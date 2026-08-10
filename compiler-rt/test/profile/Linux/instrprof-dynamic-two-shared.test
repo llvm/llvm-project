@@ -1,0 +1,24 @@
+RUN: mkdir -p %t.d
+RUN: %clang_profgen -fdata-sections -ffunction-sections -fuse-ld=gold -Wl,--gc-sections -o %t.d/a.shared -fPIC -shared %S/../Inputs/instrprof-dynamic-a.cpp
+RUN: %clang_profgen -fdata-sections -ffunction-sections -fuse-ld=gold -Wl,--gc-sections -o %t.d/b.shared -fPIC -shared %S/../Inputs/instrprof-dynamic-b.cpp
+RUN: %clang_profgen -fdata-sections -ffunction-sections -fuse-ld=gold -Wl,--gc-sections -o %t-shared -fPIC -rpath %t.d %t.d/a.shared %t.d/b.shared %S/../Inputs/instrprof-dynamic-main.cpp
+
+RUN: %clang_profgen -o %t-static %S/../Inputs/instrprof-dynamic-a.cpp %S/../Inputs/instrprof-dynamic-b.cpp %S/../Inputs/instrprof-dynamic-main.cpp
+
+RUN: env LLVM_PROFILE_FILE=%t-static.profraw %run %t-static
+RUN: env LLVM_PROFILE_FILE=%t-shared.profraw %run %t-shared
+
+RUN: llvm-profdata merge -o %t-static.profdata %t-static.profraw
+RUN: llvm-profdata merge -o %t-shared.profdata %t-shared.profraw
+
+RUN: %clang_profuse=%t-static.profdata -o %t-a.static.ll -S -emit-llvm %S/../Inputs/instrprof-dynamic-a.cpp
+RUN: %clang_profuse=%t-shared.profdata -o %t-a.shared.ll -S -emit-llvm %S/../Inputs/instrprof-dynamic-a.cpp
+RUN: diff %t-a.static.ll %t-a.shared.ll
+
+RUN: %clang_profuse=%t-static.profdata -o %t-b.static.ll -S -emit-llvm %S/../Inputs/instrprof-dynamic-b.cpp
+RUN: %clang_profuse=%t-shared.profdata -o %t-b.shared.ll -S -emit-llvm %S/../Inputs/instrprof-dynamic-b.cpp
+RUN: diff %t-b.static.ll %t-b.shared.ll
+
+RUN: %clang_profuse=%t-static.profdata -o %t-main.static.ll -S -emit-llvm %S/../Inputs/instrprof-dynamic-main.cpp
+RUN: %clang_profuse=%t-shared.profdata -o %t-main.shared.ll -S -emit-llvm %S/../Inputs/instrprof-dynamic-main.cpp
+RUN: diff %t-main.static.ll %t-main.shared.ll

@@ -1,0 +1,68 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+!s32i = !cir.int<s, 32>
+
+cir.func @FlatSwitchWithoutDefault(%arg0: !s32i) {
+  cir.switch.flat %arg0 : !s32i, ^bb2 [
+    1: ^bb1
+  ]
+  ^bb1:
+    cir.br ^bb2
+  ^bb2:
+    cir.return
+}
+
+// CHECK: cir.switch.flat %arg0 : !s32i, ^bb2 [
+// CHECK-NEXT:  1: ^bb1
+// CHECK-NEXT: ]
+// CHECK-NEXT: ^bb1:
+// CHECK-NEXT:   cir.br ^bb2
+// CHECK-NEXT: ^bb2:
+// CHECK-NEXT:   cir.return
+
+cir.func @FlatSwitchWithDefault(%arg0: !s32i) {
+  cir.switch.flat %arg0 : !s32i, ^bb2 [
+    1: ^bb1
+  ]
+  ^bb1:
+    cir.br ^bb3
+  ^bb2:
+    cir.br ^bb3
+  ^bb3:
+    cir.return
+}
+
+// CHECK: cir.switch.flat %arg0 : !s32i, ^bb2 [
+// CHECK-NEXT:  1: ^bb1
+// CHECK-NEXT: ]
+// CHECK-NEXT: ^bb1:
+// CHECK-NEXT:   cir.br ^bb3
+// CHECK-NEXT: ^bb2:
+// CHECK-NEXT:   cir.br ^bb3
+// CHECK-NEXT: ^bb3:
+// CHECK-NEXT:   cir.return
+
+cir.func @switchWithOperands(%arg0: !s32i, %arg1: !s32i, %arg2: !s32i) {
+  cir.switch.flat %arg0 : !s32i, ^bb3 [
+    0: ^bb1(%arg1, %arg2 : !s32i, !s32i),
+    1: ^bb2(%arg2, %arg1 : !s32i, !s32i)
+  ]
+^bb1:
+  cir.br ^bb3
+
+^bb2:
+  cir.br ^bb3
+
+^bb3:
+  cir.return
+}
+
+// CHECK: cir.switch.flat %arg0 : !s32i, ^bb3 [
+// CHECK-NEXT:  0: ^bb1(%arg1, %arg2 : !s32i, !s32i),
+// CHECK-NEXT:  1: ^bb2(%arg2, %arg1 : !s32i, !s32i)
+// CHECK-NEXT: ]
+// CHECK-NEXT: ^bb1:
+// CHECK-NEXT:   cir.br ^bb3
+// CHECK-NEXT: ^bb2:
+// CHECK-NEXT:    cir.br ^bb3
+// CHECK-NEXT: ^bb3:
+// CHECK-NEXT:    cir.return

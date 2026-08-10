@@ -1,0 +1,11 @@
+---
+TypeIdMap:
+  typeid1:
+    TTRes:
+      Kind:            AllOnes
+      SizeM1BitWidth:  7
+WithGlobalValueDeadStripping: false
+CfiFunctionDefs:
+- Name: f
+  GUID: 14740650423002898831
+CfiFunctionDecls: null

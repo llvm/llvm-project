@@ -1,0 +1,57 @@
+# UNSUPPORTED: system-darwin, system-windows
+
+# Make sure DWARF v4 type units work.
+# RUN: %clangxx_host %S/Inputs/debug-types-expressions.cpp \
+# RUN:   -g -gdwarf-4 -fdebug-types-section -o %t4
+# RUN: %lldb %t4 -s %s -o exit | FileCheck %s
+
+# Now do the same for DWARF v5.
+# RUN: %clangxx_host %S/Inputs/debug-types-expressions.cpp \
+# RUN:   -g -gdwarf-5 -fdebug-types-section -o %t5
+# RUN: %lldb %t5 -s %s -o exit | FileCheck %s
+
+# Test type units in dwo files.
+# RUN: %clangxx_host %S/Inputs/debug-types-expressions.cpp \
+# RUN:   -g -gdwarf-4 -fdebug-types-section -gsplit-dwarf -o %t4dwo \
+# RUN:   -Xclang -split-dwarf-output -Xclang %t4dwo.dwo \
+# RUN:   -Xclang -split-dwarf-file   -Xclang %t4dwo.dwo
+# RUN: %lldb %t4dwo -s %s -o exit | FileCheck %s
+
+# And type units+dwo+dwarf5.
+# RUN: %clangxx_host %S/Inputs/debug-types-expressions.cpp \
+# RUN:   -g -gdwarf-5 -fdebug-types-section -gsplit-dwarf -o %t5dwo \
+# RUN:   -Xclang -split-dwarf-output -Xclang %t5dwo.dwo \
+# RUN:   -Xclang -split-dwarf-file   -Xclang %t5dwo.dwo
+# RUN: %lldb %t5dwo -s %s -o exit | FileCheck %s
+
+breakpoint set -n foo
+process launch
+
+# CHECK: Process {{.*}} stopped
+
+frame variable a
+# CHECK-LABEL: frame variable a
+# CHECK: (B *) a =
+
+frame variable *a
+# CHECK-LABEL: frame variable *a
+# CHECK:      (B) *a = {
+# CHECK-NEXT:   A = (i = 47)
+# CHECK-NEXT:   j = 42
+# CHECK-NEXT: }
+
+expression a->f()
+# CHECK-LABEL: expression a->f()
+# CHECK: (int) $0 = 47
+
+expression ns::A()
+# CHECK-LABEL: expression ns::A()
+# CHECK: (ns::A) $1 = (i = 147)
+
+expression ns::A().i + a->i
+# CHECK-LABEL: expression ns::A().i + a->i
+# CHECK: (int) $2 = 194
+
+expression ns::A().getA()
+# CHECK-LABEL: ns::A().getA()
+# CHECK: (A) $3 = (i = 146)

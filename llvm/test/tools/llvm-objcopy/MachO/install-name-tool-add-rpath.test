@@ -1,0 +1,39 @@
+## This test checks adding a new LC_RPATH load command to a MachO binary.
+
+# RUN: yaml2obj %p/Inputs/i386.yaml -o %t.i386
+# RUN: llvm-install-name-tool -add_rpath @executable_path/. %t.i386
+# RUN: llvm-objdump -p %t.i386 | FileCheck --check-prefix=NEW-RPATH %s
+
+# RUN: yaml2obj %p/Inputs/x86_64.yaml -o %t.x86_64
+# RUN: llvm-install-name-tool -add_rpath @executable_path/. %t.x86_64
+# RUN: llvm-objdump -p %t.x86_64 | FileCheck --check-prefix=NEW-RPATH %s
+
+# NEW-RPATH: cmd LC_RPATH
+# NEW-RPATH-NEXT: cmdsize
+# NEW-RPATH-NEXT: @executable_path/.
+
+# RUN: not llvm-install-name-tool -add_rpath @executable_path/. %t.i386 2>&1 \
+# RUN: | FileCheck --check-prefix=DUPLICATE-RPATH %s
+
+# DUPLICATE-RPATH: rpath '@executable_path/.' would create a duplicate load command
+
+# RUN: not llvm-install-name-tool -add_rpath @executable_path/. 2>&1 \
+# RUN: | FileCheck --check-prefix=NO-INPUT %s
+
+# NO-INPUT: no input file specified
+
+## Add same RPATH twice:
+# RUN: not llvm-install-name-tool -add_rpath @executable_X \
+# RUN:                            -add_rpath @executable_X %t.i386 2>&1 \
+# RUN: | FileCheck --check-prefix=DOUBLE %s
+
+# DOUBLE: rpath '@executable_X' would create a duplicate load command
+
+## Check that cmdsize accounts for NULL terminator.
+# RUN: yaml2obj %p/Inputs/x86_64.yaml -o %t.x86_64
+# RUN: llvm-install-name-tool -add_rpath abcd %t.x86_64
+# RUN: llvm-objdump -p %t.x86_64 | FileCheck %s --check-prefix=RPATH-SIZE
+
+# RPATH-SIZE: cmd LC_RPATH
+# RPATH-SIZE-NEXT: cmdsize 24
+# RPATH-SIZE-NEXT: path abcd

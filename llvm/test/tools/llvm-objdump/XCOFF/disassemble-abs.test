@@ -1,0 +1,158 @@
+## Object files assembled on AIX from the following source:
+##        .csect [PR]
+##.main:
+##        .globl .main
+##        .extern .function
+##        bla     .function
+##        btla    .function
+##        ba      0x1234
+##        ba      -32
+##        bta     0x2348
+##        bta     -256
+#
+# RUN: yaml2obj %s --docnum=1 -o %t32.o 
+# RUN: llvm-objdump -d %t32.o | FileCheck %s
+#
+# CHECK:        : file format aixcoff-rs6000
+# CHECK:        Disassembly of section .text:
+# CHECK:        00000000 <.main>:
+# CHECK:            0: 48 00 00 03   bla 0x0
+# CHECK-NEXT:       4: 41 80 00 03   btla    0, 0x0
+# CHECK-NEXT:       8: 48 00 12 36   ba 0x1234
+# CHECK-NEXT:       c: 4b ff ff e2   ba 0xffffffe0
+# CHECK-NEXT:      10: 41 80 23 4a   bta     0, 0x2348
+# CHECK-NEXT:      14: 41 80 ff 02   bta     0, 0xffffff00
+
+--- !XCOFF
+FileHeader:
+  MagicNumber:     0x1DF
+  NumberOfSections: 1
+  CreationTime:    1700148622
+  OffsetToSymbolTable: 0x68
+  EntriesInSymbolTable: 8
+  AuxiliaryHeaderSize: 0
+  Flags:           0x0
+Sections:
+  - Name:            .text
+    Address:         0x0
+    Size:            0x18
+    FileOffsetToData: 0x3C
+    FileOffsetToRelocations: 0x54
+    FileOffsetToLineNumbers: 0x0
+    NumberOfRelocations: 0x2
+    NumberOfLineNumbers: 0x0
+    Flags:           [ STYP_TEXT ]
+    SectionData:     4800000341800003480012364BFFFFE24180234A4180FF02
+    Relocations:
+      - Address:         0x0
+        Symbol:          0x2
+        Info:            0x99
+        Type:            0x18
+      - Address:         0x6
+        Symbol:          0x2
+        Info:            0x8F
+        Type:            0x18
+Symbols:
+  - Name:            .file
+    Value:           0x0
+    Section:         N_DEBUG
+    Type:            0xC03
+    StorageClass:    C_FILE
+    NumberOfAuxEntries: 1
+  - Name:            .function
+    Value:           0x0
+    Section:         N_UNDEF
+    Type:            0x0
+    StorageClass:    C_EXT
+    NumberOfAuxEntries: 1
+  - Name:            ''
+    Value:           0x0
+    Section:         .text
+    Type:            0x0
+    StorageClass:    C_HIDEXT
+    NumberOfAuxEntries: 1
+  - Name:            .main
+    Value:           0x0
+    Section:         .text
+    Type:            0x0
+    StorageClass:    C_EXT
+    NumberOfAuxEntries: 1
+StringTable:     {}
+...
+
+# RUN: yaml2obj %s --docnum=2 -o %t64.o 
+# RUN: llvm-objdump -d %t64.o | FileCheck --check-prefixes=CHECK64 %s
+#
+
+# CHECK64:      : file format aix5coff64-rs6000
+# CHECK64:      Disassembly of section .text:
+# CHECK64:      0000000000000000 <.main>:
+# CHECK64-NEXT:       0: 48 00 00 03   bla 0x0
+# CHECK64-NEXT:       4: 41 80 00 03   btla    0, 0x0
+# CHECK64-NEXT:       8: 48 00 12 36   ba 0x1234
+# CHECK64-NEXT:       c: 4b ff ff e2   ba 0xffffffffffffffe0
+# CHECK64-NEXT:      10: 41 80 23 4a   bta     0, 0x2348
+# CHECK64-NEXT:      14: 41 80 ff 02   bta     0, 0xffffffffffffff00
+#
+--- !XCOFF
+FileHeader:
+  MagicNumber:     0x1F7
+  NumberOfSections: 1
+  CreationTime:    1701859282
+  AuxiliaryHeaderSize: 0
+  Flags:           0x0
+Sections:
+  - Name:            .text
+    Address:         0x0
+    Size:            0x18
+    FileOffsetToData: 0x60
+    FileOffsetToRelocations: 0x78
+    FileOffsetToLineNumbers: 0x0
+    NumberOfRelocations: 0x2
+    NumberOfLineNumbers: 0x0
+    Flags:           [ STYP_TEXT ]
+    SectionData:     4800000341800003480012364BFFFFE24180234A4180FF02
+    Relocations:
+      - Address:         0x0
+        Symbol:          0x1
+        Info:            0x99
+        Type:            0x18
+      - Address:         0x6
+        Symbol:          0x1
+        Info:            0x8F
+        Type:            0x18
+Symbols:
+  - Name:            .file
+    Section:         N_DEBUG
+    StorageClass:    C_FILE
+    NumberOfAuxEntries: 0
+  - Name:            .function
+    Section:         N_UNDEF
+    StorageClass:    C_EXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:                   AUX_CSECT
+        StorageMappingClass:    XMC_PR
+        SymbolAlignmentAndType: 0
+  - Name:            ''
+    Section:         .text
+    StorageClass:    C_HIDEXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:                   AUX_CSECT
+        StorageMappingClass:    XMC_PR
+        SymbolAlignmentAndType: 1
+  - Name:            .main
+    Section:         .text
+    StorageClass:    C_EXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:                   AUX_CSECT
+        StorageMappingClass:    XMC_PR
+        SymbolAlignmentAndType: 2
+StringTable:
+  Strings:
+    - .file
+    - .function
+    - .text
+    - .main

@@ -1,0 +1,131 @@
+# RUN: llc -mtriple=x86_64-linux-gnu                                  -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=ALL,NO_AVX512VL,SSE
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx                      -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=ALL,NO_AVX512VL,AVX
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f                  -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=ALL,NO_AVX512VL,AVX512F
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f -mattr=+avx512vl -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=ALL,AVX512VL
+
+--- |
+  define i64 @test_sub_i64(i64 %arg1, i64 %arg2) {
+    %ret = sub i64 %arg1, %arg2
+    ret i64 %ret
+  }
+
+  define i32 @test_sub_i32(i32 %arg1, i32 %arg2) {
+    %ret = sub i32 %arg1, %arg2
+    ret i32 %ret
+  }
+
+  define <4 x i32> @test_sub_v4i32(<4 x i32> %arg1, <4 x i32> %arg2) {
+    %ret = sub <4 x i32> %arg1, %arg2
+    ret <4 x i32> %ret
+  }
+
+  define <4 x float>  @test_sub_v4f32(<4 x float> %arg1, <4 x float>  %arg2) {
+    %ret = fsub <4 x float>  %arg1, %arg2
+    ret <4 x float>  %ret
+  }
+
+...
+---
+name:            test_sub_i64
+legalized:       true
+regBankSelected: true
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+# ALL:      %0:gr64 = COPY $rdi
+# ALL-NEXT: %1:gr64 = COPY $rsi
+# ALL-NEXT: %2:gr64 = SUB64rr %0, %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: $edi, $esi
+
+    %0(s64) = COPY $rdi
+    %1(s64) = COPY $rsi
+    %2(s64) = G_SUB %0, %1
+    $rax = COPY %2(s64)
+
+...
+
+---
+name:            test_sub_i32
+legalized:       true
+regBankSelected: true
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+# ALL:      %0:gr32 = COPY $edi
+# ALL-NEXT: %1:gr32 = COPY $esi
+# ALL-NEXT: %2:gr32 = SUB32rr %0, %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: $edi, $esi
+
+    %0(s32) = COPY $edi
+    %1(s32) = COPY $esi
+    %2(s32) = G_SUB %0, %1
+    $eax = COPY %2(s32)
+
+...
+---
+name:            test_sub_v4i32
+alignment:       16
+legalized:       true
+regBankSelected: true
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+  - { id: 2, class: vecr }
+# NO_AVX512VL:   %0:vr128 = COPY $xmm0
+# AVX512VL:      %0:vr128x = COPY $xmm0
+# NO_AVX512VL:   %1:vr128 = COPY $xmm1
+# AVX512VL:      %1:vr128x = COPY $xmm1
+# SSE-NEXT:      %2:vr128 = PSUBDrr %0, %1
+# AVX-NEXT:      %2:vr128 = VPSUBDrr %0, %1
+# AVX512F-NEXT:  %2:vr128 = VPSUBDrr %0, %1
+# AVX512VL-NEXT: %2:vr128x = VPSUBDZ128rr %0, %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: $xmm0, $xmm1
+
+    %0(<4 x s32>) = COPY $xmm0
+    %1(<4 x s32>) = COPY $xmm1
+    %2(<4 x s32>) = G_SUB %0, %1
+    $xmm0 = COPY %2(<4 x s32>)
+    RET 0, implicit $xmm0
+
+...
+---
+name:            test_sub_v4f32
+alignment:       16
+legalized:       true
+regBankSelected: true
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+  - { id: 2, class: vecr }
+# NO_AVX512VL:   %0:vr128 = COPY $xmm0
+# NO_AVX512VL:   %1:vr128 = COPY $xmm1
+# SSE-NEXT:      %2:vr128 = nofpexcept SUBPSrr %0, %1
+# AVX-NEXT:      %2:vr128 = nofpexcept VSUBPSrr %0, %1
+# AVX512F-NEXT:  %2:vr128 = nofpexcept VSUBPSrr %0, %1
+#
+# AVX512VL:      %0:vr128x = COPY $xmm0
+# AVX512VL:      %1:vr128x = COPY $xmm1
+# AVX512VL-NEXT: %2:vr128x = nofpexcept VSUBPSZ128rr %0, %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: $xmm0, $xmm1
+
+    %0(<4 x s32>) = COPY $xmm0
+    %1(<4 x s32>) = COPY $xmm1
+    %2(<4 x s32>) = G_FSUB %0, %1
+    $xmm0 = COPY %2(<4 x s32>)
+    RET 0, implicit $xmm0
+
+...

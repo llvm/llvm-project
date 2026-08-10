@@ -1,0 +1,19 @@
+module Cocoa {
+  header "Cocoa.h"
+}
+
+module AppKit {
+  header "AppKit.h"
+}
+
+module CoreText {
+  header "CoreText.h"
+}
+
+module Foundation {
+  header "Foundation.h"
+}
+
+module CoreVideo {
+  header "CoreVideo.h"
+}

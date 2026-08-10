@@ -1,0 +1,1 @@
+RUN: llc -O0 -mtriple=arm-eabi -asm-verbose %S/../Inputs/DbgValueOtherTargets.ll -o - | FileCheck %S/../Inputs/DbgValueOtherTargets.ll

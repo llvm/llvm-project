@@ -1,0 +1,109 @@
+# RUN: llc -mtriple mips64-linux -emit-call-site-info -start-after=livedebugvalues -filetype=obj %s -o -| llvm-dwarfdump -| FileCheck %s
+
+## Test case where a parameter value could be described as a sub-register.
+## Built from source:
+## extern int foo(char*,int,int);
+## int f1(int a, char* str){
+##   return foo(str, a, 0);
+## }
+## fastcc attribute of foo() is added manually to the .ll to match the real case
+
+#CHECK: DW_TAG_GNU_call_site
+#CHECK-NEXT: DW_AT_abstract_origin	{{.*}} "foo"
+
+#CHECK: DW_TAG_GNU_call_site_parameter
+#CHECK-NEXT: DW_AT_location	(DW_OP_reg6 A2_64)
+#CHECK-NEXT: DW_AT_GNU_call_site_value	(DW_OP_lit0)
+#CHECK-EMPTY:
+#CHECK-NEXT: DW_TAG_GNU_call_site_parameter
+#CHECK-NEXT:   DW_AT_location	(DW_OP_reg4 A0_64)
+#CHECK-NEXT:   DW_AT_GNU_call_site_value	(DW_OP_GNU_entry_value(DW_OP_reg5 A1_64))
+#CHECK-EMPTY:
+## The parameter, which value is loaded by COPY instr using sub-register, should be omitted.
+#CHECK-NOT: DW_TAG_GNU_call_site_parameter
+#CHECK-NOT:   DW_AT_location	(DW_OP_reg5 A1_64)
+#CHECK-NOT:   DW_AT_GNU_call_site_value	(DW_OP_GNU_entry_value(DW_OP_reg4 A0_64))
+--- |
+  ; ModuleID = 'm.ll'
+  source_filename = "m.c"
+  target datalayout = "E-m:e-i8:8:32-i16:16:32-i64:64-n32:64-S128"
+  target triple = "mips64-unknown-linux"
+  
+  ; Function Attrs: nounwind
+  define signext i32 @f1(i32 signext %a, ptr %str) local_unnamed_addr !dbg !8 {
+  entry:
+    call void @llvm.dbg.value(metadata i32 %a, metadata !16, metadata !DIExpression()), !dbg !18
+    call void @llvm.dbg.value(metadata ptr %str, metadata !17, metadata !DIExpression()), !dbg !18
+    %call = tail call fastcc signext i32 @foo(ptr %str, i32 signext %a, i32 signext 0), !dbg !18
+    ret i32 %call, !dbg !18
+  }
+  
+  declare !dbg !21 fastcc signext i32 @foo(ptr, i32 signext, i32 signext) local_unnamed_addr
+  
+  ; Function Attrs: nounwind readnone speculatable willreturn
+  declare void @llvm.dbg.value(metadata, metadata, metadata)
+  
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!3, !4, !5, !6}
+  !llvm.ident = !{!7}
+  
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 11.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, nameTableKind: None)
+  !1 = !DIFile(filename: "<stdin>", directory: "/dir")
+  !2 = !{}
+  !3 = !{i32 7, !"Dwarf Version", i32 4}
+  !4 = !{i32 2, !"Debug Info Version", i32 3}
+  !5 = !{i32 1, !"wchar_size", i32 4}
+  !6 = !{i32 7, !"PIC Level", i32 1}
+  !7 = !{!"clang version 11.0.0"}
+  !8 = distinct !DISubprogram(name: "f1", scope: !9, file: !9, line: 4, type: !10, scopeLine: 4, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !15)
+  !9 = !DIFile(filename: "m.c", directory: "/dir")
+  !10 = !DISubroutineType(types: !11)
+  !11 = !{!12, !12, !13}
+  !12 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !13 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !14, size: 64)
+  !14 = !DIBasicType(name: "char", size: 8, encoding: DW_ATE_signed_char)
+  !15 = !{!16, !17}
+  !16 = !DILocalVariable(name: "a", arg: 1, scope: !8, file: !9, line: 4, type: !12)
+  !17 = !DILocalVariable(name: "str", arg: 2, scope: !8, file: !9, line: 4, type: !13)
+  !18 = !DILocation(line: 0, scope: !8)
+  !21 = !DISubprogram(name: "foo", scope: !9, file: !9, line: 2, type: !22, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
+  !22 = !DISubroutineType(types: !23)
+  !23 = !{!12, !13, !12, !12}
+
+...
+---
+name:            f1
+alignment:       8
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -8, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '$ra_64', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+callSites:
+  - { bb: 0, offset: 12, fwdArgRegs: 
+      - { arg: 0, reg: '$a0_64' }
+      - { arg: 1, reg: '$a1' }
+      - { arg: 2, reg: '$a2' } }
+body:             |
+  bb.0.entry:
+    DBG_VALUE $a0_64, $noreg, !16, !DIExpression(), debug-location !18
+    DBG_VALUE $a1_64, $noreg, !17, !DIExpression(), debug-location !18
+    $sp_64 = DADDiu $sp_64, -16
+    CFI_INSTRUCTION def_cfa_offset 16
+    SD killed $ra_64, $sp_64, 8 :: (store (s64) into %stack.0)
+    CFI_INSTRUCTION offset $ra_64, -8
+    $at_64 = OR64 $a0_64, $zero_64
+    DBG_VALUE $a1_64, $noreg, !17, !DIExpression(), debug-location !18
+    DBG_VALUE $at_64, $noreg, !16, !DIExpression(), debug-location !18
+    $a0_64 = OR64 killed $a1_64, $zero_64, debug-location !18
+    DBG_VALUE $a0_64, $noreg, !17, !DIExpression(), debug-location !18
+    $a1 = OR $at, $zero, implicit killed $at_64, debug-location !18
+    JAL @foo, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit $a1, implicit killed $a2, implicit-def $sp, implicit-def $v0, debug-location !18 {
+      $a2 = ADDiu $zero, 0, debug-location !18
+    }
+    renamable $v0_64 = SLL64_32 killed renamable $v0, debug-location !18
+    $ra_64 = LD $sp_64, 8, debug-location !18 :: (load (s64) from %stack.0)
+    PseudoReturn64 undef $ra_64, implicit $v0_64, debug-location !18 {
+      $sp_64 = DADDiu $sp_64, 16
+    }
+
+...

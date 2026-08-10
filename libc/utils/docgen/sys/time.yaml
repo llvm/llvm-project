@@ -1,0 +1,11 @@
+functions:
+  select:
+    in-latest-posix: ''
+  utimes:
+    in-latest-posix: ''
+  getitimer:
+    removed-in-posix-2024: ''
+  gettimeofday:
+    removed-in-posix-2024: ''
+  setitimer:
+    removed-in-posix-2024: ''

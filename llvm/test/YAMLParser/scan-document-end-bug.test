@@ -1,0 +1,5 @@
+# RUN: yaml-bench -canonical %s
+
+# Ticket #4
+---
+...

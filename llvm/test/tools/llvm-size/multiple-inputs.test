@@ -1,0 +1,73 @@
+## Show how llvm-size behaves when passed in multiple inputs.
+
+# RUN: yaml2obj %s --docnum=1 -o %t1
+# RUN: yaml2obj %s --docnum=2 -o %t2
+# RUN: llvm-size -B %t1 %t2 | FileCheck %s -DFILE1=%t1 -DFILE2=%t2 --check-prefix=BERKELEY
+# RUN: llvm-size -A %t1 %t2 | FileCheck %s -DFILE1=%t1 -DFILE2=%t2 --check-prefix=SYSV
+
+# BERKELEY:     text    data     bss     dec     hex filename
+# BERKELEY-NEXT:   1       2       4       7       7 [[FILE1]]
+# BERKELEY-NEXT:   8      16      32      56      38 [[FILE2]]
+# BERKELEY-NOT:{{.}}
+
+# SYSV:      [[FILE1]]  :
+# SYSV-NEXT: section     size   addr
+# SYSV-NEXT: .text          1      4
+# SYSV-NEXT: .data          2      2
+# SYSV-NEXT: .bss           4      1
+# SYSV-NEXT: Total          7
+# SYSV-EMPTY:
+# SYSV-EMPTY:
+# SYSV-NEXT: [[FILE2]]  :
+# SYSV-NEXT: section     size   addr
+# SYSV-NEXT: .text          8     32
+# SYSV-NEXT: .data         16     16
+# SYSV-NEXT: .bss          32      8
+# SYSV-NEXT: Total         56
+# SYSV-NOT:{{.}}
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Size:    1
+    Address: 4
+  - Name:    .data
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_WRITE]
+    Size:    2
+    Address: 2
+  - Name:    .bss
+    Type:    SHT_NOBITS
+    Flags:   [SHF_ALLOC, SHF_WRITE]
+    Size:    4
+    Address: 1
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Size:    8
+    Address: 32
+  - Name:    .data
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_WRITE]
+    Size:    16
+    Address: 16
+  - Name:    .bss
+    Type:    SHT_NOBITS
+    Flags:   [SHF_ALLOC, SHF_WRITE]
+    Size:    32
+    Address: 8

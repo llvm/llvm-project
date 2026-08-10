@@ -1,0 +1,254 @@
+# How to generate this file:
+# 1. First take a swift file and run xcrun swiftc -g -v file.swift 
+# secondfile.swift, make sure the two swift files are in a short path like /tmp/
+
+# 2. Now you can see what the driver does, generate the object files in the 
+# tmp directory
+
+# 3. Run obj2yaml on object file to create a yaml file
+
+# 4. I ran delta to reduce this file.
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x1000007
+  cpusubtype:      0x3
+  filetype:        0x1
+  ncmds:           8
+  sizeofcmds:      2240
+  flags:           0x2000
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         1992
+    segname:         ''
+    vmaddr:          0
+    vmsize:          6592
+    fileoff:         2272
+    filesize:        6592
+    maxprot:         7
+    initprot:        7
+    nsects:          24
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0
+        size:            593
+        offset:          0x8E0
+        align:           4
+        reloff:          0x22A0
+        nreloc:          24
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        relocations:
+          - address:         0x233
+            symbolnum:       2
+            pcrel:           true
+            length:          2
+            extern:          true
+            type:            4
+            scattered:       false
+            value:           0
+      - sectname:        __swift5_typeref
+        segname:         __TEXT
+        addr:            0x2D6
+        size:            38
+        offset:          0xBB6
+        align:           1
+        reloff:          0x2418
+        nreloc:          4
+        flags:           0x10000000
+        reserved1:       0x0
+        reserved2:       0x0
+        content:         5369000001FFFFFFFF002473346D61696E31304D7950726F746F636F6C50000001FFFFFFFF00
+        relocations:
+          - address:         0x21
+            symbolnum:       46
+            pcrel:           false
+            length:          3
+            extern:          true
+            type:            0
+            scattered:       false
+            value:           0
+      - sectname:        __swift5_reflstr
+        segname:         __TEXT
+        addr:            0x318
+        size:            12
+        offset:          0xBF8
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x10000000
+        reserved1:       0x0
+        reserved2:       0x0
+        content:         496E6E657200696E6E657200
+      - sectname:        __swift5_assocty
+        segname:         __TEXT
+        addr:            0x324
+        size:            24
+        offset:          0xC04
+        align:           2
+        reloff:          0x2450
+        nreloc:          8
+        flags:           0x10000000
+        reserved1:       0x0
+        reserved2:       0x0
+        content:         00000000FCFFFFFF0100000008000000F0FFFFFFECFFFFFF
+        relocations:
+          - address:         0x14
+            symbolnum:       5
+            pcrel:           false
+            length:          2
+            extern:          true
+            type:            0
+            scattered:       false
+            value:           0
+      - sectname:        __swift5_fieldmd
+        segname:         __TEXT
+        addr:            0x378
+        size:            44
+        offset:          0xC58
+        align:           2
+        reloff:          0x24C0
+        nreloc:          8
+        flags:           0x10000000
+        reserved1:       0x0
+        reserved2:       0x0
+        content:         000000000000000000000C000100000002000000ECFFFFFFE8FFFFFF000000000000000000000C0000000000
+        relocations:
+          - address:         0x1C
+            symbolnum:       12
+            pcrel:           false
+            length:          3
+            extern:          false
+            type:            0
+            scattered:       false
+            value:           0
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         24
+    platform:        1
+    minos:           786432
+    sdk:             786688
+    ntools:          0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          9824
+    nsyms:           57
+    stroff:          10736
+    strsize:         1544
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       16
+    iextdefsym:      16
+    nextdefsym:      31
+    iundefsym:       47
+    nundefsym:       10
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+  - cmd:             LC_LINKER_OPTION
+    cmdsize:         40
+    count:           1
+    PayloadBytes:    [ 0x2D, 0x6C, 0x73, 0x77, 0x69, 0x66, 0x74, 0x53, 
+                       0x0, 0x0, 0x0, 0x0 ]
+  - cmd:             LC_LINKER_OPTION
+    cmdsize:         24
+    count:           1
+    PayloadBytes:    [ 0x2D, 0x6C, 0x73, 0x77, 0x69, 0x66, 0x74, 0x43, 
+                       0x6F, 0x72, 0x65, 0x0 ]
+  - cmd:             LC_LINKER_OPTION
+    cmdsize:         32
+    count:           1
+    PayloadBytes:    [ 0x2D, 0x6C, 0x73, 0x77, 0x69, 0x66, 0x74, 0x5F, 
+                       0x6E, 0x63, 0x79, 0x0 ]
+  - cmd:             LC_LINKER_OPTION
+    cmdsize:         24
+    count:           1
+    PayloadBytes:    [ 0x2D, 0x6C, 0x6F, 0x62, 0x6A, 0x63, 0x0, 0x0, 0x0, 
+                       0x0, 0x0, 0x0 ]
+LinkEditData:
+  NameList:
+    - n_strx:          1494
+      n_type:          0xE
+      n_sect:          9
+      n_desc:          0
+      n_value:         0
+  StringTable:
+    - ''
+    - l_entry_point
+    - '_$s4main12Conformance2V5innerSivs'
+    - l_protocol_conformances
+    - l_coro.devirt.trigger
+    - '_$s4main10MyProtocolMp'
+    - ___swift_reflection_version
+    - _main
+    - '_$s4main3AppVMn'
+    - '_$s4main12Conformance2VMn'
+    - '_$s4main12Conformance2V5innerSivpfi'
+    - _symbolic Si
+    - l_llvm.swift_module_hash
+    - '_$s4main12Conformance2V5innerSivg'
+    - '_$s4main3AppVMf'
+    - '_$s4main12Conformance2VMf'
+    - _swift_bridgeObjectRelease
+    - l_type_metadata_table
+    - '_$s4main12Conformance2VAA10MyProtocolAAMc'
+    - '_$sSaMa'
+    - '_$s4main3AppVMa'
+    - '_$s4main12Conformance2VMa'
+    - '_$s4main12Conformance2V5innerACSi_tcfcfA_'
+    - '_$ss5print_9separator10terminatoryypd_S2StFfA1_'
+    - '_$ss5print_9separator10terminatoryypd_S2StFfA0_'
+    - '_$s4main3AppV5$mainyyFZ'
+    - '_$s4main3AppVAAyyFZ'
+    - '_$s4main12Conformance2VAA10MyProtocolA2aDP5inner5InnerQzvgTW'
+    - _symbolic _____ 4main3AppV
+    - '_$sytWV'
+    - '_$sBi64_WV'
+    - '_$s4main12Conformance2V5innerSivpMV'
+    - _symbolic _____ 4main12Conformance2V
+    - '_symbolic $s4main10MyProtocolP'
+    - '_$s4main12Conformance2VAA10MyProtocolAAWP'
+    - '_$sypN'
+    - '_$s4main3AppVN'
+    - '_$s4main12Conformance2VN'
+    - '_$sSSN'
+    - '_$s4main12Conformance2V5innerSivM'
+    - '_$s4mainMXM'
+    - '_$sSa12_endMutationyyF'
+    - '_$ss5print_9separator10terminatoryypd_S2StF'
+    - '_$ss27_allocateUninitializedArrayySayxG_BptBwlF'
+    - '_$ss27_finalizeUninitializedArrayySayxGABnlF'
+    - '_$s4main3AppVMF'
+    - '_$s4main12Conformance2VMF'
+    - '_$s4main3AppVACycfC'
+    - '_$s4main12Conformance2VACycfC'
+    - '_$s4main12Conformance2V5innerACSi_tcfC'
+    - '_$sSS21_builtinStringLiteral17utf8CodeUnitCount7isASCIISSBp_BwBi1_tcfC'
+    - '_$s4main12Conformance2VAA10MyProtocolAAMA'
+    - l___unnamed_8
+    - l___unnamed_7
+    - l___unnamed_6
+    - l___unnamed_5
+    - l___unnamed_4
+    - '_$s4main12Conformance2V5innerSivM.resume.0'
+    - ''
+    - ''
+    - ''
+    - ''
+    - ''
+    - ''
+    - ''

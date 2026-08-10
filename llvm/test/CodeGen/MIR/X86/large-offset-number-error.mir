@@ -1,0 +1,24 @@
+# RUN: not llc -mtriple=x86_64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+
+--- |
+
+  @G = external global i32
+
+  define i32 @inc() {
+  entry:
+    %a = load i32, ptr @G
+    %b = add i32 %a, 1
+    ret i32 %b
+  }
+
+...
+---
+name: inc
+body: |
+  bb.0.entry:
+    ; CHECK: [[@LINE+1]]:37: expected 64-bit integer (too large)
+    $rax = MOV64rm $rip, 1, _, @G + 123456789123456789123456789, _
+    $eax = MOV32rm $rax, 1, _, 0, _
+    $eax = INC32r $eax implicit-def $eflags
+    RET64 $eax
+...

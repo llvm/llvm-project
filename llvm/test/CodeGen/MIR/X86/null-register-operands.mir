@@ -1,0 +1,22 @@
+# RUN: llc -mtriple=x86_64 -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses null register operands correctly.
+
+--- |
+
+  define i32 @deref(ptr %p) {
+  entry:
+    %a = load i32, ptr %p
+    ret i32 %a
+  }
+
+...
+---
+# CHECK: name: deref
+name:            deref
+body: |
+  bb.0.entry:
+    ; CHECK:      $eax = MOV32rm $rdi, 1, $noreg, 0, $noreg
+    ; CHECK-NEXT: RET64 $eax
+    $eax = MOV32rm $rdi, 1, _, 0, $noreg
+    RET64 $eax
+...

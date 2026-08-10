@@ -1,0 +1,74 @@
+# Test `image dump ast` command.
+
+# DWARF is required to properly create the AST, and on Windows that is discarded
+# and we only have PDB which doesn't work for this test.
+# UNSUPPORTED: system-windows
+
+# RUN: split-file %s %t
+# RUN: %clangxx_host -g -gdwarf %t/main.cpp -o %t.out
+# RUN: %lldb -x -b -s %t/commands.input %t.out -o exit 2>&1 \
+# RUN:       | FileCheck %s
+
+#--- main.cpp
+
+void A() {}
+void A1() {}
+void BA1() {}
+void AB() {}
+
+int main() {
+  A();
+  A1();
+  BA1();
+  AB();
+}
+
+#--- commands.input
+
+break set -n main
+run
+expr A(); A1(); BA1(); AB()
+
+image dump ast
+
+# CHECK: image dump ast
+# CHECK-DAG: FunctionDecl {{.*}} main
+# CHECK-DAG: FunctionDecl {{.*}} A
+# CHECK-DAG: FunctionDecl {{.*}} A1
+# CHECK-DAG: FunctionDecl {{.*}} BA1
+# CHECK-DAG: FunctionDecl {{.*}} AB
+
+image dump ast --filter A
+
+# CHECK: image dump ast --filter A
+# CHECK: Dumping A
+# CHECK-NOT: FunctionDecl {{.*}} main
+# CHECK-DAG: FunctionDecl {{.*}} A1
+# CHECK-DAG: FunctionDecl {{.*}} BA1
+# CHECK-DAG: FunctionDecl {{.*}} AB
+
+image dump ast --filter A1
+
+# CHECK: image dump ast --filter A1
+# CHECK: Dumping A
+# CHECK-NOT: FunctionDecl {{.*}} main
+# CHECK-NOT: FunctionDecl {{.*}} AB
+# CHECK-DAG: FunctionDecl {{.*}} A1
+# CHECK-DAG: FunctionDecl {{.*}} BA1
+
+image dump ast --filter ""
+
+# CHECK: image dump ast --filter ""
+# CHECK-DAG: FunctionDecl {{.*}} main
+# CHECK-DAG: FunctionDecl {{.*}} AB
+# CHECK-DAG: FunctionDecl {{.*}} A1
+# CHECK-DAG: FunctionDecl {{.*}} BA1
+
+image dump ast -f AB
+
+# CHECK: image dump ast -f AB
+# CHECK: Dumping AB
+# CHECK-NOT: FunctionDecl {{.*}} main
+# CHECK-NOT: FunctionDecl {{.*}} A1
+# CHECK-NOT: FunctionDecl {{.*}} BA1
+# CHECK: FunctionDecl {{.*}} AB

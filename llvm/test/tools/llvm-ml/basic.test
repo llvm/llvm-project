@@ -1,0 +1,8 @@
+# RUN: not llvm-ml %t.blah.asm /nologo /Fo /dev/null 2>&1 | FileCheck -DMSG=%errc_ENOENT --check-prefix=ENOENT %s
+# RUN: not llvm-ml /Ta /nnlogo /Fo /dev/null 2>&1 | FileCheck -DMSG=%errc_ENOENT --check-prefix=ENOENT-TA %s
+# RUN: not llvm-ml - /Fo /dev/null /nnlogo 2>&1 | FileCheck -DMSG=%errc_ENOENT --check-prefix=ENOENT-FLAG %s
+
+# ENOENT-NOT: nologo
+# ENOENT: {{.*}}.blah.asm: [[MSG]]
+# ENOENT-TA: /nnlogo: [[MSG]]
+# ENOENT-FLAG: error: /nnlogo: [[MSG]], did you mean '/nologo'?

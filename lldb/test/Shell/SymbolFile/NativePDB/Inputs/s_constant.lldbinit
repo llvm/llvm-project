@@ -1,0 +1,25 @@
+target variable GlobalLUEA
+target variable GlobalLUEB
+target variable GlobalLUEC
+
+target variable GlobalLSEA
+target variable GlobalLSEB
+target variable GlobalLSEC
+
+target variable GlobalUEA
+target variable GlobalUEB
+target variable GlobalUEC
+
+target variable GlobalSEA
+target variable GlobalSEB
+target variable GlobalSEC
+
+target variable GlobalSUEA
+target variable GlobalSUEB
+target variable GlobalSUEC
+
+target variable GlobalSSEA
+target variable GlobalSSEB
+target variable GlobalSSEC
+
+quit

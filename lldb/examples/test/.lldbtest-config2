@@ -1,0 +1,19 @@
+# Example config file for running the test suite for both 64 and 32-bit
+# architectures.
+#
+# I use the following command to invoke the test driver:
+#
+# /Volumes/data/lldb/svn/trunk/test $ ./dotest.py -r /Volumes/data/lldb-test/archs -s session -c ../examples/test/.lldbtest-config2 -v -w . 2> ~/Developer/Log/lldbtest.log 
+#
+# The '-r' option tells the driver to relocate the test execution to
+# /Volumes/data/lldb-test/archs which must not exist before the run.
+#
+# Test failures/errors will be recorded into the 'session' directory due to the
+# '-s' option, e.g., /Volumes/data/lldb-test/archs.arch=i386/test/session could
+# contain the following three session info files:
+#
+# -rw-r--r--   1 johnny  admin  1737 Oct 25 13:25 TestArrayTypes.ArrayTypesTestCase.test_with_dwarf_and_run_command.log
+# -rw-r--r--   1 johnny  admin  1733 Oct 25 13:25 TestClassTypes.ClassTypesTestCase.test_with_dwarf_and_run_command.log
+# -rw-r--r--   1 johnny  admin  4677 Oct 25 13:26 TestObjCMethods.FoundationTestCase.test_data_type_and_expr_with_dsym.log
+
+archs = ["x86_64", "i386"]

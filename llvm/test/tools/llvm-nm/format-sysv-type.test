@@ -1,0 +1,59 @@
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-nm %t.o --debug-syms --format=sysv | FileCheck %s
+
+!ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Symbols:
+  - Name: symbol_notype
+    Type: STT_NOTYPE
+  - Name: symbol_common
+    Type: STT_COMMON
+  - Name: symbol_tls
+    Type: STT_TLS
+  - Name: symbol_file
+    Type: STT_FILE
+  - Name: symbol_obj
+    Type: STT_OBJECT
+  - Name: symbol_func
+    Type: STT_FUNC
+  - Name: unknown_7
+    Type: 7
+  - Name: unknown_8
+    Type: 8
+  - Name: unknown_9
+    Type: 9
+  - Name: symbol_ifunc
+    Type: STT_GNU_IFUNC
+  - Name: os_specific_10
+    Type: 10
+  - Name: os_specific_11
+    Type: 11
+  - Name: os_specific_12
+    Type: 12
+  - Name: proc_specific_13
+    Type: 13
+  - Name: proc_specific_14
+    Type: 14
+  - Name: proc_specific_15
+    Type: 15
+
+# CHECK:      os_specific_10      |                |   U  |             IFUNC|                |     |*UND*
+# CHECK-NEXT: os_specific_11      |                |   U  | <OS specific>: 11|                |     |*UND*
+# CHECK-NEXT: os_specific_12      |                |   U  | <OS specific>: 12|                |     |*UND*
+# CHECK-NEXT: proc_specific_13    |                |   U  |<processor specific>: 13|                |     |*UND*
+# CHECK-NEXT: proc_specific_14    |                |   U  |<processor specific>: 14|                |     |*UND*
+# CHECK-NEXT: proc_specific_15    |                |   U  |<processor specific>: 15|                |     |*UND*
+# CHECK-NEXT: symbol_common       |                |   U  |            COMMON|                |     |*COM*
+# CHECK-NEXT: symbol_file         |                |   U  |              FILE|                |     |*UND*
+# CHECK-NEXT: symbol_func         |                |   U  |              FUNC|                |     |*UND*
+# CHECK-NEXT: symbol_ifunc        |                |   U  |             IFUNC|                |     |*UND*
+# CHECK-NEXT: symbol_notype       |                |   U  |            NOTYPE|                |     |*UND*
+# CHECK-NEXT: symbol_obj          |                |   U  |            OBJECT|                |     |*UND*
+# CHECK-NEXT: symbol_tls          |                |   U  |               TLS|                |     |*UND*
+# CHECK-NEXT: unknown_7           |                |   U  |      <unknown>: 7|                |     |*UND*
+# CHECK-NEXT: unknown_8           |                |   U  |      <unknown>: 8|                |     |*UND*
+# CHECK-NEXT: unknown_9           |                |   U  |      <unknown>: 9|                |     |*UND*

@@ -1,0 +1,91 @@
+# RUN: yaml2obj -D NAME= %s | llvm-nm - | FileCheck --check-prefix=FBAR %s
+# FBAR: U fbar
+
+# RUN: yaml2obj -D NAME=o %s | llvm-nm - | FileCheck --check-prefix=FOOBAR %s
+# RUN: yaml2obj -DNAME=o %s | llvm-nm - | FileCheck --check-prefix=FOOBAR %s
+# FOOBAR: U foobar
+
+# RUN: not yaml2obj -D NAME %s 2>&1 | FileCheck --check-prefix=ERR1 %s
+# ERR1: error: invalid syntax for -D: NAME
+
+# RUN: not yaml2obj -D =value %s 2>&1 | FileCheck --check-prefix=ERR2 %s
+# ERR2: error: invalid syntax for -D: =value
+
+# RUN: not yaml2obj -D NAME=a -D NAME=b %s 2>&1 | FileCheck --check-prefix=ERR3 %s
+# ERR3: error: 'NAME' redefined
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Symbols:
+  - Name: f[[NAME]][[NAME]]bar
+
+## Digits can appear in macro names. Test that we don't expand macros recursively.
+# RUN: yaml2obj --docnum=2 -D a0='[[a1]]' -D a1='[[a0]]' %s | llvm-nm --just-symbol-name --no-sort - > %t.recur
+# RUN: echo -e '[[a1]]\n[[a0]]' > %t0.recur
+# RUN: diff -u %t0.recur %t.recur
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Symbols:
+  - Name: "[[a0]]"
+  - Name: "[[a1]]"
+
+## Test unterminated [[.
+# RUN: yaml2obj --docnum=3 %s | llvm-nm --just-symbol-name --no-sort - > %t.nosubst
+# RUN: echo -e 'a[[\n[[a]\n[[a[[a]]\n[[a][[a]][[b]]' > %t0.nosubst
+# RUN: diff -u %t0.nosubst %t.nosubst
+
+# RUN: yaml2obj --docnum=3 -D a=b -D b=c %s | llvm-nm --just-symbol-name --no-sort - > %t.subst
+# RUN: echo -e 'a[[\n[[a]\n[[ab\n[[a]bc' > %t0.subst
+# RUN: diff -u %t0.subst %t.subst
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Symbols:
+  - Name: "a[["
+  - Name: "[[a]"
+  - Name: "[[a[[a]]"
+  - Name: "[[a][[a]][[b]]"
+
+## Check that it is possible to set a default value for a macro in the YAML description.
+## Check that we are able to provide an empty default value for a macro.
+# RUN: yaml2obj --docnum=4 %s -o %t4.1
+# RUN: llvm-nm --no-sort %t4.1 | FileCheck %s --check-prefix=DEFAULT
+
+# DEFAULT:      U _foo_
+# DEFAULT-NEXT: U __
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Symbols:
+  - Name: _[[FOO=foo]]_
+  - Name: _[[BAR=]]_
+
+## Check that it is possible to override a default macro value.
+# RUN: yaml2obj --docnum=4 %s -o %t4.2 -DFOO=bar -DBAR=foo
+# RUN: llvm-nm --no-sort %t4.2 | FileCheck %s --check-prefix=OVERRIDE-DEFAULT1
+
+# OVERRIDE-DEFAULT1:      U _bar_
+# OVERRIDE-DEFAULT1-NEXT: U _foo_
+
+# RUN: yaml2obj --docnum=4 %s -o %t4.3 -DFOO=bar=foo -DBAR=foo=bar
+# RUN: llvm-nm --no-sort %t4.3 | FileCheck %s --check-prefix=OVERRIDE-DEFAULT2
+
+# OVERRIDE-DEFAULT2:      U _bar=foo_
+# OVERRIDE-DEFAULT2-NEXT: U _foo=bar_

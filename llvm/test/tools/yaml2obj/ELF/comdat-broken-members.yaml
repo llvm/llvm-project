@@ -1,0 +1,19 @@
+## Check we report an error when SHT_GROUP references an unknown section in its member list.
+
+# RUN: not yaml2obj %s 2>&1 | FileCheck %s
+
+# CHECK: error: unknown section referenced: '.foo' by YAML section '.group'
+# CHECK: error: unknown section referenced: '.bar' by YAML section '.group'
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name: .group
+    Type: SHT_GROUP
+    Members:
+      - SectionOrType: GRP_COMDAT
+      - SectionOrType: .foo
+      - SectionOrType: .bar

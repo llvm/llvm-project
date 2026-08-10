@@ -1,0 +1,1 @@
+struct XX { XX(int); };

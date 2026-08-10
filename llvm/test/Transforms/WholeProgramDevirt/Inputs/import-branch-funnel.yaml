@@ -1,0 +1,11 @@
+---
+TypeIdMap:
+  typeid1:
+    WPDRes:
+      0:
+        Kind: BranchFunnel
+  typeid2:
+    WPDRes:
+      8:
+        Kind: BranchFunnel
+...

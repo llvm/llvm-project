@@ -1,0 +1,74 @@
+# Using a trick to run register-coalescer twice, that way
+# liveintervals should be preserved while running the machine verifier.
+#
+# RUN: not --crash llc -o - %s -mtriple=hexagon -enable-subreg-liveness=false -run-pass register-coalescer -verify-machineinstrs -run-pass register-coalescer 2>&1 | FileCheck -check-prefix=CHECK-NOSUB %s
+# RUN: not --crash llc -o - %s -mtriple=hexagon -enable-subreg-liveness=true -run-pass register-coalescer -verify-machineinstrs -run-pass register-coalescer 2>&1 | FileCheck -check-prefix=CHECK-SUB %s
+
+---
+name: test_pass
+tracksRegLiveness: true
+body: |
+  bb.0:
+    A2_nop implicit-def %0:doubleregs
+    A2_nop implicit-def dead %0.isub_lo, implicit-def %0.isub_hi, implicit %0
+    A2_nop implicit %0.isub_hi
+...
+
+---
+name: test_fail
+tracksRegLiveness: true
+body: |
+  bb.0:
+    A2_nop implicit-def %0:doubleregs
+    A2_nop implicit-def dead %0.isub_lo, implicit-def %0.isub_hi, implicit %0
+    A2_nop implicit %0.isub_lo
+
+    A2_nop implicit-def %1:doubleregs
+    A2_nop implicit-def dead %1.isub_lo, implicit-def dead %1.isub_hi, implicit %1
+    A2_nop implicit %1
+
+    A2_nop implicit-def dead %2:doubleregs
+    A2_nop implicit %2
+
+...
+
+###############################################################################
+# We are expecting four "Bad machine code" when subregister liveness is used.
+#
+# CHECK-SUB-NOT: Bad machine code
+#
+# CHECK-SUB: Bad machine code: Live range continues after dead def flag
+# CHECK_SUB-NEXT: function:    test_fail
+# CHECK-SUB:      v. register: %0
+# CHECK-SUB:      lanemask:    0000000000000002
+#
+# CHECK-SUB-NOT: Bad machine code
+#
+# CHECK-SUB: Bad machine code: Live range continues after dead def flag
+# CHECK-SUB-NEXT: function:    test_fail
+# CHECK-SUB:      v. register: %1
+# CHECK-SUB:      lanemask:    0000000000000002
+#
+# CHECK-SUB-NOT: Bad machine code
+#
+# CHECK-SUB: Bad machine code: Live range continues after dead def flag
+# CHECK-SUB-NEXT: function:    test_fail
+# CHECK-SUB:      v. register: %1
+# CHECK-SUB:      lanemask:    0000000000000001
+#
+# CHECK-SUB: Bad machine code: Live range continues after dead def flag
+# CHECK-SUB-NEXT: function:    test_fail
+# CHECK:          v. register: %2
+#
+# CHECK-SUB-NOT: Bad machine code
+
+###############################################################################
+# Without subregister liveness we only detect one of the failing scenarios.
+#
+# CHECK-NOSUB-NOT: Bad machine code
+#
+# CHECK-NOSUB: Bad machine code: Live range continues after dead def flag
+# CHECK-NOSUB-NEXT: function:    test_fail
+# CHECK:            v. register: %2
+#
+# CHECK-NOSUB-NOT: Bad machine code

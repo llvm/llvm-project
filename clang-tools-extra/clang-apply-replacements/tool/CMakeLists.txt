@@ -1,0 +1,19 @@
+set(LLVM_LINK_COMPONENTS
+  Support
+  )
+
+add_clang_tool(clang-apply-replacements
+  ClangApplyReplacementsMain.cpp
+  )
+clang_target_link_libraries(clang-apply-replacements
+  PRIVATE
+  clangBasic
+  clangFormat
+  clangRewrite
+  clangToolingCore
+  clangToolingRefactoring
+  )
+target_link_libraries(clang-apply-replacements
+  PRIVATE
+  clangApplyReplacements
+  )

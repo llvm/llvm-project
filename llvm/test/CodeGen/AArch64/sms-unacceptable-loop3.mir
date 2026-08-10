@@ -1,0 +1,109 @@
+# RUN: llc --verify-machineinstrs -mtriple=aarch64 -o - %s -run-pass pipeliner -aarch64-enable-pipeliner -debug-only=pipeliner 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# unacceptable loops by pipeliner
+
+...
+---
+name:            func1
+tracksRegLiveness: true
+body:             |
+  ; multiple counter increment instructions
+  ; CHECK: Unable to analyzeLoop, can NOT pipeline Loop
+  bb.0.entry:
+    liveins: $x0, $x1
+    %10:gpr64 = COPY $x0
+    %11:gpr64 = COPY $x1
+
+  bb.1:
+    %12:gpr64 = PHI %11, %bb.0, %13, %bb.1
+    %13:gpr64 = ADDXrr %12, %11
+    %14:gpr64 = ADDXrr %13, %11
+    dead $xzr = SUBSXrr %10, %14, implicit-def $nzcv
+    Bcc 1, %bb.1, implicit $nzcv
+    B %bb.2
+
+  bb.2:
+...
+---
+name:            func2
+tracksRegLiveness: true
+body:             |
+  ; neither operand of the increment instruction is a loop invariant value
+  ; CHECK: Unable to analyzeLoop, can NOT pipeline Loop
+  bb.0.entry:
+    liveins: $x0, $x1
+    %10:gpr64 = COPY $x0
+    %11:gpr64 = COPY $x1
+
+  bb.1:
+    %12:gpr64 = PHI %11, %bb.0, %13, %bb.1
+    %13:gpr64 = ADDXrr %12, %12
+    dead $xzr = SUBSXrr %10, %13, implicit-def $nzcv
+    Bcc 1, %bb.1, implicit $nzcv
+    B %bb.2
+
+  bb.2:
+...
+---
+name:            func3
+tracksRegLiveness: true
+body:             |
+  ; neither operand of the compare instruction is a loop invariant value
+  ; CHECK: Unable to analyzeLoop, can NOT pipeline Loop
+  bb.0.entry:
+    liveins: $x0, $x1
+    %10:gpr64 = COPY $x0
+    %11:gpr64 = COPY $x1
+
+  bb.1:
+    %12:gpr64 = PHI %11, %bb.0, %13, %bb.1
+    %13:gpr64 = ADDXrr %12, %11
+    dead $xzr = SUBSXrr %13, %13, implicit-def $nzcv
+    Bcc 1, %bb.1, implicit $nzcv
+    B %bb.2
+
+  bb.2:
+...
+---
+name:            func4
+tracksRegLiveness: true
+body:             |
+  ; multiple phi instructions
+  ; CHECK: Unable to analyzeLoop, can NOT pipeline Loop
+  bb.0.entry:
+    liveins: $x0, $x1
+    %10:gpr64 = COPY $x0
+    %11:gpr64 = COPY $x1
+
+  bb.1:
+    %12:gpr64 = PHI %11, %bb.0, %13, %bb.1
+    %14:gpr64 = PHI %11, %bb.0, %15, %bb.1
+    dead $xzr = SUBSXrr %12, %10, implicit-def $nzcv
+    %13:gpr64 = ADDXrr %14, %11
+    %15:gpr64 = ADDXrr %12, %11
+    Bcc 1, %bb.1, implicit $nzcv
+    B %bb.2
+
+  bb.2:
+...
+---
+name:            func5
+tracksRegLiveness: true
+body:             |
+  ; not an increment instruction
+  ; CHECK: Unable to analyzeLoop, can NOT pipeline Loop
+  bb.0.entry:
+    liveins: $x0, $x1
+    %10:gpr64 = COPY $x0
+    %11:gpr64 = COPY $x1
+
+  bb.1:
+    %12:gpr64 = PHI %11, %bb.0, %13, %bb.1
+    %13:gpr64 = ORRXrr %12, %12
+    dead $xzr = SUBSXrr %12, %10, implicit-def $nzcv
+    Bcc 1, %bb.1, implicit $nzcv
+    B %bb.2
+
+  bb.2:
+...

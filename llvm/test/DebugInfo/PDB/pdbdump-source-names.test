@@ -1,0 +1,21 @@
+# Test that we can write source file names to PDBs and read them back.
+# Because the subsection the file names are stored in is 4-byte
+# aligned, there is a possibility of misaligning the file names. This
+# will cause them to be read back empty or truncated.  To guard
+# against this, we test with two different lengths of file name data
+# that differ by one byte, so that at least one of those will only
+# pass if alignment is implemented correctly.
+
+RUN: rm -rf %t && mkdir -p %t
+RUN: llvm-pdbutil yaml2pdb -pdb=%t/source-names-1.pdb %p/Inputs/source-names-1.yaml
+RUN: llvm-pdbutil pdb2yaml -module-files %t/source-names-1.pdb \
+RUN:     | FileCheck -check-prefix=CHECK1 %s
+RUN: llvm-pdbutil yaml2pdb -pdb=%t/source-names-2.pdb %p/Inputs/source-names-2.yaml
+RUN: llvm-pdbutil pdb2yaml -module-files %t/source-names-2.pdb \
+RUN:     | FileCheck -check-prefix=CHECK2 %s
+
+CHECK1: SourceFiles:
+CHECK1: 'C:\src\test.c'
+
+CHECK2: SourceFiles:
+CHECK2: 'C:\src\test.cc'

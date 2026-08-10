@@ -1,0 +1,80 @@
+# Test the 'N' count parameter.
+
+# Get a temp clean cwd to extract into.
+RUN: rm -rf %t && mkdir -p %t && cd %t
+
+RUN: mkdir -p %t/x %t/y %t/z
+RUN: echo hello > %t/x/foo.txt
+RUN: echo cool  > %t/y/foo.txt
+RUN: echo world > %t/z/foo.txt
+RUN: echo fizz   > %t/x/bar.txt
+RUN: echo buzz   > %t/y/bar.txt
+RUN: echo fizbuz > %t/z/bar.txt
+RUN: llvm-ar rc %t/archive.a %t/x/foo.txt %t/y/foo.txt %t/z/foo.txt \
+RUN:     %t/x/bar.txt %t/y/bar.txt %t/z/bar.txt
+RUN: llvm-ar t %t/archive.a | FileCheck %s --check-prefix=LIST-MEMBERS
+
+# Make sure we set it up correctly.
+LIST-MEMBERS:      foo.txt
+LIST-MEMBERS-NEXT: foo.txt
+LIST-MEMBERS-NEXT: foo.txt
+LIST-MEMBERS-NEXT: bar.txt
+LIST-MEMBERS-NEXT: bar.txt
+LIST-MEMBERS-NEXT: bar.txt
+
+# Must be a number.
+RUN: not llvm-ar xN abc %t/archive.a foo.txt 2>&1 | FileCheck %s --check-prefix=ERR-NOT-NUM
+RUN: not llvm-ar xN 0x1 %t/archive.a foo.txt 2>&1 | FileCheck %s --check-prefix=ERR-NOT-NUM
+# Only three members named foo, so 1 <= N <= 3.
+RUN: not llvm-ar xN 0 %t/archive.a foo.txt 2>&1 | FileCheck %s --check-prefix=ERR-NOT-POS
+RUN: not llvm-ar xN 4 %t/archive.a foo.txt 2>&1 | FileCheck %s --check-prefix=ERR-NOT-FOUND
+# N only applies to x/d.
+RUN: not llvm-ar rN 1 %t/archive.a foo.txt 2>&1 | FileCheck %s --check-prefix=ERR-BAD-OP
+
+ERR-NOT-NUM:   error: value for [count] must be numeric
+ERR-NOT-POS:   error: value for [count] must be positive
+ERR-BAD-OP:    error: the 'N' modifier can only be specified with the 'x' or 'd' operations
+ERR-NOT-FOUND: error: 'foo.txt' was not found
+
+# Extract individual items.
+
+RUN: rm -f foo.txt bar.txt
+RUN: llvm-ar xN 1 %t/archive.a foo.txt bar.txt
+RUN: cat %t/foo.txt | FileCheck %s --check-prefix=FOO-1
+RUN: cat %t/bar.txt | FileCheck %s --check-prefix=BAR-1
+
+RUN: rm -f foo.txt bar.txt
+RUN: llvm-ar xN 2 %t/archive.a foo.txt bar.txt
+RUN: cat %t/foo.txt | FileCheck %s --check-prefix=FOO-2
+RUN: cat %t/bar.txt | FileCheck %s --check-prefix=BAR-2
+
+RUN: rm -f foo.txt bar.txt
+RUN: llvm-ar xN 3 %t/archive.a foo.txt bar.txt
+RUN: cat %t/foo.txt | FileCheck %s --check-prefix=FOO-3
+RUN: cat %t/bar.txt | FileCheck %s --check-prefix=BAR-3
+
+# Delete individual items.
+
+# Deleting the second member named foo means the new second member of the
+# archive is what used to be the third element.
+RUN: rm -f foo.txt bar.txt
+RUN: llvm-ar dN 2 %t/archive.a foo.txt
+RUN: llvm-ar xN 2 %t/archive.a foo.txt bar.txt
+RUN: cat %t/foo.txt | FileCheck %s --check-prefix=FOO-3
+RUN: cat %t/bar.txt | FileCheck %s --check-prefix=BAR-2
+
+# Deleting the first member from *both* archives means the new first member
+# named foo is the what used to be the third member, and the new first member
+# named bar is what used to be the second member.
+RUN: rm -f foo.txt bar.txt
+RUN: llvm-ar dN 1 %t/archive.a foo.txt bar.txt
+RUN: llvm-ar xN 1 %t/archive.a foo.txt bar.txt
+RUN: cat %t/foo.txt | FileCheck %s --check-prefix=FOO-3
+RUN: cat %t/bar.txt | FileCheck %s --check-prefix=BAR-2
+
+FOO-1: hello
+FOO-2: cool
+FOO-3: world
+BAR-1: fizz
+BAR-2: buzz
+BAR-3: fizbuz

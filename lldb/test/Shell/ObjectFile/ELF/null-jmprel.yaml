@@ -1,0 +1,148 @@
+# RUN: yaml2obj %s -o %t
+# RUN: lldb-test symbols %t | FileCheck %s
+
+# CHECK: _DYNAMIC
+# CHECK: _start
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_X86_64
+  Entry:           0x1000
+ProgramHeaders:
+  - Type:            PT_PHDR
+    Flags:           [ PF_R ]
+    VAddr:           0x40
+    Align:           0x8
+  - Type:            PT_LOAD
+    Flags:           [ PF_R ]
+    FirstSec:        .dynsym
+    LastSec:         .dynstr
+    Align:           0x1000
+  - Type:            PT_LOAD
+    Flags:           [ PF_X, PF_R ]
+    FirstSec:        .text
+    LastSec:         .text
+    VAddr:           0x1000
+    Align:           0x1000
+  - Type:            PT_LOAD
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .data
+    LastSec:         .bss
+    VAddr:           0x2000
+    Align:           0x1000
+  - Type:            PT_DYNAMIC
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .data
+    LastSec:         .dynamic
+    VAddr:           0x2000
+    Align:           0x8
+  - Type:            PT_GNU_RELRO
+    Flags:           [ PF_R ]
+    FirstSec:        .data
+    LastSec:         .bss
+    VAddr:           0x2000
+  - Type:            PT_GNU_STACK
+    Flags:           [ PF_W, PF_R ]
+    Align:           0x0
+Sections:
+  - Name:            .dynsym
+    Type:            SHT_DYNSYM
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x1C8
+    Link:            .dynstr
+    AddressAlign:    0x8
+    EntSize:         0x18
+  - Name:            .gnu.hash
+    Type:            SHT_GNU_HASH
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x1F8
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Header:
+      SymNdx:          0x1
+      Shift2:          0x6
+    BloomFilter:     [ 0x4000000000100 ]
+    HashBuckets:     [ 0x1 ]
+    HashValues:      [ 0xEDDB6233 ]
+  - Name:            .hash
+    Type:            SHT_HASH
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x218
+    Link:            .dynsym
+    AddressAlign:    0x4
+    Bucket:          [ 1, 0 ]
+    Chain:           [ 0, 0 ]
+  - Name:            .dynstr
+    Type:            SHT_STRTAB
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x230
+    AddressAlign:    0x1
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    AddressAlign:    0x1
+    Offset:          0x1000
+    Content:         C3
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x2000
+    AddressAlign:    0x1
+    Offset:          0x2000
+  - Name:            .dynamic
+    Type:            SHT_DYNAMIC
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x2000
+    Link:            .dynstr
+    AddressAlign:    0x8
+    Entries:
+      - Tag:             DT_SYMTAB
+        Value:           0x1C8
+      - Tag:             DT_SYMENT
+        Value:           0x18
+      - Tag:             DT_STRTAB
+        Value:           0x230
+      - Tag:             DT_STRSZ
+        Value:           0x8
+      - Tag:             DT_GNU_HASH
+        Value:           0x1F8
+      - Tag:             DT_HASH
+        Value:           0x218
+      - Tag:             DT_JMPREL
+        Value:           0x0
+      - Tag:             DT_PLTRELSZ
+        Value:           0x0
+      - Tag:             DT_NULL
+        Value:           0x0
+  - Name:            .bss
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x3000
+    AddressAlign:    0x1
+  - Name:            .comment
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Content:         4C696E6B65723A204C4C4420372E302E3000
+Symbols:
+  - Name:            _DYNAMIC
+    Section:         .dynamic
+    Value:           0x2000
+    Other:           [ STV_HIDDEN ]
+  - Name:            _start
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x1000
+DynamicSymbols:
+  - Name:            _start
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x1000
+...

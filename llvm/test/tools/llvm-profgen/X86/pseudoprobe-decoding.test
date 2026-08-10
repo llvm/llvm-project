@@ -1,0 +1,112 @@
+; RUN: llvm-profgen --format=text --perfscript=%s  --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --output=%t --show-pseudo-probe --show-disassembly-only | FileCheck %s
+; RUN: llvm-profgen --format=text --perfscript=%s  --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --output=%t --show-pseudo-probe --show-disassembly-only --disassemble-functions=main,foo  | FileCheck %s -check-prefix=SYM
+
+PERF_RECORD_MMAP2 2854748/2854748: [0x400000(0x1000) @ 0 00:1d 123291722 526021]: r-xp /home/inline-cs-pseudoprobe.perfbin
+
+; CHECK: Pseudo Probe Desc:
+; CHECK: GUID: 6699318081062747564 Name: foo
+; CHECK: Hash: 563088904013236
+; CHECK: GUID: 15822663052811949562 Name: main
+; CHECK: Hash: 281479271677951
+; CHECK: GUID: 16434608426314478903 Name: bar
+; CHECK: Hash: 72617220756
+
+
+
+; CHECK:      <bar>:
+
+; CHECK:       [Probe]: FUNC: bar Index: 1  Type: Block
+; CHECK-NEXT:  [Probe]: FUNC: bar Index: 4  Type: Block
+; CHECK-NEXT:   201754: imull $2863311531, %edi, %eax
+
+; CHECK:      <foo>:
+; CHECK:       [Probe]: FUNC: foo Index: 1  Type: Block
+; CHECK-NEXT:  [Probe]: FUNC: foo Index: 2  Type: Block
+; CHECK-NEXT:   201770: movl  $1, %ecx
+
+; CHECK:       [Probe]: FUNC: foo Index: 5  Type: Block
+; CHECK-NEXT:    201780: addl  $30, %esi
+; CHECK:       [Probe]: FUNC: foo Index: 6  Type: Block
+; CHECK-NEXT:  [Probe]: FUNC: foo Index: 2  Type: Block
+; CHECK-NEXT:   201783: addl  $1, %ecx
+
+; CHECK:       [Probe]: FUNC: foo Index: 3  Type: Block
+; CHECK-NEXT:   20178e:	movl	%ecx, %edx
+
+; CHECK:       [Probe]: FUNC: foo Index: 4  Type: Block
+; CHECK-NEXT:  [Probe]: FUNC: bar Index: 1  Type: Block  Inlined: @ foo:8
+; CHECK-NEXT:  [Probe]:	FUNC: bar Index: 4  Type: Block  Inlined: @ foo:8
+; CHECK-NEXT:   2017bf: addl  %ecx, %edx
+
+
+; CHECK:       [Probe]: FUNC: foo Index: 6  Type: Block
+; CHECK-NEXT:  [Probe]: FUNC: foo Index: 2  Type: Block
+; CHECK-NEXT:   2017cf:	addl	$1, %ecx
+
+; CHECK:       [Probe]: FUNC: foo Index: 7  Type: Block
+; CHECK-NEXT:   2017de: movl  $2098432, %edi
+
+; CHECK:       [Probe]: FUNC: foo Index: 9  Type: DirectCall
+; CHECK-NEXT:   2017e5: callq 0x201930
+
+
+; CHECK:      <main>:
+; CHECK:       [Probe]: FUNC: main Index: 1  Type: Block
+; CHECK-NEXT:  [Probe]: FUNC: foo Index: 1  Type: Block  Inlined: @ main:2
+; CHECK-NEXT:  [Probe]: FUNC: foo Index: 2  Type: Block  Inlined: @ main:2
+; CHECK-NEXT:   2017f0: movl  $1, %ecx
+
+; CHECK:       [Probe]: FUNC: foo Index: 5  Type: Block  Inlined: @ main:2
+; CHECK-NEXT:   201800: addl  $30, %esi
+; CHECK:       [Probe]: FUNC: foo Index: 6  Type: Block  Inlined: @ main:2
+; CHECK-NEXT:  [Probe]: FUNC: foo Index: 2  Type: Block  Inlined: @ main:2
+; CHECK-NEXT:   201803: addl  $1, %ecx
+
+; CHECK:       [Probe]: FUNC: foo Index: 3  Type: Block  Inlined: @ main:2
+; CHECK-NEXT:   20180e:	movl	%ecx, %edx
+
+; CHECK:       [Probe]: FUNC: foo Index: 4  Type: Block  Inlined: @ main:2
+; CHECK-NEXT:  [Probe]: FUNC: bar Index: 1  Type: Block  Inlined: @ main:2 @ foo:8
+; CHECK-NEXT:  [Probe]:	FUNC: bar Index: 4  Type: Block  Inlined: @ main:2 @ foo:8
+; CHECK-NEXT:   20183f: addl  %ecx, %edx
+
+; CHECK:       [Probe]: FUNC: foo Index: 6  Type: Block  Inlined: @ main:2
+; CHECK-NEXT:  [Probe]: FUNC: foo Index: 2  Type: Block  Inlined: @ main:2
+; CHECK-NEXT:   20184f: addl  $1, %ecx
+
+; CHECK:       [Probe]: FUNC: foo Index: 7  Type: Block  Inlined: @ main:2
+; CHECK-NEXT:   20185e: movl  $2098432, %edi
+
+; CHECK:       [Probe]: FUNC: foo Index: 9  Type: DirectCall  Inlined: @ main:2
+; CHECK-NEXT:   201865: callq 0x201930
+
+; SYM-NOT: <bar>:
+; SYM: <foo>:
+; SYM: <main>:
+
+
+
+; clang -O3 -fuse-ld=lld -fpseudo-probe-for-profiling
+; -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -Xclang -mdisable-tail-calls
+; -g test.c  -o a.out
+
+#include <stdio.h>
+
+int bar(int x, int y) {
+  if (x % 3) {
+    return x - y;
+  }
+  return x + y;
+}
+
+void foo() {
+  int s, i = 0;
+  while (i++ < 4000 * 4000)
+    if (i % 91) s = bar(i, s); else s += 30;
+  printf("sum is %d\n", s);
+}
+
+int main() {
+  foo();
+  return 0;
+}

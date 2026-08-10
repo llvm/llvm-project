@@ -1,0 +1,51 @@
+## Check obj2yaml is able to decode all possible LoongArch e_flags field values.
+
+# RUN: yaml2obj %s -o %t-lp64s -DCLASS=64 -DABI_MODIFIER=SOFT -DOBJABI_VER=0
+# RUN: obj2yaml %t-lp64s | FileCheck -DCLASS=64 -DABI_MODIFIER=SOFT -DOBJABI_VER=0 %s
+
+# RUN: yaml2obj %s -o %t-lp64f -DCLASS=64 -DABI_MODIFIER=SINGLE -DOBJABI_VER=0
+# RUN: obj2yaml %t-lp64f | FileCheck -DCLASS=64 -DABI_MODIFIER=SINGLE -DOBJABI_VER=0 %s
+
+# RUN: yaml2obj %s -o %t-lp64d -DCLASS=64 -DABI_MODIFIER=DOUBLE -DOBJABI_VER=0
+# RUN: obj2yaml %t-lp64d | FileCheck -DCLASS=64 -DABI_MODIFIER=DOUBLE -DOBJABI_VER=0 %s
+
+# RUN: yaml2obj %s -o %t-ilp32s -DCLASS=32 -DABI_MODIFIER=SOFT -DOBJABI_VER=0
+# RUN: obj2yaml %t-ilp32s | FileCheck -DCLASS=32 -DABI_MODIFIER=SOFT -DOBJABI_VER=0 %s
+
+# RUN: yaml2obj %s -o %t-ilp32f -DCLASS=32 -DABI_MODIFIER=SINGLE -DOBJABI_VER=0
+# RUN: obj2yaml %t-ilp32f | FileCheck -DCLASS=32 -DABI_MODIFIER=SINGLE -DOBJABI_VER=0 %s
+
+# RUN: yaml2obj %s -o %t-ilp32d -DCLASS=32 -DABI_MODIFIER=DOUBLE -DOBJABI_VER=0
+# RUN: obj2yaml %t-ilp32d | FileCheck -DCLASS=32 -DABI_MODIFIER=DOUBLE -DOBJABI_VER=0 %s
+
+# RUN: yaml2obj %s -o %t-lp64s -DCLASS=64 -DABI_MODIFIER=SOFT -DOBJABI_VER=1
+# RUN: obj2yaml %t-lp64s | FileCheck -DCLASS=64 -DABI_MODIFIER=SOFT -DOBJABI_VER=1 %s
+
+# RUN: yaml2obj %s -o %t-lp64f -DCLASS=64 -DABI_MODIFIER=SINGLE -DOBJABI_VER=1
+# RUN: obj2yaml %t-lp64f | FileCheck -DCLASS=64 -DABI_MODIFIER=SINGLE -DOBJABI_VER=1 %s
+
+# RUN: yaml2obj %s -o %t-lp64d -DCLASS=64 -DABI_MODIFIER=DOUBLE -DOBJABI_VER=1
+# RUN: obj2yaml %t-lp64d | FileCheck -DCLASS=64 -DABI_MODIFIER=DOUBLE -DOBJABI_VER=1 %s
+
+# RUN: yaml2obj %s -o %t-ilp32s -DCLASS=32 -DABI_MODIFIER=SOFT -DOBJABI_VER=1
+# RUN: obj2yaml %t-ilp32s | FileCheck -DCLASS=32 -DABI_MODIFIER=SOFT -DOBJABI_VER=1 %s
+
+# RUN: yaml2obj %s -o %t-ilp32f -DCLASS=32 -DABI_MODIFIER=SINGLE -DOBJABI_VER=1
+# RUN: obj2yaml %t-ilp32f | FileCheck -DCLASS=32 -DABI_MODIFIER=SINGLE -DOBJABI_VER=1 %s
+
+# RUN: yaml2obj %s -o %t-ilp32d -DCLASS=32 -DABI_MODIFIER=DOUBLE -DOBJABI_VER=1
+# RUN: obj2yaml %t-ilp32d | FileCheck -DCLASS=32 -DABI_MODIFIER=DOUBLE -DOBJABI_VER=1 %s
+
+# CHECK: Class:           ELFCLASS[[CLASS]]
+# CHECK: Flags: [ EF_LOONGARCH_ABI_[[ABI_MODIFIER]]_FLOAT, EF_LOONGARCH_OBJABI_V[[OBJABI_VER]] ]
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS[[CLASS]]
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_LOONGARCH
+  Flags: [
+    EF_LOONGARCH_ABI_[[ABI_MODIFIER]]_FLOAT,
+    EF_LOONGARCH_OBJABI_V[[OBJABI_VER]],
+  ]

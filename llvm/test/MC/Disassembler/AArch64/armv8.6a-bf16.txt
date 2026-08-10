@@ -1,0 +1,74 @@
+# RUN:     llvm-mc -triple=aarch64  -mattr=+bf16  -disassemble < %s      | FileCheck %s
+# RUN:     llvm-mc -triple=aarch64  -mattr=+v8.6a -disassemble < %s      | FileCheck %s
+# RUN: not llvm-mc -triple=aarch64  -mattr=-bf16  -disassemble < %s 2>&1 | FileCheck %s --check-prefix=NOBF16
+# RUN: not llvm-mc -triple=aarch64                -disassemble < %s 2>&1 | FileCheck %s --check-prefix=NOBF16
+
+
+[0x62,0xfc,0x44,0x2e]
+[0x62,0xfc,0x44,0x6e]
+# CHECK: bfdot   v2.2s, v3.4h, v4.4h
+# CHECK: bfdot   v2.4s, v3.8h, v4.8h
+# NOBF16: warning: invalid instruction encoding
+# NOBF16-NEXT: [0x62,0xfc,0x44,0x2e]
+# NOBF16: warning: invalid instruction encoding
+# NOBF16-NEXT: [0x62,0xfc,0x44,0x6e]
+
+[0x62,0xf0,0x44,0x4f]
+[0x62,0xf0,0x64,0x4f]
+[0x62,0xf8,0x44,0x4f]
+[0x62,0xf8,0x64,0x4f]
+# CHECK: bfdot  v2.4s, v3.8h, v4.2h[0]
+# CHECK: bfdot  v2.4s, v3.8h, v4.2h[1]
+# CHECK: bfdot  v2.4s, v3.8h, v4.2h[2]
+# CHECK: bfdot  v2.4s, v3.8h, v4.2h[3]
+# NOBF16: warning: invalid instruction encoding
+# NOBF-NEXT: [0x62,0xf0,0x44,0x4f]
+# NOBF16: warning: invalid instruction encoding
+# NOBF6-NEXT: [0x62,0xf0,0x64,0x4f]
+# NOBF16: warning: invalid instruction encoding
+# NOBF6-NEXT: [0x62,0xf8,0x44,0x4f]
+# NOBF16: warning: invalid instruction encoding
+# NOBF6-NEXT: [0x62,0xf8,0x64,0x4f]
+
+
+[0x62,0xf0,0x44,0x0f]
+[0x62,0xf0,0x64,0x0f]
+[0x62,0xf8,0x44,0x0f]
+[0x62,0xf8,0x64,0x0f]
+# CHECK: bfdot  v2.2s, v3.4h, v4.2h[0]
+# CHECK: bfdot  v2.2s, v3.4h, v4.2h[1]
+# CHECK: bfdot  v2.2s, v3.4h, v4.2h[2]
+# CHECK: bfdot  v2.2s, v3.4h, v4.2h[3]
+# NOBF16: warning: invalid instruction encoding
+# NOBF-NEXT: [0x62,0xf0,0x44,0x0f]
+# NOBF16: warning: invalid instruction encoding
+# NOBF6-NEXT: [0x62,0xf0,0x64,0x0f]
+# NOBF16: warning: invalid instruction encoding
+# NOBF6-NEXT: [0x62,0xf8,0x44,0x0f]
+# NOBF16: warning: invalid instruction encoding
+# NOBF6-NEXT: [0x62,0xf8,0x64,0x0f]
+
+
+[0x62,0xec,0x44,0x6e]
+[0x83,0xec,0x45,0x6e]
+# CHECK: bfmmla  v2.4s, v3.8h, v4.8h
+# CHECK: bfmmla  v3.4s, v4.8h, v5.8h
+# NOBF16: warning: invalid instruction encoding
+NOBF16-NEXT: [0x62,0xec,0x44,0x6e]
+# NOBF16: warning: invalid instruction encoding
+# NOBF16-NEXT: [0x83,0xec,0x45,0x6e]
+
+
+[0xa5,0x68,0xa1,0x0e]
+[0xa5,0x68,0xa1,0x4e]
+# CHECK: bfcvtn   v5.4h, v5.4s
+# CHECK: bfcvtn2  v5.8h, v5.4s
+# NOBF16: warning: invalid instruction encoding
+# NOBF16-NEXT: [0xa5,0x68,0xa1,0x0e]
+# NOBF16: warning: invalid instruction encoding
+# NOBF16-NEXT: [0xa5,0x68,0xa1,0x4e]
+
+[0x65, 0x40, 0x63, 0x1e]
+# CHECK: bfcvt  h5, s3
+# NOBF16: warning: invalid instruction encoding
+# NOBF16-NEXT: [0x65, 0x40, 0x63, 0x1e]

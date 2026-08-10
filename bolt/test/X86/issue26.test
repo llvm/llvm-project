@@ -1,0 +1,12 @@
+## This reproduces issue 26 from our github repo
+
+# RUN: yaml2obj %p/Inputs/issue26.yaml &> %t.exe
+# RUN: llvm-bolt %t.exe --relocs --print-cfg -o %t.out 2>&1 \
+# RUN:    | FileCheck %s
+
+CHECK-NOT: BOLT-WARNING: CFG invalid in XYZ @ .LBB0
+
+CHECK: Binary Function "XYZ"
+
+CHECK: .Ltmp0 (1 instructions, align : 1)
+CHECK-NEXT: Secondary Entry Point: FUNCat0x4004e9

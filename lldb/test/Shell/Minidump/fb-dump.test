@@ -1,0 +1,126 @@
+# RUN: yaml2obj %s -o %t
+# RUN: %lldb -c %t -o 'process plugin dump --all' | \
+# RUN:   FileCheck --check-prefix=CHECK-DIR --check-prefix=CHECK-APPDATA \
+# RUN:   --check-prefix=CHECK-BUILD --check-prefix=CHECK-VERSION \
+# RUN:   --check-prefix=CHECK-JAVA --check-prefix=CHECK-DALVIK \
+# RUN:   --check-prefix=CHECK-UNWIND --check-prefix=CHECK-ERROR \
+# RUN:   --check-prefix=CHECK-APPSTATE --check-prefix=CHECK-ABORT \
+# RUN:   --check-prefix=CHECK-THREAD --check-prefix=CHECK-LOGCAT %s
+# RUN: %lldb -c %t -o 'process plugin dump -a' | \
+# RUN:   FileCheck --check-prefix=CHECK-DIR --check-prefix=CHECK-APPDATA \
+# RUN:   --check-prefix=CHECK-BUILD --check-prefix=CHECK-VERSION \
+# RUN:   --check-prefix=CHECK-JAVA --check-prefix=CHECK-DALVIK \
+# RUN:   --check-prefix=CHECK-UNWIND --check-prefix=CHECK-ERROR \
+# RUN:   --check-prefix=CHECK-APPSTATE --check-prefix=CHECK-ABORT \
+# RUN:   --check-prefix=CHECK-THREAD --check-prefix=CHECK-LOGCAT %s
+# RUN: %lldb -c %t -o 'process plugin dump --facebook' | \
+# RUN:   FileCheck --check-prefix=CHECK-APPDATA \
+# RUN:   --check-prefix=CHECK-BUILD --check-prefix=CHECK-VERSION \
+# RUN:   --check-prefix=CHECK-JAVA --check-prefix=CHECK-DALVIK \
+# RUN:   --check-prefix=CHECK-UNWIND --check-prefix=CHECK-ERROR \
+# RUN:   --check-prefix=CHECK-APPSTATE --check-prefix=CHECK-ABORT \
+# RUN:   --check-prefix=CHECK-THREAD --check-prefix=CHECK-LOGCAT %s
+# RUN: %lldb -c %t -o 'process plugin dump --fb-app-data' | \
+# RUN:   FileCheck --check-prefix=CHECK-APPDATA %s
+# RUN: %lldb -c %t -o 'process plugin dump --fb-build-id' | \
+# RUN:   FileCheck --check-prefix=CHECK-BUILD %s
+# RUN: %lldb -c %t -o 'process plugin dump --fb-version' | \
+# RUN:   FileCheck --check-prefix=CHECK-VERSION %s
+# RUN: %lldb -c %t -o 'process plugin dump --fb-java-stack' | \
+# RUN:   FileCheck --check-prefix=CHECK-JAVA %s
+# RUN: %lldb -c %t -o 'process plugin dump --fb-dalvik-info' | \
+# RUN:   FileCheck --check-prefix=CHECK-DALVIK %s
+# RUN: %lldb -c %t -o 'process plugin dump --fb-unwind-symbols' | \
+# RUN:   FileCheck --check-prefix=CHECK-UNWIND %s
+# RUN: %lldb -c %t -o 'process plugin dump --fb-error-log' | \
+# RUN:   FileCheck --check-prefix=CHECK-ERROR %s
+# RUN: %lldb -c %t -o 'process plugin dump --fb-app-state-log' | \
+# RUN:   FileCheck --check-prefix=CHECK-APPSTATE %s
+# RUN: %lldb -c %t -o 'process plugin dump --fb-abort-reason' | \
+# RUN:   FileCheck --check-prefix=CHECK-ABORT %s
+# RUN: %lldb -c %t -o 'process plugin dump --fb-thread-name' | \
+# RUN:   FileCheck --check-prefix=CHECK-THREAD %s
+# RUN: %lldb -c %t -o 'process plugin dump --fb-logcat' | \
+# RUN:   FileCheck --check-prefix=CHECK-LOGCAT %s
+# CHECK-DIR:      RVA        SIZE       TYPE       StreamType
+# CHECK-DIR-NEXT: ---------- ---------- ---------- --------------------------
+# CHECK-DIR-NEXT: 0x{{[0-9a-f]{8} }}0x00000038 0x00000007 SystemInfo
+# CHECK-DIR-NEXT: 0x{{[0-9a-f]{8} }}0x00000018 0x0000000f MiscInfo
+# CHECK-DIR-NEXT: 0x{{[0-9a-f]{8} }}0x00000013 0xfacecb00 FacebookDumpErrorLog
+# CHECK-DIR-NEXT: 0x{{[0-9a-f]{8} }}0x00000015 0xfacee000 FacebookThreadName
+# CHECK-DIR-NEXT: 0x{{[0-9a-f]{8} }}0x00000010 0xface1ca7 FacebookLogcat
+# CHECK-DIR-NEXT: 0x{{[0-9a-f]{8} }}0x00000017 0xfacecccc FacebookAppStateLog
+# CHECK-DIR-NEXT: 0x{{[0-9a-f]{8} }}0x00000016 0xfacedead FacebookAbortReason
+# CHECK-DIR-NEXT: 0x{{[0-9a-f]{8} }}0x00000039 0xfacecafa FacebookAppCustomData
+# CHECK-DIR-NEXT: 0x{{[0-9a-f]{8} }}0x00000005 0xfacecafb FacebookBuildID
+# CHECK-DIR-NEXT: 0x{{[0-9a-f]{8} }}0x0000000d 0xfacecafc FacebookAppVersionName
+# CHECK-DIR-NEXT: 0x{{[0-9a-f]{8} }}0x00000019 0xfacecafd FacebookJavaStack
+# CHECK-DIR-NEXT: 0x{{[0-9a-f]{8} }}0x00000015 0xfacecafe FacebookDalvikInfo
+# CHECK-DIR-NEXT: 0x{{[0-9a-f]{8} }}0x00000005 0xfacecaff FacebookUnwindSymbols
+
+--- !minidump
+Streams:         
+  - Type:            SystemInfo
+    Processor Arch:  BP_ARM64
+    Platform ID:     Linux
+    CSD Version:     '15E216'
+    CPU:             
+      CPUID:           0x00000000
+  - Type:            MiscInfo
+    Content:         00000000010000007B000000000000000000000000000000
+  - Type:            FacebookDumpErrorLog
+    Content:         46616365626F6F6B206572726F72206C6F6700
+  - Type:            FacebookThreadName
+    Content:         46616365626F6F6B20746872656164206E616D6500
+  - Type:            FacebookLogcat
+    Content:         46616365626F6F6B206C6F6763617400
+  - Type:            FacebookAppStateLog
+    Content:         46616365626F6F6B20617070207374617465206C6F6700
+  - Type:            FacebookAbortReason
+    Content:         46616365626F6F6B2061626F727420726561736F6E00
+  - Type:            FacebookAppCustomData
+    Content:         7B22676C6F62616C223A207B2246696E6765727072696E74223A22696E76616C6964206465766963652066696E6765727072696E74227D7D00
+  - Type:            FacebookBuildID
+    Content:         '0403020100'
+  - Type:            FacebookAppVersionName
+    Content:         3230372E302E302E302E383600
+  - Type:            FacebookJavaStack
+    Content:         46616365626F6F6B206A61766120737461636B20696E666F00
+  - Type:            FacebookDalvikInfo
+    Content:         46616365626F6F6B2064616C76696B20696E666F00
+  - Type:            FacebookUnwindSymbols
+    Content:         '1122334400'
+...
+
+# CHECK-APPDATA:      Facebook App Data:
+# CHECK-APPDATA-NEXT: {"global": {"Fingerprint":"invalid device fingerprint"}}
+
+# CHECK-BUILD:      Facebook Build ID:
+# CHECK-BUILD-NEXT: 16909060
+
+# CHECK-VERSION:      Facebook Version String:
+# CHECK-VERSION-NEXT: 207.0.0.0.86
+
+# CHECK-JAVA:      Facebook Java Stack:
+# CHECK-JAVA-NEXT: Facebook java stack info
+
+# CHECK-DALVIK:      Facebook Dalvik Info:
+# CHECK-DALVIK-NEXT: Facebook dalvik info
+
+# CHECK-UNWIND:      Facebook Unwind Symbols Bytes:
+# CHECK-UNWIND-NEXT: 0x00000000: 11 22 33 44 00
+
+# CHECK-ERROR:      Facebook Error Log:
+# CHECK-ERROR-NEXT: Facebook error log
+
+# CHECK-APPSTATE:      Faceook Application State Log:
+# CHECK-APPSTATE-NEXT: Facebook app state log
+
+# CHECK-ABORT:      Facebook Abort Reason:
+# CHECK-ABORT-NEXT: Facebook abort reason
+
+# CHECK-THREAD:      Facebook Thread Name:
+# CHECK-THREAD-NEXT: Facebook thread name
+
+# CHECK-LOGCAT:      Facebook Logcat:
+# CHECK-LOGCAT-NEXT: Facebook logcat

@@ -1,0 +1,238 @@
+#RUN: llvm-xray graph-diff -o - -c min -b min -m %S/Inputs/simple-instrmap.yaml \
+#RUN:  %S/Inputs/graph-diff-A.yaml %S/Inputs/graph-diff-B.yaml \
+#RUN:  | FileCheck %s -check-prefix=VCEC
+#RUN: llvm-xray graph-diff -o - -c min -m %S/Inputs/simple-instrmap.yaml \
+#RUN:  %S/Inputs/graph-diff-A.yaml %S/Inputs/graph-diff-B.yaml \
+#RUN:  | FileCheck %s -check-prefix=EC
+#RUN: llvm-xray graph-diff -o - -b min -m %S/Inputs/simple-instrmap.yaml \
+#RUN:  %S/Inputs/graph-diff-A.yaml %S/Inputs/graph-diff-B.yaml \
+#RUN:  | FileCheck %s -check-prefix=VC
+#RUN: llvm-xray graph-diff -o - -e min -v min -m %S/Inputs/simple-instrmap.yaml \
+#RUN:  %S/Inputs/graph-diff-A.yaml %S/Inputs/graph-diff-B.yaml \
+#RUN:  | FileCheck %s -check-prefix=ELVL
+#RUN: llvm-xray graph-diff -o - -e min -m %S/Inputs/simple-instrmap.yaml \
+#RUN:  %S/Inputs/graph-diff-A.yaml %S/Inputs/graph-diff-B.yaml \
+#RUN:  | FileCheck %s -check-prefix=EL
+#RUN: llvm-xray graph-diff -o - -v min -m %S/Inputs/simple-instrmap.yaml \
+#RUN:  %S/Inputs/graph-diff-A.yaml %S/Inputs/graph-diff-B.yaml \
+#RUN:  | FileCheck %s -check-prefix=VL
+#RUN: llvm-xray graph-diff -o - -v min -b min -m %S/Inputs/simple-instrmap.yaml \
+#RUN:  %S/Inputs/graph-diff-A.yaml %S/Inputs/graph-diff-B.yaml \
+#RUN:  | FileCheck %s -check-prefix=VLVC
+#RUN: llvm-xray graph-diff -o - -e min -c min -m %S/Inputs/simple-instrmap.yaml \
+#RUN:  %S/Inputs/graph-diff-A.yaml %S/Inputs/graph-diff-B.yaml \
+#RUN:  | FileCheck %s -check-prefix=ELEC
+
+#VCEC:      digraph xrayDiff {
+#VCEC-DAG:  F[[F0NO:[0-9]+]] [label="F0"]
+#VCEC-DAG:  F[[N1NO:[0-9]+]] [label="#1" color="#276419"]
+#VCEC-DAG:  F[[N2NO:[0-9]+]] [label="#2" color="#276419"]
+#VCEC-DAG:  F[[N3NO:[0-9]+]] [label="#3" color="#276419"]
+#VCEC-DAG:  F[[N4NO:[0-9]+]] [label="#4" color="#9BCF61"]
+#VCEC-DAG:  F[[N5NO:[0-9]+]] [label="#5" color="#F7F7F7"]
+#VCEC-DAG:  F[[N6NO:[0-9]+]] [label="#6" color="#F5C4E0"]
+#VCEC-DAG:  F[[N7NO:[0-9]+]] [label="#7" color="#E17FB4"]
+#VCEC-DAG:  F[[N8NO:[0-9]+]] [label="#8" color="#CB3088"]
+#VCEC-DAG:  F[[N9NO:[0-9]+]] [label="#9" color="#AD0E69"]
+#VCEC-DAG:  F[[NANO:[0-9]+]] [label="#10" color="#00FF00"]
+#VCEC-DAG:  F[[NBNO:[0-9]+]] [label="#11" color="#FF0000"]
+#VCEC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N1NO]] [tooltip="F0 -> #1" label="" color="#276419" labelfontcolor="#276419" penwidth=8.00]
+#VCEC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N2NO]] [tooltip="F0 -> #2" label="" color="#276419" labelfontcolor="#276419" penwidth=3.00]
+#VCEC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N3NO]] [tooltip="F0 -> #3" label="" color="#276419" labelfontcolor="#276419" penwidth=1.33]
+#VCEC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N4NO]] [tooltip="F0 -> #4" label="" color="#9BCF61" labelfontcolor="#9BCF61" penwidth=1.00]
+#VCEC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N5NO]] [tooltip="F0 -> #5" label="" color="#F7F7F7" labelfontcolor="#F7F7F7" penwidth=1.00]
+#VCEC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N6NO]] [tooltip="F0 -> #6" label="" color="#F5C4E0" labelfontcolor="#F5C4E0" penwidth=1.00]
+#VCEC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N7NO]] [tooltip="F0 -> #7" label="" color="#E17FB4" labelfontcolor="#E17FB4" penwidth=1.00]
+#VCEC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N8NO]] [tooltip="F0 -> #8" label="" color="#CB3088" labelfontcolor="#CB3088" penwidth=1.00]
+#VCEC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N9NO]] [tooltip="F0 -> #9" label="" color="#AD0E69" labelfontcolor="#AD0E69" penwidth=1.00]
+#VCEC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[NANO]] [tooltip="F0 -> #10" label="" color="#00FF00" labelfontcolor="#00FF00" penwidth=1.00]
+#VCEC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[NBNO]] [tooltip="F0 -> #11" label="" color="#FF0000" labelfontcolor="#FF0000" penwidth=1.00]
+#VCEC-NEXT:}
+
+
+#EC:      digraph xrayDiff {
+#EC-DAG:  F[[F0NO:[0-9]+]] [label="F0"]
+#EC-DAG:  F[[N1NO:[0-9]+]] [label="#1" color="black"]
+#EC-DAG:  F[[N2NO:[0-9]+]] [label="#2" color="black"]
+#EC-DAG:  F[[N3NO:[0-9]+]] [label="#3" color="black"]
+#EC-DAG:  F[[N4NO:[0-9]+]] [label="#4" color="black"]
+#EC-DAG:  F[[N5NO:[0-9]+]] [label="#5" color="black"]
+#EC-DAG:  F[[N6NO:[0-9]+]] [label="#6" color="black"]
+#EC-DAG:  F[[N7NO:[0-9]+]] [label="#7" color="black"]
+#EC-DAG:  F[[N8NO:[0-9]+]] [label="#8" color="black"]
+#EC-DAG:  F[[N9NO:[0-9]+]] [label="#9" color="black"]
+#EC-DAG:  F[[NANO:[0-9]+]] [label="#10" color="#00FF00"]
+#EC-DAG:  F[[NBNO:[0-9]+]] [label="#11" color="#FF0000"]
+#EC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N1NO]] [tooltip="F0 -> #1" label="" color="#276419" labelfontcolor="#276419" penwidth=8.00]
+#EC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N2NO]] [tooltip="F0 -> #2" label="" color="#276419" labelfontcolor="#276419" penwidth=3.00]
+#EC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N3NO]] [tooltip="F0 -> #3" label="" color="#276419" labelfontcolor="#276419" penwidth=1.33]
+#EC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N4NO]] [tooltip="F0 -> #4" label="" color="#9BCF61" labelfontcolor="#9BCF61" penwidth=1.00]
+#EC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N5NO]] [tooltip="F0 -> #5" label="" color="#F7F7F7" labelfontcolor="#F7F7F7" penwidth=1.00]
+#EC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N6NO]] [tooltip="F0 -> #6" label="" color="#F5C4E0" labelfontcolor="#F5C4E0" penwidth=1.00]
+#EC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N7NO]] [tooltip="F0 -> #7" label="" color="#E17FB4" labelfontcolor="#E17FB4" penwidth=1.00]
+#EC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N8NO]] [tooltip="F0 -> #8" label="" color="#CB3088" labelfontcolor="#CB3088" penwidth=1.00]
+#EC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N9NO]] [tooltip="F0 -> #9" label="" color="#AD0E69" labelfontcolor="#AD0E69" penwidth=1.00]
+#EC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[NANO]] [tooltip="F0 -> #10" label="" color="#00FF00" labelfontcolor="#00FF00" penwidth=1.00]
+#EC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[NBNO]] [tooltip="F0 -> #11" label="" color="#FF0000" labelfontcolor="#FF0000" penwidth=1.00]
+#EC-NEXT:}
+
+#VC:      digraph xrayDiff {
+#VC-DAG:  F[[F0NO:[0-9]+]] [label="F0"]
+#VC-DAG:  F[[N1NO:[0-9]+]] [label="#1" color="#276419"]
+#VC-DAG:  F[[N2NO:[0-9]+]] [label="#2" color="#276419"]
+#VC-DAG:  F[[N3NO:[0-9]+]] [label="#3" color="#276419"]
+#VC-DAG:  F[[N4NO:[0-9]+]] [label="#4" color="#9BCF61"]
+#VC-DAG:  F[[N5NO:[0-9]+]] [label="#5" color="#F7F7F7"]
+#VC-DAG:  F[[N6NO:[0-9]+]] [label="#6" color="#F5C4E0"]
+#VC-DAG:  F[[N7NO:[0-9]+]] [label="#7" color="#E17FB4"]
+#VC-DAG:  F[[N8NO:[0-9]+]] [label="#8" color="#CB3088"]
+#VC-DAG:  F[[N9NO:[0-9]+]] [label="#9" color="#AD0E69"]
+#VC-DAG:  F[[NANO:[0-9]+]] [label="#10" color="#00FF00"]
+#VC-DAG:  F[[NBNO:[0-9]+]] [label="#11" color="#FF0000"]
+#VC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N1NO]] [tooltip="F0 -> #1" label="" color="black" labelfontcolor="black" penwidth=1.00]
+#VC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N2NO]] [tooltip="F0 -> #2" label="" color="black" labelfontcolor="black" penwidth=1.00]
+#VC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N3NO]] [tooltip="F0 -> #3" label="" color="black" labelfontcolor="black" penwidth=1.00]
+#VC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N4NO]] [tooltip="F0 -> #4" label="" color="black" labelfontcolor="black" penwidth=1.00]
+#VC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N5NO]] [tooltip="F0 -> #5" label="" color="black" labelfontcolor="black" penwidth=1.00]
+#VC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N6NO]] [tooltip="F0 -> #6" label="" color="black" labelfontcolor="black" penwidth=1.00]
+#VC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N7NO]] [tooltip="F0 -> #7" label="" color="black" labelfontcolor="black" penwidth=1.00]
+#VC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N8NO]] [tooltip="F0 -> #8" label="" color="black" labelfontcolor="black" penwidth=1.00]
+#VC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N9NO]] [tooltip="F0 -> #9" label="" color="black" labelfontcolor="black" penwidth=1.00]
+#VC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[NANO]] [tooltip="F0 -> #10" label="" color="#00FF00" labelfontcolor="#00FF00" penwidth=1.00]
+#VC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[NBNO]] [tooltip="F0 -> #11" label="" color="#FF0000" labelfontcolor="#FF0000" penwidth=1.00]
+#VC-NEXT:}
+
+#ELVL:      digraph xrayDiff {
+#ELVL-NEXT: node [shape=record]
+#ELVL-DAG:  F[[F0NO:[0-9]+]] [label="F0"]
+#ELVL-DAG:  F[[N1NO:[0-9]+]] [label="{#1|800.00%}" color="black"]
+#ELVL-DAG:  F[[N2NO:[0-9]+]] [label="{#2|300.00%}" color="black"]
+#ELVL-DAG:  F[[N3NO:[0-9]+]] [label="{#3|133.33%}" color="black"]
+#ELVL-DAG:  F[[N4NO:[0-9]+]] [label="{#4|50.00%}" color="black"]
+#ELVL-DAG:  F[[N5NO:[0-9]+]] [label="{#5|0.00%}" color="black"]
+#ELVL-DAG:  F[[N6NO:[0-9]+]] [label="{#6|-33.33%}" color="black"]
+#ELVL-DAG:  F[[N7NO:[0-9]+]] [label="{#7|-57.14%}" color="black"]
+#ELVL-DAG:  F[[N8NO:[0-9]+]] [label="{#8|-75.00%}" color="black"]
+#ELVL-DAG:  F[[N9NO:[0-9]+]] [label="{#9|-88.89%}" color="black"]
+#ELVL-DAG:  F[[NANO:[0-9]+]] [label="#10" color="#00FF00"]
+#ELVL-DAG:  F[[NBNO:[0-9]+]] [label="#11" color="#FF0000"]
+#ELVL-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N1NO]] [tooltip="F0 -> #1" label="800.00%" color="black" labelfontcolor="black" penwidth=1.00]
+#ELVL-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N2NO]] [tooltip="F0 -> #2" label="300.00%" color="black" labelfontcolor="black" penwidth=1.00]
+#ELVL-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N3NO]] [tooltip="F0 -> #3" label="133.33%" color="black" labelfontcolor="black" penwidth=1.00]
+#ELVL-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N4NO]] [tooltip="F0 -> #4" label="50.00%" color="black" labelfontcolor="black" penwidth=1.00]
+#ELVL-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N5NO]] [tooltip="F0 -> #5" label="0.00%" color="black" labelfontcolor="black" penwidth=1.00]
+#ELVL-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N6NO]] [tooltip="F0 -> #6" label="-33.33%" color="black" labelfontcolor="black" penwidth=1.00]
+#ELVL-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N7NO]] [tooltip="F0 -> #7" label="-57.14%" color="black" labelfontcolor="black" penwidth=1.00]
+#ELVL-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N8NO]] [tooltip="F0 -> #8" label="-75.00%" color="black" labelfontcolor="black" penwidth=1.00]
+#ELVL-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N9NO]] [tooltip="F0 -> #9" label="-88.89%" color="black" labelfontcolor="black" penwidth=1.00]
+#ELVL-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[NANO]] [tooltip="F0 -> #10" label="" color="#00FF00" labelfontcolor="#00FF00" penwidth=1.00]
+#ELVL-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[NBNO]] [tooltip="F0 -> #11" label="" color="#FF0000" labelfontcolor="#FF0000" penwidth=1.00]
+#ELVL-NEXT:}
+
+#EL:      digraph xrayDiff {
+#EL-DAG:  F[[F0NO:[0-9]+]] [label="F0"]
+#EL-DAG:  F[[N1NO:[0-9]+]] [label="#1" color="black"]
+#EL-DAG:  F[[N2NO:[0-9]+]] [label="#2" color="black"]
+#EL-DAG:  F[[N3NO:[0-9]+]] [label="#3" color="black"]
+#EL-DAG:  F[[N4NO:[0-9]+]] [label="#4" color="black"]
+#EL-DAG:  F[[N5NO:[0-9]+]] [label="#5" color="black"]
+#EL-DAG:  F[[N6NO:[0-9]+]] [label="#6" color="black"]
+#EL-DAG:  F[[N7NO:[0-9]+]] [label="#7" color="black"]
+#EL-DAG:  F[[N8NO:[0-9]+]] [label="#8" color="black"]
+#EL-DAG:  F[[N9NO:[0-9]+]] [label="#9" color="black"]
+#EL-DAG:  F[[NANO:[0-9]+]] [label="#10" color="#00FF00"]
+#EL-DAG:  F[[NBNO:[0-9]+]] [label="#11" color="#FF0000"]
+#EL-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N1NO]] [tooltip="F0 -> #1" label="800.00%" color="black" labelfontcolor="black" penwidth=1.00]
+#EL-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N2NO]] [tooltip="F0 -> #2" label="300.00%" color="black" labelfontcolor="black" penwidth=1.00]
+#EL-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N3NO]] [tooltip="F0 -> #3" label="133.33%" color="black" labelfontcolor="black" penwidth=1.00]
+#EL-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N4NO]] [tooltip="F0 -> #4" label="50.00%" color="black" labelfontcolor="black" penwidth=1.00]
+#EL-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N5NO]] [tooltip="F0 -> #5" label="0.00%" color="black" labelfontcolor="black" penwidth=1.00]
+#EL-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N6NO]] [tooltip="F0 -> #6" label="-33.33%" color="black" labelfontcolor="black" penwidth=1.00]
+#EL-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N7NO]] [tooltip="F0 -> #7" label="-57.14%" color="black" labelfontcolor="black" penwidth=1.00]
+#EL-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N8NO]] [tooltip="F0 -> #8" label="-75.00%" color="black" labelfontcolor="black" penwidth=1.00]
+#EL-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N9NO]] [tooltip="F0 -> #9" label="-88.89%" color="black" labelfontcolor="black" penwidth=1.00]
+#EL-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[NANO]] [tooltip="F0 -> #10" label="" color="#00FF00" labelfontcolor="#00FF00" penwidth=1.00]
+#EL-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[NBNO]] [tooltip="F0 -> #11" label="" color="#FF0000" labelfontcolor="#FF0000" penwidth=1.00]
+#EL-NEXT:}
+
+#VL:      digraph xrayDiff {
+#VL-NEXT: node [shape=record]
+#VL-DAG:  F[[F0NO:[0-9]+]] [label="F0"]
+#VL-DAG:  F[[N1NO:[0-9]+]] [label="{#1|800.00%}" color="black"]
+#VL-DAG:  F[[N2NO:[0-9]+]] [label="{#2|300.00%}" color="black"]
+#VL-DAG:  F[[N3NO:[0-9]+]] [label="{#3|133.33%}" color="black"]
+#VL-DAG:  F[[N4NO:[0-9]+]] [label="{#4|50.00%}" color="black"]
+#VL-DAG:  F[[N5NO:[0-9]+]] [label="{#5|0.00%}" color="black"]
+#VL-DAG:  F[[N6NO:[0-9]+]] [label="{#6|-33.33%}" color="black"]
+#VL-DAG:  F[[N7NO:[0-9]+]] [label="{#7|-57.14%}" color="black"]
+#VL-DAG:  F[[N8NO:[0-9]+]] [label="{#8|-75.00%}" color="black"]
+#VL-DAG:  F[[N9NO:[0-9]+]] [label="{#9|-88.89%}" color="black"]
+#VL-DAG:  F[[NANO:[0-9]+]] [label="#10" color="#00FF00"]
+#VL-DAG:  F[[NBNO:[0-9]+]] [label="#11" color="#FF0000"]
+#VL-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N1NO]] [tooltip="F0 -> #1" label="" color="black" labelfontcolor="black" penwidth=1.00]
+#VL-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N2NO]] [tooltip="F0 -> #2" label="" color="black" labelfontcolor="black" penwidth=1.00]
+#VL-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N3NO]] [tooltip="F0 -> #3" label="" color="black" labelfontcolor="black" penwidth=1.00]
+#VL-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N4NO]] [tooltip="F0 -> #4" label="" color="black" labelfontcolor="black" penwidth=1.00]
+#VL-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N5NO]] [tooltip="F0 -> #5" label="" color="black" labelfontcolor="black" penwidth=1.00]
+#VL-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N6NO]] [tooltip="F0 -> #6" label="" color="black" labelfontcolor="black" penwidth=1.00]
+#VL-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N7NO]] [tooltip="F0 -> #7" label="" color="black" labelfontcolor="black" penwidth=1.00]
+#VL-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N8NO]] [tooltip="F0 -> #8" label="" color="black" labelfontcolor="black" penwidth=1.00]
+#VL-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N9NO]] [tooltip="F0 -> #9" label="" color="black" labelfontcolor="black" penwidth=1.00]
+#VL-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[NANO]] [tooltip="F0 -> #10" label="" color="#00FF00" labelfontcolor="#00FF00" penwidth=1.00]
+#VL-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[NBNO]] [tooltip="F0 -> #11" label="" color="#FF0000" labelfontcolor="#FF0000" penwidth=1.00]
+#VL-NEXT:}
+
+#VLVC:      digraph xrayDiff {
+#VLVC-NEXT: node [shape=record]
+#VLVC-DAG:  F[[F0NO:[0-9]+]] [label="F0"]
+#VLVC-DAG:  F[[N1NO:[0-9]+]] [label="{#1|800.00%}" color="#276419"]
+#VLVC-DAG:  F[[N2NO:[0-9]+]] [label="{#2|300.00%}" color="#276419"]
+#VLVC-DAG:  F[[N3NO:[0-9]+]] [label="{#3|133.33%}" color="#276419"]
+#VLVC-DAG:  F[[N4NO:[0-9]+]] [label="{#4|50.00%}" color="#9BCF61"]
+#VLVC-DAG:  F[[N5NO:[0-9]+]] [label="{#5|0.00%}" color="#F7F7F7"]
+#VLVC-DAG:  F[[N6NO:[0-9]+]] [label="{#6|-33.33%}" color="#F5C4E0"]
+#VLVC-DAG:  F[[N7NO:[0-9]+]] [label="{#7|-57.14%}" color="#E17FB4"]
+#VLVC-DAG:  F[[N8NO:[0-9]+]] [label="{#8|-75.00%}" color="#CB3088"]
+#VLVC-DAG:  F[[N9NO:[0-9]+]] [label="{#9|-88.89%}" color="#AD0E69"]
+#VLVC-DAG:  F[[NANO:[0-9]+]] [label="#10" color="#00FF00"]
+#VLVC-DAG:  F[[NBNO:[0-9]+]] [label="#11" color="#FF0000"]
+#VLVC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N1NO]] [tooltip="F0 -> #1" label="" color="black" labelfontcolor="black" penwidth=1.00]
+#VLVC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N2NO]] [tooltip="F0 -> #2" label="" color="black" labelfontcolor="black" penwidth=1.00]
+#VLVC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N3NO]] [tooltip="F0 -> #3" label="" color="black" labelfontcolor="black" penwidth=1.00]
+#VLVC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N4NO]] [tooltip="F0 -> #4" label="" color="black" labelfontcolor="black" penwidth=1.00]
+#VLVC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N5NO]] [tooltip="F0 -> #5" label="" color="black" labelfontcolor="black" penwidth=1.00]
+#VLVC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N6NO]] [tooltip="F0 -> #6" label="" color="black" labelfontcolor="black" penwidth=1.00]
+#VLVC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N7NO]] [tooltip="F0 -> #7" label="" color="black" labelfontcolor="black" penwidth=1.00]
+#VLVC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N8NO]] [tooltip="F0 -> #8" label="" color="black" labelfontcolor="black" penwidth=1.00]
+#VLVC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N9NO]] [tooltip="F0 -> #9" label="" color="black" labelfontcolor="black" penwidth=1.00]
+#VLVC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[NANO]] [tooltip="F0 -> #10" label="" color="#00FF00" labelfontcolor="#00FF00" penwidth=1.00]
+#VLVC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[NBNO]] [tooltip="F0 -> #11" label="" color="#FF0000" labelfontcolor="#FF0000" penwidth=1.00]
+#VLVC-NEXT:}
+
+#ELEC:      digraph xrayDiff {
+#ELEC-DAG:  F[[F0NO:[0-9]+]] [label="F0"]
+#ELEC-DAG:  F[[N1NO:[0-9]+]] [label="#1" color="black"]
+#ELEC-DAG:  F[[N2NO:[0-9]+]] [label="#2" color="black"]
+#ELEC-DAG:  F[[N3NO:[0-9]+]] [label="#3" color="black"]
+#ELEC-DAG:  F[[N4NO:[0-9]+]] [label="#4" color="black"]
+#ELEC-DAG:  F[[N5NO:[0-9]+]] [label="#5" color="black"]
+#ELEC-DAG:  F[[N6NO:[0-9]+]] [label="#6" color="black"]
+#ELEC-DAG:  F[[N7NO:[0-9]+]] [label="#7" color="black"]
+#ELEC-DAG:  F[[N8NO:[0-9]+]] [label="#8" color="black"]
+#ELEC-DAG:  F[[N9NO:[0-9]+]] [label="#9" color="black"]
+#ELEC-DAG:  F[[NANO:[0-9]+]] [label="#10" color="#00FF00"]
+#ELEC-DAG:  F[[NBNO:[0-9]+]] [label="#11" color="#FF0000"]
+#ELEC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N1NO]] [tooltip="F0 -> #1" label="800.00%" color="#276419" labelfontcolor="#276419" penwidth=8.00]
+#ELEC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N2NO]] [tooltip="F0 -> #2" label="300.00%" color="#276419" labelfontcolor="#276419" penwidth=3.00]
+#ELEC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N3NO]] [tooltip="F0 -> #3" label="133.33%" color="#276419" labelfontcolor="#276419" penwidth=1.33]
+#ELEC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N4NO]] [tooltip="F0 -> #4" label="50.00%" color="#9BCF61" labelfontcolor="#9BCF61" penwidth=1.00]
+#ELEC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N5NO]] [tooltip="F0 -> #5" label="0.00%" color="#F7F7F7" labelfontcolor="#F7F7F7" penwidth=1.00]
+#ELEC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N6NO]] [tooltip="F0 -> #6" label="-33.33%" color="#F5C4E0" labelfontcolor="#F5C4E0" penwidth=1.00]
+#ELEC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N7NO]] [tooltip="F0 -> #7" label="-57.14%" color="#E17FB4" labelfontcolor="#E17FB4" penwidth=1.00]
+#ELEC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N8NO]] [tooltip="F0 -> #8" label="-75.00%" color="#CB3088" labelfontcolor="#CB3088" penwidth=1.00]
+#ELEC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[N9NO]] [tooltip="F0 -> #9" label="-88.89%" color="#AD0E69" labelfontcolor="#AD0E69" penwidth=1.00]
+#ELEC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[NANO]] [tooltip="F0 -> #10" label="" color="#00FF00" labelfontcolor="#00FF00" penwidth=1.00]
+#ELEC-DAG:  F{{.*}}[[F0NO]] -> F{{.*}}[[NBNO]] [tooltip="F0 -> #11" label="" color="#FF0000" labelfontcolor="#FF0000" penwidth=1.00]
+#ELEC-NEXT:}
+
+

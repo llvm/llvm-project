@@ -1,0 +1,19 @@
+; RUN: llvm-as -disable-output <%s 2>&1 | FileCheck %s
+
+define void @foo() {
+entry:
+  br label %exit, !dbg !DILocation(scope: !1, inlinedAt: !{})
+; CHECK: inlined-at should be a location
+; CHECK-NEXT: !{{[0-9]+}} = !DILocation(line: 0, scope: !{{[0-9]+}}, inlinedAt: ![[IA:[0-9]+]])
+; CHECK-NEXT: ![[IA]] = !{}
+
+exit:
+  ret void
+}
+
+; CHECK: warning: ignoring invalid debug info
+!llvm.module.flags = !{!0}
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !DISubprogram(type: !3)
+!2 = !{null}
+!3 = !DISubroutineType(types: !2)

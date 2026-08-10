@@ -1,0 +1,19 @@
+---
+MainSourceFile:     identical_in_TU.cpp
+Diagnostics:
+  - DiagnosticName: test-identical-insertion
+    DiagnosticMessage:
+      Message: Fix
+      FilePath: $(path)/identical_in_TU.cpp
+      FileOffset: 12
+      Replacements:
+        - FilePath:        $(path)/identical_in_TU.cpp
+          Offset:          12
+          Length:          0
+          ReplacementText: '0'
+        - FilePath:        $(path)/identical_in_TU.cpp
+          Offset:          12
+          Length:          0
+          ReplacementText: '0'
+...
+

@@ -1,0 +1,3 @@
+; RUN: llvm-xray | FileCheck %s
+
+; CHECK:  OVERVIEW: XRay Tools

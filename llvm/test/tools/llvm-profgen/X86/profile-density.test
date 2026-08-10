@@ -1,0 +1,68 @@
+; RUN: llvm-profgen --format=text --unsymbolized-profile=%S/Inputs/profile-density.raw.prof --binary=%S/Inputs/inline-noprobe2.perfbin --output=%t1 --use-offset=0 --show-density -profile-density-threshold=10  --trim-cold-profile=0 &> %t2
+; RUN: FileCheck %s --input-file %t2 --check-prefix=CHECK-DENSITY
+; RUN: llvm-profgen --format=text --unsymbolized-profile=%S/Inputs/profile-density-cs.raw.prof --binary=%S/Inputs/inline-noprobe2.perfbin --output=%t3 --show-density -profile-density-threshold=1 -profile-density-threshold=10000 &> %t4
+; RUN: FileCheck %s --input-file %t4 --check-prefix=CHECK-DENSITY-CS
+; RUN: llvm-profgen --format=text --unsymbolized-profile=%S/Inputs/profile-density-cs.raw.prof --binary=%S/Inputs/inline-noprobe2.perfbin --output=%t5 --show-density -profile-density-threshold=1 -profile-density-cutoff-hot=800000  &> %t6
+; RUN: FileCheck %s --input-file %t6 --check-prefix=CHECK-DENSITY-CS-80
+
+;CHECK-DENSITY: Sample PGO is estimated to optimize better with 2.9x more samples. Please consider increasing sampling rate or profiling for longer duration to get more samples.
+;CHECK-DENSITY: Functions with density >= 3.5 account for 99.00% total sample counts.
+
+;CHECK-DENSITY-CS: Sample PGO is estimated to optimize better with 12.5x more samples. Please consider increasing sampling rate or profiling for longer duration to get more samples.
+;CHECK-DENSITY-CS: Functions with density >= 800.1 account for 99.00% total sample counts.
+
+;CHECK-DENSITY-CS-80: Functions with density >= 1886.2 account for 80.00% total sample counts.
+
+; original code:
+; clang -O3 -g -fno-optimize-sibling-calls -fdebug-info-for-profiling qsort.c -o a.out
+#include <stdio.h>
+#include <stdlib.h>
+
+void swap(int *a, int *b) {
+	int t = *a;
+	*a = *b;
+	*b = t;
+}
+
+int partition_pivot_last(int* array, int low, int high) {
+	int pivot = array[high];
+	int i = low - 1;
+	for (int j = low; j < high; j++)
+		if (array[j] < pivot)
+			swap(&array[++i], &array[j]);
+	swap(&array[i + 1], &array[high]);
+	return (i + 1);
+}
+
+int partition_pivot_first(int* array, int low, int high) {
+	int pivot = array[low];
+	int i = low + 1;
+	for (int j = low + 1; j <= high; j++)
+		if (array[j] < pivot) { if (j != i) swap(&array[i], &array[j]); i++;}
+	swap(&array[i - 1], &array[low]);
+	return i - 1;
+}
+
+void quick_sort(int* array, int low, int high, int (*partition_func)(int *, int, int)) {
+	if (low < high) {
+		int pi = (*partition_func)(array, low, high);
+		quick_sort(array, low, pi - 1, partition_func);
+		quick_sort(array, pi + 1, high, partition_func);
+	}
+}
+
+int main() {
+	const int size = 200;
+	int sum = 0;
+	int *array = malloc(size * sizeof(int));
+	for(int i = 0; i < 100 * 1000; i++) {
+		for(int j = 0; j < size; j++)
+			array[j] = j % 10 ? rand() % size: j;
+		int (*fptr)(int *, int, int) = i % 3 ? partition_pivot_last : partition_pivot_first;
+		quick_sort(array, 0, size - 1, fptr);
+		sum += array[i % size];
+	}
+	printf("sum=%d\n", sum);
+
+	return 0;
+}

@@ -1,0 +1,16 @@
+## Checks that jump table footprint reduction optimization is reducing entry
+## sizes.
+
+RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown \
+RUN:   %S/Inputs/jump_table_footprint_reduction.s -o %t.o
+RUN: link_fdata %S/Inputs/jump_table_footprint_reduction.s %t.o %t.fdata --nmtool llvm-nm
+RUN: llvm-strip --strip-unneeded %t.o
+RUN: %clang %cflags -no-pie %t.o -o %t.exe -Wl,-q
+RUN: llvm-bolt %t.exe --data %t.fdata -o %t.null \
+RUN:   --jump-tables=move --jt-footprint-reduction --assume-abi --relocs \
+RUN:   | FileCheck %s
+
+CHECK: 100.00% of dynamic JT entries were reduced.
+CHECK: 1 of 1 jump tables affected.
+CHECK: 1 of 1 indirect jumps to JTs affected.
+CHECK: 36 bytes saved.

@@ -1,0 +1,54 @@
+# RUN: llc %s -o - -run-pass=peephole-opt | FileCheck %s
+
+# Check that we don't optimize out a subs due to areCFlagsAccessedBetweenInstrs
+# returning the wrong result; it should check the cneg before the subs which does
+# modify cflags.
+
+# CHECK-LABEL: f
+# CHECK:      SUBSWrr
+# CHECK-NEXT: SUBWrr
+# CHECK-NEXT: CSNEGWr
+# CHECK-NEXT: SUBSWri
+# CHECK-NEXT: CSNEGWr
+# CHECK-NEXT: Bcc
+
+--- |
+  target datalayout = "e-m:w-p:64:64-i32:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-w64-windows-gnu"
+
+  define dso_local void @f() {
+    ret void
+  }
+
+...
+---
+name:            f
+registers:
+  - { id: 43, class: gpr32, preferred-register: '' }
+  - { id: 44, class: gpr32, preferred-register: '' }
+  - { id: 46, class: gpr32, preferred-register: '' }
+  - { id: 47, class: gpr32, preferred-register: '' }
+  - { id: 48, class: gpr32common, preferred-register: '' }
+  - { id: 49, class: gpr32common, preferred-register: '' }
+  - { id: 50, class: gpr32, preferred-register: '' }
+  - { id: 51, class: gpr32, preferred-register: '' }
+  - { id: 52, class: gpr32, preferred-register: '' }
+  - { id: 53, class: gpr32, preferred-register: '' }
+body:             |
+  bb.0:
+    successors: %bb.0
+
+    %43 = MOVi32imm 1
+    %44 = MOVi32imm 1
+    %46 = MOVi32imm 1
+    %47 = MOVi32imm 1
+    %48 = nsw SUBSWrr killed %43, killed %46, implicit-def dead $nzcv
+    %49 = nsw SUBSWrr killed %44, killed %47, implicit-def dead $nzcv
+    %50 = SUBSWri %48, 0, 0, implicit-def $nzcv
+    %51 = CSNEGWr %48, %48, 5, implicit $nzcv
+    %52 = SUBSWri %49, 0, 0, implicit-def $nzcv
+    %53 = CSNEGWr %49, %49, 5, implicit $nzcv
+    Bcc 1, %bb.0, implicit $nzcv
+    RET_ReallyLR
+
+...

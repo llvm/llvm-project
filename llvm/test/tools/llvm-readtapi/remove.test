@@ -1,0 +1,276 @@
+; RUN: rm -rf %t
+; RUN: split-file %s %t 
+// Check that arch removal is accepted with tbdv5 and various inlined contents.
+
+; RUN: llvm-readtapi --remove -arch x86_64h %t/libfat.tbd -o %t/libslim.tbd 2>&1 | FileCheck --allow-empty %s
+; RUN: llvm-readtapi --compare %t/libslim.tbd %t/libslim_expected.tbd
+
+; RUN: llvm-readtapi --remove -arch x86_64h %t/libfat2.tbd -o %t/libslim2.tbd 2>&1 | FileCheck --allow-empty %s
+; RUN: llvm-readtapi --compare %t/libslim2.tbd %t/libslim_expected.tbd
+
+; RUN: llvm-readtapi --remove -arch x86_64 %t/libfat3.tbd -o %t/libslim3.tbd 2>&1 | FileCheck --allow-empty %s
+; RUN: llvm-readtapi --compare %t/libslim3.tbd %t/libslim3_expected.tbd
+
+; CHECK-NOT: error
+; CHECK-NOT: warning
+
+//--- libfat.tbd
+{
+  "libraries": [
+    {
+      "exported_symbols": [
+        {
+          "data": {
+            "global": [
+              "_sym1"
+            ]
+          },
+          "targets": [
+            "x86_64-macos"
+          ]
+        },
+        {
+          "data": {
+            "global": [
+              "_sym2"
+            ]
+          },
+          "targets": [
+            "x86_64h-macos"
+          ]
+        }
+      ],
+      "install_names": [
+        {
+          "name": "/usr/lib/internal/libfat.dylib"
+        }
+      ],
+      "parent_umbrellas": [
+        {
+          "umbrella": "fat"
+        }
+      ],
+      "target_info": [
+        {
+          "target": "x86_64-macos"
+        },
+        {
+          "target": "x86_64h-macos"
+        }
+      ]
+    }
+  ],
+  "main_library": {
+    "install_names": [
+      {
+        "name": "/usr/lib/libfat.dylib"
+      }
+    ],
+    "reexported_libraries": [
+      {
+        "names": [
+          "/usr/lib/internal/libfat.dylib"
+        ]
+      }
+    ],
+    "target_info": [
+      {
+        "target": "x86_64-macos"
+      },
+      {
+        "target": "x86_64h-macos"
+      }
+    ]
+  },
+  "tapi_tbd_version": 5
+}
+
+//--- libfat2.tbd
+{
+  "libraries": [
+    {
+      "exported_symbols": [
+        {
+          "data": {
+            "global": [
+              "_sym1"
+            ]
+          },
+          "targets": [
+            "x86_64-macos"
+          ]
+        },
+        {
+          "data": {
+            "global": [
+              "_sym2"
+            ]
+          },
+          "targets": [
+            "x86_64h-macos"
+          ]
+        }
+      ],
+      "install_names": [
+        {
+          "name": "/usr/lib/internal/libfat.dylib"
+        }
+      ],
+      "parent_umbrellas": [
+        {
+          "umbrella": "fat"
+        }
+      ],
+      "target_info": [
+        {
+          "target": "x86_64-macos"
+        },
+        {
+          "target": "x86_64h-macos"
+        }
+      ]
+    }
+  ],
+  "main_library": {
+    "install_names": [
+      {
+        "name": "/usr/lib/libfat.dylib"
+      }
+    ],
+    "reexported_libraries": [
+      {
+        "names": [
+          "/usr/lib/internal/libfat.dylib"
+        ]
+      }
+    ],
+    "target_info": [
+      {
+        "target": "x86_64-macos"
+      }
+    ]
+  },
+  "tapi_tbd_version": 5
+}
+
+//--- libfat3.tbd
+{
+  "libraries": [
+    {
+      "exported_symbols": [
+        {
+          "data": {
+            "global": [
+              "_sym1"
+            ]
+          }
+        }
+      ],
+      "install_names": [
+        {
+          "name": "/usr/lib/internal/libfat.dylib"
+        }
+      ],
+      "target_info": [
+        {
+          "target": "x86_64-macos"
+        }
+      ]
+    }
+  ],
+  "main_library": {
+    "install_names": [
+      {
+        "name": "/usr/lib/libfat.dylib"
+      }
+    ],
+    "reexported_libraries": [
+      {
+        "names": [
+          "/usr/lib/internal/libfat.dylib"
+        ],
+        "targets": [
+          "x86_64-macos"
+        ]
+      }
+    ],
+    "target_info": [
+      {
+        "target": "x86_64-macos"
+      },
+      {
+        "target": "x86_64h-macos"
+      }
+    ]
+  },
+  "tapi_tbd_version": 5
+}
+
+//--- libslim_expected.tbd
+{
+  "libraries": [
+    {
+      "exported_symbols": [
+        {
+          "data": {
+            "global": [
+              "_sym1"
+            ]
+          }
+        }
+      ],
+      "install_names": [
+        {
+          "name": "/usr/lib/internal/libfat.dylib"
+        }
+      ],
+      "parent_umbrellas": [
+        {
+          "umbrella": "fat"
+        }
+      ],
+      "target_info": [
+        {
+          "target": "x86_64-macos"
+        }
+      ]
+    }
+  ],
+  "main_library": {
+    "install_names": [
+      {
+        "name": "/usr/lib/libfat.dylib"
+      }
+    ],
+    "reexported_libraries": [
+      {
+        "names": [
+          "/usr/lib/internal/libfat.dylib"
+        ]
+      }
+    ],
+    "target_info": [
+      {
+        "target": "x86_64-macos"
+      }
+    ]
+  },
+  "tapi_tbd_version": 5
+}
+
+//--- libslim3_expected.tbd
+{
+  "main_library": {
+    "install_names": [
+      {
+        "name": "/usr/lib/libfat.dylib"
+      }
+    ],
+    "target_info": [
+      {
+        "target": "x86_64h-macos"
+      }
+    ]
+  },
+  "tapi_tbd_version": 5
+}

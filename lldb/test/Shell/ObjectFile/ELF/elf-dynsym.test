@@ -1,0 +1,45 @@
+// This test verifies that loading an ELF file that has no section headers can
+// load the dynamic symbol table using the DT_SYMTAB, DT_SYMENT, DT_HASH or
+// the DT_GNU_HASH .dynamic key/value pairs that are loaded via the PT_DYNAMIC
+// segment.
+
+// REQUIRES: x86-registered-Target
+// RUN: llvm-mc -triple=x86_64-pc-linux -filetype=obj \
+// RUN:   -o - - <<<".globl defined, undefined; defined:" | \
+// RUN:   ld.lld /dev/stdin -o - --hash-style=gnu -export-dynamic -shared \
+// RUN:   -o %t.gnu
+// RUN: llvm-strip --strip-sections %t.gnu
+// RUN: %lldb %t.gnu -b \
+// RUN:   -o "image dump objfile" \
+// RUN:   | FileCheck %s --dump-input=always --check-prefix=GNU
+// GNU: (lldb) image dump objfile
+// GNU: Dumping headers for 1 module(s).
+// GNU: ObjectFileELF, file =
+// GNU: ELF Header
+// GNU: e_type      = 0x0003 ET_DYN
+// Make sure there are no section headers
+// GNU: e_shnum = 0x00000000
+// Make sure we were able to load the symbols
+// GNU: Symtab, file = {{.*}}elf-dynsym.test.tmp.gnu, num_symbols = 2:
+// GNU-DAG: undefined
+// GNU-DAG: defined
+
+// RUN: llvm-mc -triple=x86_64-pc-linux -filetype=obj \
+// RUN:   -o - - <<<".globl defined, undefined; defined:" | \
+// RUN:   ld.lld /dev/stdin -o - --hash-style=sysv -export-dynamic -shared \
+// RUN:   -o %t.sysv
+// RUN: llvm-strip --strip-sections %t.sysv
+// RUN: %lldb %t.sysv -b \
+// RUN:   -o "image dump objfile" \
+// RUN:   | FileCheck %s --dump-input=always --check-prefix=HASH
+// HASH: (lldb) image dump objfile
+// HASH: Dumping headers for 1 module(s).
+// HASH: ObjectFileELF, file =
+// HASH: ELF Header
+// HASH: e_type      = 0x0003 ET_DYN
+// Make sure there are no section headers
+// HASH: e_shnum = 0x00000000
+// Make sure we were able to load the symbols
+// HASH: Symtab, file = {{.*}}elf-dynsym.test.tmp.sysv, num_symbols = 2:
+// HASH-DAG: undefined
+// HASH-DAG: defined

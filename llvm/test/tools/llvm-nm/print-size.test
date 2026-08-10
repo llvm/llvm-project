@@ -1,0 +1,20 @@
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-nm --print-size %t.o | FileCheck %s --strict-whitespace
+# RUN: llvm-nm -S %t.o | FileCheck %s --strict-whitespace
+
+!ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+Symbols:
+  - Name:    a_symbol
+    Size:    0x123456789abcdef0
+    Section: .text
+    Binding: STB_GLOBAL
+
+# CHECK: 0000000000000000 123456789abcdef0 N a_symbol

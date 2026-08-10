@@ -1,0 +1,38 @@
+# RUN: llc -mtriple=x86_64 -run-pass mir-canonicalizer -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64 -run-pass mir-canonicalizer -mir-vreg-namer-use-stable-hash -verify-machineinstrs -o - %s | FileCheck %s
+# The purpose of this test is to ensure that differing flags do in-fact cause
+# naming collisions with the new vreg renamers naming scheme.
+--- |
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+  define void @baz() { unreachable }
+...
+---
+name:            baz
+body:             |
+  bb.0:
+
+    ; CHECK: COPY
+    ; CHECK-NEXT: %bb0_{{[0-9a-f]+}}__1:fr32 = nnan VMULSSrr
+    ; CHECK-NEXT: %bb0_{{[0-9a-f]+}}__1:fr32 = ninf VMULSSrr
+    ; CHECK-NEXT: %bb0_{{[0-9a-f]+}}__1:fr32 = nsz VMULSSrr
+    ; CHECK-NEXT: %bb0_{{[0-9a-f]+}}__1:fr32 = arcp VMULSSrr
+    ; CHECK-NEXT: %bb0_{{[0-9a-f]+}}__1:fr32 = contract VMULSSrr
+    ; CHECK-NEXT: %bb0_{{[0-9a-f]+}}__1:fr32 = afn VMULSSrr
+    ; CHECK-NEXT: %bb0_{{[0-9a-f]+}}__1:fr32 = reassoc VMULSSrr
+    ; CHECK-NEXT: %bb0_{{[0-9a-f]+}}__1:fr32 = nsz arcp contract afn reassoc VMULSSrr
+    ; CHECK-NEXT: %bb0_{{[0-9a-f]+}}__1:fr32 = contract afn reassoc VMULSSrr
+
+    %0:fr32 = COPY $xmm0
+    %1:fr32 = nnan VMULSSrr %0, %0, implicit $mxcsr
+    %2:fr32 = ninf VMULSSrr %1, %1, implicit $mxcsr
+    %3:fr32 = nsz VMULSSrr %2, %2, implicit $mxcsr
+    %4:fr32 = arcp VMULSSrr %3, %3, implicit $mxcsr
+    %5:fr32 = contract VMULSSrr %4, %4, implicit $mxcsr
+    %6:fr32 = afn VMULSSrr %5, %5, implicit $mxcsr
+    %7:fr32 = reassoc VMULSSrr %6, %6, implicit $mxcsr
+    %8:fr32 = nsz arcp contract afn reassoc VMULSSrr %7, %7, implicit $mxcsr
+    %9:fr32 = contract afn reassoc VMULSSrr %8, %8, implicit $mxcsr
+    $xmm0 = COPY %9
+    RET 0, $xmm0
+
+...

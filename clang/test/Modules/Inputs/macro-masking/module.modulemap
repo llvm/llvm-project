@@ -1,0 +1,4 @@
+module X {
+  module A { header "a.h" export * }
+  module B { header "b.h" export * }
+}

@@ -1,0 +1,377 @@
+--- !fat-mach-o
+FatHeader:
+  magic:           0xCAFEBABE
+  nfat_arch:       4
+FatArchs:
+  - cputype:         0x00000007
+    cpusubtype:      0x00000003
+    offset:          0x0000000000001000
+    size:            432
+    align:           12
+  - cputype:         0x01000007
+    cpusubtype:      0x00000003
+    offset:          0x0000000000002000
+    size:            488
+    align:           12
+  - cputype:         0x0000000C
+    cpusubtype:      0x00000009
+    offset:          0x0000000000004000
+    size:            304
+    align:           14
+  - cputype:         0x0100000C
+    cpusubtype:      0x00000000
+    offset:          0x0000000000008000
+    size:            516
+    align:           14
+Slices:
+  - !mach-o
+    FileHeader:
+      magic:           0xFEEDFACE
+      cputype:         0x00000007
+      cpusubtype:      0x00000003
+      filetype:        0x00000001
+      ncmds:           4
+      sizeofcmds:      312
+      flags:           0x00002000
+    LoadCommands:
+      - cmd:             LC_SEGMENT
+        cmdsize:         192
+        segname:         ''
+        vmaddr:          0
+        vmsize:          72
+        fileoff:         340
+        filesize:        72
+        maxprot:         7
+        initprot:        7
+        nsects:          2
+        flags:           0
+        Sections:
+          - sectname:        __text
+            segname:         __TEXT
+            addr:            0x0000000000000000
+            size:            18
+            offset:          0x00000154
+            align:           4
+            reloff:          0x00000000
+            nreloc:          0
+            flags:           0x80000400
+            reserved1:       0x00000000
+            reserved2:       0x00000000
+            reserved3:       0x00000000
+          - sectname:        __eh_frame
+            segname:         __TEXT
+            addr:            0x0000000000000014
+            size:            52
+            offset:          0x00000168
+            align:           2
+            reloff:          0x00000000
+            nreloc:          0
+            flags:           0x6800000B
+            reserved1:       0x00000000
+            reserved2:       0x00000000
+            reserved3:       0x00000000
+      - cmd:             LC_VERSION_MIN_MACOSX
+        cmdsize:         16
+        version:         656384
+        sdk:             0
+      - cmd:             LC_SYMTAB
+        cmdsize:         24
+        symoff:          412
+        nsyms:           1
+        stroff:          424
+        strsize:         8
+      - cmd:             LC_DYSYMTAB
+        cmdsize:         80
+        ilocalsym:       0
+        nlocalsym:       0
+        iextdefsym:      0
+        nextdefsym:      1
+        iundefsym:       1
+        nundefsym:       0
+        tocoff:          0
+        ntoc:            0
+        modtaboff:       0
+        nmodtab:         0
+        extrefsymoff:    0
+        nextrefsyms:     0
+        indirectsymoff:  0
+        nindirectsyms:   0
+        extreloff:       0
+        nextrel:         0
+        locreloff:       0
+        nlocrel:         0
+    LinkEditData:
+      NameList:
+        - n_strx:          1
+          n_type:          0x0F
+          n_sect:          1
+          n_desc:          0
+          n_value:         0
+      StringTable:
+        - ''
+        - _main
+        - ''
+  - !mach-o
+    FileHeader:
+      magic:           0xFEEDFACF
+      cputype:         0x01000007
+      cpusubtype:      0x00000003
+      filetype:        0x00000001
+      ncmds:           4
+      sizeofcmds:      352
+      flags:           0x00002000
+      reserved:        0x00000000
+    LoadCommands:
+      - cmd:             LC_SEGMENT_64
+        cmdsize:         232
+        segname:         ''
+        vmaddr:          0
+        vmsize:          80
+        fileoff:         384
+        filesize:        80
+        maxprot:         7
+        initprot:        7
+        nsects:          2
+        flags:           0
+        Sections:
+          - sectname:        __text
+            segname:         __TEXT
+            addr:            0x0000000000000000
+            size:            15
+            offset:          0x00000180
+            align:           4
+            reloff:          0x00000000
+            nreloc:          0
+            flags:           0x80000400
+            reserved1:       0x00000000
+            reserved2:       0x00000000
+            reserved3:       0x00000000
+          - sectname:        __eh_frame
+            segname:         __TEXT
+            addr:            0x0000000000000010
+            size:            64
+            offset:          0x00000190
+            align:           3
+            reloff:          0x00000000
+            nreloc:          0
+            flags:           0x6800000B
+            reserved1:       0x00000000
+            reserved2:       0x00000000
+            reserved3:       0x00000000
+      - cmd:             LC_VERSION_MIN_MACOSX
+        cmdsize:         16
+        version:         656384
+        sdk:             0
+      - cmd:             LC_SYMTAB
+        cmdsize:         24
+        symoff:          464
+        nsyms:           1
+        stroff:          480
+        strsize:         8
+      - cmd:             LC_DYSYMTAB
+        cmdsize:         80
+        ilocalsym:       0
+        nlocalsym:       0
+        iextdefsym:      0
+        nextdefsym:      1
+        iundefsym:       1
+        nundefsym:       0
+        tocoff:          0
+        ntoc:            0
+        modtaboff:       0
+        nmodtab:         0
+        extrefsymoff:    0
+        nextrefsyms:     0
+        indirectsymoff:  0
+        nindirectsyms:   0
+        extreloff:       0
+        nextrel:         0
+        locreloff:       0
+        nlocrel:         0
+    LinkEditData:
+      NameList:
+        - n_strx:          1
+          n_type:          0x0F
+          n_sect:          1
+          n_desc:          0
+          n_value:         0
+      StringTable:
+        - ''
+        - _main
+        - ''
+  - !mach-o
+    FileHeader:
+      magic:           0xFEEDFACE
+      cputype:         0x0000000C
+      cpusubtype:      0x00000009
+      filetype:        0x00000001
+      ncmds:           4
+      sizeofcmds:      244
+      flags:           0x00002000
+    LoadCommands:
+      - cmd:             LC_SEGMENT
+        cmdsize:         124
+        segname:         ''
+        vmaddr:          0
+        vmsize:          10
+        fileoff:         272
+        filesize:        10
+        maxprot:         7
+        initprot:        7
+        nsects:          1
+        flags:           0
+        Sections:
+          - sectname:        __text
+            segname:         __TEXT
+            addr:            0x0000000000000000
+            size:            10
+            offset:          0x00000110
+            align:           1
+            reloff:          0x00000000
+            nreloc:          0
+            flags:           0x80000400
+            reserved1:       0x00000000
+            reserved2:       0x00000000
+            reserved3:       0x00000000
+      - cmd:             LC_VERSION_MIN_IPHONEOS
+        cmdsize:         16
+        version:         327680
+        sdk:             0
+      - cmd:             LC_SYMTAB
+        cmdsize:         24
+        symoff:          284
+        nsyms:           1
+        stroff:          296
+        strsize:         8
+      - cmd:             LC_DYSYMTAB
+        cmdsize:         80
+        ilocalsym:       0
+        nlocalsym:       0
+        iextdefsym:      0
+        nextdefsym:      1
+        iundefsym:       1
+        nundefsym:       0
+        tocoff:          0
+        ntoc:            0
+        modtaboff:       0
+        nmodtab:         0
+        extrefsymoff:    0
+        nextrefsyms:     0
+        indirectsymoff:  0
+        nindirectsyms:   0
+        extreloff:       0
+        nextrel:         0
+        locreloff:       0
+        nlocrel:         0
+    LinkEditData:
+      NameList:
+        - n_strx:          1
+          n_type:          0x0F
+          n_sect:          1
+          n_desc:          8
+          n_value:         0
+      StringTable:
+        - ''
+        - _main
+        - ''
+  - !mach-o
+    FileHeader:
+      magic:           0xFEEDFACF
+      cputype:         0x0100000C
+      cpusubtype:      0x00000000
+      filetype:        0x00000001
+      ncmds:           4
+      sizeofcmds:      352
+      flags:           0x00002000
+      reserved:        0x00000000
+    LoadCommands:
+      - cmd:             LC_SEGMENT_64
+        cmdsize:         232
+        segname:         ''
+        vmaddr:          0
+        vmsize:          56
+        fileoff:         384
+        filesize:        56
+        maxprot:         7
+        initprot:        7
+        nsects:          2
+        flags:           0
+        Sections:
+          - sectname:        __text
+            segname:         __TEXT
+            addr:            0x0000000000000000
+            size:            20
+            offset:          0x00000180
+            align:           2
+            reloff:          0x00000000
+            nreloc:          0
+            flags:           0x80000400
+            reserved1:       0x00000000
+            reserved2:       0x00000000
+            reserved3:       0x00000000
+          - sectname:        __compact_unwind
+            segname:         __LD
+            addr:            0x0000000000000018
+            size:            32
+            offset:          0x00000198
+            align:           3
+            reloff:          0x000001B8
+            nreloc:          1
+            flags:           0x02000000
+            reserved1:       0x00000000
+            reserved2:       0x00000000
+            reserved3:       0x00000000
+      - cmd:             LC_VERSION_MIN_IPHONEOS
+        cmdsize:         16
+        version:         327680
+        sdk:             0
+      - cmd:             LC_SYMTAB
+        cmdsize:         24
+        symoff:          448
+        nsyms:           3
+        stroff:          496
+        strsize:         20
+      - cmd:             LC_DYSYMTAB
+        cmdsize:         80
+        ilocalsym:       0
+        nlocalsym:       2
+        iextdefsym:      2
+        nextdefsym:      1
+        iundefsym:       3
+        nundefsym:       0
+        tocoff:          0
+        ntoc:            0
+        modtaboff:       0
+        nmodtab:         0
+        extrefsymoff:    0
+        nextrefsyms:     0
+        indirectsymoff:  0
+        nindirectsyms:   0
+        extreloff:       0
+        nextrel:         0
+        locreloff:       0
+        nlocrel:         0
+    LinkEditData:
+      NameList:
+        - n_strx:          13
+          n_type:          0x0E
+          n_sect:          1
+          n_desc:          0
+          n_value:         0
+        - n_strx:          7
+          n_type:          0x0E
+          n_sect:          2
+          n_desc:          0
+          n_value:         24
+        - n_strx:          1
+          n_type:          0x0F
+          n_sect:          1
+          n_desc:          0
+          n_value:         0
+      StringTable:
+        - ''
+        - _main
+        - ltmp1
+        - ltmp0
+        - ''
+...

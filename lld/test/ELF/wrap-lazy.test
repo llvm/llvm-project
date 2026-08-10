@@ -1,0 +1,59 @@
+# REQUIRES: x86
+
+# RUN: split-file %s %t
+# RUN: llvm-as %t/lazy.ll -o %tlazybitcode.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-elf %t/dummy.s -o %tdummy.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-elf %t/lazy.s -o %tlazy.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-elf %t/ref.s -o %tref.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-elf %t/weakref.s -o %tweakref.o
+# RUN: ld.lld -shared -o %t1.so %tdummy.o --start-lib %tlazy.o --wrap lazy
+# RUN: llvm-readelf -s %t1.so | FileCheck --check-prefix=NO-LAZY %s
+# RUN: ld.lld -shared -o %t2.so %tdummy.o --start-lib %tlazybitcode.o --wrap lazy
+# RUN: llvm-readelf -s %t2.so | FileCheck --check-prefix=NO-LAZY %s
+# RUN: ld.lld -shared -o %t3.so %tdummy.o --start-lib %tlazy.o -u lazy --wrap lazy
+# RUN: llvm-readelf -s %t3.so | FileCheck --check-prefix=LAZY-DEF %s
+# RUN: ld.lld -shared -o %t4.so %tdummy.o %tlazy.o --wrap lazy
+# RUN: llvm-readelf -s %t4.so | FileCheck --check-prefix=LAZY-DEF %s
+# RUN: ld.lld -shared -o %t5.so %tref.o --start-lib %tlazy.o --wrap lazy
+# RUN: llvm-readelf -s %t5.so | FileCheck --check-prefix=LAZY-DEF %s
+# RUN: ld.lld -shared -o %t6.so %tweakref.o --start-lib %tlazy.o --wrap lazy
+# RUN: llvm-readelf -s %t6.so | FileCheck --check-prefix=LAZY-REF %s
+# RUN: ld.lld -shared -o %t7.so %tweakref.o --start-lib %tlazybitcode.o --wrap lazy
+# RUN: llvm-readelf -s %t7.so | FileCheck --check-prefix=LAZY-REF %s
+# RUN: ld.lld -shared -o %tweakref.so %tweakref.o -soname libweakref.so
+# RUN: ld.lld -shared -o %t8.so %tdummy.o %tweakref.so --start-lib %tlazy.o --wrap lazy
+# RUN: llvm-readelf -s %t8.so | FileCheck --check-prefix=NO-LAZY %s
+
+# NO-LAZY-NOT: lazy
+# NO-LAZY-NOT: __wrap_lazy
+
+# LAZY-DEF-DAG: [[#]] lazy
+# LAZY-DEF-DAG: UND __wrap_lazy
+
+# LAZY-REF-NOT: UND lazy
+# LAZY-REF-DAG: UND __wrap_lazy
+# LAZY-REF-NOT: UND lazy
+
+#--- dummy.s
+.globl dummy
+dummy:
+	retq
+
+#--- lazy.ll
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-elf"
+define void @lazy() {
+  ret void
+}
+
+#--- lazy.s
+.globl lazy
+lazy:
+	retq
+
+#--- ref.s
+	jmp	lazy
+
+#--- weakref.s
+.weak lazy
+	jmp	lazy

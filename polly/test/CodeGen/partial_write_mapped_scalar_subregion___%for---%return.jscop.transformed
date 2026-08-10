@@ -1,0 +1,39 @@
+{
+   "arrays" : [
+      {
+         "name" : "MemRef_A",
+         "sizes" : [ "*" ],
+         "type" : "double"
+      }
+   ],
+   "context" : "[n] -> {  : -2147483648 <= n <= 2147483647 }",
+   "name" : "%for---%return",
+   "statements" : [
+      {
+         "accesses" : [
+            {
+               "kind" : "write",
+               "relation" : "[n] -> { Stmt_body__TO__subregion_exit[j] -> MemRef_A[1] : j >= 5 }"
+            }
+         ],
+         "domain" : "[n] -> { Stmt_body__TO__subregion_exit[i0] : 0 <= i0 < n }",
+         "name" : "Stmt_body__TO__subregion_exit",
+         "schedule" : "[n] -> { Stmt_body__TO__subregion_exit[i0] -> [i0, 0] }"
+      },
+      {
+         "accesses" : [
+            {
+               "kind" : "write",
+               "relation" : "[n] -> { Stmt_user[i0] -> MemRef_A[0] }"
+            },
+            {
+               "kind" : "read",
+               "relation" : "[n] -> { Stmt_user[i0] -> MemRef_A[1] }"
+            }
+         ],
+         "domain" : "[n] -> { Stmt_user[i0] : 6 <= i0 < n }",
+         "name" : "Stmt_user",
+         "schedule" : "[n] -> { Stmt_user[i0] -> [i0, 1] }"
+      }
+   ]
+}

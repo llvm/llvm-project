@@ -1,0 +1,22 @@
+## Ensure that the visibility of the start, end and size symbols created when
+## using binary input can be specified with the --new-symbol-visibility switch.
+
+# RUN: llvm-objcopy -I binary -O elf64-x86-64 %s %t.unspecified
+# RUN: llvm-readelf -s %t.unspecified | FileCheck %s --check-prefix=BINARY -DVISIBILITY=DEFAULT
+# RUN: llvm-objcopy --new-symbol-visibility default -I binary -O elf64-x86-64 %s %t.default
+# RUN: llvm-readelf -s %t.default | FileCheck %s --check-prefix=BINARY -DVISIBILITY=DEFAULT
+# RUN: llvm-objcopy --new-symbol-visibility hidden -I binary -O elf64-x86-64 %s %t.hidden
+# RUN: llvm-readelf -s %t.hidden | FileCheck %s --check-prefix=BINARY -DVISIBILITY=HIDDEN
+# RUN: llvm-objcopy --new-symbol-visibility protected -I binary -O elf64-x86-64 %s %t.protected
+# RUN: llvm-readelf -s %t.protected | FileCheck %s --check-prefix=BINARY -DVISIBILITY=PROTECTED
+# RUN: llvm-objcopy --new-symbol-visibility internal -I binary -O elf64-x86-64 %s %t.internal
+# RUN: llvm-readelf -s %t.internal | FileCheck %s --check-prefix=BINARY -DVISIBILITY=INTERNAL
+
+# BINARY:      [[VISIBILITY]] {{.*}} _binary{{.*}}_start
+# BINARY-NEXT: [[VISIBILITY]] {{.*}} _binary{{.*}}_end
+# BINARY-NEXT: [[VISIBILITY]] {{.*}} _binary{{.*}}_size
+
+# RUN: not llvm-objcopy --new-symbol-visibility fluff -I binary -O elf64-x86-64 \
+# RUN:   %s %t.error 2>&1 | FileCheck %s --check-prefix=ERR
+
+# ERR: error: 'fluff' is not a valid symbol visibility

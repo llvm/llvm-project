@@ -1,0 +1,211 @@
+## Test how we create SHT_RELR sections.
+
+## Test that the content of SHT_RELR sections for 64-bit little endian targets is correct.
+# RUN: yaml2obj --docnum=1 -D ENCODE=LSB %s -o %t.le64
+# RUN: llvm-readobj --sections --section-data %t.le64 | FileCheck %s --check-prefix=LE64
+
+# LE64:      Name: .relr.dyn
+# LE64-NEXT: Type: SHT_RELR
+# LE64-NEXT: Flags [
+# LE64-NEXT:   SHF_ALLOC
+# LE64-NEXT: ]
+# LE64-NEXT: Address: 0x0
+# LE64-NEXT: Offset: 0x40
+# LE64-NEXT: Size: 32
+# LE64-NEXT: Link: 0
+# LE64-NEXT: Info: 0
+# LE64-NEXT: AddressAlignment: 0
+# LE64-NEXT: EntrySize: 8
+# LE64-NEXT: SectionData (
+# LE64-NEXT:   0000: DDCCBBAA 00000000 2211FFEE 00000000
+# LE64-NEXT:   0010: 66554433 00000010 AA998877 00000010
+# LE64-NEXT: )
+
+## Test that the content of SHT_RELR sections for 64-bit big endian targets is correct.
+# RUN: yaml2obj --docnum=1 -D ENCODE=MSB %s -o %t.be64
+# RUN: llvm-readobj --sections --section-data %t.be64 | FileCheck %s --check-prefix=BE64
+
+# BE64:      Name: .relr.dyn
+# BE64:      SectionData (
+# BE64-NEXT:   0000: 00000000 AABBCCDD 00000000 EEFF1122
+# BE64-NEXT:   0010: 10000000 33445566 10000000 778899AA
+# BE64-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2[[ENCODE]]
+  Type:  ET_DYN
+Sections:
+  - Name:    .relr.dyn
+    Type:    SHT_RELR
+## Set an arbitrary flag to demonstrate flags are set when requested.
+    Flags:   [ SHF_ALLOC ]
+    Entries: [ 0x00000000AABBCCDD, 0x00000000EEFF1122,
+               0x1000000033445566, 0x10000000778899AA ]
+
+## Test that the content of SHT_RELR sections for 32-bit little endian targets is correct.
+# RUN: yaml2obj --docnum=2 -D ENCODE=LSB %s -o %t.le32
+# RUN: llvm-readobj --sections --section-data %t.le32 | FileCheck %s --check-prefix=LE32
+
+# LE32:      Name: .relr.dyn
+# LE32-NEXT: Type: SHT_RELR
+# LE32-NEXT: Flags [
+# LE32-NEXT:   SHF_ALLOC
+# LE32-NEXT: ]
+# LE32-NEXT: Address: 0x0
+# LE32-NEXT: Offset: 0x34
+# LE32-NEXT: Size: 16
+# LE32-NEXT: Link: 0
+# LE32-NEXT: Info: 0
+# LE32-NEXT: AddressAlignment: 0
+# LE32-NEXT: EntrySize: 4
+# LE32-NEXT: SectionData (
+# LE32-NEXT:   0000: DDCCBBAA BBAAFFEE BBAAFFEE BCAAFFEE
+# LE32-NEXT: )
+
+## Test that the content of SHT_RELR sections for 32-bit big endian targets is correct.
+# RUN: yaml2obj --docnum=2 -D ENCODE=MSB %s -o %t.be32
+# RUN: llvm-readobj --sections --section-data %t.be32 | FileCheck %s --check-prefix=BE32
+
+# BE32:      Name: .relr.dyn
+# BE32:      SectionData (
+# BE32-NEXT:   0000: AABBCCDD EEFFAABB EEFFAABB EEFFAABC  |
+# BE32-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS32
+  Data:  ELFDATA2[[ENCODE]]
+  Type:  ET_DYN
+Sections:
+  - Name:    .relr.dyn
+    Type:    SHT_RELR
+## Set an arbitrary flag to demonstrate flags are set when requested.
+    Flags:   [ SHF_ALLOC ]
+    Entries: [ 0xAABBCCDD, 0xEEFFAABB,
+               0xEEFFAABB, 0xEEFFAABC ]
+
+## Check we are able to set an arbitrary sh_entsize.
+# RUN: yaml2obj --docnum=3 %s -o %t.entsize
+# RUN: llvm-readelf --sections %t.entsize | FileCheck %s --check-prefix=ENTSIZE
+
+# ENTSIZE: [Nr] Name      Type Address  Off    Size   ES
+# ENTSIZE: [ 1] .relr.dyn RELR 00000000 000034 000001 34
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS32
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name:    .relr.dyn
+    Type:    SHT_RELR
+    EntSize: 0x34
+    Content: "12"
+
+## Test we can't use 64-bit offsets/bitmaps when creating a 32-bit object.
+# RUN: yaml2obj --docnum=4 %s -o %t.nottoolarge
+# RUN: llvm-readobj --sections --section-data %t.nottoolarge | FileCheck %s --check-prefix=NOT-TOO-LARGE
+
+# NOT-TOO-LARGE:      Name: .relr.dyn
+# NOT-TOO-LARGE:      SectionData (
+# NOT-TOO-LARGE-NEXT:   0000: FFFFFFFF
+# NOT-TOO-LARGE-NEXT: )
+
+# RUN: not yaml2obj --docnum=5 %s 2>&1 | FileCheck %s --check-prefix=TOO-LARGE
+# TOO-LARGE: error: .relr.dyn: the value is too large for 32-bits: 0x100000000
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS32
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name:    .relr.dyn
+    Type:    SHT_RELR
+    Entries: [ 0x00000000FFFFFFFF ]
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS32
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name:    .relr.dyn
+    Type:    SHT_RELR
+    Entries: [ 0x0000000100000000 ]
+
+## Check we can use the "Content" key with the "Size" key when the size is greater
+## than or equal to the content size.
+
+# RUN: not yaml2obj --docnum=6 -DSIZE=1 -DCONTENT="'0011'" %s 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=CONTENT-SIZE-ERR
+
+# CONTENT-SIZE-ERR: error: Section size must be greater than or equal to the content size
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name:    .relr.dyn
+    Type:    SHT_RELR
+    EntSize: 0xff
+    Size:    [[SIZE=<none>]]
+    Content: [[CONTENT=<none>]]
+    Entries: [[ENTRIES=<none>]]
+
+# RUN: yaml2obj --docnum=6 -DSIZE=2 -DCONTENT="'0011'" %s -o %t.cont.size.eq.o
+# RUN: llvm-readobj --sections --section-data %t.cont.size.eq.o | \
+# RUN:   FileCheck %s --check-prefix=CHECK-CONTENT -DDATA="0011"
+
+# RUN: yaml2obj --docnum=6 -DSIZE=3 -DCONTENT="'0011'" %s -o %t.cont.size.gr.o
+# RUN: llvm-readobj --sections --section-data %t.cont.size.gr.o | \
+# RUN:   FileCheck %s --check-prefix=CHECK-CONTENT -DDATA="001100"
+
+# CHECK-CONTENT:      Name: .relr.dyn
+# CHECK-CONTENT-NEXT: Type: SHT_RELR
+# CHECK-CONTENT-NEXT: Flags [
+# CHECK-CONTENT-NEXT: ]
+# CHECK-CONTENT-NEXT: Address:
+# CHECK-CONTENT-NEXT: Offset:
+# CHECK-CONTENT-NEXT: Size:
+# CHECK-CONTENT-NEXT: Link:
+# CHECK-CONTENT-NEXT: Info:
+# CHECK-CONTENT-NEXT: AddressAlignment:
+# CHECK-CONTENT-NEXT: EntrySize: 255
+# CHECK-CONTENT-NEXT: SectionData (
+# CHECK-CONTENT-NEXT:   0000: [[DATA]] |
+# CHECK-CONTENT-NEXT: )
+
+## Check we can use the "Size" key alone to create the section.
+
+# RUN: yaml2obj --docnum=6 -DSIZE=3 %s -o %t.size.o
+# RUN: llvm-readobj --sections --section-data %t.size.o | \
+# RUN:   FileCheck %s --check-prefix=CHECK-CONTENT -DDATA="000000"
+
+## Check we can use the "Content" key alone to create the section.
+
+# RUN: yaml2obj --docnum=6 -DCONTENT="'112233'" %s -o %t.content.o
+# RUN: llvm-readobj --sections --section-data %t.content.o | \
+# RUN:   FileCheck %s --check-prefix=CHECK-CONTENT -DDATA="112233"
+
+## Check we can't use the "Entries" key together with the "Content" or "Size" keys.
+
+# RUN: not yaml2obj --docnum=6 -DSIZE=0 -DENTRIES="[]" %s 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ENTRIES-ERR
+# RUN: not yaml2obj --docnum=6 -DCONTENT="'00'" -DENTRIES="[]" %s 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ENTRIES-ERR
+
+# ENTRIES-ERR: error: "Entries" cannot be used with "Content" or "Size"
+
+## Check we create an empty section when none of "Size", "Content" or "Entries" are specified.
+
+# RUN: yaml2obj %s --docnum=6 -o %t.empty.o
+# RUN: llvm-readelf --sections --section-data %t.empty.o | \
+# RUN:   FileCheck %s --check-prefix=EMPTY-SEC
+
+# EMPTY-SEC: [Nr] Name      Type Address          Off    Size
+# EMPTY-SEC: [ 1] .relr.dyn RELR 0000000000000000 000040 000000

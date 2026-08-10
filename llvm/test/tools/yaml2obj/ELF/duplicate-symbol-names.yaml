@@ -1,0 +1,97 @@
+## Check that yaml2obj is able to produce an object from YAML
+## containing symbols with duplicate names (but different name suffixes).
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readobj --syms %t1 | FileCheck %s --check-prefix=CASE1
+
+# CASE1: Name: localfoo (1)
+# CASE1: Name: localfoo (1)
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Symbols:
+  - Name: localfoo
+  - Name: 'localfoo (1)'
+
+## Check that yaml2obj reports an error when we have
+## symbols with equal names and suffixes.
+
+# RUN: not yaml2obj --docnum=2 %s 2>&1| FileCheck %s --check-prefix=CASE2
+# CASE2-COUNT-2: error: repeated symbol name: 'localfoo (1)'
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Symbols:
+  - Name: 'localfoo (1)'
+  - Name: 'localfoo (1)'
+  - Name: 'localfoo (1)'
+
+## Check that yaml2obj reports an error when we have
+## symbols without suffixes in the names and their
+## names are equal.
+
+# RUN: not yaml2obj --docnum=3 %s 2>&1| FileCheck %s --check-prefix=CASE3
+# CASE3: error: repeated symbol name: 'localfoo'
+# CASE3: error: repeated symbol name: 'localfoo'
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Symbols:
+  - Name: localfoo
+  - Name: localfoo
+  - Name: localfoo
+
+## Check that yaml2obj can produce correct relocations that
+## reference symbols with name suffixes.
+
+# RUN: yaml2obj --docnum=4 %s -o %t4
+# RUN: llvm-readobj -r --expand-relocs %t4 | FileCheck %s --check-prefix=CASE4
+
+# CASE4:      Relocations [
+# CASE4-NEXT:   Section {{.*}} .rela.text {
+# CASE4-NEXT:     Relocation {
+# CASE4-NEXT:       Offset: 0x0
+# CASE4-NEXT:       Type: R_X86_64_NONE
+# CASE4-NEXT:       Symbol: foo (1)
+# CASE4-NEXT:       Addend: 0x0
+# CASE4-NEXT:     }
+# CASE4-NEXT:     Relocation {
+# CASE4-NEXT:       Offset: 0x1
+# CASE4-NEXT:       Type: R_X86_64_NONE
+# CASE4-NEXT:       Symbol: foo (2)
+# CASE4-NEXT:       Addend: 0x0
+# CASE4-NEXT:     }
+# CASE4-NEXT:   }
+# CASE4-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+  - Name: .rela.text
+    Type: SHT_RELA
+    Info: .text
+    Link: .symtab
+    Relocations:
+      - Type:   R_X86_64_NONE
+        Symbol: foo
+      - Offset: 0x1
+        Type:   R_X86_64_NONE
+        Symbol: 'foo (1)'
+Symbols:
+  - Name: foo
+  - Name: 'foo (1)'

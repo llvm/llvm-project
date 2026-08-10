@@ -1,0 +1,4 @@
+RUN: llvm-mc -filetype=obj -triple=wasm64-unknown-unknown %p/Inputs/start.s -o %t.o
+RUN: not wasm-ld %t.o -o %t.wasm 2>&1 | FileCheck %s
+
+CHECK: must specify -mwasm64 to process wasm64 object files

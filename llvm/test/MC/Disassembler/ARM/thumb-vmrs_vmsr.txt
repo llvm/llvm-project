@@ -1,0 +1,157 @@
+# RUN: not llvm-mc -disassemble -triple=thumbv7a-arm-none-eabi -mattr=+vfp2 -show-encoding < %s 2>%t \
+# RUN: | FileCheck --check-prefix=CHECK-V7A %s
+# RUN:   FileCheck --check-prefix=ERROR-V7A < %t %s
+# RUN: not llvm-mc -disassemble -triple=thumbv7m-arm-none-eabi -mattr=+vfp2 -show-encoding < %s 2>%t \
+# RUN: | FileCheck --check-prefix=CHECK-V7M %s
+# RUN:   FileCheck --check-prefix=ERROR-V7M < %t %s
+# RUN: llvm-mc -disassemble -triple=thumbv8a-arm-none-eabi -mattr=+fp-armv8 -show-encoding < %s 2>%t \
+# RUN: | FileCheck --check-prefix=CHECK-V8A %s
+# RUN:   FileCheck --check-prefix=ERROR-V8A < %t %s
+# RUN: llvm-mc -disassemble -triple=thumbv8m.main-arm-none-eabi -mattr=+fp-armv8 -show-encoding < %s 2>%t \
+# RUN: | FileCheck --check-prefix=CHECK-V8M %s
+# RUN:   FileCheck --check-prefix=ERROR-V8M < %t %s
+# RUN: not llvm-mc -disassemble -triple=thumbv7m-arm-none-eabi -show-encoding < %s 2>%t
+# RUN:   FileCheck --check-prefix=ERROR-NOVFP < %t %s
+
+       [0xf1,0xee,0x10,0xfa]
+       [0xf1,0xee,0x10,0xfa]
+       [0xf1,0xee,0x10,0xfa]
+       [0xf1,0xee,0x10,0xaa]
+       [0xf0,0xee,0x10,0x2a]
+       [0xf0,0xee,0x10,0x3a]
+       [0xf7,0xee,0x10,0x4a]
+       [0xf6,0xee,0x10,0x5a]
+       [0xf5,0xee,0x10,0x6a]
+       [0xf1,0xee,0x10,0xda]
+
+# CHECK-V7A: vmrs APSR_nzcv, fpscr       @ encoding: [0xf1,0xee,0x10,0xfa]
+# CHECK-V7A: vmrs APSR_nzcv, fpscr       @ encoding: [0xf1,0xee,0x10,0xfa]
+# CHECK-V7A: vmrs APSR_nzcv, fpscr       @ encoding: [0xf1,0xee,0x10,0xfa]
+# CHECK-V7A: vmrs r10, fpscr             @ encoding: [0xf1,0xee,0x10,0xaa]
+# CHECK-V7A: vmrs r2, fpsid              @ encoding: [0xf0,0xee,0x10,0x2a]
+# CHECK-V7A: vmrs r3, fpsid              @ encoding: [0xf0,0xee,0x10,0x3a]
+# CHECK-V7A: vmrs r4, mvfr0              @ encoding: [0xf7,0xee,0x10,0x4a]
+# CHECK-V7A: vmrs r5, mvfr1              @ encoding: [0xf6,0xee,0x10,0x5a]
+# ERROR-V7A: invalid instruction encoding
+# ERROR-V7A: potentially undefined instruction encoding
+
+# CHECK-V7M: vmrs APSR_nzcv, fpscr       @ encoding: [0xf1,0xee,0x10,0xfa]
+# CHECK-V7M: vmrs APSR_nzcv, fpscr       @ encoding: [0xf1,0xee,0x10,0xfa]
+# CHECK-V7M: vmrs APSR_nzcv, fpscr       @ encoding: [0xf1,0xee,0x10,0xfa]
+# CHECK-V7M: vmrs r10, fpscr             @ encoding: [0xf1,0xee,0x10,0xaa]
+# CHECK-V7M: vmrs r2, fpsid              @ encoding: [0xf0,0xee,0x10,0x2a]
+# CHECK-V7M: vmrs r3, fpsid              @ encoding: [0xf0,0xee,0x10,0x3a]
+# CHECK-V7M: vmrs r4, mvfr0              @ encoding: [0xf7,0xee,0x10,0x4a]
+# CHECK-V7M: vmrs r5, mvfr1              @ encoding: [0xf6,0xee,0x10,0x5a]
+# ERROR-V7M: invalid instruction encoding
+# ERROR-V7M: potentially undefined instruction encoding
+
+# CHECK-V8A: vmrs APSR_nzcv, fpscr       @ encoding: [0xf1,0xee,0x10,0xfa]
+# CHECK-V8A: vmrs APSR_nzcv, fpscr       @ encoding: [0xf1,0xee,0x10,0xfa]
+# CHECK-V8A: vmrs APSR_nzcv, fpscr       @ encoding: [0xf1,0xee,0x10,0xfa]
+# CHECK-V8A: vmrs r10, fpscr             @ encoding: [0xf1,0xee,0x10,0xaa]
+# CHECK-V8A: vmrs r2, fpsid              @ encoding: [0xf0,0xee,0x10,0x2a]
+# CHECK-V8A: vmrs r3, fpsid              @ encoding: [0xf0,0xee,0x10,0x3a]
+# CHECK-V8A: vmrs r4, mvfr0              @ encoding: [0xf7,0xee,0x10,0x4a]
+# CHECK-V8A: vmrs r5, mvfr1              @ encoding: [0xf6,0xee,0x10,0x5a]
+# CHECK-V8A: vmrs r6, mvfr2              @ encoding: [0xf5,0xee,0x10,0x6a]
+# CHECK-V8A: vmrs sp, fpscr              @ encoding: [0xf1,0xee,0x10,0xda]
+
+# CHECK-V8M: vmrs APSR_nzcv, fpscr       @ encoding: [0xf1,0xee,0x10,0xfa]
+# CHECK-V8M: vmrs APSR_nzcv, fpscr       @ encoding: [0xf1,0xee,0x10,0xfa]
+# CHECK-V8M: vmrs APSR_nzcv, fpscr       @ encoding: [0xf1,0xee,0x10,0xfa]
+# CHECK-V8M: vmrs r10, fpscr             @ encoding: [0xf1,0xee,0x10,0xaa]
+# CHECK-V8M: vmrs r2, fpsid              @ encoding: [0xf0,0xee,0x10,0x2a]
+# CHECK-V8M: vmrs r3, fpsid              @ encoding: [0xf0,0xee,0x10,0x3a]
+# CHECK-V8M: vmrs r4, mvfr0              @ encoding: [0xf7,0xee,0x10,0x4a]
+# CHECK-V8M: vmrs r5, mvfr1              @ encoding: [0xf6,0xee,0x10,0x5a]
+# CHECK-V8M: vmrs r6, mvfr2              @ encoding: [0xf5,0xee,0x10,0x6a]
+# ERROR-V8M: potentially undefined instruction encoding
+
+# ERROR-NOVFP: invalid instruction encoding
+# ERROR-NOVFP: invalid instruction encoding
+# ERROR-NOVFP: invalid instruction encoding
+# ERROR-NOVFP: invalid instruction encoding
+# ERROR-NOVFP: invalid instruction encoding
+# ERROR-NOVFP: invalid instruction encoding
+# ERROR-NOVFP: invalid instruction encoding
+# ERROR-NOVFP: invalid instruction encoding
+# ERROR-NOVFP: invalid instruction encoding
+# ERROR-NOVFP: invalid instruction encoding
+
+[0xe1,0xee,0x10,0xfa]
+[0xe1,0xee,0x10,0x0a]
+[0xe8,0xee,0x10,0x1a]
+[0xe0,0xee,0x10,0x2a]
+[0xe1,0xee,0x10,0xaa]
+[0xe1,0xee,0x10,0xda]
+
+# ERROR-V7A: potentially undefined instruction encoding
+# CHECK-V7A: vmsr  fpscr, r0             @ encoding: [0xe1,0xee,0x10,0x0a]
+# CHECK-V7A: vmsr  fpexc, r1             @ encoding: [0xe8,0xee,0x10,0x1a]
+# CHECK-V7A: vmsr  fpsid, r2             @ encoding: [0xe0,0xee,0x10,0x2a]
+# CHECK-V7A: vmsr  fpscr, r10            @ encoding: [0xe1,0xee,0x10,0xaa]
+# ERROR-V7A: potentially undefined instruction encoding
+
+# ERROR-V7M: potentially undefined instruction encoding
+# CHECK-V7M: vmsr  fpscr, r0             @ encoding: [0xe1,0xee,0x10,0x0a]
+# CHECK-V7M: vmsr  fpexc, r1             @ encoding: [0xe8,0xee,0x10,0x1a]
+# CHECK-V7M: vmsr  fpsid, r2             @ encoding: [0xe0,0xee,0x10,0x2a]
+# CHECK-V7M: vmsr  fpscr, r10            @ encoding: [0xe1,0xee,0x10,0xaa]
+# ERROR-V7M: potentially undefined instruction encoding
+
+# ERROR-V8A: potentially undefined instruction encoding
+# CHECK-V8A: vmsr  fpscr, r0             @ encoding: [0xe1,0xee,0x10,0x0a]
+# CHECK-V8A: vmsr  fpexc, r1             @ encoding: [0xe8,0xee,0x10,0x1a]
+# CHECK-V8A: vmsr  fpsid, r2             @ encoding: [0xe0,0xee,0x10,0x2a]
+# CHECK-V8A: vmsr  fpscr, r10            @ encoding: [0xe1,0xee,0x10,0xaa]
+# CHECK-V8A: vmsr  fpscr, sp             @ encoding: [0xe1,0xee,0x10,0xda]
+
+# ERROR-V8M: potentially undefined instruction encoding
+# CHECK-V8M: vmsr  fpscr, r0             @ encoding: [0xe1,0xee,0x10,0x0a]
+# CHECK-V8M: vmsr  fpexc, r1             @ encoding: [0xe8,0xee,0x10,0x1a]
+# CHECK-V8M: vmsr  fpsid, r2             @ encoding: [0xe0,0xee,0x10,0x2a]
+# CHECK-V8M: vmsr  fpscr, r10            @ encoding: [0xe1,0xee,0x10,0xaa]
+# ERROR-V8M: potentially undefined instruction encoding
+
+# ERROR-NOVFP: invalid instruction encoding
+# ERROR-NOVFP: invalid instruction encoding
+# ERROR-NOVFP: invalid instruction encoding
+# ERROR-NOVFP: invalid instruction encoding
+# ERROR-NOVFP: invalid instruction encoding
+# ERROR-NOVFP: invalid instruction encoding
+
+        [0x0b,0xbf]
+        [0xf7,0xee,0x10,0x4a]
+        [0xf6,0xee,0x10,0x5a]
+        [0xe1,0xee,0x10,0x0a]
+        [0xe0,0xee,0x10,0x2a]
+
+# CHECK-V7A: itete eq                      @ encoding: [0x0b,0xbf]
+# CHECK-V7A: vmrseq  r4, mvfr0             @ encoding: [0xf7,0xee,0x10,0x4a]
+# CHECK-V7A: vmrsne  r5, mvfr1             @ encoding: [0xf6,0xee,0x10,0x5a]
+# CHECK-V7A: vmsreq  fpscr, r0             @ encoding: [0xe1,0xee,0x10,0x0a]
+# CHECK-V7A: vmsrne  fpsid, r2             @ encoding: [0xe0,0xee,0x10,0x2a]
+
+# CHECK-V7M: itete eq                      @ encoding: [0x0b,0xbf]
+# CHECK-V7M: vmrseq  r4, mvfr0             @ encoding: [0xf7,0xee,0x10,0x4a]
+# CHECK-V7M: vmrsne  r5, mvfr1             @ encoding: [0xf6,0xee,0x10,0x5a]
+# CHECK-V7M: vmsreq  fpscr, r0             @ encoding: [0xe1,0xee,0x10,0x0a]
+# CHECK-V7M: vmsrne  fpsid, r2             @ encoding: [0xe0,0xee,0x10,0x2a]
+
+# CHECK-V8A: itete eq                      @ encoding: [0x0b,0xbf]
+# CHECK-V8A: vmrseq  r4, mvfr0             @ encoding: [0xf7,0xee,0x10,0x4a]
+# CHECK-V8A: vmrsne  r5, mvfr1             @ encoding: [0xf6,0xee,0x10,0x5a]
+# CHECK-V8A: vmsreq  fpscr, r0             @ encoding: [0xe1,0xee,0x10,0x0a]
+# CHECK-V8A: vmsrne  fpsid, r2             @ encoding: [0xe0,0xee,0x10,0x2a]
+
+# CHECK-V8M: itete eq                      @ encoding: [0x0b,0xbf]
+# CHECK-V8M: vmrseq  r4, mvfr0             @ encoding: [0xf7,0xee,0x10,0x4a]
+# CHECK-V8M: vmrsne  r5, mvfr1             @ encoding: [0xf6,0xee,0x10,0x5a]
+# CHECK-V8M: vmsreq  fpscr, r0             @ encoding: [0xe1,0xee,0x10,0x0a]
+# CHECK-V8M: vmsrne  fpsid, r2             @ encoding: [0xe0,0xee,0x10,0x2a]
+
+# ERROR-NOVFP: invalid instruction encoding
+# ERROR-NOVFP: invalid instruction encoding
+# ERROR-NOVFP: invalid instruction encoding
+# ERROR-NOVFP: invalid instruction encoding

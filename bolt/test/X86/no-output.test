@@ -1,0 +1,29 @@
+## This script checks that BOLT is able to work in dry run mode (no output)
+
+# REQUIRES: system-linux
+
+# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown \
+# RUN:   %s -o %t.o
+# RUN: link_fdata %s %t.o %t.fdata
+# RUN: llvm-strip --strip-unneeded %t.o
+# RUN: %clang %cflags %t.o -o %t.exe -Wl,-q
+# RUN: llvm-bolt %t.exe --print-profile-stats -o /dev/null \
+# RUN:   --data %t.fdata | FileCheck %s
+
+  .text
+  .globl  main
+  .type main, %function
+  .p2align  4
+main:
+# FDATA: 0 [unknown] 0 1 main 0 0 510
+  pushq %rbp
+  movq  %rsp, %rbp
+  subq  $0x18, %rsp
+  addq  $0x18, %rsp
+  xorq  %rax, %rax
+  leaveq
+  retq
+.size main, .-main
+
+
+# CHECK: skipping writing final binary

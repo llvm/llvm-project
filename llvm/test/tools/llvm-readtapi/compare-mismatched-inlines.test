@@ -1,0 +1,17 @@
+; RUN: not llvm-readtapi --compare %S/Inputs/v4B.tbd %S/Inputs/v4D.tbd 2>&1 | FileCheck %s
+
+; CHECK:< {{.*}}/Inputs/v4B.tbd
+; CHECK:> {{.*}}/Inputs/v4D.tbd
+
+; CHECK:     Reexported Libraries
+; CHECK-NEXT:        i386-apple-macos
+; CHECK-NEXT:               > System.framework/System
+; CHECK-NEXT:        x86_64-apple-ios-simulator
+; CHECK-NEXT:               > Alpine.framework/Alpine
+; CHECK-NEXT:               > System.framework/System
+; CHECK-NEXT:Inlined Reexported Frameworks/Libraries
+; CHECK-NEXT: Install Name
+; CHECK-NEXT:    > System.framework/System
+
+; CHECK-NOT: error:
+; CHECK-NOT: warning:

@@ -1,0 +1,9 @@
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8.2a --disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=-v8.2a --disassemble < %s | FileCheck %s --check-prefix=NO_V82
+
+[0x01,0x79,0x08,0xd5]
+[0x22,0x79,0x08,0xd5]
+# CHECK: at s1e1rp, x1
+# CHECK: at s1e1wp, x2
+# NO_V82: sys     #0, c7, c9, #0, x1
+# NO_V82: sys     #0, c7, c9, #1, x2

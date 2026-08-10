@@ -1,0 +1,24 @@
+## Check that obj2yaml does not write a section Info
+## field in the case when it has a value of zero.
+
+# RUN: yaml2obj %s -o %t
+# RUN: obj2yaml %t | FileCheck %s
+
+# CHECK:      Sections:
+# CHECK-NEXT:  - Name: .foo
+# CHECK-NEXT:    Type: SHT_PROGBITS
+# CHECK-NEXT:  - Name: .bar
+# CHECK-NEXT:    Type: SHT_PROGBITS
+# CHECK-NEXT:    Info: 0x1
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+  - Name: .bar
+    Type: SHT_PROGBITS
+    Info: 1

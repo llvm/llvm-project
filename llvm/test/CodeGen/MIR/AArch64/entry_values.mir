@@ -1,0 +1,39 @@
+# RUN: llc -mtriple=aarch64 -run-pass none -o - %s | FileCheck %s
+
+# This test ensures that the MIR parser parses machine entry_value properties
+# correctly.
+
+--- |
+
+  define void @foo(ptr swiftasync %arg) !dbg !4 {
+    call void @llvm.dbg.declare(metadata ptr %arg, metadata !9, metadata !DIExpression(DW_OP_LLVM_entry_value, 1)), !dbg !10
+    ret void
+  }
+
+  declare void @llvm.dbg.declare(metadata, metadata, metadata)
+  !llvm.module.flags = !{!0, !1}
+  !llvm.dbg.cu = !{!2}
+  !0 = !{i32 7, !"Dwarf Version", i32 4}
+  !1 = !{i32 2, !"Debug Info Version", i32 3}
+  !2 = distinct !DICompileUnit(language: DW_LANG_Swift, file: !3, runtimeVersion: 0, emissionKind: FullDebug)
+  !3 = !DIFile(filename: "blah", directory: "")
+  !4 = distinct !DISubprogram(linkageName: "foo", scope: null, file: !3, type: !5, spFlags: DISPFlagDefinition, unit: !2, retainedNodes: !6)
+  !5 = !DISubroutineType(types: null)
+  !6 = !{!7, !9}
+  !7 = !DILocalVariable(name: "k1", scope: !4, file: !3, line: 7, type: !8)
+  !8 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "Klass")
+  !9 = !DILocalVariable(name: "k2", scope: !4, file: !3, line: 7, type: !8)
+  !10 = !DILocation(line: 6, scope: !4)
+
+...
+---
+name:            foo
+entry_values:
+  - { entry-value-register: '$x22', debug-info-variable: '!9', debug-info-expression: '!DIExpression(DW_OP_LLVM_entry_value, 1)',
+      debug-info-location: '!10' }
+# CHECK: entry_values:
+# CHECK:   - { entry-value-register: '$x22', debug-info-variable: '![[#]]', debug-info-expression: '!DIExpression(DW_OP_LLVM_entry_value, 1)',
+# CHECK:       debug-info-location: '![[#]]' }
+body: |
+  bb.1:
+...

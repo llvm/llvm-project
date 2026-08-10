@@ -1,0 +1,52 @@
+## Test the p_align field of a program header can be set explicitly or inferred
+## from the maximum alignment of contained sections.
+
+## Explicit Align has priority over section alignments.
+
+# RUN: yaml2obj --docnum=1 %s -o %t
+# RUN: llvm-readobj -l %t | FileCheck %s
+# CHECK:      ProgramHeader {
+# CHECK-NOT:  ProgramHeader {
+# CHECK:        Alignment: 16
+# CHECK-NEXT: }
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:         .tdata
+    Type:         SHT_PROGBITS
+    AddressAlign: 4
+  - Name:         .tbss
+    Type:         SHT_NOBITS
+    AddressAlign: 64
+ProgramHeaders:
+  - Type:  PT_TLS
+    Align: 16
+    FirstSec: .tdata
+    LastSec:  .tbss
+
+## If Align is not specified, p_align is inferred from the maximum alignment
+## of contained sections.
+
+# RUN: yaml2obj --docnum=2 %s -o %t
+# RUN: llvm-readobj -l %t | FileCheck %s
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    AddressAlign: 4
+  - Name:         .text.hot
+    Type:         SHT_PROGBITS
+    AddressAlign: 16
+ProgramHeaders:
+  - Type:     PT_LOAD
+    FirstSec: .text
+    LastSec:  .text.hot

@@ -1,0 +1,48 @@
+Test the 'm' operation in llvm-ar
+
+RUN: rm -rf %t && mkdir -p %t && cd %t
+
+RUN: rm -f %t.a
+RUN: cp %p/Inputs/GNU.a %t.a
+RUN: llvm-ar m %t.a very_long_bytecode_file_name.bc
+RUN: llvm-ar t %t.a | FileCheck %s
+
+RUN: rm -f %t.a
+RUN: cp %p/Inputs/MacOSX.a %t.a
+RUN: llvm-ar m %t.a very_long_bytecode_file_name.bc
+RUN: llvm-ar t %t.a | FileCheck %s
+
+RUN: rm -f %t.a
+RUN: cp %p/Inputs/SVR4.a %t.a
+RUN: llvm-ar m %t.a very_long_bytecode_file_name.bc
+RUN: llvm-ar t %t.a | FileCheck %s
+
+RUN: rm -f %t.a
+RUN: cp %p/Inputs/xpg4.a %t.a
+RUN: llvm-ar m %t.a very_long_bytecode_file_name.bc
+RUN: llvm-ar t %t.a | FileCheck %s
+
+CHECK: evenlen
+CHECK-NEXT: oddlen
+CHECK-NEXT: IsNAN.o
+CHECK-NEXT: very_long_bytecode_file_name.bc
+
+RUN: rm -f %t.a
+RUN: cp %p/Inputs/GNU.a %t.a
+RUN: llvm-ar mb evenlen %t.a very_long_bytecode_file_name.bc
+RUN: llvm-ar t %t.a | FileCheck --check-prefix=BEFORE %s
+
+BEFORE: very_long_bytecode_file_name.bc
+BEFORE-NEXT: evenlen
+BEFORE-NEXT: oddlen
+BEFORE-NEXT: IsNAN.o
+
+RUN: rm -f %t.a
+RUN: cp %p/Inputs/GNU.a %t.a
+RUN: llvm-ar ma evenlen %t.a very_long_bytecode_file_name.bc
+RUN: llvm-ar t %t.a | FileCheck --check-prefix=AFTER %s
+
+AFTER: evenlen
+AFTER-NEXT: very_long_bytecode_file_name.bc
+AFTER-NEXT: oddlen
+AFTER-NEXT: IsNAN.o

@@ -1,0 +1,5 @@
+Name: ExportAs
+Globals:
+  - Name: globalInt
+    Availability: none
+    AvailabilityMsg: "oh no"

@@ -1,0 +1,68 @@
+; RUN: rm -rf %t
+; RUN: split-file %s %t  
+
+; RUN: llvm-readtapi --compare %t/all_archs.tbd  %t/missing_archs.tbd --ignore-arch armv7 --ignore-arch armv7s 2>&1 | FileCheck %s --allow-empty --implicit-check-not warning: --implicit-check-not error:
+; RUN: not llvm-readtapi --compare %t/all_archs.tbd  %t/missing_archs.tbd --ignore-arch armv7s 2>&1 | FileCheck %s --check-prefix ARMV7
+
+all_archs.tbd
+; ARMV7: < {{.*}}all_archs.tbd
+; ARMV7: > {{.*}}missing_archs.tbd
+
+; ARMV7:      Reexported Libraries
+; ARMV7-NEXT: 	    armv7-apple-ios
+; ARMV7:      Symbols
+; ARMV7-NEXT: 	    armv7-apple-ios
+; ARMV7:      Inlined Reexported Frameworks/Libraries
+; ARMV7-NEXT: 	/System/Library/Frameworks/FooCore.framework/FooCore
+; ARMV7: 		  Symbols
+; ARMV7-NEXT: 			armv7-apple-ios
+
+;--- all_archs.tbd
+--- !tapi-tbd
+tbd-version:     4
+targets:         [ armv7-ios, armv7s-ios, arm64-ios, arm64e-ios ]
+install-name:    '/System/Library/Frameworks/Foo.framework/Foo'
+current-version: 1986.34.9
+reexported-libraries:
+  - targets:         [ armv7-ios, armv7s-ios, arm64-ios, arm64e-ios ]
+    libraries:       [ '/System/Library/Frameworks/FooCore.framework/FooCore' ]
+exports:
+  - targets:         [ armv7-ios, armv7s-ios, arm64-ios, arm64e-ios ]
+    symbols:         [ _AllRequestsKeyPathFragment, _AnalyticsLoggingSubsystem, _AnyRequestKeyPathFragment, 
+                       _bar_getBarPointSize_ints, _bar_newBarMessage, _bar_serialize ]
+  - targets:         [ arm64-ios, arm64e-ios ]
+    symbols:         [ __ZN3lingo11MapEdgeRoad6lengthEv, 
+                       __ZTVN3lingo11MapEdgeRoadE, __ZTVN3lingo7MapNodeE, __ZTVN5bar19GeometryPathElementE ]
+--- !tapi-tbd
+tbd-version:     4
+targets:         [ armv7-ios, armv7s-ios, arm64-ios, arm64e-ios ]
+install-name:    '/System/Library/Frameworks/FooCore.framework/FooCore'
+current-version: 1986.34.9
+exports:
+  - targets:         [ armv7-ios, armv7s-ios, arm64-ios, arm64e-ios ]
+    symbols:         [ _sym, _workgroupsym, _taskgroup_sim, meta_sim ]
+...
+
+;--- missing_archs.tbd
+--- !tapi-tbd
+tbd-version:     4
+targets:         [ arm64-ios, arm64e-ios ]
+install-name:    '/System/Library/Frameworks/Foo.framework/Foo'
+current-version: 1986.34.9
+reexported-libraries:
+  - targets:         [ arm64-ios, arm64e-ios ]
+    libraries:       [ '/System/Library/Frameworks/FooCore.framework/FooCore' ]
+exports:
+  - targets:         [ arm64-ios, arm64e-ios ]
+    symbols:         [ _AllRequestsKeyPathFragment, _AnalyticsLoggingSubsystem, _AnyRequestKeyPathFragment, 
+                       _bar_getBarPointSize_ints, _bar_newBarMessage, _bar_serialize, __ZN3lingo11MapEdgeRoad6lengthEv, 
+                       __ZTVN3lingo11MapEdgeRoadE, __ZTVN3lingo7MapNodeE, __ZTVN5bar19GeometryPathElementE ]
+--- !tapi-tbd
+tbd-version:     4
+targets:         [ arm64-ios, arm64e-ios ]
+install-name:    '/System/Library/Frameworks/FooCore.framework/FooCore'
+current-version: 1986.34.9
+exports:
+  - targets:         [ arm64-ios, arm64e-ios ]
+    symbols:         [ _sym, _workgroupsym, _taskgroup_sim, meta_sim ]
+...

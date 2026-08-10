@@ -1,0 +1,56 @@
+# REQUIRES: x86
+# UNSUPPORTED: system-windows
+
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: chmod +x a.sh
+# RUN: llvm-mc -filetype=obj -triple=x86_64 /dev/null -o 0.o
+# RUN: not ld.lld -lidontexist --error-handling-script=%t/a.sh 0.o 2>&1 |\
+# RUN:   FileCheck --check-prefix=CHECK-LIB %s --match-full-lines --strict-whitespace
+# RUN: not ld.lld -lidontexist --error-handling-script=./notexist 0.o 2>&1 |\
+# RUN:   FileCheck --check-prefix=CHECK-SCRIPT-DOES-NOT-EXIST %s
+
+# RUN: llvm-mc -filetype=obj -triple=x86_64 1.s -o 1.o
+# RUN: not ld.lld --error-handling-script=./a.sh 1.o 2>&1 |\
+# RUN:   FileCheck --check-prefix=CHECK-SYM-C %s
+
+# RUN: llvm-mc -filetype=obj -triple=x86_64 2.s -o 2.o
+# RUN: not ld.lld --demangle --error-handling-script=./a.sh 2.o 2>&1 |\
+# RUN:   FileCheck --check-prefix=CHECK-SYM-CXX-DEMANGLE %s
+# RUN: not ld.lld --no-demangle --error-handling-script=./a.sh 2.o 2>&1 |\
+# RUN:   FileCheck --check-prefix=CHECK-SYM-CXX-NO-DEMANGLE %s
+
+# RUN: llvm-mc -filetype=obj -triple=x86_64 3.s -o 3.o
+# RUN: not ld.lld --error-handling-script=%t/a.sh 3.o 2>&1 |\
+# RUN:   FileCheck --check-prefix=CHECK-SYM-C-CORRECTION %s
+
+#      CHECK-LIB:script: info: called with missing-lib idontexist
+# CHECK-LIB-NEXT:{{.*}}error: unable to find library -lidontexist
+
+# CHECK-SCRIPT-DOES-NOT-EXIST:      error: unable to find library -lidontexist
+# CHECK-SCRIPT-DOES-NOT-EXIST-NEXT: error: error handling script './notexist' failed to execute
+
+# CHECK-SYM-C:      script: info: called with undefined-symbol a
+# CHECK-SYM-C-NEXT: error: undefined symbol: a
+
+# CHECK-SYM-CXX-DEMANGLE:      script: info: called with undefined-symbol _Z1av
+# CHECK-SYM-CXX-DEMANGLE-NEXT: error: undefined symbol: a()
+
+# CHECK-SYM-CXX-NO-DEMANGLE:      script: info: called with undefined-symbol _Z1av
+# CHECK-SYM-CXX-NO-DEMANGLE-NEXT: error: undefined symbol: _Z1av
+
+# CHECK-SYM-C-CORRECTION:      script: info: called with undefined-symbol a
+# CHECK-SYM-C-CORRECTION-NEXT: error: undefined symbol: a
+# CHECK-SYM-C-CORRECTION-NEXT: >>> referenced by 3.o:
+# CHECK-SYM-C-CORRECTION-NEXT: >>> did you mean: a_
+
+#--- 1.s
+movl a(%rip), %eax
+#--- 2.s
+movl _Z1av(%rip), %eax
+#--- 3.s
+a_: ret
+movl a(%rip), %eax
+
+#--- a.sh
+#!/bin/sh
+echo "script: info: called with $*"

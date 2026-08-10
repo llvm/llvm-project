@@ -1,0 +1,17 @@
+add_entrypoint_object(
+  select
+  SRCS
+    select.cpp
+  HDRS
+    ../select.h
+  DEPENDS
+    libc.hdr.types.fd_set
+    libc.hdr.types.sigset_t
+    libc.hdr.types.size_t
+    libc.hdr.types.struct_timespec
+    libc.hdr.types.struct_timeval
+    libc.include.sys_syscall
+    libc.src.__support.CPP.limits
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)

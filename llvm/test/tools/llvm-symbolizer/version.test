@@ -1,0 +1,8 @@
+# RUN: llvm-symbolizer --version | FileCheck %s --check-prefixes=SYMBOLIZER,COMMON
+# RUN: llvm-symbolizer -v | FileCheck %s --check-prefixes=SYMBOLIZER,COMMON
+# RUN: llvm-addr2line --version | FileCheck %s --check-prefixes=ADDR2LINE,COMMON
+# RUN: llvm-addr2line -v | FileCheck %s --check-prefixes=ADDR2LINE,COMMON
+
+# SYMBOLIZER: llvm-symbolizer{{$}}
+# ADDR2LINE:  llvm-addr2line{{$}}
+# COMMON: LLVM version {{.*}}

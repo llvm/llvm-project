@@ -1,0 +1,26 @@
+## Handle invalid arch attributes.
+##
+## This test cannot be assembly because the test needs an invalid arch
+## feature and `llvm-mc` will filter out the unrecognized arch feature.
+
+# RUN: yaml2obj %s -D BITS=32 -o %t.32.o
+# RUN: not llvm-objdump -d %t.32.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefixes=DISASM
+
+# DISASM: {{.*}} invalid section length 35 at offset 0x1
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS[[BITS]]
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_RISCV
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+## The content is the encoding of "mul a0, a1, a2".
+    Content: 3385C502
+  - Name:    .riscv.attributes
+    Type:    SHT_RISCV_ATTRIBUTES
+    Content: 4123000000726973637600019572763332693270305F6D3270305F7831703000

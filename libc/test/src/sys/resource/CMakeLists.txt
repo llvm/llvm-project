@@ -1,0 +1,22 @@
+add_custom_target(libc_sys_resource_unittests)
+
+add_libc_unittest(
+  getrlimit_setrlimit_test
+  SUITE
+    libc_sys_resource_unittests
+  SRCS
+    getrlimit_setrlimit_test.cpp
+  DEPENDS
+    libc.include.fcntl
+    libc.hdr.sys_resource_macros
+    libc.hdr.sys_stat_macros
+    libc.hdr.types.struct_rlimit
+    libc.src.errno.errno
+    libc.src.fcntl.open
+    libc.src.sys.resource.getrlimit
+    libc.src.sys.resource.setrlimit
+    libc.src.unistd.close
+    libc.src.unistd.unlink
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)

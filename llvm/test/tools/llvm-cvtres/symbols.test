@@ -1,0 +1,37 @@
+// Check COFF emission of cvtres
+// The input was generated with the following command, using the original Windows
+// rc.exe:
+// > rc /fo test_resource.res /nologo test_resource.rc
+// The object file we are comparing against was generated with this command using
+// the original Windows cvtres.exe.
+// > cvtres /machine:X86 /readonly /nologo /out:test_resource.obj.coff \
+//   test_resource.res
+
+RUN: llvm-cvtres /verbose /out:%t %p/Inputs/test_resource.res
+RUN: llvm-readobj --symbols %t | FileCheck %s
+
+// Test that parameters can be preceded by '-' in addition to '/':
+RUN: llvm-cvtres -verbose -machine:X86 -out:%t %p/Inputs/test_resource.res
+RUN: llvm-readobj --symbols %t | FileCheck %s
+
+CHECK:        Name: $R000000
+CHECK-NEXT:    Value: 0
+CHECK-NEXT:    Section: .rsrc$02
+CHECK:        Name: $R000001
+CHECK-NEXT:    Value: 24
+CHECK-NEXT:    Section: .rsrc$02
+CHECK:        Name: $R000002
+CHECK-NEXT:    Value: 832
+CHECK-NEXT:    Section: .rsrc$02
+CHECK:        Name: $R000003
+CHECK-NEXT:    Value: 1640
+CHECK-NEXT:    Section: .rsrc$02
+CHECK:        Name: $R000004
+CHECK-NEXT:    Value: 1688
+CHECK-NEXT:    Section: .rsrc$02
+CHECK:        Name: $R000006
+CHECK-NEXT:    Value: 1824
+CHECK-NEXT:    Section: .rsrc$02
+CHECK:        Name: $R000007
+CHECK-NEXT:    Value: 1872
+CHECK-NEXT:    Section: .rsrc$02

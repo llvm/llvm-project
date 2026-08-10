@@ -1,0 +1,41 @@
+## Test that objcopy generates section headers that are identical to those from
+## the input binary, including the encoded size of the LEB that represents the
+## section size.
+
+# RUN: yaml2obj %s -o %t.wasm
+# RUN: llvm-objcopy %t.wasm %t.wasm.copy
+# RUN: diff %t.wasm %t.wasm.copy
+
+--- !WASM
+FileHeader:
+  Version:         0x1
+Sections:
+  - Type:            TYPE
+    HeaderSecSizeEncodingLen:   3
+    Signatures:
+      - Index:           0
+        ParamTypes:
+          - I32
+          - I32
+        ReturnTypes:
+          - I32
+  - Type:            FUNCTION
+    HeaderSecSizeEncodingLen:  4
+    FunctionTypes:             [ 0 ]
+  - Type:            MEMORY
+    HeaderSecSizeEncodingLen:  1
+    Memories:
+      - Flags:           [ HAS_MAX ]
+        Minimum:         0x100
+        Maximum:         0x100
+  - Type:            EXPORT
+    HeaderSecSizeEncodingLen:  5
+    Exports:
+      - Name:            add
+        Kind:            FUNCTION
+        Index:           0
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:          []
+        Body:            200020016A0B

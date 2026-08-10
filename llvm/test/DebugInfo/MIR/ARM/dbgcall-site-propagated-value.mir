@@ -1,0 +1,194 @@
+# RUN: llc -run-pass=livedebugvalues -o - %s | FileCheck %s
+
+# Based on the following C reproducer:
+#
+# extern void ext(int *);
+# extern int interesting(int *);
+# extern int *value(void);
+#
+# static void callee(int *p1, int *p2) {
+#   if (interesting(p2))
+#     for (;;)
+#       ext(p1);
+#   ext(p2);
+# }
+#
+# void caller() {
+#   int *local = value();
+#   callee(local, (int *)0xabcd);
+# }
+#
+# Generated using:
+#
+# clang -Os -fno-inline -Xclang -femit-debug-entry-values -g --target=armeb.
+
+--- |
+  target datalayout = "E-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+  target triple = "armebv4t-unknown-unknown"
+
+  ; Function Attrs: noinline nounwind optsize
+  define arm_aapcs_vfpcc void @caller() #0 !dbg !20 {
+  entry:
+    unreachable
+  }
+
+  ; Function Attrs: noinline nounwind optsize
+  define internal arm_aapcs_vfpcc void @callee(ptr %p1) unnamed_addr #0 !dbg !29 {
+  entry:
+    unreachable
+  }
+
+  declare !dbg !4 arm_aapcs_vfpcc ptr @value()
+  declare !dbg !9 arm_aapcs_vfpcc i32 @interesting(ptr)
+  declare !dbg !12 arm_aapcs_vfpcc void @ext(ptr)
+
+  ; Function Attrs: nounwind readnone speculatable willreturn
+  declare void @llvm.dbg.value(metadata, metadata, metadata) #1
+
+  attributes #0 = { noinline nounwind optsize "frame-pointer"="all" }
+  attributes #1 = { nounwind readnone speculatable willreturn }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!15, !16, !17, !18}
+  !llvm.ident = !{!19}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 10.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, nameTableKind: None)
+  !1 = !DIFile(filename: "armeb.c", directory: "/")
+  !2 = !{}
+  !3 = !{!4, !7, !9, !12}
+  !4 = !DISubprogram(name: "value", scope: !1, file: !1, line: 3, type: !5, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
+  !5 = !DISubroutineType(types: !6)
+  !6 = !{!7}
+  !7 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !8, size: 32)
+  !8 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !9 = !DISubprogram(name: "interesting", scope: !1, file: !1, line: 2, type: !10, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
+  !10 = !DISubroutineType(types: !11)
+  !11 = !{!8, !7}
+  !12 = !DISubprogram(name: "ext", scope: !1, file: !1, line: 1, type: !13, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
+  !13 = !DISubroutineType(types: !14)
+  !14 = !{null, !7}
+  !15 = !{i32 2, !"Dwarf Version", i32 4}
+  !16 = !{i32 2, !"Debug Info Version", i32 3}
+  !17 = !{i32 1, !"wchar_size", i32 4}
+  !18 = !{i32 1, !"min_enum_size", i32 4}
+  !19 = !{!"clang version 10.0.0"}
+  !20 = distinct !DISubprogram(name: "caller", scope: !1, file: !1, line: 12, type: !21, scopeLine: 12, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !23)
+  !21 = !DISubroutineType(types: !22)
+  !22 = !{null}
+  !23 = !{!24}
+  !24 = !DILocalVariable(name: "local", scope: !20, file: !1, line: 13, type: !7)
+  !25 = !DILocation(line: 13, scope: !20)
+  !26 = !DILocation(line: 0, scope: !20)
+  !27 = !DILocation(line: 14, scope: !20)
+  !28 = !DILocation(line: 15, scope: !20)
+  !29 = distinct !DISubprogram(name: "callee", scope: !1, file: !1, line: 5, type: !30, scopeLine: 5, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !32)
+  !30 = !DISubroutineType(types: !31)
+  !31 = !{null, !7, !7}
+  !32 = !{!33, !34}
+  !33 = !DILocalVariable(name: "p1", arg: 1, scope: !29, file: !1, line: 5, type: !7)
+  !34 = !DILocalVariable(name: "p2", arg: 2, scope: !29, file: !1, line: 5, type: !7)
+  !35 = !DILocation(line: 0, scope: !29)
+  !36 = !DILocation(line: 6, scope: !37)
+  !37 = distinct !DILexicalBlock(scope: !29, file: !1, line: 6)
+  !38 = !DILocation(line: 6, scope: !29)
+  !39 = !DILocation(line: 7, scope: !40)
+  !40 = distinct !DILexicalBlock(scope: !37, file: !1, line: 7)
+  !41 = !DILocation(line: 8, scope: !42)
+  !42 = distinct !DILexicalBlock(scope: !40, file: !1, line: 7)
+  !43 = !DILocation(line: 7, scope: !42)
+  !44 = distinct !{!44, !39, !45}
+  !45 = !DILocation(line: 8, scope: !40)
+  !46 = !DILocation(line: 9, scope: !29)
+  !47 = !DILocation(line: 10, scope: !29)
+
+...
+---
+name:            caller
+alignment:       4
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $lr
+
+    $sp = frame-setup STMDB_UPD $sp, 14, $noreg, $r11, killed $lr
+    frame-setup CFI_INSTRUCTION def_cfa_offset 8
+    frame-setup CFI_INSTRUCTION offset $lr, -4
+    frame-setup CFI_INSTRUCTION offset $r11, -8
+    $r11 = frame-setup MOVr $sp, 14, $noreg, $noreg
+    frame-setup CFI_INSTRUCTION def_cfa_register $r11
+    BL @value, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $r0, debug-location !25
+    DBG_VALUE $r0, $noreg, !24, !DIExpression(), debug-location !26
+    $sp = LDMIA_UPD $sp, 14, $noreg, def $r11, def $lr, debug-location !27
+    TAILJMPd @callee, implicit $sp, implicit $sp, implicit killed $r0, debug-location !27
+
+...
+---
+name:            callee
+tracksRegLiveness: true
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '$lr', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: -8, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '$r11', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, name: '', type: spill-slot, offset: -12, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '$r10', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 3, name: '', type: spill-slot, offset: -16, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '$r4', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+body:             |
+  bb.0:
+    successors: %bb.2(0x30000000), %bb.1(0x50000000)
+    liveins: $r0, $r4, $r10, $lr
+
+    DBG_VALUE $r0, $noreg, !33, !DIExpression(), debug-location !35
+    $sp = frame-setup STMDB_UPD $sp, 14, $noreg, killed $r4, killed $r10, $r11, killed $lr
+    frame-setup CFI_INSTRUCTION def_cfa_offset 16
+    frame-setup CFI_INSTRUCTION offset $lr, -4
+    frame-setup CFI_INSTRUCTION offset $r11, -8
+    frame-setup CFI_INSTRUCTION offset $r10, -12
+    frame-setup CFI_INSTRUCTION offset $r4, -16
+    $r11 = frame-setup ADDri $sp, 8, 14, $noreg, $noreg
+    frame-setup CFI_INSTRUCTION def_cfa $r11, 8
+    $r4 = MOVr killed $r0, 14, $noreg, $noreg
+    DBG_VALUE $r4, $noreg, !33, !DIExpression(), debug-location !35
+    $r0 = MOVi 205, 14, $noreg, $noreg
+    $r0 = ORRri killed $r0, 43776, 14, $noreg, $noreg
+    ; The MOVI and ORRri produce the second parameter's (!34) value which has
+    ; been propagated from caller().
+    DBG_VALUE $r0, $noreg, !34, !DIExpression(), debug-location !35
+    BL @interesting, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit-def $sp, implicit-def $r0, debug-location !36
+    CMPri killed renamable $r0, 0, 14, $noreg, implicit-def $cpsr, debug-location !38
+    Bcc %bb.2, 0, killed $cpsr, debug-location !38
+
+  bb.1:
+    liveins: $r4
+
+    $r0 = MOVr $r4, 14, $noreg, $noreg, debug-location !41
+    BL @ext, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit-def $sp, debug-location !41
+    B %bb.1, debug-location !43
+
+  bb.2:
+    $r0 = MOVi 205, 14, $noreg, $noreg
+    $r0 = ORRri killed $r0, 43776, 14, $noreg, $noreg
+    $sp = LDMIA_UPD $sp, 14, $noreg, def $r4, def $r10, def $r11, def $lr, debug-location !46
+    TAILJMPd @ext, implicit $sp, implicit $sp, implicit killed $r0, debug-location !46
+
+...
+
+# In this test case the second parameter's value has been propagated from the
+# caller to the callee, so we should not emit any entry value DBG_VALUEs for
+# that parameter. The second parameter reuses the first parameter's register
+# ($r0), and previously we would incorrectly emit an entry value for the
+# parameter using that register.
+
+# CHECK-DAG: ![[P1:[0-9]+]] = !DILocalVariable(name: "p1", arg: 1
+# CHECK-DAG: ![[P2:[0-9]+]] = !DILocalVariable(name: "p2", arg: 2
+
+# CHECK-NOT: DBG_VALUE $r0, $noreg, ![[P2]], !DIExpression(DW_OP_LLVM_entry_value
+
+# CHECK: DBG_VALUE $r0, $noreg, ![[P1]], !DIExpression(DW_OP_LLVM_entry_value
+
+# CHECK-NOT: DBG_VALUE $r0, $noreg, ![[P2]], !DIExpression(DW_OP_LLVM_entry_value

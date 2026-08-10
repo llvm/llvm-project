@@ -1,0 +1,43 @@
+## This test checks that .debug_names accelerator tables are
+## generated if --build-accelerator=DWARF option is specified
+## and source file has DWARFv4 debug info.
+
+# RUN: yaml2obj %p/Inputs/common.yaml -o %t.o
+
+# RUN: llvm-dwarfutil --no-garbage-collection --build-accelerator=DWARF %t.o %t1
+# RUN: llvm-dwarfdump --verify %t1 | FileCheck %s --check-prefix=VERIFY
+# RUN: llvm-dwarfdump -a %t1 | FileCheck %s
+
+# RUN: llvm-dwarfutil --garbage-collection --build-accelerator=DWARF %t.o %t1
+# RUN: llvm-dwarfdump --verify %t1 | FileCheck %s --check-prefix=VERIFY
+# RUN: llvm-dwarfdump -a %t1 | FileCheck %s
+#
+# RUN: llvm-dwarfutil --linker parallel --no-garbage-collection \
+# RUN:   --build-accelerator=DWARF %t.o %t1
+# RUN: llvm-dwarfdump --verify %t1 | FileCheck %s --check-prefix=VERIFY
+# RUN: llvm-dwarfdump -a %t1 | FileCheck %s
+
+# RUN: llvm-dwarfutil --linker parallel --garbage-collection \
+# RUN:   --build-accelerator=DWARF %t.o %t1
+# RUN: llvm-dwarfdump --verify %t1 | FileCheck %s --check-prefix=VERIFY
+# RUN: llvm-dwarfdump -a %t1 | FileCheck %s
+
+# VERIFY: No errors
+
+# CHECK: .debug_names contents:
+# CHECK:  Compilation Unit offsets [
+# CHECK:    CU[0]: 0x00000000
+# CHECK:  ]
+# CHECK: Abbreviations
+# CHECK: String: {{.*}} "foo1"
+# CHECK: Tag: DW_TAG_subprogram
+# CHECK: String: {{.*}} "class1"
+# CHECK: Tag: DW_TAG_class_type
+# CHECK: String: {{.*}} "float"
+# CHECK: Tag: DW_TAG_base_type
+# CHECK: String: {{.*}} "int"
+# CHECK: Tag: DW_TAG_base_type
+# CHECK: String: {{.*}} "var1"
+# CHECK: Tag: DW_TAG_variable
+# CHECK: String: {{.*}} "char"
+# CHECK: Tag: DW_TAG_base_type

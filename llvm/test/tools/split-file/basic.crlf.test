@@ -1,0 +1,10 @@
+#--- aa
+aa
+;--- bb
+bb
+;--- end
+
+# RUN: rm -rf %t
+# RUN: split-file --leading-lines %s %t
+# RUN: diff %S/Inputs/basic-aa.crlf %t/aa
+# RUN: diff %S/Inputs/basic-bb.crlf %t/bb

@@ -1,0 +1,15 @@
+; RUN: rm -rf %t
+; RUN: mkdir %t
+; RUN: cd %t
+; RUN: llvm-mc -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf4-df-no-base.s \
+; RUN: -split-dwarf-file=main.dwo -o main.o
+; RUN: %clang %cflags -gdwarf-4 -gsplit-dwarf=split main.o -o main.exe
+; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections
+; RUN: llvm-dwarfdump --debug-info main.exe | FileCheck -check-prefix=PRE-BOLT-MAIN %s
+; RUN: llvm-dwarfdump --debug-info main.exe.bolt | FileCheck -check-prefix=BOLT-MAIN %s
+
+;; Tests whether we add DW_AT_GNU_ranges_base, if it's not present when Skeleton CU has
+;; DW_AT_ranges.
+
+; PRE-BOLT-MAIN-NOT: DW_AT_GNU_ranges_base
+; BOLT-MAIN: DW_AT_GNU_ranges_base

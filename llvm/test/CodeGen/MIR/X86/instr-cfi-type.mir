@@ -1,0 +1,42 @@
+# RUN: llc -mtriple=x86_64 -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses cfi-type correctly.
+
+--- |
+  define void @test(ptr noundef %x) {
+    call void %x() [ "kcfi"(i32 12345678) ]
+    ret void
+  }
+  
+  !llvm.module.flags = !{!0}
+  
+  !0 = !{i32 4, !"kcfi", i32 1}
+
+...
+---
+name:            test
+# CHECK-LABEL: name: test
+alignment:       16
+tracksRegLiveness: true
+tracksDebugUserValues: true
+liveins:
+  - { reg: '$rdi' }
+frameInfo:
+  stackSize:       8
+  offsetAdjustment: -8
+  maxAlignment:    1
+  adjustsStack:    true
+  hasCalls:        true
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: $rdi
+  
+    frame-setup PUSH64r undef $rax, implicit-def $rsp, implicit $rsp
+    frame-setup CFI_INSTRUCTION def_cfa_offset 16
+    CALL64r killed renamable $rdi, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, cfi-type 12345678
+    $rax = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    frame-destroy CFI_INSTRUCTION def_cfa_offset 8
+    RET64
+
+...

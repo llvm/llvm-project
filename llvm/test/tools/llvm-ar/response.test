@@ -1,0 +1,41 @@
+## llvm-ar should be able to consume response files.
+
+# RUN: echo 'contents' > %t.txt
+# RUN: echo 'rc %t1.a %t.txt' > %t.response1.txt
+# RUN: llvm-ar @%t.response1.txt
+# RUN: llvm-ar p %t1.a | FileCheck %s --check-prefix=CONTENTS
+
+## Quotes and Spaces.
+# RUN: echo 'contents' > '%t space.txt'
+## Python is used here to ensure the quotes are written to the response file
+# RUN: %python -c "import os; open(r'%t.response2.txt', 'w').write(r'%t2.a \"%t space.txt\"'+ '\n')"
+# RUN: llvm-ar rc @%t.response2.txt
+# RUN: llvm-ar p %t2.a | FileCheck %s --check-prefix=CONTENTS
+
+## Arguments after the response file.
+# RUN: echo 'rc %t3.a' > %t.response3.txt
+# RUN: llvm-ar @%t.response3.txt %t.txt
+# RUN: llvm-ar p %t3.a | FileCheck %s --check-prefix=CONTENTS
+
+## Newlines
+# RUN: echo contents > %t.txt
+# RUN: echo rc %t4.a > %t.newline.txt
+# RUN: echo %t.txt >> %t.newline.txt
+# RUN: llvm-ar @%t.newline.txt
+# RUN: llvm-ar p %t4.a | FileCheck %s --check-prefix=CONTENTS
+
+# CONTENTS: contents
+
+## rsp-quoting
+# RUN: not llvm-ar --rsp-quoting=foobar @%t.response1.txt 2>&1 | \
+# RUN:   FileCheck  %s --check-prefix=ERROR
+# ERROR: Invalid response file quoting style foobar
+
+# RUN: echo -e 'rc %/t.a blah\\foo' > %t-rsp.txt
+# RUN: not llvm-ar --rsp-quoting=windows @%t-rsp.txt 2>&1 | \
+# RUN:   FileCheck -DMSG=%errc_ENOENT %s --check-prefix=WIN
+# WIN: error: blah\foo: [[MSG]]
+
+# RUN: not llvm-ar --rsp-quoting posix @%t-rsp.txt 2>&1 | \
+# RUN:   FileCheck -DMSG=%errc_ENOENT %s --check-prefix=POSIX
+# POSIX: error: blahfoo: [[MSG]]

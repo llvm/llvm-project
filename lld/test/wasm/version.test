@@ -1,0 +1,12 @@
+## Copied from lld/test/ELF/version.test
+
+## --version skips input file processing.
+# RUN: wasm-ld --version %t/not-exist 2>&1 | FileCheck %s
+
+## -v/-V don't skip processing if there is any input.
+# RUN: wasm-ld -v 2>&1 | FileCheck %s
+# RUN: not wasm-ld -v %t/not-exist 2>&1 | FileCheck %s
+# RUN: wasm-ld -V 2>&1 | FileCheck %s
+# RUN: not wasm-ld -V %t/not-exist 2>&1 | FileCheck %s
+
+# CHECK: LLD {{.+}}

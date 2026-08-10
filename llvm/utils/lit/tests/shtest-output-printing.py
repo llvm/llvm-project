@@ -1,0 +1,54 @@
+## Check the various features of the ShTest format.
+#
+## This is required for the use of %errc_ENOENT.
+# REQUIRES: llvm-config-available
+#
+# RUN: not %{lit} -v %{inputs}/shtest-output-printing > %t.out
+# RUN: FileCheck --input-file %t.out --match-full-lines -DERROR_MSG=%errc_ENOENT %s \
+# RUN:   %if system-aix %{ --check-prefix=AIX,CHECK %} \
+# RUN:   %else  %{ --check-prefix=NON-AIX,CHECK %}
+#
+# END.
+
+#       CHECK: -- Testing: {{.*}}
+#       CHECK: FAIL: shtest-output-printing :: basic.txt {{.*}}
+#  CHECK-NEXT: ***{{\**}} TEST 'shtest-output-printing :: basic.txt' FAILED ***{{\**}}
+#  CHECK-NEXT: Exit Code: 1
+# CHECK-EMPTY:
+#  CHECK-NEXT: Command Output (stdout):
+#  CHECK-NEXT: --
+#  CHECK-NEXT: # RUN: at line 1
+#  CHECK-NEXT: true
+#  CHECK-NEXT: # executed command: true
+#  CHECK-NEXT: # RUN: at line 2
+#  CHECK-NEXT: echo hi
+#  CHECK-NEXT: # executed command: echo hi
+#  CHECK-NEXT: # .---command stdout------------
+#  CHECK-NEXT: # | hi
+#  CHECK-NEXT: # `-----------------------------
+#  CHECK-NEXT: # RUN: at line 3
+#  CHECK-NEXT: not not wc missing-file &> [[FILE:.*]] || true
+#  CHECK-NEXT: # executed command: not not wc missing-file
+#  CHECK-NEXT: # .---redirected output from '[[FILE]]'
+## AIX needs the regex because alternative versions of wc generate different
+## formats of error message. %errc_ENOENT can't be used here because [[...]]
+## inside {{...}} is not supported.
+#  AIX-NEXT:   # | {{.*}}wc: {{cannot open missing-file|missing-file.* No such file or directory}}
+#  NON-AIX-NEXT: # | {{.*}}wc: {{.*missing-file.*}}: [[ERROR_MSG]]
+#  CHECK-NEXT: # `-----------------------------
+#  CHECK-NEXT: # note: command had no output on stdout or stderr
+#  CHECK-NEXT: # error: command failed with exit status: 1
+#  CHECK-NEXT: # executed command: true
+#  CHECK-NEXT: # RUN: at line 4
+#  CHECK-NEXT: not {{.*}}python{{.*}} {{.*}}write-a-lot.py &> [[FILE:.*]]
+#  CHECK-NEXT: # executed command: not {{.*}}python{{.*}} {{.*}}write-a-lot.py{{.*}}
+#  CHECK-NEXT: # .---redirected output from '[[FILE]]'
+#  CHECK-NEXT: # | All work and no play makes Jack a dull boy.
+#  CHECK-NEXT: # | All work and no play makes Jack a dull boy.
+#  CHECK-NEXT: # | All work and no play makes Jack a dull boy.
+#       CHECK: # | ...
+#  CHECK-NEXT: # `---data was truncated (10240/{{[0-9]+}}) (change limit with -D output_limit=N)
+#  CHECK-NEXT: # note: command had no output on stdout or stderr
+#  CHECK-NEXT: # error: command failed with exit status: 1
+# CHECK-EMPTY:
+#  CHECK-NEXT:--

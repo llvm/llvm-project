@@ -1,0 +1,5 @@
+# RUN: not llvm-reduce --abort-on-invalid-reduction --test=echo %s.NotAFileInTestingDir 2>&1 | FileCheck %s
+
+This file will not be read. An invalid file path is fed to llvm-reduce.
+
+# CHECK: llvm-reduce{{.*}}: error: {{.*}}.NotAFileInTestingDir:

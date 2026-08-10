@@ -1,0 +1,15 @@
+# REQUIRES: x86
+# RUN: echo '.section .tbss,"awT",@nobits; .quad 0' \
+# RUN:   | llvm-mc -filetype=obj -triple=x86_64-unknown-linux - -o %t.o
+# RUN: ld.lld -o %t --script %s %t.o
+# RUN: llvm-readelf -S %t | FileCheck %s
+
+## Check .foo does not get SHF_TLS flag.
+# CHECK:      .tbss        NOBITS   [[#%x,]] [[#%x,]] [[#%x,]] 00 WAT
+# CHECK-NEXT: .foo         PROGBITS [[#%x,]] [[#%x,]] [[#%x,]] 00  WA
+
+SECTIONS {
+  . = SIZEOF_HEADERS;
+  .tbss : { *(.tbss) }
+  .foo : { bar = .; }
+}

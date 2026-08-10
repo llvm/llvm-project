@@ -1,0 +1,2 @@
+class vector {};
+typedef vector* vector_ptr;

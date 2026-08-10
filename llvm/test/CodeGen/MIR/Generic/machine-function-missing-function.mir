@@ -1,0 +1,19 @@
+# RUN: not llc -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# This test ensures that an error is reported when the mir file has LLVM IR and
+# one of the machine functions has a name that doesn't match any function in
+# the LLVM IR.
+
+--- |
+
+  define i32 @foo() {
+    ret i32 0
+  }
+
+...
+---
+name:            foo
+...
+---
+# CHECK: function 'faa' isn't defined in the provided LLVM IR
+name:            faa
+...

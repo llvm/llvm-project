@@ -1,0 +1,61 @@
+# Here we use yaml from ihex-elf-sections.yaml, but add single load
+# segment containing all exported sections. In such case we should 
+# use physical address of a section instead of virtual address. Physical
+# addresses start from 0x100000, so we create two additional 'ExtenededAddr'
+# (03) record in the beginning of IHex file with that physical address
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+  Entry:           0x100000
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x0
+    AddressAlign:    0x8
+    Content:         "000102030405060708090A0B0C0D0E0F1011121314"
+  - Name:            .data1
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Content:         "3031323334353637383940"
+    Address:         0xFFF8
+    AddressAlign:    0x8
+  - Name:            .data2
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Content:         "40414243"
+    Address:         0x10100
+    AddressAlign:    0x8
+  - Name:            .data3
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Content:         "5051525354555657585960"
+    Address:         0x10FFF8
+    AddressAlign:    0x8
+  - Name:            .bss
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x10100
+    Size:            0x1000
+    AddressAlign:    0x8
+  - Name:            .dummy
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x20FFF8
+    Size:            3
+    AddressAlign:    0x8
+  - Name:            .nonalloc
+    Type:            SHT_PROGBITS
+    Flags:           [ ]
+    Address:         0x300000
+    Size:            1
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    VAddr:    0xF00000000
+    PAddr:    0x100000
+    FirstSec: .text
+    LastSec:  .bss

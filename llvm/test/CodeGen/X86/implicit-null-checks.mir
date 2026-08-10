@@ -1,0 +1,1363 @@
+# RUN: llc -run-pass implicit-null-checks -mtriple=x86_64-apple-macosx -o - %s | FileCheck %s
+
+--- |
+  target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-apple-macosx"
+
+  ;; Positive test
+  define i32 @imp_null_check_with_bitwise_op_0(ptr %x, i32 %val, i1 %arg) {
+  entry:
+    br i1 %arg, label %is_null, label %not_null, !make.implicit !0
+
+  is_null:
+    ret i32 42
+
+  not_null:
+    br i1 %arg, label %ret_100, label %ret_200
+
+  ret_100:
+    ret i32 100
+
+  ret_200:
+    ret i32 200
+  }
+
+  ;; Negative test.  The regalloc is such that we cannot hoist the
+  ;; instruction materializing 2200000 into $eax
+  define i32 @imp_null_check_with_bitwise_op_1(ptr %x, i32 %val, ptr %ptr, i1 %arg) {
+  entry:
+    br i1 %arg, label %is_null, label %not_null, !make.implicit !0
+
+  is_null:
+    ret i32 undef
+
+  not_null:
+    br i1 %arg, label %ret_100, label %ret_200
+
+  ret_100:
+    ret i32 100
+
+  ret_200:
+    ret i32 200
+  }
+
+  ;; Negative test: IR is identical to
+  ;; @imp_null_check_with_bitwise_op_0 but MIR differs.
+  define i32 @imp_null_check_with_bitwise_op_2(ptr %x, i32 %val, i1 %arg) {
+  entry:
+    br i1 %arg, label %is_null, label %not_null, !make.implicit !0
+
+  is_null:
+    ret i32 42
+
+  not_null:
+    br i1 %arg, label %ret_100, label %ret_200
+
+  ret_100:
+    ret i32 100
+
+  ret_200:
+    ret i32 200
+  }
+
+  ;; Negative test: IR is identical to
+  ;; @imp_null_check_with_bitwise_op_0 but MIR differs.
+  define i32 @imp_null_check_with_bitwise_op_3(ptr %x, i32 %val, i1 %arg) {
+  entry:
+    br i1 %arg, label %is_null, label %not_null, !make.implicit !0
+
+  is_null:
+    ret i32 42
+
+  not_null:
+    br i1 %arg, label %ret_100, label %ret_200
+
+  ret_100:
+    ret i32 100
+
+  ret_200:
+    ret i32 200
+  }
+
+  ;; Positive test
+  define i32 @imp_null_check_with_bitwise_op_4(ptr %x, i32 %val, i1 %arg) {
+  entry:
+    br i1 %arg, label %is_null, label %not_null, !make.implicit !0
+
+  is_null:
+    ret i32 42
+
+  not_null:
+    br i1 %arg, label %ret_100, label %ret_200
+
+  ret_100:
+    ret i32 100
+
+  ret_200:
+    ret i32 200
+  }
+
+  declare void @f() readonly
+
+  define i32 @no_hoist_across_call(ptr %ptr) {
+  entry:
+    %is_null = icmp eq ptr %ptr, null
+    br i1 %is_null, label %leave, label %stay, !make.implicit !0
+
+  stay:
+    call void @f()
+    %val = load i32, ptr %ptr
+    ret i32 %val
+
+  leave:
+    ret i32 0
+  }
+
+  define i32 @dependency_live_in_hazard(ptr %ptr, ptr %ptr2, ptr %ptr3) #0 {
+  entry:
+    %val = load ptr, ptr %ptr2
+    %ptr_is_null = icmp eq ptr %ptr, null
+    br i1 %ptr_is_null, label %is_null, label %not_null, !make.implicit !0
+
+  not_null:                                         ; preds = %entry
+    %addend = load i32, ptr %val
+    %result = load i32, ptr %ptr
+    %result.shr = lshr i32 %result, 4
+    %result.and = and i32 %result.shr, 4095
+    %result.add = add i32 %addend, %result.and
+    ret i32 %result.add
+
+  is_null:                                          ; preds = %entry
+    ret i32 0
+  }
+
+  define i32 @use_alternate_load_op(ptr %ptr, ptr %ptr2) {
+  entry:
+    %ptr_is_null = icmp eq ptr %ptr, null
+    br i1 %ptr_is_null, label %is_null, label %not_null, !make.implicit !0
+
+  not_null:
+    ret i32 undef
+
+  is_null:
+    ret i32 0
+  }
+
+  define i32 @imp_null_check_gep_load_with_use_dep(ptr %x, i32 %a) {
+  entry:
+    %c = icmp eq ptr %x, null
+    br i1 %c, label %is_null, label %not_null, !make.implicit !0
+  
+  is_null:                                          ; preds = %entry
+    ret i32 42
+  
+  not_null:                                         ; preds = %entry
+    %x.loc = getelementptr i32, ptr %x, i32 1
+    %y = ptrtoint ptr %x.loc to i32
+    %b = add i32 %a, %y
+    %t = load i32, ptr %x
+    %z = add i32 %t, %b
+    ret i32 %z
+  }
+
+  define i32 @imp_null_check_load_with_base_sep(ptr %x, i32 %a) {
+  entry:
+    %c = icmp eq ptr %x, null
+    br i1 %c, label %is_null, label %not_null, !make.implicit !0
+  
+  is_null:                                          ; preds = %entry
+    ret i32 42
+  
+  not_null:                                         ; preds = %entry
+    ret i32 undef
+  }
+
+  define void @inc_store(ptr %ptr, i32 %val) {
+  entry:
+    %ptr_is_null = icmp eq ptr %ptr, null
+    br i1 %ptr_is_null, label %is_null, label %not_null, !make.implicit !0
+
+  not_null:
+    ret void
+
+  is_null:
+    ret void
+  }
+
+  define void @inc_store_plus_offset(ptr %ptr, i32 %val) {
+  entry:
+    %ptr_is_null = icmp eq ptr %ptr, null
+    br i1 %ptr_is_null, label %is_null, label %not_null, !make.implicit !0
+
+  not_null:
+    ret void
+
+  is_null:
+    ret void
+  }
+
+  define void @inc_store_with_dep(ptr %ptr, i32 %val) {
+  entry:
+    %ptr_is_null = icmp eq ptr %ptr, null
+    br i1 %ptr_is_null, label %is_null, label %not_null, !make.implicit !0
+
+  not_null:
+    ret void
+
+  is_null:
+    ret void
+  }
+
+  define i32 @inc_store_with_dep_in_null(ptr %ptr, i32 %val) {
+  entry:
+    %ptr_is_null = icmp eq ptr %ptr, null
+    br i1 %ptr_is_null, label %is_null, label %not_null, !make.implicit !0
+
+  not_null:
+    ret i32 undef
+
+  is_null:
+    ret i32 undef
+  }
+
+  define void @inc_store_with_volatile(ptr %ptr, i32 %val) {
+  entry:
+    %ptr_is_null = icmp eq ptr %ptr, null
+    br i1 %ptr_is_null, label %is_null, label %not_null, !make.implicit !0
+
+  not_null:
+    ret void
+
+  is_null:
+    ret void
+  }
+
+  define void @inc_store_with_two_dep(ptr %ptr, i32 %val) {
+  entry:
+    %ptr_is_null = icmp eq ptr %ptr, null
+    br i1 %ptr_is_null, label %is_null, label %not_null, !make.implicit !0
+
+  not_null:
+    ret void
+
+  is_null:
+    ret void
+  }
+
+  define void @inc_store_with_redefined_base(ptr %ptr, i32 %val) {
+  entry:
+    %ptr_is_null = icmp eq ptr %ptr, null
+    br i1 %ptr_is_null, label %is_null, label %not_null, !make.implicit !0
+
+  not_null:
+    ret void
+
+  is_null:
+    ret void
+  }
+
+  define i32 @inc_store_with_reused_base(ptr %ptr, i32 %val) {
+  entry:
+    %ptr_is_null = icmp eq ptr %ptr, null
+    br i1 %ptr_is_null, label %is_null, label %not_null, !make.implicit !0
+
+  not_null:
+    ret i32 undef
+
+  is_null:
+    ret i32 undef
+  }
+
+  define i32 @inc_store_across_call(ptr %ptr) {
+  entry:
+    %ptr_is_null = icmp eq ptr %ptr, null
+    br i1 %ptr_is_null, label %is_null, label %not_null, !make.implicit !0
+
+  not_null:
+    call void @f()
+    ret i32 undef
+
+  is_null:
+    ret i32 undef
+  }
+
+  define i32 @inc_store_with_dep_in_dep(ptr %ptr, i32 %val) {
+  entry:
+    %ptr_is_null = icmp eq ptr %ptr, null
+    br i1 %ptr_is_null, label %is_null, label %not_null, !make.implicit !0
+
+  not_null:
+    ret i32 undef
+
+  is_null:
+    ret i32 undef
+  }
+
+  define i32 @inc_store_with_load_over_store(ptr %ptr, ptr %ptr2) {
+  entry:
+    %ptr_is_null = icmp eq ptr %ptr, null
+    br i1 %ptr_is_null, label %is_null, label %not_null, !make.implicit !0
+
+  not_null:
+    ret i32 undef
+
+  is_null:
+    ret i32 undef
+  }
+
+  define i32 @inc_store_with_store_over_load(ptr %ptr, ptr %ptr2) {
+  entry:
+    %ptr_is_null = icmp eq ptr %ptr, null
+    br i1 %ptr_is_null, label %is_null, label %not_null, !make.implicit !0
+
+  not_null:
+    ret i32 undef
+
+  is_null:
+    ret i32 undef
+  }
+
+  define void @inc_store_with_store_over_store(ptr %ptr, ptr %ptr2) {
+  entry:
+    %ptr_is_null = icmp eq ptr %ptr, null
+    br i1 %ptr_is_null, label %is_null, label %not_null, !make.implicit !0
+
+  not_null:
+    ret void
+
+  is_null:
+    ret void
+  }
+
+  define void @inc_store_with_load_and_store(ptr %ptr, ptr %ptr2) {
+  entry:
+    %ptr_is_null = icmp eq ptr %ptr, null
+    br i1 %ptr_is_null, label %is_null, label %not_null, !make.implicit !0
+
+  not_null:
+    ret void
+
+  is_null:
+    ret void
+  }
+
+  define i32 @inc_store_and_load_no_alias(ptr noalias %ptr, ptr noalias %ptr2) {
+  entry:
+    %ptr_is_null = icmp eq ptr %ptr, null
+    br i1 %ptr_is_null, label %is_null, label %not_null, !make.implicit !0
+
+  not_null:
+    ret i32 undef
+
+  is_null:
+    ret i32 undef
+  }
+
+  define i32 @inc_store_and_load_alias(ptr %ptr, ptr %ptr2) {
+  entry:
+    %ptr_is_null = icmp eq ptr %ptr, null
+    br i1 %ptr_is_null, label %is_null, label %not_null, !make.implicit !0
+
+  not_null:
+    ret i32 undef
+
+  is_null:
+    ret i32 undef
+  }
+
+  define i32 @inc_spill_dep(ptr %ptr, i32 %val) {
+  entry:
+    %ptr_is_null = icmp eq ptr %ptr, null
+    br i1 %ptr_is_null, label %is_null, label %not_null, !make.implicit !0
+
+  not_null:
+    ret i32 undef
+
+  is_null:
+    ret i32 undef
+  }
+
+  define i32 @imp_null_check_address_mul_overflow(ptr %x, i32 %a) {
+  entry:
+    %c = icmp eq ptr %x, null
+    br i1 %c, label %is_null, label %not_null, !make.implicit !0
+  
+  is_null:                                          ; preds = %entry
+    ret i32 42
+  
+  not_null:                                         ; preds = %entry
+    %y = ptrtoint ptr %x to i32
+    %y64 = zext i32 %y to i64
+    %b = mul i64 %y64, 9223372036854775807 ; 0X0FFFF.. i.e. 2^63 - 1
+    %z = trunc i64 %b to i32
+    ret i32 %z
+  }
+
+  attributes #0 = { "target-features"="+bmi,+bmi2" }
+
+  !0 = !{}
+...
+---
+name:            imp_null_check_with_bitwise_op_0
+# CHECK-LABEL: name:            imp_null_check_with_bitwise_op_0
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+  - { reg: '$esi' }
+# CHECK:  bb.0.entry:
+# CHECK:    $eax = MOV32ri 2200000
+# CHECK-NEXT:    $eax = FAULTING_OP 1, %bb.3, {{[0-9]+}}, $eax, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags :: (load (s32) from %ir.x)
+# CHECK-NEXT:    JMP_1 %bb.1
+
+body:             |
+  bb.0.entry:
+    liveins: $esi, $rdi
+
+    TEST64rr $rdi, $rdi, implicit-def $eflags
+    JCC_1 %bb.3, 4, implicit $eflags
+
+  bb.1.not_null:
+    liveins: $esi, $rdi
+
+    $eax = MOV32ri 2200000
+    $eax = AND32rm killed $eax, killed $rdi, 1, $noreg, 0, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.x)
+    CMP32rr killed $eax, killed $esi, implicit-def $eflags
+    JCC_1 %bb.4, 4, implicit $eflags
+
+  bb.2.ret_200:
+    $eax = MOV32ri 200
+    RET64 $eax
+
+  bb.3.is_null:
+    $eax = MOV32ri 42
+    RET64 $eax
+
+  bb.4.ret_100:
+    $eax = MOV32ri 100
+    RET64 $eax
+
+...
+---
+name:            imp_null_check_with_bitwise_op_1
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+  - { reg: '$esi' }
+  - { reg: '$rdx' }
+# CHECK: bb.0.entry:
+# CHECK:    $eax = MOV32rm killed $rdx, 1, $noreg, 0, $noreg :: (volatile load (s32) from %ir.ptr)
+# CHECK-NEXT:    TEST64rr $rdi, $rdi, implicit-def $eflags
+# CHECK-NEXT:    JCC_1 %bb.3, 4, implicit $eflags
+
+body:             |
+  bb.0.entry:
+    liveins: $esi, $rdi, $rdx
+
+    $eax = MOV32rm killed $rdx, 1, $noreg, 0, $noreg :: (volatile load (s32) from %ir.ptr)
+    TEST64rr $rdi, $rdi, implicit-def $eflags
+    JCC_1 %bb.3, 4, implicit $eflags
+
+  bb.1.not_null:
+    liveins: $esi, $rdi
+
+    $eax = MOV32ri 2200000
+    $eax = AND32rm killed $eax, killed $rdi, 1, $noreg, 0, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.x)
+    CMP32rr killed $eax, killed $esi, implicit-def $eflags
+    JCC_1 %bb.4, 4, implicit $eflags
+
+  bb.2.ret_200:
+
+    $eax = MOV32ri 200
+
+  bb.3.is_null:
+    liveins: $eax, $ah, $al, $ax, $bh, $bl, $bp, $bpl, $bx, $eax, $ebp, $ebx, $rax, $rbp, $rbx, $r12, $r13, $r14, $r15, $r12b, $r13b, $r14b, $r15b, $r12d, $r13d, $r14d, $r15d, $r12w, $r13w, $r14w, $r15w
+
+    RET64 $eax
+
+  bb.4.ret_100:
+    $eax = MOV32ri 100
+    RET64 $eax
+
+...
+---
+name:            imp_null_check_with_bitwise_op_2
+# CHECK-LABEL: name:            imp_null_check_with_bitwise_op_2
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+  - { reg: '$esi' }
+# CHECK:  bb.0.entry:
+# CHECK:    TEST64rr $rdi, $rdi, implicit-def $eflags
+# CHECK-NEXT:    JCC_1 %bb.3, 4, implicit $eflags
+
+body:             |
+  bb.0.entry:
+    liveins: $esi, $rdi
+
+    TEST64rr $rdi, $rdi, implicit-def $eflags
+    JCC_1 %bb.3, 4, implicit $eflags
+
+  bb.1.not_null:
+    liveins: $esi, $rdi
+
+    $eax = MOV32ri 2200000
+    $eax = ADD32ri killed $eax, 100, implicit-def dead $eflags
+    $eax = AND32rm killed $eax, killed $rdi, 1, $noreg, 0, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.x)
+    CMP32rr killed $eax, killed $esi, implicit-def $eflags
+    JCC_1 %bb.4, 4, implicit $eflags
+
+  bb.2.ret_200:
+    $eax = MOV32ri 200
+    RET64 $eax
+
+  bb.3.is_null:
+    $eax = MOV32ri 42
+    RET64 $eax
+
+  bb.4.ret_100:
+    $eax = MOV32ri 100
+    RET64 $eax
+
+...
+---
+name:            imp_null_check_with_bitwise_op_3
+# CHECK-LABEL: name:            imp_null_check_with_bitwise_op_3
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+  - { reg: '$rsi' }
+# CHECK:  bb.0.entry:
+# CHECK:    TEST64rr $rdi, $rdi, implicit-def $eflags
+# CHECK-NEXT:    JCC_1 %bb.3, 4, implicit $eflags
+
+body:             |
+  bb.0.entry:
+    liveins: $rsi, $rdi
+
+    TEST64rr $rdi, $rdi, implicit-def $eflags
+    JCC_1 %bb.3, 4, implicit $eflags
+
+  bb.1.not_null:
+    liveins: $rsi, $rdi
+
+    $rdi  = MOV64ri 5000
+    $rdi = AND64rm killed $rdi, killed $rdi, 1, $noreg, 0, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.x)
+    CMP64rr killed $rdi, killed $rsi, implicit-def $eflags
+    JCC_1 %bb.4, 4, implicit $eflags
+
+  bb.2.ret_200:
+    $eax = MOV32ri 200
+    RET64 $eax
+
+  bb.3.is_null:
+    $eax = MOV32ri 42
+    RET64 $eax
+
+  bb.4.ret_100:
+    $eax = MOV32ri 100
+    RET64 $eax
+
+...
+---
+name:            imp_null_check_with_bitwise_op_4
+# CHECK-LABEL: name:            imp_null_check_with_bitwise_op_4
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+  - { reg: '$rsi' }
+# CHECK:  bb.0.entry:
+# CHECK:  $rbx = MOV64rr $rdx
+# CHECK-NEXT:  $rbx = FAULTING_OP 1, %bb.3, {{[0-9]+}}, $rbx, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags :: (load (s32) from %ir.x)
+
+body:             |
+  bb.0.entry:
+    liveins: $rsi, $rdi, $rdx
+
+    TEST64rr $rdi, $rdi, implicit-def $eflags
+    JCC_1 %bb.3, 4, implicit $eflags
+
+  bb.1.not_null:
+    liveins: $rsi, $rdi, $rdx
+
+    $rbx  = MOV64rr $rdx
+    $rbx = AND64rm killed $rbx, killed $rdi, 1, $noreg, 0, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.x)
+    $rdx = MOV64ri 0
+    CMP64rr killed $rbx, killed $rsi, implicit-def $eflags
+    JCC_1 %bb.4, 4, implicit $eflags
+
+  bb.2.ret_200:
+    $eax = MOV32ri 200
+    RET64 $eax
+
+  bb.3.is_null:
+    $eax = MOV32ri 42
+    RET64 $eax
+
+  bb.4.ret_100:
+    $eax = MOV32ri 100
+    RET64 $eax
+
+...
+---
+name:            no_hoist_across_call
+# CHECK-LABEL: name:            no_hoist_across_call
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+calleeSavedRegisters: [ '$bh', '$bl', '$bp', '$bpl', '$bx', '$ebp', '$ebx',
+                        '$rbp', '$rbx', '$r12', '$r13', '$r14', '$r15',
+                        '$r12b', '$r13b', '$r14b', '$r15b', '$r12d', '$r13d',
+                        '$r14d', '$r15d', '$r12w', '$r13w', '$r14w', '$r15w' ]
+# CHECK: body:
+# CHECK-NOT: FAULTING_OP
+# CHECK: bb.1.stay:
+# CHECK: CALL64pcrel32
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $rbx
+
+    frame-setup PUSH64r killed $rbx, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 16
+    CFI_INSTRUCTION offset $rbx, -16
+    $rbx = MOV64rr $rdi
+    TEST64rr $rbx, $rbx, implicit-def $eflags
+    JCC_1 %bb.2, 4, implicit killed $eflags
+
+  bb.1.stay:
+    liveins: $rbx
+
+    CALL64pcrel32 @f, csr_64, implicit $rsp, implicit-def $rsp
+    $eax = MOV32rm killed $rbx, 1, $noreg, 0, $noreg :: (load (s32) from %ir.ptr)
+    $rbx = POP64r implicit-def $rsp, implicit $rsp
+    RET64 $eax
+
+  bb.2.leave:
+    $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
+    $rbx = POP64r implicit-def $rsp, implicit $rsp
+    RET64 $eax
+
+...
+---
+name:            dependency_live_in_hazard
+# CHECK-LABEL: name:            dependency_live_in_hazard
+# CHECK:   bb.0.entry:
+# CHECK-NOT: FAULTING_OP
+# CHECK: bb.1.not_null:
+
+# Make sure that the BEXTR32rm instruction below is not used to emit
+# an implicit null check -- hoisting it will require hosting the move
+# to $esi and we cannot do that without clobbering the use of $rsi in
+# the first instruction in bb.1.not_null.
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+  - { reg: '$rsi' }
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $rsi
+
+    TEST64rr $rdi, $rdi, implicit-def $eflags
+    JCC_1 %bb.2, 4, implicit killed $eflags
+
+  bb.1.not_null:
+    liveins: $rdi, $rsi
+
+    $rcx = MOV64rm killed $rsi, 1, $noreg, 0, $noreg :: (load (s64) from %ir.ptr2)
+    $esi = MOV32ri 3076
+    $eax = BEXTR32rm killed $rdi, 1, $noreg, 0, $noreg, killed $esi, implicit-def dead $eflags :: (load (s32) from %ir.ptr)
+    $eax = ADD32rm killed $eax, killed $rcx, 1, $noreg, 0, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.val)
+    RET64 $eax
+
+  bb.2.is_null:
+    $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
+    RET64 $eax
+
+...
+---
+name:            use_alternate_load_op
+# CHECK-LABEL: name:            use_alternate_load_op
+# CHECK: bb.0.entry:
+# CHECK: $rax = FAULTING_OP 1, %bb.2, {{[0-9]+}}, $rdi, 1, $noreg, 0, $noreg
+# CHECK-NEXT: JMP_1 %bb.1
+# CHECK: bb.1.not_null
+
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+  - { reg: '$rsi' }
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $rsi
+
+    TEST64rr $rdi, $rdi, implicit-def $eflags
+    JCC_1 %bb.2, 4, implicit killed $eflags
+
+  bb.1.not_null:
+    liveins: $rdi, $rsi
+
+    $rcx = MOV64rm killed $rsi, 1, $noreg, 0, $noreg
+    $rcx = AND64rm killed $rcx, $rdi, 1, $noreg, 0, $noreg, implicit-def dead $eflags
+    $rax = MOV64rm killed $rdi, 1, $noreg, 0, $noreg
+    RET64 $eax
+
+  bb.2.is_null:
+    $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
+    RET64 $eax
+
+...
+---
+name:            imp_null_check_gep_load_with_use_dep
+# CHECK-LABEL: name:            imp_null_check_gep_load_with_use_dep
+# CHECK:  bb.0.entry:
+# CHECK:    $eax = FAULTING_OP 1, %bb.2, {{[0-9]+}}, $rdi, 1, $noreg, 0, $noreg, implicit-def $rax :: (load (s32) from %ir.x)
+# CHECK-NEXT:    JMP_1 %bb.1
+alignment:       16
+tracksRegLiveness: true
+liveins:         
+  - { reg: '$rdi' }
+  - { reg: '$rsi' }
+body:             |
+  bb.0.entry:
+    liveins: $rsi, $rdi
+  
+    TEST64rr $rdi, $rdi, implicit-def $eflags
+    JCC_1 %bb.1, 4, implicit $eflags
+  
+  bb.2.not_null:
+    liveins: $rdi, $rsi
+  
+    $rsi = ADD64rr $rsi, $rdi, implicit-def dead $eflags
+    $eax = MOV32rm killed $rdi, 1, $noreg, 0, $noreg, implicit-def $rax :: (load (s32) from %ir.x)
+    $eax = LEA64_32r killed $rax, 1, killed $rsi, 4, $noreg
+    RET64 $eax
+  
+  bb.1.is_null:
+    $eax = MOV32ri 42
+    RET64 $eax
+
+...
+---
+name:            imp_null_check_load_with_base_sep
+# CHECK-LABEL: name:            imp_null_check_load_with_base_sep
+# CHECK:  bb.0.entry:
+# CHECK:     $rsi = ADD64rr $rsi, $rdi, implicit-def dead $eflags
+# CHECK-NEXT:    $esi = FAULTING_OP 1, %bb.2, {{[0-9]+}}, $esi, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags
+# CHECK-NEXT:    JMP_1 %bb.1
+alignment:       16
+tracksRegLiveness: true
+liveins:         
+  - { reg: '$rdi' }
+  - { reg: '$rsi' }
+body:             |
+  bb.0.entry:
+    liveins: $rsi, $rdi
+  
+    TEST64rr $rdi, $rdi, implicit-def $eflags
+    JCC_1 %bb.1, 4, implicit $eflags
+  
+  bb.2.not_null:
+    liveins: $rdi, $rsi
+  
+    $rsi = ADD64rr $rsi, $rdi, implicit-def dead $eflags
+    $esi = AND32rm killed $esi, $rdi, 1, $noreg, 0, $noreg, implicit-def dead $eflags
+    $eax = MOV32rr $esi
+    RET64 $eax
+  
+  bb.1.is_null:
+    $eax = MOV32ri 42
+    RET64 $eax
+
+...
+---
+name:            inc_store
+# CHECK-LABEL: name:            inc_store
+# CHECK: bb.0.entry:
+# CHECK:  $noreg = FAULTING_OP 3, %bb.2, {{[0-9]+}}, $rdi, 1, $noreg, 0, $noreg, $rsi
+# CHECK-NEXT: JMP_1 %bb.1
+# CHECK: bb.1.not_null
+
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+  - { reg: '$rsi' }
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $rsi
+
+    TEST64rr $rdi, $rdi, implicit-def $eflags
+    JCC_1 %bb.2, 4, implicit killed $eflags
+
+  bb.1.not_null:
+    liveins: $rdi, $rsi
+
+    MOV64mr killed $rdi, 1, $noreg, 0, $noreg, killed $rsi
+    RET64
+
+  bb.2.is_null:
+    RET64
+
+...
+---
+name:            inc_store_plus_offset
+# CHECK-LABEL: inc_store_plus_offset
+# CHECK: bb.0.entry:
+# CHECK:  $noreg = FAULTING_OP 3, %bb.2, {{[0-9]+}}, $rdi, 1, $noreg, 16, $noreg, $rsi
+# CHECK-NEXT: JMP_1 %bb.1
+# CHECK: bb.1.not_null
+
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+  - { reg: '$rsi' }
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $rsi
+
+    TEST64rr $rdi, $rdi, implicit-def $eflags
+    JCC_1 %bb.2, 4, implicit killed $eflags
+
+  bb.1.not_null:
+    liveins: $rdi, $rsi
+
+    MOV64mr killed $rdi, 1, $noreg, 16, $noreg, killed $rsi
+    RET64
+
+  bb.2.is_null:
+    RET64
+
+...
+---
+name:            inc_store_with_dep
+# CHECK-LABEL: inc_store_with_dep
+# CHECK: bb.0.entry:
+# CHECK:  $esi = ADD32rr killed $esi, killed $esi, implicit-def dead $eflags
+# CHECK-NEXT:  $noreg = FAULTING_OP 3, %bb.2, {{[0-9]+}}, $rdi, 1, $noreg, 16, $noreg, $esi
+# CHECK-NEXT: JMP_1 %bb.1
+# CHECK: bb.1.not_null
+# CHECK-NOT: liveins: {{.*}} $eflags
+
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+  - { reg: '$rsi' }
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $rsi
+
+    TEST64rr $rdi, $rdi, implicit-def $eflags
+    JCC_1 %bb.2, 4, implicit killed $eflags
+
+  bb.1.not_null:
+    liveins: $rdi, $rsi
+
+    $esi = ADD32rr killed $esi, killed $esi, implicit-def dead $eflags
+    MOV32mr killed $rdi, 1, $noreg, 16, $noreg, killed $esi
+    RET64
+
+  bb.2.is_null:
+    RET64
+
+...
+---
+name:            inc_store_with_dep_in_null
+# CHECK-LABEL: inc_store_with_dep_in_null
+# CHECK: bb.0.entry:
+# CHECK:    TEST64rr $rdi, $rdi, implicit-def $eflags
+# CHECK-NEXT:    JCC_1 %bb.2, 4, implicit killed $eflags
+# CHECK: bb.1.not_null
+
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+  - { reg: '$rsi' }
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $rsi
+
+    TEST64rr $rdi, $rdi, implicit-def $eflags
+    JCC_1 %bb.2, 4, implicit killed $eflags
+
+  bb.1.not_null:
+    liveins: $rdi, $rsi
+
+    $esi = ADD32rr $esi, $esi, implicit-def dead $eflags
+    MOV32mr killed $rdi, 1, $noreg, 0, $noreg, $esi
+    $eax = MOV32rr killed $esi
+    RET64 $eax
+
+  bb.2.is_null:
+    liveins: $rsi
+    
+    $eax = MOV32rr killed $esi
+    RET64 $eax
+
+...
+---
+name:            inc_store_with_volatile
+# CHECK-LABEL: inc_store_with_volatile
+# CHECK: bb.0.entry:
+# CHECK:    TEST64rr $rdi, $rdi, implicit-def $eflags
+# CHECK-NEXT:    JCC_1 %bb.2, 4, implicit killed $eflags
+# CHECK: bb.1.not_null
+
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+  - { reg: '$rsi' }
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $rsi
+
+    TEST64rr $rdi, $rdi, implicit-def $eflags
+    JCC_1 %bb.2, 4, implicit killed $eflags
+
+  bb.1.not_null:
+    liveins: $rdi, $rsi
+
+    MOV32mr killed $rdi, 1, $noreg, 0, $noreg, killed $esi :: (volatile store (s32) into %ir.ptr)
+    RET64
+
+  bb.2.is_null:
+    RET64
+
+...
+---
+name:            inc_store_with_two_dep
+# CHECK-LABEL: inc_store_with_two_dep
+# CHECK: bb.0.entry:
+# CHECK:    TEST64rr $rdi, $rdi, implicit-def $eflags
+# CHECK-NEXT:    JCC_1 %bb.2, 4, implicit killed $eflags
+# CHECK: bb.1.not_null
+
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+  - { reg: '$rsi' }
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $rsi
+
+    TEST64rr $rdi, $rdi, implicit-def $eflags
+    JCC_1 %bb.2, 4, implicit killed $eflags
+
+  bb.1.not_null:
+    liveins: $rdi, $rsi
+
+    $esi = ADD32rr killed $esi, killed $esi, implicit-def dead $eflags
+    $esi = ADD32ri killed $esi, 15, implicit-def dead $eflags
+    MOV32mr killed $rdi, 1, $noreg, 16, $noreg, killed $esi
+    RET64
+
+  bb.2.is_null:
+    RET64
+
+...
+---
+name:            inc_store_with_redefined_base
+# CHECK-LABEL: inc_store_with_redefined_base
+# CHECK: bb.0.entry:
+# CHECK:    TEST64rr $rdi, $rdi, implicit-def $eflags
+# CHECK-NEXT:    JCC_1 %bb.2, 4, implicit killed $eflags
+# CHECK: bb.1.not_null
+
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+  - { reg: '$rsi' }
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $rsi
+
+    TEST64rr $rdi, $rdi, implicit-def $eflags
+    JCC_1 %bb.2, 4, implicit killed $eflags
+
+  bb.1.not_null:
+    liveins: $rdi, $rsi
+
+    $rdi = ADD64rr killed $rdi, killed $rdi, implicit-def dead $eflags
+    MOV32mr killed $rdi, 1, $noreg, 16, $noreg, killed $esi
+    RET64
+
+  bb.2.is_null:
+    RET64
+
+...
+---
+name:            inc_store_with_reused_base
+# CHECK-LABEL: inc_store_with_reused_base
+# CHECK: bb.0.entry:
+# CHECK:  $noreg = FAULTING_OP 3, %bb.2, {{[0-9]+}}, $rdi, 1, $noreg, 16, $noreg, $esi
+# CHECK-NEXT: JMP_1 %bb.1
+# CHECK: bb.1.not_null
+
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+  - { reg: '$rsi' }
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $rsi
+
+    TEST64rr $rdi, $rdi, implicit-def $eflags
+    JCC_1 %bb.2, 4, implicit killed $eflags
+
+  bb.1.not_null:
+    liveins: $rdi, $rsi
+
+    $rax = MOV64rr $rdi
+    MOV32mr killed $rdi, 1, $noreg, 16, $noreg, killed $esi
+    RET64 $eax
+
+  bb.2.is_null:
+    $rax = XOR64rr undef $rax, undef $rax, implicit-def dead $eflags
+    RET64 $eax
+
+...
+---
+name:            inc_store_across_call
+# CHECK-LABEL: inc_store_across_call
+# CHECK: bb.0.entry:
+# CHECK:    TEST64rr $rbx, $rbx, implicit-def $eflags
+# CHECK-NEXT:    JCC_1 %bb.2, 4, implicit killed $eflags
+# CHECK: bb.1.not_null
+
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+calleeSavedRegisters: [ '$bh', '$bl', '$bp', '$bpl', '$bx', '$ebp', '$ebx',
+                        '$rbp', '$rbx', '$r12', '$r13', '$r14', '$r15',
+                        '$r12b', '$r13b', '$r14b', '$r15b', '$r12d', '$r13d',
+                        '$r14d', '$r15d', '$r12w', '$r13w', '$r14w', '$r15w' ]
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $rbx
+
+    frame-setup PUSH64r killed $rbx, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 16
+    CFI_INSTRUCTION offset $rbx, -16
+    $rbx = MOV64rr killed $rdi
+    TEST64rr $rbx, $rbx, implicit-def $eflags
+    JCC_1 %bb.2, 4, implicit killed $eflags
+
+  bb.1.not_null:
+    liveins: $rbx
+
+    CALL64pcrel32 @f, csr_64, implicit $rsp, implicit-def $rsp
+    MOV32mi $rbx, 1, $noreg, 0, $noreg, 20
+    $rax = MOV64rr killed $rbx
+    $rbx = POP64r implicit-def $rsp, implicit $rsp
+    RET64 $eax
+
+  bb.2.is_null:
+    $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
+    $rbx = POP64r implicit-def $rsp, implicit $rsp
+    RET64 $eax
+
+...
+---
+name:            inc_store_with_dep_in_dep
+# CHECK-LABEL: inc_store_with_dep_in_dep
+# CHECK: bb.0.entry:
+# CHECK:    TEST64rr $rdi, $rdi, implicit-def $eflags
+# CHECK-NEXT:    JCC_1 %bb.2, 4, implicit killed $eflags
+# CHECK: bb.1.not_null
+
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+  - { reg: '$rsi' }
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $rsi
+
+    TEST64rr $rdi, $rdi, implicit-def $eflags
+    JCC_1 %bb.2, 4, implicit killed $eflags
+
+  bb.1.not_null:
+    liveins: $rdi, $rsi
+
+    $eax = MOV32rr $esi
+    $esi = ADD32ri killed $esi, 15, implicit-def dead $eflags
+    MOV32mr killed $rdi, 1, $noreg, 0, $noreg, killed $esi
+    RET64 $eax
+
+  bb.2.is_null:
+    $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
+    RET64 $eax
+
+...
+---
+name:            inc_store_with_load_over_store
+# CHECK-LABEL: inc_store_with_load_over_store
+# CHECK: bb.0.entry:
+# CHECK:    TEST64rr $rdi, $rdi, implicit-def $eflags
+# CHECK-NEXT:    JCC_1 %bb.2, 4, implicit killed $eflags
+# CHECK: bb.1.not_null
+
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+  - { reg: '$rsi' }
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $rsi
+
+    TEST64rr $rdi, $rdi, implicit-def $eflags
+    JCC_1 %bb.2, 4, implicit killed $eflags
+
+  bb.1.not_null:
+    liveins: $rdi, $rsi
+
+    MOV32mi killed $rsi, 1, $noreg, 0, $noreg, 2
+    $eax = MOV32rm killed $rdi, 1, $noreg, 0, $noreg 
+    RET64 $eax
+
+  bb.2.is_null:
+    $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
+    RET64 $eax
+
+...
+---
+name:            inc_store_with_store_over_load
+# CHECK-LABEL: inc_store_with_store_over_load
+# CHECK: bb.0.entry:
+# CHECK:    TEST64rr $rdi, $rdi, implicit-def $eflags
+# CHECK-NEXT:    JCC_1 %bb.2, 4, implicit killed $eflags
+# CHECK: bb.1.not_null
+
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+  - { reg: '$rsi' }
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $rsi
+
+    TEST64rr $rdi, $rdi, implicit-def $eflags
+    JCC_1 %bb.2, 4, implicit killed $eflags
+
+  bb.1.not_null:
+    liveins: $rdi, $rsi
+
+    $eax = MOV32rm killed $rsi, 1, $noreg, 0, $noreg 
+    MOV32mi killed $rdi, 1, $noreg, 0, $noreg, 2
+    RET64 $eax
+
+  bb.2.is_null:
+    $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
+    RET64 $eax
+
+...
+---
+name:            inc_store_with_store_over_store
+# CHECK-LABEL: inc_store_with_store_over_store
+# CHECK: bb.0.entry:
+# CHECK:    TEST64rr $rdi, $rdi, implicit-def $eflags
+# CHECK-NEXT:    JCC_1 %bb.2, 4, implicit killed $eflags
+# CHECK: bb.1.not_null
+
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+  - { reg: '$rsi' }
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $rsi
+
+    TEST64rr $rdi, $rdi, implicit-def $eflags
+    JCC_1 %bb.2, 4, implicit killed $eflags
+
+  bb.1.not_null:
+    liveins: $rdi, $rsi
+
+    MOV32mi killed $rsi, 1, $noreg, 0, $noreg, 3 
+    MOV32mi killed $rdi, 1, $noreg, 0, $noreg, 2
+    RET64
+
+  bb.2.is_null:
+    RET64
+
+...
+---
+name:            inc_store_with_load_and_store
+# CHECK-LABEL: inc_store_with_load_and_store
+# CHECK: bb.0.entry:
+# CHECK:  $noreg = FAULTING_OP 2, %bb.2, {{[0-9]+}}, $rdi, 1, $noreg, 0, $noreg, $esi, implicit-def $eflags
+# CHECK-NEXT: JMP_1 %bb.1
+# CHECK: bb.1.not_null
+
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+  - { reg: '$rsi' }
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $rsi
+
+    TEST64rr $rdi, $rdi, implicit-def $eflags
+    JCC_1 %bb.2, 4, implicit killed $eflags
+
+  bb.1.not_null:
+    liveins: $rdi, $rsi
+
+    $esi = ADD32rr $esi, $esi, implicit-def dead $eflags
+    ADD32mr killed $rdi, 1, $noreg, 0, $noreg, killed $esi, implicit-def dead $eflags
+    RET64
+
+  bb.2.is_null:
+    RET64
+
+...
+---
+name:            inc_store_and_load_no_alias
+# CHECK-LABEL: inc_store_and_load_no_alias
+# CHECK: bb.0.entry:
+# CHECK:  $eax = FAULTING_OP 1, %bb.2, {{[0-9]+}}, $rdi, 1, $noreg, 0, $noreg :: (load (s32) from %ir.ptr)
+# CHECK-NEXT: JMP_1 %bb.1
+# CHECK: bb.1.not_null
+
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+  - { reg: '$rsi' }
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $rsi
+
+    TEST64rr $rdi, $rdi, implicit-def $eflags
+    JCC_1 %bb.2, 4, implicit killed $eflags
+
+  bb.1.not_null:
+    liveins: $rdi, $rsi
+
+    MOV32mi killed $rsi, 1, $noreg, 0, $noreg, 3 :: (store (s32) into %ir.ptr2)
+    $eax = MOV32rm killed $rdi, 1, $noreg, 0, $noreg :: (load (s32) from %ir.ptr)
+    RET64 $eax
+
+  bb.2.is_null:
+    $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
+    RET64 $eax
+
+...
+---
+name:            inc_store_and_load_alias
+# CHECK-LABEL: inc_store_and_load_alias
+# CHECK: bb.0.entry:
+# CHECK:    TEST64rr $rdi, $rdi, implicit-def $eflags
+# CHECK-NEXT:    JCC_1 %bb.2, 4, implicit killed $eflags
+# CHECK: bb.1.not_null
+
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+  - { reg: '$rsi' }
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $rsi
+
+    TEST64rr $rdi, $rdi, implicit-def $eflags
+    JCC_1 %bb.2, 4, implicit killed $eflags
+
+  bb.1.not_null:
+    liveins: $rdi, $rsi
+
+    MOV32mi killed $rsi, 1, $noreg, 0, $noreg, 3 :: (store (s32) into %ir.ptr2)
+    $eax = MOV32rm killed $rdi, 1, $noreg, 0, $noreg :: (load (s32) from %ir.ptr)
+    RET64 $eax
+
+  bb.2.is_null:
+    $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
+    RET64 $eax
+
+...
+---
+name:            inc_spill_dep
+# CHECK-LABEL: inc_spill_dep
+# CHECK: bb.0.entry:
+# CHECK:    TEST64rr $rdi, $rdi, implicit-def $eflags
+# CHECK-NEXT:    JCC_1 %bb.2, 4, implicit killed $eflags
+# CHECK: bb.1.not_null
+
+alignment:       16
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, offset: -8, size: 8, alignment: 8}
+liveins:
+  - { reg: '$rdi' }
+  - { reg: '$rsi' }
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $rsi
+
+    $rsp = frame-setup SUB64ri8 $rsp, 8, implicit-def dead $eflags
+    MOV32mr $rsp, 1, $noreg, 0, $noreg, $esi :: (store (s32) into %stack.0)
+    TEST64rr $rdi, $rdi, implicit-def $eflags
+    JCC_1 %bb.2, 4, implicit killed $eflags
+
+  bb.1.not_null:
+    liveins: $rdi, $rsi
+
+    $r14d = MOV32rm $rsp, 1, $noreg, 0, $noreg :: (load (s32) from %stack.0)
+    MOV64mr $rsp, 1, $noreg, 0, $noreg, $rdi :: (store (s64) into %stack.0)
+    $edi = MOV32rm $rdi, 1, $noreg, 8, $noreg :: (load (s32) from %ir.ptr)
+    $eax = MOV32rr $edi
+    RET64 $eax
+
+  bb.2.is_null:
+    $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
+    RET64 $eax
+
+...
+---
+name:            imp_null_check_address_mul_overflow
+# CHECK-LABEL: name:            imp_null_check_address_mul_overflow
+# CHECK:  bb.0.entry:
+# CHECK-NOT: FAULTING_OP
+alignment:       16
+tracksRegLiveness: true
+liveins:         
+  - { reg: '$rdi' }
+  - { reg: '$rsi' }
+body:             |
+  bb.0.entry:
+    liveins: $rsi, $rdi
+  
+    TEST64rr $rdi, $rdi, implicit-def $eflags
+    JCC_1 %bb.1, 4, implicit $eflags
+  
+  bb.2.not_null:
+    liveins: $rdi, $rsi
+  
+    $rcx = MOV64ri -9223372036854775808
+    $eax = MOV32rm killed $rdi, 2, $rcx, 0, $noreg, implicit-def $rax
+    RET64 $eax
+  
+  bb.1.is_null:
+    $eax = MOV32ri 42
+    RET64 $eax
+
+...

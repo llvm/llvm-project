@@ -1,0 +1,25 @@
+# REQUIRES: zlib
+## .zdebug is no longer recognized as zlib-gnu compressed sections. It's treated
+## as an opaque non-debug section.
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy --decompress-debug-sections %t %t.copy
+# RUN: llvm-readelf -S %t.copy | FileCheck %s
+
+# CHECK: .zdebug_str
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Content:      '00'
+  - Name:         .zdebug_str
+    Type:         SHT_PROGBITS
+    Content:      5a4c49420000000000000002789c4b64000000c40062
+    AddressAlign: 8
+...

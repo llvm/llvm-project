@@ -1,0 +1,26 @@
+## Test --strip-needed flag
+
+# RUN: llvm-ifs --input-format=IFS --strip-needed --output-ifs=- %s | FileCheck %s
+
+# RUN: llvm-ifs --input-format=IFS --output-elf=- %s | \
+# RUN: obj2yaml | FileCheck %s --check-prefix=FROM-ELF
+
+# RUN: llvm-ifs --input-format=IFS --strip-needed --output-elf=- %s | \
+# RUN: obj2yaml | FileCheck %s --check-prefix=FROM-ELF-STRIP-NEEDED
+
+--- !ifs-v1
+IfsVersion: 3.0
+Target: { ObjectFormat: ELF, Arch: AArch64, Endianness: little, BitWidth: 64 }
+NeededLibs:
+  - ''
+Symbols: []
+...
+
+# CHECK:      --- !ifs-v1
+# CHECK-NEXT: IfsVersion: {{[1-9]\d*\.(0|([1-9]\d*))}}
+# CHECK-NEXT: Target: { ObjectFormat: ELF, Arch: AArch64, Endianness: little, BitWidth: 64 }
+# CHECK-NEXT: Symbols: []
+# CHECK-NEXT: ...
+
+# FROM-ELF: DT_NEEDED
+# FROM-ELF-STRIP-NEEDED-NOT: DT_NEEDED

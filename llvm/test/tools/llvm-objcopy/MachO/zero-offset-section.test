@@ -1,0 +1,43 @@
+## This test verifies that a regular (non-zero-fill) section with zero offset 
+## and zero size is not modifed, this behavior is consistent with cctools' strip.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy %t %t.copy
+# RUN: cmp %t %t.copy
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACE
+  cputype:         0x00000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000001
+  ncmds:           1
+  sizeofcmds:      124
+  flags:           0x00002000
+LoadCommands:
+  - cmd:             LC_SEGMENT
+    cmdsize:         124
+    segname:         __DATA
+    vmaddr:          4096
+    vmsize:          0
+    fileoff:         152
+    filesize:        0
+    maxprot:         7
+    initprot:        7
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __broken
+        segname:         __DATA
+        addr:            0x0000000000001000
+        size:            0
+        offset:          0x00000000
+        align:           2
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+        content:         ''
+...

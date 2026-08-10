@@ -1,0 +1,35 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-nm --no-sort %t | FileCheck %s
+
+# CHECK: b mybss_local
+# CHECK: b mytbss_local
+# CHECK: B mybss_global
+# CHECK: B mytbss_global
+
+!ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: mybss
+    Type: SHT_NOBITS
+    Flags: [ SHF_ALLOC, SHF_WRITE ]
+  - Name: mytbss
+    Type: SHT_NOBITS
+    Flags: [ SHF_ALLOC, SHF_WRITE, SHF_TLS ]
+Symbols:
+  - Name:    mybss_local
+    Binding: STB_LOCAL
+    Section: mybss
+  - Name:    mytbss_local
+    Binding: STB_LOCAL
+    Section: mytbss
+
+  - Name:    mybss_global
+    Binding: STB_GLOBAL
+    Section: mybss
+  - Name:    mytbss_global
+    Binding: STB_GLOBAL
+    Section: mytbss

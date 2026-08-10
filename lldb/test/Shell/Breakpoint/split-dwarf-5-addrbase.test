@@ -1,0 +1,30 @@
+# RUN: rm -rf %t.dir
+# RUN: mkdir %t.dir
+# RUN: cd %t.dir
+# RUN: yaml2obj %p/Inputs/split-dwarf-5-addrbase.dwo.yaml -o %t.dir/test.dwo
+# RUN: yaml2obj %p/Inputs/split-dwarf-5-addrbase.yaml -o %t.dir/test
+# RUN: lldb-test breakpoints %t.dir/test %s | FileCheck %s
+
+# This test checks that source code location is shown correctly
+# when -gsplit-dwarf and DWARF 5 are used.
+#
+# split-dwarf-5-addrbase.dwo.yaml and split-dwarf-5-addrbase.yamlare
+# reduced yaml files produces from the dwo file and the corresponding executable.
+#
+# The following code was used initially:
+# void baz() {
+# }
+# 
+# int main() {
+#   baz();
+#   return 0;
+# }
+#
+# Invocation used to produce outputs was:
+# clang test.cc -g -fno-rtti -c -gdwarf-5 -gsplit-dwarf
+# clang test.o -g -fno-rtti -gdwarf-5 -o test -gsplit-dwarf
+# clang version 8.0.0 (trunk 347299)
+
+b baz
+# CHECK-LABEL: b baz
+# CHECK: Address: {{.*}}baz() + 4 at test.cc:2:1

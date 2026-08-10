@@ -1,0 +1,10 @@
+sink: "{ [S_2[] -> __pet_ref_4[]] -> a[] }"
+must_source: "{ [S_0[] -> __pet_ref_0[]] -> a[]; [S_2[] -> __pet_ref_3[]] -> b[]; [S_1[] -> __pet_ref_1[]] -> a[]; [S_1[] -> __pet_ref_2[]] -> a[] }"
+may_source: "{ [S_1[] -> __pet_ref_2[]] -> a[]; [S_1[] -> __pet_ref_1[]] -> a[]; [S_2[] -> __pet_ref_3[]] -> b[]; [S_0[] -> __pet_ref_0[]] -> a[] }"
+schedule:
+  domain: "{ [S_1[] -> __pet_ref_1[]]; [S_1[] -> __pet_ref_2[]]; [S_2[] -> __pet_ref_3[]]; [S_0[] -> __pet_ref_0[]]; [S_2[] -> __pet_ref_4[]] }"
+  child:
+    sequence:
+    - filter: "{ [S_0[] -> __pet_ref_0[]] }"
+    - filter: "{ [S_1[] -> __pet_ref_1[]]; [S_1[] -> __pet_ref_2[]] }"
+    - filter: "{ [S_2[] -> __pet_ref_3[]]; [S_2[] -> __pet_ref_4[]] }"

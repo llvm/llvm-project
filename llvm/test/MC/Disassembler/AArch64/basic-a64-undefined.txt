@@ -1,0 +1,66 @@
+# RUN: not llvm-mc -disassemble -triple=aarch64 %s 2> %t
+# RUN: FileCheck %s < %t
+# RUN: not llvm-mc -disassemble -triple=arm64 %s 2> %t
+# RUN: FileCheck %s < %t
+
+# Instructions notionally in the add/sub (extended register) sheet, but with
+# invalid shift amount or "opt" field.
+[0x00 0x10 0xa0 0x0b]
+[0x00 0x10 0x60 0x0b]
+[0x00 0x14 0x20 0x0b]
+# CHECK: invalid instruction encoding
+# CHECK: invalid instruction encoding
+# CHECK: invalid instruction encoding
+
+# Instructions notionally in the add/sub (immediate) sheet, but with
+# invalid "shift" field.
+[0xdf 0x3 0x80 0x91]
+[0xed 0x8e 0xc4 0x31]
+[0x62 0xfc 0xbf 0x11]
+[0x3 0xff 0xff 0x91]
+# CHECK: invalid instruction encoding
+# CHECK: invalid instruction encoding
+# CHECK: invalid instruction encoding
+# CHECK: invalid instruction encoding
+
+# Instructions notionally in the load/store (unsigned immediate) sheet.
+# Only unallocated (int-register) variants are: opc=0b11, size=0b10, 0b11
+[0xd7 0xfc 0xff 0xb9]
+[0xd7 0xfc 0xcf 0xf9]
+# CHECK: invalid instruction encoding
+# CHECK: invalid instruction encoding
+
+# Instructions notionally in the floating-point <-> fixed-point conversion
+# Scale field is 64-<imm> and <imm> should be 1-32 for a 32-bit int register.
+[0x23 0x01 0x18 0x1e]
+[0x23 0x25 0x42 0x1e]
+# CHECK: invalid instruction encoding
+# CHECK: invalid instruction encoding
+
+# Instructions notionally in the logical (shifted register) sheet, but with out
+# of range shift: w-registers can only have 0-31.
+[0x00 0x80 0x00 0x0a]
+# CHECK: invalid instruction encoding
+
+# Instructions notionally in the move wide (immediate) sheet, but with out
+# of range shift: w-registers can only have 0 or 16.
+[0x00 0x00 0xc0 0x12]
+[0x12 0x34 0xe0 0x52]
+# CHECK: invalid instruction encoding
+# CHECK: invalid instruction encoding
+
+# Data-processing instructions are undefined when S=1 and for the 0b0000111
+# value in opcode:sf
+[0x00 0x00 0xc0 0x5f]
+[0x56 0x0c 0xc0 0x5a]
+# CHECK: invalid instruction encoding
+# CHECK: invalid instruction encoding
+
+# Data-processing instructions (2 source) are undefined for a value of
+#  0001xx:0:x or 0011xx:0:x for opcode:S:sf
+[0x00 0x30 0xc1 0x1a]
+[0x00 0x10 0xc1 0x1a]
+# CHECK: invalid instruction encoding
+# CHECK: invalid instruction encoding
+
+

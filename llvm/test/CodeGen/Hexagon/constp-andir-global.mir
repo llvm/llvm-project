@@ -1,0 +1,25 @@
+# RUN: llc -mtriple=hexagon -run-pass hexagon-constp %s -o - | FileCheck %s
+
+# Check that this doesn't crash.
+# CHECK: A2_andir killed %{{[0-9]+}}, @g
+
+--- |
+  @g = external global i32, align 4
+  define void @fred() {
+    ret void
+  }
+...
+
+---
+name: fred
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %1:intregs = IMPLICIT_DEF
+    %0:intregs = L2_loadri_io %1, 0
+    %2:intregs = A2_addi killed %0, -1
+    %3:intregs = A2_subri -1, killed %2
+    %4:intregs = A2_andir killed %3, @g
+    %5:intregs = IMPLICIT_DEF
+    S2_storeri_io %5, 0, killed %4
+...

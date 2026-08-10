@@ -1,0 +1,31 @@
+# RUN: yaml2obj --docnum=1 %s -o %t
+# RUN: llvm-objdump -f %t | FileCheck %s -DFILE=%t --check-prefix ELF64
+# RUN: llvm-objdump --file-headers %t | FileCheck %s -DFILE=%t --check-prefix ELF64
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+  Entry:           0x123456789abcde
+
+# ELF64: [[FILE]]: file format elf64-x86-64
+# ELF64: architecture: x86_64
+# ELF64: start address: 0x00123456789abcde
+
+# RUN: yaml2obj --docnum=2 %s -o %t-i386
+# RUN: llvm-objdump -f %t-i386 | FileCheck -DFILE=%t-i386 %s --check-prefix ELF32
+# RUN: llvm-objdump --file-headers %t-i386 | FileCheck %s -DFILE=%t-i386 --check-prefix ELF32
+
+# ELF32: [[FILE]]: file format elf32-i386
+# ELF32: architecture: i386
+# ELF32: start address: 0x12345678
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_386
+  Entry:   0x12345678

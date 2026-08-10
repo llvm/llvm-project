@@ -1,0 +1,24 @@
+; REQUIRES: system-linux
+
+; RUN: rm -rf %t
+; RUN: mkdir %t
+; RUN: cd %t
+
+; RUN: llvm-mc -split-dwarf-file=main.dwo -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf4-df-do-no-convert-low-pc-high-pc-to-ranges.s -o main.o
+; RUN: %clang %cflags -gsplit-dwarf=split main.o -o main.exe -Wl,-q
+; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections
+; RUN: llvm-dwarfdump --show-form --verbose --debug-info main.dwo | FileCheck --check-prefix=PRECHECK %s
+; RUN: llvm-dwarfdump --show-form --verbose --debug-info main.dwo.dwo | FileCheck --check-prefix=POSTCHECK %s
+
+;; This test checks that we do not convert low_pc/high_pc to ranges for DW_TAG_inlined_subroutine,
+;; when there is only one output range entry.
+
+; PRECHECK: DW_TAG_inlined_subroutine
+; PRECHECK: DW_AT_abstract_origin
+; PRECHECK: DW_AT_low_pc [DW_FORM_GNU_addr_index] (indexed (00000001)
+; PRECHECK: DW_AT_high_pc [DW_FORM_data4] (0x00000002)
+
+; POSTCHECK: DW_TAG_inlined_subroutine
+; POSTCHECK: DW_AT_abstract_origin
+; POSTCHECK: DW_AT_low_pc [DW_FORM_GNU_addr_index] (indexed (00000003)
+; POSTCHECK: DW_AT_high_pc [DW_FORM_data4] (0x00000002)

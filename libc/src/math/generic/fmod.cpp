@@ -1,0 +1,18 @@
+//===-- Double-precision fmod function ------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "src/math/fmod.h"
+#include "src/__support/math/fmod.h"
+
+namespace LIBC_NAMESPACE_DECL {
+
+LLVM_LIBC_FUNCTION(double, fmod, (double x, double y)) {
+  return math::fmod(x, y);
+}
+
+} // namespace LIBC_NAMESPACE_DECL

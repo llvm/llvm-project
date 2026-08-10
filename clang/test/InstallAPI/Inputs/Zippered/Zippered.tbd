@@ -1,0 +1,47 @@
+{
+  "main_library": {
+    "exported_symbols": [
+      {
+        "data": {
+          "global": [
+            "_image", "_a"
+          ]
+        },
+        "text": {
+          "global": [
+            "_invalidAPI", "_commonAPI"
+          ]
+        }
+      },
+      {
+        "targets": [ "x86_64-maccatalyst" ],
+        "text": {
+          "global": [ "_iOSAPI"]
+        }
+      },
+      {
+        "targets": [ "x86_64-macos" ],
+        "text": {
+          "global": [ "_macOSAPI", "_macOSAPI2" ]
+        }
+      }
+    ],
+    "flags": [
+      {
+        "attributes": ["not_app_extension_safe"]
+      }
+    ],
+    "install_names": [
+      {"name": "/System/Library/Frameworks/Zippered.framework/Versions/A/Zippered"}
+    ],
+    "target_info": [
+      {
+        "min_deployment": "13", "target": "x86_64-macos"
+      },
+      {
+        "min_deployment": "16", "target": "x86_64-maccatalyst"
+      }
+    ]
+  },
+  "tapi_tbd_version": 5
+}

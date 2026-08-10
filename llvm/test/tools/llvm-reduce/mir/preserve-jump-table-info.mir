@@ -1,0 +1,97 @@
+# REQUIRES: aarch64-registered-target
+# FIXME: Fails with -abort-on-invalid-reduction
+# RUN: llvm-reduce -simplify-mir --delta-passes=instructions -mtriple=aarch64-- --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
+# RUN: FileCheck --match-full-lines --check-prefix=RESULT %s < %t
+
+# Check that jump table info is preserved through cloning
+
+# CHECK-INTERESTINGNESS: MOVi32imm
+
+# RESULT: jumpTable:
+# RESULT-NEXT: kind:            label-difference32
+# RESULT-NEXT: entries:
+# RESULT-NEXT: - id:              0
+# RESULT-NEXT: blocks:          [ '%bb.9', '%bb.5', '%bb.2', '%bb.2', '%bb.2', '%bb.2',
+# RESULT-NEXT:                    '%bb.2', '%bb.2', '%bb.2', '%bb.2', '%bb.6', '%bb.2',
+# RESULT-NEXT:                    '%bb.2', '%bb.2', '%bb.2', '%bb.2', '%bb.2', '%bb.2',
+# RESULT-NEXT:                    '%bb.2', '%bb.2', '%bb.2', '%bb.2', '%bb.2', '%bb.2',
+# RESULT-NEXT:                    '%bb.2', '%bb.2', '%bb.2', '%bb.2', '%bb.2', '%bb.2',
+# RESULT-NEXT:                    '%bb.2', '%bb.2', '%bb.2', '%bb.2', '%bb.7', '%bb.2',
+# RESULT-NEXT:                    '%bb.2', '%bb.2', '%bb.2', '%bb.7' ]
+
+---
+name:            widget
+tracksRegLiveness: true
+jumpTable:
+  kind:            label-difference32
+  entries:
+    - id:              0
+      blocks:          [ '%bb.9', '%bb.5', '%bb.2', '%bb.2', '%bb.2', '%bb.2',
+                         '%bb.2', '%bb.2', '%bb.2', '%bb.2', '%bb.6', '%bb.2',
+                         '%bb.2', '%bb.2', '%bb.2', '%bb.2', '%bb.2', '%bb.2',
+                         '%bb.2', '%bb.2', '%bb.2', '%bb.2', '%bb.2', '%bb.2',
+                         '%bb.2', '%bb.2', '%bb.2', '%bb.2', '%bb.2', '%bb.2',
+                         '%bb.2', '%bb.2', '%bb.2', '%bb.2', '%bb.7', '%bb.2',
+                         '%bb.2', '%bb.2', '%bb.2', '%bb.7' ]
+body:             |
+  bb.0:
+    liveins: $w0, $w1, $x2, $x3, $x4, $w5, $w6
+
+    %0:gpr32 = COPY $w6
+    %1:gpr32 = COPY $w5
+    %2:gpr64common = COPY $x4
+    %3:gpr64 = COPY $x3
+    %4:gpr64common = COPY $x2
+    %5:gpr32common = COPY $w1
+    %6:gpr32 = COPY $w0
+    undef %7.sub_32:gpr64 = ORRWrs $wzr, %5, 0, implicit-def %7
+    %8:gpr64common = MOVaddrJT target-flags(aarch64-page) %jump-table.0, target-flags(aarch64-pageoff, aarch64-nc) %jump-table.0
+    %9:gpr32 = MOVi32imm 1
+    undef %10.sub_32:gpr64 = IMPLICIT_DEF
+
+  bb.1:
+
+  bb.2:
+    successors: %bb.3(0x0fbefbf0), %bb.4(0x70410410)
+
+    dead $wzr = SUBSWri %5, 39, 0, implicit-def $nzcv
+    Bcc 8, %bb.3, implicit killed $nzcv
+    B %bb.4
+
+  bb.3:
+    successors: %bb.11(0x00000000), %bb.2(0x80000000)
+
+    dead $wzr = SUBSWri %5, 64, 0, implicit-def $nzcv
+    Bcc 0, %bb.11, implicit killed $nzcv
+    B %bb.2
+
+  bb.4:
+    successors: %bb.9(0x01288b01), %bb.5(0x01288b01), %bb.2(0x11f46a91), %bb.6(0x23e8d524), %bb.7(0x47d1aa49)
+
+    early-clobber %11:gpr64, dead early-clobber %12:gpr64sp = JumpTableDest32 %8, %7, %jump-table.0
+    JUMP_TABLE_DEBUG_INFO 0
+    BR %11
+
+  bb.5:
+    B %bb.8
+
+  bb.6:
+    B %bb.2
+
+  bb.7:
+    B %bb.2
+
+  bb.8:
+    B %bb.8
+
+  bb.9:
+    TBZW %0, 0, %bb.1
+    B %bb.10
+
+  bb.10:
+    B %bb.1
+
+  bb.11:
+    BRK 1
+
+...

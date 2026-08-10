@@ -1,0 +1,36 @@
+# RUN: llc -O0 -run-pass=avr-expand-pseudo %s -o - | FileCheck %s
+
+--- |
+  target triple = "avr--"
+  define void @test() {
+  entry:
+    ret void
+  }
+...
+
+---
+name:            test
+body: |
+  bb.0.entry:
+    liveins: $r17r16, $r19r18, $r21r20
+
+    ; CHECK-LABEL: test
+
+    ; CHECK:      $r17 = SWAPRd killed $r17
+    ; CHECK-NEXT: $r16 = SWAPRd killed $r16
+    ; CHECK-NEXT: $r16 = ANDIRdK killed $r16, 15, implicit-def dead $sreg
+    ; CHECK-NEXT: $r16 = EORRdRr killed $r16, $r17, implicit-def dead $sreg
+    ; CHECK-NEXT: $r17 = ANDIRdK $r17, 15, implicit-def dead $sreg
+    ; CHECK-NEXT: $r16 = EORRdRr $r16, $r17, implicit-def $sreg
+    $r17r16 = LSRWNRd $r17r16,  4, implicit-def $sreg
+
+    ; CHECK-NEXT: $r18 = MOVRdRr $r19
+    ; CHECK-NEXT: $r19 = EORRdRr $r19, $r19, implicit-def $sreg
+    $r19r18 = LSRWNRd $r19r18,  8, implicit-def $sreg
+
+    ; CHECK-NEXT: $r20 = MOVRdRr $r21
+    ; CHECK-NEXT: $r20 = SWAPRd killed $r20
+    ; CHECK-NEXT: $r20 = ANDIRdK $r20, 15, implicit-def dead $sreg
+    ; CHECK-NEXT: $r21 = EORRdRr $r21, $r21, implicit-def $sreg
+    $r21r20 = LSRWNRd $r21r20, 12, implicit-def $sreg
+...

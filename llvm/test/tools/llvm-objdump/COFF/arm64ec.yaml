@@ -1,0 +1,191 @@
+# REQUIRES: aarch64-registered-target
+
+## Check that AMD64 image file with CHPE data is recognized as ARM64EC.
+# RUN: yaml2obj --docnum=1 %s -o %t1 -DMACHINE=IMAGE_FILE_MACHINE_AMD64
+# RUN: llvm-readobj --coff-load-config %t1 | FileCheck --check-prefix=CODEMAP %s
+# RUN: %if x86-registered-target %{                                                           \
+# RUN:   llvm-objdump -d %t1 | FileCheck --check-prefixes=DISASM,ARM64EC %s                   \
+# RUN: %} %else %{                                                                            \
+# RUN:   llvm-objdump -d %t1 2>&1 | FileCheck --check-prefixes=DISASM-NO-X64,ARM64EC,WARN1 %s \
+# RUN: %}
+
+## Check that ARM64 image file with CHPE data is recognized as ARM64X.
+# RUN: yaml2obj --docnum=1 %s -o %t2 -DMACHINE=IMAGE_FILE_MACHINE_ARM64
+# RUN: llvm-readobj --coff-load-config %t2 | FileCheck --check-prefix=CODEMAP %s
+# RUN: %if x86-registered-target %{                                                          \
+# RUN:   llvm-objdump -d %t2 | FileCheck --check-prefixes=DISASM,ARM64X %s                   \
+# RUN: %} %else %{                                                                           \
+# RUN:   llvm-objdump -d %t2 2>&1 | FileCheck --check-prefixes=DISASM-NO-X64,ARM64X,WARN1 %s \
+# RUN: %}
+
+## Check handling of an explicit, non-default triple.
+# RUN: %if !x86-registered-target %{                                              \
+# RUN:   llvm-objdump --triple arm64ec-w64-windows-gnu -d %t1 2>&1                \
+# RUN:                | FileCheck --check-prefixes=DISASM-NO-X64,ARM64EC,WARN2 %s \
+# RUN: %}
+
+# ARM64EC: file format coff-arm64ec
+# ARM64X:  file format coff-arm64x
+
+# WARN1: warning: '{{.*}}': unable to get target for 'x86_64--', see --version and --triple.
+# WARN2: warning: '{{.*}}': unable to get target for 'x86_64-w64-windows-gnu', see --version and --triple.
+
+# DISASM:      Disassembly of section .text:
+# DISASM-EMPTY:
+# DISASM-NEXT: 0000000180001000 <.text>:
+# DISASM-NEXT: 180001000: 52800040     mov     w0, #0x2
+# DISASM-NEXT: 180001004: d65f03c0     ret
+# DISASM-NEXT: ...
+# DISASM-NEXT: 180001020: b8 03 00 00 00     movl    $0x3, %eax
+# DISASM-NEXT: 180001025: c3                 retq
+# DISASM-EMPTY:
+# DISASM-NEXT: Disassembly of section .test:
+# DISASM-EMPTY:
+# DISASM-NEXT: 0000000180002000 <.test>:
+# DISASM-NEXT: 180002000: b8 06 00 00 00     movl    $0x6, %eax
+# DISASM-NEXT: 180002005: c3                 retq
+# DISASM-NEXT: 180002006: cc                 int3
+# DISASM-NEXT: ...
+# DISASM-NEXT: 180002020: 528000a0     mov     w0, #0x5
+# DISASM-NEXT: 180002024: d65f03c0     ret
+
+# DISASM-NO-X64:      Disassembly of section .text:
+# DISASM-NO-X64-EMPTY:
+# DISASM-NO-X64-NEXT: 0000000180001000 <.text>:
+# DISASM-NO-X64-NEXT: 180001000: 52800040     mov     w0, #0x2
+# DISASM-NO-X64-NEXT: 180001004: d65f03c0     ret
+# DISASM-NO-X64-NEXT: ...
+# DISASM-NO-X64-NEXT: 180001020: 000003b8     udf     #0x3b8
+# DISASM-NO-X64-NEXT: 180001024: 00 c3        <unknown>
+# DISASM-NO-X64-EMPTY:
+# DISASM-NO-X64-NEXT: Disassembly of section .test:
+# DISASM-NO-X64-EMPTY:
+# DISASM-NO-X64-NEXT: 0000000180002000 <.test>:
+# DISASM-NO-X64-NEXT: 180002000: 000006b8     udf     #0x6b8
+# DISASM-NO-X64-NEXT: 180002004: 00ccc300     <unknown>
+# DISASM-NO-X64-NEXT: ...
+# DISASM-NO-X64-NEXT: 180002020: 528000a0     mov     w0, #0x5
+# DISASM-NO-X64-NEXT: 180002024: d65f03c0     ret
+
+# CODEMAP:      CodeMap [
+# CODEMAP-NEXT:   0x1000 - 0x1008  ARM64EC
+# CODEMAP-NEXT:   0x1020 - 0x2007  X64
+# CODEMAP-NEXT:   0x2020 - 0x2028  ARM64EC
+# CODEMAP-NEXT: ]
+
+--- !COFF
+OptionalHeader:
+  ImageBase:        0x180000000
+  SectionAlignment: 4096
+  FileAlignment:    512
+  DLLCharacteristics: [ ]
+  LoadConfigTable:
+    RelativeVirtualAddress: 0x3000
+    Size:                   320
+header:
+  Machine:         [[MACHINE]]
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE, IMAGE_FILE_DLL ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  0x1000
+    VirtualSize:     38
+    SectionData:     40008052C0035FD6000000000000000000000000000000000000000000000000B803000000C3
+  - Name:            .test
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  0x2000
+    VirtualSize:     40
+    SectionData:     B806000000C3CC00000000000000000000000000000000000000000000000000A0008052C0035FD6
+  - Name:            .rdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  0x3000
+    VirtualSize:     328
+    StructuredData:
+      - LoadConfig:
+          CHPEMetadataPointer: 0x180004000
+  - Name:            .data
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+    VirtualAddress:  0x4000
+    VirtualSize:     112
+    StructuredData:
+      - UInt32: 1       # Version
+      - UInt32: 0x4050  # CodeMap
+      - UInt32: 3       # CodeMapCount
+      - UInt32: 0       # CodeRangesToEntryPoints
+      - UInt32: 0       # RedirectionMetadata
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0       # CodeRangesToEntryPointsCount
+      - UInt32: 0       # RedirectionMetadataCount
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0x1001  # CodeMap[0]
+      - UInt32: 0x8
+      - UInt32: 0x1022  # CodeMap[1]
+      - UInt32: 0x0fe7
+      - UInt32: 0x2021  # CodeMap[2]
+      - UInt32: 0x8
+symbols:         []
+...
+
+## Check error handling of invalid code map RVA.
+# RUN: yaml2obj --docnum=2 %s -o %t-invalid
+# RUN: not llvm-objdump -d %t-invalid 2>&1 | FileCheck --check-prefixes=ERR %s -DFILE=%t-invalid
+# ERR: error: '[[FILE]]': RVA 0x6000 for CHPE code map not found
+
+--- !COFF
+OptionalHeader:
+  ImageBase:        0x180000000
+  SectionAlignment: 4096
+  FileAlignment:    512
+  DLLCharacteristics: [ ]
+  LoadConfigTable:
+    RelativeVirtualAddress: 0x3000
+    Size:                   320
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE, IMAGE_FILE_DLL ]
+sections:
+  - Name:            .rdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  0x3000
+    VirtualSize:     328
+    StructuredData:
+      - LoadConfig:
+          CHPEMetadataPointer: 0x180004000
+  - Name:            .data
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+    VirtualAddress:  0x4000
+    VirtualSize:     112
+    StructuredData:
+      - UInt32: 1       # Version
+      - UInt32: 0x6000  # CodeMap
+      - UInt32: 3       # CodeMapCount
+      - UInt32: 0       # CodeRangesToEntryPoints
+      - UInt32: 0       # RedirectionMetadata
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0       # CodeRangesToEntryPointsCount
+      - UInt32: 0       # RedirectionMetadataCount
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+symbols:         []
+...

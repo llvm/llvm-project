@@ -1,0 +1,51 @@
+# RUN: llc -O0 -mtriple thumb-- -mattr=+v6t2 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
+--- |
+  define void @test_inttoptr_s32() { ret void }
+  define void @test_ptrtoint_s32() { ret void }
+...
+---
+name:            test_inttoptr_s32
+# CHECK-LABEL: name: test_inttoptr_s32
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    %0(s32) = COPY $r0
+    %1(p0) = G_INTTOPTR %0(s32)
+    ; CHECK: [[INT:%[0-9]+]]:gpr = COPY $r0
+
+    $r0 = COPY %1(p0)
+    ; CHECK: $r0 = COPY [[INT]]
+
+    BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_ptrtoint_s32
+# CHECK-LABEL: name: test_ptrtoint_s32
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    %0(p0) = COPY $r0
+    %1(s32) = G_PTRTOINT %0(p0)
+    ; CHECK: [[PTR:%[0-9]+]]:gpr = COPY $r0
+
+    $r0 = COPY %1(s32)
+    ; CHECK: $r0 = COPY [[PTR]]
+
+    BX_RET 14, $noreg, implicit $r0
+...

@@ -1,0 +1,45 @@
+## This test checks that `--all --needed-libs` output is the same as the
+## printing order in code. One common reason the output could become
+## out-of-order is when more than one stream are printing at the same time.
+## https://bugs.llvm.org/show_bug.cgi?id=42140
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readelf --all --needed-libs %t | FileCheck %s
+
+# CHECK: ELF Header
+# CHECK:   Section header string table index
+# CHECK: There are 5 section headers, starting at offset
+# CHECK: Section Headers:
+# CHECK: Key to Flags:
+# CHECK: Elf file type is DYN (Shared object file)
+# CHECK: Entry point 0x0
+# CHECK: There are 1 program headers, starting at offset 64
+# CHECK: DYNAMIC
+# CHECK:  Section to Segment mapping:
+# CHECK:    None   .symtab .strtab .shstrtab
+# CHECK: Dynamic section at offset
+# CHECK:   0x0000000000000000 (NULL)               0x0
+# CHECK: NeededLibraries [
+# CHECK: ]
+# CHECK: There are no relocations in this file.
+# CHECK: Symbol table '.symtab' contains 1 entries
+# CHECK:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND
+# CHECK: There are no section groups in this file.
+
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Entries:
+      - Tag: DT_NULL
+        Value: 0
+Symbols: []
+ProgramHeaders:
+  - Type:     PT_DYNAMIC
+    FirstSec: .dynamic
+    LastSec:  .dynamic

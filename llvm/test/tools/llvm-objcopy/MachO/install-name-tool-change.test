@@ -1,0 +1,107 @@
+## This test checks updating a dependent shared library install name in a MachO binary.
+
+# RUN: yaml2obj %s -o %t
+
+## Specifying -change once:
+# RUN: cp %t %t.copy
+# RUN: llvm-install-name-tool -change /usr/dylib/LOAD /usr/long/long/dylib/LOAD %t.copy
+# RUN: llvm-objdump -p %t.copy | FileCheck %s --check-prefix=CHANGE --implicit-check-not='name /usr'
+
+# CHANGE: name /usr/long/long/dylib/LOAD
+# CHANGE: name /usr/dylib/WEAK
+
+## Specifying -change multiple times:
+# RUN: cp %t %t.copy
+# RUN: llvm-install-name-tool -change /usr/dylib/WEAK /usr/sh/WEAK \
+# RUN:                        -change /usr/dylib/LOAD /usr/sh/LOAD  %t.copy
+# RUN: llvm-objdump -p %t.copy | FileCheck %s --check-prefix=CHANGE-MULTIPLE --implicit-check-not='name /usr'
+
+# CHANGE-MULTIPLE: name /usr/sh/LOAD
+# CHANGE-MULTIPLE: name /usr/sh/WEAK
+
+## Changing same dependent library name multiple times:
+# RUN: cp %t %t.copy
+# RUN: llvm-install-name-tool -change /usr/dylib/LOAD /usr/LOAD \
+# RUN:                        -change /usr/dylib/LOAD /usr/XXXX %t.copy
+# RUN: llvm-objdump -p %t.copy | FileCheck %s --check-prefix=CHANGE-REPEAT --implicit-check-not='name /usr'
+
+# CHANGE-REPEAT: name /usr/LOAD
+# CHANGE-REPEAT: name /usr/dylib/WEAK
+
+## Specifying dependent library names in a chain:
+# RUN: cp %t %t.copy
+# RUN: llvm-install-name-tool -change /usr/dylib/LOAD /usr/XX/LOAD \
+# RUN:                        -change /usr/XX/LOAD /usr/YY/LOAD %t.copy
+# RUN: llvm-objdump -p %t.copy | FileCheck %s --check-prefix=CHANGE-CHAIN --implicit-check-not='name /usr'
+
+# CHANGE-CHAIN: name /usr/XX/LOAD
+# CHANGE-CHAIN: name /usr/dylib/WEAK
+
+## Changing multiple dependent library names where one exists and the other doesn't:
+# RUN: cp %t %t.copy
+# RUN: llvm-install-name-tool -change /usr/dylib/LOAD /usr/JOJO/LOAD \
+# RUN:                        -change /usr/BIZARRE /usr/KOKO/LOAD %t.copy
+# RUN: llvm-objdump -p %t.copy | FileCheck %s --check-prefix=CHANGE-SWITCH --implicit-check-not='name /usr'
+
+# CHANGE-SWITCH: name /usr/JOJO/LOAD
+# CHANGE-SWITCH: name /usr/dylib/WEAK
+
+## Changing to a common dependent library name:
+# RUN: cp %t %t.copy
+# RUN: llvm-install-name-tool -change /usr/dylib/LOAD /usr/COMMON \
+# RUN:                        -change /usr/dylib/WEAK /usr/COMMON %t.copy
+# RUN: llvm-objdump -p %t.copy | FileCheck %s --check-prefix=CHANGE-COMMON --implicit-check-not='name /usr'
+
+# CHANGE-COMMON: name /usr/COMMON
+# CHANGE-COMMON: name /usr/COMMON
+
+## Change all common dependent library names at once:
+# RUN: llvm-install-name-tool -change /usr/COMMON /usr/ONCE %t.copy
+# RUN: llvm-objdump -p %t.copy | FileCheck %s --check-prefix=CHANGE-ONCE --implicit-check-not='name /usr'
+
+# CHANGE-ONCE: name /usr/ONCE
+# CHANGE-ONCE: name /usr/ONCE
+
+## Check that -change option has no effect if the binary doesn't contain old install name:
+# RUN: cp %t %t1
+# RUN: llvm-install-name-tool -change /usr/JOJO/LOAD /usr/XX/LOAD \
+# RUN:                        -change /usr/KOKO/WEAK /usr/YY/WEAK %t
+# RUN: cmp %t %t1
+
+## Missing a -change argument:
+# RUN: not llvm-install-name-tool %t -change /usr/ONCE 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=MISSING
+
+## Missing both -change arguments:
+# RUN: not llvm-install-name-tool %t -change 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=MISSING
+
+# MISSING: missing argument to -change option
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000001
+  ncmds:           2
+  sizeofcmds:      80
+  flags:           0x00002000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:                        LC_LOAD_DYLIB
+    cmdsize:                    40
+    dylib:
+        name:                   24
+        timestamp:              2
+        current_version:        82115073
+        compatibility_version:  65536
+    Content:                    '/usr/dylib/LOAD'
+  - cmd:                        LC_LOAD_WEAK_DYLIB
+    cmdsize:                    40
+    dylib:
+        name:                   24
+        timestamp:              2
+        current_version:        82115073
+        compatibility_version:  65536
+    Content:                    '/usr/dylib/WEAK'

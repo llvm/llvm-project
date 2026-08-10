@@ -1,0 +1,182 @@
+## These test checks that llvm-objdump will not crash with malformed archive
+## files. The check line is not all that important but the bug fixes to
+## make sure llvm-objdump is robust is what matters.
+
+## Check we report an error when unable to read the size field on an archive as an integer.
+## Check two cases: a) the first member is valid, but the second is not, and b) both are invalid.
+
+# RUN: yaml2obj --docnum=1 -DFIRST="Size: '1%'" %s -o %t.libbogus1a.a
+# RUN: not llvm-objdump --macho --archive-headers %t.libbogus1a.a 2>&1 | \
+# RUN:   FileCheck -check-prefix=BOGUS1 -DVAL='1%' -DOFFSET=8 -DFILE=%t.libbogus1a.a %s
+
+# RUN: yaml2obj --docnum=1 %s -o %t.libbogus1b.a
+# RUN: not llvm-objdump --macho --archive-headers %t.libbogus1b.a 2>&1 | \
+# RUN:   FileCheck -check-prefix=BOGUS1 -DVAL=10% -DOFFSET=68 -DFILE=%t.libbogus1b.a %s
+
+# BOGUS1: '[[FILE]]': truncated or malformed archive (characters in size field in archive member header are not all decimal numbers: '[[VAL]]' for the archive member header at offset [[OFFSET]])
+
+--- !Arch
+Members:
+  - [[FIRST={}]]
+  - Size: '10%'
+
+## Check we report an error when an archive is truncated and are unable to skip the data of a member and read the next one.
+
+# RUN: yaml2obj --docnum=2 %s -o %t.libbogus2.a
+# RUN: not llvm-objdump --macho --archive-headers %t.libbogus2.a 2>&1 | \
+# RUN:   FileCheck -check-prefix=BOGUS2 -DFILE=%t.libbogus2.a %s
+
+# BOGUS2: '[[FILE]]': truncated or malformed archive (offset to next archive member past the end of the archive after member foo.c)
+
+--- !Arch
+Members:
+  - Name: 'foo.c'
+    Size: '1'
+
+## Check we report an error when we are unable to read the header of a truncated member (but still are able to read its name).
+
+# RUN: yaml2obj --docnum=3 %s -o %t.libbogus3.a
+# RUN: not llvm-objdump --macho --archive-headers %t.libbogus3.a 2>&1 | \
+# RUN:   FileCheck -check-prefix=BOGUS3 -DFILE=%t.libbogus3.a %s
+
+# BOGUS3: '[[FILE]]': truncated or malformed archive (remaining size of archive too small for next archive member header for foo.c)
+
+--- !Arch
+## A single truncated member header containing only the name field, which can be still be printed.
+Content: "666f6f2e632020202020202020202020" ## "foo.c           "
+
+## Check we report an error when the terminator characters of an archive member header are not the correct "`\n" string.
+
+# RUN: yaml2obj --docnum=4 %s -o %t.libbogus4.a
+# RUN: not llvm-objdump --macho --archive-headers %t.libbogus4.a 2>&1 | \
+# RUN:   FileCheck -check-prefix=BOGUS4 -DFILE=%t.libbogus4.a %s
+
+# BOGUS4: '[[FILE]]': truncated or malformed archive (terminator characters in archive member "@\n" not the correct "`\n" values for the archive member header for hello.c)
+
+--- !Arch
+Members:
+  - Name:       'hello.c/'
+    Terminator: "@\n"
+
+## Document we report an error when parsing a BSD archive and the name of a member contains a leading space.
+
+# RUN: yaml2obj --docnum=5 %s -o %t.libbogus5.a
+# RUN: not llvm-objdump --macho --archive-headers %t.libbogus5.a 2>&1 | \
+# RUN:   FileCheck -check-prefix=BOGUS5 -DFILE=%t.libbogus5.a %s
+
+# BOGUS5: '[[FILE]]': truncated or malformed archive (name contains a leading space for archive member header at offset 68)
+
+--- !Arch
+Members:
+  - Name: '#1/0' ## Triggers parsing as BFD archive.
+  - Name: ' '
+
+## Check we report an error when a member's long name length characters after
+## the "#1/" are not all decimal numbers.
+
+# RUN: yaml2obj --docnum=6 %s -o %t.libbogus6.a
+# RUN: not llvm-objdump --macho --archive-headers %t.libbogus6.a 2>&1 | \
+# RUN:   FileCheck -check-prefix=BOGUS6 -DFILE=%t.libbogus6.a %s
+
+# BOGUS6: '[[FILE]]': truncated or malformed archive (long name length characters after the #1/ are not all decimal numbers: '@123$' for archive member header at offset 8)
+
+--- !Arch
+Members:
+  - Name: '#1/@123$'
+
+## Check we report an error when a member's long name length characters extend past the end of the archive.
+
+# RUN: yaml2obj --docnum=7 %s -o %t.libbogus7.a
+# RUN: not llvm-objdump --macho --archive-headers %t.libbogus7.a 2>&1 | \
+# RUN:   FileCheck -check-prefix=BOGUS7 -DFILE=%t.libbogus7.a %s
+
+# BOGUS7: '[[FILE]]': truncated or malformed archive (long name length: 1 extends past the end of the member or archive for archive member header at offset 8)
+
+--- !Arch
+Members:
+  - Name: '#1/1'
+
+## Check we report an error when members long name length characters after
+## the "/" are not all decimal numbers.
+
+# RUN: yaml2obj --docnum=8 %s -o %t.libbogus8.a
+# RUN: not llvm-objdump -s %t.libbogus8.a 2>&1 | FileCheck -check-prefix=BOGUS8 -DFILE=%t.libbogus8.a %s
+
+# BOGUS8: [[FILE]](<file index: 1>): truncated or malformed archive (long name offset characters after the '/' are not all decimal numbers: '&a25*' for archive member header at offset 68)
+
+--- !Arch
+Members:
+## We need the first member to be a valid member to trigger the right error to be reported.
+  - Name: 'hello.c/'
+  - Name: "/&a25*"
+
+## Check we report an error when the long name offset goes past the end of the string table.
+
+# RUN: yaml2obj --docnum=9 %s -o %t.libbogus9.a
+# RUN: not llvm-objdump -s %t.libbogus9.a 2>&1 | FileCheck -check-prefix=BOGUS9 -DFILE=%t.libbogus9.a %s
+
+# BOGUS9: [[FILE]](<file index: 0>): truncated or malformed archive (long name offset 1 past the end of the string table for archive member header at offset 68)
+
+--- !Arch
+Members:
+  - Name: '//' ## String table.
+  - Name: '/1'
+
+## Check we report an error when the characters in the UID field of a member header are not all decimal numbers.
+
+# RUN: yaml2obj --docnum=10 %s -o %t.libbogus10.a
+# RUN: not llvm-objdump --macho --archive-headers \
+# RUN:   %t.libbogus10.a 2>&1 | FileCheck -check-prefix=BOGUS10 -DFILE=%t.libbogus10.a %s 
+
+# BOGUS10: [[FILE]](hello.c): truncated or malformed archive (characters in UID field in archive member header are not all decimal numbers: '~97&' for the archive member header at offset 8)
+
+--- !Arch
+Members:
+  - Name: hello.c
+    UID:  '~97&'
+
+## Check we report an error when the characters in the GID field of a member header are not all decimal numbers.
+
+# RUN: yaml2obj --docnum=11 %s -o %t.libbogus11.a
+# RUN: not llvm-objdump --macho --archive-headers \
+# RUN:   %t.libbogus11.a 2>&1 | FileCheck -check-prefix=BOGUS11 -DFILE=%t.libbogus11.a %s 
+
+# BOGUS11: [[FILE]](hello.c): truncated or malformed archive (characters in GID field in archive member header are not all decimal numbers: '#55!' for the archive member header at offset 8)
+
+--- !Arch
+Members:
+  - Name: hello.c
+    GID:  '#55!'
+
+## Check we report an error when the characters in the AccessMode field of a member header are not all octal numbers.
+
+# RUN: yaml2obj --docnum=12 %s -o %t.libbogus12.a
+# RUN: not llvm-objdump --macho --archive-headers \
+# RUN:   %t.libbogus12.a 2>&1 | FileCheck -check-prefix=BOGUS12 -DFILE=%t.libbogus12.a %s 
+
+# BOGUS12: [[FILE]](hello.c): truncated or malformed archive (characters in AccessMode field in archive member header are not all octal numbers: 'Feed' for the archive member header at offset 8)
+
+--- !Arch
+Members:
+  - Name:       hello.c
+    AccessMode: 'Feed'
+
+## Check we report an error when the characters in the LastModified field of a member header are not all decimal numbers.
+
+# RUN: yaml2obj --docnum=13 %s -o %t.libbogus13.a
+# RUN: llvm-objdump --macho --archive-headers %t.libbogus13.a 2>&1 | \
+# RUN:   FileCheck -check-prefix=BOGUS13A %s 
+
+# BOGUS13A: ----------  0/0 0 (date: "1foobar273" contains non-decimal chars) hello.c
+
+--- !Arch
+Members:
+  - Name:         hello.c
+    LastModified: '1foobar273'
+
+# RUN: not llvm-ar tv %t.libbogus13.a 2>&1 | \
+# RUN:   FileCheck -check-prefix=BOGUS13B %s 
+
+# BOGUS13B: error: truncated or malformed archive (characters in LastModified field in archive member header are not all decimal numbers: '1foobar273' for the archive member header at offset 8)
+
+## TODO: add testing for AIX Big archive.

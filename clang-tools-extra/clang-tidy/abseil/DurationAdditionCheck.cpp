@@ -1,0 +1,69 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "DurationAdditionCheck.h"
+#include "DurationRewriter.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Tooling/FixIt.h"
+#include <optional>
+
+using namespace clang::ast_matchers;
+
+namespace clang::tidy::abseil {
+
+void DurationAdditionCheck::registerMatchers(MatchFinder *Finder) {
+  Finder->addMatcher(
+      binaryOperator(hasOperatorName("+"),
+                     hasEitherOperand(expr(ignoringParenImpCasts(
+                         callExpr(callee(functionDecl(timeConversionFunction())
+                                             .bind("function_decl")))
+                             .bind("call")))))
+          .bind("binop"),
+      this);
+}
+
+void DurationAdditionCheck::check(const MatchFinder::MatchResult &Result) {
+  const auto *Binop = Result.Nodes.getNodeAs<BinaryOperator>("binop");
+  const auto *Call = Result.Nodes.getNodeAs<CallExpr>("call");
+
+  // Don't try to replace things inside of macro definitions.
+  if (Binop->getExprLoc().isMacroID() || Binop->getExprLoc().isInvalid())
+    return;
+
+  std::optional<DurationScale> Scale = getScaleForTimeInverse(
+      Result.Nodes.getNodeAs<FunctionDecl>("function_decl")->getName());
+  if (!Scale)
+    return;
+
+  const StringRef TimeFactory = getTimeInverseForScale(*Scale);
+
+  FixItHint Hint;
+  if (Call == Binop->getLHS()->IgnoreParenImpCasts()) {
+    Hint = FixItHint::CreateReplacement(
+        Binop->getSourceRange(),
+        (llvm::Twine(TimeFactory) + "(" +
+         tooling::fixit::getText(*Call->getArg(0), *Result.Context) + " + " +
+         rewriteExprFromNumberToDuration(Result, *Scale, Binop->getRHS()) + ")")
+            .str());
+  } else {
+    assert(Call == Binop->getRHS()->IgnoreParenImpCasts() &&
+           "Call should be found on the RHS");
+    Hint = FixItHint::CreateReplacement(
+        Binop->getSourceRange(),
+        (llvm::Twine(TimeFactory) + "(" +
+         rewriteExprFromNumberToDuration(Result, *Scale, Binop->getLHS()) +
+         " + " + tooling::fixit::getText(*Call->getArg(0), *Result.Context) +
+         ")")
+            .str());
+  }
+
+  diag(Binop->getBeginLoc(), "perform addition in the duration domain") << Hint;
+}
+
+} // namespace clang::tidy::abseil

@@ -1,0 +1,16 @@
+RUN: llvm-symbolizer 0x500A 0x5038 0x504B --inlining --relative-address --obj="%p/Inputs/coff-exports.exe" \
+RUN:   | FileCheck %s
+RUN: llvm-symbolizer 0x500A 0x5038 0x504B --inlines --relative-address --obj="%p/Inputs/coff-exports.exe" \
+RUN:   | FileCheck %s
+RUN: llvm-symbolizer 0x500A 0x5038 0x504B -i --relative-address --obj="%p/Inputs/coff-exports.exe" \
+RUN:   | FileCheck %s
+
+We get the expected stack trace, except 'foo' appears for the 'bar' frame
+because 'bar' isn't in the export table.
+
+CHECK: foo(void)
+CHECK: ??:0:0
+CHECK: foo(void)
+CHECK: ??:0:0
+CHECK: main
+CHECK: ??:0:0

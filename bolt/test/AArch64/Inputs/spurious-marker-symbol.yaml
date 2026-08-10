@@ -1,0 +1,56 @@
+--- !ELF
+FileHeader:
+  Class:            ELFCLASS64
+  Data:             ELFDATA2LSB
+  Type:             ET_EXEC
+  Machine:          EM_AARCH64
+  Entry:            0x2a0000
+ProgramHeaders:
+  - Type:           PT_PHDR
+    Flags:          [ PF_R ]
+    VAddr:          0x40
+    Align:          0x8
+    FileSize:       0xa8
+    MemSize:        0xa8
+    Offset:         0x40
+  - Type:           PT_LOAD
+    Flags:          [ PF_R ]
+    VAddr:          0x0
+    Align:          0x10000
+    FileSize:       0xf8
+    MemSize:        0xf8
+    Offset:         0x0
+  - Type:           PT_LOAD
+    Flags:          [ PF_X, PF_R ]
+    VAddr:          0x2a0000
+    Align:          0x10000
+    FirstSec:       .text
+    LastSec:        .ignored
+Sections:
+  - Name:           .text
+    Type:           SHT_PROGBITS
+    Flags:          [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:        0x2a0000
+    AddressAlign:   0x4
+    Content:        400580d2c0035fd6
+  - Name:           .ignored
+    Type:           SHT_PROGBITS
+    Flags:          [ SHF_ALLOC ]
+    Address:        0x2a0008
+    AddressAlign:   0x8
+    Size:           0x8
+  - Name:           .eh_frame
+    Type:           SHT_PROGBITS
+    Flags:          [ SHF_ALLOC ]
+    Address:        0x2a0010
+    AddressAlign:   0x8
+    Content:        1000000000000000017a520004781e010b0c1f00140000001800000000002a0008000000000e01410e010000
+Symbols:
+  - Name:           func
+    Section:        .text
+    Value:          0x2a0000
+    Size:           0x8
+  - Name:           '$d.42'
+    Section:        .ignored
+    Value:          0x2a0004
+...

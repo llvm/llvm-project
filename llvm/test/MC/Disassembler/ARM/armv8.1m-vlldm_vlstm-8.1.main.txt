@@ -1,0 +1,11 @@
+// RUN: llvm-mc -triple=armv8.1m.main-arm-none-eabi -mcpu=generic -show-encoding -disassemble %s \
+// RUN: | FileCheck %s --check-prefixes=CHECK-DISS
+
+// RUN: llvm-mc -triple=thumbv8.1m.main-none-eabi -mcpu=generic -show-encoding -disassemble %s \
+// RUN: | FileCheck %s --check-prefixes=CHECK-DISS
+
+[0x28,0xec,0x80,0x0a]
+// CHECK-DISS: vlstm r8, {d0 - d31} @ encoding: [0x28,0xec,0x80,0x0a]
+
+[0x38,0xec,0x80,0x0a]
+// CHECK-DISS: vlldm r8, {d0 - d31} @ encoding: [0x38,0xec,0x80,0x0a]

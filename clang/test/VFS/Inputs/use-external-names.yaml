@@ -1,0 +1,7 @@
+{
+  'version': 0,
+  'use-external-names': EXTERNAL_NAMES,
+  'roots': [{ 'type': 'file', 'name': 'OUT_DIR/external-names.h',
+             'external-contents': 'INPUT_DIR/external-names.h'
+           }]
+}

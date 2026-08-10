@@ -1,0 +1,6 @@
+## An error must be reported if a required argument value is missing.
+# RUN: not llvm-objcopy --only-section 2>&1 | FileCheck --check-prefix=CHECK-NO-VALUE-ONLY-SECTION %s
+# CHECK-NO-VALUE-ONLY-SECTION: error: argument to '--only-section' is missing (expected 1 value(s))
+
+# RUN: not llvm-objcopy -O 2>&1 | FileCheck --check-prefix=CHECK-NO-VALUE-O %s
+# CHECK-NO-VALUE-O: error: argument to '-O' is missing (expected 1 value(s))

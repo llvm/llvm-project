@@ -1,0 +1,143 @@
+macros:
+  DBL_DECIMAL_DIG:
+    c-definition: 5.3.5.3.3
+    in-latest-posix: ''
+  DBL_DIG:
+    c-definition: 5.3.5.3.3
+    in-latest-posix: ''
+  DBL_EPSILON:
+    c-definition: 5.3.5.3.3
+    in-latest-posix: ''
+  DBL_HAS_SUBNORM:
+    c-definition: 5.3.5.3.3
+    in-latest-posix: ''
+  DBL_IS_IEC_60559:
+    c-definition: 5.3.5.3.3
+  DBL_MANT_DIG:
+    c-definition: 5.3.5.3.3
+  DBL_MAX:
+    c-definition: 5.3.5.3.3
+    in-latest-posix: ''
+  DBL_MAX_10_EXP:
+    c-definition: 5.3.5.3.3
+    in-latest-posix: ''
+  DBL_MAX_EXP:
+    c-definition: 5.3.5.3.3
+    in-latest-posix: ''
+  DBL_MIN:
+    c-definition: 5.3.5.3.3
+    in-latest-posix: ''
+  DBL_MIN_10_EXP:
+    c-definition: 5.3.5.3.3
+    in-latest-posix: ''
+  DBL_MIN_EXP:
+    c-definition: 5.3.5.3.3
+    in-latest-posix: ''
+  DBL_NORM_MAX:
+    c-definition: 5.3.5.3.3
+  DBL_SNAN:
+    c-definition: 5.3.5.3.3
+  DBL_TRUE_MIN:
+    c-definition: 5.3.5.3.3
+    in-latest-posix: ''
+  DECIMAL_DIG:
+    c-definition: 5.3.5.3.3
+    in-latest-posix: ''
+  FLT_DECIMAL_DIG:
+    c-definition: 5.3.5.3.3
+    in-latest-posix: ''
+  FLT_DIG:
+    c-definition: 5.3.5.3.3
+    in-latest-posix: ''
+  FLT_EPSILON:
+    c-definition: 5.3.5.3.3
+    in-latest-posix: ''
+  FLT_EVAL_METHOD:
+    c-definition: 5.3.5.3.3
+    in-latest-posix: ''
+  FLT_HAS_SUBNORM:
+    c-definition: 5.3.5.3.3
+    in-latest-posix: ''
+  FLT_IS_IEC_60559:
+    c-definition: 5.3.5.3.3
+  FLT_MANT_DIG:
+    c-definition: 5.3.5.3.3
+  FLT_MAX:
+    c-definition: 5.3.5.3.3
+    in-latest-posix: ''
+  FLT_MAX_10_EXP:
+    c-definition: 5.3.5.3.3
+    in-latest-posix: ''
+  FLT_MAX_EXP:
+    c-definition: 5.3.5.3.3
+    in-latest-posix: ''
+  FLT_MIN:
+    c-definition: 5.3.5.3.3
+    in-latest-posix: ''
+  FLT_MIN_10_EXP:
+    c-definition: 5.3.5.3.3
+    in-latest-posix: ''
+  FLT_MIN_EXP:
+    c-definition: 5.3.5.3.3
+    in-latest-posix: ''
+  FLT_NORM_MAX:
+    c-definition: 5.3.5.3.3
+  FLT_RADIX:
+    c-definition: 5.3.5.3.3
+    in-latest-posix: ''
+  FLT_ROUNDS:
+    c-definition: 5.3.5.3.3
+    in-latest-posix: ''
+  FLT_SNAN:
+    c-definition: 5.3.5.3.3
+  FLT_TRUE_MIN:
+    c-definition: 5.3.5.3.3
+    in-latest-posix: ''
+  INFINITY:
+    c-definition: 5.3.5.3.3
+  LDBL_DECIMAL_DIG:
+    c-definition: 5.3.5.3.3
+    in-latest-posix: ''
+  LDBL_DIG:
+    c-definition: 5.3.5.3.3
+    in-latest-posix: ''
+  LDBL_EPSILON:
+    c-definition: 5.3.5.3.3
+    in-latest-posix: ''
+  LDBL_HAS_SUBNORM:
+    c-definition: 5.3.5.3.3
+    in-latest-posix: ''
+  LDBL_IS_IEC_60559:
+    c-definition: 5.3.5.3.3
+  LDBL_MANT_DIG:
+    c-definition: 5.3.5.3.3
+  LDBL_MAX:
+    c-definition: 5.3.5.3.3
+    in-latest-posix: ''
+  LDBL_MAX_10_EXP:
+    c-definition: 5.3.5.3.3
+    in-latest-posix: ''
+  LDBL_MAX_EXP:
+    c-definition: 5.3.5.3.3
+    in-latest-posix: ''
+  LDBL_MIN:
+    c-definition: 5.3.5.3.3
+    in-latest-posix: ''
+  LDBL_MIN_10_EXP:
+    c-definition: 5.3.5.3.3
+    in-latest-posix: ''
+  LDBL_MIN_EXP:
+    c-definition: 5.3.5.3.3
+    in-latest-posix: ''
+  LDBL_NORM_MAX:
+    c-definition: 5.3.5.3.3
+  LDBL_SNAN:
+    c-definition: 5.3.5.3.3
+  LDBL_TRUE_MIN:
+    c-definition: 5.3.5.3.3
+    in-latest-posix: ''
+  NAN:
+    c-definition: 5.3.5.3.3
+  __STDC_VERSION_FLOAT_H__:
+    c-definition: '7.7'
+

@@ -1,0 +1,23 @@
+# RUN: not llc -mtriple=x86_64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# This test ensures that the MIR parser reports an error when it encounters an
+# unknown register class.
+
+--- |
+
+  define i32 @test(i32 %a) {
+  entry:
+    ret i32 %a
+  }
+
+...
+---
+name:            test
+tracksRegLiveness: true
+registers:
+  # CHECK: [[@LINE+1]]:20: use of undefined register class or register bank 'gr3200'
+  - {id: 0, class: 'gr3200'}
+body: |
+  bb.0.entry:
+    RET64 %eax
+...
+

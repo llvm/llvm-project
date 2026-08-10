@@ -1,0 +1,617 @@
+RUN: FileCheck --input-file %s %s
+
+; We use CHECK-NEXT directives to force a match on all lines with digits.
+
+; Numeric variable definition with default matching format without spaces.
+DEF DEFAULT FMT NO SPC  // CHECK-LABEL: DEF DEFAULT FMT NO SPC
+10  // CHECK-NEXT: {{^}}[[#UNSI:]]
+
+; Numeric variable definition with default matching format with different
+; spacing.
+DEF DEFAULT FMT SPC  // CHECK-LABEL: DEF DEFAULT FMT SPC
+11  // CHECK-NEXT: {{^}}[[# UNSIa:]]
+11  // CHECK-NEXT: {{^}}[[# UNSIb :]]
+11  // CHECK-NEXT: {{^}}[[# UNSIc : ]]
+
+; Numeric variable redefinition.
+REDEF NO SPC  // CHECK-LABEL: REDEF
+11  // CHECK-NEXT: {{^}}[[#UNSI:]]
+
+; Numeric variable definition with explicit matching format.
+DEF FMT  // CHECK-LABEL: DEF FMT
+c    // CHECK-NEXT: {{^}}[[#%x,LHEX:]]
+D    // CHECK-NEXT: {{^}}[[#%X,UHEX:]]
+-30  // CHECK-NEXT: {{^}}[[#%d,SIGN:]]
+
+; Numeric variable definition with explicit matching format with different
+; spacing.
+DEF FMT SPC  // CHECK-LABEL: DEF FMT SPC
+c  // CHECK-NEXT: {{^}}[[# %x , LHEXa : ]]
+
+; Numeric variable definition with unsupported matching format.
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck --check-prefixes ERR,INVALID-FMT-SPEC1 --input-file %s %s 2>&1 \
+RUN:   | FileCheck --check-prefix INVALID-FMT-SPEC-MSG1 --strict-whitespace %s
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck --check-prefixes ERR,INVALID-FMT-SPEC2 --input-file %s %s 2>&1 \
+RUN:   | FileCheck --check-prefix INVALID-FMT-SPEC-MSG2 --strict-whitespace %s
+
+DEF INVALID FMT
+INVVAR1=a
+INVVAR2=11
+ERR-LABEL: DEF INVALID FMT
+INVALID-FMT-SPEC1-NEXT: INVVAR1=[[#%c,INVVAR1:]]
+INVALID-FMT-SPEC2-NEXT: INVVAR2=[[#%hhd,INVVAR2:]]
+INVALID-FMT-SPEC-MSG1: numeric-expression.txt:[[#@LINE-2]]:37: error: invalid format specifier in expression
+INVALID-FMT-SPEC-MSG1-NEXT: {{I}}NVALID-FMT-SPEC1-NEXT: INVVAR1={{\[\[#%c,INVVAR1:\]\]}}
+INVALID-FMT-SPEC-MSG1-NEXT:    {{^}}                                    ^{{$}}
+INVALID-FMT-SPEC-MSG2: numeric-expression.txt:[[#@LINE-4]]:37: error: invalid format specifier in expression
+INVALID-FMT-SPEC-MSG2-NEXT: {{I}}NVALID-FMT-SPEC2-NEXT: INVVAR2={{\[\[#%hhd,INVVAR2:\]\]}}
+INVALID-FMT-SPEC-MSG2-NEXT:    {{^}}                                    ^{{$}}
+
+; Numeric variable definition of hex value with 0x prefix.
+DEF ALT FORM  // CHECK-LABEL: DEF ALT FORM
+0xf  // CHECK-NEXT: {{^}}[[#%#x,PREFIXED_LHEX:]]
+0xE  // CHECK-NEXT: {{^}}[[#%#X,PREFIXED_UHEX:]]
+
+; Invalid numeric variable definition of non-hex value with 0x prefix.
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck --check-prefixes INVALID-ALT-FORM,INVALID-ALT-FORM1 --input-file %s %s 2>&1 \
+RUN:   | FileCheck --check-prefix INVALID-ALT-FORM-MSG1 --strict-whitespace %s
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck --check-prefixes INVALID-ALT-FORM,INVALID-ALT-FORM2 --input-file %s %s 2>&1 \
+RUN:   | FileCheck --check-prefix INVALID-ALT-FORM-MSG2 --strict-whitespace %s
+DEF INVALID ALT FORM
+PREFIXED_DEC=0x3
+INVALID-ALT-FORM-LABEL: DEF INVALID ALT FORM
+INVALID-ALT-FORM1-NEXT: PREFIXED_DEC=[[#%#u,PREFIXED_UNSI:]]
+INVALID-ALT-FORM2-NEXT: PREFIXED_DEC=[[#%#d,PREFIXED_SIGN:]]
+INVALID-ALT-FORM-MSG1: numeric-expression.txt:[[#@LINE-2]]:42: error: alternate form only supported for hex values
+INVALID-ALT-FORM-MSG1-NEXT: {{I}}NVALID-ALT-FORM1-NEXT: PREFIXED_DEC={{\[\[#%#u,PREFIXED_UNSI:\]\]}}
+INVALID-ALT-FORM-MSG1-NEXT:    {{^}}                                         ^{{$}}
+INVALID-ALT-FORM-MSG2: numeric-expression.txt:[[#@LINE-4]]:42: error: alternate form only supported for hex values
+INVALID-ALT-FORM-MSG2-NEXT: {{I}}NVALID-ALT-FORM2-NEXT: PREFIXED_DEC={{\[\[#%#d,PREFIXED_SIGN:\]\]}}
+INVALID-ALT-FORM-MSG2-NEXT:    {{^}}                                         ^{{$}}
+
+; Numeric variable definition of hex value with missing 0x prefix.
+RUN: FileCheck --check-prefix INVALID-HEX-PREFIX-DEF --input-file %s %s
+
+FAIL DEF ALT FORM  // INVALID-HEX-PREFIX-DEF-LABEL: FAIL DEF ALT FORM
+INVALID_PREFIXED_LHEX: xf   // INVALID-HEX-PREFIX-DEF-NOT: {{^}}INVALID_PREFIXED_LHEX: [[#%#x,INVALID_PREFIXED_LHEX:]]
+INVALID_PREFIXED_UHEX: 0E   // INVALID-HEX-PREFIX-DEF-NOT: {{^}}INVALID_PREFIXED_UHEX: [[#%#X,INVALID_PREFIXED_UHEX:]]
+
+; Numeric variable definition with precision specifier.
+DEF PREC FMT  // CHECK-LABEL: DEF PREC FMT
+00000022    // CHECK-NEXT: {{^}}[[#%.8,PADDED_UNSI:]]
+323232323   // CHECK-NEXT: {{^}}[[#%.8,PADDED_UNSI2:]]
+00000018    // CHECK-NEXT: {{^}}[[#%.8u,PADDED_UNSI3:]]
+181818181   // CHECK-NEXT: {{^}}[[#%.8u,PADDED_UNSI4:]]
+0000000f    // CHECK-NEXT: {{^}}[[#%.8x,PADDED_LHEX:]]
+fffffffff   // CHECK-NEXT: {{^}}[[#%.8x,PADDED_LHEX2:]]
+0000000E    // CHECK-NEXT: {{^}}[[#%.8X,PADDED_UHEX:]]
+EEEEEEEEE   // CHECK-NEXT: {{^}}[[#%.8X,PADDED_UHEX2:]]
+-00000055   // CHECK-NEXT: {{^}}[[#%.8d,PADDED_SIGN:]]
+-555555555  // CHECK-NEXT: {{^}}[[#%.8d,PADDED_SIGN2:]]
+
+; Numeric variable definition with precision specifier with value not padded
+; enough.
+RUN: FileCheck --check-prefix INVALID-PADDING-DEF --input-file %s %s
+
+FAIL DEF PREC FMT  // INVALID-PADDING-DEF-LABEL: FAIL DEF PREC FMT
+INVALID_PADDED_UNSI: 0000022   // INVALID-PADDING-DEF-NOT: {{^}}INVALID_PADDED_UNSI: [[#%.8,INVALID_PADDED_UNSI:]]
+INVALID_PADDED_UNSI2: 0000018  // INVALID-PADDING-DEF-NOT: {{^}}INVALID_PADDED_UNSI2: [[#%.8u,INVALID_PADDED_UNSI2:]]
+INVALID_PADDED_LHEX: 000000f   // INVALID-PADDING-DEF-NOT: {{^}}INVALID_PADDED_LHEX: [[#%.8x,INVALID_PADDED_LHEX:]]
+INVALID_PADDED_UHEX: 000000E   // INVALID-PADDING-DEF-NOT: {{^}}INVALID_PADDED_UHEX: [[#%.8X,INVALID_PADDED_UHEX:]]
+INVALID_PADDED_SIGN: -0000055  // INVALID-PADDING-DEF-NOT: {{^}}INVALID_PADDED_SIGN: [[#%.8d,INVALID_PADDED_SIGN:]]
+
+; Numeric expressions with explicit matching format and default matching rule
+; using variables defined on other lines without spaces.
+USE EXPL FMT IMPL MATCH  // CHECK-LABEL: USE EXPL FMT IMPL MATCH
+11  // CHECK-NEXT: {{^}}[[#%u,UNSI]]
+12  // CHECK-NEXT: {{^}}[[#%u,UNSI+1]]
+10  // CHECK-NEXT: {{^}}[[#%u,UNSI-1]]
+15  // CHECK-NEXT: {{^}}[[#%u,add(UNSI,4)]]
+11  // CHECK-NEXT: {{^}}[[#%u,max(UNSI,7)]]
+99  // CHECK-NEXT: {{^}}[[#%u,max(UNSI,99)]]
+7   // CHECK-NEXT: {{^}}[[#%u,min(UNSI,7)]]
+11  // CHECK-NEXT: {{^}}[[#%u,min(UNSI,99)]]
+8   // CHECK-NEXT: {{^}}[[#%u,sub(UNSI,3)]]
+c   // CHECK-NEXT: {{^}}[[#%x,LHEX]]
+d   // CHECK-NEXT: {{^}}[[#%x,LHEX+1]]
+b   // CHECK-NEXT: {{^}}[[#%x,LHEX-1]]
+1a  // CHECK-NEXT: {{^}}[[#%x,LHEX+0xe]]
+1a  // CHECK-NEXT: {{^}}[[#%x,LHEX+0xE]]
+e   // CHECK-NEXT: {{^}}[[#%x,add(LHEX,2)]]
+ff  // CHECK-NEXT: {{^}}[[#%x,max(LHEX,0xff)]]
+a   // CHECK-NEXT: {{^}}[[#%x,min(LHEX,0xa)]]
+a   // CHECK-NEXT: {{^}}[[#%x,sub(LHEX,2)]]
+D   // CHECK-NEXT: {{^}}[[#%X,UHEX]]
+E   // CHECK-NEXT: {{^}}[[#%X,UHEX+1]]
+C   // CHECK-NEXT: {{^}}[[#%X,UHEX-1]]
+1B  // CHECK-NEXT: {{^}}[[#%X,UHEX+0xe]]
+1B  // CHECK-NEXT: {{^}}[[#%X,UHEX+0xE]]
+F   // CHECK-NEXT: {{^}}[[#%X,add(UHEX,2)]]
+FF  // CHECK-NEXT: {{^}}[[#%X,max(UHEX,0xff)]]
+A   // CHECK-NEXT: {{^}}[[#%X,min(UHEX,0xa)]]
+B   // CHECK-NEXT: {{^}}[[#%X,sub(UHEX,2)]]
+-30 // CHECK-NEXT: {{^}}[[#%d,SIGN]]
+-29 // CHECK-NEXT: {{^}}[[#%d,SIGN+1]]
+-31 // CHECK-NEXT: {{^}}[[#%d,SIGN-1]]
+42  // CHECK-NEXT: {{^}}[[#%d,SIGN+72]]
+-29 // CHECK-NEXT: {{^}}[[#%d,add(SIGN,1)]]
+-17 // CHECK-NEXT: {{^}}[[#%d,max(SIGN,-17)]]
+-30 // CHECK-NEXT: {{^}}[[#%d,min(SIGN,-17)]]
+-31 // CHECK-NEXT: {{^}}[[#%d,sub(SIGN,1)]]
+11  // CHECK-NEXT: {{^}}[[#%u,UNSIa]]
+11  // CHECK-NEXT: {{^}}[[#%u,UNSIb]]
+11  // CHECK-NEXT: {{^}}[[#%u,UNSIc]]
+c   // CHECK-NEXT: {{^}}[[#%x,LHEXa]]
+
+; Numeric expressions with explicit matching format and default matching rule
+; using variables defined on other lines with different spacing.
+USE EXPL FMT IMPL MATCH SPC  // CHECK-LABEL: USE EXPL FMT IMPL MATCH SPC
+11  // CHECK-NEXT: {{^}}[[#%u, UNSI]]
+11  // CHECK-NEXT: {{^}}[[# %u, UNSI]]
+11  // CHECK-NEXT: {{^}}[[# %u, UNSI ]]
+12  // CHECK-NEXT: {{^}}[[#%u, UNSI+1]]
+12  // CHECK-NEXT: {{^}}[[# %u, UNSI+1]]
+12  // CHECK-NEXT: {{^}}[[# %u , UNSI+1]]
+12  // CHECK-NEXT: {{^}}[[# %u , UNSI +1]]
+12  // CHECK-NEXT: {{^}}[[# %u , UNSI + 1]]
+12  // CHECK-NEXT: {{^}}[[# %u , UNSI + 1 ]]
+10  // CHECK-NEXT: {{^}}[[#%u, UNSI-1]]
+10  // CHECK-NEXT: {{^}}[[# %u, UNSI-1]]
+10  // CHECK-NEXT: {{^}}[[# %u , UNSI-1]]
+10  // CHECK-NEXT: {{^}}[[# %u , UNSI -1]]
+10  // CHECK-NEXT: {{^}}[[# %u , UNSI - 1]]
+10  // CHECK-NEXT: {{^}}[[# %u , UNSI - 1 ]]
+13  // CHECK-NEXT: {{^}}[[#%u, add(UNSI,2)]]
+13  // CHECK-NEXT: {{^}}[[# %u, add(UNSI,2)]]
+13  // CHECK-NEXT: {{^}}[[# %u , add(UNSI,2)]]
+13  // CHECK-NEXT: {{^}}[[# %u , add(UNSI, 2)]]
+13  // CHECK-NEXT: {{^}}[[# %u , add( UNSI, 2)]]
+13  // CHECK-NEXT: {{^}}[[# %u , add( UNSI,2)]]
+13  // CHECK-NEXT: {{^}}[[# %u , add(UNSI,2) ]]
+13  // CHECK-NEXT: {{^}}[[# %u , add (UNSI,2)]]
+104 // CHECK-NEXT: {{^}}[[# %u , UNSI + sub( add (100 , UNSI+ 1 ), 20) +1 ]]
+
+; Numeric expressions with explicit matching format, precision, form and
+; default matching rule using variables defined on other lines without spaces.
+USE EXPL FMT WITH PREC IMPL MATCH  // CHECK-LABEL: USE EXPL FMT WITH PREC IMPL MATCH
+11          // CHECK-NEXT: {{^}}[[#%.1u,UNSI]]
+00000011    // CHECK-NEXT: {{^}}[[#%.8u,UNSI]]
+1c          // CHECK-NEXT: {{^}}[[#%.1x,LHEX+16]]
+0x1c        // CHECK-NEXT: {{^}}[[#%#.1x,LHEX+16]]
+0000000c    // CHECK-NEXT: {{^}}[[#%.8x,LHEX]]
+0x0000000c  // CHECK-NEXT: {{^}}[[#%#.8x,LHEX]]
+1D          // CHECK-NEXT: {{^}}[[#%.1X,UHEX+16]]
+0x1D        // CHECK-NEXT: {{^}}[[#%#.1X,UHEX+16]]
+0000000D    // CHECK-NEXT: {{^}}[[#%.8X,UHEX]]
+0x0000000D  // CHECK-NEXT: {{^}}[[#%#.8X,UHEX]]
+-30         // CHECK-NEXT: {{^}}[[#%.1d,SIGN]]
+-00000030   // CHECK-NEXT: {{^}}[[#%.8d,SIGN]]
+
+; Numeric expressions with explicit matching format, precision and wrong
+; padding, and default matching rule using variables defined on other lines
+; without spaces.
+RUN: FileCheck --check-prefixes CHECK,INVALID-PADDING-EXPL-USE --input-file %s %s
+
+FAIL USE IMPL FMT WITH PREC EXPL MATCH  // INVALID-PADDING-EXPL-USE-LABEL: FAIL USE IMPL FMT WITH PREC IMPL MATCH
+INVALID UNSI+1: 0000012     // INVALID-PADDING-EXPL-USE-NOT: {{^}}INVALID UNSI+1: [[#%.8u,UNSI+1]]
+INVALID UNSI-1: 000000010   // INVALID-PADDING-EXPL-USE-NOT: {{^}}INVALID UNSI-1: [[#%.8u,UNSI-1]]
+INVALID LHEX+1: 000000d     // INVALID-PADDING-EXPL-USE-NOT: {{^}}INVALID LHEX+1: [[#%.8x,LHEX+1]]
+INVALID LHEX-1: 00000000b   // INVALID-PADDING-EXPL-USE-NOT: {{^}}INVALID LHEX-1: [[#%.8x,LHEX-1]]
+INVALID UHEX+1: 000000E     // INVALID-PADDING-EXPL-USE-NOT: {{^}}INVALID UHEX+1: [[#%.8X,UHEX+1]]
+INVALID UHEX-1: 00000000C   // INVALID-PADDING-EXPL-USE-NOT: {{^}}INVALID UHEX-1: [[#%.8X,UHEX-1]]
+INVALID SIGN+1: -0000029    // INVALID-PADDING-EXPL-USE-NOT: {{^}}INVALID SIGN+1: [[#%.8d,SIGN+1]]
+INVALID SIGN-1: -000000031  // INVALID-PADDING-EXPL-USE-NOT: {{^}}INVALID SIGN-1: [[#%.8d,SIGN-1]]
+
+; Numeric expressions with implicit matching format and default matching rule
+; using variables defined on other lines.
+USE IMPL FMT IMPL MATCH  // CHECK-LABEL: USE IMPL FMT IMPL MATCH
+11  // CHECK-NEXT: {{^}}[[#UNSI]]
+12  // CHECK-NEXT: {{^}}[[#UNSI+1]]
+10  // CHECK-NEXT: {{^}}[[#UNSI-1]]
+99  // CHECK-NEXT: {{^}}[[#max(UNSI,99)]]
+7   // CHECK-NEXT: {{^}}[[#min(UNSI,7)]]
+c   // CHECK-NEXT: {{^}}[[#LHEX]]
+d   // CHECK-NEXT: {{^}}[[#LHEX+1]]
+b   // CHECK-NEXT: {{^}}[[#LHEX-1]]
+1a  // CHECK-NEXT: {{^}}[[#LHEX+0xe]]
+1a  // CHECK-NEXT: {{^}}[[#LHEX+0xE]]
+ff  // CHECK-NEXT: {{^}}[[#max(LHEX,255)]]
+a   // CHECK-NEXT: {{^}}[[#min(LHEX,10)]]
+D   // CHECK-NEXT: {{^}}[[#UHEX]]
+E   // CHECK-NEXT: {{^}}[[#UHEX+1]]
+C   // CHECK-NEXT: {{^}}[[#UHEX-1]]
+1B  // CHECK-NEXT: {{^}}[[#UHEX+0xe]]
+1B  // CHECK-NEXT: {{^}}[[#UHEX+0xE]]
+FF  // CHECK-NEXT: {{^}}[[#max(UHEX,255)]]
+A   // CHECK-NEXT: {{^}}[[#min(UHEX,10)]]
+-30 // CHECK-NEXT: {{^}}[[#SIGN]]
+-29 // CHECK-NEXT: {{^}}[[#SIGN+1]]
+-31 // CHECK-NEXT: {{^}}[[#SIGN-1]]
+
+; Numeric expressions with implicit matching format, precision, and default
+; matching rule using variables defined on other lines.
+USE IMPL FMT WITH PREC IMPL MATCH  // CHECK-LABEL: USE IMPL FMT WITH PREC IMPL MATCH
+00000023    // CHECK-NEXT: {{^}}[[#PADDED_UNSI+1]]
+323232324   // CHECK-NEXT: {{^}}[[#PADDED_UNSI2+1]]
+00000019    // CHECK-NEXT: {{^}}[[#PADDED_UNSI3+1]]
+181818182   // CHECK-NEXT: {{^}}[[#PADDED_UNSI4+1]]
+00000010    // CHECK-NEXT: {{^}}[[#PADDED_LHEX+1]]
+1000000000  // CHECK-NEXT: {{^}}[[#PADDED_LHEX2+1]]
+0000000F    // CHECK-NEXT: {{^}}[[#PADDED_UHEX+1]]
+EEEEEEEEF   // CHECK-NEXT: {{^}}[[#PADDED_UHEX2+1]]
+-00000054   // CHECK-NEXT: {{^}}[[#PADDED_SIGN+1]]
+-555555554  // CHECK-NEXT: {{^}}[[#PADDED_SIGN2+1]]
+
+; Numeric expression with implicit matching format, precision and wrong amount
+; of padding, and default matching rule using variables defined on other lines.
+RUN: FileCheck --check-prefixes CHECK,INVALID-PADDING-IMPL-USE --input-file %s %s
+
+FAIL USE IMPL FMT WITH PREC IMPL MATCH  // INVALID-PADDING-IMPL-USE-LABEL: FAIL USE IMPL FMT WITH PREC IMPL MATCH
+INVALID PADDED_UNSI+1: 0000023     // INVALID-PADDING-IMPL-USE-NOT: {{^}}INVALID PADDED_UNSI+1: [[#PADDED_UNSI+1]]
+INVALID PADDED_UNSI-1: 000000021   // INVALID-PADDING-IMPL-USE-NOT: {{^}}INVALID PADDED_UNSI-1: [[#PADDED_UNSI-1]]
+INVALID PADDED_UNSI3+1: 0000019    // INVALID-PADDING-IMPL-USE-NOT: {{^}}INVALID PADDED_UNSI3+1: [[#PADDED_UNSI3+1]]
+INVALID PADDED_UNSI3-1: 000000017  // INVALID-PADDING-IMPL-USE-NOT: {{^}}INVALID PADDED_UNSI3-1: [[#PADDED_UNSI3-1]]
+INVALID PADDED_LHEX+1: 0000010     // INVALID-PADDING-IMPL-USE-NOT: {{^}}INVALID PADDED_LHEX+1: [[#PADDED_LHEX+1]]
+INVALID PADDED_LHEX-1: 00000000e   // INVALID-PADDING-IMPL-USE-NOT: {{^}}INVALID PADDED_LHEX-1: [[#PADDED_LHEX-1]]
+INVALID PADDED_UHEX+1: 000000F     // INVALID-PADDING-IMPL-USE-NOT: {{^}}INVALID PADDED_UHEX+1: [[#PADDED_UHEX+1]]
+INVALID PADDED_UHEX-1: 00000000D   // INVALID-PADDING-IMPL-USE-NOT: {{^}}INVALID PADDED_UHEX-1: [[#PADDED_UHEX-1]]
+INVALID PADDED_SIGN+1: -0000054    // INVALID-PADDING-IMPL-USE-NOT: {{^}}INVALID PADDED_SIGN+1: [[#PADDED_SIGN+1]]
+INVALID PADDED_SIGN-1: -000000056  // INVALID-PADDING-IMPL-USE-NOT: {{^}}INVALID PADDED_SIGN-1: [[#PADDED_SIGN-1]]
+
+; Numeric expressions using variables defined on other lines and an immediate
+; interpreted as an unsigned value.
+; Note: 9223372036854775819 = 0x8000000000000000 + 11
+USE IMPL FMT IMPL MATCH UNSIGNED IMM
+9223372036854775819
+CHECK-LABEL: USE IMPL FMT IMPL MATCH UNSIGNED IMM
+CHECK-NEXT: [[#UNSI+0x8000000000000000]]
+
+; Numeric expressions in default matching format and explicit matching rule using
+; variables defined on other lines.
+USE DEF FMT EXPL MATCH  // CHECK-LABEL: USE DEF FMT EXPL MATCH
+11  // CHECK-NEXT: {{^}}[[#==UNSI]]
+11  // CHECK-NEXT: {{^}}[[# == UNSI]]
+12  // CHECK-NEXT: {{^}}[[#UNSI2: == UNSI + 1]]
+12  // CHECK-NEXT: {{^}}[[#==UNSI2]]
+
+; Numeric expressions in default matching format and explicit matching rule using
+; variable defined on other lines with match failure.
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck --check-prefix NUMEXPR-CONSTRAINT-NOMATCH --input-file %s %s 2>&1 \
+RUN:   | FileCheck --check-prefix NUMEXPR-CONSTRAINT-NOMATCH-MSG --strict-whitespace %s
+
+USE DEF FMT EXPL NO MATCH
+UNSI=11
+UNSI: 12
+NUMEXPR-CONSTRAINT-NOMATCH-LABEL: USE DEF FMT EXPL NO MATCH
+NUMEXPR-CONSTRAINT-NOMATCH-NEXT: UNSI=[[#UNSI:]]
+NUMEXPR-CONSTRAINT-NOMATCH-NEXT: UNSI: [[#==UNSI]]
+NUMEXPR-CONSTRAINT-NOMATCH-MSG: numeric-expression.txt:[[#@LINE-1]]:34: error: {{N}}UMEXPR-CONSTRAINT-NOMATCH-NEXT: expected string not found in input
+NUMEXPR-CONSTRAINT-NOMATCH-MSG-NEXT:  {{N}}UMEXPR-CONSTRAINT-NOMATCH-NEXT: UNSI: {{\[\[#==UNSI\]\]}}
+NUMEXPR-CONSTRAINT-NOMATCH-MSG-NEXT: {{^}}                                 ^{{$}}
+
+; Empty numeric expression with matching constraint.
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck --check-prefix EMPTY-NUMEXPR-CONSTRAINT --input-file %s %s 2>&1 \
+RUN:   | FileCheck --check-prefix EMPTY-NUMEXPR-CONSTRAINT-MSG --strict-whitespace %s
+
+EMPTY NUMEXPR USE WITH CONSTRAINT
+18
+EMPTY-NUMEXPR-CONSTRAINT-LABEL: EMPTY NUMEXPR USE WITH CONSTRAINT
+EMPTY-NUMEXPR-CONSTRAINT-NEXT: [[# ==]]
+EMPTY-NUMEXPR-CONSTRAINT-MSG: numeric-expression.txt:[[#@LINE-1]]:38: error: empty numeric expression should not have a constraint
+EMPTY-NUMEXPR-CONSTRAINT-MSG-NEXT: {{E}}MPTY-NUMEXPR-CONSTRAINT-NEXT: {{\[\[# ==\]\]}}
+EMPTY-NUMEXPR-CONSTRAINT-MSG-NEXT:     {{^}}                                     ^{{$}}
+
+; Definition from empty numeric expression with matching constraint.
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck --check-prefix EMPTY-NUMDEF-CONSTRAINT --input-file %s %s 2>&1 \
+RUN:   | FileCheck --check-prefix EMPTY-NUMDEF-CONSTRAINT-MSG %s
+
+EMPTY NUMEXPR DEF WITH CONSTRAINT
+18
+EMPTY-NUMDEF-CONSTRAINT-LABEL: EMPTY NUMEXPR CONSTRAINT
+EMPTY-NUMDEF-CONSTRAINT-NEXT: [[#VARDEF: ==]]
+EMPTY-NUMDEF-CONSTRAINT-MSG: numeric-expression.txt:[[#@LINE-1]]:44: error: empty numeric expression should not have a constraint
+EMPTY-NUMDEF-CONSTRAINT-MSG-NEXT: {{E}}MPTY-NUMDEF-CONSTRAINT-NEXT: {{\[\[#VARDEF: ==\]\]}}
+EMPTY-NUMDEF-CONSTRAINT-MSG-NEXT:     {{^}}                                           ^{{$}}
+
+; Numeric expressions with matching format overriding the implicit format of
+; variables defined on other lines.
+USE CONV FMT IMPL MATCH  // CHECK-LABEL: USE CONV FMT IMPL MATCH
+b   // CHECK-NEXT: {{^}}[[# %x, UNSI]]
+B   // CHECK-NEXT: {{^}}[[# %X, UNSI]]
+-1  // CHECK-NEXT: {{^}}[[# %d, UNSI-12]]
+12  // CHECK-NEXT: {{^}}[[# %u, LHEX]]
+C   // CHECK-NEXT: {{^}}[[# %X, LHEX]]
+-2  // CHECK-NEXT: {{^}}[[# %d, LHEX-14]]
+13  // CHECK-NEXT: {{^}}[[# %u, UHEX]]
+d   // CHECK-NEXT: {{^}}[[# %x, UHEX]]
+-5  // CHECK-NEXT: {{^}}[[# %d, UHEX-18]]
+15  // CHECK-NEXT: {{^}}[[# %u, SIGN+45]]
+f   // CHECK-NEXT: {{^}}[[# %x, SIGN+45]]
+F   // CHECK-NEXT: {{^}}[[# %X, SIGN+45]]
+
+; Conflicting implicit format.
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck --check-prefixes CHECK,FMT-CONFLICT1 --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix FMT-CONFLICT1-MSG %s
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck --check-prefixes CHECK,FMT-CONFLICT2 --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix FMT-CONFLICT2-MSG %s
+
+VAR USE IMPL FMT CONFLICT
+23
+FMT-CONFLICT1-LABEL: VAR USE IMPL FMT CONFLICT
+FMT-CONFLICT1-NEXT: [[#UNSI + LHEX]]
+FMT-CONFLICT1-MSG: numeric-expression.txt:[[#@LINE-1]]:24: error: implicit format conflict between 'UNSI' (%u) and 'LHEX' (%x), need an explicit format specifier
+FMT-CONFLICT1-MSG-NEXT: {{F}}MT-CONFLICT1-NEXT: {{\[\[#UNSI \+ LHEX\]\]}}
+FMT-CONFLICT1-MSG-NEXT: {{^                       \^$}}
+
+VAR USE IMPL FMT CONFLICT COMPLEX
+34
+FMT-CONFLICT2-LABEL: VAR USE IMPL FMT CONFLICT
+FMT-CONFLICT2-NEXT: [[#UNSI + UNSIa + LHEX]]
+FMT-CONFLICT2-MSG: numeric-expression.txt:[[#@LINE-1]]:24: error: implicit format conflict between 'UNSI + UNSIa' (%u) and 'LHEX' (%x), need an explicit format specifier
+FMT-CONFLICT2-MSG-NEXT: {{F}}MT-CONFLICT2-NEXT: {{\[\[#UNSI \+ UNSIa \+ LHEX\]\]}}
+FMT-CONFLICT2-MSG-NEXT: {{^                       \^$}}
+
+; Explicitly specified format can override conflicting implicit formats.
+VAR USE IMPL OVERRIDE FMT CONFLICT  // CHECK-LABEL: VAR USE IMPL OVERRIDE FMT CONFLICT
+23  // CHECK-NEXT: {{^}}[[# %u, UNSI + LHEX]]
+
+; Numeric expressions using more than one variable defined on other lines.
+USE MULTI VAR  // CHECK-LABEL: USE MULTI VAR
+22  // CHECK-NEXT: {{^}}[[#UNSI+UNSIa]]
+
+; Numeric expression using a variable defined from a numeric expression.
+DEF EXPR GOOD MATCH  // CHECK-LABEL: DEF EXPR GOOD MATCH
+42  // CHECK-NEXT: {{^}}[[# VAR42:UNSI+31]]
+41  // CHECK-NEXT: {{^}}[[# VAR42-1]]
+
+; Empty numeric expression.
+EMPTY NUM EXPR  // CHECK-LABEL: EMPTY NUM EXPR
+foo 104 bar  // CHECK-NEXT: {{^}}foo [[#]] bar
+
+; Numeric expressions using parentheses.
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -D#NUMVAR=10 --check-prefix PAREN-OP \
+RUN:               --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix PAREN-OP-MSG %s
+
+PAREN EXPRESSIONS // PAREN-OP-LABEL: PAREN EXPRESSIONS
+11  // PAREN-OP-NEXT: [[#(NUMVAR+2)-1]]
+11  // PAREN-OP-NEXT: [[#NUMVAR+(2-1)]]
+11  // PAREN-OP-NEXT: [[#NUMVAR+(2-1]]
+PAREN-OP-MSG: numeric-expression.txt:[[#@LINE-1]]:36: error: missing ')' at end of nested expression
+PAREN-OP-MSG-NEXT: {{P}}AREN-OP-NEXT: {{\[\[#NUMVAR\+\(2\-1]\]}}
+PAREN-OP-MSG-NEXT: {{^}}                                   ^{{$}}
+
+; Numeric expression using undefined variables.
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck --check-prefix UNDEF-USE --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix UNDEF-USE-MSG %s
+
+UNDEF VAR USE
+UNDEFVAR: 11
+UNDEF-USE-LABEL: UNDEF VAR USE
+UNDEF-USE-NEXT: UNDEFVAR: [[#UNDEFVAR1+UNDEFVAR2]]
+UNDEF-USE-MSG:      numeric-expression.txt:[[#@LINE-1]]:30: error: undefined variable: UNDEFVAR1
+UNDEF-USE-MSG-NEXT:      {{U}}NDEF-USE-NEXT: {{U}}NDEFVAR: {{\[\[#UNDEFVAR1\+UNDEFVAR2\]\]}}
+UNDEF-USE-MSG-NEXT:             {{^}}                             ^{{$}}
+UNDEF-USE-MSG-NEXT:      numeric-expression.txt:[[#@LINE-4]]:40: error: undefined variable: UNDEFVAR2
+UNDEF-USE-MSG-NEXT:      {{U}}NDEF-USE-NEXT: {{U}}NDEFVAR: {{\[\[#UNDEFVAR1\+UNDEFVAR2\]\]}}
+UNDEF-USE-MSG-NEXT:              {{^}}                                       ^{{$}}
+
+; Numeric expression in negative directive using undefined variables.
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck --check-prefix UNDEF-USE2 --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix UNDEF-USE-MSG2 %s
+
+CHECK NOT UNDEF VAR USE
+END MARKER
+UNDEF-USE2-LABEL: CHECK NOT UNDEF VAR USE
+UNDEF-USE2-NOT: UNDEFVAR: [[#UNDEFVAR1+UNDEFVAR2]]
+UNDEF-USE2: END MARKER
+UNDEF-USE-MSG2:      numeric-expression.txt:[[#@LINE-2]]:30: error: undefined variable: UNDEFVAR1
+UNDEF-USE-MSG2-NEXT:      {{U}}NDEF-USE2-NOT: {{U}}NDEFVAR: {{\[\[#UNDEFVAR1\+UNDEFVAR2\]\]}}
+UNDEF-USE-MSG2-NEXT:             {{^}}                             ^{{$}}
+UNDEF-USE-MSG2-NEXT:      numeric-expression.txt:[[#@LINE-5]]:40: error: undefined variable: UNDEFVAR2
+UNDEF-USE-MSG2-NEXT:      {{U}}NDEF-USE2-NOT: {{U}}NDEFVAR: {{\[\[#UNDEFVAR1\+UNDEFVAR2\]\]}}
+UNDEF-USE-MSG2-NEXT:              {{^}}                                       ^{{$}}
+
+; Numeric expression with unsupported operator.
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -D#NUMVAR=10 --check-prefix INVAL-OP \
+RUN:               --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix INVAL-OP-MSG %s
+
+INVALID OPERATOR
+NUMVAR*2: 22
+INVAL-OP-LABEL: INVALID OPERATOR
+INVAL-OP-NEXT: NUMVAR*2: [[#NUMVAR*2]]
+INVAL-OP-MSG: numeric-expression.txt:[[#@LINE-1]]:35: error: unsupported operation '*'
+INVAL-OP-MSG-NEXT: {{I}}NVAL-OP-NEXT: NUMVAR*2: {{\[\[#NUMVAR\*2\]\]}}
+INVAL-OP-MSG-NEXT:     {{^}}                                  ^{{$}}
+
+; Name conflict between Numeric variable definition and string variable
+; definition whether from the command-line or input text.
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck --check-prefixes CONFLICT,CONFLICT1,CONFLICT2 \
+RUN:               --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix INPUT-STR-CONFLICT %s
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -D#NUMVAR=42 --check-prefixes CONFLICT,CONFLICT2 \
+RUN:               --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix INPUT-STR-CONFLICT %s
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -D#NUMVAR=42 -DNUMVAR=foobar --check-prefix CONFLICT \
+RUN:               --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix CLI-STR-CONFLICT %s
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck --check-prefixes CONFLICT,CONFLICT3,CONFLICT4 \
+RUN:               --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix INPUT-NUM-CONFLICT %s
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -DSTRVAR=foobar --check-prefixes CONFLICT,CONFLICT4 \
+RUN:               --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix INPUT-NUM-CONFLICT %s
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -DSTRVAR=foobar -D#STRVAR=42 --check-prefix CONFLICT \
+RUN:               --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix CLI-NUM-CONFLICT %s
+
+STRVAR NUMVAR CONFLICT
+redef1 42
+foobar
+redef2 42
+CONFLICT-LABEL: STRVAR NUMVAR CONFLICT
+CONFLICT1-NEXT: redef1 [[#NUMVAR:]]
+CONFLICT2: [[NUMVAR:foo.*]]
+CONFLICT3: [[STRVAR:foo.*]]
+CONFLICT4: redef2 [[#STRVAR:]]
+INPUT-STR-CONFLICT: numeric-expression.txt:[[#@LINE-3]]:14: error: numeric variable with name 'NUMVAR' already exists
+INPUT-STR-CONFLICT-NEXT: {{C}}ONFLICT2: {{\[\[NUMVAR:foo\.\*\]\]}}
+INPUT-STR-CONFLICT-NEXT:    {{^}}             ^{{$}}
+CLI-STR-CONFLICT: Global defines:2:19: error: numeric variable with name 'NUMVAR' already exists
+CLI-STR-CONFLICT-NEXT:      Global define #2: NUMVAR=foobar
+CLI-STR-CONFLICT-NEXT: {{^}}                  ^{{$}}
+INPUT-NUM-CONFLICT: numeric-expression.txt:[[#@LINE-7]]:22: error: string variable with name 'STRVAR' already exists
+ INPUT-NUM-CONFLICT-NEXT: CONFLICT4: redef2 {{\[\[#STRVAR:\]\]}}
+INPUT-NUM-CONFLICT-NEXT: {{^}}                     ^{{$}}
+CLI-NUM-CONFLICT: Global defines:2:45: error: string variable with name 'STRVAR' already exists
+ CLI-NUM-CONFLICT-NEXT: Global define #2: #STRVAR=42 (parsed as: {{\[\[#STRVAR:42\]\]}})
+CLI-NUM-CONFLICT-NEXT: {{^}}                                            ^{{$}}
+
+; Numeric variable definition with big value.
+RUN: FileCheck --check-prefix BIGVAL --input-file %s %s
+
+BIG VALUE
+NUMVAR: 10000000000000000000000
+BIGVAL-LABEL: BIG VALUE
+BIGVAL-NEXT: NUMVAR: [[#NUMVAR:]]
+
+; Verify that when a variable is set to an expression the expression is still
+; checked.
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck --check-prefix DEF-EXPR-FAIL --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix DEF-EXPR-FAIL-MSG %s
+
+DEF EXPR WRONG MATCH
+20
+43
+DEF-EXPR-FAIL-LABEL: DEF EXPR WRONG MATCH
+DEF-EXPR-FAIL-NEXT: [[# VAR20:]]
+DEF-EXPR-FAIL-NEXT: [[# VAR42: VAR20+22]]
+DEF-EXPR-FAIL-MSG: numeric-expression.txt:[[#@LINE-1]]:21: error: {{D}}EF-EXPR-FAIL-NEXT: is not on the line after the previous match
+DEF-EXPR-FAIL-MSG-NEXT: {{D}}EF-EXPR-FAIL-NEXT: {{\[\[# VAR42: VAR20\+22\]\]}}
+DEF-EXPR-FAIL-MSG-NEXT:   {{^}}                    ^{{$}}
+
+; Verify that using a numeric variable defined on the same line (whether from
+; input or from an expression) is rejected.
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck --check-prefix SAME-LINE-USE1 --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix SAME-LINE-USE-MSG1 %s
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck --check-prefix SAME-LINE-USE2 --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix SAME-LINE-USE-MSG2 %s
+
+SAME LINE USE
+3
+4 5
+SAME-LINE-USE1-LABEL: SAME LINE USE
+SAME-LINE-USE1-NEXT: [[#]]
+SAME-LINE-USE1-NEXT: [[#UNSI:]] [[#UNSI+1]]
+SAME-LINE-USE-MSG1: numeric-expression.txt:[[#@LINE-1]]:36: error: numeric variable 'UNSI' defined earlier in the same CHECK directive
+SAME-LINE-USE-MSG1-NEXT: {{S}}AME-LINE-USE1-NEXT: {{\[\[#UNSI:\]\] \[\[#UNSI\+1\]\]}}
+SAME-LINE-USE-MSG1-NEXT:        {{^}}                                   ^{{$}}
+
+SAME-LINE-USE2-LABEL: SAME LINE USE
+SAME-LINE-USE2-NEXT: [[#UNSI:]]
+SAME-LINE-USE2-NEXT: [[#UNSI2:UNSI+1]] [[#UNSI2+1]]
+SAME-LINE-USE-MSG2: numeric-expression.txt:[[#@LINE-1]]:43: error: numeric variable 'UNSI2' defined earlier in the same CHECK directive
+SAME-LINE-USE-MSG2-NEXT: {{S}}AME-LINE-USE2-NEXT: {{\[\[#UNSI2:UNSI\+1\]\] \[\[#UNSI2\+1\]\]}}
+SAME-LINE-USE-MSG2-NEXT:        {{^}}                                          ^{{$}}
+
+; Invalid change of format in variable redefinition.
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck --check-prefix REDEF-NEW-FMT --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix REDEF-NEW-FMT-MSG %s
+
+VAR REDEF FMT CHANGE
+22
+DC
+REDEF-NEW-FMT-LABEL: VAR REDEF FMT CHANGE
+REDEF-NEW-FMT-NEXT: [[#UNSI:]]
+REDEF-NEW-FMT-NEXT: [[#%X,UNSI:]]
+REDEF-NEW-FMT-MSG: numeric-expression.txt:[[#@LINE-1]]:31: error: format different from previous variable definition
+REDEF-NEW-FMT-MSG-NEXT: {{R}}EDEF-NEW-FMT-NEXT: {{\[\[#%X,UNSI:\]\]}}
+REDEF-NEW-FMT-MSG-NEXT:    {{^}}                              ^{{$}}
+
+; Numeric expression with big resulting value.
+RUN: FileCheck --check-prefix OVERFLOW --input-file %s %s
+
+OVERFLOW EXPRESSION
+BIGVAL: 10000000000000000
+OVERFLOW-LABEL: OVERFLOW EXPRESSION
+OVERFLOW-NEXT: BIGVAL: [[#%X,0x8000000000000000+0x8000000000000000]]
+
+; Numeric expression with big negative resulting value.
+RUN: FileCheck --check-prefix UNDERFLOW --input-file %s %s
+
+UNDERFLOW EXPRESSION
+TINYVAR: -18446744073709551616 # -0x10000000000000000
+UNDERFLOW-LABEL: UNDERFLOW EXPRESSION
+UNDERFLOW-NEXT: TINYVAR: [[#%d,-0x8000000000000000-0x8000000000000000]]
+
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -D#NUMVAR=10 --check-prefix CALL-MISSING-CLOSING-BRACKET --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix CALL-MISSING-CLOSING-BRACKET-MSG %s
+
+CALL MISSING CLOSING BRACKET
+30
+CALL-MISSING-CLOSING-BRACKET-LABEL: CALL MISSING CLOSING BRACKET
+CALL-MISSING-CLOSING-BRACKET-NEXT: [[#add(NUMVAR,3]]
+CALL-MISSING-CLOSING-BRACKET-MSG: numeric-expression.txt:[[#@LINE-1]]:51: error: missing ')' at end of call expression
+CALL-MISSING-CLOSING-BRACKET-MSG-NEXT: {{C}}ALL-MISSING-CLOSING-BRACKET-NEXT: {{\[\[#add\(NUMVAR,3\]\]}}
+CALL-MISSING-CLOSING-BRACKET-MSG-NEXT:      {{^}}                                                  ^{{$}}
+
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -D#NUMVAR=10 --check-prefix CALL-MISSING-ARGUMENT --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix CALL-MISSING-ARGUMENT-MSG %s
+
+CALL MISSING ARGUMENT
+30
+CALL-MISSING-ARGUMENT-LABEL: CALL MISSING ARGUMENT
+CALL-MISSING-ARGUMENT-NEXT: [[#add(NUMVAR,)]]
+CALL-MISSING-ARGUMENT-MSG: numeric-expression.txt:[[#@LINE-1]]:43: error: missing argument
+CALL-MISSING-ARGUMENT-MSG-NEXT: {{C}}ALL-MISSING-ARGUMENT-NEXT: {{\[\[#add\(NUMVAR,\)\]\]}}
+CALL-MISSING-ARGUMENT-MSG-NEXT:      {{^}}                                          ^{{$}}
+
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -D#NUMVAR=10 --check-prefix CALL-WRONG-ARGUMENT-COUNT --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix CALL-WRONG-ARGUMENT-COUNT-MSG %s
+
+CALL WRONG ARGUMENT COUNT
+30
+CALL-WRONG-ARGUMENT-COUNT-LABEL: CALL WRONG ARGUMENT COUNT
+CALL-WRONG-ARGUMENT-COUNT-NEXT: [[#add(NUMVAR)]]
+CALL-WRONG-ARGUMENT-COUNT-MSG: numeric-expression.txt:[[#@LINE-1]]:36: error: function 'add' takes 2 arguments but 1 given
+CALL-WRONG-ARGUMENT-COUNT-MSG-NEXT: {{C}}ALL-WRONG-ARGUMENT-COUNT-NEXT: {{\[\[#add\(NUMVAR\)\]\]}}
+CALL-WRONG-ARGUMENT-COUNT-MSG-NEXT:    {{^}}                                   ^{{$}}
+
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -D#NUMVAR=10 --check-prefix CALL-UNDEFINED-FUNCTION --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix CALL-UNDEFINED-FUNCTION-MSG %s
+
+CALL UNDEFINED FUNCTION
+30
+CALL-UNDEFINED-FUNCTION-LABEL: CALL UNDEFINED FUNCTION
+CALL-UNDEFINED-FUNCTION-NEXT: [[#bogus_function(NUMVAR)]]
+CALL-UNDEFINED-FUNCTION-MSG: numeric-expression.txt:[[#@LINE-1]]:34: error: call to undefined function 'bogus_function'
+CALL-UNDEFINED-FUNCTION-MSG-NEXT: {{C}}ALL-UNDEFINED-FUNCTION-NEXT: {{\[\[#bogus_function\(NUMVAR\)\]\]}}
+CALL-UNDEFINED-FUNCTION-MSG-NEXT:    {{^}}                                 ^{{$}}

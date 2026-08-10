@@ -1,0 +1,19 @@
+# Create an input file.
+RUN: echo '# comment 1' > %t.input
+RUN: echo ' # comment 2' >> %t.input
+RUN: echo " %t.bar" >> %t.input
+RUN: echo " %t.baz" >> %t.input
+RUN: echo "2,%t.weighted" >> %t.input
+
+RUN: echo ' ' > %t.weighted
+RUN: echo ' ' > %t.foo
+RUN: echo ' ' > %t.bar
+RUN: echo ' ' > %t.baz
+
+RUN: llvm-profdata merge -f %t.input -dump-input-file-list -o /dev/null %t.foo | FileCheck %s
+RUN: llvm-profdata merge -input-files %t.input -dump-input-file-list -o /dev/null %t.foo | FileCheck %s
+
+CHECK: 1,{{.*}}.foo
+CHECK-NEXT: 1,{{.*}}.bar
+CHECK-NEXT: 1,{{.*}}.baz
+CHECK-NEXT: 2,{{.*}}.weighted

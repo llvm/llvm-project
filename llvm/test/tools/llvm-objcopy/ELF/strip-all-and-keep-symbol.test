@@ -1,0 +1,77 @@
+# RUN: yaml2obj %s -o %t
+# RUN: cp %t %t1
+# RUN: llvm-objcopy --strip-all --keep-symbol foo %t %t2
+# RUN: llvm-readobj --sections --symbols %t2 | FileCheck %s
+
+# Verify that the first run of llvm-objcopy
+# has not modified the input binary.
+# RUN: cmp %t %t1
+
+# RUN: llvm-strip --keep-symbol=foo %t1
+# RUN: cmp %t1 %t2
+
+# RUN: cp %t %t3
+# RUN: llvm-strip --keep-symbol foo %t3
+# RUN: cmp %t1 %t3
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    AddressAlign:    0x0000000000000010
+    Size:            64
+  - Name:            .gnu.warning.foo
+    Type:            SHT_PROGBITS
+  - Name:            .debug_bar
+    Type:            SHT_PROGBITS
+Symbols:
+  - Name:     foo
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1000
+    Size:     8
+  - Name:     bar
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1008
+    Size:     8
+  - Name:     baz
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1010
+    Size:     8
+
+# CHECK:     Name: .text
+# CHECK:     Name: .gnu.warning.foo
+# CHECK:     Name: .symtab
+# CHECK:     Name: .strtab
+# CHECK:     Name: .shstrtab
+# CHECK-NOT: Name: .debug_bar
+
+#CHECK: Symbols [
+#CHECK-NEXT:  Symbol {
+#CHECK-NEXT:    Name:
+#CHECK-NEXT:    Value: 0x0
+#CHECK-NEXT:    Size: 0
+#CHECK-NEXT:    Binding: Local
+#CHECK-NEXT:    Type: None
+#CHECK-NEXT:    Other: 0
+#CHECK-NEXT:    Section: Undefined
+#CHECK-NEXT:  }
+#CHECK-NEXT:  Symbol {
+#CHECK-NEXT:    Name: foo
+#CHECK-NEXT:    Value: 0x1000
+#CHECK-NEXT:    Size: 8
+#CHECK-NEXT:    Binding: Local
+#CHECK-NEXT:    Type: Function
+#CHECK-NEXT:    Other: 0
+#CHECK-NEXT:    Section: .text
+#CHECK-NEXT:  }
+#CHECK-NEXT:]

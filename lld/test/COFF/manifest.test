@@ -1,0 +1,172 @@
+# RUN: yaml2obj %p/Inputs/ret42.yaml -o %t.obj
+
+# RUN: rm -f %t.exe.manifest
+# RUN: lld-link /out:%t.exe /entry:main %t.obj
+# RUN: test ! -e %t.exe.manifest
+
+# RUN: lld-link /manifest /out:%t.exe /entry:main %t.obj
+# RUN: FileCheck -check-prefix=MANIFEST %s < %t.exe.manifest
+
+MANIFEST: <?xml version="1.0" standalone="yes"?>
+MANIFEST: <assembly xmlns="urn:schemas-microsoft-com:asm.v1"
+MANIFEST:           manifestVersion="1.0">
+MANIFEST:   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
+MANIFEST:     <security>
+MANIFEST:       <requestedPrivileges>
+MANIFEST:          <requestedExecutionLevel level='asInvoker' uiAccess='false'/>
+MANIFEST:       </requestedPrivileges>
+MANIFEST:     </security>
+MANIFEST:   </trustInfo>
+MANIFEST: </assembly>
+
+# RUN: lld-link /out:%t.exe /entry:main /manifest \
+# RUN:   /manifestuac:"level='requireAdministrator' uiAccess='true'" %t.obj
+# RUN: FileCheck -check-prefix=UAC %s < %t.exe.manifest
+
+UAC: <?xml version="1.0" standalone="yes"?>
+UAC: <assembly xmlns="urn:schemas-microsoft-com:asm.v1"
+UAC:           manifestVersion="1.0">
+UAC:   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
+UAC:     <security>
+UAC:       <requestedPrivileges>
+UAC:          <requestedExecutionLevel level='requireAdministrator' uiAccess='true'/>
+UAC:       </requestedPrivileges>
+UAC:     </security>
+UAC:   </trustInfo>
+UAC: </assembly>
+
+# /manifestdependency implies /manifest. (/manifestuac doesn't.)
+# RUN: lld-link /out:%t.exe /entry:main \
+# RUN:   /manifestdependency:"foo='bar'" %t.obj
+# RUN: FileCheck -check-prefix=DEPENDENCY %s < %t.exe.manifest
+
+DEPENDENCY: <?xml version="1.0" standalone="yes"?>
+DEPENDENCY: <assembly xmlns="urn:schemas-microsoft-com:asm.v1"
+DEPENDENCY:           manifestVersion="1.0">
+DEPENDENCY:   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
+DEPENDENCY:     <security>
+DEPENDENCY:       <requestedPrivileges>
+DEPENDENCY:          <requestedExecutionLevel level='asInvoker' uiAccess='false'/>
+DEPENDENCY:       </requestedPrivileges>
+DEPENDENCY:     </security>
+DEPENDENCY:   </trustInfo>
+DEPENDENCY:   <dependency>
+DEPENDENCY:     <dependentAssembly>
+DEPENDENCY:       <assemblyIdentity foo='bar' />
+DEPENDENCY:     </dependentAssembly>
+DEPENDENCY:   </dependency>
+DEPENDENCY: </assembly>
+
+# RUN: lld-link /manifest /out:%t.exe /entry:main /manifestuac:no \
+# RUN:   /manifestdependency:"foo='bar'" %t.obj
+# RUN: FileCheck -check-prefix=NOUAC %s < %t.exe.manifest
+
+NOUAC: <?xml version="1.0" standalone="yes"?>
+NOUAC: <assembly xmlns="urn:schemas-microsoft-com:asm.v1"
+NOUAC:           manifestVersion="1.0">
+NOUAC:   <dependency>
+NOUAC:     <dependentAssembly>
+NOUAC:       <assemblyIdentity foo='bar' />
+NOUAC:     </dependentAssembly>
+NOUAC:   </dependency>
+NOUAC: </assembly>
+
+# RUN: lld-link /manifest /out:%t.exe /entry:main /manifestuac:no %t.obj
+# RUN: FileCheck -check-prefix=NOUACNODEP %s < %t.exe.manifest
+
+NOUACNODEP: <?xml version="1.0" standalone="yes"?>
+NOUACNODEP: <assembly xmlns="urn:schemas-microsoft-com:asm.v1"
+NOUACNODEP:           manifestVersion="1.0">
+NOUACNODEP: </assembly>
+
+# Several /manifestdependency: flags are naively dedup'd.
+# RUN: lld-link /out:%t.exe /entry:main \
+# RUN:   /manifestdependency:"foo='bar'" \
+# RUN:   /manifestdependency:"foo='bar'" \
+# RUN:   /manifestdependency:"baz='quux'" \
+# RUN:   %t.obj
+# RUN: FileCheck -check-prefix=SEVERALDEPS %s < %t.exe.manifest
+
+SEVERALDEPS: <?xml version="1.0" standalone="yes"?>
+SEVERALDEPS: <assembly xmlns="urn:schemas-microsoft-com:asm.v1"
+SEVERALDEPS:           manifestVersion="1.0">
+SEVERALDEPS:   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
+SEVERALDEPS:     <security>
+SEVERALDEPS:       <requestedPrivileges>
+SEVERALDEPS:          <requestedExecutionLevel level='asInvoker' uiAccess='false'/>
+SEVERALDEPS:       </requestedPrivileges>
+SEVERALDEPS:     </security>
+SEVERALDEPS:   </trustInfo>
+SEVERALDEPS:   <dependency>
+SEVERALDEPS:     <dependentAssembly>
+SEVERALDEPS:       <assemblyIdentity foo='bar' />
+SEVERALDEPS:     </dependentAssembly>
+SEVERALDEPS:   <dependency>
+SEVERALDEPS:     <dependentAssembly>
+SEVERALDEPS:       <assemblyIdentity baz='quux' />
+SEVERALDEPS:     </dependentAssembly>
+SEVERALDEPS:   </dependency>
+SEVERALDEPS: </assembly>
+
+# /manifestdependency: flags can be in .drectve sections.
+# RUN: yaml2obj %p/Inputs/manifestdependency-drectve.yaml -o %t.dir.obj
+# RUN: rm %t.exe.manifest
+# RUN: lld-link /out:%t.exe /entry:main \
+# RUN:   %t.obj %t.dir.obj
+# RUN: FileCheck -check-prefix=SEVERALDEPS %s < %t.exe.manifest
+
+# /manifestdependency: flags in .drectve sections are ignored with an
+# explicit /manifest:no.
+# RUN: rm %t.exe.manifest
+# RUN: lld-link /out:%t.exe /entry:main /manifest:no \
+# RUN:   %t.obj %t.dir.obj
+# RUN: test ! -e %t.exe.manifest
+
+# Test that /manifestdependency: flags in .drectve sections work
+# with /manifest:embed too.
+# RUN: lld-link /out:%t.exe /entry:main /manifest:embed \
+# RUN:   %t.obj %t.dir.obj
+# RUN: test ! -e %t.exe.manifest
+# RUN: llvm-readobj --coff-resources %t.exe \
+# RUN:     | FileCheck --check-prefix EMBED %s
+
+EMBED: Data (
+EMBED:   0000: 3C3F786D 6C207665 7273696F 6E3D2231  |<?xml version="1|
+EMBED:   0010: 2E302220 7374616E 64616C6F 6E653D22  |.0" standalone="|
+EMBED:   0020: 79657322 3F3E0A3C 61737365 6D626C79  |yes"?>.<assembly|
+EMBED:   0030: 20786D6C 6E733D22 75726E3A 73636865  | xmlns="urn:sche|
+EMBED:   0040: 6D61732D 6D696372 6F736F66 742D636F  |mas-microsoft-co|
+EMBED:   0050: 6D3A6173 6D2E7631 220A2020 20202020  |m:asm.v1".      |
+EMBED:   0060: 20202020 6D616E69 66657374 56657273  |    manifestVers|
+EMBED:   0070: 696F6E3D 22312E30 223E0A20 203C7472  |ion="1.0">.  <tr|
+EMBED:   0080: 75737449 6E666F20 786D6C6E 733D2275  |ustInfo xmlns="u|
+EMBED:   0090: 726E3A73 6368656D 61732D6D 6963726F  |rn:schemas-micro|
+EMBED:   00A0: 736F6674 2D636F6D 3A61736D 2E763322  |soft-com:asm.v3"|
+EMBED:   00B0: 3E0A2020 20203C73 65637572 6974793E  |>.    <security>|
+EMBED:   00C0: 0A202020 2020203C 72657175 65737465  |.      <requeste|
+EMBED:   00D0: 64507269 76696C65 6765733E 0A202020  |dPrivileges>.   |
+EMBED:   00E0: 20202020 20203C72 65717565 73746564  |      <requested|
+EMBED:   00F0: 45786563 7574696F 6E4C6576 656C206C  |ExecutionLevel l|
+EMBED:   0100: 6576656C 3D276173 496E766F 6B657227  |evel='asInvoker'|
+EMBED:   0110: 20756941 63636573 733D2766 616C7365  | uiAccess='false|
+EMBED:   0120: 272F3E0A 20202020 20203C2F 72657175  |'/>.      </requ|
+EMBED:   0130: 65737465 64507269 76696C65 6765733E  |estedPrivileges>|
+EMBED:   0140: 0A202020 203C2F73 65637572 6974793E  |.    </security>|
+EMBED:   0150: 0A20203C 2F747275 7374496E 666F3E0A  |.  </trustInfo>.|
+EMBED:   0160: 20203C64 6570656E 64656E63 793E0A20  |  <dependency>. |
+EMBED:   0170: 2020203C 64657065 6E64656E 74417373  |   <dependentAss|
+EMBED:   0180: 656D626C 793E0A20 20202020 203C6173  |embly>.      <as|
+EMBED:   0190: 73656D62 6C794964 656E7469 74792066  |semblyIdentity f|
+EMBED:   01A0: 6F6F3D27 62617227 202F3E0A 20202020  |oo='bar' />.    |
+EMBED:   01B0: 3C2F6465 70656E64 656E7441 7373656D  |</dependentAssem|
+EMBED:   01C0: 626C793E 0A20203C 2F646570 656E6465  |bly>.  </depende|
+EMBED:   01D0: 6E63793E 0A20203C 64657065 6E64656E  |ncy>.  <dependen|
+EMBED:   01E0: 63793E0A 20202020 3C646570 656E6465  |cy>.    <depende|
+EMBED:   01F0: 6E744173 73656D62 6C793E0A 20202020  |ntAssembly>.    |
+EMBED:   0200: 20203C61 7373656D 626C7949 64656E74  |  <assemblyIdent|
+EMBED:   0210: 69747920 62617A3D 27717575 7827202F  |ity baz='quux' /|
+EMBED:   0220: 3E0A2020 20203C2F 64657065 6E64656E  |>.    </dependen|
+EMBED:   0230: 74417373 656D626C 793E0A20 203C2F64  |tAssembly>.  </d|
+EMBED:   0240: 6570656E 64656E63 793E0A3C 2F617373  |ependency>.</ass|
+EMBED:   0250: 656D626C 793E0A                      |embly>.|
+EMBED: )

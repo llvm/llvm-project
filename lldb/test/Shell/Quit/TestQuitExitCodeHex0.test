@@ -1,0 +1,3 @@
+# UNSUPPORTED: system-windows
+# RUN: %lldb -b -s %s
+q 0x0

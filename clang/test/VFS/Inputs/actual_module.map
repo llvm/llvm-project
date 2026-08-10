@@ -1,0 +1,8 @@
+module not_real {
+  header "not_real.h"
+  export *
+}
+module import_some_frame {
+  header "import_some_frame.h"
+  export *
+}

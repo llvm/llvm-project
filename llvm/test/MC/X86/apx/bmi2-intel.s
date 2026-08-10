@@ -1,0 +1,239 @@
+# RUN: llvm-mc -triple x86_64 -x86-asm-syntax=intel -output-asm-variant=1 --show-encoding %s | FileCheck %s
+
+## mulx
+
+# CHECK: {evex}	mulx	r10d, edx, ecx
+# CHECK: encoding: [0x62,0x72,0x6f,0x08,0xf6,0xd1]
+         {evex}	mulx	r10d, edx, ecx
+
+# CHECK: {evex}	mulx	r11, r15, r9
+# CHECK: encoding: [0x62,0x52,0x87,0x08,0xf6,0xd9]
+         {evex}	mulx	r11, r15, r9
+
+# CHECK: {evex}	mulx	edx, ecx, dword ptr [rax + 4*rbx + 123]
+# CHECK: encoding: [0x62,0xf2,0x77,0x08,0xf6,0x54,0x98,0x7b]
+         {evex}	mulx	edx, ecx, dword ptr [rax + 4*rbx + 123]
+
+# CHECK: {evex}	mulx	r15, r9, qword ptr [rax + 4*rbx + 123]
+# CHECK: encoding: [0x62,0x72,0xb7,0x08,0xf6,0x7c,0x98,0x7b]
+         {evex}	mulx	r15, r9, qword ptr [rax + 4*rbx + 123]
+
+# CHECK: mulx	r26d, r22d, r18d
+# CHECK: encoding: [0x62,0x6a,0x4f,0x00,0xf6,0xd2]
+         mulx	r26d, r22d, r18d
+
+# CHECK: mulx	r27, r23, r19
+# CHECK: encoding: [0x62,0x6a,0xc7,0x00,0xf6,0xdb]
+         mulx	r27, r23, r19
+
+# CHECK: mulx	r22d, r18d, dword ptr [r28 + 4*r29 + 291]
+# CHECK: encoding: [0x62,0x8a,0x6b,0x00,0xf6,0xb4,0xac,0x23,0x01,0x00,0x00]
+         mulx	r22d, r18d, dword ptr [r28 + 4*r29 + 291]
+
+# CHECK: mulx	r23, r19, qword ptr [r28 + 4*r29 + 291]
+# CHECK: encoding: [0x62,0x8a,0xe3,0x00,0xf6,0xbc,0xac,0x23,0x01,0x00,0x00]
+         mulx	r23, r19, qword ptr [r28 + 4*r29 + 291]
+
+## pdep
+
+# CHECK: {evex}	pdep	r10d, edx, ecx
+# CHECK: encoding: [0x62,0x72,0x6f,0x08,0xf5,0xd1]
+         {evex}	pdep	r10d, edx, ecx
+
+# CHECK: {evex}	pdep	r11, r15, r9
+# CHECK: encoding: [0x62,0x52,0x87,0x08,0xf5,0xd9]
+         {evex}	pdep	r11, r15, r9
+
+# CHECK: {evex}	pdep	edx, ecx, dword ptr [rax + 4*rbx + 123]
+# CHECK: encoding: [0x62,0xf2,0x77,0x08,0xf5,0x54,0x98,0x7b]
+         {evex}	pdep	edx, ecx, dword ptr [rax + 4*rbx + 123]
+
+# CHECK: {evex}	pdep	r15, r9, qword ptr [rax + 4*rbx + 123]
+# CHECK: encoding: [0x62,0x72,0xb7,0x08,0xf5,0x7c,0x98,0x7b]
+         {evex}	pdep	r15, r9, qword ptr [rax + 4*rbx + 123]
+
+# CHECK: pdep	r26d, r22d, r18d
+# CHECK: encoding: [0x62,0x6a,0x4f,0x00,0xf5,0xd2]
+         pdep	r26d, r22d, r18d
+
+# CHECK: pdep	r27, r23, r19
+# CHECK: encoding: [0x62,0x6a,0xc7,0x00,0xf5,0xdb]
+         pdep	r27, r23, r19
+
+# CHECK: pdep	r22d, r18d, dword ptr [r28 + 4*r29 + 291]
+# CHECK: encoding: [0x62,0x8a,0x6b,0x00,0xf5,0xb4,0xac,0x23,0x01,0x00,0x00]
+         pdep	r22d, r18d, dword ptr [r28 + 4*r29 + 291]
+
+# CHECK: pdep	r23, r19, qword ptr [r28 + 4*r29 + 291]
+# CHECK: encoding: [0x62,0x8a,0xe3,0x00,0xf5,0xbc,0xac,0x23,0x01,0x00,0x00]
+         pdep	r23, r19, qword ptr [r28 + 4*r29 + 291]
+
+## pext
+
+# CHECK: {evex}	pext	r10d, edx, ecx
+# CHECK: encoding: [0x62,0x72,0x6e,0x08,0xf5,0xd1]
+         {evex}	pext	r10d, edx, ecx
+
+# CHECK: {evex}	pext	r11, r15, r9
+# CHECK: encoding: [0x62,0x52,0x86,0x08,0xf5,0xd9]
+         {evex}	pext	r11, r15, r9
+
+# CHECK: {evex}	pext	edx, ecx, dword ptr [rax + 4*rbx + 123]
+# CHECK: encoding: [0x62,0xf2,0x76,0x08,0xf5,0x54,0x98,0x7b]
+         {evex}	pext	edx, ecx, dword ptr [rax + 4*rbx + 123]
+
+# CHECK: {evex}	pext	r15, r9, qword ptr [rax + 4*rbx + 123]
+# CHECK: encoding: [0x62,0x72,0xb6,0x08,0xf5,0x7c,0x98,0x7b]
+         {evex}	pext	r15, r9, qword ptr [rax + 4*rbx + 123]
+
+# CHECK: pext	r26d, r22d, r18d
+# CHECK: encoding: [0x62,0x6a,0x4e,0x00,0xf5,0xd2]
+         pext	r26d, r22d, r18d
+
+# CHECK: pext	r27, r23, r19
+# CHECK: encoding: [0x62,0x6a,0xc6,0x00,0xf5,0xdb]
+         pext	r27, r23, r19
+
+# CHECK: pext	r22d, r18d, dword ptr [r28 + 4*r29 + 291]
+# CHECK: encoding: [0x62,0x8a,0x6a,0x00,0xf5,0xb4,0xac,0x23,0x01,0x00,0x00]
+         pext	r22d, r18d, dword ptr [r28 + 4*r29 + 291]
+
+# CHECK: pext	r23, r19, qword ptr [r28 + 4*r29 + 291]
+# CHECK: encoding: [0x62,0x8a,0xe2,0x00,0xf5,0xbc,0xac,0x23,0x01,0x00,0x00]
+         pext	r23, r19, qword ptr [r28 + 4*r29 + 291]
+
+## rorx
+
+# CHECK: {evex}	rorx	edx, ecx, 123
+# CHECK: encoding: [0x62,0xf3,0x7f,0x08,0xf0,0xd1,0x7b]
+         {evex}	rorx	edx, ecx, 123
+
+# CHECK: {evex}	rorx	r15, r9, 123
+# CHECK: encoding: [0x62,0x53,0xff,0x08,0xf0,0xf9,0x7b]
+         {evex}	rorx	r15, r9, 123
+
+# CHECK: {evex}	rorx	ecx, dword ptr [rax + 4*rbx + 123], 123
+# CHECK: encoding: [0x62,0xf3,0x7f,0x08,0xf0,0x4c,0x98,0x7b,0x7b]
+         {evex}	rorx	ecx, dword ptr [rax + 4*rbx + 123], 123
+
+# CHECK: {evex}	rorx	r9, qword ptr [rax + 4*rbx + 123], 123
+# CHECK: encoding: [0x62,0x73,0xff,0x08,0xf0,0x4c,0x98,0x7b,0x7b]
+         {evex}	rorx	r9, qword ptr [rax + 4*rbx + 123], 123
+
+# CHECK: rorx	r22d, r18d, 123
+# CHECK: encoding: [0x62,0xeb,0x7f,0x08,0xf0,0xf2,0x7b]
+         rorx	r22d, r18d, 123
+
+# CHECK: rorx	r23, r19, 123
+# CHECK: encoding: [0x62,0xeb,0xff,0x08,0xf0,0xfb,0x7b]
+         rorx	r23, r19, 123
+
+# CHECK: rorx	r18d, dword ptr [r28 + 4*r29 + 291], 123
+# CHECK: encoding: [0x62,0x8b,0x7b,0x08,0xf0,0x94,0xac,0x23,0x01,0x00,0x00,0x7b]
+         rorx	r18d, dword ptr [r28 + 4*r29 + 291], 123
+
+# CHECK: rorx	r19, qword ptr [r28 + 4*r29 + 291], 123
+# CHECK: encoding: [0x62,0x8b,0xfb,0x08,0xf0,0x9c,0xac,0x23,0x01,0x00,0x00,0x7b]
+         rorx	r19, qword ptr [r28 + 4*r29 + 291], 123
+
+## sarx
+
+# CHECK: {evex}	sarx	r10d, edx, ecx
+# CHECK: encoding: [0x62,0x72,0x76,0x08,0xf7,0xd2]
+         {evex}	sarx	r10d, edx, ecx
+
+# CHECK: {evex}	sarx	edx, dword ptr [rax + 4*rbx + 123], ecx
+# CHECK: encoding: [0x62,0xf2,0x76,0x08,0xf7,0x54,0x98,0x7b]
+         {evex}	sarx	edx, dword ptr [rax + 4*rbx + 123], ecx
+
+# CHECK: {evex}	sarx	r11, r15, r9
+# CHECK: encoding: [0x62,0x52,0xb6,0x08,0xf7,0xdf]
+         {evex}	sarx	r11, r15, r9
+
+# CHECK: {evex}	sarx	r15, qword ptr [rax + 4*rbx + 123], r9
+# CHECK: encoding: [0x62,0x72,0xb6,0x08,0xf7,0x7c,0x98,0x7b]
+         {evex}	sarx	r15, qword ptr [rax + 4*rbx + 123], r9
+
+# CHECK: sarx	r26d, r22d, r18d
+# CHECK: encoding: [0x62,0x6a,0x6e,0x00,0xf7,0xd6]
+         sarx	r26d, r22d, r18d
+
+# CHECK: sarx	r22d, dword ptr [r28 + 4*r29 + 291], r18d
+# CHECK: encoding: [0x62,0x8a,0x6a,0x00,0xf7,0xb4,0xac,0x23,0x01,0x00,0x00]
+         sarx	r22d, dword ptr [r28 + 4*r29 + 291], r18d
+
+# CHECK: sarx	r27, r23, r19
+# CHECK: encoding: [0x62,0x6a,0xe6,0x00,0xf7,0xdf]
+         sarx	r27, r23, r19
+
+# CHECK: sarx	r23, qword ptr [r28 + 4*r29 + 291], r19
+# CHECK: encoding: [0x62,0x8a,0xe2,0x00,0xf7,0xbc,0xac,0x23,0x01,0x00,0x00]
+         sarx	r23, qword ptr [r28 + 4*r29 + 291], r19
+
+## shlx
+
+# CHECK: {evex}	shlx	r10d, edx, ecx
+# CHECK: encoding: [0x62,0x72,0x75,0x08,0xf7,0xd2]
+         {evex}	shlx	r10d, edx, ecx
+
+# CHECK: {evex}	shlx	edx, dword ptr [rax + 4*rbx + 123], ecx
+# CHECK: encoding: [0x62,0xf2,0x75,0x08,0xf7,0x54,0x98,0x7b]
+         {evex}	shlx	edx, dword ptr [rax + 4*rbx + 123], ecx
+
+# CHECK: {evex}	shlx	r11, r15, r9
+# CHECK: encoding: [0x62,0x52,0xb5,0x08,0xf7,0xdf]
+         {evex}	shlx	r11, r15, r9
+
+# CHECK: {evex}	shlx	r15, qword ptr [rax + 4*rbx + 123], r9
+# CHECK: encoding: [0x62,0x72,0xb5,0x08,0xf7,0x7c,0x98,0x7b]
+         {evex}	shlx	r15, qword ptr [rax + 4*rbx + 123], r9
+
+# CHECK: shlx	r26d, r22d, r18d
+# CHECK: encoding: [0x62,0x6a,0x6d,0x00,0xf7,0xd6]
+         shlx	r26d, r22d, r18d
+
+# CHECK: shlx	r22d, dword ptr [r28 + 4*r29 + 291], r18d
+# CHECK: encoding: [0x62,0x8a,0x69,0x00,0xf7,0xb4,0xac,0x23,0x01,0x00,0x00]
+         shlx	r22d, dword ptr [r28 + 4*r29 + 291], r18d
+
+# CHECK: shlx	r27, r23, r19
+# CHECK: encoding: [0x62,0x6a,0xe5,0x00,0xf7,0xdf]
+         shlx	r27, r23, r19
+
+# CHECK: shlx	r23, qword ptr [r28 + 4*r29 + 291], r19
+# CHECK: encoding: [0x62,0x8a,0xe1,0x00,0xf7,0xbc,0xac,0x23,0x01,0x00,0x00]
+         shlx	r23, qword ptr [r28 + 4*r29 + 291], r19
+
+## shrx
+
+# CHECK: {evex}	shrx	r10d, edx, ecx
+# CHECK: encoding: [0x62,0x72,0x77,0x08,0xf7,0xd2]
+         {evex}	shrx	r10d, edx, ecx
+
+# CHECK: {evex}	shrx	edx, dword ptr [rax + 4*rbx + 123], ecx
+# CHECK: encoding: [0x62,0xf2,0x77,0x08,0xf7,0x54,0x98,0x7b]
+         {evex}	shrx	edx, dword ptr [rax + 4*rbx + 123], ecx
+
+# CHECK: {evex}	shrx	r11, r15, r9
+# CHECK: encoding: [0x62,0x52,0xb7,0x08,0xf7,0xdf]
+         {evex}	shrx	r11, r15, r9
+
+# CHECK: {evex}	shrx	r15, qword ptr [rax + 4*rbx + 123], r9
+# CHECK: encoding: [0x62,0x72,0xb7,0x08,0xf7,0x7c,0x98,0x7b]
+         {evex}	shrx	r15, qword ptr [rax + 4*rbx + 123], r9
+
+# CHECK: shrx	r26d, r22d, r18d
+# CHECK: encoding: [0x62,0x6a,0x6f,0x00,0xf7,0xd6]
+         shrx	r26d, r22d, r18d
+
+# CHECK: shrx	r22d, dword ptr [r28 + 4*r29 + 291], r18d
+# CHECK: encoding: [0x62,0x8a,0x6b,0x00,0xf7,0xb4,0xac,0x23,0x01,0x00,0x00]
+         shrx	r22d, dword ptr [r28 + 4*r29 + 291], r18d
+
+# CHECK: shrx	r27, r23, r19
+# CHECK: encoding: [0x62,0x6a,0xe7,0x00,0xf7,0xdf]
+         shrx	r27, r23, r19
+
+# CHECK: shrx	r23, qword ptr [r28 + 4*r29 + 291], r19
+# CHECK: encoding: [0x62,0x8a,0xe3,0x00,0xf7,0xbc,0xac,0x23,0x01,0x00,0x00]
+         shrx	r23, qword ptr [r28 + 4*r29 + 291], r19

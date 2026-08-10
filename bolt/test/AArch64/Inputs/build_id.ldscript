@@ -1,0 +1,9 @@
+SECTIONS
+{
+  PROVIDE (__executable_start = SEGMENT_START("text-segment", 0x400000)); . = SEGMENT_START("text-segment", 0x400000) + SIZEOF_HEADERS;
+  .note.gnu.build-id (0x400400):
+   {
+    build_id_note = ABSOLUTE(.);
+    *(.note.gnu.build-id)
+   }
+}

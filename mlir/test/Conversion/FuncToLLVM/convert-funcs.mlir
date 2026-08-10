@@ -1,0 +1,126 @@
+// RUN: mlir-opt -convert-func-to-llvm -convert-cf-to-llvm -reconcile-unrealized-casts -split-input-file -verify-diagnostics %s | FileCheck %s
+
+//CHECK: llvm.func @second_order_arg(!llvm.ptr)
+func.func private @second_order_arg(%arg0 : () -> ())
+
+//CHECK: llvm.func @second_order_result() -> !llvm.ptr
+func.func private @second_order_result() -> (() -> ())
+
+//CHECK: llvm.func @second_order_multi_result() -> !llvm.struct<(ptr, ptr, ptr)>
+func.func private @second_order_multi_result() -> (() -> (i32), () -> (i64), () -> (f32))
+
+// Check that memrefs are converted to argument packs if appear as function arguments.
+// CHECK: llvm.func @memref_call_conv(!llvm.ptr, !llvm.ptr, i64, i64, i64)
+func.func private @memref_call_conv(%arg0: memref<?xf32>)
+
+// Same in nested functions.
+// CHECK: llvm.func @memref_call_conv_nested(!llvm.ptr)
+func.func private @memref_call_conv_nested(%arg0: (memref<?xf32>) -> ())
+
+//CHECK-LABEL: llvm.func @pass_through(%arg0: !llvm.ptr) -> !llvm.ptr {
+func.func @pass_through(%arg0: () -> ()) -> (() -> ()) {
+// CHECK-NEXT:  llvm.br ^bb1(%arg0 : !llvm.ptr)
+  cf.br ^bb1(%arg0 : () -> ())
+
+//CHECK-NEXT: ^bb1(%0: !llvm.ptr):
+^bb1(%bbarg: () -> ()):
+// CHECK-NEXT:  llvm.return %0 : !llvm.ptr
+  return %bbarg : () -> ()
+}
+
+// CHECK-LABEL: llvm.func extern_weak @llvmlinkage(i32)
+func.func private @llvmlinkage(i32) attributes { "llvm.linkage" = #llvm.linkage<extern_weak> }
+
+// CHECK-LABEL: llvm.func @llvmreadnone(i32)
+// CHECK-SAME: memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>
+func.func private @llvmreadnone(i32) attributes { llvm.readnone }
+
+// CHECK-LABEL: llvm.func @body(i32)
+func.func private @body(i32)
+
+// CHECK-LABEL: llvm.func @indirect_const_call
+// CHECK-SAME: (%[[ARG0:.*]]: i32) {
+func.func @indirect_const_call(%arg0: i32) {
+// CHECK-NEXT: %[[ADDR:.*]] = llvm.mlir.addressof @body : !llvm.ptr
+  %0 = constant @body : (i32) -> ()
+// CHECK-NEXT:  llvm.call %[[ADDR]](%[[ARG0:.*]]) : !llvm.ptr, (i32) -> ()
+  call_indirect %0(%arg0) : (i32) -> ()
+// CHECK-NEXT:  llvm.return
+  return
+}
+
+// CHECK-LABEL: llvm.func @indirect_call(%arg0: !llvm.ptr, %arg1: f32) -> i32 {
+func.func @indirect_call(%arg0: (f32) -> i32, %arg1: f32) -> i32 {
+// CHECK-NEXT:  %0 = llvm.call %arg0(%arg1) : !llvm.ptr, (f32) -> i32
+  %0 = call_indirect %arg0(%arg1) : (f32) -> i32
+// CHECK-NEXT:  llvm.return %0 : i32
+  return %0 : i32
+}
+
+func.func @variadic_func(%arg0: i32) attributes { "func.varargs" = true } {
+  return
+}
+
+// CHECK-LABEL: llvm.func @target_cpu()
+// CHECK-SAME: target_cpu = "gfx90a"
+func.func private @target_cpu() attributes { "llvm.target_cpu" = "gfx90a" }
+
+// CHECK-LABEL: llvm.func @target_features()
+// CHECK-SAME: target_features = #llvm.target_features<["+sme", "+sve"]>
+func.func private @target_features() attributes {
+  "llvm.target_features" = #llvm.target_features<["+sme", "+sve"]>
+}
+
+// CHECK-LABEL: llvm.func @passthrough_attr()
+// CHECK-SAME: passthrough = ["presplitcoroutine"]
+func.func private @passthrough_attr() attributes {
+  "llvm.passthrough" = ["presplitcoroutine"]
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @private_callee
+// CHECK-SAME: sym_visibility = "private"
+func.func private @private_callee(%arg1: f32) -> i32 {
+  %0 = arith.constant 0 : i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: llvm.func @caller_private_callee
+func.func @caller_private_callee(%arg1: f32) -> i32 {
+  %0 = call @private_callee(%arg1) : (f32) -> i32
+  return %0 : i32
+}
+
+// -----
+
+// expected-error@+1{{'func.func' op invalid llvm.func propertyInvalid attribute `linkage` in property conversion: 3 : i64}}
+func.func private @badllvmlinkage(i32) attributes { "llvm.linkage" = 3 : i64 }
+
+// -----
+
+// expected-error@+1{{C interface for variadic functions is not supported yet.}}
+func.func @variadic_func(%arg0: i32) attributes { "func.varargs" = true, "llvm.emit_c_interface" } {
+  return
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @empty_res_attrs()
+func.func @empty_res_attrs() attributes {res_attrs = []} {
+  return
+}
+
+// -----
+
+// Internal `llvm.linkage` must lower correctly
+// CHECK-LABEL: llvm.func internal @host_next_to_gpu_module
+// CHECK: gpu.module @gpu_mod
+func.func @host_next_to_gpu_module() attributes { llvm.linkage = #llvm.linkage<internal> } {
+  return
+}
+gpu.module @gpu_mod {
+  gpu.func @gpu_kernel() kernel {
+    gpu.return
+  }
+}

@@ -1,0 +1,17 @@
+{
+   "context" : "{  :  }",
+   "name" : "for.i => exit",
+   "statements" : [
+      {
+         "accesses" : [
+            {
+               "kind" : "write",
+               "relation" : "{ Stmt_S[i0] -> MemRef_A[i0] }"
+            }
+         ],
+         "domain" : "{ Stmt_S[i0] : i0 >= 0 and i0 <= 1023 }",
+         "name" : "Stmt_S",
+         "schedule" : "{ Stmt_S[i0] -> [floor(i0/4) * 4, i0] }"
+      }
+   ]
+}

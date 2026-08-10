@@ -1,0 +1,4 @@
+
+void callee(void) {
+  ;
+}

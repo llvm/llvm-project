@@ -1,0 +1,2 @@
+script import my
+p 1 + 1

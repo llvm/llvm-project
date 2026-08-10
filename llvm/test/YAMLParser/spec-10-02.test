@@ -1,0 +1,22 @@
+# RUN: yaml-bench -canonical %s | FileCheck %s --strict-whitespace
+# CHECK:      !!seq [
+# CHECK-NEXT:   !!str "double quoted",
+# CHECK-NEXT:   !!str "single quoted",
+# CHECK-NEXT:   !!str "plain text",
+# CHECK-NEXT:   !!seq [
+# CHECK-NEXT:     !!str "nested",
+# CHECK-NEXT:   ],
+# CHECK-NEXT:   !!map {
+# CHECK-NEXT:     ? !!str "single"
+# CHECK-NEXT:     : !!str "pair",
+# CHECK-NEXT:   },
+# CHECK-NEXT: ]
+
+[
+"double
+ quoted", 'single
+           quoted',
+plain
+ text, [ nested ],
+single: pair ,
+]

@@ -1,0 +1,11 @@
+# RUN: yaml2obj %p/Inputs/hello32.yaml -o %t.obj
+# RUN: lld-link /out:%t.exe /entry:main /timestamp:0 %p/Inputs/std32.lib %t.obj
+# RUN: llvm-readobj --file-headers %t.exe | FileCheck -check-prefix=CHECKSUM1 %s
+
+CHECKSUM1: CheckSum: 0x0
+
+# RUN: yaml2obj %p/Inputs/hello32.yaml -o %t.obj
+# RUN: lld-link /out:%t.exe /entry:main /timestamp:0 /RELEASE %p/Inputs/std32.lib %t.obj
+# RUN: llvm-readobj --file-headers %t.exe | FileCheck -check-prefix=CHECKSUM2 %s
+
+CHECKSUM2: CheckSum: 0x9196

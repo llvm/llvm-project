@@ -1,0 +1,114 @@
+## Test the --loader-section-relocations option.
+
+# RUN: yaml2obj --docnum=1 %s -o %t_xcoff32.o
+# RUN: yaml2obj --docnum=2  %s -o %t_xcoff64.o
+# RUN: llvm-readobj --loader-section-relocations --expand-relocs %t_xcoff32.o | FileCheck --check-prefixes=COMMON,EXPAND,NODEMANEXP %s
+# RUN: llvm-readobj --loader-section-relocations --expand-relocs %t_xcoff64.o | FileCheck --check-prefixes=COMMON,EXPAND,NODEMANEXP %s
+# RUN: llvm-readobj --loader-section-relocations %t_xcoff32.o | FileCheck --check-prefixes=COMMON,NOEXPAND32,NODEMAN32 %s
+# RUN: llvm-readobj --loader-section-relocations %t_xcoff64.o | FileCheck --check-prefixes=COMMON,NOEXPAND64,NODEMAN64 %s
+
+# RUN: llvm-readobj --loader-section-relocations --expand-relocs --no-demangle %t_xcoff32.o | FileCheck --check-prefixes=COMMON,EXPAND,NODEMANEXP %s
+# RUN: llvm-readobj --loader-section-relocations --expand-relocs --no-demangle %t_xcoff64.o | FileCheck --check-prefixes=COMMON,EXPAND,NODEMANEXP %s
+# RUN: llvm-readobj --loader-section-relocations --no-demangle %t_xcoff32.o | FileCheck --check-prefixes=COMMON,NOEXPAND32,NODEMAN32 %s
+# RUN: llvm-readobj --loader-section-relocations --no-demangle %t_xcoff64.o | FileCheck --check-prefixes=COMMON,NOEXPAND64,NODEMAN64 %s
+
+# RUN: llvm-readobj --loader-section-relocations --expand-relocs --demangle %t_xcoff32.o | FileCheck --check-prefixes=COMMON,EXPAND,DEMANEXP %s
+# RUN: llvm-readobj --loader-section-relocations --expand-relocs --demangle %t_xcoff64.o | FileCheck --check-prefixes=COMMON,EXPAND,DEMANEXP %s
+# RUN: llvm-readobj --loader-section-relocations --demangle %t_xcoff32.o | FileCheck --check-prefixes=COMMON,NOEXPAND32,DEMAN32 %s
+# RUN: llvm-readobj --loader-section-relocations --demangle %t_xcoff64.o | FileCheck --check-prefixes=COMMON,NOEXPAND64,DEMAN64 %s
+--- !XCOFF
+FileHeader:
+  MagicNumber:       0x1DF
+Sections:
+  - Name:            .loader
+    Flags:           [ STYP_LOADER ]
+    SectionData:     "0000000100000001000000020000016D00000001000000A400000000000000505f5a3466756e63762000028000021105000000000000000020000294000000011f0000022000029c000000031f000002"
+##                    ^-------                                                           -Version=1
+##                            ^-------                                                   -NumberOfSymbolEntries=1
+##                                    ^-------                                           -NumberOfRelocationEntries=2
+##                                            ^-------                                   -LengthOfImportFileIDStringTable=365
+##                                                    ^-------                           -NumberOfImportFileIDs=1
+##                                                            ^-------                   -OffsetToImportFileIDs=0xA4
+##                                                                    ^-------           -LengthOfStringTable=0
+##                                                                            ^-------   -OffsetToStringTable=0
+##                                                                                    ^---------------         SymbolName=_Z4funcv
+##                                                                                                    ^------- Value=0x20000280
+##                                                                                                            ^---  sectionNumber = 2
+##                                                                                                                ^- SymbolType=0x11
+##                                                                                                                  ^- StorageClass=0x05
+##                                                                                                                    ^-------   ImportFileID=0
+##                                                                                                                            ^-------ParameterCheckType=0
+##                                                                                                                                    ^-------    Virtual Address = 0x20000294
+##                                                                                                                                            ^------- SymbolIndex = 1
+##                                                                                                                                                    ^--- Type =0x1f00
+##                                                                                                                                                        ^--- Section Num =2
+##                                                                                                                                                            ^-------    Virtual Address = 0x20000294
+##                                                                                                                                                                    ^------- SymbolIndex = 3
+##                                                                                                                                                                            ^--- Type =0x1f00
+##                                                                                                                                                                                ^--- Section Num =2
+
+--- !XCOFF
+FileHeader:
+  MagicNumber:       0x1F7
+Sections:
+  - Name:            .loader
+    Flags:           [ STYP_LOADER ]
+    SectionData:     "0000000200000001000000020000016D000000010000001200000000000000D000000000000000700000000000000038000000000000005000000001100003000000000200021105000000000000000000000000200002941f00000200000001000000002000029C1f0000020000000300095f5a3466756e63760000"
+##                    ^-------                                                           -Version=2
+##                            ^-------                                                   -NumberOfSymbolEntries=1
+##                                    ^-------                                           -NumberOfRelocationEntries=2
+##                                            ^-------                                   -LengthOfImportFileIDStringTable=365
+##                                                    ^-------                           -NumberOfImportFileIDs=1
+##                                                            ^-------                   --LengthOfStringTable=0x12
+##                                                                    ^---------------   -OffsetToImportFileIDs=0xD0
+##                                                                                    ^---------------   -OffsetToStringTable=0x70
+##                                                                                                    ^---------------  -OffsetToSymbolTable=0x38
+##                                                                                                                    ^---------------   -OffsetToRelocationEntries=0x50
+##                                                                                                                                    ^---------------         Value=0x0000000110000300
+##                                                                                                                                                    ^------- OffsetToStringTbl=2
+##                                                                                                                                                            ^---  sectionNumber = 2
+##                                                                                                                                                                ^- SymbolType=0x11
+##                                                                                                                                                                  ^- StorageClass=0x05
+##                                                                                                                                                                    ^-------   ImportFileID=0
+##                                                                                                                                                                            ^-------ParameterCheckType=0
+##                                                                                                                                                                                    ^--------------- VirtualAddress= 0x20000294
+##                                                                                                                                                                                                    ^--- Type= 1f00
+##                                                                                                                                                                                                        ^---SectionNumber = 2
+##                                                                                                                                                                                                            ^------- SymbolIndex =1
+##                                                                                                                                                                                                                    ^--------------- VirtualAddress= 0x2000029C
+##                                                                                                                                                                                                                                    ^--- Type= 1f00
+##                                                                                                                                                                                                                                        ^---SectionNumber = 2
+##                                                                                                                                                                                                                                            ^------- SymbolIndex =3
+##                                                                                                                                                                                                                                                    ^-------------------StringTable
+
+# COMMON:      Loader Section {
+# COMMON-NEXT:     Loader Section Relocations {
+# NOEXPAND64-NEXT:           Vaddr            Type        SecNum  SymbolName (Index)
+# NOEXPAND64-NEXT:     0x0000000020000294 0x1f00 (R_POS)       2    .data (1)
+# NODEMAN64-NEXT:      0x000000002000029c 0x1f00 (R_POS)       2    _Z4funcv (3)
+# DEMAN64-NEXT:        0x000000002000029c 0x1f00 (R_POS)       2    func() (3)
+# NOEXPAND32-NEXT:        Vaddr        Type        SecNum  SymbolName (Index)
+# NOEXPAND32-NEXT:      0x20000294 0x1f00 (R_POS)       2    .data (1)
+# NODEMAN32-NEXT:       0x2000029c 0x1f00 (R_POS)       2    _Z4funcv (3)
+# DEMAN32-NEXT:         0x2000029c 0x1f00 (R_POS)       2    func() (3)
+# EXPAND-NEXT:       Relocation {
+# EXPAND-NEXT:         Virtual Address: 0x20000294
+# EXPAND-NEXT:         Symbol: .data (1)
+# EXPAND-NEXT:         IsSigned: No
+# EXPAND-NEXT:         FixupBitValue: 0
+# EXPAND-NEXT:         Length: 32
+# EXPAND-NEXT:         Type: R_POS (0x0)
+# EXPAND-NEXT:         SectionNumber: 2
+# EXPAND-NEXT:       }
+# EXPAND-NEXT:       Relocation {
+# EXPAND-NEXT:         Virtual Address: 0x2000029C
+# NODEMANEXP-NEXT:     Symbol: _Z4funcv (3)
+# DEMANEXP-NEXT:       Symbol: func() (3)
+# EXPAND-NEXT:         IsSigned: No
+# EXPAND-NEXT:         FixupBitValue: 0
+# EXPAND-NEXT:         Length: 32
+# EXPAND-NEXT:         Type: R_POS (0x0)
+# EXPAND-NEXT:         SectionNumber: 2
+# EXPAND-NEXT:       }
+# EXPAND-NEXT:     }
+# EXPAND-NEXT: }

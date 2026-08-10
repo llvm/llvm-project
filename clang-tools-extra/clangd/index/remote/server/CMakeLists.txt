@@ -1,0 +1,26 @@
+set(LLVM_LINK_COMPONENTS
+  Support
+  )
+add_clang_executable(clangd-index-server
+  Server.cpp
+
+  DEPENDS
+  clangdRemoteIndexProto
+  clangdRemoteIndexServiceProto
+
+  # Disable PCH, gRPC adds -pthread.
+  DISABLE_PCH_REUSE
+  )
+
+target_link_libraries(clangd-index-server
+  PRIVATE
+  clangDaemon
+  clangdSupport
+
+  clangdMonitoringServiceProto
+  clangdRemoteIndexProto
+  clangdRemoteIndexServiceProto
+  clangdRemoteMarshalling
+
+  ${REFLECTION_LIBRARY}
+  )

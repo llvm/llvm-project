@@ -1,0 +1,458 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+
+--- !mach-o
+FileHeader:      
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x0000000A
+  ncmds:           5
+  sizeofcmds:      1800
+  flags:           0x00000000
+  reserved:        0x00000000
+LoadCommands:    
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __PAGEZERO
+    vmaddr:          0
+    vmsize:          4294967296
+    fileoff:         0
+    filesize:        0
+    maxprot:         0
+    initprot:        0
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         472
+    segname:         __TEXT
+    vmaddr:          4294967296
+    vmsize:          4096
+    fileoff:         0
+    filesize:        0
+    maxprot:         7
+    initprot:        5
+    nsects:          5
+    flags:           0
+    Sections:        
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0000000100000F50
+        size:            52
+        offset:          0x00000000
+        align:           4
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __stubs
+        segname:         __TEXT
+        addr:            0x0000000100000F84
+        size:            6
+        offset:          0x00000000
+        align:           1
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000408
+        reserved1:       0x00000000
+        reserved2:       0x00000006
+        reserved3:       0x00000000
+      - sectname:        __stub_helper
+        segname:         __TEXT
+        addr:            0x0000000100000F8C
+        size:            26
+        offset:          0x00000000
+        align:           2
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __cstring
+        segname:         __TEXT
+        addr:            0x0000000100000FA6
+        size:            14
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000002
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __unwind_info
+        segname:         __TEXT
+        addr:            0x0000000100000FB4
+        size:            72
+        offset:          0x00000000
+        align:           2
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         232
+    segname:         __DATA
+    vmaddr:          4294971392
+    vmsize:          4096
+    fileoff:         0
+    filesize:        0
+    maxprot:         7
+    initprot:        3
+    nsects:          2
+    flags:           0
+    Sections:        
+      - sectname:        __nl_symbol_ptr
+        segname:         __DATA
+        addr:            0x0000000100001000
+        size:            16
+        offset:          0x00000000
+        align:           3
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000006
+        reserved1:       0x00000001
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __la_symbol_ptr
+        segname:         __DATA
+        addr:            0x0000000100001010
+        size:            8
+        offset:          0x00000000
+        align:           3
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000007
+        reserved1:       0x00000003
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          4294975488
+    vmsize:          4096
+    fileoff:         4096
+    filesize:        60
+    maxprot:         7
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         952
+    segname:         __DWARF
+    vmaddr:          4294979584
+    vmsize:          4096
+    fileoff:         8192
+    filesize:        764
+    maxprot:         7
+    initprot:        3
+    nsects:          11
+    flags:           0
+    Sections:        
+      - sectname:        __debug_line
+        segname:         __DWARF
+        addr:            0x0000000100003000
+        size:            69
+        offset:          0x00002000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __debug_pubnames
+        segname:         __DWARF
+        addr:            0x0000000100003045
+        size:            27
+        offset:          0x00002045
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __debug_pubtypes
+        segname:         __DWARF
+        addr:            0x0000000100003060
+        size:            35
+        offset:          0x00002060
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __debug_info
+        segname:         __DWARF
+        addr:            0x00000001000030B3
+        size:            180
+        offset:          0x000020B3
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __debug_abbrev
+        segname:         __DWARF
+        addr:            0x000000010000312C
+        size:            86
+        offset:          0x00002167
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __debug_str
+        segname:         __DWARF
+        addr:            0x0000000100003178
+        size:            83
+        offset:          0x000021BC
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __apple_names
+        segname:         __DWARF
+        addr:            0x0000000100003206
+        size:            36
+        offset:          0x0000221E
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __apple_namespac
+        segname:         __DWARF
+        addr:            0x0000000100003242
+        size:            36
+        offset:          0x00002242
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __apple_types
+        segname:         __DWARF
+        addr:            0x0000000100003266
+        size:            114
+        offset:          0x00002266
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __apple_objc
+        segname:         __DWARF
+        addr:            0x00000001000032D8
+        size:            36
+        offset:          0x000022D8
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+DWARF:
+  debug_str:       
+    - World
+  debug_abbrev:
+    - Table:
+        - Code:            0x00000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       0x2000
+              Form:            DW_FORM_addr
+            - Attribute:       0x2001
+              Form:            DW_FORM_block
+            - Attribute:       DW_AT_MIPS_loop_begin
+              Form:            DW_FORM_block1
+            - Attribute:       DW_AT_MIPS_tail_loop_begin
+              Form:            DW_FORM_block2
+            - Attribute:       DW_AT_MIPS_epilog_begin
+              Form:            DW_FORM_block4
+            - Attribute:       DW_AT_MIPS_loop_unroll_factor
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_MIPS_software_pipeline_depth
+              Form:            DW_FORM_data2
+            - Attribute:       DW_AT_MIPS_linkage_name
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_MIPS_stride
+              Form:            DW_FORM_data8
+            - Attribute:       DW_AT_MIPS_abstract_name
+              Form:            DW_FORM_string
+            - Attribute:       DW_AT_MIPS_clone_origin
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_MIPS_has_inlines
+              Form:            DW_FORM_ref_addr
+            - Attribute:       DW_AT_MIPS_stride_byte
+              Form:            DW_FORM_ref1
+            - Attribute:       DW_AT_MIPS_stride_elem
+              Form:            DW_FORM_ref2
+            - Attribute:       DW_AT_MIPS_ptr_dopetype
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_MIPS_allocatable_dopetype
+              Form:            DW_FORM_ref8
+            - Attribute:       DW_AT_MIPS_assumed_shape_dopetype
+              Form:            DW_FORM_ref_sig8
+            - Attribute:       DW_AT_MIPS_assumed_size
+              Form:            DW_FORM_ref_udata
+            - Attribute:       0x2012
+              Form:            DW_FORM_flag
+            - Attribute:       0x2013
+              Form:            DW_FORM_flag
+            - Attribute:       0x2014
+              Form:            DW_FORM_flag_present
+            - Attribute:       0x2015
+              Form:            DW_FORM_sdata
+            - Attribute:       0x2017
+              Form:            DW_FORM_udata
+            - Attribute:       0x2018
+              Form:            DW_FORM_GNU_ref_alt
+            - Attribute:       0x2019
+              Form:            DW_FORM_sec_offset
+            - Attribute:       0x201A
+              Form:            DW_FORM_addr
+  debug_info:      
+    - Length:          168
+      Version:         2
+      AbbrOffset:      0
+      AddrSize:        8
+      Entries:         
+        - AbbrCode:        0x00000001
+          Values:          
+            - Value:           0x0123456789ABCDEF
+            - Value:           0x000000000000000A
+              BlockData:       
+                - 0x01
+                - 0x02
+                - 0x03
+                - 0x04
+                - 0x05
+                - 0x06
+                - 0x07
+                - 0x08
+                - 0x09
+                - 0x00
+            - Value:           0x000000000000000A
+              BlockData:       
+                - 0x01
+                - 0x02
+                - 0x03
+                - 0x04
+                - 0x05
+                - 0x06
+                - 0x07
+                - 0x08
+                - 0x09
+                - 0x00
+            - Value:           0x000000000000000A
+              BlockData:       
+                - 0x01
+                - 0x02
+                - 0x03
+                - 0x04
+                - 0x05
+                - 0x06
+                - 0x07
+                - 0x08
+                - 0x09
+                - 0x00
+            - Value:           0x000000000000000A
+              BlockData:       
+                - 0x01
+                - 0x02
+                - 0x03
+                - 0x04
+                - 0x05
+                - 0x06
+                - 0x07
+                - 0x08
+                - 0x09
+                - 0x00
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000002345
+            - Value:           0x000000006789ABCD
+            - Value:           0x0011223344556677
+            - Value:           0x0000000000000000
+              CStr:            Hello
+            - Value:           0x0000000000000000
+            - Value:           0x0000000012345678
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000002345
+            - Value:           0x000000006789ABCD
+            - Value:           0x0011223344556677
+            - Value:           0xAABBCCDDEEFF0011
+            - Value:           0xFFFFFFFFFFFFFFFE
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000000000
+            - Value:           0x0000000000000001
+            - Value:           0x8000000000000000
+            - Value:           0xFFFFFFFFFFFFFFFE
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000000002
+            - Value:           0x0123456789ABCDEF
+...
+
+#CHECK:   debug_info:      
+#CHECK:     - Length:          0xA8
+#CHECK:       Version:         2
+#CHECK:       AbbrOffset:      0
+#CHECK:       AddrSize:        8
+#CHECK:       Entries:         
+#CHECK:         - AbbrCode:        0x1
+#CHECK:           Values:          
+#CHECK:             - Value:           0x123456789ABCDEF
+#CHECK:             - Value:           0xA
+#CHECK:               BlockData:       [ 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8,
+#CHECK:                                  0x9, 0x0 ]
+#CHECK:             - Value:           0xA
+#CHECK:               BlockData:       [ 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8,
+#CHECK:                                  0x9, 0x0 ]
+#CHECK:             - Value:           0xA
+#CHECK:               BlockData:       [ 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8,
+#CHECK:                                  0x9, 0x0 ]
+#CHECK:             - Value:           0xA
+#CHECK:               BlockData:       [ 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8,
+#CHECK:                                  0x9, 0x0 ]
+#CHECK:             - Value:           0x1
+#CHECK:             - Value:           0x2345
+#CHECK:             - Value:           0x6789ABCD
+#CHECK:             - Value:           0x11223344556677
+#CHECK:               CStr:            Hello
+#CHECK:             - Value:           0x0
+#CHECK:             - Value:           0x12345678
+#CHECK:             - Value:           0x1
+#CHECK:             - Value:           0x2345
+#CHECK:             - Value:           0x6789ABCD
+#CHECK:             - Value:           0x11223344556677
+#CHECK:             - Value:           0xAABBCCDDEEFF0011
+#CHECK:             - Value:           0xFFFFFFFFFFFFFFFE
+#CHECK:             - Value:           0x1
+#CHECK:             - Value:           0x0
+#CHECK:             - Value:           0x1
+#CHECK:             - Value:           0xFFFFFFFFFFFFFFFE
+#CHECK:             - Value:           0x1
+#CHECK:             - Value:           0x2
+#CHECK:             - Value:           0x123456789ABCDEF

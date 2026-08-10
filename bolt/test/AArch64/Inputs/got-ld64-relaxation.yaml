@@ -1,0 +1,202 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_AARCH64
+  Entry:           0x210648
+ProgramHeaders:
+  - Type:            PT_PHDR
+    Flags:           [ PF_R ]
+    VAddr:           0x200040
+    Align:           0x8
+  - Type:            PT_INTERP
+    Flags:           [ PF_R ]
+    FirstSec:        .interp
+    LastSec:         .interp
+    VAddr:           0x2002A8
+  - Type:            PT_LOAD
+    Flags:           [ PF_R ]
+    FirstSec:        .interp
+    LastSec:         .rodata
+    VAddr:           0x200000
+    Align:           0x10000
+  - Type:            PT_LOAD
+    Flags:           [ PF_X, PF_R ]
+    FirstSec:        .text
+    LastSec:         .plt
+    VAddr:           0x210648
+    Align:           0x10000
+  - Type:            PT_LOAD
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .text
+    LastSec:         .got
+    VAddr:           0x322580
+    Align:           0x10000
+  - Type:            PT_LOAD
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .data
+    LastSec:         .bss
+    VAddr:           0x332720
+    Align:           0x10000
+  - Type:            PT_DYNAMIC
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .dynamic
+    LastSec:         .dynamic
+    VAddr:           0x322590
+    Align:           0x8
+Sections:
+  - Name:            .interp
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x2002A8
+    AddressAlign:    0x1
+    Content:         2F6C69622F6C642D6C696E75782D616172636836342E736F2E3100
+  - Name:            .dynsym
+    Type:            SHT_DYNSYM
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x200300
+    Link:            .dynstr
+    AddressAlign:    0x8
+  - Name:            .dynstr
+    Type:            SHT_STRTAB
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x2003F4
+    AddressAlign:    0x1
+  - Name:            .rodata
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_MERGE, SHF_STRINGS ]
+    Address:         0x2004E8
+    AddressAlign:    0x8
+    Content:         010002000000000000000000000000000000000000000000486572650A00
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x210648
+    AddressAlign:    0x8
+    Content:         1D0080D21E0080D2E50300AAE10340F9E2230091E60300910000009000001A91030800D063E01191040800D084E01391B6070494B10704942F000014800800D0008843F9400000B4B4070414C0035FD6000900D000C01C91010900D021C01C913F0000EBC000005481FFFF90217842F9610000B4F00301AA00021FD6C0035FD6000900D000C01C91010900D021C01C91210000CB22FC7FD3410C818BFF0781EB21FC4193C000005482FFFF90427C42F9620000B4F00302AA00021FD6C0035FD6FD7BBEA9FD030091F30B00F9130900D060A25D3980000035DEFFFF972000805260A21D39F30B40F9FD7BC2A8C0035FD6E4FFFF17FF4300D1000800D000601191E00700F90004009100008052FF430091C0035FD6FD7BBFA9FD03009160F7FFD00000149142000094FD7BC1A8C0035FD600000000FD7BBCA9FD030091F35301A91F2003D554080810F55B02A91F2003D5B5070810940215CBF603002AF76303A9F70301AAF80302AA14000094FF0F94EB6001005494FE4393130080D2A37A73F8E20318AA73060091E10317AAE003162A60003FD69F0213EB21FFFF54F35341A9F55B42A9F76343A9FD7BC4A8C0035FD61F2003D5C0035FD6
+  - Name:            .plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x312520
+    AddressAlign:    0x10
+    Content:         F07BBFA91001009011A243F910021D9120021FD61F2003D51F2003D51F2003D51001009011A643F910221D9120021FD61001009011AA43F910421D9120021FD61001009011AE43F910621D9120021FD61001009011B243F910821D9120021FD6
+  - Name:            .dynamic
+    Type:            SHT_DYNAMIC
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x322590
+    Link:            .dynstr
+    AddressAlign:    0x8
+    Entries:
+      - Tag:             DT_NEEDED
+        Value:           0x65
+      - Tag:             DT_SYMTAB
+        Value:           0x200300
+      - Tag:             DT_SYMENT
+        Value:           0x18
+      - Tag:             DT_STRTAB
+        Value:           0x2003F4
+      - Tag:             DT_STRSZ
+        Value:           0x7A
+      - Tag:             DT_NULL
+        Value:           0x0
+  - Name:            .got
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x322710
+    AddressAlign:    0x8
+    Content:         '00000000000000005824310000000000'
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x332720
+    AddressAlign:    0x8
+    Content:         '00000000000000000000000000000000'
+  - Name:            .tm_clone_table
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x332730
+    AddressAlign:    0x8
+  - Name:            .got.plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x332730
+    AddressAlign:    0x8
+    Content:         '0000000000000000000000000000000000000000000000002025310000000000202531000000000020253100000000002025310000000000'
+  - Name:            .bss
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x332768
+    AddressAlign:    0x1
+    Size:            0x1
+  - Name:            .rela.text
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .text
+    Relocations:
+      - Offset:          0x210740
+        Symbol:          foo
+        Type:            R_AARCH64_ADR_GOT_PAGE
+      - Offset:          0x210744
+        Symbol:          foo
+        Type:            R_AARCH64_LD64_GOT_LO12_NC
+Symbols:
+  - Name:            '$x'
+    Section:         .text
+    Value:           0x210648
+  - Name:            .text
+    Type:            STT_SECTION
+    Section:         .text
+    Value:           0x210648
+  - Name:            .data
+    Type:            STT_SECTION
+    Section:         .data
+    Value:           0x332720
+  - Name:            .bss
+    Type:            STT_SECTION
+    Section:         .bss
+    Value:           0x332768
+  - Name:            .rodata
+    Type:            STT_SECTION
+    Section:         .rodata
+    Value:           0x2004E8
+  - Name:            .interp
+    Type:            STT_SECTION
+    Section:         .interp
+    Value:           0x2002A8
+  - Name:            _DYNAMIC
+    Section:         .dynamic
+    Value:           0x322590
+    Other:           [ STV_HIDDEN ]
+  - Name:            _start
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x210648
+  - Name:            main
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x21073C
+    Size:            0x20
+  - Name:            data_start
+    Section:         .data
+    Binding:         STB_WEAK
+    Value:           0x332720
+  - Name:            _IO_stdin_used
+    Type:            STT_OBJECT
+    Section:         .rodata
+    Binding:         STB_GLOBAL
+    Value:           0x2004E8
+    Size:            0x4
+  - Name:            __libc_start_main
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            foo
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x21075c
+    Size:            0xF

@@ -1,0 +1,8 @@
+# This test checks that -D disassembles from a data section.
+# RUN: llvm-objdump -D %p/Inputs/disassemble-data.obj | FileCheck %s --match-full-lines --strict-whitespace
+
+#      CHECK:Disassembly of section .data:
+#CHECK-EMPTY:
+#      CHECK:00000000 <.data>:
+# CHECK-NEXT:       0: 00 00{{ +}}	addb	%al, (%eax)
+#  CHECK-NOT:{{.}}

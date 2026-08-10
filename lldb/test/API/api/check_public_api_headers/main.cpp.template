@@ -1,0 +1,15 @@
+#include <stdio.h>
+%include_SB_APIs%
+
+using namespace lldb;
+int
+main(int argc, char const *argv[])
+{
+    SBDebugger::Initialize();
+    SBDebugger dbg = SBDebugger::Create();
+
+    printf("Hello SBDebugger %llu\n", dbg.GetID()); // Set breakpoint here.
+
+    SBDebugger::Terminate();
+    return 0;
+}

@@ -1,0 +1,110 @@
+# RUN: llvm-mc -triple thumbv8 -mattr=+v8.1a  --disassemble < %s 2>&1 | FileCheck %s --check-prefix=CHECK-V81a
+# RUN: not llvm-mc -triple thumbv8 -mattr=+v8 --disassemble < %s 2>&1 | FileCheck %s --check-prefix=CHECK-V8
+
+[0x11,0xff,0x12,0x0b]
+# CHECK-V81a: vqrdmlah.s16  d0, d1, d2
+# CHECK-V8: warning: invalid instruction encoding
+# CHECK-V8: [0x11,0xff,0x12,0x0b]
+# CHECK-V8: ^
+
+[0x21,0xff,0x12,0x0b]
+# CHECK-V81a: vqrdmlah.s32  d0, d1, d2
+# CHECK-V8: warning: invalid instruction encoding
+# CHECK-V8: [0x21,0xff,0x12,0x0b]
+# CHECK-V8: ^
+
+[0x12,0xff,0x54,0x0b]
+# CHECK-V81a: vqrdmlah.s16  q0, q1, q2
+# CHECK-V8: warning: invalid instruction encoding
+# CHECK-V8: [0x12,0xff,0x54,0x0b]
+# CHECK-V8: ^
+
+[0x26,0xff,0x50,0x4b]
+# CHECK-V81a: vqrdmlah.s32  q2, q3, q0
+# CHECK-V8: warning: invalid instruction encoding
+# CHECK-V8: [0x26,0xff,0x50,0x4b]
+# CHECK-V8: ^
+
+[0x16,0xff,0x15,0x7c]
+# CHECK-V81a: vqrdmlsh.s16  d7, d6, d5
+# CHECK-V8: warning: invalid instruction encoding
+# CHECK-V8: [0x16,0xff,0x15,0x7c]
+# CHECK-V8: ^
+
+[0x21,0xff,0x12,0x0c]
+# CHECK-V81a: vqrdmlsh.s32  d0, d1, d2
+# CHECK-V8: warning: invalid instruction encoding
+# CHECK-V8: [0x21,0xff,0x12,0x0c]
+# CHECK-V8: ^
+
+[0x12,0xff,0x54,0x0c]
+# CHECK-V81a: vqrdmlsh.s16  q0, q1, q2
+# CHECK-V8: warning: invalid instruction encoding
+# CHECK-V8: [0x12,0xff,0x54,0x0c]
+# CHECK-V8: ^
+
+[0x28,0xff,0x5a,0x6c]
+# CHECK-V81a: vqrdmlsh.s32  q3, q4, q5
+# CHECK-V8: warning: invalid instruction encoding
+# CHECK-V8: [0x28,0xff,0x5a,0x6c]
+# CHECK-V8: ^
+
+[0x91,0xef,0x42,0x0e]
+# CHECK-V81a: vqrdmlah.s16  d0, d1, d2[0]
+# CHECK-V8: warning: invalid instruction encoding
+# CHECK-V8: [0x91,0xef,0x42,0x0e]
+# CHECK-V8: ^
+
+[0xa1,0xef,0x42,0x0e]
+# CHECK-V81a: vqrdmlah.s32  d0, d1, d2[0]
+# CHECK-V8: warning: invalid instruction encoding
+# CHECK-V8: [0xa1,0xef,0x42,0x0e]
+# CHECK-V8: ^
+
+[0x92,0xff,0x42,0x0e]
+# CHECK-V81a: vqrdmlah.s16  q0, q1, d2[0]
+# CHECK-V8: warning: invalid instruction encoding
+# CHECK-V8: [0x92,0xff,0x42,0x0e]
+# CHECK-V8: ^
+
+[0xa2,0xff,0x42,0x0e]
+# CHECK-V81a: vqrdmlah.s32  q0, q1, d2[0]
+# CHECK-V8: warning: invalid instruction encoding
+# CHECK-V8: [0xa2,0xff,0x42,0x0e]
+# CHECK-V8: ^
+
+[0x91,0xef,0x42,0x0f]
+# CHECK-V81a: vqrdmlsh.s16  d0, d1, d2[0]
+# CHECK-V8: warning: invalid instruction encoding
+# CHECK-V8: [0x91,0xef,0x42,0x0f]
+# CHECK-V8: ^
+
+[0xa1,0xef,0x42,0x0f]
+# CHECK-V81a: vqrdmlsh.s32  d0, d1, d2[0]
+# CHECK-V8: warning: invalid instruction encoding
+# CHECK-V8: [0xa1,0xef,0x42,0x0f]
+# CHECK-V8: ^
+
+[0x92,0xff,0x42,0x0f]
+# CHECK-V81a: vqrdmlsh.s16  q0, q1, d2[0]
+# CHECK-V8: warning: invalid instruction encoding
+# CHECK-V8: [0x92,0xff,0x42,0x0f]
+# CHECK-V8: ^
+
+[0xa2,0xff,0x42,0x0f]
+# CHECK-V81a: vqrdmlsh.s32  q0, q1, d2[0]
+# CHECK-V8: warning: invalid instruction encoding
+# CHECK-V8: [0xa2,0xff,0x42,0x0f]
+# CHECK-V8: ^
+
+[0x10,0xb6]
+# CHECK-V81a: setpan #0
+# CHECK-V8: warning: invalid instruction encoding
+# CHECK-V8: [0x10,0xb6]
+# CHECK-V8: ^
+
+[0x18,0xb6]
+# CHECK-V81a: setpan #1
+# CHECK-V8: warning: invalid instruction encoding
+# CHECK-V8: [0x18,0xb6]
+# CHECK-V8: ^

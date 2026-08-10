@@ -1,0 +1,274 @@
+# RUN: llvm-dwarfdump --all %p/Inputs/basic32.o | FileCheck %s --check-prefix=DWARF32 
+# RUN: llvm-dwarfdump --all %p/Inputs/basic64.o | FileCheck %s --check-prefix=DWARF64
+
+## basic32.o Compiled with IBM XL C/C++ for AIX, V16.1.1.0
+## Compiler command: xlc basic.c -c -qdbgfmt=dwarf -g -q32 -o basic32.o
+##
+## basic64.o Compiled with IBM XL C/C++ for AIX, V16.1.1.0
+## Compiler command: xlc basic.c -c -qdbgfmt=dwarf -g -q64 -o basic64.o
+##
+## basic.c:
+## int main(void)
+## {
+##   return 0;
+## }
+
+# DWARF32:      .debug_abbrev contents:
+# DWARF32-NEXT:  Abbrev table for offset: 0x00000000
+# DWARF32-NEXT:  [1] DW_TAG_compile_unit DW_CHILDREN_yes
+# DWARF32-NEXT:          DW_AT_name      DW_FORM_string
+# DWARF32-NEXT:          DW_AT_stmt_list DW_FORM_data4
+# DWARF32-NEXT:          DW_AT_low_pc    DW_FORM_addr
+# DWARF32-NEXT:          DW_AT_high_pc   DW_FORM_addr
+# DWARF32-NEXT:          DW_AT_language  DW_FORM_data1
+# DWARF32-NEXT:          DW_AT_comp_dir  DW_FORM_string
+# DWARF32-NEXT:          DW_AT_producer  DW_FORM_string
+# DWARF32:       [2] DW_TAG_base_type    DW_CHILDREN_no
+# DWARF32-NEXT:          DW_AT_name      DW_FORM_string
+# DWARF32-NEXT:          DW_AT_byte_size DW_FORM_data1
+# DWARF32-NEXT:          DW_AT_encoding  DW_FORM_data1
+# DWARF32:       [3] DW_TAG_const_type   DW_CHILDREN_no
+# DWARF32-NEXT:          DW_AT_type      DW_FORM_ref4
+# DWARF32:       [4] DW_TAG_array_type   DW_CHILDREN_yes
+# DWARF32-NEXT:          DW_AT_sibling   DW_FORM_ref4
+# DWARF32-NEXT:          DW_AT_type      DW_FORM_ref4
+# DWARF32:       [5] DW_TAG_subrange_type        DW_CHILDREN_no
+# DWARF32-NEXT:          DW_AT_lower_bound       DW_FORM_data1
+# DWARF32-NEXT:          DW_AT_upper_bound       DW_FORM_data1
+# DWARF32:       [6] DW_TAG_subprogram   DW_CHILDREN_yes
+# DWARF32-NEXT:          DW_AT_name      DW_FORM_string
+# DWARF32-NEXT:          DW_AT_low_pc    DW_FORM_addr
+# DWARF32-NEXT:          DW_AT_high_pc   DW_FORM_addr
+# DWARF32-NEXT:          DW_AT_prototyped        DW_FORM_flag
+# DWARF32-NEXT:          DW_AT_calling_convention        DW_FORM_data1
+# DWARF32-NEXT:          DW_AT_decl_file DW_FORM_data1
+# DWARF32-NEXT:          DW_AT_decl_line DW_FORM_data1
+# DWARF32-NEXT:          DW_AT_external  DW_FORM_flag
+# DWARF32-NEXT:          DW_AT_frame_base        DW_FORM_block1
+# DWARF32-NEXT:          DW_AT_type      DW_FORM_ref4
+# DWARF32:       [7] DW_TAG_variable     DW_CHILDREN_no
+# DWARF32-NEXT:          DW_AT_location  DW_FORM_block1
+# DWARF32-NEXT:          DW_AT_name      DW_FORM_string
+# DWARF32-NEXT:          DW_AT_decl_file DW_FORM_data1
+# DWARF32-NEXT:          DW_AT_decl_line DW_FORM_data1
+# DWARF32-NEXT:          DW_AT_type      DW_FORM_ref4
+# DWARF32:       .debug_info contents:
+# DWARF32-NEXT:  0x00000000: Compile Unit: length = 0x00000094, format = DWARF32, version = 0x0003, abbr_offset = 0x0000, addr_size = 0x04 (next unit at 0x00000098)
+# DWARF32:       0x0000000b: DW_TAG_compile_unit
+# DWARF32:                DW_AT_name        ("basic.c")
+# DWARF32-NEXT:                DW_AT_stmt_list   (0x00000000)
+# DWARF32-NEXT:                DW_AT_low_pc      (0x00000000)
+# DWARF32-NEXT:                DW_AT_high_pc     (0x00000080)
+# DWARF32-NEXT:                DW_AT_language    (DW_LANG_C89)
+# DWARF32-NEXT:                DW_AT_comp_dir    ("/")
+# DWARF32-NEXT:                DW_AT_producer    ("IBM XL C for AIX, Version 16.1.1.0")
+# DWARF32:       0x00000046:   DW_TAG_base_type
+# DWARF32-NEXT:                  DW_AT_name      ("char")
+# DWARF32-NEXT:                  DW_AT_byte_size (0x01)
+# DWARF32-NEXT:                  DW_AT_encoding  (DW_ATE_unsigned_char)
+# DWARF32:       0x0000004e:   DW_TAG_base_type
+# DWARF32-NEXT:                  DW_AT_name      ("int")
+# DWARF32-NEXT:                  DW_AT_byte_size (0x04)
+# DWARF32-NEXT:                  DW_AT_encoding  (DW_ATE_signed)
+# DWARF32:       0x00000055:   DW_TAG_const_type
+# DWARF32-NEXT:                  DW_AT_type      (0x00000046 "char")
+# DWARF32:       0x0000005a:   DW_TAG_array_type
+# DWARF32-NEXT:                  DW_AT_sibling   (0x00000067)
+# DWARF32-NEXT:                  DW_AT_type      (0x00000055 "const char")
+# DWARF32:       0x00000063:     DW_TAG_subrange_type
+# DWARF32-NEXT:                    DW_AT_lower_bound     (0x00)
+# DWARF32-NEXT:                    DW_AT_upper_bound     (0x04)
+# DWARF32:       0x00000066:     NULL
+# DWARF32:       0x00000067:   DW_TAG_subprogram
+# DWARF32-NEXT:                  DW_AT_name      ("main")
+# DWARF32-NEXT:                  DW_AT_low_pc    (0x00000000)
+# DWARF32-NEXT:                  DW_AT_high_pc   (0x00000024)
+# DWARF32-NEXT:                  DW_AT_prototyped        (0x01)
+# DWARF32-NEXT:                  DW_AT_calling_convention        (DW_CC_program)
+# DWARF32-NEXT:                  DW_AT_decl_file ("/basic.c")
+# DWARF32-NEXT:                  DW_AT_decl_line (1)
+# DWARF32-NEXT:                  DW_AT_external  (0x01)
+# DWARF32-NEXT:                  DW_AT_frame_base        (DW_OP_reg1 R1)
+# DWARF32-NEXT:                  DW_AT_type      (0x0000004e "int")
+# DWARF32:       0x00000080:     DW_TAG_variable
+# DWARF32-NEXT:                    DW_AT_location        (DW_OP_addr 0x0)
+# DWARF32-NEXT:                    DW_AT_name    ("__func__")
+# DWARF32-NEXT:                    DW_AT_decl_file       ("/basic.c")
+# DWARF32-NEXT:                    DW_AT_decl_line       (0)
+# DWARF32-NEXT:                    DW_AT_type    (0x0000005a "const char[5]")
+# DWARF32:       0x00000096:     NULL
+# DWARF32:       0x00000097:   NULL
+# DWARF32:       .debug_line contents:
+# DWARF32-NEXT:  debug_line[0x00000000]
+# DWARF32-NEXT:  Line table prologue:
+# DWARF32-NEXT:      total_length: 0x00000042
+# DWARF32-NEXT:            format: DWARF32
+# DWARF32-NEXT:           version: 3
+# DWARF32-NEXT:   prologue_length: 0x0000001e
+# DWARF32-NEXT:   min_inst_length: 1
+# DWARF32-NEXT:   default_is_stmt: 1
+# DWARF32-NEXT:         line_base: -100
+# DWARF32-NEXT:        line_range: 220
+# DWARF32-NEXT:       opcode_base: 13
+# DWARF32-NEXT:  standard_opcode_lengths[DW_LNS_copy] = 0
+# DWARF32-NEXT:  standard_opcode_lengths[DW_LNS_advance_pc] = 1
+# DWARF32-NEXT:  standard_opcode_lengths[DW_LNS_advance_line] = 1
+# DWARF32-NEXT:  standard_opcode_lengths[DW_LNS_set_file] = 1
+# DWARF32-NEXT:  standard_opcode_lengths[DW_LNS_set_column] = 1
+# DWARF32-NEXT:  standard_opcode_lengths[DW_LNS_negate_stmt] = 0
+# DWARF32-NEXT:  standard_opcode_lengths[DW_LNS_set_basic_block] = 0
+# DWARF32-NEXT:  standard_opcode_lengths[DW_LNS_const_add_pc] = 0
+# DWARF32-NEXT:  standard_opcode_lengths[DW_LNS_fixed_advance_pc] = 1
+# DWARF32-NEXT:  standard_opcode_lengths[DW_LNS_set_prologue_end] = 0
+# DWARF32-NEXT:  standard_opcode_lengths[DW_LNS_set_epilogue_begin] = 0
+# DWARF32-NEXT:  standard_opcode_lengths[DW_LNS_set_isa] = 1
+# DWARF32-NEXT:  file_names[  1]:
+# DWARF32-NEXT:             name: "basic.c"
+# DWARF32-NEXT:        dir_index: 0
+# DWARF32-NEXT:         mod_time: 0x00000000
+# DWARF32-NEXT:           length: 0x00000000
+# DWARF32:       Address            Line   Column File   ISA Discriminator OpIndex Flags
+# DWARF32-NEXT:  ------------------ ------ ------ ------ --- ------------- ------- -------------
+# DWARF32-NEXT:  0x0000000000000000      1      0      1   0             0       0  is_stmt
+# DWARF32-NEXT:  0x0000000000000004      3      0      1   0             0       0  is_stmt
+# DWARF32-NEXT:  0x0000000000000008      4      0      1   0             0       0  is_stmt
+# DWARF32-NEXT:  0x0000000000000080      4      0      1   0             0       0  is_stmt end_sequence
+# DWARF32:      .debug_pubnames contents:
+# DWARF32-NEXT:  length = 0x00000017, format = DWARF32, version = 0x0002, unit_offset = 0x00000000, unit_size = 0x00000098
+# DWARF32-NEXT:  Offset     Name
+# DWARF32-NEXT:  0x00000067 "main"
+# DWARF32:       .debug_pubtypes contents:
+# DWARF32-NEXT:  length = 0x0000001f, format = DWARF32, version = 0x0002, unit_offset = 0x00000000, unit_size = 0x00000098
+# DWARF32-NEXT:  Offset     Name
+# DWARF32-NEXT:  0x0000004e "int"
+# DWARF32-NEXT:  0x00000046 "char"
+
+# DWARF64:       .debug_abbrev contents:
+# DWARF64-NEXT:  Abbrev table for offset: 0x00000000
+# DWARF64-NEXT:  [1] DW_TAG_compile_unit DW_CHILDREN_yes
+# DWARF64-NEXT:          DW_AT_name      DW_FORM_string
+# DWARF64-NEXT:          DW_AT_stmt_list DW_FORM_data8
+# DWARF64-NEXT:          DW_AT_low_pc    DW_FORM_addr
+# DWARF64-NEXT:          DW_AT_high_pc   DW_FORM_addr
+# DWARF64-NEXT:          DW_AT_language  DW_FORM_data1
+# DWARF64-NEXT:          DW_AT_comp_dir  DW_FORM_string
+# DWARF64-NEXT:          DW_AT_producer  DW_FORM_string
+# DWARF64:       [2] DW_TAG_base_type    DW_CHILDREN_no
+# DWARF64-NEXT:          DW_AT_name      DW_FORM_string
+# DWARF64-NEXT:          DW_AT_byte_size DW_FORM_data1
+# DWARF64-NEXT:          DW_AT_encoding  DW_FORM_data1
+# DWARF64:       [3] DW_TAG_const_type   DW_CHILDREN_no
+# DWARF64-NEXT:          DW_AT_type      DW_FORM_ref8
+# DWARF64:       [4] DW_TAG_array_type   DW_CHILDREN_yes
+# DWARF64-NEXT:          DW_AT_sibling   DW_FORM_ref8
+# DWARF64-NEXT:          DW_AT_type      DW_FORM_ref8
+# DWARF64:       [5] DW_TAG_subrange_type        DW_CHILDREN_no
+# DWARF64-NEXT:          DW_AT_lower_bound       DW_FORM_data1
+# DWARF64-NEXT:          DW_AT_upper_bound       DW_FORM_data1
+# DWARF64:       [6] DW_TAG_subprogram   DW_CHILDREN_yes
+# DWARF64-NEXT:          DW_AT_name      DW_FORM_string
+# DWARF64-NEXT:          DW_AT_low_pc    DW_FORM_addr
+# DWARF64-NEXT:          DW_AT_high_pc   DW_FORM_addr
+# DWARF64-NEXT:          DW_AT_prototyped        DW_FORM_flag
+# DWARF64-NEXT:          DW_AT_calling_convention        DW_FORM_data1
+# DWARF64-NEXT:          DW_AT_decl_file DW_FORM_data1
+# DWARF64-NEXT:          DW_AT_decl_line DW_FORM_data1
+# DWARF64-NEXT:          DW_AT_external  DW_FORM_flag
+# DWARF64-NEXT:          DW_AT_frame_base        DW_FORM_block1
+# DWARF64-NEXT:          DW_AT_type      DW_FORM_ref8
+# DWARF64:       [7] DW_TAG_variable     DW_CHILDREN_no
+# DWARF64-NEXT:          DW_AT_location  DW_FORM_block1
+# DWARF64-NEXT:          DW_AT_name      DW_FORM_string
+# DWARF64-NEXT:          DW_AT_decl_file DW_FORM_data1
+# DWARF64-NEXT:          DW_AT_decl_line DW_FORM_data1
+# DWARF64-NEXT:          DW_AT_type      DW_FORM_ref8
+# DWARF64:       .debug_info contents:
+# DWARF64-NEXT:  0x00000000: Compile Unit: length = 0x00000000000000c4, format = DWARF64, version = 0x0003, abbr_offset = 0x0000, addr_size = 0x08 (next unit at 0x000000d0)
+# DWARF64:       0x00000017: DW_TAG_compile_unit
+# DWARF64-NEXT:                DW_AT_name        ("basic.c")
+# DWARF64-NEXT:                DW_AT_stmt_list   (0x0000000000000000)
+# DWARF64-NEXT:                DW_AT_low_pc      (0x0000000000000000)
+# DWARF64-NEXT:                DW_AT_high_pc     (0x0000000000000080)
+# DWARF64-NEXT:                DW_AT_language    (DW_LANG_C89)
+# DWARF64-NEXT:                DW_AT_comp_dir    ("/")
+# DWARF64-NEXT:                DW_AT_producer    ("IBM XL C for AIX, Version 16.1.1.0")
+# DWARF64:       0x0000005e:   DW_TAG_base_type
+# DWARF64-NEXT:                  DW_AT_name      ("char")
+# DWARF64-NEXT:                  DW_AT_byte_size (0x01)
+# DWARF64-NEXT:                  DW_AT_encoding  (DW_ATE_unsigned_char)
+# DWARF64:       0x00000066:   DW_TAG_base_type
+# DWARF64-NEXT:                  DW_AT_name      ("int")
+# DWARF64-NEXT:                  DW_AT_byte_size (0x04)
+# DWARF64-NEXT:                  DW_AT_encoding  (DW_ATE_signed)
+# DWARF64:       0x0000006d:   DW_TAG_const_type
+# DWARF64-NEXT:                  DW_AT_type      (0x0000005e "char")
+# DWARF64:       0x00000076:   DW_TAG_array_type
+# DWARF64-NEXT:                  DW_AT_sibling   (0x0000008b)
+# DWARF64-NEXT:                  DW_AT_type      (0x0000006d "const char")
+# DWARF64:       0x00000087:     DW_TAG_subrange_type
+# DWARF64-NEXT:                    DW_AT_lower_bound     (0x00)
+# DWARF64-NEXT:                    DW_AT_upper_bound     (0x04)
+# DWARF64:       0x0000008a:     NULL
+# DWARF64:       0x0000008b:   DW_TAG_subprogram
+# DWARF64-NEXT:                  DW_AT_name      ("main")
+# DWARF64-NEXT:                  DW_AT_low_pc    (0x0000000000000000)
+# DWARF64-NEXT:                  DW_AT_high_pc   (0x0000000000000024)
+# DWARF64-NEXT:                  DW_AT_prototyped        (0x01)
+# DWARF64-NEXT:                  DW_AT_calling_convention        (DW_CC_program)
+# DWARF64-NEXT:                  DW_AT_decl_file ("/basic.c")
+# DWARF64-NEXT:                  DW_AT_decl_line (1)
+# DWARF64-NEXT:                  DW_AT_external  (0x01)
+# DWARF64-NEXT:                  DW_AT_frame_base        (DW_OP_reg1 X1)
+# DWARF64-NEXT:                  DW_AT_type      (0x00000066 "int")
+# DWARF64:       0x000000b0:     DW_TAG_variable
+# DWARF64-NEXT:                    DW_AT_location        (DW_OP_addr 0x0)
+# DWARF64-NEXT:                    DW_AT_name    ("__func__")
+# DWARF64-NEXT:                    DW_AT_decl_file       ("/basic.c")
+# DWARF64-NEXT:                    DW_AT_decl_line       (0)
+# DWARF64-NEXT:                    DW_AT_type    (0x00000076 "const char[5]")
+# DWARF64:       0x000000ce:     NULL
+# DWARF64:       0x000000cf:   NULL
+# DWARF64:       .debug_line contents:
+# DWARF64-NEXT:  debug_line[0x00000000]
+# DWARF64-NEXT:  Line table prologue:
+# DWARF64-NEXT:      total_length: 0x000000000000004a
+# DWARF64-NEXT:            format: DWARF64
+# DWARF64-NEXT:           version: 3
+# DWARF64-NEXT:   prologue_length: 0x000000000000001e
+# DWARF64-NEXT:   min_inst_length: 1
+# DWARF64-NEXT:   default_is_stmt: 1
+# DWARF64-NEXT:         line_base: -100
+# DWARF64-NEXT:        line_range: 220
+# DWARF64-NEXT:       opcode_base: 13
+# DWARF64-NEXT:  standard_opcode_lengths[DW_LNS_copy] = 0
+# DWARF64-NEXT:  standard_opcode_lengths[DW_LNS_advance_pc] = 1
+# DWARF64-NEXT:  standard_opcode_lengths[DW_LNS_advance_line] = 1
+# DWARF64-NEXT:  standard_opcode_lengths[DW_LNS_set_file] = 1
+# DWARF64-NEXT:  standard_opcode_lengths[DW_LNS_set_column] = 1
+# DWARF64-NEXT:  standard_opcode_lengths[DW_LNS_negate_stmt] = 0
+# DWARF64-NEXT:  standard_opcode_lengths[DW_LNS_set_basic_block] = 0
+# DWARF64-NEXT:  standard_opcode_lengths[DW_LNS_const_add_pc] = 0
+# DWARF64-NEXT:  standard_opcode_lengths[DW_LNS_fixed_advance_pc] = 1
+# DWARF64-NEXT:  standard_opcode_lengths[DW_LNS_set_prologue_end] = 0
+# DWARF64-NEXT:  standard_opcode_lengths[DW_LNS_set_epilogue_begin] = 0
+# DWARF64-NEXT:  standard_opcode_lengths[DW_LNS_set_isa] = 1
+# DWARF64-NEXT:  file_names[  1]:
+# DWARF64-NEXT:             name: "basic.c"
+# DWARF64-NEXT:        dir_index: 0
+# DWARF64-NEXT:         mod_time: 0x00000000
+# DWARF64-NEXT:           length: 0x00000000
+# DWARF64:       Address            Line   Column File   ISA Discriminator OpIndex Flags
+# DWARF64-NEXT:  ------------------ ------ ------ ------ --- ------------- ------- -------------
+# DWARF64-NEXT:  0x0000000000000000      1      0      1   0             0       0  is_stmt
+# DWARF64-NEXT:  0x0000000000000004      3      0      1   0             0       0  is_stmt
+# DWARF64-NEXT:  0x0000000000000008      4      0      1   0             0       0  is_stmt
+# DWARF64-NEXT:  0x0000000000000080      4      0      1   0             0       0  is_stmt end_sequence
+# DWARF64:       .debug_pubnames contents:
+# DWARF64-NEXT:  length = 0x0000000000000027, format = DWARF64, version = 0x0002, unit_offset = 0x0000000000000000, unit_size = 0x00000000000000d0
+# DWARF64-NEXT:  Offset     Name
+# DWARF64-NEXT:  0x000000000000008b "main"
+# DWARF64:       .debug_pubtypes contents:
+# DWARF64-NEXT:  length = 0x0000000000000033, format = DWARF64, version = 0x0002, unit_offset = 0x0000000000000000, unit_size = 0x00000000000000d0
+# DWARF64-NEXT:  Offset     Name
+# DWARF64-NEXT:  0x0000000000000066 "int"
+# DWARF64-NEXT:  0x000000000000005e "char"

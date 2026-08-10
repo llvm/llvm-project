@@ -1,0 +1,65 @@
+# REQUIRES: zlib
+## Test decompression for different sections.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy --decompress-debug-sections %t %t.de
+# RUN: llvm-readelf -S %t.de | FileCheck %s
+# RUN: llvm-objcopy --compress-sections '*nonalloc=none' --compress-sections .debugx=none %t %t.1.de
+# RUN: cmp %t.de %t.1.de
+
+# CHECK:        Name              Type            Address          Off      Size     ES Flg Lk Inf Al
+# CHECK:        .debug_alloc      PROGBITS        0000000000000000 [[#%x,]] [[#%x,]] 00  AC  0   0  0
+# CHECK-NEXT:   .debug_nonalloc   PROGBITS        0000000000000000 [[#%x,]] [[#%x,]] 00      0   0  1
+# CHECK-NEXT:   .debugx           PROGBITS        0000000000000000 [[#%x,]] [[#%x,]] 00      0   0  1
+# CHECK-NEXT:   nodebug           PROGBITS        0000000000000000 [[#%x,]] [[#%x,]] 00   C  0   0  0
+
+# RUN: llvm-objcopy --compress-sections '.debug*=none' %t %t2.de
+# RUN: llvm-readelf -S -x .debug_alloc -x .debug_nonalloc -x .debugx %t2.de | FileCheck %s --check-prefix=CHECK2
+
+# CHECK2:        Name              Type            Address          Off      Size     ES Flg Lk Inf Al
+# CHECK2:        .debug_alloc      PROGBITS        0000000000000000 [[#%x,]] [[#%x,]] 00  A   0   0  1
+# CHECK2-NEXT:   .debug_nonalloc   PROGBITS        0000000000000000 [[#%x,]] [[#%x,]] 00      0   0  1
+# CHECK2-NEXT:   .debugx           PROGBITS        0000000000000000 [[#%x,]] [[#%x,]] 00      0   0  1
+# CHECK2-NEXT:   nodebug           PROGBITS        0000000000000000 [[#%x,]] [[#%x,]] 00   C  0   0  0
+
+# CHECK2:       Hex dump of section '.debug_alloc':
+# CHECK2-NEXT:  0x00000000 2a000000 00000000 2a000000 00000000 *.......*.......
+# CHECK2-NEXT:  0x00000010 2a000000 00000000 2a000000 00000000 *.......*.......
+# CHECK2-NEXT:  0x00000020 2a000000 00000000 2a000000 00000000 *.......*.......
+# CHECK2-NEXT:  0x00000030 2a000000 00000000 2a000000 00000000 *.......*.......
+# CHECK2-EMPTY:
+# CHECK2:       Hex dump of section '.debug_nonalloc':
+# CHECK2-NEXT:  0x00000000 2a000000 00000000 2a000000 00000000 *.......*.......
+# CHECK2-NEXT:  0x00000010 2a000000 00000000 2a000000 00000000 *.......*.......
+# CHECK2-NEXT:  0x00000020 2a000000 00000000 2a000000 00000000 *.......*.......
+# CHECK2-NEXT:  0x00000030 2a000000 00000000 2a000000 00000000 *.......*.......
+# CHECK2-EMPTY:
+# CHECK2-NEXT:  Hex dump of section '.debugx':
+# CHECK2-NEXT:  0x00000000 2a000000 00000000 2a000000 00000000 *.......*.......
+# CHECK2-NEXT:  0x00000010 2a000000 00000000 2a000000 00000000 *.......*.......
+# CHECK2-NEXT:  0x00000020 2a000000 00000000 2a000000 00000000 *.......*.......
+# CHECK2-NEXT:  0x00000030 2a000000 00000000 2a000000 00000000 *.......*.......
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:      .debug_alloc
+    Type:      SHT_PROGBITS
+    Flags:     [ SHF_ALLOC, SHF_COMPRESSED ]
+    Content:   010000000000000040000000000000000100000000000000789cd36280002d3269002f800151
+  - Name:      .debug_nonalloc
+    Type:      SHT_PROGBITS
+    Flags:     [ SHF_COMPRESSED ]
+    Content:   010000000000000040000000000000000100000000000000789cd36280002d3269002f800151
+  - Name:      .debugx
+    Type:      SHT_PROGBITS
+    Flags:     [ SHF_COMPRESSED ]
+    Content:   010000000000000040000000000000000100000000000000789cd36280002d3269002f800151
+  - Name:      nodebug
+    Type:      SHT_PROGBITS
+    Flags:     [ SHF_COMPRESSED ]
+    Content:   010000000000000040000000000000000100000000000000789cd36280002d3269002f800151

@@ -1,0 +1,15 @@
+# RUN: %lldb -b -s %s -c %p/Inputs/aarch64-freebsd-multithread.core | FileCheck %s
+
+# Check that we see register fields for control registers when using a core file.
+# As this is a corefile we check all fields as they will always be the same
+# (on real cores they may vary).
+
+register read cpsr
+# CHECK:      cpsr = 0x60000200
+# CHECK-NEXT:      = (N = 0, Z = 1, C = 1, V = 0, SS = 0, IL = 0, D = 1, A = 0, I = 0, F = 0, nRW = 0, EL = 0, SP = 0)
+register read fpsr
+# CHECK:      fpsr = 0x00000000
+# CHECK-NEXT:      = (QC = 0, IDC = 0, IXC = 0, UFC = 0, OFC = 0, DZC = 0, IOC = 0)
+register read fpcr
+# CHECK:      fpcr = 0x02000000
+# CHECK-NEXT:      = (AHP = 0, DN = 1, FZ = 0, RMode = RN, IDE = 0, IXE = 0, UFE = 0, OFE = 0, DZE = 0, IOE = 0)

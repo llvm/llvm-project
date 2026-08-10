@@ -1,0 +1,26 @@
+REQUIRES: x86-registered-target && host-byteorder-little-endian
+RUN: sancov -covered-functions %p/Inputs/test-linux_x86_64 %p/Inputs/test-linux_x86_64.0.sancov | FileCheck %s --check-prefix=ALL
+RUN: sancov -covered-functions -ignorelist %p/Inputs/fun_ignorelist.txt %p/Inputs/test-linux_x86_64 %p/Inputs/test-linux_x86_64.0.sancov | FileCheck %s
+RUN: sancov -covered-functions -ignorelist %p/Inputs/src_ignorelist.txt %p/Inputs/test-linux_x86_64 %p/Inputs/test-linux_x86_64.1.sancov | FileCheck --check-prefix=CHECK1 %s
+RUN: sancov -print-coverage-stats %p/Inputs/test-linux_x86_64 %p/Inputs/test-linux_x86_64.1.sancov | FileCheck --check-prefix=STATS %s
+RUN: sancov -print-coverage-stats -ignorelist %p/Inputs/fun_ignorelist.txt %p/Inputs/test-linux_x86_64 %p/Inputs/test-linux_x86_64.1.sancov | FileCheck --check-prefix=STATS-BLIST %s
+
+ALL: test.cpp:12 bar(std::string)
+ALL: test.cpp:14 main
+
+CHECK-NOT: test.cpp:12 bar(std::string)
+CHECK: test.cpp:14 main
+
+CHECK1-NOT: test.cpp:12 bar(std::string)
+CHECK1-NOT: test.cpp:14 main
+
+STATS: all-edges: 9
+STATS: cov-edges: 7
+STATS: all-functions: 3
+STATS: cov-functions: 3
+
+STATS-BLIST: all-edges: 8
+STATS-BLIST: cov-edges: 6
+STATS-BLIST: all-functions: 2
+STATS-BLIST: cov-functions: 2
+

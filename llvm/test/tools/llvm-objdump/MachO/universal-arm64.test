@@ -1,0 +1,116 @@
+## This test checks that the CPUTypes are printed correctly for the subtypes of
+## ARM64.
+
+# RUN: yaml2obj %s -o %tarm.o
+# RUN: llvm-objdump %tarm.o --universal-headers --macho | \
+# RUN:   FileCheck %s --match-full-lines
+# RUN: llvm-otool -fv %tarm.o | FileCheck %s --match-full-lines
+# RUN: llvm-objdump %tarm.o --universal-headers --macho --non-verbose | \
+# RUN:   FileCheck %s --match-full-lines --check-prefix=NONVERBOSE
+# RUN: llvm-otool -f %tarm.o | FileCheck %s --match-full-lines --check-prefix=NONVERBOSE
+
+# CHECK:      Fat headers
+# CHECK-NEXT: fat_magic FAT_MAGIC
+# CHECK-NEXT: nfat_arch 3
+# CHECK-NEXT: architecture arm64
+# CHECK-NEXT:     cputype CPU_TYPE_ARM64
+# CHECK-NEXT:     cpusubtype CPU_SUBTYPE_ARM64_ALL
+# CHECK-NEXT:     capabilities 0x0
+# CHECK-NEXT:     offset 4096
+# CHECK-NEXT:     size 352
+# CHECK-NEXT:     align 2^12 (4096)
+# CHECK-NEXT: architecture
+# CHECK-NEXT:     cputype CPU_TYPE_ARM64
+# CHECK-NEXT:     cpusubtype CPU_SUBTYPE_ARM64_V8
+# CHECK-NEXT:     capabilities 0x0
+# CHECK-NEXT:     offset 16384
+# CHECK-NEXT:     size 384
+# CHECK-NEXT:     align 2^14 (16384)
+# CHECK-NEXT: architecture arm64e
+# CHECK-NEXT:     cputype CPU_TYPE_ARM64
+# CHECK-NEXT:     cpusubtype CPU_SUBTYPE_ARM64E
+# CHECK-NEXT:     capabilities 0x0
+# CHECK-NEXT:     offset 28672
+# CHECK-NEXT:     size 384
+# CHECK-NEXT:     align 2^12 (4096)
+# CHECK-NOT:{{.}}
+
+# NONVERBOSE:      Fat headers
+# NONVERBOSE-NEXT: fat_magic 0xcafebabe
+# NONVERBOSE-NEXT: nfat_arch 3
+# NONVERBOSE-NEXT: architecture 0
+# NONVERBOSE-NEXT:     cputype 16777228
+# NONVERBOSE-NEXT:     cpusubtype 0
+# NONVERBOSE-NEXT:     capabilities 0x0
+# NONVERBOSE-NEXT:     offset 4096
+# NONVERBOSE-NEXT:     size 352
+# NONVERBOSE-NEXT:     align 2^12 (4096)
+# NONVERBOSE-NEXT: architecture 1
+# NONVERBOSE-NEXT:     cputype 16777228
+# NONVERBOSE-NEXT:     cpusubtype 1
+# NONVERBOSE-NEXT:     capabilities 0x0
+# NONVERBOSE-NEXT:     offset 16384
+# NONVERBOSE-NEXT:     size 384
+# NONVERBOSE-NEXT:     align 2^14 (16384)
+# NONVERBOSE-NEXT: architecture 2
+# NONVERBOSE-NEXT:     cputype 16777228
+# NONVERBOSE-NEXT:     cpusubtype 2
+# NONVERBOSE-NEXT:     capabilities 0x0
+# NONVERBOSE-NEXT:     offset 28672
+# NONVERBOSE-NEXT:     size 384
+# NONVERBOSE-NEXT:     align 2^12 (4096)
+# NONVERBOSE-NOT:{{.}}
+
+
+--- !fat-mach-o
+FatHeader:
+  magic:           0xCAFEBABE
+  nfat_arch:       3
+FatArchs:
+  - cputype:         0x0100000C
+    cpusubtype:      0x00000000
+    offset:          0x0000000000001000
+    size:            352
+    align:           12
+  - cputype:         0x0100000C
+    cpusubtype:      0x00000001
+    offset:          0x0000000000004000
+    size:            384
+    align:           14
+  - cputype:         0x0100000C
+    cpusubtype:      0x00000002
+    offset:          0x0000000000007000
+    size:            384
+    align:           12
+Slices:
+  - !mach-o
+    FileHeader:
+      magic:           0xFEEDFACF
+      cputype:         0x0100000C
+      cpusubtype:      0x00000000
+      filetype:        0x00000001
+      ncmds:           0
+      sizeofcmds:      0
+      flags:           0x00000000
+      reserved:        0x00000000
+  - !mach-o
+    FileHeader:
+      magic:           0xFEEDFACF
+      cputype:         0x0100000C
+      cpusubtype:      0x00000001
+      filetype:        0x00000001
+      ncmds:           0
+      sizeofcmds:      0
+      flags:           0x00000000
+      reserved:        0x00000000
+  - !mach-o
+    FileHeader:
+      magic:           0xFEEDFACF
+      cputype:         0x0100000C
+      cpusubtype:      0x00000002
+      filetype:        0x00000001
+      ncmds:           0
+      sizeofcmds:      0
+      flags:           0x00000000
+      reserved:        0x00000000
+...

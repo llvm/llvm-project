@@ -1,0 +1,194 @@
+//===-- JSON Tests --------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "JSON.h"
+#include "LibcBenchmark.h"
+#include "LibcMemoryBenchmark.h"
+#include "llvm/Support/JSON.h"
+#include "llvm/Support/raw_ostream.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
+
+using testing::AllOf;
+using testing::ExplainMatchResult;
+using testing::Field;
+using testing::Pointwise;
+
+namespace llvm {
+namespace libc_benchmarks {
+namespace {
+
+Study getStudy() {
+  return Study{
+      "StudyName",
+      Runtime{HostState{"CpuName",
+                        123,
+                        {CacheInfo{"A", 1, 2, 3}, CacheInfo{"B", 4, 5, 6}}},
+              456, 789,
+              BenchmarkOptions{std::chrono::seconds(1), std::chrono::seconds(2),
+                               10, 100, 6, 100, 0.1, 2, BenchmarkLog::Full}},
+      StudyConfiguration{std::string("Function"), 30U, false, 32U,
+                         std::string("Distribution"), Align(16), 3U},
+      {std::chrono::seconds(3), std::chrono::seconds(4)}};
+}
+
+static std::string serializeToString(const Study &S) {
+  std::string Buffer;
+  raw_string_ostream RSO(Buffer);
+  json::OStream JOS(RSO);
+  serializeToJson(S, JOS);
+  return Buffer;
+}
+
+MATCHER(EqualsCacheInfo, "") {
+  const CacheInfo &A = ::testing::get<0>(arg);
+  const CacheInfo &B = ::testing::get<1>(arg);
+  return ExplainMatchResult(
+      AllOf(Field(&CacheInfo::type, B.type), Field(&CacheInfo::level, B.level),
+            Field(&CacheInfo::size, B.size),
+            Field(&CacheInfo::num_sharing, B.num_sharing)),
+      A, result_listener);
+}
+
+auto equals(const HostState &H) -> auto {
+  return AllOf(
+      Field(&HostState::cpu_name, H.cpu_name),
+      Field(&HostState::cpu_frequency, H.cpu_frequency),
+      Field(&HostState::caches, Pointwise(EqualsCacheInfo(), H.caches)));
+}
+
+auto equals(const StudyConfiguration &SC) -> auto {
+  return AllOf(
+      Field(&StudyConfiguration::function, SC.function),
+      Field(&StudyConfiguration::num_trials, SC.num_trials),
+      Field(&StudyConfiguration::is_sweep_mode, SC.is_sweep_mode),
+      Field(&StudyConfiguration::sweep_mode_max_size, SC.sweep_mode_max_size),
+      Field(&StudyConfiguration::size_distribution_name,
+            SC.size_distribution_name),
+      Field(&StudyConfiguration::access_alignment, SC.access_alignment),
+      Field(&StudyConfiguration::memcmp_mismatch_at, SC.memcmp_mismatch_at));
+}
+
+auto equals(const BenchmarkOptions &BO) -> auto {
+  return AllOf(
+      Field(&BenchmarkOptions::min_duration, BO.min_duration),
+      Field(&BenchmarkOptions::max_duration, BO.max_duration),
+      Field(&BenchmarkOptions::initial_iterations, BO.initial_iterations),
+      Field(&BenchmarkOptions::max_iterations, BO.max_iterations),
+      Field(&BenchmarkOptions::min_samples, BO.min_samples),
+      Field(&BenchmarkOptions::max_samples, BO.max_samples),
+      Field(&BenchmarkOptions::epsilon, BO.epsilon),
+      Field(&BenchmarkOptions::scaling_factor, BO.scaling_factor),
+      Field(&BenchmarkOptions::log, BO.log));
+}
+
+auto equals(const Runtime &RI) -> auto {
+  return AllOf(
+      Field(&Runtime::host, equals(RI.host)),
+      Field(&Runtime::buffer_size, RI.buffer_size),
+      Field(&Runtime::batch_parameter_count, RI.batch_parameter_count),
+      Field(&Runtime::benchmark_options, equals(RI.benchmark_options)));
+}
+
+auto equals(const Study &S) -> auto {
+  return AllOf(Field(&Study::study_name, S.study_name),
+               Field(&Study::runtime, equals(S.runtime)),
+               Field(&Study::configuration, equals(S.configuration)),
+               Field(&Study::measurements, S.measurements));
+}
+
+TEST(JsonTest, RoundTrip) {
+  const Study S = getStudy();
+  const auto Serialized = serializeToString(S);
+  auto StudyOrError = parseJsonStudy(Serialized);
+  if (auto Err = StudyOrError.takeError()) {
+    EXPECT_FALSE(Err) << "Unexpected error : " << Err << "\n" << Serialized;
+  }
+  const Study &Parsed = *StudyOrError;
+  EXPECT_THAT(Parsed, equals(S)) << Serialized << "\n"
+                                 << serializeToString(Parsed);
+}
+
+TEST(JsonTest, SupplementaryField) {
+  auto Failure = parseJsonStudy(R"({
+      "UnknownField": 10
+    }
+  )");
+  EXPECT_EQ(toString(Failure.takeError()), "Unknown field: UnknownField");
+}
+
+TEST(JsonTest, InvalidType) {
+  auto Failure = parseJsonStudy(R"({
+      "Runtime": 1
+    }
+  )");
+  EXPECT_EQ(toString(Failure.takeError()), "Expected JSON Object");
+}
+
+TEST(JsonTest, InvalidDuration) {
+  auto Failure = parseJsonStudy(R"({
+      "Runtime": {
+        "BenchmarkOptions": {
+          "MinDuration": "Duration should be a Number"
+        }
+      }
+    }
+  )");
+  EXPECT_EQ(toString(Failure.takeError()), "Can't parse Duration");
+}
+
+TEST(JsonTest, InvalidAlignType) {
+  auto Failure = parseJsonStudy(R"({
+      "Configuration": {
+        "AccessAlignment": "Align should be an Integer"
+      }
+    }
+  )");
+  EXPECT_EQ(toString(Failure.takeError()), "Can't parse Align, not an Integer");
+}
+
+TEST(JsonTest, InvalidAlign) {
+  auto Failure = parseJsonStudy(R"({
+      "Configuration": {
+        "AccessAlignment": 3
+      }
+    }
+  )");
+  EXPECT_EQ(toString(Failure.takeError()),
+            "Can't parse Align, not a power of two");
+}
+
+TEST(JsonTest, InvalidBenchmarkLogType) {
+  auto Failure = parseJsonStudy(R"({
+      "Runtime": {
+        "BenchmarkOptions":{
+          "Log": 3
+        }
+      }
+    }
+  )");
+  EXPECT_EQ(toString(Failure.takeError()),
+            "Can't parse BenchmarkLog, not a String");
+}
+
+TEST(JsonTest, InvalidBenchmarkLog) {
+  auto Failure = parseJsonStudy(R"({
+      "Runtime": {
+        "BenchmarkOptions":{
+          "Log": "Unknown"
+        }
+      }
+    }
+  )");
+  EXPECT_EQ(toString(Failure.takeError()),
+            "Can't parse BenchmarkLog, invalid value 'Unknown'");
+}
+
+} // namespace
+} // namespace libc_benchmarks
+} // namespace llvm

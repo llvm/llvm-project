@@ -1,0 +1,159 @@
+# RUN: yaml2obj %s -o %t
+
+# Single flags on a section with no flags:
+# RUN: llvm-objcopy --set-section-flags=.foo=alloc \
+# RUN:   --set-section-flags=.baz=alloc --set-section-flags=.rela.baz=alloc %t %t.alloc
+# RUN: llvm-readobj --sections %t.alloc | FileCheck %s --check-prefixes=CHECK,NOBITS,ALLOC,WRITE
+# RUN: llvm-objcopy --set-section-flags=.foo=load \
+# RUN:   --set-section-flags=.baz=load --set-section-flags=.rela.baz=load %t %t.load
+# RUN: llvm-readobj --sections %t.load | FileCheck %s --check-prefixes=CHECK,PROGBITS,WRITE
+# RUN: llvm-objcopy --set-section-flags=.foo=noload \
+# RUN:   --set-section-flags=.baz=noload --set-section-flags=.rela.baz=noload %t %t.noload
+# RUN: llvm-readobj --sections %t.noload | FileCheck %s --check-prefixes=CHECK,PROGBITS,WRITE
+# RUN: llvm-objcopy --set-section-flags=.foo=readonly \
+# RUN:   --set-section-flags=.baz=readonly --set-section-flags=.rela.baz=readonly %t %t.readonly
+# RUN: llvm-readobj --sections %t.readonly | FileCheck %s --check-prefixes=CHECK,PROGBITS
+# RUN: llvm-objcopy --set-section-flags=.foo=exclude \
+# RUN:   --set-section-flags=.baz=exclude --set-section-flags=.rela.baz=exclude %t %t.exclude
+# RUN: llvm-readobj --sections %t.exclude | FileCheck %s --check-prefixes=CHECK,PROGBITS,EXCLUDE,WRITE
+# RUN: llvm-objcopy --set-section-flags=.foo=debug \
+# RUN:   --set-section-flags=.baz=debug --set-section-flags=.rela.baz=debug %t %t.debug
+# RUN: llvm-readobj --sections %t.debug | FileCheck %s --check-prefixes=CHECK,PROGBITS,WRITE
+# RUN: llvm-objcopy --set-section-flags=.foo=code \
+# RUN:   --set-section-flags=.baz=code --set-section-flags=.rela.baz=code %t %t.code
+# RUN: llvm-readobj --sections %t.code | FileCheck %s --check-prefixes=CHECK,PROGBITS,EXEC,WRITE
+# RUN: llvm-objcopy --set-section-flags=.foo=data \
+# RUN:   --set-section-flags=.baz=data --set-section-flags=.rela.baz=data %t %t.data
+# RUN: llvm-readobj --sections %t.data | FileCheck %s --check-prefixes=CHECK,PROGBITS,WRITE
+# RUN: llvm-objcopy --set-section-flags=.foo=rom \
+# RUN:   --set-section-flags=.baz=rom --set-section-flags=.rela.baz=rom %t %t.rom
+# RUN: llvm-readobj --sections %t.rom | FileCheck %s --check-prefixes=CHECK,PROGBITS,WRITE
+# RUN: llvm-objcopy --set-section-flags=.foo=contents \
+# RUN:   --set-section-flags=.baz=contents --set-section-flags=.rela.baz=contents %t %t.contents
+# RUN: llvm-readobj --sections %t.contents | FileCheck %s --check-prefixes=CHECK,PROGBITS,WRITE
+# RUN: llvm-objcopy --set-section-flags=.foo=merge \
+# RUN:   --set-section-flags=.baz=merge --set-section-flags=.rela.baz=merge %t %t.merge
+# RUN: llvm-readobj --sections %t.merge | FileCheck %s --check-prefixes=CHECK,MERGE,PROGBITS,WRITE
+# RUN: llvm-objcopy --set-section-flags=.foo=strings \
+# RUN:   --set-section-flags=.baz=strings --set-section-flags=.rela.baz=strings %t %t.strings
+# RUN: llvm-readobj --sections %t.strings | FileCheck %s --check-prefixes=CHECK,STRINGS,PROGBITS,WRITE
+# RUN: llvm-objcopy --set-section-flags=.foo=share \
+# RUN:   --set-section-flags=.baz=share --set-section-flags=.rela.baz=share %t %t.share
+# RUN: llvm-readobj --sections %t.share | FileCheck %s --check-prefixes=CHECK,PROGBITS,WRITE
+# RUN: llvm-objcopy --set-section-flags=.foo=large \
+# RUN:   --set-section-flags=.baz=large --set-section-flags=.rela.baz=large %t %t.large
+# RUN: llvm-readobj --sections %t.large | FileCheck %s --check-prefixes=CHECK,LARGE,PROGBITS,WRITE
+# RUN: llvm-objcopy --set-section-flags=.foo=data \
+# RUN:   --set-section-flags=.baz=data --set-section-flags=.rela.baz=data %t %t.no-large
+# RUN: llvm-readobj --sections %t.no-large | FileCheck %s --check-prefixes=CHECK,PROGBITS,WRITE
+
+# Multiple flags:
+# RUN: llvm-objcopy --set-section-flags=.foo=alloc,readonly,strings \
+# RUN:   --set-section-flags=.baz=alloc,readonly,strings \
+# RUN:   --set-section-flags=.rela.baz=alloc,readonly,strings %t %t.alloc_ro_strings
+# RUN: llvm-readobj --sections %t.alloc_ro_strings | FileCheck %s --check-prefixes=CHECK,NOBITS,ALLOC,STRINGS
+# RUN: llvm-objcopy --set-section-flags=.foo=alloc,code \
+# RUN:   --set-section-flags=.baz=alloc,code \
+# RUN:   --set-section-flags=.rela.baz=alloc,code %t %t.alloc_code
+# RUN: llvm-readobj --sections %t.alloc_code | FileCheck %s --check-prefixes=CHECK,NOBITS,ALLOC,EXEC,WRITE
+
+# Invalid flags:
+# RUN: not llvm-objcopy --set-section-flags=.foo=xyzzy %t %t.xyzzy 2>&1 | FileCheck %s --check-prefix=BAD-FLAG
+
+# Bad flag format:
+# RUN: not llvm-objcopy --set-section-flags=.foo %t %t2 2>&1 | FileCheck %s --check-prefix=BAD-FORMAT
+
+# Setting flags for the same section multiple times:
+# RUN: not llvm-objcopy --set-section-flags=.foo=alloc --set-section-flags=.foo=load %t %t2 2>&1 | FileCheck %s --check-prefix=MULTIPLE-SETS
+
+# Upper-case flags:
+# RUN: llvm-objcopy --set-section-flags=.foo=ALLOC,LOAD,NOLOAD,READONLY,DEBUG,CODE,DATA,ROM,CONTENTS,MERGE,STRINGS,SHARE \
+# RUN:   --set-section-flags=.baz=ALLOC,LOAD,NOLOAD,READONLY,DEBUG,CODE,DATA,ROM,CONTENTS,MERGE,STRINGS,SHARE \
+# RUN:   --set-section-flags=.rela.baz=ALLOC,LOAD,NOLOAD,READONLY,DEBUG,CODE,DATA,ROM,CONTENTS,MERGE,STRINGS,SHARE %t %t.upper
+# RUN: llvm-readobj --sections %t.upper | FileCheck %s --check-prefixes=CHECK,PROGBITS,ALLOC,EXEC,MERGE,STRINGS
+
+# Mixed-case flags:
+# RUN: llvm-objcopy --set-section-flags=.foo=aLlOc,LoAd,NoLoad,rEAdONly,Debug,codE,DaTa,rOm,CoNtEnTs,mErGe,sTRINGs,SharE \
+# RUN:   --set-section-flags=.baz=aLlOc,LoAd,NoLoad,rEAdONly,Debug,codE,DaTa,rOm,CoNtEnTs,mErGe,sTRINGs,SharE \
+# RUN:   --set-section-flags=.rela.baz=aLlOc,LoAd,NoLoad,rEAdONly,Debug,codE,DaTa,rOm,CoNtEnTs,mErGe,sTRINGs,SharE %t %t.mixed
+# RUN: llvm-readobj --sections %t.mixed | FileCheck %s --check-prefixes=CHECK,PROGBITS,ALLOC,EXEC,MERGE,STRINGS
+
+## Unspecified sections are not affected:
+# RUN: llvm-objcopy --set-section-flags=.foo=alloc %t %t.unspecified
+# RUN: llvm-readobj --sections %t.unspecified | FileCheck %s --check-prefixes=UNSPECIFIED
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .foo
+    Type:            SHT_PROGBITS
+    Flags:           [ ]
+  - Name:            .baz
+    Type:            SHT_NOBITS
+    Flags:           [ ]
+  - Name:            .rela.baz
+    Type:            SHT_RELA
+    Info:            .baz
+
+# CHECK:         Name: .foo
+# CHECK-NEXT:    Type: SHT_PROGBITS
+# CHECK-NEXT:    Flags [
+# ALLOC-NEXT:      SHF_ALLOC (0x2)
+# EXEC-NEXT:       SHF_EXECINSTR (0x4)
+# MERGE-NEXT:      SHF_MERGE (0x10)
+# STRINGS-NEXT:    SHF_STRINGS (0x20)
+# EXCLUDE-NEXT:    SHF_EXCLUDE (0x80000000)
+# WRITE-NEXT:      SHF_WRITE (0x1)
+# LARGE-NEXT:      SHF_X86_64_LARGE (0x10000000)
+# CHECK-NEXT:    ]
+
+# CHECK:         Name: .baz
+# NOBITS-NEXT:   Type: SHT_NOBITS
+# PROGBITS-NEXT: Type: SHT_PROGBITS
+# CHECK-NEXT:    Flags [
+# ALLOC-NEXT:      SHF_ALLOC (0x2)
+# EXEC-NEXT:       SHF_EXECINSTR (0x4)
+# MERGE-NEXT:      SHF_MERGE (0x10)
+# STRINGS-NEXT:    SHF_STRINGS (0x20)
+# EXCLUDE-NEXT:    SHF_EXCLUDE (0x80000000)
+# WRITE-NEXT:      SHF_WRITE (0x1)
+# LARGE-NEXT:      SHF_X86_64_LARGE (0x10000000)
+# CHECK-NEXT:    ]
+
+# CHECK:         Name: .rela.baz
+# CHECK-NEXT:    Type: SHT_RELA
+# CHECK-NEXT:    Flags [
+# ALLOC-NEXT:      SHF_ALLOC (0x2)
+# EXEC-NEXT:       SHF_EXECINSTR (0x4)
+# MERGE-NEXT:      SHF_MERGE (0x10)
+# STRINGS-NEXT:    SHF_STRINGS (0x20)
+# EXCLUDE-NEXT:    SHF_EXCLUDE (0x80000000)
+# WRITE-NEXT:      SHF_WRITE (0x1)
+# LARGE-NEXT:      SHF_X86_64_LARGE (0x10000000)
+# CHECK-NEXT:    ]
+
+# BAD-FORMAT: bad format for --set-section-flags: missing '='
+# MULTIPLE-SETS: --set-section-flags set multiple times for section '.foo'
+
+# BAD-FLAG: unrecognized section flag 'xyzzy'. Flags supported for GNU compatibility: alloc, load, noload, readonly, exclude, debug, code, data, rom, share, contents, merge, strings
+
+# UNSPECIFIED:      Name: .foo
+# UNSPECIFIED-NEXT: Type: SHT_PROGBITS
+# UNSPECIFIED-NEXT: Flags [
+# UNSPECIFIED-NEXT:   SHF_ALLOC (0x2)
+# UNSPECIFIED-NEXT:   SHF_WRITE (0x1)
+# UNSPECIFIED-NEXT: ]
+
+# UNSPECIFIED:      Name: .baz
+# UNSPECIFIED-NEXT: Type: SHT_NOBITS
+# UNSPECIFIED-NEXT: Flags [ (0x0)
+# UNSPECIFIED-NEXT: ]
+
+# UNSPECIFIED:      Name: .rela.baz
+# UNSPECIFIED-NEXT: Type: SHT_RELA
+# UNSPECIFIED-NEXT: Flags [ (0x0)
+# UNSPECIFIED-NEXT: ]

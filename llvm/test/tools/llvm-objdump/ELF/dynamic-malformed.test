@@ -1,0 +1,62 @@
+## An empty dynamic section is invalid. Test we report a warning instead of an
+## error, so that dumping can continue with other objects.
+# RUN: yaml2obj %s --docnum=1 -o %t.empty
+# RUN: llvm-objdump -p %t.empty 2>&1 | FileCheck %s -DFILE=%t.empty --check-prefix=EMPTY
+
+# EMPTY:       Program Header:
+# EMPTY-NEXT:  warning: '[[FILE]]': invalid empty dynamic section
+# EMPTY-EMPTY:
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+
+# RUN: yaml2obj %s --docnum=2 -o %t.nonull
+# RUN: llvm-objdump -p %t.nonull 2>&1 | FileCheck %s -DFILE=%t.nonull --check-prefix=NONULL
+
+# NONULL:       Program Header:
+# NONULL-NEXT:  warning: '[[FILE]]': dynamic sections must be DT_NULL terminated
+# NONULL-EMPTY:
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_SONAME
+        Value: 1
+
+# RUN: yaml2obj %s --docnum=3 -o %t.invalidaddr
+# RUN: llvm-objdump -p %t.invalidaddr 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.invalidaddr --implicit-check-not=warning: --check-prefix=ADDR
+
+# ADDR:       Dynamic Section:
+# ADDR-NEXT:  warning: '[[FILE]]': virtual address is not in any segment: 0x474
+# ADDR-NEXT:    NEEDED       0xffffffffbe5a0b5f
+# ADDR-NEXT:    STRTAB       0x0000000000000474
+
+---
+!ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data: ELFDATA2LSB
+  Type: ET_DYN
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag: DT_NEEDED
+        Value: 0xFFFFFFFFBE5A0B5F
+      - Tag: DT_STRTAB
+        Value: 0x474
+      - Tag: DT_NULL
+        Value: 0x0

@@ -1,0 +1,21 @@
+# RUN: not llc -mtriple=aarch64-apple-ios -run-pass none -o - %s 2>&1 \
+# RUN:        | FileCheck %s --check-prefix=ERR
+# This test ensures that the MIR parser errors out when
+# generic virtual register definitions are not correct.
+# In that case, it is defined by a register bank.
+
+--- |
+  define void @bar() { ret void }
+...
+
+---
+name:            bar
+registers:
+  - { id: 0, class: gpr }
+body: |
+  bb.0:
+    liveins: $w0
+    ; ERR: generic virtual registers must have a type
+    ; ERR-NEXT: %0
+    %0 = G_ADD i32 $w0, $w0
+...

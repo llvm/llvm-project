@@ -1,0 +1,40 @@
+# RUN: llc -mtriple=arm64-applie-ios7.0 -start-before=aarch64-lower-homogeneous-prolog-epilog -homogeneous-prolog-epilog %s -o - | FileCheck %s
+#
+# This test ensure no outlined epilog is formed when X16 is live across the helper.
+--- |
+  @FuncPtr = local_unnamed_addr global ptr null, align 8
+
+  define i32 @_Z3fooi(i32) minsize "frame-pointer"="all" {
+    ret i32 0
+  }
+
+  declare i32 @_Z3gooii(i32, i32)
+...
+---
+name:            _Z3fooi
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0, $lr, $x19, $x20
+    successors: %bb.1
+    frame-setup HOM_Prolog $lr, $fp, $x19, $x20, 16
+    frame-setup CFI_INSTRUCTION def_cfa $w29, 16
+    frame-setup CFI_INSTRUCTION offset $w30, -8
+    frame-setup CFI_INSTRUCTION offset $w29, -16
+    frame-setup CFI_INSTRUCTION offset $w19, -24
+    frame-setup CFI_INSTRUCTION offset $w20, -32
+    $w19 = nsw ADDWri $w0, 1, 0
+    $w1 = ORRWrr $wzr, $w0
+    $w0 = ORRWrr $wzr, $w19
+    BL @_Z3gooii, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0, implicit $w1, implicit-def $sp, implicit-def $w0
+    $x8 = ADRP target-flags(aarch64-page) @FuncPtr
+    $x16 = LDRXui killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @FuncPtr
+    $w0 = nsw ADDWrr renamable $w0, killed renamable $w19
+    $lr, $fp, $x19, $x20 = frame-destroy HOM_Epilog
+    B %bb.1
+
+  bb.1:
+    liveins: $w0, $x16
+    TCRETURNri killed renamable $x16, 0, csr_aarch64_aapcs, implicit $sp, implicit $w0
+# CHECK: _OUTLINED_FUNCTION_PROLOG_FRAME16_x30x29x19x20:
+# CHECK-NOT: _OUTLINED_FUNCTION_EPILOG_x30x29x19x20:

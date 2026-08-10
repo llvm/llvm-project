@@ -1,0 +1,99 @@
+# RUN: yaml2obj %s --docnum=1 -o %t.i386 -DCPUTYPE=0x00000007 -DSUBTYPE=0x00000003 -DENDIAN=true
+# RUN: llvm-readobj -h %t.i386 \
+# RUN:  | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.i386 --check-prefix=MACHO32 \
+# RUN:      -DFORMAT="Mach-O 32-bit i386" -DARCH=i386 -DCPUTYPE="X86 (0x7)" \
+# RUN:      -DSUBTYPE="CPU_SUBTYPE_I386_ALL (0x3)"
+
+# RUN: yaml2obj %s --docnum=1 -o %t.arm-v7 -DCPUTYPE=0x0000000C -DSUBTYPE=0x9 -DENDIAN=true
+# RUN: llvm-readobj -h %t.arm-v7 \
+# RUN:  | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.arm-v7 --check-prefix=MACHO32 \
+# RUN:      -DFORMAT="Mach-O arm" -DARCH=arm \
+# RUN:      -DCPUTYPE="Arm (0xC)" -DSUBTYPE="CPU_SUBTYPE_ARM_V7 (0x9)"
+
+# RUN: yaml2obj %s --docnum=1 -o %t.arm64_32 -DCPUTYPE=0x0200000C -DSUBTYPE=0x1 -DENDIAN=true
+# RUN: llvm-readobj -h %t.arm64_32 \
+# RUN:  | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.arm64_32 --check-prefix=MACHO32 \
+# RUN:      -DFORMAT="Mach-O arm64 (ILP32)" -DARCH=aarch64_32 -DCPUTYPE="Arm64 (ILP32) (0x200000C)" \
+# RUN:      -DSUBTYPE="CPU_SUBTYPE_ARM64_32_V8 (0x1)"
+
+# RUN: yaml2obj %s --docnum=1 -o %t.ppc -DCPUTYPE=0x00000012 -DSUBTYPE=0x00000000 -DENDIAN=false
+# RUN: llvm-readobj -h %t.ppc \
+# RUN:  | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.ppc --check-prefix=MACHO32 \
+# RUN:      -DFORMAT="Mach-O 32-bit ppc" -DARCH=powerpc -DCPUTYPE="PowerPC (0x12)" \
+# RUN:      -DSUBTYPE="CPU_SUBTYPE_POWERPC_ALL (0x0)"
+
+--- !mach-o
+IsLittleEndian: [[ENDIAN]]
+FileHeader:
+  magic:      0xFEEDFACE
+  cputype:    [[CPUTYPE]]
+  cpusubtype: [[SUBTYPE]]
+  filetype:   0x00000001
+  ncmds:      0
+  sizeofcmds: 0
+  flags:      0x00002000
+
+#      MACHO32:File: [[FILE]]
+# MACHO32-NEXT:Format: [[FORMAT]]
+# MACHO32-NEXT:Arch: [[ARCH]]
+# MACHO32-NEXT:AddressSize: 32bit
+# MACHO32-NEXT:MachHeader {
+# MACHO32-NEXT:  Magic: Magic (0xFEEDFACE)
+# MACHO32-NEXT:  CpuType: [[CPUTYPE]]
+# MACHO32-NEXT:  CpuSubType: [[SUBTYPE]]
+# MACHO32-NEXT:  FileType: Relocatable (0x1)
+# MACHO32-NEXT:  NumOfLoadCommands: 0
+# MACHO32-NEXT:  SizeOfLoadCommands: 0
+# MACHO32-NEXT:  Flags [ (0x2000)
+# MACHO32-NEXT:    MH_SUBSECTIONS_VIA_SYMBOLS (0x2000)
+# MACHO32-NEXT:  ]
+# MACHO32-NEXT:}
+# MACHO32-NOT:{{.}}
+
+# RUN: yaml2obj %s --docnum=2 -o %t.x86-64 -DCPUTYPE=0x01000007 -DSUBTYPE=0x00000003 -DENDIAN=true
+# RUN: llvm-readobj -h %t.x86-64 \
+# RUN:  | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.x86-64 --check-prefix=MACHO64 \
+# RUN:      -DFORMAT="Mach-O 64-bit x86-64" -DARCH=x86_64 -DCPUTYPE="X86-64 (0x1000007)" \
+# RUN:      -DSUBTYPE="CPU_SUBTYPE_X86_64_ALL (0x3)"
+
+# RUN: yaml2obj %s --docnum=2 -o %t.arm64 -DCPUTYPE=0x0100000C -DSUBTYPE=0x00000000 -DENDIAN=true
+# RUN: llvm-readobj -h %t.arm64 \
+# RUN:  | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.arm64 --check-prefix=MACHO64 \
+# RUN:      -DFORMAT="Mach-O arm64" -DARCH=aarch64 -DCPUTYPE="Arm64 (0x100000C)" \
+# RUN:      -DSUBTYPE="CPU_SUBTYPE_ARM64_ALL (0x0)"
+
+# RUN: yaml2obj %s --docnum=2 -o %t.ppc64 -DCPUTYPE=0x01000012 -DSUBTYPE=0x00000000 -DENDIAN=false
+# RUN: llvm-readobj -h %t.ppc64 \
+# RUN:  | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.ppc64 --check-prefix=MACHO64 \
+# RUN:      -DFORMAT="Mach-O 64-bit ppc64" -DARCH=powerpc64 -DCPUTYPE="PowerPC64 (0x1000012)" \
+# RUN:      -DSUBTYPE=0x0
+
+--- !mach-o
+IsLittleEndian: [[ENDIAN]]
+FileHeader:
+  magic:      0xFEEDFACF
+  cputype:    [[CPUTYPE]]
+  cpusubtype: [[SUBTYPE]]
+  filetype:   0x00000001
+  ncmds:      0
+  sizeofcmds: 0
+  flags:      0x00002000
+  reserved:   0x00000000
+
+#      MACHO64:File: [[FILE]]
+# MACHO64-NEXT:Format: [[FORMAT]]
+# MACHO64-NEXT:Arch: [[ARCH]]
+# MACHO64-NEXT:AddressSize: 64bit
+# MACHO64-NEXT:MachHeader {
+# MACHO64-NEXT:  Magic: Magic64 (0xFEEDFACF)
+# MACHO64-NEXT:  CpuType: [[CPUTYPE]]
+# MACHO64-NEXT:  CpuSubType: [[SUBTYPE]]
+# MACHO64-NEXT:  FileType: Relocatable (0x1)
+# MACHO64-NEXT:  NumOfLoadCommands: 0
+# MACHO64-NEXT:  SizeOfLoadCommands: 0
+# MACHO64-NEXT:  Flags [ (0x2000)
+# MACHO64-NEXT:    MH_SUBSECTIONS_VIA_SYMBOLS (0x2000)
+# MACHO64-NEXT:  ]
+# MACHO64-NEXT:  Reserved: 0x0
+# MACHO64-NEXT:}
+# MACHO64-NOT:{{.}}

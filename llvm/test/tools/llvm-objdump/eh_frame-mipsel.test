@@ -1,0 +1,33 @@
+# RUN: llvm-objdump --dwarf=frames %p/Inputs/eh_frame.elf-mipsel | FileCheck %s
+
+# CHECK:       .eh_frame contents:
+# CHECK-EMPTY:
+# CHECK-NEXT:  00000000 00000018 00000000 CIE
+# CHECK-NEXT:    Format:                DWARF32
+# CHECK-NEXT:    Version:               1
+# CHECK-NEXT:    Augmentation:          "zPLR"
+# CHECK-NEXT:    Code alignment factor: 1
+# CHECK-NEXT:    Data alignment factor: -4
+# CHECK-NEXT:    Return address column: 31
+# CHECK-NEXT:    Personality Address: 0000000000410b90
+# CHECK-NEXT:    Augmentation data:     80 90 0B 41 00 00 0B
+# CHECK-EMPTY:
+# CHECK-NEXT:  DW_CFA_def_cfa: reg29 +0
+# CHECK-EMPTY:
+# CHECK-NEXT:  CFA=reg29
+# CHECK-EMPTY:
+# CHECK-NEXT:  0000001c 00000018 00000020 FDE cie=00000000 pc=00400890...004008dc
+# CHECK-NEXT:    Format:       DWARF32
+# CHECK-NEXT:    LSDA Address: 0000000000400a90
+# CHECK-NEXT:    DW_CFA_advance_loc: 4
+# CHECK-NEXT:    DW_CFA_def_cfa_offset: +24
+# CHECK-NEXT:    DW_CFA_advance_loc: 4
+# CHECK-NEXT:    DW_CFA_offset: reg31 -4
+# CHECK-NEXT:    DW_CFA_nop:
+# CHECK-EMPTY:
+# CHECK-NEXT:    0x400890: CFA=reg29
+# CHECK-NEXT:    0x400894: CFA=reg29+24
+# CHECK-NEXT:    0x400898: CFA=reg29+24: reg31=[CFA-4]
+# CHECK-EMPTY:
+# CHECK-NEXT:  00000038 ZERO terminator
+# CHECK-NOT: {{.}}

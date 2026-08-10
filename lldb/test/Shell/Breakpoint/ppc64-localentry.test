@@ -1,0 +1,12 @@
+# REQUIRES: powerpc
+#
+# RUN: llvm-mc -triple=powerpc64 -filetype=obj %p/Inputs/ppc64-localentry.s -o %t
+# RUN: lldb-test breakpoints %t %s | FileCheck %s
+
+breakpoint set -n lfunc
+# CHECK-LABEL: breakpoint set -n lfunc
+# CHECK: Address: {{.*}}`lfunc + 8
+
+breakpoint set -n simple
+# CHECK-LABEL: breakpoint set -n simple
+# CHECK: Address: {{.*}}`simple

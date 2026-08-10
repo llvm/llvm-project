@@ -1,0 +1,74 @@
+## Verify that llvm-readobj can dump the various symbol flags correctly.
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj --syms %t | FileCheck %s
+
+# CHECK:      Symbols [
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: _foo (1)
+# CHECK-NEXT:     Extern
+# CHECK-NEXT:     Type: Section (0xE)
+# CHECK-NEXT:     Section: __text (0x1)
+# CHECK-NEXT:     RefType: UndefinedNonLazy (0x0)
+# CHECK-NEXT:     Flags [ (0x128)
+# CHECK-NEXT:       NoDeadStrip (0x20)
+# CHECK-NEXT:       SymbolResolver (0x100)
+# CHECK-NEXT:       ThumbDef (0x8)
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Value: 0x0
+# CHECK-NEXT:   }
+# CHECK-NEXT: ]
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACE
+  cputype:         0xC
+  cpusubtype:      0x9
+  filetype:        0x1
+  ncmds:           2
+  sizeofcmds:      228
+  flags:           0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT
+    cmdsize:         124
+    segname:         ''
+    vmaddr:          0
+    vmsize:          0
+    fileoff:         256
+    filesize:        0
+    maxprot:         7
+    initprot:        7
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0
+        size:            0
+        offset:          0x100
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         ''
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          256
+    nsyms:           1
+    stroff:          268
+    strsize:         8
+LinkEditData:
+  NameList:
+    - n_strx:          1
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          296
+      n_value:         0
+  StringTable:
+    - ''
+    - _foo
+    - ''
+    - ''
+...

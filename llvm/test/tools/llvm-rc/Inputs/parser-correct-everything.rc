@@ -1,0 +1,123 @@
+meh IcOn "hello.bmp"
+Icon Icon "Icon"
+
+LANGUAGE 5, 12
+
+STRINGTABLE
+LANGUAGE 1, 1
+CHARACTERISTICS 500
+LANGUAGE 3, 4
+VERSION 14
+{
+  1 "hello"
+  2 "world"
+}
+STRINGTABLE BEGIN END
+
+500 HTML "index.html"
+Name Cursor "hello.ico"
+
+12 ACCELERATORS
+VERSION 5000
+LANGUAGE 0, 2
+{
+  "^C", 10
+  14, 11
+  5, 12, VIRTKEY
+  0, 0, ASCII
+  1, 1, VIRTKEY, CONTROL
+  2, 2, CONTROL, VIRTKEY
+  3, 3, ALT, CONTROL, SHIFT, NOINVERT, ASCII, VIRTKEY
+}
+
+LLVMTest MENU
+LANGUAGE 4, 1
+{
+  POPUP "&OneMenu"
+  {
+    POPUP "Menu&1"
+    {
+      MENUITEM "Item&1", 301, MENUBREAK, CHECKED
+      MENUITEM "Item&2", 302, CHECKED, MENUBARBREAK
+      MENUITEM "Item&3", 303, MENUBREAK, INACTIVE, HELP
+      MENUITEM "Item&4", 304, GRAYED
+    }
+    POPUP "Menu&2"
+    {
+      MENUITEM "&A", 401
+      MENUITEM "&B", 402
+    }
+  }
+  POPUP "&Items"
+  {
+    MENUITEM "&Row", 500
+    MENUITEM "&Column", 501, CHECKED
+    MENUITEM SEPARATOR
+    MENUITEM "&Word", 502
+  }
+}
+
+14 DIALOGEX 50, 60, 10, 20, 500
+LANGUAGE 1, 2
+CHARACTERISTICS 50
+VERSION 100
+FONT 12, "Arial", 500, 1, 13
+CAPTION "RC parser dialog"
+STYLE 0x51234
+BEGIN
+  LTEXT "Hello world!", 14, 20, 20, 50, 50
+  RTEXT "Heh", 50, 51, 52, 53, 54, 55, 56
+  CTEXT "Muuuu", 1, 2, 3, 4, 5, 6, 7, 8
+  PUSHBUTTON "Muuuu", 1, 2, 3, 4, 5, 6, 7, 8
+  DEFPUSHBUTTON "Muuuu", 1, 2, 3, 4, 5, 6
+  EDITTEXT 5, 1, 2, 4, 7, 8
+END
+
+25 DIALOG 1, 2, 3, 4
+BEGIN
+END
+
+26 DIALOGEX 1, 2, 3, 4 {}
+
+1 VERSIONINFO
+FILEVERSION 1, 2, 3, 4
+PRODUCTVERSION 5, 6, 7, 8
+FILEFLAGSMASK 50
+FILEFLAGS 555
+FILEOS 110
+FILETYPE 555555
+FILESUBTYPE 14
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904E4"
+        {
+            VALUE "CompanyName",      "a"
+            VALUE "FileDescription",  "b" "c" "d",   1 3  7L, "y", "h" "d"
+            VALUE "FileVersion",      "c"
+            VALUE "InternalName",     "d"
+            VALUE "LegalCopyright",   "e" 0
+            VALUE "LegalTrademarks1", 1 2, 3
+            VALUE "LegalTrademarks2", "g"
+            VALUE "OriginalFilename", L"h"
+            VALUE "ProductName",      "ii", 2L, 3
+            VALUE "ProductVersion",   0x12345678L
+        }
+    END
+
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1252
+
+    END
+END
+
+MYNAME MYTYPE "filename"
+
+500 600 "other filename"
+
+HELLO INTEGERS {1, 2, 3, 4}
+
+HELLO STRINGS {"1", "2", "3", "4"}
+
+4 MIXED {1, "2", 3, "4"}

@@ -1,0 +1,10 @@
+RUN: rm -rf %t && mkdir -p %t/foo/bar/
+RUN: mkdir -p %t/baz/
+RUN: yaml2obj %S/Inputs/elf.yaml -o %t/elf.o
+
+RUN: cd %t && llvm-ar rTc %t/baz/internal.ar elf.o
+RUN: cd %t/foo && llvm-ar rTc %t/foo/bar/external.ar ../baz/internal.ar
+
+RUN: FileCheck -input-file=%t/foo/bar/external.ar %s
+
+CHECK: {{^}}../../elf.o/

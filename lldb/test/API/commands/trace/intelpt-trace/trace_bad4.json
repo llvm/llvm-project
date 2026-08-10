@@ -1,0 +1,10 @@
+{
+  "type": "intel-pt",
+  "cpuInfo": {
+    "vendor": "GenuineIntel",
+    "model": 79,
+    "stepping": 1
+  },
+  "processes": [
+  ]
+}

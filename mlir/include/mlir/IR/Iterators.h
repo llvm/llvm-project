@@ -1,0 +1,126 @@
+//===- Iterators.h - IR iterators for IR visitors ---------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// The iterators defined in this file can be used together with IR visitors.
+// Note: These iterators cannot be defined in Visitors.h because that would
+// introduce a cyclic header dependency due to Operation.h.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef MLIR_IR_ITERATORS_H
+#define MLIR_IR_ITERATORS_H
+
+#include "mlir/IR/Operation.h"
+#include "mlir/IR/RegionGraphTraits.h"
+#include "mlir/IR/RegionKindInterface.h"
+#include "mlir/Support/LLVM.h"
+
+#include "llvm/ADT/DepthFirstIterator.h"
+#include "llvm/ADT/PostOrderIterator.h"
+
+namespace mlir {
+/// This iterator enumerates elements in "reverse" order. It is a wrapper around
+/// llvm::reverse.
+struct ReverseIterator {
+  // llvm::reverse uses RangeT::rbegin and RangeT::rend.
+  template <typename RangeT>
+  static constexpr auto makeIterable(RangeT &&range) {
+    return llvm::reverse(
+        ForwardIterator::makeIterable(std::forward<RangeT>(range)));
+  }
+};
+
+/// This iterator enumerates elements according to their dominance relationship.
+/// Operations and regions are enumerated in "forward" order. Blocks are
+/// enumerated according to their successor relationship. Unreachable blocks are
+/// not enumerated. Blocks may not be erased during the traversal.
+///
+/// Note: If `SkipGraphRegion` is set to "true", graph regions (regions without
+/// SSA dominance) are silently skipped during the traversal. If set to "false"
+/// (the default), graph regions are visited but without dominance guarantees
+/// (i.e., defining ops are not guaranteed to be visited before their users).
+///
+/// Regions of unregistered ops are always treated as SSACFG regions (i.e.,
+/// they are visited even when `SkipGraphRegion=true`), because
+/// `mayHaveSSADominance` returns true for unregistered ops.
+template <bool SkipGraphRegion = false>
+struct ForwardDominanceIterator {
+  static Block &makeIterable(Block &range) {
+    return ForwardIterator::makeIterable(range);
+  }
+
+  static auto makeIterable(Region &region) {
+    Block *null = nullptr;
+    if (SkipGraphRegion && !mayHaveSSADominance(region)) {
+      // Skip graph regions.
+      return llvm::make_pointee_range(
+          llvm::make_range(llvm::df_end(null), llvm::df_end(null)));
+    }
+
+    // Create DFS iterator. Blocks are enumerated according to their successor
+    // relationship.
+    auto it = region.empty()
+                  ? llvm::make_range(llvm::df_end(null), llvm::df_end(null))
+                  : llvm::depth_first(&region.front());
+
+    // Walk API expects Block references instead of pointers.
+    return llvm::make_pointee_range(it);
+  }
+
+  static MutableArrayRef<Region> makeIterable(Operation &range) {
+    return ForwardIterator::makeIterable(range);
+  }
+};
+
+/// This iterator enumerates elements according to their reverse dominance
+/// relationship. Operations and regions are enumerated in "reverse" order.
+/// Blocks are enumerated according to their successor relationship, but
+/// post-order. I.e., a block is visited after its successors have been visited.
+/// Cycles in the block graph are broken in an unspecified way. Unreachable
+/// blocks are not enumerated. Blocks may not be erased during the traversal.
+///
+/// Note: If `SkipGraphRegion` is set to "true", graph regions (regions without
+/// SSA dominance) are silently skipped during the traversal.
+///
+/// Regions of unregistered ops are always treated as SSACFG regions (i.e.,
+/// they are visited even when `SkipGraphRegion=true`), because
+/// `mayHaveSSADominance` returns true for unregistered ops.
+template <bool SkipGraphRegion = false>
+struct ReverseDominanceIterator {
+  // llvm::reverse uses RangeT::rbegin and RangeT::rend.
+  static constexpr auto makeIterable(Block &range) {
+    return llvm::reverse(ForwardIterator::makeIterable(range));
+  }
+
+  static constexpr auto makeIterable(Operation &range) {
+    return llvm::reverse(ForwardIterator::makeIterable(range));
+  }
+
+  static auto makeIterable(Region &region) {
+    struct Traversal : llvm::PostOrderTraversal<Region *> {
+      using BaseT = llvm::PostOrderTraversal<Region *>;
+      using BaseT::PostOrderTraversal; // Re-use constructors.
+
+      // Walk API expects Block references instead of pointers.
+      using iterator = llvm::pointee_iterator<typename BaseT::iterator>;
+      iterator begin() { return iterator(BaseT::begin()); }
+      iterator end() { return iterator(BaseT::end()); }
+    };
+
+    // Skip graph regions.
+    if ((SkipGraphRegion && !mayHaveSSADominance(region)) || region.empty())
+      return Traversal();
+
+    // Create post-order iterator. Blocks are enumerated according to their
+    // successor relationship.
+    return Traversal(&region);
+  }
+};
+} // namespace mlir
+
+#endif // MLIR_IR_ITERATORS_H

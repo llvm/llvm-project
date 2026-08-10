@@ -1,0 +1,37 @@
+# If we see the same function name, but with different hashes, make
+# sure we keep both.
+
+# RUN: llvm-profdata merge %s -o %t 2>&1
+# RUN: llvm-profdata show %t -all-functions -counts > %t.out
+
+# The function ordering is non-deterministic, so we need to do our
+# checks in multiple runs.
+# RUN: FileCheck -check-prefixes=FOO3,BOTH %s -input-file %t.out
+# RUN: FileCheck -check-prefixes=FOO4,BOTH %s -input-file %t.out
+
+# FOO3: Hash: 0x{{0+}}3
+# FOO3-NEXT: Counters: 3
+# FOO3-NEXT: Function count: 1
+# FOO3-NEXT: Block counts: [2, 3]
+foo
+3
+3
+1
+2
+3
+
+# FOO4: Hash: 0x{{0+}}4
+# FOO4-NEXT: Counters: 4
+# FOO4-NEXT: Function count: 11
+# FOO4-NEXT: Block counts: [22, 33, 44]
+foo
+4
+4
+11
+22
+33
+44
+
+# BOTH: Total functions: 2
+# BOTH: Maximum function count: 11
+# BOTH: Maximum internal block count: 44

@@ -1,0 +1,11 @@
+RUN: llvm-symbolizer 0 --obj=%p/Inputs/fat.o --default-arch=x86_64 | FileCheck --check-prefix=X86_64 %s
+RUN: llvm-symbolizer 0 --obj=%p/Inputs/fat.o --default-arch=x86_64h | FileCheck --check-prefix=X86_64H %s
+RUN: llvm-symbolizer 0 --obj=%p/Inputs/fat.o --default-arch=armv7 | FileCheck --check-prefix=ARMV7 %s
+RUN: llvm-symbolizer 0 --obj=%p/Inputs/fat.o --default-arch=armv7em | FileCheck --check-prefix=ARMV7EM %s
+RUN: llvm-symbolizer 0 --obj=%p/Inputs/fat.o --default-arch=armv7m | FileCheck --check-prefix=ARMV7M %s
+
+X86_64: x86_64_function
+X86_64H: x86_64h_function
+ARMV7: armv7_function
+ARMV7EM: armv7em_function
+ARMV7M: armv7m_function

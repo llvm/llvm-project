@@ -1,0 +1,31 @@
+import("//lldb/utils/TableGen/lldb_tablegen.gni")
+
+lldb_tablegen("PlatformWindowsProperties") {
+  args = [ "-gen-lldb-property-defs" ]
+}
+
+lldb_tablegen("PlatformWindowsPropertiesEnum") {
+  args = [ "-gen-lldb-property-enum-defs" ]
+  td_file = "PlatformWindowsProperties.td"
+}
+
+static_library("Windows") {
+  output_name = "lldbPluginPlatformWindows"
+  configs += [
+    "//llvm/utils/gn/build:clang_code",
+    "//llvm/utils/gn/build:lldb_code",
+  ]
+  deps = [
+    ":PlatformWindowsProperties",
+    ":PlatformWindowsPropertiesEnum",
+    "//lldb/source/Breakpoint",
+    "//lldb/source/Core",
+    "//lldb/source/Host",
+    "//lldb/source/Plugins/Platform/gdb-server",
+    "//lldb/source/Target",
+  ]
+
+  # Reaches into Plugins/TypeSystem/Clang.
+  include_dirs = [ "//lldb/source" ]
+  sources = [ "PlatformWindows.cpp" ]
+}

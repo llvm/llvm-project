@@ -1,0 +1,16 @@
+main:252:0
+ 1: 0
+ 2: 50
+ 5: 50
+ 7: bar:102
+  1: 51
+  2: baz:51
+   1: 51
+   !CFGChecksum: 4294967295
+   !Attributes: 3
+  !CFGChecksum: 281479271677951
+  !Attributes: 2
+ !CFGChecksum: 281582081721716
+bar:1:1
+ 1: 1
+ !CFGChecksum: 281479271677951

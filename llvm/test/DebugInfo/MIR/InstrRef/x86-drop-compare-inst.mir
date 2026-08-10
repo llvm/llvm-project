@@ -1,0 +1,96 @@
+# RUN: llc %s -o - -experimental-debug-variable-locations -run-pass=peephole-opt | FileCheck %s
+#
+# X86 initially produces subtract operations to perform comparisons, and then
+# downgrades them into cmp instructions if nothing uses the result. It does this
+# by calling setDesc on the instruction, mutating it from one sort to another,
+# which makes any debug instruction numbers attached to the number invalid.
+# This test tests that the relevant instruction number is dropped.
+#
+# CHECK-NOT: debug-instr-number
+# CHECK:     CMP32rm
+# CHECK-NOT: debug-instr-number
+#
+--- |
+  ; ModuleID = '/fast/fs/build34llvm4/reduced.ll'
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-linux-gnu"
+
+  %"class.std::vector.534" = type { %"struct.std::_Vector_base.535" }
+  %"struct.std::_Vector_base.535" = type { %"struct.std::_Vector_base<unsigned char, std::allocator<unsigned char>>::_Vector_impl" }
+  %"struct.std::_Vector_base<unsigned char, std::allocator<unsigned char>>::_Vector_impl" = type { ptr, ptr, ptr }
+
+  ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
+  declare void @llvm.dbg.declare(metadata, metadata, metadata) #0
+
+  define hidden fastcc void @soup() unnamed_addr !dbg !3 {
+  _ZN4llvm11raw_ostreamlsEPKc.exit2752:
+    %0 = load ptr, ptr undef, align 8, !dbg !7
+    %1 = load ptr, ptr undef, align 8, !dbg !7
+    %_M_start.i2756 = getelementptr inbounds %"class.std::vector.534", ptr %0, i64 undef, i32 0, i32 0, i32 0, !dbg !7
+    %2 = load ptr, ptr %_M_start.i2756, align 8, !dbg !7
+    %sub.ptr.lhs.cast.i2757 = ptrtoint ptr %1 to i64, !dbg !7
+    %sub.ptr.rhs.cast.i2758 = ptrtoint ptr %2 to i64, !dbg !7
+    %sub.ptr.sub.i2759 = sub i64 %sub.ptr.lhs.cast.i2757, %sub.ptr.rhs.cast.i2758, !dbg !7
+    %conv373 = trunc i64 %sub.ptr.sub.i2759 to i32, !dbg !7
+    call void @llvm.dbg.value(metadata i32 %conv373, metadata !8, metadata !DIExpression()), !dbg !7
+    %cmp375.not2842 = icmp eq i32 %conv373, 0, !dbg !7
+    br i1 %cmp375.not2842, label %for.cond.cleanup376, label %for.body377, !dbg !7
+
+  for.cond.cleanup376:                              ; preds = %_ZN4llvm11raw_ostreamlsEPKc.exit2752
+    ret void
+
+  for.body377:                                      ; preds = %_ZN4llvm11raw_ostreamlsEPKc.exit2752
+    ret void
+  }
+
+  ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
+  declare void @llvm.dbg.value(metadata, metadata, metadata) #0
+
+  attributes #0 = { nofree nosync nounwind readnone speculatable willreturn }
+
+  !llvm.module.flags = !{!0}
+  !llvm.dbg.cu = !{!1}
+
+  !0 = !{i32 2, !"Debug Info Version", i32 3}
+  !1 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !2, producer: "beards", isOptimized: true, runtimeVersion: 4, emissionKind: FullDebug)
+  !2 = !DIFile(filename: "bees.cpp", directory: "")
+  !3 = distinct !DISubprogram(name: "nope", scope: !2, file: !2, line: 1, type: !4, spFlags: DISPFlagDefinition, unit: !1)
+  !4 = !DISubroutineType(types: !5)
+  !5 = !{!6}
+  !6 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !7 = !DILocation(line: 1, scope: !3)
+  !8 = !DILocalVariable(name: "flannel", scope: !3)
+
+...
+---
+name:            soup
+alignment:       16
+tracksRegLiveness: true
+debugInstrRef: true
+registers:
+  - { id: 0, class: gr64 }
+  - { id: 1, class: gr64 }
+  - { id: 2, class: gr32 }
+  - { id: 3, class: gr32 }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.0._ZN4llvm11raw_ostreamlsEPKc.exit2752:
+    successors: %bb.1(0x30000000), %bb.2(0x50000000)
+
+    %1:gr64 = IMPLICIT_DEF
+    %0:gr64 = MOV64rm killed %1, 1, $noreg, 0, $noreg, debug-location !7 :: (load (s64) from `ptr undef`)
+    %2:gr32 = COPY %0.sub_32bit, debug-location !7
+    %3:gr32 = SUB32rm %2, %0, 1, $noreg, 0, $noreg, implicit-def $eflags, debug-instr-number 1, debug-location !7 :: (load (s32) from %ir._M_start.i2756, align 8)
+    DBG_INSTR_REF !8, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !7
+    JCC_1 %bb.2, 5, implicit $eflags, debug-location !7
+    JMP_1 %bb.1, debug-location !7
+
+  bb.1.for.cond.cleanup376:
+    RET 0
+
+  bb.2.for.body377:
+    RET 0
+
+...

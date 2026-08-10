@@ -1,0 +1,4 @@
+module Foo {
+  umbrella header "Foo.h"
+  header "FooB.h"
+}

@@ -1,0 +1,43 @@
+/// Copied from libcxx type_traits and simplified
+
+#pragma once
+
+namespace std {
+
+template <class _Tp, _Tp __v>
+struct integral_constant {
+  static const _Tp value = __v;
+  typedef _Tp value_type;
+  typedef integral_constant type;
+};
+
+typedef integral_constant<bool, true> true_type;
+typedef integral_constant<bool, false> false_type;
+
+// is_same, functional
+template <class _Tp, class _Up> struct is_same : public false_type {};
+template <class _Tp> struct is_same<_Tp, _Tp> : public true_type {};
+
+// is_integral, for some types.
+template <class _Tp> struct is_integral
+    : public integral_constant<bool, false> {};
+template <> struct is_integral<bool>
+    : public integral_constant<bool, true> {};
+template <> struct is_integral<char>
+    : public integral_constant<bool, true> {};
+template <> struct is_integral<short>
+    : public integral_constant<bool, true> {};
+template <> struct is_integral<int>
+    : public integral_constant<bool, true> {};
+template <> struct is_integral<long>
+    : public integral_constant<bool, true> {};
+template <> struct is_integral<long long>
+    : public integral_constant<bool, true> {};
+
+// enable_if, functional
+template <bool _C, typename _Tp> struct enable_if{};
+template <typename _Tp> struct enable_if<true, _Tp>{
+  using type = _Tp;
+};
+
+}

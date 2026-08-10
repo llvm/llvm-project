@@ -1,0 +1,103 @@
+; REQUIRES: x86-registered-target
+
+; Test case 1 - General options
+
+; test.cpp
+;  1  using INTPTR = const int *;
+;  2  int foo(INTPTR ParamPtr, unsigned ParamUnsigned, bool ParamBool) {
+;  3    if (ParamBool) {
+;  4      typedef int INTEGER;
+;  5      const INTEGER CONSTANT = 7;
+;  6      return CONSTANT;
+;  7    }
+;  8    return ParamUnsigned;
+;  9  }
+
+; Compare mode - Logical view.
+; The output shows in view form the 'missing (-), added (+)' elements,
+; giving more context by swapping the reference and target object files.
+
+; RUN: llvm-debuginfo-analyzer --attribute=level \
+; RUN:                         --compare=types \
+; RUN:                         --report=view \
+; RUN:                         --print=symbols,types \
+; RUN:                         %p/Inputs/test-codeview-clang.o \
+; RUN:                         %p/Inputs/test-codeview-msvc.o 2>&1 | \
+; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s
+
+; ONE:      Reference: 'test-codeview-clang.o'
+; ONE-NEXT: Target:    'test-codeview-msvc.o'
+; ONE-EMPTY:
+; ONE-NEXT: Logical View:
+; ONE-NEXT:  [000]           {File} 'test-codeview-clang.o'
+; ONE-EMPTY:
+; ONE-NEXT:  [001]             {CompileUnit} 'test.cpp'
+; ONE-NEXT:  [002]               {TypeAlias} 'INTPTR' -> '* const int'
+; ONE-NEXT:  [002]               {Function} extern not_inlined 'foo' -> 'int'
+; ONE-NEXT: -[003]                 {TypeAlias} 'INTEGER' -> 'int'
+; ONE-NEXT:  [003]                 {Parameter} 'ParamBool' -> 'bool'
+; ONE-NEXT:  [003]                 {Parameter} 'ParamPtr' -> '* const int'
+; ONE-NEXT:  [003]                 {Parameter} 'ParamUnsigned' -> 'unsigned'
+; ONE-NEXT:  [003]                 {Block}
+; ONE-NEXT:  [004]                   {Variable} 'CONSTANT' -> 'const int'
+; ONE-NEXT: +[004]                   {TypeAlias} 'INTEGER' -> 'int'
+
+; Compare mode - Logical elements.
+; The output shows in tabular form the 'missing (-), added (+)' elements,
+; giving more context by swapping the reference and target object files.
+
+; RUN: llvm-debuginfo-analyzer --attribute=level \
+; RUN:                         --compare=types \
+; RUN:                         --report=list \
+; RUN:                         --print=symbols,types,summary \
+; RUN:                         %p/Inputs/test-codeview-clang.o \
+; RUN:                         %p/Inputs/test-codeview-msvc.o 2>&1 | \
+; RUN: FileCheck --strict-whitespace -check-prefix=TWO %s
+
+; TWO:      Reference: 'test-codeview-clang.o'
+; TWO-NEXT: Target:    'test-codeview-msvc.o'
+; TWO-EMPTY:
+; TWO-NEXT: (1) Missing Types:
+; TWO-NEXT: -[003]           {TypeAlias} 'INTEGER' -> 'int'
+; TWO-EMPTY:
+; TWO-NEXT: (1) Added Types:
+; TWO-NEXT: +[004]           {TypeAlias} 'INTEGER' -> 'int'
+; TWO-EMPTY:
+; TWO-NEXT: ----------------------------------------
+; TWO-NEXT: Element   Expected    Missing      Added
+; TWO-NEXT: ----------------------------------------
+; TWO-NEXT: Scopes           4          0          0
+; TWO-NEXT: Symbols          0          0          0
+; TWO-NEXT: Types            2          1          1
+; TWO-NEXT: Lines            0          0          0
+; TWO-NEXT: ----------------------------------------
+; TWO-NEXT: Total            6          1          1
+
+; Changing the 'Reference' and 'Target' order:
+
+; RUN: llvm-debuginfo-analyzer --attribute=level \
+; RUN:                         --compare=types \
+; RUN:                         --report=list \
+; RUN:                         --print=symbols,types,summary \
+; RUN:                         %p/Inputs/test-codeview-msvc.o \
+; RUN:                         %p/Inputs/test-codeview-clang.o 2>&1 | \
+; RUN: FileCheck --strict-whitespace -check-prefix=THR %s
+
+; THR:      Reference: 'test-codeview-msvc.o'
+; THR-NEXT: Target:    'test-codeview-clang.o'
+; THR-EMPTY:
+; THR-NEXT: (1) Missing Types:
+; THR-NEXT: -[004]           {TypeAlias} 'INTEGER' -> 'int'
+; THR-EMPTY:
+; THR-NEXT: (1) Added Types:
+; THR-NEXT: +[003]           {TypeAlias} 'INTEGER' -> 'int'
+; THR-EMPTY:
+; THR-NEXT: ----------------------------------------
+; THR-NEXT: Element   Expected    Missing      Added
+; THR-NEXT: ----------------------------------------
+; THR-NEXT: Scopes           4          0          0
+; THR-NEXT: Symbols          0          0          0
+; THR-NEXT: Types            2          1          1
+; THR-NEXT: Lines            0          0          0
+; THR-NEXT: ----------------------------------------
+; THR-NEXT: Total            6          1          1

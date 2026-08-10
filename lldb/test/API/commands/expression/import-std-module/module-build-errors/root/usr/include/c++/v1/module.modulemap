@@ -1,0 +1,3 @@
+module std {
+  module "algorithm" { header "algorithm" export * }
+}

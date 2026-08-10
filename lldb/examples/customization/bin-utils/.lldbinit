@@ -1,0 +1,5 @@
+# So that ~/binutils.py takes precedence.
+script sys.path[:0] = [os.path.expanduser('~')]
+script import binutils
+command script add -f binutils.itob itob
+command script add -f binutils.utob utob

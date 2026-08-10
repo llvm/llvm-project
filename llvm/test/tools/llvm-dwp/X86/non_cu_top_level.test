@@ -1,0 +1,3 @@
+RUN: not llvm-dwp %p/../Inputs/non_cu_top_level.dwo -o %t 2>&1 | FileCheck %s
+
+CHECK: error: {{.*}}non_cu_top_level.dwo': top level DIE is not a compile unit

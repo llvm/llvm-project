@@ -1,0 +1,82 @@
+## Check how llvm-readelf prints sections to segments mapping.
+
+## Check that --section-mapping produces a sections to segments
+## mapping and not anything else.
+# RUN: yaml2obj %s -o %t64.elf
+# RUN: llvm-readelf --section-mapping %t64.elf \
+# RUN:   | FileCheck %s --check-prefix=MAPPING --strict-whitespace --match-full-lines --implicit-check-not={{.}}
+
+#      MAPPING: Section to Segment mapping:
+# MAPPING-NEXT:  Segment Sections...
+# MAPPING-NEXT:   00     .foo.begin .foo.end {{$}}
+# MAPPING-NEXT:   01     .bar.begin .bar.end {{$}}
+# MAPPING-NEXT:   None   .strtab .shstrtab {{$}}
+
+--- !ELF
+FileHeader:
+  Class:      ELFCLASS64
+  Data:       ELFDATA2LSB
+  Type:       ET_EXEC
+  EPhEntSize: [[PHENTSIZE=<none>]]
+Sections:
+  - Name:    .foo.begin
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC ]
+    Address: 0x1000
+    Size:    0x1
+  - Name:    .foo.end
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC ]
+    Size:    0x2
+  - Name:    .bar.begin
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC ]
+    Address: 0x2000
+    Size:    0x3
+  - Name:    .bar.end
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC ]
+    Size:    0x4
+ProgramHeaders:
+## Case 1: an arbitrary segment with sections.
+  - Type:     PT_PHDR
+    Flags:    [ PF_W ]
+    VAddr:    0x1000
+    FirstSec: .foo.begin
+    LastSec:  .foo.end
+## Case 2: another segment with different sections.
+  - Type:     PT_PHDR
+    Flags:    [ PF_X ]
+    VAddr:    0x2000
+    FirstSec: .bar.begin
+    LastSec:  .bar.end
+
+## Check that --section-mapping=false --program-headers produces just program headers.
+# RUN: llvm-readelf --section-mapping=false --program-headers %t64.elf \
+# RUN:   | FileCheck %s --check-prefix=SEC-MAPPING-FALSE --implicit-check-not="Section to Segment mapping:"
+
+# SEC-MAPPING-FALSE: Program Headers:
+
+## Check that only one copy of the section/segment mapping table is produced
+## when both --section-mapping and --program-headers are used.
+# RUN: llvm-readelf --section-mapping --program-headers %t64.elf \
+# RUN:   | FileCheck %s --check-prefix=MAPPING --implicit-check-not="Section to Segment mapping:"
+
+## Check the output when an object has no section headers.
+## RUN: llvm-objcopy --strip-sections %t64.elf %tno-shdrs.o
+## RUN: llvm-readelf --section-mapping %tno-shdrs.o | FileCheck %s --check-prefix=NO-SECHDRS
+
+# NO-SECHDRS:      Section to Segment mapping:
+# NO-SECHDRS-NEXT:  Segment Sections...
+# NO-SECHDRS-NEXT:   00 {{$}}
+# NO-SECHDRS-NEXT:   01 {{$}}
+# NO-SECHDRS-NOT: {{.}}
+
+## Check we report a warning when we are unable to read program headers.
+# RUN: yaml2obj %s -DPHENTSIZE=1 -o %t64-err1.elf
+# RUN: llvm-readelf --section-mapping %t64-err1.elf 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t64-err1.elf --check-prefix=PHENTSIZE
+
+# PHENTSIZE:      Section to Segment mapping:
+# PHENTSIZE-NEXT:  Segment Sections...
+# PHENTSIZE-NEXT: warning: '[[FILE]]': can't read program headers to build section to segment mapping: invalid e_phentsize: 1

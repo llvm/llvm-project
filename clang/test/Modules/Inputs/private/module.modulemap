@@ -1,0 +1,9 @@
+module libPrivate1 {
+  header "public1.h"
+  private header "private1.h"
+}
+
+module libPrivate2 {
+  header "public2.h"
+  private header "private2.h"
+}

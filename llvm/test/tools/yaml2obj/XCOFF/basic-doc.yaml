@@ -1,0 +1,166 @@
+## Check that yaml2obj automatically assigns omited fields with values.
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj --headers --symbols %t | FileCheck %s
+
+--- !XCOFF
+FileHeader:
+  MagicNumber:       0x1DF
+Sections:
+  - Name:            .text
+    Flags:           [ STYP_TEXT ]
+    SectionData:     "9061FFF880820000"
+  - Name:            .data
+    Flags:           [ STYP_DATA ]
+    SectionData:     "0000000000000FC0"
+    Relocations:
+      - Address:     0x08
+  - Name:            .data
+    Relocations:
+      - Type:        0x02
+  - Name:            .debug
+    Address:         0x0
+    Size:            0x60
+    Flags:           [ STYP_DEBUG, STYP_DATA ]
+    SectionData:     01110103
+  - Flags:           [ STYP_BSS, STYP_DWARF, STYP_EXCEPT,  STYP_INFO, STYP_TDATA, STYP_TBSS, STYP_LOADER, STYP_TYPCHK, STYP_OVRFLO ]
+Symbols:
+  - Name:            .file
+    Section:         N_DEBUG
+  - Name:            .undef
+  - Name:            .abs
+    Section:         N_ABS
+  - Name:            .text
+    Value:           0x0
+    Section:         .text
+    Type:            0x0
+    StorageClass:    C_HIDEXT
+    NumberOfAuxEntries: 1
+
+# CHECK:      AddressSize: 32bit
+# CHECK-NEXT: FileHeader {
+# CHECK-NEXT:   Magic: 0x1DF
+# CHECK-NEXT:   NumberOfSections: 5
+# CHECK-NEXT:   TimeStamp: None (0x0)
+# CHECK-NEXT:   SymbolTableOffset: 0x104
+# CHECK-NEXT:   SymbolTableEntries: 5
+# CHECK-NEXT:   OptionalHeaderSize: 0x0
+# CHECK-NEXT:   Flags: 0x0
+# CHECK-NEXT: }
+# CHECK-NEXT: AuxiliaryHeader {
+# CHECK-NEXT: }
+# CHECK-NEXT: Sections [
+# CHECK-NEXT:   Section {
+# CHECK-NEXT:     Index: 1
+# CHECK-NEXT:     Name: .text
+# CHECK-NEXT:     PhysicalAddress: 0x0
+# CHECK-NEXT:     VirtualAddress: 0x0
+# CHECK-NEXT:     Size: 0x8
+# CHECK-NEXT:     RawDataOffset: 0xDC
+# CHECK-NEXT:     RelocationPointer: 0x0
+# CHECK-NEXT:     LineNumberPointer: 0x0
+# CHECK-NEXT:     NumberOfRelocations: 0
+# CHECK-NEXT:     NumberOfLineNumbers: 0
+# CHECK-NEXT:     Type: STYP_TEXT (0x20)
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Section {
+# CHECK-NEXT:     Index: 2
+# CHECK-NEXT:     Name: .data
+# CHECK-NEXT:     PhysicalAddress: 0x0
+# CHECK-NEXT:     VirtualAddress: 0x0
+# CHECK-NEXT:     Size: 0x8
+# CHECK-NEXT:     RawDataOffset: 0xE4
+# CHECK-NEXT:     RelocationPointer: 0xF0
+# CHECK-NEXT:     LineNumberPointer: 0x0
+# CHECK-NEXT:     NumberOfRelocations: 1
+# CHECK-NEXT:     NumberOfLineNumbers: 0
+# CHECK-NEXT:     Type: STYP_DATA (0x40)
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Section {
+# CHECK-NEXT:     Index: 3
+# CHECK-NEXT:     Name: .data
+# CHECK-NEXT:     PhysicalAddress: 0x0
+# CHECK-NEXT:     VirtualAddress: 0x0
+# CHECK-NEXT:     Size: 0x0
+# CHECK-NEXT:     RawDataOffset: 0x0
+# CHECK-NEXT:     RelocationPointer: 0xFA
+# CHECK-NEXT:     LineNumberPointer: 0x0
+# CHECK-NEXT:     NumberOfRelocations: 1
+# CHECK-NEXT:     NumberOfLineNumbers: 0
+# CHECK-NEXT:     Type: 0x0
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Section {
+# CHECK-NEXT:     Index: 4
+# CHECK-NEXT:     Name: .debug
+# CHECK-NEXT:     PhysicalAddress: 0x0
+# CHECK-NEXT:     VirtualAddress: 0x0
+# CHECK-NEXT:     Size: 0x60
+# CHECK-NEXT:     RawDataOffset: 0xEC
+# CHECK-NEXT:     RelocationPointer: 0x0
+# CHECK-NEXT:     LineNumberPointer: 0x0
+# CHECK-NEXT:     NumberOfRelocations: 0
+# CHECK-NEXT:     NumberOfLineNumbers: 0
+# CHECK-NEXT:     Type: 0x2040
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Section {
+# CHECK-NEXT:     Index: 5
+# CHECK-NEXT:     Name: 
+# CHECK-NEXT:     PhysicalAddress: 0x0
+# CHECK-NEXT:     VirtualAddress: 0x0
+# CHECK-NEXT:     Size: 0x0
+# CHECK-NEXT:     RawDataOffset: 0x0
+# CHECK-NEXT:     RelocationPointer: 0x0
+# CHECK-NEXT:     LineNumberPointer: 0x0
+# CHECK-NEXT:     NumberOfRelocations: 0
+# CHECK-NEXT:     NumberOfLineNumbers: 0
+# CHECK-NEXT:     Type: 0xDF90
+# CHECK-NEXT:   }
+# CHECK-NEXT: ]
+# CHECK-NEXT: Symbols [
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Index: 0
+# CHECK-NEXT:     Name: .file
+# CHECK-NEXT:     Value: 0x0
+# CHECK-NEXT:     Section: N_DEBUG
+# CHECK-NEXT:     Type: 0x0
+# CHECK-NEXT:     StorageClass: C_NULL (0x0)
+# CHECK-NEXT:     NumberOfAuxEntries: 0
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Index: 1
+# CHECK-NEXT:     Name: .undef
+# CHECK-NEXT:     Value: 0x0
+# CHECK-NEXT:     Section: N_UNDEF
+# CHECK-NEXT:     Type: 0x0
+# CHECK-NEXT:     StorageClass: C_NULL (0x0)
+# CHECK-NEXT:     NumberOfAuxEntries: 0
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Index: 2
+# CHECK-NEXT:     Name: .abs
+# CHECK-NEXT:     Value: 0x0
+# CHECK-NEXT:     Section: N_ABS
+# CHECK-NEXT:     Type: 0x0
+# CHECK-NEXT:     StorageClass: C_NULL (0x0)
+# CHECK-NEXT:     NumberOfAuxEntries: 0
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Index: 3
+# CHECK-NEXT:     Name: .text
+# CHECK-NEXT:     Value (RelocatableAddress): 0x0
+# CHECK-NEXT:     Section: .text
+# CHECK-NEXT:     Type: 0x0
+# CHECK-NEXT:     StorageClass: C_HIDEXT (0x6B)
+# CHECK-NEXT:     NumberOfAuxEntries: 1
+# CHECK-NEXT:     CSECT Auxiliary Entry {
+# CHECK-NEXT:       Index: 4
+# CHECK-NEXT:       SectionLen: 0
+# CHECK-NEXT:       ParameterHashIndex: 0x0
+# CHECK-NEXT:       TypeChkSectNum: 0x0
+# CHECK-NEXT:       SymbolAlignmentLog2: 0
+# CHECK-NEXT:       SymbolType: XTY_ER (0x0)
+# CHECK-NEXT:       StorageMappingClass: XMC_PR (0x0)
+# CHECK-NEXT:       StabInfoIndex: 0x0
+# CHECK-NEXT:       StabSectNum: 0x0
+# CHECK-NEXT:     }
+# CHECK-NEXT:   }
+# CHECK-NEXT: ]

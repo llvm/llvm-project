@@ -1,0 +1,4 @@
+# RUN: yaml-bench -canonical %s
+
+anchored: !local &anchor value
+alias: *anchor

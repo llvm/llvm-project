@@ -1,0 +1,99 @@
+; RUN: llvm-undname < %s | FileCheck %s
+
+; CHECK-NOT: Invalid mangled name
+
+??0?$AutoNTTPClass@$MPEAH1?i@@3HA@@QEAA@XZ
+; CHECK: public: __cdecl AutoNTTPClass<&int i>::AutoNTTPClass<&int i>(void)
+
+??0?$AutoNTTPClass@$1?i@@3HA@@QEAA@XZ
+; CHECK: public: __cdecl AutoNTTPClass<&int i>::AutoNTTPClass<&int i>(void)
+
+??0?$AutoNTTPClass@$MPEAH1?i@@3HA$MPEAH1?j@@3HA@@QEAA@XZ
+; CHECK: public: __cdecl AutoNTTPClass<&int i, &int j>::AutoNTTPClass<&int i, &int j>(void)
+
+??0?$AutoNTTPClass@$1?i@@3HA$1?j@@3HA@@QEAA@XZ
+; CHECK: public: __cdecl AutoNTTPClass<&int i, &int j>::AutoNTTPClass<&int i, &int j>(void)
+
+??0?$AutoNTTPClass@$MP6AHXZ1?Func@@YAHXZ@@QEAA@XZ
+; CHECK: public: __cdecl AutoNTTPClass<&int __cdecl Func(void)>::AutoNTTPClass<&int __cdecl Func(void)>(void)
+
+??0?$AutoNTTPClass@$1?Func@@YAHXZ@@QEAA@XZ
+; CHECK: public: __cdecl AutoNTTPClass<&int __cdecl Func(void)>::AutoNTTPClass<&int __cdecl Func(void)>(void)
+
+??0?$AutoNTTPClass@$MP6AHXZ1?Func@@YAHXZ$MP6AHXZ1?Func2@@YAHXZ@@QEAA@XZ
+; CHECK: public: __cdecl AutoNTTPClass<&int __cdecl Func(void), &int __cdecl Func2(void)>::AutoNTTPClass<&int __cdecl Func(void), &int __cdecl Func2(void)>(void)
+
+??0?$AutoNTTPClass@$1?Func@@YAHXZ$1?Func2@@YAHXZ@@QEAA@XZ
+; CHECK: public: __cdecl AutoNTTPClass<&int __cdecl Func(void), &int __cdecl Func2(void)>::AutoNTTPClass<&int __cdecl Func(void), &int __cdecl Func2(void)>(void)
+
+??$AutoFunc@$MPEAH1?i@@3HA@@YA?A?<auto>@@XZ
+; CHECK: <auto> __cdecl AutoFunc<&int i>(void)
+
+??$AutoFunc@$1?i@@3HA@@YA?A?<auto>@@XZ
+; CHECK: <auto> __cdecl AutoFunc<&int i>(void)
+
+??$AutoFunc@$MP6AHXZ1?Func@@YAHXZ@@YA?A?<auto>@@XZ
+; CHECK: <auto> __cdecl AutoFunc<&int __cdecl Func(void)>(void)
+
+??$AutoFunc@$1?Func@@YAHXZ@@YA?A?<auto>@@XZ
+; CHECK: <auto> __cdecl AutoFunc<&int __cdecl Func(void)>(void)
+
+??$AutoFunc@$MH00@@YA?A?<auto>@@XZ
+; CHECK: <auto> __cdecl AutoFunc<1>(void)
+
+??$AutoFunc@$00@@YA?A?<auto>@@XZ
+; CHECK: <auto> __cdecl AutoFunc<1>(void)
+
+??0?$AutoNTTPClass@$0A@@@QEAA@XZ
+; CHECK: public: __cdecl AutoNTTPClass<0>::AutoNTTPClass<0>(void)
+
+??0?$AutoNTTPClass@$MH0A@@@QEAA@XZ
+; CHECK: public: __cdecl AutoNTTPClass<0>::AutoNTTPClass<0>(void)
+
+??0?$AutoNTTPClass@$0A@$0A@$0GB@@@QEAA@XZ
+; CHECK: public: __cdecl AutoNTTPClass<0, 0, 97>::AutoNTTPClass<0, 0, 97>(void)
+
+??0?$AutoNTTPClass@$MH0A@$M_N0A@$MD0GB@@@QEAA@XZ
+; CHECK: public: __cdecl AutoNTTPClass<0, 0, 97>::AutoNTTPClass<0, 0, 97>(void)
+
+??0?$AutoNTTPClass@$M$$T0A@@@QEAA@XZ
+; CHECK: public: __cdecl AutoNTTPClass<0>::AutoNTTPClass<0>(void)
+
+??0?$AutoNTTPClass@$0A@@@QEAA@XZ
+; CHECK: public: __cdecl AutoNTTPClass<0>::AutoNTTPClass<0>(void)
+
+??0?$AutoNTTPClass@$MP8S@@EAAXXZ1?f@1@QEAAXXZ@@QEAA@XZ
+; CHECK: public: __cdecl AutoNTTPClass<&public: void __cdecl S::f(void)>::AutoNTTPClass<&public: void __cdecl S::f(void)>(void)
+
+??0?$AutoNTTPClass@$1?f@S@@QEAAXXZ@@QEAA@XZ
+; CHECK: public: __cdecl AutoNTTPClass<&public: void __cdecl S::f(void)>::AutoNTTPClass<&public: void __cdecl S::f(void)>(void)
+
+??0?$AutoNTTPClass@$MP8M@@EAAXXZH?f@1@QEAAXXZA@@@QEAA@XZ
+; CHECK: public: __cdecl AutoNTTPClass<{public: void __cdecl M::f(void), 0}>::AutoNTTPClass<{public: void __cdecl M::f(void), 0}>(void)
+
+??0?$AutoNTTPClass@$H?f@M@@QEAAXXZA@@@QEAA@XZ
+; CHECK: public: __cdecl AutoNTTPClass<{public: void __cdecl M::f(void), 0}>::AutoNTTPClass<{public: void __cdecl M::f(void), 0}>(void)
+
+??0?$AutoNTTPClass@$MP8V@@EAAXXZI?f@1@QEAAXXZA@A@@@QEAA@XZ
+; CHECK: public: __cdecl AutoNTTPClass<{public: void __cdecl V::f(void), 0, 0}>::AutoNTTPClass<{public: void __cdecl V::f(void), 0, 0}>(void)
+
+??0?$AutoNTTPClass@$I?f@V@@QEAAXXZA@A@@@QEAA@XZ
+; CHECK: public: __cdecl AutoNTTPClass<{public: void __cdecl V::f(void), 0, 0}>::AutoNTTPClass<{public: void __cdecl V::f(void), 0, 0}>(void)
+
+??0?$AutoNTTPClass@$MPEQS@@H07@@QEAA@XZ
+; CHECK: public: __cdecl AutoNTTPClass<8>::AutoNTTPClass<8>(void)
+
+??0?$AutoNTTPClass@$07@@QEAA@XZ
+; CHECK: public: __cdecl AutoNTTPClass<8>::AutoNTTPClass<8>(void)
+
+??0?$AutoNTTPClass@$MPEQM@@H0M@@@QEAA@XZ
+; CHECK: public: __cdecl AutoNTTPClass<12>::AutoNTTPClass<12>(void)
+
+??0?$AutoNTTPClass@$0M@@@QEAA@XZ
+; CHECK: public: __cdecl AutoNTTPClass<12>::AutoNTTPClass<12>(void)
+
+??0?$AutoNTTPClass@$MPEQV@@HFBA@A@@@QEAA@XZ
+; CHECK: public: __cdecl AutoNTTPClass<{16, 0}>::AutoNTTPClass<{16, 0}>(void)
+
+??0?$AutoNTTPClass@$FBA@A@@@QEAA@XZ
+; CHECK: public: __cdecl AutoNTTPClass<{16, 0}>::AutoNTTPClass<{16, 0}>(void)

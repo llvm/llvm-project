@@ -1,0 +1,17 @@
+--- !minidump
+Streams:         
+  - Type:            SystemInfo
+    Processor Arch:  AMD64
+    Platform ID:     Linux
+    CSD Version:     '15E216'
+    CPU:             
+      Vendor ID:       GenuineIntel
+      Version Info:    0x00000000
+      Feature Info:    0x00000000
+  - Type:            ModuleList
+    Modules:         
+      - Base of Image:   0x0000000000001000
+        Size of Image:   0x00001000
+        Module Name:     'file-with-a-name-unlikely-to-exist-in-the-current-directory.so'
+        CodeView Record: ''
+...

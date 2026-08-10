@@ -1,0 +1,243 @@
+macros:
+  NCCS:
+    in-latest-posix: ''
+
+  VEOF:
+    in-latest-posix: ''
+  VEOL:
+    in-latest-posix: ''
+  VERASE:
+    in-latest-posix: ''
+  VINTR:
+    in-latest-posix: ''
+  VKILL:
+    in-latest-posix: ''
+  VMIN:
+    in-latest-posix: ''
+  VQUIT:
+    in-latest-posix: ''
+  VSTART:
+    in-latest-posix: ''
+  VSTOP:
+    in-latest-posix: ''
+  VSUSP:
+    in-latest-posix: ''
+  VTIME:
+    in-latest-posix: ''
+
+  BRKINT:
+    in-latest-posix: ''
+  ICRNL:
+    in-latest-posix: ''
+  IGNBRK:
+    in-latest-posix: ''
+  IGNCR:
+    in-latest-posix: ''
+  IGNPAR:
+    in-latest-posix: ''
+  INLCR:
+    in-latest-posix: ''
+  INPCK:
+    in-latest-posix: ''
+  ISTRIP:
+    in-latest-posix: ''
+  IXANY:
+    in-latest-posix: ''
+  IXOFF:
+    in-latest-posix: ''
+  IXON:
+    in-latest-posix: ''
+  PARMRK:
+    in-latest-posix: ''
+
+  OPOST:
+    in-latest-posix: ''
+  ONLCR:
+    in-latest-posix: ''
+  OCRNL:
+    in-latest-posix: ''
+  ONOCR:
+    in-latest-posix: ''
+  ONLRET:
+    in-latest-posix: ''
+  OFDEL:
+    in-latest-posix: ''
+  OFILL:
+    in-latest-posix: ''
+
+  NLDLY:
+    in-latest-posix: ''
+  NL0:
+    in-latest-posix: ''
+  NL1:
+    in-latest-posix: ''
+
+  CRDLY:
+    in-latest-posix: ''
+  CR0:
+    in-latest-posix: ''
+  CR1:
+    in-latest-posix: ''
+  CR2:
+    in-latest-posix: ''
+  CR3:
+    in-latest-posix: ''
+
+  TABDLY:
+    in-latest-posix: ''
+  TAB0:
+    in-latest-posix: ''
+  TAB1:
+    in-latest-posix: ''
+  TAB2:
+    in-latest-posix: ''
+  TAB3:
+    in-latest-posix: ''
+
+  BSDLY:
+    in-latest-posix: ''
+  BS0:
+    in-latest-posix: ''
+  BS1:
+    in-latest-posix: ''
+
+  VTDLY:
+    in-latest-posix: ''
+  VT0:
+    in-latest-posix: ''
+  VT1:
+    in-latest-posix: ''
+
+  FFDLY:
+    in-latest-posix: ''
+  FF0:
+    in-latest-posix: ''
+  FF1:
+    in-latest-posix: ''
+
+  B0:
+    in-latest-posix: ''
+  B50:
+    in-latest-posix: ''
+  B75:
+    in-latest-posix: ''
+  B110:
+    in-latest-posix: ''
+  B134:
+    in-latest-posix: ''
+  B150:
+    in-latest-posix: ''
+  B200:
+    in-latest-posix: ''
+  B300:
+    in-latest-posix: ''
+  B600:
+    in-latest-posix: ''
+  B1200:
+    in-latest-posix: ''
+  B1800:
+    in-latest-posix: ''
+  B2400:
+    in-latest-posix: ''
+  B4800:
+    in-latest-posix: ''
+  B9600:
+    in-latest-posix: ''
+  B19200:
+    in-latest-posix: ''
+  B38400:
+    in-latest-posix: ''
+
+  CSIZE:
+    in-latest-posix: ''
+  CS5:
+    in-latest-posix: ''
+  CS6:
+    in-latest-posix: ''
+  CS7:
+    in-latest-posix: ''
+  CS8:
+    in-latest-posix: ''
+
+  CSTOPB:
+    in-latest-posix: ''
+  CREAD:
+    in-latest-posix: ''
+  PARENB:
+    in-latest-posix: ''
+  PARODD:
+    in-latest-posix: ''
+  HUPCL:
+    in-latest-posix: ''
+  CLOCAL:
+    in-latest-posix: ''
+
+  ECHO:
+    in-latest-posix: ''
+  ECHOE:
+    in-latest-posix: ''
+  ECHOK:
+    in-latest-posix: ''
+  ECHONL:
+    in-latest-posix: ''
+  ICANON:
+    in-latest-posix: ''
+  IEXTEN:
+    in-latest-posix: ''
+  ISIG:
+    in-latest-posix: ''
+  NOFLSH:
+    in-latest-posix: ''
+  TOSTOP:
+    in-latest-posix: ''
+
+  TCSANOW:
+    in-latest-posix: ''
+  TCSADRAIN:
+    in-latest-posix: ''
+  TCSAFLUSH:
+    in-latest-posix: ''
+
+  TCIFLUSH:
+    in-latest-posix: ''
+  TCIOFLUSH:
+    in-latest-posix: ''
+  TCOFLUSH:
+    in-latest-posix: ''
+
+  TCIOFF:
+    in-latest-posix: ''
+  TCION:
+    in-latest-posix: ''
+  TCOOFF:
+    in-latest-posix: ''
+  TCOON:
+    in-latest-posix: ''
+
+functions:
+  cfgetispeed:
+    in-latest-posix: ''
+  cfgetospeed:
+    in-latest-posix: ''
+  cfsetispeed:
+    in-latest-posix: ''
+  cfsetospeed:
+    in-latest-posix: ''
+  tcdrain:
+    in-latest-posix: ''
+  tcflow:
+    in-latest-posix: ''
+  tcflush:
+    in-latest-posix: ''
+  tcgetattr:
+    in-latest-posix: ''
+  tcgetsid:
+    in-latest-posix: ''
+  tcgetwinsize:
+    in-latest-posix: ''
+  tcsendbreak:
+    in-latest-posix: ''
+  tcsetattr:
+    in-latest-posix: ''
+  tcsetwinsize:
+    in-latest-posix: ''

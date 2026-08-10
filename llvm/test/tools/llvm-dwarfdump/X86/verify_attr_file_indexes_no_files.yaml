@@ -1,0 +1,116 @@
+# RUN: yaml2obj %s | not llvm-dwarfdump --error-display=details --verify - | FileCheck %s --implicit-check-not=error:
+
+# CHECK:      error: DIE has DW_AT_decl_file with an invalid file index 2 (the file table in the prologue is empty){{[[:space:]]}}
+# CHECK-NEXT: 0x0000001e: DW_TAG_subprogram
+# CHECK-NEXT:               DW_AT_name        [DW_FORM_strp] ( .debug_str[0x0000000d] = "main")
+# CHECK-NEXT:               DW_AT_low_pc      [DW_FORM_addr] (0x0000000000001000)
+# CHECK-NEXT:               DW_AT_high_pc     [DW_FORM_addr] (0x0000000000002000)
+# CHECK-NEXT:               DW_AT_decl_file   [DW_FORM_data1] (0x02)
+# CHECK-NEXT:               DW_AT_call_line   [DW_FORM_data1] (5){{[[:space:]]}}
+# CHECK-NEXT: error: DIE has DW_AT_call_file with an invalid file index 3 (the file table in the prologue is empty){{[[:space:]]}}
+# CHECK-NEXT: 0x00000035: DW_TAG_inlined_subroutine
+# CHECK-NEXT:               DW_AT_name        [DW_FORM_strp] ( .debug_str[0x00000012] = "inline1")
+# CHECK-NEXT:               DW_AT_low_pc      [DW_FORM_addr] (0x0000000000001100)
+# CHECK-NEXT:               DW_AT_high_pc     [DW_FORM_data4] (0x00000100)
+# CHECK-NEXT:               DW_AT_call_file   [DW_FORM_data1] (0x03)
+# CHECK-NEXT:               DW_AT_call_line   [DW_FORM_data1] (10){{[[:space:]]}}
+
+# CHECK:      Errors detected.
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_str:
+    - ''
+    - '/tmp/main.c'
+    - main
+    - inline1
+  debug_abbrev:
+    - Table:
+        - Code:            0x0000000000000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_stmt_list
+              Form:            DW_FORM_sec_offset
+        - Code:            0x0000000000000002
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_decl_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_call_line
+              Form:            DW_FORM_data1
+        - Code:            0x0000000000000003
+          Tag:             DW_TAG_inlined_subroutine
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_call_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_call_line
+              Form:            DW_FORM_data1
+  debug_info:
+    - Length:          0x0000000000000046
+      Version:         4
+      AbbrOffset:      0x0000000000000000
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x00000001
+          Values:
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000000002
+            - Value:           0x0000000000000000
+            - Value:           0x0000000000000000
+        - AbbrCode:        0x00000002
+          Values:
+            - Value:           0x000000000000000D
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000002000
+            - Value:           0x0000000000000002
+            - Value:           0x0000000000000005
+        - AbbrCode:        0x00000003
+          Values:
+            - Value:           0x0000000000000012
+            - Value:           0x0000000000001100
+            - Value:           0x0000000000000100
+            - Value:           0x0000000000000003
+            - Value:           0x000000000000000A
+        - AbbrCode:        0x00000000
+          Values:          []
+        - AbbrCode:        0x00000000
+          Values:          []
+  debug_line:
+    - Length:          30
+      Version:         2
+      PrologueLength:  24
+      MinInstLength:   1
+      DefaultIsStmt:   1
+      LineBase:        251
+      LineRange:       14
+      OpcodeBase:      13
+      StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+      IncludeDirs:
+        - '/tmp'
+...

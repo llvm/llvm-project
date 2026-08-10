@@ -1,0 +1,28 @@
+{
+  'version': 0,
+  'case-sensitive': 'false',
+  'roots': [
+    {
+      'type': 'directory',
+      'name': "TEST_DIR/Z.framework/Headers",
+      'contents': [
+        {
+          'type': 'file',
+          'name': "Z.h",
+          'external-contents': "TEST_DIR/flat-header-path/Z.h"
+        }
+      ]
+    },
+    {
+      'type': 'directory',
+      'name': "TEST_DIR/Z.framework/Modules",
+      'contents': [
+        {
+          'type': 'file',
+          'name': "module.modulemap",
+          'external-contents': "TEST_DIR/flat-header-path/Z.modulemap"
+        }
+      ]
+    }
+  ]
+}

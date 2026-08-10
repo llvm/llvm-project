@@ -1,0 +1,41 @@
+# RUN: llc -mtriple=hexagon -mcpu=hexagonv60 -run-pass hexagon-packetizer %s -o - | FileCheck %s
+
+# Check that a store can be packetized with a load that happens later
+# if these instructions are not aliased (the load will actually execute
+# first).
+# CHECK-LABEL: name: danny
+# CHECK: BUNDLE
+
+---
+name: danny
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: default, size: 4, alignment: 4 }
+  - { id: 1, type: default, size: 4, alignment: 4 }
+body: |
+  bb.0:
+    liveins: $r0
+    S2_storeri_io $r29, 0, $r0 :: (store (s32) into %stack.0)
+    $r1 = L2_loadri_io $r29, 4 :: (load (s32) from %stack.1)
+...
+
+
+# Check that a store cannot be packetized with a load that happens later
+# if these instructions are aliased.
+# CHECK-LABEL: name: sammy
+# CHECK-NOT: BUNDLE
+# CHECK: S2_storeri_io $r29, 0, $r0
+# CHECK: $r1 = L2_loadri_io $r29, 0
+
+---
+name: sammy
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: default, size: 4, alignment: 4 }
+body: |
+  bb.0:
+    liveins: $r0
+    S2_storeri_io $r29, 0, $r0 :: (store (s32) into %stack.0)
+    $r1 = L2_loadri_io $r29, 0 :: (load (s32) from %stack.0)
+...
+

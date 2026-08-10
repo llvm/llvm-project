@@ -1,0 +1,15 @@
+# RUN: llvm-mc --disassemble %s -triple=armv4-linux-gnueabi 2>&1 | FileCheck %s -check-prefix=V4
+# RUN: llvm-mc --disassemble %s -triple=armv5te-linux-gnueabi 2>&1 | FileCheck %s -check-prefix=V5TE
+
+#  31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0 
+# -------------------------------------------------------------------------------------------------
+# | 0: 0: 0: 0| 0: 0: 0: 0| 0: 0: 0: 0| 0: 0: 0: 0| X: X: X: 1| X: X: X: X| 1: 1: X: 1| X: X: X: X|
+# -------------------------------------------------------------------------------------------------
+# 
+# A8.6.68 LDRD (register)
+# if Rt{0} = 1 then UNDEFINED;
+
+# V4: invalid instruction encoding
+# V5TE: ldrd
+0xd0 0x10 0x00 0x01
+

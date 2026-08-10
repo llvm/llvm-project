@@ -1,0 +1,81 @@
+RUN: llvm-dwarfdump -h 2>&1 | FileCheck --check-prefix=HELP %s --implicit-check-not=out-file
+RUN: llvm-dwarfdump --help 2>&1 | FileCheck --check-prefix=HELP %s --implicit-check-not=out-file
+HELP: USAGE: llvm-dwarfdump{{[^ ]*}} [options] <input object files or .dSYM bundles>
+HELP: Color Options
+HELP: --color
+HELP: Generic Options
+HELP: --help
+HELP: --help-list
+HELP: --version
+HELP: Section-specific Dump Options
+HELP: -a                         - Alias for --all
+HELP: --all                      - Dump all debug info sections
+HELP: --apple-names              - Dump the .apple_names section
+HELP: --apple-namespaces         - Dump the .apple_namespaces section
+HELP: --apple-objc               - Dump the .apple_objc section
+HELP: --apple-types              - Dump the .apple_types section
+HELP: --debug-abbrev             - Dump the .debug_abbrev section
+HELP: --debug-addr               - Dump the .debug_addr section
+HELP: --debug-aranges            - Dump the .debug_aranges section
+HELP: --debug-cu-index           - Dump the .debug_cu_index section
+HELP: --debug-frame[=<offset>]     - Dump the .debug_frame section
+HELP: --debug-gnu-pubnames       - Dump the .debug_gnu_pubnames section
+HELP: --debug-gnu-pubtypes       - Dump the .debug_gnu_pubtypes section
+HELP: --debug-info[=<offset>]      - Dump the .debug_info section
+HELP: --debug-line[=<offset>]      - Dump the .debug_line section
+HELP: --debug-line-str           - Dump the .debug_line_str section
+HELP: --debug-loc[=<offset>]       - Dump the .debug_loc section
+HELP: --debug-loclists[=<offset>]  - Dump the .debug_loclists section
+HELP: --debug-macro              - Dump the .debug_macro section
+HELP: --debug-names              - Dump the .debug_names section
+HELP: --debug-pubnames           - Dump the .debug_pubnames section
+HELP: --debug-pubtypes           - Dump the .debug_pubtypes section
+HELP: --debug-ranges             - Dump the .debug_ranges section
+HELP: --debug-rnglists           - Dump the .debug_rnglists section
+HELP: --debug-str                - Dump the .debug_str section
+HELP: --debug-str-offsets        - Dump the .debug_str_offsets section
+HELP: --debug-tu-index           - Dump the .debug_tu_index section
+HELP: --debug-types[=<offset>]     - Dump the .debug_types section
+HELP: --eh-frame                 - Alias for --debug-frame
+HELP: --gdb-index                - Dump the .gdb_index section
+HELP: Specific Options
+HELP: -F
+HELP: --arch=<string>
+HELP: -c
+HELP: --diff
+HELP: -f
+HELP: --find=<name>
+HELP: -i
+HELP: --ignore-case
+HELP: --lookup=<address>
+HELP: -n
+HELP: --name=<pattern>
+HELP: -o <filename>
+HELP: -p
+HELP: --parent-recurse-depth=<N>
+HELP: --quiet
+HELP: -r
+HELP: --recurse-depth=<N>
+HELP: --regex
+HELP: --show-children
+HELP: --show-form
+HELP: --show-parents
+HELP: --show-section-sizes
+HELP: --statistics
+HELP: --summarize-types
+HELP: -u
+HELP: --uuid
+HELP: -v
+HELP: --verbose
+HELP: --verify
+HELP: -x
+HELP: @FILE
+
+RUN: llvm-dwarfdump --version 2>&1 | FileCheck --check-prefix=VERSION %s
+VERSION: {{ version }}
+
+RUN: not llvm-dwarfdump -diff -verbose 2>&1 | FileCheck --check-prefix=INCOMPATIBLE %s
+INCOMPATIBLE: error: incompatible arguments: specifying both -diff and -verbose is currently not supported
+
+RUN: not llvm-dwarfdump --debug-names=0x0 2>&1 | FileCheck --check-prefix=FLAG %s
+FLAG: for the --debug-names option: this is a flag and does not take a value

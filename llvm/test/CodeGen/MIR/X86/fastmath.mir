@@ -1,0 +1,36 @@
+# RUN: llc -mtriple=x86_64 -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses the fast math instruction flags.
+
+...
+---
+name:            baz
+body: |
+  bb.0.entry:
+    liveins: $xmm0
+  
+    ; CHECK:     %0:fr32 = COPY $xmm0
+    %0:fr32 = COPY $xmm0
+    ; CHECK:     %1:fr32 = nnan VMULSSrr %0, %0, implicit $mxcsr
+    %1:fr32 = nnan VMULSSrr %0, %0, implicit $mxcsr
+    ; CHECK:     %2:fr32 = ninf VMULSSrr %1, %1, implicit $mxcsr
+    %2:fr32 = ninf VMULSSrr %1, %1, implicit $mxcsr
+    ; CHECK:     %3:fr32 = nsz VMULSSrr %2, %2, implicit $mxcsr
+    %3:fr32 = nsz VMULSSrr %2, %2, implicit $mxcsr
+    ; CHECK:     %4:fr32 = arcp VMULSSrr %3, %3, implicit $mxcsr
+    %4:fr32 = arcp VMULSSrr %3, %3, implicit $mxcsr
+    ; CHECK:     %5:fr32 = contract VMULSSrr %4, %4, implicit $mxcsr
+    %5:fr32 = contract VMULSSrr %4, %4, implicit $mxcsr
+    ; CHECK:     %6:fr32 = afn VMULSSrr %5, %5, implicit $mxcsr
+    %6:fr32 = afn VMULSSrr %5, %5, implicit $mxcsr
+    ; CHECK:     %7:fr32 = reassoc VMULSSrr %6, %6, implicit $mxcsr
+    %7:fr32 = reassoc VMULSSrr %6, %6, implicit $mxcsr
+    ; CHECK:     %8:fr32 = nsz arcp contract afn reassoc VMULSSrr %7, %7, implicit $mxcsr
+    %8:fr32 = nsz arcp contract afn reassoc VMULSSrr %7, %7, implicit $mxcsr
+    ; CHECK:     %9:fr32 = contract afn reassoc VMULSSrr %8, %8, implicit $mxcsr
+    %9:fr32 = contract afn reassoc VMULSSrr %8, %8, implicit $mxcsr
+    ; CHECK:     $xmm0 = COPY %9
+    $xmm0 = COPY %9
+    ; CHECK:     RET 0, $xmm0
+    RET 0, $xmm0
+
+...

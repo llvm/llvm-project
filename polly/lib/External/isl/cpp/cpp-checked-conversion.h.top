@@ -1,0 +1,14 @@
+/// These are automatically generated conversions between
+/// the default and the checked C++ bindings for isl.
+///
+/// isl is a library for computing with integer sets and maps described by
+/// Presburger formulas. On top of this, isl provides various tools for
+/// polyhedral compilation, ranging from dependence analysis over scheduling
+/// to AST generation.
+
+#ifndef ISL_CPP_CHECKED_CONVERSION
+#define ISL_CPP_CHECKED_CONVERSION
+
+#include <isl/cpp.h>
+#include <isl/cpp-checked.h>
+

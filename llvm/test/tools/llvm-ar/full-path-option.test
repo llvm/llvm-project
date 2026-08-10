@@ -1,0 +1,108 @@
+# Note: many of these tests depend on relative paths, so we have to cd to a
+# test directory first.
+RUN: mkdir -p %t && cd %t
+RUN: rm -rf a b && mkdir a b
+RUN: echo hello-a      > a/foo.txt
+RUN: echo hello-b      > b/foo.txt
+RUN: echo hello-parent > foo.txt
+
+# Verify that P is accepted.
+RUN: rm -f noop.a && llvm-ar rcP noop.a foo.txt
+RUN: llvm-ar p noop.a | FileCheck %s --check-prefix=ACCEPT
+
+ACCEPT: hello-parent
+
+# Regular (non-thin) archives cannot be created with full path names as
+# members, but P can still affect how lookup works (assuming we're reading an
+# archive not created by GNU ar or llvm-ar).
+# Looking up a/foo.txt in a regular archive will fail with P because it is
+# added to the archive as foo.txt.
+RUN: rm -f display.a
+RUN: llvm-ar rcS display.a a/foo.txt foo.txt b/foo.txt
+RUN: llvm-ar t display.a a/foo.txt | FileCheck %s --check-prefix=DISPLAY-FOUND --match-full-lines
+RUN: not llvm-ar tP display.a a/foo.txt 2>&1 | FileCheck %s --check-prefix=DISPLAY-NOT-FOUND
+
+DISPLAY-FOUND: foo.txt
+DISPLAY-NOT-FOUND: 'a/foo.txt' was not found
+
+# Deleting will fail with P because the members exist as foo.txt, not a/foo.txt.
+RUN: rm -f del1.a
+RUN: llvm-ar rcS del1.a foo.txt
+RUN: llvm-ar dP del1.a a/foo.txt
+RUN: llvm-ar t del1.a a/foo.txt | FileCheck %s --check-prefix=DISPLAY-FOUND --match-full-lines
+RUN: llvm-ar d del1.a a/foo.txt
+RUN: not llvm-ar t del1.a a/foo.txt 2>&1 | FileCheck %s --check-prefix=DISPLAY-NOT-FOUND
+
+# Run several checks that P is implied when using thin archives. None of these
+# checks explicitly use P.
+
+# Creating an archive in one step.
+RUN: rm -f add.a
+RUN: llvm-ar rcST add.a a/foo.txt foo.txt b/foo.txt
+RUN: llvm-ar t add.a | FileCheck %s --check-prefix=ADD --match-full-lines
+
+ADD:      a/foo.txt
+ADD-NEXT: foo.txt
+ADD-NEXT: b/foo.txt
+
+# Create an archive incrementally.
+RUN: rm -f add-inc.a
+RUN: llvm-ar rcST add-inc.a a/foo.txt
+RUN: llvm-ar rcST add-inc.a foo.txt
+RUN: llvm-ar rcST add-inc.a b/foo.txt
+RUN: llvm-ar t add-inc.a | FileCheck %s --check-prefix=ADD-INC --match-full-lines
+
+ADD-INC:      a/foo.txt
+ADD-INC-NEXT: foo.txt
+ADD-INC-NEXT: b/foo.txt
+
+# Nesting a thin archive with a name conflict.
+RUN: rm -f a/nested.a b/nested.a nested.a
+RUN: llvm-ar rcST a/nested.a a/foo.txt
+RUN: llvm-ar rcST b/nested.a b/foo.txt
+RUN: llvm-ar rcST nested.a a/nested.a foo.txt b/nested.a
+RUN: llvm-ar t nested.a | FileCheck %s --check-prefix=NESTED --match-full-lines
+
+NESTED:      a/foo.txt
+NESTED-NEXT: foo.txt
+NESTED-NEXT: b/foo.txt
+
+# Printing members.
+RUN: rm -f add.a
+RUN: llvm-ar rcST add.a a/foo.txt foo.txt b/foo.txt
+RUN: llvm-ar p add.a foo.txt | FileCheck %s --check-prefix=PRINT-PARENT --match-full-lines
+RUN: llvm-ar p add.a a/foo.txt | FileCheck %s --check-prefix=PRINT-A --match-full-lines
+RUN: llvm-ar p add.a b/foo.txt | FileCheck %s --check-prefix=PRINT-B --match-full-lines
+PRINT-PARENT: hello-parent
+PRINT-A:      hello-a
+PRINT-B:      hello-b
+
+# Listing members.
+RUN: rm -f add.a
+RUN: llvm-ar rcST add.a a/foo.txt foo.txt b/foo.txt
+RUN: llvm-ar t add.a foo.txt | FileCheck %s --check-prefix=LIST-PARENT --match-full-lines
+RUN: llvm-ar t add.a a/foo.txt | FileCheck %s --check-prefix=LIST-A --match-full-lines
+RUN: llvm-ar t add.a b/foo.txt | FileCheck %s --check-prefix=LIST-B --match-full-lines
+LIST-PARENT:     foo.txt
+LIST-PARENT-NOT: a/foo.txt
+LIST-PARENT-NOT: b/foo.txt
+LIST-A:          a/foo.txt
+LIST-B:          b/foo.txt
+
+# Deleting members.
+RUN: rm -f del1.a
+RUN: llvm-ar rcST del1.a a/foo.txt foo.txt b/foo.txt
+RUN: llvm-ar d del1.a foo.txt
+RUN: llvm-ar t del1.a | FileCheck %s --check-prefix=DEL-1 --match-full-lines
+
+DEL-1-NOT:  foo.txt
+DEL-1:      a/foo.txt
+DEL-1-NEXT: b/foo.txt
+
+RUN: rm -f del2.a
+RUN: llvm-ar rcST del2.a a/foo.txt foo.txt b/foo.txt
+RUN: llvm-ar d del2.a a/foo.txt
+RUN: llvm-ar t del2.a | FileCheck %s --check-prefix=DEL-2 --match-full-lines
+DEL-2-NOT:  a/foo.txt
+DEL-2:      foo.txt
+DEL-2-NEXT: b/foo.txt

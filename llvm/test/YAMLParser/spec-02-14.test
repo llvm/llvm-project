@@ -1,0 +1,6 @@
+# RUN: yaml-bench -canonical %s
+
+---
+  Mark McGwire's
+  year was crippled
+  by a knee injury.

@@ -1,0 +1,702 @@
+## Check how we print sections.
+
+## Show that llvm-readobj prints MachO all section types properly.
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readobj --sections %t1 | FileCheck %s
+
+# CHECK:  Type: Regular (0x0)
+# CHECK:  Type: ZeroFill (0x1)
+# CHECK:  Type: CStringLiterals (0x2)
+# CHECK:  Type: 4ByteLiterals (0x3)
+# CHECK:  Type: 8ByteLiterals (0x4)
+# CHECK:  Type: LiteralPointers (0x5)
+# CHECK:  Type: NonLazySymbolPointers (0x6)
+# CHECK:  Type: LazySymbolPointers (0x7)
+# CHECK:  Type: SymbolStubs (0x8)
+# CHECK:  Type: ModInitFuncPointers (0x9)
+# CHECK:  Type: ModTermFuncPointers (0xA)
+# CHECK:  Type: Coalesced (0xB)
+# CHECK:  Type: GBZeroFill (0xC)
+# CHECK:  Type: Interposing (0xD)
+# CHECK:  Type: 16ByteLiterals (0xE)
+# CHECK:  Type: DTraceDOF (0xF)
+# CHECK:  Type: LazyDylibSymbolPointers (0x10)
+# CHECK:  Type: ThreadLocalRegular (0x11)
+# CHECK:  Type: ThreadLocalZerofill (0x12)
+# CHECK:  Type: ThreadLocalVariables (0x13)
+# CHECK:  Type: ThreadLocalVariablePointers (0x14)
+# CHECK:  Type: ThreadLocalInitFunctionPointers (0x15)
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x80000003
+  filetype:        0x00000002
+  ncmds:           1
+  sizeofcmds:      1832
+  flags:           0x00002000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         1832
+    segname:         ''
+    vmaddr:          0x0000000000001000
+    vmsize:          4096
+    fileoff:         0
+    filesize:        4096
+    maxprot:         7
+    initprot:        7
+    nsects:          22
+    flags:           0
+    Sections:
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000001
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000002
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000003
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000004
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000005
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000006
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000007
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000008
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000009
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x0000000a
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x0000000b
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x0000000c
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x0000000d
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x0000000e
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x0000000f
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000010
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000011
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000012
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000013
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000014
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        ''
+        segname:         ''
+        addr:            0x000000000000000
+        size:            0
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000015
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+
+## Check that we can print sections for other targets.
+
+# RUN: llvm-readobj --sections %p/Inputs/trivial.obj.macho-i386 \
+# RUN:   | FileCheck %s --check-prefix MACHO-I386
+# RUN: llvm-readobj --sections %p/Inputs/trivial.obj.macho-x86-64 \
+# RUN:   | FileCheck %s --check-prefix MACHO-X86-64
+# RUN: llvm-readobj --sections %p/Inputs/trivial.obj.macho-ppc \
+# RUN:   | FileCheck %s --check-prefix MACHO-PPC
+# RUN: llvm-readobj --sections %p/Inputs/trivial.obj.macho-ppc64 \
+# RUN:   | FileCheck %s --check-prefix MACHO-PPC64
+# RUN: llvm-readobj --sections %p/Inputs/trivial.obj.macho-arm \
+# RUN:   | FileCheck %s --check-prefix MACHO-ARM
+
+# MACHO-I386:      Sections [
+# MACHO-I386-NEXT:   Section {
+# MACHO-I386-NEXT:     Index: 0
+# MACHO-I386-NEXT:     Name: __text (5F 5F 74 65 78 74 00 00 00 00 00 00 00 00 00 00)
+# MACHO-I386-NEXT:     Segment: __TEXT (5F 5F 54 45 58 54 00 00 00 00 00 00 00 00 00 00)
+# MACHO-I386-NEXT:     Address: 0x0
+# MACHO-I386-NEXT:     Size: 0x22
+# MACHO-I386-NEXT:     Offset: 324
+# MACHO-I386-NEXT:     Alignment: 4
+# MACHO-I386-NEXT:     RelocationOffset: 0x174
+# MACHO-I386-NEXT:     RelocationCount: 4
+# MACHO-I386-NEXT:     Type: Regular (0x0)
+# MACHO-I386-NEXT:     Attributes [ (0x800004)
+# MACHO-I386-NEXT:       PureInstructions (0x800000)
+# MACHO-I386-NEXT:       SomeInstructions (0x4)
+# MACHO-I386-NEXT:     ]
+# MACHO-I386-NEXT:     Reserved1: 0x0
+# MACHO-I386-NEXT:     Reserved2: 0x0
+# MACHO-I386-NEXT:   }
+# MACHO-I386-NEXT:   Section {
+# MACHO-I386-NEXT:     Index: 1
+# MACHO-I386-NEXT:     Name: __cstring (5F 5F 63 73 74 72 69 6E 67 00 00 00 00 00 00 00)
+# MACHO-I386-NEXT:     Segment: __TEXT (5F 5F 54 45 58 54 00 00 00 00 00 00 00 00 00 00)
+# MACHO-I386-NEXT:     Address: 0x22
+# MACHO-I386-NEXT:     Size: 0xD
+# MACHO-I386-NEXT:     Offset: 358
+# MACHO-I386-NEXT:     Alignment: 0
+# MACHO-I386-NEXT:     RelocationOffset: 0x0
+# MACHO-I386-NEXT:     RelocationCount: 0
+# MACHO-I386-NEXT:     Type: CStringLiterals (0x2)
+# MACHO-I386-NEXT:     Attributes [ (0x0)
+# MACHO-I386-NEXT:     ]
+# MACHO-I386-NEXT:     Reserved1: 0x0
+# MACHO-I386-NEXT:     Reserved2: 0x0
+# MACHO-I386-NEXT:   }
+
+# MACHO-X86-64:     Sections [
+# MACHO-X86-64-NEXT:  Section {
+# MACHO-X86-64-NEXT:    Index: 0
+# MACHO-X86-64-NEXT:    Name: __text (5F 5F 74 65 78 74 00 00 00 00 00 00 00 00 00 00)
+# MACHO-X86-64-NEXT:    Segment: __TEXT (5F 5F 54 45 58 54 00 00 00 00 00 00 00 00 00 00)
+# MACHO-X86-64-NEXT:    Address: 0x0
+# MACHO-X86-64-NEXT:    Size: 0x16
+# MACHO-X86-64-NEXT:    Offset: 368
+# MACHO-X86-64-NEXT:    Alignment: 4
+# MACHO-X86-64-NEXT:    RelocationOffset: 0x194
+# MACHO-X86-64-NEXT:    RelocationCount: 3
+# MACHO-X86-64-NEXT:    Type: Regular (0x0)
+# MACHO-X86-64-NEXT:    Attributes [ (0x800004)
+# MACHO-X86-64-NEXT:      PureInstructions (0x800000)
+# MACHO-X86-64-NEXT:      SomeInstructions (0x4)
+# MACHO-X86-64-NEXT:    ]
+# MACHO-X86-64-NEXT:    Reserved1: 0x0
+# MACHO-X86-64-NEXT:    Reserved2: 0x0
+# MACHO-X86-64-NEXT:    Reserved3: 0x0
+# MACHO-X86-64-NEXT:  }
+# MACHO-X86-64-NEXT:  Section {
+# MACHO-X86-64-NEXT:    Index: 1
+# MACHO-X86-64-NEXT:    Name: __cstring (5F 5F 63 73 74 72 69 6E 67 00 00 00 00 00 00 00)
+# MACHO-X86-64-NEXT:    Segment: __TEXT (5F 5F 54 45 58 54 00 00 00 00 00 00 00 00 00 00)
+# MACHO-X86-64-NEXT:    Address: 0x16
+# MACHO-X86-64-NEXT:    Size: 0xD
+# MACHO-X86-64-NEXT:    Offset: 390
+# MACHO-X86-64-NEXT:    Alignment: 0
+# MACHO-X86-64-NEXT:    RelocationOffset: 0x0
+# MACHO-X86-64-NEXT:    RelocationCount: 0
+# MACHO-X86-64-NEXT:    Type: CStringLiterals (0x2)
+# MACHO-X86-64-NEXT:    Attributes [ (0x0)
+# MACHO-X86-64-NEXT:    ]
+# MACHO-X86-64-NEXT:    Reserved1: 0x0
+# MACHO-X86-64-NEXT:    Reserved2: 0x0
+# MACHO-X86-64-NEXT:    Reserved3: 0x0
+# MACHO-X86-64-NEXT:  }
+# MACHO-X86-64-NEXT:]
+
+# MACHO-PPC: Sections [
+# MACHO-PPC-NEXT:   Section {
+# MACHO-PPC-NEXT:     Index: 0
+# MACHO-PPC-NEXT:     Name: __text (5F 5F 74 65 78 74 00 00 00 00 00 00 00 00 00 00)
+# MACHO-PPC-NEXT:     Segment: __TEXT (5F 5F 54 45 58 54 00 00 00 00 00 00 00 00 00 00)
+# MACHO-PPC-NEXT:     Address: 0x0
+# MACHO-PPC-NEXT:     Size: 0x3C
+# MACHO-PPC-NEXT:     Offset: 528
+# MACHO-PPC-NEXT:     Alignment: 2
+# MACHO-PPC-NEXT:     RelocationOffset: 0x27C
+# MACHO-PPC-NEXT:     RelocationCount: 5
+# MACHO-PPC-NEXT:     Type: Regular (0x0)
+# MACHO-PPC-NEXT:     Attributes [ (0x800004)
+# MACHO-PPC-NEXT:       PureInstructions (0x800000)
+# MACHO-PPC-NEXT:       SomeInstructions (0x4)
+# MACHO-PPC-NEXT:     ]
+# MACHO-PPC-NEXT:     Reserved1: 0x0
+# MACHO-PPC-NEXT:     Reserved2: 0x0
+# MACHO-PPC-NEXT:   }
+# MACHO-PPC-NEXT:   Section {
+# MACHO-PPC-NEXT:     Index: 1
+# MACHO-PPC-NEXT:     Name: __picsymbolstub1 (5F 5F 70 69 63 73 79 6D 62 6F 6C 73 74 75 62 31)
+# MACHO-PPC-NEXT:     Segment: __TEXT (5F 5F 54 45 58 54 00 00 00 00 00 00 00 00 00 00)
+# MACHO-PPC-NEXT:     Address: 0x40
+# MACHO-PPC-NEXT:     Size: 0x20
+# MACHO-PPC-NEXT:     Offset: 592
+# MACHO-PPC-NEXT:     Alignment: 5
+# MACHO-PPC-NEXT:     RelocationOffset: 0x2A4
+# MACHO-PPC-NEXT:     RelocationCount: 4
+# MACHO-PPC-NEXT:     Type: SymbolStubs (0x8)
+# MACHO-PPC-NEXT:     Attributes [ (0x800004)
+# MACHO-PPC-NEXT:       PureInstructions (0x800000)
+# MACHO-PPC-NEXT:       SomeInstructions (0x4)
+# MACHO-PPC-NEXT:     ]
+# MACHO-PPC-NEXT:     Reserved1: 0x0
+# MACHO-PPC-NEXT:     Reserved2: 0x20
+# MACHO-PPC-NEXT:   }
+# MACHO-PPC-NEXT:   Section {
+# MACHO-PPC-NEXT:     Index: 2
+# MACHO-PPC-NEXT:     Name: __data (5F 5F 64 61 74 61 00 00 00 00 00 00 00 00 00 00)
+# MACHO-PPC-NEXT:     Segment: __DATA (5F 5F 44 41 54 41 00 00 00 00 00 00 00 00 00 00)
+# MACHO-PPC-NEXT:     Address: 0x60
+# MACHO-PPC-NEXT:     Size: 0x4
+# MACHO-PPC-NEXT:     Offset: 624
+# MACHO-PPC-NEXT:     Alignment: 2
+# MACHO-PPC-NEXT:     RelocationOffset: 0x0
+# MACHO-PPC-NEXT:     RelocationCount: 0
+# MACHO-PPC-NEXT:     Type: Regular (0x0)
+# MACHO-PPC-NEXT:     Attributes [ (0x0)
+# MACHO-PPC-NEXT:     ]
+# MACHO-PPC-NEXT:     Reserved1: 0x0
+# MACHO-PPC-NEXT:     Reserved2: 0x0
+# MACHO-PPC-NEXT:   }
+# MACHO-PPC-NEXT:   Section {
+# MACHO-PPC-NEXT:     Index: 3
+# MACHO-PPC-NEXT:     Name: __nl_symbol_ptr (5F 5F 6E 6C 5F 73 79 6D 62 6F 6C 5F 70 74 72 00)
+# MACHO-PPC-NEXT:     Segment: __DATA (5F 5F 44 41 54 41 00 00 00 00 00 00 00 00 00 00)
+# MACHO-PPC-NEXT:     Address: 0x64
+# MACHO-PPC-NEXT:     Size: 0x4
+# MACHO-PPC-NEXT:     Offset: 628
+# MACHO-PPC-NEXT:     Alignment: 2
+# MACHO-PPC-NEXT:     RelocationOffset: 0x0
+# MACHO-PPC-NEXT:     RelocationCount: 0
+# MACHO-PPC-NEXT:     Type: NonLazySymbolPointers (0x6)
+# MACHO-PPC-NEXT:     Attributes [ (0x0)
+# MACHO-PPC-NEXT:     ]
+# MACHO-PPC-NEXT:     Reserved1: 0x1
+# MACHO-PPC-NEXT:     Reserved2: 0x0
+# MACHO-PPC-NEXT:   }
+# MACHO-PPC-NEXT:   Section {
+# MACHO-PPC-NEXT:     Index: 4
+# MACHO-PPC-NEXT:     Name: __la_symbol_ptr (5F 5F 6C 61 5F 73 79 6D 62 6F 6C 5F 70 74 72 00)
+# MACHO-PPC-NEXT:     Segment: __DATA (5F 5F 44 41 54 41 00 00 00 00 00 00 00 00 00 00)
+# MACHO-PPC-NEXT:     Address: 0x68
+# MACHO-PPC-NEXT:     Size: 0x4
+# MACHO-PPC-NEXT:     Offset: 632
+# MACHO-PPC-NEXT:     Alignment: 2
+# MACHO-PPC-NEXT:     RelocationOffset: 0x2C4
+# MACHO-PPC-NEXT:     RelocationCount: 1
+# MACHO-PPC-NEXT:     Type: LazySymbolPointers (0x7)
+# MACHO-PPC-NEXT:     Attributes [ (0x0)
+# MACHO-PPC-NEXT:     ]
+# MACHO-PPC-NEXT:     Reserved1: 0x2
+# MACHO-PPC-NEXT:     Reserved2: 0x0
+# MACHO-PPC-NEXT:   }
+# MACHO-PPC-NEXT: ]
+
+# MACHO-PPC64: Sections [
+# MACHO-PPC64-NEXT:   Section {
+# MACHO-PPC64-NEXT:     Index: 0
+# MACHO-PPC64-NEXT:     Name: __text (5F 5F 74 65 78 74 00 00 00 00 00 00 00 00 00 00)
+# MACHO-PPC64-NEXT:     Segment: __TEXT (5F 5F 54 45 58 54 00 00 00 00 00 00 00 00 00 00)
+# MACHO-PPC64-NEXT:     Address: 0x0
+# MACHO-PPC64-NEXT:     Size: 0x3C
+# MACHO-PPC64-NEXT:     Offset: 608
+# MACHO-PPC64-NEXT:     Alignment: 2
+# MACHO-PPC64-NEXT:     RelocationOffset: 0x2D4
+# MACHO-PPC64-NEXT:     RelocationCount: 5
+# MACHO-PPC64-NEXT:     Type: Regular (0x0)
+# MACHO-PPC64-NEXT:     Attributes [ (0x800004)
+# MACHO-PPC64-NEXT:       PureInstructions (0x800000)
+# MACHO-PPC64-NEXT:       SomeInstructions (0x4)
+# MACHO-PPC64-NEXT:     ]
+# MACHO-PPC64-NEXT:     Reserved1: 0x0
+# MACHO-PPC64-NEXT:     Reserved2: 0x0
+# MACHO-PPC64-NEXT:     Reserved3: 0x0
+# MACHO-PPC64-NEXT:   }
+# MACHO-PPC64-NEXT:   Section {
+# MACHO-PPC64-NEXT:     Index: 1
+# MACHO-PPC64-NEXT:     Name: __picsymbolstub1 (5F 5F 70 69 63 73 79 6D 62 6F 6C 73 74 75 62 31)
+# MACHO-PPC64-NEXT:     Segment: __TEXT (5F 5F 54 45 58 54 00 00 00 00 00 00 00 00 00 00)
+# MACHO-PPC64-NEXT:     Address: 0x40
+# MACHO-PPC64-NEXT:     Size: 0x20
+# MACHO-PPC64-NEXT:     Offset: 672
+# MACHO-PPC64-NEXT:     Alignment: 5
+# MACHO-PPC64-NEXT:     RelocationOffset: 0x2FC
+# MACHO-PPC64-NEXT:     RelocationCount: 4
+# MACHO-PPC64-NEXT:     Type: SymbolStubs (0x8)
+# MACHO-PPC64-NEXT:     Attributes [ (0x800004)
+# MACHO-PPC64-NEXT:       PureInstructions (0x800000)
+# MACHO-PPC64-NEXT:       SomeInstructions (0x4)
+# MACHO-PPC64-NEXT:     ]
+# MACHO-PPC64-NEXT:     Reserved1: 0x0
+# MACHO-PPC64-NEXT:     Reserved2: 0x20
+# MACHO-PPC64-NEXT:     Reserved3: 0x0
+# MACHO-PPC64-NEXT:   }
+# MACHO-PPC64-NEXT:   Section {
+# MACHO-PPC64-NEXT:     Index: 2
+# MACHO-PPC64-NEXT:     Name: __data (5F 5F 64 61 74 61 00 00 00 00 00 00 00 00 00 00)
+# MACHO-PPC64-NEXT:     Segment: __DATA (5F 5F 44 41 54 41 00 00 00 00 00 00 00 00 00 00)
+# MACHO-PPC64-NEXT:     Address: 0x60
+# MACHO-PPC64-NEXT:     Size: 0x4
+# MACHO-PPC64-NEXT:     Offset: 704
+# MACHO-PPC64-NEXT:     Alignment: 2
+# MACHO-PPC64-NEXT:     RelocationOffset: 0x0
+# MACHO-PPC64-NEXT:     RelocationCount: 0
+# MACHO-PPC64-NEXT:     Type: Regular (0x0)
+# MACHO-PPC64-NEXT:     Attributes [ (0x0)
+# MACHO-PPC64-NEXT:     ]
+# MACHO-PPC64-NEXT:     Reserved1: 0x0
+# MACHO-PPC64-NEXT:     Reserved2: 0x0
+# MACHO-PPC64-NEXT:     Reserved3: 0x0
+# MACHO-PPC64-NEXT:   }
+# MACHO-PPC64-NEXT:   Section {
+# MACHO-PPC64-NEXT:     Index: 3
+# MACHO-PPC64-NEXT:     Name: __nl_symbol_ptr (5F 5F 6E 6C 5F 73 79 6D 62 6F 6C 5F 70 74 72 00)
+# MACHO-PPC64-NEXT:     Segment: __DATA (5F 5F 44 41 54 41 00 00 00 00 00 00 00 00 00 00)
+# MACHO-PPC64-NEXT:     Address: 0x64
+# MACHO-PPC64-NEXT:     Size: 0x8
+# MACHO-PPC64-NEXT:     Offset: 708
+# MACHO-PPC64-NEXT:     Alignment: 2
+# MACHO-PPC64-NEXT:     RelocationOffset: 0x0
+# MACHO-PPC64-NEXT:     RelocationCount: 0
+# MACHO-PPC64-NEXT:     Type: NonLazySymbolPointers (0x6)
+# MACHO-PPC64-NEXT:     Attributes [ (0x0)
+# MACHO-PPC64-NEXT:     ]
+# MACHO-PPC64-NEXT:     Reserved1: 0x1
+# MACHO-PPC64-NEXT:     Reserved2: 0x0
+# MACHO-PPC64-NEXT:     Reserved3: 0x0
+# MACHO-PPC64-NEXT:   }
+# MACHO-PPC64-NEXT:   Section {
+# MACHO-PPC64-NEXT:     Index: 4
+# MACHO-PPC64-NEXT:     Name: __la_symbol_ptr (5F 5F 6C 61 5F 73 79 6D 62 6F 6C 5F 70 74 72 00)
+# MACHO-PPC64-NEXT:     Segment: __DATA (5F 5F 44 41 54 41 00 00 00 00 00 00 00 00 00 00)
+# MACHO-PPC64-NEXT:     Address: 0x6C
+# MACHO-PPC64-NEXT:     Size: 0x8
+# MACHO-PPC64-NEXT:     Offset: 716
+# MACHO-PPC64-NEXT:     Alignment: 2
+# MACHO-PPC64-NEXT:     RelocationOffset: 0x31C
+# MACHO-PPC64-NEXT:     RelocationCount: 1
+# MACHO-PPC64-NEXT:     Type: LazySymbolPointers (0x7)
+# MACHO-PPC64-NEXT:     Attributes [ (0x0)
+# MACHO-PPC64-NEXT:     ]
+# MACHO-PPC64-NEXT:     Reserved1: 0x2
+# MACHO-PPC64-NEXT:     Reserved2: 0x0
+# MACHO-PPC64-NEXT:     Reserved3: 0x0
+# MACHO-PPC64-NEXT:   }
+# MACHO-PPC64-NEXT: ]
+
+# MACHO-ARM:      Sections [
+# MACHO-ARM-NEXT:   Section {
+# MACHO-ARM-NEXT:    Index: 0
+# MACHO-ARM-NEXT:    Name: __text (5F 5F 74 65 78 74 00 00 00 00 00 00 00 00 00 00)
+# MACHO-ARM-NEXT:    Segment: __TEXT (5F 5F 54 45 58 54 00 00 00 00 00 00 00 00 00 00)
+# MACHO-ARM-NEXT:    Address: 0x0
+# MACHO-ARM-NEXT:    Size: 0x3C
+# MACHO-ARM-NEXT:    Offset: 664
+# MACHO-ARM-NEXT:    Alignment: 2
+# MACHO-ARM-NEXT:    RelocationOffset: 0x2E0
+# MACHO-ARM-NEXT:    RelocationCount: 9
+# MACHO-ARM-NEXT:    Type: Regular (0x0)
+# MACHO-ARM-NEXT:    Attributes [ (0x800004)
+# MACHO-ARM-NEXT:      PureInstructions (0x800000)
+# MACHO-ARM-NEXT:      SomeInstructions (0x4)
+# MACHO-ARM-NEXT:    ]
+# MACHO-ARM-NEXT:    Reserved1: 0x0
+# MACHO-ARM-NEXT:    Reserved2: 0x0
+# MACHO-ARM-NEXT:  }
+# MACHO-ARM-NEXT:  Section {
+# MACHO-ARM-NEXT:    Index: 1
+# MACHO-ARM-NEXT:    Name: __textcoal_nt (5F 5F 74 65 78 74 63 6F 61 6C 5F 6E 74 00 00 00)
+# MACHO-ARM-NEXT:    Segment: __TEXT (5F 5F 54 45 58 54 00 00 00 00 00 00 00 00 00 00)
+# MACHO-ARM-NEXT:    Address: 0x3C
+# MACHO-ARM-NEXT:    Size: 0x0
+# MACHO-ARM-NEXT:    Offset: 724
+# MACHO-ARM-NEXT:    Alignment: 0
+# MACHO-ARM-NEXT:    RelocationOffset: 0x0
+# MACHO-ARM-NEXT:    RelocationCount: 0
+# MACHO-ARM-NEXT:    Type: Coalesced (0xB)
+# MACHO-ARM-NEXT:    Attributes [ (0x800000)
+# MACHO-ARM-NEXT:      PureInstructions (0x800000)
+# MACHO-ARM-NEXT:    ]
+# MACHO-ARM-NEXT:    Reserved1: 0x0
+# MACHO-ARM-NEXT:    Reserved2: 0x0
+# MACHO-ARM-NEXT:  }
+# MACHO-ARM-NEXT:  Section {
+# MACHO-ARM-NEXT:    Index: 2
+# MACHO-ARM-NEXT:    Name: __const_coal (5F 5F 63 6F 6E 73 74 5F 63 6F 61 6C 00 00 00 00)
+# MACHO-ARM-NEXT:    Segment: __TEXT (5F 5F 54 45 58 54 00 00 00 00 00 00 00 00 00 00)
+# MACHO-ARM-NEXT:    Address: 0x3C
+# MACHO-ARM-NEXT:    Size: 0x0
+# MACHO-ARM-NEXT:    Offset: 724
+# MACHO-ARM-NEXT:    Alignment: 0
+# MACHO-ARM-NEXT:    RelocationOffset: 0x0
+# MACHO-ARM-NEXT:    RelocationCount: 0
+# MACHO-ARM-NEXT:    Type: Coalesced (0xB)
+# MACHO-ARM-NEXT:    Attributes [ (0x0)
+# MACHO-ARM-NEXT:    ]
+# MACHO-ARM-NEXT:    Reserved1: 0x0
+# MACHO-ARM-NEXT:    Reserved2: 0x0
+# MACHO-ARM-NEXT:  }
+# MACHO-ARM-NEXT:  Section {
+# MACHO-ARM-NEXT:    Index: 3
+# MACHO-ARM-NEXT:    Name: __picsymbolstub4 (5F 5F 70 69 63 73 79 6D 62 6F 6C 73 74 75 62 34)
+# MACHO-ARM-NEXT:    Segment: __TEXT (5F 5F 54 45 58 54 00 00 00 00 00 00 00 00 00 00)
+# MACHO-ARM-NEXT:    Address: 0x3C
+# MACHO-ARM-NEXT:    Size: 0x0
+# MACHO-ARM-NEXT:    Offset: 724
+# MACHO-ARM-NEXT:    Alignment: 0
+# MACHO-ARM-NEXT:    RelocationOffset: 0x0
+# MACHO-ARM-NEXT:    RelocationCount: 0
+# MACHO-ARM-NEXT:    Type: SymbolStubs (0x8)
+# MACHO-ARM-NEXT:    Attributes [ (0x0)
+# MACHO-ARM-NEXT:    ]
+# MACHO-ARM-NEXT:    Reserved1: 0x0
+# MACHO-ARM-NEXT:    Reserved2: 0x10
+# MACHO-ARM-NEXT:  }
+# MACHO-ARM-NEXT:  Section {
+# MACHO-ARM-NEXT:    Index: 4
+# MACHO-ARM-NEXT:    Name: __StaticInit (5F 5F 53 74 61 74 69 63 49 6E 69 74 00 00 00 00)
+# MACHO-ARM-NEXT:    Segment: __TEXT (5F 5F 54 45 58 54 00 00 00 00 00 00 00 00 00 00)
+# MACHO-ARM-NEXT:    Address: 0x3C
+# MACHO-ARM-NEXT:    Size: 0x0
+# MACHO-ARM-NEXT:    Offset: 724
+# MACHO-ARM-NEXT:    Alignment: 0
+# MACHO-ARM-NEXT:    RelocationOffset: 0x0
+# MACHO-ARM-NEXT:    RelocationCount: 0
+# MACHO-ARM-NEXT:    Type: Regular (0x0)
+# MACHO-ARM-NEXT:    Attributes [ (0x800000)
+# MACHO-ARM-NEXT:      PureInstructions (0x800000)
+# MACHO-ARM-NEXT:    ]
+# MACHO-ARM-NEXT:    Reserved1: 0x0
+# MACHO-ARM-NEXT:    Reserved2: 0x0
+# MACHO-ARM-NEXT:  }
+# MACHO-ARM-NEXT:  Section {
+# MACHO-ARM-NEXT:    Index: 5
+# MACHO-ARM-NEXT:    Name: __data (5F 5F 64 61 74 61 00 00 00 00 00 00 00 00 00 00)
+# MACHO-ARM-NEXT:    Segment: __DATA (5F 5F 44 41 54 41 00 00 00 00 00 00 00 00 00 00)
+# MACHO-ARM-NEXT:    Address: 0x3C
+# MACHO-ARM-NEXT:    Size: 0x4
+# MACHO-ARM-NEXT:    Offset: 724
+# MACHO-ARM-NEXT:    Alignment: 2
+# MACHO-ARM-NEXT:    RelocationOffset: 0x0
+# MACHO-ARM-NEXT:    RelocationCount: 0
+# MACHO-ARM-NEXT:    Type: Regular (0x0)
+# MACHO-ARM-NEXT:    Attributes [ (0x0)
+# MACHO-ARM-NEXT:    ]
+# MACHO-ARM-NEXT:    Reserved1: 0x0
+# MACHO-ARM-NEXT:    Reserved2: 0x0
+# MACHO-ARM-NEXT:  }
+# MACHO-ARM-NEXT:  Section {
+# MACHO-ARM-NEXT:    Index: 6
+# MACHO-ARM-NEXT:    Name: __nl_symbol_ptr (5F 5F 6E 6C 5F 73 79 6D 62 6F 6C 5F 70 74 72 00)
+# MACHO-ARM-NEXT:    Segment: __DATA (5F 5F 44 41 54 41 00 00 00 00 00 00 00 00 00 00)
+# MACHO-ARM-NEXT:    Address: 0x40
+# MACHO-ARM-NEXT:    Size: 0x8
+# MACHO-ARM-NEXT:    Offset: 728
+# MACHO-ARM-NEXT:    Alignment: 2
+# MACHO-ARM-NEXT:    RelocationOffset: 0x0
+# MACHO-ARM-NEXT:    RelocationCount: 0
+# MACHO-ARM-NEXT:    Type: NonLazySymbolPointers (0x6)
+# MACHO-ARM-NEXT:    Attributes [ (0x0)
+# MACHO-ARM-NEXT:    ]
+# MACHO-ARM-NEXT:    Reserved1: 0x0
+# MACHO-ARM-NEXT:    Reserved2: 0x0
+# MACHO-ARM-NEXT:  }
+# MACHO-ARM-NEXT: ]

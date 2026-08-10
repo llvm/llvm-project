@@ -1,0 +1,136 @@
+# REQUIRES: x86
+# RUN: rm -rf %t && split-file --leading-lines %s %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %t/a.s -o %t/a.o
+
+## There is no main linker script. OVERWRITE_SECTIONS defines output section
+## descriptions and follows the usual orphan placement rules.
+
+# RUN: ld.lld %t/overwrite1.lds %t/a.o -o %t1
+# RUN: llvm-readelf -S %t1 | FileCheck %s --check-prefix=CHECK1
+
+# CHECK1:      Name      Type     Address  Off      Size   ES Flg Lk Inf Al
+# CHECK1-NEXT:           NULL     [[#%x,]] [[#%x,]] 000000
+# CHECK1-NEXT: .text     PROGBITS [[#%x,]] [[#%x,]] 000001 00  AX  0   0  4
+# CHECK1-NEXT: .foo.text PROGBITS [[#%x,]] [[#%x,]] 000002 00 WAX  0   0  8
+# CHECK1-NEXT: .data     PROGBITS [[#%x,]] [[#%x,]] 000001 00  WA  0   0  1
+# CHECK1-NEXT: .comment  PROGBITS {{.*}}
+
+# RUN: ld.lld %t/overwrite1.lds %t/overwrite1.lds %t/a.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=WARN1
+
+# WARN1: warning: OVERWRITE_SECTIONS specifies duplicate .foo.text
+
+## The output section description order (.foo.data .foo.text) does not affect
+## the output order.
+
+# RUN: ld.lld %t/overwrite2.lds %t/a.o -o %t2
+# RUN: llvm-readelf -S -s %t2 | FileCheck %s --check-prefix=CHECK2
+
+# CHECK2:      [Nr] Name      Type     Address  Off      Size   ES Flg Lk Inf Al
+# CHECK2-NEXT: [ 0]           NULL     [[#%x,]] [[#%x,]] 000000
+# CHECK2-NEXT: [ 1] .text     PROGBITS [[#%x,]] [[#%x,]] 000001 00  AX  0   0  4
+# CHECK2-NEXT: [ 2] .foo.text PROGBITS [[#%x,]] [[#%x,]] 000001 00  AX  0   0  1
+# CHECK2-NEXT: [ 3] .data     PROGBITS [[#%x,]] [[#%x,]] 000001 00  WA  0   0  1
+# CHECK2-NEXT: [ 4] .foo.data PROGBITS [[#%x,]] [[#%x,]] 000001 00  WA  0   0  1
+# CHECK2-NEXT: [ 5] .comment  PROGBITS {{.*}}
+
+# CHECK2:        Num: Value            Size Type   Bind   Vis     Ndx Name
+# CHECK2:      [[#]]: [[#%x,ADDR:]]       0  NOTYPE GLOBAL DEFAULT   4 FOO_DATA_START
+# CHECK2-NEXT: [[#]]: {{0*}}[[#ADDR+1]]   0  NOTYPE GLOBAL DEFAULT   4 FOO_DATA_END
+# CHECK2-NEXT: [[#]]: [[#%x,ADDR:]]       0  NOTYPE GLOBAL DEFAULT   2 FOO_TEXT_START
+# CHECK2-NEXT: [[#]]: {{0*}}[[#ADDR+1]]   0  NOTYPE GLOBAL DEFAULT   2 FOO_TEXT_END
+
+## OVERWRITE_SECTIONS is processed before the main script. The main script
+## specifies the output order. The alignment of .foo.text is specified by
+## OVERWRITE_SECTIONS insteaad of the main script.
+
+# RUN: ld.lld -T %t/main.lds %t/overwrite1.lds %t/a.o -o %t3 2>&1 | count 0
+# RUN: llvm-readelf -S %t3 | FileCheck %s --check-prefix=CHECK3
+# RUN: ld.lld %t/overwrite1.lds -T %t/main.lds %t/a.o -o %t3 2>&1 | count 0
+# RUN: llvm-readelf -S %t3 | FileCheck %s --check-prefix=CHECK3
+
+# CHECK3:      Name      Type     Address  Off      Size   ES Flg Lk Inf Al
+# CHECK3-NEXT:           NULL     [[#%x,]] [[#%x,]] 000000
+# CHECK3-NEXT: .data     PROGBITS [[#%x,]] [[#%x,]] 000001 00  WA  0   0  1
+# CHECK3-NEXT: .text     PROGBITS [[#%x,]] [[#%x,]] 000001 00  AX  0   0  4
+# CHECK3-NEXT: .foo.text PROGBITS [[#%x,]] [[#%x,]] 000002 00 WAX  0   0  8
+# CHECK3-NEXT: .comment  PROGBITS {{.*}}
+
+# RUN: ld.lld -T %t/main.lds %t/overwrite1.lds %t/a.o -o %t3 --verbose 2>&1 | FileCheck %s --check-prefix=VERBOSE3
+
+# VERBOSE3: {{.*}}overwrite1.lds:[[#]] overwrites .foo.text
+
+## If INSERT commands are specified, INSERT commands are processed after overwrite sections.
+# RUN: ld.lld %t/insert.lds %t/overwrite2.lds %t/a.o -o %t4
+# RUN: llvm-readelf -S -s %t4 | FileCheck %s --check-prefix=CHECK4
+
+# CHECK4:      [Nr] Name      Type     Address  Off      Size   ES Flg Lk Inf Al
+# CHECK4-NEXT: [ 0]           NULL     [[#%x,]] [[#%x,]] 000000
+# CHECK4-NEXT: [ 1] .text     PROGBITS [[#%x,]] [[#%x,]] 000001 00  AX  0   0  4
+# CHECK4-NEXT: [ 2] .data     PROGBITS [[#%x,]] [[#%x,]] 000001 00  WA  0   0  1
+# CHECK4-NEXT: [ 3] .foo.data PROGBITS [[#%x,]] [[#%x,]] 000001 00  WA  0   0  1
+# CHECK4-NEXT: [ 4] .foo.text PROGBITS [[#%x,]] [[#%x,]] 000001 00  AX  0   0  1
+# CHECK4-NEXT: [ 5] .comment  PROGBITS {{.*}}
+
+# CHECK4:        Num: Value            Size Type   Bind   Vis     Ndx Name
+# CHECK4:      [[#]]: [[#%x,ADDR:]]       0  NOTYPE GLOBAL DEFAULT   4 FOO_TEXT_START
+# CHECK4-NEXT: [[#]]: {{0*}}[[#ADDR+1]]   0  NOTYPE GLOBAL DEFAULT   4 FOO_TEXT_END
+# CHECK4-NEXT: [[#]]: [[#%x,ADDR:]]       0  NOTYPE GLOBAL DEFAULT   3 FOO_DATA_START
+# CHECK4-NEXT: [[#]]: {{0*}}[[#ADDR+1]]   0  NOTYPE GLOBAL DEFAULT   3 FOO_DATA_END
+
+## OVERWRITE_SECTIONS describes a section used as an anchor of an insert command.
+## Place .foo.data as an orphan, then insert .foo.text after .foo.data.
+# RUN: ld.lld %t/insert.lds %t/overwrite3.lds %t/a.o -o %t5
+# RUN: llvm-readelf -S -s %t4 | FileCheck %s --check-prefix=CHECK5
+
+# CHECK5:      [Nr] Name      Type     Address  Off      Size   ES Flg Lk Inf Al
+# CHECK5-NEXT: [ 0]           NULL     [[#%x,]] [[#%x,]] 000000
+# CHECK5-NEXT: [ 1] .text     PROGBITS [[#%x,]] [[#%x,]] 000001 00  AX  0   0  4
+# CHECK5-NEXT: [ 2] .data     PROGBITS [[#%x,]] [[#%x,]] 000001 00  WA  0   0  1
+# CHECK5-NEXT: [ 3] .foo.data PROGBITS [[#%x,]] [[#%x,]] 000001 00  WA  0   0  1
+# CHECK5-NEXT: [ 4] .foo.text PROGBITS [[#%x,]] [[#%x,]] 000001 00  AX  0   0  1
+# CHECK5-NEXT: [ 5] .comment  PROGBITS {{.*}}
+
+
+#--- a.s
+.globl _start
+_start:
+
+.section .foo.text,"ax"; .byte 1
+.section .foo.data,"aw"; .byte 2
+.section .text.1,"ax"; .byte 3
+.section .data.1,"aw"; .byte 4
+
+#--- main.lds
+SECTIONS {
+  .data : { *(.data*) }
+  .foo.data : { *(.foo.data) }
+  .text : { *(.text*) }
+  .foo.text : ALIGN(16) { *(.foo.text) }
+}
+
+#--- overwrite1.lds
+OVERWRITE_SECTIONS {
+  .foo.text : ALIGN(8) { *(.foo.data .foo.text) }
+}
+
+#--- overwrite2.lds
+OVERWRITE_SECTIONS {
+  .foo.data : { FOO_DATA_START = .; *(.foo.data) FOO_DATA_END = .;  }
+  .foo.text : { FOO_TEXT_START = .; *(.foo.text) FOO_TEXT_END = .;  }
+}
+
+#--- overwrite3.lds
+OVERWRITE_SECTIONS {
+  .foo.data : {}
+}
+
+#--- insert.lds
+SECTIONS { .foo.text : {} } INSERT AFTER .foo.data;
+
+#--- err1.lds
+## TODO Fix the diagnostic 'malformed number'
+# RUN: not ld.lld %t/err1.lds %t/a.o -o /dev/null 2>&1 | FileCheck %s -DFILE=%t/err1.lds --check-prefix=ERR1
+# ERR1: error: [[FILE]]:[[#@LINE+2]]: malformed number: =
+OVERWRITE_SECTIONS {
+  A = 1;
+}

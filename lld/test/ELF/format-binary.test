@@ -1,0 +1,52 @@
+# REQUIRES: x86
+
+# RUN: rm -rf %t.dir
+# RUN: mkdir %t.dir
+# RUN: cd %t.dir
+
+# RUN: mkdir d
+# RUN: echo -n "Fluffle Puff" > d/t.txt
+# RUN: ld.lld -m elf_x86_64 -r -b binary d/t.txt -t -o ro | FileCheck %s --check-prefix=RO-TRACE
+# RUN: llvm-readelf -h -S -s -x .data ro | FileCheck --check-prefix=RO %s
+
+# RO-TRACE: d/t.txt
+
+# RO:      Machine: Advanced Micro Devices X86-64
+# RO:      Name         Type     Address          Off    Size   ES Flg Lk Inf Al
+# RO-NEXT:              NULL     0000000000000000 000000 000000 00      0   0  0
+# RO-NEXT: .data        PROGBITS 0000000000000000 {{.*}} 00000c 00  WA  0   0  8
+# RO:         Value          Size Type    Bind   Vis      Ndx Name
+# RO:      0000000000000000     0 OBJECT  GLOBAL DEFAULT    1 _binary_d_t_txt_start
+# RO-NEXT: 000000000000000c     0 OBJECT  GLOBAL DEFAULT    1 _binary_d_t_txt_end
+# RO-NEXT: 000000000000000c     0 OBJECT  GLOBAL DEFAULT  ABS _binary_d_t_txt_size
+# RO:      Hex dump of section '.data':
+# RO-NEXT: 0x00000000 466c7566 666c6520 50756666          Fluffle Puff
+
+# RUN: echo 'OUTPUT_FORMAT(elf64-x86-64)' > t.lds
+# RUN: ld.lld -b binary -T t.lds d/t.txt -o exe
+# RUN: llvm-readelf -h -S -s exe | FileCheck --check-prefix=EXE %s
+
+## bfdname can be quoted.
+# RUN: echo 'OUTPUT_FORMAT("elf64-x86-64")' > t1.lds
+# RUN: ld.lld -b binary -T t1.lds d/t.txt -o exe1
+# RUN: llvm-readelf -h -S -s exe | FileCheck --check-prefix=EXE %s
+
+# EXE:      Machine: Advanced Micro Devices X86-64
+# EXE:      [Nr] Name         Type     Address          Off    Size   ES Flg Lk Inf Al
+# EXE:      [ 2] .data        PROGBITS {{.*}}                  00000c 00  WA  0   0  8
+# EXE:      Size Type    Bind   Vis      Ndx Name
+# EXE:         0 OBJECT  GLOBAL DEFAULT    2 _binary_d_t_txt_start
+# EXE-NEXT:    0 OBJECT  GLOBAL DEFAULT    2 _binary_d_t_txt_end
+# EXE-NEXT:    0 OBJECT  GLOBAL DEFAULT  ABS _binary_d_t_txt_size
+
+# RUN: not ld.lld -b foo 2>&1 | FileCheck --check-prefix=ERR %s
+# ERR: error: unknown --format value: foo (supported formats: elf, default, binary)
+
+## Non-isalnum bytes are converted to _. See D37331.
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o d/£.o
+# RUN: ld.lld d/£.o --format=binary d/£.o -o unicode
+# RUN: llvm-nm -p unicode | FileCheck --check-prefix=UNICODE %s
+
+# UNICODE: D _binary_d_{{_+}}o_start
+# UNICODE: D _binary_d_{{_+}}o_end
+# UNICODE: A _binary_d_{{_+}}o_size

@@ -1,0 +1,87 @@
+# Test if we are handling RELA relocations for ARM correctly using llvm-dwarfdump.
+#
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-dwarfdump -i %t | FileCheck %s
+
+# CHECK:      DW_TAG_compile_unit
+# CHECK-NEXT: DW_AT_name {{.*}}("correct")
+# CHECK-NEXT: DW_AT_type ([[TYPEDIE:0x[0-9A-Fa-f]+]] "correct")
+# CHECK:      [[TYPEDIE]]: DW_TAG_base_type
+# CHECK-NEXT: DW_AT_name {{.*}}("correct")
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_ARM
+  Flags:           [ EF_ARM_EABI_VER5 ]
+Sections:
+  # A rudimentary v5 compile unit with an AT_name and an AT_type referencing
+  # a rudimentary DW_TAG_base_type DIE with an AT_name attribute.
+  - Name:            .debug_info
+    Type:            SHT_PROGBITS
+    Content:         17000000050001040000000001A000000000000000020000000000
+  - Name:            .debug_abbrev
+    Type:            SHT_PROGBITS
+    Content:         011101030E49130000022400030E000000
+  - Name:            .debug_str
+    Type:            SHT_PROGBITS
+  - Name:            .rela.debug_info
+    Type:            SHT_RELA
+    Link:            .symtab
+    AddressAlign:    0x4
+    Offset:          0x929
+    Info:            .debug_info
+    Relocations:
+      - Offset:          0x8
+        Symbol:          .debug_abbrev
+        Type:            R_ARM_ABS32
+      # The compile unit name is found via a R_ARM_ABS32 relocation.
+      - Offset:          0xD
+        Symbol:          .debug_str
+        Type:            R_ARM_ABS32
+        Addend:          6
+      # The DW_TAG_base_type is found via a R_ARM_REL32 relocation.
+      # This is completely artificial and unlikely to be ever generated
+      # by a compiler or other tool. We make sure that the relocation is
+      # resolved by (Symbol - Offset + Addend).
+      - Offset:          0x11
+        Symbol:          .debug_info
+        Type:            R_ARM_REL32
+        Addend:          0x26
+      - Offset:          0x16
+        Symbol:          .debug_str
+        Type:            R_ARM_ABS32
+        Addend:          6
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .symtab
+      - Name:            .strtab
+      - Name:            .shstrtab
+      - Name:            .debug_info
+      - Name:            .debug_abbrev
+      - Name:            .debug_str
+      - Name:            .rela.debug_info
+Symbols:
+  - Name:            test.cpp
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            .debug_info
+    Type:            STT_SECTION
+    Section:         .debug_info
+  - Name:            .debug_abbrev
+    Type:            STT_SECTION
+    Section:         .debug_abbrev
+  - Name:            .debug_str
+    Type:            STT_SECTION
+    Section:         .debug_str
+  - Name:            .debug_info_cudie
+    Type:            STT_OBJECT
+    Section:         .debug_info
+    Value:           0xC
+DWARF:
+  debug_str:
+    - 'wrong'
+    - 'correct'
+...

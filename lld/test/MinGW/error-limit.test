@@ -1,0 +1,12 @@
+RUN: ld.lld -### foo.o -m i386pep 2>&1 | FileCheck -check-prefix=DEFAULT %s
+DEFAULT-NOT: -errorlimit:
+DEFAULT-NOT: /errorlimit:
+
+RUN: ld.lld -### foo.o -m i386pep --error-limit=5 2>&1 | FileCheck -check-prefix=NUMERIC %s
+NUMERIC: -errorlimit:5
+
+RUN: ld.lld -### foo.o -m i386pep --error-limit=0 2>&1 | FileCheck -check-prefix=UNLIMITED %s
+UNLIMITED: -errorlimit:0
+
+RUN: not ld.lld -### foo.o -m i386pep --error-limit=XYZ 2>&1 | FileCheck -check-prefix=WRONG %s
+WRONG:      --error-limit: number expected, but got XYZ

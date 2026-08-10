@@ -1,0 +1,56 @@
+; RUN: rm -rf %t
+; RUN: split-file %s %t
+// Check readtapi only accepts one file. 
+; RUN: not llvm-readtapi -extract %t/libfoo.tbd %t/libbar.tbd 2>&1 | FileCheck %s --allow-empty --check-prefix EXTRA
+// Check missing argument.
+; RUN: not llvm-readtapi -extract %t/libfoo.tbd 2>&1 | FileCheck %s --allow-empty --check-prefix MISSING
+// Check that TBD file manipulation was not valid and error propagated as expected.
+; RUN: not llvm-readtapi -arch x86_64 -extract %t/libfoo.tbd 2>&1 | FileCheck %s --allow-empty --check-prefix MISMATCH 
+
+; EXTRA: error: extract only supports one input file
+; MISSING:  extract requires -arch <arch>
+; MISMATCH: error: {{.*}}libfoo.tbd' file doesn't have architecture 'x86_64'
+
+;--- libfoo.tbd
+--- !tapi-tbd
+tbd-version:     4
+targets:         [ arm64-ios ]
+flags:           [ not_app_extension_safe ]
+install-name:    '/usr/lib/libfoo.dylib'
+exports:
+  - targets:         [ arm64-ios ]
+    symbols:         [ _bar ]
+...
+
+;--- libbar.tbd
+{
+  "main_library": {
+    "exported_symbols": [
+      {
+        "data": {
+          "global": [
+            "_bar"
+          ]
+        }
+      }
+    ],
+    "flags": [
+      {
+        "attributes": [
+          "not_app_extension_safe"
+        ]
+      }
+    ],
+    "install_names": [
+      {
+        "name": "/usr/lib/libbar.dylib"
+      }
+    ],
+    "target_info": [
+      {
+        "target": "arm64-ios"
+      }
+    ]
+  },
+  "tapi_tbd_version": 5
+}

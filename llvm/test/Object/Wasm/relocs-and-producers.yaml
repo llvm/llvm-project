@@ -1,0 +1,61 @@
+# RUN: yaml2obj %s | llvm-objdump -s - | FileCheck %s
+
+# This is a regression test for an issue with the section order
+# checker being overly strict. yaml2obj places the relocations last,
+# but the section order checker previously checked that relocations
+# came before the producers section, which would cause this test to
+# fail.
+
+# CHECK: Contents of section producers:
+# CHECK: Contents of section reloc.CODE:
+
+--- !WASM
+FileHeader:
+  Version:         0x00000001
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - Index:           0
+        ParamTypes:      []
+        ReturnTypes:     []
+  - Type:            IMPORT
+    Imports:
+      - Module:          env
+        Field:           __linear_memory
+        Kind:            MEMORY
+        Memory:
+          Minimum:         0x00000000
+      - Module:          env
+        Field:           __indirect_function_table
+        Kind:            TABLE
+        Table:
+          Index:           0
+          ElemType:        FUNCREF
+          Limits:
+            Minimum:         0x00000000
+  - Type:            FUNCTION
+    FunctionTypes:   [ 0 ]
+  - Type:            CODE
+    Relocations:
+      - Type:            R_WASM_FUNCTION_INDEX_LEB
+        Index:           0
+        Offset:          0x00000004
+    Functions:
+      - Index:           0
+        Locals:          []
+        Body:            1080808080000B
+  - Type:            CUSTOM
+    Name:            linking
+    Version:         2
+    SymbolTable:
+      - Index:           0
+        Kind:            FUNCTION
+        Name:            foo
+        Flags:           [ VISIBILITY_HIDDEN ]
+        Function:        0
+  - Type:            CUSTOM
+    Name:            producers
+    Tools:
+      - Name:            clang
+        Version:         9.0.0
+...

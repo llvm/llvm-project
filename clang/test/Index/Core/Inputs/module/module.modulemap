@@ -1,0 +1,11 @@
+module ModA {
+  header "ModA.h" export *
+
+  module SubModA {
+    header "SubModA.h"
+
+    module SubSubModA {
+      header "SubSubModA.h"
+    }
+  }
+}

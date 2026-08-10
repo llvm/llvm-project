@@ -1,0 +1,287 @@
+//===- XeGPUUtils.h - Vector Utilities --------------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef MLIR_DIALECT_XEGPU_UTILS_XEGPUUTILS_H_
+#define MLIR_DIALECT_XEGPU_UTILS_XEGPUUTILS_H_
+
+#include "mlir/Dialect/XeGPU/IR/XeGPU.h"
+#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/OpDefinition.h"
+#include "llvm/ADT/SetVector.h"
+#include <functional>
+
+namespace mlir {
+
+class UnrealizedConversionCastOp;
+class VectorType;
+class OpOperand;
+class OpResult;
+class OpBuilder;
+class ValueRange;
+class TypeConverter;
+class OpFoldResult;
+
+namespace xegpu {
+class DistributeLayoutAttr;
+class LayoutAttr;
+class TensorDescType;
+
+namespace uArch {
+struct uArch;
+} // namespace uArch
+} // namespace xegpu
+
+namespace xegpu {
+
+/// Flatten a set of ValueRange into a single SmallVector<Value>
+SmallVector<Value> flattenValues(ArrayRef<ValueRange> values);
+
+/// If tensor descriptor has a layout attribute it is used in SIMT mode.
+/// In this mode, the distributed vector shape is determined as follows:
+/// Definitions:
+///        lane_data_size = lane_data[0] × lane_data[1]
+///        subgroup_size = lane_layout[0] × lane_layout[1]
+///        distribution_unit_size = subgroup_size × lane_data_size
+///
+/// Case 1: Regular loads/stores.
+/// The following conditions must be met:
+///        * tensor_desc[0] == lane_layout[0]
+/// Distributed vector is a 1D vector with shape:
+///        [chunk_size]
+///
+/// Case 2: Block loads/stores
+/// Additional definitions:
+///        tensor_size = tensor_desc[0] * .. * tensor_desc[r-1] * array_length
+///        n_distribution_units = tensor_size / distribution_unit_size
+///        fragment_size = n_distribution_units * lane_data_size
+/// Given above definitions, the following conditions must be met:
+///        * tensor_desc[0] % (lane_layout[0] × lane_data[0]) == 0
+///        * tensor_desc[1] % (lane_layout[1] × lane_data[1]) == 0
+/// Distributed vector is a 1D vector with shape:
+///        [fragment_size]
+FailureOr<VectorType> getDistributedVectorType(xegpu::TensorDescType tdescTy);
+
+/// Helper to get the distributed vector type for a given vector type according
+/// to a given LayoutAttr.
+FailureOr<VectorType> getDistributedVectorType(VectorType originalType,
+                                               LayoutAttr layout);
+
+/// Helper function to get distributed vector type for a source vector type
+/// according to the lane_layout. We simply divide each dimension of tensor
+/// descriptor shape by corresponding lane_layout dimension. If
+/// array_length > 1, that is appended to the front of the distributed shape.
+///
+/// Examples:
+/// | original vector shape | lane_layout | distributed vector shape |
+/// |-----------------------|-------------|--------------------------|
+/// | 32x16                 | [1, 16]     | 32x1                     |
+/// | 32x16                 | [2, 8]      | 16x2                     |
+/// | 2x32x16               | [1, 16]     | 2x32x1                   |
+FailureOr<VectorType>
+getDistVecTypeBasedOnLaneLayout(DistributeLayoutAttr layout,
+                                VectorType originalType);
+
+/// Extract a set of small vectors from a value with a given shape using
+/// vector.extract_stride_slice
+SmallVector<Value> extractVectorsWithShapeFromValue(OpBuilder &builder,
+                                                    Location loc, Value value,
+                                                    ArrayRef<int64_t> shape);
+
+/// Create a vector of shape from a set of values using
+/// vector.insert_stride_slice.
+Value createVectorWithShapeFromValues(OpBuilder &builder, Location loc,
+                                      ValueRange values,
+                                      ArrayRef<int64_t> shape);
+
+/// Retrieves the chip string from the XeVM target attribute of the parent
+/// GPU module operation. Returns the chip identifier if found, or nullopt
+/// if no GPU module parent or XeVM target attribute exists.
+std::optional<std::string> getChipStr(Operation *op);
+
+/// Generates element-wise addition ops of two arrays with same length.
+SmallVector<OpFoldResult> addElementwise(OpBuilder &builder, Location loc,
+                                         ArrayRef<OpFoldResult> lhs,
+                                         ArrayRef<OpFoldResult> rhs);
+
+/// Generates element-wise addition ops of two arrays with automatic alignment.
+/// When the input arrays have different sizes, the shorter array is
+/// right-aligned with the longer array, and the unmatched leading elements from
+/// the longer array are preserved unchanged. This is commonly used for offset
+/// computation where higher-dimensional offsets need to be added to
+/// lower-dimensional adjustments.
+///
+/// Example:
+///   lhs = [l1, l2, l3], rhs = [r1, r2]
+///   Result: [11, l2+r1, l3+r2]
+SmallVector<OpFoldResult> addWithRightAligned(OpBuilder &builder, Location loc,
+                                              ArrayRef<OpFoldResult> lhs,
+                                              ArrayRef<OpFoldResult> rhs);
+
+/// Given an `input` value representing per-lane data, this function returns the
+/// result after performing a reduction on the input over all lanes (number of
+/// lanes given by `size`). This uses butterfly shuffles to perform the
+/// reduction in a log2(size) number of steps.
+/// NOTE: Implementation taken from TestVectorTransforms.cpp
+Value subgroupReduction(Location loc, OpBuilder &builder, Value input,
+                        vector::CombiningKind kind, uint32_t size);
+
+/// Given a `src` and an `acc` argumments from a vector::MultiDimReductionOp,
+/// lower to a set of vector::ReductionOp ops over 1D slices extracted from
+/// `src`. The reduction is performed along `reductionDim`. The result is a
+/// vector with the same shape as `acc`.
+/// TODO: Only 2D to 1D reduction is supported for now.
+Value lowerToVectorReductions(TypedValue<VectorType> src,
+                              TypedValue<VectorType> acc,
+                              vector::CombiningKind kind, int64_t reductionDim,
+                              Location loc, PatternRewriter &rewriter);
+
+/// Creates a constant filled with the neutral (identity) value for the
+/// given reduction kind. For example: 0 for ADD/OR/XOR, 1 for MUL/AND,
+/// max/min signed/unsigned int for MINSI/MINUI/MAXSI/MAXUI, and +/-infinity
+/// for float min/max operations. If \p type is a VectorType, returns a splat
+/// vector constant; otherwise returns a scalar constant. Returns nullptr if
+/// the element type is incompatible with the requested reduction kind.
+Value createReductionNeutralValue(OpBuilder &builder, Location loc, Type type,
+                                  vector::CombiningKind kind);
+
+/// Lowers cross-lane reductions to shuffle operations on a 2D vector.
+/// Extracts slices along the reduction dimension, performs subgroup reductions
+/// with shuffles across reductionSize work-items, and inserts the results back
+/// into an accumulator vector.
+Value lowerCrossLaneReductionToShuffles(TypedValue<VectorType> src,
+                                        TypedValue<VectorType> acc,
+                                        vector::CombiningKind kind,
+                                        int64_t reductionDim,
+                                        int64_t reductionSize, Location loc,
+                                        PatternRewriter &rewriter);
+
+/// Helper Function to find a proper instruction multiple for the user-supplied
+/// sg-level data shape (diven by `dim`). `candidates` are uArch allowed shapes.
+/// `candidateMultiples` are uArch multiples of such shapes (i.e. block count or
+/// array length).
+template <typename T>
+int getLargestDivisor(T dim, ArrayRef<T> candidates,
+                      ArrayRef<T> candidateMultiples = {});
+
+/// Retrieves the DistributeLayoutAttr associated with a given Value. For
+/// TensorDescType values, the DistributeLayoutAttr is extracted from the
+/// TensorDescType itself. For other values, it is obtained from the attributes
+/// of the defining operation. Returns nullptr if no DistributeLayoutAttr is
+/// found.
+DistributeLayoutAttr getDistributeLayoutAttr(const Value value);
+
+/// Retrieves the DistributeLayoutAttr associated with a given OpOperand. It
+/// will first check the operand_layout_{id} of the owner operation. If not
+/// found, it will check the operand itself and its defining op.
+DistributeLayoutAttr getDistributeLayoutAttr(const OpOperand &opr);
+
+/// [to-be-deprecated] Sets the DistributeLayoutAttr for a given OpResult
+/// user should use setAnchorLayout instead
+void setDistributeLayoutAttr(const OpResult &Result,
+                             const DistributeLayoutAttr layout);
+
+/// [to-be-deprecated] Sets the DistributeLayoutAttr for a given OpOperand
+/// user should use setAnchorLayout instead
+void setDistributeLayoutAttr(const OpOperand &opr,
+                             const DistributeLayoutAttr layout);
+
+/// Return the attribute name for the OpOperand to attach DistributeLayoutAttr
+std::string getTemporaryLayoutName(const OpOperand &operand);
+
+/// Return the attribute name for the OpResult to attach DistributeLayoutAttr
+std::string getTemporaryLayoutName(const OpResult result);
+
+/// get and set distribute layout attribute for non-anchor operations
+/// (and offsets/masks of load/store ops before we get rid of their temp attrs)
+template <typename T,
+          typename = std::enable_if_t<std::is_same_v<T, OpOperand> ||
+                                      std::is_same_v<T, OpResult>>>
+DistributeLayoutAttr getTemporaryLayout(const T &operandOrResult);
+
+template <typename T,
+          typename = std::enable_if_t<std::is_same_v<T, OpOperand> ||
+                                      std::is_same_v<T, OpResult>>>
+void setTemporaryLayout(const T &operandOrResult,
+                        const DistributeLayoutAttr layout);
+
+/// Helper function to check if the layout is packed. Layout is packed if it is
+/// 2D and lane_data[0] != 1 (data packed from col dimension).
+/// TODO: Move to target info.
+bool requirePacked(const DistributeLayoutAttr layout);
+
+/// Helper function to check if the layout requires a transpose effect.
+bool requireTranspose(const DistributeLayoutAttr layout,
+                      const uArch::uArch *uArch);
+
+// Check if dst shape is an expansion of src shape by inserting unit dimensions.
+bool matchUnitDimExpansion(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
+                           SmallVector<int64_t> &expandedUnitDims);
+
+// Checks if dst shape is an expansion of src shape where each dimension in src
+// is split into one or more consecutive dimensions in dst
+bool matchSplitDimExpansion(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
+                            SmallVector<SmallVector<int64_t>> &splitDimGroups);
+
+/// Callback type for computing sub-shape and count for 1:N (or 1:1
+/// shape-changing) VectorType conversion. Given a VectorType and its
+/// DistributeLayoutAttr, returns (subShape, count). A count <= 0 signals
+/// "no conversion needed"; count == 1 is a 1:1 shape-changing conversion;
+/// count > 1 produces `count` copies of `subShape`.
+using SubShapeAndCountFn = std::function<std::pair<SmallVector<int64_t>, int>(
+    VectorType, DistributeLayoutAttr)>;
+
+/// Pre-computes distributed VectorType mappings for every value carried
+/// through an SCF loop under `topLevelOp` (1:1 shape-changing or 1:N): the
+/// region block args (`scf.while` before/after args, `scf.for` iter_args), the
+/// loop results, and the terminator operands feeding them. Each is derived from
+/// a single source -- the layout of the feeding value (loop init or
+/// `scf.condition` operand) -- and keyed by `Value`, because the SCF converters
+/// detach/replace the loop body mid-conversion, after which a layout query on a
+/// block arg returns null. Recording results and terminator operands lets a 1:N
+/// pass resolve them from the map after stripping the loop op's transient
+/// layout attrs. `scf.if` has no loop-carried block args and needs no entry.
+DenseMap<Value, SmallVector<Type>>
+precomputeLoopBlockArgTypes(Operation *topLevelOp,
+                            SubShapeAndCountFn getSubShapeAndCount);
+
+/// Adds a context-aware VectorType conversion to `converter` (1:1
+/// shape-changing or 1:N, depending on `getSubShapeAndCount`'s returned
+/// count). `getSubShapeAndCount` computes (subShape, count) for a VectorType
+/// and its layout; count <= 0 means no conversion needed. `loopArgTypes`
+/// (typically obtained from `precomputeLoopBlockArgTypes`) provides the
+/// pre-computed types for SCF loop block arguments (`scf.while`,
+/// `scf.for`); pass an empty map if the IR has no such loops.
+void addVectorTypeConversion(TypeConverter &converter,
+                             SubShapeAndCountFn getSubShapeAndCount,
+                             DenseMap<Value, SmallVector<Type>> loopArgTypes);
+
+/// Cleans up UnrealizedConversionCastOps inserted during SCF structural type
+/// conversion and/or XeGPU unrolling. Folds cancelling N:1->1:N and 1:N->N:1
+/// cast chains (inserting vector.shape_cast when shapes differ but element
+/// counts match). Unpaired pack (1:N) and unpack (N:1) casts between a single
+/// large VectorType and N identically-typed smaller VectorTypes are lowered
+/// to vector.extract_strided_slice / vector.insert_strided_slice. Dead casts
+/// are erased. Casts in `existingCasts` are preserved.
+void cleanupUnrealizedConversionCasts(
+    Operation *root,
+    const llvm::SmallSetVector<UnrealizedConversionCastOp, 8> &existingCasts);
+
+// Checks if dst shape is a collapse of src shape where each dimension in dst is
+// produced by one or more consecutive dimensions in src whose product equals
+// the dst dimension. Populates collapseDims with groups of src indices that are
+// collapsed into each dst dimension. Leading or trailing unit dst dimensions
+// (with no backing src dim) result in empty groups. Example: src=[8,16,32],
+// dst=[1,4096] -> true, collapseDims=[[],[0,1,2]].
+bool matchDimCollapse(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
+                      SmallVector<SmallVector<int64_t>> &collapseDims);
+
+} // namespace xegpu
+
+} // namespace mlir
+
+#endif // MLIR_DIALECT_XEGPU_UTILS_XEGPUUTILS_H_

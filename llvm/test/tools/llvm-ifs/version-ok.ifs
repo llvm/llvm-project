@@ -1,0 +1,8 @@
+# RUN: llvm-ifs --input-format=IFS --output-ifs - %s %S/object.ifs
+
+--- !ifs-v1
+IfsVersion: 3.0
+Target:          x86_64-unknown-linux-gnu
+Symbols:
+  - { Name: a, Type: Func }
+...

@@ -1,0 +1,60 @@
+# IR level Instrumentation Flag
+:ir
+_Z3barv
+# Func Hash:
+742261418966908927
+# Num Counters:
+1
+# Counter Values:
+1
+
+_Z3bazv
+# Func Hash:
+742261418966908927
+# Num Counters:
+1
+# Counter Values:
+1
+
+_Z3foov
+# Func Hash:
+742261418966908927
+# Num Counters:
+1
+# Counter Values:
+6
+
+_Z4foo2v
+# Func Hash:
+742261418966908927
+# Num Counters:
+1
+# Counter Values:
+2
+
+_Z7recursej
+# Func Hash:
+146835647075900052
+# Num Counters:
+2
+# Counter Values:
+7
+2
+
+main
+# Func Hash:
+303685788594980264
+# Num Counters:
+10
+# Counter Values:
+2
+2
+1
+1
+1
+1
+1
+1
+1
+1
+

@@ -1,0 +1,16 @@
+# RUN: yaml2obj %s | llvm-objdump -D -
+
+# Test that -D does not crash llvm-objdump encounters a section who size is a
+# not a multiple of the size of an instruction.
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_MIPS
+Sections:
+  - Name:            .note.llvm.crash
+    Type:            SHT_NOTE
+    Address:         0x0
+    Content:         002E746578

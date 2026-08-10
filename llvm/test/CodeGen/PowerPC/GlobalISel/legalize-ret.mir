@@ -1,0 +1,17 @@
+# RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -global-isel -run-pass=legalizer -verify-machineinstrs %s -o - | FileCheck %s
+
+---
+name:            test_simple
+body:             |
+  ; CHECK-LABEL: name: test_simple
+  ; CHECK: [[IN:%[0-9]+]]:_(s64) = COPY $x3
+  ; CHECK: $x3 = COPY [[IN]]
+  ; CHECK: BLR8 implicit $lr8, implicit $rm, implicit $x3
+  bb.1.entry:
+    liveins: $x3
+
+    %0:_(s64) = COPY $x3
+    $x3 = COPY %0(s64)
+    BLR8 implicit $lr8, implicit $rm, implicit $x3
+
+...

@@ -1,0 +1,9 @@
+// NoProblems.modulemap
+module SomeTypes {
+  header "SomeTypes.h"
+  export *
+}
+module SomeDecls {
+  header "SomeDecls.h"
+  export *
+}

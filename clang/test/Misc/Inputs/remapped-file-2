@@ -1,0 +1,3 @@
+#include "nonexistent.h"
+
+int *f(void) { return fp; }

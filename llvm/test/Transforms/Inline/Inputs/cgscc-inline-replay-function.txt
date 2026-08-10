@@ -1,0 +1,1 @@
+remark: calls.cc:4:0: '_Z3subii' will not be inlined into 'main' with (cost=-5, threshold=337) at callsite _Z3sumii:1:0 @ main:3:0.1;

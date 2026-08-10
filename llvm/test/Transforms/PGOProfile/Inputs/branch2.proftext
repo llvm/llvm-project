@@ -1,0 +1,8 @@
+# :ir is the flag to indicate this is IR level profile.
+:ir
+test_br_2
+146835647075900052
+2
+1
+1
+

@@ -1,0 +1,68 @@
+; REQUIRES: asserts
+; Test default using size of profile as a proxy
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/cs-preinline-cost.perfscript --binary=%S/Inputs/cs-preinline-cost.perfbin --csspgo-preinliner --debug-only=cs-preinliner --use-context-cost-for-preinliner=0 --output=/dev/null 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT
+
+; Test use-context-cost-for-preinliner using inlinee's byte size as context-sensitive inline cost
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/cs-preinline-cost.perfscript --binary=%S/Inputs/cs-preinline-cost.perfbin --csspgo-preinliner --debug-only=cs-preinliner --use-context-cost-for-preinliner --output=/dev/null 2>&1 | FileCheck %s --check-prefix=CHECK-CSCOST
+
+CHECK-DEFAULT:      Process main for context-sensitive pre-inlining (pre-inline size: 9, size limit: 108)
+CHECK-DEFAULT-NEXT:   Inlined context profile for: main:9 @ _Z3fooi (callee size: 2, call count:545)
+CHECK-DEFAULT-NEXT:   Inlined context profile for: main:7 @ _Z3fooi (callee size: 14, call count:545)
+CHECK-DEFAULT-NEXT:   Inlined context profile for: main:8 @ _Z3fooi (callee size: 4, call count:544)
+
+CHECK-CSCOST:      Process main for context-sensitive pre-inlining (pre-inline size: 69, size limit: 828)
+; This inlinee is fully optimized away, make sure we have the correct zero size for that context even if the size is
+; not available through symbolization.
+CHECK-CSCOST-NEXT:   Inlined context profile for: main:9 @ _Z3fooi (callee size: 0, call count:545)
+CHECK-CSCOST-NEXT:   Inlined context profile for: main:7 @ _Z3fooi (callee size: 279, call count:545)
+CHECK-CSCOST-NEXT:   Inlined context profile for: main:8 @ _Z3fooi (callee size: 44, call count:544)
+
+; binary is built with the source below using the following command line:
+;   clang -O3 -g -fpseudo-probe-for-profiling test.cpp
+;
+;#include <stdio.h>
+;
+;volatile int state = 9000;
+;
+;int foo(int x) {
+;    if (x == 0) {
+;        return 7;
+;    }
+;
+;    if ((x & 1) == 0) {
+;        state--;
+;        return 9;
+;    }
+;
+;    if (state > 5000) {
+;        while (state > 5000) {
+;               for (int i = 50; i >= 0; i--) {
+;                state *= 6;
+;                state /= 7;
+;                state -= 1;
+;            }
+;        }
+;    }
+;    else {
+;        while (state < 5000) {
+;            for (int i = 50; i >= 0; i--) {
+;                state *= 6;
+;                state /= 5;
+;                state += 1;
+;            }
+;        }
+;    }
+;
+;    return state;
+;}
+;
+;volatile int cnt = 10000000;//10000000;
+;int main() {
+;    int r = 0;
+;    for (int i = 0; i < cnt; i++) {
+;      r += foo(i);
+;      r -= foo(i & (~1));
+;      r += foo(0);
+;    }
+;    return r;
+;}

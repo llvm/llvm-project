@@ -1,0 +1,3 @@
+{% extends (meta|default({})).template|default("!layout.html") %}
+
+{% set css_files = css_files + ['_static/clang-tools-extra-styles.css'] %}

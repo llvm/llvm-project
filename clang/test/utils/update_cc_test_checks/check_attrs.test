@@ -1,0 +1,9 @@
+## Test that CHECK lines are generated as expected without --check-attributes
+# RUN: cp %S/Inputs/check-attributes.cpp %t.cpp && %update_cc_test_checks %t.cpp
+# RUN: diff -u %S/Inputs/check-attributes.cpp.plain.expected %t.cpp
+## Test with --check-attributes flag.
+# RUN: cp %S/Inputs/check-attributes.cpp %t.cpp && %update_cc_test_checks %t.cpp --check-attributes
+# RUN: diff -u %S/Inputs/check-attributes.cpp.funcattrs.expected %t.cpp
+## Check that re-running update_cc_test_checks doesn't change the output
+# RUN: %update_cc_test_checks %t.cpp
+# RUN: diff -u %S/Inputs/check-attributes.cpp.funcattrs.expected %t.cpp

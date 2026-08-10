@@ -1,0 +1,38 @@
+// FIXME: This test infinite loops on darwin because it crashes
+// printing a stack trace repeatedly
+// FIXME: Disabled on Windows because of a crash (possibly related to above).
+UNSUPPORTED: darwin, target=aarch64{{.*}}, target={{.*windows.*}}
+
+RUN: %cpp_compiler %S/TraceMallocThreadedTest.cpp -o \
+RUN:   %t-TraceMallocThreadedTest
+
+RUN: %run %t-TraceMallocThreadedTest -trace_malloc=2 -runs=1 2>&1 | FileCheck %s
+CHECK: {{MALLOC\[[0-9]+] +0x[0-9a-f]+ 5639}}
+CHECK-NEXT: {{ +\#0 +}}
+CHECK-NEXT: {{ +\#1 +}}
+CHECK-NEXT: {{ +\#2 +}}
+
+CHECK: {{MALLOC\[[0-9]+] +0x[0-9a-f]+ 5639}}
+CHECK-NEXT: {{ +\#0 +}}
+CHECK-NEXT: {{ +\#1 +}}
+CHECK-NEXT: {{ +\#2 +}}
+
+CHECK: {{MALLOC\[[0-9]+] +0x[0-9a-f]+ 5639}}
+CHECK-NEXT: {{ +\#0 +}}
+CHECK-NEXT: {{ +\#1 +}}
+CHECK-NEXT: {{ +\#2 +}}
+
+CHECK: {{MALLOC\[[0-9]+] +0x[0-9a-f]+ 5639}}
+CHECK-NEXT: {{ +\#0 +}}
+CHECK-NEXT: {{ +\#1 +}}
+CHECK-NEXT: {{ +\#2 +}}
+
+CHECK: {{MALLOC\[[0-9]+] +0x[0-9a-f]+ 5639}}
+CHECK-NEXT: {{ +\#0 +}}
+CHECK-NEXT: {{ +\#1 +}}
+CHECK-NEXT: {{ +\#2 +}}
+
+CHECK: {{MALLOC\[[0-9]+] +0x[0-9a-f]+ 5639}}
+CHECK-NEXT: {{ +\#0 +}}
+CHECK-NEXT: {{ +\#1 +}}
+CHECK-NEXT: {{ +\#2 +}}

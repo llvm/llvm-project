@@ -1,0 +1,112 @@
+# RUN: yaml2obj %s -o %t
+# RUN: cp %t %t3
+# RUN: llvm-objcopy --strip-debug %t %t2
+## Test that debug sections (but not linking or names) are stripped with --strip-debug
+# RUN: obj2yaml %t2 | FileCheck --implicit-check-not=.debug %s
+#
+# RUN: llvm-objcopy -g %t %t2g
+# Verify that --strip-debug and -g produce the same output
+# RUN: cmp %t2 %t2g
+
+# RUN: llvm-strip --strip-debug %t3
+# RUN: cmp %t2 %t3
+
+# RUN: cp %t %t4
+# RUN: llvm-strip -d %t4
+# RUN: cmp %t2 %t4
+
+# RUN: cp %t %t5
+# RUN: llvm-strip -g %t5
+# RUN: cmp %t2 %t5
+
+# RUN: cp %t %t6
+# RUN: llvm-strip -S %t6
+# RUN: cmp %t2 %t6
+
+# Verify that an archive with multiple object files is handled correctly.
+# RUN: cp %t %t.duplicate
+# RUN: cp %t2 %t.duplicate.stripped
+# RUN: rm -f %t.multiple-stripped-obj.a
+# RUN: llvm-ar crs %t.multiple-stripped-obj.a %t2 %t.duplicate.stripped
+# RUN: rm -f %t.multiple-obj.a
+# RUN: llvm-ar crs %t.multiple-obj.a %t %t.duplicate
+# RUN: llvm-objcopy --strip-debug %t.multiple-obj.a %t.multiple-obj.stripped.a
+# RUN: llvm-ar p %t.multiple-stripped-obj.a > %t.multiple-stripped-obj.a.dump
+# RUN: llvm-ar p %t.multiple-obj.stripped.a > %t.multiple-obj.stripped.a.dump
+# RUN: cmp %t.multiple-stripped-obj.a.dump %t.multiple-obj.stripped.a.dump
+
+# CHECK:      Sections:
+# CHECK-NEXT:   - Type: TYPE
+# CHECK:        - Type: CUSTOM
+## We expect the linking section to be preceeded by the removed `.debug_info`
+## section.
+# CHECK-NEXT:     Name:            .objcopy.removed
+# CHECK-NEXT:     Payload:         ''
+# CHECK-NEXT:   - Type: CUSTOM
+# CHECK-NEXT:     Name: linking
+# CHECK:          Name: name
+# CHECK-NEXT:     FunctionNames:
+# CHECK:          Name: producers
+## Following the producers section we expect to find three removed sections.
+## The `.debug_line` section that two reloction section corresponding to the
+## two debug sections.
+# CHECK:        - Type:            CUSTOM
+# CHECK-NEXT:     Name:            .objcopy.removed
+# CHECK-NEXT:     Payload:         ''
+# CHECK-NEXT:   - Type:            CUSTOM
+# CHECK-NEXT:     Name:            .objcopy.removed
+# CHECK-NEXT:     Payload:         ''
+# CHECK-NEXT:   - Type:            CUSTOM
+# CHECK-NEXT:     Name:            .objcopy.removed
+# CHECK-NEXT:     Payload:         ''
+
+
+--- !WASM
+FileHeader:
+  Version: 0x00000001
+Sections:
+  - Type: TYPE
+    Signatures:
+      - Index: 0
+        ParamTypes: []
+        ReturnTypes: []
+  - Type: FUNCTION
+    FunctionTypes: [ 0 ]
+  - Type: CODE
+    Functions:
+      - Index: 0
+        Locals: []
+        Body: 0B
+  - Type: CUSTOM
+    Name: .debug_info
+    Payload: 'CAFE123456'
+    Relocations:
+      - Type:   R_WASM_FUNCTION_INDEX_LEB
+        Index:  0
+        Offset: 0x0000000
+  - Type:            CUSTOM
+    Name:            linking
+    Version:         2
+    SymbolTable:
+      - Index:           0
+        Kind:            FUNCTION
+        Name:            foo
+        Flags:           [ BINDING_LOCAL ]
+        Function:        0
+  - Type: CUSTOM
+    Name: name
+    FunctionNames:
+     - Index:          0
+       Name:           foo
+  - Type: CUSTOM
+    Name: producers
+    Tools:
+      - Name:   clang
+        Version: 9.0.0
+  - Type: CUSTOM
+    Name: .debug_line
+    Payload: 'DEADBEEF01'
+    Relocations:
+      - Type:   R_WASM_FUNCTION_INDEX_LEB
+        Index:  0
+        Offset: 0x0000000

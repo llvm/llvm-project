@@ -1,0 +1,21 @@
+# RUN: clangd -lit-test < %s | FileCheck -strict-whitespace %s
+{"jsonrpc":"2.0","id":0,"method":"workspace/symbol","params":{"query":"std::basic_ostringstream"}}
+#      CHECK:  "error": {
+# CHECK-NEXT:    "code": -32002
+# CHECK-NEXT:    "message": "server not initialized"
+# CHECK-NEXT:  },
+# CHECK-NEXT:  "id": 0,
+---
+{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
+---
+{"jsonrpc":"2.0","id":2,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
+#      CHECK:  "error": {
+# CHECK-NEXT:    "code": -32600
+# CHECK-NEXT:    "message": "server already initialized"
+# CHECK-NEXT:  },
+# CHECK-NEXT:  "id": 2,
+---
+{"jsonrpc":"2.0","id":3,"method":"shutdown"}
+---
+{"jsonrpc":"2.0","method":"exit"}
+

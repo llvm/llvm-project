@@ -1,0 +1,8 @@
+RUN: yaml2obj %S/Inputs/macho.yaml -o %t.o
+
+RUN: rm -f %t.ar
+RUN: llvm-ar --format=gnu crs %t.ar %t.o
+RUN: not grep -q __.SYMDEF %t.ar
+
+Ensure that we honour a specific request
+

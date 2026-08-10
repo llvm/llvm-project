@@ -1,0 +1,26 @@
+R"(
+
+//===----------------------------------------------------------------------===//
+// __NAMESPACE_PATH__::__TYPE_CPP_NAME__ declarations
+//===----------------------------------------------------------------------===//
+
+__NAMESPACE_OPEN__
+
+class __TYPE_CPP_NAME__ 
+  : public ::mlir::Type::TypeBase<__TYPE_CPP_NAME__, 
+                                  __DIALECT_BASE_TYPE_NAME__, 
+                                  ::mlir::TypeStorage> {
+public:
+  using Base::Base;
+  static constexpr ::llvm::StringLiteral name = 
+    "__DIALECT_NAME__.__TYPE_NAME__";
+  static constexpr ::llvm::StringLiteral dialectName = "__DIALECT_NAME__";
+  static constexpr ::llvm::StringLiteral getMnemonic() {
+    return {"__TYPE_NAME__"};
+  }
+};
+
+__NAMESPACE_CLOSE__
+
+MLIR_DECLARE_EXPLICIT_TYPE_ID(__NAMESPACE_PATH__::__TYPE_CPP_NAME__)
+)"

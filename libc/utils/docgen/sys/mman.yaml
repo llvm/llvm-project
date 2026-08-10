@@ -1,0 +1,77 @@
+functions:
+  mlock:
+    in-latest-posix: ''
+  mlockall:
+    in-latest-posix: ''
+  mmap:
+    in-latest-posix: ''
+  mprotect:
+    in-latest-posix: ''
+  msync:
+    in-latest-posix: ''
+  munlock:
+    in-latest-posix: ''
+  munlockall:
+    in-latest-posix: ''
+  munmap:
+    in-latest-posix: ''
+  posix_madvise:
+    in-latest-posix: ''
+  posix_mem_offset:
+    in-latest-posix: ''
+  posix_typed_mem_get_info:
+    in-latest-posix: ''
+  posix_typed_mem_open:
+    in-latest-posix: ''
+  shm_open:
+    in-latest-posix: ''
+  shm_unlink:
+    in-latest-posix: ''
+macros:
+  MAP_ANON:
+    in-latest-posix: ''
+  MAP_ANONYMOUS:
+    in-latest-posix: ''
+  MAP_FAILED:
+    in-latest-posix: ''
+  MAP_FIXED:
+    in-latest-posix: ''
+  MAP_PRIVATE:
+    in-latest-posix: ''
+  MAP_SHARED:
+    in-latest-posix: ''
+  MCL_CURRENT:
+    in-latest-posix: ''
+  MCL_FUTURE:
+    in-latest-posix: ''
+  MS_ASYNC:
+    in-latest-posix: ''
+  MS_INVALIDATE:
+    in-latest-posix: ''
+  MS_SYNC:
+    in-latest-posix: ''
+  POSIX_MADV_DONTNEED:
+    in-latest-posix: ''
+  POSIX_MADV_NORMAL:
+    in-latest-posix: ''
+  POSIX_MADV_RANDOM:
+    in-latest-posix: ''
+  POSIX_MADV_SEQUENTIAL:
+    in-latest-posix: ''
+  POSIX_MADV_WILLNEED:
+    in-latest-posix: ''
+  POSIX_TYPED_MEM_ALLOCATE:
+    in-latest-posix: ''
+  POSIX_TYPED_MEM_ALLOCATE_CONTIG:
+    in-latest-posix: ''
+  POSIX_TYPED_MEM_MAP_ALLOCATABLE:
+    in-latest-posix: ''
+  PROT_EXEC:
+    in-latest-posix: ''
+  PROT_NONE:
+    in-latest-posix: ''
+  PROT_READ:
+    in-latest-posix: ''
+  PROT_WRITE:
+    in-latest-posix: ''
+

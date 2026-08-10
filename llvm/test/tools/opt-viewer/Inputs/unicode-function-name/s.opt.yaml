@@ -1,0 +1,22 @@
+--- !Passed
+Pass:            sil-inliner
+Name:            sil.Inlined
+DebugLoc:
+  File:            s.swift
+  Line:            12
+  Column:          16
+Function:        main
+Args:
+  - Callee:          '"s.• infix(_:_:)"'
+    DebugLoc:
+      File:            s.swift
+      Line:            3
+      Column:          6
+  - String:          ' inlined into '
+  - Caller:          '"main"'
+  - String:          ' (cost = '
+  - Cost:            '2'
+  - String:          ', benefit = '
+  - Benefit:         '40'
+  - String:          ')'
+...

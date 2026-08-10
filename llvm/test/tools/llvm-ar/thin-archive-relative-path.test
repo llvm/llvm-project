@@ -1,0 +1,19 @@
+RUN: rm -rf %t && mkdir -p %t/foo %t/bar 
+
+RUN: yaml2obj %S/Inputs/elf.yaml -o %t/foo/elf.o
+RUN: cp %t/foo/elf.o %t/bar/elf.o
+RUN: cd %t
+
+Test a case in which CWD does not contain the archive, ensure replacement behaves as expected
+
+RUN: llvm-ar cr --thin foo/lib.a foo/elf.o
+RUN: llvm-ar t foo/lib.a  | FileCheck %s --check-prefix=FOO --implicit-check-not {{.}}
+
+RUN: llvm-ar cr --thin foo/lib.a bar/elf.o
+RUN: llvm-ar t foo/lib.a  | FileCheck %s --check-prefixes=FOO,BAR --implicit-check-not {{.}}
+
+RUN: llvm-ar cr --thin foo/lib.a foo/elf.o
+RUN: llvm-ar t foo/lib.a  | FileCheck %s --check-prefixes=FOO,BAR --implicit-check-not {{.}}
+
+FOO: foo/elf.o
+BAR: foo/../bar/elf.o

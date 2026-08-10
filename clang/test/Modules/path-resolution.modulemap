@@ -1,0 +1,70 @@
+// RUN: rm -rf %t
+//
+// First, create two modules a and b, with a dependency b -> a, both within
+// the same directory p1.
+//
+// RUN: mkdir -p %t/p1
+// RUN: cd %t/p1
+//
+// RUN: grep "<AM>" %s > %t/p1/a.modulemap
+// RUN: %clang_cc1 -x c++ -fmodules -emit-module -fmodule-map-file-home-is-cwd \
+// RUN:   -fmodules-embed-all-files -fmodules-local-submodule-visibility \
+// RUN:   -fmodule-name="a" -o a.pcm a.modulemap
+//
+// RUN: grep "<BM>" %s > %t/p1/b.modulemap
+// RUN: %clang_cc1 -x c++ -fmodules -emit-module -fmodule-map-file-home-is-cwd \
+// RUN:   -fmodules-embed-all-files -fmodules-local-submodule-visibility \
+// RUN:   -fmodule-name="b" -o b.pcm b.modulemap
+//
+// Next, move the whole tree p1 -> p2.
+//
+// RUN: cd %t
+// RUN: mv %t/p1 %t/p2
+// RUN: cd %t/p2
+//
+// Compile a new module c in the newly generated tree that depends on b; c.pcm
+// has to be within a subdirectory so a.modulemap will be one step up (../) from
+// c.pcm.
+//
+// RUN: mkdir %t/p2/c
+// RUN: grep "<CM>" %s > %t/p2/c/c.modulemap
+// RUN: grep "<CH>" %s > %t/p2/c/c.h
+// RUN: %clang_cc1 -x c++ -fmodules -emit-module -fmodule-map-file-home-is-cwd \
+// RUN:   -fmodules-embed-all-files -fmodules-local-submodule-visibility \
+// RUN:   -fmodule-name="c" -fmodule-file=b.pcm -o c/c.pcm c/c.modulemap
+//
+// Delete a.modulemap from its original location, and instead inject a different
+// (unrelated) a.modulemap in the path p2/p2.
+//
+// RUN: rm %t/p2/a.modulemap
+// RUN: mkdir -p %t/p2/p2
+// RUN: touch %t/p2/p2/a.modulemap
+//
+// Now compile a file c.cpp that uses c.h and the module c; it is important
+// to first load b.pcm and a.pcm before c.pcm on the command line to trigger
+// the right order of module loading. This used to trigger clang to find the
+// p2/p2/a.modulemap via the path c/../p2/a.modulemap, which is not the correct
+// relative path from c.
+//
+// RUN: grep "<CC>" %s > %t/p2/c/c.cpp
+// RUN: %clang_cc1 -I. -x c++ -fmodules \
+// RUN:     -fmodule-file=b.pcm -fmodule-file=a.pcm -fmodule-file=c/c.pcm  \
+// RUN:     -o c/c.o -emit-obj c/c.cpp
+
+module "a" {                // <AM>
+}                           // <AM>
+
+module "b" {                // <BM>
+  use "a"                   // <BM>
+}                           // <BM>
+
+module "c" {                // <CM>
+  header "c/c.h"            // <CM>
+  use "a"                   // <CM>
+  use "b"                   // <CM>
+}                           // <CM>
+
+inline void c() {}          // <CH>
+
+#include "c/c.h"            // <CC>
+void foo() { c(); }         // <CC>

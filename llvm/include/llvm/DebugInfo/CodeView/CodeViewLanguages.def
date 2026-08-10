@@ -1,0 +1,51 @@
+//===-- CodeViewLanguages.def - All CodeView languages ----------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// These values correspond to the CV_CFL_LANG enumeration in the Microsoft
+// Debug Interface Access SDK, and are documented here:
+// https://learn.microsoft.com/en-us/visualstudio/debugger/debug-interface-access/cv-cfl-lang
+// This should match the constants there.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef CV_LANGUAGE
+#define CV_LANGUAGE(NAME, ID)
+#endif
+
+CV_LANGUAGE(C, 0x00)
+CV_LANGUAGE(Cpp, 0x01)
+CV_LANGUAGE(Fortran, 0x02)
+CV_LANGUAGE(Masm, 0x03)
+CV_LANGUAGE(Pascal, 0x04)
+CV_LANGUAGE(Basic, 0x05)
+CV_LANGUAGE(Cobol, 0x06)
+CV_LANGUAGE(Link, 0x07)
+CV_LANGUAGE(Cvtres, 0x08)
+CV_LANGUAGE(Cvtpgd, 0x09)
+CV_LANGUAGE(CSharp, 0x0a)
+CV_LANGUAGE(VB, 0x0b)
+CV_LANGUAGE(ILAsm, 0x0c)
+CV_LANGUAGE(Java, 0x0d)
+CV_LANGUAGE(JScript, 0x0e)
+CV_LANGUAGE(MSIL, 0x0f)
+CV_LANGUAGE(HLSL, 0x10)
+CV_LANGUAGE(ObjC, 0x11)
+CV_LANGUAGE(ObjCpp, 0x12)
+CV_LANGUAGE(Swift, 0x13)
+CV_LANGUAGE(AliasObj, 0x14)
+CV_LANGUAGE(Rust, 0x15)
+CV_LANGUAGE(Go, 0x16)
+
+// The DMD compiler emits 'D' for the CV source language. Microsoft does not
+// have an enumerator for it yet.
+CV_LANGUAGE(D, 'D')
+// The Swift compiler used to emit 'S' for the CV source language, but
+// current versions emit the enumerator defined above.
+CV_LANGUAGE(OldSwift, 'S')
+
+#undef CV_LANGUAGE

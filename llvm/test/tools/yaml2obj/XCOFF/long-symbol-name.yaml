@@ -1,0 +1,36 @@
+## Test that the string table works well for long symbol names.
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj --symbols --string-table %t | FileCheck %s
+
+# CHECK:      AddressSize: 32bit
+# CHECK-NEXT: Symbols [
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Index: 0
+# CHECK-NEXT:     Name: .symname
+# CHECK-NEXT:     Value: 0x0
+# CHECK-NEXT:     Section: N_UNDEF
+# CHECK-NEXT:     Type: 0x0
+# CHECK-NEXT:     StorageClass: C_NULL (0x0)
+# CHECK-NEXT:     NumberOfAuxEntries: 0
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Index: 1
+# CHECK-NEXT:     Name: .longname
+# CHECK-NEXT:     Value: 0x0
+# CHECK-NEXT:     Section: N_UNDEF
+# CHECK-NEXT:     Type: 0x0
+# CHECK-NEXT:     StorageClass: C_NULL (0x0)
+# CHECK-NEXT:     NumberOfAuxEntries: 0
+# CHECK-NEXT:   }
+# CHECK-NEXT: ]
+# CHECK-NEXT: StringTable {
+# CHECK-NEXT:   Length: 14
+# CHECK-NEXT:   [     4]   .longname
+# CHECK-NEXT: }
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x1DF
+Symbols:
+  - Name: .symname
+  - Name: .longname

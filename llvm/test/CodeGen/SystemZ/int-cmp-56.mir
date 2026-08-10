@@ -1,0 +1,327 @@
+# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z14 -run-pass greedy %s -o - \
+# RUN:   | FileCheck %s
+#
+# Test that a reload can be folded into a compare instruction after swapping
+# operands (when the LHS register is spilled).
+
+--- |
+  declare i64 @foo()
+  define i64 @fun1(ptr %ptr0)  { ret i64 0 }
+  define i64 @fun2(ptr %ptr0)  { ret i64 0 }
+
+  declare i32 @foo32()
+  define i32 @fun3(ptr %ptr0)  { ret i32 0 }
+  define i32 @fun4(ptr %ptr0)  { ret i32 0 }
+...
+
+
+# Test CGR -> CG
+# CHECK: name:            fun1
+# CHECK: CG %10, %stack.0, 0, $noreg, implicit-def $cc :: (load (s64) from %stack.0)
+# CHECK-NEXT: %12:gr64bit = LOCGHI %12, 8, 14, 12, implicit $cc
+---
+name:            fun1
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: addr64bit }
+  - { id: 1, class: gr64bit }
+  - { id: 2, class: gr64bit }
+  - { id: 3, class: gr64bit }
+  - { id: 4, class: gr64bit }
+  - { id: 5, class: gr64bit }
+  - { id: 6, class: gr64bit }
+  - { id: 7, class: gr64bit }
+  - { id: 8, class: gr64bit }
+  - { id: 9, class: gr64bit }
+  - { id: 10, class: gr64bit }
+  - { id: 11, class: gr64bit }
+  - { id: 12, class: gr64bit }
+  - { id: 13, class: gr64bit }
+  - { id: 14, class: gr64bit }
+  - { id: 15, class: gr64bit }
+  - { id: 16, class: gr64bit }
+  - { id: 17, class: gr64bit }
+  - { id: 18, class: gr64bit }
+  - { id: 19, class: gr64bit }
+liveins:
+  - { reg: '$r2d', virtual-reg: '%0' }
+frameInfo:
+  maxAlignment:    1
+  adjustsStack:    true
+  hasCalls:        true
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $r2d
+
+    %0:addr64bit = COPY $r2d
+    %1:gr64bit = LG %0, 0, $noreg
+    %2:gr64bit = LG %0, 16, $noreg
+    %3:gr64bit = LG %0, 32, $noreg
+    %4:gr64bit = LG %0, 48, $noreg
+    %5:gr64bit = LG %0, 64, $noreg
+    %6:gr64bit = LG %0, 80, $noreg
+    %7:gr64bit = LG %0, 96, $noreg
+    %8:gr64bit = LG %0, 112, $noreg
+    %9:gr64bit = LG %0, 128, $noreg
+    ADJCALLSTACKDOWN 0, 0
+    CallBRASL @foo, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc, implicit-def $r2d
+    %10:gr64bit = COPY $r2d
+    ADJCALLSTACKUP 0, 0
+    CGR %10, %1, implicit-def $cc
+    %12:gr64bit = COPY %10
+    %12:gr64bit = LOCGHI %12, 0, 14, 10, implicit killed $cc
+    CGR %10, %2, implicit-def $cc
+    %12:gr64bit = LOCGHI %12, 1, 14, 10, implicit killed $cc
+    CGR %10, %3, implicit-def $cc
+    %12:gr64bit = LOCGHI %12, 2, 14, 10, implicit killed $cc
+    CGR %10, %4, implicit-def $cc
+    %12:gr64bit = LOCGHI %12, 3, 14, 10, implicit killed $cc
+    CGR %10, %5, implicit-def $cc
+    %12:gr64bit = LOCGHI %12, 4, 14, 10, implicit killed $cc
+    CGR %10, %6, implicit-def $cc
+    %12:gr64bit = LOCGHI %12, 5, 14, 10, implicit killed $cc
+    CGR %10, %7, implicit-def $cc
+    %12:gr64bit = LOCGHI %12, 6, 14, 10, implicit killed $cc
+    CGR %10, %8, implicit-def $cc
+    %12:gr64bit = LOCGHI %12, 7, 14, 10, implicit killed $cc
+    CGR %9, %10, implicit-def $cc
+    %12:gr64bit = LOCGHI %12, 8, 14, 10, implicit killed $cc
+    $r2d = COPY %12
+    Return implicit $r2d
+...
+
+
+# Test CLGR -> CLG
+# CHECK: name:            fun2
+# CHECK: CLG %10, %stack.0, 0, $noreg, implicit-def $cc :: (load (s64) from %stack.0)
+# CHECK-NEXT: %12:gr64bit = LOCGHI %12, 8, 14, 12, implicit $cc
+---
+name:            fun2
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: addr64bit }
+  - { id: 1, class: gr64bit }
+  - { id: 2, class: gr64bit }
+  - { id: 3, class: gr64bit }
+  - { id: 4, class: gr64bit }
+  - { id: 5, class: gr64bit }
+  - { id: 6, class: gr64bit }
+  - { id: 7, class: gr64bit }
+  - { id: 8, class: gr64bit }
+  - { id: 9, class: gr64bit }
+  - { id: 10, class: gr64bit }
+  - { id: 11, class: gr64bit }
+  - { id: 12, class: gr64bit }
+  - { id: 13, class: gr64bit }
+  - { id: 14, class: gr64bit }
+  - { id: 15, class: gr64bit }
+  - { id: 16, class: gr64bit }
+  - { id: 17, class: gr64bit }
+  - { id: 18, class: gr64bit }
+  - { id: 19, class: gr64bit }
+liveins:
+  - { reg: '$r2d', virtual-reg: '%0' }
+frameInfo:
+  maxAlignment:    1
+  adjustsStack:    true
+  hasCalls:        true
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $r2d
+
+    %0:addr64bit = COPY $r2d
+    %1:gr64bit = LG %0, 0, $noreg
+    %2:gr64bit = LG %0, 16, $noreg
+    %3:gr64bit = LG %0, 32, $noreg
+    %4:gr64bit = LG %0, 48, $noreg
+    %5:gr64bit = LG %0, 64, $noreg
+    %6:gr64bit = LG %0, 80, $noreg
+    %7:gr64bit = LG %0, 96, $noreg
+    %8:gr64bit = LG %0, 112, $noreg
+    %9:gr64bit = LG %0, 128, $noreg
+    ADJCALLSTACKDOWN 0, 0
+    CallBRASL @foo, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc, implicit-def $r2d
+    %10:gr64bit = COPY $r2d
+    ADJCALLSTACKUP 0, 0
+    CGR %10, %1, implicit-def $cc
+    %12:gr64bit = COPY %10
+    %12:gr64bit = LOCGHI %12, 0, 14, 10, implicit killed $cc
+    CGR %10, %2, implicit-def $cc
+    %12:gr64bit = LOCGHI %12, 1, 14, 10, implicit killed $cc
+    CGR %10, %3, implicit-def $cc
+    %12:gr64bit = LOCGHI %12, 2, 14, 10, implicit killed $cc
+    CGR %10, %4, implicit-def $cc
+    %12:gr64bit = LOCGHI %12, 3, 14, 10, implicit killed $cc
+    CGR %10, %5, implicit-def $cc
+    %12:gr64bit = LOCGHI %12, 4, 14, 10, implicit killed $cc
+    CGR %10, %6, implicit-def $cc
+    %12:gr64bit = LOCGHI %12, 5, 14, 10, implicit killed $cc
+    CGR %10, %7, implicit-def $cc
+    %12:gr64bit = LOCGHI %12, 6, 14, 10, implicit killed $cc
+    CGR %10, %8, implicit-def $cc
+    %12:gr64bit = LOCGHI %12, 7, 14, 10, implicit killed $cc
+    CLGR %9, %10, implicit-def $cc
+    %12:gr64bit = LOCGHI %12, 8, 14, 10, implicit killed $cc
+    $r2d = COPY %12
+    Return implicit $r2d
+...
+
+
+# Test CR -> C
+# CHECK: name:            fun3
+# CHECK: C %10, %stack.0, 0, $noreg, implicit-def $cc :: (load (s32) from %stack.0)
+# CHECK: %12:gr32bit = LOCHIMux %12, 8, 14, 12, implicit $cc
+---
+name:            fun3
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: addr64bit }
+  - { id: 1, class: gr32bit }
+  - { id: 2, class: gr32bit }
+  - { id: 3, class: gr32bit }
+  - { id: 4, class: gr32bit }
+  - { id: 5, class: gr32bit }
+  - { id: 6, class: gr32bit }
+  - { id: 7, class: gr32bit }
+  - { id: 8, class: gr32bit }
+  - { id: 9, class: gr32bit }
+  - { id: 10, class: gr32bit }
+  - { id: 11, class: gr32bit }
+  - { id: 12, class: gr32bit }
+  - { id: 13, class: gr32bit }
+  - { id: 14, class: gr32bit }
+  - { id: 15, class: gr32bit }
+  - { id: 16, class: gr32bit }
+  - { id: 17, class: gr32bit }
+  - { id: 18, class: gr32bit }
+  - { id: 19, class: gr32bit }
+liveins:
+  - { reg: '$r2d', virtual-reg: '%0' }
+frameInfo:
+  maxAlignment:    1
+  adjustsStack:    true
+  hasCalls:        true
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $r2d
+
+    %0:addr64bit = COPY $r2d
+    %1:gr32bit = LMux %0, 0, $noreg
+    %2:gr32bit = LMux %0, 8, $noreg
+    %3:gr32bit = LMux %0, 16, $noreg
+    %4:gr32bit = LMux %0, 24, $noreg
+    %5:gr32bit = LMux %0, 32, $noreg
+    %6:gr32bit = LMux %0, 40, $noreg
+    %7:gr32bit = LMux %0, 48, $noreg
+    %8:gr32bit = LMux %0, 56, $noreg
+    %9:gr32bit = LMux %0, 64, $noreg
+    ADJCALLSTACKDOWN 0, 0
+    CallBRASL @foo, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc, implicit-def $r2l
+    %10:gr32bit = COPY $r2l
+    ADJCALLSTACKUP 0, 0
+    CR %10, %1, implicit-def $cc
+    %12:gr32bit = COPY %10
+    %12:gr32bit = LOCHIMux %12, 0, 14, 10, implicit killed $cc
+    CR %10, %2, implicit-def $cc
+    %12:gr32bit = LOCHIMux %12, 1, 14, 10, implicit killed $cc
+    CR %10, %3, implicit-def $cc
+    %12:gr32bit = LOCHIMux %12, 2, 14, 10, implicit killed $cc
+    CR %10, %4, implicit-def $cc
+    %12:gr32bit = LOCHIMux %12, 3, 14, 10, implicit killed $cc
+    CR %10, %5, implicit-def $cc
+    %12:gr32bit = LOCHIMux %12, 4, 14, 10, implicit killed $cc
+    CR %10, %6, implicit-def $cc
+    %12:gr32bit = LOCHIMux %12, 5, 14, 10, implicit killed $cc
+    CR %10, %7, implicit-def $cc
+    %12:gr32bit = LOCHIMux %12, 6, 14, 10, implicit killed $cc
+    CR %10, %8, implicit-def $cc
+    %12:gr32bit = LOCHIMux %12, 7, 14, 10, implicit killed $cc
+    CR %9, %10, implicit-def $cc
+    %12:gr32bit = LOCHIMux %12, 8, 14, 10, implicit killed $cc
+    $r2l = COPY %12
+    Return implicit $r2l
+...
+
+
+# Test CLR -> CL
+# CHECK: name:            fun4
+# CHECK: CL %10, %stack.0, 0, $noreg, implicit-def $cc :: (load (s32) from %stack.0)
+# CHECK: %12:gr32bit = LOCHIMux %12, 8, 14, 12, implicit $cc
+---
+name:            fun4
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: addr64bit }
+  - { id: 1, class: gr32bit }
+  - { id: 2, class: gr32bit }
+  - { id: 3, class: gr32bit }
+  - { id: 4, class: gr32bit }
+  - { id: 5, class: gr32bit }
+  - { id: 6, class: gr32bit }
+  - { id: 7, class: gr32bit }
+  - { id: 8, class: gr32bit }
+  - { id: 9, class: gr32bit }
+  - { id: 10, class: gr32bit }
+  - { id: 11, class: gr32bit }
+  - { id: 12, class: gr32bit }
+  - { id: 13, class: gr32bit }
+  - { id: 14, class: gr32bit }
+  - { id: 15, class: gr32bit }
+  - { id: 16, class: gr32bit }
+  - { id: 17, class: gr32bit }
+  - { id: 18, class: gr32bit }
+  - { id: 19, class: gr32bit }
+liveins:
+  - { reg: '$r2d', virtual-reg: '%0' }
+frameInfo:
+  maxAlignment:    1
+  adjustsStack:    true
+  hasCalls:        true
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $r2d
+
+    %0:addr64bit = COPY $r2d
+    %1:gr32bit = LMux %0, 0, $noreg
+    %2:gr32bit = LMux %0, 8, $noreg
+    %3:gr32bit = LMux %0, 16, $noreg
+    %4:gr32bit = LMux %0, 24, $noreg
+    %5:gr32bit = LMux %0, 32, $noreg
+    %6:gr32bit = LMux %0, 40, $noreg
+    %7:gr32bit = LMux %0, 48, $noreg
+    %8:gr32bit = LMux %0, 56, $noreg
+    %9:gr32bit = LMux %0, 64, $noreg
+    ADJCALLSTACKDOWN 0, 0
+    CallBRASL @foo, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc, implicit-def $r2l
+    %10:gr32bit = COPY $r2l
+    ADJCALLSTACKUP 0, 0
+    CR %10, %1, implicit-def $cc
+    %12:gr32bit = COPY %10
+    %12:gr32bit = LOCHIMux %12, 0, 14, 10, implicit killed $cc
+    CR %10, %2, implicit-def $cc
+    %12:gr32bit = LOCHIMux %12, 1, 14, 10, implicit killed $cc
+    CR %10, %3, implicit-def $cc
+    %12:gr32bit = LOCHIMux %12, 2, 14, 10, implicit killed $cc
+    CR %10, %4, implicit-def $cc
+    %12:gr32bit = LOCHIMux %12, 3, 14, 10, implicit killed $cc
+    CR %10, %5, implicit-def $cc
+    %12:gr32bit = LOCHIMux %12, 4, 14, 10, implicit killed $cc
+    CR %10, %6, implicit-def $cc
+    %12:gr32bit = LOCHIMux %12, 5, 14, 10, implicit killed $cc
+    CR %10, %7, implicit-def $cc
+    %12:gr32bit = LOCHIMux %12, 6, 14, 10, implicit killed $cc
+    CR %10, %8, implicit-def $cc
+    %12:gr32bit = LOCHIMux %12, 7, 14, 10, implicit killed $cc
+    CLR %9, %10, implicit-def $cc
+    %12:gr32bit = LOCHIMux %12, 8, 14, 10, implicit killed $cc
+    $r2l = COPY %12
+    Return implicit $r2l
+...

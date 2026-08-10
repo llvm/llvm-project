@@ -1,0 +1,4 @@
+# RUN: llvm-as %p/Inputs/armv7-ios.ll -o %t-armv7.o
+# RUN: llvm-lipo -archs %t-armv7.o | FileCheck %s
+
+# CHECK: armv7

@@ -1,0 +1,5 @@
+# RUN: llvm-mc --disassemble %s -triple=thumbv7 2>&1 | FileCheck %s
+
+0x01 0x47
+# CHECK: 3:1: warning: potentially undefined
+# CHECK: bx r0

@@ -1,0 +1,263 @@
+## Check how yaml2obj produces SHT_LLVM_ADDRSIG sections.
+
+## Check we can describe SHT_LLVM_ADDRSIG using the "Symbols" tag. We can define
+## symbols either using names or indexes.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readobj --sections --section-data %t1 | FileCheck %s --check-prefix=SYMBOLS
+
+# SYMBOLS:      Section {
+# SYMBOLS:        Index: 1
+# SYMBOLS-NEXT:   Name: .llvm_addrsig
+# SYMBOLS-NEXT:   Type: SHT_LLVM_ADDRSIG
+# SYMBOLS-NEXT:   Flags [
+# SYMBOLS-NEXT:   ]
+# SYMBOLS-NEXT:   Address: 0x0
+# SYMBOLS-NEXT:   Offset: 0x40
+# SYMBOLS-NEXT:   Size: 4
+# SYMBOLS-NEXT:   Link: 2
+# SYMBOLS-NEXT:   Info: 0
+# SYMBOLS-NEXT:   AddressAlignment: 0
+# SYMBOLS-NEXT:   EntrySize: 0
+# SYMBOLS-NEXT:   SectionData (
+# SYMBOLS-NEXT:     0000: 01020102
+# SYMBOLS-NEXT:   )
+# SYMBOLS-NEXT: }
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name: .llvm_addrsig
+    Type: SHT_LLVM_ADDRSIG
+    Symbols: [ foo, bar, 1, 2 ]
+Symbols:
+  - Name:    foo
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+  - Name:    bar
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+
+## Check we report an error if an unknown symbol is referenced in the
+## SHT_LLVM_ADDRSIG section description.
+
+# RUN: not yaml2obj --docnum=2 %s 2>&1 | FileCheck %s --check-prefix=SYMBOL-UNKNOWN
+
+# SYMBOL-UNKNOWN: error: unknown symbol referenced: 'foo' by YAML section '.llvm_addrsig'
+# SYMBOL-UNKNOWN: error: unknown symbol referenced: 'bar' by YAML section '.llvm_addrsig'
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name: .llvm_addrsig
+    Type: SHT_LLVM_ADDRSIG
+    Symbols: [ foo, bar ]
+
+## Check we can specify any arbitrary symbol indices.
+
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: llvm-readobj --sections --section-data %t3 | FileCheck %s --check-prefix=SYMBOL-INDEX
+
+# SYMBOL-INDEX:      Type: SHT_LLVM_ADDRSIG
+# SYMBOL-INDEX:      SectionData (
+# SYMBOL-INDEX-NEXT:   0000: 00FF01C4 E6888901 FFFFFFFF 0F
+# SYMBOL-INDEX-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name: .llvm_addrsig
+    Type: SHT_LLVM_ADDRSIG
+## 0xFFFFFFFF is a maximum allowed index value.
+    Symbols: [ 0, 255, 0x11223344, 0xFFFFFFFF ]
+
+## Check that the maximum symbol index size is 32 bits.
+
+# RUN: not yaml2obj --docnum=4 %s 2>&1 | FileCheck %s --check-prefix=SYMBOL-INDEX-OVERFLOW
+
+# SYMBOL-INDEX-OVERFLOW: error: unknown symbol referenced: '0x1122334455' by YAML section '.llvm_addrsig'
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name: .llvm_addrsig
+    Type: SHT_LLVM_ADDRSIG
+    Symbols: [ 0x1122334455 ]
+
+## Check we can use the "Content" tag to specify any data for SHT_LLVM_ADDRSIG sections.
+
+# RUN: yaml2obj --docnum=5 %s -o %t5
+# RUN: llvm-readobj --sections --section-data %t5 | FileCheck %s --check-prefix=CONTENT
+
+# CONTENT:      Type: SHT_LLVM_ADDRSIG
+# CONTENT:      Size:
+# CONTENT-SAME: 5
+# CONTENT:      SectionData (
+# CONTENT-NEXT:   0000: 11223344 55
+# CONTENT-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name: .llvm_addrsig
+    Type: SHT_LLVM_ADDRSIG
+    Content: "1122334455"
+
+## Check we emit an empty section if neither "Content", "Size" nor "Symbols" were set.
+
+# RUN: yaml2obj --docnum=6 %s -o %t6
+# RUN: llvm-readelf --sections %t6 | FileCheck %s --check-prefix=NO-TAGS
+
+# NO-TAGS: [Nr] Name          Type         Address          Off    Size
+# NO-TAGS: [ 1] .llvm_addrsig LLVM_ADDRSIG 0000000000000000 000040 000000
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name: .llvm_addrsig
+    Type: SHT_LLVM_ADDRSIG
+
+## "Content" and "Symbols" cannot be used together to describe the SHT_LLVM_ADDRSIG section.
+
+# RUN: not yaml2obj --docnum=7 %s 2>&1 | FileCheck %s --check-prefix=CONTENT-SYMBOLS
+
+# CONTENT-SYMBOLS: "Symbols" cannot be used with "Content" or "Size"
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name: .llvm_addrsig
+    Type: SHT_LLVM_ADDRSIG
+    Content: ""
+    Symbols:
+
+## Check we can set an arbitrary sh_link value for SHT_LLVM_ADDRSIG sections.
+
+# RUN: yaml2obj --docnum=8 %s -o %t8
+# RUN: llvm-readobj --sections %t8 | FileCheck %s --check-prefix=LINK
+
+# LINK:      Name: .llvm_addrsig
+# LINK:      Link:
+# LINK-SAME:       123{{$}}
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name: .llvm_addrsig
+    Type: SHT_LLVM_ADDRSIG
+    Link: 123
+    Content: ""
+
+## Check we can use only "Size" to create a SHT_LLVM_ADDRSIG section.
+
+# RUN: yaml2obj --docnum=9 %s -o %t9
+# RUN: llvm-readobj --sections --section-data %t9 | FileCheck %s --check-prefix=SIZE
+
+# SIZE:      Name: .llvm_addrsig
+# SIZE:      Size:
+# SIZE-SAME: 17
+# SIZE:      SectionData (
+# SIZE-NEXT:  0000: 00000000 00000000 00000000 00000000  |
+# SIZE-NEXT:  0010: 00                                   |
+# SIZE-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name: .llvm_addrsig
+    Type: SHT_LLVM_ADDRSIG
+    Size: 0x11
+
+## Check we can use "Size" and "Content" together to create a SHT_LLVM_ADDRSIG section.
+
+# RUN: yaml2obj --docnum=10 %s -o %t10
+# RUN: llvm-readobj --sections --section-data %t10 | FileCheck %s --check-prefix=SIZE-CONTENT
+
+# SIZE-CONTENT:      Name: .llvm_addrsig_sizegr
+# SIZE-CONTENT:      Size:
+# SIZE-CONTENT-SAME: 5
+# SIZE-CONTENT:      SectionData (
+# SIZE-CONTENT-NEXT:  0000: 11223300 00 |
+# SIZE-CONTENT-NEXT: )
+
+# SIZE-CONTENT:      Name: .llvm_addrsig_sizeeq
+# SIZE-CONTENT:      Size:
+# SIZE-CONTENT-SAME: 3
+# SIZE-CONTENT:      SectionData (
+# SIZE-CONTENT-NEXT:  0000: 112233 |
+# SIZE-CONTENT-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name: .llvm_addrsig_sizegr
+    Type: SHT_LLVM_ADDRSIG
+    Size: 0x5
+    Content: "112233"
+  - Name: .llvm_addrsig_sizeeq
+    Type: SHT_LLVM_ADDRSIG
+    Size: 0x3
+    Content: "112233"
+
+## Check that when "Size" and "Content" are used together, the size
+## must be greater than or equal to the content size.
+
+# RUN: not yaml2obj --docnum=11 %s 2>&1 | FileCheck %s --check-prefix=SIZE-CONTENT-ERR
+
+# SIZE-CONTENT-ERR: error: Section size must be greater than or equal to the content size
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name: .llvm_addrsig
+    Type: SHT_LLVM_ADDRSIG
+    Size: 0x1
+    Content: "1122"
+
+## Check we can't use "Size" and "Symbols" tags together.
+
+# RUN: not yaml2obj --docnum=12 %s 2>&1 | FileCheck %s --check-prefix=CONTENT-SYMBOLS
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name: .llvm_addrsig
+    Type: SHT_LLVM_ADDRSIG
+    Size: 0x1
+    Symbols: [ ]

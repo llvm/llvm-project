@@ -1,0 +1,25 @@
+L1 = malloc 0 1
+L2 = malloc 1 1
+
+L3 = malloc 2 1
+L4 = malloc 2 2
+L5 = malloc 2 4
+
+L6 = malloc 3 1
+L7 = malloc 3 2
+L8 = malloc 3 4
+
+L9 = malloc 128 1
+L10 = malloc 128 2
+L11 = malloc 128 4
+L12 = malloc 128 128
+
+L13 = malloc 2048 1
+L14 = malloc 2048 2
+L15 = malloc 2048 4
+
+L16 = malloc 3968 1
+L17 = malloc 3968 2
+L18 = malloc 3968 4
+
+L19 = malloc 0 1

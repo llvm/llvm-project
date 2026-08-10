@@ -1,0 +1,5 @@
+module M {
+  header "a.h"
+  module mod_c { header "c.h" }
+  header "b.h"
+}

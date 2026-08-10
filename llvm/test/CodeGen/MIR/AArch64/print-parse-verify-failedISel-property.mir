@@ -1,0 +1,70 @@
+# RUN: llc -mtriple aarch64-- -run-pass instruction-select -simplify-mir \
+# RUN:     -verify-machineinstrs %s -o - | FileCheck %s
+#
+# RUN: llc -mtriple aarch64-- -global-isel=true -global-isel-abort=2 \
+# RUN:     -start-after=regbankselect -stop-before=finalize-isel \
+# RUN:     -simplify-mir -verify-machineinstrs %s -o - 2>&1 \
+# RUN:    | FileCheck %s --check-prefix=FALLBACK
+
+# Test that:
+# 1) MIRParser can deserialize FailedISel property.
+# 2) Machine Verifier respects FailedISel and doesn't complain needlessly.
+# 3) MIRPrinter is able to print FailedISel MIR after InstructionSelect pass.
+# 4) MIRPrinter can serialize FailedISel property.
+# 5) It's possible to start llc mid-GlobalISel pipeline from a MIR file with
+#    the FailedISel property set to true and watch it properly fallback to
+#    FastISel / SelectionDAG ISel.
+# 6) Resetting a MachineFunction resets unique MachineBasicBlock IDs as well.
+--- |
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64--"
+
+  define i32 @test(i32 %a, i32 %b) #0 {
+  entry:
+    %add = add i32 %b, %a
+    ret i32 %add
+  }
+
+  attributes #0 = { nounwind readnone ssp }
+...
+---
+# CHECK-LABEL: name: test
+# CHECK: failedISel: true
+#
+# FALLBACK: warning: Instruction selection used fallback path for test
+# FALLBACK-LABEL: name: test
+# FALLBACK-NOT: failedISel
+name:            test
+alignment:       4
+legalized:       true
+regBankSelected: true
+failedISel:      true
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $w0, $w1
+
+    ; CHECK: liveins: $w0, $w1
+    ;
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
+    ; CHECK: [[ADD:%[0-9]+]]:gpr(s32) = G_ADD [[COPY1]], [[COPY]]
+    ; CHECK: $w0 = COPY [[ADD]](s32)
+    ; CHECK: RET_ReallyLR implicit $w0
+    ;
+    ; FALLBACK: body: |
+    ; FALLBACK-NEXT: bb.0.entry:
+    ; FALLBACK-NEXT: liveins: $w0, $w1
+    ;
+    ; FALLBACK: [[COPY:%[0-9]+]]:gpr32 = COPY $w1
+    ; FALLBACK: [[COPY1:%[0-9]+]]:gpr32 = COPY $w0
+    ; FALLBACK: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[COPY]], [[COPY1]]
+    ; FALLBACK: $w0 = COPY [[ADDWrr]]
+    ; FALLBACK: RET_ReallyLR implicit $w0
+
+    %0:_(s32) = COPY $w0
+    %1:_(s32) = COPY $w1
+    %2:gpr(s32) = G_ADD %1, %0
+    $w0 = COPY %2(s32)
+    RET_ReallyLR implicit $w0
+...

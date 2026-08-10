@@ -1,0 +1,5 @@
+settings set auto-one-line-summaries false
+
+target variable -T TheStruct
+
+target modules dump ast

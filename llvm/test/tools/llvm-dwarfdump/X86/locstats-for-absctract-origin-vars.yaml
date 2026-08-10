@@ -1,0 +1,423 @@
+# RUN: yaml2obj %s | llvm-dwarfdump --statistics - | FileCheck %s
+
+## Check that zero coverage was reported for inlined variable with
+## DW_AT_abstract_origin with no location attribute as well as
+## for the variable that has not been generated within the inlined subroutine.
+##
+## The yaml represents DWARF as:
+##
+## DW_TAG_compile_unit
+##   DW_AT_low_pc      (0x0000000000000000)
+##   DW_TAG_subprogram <-- (0x00000014)
+##     DW_AT_decl_file (0x01)
+##     DW_AT_decl_line (1)
+##     DW_AT_inline    (DW_INL_inlined)
+##     DW_TAG_formal_parameter <-- (0x00000018)
+##       DW_AT_decl_file       (0x01)
+##       DW_AT_decl_line       (1)
+##     DW_TAG_formal_parameter <-- (0x0000001b)
+##       DW_AT_decl_file       (0x01)
+##       DW_AT_decl_line       (1)
+##     DW_TAG_variable <-- (0x0000001e)
+##       DW_AT_decl_file       (0x01)
+##       DW_AT_decl_line       (1)
+##   DW_TAG_subprogram
+##     DW_AT_decl_file (0x01)
+##     DW_AT_decl_line (1)
+##     DW_AT_low_pc    (0x0000000000000000)
+##     DW_AT_high_pc   (0x000000000000000b)
+##     DW_TAG_inlined_subroutine
+##       DW_AT_abstract_origin (0x00000014)
+##       DW_AT_low_pc  (0x0000000000000000)
+##       DW_AT_high_pc (0x0000000000000007)
+##       DW_AT_call_file       (0x01)
+##       DW_AT_call_line       (1)
+##       DW_AT_call_column     (1)
+##       DW_TAG_formal_parameter
+##         DW_AT_abstract_origin       (0x00000018)
+##       DW_TAG_variable
+##         DW_AT_abstract_origin       (0x0000001e)
+##         DW_AT_location      ()
+##     DW_TAG_inlined_subroutine
+##       DW_AT_abstract_origin       (0x00000014)
+##       DW_AT_low_pc        (0x0000000000000000)
+##       DW_AT_high_pc       (0x0000000000000007)
+##       DW_AT_call_file     (0x01)
+##       DW_AT_call_line     (1)
+##       DW_AT_call_column   (1)
+##       DW_TAG_formal_parameter
+##         DW_AT_abstract_origin     (0x00000018)
+##         DW_AT_location    ()
+##       DW_TAG_variable
+##         DW_AT_abstract_origin     (0x0000001e)
+##         DW_AT_location    ()
+##     DW_TAG_inlined_subroutine
+##       DW_AT_abstract_origin       (0x00000014)
+##       DW_AT_low_pc        (0x0000000000000000)
+##       DW_AT_high_pc       (0x0000000000000007)
+##       DW_AT_call_file     (0x01)
+##       DW_AT_call_line     (1)
+##       DW_AT_call_column   (1)
+##     DW_TAG_inlined_subroutine
+##       DW_AT_abstract_origin (0x00000014)
+##       DW_AT_low_pc  (0x0000000000000002)
+##       DW_AT_high_pc (0x000000000000000a)
+##       DW_AT_call_file       (0x01)
+##       DW_AT_call_line       (3)
+##       DW_AT_call_column     (3)
+##     DW_TAG_inlined_subroutine
+##       DW_AT_abstract_origin (0x000000e5)
+##       DW_AT_low_pc  (0x0000000000000006)
+##       DW_AT_high_pc (0x0000000000000010)
+##       DW_AT_call_file       (0x01)
+##       DW_AT_call_line       (3)
+##       DW_AT_call_column     (3)
+##     DW_TAG_inlined_subroutine
+##       DW_AT_abstract_origin (0x000000e5)
+##       DW_AT_low_pc  (0x0000000000000006)
+##       DW_AT_high_pc (0x0000000000000010)
+##       DW_AT_call_file       (0x01)
+##       DW_AT_call_line       (3)
+##       DW_AT_call_column     (3)
+##       DW_TAG_formal_parameter
+##         DW_AT_abstract_origin       (0x000000e9)
+##         DW_AT_location      ()
+##     DW_TAG_inlined_subroutine
+##       DW_AT_abstract_origin (0x000000f0)
+##       DW_AT_low_pc  (0x0000000000000010)
+##       DW_AT_high_pc (0x000000000000001a)
+##       DW_AT_call_file       (0x01)
+##       DW_AT_call_line       (3)
+##       DW_AT_call_column     (3)
+##       DW_TAG_formal_parameter
+##         DW_AT_abstract_origin       (0x000000f4)
+##       DW_TAG_lexical_block
+##         DW_AT_low_pc        (0x00000000000000bc)
+##         DW_AT_high_pc       (0x00000000000000bc)
+##         DW_TAG_variable
+##           DW_AT_abstract_origin     (0x000000f8)
+##   DW_TAG_subprogram  <-- (0x000000e5)
+##     DW_AT_decl_file       (0x01)
+##     DW_AT_decl_line       (3)
+##     DW_AT_inline  (DW_INL_inlined)
+##     DW_TAG_formal_parameter <-- (0x000000e9)
+##       DW_AT_decl_file     (0x01)
+##       DW_AT_decl_line     (1)
+##     DW_TAG_variable  <-- (0x000000be)
+##       DW_AT_decl_file     (0x01)
+##       DW_AT_decl_line     (1)
+##   DW_TAG_subprogram  <-- (0x000000f0)
+##     DW_AT_decl_file (0x01)
+##     DW_AT_decl_line (3)
+##     DW_AT_inline    (DW_INL_inlined)
+##       DW_TAG_formal_parameter <--(0x000000f4)
+##         DW_AT_decl_file       (0x01)
+##         DW_AT_decl_line       (1)
+##       DW_TAG_lexical_block
+##         DW_TAG_variable <--(0x000000f8)
+##           DW_AT_decl_file     (0x01)
+##           DW_AT_decl_line     (1)
+##    DW_TAG_subprogram
+##        DW_AT_abstract_origin (0x000000f0)
+
+# CHECK: "version": 9,
+# CHECK: "#variables processed by location statistics": 17,
+# CHECK: "#variables with 0% of parent scope covered by DW_AT_location": 13,
+# CHECK: "#variables with 100% of parent scope covered by DW_AT_location": 4,
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Code: 1
+        Tag: DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_low_pc
+            Form: DW_FORM_addr
+      - Code: 2
+        Tag: DW_TAG_subprogram
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_decl_file
+            Form: DW_FORM_data1
+          - Attribute: DW_AT_decl_line
+            Form: DW_FORM_data1
+          - Attribute: DW_AT_inline
+            Form: DW_FORM_data1
+      - Code: 3
+        Tag: DW_TAG_formal_parameter
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_decl_file
+            Form: DW_FORM_data1
+          - Attribute: DW_AT_decl_line
+            Form: DW_FORM_data1
+      - Code: 4
+        Tag: DW_TAG_formal_parameter
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_decl_file
+            Form: DW_FORM_data1
+          - Attribute: DW_AT_decl_line
+            Form: DW_FORM_data1
+      - Code: 5
+        Tag: DW_TAG_variable
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_decl_file
+            Form: DW_FORM_data1
+          - Attribute: DW_AT_decl_line
+            Form: DW_FORM_data1
+      - Code: 6
+        Tag: DW_TAG_subprogram
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_decl_file
+            Form: DW_FORM_data1
+          - Attribute: DW_AT_decl_line
+            Form: DW_FORM_data1
+          - Attribute: DW_AT_low_pc
+            Form: DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form: DW_FORM_data4
+      - Code: 7
+        Tag: DW_TAG_inlined_subroutine
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_abstract_origin
+            Form:      DW_FORM_ref4
+          - Attribute: DW_AT_low_pc
+            Form: DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form: DW_FORM_data4
+          - Attribute: DW_AT_call_file
+            Form: DW_FORM_data1
+          - Attribute: DW_AT_call_line
+            Form: DW_FORM_data1
+          - Attribute: DW_AT_call_column
+            Form: DW_FORM_data1
+      - Code: 8
+        Tag: DW_TAG_formal_parameter
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_abstract_origin
+            Form: DW_FORM_ref4
+      - Code: 9
+        Tag: DW_TAG_variable
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_abstract_origin
+            Form: DW_FORM_ref4
+          - Attribute: DW_AT_location
+            Form: DW_FORM_exprloc
+      - Code: 10
+        Tag: DW_TAG_formal_parameter
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_abstract_origin
+            Form: DW_FORM_ref4
+          - Attribute: DW_AT_location
+            Form: DW_FORM_exprloc
+      - Code: 11
+        Tag: DW_TAG_subprogram
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_decl_file
+            Form: DW_FORM_data1
+          - Attribute: DW_AT_decl_line
+            Form: DW_FORM_data1
+          - Attribute: DW_AT_inline
+            Form: DW_FORM_data1
+      - Code: 12
+        Tag: DW_TAG_formal_parameter
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_decl_file
+            Form: DW_FORM_data1
+          - Attribute: DW_AT_decl_line
+            Form: DW_FORM_data1
+      - Code: 13
+        Tag: DW_TAG_lexical_block
+        Children: DW_CHILDREN_yes
+      - Code: 14
+        Tag: DW_TAG_lexical_block
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_low_pc
+            Form: DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form: DW_FORM_data4
+      - Code: 15
+        Tag: DW_TAG_formal_parameter
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_abstract_origin
+            Form: DW_FORM_ref4
+      - Code: 16
+        Tag: DW_TAG_variable
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_abstract_origin
+            Form: DW_FORM_ref4
+      - Code: 17
+        Tag: DW_TAG_subprogram
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_abstract_origin
+            Form: DW_FORM_ref4
+  debug_info:
+    - Version:    4
+      AbbrOffset: 0x00
+      Entries:
+        - AbbrCode: 1 ## DW_TAG_compile_unit
+          Values:
+            - Value: 0x00 ## DW_AT_producer
+        - AbbrCode: 2 ## DW_TAG_subprogram
+          Values:
+            - Value: 1 ## DW_AT_decl_file
+            - Value: 1 ## DW_AT_decl_line
+            - Value: 1 ## DW_AT_inline
+        - AbbrCode: 3 ## DW_TAG_formal_parameter
+          Values:
+            - Value: 1 ## DW_AT_decl_file
+            - Value: 1 ## DW_AT_decl_line
+        - AbbrCode: 4 ## DW_TAG_formal_parameter
+          Values:
+            - Value: 1 ## DW_AT_decl_file
+            - Value: 1 ## DW_AT_decl_line
+        - AbbrCode: 5 ## DW_TAG_variable
+          Values:
+            - Value: 1 ## DW_AT_decl_file
+            - Value: 1 ## DW_AT_decl_line
+        - AbbrCode: 0 ## NULL
+        - AbbrCode: 6 ## DW_TAG_subprogram
+          Values:
+            - Value: 1 ## DW_AT_decl_file
+            - Value: 1 ## DW_AT_decl_line
+            - Value: 0x00 ## DW_AT_low_pc
+            - Value: 0x0b ## DW_AT_high_pc
+        - AbbrCode: 7 ## DW_TAG_inlined_subroutine
+          Values:
+            - Value: 0x14 ## DW_AT_abstract_origin
+            - Value: 0x00 ## DW_AT_low_pc
+            - Value: 0x07 ## DW_AT_high_pc
+            - Value: 1 ## DW_AT_call_file
+            - Value: 1 ## DW_AT_call_line
+            - Value: 1 ## DW_AT_call_column
+        - AbbrCode: 8 ## DW_TAG_formal_parameter
+          Values:
+            - Value: 0x18 ## DW_AT_abstract_origin
+        - AbbrCode: 9 ## DW_TAG_formal_parameter
+          Values:
+            - Value: 0x1e ## DW_AT_abstract_origin
+            - Value: 0x0 ## DW_AT_location
+        - AbbrCode: 0 ## NULL
+        - AbbrCode: 7 ## DW_TAG_inlined_subroutine
+          Values:
+            - Value: 0x14 ## DW_AT_abstract_origin
+            - Value: 0x02 ## DW_AT_low_pc
+            - Value: 0x08 ## DW_AT_high_pc
+            - Value: 1 ## DW_AT_call_file
+            - Value: 2 ## DW_AT_call_line
+            - Value: 2 ## DW_AT_call_column
+        - AbbrCode: 10 ## DW_TAG_formal_parameter
+          Values:
+            - Value: 0x18 ## DW_AT_abstract_origin
+            - Value: 0x0 ## DW_AT_location
+        - AbbrCode: 9 ## DW_TAG_variable
+          Values:
+            - Value: 0x1e ## DW_AT_abstract_origin
+            - Value: 0x0 ## DW_AT_location
+        - AbbrCode: 0 ## NULL
+        - AbbrCode: 7 ## DW_TAG_inlined_subroutine
+          Values:
+            - Value: 0x14 ## DW_AT_abstract_origin
+            - Value: 0x02 ## DW_AT_low_pc
+            - Value: 0x08 ## DW_AT_high_pc
+            - Value: 1 ## DW_AT_call_file
+            - Value: 3 ## DW_AT_call_line
+            - Value: 3 ## DW_AT_call_column
+        - AbbrCode: 0 ## NULL
+        - AbbrCode: 7 ## DW_TAG_inlined_subroutine
+          Values:
+            - Value: 0xe5 ## DW_AT_abstract_origin
+            - Value: 0x06 ## DW_AT_low_pc
+            - Value: 0x0a ## DW_AT_high_pc
+            - Value: 1 ## DW_AT_call_file
+            - Value: 3 ## DW_AT_call_line
+            - Value: 3 ## DW_AT_call_column
+        - AbbrCode: 0 ## NULL
+        - AbbrCode: 7 ## DW_TAG_inlined_subroutine
+          Values:
+            - Value: 0xe5 ## DW_AT_abstract_origin
+            - Value: 0x06 ## DW_AT_low_pc
+            - Value: 0x0a ## DW_AT_high_pc
+            - Value: 1 ## DW_AT_call_file
+            - Value: 3 ## DW_AT_call_line
+            - Value: 3 ## DW_AT_call_column
+        - AbbrCode: 10 ## DW_TAG_formal_parameter
+          Values:
+            - Value: 0xe9 ## DW_AT_abstract_origin
+            - Value: 0x0 ## DW_AT_location
+        - AbbrCode: 0 ## NULL
+        - AbbrCode: 7 ## DW_TAG_inlined_subroutine
+          Values:
+            - Value: 0xf0 ## DW_AT_abstract_origin
+            - Value: 0x10 ## DW_AT_low_pc
+            - Value: 0x0a ## DW_AT_high_pc
+            - Value: 1 ## DW_AT_call_file
+            - Value: 3 ## DW_AT_call_line
+            - Value: 3 ## DW_AT_call_column
+        - AbbrCode: 15 ## DW_TAG_formal_parameter
+          Values:
+            - Value: 0xf4  ## DW_AT_abstract_origin
+        - AbbrCode: 14 ## DW_TAG_lexical_block
+          Values:
+            - Value: 0xbc ## DW_AT_low_pc
+            - Value: 0x0 ## DW_AT_high_pc
+        - AbbrCode: 16 ## DW_TAG_variable
+          Values:
+            - Value: 0xf8 ## DW_AT_abstract_origin
+        - AbbrCode: 0 ## NULL
+        - AbbrCode: 0 ## NULL
+        - AbbrCode: 0 ## NULL
+        - AbbrCode: 2 ## DW_TAG_subprogram
+          Values:
+            - Value: 1 ## DW_AT_decl_file
+            - Value: 3 ## DW_AT_decl_line
+            - Value: 1 ## DW_AT_inline
+        - AbbrCode: 3 ## DW_TAG_formal_parameter
+          Values:
+            - Value: 1 ## DW_AT_decl_file
+            - Value: 1 ## DW_AT_decl_line
+        - AbbrCode: 5 ## DW_TAG_variable
+          Values:
+            - Value: 1 ## DW_AT_decl_file
+            - Value: 1 ## DW_AT_decl_line
+        - AbbrCode: 0 ## NULL
+        - AbbrCode: 11 ## DW_TAG_subprogram
+          Values:
+            - Value: 1 ## DW_AT_decl_file
+            - Value: 3 ## DW_AT_decl_line
+            - Value: 1 ## DW_AT_inline
+        - AbbrCode: 3 ## DW_TAG_formal_parameter
+          Values:
+            - Value: 1 ## DW_AT_decl_file
+            - Value: 1 ## DW_AT_decl_line
+        - AbbrCode: 13 ## DW_TAG_lexical_block
+        - AbbrCode: 5 ## DW_TAG_variable
+          Values:
+            - Value: 1 ## DW_AT_decl_file
+            - Value: 1 ## DW_AT_decl_line
+        - AbbrCode: 0 ## NULL
+        - AbbrCode: 0 ## NULL
+        - AbbrCode: 17 ## DW_TAG_subprogram
+          Values:
+            - Value: 0xf0 ## DW_AT_abstract_origin
+        - AbbrCode: 0 ## NULL

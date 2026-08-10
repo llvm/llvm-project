@@ -1,0 +1,2 @@
+; RUN: llvm-bcanalyzer -dump %p/Inputs/source-filename.bc | FileCheck %s
+; CHECK: <SOURCE_FILENAME {{.*}} record string = 'source-filename.c'

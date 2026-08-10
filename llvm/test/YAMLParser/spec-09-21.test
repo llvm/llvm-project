@@ -1,0 +1,12 @@
+# RUN: not yaml-bench -canonical %s 2>&1 | FileCheck %s
+
+- |
+
+ text
+- >
+  text
+ text
+- |1
+ text
+
+# CHECK: 8:2: error: A text line is less indented than the block scalar

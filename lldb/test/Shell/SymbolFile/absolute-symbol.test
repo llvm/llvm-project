@@ -1,0 +1,94 @@
+# RUN: yaml2obj %s -o %t.o
+# RUN: %lldb -b -o 'target modules lookup -s absolute_symbol' %t.o | FileCheck %s
+# CHECK: 1 symbols match 'absolute_symbol'
+# CHECK:   Name: absolute_symbol
+# CHECK:   Value: 0x0000000012345678
+# Created from:
+#   .globl absolute_symbol
+#   absolute_symbol = 0x12345678
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x0
+  filetype:        0x1
+  ncmds:           4
+  sizeofcmds:      280
+  flags:           0x0
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         ''
+    vmaddr:          0
+    vmsize:          0
+    fileoff:         312
+    filesize:        0
+    maxprot:         7
+    initprot:        7
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0
+        size:            0
+        offset:          0x138
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         ''
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         24
+    platform:        1
+    minos:           786432
+    sdk:             0
+    ntools:          0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          312
+    nsyms:           2
+    stroff:          344
+    strsize:         24
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       1
+    iextdefsym:      1
+    nextdefsym:      1
+    iundefsym:       2
+    nundefsym:       0
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+LinkEditData:
+  NameList:
+    - n_strx:          17
+      n_type:          0xE
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+    - n_strx:          1
+      n_type:          0x3
+      n_sect:          0
+      n_desc:          0
+      n_value:         305419896
+  StringTable:
+    - ''
+    - absolute_symbol
+    - ltmp0
+    - ''
+...

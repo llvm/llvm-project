@@ -1,0 +1,17 @@
+## This test shows that llvm-objdump can disassemble a long instruction.
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-objdump -d %t.o | FileCheck %s --strict-whitespace
+
+# CHECK: 0: 66 66 66 66 66 66 2e 0f 1f 84 00 00 00 00 00 	nopw	%cs:(%rax,%rax)
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [SHF_ALLOC, SHF_EXECINSTR]
+    Content: '6666666666662E0F1F840000000000' # 15-byte nop

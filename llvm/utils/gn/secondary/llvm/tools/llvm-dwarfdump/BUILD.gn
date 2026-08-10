@@ -1,0 +1,18 @@
+executable("llvm-dwarfdump") {
+  deps = [
+    "//llvm/lib/DebugInfo/DWARF",
+    "//llvm/lib/DebugInfo/DWARF/LowLevel",
+    "//llvm/lib/MC",
+    "//llvm/lib/Object",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target:AllTargetsDescs",
+    "//llvm/lib/Target:AllTargetsInfos",
+    "//llvm/lib/TargetParser",
+  ]
+  sources = [
+    "Coverage.cpp",
+    "SectionSizes.cpp",
+    "Statistics.cpp",
+    "llvm-dwarfdump.cpp",
+  ]
+}

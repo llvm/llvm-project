@@ -1,0 +1,152 @@
+# RUN: llc -start-after=livedebugvalues --filetype=obj %s -o - \
+# RUN:     | llvm-dwarfdump -v --name local* --regex - | FileCheck %s
+#
+# Generated with opt -sroa, llc -stop-after=livedebugvalues, with some metadata
+# removed by hand:
+# long a, b, c;
+# long funone() {
+#   unsigned localone;
+#   if (c)
+#     return b;
+#   // Location should start here.
+#   localone = 0;
+#   return a;
+# }
+#
+# short funtwo() {
+#   union {
+#     char b[2];
+#     short c;
+#   } localtwo;
+#   {
+#     // Location should start here.
+#     memcpy(localtwo.b, 0, 2);
+#   }
+#   return localtwo.c;
+# }
+#
+# Check that the local variables each have a location range which reflects the
+# fact that they're both unavailable at the start of the functions.
+#
+# CHECK:        DW_TAG_variable [
+# CHECK-NEXT:     DW_AT_location [DW_FORM_sec_offset]
+# CHECK-NEXT:         [0x{{[0-9a-z]+}}, 0x{{[0-9a-z]+}})
+# CHECK-NEXT:     DW_AT_name {{.*}} = "localone"
+#
+# CHECK:        DW_TAG_variable [
+# CHECK-NEXT:     DW_AT_location [DW_FORM_sec_offset]
+# CHECK-NEXT:         [0x{{[0-9a-z]+}}, 0x{{[0-9a-z]+}})
+# CHECK-NEXT:     DW_AT_name {{.*}} = "localtwo"
+
+--- |
+  target triple = "x86_64-unknown-linux-gnu"
+
+  @c = dso_local global i64 0, align 8, !dbg !0
+  @b = dso_local global i64 0, align 8, !dbg !9
+  @a = dso_local global i64 0, align 8, !dbg !6
+
+  define dso_local i64 @funone() !dbg !15 {
+  entry:
+    %0 = load i64, ptr @c, align 8, !dbg !21
+    %tobool = icmp ne i64 %0, 0, !dbg !21
+    br i1 %tobool, label %if.then, label %if.end, !dbg !27
+
+  if.then:                                          ; preds = %entry
+    %1 = load i64, ptr @b, align 8, !dbg !21
+    br label %cleanup, !dbg !21
+
+  if.end:                                           ; preds = %entry
+    call void @llvm.dbg.value(metadata i32 0, metadata !19, metadata !DIExpression()), !dbg !27
+    %2 = load i64, ptr @a, align 8, !dbg !27
+    br label %cleanup, !dbg !27
+
+  cleanup:                                          ; preds = %if.end, %if.then
+    %retval.0 = phi i64 [ %1, %if.then ], [ %2, %if.end ], !dbg !27
+    ret i64 %retval.0, !dbg !27
+  }
+
+  define dso_local signext i16 @funtwo() !dbg !34 {
+  entry:
+    %localtwo.sroa.0.0.copyload = load i16, ptr null, align 1, !dbg !48
+    call void @llvm.dbg.value(metadata i16 %localtwo.sroa.0.0.copyload, metadata !39, metadata !DIExpression()), !dbg !51
+    ret i16 %localtwo.sroa.0.0.copyload, !dbg !51
+  }
+
+  declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg)
+  declare void @llvm.dbg.value(metadata, metadata, metadata)
+
+  !llvm.dbg.cu = !{!2}
+  !llvm.module.flags = !{!11, !12, !13}
+  !llvm.ident = !{!14}
+
+  !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+  !1 = distinct !DIGlobalVariable(name: "c", scope: !2, file: !3, line: 2, type: !8, isLocal: false, isDefinition: true)
+  !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 11.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5, splitDebugInlining: false, nameTableKind: None)
+  !3 = !DIFile(filename: "test.c", directory: "/")
+  !4 = !{}
+  !5 = !{!6, !9, !0}
+  !6 = !DIGlobalVariableExpression(var: !7, expr: !DIExpression())
+  !7 = distinct !DIGlobalVariable(name: "a", scope: !2, file: !3, line: 2, type: !8, isLocal: false, isDefinition: true)
+  !8 = !DIBasicType(name: "long int", size: 64, encoding: DW_ATE_signed)
+  !9 = !DIGlobalVariableExpression(var: !10, expr: !DIExpression())
+  !10 = distinct !DIGlobalVariable(name: "b", scope: !2, file: !3, line: 2, type: !8, isLocal: false, isDefinition: true)
+  !11 = !{i32 7, !"Dwarf Version", i32 4}
+  !12 = !{i32 2, !"Debug Info Version", i32 3}
+  !13 = !{i32 1, !"wchar_size", i32 4}
+  !14 = !{!"clang version 11.0.0"}
+  !15 = distinct !DISubprogram(name: "funone", scope: !3, file: !3, line: 3, type: !16, scopeLine: 3, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !2, retainedNodes: !18)
+  !16 = !DISubroutineType(types: !17)
+  !17 = !{!8}
+  !18 = !{!19}
+  !19 = !DILocalVariable(name: "localone", scope: !15, file: !3, line: 4, type: !20)
+  !20 = !DIBasicType(name: "unsigned int", size: 32, encoding: DW_ATE_unsigned)
+  !21 = !DILocation(line: 5, column: 7, scope: !22)
+  !22 = distinct !DILexicalBlock(scope: !15, file: !3, line: 5, column: 7)
+  !27 = !DILocation(line: 5, column: 7, scope: !15)
+  !34 = distinct !DISubprogram(name: "funtwo", scope: !3, file: !3, line: 13, type: !35, scopeLine: 13, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !2, retainedNodes: !38)
+  !35 = !DISubroutineType(types: !36)
+  !36 = !{!37}
+  !37 = !DIBasicType(name: "short", size: 16, encoding: DW_ATE_signed)
+  !38 = !{!39}
+  !39 = !DILocalVariable(name: "localtwo", scope: !34, file: !3, line: 17, type: !40)
+  !40 = distinct !DICompositeType(tag: DW_TAG_union_type, scope: !34, file: !3, line: 14, size: 16, elements: !41)
+  !41 = !{!42, !47}
+  !42 = !DIDerivedType(tag: DW_TAG_member, name: "b", scope: !40, file: !3, line: 15, baseType: !43, size: 16)
+  !43 = !DICompositeType(tag: DW_TAG_array_type, baseType: !44, size: 16, elements: !45)
+  !44 = !DIBasicType(name: "char", size: 8, encoding: DW_ATE_signed_char)
+  !45 = !{!46}
+  !46 = !DISubrange(count: 2)
+  !47 = !DIDerivedType(tag: DW_TAG_member, name: "c", scope: !40, file: !3, line: 16, baseType: !37, size: 16)
+  !48 = !DILocation(line: 20, column: 5, scope: !49)
+  !49 = distinct !DILexicalBlock(scope: !34, file: !3, line: 18, column: 3)
+  !51 = !DILocation(line: 22, column: 3, scope: !34)
+
+...
+---
+name:            funone
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x50000000), %bb.2(0x30000000)
+
+    CMP64mi32 $rip, 1, $noreg, @c, $noreg, 0, implicit-def $eflags, debug-location !21 :: (dereferenceable load (s64) from @c)
+    JCC_1 %bb.2, 4, implicit killed $eflags, debug-location !27
+
+  bb.1.if.then:
+    renamable $rax = MOV64rm $rip, 1, $noreg, @b, $noreg, debug-location !21 :: (dereferenceable load (s64) from @b)
+    RET64 $rax, debug-location !27
+
+  bb.2.if.end:
+    DBG_VALUE 0, $noreg, !19, !DIExpression(), debug-location !27
+    renamable $rax = MOV64rm $rip, 1, $noreg, @a, $noreg, debug-location !27 :: (dereferenceable load (s64) from @a)
+    RET64 $rax, debug-location !27
+
+...
+---
+name:            funtwo
+body:             |
+  bb.0.entry:
+    $eax = MOVZX32rm16 $noreg, 1, $noreg, 0, $noreg, debug-location !48 :: (load (s16) from `ptr null`, align 1)
+    DBG_VALUE $ax, $noreg, !39, !DIExpression(), debug-location !51
+    RET64 $ax, debug-location !51
+
+...

@@ -1,0 +1,77 @@
+REQUIRES: aarch64-registered-target
+
+Prepare inputs:
+
+RUN: rm -rf %t && mkdir -p %t
+RUN: llvm-mc -triple=i386-pc-windows-msvc -filetype=obj -o %t/i386.obj %S/Inputs/a.s
+RUN: llvm-mc -triple=x86_64-pc-windows-msvc -filetype=obj -o %t/x86_64.obj %S/Inputs/a.s
+RUN: llvm-mc -triple=aarch64-pc-windows-msvc -filetype=obj -o %t/arm64.obj %S/Inputs/a.s
+RUN: llvm-mc -triple=arm64ec-pc-windows-msvc -filetype=obj -o %t/arm64ec.obj %S/Inputs/a.s
+RUN: llvm-as -o %t/i386.bc %S/Inputs/i386.ll
+RUN: llvm-as -o %t/x86_64.bc %S/Inputs/x86_64.ll
+RUN: llvm-as -o %t/arm64.bc %S/Inputs/arm64.ll
+RUN: yaml2obj -o %t/arm64x.obj %S/Inputs/arm64x.yaml
+
+
+Mixing bitcode and normal object files with the same machine type is ok:
+
+RUN: llvm-lib %t/i386.obj %t/i386.bc
+RUN: llvm-lib %t/x86_64.obj %t/x86_64.bc
+
+
+As is including resource files:
+
+RUN: llvm-lib /out:%t.lib %S/Inputs/resource.res %t/i386.obj %t/i386.bc
+RUN: llvm-lib /out:%t.lib %t/x86_64.obj %S/Inputs/resource.res %t/x86_64.bc
+
+
+Mixing object files with different machine type is not ok:
+
+RUN: not llvm-lib %t/x86_64.obj %t/i386.obj 2>&1 | \
+RUN:     FileCheck --check-prefix=OBJ32 %s
+OBJ32: i386.obj: file machine type x86 conflicts with library machine type x64 (inferred from earlier file '{{.*}}x86_64.obj')
+
+
+Neither is mixing object and bitcode files with different machine type:
+
+RUN: not llvm-lib %t/x86_64.obj %t/i386.bc 2>&1 | \
+RUN:     FileCheck --check-prefix=BC32 %s
+BC32: i386.bc: file machine type x86 conflicts with library machine type x64 (inferred from earlier file '{{.*}}x86_64.obj')
+
+RUN: not llvm-lib %t/arm64.bc %t/x86_64.bc 2>&1 | \
+RUN:     FileCheck --check-prefix=BC64 %s
+BC64: x86_64.bc: file machine type x64 conflicts with library machine type arm64 (inferred from earlier file '{{.*}}arm64.bc')
+
+
+If /machine: is passed, its value is authoritative.
+
+RUN: not llvm-lib /machine:X86 %t/x86_64.obj %t/i386.obj 2>&1 | \
+RUN:     FileCheck --check-prefix=OBJ64 %s
+OBJ64: x86_64.obj: file machine type x64 conflicts with library machine type x86 (from '/machine:X86' flag)
+
+
+Mixing arm64 and x86_64 is possible using arm64ec:
+
+RUN: llvm-lib -machine:arm64ec %t/arm64.bc %t/x86_64.bc %t/arm64.obj %t/x86_64.obj %t/arm64ec.obj %t/arm64x.obj
+RUN: llvm-lib -machine:arm64x %t/arm64.bc %t/x86_64.bc %t/arm64.obj %t/x86_64.obj %t/arm64ec.obj %t/arm64x.obj
+RUN: llvm-lib -machine:arm64 %t/arm64.bc %t/arm64.obj %t/arm64x.obj
+
+RUN: not llvm-lib %t/arm64ec.obj 2>&1 | FileCheck --check-prefix=NOEC %s
+NOEC: arm64ec.obj: file machine type arm64ec conflicts with inferred library machine type, use /machine:arm64ec or /machine:arm64x
+
+RUN: not llvm-lib -machine:arm64ec %t/arm64ec.obj %t/i386.obj 2>&1 | \
+RUN:     FileCheck --check-prefix=OBJEC %s
+RUN: not llvm-lib -machine:arm64x %t/arm64ec.obj %t/i386.obj 2>&1 | \
+RUN:     FileCheck --check-prefix=OBJX %s
+RUN: not llvm-lib -machine:x64 %t/x86_64.obj %t/arm64x.obj 2>&1 | \
+RUN:     FileCheck --check-prefix=OBJX2 %s
+OBJEC: i386.obj: file machine type x86 conflicts with library machine type arm64ec (from '/machine:arm64ec' flag)
+OBJX:  i386.obj: file machine type x86 conflicts with library machine type arm64x (from '/machine:arm64x' flag)
+OBJX2: arm64x.obj: file machine type arm64x conflicts with library machine type x64 (from '/machine:x64' flag)
+
+RUN: not llvm-lib -machine:arm64ec %t/arm64.bc %t/x86_64.bc %t/i386.bc 2>&1 | \
+RUN:     FileCheck --check-prefix=BCEC %s
+RUN: not llvm-lib -machine:arm64x %t/arm64.bc %t/x86_64.bc %t/i386.bc 2>&1 | \
+RUN:     FileCheck --check-prefix=BCX %s
+BCEC: i386.bc: file machine type x86 conflicts with library machine type arm64ec (from '/machine:arm64ec' flag)
+BCX:  i386.bc: file machine type x86 conflicts with library machine type arm64x (from '/machine:arm64x' flag)

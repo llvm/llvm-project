@@ -1,0 +1,38 @@
+# REQUIRES: system-linux
+
+# RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-locexpr-referrence-main.s -o %tmain.o
+# RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-locexpr-referrence-helper.s -o %thelper.o
+# RUN: %clang %cflags -dwarf-5 %tmain.o %thelper.o -o %t.exe -Wl,-q
+# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections --debug-thread-count=4 --cu-processing-batch-size=4
+# RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt | FileCheck --check-prefix=CHECK %s
+# RUN: llvm-dwarfdump --show-form --verbose --debug-addr %t.bolt | FileCheck --check-prefix=CHECKADDR %s
+
+## This test checks that we update relative DIE references with DW_OP_convert that are in locexpr
+## and checks the address table is correct.
+
+# CHECK: version = 0x0005
+# CHECK: DW_TAG_variable
+# CHECK-NEXT: DW_AT_location
+# CHECK-SAME: DW_OP_convert (0x00000028 -> 0x00000028)
+# CHECK-SAME: DW_OP_convert (0x0000002c -> 0x0000002c)
+# CHECK: version = 0x0005
+# CHECK: DW_TAG_variable
+# CHECK-NEXT: DW_AT_location
+# CHECK-SAME: DW_OP_convert (0x00000028 -> 0x00000092)
+# CHECK-SAME: DW_OP_convert (0x0000002c -> 0x00000096)
+# CHECK: version = 0x0005
+
+# CHECKADDR: Addrs: [
+# CHECKADDR-NEXT: 0x0000000000001330
+# CHECKADDR-NEXT: 0x0000000000000000
+# CHECKADDR-NEXT: 0x0000000000001333
+# CHECKADDR-NEXT: ]
+# CHECKADDR: Addrs: [
+# CHECKADDR-NEXT: 0x0000000000001340
+# CHECKADDR-NEXT: 0x0000000000000000
+# CHECKADDR-NEXT: 0x0000000000001343
+# CHECKADDR-NEXT: ]
+# CHECKADDR: Addrs: [
+# CHECKADDR-NEXT: 0x0000000000001320
+# CHECKADDR-NEXT: 0x0000000000000000
+# CHECKADDR-NEXT: ]

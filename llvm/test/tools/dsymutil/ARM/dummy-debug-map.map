@@ -1,0 +1,15 @@
+# This is a dummy debug map used for some tests where the contents of the
+# map are just an implementation detail. The tests wanting to use that file
+# should put all there object files in an explicitely named sub-directory
+# of Inputs, and they should be named 1.o, 2.o, ...
+# As not finding an object file or symbols isn't a fatal error for dsymutil,
+# you can extend this file with as much object files and symbols as needed.
+
+---
+triple:          'armv7-apple-darwin'
+objects:
+  - filename: 1.o
+    symbols:
+      - { sym: _bar, objAddr: 0x0, binAddr: 0x10000, size: 0x10 }
+...
+

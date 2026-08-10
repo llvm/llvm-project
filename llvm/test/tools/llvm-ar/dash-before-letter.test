@@ -1,0 +1,12 @@
+# Test the use of dash before key letters.
+
+RUN: touch %t1.txt
+RUN: touch %t2.txt
+
+RUN: rm -f %t.ar
+RUN: llvm-ar s -cr %t.ar %t1.txt
+RUN: llvm-ar -r -s %t.ar %t2.txt -s
+RUN: llvm-ar -t %t.ar | FileCheck %s
+
+CHECK:      1.txt
+CHECK-NEXT: 2.txt

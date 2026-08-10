@@ -1,0 +1,19 @@
+module ModCommon1 {
+    header "mod_common_1.h"
+}
+
+module ModCommon2 {
+    header "mod_common_2.h"
+}
+
+module ModPCH {
+    header "mod_pch.h"
+}
+
+module ModTU {
+    header "mod_tu.h"
+}
+
+module ModTUWithCommon {
+    header "mod_tu_with_common.h"
+}

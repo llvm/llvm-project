@@ -1,0 +1,2 @@
+// at-import-in-framework-header/module.modulemap
+module B {}

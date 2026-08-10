@@ -1,0 +1,9 @@
+#ifndef _LIBCPP_CSTDDEF
+#define _LIBCPP_CSTDDEF
+
+#include <stddef.h>
+#include <type_traits>
+
+typedef ptrdiff_t my_ptrdiff_t;
+
+#endif

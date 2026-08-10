@@ -1,0 +1,1273 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_X86_64
+  Entry:           0x4F0
+ProgramHeaders:
+  - Type:            PT_PHDR
+    Flags:           [ PF_R ]
+    VAddr:           0x40
+    Align:           0x8
+    Offset:          0x40
+  - Type:            PT_INTERP
+    Flags:           [ PF_R ]
+    FirstSec:        .interp
+    LastSec:         .interp
+    VAddr:           0x238
+    Offset:          0x238
+  - Type:            PT_LOAD
+    Flags:           [ PF_X, PF_R ]
+    FirstSec:        .interp
+    LastSec:         .eh_frame
+    Align:           0x200000
+    Offset:          0x0
+  - Type:            PT_LOAD
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .init_array
+    LastSec:         .bss
+    VAddr:           0x200DE0
+    Align:           0x200000
+    Offset:          0xDE0
+  - Type:            PT_DYNAMIC
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .dynamic
+    LastSec:         .dynamic
+    VAddr:           0x200DF8
+    Align:           0x8
+    Offset:          0xDF8
+  - Type:            PT_NOTE
+    Flags:           [ PF_R ]
+    FirstSec:        .note.ABI-tag
+    LastSec:         .note.ABI-tag
+    VAddr:           0x254
+    Align:           0x4
+    Offset:          0x254
+  - Type:            PT_GNU_EH_FRAME
+    Flags:           [ PF_R ]
+    FirstSec:        .eh_frame_hdr
+    LastSec:         .eh_frame_hdr
+    VAddr:           0x69C
+    Align:           0x4
+    Offset:          0x69C
+  - Type:            PT_GNU_STACK
+    Flags:           [ PF_W, PF_R ]
+    Align:           0x10
+    Offset:          0x0
+  - Type:            PT_GNU_RELRO
+    Flags:           [ PF_R ]
+    FirstSec:        .init_array
+    LastSec:         .got
+    VAddr:           0x200DE0
+    Offset:          0xDE0
+Sections:
+  - Name:            .interp
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x238
+    AddressAlign:    0x1
+    Content:         2F6C696236342F6C642D6C696E75782D7838362D36342E736F2E3200
+  - Name:            .note.ABI-tag
+    Type:            SHT_NOTE
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x254
+    AddressAlign:    0x4
+    Notes:
+      - Name:            GNU
+        Desc:            '00000000030000000200000000000000'
+        Type:            NT_VERSION
+  - Name:            .gnu.hash
+    Type:            SHT_GNU_HASH
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x278
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Header:
+      SymNdx:          0x1
+      Shift2:          0x0
+    BloomFilter:     [ 0x0 ]
+    HashBuckets:     [ 0x0 ]
+    HashValues:      [  ]
+  - Name:            .dynsym
+    Type:            SHT_DYNSYM
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x298
+    Link:            .dynstr
+    AddressAlign:    0x8
+  - Name:            .dynstr
+    Type:            SHT_STRTAB
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x328
+    AddressAlign:    0x1
+  - Name:            .gnu.version
+    Type:            SHT_GNU_versym
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x3A6
+    Link:            .dynsym
+    AddressAlign:    0x2
+    Entries:         [ 0, 1, 2, 1, 1, 2 ]
+  - Name:            .gnu.version_r
+    Type:            SHT_GNU_verneed
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x3B8
+    Link:            .dynstr
+    AddressAlign:    0x8
+    Dependencies:
+      - Version:         1
+        File:            libc.so.6
+        Entries:
+          - Name:            GLIBC_2.2.5
+            Hash:            157882997
+            Flags:           0
+            Other:           2
+  - Name:            .rela.dyn
+    Type:            SHT_RELA
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x3D8
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Relocations:
+      - Offset:          0x200DE0
+        Type:            R_X86_64_RELATIVE
+        Addend:          1488
+      - Offset:          0x200DE8
+        Type:            R_X86_64_RELATIVE
+        Addend:          1424
+      - Offset:          0x200DF0
+        Type:            R_X86_64_RELATIVE
+        Addend:          2100720
+      - Offset:          0x200FD8
+        Symbol:          _ITM_deregisterTMCloneTable
+        Type:            R_X86_64_GLOB_DAT
+      - Offset:          0x200FE0
+        Symbol:          __libc_start_main
+        Type:            R_X86_64_GLOB_DAT
+      - Offset:          0x200FE8
+        Symbol:          __gmon_start__
+        Type:            R_X86_64_GLOB_DAT
+      - Offset:          0x200FF0
+        Symbol:          _ITM_registerTMCloneTable
+        Type:            R_X86_64_GLOB_DAT
+      - Offset:          0x200FF8
+        Symbol:          __cxa_finalize
+        Type:            R_X86_64_GLOB_DAT
+  - Name:            .rela.plt
+    Type:            SHT_RELA
+    Flags:           [ SHF_ALLOC, SHF_INFO_LINK ]
+    Address:         0x498
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Info:            .got.plt
+    Relocations:
+      - Offset:          0x201018
+        Symbol:          __cxa_finalize
+        Type:            R_X86_64_JUMP_SLOT
+  - Name:            .init
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x4B0
+    AddressAlign:    0x4
+    Content:         F30F1EFA4883EC08488B05290B20004885C07402FFD04883C408C3
+  - Name:            .plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x4D0
+    AddressAlign:    0x10
+    EntSize:         0x10
+    Content:         FF35320B2000FF25340B20000F1F4000FF25320B20006800000000E9E0FFFFFF
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x4F0
+    AddressAlign:    0x10
+    Content:         F30F1EFA31ED4989D15E4889E24883E4F050544C8D0576010000488D0DFF000000488D3DC8000000FF15C20A2000F490488D3D010B2000488D05FA0A20004839F87415488B059E0A20004885C07409FFE00F1F8000000000C30F1F8000000000488D3DD10A2000488D35CA0A20004829FE48C1FE034889F048C1E83F4801C648D1FE7414488B05750A20004885C07408FFE0660F1F440000C30F1F8000000000F30F1EFA803D890A200000752B5548833D520A2000004889E5740C488D3D3E082000E829FFFFFFE864FFFFFFC605610A2000015DC30F1F00C30F1F8000000000F30F1EFAE977FFFFFF0F1F8000000000554889E54883EC10C745FC00000000B000E80A0000004883C4105DC30F1F4000554889E5B8010000005DC30F1F440000F30F1EFA41574989D741564989F641554189FD41544C8D25B407200055488D2DB4072000534C29E54883EC08E86FFEFFFF48C1FD03741F31DB0F1F80000000004C89FA4C89F64489EF41FF14DC4883C3014839DD75EA4883C4085B5D415C415D415E415FC366662E0F1F840000000000F30F1EFAC3
+  - Name:            .fini
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x688
+    AddressAlign:    0x4
+    Content:         F30F1EFA4883EC084883C408C3
+  - Name:            .rodata
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_MERGE ]
+    Address:         0x698
+    AddressAlign:    0x4
+    EntSize:         0x4
+    Content:         '01000200'
+  - Name:            .eh_frame_hdr
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x69C
+    AddressAlign:    0x4
+    Content:         011B033B380000000600000034FEFFFF6C00000054FEFFFF5400000044FFFFFF9400000064FFFFFFB400000074FFFFFFD4000000E4FFFFFF1C010000
+  - Name:            .eh_frame
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x6D8
+    AddressAlign:    0x8
+    Content:         1400000000000000017A5200017810011B0C070890010000140000001C000000F8FDFFFF2F00000000440710000000002400000034000000C0FDFFFF20000000000E10460E184A0F0B770880003F1A3B2A332422000000001C0000005C000000A8FEFFFF1C00000000410E108602430D06570C07080000001C0000007C000000A8FEFFFF0B00000000410E108602430D06460C0708000000440000009C00000098FEFFFF6500000000460E108F02450E188E03450E208D04450E288C05480E308606480E388307470E406E0E38410E30410E28420E20420E18420E10420E080010000000E4000000C0FEFFFF050000000000000000000000
+  - Name:            .init_array
+    Type:            SHT_INIT_ARRAY
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x200DE0
+    AddressAlign:    0x8
+    EntSize:         0x8
+    Offset:          0xDE0
+    Content:         D005000000000000
+  - Name:            .fini_array
+    Type:            SHT_FINI_ARRAY
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x200DE8
+    AddressAlign:    0x8
+    EntSize:         0x8
+    Content:         '9005000000000000'
+  - Name:            .data.rel.ro
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x200DF0
+    AddressAlign:    0x8
+    Content:         F00D200000000000
+  - Name:            .dynamic
+    Type:            SHT_DYNAMIC
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x200DF8
+    Link:            .dynstr
+    AddressAlign:    0x8
+    Entries:
+      - Tag:             DT_NEEDED
+        Value:           0x1
+      - Tag:             DT_INIT
+        Value:           0x4B0
+      - Tag:             DT_FINI
+        Value:           0x688
+      - Tag:             DT_INIT_ARRAY
+        Value:           0x200DE0
+      - Tag:             DT_INIT_ARRAYSZ
+        Value:           0x8
+      - Tag:             DT_FINI_ARRAY
+        Value:           0x200DE8
+      - Tag:             DT_FINI_ARRAYSZ
+        Value:           0x8
+      - Tag:             DT_GNU_HASH
+        Value:           0x278
+      - Tag:             DT_STRTAB
+        Value:           0x328
+      - Tag:             DT_SYMTAB
+        Value:           0x298
+      - Tag:             DT_STRSZ
+        Value:           0x7D
+      - Tag:             DT_SYMENT
+        Value:           0x18
+      - Tag:             DT_DEBUG
+        Value:           0x0
+      - Tag:             DT_PLTGOT
+        Value:           0x201000
+      - Tag:             DT_PLTRELSZ
+        Value:           0x18
+      - Tag:             DT_PLTREL
+        Value:           0x7
+      - Tag:             DT_JMPREL
+        Value:           0x498
+      - Tag:             DT_RELA
+        Value:           0x3D8
+      - Tag:             DT_RELASZ
+        Value:           0xC0
+      - Tag:             DT_RELAENT
+        Value:           0x18
+      - Tag:             DT_FLAGS_1
+        Value:           0x8000000
+      - Tag:             DT_VERNEED
+        Value:           0x3B8
+      - Tag:             DT_VERNEEDNUM
+        Value:           0x1
+      - Tag:             DT_VERSYM
+        Value:           0x3A6
+      - Tag:             DT_RELACOUNT
+        Value:           0x3
+      - Tag:             DT_NULL
+        Value:           0x0
+      - Tag:             DT_NULL
+        Value:           0x0
+      - Tag:             DT_NULL
+        Value:           0x0
+      - Tag:             DT_NULL
+        Value:           0x0
+      - Tag:             DT_NULL
+        Value:           0x0
+  - Name:            .got
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x200FD8
+    AddressAlign:    0x8
+    EntSize:         0x8
+    Content:         '00000000000000000000000000000000000000000000000000000000000000000000000000000000'
+  - Name:            .got.plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x201000
+    AddressAlign:    0x8
+    EntSize:         0x8
+    Content:         F80D20000000000000000000000000000000000000000000E604000000000000
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x201020
+    AddressAlign:    0x1
+    Content:         '00000000'
+  - Name:            .bss
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x201024
+    AddressAlign:    0x1
+    Size:            0x4
+  - Name:            .comment
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Content:         4743433A2028474E552920382E352E3020323032313035313420285265642048617420382E352E302D3231290046616365626F6F6B20636C616E672076657273696F6E2031352E302E3020287373683A2F2F6769742E7669702E66616365626F6F6B2E636F6D2F646174612F6769747265706F732F6F736D6574612F65787465726E616C2F6C6C766D2D70726F6A65637420343561653864633237346536636263626434306435373435313664353334333739366265313532372900
+  - Name:            .gnu.build.attributes
+    Type:            SHT_NOTE
+    Address:         0x601028
+    AddressAlign:    0x4
+    Notes:
+      - Name:            "GA$\x013p1113"
+        Desc:            1F050000000000001F05000000000000
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x05running gcc 8.5.0 20210514"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x05annobin gcc 8.5.0 20210514"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x05plugin name: gcc-annobin"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*GOW\0*\x05\x02"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*\x02\0"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            'GA+stack_clash'
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*cf_protection\0\b"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*FORTIFY\0�"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            'GA+GLIBCXX_ASSERTIONS'
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*\a\x03"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA!\b"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            'GA+omit_frame_pointer'
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*\x06\x12"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            'GA!stack_realign'
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x013p1113"
+        Desc:            F004000000000000F004000000000000
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x05running gcc 8.5.0 20210514"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x05annobin gcc 8.5.0 20210514"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x05plugin name: gcc-annobin"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*GOW\0*\x05\x02"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*\x02\0"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            'GA+stack_clash'
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*cf_protection\0\b"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*FORTIFY\0�"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            'GA+GLIBCXX_ASSERTIONS'
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*\a\x03"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA!\b"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            'GA+omit_frame_pointer'
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*\x06\x12"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            'GA!stack_realign'
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x013p1113"
+        Desc:            F004000000000000F004000000000000
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x05running gcc 8.5.0 20210514"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x05annobin gcc 8.5.0 20210514"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x05plugin name: gcc-annobin"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*GOW\0*\x05\x02"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*\x02\0"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            'GA+stack_clash'
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*cf_protection\0\b"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*FORTIFY\0�"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            'GA+GLIBCXX_ASSERTIONS'
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*\a\x03"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA!\b"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            'GA+omit_frame_pointer'
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*\x06\x12"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            'GA!stack_realign'
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x013p1113"
+        Desc:            F004000000000000F004000000000000
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x05running gcc 8.5.0 20210514"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x05annobin gcc 8.5.0 20210514"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x05plugin name: gcc-annobin"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*GOW\0*\x05\x02"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*\x02\0"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            'GA+stack_clash'
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*cf_protection\0\b"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*FORTIFY\0�"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            'GA+GLIBCXX_ASSERTIONS'
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*\a\x03"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA!\b"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            'GA+omit_frame_pointer'
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*\x06\x12"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            'GA!stack_realign'
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x013p1113"
+        Desc:            F004000000000000F004000000000000
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x05running gcc 8.5.0 20210514"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x05annobin gcc 8.5.0 20210514"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x05plugin name: gcc-annobin"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*GOW\0*\x05\x02"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*\x02\0"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            'GA+stack_clash'
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*cf_protection\0\b"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*FORTIFY\0�"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            'GA+GLIBCXX_ASSERTIONS'
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*\a\x03"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA!\b"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            'GA+omit_frame_pointer'
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*\x06\x12"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            'GA!stack_realign'
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x013a1"
+        Desc:            F0040000000000001F05000000000000
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x013a1"
+        Desc:            1F050000000000001F05000000000000
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x013a1"
+        Desc:            1F050000000000001F05000000000000
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x013a1"
+        Desc:            B004000000000000C604000000000000
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x013a1"
+        Desc:            '88060000000000009006000000000000'
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x013a1"
+        Desc:            2005000000000000D905000000000000
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x013p1113"
+        Desc:            '10060000000000008506000000000000'
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x05running gcc 8.5.0 20210514"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x05annobin gcc 8.5.0 20210514"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x05plugin name: gcc-annobin"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*GOW\0*\x05\x02"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*\x02\x03"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            'GA+stack_clash'
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*cf_protection\0\b"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*FORTIFY\0\x02"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            'GA+GLIBCXX_ASSERTIONS'
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*\a\x02"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA!\b"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            'GA+omit_frame_pointer'
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*\x06\x12"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            'GA!stack_realign'
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*FORTIFY\0\x02"
+        Desc:            '10060000000000007506000000000000'
+        Type:            NT_GNU_BUILD_ATTRIBUTE_FUNC
+      - Name:            'GA+GLIBCXX_ASSERTIONS'
+        Desc:            '10060000000000007506000000000000'
+        Type:            NT_GNU_BUILD_ATTRIBUTE_FUNC
+      - Name:            "GA*FORTIFY\0\x02"
+        Desc:            '75060000000000008506000000000000'
+        Type:            NT_GNU_BUILD_ATTRIBUTE_FUNC
+      - Name:            'GA+GLIBCXX_ASSERTIONS'
+        Desc:            '75060000000000008506000000000000'
+        Type:            NT_GNU_BUILD_ATTRIBUTE_FUNC
+      - Name:            "GA$\x013p1113"
+        Desc:            F004000000000000F004000000000000
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x05running gcc 8.5.0 20210514"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x05annobin gcc 8.5.0 20210514"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x05plugin name: gcc-annobin"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*GOW\0*\x05\x02"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*\x02\x03"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            'GA+stack_clash'
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*cf_protection\0\b"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*FORTIFY\0\x02"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            'GA+GLIBCXX_ASSERTIONS'
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*\a\x02"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA!\b"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            'GA+omit_frame_pointer'
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*\x06\x12"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            'GA!stack_realign'
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x013p1113"
+        Desc:            F004000000000000F004000000000000
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x05running gcc 8.5.0 20210514"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x05annobin gcc 8.5.0 20210514"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x05plugin name: gcc-annobin"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*GOW\0*\x05\x02"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*\x02\x03"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            'GA+stack_clash'
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*cf_protection\0\b"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*FORTIFY\0\x02"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            'GA+GLIBCXX_ASSERTIONS'
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*\a\x02"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA!\b"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            'GA+omit_frame_pointer'
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*\x06\x12"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            'GA!stack_realign'
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x013p1113"
+        Desc:            F004000000000000F004000000000000
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x05running gcc 8.5.0 20210514"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x05annobin gcc 8.5.0 20210514"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x05plugin name: gcc-annobin"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*GOW\0*\x05\x02"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*\x02\x03"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            'GA+stack_clash'
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*cf_protection\0\b"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*FORTIFY\0\x02"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            'GA+GLIBCXX_ASSERTIONS'
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*\a\x02"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA!\b"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            'GA+omit_frame_pointer'
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*\x06\x12"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            'GA!stack_realign'
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x013p1113"
+        Desc:            F004000000000000F004000000000000
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x05running gcc 8.5.0 20210514"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x05annobin gcc 8.5.0 20210514"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x05plugin name: gcc-annobin"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*GOW\0*\x05\x02"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*\x02\x03"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            'GA+stack_clash'
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*cf_protection\0\b"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*FORTIFY\0\x02"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            'GA+GLIBCXX_ASSERTIONS'
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*\a\x02"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA!\b"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            'GA+omit_frame_pointer'
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA*\x06\x12"
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            'GA!stack_realign'
+        Desc:            ''
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x013a1"
+        Desc:            '85060000000000008506000000000000'
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x013a1"
+        Desc:            '85060000000000008506000000000000'
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x013a1"
+        Desc:            C604000000000000CB04000000000000
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x013a1"
+        Desc:            '90060000000000009506000000000000'
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+  - Name:            .debug_info
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         24000000050004080000000037AA38DE48449DD70100000000080000000001001C00000008000000240000000500040817000000495EA96AE5C99FC4015F000000180000000001000B00000018000000
+  - Name:            .debug_abbrev
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         014A00101772171B25B442197625111B12067317000000014A00101772171B25B442197625111B12067317000000
+  - Name:            .debug_line
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         5B0000000500080037000000010101FB0E0D00010101010000000100000101011F010000000003011F020F051E010200000000CEBCB192A47C15B4C4C1CCEC9400444F0400000902E0050000000000001405190AE40512060B740206000101590000000500080037000000010101FB0E0D00010101010000000100000101011F010000000003011F020F051E016200000000E50309AC872C80EA355C846ACBBCF1660400000902000600000000000014050D0A4A060B580202000101
+  - Name:            .debug_str_offsets
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         0C0000000500000000000000020000000C000000050000000000000011000000
+  - Name:            .debug_gnu_pubnames
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         18000000020000000000280000001A000000306D61696E000000000017000000020028000000280000001A00000030666F6F0000000000
+  - Name:            .debug_gnu_pubtypes
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         17000000020000000000280000002900000090696E74000000000017000000020028000000280000002900000090696E740000000000
+  - Name:            .debug_line_str
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Content:         2E002F686F6D652F6A65666672657974616E2F6C6C766D2D73616E642F65787465726E616C2F6C6C766D2D70726F6A6563742F6C6C64622F746573742F4150492F636F6D6D616E64732F7461726765742F6465627567696E666F2F6D61696E2E63002F686F6D652F6A65666672657974616E2F6C6C766D2D73616E642F65787465726E616C2F6C6C766D2D70726F6A6563742F6C6C64622F746573742F4150492F636F6D6D616E64732F7461726765742F6465627567696E666F2F666F6F2E6300
+Symbols:
+  - Name:            .interp
+    Type:            STT_SECTION
+    Section:         .interp
+    Value:           0x238
+  - Name:            .note.ABI-tag
+    Type:            STT_SECTION
+    Section:         .note.ABI-tag
+    Value:           0x254
+  - Name:            .gnu.hash
+    Type:            STT_SECTION
+    Section:         .gnu.hash
+    Value:           0x278
+  - Name:            .dynsym
+    Type:            STT_SECTION
+    Section:         .dynsym
+    Value:           0x298
+  - Name:            .dynstr
+    Type:            STT_SECTION
+    Section:         .dynstr
+    Value:           0x328
+  - Name:            .gnu.version
+    Type:            STT_SECTION
+    Section:         .gnu.version
+    Value:           0x3A6
+  - Name:            .gnu.version_r
+    Type:            STT_SECTION
+    Section:         .gnu.version_r
+    Value:           0x3B8
+  - Name:            .rela.dyn
+    Type:            STT_SECTION
+    Section:         .rela.dyn
+    Value:           0x3D8
+  - Name:            .rela.plt
+    Type:            STT_SECTION
+    Section:         .rela.plt
+    Value:           0x498
+  - Name:            .init
+    Type:            STT_SECTION
+    Section:         .init
+    Value:           0x4B0
+  - Name:            .plt
+    Type:            STT_SECTION
+    Section:         .plt
+    Value:           0x4D0
+  - Name:            .text
+    Type:            STT_SECTION
+    Section:         .text
+    Value:           0x4F0
+  - Name:            .fini
+    Type:            STT_SECTION
+    Section:         .fini
+    Value:           0x688
+  - Name:            .rodata
+    Type:            STT_SECTION
+    Section:         .rodata
+    Value:           0x698
+  - Name:            .eh_frame_hdr
+    Type:            STT_SECTION
+    Section:         .eh_frame_hdr
+    Value:           0x69C
+  - Name:            .eh_frame
+    Type:            STT_SECTION
+    Section:         .eh_frame
+    Value:           0x6D8
+  - Name:            .init_array
+    Type:            STT_SECTION
+    Section:         .init_array
+    Value:           0x200DE0
+  - Name:            .fini_array
+    Type:            STT_SECTION
+    Section:         .fini_array
+    Value:           0x200DE8
+  - Name:            .data.rel.ro
+    Type:            STT_SECTION
+    Section:         .data.rel.ro
+    Value:           0x200DF0
+  - Name:            .dynamic
+    Type:            STT_SECTION
+    Section:         .dynamic
+    Value:           0x200DF8
+  - Name:            .got
+    Type:            STT_SECTION
+    Section:         .got
+    Value:           0x200FD8
+  - Name:            .got.plt
+    Type:            STT_SECTION
+    Section:         .got.plt
+    Value:           0x201000
+  - Name:            .data
+    Type:            STT_SECTION
+    Section:         .data
+    Value:           0x201020
+  - Name:            .bss
+    Type:            STT_SECTION
+    Section:         .bss
+    Value:           0x201024
+  - Name:            .comment
+    Type:            STT_SECTION
+    Section:         .comment
+  - Name:            .gnu.build.attributes
+    Type:            STT_SECTION
+    Section:         .gnu.build.attributes
+    Value:           0x601028
+  - Name:            .debug_info
+    Type:            STT_SECTION
+    Section:         .debug_info
+  - Name:            .debug_abbrev
+    Type:            STT_SECTION
+    Section:         .debug_abbrev
+  - Name:            .debug_line
+    Type:            STT_SECTION
+    Section:         .debug_line
+  - Name:            .debug_str
+    Type:            STT_SECTION
+    Section:         .debug_str
+  - Name:            .debug_addr
+    Type:            STT_SECTION
+    Section:         .debug_addr
+  - Name:            .debug_str_offsets
+    Type:            STT_SECTION
+    Section:         .debug_str_offsets
+  - Name:            .debug_gnu_pubnames
+    Type:            STT_SECTION
+    Section:         .debug_gnu_pubnames
+  - Name:            .debug_gnu_pubtypes
+    Type:            STT_SECTION
+    Section:         .debug_gnu_pubtypes
+  - Name:            .debug_line_str
+    Type:            STT_SECTION
+    Section:         .debug_line_str
+  - Name:            '/usr/lib/gcc/x86_64-redhat-linux/8/../../../../lib64/Scrt1.o'
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            .annobin_init.c
+    Section:         .text
+    Value:           0x51F
+    Other:           [ STV_HIDDEN ]
+  - Name:            .annobin_init.c_end
+    Section:         .text
+    Value:           0x51F
+    Other:           [ STV_HIDDEN ]
+  - Name:            .annobin_init.c.hot
+    Section:         .text
+    Value:           0x4F0
+    Other:           [ STV_HIDDEN ]
+  - Name:            .annobin_init.c_end.hot
+    Section:         .text
+    Value:           0x4F0
+    Other:           [ STV_HIDDEN ]
+  - Name:            .annobin_init.c.unlikely
+    Section:         .text
+    Value:           0x4F0
+    Other:           [ STV_HIDDEN ]
+  - Name:            .annobin_init.c_end.unlikely
+    Section:         .text
+    Value:           0x4F0
+    Other:           [ STV_HIDDEN ]
+  - Name:            .annobin_init.c.startup
+    Section:         .text
+    Value:           0x4F0
+    Other:           [ STV_HIDDEN ]
+  - Name:            .annobin_init.c_end.startup
+    Section:         .text
+    Value:           0x4F0
+    Other:           [ STV_HIDDEN ]
+  - Name:            .annobin_init.c.exit
+    Section:         .text
+    Value:           0x4F0
+    Other:           [ STV_HIDDEN ]
+  - Name:            .annobin_init.c_end.exit
+    Section:         .text
+    Value:           0x4F0
+    Other:           [ STV_HIDDEN ]
+  - Name:            elf-init.oS
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            .annobin_elf_init.c
+    Section:         .text
+    Value:           0x610
+    Other:           [ STV_HIDDEN ]
+  - Name:            .annobin_elf_init.c_end
+    Section:         .text
+    Value:           0x685
+    Other:           [ STV_HIDDEN ]
+  - Name:            .annobin_elf_init.c.hot
+    Section:         .text
+    Value:           0x4F0
+    Other:           [ STV_HIDDEN ]
+  - Name:            .annobin_elf_init.c_end.hot
+    Section:         .text
+    Value:           0x4F0
+    Other:           [ STV_HIDDEN ]
+  - Name:            .annobin_elf_init.c.unlikely
+    Section:         .text
+    Value:           0x4F0
+    Other:           [ STV_HIDDEN ]
+  - Name:            .annobin_elf_init.c_end.unlikely
+    Section:         .text
+    Value:           0x4F0
+    Other:           [ STV_HIDDEN ]
+  - Name:            .annobin_elf_init.c.startup
+    Section:         .text
+    Value:           0x4F0
+    Other:           [ STV_HIDDEN ]
+  - Name:            .annobin_elf_init.c_end.startup
+    Section:         .text
+    Value:           0x4F0
+    Other:           [ STV_HIDDEN ]
+  - Name:            .annobin_elf_init.c.exit
+    Section:         .text
+    Value:           0x4F0
+    Other:           [ STV_HIDDEN ]
+  - Name:            .annobin_elf_init.c_end.exit
+    Section:         .text
+    Value:           0x4F0
+    Other:           [ STV_HIDDEN ]
+  - Name:            .annobin___libc_csu_init.start
+    Section:         .text
+    Value:           0x610
+    Other:           [ STV_HIDDEN ]
+  - Name:            .annobin___libc_csu_init.end
+    Section:         .text
+    Value:           0x675
+    Other:           [ STV_HIDDEN ]
+  - Name:            .annobin___libc_csu_fini.start
+    Section:         .text
+    Value:           0x675
+    Other:           [ STV_HIDDEN ]
+  - Name:            .annobin___libc_csu_fini.end
+    Section:         .text
+    Value:           0x685
+    Other:           [ STV_HIDDEN ]
+  - Name:            crtstuff.c
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            deregister_tm_clones
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x520
+  - Name:            register_tm_clones
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x550
+  - Name:            __do_global_dtors_aux
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x590
+  - Name:            completed.7303
+    Type:            STT_OBJECT
+    Section:         .bss
+    Value:           0x201024
+    Size:            0x1
+  - Name:            __do_global_dtors_aux_fini_array_entry
+    Type:            STT_OBJECT
+    Section:         .fini_array
+    Value:           0x200DE8
+  - Name:            frame_dummy
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x5D0
+  - Name:            __frame_dummy_init_array_entry
+    Type:            STT_OBJECT
+    Section:         .init_array
+    Value:           0x200DE0
+  - Name:            main.c
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            foo.c
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            'crtstuff.c (1)'
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            __FRAME_END__
+    Type:            STT_OBJECT
+    Section:         .eh_frame
+    Value:           0x7CC
+  - Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            __init_array_end
+    Section:         .init_array
+    Value:           0x200DE8
+  - Name:            _DYNAMIC
+    Type:            STT_OBJECT
+    Section:         .dynamic
+    Value:           0x200DF8
+  - Name:            __init_array_start
+    Section:         .init_array
+    Value:           0x200DE0
+  - Name:            __GNU_EH_FRAME_HDR
+    Section:         .eh_frame_hdr
+    Value:           0x69C
+  - Name:            _GLOBAL_OFFSET_TABLE_
+    Type:            STT_OBJECT
+    Section:         .got.plt
+    Value:           0x201000
+  - Name:            _init
+    Type:            STT_FUNC
+    Section:         .init
+    Value:           0x4B0
+  - Name:            __libc_csu_fini
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x680
+    Size:            0x5
+  - Name:            _ITM_deregisterTMCloneTable
+    Binding:         STB_WEAK
+  - Name:            data_start
+    Section:         .data
+    Binding:         STB_WEAK
+    Value:           0x201020
+  - Name:            _edata
+    Section:         .data
+    Binding:         STB_GLOBAL
+    Value:           0x201024
+  - Name:            _fini
+    Type:            STT_FUNC
+    Section:         .fini
+    Binding:         STB_GLOBAL
+    Value:           0x688
+    Other:           [ STV_HIDDEN ]
+  - Name:            '__libc_start_main@@GLIBC_2.2.5'
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            __data_start
+    Section:         .data
+    Binding:         STB_GLOBAL
+    Value:           0x201020
+  - Name:            __gmon_start__
+    Binding:         STB_WEAK
+  - Name:            __dso_handle
+    Type:            STT_OBJECT
+    Section:         .data.rel.ro
+    Binding:         STB_GLOBAL
+    Value:           0x200DF0
+    Other:           [ STV_HIDDEN ]
+  - Name:            _IO_stdin_used
+    Type:            STT_OBJECT
+    Section:         .rodata
+    Binding:         STB_GLOBAL
+    Value:           0x698
+    Size:            0x4
+  - Name:            __libc_csu_init
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x610
+    Size:            0x65
+  - Name:            foo
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x600
+    Size:            0xB
+  - Name:            _end
+    Section:         .bss
+    Binding:         STB_GLOBAL
+    Value:           0x201028
+  - Name:            _start
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x4F0
+    Size:            0x2F
+  - Name:            __bss_start
+    Section:         .bss
+    Binding:         STB_GLOBAL
+    Value:           0x201024
+  - Name:            main
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x5E0
+    Size:            0x1C
+  - Name:            __TMC_END__
+    Type:            STT_OBJECT
+    Section:         .data
+    Binding:         STB_GLOBAL
+    Value:           0x201028
+    Other:           [ STV_HIDDEN ]
+  - Name:            _ITM_registerTMCloneTable
+    Binding:         STB_WEAK
+  - Name:            '__cxa_finalize@@GLIBC_2.2.5'
+    Type:            STT_FUNC
+    Binding:         STB_WEAK
+DynamicSymbols:
+  - Name:            _ITM_deregisterTMCloneTable
+    Binding:         STB_WEAK
+  - Name:            __libc_start_main
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            __gmon_start__
+    Binding:         STB_WEAK
+  - Name:            _ITM_registerTMCloneTable
+    Binding:         STB_WEAK
+  - Name:            __cxa_finalize
+    Type:            STT_FUNC
+    Binding:         STB_WEAK
+DWARF:
+  debug_str:
+    - .
+    - a.out-main.dwo
+    - a.out-foo.dwo
+  debug_addr:
+    - Length:          0xC
+      Version:         0x5
+      AddressSize:     0x8
+      Entries:
+        - Address:         0x5E0
+    - Length:          0xC
+      Version:         0x5
+      AddressSize:     0x8
+      Entries:
+        - Address:         0x600
+...

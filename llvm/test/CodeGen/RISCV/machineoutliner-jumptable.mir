@@ -1,0 +1,65 @@
+# RUN: llc -mtriple=riscv32 -x mir -run-pass=machine-outliner -simplify-mir -verify-machineinstrs < %s \
+# RUN: | FileCheck -check-prefix=RV32I-MO %s
+# RUN: llc -mtriple=riscv64 -x mir -run-pass=machine-outliner -simplify-mir -verify-machineinstrs < %s \
+# RUN: | FileCheck -check-prefix=RV64I-MO %s
+
+--- |
+  ; Cannot outline instructions with jump-table index operands
+  define i32 @foo(i32 %a, i32 %b) #0 { ret i32 0 }
+
+...
+---
+name:            foo
+tracksRegLiveness: true
+jumpTable:
+  kind:            block-address
+  entries:
+    - id:              0
+      blocks:          [ '%bb.0', '%bb.1', '%bb.2', '%bb.3' ]
+body:             |
+  bb.0:
+    liveins: $x10, $x11
+    ; RV32I-MO-LABEL: name: foo
+    ; RV32I-MO: $x5 = PseudoCALLReg {{.*}} @OUTLINED_FUNCTION_0
+    ; RV32I-MO: $x12 = LUI target-flags(riscv-hi) %jump-table.0
+    ; RV32I-MO: $x12 = ADDI $x12, target-flags(riscv-lo) %jump-table.0
+    ;
+    ; RV64I-MO-LABEL: name: foo
+    ; RV64I-MO: $x5 = PseudoCALLReg {{.*}} @OUTLINED_FUNCTION_0
+    ; RV64I-MO: $x12 = LUI target-flags(riscv-hi) %jump-table.0
+    ; RV64I-MO: $x12 = ADDI $x12, target-flags(riscv-lo) %jump-table.0
+
+    $x11 = ORI $x11, 1023
+    $x12 = ADDI $x10, 17
+    $x11 = AND $x12, $x11
+    $x10 = SUB $x10, $x11
+    $x12 = LUI target-flags(riscv-hi) %jump-table.0
+    $x12 = ADDI $x12, target-flags(riscv-lo) %jump-table.0
+    PseudoBR %bb.3
+
+  bb.1:
+    liveins: $x10, $x11
+
+    $x11 = ORI $x11, 1023
+    $x12 = ADDI $x10, 17
+    $x11 = AND $x12, $x11
+    $x10 = SUB $x10, $x11
+    $x12 = LUI target-flags(riscv-hi) %jump-table.0
+    $x12 = ADDI $x12, target-flags(riscv-lo) %jump-table.0
+    PseudoBR %bb.3
+
+  bb.2:
+    liveins: $x10, $x11
+
+    $x11 = ORI $x11, 1023
+    $x12 = ADDI $x10, 17
+    $x11 = AND $x12, $x11
+    $x10 = SUB $x10, $x11
+    $x12 = LUI target-flags(riscv-hi) %jump-table.0
+    $x12 = ADDI $x12, target-flags(riscv-lo) %jump-table.0
+    PseudoBR %bb.3
+
+  bb.3:
+    PseudoRET
+
+...

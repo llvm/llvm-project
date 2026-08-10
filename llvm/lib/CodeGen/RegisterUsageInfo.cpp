@@ -1,0 +1,122 @@
+//===- RegisterUsageInfo.cpp - Register Usage Information Storage ---------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+///
+/// This pass is required to take advantage of the interprocedural register
+/// allocation infrastructure.
+///
+//===----------------------------------------------------------------------===//
+
+#include "llvm/CodeGen/RegisterUsageInfo.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/InitializePasses.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
+#include <cstdint>
+#include <utility>
+#include <vector>
+
+using namespace llvm;
+
+// Defined in TargetPassConfig.cpp
+extern cl::opt<bool> PrintRegUsage;
+
+INITIALIZE_PASS(PhysicalRegisterUsageInfoWrapperLegacy, "reg-usage-info",
+                "Register Usage Information Storage", false, true)
+
+char PhysicalRegisterUsageInfoWrapperLegacy::ID = 0;
+
+void PhysicalRegisterUsageInfo::setTargetMachine(const TargetMachine &TM) {
+  this->TM = &TM;
+}
+
+bool PhysicalRegisterUsageInfo::doInitialization(Module &M) {
+  RegMasks.reserve(M.size());
+  return false;
+}
+
+bool PhysicalRegisterUsageInfo::doFinalization(Module &M) {
+  if (PrintRegUsage)
+    print(errs());
+
+  RegMasks.shrink_and_clear();
+  return false;
+}
+
+void PhysicalRegisterUsageInfo::storeUpdateRegUsageInfo(
+    const Function &FP, ArrayRef<uint32_t> RegMask) {
+  RegMasks[&FP] = RegMask;
+}
+
+ArrayRef<uint32_t>
+PhysicalRegisterUsageInfo::getRegUsageInfo(const Function &FP) {
+  auto It = RegMasks.find(&FP);
+  if (It != RegMasks.end())
+    return ArrayRef<uint32_t>(It->second);
+  return ArrayRef<uint32_t>();
+}
+
+void PhysicalRegisterUsageInfo::print(raw_ostream &OS, const Module *M) const {
+  using FuncPtrRegMaskPair = std::pair<const Function *, std::vector<uint32_t>>;
+
+  // Create a vector of pointer to RegMasks entries
+  SmallVector<const FuncPtrRegMaskPair *, 64> FPRMPairVector(
+      llvm::make_pointer_range(RegMasks));
+
+  // sort the vector to print analysis in alphabatic order of function name.
+  llvm::sort(
+      FPRMPairVector,
+      [](const FuncPtrRegMaskPair *A, const FuncPtrRegMaskPair *B) -> bool {
+        return A->first->getName() < B->first->getName();
+      });
+
+  for (const FuncPtrRegMaskPair *FPRMPair : FPRMPairVector) {
+    OS << FPRMPair->first->getName() << " "
+       << "Clobbered Registers: ";
+    const TargetRegisterInfo *TRI
+        = TM->getSubtarget<TargetSubtargetInfo>(*(FPRMPair->first))
+          .getRegisterInfo();
+
+    for (unsigned PReg = 1, PRegE = TRI->getNumRegs(); PReg < PRegE; ++PReg) {
+      if (MachineOperand::clobbersPhysReg(&(FPRMPair->second[0]), PReg))
+        OS << printReg(PReg, TRI) << " ";
+    }
+    OS << "\n";
+  }
+}
+
+bool PhysicalRegisterUsageInfo::invalidate(
+    Module &M, const PreservedAnalyses &PA,
+    ModuleAnalysisManager::Invalidator &) {
+  auto PAC = PA.getChecker<PhysicalRegisterUsageAnalysis>();
+  return !PAC.preservedWhenStateless();
+}
+
+AnalysisKey PhysicalRegisterUsageAnalysis::Key;
+PhysicalRegisterUsageInfo
+PhysicalRegisterUsageAnalysis::run(Module &M, ModuleAnalysisManager &) {
+  PhysicalRegisterUsageInfo PRUI;
+  PRUI.doInitialization(M);
+  return PRUI;
+}
+
+PreservedAnalyses
+PhysicalRegisterUsageInfoPrinterPass::run(Module &M,
+                                          ModuleAnalysisManager &AM) {
+  auto *PRUI = &AM.getResult<PhysicalRegisterUsageAnalysis>(M);
+  PRUI->print(OS, &M);
+  return PreservedAnalyses::all();
+}

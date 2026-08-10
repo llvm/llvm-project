@@ -1,0 +1,323 @@
+; RUN: llvm-rc -no-preprocess /FO %t -- %p/Inputs/memoryflags.rc
+; RUN: llvm-readobj %t | FileCheck %s
+
+; CHECK:      Resource type (int): CURSOR (ID 1)
+; CHECK-NEXT: Resource name (int): 1
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1050
+; CHECK:      Resource type (int): GROUP_CURSOR (ID 12)
+; CHECK-NEXT: Resource name (int): 1
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1050
+; CHECK:      Resource type (int): CURSOR (ID 1)
+; CHECK-NEXT: Resource name (int): 2
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1010
+; CHECK:      Resource type (int): GROUP_CURSOR (ID 12)
+; CHECK-NEXT: Resource name (int): 2
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030
+; CHECK:      Resource type (int): CURSOR (ID 1)
+; CHECK-NEXT: Resource name (int): 3
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x0
+; CHECK:      Resource type (int): GROUP_CURSOR (ID 12)
+; CHECK-NEXT: Resource name (int): 3
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030
+; CHECK:      Resource type (int): CURSOR (ID 1)
+; CHECK-NEXT: Resource name (int): 4
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1010
+; CHECK:      Resource type (int): GROUP_CURSOR (ID 12)
+; CHECK-NEXT: Resource name (int): 4
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030
+; CHECK:      Resource type (int): CURSOR (ID 1)
+; CHECK-NEXT: Resource name (int): 5
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030
+; CHECK:      Resource type (int): GROUP_CURSOR (ID 12)
+; CHECK-NEXT: Resource name (int): 5
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030
+; CHECK:      Resource type (int): CURSOR (ID 1)
+; CHECK-NEXT: Resource name (int): 6
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030
+; CHECK:      Resource type (int): GROUP_CURSOR (ID 12)
+; CHECK-NEXT: Resource name (int): 6
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030
+; CHECK:      Resource type (int): CURSOR (ID 1)
+; CHECK-NEXT: Resource name (int): 7
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x10
+; CHECK:      Resource type (int): GROUP_CURSOR (ID 12)
+; CHECK-NEXT: Resource name (int): 7
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030
+; CHECK:      Resource type (int): CURSOR (ID 1)
+; CHECK-NEXT: Resource name (int): 8
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030
+; CHECK:      Resource type (int): GROUP_CURSOR (ID 12)
+; CHECK-NEXT: Resource name (int): 8
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030
+; CHECK:      Resource type (int): CURSOR (ID 1)
+; CHECK-NEXT: Resource name (int): 9
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x10
+; CHECK:      Resource type (int): GROUP_CURSOR (ID 12)
+; CHECK-NEXT: Resource name (int): 9
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030
+; CHECK:      Resource type (int): ICON (ID 3)
+; CHECK-NEXT: Resource name (int): 10
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1050
+; CHECK:      Resource type (int): ICON (ID 3)
+; CHECK-NEXT: Resource name (int): 11
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1050
+; CHECK:      Resource type (int): ICON (ID 3)
+; CHECK-NEXT: Resource name (int): 12
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1050
+; CHECK:      Resource type (int): ICON (ID 3)
+; CHECK-NEXT: Resource name (int): 13
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1050
+; CHECK:      Resource type (int): GROUP_ICON (ID 14)
+; CHECK-NEXT: Resource name (int): 10
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1050
+; CHECK:      Resource type (int): ICON (ID 3)
+; CHECK-NEXT: Resource name (int): 14
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1010
+; CHECK:      Resource type (int): ICON (ID 3)
+; CHECK-NEXT: Resource name (int): 15
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1010
+; CHECK:      Resource type (int): ICON (ID 3)
+; CHECK-NEXT: Resource name (int): 16
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1010
+; CHECK:      Resource type (int): ICON (ID 3)
+; CHECK-NEXT: Resource name (int): 17
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1010
+; CHECK:      Resource type (int): GROUP_ICON (ID 14)
+; CHECK-NEXT: Resource name (int): 11
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030
+; CHECK:      Resource type (int): ICON (ID 3)
+; CHECK-NEXT: Resource name (int): 18
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x0
+; CHECK:      Resource type (int): ICON (ID 3)
+; CHECK-NEXT: Resource name (int): 19
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x0
+; CHECK:      Resource type (int): ICON (ID 3)
+; CHECK-NEXT: Resource name (int): 20
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x0
+; CHECK:      Resource type (int): ICON (ID 3)
+; CHECK-NEXT: Resource name (int): 21
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x0
+; CHECK:      Resource type (int): GROUP_ICON (ID 14)
+; CHECK-NEXT: Resource name (int): 12
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030
+; CHECK:      Resource type (int): ICON (ID 3)
+; CHECK-NEXT: Resource name (int): 22
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1010
+; CHECK:      Resource type (int): ICON (ID 3)
+; CHECK-NEXT: Resource name (int): 23
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1010
+; CHECK:      Resource type (int): ICON (ID 3)
+; CHECK-NEXT: Resource name (int): 24
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1010
+; CHECK:      Resource type (int): ICON (ID 3)
+; CHECK-NEXT: Resource name (int): 25
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1010
+; CHECK:      Resource type (int): GROUP_ICON (ID 14)
+; CHECK-NEXT: Resource name (int): 13
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030
+; CHECK:      Resource type (int): ICON (ID 3)
+; CHECK-NEXT: Resource name (int): 26
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030
+; CHECK:      Resource type (int): ICON (ID 3)
+; CHECK-NEXT: Resource name (int): 27
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030
+; CHECK:      Resource type (int): ICON (ID 3)
+; CHECK-NEXT: Resource name (int): 28
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030
+; CHECK:      Resource type (int): ICON (ID 3)
+; CHECK-NEXT: Resource name (int): 29
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030
+; CHECK:      Resource type (int): GROUP_ICON (ID 14)
+; CHECK-NEXT: Resource name (int): 14
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030
+; CHECK:      Resource type (int): ICON (ID 3)
+; CHECK-NEXT: Resource name (int): 30
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030
+; CHECK:      Resource type (int): ICON (ID 3)
+; CHECK-NEXT: Resource name (int): 31
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030
+; CHECK:      Resource type (int): ICON (ID 3)
+; CHECK-NEXT: Resource name (int): 32
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030
+; CHECK:      Resource type (int): ICON (ID 3)
+; CHECK-NEXT: Resource name (int): 33
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030
+; CHECK:      Resource type (int): GROUP_ICON (ID 14)
+; CHECK-NEXT: Resource name (int): 15
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030
+; CHECK:      Resource type (int): ICON (ID 3)
+; CHECK-NEXT: Resource name (int): 34
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x10
+; CHECK:      Resource type (int): ICON (ID 3)
+; CHECK-NEXT: Resource name (int): 35
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x10
+; CHECK:      Resource type (int): ICON (ID 3)
+; CHECK-NEXT: Resource name (int): 36
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x10
+; CHECK:      Resource type (int): ICON (ID 3)
+; CHECK-NEXT: Resource name (int): 37
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x10
+; CHECK:      Resource type (int): GROUP_ICON (ID 14)
+; CHECK-NEXT: Resource name (int): 16
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030
+; CHECK:      Resource type (int): ICON (ID 3)
+; CHECK-NEXT: Resource name (int): 38
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030
+; CHECK:      Resource type (int): ICON (ID 3)
+; CHECK-NEXT: Resource name (int): 39
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030
+; CHECK:      Resource type (int): ICON (ID 3)
+; CHECK-NEXT: Resource name (int): 40
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030
+; CHECK:      Resource type (int): ICON (ID 3)
+; CHECK-NEXT: Resource name (int): 41
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030
+; CHECK:      Resource type (int): GROUP_ICON (ID 14)
+; CHECK-NEXT: Resource name (int): 17
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030
+; CHECK:      Resource type (int): ICON (ID 3)
+; CHECK-NEXT: Resource name (int): 42
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x10
+; CHECK:      Resource type (int): ICON (ID 3)
+; CHECK-NEXT: Resource name (int): 43
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x10
+; CHECK:      Resource type (int): ICON (ID 3)
+; CHECK-NEXT: Resource name (int): 44
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x10
+; CHECK:      Resource type (int): ICON (ID 3)
+; CHECK-NEXT: Resource name (int): 45
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x10
+; CHECK:      Resource type (int): GROUP_ICON (ID 14)
+; CHECK-NEXT: Resource name (int): 18
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030
+; CHECK:      Resource type (int): BITMAP (ID 2)
+; CHECK-NEXT: Resource name (int): 19
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x70
+; CHECK:      Resource type (int): BITMAP (ID 2)
+; CHECK-NEXT: Resource name (int): 20
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x30
+; CHECK:      Resource type (int): BITMAP (ID 2)
+; CHECK-NEXT: Resource name (int): 21
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x20
+; CHECK:      Resource type (int): BITMAP (ID 2)
+; CHECK-NEXT: Resource name (int): 22
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x30
+; CHECK:      Resource type (int): BITMAP (ID 2)
+; CHECK-NEXT: Resource name (int): 23
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030
+; CHECK:      Resource type (int): BITMAP (ID 2)
+; CHECK-NEXT: Resource name (int): 24
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x30
+; CHECK:      Resource type (int): BITMAP (ID 2)
+; CHECK-NEXT: Resource name (int): 25
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x10
+; CHECK:      Resource type (int): BITMAP (ID 2)
+; CHECK-NEXT: Resource name (int): 26
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x30
+; CHECK:      Resource type (int): BITMAP (ID 2)
+; CHECK-NEXT: Resource name (int): 27
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x10
+; CHECK:      Resource type (int): BITMAP (ID 2)
+; CHECK-NEXT: Resource name (int): 28
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x0
+; CHECK:      Resource type (int): BITMAP (ID 2)
+; CHECK-NEXT: Resource name (int): 29
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x0
+; CHECK:      Resource type (int): BITMAP (ID 2)
+; CHECK-NEXT: Resource name (int): 30
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x20
+; CHECK:      Resource type (int): BITMAP (ID 2)
+; CHECK-NEXT: Resource name (int): 31
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x10
+; CHECK:      Resource type (int): BITMAP (ID 2)
+; CHECK-NEXT: Resource name (int): 32
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030
+; CHECK:      Resource type (int): BITMAP (ID 2)
+; CHECK-NEXT: Resource name (int): 33
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x20
+; CHECK:      Resource type (int): BITMAP (ID 2)
+; CHECK-NEXT: Resource name (int): 34
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x20
+; CHECK:      Resource type (int): BITMAP (ID 2)
+; CHECK-NEXT: Resource name (int): 35
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030

@@ -1,0 +1,4 @@
+module "relative-dep-gen" {
+  header "relative-dep-gen-1.h"
+  header "relative-dep-gen-2.h"
+}

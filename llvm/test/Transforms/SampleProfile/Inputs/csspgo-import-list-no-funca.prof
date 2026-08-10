@@ -1,0 +1,17 @@
+[main]:154:2
+ 2: 12
+ 3.1: 18 _Z5funcBi:19
+[main:3.1 @ _Z5funcBi]:120:7040
+ 0: 7001
+ 1: 19 _Z8funcLeafi:9999
+ 3: 12
+[main:3.1 @ _Z5funcBi @ _Z5funcBiLeaf2]:1:9010
+ 0: 7001
+ 1: 19 _Z8funcLeafi3:9999
+ 3: 12
+[main:3 @ _Z5funcCi]:23254:11
+ 0: 10
+ 1: 23250
+[main:3 @ _Z5funcDi]:23:45201
+ 0: 10
+ 1: 23250

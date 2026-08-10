@@ -1,0 +1,51 @@
+macros:
+  DT_BLK:
+    in-latest-posix: ''
+  DT_CHR:
+    in-latest-posix: ''
+  DT_DIR:
+    in-latest-posix: ''
+  DT_FIFO:
+    in-latest-posix: ''
+  DT_LNK:
+    in-latest-posix: ''
+  DT_REG:
+    in-latest-posix: ''
+  DT_SOCK:
+    in-latest-posix: ''
+  DT_UNKNOWN:
+    in-latest-posix: ''
+  DT_MQ:
+    in-latest-posix: ''
+  DT_SEM:
+    in-latest-posix: ''
+  DT_SHM:
+    in-latest-posix: ''
+  DT_TMO:
+    in-latest-posix: ''
+
+functions:
+  alphasort:
+    in-latest-posix: ''
+  closedir:
+    in-latest-posix: ''
+  dirfd:
+    in-latest-posix: ''
+  fdopendir:
+    in-latest-posix: ''
+  opendir:
+    in-latest-posix: ''
+  posix_getdents:
+    in-latest-posix: ''
+  readdir:
+    in-latest-posix: ''
+  readdir_r:
+    in-latest-posix: ''
+  rewinddir:
+    in-latest-posix: ''
+  scandir:
+    in-latest-posix: ''
+  seekdir:
+    in-latest-posix: ''
+  telldir:
+    in-latest-posix: ''

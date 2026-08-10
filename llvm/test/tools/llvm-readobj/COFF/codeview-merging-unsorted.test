@@ -1,0 +1,40 @@
+; RUN: llvm-readobj --codeview %S/Inputs/codeview-unsorted.obj | FileCheck %s
+; RUN: llvm-readobj --codeview-merged-types %S/Inputs/codeview-unsorted.obj | FileCheck %s --check-prefix=MERGED
+
+; The input type stream has records that refer to later type indices in the same
+; stream:
+
+; CHECK: Pointer (0x1000)
+; CHECK: Struct (0x1001)
+; CHECK:   FieldList: {{.*}} (0x1002)
+; CHECK: FieldList (0x1002)
+; CHECK: Pointer (0x1003)
+; CHECK: Procedure (0x1004)
+; CHECK:   ArgListType: {{.*}} (0x1005)
+; CHECK: ArgList (0x1005)
+
+; MERGED: Pointer (0x1000)
+; MERGED: FieldList (0x1001)
+; MERGED: Struct (0x1002)
+; MERGED:   FieldList: {{.*}} (0x1001)
+; MERGED: Pointer (0x1003)
+; MERGED: ArgList (0x1004)
+; MERGED: Procedure (0x1005)
+; MERGED:   ArgListType: {{.*}} (0x1004)
+
+
+; To reproduce codeview-unsorted.obj:
+; $ cat codeview-unsorted.asm
+;       .model  flat, C
+;       .code
+; PBYTE TYPEDEF PTR BYTE
+; foo_list STRUCT
+;       next PBYTE ?
+;       data dd ?
+; foo_list ENDS
+;       public  foo
+; foo proc dst:ptr foo_list
+;       ret
+; foo   endp
+;       end
+; $ ml -c -Zi codeview-unsorted.asm

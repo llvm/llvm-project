@@ -1,0 +1,16 @@
+RUN: llvm-nm %p/Inputs/redacted-function.macho-aarch64 | FileCheck %s
+
+CHECK: <redacted function 1>
+
+# Generated with:
+# $ cat /tmp/a.c
+# static int i(void) {
+#   return 0;
+# }
+#
+# int main(void) {
+#   return i();
+# }
+#
+# $ xcrun -sdk watchos clang -arch arm64_32 /tmp/a.c -o /tmp/redacted-function.macho-aarch64
+# $ xcrun -sdk watchos strip -N /tmp/redacted-function.macho-aarch64

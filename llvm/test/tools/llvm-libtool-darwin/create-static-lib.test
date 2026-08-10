@@ -1,0 +1,78 @@
+## This test checks that a correct static library is created.
+
+# RUN: yaml2obj %S/Inputs/input1.yaml -o %t-input1.o
+# RUN: yaml2obj %S/Inputs/input2.yaml -o %t-input2.o
+# RUN: llvm-as %S/Inputs/x86_64-osx.ll -o %t-x86_64.bc
+
+# RUN: rm -rf %t.lib %t2.lib
+# RUN: llvm-libtool-darwin -static -o %t.lib %t-input1.o %t-input2.o %t-x86_64.bc
+# RUN: llvm-libtool-darwin -static -o %t2.lib -o %t.lib %t-input1.o %t-input2.o %t-x86_64.bc
+# RUN: not ls %t2.lib
+
+## Check that binaries are present:
+# RUN: llvm-ar t %t.lib | \
+# RUN:   FileCheck %s --check-prefix=CHECK-NAMES --implicit-check-not={{.}} -DPREFIX=%basename_t.tmp
+
+# CHECK-NAMES:      [[PREFIX]]-input1.o
+# CHECK-NAMES-NEXT: [[PREFIX]]-input2.o
+# CHECK-NAMES-NEXT: [[PREFIX]]-x86_64.bc
+
+## Check that symbols are present:
+# RUN: llvm-nm --print-armap %t.lib | \
+# RUN:   FileCheck %s --check-prefix=CHECK-SYMBOLS -DPREFIX=%basename_t.tmp --match-full-lines
+
+# CHECK-SYMBOLS:      Archive map
+# CHECK-SYMBOLS-NEXT: _symbol1 in [[PREFIX]]-input1.o
+# CHECK-SYMBOLS-NEXT: _symbol2 in [[PREFIX]]-input2.o
+# CHECK-SYMBOLS-NEXT: _x86_64 in [[PREFIX]]-x86_64.bc
+# CHECK-SYMBOLS-EMPTY:
+
+## Check that output archive is in Darwin format:
+# RUN: llvm-objdump --macho --archive-headers %t.lib | \
+# RUN:   FileCheck %s --check-prefix=FORMAT -DPREFIX=%basename_t.tmp -DARCHIVE=%t
+
+# FORMAT:      Archive : [[ARCHIVE]]
+# FORMAT-NEXT: __.SYMDEF
+# FORMAT-NEXT: [[PREFIX]]-input1.o
+# FORMAT-NEXT: [[PREFIX]]-input2.o
+# FORMAT-NEXT: [[PREFIX]]-x86_64.bc
+# FORMAT-NOT:  {{.}}
+
+## Check that the output file is overwritten:
+# RUN: llvm-libtool-darwin -static -o %t.lib %t-input2.o
+# RUN: llvm-ar t %t.lib | \
+# RUN:   FileCheck %s --check-prefix=OVERWRITE-NAMES --implicit-check-not={{.}} -DPREFIX=%basename_t.tmp
+# RUN: llvm-nm --print-armap %t.lib | \
+# RUN:   FileCheck %s --check-prefix=OVERWRITE-SYMBOLS -DPREFIX=%basename_t.tmp --match-full-lines
+
+# OVERWRITE-NAMES: [[PREFIX]]-input2.o
+
+# OVERWRITE-SYMBOLS:      Archive map
+# OVERWRITE-SYMBOLS-NEXT: _symbol2 in [[PREFIX]]-input2.o
+# OVERWRITE-SYMBOLS-EMPTY:
+
+## Duplicate a binary:
+# RUN: llvm-libtool-darwin -static -o %t.lib %t-input1.o %t-input2.o %t-input1.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=DUPLICATE-INPUT -DFILE=%basename_t.tmp-input1.o \
+# RUN:     -DINPUTA=%t-input1.o -DINPUTB=%t-input1.o
+
+# DUPLICATE-INPUT:     warning: file '[[FILE]]' was specified multiple times.
+# DUPLICATE-INPUT-DAG: [[INPUTA]]
+# DUPLICATE-INPUT-DAG: [[INPUTB]]
+
+# RUN: not llvm-libtool-darwin -warnings_as_errors -static -o %t.lib %t-input1.o %t-input2.o %t-input1.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ERROR-DUPLICATE-INPUT -DFILE=%basename_t.tmp-input1.o \
+# RUN:     -DINPUTA=%t-input1.o -DINPUTB=%t-input1.o
+
+# ERROR-DUPLICATE-INPUT:     error: file '[[FILE]]' was specified multiple times.
+# ERROR-DUPLICATE-INPUT-DAG: [[INPUTA]]
+# ERROR-DUPLICATE-INPUT-DAG: [[INPUTB]]
+
+## Make sure we can combine object files with the same name if
+## they are for different architectures.
+# RUN: mkdir -p %t/arm64 %t/armv7
+# RUN: llvm-as %S/Inputs/arm64-ios.ll -o %t/arm64/out.bc
+# RUN: llvm-as %S/Inputs/armv7-ios.ll -o %t/armv7/out.bc
+## Command output should be empty.
+# RUN: llvm-libtool-darwin -static %t/arm64/out.bc %t/armv7/out.bc -o %t.lib 2>&1 | \
+# RUN:   FileCheck %s --implicit-check-not=warning: --allow-empty

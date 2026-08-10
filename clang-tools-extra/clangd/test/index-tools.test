@@ -1,0 +1,7 @@
+# Paths are not constructed correctly for the test to run on Windows.
+# UNSUPPORTED: system-windows
+# REQUIRES: have-benchmarks
+# RUN: clangd-indexer %p/Inputs/BenchmarkSource.cpp -- -I%p/Inputs > %t.index
+# RUN: %clangd-benchmark-dir/IndexBenchmark %t.index %p/Inputs/requests.json --benchmark_min_time=0.01
+# Pass invalid JSON file and check that IndexBenchmark fails to parse it.
+# RUN: not %clangd-benchmark-dir/IndexBenchmark %t.index %t --benchmark_min_time=0.01

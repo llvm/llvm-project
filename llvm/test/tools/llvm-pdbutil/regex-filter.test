@@ -1,0 +1,94 @@
+; REQUIRES: diasdk
+
+; RUN: llvm-pdbutil pretty -module-syms -globals -types %p/Inputs/FilterTest.pdb \
+; RUN:    | FileCheck --check-prefix=NO_FILTER %s
+
+; RUN: llvm-pdbutil pretty -types -exclude-types="GlobalTypedef|NestedTypedef" \
+; RUN:    %p/Inputs/FilterTest.pdb | FileCheck --check-prefix=EXCLUDE_TYPEDEFS %s
+; RUN: llvm-pdbutil pretty -classes -enums %p/Inputs/FilterTest.pdb \
+; RUN:    | FileCheck --check-prefix=EXCLUDE_TYPEDEFS %s
+
+; RUN: llvm-pdbutil pretty -types -exclude-types="GlobalEnum|NestedEnum" \
+; RUN:    %p/Inputs/FilterTest.pdb | FileCheck --check-prefix=EXCLUDE_ENUMS %s
+; RUN: llvm-pdbutil pretty -classes -typedefs %p/Inputs/FilterTest.pdb \
+; RUN:    | FileCheck --check-prefix=EXCLUDE_ENUMS %s
+
+; RUN: llvm-pdbutil pretty -types -module-syms -globals -exclude-symbols="MemberVar|GlobalVar" \
+; RUN:    %p/Inputs/FilterTest.pdb | FileCheck --check-prefix=EXCLUDE_VARS %s
+; RUN: llvm-pdbutil pretty -classes -exclude-types="FilterTestClass" \
+; RUN:    %p/Inputs/FilterTest.pdb | FileCheck  --check-prefix=EXCLUDE_WHOLE_CLASS %s
+; RUN: llvm-pdbutil pretty -module-syms -globals -exclude-compilands="FilterTest.obj"  \
+; RUN:    %p/Inputs/FilterTest.pdb | FileCheck  --check-prefix=EXCLUDE_COMPILAND %s
+; RUN: llvm-pdbutil pretty -types -include-types="FilterTestClass" \
+; RUN:    %p/Inputs/FilterTest.pdb | FileCheck --check-prefix=INCLUDE_ONLY_TYPES %s
+; RUN: llvm-pdbutil pretty -types -module-syms -globals -include-symbols="[[:<:]](IntGlobalVar|DoubleGlobalVar)[[:>:]]" \
+; RUN:    %p/Inputs/FilterTest.pdb | FileCheck --check-prefix=INCLUDE_ONLY_VARS %s
+
+; NO_FILTER: ---TYPES---
+; NO_FILTER: Enums:
+; NO_FILTER: enum GlobalEnum
+; NO_FILTER: Typedefs
+; NO_FILTER: typedef int GlobalTypedef
+; NO_FILTER: Classes:
+; NO_FILTER: struct __vc_attributes
+; NO_FILTER: class FilterTestClass
+; NO_FILTER-DAG: typedef int NestedTypedef
+; NO_FILTER-DAG: enum NestedEnum
+; NO_FILTER-DAG: int IntMemberVar
+; NO_FILTER-DAG: double DoubleMemberVar
+; NO_FILTER: ---SYMBOLS---
+; NO_FILTER: Inputs\FilterTest.obj
+; NO_FILTER: int __cdecl main(int argc, char** argv)
+; NO_FILTER: ---GLOBALS---
+; NO_FILTER-DAG: double DoubleGlobalVar
+; NO_FILTER-DAG: int IntGlobalVar
+; NO_FILTER-DAG: GlobalEnum GlobalEnumVar
+
+; EXCLUDE_TYPEDEFS: ---TYPES---
+; EXCLUDE_TYPEDEFS-NOT: GlobalTypedef
+; EXCLUDE_TYPEDEFS-NOT: NestedTypedef
+; EXCLUDE_TYPEDEFS-DAG: GlobalEnum
+; EXCLUDE_TYPEDEFS-DAG: NestedEnum
+; EXCLUDE_TYPEDEFS: class FilterTestClass
+
+; EXCLUDE_ENUMS: ---TYPES---
+; EXCLUDE_ENUMS-NOT: GlobalEnum
+; EXCLUDE_ENUMS-NOT: NestedEnum
+; EXCLUDE_ENUMS: GlobalTypedef
+; EXCLUDE_ENUMS: class FilterTestClass
+
+; EXCLUDE_VARS: ---TYPES---
+; EXCLUDE_VARS-NOT: IntMemberVar
+; EXCLUDE_VARS-NOT: DoubleMemberVar
+; EXCLUDE_VARS-DAG: GlobalEnum
+; EXCLUDE_VARS-DAG: NestedEnum
+; EXCLUDE_VARS: GlobalTypedef
+; EXCLUDE_VARS: class FilterTestClass
+; EXCLUDE_VARS: ---GLOBALS---
+; EXCLUDE_VARS-NOT: DoubleGlobalVar
+; EXCLUDE_VARS-NOT: IntGlobalVar
+
+; EXCLUDE_WHOLE_CLASS: ---TYPES---
+; EXCLUDE_WHOLE_CLASS-NOT: class FilterTestClass
+
+; EXCLUDE_COMPILAND: ---SYMBOLS---
+; EXCLUDE_COMPILAND-NOT: FilterTest.obj
+; EXCLUDE_COMPILAND-NOT: __cdecl main
+; EXCLUDE_COMPILAND: * Linker *
+; EXCLUDE_COMPILAND: ---GLOBALS---
+
+; Everything but types are displayed normally.  But FilterTestClass is
+; the only type that should be displayed.
+; INCLUDE_ONLY_TYPES: ---TYPES---
+; INCLUDE_ONLY_TYPES-NOT: GlobalTypedef
+; INCLUDE_ONLY_TYPES: class FilterTestClass
+
+; We should only see DoubleGlobalVar and IntGlobalVar.  This means that even
+; variables printed in class definitions should be filtered out.
+; INCLUDE_ONLY_VARS: ---TYPES---
+; INCLUDE_ONLY_VARS: class FilterTestClass
+; INCLUDE_ONLY_VARS-NOT: IntMemberVar
+; INCLUDE_ONLY_VARS-NOT: IntDoubleVar
+; INCLUDE_ONLY_VARS: ---GLOBALS---
+; INCLUDE_ONLY_VARS: DoubleGlobalVar
+; INCLUDE_ONLY_VARS: IntGlobalVar

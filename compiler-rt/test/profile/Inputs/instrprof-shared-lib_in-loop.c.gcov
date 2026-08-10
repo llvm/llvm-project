@@ -1,0 +1,13 @@
+// CHECK:        -:    0:Source:{{.*}}Inputs{{[/\\]}}instrprof-shared-lib.c
+// CHECK-NEXT:        -:    0:Graph:instrprof-shared-lib.gcno
+// CHECK-NEXT:        -:    0:Data:instrprof-shared-lib.gcda
+// CHECK-NEXT:        -:    0:Runs:1
+// CHECK-NEXT:        -:    1:int g1 = 0;
+// CHECK-NEXT:        -:    2:int g2 = 1;
+// CHECK-NEXT:        -:    3:
+// CHECK-NEXT:  1000000:    4:void foo(int n) {
+// CHECK-NEXT:  1000000:    5:  if (n % 5 == 0)
+// CHECK-NEXT:   360000:    6:    g1++;
+// CHECK-NEXT:        -:    7:  else
+// CHECK-NEXT:   640000:    8:    g2++;
+// CHECK-NEXT:  1000000:    9:}

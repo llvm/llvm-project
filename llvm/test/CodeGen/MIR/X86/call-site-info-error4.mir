@@ -1,0 +1,23 @@
+# RUN: llc -emit-call-site-info -mtriple=x86_64-- -run-pass none %s -o - 2>&1 | FileCheck %s
+# CHECK-NOT: Call site info provided but not used
+--- |
+  define dso_local i32 @baa(i32 %a) local_unnamed_addr {
+  entry:
+    %call = tail call i32 @foo(i32 %a)
+    ret i32 %call
+  }
+
+  declare dso_local i32 @foo(i32) local_unnamed_addr
+...
+---
+name: baa
+callSites:
+  - {bb: 0, offset: 0, fwdArgRegs:
+    - { arg: 0, reg: '$edi' } }
+body: |
+  bb.0:
+  liveins: $edi
+
+  TAILJMPd64 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $rsp, implicit $ssp, implicit $edi
+
+...

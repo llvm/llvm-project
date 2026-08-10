@@ -1,0 +1,70 @@
+# RUN: yaml2obj %s -o %t
+# RUN: lldb-test object-file %t | FileCheck %s
+
+
+# CHECK:      Showing 3 sections
+# CHECK-NEXT:   Index: 0
+# CHECK-NEXT:   ID: 0xffffffffffffffff
+# CHECK-NEXT:   Name: PECOFF header
+# CHECK-NEXT:   Type: regular
+# CHECK-NEXT:   Permissions: r--
+# CHECK-NEXT:   Thread specific: no
+# CHECK-NEXT:   VM address: 0x40000000
+# CHECK-NEXT:   VM size: 512
+# CHECK-NEXT:   File size: 512
+# CHECK-EMPTY: 
+# CHECK-NEXT:   Index: 1
+# CHECK-NEXT:   ID: 0x1
+# CHECK-NEXT:   Name: .text
+# CHECK-NEXT:   Type: code
+# CHECK-NEXT:   Permissions: r-x
+# CHECK-NEXT:   Thread specific: no
+# CHECK-NEXT:   VM address: 0x40001000
+# CHECK-NEXT:   VM size: 64
+# CHECK-NEXT:   File size: 512
+# CHECK-EMPTY:
+# CHECK-NEXT:   Index: 2
+# CHECK-NEXT:   ID: 0x2
+# CHECK-NEXT:   Name: .data
+# CHECK-NEXT:   Type: data
+# CHECK-NEXT:   Permissions: r--
+# CHECK-NEXT:   Thread specific: no
+# CHECK-NEXT:   VM address: 0x40002000
+# CHECK-NEXT:   VM size: 64
+# CHECK-NEXT:   File size: 512
+
+
+--- !COFF
+OptionalHeader:
+  AddressOfEntryPoint: 4616
+  ImageBase:       1073741824
+  SectionAlignment: 4096
+  FileAlignment:   512
+  MajorOperatingSystemVersion: 6
+  MinorOperatingSystemVersion: 0
+  MajorImageVersion: 0
+  MinorImageVersion: 0
+  MajorSubsystemVersion: 6
+  MinorSubsystemVersion: 0
+  Subsystem:       IMAGE_SUBSYSTEM_WINDOWS_CUI
+  DLLCharacteristics: [ IMAGE_DLL_CHARACTERISTICS_HIGH_ENTROPY_VA, IMAGE_DLL_CHARACTERISTICS_DYNAMIC_BASE, IMAGE_DLL_CHARACTERISTICS_NX_COMPAT, IMAGE_DLL_CHARACTERISTICS_TERMINAL_SERVER_AWARE ]
+  SizeOfStackReserve: 1048576
+  SizeOfStackCommit: 4096
+  SizeOfHeapReserve: 1048576
+  SizeOfHeapCommit: 4096
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  4096
+    VirtualSize:     64
+    SectionData:     DEADBEEFBAADF00D
+  - Name:            .data
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  8192
+    VirtualSize:     64
+    SectionData:     DEADBEEFBAADF00D
+symbols:         []
+...

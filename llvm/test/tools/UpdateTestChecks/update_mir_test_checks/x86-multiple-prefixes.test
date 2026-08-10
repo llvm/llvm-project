@@ -1,0 +1,5 @@
+# REQUIRES: x86-registered-target
+## Check that update_mir_test_checks handles multiple check prefixes
+
+# RUN: cp -f %S/Inputs/x86-multiple-prefixes.ll %t.ll && %update_mir_test_checks %t.ll
+# RUN: diff -u %S/Inputs/x86-multiple-prefixes.ll.expected %t.ll

@@ -1,0 +1,112 @@
+## In this test we check the --needed-libs option.
+
+# RUN: yaml2obj %s --docnum=1 -o %t1
+# RUN: llvm-readobj --needed-libs %t1 2>&1 \
+# RUN:   | FileCheck %s -DFILE=%t1 --implicit-check-not=warning: --strict-whitespace --check-prefix=NEEDED-LIBS
+# RUN: llvm-readelf --needed-libs %t1 2>&1 \
+# RUN:   | FileCheck %s -DFILE=%t1 --implicit-check-not=warning: --strict-whitespace --check-prefix=NEEDED-LIBS
+# RUN: llvm-readobj --elf-output-style=JSON --needed-libs --pretty-print %t1 2>&1 \
+# RUN:   | FileCheck %s -DFILE=%t1 --implicit-check-not=warning: --match-full-lines --strict-whitespace --check-prefix=JSON
+
+## Check that library names are sorted when printed.
+## Document that we also sort error entries.
+
+#      NEEDED-LIBS:{{^}}NeededLibraries [{{$}}
+# NEEDED-LIBS-NEXT:  warning: '[[FILE]]': string table at offset 0x78: unable to read the string at 0x9999a11: it goes past the end of the table (0x85){{$}}
+# NEEDED-LIBS-NEXT:  warning: '[[FILE]]': string table at offset 0x78: unable to read the string at 0x1111189: it goes past the end of the table (0x85){{$}}
+# NEEDED-LIBS-NEXT:{{^}}  <?>{{$}}
+# NEEDED-LIBS-NEXT:{{^}}  <?>{{$}}
+# NEEDED-LIBS-NEXT:{{^}}  aaa{{$}}
+# NEEDED-LIBS-NEXT:{{^}}  bbb{{$}}
+# NEEDED-LIBS-NEXT:{{^}}  ccc{{$}}
+# NEEDED-LIBS-NEXT:{{^}}]{{$}}
+
+#      JSON:    "FileSummary": {
+#      JSON:    "NeededLibraries": [{{.*}}warning: '[[FILE]]': string table at offset 0x78: unable to read the string at 0x9999a11: it goes past the end of the table (0x85)
+# JSON-NEXT:{{.*}}warning: '[[FILE]]': string table at offset 0x78: unable to read the string at 0x1111189: it goes past the end of the table (0x85)
+# JSON-EMPTY:
+# JSON-NEXT:      "<?>",
+# JSON-NEXT:      "<?>",
+# JSON-NEXT:      "aaa",
+# JSON-NEXT:      "bbb",
+# JSON-NEXT:      "ccc"
+# JSON-NEXT:    ]
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:  .dynstr
+    Type:  SHT_STRTAB
+    Flags: [ SHF_ALLOC ]
+    Content: '00616161006262620063636300' ## 0,a,a,a,0,b,b,b,0,c,c,c,0
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_STRTAB
+        Value: 0x0000000000000000
+      - Tag:   DT_NEEDED
+        Value: 0x9999999
+      - Tag:   DT_NEEDED
+        Value: 9
+      - Tag:   DT_NEEDED
+        Value: 1
+      - Tag:   DT_NEEDED
+        Value: 5
+      - Tag:   DT_NEEDED
+        Value: 0x1111111
+      - Tag:   DT_STRSZ
+        Value: [[SIZE=0xD]]
+      - Tag:   DT_NULL
+        Value: 0x0
+ProgramHeaders:
+  - Type: PT_LOAD
+    VAddr: 0x0
+    FirstSec: .dynstr
+    LastSec:  .dynamic
+
+## Check what we print when the dynamic string table is empty.
+# RUN: yaml2obj %s --docnum=2 -o %t2
+# RUN: llvm-readobj --needed-libs %t2 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t2 --implicit-check-not=warning: --check-prefix=EMPTY-DYNSTR
+# RUN: llvm-readelf --needed-libs %t2 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t2 --implicit-check-not=warning: --check-prefix=EMPTY-DYNSTR
+
+# EMPTY-DYNSTR:      NeededLibraries [
+# EMPTY-DYNSTR-NEXT: warning: '[[FILE]]': string table at offset 0x78: unable to read the string at 0x79: it goes past the end of the table (0x78)
+# EMPTY-DYNSTR-NEXT: warning: '[[FILE]]': string table at offset 0x78: unable to read the string at 0x7a: it goes past the end of the table (0x78)
+# EMPTY-DYNSTR-NEXT:   <?>
+# EMPTY-DYNSTR-NEXT:   <?>
+# EMPTY-DYNSTR-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:  .dynstr
+    Type:  SHT_STRTAB
+    Flags: [ SHF_ALLOC ]
+    Size:  0
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Address: 0x1000
+    Entries:
+      - Tag:   DT_STRTAB
+        Value: 0x0000000000000000
+      - Tag:   DT_NEEDED
+        Value: 1
+      - Tag:   DT_NEEDED
+        Value: 2
+      - Tag:   DT_STRSZ
+        Value: 0x0
+      - Tag:   DT_NULL
+        Value: 0x0
+ProgramHeaders:
+  - Type:     PT_LOAD
+    VAddr:    0x0
+    FirstSec: .dynstr
+    LastSec:  .dynamic

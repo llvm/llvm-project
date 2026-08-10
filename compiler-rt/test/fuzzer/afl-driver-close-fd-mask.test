@@ -1,0 +1,30 @@
+REQUIRES: linux
+RUN: %no_fuzzer_cpp_compiler %S/AFLDriverTest.cpp %libfuzzer_src/afl/afl_driver.cpp -o %t-AFLDriverTest
+
+; Test that not specifying AFL_DRIVER_CLOSE_FD_MASK works as intended.
+RUN: echo -n "abc" > %t.file3
+RUN: env -u AFL_DRIVER_CLOSE_FD_MASK %run %t-AFLDriverTest < %t.file3 2>&1 | FileCheck %s --check-prefixes=STDERR,STDOUT
+STDOUT: STDOUT MESSAGE
+STDERR: STDERR MESSAGE
+
+; Test that stdout is closed properly.
+RUN: env AFL_DRIVER_CLOSE_FD_MASK=1 %run %t-AFLDriverTest < %t.file3 2>&1 | FileCheck %s --check-prefixes=NOT_STDOUT,STDERR
+NOT_STDOUT-NOT: STDOUT MESSAGE
+
+; Test that stderr is closed properly.
+RUN: env AFL_DRIVER_CLOSE_FD_MASK=2 %run %t-AFLDriverTest < %t.file3 2>&1 | FileCheck %s --check-prefixes=NOT_STDERR,STDOUT
+NOT_STDERR-NOT: STDERR MESSAGE
+
+; Test that both are closed properly.
+RUN: env AFL_DRIVER_CLOSE_FD_MASK=3 %run %t-AFLDriverTest < %t.file3 2>&1 | FileCheck %s --check-prefixes=NOT_STDERR,NOT_STDOUT
+
+; Test that a stack is printed when we close stderr
+RUN: echo -n "abcd" > %t.file4
+RUN: env AFL_DRIVER_CLOSE_FD_MASK=2 not %run %t-AFLDriverTest < %t.file4 2>&1  | FileCheck %s --check-prefixes=ASAN_CRASH,STDOUT,NOT_STDERR
+ASAN_CRASH: ERROR: AddressSanitizer
+
+; Test that a stack is written to the stderr duplicate file when we close stderr
+; and specify a duplicate.
+RUN: rm -f %t.stderr
+RUN: env AFL_DRIVER_STDERR_DUPLICATE_FILENAME=%t.stderr AFL_DRIVER_CLOSE_FD_MASK=2 not %run %t-AFLDriverTest < %t.file4
+RUN: cat %t.stderr | FileCheck %s --check-prefixes=ASAN_CRASH,NOT_STDERR

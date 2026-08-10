@@ -1,0 +1,7 @@
+SECTIONS
+{
+. = 0x4002a0;
+.text : { *(.text*) }
+. = 0x601000;
+.data : { *(.data) }
+}

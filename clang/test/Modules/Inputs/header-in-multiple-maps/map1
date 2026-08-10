@@ -1,0 +1,3 @@
+module a { header "a.h" }
+module b { header "a.h" }
+module c { textual header "a.h" }

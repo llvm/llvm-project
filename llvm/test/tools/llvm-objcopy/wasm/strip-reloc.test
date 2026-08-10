@@ -1,0 +1,53 @@
+## Test that linking, reloc, and name sections are stripped by --strip-all.
+
+## These get a separate test because ObjectYaml understands relocs and names,
+## so the test needs to be a valid object with relocs and names.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy --strip-all %t %t2
+# RUN: obj2yaml %t2 | FileCheck %s
+
+## Check that the known sections are still present.
+# CHECK: Sections:
+# CHECK: - Type: TYPE
+# CHECK: - Type: FUNCTION
+# CHECK: - Type: CODE
+# CHECK-NOT: Relocations
+# CHECK-NOT: linking
+## Check that there are still functions in the code section.
+# CHECK: Functions:
+
+--- !WASM
+FileHeader:
+  Version:         0x00000001
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - Index:           0
+        ParamTypes:      []
+        ReturnTypes:     []
+  - Type:            FUNCTION
+    FunctionTypes:   [ 0 ]
+  - Type:            CODE
+    Relocations:
+      - Type:            R_WASM_FUNCTION_INDEX_LEB
+        Index:           0
+        Offset:          0x4
+    Functions:
+      - Index:           0
+        Locals:          []
+        Body:            1080808080000B
+  - Type:            CUSTOM
+    Name:            linking
+    Version:         2
+    SymbolTable:
+      - Index:           0
+        Kind:            FUNCTION
+        Name:            foo
+        Flags:           [ BINDING_LOCAL ]
+        Function:        0
+  - Type:            CUSTOM
+    Name:            name
+    FunctionNames:
+       - Index:          0
+         Name:           foo

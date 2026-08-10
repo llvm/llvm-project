@@ -1,0 +1,30 @@
+---
+header:
+  version: 1
+  type: 0
+  constant-tsc: true
+  nonstop-tsc: true
+  cycle-frequency: 1
+records:
+  - { type: 0, func-id:  1, cpu: 1, thread: 111, kind: function-enter, tsc: 10000 }
+  - { type: 0, func-id:  1, cpu: 1, thread: 111, kind: function-exit,  tsc: 10090 }
+  - { type: 0, func-id:  2, cpu: 1, thread: 111, kind: function-enter, tsc: 10100 }
+  - { type: 0, func-id:  2, cpu: 1, thread: 111, kind: function-exit,  tsc: 10180 }
+  - { type: 0, func-id:  3, cpu: 1, thread: 111, kind: function-enter, tsc: 10200 }
+  - { type: 0, func-id:  3, cpu: 1, thread: 111, kind: function-exit,  tsc: 10270 }
+  - { type: 0, func-id:  4, cpu: 1, thread: 111, kind: function-enter, tsc: 10300 }
+  - { type: 0, func-id:  4, cpu: 1, thread: 111, kind: function-exit,  tsc: 10360 }
+  - { type: 0, func-id:  5, cpu: 1, thread: 111, kind: function-enter, tsc: 10400 }
+  - { type: 0, func-id:  5, cpu: 1, thread: 111, kind: function-exit,  tsc: 10450 }
+  - { type: 0, func-id:  6, cpu: 1, thread: 111, kind: function-enter, tsc: 10500 }
+  - { type: 0, func-id:  6, cpu: 1, thread: 111, kind: function-exit,  tsc: 10540 }
+  - { type: 0, func-id:  7, cpu: 1, thread: 111, kind: function-enter, tsc: 10600 }
+  - { type: 0, func-id:  7, cpu: 1, thread: 111, kind: function-exit,  tsc: 10630 }
+  - { type: 0, func-id:  8, cpu: 1, thread: 111, kind: function-enter, tsc: 10700 }
+  - { type: 0, func-id:  8, cpu: 1, thread: 111, kind: function-exit,  tsc: 10720 }
+  - { type: 0, func-id:  9, cpu: 1, thread: 111, kind: function-enter, tsc: 10800 }
+  - { type: 0, func-id:  9, cpu: 1, thread: 111, kind: function-exit,  tsc: 10810 }
+  - { type: 0, func-id: 10, cpu: 1, thread: 111, kind: function-enter, tsc: 10900 }
+  - { type: 0, func-id: 10, cpu: 1, thread: 111, kind: function-exit,  tsc: 10910 }
+---
+

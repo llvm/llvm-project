@@ -1,0 +1,74 @@
+# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z13 -start-before=greedy %s -o - \
+# RUN:   | FileCheck %s
+#
+# Test that regalloc manages (via regalloc hints) to avoid a LOCRMux jump
+# sequence expansion.
+
+--- |
+  
+  declare ptr @foo(ptr, i32 signext, i32 signext) local_unnamed_addr
+  
+  define ptr @fun(ptr returned) {
+    br label %2
+  
+  ; <label>:2:                                      ; preds = %6, %1
+    %3 = zext i16 undef to i32
+    switch i32 %3, label %4 [
+      i32 15, label %6
+      i32 125, label %5
+    ]
+  
+  ; <label>:4:                                      ; preds = %2
+    br label %6
+  
+  ; <label>:5:                                      ; preds = %2
+    br label %6
+  
+  ; <label>:6:                                      ; preds = %5, %4, %2
+    %7 = phi i32 [ 4, %2 ], [ undef, %4 ], [ 10, %5 ]
+    %8 = call ptr @foo(ptr undef, i32 signext undef, i32 signext %7)
+    br label %2
+  }
+
+...
+
+# CHECK: locr
+# CHECK-NOT: risblg
+
+---
+name:            fun
+alignment:       4
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: gr32bit }
+  - { id: 1, class: gr64bit }
+  - { id: 2, class: grx32bit }
+  - { id: 3, class: grx32bit }
+  - { id: 4, class: grx32bit }
+  - { id: 5, class: grx32bit }
+  - { id: 6, class: grx32bit }
+  - { id: 7, class: gr64bit }
+  - { id: 8, class: gr64bit }
+  - { id: 9, class: gr64bit }
+  - { id: 10, class: gr64bit }
+  - { id: 11, class: gr32bit }
+frameInfo:       
+  adjustsStack:    true
+  hasCalls:        true
+body:             |
+  bb.0 (%ir-block.1):
+    %3 = LHIMux 0
+    %2 = LHIMux 4
+    %5 = LHIMux 10
+  
+  bb.1 (%ir-block.2):
+    CHIMux %3, 0, implicit-def $cc
+    %0 = LOCRMux undef %0, %5, 14, 6, implicit $cc
+    %0 = LOCRMux %0, %2, 14, 6, implicit killed $cc
+    %7 = LGFR %0
+    $r3d = LGHI 0
+    $r4d = COPY %7
+    CallBRASL @foo, undef $r2d, killed $r3d, killed $r4d, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit-def dead $r2d
+    J %bb.1
+
+...

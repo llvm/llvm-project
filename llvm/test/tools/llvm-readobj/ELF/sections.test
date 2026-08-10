@@ -1,0 +1,100 @@
+## Check how llvm-readobj prints sections with --sections.
+## We test the --sections flag for llvm-readelf in the gnu-sections.test.
+
+# RUN: yaml2obj %s -o %t64
+# RUN: llvm-readobj --sections %t64 | FileCheck %s --check-prefixes=ELF,ELF64
+# RUN: yaml2obj -DBITS=32 %s -o %t32
+# RUN: llvm-readobj --sections %t32 | FileCheck %s --check-prefixes=ELF,ELF32
+
+## Check flag aliases produce identical output.
+# RUN: llvm-readobj --sections %t64 > %t64.llvm.sections
+# RUN: llvm-readobj -S %t64 > %t64.llvm.upper.s
+# RUN: cmp %t64.llvm.sections %t64.llvm.upper.s
+# RUN: llvm-readobj --section-headers %t64 > %t64.llvm.section-headers
+# RUN: cmp %t64.llvm.sections %t64.llvm.section-headers
+
+# RUN: llvm-readobj --sections %t32 > %t32.llvm.sections
+# RUN: llvm-readobj -S %t32 > %t32.llvm.upper.s
+# RUN: cmp %t32.llvm.sections %t32.llvm.upper.s
+# RUN: llvm-readobj --section-headers %t32 > %t32.llvm.section-headers
+# RUN: cmp %t32.llvm.sections %t32.llvm.section-headers
+
+# ELF:      Sections [
+# ELF-NEXT:   Section {
+# ELF-NEXT:     Index: 0
+# ELF-NEXT:     Name:  (0)
+# ELF-NEXT:     Type: SHT_NULL (0x0)
+# ELF-NEXT:     Flags [ (0x0)
+# ELF-NEXT:     ]
+# ELF-NEXT:     Address: 0x0
+# ELF-NEXT:     Offset: 0x0
+# ELF-NEXT:     Size: 0
+# ELF-NEXT:     Link: 0
+# ELF-NEXT:     Info: 0
+# ELF-NEXT:     AddressAlignment: 0
+# ELF-NEXT:     EntrySize: 0
+# ELF-NEXT:   }
+# ELF-NEXT:   Section {
+# ELF-NEXT:     Index: 1
+# ELF-NEXT:     Name: .foo (1)
+# ELF-NEXT:     Type: SHT_PROGBITS (0x1)
+# ELF-NEXT:     Flags [ (0x3)
+# ELF-NEXT:       SHF_ALLOC (0x2)
+# ELF-NEXT:       SHF_WRITE (0x1)
+# ELF-NEXT:     ]
+# ELF-NEXT:     Address: 0x2
+# ELF64-NEXT:   Offset: 0x41
+# ELF32-NEXT:   Offset: 0x37
+# ELF-NEXT:     Size: 3
+# ELF-NEXT:     Link: 4
+# ELF-NEXT:     Info: 1
+# ELF-NEXT:     AddressAlignment: 5
+# ELF-NEXT:     EntrySize: 6
+# ELF-NEXT:   }
+# ELF-NEXT:   Section {
+# ELF-NEXT:     Index: 2
+# ELF-NEXT:     Name: .strtab (16)
+# ELF-NEXT:     Type: SHT_STRTAB (0x3)
+# ELF-NEXT:     Flags [ (0x0)
+# ELF-NEXT:     ]
+# ELF-NEXT:     Address: 0x0
+# ELF64-NEXT:   Offset: 0x44
+# ELF32-NEXT:   Offset: 0x3A
+# ELF-NEXT:     Size: 1
+# ELF-NEXT:     Link: 0
+# ELF-NEXT:     Info: 0
+# ELF-NEXT:     AddressAlignment: 1
+# ELF-NEXT:     EntrySize: 0
+# ELF-NEXT:   }
+# ELF-NEXT:   Section {
+# ELF-NEXT:     Index: 3
+# ELF-NEXT:     Name: .shstrtab (6)
+# ELF-NEXT:     Type: SHT_STRTAB (0x3)
+# ELF-NEXT:     Flags [ (0x0)
+# ELF-NEXT:     ]
+# ELF-NEXT:     Address: 0x0
+# ELF64-NEXT:   Offset: 0x45
+# ELF32-NEXT:   Offset: 0x3B
+# ELF-NEXT:     Size: 24
+# ELF-NEXT:     Link: 0
+# ELF-NEXT:     Info: 0
+# ELF-NEXT:     AddressAlignment: 1
+# ELF-NEXT:     EntrySize: 0
+# ELF-NEXT:   }
+# ELF-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS[[BITS=64]]
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name:         .foo
+    Type:         SHT_PROGBITS
+    Info:         1
+    Address:      0x2
+    Size:         0x3
+    Flags:        [ SHF_WRITE, SHF_ALLOC ]
+    Link:         4
+    AddressAlign: 5
+    EntSize:      6

@@ -1,0 +1,1 @@
+; RUN: llc -mtriple=x86_64-linux -O0 -filetype=asm < %S/../Inputs/line.ll | FileCheck %S/../Inputs/line.ll

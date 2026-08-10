@@ -1,0 +1,43 @@
+# Check that relocations get applied
+RUN: llvm-dwarfdump %p/Inputs/test-simple-macho.o | FileCheck %s
+RUN: llvm-dwarfdump %p/Inputs/test-multiple-macho.o | FileCheck %s
+RUN: llvm-rtdyld -printline %p/Inputs/test-multiple-macho.o | FileCheck %s
+RUN: llvm-rtdyld -printobjline %p/Inputs/test-multiple-macho.o | FileCheck %s
+
+CHECK-NOT: error: failed to compute relocation: X86_64_RELOC_UNSIGNED
+
+# Check that relocations get applied correctly
+RUN: llvm-rtdyld -printobjline %p/Inputs/test-simple-macho.o \
+RUN:   | FileCheck %s -check-prefix TEST_SIMPLE
+RUN: llvm-rtdyld -printline %p/Inputs/test-simple-macho.o \
+RUN:   | FileCheck %s -check-prefix TEST_SIMPLE
+RUN: llvm-rtdyld -printobjline %p/Inputs/test-multiple-macho.o \
+RUN:   | FileCheck %s -check-prefix TEST_MULTIPLE
+RUN: llvm-rtdyld -printline %p/Inputs/test-multiple-macho.o \
+RUN:   | FileCheck %s -check-prefix TEST_MULTIPLE
+
+TEST_SIMPLE:      Function: _foo, Size = 11
+TEST_SIMPLE-NEXT:  Line info @ 0: simple.c, line:1
+TEST_SIMPLE-NEXT:  Line info @ 7: simple.c, line:2
+TEST_SIMPLE-NOT:   Line info @ 11: simple.c, line:2
+
+TEST_MULTIPLE:      Function: _bar, Size = 48
+TEST_MULTIPLE-NEXT:   Line info @ 0: multiple.c, line:5
+TEST_MULTIPLE-NEXT:   Line info @ 7: multiple.c, line:6
+TEST_MULTIPLE-NEXT:   Line info @ 16: multiple.c, line:9
+TEST_MULTIPLE-NEXT:   Line info @ 21: multiple.c, line:9
+TEST_MULTIPLE-NEXT:   Line info @ 26: multiple.c, line:7
+TEST_MULTIPLE-NEXT:   Line info @ 33: multiple.c, line:10
+TEST_MULTIPLE-NOT:    Line info @ 48: multiple.c, line:12
+TEST_MULTIPLE-NEXT: Function: _foo, Size = 16
+TEST_MULTIPLE-NEXT:   Line info @ 0: multiple.c, line:1
+TEST_MULTIPLE-NEXT:   Line info @ 7: multiple.c, line:2
+TEST_MULTIPLE-NOT:    Line info @ 16: multiple.c, line:5
+TEST_MULTIPLE-NEXT: Function: _fubar, Size = 46
+TEST_MULTIPLE-NEXT:   Line info @ 0: multiple.c, line:12
+TEST_MULTIPLE-NEXT:   Line info @ 7: multiple.c, line:13
+TEST_MULTIPLE-NEXT:   Line info @ 12: multiple.c, line:17
+TEST_MULTIPLE-NEXT:   Line info @ 25: multiple.c, line:15
+TEST_MULTIPLE-NEXT:   Line info @ 34: multiple.c, line:19
+TEST_MULTIPLE-NEXT:   Line info @ 41: multiple.c, line:21
+TEST_MULTIPLE-NOT:    Line info @ 46: multiple.c, line:21

@@ -1,0 +1,2 @@
+module a { module h { header "a.h" } module x { header "x.h" } }
+module b { module h { header "b.h" } module x { header "x.h" } }

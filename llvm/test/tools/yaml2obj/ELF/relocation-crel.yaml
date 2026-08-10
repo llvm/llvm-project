@@ -1,0 +1,92 @@
+# RUN: rm -rf %t && mkdir %t && cd %t
+# RUN: yaml2obj %s -o out
+# RUN: llvm-readelf -r out | FileCheck %s
+
+# CHECK:      Relocation section '.crel.text' at offset {{.*}} contains 7 entries:
+# CHECK-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+# CHECK-NEXT: 0000000000000001  0000000100000004 R_X86_64_PLT32         0000000000000000 a0 - 4
+# CHECK-NEXT: 0000000000000005  0000000200000004 R_X86_64_PLT32         0000000000000000 a1 - 4
+# CHECK-NEXT: 000000000000000a  0000000300000004 R_X86_64_PLT32         0000000000000000 a2 + 0
+# CHECK-NEXT: 0000000000000010  0000000200000001 R_X86_64_64            0000000000000000 a1 - 4
+# CHECK-NEXT: 0000000000000018  0000000100000001 R_X86_64_64            0000000000000000 a0 + 80
+# CHECK-NEXT: 0000000000000020  0000000000000008 R_X86_64_RELATIVE                 8000000000000000{{$}}
+# CHECK-NEXT: 0000000000000028  0000000400000001 R_X86_64_64            0000000000000000 a3 + 7fffffffffffffff
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+  - Name: .crel.text
+    Type: SHT_CREL
+    Info: .text
+    Link: .symtab
+    Relocations:
+      - Offset: 1
+        Type:   R_X86_64_PLT32
+        Symbol: a0
+        Addend: -4
+      - Offset: 5
+        Type:   R_X86_64_PLT32
+        Symbol: a1
+        Addend: -4
+      - Offset: 10
+        Type:   R_X86_64_PLT32
+        Symbol: a2
+        Addend: 0
+      - Offset: 16
+        Type:   R_X86_64_64
+        Symbol: a1
+        Addend: -4
+      - Offset: 24
+        Type:   R_X86_64_64
+        Symbol: a0
+        Addend: 128
+      - Offset: 32
+        Type:   R_X86_64_RELATIVE
+        Addend: 0x8000000000000000
+      - Offset: 40
+        Type:   R_X86_64_64
+        Symbol: a3
+        Addend: 0x7fffffffffffffff
+Symbols:
+  - Name:    a0
+  - Name:    a1
+    Binding: STB_GLOBAL
+  - Name:    a2
+    Binding: STB_GLOBAL
+  - Name:    a3
+    Binding: STB_GLOBAL
+
+## See output-limit.yaml. While estimating the size of the last byte of .crel.text
+## (a SLEB128), checkLimit thinks 10 byte headroom is needed while only 1 is used.
+## The file end is 1 byte away from the end of .crel.text (one-byte .strtab).
+## Therefore, the --max-size= value has to be at least 10-1-1 larger than the
+## actual file size.
+# RUN: not yaml2obj %s --docnum=2 --max-size=76 -o /dev/null
+# RUN: yaml2obj %s --docnum=2 --max-size=77 -o out
+# RUN: %python -c 'import os; print(os.path.getsize("out"))' | FileCheck %s --check-prefix=SIZE
+
+# SIZE: 69
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+  - Name: .crel.text
+    Type: SHT_CREL
+    Relocations:
+      - Offset: 1
+        Type:   R_X86_64_64
+        Addend: -4
+  - Type: SectionHeaderTable
+    NoHeaders: true

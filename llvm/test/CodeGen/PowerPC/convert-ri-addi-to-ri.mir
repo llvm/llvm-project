@@ -1,0 +1,99 @@
+# RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -verify-machineinstrs \
+# RUN:   -run-pass ppc-mi-peepholes -ppc-convert-rr-to-ri %s -o - | FileCheck %s
+
+---
+name: foldNewDformStore
+# CHECK: name: foldNewDformStore
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x3
+
+    %0:g8rc_and_g8rc_nox0 = COPY $x3
+    %1:g8rc_and_g8rc_nox0 = ADDI8 %0:g8rc_and_g8rc_nox0, 144
+    %2:g8rc = LI8 0
+    ; CHECK: STD killed %2, 160, killed %0
+    STD killed %2:g8rc, 16, %1:g8rc_and_g8rc_nox0
+    BLR8 implicit $lr8, implicit $rm
+...
+---
+name: foldNewDformStoreAlignNotMatch
+# CHECK: name: foldNewDformStoreAlignNotMatch
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x3
+
+    %0:g8rc_and_g8rc_nox0 = COPY $x3
+    %1:g8rc_and_g8rc_nox0 = ADDI8 %0:g8rc_and_g8rc_nox0, 141
+    %2:g8rc = LI8 0
+    ; CHECK: STD killed %2, 16, killed %1
+    STD killed %2:g8rc, 16, %1:g8rc_and_g8rc_nox0
+    BLR8 implicit $lr8, implicit $rm
+...
+---
+name: foldNewDformStoreKilledFlag
+# CHECK: name: foldNewDformStoreKilledFlag
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x3
+
+    %0:g8rc_and_g8rc_nox0 = COPY $x3
+    %1:g8rc_and_g8rc_nox0 = ADDI8 %0:g8rc_and_g8rc_nox0, 144
+    %2:g8rc = LI8 0
+    ; CHECK: STD killed %1, 0, %0
+    STD %1:g8rc_and_g8rc_nox0, 0, killed %0:g8rc_and_g8rc_nox0
+    ; CHECK: STD killed %2, 160, killed %0
+    STD killed %2:g8rc, 16, %1:g8rc_and_g8rc_nox0
+    BLR8 implicit $lr8, implicit $rm
+...
+---
+name: foldNewDformPreferLIOperand
+# CHECK: name: foldNewDformPreferLIOperand
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+  liveins: $x3
+  %0:g8rc_and_g8rc_nox0 = COPY $x3
+  %1:g8rc = ADDI8 %0:g8rc_and_g8rc_nox0, 1
+  %2:g8rc = LI8 1
+  ; CHECK: SUBFIC8 killed %1, 1, implicit-def $carry
+  %3:g8rc = SUBFC8 killed %1:g8rc, %2:g8rc, implicit-def $carry
+  %4:g8rc = SUBFE8 %2:g8rc, %2:g8rc, implicit-def dead $carry, implicit $carry
+  %5:g8rc = NEG8 killed %4:g8rc
+  $x3 = COPY %5:g8rc
+  BLR8 implicit $lr8, implicit $rm, implicit $x3
+...
+---
+name: killFlagSameBlock
+#CHECK : name : killFlagSameBlock
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+  liveins: $x3
+    %0:g8rc_and_g8rc_nox0 = COPY $x3
+    %1:g8rc_and_g8rc_nox0 = ADDI8 killed %0:g8rc_and_g8rc_nox0, -8
+    ; CHECK: %1:g8rc_and_g8rc_nox0 = ADDI8 %0, -8
+    %2:g8rc = LI8 0
+    ; CHECK: STD killed %2, 8, killed %0
+    STD killed %2:g8rc, 16, %1:g8rc_and_g8rc_nox0
+    BLR8 implicit $lr8, implicit $rm
+...
+---
+name: killFlagDifferentBlocks
+#CHECK : name : killFlagDifferentBlocks
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+  liveins: $x3
+    %0:g8rc_and_g8rc_nox0 = COPY $x3
+    ; CHECK: %1:g8rc_and_g8rc_nox0 = ADDI8 %0, -8
+    %1:g8rc_and_g8rc_nox0 = ADDI8 killed %0:g8rc_and_g8rc_nox0, -8
+
+  bb.1:
+    %2:g8rc = LI8 0
+    ; CHECK: STD killed %2, 8, killed %0
+    STD killed %2:g8rc, 16, %1:g8rc_and_g8rc_nox0
+    BLR8 implicit $lr8, implicit $rm
+...

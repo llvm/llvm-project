@@ -1,0 +1,25 @@
+---
+TypeIdMap:
+  typeid1:
+    TTRes:
+      Kind:            AllOnes
+      SizeM1BitWidth:  7
+  typeid2:
+    TTRes:
+      Kind:            Single
+      SizeM1BitWidth:  0
+WithGlobalValueDeadStripping: false
+CfiFunctionDefs:
+- Name: local_a
+  GUID: 16847745505082467832
+- Name: local_b
+  GUID: 3388953113786086079
+- Name: does_not_exist
+  GUID: 3974636296533007648
+CfiFunctionDecls:
+- Name: external
+  GUID: 5224464028922159466
+- Name: external_weak
+  GUID: 5227079976482001346
+- Name: local_decl
+  GUID: 6093141505335291027

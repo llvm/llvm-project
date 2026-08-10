@@ -1,0 +1,24 @@
+## Check that llvm-objcopy can correctly add a prefix to
+## a dynamic relocation section and its target section.
+
+# RUN: yaml2obj %s -o %t1
+# RUN: llvm-objcopy --prefix-alloc-sections=.prefix %t1 %t2
+# RUN: llvm-readobj --sections %t2 | FileCheck %s
+
+# CHECK: Name: .prefix.rela.plt
+# CHECK: Name: .prefix.plt
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:  .rela.plt
+    Type:  SHT_RELA
+    Flags: [ SHF_ALLOC ]
+    Link:  0
+  - Name:  .plt
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]

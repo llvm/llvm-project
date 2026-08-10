@@ -1,0 +1,158 @@
+functions:
+  _Exit:
+    c-definition: 7.24.4.5
+    in-latest-posix: ''
+  abort:
+    c-definition: 7.24.4.1
+    in-latest-posix: ''
+  abs:
+    c-definition: 7.24.6.1
+    in-latest-posix: ''
+  aligned_alloc:
+    c-definition: 7.24.3.1
+    in-latest-posix: ''
+  at_quick_exit:
+    c-definition: 7.24.4.3
+    in-latest-posix: ''
+  atexit:
+    c-definition: 7.24.4.2
+    in-latest-posix: ''
+  atof:
+    c-definition: 7.24.1.1
+    in-latest-posix: ''
+  atoi:
+    c-definition: 7.24.1.2
+    in-latest-posix: ''
+  atol:
+    c-definition: 7.24.1.2
+    in-latest-posix: ''
+  atoll:
+    c-definition: 7.24.1.2
+    in-latest-posix: ''
+  bsearch:
+    c-definition: 7.24.5.1
+    in-latest-posix: ''
+  calloc:
+    c-definition: 7.24.3.2
+    in-latest-posix: ''
+  div:
+    c-definition: 7.24.6.2
+    in-latest-posix: ''
+  exit:
+    c-definition: 7.24.4.4
+    in-latest-posix: ''
+  free:
+    c-definition: 7.24.3.3
+    in-latest-posix: ''
+  free_aligned_sized:
+    c-definition: 7.24.3.5
+  free_sized:
+    c-definition: 7.24.3.4
+  getenv:
+    c-definition: 7.24.4.6
+    in-latest-posix: ''
+  labs:
+    c-definition: 7.24.6.1
+    in-latest-posix: ''
+  ldiv:
+    c-definition: 7.24.6.2
+    in-latest-posix: ''
+  llabs:
+    c-definition: 7.24.6.1
+    in-latest-posix: ''
+  lldiv:
+    c-definition: 7.24.6.2
+    in-latest-posix: ''
+  malloc:
+    c-definition: 7.24.3.6
+    in-latest-posix: ''
+  mblen:
+    c-definition: 7.24.7.1
+    in-latest-posix: ''
+  mbstowcs:
+    c-definition: 7.24.8.1
+    in-latest-posix: ''
+  mbtowc:
+    c-definition: 7.24.7.2
+    in-latest-posix: ''
+  memalignment:
+    c-definition: 7.24.9.1
+  qsort:
+    c-definition: 7.24.5.2
+    in-latest-posix: ''
+  quick_exit:
+    c-definition: 7.24.4.7
+    in-latest-posix: ''
+  rand:
+    c-definition: 7.24.2.1
+    in-latest-posix: ''
+  realloc:
+    c-definition: 7.24.3.7
+    in-latest-posix: ''
+  srand:
+    c-definition: 7.24.2.2
+    in-latest-posix: ''
+  strfromd:
+    c-definition: 7.24.1.3
+  strfromd128:
+    c-definition: 7.24.1.4
+  strfromd32:
+    c-definition: 7.24.1.4
+  strfromd64:
+    c-definition: 7.24.1.4
+  strfromf:
+    c-definition: 7.24.1.3
+  strfroml:
+    c-definition: 7.24.1.3
+  strtod:
+    c-definition: 7.24.1.5
+    in-latest-posix: ''
+  strtod128:
+    c-definition: 7.24.1.6
+  strtod32:
+    c-definition: 7.24.1.6
+  strtod64:
+    c-definition: 7.24.1.6
+  strtof:
+    c-definition: 7.24.1.5
+    in-latest-posix: ''
+  strtol:
+    c-definition: 7.24.1.7
+    in-latest-posix: ''
+  strtold:
+    c-definition: 7.24.1.5
+    in-latest-posix: ''
+  strtoll:
+    c-definition: 7.24.1.7
+    in-latest-posix: ''
+  strtoul:
+    c-definition: 7.24.1.7
+    in-latest-posix: ''
+  strtoull:
+    c-definition: 7.24.1.7
+    in-latest-posix: ''
+  system:
+    c-definition: 7.24.4.8
+    in-latest-posix: ''
+  wcstombs:
+    c-definition: 7.24.8.2
+    in-latest-posix: ''
+  wctomb:
+    c-definition: 7.24.7.3
+    in-latest-posix: ''
+macros:
+  EXIT_FAILURE:
+    c-definition: '7.24'
+    in-latest-posix: ''
+  EXIT_SUCCESS:
+    c-definition: '7.24'
+    in-latest-posix: ''
+  MB_CUR_MAX:
+    c-definition: '7.24'
+    in-latest-posix: ''
+  RAND_MAX:
+    c-definition: '7.24'
+    in-latest-posix: ''
+  __STDC_VERSION_STDLIB_H__:
+    c-definition: '7.24'
+

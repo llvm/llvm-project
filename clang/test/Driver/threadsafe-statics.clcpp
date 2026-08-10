@@ -1,0 +1,11 @@
+// RUN: %clang -### -c -DNO_THREADSAFE_STATICS %s 2>&1 | FileCheck --check-prefix=CHECK-NO-THREADSAFE-STATICS %s
+// RUN: %clang -### -fno-threadsafe-statics -DNO_THREADSAFE_STATICS -c %s 2>&1 | FileCheck --check-prefix=CHECK-NO-THREADSAFE-STATICS %s
+
+// CHECK-NO-THREADSAFE-STATICS: "-cc1"
+// CHECK-NO-THREADSAFE-STATICS: "-fno-threadsafe-statics"
+// CHECK-NO-THREADSAFE-STATICS-NOT: "-fthreadsafe-statics"
+
+// RUN: %clang -### -fthreadsafe-statics -DTHREADSAFE_STATICS -c %s 2>&1 | FileCheck --check-prefix=CHECK-THREADSAFE-STATICS %s
+
+// CHECK-THREADSAFE-STATICS: "-cc1"
+// CHECK-THREADSAFE-STATICS-NOT: "-fno-threadsafe-statics"

@@ -1,0 +1,31 @@
+REQUIRES: x86-registered-target && host-byteorder-little-endian
+RUN: sancov -symbolize -strip_path_prefix="llvm/" %p/Inputs/test-linux_x86_64 %p/Inputs/test-linux_x86_64.0.sancov | FileCheck %s --check-prefixes=CHECK,STRIP
+RUN: sancov -symbolize %p/Inputs/test-linux_x86_64 %p/Inputs/test-linux_x86_64.0.sancov | FileCheck %s --check-prefixes=CHECK,NOSTRIP
+
+CHECK: {
+CHECK-NEXT:  "covered-points": [
+CHECK-NEXT:    "4e132b",
+CHECK-NEXT:    "4e1472",
+CHECK-NEXT:    "4e1520",
+CHECK-NEXT:    "4e1553",
+CHECK-NEXT:    "4e1586"
+CHECK-NEXT:  ],
+CHECK-NEXT:  "binary-hash": "BB3CDD5045AED83906F6ADCC1C4DAF7E2596A6B5",
+CHECK-NEXT:  "point-symbol-info": {
+STRIP-NEXT:    "test/tools/sancov/Inputs/test.cpp": {
+NOSTRIP-NEXT:  "/usr/local/google/home/aizatsky/src/llvm/test/tools/sancov/Inputs/test.cpp": {
+CHECK-NEXT:      "bar(std::string)": {
+CHECK-NEXT:        "4e132b": "12:0"
+CHECK-NEXT:      },
+CHECK-NEXT:      "main": {
+CHECK-NEXT:        "4e1472": "14:0",
+CHECK-NEXT:        "4e14c2": "16:9",
+CHECK-NEXT:        "4e1520": "17:5",
+CHECK-NEXT:        "4e1553": "17:5",
+CHECK-NEXT:        "4e1586": "17:5",
+CHECK-NEXT:        "4e1635": "19:1",
+CHECK-NEXT:        "4e1690": "17:5"
+CHECK-NEXT:      }
+CHECK-NEXT:    }
+CHECK-NEXT:  }
+CHECK-NEXT:}

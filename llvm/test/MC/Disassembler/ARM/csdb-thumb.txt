@@ -1,0 +1,4 @@
+# RUN: llvm-mc < %s -triple thumbv8a-none-eabi -disassemble | FileCheck %s
+
+[0xaf,0xf3,0x14,0x80]
+# CHECK: csdb

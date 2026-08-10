@@ -1,0 +1,33 @@
+## Check that llvm-objdump --syms reports an error when
+## the symbol type in the csect aux entry of a symbol is not valid.
+
+## Check XCOFF32
+# RUN: yaml2obj -DMAGICNUMBER=0x1DF %s -o %t1
+# RUN: not llvm-objdump --syms %t1 2>&1 | FileCheck %s -DOBJ=%t1
+
+## Check XCOFF64
+# RUN: yaml2obj -DMAGICNUMBER=0x1F7 %s -o %t2
+# RUN: not llvm-objdump --syms %t2 2>&1 | FileCheck %s -DOBJ=%t2
+
+# CHECK: error: '[[OBJ]]': symbol csect aux entry with index 2 has invalid symbol type 5
+
+--- !XCOFF
+FileHeader:
+  MagicNumber:       [[MAGICNUMBER]]
+Sections:
+  - Name:                    .text
+    Flags:           [ STYP_TEXT ]
+Symbols:
+  - Name:            .file
+    Section:         N_DEBUG
+    NumberOfAuxEntries: 0
+    Type:            0x0
+    StorageClass:       C_FILE
+  - Name:             test
+    Section:         .text
+    NumberOfAuxEntries: 1
+    StorageClass:       C_EXT
+    AuxEntries:
+      - Type:                   AUX_CSECT
+        SymbolAlignmentAndType: 5
+        StorageMappingClass:    XMC_PR

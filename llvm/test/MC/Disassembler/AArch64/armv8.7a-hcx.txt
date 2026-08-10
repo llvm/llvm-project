@@ -1,0 +1,7 @@
+# RUN: llvm-mc -triple=aarch64 -disassemble %s | FileCheck %s
+
+[0x42,0x12,0x3c,0xd5]
+# CHECK: mrs x2, HCRX_EL2
+
+[0x43,0x12,0x1c,0xd5]
+# CHECK: msr HCRX_EL2, x3

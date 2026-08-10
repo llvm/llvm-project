@@ -1,0 +1,41 @@
+# RUN: llc -O0 -run-pass=avr-expand-pseudo %s -o - | FileCheck %s
+
+--- |
+  target triple = "avr--"
+  define void @test() {
+  entry:
+    ret void
+  }
+...
+
+---
+name:            test
+body: |
+  bb.0.entry:
+    liveins: $r15r14, $r13r12, $r11r10, $r17r16
+
+    ; CHECK-LABEL: test
+
+    ; CHECK:      $r14 = ADDRdRr killed $r14, killed $r14, implicit-def $sreg
+    ; CHECK-NEXT: $r14 = MOVRdRr $r15
+    ; CHECK-NEXT: $r14 = ADCRdRr $r14, $r14, implicit-def $sreg, implicit $sreg
+    ; CHECK-NEXT: $r15 = SBCRdRr $r15, $r15, implicit-def $sreg, implicit killed $sreg
+    $r15r14 = ASRWNRd $r15r14,  7, implicit-def $sreg
+
+    ; CHECK-NEXT: $r12 = MOVRdRr $r13
+    ; CHECK-NEXT: $r13 = ADDRdRr killed $r13, killed $r13, implicit-def $sreg
+    ; CHECK-NEXT: $r13 = SBCRdRr $r13, $r13, implicit-def $sreg, implicit killed $sreg
+    $r13r12 = ASRWNRd $r13r12,  8, implicit-def $sreg
+
+    ; CHECK-NEXT: $r11 = ADDRdRr killed $r11, killed $r11, implicit-def $sreg
+    ; CHECK-NEXT: $r10 = SBCRdRr killed $r10, killed $r10, implicit-def $sreg, implicit $sreg
+    ; CHECK-NEXT: $r11 = ADDRdRr killed $r11, killed $r11, implicit-def $sreg
+    ; CHECK-NEXT: $r11 = MOVRdRr $r10
+    ; CHECK-NEXT: $r10 = ADCRdRr $r10, $r10, implicit-def $sreg, implicit killed $sreg
+    $r11r10 = ASRWNRd $r11r10, 14, implicit-def $sreg
+
+    ; CHECK-NEXT: $r17 = ADDRdRr killed $r17, killed $r17, implicit-def $sreg
+    ; CHECK-NEXT: $r17 = SBCRdRr killed $r17, killed $r17, implicit-def $sreg, implicit killed $sreg
+    ; CHECK-NEXT: $r16 = MOVRdRr $r17
+    $r17r16 = ASRWNRd $r17r16, 15, implicit-def $sreg
+...

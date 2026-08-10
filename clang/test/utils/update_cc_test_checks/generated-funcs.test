@@ -1,0 +1,24 @@
+## Test that CHECK lines are generated for clang-generated functions
+
+# RUN: cp %S/Inputs/generated-funcs.c %t-generated.c && %update_cc_test_checks --include-generated-funcs --check-globals smart %t-generated.c
+# RUN: diff -u %S/Inputs/generated-funcs.c.generated.expected %t-generated.c
+# RUN: cp %S/Inputs/generated-funcs.c %t-no-generated.c && %update_cc_test_checks --check-globals smart %t-no-generated.c
+# RUN: diff -u %S/Inputs/generated-funcs.c.no-generated.expected %t-no-generated.c
+
+## Check that re-running update_cc_test_checks doesn't change the output
+# RUN: %update_cc_test_checks --include-generated-funcs %t-generated.c
+# RUN: diff -u %S/Inputs/generated-funcs.c.generated.expected %t-generated.c
+# RUN: %update_cc_test_checks %t-no-generated.c
+# RUN: diff -u %S/Inputs/generated-funcs.c.no-generated.expected %t-no-generated.c
+
+## Same as above for --check-globals all
+# RUN: cp %S/Inputs/generated-funcs.c %t-generated.c && %update_cc_test_checks --include-generated-funcs --check-globals all %t-generated.c
+# RUN: diff -u %S/Inputs/generated-funcs.c.generated.all.expected %t-generated.c
+# RUN: cp %S/Inputs/generated-funcs.c %t-no-generated.c && %update_cc_test_checks --check-globals all %t-no-generated.c
+# RUN: diff -u %S/Inputs/generated-funcs.c.no-generated.all.expected %t-no-generated.c
+
+## Check that re-running update_cc_test_checks doesn't change the output
+# RUN: %update_cc_test_checks --include-generated-funcs %t-generated.c
+# RUN: diff -u %S/Inputs/generated-funcs.c.generated.all.expected %t-generated.c
+# RUN: %update_cc_test_checks %t-no-generated.c
+# RUN: diff -u %S/Inputs/generated-funcs.c.no-generated.all.expected %t-no-generated.c

@@ -1,0 +1,45 @@
+# This test verifies that DWARF form types are printed in verbose mode and when
+# passing -F but not in brief mode. Additionally we check that the high pc is
+# not printed as an address in verbose or show-form mode.
+
+# RUN: llvm-mc %S/brief.s -filetype obj -triple x86_64-apple-darwin -o - \
+# RUN: | llvm-dwarfdump -v --debug-info - \
+# RUN: | FileCheck %s
+
+# RUN: llvm-mc %S/brief.s -filetype obj -triple x86_64-apple-darwin -o - \
+# RUN: | llvm-dwarfdump -F --debug-info - \
+# RUN: | FileCheck %s
+
+# RUN: llvm-mc %S/brief.s -filetype obj -triple x86_64-apple-darwin -o - \
+# RUN: | llvm-dwarfdump --debug-info - \
+# RUN: | FileCheck %s --check-prefix NO-FORM
+
+# CHECK: DW_TAG_compile_unit
+# CHECK: DW_AT_producer [DW_FORM_strp]
+# CHECK: DW_AT_language [DW_FORM_data2]
+# CHECK: DW_AT_name [DW_FORM_strp]
+# CHECK: DW_AT_stmt_list [DW_FORM_sec_offset]
+# CHECK: DW_AT_comp_dir [DW_FORM_strp]
+# CHECK: DW_AT_low_pc [DW_FORM_addr]
+# CHECK: DW_AT_high_pc [DW_FORM_data4] (0x00000008)
+
+# CHECK: DW_TAG_subprogram
+# CHECK: DW_AT_low_pc [DW_FORM_addr]
+# CHECK: DW_AT_high_pc [DW_FORM_data4] (0x00000008)
+# CHECK: DW_AT_frame_base [DW_FORM_exprloc]
+# CHECK: DW_AT_name [DW_FORM_strp]
+# CHECK: DW_AT_decl_file [DW_FORM_data1]
+# CHECK: DW_AT_decl_line [DW_FORM_data1]
+# CHECK: DW_AT_type [DW_FORM_ref4]
+# CHECK: DW_AT_external [DW_FORM_flag_present]
+
+# CHECK: DW_TAG_base_type
+# CHECK: DW_AT_name [DW_FORM_strp]
+# CHECK: DW_AT_encoding [DW_FORM_data1]
+# CHECK: DW_AT_byte_size [DW_FORM_data1]
+
+# NO-FORM-NOT: DW_FORM_
+# NO-FORM: DW_AT_high_pc (0x0000000000000008)
+# NO-FORM-NOT: DW_FORM_
+# NO-FORM: DW_AT_high_pc (0x0000000000000008)
+# NO-FORM-NOT: DW_FORM_

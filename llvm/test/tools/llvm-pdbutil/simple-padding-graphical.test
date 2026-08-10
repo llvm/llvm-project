@@ -1,0 +1,127 @@
+; REQUIRES: diasdk
+
+; RUN: llvm-pdbutil pretty -classes -class-definitions=layout \
+; RUN:     -include-types=SimplePad %p/Inputs/SimplePaddingTest.pdb > %t
+
+; RUN: FileCheck -input-file=%t %s -check-prefix=NO_PADDING
+; RUN: FileCheck -input-file=%t %s -check-prefix=UNION
+; RUN: FileCheck -input-file=%t %s -check-prefix=NESTED_UNION
+; RUN: FileCheck -input-file=%t %s -check-prefix=PAD_FROM_FIELDS1
+; RUN: FileCheck -input-file=%t %s -check-prefix=PAD_FROM_FIELDS2
+; RUN: FileCheck -input-file=%t %s -check-prefix=NO_PAD_IN_BASE
+; RUN: FileCheck -input-file=%t %s -check-prefix=PAD_IN_DERIVED
+; RUN: FileCheck -input-file=%t %s -check-prefix=EMPTY_BASE
+; RUN: FileCheck -input-file=%t %s -check-prefix=VFPTR
+; RUN: FileCheck -input-file=%t %s -check-prefix=MULTIPLE_INHERIT
+; RUN: FileCheck -input-file=%t %s -check-prefix=MULTIPLE_INHERIT2
+; RUN: FileCheck -input-file=%t %s -check-prefix=DEEP_INHERIT
+; RUN: FileCheck -input-file=%t %s -check-prefix=AGGREGATE
+
+; NO_PADDING:      struct SimplePadNoPadding [sizeof = 8] {
+; NO_PADDING-NEXT:   data +0x00 [sizeof=4] int X
+; NO_PADDING-NEXT:   data +0x04 [sizeof=4] int Y
+; NO_PADDING-NEXT: }
+
+; UNION:      struct SimplePadUnion [sizeof = 16] {
+; UNION-NEXT:   data +0x00 [sizeof=4] int X
+; UNION-NEXT:   data +0x00 [sizeof=8] __int64 Y
+; UNION-NEXT:   data +0x00 [sizeof=16] SimplePadUnion::
+; UNION-NEXT:     data +0x00 [sizeof=4] int X
+; UNION-NEXT:     <padding> (4 bytes)
+; UNION-NEXT:     data +0x08 [sizeof=8] __int64 Y
+; UNION-NEXT: }
+
+; NESTED_UNION:      struct {{SimplePadUnion::.*}} [sizeof = 16] {
+; NESTED_UNION-NEXT:   data +0x00 [sizeof=4] int X
+; NESTED_UNION-NEXT:   <padding> (4 bytes)
+; NESTED_UNION-NEXT:   data +0x08 [sizeof=8] __int64 Y
+; NESTED_UNION-NEXT: }
+
+; PAD_FROM_FIELDS1:      struct SimplePadFields1 [sizeof = 4] {
+; PAD_FROM_FIELDS1-NEXT:   data +0x00 [sizeof=1] char A
+; PAD_FROM_FIELDS1-NEXT:   data +0x01 [sizeof=1] char B
+; PAD_FROM_FIELDS1-NEXT:   data +0x02 [sizeof=1] char C
+; PAD_FROM_FIELDS1-NEXT:   <padding> (1 bytes)
+; PAD_FROM_FIELDS1-NEXT: }
+
+; PAD_FROM_FIELDS2:      struct SimplePadFields2 [sizeof = 8] {
+; PAD_FROM_FIELDS2-NEXT:   data +0x00 [sizeof=4] int Y
+; PAD_FROM_FIELDS2-NEXT:   data +0x04 [sizeof=1] char X
+; PAD_FROM_FIELDS2-NEXT:   <padding> (3 bytes)
+; PAD_FROM_FIELDS2-NEXT: }
+
+; NO_PAD_IN_BASE:      struct SimplePadBase [sizeof = 4] {
+; NO_PAD_IN_BASE-NEXT:   data +0x00 [sizeof=4] int X
+; NO_PAD_IN_BASE-NEXT: }
+
+; PAD_IN_DERIVED:      struct SimplePadDerived [sizeof = 16]
+; PAD_IN_DERIVED-NEXT:   : public SimplePadBase {
+; PAD_IN_DERIVED-NEXT:   base +0x00 [sizeof=4] SimplePadBase
+; PAD_IN_DERIVED-NEXT:     data +0x00 [sizeof=4] int X
+; PAD_IN_DERIVED-NEXT:   <padding> (4 bytes)
+; PAD_IN_DERIVED-NEXT:   data +0x08 [sizeof=8] __int64 Y
+; PAD_IN_DERIVED-NEXT: }
+
+; EMPTY_BASE:      struct SimplePadEmpty [sizeof = 8]
+; EMPTY_BASE-NEXT:   : public SimplePadEmptyBase1
+; EMPTY_BASE-NEXT:   , public SimplePadEmptyBase2 {
+; EMPTY_BASE-NEXT:   base +0x00 [sizeof=1] SimplePadEmptyBase1
+; EMPTY_BASE-NEXT:   base +0x01 [sizeof=1] SimplePadEmptyBase2
+; EMPTY_BASE-NEXT:   <padding> (2 bytes)
+; EMPTY_BASE-NEXT:   data +0x04 [sizeof=4] int X
+; EMPTY_BASE-NEXT: }
+
+; VFPTR:      struct SimplePadVfptr [sizeof = 8] {
+; VFPTR-NEXT:   vfptr +0x00 [sizeof=4]
+; VFPTR-NEXT:   data +0x04 [sizeof=4] int X
+; VFPTR-NEXT: }
+
+; MULTIPLE_INHERIT:      struct SimplePadMultiInherit [sizeof = 8]
+; MULTIPLE_INHERIT-NEXT:   : public NonEmptyBase1
+; MULTIPLE_INHERIT-NEXT:   , public NonEmptyBase2 {
+; MULTIPLE_INHERIT-NEXT:   base +0x00 [sizeof=1] NonEmptyBase1
+; MULTIPLE_INHERIT-NEXT:     data +0x00 [sizeof=1] bool X
+; MULTIPLE_INHERIT-NEXT:   base +0x01 [sizeof=1] NonEmptyBase2
+; MULTIPLE_INHERIT-NEXT:     data +0x01 [sizeof=1] bool Y
+; MULTIPLE_INHERIT-NEXT:   <padding> (2 bytes)
+; MULTIPLE_INHERIT-NEXT:   data +0x04 [sizeof=4] int X
+; MULTIPLE_INHERIT-NEXT: }
+
+; MULTIPLE_INHERIT2:      SimplePadMultiInherit2 [sizeof = 16]
+; MULTIPLE_INHERIT2-NEXT:   : public SimplePadFields1
+; MULTIPLE_INHERIT2-NEXT:   , public SimplePadFields2 {
+; MULTIPLE_INHERIT2-NEXT:   base +0x00 [sizeof=3] SimplePadFields1
+; MULTIPLE_INHERIT2-NEXT:     data +0x00 [sizeof=1] char A
+; MULTIPLE_INHERIT2-NEXT:     data +0x01 [sizeof=1] char B
+; MULTIPLE_INHERIT2-NEXT:     data +0x02 [sizeof=1] char C
+; MULTIPLE_INHERIT2-NEXT:   <padding> (1 bytes)
+; MULTIPLE_INHERIT2-NEXT:   base +0x04 [sizeof=5] SimplePadFields2
+; MULTIPLE_INHERIT2-NEXT:     data +0x04 [sizeof=4] int Y
+; MULTIPLE_INHERIT2-NEXT:     data +0x08 [sizeof=1] char X
+; MULTIPLE_INHERIT2-NEXT:   <padding> (3 bytes)
+; MULTIPLE_INHERIT2-NEXT:   data +0x0c [sizeof=4] int X
+; MULTIPLE_INHERIT2-NEXT: }
+
+; DEEP_INHERIT:      struct SimplePadTwoLevelInherit [sizeof = 16]
+; DEEP_INHERIT-NEXT:   : public OneLevelInherit {
+; DEEP_INHERIT-NEXT:     base +0x00 [sizeof=4] OneLevelInherit
+; DEEP_INHERIT-NEXT:       base +0x00 [sizeof=1] NonEmptyBase1
+; DEEP_INHERIT-NEXT:         data +0x00 [sizeof=1] bool X
+; DEEP_INHERIT-NEXT:       <padding> (1 bytes)
+; DEEP_INHERIT-NEXT:       data +0x02 [sizeof=2] short Y
+; DEEP_INHERIT-NEXT:     <padding> (4 bytes)
+; DEEP_INHERIT-NEXT:     data +0x08 [sizeof=8] __int64 Z
+; DEEP_INHERIT-NEXT: }
+
+
+; AGGREGATE:      struct SimplePadAggregate [sizeof = 12] {
+; AGGREGATE-NEXT:   data +0x00 [sizeof=1] NonEmptyBase1 X
+; AGGREGATE-NEXT:     data +0x00 [sizeof=1] bool X
+; AGGREGATE-NEXT:   <padding> (3 bytes)
+; AGGREGATE-NEXT:   data +0x04 [sizeof=4] int Y
+; AGGREGATE-NEXT:   data +0x08 [sizeof=4] SimplePadFields1 Fields
+; AGGREGATE-NEXT:     data +0x08 [sizeof=1] char A
+; AGGREGATE-NEXT:     data +0x09 [sizeof=1] char B
+; AGGREGATE-NEXT:     data +0x0a [sizeof=1] char C
+; AGGREGATE-NEXT:     <padding> (1 bytes)
+; AGGREGATE-NEXT: }

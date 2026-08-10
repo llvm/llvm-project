@@ -1,0 +1,40 @@
+; RUN: llvm-pdbutil dump -type-index=0x1019 %p/Inputs/ClassLayoutTest.pdb \
+; RUN:     | FileCheck --check-prefix=NODEPS %s
+; RUN: llvm-pdbutil dump -type-index=0x1019 -dependents -dont-resolve-forward-refs \
+; RUN:     %p/Inputs/ClassLayoutTest.pdb | FileCheck --check-prefix=DEPS %s
+; RUN: llvm-pdbutil dump -type-index=0x3,0x30,0x44,0x74 \
+; RUN:     %p/Inputs/ClassLayoutTest.pdb | FileCheck --check-prefix=SIMPLE %s 
+
+
+NODEPS:                          Types (TPI Stream)
+NODEPS-NEXT: ============================================================
+NODEPS-NEXT:   Showing 1 records.
+NODEPS-NEXT:   0x1019 | LF_MFUNCTION [size = 28]
+NODEPS-NEXT:            return type = 0x0003 (void), # args = 0, param list = 0x100E
+NODEPS-NEXT:            class type = 0x1017, this type = 0x1018, this adjust = 0
+NODEPS-NEXT:            calling conv = thiscall, options = None
+
+
+DEPS:                           Types (TPI Stream)
+DEPS-NEXT: ============================================================
+DEPS-NEXT:   Showing 1 records and their dependents (4 records total)
+DEPS-NEXT:   0x100E | LF_ARGLIST [size = 8]
+DEPS-NEXT:   0x1017 | LF_CLASS [size = 60] `MembersTest::A`
+DEPS-NEXT:            unique name: `.?AVA@MembersTest@@`
+DEPS-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
+DEPS-NEXT:            options: forward ref | has unique name
+DEPS-NEXT:   0x1018 | LF_POINTER [size = 12]
+DEPS-NEXT:            referent = 0x1017, mode = pointer, opts = const, kind = ptr32
+DEPS-NEXT:   0x1019 | LF_MFUNCTION [size = 28]
+DEPS-NEXT:            return type = 0x0003 (void), # args = 0, param list = 0x100E
+DEPS-NEXT:            class type = 0x1017, this type = 0x1018, this adjust = 0
+DEPS-NEXT:            calling conv = thiscall, options = None
+
+
+SIMPLE:                          Types (TPI Stream)
+SIMPLE-NEXT: ============================================================
+SIMPLE-NEXT:   Showing 4 records.
+SIMPLE-NEXT:   0x0003 (void) | void
+SIMPLE-NEXT:   0x0030 (bool) | bool
+SIMPLE-NEXT:   0x0044 (__float48) | __float48
+SIMPLE-NEXT:   0x0074 (int) | int

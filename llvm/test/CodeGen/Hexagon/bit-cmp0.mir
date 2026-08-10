@@ -1,0 +1,154 @@
+# RUN: llc -mtriple=hexagon -run-pass hexagon-bit-simplify -o - %s | FileCheck %s
+
+--- |
+  @g0 = global i32 0, align 4
+
+  define i32 @f0() { ret i32 0 }
+  define i32 @f1() { ret i32 0 }
+  define i32 @f2() { ret i32 0 }
+  define i32 @f3() { ret i32 0 }
+  define i32 @f4() { ret i32 0 }
+  define i32 @f5() { ret i32 0 }
+  define i32 @f6() { ret i32 0 }
+  define i32 @f7() { ret i32 0 }
+...
+
+# Case 0: is-zero with known zero register
+# CHECK-LABEL: name: f0
+# CHECK: %[[R00:[0-9]+]]:intregs = A2_tfrsi 1
+# CHECK: $r0 = COPY %[[R00]]
+# CHECK: PS_jmpret $r31, implicit-def dead $pc, implicit $r0
+
+name: f0
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:intregs = A2_tfrsi 0
+    %2:intregs = A4_rcmpeqi killed %0, 0
+    $r0 = COPY %2
+    PS_jmpret $r31, implicit-def dead $pc, implicit $r0
+...
+
+# Case 1: is-zero with known non-zero register
+# CHECK-LABEL: name: f1
+# CHECK: %[[R10:[0-9]+]]:intregs = A2_tfrsi 0
+# CHECK: $r0 = COPY %[[R10]]
+# CHECK: PS_jmpret $r31, implicit-def dead $pc, implicit $r0
+
+name: f1
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:intregs = A2_tfrsi 128
+    %2:intregs = A4_rcmpeqi killed %0, 0
+    $r0 = COPY %2
+    PS_jmpret $r31, implicit-def dead $pc, implicit $r0
+...
+
+# Case 2: is-not-zero with known zero register
+# CHECK-LABEL: name: f2
+# CHECK: %[[R20:[0-9]+]]:intregs = A2_tfrsi 0
+# CHECK: $r0 = COPY %[[R20]]
+# CHECK: PS_jmpret $r31, implicit-def dead $pc, implicit $r0
+
+name: f2
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:intregs = A2_tfrsi 0
+    %2:intregs = A4_rcmpneqi killed %0, 0
+    $r0 = COPY %2
+    PS_jmpret $r31, implicit-def dead $pc, implicit $r0
+...
+
+# Case 3: is-not-zero with known non-zero register
+# CHECK-LABEL: name: f3
+# CHECK: %[[R30:[0-9]+]]:intregs = A2_tfrsi 1
+# CHECK: $r0 = COPY %[[R30]]
+# CHECK: PS_jmpret $r31, implicit-def dead $pc, implicit $r0
+
+name: f3
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:intregs = A2_tfrsi 1024
+    %2:intregs = A4_rcmpneqi killed %0, 0
+    $r0 = COPY %2
+    PS_jmpret $r31, implicit-def dead $pc, implicit $r0
+...
+
+
+# Case 4: is-zero with mux(p, 1, 0)
+# CHECK-LABEL: name: f4
+# CHECK: %[[R40:[0-9]+]]:predregs = COPY $p0
+# CHECK: %[[R41:[0-9]+]]:intregs = C2_muxii %[[R40]], 0, 1
+# CHECK: $r0 = COPY %[[R41]]
+# CHECK: PS_jmpret $r31, implicit-def dead $pc, implicit $r0
+
+name: f4
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $p0
+    %0:predregs = COPY $p0
+    %1:intregs = C2_muxii %0, 1, 0
+    %2:intregs = A4_rcmpeqi killed %1, 0
+    $r0 = COPY %2
+    PS_jmpret $r31, implicit-def dead $pc, implicit $r0
+...
+
+# Case 5: is-zero with mux(p, 0, 1)
+# CHECK-LABEL: name: f5
+# CHECK: %[[R50:[0-9]+]]:predregs = COPY $p0
+# CHECK: %[[R51:[0-9]+]]:intregs = C2_muxii %[[R50]], 1, 0
+# CHECK: $r0 = COPY %[[R51]]
+# CHECK: PS_jmpret $r31, implicit-def dead $pc, implicit $r0
+
+name: f5
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $p0
+    %0:predregs = COPY $p0
+    %1:intregs = C2_muxii %0, 0, 1
+    %2:intregs = A4_rcmpeqi killed %1, 0
+    $r0 = COPY %2
+    PS_jmpret $r31, implicit-def dead $pc, implicit $r0
+...
+
+# Case 6: is-not-zero with mux(p, 1, 2)
+# CHECK-LABEL: name: f6
+# CHECK: %[[R60:[0-9]+]]:intregs = A2_tfrsi 1
+# CHECK: $r0 = COPY %[[R60]]
+# CHECK: PS_jmpret $r31, implicit-def dead $pc, implicit $r0
+
+name: f6
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $p0
+    %0:predregs = COPY $p0
+    %1:intregs = C2_muxii %0, 1, 2
+    %2:intregs = A4_rcmpneqi killed %1, 0
+    $r0 = COPY %2
+    PS_jmpret $r31, implicit-def dead $pc, implicit $r0
+...
+
+# Case 7: is-not-zero with mux(p, @g0, 2)
+# CHECK-LABEL: name: f7
+# CHECK: %[[R70:[0-9]+]]:intregs = A2_tfrsi 1
+# CHECK: $r0 = COPY %[[R70]]
+# CHECK: PS_jmpret $r31, implicit-def dead $pc, implicit $r0
+
+name: f7
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $p0
+    %0:predregs = COPY $p0
+    %1:intregs = C2_muxii %0, @g0, 2
+    %2:intregs = A4_rcmpneqi killed %1, 0
+    $r0 = COPY %2
+    PS_jmpret $r31, implicit-def dead $pc, implicit $r0
+...
+

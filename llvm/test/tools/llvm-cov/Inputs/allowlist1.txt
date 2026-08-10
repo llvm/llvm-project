@@ -1,0 +1,4 @@
+# Comment
+
+allowlist_fun:*func1*
+allowlist_fun:*func2*

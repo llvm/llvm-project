@@ -1,0 +1,33 @@
+--- !minidump
+Streams:         
+  - Type:            SystemInfo
+    Processor Arch:  ARM64
+    Platform ID:     Linux
+    CSD Version:     '15E216'
+    CPU:             
+      CPUID:           0x00000000
+  - Type:            MiscInfo
+    Content:         00000000010000007B000000000000000000000000000000
+  - Type:            LinuxMaps
+    Text:             |
+      400d9000-400db000 r-xp 00000000 b3:04 227        /system/bin/app_process
+      400db000-400dc000 r--p 00001000 b3:04 227        /system/bin/app_process
+      400dc000-400dd000 rw-p 00000000 00:00 0 
+      400dd000-400ec000 r-xp 00000000 b3:04 300        /system/bin/linker
+      400ec000-400ed000 r--p 00000000 00:00 0 
+      400ed000-400ee000 r--p 0000f000 b3:04 300        /system/bin/linker
+      400ee000-400ef000 rw-p 00010000 b3:04 300        /system/bin/linker
+      400ef000-400fb000 rw-p 00000000 00:00 0 
+      400fb000-400fc000 r-xp 00000000 b3:04 1096       /system/lib/liblog.so
+      400fc000-400fd000 rwxp 00001000 b3:04 1096       /system/lib/liblog.so
+      400fd000-400ff000 r-xp 00002000 b3:04 1096       /system/lib/liblog.so
+      400ff000-40100000 r--p 00003000 b3:04 1096       /system/lib/liblog.so
+      40100000-40101000 rw-p 00004000 b3:04 1096       /system/lib/liblog.so
+      40101000-40122000 r-xp 00000000 b3:04 955        /system/lib/libc.so
+      40122000-40123000 rwxp 00021000 b3:04 955        /system/lib/libc.so
+      40123000-40167000 r-xp 00022000 b3:04 955        /system/lib/libc.so
+      40167000-40169000 r--p 00065000 b3:04 955        /system/lib/libc.so
+      40169000-4016b000 rw-p 00067000 b3:04 955        /system/lib/libc.so
+      4016b000-40176000 rw-p 00000000 00:00 0 
+
+...

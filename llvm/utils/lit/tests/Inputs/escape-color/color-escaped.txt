@@ -1,0 +1,10 @@
+# .---command stdout------------
+# | # RUN: cat %s
+# | [31mred
+[0m# | [31mstill red(B[m
+# | plain
+# | [32mgreen
+[0m# | [32mstill green (never terminated)
+[0m# `-----------------------------
+
+--

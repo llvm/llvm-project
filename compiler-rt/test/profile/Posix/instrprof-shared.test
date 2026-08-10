@@ -1,0 +1,75 @@
+"""
+This test produces three shared libraries:
+
+1. libt-instr.so is instrumented
+2. libt-no-instr1.so is not instrumented
+3. libt-no-instr2.so is built with profile rt linked in (via -u<hook>), but the object file is built
+   with instrumentation turned off.
+
+After the libraries are built, the main program is then built with/without instrumentation and linked
+against 3 libraries above.
+
+The test is to verify that programs linked against these shared objects with and without instrumentation
+enabled behave as expected.
+"""
+
+RUN: mkdir -p %t.d
+RUN: %clang_profgen -o %t.d/libt-instr.so -fPIC -shared %S/../Inputs/instrprof-shared-lib.c
+RUN: %clang -o %t.d/libt-no-instr1.so -fPIC -shared %S/../Inputs/instrprof-shared-lib.c
+RUN: %clang -c -o %t.d/instrprof-shared-lib-no-instr2.o -fPIC  %S/../Inputs/instrprof-shared-lib.c
+RUN: %clang_profgen -o %t.d/libt-no-instr2.so -fPIC -shared %t.d/instrprof-shared-lib-no-instr2.o
+
+RUN: %clang_profgen -o %t-instr-instr -L%t.d -rpath %t.d -lt-instr  %S/../Inputs/instrprof-shared-main.c
+RUN: %clang_profgen -o %t-instr-no-instr1 -L%t.d -rpath %t.d -lt-no-instr1  %S/../Inputs/instrprof-shared-main.c
+RUN: %clang_profgen -o %t-instr-no-instr2 -L%t.d -rpath %t.d -lt-no-instr2  %S/../Inputs/instrprof-shared-main.c
+RUN: %clang -o %t-no-instr1-instr -L%t.d -rpath %t.d -lt-instr  %S/../Inputs/instrprof-shared-main.c
+RUN: %clang -o %t-no-instr1-no-instr1 -L%t.d -rpath %t.d -lt-no-instr1  %S/../Inputs/instrprof-shared-main.c
+RUN: %clang -o %t-no-instr1-no-instr2 -L%t.d -rpath %t.d -lt-no-instr2  %S/../Inputs/instrprof-shared-main.c
+RUN: %clang -c -o %t.d/instrprof-shared-main-no-instr2.o  %S/../Inputs/instrprof-shared-main.c
+RUN: %clang -o %t-no-instr2-instr -L%t.d -rpath %t.d -lt-instr  %t.d/instrprof-shared-main-no-instr2.o
+RUN: %clang -o %t-no-instr2-no-instr1 -L%t.d -rpath %t.d -lt-no-instr1  %t.d/instrprof-shared-main-no-instr2.o
+RUN: %clang -o %t-no-instr2-no-instr2 -L%t.d -rpath %t.d -lt-no-instr2  %t.d/instrprof-shared-main-no-instr2.o
+
+RUN: env LLVM_PROFILE_FILE=%t-instr-instr.profraw %run %t-instr-instr
+RUN: env LLVM_PROFILE_FILE=%t-instr-no-instr1.profraw %run %t-instr-no-instr1
+RUN: env LLVM_PROFILE_FILE=%t-instr-no-instr2.profraw %run %t-instr-no-instr2
+RUN: env LLVM_PROFILE_FILE=%t-no-instr1-instr.profraw %run %t-no-instr1-instr
+RUN: env LLVM_PROFILE_FILE=%t-no-instr2-instr.profraw %run %t-no-instr2-instr
+RUN: env LLVM_PROFILE_FILE=%t-no-instr1-no-instr1.profraw %run %t-no-instr1-no-instr1
+RUN: env LLVM_PROFILE_FILE=%t-no-instr1-no-instr2.profraw %run %t-no-instr1-no-instr2
+RUN: env LLVM_PROFILE_FILE=%t-no-instr2-no-instr1.profraw %run %t-no-instr2-no-instr1
+RUN: env LLVM_PROFILE_FILE=%t-no-instr2-no-instr2.profraw %run %t-no-instr2-no-instr2
+
+RUN: llvm-profdata merge -o %t-instr-instr.profdata %t-instr-instr.profraw
+RUN: llvm-profdata merge -o %t-instr-no-instr1.profdata %t-instr-no-instr1.profraw
+RUN: llvm-profdata merge -o %t-instr-no-instr2.profdata %t-instr-no-instr2.profraw
+RUN: llvm-profdata merge -o %t-no-instr1-instr.profdata %t-no-instr1-instr.profraw
+RUN: llvm-profdata merge -o %t-no-instr2-instr.profdata %t-no-instr2-instr.profraw
+
+RUN: not llvm-profdata merge -o %t-no-instr1-no-instr1.profdata %t-no-instr1-no-instr1.profraw 2>&1 | FileCheck %s --check-prefix=MISSING-FILE
+RUN: not llvm-profdata merge -o %t-no-instr2-no-instr1.profdata %t-no-instr2-no-instr1.profraw 2>&1 | FileCheck %s --check-prefix=MISSING-FILE
+MISSING-FILE: profraw
+
+RUN: llvm-profdata show -counts --function main %t-instr-instr.profdata | grep -v 'Total\|Maximum' > %t-main-1
+RUN: llvm-profdata show -counts --function main %t-instr-no-instr1.profdata | grep -v 'Total\|Maximum' > %t-main-2
+RUN: llvm-profdata show -counts --function main %t-instr-no-instr2.profdata | grep -v 'Total\|Maximum' > %t-main-3
+RUN: llvm-profdata show -counts --function foo %t-instr-instr.profdata | grep -v 'Total\|Maximum' > %t-foo-1
+RUN: llvm-profdata show -counts --function foo %t-no-instr1-instr.profdata | grep -v 'Total\|Maximum' > %t-foo-2
+RUN: llvm-profdata show -counts --function foo %t-no-instr2-instr.profdata | grep -v 'Total\|Maximum'  > %t-foo-3
+
+RUN: %clang_profuse=%t-instr-instr.profdata -o %t-main-instr-instr.ll -S -emit-llvm %S/../Inputs/instrprof-shared-main.c
+RUN: %clang_profuse=%t-instr-no-instr1.profdata -o %t-main-instr-no-instr1.ll -S -emit-llvm %S/../Inputs/instrprof-shared-main.c
+RUN: %clang_profuse=%t-instr-no-instr2.profdata -o %t-main-instr-no-instr2.ll -S -emit-llvm %S/../Inputs/instrprof-shared-main.c
+RUN: %clang_profuse=%t-instr-instr.profdata -o %t-lib-instr-instr.ll -S -emit-llvm %S/../Inputs/instrprof-shared-lib.c
+RUN: %clang_profuse=%t-no-instr1-instr.profdata -o %t-lib-no-instr1-instr.ll -S -emit-llvm %S/../Inputs/instrprof-shared-lib.c
+RUN: %clang_profuse=%t-no-instr2-instr.profdata -o %t-lib-no-instr2-instr.ll -S -emit-llvm %S/../Inputs/instrprof-shared-lib.c
+RUN: %clang_profuse=%t-instr-instr.profdata -o %t-lib-instr-instr.ll -S -emit-llvm %S/../Inputs/instrprof-shared-lib.c
+
+RUN: diff %t-main-instr-no-instr1.ll %t-main-instr-no-instr2.ll
+RUN: diff %t-lib-no-instr1-instr.ll %t-lib-no-instr2-instr.ll
+
+RUN: diff %t-main-1 %t-main-2
+RUN: diff %t-main-1 %t-main-3
+RUN: diff %t-foo-1 %t-foo-2
+RUN: diff %t-foo-1 %t-foo-3
+

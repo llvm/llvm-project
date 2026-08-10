@@ -1,0 +1,12 @@
+RUN: llvm-objdump -t %p/Inputs/library.lib
+
+CHECK: [ 0](sec  0)(fl 0x00)(ty   0)(scl   0) (nx 0) 0x00000000 __imp__constant
+
+CHECK: [ 0](sec  0)(fl 0x00)(ty   0)(scl   0) (nx 0) 0x00000000 __imp__data
+
+CHECK: [ 0](sec  0)(fl 0x00)(ty   0)(scl   0) (nx 0) 0x00000000 __imp__function
+CHECK: [ 1](sec  0)(fl 0x00)(ty  20)(scl   0) (nx 0) 0x00000000 _function
+
+CHECK: [ 0](sec  0)(fl 0x00)(ty   0)(scl   0) (nx 0) 0x00000000 __imp__ordinal
+CHECK: [ 1](sec  0)(fl 0x00)(ty  20)(scl   0) (nx 0) 0x00000000 _ordinal
+

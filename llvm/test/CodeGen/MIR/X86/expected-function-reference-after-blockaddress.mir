@@ -1,0 +1,30 @@
+# RUN: not llc -mtriple=x86_64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+
+--- |
+
+  @addr = global ptr null
+
+  define void @test() {
+  entry:
+    store volatile ptr blockaddress(@test, %block), ptr @addr
+    %val = load volatile ptr, ptr @addr
+    indirectbr ptr %val, [label %block]
+
+  block:
+    ret void
+  }
+
+...
+---
+name:            test
+body: |
+  bb.0.entry:
+    successors: %bb.1.block
+    ; CHECK: [[@LINE+1]]:44: expected an IR function reference
+    $rax = LEA64r $rip, 1, _, blockaddress(@addr, %ir-block.block), _
+    MOV64mr $rip, 1, _, @addr, _, killed $rax
+    JMP64m $rip, 1, _, @addr, _
+
+  bb.1.block:
+    RET64
+...

@@ -1,0 +1,27 @@
+## This tests "Format" values printed by llvm-readobj.
+
+## The "Format" value printed depends on values stored in e_ident[EI_CLASS],
+## e_ident[EI_DATA] and e_machine fields of an ELF file header.
+## We test all possible values in unittests\Object\ELFObjectFileTest.cpp,
+## here we test just a few of them to demonstrate that llvm-readobj prints the same.
+
+# RUN: yaml2obj %s -o %t.none64.o
+# RUN: llvm-readobj --file-headers %t.none64.o | FileCheck %s -DFMT="elf64-unknown"
+
+# RUN: yaml2obj %s -o %t.none32.o -DCLASS=32
+# RUN: llvm-readobj --file-headers %t.none32.o | FileCheck %s -DFMT="elf32-unknown"
+
+# RUN: yaml2obj %s -o %t.i386-32.o -DMACHINE=EM_386 -DCLASS=32
+# RUN: llvm-readobj --file-headers %t.i386-32.o | FileCheck %s -DFMT="elf32-i386"
+
+# RUN: yaml2obj %s -o %t.x86_64.o -DMACHINE=EM_X86_64
+# RUN: llvm-readobj --file-headers %t.x86_64.o | FileCheck %s -DFMT="elf64-x86-64"
+
+# CHECK: Format: [[FMT]]
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS[[CLASS=64]]
+  Data:    ELFDATA2[[DATA=LSB]]
+  Type:    ET_REL
+  Machine: [[MACHINE=EM_NONE]]

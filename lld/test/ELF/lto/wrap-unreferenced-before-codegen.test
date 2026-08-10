@@ -1,0 +1,91 @@
+# REQUIRES: x86
+## Verify that we can correctly wrap symbols produced only during LTO codegen
+## and unreferenced before then.
+
+# RUN: rm -rf %t && split-file %s %t
+# RUN: llvm-mc -triple x86_64-elf --filetype=obj -o %t/unwind.o %t/unwind.s
+# RUN: ld.lld -shared -o %t/libunwind.so -soname libunwind.so %t/unwind.o
+# RUN: llvm-as -o %t/resume.bc %t/resume.ll
+# RUN: ld.lld -shared -o %t/libresume.so -soname libresume.so %t/resume.bc \
+# RUN:   %t/libunwind.so --wrap _Unwind_Resume
+# RUN: llvm-objdump --no-print-imm-hex --dynamic-reloc --disassemble %t/libresume.so | \
+# RUN:   FileCheck --check-prefix=UNWIND-DISASM %s
+# RUN: llvm-readelf --dyn-syms %t/libresume.so | \
+# RUN:   FileCheck --check-prefix=UNWIND-DYNSYM %s
+
+# UNWIND-DISASM:       [[#%x,RELOC:]] R_X86_64_JUMP_SLOT __wrap__Unwind_Resume
+# UNWIND-DISASM-LABEL: <_Z1fv>:
+# UNWIND-DISASM:       callq {{.*}}<__wrap__Unwind_Resume@plt>
+# UNWIND-DISASM-LABEL: <__wrap__Unwind_Resume@plt>:
+# UNWIND-DISASM-NEXT:  jmpq *[[#]](%rip) # [[#%#x,RELOC]]
+
+# UNWIND-DYNSYM:      Symbol table '.dynsym' contains 4 entries:
+# UNWIND-DYNSYM:      NOTYPE  LOCAL  DEFAULT   UND
+# UNWIND-DYNSYM-NEXT: NOTYPE  GLOBAL DEFAULT   UND throw
+# UNWIND-DYNSYM-NEXT: NOTYPE  GLOBAL DEFAULT   UND __wrap__Unwind_Resume
+# UNWIND-DYNSYM-NEXT: FUNC    GLOBAL DEFAULT     9 _Z1fv
+
+# RUN: llvm-mc -triple x86_64-elf -filetype=obj -o %t/malloc.o %t/malloc.s
+# RUN: ld.lld -shared -o %t/libmalloc.so -soname libmalloc.so %t/malloc.o
+# RUN: llvm-mc -triple x86_64-elf -filetype=obj -o %t/emutls.o %t/emutls.s
+# RUN: llvm-as -o %t/usetls.bc %t/usetls.ll
+# RUN: ld.lld -shared -o %t/libusetls.so \
+# RUN:   %t/usetls.bc %t/libmalloc.so \
+# RUN:   --start-lib %t/emutls.o -mllvm -emulated-tls --wrap malloc
+# RUN: llvm-objdump --no-print-imm-hex --dynamic-reloc --disassemble %t/libusetls.so | \
+# RUN:   FileCheck --check-prefix=USETLS-DISASM %s
+# RUN: llvm-readelf --dyn-syms %t/libusetls.so | \
+# RUN:   FileCheck --check-prefix=USETLS-DYNSYM %s
+
+# USETLS-DISASM:       [[#%x,RELOC:]] R_X86_64_JUMP_SLOT __wrap_malloc
+# USETLS-DISASM-LABEL: <__emutls_get_address>:
+# USETLS-DISASM-NEXT:  jmp{{.*}}<__wrap_malloc@plt>
+# USETLS-DISASM-LABEL: <__wrap_malloc@plt>:
+# USETLS-DISASM-NEXT:  jmpq *[[#]](%rip) # [[#%#x,RELOC]]
+
+# USETLS-DYNSYM:      Symbol table '.dynsym' contains 5 entries:
+# USETLS-DYNSYM:      NOTYPE  LOCAL  DEFAULT   UND
+# USETLS-DYNSYM-NEXT: NOTYPE  GLOBAL DEFAULT   UND __wrap_malloc
+# USETLS-DYNSYM-NEXT: FUNC    GLOBAL DEFAULT     6 f
+# USETLS-DYNSYM-NEXT: NOTYPE  GLOBAL DEFAULT     6 __emutls_get_address
+
+#--- unwind.s
+.globl _Unwind_Resume
+.globl __wrap__Unwind_Resume
+_Unwind_Resume:
+__wrap__Unwind_Resume:
+	retq
+
+#--- resume.ll
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+define dso_local void @_Z1fv() optnone noinline personality ptr @throw {
+  invoke void @throw()
+          to label %unreachable unwind label %lpad
+lpad:
+  %1 = landingpad { ptr, i32 }
+          cleanup
+  resume { ptr, i32 } %1
+unreachable:
+  unreachable
+}
+declare void @throw()
+
+#--- malloc.s
+.globl malloc
+malloc:
+	retq
+
+#--- emutls.s
+.globl __emutls_get_address
+__emutls_get_address:
+	jmp	malloc@plt
+
+#--- usetls.ll
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+@x = dso_local thread_local global i32 0, align 4
+define dso_local i32 @f() {
+  %loaded = load i32, ptr @x, align 4
+  ret i32 %loaded
+}

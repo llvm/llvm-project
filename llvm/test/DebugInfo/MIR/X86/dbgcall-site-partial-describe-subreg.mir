@@ -1,0 +1,66 @@
+# RUN: llc -emit-call-site-info -start-before=livedebugvalues -filetype=obj -o - %s \
+# RUN:     | llvm-dwarfdump - | FileCheck %s --implicit-check-not=DW_TAG_GNU_call_site_parameter
+#
+# Test that we don't crash on complicated copies with avx registers. For
+# complex intrinsic code, LLVM will produce register copies to 128-bit
+# registers that (through writing to them) implicitly zero out the upper
+# bit of the 256 ymm register.
+#
+# However, this is now what call-site-info tracking expects to see, as
+# demonstrated in the MIR below -- a ymm argument to a function might be
+# implicit-def'd by such a copy, but without being the 'Destination'
+# register. For this non-trivial copy, test that we presently produce
+# no parameter location. We might be able to describe it in the future.
+#
+# CHECK:      DW_TAG_GNU_call_site
+# CHECK-NEXT:    DW_AT_abstract_origin
+
+--- |
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-linux-gnu"
+
+  ; Function Attrs: nounwind uwtable
+  define void @foo() !dbg !12 {
+  entry:
+    ret void, !dbg !16
+  }
+
+  declare !dbg !4 void @call()
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!8, !9, !10}
+  !llvm.ident = !{!11}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 11.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, splitDebugInlining: false, nameTableKind: None)
+  !1 = !DIFile(filename: "clobber.c", directory: "/")
+  !2 = !{}
+  !3 = !{!4}
+  !4 = !DISubprogram(name: "call", scope: !1, file: !1, line: 1, type: !5, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
+  !5 = !DISubroutineType(types: !6)
+  !6 = !{null, !7, !7}
+  !7 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !8 = !{i32 7, !"Dwarf Version", i32 4}
+  !9 = !{i32 2, !"Debug Info Version", i32 3}
+  !10 = !{i32 1, !"wchar_size", i32 4}
+  !11 = !{!"clang version 11.0.0"}
+  !12 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 3, type: !13, scopeLine: 3, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
+  !13 = !DISubroutineType(types: !14)
+  !14 = !{null}
+  !15 = !DILocation(line: 5, scope: !12)
+  !16 = !DILocation(line: 6, scope: !12)
+
+...
+---
+name:            foo
+callSites:
+  - { bb: 0, offset: 1, fwdArgRegs:
+      - { arg: 0, reg: '$ymm0' } }
+body:             |
+  bb.0.entry:
+    liveins: $xmm1
+
+    renamable $xmm0 = VMOVAPSrr renamable $xmm1, implicit-def $ymm0
+    CALL64pcrel32 @call, csr_64, implicit $rsp, implicit $ssp, implicit killed $ymm0, implicit-def $rsp, implicit-def $ssp, debug-location !15
+    RET64 debug-location !16
+
+...

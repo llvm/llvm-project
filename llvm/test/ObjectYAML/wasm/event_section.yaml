@@ -1,0 +1,94 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+
+--- !WASM
+FileHeader:
+  Version:         0x00000001
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - Index:           0
+        ParamTypes:
+          - I32
+        ReturnTypes:
+          - I32
+      - Index:           1
+        ParamTypes:
+          - I32
+        ReturnTypes:      []
+  - Type:            FUNCTION
+    FunctionTypes:   [ 0 ]
+  - Type:            TAG
+    TagTypes:        [ 1 ]
+  - Type:            CODE
+    Relocations:
+      - Type:            R_WASM_TAG_INDEX_LEB
+        Index:           1
+        Offset:          0x00000006
+      - Type:            10
+        Index:           1
+        Offset:          0x00000006
+    Functions:
+      - Index:           0
+        Locals:
+        Body:            200008808080800041000B
+  - Type:            CUSTOM
+    Name:            linking
+    Version:         2
+    SymbolTable:
+      - Index:           0
+        Kind:            FUNCTION
+        Name:            test_throw0
+        Flags:           [  ]
+        Function:        0
+      - Index:           1
+        Kind:            TAG
+        Name:            __cpp_exception
+        Flags:           [ BINDING_WEAK ]
+        Tag:             0
+...
+
+# CHECK:      --- !WASM
+# CHECK-NEXT: FileHeader:
+# CHECK-NEXT:   Version:         0x1
+# CHECK-NEXT: Sections:
+# CHECK-NEXT:   - Type:            TYPE
+# CHECK-NEXT:     Signatures:
+# CHECK-NEXT:       - Index:           0
+# CHECK-NEXT:         ParamTypes:
+# CHECK-NEXT:           - I32
+# CHECK-NEXT:         ReturnTypes:
+# CHECK-NEXT:           - I32
+# CHECK-NEXT:       - Index:           1
+# CHECK-NEXT:         ParamTypes:
+# CHECK-NEXT:           - I32
+# CHECK-NEXT:         ReturnTypes:     []
+# CHECK-NEXT:   - Type:            FUNCTION
+# CHECK-NEXT:     FunctionTypes:   [ 0 ]
+# CHECK-NEXT:   - Type:            TAG
+# CHECK-NEXT:     TagTypes:        [ 1 ]
+# CHECK-NEXT:   - Type:            CODE
+# CHECK-NEXT:     Relocations:
+# CHECK-NEXT:       - Type:            R_WASM_TAG_INDEX_LEB
+# CHECK-NEXT:         Index:           1
+# CHECK-NEXT:         Offset:          0x6
+# CHECK-NEXT:       - Type:            R_WASM_TAG_INDEX_LEB
+# CHECK-NEXT:         Index:           1
+# CHECK-NEXT:         Offset:          0x6
+# CHECK-NEXT:     Functions:
+# CHECK-NEXT:       - Index:           0
+# CHECK-NEXT:         Locals:
+# CHECK-NEXT:         Body:            200008808080800041000B
+# CHECK-NEXT:   - Type:            CUSTOM
+# CHECK-NEXT:     Name:            linking
+# CHECK-NEXT:     Version:         2
+# CHECK-NEXT:     SymbolTable:
+# CHECK-NEXT:       - Index:           0
+# CHECK-NEXT:         Kind:            FUNCTION
+# CHECK-NEXT:         Name:            test_throw0
+# CHECK-NEXT:         Flags:           [  ]
+# CHECK-NEXT:         Function:        0
+# CHECK-NEXT:       - Index:           1
+# CHECK-NEXT:         Kind:            TAG
+# CHECK-NEXT:         Name:            __cpp_exception
+# CHECK-NEXT:         Flags:           [ BINDING_WEAK ]
+# CHECK-NEXT:         Tag:             0

@@ -1,0 +1,48 @@
+set(LLVM_LINK_COMPONENTS
+  support
+  BitstreamReader
+  FrontendOpenMP
+  )
+add_subdirectory(support)
+
+add_clang_library(clangDoc STATIC
+  BitcodeReader.cpp
+  BitcodeWriter.cpp
+  ClangDoc.cpp
+  Generators.cpp
+  HTMLGenerator.cpp
+  Mapper.cpp
+  MDGenerator.cpp
+  Representation.cpp
+  Serialize.cpp
+  JSONGenerator.cpp
+
+  DEPENDS
+  omp_gen
+  ClangDriverOptions
+)
+
+clang_target_link_libraries(clangDoc
+  PRIVATE
+  clangDocSupport
+  clangAnalysis
+  clangAST
+  clangASTMatchers
+  clangBasic
+  clangFrontend
+  clangLex
+  clangTooling
+  clangToolingCore
+  clangUnifiedSymbolResolution
+  )
+
+target_link_libraries(clangDoc
+  PRIVATE
+  clangDocSupport
+  )
+
+add_subdirectory(tool)
+
+if (LLVM_INCLUDE_BENCHMARKS)
+  add_subdirectory(benchmarks)
+endif()

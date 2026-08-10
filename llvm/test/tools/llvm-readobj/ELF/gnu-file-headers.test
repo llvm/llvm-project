@@ -1,0 +1,131 @@
+## In this test we test how llvm-readelf prints file headers.
+
+## Case 1: Test EM_386 object.
+# RUN: yaml2obj %s --docnum=1 -o %t1
+# RUN: llvm-readelf -h %t1 | FileCheck %s --check-prefix=I386
+# RUN: llvm-readelf --file-header %t1 \
+# RUN:   | FileCheck %s --strict-whitespace --match-full-lines --check-prefix=I386
+# RUN: llvm-readelf --file-headers %t1  \
+# RUN:   | FileCheck %s --strict-whitespace --match-full-lines --check-prefix=I386
+
+#      I386:ELF Header:
+# I386-NEXT:  Magic:   7f 45 4c 46 01 01 01 00 00 00 00 00 00 00 00 00
+# I386-NEXT:  Class:                             ELF32
+# I386-NEXT:  Data:                              2's complement, little endian
+# I386-NEXT:  Version:                           1 (current)
+# I386-NEXT:  OS/ABI:                            UNIX - System V
+# I386-NEXT:  ABI Version:                       0
+# I386-NEXT:  Type:                              REL (Relocatable file)
+# I386-NEXT:  Machine:                           Intel 80386
+# I386-NEXT:  Version:                           0x1
+# I386-NEXT:  Entry point address:               0x11223344
+# I386-NEXT:  Start of program headers:          52 (bytes into file)
+# I386-NEXT:  Start of section headers:          112 (bytes into file)
+# I386-NEXT:  Flags:                             0x0
+# I386-NEXT:  Size of this header:               52 (bytes)
+# I386-NEXT:  Size of program headers:           32 (bytes)
+# I386-NEXT:  Number of program headers:         1
+# I386-NEXT:  Size of section headers:           40 (bytes)
+# I386-NEXT:  Number of section headers:         4
+# I386-NEXT:  Section header string table index: 3
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_386
+  Entry:   0x11223344
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+ProgramHeaders:
+  - Type: PT_LOAD
+    Flags: [ PF_R ]
+
+## Case 2: Test EM_X86_64 object.
+# RUN: yaml2obj %s --docnum=2 -o %t2
+# RUN: llvm-readelf -h %t2 | FileCheck %s --check-prefix=X86-64
+# RUN: llvm-readelf --file-header %t2 \
+# RUN:   | FileCheck %s --check-prefix=X86-64 --strict-whitespace --match-full-lines
+# RUN: llvm-readelf --file-headers %t2 \
+# RUN:   | FileCheck %s --check-prefix=X86-64 --strict-whitespace --match-full-lines
+
+#      X86-64:ELF Header:
+# X86-64-NEXT:  Magic:   7f 45 4c 46 02 01 01 00 00 00 00 00 00 00 00 00
+# X86-64-NEXT:  Class:                             ELF64
+# X86-64-NEXT:  Data:                              2's complement, little endian
+# X86-64-NEXT:  Version:                           1 (current)
+# X86-64-NEXT:  OS/ABI:                            UNIX - System V
+# X86-64-NEXT:  ABI Version:                       0
+# X86-64-NEXT:  Type:                              REL (Relocatable file)
+# X86-64-NEXT:  Machine:                           Advanced Micro Devices X86-64
+# X86-64-NEXT:  Version:                           0x1
+# X86-64-NEXT:  Entry point address:               0x1122334455667788
+# X86-64-NEXT:  Start of program headers:          64 (bytes into file)
+# X86-64-NEXT:  Start of section headers:          152 (bytes into file)
+# X86-64-NEXT:  Flags:                             0x0
+# X86-64-NEXT:  Size of this header:               64 (bytes)
+# X86-64-NEXT:  Size of program headers:           56 (bytes)
+# X86-64-NEXT:  Number of program headers:         1
+# X86-64-NEXT:  Size of section headers:           64 (bytes)
+# X86-64-NEXT:  Number of section headers:         4
+# X86-64-NEXT:  Section header string table index: 3
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+  Entry:   0x1122334455667788
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+ProgramHeaders:
+  - Type: PT_LOAD
+    Flags: [ PF_R ]
+
+## Case 3: Use an arbitrary machine type that allows to show how we print Flags.
+##         Here we use an EM_MIPS object for that.
+# RUN: yaml2obj %s --docnum=3 -o %t3
+# RUN: llvm-readelf -h %t3 | FileCheck %s --check-prefix=MIPSEL
+# RUN: llvm-readelf --file-header %t3 \
+# RUN:   | FileCheck %s --check-prefix=MIPSEL --strict-whitespace --match-full-lines
+# RUN: llvm-readelf --file-headers %t3 \
+# RUN:   | FileCheck %s --check-prefix=MIPSEL --strict-whitespace --match-full-lines
+
+#      MIPSEL:ELF Header:
+# MIPSEL-NEXT:  Magic:   7f 45 4c 46 01 01 01 00 00 00 00 00 00 00 00 00
+# MIPSEL-NEXT:  Class:                             ELF32
+# MIPSEL-NEXT:  Data:                              2's complement, little endian
+# MIPSEL-NEXT:  Version:                           1 (current)
+# MIPSEL-NEXT:  OS/ABI:                            UNIX - System V
+# MIPSEL-NEXT:  ABI Version:                       0
+# MIPSEL-NEXT:  Type:                              REL (Relocatable file)
+# MIPSEL-NEXT:  Machine:                           MIPS R3000
+# MIPSEL-NEXT:  Version:                           0x1
+# MIPSEL-NEXT:  Entry point address:               0x0
+# MIPSEL-NEXT:  Start of program headers:          52 (bytes into file)
+# MIPSEL-NEXT:  Start of section headers:          112 (bytes into file)
+# MIPSEL-NEXT:  Flags:                             0x50001000, o32, mips32
+# MIPSEL-NEXT:  Size of this header:               52 (bytes)
+# MIPSEL-NEXT:  Size of program headers:           32 (bytes)
+# MIPSEL-NEXT:  Number of program headers:         1
+# MIPSEL-NEXT:  Size of section headers:           40 (bytes)
+# MIPSEL-NEXT:  Number of section headers:         4
+# MIPSEL-NEXT:  Section header string table index: 3
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_MIPS
+  Flags:   [ EF_MIPS_ARCH_32, EF_MIPS_ABI_O32 ]
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+ProgramHeaders:
+  - Type: PT_LOAD
+    Flags: [ PF_R ]

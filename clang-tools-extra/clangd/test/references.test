@@ -1,0 +1,36 @@
+# RUN: clangd -lit-test < %s | FileCheck -strict-whitespace %s
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
+---
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{
+  "uri":"test:///main.cpp",
+  "languageId":"cpp",
+  "version":1,
+  "text":"int x; int y = x;"
+}}}
+---
+{"jsonrpc":"2.0","id":1,"method":"textDocument/references","params":{
+  "textDocument":{"uri":"test:///main.cpp"},
+  "position":{"line":0,"character":4},
+  "context":{"includeDeclaration": false}
+}}
+#      CHECK:  "id": 1
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": [
+# CHECK-NEXT:    {
+# CHECK-NEXT:      "range": {
+# CHECK-NEXT:        "end": {
+# CHECK-NEXT:          "character": 16,
+# CHECK-NEXT:          "line": 0
+# CHECK-NEXT:        },
+# CHECK-NEXT:        "start": {
+# CHECK-NEXT:          "character": 15,
+# CHECK-NEXT:          "line": 0
+# CHECK-NEXT:        }
+# CHECK-NEXT:      },
+# CHECK-NEXT:      "uri": "{{.*}}/main.cpp"
+# CHECK-NEXT:    }
+# CHECK-NEXT:  ]
+---
+{"jsonrpc":"2.0","id":3,"method":"shutdown"}
+---
+{"jsonrpc":"2.0","method":"exit"}

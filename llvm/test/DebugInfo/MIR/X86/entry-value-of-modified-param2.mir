@@ -1,0 +1,122 @@
+# RUN: llc -run-pass=livedebugvalues -o - %s  \
+# RUN:  -experimental-debug-variable-locations=false \
+# RUN: | FileCheck %s --check-prefixes=CHECK,VARLOCLDV
+#
+# NB: clone of this file testing InstrRefBasedLDV is in
+# llvm/test/DebugInfo/MIR/X86/entry-value-of-modified-param.mir
+#
+#extern void fn1 (int, int, int);
+#
+#__attribute__((noinline))
+#int
+#fn2 (int a, int b, int c) {
+#  int q = 2 + a;
+#
+#  fn1 (5, 6, q);
+#
+#  b = b + 7;
+#  if (b < 17)
+#    return 1;
+#  else
+#    return 0;
+#}
+#
+# CHECK: ![[ARG_A:.*]] = !DILocalVariable(name: "a"
+# CHECK: ![[ARG_B:.*]] = !DILocalVariable(name: "b"
+# CHECK: ![[ARG_C:.*]] = !DILocalVariable(name: "c"
+## TODO: Support KILL instruction, which doesn't clobber parameter value.
+# VARLOCLDV: DBG_VALUE $edi, $noreg, ![[ARG_A]], !DIExpression()
+# CHECK: DBG_VALUE $edx, $noreg, ![[ARG_C]], !DIExpression(DW_OP_LLVM_entry_value, 1)
+# VARLOCLDV-NOT: DBG_VALUE $edi, $noreg, ![[ARG_A]], !DIExpression(DW_OP_LLVM_entry_value, 1)
+# CHECK-NOT: DBG_VALUE $esi, $noreg, ![[ARG_B]], !DIExpression(DW_OP_LLVM_entry_value, 1)
+#
+--- |
+  ; ModuleID = 'test.c'
+  source_filename = "test.c"
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-linux-gnu"
+
+  ; Function Attrs: noinline nounwind uwtable
+  define dso_local i32 @fn2(i32 %a, i32 %b, i32 %c) local_unnamed_addr !dbg !12 {
+  entry:
+    call void @llvm.dbg.value(metadata i32 %a, metadata !16, metadata !DIExpression()), !dbg !20
+    call void @llvm.dbg.value(metadata i32 %b, metadata !17, metadata !DIExpression()), !dbg !20
+    call void @llvm.dbg.value(metadata i32 %c, metadata !18, metadata !DIExpression()), !dbg !20
+    %add = add nsw i32 %a, 2, !dbg !21
+    call void @llvm.dbg.value(metadata i32 %add, metadata !19, metadata !DIExpression()), !dbg !20
+    tail call void @fn1(i32 5, i32 6, i32 %add), !dbg !22
+    call void @llvm.dbg.value(metadata i32 %b, metadata !17, metadata !DIExpression(DW_OP_plus_uconst, 7, DW_OP_stack_value)), !dbg !20
+    %cmp = icmp slt i32 %b, 10, !dbg !23
+    %. = zext i1 %cmp to i32, !dbg !25
+    ret i32 %., !dbg !26
+  }
+
+  declare !dbg !4 dso_local void @fn1(i32, i32, i32) local_unnamed_addr
+
+  ; Function Attrs: nounwind readnone speculatable willreturn
+  declare void @llvm.dbg.value(metadata, metadata, metadata)
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!8, !9, !10}
+  !llvm.ident = !{!11}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 10.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, nameTableKind: None)
+  !1 = !DIFile(filename: "test.c", directory: "/dir")
+  !2 = !{}
+  !3 = !{!4}
+  !4 = !DISubprogram(name: "fn1", scope: !1, file: !1, line: 1, type: !5, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
+  !5 = !DISubroutineType(types: !6)
+  !6 = !{null, !7, !7, !7}
+  !7 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !8 = !{i32 2, !"Dwarf Version", i32 4}
+  !9 = !{i32 2, !"Debug Info Version", i32 3}
+  !10 = !{i32 1, !"wchar_size", i32 4}
+  !11 = !{!"clang version 10.0.0"}
+  !12 = distinct !DISubprogram(name: "fn2", scope: !1, file: !1, line: 5, type: !13, scopeLine: 6, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !15)
+  !13 = !DISubroutineType(types: !14)
+  !14 = !{!7, !7, !7, !7}
+  !15 = !{!16, !17, !18, !19}
+  !16 = !DILocalVariable(name: "a", arg: 1, scope: !12, file: !1, line: 5, type: !7)
+  !17 = !DILocalVariable(name: "b", arg: 2, scope: !12, file: !1, line: 5, type: !7)
+  !18 = !DILocalVariable(name: "c", arg: 3, scope: !12, file: !1, line: 5, type: !7)
+  !19 = !DILocalVariable(name: "q", scope: !12, file: !1, line: 7, type: !7)
+  !20 = !DILocation(line: 0, scope: !12)
+  !21 = !DILocation(line: 7, column: 15, scope: !12)
+  !22 = !DILocation(line: 9, column: 5, scope: !12)
+  !23 = !DILocation(line: 12, column: 11, scope: !24)
+  !24 = distinct !DILexicalBlock(scope: !12, file: !1, line: 12, column: 9)
+  !25 = !DILocation(line: 0, scope: !24)
+  !26 = !DILocation(line: 16, column: 1, scope: !12)
+
+...
+---
+name:            fn2
+alignment:       16
+body:             |
+  bb.0.entry:
+    liveins: $edi, $esi, $rbx
+
+    DBG_VALUE $edi, $noreg, !16, !DIExpression(), debug-location !20
+    DBG_VALUE $esi, $noreg, !17, !DIExpression(), debug-location !20
+    DBG_VALUE $edx, $noreg, !18, !DIExpression(), debug-location !20
+    frame-setup PUSH64r killed $rbx, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 16
+    CFI_INSTRUCTION offset $rbx, -16
+    $ebx = MOV32rr $esi
+    DBG_VALUE $ebx, $noreg, !17, !DIExpression(), debug-location !20
+    renamable $edi = KILL $edi, implicit-def $rdi
+    DBG_VALUE $edi, $noreg, !16, !DIExpression(), debug-location !20
+    renamable $edx = LEA64_32r killed renamable $rdi, 1, $noreg, 2, $noreg, debug-location !21
+    DBG_VALUE $edx, $noreg, !19, !DIExpression(), debug-location !20
+    $edi = MOV32ri 5, debug-location !22
+    $esi = MOV32ri 6, debug-location !22
+    CALL64pcrel32 @fn1, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit $esi, implicit $edx, implicit-def $rsp, implicit-def $ssp, debug-location !22
+    DBG_VALUE $ebx, $noreg, !17, !DIExpression(DW_OP_plus_uconst, 7, DW_OP_stack_value), debug-location !20
+    renamable $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, debug-location !23
+    CMP32ri8 killed renamable $ebx, 10, implicit-def $eflags, debug-location !23
+    renamable $al = SETCCr 12, implicit killed $eflags, implicit killed $eax, implicit-def $eax, debug-location !23
+    $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !26
+    CFI_INSTRUCTION def_cfa_offset 8, debug-location !26
+    RET64 $eax, debug-location !26
+
+...

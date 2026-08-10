@@ -1,0 +1,11 @@
+# The FILE prefix acts as a no-op, but it provides consistency with BUILDID.
+RUN: llvm-symbolizer "CODE FILE:%p/Inputs/addr.exe 0x40054d" | \
+RUN:   FileCheck %s --check-prefix=FOUND
+FOUND: {{[/\]+}}tmp{{[/\]+}}x.c:14:0
+
+# Passing FILE twice is a syntax error.
+RUN: llvm-symbolizer "CODE FILE:FILE:%p/Inputs/addr.exe 0x40054d" 2>%t.err | FileCheck --check-prefix=NOTFOUND %s
+RUN:   FileCheck %s --check-prefix=FILEFILE --input-file %t.err
+NOTFOUND:      ??
+NOTFOUND-NEXT: ??:0:0
+FILEFILE: error: 'CODE FILE:FILE:{{.*}}/Inputs/addr.exe 0x40054d': duplicate input file specification prefix

@@ -1,0 +1,25 @@
+# RUN: llvm-mc -triple=thumbv8m.base -disassemble < %s 2>%t | FileCheck %s
+# RUN: FileCheck < %t %s --check-prefix=CHECK-STDERR
+# RUN: llvm-mc -triple=thumbv8m.main -disassemble < %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-MAINLINE
+
+0xef 0xf3 0x0a 0x83
+# CHECK:          mrs      r3, msplim
+0xef 0xf3 0x0b 0x84
+# CHECK:          mrs      r4, psplim
+0x8b 0xf3 0x0a 0x88
+# CHECK:          msr      msplim, r11
+0x8c 0xf3 0x0b 0x88
+# CHECK:          msr      psplim, r12
+
+0xef 0xf3 0x90 0x86
+# CHECK:          mrs      r6, primask_ns
+0x88 0xf3 0x98 0x88
+# CHECK:          msr      sp_ns, r8
+
+0xef 0xf3 0x8a 0x85
+# CHECK-STDERR: warning: invalid instruction encoding
+# CHECK-MAINLINE: mrs      r5, msplim_ns
+0x87 0xf3 0x93 0x88
+# CHECK-STDERR: warning: invalid instruction encoding
+# CHECK-MAINLINE: msr      faultmask_ns, r7
+

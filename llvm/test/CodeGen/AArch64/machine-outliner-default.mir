@@ -1,0 +1,71 @@
+# RUN: llc -mtriple=aarch64--- -run-pass=machine-outliner \
+# RUN: -verify-machineinstrs %s -o - | FileCheck %s
+
+--- |
+  define void @outline_1() #0 { ret void }
+  define void @outline_2() #0 { ret void }
+  define void @outline_3() #0 { ret void }
+  define void @dont_outline() #1 { ret void }
+
+  attributes #0 = { noredzone minsize optsize }
+  attributes #1 = { noredzone }
+...
+---
+
+name:           outline_1
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: bb.0:
+    ; CHECK: OUTLINED
+    liveins: $w8, $wzr
+    $w8 = ORRWri $wzr, 1
+    $w8 = ORRWri $wzr, 2
+    $w8 = ORRWri $wzr, 3
+    $w8 = ORRWri $wzr, 4
+    RET undef $lr
+...
+---
+
+name:           outline_2
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: bb.0:
+    ; CHECK: OUTLINED
+    liveins: $w8, $wzr
+    $w8 = ORRWri $wzr, 1
+    $w8 = ORRWri $wzr, 2
+    $w8 = ORRWri $wzr, 3
+    $w8 = ORRWri $wzr, 4
+    RET undef $lr
+...
+---
+
+name:           outline_3
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: bb.0:
+    ; CHECK: OUTLINED
+    liveins: $w8, $wzr
+    $w8 = ORRWri $wzr, 1
+    $w8 = ORRWri $wzr, 2
+    $w8 = ORRWri $wzr, 3
+    $w8 = ORRWri $wzr, 4
+    RET undef $lr
+...
+---
+
+name:           dont_outline
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: bb.0:
+    ; CHECK-NOT: BL
+    liveins: $w8, $wzr
+    $w8 = ORRWri $wzr, 1
+    $w8 = ORRWri $wzr, 2
+    $w8 = ORRWri $wzr, 3
+    $w8 = ORRWri $wzr, 4
+    RET undef $lr

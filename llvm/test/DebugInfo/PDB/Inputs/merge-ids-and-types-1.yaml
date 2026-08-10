@@ -1,0 +1,113 @@
+# The idea is to set up some types in the TPI stream, and then have records in
+# the IPI stream that refer to them.  There are three types of IPI records that
+# can refer to TPI records.  They are:
+# 1) LF_PROCEDURE - Referred to by LF_FUNC_ID
+# 2) LF_STRUCTURE - Referred to by LF_UDT_MOD_SRC_LINE
+#                   Referred to by LF_UDT_SRC_LINE
+# 3) LF_MFUNCTION - Referred to by LF_MFUNC_ID
+# We will set up one of each of these, and then create IPI records that refer to
+# them.  We intentionally choose an unintuitive ordering of the records in both
+# streams (while still maintaining the topological sorting required by CodeView
+# type streams), to make sure the merging algorithm is sufficiently exercised.
+# For easy understanding, a semantic representation of the types we will set up
+# is as follows:
+#  - int main(int, char**)
+#
+#  - struct FooBar {
+#    public:
+#      void *FooMember;
+#      void FooMethod(int);
+#    };
+TpiStream:
+  Records:
+    # TypeIndex: 4096 (0x1000)
+    # char**
+    - Kind:            LF_POINTER
+      Pointer:         
+        ReferentType:    1136
+        Attrs:           32778
+    # TypeIndex: 4097 (0x1001)
+    # public void *FooMember
+    - Kind:            LF_FIELDLIST
+      FieldList:       
+        - Kind:            LF_MEMBER
+          DataMember:      
+            Attrs:           3           # public
+            Type:            1027        # void*
+            FieldOffset:     0
+            Name:            FooMember   # FooMember
+    # TypeIndex: 4098 (0x1002)
+    # (int, char**)
+    - Kind:            LF_ARGLIST
+      ArgList:         
+        ArgIndices:      [ 116, 4096 ]
+    # TypeIndex: 4099 (0x1003)
+    # struct FooBar {
+    # public:
+    #   void *FooMember;
+    # };
+    - Kind:            LF_STRUCTURE
+      Class:           
+        MemberCount:     1
+        Options:         [ None, HasUniqueName ]
+        FieldList:       4097
+        Name:            FooBar
+        UniqueName:      'FooBar'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            4
+    # TypeIndex: 4100 (0x1004)
+    # FooBar *
+    - Kind:            LF_POINTER
+      Pointer:         
+        ReferentType:    4099       # FooBar
+        Attrs:           32778
+    # TypeIndex: 4101 (0x1005)
+    # (int)
+    - Kind:            LF_ARGLIST
+      ArgList:         
+        ArgIndices:      [ 116 ]
+    # TypeIndex: 4102 (0x1006)
+    - Kind:            LF_MFUNCTION
+      MemberFunction:  
+        ReturnType:      3                      # void
+        ClassType:       4099                   # struct FooBar
+        ThisType:        4100                   # FooBar *
+        CallConv:        ThisCall
+        Options:         [ None, Constructor ]
+        ParameterCount:  1
+        ArgumentList:    4101                   # (int)
+        ThisPointerAdjustment: 0
+    # TypeIndex: 4103 (0x1007)
+    # int (int, char**)
+    - Kind:            LF_PROCEDURE
+      Procedure:       
+        ReturnType:      116         # int
+        CallConv:        NearC
+        Options:         [ None ]
+        ParameterCount:  2
+        ArgumentList:    4098        # (int, char**)
+IpiStream:
+  Records:
+    # TypeIndex: 4096 (0x1000)
+    # int main(int, char **)
+    - Kind:            LF_FUNC_ID
+      FuncId:          
+        ParentScope:     0
+        FunctionType:    4103       # int main(int, char**)
+        Name:            main
+    # TypeIndex: 4097 (0x1001)
+    # void FooBar::FooMethod(int)
+    - Kind:            LF_MFUNC_ID
+      MemberFuncId:    
+        ClassType:       4099       # struct FooBar
+        FunctionType:    4102       # void FooMethod(int)
+        Name:            FooMethod
+    # TypeIndex: 4098 (0x1002)
+    # struct FooBar
+    - Kind:            LF_UDT_MOD_SRC_LINE
+      UdtModSourceLine: 
+        UDT:             4099       # struct FooBar
+        SourceFile:      0          # We don't support this yet
+        LineNumber:      0
+        Module:          0          # We don't support this yet

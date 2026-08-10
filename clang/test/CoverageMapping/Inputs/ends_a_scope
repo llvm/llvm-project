@@ -1,0 +1,5 @@
+// This file closes a scope
+
+}
+
+if (true) x = x;

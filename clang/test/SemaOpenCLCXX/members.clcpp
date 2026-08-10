@@ -1,0 +1,25 @@
+//RUN: %clang_cc1 %s -triple spir -verify -fsyntax-only
+//RUN: %clang_cc1 %s -triple spir -verify -fsyntax-only -DFUNCPTREXT
+
+#ifdef FUNCPTREXT
+#pragma OPENCL EXTENSION __cl_clang_function_pointers : enable
+//expected-no-diagnostics
+#endif
+
+// Check that pointer to member functions are diagnosed
+// unless specific clang extension is enabled.
+struct C {
+  void f(int n);
+};
+
+typedef void (C::*p_t)(int);
+#ifndef FUNCPTREXT
+//expected-error@-2{{pointers to functions are not allowed}}
+#endif
+
+void test() {
+  void (C::*p)(int);
+#ifndef FUNCPTREXT
+//expected-error@-2{{pointers to functions are not allowed}}
+#endif
+}

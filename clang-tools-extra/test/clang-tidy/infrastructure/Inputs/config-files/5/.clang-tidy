@@ -1,0 +1,4 @@
+InheritParentConfig: true
+Checks: 'misc-throw-by-value-catch-by-reference'
+CheckOptions:
+  misc-throw-by-value-catch-by-reference.MaxSize: '1152921504606846976'

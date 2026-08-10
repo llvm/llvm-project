@@ -1,0 +1,18 @@
+; RUN: llvm-undname < %s | FileCheck %s
+
+; CHECK-NOT: Invalid mangled name
+
+?TestNonTemplateAuto@@YA@XZ
+; CHECK: __cdecl TestNonTemplateAuto(void)
+
+??$AutoT@X@@YA?A_PXZ
+; CHECK: auto __cdecl AutoT<void>(void)
+
+??$AutoT@X@@YA?B_PXZ
+; CHECK: auto const __cdecl AutoT<void>(void)
+
+??$AutoT@X@@YA?A_TXZ
+; CHECK: decltype(auto) __cdecl AutoT<void>(void)
+
+??$AutoT@X@@YA?B_TXZ
+; CHECK: decltype(auto) const __cdecl AutoT<void>(void)
