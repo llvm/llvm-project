@@ -117,7 +117,7 @@ bool SuperHDAGToDAGISel::trySelectRET(SDNode *N) {
   Ops.push_back(Chain.getValue(1));
 
   SDNode *ResNode = CurDAG->getMachineNode(SH::RTS, DL, MVT::Other, Ops);
-  ResNode = CurDAG->getMachineNode(SH::NOP, DL, MVT::Other, SDValue(ResNode, 0));
+  //ResNode = CurDAG->getMachineNode(SH::NOP, DL, MVT::Other, SDValue(ResNode, 0));
 
   ReplaceUses(SDValue(N, 0), SDValue(ResNode, 0));
   CurDAG->RemoveDeadNode(N);
@@ -140,7 +140,7 @@ bool SuperHDAGToDAGISel::trySelect(SDNode *N) {
   switch(Opcode) {
   case ISD::FrameIndex:
     return trySelectFrameIndex(N);
-  case SHISD::RET:
+  case SHISD::RET_GLUE:
     return trySelectRET(N);
   default:
     return false;

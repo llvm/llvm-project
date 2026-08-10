@@ -52,65 +52,20 @@ void SuperHInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   llvm_unreachable("Impossible reg-to-reg copy");
 }
 
-bool SuperHInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
-  unsigned OpCode = MI.getOpcode();
-  switch(OpCode) {
-  case SH::DIVURmRn:
-  case SH::DIVSRmRn:
-    return expandDIV(OpCode, MI);
-  default:
-    return false;
-  }
+bool SuperHInstrInfo::expandRET(MachineInstr &MI) const {
+  MachineBasicBlock &MBB = *MI.getParent();
+  MachineBasicBlock::iterator MBBI = MI.getIterator();
+  DebugLoc DL = MI.getDebugLoc();
+
+
+  BuildMI(MBB, MBBI, DL, get(SH::NOP));
+  return true;
 }
 
-
-
-
-
-//===----------------------------------------------------------------------===//
-//                        Pseudo Instruction Expansion
-//===----------------------------------------------------------------------===//
-
-// Expands the division psuedo instructions into valid SuperH sequences.
-// SuperH sets the division mode with an struction inserted before.
-bool SuperHInstrInfo::expandDIV(unsigned Opcode, MachineInstr &MI) const {
-  assert(MI.getOperand(0).isReg() && "Expected register in op0 for expansion!");
-  assert(MI.getOperand(1).isReg() && "Expected register in op1 for expansion!");
-  auto &MBB = *MI.getParent();
-  auto Lhs = MI.getOperand(0).getReg();
-  auto Rhs = MI.getOperand(1).getReg();
-  auto DL = MI.getDebugLoc();
-
-  switch(Opcode) {
-
-  // Expand DIVURmRn to the following sequence:
-  // div0u
-  // div1 Rm, Rn
-  case SH::DIVURmRn: {
-    BuildMI(MBB, MI, DL, get(SH::DIV0U));
-    BuildMI(MBB, MI, DL, get(SH::DIV1RmRn), Rhs)
-      .addReg(Lhs);
-    MI.removeFromParent();
-    return true;
+bool SuperHInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
+  switch(MI.getOpcode()) {
+  case SH::RTS:
+    return expandRET(MI);
   }
-
-  // Expand DIVSRmRn to the following sequence:
-  // div0s Rm, Rn
-  // div1 Rm, Rn
-  case SH::DIVSRmRn: {
-    BuildMI(MBB, MI, DL, get(SH::DIV0SRmRn))
-      .addReg(Rhs)
-      .addReg(Lhs);
-    BuildMI(MBB, MI, DL, get(SH::DIV1RmRn), Rhs)
-      .addReg(Lhs);
-    MI.removeFromParent();
-    return true;
-  }
-
-  // This shouldn't be reached.
-  default: {
-    llvm_unreachable("expandDIV was wrongfully called on a non-div pseudo!");
-    return false; 
-  }
-  }
+  return false;
 }

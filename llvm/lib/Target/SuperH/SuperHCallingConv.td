@@ -13,20 +13,23 @@
 //===-------------------------------------------------------------------------===//
 
 def CC_SH : CallingConv<[
-  CCIfSRet<CCCustom<"RetCC_SuperH_SRet">>,
 
-  // Handles byval parameters.
-  CCIfByVal<CCPassByVal<4, 4>>,
+  // All lower size parameters are promoted to 32-bit
   CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
-
   CCIfType<[i32], CCAssignToReg<[R4, R5, R6, R7]>>,
-  CCIfType<[i32], CCAssignToStack<4, 4>>,
-  CCIfType<[f32], CCAssignToStack<4, 4>>,
 ]>;
 
 def RetCC_SH : CallingConv<[
-  CCIfType<[i32],  CCAssignToReg<[R0]>>,
-  CCIfType<[i64],  CCAssignToReg<[R0, R1]>>
+  CCIfSRet<CCCustom<"RetCC_SuperH_SRet">>,
+
+  // All lower size parameters are promoted to 32-bit
+  CCIfType<[i1, i8, i16],  CCPromoteToType<i32>>,
+  CCIfType<[i32],  CCAssignToReg<[R0, R1, R2, R3]>>,
+  CCIfType<[i64],  CCAssignToReg<[R0, R1]>>,
+
+  // Anything that doesn't fit in registers should be spilled.
+  CCIfType<[i32], CCAssignToStack<4, 4>>,
+  CCIfType<[i64], CCAssignToStack<8, 8>>,
 ]>;
 
 //===----------------------------------------------------------------------===//
