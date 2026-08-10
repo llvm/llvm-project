@@ -371,6 +371,12 @@ public:
   OnDiskGraphDB::FileBackedData
   getInternalFileBackedObjectData(StringRef RootPath) const;
 
+  /// Map this object's file independently of \a Region, so the result stays
+  /// valid after this object is gone. Returns \c nullptr if it cannot be done.
+  std::unique_ptr<MemoryBuffer>
+  getStandaloneMemoryBuffer(StringRef RootPath, StringRef Name,
+                            bool RequiresNullTerminator) const;
+
   StandaloneDataInMemory(std::unique_ptr<sys::fs::mapped_file_region> Region,
                          TrieRecord::StorageKind SK, FileOffset IndexOffset)
       : Region(std::move(Region)), SK(SK), IndexOffset(IndexOffset) {
@@ -1291,6 +1297,22 @@ OnDiskGraphDB::getInternalFileBackedObjectData(ObjectHandle Node) const {
   }
 }
 
+std::unique_ptr<MemoryBuffer>
+OnDiskGraphDB::getStandaloneMemoryBuffer(ObjectHandle Node, StringRef Name,
+                                         bool RequiresNullTerminator) const {
+  // Only an object with a file to itself can be mapped; one in the shared data
+  // pool is a subrange of a file holding unrelated objects.
+  auto SDIMOrRecord = getStandaloneDataOrDataRecord(DataPool, Node);
+  if (std::holds_alternative<const StandaloneDataInMemory *>(SDIMOrRecord)) {
+    auto *SDIM = std::get<const StandaloneDataInMemory *>(SDIMOrRecord);
+    if (std::unique_ptr<MemoryBuffer> Mapped = SDIM->getStandaloneMemoryBuffer(
+            RootPath, Name, RequiresNullTerminator))
+      return Mapped;
+  }
+
+  return MemoryBuffer::getMemBufferCopy(toStringRef(getObjectData(Node)), Name);
+}
+
 Expected<std::optional<ObjectHandle>>
 OnDiskGraphDB::load(ObjectID ExternalRef) {
   InternalRef Ref = getInternalRef(ExternalRef);
@@ -1461,6 +1483,62 @@ StandaloneDataInMemory::getInternalFileBackedObjectData(
                                     std::string(Path), IsFileNulTerminated}};
   }
   llvm_unreachable("Unknown StorageKind enum");
+}
+
+namespace {
+/// A MemoryBuffer exposing a subrange of another buffer's bytes, under its own
+/// name.
+class AdoptedMemoryBuffer : public MemoryBuffer {
+public:
+  AdoptedMemoryBuffer(std::unique_ptr<MemoryBuffer> Buffer, StringRef Name,
+                      uint64_t Offset, uint64_t Size)
+      : Buffer(std::move(Buffer)), Name(Name.str()) {
+    const char *Start = this->Buffer->getBufferStart() + Offset;
+    init(Start, Start + Size, /*RequiresNullTerminator=*/false);
+  }
+
+  StringRef getBufferIdentifier() const override { return Name; }
+
+  BufferKind getBufferKind() const override { return Buffer->getBufferKind(); }
+
+private:
+  std::unique_ptr<MemoryBuffer> Buffer;
+  std::string Name;
+};
+} // end anonymous namespace
+
+std::unique_ptr<MemoryBuffer> StandaloneDataInMemory::getStandaloneMemoryBuffer(
+    StringRef RootPath, StringRef Name, bool RequiresNullTerminator) const {
+  // A plain leaf's file is exactly the data, with no nul after it to map. The
+  // other kinds have one: a record's own terminator, or the one appended to a
+  // "leaf+0".
+  if (RequiresNullTerminator && SK == TrieRecord::StorageKind::StandaloneLeaf)
+    return nullptr;
+
+  // These files are written once and never resized, and are only deleted along
+  // with the whole directory they live in, which leaves a mapping of them
+  // intact. Map read-only, which is MAP_PRIVATE.
+  SmallString<256> Path;
+  ::getStandalonePath(RootPath, TrieRecord::getStandaloneFilePrefix(SK),
+                      IndexOffset, Path);
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+  ErrorOr<std::unique_ptr<MemoryBuffer>> Mapped =
+      MemoryBuffer::getFile(Path, /*IsText=*/false,
+                            /*RequiresNullTerminator=*/false,
+                            /*IsVolatile=*/false);
+  if (!Mapped)
+    return nullptr;
+
+  // Find the data within the mapping. A leaf's file holds just the data; a
+  // record's also holds its header and refs.
+  OnDiskContent Content = getContent();
+  ArrayRef<char> Data = Content.getData();
+  uint64_t Offset = Content.Record ? Data.data() - Region->data() : 0;
+  if (Offset + Data.size() > (*Mapped)->getBufferSize())
+    return nullptr;
+
+  return std::make_unique<AdoptedMemoryBuffer>(std::move(*Mapped), Name, Offset,
+                                               Data.size());
 }
 
 static Expected<MappedTempFile>

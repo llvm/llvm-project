@@ -61,6 +61,12 @@ of error handling. The class APIs also provide convenient methods to
 access underlying data. The lifetime of the underlying data is equal to
 the lifetime of the instance of `ObjectStore` unless explicitly copied.
 
+To get a lifetime-extended buffer, call `getStandaloneMemoryBuffer()`, which
+returns a `MemoryBuffer` that remains valid after the `ObjectStore` is
+destroyed. A CAS can provide a customized implementation that is cheaper than
+a copy; the on-disk CAS maps the object's file where it has one, so the pages
+stay evictable instead of being charged as dirty memory.
+
 ### CASID
 
 `CASID` is the hash identifier for CASObjects. It owns the underlying
@@ -106,6 +112,10 @@ ones.
 
 To add your own implementation, you just need to add a subclass to
 `llvm::cas::ObjectStore` and implement all its pure virtual methods.
+`getStandaloneMemoryBufferImpl()` is an optional customization point; it
+copies by default, so override it only if the implementation can hand out
+storage that outlives itself.
+
 To be interchangeable with LLVM ObjectStore, the new CAS implementation
 needs to conform to following contracts:
 

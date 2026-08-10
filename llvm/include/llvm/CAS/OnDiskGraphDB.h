@@ -22,6 +22,10 @@
 #include "llvm/CAS/OnDiskTrieRawHashMap.h"
 #include <atomic>
 
+namespace llvm {
+class MemoryBuffer;
+} // namespace llvm
+
 namespace llvm::cas::ondisk {
 
 /// Standard 8 byte reference inside OnDiskGraphDB.
@@ -353,6 +357,16 @@ public:
   /// delete the underlying file, the path is provided only for reading/copying.
   LLVM_ABI FileBackedData
   getInternalFileBackedObjectData(ObjectHandle Node) const;
+
+  /// Get a MemoryBuffer for \p Node's data that stays valid after this
+  /// database is destroyed.
+  ///
+  /// Maps the data where it can, so the pages stay evictable and are not
+  /// charged as dirty memory, and copies where it cannot. Either way the
+  /// result does not reference anything this database owns.
+  LLVM_ABI std::unique_ptr<MemoryBuffer>
+  getStandaloneMemoryBuffer(ObjectHandle Node, StringRef Name,
+                            bool RequiresNullTerminator) const;
 
   /// \returns Total size of stored objects.
   ///
