@@ -65,6 +65,15 @@ template <typename... Ts> Stencil cat(Ts &&... Parts) {
   return catVector({detail::makeStencil(std::forward<Ts>(Parts))...});
 }
 
+// Constructs the string representing the concatenation of the given \p
+// Parts, separated using \p Sep.
+Stencil joinVector(StringRef Sep, std::vector<Stencil> Parts);
+
+// Same as `cat(Parts[0], Sep, Parts[1], Sep, ...,)`.
+template <typename... Ts> Stencil join(StringRef Sep, Ts &&...Parts) {
+  return joinVector(Sep, {detail::makeStencil(std::forward<Ts>(Parts))...});
+}
+
 //
 // Functions for conveniently building stencils.
 //
