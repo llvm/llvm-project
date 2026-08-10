@@ -6314,7 +6314,7 @@ class Tcgen05MMAInst<bit IsSparse, string ASpace, string Kind, int CtaGroup,
         Tcgen05MMABase<IsSparse, ASpace, Kind, CtaGroup, CollectorUsageA,
                        CollectorUsageB> {
   let Predicates = !listconcat(
-    !if(HasCollectorBQualifier, [callSubtarget<"hasTcgen05RubinFamily">], []),
+    !if(HasCollectorBQualifier, [callSubtarget<"hasRubinFamilySupport">], []),
     !cond(
       IsScaleInputD : [callSubtarget<"hasTcgen05MMAScaleInputDImm">],
       !eq(Kind, "i8") : [callSubtarget<"hasTcgen05MMAI8Kind">],
@@ -6420,7 +6420,7 @@ class Tcgen05MMADisableOutputLaneInst<bit IsSparse, string ASpace, string Kind,
         Tcgen05MMABase<IsSparse, ASpace, Kind, CtaGroup, CollectorUsageA,
                        CollectorUsageB> {
   let Predicates = !listconcat(
-    !if(HasCollectorBQualifier, [callSubtarget<"hasTcgen05RubinFamily">], []),
+    !if(HasCollectorBQualifier, [callSubtarget<"hasRubinFamilySupport">], []),
     !cond(
       IsScaleInputD : [callSubtarget<"hasTcgen05MMAScaleInputDImm">],
       !eq(Kind, "i8") : [callSubtarget<"hasTcgen05MMAI8Kind">],
@@ -6516,7 +6516,7 @@ class Tcgen05MMABlockScaleInst<bit IsSparse, string ASpace, string Kind,
         Tcgen05MMABase<IsSparse, ASpace, Kind, CtaGroup, CollectorUsageA,
                        CollectorUsageB> {
   let Predicates = !listconcat(
-    !if(HasCollectorBQualifier, [callSubtarget<"hasTcgen05RubinFamily">], []),
+    !if(HasCollectorBQualifier, [callSubtarget<"hasRubinFamilySupport">], []),
     !cond(
       !and(IsSparse,
            !eq(Kind, "mxf4")) : [callSubtarget<"hasTcgen05MMASparseMxf4">],
