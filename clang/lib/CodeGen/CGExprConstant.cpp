@@ -2754,6 +2754,8 @@ ConstantEmitter::tryEmitPrivate(const APValue &Value, QualType DestType,
   }
   case APValue::MemberPointer:
     return CGM.getCXXABI().EmitMemberPointer(Value, DestType);
+  case APValue::Reflection:
+    llvm_unreachable("std::meta::info is consteval-only type");
   }
   llvm_unreachable("Unknown APValue kind");
 }

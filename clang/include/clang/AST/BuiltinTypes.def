@@ -223,6 +223,9 @@ FLOATING_TYPE(Ibm128, Ibm128Ty)
 
 //===- Language-specific types --------------------------------------------===//
 
+// 'std::meta::info' in C++
+BUILTIN_TYPE(MetaInfo, MetaInfoTy)
+
 // This is the type of C++0x 'nullptr'.
 BUILTIN_TYPE(NullPtr, NullPtrTy)
 

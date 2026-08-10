@@ -374,6 +374,10 @@ APValue::APValue(const APValue &RHS)
     MakeAddrLabelDiff();
     setAddrLabelDiff(RHS.getAddrLabelDiffLHS(), RHS.getAddrLabelDiffRHS());
     break;
+  case Reflection:
+    MakeReflection(RHS.getReflectionOperandKind(),
+                   RHS.getReflectionOpaqueOperand());
+    break;
   }
 }
 
@@ -429,6 +433,8 @@ void APValue::DestroyDataAndMakeUninit() {
     ((MemberPointerData *)(char *)&Data)->~MemberPointerData();
   else if (Kind == AddrLabelDiff)
     ((AddrLabelDiffData *)(char *)&Data)->~AddrLabelDiffData();
+  else if (Kind == Reflection)
+    ((ReflectionData *)(char *)&Data)->~ReflectionData();
   Kind = None;
   AllowConstexprUnknown = false;
 }
@@ -438,6 +444,7 @@ bool APValue::needsCleanup() const {
   case None:
   case Indeterminate:
   case AddrLabelDiff:
+  case Reflection:
     return false;
   case Struct:
   case Union:
@@ -484,6 +491,37 @@ void APValue::swap(APValue &RHS) {
 static void profileIntValue(llvm::FoldingSetNodeID &ID, const llvm::APInt &V) {
   for (unsigned I = 0, N = V.getBitWidth(); I < N; I += 32)
     ID.AddInteger((uint32_t)V.extractBitsAsZExtValue(std::min(32u, N - I), I));
+}
+
+/// Unwrap reflected type for profiling
+static void profileTypeReflection(llvm::FoldingSetNodeID &ID, QualType QT) {
+  // TODO(Reflection)
+
+  if (isTypeAliasAsReflectionName(QT)) {
+    if (const auto *TDT = QT->getAs<TypedefType>()) {
+      ID.AddBoolean(true);
+      ID.AddPointer(TDT->getDecl()->getCanonicalDecl());
+      return;
+    }
+  }
+
+  ID.AddBoolean(false);
+  QT.getCanonicalType().Profile(ID);
+}
+
+static void profileReflection(llvm::FoldingSetNodeID &ID, APValue V) {
+  ID.AddInteger(static_cast<int>(V.getReflectionOperandKind()));
+  switch (V.getReflectionOperandKind()) {
+  case ReflectionKind::Null:
+    return;
+  case ReflectionKind::Type: {
+    const TypeSourceInfo *Info =
+        static_cast<const TypeSourceInfo *>(V.getReflectionOpaqueOperand());
+    profileTypeReflection(ID, Info->getType());
+    return;
+  }
+  }
+  assert(false && "unknown or unimplemented reflection entities");
 }
 
 void APValue::Profile(llvm::FoldingSetNodeID &ID) const {
@@ -631,6 +669,9 @@ void APValue::Profile(llvm::FoldingSetNodeID &ID) const {
     ID.AddInteger(isMemberPointerToDerivedMember());
     for (const CXXRecordDecl *D : getMemberPointerPath())
       ID.AddPointer(D);
+    return;
+  case Reflection:
+    profileReflection(ID, *this);
     return;
   }
 
@@ -986,6 +1027,19 @@ void APValue::printPretty(raw_ostream &Out, const PrintingPolicy &Policy,
     Out << " - ";
     Out << "&&" << getAddrLabelDiffRHS()->getLabel()->getName();
     return;
+  case APValue::Reflection:
+    switch (getReflectionOperandKind()) {
+    case ReflectionKind::Null:
+      Out << "std::meta::info{}";
+      break;
+    case ReflectionKind::Type: {
+      const auto *TInfo =
+          static_cast<const TypeSourceInfo *>(getReflectionOpaqueOperand());
+      Out << "^^" << TInfo->getType().stream(Policy);
+      break;
+    }
+    }
+    return;
   }
   llvm_unreachable("Unknown APValue kind!");
 }
@@ -1176,6 +1230,7 @@ LinkageInfo LinkageComputer::getLVForValue(const APValue &V,
   case APValue::ComplexInt:
   case APValue::ComplexFloat:
   case APValue::Vector:
+  case APValue::Reflection:
   case APValue::Matrix:
     break;
 
