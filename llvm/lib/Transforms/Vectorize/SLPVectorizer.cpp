@@ -29688,17 +29688,25 @@ class HorizontalReduction {
   /// Return CmpZero for a scalar OR/UMax reduction whose only use is an eq/ne
   /// comparison against zero.
   TTI::VectorInstrContext getReductionContext() const {
+    TTI::VectorInstrContext Context = TTI::VectorInstrContext::None;
+
     auto *Root = dyn_cast<Instruction>(ReductionRoot);
-    if (!Root || !Root->getType()->isIntegerTy() || !Root->hasOneUse() ||
-        (RdxKind != RecurKind::Or && RdxKind != RecurKind::UMax))
-      return TTI::VectorInstrContext::None;
+    if (!Root || !Root->getType()->isIntegerTy() || !Root->hasOneUse())
+      return Context;
 
     CmpPredicate Pred;
     if (!match(*Root->user_begin(),
                m_c_ICmp(Pred, m_Specific(Root), m_ZeroInt())) ||
         !ICmpInst::isEquality(Pred))
-      return TTI::VectorInstrContext::None;
-    return TTI::VectorInstrContext::CmpZero;
+      return Context;
+
+    switch (RdxKind) {
+    case RecurKind::Or:
+    case RecurKind::UMax:
+      return TTI::VectorInstrContext::CmpZero;
+    default:
+      return Context;
+    }
   }
 
   static bool isZeroCmpContext(TTI::VectorInstrContext Context) {
