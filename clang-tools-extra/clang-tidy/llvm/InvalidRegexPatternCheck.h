@@ -16,7 +16,7 @@ namespace clang::tidy::llvm_check {
 /// Detects malformed regex patterns used in ``llvm::Regex``.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/llvm/regex.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/llvm/regex.html
 class InvalidRegexPatternCheck : public ClangTidyCheck {
 public:
   InvalidRegexPatternCheck(StringRef Name, ClangTidyContext *Context)
