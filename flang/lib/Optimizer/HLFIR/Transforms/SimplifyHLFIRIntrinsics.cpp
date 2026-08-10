@@ -3080,6 +3080,55 @@ static mlir::Value computeArraySize(mlir::Location loc,
   return size;
 }
 
+static mlir::Value computeLinearIndex(mlir::Location loc,
+                                      fir::FirOpBuilder &builder,
+                                      mlir::ValueRange extents,
+                                      mlir::ValueRange indices) {
+  std::size_t rank = extents.size();
+  assert(rank == indices.size());
+  mlir::Type indexType = builder.getIndexType();
+  mlir::Value zero = builder.createIntegerConstant(loc, indexType, 0);
+  mlir::Value one = builder.createIntegerConstant(loc, indexType, 1);
+  mlir::Value linearIndex = zero;
+  std::size_t idx = 0;
+  for (auto index : llvm::reverse(indices)) {
+    mlir::Value tmp = mlir::arith::SubIOp::create(
+        builder, loc, builder.createConvert(loc, indexType, index), one);
+    tmp = mlir::arith::AddIOp::create(builder, loc, linearIndex, tmp);
+    if (idx + 1 < rank)
+      tmp = mlir::arith::MulIOp::create(
+          builder, loc, tmp,
+          builder.createConvert(loc, indexType, extents[rank - idx - 2]));
+
+    linearIndex = tmp;
+    ++idx;
+  }
+  return linearIndex;
+}
+
+static llvm::SmallVector<mlir::Value, Fortran::common::maxRank>
+delinearizeIndex(mlir::Location loc, fir::FirOpBuilder &builder,
+                 mlir::ValueRange extents, mlir::Value linearIndex,
+                 bool wrapAround) {
+  llvm::SmallVector<mlir::Value, Fortran::common::maxRank> indices;
+  mlir::Type indexType = builder.getIndexType();
+  mlir::Value one = builder.createIntegerConstant(loc, indexType, 1);
+  linearIndex = builder.createConvert(loc, indexType, linearIndex);
+
+  for (std::size_t dim = 0; dim < extents.size(); ++dim) {
+    mlir::Value extent = builder.createConvert(loc, indexType, extents[dim]);
+    mlir::Value currentIndex = linearIndex;
+    if (dim != extents.size() - 1 || wrapAround)
+      currentIndex =
+          mlir::arith::RemUIOp::create(builder, loc, linearIndex, extent);
+    linearIndex =
+        mlir::arith::DivUIOp::create(builder, loc, linearIndex, extent);
+    indices.push_back(
+        mlir::arith::AddIOp::create(builder, loc, currentIndex, one));
+  }
+  return indices;
+}
+
 static std::optional<bool> getLogicalConstant(mlir::Value value) {
   if (auto convertOp = value.getDefiningOp<fir::ConvertOp>())
     value = convertOp.getValue();
@@ -3109,23 +3158,36 @@ public:
 
     mlir::Location loc = pack.getLoc();
     fir::FirOpBuilder builder{rewriter, pack.getOperation()};
-    llvm::SmallVector<mlir::Value, Fortran::common::maxRank> extents =
+    builder.setIntegerOverflowFlags(mlir::arith::IntegerOverflowFlags::nuw);
+
+    llvm::SmallVector<mlir::Value, Fortran::common::maxRank> arrayExtents =
         hlfir::genExtentsVector(loc, builder, array);
-    mlir::Value totalSize = computeArraySize(loc, builder, extents);
-    mlir::Type extentType = builder.getDefaultIntegerType();
-    mlir::Type shapeSeqType = fir::SequenceType::get({1}, extentType);
-    mlir::Value shapeStorage =
-        builder.createTemporary(loc, shapeSeqType, ".pack.shape");
-    totalSize = builder.createConvert(loc, extentType, totalSize);
-    mlir::Type indexType = builder.getIndexType();
-    mlir::Value zero = builder.createIntegerConstant(loc, indexType, 0);
-    mlir::Value shapeAddr = fir::CoordinateOp::create(
-        builder, loc, builder.getRefType(extentType), shapeStorage, zero);
-    fir::StoreOp::create(builder, loc, totalSize, shapeAddr);
-    auto reshape = hlfir::ReshapeOp::create(
-        builder, loc, pack.getType(), array, shapeStorage,
-        /*pad=*/mlir::Value{}, /*order=*/mlir::Value{});
-    rewriter.replaceOp(pack, reshape);
+    mlir::Value totalSize = computeArraySize(loc, builder, arrayExtents);
+    mlir::Type elementType = array.getFortranElementType();
+
+    llvm::SmallVector<mlir::Value, 1> typeParams;
+    hlfir::genLengthParameters(loc, builder, array, typeParams);
+    mlir::Value resultShape = fir::ShapeOp::create(builder, loc, totalSize);
+    llvm::SmallVector<mlir::Value, 1> resultExtents{totalSize};
+
+    auto genKernel = [&](mlir::Location loc, fir::FirOpBuilder &builder,
+                         mlir::ValueRange inputIndices) -> hlfir::Entity {
+      mlir::Value linearIndex =
+          computeLinearIndex(loc, builder, resultExtents, inputIndices);
+      llvm::SmallVector<mlir::Value, Fortran::common::maxRank> arrayIndices =
+          delinearizeIndex(loc, builder, arrayExtents, linearIndex,
+                           /*wrapAround=*/false);
+      mlir::Value arrayElement =
+          hlfir::loadElementAt(loc, builder, array, arrayIndices);
+      return hlfir::Entity{arrayElement};
+    };
+    hlfir::ElementalOp elementalOp = hlfir::genElementalOp(
+        loc, builder, elementType, resultShape, typeParams, genKernel,
+        /*isUnordered=*/true,
+        /*polymorphicMold=*/hlfir::Entity{pack}.isPolymorphic() ? array
+                                                                : mlir::Value{},
+        pack.getType());
+    rewriter.replaceOp(pack, elementalOp);
     return mlir::success();
   }
 };
@@ -3254,81 +3316,6 @@ public:
     assert(elementalOp.getResult().getType() == reshape.getResult().getType());
     rewriter.replaceOp(reshape, elementalOp);
     return mlir::success();
-  }
-
-private:
-  /// Compute zero-based linear index given an array extents
-  /// and one-based indices:
-  ///   \p extents: [e0, e1, ..., en]
-  ///   \p indices: [i0, i1, ..., in]
-  ///
-  /// linear-index :=
-  ///   (...((in-1)*e(n-1)+(i(n-1)-1))*e(n-2)+...)*e0+(i0-1)
-  static mlir::Value computeLinearIndex(mlir::Location loc,
-                                        fir::FirOpBuilder &builder,
-                                        mlir::ValueRange extents,
-                                        mlir::ValueRange indices) {
-    std::size_t rank = extents.size();
-    assert(rank == indices.size());
-    mlir::Type indexType = builder.getIndexType();
-    mlir::Value zero = builder.createIntegerConstant(loc, indexType, 0);
-    mlir::Value one = builder.createIntegerConstant(loc, indexType, 1);
-    mlir::Value linearIndex = zero;
-    std::size_t idx = 0;
-    for (auto index : llvm::reverse(indices)) {
-      mlir::Value tmp = mlir::arith::SubIOp::create(
-          builder, loc, builder.createConvert(loc, indexType, index), one);
-      tmp = mlir::arith::AddIOp::create(builder, loc, linearIndex, tmp);
-      if (idx + 1 < rank)
-        tmp = mlir::arith::MulIOp::create(
-            builder, loc, tmp,
-            builder.createConvert(loc, indexType, extents[rank - idx - 2]));
-
-      linearIndex = tmp;
-      ++idx;
-    }
-    return linearIndex;
-  }
-
-  /// Compute one-based array indices from the given zero-based \p linearIndex
-  /// and the array \p extents [e0, e1, ..., en].
-  ///   i0 := linearIndex % e0 + 1
-  ///   linearIndex := linearIndex / e0
-  ///   i1 := linearIndex % e1 + 1
-  ///   linearIndex := linearIndex / e1
-  ///   ...
-  ///   i(n-1) := linearIndex % e(n-1) + 1
-  ///   linearIndex := linearIndex / e(n-1)
-  ///   if (wrapAround) {
-  ///     // If the index is allowed to wrap around, then
-  ///     // we need to modulo it by the last dimension's extent.
-  ///     in := linearIndex % en + 1
-  ///   } else {
-  ///     in := linearIndex + 1
-  ///   }
-  static llvm::SmallVector<mlir::Value, Fortran::common::maxRank>
-  delinearizeIndex(mlir::Location loc, fir::FirOpBuilder &builder,
-                   mlir::ValueRange extents, mlir::Value linearIndex,
-                   bool wrapAround) {
-    llvm::SmallVector<mlir::Value, Fortran::common::maxRank> indices;
-    mlir::Type indexType = builder.getIndexType();
-    mlir::Value one = builder.createIntegerConstant(loc, indexType, 1);
-    linearIndex = builder.createConvert(loc, indexType, linearIndex);
-
-    for (std::size_t dim = 0; dim < extents.size(); ++dim) {
-      mlir::Value extent = builder.createConvert(loc, indexType, extents[dim]);
-      // Avoid the modulo for the last index, unless wrap around is allowed.
-      mlir::Value currentIndex = linearIndex;
-      if (dim != extents.size() - 1 || wrapAround)
-        currentIndex =
-            mlir::arith::RemUIOp::create(builder, loc, linearIndex, extent);
-      // The result of the last division is unused, so it will be DCEd.
-      linearIndex =
-          mlir::arith::DivUIOp::create(builder, loc, linearIndex, extent);
-      indices.push_back(
-          mlir::arith::AddIOp::create(builder, loc, currentIndex, one));
-    }
-    return indices;
   }
 };
 

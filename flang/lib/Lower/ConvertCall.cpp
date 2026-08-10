@@ -2370,6 +2370,8 @@ genIntrinsicRefCore(Fortran::lower::PreparedActualArguments &loweredActuals,
   return resultEntity;
 }
 
+/// Lower calls to intrinsic procedures with actual arguments that have been
+/// pre-lowered but have not yet been prepared according to the interface.
 static std::optional<hlfir::EntityWithAttributes> genHLFIRIntrinsicRefCore(
     Fortran::lower::PreparedActualArguments &loweredActuals,
     const Fortran::evaluate::SpecificIntrinsic *intrinsic,
