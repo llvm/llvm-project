@@ -104,14 +104,6 @@ public:
 #endif // NDEBUG
 };
 
-enum class SchedDirection {
-  BottomUp,
-  TopDown,
-};
-#ifndef NDEBUG
-StringLiteral schedDirectionToStr(SchedDirection Dir);
-#endif
-
 /// The nodes that need to be scheduled back-to-back in a single scheduling
 /// cycle form a SchedBundle.
 class SchedBundle {
@@ -337,7 +329,7 @@ private:
 
 public:
   Scheduler(AAResults &AA, Context &Ctx, SchedDirection Dir)
-      : DAG(AA, Ctx), Ctx(Ctx), Dir(Dir) {
+      : DAG(Dir, AA, Ctx), Ctx(Ctx), Dir(Dir) {
     // NOTE: The scheduler's callback depends on the DAG's callback running
     // before it and updating the DAG accordingly.
     CreateInstrCB = Ctx.registerCreateInstrCallback(
