@@ -31,7 +31,9 @@ def main():
     args = parser.parse_args()
 
     if not shutil.which(args.runtime):
-        sys.exit(f"Failed to find a WASI runtime from --runtime value: '{args.runtime}'")
+        sys.exit(
+            f"Failed to find a WASI runtime from --runtime value: '{args.runtime}'"
+        )
 
     if not os.path.exists(args.test_binary):
         sys.exit(f"Expected argument to be a test executable: '{args.test_binary}'")
