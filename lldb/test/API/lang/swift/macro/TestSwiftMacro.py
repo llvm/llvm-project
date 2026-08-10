@@ -5,6 +5,7 @@ import lldbsuite.test.lldbutil as lldbutil
 import os
 
 class TestSwiftMacro(lldbtest.TestBase):
+    SHARED_BUILD_TESTCASE = False
 
     NO_DEBUG_INFO_TESTCASE = True
 

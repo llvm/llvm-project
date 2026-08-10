@@ -27,6 +27,7 @@ def getOlderVersion(major, minor):
     return '%d.%d' % (major-1, minor)
 
 class TestAvailability(TestBase):
+    SHARED_BUILD_TESTCASE = False
 
     NO_DEBUG_INFO_TESTCASE = True
 

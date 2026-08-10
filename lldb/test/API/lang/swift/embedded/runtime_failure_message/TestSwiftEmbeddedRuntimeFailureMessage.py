@@ -15,6 +15,7 @@ class TestSwiftEmbeddedRuntimeFailureMessage(TestBase):
     cannot be folded into the trap is replaced by a generic one.
     """
 
+    SHARED_BUILD_TESTCASE = False
     message = "index must not be negative"
 
     def run_to_failure(self, extra_flags):
