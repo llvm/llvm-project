@@ -81,10 +81,12 @@ func.func @xfer_write_minor_identity_transposed_with_mask_scalable(
   return
 }
 
-// Masked version is not supported
-
 // CHECK-LABEL:   func.func @xfer_write_minor_identity_transposed_map_masked
-// CHECK-NOT: vector.transpose
+// CHECK-SAME:      %[[VEC:.*]]: vector<4x8xi16>,
+// CHECK-SAME:      %[[MEM:.*]]: memref<2x2x8x4xi16>,
+// CHECK-SAME:      %[[MASK:.*]]: vector<8x4xi1>
+// CHECK:           %[[TR:.*]] = vector.transpose %[[VEC]], [1, 0] : vector<4x8xi16> to vector<8x4xi16>
+// CHECK:           vector.mask %[[MASK]] { vector.transfer_write %[[TR]], %[[MEM]]{{.*}} {in_bounds = [true, true]} : vector<8x4xi16>, memref<2x2x8x4xi16> } : vector<8x4xi1>
 func.func @xfer_write_minor_identity_transposed_map_masked(
     %vec: vector<4x8xi16>,
     %mem: memref<2x2x8x4xi16>,
@@ -315,14 +317,12 @@ func.func @xfer_read_minor_identity_transposed_with_mask_scalable(
   return %res : vector<8x[4]x2xf32>
 }
 
-// Masked version is not supported
-
 // CHECK-LABEL: func @xfer_read_minor_identity_transposed_masked(
 //  CHECK-SAME:   %[[DEST:.*]]: tensor<?x?xf32>,
 //  CHECK-SAME:   %[[MASK:.*]]: vector<2x4xi1>
 //  CHECK-SAME:   %[[IDX:.*]]: index
-//   CHECK-NOT:   vector.transpose
-//       CHECK:   vector.mask %[[MASK]] { vector.transfer_read %[[DEST]]{{.*}}: tensor<?x?xf32>, vector<8x4x2xf32> } : vector<2x4xi1> -> vector<8x4x2xf32>
+//       CHECK:   %[[T_READ:.*]] = vector.mask %[[MASK]] { vector.transfer_read %[[DEST]]{{.*}}: tensor<?x?xf32>, vector<8x2x4xf32> } : vector<2x4xi1> -> vector<8x2x4xf32>
+//       CHECK:   vector.transpose %[[T_READ]], [0, 2, 1] : vector<8x2x4xf32> to vector<8x4x2xf32>
 func.func @xfer_read_minor_identity_transposed_masked(
     %dest: tensor<?x?xf32>,
     %mask: vector<2x4xi1>,
@@ -343,8 +343,8 @@ func.func @xfer_read_minor_identity_transposed_masked(
 // CHECK-LABEL:  func.func @xfer_read_minor_identity_transposed_masked_scalable(
 //  CHECK-SAME:    %[[DEST:.*]]: tensor<?x?xf32>,
 //  CHECK-SAME:    %[[MASK:.*]]: vector<2x[4]xi1>
-//   CHECK-NOT:    vector.transpose
-//       CHECK:    %[[T_READ:.*]] = vector.mask %[[MASK]] { vector.transfer_read %[[DEST]]{{.*}} : tensor<?x?xf32>, vector<8x[4]x2xf32> } : vector<2x[4]xi1> -> vector<8x[4]x2xf32>
+//       CHECK:    %[[T_READ:.*]] = vector.mask %[[MASK]] { vector.transfer_read %[[DEST]]{{.*}} : tensor<?x?xf32>, vector<8x2x[4]xf32> } : vector<2x[4]xi1> -> vector<8x2x[4]xf32>
+//       CHECK:    vector.transpose %[[T_READ]], [0, 2, 1] : vector<8x2x[4]xf32> to vector<8x[4]x2xf32>
 func.func @xfer_read_minor_identity_transposed_masked_scalable(
   %dest: tensor<?x?xf32>,
   %mask: vector<2x[4]xi1>,
