@@ -121,8 +121,6 @@ entry:
 define void @extract_user_undef_index(ptr %ptr) {
 ; CHECK-LABEL: extract_user_undef_index:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    // fake_use: $w8
 ; CHECK-NEXT:    ret
 entry:
   %interleaved.vec = load <8 x i32>, ptr %ptr, align 8
