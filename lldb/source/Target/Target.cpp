@@ -2988,7 +2988,7 @@ ExpressionResults Target::EvaluateExpression(
             GetScratchTypeSystemForLanguage(eLanguageTypeC);
     if (auto err = type_system_or_err.takeError()) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Target), std::move(err),
-                     "Unable to get scratch type system");
+                     "Unable to get scratch type system: {0}");
     } else {
       auto ts = *type_system_or_err;
       if (!ts)

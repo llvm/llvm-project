@@ -695,7 +695,7 @@ void TypeSystemClang::CreateASTContext() {
             m_target_triple)
             .str();
 
-    LLDB_LOG(GetLog(LLDBLog::Expressions), err.c_str());
+    LLDB_LOG(GetLog(LLDBLog::Expressions), "{0}", err);
 
     static std::once_flag s_uninitialized_target_warning;
     Debugger::ReportWarning(std::move(err), /*debugger_id=*/std::nullopt,
