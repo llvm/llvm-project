@@ -774,6 +774,10 @@ void TargetLoweringBase::initActions() {
   llvm::fill(RegClassForVT, nullptr);
   llvm::fill(TargetDAGCombineArray, 0);
 
+  // Targets must explicitly opt into legal VECTOR_BROADCAST nodes.
+  for (MVT VT : MVT::vector_valuetypes())
+    setOperationAction(ISD::VECTOR_BROADCAST, VT, Expand);
+
   // Let extending atomic loads be unsupported by default.
   for (MVT ValVT : MVT::all_valuetypes())
     for (MVT MemVT : MVT::all_valuetypes())

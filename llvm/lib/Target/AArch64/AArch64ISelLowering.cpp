@@ -735,9 +735,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ROTR, VT, Expand);
   }
 
-  for (MVT VT : MVT::fixedlen_vector_valuetypes())
-    setOperationAction(ISD::VECTOR_BROADCAST, VT, Expand);
-
   // AArch64 doesn't have i32 MULH{S|U}.
   setOperationAction(ISD::MULHU, MVT::i32, Expand);
   setOperationAction(ISD::MULHS, MVT::i32, Expand);
@@ -1967,6 +1964,11 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECTOR_SPLICE_LEFT, VT, Custom);
       setOperationAction(ISD::VECTOR_SPLICE_RIGHT, VT, Custom);
     }
+
+    // Direct patterns exist for broadcasts to packed SVE types.
+    for (auto VT : {MVT::nxv16i8, MVT::nxv8i16, MVT::nxv4i32, MVT::nxv2i64,
+                    MVT::nxv8f16, MVT::nxv4f32, MVT::nxv2f64, MVT::nxv8bf16})
+      setOperationAction(ISD::VECTOR_BROADCAST, VT, Legal);
 
     // Broadcasts to unpacked SVE type require explicit unpacking to add spacing
     // between elements.
