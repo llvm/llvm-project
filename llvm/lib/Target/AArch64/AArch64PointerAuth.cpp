@@ -492,8 +492,6 @@ void AArch64PointerAuthImpl::authenticateLR(
 
   for (auto *MI : SPMods)
     MBB.insert(MBBI, MI);
-
-  return;
 }
 
 unsigned llvm::AArch64PAuth::getCheckerSizeInBytes(AuthCheckMethod Method) {
