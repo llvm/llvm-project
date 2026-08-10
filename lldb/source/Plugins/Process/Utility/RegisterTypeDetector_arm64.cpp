@@ -308,7 +308,8 @@ void Arm64RegisterTypeDetector::UpdateRegisterInfo(const RegisterInfo *reg_info,
     // It is possible that a register is all extension dependent fields, and
     // none of them are present.
     if (reg.m_type)
-      search_registers.push_back({reg.m_name, reg.m_type});
+      for (auto reg_name : reg.m_names)
+        search_registers.push_back({reg_name, reg.m_type});
   }
 
   // Walk register information while there are registers we know need
