@@ -356,14 +356,15 @@ def generate_report_from_files(title, return_code, build_log_files):
 
 def compute_platform_title() -> str:
     logo = {
-        "Windows": ":window: ",
-        "Linux": ":penguin: ",
-        "Darwin": ":green_apple: ",
-    }.get(platform.system(), "")
+        "Windows": ":window:",
+        "Linux": ":penguin:",
+        "Darwin": ":green_apple:",
+    }.get(platform.system())
 
     # On Linux the machine value is x86_64 on Windows it is AMD64.
     if platform.machine() == "x86_64" or platform.machine() == "AMD64":
         arch = "x64"
     else:
         arch = platform.machine()
-    return f"{logo}{platform.system()} {arch} Test Results"
+
+    return f"{logo + ' ' if logo is not None else ''}{platform.system()} {arch} Test Results"
