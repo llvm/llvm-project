@@ -12,7 +12,6 @@
 #ifndef FORTRAN_SEMANTICS_CHECK_DIRECTIVE_STRUCTURE_H_
 #define FORTRAN_SEMANTICS_CHECK_DIRECTIVE_STRUCTURE_H_
 
-#include "flang/Common/enum-set.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/tools.h"
 #include "llvm/ADT/iterator_range.h"

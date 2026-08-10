@@ -34,6 +34,7 @@
 #include "flang/Lower/Support/ReductionProcessor.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
@@ -54,6 +55,8 @@
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Support/StateStack.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
@@ -2541,7 +2544,7 @@ static void genParallelClauses(
     mlir::Location loc, mlir::omp::ParallelOperands &clauseOps,
     llvm::SmallVectorImpl<Object> &reductionObjects) {
   ClauseProcessor cp(converter, semaCtx, clauses);
-  cp.processAllocate(clauseOps);
+  cp.processAllocate(clauseOps, /*supportAlignment=*/true);
   cp.processIf(llvm::omp::Directive::OMPD_parallel, clauseOps);
 
   HostEvalInfo *hostEvalInfo = getHostEvalInfoStackTop(converter);
@@ -3501,6 +3504,75 @@ genParallelOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
               bool isComposite = false) {
   assert((!enableDelayedPrivatization || dsp) &&
          "expected valid DataSharingProcessor");
+
+  if (!clauseOps.allocateVars.empty()) {
+    llvm::DenseMap<const semantics::Symbol *, int64_t> privateSlots;
+    int64_t privateSlot = 0;
+    auto addPrivateSlot = [&](const semantics::Symbol &symbol) {
+      if (!privateSlots.try_emplace(&symbol.GetUltimate(), privateSlot).second)
+        fir::emitFatalError(
+            loc, "symbol with multiple private storage slots on one construct");
+      ++privateSlot;
+    };
+    for (const Object &object : args.priv.objects) {
+      const semantics::Symbol *symbol = object.sym();
+      if (!symbol)
+        fir::emitFatalError(loc, "private item without a semantic symbol");
+      // A privatized common block contributes one private operand per member,
+      // so slot numbering must follow the same expansion.
+      if (const auto *commonDetails =
+              symbol->detailsIf<semantics::CommonBlockDetails>()) {
+        for (const auto &member : commonDetails->objects())
+          addPrivateSlot(*member);
+      } else {
+        addPrivateSlot(*symbol);
+      }
+    }
+
+    llvm::DenseSet<const semantics::Symbol *> allocateSymbols;
+    for (const Clause &clause : item->clauses) {
+      if (clause.id != llvm::omp::Clause::OMPC_allocate)
+        continue;
+      const auto &allocate = std::get<clause::Allocate>(clause.u);
+      const auto &objects = std::get<ObjectList>(allocate.t);
+      for (const Object &object : objects) {
+        const semantics::Symbol *symbol = object.sym();
+        if (!symbol)
+          fir::emitFatalError(loc,
+                              "ALLOCATE clause item without a semantic symbol");
+        const semantics::Symbol *ultimate = &symbol->GetUltimate();
+        if (!allocateSymbols.insert(ultimate).second)
+          TODO(loc, "ALLOCATE clause item appears more than once");
+
+        auto privateSlot = privateSlots.find(ultimate);
+        if (privateSlot == privateSlots.end())
+          fir::emitFatalError(
+              loc, "ALLOCATE clause item without private storage slot");
+
+        auto type = evaluate::DynamicType::From(*ultimate);
+        bool supportedDataSharing =
+            symbol->test(semantics::Symbol::Flag::OmpPrivate) ||
+            symbol->test(semantics::Symbol::Flag::OmpFirstPrivate);
+        bool supportedType =
+            ultimate->Rank() == 0 &&
+            !semantics::IsAllocatableOrPointer(*ultimate) && type &&
+            type->category() != common::TypeCategory::Derived &&
+            !type->RequiresDescriptor() &&
+            !type->HasDeferredOrAssumedTypeParameter();
+        if (!supportedDataSharing || !supportedType)
+          TODO(loc,
+               "ALLOCATE clause currently supports only fixed-size intrinsic "
+               "scalar PRIVATE or FIRSTPRIVATE items");
+
+        clauseOps.allocatePrivateIndices.push_back(privateSlot->second);
+      }
+    }
+
+    if (clauseOps.allocatePrivateIndices.size() !=
+        clauseOps.allocateVars.size())
+      fir::emitFatalError(loc,
+                          "incomplete ALLOCATE clause private storage mapping");
+  }
 
   OpWithBodyGenInfo genInfo =
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
@@ -6018,12 +6090,10 @@ static void genMetadirective(lower::AbstractConverter &converter,
                    std::get_if<parser::OmpClause::Otherwise>(&clause.u)) {
       if (otherwiseClause->v && otherwiseClause->v->v)
         fallback = getFallbackVariant(otherwiseClause->v->v->value());
-    } else if (const auto *defaultClause =
-                   std::get_if<parser::OmpClause::Default>(&clause.u)) {
-      if (const auto *dirSpecPtr = std::get_if<
-              common::Indirection<parser::OmpDirectiveSpecification>>(
-              &defaultClause->v.u))
-        fallback = getFallbackVariant(dirSpecPtr->value());
+    } else if (const auto *defaultVariantClause =
+                   std::get_if<parser::OmpClause::DefaultVariant>(&clause.u)) {
+      const auto &dirSpec = defaultVariantClause->v.v;
+      fallback = getFallbackVariant(dirSpec.value());
     }
   }
 
@@ -6323,8 +6393,17 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
     }
   }
 
-  // Helper to get the address of an interop variable from an Object.
+  // Helper to get the address of an interop variable from an Object. A
+  // designator such as arr(1) or rec%obj must lower through genExprAddr so we
+  // obtain the address of the actual scalar element/component with the correct
+  // type, rather than the base symbol address (which would be the whole array,
+  // or null for a component defined inside a derived type).
   auto getInteropVarAddr = [&](const Object &object) -> mlir::Value {
+    if (const auto &designator = object.ref()) {
+      fir::ExtendedValue exv =
+          converter.genExprAddr(*designator, stmtCtx, &loc);
+      return fir::getBase(exv);
+    }
     const semantics::Symbol *sym = object.sym();
     assert(sym && "interop variable must have a symbol");
     mlir::Value addr = converter.getSymbolAddress(*sym);
@@ -6383,7 +6462,6 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                             .Case("sycl", 4)
                             .Case("hip", 5)
                             .Case("level_zero", 6)
-                            .Case("hsa", 7)
                             .Default(std::nullopt);
             if (frId)
               prefValues.push_back(*frId);
@@ -6604,6 +6682,98 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                 queue.begin(), critName);
 }
 
+// Copy the character value `str` into fresh stack memory with an appended NUL
+// and return a pointer to its first character. Fortran characters are not
+// NUL-terminated, so the terminator is needed for C runtime entry points (such
+// as `__kmpc_error`) that expect a NUL-terminated string.
+static mlir::Value genNullTerminatedString(fir::FirOpBuilder &builder,
+                                           mlir::Location loc,
+                                           const fir::ExtendedValue &str) {
+  fir::factory::CharacterExprHelper helper(builder, loc);
+  const mlir::Value addr = fir::getBase(str);
+  const mlir::Value len = fir::getLen(str);
+  const auto charTy =
+      mlir::cast<fir::CharacterType>(fir::unwrapRefType(addr.getType()));
+  mlir::MLIRContext *ctx = builder.getContext();
+  const mlir::Type idxTy = builder.getIndexType();
+  const mlir::Value idxLen = builder.createConvert(loc, idxTy, len);
+  const mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+  const mlir::Value lenPlusOne =
+      mlir::arith::AddIOp::create(builder, loc, idxLen, one);
+
+  // Allocate `len + 1` characters and copy the message into them, leaving room
+  // for the terminating NUL.
+  const fir::CharBoxValue temp = helper.createCharacterTemp(charTy, lenPlusOne);
+  helper.createCopy(temp, fir::CharBoxValue{addr, len}, len);
+
+  // Address the buffer as an array of single characters so the terminating NUL
+  // can be stored at index `len`.
+  const auto singleTy = fir::CharacterType::get(
+      ctx, charTy.getFKind(), fir::CharacterType::singleton());
+  const mlir::Type singleRefTy = builder.getRefType(singleTy);
+  const mlir::Type seqRefTy = builder.getRefType(fir::SequenceType::get(
+      {fir::SequenceType::getUnknownExtent()}, singleTy));
+  const mlir::Value seq =
+      builder.createConvert(loc, seqRefTy, temp.getBuffer());
+  const mlir::Value nulAddr =
+      fir::CoordinateOp::create(builder, loc, singleRefTy, seq, idxLen);
+  const mlir::Value zero =
+      builder.createIntegerConstant(loc, builder.getI8Type(), 0);
+  const mlir::Value nul =
+      helper.createSingletonFromCode(zero, charTy.getFKind());
+  fir::StoreOp::create(builder, loc, nul, nulAddr);
+
+  // Pass a pointer to the first character of the buffer.
+  return builder.createConvert(loc, singleRefTy, temp.getBuffer());
+}
+
+// Lower an `!$omp error` directive. The `at(compilation)` form is handled
+// entirely in semantics, so only the `at(execution)` form reaches lowering,
+// where it becomes an `omp.error` operation.
+static void genErrorDirective(lower::AbstractConverter &converter,
+                              semantics::SemanticsContext &semaCtx,
+                              const parser::OmpErrorDirective &errDir) {
+  const semantics::omp::OmpErrorArgs args{
+      semantics::omp::GetErrorDirectiveArgs(errDir)};
+
+  if (args.at != parser::OmpAtClause::ActionTime::Execution ||
+      semaCtx.langOptions().OpenMPSimd)
+    return;
+
+  std::optional<std::string> message;
+  MaybeExpr messageExpr;
+  if (args.message) {
+    if (auto expr = semantics::omp::GetEvaluateExpr(*args.message)) {
+      if (auto val = evaluate::GetScalarConstantValue<evaluate::Ascii>(*expr))
+        message = *val;
+      else
+        messageExpr = expr;
+    }
+  }
+
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  const mlir::Location loc = converter.getCurrentLocation();
+  const mlir::omp::ClauseSeverity sev =
+      args.severity == parser::OmpSeverityClause::SevLevel::Warning
+          ? mlir::omp::ClauseSeverity::warning
+          : mlir::omp::ClauseSeverity::fatal;
+
+  // A compile-time-constant message is stored directly on the operation as an
+  // attribute. A non-constant message is lowered to a null-terminated string in
+  // memory and passed as the `message_expr` operand.
+  mlir::StringAttr msgAttr;
+  mlir::Value msgExprVal;
+  if (message) {
+    msgAttr = builder.getStringAttr(*message);
+  } else if (messageExpr) {
+    lower::StatementContext stmtCtx;
+    fir::ExtendedValue str = converter.genExprAddr(loc, *messageExpr, stmtCtx);
+    msgExprVal = genNullTerminatedString(builder, loc, str);
+  }
+
+  mlir::omp::ErrorOp::create(builder, loc, sev, msgAttr, msgExprVal);
+}
+
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
@@ -6612,10 +6782,8 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                     [&](const parser::OmpNothingDirective &) {
                       // nothing-directive is a no-op (OpenMP 5.2 [8.4])
                     },
-                    [&](const parser::OmpErrorDirective &) {
-                      if (!semaCtx.langOptions().OpenMPSimd)
-                        TODO(converter.getCurrentLocation(),
-                             "OmpErrorDirective");
+                    [&](const parser::OmpErrorDirective &errDir) {
+                      genErrorDirective(converter, semaCtx, errDir);
                     },
                 },
                 dir.u);
