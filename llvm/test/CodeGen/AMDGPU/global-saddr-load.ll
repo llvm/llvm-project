@@ -5,8 +5,8 @@
 ; RUN: llc -mtriple=amdgpu11.00-mesa-mesa3d -mattr=-real-true16 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX11,GFX11-FAKE16 %s
 ; RUN: llc -mtriple=amdgpu12.00-mesa-mesa3d -mattr=+real-true16 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX12,GFX12-SDAG,GFX12-SDAG-TRUE16 %s
 ; RUN: llc -mtriple=amdgpu12.00-mesa-mesa3d -mattr=-real-true16 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX12,GFX12-SDAG,GFX12-SDAG-FAKE16 %s
-; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgpu12.00-mesa-mesa3d -mattr=+real-true16 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX12,GFX12-GISEL,GFX12-GISEL-TRUE16 %s
-; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgpu12.00-mesa-mesa3d -mattr=-real-true16 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX12,GFX12-GISEL,GFX12-GISEL-FAKE16 %s
+; RUN: llc -global-isel -mtriple=amdgpu12.00-mesa-mesa3d -mattr=+real-true16 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX12,GFX12-GISEL,GFX12-GISEL-TRUE16 %s
+; RUN: llc -global-isel -mtriple=amdgpu12.00-mesa-mesa3d -mattr=-real-true16 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX12,GFX12-GISEL,GFX12-GISEL-FAKE16 %s
 
 ; Test using saddr addressing mode of global_*load_* flat instructions.
 

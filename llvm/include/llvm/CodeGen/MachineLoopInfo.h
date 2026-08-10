@@ -96,9 +96,6 @@ private:
   /// Returns true if the given physreg has no defs inside the loop.
   bool isLoopInvariantImplicitPhysReg(Register Reg) const;
 
-  explicit MachineLoop(MachineBasicBlock *MBB)
-    : LoopBase<MachineBasicBlock, MachineLoop>(MBB) {}
-
   MachineLoop() = default;
 };
 
@@ -134,6 +131,12 @@ public:
 
   /// Calculate the natural loop information.
   LLVM_ABI void calculate(MachineDominatorTree &MDT);
+
+  /// Rebuild the loop forest. \p GetDomTree is called only for an irreducible
+  /// CFG.
+  LLVM_ABI void
+  calculate(MachineFunction &MF,
+            function_ref<const DomTreeBase<MachineBasicBlock> &()> GetDomTree);
 };
 
 /// Analysis pass that exposes the \c MachineLoopInfo for a machine function.

@@ -31,8 +31,8 @@
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/UnresolvedSet.h"
+#include "clang/Basic/BuiltinTraits.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
-#include "clang/Basic/ExpressionTraits.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Lambda.h"
 #include "clang/Basic/LangOptions.h"
@@ -40,7 +40,6 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TemplateKinds.h"
-#include "clang/Basic/TypeTraits.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
@@ -5184,6 +5183,10 @@ public:
   }
 
   ArrayRef<Expr *> getInitExprs() const { return getTrailingObjects(NumExprs); }
+
+  MutableArrayRef<Expr *> getUserSpecifiedInitExprs() {
+    return getTrailingObjects(NumUserSpecifiedExprs);
+  }
 
   ArrayRef<Expr *> getUserSpecifiedInitExprs() const {
     return getTrailingObjects(NumUserSpecifiedExprs);

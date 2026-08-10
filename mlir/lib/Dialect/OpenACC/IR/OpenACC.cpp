@@ -394,6 +394,11 @@ struct MemrefGlobalVariableModel
     return globalOp.getConstant();
   }
 
+  bool hasInitializer(Operation *op) const {
+    auto globalOp = cast<memref::GlobalOp>(op);
+    return globalOp.getInitialValue().has_value();
+  }
+
   Region *getInitRegion(Operation *op) const {
     // GlobalOp uses attributes for initialization, not regions
     return nullptr;
