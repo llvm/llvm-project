@@ -9,6 +9,9 @@
 #include "CASTestConfig.h"
 #include "OnDiskCommonUtils.h"
 #include "llvm/CAS/ObjectStore.h"
+#include "llvm/Config/config.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/SHA1.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
@@ -17,6 +20,27 @@
 using namespace llvm;
 using namespace llvm::cas;
 using namespace llvm::unittest::cas;
+
+// See llvm/utils/unittest/UnitTestMain/TestMain.cpp
+extern const char *TestMainArgv0;
+
+// Just a reachable symbol to ease resolving of the executable's path.
+static std::string TestStringArg1("castest-string-arg1");
+
+std::string unittest::cas::getCASPluginPath() {
+  std::string Executable =
+      sys::fs::getMainExecutable(TestMainArgv0, &TestStringArg1);
+  llvm::SmallString<256> PathBuf(sys::path::parent_path(
+      sys::path::parent_path(sys::path::parent_path(Executable))));
+#ifndef _WIN32
+  std::string LibName = "libCASPluginTest";
+  sys::path::append(PathBuf, "lib", LibName + LLVM_PLUGIN_EXT);
+#else
+  std::string LibName = "CASPluginTest";
+  sys::path::append(PathBuf, "bin", LibName + LLVM_PLUGIN_EXT);
+#endif
+  return std::string(PathBuf);
+}
 
 Expected<ObjectID> CustomHasherOnDiskCASTest::store(OnDiskGraphDB &DB,
                                                     StringRef Data,
@@ -105,6 +129,28 @@ static void sha1Digest(ArrayRef<ArrayRef<uint8_t>> Refs, ArrayRef<char> Data,
 INSTANTIATE_TEST_SUITE_P(SHA1, CustomHasherOnDiskCASTest,
                          ::testing::Values(CustomHasherParam{
                              sha1Digest, "SHA1", sizeof(SHA1HashType)}));
+
+// HWASan does not tag the globals of a dlopen'ed library with glibc, so the
+// plugin faults as soon as it touches one of its own globals.
+// FIXME: Re-enable once https://github.com/llvm/llvm-project/issues/57206 is
+// fixed.
+#if !LLVM_HWADDRESS_SANITIZER_BUILD
+static CASTestingEnv createPlugin(int I) {
+  unittest::TempDir Temp("plugin-cas", /*Unique=*/true);
+  std::optional<
+      std::pair<std::shared_ptr<ObjectStore>, std::shared_ptr<ActionCache>>>
+      DBs;
+  EXPECT_THAT_ERROR(createPluginCASDatabases(getCASPluginPath(), Temp.path(),
+                                             /*PluginArgs=*/{})
+                        .moveInto(DBs),
+                    Succeeded());
+  if (!DBs)
+    return CASTestingEnv{nullptr, nullptr, std::move(Temp)};
+  return CASTestingEnv{std::move(DBs->first), std::move(DBs->second),
+                       std::move(Temp)};
+}
+INSTANTIATE_TEST_SUITE_P(PluginCAS, CASTest, ::testing::Values(createPlugin));
+#endif
 
 #else
 void unittest::cas::setMaxOnDiskCASMappingSize() {}
