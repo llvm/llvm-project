@@ -1398,6 +1398,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     return emitAMDGCNImageOverloadedReturnType(
         *this, E, Intrinsic::amdgcn_image_sample_d_2darray, false);
   case clang::AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f32_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f16_f32:
     return emitAMDGCNImageOverloadedReturnType(
         *this, E, Intrinsic::amdgcn_image_gather4_lz_2d, false);
   case AMDGPU::BI__builtin_amdgcn_mfma_scale_f32_16x16x128_f8f6f4:

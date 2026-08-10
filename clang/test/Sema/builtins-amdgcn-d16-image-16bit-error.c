@@ -107,3 +107,8 @@ void test_sample(half4 v, float f32, __amdgpu_texture_t tex, int4 vec4i32) {
   v = __builtin_amdgcn_image_sample_d_3d_v4f16_f32( // expected-error {{needs target feature extended-image-insts,16-bit-insts}}
       15, f32, f32, f32, f32, f32, f32, f32, f32, f32, tex, vec4i32, 0, 0, 0);
 }
+
+void test_gather4(half4 v, float f32, __amdgpu_texture_t tex, int4 vec4i32) {
+  v = __builtin_amdgcn_image_gather4_lz_2d_v4f16_f32( // expected-error {{needs target feature extended-image-insts,16-bit-insts}}
+      1, f32, f32, tex, vec4i32, 0, 0, 0);
+}
