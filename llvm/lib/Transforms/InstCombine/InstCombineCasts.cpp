@@ -1642,14 +1642,13 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
     uint32_t DestBitSize = DestTy->getScalarSizeInBits();
 
     // If the high bits are already filled with zeros, just replace this
-    // cast with the result. If we've evaluated as a signed expressions then
-    // instead check that the high bits are the sign bit, which we know is zero.
-    if (EvaluateAsSigned
-            ? (ComputeNumSignBits(Res, &Zext) > DestBitSize - SrcBitsKept)
-            : MaskedValueIsZero(
-                  Res,
-                  APInt::getHighBitsSet(DestBitSize, DestBitSize - SrcBitsKept),
-                  &Zext))
+    // cast with the result. If we've evaluated as a signed expressions then we
+    // know the high bits are all zero, as canEvaluateSExtd doesn't permit
+    // anything that would set the high bits.
+    if (EvaluateAsSigned ||
+        MaskedValueIsZero(
+            Res, APInt::getHighBitsSet(DestBitSize, DestBitSize - SrcBitsKept),
+            &Zext))
       return replaceInstUsesWith(Zext, Res);
 
     // We need to emit an AND to clear the high bits.
