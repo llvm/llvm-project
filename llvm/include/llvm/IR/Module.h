@@ -1050,6 +1050,15 @@ public:
   /// @}
 
   /// @}
+  /// @name Utility function for querying the floating-point ABI
+  /// @{
+
+  /// Returns the floating-point ABI recorded by the "float-abi" module flag, or
+  /// FloatABI::Default when the flag is absent (meaning the target default).
+  FloatABI::ABIType getFloatABI() const;
+  /// @}
+
+  /// @}
   /// @name Utility function for querying and setting the large data threshold
   /// @{
 

@@ -49,7 +49,7 @@ define void @test(ptr %p) {
 ; VEC-NEXT:    [[TMP14:%.*]] = or i1 [[TMP12]], [[TMP13]]
 ; VEC-NEXT:    br i1 [[TMP14]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; VEC:       vector.ph:
-; VEC-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP4]], 8
+; VEC-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP4]], 7
 ; VEC-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP4]], [[N_MOD_VF]]
 ; VEC-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i16
 ; VEC-NEXT:    [[IND_END:%.*]] = add i16 1, [[DOTCAST]]

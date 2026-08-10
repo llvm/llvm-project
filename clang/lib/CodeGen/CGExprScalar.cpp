@@ -682,6 +682,8 @@ public:
     if (E->getCallReturnType(CGF.getContext())->isReferenceType())
       return EmitLoadOfLValue(E);
 
+    CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
+
     Value *V = CGF.EmitCallExpr(E).getScalarVal();
 
     EmitLValueAlignmentAssumption(E, V);
@@ -3707,8 +3709,10 @@ Value *ScalarExprEmitter::VisitMinus(const UnaryOperator *E,
     Op = Visit(E->getSubExpr());
 
   // Generate a unary FNeg for FP ops.
-  if (Op->getType()->isFPOrFPVectorTy())
+  if (Op->getType()->isFPOrFPVectorTy()) {
+    CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
     return Builder.CreateFNeg(Op, "fneg");
+  }
 
   // Emit unary minus with EmitSub so we handle overflow cases etc.
   BinOpInfo BinOp;
@@ -6454,15 +6458,12 @@ CodeGenFunction::EmitCheckedInBoundsGEP(llvm::Type *ElemTy, Value *Ptr,
   GEPOffsetAndOverflow EvaluatedGEP =
       EmitGEPOffsetInBytes(Ptr, GEPVal, getLLVMContext(), CGM, Builder);
 
-  assert((!isa<llvm::Constant>(EvaluatedGEP.TotalOffset) ||
-          EvaluatedGEP.OffsetOverflows == Builder.getFalse()) &&
-         "If the offset got constant-folded, we don't expect that there was an "
-         "overflow.");
-
   auto *Zero = llvm::ConstantInt::getNullValue(IntPtrTy);
 
-  // Common case: if the total offset is zero, don't emit a check.
-  if (EvaluatedGEP.TotalOffset == Zero)
+  // Common case: if the total offset is zero and has not overflowed, don't emit
+  // a check.
+  if (EvaluatedGEP.TotalOffset == Zero &&
+      EvaluatedGEP.OffsetOverflows == Builder.getFalse())
     return GEPVal;
 
   // Now that we've computed the total offset, add it to the base pointer (with
