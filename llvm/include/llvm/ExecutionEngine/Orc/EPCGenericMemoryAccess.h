@@ -45,55 +45,55 @@ public:
 
   /// Create an EPCGenericMemoryAccess instance from a given set of
   /// function addrs.
-  EPCGenericMemoryAccess(ExecutorProcessControl &EPC, FuncAddrs FAs)
-      : EPC(EPC), FAs(FAs) {}
+  EPCGenericMemoryAccess(ExecutionSession &ES, FuncAddrs FAs)
+      : ES(ES), FAs(FAs) {}
 
   void writeUInt8sAsync(ArrayRef<tpctypes::UInt8Write> Ws,
                         WriteResultFn OnWriteComplete) override {
     using namespace shared;
-    EPC.callSPSWrapperAsync<void(SPSSequence<SPSMemoryAccessUInt8Write>)>(
+    ES.callSPSWrapperAsync<void(SPSSequence<SPSMemoryAccessUInt8Write>)>(
         FAs.WriteUInt8s, std::move(OnWriteComplete), Ws);
   }
 
   void writeUInt16sAsync(ArrayRef<tpctypes::UInt16Write> Ws,
                          WriteResultFn OnWriteComplete) override {
     using namespace shared;
-    EPC.callSPSWrapperAsync<void(SPSSequence<SPSMemoryAccessUInt16Write>)>(
+    ES.callSPSWrapperAsync<void(SPSSequence<SPSMemoryAccessUInt16Write>)>(
         FAs.WriteUInt16s, std::move(OnWriteComplete), Ws);
   }
 
   void writeUInt32sAsync(ArrayRef<tpctypes::UInt32Write> Ws,
                          WriteResultFn OnWriteComplete) override {
     using namespace shared;
-    EPC.callSPSWrapperAsync<void(SPSSequence<SPSMemoryAccessUInt32Write>)>(
+    ES.callSPSWrapperAsync<void(SPSSequence<SPSMemoryAccessUInt32Write>)>(
         FAs.WriteUInt32s, std::move(OnWriteComplete), Ws);
   }
 
   void writeUInt64sAsync(ArrayRef<tpctypes::UInt64Write> Ws,
                          WriteResultFn OnWriteComplete) override {
     using namespace shared;
-    EPC.callSPSWrapperAsync<void(SPSSequence<SPSMemoryAccessUInt64Write>)>(
+    ES.callSPSWrapperAsync<void(SPSSequence<SPSMemoryAccessUInt64Write>)>(
         FAs.WriteUInt64s, std::move(OnWriteComplete), Ws);
   }
 
   void writePointersAsync(ArrayRef<tpctypes::PointerWrite> Ws,
                           WriteResultFn OnWriteComplete) override {
     using namespace shared;
-    EPC.callSPSWrapperAsync<void(SPSSequence<SPSMemoryAccessPointerWrite>)>(
+    ES.callSPSWrapperAsync<void(SPSSequence<SPSMemoryAccessPointerWrite>)>(
         FAs.WritePointers, std::move(OnWriteComplete), Ws);
   }
 
   void writeBuffersAsync(ArrayRef<tpctypes::BufferWrite> Ws,
                          WriteResultFn OnWriteComplete) override {
     using namespace shared;
-    EPC.callSPSWrapperAsync<void(SPSSequence<SPSMemoryAccessBufferWrite>)>(
+    ES.callSPSWrapperAsync<void(SPSSequence<SPSMemoryAccessBufferWrite>)>(
         FAs.WriteBuffers, std::move(OnWriteComplete), Ws);
   }
 
   void readUInt8sAsync(ArrayRef<ExecutorAddr> Rs,
                        OnReadUIntsCompleteFn<uint8_t> OnComplete) override {
     using namespace shared;
-    EPC.callSPSWrapperAsync<SPSSequence<uint8_t>(SPSSequence<SPSExecutorAddr>)>(
+    ES.callSPSWrapperAsync<SPSSequence<uint8_t>(SPSSequence<SPSExecutorAddr>)>(
         FAs.ReadUInt8s,
         [OnComplete = std::move(OnComplete)](
             Error Err, ReadUIntsResult<uint8_t> Result) mutable {
@@ -108,8 +108,7 @@ public:
   void readUInt16sAsync(ArrayRef<ExecutorAddr> Rs,
                         OnReadUIntsCompleteFn<uint16_t> OnComplete) override {
     using namespace shared;
-    EPC.callSPSWrapperAsync<SPSSequence<uint16_t>(
-        SPSSequence<SPSExecutorAddr>)>(
+    ES.callSPSWrapperAsync<SPSSequence<uint16_t>(SPSSequence<SPSExecutorAddr>)>(
         FAs.ReadUInt16s,
         [OnComplete = std::move(OnComplete)](
             Error Err, ReadUIntsResult<uint16_t> Result) mutable {
@@ -124,8 +123,7 @@ public:
   void readUInt32sAsync(ArrayRef<ExecutorAddr> Rs,
                         OnReadUIntsCompleteFn<uint32_t> OnComplete) override {
     using namespace shared;
-    EPC.callSPSWrapperAsync<SPSSequence<uint32_t>(
-        SPSSequence<SPSExecutorAddr>)>(
+    ES.callSPSWrapperAsync<SPSSequence<uint32_t>(SPSSequence<SPSExecutorAddr>)>(
         FAs.ReadUInt32s,
         [OnComplete = std::move(OnComplete)](
             Error Err, ReadUIntsResult<uint32_t> Result) mutable {
@@ -140,8 +138,7 @@ public:
   void readUInt64sAsync(ArrayRef<ExecutorAddr> Rs,
                         OnReadUIntsCompleteFn<uint64_t> OnComplete) override {
     using namespace shared;
-    EPC.callSPSWrapperAsync<SPSSequence<uint64_t>(
-        SPSSequence<SPSExecutorAddr>)>(
+    ES.callSPSWrapperAsync<SPSSequence<uint64_t>(SPSSequence<SPSExecutorAddr>)>(
         FAs.ReadUInt64s,
         [OnComplete = std::move(OnComplete)](
             Error Err, ReadUIntsResult<uint64_t> Result) mutable {
@@ -157,7 +154,7 @@ public:
                          OnReadPointersCompleteFn OnComplete) override {
     using namespace shared;
     using SPSSig = SPSSequence<SPSExecutorAddr>(SPSSequence<SPSExecutorAddr>);
-    EPC.callSPSWrapperAsync<SPSSig>(
+    ES.callSPSWrapperAsync<SPSSig>(
         FAs.ReadPointers,
         [OnComplete = std::move(OnComplete)](
             Error Err, ReadPointersResult Result) mutable {
@@ -174,7 +171,7 @@ public:
     using namespace shared;
     using SPSSig =
         SPSSequence<SPSSequence<uint8_t>>(SPSSequence<SPSExecutorAddrRange>);
-    EPC.callSPSWrapperAsync<SPSSig>(
+    ES.callSPSWrapperAsync<SPSSig>(
         FAs.ReadBuffers,
         [OnComplete = std::move(OnComplete)](Error Err,
                                              ReadBuffersResult Result) mutable {
@@ -190,7 +187,7 @@ public:
                         OnReadStringsCompleteFn OnComplete) override {
     using namespace shared;
     using SPSSig = SPSSequence<SPSString>(SPSSequence<SPSExecutorAddr>);
-    EPC.callSPSWrapperAsync<SPSSig>(
+    ES.callSPSWrapperAsync<SPSSig>(
         FAs.ReadStrings,
         [OnComplete = std::move(OnComplete)](Error Err,
                                              ReadStringsResult Result) mutable {
@@ -203,7 +200,7 @@ public:
   }
 
 private:
-  ExecutorProcessControl &EPC;
+  ExecutionSession &ES;
   FuncAddrs FAs;
 };
 
