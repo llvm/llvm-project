@@ -1,17 +1,21 @@
-// Generic zebin launcher: wraps a zebin in an OffloadBinary, loads via
+// Generic zebin runner: wraps a zebin in an OffloadBinary, loads via
 // liboffload, launches, dumps output buffers. No kernel knowledge.
 //
-// Usage: launcher <zebin.bin> <kernel-name> <n> <arg-spec>...
+// Usage: inter-runner [--compact] [--sort-output] <zebin.bin> <kernel-name>
+//                     <n> <arg-spec>...
+//        inter-runner --probe [device-name-substring]
 //   arg-spec (in kernel arg order):
 //     out        device buffer, printed as hex after the run
 //     in:<mul>   device buffer filled with i*mul before the run
 //     u32:<v>    scalar 32-bit argument with value v
 //
 // Output lines: "out<k>[<i>] = 0x........" for each out buffer.
-// Verification is the caller's job (see inter/verify.py).
+// Default output can be consumed by verify.py; --compact is intended for
+// FileCheck tests.
 
 #include <OffloadAPI.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -19,17 +23,18 @@
 #include <string>
 #include <vector>
 
-#define CHECK(expr)                                                          \
-  do {                                                                       \
-    ol_result_t res_ = (expr);                                               \
-    if (res_ != OL_SUCCESS) {                                                \
-      fprintf(stderr, "FAIL %s:%d: %s -> %d\n", __FILE__, __LINE__, #expr,   \
-              res_->Code);                                                   \
-      return 1;                                                              \
-    }                                                                        \
+#define CHECK(expr)                                                            \
+  do {                                                                         \
+    ol_result_t res_ = (expr);                                                 \
+    if (res_ != OL_SUCCESS) {                                                  \
+      fprintf(stderr, "FAIL %s:%d: %s -> %d\n", __FILE__, __LINE__, #expr,     \
+              res_->Code);                                                     \
+      return 1;                                                                \
+    }                                                                          \
   } while (0)
 
-static std::vector<uint8_t> wrapOffloadBinary(const std::vector<uint8_t> &image) {
+static std::vector<uint8_t>
+wrapOffloadBinary(const std::vector<uint8_t> &image) {
   static const char key[] = "triple";
   static const char triple[] = "spirv64-unknown-unknown";
 
@@ -42,7 +47,10 @@ static std::vector<uint8_t> wrapOffloadBinary(const std::vector<uint8_t> &image)
 
   std::vector<uint8_t> blob(imageOff + image.size(), 0);
   uint8_t *p = blob.data();
-  p[0] = 0x10; p[1] = 0xFF; p[2] = 0x10; p[3] = 0xAD;
+  p[0] = 0x10;
+  p[1] = 0xFF;
+  p[2] = 0x10;
+  p[3] = 0xAD;
   auto put32 = [&](uint64_t off, uint32_t v) { memcpy(p + off, &v, 4); };
   auto put64 = [&](uint64_t off, uint64_t v) { memcpy(p + off, &v, 8); };
   put32(4, 2);
@@ -66,22 +74,34 @@ static std::vector<uint8_t> wrapOffloadBinary(const std::vector<uint8_t> &image)
 
 static std::vector<uint8_t> readFile(const char *path) {
   FILE *f = fopen(path, "rb");
-  if (!f) { perror(path); exit(1); }
+  if (!f) {
+    perror(path);
+    exit(1);
+  }
   fseek(f, 0, SEEK_END);
   long sz = ftell(f);
   fseek(f, 0, SEEK_SET);
   std::vector<uint8_t> buf(sz);
-  if (fread(buf.data(), 1, sz, f) != (size_t)sz) { perror("read"); exit(1); }
+  if (fread(buf.data(), 1, sz, f) != (size_t)sz) {
+    perror("read");
+    exit(1);
+  }
   fclose(f);
   return buf;
 }
 
-static ol_device_handle_t pickL0GpuDevice() {
-  struct Ctx { ol_device_handle_t found = nullptr; };
+static ol_device_handle_t pickL0GpuDevice(const char *requiredName) {
+  struct Ctx {
+    ol_device_handle_t found = nullptr;
+  };
   Ctx ctx;
+  struct Search {
+    Ctx *ctx;
+    const char *requiredName;
+  } search{&ctx, requiredName};
   olIterateDevices(
       [](ol_device_handle_t dev, void *data) -> bool {
-        auto *c = static_cast<Ctx *>(data);
+        auto *search = static_cast<Search *>(data);
         ol_device_type_t type;
         if (olGetDeviceInfo(dev, OL_DEVICE_INFO_TYPE, sizeof(type), &type) !=
                 OL_SUCCESS ||
@@ -99,30 +119,70 @@ static ol_device_handle_t pickL0GpuDevice() {
           return true;
         char name[256] = {0};
         olGetDeviceInfo(dev, OL_DEVICE_INFO_NAME, sizeof(name), name);
+        if (search->requiredName && search->requiredName[0] != '\0' &&
+            !strstr(name, search->requiredName))
+          return true;
         fprintf(stderr, "device: %s\n", name);
-        c->found = dev;
+        search->ctx->found = dev;
         return false;
       },
-      &ctx);
+      &search);
   return ctx.found;
 }
 
 int main(int argc, char **argv) {
-  if (argc < 5) {
+  if (argc >= 2 && std::string(argv[1]) == "--probe") {
+    if (argc > 3) {
+      fprintf(stderr, "usage: %s --probe [device-name-substring]\n", argv[0]);
+      return 1;
+    }
+    const char *requiredName =
+        argc == 3 ? argv[2] : getenv("INTER_DEVICE_NAME");
+    CHECK(olInit(nullptr));
+    ol_device_handle_t dev = pickL0GpuDevice(requiredName);
+    if (!dev) {
+      fprintf(stderr, "FAIL: no matching Level Zero GPU device found\n");
+      olShutDown();
+      return 1;
+    }
+    CHECK(olShutDown());
+    return 0;
+  }
+
+  bool compactOutput = false;
+  bool sortOutput = false;
+  int firstArg = 1;
+  while (firstArg < argc) {
+    std::string option = argv[firstArg];
+    if (option == "--compact")
+      compactOutput = true;
+    else if (option == "--sort-output")
+      sortOutput = true;
+    else
+      break;
+    ++firstArg;
+  }
+
+  if (argc - firstArg < 4) {
     fprintf(stderr,
-            "usage: %s <zebin.bin> <kernel> <n> <spec>...\n"
+            "usage: %s [--compact] [--sort-output] "
+            "<zebin.bin> <kernel> <n> <spec>...\n"
             "  spec: out | in:<mul> | u32:<value>\n",
             argv[0]);
     return 1;
   }
-  const char *zebinPath = argv[1];
-  const char *kernelName = argv[2];
-  size_t n = strtoul(argv[3], nullptr, 0);
-  int numArgs = argc - 4;
-  char **specs = argv + 4;
+  const char *zebinPath = argv[firstArg];
+  const char *kernelName = argv[firstArg + 1];
+  size_t n = strtoul(argv[firstArg + 2], nullptr, 0);
+  if (n == 0 || n % 32 != 0) {
+    fprintf(stderr, "FAIL: launch size must be a nonzero multiple of 32\n");
+    return 1;
+  }
+  int numArgs = argc - firstArg - 3;
+  char **specs = argv + firstArg + 3;
 
   CHECK(olInit(nullptr));
-  ol_device_handle_t dev = pickL0GpuDevice();
+  ol_device_handle_t dev = pickL0GpuDevice(getenv("INTER_DEVICE_NAME"));
   if (!dev) {
     fprintf(stderr, "FAIL: no Level Zero GPU device found\n");
     return 1;
@@ -145,6 +205,7 @@ int main(int argc, char **argv) {
   std::vector<size_t> argSizes(numArgs);
   std::vector<uint32_t> scalars(numArgs);
   std::vector<int> outIndex(numArgs, -1);
+  std::vector<bool> bufferArgument(numArgs, false);
   int numOuts = 0;
 
   for (int i = 0; i < numArgs; ++i) {
@@ -165,6 +226,7 @@ int main(int argc, char **argv) {
       argPtrsStorage[i] = buf;
       argPtrs[i] = &argPtrsStorage[i];
       argSizes[i] = sizeof(void *);
+      bufferArgument[i] = true;
     } else if (spec.rfind("u32:", 0) == 0) {
       scalars[i] = strtoul(spec.c_str() + 4, nullptr, 0);
       argPtrs[i] = &scalars[i];
@@ -187,10 +249,23 @@ int main(int argc, char **argv) {
     if (outIndex[i] < 0)
       continue;
     auto *w = static_cast<uint32_t *>(argPtrsStorage[i]);
-    for (size_t j = 0; j < n; ++j)
-      printf("out%d[%zu] = 0x%08x\n", outIndex[i], j, w[j]);
+    if (sortOutput)
+      std::sort(w, w + n);
+    if (compactOutput) {
+      printf("out%d = [", outIndex[i]);
+      for (size_t j = 0; j < n; ++j)
+        printf("%s0x%08x", j == 0 ? "" : ", ", w[j]);
+      printf("]\n");
+    } else {
+      for (size_t j = 0; j < n; ++j)
+        printf("out%d[%zu] = 0x%08x\n", outIndex[i], j, w[j]);
+    }
   }
 
-  olShutDown();
+  for (int i = 0; i < numArgs; ++i)
+    if (bufferArgument[i])
+      CHECK(olMemFree(argPtrsStorage[i]));
+  CHECK(olDestroyProgram(prog));
+  CHECK(olShutDown());
   return 0;
 }

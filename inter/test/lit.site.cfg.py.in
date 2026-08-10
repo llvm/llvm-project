@@ -1,16 +1,21 @@
-import lit.formats
+@LIT_SITE_CFG_IN_HEADER@
 
-config.name = "inter"
-config.test_format = lit.formats.ShTest(False)
-config.suffixes = [".mlir"]
-config.test_source_root = "@CMAKE_CURRENT_SOURCE_DIR@"
-config.test_exec_root = "@CMAKE_CURRENT_BINARY_DIR@"
+config.inter_src_root = "@PROJECT_SOURCE_DIR@"
+config.inter_obj_root = "@PROJECT_BINARY_DIR@"
+config.llvm_tools_dir = "@LLVM_TOOLS_BINARY_DIR@"
+config.inter_test_source_root = "@INTER_TEST_SOURCE_ROOT@"
+config.inter_test_exec_root = "@INTER_TEST_EXEC_ROOT@"
+config.inter_test_is_integration = @INTER_TEST_IS_INTEGRATION@
+config.inter_opt = "@PROJECT_BINARY_DIR@/tools/inter-opt/inter-opt"
+config.inter_translate = "@PROJECT_BINARY_DIR@/tools/inter-translate/inter-translate"
+config.inter_ged_dump = "@CMAKE_CURRENT_BINARY_DIR@/inter-ged-dump"
+config.filecheck = "@LLVM_TOOLS_BINARY_DIR@/FileCheck"
+config.inter_ocloc = "@INTER_OCLOC_EXECUTABLE@"
+config.inter_runner = "@CMAKE_CURRENT_BINARY_DIR@/Integration/inter-runner"
+config.inter_ocloc_device = "@INTER_INTEGRATION_OCLOC_DEVICE@"
+config.inter_device_name = "@INTER_INTEGRATION_DEVICE_NAME@"
 
-config.substitutions.append(
-    ("inter-opt", "@CMAKE_BINARY_DIR@/tools/inter-opt/inter-opt"))
-config.substitutions.append(
-    ("inter-translate", "@CMAKE_BINARY_DIR@/tools/inter-translate/inter-translate"))
-config.substitutions.append(
-    ("FileCheck", "@LLVM_TOOLS_BINARY_DIR@/FileCheck"))
-config.substitutions.append(
-    ("inter-ged-dump", "@CMAKE_CURRENT_BINARY_DIR@/inter-ged-dump"))
+import lit.llvm
+lit.llvm.initialize(lit_config, config)
+
+lit_config.load_config(config, "@CMAKE_CURRENT_SOURCE_DIR@/lit.cfg.py")

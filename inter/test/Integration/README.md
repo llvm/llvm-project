@@ -1,0 +1,35 @@
+# Inter integration tests
+
+Each `.ll` test contains its LLVM IR input, exposes the Inter compilation stages
+in its `RUN` lines, invokes `inter-runner`, and checks the device result with
+`FileCheck`. The tests package the emitted Xe2 instructions with temporary
+`ocloc` metadata until Inter has its own `.ze_info` emitter.
+
+Build the LLVM offload runtime first, then enable the opt-in suite when
+configuring Inter:
+
+```sh
+ninja -C build-m0 offload
+cmake -S inter -B inter/build -G Ninja \
+  -DMLIR_DIR=$PWD/build-m0/lib/cmake/mlir \
+  -DLLVM_DIR=$PWD/build-m0/lib/cmake/llvm \
+  -DINTER_INCLUDE_INTEGRATION_TESTS=ON
+ninja -C inter/build check-inter-integration
+```
+
+`check-inter` remains host-only. The integration target builds
+`inter-runner`, probes the selected Level Zero device, and serializes device
+execution. Tests are reported as unsupported when the configured device is not
+available.
+
+Configuration variables:
+
+- `INTER_OCLOC_EXECUTABLE`: `ocloc` executable used for temporary metadata.
+- `INTER_OFFLOAD_INCLUDE_DIR`: directory containing `OffloadAPI.h`.
+- `INTER_OFFLOAD_LIBRARY`: path to `libLLVMOffload`.
+- `INTER_INTEGRATION_OCLOC_DEVICE`: `ocloc` device, default `bmg-g21`.
+- `INTER_INTEGRATION_DEVICE_NAME`: required runtime device-name substring,
+  default `B60`.
+
+All generated files live below `inter/build/test/Integration/Output`; tests do
+not share the source-tree `inter/out` directory.

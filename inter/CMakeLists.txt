@@ -10,6 +10,13 @@ project(inter LANGUAGES CXX C)
 set(CMAKE_CXX_STANDARD 17 CACHE STRING "")
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+option(INTER_INCLUDE_INTEGRATION_TESTS
+       "Build and enable Intel Xe hardware integration tests" OFF)
+set(INTER_INTEGRATION_OCLOC_DEVICE "bmg-g21" CACHE STRING
+    "ocloc device used to produce integration-test metadata")
+set(INTER_INTEGRATION_DEVICE_NAME "B60" CACHE STRING
+    "Substring required in the Level Zero integration-test device name")
+
 find_package(MLIR REQUIRED CONFIG)
 
 list(APPEND CMAKE_MODULE_PATH "${MLIR_CMAKE_DIR}")

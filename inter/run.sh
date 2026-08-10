@@ -55,5 +55,5 @@ python3 inter/make_zebin.py write --kernel $K \
 $OUT/launcher $OUT/mod_ours.bin $K 128 out u32:7 | python3 inter/verify.py 'i*4+7'
 
 # Stage 4: vadd from ocloc through our container (3 pointer args).
-ocloc compile -file inter/vadd.cl -device bmg-g21 -out_dir $OUT/vaddref
+ocloc compile -file inter/test/Integration/Inputs/vadd.cl -device bmg-g21 -out_dir $OUT/vaddref
 $OUT/launcher $OUT/vaddref/vadd_bmg.bin vadd 128 in:1 in:1000 out | python3 inter/verify.py 'i*1+i*1000'
