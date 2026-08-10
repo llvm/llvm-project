@@ -21,7 +21,6 @@
 #include "src/__support/macros/optimization.h"
 #include "src/__support/math/check/exp_exceptions.h"
 #include "src/__support/math/exp_integer_utils.h"
-#include "src/__support/uint128.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -146,21 +145,22 @@ LIBC_INLINE float expf(float x) {
     return 0.0f;
   }
 
-  // TODO: uint64_t will cause overflow, dialing to UInt128 works flawlessly,
-  // but wondering if there is any lighter solution without touching the 128-bit
-  // types?
+  // Dropping some last bits (won't need them as we're casting into 32-bit float
+  // anyway)
+  constexpr uint32_t DROP_BITS = 2;
   if (LIBC_UNLIKELY(is_neg && d >= 0)) { // subnormal
     // 1 + p
-    UInt128 full_val = (UInt128(1) << 63) | (p.val[0] >> 1);
+    uint64_t full_val =
+        (uint64_t(1) << (64 - DROP_BITS)) | (p.val[0] >> DROP_BITS);
 
     // add rounding bit
     // TODO: skip for R0, RD
-    full_val += (UInt128(1) << (40 + d));
+    full_val += (uint64_t(1) << ((41 - DROP_BITS) + d));
 
     // TODO: RU --> mask
 
     // shift back to align to 32-bit float representation
-    uint32_t result = static_cast<uint32_t>(full_val >> (41 + d));
+    uint32_t result = static_cast<uint32_t>(full_val >> ((42 - DROP_BITS) + d));
 
     return cpp::bit_cast<float>(result);
   }
