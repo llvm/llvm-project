@@ -46,8 +46,6 @@ union Union toUnionAssign() {
   // LLVM: store i32 42, ptr %[[RET_ALLOCA]]
   // OGCG: store i32 42, ptr %[[RET_ALLOCA]]
   return u;
-  // The union is returned in a register, so the result is reloaded from the
-  // coerce slot as i32 rather than returned as a record.
   // CIR: %[[LOAD:.*]] = cir.load %[[RET_ALLOCA]] : !cir.ptr<!rec_Union>, !rec_Union
   // CIR: cir.store %[[LOAD]], %[[COERCE]] : !rec_Union, !cir.ptr<!rec_Union>
   // CIR: %[[COERCE_TO_INT:.*]] = cir.cast bitcast %[[COERCE]] : !cir.ptr<!rec_Union> -> !cir.ptr<!s32i>

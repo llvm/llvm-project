@@ -21,8 +21,6 @@ void use() {
 // CIR: cir.func {{.*}} @_Z3usev()
 // CIR:   %[[FP:.*]] = cir.get_global @fp
 // CIR:   %[[LOAD:.*]] = cir.load {{.*}} %[[FP]]
-// A single-int record is returned in a register, so the indirect callee is
-// bitcast to a function returning !s32i before the call.
 // CIR:   %[[FN:.*]] = cir.cast bitcast %[[LOAD]] : !cir.ptr<!cir.func<() -> !rec_Delayed>> -> !cir.ptr<!cir.func<() -> !s32i>>
 // CIR:   cir.call %[[FN]]() : (!cir.ptr<!cir.func<() -> !s32i>>) -> !s32i
 

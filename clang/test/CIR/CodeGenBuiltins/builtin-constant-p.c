@@ -23,7 +23,6 @@ struct foo test0(int expr) {
   return f;
 }
 
-// A two-int record fits in one eightbyte, so it is returned as i64.
 // CIR: cir.func {{.*}} @test0(%[[ARG0:.*]]: !s32i {{.*}}) -> !u64i
 // CIR:   %[[EXPR_ADDR:.*]] = cir.alloca "expr" {{.*}} init : !cir.ptr<!s32i>
 // CIR:   cir.store %[[ARG0]], %[[EXPR_ADDR]]

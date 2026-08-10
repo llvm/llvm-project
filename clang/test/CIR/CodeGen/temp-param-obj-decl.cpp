@@ -47,7 +47,6 @@ HasMem get_m() { return m; }
 // CIR: %[[GET_GLOB:.*]] = cir.get_global @_ZTAXtl6HasMemLi2EEE : !cir.ptr<!rec_HasMem>
 // CIR: cir.copy %[[GET_GLOB]] align(4) to %[[RET_ALLOCA]] align(4) : !cir.ptr<!rec_HasMem>
 // 
-// A single-int record fits in one eightbyte, so it is returned as i32.
 // LLVM-BOTH-LABEL: define linkonce_odr i32 @_Z5get_mIXtl6HasMemLi2EEEES0_v()
 // LLVM-BOTH: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}%[[RET_ALLOCA:.*]], ptr {{.*}}@_ZTAXtl6HasMemLi2EEE, i64 4, i1 false)
 // LLVM: %[[LOAD_RET:.*]] = load %struct.HasMem, ptr %[[RET_ALLOCA]]

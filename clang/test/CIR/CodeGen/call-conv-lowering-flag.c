@@ -16,9 +16,6 @@
 
 typedef struct { long a, b, c, d; } Big;
 
-// A 32-byte record returns through memory once the pass runs, and first-class
-// otherwise, so the signature alone says whether the pass ran.  The ON
-// signature is also what classic CodeGen emits, which the last RUN line pins.
 Big ret_big(long a) {
   Big b = {a, a, a, a};
   return b;

@@ -83,8 +83,6 @@ void f11() {
   S s = f10();
 }
 
-// S is returned in a register, so the result lands in a coerce slot and is
-// reloaded as a record.
 // CIR-LABEL: cir.func{{.*}} @_Z3f11v()
 // CIR:         %[[#coerce:]] = cir.alloca "coerce" align(8) : !cir.ptr<!u64i>
 // CIR:         %[[#ret:]] = cir.call @_Z3f10v() : () -> !u64i
@@ -100,8 +98,6 @@ void f11() {
 // LLVM-NEXT:    %[[#s:]] = load %struct.S, ptr %[[#coerce]], align 4
 // LLVM-NEXT:    store %struct.S %[[#s]], ptr %{{.+}}, align 4
 
-// Both backends return S in one register.  CIR reads it back through an i64
-// coerce slot, where classic stores the register straight into the object.
 // OGCG-LABEL: define{{.*}} void @_Z3f11v(){{.*}}
 // OGCG:         %[[S:.+]] = alloca %struct.S, align 4
 // OGCG:         %[[RET:.+]] = call i64 @_Z3f10v()

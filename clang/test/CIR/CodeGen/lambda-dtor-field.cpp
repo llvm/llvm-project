@@ -34,10 +34,8 @@ void capture_one(S s) {
 // LLVM:   call void @_ZN1SD1Ev(ptr {{.*}} %[[FIELD1]])
 // LLVM:   ret void
 
-// A non-trivially-copyable class is passed indirectly, so the parameter is a
-// pointer to the caller's object and no local copy is allocated.  CIR marks
-// that pointer byref where classic CodeGen leaves it a plain noundef pointer,
-// so the two signatures are pinned separately.
+// TODO(cir): CIR marks the indirect parameter byref and drops noundef where
+// classic CodeGen emits a plain noundef pointer.
 // LLVM-LABEL: define dso_local void @_Z11capture_one1S(
 // LLVM-SAME:    ptr byref(%struct.S) align 4 %[[S_ARG:[^,)]+]])
 // LLVM:   %[[LAM1:.*]] = alloca %[[LAM_TY_1]]

@@ -52,8 +52,6 @@ void calls(MemPtrTy mpt) {
   // LLVM: call void @_Z16not_noundef_voidv()
 
   not_noundef_memptr(mpt);
-  // A member function pointer is two eightbytes, so it is expanded into a
-  // pair of i64 arguments.
   // CIR: cir.call @_Z18not_noundef_memptrM6StructFvvE(%{{.+}}, %{{.+}}) : (!s64i, !s64i) -> !rec_anon_struct
   // LLVM: call { i64, i64 } @_Z18not_noundef_memptrM6StructFvvE(i64 %{{.+}}, i64 %{{.+}})
 

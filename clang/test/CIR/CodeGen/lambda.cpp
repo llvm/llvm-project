@@ -157,8 +157,6 @@ auto g() {
   };
 }
 
-// A lambda capturing one reference is a single-pointer record, so it is
-// returned in a register.
 // CIR: cir.func {{.*}} @_Z1gv() -> !cir.ptr<!void> attributes {{{.*}}nothrow} {
 // CIR:   %[[COERCE:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<![[REC_LAM_G:.*]]>
 // CIR:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<![[REC_LAM_G]]>

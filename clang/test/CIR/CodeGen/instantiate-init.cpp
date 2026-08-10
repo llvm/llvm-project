@@ -24,8 +24,6 @@ void init_vec_using_initalizer_list() {
   Vector vec = {0, 1, 2};
 }
 
-// std::initializer_list<int> is two eightbytes, so the constructor takes the
-// data pointer and the size as separate register arguments.
 // CIR: %[[COERCE:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!rec_std3A3Ainitializer_list3Cint3E>
 // CIR: %[[VEC_ADDR:.*]] = cir.alloca "vec" {{.*}} init : !cir.ptr<!rec_Vector>
 // CIR: %[[AGG_ADDR:.*]] = cir.alloca "agg.tmp0" {{.*}} : !cir.ptr<!rec_std3A3Ainitializer_list3Cint3E>

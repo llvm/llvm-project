@@ -12,8 +12,6 @@ typedef union vec3 {
 
 // In C++ mode, this doesn't do zero padding.
 extern "C" vec3 ret_vec3() {
-  // A 24-byte union does not fit in registers, so it is returned through an
-  // sret pointer and the members are written directly into it.
   // CIR-LABEL: cir.func {{.*}} @ret_vec3
   // CIR-SAME: (%[[RET_ALLOCA:.*]]: !cir.ptr<!rec_vec3> {{.*}}llvm.sret = !rec_vec3{{.*}})
   // CIR: %[[GET_ANON:.*]] = cir.get_member %[[RET_ALLOCA]][0] {name = ""}
@@ -43,7 +41,6 @@ typedef union Trivial {
 } Trivial;
 
 extern "C" Trivial ret_trivial() { return {}; }
-  // A single-int union fits in one eightbyte, so it is returned as i32.
   // CIR-LABEL: cir.func {{.*}} @ret_trivial() -> !s32i
   // CIR: %[[COERCE:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!rec_Trivial>
   // CIR: %[[RET_ALLOCA:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_Trivial>

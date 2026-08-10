@@ -340,8 +340,6 @@ void calling_function_with_default_values() {
   function_arg_with_default_value();
 }
 
-// CompleteS is 8 bytes of INTEGER class, so it is passed as one i64 out of a
-// coerce slot.
 // CIR: %[[COERCE:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!rec_CompleteS>
 // CIR: %[[AGG_ADDR:.*]] = cir.alloca "agg.tmp0" {{.*}} : !cir.ptr<!rec_CompleteS>
 // CIR: %[[ELEM_0_PTR:.*]] = cir.get_member %[[AGG_ADDR]][0] {name = "a"} : !cir.ptr<!rec_CompleteS> -> !cir.ptr<!s32i>

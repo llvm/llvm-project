@@ -12,16 +12,12 @@ struct Struct {
 
 extern "C" Struct getStruct(int i) { return i; }
 
-// A single-int record fits in one eightbyte, so it is returned in a register.
 // CIR: cir.func {{.*}} @getStruct(%{{[^,)]+}}: !s32i {{.*}}) -> !s32i
 // LLVM: define dso_local i32 @getStruct(i32 noundef %{{[^,)]+}})
 
 extern "C" void use() {
   int g = getStruct(0).member;
 
-  // The register-returned i32 lands in a coerce slot that is then reread as a
-  // Struct. Classic CodeGen instead stores it straight through a GEP to the
-  // first member.
   // CIR-LABEL: @use()
   // CIR: %[[COERCE:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!s32i>
   // CIR: %[[G_ALLOCA:.*]] = cir.alloca "g" {{.*}} init : !cir.ptr<!s32i>

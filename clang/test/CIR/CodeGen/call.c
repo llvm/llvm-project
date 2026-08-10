@@ -16,7 +16,6 @@ void f2(void) {
   f1(s);
 }
 
-// S is one eightbyte of INTEGER class, so it is passed as one i64.
 // CIR-LABEL: cir.func{{.*}} @f2(){{.*}} {
 // CIR:         %[[COERCE:.+]] = cir.alloca "coerce" align(8) : !cir.ptr<!rec_S>
 // CIR:         %[[S:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!rec_S>, !rec_S
@@ -72,8 +71,6 @@ void f7(void) {
   f5(b);
 }
 
-// Big is 40 bytes, so it goes to memory: the caller allocates the copy and
-// passes it byval.
 // CIR-LABEL: cir.func{{.*}} @f7(){{.*}} {
 // CIR:         %[[B:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!rec_Big>, !rec_Big
 // CIR-NEXT:    %[[SLOT:.+]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Big>
@@ -111,8 +108,6 @@ void f9(void) {
   f1(f3());
 }
 
-// The result of f3 is coerced out of a slot and the argument to f1 is coerced
-// back into one, so this function carries a coerce slot for each direction.
 // CIR-LABEL: cir.func{{.*}} @f9(){{.*}} {
 // CIR:         %[[RETSLOT:.+]] = cir.alloca "coerce" align(8) : !cir.ptr<!u64i>
 // CIR-NEXT:    %[[ARGSLOT:.+]] = cir.alloca "coerce" align(8) : !cir.ptr<!rec_S>

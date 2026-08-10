@@ -17,8 +17,6 @@ typedef union vec3 {
 
 // In C mode, this does do zero padding.
 vec3 ret_vec3() {
-  // A 24-byte union does not fit in registers, so it is returned through an
-  // sret pointer and the members are written directly into it.
   // CIR-LABEL: cir.func {{.*}} @ret_vec3
   // CIR-SAME: (%[[RET_ALLOCA:.*]]: !cir.ptr<!rec_vec3> {{.*}}llvm.sret = !rec_vec3{{.*}})
   // CIR: %[[GET_ANON:.*]] = cir.get_member %[[RET_ALLOCA]][0] {name = ""}
@@ -61,8 +59,6 @@ struct outer ret_outer() {
   // CIR: %[[GET_GLOB:.*]] = cir.get_global @__const.ret_outer.__retval : !cir.ptr<!rec_outer>
   // CIR: cir.copy %[[GET_GLOB]] to %[[RET_ALLOCA]] : !cir.ptr<!rec_outer>
 
-  // A 16-byte record spans two eightbytes, so it is returned in a register
-  // pair.
   // LLVM-LABEL: define dso_local { i64, i32 } @ret_outer()
   // LLVM: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}%[[RET_ALLOCA:.*]], ptr {{.*}}@__const.ret_outer.{{.*}}, i64 16, i1 false)
   // LLVMCIR: %[[OUTER:.*]] = load %struct.outer, ptr %[[RET_ALLOCA]]

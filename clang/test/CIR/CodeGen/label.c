@@ -190,8 +190,6 @@ void foo() {
 // LLVM:2:
 // LLVM:  br label %3
 // LLVM:3:
-// An empty struct occupies no eightbytes, so neither the return value nor the
-// argument is passed.
 // LLVM:  call void @get()
 // LLVM:  call void @bar()
 

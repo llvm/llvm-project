@@ -250,8 +250,6 @@ void C::f(int x, ...) {}
 
 // CIR: cir.func {{.*}} @_ZN5Test51C1hEv
 
-// A non-trivial class is returned indirectly, so the thunk forwards the sret
-// pointer it was given straight to the callee.
 // CIR: cir.func {{.*}} @_ZThn8_N5Test51C1hEv(%arg0: !cir.ptr<!rec_Test53A3ANonTrivial> {{.*}}llvm.sret = !rec_Test53A3ANonTrivial{{.*}}, %arg1: !cir.ptr<
 // CIR:   %[[T5_THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init
 // CIR:   cir.store %arg1, %[[T5_THIS_ADDR]]

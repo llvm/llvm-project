@@ -62,7 +62,6 @@
 //
 // Check cudaLaunchKernel is called with all 6 arguments:
 // func ptr, gridDim, blockDim, args, sharedMem, stream
-// dim3 is 12 bytes, so each one is passed as an INTEGER eightbyte pair.
 // CUDA-NEW: cir.call @cudaLaunchKernel({{.*}}) : (!cir.ptr<!void>{{.*}}, !u64i, !u32i, !u64i, !u32i, !cir.ptr<!cir.ptr<!void>>{{.*}}, !u64i{{.*}}, !cir.ptr<!rec_cudaStream>{{.*}}) -> (!u32i {llvm.noundef})
 // CUDA-PTH: cir.call @cudaLaunchKernel_ptsz
 

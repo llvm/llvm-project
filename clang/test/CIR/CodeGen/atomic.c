@@ -3768,8 +3768,6 @@ void store_atomic_different_size(S a) {
  // CIR: %[[DATA:.*]] = cir.load {{.*}} %[[ATOMIC_TMP_U32]] : !cir.ptr<!u32i>, !u32i
  // CIR: cir.store {{.*}} syncscope(system) atomic(seq_cst) %[[DATA]], %[[B_VOID_PTR]] : !u32i, !cir.ptr<!u32i>
 
- // FIXME(cir): The difference below is due to ABI lowering not being fully implemented for CIR.
-
  // LLVM: %[[COERCE:.*]] = alloca i24, i64 1, align 4
  // LLVM: store i24 %{{.+}}, ptr %[[COERCE]], align 4
  // LLVM: %[[A:.*]] = load %struct.S, ptr %[[COERCE]], align 1

@@ -29,8 +29,6 @@ auto [t1, t2, t3] = t;
 // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}@_ZDC2t12t22t3E, ptr {{.*}}@t, i64 12, i1 false)
 
 const auto & [t11, t12, t13] = getT<Type>();
-// A three-int record spans two eightbytes, so it is returned in a register
-// pair.
 // CIR: cir.func {{.*}} @_Z4getTI4TypeEDav() -> !rec_anon_struct
 
 // CIR: cir.global external @_ZDC3t113t123t13E = #cir.ptr<null> : !cir.ptr<!rec_Type>
