@@ -357,10 +357,8 @@ public:
         }
       } else {
 #    if !defined(__cpp_trivial_union)
-        // TODO: Clang emits a -Wformat-security warning for this when it's in a consteval block. File bug for this
-        _LIBCPP_VERBOSE_ABORT("%s",
-                              "std::inplace_vector<T,N> currently cannot be used in constant expressions for "
-                              "non-trivial T on compilers where P3074 is not implemented.");
+        _LIBCPP_VERBOSE_TRAP("std::inplace_vector<T,N> currently cannot be used in constant expressions for "
+                             "non-trivial T on compilers where P3074 is not implemented.");
 #    endif
       }
     }
