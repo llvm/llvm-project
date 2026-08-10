@@ -62,10 +62,10 @@ define i64 @second_lshr_operand_zero_via_scev() {
 ; CHECK-LABEL: define i64 @second_lshr_operand_zero_via_scev() {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[EXT_0:%.*]] = sext i8 0 to i32
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RED:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[RED_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    br label %[[LOOPS:.*]]
+; CHECK:       [[LOOPS]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOPS]] ]
+; CHECK-NEXT:    [[RED:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[RED_NEXT:%.*]], %[[LOOPS]] ]
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i64 [[IV]], 0
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[IV]], 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[IV]] to i32
@@ -73,12 +73,12 @@ define i64 @second_lshr_operand_zero_via_scev() {
 ; CHECK-NEXT:    [[CONV_1:%.*]] = zext i32 [[SHR]] to i64
 ; CHECK-NEXT:    [[RED_NEXT_V:%.*]] = select i1 [[C]], i64 [[AND]], i64 [[CONV_1]]
 ; CHECK-NEXT:    [[RED_NEXT]] = or i64 [[RED_NEXT_V]], [[RED]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[IV]], 1
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[TMP12]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOPS]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[TMP13:%.*]] = phi i64 [ [[RED_NEXT]], %[[LOOP]] ]
-; CHECK-NEXT:    ret i64 [[TMP13]]
+; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[RED_NEXT]], %[[LOOPS]] ]
+; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:
   %ext.0 = sext i8 0 to i32

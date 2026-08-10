@@ -182,8 +182,8 @@ define void @tail_predicate_without_optsize(ptr %p, i8 %a, i8 %b, i8 %c, i32 %n)
 ; DEFAULT-LABEL: define void @tail_predicate_without_optsize(
 ; DEFAULT-SAME: ptr [[P:%.*]], i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]], i32 [[N:%.*]]) {
 ; DEFAULT-NEXT:  [[ENTRY:.*:]]
-; DEFAULT-NEXT:    br label %[[FOR_BODY:.*]]
-; DEFAULT:       [[FOR_BODY]]:
+; DEFAULT-NEXT:    br label %[[VECTOR_PH:.*]]
+; DEFAULT:       [[VECTOR_PH]]:
 ; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i8> poison, i8 [[A]], i64 0
 ; DEFAULT-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i8> [[BROADCAST_SPLATINSERT]], <16 x i8> poison, <16 x i32> zeroinitializer
 ; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <16 x i8> poison, i8 [[B]], i64 0
@@ -203,13 +203,13 @@ define void @tail_predicate_without_optsize(ptr %p, i8 %a, i8 %b, i8 %c, i32 %n)
 ; DEFAULT-NEXT:    store i8 [[TMP5]], ptr [[P]], align 1
 ; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; DEFAULT:       [[PRED_STORE_CONTINUE]]:
-; DEFAULT-NEXT:    br i1 true, label %[[PRED_STORE_IF5:.*]], label %[[FOR_COND_CLEANUP:.*]]
+; DEFAULT-NEXT:    br i1 true, label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
 ; DEFAULT:       [[PRED_STORE_IF5]]:
-; DEFAULT-NEXT:    [[TMP70:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 1
-; DEFAULT-NEXT:    [[TMP71:%.*]] = extractelement <16 x i8> [[TMP4]], i64 1
-; DEFAULT-NEXT:    store i8 [[TMP71]], ptr [[TMP70]], align 1
-; DEFAULT-NEXT:    br label %[[FOR_COND_CLEANUP]]
-; DEFAULT:       [[FOR_COND_CLEANUP]]:
+; DEFAULT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 1
+; DEFAULT-NEXT:    [[TMP7:%.*]] = extractelement <16 x i8> [[TMP4]], i64 1
+; DEFAULT-NEXT:    store i8 [[TMP7]], ptr [[TMP6]], align 1
+; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
+; DEFAULT:       [[PRED_STORE_CONTINUE6]]:
 ; DEFAULT-NEXT:    br i1 true, label %[[PRED_STORE_IF7:.*]], label %[[PRED_STORE_CONTINUE8:.*]]
 ; DEFAULT:       [[PRED_STORE_IF7]]:
 ; DEFAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 2
@@ -310,8 +310,8 @@ define void @tail_predicate_without_optsize(ptr %p, i8 %a, i8 %b, i8 %c, i32 %n)
 ; DEFAULT:       [[PRED_STORE_CONTINUE34]]:
 ; DEFAULT-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
-; DEFAULT-NEXT:    br label %[[FOR_COND_CLEANUP1:.*]]
-; DEFAULT:       [[FOR_COND_CLEANUP1]]:
+; DEFAULT-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
+; DEFAULT:       [[FOR_COND_CLEANUP]]:
 ; DEFAULT-NEXT:    ret void
 ;
 ; OPTSIZE-LABEL: define void @tail_predicate_without_optsize(

@@ -18,7 +18,7 @@ define void @conversion_cost1(i32 %n, ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[TMP3]], 64
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 31
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 63
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 3, [[N_VEC]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
