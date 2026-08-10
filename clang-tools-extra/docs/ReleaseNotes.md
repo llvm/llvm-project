@@ -121,6 +121,9 @@ infrastructure are described first, followed by tool-specific sections.
 - Improved {doc}`cppcoreguidelines-pro-type-member-init
   <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` check by treating
   `std::array` the same as built-in arrays when `IgnoreArrays` option is enabled.
+  
+- Fixed {doc}`cppcoreguidelines-use-enum-class
+  <clang-tidy/checks/cppcoreguidelines/use-enum-class>` suggesting `enum class` for unnamed enums (which is ill-formed).
 
 - Improved {doc}`misc-redundant-expression
   <clang-tidy/checks/misc/redundant-expression>` by fixing false positives in
@@ -143,9 +146,6 @@ infrastructure are described first, followed by tool-specific sections.
 - Improved {doc}`readability-use-std-min-max
   <clang-tidy/checks/readability/use-std-min-max>` check by fixing spurious
   trailing semicolons and lost comments when the `if` body has no braces.
-
-- Fixed {doc}`cppcoreguidelines-use-enum-class
-  <clang-tidy/checks/cppcoreguidelines/use-enum-class>` suggesting `enum class` for unnamed enums (which is ill-formed).
 
 #### Removed checks
 
