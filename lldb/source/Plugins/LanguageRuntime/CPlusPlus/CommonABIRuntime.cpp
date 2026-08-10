@@ -17,10 +17,12 @@ using namespace lldb_private;
 
 CommonABIRuntime::CommonABIRuntime(Process *process) : m_process(process) {}
 
-lldb::TypeSP
-CommonABIRuntime::LookupTypeByName(llvm::StringRef type_name,
-                                   lldb::ModuleSP preferred_module) const {
+lldb::TypeSP CommonABIRuntime::LookupTypeByName(llvm::StringRef type_name,
+                                                lldb::ModuleSP preferred_module,
+                                                bool &any_found) const {
   Log *log = GetLog(LLDBLog::Object);
+
+  any_found = false;
 
   ConstString const_lookup_name(type_name);
   TypeList class_types;
@@ -52,6 +54,7 @@ CommonABIRuntime::LookupTypeByName(llvm::StringRef type_name,
     LLDB_LOG(log, "Failed to find '{0}'", type_name);
     return {};
   }
+  any_found = true;
 
   if (class_types.GetSize() == 1) {
     type_sp = class_types.GetTypeAtIndex(0);
@@ -94,4 +97,20 @@ CommonABIRuntime::LookupTypeByName(llvm::StringRef type_name,
            "'{0}' has multiple matching dynamic types, didn't find a C++ match",
            type_name);
   return {};
+}
+
+TypeAndOrName
+CommonABIRuntime::GetDynamicTypeInfo(const lldb_private::Address &vtable_addr) {
+  std::lock_guard<std::mutex> locker(m_mutex);
+  DynamicTypeCache::const_iterator pos = m_dynamic_type_map.find(vtable_addr);
+  if (pos == m_dynamic_type_map.end())
+    return TypeAndOrName();
+
+  return pos->second;
+}
+
+void CommonABIRuntime::SetDynamicTypeInfo(
+    const lldb_private::Address &vtable_addr, const TypeAndOrName &type_info) {
+  std::lock_guard<std::mutex> locker(m_mutex);
+  m_dynamic_type_map[vtable_addr] = type_info;
 }

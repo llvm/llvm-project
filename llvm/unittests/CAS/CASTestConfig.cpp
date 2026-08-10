@@ -10,6 +10,7 @@
 #include "OnDiskCommonUtils.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/Config/config.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SHA1.h"
 #include "llvm/Testing/Support/Error.h"
@@ -129,6 +130,11 @@ INSTANTIATE_TEST_SUITE_P(SHA1, CustomHasherOnDiskCASTest,
                          ::testing::Values(CustomHasherParam{
                              sha1Digest, "SHA1", sizeof(SHA1HashType)}));
 
+// HWASan does not tag the globals of a dlopen'ed library with glibc, so the
+// plugin faults as soon as it touches one of its own globals.
+// FIXME: Re-enable once https://github.com/llvm/llvm-project/issues/57206 is
+// fixed.
+#if !LLVM_HWADDRESS_SANITIZER_BUILD
 static CASTestingEnv createPlugin(int I) {
   unittest::TempDir Temp("plugin-cas", /*Unique=*/true);
   std::optional<
@@ -144,6 +150,7 @@ static CASTestingEnv createPlugin(int I) {
                        std::move(Temp)};
 }
 INSTANTIATE_TEST_SUITE_P(PluginCAS, CASTest, ::testing::Values(createPlugin));
+#endif
 
 #else
 void unittest::cas::setMaxOnDiskCASMappingSize() {}

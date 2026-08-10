@@ -3,6 +3,8 @@
 # it requires several inputs that allow customizing its behavior.
 
 name: "[libc++] Run benchmark suite against commit"
+
+# Keep in sync with libcxx/utils/ci/lnt/dispatch-benchmarks
 run-name: "[libc++] Run benchmark suite against ${{ inputs.commit }} on ${{ inputs.lnt-machine }}"
 
 permissions:

@@ -760,9 +760,8 @@ void CIRGenFunction::emitStaticVarDecl(const VarDecl &d,
     cgm.errorNYI(d.getSourceRange(),
                  "emitStaticVarDecl: CIR global Relro section attribute");
 
-  if (d.getAttr<SectionAttr>())
-    cgm.errorNYI(d.getSourceRange(),
-                 "emitStaticVarDecl: CIR global object file section attribute");
+  if (const SectionAttr *sa = d.getAttr<SectionAttr>())
+    var.setSectionAttr(builder.getStringAttr(sa->getName()));
 
   if (cgm.getCodeGenOpts().KeepPersistentStorageVariables)
     cgm.errorNYI(d.getSourceRange(), "static var keep persistent storage");

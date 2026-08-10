@@ -132,6 +132,11 @@ public:
   /// Separator used between all of the rest consecutive parts of s name.
   std::optional<StringRef> Separator;
 
+  /// Flag for specifying whether the no-signed-wrap (nsw) flag should be added
+  /// to loop induction variable arithmetic. Set when the frontend guarantees
+  /// that signed integer overflow is undefined (with -fno-wrapv).
+  std::optional<bool> NoSignedWrap;
+
   // Grid Value for the GPU target.
   std::optional<omp::GV> GridValue;
 
@@ -175,6 +180,9 @@ public:
   }
 
   unsigned getDefaultTargetAS() const { return DefaultTargetAS; }
+
+  bool hasNoSignedWrap() const { return NoSignedWrap.value_or(false); }
+  void setNoSignedWrap(bool Value) { NoSignedWrap = Value; }
 
   CallingConv::ID getRuntimeCC() const { return RuntimeCC; }
 
@@ -4198,13 +4206,13 @@ public:
   /// \param PostInsertBefore Where to insert BBs that execute after the body.
   /// \param Name      Base name used to derive BB
   ///                  and instruction names.
+  /// \param IsCollapsed  Whether this is a collapsed loop.
   ///
   /// \returns The CanonicalLoopInfo that represents the emitted loop.
-  LLVM_ABI CanonicalLoopInfo *createLoopSkeleton(DebugLoc DL, Value *TripCount,
-                                                 Function *F,
-                                                 BasicBlock *PreInsertBefore,
-                                                 BasicBlock *PostInsertBefore,
-                                                 const Twine &Name = {});
+  LLVM_ABI CanonicalLoopInfo *
+  createLoopSkeleton(DebugLoc DL, Value *TripCount, Function *F,
+                     BasicBlock *PreInsertBefore, BasicBlock *PostInsertBefore,
+                     const Twine &Name = {}, bool IsCollapsed = false);
   /// OMP Offload Info Metadata name string
   const std::string ompOffloadInfoName = "omp_offload.info";
 
