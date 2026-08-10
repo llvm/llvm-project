@@ -237,8 +237,7 @@ Status DynamicLoaderPOSIXDYLD::ReplaceModule(const ModuleSP &old_module_sp,
     return Status::FromErrorStringWithFormatv(
         "'{0}' is not loaded at a known address", old_module_sp->GetFileSpec());
 
-  UnloadModule(old_module_sp);
-  UnloadSectionsCommon(old_module_sp);
+  UnloadSections(old_module_sp);
   UpdateLoadedSections(new_module_sp, info.link_map_addr, info.base_addr,
                        info.base_addr_is_offset);
   return Status();
