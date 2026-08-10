@@ -3597,10 +3597,6 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
 /// compressible) standard load/store instructions.
 bool RISCVDAGToDAGISel::SelectAddrRegImm26(SDValue Addr, SDValue &Base,
                                            SDValue &Offset) {
-
-  if (SelectAddrFrameIndex(Addr, Base, Offset))
-    return true;
-
   SDLoc DL(Addr);
   MVT VT = Addr.getSimpleValueType();
 
@@ -5106,6 +5102,10 @@ FunctionPass *llvm::createRISCVISelDag(RISCVTargetMachine &TM,
                                        CodeGenOptLevel OptLevel) {
   return new RISCVDAGToDAGISelLegacy(TM, OptLevel);
 }
+
+RISCVISelDAGToDAGPass::RISCVISelDAGToDAGPass(RISCVTargetMachine &TM,
+                                             CodeGenOptLevel OptLevel)
+    : SelectionDAGISelPass(std::make_unique<RISCVDAGToDAGISel>(TM, OptLevel)) {}
 
 char RISCVDAGToDAGISelLegacy::ID = 0;
 

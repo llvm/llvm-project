@@ -479,7 +479,13 @@ def UINTTOFP_I128_PPCF128 : RuntimeLibcall;
 def CONVERT_F128_PPCF128 : RuntimeLibcall;
 def CONVERT_PPCF128_F128 : RuntimeLibcall;
 
-// Comparisons
+// Comparisons.
+//
+// The O*_F* and UO_F* libcalls return a simple 0/1 boolean value.
+//
+// The FCMP3_PRED_*_F* libcalls return a three-way (-1/0/1) result, one symbol
+// per predicate. FCMP3_F* is a generic three-way compare for ABIs with one
+// symbol serving every predicate (e.g. MSP430's __mspabi_cmpd).
 foreach FPTy = ["F32", "F64", "F128", "PPCF128"] in {
   def OEQ_#FPTy : RuntimeLibcall;
   def UNE_#FPTy : RuntimeLibcall;
@@ -488,6 +494,15 @@ foreach FPTy = ["F32", "F64", "F128", "PPCF128"] in {
   def OLE_#FPTy : RuntimeLibcall;
   def OGT_#FPTy : RuntimeLibcall;
   def UO_#FPTy : RuntimeLibcall;
+
+  def FCMP3_PRED_OEQ_#FPTy : RuntimeLibcall;
+  def FCMP3_PRED_UNE_#FPTy : RuntimeLibcall;
+  def FCMP3_PRED_OGE_#FPTy : RuntimeLibcall;
+  def FCMP3_PRED_OLT_#FPTy : RuntimeLibcall;
+  def FCMP3_PRED_OLE_#FPTy : RuntimeLibcall;
+  def FCMP3_PRED_OGT_#FPTy : RuntimeLibcall;
+
+  def FCMP3_#FPTy : RuntimeLibcall;
 }
 
 // Memory
@@ -1214,31 +1229,32 @@ def __floatuntitf_ppcf128 : RuntimeLibcallImpl<UINTTOFP_I128_PPCF128, "__floatun
 def __extendkftf2 : RuntimeLibcallImpl<CONVERT_F128_PPCF128>;
 def __trunctfkf2 : RuntimeLibcallImpl<CONVERT_PPCF128_F128>;
 
-// Comparison
-def __eqsf2 : RuntimeLibcallImpl<OEQ_F32>;
-def __eqdf2 : RuntimeLibcallImpl<OEQ_F64>;
-def __eqtf2 : RuntimeLibcallImpl<OEQ_F128>;
-def __gcc_qeq : RuntimeLibcallImpl<OEQ_PPCF128>;
-def __nesf2 : RuntimeLibcallImpl<UNE_F32>;
-def __nedf2 : RuntimeLibcallImpl<UNE_F64>;
-def __netf2 : RuntimeLibcallImpl<UNE_F128>;
-def __gcc_qne : RuntimeLibcallImpl<UNE_PPCF128>;
-def __gesf2 : RuntimeLibcallImpl<OGE_F32>;
-def __gedf2 : RuntimeLibcallImpl<OGE_F64>;
-def __getf2 : RuntimeLibcallImpl<OGE_F128>;
-def __gcc_qge : RuntimeLibcallImpl<OGE_PPCF128>;
-def __ltsf2 : RuntimeLibcallImpl<OLT_F32>;
-def __ltdf2 : RuntimeLibcallImpl<OLT_F64>;
-def __lttf2 : RuntimeLibcallImpl<OLT_F128>;
-def __gcc_qlt : RuntimeLibcallImpl<OLT_PPCF128>;
-def __lesf2 : RuntimeLibcallImpl<OLE_F32>;
-def __ledf2 : RuntimeLibcallImpl<OLE_F64>;
-def __letf2 : RuntimeLibcallImpl<OLE_F128>;
-def __gcc_qle : RuntimeLibcallImpl<OLE_PPCF128>;
-def __gtsf2 : RuntimeLibcallImpl<OGT_F32>;
-def __gtdf2 : RuntimeLibcallImpl<OGT_F64>;
-def __gttf2 : RuntimeLibcallImpl<OGT_F128>;
-def __gcc_qgt : RuntimeLibcallImpl<OGT_PPCF128>;
+// Comparison. These return a three-way -1/0/1 result (FCMP3_PRED_*_F*), not a
+// boolean.
+def __eqsf2 : RuntimeLibcallImpl<FCMP3_PRED_OEQ_F32>;
+def __eqdf2 : RuntimeLibcallImpl<FCMP3_PRED_OEQ_F64>;
+def __eqtf2 : RuntimeLibcallImpl<FCMP3_PRED_OEQ_F128>;
+def __gcc_qeq : RuntimeLibcallImpl<FCMP3_PRED_OEQ_PPCF128>;
+def __nesf2 : RuntimeLibcallImpl<FCMP3_PRED_UNE_F32>;
+def __nedf2 : RuntimeLibcallImpl<FCMP3_PRED_UNE_F64>;
+def __netf2 : RuntimeLibcallImpl<FCMP3_PRED_UNE_F128>;
+def __gcc_qne : RuntimeLibcallImpl<FCMP3_PRED_UNE_PPCF128>;
+def __gesf2 : RuntimeLibcallImpl<FCMP3_PRED_OGE_F32>;
+def __gedf2 : RuntimeLibcallImpl<FCMP3_PRED_OGE_F64>;
+def __getf2 : RuntimeLibcallImpl<FCMP3_PRED_OGE_F128>;
+def __gcc_qge : RuntimeLibcallImpl<FCMP3_PRED_OGE_PPCF128>;
+def __ltsf2 : RuntimeLibcallImpl<FCMP3_PRED_OLT_F32>;
+def __ltdf2 : RuntimeLibcallImpl<FCMP3_PRED_OLT_F64>;
+def __lttf2 : RuntimeLibcallImpl<FCMP3_PRED_OLT_F128>;
+def __gcc_qlt : RuntimeLibcallImpl<FCMP3_PRED_OLT_PPCF128>;
+def __lesf2 : RuntimeLibcallImpl<FCMP3_PRED_OLE_F32>;
+def __ledf2 : RuntimeLibcallImpl<FCMP3_PRED_OLE_F64>;
+def __letf2 : RuntimeLibcallImpl<FCMP3_PRED_OLE_F128>;
+def __gcc_qle : RuntimeLibcallImpl<FCMP3_PRED_OLE_PPCF128>;
+def __gtsf2 : RuntimeLibcallImpl<FCMP3_PRED_OGT_F32>;
+def __gtdf2 : RuntimeLibcallImpl<FCMP3_PRED_OGT_F64>;
+def __gttf2 : RuntimeLibcallImpl<FCMP3_PRED_OGT_F128>;
+def __gcc_qgt : RuntimeLibcallImpl<FCMP3_PRED_OGT_PPCF128>;
 def __unordsf2 : RuntimeLibcallImpl<UO_F32>;
 def __unorddf2 : RuntimeLibcallImpl<UO_F64>;
 def __unordtf2 : RuntimeLibcallImpl<UO_F128>;
@@ -2754,7 +2770,7 @@ def HexagonSystemLibrary
     : SystemRuntimeLibrary<isHexagon,
     (add (sub DefaultLibcallImpls32,
     __adddf3, __divsf3, __udivsi3, __udivdi3,
-    __umoddi3, __divdf3, __muldf3, __divsi3, __subdf3, sqrtf,
+    __umoddi3, __divdf3, __muldf3, __divsi3, __subdf3,
     __divdi3, __umodsi3, __moddi3, __modsi3), HexagonLibcalls,
     LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
     exp10f, exp10, exp10l_f128, __stack_chk_fail, __stack_chk_guard,
@@ -2782,8 +2798,8 @@ def __mips16_adddf3 : RuntimeLibcallImpl<ADD_F64>;
 def __mips16_addsf3 : RuntimeLibcallImpl<ADD_F32>;
 def __mips16_divdf3 : RuntimeLibcallImpl<DIV_F64>;
 def __mips16_divsf3 : RuntimeLibcallImpl<DIV_F32>;
-def __mips16_eqdf2 : RuntimeLibcallImpl<OEQ_F64>;
-def __mips16_eqsf2 : RuntimeLibcallImpl<OEQ_F32>;
+def __mips16_eqdf2 : RuntimeLibcallImpl<FCMP3_PRED_OEQ_F64>;
+def __mips16_eqsf2 : RuntimeLibcallImpl<FCMP3_PRED_OEQ_F32>;
 def __mips16_extendsfdf2 : RuntimeLibcallImpl<FPEXT_F32_F64>;
 def __mips16_fix_truncdfsi : RuntimeLibcallImpl<FPTOSINT_F64_I32>;
 def __mips16_fix_truncsfsi : RuntimeLibcallImpl<FPTOSINT_F32_I32>;
@@ -2791,18 +2807,18 @@ def __mips16_floatsidf : RuntimeLibcallImpl<SINTTOFP_I32_F64>;
 def __mips16_floatsisf : RuntimeLibcallImpl<SINTTOFP_I32_F32>;
 def __mips16_floatunsidf : RuntimeLibcallImpl<UINTTOFP_I32_F64>;
 def __mips16_floatunsisf : RuntimeLibcallImpl<UINTTOFP_I32_F32>;
-def __mips16_gedf2 : RuntimeLibcallImpl<OGE_F64>;
-def __mips16_gesf2 : RuntimeLibcallImpl<OGE_F32>;
-def __mips16_gtdf2 : RuntimeLibcallImpl<OGT_F64>;
-def __mips16_gtsf2 : RuntimeLibcallImpl<OGT_F32>;
-def __mips16_ledf2 : RuntimeLibcallImpl<OLE_F64>;
-def __mips16_lesf2 : RuntimeLibcallImpl<OLE_F32>;
-def __mips16_ltdf2 : RuntimeLibcallImpl<OLT_F64>;
-def __mips16_ltsf2 : RuntimeLibcallImpl<OLT_F32>;
+def __mips16_gedf2 : RuntimeLibcallImpl<FCMP3_PRED_OGE_F64>;
+def __mips16_gesf2 : RuntimeLibcallImpl<FCMP3_PRED_OGE_F32>;
+def __mips16_gtdf2 : RuntimeLibcallImpl<FCMP3_PRED_OGT_F64>;
+def __mips16_gtsf2 : RuntimeLibcallImpl<FCMP3_PRED_OGT_F32>;
+def __mips16_ledf2 : RuntimeLibcallImpl<FCMP3_PRED_OLE_F64>;
+def __mips16_lesf2 : RuntimeLibcallImpl<FCMP3_PRED_OLE_F32>;
+def __mips16_ltdf2 : RuntimeLibcallImpl<FCMP3_PRED_OLT_F64>;
+def __mips16_ltsf2 : RuntimeLibcallImpl<FCMP3_PRED_OLT_F32>;
 def __mips16_muldf3 : RuntimeLibcallImpl<MUL_F64>;
 def __mips16_mulsf3 : RuntimeLibcallImpl<MUL_F32>;
-def __mips16_nedf2 : RuntimeLibcallImpl<UNE_F64>;
-def __mips16_nesf2 : RuntimeLibcallImpl<UNE_F32>;
+def __mips16_nedf2 : RuntimeLibcallImpl<FCMP3_PRED_UNE_F64>;
+def __mips16_nesf2 : RuntimeLibcallImpl<FCMP3_PRED_UNE_F32>;
 def __mips16_ret_dc : RuntimeLibcallImpl<MIPS16_RET_DC>;
 def __mips16_ret_df : RuntimeLibcallImpl<MIPS16_RET_DF>;
 def __mips16_ret_sc : RuntimeLibcallImpl<MIPS16_RET_SC>;
@@ -2872,18 +2888,9 @@ def __mspabi_fltulf : RuntimeLibcallImpl<UINTTOFP_I32_F32>;
 def __mspabi_fltullf : RuntimeLibcallImpl<UINTTOFP_I64_F32>;
 
 // Floating point comparisons - EABI Table 7
-def __mspabi_cmpd__oeq : RuntimeLibcallImpl<OEQ_F64, "__mspabi_cmpd">;
-def __mspabi_cmpd__une : RuntimeLibcallImpl<UNE_F64, "__mspabi_cmpd">;
-def __mspabi_cmpd__oge : RuntimeLibcallImpl<OGE_F64, "__mspabi_cmpd">;
-def __mspabi_cmpd__olt : RuntimeLibcallImpl<OLT_F64, "__mspabi_cmpd">;
-def __mspabi_cmpd__ole : RuntimeLibcallImpl<OLE_F64, "__mspabi_cmpd">;
-def __mspabi_cmpd__ogt : RuntimeLibcallImpl<OGT_F64, "__mspabi_cmpd">;
-def __mspabi_cmpf__oeq : RuntimeLibcallImpl<OEQ_F32, "__mspabi_cmpf">;
-def __mspabi_cmpf__une : RuntimeLibcallImpl<UNE_F32, "__mspabi_cmpf">;
-def __mspabi_cmpf__oge : RuntimeLibcallImpl<OGE_F32, "__mspabi_cmpf">;
-def __mspabi_cmpf__olt : RuntimeLibcallImpl<OLT_F32, "__mspabi_cmpf">;
-def __mspabi_cmpf__ole : RuntimeLibcallImpl<OLE_F32, "__mspabi_cmpf">;
-def __mspabi_cmpf__ogt : RuntimeLibcallImpl<OGT_F32, "__mspabi_cmpf">;
+// A single three-way compare symbol serves every predicate.
+def __mspabi_cmpd : RuntimeLibcallImpl<FCMP3_F64>;
+def __mspabi_cmpf : RuntimeLibcallImpl<FCMP3_F32>;
 
 // Floating point arithmetic - EABI Table 8
 def __mspabi_addd : RuntimeLibcallImpl<ADD_F64>;
@@ -3010,18 +3017,8 @@ def MSP430SystemLibrary
       __mspabi_fltullf,
 
       // Floating point comparisons - EABI Table 7
-      LibcallsWithCC<(add __mspabi_cmpd__oeq,
-                          __mspabi_cmpd__une,
-                          __mspabi_cmpd__oge,
-                          __mspabi_cmpd__olt,
-                          __mspabi_cmpd__ole,
-                          __mspabi_cmpd__ogt), MSP430_BUILTIN>,
-      __mspabi_cmpf__oeq,
-      __mspabi_cmpf__une,
-      __mspabi_cmpf__oge,
-      __mspabi_cmpf__olt,
-      __mspabi_cmpf__ole,
-      __mspabi_cmpf__ogt,
+      LibcallsWithCC<(add __mspabi_cmpd), MSP430_BUILTIN>,
+      __mspabi_cmpf,
 
       // Floating point arithmetic - EABI Table 8
       LibcallsWithCC<(add __mspabi_addd,
@@ -3104,12 +3101,12 @@ defset list<RuntimeLibcallImpl> PPCRuntimeLibcalls = {
   def __floatunsikf : RuntimeLibcallImpl<UINTTOFP_I32_F128>;
   def __floatundikf : RuntimeLibcallImpl<UINTTOFP_I64_F128>;
   def __floatuntikf : RuntimeLibcallImpl<UINTTOFP_I128_F128>;
-  def __eqkf2 : RuntimeLibcallImpl<OEQ_F128>;
-  def __nekf2 : RuntimeLibcallImpl<UNE_F128>;
-  def __gekf2 : RuntimeLibcallImpl<OGE_F128>;
-  def __ltkf2 : RuntimeLibcallImpl<OLT_F128>;
-  def __lekf2 : RuntimeLibcallImpl<OLE_F128>;
-  def __gtkf2 : RuntimeLibcallImpl<OGT_F128>;
+  def __eqkf2 : RuntimeLibcallImpl<FCMP3_PRED_OEQ_F128>;
+  def __nekf2 : RuntimeLibcallImpl<FCMP3_PRED_UNE_F128>;
+  def __gekf2 : RuntimeLibcallImpl<FCMP3_PRED_OGE_F128>;
+  def __ltkf2 : RuntimeLibcallImpl<FCMP3_PRED_OLT_F128>;
+  def __lekf2 : RuntimeLibcallImpl<FCMP3_PRED_OLE_F128>;
+  def __gtkf2 : RuntimeLibcallImpl<FCMP3_PRED_OGT_F128>;
   def __unordkf2 : RuntimeLibcallImpl<UO_F128>;
 }
 
