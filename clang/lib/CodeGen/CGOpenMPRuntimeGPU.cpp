@@ -1825,14 +1825,9 @@ void CGOpenMPRuntimeGPU::emitReduction(
       auto *CurFn = CGF.CurFn;
       CGF.CurFn = NewFunc;
 
-      // The combiner is emitted into a helper function created by
-      // OpenMPIRBuilder which has no DISubprogram of its own. Emitting debug
-      // locations here would attach the enclosing function's scope to
-      // instructions living in a different function, which is invalid IR (the
-      // Verifier only catches it once the helper is inlined into a function
-      // that does have a DISubprogram). Suppress debug locations for the
-      // duration, matching the other OpenMPIRBuilder-generated reduction
-      // helpers.
+      // The helper has no DISubprogram of its own, so a debug location here
+      // would name the enclosing function's scope, which is invalid IR.
+      // Suppress them, as the other OpenMPIRBuilder-generated helpers do.
       llvm::DebugLoc SavedDebugLoc = CGF.Builder.getCurrentDebugLocation();
       CGF.Builder.SetCurrentDebugLocation(llvm::DebugLoc());
       CGF.disableDebugInfo();

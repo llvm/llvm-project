@@ -34,8 +34,8 @@ void foo() {
 // debug location anywhere in its body.
 // CHECK:     define internal void @"{{.*}}_omp$reduction$reduction_func"(
 // CHECK-NOT:   !dbg
-// CHECK:       ret void
+// CHECK:     }
 
 // CHECK:     define internal void @"{{.*}}_omp$reduction$reduction_func"(
 // CHECK-NOT:   !dbg
-// CHECK:       ret void
+// CHECK:     }
