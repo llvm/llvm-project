@@ -37,6 +37,9 @@ class TestFrameVarDILExprSizeOf(TestBase):
         self.expect_var_path("sizeof(iref)", value=intref_size)
         self.expect_var_path("sizeof(arr)", value=arr_size)
         self.expect_var_path("sizeof(arr + 1)", value=ptr_size)
+        self.expect_var_path("sizeof(arr[0])", value=int_size)
+        self.expect_var_path("sizeof(arr2d[1])", value=arr_size)
+        self.expect_var_path("sizeof(i + sh + d)", value=double_size)
 
         # Check types
         self.expect_var_path("sizeof(int)", value=int_size)
@@ -56,6 +59,7 @@ class TestFrameVarDILExprSizeOf(TestBase):
         self.expect_var_path("sizeof(SizeOfFoo)", value=foo_size)
         self.expect_var_path("sizeof(SizeOfFoo&)", value=foo_size)
         self.expect_var_path("sizeof(SizeOfFoo*)", value=ptr_size)
+        self.expect_var_path("sizeof(foo.d)", value=double_size)
 
         # Check enum
         self.expect_var_path("sizeof(enum_one)", value=enum_size)

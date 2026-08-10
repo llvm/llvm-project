@@ -2,6 +2,13 @@
 
 void stop() {}
 
+struct SizeOfFoo {
+  int x, y;
+  double d;
+  static int z;
+  virtual void foo() {}
+} foo;
+
 int main(int argc, char **argv) {
   int i = 1;
   short sh = 1;
@@ -9,11 +16,8 @@ int main(int argc, char **argv) {
   int *ptr = &i;
   int &iref = i;
   int arr[] = {1, 2, 3};
+  int arr2d[2][3] = {{1, 2}, {3, 4, 5}};
 
-  struct SizeOfFoo {
-    int x, y;
-    double d;
-  } foo;
   SizeOfFoo *foo_ptr = &foo;
 
   enum UnscopedEnum16 : int16_t { kZero16, kOne16 };
