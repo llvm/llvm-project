@@ -46,23 +46,23 @@ Presently, the DirectX backend requires targeting the `shadermodel` OS, and
 supports versions 6.0+ (as of writing, the latest announced version is 6.7).
 
 :::{table} DirectX Environments
-| Environment | Description |
-| --- | --- |
-| `pixel` | Pixel shader |
-| `vertex` | Vertex shader |
-| `geometry` | Geometry shader |
-| `hull` | Hull shader (tesselation) |
-| `domain` | Domain shader (tesselation) |
-| `compute` | Compute kernel |
-| `library` | Linkable `dxil` library |
-| `raygeneration` | Ray generation (ray tracing) |
-| `intersection` | Ray intersection (ray tracing) |
-| `anyhit` | Ray any collision (ray tracing) |
-| `closesthit` | Ray closest collision (ray tracing) |
-| `miss` | Ray miss (ray tracing) |
-| `callable` | Callable shader (ray tracing) |
-| `mesh` | Mesh shader |
-| `amplification` | Amplification shader |
+| Environment     | Description                         |
+| --------------- | ----------------------------------- |
+| `pixel`         | Pixel shader                        |
+| `vertex`        | Vertex shader                       |
+| `geometry`      | Geometry shader                     |
+| `hull`          | Hull shader (tesselation)           |
+| `domain`        | Domain shader (tesselation)         |
+| `compute`       | Compute kernel                      |
+| `library`       | Linkable `dxil` library             |
+| `raygeneration` | Ray generation (ray tracing)        |
+| `intersection`  | Ray intersection (ray tracing)      |
+| `anyhit`        | Ray any collision (ray tracing)     |
+| `closesthit`    | Ray closest collision (ray tracing) |
+| `miss`          | Ray miss (ray tracing)              |
+| `callable`      | Callable shader (ray tracing)       |
+| `mesh`          | Mesh shader                         |
+| `amplification` | Amplification shader                |
 :::
 
 ## Output Binaries
