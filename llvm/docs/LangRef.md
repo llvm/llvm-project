@@ -9526,13 +9526,12 @@ flags metadata, using the following key-value pairs:
 ### Other Module Flags
 
 `executable-stack`
-:   **Max**. If this flag is present and non-zero, the module contains code that
-    requires the stack to be executable, for example because it builds a
-    trampoline in stack memory and jumps to it. On ELF targets this is emitted as
-    a `.note.GNU-stack` section with the `SHF_EXECINSTR` flag set, which
-    instructs the linker to mark the stack of the resulting binary executable.
-    Frontends that generate such code are responsible for setting this flag;
-    when it is absent or zero, the stack is marked non-executable.
+:   A non-zero value indicates the module contains code requiring an executable
+    stack, such as a trampoline built in stack memory and jumped to. On ELF
+    targets a non-zero value emits `.note.GNU-stack` with `SHF_EXECINSTR` set,
+    telling the linker to mark the binary's stack executable. The flag must use
+    the `max` merge behavior, so that a module requiring an executable stack
+    still gets one after linking with modules that do not.
 
 `require-logical-pointer`
 :   This flag indicates this module must only use logical pointer intrinsics
@@ -21719,7 +21718,8 @@ The block may be allocated anywhere - the stack, the heap, a global, or a
 runtime-managed pool - as long as it is writable when
 `llvm.init.trampoline` executes and the address returned by
 {ref}`llvm.adjust.trampoline <int_at>` is executable when called. Those two
-addresses need not name the same mapping of the memory.
+addresses need not be equal, so a W^X implementation may map the block
+twice, once writable and once executable.
 
 The `func` argument must be a constant (potentially bitcasted) pointer to a
 function declaration or definition, since the calling convention may affect the

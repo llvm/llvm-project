@@ -21,6 +21,7 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace fir {
@@ -197,17 +198,26 @@ private:
 /// backend mark the `.note.GNU-stack` section executable on ELF targets.
 static void requestExecutableStack(mlir::ModuleOp module) {
   mlir::MLIRContext *context{module.getContext()};
+  auto key{mlir::StringAttr::get(context, "executable-stack")};
+  // The flag merges with `Max`, since the linked result needs an executable
+  // stack as soon as any one of the modules linked into it does.
   auto flag{mlir::LLVM::ModuleFlagAttr::get(
-      context, mlir::LLVM::ModFlagBehavior::Max,
-      mlir::StringAttr::get(context, "executable-stack"),
+      context, mlir::LLVM::ModFlagBehavior::Max, key,
       mlir::IntegerAttr::get(mlir::IntegerType::get(context, 32), 1))};
 
-  // Append to the module flags that are already there, if any.
+  // Add to the module flags that are already there, if any. A key may appear
+  // only once, so overwrite any "executable-stack" already present instead of
+  // appending a second one; a request for 1 wins over whatever it held.
   for (auto flagsOp : module.getOps<mlir::LLVM::ModuleFlagsOp>()) {
     llvm::SmallVector<mlir::Attribute> flags{flagsOp.getFlags().getValue()};
-    if (llvm::is_contained(flags, flag))
-      return;
-    flags.push_back(flag);
+    auto *existing = llvm::find_if(flags, [&](mlir::Attribute attr) {
+      return mlir::cast<mlir::LLVM::ModuleFlagAttrInterface>(attr)
+                 .getModuleFlagKey() == key;
+    });
+    if (existing == flags.end())
+      flags.push_back(flag);
+    else
+      *existing = flag;
     flagsOp.setFlagsAttr(mlir::ArrayAttr::get(context, flags));
     return;
   }
@@ -239,6 +249,7 @@ public:
   inline mlir::ModuleOp getModule() { return getOperation(); }
 
   void runOnOperation() override final {
+    needsExecutableStack = false;
     if (useThunks) {
       auto *context = &getContext();
       mlir::IRRewriter rewriter(context);
