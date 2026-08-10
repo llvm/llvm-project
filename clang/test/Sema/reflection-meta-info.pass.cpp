@@ -93,8 +93,8 @@ consteval void test()
     static_assert(f6<^^float>() != ^^int);
     static_assert(f6<^^int>() == f5<^^int>());
 
-    static_assert(sizeof(info) == 8);
-    static_assert(alignof(info) == 1);
+    static_assert(sizeof(info) == sizeof(void*));
+    static_assert(alignof(info) == sizeof(void*));
     static_assert(sizeof(decltype(^^int)) == sizeof(decltype(^^float)));
     static_assert(^^int32_t != ^^int);
     static_assert(^^const int != ^^int);
