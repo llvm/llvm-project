@@ -905,11 +905,46 @@ static int settleAttachStorage(DeviceTy &Device, StateInfoTy &StateInfo,
     return PteeEntry && !PteeEntry->isHostBound();
   };
 
-  // Give a pointer device storage only where the pointee cannot give its own
-  // allocation up: it was made by an enclosing construct, so its device address
-  // may already have been obtained by the program. Those are the attachments
-  // that have no other way to be settled, so they are settled first, and the
-  // releases below then see the storage they forced.
+  // An attachment whose pointee cannot give its allocation up -- it was made by
+  // an enclosing construct, so its device address may already have been
+  // obtained by the program -- can only be settled by giving the pointer device
+  // storage. That obligation propagates: the pointer's storage then holds a
+  // device address, so anything attached to it must hold one too. Work the
+  // whole set out before touching anything, because a pointee reached this way
+  // must not be released even though this construct allocated it.
+  llvm::DenseSet<HostDataToTargetTy *> ForcedDevice;
+  {
+    SmallVector<HostDataToTargetTy *> Worklist;
+    auto Force = [&](HostDataToTargetTy *Entry) {
+      if (Entry && ForcedDevice.insert(Entry).second)
+        Worklist.push_back(Entry);
+    };
+
+    for (const auto &AttachEntry : StateInfo.AttachEntries) {
+      if (!WillAttach(AttachEntry) ||
+          StateInfo.wasNewlyAllocated(AttachEntry.PointeeBegin).has_value())
+        continue;
+      HostDataToTargetTy *PteeEntry =
+          FindEntry(AttachEntry.PointeeBegin, /*Size=*/0);
+      if (PteeEntry && !PteeEntry->isHostBound())
+        Force(PteeEntry);
+    }
+
+    while (!Worklist.empty()) {
+      HostDataToTargetTy *Entry = Worklist.pop_back_val();
+      for (const auto &AttachEntry : StateInfo.AttachEntries) {
+        if (!WillAttach(AttachEntry))
+          continue;
+        uintptr_t Ptee = reinterpret_cast<uintptr_t>(AttachEntry.PointeeBegin);
+        if (Ptee < Entry->HstPtrBegin || Ptee >= Entry->HstPtrEnd)
+          continue;
+        Force(FindEntry(AttachEntry.PointerBase, AttachEntry.PointerSize));
+      }
+    }
+  }
+
+  // Settle those attachments first, so that the releases below see the storage
+  // this obligation implies instead of undoing their own work.
   for (const auto &AttachEntry : StateInfo.AttachEntries) {
     void **HstPtr = reinterpret_cast<void **>(AttachEntry.PointerBase);
     if (!WillAttach(AttachEntry) ||
@@ -917,7 +952,7 @@ static int settleAttachStorage(DeviceTy &Device, StateInfoTy &StateInfo,
                        AttachEntry.PointeeBegin))
       continue;
 
-    if (StateInfo.wasNewlyAllocated(AttachEntry.PointeeBegin).has_value())
+    if (!ForcedDevice.contains(FindEntry(AttachEntry.PointeeBegin, /*Size=*/0)))
       continue;
 
     // Give the pointer, and whatever points at it, device storage. A pointer
@@ -1013,11 +1048,14 @@ static int settleAttachStorage(DeviceTy &Device, StateInfoTy &StateInfo,
           !NeedsSettling(HstPtr, AttachEntry.PointerSize, HstPteeBegin))
         continue;
 
-      // Only a pointee allocated for this construct may give its allocation up.
+      // Only a pointee allocated for this construct may give its allocation up,
+      // and not one whose storage is required to hold device addresses.
       if (!StateInfo.wasNewlyAllocated(HstPteeBegin).has_value())
         continue;
 
       HostDataToTargetTy *PteeEntry = FindEntry(HstPteeBegin, /*Size=*/0);
+      if (ForcedDevice.contains(PteeEntry))
+        continue;
 #ifndef NDEBUG
       // Giving the allocation up moves the pointee's device address, which
       // would strand any pointer already attached to it. That cannot happen
