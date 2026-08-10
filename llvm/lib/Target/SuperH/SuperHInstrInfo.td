@@ -916,7 +916,7 @@ let hasSideEffects = 0, Constraints = "$src = $Rn" in {
 // Call Instructions
 //===--------------------------------------------------------------------------===//
 
-let isCall = 1 in {
+let isCall = 1, hasDelaySlot = 1 in {
   let Uses = [GBR] in
   def JSRRmi          : InstRm<0b0100000000001011,
                               (outs), (ins GPRMem:$Rm),
@@ -933,7 +933,7 @@ let isTerminator = 1, isReturn = 1, isBarrier = 1, hasDelaySlot = 1 in {
   def RTS               : Inst<0b0000000000001011,
                               (outs), (ins),
                               "rts",
-                              []>;
+                              [(SHRetGlue)]>;
 }
 
 

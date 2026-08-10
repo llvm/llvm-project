@@ -52,20 +52,14 @@ void SuperHInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   llvm_unreachable("Impossible reg-to-reg copy");
 }
 
-bool SuperHInstrInfo::expandRET(MachineInstr &MI) const {
-  MachineBasicBlock &MBB = *MI.getParent();
-  MachineBasicBlock::iterator MBBI = MI.getIterator();
-  DebugLoc DL = MI.getDebugLoc();
-
-
-  BuildMI(MBB, MBBI, DL, get(SH::NOP));
-  return true;
-}
-
-bool SuperHInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
-  switch(MI.getOpcode()) {
-  case SH::RTS:
-    return expandRET(MI);
-  }
-  return false;
+// Gets whether a given opcode can fill a delay slot.
+// 
+// SuperH does not allow branch instructions of any kind to be situated 
+// in a delay slot, nor does it allow instructions with delay slots
+// to be chained together.
+bool SuperHInstrInfo::canFillDelaySlot(unsigned Opcode) const {
+  auto Desc = this->get(Opcode);
+  return !Desc.hasDelaySlot() && 
+         !Desc.isBranch() && 
+         !Desc.isCall() && !Desc.isReturn();
 }

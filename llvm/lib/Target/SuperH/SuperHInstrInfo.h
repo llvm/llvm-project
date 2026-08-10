@@ -41,11 +41,7 @@ public:
                            bool RenamableDest = false,
                            bool RenamableSrc = false) const override;
 
-  bool expandPostRAPseudo(MachineInstr &MI) const override;
-
-private:
-  // Custom expansions
-  bool expandRET(MachineInstr &MI) const;
+  bool canFillDelaySlot(unsigned Opcode) const;
 };
 
 const SuperHInstrInfo *createSuperHInstrInfo(const SuperHSubtarget &STI);
