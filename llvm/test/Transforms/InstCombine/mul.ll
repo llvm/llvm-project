@@ -2522,10 +2522,9 @@ define i1 @neg_mul_add_one_i1(i1 %x, i1 %y) {
 ; fold mul (select (icmp ugt X, 1) (1, add nuw nsw X, 1)), Y  -> shl Y, zext (icmp eq X, 1)
 define i16 @mul_select_ugt(i16 noundef %x, i16 noundef %y) {
 ; CHECK-LABEL: @mul_select_ugt(
-; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i16 [[X:%.*]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt i16 [[X]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i16 1, i16 [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i16 [[TMP3]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i16 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP1]] to i16
+; CHECK-NEXT:    [[TMP4:%.*]] = shl i16 [[Y:%.*]], [[TMP2]]
 ; CHECK-NEXT:    ret i16 [[TMP4]]
 ;
   %3 = add nuw nsw i16 %x, 1
@@ -2538,10 +2537,9 @@ define i16 @mul_select_ugt(i16 noundef %x, i16 noundef %y) {
 ; commuted mul
 define i32 @mul_select_ugt_commuted(i32 %x, i32 %y) {
 ; CHECK-LABEL: @mul_select_ugt_commuted(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[X]], 1
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 1, i32 [[ADD]]
-; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[Y:%.*]], [[SEL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP1]] to i32
+; CHECK-NEXT:    [[MUL:%.*]] = shl i32 [[Y:%.*]], [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[MUL]]
 ;
   %cmp = icmp ugt i32 %x, 1

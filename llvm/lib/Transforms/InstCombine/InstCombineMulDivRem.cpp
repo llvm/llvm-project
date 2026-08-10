@@ -263,6 +263,29 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
     }
   }
 
+  // mul (select (icmp ugt X, 1) (1, add nuw nsw X, 1)), Y  ->
+  // shl Y, zext (icmp eq X, 1)
+  {
+
+    Value *X = nullptr, *Y = nullptr;
+    Instruction *Add = nullptr;
+
+    if (match(&I, m_c_Mul(m_Select(m_SpecificICmp(ICmpInst::ICMP_UGT,
+                                                  m_Value(X), m_One()),
+                                   m_One(),
+                                   m_CombineAnd(m_Add(m_Deferred(X), m_One()),
+                                                m_Instruction(Add))),
+                          m_Value(Y)))) {
+
+      if (Add->hasNoUnsignedWrap() && Add->hasNoSignedWrap()) {
+        auto *ICmpEq = Builder.CreateICmp(ICmpInst::ICMP_EQ, X,
+                                          ConstantInt::get(X->getType(), 1));
+        auto *Zext = Builder.CreateZExt(ICmpEq, Y->getType());
+        return BinaryOperator::CreateShl(Y, Zext);
+      }
+    }
+  }
+
   // mul (shr exact X, N), (2^N + 1) -> add (X, shr exact (X, N))
   {
     Value *NewOp;
