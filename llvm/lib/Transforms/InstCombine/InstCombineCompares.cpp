@@ -3024,11 +3024,10 @@ Instruction *InstCombinerImpl::foldICmpSubConstant(ICmpInst &Cmp,
   ICmpInst::Predicate Pred = Cmp.getPredicate();
   Type *Ty = Sub->getType();
 
-  // (X - (X urem D)) is D*(X/D), a multiple of D. A multiple of D is > C for
-  // any C in [0, D) exactly when X >= D, and < C for any C in (0, D] exactly
-  // when X < D.
-  //   (icmp ugt (sub X, (urem X, D)), C) --> (icmp ugt X, D-1)  for C u< D
-  //   (icmp ult (sub X, (urem X, D)), C) --> (icmp ult X, D)    for 0 u< C u<= D
+  // (X - (X urem D)) is D*(X/D), a multiple of D, so it is u> C exactly when
+  // X u>= D (for C u< D), and u< C exactly when X u< D (for 0 u< C u<= D):
+  //   icmp ugt (sub X, (urem X, D)), C --> icmp ugt X, D-1
+  //   icmp ult (sub X, (urem X, D)), C --> icmp ult X, D
   const APInt *D;
   if (match(Y, m_URem(m_Specific(X), m_APInt(D))) && !D->isZero()) {
     if (Pred == ICmpInst::ICMP_UGT && C.ult(*D))
