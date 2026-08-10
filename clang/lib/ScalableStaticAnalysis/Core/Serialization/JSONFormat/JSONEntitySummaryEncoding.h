@@ -27,22 +27,29 @@ class JSONEntitySummaryEncoding final : public EntitySummaryEncoding {
   friend JSONFormat;
 
 public:
-  llvm::Error
-  patch(const std::map<EntityId, EntityId> &EntityResolutionTable) override;
+  llvm::Error patch(const EntityResolutionMap &Resolution) override;
+
+  const void *getEncodingKind() const override { return &Kind; }
+
+  bool equals(const EntitySummaryEncoding &Other) const override;
 
 private:
+  /// Distinguishes this encoding from other formats' without RTTI. Its address
+  /// is the identity; the value is irrelevant.
+  static const char Kind;
+
   explicit JSONEntitySummaryEncoding(llvm::json::Value Data)
       : Data(std::move(Data)) {}
 
   llvm::Error patchEntityIdObject(llvm::json::Object &Obj,
-                                  const std::map<EntityId, EntityId> &Table,
+                                  const EntityResolutionMap &Resolution,
                                   llvm::json::Value *AtVal);
   llvm::Error patchRegularObject(llvm::json::Object &Obj,
-                                 const std::map<EntityId, EntityId> &Table);
+                                 const EntityResolutionMap &Resolution);
   llvm::Error patchObject(llvm::json::Object &Obj,
-                          const std::map<EntityId, EntityId> &Table);
+                          const EntityResolutionMap &Resolution);
   llvm::Error patchValue(llvm::json::Value &V,
-                         const std::map<EntityId, EntityId> &Table);
+                         const EntityResolutionMap &Resolution);
 
   llvm::json::Value Data;
 };

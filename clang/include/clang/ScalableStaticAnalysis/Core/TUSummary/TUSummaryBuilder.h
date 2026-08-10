@@ -26,7 +26,7 @@ public:
   TUSummaryBuilder(TUSummary &Summary, const SSAFOptions &Options)
       : Summary(Summary), Options(Options) {}
 
-  EntityId addEntity(const EntityName &EN, EntityLinkageType Linkage);
+  EntityId addEntity(const EntityName &EN, EntityLinkage Linkage);
 
   /// Associate the \p Data \c EntitySummary with the \p Entity.
   /// This consumes the \p Data only if \p Entity wasn't associated yet with the

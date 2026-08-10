@@ -289,8 +289,11 @@ static AnalysisRegistry::Add<CycleB> RegCycleB("Cyclic analysis B (test only)");
 
 class AnalysisDriverTest : public TestFixture {
 protected:
-  static constexpr EntityLinkage ExternalLinkage =
-      EntityLinkage(EntityLinkageType::External);
+  static constexpr EntityLinkage ExternalLinkage = EntityLinkage(
+      EntityLinkageType::External, clang::ssaf::EntityBinding::Strong,
+      clang::ssaf::EntityCoalescing::None,
+      clang::ssaf::EntityVisibility::Default,
+      clang::ssaf::EntityDefinitionKind::Definition);
 
   void SetUp() override {
     NextSummaryInstanceId = 0;

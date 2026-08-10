@@ -171,8 +171,11 @@ static SummaryDataBuilderRegistry::Add<Analysis4Builder>
 
 class LUSummaryConsumerTest : public TestFixture {
 protected:
-  static constexpr EntityLinkage ExternalLinkage =
-      EntityLinkage(EntityLinkageType::External);
+  static constexpr EntityLinkage ExternalLinkage = EntityLinkage(
+      EntityLinkageType::External, clang::ssaf::EntityBinding::Strong,
+      clang::ssaf::EntityCoalescing::None,
+      clang::ssaf::EntityVisibility::Default,
+      clang::ssaf::EntityDefinitionKind::Definition);
 
   void SetUp() override {
     NextSummaryInstanceId = 0;

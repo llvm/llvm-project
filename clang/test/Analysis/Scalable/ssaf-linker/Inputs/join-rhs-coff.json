@@ -1,0 +1,139 @@
+{
+  "tu_namespace": {
+    "kind": "CompilationUnit",
+    "name": "join_rhs.cpp"
+  },
+  "id_table": [
+    {
+      "id": 0,
+      "name": {
+        "suffix": "",
+        "usr": "c:@F@def_vs_decl"
+      }
+    },
+    {
+      "id": 1,
+      "name": {
+        "suffix": "",
+        "usr": "c:@F@decl_vs_def"
+      }
+    },
+    {
+      "id": 2,
+      "name": {
+        "suffix": "",
+        "usr": "c:@F@weaker_incumbent"
+      }
+    },
+    {
+      "id": 3,
+      "name": {
+        "suffix": "",
+        "usr": "c:@F@stronger_incumbent"
+      }
+    },
+    {
+      "id": 4,
+      "name": {
+        "suffix": "",
+        "usr": "c:@F@equal_weak"
+      }
+    }
+  ],
+  "linkage_table": [
+    {
+      "id": 0,
+      "linkage": {
+        "binding": "Undefined",
+        "coalescing": "None",
+        "definition": "Declaration",
+        "type": "External",
+        "visibility": "Default"
+      }
+    },
+    {
+      "id": 1,
+      "linkage": {
+        "binding": "Strong",
+        "coalescing": "None",
+        "definition": "Definition",
+        "type": "External",
+        "visibility": "Default"
+      }
+    },
+    {
+      "id": 2,
+      "linkage": {
+        "binding": "Strong",
+        "coalescing": "None",
+        "definition": "Definition",
+        "type": "External",
+        "visibility": "Default"
+      }
+    },
+    {
+      "id": 3,
+      "linkage": {
+        "binding": "Weak",
+        "coalescing": "None",
+        "definition": "Definition",
+        "type": "External",
+        "visibility": "Default"
+      }
+    },
+    {
+      "id": 4,
+      "linkage": {
+        "binding": "Weak",
+        "coalescing": "None",
+        "definition": "Definition",
+        "type": "External",
+        "visibility": "Default"
+      }
+    }
+  ],
+  "data": [
+    {
+      "summary_name": "Analysis1",
+      "summary_data": [
+        {
+          "entity_id": 0,
+          "entity_summary": {
+            "call_count": 2,
+            "callees": []
+          }
+        },
+        {
+          "entity_id": 1,
+          "entity_summary": {
+            "call_count": 2,
+            "callees": []
+          }
+        },
+        {
+          "entity_id": 2,
+          "entity_summary": {
+            "call_count": 2,
+            "callees": []
+          }
+        },
+        {
+          "entity_id": 3,
+          "entity_summary": {
+            "call_count": 2,
+            "callees": []
+          }
+        },
+        {
+          "entity_id": 4,
+          "entity_summary": {
+            "call_count": 2,
+            "callees": []
+          }
+        }
+      ]
+    }
+  ],
+  "target_triple": "x86_64-pc-windows-msvc",
+  "type": "TUSummary"
+}

@@ -1,0 +1,64 @@
+{
+  "tu_namespace": {
+    "kind": "CompilationUnit",
+    "name": "vis_rhs.cpp"
+  },
+  "id_table": [
+    {
+      "id": 0,
+      "name": {
+        "suffix": "",
+        "usr": "c:@F@hidden_vs_default"
+      }
+    },
+    {
+      "id": 1,
+      "name": {
+        "suffix": "",
+        "usr": "c:@F@default_vs_hidden"
+      }
+    },
+    {
+      "id": 2,
+      "name": {
+        "suffix": "",
+        "usr": "c:@F@both_hidden"
+      }
+    }
+  ],
+  "linkage_table": [
+    {
+      "id": 0,
+      "linkage": {
+        "binding": "Weak",
+        "coalescing": "None",
+        "definition": "Definition",
+        "type": "External",
+        "visibility": "Default"
+      }
+    },
+    {
+      "id": 1,
+      "linkage": {
+        "binding": "Weak",
+        "coalescing": "None",
+        "definition": "Definition",
+        "type": "External",
+        "visibility": "Hidden"
+      }
+    },
+    {
+      "id": 2,
+      "linkage": {
+        "binding": "Weak",
+        "coalescing": "None",
+        "definition": "Definition",
+        "type": "External",
+        "visibility": "Hidden"
+      }
+    }
+  ],
+  "data": [],
+  "target_triple": "x86_64-unknown-linux-gnu",
+  "type": "TUSummary"
+}

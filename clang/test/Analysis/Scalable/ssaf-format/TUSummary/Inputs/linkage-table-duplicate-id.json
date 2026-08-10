@@ -15,11 +15,11 @@
   "linkage_table": [
     {
       "id": 0,
-      "linkage": { "type": "External" }
+      "linkage": { "binding": "Strong", "coalescing": "None", "definition": "Definition", "type": "External", "visibility": "Default" }
     },
     {
       "id": 0,
-      "linkage": { "type": "Internal" }
+      "linkage": { "binding": "Strong", "coalescing": "None", "definition": "Definition", "type": "Internal", "visibility": "Default" }
     }
   ],
   "data": [],

@@ -77,6 +77,42 @@ cl::opt<bool> Time("time", cl::desc("Enable timing"), cl::init(false),
                    cl::sub(cl::SubCommand::getTopLevel()),
                    cl::sub(StaticLibraryCmd), cl::sub(MultiArchCmd));
 
+cl::opt<bool> WarnOnMultipleDefinitions(
+    "warn-on-multiple-definitions",
+    cl::desc("Warn instead of failing when an external entity is defined by "
+             "more than one translation unit"),
+    cl::init(false), cl::cat(SsafLinkerCategory),
+    cl::sub(cl::SubCommand::getTopLevel()));
+
+cl::opt<UnresolvedPolicy> UnresolvedSymbols(
+    "unresolved-symbols",
+    cl::desc("How to report entities that no linked translation unit defines"),
+    cl::init(UnresolvedPolicy::Ignore), cl::cat(SsafLinkerCategory),
+    cl::sub(cl::SubCommand::getTopLevel()),
+    cl::values(
+        clEnumValN(UnresolvedPolicy::Ignore, "ignore",
+                   "Do not check (default: a link unit is usually an "
+                   "intermediate artifact, where references to other link "
+                   "units are expected)"),
+        clEnumValN(UnresolvedPolicy::Warn, "warn",
+                   "Report each undefined entity and keep linking"),
+        clEnumValN(UnresolvedPolicy::Error, "error",
+                   "Fail the link if any entity is left undefined")));
+
+cl::opt<ODRMismatchPolicy> ODRMismatch(
+    "odr-mismatch",
+    cl::desc("How to report summary data that differs between two definitions "
+             "required to be identical, such as an inline function"),
+    cl::init(ODRMismatchPolicy::Ignore), cl::cat(SsafLinkerCategory),
+    cl::sub(cl::SubCommand::getTopLevel()),
+    cl::values(clEnumValN(ODRMismatchPolicy::Ignore, "ignore",
+                          "Do not check (default: comparing costs an extra "
+                          "patch of every displaced encoding)"),
+               clEnumValN(ODRMismatchPolicy::Warn, "warn",
+                          "Report each mismatch and keep linking"),
+               clEnumValN(ODRMismatchPolicy::Error, "error",
+                          "Fail the link on the first mismatch")));
+
 // The `static-library` subcommand's verb positional. Declared BEFORE
 // StaticLibraryInputs so cl-lib binds argv[0] under the subcommand to the
 // verb rather than to the greedy input list.
@@ -207,50 +243,55 @@ void runLink(llvm::TimerGroup &TG) {
   }
 
   info(Verbose, 1, "Linking input.");
-  info(Verbose, 2, "Constructing linker.");
-
-  // TODO: The linker currently uses a hardcoded target triple. Architecture
-  // tracking in the linker will be handled properly in a separate PR.
-  EntityLinker EL(llvm::Triple("arm64-apple-macosx"),
-                  NestedBuildNamespace(BuildNamespace(
-                      BuildNamespaceKind::LinkUnit, LI.LinkUnitName)));
 
   llvm::Timer TRead("read", "Read Summaries", TG);
   llvm::Timer TLink("link", "Link Summaries", TG);
   llvm::Timer TWrite("write", "Write Summary", TG);
 
-  info(Verbose, 2, "Linking summaries.");
-
+  // Read every summary before constructing the linker: the link unit's target
+  // triple comes from its inputs, and it selects the resolution rules to
+  // emulate. EntityLinker rejects any later input that disagrees.
+  std::vector<std::unique_ptr<TUSummaryEncoding>> Summaries;
   for (auto [Index, InputFile] : llvm::enumerate(LI.InputFiles)) {
-    std::unique_ptr<TUSummaryEncoding> Summary;
+    info(Verbose, 3, "[{0}/{1}] Reading '{2}'.", (Index + 1),
+         LI.InputFiles.size(), InputFile.Path);
 
-    {
-      info(Verbose, 3, "[{0}/{1}] Reading '{2}'.", (Index + 1),
-           LI.InputFiles.size(), InputFile.Path);
+    llvm::TimeRegion _(Time ? &TRead : nullptr);
 
-      llvm::TimeRegion _(Time ? &TRead : nullptr);
-
-      auto ExpectedSummaryEncoding =
-          InputFile.Format->readTUSummaryEncoding(InputFile.Path);
-      if (!ExpectedSummaryEncoding) {
-        fail(ExpectedSummaryEncoding.takeError());
-      }
-
-      Summary = std::make_unique<TUSummaryEncoding>(
-          std::move(*ExpectedSummaryEncoding));
+    auto ExpectedSummaryEncoding =
+        InputFile.Format->readTUSummaryEncoding(InputFile.Path);
+    if (!ExpectedSummaryEncoding) {
+      fail(ExpectedSummaryEncoding.takeError());
     }
 
-    {
-      info(Verbose, 3, "[{0}/{1}] Linking '{2}'.", (Index + 1),
-           LI.InputFiles.size(), InputFile.Path);
+    Summaries.push_back(std::make_unique<TUSummaryEncoding>(
+        std::move(*ExpectedSummaryEncoding)));
+  }
 
-      llvm::TimeRegion _(Time ? &TLink : nullptr);
+  info(Verbose, 2, "Constructing linker.");
 
-      if (auto Err = EL.link(std::move(Summary))) {
-        fail(ErrorBuilder::wrap(std::move(Err))
-                 .context(LocalErrorMessages::LinkingSummary, InputFile.Path)
-                 .build());
-      }
+  // cl::OneOrMore on the input list guarantees at least one summary.
+  const llvm::Triple &TargetTriple = Summaries.front()->getTargetTriple();
+  info(Verbose, 3, "Link unit targets '{0}'.", TargetTriple.str());
+
+  EntityLinker EL(TargetTriple,
+                  NestedBuildNamespace(BuildNamespace(
+                      BuildNamespaceKind::LinkUnit, LI.LinkUnitName)),
+                  WarnOnMultipleDefinitions, UnresolvedSymbols, ODRMismatch);
+
+  info(Verbose, 2, "Linking summaries.");
+
+  for (auto [Index, Summary] : llvm::enumerate(Summaries)) {
+    info(Verbose, 3, "[{0}/{1}] Linking '{2}'.", (Index + 1),
+         LI.InputFiles.size(), LI.InputFiles[Index].Path);
+
+    llvm::TimeRegion _(Time ? &TLink : nullptr);
+
+    if (auto Err = EL.link(std::move(Summary))) {
+      fail(ErrorBuilder::wrap(std::move(Err))
+               .context(LocalErrorMessages::LinkingSummary,
+                        LI.InputFiles[Index].Path)
+               .build());
     }
   }
 

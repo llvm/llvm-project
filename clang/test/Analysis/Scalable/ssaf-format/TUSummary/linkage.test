@@ -28,6 +28,28 @@
 // LINKAGE-TABLE-ENTRY-LINKAGE-INVALID-TYPE-NEXT: reading EntityLinkageType from field 'type'
 // LINKAGE-TABLE-ENTRY-LINKAGE-INVALID-TYPE-NEXT: invalid EntityLinkageType value 'invalid_type' for field 'type'
 
+// 'coalescing' is required, like every other EntityLinkage field.
+// RUN: not clang-ssaf-format --type tu %S/Inputs/linkage-table-entry-linkage-missing-coalescing.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=LINKAGE-MISSING-COALESCING
+// RUN: not clang-ssaf-format --type tu --encoding %S/Inputs/linkage-table-entry-linkage-missing-coalescing.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=LINKAGE-MISSING-COALESCING
+// LINKAGE-MISSING-COALESCING:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}linkage-table-entry-linkage-missing-coalescing.json'
+// LINKAGE-MISSING-COALESCING-NEXT: reading LinkageTable from field 'linkage_table'
+// LINKAGE-MISSING-COALESCING-NEXT: reading LinkageTable entry from index '0'
+// LINKAGE-MISSING-COALESCING-NEXT: reading EntityLinkage from field 'linkage'
+// LINKAGE-MISSING-COALESCING-NEXT: failed to read EntityCoalescing from field 'coalescing': expected JSON string
+
+// RUN: not clang-ssaf-format --type tu %S/Inputs/linkage-table-entry-linkage-invalid-coalescing.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=LINKAGE-INVALID-COALESCING
+// RUN: not clang-ssaf-format --type tu --encoding %S/Inputs/linkage-table-entry-linkage-invalid-coalescing.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=LINKAGE-INVALID-COALESCING
+// LINKAGE-INVALID-COALESCING:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}linkage-table-entry-linkage-invalid-coalescing.json'
+// LINKAGE-INVALID-COALESCING-NEXT: reading LinkageTable from field 'linkage_table'
+// LINKAGE-INVALID-COALESCING-NEXT: reading LinkageTable entry from index '0'
+// LINKAGE-INVALID-COALESCING-NEXT: reading EntityLinkage from field 'linkage'
+// LINKAGE-INVALID-COALESCING-NEXT: reading EntityCoalescing from field 'coalescing'
+// LINKAGE-INVALID-COALESCING-NEXT: invalid EntityCoalescing value 'invalid_coalescing' for field 'coalescing'
+
 // ============================================================================
 // linkageTableEntryFromJSON() errors
 // ============================================================================

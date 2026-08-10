@@ -1,0 +1,70 @@
+// Verifies that every linkage value survives read -> link -> write, and that
+// values a target cannot express are coerced.
+//
+// Fixtures are per-target because the link unit's triple selects the
+// resolution rules; see docs/ssaf-linker-{elf,macho,coff}-behavior.md.
+
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
+
+// The id_table is emitted first and sorted by USR, which fixes the ids the
+// linkage_table then uses:
+//
+//   0 extern_decl   1 inline_fn   2 local_fn
+//   3 static_fn     4 weak_fn     5 tentative_var
+
+// ELF and Mach-O carry every value through untouched.
+// RUN: clang-ssaf-linker %S/Inputs/carry-elf.json -o %t/carry-elf.json
+// RUN: cat %t/carry-elf.json | FileCheck %s --check-prefix=KEEPS-HIDDEN
+// RUN: clang-ssaf-linker %S/Inputs/carry-macho.json -o %t/carry-macho.json
+// RUN: cat %t/carry-macho.json | FileCheck %s --check-prefix=KEEPS-HIDDEN
+
+// KEEPS-HIDDEN:      "linkage_table": [
+
+// extern_decl: a declaration defines nothing and coalesces nothing.
+// KEEPS-HIDDEN:      "id": 0,
+// KEEPS-HIDDEN-NEXT: "linkage": {
+// KEEPS-HIDDEN-NEXT: "binding": "Undefined",
+// KEEPS-HIDDEN-NEXT: "coalescing": "None",
+// KEEPS-HIDDEN-NEXT: "definition": "Declaration",
+
+// inline_fn: strong at the source level, plus the ODR guarantee. The two are
+// independent axes, which is why the binding is not "Weak" here even though
+// ELF and Mach-O both emit a weak symbol for it.
+// KEEPS-HIDDEN:      "id": 1,
+// KEEPS-HIDDEN-NEXT: "linkage": {
+// KEEPS-HIDDEN-NEXT: "binding": "Strong",
+// KEEPS-HIDDEN-NEXT: "coalescing": "ODR",
+// KEEPS-HIDDEN-NEXT: "definition": "Definition",
+// KEEPS-HIDDEN-NEXT: "type": "External",
+// KEEPS-HIDDEN-NEXT: "visibility": "Default"
+
+// static_fn: internal linkage keeps its Hidden visibility.
+// KEEPS-HIDDEN:      "id": 3,
+// KEEPS-HIDDEN-NEXT: "linkage": {
+// KEEPS-HIDDEN-NEXT: "binding": "Strong",
+// KEEPS-HIDDEN-NEXT: "coalescing": "None",
+// KEEPS-HIDDEN-NEXT: "definition": "Definition",
+// KEEPS-HIDDEN-NEXT: "type": "Internal",
+// KEEPS-HIDDEN-NEXT: "visibility": "Hidden"
+
+// tentative_var: a C tentative definition is a common symbol.
+// KEEPS-HIDDEN:      "id": 5,
+// KEEPS-HIDDEN-NEXT: "linkage": {
+// KEEPS-HIDDEN-NEXT: "binding": "Common",
+// KEEPS-HIDDEN-NEXT: "coalescing": "None",
+// KEEPS-HIDDEN-NEXT: "definition": "Definition",
+
+// COFF has no visibility at all: clang accepts the attribute silently and
+// drops it at emission, so the linker coerces it rather than rejecting a
+// summary that portable source legitimately produces (COFF doc §7).
+// RUN: clang-ssaf-linker %S/Inputs/carry-coff.json -o %t/carry-coff.json
+// RUN: cat %t/carry-coff.json | FileCheck %s --check-prefix=COERCES-HIDDEN
+// COERCES-HIDDEN:      "linkage_table": [
+// COERCES-HIDDEN:      "id": 3,
+// COERCES-HIDDEN-NEXT: "linkage": {
+// COERCES-HIDDEN-NEXT: "binding": "Strong",
+// COERCES-HIDDEN-NEXT: "coalescing": "None",
+// COERCES-HIDDEN-NEXT: "definition": "Definition",
+// COERCES-HIDDEN-NEXT: "type": "Internal",
+// COERCES-HIDDEN-NEXT: "visibility": "Default"

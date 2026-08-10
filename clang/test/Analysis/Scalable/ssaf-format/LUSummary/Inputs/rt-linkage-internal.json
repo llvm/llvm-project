@@ -19,7 +19,11 @@
     {
       "id": 0,
       "linkage": {
-        "type": "Internal"
+        "binding": "Strong",
+        "coalescing": "None",
+        "definition": "Definition",
+        "type": "Internal",
+        "visibility": "Default"
       }
     }
   ],

@@ -21,8 +21,17 @@
 // CHECK-NEXT:   --help-list         - Display list of available options (--help-list-hidden for more)
 // CHECK-NEXT:   --help-list-hidden  - Display list of all available options
 // CHECK-NEXT:   -o <path>           - Output file path
+// CHECK-NEXT:   --odr-mismatch=<value> - How to report summary data that differs between two definitions required to be identical, such as an inline function
+// CHECK-NEXT:     =ignore           -   Do not check (default: comparing costs an extra patch of every displaced encoding)
+// CHECK-NEXT:     =warn             -   Report each mismatch and keep linking
+// CHECK-NEXT:     =error            -   Fail the link on the first mismatch
 // CHECK-NEXT:   --print-all-options - Print all option values after command line parsing
 // CHECK-NEXT:   --print-options     - Print non-default options after command line parsing
 // CHECK-NEXT:   --time              - Enable timing
+// CHECK-NEXT:   --unresolved-symbols=<value> - How to report entities that no linked translation unit defines
+// CHECK-NEXT:     =ignore           -   Do not check (default: a link unit is usually an intermediate artifact, where references to other link units are expected)
+// CHECK-NEXT:     =warn             -   Report each undefined entity and keep linking
+// CHECK-NEXT:     =error            -   Fail the link if any entity is left undefined
 // CHECK-NEXT:   --verbose           - Enable verbose output
 // CHECK-NEXT:   --version           - Display the version of this program
+// CHECK-NEXT:   --warn-on-multiple-definitions - Warn instead of failing when an external entity is defined by more than one translation unit

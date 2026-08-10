@@ -21,7 +21,11 @@
         {
           "id": 0,
           "linkage": {
-            "type": "External"
+            "binding": "Strong",
+            "coalescing": "None",
+            "definition": "Definition",
+            "type": "External",
+            "visibility": "Default"
           }
         }
       ],
@@ -55,7 +59,11 @@
         {
           "id": 0,
           "linkage": {
-            "type": "External"
+            "binding": "Strong",
+            "coalescing": "None",
+            "definition": "Definition",
+            "type": "External",
+            "visibility": "Default"
           }
         }
       ],

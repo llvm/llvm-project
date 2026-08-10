@@ -1,0 +1,74 @@
+// Verifies which occurrence's summary data survives when two TUs define the
+// same external entity, end to end through the linker.
+//
+// The `call_count` in each entity's summary is 1 in the left-hand TU and 2 in
+// the right-hand one, so the linked value names the winner. The unit tests in
+// EntityLinkerReconcileTest cover the rules themselves; this checks that the
+// decision actually reaches the output file.
+
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
+
+// ELF and Mach-O agree on every case here. --warn-on-multiple-definitions is
+// needed only because COFF rejects the two-weak-definitions case (COFF doc §1
+// probe C4), and the same command line is used for all three targets.
+
+// RUN: clang-ssaf-linker --warn-on-multiple-definitions \
+// RUN:   %S/Inputs/join-lhs-elf.json %S/Inputs/join-rhs-elf.json \
+// RUN:   -o %t/join-elf.json 2>&1 | FileCheck %s --check-prefix=NO-CONFLICT \
+// RUN:   --allow-empty
+// RUN: cat %t/join-elf.json | FileCheck %s
+
+// RUN: clang-ssaf-linker --warn-on-multiple-definitions \
+// RUN:   %S/Inputs/join-lhs-macho.json %S/Inputs/join-rhs-macho.json \
+// RUN:   -o %t/join-macho.json 2>&1 | FileCheck %s --check-prefix=NO-CONFLICT \
+// RUN:   --allow-empty
+// RUN: cat %t/join-macho.json | FileCheck %s
+
+// ELF and Mach-O accept two weak definitions silently.
+// NO-CONFLICT-NOT: multiple definition
+
+// The id_table is sorted by USR, which fixes the entity_ids the summary data
+// then uses:
+//
+//   0 decl_vs_def   1 def_vs_decl   2 equal_weak
+//   3 stronger_incumbent            4 weaker_incumbent
+
+// A definition beats a declaration, whichever side it is on. decl_vs_def is a
+// declaration on the left and a definition on the right, so the right wins;
+// def_vs_decl is the mirror image.
+// CHECK:      "entity_id": 0,
+// CHECK-NEXT: "entity_summary": {
+// CHECK-NEXT: "call_count": 2
+// CHECK:      "entity_id": 1,
+// CHECK-NEXT: "entity_summary": {
+// CHECK-NEXT: "call_count": 1
+
+// A tie keeps the data already linked (ELF probe P4, Mach-O probe M4).
+// CHECK:      "entity_id": 2,
+// CHECK-NEXT: "entity_summary": {
+// CHECK-NEXT: "call_count": 1
+
+// Among definitions the stronger binding wins, regardless of link order:
+// stronger_incumbent is strong on the left, weaker_incumbent on the right.
+// CHECK:      "entity_id": 3,
+// CHECK-NEXT: "entity_summary": {
+// CHECK-NEXT: "call_count": 1
+// CHECK:      "entity_id": 4,
+// CHECK-NEXT: "entity_summary": {
+// CHECK-NEXT: "call_count": 2
+
+// COFF reaches the same data selection, but rejects the two weak definitions
+// unless the multiple-definition error is downgraded, because it emulates weak
+// symbols with an alias that collides (COFF doc §1 probe C4).
+// RUN: clang-ssaf-linker --warn-on-multiple-definitions \
+// RUN:   %S/Inputs/join-lhs-coff.json %S/Inputs/join-rhs-coff.json \
+// RUN:   -o %t/join-coff.json 2>&1 | FileCheck %s --check-prefix=COFF-WEAK
+// RUN: cat %t/join-coff.json | FileCheck %s
+// COFF-WEAK: warning: multiple definition of EntityName(c:@F@equal_weak,
+
+// RUN: not clang-ssaf-linker \
+// RUN:   %S/Inputs/join-lhs-coff.json %S/Inputs/join-rhs-coff.json \
+// RUN:   -o %t/join-coff-strict.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=COFF-WEAK-FATAL
+// COFF-WEAK-FATAL: multiple definition of EntityName(c:@F@equal_weak,

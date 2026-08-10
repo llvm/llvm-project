@@ -14,7 +14,7 @@
   "linkage_table": [
     {
       "id": 0,
-      "linkage": { "type": "External" }
+      "linkage": { "binding": "Strong", "coalescing": "None", "definition": "Definition", "type": "External", "visibility": "Default" }
     }
   ],
   "data": [],

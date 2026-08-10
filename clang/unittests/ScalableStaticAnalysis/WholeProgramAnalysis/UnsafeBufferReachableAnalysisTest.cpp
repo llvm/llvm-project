@@ -40,8 +40,11 @@ class UnsafeBufferReachableAnalysisTest : public TestFixture {
 protected:
   using EPLEdge = std::pair<EntityPointerLevel, EntityPointerLevel>;
 
-  static constexpr EntityLinkage ExternalLinkage =
-      EntityLinkage(EntityLinkageType::External);
+  static constexpr EntityLinkage ExternalLinkage = EntityLinkage(
+      EntityLinkageType::External, clang::ssaf::EntityBinding::Strong,
+      clang::ssaf::EntityCoalescing::None,
+      clang::ssaf::EntityVisibility::Default,
+      clang::ssaf::EntityDefinitionKind::Definition);
 
   std::unique_ptr<LUSummary> makeLUSummary() {
     NestedBuildNamespace NS(
