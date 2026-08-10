@@ -841,6 +841,20 @@ let Predicates = [callSubtarget<"hasS2F6X2ConversionSupport">] in {
                    (ins B16:$src),
                    "cvt.rn.bf16x2.ue8m0x2">;
 
+  // UE5M3x2 conversions.
+  def CVT_f16x2_ue5m3x2 : BasicFlagsNVPTXInst<(outs B32:$dst),
+            (ins B16:$src), (ins CvtMode:$mode),
+            "cvt${mode:base}.f16x2.ue5m3x2">,
+    Requires<[callSubtarget<"hasUE5M3TypeSupport">]>;
+  def CVT_bf16x2_ue5m3x2 : BasicFlagsNVPTXInst<(outs B32:$dst),
+            (ins B16:$src), (ins CvtMode:$mode),
+            "cvt${mode:base}${mode:satfinite}.bf16x2.ue5m3x2">,
+    Requires<[callSubtarget<"hasUE5M3TypeSupport">]>;
+  def CVT_bf16x2_ue5m3x2_scale_n2 : BasicFlagsNVPTXInst<(outs B32:$dst),
+            (ins B16:$src, B16:$src2), (ins CvtMode:$mode),
+            "cvt${mode:base}${mode:satfinite}.scaled::n2::ue8m0.bf16x2.ue5m3x2">,
+    Requires<[callSubtarget<"hasUE5M3TypeSupport">]>;
+
 }
 
 def fpround_oneuse : OneUse1<fpround>;

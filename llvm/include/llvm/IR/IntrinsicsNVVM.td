@@ -1879,6 +1879,18 @@ let TargetPrefix = "nvvm" in {
   def int_nvvm_ue8m0x2_to_bf16x2 : NVVMBuiltin,
       PureIntrinsic<[llvm_v2bf16_ty], [llvm_i16_ty]>;
 
+  // UE5M3x2 conversions.
+  def int_nvvm_ue5m3x2_to_f16x2_rn
+      : PureIntrinsic<[llvm_v2f16_ty], [llvm_i16_ty]>;
+
+  foreach satfinite = ["", "_satfinite"] in {
+    def int_nvvm_ue5m3x2_to_bf16x2_rn # satfinite
+        : PureIntrinsic<[llvm_v2bf16_ty], [llvm_i16_ty]>;
+
+    def int_nvvm_ue5m3x2_to_bf16x2_rn # satfinite # _scale_n2_ue8m0
+        : PureIntrinsic<[llvm_v2bf16_ty], [llvm_i16_ty, llvm_i16_ty]>;
+  }
+
   //
   // Bar.Sync
   //
