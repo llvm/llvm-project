@@ -54,7 +54,7 @@ class Module;
 /// |   return g.promo                             |
 /// | }                                            |
 /// | exported function __dyndbg.ext() {           |
-/// |   return return loc.promo()                  |
+/// |   return loc.promo()                         |
 /// | }                                            |
 /// +----------------------------------------------+
 LLVM_ABI std::unique_ptr<Module>
