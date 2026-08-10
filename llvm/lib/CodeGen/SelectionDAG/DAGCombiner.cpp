@@ -14310,18 +14310,18 @@ SDValue DAGCombiner::foldPartialReduceAdd(SDNode *N) {
   SDValue UnextOp1 = Op1.getOperand(0);
   EVT UnextOp1VT = UnextOp1.getValueType();
   auto *Context = DAG.getContext();
+  EVT PromOp1VT = TLI.getTypeToTransformTo(*Context, UnextOp1VT);
   if (!TLI.isPartialReduceMLALegalOrCustom(
           NewOpcode, TLI.getTypeToTransformTo(*Context, N->getValueType(0)),
-          TLI.getTypeToTransformTo(*Context, UnextOp1VT)))
+          PromOp1VT))
     return SDValue();
 
   // The multiplier below is built at the operand type, where a splat of 1 in i1
   // sign extends to -1. Extend i1 masks to the promoted type first.
   if (Op1IsSigned && UnextOp1VT.getVectorElementType() == MVT::i1) {
-    EVT PromVT = TLI.getTypeToTransformTo(*Context, UnextOp1VT);
-    if (PromVT == UnextOp1VT)
+    if (PromOp1VT == UnextOp1VT)
       return SDValue();
-    UnextOp1VT = PromVT;
+    UnextOp1VT = PromOp1VT;
     UnextOp1 = DAG.getNode(ISD::SIGN_EXTEND, DL, UnextOp1VT, UnextOp1);
   }
 
