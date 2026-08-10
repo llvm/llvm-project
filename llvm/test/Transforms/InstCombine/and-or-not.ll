@@ -200,7 +200,7 @@ define i32 @or_to_xor3(float %fa, float %fb) {
 ; CHECK-LABEL: @or_to_xor3(
 ; CHECK-NEXT:    [[A:%.*]] = fptosi float [[FA:%.*]] to i32
 ; CHECK-NEXT:    [[B:%.*]] = fptosi float [[FB:%.*]] to i32
-; CHECK-NEXT:    [[OR:%.*]] = xor i32 [[B]], [[A]]
+; CHECK-NEXT:    [[OR:%.*]] = xor i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %a = fptosi float %fa to i32
@@ -219,7 +219,7 @@ define i32 @or_to_xor4(float %fa, float %fb) {
 ; CHECK-LABEL: @or_to_xor4(
 ; CHECK-NEXT:    [[A:%.*]] = fptosi float [[FA:%.*]] to i32
 ; CHECK-NEXT:    [[B:%.*]] = fptosi float [[FB:%.*]] to i32
-; CHECK-NEXT:    [[OR:%.*]] = xor i32 [[B]], [[A]]
+; CHECK-NEXT:    [[OR:%.*]] = xor i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %a = fptosi float %fa to i32
