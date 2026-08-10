@@ -87,8 +87,20 @@ foo:
 # CHECK-NEXT:     - Minimum:         0x2
 # CHECK-NOT:       Shared
 
-# The function table is exported by default.
+# For wasip3 these symbols are unconditionally exported since they're required
+# when dynamic linking.
 # CHECK:      - Type:            EXPORT
+# CHECK:          - Name:            __tls_size
+# CHECK-NEXT:       Kind:            GLOBAL
+# CHECK-NEXT:       Index:           2
+# CHECK-NEXT:     - Name:            __tls_align
+# CHECK-NEXT:       Kind:            GLOBAL
+# CHECK-NEXT:       Index:           3
+# CHECK-NEXT:     - Name:            __wasm_init_tls
+# CHECK-NEXT:       Kind:            FUNCTION
+# CHECK-NEXT:       Index:           2
+
+# The function table is exported by default.
 # CHECK:          - Name:            __indirect_function_table
 # CHECK-NEXT:       Kind:            TABLE
 # CHECK-NEXT:       Index:           0

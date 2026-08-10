@@ -1004,6 +1004,13 @@ static void createSyntheticSymbols() {
       ctx.sym.getTLSBase =
           createUndefinedFunction("__wasm_get_tls_base", &getTLSBaseSignature);
       ctx.sym.getTLSBase->markLive();
+
+      // TODO: this might be best to happen up the stack in the Clang driver
+      // and the Rust driver rather than here. For now though this is an easy
+      // place to share code between the two.
+      ctx.sym.tlsSize->forceExport = true;
+      ctx.sym.tlsAlign->forceExport = true;
+      ctx.sym.initTLS->forceExport = true;
     }
   }
 }
