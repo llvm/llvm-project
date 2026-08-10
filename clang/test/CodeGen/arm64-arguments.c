@@ -149,11 +149,11 @@ struct s30 f30() {}
 
 struct s31 { char x; };
 void f31(struct s31 s) { }
-// CHECK: define{{.*}} void @f31(i64 %s.coerce)
+// CHECK-LE: define{{.*}} void @f31(i8 %s.coerce)
+// CHECK-BE: define{{.*}} void @f31(i64 %s.coerce)
 // CHECK: %s = alloca %struct.s31, align 1
 // CHECK-BE: %coerce.highbits = lshr i64 %s.coerce, 56
 // CHECK-BE: trunc i64 %coerce.highbits to i8
-// CHECK-LE: trunc i64 %s.coerce to i8
 // CHECK: store i8 %{{.*}},
 
 struct s32 { double x; };
@@ -170,8 +170,9 @@ void f34(struct s34 s);
 void g34(struct s34 *s) { f34(*s); }
 // CHECK: @g34(ptr noundef %s)
 // CHECK: %[[a:.*]] = load i8, ptr %{{.*}}
-// CHECK: zext i8 %[[a]] to i64
-// CHECK: call void @f34(i64 %{{.*}})
+// CHECK-LE: call void @f34(i8 %{{.*}})
+// CHECK-BE: zext i8 %{{.*}} to i64
+// CHECK-BE: call void @f34(i64 %{{.*}})
 
 /*
  * Check that va_arg accesses stack according to ABI alignment

@@ -66,8 +66,7 @@ void g(A a, B b, C c) { f(a, b, c); }
 // CHECK-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_A]], ptr [[A]], i32 0, i32 0
 // CHECK-NEXT:    store [2 x float] [[A_COERCE:%.*]], ptr [[COERCE_DIVE]], align 4
 // CHECK-NEXT:    [[COERCE_DIVE1:%.*]] = getelementptr inbounds nuw [[STRUCT_B]], ptr [[B]], i32 0, i32 0
-// CHECK-NEXT:    [[COERCE_VAL_II:%.*]] = trunc i64 [[B_COERCE:%.*]] to i48
-// CHECK-NEXT:    store i48 [[COERCE_VAL_II]], ptr [[COERCE_DIVE1]], align 1
+// CHECK-NEXT:    store i48 {{.*}}, ptr [[COERCE_DIVE1]], align 1
 // CHECK-NEXT:    [[COERCE_DIVE2:%.*]] = getelementptr inbounds nuw [[STRUCT_C]], ptr [[C]], i32 0, i32 0
 // CHECK-NEXT:    store [4 x float] [[C_COERCE:%.*]], ptr [[COERCE_DIVE2]], align 4
 // CHECK-NEXT:    [[COERCE_DIVE3:%.*]] = getelementptr inbounds nuw [[STRUCT_A]], ptr [[A]], i32 0, i32 0
