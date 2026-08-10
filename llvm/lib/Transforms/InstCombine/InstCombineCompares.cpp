@@ -3024,14 +3024,18 @@ Instruction *InstCombinerImpl::foldICmpSubConstant(ICmpInst &Cmp,
   ICmpInst::Predicate Pred = Cmp.getPredicate();
   Type *Ty = Sub->getType();
 
-  // D: (X - (X urem D)) is D*(X/D), a multiple of D, so it is >= D exactly when
-  // X >= D.
-  //   (icmp ugt (sub X, (urem X, D)), D-1) --> (icmp ugt X, D-1)
+  // (X - (X urem D)) is D*(X/D), a multiple of D. A multiple of D is > C for
+  // any C in [0, D) exactly when X >= D, and < C for any C in (0, D] exactly
+  // when X < D.
+  //   (icmp ugt (sub X, (urem X, D)), C) --> (icmp ugt X, D-1)  for C u< D
+  //   (icmp ult (sub X, (urem X, D)), C) --> (icmp ult X, D)    for 0 u< C u<= D
   const APInt *D;
-  if (Pred == ICmpInst::ICMP_UGT &&
-      match(Y, m_URem(m_Specific(X), m_APInt(D))) && !D->isZero() &&
-      C == (*D - 1))
-    return new ICmpInst(ICmpInst::ICMP_UGT, X, ConstantInt::get(Ty, C));
+  if (match(Y, m_URem(m_Specific(X), m_APInt(D))) && !D->isZero()) {
+    if (Pred == ICmpInst::ICMP_UGT && C.ult(*D))
+      return new ICmpInst(ICmpInst::ICMP_UGT, X, ConstantInt::get(Ty, *D - 1));
+    if (Pred == ICmpInst::ICMP_ULT && !C.isZero() && C.ule(*D))
+      return new ICmpInst(ICmpInst::ICMP_ULT, X, ConstantInt::get(Ty, *D));
+  }
 
   // (SubC - Y) == C) --> Y == (SubC - C)
   // (SubC - Y) != C) --> Y != (SubC - C)
