@@ -27833,7 +27833,8 @@ SDValue DAGCombiner::narrowInsertExtractVectorBinOp(SDNode *N, SDValue BinOp) {
       return SDValue();
     if (!ExtSubVec) {
       ExtSubVec = User;
-      AllExtractsCheap &= TLI.isExtractSubvectorCheap(SubVT, VecVT, Idx);
+      AllExtractsCheap &= TLI.getExtractSubvectorCost(SubVT, VecVT, Idx) <=
+                          TargetLoweringBase::ExtractSubvectorCost::Cheap;
       if (Idx != 0)
         HasNonZeroExt = true;
     } else {
