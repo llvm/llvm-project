@@ -4184,6 +4184,28 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (BuiltinCountedByRef(TheCall))
       return ExprError();
     break;
+
+  case Builtin::BIfeclearexcept:
+  case Builtin::BIfegetexceptflag:
+  case Builtin::BIferaiseexcept:
+  case Builtin::BIfesetexceptflag:
+  case Builtin::BIfetestexcept:
+  case Builtin::BIfegetround:
+  case Builtin::BIfesetround:
+  case Builtin::BIfegetenv:
+  case Builtin::BIfeholdexcept:
+  case Builtin::BIfesetenv:
+  case Builtin::BIfeupdateenv:
+    const FPOptions &fpOpts = TheCall->getFPFeaturesInEffect(getLangOpts());
+    if ((fpOpts.getExceptionMode() == LangOptions::FPE_Ignore ||
+         fpOpts.getRoundingMode() != LangOptions::RoundingMode::Dynamic) &&
+        isPotentiallyEvaluatedContext() &&
+        (getASTContext().getTargetInfo().hasStrictFP() ||
+         getLangOpts().ExpStrictFP)) {
+      Diag(TheCall->getBeginLoc(),
+           diag::warn_fenv_access_no_exception_semantics_or_rounding_mode)
+          << FDecl->getName() << TheCall->getSourceRange();
+    }
   }
 
   if (getLangOpts().HLSL && HLSL().CheckBuiltinFunctionCall(BuiltinID, TheCall))
