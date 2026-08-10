@@ -447,6 +447,17 @@ define i1 @icmp_eq_usub_sat_lhs_nonzero_constant_commuted(i64 %x) {
   ret i1 %cmp
 }
 
+define i1 @icmp_samesign_eq_usub_sat_lhs_nonzero_constant(i64 %x) {
+; CHECK-LABEL: define i1 @icmp_samesign_eq_usub_sat_lhs_nonzero_constant
+; CHECK-SAME: (i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[X]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sat = call i64 @llvm.usub.sat.i64(i64 %x, i64 10)
+  %cmp = icmp samesign eq i64 %sat, %x
+  ret i1 %cmp
+}
+
 define i1 @icmp_ult_usub_sat_lhs_nonzero_constant(i64 %x) {
 ; CHECK-LABEL: define i1 @icmp_ult_usub_sat_lhs_nonzero_constant
 ; CHECK-SAME: (i64 [[X:%.*]]) {
@@ -534,7 +545,8 @@ define i1 @icmp_eq_usub_sat_lhs_known_nonzero_rhs(i64 %x, i64 %y) {
 ; CHECK-SAME: (i64 [[X:%.*]], i64 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ne i64 [[Y]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[X]], 0
+; CHECK-NEXT:    [[SAT:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[X]], i64 [[Y]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[SAT]], [[X]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %cond = icmp ne i64 %y, 0
