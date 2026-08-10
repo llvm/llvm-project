@@ -7842,6 +7842,52 @@ SemaOpenMP::checkOpenMPDeclareVariantFunction(SemaOpenMP::DeclGroupPtrTy DG,
   return std::make_pair(FD, cast<Expr>(DRE));
 }
 
+/// Validate prefer_type fr() and attr() arguments in an OMPInteropInfo.
+/// fr() must be a string literal or constant integer expression.
+/// attr() must be a string literal starting with "ompx_" and containing no
+/// commas. Returns true if valid; emits diagnostic and returns false on first
+/// error.
+static bool checkPreferTypeArgs(SemaOpenMP &S, const OMPInteropInfo &Info) {
+  auto isDependent = [](const Expr *E) {
+    return E->isValueDependent() || E->isTypeDependent() ||
+           E->isInstantiationDependent() ||
+           E->containsUnexpandedParameterPack();
+  };
+  for (const OMPInteropPref &P : Info.Prefs) {
+    const Expr *E = P.Fr;
+    if (!E) {
+      assert(Info.HasPreferAttrs && "null Fr requires OMP 6.0 syntax");
+    } else if (!isDependent(E)) {
+      if (!E->isIntegerConstantExpr(S.getASTContext()) &&
+          !isa<StringLiteral>(E)) {
+        S.Diag(E->getExprLoc(), diag::err_omp_interop_prefer_type);
+        return false;
+      }
+    }
+    for (const Expr *A : P.Attrs) {
+      if (isDependent(A))
+        continue;
+      const auto *SL = dyn_cast<StringLiteral>(A);
+      if (!SL) {
+        S.Diag(A->getExprLoc(), diag::err_omp_interop_attr_not_string);
+        return false;
+      }
+      StringRef Str = SL->getString();
+      if (!Str.starts_with("ompx_")) {
+        S.Diag(A->getExprLoc(), diag::err_omp_interop_attr_missing_ompx_prefix)
+            << Str;
+        return false;
+      }
+      if (Str.contains(',')) {
+        S.Diag(A->getExprLoc(), diag::err_omp_interop_attr_contains_comma)
+            << Str;
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
     FunctionDecl *FD, Expr *VariantRef, OMPTraitInfo &TI,
     ArrayRef<Expr *> AdjustArgsNothing,
@@ -7919,6 +7965,13 @@ void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
         }
       }
     }
+  }
+
+  // OpenMP 6.0 [16.1.3] Check prefer_type fr()/attr() arguments in
+  // append_args.
+  for (const OMPInteropInfo &Info : AppendArgs) {
+    if (!checkPreferTypeArgs(*this, Info))
+      return;
   }
 
   auto *NewAttr = OMPDeclareVariantAttr::CreateImplicit(
@@ -19086,44 +19139,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPInitClause(
   if (!isValidInteropVariable(SemaRef, InteropVar, VarLoc, OMPC_init))
     return nullptr;
 
-  // Check prefer_type values. fr() arguments are either string literals or
-  // constant integral expressions; null Fr is only valid in OMP 6.0.
-  // attr() arguments must be ext-string-literals with the 'ompx_' prefix
-  // (OpenMP 6.0 spec, section 16.1.3).
-  for (const OMPInteropPref &P : InteropInfo.Prefs) {
-    const Expr *E = P.Fr;
-    if (!E) {
-      assert(InteropInfo.HasPreferAttrs && "null Fr requires OMP 6.0 syntax");
-    } else if (!E->isValueDependent() && !E->isTypeDependent() &&
-               !E->isInstantiationDependent() &&
-               !E->containsUnexpandedParameterPack()) {
-      if (!E->isIntegerConstantExpr(getASTContext()) &&
-          !isa<StringLiteral>(E)) {
-        Diag(E->getExprLoc(), diag::err_omp_interop_prefer_type);
-        return nullptr;
-      }
-    }
-    for (const Expr *A : P.Attrs) {
-      if (A->isValueDependent() || A->isTypeDependent() ||
-          A->isInstantiationDependent() || A->containsUnexpandedParameterPack())
-        continue;
-      const auto *SL = dyn_cast<StringLiteral>(A);
-      if (!SL) {
-        Diag(A->getExprLoc(), diag::err_omp_interop_attr_not_string);
-        return nullptr;
-      }
-      if (!SL->getString().starts_with("ompx_")) {
-        Diag(A->getExprLoc(), diag::err_omp_interop_attr_missing_ompx_prefix)
-            << SL->getString();
-        return nullptr;
-      }
-      if (SL->getString().contains(',')) {
-        Diag(A->getExprLoc(), diag::err_omp_interop_attr_contains_comma)
-            << SL->getString();
-        return nullptr;
-      }
-    }
-  }
+  if (!checkPreferTypeArgs(*this, InteropInfo))
+    return nullptr;
 
   return OMPInitClause::Create(getASTContext(), InteropVar, InteropInfo,
                                StartLoc, LParenLoc, VarLoc, EndLoc);

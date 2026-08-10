@@ -905,8 +905,21 @@ namespace {
       OS << "I != E; ++I) {\n";
       OS << "      bool IsTarget = Record.readBool();\n";
       OS << "      bool IsTargetSync = Record.readBool();\n";
-      OS << "      " << getLowerName()
-         << ".emplace_back(IsTarget, IsTargetSync);\n";
+      OS << "      OMPInteropInfo Info(IsTarget, IsTargetSync);\n";
+      OS << "      Info.HasPreferAttrs = Record.readBool();\n";
+      OS << "      unsigned prefsSize = Record.readInt();\n";
+      OS << "      Info.Prefs.reserve(prefsSize);\n";
+      OS << "      for (unsigned J = 0; J < prefsSize; ++J) {\n";
+      OS << "        bool hasFr = Record.readBool();\n";
+      OS << "        Expr *Fr = hasFr ? Record.readExpr() : nullptr;\n";
+      OS << "        unsigned attrsSize = Record.readInt();\n";
+      OS << "        llvm::SmallVector<Expr *, 2> Attrs;\n";
+      OS << "        Attrs.reserve(attrsSize);\n";
+      OS << "        for (unsigned K = 0; K < attrsSize; ++K)\n";
+      OS << "          Attrs.push_back(Record.readExpr());\n";
+      OS << "        Info.Prefs.emplace_back(Fr, std::move(Attrs));\n";
+      OS << "      }\n";
+      OS << "      " << getLowerName() << ".push_back(Info);\n";
       OS << "    }\n";
     }
 
@@ -917,6 +930,41 @@ namespace {
          << getLowerName() << "_end(); I != E; ++I) {\n";
       OS << "      Record.writeBool(I->IsTarget);\n";
       OS << "      Record.writeBool(I->IsTargetSync);\n";
+      OS << "      Record.writeBool(I->HasPreferAttrs);\n";
+      OS << "      Record.push_back(I->Prefs.size());\n";
+      OS << "      for (auto &P : I->Prefs) {\n";
+      OS << "        Record.writeBool(P.Fr != nullptr);\n";
+      OS << "        if (P.Fr) Record.AddStmt(P.Fr);\n";
+      OS << "        Record.push_back(P.Attrs.size());\n";
+      OS << "        for (Expr *A : P.Attrs) Record.AddStmt(A);\n";
+      OS << "      }\n";
+      OS << "    }\n";
+    }
+
+    void writeASTVisitorTraversal(raw_ostream &OS) const override {
+      OS << "  {\n";
+      OS << "    OMPInteropInfo *I = A->" << getLowerName() << "_begin();\n";
+      OS << "    " << getType() << " *E = A->" << getLowerName() << "_end();\n";
+      OS << "    for (; I != E; ++I) {\n";
+      OS << "      for (auto &P : I->Prefs) {\n";
+      OS << "        if (P.Fr && !getDerived().TraverseStmt(P.Fr))\n";
+      OS << "          return false;\n";
+      OS << "        for (Expr *A : P.Attrs)\n";
+      OS << "          if (!getDerived().TraverseStmt(A))\n";
+      OS << "            return false;\n";
+      OS << "      }\n";
+      OS << "    }\n";
+      OS << "  }\n";
+    }
+
+    void writeDumpChildren(raw_ostream &OS) const override {
+      OS << "    for (" << getAttrName() << "Attr::" << getLowerName()
+         << "_iterator I = SA->" << getLowerName() << "_begin(), E = SA->"
+         << getLowerName() << "_end(); I != E; ++I) {\n";
+      OS << "      for (auto &P : I->Prefs) {\n";
+      OS << "        if (P.Fr) Visit(P.Fr);\n";
+      OS << "        for (Expr *A : P.Attrs) Visit(A);\n";
+      OS << "      }\n";
       OS << "    }\n";
     }
   };
