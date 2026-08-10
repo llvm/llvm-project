@@ -193,7 +193,8 @@ protected:
   ///
   /// May be more expensive than \a getMemoryBuffer(), which is free to alias
   /// storage the store already has mapped; prefer that one whenever the buffer
-  /// cannot outlive the store.
+  /// cannot outlive the store. Never returns \c nullptr: copying the data
+  /// always satisfies the lifetime requirement.
   std::unique_ptr<MemoryBuffer>
   getStandaloneMemoryBuffer(ObjectHandle Node, StringRef Name = "",
                             bool RequiresNullTerminator = true);
@@ -303,7 +304,9 @@ private:
   /// implementation copies the data, which always satisfies the lifetime
   /// requirement; implementations that can hand out storage outliving
   /// themselves, e.g. a mapping of a file they do not keep open, should
-  /// override this to avoid the copy.
+  /// override this to avoid the copy. Must not return \c nullptr: fall back
+  /// to \c ObjectStore::getStandaloneMemoryBufferImpl() where the cheaper
+  /// path does not apply.
   virtual std::unique_ptr<MemoryBuffer>
   getStandaloneMemoryBufferImpl(ObjectHandle Node, StringRef Name,
                                 bool RequiresNullTerminator);

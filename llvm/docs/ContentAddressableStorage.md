@@ -64,8 +64,8 @@ the lifetime of the instance of `ObjectStore` unless explicitly copied.
 To get a lifetime-extended buffer, call `getStandaloneMemoryBuffer()`, which
 returns a `MemoryBuffer` that remains valid after the `ObjectStore` is
 destroyed. A CAS can provide a customized implementation that is cheaper than
-a copy; the on-disk CAS maps the object's file where it has one, so the pages
-stay evictable instead of being charged as dirty memory.
+a copy; the on-disk CAS re-reads the object's file where it has one, which
+lets the pages be shared and reclaimed rather than charged to the process.
 
 ### CASID
 

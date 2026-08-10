@@ -361,9 +361,10 @@ public:
   /// Get a MemoryBuffer for \p Node's data that stays valid after this
   /// database is destroyed.
   ///
-  /// Maps the data where it can, so the pages stay evictable and are not
-  /// charged as dirty memory, and copies where it cannot. Either way the
-  /// result does not reference anything this database owns.
+  /// Objects stored in a file of their own are re-read from it rather than
+  /// copied out of this database's mapping, which lets the pages be shared and
+  /// reclaimed rather than charged to this process. The rest are copied. Never
+  /// returns \c nullptr.
   LLVM_ABI std::unique_ptr<MemoryBuffer>
   getStandaloneMemoryBuffer(ObjectHandle Node, StringRef Name,
                             bool RequiresNullTerminator) const;

@@ -371,8 +371,11 @@ public:
   OnDiskGraphDB::FileBackedData
   getInternalFileBackedObjectData(StringRef RootPath) const;
 
-  /// Map this object's file independently of \a Region, so the result stays
-  /// valid after this object is gone. Returns \c nullptr if it cannot be done.
+  /// Read this object's data from its file again, so the result does not
+  /// reference \a Region and stays valid after this object is gone.
+  ///
+  /// \returns \c nullptr when it does not apply, and the caller is
+  /// expected to copy instead.
   std::unique_ptr<MemoryBuffer>
   getStandaloneMemoryBuffer(StringRef RootPath, StringRef Name,
                             bool RequiresNullTerminator) const;
@@ -1300,14 +1303,15 @@ OnDiskGraphDB::getInternalFileBackedObjectData(ObjectHandle Node) const {
 std::unique_ptr<MemoryBuffer>
 OnDiskGraphDB::getStandaloneMemoryBuffer(ObjectHandle Node, StringRef Name,
                                          bool RequiresNullTerminator) const {
-  // Only an object with a file to itself can be mapped; one in the shared data
-  // pool is a subrange of a file holding unrelated objects.
+  // Only an object with a file to itself can be read back on its own; one in
+  // the shared data pool is a subrange of a file holding unrelated objects.
   auto SDIMOrRecord = getStandaloneDataOrDataRecord(DataPool, Node);
-  if (std::holds_alternative<const StandaloneDataInMemory *>(SDIMOrRecord)) {
-    auto *SDIM = std::get<const StandaloneDataInMemory *>(SDIMOrRecord);
-    if (std::unique_ptr<MemoryBuffer> Mapped = SDIM->getStandaloneMemoryBuffer(
-            RootPath, Name, RequiresNullTerminator))
-      return Mapped;
+  if (auto **SDIM =
+          std::get_if<const StandaloneDataInMemory *>(&SDIMOrRecord)) {
+    if (std::unique_ptr<MemoryBuffer> Standalone =
+            (*SDIM)->getStandaloneMemoryBuffer(RootPath, Name,
+                                               RequiresNullTerminator))
+      return Standalone;
   }
 
   return MemoryBuffer::getMemBufferCopy(toStringRef(getObjectData(Node)), Name);
@@ -1488,7 +1492,7 @@ StandaloneDataInMemory::getInternalFileBackedObjectData(
 namespace {
 /// A MemoryBuffer exposing a subrange of another buffer's bytes, under its own
 /// name.
-class AdoptedMemoryBuffer : public MemoryBuffer {
+class AdoptedMemoryBuffer final : public MemoryBuffer {
 public:
   AdoptedMemoryBuffer(std::unique_ptr<MemoryBuffer> Buffer, StringRef Name,
                       uint64_t Offset, uint64_t Size)
@@ -1497,9 +1501,9 @@ public:
     init(Start, Start + Size, /*RequiresNullTerminator=*/false);
   }
 
-  StringRef getBufferIdentifier() const override { return Name; }
+  StringRef getBufferIdentifier() const final { return Name; }
 
-  BufferKind getBufferKind() const override { return Buffer->getBufferKind(); }
+  BufferKind getBufferKind() const final { return Buffer->getBufferKind(); }
 
 private:
   std::unique_ptr<MemoryBuffer> Buffer;
@@ -1515,9 +1519,10 @@ std::unique_ptr<MemoryBuffer> StandaloneDataInMemory::getStandaloneMemoryBuffer(
   if (RequiresNullTerminator && SK == TrieRecord::StorageKind::StandaloneLeaf)
     return nullptr;
 
-  // These files are written once and never resized, and are only deleted along
-  // with the whole directory they live in, which leaves a mapping of them
-  // intact. Map read-only, which is MAP_PRIVATE.
+  // Read the file again instead of sharing \a Region, whose lifetime is tied
+  // to this object. These files are written once and never modified, so the
+  // second read sees the same bytes. Whether that ends up mapping the file or
+  // copying it is up to MemoryBuffer; either way the result stands alone.
   SmallString<256> Path;
   ::getStandalonePath(RootPath, TrieRecord::getStandaloneFilePrefix(SK),
                       IndexOffset, Path);
