@@ -71,8 +71,8 @@ int main() {
 #pragma omp target enter data map(close, alloc : x[0 : 10])
   //
   // clang-format off
-  // ALWAYS: cannot attach pointer
-  // ALWAYS: was mapped by an enclosing construct with its storage shared with the original
+  // ALWAYS: could not do pointer attachment
+  // ALWAYS-SAME: host-bound mapping and the pointee is device-bound
   // clang-format on
 #pragma omp target enter data map(alloc : p[0 : 0])
 #else

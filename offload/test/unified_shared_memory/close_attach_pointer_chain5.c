@@ -181,8 +181,8 @@ int main(void) {
   // the original and so cannot take an allocation now.
   //
   // clang-format off
-  // S1: cannot attach pointer
-  // S1: was mapped by an enclosing construct with its storage shared with the original
+  // S1: could not do pointer attachment
+  // S1-SAME: would have to be device-bound as well
   // clang-format on
 
   // p1 is already device-backed, so the attachment into it does not touch an
@@ -260,8 +260,8 @@ int main(void) {
   // sharing storage with the original and so cannot take an allocation now.
   //
   // clang-format off
-  // S9: cannot attach pointer
-  // S9: was mapped by an enclosing construct with its storage shared with the original
+  // S9: could not do pointer attachment
+  // S9-SAME: would have to be device-bound as well
   // clang-format on
 
   // Wherever the chain ends up, it must be internally consistent: reaching the

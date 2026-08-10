@@ -385,6 +385,16 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
     return WasNewlyAllocated;
   };
 
+  // Record TO ranges whose transfer target is the original storage itself,
+  // which is the normal case under unified shared memory. Such a transfer
+  // leaves nothing behind in a device allocation, so if this storage is later
+  // given one to make a pointer attachment possible, these are the ranges that
+  // have to be brought over then. Anything else in the entry was never
+  // specified to have a corresponding value on the device.
+  if (StateInfo && HasFlagTo && Size != 0 &&
+      LR.TPR.TargetPointer == HstPtrBegin)
+    StateInfo->HostPathToRanges[HstPtrBegin] = Size;
+
   // Even if this isn't a new entry, we still need to do a data-transfer if
   // the pointer was newly allocated on the current target region.
   if (LR.TPR.TargetPointer && !LR.TPR.Flags.IsHostPointer && HasFlagTo &&
@@ -589,11 +599,11 @@ void MappingInfoTy::recordAttachedPointer(void *HstPteeBegin,
     Attached.push_back(HstPtrAddr);
 }
 
-int MappingInfoTy::giveEntryDeviceStorage(HDTTMapAccessorTy &HDTTMap,
-                                          HostDataToTargetTy *Entry,
-                                          AsyncInfoTy &AsyncInfo) {
+int MappingInfoTy::giveEntryDeviceStorage(
+    HDTTMapAccessorTy &HDTTMap, HostDataToTargetTy *Entry,
+    AsyncInfoTy &AsyncInfo, const llvm::DenseMap<void *, int64_t> &ToRanges) {
   assert(Entry && "Trying to allocate for a null entry.");
-  assert(Entry->isHostBacked() && "Entry already owns a device allocation");
+  assert(Entry->isHostBound() && "Entry already owns a device allocation");
 
   void *HstPtrBegin = reinterpret_cast<void *>(Entry->HstPtrBegin);
   int64_t Size = Entry->HstPtrEnd - Entry->HstPtrBegin;
@@ -617,12 +627,26 @@ int MappingInfoTy::giveEntryDeviceStorage(HDTTMapAccessorTy &HDTTMap,
                     << ") -> (tgt:" << reinterpret_cast<void *>(TgtAllocBegin)
                     << "), so that its storage is not shared with the original";
 
-  // The storage was shared with the host until now, so bring its current
-  // contents over: it may hold data besides the pointer being attached.
-  if (Device.submitData(reinterpret_cast<void *>(TgtAllocBegin), HstPtrBegin,
-                        Size, AsyncInfo, Entry) != OFFLOAD_SUCCESS) {
-    REPORT() << "Copying data to device failed.";
-    return OFFLOAD_FAIL;
+  // Bring over the parts of the storage that were mapped with the TO map type
+  // on this construct. Those had no transfer performed for them, because the
+  // storage was shared with the original at the time. The rest of the entry is
+  // deliberately left alone: it was never specified to have a corresponding
+  // value on the device, and copying it would give the program a value it
+  // cannot rely on under a device allocation.
+  for (const auto &[ToBegin, ToSize] : ToRanges) {
+    uintptr_t Begin = reinterpret_cast<uintptr_t>(ToBegin);
+    if (Begin < Entry->HstPtrBegin || Begin + ToSize > Entry->HstPtrEnd)
+      continue;
+    void *TgtBegin =
+        reinterpret_cast<void *>(TgtAllocBegin + (Begin - Entry->HstPtrBegin));
+    ODBG(ODT_Mapping) << "Moving " << ToSize
+                      << " bytes mapped with 'to' (hst:" << ToBegin
+                      << ") -> (tgt:" << TgtBegin << ")";
+    if (Device.submitData(TgtBegin, ToBegin, ToSize, AsyncInfo, Entry) !=
+        OFFLOAD_SUCCESS) {
+      REPORT() << "Copying data to device failed.";
+      return OFFLOAD_FAIL;
+    }
   }
 
   return Device.notifyDataMapped(HstPtrBegin, Size);
@@ -632,7 +656,7 @@ int MappingInfoTy::shareEntryStorageWithOriginal(HDTTMapAccessorTy &HDTTMap,
                                                  HostDataToTargetTy *Entry,
                                                  AsyncInfoTy &AsyncInfo) {
   assert(Entry && "Trying to share storage of a null entry.");
-  assert(!Entry->isHostBacked() &&
+  assert(!Entry->isHostBound() &&
          "Entry storage is already shared with the original");
 
   void *HstPtrBegin = reinterpret_cast<void *>(Entry->HstPtrBegin);

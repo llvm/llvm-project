@@ -884,10 +884,10 @@ static int settleAttachStorage(DeviceTy &Device, StateInfoTy &StateInfo,
   auto NeedsSettling = [&](void *HstPtr, int64_t PtrSize,
                            void *HstPteeBegin) -> bool {
     HostDataToTargetTy *PtrEntry = FindEntry(HstPtr, PtrSize);
-    if (!PtrEntry || !PtrEntry->isHostBacked())
+    if (!PtrEntry || !PtrEntry->isHostBound())
       return false;
     HostDataToTargetTy *PteeEntry = FindEntry(HstPteeBegin, /*Size=*/0);
-    return PteeEntry && !PteeEntry->isHostBacked();
+    return PteeEntry && !PteeEntry->isHostBound();
   };
 
   for (const auto &AttachEntry : StateInfo.AttachEntries) {
@@ -945,39 +945,33 @@ static int settleAttachStorage(DeviceTy &Device, StateInfoTy &StateInfo,
       auto [UpHstPtr, UpPtrSize, ReachedFrom] = ToUpgrade.pop_back_val();
 
       HostDataToTargetTy *UpEntry = FindEntry(UpHstPtr, UpPtrSize);
-      if (!UpEntry || !UpEntry->isHostBacked())
+      if (!UpEntry || !UpEntry->isHostBound())
         continue;
 
       if (!StateInfo.wasNewlyMapped(UpHstPtr).has_value()) {
         std::string PtrName = NameOf(AttachEntry.Pointername);
-        std::string PteeName =
-            NameOfEntry(FindEntry(AttachEntry.PointeeBegin, /*Size=*/0));
         std::string BlockerName = NameOfEntry(UpEntry);
 
-        MESSAGE("cannot attach pointer %s (" DPxMOD ") to %s (" DPxMOD
-                ") under unified shared memory: %s has a device allocation, so "
-                "the attachment would assign a device address to the original "
-                "pointer\n",
-                PtrName.c_str(), DPxPTR(HstPtr), PteeName.c_str(),
-                DPxPTR(AttachEntry.PointeeBegin), PteeName.c_str());
+        // Say which mapping cannot hold a device address, and why. When the
+        // upgrade cascaded, that is not the pointer of this attach entry but
+        // something that points into its storage.
         if (ReachedFrom)
-          MESSAGE("  %s (" DPxMOD ") has to hold a device address as well, "
-                  "because the pointer at " DPxMOD " points into its storage\n",
-                  BlockerName.c_str(), DPxPTR(UpHstPtr), DPxPTR(ReachedFrom));
-        MESSAGE("  but %s (" DPxMOD ") was mapped by an enclosing construct "
-                "with its storage shared with the original, and its device "
-                "address may already have been obtained, so it cannot be given "
-                "a device allocation now\n",
-                BlockerName.c_str(), DPxPTR(UpHstPtr));
-        MESSAGE("  map %s with the close modifier where it is first mapped, or "
-                "drop the close modifier from %s\n",
-                BlockerName.c_str(), PteeName.c_str());
-        REPORT() << "Unsatisfiable pointer attachment under unified shared "
-                    "memory.";
+          MESSAGE("could not do pointer attachment for %s (" DPxMOD
+                  "): the pointee is device-bound, so %s (" DPxMOD
+                  ") would have to be device-bound as well, but it has an "
+                  "existing host-bound mapping that cannot be changed\n",
+                  PtrName.c_str(), DPxPTR(HstPtr), BlockerName.c_str(),
+                  DPxPTR(UpHstPtr));
+        else
+          MESSAGE("could not do pointer attachment for %s (" DPxMOD
+                  "): the pointer has an existing host-bound mapping and the "
+                  "pointee is device-bound, so neither can be changed\n",
+                  PtrName.c_str(), DPxPTR(HstPtr));
         return OFFLOAD_FAIL;
       }
 
-      if (MappingInfo.giveEntryDeviceStorage(HDTTMap, UpEntry, AsyncInfo) !=
+      if (MappingInfo.giveEntryDeviceStorage(HDTTMap, UpEntry, AsyncInfo,
+                                             StateInfo.HostPathToRanges) !=
           OFFLOAD_SUCCESS)
         return OFFLOAD_FAIL;
 
@@ -1139,7 +1133,7 @@ int processAttachEntries(DeviceTy &Device, StateInfoTy &StateInfo,
     // The storage on both sides was settled by settleAttachStorage, so an
     // attachment that would write a device address into an original pointer is
     // one that could not be settled at all.
-    if (PtrTPROpt->getEntry() && PtrTPROpt->getEntry()->isHostBacked() &&
+    if (PtrTPROpt->getEntry() && PtrTPROpt->getEntry()->isHostBound() &&
         TgtPteeBegin != HstPteeBegin) {
       MESSAGE("pointer " DPxMOD " cannot be attached to " DPxMOD
               ": its corresponding pointer is the original pointer, so the "

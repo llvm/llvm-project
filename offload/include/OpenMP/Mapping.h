@@ -126,14 +126,14 @@ struct HostDataToTargetTy {
   /// Whether this entry's storage is the host storage itself, i.e. it owns no
   /// device allocation. That is the case for the entries recorded on the
   /// unified-shared-memory host path.
-  bool isHostBacked() const { return TgtPtrBegin == HstPtrBegin; }
+  bool isHostBound() const { return TgtPtrBegin == HstPtrBegin; }
 
   /// Give this entry a device allocation, so that its storage stops being
   /// shared with the original. The caller performs the allocation; see
   /// MappingInfoTy::giveEntryDeviceStorage(), which is the only intended caller
   /// and documents when this is legal.
   void takeDeviceStorage(uintptr_t NewTgtAllocBegin, uintptr_t NewTgtPtrBegin) {
-    assert(isHostBacked() && "Entry already owns a device allocation");
+    assert(isHostBound() && "Entry already owns a device allocation");
     TgtAllocBegin = NewTgtAllocBegin;
     TgtPtrBegin = NewTgtPtrBegin;
   }
@@ -143,7 +143,7 @@ struct HostDataToTargetTy {
   /// MappingInfoTy::shareEntryStorageWithOriginal(), which is the only intended
   /// caller and documents when this is legal.
   void shareStorageWithOriginal() {
-    assert(!isHostBacked() && "Entry is already shared with the original");
+    assert(!isHostBound() && "Entry is already shared with the original");
     TgtAllocBegin = HstPtrBegin;
     TgtPtrBegin = HstPtrBegin;
   }
@@ -542,6 +542,14 @@ struct StateInfoTy {
   /// Key: host pointer, Value: mapped size.
   llvm::DenseMap<void *, int64_t> NewMappings;
 
+  /// Ranges mapped with the TO map type on this construct whose storage was
+  /// shared with the original, so that no transfer was performed for them.
+  /// If such storage is later given a device allocation for pointer attachment,
+  /// these are the ranges whose contents have to be brought over: the rest of
+  /// the entry was never specified to have a corresponding value on the device.
+  /// Key: host pointer, Value: mapped size.
+  llvm::DenseMap<void *, int64_t> HostPathToRanges;
+
   /// Host pointers that had a FROM entry, but for which a data transfer was
   /// skipped due to the ref-count not being zero.
   /// Key: host pointer, Value: data size.
@@ -773,9 +781,13 @@ struct MappingInfoTy {
   /// Only legal for an entry whose mapping was created by the construct that is
   /// currently being processed, since its device address cannot have been
   /// observed yet. \p HDTTMap must be held by the caller.
-  [[nodiscard]] int giveEntryDeviceStorage(HDTTMapAccessorTy &HDTTMap,
-                                           HostDataToTargetTy *Entry,
-                                           AsyncInfoTy &AsyncInfo);
+  /// \p ToRanges gives the ranges mapped with the TO map type on this construct
+  /// while the storage was shared with the original; only those are brought
+  /// over, see StateInfoTy::HostPathToRanges.
+  [[nodiscard]] int
+  giveEntryDeviceStorage(HDTTMapAccessorTy &HDTTMap, HostDataToTargetTy *Entry,
+                         AsyncInfoTy &AsyncInfo,
+                         const llvm::DenseMap<void *, int64_t> &ToRanges);
 
   /// Return the storage of \p Entry to being shared with the original,
   /// releasing the device allocation it was created with.
