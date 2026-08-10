@@ -28,8 +28,8 @@ void UseEnumClassCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 void UseEnumClassCheck::registerMatchers(MatchFinder *Finder) {
   const auto EnumDecl =
       IgnoreUnscopedEnumsInClasses
-          ? enumDecl(unless(isScoped()), unless(hasParent(recordDecl())))
-          : enumDecl(unless(isScoped()));
+          ? enumDecl(unless(isScoped()), unless(hasName("")), unless(hasParent(recordDecl())))
+          : enumDecl(unless(isScoped()), unless(hasName("")));
   Finder->addMatcher(EnumDecl.bind("unscoped_enum"), this);
 }
 
