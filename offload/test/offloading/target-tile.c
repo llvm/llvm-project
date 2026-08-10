@@ -44,14 +44,14 @@ int main() {
       }
     }
   }
-  // Tiling leaves the loop variables with their values from the final iteration
-  // rather than with the usual +1.
-  expected = I_NTILES * I_NELEMS - 1;
+  // OpenMP 6.0 spec requires loop variables to have loop-exit values
+  // (the values they would have without the transformation directive).
+  expected = I_NTILES * I_NELEMS;
   if (i != expected) {
     printf("error: i = %d, expected %d\n", i, expected);
     return 1;
   }
-  expected = J_NTILES * J_NELEMS - 1;
+  expected = J_NTILES * J_NELEMS;
   if (j != expected) {
     printf("error: j = %d, expected %d\n", j, expected);
     return 1;
