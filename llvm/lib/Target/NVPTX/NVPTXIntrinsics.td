@@ -5752,25 +5752,41 @@ defm TCGEN05_RELINQ_CG2: TCGEN05_RELINQ_PERMIT_INTR<"2", int_nvvm_tcgen05_relinq
 def tcgen05_wait_ld: NullaryInst<"tcgen05.wait::ld.sync.aligned", int_nvvm_tcgen05_wait_ld>;
 def tcgen05_wait_st: NullaryInst<"tcgen05.wait::st.sync.aligned", int_nvvm_tcgen05_wait_st>;
 
-multiclass TCGEN05_COMMIT_INTR<string AS, string num> {
-  defvar prefix = "tcgen05.commit.cta_group::" # num #".mbarrier::arrive::one.shared::cluster";
+multiclass TCGEN05_COMMIT_INTR<string num> {
+  defvar prefix = "tcgen05.commit.cta_group::" # num #
+                  ".mbarrier::arrive::one.shared::cluster";
+  defvar prefix_smem_a_read = prefix # ".sync_restrict::shared::read::mma::a";
 
-  defvar intr_suffix = !if(!eq(AS, "shared"), "_shared", "") # "_cg" # num;
-  defvar Intr = !cast<Intrinsic>("int_nvvm_tcgen05_commit" # intr_suffix);
-  defvar IntrMC = !cast<Intrinsic>("int_nvvm_tcgen05_commit_mc" # intr_suffix);
+  defvar intr_prefix = "int_nvvm_tcgen05_commit";
+  defvar intr_suffix = "_cg" # num;
+  defvar Intr = !cast<Intrinsic>(intr_prefix # intr_suffix);
+  defvar IntrMC = !cast<Intrinsic>(intr_prefix # "_mc" # intr_suffix);
+  defvar IntrSmemARead =
+      !cast<Intrinsic>(intr_prefix # "_smem_a_read" # intr_suffix);
+  defvar IntrSmemAReadMC =
+      !cast<Intrinsic>(intr_prefix # "_smem_a_read_mc" # intr_suffix);
 
   def "" : BasicNVPTXInst<(outs), (ins ADDR:$mbar),
              prefix # ".b64",
              [(Intr addr:$mbar)]>;
   def _MC : BasicNVPTXInst<(outs), (ins ADDR:$mbar, B16:$mc),
-                   prefix # ".multicast::cluster.b64",
-                   [(IntrMC addr:$mbar, B16:$mc)]>;
+              prefix # ".multicast::cluster.b64",
+              [(IntrMC addr:$mbar, i16:$mc)]>;
+  let Predicates = [callSubtarget<"hasRubinFamilySupport">] in {
+    def _MC_32B : BasicNVPTXInst<(outs), (ins ADDR:$mbar, B32:$mc),
+                    prefix # ".multicast::cluster::32b.b64",
+                    [(IntrMC addr:$mbar, i32:$mc)]>;
+    def _SMEM_A_READ : BasicNVPTXInst<(outs), (ins ADDR:$mbar),
+                  prefix_smem_a_read # ".b64",
+                  [(IntrSmemARead addr:$mbar)]>;
+    def _SMEM_A_READ_MC : BasicNVPTXInst<(outs), (ins ADDR:$mbar, B16:$mc),
+                    prefix_smem_a_read # ".multicast::cluster.b64",
+                    [(IntrSmemAReadMC addr:$mbar, i16:$mc)]>;
+    def _SMEM_A_READ_MC_32B : BasicNVPTXInst<(outs), (ins ADDR:$mbar, B32:$mc),
+                        prefix_smem_a_read # ".multicast::cluster::32b.b64",
+                        [(IntrSmemAReadMC addr:$mbar, i32:$mc)]>;
+  }
 }
-
-defm TCGEN05_COMMIT_CG1 : TCGEN05_COMMIT_INTR<"", "1">;
-defm TCGEN05_COMMIT_CG2 : TCGEN05_COMMIT_INTR<"", "2">;
-defm TCGEN05_COMMIT_S64_CG1 : TCGEN05_COMMIT_INTR<"shared", "1">;
-defm TCGEN05_COMMIT_S64_CG2 : TCGEN05_COMMIT_INTR<"shared", "2">;
 
 multiclass TCGEN05_CP_INTR<string shape, string src_fmt, string mc = ""> {
   defvar dst_fmt = !if(!eq(src_fmt, ""), "", ".b8x16");
@@ -5803,6 +5819,9 @@ foreach src_fmt = ["", "b6x16_p32", "b4x16_p64"] in {
   defm TCGEN05_CP_32x128 # src_fmt   : TCGEN05_CP_INTR<"32x128b", src_fmt, "warpx4">;
 }
 } // Predicates
+
+defm TCGEN05_COMMIT_CG1 : TCGEN05_COMMIT_INTR<"1">;
+defm TCGEN05_COMMIT_CG2 : TCGEN05_COMMIT_INTR<"2">;
 
 let Predicates = [callSubtarget<"hasTcgen05ShiftSupport">] in {
 multiclass TCGEN05_SHIFT_INTR<string num, Intrinsic Intr> {

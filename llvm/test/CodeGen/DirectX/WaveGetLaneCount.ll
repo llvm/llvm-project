@@ -2,12 +2,12 @@
 
 define void @main() {
 entry:
-; CHECK: call i32 @dx.op.waveGetLaneCount(i32 112) #[[#ATTR:]]
+; CHECK: call i32 @dx.op.waveGetLaneCount(i32 112)
   %0 = call i32 @llvm.dx.wave.get.lane.count()
   ret void
 }
 
-; CHECK: attributes #[[#ATTR]] = {{{.*}} memory(read) {{.*}}}
+; CHECK: declare i32 @dx.op.waveGetLaneCount(i32) #[[#ATTR:]]
+; CHECK: attributes #[[#ATTR]] = { nounwind memory(read) }
 
 declare i32 @llvm.dx.wave.get.lane.count()
-

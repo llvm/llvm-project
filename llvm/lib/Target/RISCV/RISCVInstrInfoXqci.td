@@ -1447,8 +1447,8 @@ def PseudoQCAccessC_SH : PseudoQCAccessCStore_rri<"c.sh", uimm2_lsb0_optional>;
 
 // FIXME: We would like to add these but they are not supported by CompressPat.
 // let Predicates = [HasVendorXqcili, HasStdExtZca] in {
-// def : CompressPat<(PseudoQCAccessLW GPRC:$rd, BasePtrC:$rs1, uimm7_lsb00_optional:$imm, qc_access_symbol:$expr),
-//                   (PseudoQCAccessC_LW GPRC:$rd, BasePtrC:$rs1, uimm7_lsb00_optional:$imm, qc_access_symbol:$expr)>;
+// def : CompressPat<(PseudoQCAccessLW GPRC:$rd, BasePtrC:$rs1, uimm7_lsb00:$imm, qc_access_symbol:$expr),
+//                   (PseudoQCAccessC_LW GPRC:$rd, BasePtrC:$rs1, uimm7_lsb00:$imm, qc_access_symbol:$expr)>;
 // }
 
 
@@ -1862,16 +1862,16 @@ def : CompressPat<(QC_SYNCWF uimm5slist:$imm5), (QC_C_SYNCWF uimm5slist:$imm5)>;
 
 let isCompressOnly = true, Predicates = [HasVendorXqcilo, IsRV32] in {
 let append Predicates = [HasStdExtZcb] in {
-def : CompressPat<(QC_E_LBU GPRC:$rd, BasePtrC:$rs1, uimm2_optional:$imm),
-                  (C_LBU GPRC:$rd, BasePtrC:$rs1, uimm2_optional:$imm)>;
-def : CompressPat<(QC_E_LHU GPRC:$rd, BasePtrC:$rs1, uimm2_lsb0_optional:$imm),
-                  (C_LHU GPRC:$rd, BasePtrC:$rs1, uimm2_lsb0_optional:$imm)>;
-def : CompressPat<(QC_E_LH GPRC:$rd, BasePtrC:$rs1, uimm2_lsb0_optional:$imm),
-                  (C_LH GPRC:$rd, BasePtrC:$rs1, uimm2_lsb0_optional:$imm)>;
-def : CompressPat<(QC_E_SB GPRC:$rs2, BasePtrC:$rs1, uimm2_optional:$imm),
-                  (C_SB GPRC:$rs2, BasePtrC:$rs1, uimm2_optional:$imm)>;
-def : CompressPat<(QC_E_SH GPRC:$rs2, BasePtrC:$rs1, uimm2_lsb0_optional:$imm),
-                  (C_SH GPRC:$rs2, BasePtrC:$rs1, uimm2_lsb0_optional:$imm)>;
+def : CompressPat<(QC_E_LBU GPRC:$rd, BasePtrC:$rs1, uimm2:$imm),
+                  (C_LBU GPRC:$rd, BasePtrC:$rs1, uimm2:$imm)>;
+def : CompressPat<(QC_E_LHU GPRC:$rd, BasePtrC:$rs1, uimm2_lsb0:$imm),
+                  (C_LHU GPRC:$rd, BasePtrC:$rs1, uimm2_lsb0:$imm)>;
+def : CompressPat<(QC_E_LH GPRC:$rd, BasePtrC:$rs1, uimm2_lsb0:$imm),
+                  (C_LH GPRC:$rd, BasePtrC:$rs1, uimm2_lsb0:$imm)>;
+def : CompressPat<(QC_E_SB GPRC:$rs2, BasePtrC:$rs1, uimm2:$imm),
+                  (C_SB GPRC:$rs2, BasePtrC:$rs1, uimm2:$imm)>;
+def : CompressPat<(QC_E_SH GPRC:$rs2, BasePtrC:$rs1, uimm2_lsb0:$imm),
+                  (C_SH GPRC:$rs2, BasePtrC:$rs1, uimm2_lsb0:$imm)>;
 } // append Predicates = [HasStdExtZcb]
 
 def : CompressPat<(QC_E_LW GPRC:$rd, BasePtrC:$rs1, uimm7_lsb00:$imm),

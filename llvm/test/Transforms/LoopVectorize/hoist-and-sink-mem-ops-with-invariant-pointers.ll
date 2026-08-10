@@ -275,10 +275,10 @@ define void @load_store_noalias_via_tbaa(ptr %p, ptr %q, ptr %n) {
 ; CHECK-NEXT:    [[TMP29:%.*]] = load float, ptr [[TMP25]], align 4, !tbaa [[FLOAT_TBAA27]], !alias.scope [[META31]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = load float, ptr [[TMP26]], align 4, !tbaa [[FLOAT_TBAA27]], !alias.scope [[META31]]
 ; CHECK-NEXT:    [[TMP31:%.*]] = load float, ptr [[TMP27]], align 4, !tbaa [[FLOAT_TBAA27]], !alias.scope [[META31]]
-; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <4 x float> poison, float [[TMP28]], i32 0
-; CHECK-NEXT:    [[TMP33:%.*]] = insertelement <4 x float> [[TMP32]], float [[TMP29]], i32 1
-; CHECK-NEXT:    [[TMP34:%.*]] = insertelement <4 x float> [[TMP33]], float [[TMP30]], i32 2
-; CHECK-NEXT:    [[TMP35:%.*]] = insertelement <4 x float> [[TMP34]], float [[TMP31]], i32 3
+; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <4 x float> poison, float [[TMP28]], i64 0
+; CHECK-NEXT:    [[TMP33:%.*]] = insertelement <4 x float> [[TMP32]], float [[TMP29]], i64 1
+; CHECK-NEXT:    [[TMP34:%.*]] = insertelement <4 x float> [[TMP33]], float [[TMP30]], i64 2
+; CHECK-NEXT:    [[TMP35:%.*]] = insertelement <4 x float> [[TMP34]], float [[TMP31]], i64 3
 ; CHECK-NEXT:    [[TMP36:%.*]] = fadd <4 x float> [[BROADCAST_SPLAT]], [[TMP35]]
 ; CHECK-NEXT:    [[TMP37:%.*]] = extractelement <4 x float> [[TMP36]], i64 3
 ; CHECK-NEXT:    store float [[TMP37]], ptr [[P]], align 4, !tbaa [[FLOAT_TBAA27]], !alias.scope [[META33:![0-9]+]], !noalias [[META28]]
