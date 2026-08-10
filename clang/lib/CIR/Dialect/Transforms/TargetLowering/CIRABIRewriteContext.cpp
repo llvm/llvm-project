@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRABIRewriteContext.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Dominance.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
@@ -179,11 +180,6 @@ mlir::Value createIgnoredValue(mlir::OpBuilder &builder, mlir::Location loc,
 /// llvm.align on Indirect args.  Preserves any existing arg attributes on
 /// retained arg slots.  \p origArgTypes provides the pre-rewrite type for
 /// each arg slot (needed to compute the llvm.byval pointee type).
-///
-/// An attribute this function sets can already be present on the arg slot:
-/// CIRGen marks a scalar parameter llvm.noundef, and the ABI can then pass that
-/// parameter byval, which wants llvm.noundef too.  So each name has to be set
-/// rather than appended, or the dictionary carries it twice.
 mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx,
                                ArrayRef<mlir::Type> origArgTypes,
                                mlir::ArrayAttr existingArgAttrs,
@@ -208,7 +204,9 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx,
       auto recTy = cast<cir::RecordType>(origArgTypes[oldIdx]);
       newArgAttrs.append(recTy.getNumElements(), builder.getDictionaryAttr({}));
     } else if (ac.kind == ArgKind::Extend) {
-      StringRef attrName = ac.signExtend ? "llvm.signext" : "llvm.zeroext";
+      StringRef attrName = ac.signExtend
+                               ? mlir::LLVM::LLVMDialect::getSExtAttrName()
+                               : mlir::LLVM::LLVMDialect::getZExtAttrName();
       mlir::NamedAttrList attrs(existing);
       attrs.set(attrName, builder.getUnitAttr());
       newArgAttrs.push_back(attrs.getDictionary(ctx));
@@ -230,14 +228,18 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx,
       //     emit it unconditionally because our call-site rewrite always
       //     produces a fresh alloca+store.
       mlir::Type pointeeTy = origArgTypes[oldIdx];
-      StringRef ownershipAttr = ac.byVal ? "llvm.byval" : "llvm.byref";
+      StringRef ownershipAttr =
+          ac.byVal ? mlir::LLVM::LLVMDialect::getByValAttrName()
+                   : mlir::LLVM::LLVMDialect::getByRefAttrName();
       mlir::NamedAttrList attrs(existing);
-      attrs.set("llvm.align",
+      attrs.set(mlir::LLVM::LLVMDialect::getAlignAttrName(),
                 builder.getI64IntegerAttr(ac.indirectAlign.value()));
       attrs.set(ownershipAttr, mlir::TypeAttr::get(pointeeTy));
       if (ac.byVal) {
-        attrs.set("llvm.noalias", builder.getUnitAttr());
-        attrs.set("llvm.noundef", builder.getUnitAttr());
+        attrs.set(mlir::LLVM::LLVMDialect::getNoAliasAttrName(),
+                  builder.getUnitAttr());
+        attrs.set(mlir::LLVM::LLVMDialect::getNoUndefAttrName(),
+                  builder.getUnitAttr());
       }
       newArgAttrs.push_back(attrs.getDictionary(ctx));
     } else {
