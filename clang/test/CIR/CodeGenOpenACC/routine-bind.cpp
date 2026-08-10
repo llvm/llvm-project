@@ -1,6 +1,6 @@
-// TODO(cir): drop -clangir-disable-call-conv-lowering once CallConvLowering
+// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
 // supports parameters of an empty or tag class.
-// RUN: %clang_cc1 -fopenacc -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir -clangir-disable-call-conv-lowering %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fopenacc -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir -fno-clangir-call-conv-lowering %s -o - | FileCheck %s
 // FIXME: We should run this against Windows mangling as well at one point.
 
 #pragma acc routine seq bind("BIND1")

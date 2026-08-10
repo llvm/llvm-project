@@ -1,6 +1,6 @@
-// TODO(cir): drop -clangir-disable-call-conv-lowering once CallConvLowering
+// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
 // supports _Complex types.
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -clangir-disable-call-conv-lowering -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fno-clangir-call-conv-lowering -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s
 
 struct Struk {

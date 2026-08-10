@@ -1,6 +1,6 @@
-// TODO(cir): drop -clangir-disable-call-conv-lowering once CallConvLowering
+// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
 // supports parameters of an empty or tag class.
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -clangir-disable-call-conv-lowering -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -fno-clangir-call-conv-lowering -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -emit-llvm  -disable-llvm-passes %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s --check-prefix=OGCG

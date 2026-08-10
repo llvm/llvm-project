@@ -1,15 +1,15 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o - \
 // RUN:   | FileCheck %s --check-prefix=ON
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o - \
-// RUN:     -clangir-disable-call-conv-lowering \
+// RUN:     -fno-clangir-call-conv-lowering \
 // RUN:   | FileCheck %s --check-prefix=OFF
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o - \
-// RUN:     -clangir-enable-call-conv-lowering -clangir-disable-call-conv-lowering \
-// RUN:     -clangir-enable-call-conv-lowering \
+// RUN:     -fclangir-call-conv-lowering -fno-clangir-call-conv-lowering \
+// RUN:     -fclangir-call-conv-lowering \
 // RUN:   | FileCheck %s --check-prefix=ON
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o - \
-// RUN:     -clangir-disable-call-conv-lowering -clangir-enable-call-conv-lowering \
-// RUN:     -clangir-disable-call-conv-lowering \
+// RUN:     -fno-clangir-call-conv-lowering -fclangir-call-conv-lowering \
+// RUN:     -fno-clangir-call-conv-lowering \
 // RUN:   | FileCheck %s --check-prefix=OFF
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - \
 // RUN:   | FileCheck %s --check-prefix=ON
