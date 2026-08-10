@@ -18,7 +18,7 @@ define void @conversion_cost1(i32 %n, ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[TMP3]], 32
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 32
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 31
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 3, [[N_VEC]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -41,7 +41,7 @@ define void @conversion_cost1(i32 %n, ptr nocapture %A, ptr nocapture %B) {
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP4]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 3, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[N_MOD_VF2:%.*]] = urem i64 [[TMP3]], 8
+; CHECK-NEXT:    [[N_MOD_VF2:%.*]] = and i64 [[TMP3]], 7
 ; CHECK-NEXT:    [[N_VEC3:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF2]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 3, [[N_VEC3]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = trunc i64 [[BC_RESUME_VAL]] to i8
@@ -63,10 +63,10 @@ define void @conversion_cost1(i32 %n, ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-NEXT:    [[CMP_N8:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[CMP_N8]], [[DOT_CRIT_EDGE_LOOPEXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL9:%.*]] = phi i64 [ [[TMP8]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP4]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 3, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL8:%.*]] = phi i64 [ [[TMP8]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP4]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 3, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[DOTLR_PH:.*]]
 ; CHECK:       [[_LR_PH:.*:]]
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[DOTLR_PH]] ], [ [[BC_RESUME_VAL9]], %[[VEC_EPILOG_SCALAR_PH]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[DOTLR_PH]] ], [ [[BC_RESUME_VAL8]], %[[VEC_EPILOG_SCALAR_PH]] ]
 ; CHECK-NEXT:    [[TMP13:%.*]] = trunc i64 [[INDVARS_IV]] to i8
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    store i8 [[TMP13]], ptr [[TMP14]], align 1
@@ -107,7 +107,7 @@ define void @conversion_cost2(i32 %n, ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 8
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 8
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 7
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 9, [[N_VEC]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]

@@ -246,8 +246,25 @@ bool CheckDivRem(InterpState &S, CodePtr OpPC, const T &LHS, const T &RHS) {
 
 /// Checks if the result of a floating-point operation is valid
 /// in the current context.
+/// Notes:
+///   - CheckFloatStatus is the same as
+///     checkFloatingPointResultForConstantFolding in
+///     clang/lib/AST/ExprConstant.cpp.
+///   - CheckFloatResult will also check if the result is NaN, in addition to
+///     CheckFloatStatus's checks.
+// FIXME: P3899R3 (adopted by WG21 in June 2026) likely makes this interface
+// obsolete.
+// https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2026/p3899r3.html
+// Also see the comment:
+// https://github.com/llvm/llvm-project/pull/213750/changes/2fea01449764e23b84ce6790bc7121d369546192#r3708712572
 bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
                       APFloat::opStatus Status, FPOptions FPO);
+
+/// Check if the given floating-point evaluation status is allowed for
+/// compile-time constant folding during translation (as opposed to mandatory
+/// constant expression evaluation).
+bool CheckFloatStatus(InterpState &S, CodePtr OpPC, APFloat::opStatus Status,
+                      FPOptions FPO);
 
 /// Checks why the given DeclRefExpr is invalid.
 bool CheckDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR);
@@ -2910,10 +2927,11 @@ bool CastAPS(InterpState &S, uint32_t BitWidth) {
   return true;
 }
 
-// Cast an AP integer to Sint64, failing constant evaluation if the value is
-// negative or too large to fit (i.e. truncation would change the value).
+// Cast an AP integer to Sint64 for use as an offsetof array index, failing
+// constant evaluation if the value is negative or too large to fit in Sint64
+// (i.e. truncation would change the value).
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool CastNoOverflow(InterpState &S, CodePtr OpPC) {
+bool CastAPToOffsetIndex(InterpState &S, CodePtr OpPC) {
   T Source = S.Stk.pop<T>();
   APSInt Val = Source.toAPSInt();
   if (Val.isNegative() || Val.getActiveBits() > 63)

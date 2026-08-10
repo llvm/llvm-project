@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstBuilder.h"
@@ -129,7 +130,7 @@ void CSKYAsmPrinter::emitFunctionBodyEnd() {
 
 void CSKYAsmPrinter::emitStartOfAsmFile(Module &M) {
   if (TM.getTargetTriple().isOSBinFormatELF())
-    emitAttributes();
+    emitAttributes(M);
 }
 
 void CSKYAsmPrinter::emitEndOfAsmFile(Module &M) {
@@ -245,11 +246,12 @@ void CSKYAsmPrinter::emitMachineConstantPoolValue(
   OutStreamer->emitValue(Expr, Size);
 }
 
-void CSKYAsmPrinter::emitAttributes() {
+void CSKYAsmPrinter::emitAttributes(Module &M) {
   CSKYTargetStreamer &CTS =
       static_cast<CSKYTargetStreamer &>(*OutStreamer->getTargetStreamer());
 
-  CTS.emitTargetAttributes(TM.getMCSubtargetInfo());
+  CTS.emitTargetAttributes(TM.getMCSubtargetInfo(),
+                           M.getFloatABI() == FloatABI::Hard);
 }
 
 bool CSKYAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,

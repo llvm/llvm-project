@@ -249,7 +249,7 @@ AArch64RegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
                                                 LLT Ty) const {
   switch (RC.getID()) {
   case AArch64::GPR64sponlyRegClassID:
-    return getRegBank(AArch64::GPRRegBankID);
+    return AArch64::GPRRegBank;
   default:
     return AArch64GenRegisterBankInfo::getRegBankFromRegClass(RC, Ty);
   }
@@ -413,8 +413,7 @@ static bool preferGPRForFPImm(const MachineInstr &MI,
 // anyext and should instead make use of the G_CONSTANT directly, deleting the
 // trunc if possible.
 static bool foldTruncOfI32Constant(MachineInstr &MI, unsigned OpIdx,
-                                   MachineRegisterInfo &MRI,
-                                   const AArch64RegisterBankInfo &RBI) {
+                                   MachineRegisterInfo &MRI) {
   MachineOperand &Op = MI.getOperand(OpIdx);
 
   Register ScalarReg = Op.getReg();
@@ -433,7 +432,7 @@ static bool foldTruncOfI32Constant(MachineInstr &MI, unsigned OpIdx,
 
   // Avoid truncating and extending a constant, this helps with selection.
   Op.setReg(TruncSrc);
-  MRI.setRegBank(TruncSrc, RBI.getRegBank(AArch64::GPRRegBankID));
+  MRI.setRegBank(TruncSrc, AArch64::GPRRegBank);
 
   if (MRI.use_empty(ScalarReg))
     TruncMI->eraseFromParent();
@@ -490,7 +489,7 @@ void AArch64RegisterBankInfo::applyMappingImpl(
     if (MRI.getRegBank(Dst) == &AArch64::GPRRegBank && Ty.isScalar() &&
         Ty.getSizeInBits() < 32) {
 
-      if (foldTruncOfI32Constant(MI, 0, MRI, *this))
+      if (foldTruncOfI32Constant(MI, 0, MRI))
         return applyDefaultMapping(OpdMapper);
 
       Builder.setInsertPt(*MI.getParent(), MI.getIterator());
@@ -521,7 +520,7 @@ void AArch64RegisterBankInfo::applyMappingImpl(
            "Don't know how to handle that ID");
     return applyDefaultMapping(OpdMapper);
   case AArch64::G_DUP: {
-    if (foldTruncOfI32Constant(MI, 1, MRI, *this))
+    if (foldTruncOfI32Constant(MI, 1, MRI))
       return applyDefaultMapping(OpdMapper);
 
     // Extend smaller gpr to 32-bits
@@ -532,7 +531,7 @@ void AArch64RegisterBankInfo::applyMappingImpl(
     Register ConstReg =
         Builder.buildAnyExt(LLT::integer(32), MI.getOperand(1).getReg())
             .getReg(0);
-    MRI.setRegBank(ConstReg, getRegBank(AArch64::GPRRegBankID));
+    MRI.setRegBank(ConstReg, AArch64::GPRRegBank);
     MI.getOperand(1).setReg(ConstReg);
 
     return applyDefaultMapping(OpdMapper);
