@@ -20454,6 +20454,44 @@ static ExprResult rebuildPotentialResultsAsNonOdrUsed(Sema &S, Expr *E,
   }
 
   // [Clang extension]
+  //   -- If e is a GNU binary conditional expression, its false operand is a
+  //      potential result. The common operand is also used as the condition,
+  //      so it remains an odr-use.
+  case Expr::BinaryConditionalOperatorClass: {
+    auto *BCO = cast<BinaryConditionalOperator>(E);
+    ExprResult RHS = Rebuild(BCO->getFalseExpr());
+    if (!RHS.isUsable())
+      return RHS;
+    return new (S.Context) BinaryConditionalOperator(
+        BCO->getCommon(), BCO->getOpaqueValue(), BCO->getCond(),
+        BCO->getTrueExpr(), RHS.get(), BCO->getQuestionLoc(),
+        BCO->getColonLoc(), BCO->getType(), BCO->getValueKind(),
+        BCO->getObjectKind());
+  }
+
+  // [Clang extension]
+  //   -- If e is a comma fold-expression, its rightmost operand is a
+  //      potential result.
+  case Expr::CXXFoldExprClass: {
+    auto *FE = cast<CXXFoldExpr>(E);
+    if (FE->getOperator() != BO_Comma)
+      break;
+
+    Expr *LHS = FE->getLHS();
+    Expr *RHS = FE->getRHS();
+    ExprResult Sub = Rebuild(RHS ? RHS : LHS);
+    if (!Sub.isUsable())
+      return Sub;
+    if (RHS)
+      RHS = Sub.get();
+    else
+      LHS = Sub.get();
+    return S.BuildCXXFoldExpr(FE->getCallee(), FE->getLParenLoc(), LHS,
+                              FE->getOperator(), FE->getEllipsisLoc(), RHS,
+                              FE->getRParenLoc(), FE->getNumExpansions());
+  }
+
+  // [Clang extension]
   //   -- If e has the form __extension__ e1...
   case Expr::UnaryOperatorClass: {
     auto *UO = cast<UnaryOperator>(E);

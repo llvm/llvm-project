@@ -455,6 +455,15 @@ features cannot lower the translation-unit ABI level;
   affect C++26 constexpr structured bindings and expansion statements, but
   also affects some uses of plain structured bindings. (#GH211930)
 
+- A variable that appears as the potential result of a discarded-value
+  expression is no longer treated as odr-used, so naming it in a lambda with no
+  capture-default is accepted and requires no capture, for example
+  `constexpr bool b = true; [] { b; };` and `[] { static_cast<void>(b); };`.
+  Previously the same lambda body was rejected while `+b` was accepted. This
+  also fixes such a use inside a template being reported against an unrelated
+  construct in the same full-expression, and fixes `__builtin_choose_expr`
+  rebuilding its right operand from its left operand. (#GH127086)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made

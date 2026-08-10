@@ -100,6 +100,24 @@ void dependent_discarded_constant() {
   [=](auto) { n; }(T());
 }
 
+template <typename... T>
+void discarded_fold(T... t) {
+  [] { (t, ...); };
+}
+
+template <typename... T>
+void nested_discarded_fold(T... t) {
+  [](auto... u) {
+    [] { (u, ...); };
+  }(t...);
+}
+
+int global;
+
+void discarded_binary_conditional(int i) {
+  [] { global ?: i; };
+}
+
 template <char...>
 int operator""_literal() {
   return 0;
@@ -130,5 +148,7 @@ template void dependent_initializer<S>();
 template void dependent_parameter<int>(int);
 template void dependent_capture_default<int>(int);
 template void dependent_discarded_constant<int>();
+template void discarded_fold<int, int>(int, int);
+template void nested_discarded_fold<int, int>(int, int);
 template void literal_template_argument<S>();
 template void dependent_conditional<S>();
