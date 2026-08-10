@@ -28,6 +28,7 @@ class TestFrameVarDILExprSizeOf(TestBase):
         arr_size = frame.GetValueForVariablePath("arr_size").GetValue()
         foo_size = frame.GetValueForVariablePath("foo_size").GetValue()
         enum_size = frame.GetValueForVariablePath("enum_size").GetValue()
+        bitfield_size = frame.GetValueForVariablePath("bitfield_size").GetValue()
 
         # Check variables
         self.expect_var_path("sizeof(i)", value=int_size, type="__size_t")
@@ -68,6 +69,15 @@ class TestFrameVarDILExprSizeOf(TestBase):
         self.expect_var_path("sizeof(UnscopedEnum16)", value=enum_size)
         self.expect_var_path("sizeof(UnscopedEnum16&)", value=enum_size)
         self.expect_var_path("sizeof(UnscopedEnum16*)", value=ptr_size)
+
+        # Check bitfield
+        self.expect_var_path("sizeof(bitfield)", value=bitfield_size)
+        self.expect_var_path("sizeof(BitFieldStruct)", value=bitfield_size)
+        self.expect(
+            "frame var -- 'sizeof(bitfield.a)'",
+            error=True,
+            substrs=["invalid application of 'sizeof' to bit-field"],
+        )
 
         self.expect(
             "frame var -- 'sizeof(bar)'",

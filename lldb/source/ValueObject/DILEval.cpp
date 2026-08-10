@@ -1698,6 +1698,11 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const SizeOfNode &node) {
       return arg_or_err;
     lldb::ValueObjectSP arg = *arg_or_err;
 
+    if (arg->IsBitfield())
+      return llvm::make_error<DILDiagnosticError>(
+          m_expr, "invalid application of 'sizeof' to bit-field",
+          node.GetLocation());
+
     llvm::Expected<uint64_t> byte_size = arg->GetByteSize();
     if (!byte_size)
       return byte_size.takeError();

@@ -23,6 +23,14 @@ int main(int argc, char **argv) {
   enum UnscopedEnum16 : int16_t { kZero16, kOne16 };
   UnscopedEnum16 enum_one = kOne16;
 
+  struct BitFieldStruct {
+    int8_t a : 4;
+    int32_t b : 20;
+    uint32_t c : 24;
+    uint64_t d : 48;
+  };
+  BitFieldStruct bitfield = {1, 2, 3, 4};
+
   auto int_size = sizeof(int);
   auto short_size = sizeof(short);
   auto double_size = sizeof(double);
@@ -31,6 +39,7 @@ int main(int argc, char **argv) {
   auto arr_size = sizeof(arr);
   auto foo_size = sizeof(SizeOfFoo);
   auto enum_size = sizeof(UnscopedEnum16);
+  auto bitfield_size = sizeof(BitFieldStruct);
 
   stop(); // Set a breakpoint here
   return 0;
