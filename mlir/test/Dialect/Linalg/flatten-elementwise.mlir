@@ -52,7 +52,7 @@ module attributes {transform.with_named_sequence} {
 #map0 = affine_map<(d0, d1) -> ()>
 #map1 = affine_map<(d0, d1) -> (d0, d1)>
 
-func.func @broadcast_rank0_tensor(%arg0: tensor<i32>, %arg1: tensor<32x2xi32>) -> tensor<32x2xi32> {
+func.func @broadcast_as_generic_rank0_tensor(%arg0: tensor<i32>, %arg1: tensor<32x2xi32>) -> tensor<32x2xi32> {
   %0 = linalg.generic {indexing_maps = [#map0, #map1], iterator_types = ["parallel", "parallel"]} ins(%arg0 : tensor<i32>) outs(%arg1 : tensor<32x2xi32>) {
     ^bb0(%in: i32, %out: i32):
       linalg.yield %in : i32
