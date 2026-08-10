@@ -476,13 +476,13 @@ struct Hold {
   int *ptr;
 };
 
-Hold takePtr(int &x);
+Hold takeRef(int &x);
 // Even though there might be a lifetime error in the function
 // UseAfterLifetimeEnd should not emit a warning for this
 // case since there is no annotation present in the code.
 Hold return_by_val_no_ann() {
   int num = 4;
-  return takePtr(num);
+  return takeRef(num);
 }
 
 int *unwrap(Hold i [[clang::lifetimebound]]) { return i.ptr; }

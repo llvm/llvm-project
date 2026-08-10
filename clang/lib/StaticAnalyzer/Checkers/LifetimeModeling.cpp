@@ -177,6 +177,13 @@ static bool hasAnyParamLifetimeAnnotated(const FunctionDecl *FD) {
   return lifetimes::implicitObjectParamIsLifetimeBound(FD);
 }
 
+static SmallVector<const MemRegion *, 4> getRegionsFromSVal(SVal Val,
+                                                            CheckerContext &C) {
+  if (const MemRegion *R = Val.getAsRegion())
+    return {R};
+  return lifetime_modeling::getRegionsFromAggrVal(Val, C);
+}
+
 void LifetimeModeling::checkPostCall(const CallEvent &Call,
                                      CheckerContext &C) const {
   ProgramStateRef State = C.getState();
@@ -202,13 +209,9 @@ void LifetimeModeling::checkPostCall(const CallEvent &Call,
     if (PVD->hasAttr<LifetimeBoundAttr>()) {
       unsigned Idx = PVD->getFunctionScopeIndex();
       SVal Arg = Call.getArgSVal(Idx);
-      if (const MemRegion *ArgValRegion = Arg.getAsRegion()) {
-        State = bindSource(State, RetVal, ArgValRegion);
-      } else {
-        auto AggrRegs = lifetime_modeling::getRegionsFromAggrVal(Arg, C);
-        for (const MemRegion *R : AggrRegs) {
-          State = bindSource(State, RetVal, R);
-        }
+
+      for (const MemRegion *R : getRegionsFromSVal(Arg, C)) {
+        State = bindSource(State, RetVal, R);
       }
     }
   }
