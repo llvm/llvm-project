@@ -11,7 +11,7 @@ RUN: llvm-pdbutil dump out.pdb -all | FileCheck %s
 
 CHECK:                             Streams
 CHECK-NEXT: ============================================================
-CHECK:        Stream 10 ( 104 bytes): [Module "Import:test.dll"]
+CHECK:        Stream 10 ( 184 bytes): [Module "Import:test.dll"]
 CHECK-NEXT:              Blocks: [9]
 CHECK-NEXT:   Stream 11 ({{[ 0-9]+}} bytes): [Module "* Linker *"]
 CHECK-NEXT:              Blocks: [10]
@@ -27,7 +27,7 @@ CHECK-NEXT:   Mod 2 (debug info not present): [{{.*}}loadconfig-arm64ec.obj]
 CHECK-NEXT: Mod 0003 | `test.dll`:
 CHECK-NEXT:   Mod 3 (debug info not present): [test.dll]
 CHECK-NEXT: Mod 0004 | `Import:test.dll`:
-CHECK-NEXT:   Stream 10, 104 bytes
+CHECK-NEXT:   Stream 10, 184 bytes
 
 CHECK:                                Modules
 CHECK-NEXT: ============================================================
@@ -129,8 +129,16 @@ CHECK-NEXT:          frontend = 0.0.0.0, backend = 14.10.25019.0
 CHECK-NEXT:          flags = none
 CHECK-NEXT:     64 | S_THUNK32 [size = 32] `func`
 CHECK-NEXT:          parent = 0, end = 96, next = 0
-CHECK-NEXT:          kind = thunk, size = 6, addr = 0001:4096
+CHECK-NEXT:          kind = thunk, size = 12, addr = 0001:0008
 CHECK-NEXT:     96 | S_END [size = 4]
+CHECK-NEXT:    100 | S_THUNK32 [size = 40] `__impchk_func`
+CHECK-NEXT:          parent = 0, end = 140, next = 0
+CHECK-NEXT:          kind = thunk, size = 20, addr = 0001:0020
+CHECK-NEXT:    140 | S_END [size = 4]
+CHECK-NEXT:    144 | S_THUNK32 [size = 32] `func`
+CHECK-NEXT:          parent = 0, end = 176, next = 0
+CHECK-NEXT:          kind = thunk, size = 6, addr = 0001:4096
+CHECK-NEXT:    176 | S_END [size = 4]
 CHECK-NEXT: Mod 0005 | `* Linker *`:
 CHECK-NEXT:      4 | S_OBJNAME [size = 20] sig=0, `* Linker *`
 CHECK-NEXT:     24 | S_COMPILE3 [size = 40]
