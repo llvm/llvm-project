@@ -61346,6 +61346,16 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         return DAG.getNode(Opcode, DL, VT, ConcatSubOperand(NewSrcVT, Ops, 0));
       }
       break;
+    case X86ISD::CVTNEPS2BF16:
+      // Always profitable to concat to a single op.
+      // NOTE: Swapped operands.
+      if (NumOps == 2 && (VT.is256BitVector() || VT.is512BitVector()) &&
+          llvm::all_of(Ops, [VT](SDValue Op) {
+            return Op.getOperand(0).getValueSizeInBits() == VT.getSizeInBits();
+          }))
+        return DAG.getNode(X86ISD::VFPROUND2, DL, VT, Ops[1].getOperand(0),
+                           Ops[0].getOperand(0));
+      break;
     case X86ISD::HADD:
     case X86ISD::HSUB:
     case X86ISD::FHADD:
