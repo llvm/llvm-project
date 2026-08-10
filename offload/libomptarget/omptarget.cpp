@@ -884,6 +884,13 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
 /// phase 3 terminates because each release frees an allocation made by this
 /// construct and none are created here.
 ///
+/// The mapping table is held for all three phases, because the decisions are
+/// taken against entry pointers and the table has to stay stable across them.
+/// That serialises concurrent constructs on the same device for the duration,
+/// including across the allocations, transfers and the wait before a release
+/// frees storage. Worth revisiting if that contention is ever measured to
+/// matter, but not separable from the decisions themselves.
+///
 /// Attachments for PTR_AND_OBJ map entries are not covered: those are performed
 /// as the mapping is processed, before this runs, so such a pointer can still
 /// be assigned a device address in its original storage. That encoding is on
