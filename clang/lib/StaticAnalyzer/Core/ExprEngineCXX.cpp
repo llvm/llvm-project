@@ -1102,6 +1102,12 @@ void ExprEngine::VisitCXXCatchStmt(const CXXCatchStmt *CS, ExplodedNode *Pred,
   Dst.insert(Engine.makePostStmtNode(CS, state, Pred));
 }
 
+void ExprEngine::VisitCXXParenListInitExpr(const CXXParenListInitExpr *E,
+                                           ExplodedNode *Pred,
+                                           ExplodedNodeSet &Dst) {
+  ConstructInitList(E, E->getInitExprs(), /*IsTransparent*/ false, Pred, Dst);
+}
+
 void ExprEngine::VisitCXXThisExpr(const CXXThisExpr *TE, ExplodedNode *Pred,
                                   ExplodedNodeSet &Dst) {
   // Get the this object region from StoreManager.

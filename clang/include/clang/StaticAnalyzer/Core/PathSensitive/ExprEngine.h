@@ -643,6 +643,9 @@ public:
   void VisitCXXCatchStmt(const CXXCatchStmt *CS, ExplodedNode *Pred,
                          ExplodedNodeSet &Dst);
 
+  void VisitCXXParenListInitExpr(const CXXParenListInitExpr *E,
+                                 ExplodedNode *Pred, ExplodedNodeSet &Dst);
+
   void VisitCXXThisExpr(const CXXThisExpr *TE, ExplodedNode *Pred,
                         ExplodedNodeSet & Dst);
 

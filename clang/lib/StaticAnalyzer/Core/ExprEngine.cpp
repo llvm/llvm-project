@@ -2245,12 +2245,9 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       break;
     }
 
-    case Expr::CXXParenListInitExprClass: {
-      const CXXParenListInitExpr *E = cast<CXXParenListInitExpr>(S);
-      ConstructInitList(E, E->getInitExprs(), /*IsTransparent*/ false, Pred,
-                        Dst);
+    case Expr::CXXParenListInitExprClass:
+      VisitCXXParenListInitExpr(cast<CXXParenListInitExpr>(S), Pred, Dst);
       break;
-    }
 
     case Stmt::MemberExprClass:
       VisitMemberExpr(cast<MemberExpr>(S), Pred, Dst);
