@@ -258,6 +258,7 @@ void printInlineKindAttr(OpAsmPrinter &p, cir::InlineKindAttr inlineKindAttr) {
     p << " " << stringifyInlineKind(inlineKindAttr.getValue());
   }
 }
+
 //===----------------------------------------------------------------------===//
 // CIR Custom Parsers/Printers
 //===----------------------------------------------------------------------===//
