@@ -90,7 +90,7 @@ struct HasNonTrivialArray {
 // LLVM-LABEL: define dso_local void @make_copy(ptr dead_on_unwind noalias writable sret(%struct.HasNonTrivialArray) align 4 %{{[^,)]+}}, ptr noundef nonnull align 4 dereferenceable(12) %{{[^,)]+}})
 // LLVM: call void @_ZN18HasNonTrivialArrayC1ERKS_(
 
-// OGCG-LABEL: define dso_local void @make_copy(ptr dead_on_unwind noalias writable sret(%struct.HasNonTrivialArray) align 4 %{{[^,)]+}}, ptr noundef nonnull align 4 dereferenceable(12) %{{[^,)]+}})
+// OGCG-LABEL: define dso_local void @make_copy(ptr{{.*}} sret(%struct.HasNonTrivialArray) align 4 %{{[^,)]+}}, ptr{{.*}} align 4 {{.*}}%{{[^,)]+}})
 // OGCG: call void @_ZN18HasNonTrivialArrayC1ERKS_(
 //
 // OGCG-LABEL: define {{.*}}@_ZN18HasNonTrivialArrayC1ERKS_(

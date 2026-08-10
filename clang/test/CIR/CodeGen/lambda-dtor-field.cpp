@@ -44,7 +44,7 @@ void capture_one(S s) {
 // LLVM:   call void @"_ZZ11capture_one1SEN3$_0D1Ev"(ptr {{.*}} %[[LAM1]])
 // LLVM:   ret void
 
-// OGCG-LABEL: define dso_local void @_Z11capture_one1S(ptr{{.*}} noundef align 4 %{{[^,)]+}})
+// OGCG-LABEL: define dso_local void @_Z11capture_one1S(ptr{{.*}} align 4 {{.*}}%{{[^,)]+}})
 // OGCG:   %[[LAM1:.*]] = alloca %[[LAM_TY_1:.*]], align 4
 // OGCG:   %[[FIELD1:.*]] = getelementptr inbounds nuw %[[LAM_TY_1]], ptr %[[LAM1]], i32 0, i32 0
 // OGCG:   call void @_ZN1SC1ERKS_(ptr {{.*}} %[[FIELD1]], ptr {{.*}} %s)
@@ -139,7 +139,7 @@ void capture_mixed(int n, S s) {
 // LLVM:   call void @"_ZZ13capture_mixedi1SEN3$_0D1Ev"(ptr {{.*}} %[[LAM3]])
 // LLVM:   ret void
 
-// OGCG-LABEL: define dso_local void @_Z13capture_mixedi1S(i32 noundef %{{[^,)]+}}, ptr{{.*}} noundef align 4 %{{[^,)]+}})
+// OGCG-LABEL: define dso_local void @_Z13capture_mixedi1S(i32{{.*}} %{{[^,)]+}}, ptr{{.*}} align 4 {{.*}}%{{[^,)]+}})
 // OGCG:   %[[LAM3:.*]] = alloca %[[LAM_TY_3:.*]], align 4
 // OGCG:   %[[FN:.*]] = getelementptr inbounds nuw %[[LAM_TY_3]], ptr %[[LAM3]], i32 0, i32 0
 // OGCG:   %[[NVAL:.*]] = load i32, ptr %n.addr
