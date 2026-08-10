@@ -138,6 +138,25 @@ HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
   std::string FeatureString = Features.getString();
   ParseSubtargetFeatures(CPUString, /*TuneCPU*/ CPUString, FeatureString);
 
+  // Resolve the shadow call stack pointer register.  At most one "scs-reg-rN"
+  // feature may be given; R18 is the default.  R18 is chosen because it is the
+  // lowest callee-saved register that neither the Hexagon Linux kernel (which
+  // reserves R19 for the thread-info pointer) nor code that reserves the upper
+  // callee-saved range already claims.
+  static_assert(Hexagon::R27 - Hexagon::R16 == 11,
+                "Callee-saved R16-R27 are assumed to be consecutive");
+  SCSPReg = Hexagon::R18;
+  bool SCSRegSelected = false;
+  for (unsigned Reg = Hexagon::R16; Reg <= Hexagon::R27; ++Reg) {
+    if (!SCSPointerRegister[Reg])
+      continue;
+    if (SCSRegSelected)
+      report_fatal_error(
+          "Only one shadow call stack pointer register may be selected");
+    SCSPReg = Reg;
+    SCSRegSelected = true;
+  }
+
   if (useHVXV68Ops())
     UseHVXFloatingPoint = UseHVXIEEEFPOps || UseHVXQFloatOps;
 
