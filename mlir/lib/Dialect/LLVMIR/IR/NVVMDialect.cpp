@@ -5691,6 +5691,9 @@ Tcgen05MMAOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
   args.push_back(
       builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOp())));
 
+  args.push_back(
+      builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOpB())));
+
   return {ID, args};
 }
 
@@ -5876,6 +5879,9 @@ mlir::NVVM::IDArgPair Tcgen05MMASparseOp::getIntrinsicIDAndArgs(
   args.push_back(
       builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOp())));
 
+  args.push_back(
+      builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOpB())));
+
   return {ID, args};
 }
 
@@ -5910,6 +5916,8 @@ mlir::NVVM::IDArgPair Tcgen05MMABlockScaleOp::getIntrinsicIDAndArgs(
       static_cast<unsigned>(getNVVMCtaGroupKind(thisOp.getCtaGroup()))));
   args.push_back(
       builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOp())));
+  args.push_back(
+      builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOpB())));
 
   auto kind = thisOp.getKind();
   auto blockScale = thisOp.getBlockScale();
@@ -6007,6 +6015,8 @@ mlir::NVVM::IDArgPair Tcgen05MMASparseBlockScaleOp::getIntrinsicIDAndArgs(
       static_cast<unsigned>(getNVVMCtaGroupKind(thisOp.getCtaGroup()))));
   args.push_back(
       builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOp())));
+  args.push_back(
+      builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOpB())));
 
   auto kind = thisOp.getKind();
   auto blockScale = thisOp.getBlockScale();
