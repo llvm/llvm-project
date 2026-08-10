@@ -72,7 +72,15 @@ public:
         std::is_base_of<OpTrait::OneResult<SourceOp>, SourceOp>::value,
         "expected single result op");
 
-    bool isResultBool = op->getResultTypes().front().isInteger(1);
+    // This pattern only handles scalar ops. Ops with shaped (e.g. vector)
+    // result types, such as `math.isinf` on `vector<Nxf32>`, are expected to be
+    // scalarized first by `ScalarizeVectorOpLowering`, which is co-registered
+    // for these ops; bail out so that pattern can take over.
+    Type opResultType = op->getResultTypes().front();
+    if (!opResultType.isIntOrIndexOrFloat())
+      return rewriter.notifyMatchFailure(op, "expected scalar result type");
+
+    bool isResultBool = opResultType.isInteger(1);
     if constexpr (!std::is_base_of<OpTrait::SameOperandsAndResultType<SourceOp>,
                                    SourceOp>::value) {
       assert(op->getNumOperands() > 0 &&
