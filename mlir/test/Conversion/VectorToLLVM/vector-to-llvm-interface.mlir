@@ -878,6 +878,20 @@ func.func @print_string() {
 
 // -----
 
+gpu.module @gpu_module {
+  gpu.func @kernel() {
+    vector.print str "GPU Print"
+    gpu.return
+  }
+}
+// CHECK-LABEL: gpu.module @gpu_module
+//       CHECK: llvm.mlir.global private constant @[[GPU_STR:.*]]("GPU Print\00")
+// CHECK-LABEL: gpu.func @kernel
+//       CHECK: %[[GLOBAL_ADDR:.*]] = llvm.mlir.addressof @[[GPU_STR]] : !llvm.ptr
+
+// -----
+
+
 //===----------------------------------------------------------------------===//
 // vector.reduction
 //===----------------------------------------------------------------------===//

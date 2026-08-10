@@ -68,7 +68,8 @@ struct AssertOpLowering : public ConvertOpToLLVMPattern<cf::AssertOp> {
 
     if (abortOnFailedAssert) {
       // Insert the `abort` declaration if necessary.
-      auto abortFunc = SymbolTable::lookupSymbolIn<LLVM::LLVMFuncOp>(module, "abort");
+      auto abortFunc =
+          SymbolTable::lookupSymbolIn<LLVM::LLVMFuncOp>(module, "abort");
       if (!abortFunc) {
         OpBuilder::InsertionGuard guard(rewriter);
         rewriter.setInsertionPointToStart(&module->getRegion(0).front());

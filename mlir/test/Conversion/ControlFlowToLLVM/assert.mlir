@@ -20,3 +20,19 @@ func.func @main() {
 // CHECK: %[[ADDRESS_OF:.*]] = llvm.mlir.addressof @{{.*}} : !llvm.ptr{{$}}
 // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[ADDRESS_OF]][0] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<{{[0-9]+}} x i8>
 // CHECK: llvm.call @puts(%[[GEP]]) : (!llvm.ptr) -> ()
+
+// -----
+
+gpu.module @gpu_module {
+  gpu.func @kernel() {
+    %cond = arith.constant 0 : i1
+    cf.assert %cond, "gpu assertion"
+    gpu.return
+  }
+}
+
+// CHECK-LABEL: gpu.module @gpu_module
+// CHECK: llvm.func @puts(!llvm.ptr)
+// CHECK-LABEL: gpu.func @kernel
+// CHECK: %[[ADDRESS_OF:.*]] = llvm.mlir.addressof @assert_msg : !llvm.ptr
+
