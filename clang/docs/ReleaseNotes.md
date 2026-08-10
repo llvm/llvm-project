@@ -170,6 +170,9 @@ features cannot lower the translation-unit ABI level;
 
 ### Non-comprehensive list of changes in this release
 
+- Clang now allows GNU computed `goto` extension in `constexpr` functions, matching the relaxed
+  `constexpr` function body rules introduced in C++23.
+
 ### New Compiler Flags
 
 - New option `-fdefined-pointer-subtraction` added to preserve stable semantics
@@ -367,7 +370,6 @@ features cannot lower the translation-unit ABI level;
 
 - Clang now attempts to print enumerator names rather than C-style cast expressions
   in more diagnostics.
-
 
 ### Improvements to Clang's time-trace
 
