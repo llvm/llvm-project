@@ -136,6 +136,7 @@ void SlotIndexes::removeMachineInstrFromMaps(MachineInstr &MI,
   mi2iMap.erase(mi2iItr);
   // FIXME: Eventually we want to actually delete these indexes.
   MIEntry.setInstr(nullptr);
+  MIEntry.setPoison();
 }
 
 void SlotIndexes::removeSingleMachineInstrFromMaps(MachineInstr &MI) {
@@ -162,6 +163,7 @@ void SlotIndexes::removeSingleMachineInstrFromMaps(MachineInstr &MI) {
   } else {
     // FIXME: Eventually we want to actually delete these indexes.
     MIEntry.setInstr(nullptr);
+    MIEntry.setPoison();
   }
 }
 

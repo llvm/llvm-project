@@ -61,6 +61,8 @@ public:
 
   LLVM_ABI void releaseMemory();
 
+  void verifyAnalysis() const;
+
   LLVM_ABI bool invalidate(MachineFunction &MF, const PreservedAnalyses &PA,
                            MachineFunctionAnalysisManager::Invalidator &Inv);
 
@@ -85,6 +87,12 @@ public:
     if (Impl)
       Impl->releaseMemory();
   }
+
+  void verifyAnalysis() const override {
+    if (Impl)
+      Impl->verifyAnalysis();
+  }
+
   void getAnalysisUsage(AnalysisUsage &) const override;
 
   MachineFunctionProperties getSetProperties() const override {
