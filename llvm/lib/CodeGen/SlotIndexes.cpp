@@ -111,8 +111,8 @@ void SlotIndexes::analyze(MachineFunction &fn) {
     indexList.push_back(*createEntry(nullptr, index += SlotIndex::InstrDist));
 
     MBBRanges[MBB.getAnalysisNumber()].first = blockStartIndex;
-    MBBRanges[MBB.getAnalysisNumber()].second = SlotIndex(&indexList.back(),
-                                                   SlotIndex::Slot_Block);
+    MBBRanges[MBB.getAnalysisNumber()].second =
+        SlotIndex(&indexList.back(), SlotIndex::Slot_Block);
     idx2MBBMap.push_back(IdxMBBPair(blockStartIndex, &MBB));
   }
 
