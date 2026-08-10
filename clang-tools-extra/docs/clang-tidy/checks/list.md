@@ -30,7 +30,6 @@ openmp/*
 performance/*
 portability/*
 readability/*
-zircon/*
 ```
 
 | Name | Offers fixes |
@@ -441,7 +440,6 @@ zircon/*
 | {doc}`readability-use-anyofallof <readability/use-anyofallof>` |  |
 | {doc}`readability-use-concise-preprocessor-directives <readability/use-concise-preprocessor-directives>` | Yes |
 | {doc}`readability-use-std-min-max <readability/use-std-min-max>` | Yes |
-| {doc}`zircon-temporary-objects <zircon/temporary-objects>` |  |
 
 ## Check aliases
 
