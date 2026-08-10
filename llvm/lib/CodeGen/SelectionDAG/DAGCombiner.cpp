@@ -27739,24 +27739,26 @@ SDValue DAGCombiner::visitVECTOR_INTERLEAVE(SDNode *N) {
 
   // Fold an interleave of fixed-length BUILD_VECTORs by rearranging their
   // scalar operands directly.
-  EVT EltVT = Op0.getOperand(0).getValueType();
-  if (llvm::all_of(N->op_values(), [&](SDValue Op) {
-        return Op.getOpcode() == ISD::BUILD_VECTOR &&
-               Op.getOperand(0).getValueType() == EltVT;
-      })) {
-    unsigned Factor = N->getNumOperands();
-    unsigned NumElts = VT.getVectorNumElements();
-    SDLoc DL(N);
-    SmallVector<SDValue, 4> Results;
-    SmallVector<SDValue, 16> InterleavedElts;
-    for (unsigned I = 0; I != NumElts; ++I) {
-      for (SDValue op : N->op_values())
-        InterleavedElts.push_back(op.getOperand(I));
+  if (Op0.getOpcode() == ISD::BUILD_VECTOR) {
+    EVT EltVT = Op0.getOperand(0).getValueType();
+    if (llvm::all_of(N->op_values(), [&](SDValue Op) {
+          return Op.getOpcode() == ISD::BUILD_VECTOR &&
+                 Op.getOperand(0).getValueType() == EltVT;
+        })) {
+      unsigned Factor = N->getNumOperands();
+      unsigned NumElts = VT.getVectorNumElements();
+      SDLoc DL(N);
+      SmallVector<SDValue, 4> Results;
+      SmallVector<SDValue, 16> InterleavedElts;
+      for (unsigned I = 0; I != NumElts; ++I) {
+        for (SDValue op : N->op_values())
+          InterleavedElts.push_back(op.getOperand(I));
+      }
+      for (unsigned I = 0; I < Factor; I++)
+        Results.push_back(DAG.getBuildVector(
+            VT, DL, ArrayRef(InterleavedElts).slice(I * NumElts, NumElts)));
+      return CombineTo(N, &Results);
     }
-    for (unsigned I = 0; I < Factor; I++)
-      Results.push_back(DAG.getBuildVector(
-          VT, DL, ArrayRef(InterleavedElts).slice(I * NumElts, NumElts)));
-    return CombineTo(N, &Results);
   }
 
   // Check to see if all operands are identical.
