@@ -123,7 +123,7 @@ public:
   // NOLINTNEXTLINE(readability-identifier-naming)
   void push_back(const T &Elem) {
     if (Last == Cap)
-      reserve(std::max<size_t>(1, size() * 2));
+      reserve(N == 0 && size() == 0 ? 1 : size() * 2);
     *Last++ = Elem;
   }
 
