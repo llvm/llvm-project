@@ -2741,7 +2741,7 @@ libc_support_library(
         ],
         "@platforms//os:macos": [
             "src/__support/OSUtil/darwin/syscall.h",
-            "src/__support/OSUtil/darwin/arm/syscall.h",
+            "src/__support/OSUtil/darwin/aarch64/syscall.h",
         ],
         "@platforms//os:windows": [],
     }),
@@ -3748,6 +3748,7 @@ cc_library(
         ":__support_libc_errno",
         ":__support_macros_attributes",
         ":__support_macros_config",
+        ":__support_macros_hardening",
         ":__support_macros_optimization",
         ":__support_macros_properties_architectures",
         ":__support_macros_properties_compiler",
