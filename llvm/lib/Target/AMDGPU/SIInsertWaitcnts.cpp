@@ -3707,11 +3707,11 @@ bool SIInsertWaitcnts::run() {
 
   if (MFI->isEntryFunction() && ST.hasRequiresInitialUnclausedVmem()) {
     // Hardware entrypoints must begin with a specific sequence:
-    //   GLOBAL_PREFETCH_B8 V0, S[0:1] SCOPE:SCOPE_SE
+    //   GLOBAL_PREFETCH_B8 V0, NULL SCOPE:SCOPE_SE
     //   V_NOP
     MachineBasicBlock::iterator I = EntryBB.begin();
     BuildMI(EntryBB, I, DebugLoc(), TII.get(AMDGPU::GLOBAL_PREFETCH_B8_SADDR))
-        .addReg(AMDGPU::SGPR0_SGPR1, RegState::Undef)
+        .addReg(AMDGPU::SGPR_NULL64)
         .addReg(AMDGPU::VGPR0, RegState::Undef)
         .addImm(0)
         .addImm(AMDGPU::CPol::SCOPE_SE | AMDGPU::CPol::TH_RT);
