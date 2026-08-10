@@ -7658,6 +7658,9 @@ bool DAGTypeLegalizer::WidenVectorOperand(SDNode *N, unsigned OpNo) {
     Res = WidenVecOp_FAKE_USE(N);
     break;
   case ISD::CONCAT_VECTORS:     Res = WidenVecOp_CONCAT_VECTORS(N); break;
+  case ISD::VECTOR_BROADCAST:
+    Res = WidenVecOp_VECTOR_BROADCAST(N);
+    break;
   case ISD::INSERT_SUBVECTOR:   Res = WidenVecOp_INSERT_SUBVECTOR(N); break;
   case ISD::EXTRACT_SUBVECTOR:  Res = WidenVecOp_EXTRACT_SUBVECTOR(N); break;
   case ISD::EXTRACT_VECTOR_ELT: Res = WidenVecOp_EXTRACT_VECTOR_ELT(N); break;
@@ -8096,6 +8099,28 @@ SDValue DAGTypeLegalizer::WidenVecOp_CONCAT_VECTORS(SDNode *N) {
       Ops[Idx++] = DAG.getExtractVectorElt(dl, EltVT, InOp, j);
   }
   return DAG.getBuildVector(VT, dl, Ops);
+}
+
+SDValue DAGTypeLegalizer::WidenVecOp_VECTOR_BROADCAST(SDNode *N) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  SDValue Src = N->getOperand(0);
+  EVT SrcVT = Src.getValueType();
+  EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), SrcVT);
+  assert(WidenVT.getVectorElementCount().isKnownMultipleOf(
+             SrcVT.getVectorElementCount()) &&
+         "Cannot widen VECTOR_BROADCAST operand to an ElementCount that's not "
+         "a multiple of the input ElementCount.");
+  unsigned NumConcat =
+      WidenVT.getVectorMinNumElements() / SrcVT.getVectorMinNumElements();
+
+  // Repeat the original source because the extra lanes of its widened value
+  // are unspecified.
+  SmallVector<SDValue, 8> Ops(NumConcat, Src);
+  SDValue WidenedSrc = DAG.getNode(ISD::CONCAT_VECTORS, DL, WidenVT, Ops);
+  if (VT == WidenVT)
+    return WidenedSrc;
+  return DAG.getNode(ISD::VECTOR_BROADCAST, DL, VT, WidenedSrc);
 }
 
 SDValue DAGTypeLegalizer::WidenVecOp_INSERT_SUBVECTOR(SDNode *N) {

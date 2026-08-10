@@ -138,6 +138,8 @@ define <vscale x 2 x i64> @broadcast_quad_i64(<2 x i64> %a) {
   ret <vscale x 2 x i64> %out
 }
 
+; FP / BFP types
+
 define <vscale x 8 x half> @broadcast_quad_f16(<8 x half> %a) {
 ; CHECK-LABEL: broadcast_quad_f16:
 ; CHECK:       // %bb.0:
@@ -165,6 +167,30 @@ define <vscale x 4 x half> @broadcast_double_f16_to_double_sve(<4 x half> %a) {
 ; CHECK-NEXT:    mov z0.d, d0
 ; CHECK-NEXT:    ret
   %out = call <vscale x 4 x half> @llvm.vector.broadcast.nxv4f16(<4 x half> %a)
+  ret <vscale x 4 x half> %out
+}
+
+define <vscale x 8 x half> @broadcast_2f16_to_nxv8f16(<4 x half> %a) {
+; CHECK-LABEL: broadcast_2f16_to_nxv8f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    dup v0.2s, v0.s[0]
+; CHECK-NEXT:    mov z0.d, d0
+; CHECK-NEXT:    ret
+  %a.legal = call <2 x half> @llvm.vector.extract.v2f16.v4f16(<4 x half> %a, i64 0)
+  %out = call <vscale x 8 x half> @llvm.vector.broadcast.nxv8f16(<2 x half> %a.legal)
+  ret <vscale x 8 x half> %out
+}
+
+define <vscale x 4 x half> @broadcast_2f16_to_nxv4f16(<4 x half> %a) {
+; CHECK-LABEL: broadcast_2f16_to_nxv4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    dup v0.2s, v0.s[0]
+; CHECK-NEXT:    mov z0.d, d0
+; CHECK-NEXT:    ret
+  %a.legal = call <2 x half> @llvm.vector.extract.v2f16.v4f16(<4 x half> %a, i64 0)
+  %out = call <vscale x 4 x half> @llvm.vector.broadcast.nxv4f16(<2 x half> %a.legal)
   ret <vscale x 4 x half> %out
 }
 
