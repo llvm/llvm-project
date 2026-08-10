@@ -56,6 +56,10 @@ infrastructure are described first, followed by tool-specific sections.
 
 ### Potentially Breaking Changes
 
+- In 22nd release, The `clang-tidy/ClangTidyModuleRegistry.h` header was deprecated.
+  All of the symbols it used to define were moved into `clang-tidy/ClangTidyModule.h`.
+  The deprecated header has been removed in this release.
+
 ### Improvements to clangd
 
 #### Inlay hints
@@ -102,6 +106,10 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### Changes in existing checks
 
+- Fixed a crash in {doc}`bugprone-std-namespace-modification
+  <clang-tidy/checks/bugprone/std-namespace-modification>` when checking
+  lambda closure types used as template arguments.
+
 - Improved {doc}`cppcoreguidelines-pro-type-member-init
   <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` check by treating
   `std::array` the same as built-in arrays when `IgnoreArrays` option is enabled.
@@ -141,4 +149,3 @@ infrastructure are described first, followed by tool-specific sections.
 ### Improvements to pp-trace
 
 ### Clang-tidy Visual Studio plugin
-

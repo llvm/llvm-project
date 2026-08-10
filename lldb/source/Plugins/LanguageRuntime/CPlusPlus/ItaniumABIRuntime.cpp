@@ -22,6 +22,10 @@ static const char *vtable_demangled_prefix = "vtable for ";
 ItaniumABIRuntime::ItaniumABIRuntime(Process *process)
     : CommonABIRuntime(process) {}
 
+llvm::StringRef ItaniumABIRuntime::GetName() const {
+  return "Itanium ABI runtime";
+}
+
 bool ItaniumABIRuntime::IsVTableSymbol(Mangled &mangled) const {
   return mangled.GetDemangledName().GetStringRef().starts_with(
       vtable_demangled_prefix);
@@ -83,8 +87,7 @@ ItaniumABIRuntime::GetTypeInfo(ValueObject &in_value,
 bool ItaniumABIRuntime::GetDynamicTypeAndAddress(
     ValueObject &in_value, lldb::DynamicValueType use_dynamic,
     const LanguageRuntime::VTableInfo &vtable_info,
-    TypeAndOrName &class_type_or_name, Address &dynamic_address,
-    Value::ValueType &value_type) {
+    TypeAndOrName &class_type_or_name, Address &dynamic_address) {
   // For Itanium, if the type has a vtable pointer in the object, it will be at
   // offset 0 in the object.  That will point to the "address point" within the
   // vtable (not the beginning of the vtable.)  We can then look up the symbol
@@ -255,20 +258,4 @@ ItaniumABIRuntime::GetExceptionObjectForThread(ThreadSP thread_sp) {
     return dyn_exception;
 
   return exception;
-}
-
-TypeAndOrName ItaniumABIRuntime::GetDynamicTypeInfo(
-    const lldb_private::Address &vtable_addr) {
-  std::lock_guard<std::mutex> locker(m_mutex);
-  DynamicTypeCache::const_iterator pos = m_dynamic_type_map.find(vtable_addr);
-  if (pos == m_dynamic_type_map.end())
-    return TypeAndOrName();
-  else
-    return pos->second;
-}
-
-void ItaniumABIRuntime::SetDynamicTypeInfo(
-    const lldb_private::Address &vtable_addr, const TypeAndOrName &type_info) {
-  std::lock_guard<std::mutex> locker(m_mutex);
-  m_dynamic_type_map[vtable_addr] = type_info;
 }
