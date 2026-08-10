@@ -280,6 +280,7 @@ DeletionKind memref::StoreOp::rewire(const DestructurableMemorySlot &slot,
 //===----------------------------------------------------------------------===//
 //  Interfaces for AllocaScopeOp
 //===----------------------------------------------------------------------===//
+
 bool memref::AllocaScopeOp::isRegionPromotable(const MemorySlot &slot,
                                                Region *region,
                                                bool hasValueStores) {
