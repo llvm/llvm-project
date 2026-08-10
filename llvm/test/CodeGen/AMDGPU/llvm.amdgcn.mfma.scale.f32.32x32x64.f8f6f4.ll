@@ -10365,6 +10365,6 @@ declare <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v6i32.v8i32(<6 
 declare <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v8i32.v4i32(<8 x i32>, <4 x i32>, <16 x float>, i32 immarg, i32 immarg, i32 immarg, i32, i32 immarg, i32) #2
 declare <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v8i32.v6i32(<8 x i32>, <6 x i32>, <16 x float>, i32 immarg, i32 immarg, i32 immarg, i32, i32 immarg, i32) #2
 
-attributes #0 = { "amdgpu-flat-work-group-size"="512,512" "amdgpu-agpr-alloc"="0,0" nounwind }
+attributes #0 = { "amdgpu-flat-work-group-size"="512,512" "amdgpu-agpr-alloc"="0,0" "amdgpu-register-budget"="256,256" nounwind }
 attributes #1 = { "amdgpu-flat-work-group-size"="128,128" nounwind }
 attributes #2 = { convergent nocallback nofree nosync nounwind willreturn memory(none) }

@@ -639,4 +639,4 @@ epilogue:
   ret void
 }
 
-attributes #0 = { "amdgpu-agpr-alloc"="0,0" "amdgpu-flat-work-group-size"="64,64" "amdgpu-waves-per-eu"="1,1" }
+attributes #0 = { "amdgpu-agpr-alloc"="0,0" "amdgpu-register-budget"="256,256" "amdgpu-flat-work-group-size"="64,64" "amdgpu-waves-per-eu"="1,1" }

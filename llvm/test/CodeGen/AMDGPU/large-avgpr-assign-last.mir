@@ -7,7 +7,7 @@
     unreachable
   }
 
-  attributes #0 = { "amdgpu-agpr-alloc"="0,0" }
+  attributes #0 = { "amdgpu-agpr-alloc"="0,0" "amdgpu-register-budget"="256,256" }
 ...
 
 

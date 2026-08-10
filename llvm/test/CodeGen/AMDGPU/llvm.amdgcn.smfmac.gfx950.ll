@@ -5715,5 +5715,5 @@ define <16 x float> @test_smfmac_f32_32x32x64_fp8_fp8__sgpr(<4 x i32> inreg %arg
   ret <16 x float> %result
 }
 
-attributes #0 = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-agpr-alloc"="0,0" nounwind }
+attributes #0 = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-agpr-alloc"="0,0" "amdgpu-register-budget"="256,256" nounwind }
 attributes #1 = { nounwind }
