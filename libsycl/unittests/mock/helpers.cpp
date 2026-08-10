@@ -317,8 +317,7 @@ void mock::MockLiboffload::initDefault() {
           return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
         if (Count > 0 && (Mems == nullptr || Sizes == nullptr))
           return makeEmptyStrError(OL_ERRC_INVALID_NULL_POINTER);
-        if ((Flags & ~(OL_MEM_MIGRATION_FLAG_HOST_TO_DEVICE |
-                       OL_MEM_MIGRATION_FLAG_DEVICE_TO_HOST)) != 0)
+        if (Flags != OL_MEM_MIGRATION_FLAG_HOST_TO_DEVICE)
           return makeEmptyStrError(OL_ERRC_INVALID_ENUMERATION);
         return OL_SUCCESS;
       });
