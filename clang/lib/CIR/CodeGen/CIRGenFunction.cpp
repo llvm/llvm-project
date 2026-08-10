@@ -370,7 +370,8 @@ void CIRGenFunction::LexicalScope::emitImplicitReturn() {
   LexicalScope *localScope = cgf.curLexScope;
 
   // Synthesized functions (e.g. SYCL kernel caller entry points) have no
-  // FunctionDecl; the non-void flow-off-the-end handling below is guarded on fd.
+  // FunctionDecl; the non-void flow-off-the-end handling below is guarded on
+  // fd.
   const auto *fd = dyn_cast_or_null<clang::FunctionDecl>(cgf.curGD.getDecl());
 
   // In C++, flowing off the end of a non-void function is always undefined

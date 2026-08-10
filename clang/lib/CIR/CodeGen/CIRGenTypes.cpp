@@ -784,8 +784,9 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
   return *fi;
 }
 
-const CIRGenFunctionInfo &CIRGenTypes::arrangeDeviceKernelCallerDeclaration(
-    QualType resultType, const FunctionArgList &args) {
+const CIRGenFunctionInfo &
+CIRGenTypes::arrangeDeviceKernelCallerDeclaration(QualType resultType,
+                                                  const FunctionArgList &args) {
   SmallVector<CanQualType, 16> argTypes;
   for (const VarDecl *arg : args)
     argTypes.push_back(astContext.getCanonicalParamType(arg->getType()));

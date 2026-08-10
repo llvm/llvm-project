@@ -16,8 +16,10 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
-#include "clang/AST/StmtSYCL.h"
 #include "clang/AST/SYCLKernelInfo.h"
+#include "clang/AST/StmtSYCL.h"
+
+#include "llvm/Support/SaveAndRestore.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -105,32 +107,31 @@ void CIRGenModule::emitSYCLKernelCaller(const FunctionDecl *kernelEntryPointFn,
       ctx.getCanonicalType(kernelEntryPointAttr->getKernelName());
   const SYCLKernelInfo &kernelInfo = ctx.getSYCLKernelInfo(kernelNameType);
 
-  // Synthesized from the OutlinedFunctionDecl, not a FunctionDecl, so create it
-  // with an empty GlobalDecl.
-  cir::FuncOp funcOp = getOrCreateCIRFunction(
-      kernelInfo.GetKernelName(), funcType, GlobalDecl(), /*forVTable=*/false,
-      /*dontDefer=*/true, /*isThunk=*/false, ForDefinition);
+  // Synthesized from the OutlinedFunctionDecl, not a FunctionDecl, so create
+  // the function directly with a null FunctionDecl (mirrors classic CodeGen's
+  // llvm::Function::Create).
+  cir::FuncOp funcOp = createCIRFunction(
+      getLoc(kernelEntryPointFn->getSourceRange()), kernelInfo.GetKernelName(),
+      funcType, /*funcDecl=*/nullptr);
   funcOp.setLinkage(cir::GlobalLinkageKind::ExternalLinkage);
 
   // Emit as a device kernel (e.g. spir_kernel). Classic CodeGen derives this
   // from CC_DeviceKernel via SetLLVMFunctionAttributes; CIR does not yet route
   // opFuncCallingConv onto the FuncOp, so set it from the target hook.
   funcOp.setCallingConv(getTargetCIRGenInfo().getDeviceKernelCallingConv());
+  setDSOLocal(static_cast<mlir::Operation *>(funcOp));
 
   // TODO: attributes applied by classic CodeGen not yet handled in CIR:
-  // SetSYCLKernelAttributes (norecurse, mustprogress), addSYCLModuleIdAttr,
-  // setDSOLocal.
+  // SetSYCLKernelAttributes (norecurse, mustprogress), addSYCLModuleIdAttr.
   assert(!cir::MissingFeatures::setLLVMFunctionFEnvAttributes());
-  assert(!cir::MissingFeatures::setDSOLocal());
 
   // Emit the SYCL kernel caller function.
   CIRGenFunction cgf(*this, builder);
-  curCGF = &cgf;
+  llvm::SaveAndRestore<CIRGenFunction *> savedCGF(curCGF, &cgf);
   {
     mlir::OpBuilder::InsertionGuard guard(builder);
     cgf.emitSYCLKernelCaller(outlinedFnDecl, funcOp, funcType, args);
   }
-  curCGF = nullptr;
 
   setNonAliasAttributes(GlobalDecl(), funcOp);
   // CIR's setter takes a FunctionDecl; nullptr skips OutlinedFunctionDecl-
