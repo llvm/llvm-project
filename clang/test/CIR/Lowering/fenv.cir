@@ -124,6 +124,10 @@ module {
     %0 = cir.fma %a, %b, %c : !cir.double {fenv = #cir.fenv<strict_except = true>}
     // CHECK: llvm.intr.fma(%{{.*}}, %{{.*}}, %{{.*}}) : (f64, f64, f64) -> f64
     %1 = cir.fma %a, %b, %c : !cir.double
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fmuladd"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (f64, f64, f64, !llvm.metadata, !llvm.metadata) -> f64
+    %2 = cir.fmuladd %a, %b, %c : !cir.double {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: llvm.intr.fmuladd(%{{.*}}, %{{.*}}, %{{.*}}) : (f64, f64, f64) -> f64
+    %3 = cir.fmuladd %a, %b, %c : !cir.double
     cir.return
   }
 
