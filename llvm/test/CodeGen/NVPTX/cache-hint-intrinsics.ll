@@ -675,22 +675,12 @@ define void @test_memcpy_128bytes_combined(ptr addrspace(1) %dest, ptr addrspace
 !214 = !{!"nvvm.l1_eviction", !"first", !"nvvm.l2_eviction", !"last", !"nvvm.l2_prefetch_size", !"256B"}
 !215 = !{!"nvvm.l1_eviction", !"last", !"nvvm.l2_eviction", !"first"}
 
-; Masked load metadata (pointer operand 0)
-!101 = !{i32 0, !216}
-!216 = !{!"nvvm.l1_eviction", !"first"}
+; Masked load metadata
+!101 = !{i32 0, !182}
+!102 = !{i32 0, !184}
+!103 = !{i32 0, !199}
+!105 = !{i32 0, !200}
 
-!102 = !{i32 0, !217}
-!217 = !{!"nvvm.l2_cache_hint", i64 12345}
-
-!103 = !{i32 0, !218}
-!218 = !{!"nvvm.l1_eviction", !"last"}
-
-; Masked store metadata (pointer operand 1)
-!104 = !{i32 1, !219}
-!219 = !{!"nvvm.l2_eviction", !"last"}
-
-!105 = !{i32 0, !220}
-!220 = !{!"nvvm.l2_prefetch_size", !"256B"}
-
-!106 = !{i32 1, !221}
-!221 = !{!"nvvm.l2_cache_hint", i64 12345}
+; Masked store metadata
+!104 = !{i32 1, !191}
+!106 = !{i32 1, !184}
