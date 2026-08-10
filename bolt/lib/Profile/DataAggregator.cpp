@@ -956,6 +956,11 @@ Error DataAggregator::readProfile(BinaryContext &BC) {
   if (Error E = DataReader::readProfile(BC))
     return E;
 
+  for (auto &BFI : BC.getBinaryFunctions()) {
+    BinaryFunction &BF = BFI.second;
+    readSampleData(BF);
+  }
+
   if (opts::AggregateOnly) {
     if (opts::ProfileFormat == opts::ProfileFormatKind::PF_Fdata)
       if (std::error_code EC = writeFdataFile(opts::OutputFilename))
@@ -1014,6 +1019,9 @@ void DataAggregator::processProfile(BinaryContext &BC) {
 
   for (auto &FuncBasicSamples : NamesToBasicSamples)
     llvm::stable_sort(FuncBasicSamples.second.Data);
+
+  for (auto &FuncSamples : NamesToSamples)
+    llvm::stable_sort(FuncSamples.second.Data);
 
   for (auto &MemEvents : NamesToMemEvents)
     llvm::stable_sort(MemEvents.second.Data);
