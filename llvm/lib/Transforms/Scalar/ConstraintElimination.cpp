@@ -187,7 +187,9 @@ struct State {
   TargetLibraryInfo &TLI;
   const DataLayout &DL;
   LLVMContext &Ctx;
-  SmallVector<Instruction *, 4> ExtraCmps;
+  /// Temporary instructions created to express facts about values in the
+  /// function.
+  SmallVector<Instruction *, 4> ExtraInsts;
 
   SmallVector<FactOrCheck, 64> WorkList;
   /// Map containing a value representing a maximum value which is known to not
@@ -208,8 +210,10 @@ struct State {
       : DT(DT), LI(LI), SE(SE), TLI(TLI), DL(DL), Ctx(Ctx) {}
 
   ~State() {
-    for (Instruction *I : reverse(ExtraCmps))
-      I->deleteValue();
+    for (Instruction *I : reverse(ExtraInsts)) {
+      SE.forgetValue(I);
+      I->eraseFromParent();
+    }
   }
 
   /// Try to add facts for loop inductions (AddRecs) in EQ/NE compares
@@ -231,29 +235,36 @@ struct State {
   /// Process block \p BB and add known facts to work-list.
   void addInfoFor(BasicBlock &BB);
   void addPointerBoundInfo(GEPOperator *GEP, DomTreeNode *DTN);
-  void addPointerBoundInfo(Value *PtrOp, Value *IdxOp, DomTreeNode *DTN,
-                           Constant *Scale);
+  void addPointerBoundInfo(Value *PtrOp, Value *IdxOp, DomTreeNode *DTN);
   /// Try to add a known-safe upper bound from \p Op if \p Op is a condition
   /// checking whether a GEP overflows. \p Op must be true in \p DTN.
   void addPointerBoundInfoFromOverflowCheck(Value *Op, DomTreeNode *DTN);
 
-  Value *zeroExtendIfNeeded(Value *Op, Type *ToTy) {
-    if (Op->getType()->getScalarSizeInBits() < ToTy->getScalarSizeInBits()) {
-      Value *Inner;
-      if (match(Op, m_ZExt(m_Value(Inner))))
-        Op = Inner;
-      Op = new ZExtInst(Op, ToTy);
-      ExtraCmps.push_back(cast<Instruction>(Op));
-    }
-    return Op;
+  /// Track \p V for removal when the pass finishes, if it is an instruction
+  /// created to express a fact. \returns \p V.
+  Value *trackExtraInst(Value *V) {
+    // Nothing to clean up if the expression folded to a constant.
+    if (auto *I = dyn_cast<Instruction>(V))
+      ExtraInsts.push_back(I);
+    return V;
   }
 
-  /// \returns a expression to compute the integer offset for a GEP with
+  /// \returns \p Op zero-extended to \p ToTy using \p Builder, if needed.
+  Value *zeroExtendIfNeeded(IRBuilderBase &Builder, Value *Op, Type *ToTy) {
+    if (Op->getType()->getScalarSizeInBits() >= ToTy->getScalarSizeInBits())
+      return Op;
+    Value *Inner;
+    if (match(Op, m_ZExt(m_Value(Inner))))
+      Op = Inner;
+    return trackExtraInst(Builder.CreateZExt(Op, ToTy));
+  }
+
+  /// \returns an expression to compute the integer offset for \p GEP with
   /// constant offset \p ConstantOffset and \p VariableOffsets for inbounds
   /// precondition checking.
-  Value *
-  createIndexExpression(APInt ConstantOffset,
-                        const SmallMapVector<Value *, APInt, 4> &VariableOffsets);
+  Value *createIndexExpression(
+      GEPOperator &GEP, APInt ConstantOffset,
+      const SmallMapVector<Value *, APInt, 4> &VariableOffsets);
 };
 
 class ConstraintInfo;
@@ -534,7 +545,7 @@ decomposeGEP(GEPOperator &GEP, SmallVectorImpl<ConditionTy> &Preconditions,
     auto Iter = State.PtrKnownSafeBound.find(BasePtr);
     if (Iter != State.PtrKnownSafeBound.end()) {
       Value *IndexExpr =
-          State.createIndexExpression(ConstantOffset, VariableOffsets);
+          State.createIndexExpression(GEP, ConstantOffset, VariableOffsets);
       if (!IndexExpr)
         return &GEP;
       Preconditions.emplace_back(CmpInst::ICMP_ULE, IndexExpr, Iter->second);
@@ -1073,9 +1084,9 @@ static void dumpConstraint(ArrayRef<int64_t> C,
 }
 #endif
 
-Value *
-State::createIndexExpression(APInt ConstantOffset,
-                             const SmallMapVector<Value *, APInt, 4> &VariableOffsets) {
+Value *State::createIndexExpression(
+    GEPOperator &GEP, APInt ConstantOffset,
+    const SmallMapVector<Value *, APInt, 4> &VariableOffsets) {
   unsigned BitWidth = ConstantOffset.getBitWidth();
 
   Type *IntTy = Type::getIntNTy(Ctx, BitWidth);
@@ -1085,26 +1096,22 @@ State::createIndexExpression(APInt ConstantOffset,
     return nullptr;
   if (VariableOffsets.size() == 0)
     return ConstOffsetValue;
-  if (VariableOffsets.begin()->first->getType()->getScalarSizeInBits() >
-      BitWidth)
+  const auto &[Index, Scale] = *VariableOffsets.begin();
+  if (Index->getType()->getScalarSizeInBits() > BitWidth)
     return nullptr;
 
-  // Compute offset as VariableOffset * Scale + ConstantOffset.
-  Value *IdxOp = zeroExtendIfNeeded(VariableOffsets.begin()->first, IntTy);
-
-  Value *Scale =
-      ConstantInt::get(IntTy, VariableOffsets.begin()->second.getSExtValue());
-  Value *UpperBound = BinaryOperator::CreateNUW(Instruction::Mul, IdxOp, Scale);
-  cast<BinaryOperator>(UpperBound)->setHasNoSignedWrap();
-  ExtraCmps.push_back(cast<Instruction>(UpperBound));
-  if (!ConstantOffset.isZero()) {
-    UpperBound = BinaryOperator::CreateNUW(Instruction::Add, UpperBound,
-                                           ConstOffsetValue);
-    cast<BinaryOperator>(UpperBound)->setHasNoSignedWrap();
-    if (auto *I = dyn_cast<Instruction>(UpperBound))
-      ExtraCmps.push_back(I);
-  }
-  return UpperBound;
+  // Compute offset as VariableOffset * Scale + ConstantOffset, in front of GEP,
+  // where its operands are available.
+  auto *GEPI = dyn_cast<Instruction>(&GEP);
+  IRBuilder<> Builder(GEPI ? GEPI : &*DT.getRoot()->getFirstInsertionPt());
+  Value *IdxOp = zeroExtendIfNeeded(Builder, Index, IntTy);
+  Value *ScaleV = ConstantInt::get(IntTy, Scale.getSExtValue());
+  Value *Offset = trackExtraInst(
+      Builder.CreateMul(IdxOp, ScaleV, "", /*HasNUW=*/true, /*HasNSW=*/true));
+  if (ConstantOffset.isZero())
+    return Offset;
+  return trackExtraInst(Builder.CreateAdd(Offset, ConstOffsetValue, "",
+                                          /*HasNUW=*/true, /*HasNSW=*/true));
 }
 
 void State::addPointerBoundInfo(GEPOperator *GEP, DomTreeNode *DTN) {
@@ -1112,39 +1119,32 @@ void State::addPointerBoundInfo(GEPOperator *GEP, DomTreeNode *DTN) {
       collectOffsets(*GEP, DL);
   if (!BasePtr)
     return;
-  Value *UpperBound = createIndexExpression(ConstantOffset, VariableOffsets);
+  Value *UpperBound =
+      createIndexExpression(*GEP, ConstantOffset, VariableOffsets);
   if (UpperBound)
-    addPointerBoundInfo(BasePtr, UpperBound, DTN, nullptr);
+    addPointerBoundInfo(BasePtr, UpperBound, DTN);
 }
 
-void State::addPointerBoundInfo(Value *PtrOp, Value *IdxOp, DomTreeNode *DTN,
-                                Constant *Scale) {
+void State::addPointerBoundInfo(Value *PtrOp, Value *IdxOp, DomTreeNode *DTN) {
   ConditionTy HoldsIf;
   if (!isKnownNonNegative(IdxOp, DL, 2)) {
     HoldsIf = ConditionTy(CmpInst::ICMP_SGE, IdxOp,
                           ConstantInt::get(IdxOp->getType(), 0));
   }
-  if (Scale) {
-    auto *Mul = BinaryOperator::CreateNUW(Instruction::Mul, IdxOp, Scale);
-    ExtraCmps.push_back(Mul);
-    IdxOp = Mul;
-  }
 
   // We know that IdxOp does not cause an overflow. Now try to add a fact
   // for UB >= IdxOp.
-  auto I = PtrKnownSafeBound.insert({PtrOp, nullptr});
-  if (I.second) {
-    // Create a dummy instruction we can use to compare the bounds
-    // against.
-    I.first->second =
-        new LoadInst(IdxOp->getType(),
-                     UndefValue::get(PointerType::get(IdxOp->getContext(), 0)),
-                     "ub", false, Align(1));
-    ExtraCmps.push_back(cast<Instruction>(I.first->second));
+  auto I = PtrKnownSafeBound.find(PtrOp);
+  if (I == PtrKnownSafeBound.end()) {
+    // Create a placeholder for the bound in the entry block.
+    IRBuilder<> Builder(&*DT.getRoot()->getFirstInsertionPt());
+    Value *Bound = trackExtraInst(
+        Builder.CreateFreeze(PoisonValue::get(IdxOp->getType())));
+    I = PtrKnownSafeBound.insert({PtrOp, Bound}).first;
   }
-  if (I.first->second->getType() == IdxOp->getType()) {
+  if (I->second->getType() == IdxOp->getType()) {
     WorkList.push_back(FactOrCheck::getConditionFact(
-        DTN, CmpInst::ICMP_UGE, I.first->second, IdxOp, HoldsIf));
+        DTN, CmpInst::ICMP_UGE, I->second, IdxOp, HoldsIf));
   }
 }
 
@@ -1689,20 +1689,18 @@ void State::addInfoFor(BasicBlock &BB) {
           (!isa<SCEVCouldNotCompute>(BTC) && !isa<SCEVConstant>(BTC)))) {
         auto *IVAtEnd = IV->evaluateAtIteration(BTC, SE);
 
-        bool NeedZExt = false;
-        Value *V;
-        std::tie(V, NeedZExt) = getValueOrConstant(IVAtEnd, L, SE);
+        Value *V = getValueOrConstant(IVAtEnd, L, SE).first;
         auto Monotonic = SE.getMonotonicPredicateType(IV, CmpInst::ICMP_UGE);
         bool CanBuildCmp =
             V && (!PN.getType()->isPointerTy() || V->getType() == PN.getType());
         if (CanBuildCmp && Monotonic &&
             Monotonic == ScalarEvolution::MonotonicallyIncreasing) {
-          if (NeedZExt) {
-            V = new ZExtInst(V, PN.getType());
-            ExtraCmps.push_back(cast<Instruction>(V));
-          }
+          // V is loop-invariant, hence available at the start of the header,
+          // which has an insertion point as BB ends in a branch.
+          IRBuilder<> Builder(&*BB.getFirstInsertionPt());
           WorkList.push_back(FactOrCheck::getConditionFact(
-              DT.getNode(&BB), CmpInst::ICMP_ULE, &PN, V));
+              DT.getNode(&BB), CmpInst::ICMP_ULE, &PN,
+              zeroExtendIfNeeded(Builder, V, PN.getType())));
         }
       }
 
