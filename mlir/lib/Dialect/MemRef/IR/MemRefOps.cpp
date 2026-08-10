@@ -3803,6 +3803,8 @@ static MemRefType inferTransposeResultType(MemRefType memRefType,
           StridedLayoutAttr::get(memRefType.getContext(), offset, strides));
 }
 
+Value TransposeOp::getViewSource() { return getIn(); }
+
 void TransposeOp::build(OpBuilder &b, OperationState &result, Value in,
                         AffineMapAttr permutation,
                         ArrayRef<NamedAttribute> attrs) {
