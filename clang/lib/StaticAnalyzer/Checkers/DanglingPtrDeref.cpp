@@ -71,7 +71,8 @@ void DanglingPtrDeref::reportUseAfterScope(const MemRegion *Region,
                                            CheckerContext &C) const {
   auto BR = std::make_unique<PathSensitiveBugReport>(
       BugMsg,
-      (llvm::Twine("Use of ") + lifetime_modeling::getRegionName(Region) +
+      (llvm::Twine("Use of ") +
+       Region->getDescriptiveName(/*UseQuotes=*/true, /*AllowFallback=*/true) +
        " after its lifetime ended."),
       N);
   BR->addVisitor<DanglingPtrDerefBRVisitor>(Region);
@@ -103,7 +104,8 @@ DanglingPtrDerefBRVisitor::VisitNode(const ExplodedNode *N,
       S, BRC.getSourceManager(), N->getStackFrame());
   return std::make_shared<PathDiagnosticEventPiece>(
       Pos,
-      (lifetime_modeling::getRegionName(SourceRegion) +
+      (SourceRegion->getDescriptiveName(/*UseQuotes=*/true,
+                                        /*AllowFallback=*/true) +
        llvm::Twine(" is destroyed here"))
           .str(),
       true);
