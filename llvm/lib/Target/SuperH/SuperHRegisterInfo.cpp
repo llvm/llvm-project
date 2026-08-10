@@ -19,6 +19,7 @@
 #include "SuperH.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;
@@ -38,10 +39,6 @@ const TargetRegisterClass *SuperHRegisterInfo::getPointerRegClass(unsigned Kind)
   return &SH::GPRRegClass;
 }
 
-const TargetRegisterClass *SuperHRegisterInfo::intRegClass(unsigned Size) const {
-  return &SH::GPRRegClass;
-}
-
 const MCPhysReg *SuperHRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   return CSR_SH_SaveList;
 }
@@ -50,15 +47,31 @@ const uint32_t *SuperHRegisterInfo::getCallPreservedMask(const MachineFunction &
   return CSR_SH_RegMask; 
 }
 
+const TargetRegisterClass *
+SuperHRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
+                                           const MachineFunction &MF) const {
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+
+  if (TRI->isTypeLegalForClass(*RC, MVT::i16)) {
+    return &SH::GPRRegClass;
+  }
+
+  if (TRI->isTypeLegalForClass(*RC, MVT::i8)) {
+    return &SH::GPRRegClass;
+  }
+
+  return TargetRegisterInfo::getLargestLegalSuperClass(RC, MF);
+}
+
 BitVector SuperHRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
 
-  // R0 and R1 are always reserved as return slots.
+  // R0 is always reserved as some instructions can only write to it.
   Reserved.set(SH::R0);
-  Reserved.set(SH::R1);
 
-  // Also reserve the stack frame.
+  // Also reserve the stack frame and stack pointer.
   Reserved.set(SH::R14);
+  Reserved.set(SH::R15);
   return Reserved;
 }
 
@@ -95,4 +108,12 @@ bool SuperHRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
 Register SuperHRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   return SH::R14;
+}
+
+Register SuperHRegisterInfo::getFrameRegister() const {
+  return SH::R14;
+}
+
+Register SuperHRegisterInfo::getStackRegister() const {
+  return SH::R15;
 }

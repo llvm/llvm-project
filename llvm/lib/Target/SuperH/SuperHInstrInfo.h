@@ -44,7 +44,8 @@ public:
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
 private:
-  bool expandDIV(unsigned Opcode, MachineInstr &MI) const;
+  // Custom expansions
+  bool expandRET(MachineInstr &MI) const;
 };
 
 const SuperHInstrInfo *createSuperHInstrInfo(const SuperHSubtarget &STI);

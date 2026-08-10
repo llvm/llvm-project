@@ -13,7 +13,9 @@
 
 #include "SuperHInstPrinter.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;
@@ -51,6 +53,13 @@ void SuperHInstPrinter::printOperand(const MCInst *MI, unsigned OpNo, raw_ostrea
 	// Print immediates
 	if (Op.isImm()) {
 		O << Op.getImm();
+		return;
+	}
+
+	// Print symbol references
+	if (Op.isBareSymbolRef()) {
+		const MCSymbolRefExpr *SymOp = dyn_cast<MCSymbolRefExpr>(Op.getExpr());
+		O << SymOp->getSymbol().getName();
 		return;
 	}
 }

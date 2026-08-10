@@ -151,13 +151,10 @@ let Namespace = "SH" in {
 // Register Classes
 //===----------------------------------------------------------------------===//
 
-def GPR : RegisterClass<"SH", [ i32 ], 32, (add
-  R0, R1, R2,  R3,  R4,  R5,  R6,  R7,  // Banked memory
-  R8, R9, R10, R11, R12, R13, R14, R15  // Non-banked memory.
-)>;
+def GPR : RegisterClass<"SH", [ i8, i16, i32 ], 32, (sequence "R%u", 0, 15)>;
 
 // 32-bit floating point registers.
-def FR32 : RegisterClass<"SH", [f32], 32, (add
+def FR32 : RegisterClass<"SH", [ f32 ], 32, (add
   // FR
   FR0,  FR1,  FR2,  FR3,  FR4,  FR5,  FR6,  FR7,
   FR8,  FR9, FR10, FR11, FR12, FR13, FR14, FR15,

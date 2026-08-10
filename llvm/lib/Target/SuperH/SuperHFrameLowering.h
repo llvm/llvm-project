@@ -43,7 +43,7 @@ public:
   void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
                             RegScavenger *RS) const override;
 protected:
-  bool hasFPImpl(const MachineFunction &MF) const override { return false; }
+  bool hasFPImpl(const MachineFunction &MF) const override;
 };
 
 } // end namespace llvm
