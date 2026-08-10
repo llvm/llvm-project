@@ -73,8 +73,10 @@ int main(int argc, char** argv) {
               benchmark::DoNotOptimize(result);
             }
           })
+          ->Arg(32)
           ->Arg(50) // non power-of-two
-          ->Range(64, 1 << 20);
+          ->Arg(1024)
+          ->Arg(8192);
     };
     bm.operator()<true>("std::swap_ranges(vector<bool>) (aligned)", std_swap_ranges);
     bm.operator()<false>("std::swap_ranges(vector<bool>) (unaligned)", std_swap_ranges);
