@@ -2,8 +2,8 @@
 // RUN: %clang_cc1 -fsycl-is-device -ast-print %s -o - | FileCheck %s
 
 struct sycl_kernel_launcher {
-  template<typename KernelName, typename... Ts>
-  void sycl_kernel_launch(const char *, Ts...) {}
+  template<typename KernelInfo, typename... Ts>
+  void sycl_kernel_launch(Ts...) {}
 
   template<typename KernelName, typename KernelType>
   [[clang::sycl_kernel_entry_point(KernelName)]]

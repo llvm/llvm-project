@@ -24,8 +24,8 @@ namespace ok1 {
   struct base_handler {
   protected:
     // expected-note@+2 {{must qualify identifier to find this declaration in dependent base class}}
-    template<typename KN, typename... Ts>
-    void sycl_kernel_launch(const char *, Ts...);
+    template<typename KI, typename... Ts>
+    void sycl_kernel_launch(Ts...);
   };
   template<int N>
   struct handler : protected base_handler<handler<N>> {
@@ -34,7 +34,7 @@ namespace ok1 {
     // lookups are allowed as a Microsoft compatible extension.
     // expected-warning@+4 {{use of member 'sycl_kernel_launch' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}}
     // expected-note@+2 {{this indicates a problem with the SYCL runtime header files; please consider reporting this to your SYCL runtime provider}}
-    // expected-note-re@+1 {{in implicit call to 'sycl_kernel_launch' with template argument 'KN<1>' and function arguments (lvalue of type 'const char[{{[0-9]*}}]', xvalue of type 'KT<1>') required here}}
+    // expected-note@+1 {{in implicit call to 'sycl_kernel_launch' with template argument '__sycl_kernel_info<KN<1>>' and function arguments (xvalue of type 'KT<1>') required here}}
     [[clang::sycl_kernel_entry_point(KN<1>)]]
     void skep(KT<1> k) {
       k();
@@ -65,8 +65,8 @@ namespace bad1 {
   private:
     // expected-note@+3 {{must qualify identifier to find this declaration in dependent base class}}
     // expected-note@+2 {{declared private here}}
-    template<typename KN, typename... Ts>
-    void sycl_kernel_launch(const char *, Ts...);
+    template<typename KI, typename... Ts>
+    void sycl_kernel_launch(Ts...);
   };
   template<int N>
   struct handler : protected base_handler<handler<N>> {
@@ -76,7 +76,7 @@ namespace bad1 {
     // this case an error.
     // expected-warning@+5 {{use of member 'sycl_kernel_launch' found via unqualified lookup into dependent bases of class templates is a Microsoft extension}}
     // expected-note@+3 {{this indicates a problem with the SYCL runtime header files; please consider reporting this to your SYCL runtime provider}}
-    // expected-note-re@+2 {{in implicit call to 'sycl_kernel_launch' with template argument 'BADKN<1>' and function arguments (lvalue of type 'const char[{{[0-9]*}}]', xvalue of type 'BADKT<1>') required here}}
+    // expected-note@+2 {{in implicit call to 'sycl_kernel_launch' with template argument '__sycl_kernel_info<BADKN<1>>' and function arguments (xvalue of type 'BADKT<1>') required here}}
     // expected-error@+2 {{'sycl_kernel_launch' is a private member of 'bad1::base_handler<bad1::handler<1>>'}}
     [[clang::sycl_kernel_entry_point(BADKN<1>)]]
     void skep(BADKT<1> k) {

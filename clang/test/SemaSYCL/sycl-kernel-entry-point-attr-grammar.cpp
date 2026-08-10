@@ -11,8 +11,8 @@ template<int> struct ST; // #ST-decl
 template<int N> using TTA = ST<N>; // #TTA-decl
 
 // A generic kernel launch function.
-template<typename KN, typename... Ts>
-void sycl_kernel_launch(const char *, Ts...) {}
+template<typename KI, typename... Ts>
+void sycl_kernel_launch(Ts...) {}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Valid declarations.
