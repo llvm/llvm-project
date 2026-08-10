@@ -3094,14 +3094,14 @@ namespace {
 bool isExprBuiltFromBaseOnly(Value *Expr, Value *Base) {
   if (!Expr || !Base) 
     return false;
-  
+
   if (Expr == Base)
     return true;
-  
+
   // Only handle Cast, BinOp, UnaryOp for now.
   if (!isa<CastInst, BinaryOperator, UnaryOperator>(Expr))
       return false;
-    
+
   auto *ExprInst = cast<Instruction>(Expr);
   bool isUsedAtLeastOnce = false;
   for (Value *Op : ExprInst->operands()) {
@@ -3111,7 +3111,7 @@ bool isExprBuiltFromBaseOnly(Value *Expr, Value *Base) {
       return false;
     isUsedAtLeastOnce = true;
   }
-  
+
   return isUsedAtLeastOnce;
 }
 
@@ -3123,17 +3123,17 @@ Value *cloneExprReplacingOperand(Value *Expr, const Value *OldVal,
                                  Value *NewVal, Instruction *InsertPt) {
   if (!Expr || !OldVal || !NewVal || !InsertPt)
      return nullptr;
-    
+
   if (isa<Constant>(Expr))
     return Expr;
-  
+
   if (Expr == OldVal)
     return NewVal;
-  
+
   // Only handle Cast, BinOp, UnaryOp for now.
   if (!isa<CastInst, BinaryOperator, UnaryOperator>(Expr))
     return nullptr;
-  
+
   auto *ExprInst = cast<Instruction>(Expr);
   SmallVector<Value *, 4> NewOps;
   for (Value *Op : ExprInst->operands()) {
@@ -3157,7 +3157,7 @@ bool GVNPass::propagateConstExpressions(Value *LHS, Value *RHS,
                                         const BasicBlockEdge &Root) {
   if (!GVNPropagateConstExp)
     return false;
-  
+
   if (!LHS || !RHS || !DT)
     return false;
 
@@ -3175,11 +3175,11 @@ bool GVNPass::propagateConstExpressions(Value *LHS, Value *RHS,
 
   if (!isOnlyReachableViaThisEdge(Root, DT))
     return false;
-  
+
   auto processBlock = [&](BasicBlock *Block) {
     bool Changed = false;
     for (auto &I : *Block) {
-      
+
       if (isa<PHINode>(&I))
         continue;
 
@@ -3221,10 +3221,10 @@ bool GVNPass::propagateConstExpressions(Value *LHS, Value *RHS,
         Changed = true;
       }
     }
-    
+
     return Changed;
   };
-  
+
   bool Changed = false;
   auto *RootNode = DT->getNode(Root.getEnd());
   Changed |= processBlock(const_cast<BasicBlock *>(Root.getEnd()));
