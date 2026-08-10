@@ -310,8 +310,11 @@ func.func @two_consecutive_merge_points(%cond1: i1, %cond2: i1) -> i32 {
   return %result : i32
 }
 
+// -----
+
 // Ensure that AllocaScopeOp does not block mem2reg.
 
+// CHECK-LABEL: func.func @alloca_scope
 func.func @alloca_scope() -> i32 {
   %c0 = arith.constant 0 : i32
   %alloca = memref.alloca() {alignment = 4 : i64} : memref<i32>
