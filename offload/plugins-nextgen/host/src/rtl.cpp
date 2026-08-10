@@ -278,6 +278,12 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     return Plugin::success();
   }
 
+  Error dataMemcpyImpl(void *DstPtr, const void *SrcPtr, int64_t Size,
+                       AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+    std::memcpy(DstPtr, SrcPtr, Size);
+    return Plugin::success();
+  }
+
   /// Exchange data between two devices within the plugin. This function is not
   /// supported in this plugin.
   Error dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstGenericDevice,
