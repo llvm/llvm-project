@@ -30537,8 +30537,6 @@ public:
     // nodes and thus requiring extract if fully vectorized in other trees.
     SmallPtrSet<Value *, 4> RequiredExtract;
     WeakTrackingVH VectorizedTree = nullptr;
-    TTI::VectorInstrContext VectorizedReductionContext =
-        TTI::VectorInstrContext::None;
     bool CheckForReusedReductionOps = false;
     // Try to vectorize elements based on their type.
     SmallVector<InstructionsState> States;
@@ -31039,8 +31037,6 @@ public:
         Type *ScalarTy = VL.front()->getType();
         Type *VecTy = VectorizedRoot->getType();
         Type *RedScalarTy = VecTy->getScalarType();
-        if (isZeroCmpContext(CostContext))
-          VectorizedReductionContext = CostContext;
         VectorValuesAndScales.emplace_back(
             VectorizedRoot,
             OptReusedScalars && SameScaleFactor
@@ -31086,8 +31082,8 @@ public:
 
     if (!VectorValuesAndScales.empty())
       VectorizedTree = GetNewVectorizedTree(
-          VectorizedTree, emitReduction(Builder, *TTI, ReductionRoot->getType(),
-                                        VectorizedReductionContext));
+          VectorizedTree,
+          emitReduction(Builder, *TTI, ReductionRoot->getType()));
 
     if (!VectorizedTree) {
       if (!CheckForReusedReductionOps) {
@@ -31205,18 +31201,7 @@ public:
     }
     VectorizedTree = ExtraReductions.front().second;
 
-    if (isZeroCmpContext(VectorizedReductionContext)) {
-      auto *Cmp =
-          cast<ICmpInst>(*cast<Instruction>(ReductionRoot)->user_begin());
-      VectorizedTree->takeName(Cmp);
-      Cmp->replaceAllUsesWith(VectorizedTree);
-      salvageDebugInfo(*Cmp);
-      Cmp->dropAllReferences();
-      Cmp->removeFromParent();
-      V.eraseInstruction(Cmp);
-    } else {
-      ReductionRoot->replaceAllUsesWith(VectorizedTree);
-    }
+    ReductionRoot->replaceAllUsesWith(VectorizedTree);
 
     // The original scalar reduction is expected to have no remaining
     // uses outside the reduction tree itself.  Assert that we got this
@@ -31836,25 +31821,7 @@ private:
   /// sub-registers, combines them with the given reduction operation as a
   /// vector operation and then performs single (small enough) reduction.
   Value *emitReduction(IRBuilderBase &Builder, const TargetTransformInfo &TTI,
-                       Type *DestTy,
-                       TargetTransformInfo::VectorInstrContext Context) {
-    if (isZeroCmpContext(Context)) {
-      assert(VectorValuesAndScales.size() == 1 &&
-             !std::get<3>(VectorValuesAndScales.front()) &&
-             "Expected one complete vector reduction");
-      Value *Vec = std::get<0>(VectorValuesAndScales.front());
-      auto *VecTy = cast<VectorType>(Vec->getType());
-      auto *ScalarCmp =
-          cast<ICmpInst>(*cast<Instruction>(ReductionRoot)->user_begin());
-      CmpPredicate Pred = ScalarCmp->getPredicate();
-      Builder.SetCurrentDebugLocation(ScalarCmp->getDebugLoc());
-      Value *Cmp = Builder.CreateICmp(Pred, Vec, Constant::getNullValue(VecTy));
-      RecurKind BoolRdxKind =
-          Pred == ICmpInst::ICMP_EQ ? RecurKind::And : RecurKind::Or;
-      NumVectorInstructions += 2;
-      return createSimpleReduction(Builder, Cmp, BoolRdxKind);
-    }
-
+                       Type *DestTy) {
     Value *ReducedSubTree = nullptr;
     // Creates reduction and combines with the previous reduction.
     auto CreateSingleOp = [&](Value *Vec, unsigned Scale, bool IsSigned,
