@@ -108,8 +108,7 @@ static Value peelZeroOffsetViews(Value memref) {
     auto result = cast<OpResult>(memref);
     auto view = dyn_cast<fir::FortranObjectViewOpInterface>(defOp);
     // Marshal-like fir.convert has its own dedicated path.
-    // fir.volatile_cast may change volatility, so what it wraps could be
-    // more volatile than its result; don't peel past it.
+    // fir.volatile_cast may change volatility, don't peel past it.
     if (!view || isMarshalLike(defOp) || isa<fir::VolatileCastOp>(defOp) ||
         view.getViewOffset(result) != 0)
       break;
@@ -166,6 +165,12 @@ private:
 
   FailureOr<Value> getFIRConvert(Operation *memOp, Operation *memref,
                                  PatternRewriter &, FIRToMemRefTypeConverter &);
+
+  /// Marshal \p memrefOp itself (no bounds-aware indexing) via getFIRConvert,
+  /// logging \p debugContext on failure.
+  MemRefInfo marshalView(Operation *memOp, Operation *memrefOp, Value firMemref,
+                         PatternRewriter &, FIRToMemRefTypeConverter &,
+                         llvm::StringRef debugContext);
 
   FailureOr<SmallVector<Value>> getMemrefIndices(fir::ArrayCoorOp, Operation *,
                                                  PatternRewriter &,
@@ -1321,6 +1326,22 @@ FIRToMemRef::getFIRConvert(Operation *memOp, Operation *op,
   return convert->getResult(0);
 }
 
+MemRefInfo FIRToMemRef::marshalView(Operation *memOp, Operation *memrefOp,
+                                    Value firMemref, PatternRewriter &rewriter,
+                                    FIRToMemRefTypeConverter &typeConverter,
+                                    llvm::StringRef debugContext) {
+  FailureOr<Value> converted =
+      getFIRConvert(memOp, memrefOp, rewriter, typeConverter);
+  if (failed(converted)) {
+    LLVM_DEBUG(llvm::dbgs() << "FIRToMemRef: unable to create convert for "
+                            << debugContext << ":\n";
+               firMemref.dump());
+    return failure();
+  }
+  SmallVector<Value> indices;
+  return std::pair{*converted, indices};
+}
+
 /// Peephole-simplify an index-shaped SSA value before it gets fed into
 /// memref index arithmetic. Returns a (possibly newly-created) `Value`;
 /// the input is left untouched. Callers must not assume the result is
@@ -1508,19 +1529,9 @@ MemRefInfo FIRToMemRef::getMemRefInfo(Value firMemref,
 
   rewriter.setInsertionPoint(memOp);
 
-  if (isMarshalLike(memrefOp)) {
-    FailureOr<Value> converted =
-        getFIRConvert(memOp, memrefOp, rewriter, typeConverter);
-    if (failed(converted)) {
-      LLVM_DEBUG(llvm::dbgs()
-                     << "FIRToMemRef: expected FIR memref in convert, bailing "
-                        "out:\n";
-                 firMemref.dump());
-      return failure();
-    }
-    SmallVector<Value> indices;
-    return std::pair{*converted, indices};
-  }
+  if (isMarshalLike(memrefOp))
+    return marshalView(memOp, memrefOp, firMemref, rewriter, typeConverter,
+                       "marshal-like convert");
 
   if (auto coordinateOp = dyn_cast<fir::CoordinateOp>(memrefOp)) {
     // Fast path: coordinate_of used as a plain array indexer on a static-extent
@@ -1548,28 +1559,13 @@ MemRefInfo FIRToMemRef::getMemRefInfo(Value firMemref,
 
     // Fallback: struct field access or dynamic array — produce a rank-0 scalar
     // memref from the leaf reference.
-    FailureOr<Value> converted =
-        getFIRConvert(memOp, coordinateOp, rewriter, typeConverter);
-    if (failed(converted)) {
-      LLVM_DEBUG(
-          llvm::dbgs()
-              << "FIRToMemRef: unable to create convert for derived-type "
-                 "memref:\n";
-          firMemref.dump());
-      return failure();
-    }
-    SmallVector<Value> indices;
-    return std::pair{*converted, indices};
+    return marshalView(memOp, coordinateOp, firMemref, rewriter, typeConverter,
+                       "derived-type memref");
   }
 
-  if (memrefIsDeviceData(memrefOp)) {
-    FailureOr<Value> converted =
-        getFIRConvert(memOp, memrefOp, rewriter, typeConverter);
-    if (failed(converted))
-      return failure();
-    SmallVector<Value> indices;
-    return std::pair{*converted, indices};
-  }
+  if (memrefIsDeviceData(memrefOp))
+    return marshalView(memOp, memrefOp, firMemref, rewriter, typeConverter,
+                       "device-data memref");
 
   // Some other zero-offset, ref-producing view (fir.declare, ref-to-ref
   // fir.convert, fir.box_addr, fir.volatile_cast): peek underneath for an
@@ -1590,17 +1586,8 @@ MemRefInfo FIRToMemRef::getMemRefInfo(Value firMemref,
       return memrefInfo;
     }
 
-    FailureOr<Value> converted =
-        getFIRConvert(memOp, memrefOp, rewriter, typeConverter);
-    if (failed(converted)) {
-      LLVM_DEBUG(llvm::dbgs()
-                     << "FIRToMemRef: unable to create convert for view "
-                        "memref:\n";
-                 firMemref.dump());
-      return failure();
-    }
-    SmallVector<Value> indices;
-    return std::pair{*converted, indices};
+    return marshalView(memOp, memrefOp, firMemref, rewriter, typeConverter,
+                       "view memref");
   }
 
   LLVM_DEBUG(llvm::dbgs()
