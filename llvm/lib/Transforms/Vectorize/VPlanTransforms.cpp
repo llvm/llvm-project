@@ -5691,6 +5691,8 @@ void VPlanTransforms::multiversionForUnitStridedMemOps(
     };
 
     ReplaceUsesInVectorLoop(StrideVal, MVConst);
+    // If `StrideVal` has casts defined outside VPlan that are live-ins, replace
+    // them too.
     for (auto *U : StrideVal->users())
       if (isa<SExtInst>(U))
         ReplaceUsesInVectorLoop(U,
