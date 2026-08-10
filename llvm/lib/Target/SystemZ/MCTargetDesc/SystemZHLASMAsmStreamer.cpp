@@ -491,6 +491,12 @@ bool SystemZHLASMAsmStreamer::emitSymbolAttribute(MCSymbol *Sym,
   return static_cast<MCSymbolGOFF *>(Sym)->setSymbolAttribute(Attribute);
 }
 
+void SystemZHLASMAsmStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
+                                               Align ByteAlignment) {
+  auto *Symbol = static_cast<MCSymbolGOFF *>(S);
+  MCGOFFStreamer::emitCommonSymbolImpl(this, Symbol, Size, ByteAlignment);
+}
+
 void SystemZHLASMAsmStreamer::emitRawTextImpl(StringRef String) {
   String.consume_back("\n");
   OS << String;

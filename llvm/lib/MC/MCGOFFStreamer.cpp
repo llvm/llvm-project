@@ -73,15 +73,14 @@ bool MCGOFFStreamer::emitSymbolAttribute(MCSymbol *Sym,
   return static_cast<MCSymbolGOFF *>(Sym)->setSymbolAttribute(Attribute);
 }
 
-void MCGOFFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
-                                      Align ByteAlignment) {
-  auto *Symbol = static_cast<MCSymbolGOFF *>(S);
-
-  MCSectionGOFF *SD = getContext().getGOFFSection(
+void MCGOFFStreamer::emitCommonSymbolImpl(MCStreamer *Streamer,
+                                          MCSymbolGOFF *Symbol, uint64_t Size,
+                                          Align ByteAlignment) {
+  MCSectionGOFF *SD = Streamer->getContext().getGOFFSection(
       SectionKind::getMetadata(), Symbol->getName(),
       GOFF::SDAttr{GOFF::ESD_TA_Unspecified, GOFF::ESD_BSC_Unspecified});
 
-  MCSectionGOFF *ED = getContext().getGOFFSection(
+  MCSectionGOFF *ED = Streamer->getContext().getGOFFSection(
       SectionKind::getMetadata(), GOFF::CLASS_WSA,
       GOFF::EDAttr{false, GOFF::ESD_RMODE_64, GOFF::ESD_NS_Parts,
                    GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Merge,
@@ -89,17 +88,23 @@ void MCGOFFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
       SD);
   ED->setAlignment(ByteAlignment);
 
-  MCSectionGOFF *Section = getContext().getGOFFSection(
+  MCSectionGOFF *Section = Streamer->getContext().getGOFFSection(
       SectionKind::getBSS(), Symbol->getName(),
       GOFF::PRAttr{false, GOFF::ESD_EXE_DATA, GOFF::ESD_LT_XPLink,
                    Symbol->getBindingScope(), 0},
       ED);
 
-  pushSection();
-  switchSection(Section);
-  emitLabel(Symbol);
-  emitZeros(Size);
-  popSection();
+  Streamer->pushSection();
+  Streamer->switchSection(Section);
+  Streamer->emitLabel(Symbol);
+  Streamer->emitZeros(Size);
+  Streamer->popSection();
+}
+
+void MCGOFFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
+                                      Align ByteAlignment) {
+  auto *Symbol = static_cast<MCSymbolGOFF *>(S);
+  emitCommonSymbolImpl(this, Symbol, Size, ByteAlignment);
 }
 
 MCStreamer *llvm::createGOFFStreamer(MCContext &Context,
