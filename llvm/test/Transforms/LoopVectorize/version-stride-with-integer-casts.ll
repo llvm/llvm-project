@@ -305,20 +305,8 @@ define void @test_versioned_with_non_ex_use(i32 %offset, ptr noalias %dst.1, ptr
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[OFFSET]], 3
 ; CHECK-NEXT:    br label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 -3, [[OFFSET]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[ADD]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[TMP0]], i32 [[ADD]]
-; CHECK-NEXT:    [[MUL:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 [[TMP2]], i32 200)
-; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i32, i1 } [[MUL]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i32, i1 } [[MUL]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 0, [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt i32 [[MUL_RESULT]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp sgt i32 [[TMP3]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[TMP1]], i1 [[TMP5]], i1 [[TMP4]]
-; CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP6]], [[MUL_OVERFLOW]]
 ; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[OFFSET]], 1
-; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP7]], [[IDENT_CHECK]]
-; CHECK-NEXT:    br i1 [[TMP8]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br i1 [[IDENT_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
