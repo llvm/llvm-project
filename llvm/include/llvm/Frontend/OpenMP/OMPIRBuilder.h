@@ -1838,7 +1838,8 @@ private:
   Value *castValueToType(InsertPointTy AllocaIP, Value *From, Type *ToType);
 
   /// This function creates calls to one of two shuffle functions to copy
-  /// variables between lanes in a warp.
+  /// variables between lanes in a warp. The returned value has \p ElementType,
+  /// even though the shuffle runtime functions operate on 32- or 64-bit values.
   Value *createRuntimeShuffleFunction(InsertPointTy AllocaIP, Value *Element,
                                       Type *ElementType, Value *Offset);
 
