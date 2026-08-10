@@ -937,6 +937,24 @@ bool SIFoldOperandsImpl::tryAddToFoldList(
       }
     }
 
+    // Special case for valu16 using sreg32
+    // %1:vgpr32 = copy %0:sreg32/sregxx:sub_x
+    // VALU16 %1.lo16:vgpr16 ...
+    // =>
+    // VALU16 %0:sreg32/sregxx:sub_x...
+    // Hack to allow 32-bit SGPRs to be folded into True16 instructions
+    // Remove this if 16-bit SGPRs (i.e. SGPR_LO16) are added to the
+    // VS_16RegClass
+    if (OpToFold.isReg() && OpToFold.DefSubReg == AMDGPU::lo16 &&
+        TRI->isSGPRReg(*MRI, OpToFold.getReg())) {
+      FoldableDef NewOpToFold(*OpToFold.OpToFold, OpToFold.DefRC,
+                              AMDGPU::NoSubRegister);
+      if (NewOpToFold.isOperandLegal(*TII, *MI, OpNo)) {
+        appendFoldCandidate(FoldList, MI, OpNo, NewOpToFold);
+        return true;
+      }
+    }
+
     // Operand is not legal, so try to commute the instruction to
     // see if this makes it possible to fold.
     unsigned CommuteOpNo = TargetInstrInfo::CommuteAnyOperandIndex;
@@ -1538,6 +1556,45 @@ bool SIFoldOperandsImpl::foldOperand(
       MRI->clearKillFlags(UseReg);
       if (foldCopyToAGPRRegSequence(UseMI))
         return true;
+    }
+
+    // Look through Lo16 Copy
+    // OpToFold: %0
+    // %1:vgpr32 = copy %0:sreg32/sregxx:sub_x
+    // %2:vgpr16 = copy %1.lo16:vgpr32  (UseMI)
+    // VALU16 %2:vgpr16 ...
+    // =>
+    // VALU16 %0:sreg32/sregxx:sub_x...
+    // Hack to allow 32-bit SGPRs to be folded into True16 instructions
+    // Remove this if 16-bit SGPRs (i.e. SGPR_LO16) are added to the
+    // VS_16RegClass
+    if (UseMI->isCopy() && OpToFold.isReg() &&
+        UseMI->getOperand(0).getReg().isVirtual() &&
+        TRI->isSGPRReg(*MRI, OpToFold.getReg()) &&
+        TII->getOpSize(*UseMI, 0) == 2 &&
+        UseMI->getOperand(1).getSubReg() == AMDGPU::lo16 &&
+        OpToFold.DefMI->implicit_operands().empty()) {
+
+      // Append Users of the UseMI instead
+      SmallVector<MachineOperand *, 4> UsesToProcess(llvm::make_pointer_range(
+          MRI->use_nodbg_operands(UseMI->getOperand(0).getReg())));
+      for (auto *U : UsesToProcess) {
+        MachineInstr *NextMI = U->getParent();
+
+        const MCInstrDesc &UseDesc = NextMI->getDesc();
+        if (UseDesc.isVariadic() || U->isImplicit() ||
+            UseDesc.operands()[NextMI->getOperandNo(U)].RegClass == -1)
+          continue;
+
+        FoldableDef NextOpToFold(*OpToFold.OpToFold, OpToFold.DefRC,
+                                 U->getSubReg());
+        LLVM_DEBUG(dbgs() << "Folding " << *NextOpToFold.OpToFold
+                          << "\n through" << *UseMI << " into " << *NextMI);
+
+        Changed |= tryAddToFoldList(FoldList, NextMI, NextMI->getOperandNo(U),
+                                    NextOpToFold);
+      }
+      return Changed;
     }
 
     unsigned UseOpc = UseMI->getOpcode();

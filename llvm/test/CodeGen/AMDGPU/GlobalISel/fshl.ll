@@ -2962,28 +2962,16 @@ define amdgpu_ps i32 @s_fshl_i32(i32 inreg %lhs, i32 inreg %rhs, i32 inreg %amt)
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
-; GFX11-TRUE16-LABEL: s_fshl_i32:
-; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    s_not_b32 s2, s2
-; GFX11-TRUE16-NEXT:    v_alignbit_b32 v0, s0, s1, 1
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, s2
-; GFX11-TRUE16-NEXT:    s_lshr_b32 s0, s0, 1
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
-; GFX11-TRUE16-NEXT:    v_alignbit_b32 v0, s0, v0, v1.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-TRUE16-NEXT:    ; return to shader part epilog
-;
-; GFX11-FAKE16-LABEL: s_fshl_i32:
-; GFX11-FAKE16:       ; %bb.0:
-; GFX11-FAKE16-NEXT:    v_alignbit_b32 v0, s0, s1, 1
-; GFX11-FAKE16-NEXT:    s_lshr_b32 s0, s0, 1
-; GFX11-FAKE16-NEXT:    s_not_b32 s1, s2
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
-; GFX11-FAKE16-NEXT:    v_alignbit_b32 v0, s0, v0, s1
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-FAKE16-NEXT:    ; return to shader part epilog
+; GFX11-LABEL: s_fshl_i32:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    v_alignbit_b32 v0, s0, s1, 1
+; GFX11-NEXT:    s_lshr_b32 s0, s0, 1
+; GFX11-NEXT:    s_not_b32 s1, s2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    v_alignbit_b32 v0, s0, v0, s1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-NEXT:    ; return to shader part epilog
   %result = call i32 @llvm.fshl.i32(i32 %lhs, i32 %rhs, i32 %amt)
   ret i32 %result
 }
@@ -3223,24 +3211,14 @@ define amdgpu_ps float @v_fshl_i32_svs(i32 inreg %lhs, i32 %rhs, i32 inreg %amt)
 ; GFX10-NEXT:    v_alignbit_b32 v0, s0, v0, s1
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
-; GFX11-TRUE16-LABEL: v_fshl_i32_svs:
-; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    s_not_b32 s1, s1
-; GFX11-TRUE16-NEXT:    v_alignbit_b32 v0, s0, v0, 1
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, s1
-; GFX11-TRUE16-NEXT:    s_lshr_b32 s0, s0, 1
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
-; GFX11-TRUE16-NEXT:    v_alignbit_b32 v0, s0, v0, v1.l
-; GFX11-TRUE16-NEXT:    ; return to shader part epilog
-;
-; GFX11-FAKE16-LABEL: v_fshl_i32_svs:
-; GFX11-FAKE16:       ; %bb.0:
-; GFX11-FAKE16-NEXT:    v_alignbit_b32 v0, s0, v0, 1
-; GFX11-FAKE16-NEXT:    s_lshr_b32 s0, s0, 1
-; GFX11-FAKE16-NEXT:    s_not_b32 s1, s1
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
-; GFX11-FAKE16-NEXT:    v_alignbit_b32 v0, s0, v0, s1
-; GFX11-FAKE16-NEXT:    ; return to shader part epilog
+; GFX11-LABEL: v_fshl_i32_svs:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    v_alignbit_b32 v0, s0, v0, 1
+; GFX11-NEXT:    s_lshr_b32 s0, s0, 1
+; GFX11-NEXT:    s_not_b32 s1, s1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    v_alignbit_b32 v0, s0, v0, s1
+; GFX11-NEXT:    ; return to shader part epilog
   %result = call i32 @llvm.fshl.i32(i32 %lhs, i32 %rhs, i32 %amt)
   %cast.result = bitcast i32 %result to float
   ret float %cast.result
@@ -3285,24 +3263,14 @@ define amdgpu_ps float @v_fshl_i32_vss(i32 inreg %lhs, i32 inreg %rhs, i32 inreg
 ; GFX10-NEXT:    v_alignbit_b32 v0, s0, v0, s1
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
-; GFX11-TRUE16-LABEL: v_fshl_i32_vss:
-; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    s_not_b32 s2, s2
-; GFX11-TRUE16-NEXT:    v_alignbit_b32 v0, s0, s1, 1
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, s2
-; GFX11-TRUE16-NEXT:    s_lshr_b32 s0, s0, 1
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
-; GFX11-TRUE16-NEXT:    v_alignbit_b32 v0, s0, v0, v1.l
-; GFX11-TRUE16-NEXT:    ; return to shader part epilog
-;
-; GFX11-FAKE16-LABEL: v_fshl_i32_vss:
-; GFX11-FAKE16:       ; %bb.0:
-; GFX11-FAKE16-NEXT:    v_alignbit_b32 v0, s0, s1, 1
-; GFX11-FAKE16-NEXT:    s_lshr_b32 s0, s0, 1
-; GFX11-FAKE16-NEXT:    s_not_b32 s1, s2
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
-; GFX11-FAKE16-NEXT:    v_alignbit_b32 v0, s0, v0, s1
-; GFX11-FAKE16-NEXT:    ; return to shader part epilog
+; GFX11-LABEL: v_fshl_i32_vss:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    v_alignbit_b32 v0, s0, s1, 1
+; GFX11-NEXT:    s_lshr_b32 s0, s0, 1
+; GFX11-NEXT:    s_not_b32 s1, s2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    v_alignbit_b32 v0, s0, v0, s1
+; GFX11-NEXT:    ; return to shader part epilog
   %result = call i32 @llvm.fshl.i32(i32 %lhs, i32 %rhs, i32 %amt)
   %cast.result = bitcast i32 %result to float
   ret float %cast.result
