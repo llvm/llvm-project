@@ -1672,6 +1672,7 @@ SymbolFileDWARF::GetCompUnitForDWARFCompUnit(DWARFCompileUnit &dwarf_cu) {
 void SymbolFileDWARF::GetObjCMethods(
     ConstString class_name,
     llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   m_index->GetObjCMethods(class_name, callback);
 }
 
@@ -3120,6 +3121,7 @@ Symbol *SymbolFileDWARF::GetObjCClassSymbol(ConstString objc_class_name) {
 // DIE and we want to try and find a type that has the complete definition.
 TypeSP SymbolFileDWARF::FindCompleteObjCDefinitionTypeForDIE(
     const DWARFDIE &die, ConstString type_name, bool must_be_implementation) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
 
   TypeSP type_sp;
 

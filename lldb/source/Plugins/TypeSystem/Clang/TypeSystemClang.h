@@ -14,6 +14,7 @@
 #include <functional>
 #include <initializer_list>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <set>
 #include <string>
@@ -122,6 +123,14 @@ public:
   typedef void (*CompleteTagDeclCallback)(void *baton, clang::TagDecl *);
   typedef void (*CompleteObjCInterfaceDeclCallback)(void *baton,
                                                     clang::ObjCInterfaceDecl *);
+
+  /// Returns the lock that is used to guard all accesses to this TypeSystem.
+  /// This might return the Module's lock if this TypeSystemClang represents
+  /// Module contents.
+  std::recursive_mutex &GetMutex() const { return *m_mutex_ptr; }
+
+  /// Makes GetMutex() hand out \p mutex instead of this instance's own lock.
+  void SetSharedMutex(std::recursive_mutex &mutex) { m_mutex_ptr = &mutex; }
 
   // llvm casting support
   bool isA(const void *ClassID) const override { return ClassID == &ID; }
@@ -1206,6 +1215,10 @@ private:
 
   // Classes that inherit from TypeSystemClang can see and modify these
   std::string m_target_triple;
+  mutable std::recursive_mutex m_mutex;
+  /// \see SetSharedMutex()
+  /// \see GetMutex()
+  std::recursive_mutex *m_mutex_ptr = &m_mutex;
   std::unique_ptr<clang::ASTContext> m_ast_up;
   std::unique_ptr<clang::LangOptions> m_language_options_up;
   std::unique_ptr<clang::FileManager> m_file_manager_up;
