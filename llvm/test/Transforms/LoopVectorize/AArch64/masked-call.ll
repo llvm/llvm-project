@@ -925,7 +925,7 @@ define void @test_widen_exp_v2(ptr noalias %p2, ptr noalias %p, i64 %n) #5 {
 ; TFNONE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 2
 ; TFNONE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; TFNONE:       [[VECTOR_PH]]:
-; TFNONE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 2
+; TFNONE-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 1
 ; TFNONE-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; TFNONE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; TFNONE:       [[VECTOR_BODY]]:

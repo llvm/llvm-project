@@ -167,6 +167,12 @@ struct __generate_n;
 // operator()(_Policy&&, _ForwardIterator __first, _Size __n, _Generator __gen) const noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
+struct __reverse;
+// template <class _Policy, class _BidirectionalIterator>
+// optional<__empty>
+// operator()(_Policy&&, _BidirectionalIterator __first, _BidirectionalIterator __last) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
 struct __reverse_copy;
 // template <class _Policy, class _BidirectionalIterator, class _ForwardIterator>
 // optional<_ForwardIterator>
@@ -318,6 +324,12 @@ struct __is_sorted;
 // operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Comp&& __comp) const noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
+struct __is_sorted_until;
+// template <class _Policy, class _ForwardIterator, class _Comp>
+// optional<_ForwardIterator>
+// operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Comp&& __comp) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
 struct __adjacent_difference;
 // template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _BinaryOperation>
 // optional<_ForwardIterator2>
@@ -352,6 +364,18 @@ struct __lexicographical_compare;
 // optional<bool>
 // operator()(_Policy&& __policy, _ForwardIterator1 __first1, _ForwardIterator1 __last1,
 //                                _ForwardIterator2 __first2, _ForwardIterator2 __last2, _Comp __comp) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __destroy;
+// template <class _Policy, class _ForwardIterator>
+// optional<__empty>
+// operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __destroy_n;
+// template <class _Policy, class _ForwardIterator, class _Size>
+// optional<__empty>
+// operator()(_Policy&& __policy, _ForwardIterator __first, _Size __n) const noexcept;
 
 } // namespace __pstl
 _LIBCPP_END_NAMESPACE_STD
