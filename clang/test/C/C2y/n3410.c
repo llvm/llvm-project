@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -verify=c2y -std=c2y -Wall -pedantic -Wno-unused %s
-// RUN: %clang_cc1 -verify=c89-23 -std=c23 -Wall -pedantic -Wno-unused %s
-// RUN: %clang_cc1 -verify=c89-23 -std=c17 -Wall -pedantic -Wno-unused %s
-// RUN: %clang_cc1 -verify=c89-23 -std=c11 -Wall -pedantic -Wno-unused %s
-// RUN: %clang_cc1 -verify=c89-23 -std=c99 -Wall -pedantic -Wno-unused %s
-// RUN: %clang_cc1 -verify=c89-23 -std=c89 -Wall -pedantic -Wno-unused -Wno-comment %s
+// RUN: %clang_cc1 -verify=expected,c2y -std=c2y -Wall -pedantic -Wno-unused %s
+// RUN: %clang_cc1 -verify=expected,c89-23 -std=c23 -Wall -pedantic -Wno-unused %s
+// RUN: %clang_cc1 -verify=expected,c89-23 -std=c17 -Wall -pedantic -Wno-unused %s
+// RUN: %clang_cc1 -verify=expected,c89-23 -std=c11 -Wall -pedantic -Wno-unused %s
+// RUN: %clang_cc1 -verify=expected,c89-23 -std=c99 -Wall -pedantic -Wno-unused %s
+// RUN: %clang_cc1 -verify=expected,c89-23 -std=c89 -Wall -pedantic -Wno-unused -Wno-comment %s
 
 /* WG14 N3410: Clang 24
  * Slay Some Earthly Demons XI
@@ -18,23 +18,19 @@ void func1(void) {
 
 /* This 'a' is the same as the one declared extern above. */
 static int a; /* c2y-error {{static declaration of 'a' follows non-static declaration}}
-                 c2y-note@#a {{previous declaration is here}}
                  c89-23-error {{static declaration of 'a' follows non-static declaration; behavior is undefined}}
-                 c89-23-note@#a {{previous declaration is here}}
+                 expected-note@#a {{previous declaration is here}}
                */
 
 static int b;
 void func2(void) {
-  /* This 'b' is the same as the one declared static above, but this is not
-     ill-formed because of C2y 6.2.2p4, which gives this variable internal
-     linkage because the previous declaration had internal linkage.
+  /* This 'b' is well-formed, because C2y 6.2.2p6 makes it "inherit" the
+     static linkage of `static int b` above, because the latter is visible.
    */
   extern int b; /* Ok */
 }
 
-static int c, d; /* c2y-note 2 {{previous definition is here}}
-                    c89-23-note 2 {{previous definition is here}}
-                  */
+static int c, d; /* expected-note 2 {{previous definition is here}} */
 void func3(void) {
   int c; /* no linkage, different object from the one declared above. */
   {
@@ -64,9 +60,7 @@ void func3(void) {
 /* A function parameter shadows the file-scope 'p' the same way a local
    variable does, so the block-scope 'extern' does not inherit internal
    linkage and conflicts. */
-static int p; /* c2y-note {{previous definition is here}}
-                 c89-23-note {{previous definition is here}}
-               */
+static int p; /* expected-note {{previous definition is here}} */
 void func4(int p) {
   {
     extern int p; /* c2y-error {{'p' declared with both internal and external linkage in the same translation unit}}
@@ -86,9 +80,8 @@ void func5(void) {
       /* The file-scope 'q' is now hidden, so this 'extern' has external
          linkage and conflicts with the internal-linkage declaration above. */
       extern int q; /* c2y-error {{'q' declared with both internal and external linkage in the same translation unit}}
-                       c2y-note@#q {{previous declaration is here}}
                        c89-23-error {{'q' declared with both internal and external linkage in the same translation unit; behavior is undefined}}
-                       c89-23-note@#q {{previous declaration is here}}
+                       expected-note@#q {{previous declaration is here}}
                      */
     }
   }
