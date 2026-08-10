@@ -13334,8 +13334,8 @@ If the operands are integer vectors, then they are compared element by
 element. The result is an `i1` vector with the same number of elements
 as the values being compared. Otherwise, the result is an `i1`.
 
-If the `samesign` keyword is present and the operands are not of the
-same sign then the result is a {ref}`poison value <poisonvalues>`.
+If the `samesign` keyword is present and the operands do not have equal sign
+bits when interpreted as signed integers (one negative, one non-negative), then the result is a {ref}`poison value <poisonvalues>`.
 
 ##### Example:
 
