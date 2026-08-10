@@ -65,7 +65,12 @@ class HexagonSubtarget : public HexagonGenSubtargetInfo {
   bool HasMemNoShuf = false;
   bool EnableDuplex = false;
   std::bitset<Hexagon::NUM_TARGET_REGS> UserReservedRegister;
+  std::bitset<Hexagon::NUM_TARGET_REGS> SCSPointerRegister;
   bool NoreturnStackElim = false;
+
+  /// Register holding the shadow call stack pointer, resolved from
+  /// SCSPointerRegister in initializeSubtargetDependencies().
+  Register SCSPReg;
 
 public:
   Hexagon::ArchEnum HexagonArchVersion;
@@ -291,6 +296,11 @@ public:
     assert(i.id() < Hexagon::NUM_TARGET_REGS && "Register out of range");
     return UserReservedRegister[i.id()];
   }
+
+  /// Returns the register that holds the shadow call stack pointer.  Defaults
+  /// to R18, overridable with the "scs-reg-rN" subtarget features.
+  Register getSCSPReg() const { return SCSPReg; }
+
   bool usePredicatedCalls() const;
 
   bool noreturnStackElim() const { return NoreturnStackElim; }
