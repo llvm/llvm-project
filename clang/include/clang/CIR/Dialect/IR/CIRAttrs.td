@@ -1688,7 +1688,7 @@ def CIR_TypeInfoAttr : CIR_ValueLikeAttr<"TypeInfo", "typeinfo"> {
   }];
 }
 //===----------------------------------------------------------------------===//
-// InlineAttr
+// InlineKindAttr
 //===----------------------------------------------------------------------===//
 
 def CIR_InlineKind : CIR_I32EnumAttr<"InlineKind", "inlineKind", [
@@ -1701,8 +1701,9 @@ def CIR_InlineKind : CIR_I32EnumAttr<"InlineKind", "inlineKind", [
 
 def CIR_InlineKindAttr: CIR_EnumAttr<CIR_InlineKind, "inline_kind"> {
   let summary = "Inline kind attribute";
-  let description = [{ Inline Kind attributes }];
-  let cppClassName = "InlineKindAttr";
+  let description = [{ Inline Kind attributes.  `no_inline` and `always_inline`
+    spellings correspond to the attributes of the same name, and `inline_hint`
+      is the `inline` keyword in the language.}];
 }
 
 //===----------------------------------------------------------------------===//
