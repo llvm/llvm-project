@@ -112,46 +112,95 @@ static SemanticCategory
 getSemanticCategory(dxbc::PSV::SemanticKind SemanticKind,
                     Triple::EnvironmentType ShaderStage,
                     SemanticSignatureKind SignatureKind, unsigned Rows) {
+  const bool IsInput = SignatureKind == SemanticSignatureKind::Input;
+  const bool IsOutput = SignatureKind == SemanticSignatureKind::Output;
+  const bool IsPatchConstOrPrim =
+      SignatureKind == SemanticSignatureKind::PatchConstOrPrim;
+
   switch (SemanticKind) {
   case dxbc::PSV::SemanticKind::Arbitrary:
-    return SemanticCategory::Arbitrary;
+    switch (ShaderStage) {
+    case Triple::EnvironmentType::Vertex:
+      return IsOutput ? SemanticCategory::Arbitrary
+                      : SemanticCategory::NotPacked;
+    case Triple::EnvironmentType::Hull:
+    case Triple::EnvironmentType::Domain:
+      return SemanticCategory::Arbitrary;
+    case Triple::EnvironmentType::Geometry:
+      return IsPatchConstOrPrim ? SemanticCategory::NotPacked
+                                : SemanticCategory::Arbitrary;
+    case Triple::EnvironmentType::Pixel:
+      return IsInput ? SemanticCategory::Arbitrary
+                     : SemanticCategory::NotPacked;
+    case Triple::EnvironmentType::Mesh:
+      return IsInput ? SemanticCategory::NotPacked
+                     : SemanticCategory::Arbitrary;
+    default:
+      return SemanticCategory::NotPacked;
+    }
+
   case dxbc::PSV::SemanticKind::Position:
+    if (ShaderStage == Triple::EnvironmentType::Vertex)
+      return IsInput ? SemanticCategory::Arbitrary
+                     : SemanticCategory::SystemValue;
+    return ShaderStage == Triple::EnvironmentType::Pixel && IsInput
+               ? SemanticCategory::SystemValue
+               : SemanticCategory::NotPacked;
+
+  case dxbc::PSV::SemanticKind::VertexID:
+    return ShaderStage == Triple::EnvironmentType::Vertex && IsInput
+               ? SemanticCategory::SystemValue
+               : SemanticCategory::NotPacked;
+
   case dxbc::PSV::SemanticKind::RenderTargetArrayIndex:
     return SemanticCategory::SystemValue;
+
   case dxbc::PSV::SemanticKind::PrimitiveID:
   case dxbc::PSV::SemanticKind::IsFrontFace:
     return SemanticCategory::SystemGeneratedValue;
+
   case dxbc::PSV::SemanticKind::ClipDistance:
   case dxbc::PSV::SemanticKind::CullDistance:
-    if ((ShaderStage == Triple::EnvironmentType::Vertex &&
-         SignatureKind == SemanticSignatureKind::Input) ||
-        ((ShaderStage == Triple::EnvironmentType::Hull ||
-          ShaderStage == Triple::EnvironmentType::Domain) &&
-         SignatureKind == SemanticSignatureKind::PatchConstOrPrim))
-      return SemanticCategory::Arbitrary;
-    if ((ShaderStage == Triple::EnvironmentType::Vertex &&
-         SignatureKind == SemanticSignatureKind::Output) ||
-        ((ShaderStage == Triple::EnvironmentType::Hull ||
-          ShaderStage == Triple::EnvironmentType::Domain) &&
-         SignatureKind != SemanticSignatureKind::PatchConstOrPrim) ||
-        (ShaderStage == Triple::EnvironmentType::Geometry &&
-         SignatureKind == SemanticSignatureKind::Input) ||
-        (ShaderStage == Triple::EnvironmentType::Pixel &&
-         SignatureKind == SemanticSignatureKind::Input) ||
-        (ShaderStage == Triple::EnvironmentType::Mesh &&
-         SignatureKind == SemanticSignatureKind::Output))
-      return SemanticCategory::CullClip;
-    return SemanticCategory::NotPacked;
+    switch (ShaderStage) {
+    case Triple::EnvironmentType::Vertex:
+      return IsInput ? SemanticCategory::Arbitrary : SemanticCategory::CullClip;
+    case Triple::EnvironmentType::Hull:
+    case Triple::EnvironmentType::Domain:
+      return IsPatchConstOrPrim ? SemanticCategory::Arbitrary
+                                : SemanticCategory::CullClip;
+    case Triple::EnvironmentType::Geometry:
+      return IsPatchConstOrPrim ? SemanticCategory::NotPacked
+                                : SemanticCategory::CullClip;
+    case Triple::EnvironmentType::Pixel:
+      return IsInput ? SemanticCategory::CullClip : SemanticCategory::NotPacked;
+    case Triple::EnvironmentType::Mesh:
+      return IsOutput ? SemanticCategory::CullClip
+                      : SemanticCategory::NotPacked;
+    default:
+      return SemanticCategory::NotPacked;
+    }
+
   case dxbc::PSV::SemanticKind::TessFactor:
   case dxbc::PSV::SemanticKind::InsideTessFactor:
     // Only a tess factor that covers multiple rows is dynamically indexable
     // and needs to be reserved in the last column.
     return Rows > 1 ? SemanticCategory::TessFactor
                     : SemanticCategory::SystemValue;
+
+  // Semantics that are not packed into a signature register, either because
+  // they are accessed through a dedicated intrinsic, or because their location
+  // is not assigned by this algorithm.
   case dxbc::PSV::SemanticKind::SampleIndex:
+  case dxbc::PSV::SemanticKind::DispatchThreadID:
+  case dxbc::PSV::SemanticKind::GroupID:
+  case dxbc::PSV::SemanticKind::GroupIndex:
+  case dxbc::PSV::SemanticKind::GroupThreadID:
     return SemanticCategory::NotPacked;
+
+  // As each semantic is added to the frontend, it should be added to this
+  // categorization
   default:
-    return SemanticCategory::Arbitrary;
+    return SemanticCategory::NotPacked;
   }
 }
 
@@ -206,13 +255,19 @@ static bool canCoPack(const SignatureRow &Row,
 
   if (Row.OccupiedColumns && Row.ComponentWidth != Placement.ComponentWidth)
     return false;
+
   if (Row.InterpMode != dxbc::PSV::InterpolationMode::Undefined &&
       Row.InterpMode != Placement.InterpMode)
     return false;
+
+  // Elements are packed in category order, so an element may not be placed to
+  // the left of a greater category. An indexed tess factor is an exception as
+  // it is reserved in the last column.
   if (Row.OccupiedColumns && Placement.Category < Row.RightmostCategory &&
       !(Placement.Category == SemanticCategory::Arbitrary &&
         Row.RightmostCategory == SemanticCategory::TessFactor))
     return false;
+
   return true;
 }
 

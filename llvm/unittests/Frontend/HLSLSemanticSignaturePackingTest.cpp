@@ -542,10 +542,6 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableDistinctInterpModes) {
 }
 
 //===----------------------------------------------------------------------===//
-// Boundary and stability tests
-//===----------------------------------------------------------------------===//
-
-//===----------------------------------------------------------------------===//
 // Component ordering tests
 //===----------------------------------------------------------------------===//
 
@@ -626,6 +622,42 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableSkipsUnpackedElements) {
                 {{/*Row=*/0, /*Col=*/0}, Unallocated, {/*Row=*/0, /*Col=*/2}});
 }
 
+TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableSupportedSignatures) {
+  struct SignatureCase {
+    Triple::EnvironmentType ShaderStage;
+    SemanticSignatureKind SignatureKind;
+  };
+  static constexpr SignatureCase Cases[] = {
+      {Triple::EnvironmentType::Vertex, SemanticSignatureKind::Output},
+      {Triple::EnvironmentType::Hull, SemanticSignatureKind::Input},
+      {Triple::EnvironmentType::Hull, SemanticSignatureKind::Output},
+      {Triple::EnvironmentType::Hull, SemanticSignatureKind::PatchConstOrPrim},
+      {Triple::EnvironmentType::Domain, SemanticSignatureKind::Input},
+      {Triple::EnvironmentType::Domain, SemanticSignatureKind::Output},
+      {Triple::EnvironmentType::Domain,
+       SemanticSignatureKind::PatchConstOrPrim},
+      {Triple::EnvironmentType::Geometry, SemanticSignatureKind::Input},
+      {Triple::EnvironmentType::Geometry, SemanticSignatureKind::Output},
+      {Triple::EnvironmentType::Pixel, SemanticSignatureKind::Input},
+      {Triple::EnvironmentType::Mesh, SemanticSignatureKind::Output},
+      {Triple::EnvironmentType::Mesh, SemanticSignatureKind::PatchConstOrPrim},
+  };
+
+  for (const SignatureCase &Case : Cases) {
+    SCOPED_TRACE(testing::Message()
+                 << "stage " << static_cast<unsigned>(Case.ShaderStage)
+                 << ", signature "
+                 << static_cast<unsigned>(Case.SignatureKind));
+    TestConfig Config(
+        Case.ShaderStage, Case.SignatureKind,
+        /*UseNative16BitTypes=*/false,
+        {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
+          dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear}});
+
+    expectPacking(Config, /*ExpectedRows=*/1, {{/*Row=*/0, /*Col=*/0}});
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Dynamic indexing tests
 //===----------------------------------------------------------------------===//
@@ -704,10 +736,6 @@ TEST_F(HLSLSemanticSignaturePackingTest,
   expectPacking(Config, /*ExpectedRows=*/5,
                 {{/*Row=*/0, /*Col=*/0}, {/*Row=*/3, /*Col=*/3}});
 }
-
-//===----------------------------------------------------------------------===//
-// Clip/cull tests
-//===----------------------------------------------------------------------===//
 
 TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableClipCull) {
   // struct VSOut {
@@ -829,6 +857,47 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableMultipleIndexedClipCull) {
                  {/*Row=*/0, /*Col=*/3},
                  {/*Row=*/3, /*Col=*/0}});
 }
+
+TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableGeometryStreams) {
+  // Each geometry shader output stream is packed into its own signature, so
+  // elements of different streams never share a register. The reported number
+  // of rows is the maximum used by any single stream.
+
+  // struct Stream0 {
+  //   float4 A : A;
+  //   float2 C : C;
+  // };
+  // struct Stream1 {
+  //   float4 B : B;
+  // };
+  // void GSMain(inout PointStream<Stream0> S0, inout PointStream<Stream1> S1);
+  //
+  // Elements are declared in the order A, B, C.
+  TestConfig Config(Triple::EnvironmentType::Geometry,
+                    SemanticSignatureKind::Output,
+                    /*UseNative16BitTypes=*/false,
+                    {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1,
+                      /*Cols=*/4, dxil::ElementType::F32,
+                      dxbc::PSV::InterpolationMode::Linear, /*GSStream=*/0},
+                     {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1,
+                      /*Cols=*/4, dxil::ElementType::F32,
+                      dxbc::PSV::InterpolationMode::Linear, /*GSStream=*/1},
+                     {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1,
+                      /*Cols=*/2, dxil::ElementType::F32,
+                      dxbc::PSV::InterpolationMode::Linear, /*GSStream=*/0}});
+
+  // Expected layout:
+  // stream0 reg0: A.xyzw
+  // stream0 reg1: C.xy | unused.zw
+  // stream1 reg0: B.xyzw
+  expectPacking(
+      Config, /*ExpectedRows=*/2,
+      {{/*Row=*/0, /*Col=*/0}, {/*Row=*/0, /*Col=*/0}, {/*Row=*/1, /*Col=*/0}});
+}
+
+//===----------------------------------------------------------------------===//
+// Boundary and stability tests
+//===----------------------------------------------------------------------===//
 
 TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableClipCullFillsTwoRows) {
   // Clip and cull distances may use a combined maximum of eight components
@@ -963,43 +1032,6 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableClipCullWhenAppended) {
                  {/*Row=*/1, /*Col=*/3},
                  {/*Row=*/0, /*Col=*/3},
                  {/*Row=*/3, /*Col=*/0}});
-}
-
-TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableGeometryStreams) {
-  // Each geometry shader output stream is packed into its own signature, so
-  // elements of different streams never share a register. The reported number
-  // of rows is the maximum used by any single stream.
-
-  // struct Stream0 {
-  //   float4 A : A;
-  //   float2 C : C;
-  // };
-  // struct Stream1 {
-  //   float4 B : B;
-  // };
-  // void GSMain(inout PointStream<Stream0> S0, inout PointStream<Stream1> S1);
-  //
-  // Elements are declared in the order A, B, C.
-  TestConfig Config(Triple::EnvironmentType::Geometry,
-                    SemanticSignatureKind::Output,
-                    /*UseNative16BitTypes=*/false,
-                    {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1,
-                      /*Cols=*/4, dxil::ElementType::F32,
-                      dxbc::PSV::InterpolationMode::Linear, /*GSStream=*/0},
-                     {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1,
-                      /*Cols=*/4, dxil::ElementType::F32,
-                      dxbc::PSV::InterpolationMode::Linear, /*GSStream=*/1},
-                     {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1,
-                      /*Cols=*/2, dxil::ElementType::F32,
-                      dxbc::PSV::InterpolationMode::Linear, /*GSStream=*/0}});
-
-  // Expected layout:
-  // stream0 reg0: A.xyzw
-  // stream0 reg1: C.xy | unused.zw
-  // stream1 reg0: B.xyzw
-  expectPacking(
-      Config, /*ExpectedRows=*/2,
-      {{/*Row=*/0, /*Col=*/0}, {/*Row=*/0, /*Col=*/0}, {/*Row=*/1, /*Col=*/0}});
 }
 
 TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableFillsAllRows) {
