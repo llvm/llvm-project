@@ -164,3 +164,46 @@ namespace PR15673 {
   void rangesv3(); // expected-note{{candidate template ignored: requirement 'PR15673::some_trait<int>::value' was not satisfied [with T = int, x = 42]}}
   void test_rangesv3() { rangesv3<int>(); } // expected-error{{no matching function for call to 'rangesv3'}}
 }
+
+#if __cplusplus >= 201103L
+namespace AddressOfTemplateSFINAE {
+template <class...> struct tag {};
+
+struct Foo {};
+
+template <class T> struct UniqueIf {
+  using Single = int;
+};
+template <class T, unsigned N> struct UniqueIf<T[N]> {
+  using Bounded = int;
+};
+
+template <class T> typename UniqueIf<T>::Single make_unique() { return {}; }
+template <class T, class... Args>
+typename UniqueIf<T>::Bounded make_unique(Args &&...) = delete;
+
+struct Detector {
+  using Self = Detector;
+
+  template <class, class T, class... Args>
+  static auto well_formed(Args &&...args)
+      -> decltype(void(), make_unique<T>(static_cast<Args &&>(args)...),
+                  void()) {}
+
+  template <class... Args, class = decltype(&Self::well_formed<Args...>)>
+  static constexpr bool test(tag<Args...> *, int) {
+    return true;
+  }
+
+  static constexpr bool test(void *, long) { return false; }
+};
+
+template <class T, class... Args> struct has_make_unique {
+  static constexpr bool value =
+      Detector::test(static_cast<tag<void, T, Args...> *>(nullptr), 0);
+};
+
+static_assert(has_make_unique<int>::value, "");
+static_assert(!has_make_unique<Foo[2], int, int>::value, "");
+} // namespace AddressOfTemplateSFINAE
+#endif

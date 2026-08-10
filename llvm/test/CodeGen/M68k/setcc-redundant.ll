@@ -4,8 +4,9 @@
 define i8 @scalar_setcc_lt0(i8 %a, i8 %b, i8 %x, i8 %y) {
 ; CHECK-LABEL: scalar_setcc_lt0:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    move.b (7,%sp), %d0
-; CHECK-NEXT:    sub.b (11,%sp), %d0
+; CHECK-NEXT:    move.b (11,%sp), %d0
+; CHECK-NEXT:    move.b (7,%sp), %d1
+; CHECK-NEXT:    sub.b %d0, %d1
 ; CHECK-NEXT:    blt .LBB0_1
 ; CHECK-NEXT:  ; %bb.2:
 ; CHECK-NEXT:    lea (19,%sp), %a0
@@ -25,8 +26,9 @@ define i8 @scalar_setcc_lt0(i8 %a, i8 %b, i8 %x, i8 %y) {
 define i8 @scalar_setcc_ne0(i8 %a, i8 %b, i8 %x, i8 %y) {
 ; CHECK-LABEL: scalar_setcc_ne0:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    move.b (7,%sp), %d0
-; CHECK-NEXT:    sub.b (11,%sp), %d0
+; CHECK-NEXT:    move.b (11,%sp), %d0
+; CHECK-NEXT:    move.b (7,%sp), %d1
+; CHECK-NEXT:    sub.b %d0, %d1
 ; CHECK-NEXT:    blt .LBB1_1
 ; CHECK-NEXT:  ; %bb.2:
 ; CHECK-NEXT:    lea (19,%sp), %a0

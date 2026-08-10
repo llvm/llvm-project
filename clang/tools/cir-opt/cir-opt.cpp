@@ -26,7 +26,12 @@
 #include "clang/CIR/Passes.h"
 
 struct CIRToLLVMPipelineOptions
-    : public mlir::PassPipelineOptions<CIRToLLVMPipelineOptions> {};
+    : public mlir::PassPipelineOptions<CIRToLLVMPipelineOptions> {
+  Option<bool> enableOpenMP{
+      *this, "enable-openmp",
+      llvm::cl::desc("Add OpenMP-specific CIR-to-LLVM lowering passes"),
+      llvm::cl::init(false)};
+};
 
 int main(int argc, char **argv) {
   // TODO: register needed MLIR passes for CIR?
@@ -44,7 +49,7 @@ int main(int argc, char **argv) {
   mlir::PassPipelineRegistration<CIRToLLVMPipelineOptions> pipeline(
       "cir-to-llvm", "",
       [](mlir::OpPassManager &pm, const CIRToLLVMPipelineOptions &options) {
-        cir::direct::populateCIRToLLVMPasses(pm);
+        cir::direct::populateCIRToLLVMPasses(pm, options.enableOpenMP);
       });
 
   ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
@@ -65,6 +70,10 @@ int main(int argc, char **argv) {
 
   ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
     return mlir::createCXXABILoweringPass();
+  });
+
+  ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
+    return mlir::createIdiomRecognizerPass();
   });
 
   ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {

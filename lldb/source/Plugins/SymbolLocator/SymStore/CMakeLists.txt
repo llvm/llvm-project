@@ -6,6 +6,10 @@ lldb_tablegen(SymbolLocatorSymStorePropertiesEnum.inc -gen-lldb-property-enum-de
   SOURCE SymbolLocatorSymStoreProperties.td
   TARGET LLDBPluginSymbolLocatorSymStorePropertiesEnumGen)
 
+lldb_tablegen(SymbolLocatorSymStoreProperties.json -dump-json
+  SOURCE SymbolLocatorSymStoreProperties.td
+  TARGET LLDBPluginSymbolLocatorSymStorePropertiesJsonGen)
+
 add_lldb_library(lldbPluginSymbolLocatorSymStore PLUGIN
   SymbolLocatorSymStore.cpp
 

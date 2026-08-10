@@ -112,7 +112,9 @@ add_header_library(
     thread.h
   DEPENDS
     libc.hdr.stdint_proxy
+    libc.hdr.types.struct_sched_param
     libc.src.__support.common
+    libc.src.__support.error_or
     libc.src.__support.CPP.atomic
     libc.src.__support.CPP.optional
     libc.src.__support.CPP.string_view
@@ -167,7 +169,7 @@ if(TARGET libc.src.__support.threads.futex_utils)
   )
 endif()
 
-if (LLVM_LIBC_FULL_BUILD)
+if(LLVM_LIBC_FULL_BUILD)
   set(identifier_dependency_on_thread libc.src.__support.threads.thread)
 endif()
 

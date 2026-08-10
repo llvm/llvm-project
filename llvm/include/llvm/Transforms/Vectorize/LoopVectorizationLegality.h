@@ -58,14 +58,7 @@ class Type;
 /// for example 'force', means a decision has been made. So, we need to be
 /// careful NOT to add them if the user hasn't specifically asked so.
 class LoopVectorizeHints {
-  enum HintKind {
-    HK_WIDTH,
-    HK_INTERLEAVE,
-    HK_FORCE,
-    HK_ISVECTORIZED,
-    HK_PREDICATE,
-    HK_SCALABLE
-  };
+  enum HintKind { HK_WIDTH, HK_INTERLEAVE, HK_ISVECTORIZED, HK_SCALABLE };
 
   /// Hint - associates name and validation with the hint value.
   struct Hint {
@@ -85,14 +78,15 @@ class LoopVectorizeHints {
   /// Vectorization interleave factor.
   Hint Interleave;
 
-  /// Vectorization forced
-  Hint Force;
+  /// Vectorization forced; one of ForceKind. Carried as a plain value because
+  /// the enable/disable pair is a standalone tag with no operand to validate.
+  unsigned Force;
 
   /// Already Vectorized
   Hint IsVectorized;
 
-  /// Vector Predicate
-  Hint Predicate;
+  /// Vector Predicate; one of ForceKind, carried as a plain value like Force.
+  unsigned Predicate;
 
   /// Says whether we should use fixed width or scalable vectorization.
   Hint Scalable;
@@ -155,12 +149,12 @@ public:
     return 0;
   }
   unsigned getIsVectorized() const { return IsVectorized.Value; }
-  unsigned getPredicate() const { return Predicate.Value; }
+  unsigned getPredicate() const { return Predicate; }
   enum ForceKind getForce() const {
-    if ((ForceKind)Force.Value == FK_Undefined &&
+    if ((ForceKind)Force == FK_Undefined &&
         hasDisableAllTransformsHint(TheLoop))
       return FK_Disabled;
-    return (ForceKind)Force.Value;
+    return (ForceKind)Force;
   }
 
   /// \return true if scalable vectorization has been explicitly disabled.
@@ -353,16 +347,6 @@ public:
   /// Returns True if V is a Phi node of an induction variable in this loop.
   LLVM_ABI bool isInductionPhi(const Value *V) const;
 
-  /// Returns a pointer to the induction descriptor, if \p Phi is an integer or
-  /// floating point induction.
-  LLVM_ABI const InductionDescriptor *
-  getIntOrFpInductionDescriptor(PHINode *Phi) const;
-
-  /// Returns a pointer to the induction descriptor, if \p Phi is pointer
-  /// induction.
-  LLVM_ABI const InductionDescriptor *
-  getPointerInductionDescriptor(PHINode *Phi) const;
-
   /// Returns True if V is a cast that is part of an induction def-use chain,
   /// and had been proven to be redundant under a runtime guard (in other
   /// words, the cast has the same SCEV expression as the induction phi).
@@ -532,7 +516,7 @@ private:
   /// the new code path being implemented for outer loop vectorization
   /// (should be functional for inner loop vectorization) based on VPlan.
   /// If false, good old LV code.
-  bool canVectorizeLoopCFG(Loop *Lp, bool UseVPlanNativePath);
+  bool canVectorizeLoopCFG(Loop *Lp, bool UseVPlanNativePath) const;
 
   /// Check if a single basic block loop is vectorizable.
   /// At this point we know that this is a loop with a constant trip count

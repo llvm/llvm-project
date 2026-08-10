@@ -64,4 +64,4 @@ for.end:
 !1 = !{!"llvm.loop.vectorize.width", i32 4}
 !2 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
 !3 = !{!"llvm.loop.interleave.count", i32 1}
-!4 = !{!"llvm.loop.vectorize.enable", i1 true}
+!4 = !{!"llvm.loop.vectorize.enable"}

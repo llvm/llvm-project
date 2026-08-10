@@ -20,6 +20,7 @@ void FreeList::push(Node *node) {
     LIBC_ASSERT(BlockRef::from_usable_space(node).outer_size() ==
                     begin_->block().outer_size() &&
                 "freelist entries must have the same size");
+    begin_->integrity_check();
     // Since the list is circular, insert the node immediately before begin_.
     node->prev = begin_->prev;
     node->next = begin_;
@@ -32,16 +33,29 @@ void FreeList::push(Node *node) {
 
 void FreeList::remove(Node *node) {
   LIBC_ASSERT(begin_ && "cannot remove from empty list");
-  if (node == node->next) {
+  node->integrity_check();
+  Node *next = node->next;
+  if (node == next) {
     LIBC_ASSERT(node == begin_ &&
                 "a self-referential node must be the only element");
     begin_ = nullptr;
   } else {
-    node->prev->next = node->next;
-    node->next->prev = node->prev;
+    Node *prev = node->prev;
+    prev->next = next;
+    next->prev = prev;
     if (begin_ == node)
-      begin_ = node->next;
+      begin_ = next;
   }
+}
+
+void FreeList::integrity_check() const {
+  if (!begin_)
+    return;
+  Node *curr = begin_;
+  do {
+    curr->integrity_check();
+    curr = curr->next;
+  } while (curr != begin_);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

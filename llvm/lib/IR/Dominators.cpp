@@ -67,50 +67,6 @@ template class LLVM_EXPORT_TEMPLATE
 
 template class llvm::cfg::Update<BasicBlock *>;
 
-template LLVM_EXPORT_TEMPLATE void
-llvm::DomTreeBuilder::Calculate<DomTreeBuilder::BBDomTree>(
-    DomTreeBuilder::BBDomTree &DT);
-template LLVM_EXPORT_TEMPLATE void
-llvm::DomTreeBuilder::CalculateWithUpdates<DomTreeBuilder::BBDomTree>(
-    DomTreeBuilder::BBDomTree &DT, BBUpdates U);
-
-template LLVM_EXPORT_TEMPLATE void
-llvm::DomTreeBuilder::Calculate<DomTreeBuilder::BBPostDomTree>(
-    DomTreeBuilder::BBPostDomTree &DT);
-// No CalculateWithUpdates<PostDomTree> instantiation, unless a usecase arises.
-
-template LLVM_EXPORT_TEMPLATE void
-llvm::DomTreeBuilder::InsertEdge<DomTreeBuilder::BBDomTree>(
-    DomTreeBuilder::BBDomTree &DT, BasicBlock *From, BasicBlock *To);
-template LLVM_EXPORT_TEMPLATE void
-llvm::DomTreeBuilder::InsertEdge<DomTreeBuilder::BBPostDomTree>(
-    DomTreeBuilder::BBPostDomTree &DT, BasicBlock *From, BasicBlock *To);
-
-template LLVM_EXPORT_TEMPLATE void
-llvm::DomTreeBuilder::DeleteEdge<DomTreeBuilder::BBDomTree>(
-    DomTreeBuilder::BBDomTree &DT, BasicBlock *From, BasicBlock *To);
-template LLVM_EXPORT_TEMPLATE void
-llvm::DomTreeBuilder::DeleteEdge<DomTreeBuilder::BBPostDomTree>(
-    DomTreeBuilder::BBPostDomTree &DT, BasicBlock *From, BasicBlock *To);
-
-template LLVM_EXPORT_TEMPLATE void
-llvm::DomTreeBuilder::ApplyUpdates<DomTreeBuilder::BBDomTree>(
-    DomTreeBuilder::BBDomTree &DT, DomTreeBuilder::BBDomTreeGraphDiff &,
-    DomTreeBuilder::BBDomTreeGraphDiff *);
-template LLVM_EXPORT_TEMPLATE void
-llvm::DomTreeBuilder::ApplyUpdates<DomTreeBuilder::BBPostDomTree>(
-    DomTreeBuilder::BBPostDomTree &DT, DomTreeBuilder::BBPostDomTreeGraphDiff &,
-    DomTreeBuilder::BBPostDomTreeGraphDiff *);
-
-template LLVM_EXPORT_TEMPLATE bool
-llvm::DomTreeBuilder::Verify<DomTreeBuilder::BBDomTree>(
-    const DomTreeBuilder::BBDomTree &DT,
-    DomTreeBuilder::BBDomTree::VerificationLevel VL);
-template LLVM_EXPORT_TEMPLATE bool
-llvm::DomTreeBuilder::Verify<DomTreeBuilder::BBPostDomTree>(
-    const DomTreeBuilder::BBPostDomTree &DT,
-    DomTreeBuilder::BBPostDomTree::VerificationLevel VL);
-
 bool DominatorTree::invalidate(Function &F, const PreservedAnalyses &PA,
                                FunctionAnalysisManager::Invalidator &) {
   // Check whether the analysis, all analyses on functions, or the function's
@@ -146,11 +102,13 @@ bool DominatorTree::dominates(const Value *DefV,
   const BasicBlock *DefBB = Def->getParent();
 
   // Any unreachable use is dominated, even if Def == User.
-  if (!isReachableFromEntry(UseBB))
+  const DomTreeNode *UseNode = getNode(UseBB);
+  if (!UseNode)
     return true;
 
   // Unreachable definitions don't dominate anything.
-  if (!isReachableFromEntry(DefBB))
+  const DomTreeNode *DefNode = getNode(DefBB);
+  if (!DefNode)
     return false;
 
   // An instruction doesn't dominate a use in itself.
@@ -165,7 +123,7 @@ bool DominatorTree::dominates(const Value *DefV,
     return dominates(Def, UseBB);
 
   if (DefBB != UseBB)
-    return dominates(DefBB, UseBB);
+    return dominates(DefNode, UseNode);
 
   return Def->comesBefore(User);
 }
@@ -177,11 +135,13 @@ bool DominatorTree::dominates(const Instruction *Def,
   const BasicBlock *DefBB = Def->getParent();
 
   // Any unreachable use is dominated, even if DefBB == UseBB.
-  if (!isReachableFromEntry(UseBB))
+  const DomTreeNode *UseNode = getNode(UseBB);
+  if (!UseNode)
     return true;
 
   // Unreachable definitions don't dominate anything.
-  if (!isReachableFromEntry(DefBB))
+  const DomTreeNode *DefNode = getNode(DefBB);
+  if (!DefNode)
     return false;
 
   if (DefBB == UseBB)
@@ -195,7 +155,7 @@ bool DominatorTree::dominates(const Instruction *Def,
     return dominates(E, UseBB);
   }
 
-  return dominates(DefBB, UseBB);
+  return dominates(DefNode, UseNode);
 }
 
 bool DominatorTree::dominates(const BasicBlockEdge &BBE,
@@ -204,7 +164,8 @@ bool DominatorTree::dominates(const BasicBlockEdge &BBE,
   // edge also doesn't.
   const BasicBlock *Start = BBE.getStart();
   const BasicBlock *End = BBE.getEnd();
-  if (!dominates(End, UseBB))
+  const DomTreeNode *EndNode = getNode(End);
+  if (!dominates(EndNode, getNode(UseBB)))
     return false;
 
   // Simple case: if the end BB has a single predecessor, the fact that it
@@ -242,7 +203,7 @@ bool DominatorTree::dominates(const BasicBlockEdge &BBE,
       continue;
     }
 
-    if (!dominates(End, BB))
+    if (!dominates(EndNode, getNode(BB)))
       return false;
   }
   return true;
@@ -287,11 +248,13 @@ bool DominatorTree::dominates(const Value *DefV, const Use &U) const {
     UseBB = UserInst->getParent();
 
   // Any unreachable use is dominated, even if Def == User.
-  if (!isReachableFromEntry(UseBB))
+  const DomTreeNode *UseNode = getNode(UseBB);
+  if (!UseNode)
     return true;
 
   // Unreachable definitions don't dominate anything.
-  if (!isReachableFromEntry(DefBB))
+  const DomTreeNode *DefNode = getNode(DefBB);
+  if (!DefNode)
     return false;
 
   // Invoke instructions define their return values on the edges to their normal
@@ -308,7 +271,7 @@ bool DominatorTree::dominates(const Value *DefV, const Use &U) const {
   // If the def and use are in different blocks, do a simple CFG dominator
   // tree query.
   if (DefBB != UseBB)
-    return dominates(DefBB, UseBB);
+    return dominates(DefNode, UseNode);
 
   // Ok, def and use are in the same block. If the def is an invoke, it
   // doesn't dominate anything in the block. If it's a PHI, it dominates
