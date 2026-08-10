@@ -17,10 +17,30 @@ llvm.func @unroll_full_inner_loop(%baseptr: !llvm.ptr, %tc1: i32, %tc2: i32) -> 
   llvm.return
 }
 
-// Only the inner loop carries the full-unroll metadata; the outer loop is
-// untouched.
 // CHECK-LABEL: define void @unroll_full_inner_loop(
-// CHECK: !llvm.loop ![[MD:[0-9]+]]
-// CHECK: ![[MD]] = distinct !{![[MD]], ![[ENABLE:[0-9]+]], ![[FULL:[0-9]+]]}
-// CHECK-DAG: ![[ENABLE]] = !{!"llvm.loop.unroll.enable"}
-// CHECK-DAG: ![[FULL]] = !{!"llvm.loop.unroll.full"}
+// CHECK-SAME:      ptr %[[PTR:.*]], i32 %[[TC1:.*]], i32 %[[TC2:.*]])
+
+// The outer loop counts to %[[TC1]] ...
+// CHECK:       %[[OUTER_IV:.*]] = phi i32 [ 0, %{{.*}} ], [ %[[OUTER_NEXT:.*]], %[[OUTER_INC:.*]] ]
+// CHECK:       icmp ult i32 %[[OUTER_IV]], %[[TC1]]
+
+// ... and the inner loop, which holds the store, counts to %[[TC2]].
+// CHECK:       %[[INNER_IV:.*]] = phi i32 [ 0, %{{.*}} ], [ %[[INNER_NEXT:.*]], %[[INNER_INC:.*]] ]
+// CHECK:       icmp ult i32 %[[INNER_IV]], %[[TC2]]
+// CHECK:       %[[GEP:.*]] = getelementptr inbounds float, ptr %[[PTR]], i32 %[[INNER_IV]]
+// CHECK:       store float 4.200000e+01, ptr %[[GEP]]
+
+// The full-unroll metadata hangs off the inner loop's backedge.
+// CHECK:     [[INNER_INC]]:
+// CHECK-NEXT:  %[[INNER_NEXT]] = add nuw i32 %[[INNER_IV]], 1
+// CHECK-NEXT:  br label %{{.*}}, !llvm.loop ![[MD:[0-9]+]]
+
+// The outer loop's backedge carries no metadata at all; the trailing anchor is
+// what keeps an accidental !llvm.loop here from passing.
+// CHECK:     [[OUTER_INC]]:
+// CHECK-NEXT:  %[[OUTER_NEXT]] = add nuw i32 %[[OUTER_IV]], 1
+// CHECK-NEXT:  br label %{{.*}}{{$}}
+
+// CHECK:       ![[MD]] = distinct !{![[MD]], ![[ENABLE:[0-9]+]], ![[FULL:[0-9]+]]}
+// CHECK-DAG:   ![[ENABLE]] = !{!"llvm.loop.unroll.enable"}
+// CHECK-DAG:   ![[FULL]] = !{!"llvm.loop.unroll.full"}
