@@ -67,12 +67,6 @@ static cl::opt<bool> DisableRequireStructuredCFG(
              "unexpected regressions happen."),
     cl::init(false), cl::Hidden);
 
-static cl::opt<bool> UseShortPointersOpt(
-    "nvptx-short-ptr",
-    cl::desc(
-        "Use 32-bit pointers for accessing const/local/shared address spaces."),
-    cl::init(false), cl::Hidden);
-
 // byval arguments in NVPTX are special. We're only allowed to read from them
 // using a special instruction, and if we ever need to write to them or take an
 // address, we must make a local copy and use it, instead.
@@ -138,10 +132,10 @@ NVPTXTargetMachine::NVPTXTargetMachine(const Target &T, const Triple &TT,
                                        CodeGenOptLevel OL, bool JIT)
     // The pic relocation model is used regardless of what the client has
     // specified, as it is the only relocation model currently supported.
-    : CodeGenTargetMachineImpl(
-          T, TT.computeDataLayout(UseShortPointersOpt ? "shortptr" : ""), TT,
-          CPU, FS, Options, Reloc::PIC_,
-          getEffectiveCodeModel(CM, CodeModel::Small), OL),
+    : CodeGenTargetMachineImpl(T,
+                               TT.computeDataLayout(Options.MCOptions.ABIName),
+                               TT, CPU, FS, Options, Reloc::PIC_,
+                               getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(std::make_unique<NVPTXTargetObjectFile>()),
       Subtarget(TT, CPU, FS, *this), StrPool(StrAlloc) {
   if (!DisableRequireStructuredCFG)
