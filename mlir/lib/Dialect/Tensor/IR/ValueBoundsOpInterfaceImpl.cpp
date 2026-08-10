@@ -9,6 +9,7 @@
 #include "mlir/Dialect/Tensor/IR/ValueBoundsOpInterfaceImpl.h"
 
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 
 using namespace mlir;
@@ -141,6 +142,20 @@ struct RankOpInterface
   }
 };
 
+struct SplatOpInterface
+    : public ValueBoundsOpInterface::ExternalModel<SplatOpInterface, SplatOp> {
+  void populateBoundsForShapedValueDim(Operation *op, Value value, int64_t dim,
+                                       ValueBoundsConstraintSet &cstr) const {
+    auto splatOp = cast<SplatOp>(op);
+    assert(value == splatOp.getAggregate() && "invalid value");
+
+    RankedTensorType type = splatOp.getType();
+    SmallVector<OpFoldResult> sizes = getMixedValues(
+        type.getShape(), splatOp.getDynamicSizes(), type.getContext());
+    cstr.bound(value)[dim] == sizes[dim];
+  }
+};
+
 } // namespace
 } // namespace tensor
 } // namespace mlir
@@ -159,6 +174,7 @@ void mlir::tensor::registerValueBoundsOpInterfaceExternalModels(
         *ctx);
     tensor::PadOp::attachInterface<tensor::PadOpInterface>(*ctx);
     tensor::RankOp::attachInterface<tensor::RankOpInterface>(*ctx);
+    tensor::SplatOp::attachInterface<tensor::SplatOpInterface>(*ctx);
     // Note: ValueBoundsOpInterface implementation is not required for ops that
     // implement `DestinationStyleOpInterface` (for querying shaped OpResults).
   });
