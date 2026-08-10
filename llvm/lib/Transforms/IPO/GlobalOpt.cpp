@@ -303,9 +303,11 @@ static bool CleanupConstantGlobalUsers(GlobalVariable *GV,
       append_range(WorkList, BO->users());
     if (auto *ASC = dyn_cast<AddrSpaceCastOperator>(U))
       append_range(WorkList, ASC->users());
-    else if (auto *GEP = dyn_cast<GEPOperator>(U))
+    else if (auto *GEP = dyn_cast<GEPOperator>(U)) {
+      auto R = GEP->users();
+      WorkList.reserve(WorkList.size() + std::distance(R.begin(), R.end()));
       append_range(WorkList, GEP->users());
-    else if (auto *LI = dyn_cast<LoadInst>(U)) {
+    } else if (auto *LI = dyn_cast<LoadInst>(U)) {
       // A load from a uniform value is always the same, regardless of any
       // applied offset.
       Type *Ty = LI->getType();
