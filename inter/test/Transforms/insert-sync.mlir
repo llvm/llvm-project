@@ -123,6 +123,24 @@ func.func @bar_preserves_scoreboard() {
   return
 }
 
+// sync.bar retires source reads from sends issued before the barrier.
+// CHECK-LABEL: func.func @bar_retires_reads
+// CHECK: [[STORE:%.*]] = xemachine.store_a64
+// CHECK-NEXT: [[BAR:%.*]] = xemachine.sync bar dep [[STORE]]
+// CHECK-NEXT: {{%.*}}, {{%.*}} = xemachine.load_a64 {{.*}} dep [[BAR]]
+func.func @bar_retires_reads() {
+  %root = xemachine.token
+  %address = xemachine.archreg 1 : !xemachine.reg<16, 1>
+  %data = xemachine.archreg 2 : !xemachine.reg<16, 2>
+  %store = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<16, 1>, !xemachine.reg<16, 2>)
+      -> !xemachine.mem.token
+  %bar = xemachine.sync bar dep %store : !xemachine.mem.token
+  %loaded, %load_token = xemachine.load_a64 %address dep %bar
+      : !xemachine.reg<16, 1> -> (!xemachine.reg<32, 4>, !xemachine.mem.token)
+  return
+}
+
 // CHECK-LABEL: func.func @joined_eot
 // CHECK: {{%.*}}, [[LOAD:%.*]] = xemachine.load_a64
 // CHECK: [[STORE:%.*]] = xemachine.store_a64

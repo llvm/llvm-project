@@ -8,18 +8,18 @@
 
 #include "inter/Analysis/UniformityAnalysis.h"
 #include "inter/Dialect/Inter/IR/XW.h"
-#include "inter/Support/Builtins.h"
 #include "inter/Dialect/XeMachine/IR/XeMachine.h"
+#include "inter/Support/Builtins.h"
 #include "inter/Transforms/Passes.h"
 
+#include "mlir/Analysis/DataFlow/Utils.h"
+#include "mlir/Analysis/DataFlowFramework.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/DenseMap.h"
-#include "mlir/Analysis/DataFlow/Utils.h"
-#include "mlir/Analysis/DataFlowFramework.h"
 
 #include <optional>
 
@@ -37,6 +37,7 @@ namespace {
 constexpr int kInlineMirrorSize = 32;
 constexpr int kFirstArgOffset = 24;
 constexpr int kLocalIdLoadOffset = 0x20;
+constexpr int kPerThreadPayloadSize = 192;
 
 struct SelectToMachine
     : public inter::impl::SelectToMachineBase<SelectToMachine> {
@@ -66,7 +67,7 @@ struct SelectToMachine
   DataFlowSolver *uniformity = nullptr;
   std::optional<Location> loc;
   std::optional<OpBuilder> b;
-  int nextGRF = 4; // r0-r3 reserved: r0 header, r1 inline, r2/r3 scratch
+  int nextGRF = 4; // The dual-entry payload prologue reserves r0-r9.
   DenseMap<Value, Value> vmap;
   Value gidValue;
   Value localXValue;
@@ -126,14 +127,78 @@ struct SelectToMachine
   }
 
   void emitSync(SyncKind kind) {
-    auto op = SyncOp::create(*b, *loc, MemTokenType::get(ctx), SyncKindAttr::get(ctx, kind), memToken);
+    auto op = SyncOp::create(*b, *loc, MemTokenType::get(ctx),
+                             SyncKindAttr::get(ctx, kind), memToken);
     memToken = op.getToken();
+  }
+
+  void emitLocalIdLoadEntry() {
+    Value r0 = archreg(0);
+    Value r1 = archreg(1);
+
+    // Hardware local-ID generation places IDs in r1-r3 and inline data in r4.
+    // The software entry mirrors that layout before converging at byte 192.
+    MovOp::create(*b, *loc, RegType::get(ctx, 16, 4), i32(), /*execSize=*/8,
+                  dcanon(), rcanon(), IntegerAttr(), IntegerAttr(), TypeAttr(),
+                  /*noMask=*/true, /*maskOffset=*/0, r1);
+    Value base =
+        AndOp::create(*b, *loc, RegType::get(ctx, 16, 5), i32(),
+                      /*execSize=*/1, dcanon(), runiform(), RegionAttr(),
+                      IntegerAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(),
+                      TypeAttr(), /*noMask=*/true, /*maskOffset=*/0, r0,
+                      imm(0xFFFFFFC0, i32()))
+            .getResult();
+    Value perThreadBase =
+        AddOp::create(*b, *loc, RegType::get(ctx, 16, 6), i32(),
+                      /*execSize=*/1, dcanon(), runiform(), RegionAttr(),
+                      IntegerAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(),
+                      TypeAttr(), /*noMask=*/true, /*maskOffset=*/0, base,
+                      imm(kLocalIdLoadOffset, i32()))
+            .getResult();
+    Value threadSlot =
+        AndOp::create(*b, *loc, RegType::get(ctx, 16, 7), i32(),
+                      /*execSize=*/1, dcanon(), runiform(), RegionAttr(),
+                      IntegerAttr(), b->getI32IntegerAttr(4), IntegerAttr(),
+                      TypeAttr(), TypeAttr(), /*noMask=*/true,
+                      /*maskOffset=*/0, r0, imm(0xff, i32()))
+            .getResult();
+    Value threadOffsetAcc =
+        MulOp::create(*b, *loc, ARFType::get(ctx, ARFFile::acc, 16, 0), i32(),
+                      /*execSize=*/1, dcanon(), runiform(), RegionAttr(),
+                      IntegerAttr(), IntegerAttr(), IntegerAttr(),
+                      /*noMask=*/true, /*maskOffset=*/0, threadSlot,
+                      imm(kPerThreadPayloadSize, i32()))
+            .getResult();
+    Value threadOffset =
+        MovOp::create(*b, *loc, RegType::get(ctx, 16, 8), i32(),
+                      /*execSize=*/1, dcanon(), runiform(), IntegerAttr(),
+                      IntegerAttr(), TypeAttr(), /*noMask=*/true,
+                      /*maskOffset=*/0, threadOffsetAcc)
+            .getResult();
+    Value perThreadAddr =
+        AddOp::create(*b, *loc, RegType::get(ctx, 16, 9), i32(),
+                      /*execSize=*/1, dcanon(), runiform(), runiform(),
+                      IntegerAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(),
+                      TypeAttr(), /*noMask=*/true, /*maskOffset=*/0,
+                      perThreadBase, threadOffset)
+            .getResult();
+    auto load = LoadBlockA32Op::create(*b, *loc, RegType::get(ctx, 16, 1),
+                                       MemTokenType::get(ctx), perThreadAddr,
+                                       Value(), 16);
+    memToken = load.getToken();
+
+    // Keep the hardware-generated-local-ID entry at the zeinfo offset.
+    emitSync(SyncKind::nop);
+    emitSync(SyncKind::nop);
+    emitSync(SyncKind::nop);
+    emitSync(SyncKind::nop);
+    nextGRF = 10;
   }
 
   LogicalResult lowerKernel(func::FuncOp kernel) {
     ctx = kernel.getContext();
     loc = kernel.getLoc();
-    nextGRF = 4; // r0-r3 reserved: r0 header, r1 inline, r2/r3 scratch
+    nextGRF = 4; // The dual-entry payload prologue reserves r0-r9.
     vmap.clear();
     memToken = nullptr;
     gidValue = nullptr;
@@ -142,13 +207,19 @@ struct SelectToMachine
     prologueEmitted = false;
 
     OpBuilder moduleBuilder(kernel);
-    auto func = moduleBuilder.create<func::FuncOp>(
-        kernel.getLoc(), (kernel.getName() + "_xm").str(),
-        moduleBuilder.getFunctionType({}, {}));
+    auto func = func::FuncOp::create(moduleBuilder, kernel.getLoc(),
+                                     (kernel.getName() + "_xm").str(),
+                                     moduleBuilder.getFunctionType({}, {}));
     func->setAttr("xemachine.target",
                   TargetAttr::get(ctx, moduleBuilder.getStringAttr("bmg")));
     b = OpBuilder::atBlockBegin(func.addEntryBlock());
 
+    bool usesThreadIds = false;
+    kernel.walk([&](Operation *operation) {
+      usesThreadIds |= isa<xw::GlobalIdOp, xw::LocalIdOp>(operation);
+    });
+    if (usesThreadIds && failed(emitPrologueAndGid()))
+      return failure();
     if (failed(lowerBlock(kernel.getBody().front())))
       return failure();
     func::ReturnOp::create(*b, *loc);
@@ -178,16 +249,14 @@ struct SelectToMachine
         if (failed(emitPrologueAndGid()))
           return failure();
         // Widen the packed u16 lane ids to dwords once.
-        Value lid = MovOp::create(*b, *loc, grf(32), i32(), /*execSize=*/32,
-                                  dcanon(), rcanon(), IntegerAttr(),
-                                  IntegerAttr(), ty(i16()),
-                                  /*noMask=*/false, /*maskOffset=*/0,
-                                  localXValue)
-                        .getResult();
+        Value lid =
+            MovOp::create(*b, *loc, grf(32), i32(), /*execSize=*/32, dcanon(),
+                          rcanon(), IntegerAttr(), IntegerAttr(), ty(i16()),
+                          /*noMask=*/false, /*maskOffset=*/0, localXValue)
+                .getResult();
         vmap[op.getResult(0)] = lid;
       } else if (auto tok = dyn_cast<xw::TokenOp>(&op)) {
-        memToken =
-            TokenOp::create(*b, *loc, MemTokenType::get(ctx)).getToken();
+        memToken = TokenOp::create(*b, *loc, MemTokenType::get(ctx)).getToken();
         vmap[tok.getToken()] = memToken;
       } else if (auto join = dyn_cast<xw::TokenJoinOp>(&op)) {
         SmallVector<Value> deps;
@@ -229,12 +298,12 @@ struct SelectToMachine
       } else if (isa<scf::YieldOp>(&op)) {
         continue; // structural; merge movs are injected by emitIf
       } else if (auto load = dyn_cast<xw::LoadOp>(&op)) {
-        FailureOr<Value> dependency =
-            mapDependency(&op, load.getDependency());
+        FailureOr<Value> dependency = mapDependency(&op, load.getDependency());
         if (failed(dependency))
           return failure();
-        if (failed(emitLoad(cast<LLVM::GEPOp>(load.getAddress().getDefiningOp()),
-                            load.getValue(), *dependency)))
+        if (failed(
+                emitLoad(cast<LLVM::GEPOp>(load.getAddress().getDefiningOp()),
+                         load.getValue(), *dependency)))
           return failure();
         vmap[load.getToken()] = memToken;
       } else if (isa<LLVM::AddOp>(&op)) {
@@ -250,21 +319,20 @@ struct SelectToMachine
           // only shape is const - laneValue; handle both orders.
         }
         // sub a,b lowers to add(-b, a): operands are (b, a).
-        Value diff = SubOp::create(*b, *loc, grf(32), i32(), /*execSize=*/32,
-                                   dcanon(), rcanon(), rcanon(),
-                                   IntegerAttr(), IntegerAttr(),
-                                   IntegerAttr(), TypeAttr(), TypeAttr(),
-                                   /*noMask=*/false, /*maskOffset=*/0, rhs,
-                                   lhs)
-                         .getResult();
+        Value diff =
+            SubOp::create(*b, *loc, grf(32), i32(), /*execSize=*/32, dcanon(),
+                          rcanon(), rcanon(), IntegerAttr(), IntegerAttr(),
+                          IntegerAttr(), TypeAttr(), TypeAttr(),
+                          /*noMask=*/false, /*maskOffset=*/0, rhs, lhs)
+                .getResult();
         vmap[op.getResult(0)] = diff;
       } else if (auto store = dyn_cast<xw::StoreOp>(&op)) {
-        FailureOr<Value> dependency =
-            mapDependency(&op, store.getDependency());
+        FailureOr<Value> dependency = mapDependency(&op, store.getDependency());
         if (failed(dependency))
           return failure();
-        if (failed(emitStore(cast<LLVM::GEPOp>(store.getAddress().getDefiningOp()),
-                             vmap.lookup(store.getValue()), *dependency)))
+        if (failed(
+                emitStore(cast<LLVM::GEPOp>(store.getAddress().getDefiningOp()),
+                          vmap.lookup(store.getValue()), *dependency)))
           return failure();
         vmap[store.getToken()] = memToken;
       } else if (isa<LLVM::ReturnOp, func::ReturnOp>(&op)) {
@@ -277,17 +345,24 @@ struct SelectToMachine
   // icmp predicate -> EU condition modifier; sign rides on the operand types.
   std::optional<CondModifier> mapPredicate(LLVM::ICmpPredicate pred) {
     switch (pred) {
-    case LLVM::ICmpPredicate::eq: return CondModifier::eq;
-    case LLVM::ICmpPredicate::ne: return CondModifier::ne;
+    case LLVM::ICmpPredicate::eq:
+      return CondModifier::eq;
+    case LLVM::ICmpPredicate::ne:
+      return CondModifier::ne;
     case LLVM::ICmpPredicate::ugt:
-    case LLVM::ICmpPredicate::sgt: return CondModifier::gt;
+    case LLVM::ICmpPredicate::sgt:
+      return CondModifier::gt;
     case LLVM::ICmpPredicate::uge:
-    case LLVM::ICmpPredicate::sge: return CondModifier::ge;
+    case LLVM::ICmpPredicate::sge:
+      return CondModifier::ge;
     case LLVM::ICmpPredicate::ult:
-    case LLVM::ICmpPredicate::slt: return CondModifier::lt;
+    case LLVM::ICmpPredicate::slt:
+      return CondModifier::lt;
     case LLVM::ICmpPredicate::ule:
-    case LLVM::ICmpPredicate::sle: return CondModifier::le;
-    default: return std::nullopt;
+    case LLVM::ICmpPredicate::sle:
+      return CondModifier::le;
+    default:
+      return std::nullopt;
     }
   }
 
@@ -412,7 +487,7 @@ struct SelectToMachine
             MovOp::create(*b, *loc, ifm->getResult(i).getType(), i32(),
                           /*execSize=*/32, dcanon(), rcanon(), IntegerAttr(),
                           IntegerAttr(), TypeAttr(), /*noMask=*/false,
-                           /*maskOffset=*/0, v);
+                          /*maskOffset=*/0, v);
         yieldVals.push_back(merge.getResult());
       }
       YieldOp::create(*b, *loc, yieldVals);
@@ -421,30 +496,25 @@ struct SelectToMachine
     return success();
   }
 
-  // r0.0 & ~0x3F = blob base; per-thread local X at blob+0x20; cross-thread
-  // tail at blob+0. gid = r0.1 * enq_local.x + localX + gid_off.x.
+  // r1 contains hardware-generated or software-loaded local IDs; r4 contains
+  // inline data. The cross-thread tail starts at blob+0.
   LogicalResult emitPrologueAndGid() {
     if (prologueEmitted)
       return success();
     prologueEmitted = true;
-    Value r0 = archreg(0);
-    Value r1 = archreg(1);
+    emitLocalIdLoadEntry();
+    emitSync(SyncKind::allwr);
 
-    Value base = AndOp::create(*b, *loc, grf(16), i32(), /*execSize=*/1,
-                               dcanon(), runiform(), RegionAttr(),
-                               IntegerAttr(), IntegerAttr(), IntegerAttr(),
-                               TypeAttr(), TypeAttr(), /*noMask=*/true,
-                               /*maskOffset=*/0, r0, imm(0xFFFFFFC0, i32()))
-                     .getResult();
-    Value perThreadAddr =
-        AddOp::create(*b, *loc, grf(16), i32(), /*execSize=*/1, dcanon(),
+    Value r0 = archreg(0);
+    Value localX = archreg(1);
+    Value inlineData = archreg(4);
+
+    Value base =
+        AndOp::create(*b, *loc, grf(16), i32(), /*execSize=*/1, dcanon(),
                       runiform(), RegionAttr(), IntegerAttr(), IntegerAttr(),
                       IntegerAttr(), TypeAttr(), TypeAttr(), /*noMask=*/true,
-                      /*maskOffset=*/0, base, imm(kLocalIdLoadOffset, i32()))
+                      /*maskOffset=*/0, r0, imm(0xFFFFFFC0, i32()))
             .getResult();
-
-    // Local X ids: d32x16t at blob+0x20 (one GRF: 32 lanes of u16).
-    Value localX = emitLoadBlock(grf(16), perThreadAddr, 16);
     localXValue = localX;
     // Cross-thread tail: d32x8t at blob+0.
     tailValue = emitLoadBlock(grf(16), base, 8);
@@ -453,8 +523,8 @@ struct SelectToMachine
                               i32(), /*execSize=*/1, dcanon(), runiform(),
                               runiform(), IntegerAttr(),
                               b->getI32IntegerAttr(1), b->getI32IntegerAttr(3),
-                              /*noMask=*/true, /*maskOffset=*/0, r0, r1)
-                      .getResult();
+                              /*noMask=*/true, /*maskOffset=*/0, r0, inlineData)
+                    .getResult();
     Value gidBase = MovOp::create(*b, *loc, grf(16), i32(), /*execSize=*/1,
                                   dcanon(), runiform(), IntegerAttr(),
                                   IntegerAttr(), TypeAttr(), /*noMask=*/true,
@@ -465,9 +535,10 @@ struct SelectToMachine
                               IntegerAttr(), IntegerAttr(), IntegerAttr(),
                               IntegerAttr(), TypeAttr(), ty(i16()), TypeAttr(),
                               /*noMask=*/false, /*maskOffset=*/0, gidBase,
-                              localX, r1)
+                              localX, inlineData)
                    .getResult();
-    emitByteOffsets(); // keep offset chains at top level: regions reference them
+    emitByteOffsets(); // keep offset chains at top level: regions reference
+                       // them
     return success();
   }
 
@@ -490,31 +561,31 @@ struct SelectToMachine
                              IntegerAttr(), IntegerAttr(), TypeAttr(),
                              /*noMask=*/false, /*maskOffset=*/0, gidValue)
                    .getResult();
-    Value w1 = MovOp::create(*b, *loc, zeroHi.getType(), i32(),
-                             /*execSize=*/16, dstride2(), rcanon(),
-                             IntegerAttr(), b->getI32IntegerAttr(16),
-                             TypeAttr(), /*noMask=*/false, /*maskOffset=*/16,
-                             gidValue)
-                   .getResult();
-    byteOffLo = ShlOp::create(*b, *loc, grf(32), i64(), /*execSize=*/16,
-                              dcanon(), rstride2(), RegionAttr(), IntegerAttr(),
-                              IntegerAttr(), IntegerAttr(), ty(i32()),
-                              TypeAttr(), /*noMask=*/false, /*maskOffset=*/0,
-                              w0, imm(2, i16()))
-                    .getResult();
-    byteOffHi = ShlOp::create(*b, *loc, grf(32), i64(), /*execSize=*/16,
-                              dcanon(), rstride2(), RegionAttr(), IntegerAttr(),
-                              IntegerAttr(), IntegerAttr(), ty(i32()),
-                              TypeAttr(), /*noMask=*/false, /*maskOffset=*/16,
-                              w1, imm(2, i16()))
-                    .getResult();
+    Value w1 =
+        MovOp::create(*b, *loc, zeroHi.getType(), i32(),
+                      /*execSize=*/16, dstride2(), rcanon(), IntegerAttr(),
+                      b->getI32IntegerAttr(16), TypeAttr(), /*noMask=*/false,
+                      /*maskOffset=*/16, gidValue)
+            .getResult();
+    byteOffLo =
+        ShlOp::create(*b, *loc, grf(32), i64(), /*execSize=*/16, dcanon(),
+                      rstride2(), RegionAttr(), IntegerAttr(), IntegerAttr(),
+                      IntegerAttr(), ty(i32()), TypeAttr(), /*noMask=*/false,
+                      /*maskOffset=*/0, w0, imm(2, i16()))
+            .getResult();
+    byteOffHi =
+        ShlOp::create(*b, *loc, grf(32), i64(), /*execSize=*/16, dcanon(),
+                      rstride2(), RegionAttr(), IntegerAttr(), IntegerAttr(),
+                      IntegerAttr(), ty(i32()), TypeAttr(), /*noMask=*/false,
+                      /*maskOffset=*/16, w1, imm(2, i16()))
+            .getResult();
   }
 
   // Pointer arg: offset < 32 reads inline r1 (qword sub), else the tail load.
   std::pair<Value, int> pointerArg(int argIndex) {
     int offset = kFirstArgOffset + argIndex * 8;
     if (offset < kInlineMirrorSize)
-      return {archreg(1), offset / 8};
+      return {archreg(4), offset / 8};
     return {tailValue, (offset - kInlineMirrorSize) / 8};
   }
 
@@ -591,12 +662,12 @@ struct SelectToMachine
     Value rhs = vmap.lookup(op->getOperand(1));
     if (!lhs || !rhs)
       return emitError(op->getLoc(), "add operand not lowered"), failure();
-    Value sum = AddOp::create(*b, *loc, grf(32), i32(), /*execSize=*/32,
-                              dcanon(), rcanon(), rcanon(), IntegerAttr(),
-                              IntegerAttr(), IntegerAttr(), TypeAttr(),
-                              TypeAttr(), /*noMask=*/false, /*maskOffset=*/0,
-                              lhs, rhs)
-                      .getResult();
+    Value sum =
+        AddOp::create(*b, *loc, grf(32), i32(), /*execSize=*/32, dcanon(),
+                      rcanon(), rcanon(), IntegerAttr(), IntegerAttr(),
+                      IntegerAttr(), TypeAttr(), TypeAttr(), /*noMask=*/false,
+                      /*maskOffset=*/0, lhs, rhs)
+            .getResult();
     vmap[op->getResult(0)] = sum;
     return success();
   }
@@ -606,8 +677,8 @@ struct SelectToMachine
       Value addr = emitSlmAddress(gep);
       if (!addr)
         return failure();
-      auto op = StoreSLMOp::create(*b, *loc, MemTokenType::get(ctx), addr,
-                                   data, depTok, 32);
+      auto op = StoreSLMOp::create(*b, *loc, MemTokenType::get(ctx), addr, data,
+                                   depTok, 32);
       memToken = op.getToken();
       return success();
     }
@@ -637,7 +708,7 @@ struct SelectToMachine
                                         fence.getReadback(), memToken);
     memToken = awaitOp.getToken();
 
-    // Barrier payload: zero GRF with dword 2 = 0x400000 and byte 10 = r0.11.
+    // Barrier payload: zero GRF with dword 2 = 0x100 and byte 10 = r0.11.
     Value payload = MovOp::create(*b, *loc, grf(16), i32(), /*execSize=*/16,
                                   DstRegionAttr(), RegionAttr(), IntegerAttr(),
                                   IntegerAttr(), TypeAttr(), /*noMask=*/true,
@@ -646,7 +717,7 @@ struct SelectToMachine
     payload = MovOp::create(*b, *loc, payload.getType(), i32(), /*execSize=*/1,
                             dcanon(), RegionAttr(), b->getI32IntegerAttr(2),
                             IntegerAttr(), TypeAttr(), /*noMask=*/true,
-                            /*maskOffset=*/0, imm(0x400000, i32()))
+                            /*maskOffset=*/0, imm(0x100, i32()))
                   .getResult();
     payload = MovOp::create(*b, *loc, payload.getType(),
                             IntegerType::get(ctx, 8), /*execSize=*/2, dcanon(),
@@ -674,24 +745,21 @@ struct SelectToMachine
     auto [ptr, sub] = pointerArg(barg.getArgNumber());
     // Per-lane address payload: the uniform pointer broadcast into qwords.
     Type i64t = i64();
-    Value a0 = MovOp::create(*b, *loc, grf(32), i64t, /*execSize=*/16,
-                             dcanon(), runiform(), IntegerAttr(),
+    Value a0 = MovOp::create(*b, *loc, grf(32), i64t, /*execSize=*/16, dcanon(),
+                             runiform(), IntegerAttr(),
                              b->getI32IntegerAttr(sub), TypeAttr(),
                              /*noMask=*/false, /*maskOffset=*/0, ptr)
                    .getResult();
-    Value a1 = MovOp::create(*b, *loc, grf(32), i64t, /*execSize=*/16,
-                             dcanon(), runiform(), IntegerAttr(),
-                             b->getI32IntegerAttr(sub), TypeAttr(),
-                             /*noMask=*/false, /*maskOffset=*/16, ptr)
-                   .getResult();
+    MovOp::create(*b, *loc, grf(32), i64t, /*execSize=*/16, dcanon(),
+                  runiform(), IntegerAttr(), b->getI32IntegerAttr(sub),
+                  TypeAttr(), /*noMask=*/false, /*maskOffset=*/16, ptr);
     Value ones = MovOp::create(*b, *loc, grf(32), i32(), /*execSize=*/32,
                                DstRegionAttr(), RegionAttr(), IntegerAttr(),
                                IntegerAttr(), TypeAttr(), /*noMask=*/false,
                                /*maskOffset=*/0, imm(1, i16()))
                      .getResult();
-    auto op = AtomicIAddA64Op::create(*b, *loc, grf(32),
-                                      MemTokenType::get(ctx), a0, ones,
-                                      *dependency, 32);
+    auto op = AtomicIAddA64Op::create(*b, *loc, grf(32), MemTokenType::get(ctx),
+                                      a0, ones, *dependency, 32);
     memToken = op.getToken();
     vmap[call.getToken()] = memToken;
     vmap[call.getOld()] = op.getDst();

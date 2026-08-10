@@ -19,6 +19,8 @@ include(AddLLVM)
 include(AddMLIR)
 include(HandleLLVMOptions)
 
+include(cmake/FetchGED.cmake)
+
 include_directories(BEFORE
   ${CMAKE_CURRENT_SOURCE_DIR}/include
   ${CMAKE_CURRENT_BINARY_DIR}/include)

@@ -56,10 +56,11 @@ def cmd_extract(args):
             print(f"kernel {kname}: {size} bytes")
     for want, fname in ((".ze_info", "zeinfo.yaml"),
                         (".note.intelgt.compat", "note.compat.bin")):
-        if want in secs:
-            _, off, size, _ = secs[want]
-            open(f"{args.outdir}/{fname}", "wb").write(data[off:off + size])
-            print(f"{want}: {size} bytes -> {fname}")
+        if want not in secs:
+            raise SystemExit(f"missing required section {want}")
+        _, off, size, _ = secs[want]
+        open(f"{args.outdir}/{fname}", "wb").write(data[off:off + size])
+        print(f"{want}: {size} bytes -> {fname}")
 
 
 def cmd_write(args):

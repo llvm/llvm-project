@@ -1,7 +1,8 @@
 // Straight-line selection: vadd lowers to the prologue, gid computation,
 // A64 loads, a store, and EOT.
 // RUN: inter-opt %s --inter-normalize-cf --inter-convert-calls --inter-convert-memory --inter-select-to-machine --inter-insert-sync | FileCheck %s
-// RUN: inter-opt %s --inter-normalize-cf --inter-convert-calls --inter-convert-memory --inter-select-to-machine --inter-insert-sync | inter-translate --xemachine-to-iga -o /dev/null
+// RUN: inter-opt %s --inter-normalize-cf --inter-convert-calls --inter-convert-memory --inter-select-to-machine --inter-insert-sync | inter-translate --xemachine-to-ged -o %t
+// RUN: inter-ged-dump %t | FileCheck %s --check-prefix=GED
 
 module {
   // CHECK: func.func @vadd
@@ -24,10 +25,14 @@ module {
 
 // Prologue: blob base and the two payload loads.
 // CHECK: xemachine.and
+// CHECK: [[SLOT:%.*]] = xemachine.and {{.*}}src0Sub = 4
+// CHECK: [[PAYLOAD_STRIDE:%.*]] = xemachine.imm 192
+// CHECK: [[THREAD_OFFSET_ACC:%.*]] = xemachine.mul [[SLOT]], [[PAYLOAD_STRIDE]]
+// CHECK: [[THREAD_OFFSET:%.*]] = xemachine.mov [[THREAD_OFFSET_ACC]]
+// CHECK: xemachine.add {{.*}}, [[THREAD_OFFSET]]
 // CHECK-COUNT-2: xemachine.load_block_a32
-// gid: mul into acc, then wait for the payload before add3 uses it.
+// gid: mul into acc, then add the hardware- or software-provided local ID.
 // CHECK: xemachine.mul
-// CHECK: xemachine.sync allwr
 // CHECK: xemachine.add3
 // Two A64 loads and one store with a data payload.
 // CHECK-COUNT-2: xemachine.load_a64
@@ -36,3 +41,10 @@ module {
 // CHECK: xemachine.sync allrd
 // EOT via the gateway.
 // CHECK-NEXT: xemachine.eot {{.*}} dep [[FINAL]]
+
+// GED: pc=192 opcode=sync {{.*}}function=allwr
+// GED: opcode=mul
+// GED: opcode=add3
+// GED: opcode=shl
+// GED: opcode=send {{.*}}sfid=ugm {{.*}}len=2 eot=0
+// GED: opcode=send {{.*}}sfid=gateway {{.*}}len=0 eot=1

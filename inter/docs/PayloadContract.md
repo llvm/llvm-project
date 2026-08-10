@@ -7,10 +7,14 @@
   (64B-aligned). Used as the a32 offset with stateless `bti[255]` loads.
 - `r0.1` — thread group ID X (ud). (Y/Z in r0.2/r0.3 area.)
 - `r0.4[7:0]` — thread slot id within the dispatch.
-- `r1...` — walker inline data: the FIRST `walkerInlineDataSize` (observed 32)
-  bytes of the cross-thread payload, delivered in registers. Argument at
-  zeinfo payload offset N lives at byte N of r1. Sub-register numbering is in
-  TYPE units: a 64-bit pointer arg at offset 24 is `r1.3:q` (qword 3).
+- The software-local-ID entry receives the first 32 cross-thread bytes in
+  `r1`, copies them to `r4`, and loads local IDs into `r1-r3`.
+- When NEO enables hardware local-ID generation, it starts the kernel at
+  `offset_to_skip_per_thread_data_load` (192 bytes): `r1-r3` already contain
+  local IDs and the same inline data is delivered in `r4`.
+- The common body therefore reads inline data from `r4`. Argument at zeinfo
+  payload offset N lives at byte N of `r4`; a 64-bit pointer at offset 24 is
+  `r4.3:q`.
 - EU sub-register numbering is in units of the operand data type.
 
 ## Indirect data blob (in memory, at `r0.0 & ~0x3F`)
@@ -19,7 +23,7 @@ Layout (NEO strips the inline-mirrored prefix of cross-thread data):
 
 ```
 +0x00  cross-thread remainder (args beyond the 32B inline mirror)
-+0x20  per-thread data: packed local IDs, SoA u16 arrays:
++0x20 + thread_slot*0xC0  per-thread data: packed local IDs, SoA u16 arrays:
          X at +0x20 (64B for SIMD32), Y at +0x60, Z at +0xA0
 ```
 
@@ -43,6 +47,9 @@ loaded local-ID array and the inline-register global offset).
 - A64 scattered dword load: `send.ugm (32|M0) rDst rAddr null:0 0x0
   0x08200580` (load.ugm.d32.a64), 2 GRF dst for 32 dwords.
 - A64 single-dword load: desc 0x02108580 (load.ugm.d32x1t.a64).
+- SIMD32 A64 atomic iadd: desc 0x0820058C (four address GRFs, two data GRFs,
+  two result GRFs).
+- Barrier signal payload: dword 2 is 0x100; bytes 10-11 copy `r0.11-r0.12`.
 - EOT: `send.gtwy (1|M0) null r127 null:0 0x0 0x02000010 {EOT}`.
 
 ## SWSB notation seen in IGA text

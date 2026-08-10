@@ -1,6 +1,6 @@
 // inter-translate: file-format crossings for the inter pipeline.
 // --import-llvm:        LLVM IR -> MLIR llvm dialect
-// --xemachine-to-iga:   xemachine MLIR -> IGA assembly text
+// --xemachine-to-ged:   xemachine MLIR -> raw Xe2 kernel bytes
 
 #include "inter/Dialect/XeMachine/IR/XeMachine.h"
 #include "inter/Emit/Emit.h"
@@ -32,8 +32,8 @@ static cl::opt<std::string> outputFilename("o", cl::desc("output file"),
 static cl::opt<bool> importLLVM("import-llvm",
                                 cl::desc("import LLVM IR to the llvm dialect"),
                                 cl::init(false));
-static cl::opt<bool> toIga("xemachine-to-iga",
-                           cl::desc("emit IGA assembly from xemachine MLIR"),
+static cl::opt<bool> toGed("xemachine-to-ged",
+                           cl::desc("emit raw Xe2 kernel bytes via GED"),
                            cl::init(false));
 } // namespace llvm
 
@@ -78,7 +78,7 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-  if (llvm::toIga) {
+  if (llvm::toGed) {
     mlir::DialectRegistry registry;
     registry.insert<inter::xemachine::XeMachineDialect,
                     mlir::func::FuncDialect, mlir::LLVM::LLVMDialect,
@@ -94,7 +94,7 @@ int main(int argc, char **argv) {
     auto out = openOutput();
     if (!out)
       return 1;
-    if (mlir::failed(inter::emitIgaAsm(mod.get(), out->os())))
+    if (mlir::failed(inter::emitGedBinary(mod.get(), out->os())))
       return 1;
     out->keep();
     return 0;

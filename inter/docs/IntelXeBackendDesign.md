@@ -387,6 +387,9 @@ no LLVM MC target for Xe; the MC-equivalent layer is owned here.
   the single decision that removes the largest risk in the project — bit
   encoding is Intel's own table, not our transcription. Decoder side gives
   free disassembly for tests and debugging.
+- The standalone build fetches IGC v2.38.2 at a pinned commit and archive
+  hash. `inter-translate --xemachine-to-ged` emits native 16-byte Xe2
+  instructions directly; there is no assembly-text emission path.
 - Buffered emission: instructions accumulate in a buffer (variant of
   instruction / label / alignment / directive) so fixups apply before
   finalize: branch targets (JIP/UIP), SWSB finalization if layout moved,
@@ -424,9 +427,11 @@ repo), never through hand-rolled `ze*` calls:
 
 ### Device ABI: payload and zeinfo
 
-- Thread payload: r0 header (local IDs etc. per PRM), then inline argument
-  area; argument placement described by zeinfo `payload_arguments` entries
-  (offset/size/kind per argument). NEO marshals; we declare.
+- Thread payload has dual entries. The software-local-ID prologue copies
+  inline arguments from r1 to r4 and loads local IDs into r1-r3; NEO's
+  hardware-local-ID path enters at byte 192 with that same register layout
+  already established. Argument placement is described by zeinfo
+  `payload_arguments` entries (offset/size/kind per argument).
 - Implicit arguments (global offset, enqueued local size, printf buffer,
   scratch pointer, sync buffer, ...) are requested explicitly in zeinfo only
   when the kernel uses them.

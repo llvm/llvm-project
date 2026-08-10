@@ -12,3 +12,5 @@ config.substitutions.append(
     ("inter-translate", "@CMAKE_BINARY_DIR@/tools/inter-translate/inter-translate"))
 config.substitutions.append(
     ("FileCheck", "@LLVM_TOOLS_BINARY_DIR@/FileCheck"))
+config.substitutions.append(
+    ("inter-ged-dump", "@CMAKE_CURRENT_BINARY_DIR@/inter-ged-dump"))

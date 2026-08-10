@@ -10,7 +10,7 @@ OUT=inter/out/m3
 run_kernel() {
   local name=$1 cl=$2; shift 2
   local mode=$1; shift
-  mkdir -p $OUT/$name/dump
+  mkdir -p $OUT/$name/final
   clang-20 -target spir64-unknown-unknown -x cl -emit-llvm -S -O1 \
     -o $OUT/$name/k.ll inter/$cl
   inter/build/tools/inter-translate/inter-translate $OUT/$name/k.ll --import-llvm -o $OUT/$name/k.mlir
@@ -18,18 +18,12 @@ run_kernel() {
     --inter-normalize-cf --lift-cf-to-scf --inter-convert-calls --inter-convert-memory --inter-select-to-machine --inter-insert-sync \
     -o $OUT/$name/k.xemachine.mlir
   inter/build/tools/inter-translate/inter-translate $OUT/$name/k.xemachine.mlir \
-    --xemachine-to-iga -o $OUT/$name/k.asm
-  if [ ! -d $OUT/$name/refdump ]; then
-    ocloc compile -file inter/$cl -device bmg-g21 -out_dir $OUT/$name/ref -q
-    ocloc disasm -file $OUT/$name/ref/${cl%.cl}_bmg.bin -device bmg-g21 -dump $OUT/$name/refdump
-  fi
-  cp $OUT/$name/k.asm $OUT/$name/dump/.text.$name.asm
-  cp $OUT/$name/refdump/.??* $OUT/$name/refdump/sections.txt $OUT/$name/dump/
-  (cd $OUT/$name && ocloc asm -file final.bin -dump dump -device bmg-g21) > /dev/null
-  mkdir -p $OUT/$name/final
-  python3 inter/make_zebin.py extract $OUT/$name/dump/final.bin $OUT/$name/final
+    --xemachine-to-ged -o $OUT/$name/k.text.bin
+  local ref=$OUT/$name/ref/${cl%.cl}_bmg.bin
+  ocloc compile -file inter/$cl -device bmg-g21 -out_dir $OUT/$name/ref -q
+  python3 inter/make_zebin.py extract $ref $OUT/$name/final
   python3 inter/make_zebin.py write --kernel $name \
-    --text $OUT/$name/final/$name.text.bin \
+    --text $OUT/$name/k.text.bin \
     --zeinfo $OUT/$name/final/zeinfo.yaml \
     --notes $OUT/$name/final/note.compat.bin -o $OUT/$name/final.bin
   inter/out/launcher $OUT/$name/final.bin $name 128 "$@" | python3 inter/verify.py "$mode"

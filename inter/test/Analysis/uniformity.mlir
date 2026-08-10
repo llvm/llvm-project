@@ -1,5 +1,7 @@
 // Uniformity analysis drives uniform_if vs exec_if selection.
 // RUN: inter-opt %s --inter-normalize-cf --lift-cf-to-scf --inter-convert-calls --inter-convert-memory --inter-select-to-machine | FileCheck %s
+// RUN: inter-opt %s --inter-normalize-cf --lift-cf-to-scf --inter-convert-calls --inter-convert-memory --inter-select-to-machine | inter-translate --xemachine-to-ged -o %t
+// RUN: inter-ged-dump %t | FileCheck %s --check-prefix=GED
 
 module {
   // Condition reads only a kernel arg and a constant: uniform.
@@ -52,3 +54,6 @@ module {
   }
   llvm.func spir_funccc @_Z13get_global_idj(i32) -> i64
 }
+
+// GED: pc=400 opcode=jmpi exec=1 swsb=0x0 jip=96 {{.*}}pred=sequential inverse=1 flag=0.0
+// GED: pc=480 opcode=jmpi exec=1 swsb=0x0 jip=80 {{.*}}pred=normal

@@ -10,7 +10,8 @@ class ModuleOp;
 
 namespace inter {
 
-mlir::LogicalResult emitIgaAsm(mlir::ModuleOp mod, llvm::raw_ostream &os);
+mlir::LogicalResult emitGedBinary(mlir::ModuleOp moduleOp,
+                                  llvm::raw_ostream &output);
 
 } // namespace inter
 

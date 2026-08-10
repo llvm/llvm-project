@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <array>
+#include <limits>
 
 using namespace mlir;
 using namespace inter::xemachine;
@@ -39,13 +40,22 @@ private:
       return DataType::q;
     if (type.isF32())
       return DataType::f;
+    assert(type.isInteger(32) && "unsupported Xe2 data type");
     return DataType::ud;
+  }
+
+  LogicalResult validateDataType(Operation *operation, Type type) const {
+    if (type.isInteger(8) || type.isInteger(16) || type.isInteger(32) ||
+        type.isInteger(64) || type.isF32())
+      return success();
+    return operation->emitError("unsupported Xe2 data type ") << type;
   }
 
   GrfReference getGrfReference(RegType type, int32_t sub,
                                Type elementType) const {
-    int32_t unitBytes = elementType.isInteger(64)   ? 8
+    int32_t unitBytes = elementType.isInteger(8)    ? 1
                         : elementType.isInteger(16) ? 2
+                        : elementType.isInteger(64) ? 8
                                                     : 4;
     int32_t advance = sub * unitBytes / 64;
     int32_t remainder = (sub * unitBytes) % 64 / unitBytes;
@@ -97,9 +107,14 @@ private:
             type, region, false};
   }
 
-  int32_t getYoungestProducerDistance(Operation *operation,
-                                      ValueRange operands) const {
-    int32_t youngest = -1;
+  struct ProducerDistance {
+    DistancePipe pipe = DistancePipe::none;
+    int32_t distance = -1;
+  };
+
+  ProducerDistance getYoungestProducer(Operation *operation,
+                                       ValueRange operands) const {
+    ProducerDistance youngest;
     for (Value operand : operands) {
       if (isa<MemTokenType>(operand.getType()))
         continue;
@@ -111,25 +126,39 @@ private:
         continue;
       int32_t distance =
           instructionIndices.lookup(operation) - iterator->second;
-      if (distance >= 1 && distance <= 15)
-        youngest = youngest < 0 ? distance : std::min(youngest, distance);
+      if (distance < 1 || distance > 7)
+        continue;
+      TypeAttr elementType =
+          definingOperation->getAttrOfType<TypeAttr>("elemType");
+      DistancePipe pipe = elementType && elementType.getValue().isF32()
+                              ? DistancePipe::floating
+                              : DistancePipe::inOrder;
+      if (youngest.distance < 0)
+        youngest = {pipe, distance};
+      else {
+        if (pipe != youngest.pipe)
+          youngest.pipe = DistancePipe::all;
+        youngest.distance = std::min(youngest.distance, distance);
+      }
     }
     return youngest;
   }
 
   SwsbInfo getInOrderSwsb(Operation *operation, ValueRange operands) const {
-    int32_t distance = getYoungestProducerDistance(operation, operands);
-    if (distance < 0)
+    ProducerDistance producer = getYoungestProducer(operation, operands);
+    if (producer.distance < 0)
       return {};
-    return {DistancePipe::inOrder, distance, -1};
+    return {producer.pipe, producer.distance, -1};
   }
 
   SwsbInfo getSendSwsb(Operation *operation, ValueRange operands, bool eot) {
-    int32_t distance = getYoungestProducerDistance(operation, operands);
-    DistancePipe pipe = distance < 0 ? DistancePipe::none
-                        : eot        ? DistancePipe::inOrder
-                                     : DistancePipe::all;
-    return {pipe, distance, nextToken++};
+    ProducerDistance producer = getYoungestProducer(operation, operands);
+    DistancePipe pipe = producer.pipe;
+    if (eot)
+      pipe = DistancePipe::inOrder;
+    else if (pipe == DistancePipe::floating)
+      pipe = DistancePipe::all;
+    return {pipe, producer.distance, nextToken++};
   }
 
   LogicalResult lowerBlock(Block &block) {
@@ -139,7 +168,8 @@ private:
       instructionIndices[&operation] = nextInstruction++;
 
       if (SendOp send = dyn_cast<SendOp>(&operation)) {
-        lowerSend(send);
+        if (failed(lowerSend(send)))
+          return failure();
         continue;
       }
       if (SyncOp sync = dyn_cast<SyncOp>(&operation)) {
@@ -157,7 +187,8 @@ private:
         continue;
       }
       if (CmpOp compare = dyn_cast<CmpOp>(&operation)) {
-        lowerCompare(compare);
+        if (failed(lowerCompare(compare)))
+          return failure();
         continue;
       }
       if (ExecIfOp ifOp = dyn_cast<ExecIfOp>(&operation)) {
@@ -184,6 +215,11 @@ private:
     ++nextInstruction;
   }
 
+  void lowerJmpi(std::optional<Predicate> predicate, uint32_t target) {
+    program.items.emplace_back(JmpiInstruction{predicate, target});
+    ++nextInstruction;
+  }
+
   void lowerJoin(uint32_t label, uint32_t uip) {
     program.items.emplace_back(Label{label});
     program.items.emplace_back(JoinInstruction{uip});
@@ -195,29 +231,43 @@ private:
     Predicate predicate{getArfReference(cast<ARFType>(condition.getType()), 0),
                         true};
 
+    if (UniformIfOp uniformIf = dyn_cast<UniformIfOp>(operation);
+        uniformIf && divergentDepth == 0) {
+      uint32_t elseLabel = nextLabel++;
+      uint32_t finalLabel = nextLabel++;
+      lowerJmpi(predicate, elseLabel);
+      if (failed(lowerBlock(uniformIf.getThenRegion().front())))
+        return failure();
+      lowerJmpi(std::nullopt, finalLabel);
+      program.items.emplace_back(Label{elseLabel});
+      if (!uniformIf.getElseRegion().empty() &&
+          failed(lowerBlock(uniformIf.getElseRegion().front())))
+        return failure();
+      program.items.emplace_back(Label{finalLabel});
+      return success();
+    }
+
     uint32_t firstLabel = nextLabel++;
     uint32_t secondLabel = nextLabel++;
     uint32_t finalLabel = nextLabel++;
     lowerGoto(predicate, firstLabel, firstLabel);
-    if (ExecIfOp ifOp = dyn_cast<ExecIfOp>(operation)) {
-      if (failed(lowerBlock(ifOp.getThenRegion().front())))
-        return failure();
-    } else if (failed(lowerBlock(
-                   cast<UniformIfOp>(operation).getThenRegion().front()))) {
+    bool divergent = isa<ExecIfOp>(operation);
+    auto lowerArm = [&](Region &region) {
+      if (region.empty())
+        return success();
+      if (divergent)
+        ++divergentDepth;
+      LogicalResult result = lowerBlock(region.front());
+      if (divergent)
+        --divergentDepth;
+      return result;
+    };
+    if (failed(lowerArm(operation->getRegion(0))))
       return failure();
-    }
     lowerGoto(std::nullopt, firstLabel, secondLabel);
     lowerJoin(firstLabel, secondLabel);
-    if (ExecIfOp ifOp = dyn_cast<ExecIfOp>(operation)) {
-      if (!ifOp.getElseRegion().empty() &&
-          failed(lowerBlock(ifOp.getElseRegion().front())))
-        return failure();
-    } else {
-      UniformIfOp uniformIf = cast<UniformIfOp>(operation);
-      if (!uniformIf.getElseRegion().empty() &&
-          failed(lowerBlock(uniformIf.getElseRegion().front())))
-        return failure();
-    }
+    if (failed(lowerArm(operation->getRegion(1))))
+      return failure();
     lowerJoin(secondLabel, finalLabel);
     program.items.emplace_back(Label{finalLabel});
     return success();
@@ -245,7 +295,7 @@ private:
     else if (isa<StoreSLMOp>(operation))
       form = {SendFn::slm, 0x04000504, 0x0, false};
     else if (isa<AtomicIAddA64Op>(operation))
-      form = {SendFn::ugm, 0x0410058C, 0x0, true};
+      form = {SendFn::ugm, 0x0820058C, 0x0, true};
     else if (isa<FenceSLMOp>(operation))
       form = {SendFn::slm, 0x0210001F, 0x0, true};
     else if (isa<BarrierSignalOp>(operation))
@@ -308,7 +358,7 @@ private:
     program.items.push_back(std::move(instruction));
   }
 
-  void lowerSend(SendOp send) {
+  LogicalResult lowerSend(SendOp send) {
     Type i32 = IntegerType::get(context, 32);
     SendInstruction instruction;
     instruction.execution = {static_cast<uint32_t>(send.getExecSize()), 0,
@@ -324,11 +374,20 @@ private:
     instruction.exdesc = send.getExdesc();
     instruction.desc = send.getDesc();
     instruction.eot = send.getEot();
-    instruction.swsb = getSendSwsb(send, send.getOperands(), send.getEot());
+    if (std::optional<uint64_t> rawSwsb = send.getSwsb()) {
+      if (*rawSwsb > std::numeric_limits<uint32_t>::max())
+        return send.emitError("raw SWSB value exceeds 32 bits");
+      instruction.rawSwsb = static_cast<uint32_t>(*rawSwsb);
+    } else {
+      instruction.swsb = getSendSwsb(send, send.getOperands(), send.getEot());
+    }
     program.items.push_back(std::move(instruction));
+    return success();
   }
 
-  void lowerCompare(CmpOp compare) {
+  LogicalResult lowerCompare(CmpOp compare) {
+    if (failed(validateDataType(compare, compare.getElemType())))
+      return failure();
     CompareInstruction instruction;
     instruction.execution.size = compare.getExecSize();
     instruction.condition = compare.getCond();
@@ -343,12 +402,18 @@ private:
     for (auto [index, operand] : llvm::enumerate(compare.getOperands())) {
       Type sourceType =
           getSourceType(compare, typeNames[index], compare.getElemType());
+      if (failed(validateDataType(compare, sourceType)))
+        return failure();
+      if (ImmOp immediate = operand.getDefiningOp<ImmOp>())
+        if (failed(validateDataType(compare, immediate.getElemType())))
+          return failure();
       instruction.sources.push_back(getSourceOperand(
           operand, getSub(compare, subNames[index]), sourceType,
           getSourceRegion(compare, regionNames[index])));
     }
     instruction.swsb = getInOrderSwsb(compare, compare.getOperands());
     program.items.push_back(std::move(instruction));
+    return success();
   }
 
   LogicalResult lowerAlu(Operation *operation) {
@@ -378,6 +443,8 @@ private:
     if (!elementTypeAttr)
       return operation->emitError("expected an elemType attribute");
     Type elementType = elementTypeAttr.getValue();
+    if (failed(validateDataType(operation, elementType)))
+      return failure();
     instruction.destinationType = getDataType(elementType);
     if (IntegerAttr attr = operation->getAttrOfType<IntegerAttr>("execSize"))
       instruction.execution.size = attr.getInt();
@@ -405,6 +472,11 @@ private:
                                                         "src2Type"};
     for (auto [index, operand] : llvm::enumerate(operation->getOperands())) {
       Type sourceType = getSourceType(operation, typeNames[index], elementType);
+      if (failed(validateDataType(operation, sourceType)))
+        return failure();
+      if (ImmOp immediate = operand.getDefiningOp<ImmOp>())
+        if (failed(validateDataType(operation, immediate.getElemType())))
+          return failure();
       SourceOperand source = getSourceOperand(
           operand, getSub(operation, subNames[index]), sourceType,
           getSourceRegion(operation, regionNames[index]));
@@ -422,6 +494,7 @@ private:
   DenseMap<Operation *, int32_t> instructionIndices;
   int32_t nextInstruction = 0;
   int32_t nextToken = 0;
+  uint32_t divergentDepth = 0;
   uint32_t nextLabel = 1;
 };
 

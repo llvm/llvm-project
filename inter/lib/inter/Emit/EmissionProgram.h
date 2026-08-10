@@ -60,7 +60,7 @@ struct Destination {
   uint32_t hstride = 1;
 };
 
-enum class DistancePipe { none, all, inOrder };
+enum class DistancePipe { none, all, floating, inOrder };
 
 struct SwsbInfo {
   DistancePipe pipe = DistancePipe::none;
@@ -96,6 +96,7 @@ struct SendInstruction {
   uint32_t desc = 0;
   bool eot = false;
   SwsbInfo swsb;
+  std::optional<uint32_t> rawSwsb;
 };
 
 struct SyncInstruction {
@@ -113,6 +114,11 @@ struct GotoInstruction {
   uint32_t uip = 0;
 };
 
+struct JmpiInstruction {
+  std::optional<Predicate> predicate;
+  uint32_t target = 0;
+};
+
 struct JoinInstruction {
   uint32_t uip = 0;
 };
@@ -123,7 +129,8 @@ struct Label {
 
 using EmissionItem =
     std::variant<Label, AluInstruction, CompareInstruction, SendInstruction,
-                 SyncInstruction, GotoInstruction, JoinInstruction>;
+                 SyncInstruction, GotoInstruction, JmpiInstruction,
+                 JoinInstruction>;
 
 struct EmissionProgram {
   llvm::SmallVector<EmissionItem> items;

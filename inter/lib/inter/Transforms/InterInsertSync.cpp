@@ -427,6 +427,8 @@ static void observeSync(SyncOp sync, SyncState &state) {
     applyReadWait(state);
   else if (sync.getKind() == SyncKind::allwr)
     applyWriteWait(state);
+  else if (sync.getKind() == SyncKind::bar)
+    applyReadWait(state);
   deriveResults(sync, state);
 }
 
