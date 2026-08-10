@@ -436,9 +436,8 @@ static bool simplifyAssocCastAssoc(BinaryOperator *BinOp1,
     return false;
 
   // `or disjoint` is equivalent to xor.
-  bool IsDisjointOrAsXor =
-      AssocOpcode == Instruction::Xor &&
-      match(BinOp2, m_DisjointOr(m_Value(), m_Value()));
+  bool IsDisjointOrAsXor = AssocOpcode == Instruction::Xor &&
+                           match(BinOp2, m_DisjointOr(m_Value(), m_Value()));
 
   if (BinOp2->getOpcode() != AssocOpcode && !IsDisjointOrAsXor)
     return false;
@@ -464,9 +463,10 @@ static bool simplifyAssocCastAssoc(BinaryOperator *BinOp1,
     return false;
 
   // If the original zext was nneg, it is safe to preserve nneg when
-  // removing an `or disjoint`: a non-negative (X | C) implies X is
-  // also non-negative.
-  bool PreserveNonNeg = IsDisjointOrAsXor && Cast->hasNonNeg();
+  // removing an `or`: a non-negative (X | C) implies X is also
+  // non-negative.
+  bool PreserveNonNeg =
+    Cast->hasNonNeg() && BinOp2->getOpcode() == Instruction::Or;
 
   IC.replaceOperand(*Cast, 0, BinOp2->getOperand(0));
   IC.replaceOperand(*BinOp1, 1, FoldedC);
