@@ -732,11 +732,18 @@ end:;
   KE_TRACE(10, ("__kmpc_dist_for_static_init: T#%d return\n", gtid));
 #if OMPT_SUPPORT && OMPT_OPTIONAL
   if (ompt_enabled.ompt_callback_work || ompt_enabled.ompt_callback_dispatch) {
+    // Workshare type is distribute and parallel loop.
+    // Emit ws-loop-begin event for all threads.
+    // Emit distribute-begin event for the primary threads.
     ompt_team_info_t *team_info = __ompt_get_teaminfo(0, NULL);
     ompt_task_info_t *task_info = __ompt_get_task_info_object(0);
     if (ompt_enabled.ompt_callback_work) {
+      if (tid == 0)
+        ompt_callbacks.ompt_callback(ompt_callback_work)(
+            ompt_work_distribute, ompt_scope_begin, &(team_info->parallel_data),
+            &(task_info->task_data), 0, codeptr);
       ompt_callbacks.ompt_callback(ompt_callback_work)(
-          ompt_work_distribute, ompt_scope_begin, &(team_info->parallel_data),
+          ompt_work_loop_static, ompt_scope_begin, &(team_info->parallel_data),
           &(task_info->task_data), 0, codeptr);
     }
     if (ompt_enabled.ompt_callback_dispatch) {
