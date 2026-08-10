@@ -389,6 +389,11 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
       else if (const ModuleFileName *FileName = M->getASTFileName())
         Diag(M->DefinitionLoc, diag::note_prev_module_definition_from_ast_file)
             << *FileName;
+      // A Clang module or a header unit cannot be used as the current named
+      // module while recovering from it. See clang/test/Modules/GH204632.cppm
+      // for an example.
+      if (!M->isNamedModule())
+        return nullptr;
       Mod = M;
       break;
     }
