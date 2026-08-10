@@ -4,7 +4,7 @@
 
 ; Test for https://github.com/llvm/llvm-project/issues/172674.
 
-define i1 @top_i16_range(i64 %x) {
+define i1 @top_i16_range(i64 %x) nounwind {
 ; X64-LABEL: top_i16_range:
 ; X64:       # %bb.0:
 ; X64-NEXT:    shrq $49, %rdi
@@ -29,7 +29,7 @@ define i1 @top_i16_range(i64 %x) {
   ret i1 %in.range
 }
 
-define i1 @top_i32_range(i64 %x) {
+define i1 @top_i32_range(i64 %x) nounwind {
 ; X64-LABEL: top_i32_range:
 ; X64:       # %bb.0:
 ; X64-NEXT:    shrq $32, %rdi
@@ -53,7 +53,7 @@ define i1 @top_i32_range(i64 %x) {
   ret i1 %in.range
 }
 
-define i1 @top_i32_range_uge(i64 %x) {
+define i1 @top_i32_range_uge(i64 %x) nounwind {
 ; X64-LABEL: top_i32_range_uge:
 ; X64:       # %bb.0:
 ; X64-NEXT:    shrq $32, %rdi
@@ -65,8 +65,6 @@ define i1 @top_i32_range_uge(i64 %x) {
 ; X86-LABEL: top_i32_range_uge:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    addl $-123, %eax
@@ -77,14 +75,13 @@ define i1 @top_i32_range_uge(i64 %x) {
 ; X86-NEXT:    sbbl %edx, %ecx
 ; X86-NEXT:    setb %al
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
   %offset = add i64 %x, -528280977408
   %out.range = icmp uge i64 %offset, 1430224109568
   ret i1 %out.range
 }
 
-define i1 @top_i16_range_ule(i64 %x) {
+define i1 @top_i16_range_ule(i64 %x) nounwind {
 ; X64-LABEL: top_i16_range_ule:
 ; X64:       # %bb.0:
 ; X64-NEXT:    shrq $49, %rdi
@@ -109,7 +106,7 @@ define i1 @top_i16_range_ule(i64 %x) {
   ret i1 %in.range
 }
 
-define i1 @top_i8_range(i64 %x) {
+define i1 @top_i8_range(i64 %x) nounwind {
 ; X64-LABEL: top_i8_range:
 ; X64:       # %bb.0:
 ; X64-NEXT:    shrq $56, %rdi
@@ -133,7 +130,7 @@ define i1 @top_i8_range(i64 %x) {
   ret i1 %in.range
 }
 
-define i1 @signed_min_add_offset(i64 %x) {
+define i1 @signed_min_add_offset(i64 %x) nounwind {
 ; X64-LABEL: signed_min_add_offset:
 ; X64:       # %bb.0:
 ; X64-NEXT:    shrq $60, %rdi
@@ -160,7 +157,7 @@ define i1 @signed_min_add_offset(i64 %x) {
 
 ; The selected range wraps around the 8-bit boundary, so the offset cannot be
 ; moved after the shift without preserving that wrapping behavior.
-define i1 @wrapping_range(i64 %x) {
+define i1 @wrapping_range(i64 %x) nounwind {
 ; X64-LABEL: wrapping_range:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movabsq $432345564227567616, %rax # imm = 0x600000000000000

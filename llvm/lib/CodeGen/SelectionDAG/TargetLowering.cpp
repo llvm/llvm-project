@@ -5514,8 +5514,8 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
             !shouldAvoidTransformToShift(ShValTy, ShiftBits)) {
           // If this is an offset range check, try to move the offset after the
           // shift to avoid preserving the pre-shift add with a mask.
-          if (N0.hasOneUse() && N0.getOpcode() == ISD::ADD) {
-            if (auto *AddC = dyn_cast<ConstantSDNode>(N0.getOperand(1))) {
+          if (N0.getOpcode() == ISD::ADD && N0.hasOneUse()) {
+            if (auto *AddC = isConstOrConstSplat(N0.getOperand(1))) {
               const APInt &AddVal = AddC->getAPIntValue();
               if (AddVal.countr_zero() >= ShiftBits) {
                 APInt RangeLower = -AddVal;
