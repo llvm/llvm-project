@@ -68,10 +68,6 @@ protected:
 
   /// Retrieves enabled RISC-V ISA extension feature names from the module's
   /// ArchSpec.
-  ///
-  /// Fetch the feature list from the module's ArchSpec, filter disabled
-  /// features, normalize enabled features by stripping leading '+', and remove
-  /// empty entries.
   void GetFeatures(llvm::SmallVectorImpl<std::string> &features) const;
 
 private:

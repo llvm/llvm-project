@@ -102,8 +102,7 @@ void RegisterInfoPOSIXDynamic_riscv32::BuildCSRegInfos(
     llvm::SmallVectorImpl<lldb_private::RegisterInfo> &cs_reg_infos) {
   cs_reg_infos.clear();
 
-  // Sort and deduplicate the feature list to make the resulting CSR metadata
-  // independent of caller ordering.
+  // Sort and deduplicate to make the list independent of caller ordering.
   llvm::SmallVector<llvm::StringRef> normalized_features(features.begin(),
                                                          features.end());
   llvm::sort(normalized_features);
@@ -114,10 +113,7 @@ void RegisterInfoPOSIXDynamic_riscv32::BuildCSRegInfos(
   cs_reg_infos.reserve(k_num_csr_registers);
 
   // Construct default CS register information. CS register information entries
-  // are stored in CSR-address order. For each entry at slot 'reg',
-  //   kinds[eRegisterKindLLDB] = csr_first_riscv + reg.
-  // So, patch entries can recover the slot as:
-  //   idx = lldb_reg - csr_first_riscv.
+  // are stored in CSR-address order.
   for (uint32_t reg = 0; reg < k_num_csr_registers; ++reg) {
     lldb_private::RegisterInfo csr{};
     for (auto &kind : csr.kinds)
