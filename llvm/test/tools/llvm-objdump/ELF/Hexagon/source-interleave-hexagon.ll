@@ -67,7 +67,9 @@ attributes #1 = { nounwind readnone }
 !23 = !DILocation(line: 8, column: 3, scope: !14)
 ; LINES: <main>:
 ; LINES-NEXT: main():
-; LINES-NEXT: SRC_COMPDIR/source-interleave-hexagon.c:6
+;; Source paths are normalized to the host separator, which is '/' on POSIX and
+;; '\' on Windows, so match either.
+; LINES-NEXT: Inputs{{[/\\]}}source-interleave-hexagon.c:6
 
 ; SOURCE: <main>:
 ; SOURCE-NEXT: int main() {
