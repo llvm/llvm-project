@@ -853,8 +853,15 @@ SmallVector<SmallVector<Value *>> scanAltAssociativeOperands(
     for (unsigned Lane : seq<unsigned>(NumLanes)) {
       Instruction *Link = GetChainLink(Lane, Columns[0][Lane]);
       ReassocScalars.push_back(Link);
-      NewColumn[Lane] = Link->getOperand(1);
-      Columns[0][Lane] = Link->getOperand(0);
+      // The chain of a commutative lane may continue in the second operand;
+      // keep the chain link as the running value.
+      unsigned RunningOp = Link->isCommutative() &&
+                                   !GetChainLink(Lane, Link->getOperand(0)) &&
+                                   GetChainLink(Lane, Link->getOperand(1))
+                               ? 1
+                               : 0;
+      NewColumn[Lane] = Link->getOperand(1 - RunningOp);
+      Columns[0][Lane] = Link->getOperand(RunningOp);
     }
     Columns.insert(std::next(Columns.begin()), std::move(NewColumn));
   }
