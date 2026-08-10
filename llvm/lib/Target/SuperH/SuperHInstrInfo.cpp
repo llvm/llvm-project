@@ -61,5 +61,6 @@ bool SuperHInstrInfo::canFillDelaySlot(unsigned Opcode) const {
   auto Desc = this->get(Opcode);
   return !Desc.hasDelaySlot() && 
          !Desc.isBranch() && 
-         !Desc.isCall() && !Desc.isReturn();
+         !Desc.isCall() && !Desc.isReturn() &&
+         !(Desc.TSFlags & 0x1);
 }

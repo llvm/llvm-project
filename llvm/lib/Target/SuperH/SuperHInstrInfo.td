@@ -229,21 +229,21 @@ def MOVI8Rn       : InstRnI8<0b1110000000000000,
                             [(set i32:$Rn, imm8:$imm)]>;
 
 // mov @(disp, PC), R0
-let hasSideEffects = 0, mayLoad = 1, Defs = [R0] in
+let hasSideEffects = 0, mayLoad = 1, Defs = [R0], isDelayIllegal = 1 in
 def MOVAD8PCR0      : InstD8<0b1100011100000000,
                             (outs), (ins disp8:$disp),
                             "mov @($disp,PC),R0",
                             []>;
 
 // mov.w @(disp,PC), Rn 
-let hasSideEffects = 0, mayLoad = 1 in
+let hasSideEffects = 0, mayLoad = 1, isDelayIllegal = 1 in
 def MOVWD8PCRn    : InstRnD8<0b1001000000000000,
                             (outs GPR:$Rn), (ins disp8:$disp),
                             "mov.w @($disp,PC),$Rn",
                             [(set i32:$Rn, (sextloadi16 addr:$disp))]>;
 
 // mov.l @(disp,PC), Rn 
-let hasSideEffects = 0, mayLoad = 1 in
+let hasSideEffects = 0, mayLoad = 1, isDelayIllegal = 1 in
 def MOVLD8PCRn    : InstRnD8<0b1101000000000000,
                             (outs GPR:$Rn), (ins disp8:$disp),
                             "mov.l @($disp,PC),$Rn",
@@ -954,14 +954,14 @@ let Defs = [SR] in
 def CLRT                : Inst<0b0000000000001000, (outs), (ins), "clrt", []>;
 
 // ldc Rm, SR
-let Defs = [SR] in
+let Defs = [SR], isDelayIllegal = 1 in
 def LDCRmSR           : InstRm<0b0100000000001110, 
                               (outs), (ins GPR:$Rm), 
                               "ldc $Rm,SR",
                               []>;
 
 // ldc.l @Rm+, SR
-let Defs = [SR] in
+let Defs = [SR], isDelayIllegal = 1 in
 def LDCLRminciSR      : InstRm<0b0100000000000111, 
                               (outs), (ins GPR:$Rm), 
                               "ldc.l @$Rm+,SR",
@@ -982,14 +982,14 @@ def LDCLRminciGBR     : InstRm<0b0100000000010111,
                               []>;
 
 // ldc Rm, VBR
-let Defs = [VBR] in
+let Defs = [VBR], isDelayIllegal = 1 in
 def LDCRmVBR          : InstRm<0b0100000000101110, 
                               (outs), (ins GPR:$Rm), 
                               "ldc $Rm,VBR",
                               []>;
 
 // ldc.l @Rm+, VBR
-let Defs = [VBR] in
+let Defs = [VBR], isDelayIllegal = 1 in
 def LDCLRminciVBR     : InstRm<0b0100000000100111, 
                               (outs), (ins GPR:$Rm), 
                               "ldc.l @$Rm+,VBR",
@@ -1050,18 +1050,18 @@ let Defs = [SR] in
 def SETT                : Inst<0b0000000000011000, (outs), (ins), "sett", []>;
 
 // sleep
-let hasSideEffects = 1 in
+let hasSideEffects = 1, isDelayIllegal = 1 in
 def SLEEP               : Inst<0b0000000000011011, (outs), (ins), "sleep", []>;
 
 // stc SR,Rn
-let Uses = [SR] in
+let Uses = [SR], isDelayIllegal = 1 in
 def STCSRRn           : InstRn<0b0000000000000010, 
                               (outs GPR:$Rn), (ins), 
                               "stc SR,$Rn",
                               []>;
 
 // stc.l SR,@-Rn
-let Uses = [SR] in
+let Uses = [SR], isDelayIllegal = 1 in
 def STCLSRRndeci      : InstRn<0b0100000000000011, 
                               (outs GPR:$Rn), (ins), 
                               "stc.l SR,@-$Rn",
@@ -1082,14 +1082,14 @@ def STCLGBRRndeci     : InstRn<0b0100000000010011,
                               []>;
 
 // stc VBR,Rn
-let Uses = [VBR] in
+let Uses = [VBR], isDelayIllegal = 1 in
 def STCVBRRn          : InstRn<0b0000000000100010, 
                               (outs GPR:$Rn), (ins), 
                               "stc VBR,$Rn",
                               []>;
 
 // stc.l VBR,@-Rn
-let Uses = [VBR] in
+let Uses = [VBR], isDelayIllegal = 1 in
 def STCLVBRRndeci     : InstRn<0b0100000000100011, 
                               (outs GPR:$Rn), (ins), 
                               "stc.l VBR,@-$Rn",

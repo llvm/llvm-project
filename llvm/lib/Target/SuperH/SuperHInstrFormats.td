@@ -45,6 +45,10 @@ class SHInst<dag outs, dag ins, string asmstr, list<dag> pattern = []>
   dag InOperandList = ins;
   let AsmString = asmstr;
   let Pattern = pattern;
+
+  // Whether the instruction is incompatible with delay slots.
+  bit isDelayIllegal = 0;
+  let TSFlags{0} = isDelayIllegal;
 }
 
 
