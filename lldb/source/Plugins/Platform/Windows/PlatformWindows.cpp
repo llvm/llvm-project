@@ -686,13 +686,11 @@ void PlatformWindows::GetStatus(Stream &strm) {
 
 bool PlatformWindows::CanDebugProcess() { return true; }
 
-ConstString PlatformWindows::GetFullNameForDylib(ConstString basename) {
-  if (basename.IsEmpty())
-    return basename;
+std::string PlatformWindows::GetFullNameForDylib(llvm::StringRef basename) {
+  if (basename.empty())
+    return basename.str();
 
-  StreamString stream;
-  stream.Printf("%s.dll", basename.GetCString());
-  return ConstString(stream.GetString());
+  return llvm::formatv("{0}.dll", basename).str();
 }
 
 size_t

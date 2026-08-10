@@ -1246,13 +1246,11 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
   }
 }
 
-ConstString PlatformDarwin::GetFullNameForDylib(ConstString basename) {
-  if (basename.IsEmpty())
-    return basename;
+std::string PlatformDarwin::GetFullNameForDylib(llvm::StringRef basename) {
+  if (basename.empty())
+    return basename.str();
 
-  StreamString stream;
-  stream.Printf("lib%s.dylib", basename.GetCString());
-  return ConstString(stream.GetString());
+  return llvm::formatv("lib{0}.dylib", basename).str();
 }
 
 llvm::VersionTuple PlatformDarwin::GetOSVersion(Process *process) {
