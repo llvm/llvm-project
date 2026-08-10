@@ -957,6 +957,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     AddPromotedToType(ISD::SELECT, MVT::v2i16, MVT::i32);
     setOperationAction(ISD::SELECT, MVT::v2f16, Promote);
     AddPromotedToType(ISD::SELECT, MVT::v2f16, MVT::i32);
+    setOperationAction(ISD::SELECT, MVT::v2bf16, Promote);
+    AddPromotedToType(ISD::SELECT, MVT::v2bf16, MVT::i32);
   } else {
     // Legalization hack.
     setOperationAction(ISD::SELECT, {MVT::v2i16, MVT::v2f16}, Custom);
@@ -12719,8 +12721,6 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   case Intrinsic::amdgcn_struct_buffer_load_async_lds:
   case Intrinsic::amdgcn_struct_ptr_buffer_load_lds:
   case Intrinsic::amdgcn_struct_ptr_buffer_load_async_lds: {
-    if (!Subtarget->hasVMemToLDSLoad())
-      return SDValue();
     unsigned Opc;
     bool HasVIndex =
         IntrinsicID == Intrinsic::amdgcn_struct_buffer_load_lds ||
@@ -16404,10 +16404,8 @@ SITargetLowering::performFCanonicalizeCombine(SDNode *N,
     return DAG.getConstantFP(QNaN, SDLoc(N), VT);
   }
 
-  if (ConstantFPSDNode *CFP = isConstOrConstSplatFP(N0)) {
-    EVT VT = N->getValueType(0);
+  if (ConstantFPSDNode *CFP = isConstOrConstSplatFP(N0))
     return getCanonicalConstantFP(DAG, SDLoc(N), VT, CFP->getValueAPF());
-  }
 
   // fcanonicalize (build_vector x, k) -> build_vector (fcanonicalize x),
   //                                                   (fcanonicalize k)
@@ -16416,13 +16414,19 @@ SITargetLowering::performFCanonicalizeCombine(SDNode *N,
 
   // TODO: This could be better with wider vectors that will be split to v2f16,
   // and to consider uses since there aren't that many packed operations.
-  if (N0.getOpcode() == ISD::BUILD_VECTOR && VT == MVT::v2f16 &&
-      isTypeLegal(MVT::v2f16)) {
+  if (N0.getOpcode() == ISD::BUILD_VECTOR && N0.getNumOperands() == 2 &&
+      isTypeLegal(VT)) {
     SDLoc SL(N);
     SDValue NewElts[2];
     SDValue Lo = N0.getOperand(0);
     SDValue Hi = N0.getOperand(1);
     EVT EltVT = Lo.getValueType();
+
+    // Only apply this optimization if scalar canonicalize is legal for the
+    // element type. Otherwise, scalarizing may require widening the scalar back
+    // to a vector, adding overhead (e.g., bf16 has no scalar instructions).
+    if (getOperationAction(ISD::FCANONICALIZE, EltVT) != Legal)
+      return SDValue();
 
     if (vectorEltWillFoldAway(Lo) || vectorEltWillFoldAway(Hi)) {
       for (unsigned I = 0; I != 2; ++I) {

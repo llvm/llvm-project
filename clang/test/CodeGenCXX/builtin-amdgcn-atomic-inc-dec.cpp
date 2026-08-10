@@ -87,7 +87,7 @@ __attribute__((device)) void test_non_volatile_parameter32(__UINT32_TYPE__ *ptr)
 // CHECK-NEXT:    [[TMP7:%.*]] = atomicrmw udec_wrap ptr [[TMP4]], i64 [[TMP6]] syncscope("workgroup") seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META4]]
 // CHECK-NEXT:    store i64 [[TMP7]], ptr [[RES_ASCAST]], align 8
 // CHECK-NEXT:    ret void
-// GCN-LABEL: @_Z29test_non_volatile_parameter64Py(
+// GCN-LABEL: @_Z29test_non_volatile_parameter64Pm(
 // GCN-NEXT:  entry:
 // GCN-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // GCN-NEXT:    [[RES:%.*]] = alloca i64, align 8, addrspace(5)
@@ -213,7 +213,7 @@ __attribute__((device)) void test_volatile_parameter32(volatile __UINT32_TYPE__ 
 // CHECK-NEXT:    [[TMP7:%.*]] = atomicrmw volatile udec_wrap ptr [[TMP4]], i64 [[TMP6]] syncscope("workgroup") seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META4]]
 // CHECK-NEXT:    store i64 [[TMP7]], ptr [[RES_ASCAST]], align 8
 // CHECK-NEXT:    ret void
-// GCN-LABEL: @_Z25test_volatile_parameter64PVy(
+// GCN-LABEL: @_Z25test_volatile_parameter64PVm(
 // GCN-NEXT:  entry:
 // GCN-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // GCN-NEXT:    [[RES:%.*]] = alloca i64, align 8, addrspace(5)

@@ -824,6 +824,7 @@ multiclass TMA_TENSOR_S2G_INTR<int dim, string mode,
   // Fix-up the asm_str when it is im2col/scatter4.
   defvar mode_asm_str = !cond(
                           !eq(mode, "im2col") : "im2col_no_offs",
+                          !eq(mode, "im2col_w") : "im2col_no_offs::w",
                           !eq(mode, "tile_scatter4") : "tile::scatter4",
                           true : mode);
   defvar prefix = "cp.async.bulk.tensor"
@@ -849,6 +850,11 @@ foreach dim = 1...5 in {
     defm TMA_TENSOR_S2G_ # suffix : TMA_TENSOR_S2G_INTR<dim, mode>;
   }
 }
+foreach dim = 3...5 in {
+  defm TMA_TENSOR_S2G_IM2COL_W_ # dim # D
+    : TMA_TENSOR_S2G_INTR<dim, "im2col_w",
+                          [callSubtarget<"hasRubinFamilySupport">]>;
+}
 defm TMA_S2G_TILE_SCATTER4_2D : TMA_TENSOR_S2G_INTR<5, "tile_scatter4",
                                 [callSubtarget<"hasTMABlackwellSupport">]>;
 
@@ -860,14 +866,15 @@ def tma_tensor_reduction_imm :
     TImmLeaf<i32, [{ return Imm >= 0 && Imm < 8; }]>;
 
 // TMA Copy from Shared to Global memory with Reduction
-multiclass CP_ASYNC_BULK_TENSOR_REDUCE_INTR<int dim, string mode> {
+multiclass CP_ASYNC_BULK_TENSOR_REDUCE_INTR<int dim, string mode,
+                                            list<Predicate> pred = [hasPTX<80>, SM90]> {
   defvar dims_dag = TMA_DIMS_UTIL<dim>.ins_dag;
   defvar dims_str = TMA_DIMS_UTIL<dim>.base_str;
   defvar asm_str = " [$tmap, {{" # dims_str # "}}], [$src]";
 
-  // For im2col mode, the actual asm_str is "im2col_no_offs"
-  defvar mode_asm_str = !if(!eq(mode, "im2col"),
-                            "im2col_no_offs", mode);
+  defvar mode_asm_str = !cond(!eq(mode, "im2col") : "im2col_no_offs",
+                              !eq(mode, "im2col_w") : "im2col_no_offs::w",
+                              true : mode);
   defvar prefix = "cp.reduce.async.bulk.tensor"
                   # "." # dim # "d"
                   # ".global.shared::cta";
@@ -894,14 +901,14 @@ multiclass CP_ASYNC_BULK_TENSOR_REDUCE_INTR<int dim, string mode> {
                  (ins TMAReductionFlags:$red_op)),
             !strconcat(prefix, "${red_op}", suffix, asm_str, ";"),
             [intr_dag]>,
-            Requires<[hasPTX<80>, SM90]>;
+            Requires<pred>;
   def _CH : NVPTXInst<(outs),
               !con((ins ADDR:$src, B64:$tmap), dims_dag,
                    (ins B64:$ch, TMAReductionFlags:$red_op)),
               !strconcat(prefix, "${red_op}", suffix,
                          ".L2::cache_hint", asm_str, ", $ch;"),
               [intr_dag_with_ch]>,
-              Requires<[hasPTX<80>, SM90]>;
+              Requires<pred>;
 }
 
 foreach dim = 1...5 in {
@@ -910,6 +917,12 @@ foreach dim = 1...5 in {
     defm CP_ASYNC_BULK_TENSOR_RED_ # suffix :
       CP_ASYNC_BULK_TENSOR_REDUCE_INTR<dim, mode>;
   }
+}
+
+foreach dim = 3...5 in {
+  defm CP_ASYNC_BULK_TENSOR_RED_ # dim # D_IM2COL_W
+    : CP_ASYNC_BULK_TENSOR_REDUCE_INTR<dim, "im2col_w",
+                          [callSubtarget<"hasRubinFamilySupport">]>;
 }
 
 // TMA Prefetch from Global memory to L2 cache
@@ -2424,6 +2437,22 @@ let Predicates = [callSubtarget<"hasNarrowFPConversionSupport">] in {
   def : Pat<(int_nvvm_ue8m0x2_to_bf16x2 i16:$a),
             (CVT_bf16x2_ue8m0x2 $a)>;
 }
+
+// ue5m3x2 to f16x2 / bf16x2 conversions.
+let Predicates = [callSubtarget<"hasUE5M3TypeSupport">] in {
+  def : Pat<(int_nvvm_ue5m3x2_to_f16x2_rn i16:$a),
+            (CVT_f16x2_ue5m3x2 $a, CvtRN)>;
+  
+  def : Pat<(int_nvvm_ue5m3x2_to_bf16x2_rn i16:$a),
+            (CVT_bf16x2_ue5m3x2 $a, CvtRN)>;
+  def : Pat<(int_nvvm_ue5m3x2_to_bf16x2_rn_satfinite i16:$a),
+            (CVT_bf16x2_ue5m3x2 $a, CvtRN_SATFINITE)>;
+  
+  def : Pat<(int_nvvm_ue5m3x2_to_bf16x2_rn_scale_n2_ue8m0 i16:$a, i16:$b),
+            (CVT_bf16x2_ue5m3x2_scale_n2 $a, $b, CvtRN)>;
+  def : Pat<(int_nvvm_ue5m3x2_to_bf16x2_rn_satfinite_scale_n2_ue8m0 i16:$a, i16:$b),
+            (CVT_bf16x2_ue5m3x2_scale_n2 $a, $b, CvtRN_SATFINITE)>;
+} // let Predicates = [callSubtarget<"hasUE5M3TypeSupport">]
 
 def SDT_CVT_F32X4_TO_FPX4_RS_VEC :
   SDTypeProfile<1, 6, [SDTCisVec<0>, SDTCisFP<1>, SDTCisFP<2>, SDTCisFP<3>, 
@@ -5739,25 +5768,41 @@ defm TCGEN05_RELINQ_CG2: TCGEN05_RELINQ_PERMIT_INTR<"2", int_nvvm_tcgen05_relinq
 def tcgen05_wait_ld: NullaryInst<"tcgen05.wait::ld.sync.aligned", int_nvvm_tcgen05_wait_ld>;
 def tcgen05_wait_st: NullaryInst<"tcgen05.wait::st.sync.aligned", int_nvvm_tcgen05_wait_st>;
 
-multiclass TCGEN05_COMMIT_INTR<string AS, string num> {
-  defvar prefix = "tcgen05.commit.cta_group::" # num #".mbarrier::arrive::one.shared::cluster";
+multiclass TCGEN05_COMMIT_INTR<string num> {
+  defvar prefix = "tcgen05.commit.cta_group::" # num #
+                  ".mbarrier::arrive::one.shared::cluster";
+  defvar prefix_smem_a_read = prefix # ".sync_restrict::shared::read::mma::a";
 
-  defvar intr_suffix = !if(!eq(AS, "shared"), "_shared", "") # "_cg" # num;
-  defvar Intr = !cast<Intrinsic>("int_nvvm_tcgen05_commit" # intr_suffix);
-  defvar IntrMC = !cast<Intrinsic>("int_nvvm_tcgen05_commit_mc" # intr_suffix);
+  defvar intr_prefix = "int_nvvm_tcgen05_commit";
+  defvar intr_suffix = "_cg" # num;
+  defvar Intr = !cast<Intrinsic>(intr_prefix # intr_suffix);
+  defvar IntrMC = !cast<Intrinsic>(intr_prefix # "_mc" # intr_suffix);
+  defvar IntrSmemARead =
+      !cast<Intrinsic>(intr_prefix # "_smem_a_read" # intr_suffix);
+  defvar IntrSmemAReadMC =
+      !cast<Intrinsic>(intr_prefix # "_smem_a_read_mc" # intr_suffix);
 
   def "" : BasicNVPTXInst<(outs), (ins ADDR:$mbar),
              prefix # ".b64",
              [(Intr addr:$mbar)]>;
   def _MC : BasicNVPTXInst<(outs), (ins ADDR:$mbar, B16:$mc),
-                   prefix # ".multicast::cluster.b64",
-                   [(IntrMC addr:$mbar, B16:$mc)]>;
+              prefix # ".multicast::cluster.b64",
+              [(IntrMC addr:$mbar, i16:$mc)]>;
+  let Predicates = [callSubtarget<"hasRubinFamilySupport">] in {
+    def _MC_32B : BasicNVPTXInst<(outs), (ins ADDR:$mbar, B32:$mc),
+                    prefix # ".multicast::cluster::32b.b64",
+                    [(IntrMC addr:$mbar, i32:$mc)]>;
+    def _SMEM_A_READ : BasicNVPTXInst<(outs), (ins ADDR:$mbar),
+                  prefix_smem_a_read # ".b64",
+                  [(IntrSmemARead addr:$mbar)]>;
+    def _SMEM_A_READ_MC : BasicNVPTXInst<(outs), (ins ADDR:$mbar, B16:$mc),
+                    prefix_smem_a_read # ".multicast::cluster.b64",
+                    [(IntrSmemAReadMC addr:$mbar, i16:$mc)]>;
+    def _SMEM_A_READ_MC_32B : BasicNVPTXInst<(outs), (ins ADDR:$mbar, B32:$mc),
+                        prefix_smem_a_read # ".multicast::cluster::32b.b64",
+                        [(IntrSmemAReadMC addr:$mbar, i32:$mc)]>;
+  }
 }
-
-defm TCGEN05_COMMIT_CG1 : TCGEN05_COMMIT_INTR<"", "1">;
-defm TCGEN05_COMMIT_CG2 : TCGEN05_COMMIT_INTR<"", "2">;
-defm TCGEN05_COMMIT_S64_CG1 : TCGEN05_COMMIT_INTR<"shared", "1">;
-defm TCGEN05_COMMIT_S64_CG2 : TCGEN05_COMMIT_INTR<"shared", "2">;
 
 multiclass TCGEN05_CP_INTR<string shape, string src_fmt, string mc = ""> {
   defvar dst_fmt = !if(!eq(src_fmt, ""), "", ".b8x16");
@@ -5790,6 +5835,9 @@ foreach src_fmt = ["", "b6x16_p32", "b4x16_p64"] in {
   defm TCGEN05_CP_32x128 # src_fmt   : TCGEN05_CP_INTR<"32x128b", src_fmt, "warpx4">;
 }
 } // Predicates
+
+defm TCGEN05_COMMIT_CG1 : TCGEN05_COMMIT_INTR<"1">;
+defm TCGEN05_COMMIT_CG2 : TCGEN05_COMMIT_INTR<"2">;
 
 let Predicates = [callSubtarget<"hasTcgen05ShiftSupport">] in {
 multiclass TCGEN05_SHIFT_INTR<string num, Intrinsic Intr> {
@@ -6199,7 +6247,7 @@ foreach dim = ["x", "y", "z"] in {
 //
 
 class Tcgen05MMABase<bit IsSparse, string ASpace, string Kind, int CtaGroup,
-                     string CollectorUsage> :
+                     string CollectorUsage, string CollectorUsageB = "discard"> :
         NVPTXInst<(outs), (ins), "?", []>,
         Requires<[]> {
 
@@ -6209,6 +6257,7 @@ class Tcgen05MMABase<bit IsSparse, string ASpace, string Kind, int CtaGroup,
     !eq(CollectorUsage, "fill"): 2,
     !eq(CollectorUsage, "use"): 3
   );
+  int CollectorUsageAVal = CollectorUsageVal;
 
   int KindVal = !cond(
                   !eq(Kind, "f16"): 0,
@@ -6216,6 +6265,14 @@ class Tcgen05MMABase<bit IsSparse, string ASpace, string Kind, int CtaGroup,
                   !eq(Kind, "f8f6f4"): 2,
                   !eq(Kind, "i8"): 3,
                 );
+
+  bit HasCollectorBQualifier = !ne(CollectorUsageB, "discard");
+  int CollectorUsageBVal = !cond(
+    !eq(CollectorUsageB, "discard"): 0,
+    !eq(CollectorUsageB, "lastuse"): 1,
+    !eq(CollectorUsageB, "fill"): 2,
+    !eq(CollectorUsageB, "use"): 3
+  );
 
   dag SparseMetadataIns = !if(IsSparse, (ins B32:$spmetadata), (ins));
   string SparseMetadataStr = !if(IsSparse, ", [$spmetadata]", "");
@@ -6239,11 +6296,11 @@ class Tcgen05MMABase<bit IsSparse, string ASpace, string Kind, int CtaGroup,
                         # ".cta_group::" # CtaGroup
                         # ".kind::" # Kind;
 
-  string BaseOperandsStr = " [$dtmem], "
-                           # AOperandStr
-                           # ", $b"
-                           # SparseMetadataStr
-                           # ", $idesc";
+  string BaseOperandsCommonStr = " [$dtmem], "
+                                 # AOperandStr
+                                 # ", $b";
+  string IDescStr = ", $idesc";
+  string BaseOperandsStr = BaseOperandsCommonStr # SparseMetadataStr # IDescStr;
   string InputDStr = ", $enable_inp_d";
 }
 
@@ -6252,13 +6309,17 @@ class Tcgen05MMABase<bit IsSparse, string ASpace, string Kind, int CtaGroup,
 //
 
 class Tcgen05MMAInst<bit IsSparse, string ASpace, string Kind, int CtaGroup,
-                     string CollectorUsage, bit IsScaleInputD, bit IsAShift> :
-        Tcgen05MMABase<IsSparse, ASpace, Kind, CtaGroup, CollectorUsage> {
-
-  let Predicates = !cond(
-    IsScaleInputD : [callSubtarget<"hasTcgen05MMAScaleInputDImm">],
-    !eq(Kind, "i8") : [callSubtarget<"hasTcgen05MMAI8Kind">],
-    true : [callSubtarget<"hasTcgen05InstSupport">]
+                     string CollectorUsageA, string CollectorUsageB,
+                     bit IsScaleInputD, bit IsAShift> :
+        Tcgen05MMABase<IsSparse, ASpace, Kind, CtaGroup, CollectorUsageA,
+                       CollectorUsageB> {
+  let Predicates = !listconcat(
+    !if(HasCollectorBQualifier, [callSubtarget<"hasRubinFamilySupport">], []),
+    !cond(
+      IsScaleInputD : [callSubtarget<"hasTcgen05MMAScaleInputDImm">],
+      !eq(Kind, "i8") : [callSubtarget<"hasTcgen05MMAI8Kind">],
+      true : [callSubtarget<"hasTcgen05InstSupport">]
+    )
   );
 
   Intrinsic Intrin = !cast<Intrinsic>(
@@ -6274,7 +6335,8 @@ class Tcgen05MMAInst<bit IsSparse, string ASpace, string Kind, int CtaGroup,
   let AsmString = Prefix
                   # SpCtaKindStr
                   # !if(IsAShift, ".ashift", "")
-                  # ".collector::a::" # CollectorUsage
+                  # ".collector::a::" # CollectorUsageA
+                  # !if(HasCollectorBQualifier, ".collector::b::" # CollectorUsageB, "")
                   # BaseOperandsStr
                   # InputDStr
                   # ScaleInpStr
@@ -6284,7 +6346,7 @@ class Tcgen05MMAInst<bit IsSparse, string ASpace, string Kind, int CtaGroup,
                               ScaleInpIntr);
 
   dag FlagOperands = (Intrin (i32 KindVal), (i32 CtaGroup),
-                             (i32 CollectorUsageVal));
+                             (i32 CollectorUsageAVal), (i32 CollectorUsageBVal));
 
   let Pattern = [!con(IntrinsicPattern, FlagOperands)];
 }
@@ -6294,16 +6356,18 @@ foreach sparse = [0, 1] in {
   foreach space = ["tensor", "shared"] in {
     foreach kind = ["f16", "tf32", "f8f6f4", "i8"] in {
       foreach cta_group = [1, 2] in {
-        foreach collector_usage = ["discard", "lastuse", "fill", "use"] in {
+        foreach collector_usage_a = ["discard", "lastuse", "fill", "use"] in {
           foreach scale_input_d = !if(!or(!eq(kind, "f16"),
                                           !eq(kind, "tf32")), [0, 1], [0]) in {
             foreach ashift = !if(!eq(space, "tensor"), [0, 1], [0]) in {
-
-              def : Tcgen05MMAInst<sparse, space, kind, cta_group,
-                                   collector_usage, scale_input_d, ashift>;
+              foreach collector_usage_b = ["discard", "lastuse", "fill", "use"] in {
+                def : Tcgen05MMAInst<sparse, space, kind, cta_group,
+                                    collector_usage_a, collector_usage_b,
+                                    scale_input_d, ashift>;
+              } // collector_usage_b
             } // ashift
           } // scale_input_d
-        } // collector_usage
+        } // collector_usage_a
       } // cta_group
     } // kind
   } // space
@@ -6325,7 +6389,9 @@ class Tcgen05MMADisableOutputLaneTypeProfile<bit IsSparse, string ASpace,
     !if(IsSparse, [i32], []),                   // spmetadata
     !if(IsScaleInputD, [i64], []),              // scale_input_d
     !listsplat(i32, DisableOutputLaneVecSize),  // disable_output_lane
-    [i32, i32]                                  // kind, collector_usage
+    [i32],                                      // kind
+    [i32],                                      // collector_usage_a
+    [i32]                                       // collector_usage_b
   );
   let Constraints = !foreach(x, !range(!size(VTs)), SDTCisVT<x, VTs[x]>);
   let NumOperands = !size(Constraints);
@@ -6348,14 +6414,18 @@ class Tcgen05MMADisableOutputLaneSDNode<bit IsSparse, string ASpace,
 //
 
 class Tcgen05MMADisableOutputLaneInst<bit IsSparse, string ASpace, string Kind,
-                                      int CtaGroup, string CollectorUsage,
+                                      int CtaGroup, string CollectorUsageA,
+                                      string CollectorUsageB,
                                       bit IsScaleInputD, bit IsAShift> :
-        Tcgen05MMABase<IsSparse, ASpace, Kind, CtaGroup, CollectorUsage> {
-
-  let Predicates = !cond(
-    IsScaleInputD : [callSubtarget<"hasTcgen05MMAScaleInputDImm">],
-    !eq(Kind, "i8") : [callSubtarget<"hasTcgen05MMAI8Kind">],
-    true : [callSubtarget<"hasTcgen05InstSupport">]
+        Tcgen05MMABase<IsSparse, ASpace, Kind, CtaGroup, CollectorUsageA,
+                       CollectorUsageB> {
+  let Predicates = !listconcat(
+    !if(HasCollectorBQualifier, [callSubtarget<"hasRubinFamilySupport">], []),
+    !cond(
+      IsScaleInputD : [callSubtarget<"hasTcgen05MMAScaleInputDImm">],
+      !eq(Kind, "i8") : [callSubtarget<"hasTcgen05MMAI8Kind">],
+      true : [callSubtarget<"hasTcgen05InstSupport">]
+    )
   );
 
   SDNode Opcode = Tcgen05MMADisableOutputLaneSDNode<IsSparse, ASpace, CtaGroup,
@@ -6395,7 +6465,8 @@ class Tcgen05MMADisableOutputLaneInst<bit IsSparse, string ASpace, string Kind,
   let AsmString = Prefix
                   # SpCtaKindStr
                   # !if(IsAShift, ".ashift", "")
-                  # ".collector::a::" # CollectorUsage
+                  # ".collector::a::" # CollectorUsageA
+                  # !if(HasCollectorBQualifier, ".collector::b::" # CollectorUsageB, "")
                   # BaseOperandsStr
                   # ", " # DisableOutputLaneStr
                   # InputDStr
@@ -6406,7 +6477,8 @@ class Tcgen05MMADisableOutputLaneInst<bit IsSparse, string ASpace, string Kind,
                               ScaleInpIntr,
                               DisableOutputLaneInput);
 
-  dag FlagOperands = (Opcode (i32 KindVal), (i32 CollectorUsageVal));
+  dag FlagOperands = (Opcode (i32 KindVal), (i32 CollectorUsageAVal),
+                             (i32 CollectorUsageBVal));
 
   let Pattern = [!con(IntrinsicPattern, FlagOperands)];
 }
@@ -6416,17 +6488,19 @@ foreach sparse = [0, 1] in {
   foreach space = ["tensor", "shared"] in {
     foreach kind = ["f16", "tf32", "f8f6f4", "i8"] in {
       foreach cta_group = [1, 2] in {
-        foreach collector_usage = ["fill", "use", "lastuse", "discard"] in {
+        foreach collector_usage_a = ["fill", "use", "lastuse", "discard"] in {
           foreach scale_input_d = !if(!or(!eq(kind, "f16"),
                                           !eq(kind, "tf32")), [0, 1], [0]) in {
             foreach ashift = !if(!eq(space, "tensor"), [0, 1], [0]) in {
-              def :
-                Tcgen05MMADisableOutputLaneInst<sparse, space, kind, cta_group,
-                                                collector_usage, scale_input_d,
-                                                ashift>;
+              foreach collector_usage_b = ["discard", "lastuse", "fill", "use"] in {
+                def :
+                  Tcgen05MMADisableOutputLaneInst<sparse, space, kind, cta_group,
+                                                  collector_usage_a, collector_usage_b,
+                                                  scale_input_d, ashift>;
+              } // collector_usage_b
             } // ashift
           } // scale_input_d
-        } // collector_usage
+        } // collector_usage_a
       } // cta_group
     } // kind
   } // space
@@ -6438,16 +6512,19 @@ foreach sparse = [0, 1] in {
 
 class Tcgen05MMABlockScaleInst<bit IsSparse, string ASpace, string Kind,
                                int CtaGroup, string ScaleVecSize,
-                               string CollectorUsage>:
-        Tcgen05MMABase<IsSparse, ASpace, Kind, CtaGroup, CollectorUsage> {
-
-  let Predicates = !cond(
-    !and(IsSparse,
-         !eq(Kind, "mxf4")) : [callSubtarget<"hasTcgen05MMASparseMxf4">],
-    !and(IsSparse,
-         !eq(Kind, "mxf4nvf4")) : [callSubtarget<"hasTcgen05MMASparseMxf4nvf4">],
-    !ne(ScaleVecSize, "") : [callSubtarget<"hasTcgen05InstSupport">, hasPTX<88>],
-    true : [callSubtarget<"hasTcgen05InstSupport">]
+                               string CollectorUsageA, string CollectorUsageB>:
+        Tcgen05MMABase<IsSparse, ASpace, Kind, CtaGroup, CollectorUsageA,
+                       CollectorUsageB> {
+  let Predicates = !listconcat(
+    !if(HasCollectorBQualifier, [callSubtarget<"hasRubinFamilySupport">], []),
+    !cond(
+      !and(IsSparse,
+           !eq(Kind, "mxf4")) : [callSubtarget<"hasTcgen05MMASparseMxf4">],
+      !and(IsSparse,
+           !eq(Kind, "mxf4nvf4")) : [callSubtarget<"hasTcgen05MMASparseMxf4nvf4">],
+      !ne(ScaleVecSize, "") : [callSubtarget<"hasTcgen05InstSupport">, hasPTX<88>],
+      true : [callSubtarget<"hasTcgen05InstSupport">]
+    )
   );
 
   Intrinsic Intrin = !cast<Intrinsic>(
@@ -6465,7 +6542,8 @@ class Tcgen05MMABlockScaleInst<bit IsSparse, string ASpace, string Kind,
   let AsmString = Prefix
                   # SpCtaKindStr
                   # ".block_scale" # ScaleVecSize
-                  # ".collector::a::" # CollectorUsage
+                  # ".collector::a::" # CollectorUsageA
+                  # !if(HasCollectorBQualifier, ".collector::b::" # CollectorUsageB, "")
                   # BaseOperandsStr
                   # ", [$scale_a], [$scale_b]"
                   # InputDStr
@@ -6475,7 +6553,8 @@ class Tcgen05MMABlockScaleInst<bit IsSparse, string ASpace, string Kind,
                               (Intrin i32:$scale_a,
                                       i32:$scale_b));
 
-  dag FlagOperands = (Intrin (i32 CtaGroup), (i32 CollectorUsageVal));
+  dag FlagOperands = (Intrin (i32 CtaGroup), (i32 CollectorUsageAVal),
+                             (i32 CollectorUsageBVal));
 
   let Pattern = [!con(IntrinsicPattern, FlagOperands)];
 }
@@ -6486,12 +6565,15 @@ foreach sparse = [0, 1] in {
     foreach kind = ["mxf8f6f4", "mxf4", "mxf4nvf4"] in {
       foreach scale_vec_size = ["", ".block16", ".block32"] in {
         foreach cta_group = [1, 2] in {
-          foreach collector_usage = ["fill", "use", "lastuse", "discard"] in {
-            if NVVM_TCGEN05_MMA_BLOCKSCALE_SUPPORTED<kind, scale_vec_size>.ret then {
-              def : Tcgen05MMABlockScaleInst<sparse, space, kind, cta_group,
-                                             scale_vec_size, collector_usage>;
-            }
-          } // collector_usage
+          foreach collector_usage_a = ["fill", "use", "lastuse", "discard"] in {
+            foreach collector_usage_b = ["discard", "lastuse", "fill", "use"] in {
+              if NVVM_TCGEN05_MMA_BLOCKSCALE_SUPPORTED<kind, scale_vec_size>.ret then {
+                def : Tcgen05MMABlockScaleInst<sparse, space, kind, cta_group,
+                                               scale_vec_size, collector_usage_a,
+                                               collector_usage_b>;
+              }
+            } // collector_usage_b
+          } // collector_usage_a
         } // cta_group
       } // scale_vec_size
     } // kind
