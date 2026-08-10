@@ -203,8 +203,9 @@ setupIndirectCallTable(DeviceTy &Device, __tgt_device_image *Image,
   // The IndirectCallTable is on the stack, so we must syncronize to ensure
   // the data is copied before we return.
   if (Device.synchronize(AsyncInfo))
-    return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
-                                     "failed to synchronize after copying data");
+    return error::createOffloadError(
+        error::ErrorCode::INVALID_BINARY,
+        "failed to synchronize after copying data");
 
   return std::pair<void *, uint64_t>(DevicePtr, IndirectCallTable.size());
 }
