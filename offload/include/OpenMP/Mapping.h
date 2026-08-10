@@ -550,6 +550,17 @@ struct StateInfoTy {
   /// Key: host pointer, Value: mapped size.
   llvm::DenseMap<void *, int64_t> HostPathToRanges;
 
+  /// Initial TO transfers into an allocation that settling may release, held
+  /// back until the decisions are made so that a released allocation is never
+  /// copied into. Flushed by processAttachEntries, which drops the ones whose
+  /// entry ended up sharing storage with the original.
+  struct DeferredSubmitTy {
+    void *HstPtrBegin;
+    int64_t Size;
+    HostDataToTargetTy *Entry;
+  };
+  llvm::SmallVector<DeferredSubmitTy> DeferredSubmits;
+
   /// Host pointers that had a FROM entry, but for which a data transfer was
   /// skipped due to the ref-count not being zero.
   /// Key: host pointer, Value: data size.

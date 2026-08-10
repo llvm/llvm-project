@@ -423,6 +423,24 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
       return std::move(LR.TPR);
     }
 
+    // An allocation made for a close mapping under unified shared memory may
+    // still be released, if a pointer that has to keep the original storage is
+    // attached to it. Copying into it first would be wasted, and the release
+    // would then have to wait for that copy before it could free the storage.
+    // So hold the transfer back; processAttachEntries issues it once the
+    // storage is settled, or drops it if the allocation was released.
+    if (StateInfo && HasCloseModifier &&
+        PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY) {
+      ODBG(ODT_Mapping) << "Deferring the transfer of " << Size
+                        << " bytes (hst:" << HstPtrBegin
+                        << ") -> (tgt:" << LR.TPR.TargetPointer
+                        << ") until the storage for pointer attachment is "
+                           "settled";
+      StateInfo->DeferredSubmits.push_back(
+          {HstPtrBegin, Size, LR.TPR.getEntry()});
+      return std::move(LR.TPR);
+    }
+
     ODBG(ODT_Mapping) << "Moving " << Size << " bytes (hst:" << HstPtrBegin
                       << ") -> (tgt:" << LR.TPR.TargetPointer << ")";
 

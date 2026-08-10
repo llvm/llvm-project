@@ -1127,6 +1127,34 @@ static int settleAttachStorage(DeviceTy &Device, StateInfoTy &StateInfo,
   return OFFLOAD_SUCCESS;
 }
 
+/// Issue the transfers that were held back until the storage was settled.
+///
+/// An entry that ended up sharing storage with the original needs none: the
+/// device reads the original storage, which already holds the data. Anything
+/// else has a device allocation that is now known to be staying.
+static int flushDeferredSubmits(DeviceTy &Device, StateInfoTy &StateInfo,
+                                AsyncInfoTy &AsyncInfo) {
+  for (const auto &[HstPtrBegin, Size, Entry] : StateInfo.DeferredSubmits) {
+    if (Entry->isHostBound()) {
+      ODBG(ODT_Mapping) << "Dropping the deferred transfer of " << Size
+                        << " bytes (hst:" << HstPtrBegin
+                        << "): its storage is shared with the original";
+      continue;
+    }
+    void *TgtPtrBegin = reinterpret_cast<void *>(Entry->TgtPtrBegin);
+    ODBG(ODT_Mapping) << "Moving " << Size
+                      << " deferred bytes (hst:" << HstPtrBegin
+                      << ") -> (tgt:" << TgtPtrBegin << ")";
+    if (Device.submitData(TgtPtrBegin, HstPtrBegin, Size, AsyncInfo, Entry) !=
+        OFFLOAD_SUCCESS) {
+      REPORT() << "Copying data to device failed.";
+      return OFFLOAD_FAIL;
+    }
+  }
+  StateInfo.DeferredSubmits.clear();
+  return OFFLOAD_SUCCESS;
+}
+
 int processAttachEntries(DeviceTy &Device, StateInfoTy &StateInfo,
                          AsyncInfoTy &AsyncInfo) {
   // Report all tracked allocations from both main loop and ATTACH processing
@@ -1142,7 +1170,7 @@ int processAttachEntries(DeviceTy &Device, StateInfoTy &StateInfo,
   }
 
   if (StateInfo.AttachEntries.empty())
-    return OFFLOAD_SUCCESS;
+    return flushDeferredSubmits(Device, StateInfo, AsyncInfo);
 
   ODBG(ODT_Mapping) << "Processing " << StateInfo.AttachEntries.size()
                     << " deferred ATTACH map entries";
@@ -1150,6 +1178,9 @@ int processAttachEntries(DeviceTy &Device, StateInfoTy &StateInfo,
   // Decide which side of each attachment holds device storage before performing
   // any of them, so that a release cannot strand an earlier attachment.
   if (settleAttachStorage(Device, StateInfo, AsyncInfo) != OFFLOAD_SUCCESS)
+    return OFFLOAD_FAIL;
+
+  if (flushDeferredSubmits(Device, StateInfo, AsyncInfo) != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
 
   bool TreatAttachAutoAsAlways = MappingConfig::get().TreatAttachAutoAsAlways;
@@ -2413,8 +2444,10 @@ static int processDataBefore(ident_t *Loc, int64_t DeviceId, void *HostPtr,
     return OFFLOAD_FAIL;
   }
 
-  // Process collected ATTACH entries
-  if (!StateInfo.AttachEntries.empty()) {
+  // Process collected ATTACH entries. Also entered with none, because transfers
+  // held back for storage that attachment might have released still have to be
+  // issued.
+  if (!StateInfo.AttachEntries.empty() || !StateInfo.DeferredSubmits.empty()) {
     Ret = processAttachEntries(*DeviceOrErr, StateInfo, AsyncInfo);
     if (Ret != OFFLOAD_SUCCESS) {
       REPORT() << "Failed to process ATTACH entries.";
