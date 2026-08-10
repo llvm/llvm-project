@@ -430,7 +430,7 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
     // So hold the transfer back; processAttachEntries issues it once the
     // storage is settled, or drops it if the allocation was released.
     if (StateInfo && HasCloseModifier &&
-        PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY) {
+        mayShareStorageWithOriginal(PM->getRequirements())) {
       ODBG(ODT_Mapping) << "Deferring the transfer of " << Size
                         << " bytes (hst:" << HstPtrBegin
                         << ") -> (tgt:" << LR.TPR.TargetPointer

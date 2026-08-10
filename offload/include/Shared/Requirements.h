@@ -41,6 +41,15 @@ enum OpenMPOffloadingRequiresDirFlags : int64_t {
   OMPX_REQ_AUTO_ZERO_COPY = 0x020
 };
 
+/// Whether a mapping's corresponding storage can be the original storage
+/// itself, which is what makes pointer attachment able to assign a device
+/// address to an original pointer. True under unified shared memory, and also
+/// under auto zero-copy, which is set on APUs when no other requirement is.
+inline bool mayShareStorageWithOriginal(int64_t Requirements) {
+  return Requirements &
+         (OMP_REQ_UNIFIED_SHARED_MEMORY | OMPX_REQ_AUTO_ZERO_COPY);
+}
+
 class RequirementCollection {
   int64_t SetFlags = OMP_REQ_UNDEFINED;
 

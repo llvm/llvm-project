@@ -456,8 +456,9 @@ static int performPointerAttachment(DeviceTy &Device, AsyncInfoTy &AsyncInfo,
   // Record the pointer against its pointee, so that it can be told later
   // whether the pointee's entry may take a device allocation. Recorded even
   // when the shadow pointer below turns out to be a duplicate. Only settling
-  // consults this, so there is nothing to record without unified shared memory.
-  if (PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY)
+  // consults this, so there is nothing to record when no mapping can share
+  // storage with the original.
+  if (mayShareStorageWithOriginal(PM->getRequirements()))
     Device.getMappingInfo().recordAttachedPointer(HstPteeBegin, HstPtrAddr);
 
   // Add shadow pointer tracking
@@ -903,11 +904,11 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
 /// it, once they are no longer emitted at all.
 static int settleAttachStorage(DeviceTy &Device, StateInfoTy &StateInfo,
                                AsyncInfoTy &AsyncInfo) {
-  // Without unified shared memory a mapping never shares storage with the
-  // original, so attachment cannot assign a device address to an original
-  // pointer and there is nothing to settle. Leave before taking the mapping
-  // table, which the phases below would otherwise hold for their duration.
-  if (!(PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY))
+  // When no mapping can share storage with the original, attachment cannot
+  // assign a device address to an original pointer and there is nothing to
+  // settle. Leave before taking the mapping table, which the phases below would
+  // otherwise hold for their duration.
+  if (!mayShareStorageWithOriginal(PM->getRequirements()))
     return OFFLOAD_SUCCESS;
 
   MappingInfoTy &MappingInfo = Device.getMappingInfo();
