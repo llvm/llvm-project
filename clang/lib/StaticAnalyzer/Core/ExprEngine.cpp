@@ -1106,6 +1106,7 @@ static bool justRunCheckersAsPreVisit(const Stmt *S) {
     return false;
   case Stmt::CXXBindTemporaryExprClass:
   case Stmt::OffsetOfExprClass:
+  case Stmt::UnaryOperatorClass:
     return true;
   }
 }
@@ -1116,6 +1117,7 @@ static bool justRunCheckersAsPostVisit(const Stmt *S) {
     return false;
   case Stmt::CXXBindTemporaryExprClass:
   case Stmt::OffsetOfExprClass:
+  case Stmt::UnaryOperatorClass:
     return true;
   }
 }
@@ -2298,17 +2300,9 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       VisitStmtExpr(cast<StmtExpr>(S), Pred, Dst);
       break;
 
-    case Stmt::UnaryOperatorClass: {
-      const auto *U = cast<UnaryOperator>(S);
-      if (AMgr.options.ShouldEagerlyAssume && (U->getOpcode() == UO_LNot)) {
-        ExplodedNodeSet Tmp;
-        VisitUnaryOperator(U, Pred, Tmp);
-        evalEagerlyAssumeBifurcation(Dst, Tmp, U);
-      }
-      else
-        VisitUnaryOperator(U, Pred, Dst);
+    case Stmt::UnaryOperatorClass:
+      VisitUnaryOperator(cast<UnaryOperator>(S), Pred, Dst);
       break;
-    }
 
     case Stmt::PseudoObjectExprClass: {
       const auto *PE = cast<PseudoObjectExpr>(S);
