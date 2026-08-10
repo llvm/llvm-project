@@ -8,12 +8,10 @@ config.name = "DeadlockSanitizer" + config.name_suffix
 # Setup source root.
 config.test_source_root = os.path.dirname(__file__)
 
-default_tsan_deadlock_opts = "atexit_sleep_ms=0"
+default_tsan_deadlock_opts = ""
 
 if config.target_os == "Darwin":
-    # On Darwin, we default to `abort_on_error=1`, which would make tests run
-    # much slower. Let's override this and run lit tests with 'abort_on_error=0'.
-    default_tsan_deadlock_opts += ":abort_on_error=0"
+    default_tsan_deadlock_opts += "abort_on_error=0"
 
 if default_tsan_deadlock_opts:
     config.environment["TSAN_DEADLOCK_OPTIONS"] = default_tsan_deadlock_opts
@@ -26,12 +24,12 @@ config.substitutions.append(
 )
 
 clang_tsan_deadlock_cflags = (
-    ["-fsanitize=thread-deadlock", "-Wall", "-pthread"]
+    ["-fsanitize=thread-deadlock", "-Wall"]
     + [config.target_cflags]
     + config.debug_info_flags
 )
 clang_tsan_deadlock_cxxflags = (
-    config.cxx_mode_flags + clang_tsan_deadlock_cflags + ["-std=c++14"]
+    config.cxx_mode_flags + clang_tsan_deadlock_cflags + ["-std=c++11"]
 )
 
 

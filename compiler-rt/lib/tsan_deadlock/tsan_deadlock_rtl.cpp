@@ -25,6 +25,7 @@ namespace __tsan_deadlock {
 Flags tsan_deadlock_flags;
 
 static Context *ctx;
+static atomic_uint32_t error_count;
 
 static const uptr kShadowStackSize = 64 * 1024;
 
@@ -96,6 +97,7 @@ static void ReportDeadlock(Thread *thr, DDReport *rep) {
   Printf("==================\n");
   StackTrace empty;
   ReportErrorSummary("lock-order-inversion", &empty);
+  atomic_fetch_add(&error_count, 1, memory_order_relaxed);
   if (flags()->halt_on_error)
     Die();
 }
@@ -121,6 +123,7 @@ static void ReportMutexMisuse(Thread *thr, const char *what, uptr addr, uptr pc,
   Printf("==================\n");
   StackTrace empty;
   ReportErrorSummary(what, &empty);
+  atomic_fetch_add(&error_count, 1, memory_order_relaxed);
   if (flags()->halt_on_error)
     Die();
 }
@@ -169,6 +172,11 @@ static void InitializeFlags() {
   SetVerbosity(common_flags()->verbosity);
 }
 
+static void Finalize() {
+  if (atomic_load(&error_count, memory_order_relaxed) > 0)
+    internal__exit(common_flags()->exitcode);
+}
+
 void Initialize() {
   static atomic_uint32_t initialized;
   if (atomic_fetch_add(&initialized, 1, memory_order_relaxed) != 0)
@@ -179,6 +187,7 @@ void Initialize() {
   InitializeFlags();
   ctx->dd = DDetector::Create(flags());
   InitializeInterceptors();
+  Atexit(Finalize);
 }
 
 void ThreadInit(Thread *thr) {

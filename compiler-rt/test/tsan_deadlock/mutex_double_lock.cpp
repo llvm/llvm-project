@@ -1,5 +1,5 @@
 // Adapted from tsan/mutex_double_lock.cpp
-// RUN: %clangxx_tsan_deadlock -O1 %s -o %t && not %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_tsan_deadlock -O1 %s -o %t && %env_tsan_deadlock_opts=halt_on_error=1 not %run %t 2>&1 | FileCheck %s
 
 #include <pthread.h>
 
