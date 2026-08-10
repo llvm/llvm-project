@@ -347,25 +347,25 @@ void Symtab::InitNameIndexes() {
           RegisterMangledNameEntry(value, class_contexts, backlog, rmc);
           continue;
         }
-      }
 #ifdef LLDB_ENABLE_SWIFT
-      else if (SwiftLanguageRuntime::IsSwiftMangledName(name.GetStringRef())) {
-        lldb_private::ConstString basename;
-        bool is_method = false;
-        ConstString mangled_name = mangled.GetMangledName();
-        if (SwiftLanguageRuntime::MethodName::
-                ExtractFunctionBasenameFromMangled(mangled_name, basename,
-                                                   is_method)) {
-          if (basename && basename != mangled_name) {
-            if (is_method)
-              method_to_index.Append(basename, value);
-            else
-              basename_to_index.Append(basename, value);
+        else if (SwiftLanguageRuntime::IsSwiftMangledName(name.GetStringRef())) {
+          lldb_private::ConstString basename;
+          bool is_method = false;
+          ConstString mangled_name = mangled.GetMangledName();
+          if (SwiftLanguageRuntime::MethodName::
+                  ExtractFunctionBasenameFromMangled(mangled_name, basename,
+                                                     is_method)) {
+            if (basename && basename != mangled_name) {
+              if (is_method)
+                method_to_index.Append(basename, value);
+              else
+                basename_to_index.Append(basename, value);
+            }
+            continue;
           }
-          continue;
         }
+#endif // LLDB_ENABLE_SWIFT
       }
-#endif // LLDB_ENABLE_SWIFT      
     }
 
     // Symbol name strings that didn't match a Mangled::ManglingScheme, are
