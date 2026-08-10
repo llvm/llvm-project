@@ -881,8 +881,8 @@ Error olCreateQueue_impl(ol_context_handle_t Context, ol_device_handle_t Device,
             Device->Device->synchronize(OutstandingQueue, /*Release=*/false))
       return Err;
     CreatedQueue->AsyncInfo = OutstandingQueue;
-  } else if (auto Err = Device->Device->initAsyncInfo(
-                 &(CreatedQueue->AsyncInfo), Context->PluginCtx.get())) {
+  } else if (auto Err = Context->PluginCtx->initAsyncInfo(*Device->Device,
+                 &(CreatedQueue->AsyncInfo))) {
     return Err;
   }
 

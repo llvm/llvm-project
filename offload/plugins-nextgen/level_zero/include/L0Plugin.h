@@ -18,6 +18,7 @@
 #include "L0Options.h"
 #include "L0Program.h"
 #include "L0Queue.h"
+#include "PluginInterface.h"
 
 namespace llvm::omp::target::plugin {
 
@@ -38,6 +39,8 @@ public:
 
   ze_driver_handle_t getZeDriver() const { return Driver; }
   ze_context_handle_t getZeContext() const { return ZeContext; }
+
+  Error initAsyncInfoImpl(GenericDeviceTy& Device, AsyncInfoWrapperTy &AsyncInfoWrapper) override;
 
   /// Pop an idle queue for \p Device from the cache, or create a new one.
   Expected<L0QueueTy *> takeCachedQueue(L0DeviceTy *Device) {

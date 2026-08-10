@@ -407,11 +407,8 @@ Error L0DeviceTy::dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstDev,
   return Plugin::success();
 }
 
-Error L0DeviceTy::initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) {
-  auto *UserCtx =
-      static_cast<LevelZeroPluginContextTy *>(AsyncInfoWrapper.getContext());
-  auto QueueOrErr = getOrCreateQueue(AsyncInfoWrapper, UserCtx);
-  return QueueOrErr ? Plugin::success() : QueueOrErr.takeError();
+Error L0DeviceTy::initAsyncInfoImpl(AsyncInfoWrapperTy &) {
+  return Plugin::success();
 }
 
 const char *L0DeviceTy::getArchCStr() const {

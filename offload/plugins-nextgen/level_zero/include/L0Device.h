@@ -184,6 +184,7 @@ public:
   Error initImpl(GenericPluginTy &Plugin) override;
   Error deinitImpl() override;
   ze_device_handle_t getZeDevice() const { return zeDevice; }
+  Error initAsyncInfoImpl(AsyncInfoWrapperTy &) override;
 
   bool supportsCooperativeKernels() const {
     return QueueConfig.SupportsCooperativeKernels;
@@ -553,7 +554,6 @@ public:
   Error dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstDev,
                          void *DstPtr, int64_t Size,
                          AsyncInfoWrapperTy &AsyncInfoWrapper) override;
-  Error initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override;
   Expected<bool>
   hasPendingWorkImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override;
 
