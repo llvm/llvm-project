@@ -429,6 +429,8 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 
 #if defined(_LIBCPP_VERSION) && defined(_LIBCPP_HAS_UNICODE) && !_LIBCPP_HAS_UNICODE
 #  define TEST_HAS_NO_UNICODE
+#elif defined(_LIBCPP_VERSION) && defined(_LIBCPP_HAS_NO_UNICODE) /* old libc++ version */
+#  define TEST_HAS_NO_UNICODE
 #elif defined(_MSVC_EXECUTION_CHARACTER_SET) && _MSVC_EXECUTION_CHARACTER_SET != 65001
 #  define TEST_HAS_NO_UNICODE
 #endif
