@@ -734,6 +734,7 @@ static bool intrinsicHasSideEffects(Intrinsic::ID ID) {
   case Intrinsic::spv_num_subgroups:
   case Intrinsic::spv_num_workgroups:
   case Intrinsic::spv_ptrcast:
+  case Intrinsic::spv_radians:
   case Intrinsic::spv_reflect:
   case Intrinsic::spv_refract:
   case Intrinsic::spv_resource_getbasepointer:
@@ -5623,6 +5624,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_quad_read_across_diagonal: {
     return selectQuadSwap(ResVReg, ResType, I, /*Direction*/ 2);
   }
+  case Intrinsic::spv_radians:
+    return selectExtInst(ResVReg, ResType, I, CL::radians, GL::Radians);
   // Discard intrinsics which we do not expect to actually represent code after
   // lowering or intrinsics which are not implemented but should not crash when
   // found in a customer's LLVM IR input.
