@@ -219,6 +219,12 @@ static Value *peekThroughBitcasts(Value *V) {
   return V;
 }
 
+/// Helper to peek through bitcasts to the same value.
+static bool isEquivBitcast(Value *X, Value *Y) {
+  return X->getType() == Y->getType() &&
+         peekThroughBitcasts(X) == peekThroughBitcasts(Y);
+}
+
 static bool canWidenLoad(LoadInst *Load, const TargetTransformInfo &TTI) {
   // Do not widen load if atomic/volatile or under asan/hwasan/memtag/tsan.
   // The widened load may load data from dirty regions or create data races
@@ -3740,19 +3746,13 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
     if (!FrontV)
       return false;
 
-    // Helper to peek through bitcasts to the same value.
-    auto IsEquiv = [&](Value *X, Value *Y) {
-      return X->getType() == Y->getType() &&
-             peekThroughBitcasts(X) == peekThroughBitcasts(Y);
-    };
-
     // Look for an identity value.
     if (FrontLane == 0 &&
         cast<FixedVectorType>(FrontV->getType())->getNumElements() ==
             Item.size() &&
-        all_of(drop_begin(enumerate(Item)), [IsEquiv, Item](const auto &E) {
+        all_of(drop_begin(enumerate(Item)), [Item](const auto &E) {
           Value *FrontV = Item.front().first;
-          return !E.value().first || (IsEquiv(E.value().first, FrontV) &&
+          return !E.value().first || (isEquivBitcast(E.value().first, FrontV) &&
                                       E.value().second == (int)E.index());
         })) {
       IdentityLeafs.insert(std::make_pair(FrontV, From));
@@ -4267,11 +4267,23 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
     auto It = Demands.find(S);
     if (It == Demands.end() || It->second.Lanes.isZero())
       continue;
-    if (Cut || (!IsIdempotent && !It->second.Duplicates.isZero())) {
+    if (!IsIdempotent && !It->second.Duplicates.isZero()) {
       Cut.reset();
       break;
     }
-    Cut = ReductionCut{S, It->second.Lanes};
+    if (!Cut) {
+      Cut = ReductionCut{S, It->second.Lanes};
+      continue;
+    }
+    if (!isEquivBitcast(Cut->Src, S)) {
+      Cut.reset();
+      break;
+    }
+    if (!IsIdempotent && !(Cut->Elts & It->second.Lanes).isZero()) {
+      Cut.reset();
+      break;
+    }
+    Cut->Elts |= It->second.Lanes;
   }
   if (!Cut) {
     for (Value *V : Nodes) {
