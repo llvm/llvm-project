@@ -680,13 +680,16 @@ private:
       return;
 
     const Expr *LastExpr = OriginExprChain.back();
-    std::string IssueStr = getDiagSubjectDescription(LastExpr);
+    const Expr *VisibleLastExpr = LastExpr;
+    std::string IssueStr = getDiagSubjectDescription(VisibleLastExpr);
 
     for (const Expr *CurrExpr : reverse(OriginExprChain.drop_back())) {
-      if (!shouldShowInAliasChain(CurrExpr, LastExpr))
+      const Expr *PrevExpr = LastExpr;
+      LastExpr = CurrExpr;
+      if (!shouldShowInAliasChain(CurrExpr, VisibleLastExpr))
         continue;
       std::optional<LifetimeBoundParamInfo> ParamInfo =
-          getTrackingInfoForCallArg(CurrExpr, LastExpr);
+          getTrackingInfoForCallArg(CurrExpr, PrevExpr);
       if (ParamInfo) {
         bool IsImplicitObject = isa<const CXXMethodDecl *>(*ParamInfo);
         std::string ParamName;
@@ -705,7 +708,7 @@ private:
                diag::note_lifetime_safety_aliases_storage)
             << CurrExpr->getSourceRange() << getDiagSubjectDescription(CurrExpr)
             << IssueStr;
-      LastExpr = CurrExpr;
+      VisibleLastExpr = CurrExpr;
     }
   }
 
