@@ -172,6 +172,68 @@ exit:                                             ; preds = %Header
   %result.le = load i64, ptr %result.in3.lcssa, align 8
   ret i64 %result.le
 }
+
+; predicate loop since we have an exit block with unknown probability but
+; it leads to deopt so we assume it's cold.
+define i64 @predicate2(ptr nocapture readonly %arg, i32 %length, ptr nocapture readonly %arg2, ptr nocapture readonly %n_addr, i64 %i) !prof !21 {
+; CHECK-LABEL: @predicate2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LENGTH_EXT:%.*]] = zext i32 [[LENGTH:%.*]] to i64
+; CHECK-NEXT:    [[N_PRE:%.*]] = load i64, ptr [[N_ADDR:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule i64 1048576, [[LENGTH_EXT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 0, [[LENGTH_EXT]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = freeze i1 [[TMP2]]
+; CHECK-NEXT:    br label [[HEADER:%.*]]
+; CHECK:       Header:
+; CHECK-NEXT:    [[RESULT_IN3:%.*]] = phi ptr [ [[ARG2:%.*]], [[ENTRY:%.*]] ], [ [[ARG:%.*]], [[LATCH:%.*]] ]
+; CHECK-NEXT:    [[J2:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[J_NEXT:%.*]], [[LATCH]] ]
+; CHECK-NEXT:    [[WITHIN_BOUNDS:%.*]] = icmp ult i64 [[J2]], [[LENGTH_EXT]]
+; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP3]], i32 9) [ "deopt"() ]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS]])
+; CHECK-NEXT:    [[INNERCMP:%.*]] = icmp eq i64 [[J2]], [[N_PRE]]
+; CHECK-NEXT:    [[J_NEXT]] = add nuw nsw i64 [[J2]], 1
+; CHECK-NEXT:    br i1 [[INNERCMP]], label [[LATCH]], label [[EVENTUAL_DEOPT:%.*]]
+; CHECK:       Latch:
+; CHECK-NEXT:    [[SPECULATE_TRIP_COUNT:%.*]] = icmp ult i64 [[J_NEXT]], 1048576
+; CHECK-NEXT:    br i1 [[SPECULATE_TRIP_COUNT]], label [[HEADER]], label [[EXITLATCH:%.*]], !prof [[PROF3]]
+; CHECK:       exitLatch:
+; CHECK-NEXT:    ret i64 1
+; CHECK:       eventual_deopt:
+; CHECK-NEXT:    br label [[DEOPT:%.*]]
+; CHECK:       deopt:
+; CHECK-NEXT:    [[COUNTED_SPECULATION_FAILED:%.*]] = call i64 (...) @llvm.experimental.deoptimize.i64(i64 30) [ "deopt"(i32 0) ]
+; CHECK-NEXT:    ret i64 [[COUNTED_SPECULATION_FAILED]]
+;
+entry:
+  %length.ext = zext i32 %length to i64
+  %n.pre = load i64, ptr %n_addr, align 4
+  br label %Header
+
+Header:                                          ; preds = %entry, %Latch
+  %result.in3 = phi ptr [ %arg2, %entry ], [ %arg, %Latch ]
+  %j2 = phi i64 [ 0, %entry ], [ %j.next, %Latch ]
+  %within.bounds = icmp ult i64 %j2, %length.ext
+  call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
+  %innercmp = icmp eq i64 %j2, %n.pre
+  %j.next = add nuw nsw i64 %j2, 1
+  br i1 %innercmp, label %Latch, label %eventual_deopt
+
+Latch:                                           ; preds = %Header
+  %speculate_trip_count = icmp ult i64 %j.next, 1048576
+  br i1 %speculate_trip_count, label %Header, label %exitLatch, !prof !2
+
+exitLatch:                                            ; preds = %Latch
+  ret i64 1
+
+eventual_deopt:                                             ; preds = %Header
+  br label %deopt
+
+deopt:                                            ; preds = %eventual_deopt_true, %eventual_deopt_false
+  %counted_speculation_failed = call i64 (...) @llvm.experimental.deoptimize.i64(i64 30) [ "deopt"(i32 0) ]
+  ret i64 %counted_speculation_failed
+}
+
 declare i64 @llvm.experimental.deoptimize.i64(...)
 declare void @llvm.experimental.guard(i1, ...)
 
