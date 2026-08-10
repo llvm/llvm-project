@@ -1042,6 +1042,8 @@ inline constexpr EytzingerModeT EytzingerMode{};
 /// modification in on-disk mode.
 class SampleProfileFuncOffsetTable {
 public:
+  enum class TableMode { InMemory, OnDisk, Eytzinger };
+
   using OnDiskTableType =
       llvm::OnDiskIterableChainedHashTable<FuncOffsetHashTableInfo>;
 
@@ -1054,14 +1056,16 @@ public:
   operator=(SampleProfileFuncOffsetTable &&) = delete;
 
   explicit SampleProfileFuncOffsetTable(InMemoryModeT,
-                                        size_t InitialCapacity = 0) {
+                                        size_t InitialCapacity = 0)
+      : Mode(TableMode::InMemory) {
     InMemoryTable.reserve(InitialCapacity);
   }
 
   SampleProfileFuncOffsetTable(
       EytzingerModeT, EytzingerTableSpan<support::ulittle64_t> NameSpan,
       ArrayRef<support::ulittle32_t> FuncOffsetSpan)
-      : NameSpan(NameSpan), FuncOffsetSpan(FuncOffsetSpan) {}
+      : Mode(TableMode::Eytzinger), NameSpan(NameSpan),
+        FuncOffsetSpan(FuncOffsetSpan) {}
 
   /// Insert a function GUID and its profile offset into the in-memory map.
   /// Enforces that the on-disk table must not have been set first.
@@ -1073,7 +1077,8 @@ public:
 
   /// Instantiate the on-disk chained hash table using raw stream pointers.
   SampleProfileFuncOffsetTable(OnDiskModeT, const uint8_t *Buckets,
-                               const uint8_t *Payload, const uint8_t *Base) {
+                               const uint8_t *Payload, const uint8_t *Base)
+      : Mode(TableMode::OnDisk) {
     OnDiskTable.reset(OnDiskTableType::Create(Buckets, Payload, Base));
   }
 
@@ -1101,7 +1106,7 @@ public:
   }
 
   /// Direct read-only array (`ArrayRef`) of function offsets aligned parallel
-  /// to the corresponding Eytzinger name span:
+  /// to the corresponding Eytzinger name span.
   ArrayRef<support::ulittle32_t> getFuncOffsets() const {
     assert(isEytzinger() &&
            "Cannot call getFuncOffsets() on non-Eytzinger table");
@@ -1114,9 +1119,10 @@ public:
     return NameSpan.size();
   }
 
-  bool isEytzinger() const { return FuncOffsetSpan.data() != nullptr; }
+  bool isEytzinger() const { return Mode == TableMode::Eytzinger; }
 
 private:
+  TableMode Mode;
   llvm::DenseMap<hash_code, uint64_t> InMemoryTable;
   std::unique_ptr<OnDiskTableType> OnDiskTable;
   EytzingerTableSpan<support::ulittle64_t> NameSpan;

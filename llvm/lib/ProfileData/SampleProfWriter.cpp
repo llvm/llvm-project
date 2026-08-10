@@ -465,7 +465,8 @@ std::error_code SampleProfileWriterExtBinaryBase::writeNameTableSection(
   }
 
   if (UseMD5 && WriteEytzingerNameTables) {
-    // Eytzinger name tables do not support Context-Sensitive profiles.
+    // Eytzinger name tables do not support CSSPGO profiles
+    // (FunctionSamples::ProfileIsCS).
     if (FunctionSamples::ProfileIsCS)
       return sampleprof_error::unsupported_writing_format;
     if (auto EC = writeEytzingerNameTableSection(ProfileMap))
