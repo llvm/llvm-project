@@ -30,15 +30,15 @@
 using namespace clang;
 using namespace ento;
 
-void ExprEngine::CreateCXXTemporaryObject(const MaterializeTemporaryExpr *ME,
-                                          ExplodedNode *Pred,
-                                          ExplodedNodeSet &Dst) {
-  const Expr *tempExpr = ME->getSubExpr()->IgnoreParens();
+void ExprEngine::VisitMaterializeTemporaryExpr(
+    const MaterializeTemporaryExpr *MTE, ExplodedNode *Pred,
+    ExplodedNodeSet &Dst) {
+  const Expr *tempExpr = MTE->getSubExpr()->IgnoreParens();
   ProgramStateRef state = Pred->getState();
   const StackFrame *SF = Pred->getStackFrame();
 
-  state = createTemporaryRegionIfNeeded(state, SF, tempExpr, ME);
-  Dst.insert(Engine.makePostStmtNode(ME, state, Pred));
+  state = createTemporaryRegionIfNeeded(state, SF, tempExpr, MTE);
+  Dst.insert(Engine.makePostStmtNode(MTE, state, Pred));
 }
 
 void ExprEngine::performTrivialCopy(ExplodedNodeSet &Dst, ExplodedNode *Pred,

@@ -668,9 +668,8 @@ public:
                           ExplodedNodeSet &Dst);
 
   /// Create a C++ temporary object for an rvalue.
-  void CreateCXXTemporaryObject(const MaterializeTemporaryExpr *ME,
-                                ExplodedNode *Pred,
-                                ExplodedNodeSet &Dst);
+  void VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *MTE,
+                                     ExplodedNode *Pred, ExplodedNodeSet &Dst);
 
   void ConstructInitList(const Expr *Source, ArrayRef<Expr *> Args,
                          bool IsTransparent, ExplodedNode *Pred,

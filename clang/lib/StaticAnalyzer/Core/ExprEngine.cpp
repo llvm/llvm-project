@@ -1105,6 +1105,7 @@ static bool justRunCheckersAsPreVisit(const Stmt *S) {
   default:
     return false;
   case Stmt::CXXBindTemporaryExprClass:
+  case Stmt::MaterializeTemporaryExprClass:
   case Stmt::OffsetOfExprClass:
   case Stmt::UnaryOperatorClass:
     return true;
@@ -1116,6 +1117,7 @@ static bool justRunCheckersAsPostVisit(const Stmt *S) {
   default:
     return false;
   case Stmt::CXXBindTemporaryExprClass:
+  case Stmt::MaterializeTemporaryExprClass:
   case Stmt::OffsetOfExprClass:
   case Stmt::UnaryOperatorClass:
     return true;
@@ -2232,16 +2234,10 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       break;
     }
 
-    case Expr::MaterializeTemporaryExprClass: {
-      const auto *MTE = cast<MaterializeTemporaryExpr>(S);
-      ExplodedNodeSet dstPrevisit;
-      getCheckerManager().runCheckersForPreStmt(dstPrevisit, Pred, MTE, *this);
-      ExplodedNodeSet dstExpr;
-      for (const auto i : dstPrevisit)
-        CreateCXXTemporaryObject(MTE, i, dstExpr);
-      getCheckerManager().runCheckersForPostStmt(Dst, dstExpr, MTE, *this);
+    case Expr::MaterializeTemporaryExprClass:
+      VisitMaterializeTemporaryExpr(cast<MaterializeTemporaryExpr>(S), Pred,
+                                    Dst);
       break;
-    }
 
     case Stmt::InitListExprClass: {
       const InitListExpr *E = cast<InitListExpr>(S);
