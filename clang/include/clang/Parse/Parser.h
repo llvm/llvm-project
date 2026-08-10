@@ -2337,12 +2337,12 @@ private:
     return false;
   }
 
-  bool MaybeParseMicrosoftAttributes(ParsedAttributes &Attrs) {
+  bool MaybeParseMicrosoftAttributes(ParsedAttributes &Attrs, bool IsStmtContext = false) {
     bool AttrsParsed = false;
     if ((getLangOpts().MicrosoftExt || getLangOpts().HLSL) &&
         Tok.is(tok::l_square)) {
       ParsedAttributes AttrsWithRange(AttrFactory);
-      ParseMicrosoftAttributes(AttrsWithRange);
+      ParseMicrosoftAttributes(AttrsWithRange, IsStmtContext);
       AttrsParsed = !AttrsWithRange.empty();
       Attrs.takeAllAppendingFrom(AttrsWithRange);
     }
@@ -3133,7 +3133,7 @@ private:
   ///             ms-attribute[opt]
   ///             ms-attribute ms-attribute-seq
   /// \endverbatim
-  void ParseMicrosoftAttributes(ParsedAttributes &Attrs);
+  void ParseMicrosoftAttributes(ParsedAttributes &Attrs, bool IsStmtContext = false);
 
   void ParseMicrosoftInheritanceClassAttributes(ParsedAttributes &attrs);
   void ParseNullabilityClassAttributes(ParsedAttributes &attrs);
