@@ -30,6 +30,7 @@
 #include "Plugins/ExpressionParser/Clang/CxxModuleHandler.h"
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SetVector.h"
 
 namespace lldb_private {
 
@@ -175,7 +176,19 @@ public:
 
   bool CompleteTagDeclWithOrigin(clang::TagDecl *decl, clang::TagDecl *origin);
 
+  /// Completes the given ObjCInterfaceDecl, unless an import is already in
+  /// progress on this thread (see ImportLock), in which case the completion
+  /// is queued until that import finishes.
+  ///
+  /// Completing an ObjCInterfaceDecl can ask the Objective-C runtime for
+  /// class info that debug info doesn't have, which runs code in the process.
+  /// Doing that while holding a source ASTContext's lock - which, for a
+  /// Module's ASTContext, is also the lock the process's private state thread
+  /// needs to report the resulting stop - deadlocks the two threads.
   bool CompleteObjCInterfaceDecl(clang::ObjCInterfaceDecl *interface_decl);
+
+  /// Completes Objective-C interfaces that have been queued up.
+  void CompleteQueuedObjCInterfaces();
 
   bool CompleteAndFetchChildren(clang::QualType type);
 
@@ -470,11 +483,25 @@ public:
 
   DeclOrigin GetDeclOrigin(const clang::Decl *decl);
 
+  bool CompleteQueuedObjCInterface(clang::ObjCInterfaceDecl *interface_decl);
+
   clang::FileManager m_file_manager;
   typedef llvm::DenseMap<const clang::RecordDecl *, LayoutInfo>
       RecordDeclToLayoutMap;
 
   RecordDeclToLayoutMap m_record_decl_to_layout_map;
+
+  /// ObjCInterfaceDecls that CompleteObjCInterfaceDecl deferred because an
+  /// import was already in progress.
+  ///
+  /// This is necessary as completing an Objective-C interface can trigger
+  /// LLDB to run an utility expression. This expression will likely deadlock
+  /// when we hold any Module lock (or any other lock an expression might
+  /// acquire).
+  llvm::SmallSetVector<clang::ObjCInterfaceDecl *, 4> m_queued_objc_interfaces;
+
+  /// Number of ImportLocks currently active on this ClangASTImporter.
+  unsigned m_nested_imports_depth = 0;
 };
 
 template <class D> class TaggedASTDecl {
