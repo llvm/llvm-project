@@ -20483,7 +20483,7 @@ static ExprResult rebuildPotentialResultsAsNonOdrUsed(Sema &S, Expr *E,
     if (LHS.isInvalid())
       return ExprError();
 
-    ExprResult RHS = Rebuild(CE->getLHS());
+    ExprResult RHS = Rebuild(CE->getRHS());
     if (RHS.isInvalid())
       return ExprError();
 
