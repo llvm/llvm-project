@@ -1,5 +1,4 @@
-; RUN: not --crash llc -mtriple=amdgpu9.42-amd-amdhsa -amdgpu-stress-sgpr=16 < %s 2>&1 | FileCheck %s
-; REQUIRES: asserts
+; RUN: llc -mtriple=amdgpu9.42-amd-amdhsa -amdgpu-stress-sgpr=16 < %s 2>&1 | FileCheck %s
 
 ; Verifies SIRegisterInfo::eliminateFrameIndex on a flat-scratch target: a frame
 ; index used by a VALU instruction reaches the generic SGPR scavenging path.
@@ -17,8 +16,6 @@
 ;   5. A flat-scratch target (gfx942/gfx950).
 ; The data dependency through %diff keeps every SGPR live across the subtract so
 ; the scheduler cannot free one up.
-
-; CHECK: there is a frame register!
 
 define fastcc i64 @no_scavengeable_sgpr_with_frame_register(
 ; CHECK-LABEL: no_scavengeable_sgpr_with_frame_register:
