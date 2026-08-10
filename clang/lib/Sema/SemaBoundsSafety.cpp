@@ -80,19 +80,15 @@ static std::optional<bool> checkBoundsAttrTypeConflictsAndMisc(
   // * Some diagnostics want the attribute spelling and some don't. This seems
   //   really inconsistent.
   //
-  // FIXME: Sugar handling in this function is a mess. It is unclear if this
-  // function should be using desugaring checks (e.g. `Ty->IsPointerType`) or
-  // direct checks (e.g. `dyn_cast<PointerType>`, `isa<ValueTerminatedType>`).
-  // This function and `Sema::ValidateBoundsAttrTypeShape` use a mix of the two.
-  // We need to decide what the contract with our callers is and then perform
-  // checks consistently OR clearly document why we need the mix.
+  // Note checks below should use sugar-walking checks (e.g. `get<>`) rather
+  // than direct checks (e.g. `dyn_cast<>`).
 
   assert(AttrSpelling.size() > 0);
   const Type *T = Ty.getTypePtr();
 
   // A __terminated_by pointer cannot also carry a count or range attribute
   // unless the terminator was auto-inferred via __ptrauto.
-  if (isa<ValueTerminatedType>(T) && !AutoPtrAttributed) {
+  if (Ty->getAs<ValueTerminatedType>() && !AutoPtrAttributed) {
     S.Diag(AttrLoc, diag::err_bounds_safety_terminated_by_wrong_pointer_type);
     return false;
   }
@@ -100,12 +96,12 @@ static std::optional<bool> checkBoundsAttrTypeConflictsAndMisc(
   if (Flags.IsEndedBy) {
     // Handle ended_by conflicts with counted_by/sized_by or existing
     // ended_by.
-    if (isa<CountAttributedType>(T)) {
+    if (Ty->getAs<CountAttributedType>()) {
       S.Diag(AttrLoc,
              diag::err_bounds_safety_conflicting_count_range_attributes);
       return false;
     }
-    if (const auto *DRPT = dyn_cast<DynamicRangePointerType>(T)) {
+    if (const auto *DRPT = Ty->getAs<DynamicRangePointerType>()) {
       if (DRPT->getEndPointer() != nullptr) {
         if (!AllowRedecl) {
           S.Diag(AttrLoc,
@@ -137,7 +133,7 @@ static std::optional<bool> checkBoundsAttrTypeConflictsAndMisc(
   } else {
     // Handle counted_by/sized_by conflicts with ended_by or existing
     // counted_by/sized_by.
-    if (const auto *CAT = dyn_cast<CountAttributedType>(T)) {
+    if (const auto *CAT = Ty->getAs<CountAttributedType>()) {
       if (!AllowRedecl) {
         S.Diag(AttrLoc, diag::err_bounds_safety_conflicting_pointer_attributes)
             << /*pointer*/ CAT->isPointerType() << /*count*/ 2;
@@ -163,13 +159,19 @@ static std::optional<bool> checkBoundsAttrTypeConflictsAndMisc(
       }
       return true;
     }
-    if (isa<DynamicRangePointerType>(T)) {
+    if (Ty->getAs<DynamicRangePointerType>()) {
       S.Diag(AttrLoc,
              diag::err_bounds_safety_conflicting_count_range_attributes);
       return false;
     }
   }
 
+  // FIXME: the AtomicType check below still uses `dyn_cast` on the
+  // top node. It returns `true` and lets the caller continue, so making it
+  // sugar-walking is only safe once the caller runs the leaf once per level
+  // (the once-per-level guard); until then a sugar-wrapped atomic would
+  // double-emit.
+  //
   // An AtomicType wrapping a pointer: emit the diagnostic but return true so
   // the caller still constructs the AtomicType instead of bailing out.
   if (const auto *ATy = dyn_cast<AtomicType>(T)) {
@@ -190,7 +192,7 @@ static std::optional<bool> checkBoundsAttrTypeConflictsAndMisc(
 
   // Pointer with explicit upper-bound (__bidi_indexable / __indexable):
   // conflict with count/end attributes.
-  if (const auto *PT = dyn_cast<PointerType>(T)) {
+  if (const auto *PT = Ty->getAs<PointerType>()) {
     auto FAttr = PT->getPointerAttributes();
     if (FAttr.hasUpperBound() && !AutoPtrAttributed) {
       S.Diag(AttrLoc,

@@ -38,9 +38,7 @@ void ended_bidi(int * __ended_by(e) * __bidi_indexable p, int *e);
 void ended_indexable(int * __ended_by(e) * __indexable p, int *e);
 
 // The same conflict, but with the wide pointer hidden behind sugar (a typedef
-// or __typeof__) so it appears at the outermost level (Level == 0). The
-// non-desugaring `ValidateBoundsAttrTypeShape` check does not see through the
-// sugar, so the conflict is diagnosed here in VisitPointerType instead.
+// or __typeof__).
 
 typedef int * __bidi_indexable bidi_ptr_t;
 typedef int * __indexable indexable_ptr_t;
