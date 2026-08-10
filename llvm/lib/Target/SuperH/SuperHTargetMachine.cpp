@@ -39,6 +39,7 @@ public:
     : TargetPassConfig(TM, PM) {}
 
   bool addInstSelector() override;
+  void addPreSched2() override;
   SuperHTargetMachine &getSuperHTargetMachine() const {
     return getTM<SuperHTargetMachine>();
   }
@@ -48,6 +49,11 @@ bool SuperHPassConfig::addInstSelector() {
   addPass(createSuperHISelDag(getSuperHTargetMachine(), getOptLevel()));
   return false;
 }
+
+void SuperHPassConfig::addPreSched2() {
+  addPass(createSuperHFillDelaySlotsPass());
+}
+
 } // namespace
 
 

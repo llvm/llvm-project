@@ -27,6 +27,7 @@ add_llvm_target(SuperHCodeGen
   SuperHAsmPrinter.cpp
   SuperHInstrInfo.cpp
   SuperHSubtarget.cpp
+  SuperHFillDelaySlots.cpp
 
   LINK_COMPONENTS
   Analysis

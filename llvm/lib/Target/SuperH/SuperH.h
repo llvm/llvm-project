@@ -26,9 +26,12 @@ class PassRegistry;
 class SuperHTargetMachine;
 
 FunctionPass *createSuperHISelDag(SuperHTargetMachine &TM, CodeGenOptLevel OptLevel);
+FunctionPass *createSuperHFillDelaySlotsPass();
 
 void initializeSuperHDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeSuperHAsmPrinterPass(PassRegistry &);
+void initializeSuperHAsmPrinterPass(PassRegistry &);
+void initializeSuperHFillDelaySlotsPass(PassRegistry &);
 } // namespace llvm
 
 
