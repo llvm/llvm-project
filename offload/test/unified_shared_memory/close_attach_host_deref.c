@@ -71,8 +71,8 @@ int main() {
 #pragma omp target enter data map(close, alloc : x[0 : 10])
   //
   // clang-format off
-  // ALWAYS: cannot be attached to
-  // ALWAYS: was already mapped with its original storage
+  // ALWAYS: cannot attach pointer
+  // ALWAYS: was mapped by an enclosing construct with its storage shared with the original
   // clang-format on
 #pragma omp target enter data map(alloc : p[0 : 0])
 #else

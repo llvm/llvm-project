@@ -629,7 +629,8 @@ int MappingInfoTy::giveEntryDeviceStorage(HDTTMapAccessorTy &HDTTMap,
 }
 
 int MappingInfoTy::shareEntryStorageWithOriginal(HDTTMapAccessorTy &HDTTMap,
-                                                 HostDataToTargetTy *Entry) {
+                                                 HostDataToTargetTy *Entry,
+                                                 AsyncInfoTy &AsyncInfo) {
   assert(Entry && "Trying to share storage of a null entry.");
   assert(!Entry->isHostBacked() &&
          "Entry storage is already shared with the original");
@@ -651,6 +652,13 @@ int MappingInfoTy::shareEntryStorageWithOriginal(HDTTMapAccessorTy &HDTTMap,
 
   if (Device.notifyDataUnmapped(HstPtrBegin))
     return OFFLOAD_FAIL;
+
+  // A transfer into this allocation may already be in flight, and the free
+  // below is not ordered against it, so wait for it to complete first.
+  if (Device.synchronize(AsyncInfo) != OFFLOAD_SUCCESS) {
+    REPORT() << "Failed to synchronize before releasing a device allocation.";
+    return OFFLOAD_FAIL;
+  }
 
   return Device.deleteData(TgtAllocBegin);
 }

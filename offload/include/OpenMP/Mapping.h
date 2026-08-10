@@ -791,9 +791,13 @@ struct MappingInfoTy {
   /// device address into the original pointer, so the pointee keeps host
   /// storage instead and the attached address is the original one.
   ///
+  /// Any transfer already queued into the allocation being released has to
+  /// complete before it is freed, so \p AsyncInfo is synchronized first.
+  ///
   /// \p HDTTMap must be held by the caller.
   [[nodiscard]] int shareEntryStorageWithOriginal(HDTTMapAccessorTy &HDTTMap,
-                                                  HostDataToTargetTy *Entry);
+                                                  HostDataToTargetTy *Entry,
+                                                  AsyncInfoTy &AsyncInfo);
 
   /// Deallocate the \p Entry from the device memory and delete it. Return \c
   /// OFFLOAD_SUCCESS if the deallocation operations executed successfully, and

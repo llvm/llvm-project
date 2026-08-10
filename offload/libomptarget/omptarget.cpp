@@ -870,6 +870,15 @@ static int settleAttachStorage(DeviceTy &Device, StateInfoTy &StateInfo,
     return Entry;
   };
 
+  // Names are only available when the program was compiled with -g; they make
+  // the diagnostics below usable, and cost nothing when absent.
+  auto NameOf = [](map_var_info_t Name) -> std::string {
+    return Name ? getNameFromMapping(Name) : "unknown";
+  };
+  auto NameOfEntry = [&](HostDataToTargetTy *Entry) -> std::string {
+    return Entry ? NameOf(Entry->HstPtrName) : "unknown";
+  };
+
   // An attachment only needs settling if the pointer is shared with the
   // original, and the pointee has device storage for its address to differ.
   auto NeedsSettling = [&](void *HstPtr, int64_t PtrSize,
@@ -907,8 +916,8 @@ static int settleAttachStorage(DeviceTy &Device, StateInfoTy &StateInfo,
              "Releasing an allocation that a pointer is already attached to");
     }
 #endif
-    if (MappingInfo.shareEntryStorageWithOriginal(HDTTMap, PteeEntry) !=
-        OFFLOAD_SUCCESS)
+    if (MappingInfo.shareEntryStorageWithOriginal(HDTTMap, PteeEntry,
+                                                  AsyncInfo) != OFFLOAD_SUCCESS)
       return OFFLOAD_FAIL;
   }
 
@@ -922,25 +931,49 @@ static int settleAttachStorage(DeviceTy &Device, StateInfoTy &StateInfo,
     // attached to storage within an entry designates that entry's current
     // address, so an entry cannot take a device allocation while such a pointer
     // is itself unable to hold a device address.
-    SmallVector<std::pair<void **, int64_t>> ToUpgrade;
-    ToUpgrade.emplace_back(HstPtr, AttachEntry.PointerSize);
+    // Each item carries the pointer that made it need device storage, so a
+    // failure can name the chain that led there rather than just its end.
+    struct UpgradeItem {
+      void **HstPtr;
+      int64_t PtrSize;
+      void **ReachedFrom;
+    };
+    SmallVector<UpgradeItem> ToUpgrade;
+    ToUpgrade.push_back({HstPtr, AttachEntry.PointerSize, nullptr});
 
     while (!ToUpgrade.empty()) {
-      auto [UpHstPtr, UpPtrSize] = ToUpgrade.pop_back_val();
+      auto [UpHstPtr, UpPtrSize, ReachedFrom] = ToUpgrade.pop_back_val();
 
       HostDataToTargetTy *UpEntry = FindEntry(UpHstPtr, UpPtrSize);
       if (!UpEntry || !UpEntry->isHostBacked())
         continue;
 
       if (!StateInfo.wasNewlyMapped(UpHstPtr).has_value()) {
-        MESSAGE("pointer " DPxMOD " cannot be attached to " DPxMOD
-                ": its corresponding pointer is the original pointer, and "
-                "neither it nor the pointee could be given storage that would "
-                "make the attachment possible\n",
-                DPxPTR(HstPtr), DPxPTR(AttachEntry.PointeeBegin));
-        REPORT() << "Storage at " << UpHstPtr
-                 << " was already mapped with its original storage, so it "
-                    "cannot be given a device allocation now.";
+        std::string PtrName = NameOf(AttachEntry.Pointername);
+        std::string PteeName =
+            NameOfEntry(FindEntry(AttachEntry.PointeeBegin, /*Size=*/0));
+        std::string BlockerName = NameOfEntry(UpEntry);
+
+        MESSAGE("cannot attach pointer %s (" DPxMOD ") to %s (" DPxMOD
+                ") under unified shared memory: %s has a device allocation, so "
+                "the attachment would assign a device address to the original "
+                "pointer\n",
+                PtrName.c_str(), DPxPTR(HstPtr), PteeName.c_str(),
+                DPxPTR(AttachEntry.PointeeBegin), PteeName.c_str());
+        if (ReachedFrom)
+          MESSAGE("  %s (" DPxMOD ") has to hold a device address as well, "
+                  "because the pointer at " DPxMOD " points into its storage\n",
+                  BlockerName.c_str(), DPxPTR(UpHstPtr), DPxPTR(ReachedFrom));
+        MESSAGE("  but %s (" DPxMOD ") was mapped by an enclosing construct "
+                "with its storage shared with the original, and its device "
+                "address may already have been obtained, so it cannot be given "
+                "a device allocation now\n",
+                BlockerName.c_str(), DPxPTR(UpHstPtr));
+        MESSAGE("  map %s with the close modifier where it is first mapped, or "
+                "drop the close modifier from %s\n",
+                BlockerName.c_str(), PteeName.c_str());
+        REPORT() << "Unsatisfiable pointer attachment under unified shared "
+                    "memory.";
         return OFFLOAD_FAIL;
       }
 
@@ -962,14 +995,14 @@ static int settleAttachStorage(DeviceTy &Device, StateInfoTy &StateInfo,
         if (!IsInsideUpEntry(AttachedPtee))
           continue;
         for (void **AttachedPtr : AttachedPtrs)
-          ToUpgrade.emplace_back(AttachedPtr, sizeof(void *));
+          ToUpgrade.push_back({AttachedPtr, sizeof(void *), UpHstPtr});
       }
 
       for (const auto &Pending : StateInfo.AttachEntries) {
         if (!IsInsideUpEntry(Pending.PointeeBegin))
           continue;
-        ToUpgrade.emplace_back(reinterpret_cast<void **>(Pending.PointerBase),
-                               Pending.PointerSize);
+        ToUpgrade.push_back({reinterpret_cast<void **>(Pending.PointerBase),
+                             Pending.PointerSize, UpHstPtr});
       }
     }
   }
