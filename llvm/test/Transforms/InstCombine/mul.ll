@@ -2519,6 +2519,70 @@ define i1 @neg_mul_add_one_i1(i1 %x, i1 %y) {
   ret i1 %ret
 }
 
+; fold mul (select (icmp ugt X, 1) (1, add nuw nsw X, 1)), Y  -> shl Y, zext (icmp eq X, 1)
+define i16 @mul_select_ugt(i16 noundef %x, i16 noundef %y) {
+; CHECK-LABEL: @mul_select_ugt(
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i16 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt i16 [[X]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i16 1, i16 [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = mul i16 [[TMP3]], [[Y:%.*]]
+; CHECK-NEXT:    ret i16 [[TMP4]]
+;
+  %3 = add nuw nsw i16 %x, 1
+  %4 = icmp ugt i16 %x, 1
+  %5 = select i1 %4, i16 1, i16 %3
+  %6 = mul i16 %5, %y
+  ret i16 %6
+}
+
+; commuted mul
+define i32 @mul_select_ugt_commuted(i32 %x, i32 %y) {
+; CHECK-LABEL: @mul_select_ugt_commuted(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[X]], 1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 1, i32 [[ADD]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[Y:%.*]], [[SEL]]
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %cmp = icmp ugt i32 %x, 1
+  %add = add nuw nsw i32 %x, 1
+  %sel = select i1 %cmp, i32 1, i32 %add
+  %mul = mul i32 %y, %sel
+  ret i32 %mul
+}
+
+; negative test - swapped select arms
+define i32 @mul_select_ugt_swapped(i32 %x, i32 %y) {
+; CHECK-LABEL: @mul_select_ugt_swapped(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[X]], 1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[ADD]], i32 1
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[SEL]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %cmp = icmp ugt i32 %x, 1
+  %add = add nuw nsw i32 %x, 1
+  %sel = select i1 %cmp, i32 %add, i32 1
+  %mul = mul i32 %sel, %y
+  ret i32 %mul
+}
+
+; negative test - wrong add constant
+define i32 @mul_select_ugt_wrong_add(i32 %x, i32 %y) {
+; CHECK-LABEL: @mul_select_ugt_wrong_add(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[X]], 2
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 1, i32 [[ADD]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[SEL]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %cmp = icmp ugt i32 %x, 1
+  %add = add nuw nsw i32 %x, 2
+  %sel = select i1 %cmp, i32 1, i32 %add
+  %mul = mul i32 %sel, %y
+  ret i32 %mul
+}
+
 !0 = !{!"function_entry_count", i64 1000}
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
