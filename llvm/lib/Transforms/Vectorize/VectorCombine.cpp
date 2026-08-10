@@ -2004,9 +2004,13 @@ bool VectorCombine::foldSingleElementStore(Instruction &I) {
 
     if (ScalarizableIdx.isSafeWithFreeze())
       ScalarizableIdx.freeze(Builder, *cast<Instruction>(Idx));
+    // Canonicalize the unsigned vector element index to the pointer index type
+    // before using it as a GEP index.
+    Type *PtrIdxTy = DL->getIndexType(SI->getPointerOperandType());
+    Value *GEPIdx = Builder.CreateZExtOrTrunc(Idx, PtrIdxTy);
     Value *GEP = Builder.CreateInBoundsGEP(
         SI->getValueOperand()->getType(), SI->getPointerOperand(),
-        {ConstantInt::get(Idx->getType(), 0), Idx});
+        {ConstantInt::get(GEPIdx->getType(), 0), GEPIdx});
     StoreInst *NSI = Builder.CreateStore(NewElement, GEP);
     NSI->copyMetadata(*SI);
     Align ScalarOpAlignment = computeAlignmentAfterScalarization(
