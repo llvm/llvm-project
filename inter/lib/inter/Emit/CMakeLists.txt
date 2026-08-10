@@ -1,5 +1,6 @@
 add_mlir_library(InterEmit
   IgaTextEmitter.cpp
+  XeMachineLowering.cpp
 
   LINK_LIBS PUBLIC
   InterXeMachine
