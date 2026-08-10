@@ -19,8 +19,8 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
-#include "mlir/Interfaces/Utils/MemorySlotUtils.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace mlir;
@@ -275,44 +275,6 @@ DeletionKind memref::StoreOp::rewire(const DestructurableMemorySlot &slot,
   setMemRef(memorySlot.ptr);
   getIndicesMutable().clear();
   return DeletionKind::Keep;
-}
-
-//===----------------------------------------------------------------------===//
-//  Interfaces for AllocaScopeOp
-//===----------------------------------------------------------------------===//
-
-bool memref::AllocaScopeOp::isRegionPromotable(const MemorySlot &slot,
-                                               Region *region,
-                                               bool hasValueStores) {
-  return true;
-}
-
-void memref::AllocaScopeOp::setupPromotion(
-    const MemorySlot &slot, Value reachingDef, bool hasValueStores,
-    llvm::SmallMapVector<Region *, Value, 2> &regionsToProcess) {
-  regionsToProcess.insert({&getRegion(), reachingDef});
-}
-
-Value memref::AllocaScopeOp::finalizePromotion(
-    const MemorySlot &slot, Value reachingDef, bool hasValueStores,
-    const llvm::DenseMap<Block *, Value> &reachingAtBlockEnd,
-    OpBuilder &builder) {
-  if (!hasValueStores)
-    return reachingDef;
-
-  IRRewriter rewriter(builder);
-
-  // Update the return terminator to return the newly defined reaching
-  // definition.
-  memoryslot::updateTerminator(&getRegion().back(), reachingDef,
-                               reachingAtBlockEnd);
-
-  SmallVector<Type> resultTypes(getResultTypes());
-  resultTypes.push_back(slot.elemType);
-
-  Operation *newOp =
-      memoryslot::replaceWithNewResults(rewriter, getOperation(), resultTypes);
-  return newOp->getResults().back();
 }
 
 //===----------------------------------------------------------------------===//
