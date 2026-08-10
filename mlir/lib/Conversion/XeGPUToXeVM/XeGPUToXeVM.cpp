@@ -1341,6 +1341,72 @@ class TruncfToXeVMPattern : public OpConversionPattern<arith::TruncFOp> {
   }
 };
 
+// Lowers `xegpu.lane_shuffle` to `xevm.bitcast_shuffle`.
+//
+// `xevm.bitcast_shuffle` concatenates the components of its operand across the
+// subgroup, the first component of every lane first, and then hands chunks the
+// size of a result component back out to the lanes in order. Numbering the
+// elements of a `vector<NxT>` fragment held by lane `i` of a subgroup of size
+// `S` by their logical position, that concatenation is exactly the `pack` mode
+// input numbering `j * S + i`. Taking the result as a single `N * width(T)` bit
+// scalar then hands lane `i` the logical positions `i * N .. i * N + N - 1`,
+// which is the `pack` mode output numbering.
+//
+// So `pack` is a vector-to-scalar `xevm.bitcast_shuffle` followed by a bitcast
+// back to the fragment type, and `unpack`, being its inverse, is a bitcast to
+// the scalar followed by a scalar-to-vector `xevm.bitcast_shuffle`.
+//
+// `xevm.bitcast_shuffle` only accepts the integer types `i8`, `i16`, `i32` and
+// `i64`, since it is bit-preserving and so does not depend on how the bits are
+// interpreted. A fragment of a floating point type is therefore bitcast to a
+// same-width integer vector on the way in and back on the way out.
+class LaneShuffleToXeVMPattern
+    : public OpConversionPattern<xegpu::LaneShuffleOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(xegpu::LaneShuffleOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto vecTy = dyn_cast<VectorType>(adaptor.getSource().getType());
+    if (!vecTy)
+      return rewriter.notifyMatchFailure(op, "Expected a vector fragment.");
+    // The shuffle redistributes whole bytes between the lanes, so sub-byte
+    // element types, fp4 in particular, cannot be shuffled. Widths without a
+    // matching integer type the op accepts are rejected for the same reason.
+    unsigned elemBits = vecTy.getElementTypeBitWidth();
+    if (elemBits != 8 && elemBits != 16 && elemBits != 32 && elemBits != 64)
+      return rewriter.notifyMatchFailure(
+          op, "Expected an element type of 8, 16, 32 or 64 bits.");
+    int64_t fragmentBits = vecTy.getNumElements() * elemBits;
+    if (fragmentBits > 64 || !llvm::isPowerOf2_64(fragmentBits))
+      return rewriter.notifyMatchFailure(
+          op, "Expected a fragment of 8, 16, 32 or 64 bits.");
+
+    Location loc = op.getLoc();
+    Type packedTy = rewriter.getIntegerType(fragmentBits);
+    // The integer vector type the shuffle actually operates on. Equal to the
+    // fragment type when that is already an integer vector.
+    VectorType shuffleTy =
+        VectorType::get(vecTy.getShape(), rewriter.getIntegerType(elemBits));
+
+    Value res;
+    if (op.getMode() == xegpu::LaneShuffleMode::Pack) {
+      Value src = adaptor.getSource();
+      if (shuffleTy != vecTy)
+        src = LLVM::BitcastOp::create(rewriter, loc, shuffleTy, src);
+      res = xevm::BitcastShuffleOp::create(rewriter, loc, packedTy, src);
+      res = LLVM::BitcastOp::create(rewriter, loc, vecTy, res);
+    } else {
+      Value packed =
+          LLVM::BitcastOp::create(rewriter, loc, packedTy, adaptor.getSource());
+      res = xevm::BitcastShuffleOp::create(rewriter, loc, shuffleTy, packed);
+      if (shuffleTy != vecTy)
+        res = LLVM::BitcastOp::create(rewriter, loc, vecTy, res);
+    }
+    rewriter.replaceOp(op, res);
+    return success();
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // Pass Definition
 //===----------------------------------------------------------------------===//
@@ -1664,4 +1730,5 @@ void mlir::populateXeGPUToXeVMConversionPatterns(
   patterns.add<DpasMxToXeVMPattern>(typeConverter, patterns.getContext());
   patterns.add<ExtfToXeVMPattern, TruncfToXeVMPattern>(typeConverter,
                                                        patterns.getContext());
+  patterns.add<LaneShuffleToXeVMPattern>(typeConverter, patterns.getContext());
 }
