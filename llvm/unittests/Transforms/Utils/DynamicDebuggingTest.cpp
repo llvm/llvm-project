@@ -476,7 +476,7 @@ TEST(DynamicDebugging, GlobalVariableLinkage) {
 
 TEST(DynamicDebugging, DiscardableGlobal) {
   // Test discardable symbols are added to the @llvm.compiler.used global,
-  // which prevents them being discarded (including by globalopt replacing) them
+  // which prevents them being discarded, including by globalopt replacing them
   // with their external linkage aliases.
   StringRef IR = R"(
     @not_discardable_used = dso_local global i32 1, align 4
