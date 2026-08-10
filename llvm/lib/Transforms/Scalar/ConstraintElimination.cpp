@@ -1950,7 +1950,10 @@ static bool replaceSubOverflowUses(IntrinsicInst *II, Value *A, Value *B,
   }
 
   if (II->use_empty()) {
-    II->eraseFromParent();
+    // Do not erase II here: the worklist may still hold Uses of II's operands.
+    for (Use &Arg : II->args())
+      Arg.set(PoisonValue::get(Arg->getType()));
+    ToRemove.push_back(II);
     Changed = true;
   }
   return Changed;
