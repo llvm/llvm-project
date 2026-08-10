@@ -3879,10 +3879,10 @@ void Parser::ParseDeclarationSpecifiers(
       // when a variable name matches a type brought in by a using-directive.
       if (DS.getTypeSpecType() == DeclSpec::TST_auto) {
         Token Next = NextToken();
-        if (Next.isOneOf(tok::equal, tok::l_paren, tok::l_square, tok::amp,
-                         tok::ampamp, tok::star, tok::coloncolon, tok::comma,
-                         tok::semi, tok::colon, tok::greater, tok::r_paren,
-                         tok::arrow))
+        if (Next.isOneOf(tok::equal, tok::l_paren, tok::l_square, tok::l_brace,
+                         tok::amp, tok::ampamp, tok::star, tok::coloncolon,
+                         tok::comma, tok::semi, tok::colon, tok::greater,
+                         tok::r_paren, tok::arrow))
           goto DoneWithDeclSpec;
       }
 
