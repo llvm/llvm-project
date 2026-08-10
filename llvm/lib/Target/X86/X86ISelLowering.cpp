@@ -570,9 +570,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   if (Subtarget.canUseCMPXCHG16B())
     setOperationAction(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, MVT::i128, Custom);
 
-  // FIXME - use subtarget debug flags
-  if (!Subtarget.isTargetDarwin() && !Subtarget.isTargetELF() &&
-      !Subtarget.isTargetCygMing() && !Subtarget.isTargetWin64() &&
+  // 32-bit Windows non-GNU EH (MSVC/Itanium SEH) does not use per-invoke EH
+  // labels, so expand them away. SjLj EH does use them.
+  if (Subtarget.isTargetWin32() && !Subtarget.isTargetCygMing() &&
       TM.Options.ExceptionModel != ExceptionHandling::SjLj) {
     setOperationAction(ISD::EH_LABEL, MVT::Other, Expand);
   }
@@ -40741,6 +40741,10 @@ static SDValue combineX86ShuffleChain(
   SDValue V1 = peekThroughBitcasts(Inputs[0]);
   SDValue V2 = (UnaryShuffle ? DAG.getUNDEF(V1.getValueType())
                              : peekThroughBitcasts(Inputs[1]));
+
+  if (!(V1.getValueType().isVector() && V1.getValueType().isSimple() &&
+        V2.getValueType().isVector() && V2.getValueType().isSimple()))
+    return SDValue();
 
   MVT VT1 = V1.getSimpleValueType();
   MVT VT2 = V2.getSimpleValueType();
