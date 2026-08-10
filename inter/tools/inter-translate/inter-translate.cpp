@@ -1,6 +1,7 @@
 // inter-translate: file-format crossings for the inter pipeline.
 // --import-llvm:        LLVM IR -> MLIR llvm dialect
 // --xemachine-to-ged:   xemachine MLIR -> raw Xe2 kernel bytes
+// --xemachine-to-zebin: xemachine MLIR -> runnable Xe2 zebin
 
 #include "inter/Dialect/XeMachine/IR/XeMachine.h"
 #include "inter/Emit/Emit.h"
@@ -24,9 +25,8 @@
 #include "llvm/Support/ToolOutputFile.h"
 
 namespace llvm {
-static cl::opt<std::string> inputFilename(cl::Positional,
-                                          cl::desc("<input file>"),
-                                          cl::init("-"));
+static cl::opt<std::string>
+    inputFilename(cl::Positional, cl::desc("<input file>"), cl::init("-"));
 static cl::opt<std::string> outputFilename("o", cl::desc("output file"),
                                            cl::init("-"));
 static cl::opt<bool> importLLVM("import-llvm",
@@ -35,6 +35,9 @@ static cl::opt<bool> importLLVM("import-llvm",
 static cl::opt<bool> toGed("xemachine-to-ged",
                            cl::desc("emit raw Xe2 kernel bytes via GED"),
                            cl::init(false));
+static cl::opt<bool> toZebin("xemachine-to-zebin",
+                             cl::desc("emit a runnable Xe2 zebin"),
+                             cl::init(false));
 } // namespace llvm
 
 static std::unique_ptr<llvm::ToolOutputFile> openOutput() {
@@ -50,6 +53,13 @@ static std::unique_ptr<llvm::ToolOutputFile> openOutput() {
 
 int main(int argc, char **argv) {
   llvm::cl::ParseCommandLineOptions(argc, argv, "inter translate tool\n");
+
+  unsigned translations = (llvm::importLLVM ? 1u : 0u) +
+                          (llvm::toGed ? 1u : 0u) + (llvm::toZebin ? 1u : 0u);
+  if (translations != 1) {
+    llvm::errs() << "error: select exactly one translation\n";
+    return 1;
+  }
 
   if (llvm::importLLVM) {
     llvm::LLVMContext llvmContext;
@@ -78,15 +88,14 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-  if (llvm::toGed) {
+  if (llvm::toGed || llvm::toZebin) {
     mlir::DialectRegistry registry;
-    registry.insert<inter::xemachine::XeMachineDialect,
-                    mlir::func::FuncDialect, mlir::LLVM::LLVMDialect,
-                    mlir::DLTIDialect>();
+    registry.insert<inter::xemachine::XeMachineDialect, mlir::func::FuncDialect,
+                    mlir::LLVM::LLVMDialect, mlir::DLTIDialect>();
     mlir::MLIRContext context(registry);
     context.loadAllAvailableDialects();
-    auto mod = mlir::parseSourceFile<mlir::ModuleOp>(llvm::inputFilename,
-                                                     &context);
+    auto mod =
+        mlir::parseSourceFile<mlir::ModuleOp>(llvm::inputFilename, &context);
     if (!mod) {
       llvm::errs() << "error: MLIR parse failed\n";
       return 1;
@@ -94,12 +103,14 @@ int main(int argc, char **argv) {
     auto out = openOutput();
     if (!out)
       return 1;
-    if (mlir::failed(inter::emitGedBinary(mod.get(), out->os())))
+    mlir::LogicalResult result =
+        llvm::toZebin ? inter::emitZebin(mod.get(), out->os())
+                      : inter::emitGedBinary(mod.get(), out->os());
+    if (mlir::failed(result))
       return 1;
     out->keep();
     return 0;
   }
 
-  llvm::errs() << "error: no translation selected\n";
-  return 1;
+  llvm_unreachable("translation selection validated above");
 }

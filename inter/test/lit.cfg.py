@@ -1,7 +1,4 @@
-import os
 import subprocess
-import sys
-from pathlib import Path
 
 import lit.formats
 from lit.llvm import llvm_config
@@ -23,6 +20,8 @@ llvm_config.with_system_environment(
 
 tools = [
     ToolSubst("FileCheck", command=config.filecheck, unresolved="fatal"),
+    ToolSubst("llvm-objcopy", command=config.llvm_objcopy, unresolved="fatal"),
+    ToolSubst("llvm-readobj", command=config.llvm_readobj, unresolved="fatal"),
     ToolSubst("inter-opt", command=config.inter_opt, unresolved="fatal"),
     ToolSubst(
         "inter-translate", command=config.inter_translate, unresolved="fatal"
@@ -32,10 +31,6 @@ tools = [
     ),
 ]
 
-config.substitutions.append(("%python", f'"{sys.executable}"'))
-config.substitutions.append(
-    ("%make-zebin", f'"{Path(config.inter_src_root) / "make_zebin.py"}"')
-)
 if config.inter_test_is_integration:
     config.maxIndividualTestTime = 45
     lit_config.parallelism_groups["inter-xe2"] = 1
@@ -44,7 +39,6 @@ if config.inter_test_is_integration:
 
     tools.extend(
         [
-            ToolSubst("%ocloc", command=config.inter_ocloc, unresolved="fatal"),
             ToolSubst(
                 "inter-runner",
                 command=config.inter_runner,
@@ -52,7 +46,6 @@ if config.inter_test_is_integration:
             ),
         ]
     )
-    config.substitutions.append(("%inter-device", config.inter_ocloc_device))
 
     try:
         probe = subprocess.run(

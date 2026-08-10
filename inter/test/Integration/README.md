@@ -1,9 +1,8 @@
 # Inter integration tests
 
 Each `.ll` test contains its LLVM IR input, exposes the Inter compilation stages
-in its `RUN` lines, invokes `inter-runner`, and checks the device result with
-`FileCheck`. The tests package the emitted Xe2 instructions with temporary
-`ocloc` metadata until Inter has its own `.ze_info` emitter.
+in its `RUN` lines, emits a complete zebin, invokes `inter-runner`, and checks
+the device result with `FileCheck`.
 
 Build the LLVM offload runtime first, then enable the opt-in suite when
 configuring Inter:
@@ -24,10 +23,8 @@ available.
 
 Configuration variables:
 
-- `INTER_OCLOC_EXECUTABLE`: `ocloc` executable used for temporary metadata.
 - `INTER_OFFLOAD_INCLUDE_DIR`: directory containing `OffloadAPI.h`.
 - `INTER_OFFLOAD_LIBRARY`: path to `libLLVMOffload`.
-- `INTER_INTEGRATION_OCLOC_DEVICE`: `ocloc` device, default `bmg-g21`.
 - `INTER_INTEGRATION_DEVICE_NAME`: required runtime device-name substring,
   default `B60`.
 

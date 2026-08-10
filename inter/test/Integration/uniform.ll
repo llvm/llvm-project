@@ -1,11 +1,7 @@
 ; REQUIRES: host-supports-inter-bmg
-; RUN: mkdir -p %t.ref %t.meta
 ; RUN: inter-translate %s --import-llvm -o %t.mlir
 ; RUN: inter-opt %t.mlir --inter-normalize-cf --lift-cf-to-scf --inter-convert-calls --inter-convert-memory --inter-select-to-machine --inter-insert-sync -o %t.xemachine.mlir
-; RUN: inter-translate %t.xemachine.mlir --xemachine-to-ged -o %t.text.bin
-; RUN: %ocloc compile -file %S/Inputs/uniform.cl -device %inter-device -out_dir %t.ref -q
-; RUN: %python %make-zebin extract %t.ref/uniform_bmg.bin %t.meta
-; RUN: %python %make-zebin write --kernel uniform_kernel --text %t.text.bin --zeinfo %t.meta/zeinfo.yaml --notes %t.meta/note.compat.bin -o %t.bin
+; RUN: inter-translate %t.xemachine.mlir --xemachine-to-zebin -o %t.bin
 ; RUN: inter-runner --compact %t.bin uniform_kernel 32 out in:1 in:1000 u32:7 | FileCheck %s
 
 ; CHECK: out0 = [0x00000064, 0x00000065, 0x00000066, 0x00000067, 0x00000068, 0x00000069, 0x0000006a, 0x0000006b, 0x0000006c, 0x0000006d, 0x0000006e, 0x0000006f, 0x00000070, 0x00000071, 0x00000072, 0x00000073, 0x00000074, 0x00000075, 0x00000076, 0x00000077, 0x00000078, 0x00000079, 0x0000007a, 0x0000007b, 0x0000007c, 0x0000007d, 0x0000007e, 0x0000007f, 0x00000080, 0x00000081, 0x00000082, 0x00000083]

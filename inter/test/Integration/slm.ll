@@ -1,11 +1,7 @@
 ; REQUIRES: host-supports-inter-bmg
-; RUN: mkdir -p %t.ref %t.meta
 ; RUN: inter-translate %s --import-llvm -o %t.mlir
 ; RUN: inter-opt %t.mlir --inter-normalize-cf --lift-cf-to-scf --inter-convert-calls --inter-convert-memory --inter-select-to-machine --inter-insert-sync -o %t.xemachine.mlir
-; RUN: inter-translate %t.xemachine.mlir --xemachine-to-ged -o %t.text.bin
-; RUN: %ocloc compile -file %S/Inputs/slm.cl -device %inter-device -out_dir %t.ref -q
-; RUN: %python %make-zebin extract %t.ref/slm_bmg.bin %t.meta
-; RUN: %python %make-zebin write --kernel slm_kernel --text %t.text.bin --zeinfo %t.meta/zeinfo.yaml --notes %t.meta/note.compat.bin -o %t.bin
+; RUN: inter-translate %t.xemachine.mlir --xemachine-to-zebin -o %t.bin
 ; RUN: inter-runner --compact %t.bin slm_kernel 32 out in:1 | FileCheck %s
 
 ; CHECK: out0 = [0x0000001f, 0x0000001f, 0x0000001f, 0x0000001f, 0x0000001f, 0x0000001f, 0x0000001f, 0x0000001f, 0x0000001f, 0x0000001f, 0x0000001f, 0x0000001f, 0x0000001f, 0x0000001f, 0x0000001f, 0x0000001f, 0x0000001f, 0x0000001f, 0x0000001f, 0x0000001f, 0x0000001f, 0x0000001f, 0x0000001f, 0x0000001f, 0x0000001f, 0x0000001f, 0x0000001f, 0x0000001f, 0x0000001f, 0x0000001f, 0x0000001f, 0x0000001f]

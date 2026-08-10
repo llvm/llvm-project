@@ -389,15 +389,18 @@ no LLVM MC target for Xe; the MC-equivalent layer is owned here.
   free disassembly for tests and debugging.
 - The standalone build fetches IGC v2.38.2 at a pinned commit and archive
   hash. `inter-translate --xemachine-to-ged` emits native 16-byte Xe2
-  instructions directly; there is no assembly-text emission path.
+  instructions directly; `--xemachine-to-zebin` packages them as a runnable
+  ELF device binary. There is no assembly-text emission path.
 - Buffered emission: instructions accumulate in a buffer (variant of
   instruction / label / alignment / directive) so fixups apply before
   finalize: branch targets (JIP/UIP), SWSB finalization if layout moved,
   optional compaction later.
-- Resource info pass stamps function attrs beforehand (`grf_count`,
-  `slm_size`, `barrier_count`, spill size); the emitter serializes attrs
-  into zeinfo, it does not compute them.
-- ELF + `.note.zeinfo` writer; ground truth is NEO's decoder
+- Selection currently preserves the kernel ABI and fixed target resources as
+  function attrs (`kernel_type`, `grf_count`, `simd_size`, payload sizes, and
+  `slm_size`). The emitter validates those attrs and derives operation-local
+  facts such as barrier, atomic, and stateless-write use. M4 moves all of this
+  into the dedicated resource-info pass.
+- ELF + `.ze_info` + `.note.intelgt.compat` writer; ground truth is NEO's decoder
   (`shared/source/device_binary_format/zebin/`). The emitter is wrong when
   NEO rejects it, by definition.
 
@@ -435,9 +438,9 @@ repo), never through hand-rolled `ze*` calls:
 - Implicit arguments (global offset, enqueued local size, printf buffer,
   scratch pointer, sync buffer, ...) are requested explicitly in zeinfo only
   when the kernel uses them.
-- Execution environment in zeinfo: `compiled_simd_size`, required subgroup
-  size, SLM size, barrier count, GRF count. Cross-checked against the
-  resource-info attrs at emission; mismatch is a hard error.
+- Execution environment in zeinfo: SIMD size, SLM size, barrier count, GRF
+  count, atomic use, and stateless-write use. These are cross-checked against
+  the machine IR and resource attrs at emission; mismatch is a hard error.
 - v1: one kernel per module is supported end-to-end; the writer already
   emits per-kernel sections so multi-kernel is format-trivial later.
 
@@ -452,12 +455,11 @@ Three tiers, wave-mlir structure:
    golden tier — binary drift review only works if a human can read the
    diff, and the decoder gives us that. A small number of binary smoke
    goldens guard the encoder directly.
-3. **End-to-end via mlir-runner + a Level Zero runner shim**
-   (`libinter_runtime.so`) built on `liboffload` (section 16): wraps emitted
-   zebins in the OffloadBinary container, loads them with `olCreateProgram`,
-   and exposes the launch ABI to host code produced by upstream
-   `gpu-to-llvm`. No raw `ze*` calls anywhere in the project.
-   Gated on hardware presence (`REQUIRES: host-supports-xe2-inter`).
+3. **End-to-end via `inter-runner`**, built on `liboffload` (section 16):
+   wraps emitted zebins in the OffloadBinary container, loads them with
+   `olCreateProgram`, and launches them through the generic argument ABI. No
+   raw `ze*` calls anywhere in the project. Gated on hardware presence
+   (`REQUIRES: host-supports-inter-bmg`).
 
 Perf tier (later): frozen pipeline inputs + disassembly goldens for perf
 kernels; drift is a review stop with mandatory A/B benchmark on the B60.

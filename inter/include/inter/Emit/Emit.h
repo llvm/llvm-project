@@ -12,6 +12,8 @@ namespace inter {
 
 mlir::LogicalResult emitGedBinary(mlir::ModuleOp moduleOp,
                                   llvm::raw_ostream &output);
+mlir::LogicalResult emitZebin(mlir::ModuleOp moduleOp,
+                              llvm::raw_ostream &output);
 
 } // namespace inter
 

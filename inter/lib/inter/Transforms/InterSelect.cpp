@@ -20,6 +20,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/Support/MathExtras.h"
 
 #include <optional>
 
@@ -38,6 +39,36 @@ constexpr int kInlineMirrorSize = 32;
 constexpr int kFirstArgOffset = 24;
 constexpr int kLocalIdLoadOffset = 0x20;
 constexpr int kPerThreadPayloadSize = 192;
+
+FailureOr<uint64_t> getTypeSize(Type type) {
+  if (auto integer = dyn_cast<IntegerType>(type))
+    return llvm::divideCeil(integer.getWidth(), 8u);
+  if (auto array = dyn_cast<LLVM::LLVMArrayType>(type)) {
+    FailureOr<uint64_t> elementSize = getTypeSize(array.getElementType());
+    if (failed(elementSize))
+      return failure();
+    return array.getNumElements() * *elementSize;
+  }
+  return failure();
+}
+
+FailureOr<uint64_t> getSlmSize(ModuleOp moduleOp) {
+  uint64_t size = 0;
+  unsigned globals = 0;
+  for (LLVM::GlobalOp global : moduleOp.getOps<LLVM::GlobalOp>()) {
+    if (global.getAddrSpace() != 3)
+      continue;
+    if (++globals > 1)
+      return global.emitOpError("multiple SLM globals are not supported"),
+             failure();
+    FailureOr<uint64_t> globalSize = getTypeSize(global.getGlobalType());
+    if (failed(globalSize))
+      return global.emitOpError("unsupported SLM global type"), failure();
+    uint64_t alignment = global.getAlignment().value_or(1);
+    size = llvm::alignTo(size, alignment) + *globalSize;
+  }
+  return size;
+}
 
 struct SelectToMachine
     : public inter::impl::SelectToMachineBase<SelectToMachine> {
@@ -210,7 +241,7 @@ struct SelectToMachine
     auto func = func::FuncOp::create(moduleBuilder, kernel.getLoc(),
                                      (kernel.getName() + "_xm").str(),
                                      moduleBuilder.getFunctionType({}, {}));
-    func->setAttr("xemachine.target",
+    func->setAttr(kTargetAttrName,
                   TargetAttr::get(ctx, moduleBuilder.getStringAttr("bmg")));
     b = OpBuilder::atBlockBegin(func.addEntryBlock());
 
@@ -218,6 +249,24 @@ struct SelectToMachine
     kernel.walk([&](Operation *operation) {
       usesThreadIds |= isa<xw::GlobalIdOp, xw::LocalIdOp>(operation);
     });
+    FailureOr<uint64_t> slmSize = getSlmSize(getOperation());
+    if (failed(slmSize))
+      return failure();
+    func->setAttr(kKernelTypeAttrName, TypeAttr::get(kernel.getFunctionType()));
+    func->setAttr(kGrfCountAttrName, moduleBuilder.getI32IntegerAttr(128));
+    func->setAttr(kSimdSizeAttrName, moduleBuilder.getI32IntegerAttr(32));
+    if (usesThreadIds) {
+      func->setAttr(kUsesThreadIdsAttrName, moduleBuilder.getUnitAttr());
+      func->setAttr(kInlineDataPayloadSizeAttrName,
+                    moduleBuilder.getI32IntegerAttr(kInlineMirrorSize));
+      func->setAttr(kPerThreadPayloadSizeAttrName,
+                    moduleBuilder.getI32IntegerAttr(kPerThreadPayloadSize));
+      func->setAttr(kPayloadEntryOffsetAttrName,
+                    moduleBuilder.getI32IntegerAttr(kPerThreadPayloadSize));
+    }
+    if (*slmSize != 0)
+      func->setAttr(kSlmSizeAttrName,
+                    moduleBuilder.getI64IntegerAttr(*slmSize));
     if (usesThreadIds && failed(emitPrologueAndGid()))
       return failure();
     if (failed(lowerBlock(kernel.getBody().front())))

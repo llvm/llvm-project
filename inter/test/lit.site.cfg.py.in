@@ -1,6 +1,5 @@
 @LIT_SITE_CFG_IN_HEADER@
 
-config.inter_src_root = "@PROJECT_SOURCE_DIR@"
 config.inter_obj_root = "@PROJECT_BINARY_DIR@"
 config.llvm_tools_dir = "@LLVM_TOOLS_BINARY_DIR@"
 config.inter_test_source_root = "@INTER_TEST_SOURCE_ROOT@"
@@ -10,9 +9,9 @@ config.inter_opt = "@PROJECT_BINARY_DIR@/tools/inter-opt/inter-opt"
 config.inter_translate = "@PROJECT_BINARY_DIR@/tools/inter-translate/inter-translate"
 config.inter_ged_dump = "@CMAKE_CURRENT_BINARY_DIR@/inter-ged-dump"
 config.filecheck = "@LLVM_TOOLS_BINARY_DIR@/FileCheck"
-config.inter_ocloc = "@INTER_OCLOC_EXECUTABLE@"
+config.llvm_objcopy = "@LLVM_TOOLS_BINARY_DIR@/llvm-objcopy"
+config.llvm_readobj = "@LLVM_TOOLS_BINARY_DIR@/llvm-readobj"
 config.inter_runner = "@CMAKE_CURRENT_BINARY_DIR@/Integration/inter-runner"
-config.inter_ocloc_device = "@INTER_INTEGRATION_OCLOC_DEVICE@"
 config.inter_device_name = "@INTER_INTEGRATION_DEVICE_NAME@"
 
 import lit.llvm

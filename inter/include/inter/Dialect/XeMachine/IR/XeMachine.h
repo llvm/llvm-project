@@ -6,6 +6,26 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "llvm/ADT/StringRef.h"
+
+namespace inter::xemachine {
+
+inline constexpr llvm::StringLiteral kTargetAttrName = "xemachine.target";
+inline constexpr llvm::StringLiteral kKernelTypeAttrName =
+    "xemachine.kernel_type";
+inline constexpr llvm::StringLiteral kGrfCountAttrName = "xemachine.grf_count";
+inline constexpr llvm::StringLiteral kSimdSizeAttrName = "xemachine.simd_size";
+inline constexpr llvm::StringLiteral kUsesThreadIdsAttrName =
+    "xemachine.uses_thread_ids";
+inline constexpr llvm::StringLiteral kInlineDataPayloadSizeAttrName =
+    "xemachine.inline_data_payload_size";
+inline constexpr llvm::StringLiteral kPerThreadPayloadSizeAttrName =
+    "xemachine.per_thread_payload_size";
+inline constexpr llvm::StringLiteral kPayloadEntryOffsetAttrName =
+    "xemachine.payload_entry_offset";
+inline constexpr llvm::StringLiteral kSlmSizeAttrName = "xemachine.slm_size";
+
+} // namespace inter::xemachine
 
 #include "inter/Dialect/XeMachine/IR/XeMachineDialect.h.inc"
 #include "inter/Dialect/XeMachine/IR/XeMachineEnums.h.inc"

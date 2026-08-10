@@ -14,7 +14,9 @@ set(INTER_TEST_DEPENDS
   FileCheck
   inter-ged-dump
   inter-opt
-  inter-translate)
+  inter-translate
+  llvm-objcopy
+  llvm-readobj)
 
 add_lit_testsuite(check-inter "Running the inter regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}
@@ -22,8 +24,6 @@ add_lit_testsuite(check-inter "Running the inter regression tests"
 set_target_properties(check-inter PROPERTIES FOLDER "Tests")
 
 if(INTER_INCLUDE_INTEGRATION_TESTS)
-  find_program(INTER_OCLOC_EXECUTABLE NAMES ocloc REQUIRED)
-
   get_filename_component(INTER_LLVM_BUILD_ROOT
     "${LLVM_TOOLS_BINARY_DIR}/.." ABSOLUTE)
   find_path(INTER_OFFLOAD_INCLUDE_DIR OffloadAPI.h

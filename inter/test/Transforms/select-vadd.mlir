@@ -6,7 +6,14 @@
 
 module {
   // CHECK: func.func @vadd
+  // CHECK-SAME: xemachine.grf_count = 128 : i32
+  // CHECK-SAME: xemachine.inline_data_payload_size = 32 : i32
+  // CHECK-SAME: xemachine.kernel_type = (!llvm.ptr<1>, !llvm.ptr<1>, !llvm.ptr<1>) -> ()
+  // CHECK-SAME: xemachine.payload_entry_offset = 192 : i32
+  // CHECK-SAME: xemachine.per_thread_payload_size = 192 : i32
+  // CHECK-SAME: xemachine.simd_size = 32 : i32
   // CHECK-SAME: xemachine.target = #xemachine.target<chip = "bmg">
+  // CHECK-SAME: xemachine.uses_thread_ids
   llvm.func spir_kernelcc @vadd(%a: !llvm.ptr<1>, %b: !llvm.ptr<1>,
                                 %out: !llvm.ptr<1>) {
     %c0 = llvm.mlir.constant(0 : i32) : i32

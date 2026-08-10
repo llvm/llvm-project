@@ -1,11 +1,7 @@
 ; REQUIRES: host-supports-inter-bmg
-; RUN: mkdir -p %t.ref %t.meta
 ; RUN: inter-translate %s --import-llvm -o %t.mlir
 ; RUN: inter-opt %t.mlir --inter-normalize-cf --lift-cf-to-scf --inter-convert-calls --inter-convert-memory --inter-select-to-machine --inter-insert-sync -o %t.xemachine.mlir
-; RUN: inter-translate %t.xemachine.mlir --xemachine-to-ged -o %t.text.bin
-; RUN: %ocloc compile -file %S/Inputs/vadd.cl -device %inter-device -out_dir %t.ref -q
-; RUN: %python %make-zebin extract %t.ref/vadd_bmg.bin %t.meta
-; RUN: %python %make-zebin write --kernel vadd --text %t.text.bin --zeinfo %t.meta/zeinfo.yaml --notes %t.meta/note.compat.bin -o %t.bin
+; RUN: inter-translate %t.xemachine.mlir --xemachine-to-zebin -o %t.bin
 ; RUN: inter-runner --compact %t.bin vadd 32 in:1 in:1000 out | FileCheck %s
 
 ; CHECK: out0 = [0x00000000, 0x000003e9, 0x000007d2, 0x00000bbb, 0x00000fa4, 0x0000138d, 0x00001776, 0x00001b5f, 0x00001f48, 0x00002331, 0x0000271a, 0x00002b03, 0x00002eec, 0x000032d5, 0x000036be, 0x00003aa7, 0x00003e90, 0x00004279, 0x00004662, 0x00004a4b, 0x00004e34, 0x0000521d, 0x00005606, 0x000059ef, 0x00005dd8, 0x000061c1, 0x000065aa, 0x00006993, 0x00006d7c, 0x00007165, 0x0000754e, 0x00007937]
