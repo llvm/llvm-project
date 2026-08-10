@@ -2397,9 +2397,9 @@ ExplodedNode *ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
   ProgramStateRef State = Pred->getState();
   unsigned MaxBlockVisit = AMgr.options.maxBlockVisitOnPath;
 
-  // If we reach a loop which has a known bound (and meets
-  // other constraints) then consider completely unrolling it.
-  if(AMgr.options.ShouldUnrollLoops) {
+  // If we reach a loop which has a known bound (and meets other constraints)
+  // then consider completely unrolling it.
+  if (AMgr.options.ShouldUnrollLoops) {
     if (Term)
       State = updateLoopStack(Term, AMgr.getASTContext(), Pred, MaxBlockVisit);
     // Is we are inside an unrolled loop then no need the check the counters.
@@ -2433,8 +2433,11 @@ ExplodedNode *ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
     return Engine.makeNode(BE, WidenedState, Pred);
   }
 
+  // If we did not reach MaxBlockVisitOnPath, continue the analysis normally.
   if (BlockCount < MaxBlockVisit)
     return Engine.makeNode(BE, State, Pred);
+
+  // ... otherwise, discard this execution path.
 
   if (State != Pred->getState()) {
     // TODO: This intermediate transition is very likely to be irrelevant,
@@ -2464,7 +2467,7 @@ ExplodedNode *ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
     // no-inlining policy in the state and enqueuing the new work item on
     // the list. Replay should almost never fail. Use the stats to catch it
     // if it does.
-    if ((!AMgr.options.NoRetryExhausted && replayWithoutInlining(Pred, SF)))
+    if (!AMgr.options.NoRetryExhausted && replayWithoutInlining(Pred, SF))
       return nullptr;
     NumMaxBlockCountReachedInInlined++;
   } else
