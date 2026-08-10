@@ -7181,6 +7181,14 @@ foreach i = {6-7} in
     HelpText<"Reserve register r"#i#" (Hexagon only)">;
 def ffixed_r19: Flag<["-"], "ffixed-r19">, Group<m_Group>,
   HelpText<"Reserve register r19 (Hexagon/x86_64 only; x86_64 requires APX EGPR)">;
+// Deliberately in m_Group, not m_hexagon_Features_Group: the latter is swept
+// up by handleTargetFeaturesGroup(), which would turn this into a bogus
+// "+scs-reg=" target feature.  It is translated explicitly in Hexagon.cpp.
+def mhexagon_scs_reg : Joined<["-"], "mscs-reg=">,
+  Group<m_Group>,
+  HelpText<"Register holding the shadow call stack pointer: one of the "
+           "callee-saved registers r16-r27, default r18 (Hexagon only). "
+           "The chosen register must also be reserved with -ffixed-<reg>.">;
 } // let Flags = [TargetSpecific]
 def mmemops : Flag<["-"], "mmemops">, Group<m_hexagon_Features_Group>,
   Visibility<[ClangOption, CC1Option]>,
