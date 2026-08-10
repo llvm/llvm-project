@@ -571,7 +571,7 @@ class _LIBCPP_NO_SPECIALIZATIONS tuple {
 
 public:
   using __trivially_relocatable _LIBCPP_NODEBUG =
-      __conditional_t<_And<__libcpp_is_trivially_relocatable<_Tp>...>::value, tuple, void>;
+      __conditional_t<__all<__is_trivially_relocatable_v<_Tp>...>::value, tuple, void>;
 
   // [tuple.cnstr]
 
@@ -605,13 +605,9 @@ public:
 
   // tuple(U&& ...) constructors (including allocator_arg_t variants)
   template <class... _Up>
-  struct _IsThisTuple : false_type {};
-  template <class _Up>
-  struct _IsThisTuple<_Up> : is_same<__remove_cvref_t<_Up>, tuple> {};
-
-  template <class... _Up>
   struct _EnableUTypesCtor
-      : _And<_Not<_IsThisTuple<_Up...> >, // extension to allow mis-behaved user constructors
+      : _And<_Or<integral_constant<bool, sizeof...(_Up) != 1>,
+                 _IsNotSame<__remove_cvref_t<_Up...[0]>, tuple>>, // extension to allow mis-behaved user constructors
              is_constructible<_Tp, _Up>... > {};
 
   template <class... _Up,

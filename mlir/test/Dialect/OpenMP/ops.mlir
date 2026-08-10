@@ -195,11 +195,11 @@ func.func @omp_parallel_pretty(%data_var : memref<i32>, %if_cond : i1, %num_thre
 
  // CHECK: omp.parallel allocate(
  // CHECK-SAME: private(
- // CHECK: } {allocate_private_indices = array<i64: 0>}
+ // CHECK: } {allocate_alignments = array<i64: 64>, allocate_private_indices = array<i64: 0>}
  omp.parallel allocate(%allocator : si32 -> %data_var : memref<i32>)
      private(@parallel_allocate_private %data_var -> %private : memref<i32>) {
    omp.terminator
- } {allocate_private_indices = array<i64: 0>}
+ } {allocate_alignments = array<i64: 64>, allocate_private_indices = array<i64: 0>}
 
  // CHECK: omp.parallel
  // CHECK-NEXT: omp.parallel if(%{{.*}})
@@ -2131,6 +2131,24 @@ func.func @omp_atomic_compare(%x: memref<i32>, %e: i32, %d: i32) {
     %sel = arith.select %cmp, %d, %xval : i32
     omp.yield(%sel : i32)
   } {weak}
+  return
+}
+
+// CHECK-LABEL: omp_atomic_compare_fail
+// CHECK-SAME: (%[[X:.*]]: memref<i32>, %[[E:.*]]: i32, %[[D:.*]]: i32)
+func.func @omp_atomic_compare_fail(%x: memref<i32>, %e: i32, %d: i32) {
+  // CHECK: omp.atomic.compare memory_order(seq_cst) %[[X]] : memref<i32> {
+  // CHECK-NEXT: ^bb0(%[[XVAL:.*]]: i32):
+  // CHECK-NEXT:   %[[CMP:.*]] = arith.cmpi eq, %[[XVAL]], %[[E]] : i32
+  // CHECK-NEXT:   %[[SEL:.*]] = arith.select %[[CMP]], %[[D]], %[[XVAL]] : i32
+  // CHECK-NEXT:   omp.yield(%[[SEL]] : i32)
+  // CHECK-NEXT: } {fail_memory_order = #omp<memoryorderkind acquire>}
+  omp.atomic.compare memory_order(seq_cst) %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = arith.cmpi eq, %xval, %e : i32
+    %sel = arith.select %cmp, %d, %xval : i32
+    omp.yield(%sel : i32)
+  } {fail_memory_order = #omp<memoryorderkind acquire>}
   return
 }
 

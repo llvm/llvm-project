@@ -50,12 +50,12 @@ function(add_fp_unittest name)
     ${name}
     ${test_type}
     LINK_LIBRARIES "${MATH_UNITTEST_LINK_LIBRARIES}"
-    "${MATH_UNITTEST_UNPARSED_ARGUMENTS}"
+      "${MATH_UNITTEST_UNPARSED_ARGUMENTS}"
     DEPENDS
       libc.hdr.stdint_proxy
       "${deps}"
   )
-endfunction(add_fp_unittest)
+endfunction()
 
 add_subdirectory(__support)
 add_subdirectory(arpa)

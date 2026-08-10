@@ -62,7 +62,7 @@
 // CHECK:                 omp.terminator
 // CHECK:               } {omp.combined}
 // CHECK:               omp.terminator
-// CHECK:             } {allocate_private_indices = array<i64: 0>, omp.combined}
+// CHECK:             } {allocate_alignments = array<i64: 64>, allocate_private_indices = array<i64: 0>, omp.combined}
 // CHECK:             %[[VAL_45:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK:             %[[VAL_46:.*]] = fir.load %[[VAL_11]] : !fir.ref<index>
 // CHECK:             %[[VAL_47:.*]] = fir.load %[[VAL_14]] : !fir.ref<index>
@@ -96,6 +96,7 @@ func.func @x(%lb : index, %ub : index, %step : index, %addr : !fir.ref<index>) {
 
   "omp.target"(%addr, %allocator, %lb_map, %ub_map, %step_map, %addr_map, %addr) <{
       allocate_private_indices = array<i64: 0>,
+      allocate_alignments = array<i64: 64>,
       kernel_type = #omp<kernel_type(generic)>,
       operandSegmentSizes = array<i32: 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 1, 0>,
       private_syms = [@addr_private]

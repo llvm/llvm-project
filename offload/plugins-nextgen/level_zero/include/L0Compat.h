@@ -23,7 +23,7 @@ API_HELPER_OPTIONAL(ze_result_t, zeCommandListAppendLaunchKernelWithArguments,
                     const ze_group_count_t groupCounts,
                     const ze_group_size_t groupSizes, void **pArguments,
                     const void *pNext, ze_event_handle_t hSignalEvent,
-                    uint32_t numWaitEvents, ze_event_handle_t *phWaitEvents);
+                    uint32_t numWaitEvents, ze_event_handle_t *phWaitEvents)
 
 API_HELPER_OPTIONAL(ze_context_handle_t, zeDriverGetDefaultContext,
                     ze_driver_handle_t hDriver);

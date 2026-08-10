@@ -1971,8 +1971,10 @@ allocatePrivateVars(T op, llvm::IRBuilderBase &builder,
   SmallVector<int64_t> allocateItemForPrivate(privateVarsInfo.blockArgs.size(),
                                               -1);
   ValueRange allocatorVars;
+  DenseI64ArrayAttr allocateAlignments;
   if constexpr (std::is_same_v<T, omp::ParallelOp>) {
     allocatorVars = op.getAllocatorVars();
+    allocateAlignments = op.getAllocateAlignmentsAttr();
     if (auto privateIndices = op.getAllocatePrivateIndicesAttr())
       for (auto [allocateIndex, privateIndex] :
            llvm::enumerate(privateIndices.asArrayRef()))
@@ -2016,8 +2018,26 @@ allocatePrivateVars(T op, llvm::IRBuilderBase &builder,
         return llvm::createStringError(
             "failed to find converted OpenMP allocator operand");
       llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
-      llvmPrivateVar = ompBuilder->createOMPAlloc(
-          ompLoc, sizeValue, allocator->second, "omp.private.alloc");
+      int64_t alignment =
+          allocateAlignments ? allocateAlignments[allocateIndex] : 0;
+      if (alignment != 0) {
+        // The allocation must be aligned to at least the maximum of the
+        // requested alignment and the alignment the base language requires
+        // for the type being allocated.
+        uint64_t alignmentValue = std::max<uint64_t>(
+            static_cast<uint64_t>(alignment),
+            dataLayout.getABITypeAlign(llvmAllocType).value());
+        if (!llvm::isUIntN(sizeTy->getBitWidth(), alignmentValue))
+          return llvm::createStringError(
+              "OpenMP allocation alignment cannot be represented by the "
+              "target size type");
+        llvmPrivateVar = ompBuilder->createOMPAlignedAlloc(
+            ompLoc, llvm::ConstantInt::get(sizeTy, alignmentValue), sizeValue,
+            allocator->second, "omp.private.alloc");
+      } else {
+        llvmPrivateVar = ompBuilder->createOMPAlloc(
+            ompLoc, sizeValue, allocator->second, "omp.private.alloc");
+      }
       if (!llvmPrivateVar)
         return llvm::createStringError(
             "failed to create OpenMP private allocation");
@@ -6102,8 +6122,14 @@ convertOmpAtomicCompare(omp::AtomicCompareOp atomicCompareOp,
     llvm::Value *dInt =
         builder.CreateAlignedLoad(intTy, dAlloca, maxAlign, "cmplx.d.int");
 
+    // Honor the `fail` clause ordering when present (the verifier guarantees
+    // it is a valid cmpxchg failure ordering); otherwise derive it from the
+    // success ordering.
     llvm::AtomicOrdering failOrdering =
-        llvm::AtomicCmpXchgInst::getStrongestFailureOrdering(atomicOrdering);
+        atomicCompareOp.getFailMemoryOrder()
+            ? convertAtomicOrdering(atomicCompareOp.getFailMemoryOrder())
+            : llvm::AtomicCmpXchgInst::getStrongestFailureOrdering(
+                  atomicOrdering);
     auto *cmpXchg = builder.CreateAtomicCmpXchg(llvmX, eInt, dInt, maxAlign,
                                                 atomicOrdering, failOrdering);
     cmpXchg->setWeak(atomicCompareOp.getWeak());
@@ -6191,10 +6217,19 @@ convertOmpAtomicCompare(omp::AtomicCompareOp atomicCompareOp,
   bool isWeak = atomicCompareOp.getWeak();
 
   bool savedHandleFPNegZero = ompBuilder->setHandleFPNegZero(true);
-  llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
-      ompBuilder->createAtomicCompare(ompLoc, llvmAtomicX, vOpVal, rOpVal, eVal,
-                                      dVal, atomicOrdering, compareOp,
-                                      isXBinopExpr, false, false, isWeak);
+  llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP = [&]() {
+    if (auto failOrder = atomicCompareOp.getFailMemoryOrder()) {
+      llvm::AtomicOrdering failureOrdering = convertAtomicOrdering(*failOrder);
+      return ompBuilder->createAtomicCompare(
+          ompLoc, llvmAtomicX, vOpVal, rOpVal, eVal, dVal, atomicOrdering,
+          compareOp, isXBinopExpr, /*IsPostfixUpdate=*/false,
+          /*IsFailOnly=*/false, failureOrdering, isWeak);
+    }
+    return ompBuilder->createAtomicCompare(
+        ompLoc, llvmAtomicX, vOpVal, rOpVal, eVal, dVal, atomicOrdering,
+        compareOp, isXBinopExpr, /*IsPostfixUpdate=*/false,
+        /*IsFailOnly=*/false, isWeak);
+  }();
   ompBuilder->setHandleFPNegZero(savedHandleFPNegZero);
 
   if (failed(handleError(afterIP, *atomicCompareOp)))
@@ -8164,27 +8199,16 @@ convertFlagsAttr(Operation *op, mlir::omp::FlagsAttr attribute,
   if (attribute.getNoGpuLib())
     return success();
 
-  ompBuilder->createGlobalFlag(
-      attribute.getDebugKind() /*LangOpts().OpenMPTargetDebug*/,
-      "__omp_rtl_debug_kind");
-  ompBuilder->createGlobalFlag(
-      attribute
-          .getAssumeTeamsOversubscription() /*LangOpts().OpenMPTeamSubscription*/
-      ,
-      "__omp_rtl_assume_teams_oversubscription");
-  ompBuilder->createGlobalFlag(
-      attribute
-          .getAssumeThreadsOversubscription() /*LangOpts().OpenMPThreadSubscription*/
-      ,
-      "__omp_rtl_assume_threads_oversubscription");
-  ompBuilder->createGlobalFlag(
-      attribute.getAssumeNoThreadState() /*LangOpts().OpenMPNoThreadState*/,
-      "__omp_rtl_assume_no_thread_state");
-  ompBuilder->createGlobalFlag(
-      attribute
-          .getAssumeNoNestedParallelism() /*LangOpts().OpenMPNoNestedParallelism*/
-      ,
-      "__omp_rtl_assume_no_nested_parallelism");
+  ompBuilder->createGlobalFlag(attribute.getDebugKind(),
+                               "__omp_rtl_debug_kind");
+  ompBuilder->createGlobalFlag(attribute.getAssumeTeamsOversubscription(),
+                               "__omp_rtl_assume_teams_oversubscription");
+  ompBuilder->createGlobalFlag(attribute.getAssumeThreadsOversubscription(),
+                               "__omp_rtl_assume_threads_oversubscription");
+  ompBuilder->createGlobalFlag(attribute.getAssumeNoThreadState(),
+                               "__omp_rtl_assume_no_thread_state");
+  ompBuilder->createGlobalFlag(attribute.getAssumeNoNestedParallelism(),
+                               "__omp_rtl_assume_no_nested_parallelism");
   return success();
 }
 
@@ -9499,6 +9523,16 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::amendOperation(
                   else
                     return failure();
                 }
+                return success();
+              }
+              return failure();
+            })
+      .Case("omp.integer_wrap_around",
+            [&](Attribute attr) {
+              if (auto wrapAttr = dyn_cast<omp::IntegerWrapAroundAttr>(attr)) {
+                llvm::OpenMPIRBuilderConfig &config =
+                    moduleTranslation.getOpenMPBuilder()->Config;
+                config.setNoSignedWrap(!wrapAttr.getIntegerWrapAround());
                 return success();
               }
               return failure();
