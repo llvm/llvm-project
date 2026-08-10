@@ -70,7 +70,6 @@ namespace cwg2006 { // cwg2006: 2.7
     b ? get_cv_void() : get_const_void();
   }
 
-  namespace std { class type_info; }
   void test_typeid() {
     (void)typeid(const void);
     (void)typeid(volatile void);
