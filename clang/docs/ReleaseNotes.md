@@ -2,6 +2,7 @@
 myst:
   enable_extensions:
     - attrs_block
+    - colon_fence
     - substitution
 ---
 
@@ -18,14 +19,14 @@ myst:
 
 Written by the [LLVM Team](https://llvm.org/)
 
-````{only} PreRelease
+::::{only} PreRelease
 
-```{warning}
+:::{warning}
 These are in-progress notes for the upcoming Clang {{env.config.version}} release.
 Release notes for previous releases can be found on
 [the Releases Page](https://llvm.org/releases/).
-```
-````
+:::
+::::
 
 ## Introduction
 
@@ -177,6 +178,11 @@ features cannot lower the translation-unit ABI level;
 - Added `--print-cxx-stdlib` and `--print-cxx-stdlib-include-dirs` to print
   the C++ standard library selected by the driver and the include directories
   added for it.
+
+- Added `-mscs-reg=<reg>` on Hexagon to select which callee-saved register
+  (`r16`-`r27`, default `r18`) holds the shadow call stack pointer under
+  `-fsanitize=shadow-call-stack`. The selected register must also be reserved
+  with the matching `-ffixed-<reg>`.
 
 ### Deprecated Compiler Flags
 
@@ -440,6 +446,10 @@ features cannot lower the translation-unit ABI level;
   copy so the union's object representation is copied, matching the defaulted
   union copy constructor.
 
+- Compute value dependence correctly for structured bindings. This mostly
+  affect C++26 constexpr structured bindings and expansion statements, but
+  also affects some uses of plain structured bindings. (#GH211930)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
@@ -496,6 +506,12 @@ features cannot lower the translation-unit ABI level;
 #### RISC-V Support
 
 #### CUDA/HIP Language Changes
+
+- HIP compilations now add the `include/libhipcxx` directory from the selected
+  ROCm installation to the header search path when it exists. This allows
+  libhipcxx headers to be included with paths such as `<cuda/std/atomic>`.
+  The `-nogpuinc` option disables this path together with the other HIP include
+  paths.
 
 #### CUDA Support
 

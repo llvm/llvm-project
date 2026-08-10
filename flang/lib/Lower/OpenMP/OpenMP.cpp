@@ -2129,7 +2129,6 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
     }
   }
 
-  // TODO: groupprivate is currently only materialised for `teams` constructs.
   if (info.dir == llvm::omp::Directive::OMPD_teams)
     groupprivatizeVars(info.converter, info.eval);
 
@@ -2380,6 +2379,22 @@ static void genBodyOfTargetOp(
 
   // Create the insertion point after the marker.
   firOpBuilder.setInsertionPointAfter(undefMarker.getDefiningOp());
+
+  bool immediatelyNestsTeams = false;
+  if (std::next(item) != queue.end()) {
+    immediatelyNestsTeams = llvm::omp::topTeamsSet.test(std::next(item)->id);
+  } else if (lower::pft::Evaluation *nestedEval =
+                 extractOnlyOmpNestedEval(eval)) {
+    const auto &ompEval = nestedEval->get<parser::OpenMPConstruct>();
+    llvm::omp::Directive nestedDir =
+        parser::omp::GetOmpDirectiveName(ompEval).v;
+    llvm::omp::Directive firstLeafDir =
+        llvm::omp::getLeafConstructsOrSelf(nestedDir).front();
+    immediatelyNestsTeams = llvm::omp::topTeamsSet.test(firstLeafDir);
+  }
+  // No enclosing teams: materialise the copy on the target itself
+  if (!immediatelyNestsTeams)
+    groupprivatizeVars(converter, eval);
 
   if (ConstructQueue::const_iterator next = std::next(item);
       next != queue.end()) {
