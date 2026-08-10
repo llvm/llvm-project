@@ -2,6 +2,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefix=AVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefix=AVX2 --check-prefix=AVX2NOBW
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bw | FileCheck %s --check-prefix=AVX2 --check-prefix=AVX512BW
+; RUN: llc < %s -mtriple=x86_64 -mattr=+avx512fp16,+fast-vector-fp16-div | FileCheck %s --check-prefix=FAST-FP16
+; RUN: llc -mtriple=x86_64 -mattr=+avx512fp16 < %s | FileCheck %s --check-prefix=NO-FAST-FP16
 
 ;
 ; sdiv by 7
@@ -855,4 +857,24 @@ define <8 x i32> @test_remv_8i32(<8 x i32> %a, <8 x i32> %b) nounwind {
 ; AVX512BW-NEXT:    retq
   %res = srem <8 x i32> %a, %b
   ret <8 x i32> %res
+}
+
+define <32 x i8> @test_sdiv_32i8_fast_fp16(<32 x i8> %a, <32 x i8> %b) nounwind {
+; FAST-FP16-LABEL: test_sdiv_32i8_fast_fp16:
+; FAST-FP16:       # %bb.0:
+; FAST-FP16:         vpmovsxbw
+; FAST-FP16:         vcvtw2ph
+; FAST-FP16:         vdivph
+; FAST-FP16:         vcvttph2w
+; FAST-FP16:         vpmovwb
+; FAST-FP16-NOT:     idiv
+; FAST-FP16-NOT:     div
+; FAST-FP16-NEXT:    retq
+
+; NO-FAST-FP16-LABEL: test_sdiv_32i8_fast_fp16:
+; NO-FAST-FP16-NOT:   vdivph
+; NO-FAST-FP16:       retq
+
+%res = sdiv <32 x i8> %a, %b
+ret <32 x i8> %res
 }
