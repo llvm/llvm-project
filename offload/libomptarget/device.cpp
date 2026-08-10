@@ -202,7 +202,7 @@ setupIndirectCallTable(DeviceTy &Device, __tgt_device_image *Image,
                         AsyncInfo))
     return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
                                      "failed to copy data");
-  // The IndirectCallTable is on the stack, so we must syncronize to ensure
+  // The IndirectCallTable is on the stack, so we must synchronize to ensure
   // the data is copied before we return.
   if (Device.synchronize(AsyncInfo))
     return error::createOffloadError(
