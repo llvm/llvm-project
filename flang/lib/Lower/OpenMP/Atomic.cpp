@@ -159,6 +159,24 @@ getMemoryOrderKind(common::OmpMemoryOrderType kind) {
   llvm_unreachable("Unexpected kind");
 }
 
+static mlir::omp::ClauseMemoryOrderKind
+getMemoryOrderKind(omp::clause::Fail::MemoryOrder kind) {
+  using MemoryOrder = omp::clause::Fail::MemoryOrder;
+  switch (kind) {
+  case MemoryOrder::AcqRel:
+    return mlir::omp::ClauseMemoryOrderKind::Acq_rel;
+  case MemoryOrder::Acquire:
+    return mlir::omp::ClauseMemoryOrderKind::Acquire;
+  case MemoryOrder::Relaxed:
+    return mlir::omp::ClauseMemoryOrderKind::Relaxed;
+  case MemoryOrder::Release:
+    return mlir::omp::ClauseMemoryOrderKind::Release;
+  case MemoryOrder::SeqCst:
+    return mlir::omp::ClauseMemoryOrderKind::Seq_cst;
+  }
+  llvm_unreachable("Unexpected memory order");
+}
+
 static std::optional<mlir::omp::ClauseMemoryOrderKind>
 getMemoryOrderKind(llvm::omp::Clause clauseId) {
   switch (clauseId) {
@@ -564,13 +582,21 @@ void Fortran::lower::omp::lowerAtomic(
     // e : expecteVal
     // d : desiredVal
 
-    // Check for compound clauses (fail, capture) that are not yet
-    // supported with atomic compare.
+    // Atomic compare with capture is not yet supported.
     if (llvm::any_of(clauses, [](const omp::Clause &clause) {
-          return clause.id == llvm::omp::Clause::OMPC_fail ||
-                 clause.id == llvm::omp::Clause::OMPC_capture;
+          return clause.id == llvm::omp::Clause::OMPC_capture;
         })) {
       TODO(loc, "Compound clauses of OpenMP ATOMIC COMPARE");
+    }
+
+    // The `fail` clause sets the memory ordering for a failed compare;
+    // extract its argument to attach to the omp.atomic.compare op below.
+    std::optional<mlir::omp::ClauseMemoryOrderKind> failMemOrder;
+    for (const omp::Clause &clause : clauses) {
+      if (const auto *fail = std::get_if<omp::clause::Fail>(&clause.u)) {
+        failMemOrder = getMemoryOrderKind(fail->v);
+        break;
+      }
     }
 
     common::RelationalOperator relOpr = common::RelationalOperator::EQ;
@@ -624,7 +650,8 @@ void Fortran::lower::omp::lowerAtomic(
     }
     mlir::Operation *atomicOp = mlir::omp::AtomicCompareOp::create(
         builder, loc, atomAddr, weakAttr, hint,
-        makeMemOrderAttr(converter, memOrder));
+        makeMemOrderAttr(converter, memOrder),
+        makeMemOrderAttr(converter, failMemOrder));
     mlir::Block *block = builder.createBlock(&atomicOp->getRegion(0));
     mlir::Value blockArg = block->addArgument(elemTypeOfX, loc);
     builder.setInsertionPointToEnd(block);

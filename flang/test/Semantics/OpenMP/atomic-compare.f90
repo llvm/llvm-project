@@ -36,11 +36,11 @@
   if (b .eq. a) b = c
   !$omp end atomic
 
-  !$omp atomic hint(1) acq_rel compare fail(release)
+  !$omp atomic hint(1) acq_rel compare fail(acquire)
   if (c .eq. a) a = b
   !$omp end atomic
 
-  !$omp atomic compare fail(release)
+  !$omp atomic compare fail(acquire)
   if (c .eq. a) a = b
   !$omp end atomic
 
@@ -90,7 +90,7 @@
   if (b .eq. c) b = a
 
   !ERROR: At most one FAIL clause can appear on ATOMIC directive
-  !$omp atomic fail(release) compare fail(release)
+  !$omp atomic fail(acquire) compare fail(acquire)
   if (c .eq. a) a = b
   !$omp end atomic
 

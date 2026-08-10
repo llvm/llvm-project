@@ -2811,6 +2811,79 @@ llvm.func @omp_atomic_compare_weak(%x : !llvm.ptr, %e : i32, %d : i32) {
 
 // -----
 
+// CHECK-LABEL: @omp_atomic_compare_fail
+// CHECK-SAME: (ptr %[[X:.*]], i32 %[[E:.*]], i32 %[[D:.*]])
+llvm.func @omp_atomic_compare_fail(%x : !llvm.ptr, %e : i32, %d : i32) {
+  // The fail clause sets the cmpxchg failure ordering independently of the
+  // success ordering. Relaxed success + acquire failure.
+  // CHECK: cmpxchg ptr %[[X]], i32 %[[E]], i32 %[[D]] monotonic acquire
+  omp.atomic.compare %x : !llvm.ptr {
+  ^bb0(%xval : i32):
+    %cmp = llvm.icmp "eq" %xval, %e : i32
+    %sel = llvm.select %cmp, %d, %xval : i1, i32
+    omp.yield(%sel : i32)
+  } {fail_memory_order = #omp<memoryorderkind acquire>}
+
+  // Seq_cst success + relaxed failure. The seq_cst success ordering still
+  // requires the flush on the new fail_memory_order code path.
+  // CHECK: cmpxchg ptr %[[X]], i32 %[[E]], i32 %[[D]] seq_cst monotonic
+  // CHECK: call void @__kmpc_flush(ptr @{{.*}})
+  omp.atomic.compare memory_order(seq_cst) %x : !llvm.ptr {
+  ^bb0(%xval : i32):
+    %cmp = llvm.icmp "eq" %xval, %e : i32
+    %sel = llvm.select %cmp, %d, %xval : i1, i32
+    omp.yield(%sel : i32)
+  } {fail_memory_order = #omp<memoryorderkind relaxed>}
+
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @omp_atomic_compare_complex_fail
+// CHECK-SAME: (ptr %[[X:.*]], ptr %[[E:.*]], ptr %[[D:.*]])
+// The complex (struct) compare path must honor the fail clause ordering too,
+// not just derive the failure ordering from the success ordering.
+llvm.func @omp_atomic_compare_complex_fail(%x: !llvm.ptr, %e: !llvm.ptr, %d: !llvm.ptr) {
+  %e0 = llvm.load %e : !llvm.ptr -> !llvm.struct<(f32, f32)>
+  // Relaxed success + acquire failure.
+  // CHECK: cmpxchg ptr %[[X]], i64 %{{.*}}, i64 %{{.*}} monotonic acquire
+  omp.atomic.compare memory_order(relaxed) %x : !llvm.ptr {
+  ^bb0(%xval: !llvm.struct<(f32, f32)>):
+    %xr = llvm.extractvalue %xval[0] : !llvm.struct<(f32, f32)>
+    %er = llvm.extractvalue %e0[0] : !llvm.struct<(f32, f32)>
+    %cr = llvm.fcmp "oeq" %xr, %er : f32
+    %xi = llvm.extractvalue %xval[1] : !llvm.struct<(f32, f32)>
+    %ei = llvm.extractvalue %e0[1] : !llvm.struct<(f32, f32)>
+    %ci = llvm.fcmp "oeq" %xi, %ei : f32
+    %cmp = llvm.and %cr, %ci : i1
+    %dval = llvm.load %d : !llvm.ptr -> !llvm.struct<(f32, f32)>
+    %sel = llvm.select %cmp, %dval, %xval : i1, !llvm.struct<(f32, f32)>
+    omp.yield(%sel : !llvm.struct<(f32, f32)>)
+  } {fail_memory_order = #omp<memoryorderkind acquire>}
+
+  // Seq_cst success + relaxed failure still emits the flush on the complex path.
+  // CHECK: cmpxchg ptr %[[X]], i64 %{{.*}}, i64 %{{.*}} seq_cst monotonic
+  // CHECK: call void @__kmpc_flush(ptr @{{.*}})
+  omp.atomic.compare memory_order(seq_cst) %x : !llvm.ptr {
+  ^bb0(%xval: !llvm.struct<(f32, f32)>):
+    %xr = llvm.extractvalue %xval[0] : !llvm.struct<(f32, f32)>
+    %er = llvm.extractvalue %e0[0] : !llvm.struct<(f32, f32)>
+    %cr = llvm.fcmp "oeq" %xr, %er : f32
+    %xi = llvm.extractvalue %xval[1] : !llvm.struct<(f32, f32)>
+    %ei = llvm.extractvalue %e0[1] : !llvm.struct<(f32, f32)>
+    %ci = llvm.fcmp "oeq" %xi, %ei : f32
+    %cmp = llvm.and %cr, %ci : i1
+    %dval = llvm.load %d : !llvm.ptr -> !llvm.struct<(f32, f32)>
+    %sel = llvm.select %cmp, %dval, %xval : i1, !llvm.struct<(f32, f32)>
+    omp.yield(%sel : !llvm.struct<(f32, f32)>)
+  } {fail_memory_order = #omp<memoryorderkind relaxed>}
+
+  llvm.return
+}
+
+// -----
+
 // CHECK-LABEL: @omp_atomic_compare_float_neg_zero
 // CHECK-SAME: (ptr %[[XF:.*]], float %[[EF:.*]], float %[[DF:.*]])
 // Verify NaN guard + ±0.0 handling.

@@ -2047,13 +2047,20 @@ def AtomicCompareOp : OpenMP_Op<"atomic.compare", traits = [
         omp.yield
       }
     ```
+
+    The optional `fail_memory_order` attribute specifies the memory ordering
+    to use for the comparison when the atomic conditional update fails (i.e.
+    the value of `x` is not updated). It corresponds to the OpenMP `fail`
+    clause and overrides the failure ordering that would otherwise be derived
+    from the construct's memory ordering.
   }] # clausesDescription;
 
   let arguments = !con(
       (ins Arg<OpenMP_PointerLikeType,
                "Address of variable to be compared/updated", [MemRead, MemWrite]>:$x,
            UnitAttr:$weak),
-      clausesArgs);
+      clausesArgs,
+      (ins OptionalAttr<MemoryOrderKindAttr>:$fail_memory_order));
 
   // Override region definition.
   let regions = (region SizedRegion<1>:$region);
