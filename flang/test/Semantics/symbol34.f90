@@ -27,9 +27,14 @@ program MAIN
     end interface
     !DEF: /MAIN/a ObjectEntity REAL(4)
     real a
+    !DEF: /MAIN/b ObjectEntity REAL(8)
+    real(kind=8) b
     !REF: /MAIN/a
     !REF: /MAIN/internal_definition_sin_real4
     a = sin(1.0)
     !REF: /MAIN/a
     print *, a
+    !REF: /MAIN/b
+    !REF: /MAIN/sin
+    b = sin(1.0_8)
 end program
