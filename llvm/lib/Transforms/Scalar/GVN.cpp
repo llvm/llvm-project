@@ -3100,7 +3100,7 @@ bool isExprBuiltFromBaseOnly(Value *Expr, Value *Base) {
 
   // Only handle Cast, BinOp, UnaryOp for now.
   if (!isa<CastInst, BinaryOperator, UnaryOperator>(Expr))
-      return false;
+    return false;
 
   auto *ExprInst = cast<Instruction>(Expr);
   bool isUsedAtLeastOnce = false;
