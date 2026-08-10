@@ -1485,7 +1485,7 @@ struct AAAMDGPURegisterBudget
   // means that the budget for the number of VGPRs and AGPRs will be split in half for the unknown 
   // caller. We also know that the FlatWorkGroupSize attribute will also be pessimistic for at 
   // least the current function (the one being called in the indirect callsite)
-  std::optional<unsigned> computePessimisticValue(Attributor &A) const {
+  unsigned computePessimisticValue(Attributor &A) const {
     Function *F = getAssociatedFunction();
     auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
     const GCNSubtarget &ST = InfoCache.TM.getSubtarget<GCNSubtarget>(*F);
@@ -1514,10 +1514,13 @@ struct AAAMDGPURegisterBudget
       unsigned MaxRegs = ST.getMaxNumVGPRs(*F);
       if (!AGPRAlloc || !AGPRAlloc->isValidState()) {
         VGPRBudget = AGPRBudget = MaxRegs / 2; // pessimistic
+        if(VGPRBudget == computePessimisticValue(A))
+          return indicatePessimisticFixpoint();
       }
       else
       {
         AGPRBudget = AGPRAlloc->getAssumed();
+        AGPRBudget = alignTo(AGPRBudget, 4);
         VGPRBudget = MaxRegs - std::min(MaxRegs, AGPRBudget);
       }
         
@@ -1526,36 +1529,35 @@ struct AAAMDGPURegisterBudget
     } else {
       RegisterBudgetState Merged;
 
-      auto CheckCallSite = [&](AbstractCallSite CS) {
-        Function *Caller = CS.getInstruction()->getFunction();
-        const auto *CallerAA = A.getAAFor<AAAMDGPURegisterBudget>(
-            *this, IRPosition::function(*Caller), DepClassTy::REQUIRED);
-        if (!CallerAA || !CallerAA->isValidState())
-        {
-          return true;
+      auto CheckUse = [&](const Use &U, bool &Follow) {
+        if (auto *CE = dyn_cast<ConstantExpr>(U.getUser())) {
+          if (CE->isCast() && CE->getType()->isPointerTy()) {
+            Follow = true;
+            return true;
+          }
         }
+        AbstractCallSite ACS(&U);
+        const Use *EffectiveUse = ACS && ACS.isCallbackCall() ? &ACS.getCalleeUseForCallback() : &U;
+        if(!ACS || !ACS.isCallee(EffectiveUse)) 
+          return true;
 
-        // A caller without a budget yet imposes no constraint, so skip it
-        // rather than giving up. This is what lets a call graph cycle be
-        // seeded from outside the cycle instead of deadlocking on itself; the
-        // dependency brings us back once the caller does have a value.
+        Function *Caller = ACS.getInstruction()->getFunction();
+        const auto *CallerAA = A.getAAFor<AAAMDGPURegisterBudget>(*this, IRPosition::function(*Caller), DepClassTy::REQUIRED);
+        if(!CallerAA || !CallerAA->isValidState())
+          return true;
+
         const RegisterBudgetState &CallerBudget = CallerAA->getBudget();
-        if (!CallerBudget.Unknown)
+        if(!CallerBudget.Unknown)
           Merged.merge(CallerBudget);
         return true;
       };
 
-      bool UsedAssumedInformation = false;
-      if (!A.checkForAllCallSites(CheckCallSite, *this,
-                                  /*RequireAllCallSites=*/false,
-                                  UsedAssumedInformation))
-        return indicatePessimisticFixpoint();
+      A.checkForAllUses(CheckUse, *this, *F);
 
       // Checks for unknown call sites.
       bool DummyUAI = false;
       bool AllCallsitesKnown = A.checkForAllCallSites([](AbstractCallSite) { return true; }, *this, true, DummyUAI);
-
-      if (!AllCallsitesKnown) {
+      if (!AllCallsitesKnown && !Merged.Unknown) {
         if (std::optional<unsigned> PessimisticValue = computePessimisticValue(A)) {
           Merged.merge({*PessimisticValue, *PessimisticValue, /*Unknown=*/false});
         } else return indicatePessimisticFixpoint();
