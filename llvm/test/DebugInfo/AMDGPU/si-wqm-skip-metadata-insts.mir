@@ -1,0 +1,109 @@
+
+# RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1150 -run-pass=si-wqm -o - %s 
+
+--- |
+
+
+  declare void @test() #0
+
+  !0   = !DILocalVariable(name: "rayPayload", arg: 1, scope: !661, file: !106, line: 232, type: !304)
+  !36 = !DIBasicType(name: "unsigned int", size: 32, align: 32, encoding: DW_ATE_unsigned)
+  !106 = !DIFile(filename: "./RaytracingShaderHelper.hlsli", directory: "")
+  !153 = !DIDerivedType(tag: DW_TAG_typedef, name: "UINT", file: !106, line: 20, baseType: !154)
+  !154 = !DIDerivedType(tag: DW_TAG_typedef, name: "uint", file: !106, line: 57, baseType: !36)
+  !182 = !DIDerivedType(tag: DW_TAG_typedef, name: "XMFLOAT4", file: !106, line: 17, baseType: !36)
+  !304 = !DICompositeType(tag: DW_TAG_structure_type, name: "RayPayload", file: !106, line: 60, size: 160, align: 32, elements: !305)
+  !305 = !{!306, !307}
+  !306 = !DIDerivedType(tag: DW_TAG_member, name: "color", scope: !304, file: !106, line: 62, baseType: !182, size: 128, align: 32)
+  !307 = !DIDerivedType(tag: DW_TAG_member, name: "recursionDepth", scope: !304, file: !106, line: 63, baseType: !153, size: 32, align: 32, offset: 128)
+  !325 = distinct !DISubprogram(name: "HitWorldPosition", linkageName: "\01?HitWorldPosition@@YA?AV?$vector@M$02@@XZ", scope: !106, file: !106, line: 89, type: !326, scopeLine: 90, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition)
+  !326 = !DISubroutineType(types: !327)
+  !327 = !{}
+  !661 = !DILocation(line: 0, scope: !325, inlinedAt: !662)
+  !662 = distinct !DILocation(line: 249, column: 34, scope: !325)
+  !665 = !DILocation(line: 91, column: 12, scope: !325, inlinedAt: !666)
+  !666 = distinct !DILocation(line: 239, column: 26, scope: !325)
+
+...
+---
+name:            test
+body:             |
+
+  bb.0:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000); %bb.1(50.00%), %bb.2(50.00%)
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $sgpr14, $sgpr15, $sgpr16, $sgpr17, $sgpr18, $sgpr19, $vgpr8, $vgpr9, $vgpr12, $vgpr51, $vgpr52, $vgpr53, $vgpr54, $vgpr55, $vgpr56, $vgpr57, $vgpr58, $vgpr59, $vgpr60, $vgpr61
+  %126:vgpr_32 = COPY $vgpr60, debug-instr-number 754
+  %75:vgpr_32 = COPY $vgpr9, debug-instr-number 743
+  %125:vgpr_32 = COPY $vgpr59, debug-instr-number 753
+  %124:vgpr_32 = COPY $vgpr58, debug-instr-number 752
+  %136:vgpr_32 = COPY $vgpr57, debug-instr-number 751
+  %135:vgpr_32 = COPY $vgpr56, debug-instr-number 750
+  %134:vgpr_32 = COPY $vgpr55, debug-instr-number 749
+  %133:vgpr_32 = COPY $vgpr54, debug-instr-number 748
+  %132:vgpr_32 = COPY $vgpr53, debug-instr-number 747
+  %131:vgpr_32 = COPY $vgpr52, debug-instr-number 746
+  %117:vgpr_32 = COPY $vgpr51, debug-instr-number 745
+  %78:vgpr_32 = COPY $vgpr12, debug-instr-number 744
+  %628:sreg_32 = ENTER_STRICT_WWM -1, implicit-def $exec, implicit-def $scc, implicit $exec, debug-instr-number 523
+  %74:vgpr_32 = COPY $vgpr8, debug-instr-number 742
+  $exec_lo = EXIT_STRICT_WWM %628:sreg_32, debug-instr-number 524
+  %458:sgpr_32 = COPY $sgpr19, debug-instr-number 741
+  %468:sgpr_32 = COPY $sgpr18, debug-instr-number 740
+  %466:sgpr_32 = COPY $sgpr17, debug-instr-number 739
+  %464:sgpr_32 = COPY $sgpr16, debug-instr-number 738
+  %456:sgpr_32 = COPY $sgpr15, debug-instr-number 737
+  %454:sgpr_32 = COPY $sgpr14, debug-instr-number 736
+  %452:sgpr_32 = COPY $sgpr13, debug-instr-number 735
+  %450:sgpr_32 = COPY $sgpr12, debug-instr-number 734
+  %448:sgpr_32 = COPY $sgpr11, debug-instr-number 733
+  %446:sgpr_32 = COPY $sgpr10, debug-instr-number 732
+  %444:sgpr_32 = COPY $sgpr9, debug-instr-number 731
+  %442:sgpr_32 = COPY $sgpr8, debug-instr-number 730
+  %440:sgpr_32 = COPY $sgpr7, debug-instr-number 729
+  %438:sgpr_32 = COPY $sgpr6, debug-instr-number 728
+  %436:sgpr_32 = COPY $sgpr5, debug-instr-number 727
+  %434:sgpr_32 = COPY $sgpr4, debug-instr-number 726
+  undef %291.sub0:sgpr_64 = COPY $sgpr3, debug-instr-number 725
+  %627:sgpr_32 = COPY $sgpr2, debug-instr-number 724
+  %626:sgpr_32 = COPY $sgpr1, debug-instr-number 723
+  %430:sgpr_32 = COPY $sgpr0, debug-instr-number 722
+  DBG_VALUE $noreg, $noreg, !0, !DIExpression(DW_OP_LLVM_fragment, 0, 128), debug-location !661; Raytracing.hlsl:0 @[ Raytracing.hlsl:249:34 ] line no:113
+  DBG_VALUE $noreg, $noreg, !0, !DIExpression(DW_OP_LLVM_fragment, 0, 128), debug-location !661; Raytracing.hlsl:0 @[ Raytracing.hlsl:249:34 ] line no:113
+  DBG_VALUE $noreg, $noreg, !0, !DIExpression(DW_OP_LLVM_fragment, 0, 128), debug-location !661; Raytracing.hlsl:0 @[ Raytracing.hlsl:249:34 ] line no:113
+  DBG_VALUE $noreg, $noreg, !0, !DIExpression(DW_OP_LLVM_fragment, 0, 128), debug-location !661; Raytracing.hlsl:0 @[ Raytracing.hlsl:249:34 ] line no:113
+  DBG_VALUE $noreg, $noreg, !0, !DIExpression(DW_OP_LLVM_fragment, 128, 32),debug-location !661; Raytracing.hlsl:0 @[ Raytracing.hlsl:249:34 ] line no:113
+  DBG_VALUE $noreg, $noreg, !0, !DIExpression(DW_OP_LLVM_fragment, 0, 128), debug-location !661; Raytracing.hlsl:0 @[ Raytracing.hlsl:249:34 ] line no:113
+  DBG_VALUE $noreg, $noreg, !0, !DIExpression(DW_OP_LLVM_fragment, 0, 128), debug-location !661; Raytracing.hlsl:0 @[ Raytracing.hlsl:249:34 ] line no:113
+  DBG_VALUE $noreg, $noreg, !0, !DIExpression(DW_OP_LLVM_fragment, 0, 128), debug-location !661; Raytracing.hlsl:0 @[ Raytracing.hlsl:249:34 ] line no:113
+  DBG_VALUE $noreg, $noreg, !0, !DIExpression(DW_OP_LLVM_fragment, 0, 128), debug-location !661; Raytracing.hlsl:0 @[ Raytracing.hlsl:249:34 ] line no:113
+  DBG_VALUE $noreg, $noreg, !0, !DIExpression(DW_OP_LLVM_fragment, 128, 32), debug-location !661; Raytracing.hlsl:0 @[ Raytracing.hlsl:249:34 ] line no:113
+  %0:vreg_128 = SCRATCH_LOAD_DWORDX4 %75:vgpr_32, -60, 0, implicit $exec, implicit $flat_scr, debug-instr-number 24, debug-location !665
+  %144:vreg_64 = SCRATCH_LOAD_DWORDX2 %75:vgpr_32, -44, 0, implicit $exec, implicit $flat_scr, debug-instr-number 25, debug-location !665
+  %2:vgpr_32 = SCRATCH_LOAD_DWORD %75:vgpr_32, -4, 0, implicit $exec, implicit $flat_scr, debug-instr-number 28, debug-location !665
+  %3:vgpr_32 = SCRATCH_LOAD_DWORD %75:vgpr_32, -180, 0, implicit $exec, implicit $flat_scr, debug-instr-number 29, debug-location !665
+  %4:vreg_96 = SCRATCH_LOAD_DWORDX3 %75:vgpr_32, -128, 0, implicit $exec, implicit $flat_scr, debug-instr-number 30, debug-location !665
+  %5:vreg_64 = SCRATCH_LOAD_DWORDX2 %75:vgpr_32, -92, 0, implicit $exec, implicit $flat_scr, debug-instr-number 31, debug-location !665
+  DBG_VALUE $noreg, $noreg, !0, !DIExpression(DW_OP_LLVM_fragment, 0, 32), debug-location !665; Raytracing.hlsl:249:16 line no:249
+  DBG_VALUE $noreg, $noreg, !0, !DIExpression(DW_OP_LLVM_fragment, 32, 32), debug-location !665; Raytracing.hlsl:249:16 line no:249
+  DBG_VALUE $noreg, $noreg, !0, !DIExpression(DW_OP_LLVM_fragment, 64, 32), debug-location !665; Raytracing.hlsl:249:16 line no:249
+  DBG_VALUE $noreg, $noreg, !0, !DIExpression(DW_OP_LLVM_fragment, 96, 32), debug-location !665; Raytracing.hlsl:249:16 line no:249
+  %148:vgpr_32 = V_BFE_U32_e64 %0.sub1:vreg_128, 16, 14, implicit $exec,  debug-location !665; Raytracing.hlsl:251:87
+  %7:vgpr_32 = V_MUL_LO_U32_e64 %144.sub1:vreg_64, %148:vgpr_32, implicit $exec,  debug-location !665; Raytracing.hlsl:251:87
+  %6:vgpr_32 = V_MUL_LO_U32_e64 %0.sub2:vreg_128, %148:vgpr_32, implicit $exec,  debug-location !665; Raytracing.hlsl:251:87
+  %8:vgpr_32 = V_ADD_U32_e64 %7:vgpr_32, %144.sub0:vreg_64, 0, implicit $exec,  debug-location !665; Raytracing.hlsl:251:87
+  %609:vgpr_32 = V_MOV_B32_e32 0, implicit $exec,  debug-location !661; Raytracing.hlsl:251:87
+  %607:vgpr_32 = V_AND_B32_e64 65535, %0.sub1:vreg_128, implicit $exec,
+  %149:sreg_32 = V_CMP_LT_U32_e64 %8:vgpr_32, %6:vgpr_32, implicit $exec, debug-instr-number 38, debug-location !661; Raytracing.hlsl:251:87
+  %608:vgpr_32 = V_MOV_B32_e32 0, implicit $exec, debug-instr-number 612
+  %9:sreg_32 = COPY $exec_lo, implicit-def $exec_lo, debug-instr-number 566, debug-location !661; Raytracing.hlsl:251:87
+  %617:sreg_32 = S_AND_B32 %9:sreg_32, %149:sreg_32, implicit-def dead $scc, debug-instr-number 567, debug-location !661; Raytracing.hlsl:251:87
+  $exec_lo = S_MOV_B32_term %617:sreg_32, debug-instr-number 568, debug-location !661; Raytracing.hlsl:251:87
+  S_CBRANCH_EXECZ %bb.2, implicit $exec, debug-instr-number 569, debug-location !661; Raytracing.hlsl:251:87
+  S_BRANCH %bb.1, debug-instr-number 41, debug-location !661; Raytracing.hlsl:251:87
+
+  bb.1:
+
+  bb.2:
+
+
+...
