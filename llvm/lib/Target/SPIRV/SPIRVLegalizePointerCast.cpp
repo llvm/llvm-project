@@ -234,12 +234,12 @@ class SPIRVLegalizePointerCastImpl {
     if (ByteOffset == 0)
       return BasePtr;
 
-    IntrinsicInst *GetPtr = getResourceGetPointer(BasePtr);
-    assert(GetPtr &&
+    IntrinsicInst *ResourcePtr = getResourceGetPointer(BasePtr);
+    assert(ResourcePtr &&
            "byte layout pointer must come from spv.resource.getpointer");
 
-    Value *Handle = GetPtr->getOperand(0);
-    Value *BaseOffset = GetPtr->getOperand(1);
+    Value *Handle = ResourcePtr->getOperand(0);
+    Value *BaseOffset = ResourcePtr->getOperand(1);
     Value *NewOffset;
     if (auto *CI = dyn_cast<ConstantInt>(BaseOffset))
       NewOffset =
@@ -247,19 +247,19 @@ class SPIRVLegalizePointerCastImpl {
     else
       NewOffset = B.CreateAdd(
           BaseOffset, ConstantInt::get(BaseOffset->getType(), ByteOffset));
-    SmallVector<OperandBundleDef, 1> OpBundles;
-    GetPtr->getOperandBundlesAsDefs(OpBundles);
-    CallInst *NewPtr =
-        B.CreateCall(GetPtr->getFunctionType(), GetPtr->getCalledOperand(),
-                     {Handle, NewOffset}, OpBundles);
-    NewPtr->setAttributes(GetPtr->getAttributes());
-    NewPtr->setCallingConv(GetPtr->getCallingConv());
+    SmallVector<OperandBundleDef> OpBundles;
+    ResourcePtr->getOperandBundlesAsDefs(OpBundles);
+    CallInst *ResourcePtrAtOffset = B.CreateCall(
+        ResourcePtr->getFunctionType(), ResourcePtr->getCalledOperand(),
+        {Handle, NewOffset}, OpBundles);
+    ResourcePtrAtOffset->setAttributes(ResourcePtr->getAttributes());
+    ResourcePtrAtOffset->setCallingConv(ResourcePtr->getCallingConv());
     Type *I8Ty = Type::getInt8Ty(B.getContext());
-    GR->buildAssignPtr(B, I8Ty, NewPtr);
-    return NewPtr;
+    GR->buildAssignPtr(B, I8Ty, ResourcePtrAtOffset);
+    return ResourcePtrAtOffset;
   }
 
-  Value *bitcastScalarToInt(IRBuilder<> &B, Value *Scalar) {
+  Value *scalarToStoreInt(IRBuilder<> &B, Value *Scalar) {
     Type *Ty = Scalar->getType();
     const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
     Type *IntTy =
@@ -271,7 +271,7 @@ class SPIRVLegalizePointerCastImpl {
     return B.CreateBitCast(Scalar, IntTy);
   }
 
-  Value *bitcastIntToScalar(IRBuilder<> &B, Value *IntVal, Type *ScalarTy) {
+  Value *storeIntToScalar(IRBuilder<> &B, Value *IntVal, Type *ScalarTy) {
     if (IntVal->getType() == ScalarTy)
       return IntVal;
     if (ScalarTy->isIntOrIntVectorTy())
@@ -284,7 +284,7 @@ class SPIRVLegalizePointerCastImpl {
     LLVMContext &Ctx = B.getContext();
     Type *I8Ty = Type::getInt8Ty(Ctx);
     const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
-    Value *IntVal = bitcastScalarToInt(B, Src);
+    Value *IntVal = scalarToStoreInt(B, Src);
     unsigned NumBytes = DL.getTypeStoreSize(Src->getType());
 
     for (unsigned I = 0; I < NumBytes; ++I) {
@@ -325,42 +325,34 @@ class SPIRVLegalizePointerCastImpl {
       buildAssignType(B, IntTy, IntVal);
     }
 
-    Value *Result = bitcastIntToScalar(B, IntVal, AccessTy);
+    Value *Result = storeIntToScalar(B, IntVal, AccessTy);
     if (Result != IntVal)
       buildAssignType(B, AccessTy, Result);
     return Result;
   }
 
-  enum class ReinterpretKind { None, ByteWise, RetagDirect };
-
   // Classifies a ptrcast reinterpretation: casted pointee matches the access
   // type but differs from the original storage layout (e.g. i8 byte buffer as
   // i32). ByteWise means multi-byte access must use per-byte i8 load/store.
-  ReinterpretKind classifyReinterpretAccess(IRBuilder<> &B, Type *AccessTy,
-                                            Value *OriginalPtr,
-                                            Value *CastedPtr) {
-    Type *CastedElemTy = GR->findDeducedElementType(CastedPtr);
-    if (!CastedElemTy || CastedElemTy != AccessTy)
-      return ReinterpretKind::None;
-
+  bool shouldReinterpretByteWise(IRBuilder<> &B, Type *AccessTy,
+                                 Value *OriginalPtr) {
     Type *OriginalElemTy = GR->findDeducedElementType(OriginalPtr);
     const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
     if (OriginalElemTy && OriginalElemTy == Type::getInt8Ty(B.getContext()) &&
         AccessTy->isSingleValueType() && DL.getTypeStoreSize(AccessTy) > 1)
-      return ReinterpretKind::ByteWise;
+      return true;
 
-    return ReinterpretKind::RetagDirect;
+    return false;
   }
 
   bool tryReinterpretLoad(IRBuilder<> &B, Type *AccessTy, Value *OriginalPtr,
                           Value *CastedPtr, LoadInst *IllegalLoad) {
-    ReinterpretKind Kind =
-        classifyReinterpretAccess(B, AccessTy, OriginalPtr, CastedPtr);
-    if (Kind == ReinterpretKind::None)
+    Type *CastedElemTy = GR->findDeducedElementType(CastedPtr);
+    if (!CastedElemTy || CastedElemTy != AccessTy)
       return false;
 
     Align Alignment = IllegalLoad->getAlign();
-    if (Kind == ReinterpretKind::ByteWise) {
+    if (shouldReinterpretByteWise(B, AccessTy, OriginalPtr)) {
       const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
       Value *Loaded;
       if (auto *VT = dyn_cast<FixedVectorType>(AccessTy)) {
@@ -418,7 +410,7 @@ class SPIRVLegalizePointerCastImpl {
     Type *I8Ty = Type::getInt8Ty(Ctx);
     const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
     Type *AccessTy = Val->getType();
-    Value *IntVal = bitcastScalarToInt(B, Val);
+    Value *IntVal = scalarToStoreInt(B, Val);
     unsigned NumBytes = DL.getTypeStoreSize(AccessTy);
     Type *IntTy = IntegerType::get(Ctx, DL.getTypeStoreSizeInBits(AccessTy));
     Value *OldIntVal = ConstantInt::get(IntTy, 0);
@@ -444,7 +436,7 @@ class SPIRVLegalizePointerCastImpl {
       buildAssignType(B, IntTy, OldIntVal);
     }
 
-    Value *Result = bitcastIntToScalar(B, OldIntVal, AccessTy);
+    Value *Result = storeIntToScalar(B, OldIntVal, AccessTy);
     if (Result != OldIntVal)
       buildAssignType(B, AccessTy, Result);
     return Result;
@@ -453,12 +445,11 @@ class SPIRVLegalizePointerCastImpl {
   bool tryReinterpretAtomicRMW(IRBuilder<> &B, AtomicRMWInst *IllegalRMW,
                                Value *OriginalPtr, Value *CastedPtr) {
     Type *AccessTy = IllegalRMW->getValOperand()->getType();
-    ReinterpretKind Kind =
-        classifyReinterpretAccess(B, AccessTy, OriginalPtr, CastedPtr);
-    if (Kind == ReinterpretKind::None)
+    Type *CastedElemTy = GR->findDeducedElementType(CastedPtr);
+    if (!CastedElemTy || CastedElemTy != AccessTy)
       return false;
 
-    if (Kind == ReinterpretKind::ByteWise) {
+    if (shouldReinterpretByteWise(B, AccessTy, OriginalPtr)) {
       if (!atomicRMWIsByteDecomposable(IllegalRMW->getOperation()))
         return false;
       Value *Result = atomicRMWScalarToByteLayout(B, IllegalRMW, OriginalPtr,
@@ -481,12 +472,11 @@ class SPIRVLegalizePointerCastImpl {
 
   bool tryReinterpretStore(IRBuilder<> &B, Type *AccessTy, Value *OriginalPtr,
                            Value *CastedPtr, Value *StoreSrc, Align Alignment) {
-    ReinterpretKind Kind =
-        classifyReinterpretAccess(B, AccessTy, OriginalPtr, CastedPtr);
-    if (Kind == ReinterpretKind::None)
+    Type *CastedElemTy = GR->findDeducedElementType(CastedPtr);
+    if (!CastedElemTy || CastedElemTy != AccessTy)
       return false;
 
-    if (Kind == ReinterpretKind::ByteWise) {
+    if (shouldReinterpretByteWise(B, AccessTy, OriginalPtr)) {
       const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
       if (auto *VT = dyn_cast<FixedVectorType>(StoreSrc->getType())) {
         unsigned ElemSize = DL.getTypeStoreSize(VT->getElementType());
