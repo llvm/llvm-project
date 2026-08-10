@@ -2183,19 +2183,18 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
         return Pred == CmpInst::ICMP_SLE || Pred == CmpInst::ICMP_SLT;
       case RecurKind::SMin:
         return Pred == CmpInst::ICMP_SGE || Pred == CmpInst::ICMP_SGT;
-      case RecurKind::FMaximum:
-        return Pred == CmpInst::FCMP_ULE || Pred == CmpInst::FCMP_ULT;
       case RecurKind::FMax:
       case RecurKind::FMaximumNum:
         return Pred == CmpInst::FCMP_OLE || Pred == CmpInst::FCMP_OLT;
-      case RecurKind::FMinimum:
-        return Pred == CmpInst::FCMP_UGE || Pred == CmpInst::FCMP_UGT;
       case RecurKind::FMin:
       case RecurKind::FMinimumNum:
         return Pred == CmpInst::FCMP_OGE || Pred == CmpInst::FCMP_OGT;
       // minnum and maxnum need special handling due to expected sNaN behaviour
+      // minimum and maximum return NaN if either input is a NAN
       case RecurKind::FMinNum:
       case RecurKind::FMaxNum:
+      case RecurKind::FMinimum:
+      case RecurKind::FMaximum:
         return false;
       default:
         llvm_unreachable("unhandled recurrence kind");
