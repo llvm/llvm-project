@@ -32,8 +32,17 @@ class ProxySpec;
 template <typename ProxyT, typename SPSSigT, const char *DefaultName,
           typename RetT, typename... ArgTs>
 class ProxySpec<ProxyT, SPSSigT, DefaultName, RetT(ArgTs...)> {
+
   using CalleeRetT = typename ProxyT::CalleeRetT;
   using ErrorRetT = typename ProxyT::ErrorRetT;
+
+  static void consumeResult(Error &Err) { consumeError(std::move(Err)); }
+
+  template <typename T> static void consumeResult(T &V) {}
+
+  template <typename T> static void consumeResult(Expected<T> &E) {
+    consumeError(E.takeError());
+  }
 
 public:
   static constexpr const char *Name = DefaultName;
@@ -51,8 +60,12 @@ public:
           CalleeAddr,
           [OnComplete = std::move(OnComplete)](Error SerErr,
                                                CalleeRetT Result) mutable {
-            if (SerErr)
+            if (SerErr) {
+              consumeResult(Result);
               return OnComplete(std::move(SerErr));
+            }
+            // For an Error/Expected callee this forwards the callee's own
+            // result; for a plain value it is wrapped into Expected.
             return OnComplete(std::move(Result));
           },
           Args...);
