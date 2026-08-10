@@ -436,7 +436,7 @@ define half @test_v2f16(<2 x half> %a0) nounwind {
 ; AVX512FP16-LABEL: test_v2f16:
 ; AVX512FP16:       # %bb.0:
 ; AVX512FP16-NEXT:    vpsrld $16, %xmm0, %xmm1
-; AVX512FP16-NEXT:    vcmpltsh %xmm0, %xmm1, %k1
+; AVX512FP16-NEXT:    vcmpnlesh %xmm1, %xmm0, %k1
 ; AVX512FP16-NEXT:    vmovsh %xmm0, %xmm0, %xmm1 {%k1}
 ; AVX512FP16-NEXT:    vmovaps %xmm1, %xmm0
 ; AVX512FP16-NEXT:    retq
