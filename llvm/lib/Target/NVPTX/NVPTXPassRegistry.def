@@ -21,6 +21,7 @@ MODULE_PASS("nvptx-lower-args", NVPTXLowerArgsPass(*this))
 MODULE_PASS("nvptx-lower-ctor-dtor", NVPTXCtorDtorLoweringPass())
 MODULE_PASS("nvptx-promote-param-align", NVPTXPromoteParamAlignPass())
 MODULE_PASS("nvvm-reflect", NVVMReflectPass())
+MODULE_PASS("nvptx-assign-valid-global-names", NVPTXAssignValidGlobalNamesPass())
 #undef MODULE_PASS
 
 #ifndef FUNCTION_ANALYSIS
@@ -44,3 +45,10 @@ FUNCTION_PASS("nvptx-mark-kernel-ptrs-global", NVPTXMarkKernelPtrsGlobalPass())
 FUNCTION_PASS("nvptx-tag-invariant-loads", NVPTXTagInvariantLoadsPass())
 FUNCTION_PASS("nvptx-ir-peephole", NVPTXIRPeepholePass())
 #undef FUNCTION_PASS
+
+#ifndef MACHINE_FUNCTION_PASS
+#define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
+#endif
+MACHINE_FUNCTION_PASS("nvptx-isel", NVPTXISelDAGToDAGPass(*this, getOptLevel()))
+MACHINE_FUNCTION_PASS("nvptx-forward-params", NVPTXForwardParamsPass())
+#undef MACHINE_FUNCTION_PASS
