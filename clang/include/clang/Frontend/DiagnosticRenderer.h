@@ -23,6 +23,7 @@
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringRef.h"
+#include <optional>
 
 namespace clang {
 
@@ -31,6 +32,14 @@ class SourceManager;
 
 using DiagOrStoredDiag =
     llvm::PointerUnion<const Diagnostic *, const StoredDiagnostic *>;
+
+/// Maps both endpoints of \p Range to their macro expansion, so that the range
+/// can be shown to a user.
+///
+/// \returns nullopt if \p Range is invalid, if an endpoint lies outside \p FID.
+std::optional<CharSourceRange> getExpansionRangeInFile(CharSourceRange Range,
+                                                       FileID FID,
+                                                       const SourceManager &SM);
 
 /// Class to encapsulate the logic for formatting a diagnostic message.
 ///
