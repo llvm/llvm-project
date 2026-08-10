@@ -3820,6 +3820,7 @@ bool MIParser::parseMachineMemoryOperand(MachineMemOperand *&Dest) {
           : 1;
   AAMDNodes AAInfo;
   MDNode *Range = nullptr;
+  MDNode *MemCacheHint = nullptr;
   while (consumeIfPresent(MIToken::comma)) {
     switch (Token.kind()) {
     case MIToken::kw_align: {
@@ -3871,16 +3872,23 @@ bool MIParser::parseMachineMemoryOperand(MachineMemOperand *&Dest) {
       if (parseMDNode(Range))
         return true;
       break;
+    case MIToken::md_mem_cache_hint:
+      lex();
+      if (parseMDNode(MemCacheHint))
+        return true;
+      break;
     // TODO: Report an error on duplicate metadata nodes.
     default:
       return error("expected 'align' or '!tbaa' or '!alias.scope' or "
-                   "'!noalias' or '!range' or '!noalias.addrspace'");
+                   "'!noalias' or '!range' or '!mem.cache_hint' or "
+                   "'!noalias.addrspace'");
     }
   }
   if (expectAndConsume(MIToken::rparen))
     return true;
   Dest = MF.getMachineMemOperand(Ptr, Flags, MemoryType, Align(BaseAlignment),
-                                 AAInfo, Range, SSID, Order, FailureOrder);
+                                 MMOMetadata(AAInfo, Range, MemCacheHint), SSID,
+                                 Order, FailureOrder);
   return false;
 }
 

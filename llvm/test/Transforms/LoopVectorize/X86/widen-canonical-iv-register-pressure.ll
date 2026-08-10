@@ -13,7 +13,7 @@ define i32 @many_reductions(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e, ptr %f, i64 
 ; UF2-NEXT:    br label %[[VECTOR_PH:.*]]
 ; UF2:       [[VECTOR_PH]]:
 ; UF2-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], 15
-; UF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 16
+; UF2-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_RND_UP]], 15
 ; UF2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; UF2-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[N]], 1
 ; UF2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
@@ -117,7 +117,7 @@ define i32 @many_reductions(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e, ptr %f, i64 
 ; UF4-NEXT:    br label %[[VECTOR_PH:.*]]
 ; UF4:       [[VECTOR_PH]]:
 ; UF4-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], 31
-; UF4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 32
+; UF4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_RND_UP]], 31
 ; UF4-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; UF4-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[N]], 1
 ; UF4-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0

@@ -228,6 +228,30 @@ __device__ void test_atom_min_gen_ull(unsigned long long *p, unsigned long long 
   __nvvm_atom_min_gen_ull(p, val);
 }
 
+// CIR-LABEL: @_Z20test_atom_xchg_gen_iPii
+// CIR: cir.atomic.xchg relaxed syncscope(system) %{{.*}}, %{{.*}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+// LLVM-LABEL: @_Z20test_atom_xchg_gen_iPii
+// LLVM: atomicrmw xchg ptr %{{.*}}, i32 %{{.*}} monotonic, align 4
+__device__ void test_atom_xchg_gen_i(int *p, int val) {
+  __nvvm_atom_xchg_gen_i(p, val);
+}
+
+// CIR-LABEL: @_Z20test_atom_xchg_gen_lPll
+// CIR: cir.atomic.xchg relaxed syncscope(system) %{{.*}}, %{{.*}} : (!cir.ptr<!s64i>, !s64i) -> !s64i
+// LLVM-LABEL: @_Z20test_atom_xchg_gen_lPll
+// LLVM: atomicrmw xchg ptr %{{.*}}, i64 %{{.*}} monotonic, align 8
+__device__ void test_atom_xchg_gen_l(long *p, long val) {
+  __nvvm_atom_xchg_gen_l(p, val);
+}
+
+// CIR-LABEL: @_Z21test_atom_xchg_gen_llPxx
+// CIR: cir.atomic.xchg relaxed syncscope(system) %{{.*}}, %{{.*}} : (!cir.ptr<!s64i>, !s64i) -> !s64i
+// LLVM-LABEL: @_Z21test_atom_xchg_gen_llPxx
+// LLVM: atomicrmw xchg ptr %{{.*}}, i64 %{{.*}} monotonic, align 8
+__device__ void test_atom_xchg_gen_ll(long long *p, long long val) {
+  __nvvm_atom_xchg_gen_ll(p, val);
+}
+
 // CIR-LABEL: @_Z23test_atom_cta_add_gen_iPii
 // CIR: cir.atomic.fetch add relaxed syncscope(workgroup) fetch_first %{{.*}}, %{{.*}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
 // LLVM-LABEL: @_Z23test_atom_cta_add_gen_iPii
@@ -674,4 +698,52 @@ __device__ void test_atom_cta_xor_gen_ll(long long *p, long long val) {
 // LLVM: atomicrmw xor ptr %{{.*}}, i64 %{{.*}} monotonic, align 8
 __device__ void test_atom_sys_xor_gen_ll(long long *p, long long val) {
   __nvvm_atom_sys_xor_gen_ll(p, val);
+}
+
+// CIR-LABEL: @_Z24test_atom_cta_xchg_gen_iPii
+// CIR: cir.atomic.xchg relaxed syncscope(workgroup) %{{.*}}, %{{.*}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+// LLVM-LABEL: @_Z24test_atom_cta_xchg_gen_iPii
+// LLVM: atomicrmw xchg ptr %{{.*}}, i32 %{{.*}} syncscope("block") monotonic, align 4
+__device__ void test_atom_cta_xchg_gen_i(int *p, int val) {
+  __nvvm_atom_cta_xchg_gen_i(p, val);
+}
+
+// CIR-LABEL: @_Z24test_atom_sys_xchg_gen_iPii
+// CIR: cir.atomic.xchg relaxed syncscope(system) %{{.*}}, %{{.*}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+// LLVM-LABEL: @_Z24test_atom_sys_xchg_gen_iPii
+// LLVM: atomicrmw xchg ptr %{{.*}}, i32 %{{.*}} monotonic, align 4
+__device__ void test_atom_sys_xchg_gen_i(int *p, int val) {
+  __nvvm_atom_sys_xchg_gen_i(p, val);
+}
+
+// CIR-LABEL: @_Z24test_atom_cta_xchg_gen_lPll
+// CIR: cir.atomic.xchg relaxed syncscope(workgroup) %{{.*}}, %{{.*}} : (!cir.ptr<!s64i>, !s64i) -> !s64i
+// LLVM-LABEL: @_Z24test_atom_cta_xchg_gen_lPll
+// LLVM: atomicrmw xchg ptr %{{.*}}, i64 %{{.*}} syncscope("block") monotonic, align 8
+__device__ void test_atom_cta_xchg_gen_l(long *p, long val) {
+  __nvvm_atom_cta_xchg_gen_l(p, val);
+}
+
+// CIR-LABEL: @_Z24test_atom_sys_xchg_gen_lPll
+// CIR: cir.atomic.xchg relaxed syncscope(system) %{{.*}}, %{{.*}} : (!cir.ptr<!s64i>, !s64i) -> !s64i
+// LLVM-LABEL: @_Z24test_atom_sys_xchg_gen_lPll
+// LLVM: atomicrmw xchg ptr %{{.*}}, i64 %{{.*}} monotonic, align 8
+__device__ void test_atom_sys_xchg_gen_l(long *p, long val) {
+  __nvvm_atom_sys_xchg_gen_l(p, val);
+}
+
+// CIR-LABEL: @_Z25test_atom_cta_xchg_gen_llPxx
+// CIR: cir.atomic.xchg relaxed syncscope(workgroup) %{{.*}}, %{{.*}} : (!cir.ptr<!s64i>, !s64i) -> !s64i
+// LLVM-LABEL: @_Z25test_atom_cta_xchg_gen_llPxx
+// LLVM: atomicrmw xchg ptr %{{.*}}, i64 %{{.*}} syncscope("block") monotonic, align 8
+__device__ void test_atom_cta_xchg_gen_ll(long long *p, long long val) {
+  __nvvm_atom_cta_xchg_gen_ll(p, val);
+}
+
+// CIR-LABEL: @_Z25test_atom_sys_xchg_gen_llPxx
+// CIR: cir.atomic.xchg relaxed syncscope(system) %{{.*}}, %{{.*}} : (!cir.ptr<!s64i>, !s64i) -> !s64i
+// LLVM-LABEL: @_Z25test_atom_sys_xchg_gen_llPxx
+// LLVM: atomicrmw xchg ptr %{{.*}}, i64 %{{.*}} monotonic, align 8
+__device__ void test_atom_sys_xchg_gen_ll(long long *p, long long val) {
+  __nvvm_atom_sys_xchg_gen_ll(p, val);
 }

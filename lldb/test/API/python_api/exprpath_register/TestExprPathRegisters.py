@@ -50,7 +50,7 @@ class TestExprPathRegisters(TestBase):
             if reg_value:
                 self.verify_register_path(reg_value)
 
-    @skipIfWasm  # wasm exposes no registers
+    @requireNotWasm  # wasm exposes no registers
     def test_all_registers(self):
         """Test all the registers that is avaiable on the machine"""
         self.build()

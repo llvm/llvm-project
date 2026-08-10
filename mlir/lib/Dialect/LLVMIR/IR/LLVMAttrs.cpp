@@ -352,17 +352,17 @@ DICompositeTypeAttr::getRecSelf(DistinctAttr recId) {
 DIRecursiveTypeAttrInterface DICompileUnitAttr::withRecId(DistinctAttr recId) {
   return DICompileUnitAttr::get(
       getContext(), recId, getIsRecSelf(), getId(), getSourceLanguage(),
-      getFile(), getProducer(), getIsOptimized(), getEmissionKind(),
-      getIsDebugInfoForProfiling(), getNameTableKind(), getSplitDebugFilename(),
-      getImportedEntities());
+      getSourceLanguageDialect(), getFile(), getProducer(), getIsOptimized(),
+      getEmissionKind(), getIsDebugInfoForProfiling(), getNameTableKind(),
+      getSplitDebugFilename(), getImportedEntities());
 }
 
 DIRecursiveTypeAttrInterface DICompileUnitAttr::getRecSelf(DistinctAttr recId) {
 
   return DICompileUnitAttr::get(
       recId.getContext(), recId, /*isRecSelf=*/true, /*id=*/{},
-      /*sourceLanguage=*/0u, /*file=*/{}, /*producer=*/{},
-      /*isOptimized=*/false, DIEmissionKind::None,
+      /*sourceLanguage=*/0u, /*sourceLanguageDialect=*/0u, /*file=*/{},
+      /*producer=*/{}, /*isOptimized=*/false, DIEmissionKind::None,
       /*isDebugInfoForProfiling=*/false, DINameTableKind::Default,
       /*splitDebugFilename=*/{}, /*importedEntities=*/{});
 }

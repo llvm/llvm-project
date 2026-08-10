@@ -39,4 +39,4 @@ exit:
 
 !0 = !{!0, !1, !2}
 !1 = !{!"llvm.loop.vectorize.width", i64 32}
-!2 = !{!"llvm.loop.vectorize.enable", i1 true}
+!2 = !{!"llvm.loop.vectorize.enable"}

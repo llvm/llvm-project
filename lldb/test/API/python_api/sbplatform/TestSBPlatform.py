@@ -10,7 +10,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipIfWasm  # no remote platform file/process APIs
+@requireNotWasm  # no remote platform file/process APIs
 class SBPlatformAPICase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

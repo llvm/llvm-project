@@ -145,11 +145,13 @@ public:
 
   void reportDanglingField(const Expr *IssueExpr,
                            const FieldDecl *DanglingField,
-                           const Expr *MovedExpr,
+                           const Expr *MovedExpr, bool IsCapturedByLambda,
                            SourceLocation ExpiryLoc) override {
-    unsigned DiagID = MovedExpr
-                          ? diag::warn_lifetime_safety_dangling_field_moved
-                          : diag::warn_lifetime_safety_dangling_field;
+    unsigned DiagID =
+        IsCapturedByLambda
+            ? diag::warn_lifetime_safety_dangling_field_lambda_capture
+            : (MovedExpr ? diag::warn_lifetime_safety_dangling_field_moved
+                         : diag::warn_lifetime_safety_dangling_field);
 
     S.Diag(IssueExpr->getExprLoc(), DiagID)
         << getDiagSubjectDescription(IssueExpr)

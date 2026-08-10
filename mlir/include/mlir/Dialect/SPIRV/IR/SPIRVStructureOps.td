@@ -279,7 +279,7 @@ def SPIRV_ExecutionModeOp : SPIRV_Op<"ExecutionMode", [InModuleScope]> {
 
   let results = (outs);
 
-  let hasVerifier = 0;
+  let hasVerifier = 1;
 
   let autogenSerialization = 0;
 

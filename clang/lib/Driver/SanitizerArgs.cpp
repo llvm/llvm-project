@@ -964,6 +964,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
 
     KcfiArity = Args.hasArg(options::OPT_fsanitize_kcfi_arity);
 
+    if (const Arg *A = Args.getLastArg(options::OPT_fsanitize_kcfi_hash_EQ))
+      KcfiHash = A->getValue();
+
     if (AllAddedKinds & SanitizerKind::CFI && DiagnoseErrors)
       D.Diag(diag::err_drv_argument_not_allowed_with)
           << "-fsanitize=kcfi"
@@ -1572,6 +1575,9 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
     }
     CmdArgs.push_back("-fsanitize-kcfi-arity");
   }
+
+  if (KcfiHash)
+    CmdArgs.push_back(Args.MakeArgString("-fsanitize-kcfi-hash=" + *KcfiHash));
 
   if (CfiCanonicalJumpTables)
     CmdArgs.push_back("-fsanitize-cfi-canonical-jump-tables");

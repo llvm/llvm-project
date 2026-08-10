@@ -105,7 +105,20 @@ def BasicPtxBuilderOpInterface : OpInterface<"BasicPtxBuilderInterface"> {
         /*methodBody=*/"",
         /*defaultImplementation=*/"return true;"
       >,
-    
+    InterfaceMethod<
+        /*desc=*/[{
+          Return whether a memory clobber ("~{memory}") is appended to the
+          constraints of the generated inline assembly. It informs LLVM that
+          the PTX may read or write memory beyond its listed operands, so
+          optimizations must not reorder memory accesses across it.
+        }],
+        /*retType=*/"bool",
+        /*methodName=*/"hasMemoryClobber",
+        /*args=*/(ins),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/"return false;"
+      >,
+
     InterfaceMethod<
         /*desc=*/[{Helper function to generate i32 constant value.}],
         /*retType=*/"::mlir::Value",

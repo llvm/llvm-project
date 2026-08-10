@@ -15,27 +15,28 @@ def IsA : LibcallPredicate<[{TT.isAArch64()}]>;
 def IsB : LibcallPredicate<[{TT.isOSDarwin()}]>;
 def NotAnAtom : RuntimeLibcall;
 
-def isArch : RuntimeLibcallAvailability<[{isArch()}]>;
+def IsArch : LibcallPredicate<[{isArch()}]>;
+def isArch : RuntimeLibcallAvailability<(all_of IsArch)>;
 
 #ifdef ERR_NOT_ATOM
 // NOT-ATOM: error: predicate dag leaf 'NotAnAtom' is not a LibcallPredicate
-def badpred : RuntimeLibcallAvailabilityDag<(all_of NotAnAtom)>;
+def badpred : RuntimeLibcallAvailability<(all_of NotAnAtom)>;
 #endif
 
 #ifdef ERR_BAD_OP
 // A defined record that isn't all_of/any_of/not used as the dag operator.
 // BAD-OP: error: unknown predicate dag operator 'IsA'; expected all_of/any_of/not
-def badpred : RuntimeLibcallAvailabilityDag<(IsA IsB)>;
+def badpred : RuntimeLibcallAvailability<(IsA IsB)>;
 #endif
 
 #ifdef ERR_NOT_ARITY
 // NOT-ARITY: error: 'not' takes exactly one operand
-def badpred : RuntimeLibcallAvailabilityDag<(not IsA, IsB)>;
+def badpred : RuntimeLibcallAvailability<(not IsA, IsB)>;
 #endif
 
 #ifdef ERR_EMPTY
 // EMPTY: error: 'all_of' requires at least one operand
-def badpred : RuntimeLibcallAvailabilityDag<(all_of)>;
+def badpred : RuntimeLibcallAvailability<(all_of)>;
 #endif
 
 def Sys : SystemRuntimeLibrary<isArch,

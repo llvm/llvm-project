@@ -300,6 +300,10 @@ The following options are implemented only for the Mach-O file format.
 
  Display the Segment command.
 
+.. option:: --macho-target-triple
+
+ Display the target triple command.
+
 .. option:: --macho-version-min
 
  Display the version min command.

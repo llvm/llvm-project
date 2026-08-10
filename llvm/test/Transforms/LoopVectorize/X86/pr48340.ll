@@ -19,7 +19,7 @@ define ptr @foo(ptr %p, ptr %p.last) #0 {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 16
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 16
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 15
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 10
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[P_LAST]], i64 [[TMP4]]
@@ -79,7 +79,7 @@ define ptr @bar(ptr %p, ptr %p.last) #0 {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 16
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 16
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 15
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 10
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[P_LAST]], i64 [[TMP4]]

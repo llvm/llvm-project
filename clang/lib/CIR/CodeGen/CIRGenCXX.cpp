@@ -352,6 +352,18 @@ void CIRGenModule::emitCXXGlobalVarDeclInit(const VarDecl *varDecl,
   CIRGenFunction::SourceLocRAIIObject fnLoc{cgf,
                                             getLoc(varDecl->getLocation())};
 
+  // Set up the constrained FP environment for the dynamic initializer.
+  llvm::RoundingMode rm = getLangOpts().getDefaultRoundingMode();
+  LangOptions::FPExceptionModeKind eb = getLangOpts().getDefaultExceptionMode();
+  builder.setDefaultConstrainedRounding(rm);
+  builder.setDefaultConstrainedExcept(eb);
+  builder.setIsFPConstrained(false);
+  if (eb != LangOptions::FPE_Ignore ||
+      rm != llvm::RoundingMode::NearestTiesToEven) {
+    builder.setIsFPConstrained(true);
+    addr.setStrictfp(true);
+  }
+
   emitCXXSpecialVarDeclInit(varDecl, addr, performInit, addr.getCtorRegion(),
                             addr.getDtorRegion());
 }

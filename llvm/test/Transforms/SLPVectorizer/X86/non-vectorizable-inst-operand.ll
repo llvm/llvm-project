@@ -108,14 +108,13 @@ define void @test_two_invokes_with_vectorizable_operands(ptr %p, ptr %out0, ptr 
 ; CHECK-LABEL: define void @test_two_invokes_with_vectorizable_operands(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[OUT0:%.*]], ptr [[OUT1:%.*]]) #[[ATTR0]] personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[A0:%.*]] = load double, ptr [[P]], align 8
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr double, ptr [[P]], i64 1
-; CHECK-NEXT:    [[A1:%.*]] = load double, ptr [[P1]], align 8
-; CHECK-NEXT:    [[M0:%.*]] = fmul double [[A0]], 2.000000e+00
-; CHECK-NEXT:    [[M1:%.*]] = fmul double [[A1]], 3.000000e+00
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[P]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul <2 x double> [[TMP0]], <double 2.000000e+00, double 3.000000e+00>
+; CHECK-NEXT:    [[M0:%.*]] = extractelement <2 x double> [[TMP1]], i64 0
 ; CHECK-NEXT:    [[R0:%.*]] = invoke double @user_func(double [[M0]])
 ; CHECK-NEXT:            to label %[[CONT1:.*]] unwind label %[[EH:.*]]
 ; CHECK:       [[CONT1]]:
+; CHECK-NEXT:    [[M1:%.*]] = extractelement <2 x double> [[TMP1]], i64 1
 ; CHECK-NEXT:    [[R1:%.*]] = invoke double @user_func(double [[M1]])
 ; CHECK-NEXT:            to label %[[CONT2:.*]] unwind label %[[EH]]
 ; CHECK:       [[CONT2]]:

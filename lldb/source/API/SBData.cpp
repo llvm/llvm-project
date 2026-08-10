@@ -12,6 +12,7 @@
 #include "lldb/Utility/Instrumentation.h"
 
 #include "lldb/Core/DumpDataExtractor.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Stream.h"

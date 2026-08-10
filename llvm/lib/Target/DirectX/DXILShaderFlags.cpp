@@ -63,7 +63,6 @@ static bool hasUAVsAtEveryStage(const DXILResourceMap &DRM,
 
 static bool checkWaveOps(Intrinsic::ID IID) {
   // Currently unsupported intrinsics
-  // case Intrinsic::dx_wave_getlanecount:
   // case Intrinsic::dx_wave_readfirst:
   // case Intrinsic::dx_wave_reduce.and:
   // case Intrinsic::dx_wave_reduce.or:
@@ -82,6 +81,7 @@ static bool checkWaveOps(Intrinsic::ID IID) {
     return false;
   case Intrinsic::dx_wave_is_first_lane:
   case Intrinsic::dx_wave_getlaneindex:
+  case Intrinsic::dx_wave_get_lane_count:
   case Intrinsic::dx_wave_any:
   case Intrinsic::dx_wave_all_equal:
   case Intrinsic::dx_wave_all:
@@ -251,7 +251,28 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
         CSF.TiledResources = true;
       break;
     }
+    case Intrinsic::dx_resource_atomic_binop: {
+      if (II->getType()->isIntegerTy(64)) {
+        dxil::ResourceTypeInfo &RTI =
+            DRTM[cast<TargetExtType>(II->getArgOperand(0)->getType())];
+        if (RTI.isTyped())
+          CSF.AtomicInt64OnTypedResource = true;
+        // TODO(https://github.com/llvm/llvm-project/issues/116152): Set
+        // AtomicInt64OnHeapResource when heap-resource intrinsics are added.
+      }
+      break;
     }
+    }
+  }
+  // 64-bit atomics on groupshared memory (address space 3).
+  if (const auto *ARMW = dyn_cast<AtomicRMWInst>(&I)) {
+    if (ARMW->getValOperand()->getType()->isIntegerTy(64) &&
+        ARMW->getPointerAddressSpace() == 3)
+      CSF.AtomicInt64OnGroupShared = true;
+  } else if (const auto *AXCG = dyn_cast<AtomicCmpXchgInst>(&I)) {
+    if (AXCG->getNewValOperand()->getType()->isIntegerTy(64) &&
+        AXCG->getPointerAddressSpace() == 3)
+      CSF.AtomicInt64OnGroupShared = true;
   }
   // Handle call instructions
   if (auto *CI = dyn_cast<CallInst>(&I)) {

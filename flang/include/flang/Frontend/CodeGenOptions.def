@@ -71,5 +71,7 @@ ENUM_CODEGENOPT(ComplexRange, ComplexRangeKind, 3, ComplexRangeKind::CX_Full) //
 
 ENUM_CODEGENOPT(DoConcurrentMapping, DoConcurrentMappingKind, 2, DoConcurrentMappingKind::DCMK_None) ///< Map `do concurrent` to OpenMP
 
+ENUM_CODEGENOPT(CompressDebugSections, llvm::DebugCompressionType, 2, llvm::DebugCompressionType::None) ///< DWARF debug sections compression type
+
 #undef CODEGENOPT
 #undef ENUM_CODEGENOPT

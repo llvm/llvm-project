@@ -73,16 +73,14 @@ public:
 
   bool IsSymbolFileTrusted(Module &module) override;
 
-  Status GetSharedModule(const ModuleSpec &module_spec, Process *process,
+  Status GetSharedModule(const ModuleSpec &module_spec, Target &target,
                          lldb::ModuleSP &module_sp,
                          llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
                          bool *did_create_ptr) override;
 
-  Status
-  GetModuleFromSharedCaches(const ModuleSpec &module_spec, Process *process,
-                            lldb::ModuleSP &module_sp,
-                            llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
-                            bool *did_create_ptr);
+  Status GetModuleFromSharedCaches(
+      const ModuleSpec &module_spec, Target &target, lldb::ModuleSP &module_sp,
+      llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr);
 
   size_t GetSoftwareBreakpointTrapOpcode(Target &target,
                                          BreakpointSite *bp_site) override;
@@ -225,8 +223,7 @@ protected:
                                              XcodeSDK::Type sdk_type);
 
   Status FindBundleBinaryInExecSearchPaths(
-      const ModuleSpec &module_spec, Process *process,
-      lldb::ModuleSP &module_sp,
+      const ModuleSpec &module_spec, Target &target, lldb::ModuleSP &module_sp,
       llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr);
 
   // The OSType where lldb is running.

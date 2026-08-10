@@ -18,7 +18,7 @@ define i32 @foo(ptr addrspace(1) %p) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP0]], 8
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP0]], 8
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[TMP0]], 7
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 1, [[N_VEC]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[N_VEC]], 1

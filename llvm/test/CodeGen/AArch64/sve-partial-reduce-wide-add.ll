@@ -13,8 +13,8 @@ define <vscale x 2 x i64> @signed_wide_add_nxv4i32(<vscale x 2 x i64> %acc, <vsc
 ;
 ; CHECK-SVE2-LABEL: signed_wide_add_nxv4i32:
 ; CHECK-SVE2:       // %bb.0: // %entry
-; CHECK-SVE2-NEXT:    saddwb z0.d, z0.d, z1.s
-; CHECK-SVE2-NEXT:    saddwt z0.d, z0.d, z1.s
+; CHECK-SVE2-NEXT:    ptrue p0.d
+; CHECK-SVE2-NEXT:    sadalp z0.d, p0/m, z1.s
 ; CHECK-SVE2-NEXT:    ret
 entry:
     %input.wide = sext <vscale x 4 x i32> %input to <vscale x 4 x i64>
@@ -33,13 +33,48 @@ define <vscale x 2 x i64> @unsigned_wide_add_nxv4i32(<vscale x 2 x i64> %acc, <v
 ;
 ; CHECK-SVE2-LABEL: unsigned_wide_add_nxv4i32:
 ; CHECK-SVE2:       // %bb.0: // %entry
-; CHECK-SVE2-NEXT:    uaddwb z0.d, z0.d, z1.s
-; CHECK-SVE2-NEXT:    uaddwt z0.d, z0.d, z1.s
+; CHECK-SVE2-NEXT:    ptrue p0.d
+; CHECK-SVE2-NEXT:    uadalp z0.d, p0/m, z1.s
 ; CHECK-SVE2-NEXT:    ret
 entry:
     %input.wide = zext <vscale x 4 x i32> %input to <vscale x 4 x i64>
     %partial.reduce = tail call <vscale x 2 x i64> @llvm.vector.partial.reduce.add.nxv2i64.nxv4i64(<vscale x 2 x i64> %acc, <vscale x 4 x i64> %input.wide)
     ret <vscale x 2 x i64> %partial.reduce
+}
+
+define <vscale x 4 x i32> @signed_wide_add_nxv4i32_nxv4i16(<vscale x 4 x i32> %acc, <vscale x 4 x i16> %input){
+; CHECK-SVE-LABEL: signed_wide_add_nxv4i32_nxv4i16:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    ptrue p0.s
+; CHECK-SVE-NEXT:    sxth z1.s, p0/m, z1.s
+; CHECK-SVE-NEXT:    add z0.s, z0.s, z1.s
+; CHECK-SVE-NEXT:    ret
+;
+; CHECK-SVE2-LABEL: signed_wide_add_nxv4i32_nxv4i16:
+; CHECK-SVE2:       // %bb.0: // %entry
+; CHECK-SVE2-NEXT:    saddwb z0.s, z0.s, z1.h
+; CHECK-SVE2-NEXT:    ret
+entry:
+    %input.wide = sext <vscale x 4 x i16> %input to <vscale x 4 x i32>
+    %partial.reduce = tail call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv8i32(<vscale x 4 x i32> %acc, <vscale x 4 x i32> %input.wide)
+    ret <vscale x 4 x i32> %partial.reduce
+}
+
+define <vscale x 4 x i32> @unsigned_wide_add_nxv4i32_nxv4i16(<vscale x 4 x i32> %acc, <vscale x 4 x i16> %input){
+; CHECK-SVE-LABEL: unsigned_wide_add_nxv4i32_nxv4i16:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    and z1.s, z1.s, #0xffff
+; CHECK-SVE-NEXT:    add z0.s, z0.s, z1.s
+; CHECK-SVE-NEXT:    ret
+;
+; CHECK-SVE2-LABEL: unsigned_wide_add_nxv4i32_nxv4i16:
+; CHECK-SVE2:       // %bb.0: // %entry
+; CHECK-SVE2-NEXT:    uaddwb z0.s, z0.s, z1.h
+; CHECK-SVE2-NEXT:    ret
+entry:
+    %input.wide = zext <vscale x 4 x i16> %input to <vscale x 4 x i32>
+    %partial.reduce = tail call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv8i32(<vscale x 4 x i32> %acc, <vscale x 4 x i32> %input.wide)
+    ret <vscale x 4 x i32> %partial.reduce
 }
 
 define <vscale x 4 x i32> @signed_wide_add_nxv8i16(<vscale x 4 x i32> %acc, <vscale x 8 x i16> %input){
@@ -53,8 +88,8 @@ define <vscale x 4 x i32> @signed_wide_add_nxv8i16(<vscale x 4 x i32> %acc, <vsc
 ;
 ; CHECK-SVE2-LABEL: signed_wide_add_nxv8i16:
 ; CHECK-SVE2:       // %bb.0: // %entry
-; CHECK-SVE2-NEXT:    saddwb z0.s, z0.s, z1.h
-; CHECK-SVE2-NEXT:    saddwt z0.s, z0.s, z1.h
+; CHECK-SVE2-NEXT:    ptrue p0.s
+; CHECK-SVE2-NEXT:    sadalp z0.s, p0/m, z1.h
 ; CHECK-SVE2-NEXT:    ret
 entry:
     %input.wide = sext <vscale x 8 x i16> %input to <vscale x 8 x i32>
@@ -73,8 +108,8 @@ define <vscale x 4 x i32> @unsigned_wide_add_nxv8i16(<vscale x 4 x i32> %acc, <v
 ;
 ; CHECK-SVE2-LABEL: unsigned_wide_add_nxv8i16:
 ; CHECK-SVE2:       // %bb.0: // %entry
-; CHECK-SVE2-NEXT:    uaddwb z0.s, z0.s, z1.h
-; CHECK-SVE2-NEXT:    uaddwt z0.s, z0.s, z1.h
+; CHECK-SVE2-NEXT:    ptrue p0.s
+; CHECK-SVE2-NEXT:    uadalp z0.s, p0/m, z1.h
 ; CHECK-SVE2-NEXT:    ret
 entry:
     %input.wide = zext <vscale x 8 x i16> %input to <vscale x 8 x i32>
@@ -93,8 +128,8 @@ define <vscale x 8 x i16> @signed_wide_add_nxv16i8(<vscale x 8 x i16> %acc, <vsc
 ;
 ; CHECK-SVE2-LABEL: signed_wide_add_nxv16i8:
 ; CHECK-SVE2:       // %bb.0: // %entry
-; CHECK-SVE2-NEXT:    saddwb z0.h, z0.h, z1.b
-; CHECK-SVE2-NEXT:    saddwt z0.h, z0.h, z1.b
+; CHECK-SVE2-NEXT:    ptrue p0.h
+; CHECK-SVE2-NEXT:    sadalp z0.h, p0/m, z1.b
 ; CHECK-SVE2-NEXT:    ret
 entry:
     %input.wide = sext <vscale x 16 x i8> %input to <vscale x 16 x i16>
@@ -113,8 +148,8 @@ define <vscale x 8 x i16> @unsigned_wide_add_nxv16i8(<vscale x 8 x i16> %acc, <v
 ;
 ; CHECK-SVE2-LABEL: unsigned_wide_add_nxv16i8:
 ; CHECK-SVE2:       // %bb.0: // %entry
-; CHECK-SVE2-NEXT:    uaddwb z0.h, z0.h, z1.b
-; CHECK-SVE2-NEXT:    uaddwt z0.h, z0.h, z1.b
+; CHECK-SVE2-NEXT:    ptrue p0.h
+; CHECK-SVE2-NEXT:    uadalp z0.h, p0/m, z1.b
 ; CHECK-SVE2-NEXT:    ret
 entry:
     %input.wide = zext <vscale x 16 x i8> %input to <vscale x 16 x i16>
@@ -137,8 +172,8 @@ define <vscale x 2 x i32> @signed_wide_add_nxv4i16(<vscale x 2 x i32> %acc, <vsc
 ; CHECK-SVE2:       // %bb.0: // %entry
 ; CHECK-SVE2-NEXT:    ptrue p0.s
 ; CHECK-SVE2-NEXT:    sxth z1.s, p0/m, z1.s
-; CHECK-SVE2-NEXT:    saddwb z0.d, z0.d, z1.s
-; CHECK-SVE2-NEXT:    saddwt z0.d, z0.d, z1.s
+; CHECK-SVE2-NEXT:    ptrue p0.d
+; CHECK-SVE2-NEXT:    sadalp z0.d, p0/m, z1.s
 ; CHECK-SVE2-NEXT:    ret
 entry:
     %input.wide = sext <vscale x 4 x i16> %input to <vscale x 4 x i32>
@@ -159,8 +194,8 @@ define <vscale x 2 x i32> @unsigned_wide_add_nxv4i16(<vscale x 2 x i32> %acc, <v
 ; CHECK-SVE2-LABEL: unsigned_wide_add_nxv4i16:
 ; CHECK-SVE2:       // %bb.0: // %entry
 ; CHECK-SVE2-NEXT:    and z1.s, z1.s, #0xffff
-; CHECK-SVE2-NEXT:    uaddwb z0.d, z0.d, z1.s
-; CHECK-SVE2-NEXT:    uaddwt z0.d, z0.d, z1.s
+; CHECK-SVE2-NEXT:    ptrue p0.d
+; CHECK-SVE2-NEXT:    uadalp z0.d, p0/m, z1.s
 ; CHECK-SVE2-NEXT:    ret
 entry:
     %input.wide = zext <vscale x 4 x i16> %input to <vscale x 4 x i32>
@@ -183,10 +218,9 @@ define <vscale x 4 x i64> @signed_wide_add_nxv8i32(<vscale x 4 x i64> %acc, <vsc
 ;
 ; CHECK-SVE2-LABEL: signed_wide_add_nxv8i32:
 ; CHECK-SVE2:       // %bb.0: // %entry
-; CHECK-SVE2-NEXT:    saddwb z1.d, z1.d, z3.s
-; CHECK-SVE2-NEXT:    saddwb z0.d, z0.d, z2.s
-; CHECK-SVE2-NEXT:    saddwt z1.d, z1.d, z3.s
-; CHECK-SVE2-NEXT:    saddwt z0.d, z0.d, z2.s
+; CHECK-SVE2-NEXT:    ptrue p0.d
+; CHECK-SVE2-NEXT:    sadalp z0.d, p0/m, z2.s
+; CHECK-SVE2-NEXT:    sadalp z1.d, p0/m, z3.s
 ; CHECK-SVE2-NEXT:    ret
 entry:
     %input.wide = sext <vscale x 8 x i32> %input to <vscale x 8 x i64>
@@ -209,10 +243,9 @@ define <vscale x 4 x i64> @unsigned_wide_add_nxv8i32(<vscale x 4 x i64> %acc, <v
 ;
 ; CHECK-SVE2-LABEL: unsigned_wide_add_nxv8i32:
 ; CHECK-SVE2:       // %bb.0: // %entry
-; CHECK-SVE2-NEXT:    uaddwb z1.d, z1.d, z3.s
-; CHECK-SVE2-NEXT:    uaddwb z0.d, z0.d, z2.s
-; CHECK-SVE2-NEXT:    uaddwt z1.d, z1.d, z3.s
-; CHECK-SVE2-NEXT:    uaddwt z0.d, z0.d, z2.s
+; CHECK-SVE2-NEXT:    ptrue p0.d
+; CHECK-SVE2-NEXT:    uadalp z0.d, p0/m, z2.s
+; CHECK-SVE2-NEXT:    uadalp z1.d, p0/m, z3.s
 ; CHECK-SVE2-NEXT:    ret
 entry:
     %input.wide = zext <vscale x 8 x i32> %input to <vscale x 8 x i64>

@@ -370,6 +370,10 @@ struct LLVM_ABI InstrumentationConfig {
         *this, "host_enabled", "Instrument non-GPU targets", true);
     GPUEnabled = BaseConfigurationOption::createBoolOption(
         *this, "gpu_enabled", "Instrument GPU targets", true);
+    RuntimeBitcode = BaseConfigurationOption::createStringOption(
+        *this, "runtime_bitcode", "Link runtime bitcode", "");
+    InlineRuntimeEagerly = BaseConfigurationOption::createBoolOption(
+        *this, "inline_runtime", "Inline runtime function calls eagerly", true);
     populate(IIRB);
   }
 
@@ -441,6 +445,8 @@ struct LLVM_ABI InstrumentationConfig {
   std::unique_ptr<BaseConfigurationOption> FunctionRegex;
   std::unique_ptr<BaseConfigurationOption> HostEnabled;
   std::unique_ptr<BaseConfigurationOption> GPUEnabled;
+  std::unique_ptr<BaseConfigurationOption> RuntimeBitcode;
+  std::unique_ptr<BaseConfigurationOption> InlineRuntimeEagerly;
 
   /// The map registered instrumentation opportunities. The map is indexed by
   /// the instrumentation location kind and then by the opportunity name. Notice

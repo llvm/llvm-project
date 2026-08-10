@@ -168,7 +168,7 @@ struct ConvertToGroupNonUniformBallot : RewritePattern {
                                 PatternRewriter &rewriter) const override {
     Value predicate = op->getOperand(0);
     rewriter.replaceOpWithNewOp<spirv::GroupNonUniformBallotOp>(
-        op, op->getResult(0).getType(), spirv::Scope::Workgroup, predicate);
+        op, op->getResult(0).getType(), spirv::Scope::Subgroup, predicate);
     return success();
   }
 };

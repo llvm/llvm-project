@@ -12,7 +12,8 @@ def FUNC_DEFAULT : RuntimeLibcall;
 def impl_aapcs : RuntimeLibcallImpl<FUNC_AAPCS>;
 def impl_default : RuntimeLibcallImpl<FUNC_DEFAULT>;
 
-def isWin : RuntimeLibcallAvailability<[{TT.isOSWindows()}]>;
+def IsWin : LibcallPredicate<[{TT.isOSWindows()}]>;
+def isWin : RuntimeLibcallAvailability<(all_of IsWin)>;
 
 def WinLibrary : SystemRuntimeLibrary<isWin,
   (add LibcallsWithCC<(add impl_aapcs), ARM_AAPCS, isWin>,

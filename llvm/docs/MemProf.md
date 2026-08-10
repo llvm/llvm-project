@@ -30,10 +30,10 @@ To enable MemProf instrumentation, compile your application with the `-fmemory-p
 clang++ -fmemory-profile -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -fno-optimize-sibling-calls -fdebug-info-for-profiling -gmlt -O2 -fno-pie -no-pie -Wl,-z,noseparate-code -Wl,--build-id source.cpp -o app
 ```
 
-```{note}
+:::{note}
 Link with `-fmemory-profile` as well to link the necessary runtime libraries. If you use a separate link step, ensure the flag is passed to the linker.
 On Linux, the flags `-fno-pie -no-pie -Wl,-z,noseparate-code -Wl,--build-id` are currently required to ensure the binary layout (executable segment at offset 0) and Build ID presence are compatible with the `llvm-profdata` profile reader.
-```
+:::
 
 ### Running and Generating Profiles
 
@@ -83,10 +83,10 @@ opt -passes='memprof-use<profile-filename=memprof.memprofdata>' ...
 
 The compiler uses the profile data to annotate allocation instructions with `!memprof` metadata ([MemProf Metadata Documentation](https://llvm.org/docs/LangRef.html#memprof-metadata)), distinguishing between "hot", "cold", and "notcold" allocations. This metadata guides downstream optimizations. Additionally, callsites which are part of allocation contexts are also annotated with `!callsite` metadata ([Callsite Metadata Documentation](https://llvm.org/docs/LangRef.html#callsite-metadata)).
 
-```{note}
+:::{note}
 Ensure that the same debug info flags (e.g. `-gmlt` and `-fdebug-info-for-profiling`) used during instrumentation are also passed during this compilation step to enable correct matching of the profile data.
 For the optimized binary to fully utilize the hot/cold hinting, it must be linked with an allocator that supports this mechanism, such as [tcmalloc](https://github.com/google/tcmalloc). TCMalloc provides an API (`tcmalloc::hot_cold_t`) that accepts a hint (0 for cold, 255 for hot) to guide data placement and improve locality. To indicate that the library supports these interfaces, the `-mllvm -supports-hot-cold-new` flag is used during the LTO link.
-```
+:::
 
 ### Context Disambiguation (LTO)
 
@@ -138,7 +138,7 @@ clang++ -fmemory-profile-use=memprof.memprofdata -fpartition-static-data-section
 
 The optimized layout clusters hot static data, improving dTLB and cache efficiency.
 
-```{note}
+:::{note}
 When both PGO profiles and memory profiles are provided (using
 `-fprofile-use` and `-fmemory-profile-use`), global variable hotness are
 inferred from a combination of PGO profile and data access profile:
@@ -150,7 +150,7 @@ inferred from a combination of PGO profile and data access profile:
   profile. Most notably, symbolizable data with external linkage is only
   covered by data access profile, and module-internal unsymbolizable data is
   only covered by PGO profile.
-```
+:::
 
 ## Developer Manual
 

@@ -70,12 +70,12 @@ define i64 @extract_any_extend_vector_inreg_v16i64(<16 x i64> %a0, i32 %a1) noun
 ; X86-AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X86-AVX-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%esp)
 ; X86-AVX-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%esp)
-; X86-AVX-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%esp)
 ; X86-AVX-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%esp)
 ; X86-AVX-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%esp)
 ; X86-AVX-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%esp)
+; X86-AVX-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%esp)
+; X86-AVX-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%esp)
 ; X86-AVX-NEXT:    vmovaps %ymm1, (%esp)
-; X86-AVX-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%esp)
 ; X86-AVX-NEXT:    leal 1(%eax,%eax), %ecx
 ; X86-AVX-NEXT:    andl $15, %eax
 ; X86-AVX-NEXT:    movl 128(%esp,%eax,8), %eax

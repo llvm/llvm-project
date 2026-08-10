@@ -317,7 +317,8 @@ def warn_stack_clash_protection_inline_asm : Warning<
 
 def warn_stack_protection_ignore_attribute : Warning<
   "'stack_protector_ignore' attribute ignored due to "
-  "'-fstack-protector-all' option">, InGroup<IgnoredAttributes>;
+  "'-fstack-protector-all' option">, InGroup<IgnoredAttributes>,
+  SuppressInSystemMacro;
 
 def warn_slh_does_not_support_asm_goto : Warning<
   "speculative load hardening does not protect functions with asm goto">,
@@ -455,6 +456,8 @@ def warn_omp_gpu_unsupported_clause: Warning<
 def warn_omp_gpu_unsupported_modifier_for_clause: Warning<
   "modifier '%0' is currently not supported on a GPU for the '%1' clause; modifier ignored">,
   InGroup<OpenMPClauses>;
+def err_omp_unified_shared_memory_unsupported : Error<
+  "target architecture '%0' does not support unified addressing">;
 
 // Static Analyzer Core
 def err_unknown_analyzer_checker_or_package : Error<

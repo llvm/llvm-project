@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -verify=expected,le50 -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge50,le50 -fopenmp %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,le45 -fopenmp-version=40 -fopenmp %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,le45 -fopenmp-version=45 -fopenmp %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify=expected,le50 -fopenmp-simd %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge50,le50 -fopenmp-simd %s -Wuninitialized
 
 typedef void **omp_allocator_handle_t;
 extern const omp_allocator_handle_t omp_null_allocator;
@@ -101,7 +101,7 @@ int foomain(int argc, char **argv) {
 #pragma omp target teams distribute simd lastprivate(argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name}}
   for (int k = 0; k < argc; ++k) ++k;
 
-#pragma omp target teams distribute simd lastprivate(argc) allocate , allocate(, allocate(omp_default , allocate(omp_default_mem_alloc, allocate(omp_default_mem_alloc:, allocate(omp_default_mem_alloc: argc, allocate(omp_default_mem_alloc: argv), allocate(argv) // expected-error {{expected '(' after 'allocate'}} expected-error 2 {{expected expression}} expected-error 2 {{expected ')'}} expected-error {{use of undeclared identifier 'omp_default'}} expected-note 2 {{to match this '('}}
+#pragma omp target teams distribute simd lastprivate(argc) allocate , allocate(, allocate(omp_default , allocate(omp_default_mem_alloc, allocate(omp_default_mem_alloc:, allocate(omp_default_mem_alloc: argc, allocate(omp_default_mem_alloc: argv), allocate(argv) // expected-error {{expected '(' after 'allocate'}} expected-error 2 {{expected expression}} expected-error 2 {{expected ')'}} expected-error {{use of undeclared identifier 'omp_default'}} expected-note 2 {{to match this '('}} le45-error 2 {{unexpected OpenMP clause 'allocate' in directive '#pragma omp target teams distribute simd'}}
   for (int k = 0; k < argc; ++k) ++k;
 
 #pragma omp target teams distribute simd lastprivate(conditional: argc) lastprivate(conditional: // expected-error 2 {{use of undeclared identifier 'conditional'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
@@ -123,7 +123,7 @@ int foomain(int argc, char **argv) {
   for (int k = 0; k < argc; ++k) ++k;
 
   int v = 0;
-#pragma omp target teams distribute simd allocate(omp_thread_mem_alloc: i) lastprivate(i) // expected-warning {{allocator with the 'thread' trait access has unspecified behavior on 'target teams distribute simd' directive}} le50-error {{allocator must be specified in the 'uses_allocators' clause}}
+#pragma omp target teams distribute simd allocate(omp_thread_mem_alloc: i) lastprivate(i) // ge50-warning {{allocator with the 'thread' trait access has unspecified behavior on 'target teams distribute simd' directive}} le50-error {{allocator must be specified in the 'uses_allocators' clause}} le45-error {{unexpected OpenMP clause 'allocate' in directive '#pragma omp target teams distribute simd'}}
   for (int k = 0; k < argc; ++k) {
     i = k;
     v += i;

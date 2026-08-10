@@ -21,6 +21,7 @@ static_library("CPlusPlus") {
   sources = [
     "CPPLanguageRuntime.cpp",
     "CommandObjectCPlusPlus.cpp",
+    "CommonABIRuntime.cpp",
     "ItaniumABIRuntime.cpp",
     "VerboseTrapFrameRecognizer.cpp",
   ]

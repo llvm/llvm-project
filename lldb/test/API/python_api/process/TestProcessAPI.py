@@ -374,6 +374,7 @@ class ProcessAPITestCase(TestBase):
 
     @no_debug_info_test
     @skipIfRemote
+    @skipIfWasm  # the Wasm platform cannot look a process up by its id
     def test_get_process_info(self):
         """Test SBProcess::GetProcessInfo() API with a locally launched process."""
         self.build()
@@ -463,6 +464,7 @@ class ProcessAPITestCase(TestBase):
         process_info.GetParentProcessID()
 
     @expectedFailureWindows  # Not yet implemented.
+    @skipIfWasm  # the Wasm platform cannot look a process up by its id
     def test_get_process_info_arguments(self):
         """Test SBProcessInfo Arguments returns the correct values."""
         self.build()
@@ -495,6 +497,7 @@ class ProcessAPITestCase(TestBase):
         self.assertEqual(process_info.GetArgumentAtIndex(3), "מזל טוב")
         self.assertEqual(process_info.GetArgumentAtIndex(4), None)
 
+    @skipIfWasm  # the test reads the allocation back with an expression
     def test_allocate_deallocate_memory(self):
         """Test Python SBProcess.AllocateMemory() and SBProcess.DeallocateMemory() APIs."""
         self.build()

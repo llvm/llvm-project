@@ -2805,9 +2805,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   ltoCompilationDone = true;
   ctx.forEachSymtab([](SymbolTable &symtab) { symtab.compileBitcodeFiles(); });
 
-  if (Defined *d =
-          dyn_cast_or_null<Defined>(ctx.symtab.findUnderscore("_tls_used")))
-    config->gcroot.push_back(d);
+  ctx.forEachSymtab([&](SymbolTable &symtab) {
+    if (Defined *d =
+            dyn_cast_or_null<Defined>(symtab.findUnderscore("_tls_used")))
+      config->gcroot.push_back(d);
+  });
 
   // If -thinlto-index-only is given, we should create only "index
   // files" and not object files. Index file creation is already done
@@ -2836,6 +2838,22 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   if (errorCount())
     return;
+
+  if (ctx.hybridSymtab) {
+    // On ARM64X, merge tls chunks, there may be only one true _tls_start and
+    // _tls_end chunk.
+    auto maybeReplaceWithNative = [&](StringRef name) {
+      auto nativeSym = dyn_cast_or_null<DefinedRegular>(
+          ctx.hybridSymtab->findUnderscore(name));
+      if (!nativeSym)
+        return;
+      if (auto ecSym =
+              dyn_cast_or_null<DefinedRegular>(ctx.symtab.findUnderscore(name)))
+        nativeSym->getChunk()->replace(ecSym->getChunk());
+    };
+    maybeReplaceWithNative("_tls_start");
+    maybeReplaceWithNative("_tls_end");
+  }
 
   ctx.forEachActiveSymtab([](SymbolTable &symtab) {
     symtab.initializeECThunks();

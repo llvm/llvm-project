@@ -134,8 +134,8 @@ ASTNodeUP DILParser::ParseExpression() { return ParseAssignmentExpression(); }
 // Parse an assignment_expression
 //
 //  assignment_expression
-//    shift_expression
-//    shift_expression assignment_operator assignment_expression
+//    inclusive_or_expression
+//    inclusive_or_expression assignment_operator assignment_expression
 //
 //  assignment_operator:
 //    "="
@@ -143,7 +143,7 @@ ASTNodeUP DILParser::ParseExpression() { return ParseAssignmentExpression(); }
 //    "-="
 //
 ASTNodeUP DILParser::ParseAssignmentExpression() {
-  auto lhs = ParseShiftExpression();
+  auto lhs = ParseInclusiveOrExpression();
   assert(lhs && "ASTNodeUP must not contain a nullptr");
 
   // Check if it's an assignment expression.
@@ -157,6 +157,77 @@ ASTNodeUP DILParser::ParseAssignmentExpression() {
         token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
         std::move(lhs), std::move(rhs));
   }
+  return lhs;
+}
+
+// Parse an inclusive_or_expression.
+//
+//  inclusive_or_expression:
+//    exclusive_or_expression {"|" exclusive_or_expression}
+//
+ASTNodeUP DILParser::ParseInclusiveOrExpression() {
+  auto lhs = ParseExclusiveOrExpression();
+  assert(lhs && "ASTNodeUP must not contain a nullptr");
+
+  while (CurToken().Is(Token::pipe)) {
+    Token token = CurToken();
+    m_dil_lexer.Advance();
+    auto rhs = ParseExclusiveOrExpression();
+    assert(rhs && "ASTNodeUP must not contain a nullptr");
+    lhs = std::make_unique<BinaryOpNode>(
+        token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
+        std::move(lhs), std::move(rhs));
+  }
+
+  return lhs;
+}
+
+// Parse an exclusive_or_expression.
+//
+//  exclusive_or_expression:
+//    and_expression {"^" and_expression}
+//
+ASTNodeUP DILParser::ParseExclusiveOrExpression() {
+  auto lhs = ParseAndExpression();
+  assert(lhs && "ASTNodeUP must not contain a nullptr");
+
+  while (CurToken().Is(Token::caret)) {
+    Token token = CurToken();
+    m_dil_lexer.Advance();
+    auto rhs = ParseAndExpression();
+    assert(rhs && "ASTNodeUP must not contain a nullptr");
+    lhs = std::make_unique<BinaryOpNode>(
+        token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
+        std::move(lhs), std::move(rhs));
+  }
+
+  return lhs;
+}
+
+// Parse an and_expression.
+//
+//  and_expression:
+//    shift_expression {"&" shift_expression}
+//
+ASTNodeUP DILParser::ParseAndExpression() {
+  auto lhs = ParseShiftExpression();
+  assert(lhs && "ASTNodeUP must not contain a nullptr");
+
+  while (CurToken().Is(Token::amp)) {
+    Token token = CurToken();
+    if (token.Is(Token::amp) && m_mode != lldb::eDILModeFull) {
+      BailOut("bitwise and (&) is allowed only in DIL full mode",
+              token.GetLocation(), token.GetSpelling().length());
+      return std::make_unique<ErrorNode>();
+    }
+    m_dil_lexer.Advance();
+    auto rhs = ParseShiftExpression();
+    assert(rhs && "ASTNodeUP must not contain a nullptr");
+    lhs = std::make_unique<BinaryOpNode>(
+        token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
+        std::move(lhs), std::move(rhs));
+  }
+
   return lhs;
 }
 
@@ -293,10 +364,11 @@ ASTNodeUP DILParser::ParseCastExpression() {
 //    "*"
 //    "+"
 //    "-"
+//    "~"
 //
 ASTNodeUP DILParser::ParseUnaryExpression() {
   if (CurToken().IsOneOf(
-          {Token::amp, Token::star, Token::minus, Token::plus})) {
+          {Token::amp, Token::star, Token::minus, Token::plus, Token::tilde})) {
     Token token = CurToken();
     uint32_t loc = token.GetLocation();
     m_dil_lexer.Advance();
@@ -314,6 +386,9 @@ ASTNodeUP DILParser::ParseUnaryExpression() {
                                            std::move(rhs));
     case Token::plus:
       return std::make_unique<UnaryOpNode>(loc, UnaryOpKind::Plus,
+                                           std::move(rhs));
+    case Token::tilde:
+      return std::make_unique<UnaryOpNode>(loc, UnaryOpKind::Not,
                                            std::move(rhs));
     default:
       llvm_unreachable("invalid token kind");

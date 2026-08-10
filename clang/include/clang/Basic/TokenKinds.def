@@ -913,7 +913,7 @@ ANNOTATION(repl_input_end)
 // Annotation for #embed
 ANNOTATION(embed)
 
-#include "clang/Basic/Traits.inc"
+#include "clang/Basic/BuiltinTraits.inc"
 
 #undef PRAGMA_ANNOTATION
 #undef ANNOTATION

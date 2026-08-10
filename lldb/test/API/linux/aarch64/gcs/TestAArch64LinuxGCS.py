@@ -13,7 +13,7 @@ class AArch64LinuxGCSTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipUnlessArch("aarch64")
-    @skipUnlessPlatform(["linux"])
+    @requireLinux
     def test_gcs_region(self):
         if not self.isAArch64GCS():
             self.skipTest("Target must support GCS.")
@@ -62,7 +62,7 @@ class AArch64LinuxGCSTestCase(TestBase):
         # cleanly if GCS was manually enabled.
 
     @skipUnlessArch("aarch64")
-    @skipUnlessPlatform(["linux"])
+    @requireLinux
     def test_gcs_fault(self):
         if not self.isAArch64GCS():
             self.skipTest("Target must support GCS.")
@@ -118,7 +118,7 @@ class AArch64LinuxGCSTestCase(TestBase):
         return gcs_features_enabled, gcs_features_locked, gcspr_el0
 
     @skipUnlessArch("aarch64")
-    @skipUnlessPlatform(["linux"])
+    @requireLinux
     def test_gcs_registers(self):
         if not self.isAArch64GCS():
             self.skipTest("Target must support GCS.")
@@ -239,7 +239,7 @@ class AArch64LinuxGCSTestCase(TestBase):
             ],
         )
 
-    @skipUnlessPlatform(["linux"])
+    @requireLinux
     def test_gcs_expression_simple(self):
         if not self.isAArch64GCS():
             self.skipTest("Target must support GCS.")
@@ -303,7 +303,7 @@ class AArch64LinuxGCSTestCase(TestBase):
         self.expect(expr_cmd, substrs=["(unsigned long) 1"])
         self.check_gcs_registers(*before)
 
-    @skipUnlessPlatform(["linux"])
+    @requireLinux
     def test_gcs_expression_disable_gcs(self):
         if not self.isAArch64GCS():
             self.skipTest("Target must support GCS.")
@@ -343,7 +343,7 @@ class AArch64LinuxGCSTestCase(TestBase):
         enabled &= ~1
         self.check_gcs_registers(enabled, locked, spr_el0)
 
-    @skipUnlessPlatform(["linux"])
+    @requireLinux
     def test_gcs_expression_enable_gcs(self):
         if not self.isAArch64GCS():
             self.skipTest("Target must support GCS.")

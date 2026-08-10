@@ -19,10 +19,18 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "lldb/API/LLDB.h"
+#include "lldb/API/SBBreakpoint.h"
+#include "lldb/API/SBBroadcaster.h"
 #include "lldb/API/SBCommandInterpreter.h"
-#include "lldb/API/SBCommandReturnObject.h"
 #include "lldb/API/SBDebugger.h"
+#include "lldb/API/SBError.h"
+#include "lldb/API/SBEvent.h"
+#include "lldb/API/SBFrame.h"
+#include "lldb/API/SBLaunchInfo.h"
+#include "lldb/API/SBListener.h"
+#include "lldb/API/SBProcess.h"
+#include "lldb/API/SBTarget.h"
+#include "lldb/API/SBThread.h"
 
 #include <chrono>
 #include <csignal>

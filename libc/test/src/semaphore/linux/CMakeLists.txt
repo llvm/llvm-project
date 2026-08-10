@@ -1,6 +1,6 @@
 add_custom_target(libc_semaphore_unittests)
 
-add_libc_unittest(
+add_libc_test(
   semaphore_test
   SUITE
     libc_semaphore_unittests

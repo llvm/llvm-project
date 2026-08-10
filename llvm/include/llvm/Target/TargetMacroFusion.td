@@ -103,10 +103,19 @@ def OneUse : OneUsePred;
 // ```
 //
 // `IsCommutable` means whether we should handle commutable operands.
+//
+// `RunPreRA` and `RunPostRA` control in which scheduling stage the fusion
+// is allowed to fire. MacroFusion runs in both the pre-RA and post-RA machine
+// schedulers; by default a fusion participates in both. Setting one of them to
+// `false` makes the generated predicator return `false` early during that
+// stage (detected via the `NoVRegs` machine function property). At least one
+// of the two must be `true`.
 class Fusion<string name, string fieldName, string desc, list<FusionPredicate> predicates>
   : SubtargetFeature<"fusion-" # name, fieldName, "true", desc> {
   list<FusionPredicate> Predicates = predicates;
   bit IsCommutable = 0;
+  bit RunPreRA = true;
+  bit RunPostRA = true;
 }
 
 // The generated predicator will be like:

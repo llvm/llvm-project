@@ -1787,6 +1787,9 @@ SDValue SelectionDAGLegalize::ExpandFABS(SDNode *Node) const {
     return DAG.getNode(ISD::FCOPYSIGN, DL, FloatVT, Value, Zero);
   }
 
+  if (FloatVT.isVector())
+    return DAG.UnrollVectorOp(Node);
+
   // Transform value to integer, clear the sign bit and transform back.
   FloatSignAsInt ValueAsInt;
   getSignAsIntValue(ValueAsInt, DL, Value);
@@ -2161,7 +2164,10 @@ SelectionDAGLegalize::ExpandLibCall(RTLIB::Libcall LC, SDNode *Node,
   const Function &F = DAG.getMachineFunction().getFunction();
   bool isTailCall =
       TLI.isInTailCallPosition(DAG, Node, TCChain) &&
-      (RetTy == F.getReturnType() || F.getReturnType()->isVoidTy());
+      (RetTy == F.getReturnType() || F.getReturnType()->isVoidTy()) &&
+      // Lowering doesn't support tail calling inside a function with
+      // a swifterror argument yet.
+      !DAG.hasSwiftErrorArg();
   if (isTailCall)
     InChain = TCChain;
 

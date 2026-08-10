@@ -81,18 +81,16 @@ func.func @inline_to_loop(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "
     %12 = arith.muli %10, %11 : i32
     hlfir.yield_element %12 : i32
   }
-  %array = fir.array_load %0#0 : (!fir.box<!fir.array<?xi32>>) -> !fir.array<?xi32>
   %c1 = arith.constant 1 : index
   %max = arith.subi %4#1, %c1 : index
-  %7 = fir.do_loop %arg4 = %c0 to %max step %c1 unordered iter_args(%arg5 = %array) -> (!fir.array<?xi32>) {
+  fir.do_loop %arg4 = %c0 to %max step %c1 unordered {
     %8 = hlfir.apply %6, %arg4 : (!hlfir.expr<?xi32>, index) -> i32
     %9 = hlfir.designate %3#0 (%arg4)  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
     %10 = fir.load %9 : !fir.ref<i32>
     %11 = arith.addi %8, %10 : i32
-    %12 = fir.array_update %arg5, %11, %arg4 : (!fir.array<?xi32>, i32, index) -> !fir.array<?xi32>
-    fir.result %12 : !fir.array<?xi32>
+    %12 = hlfir.designate %0#0 (%arg4)  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+    fir.store %11 to %12 : !fir.ref<i32>
   }
-  fir.array_merge_store %array, %7 to %arg0 : !fir.array<?xi32>, !fir.array<?xi32>, !fir.box<!fir.array<?xi32>>
   hlfir.destroy %6 : !hlfir.expr<?xi32>
   return
 }
@@ -108,9 +106,8 @@ func.func @inline_to_loop(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "
 // CHECK-DAG:     %[[C:.*]]:2 = hlfir.declare %[[C_ARG]]
 // CHECK-DAG:     %[[D:.*]]:2 = hlfir.declare %[[D_ARG]]
 // CHECK-NEXT:    %[[B_DIM0:.*]]:3 = fir.box_dims %[[B]]#0, %[[C0]]
-// CHECK-NEXT:    %[[ARRAY:.*]] = fir.array_load %[[A]]#0
 // CHECK-NEXT:    %[[MAX:.*]] = arith.subi %[[B_DIM0]]#1, %[[C1]]
-// CHECK-NEXT:    %[[LOOP:.*]] = fir.do_loop %[[I:.*]] = %[[C0]] to %[[MAX]] step %[[C1]] unordered iter_args(%[[LOOP_ARRAY:.*]] = %[[ARRAY]])
+// CHECK-NEXT:    fir.do_loop %[[I:.*]] = %[[C0]] to %[[MAX]] step %[[C1]] unordered {
 // inline the elemental:
 // CHECK-NEXT:      %[[B_I_REF:.*]] = hlfir.designate %[[B]]#0 (%[[I]])
 // CHECK-NEXT:      %[[C_I_REF:.*]] = hlfir.designate %[[C]]#0 (%[[I]])
@@ -121,10 +118,9 @@ func.func @inline_to_loop(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "
 // CHECK-NEXT:      %[[D_I_REF:.*]] = hlfir.designate %[[D]]#0 (%[[I]])
 // CHECK-NEXT:      %[[D_I:.*]] = fir.load %[[D_I_REF]]
 // CHECK-NEXT:      %[[ADD:.*]] = arith.addi %[[MUL]], %[[D_I]]
-// CHECK-NEXT:      %[[ARRAY_UPD:.*]] = fir.array_update %[[LOOP_ARRAY]], %[[ADD]], %[[I]]
-// CHECK-NEXT:      fir.result %[[ARRAY_UPD]]
+// CHECK-NEXT:      %[[A_I_REF:.*]] = hlfir.designate %[[A]]#0 (%[[I]])
+// CHECK-NEXT:      fir.store %[[ADD]] to %[[A_I_REF]]
 // CHECK-NEXT:    }
-// CHECK-NEXT:    fir.array_merge_store %[[ARRAY]], %[[LOOP]] to %[[A_ARG]]
 // CHECK-NEXT:    return
 // CHECK-NEXT:  }
 

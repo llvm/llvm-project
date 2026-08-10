@@ -1749,7 +1749,7 @@ float64x2_t test_vmaxnmq_f64(float64x2_t v1, float64x2_t v2) {
 // LLVM-LABEL: @test_vsqrt_f32(
 // CIR-LABEL: @vsqrt_f32(
 float32x2_t test_vsqrt_f32(float32x2_t a) {
-// CIR: cir.call_llvm_intrinsic "sqrt" %{{.*}} : (!cir.vector<2 x !cir.float>) -> !cir.vector<2 x !cir.float>
+// CIR: cir.sqrt %{{.*}} : !cir.vector<2 x !cir.float>
 
 // LLVM-SAME: <2 x float> {{.*}} [[A:%.*]]) {{.*}} {
 // LLVM:    [[TMP0:%.*]] = bitcast <2 x float> [[A]] to <2 x i32>
@@ -1763,7 +1763,7 @@ float32x2_t test_vsqrt_f32(float32x2_t a) {
 // LLVM-LABEL: @test_vsqrtq_f32(
 // CIR-LABEL: @vsqrtq_f32(
 float32x4_t test_vsqrtq_f32(float32x4_t a) {
-// CIR: cir.call_llvm_intrinsic "sqrt" %{{.*}} : (!cir.vector<4 x !cir.float>) -> !cir.vector<4 x !cir.float>
+// CIR: cir.sqrt %{{.*}} : !cir.vector<4 x !cir.float>
 
 // LLVM-SAME: <4 x float> {{.*}} [[A:%.*]]) {{.*}} {
 // LLVM:    [[TMP0:%.*]] = bitcast <4 x float> [[A]] to <4 x i32>
@@ -1777,7 +1777,7 @@ float32x4_t test_vsqrtq_f32(float32x4_t a) {
 // LLVM-LABEL: @test_vsqrt_f64(
 // CIR-LABEL: @vsqrt_f64(
 float64x1_t test_vsqrt_f64(float64x1_t a) {
-// CIR: cir.call_llvm_intrinsic "sqrt" %{{.*}} : (!cir.vector<1 x !cir.double>) -> !cir.vector<1 x !cir.double>
+// CIR: cir.sqrt %{{.*}} : !cir.vector<1 x !cir.double>
 
 // LLVM-SAME: <1 x double> {{.*}} [[A:%.*]]) {{.*}} {
 // LLVM:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
@@ -1792,7 +1792,7 @@ float64x1_t test_vsqrt_f64(float64x1_t a) {
 // LLVM-LABEL: @test_vsqrtq_f64(
 // CIR-LABEL: @vsqrtq_f64(
 float64x2_t test_vsqrtq_f64(float64x2_t a) {
-// CIR: cir.call_llvm_intrinsic "sqrt" %{{.*}} : (!cir.vector<2 x !cir.double>) -> !cir.vector<2 x !cir.double>
+// CIR: cir.sqrt %{{.*}} : !cir.vector<2 x !cir.double>
 
 // LLVM-SAME: <2 x double> {{.*}} [[A:%.*]]) {{.*}} {
 // LLVM:    [[TMP0:%.*]] = bitcast <2 x double> [[A]] to <2 x i64>
@@ -7251,7 +7251,6 @@ float64x2_t test_vrndnq_f64(float64x2_t a) {
 // LLVM-LABEL: @test_vrndns_f32(
 // CIR-LABEL: @vrndns_f32(
 float32_t test_vrndns_f32(float32_t a) {
-// CIR: cir.load {{.*}} : !cir.ptr<!cir.float>, !cir.float
 // CIR: [[LOAD:%.*]] = cir.load {{.*}} : !cir.ptr<!cir.float>, !cir.float
 // CIR: cir.roundeven [[LOAD]] : !cir.float
 

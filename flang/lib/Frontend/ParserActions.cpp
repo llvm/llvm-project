@@ -91,7 +91,8 @@ struct MeasurementVisitor {
 
 void debugMeasureParseTree(CompilerInstance &ci, llvm::StringRef filename) {
   // Parse. In case of failure, report and return.
-  ci.getParsing().Parse(llvm::outs());
+  const common::LangOptions &langOptions = ci.getInvocation().getLangOpts();
+  ci.getParsing().Parse(llvm::outs(), langOptions);
 
   if ((ci.getParsing().parseTree().has_value() &&
        !ci.getParsing().consumedWholeFile()) ||
@@ -146,7 +147,8 @@ void debugUnparseWithModules(CompilerInstance &ci) {
 }
 
 void debugDumpParsingLog(CompilerInstance &ci) {
-  ci.getParsing().Parse(llvm::errs());
+  const common::LangOptions &langOptions = ci.getInvocation().getLangOpts();
+  ci.getParsing().Parse(llvm::errs(), langOptions);
   ci.getParsing().DumpParsingLog(llvm::outs());
 }
 } // namespace Fortran::frontend

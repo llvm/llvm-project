@@ -15,6 +15,7 @@
 #include <valarray>
 #include <cassert>
 
+#include "operator_hijacker.h"
 #include "test_macros.h"
 
 int main(int, char**)
@@ -28,6 +29,11 @@ int main(int, char**)
         {
             assert(v[i] == a[i]);
         }
+    }
+    {
+      const std::valarray<operator_hijacker> v(1);
+      const operator_hijacker& r = v[0];
+      (void)r;
     }
 
   return 0;

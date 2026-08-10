@@ -843,6 +843,8 @@ void HLSLExternalSemaSource::defineHLSLAtomicIntrinsics() {
                             "__builtin_hlsl_interlocked_add");
   defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedOr",
                             "__builtin_hlsl_interlocked_or");
+  defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedXor",
+                            "__builtin_hlsl_interlocked_xor");
 }
 
 void HLSLExternalSemaSource::onCompletion(CXXRecordDecl *Record,

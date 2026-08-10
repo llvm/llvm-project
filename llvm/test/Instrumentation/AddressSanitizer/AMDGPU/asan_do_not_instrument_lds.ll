@@ -1,5 +1,5 @@
 ; RUN: opt < %s -passes=asan -S | FileCheck %s
-target triple = "amdgcn-amd-amdhsa"
+target triple = "amdgpu7.00-amd-amdhsa"
 
 ; Memory access to lds are not instrumented
 

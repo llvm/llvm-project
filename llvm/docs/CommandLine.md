@@ -922,12 +922,12 @@ cl::opt<bool> Quiet("quiet");
   defaults to the value created by the default constructor for the
   type.
 
-```{warning}
+:::{warning}
 If you specify both **cl::init** and **cl::location** for an option, you
 must specify **cl::location** first, so that when the command-line parser
 sees **cl::init**, it knows where to put the initial value. (You will get an
 error at runtime if you don't put them in the right order.)
-```
+:::
 
 (cl::location)=
 
@@ -1695,14 +1695,14 @@ library. Examples of this include the `llvm::DebugFlag` exported by the
 `lib/Support/Debug.cpp` file and the `llvm::TimePassesIsEnabled` flag
 exported by the `lib/IR/PassManager.cpp` file.
 
-```{todo}
+:::{todo}
 TODO: complete this section
-```
+:::
 
 (dynamically loaded options)=
 
 ### Dynamically adding command line options
 
-```{todo}
+:::{todo}
 TODO: fill in this section
-```
+:::

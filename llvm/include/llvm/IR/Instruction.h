@@ -54,9 +54,6 @@ class InsertPosition {
 
 public:
   InsertPosition(std::nullptr_t) : InsertAt() {}
-  LLVM_ABI LLVM_DEPRECATED("Use BasicBlock::iterators for insertion instead",
-                           "BasicBlock::iterator")
-      InsertPosition(Instruction *InsertBefore);
   LLVM_ABI InsertPosition(BasicBlock *InsertAtEnd);
   InsertPosition(InstListType::iterator InsertAt) : InsertAt(InsertAt) {}
   operator InstListType::iterator() const { return InsertAt; }

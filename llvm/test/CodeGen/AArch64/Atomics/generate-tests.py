@@ -209,6 +209,7 @@ def align(val, aligned: bool) -> int:
 def all_atomicrmw(f, datatype, atomicrmw_ops, featname):
     instr = "atomicrmw"
     generate_unused = False
+    attrs = " #0" if featname == "lsfe" else ""
     tests = []
     for op in atomicrmw_ops:
         for aligned in Aligned:
@@ -219,7 +220,7 @@ def all_atomicrmw(f, datatype, atomicrmw_ops, featname):
                     tests.append(
                         textwrap.dedent(
                             f"""
-                        define dso_local {ty} @{name}(ptr %ptr, {ty} %value) {{
+                        define dso_local {ty} @{name}(ptr %ptr, {ty} %value){attrs} {{
                             %r = {instr} {op} ptr %ptr, {ty} %value {ordering}, align {alignval}
                             ret {ty} %r
                         }}
@@ -232,7 +233,7 @@ def all_atomicrmw(f, datatype, atomicrmw_ops, featname):
                         tests.append(
                             textwrap.dedent(
                                 f"""
-                           define dso_local void @{name}(ptr %ptr, {ty} %value) {{
+                           define dso_local void @{name}(ptr %ptr, {ty} %value){attrs} {{
                                %r = {instr} {op} ptr %ptr, {ty} %value {ordering}, align {alignval}
                                ret void
                            }}
@@ -249,6 +250,26 @@ def all_atomicrmw(f, datatype, atomicrmw_ops, featname):
 
     for test in tests:
         f.write(test)
+
+    if featname == "lsfe":
+        f.write(
+            textwrap.dedent(
+                """
+                define dso_local float @atomicrmw_fadd_float_aligned_seq_cst_trapping(ptr %ptr, float %value) {
+                    %r = atomicrmw fadd ptr %ptr, float %value seq_cst, align 4
+                    ret float %r
+                }
+
+                define dso_local float @atomicrmw_fadd_float_aligned_seq_cst_strictfp(ptr %ptr, float %value) #1 {
+                    %r = atomicrmw fadd ptr %ptr, float %value seq_cst, align 4
+                    ret float %r
+                }
+
+                attributes #0 = { "no-trapping-math"="true" }
+                attributes #1 = { strictfp "no-trapping-math"="true" }
+                """
+            )
+        )
 
 
 def emit_load_tests(f, datatypes, alignments, orderings):

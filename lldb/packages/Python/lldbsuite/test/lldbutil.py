@@ -979,6 +979,10 @@ def is_thread_crashed(test, thread):
         )
     elif test.getPlatform() == "windows":
         return "Exception 0xc0000005" in thread.GetStopDescription(200)
+    elif test.getPlatform() in ["wasip1", "wasi"]:
+        # Wasm has no signals. What a bad access raises is a trap, which a
+        # runtime reports as an exception described by the trap it hit.
+        return thread.GetStopReason() == lldb.eStopReasonException
     else:
         return "invalid address" in thread.GetStopDescription(100)
 

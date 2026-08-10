@@ -5,7 +5,7 @@ if(LLVM_LIBC_FULL_BUILD)
   list(APPEND libc_archive_names c m mvec)
   list(APPEND libc_archive_targets libc libm libmvec)
   list(APPEND libc_archive_entrypoint_lists
-       TARGET_LIBC_ENTRYPOINTS TARGET_LIBM_ENTRYPOINTS TARGET_LIBMVEC_ENTRYPOINTS)
+    TARGET_LIBC_ENTRYPOINTS TARGET_LIBM_ENTRYPOINTS TARGET_LIBMVEC_ENTRYPOINTS)
 else()
   list(APPEND libc_archive_names llvmlibc)
   list(APPEND libc_archive_targets libc)
@@ -15,7 +15,7 @@ endif()
 set(added_archive_targets "")
 set(added_bitcode_targets "")
 foreach(archive IN ZIP_LISTS
-        libc_archive_names libc_archive_targets libc_archive_entrypoint_lists)
+  libc_archive_names libc_archive_targets libc_archive_entrypoint_lists)
   if(NOT ${archive_2})
     # If an entrypoint list is missing, then skip adding targets for it.
     continue()
@@ -63,10 +63,10 @@ install(
 )
 
 foreach(file ${added_bitcode_targets})
-  install(FILES $<TARGET_FILE:${file}>
-          DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
-          RENAME $<TARGET_PROPERTY:${file},OUTPUT_NAME>
-          COMPONENT libc
+  install(FILES $<TARGET_PROPERTY:${file},TARGET_FILE>
+    DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
+    RENAME $<TARGET_PROPERTY:${file},OUTPUT_NAME>
+    COMPONENT libc
   )
 endforeach()
 
@@ -107,21 +107,21 @@ if(LLVM_LIBC_FULL_BUILD)
 endif()
 
 add_custom_target(install-libc
-                  DEPENDS ${added_archive_targets}
-                          ${added_bitcode_targets}
-                          ${added_empty_archives}
-                          ${startup_target}
-                          ${header_install_target}
-                  COMMAND "${CMAKE_COMMAND}"
-                          -DCMAKE_INSTALL_COMPONENT=libc
-                          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+  DEPENDS ${added_archive_targets}
+    ${added_bitcode_targets}
+    ${added_empty_archives}
+    ${startup_target}
+    ${header_install_target}
+  COMMAND "${CMAKE_COMMAND}"
+    -DCMAKE_INSTALL_COMPONENT=libc
+    -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
 add_custom_target(install-libc-stripped
-                  DEPENDS ${added_archive_targets}
-                          ${added_bitcode_targets}
-                          ${added_empty_archives}
-                          ${startup_target}
-                          ${header_install_target}
-                  COMMAND "${CMAKE_COMMAND}"
-                          -DCMAKE_INSTALL_COMPONENT=libc
-                          -DCMAKE_INSTALL_DO_STRIP=1
-                          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+  DEPENDS ${added_archive_targets}
+    ${added_bitcode_targets}
+    ${added_empty_archives}
+    ${startup_target}
+    ${header_install_target}
+  COMMAND "${CMAKE_COMMAND}"
+    -DCMAKE_INSTALL_COMPONENT=libc
+    -DCMAKE_INSTALL_DO_STRIP=1
+    -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")

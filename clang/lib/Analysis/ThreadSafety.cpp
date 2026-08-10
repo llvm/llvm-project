@@ -62,6 +62,19 @@ using namespace threadSafety;
 // Key method definition
 ThreadSafetyHandler::~ThreadSafetyHandler() = default;
 
+/// True if capability attributes on \p Param describe the function reached
+/// through it rather than the argument bound to it.
+///
+/// Sema accepts capability attributes on a parameter for two unrelated
+/// purposes: a scoped-lockable parameter, where the attributes describe the
+/// locks the passed scope object holds, and a parameter naming a function to
+/// call -- a function pointer or a function reference -- where they describe
+/// the requirements of the function called through it.
+static bool isCallbackParam(const ParmVarDecl *Param) {
+  QualType T = Param->getType().getNonReferenceType();
+  return T->isFunctionPointerType() || T->isFunctionType();
+}
+
 /// Issue a warning about an invalid lock expression
 static void warnInvalidLock(ThreadSafetyHandler &Handler,
                             const Expr *MutexExp, const NamedDecl *D,
@@ -1691,9 +1704,14 @@ ThreadSafetyAnalyzer::getTerminatorTrylockCall(const CFGBlock *Block,
   assert(!Negate && "Must be called with Negate initialized to false");
 
   const Stmt *Cond = Block->getTerminatorCondition();
-  // We don't acquire try-locks on ?: branches, only when its result is used.
-  if (!Cond || isa<ConditionalOperator>(Block->getTerminatorStmt()))
+  if (!Cond)
     return {};
+
+  // We don't acquire try-locks on ?: branches, except when its result is used.
+  if (const auto *COp =
+          dyn_cast_if_present<ConditionalOperator>(Block->getTerminatorStmt()))
+    if (!COp->getType()->isVoidType())
+      return {};
 
   const LocalVarContext &LVarCtx = BlockInfo[Block->getBlockID()].ExitContext;
 
@@ -2327,6 +2345,8 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
   const auto *CalledFunction = dyn_cast<FunctionDecl>(D);
   if (CalledFunction && Args.has_value()) {
     for (auto [Param, Arg] : zip(CalledFunction->parameters(), *Args)) {
+      if (isCallbackParam(Param))
+        continue;
       CapExprSet DeclaredLocks;
       for (const Attr *At : Param->attrs()) {
         switch (At->getKind()) {
@@ -2899,6 +2919,8 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
     else
       llvm_unreachable("Unknown function kind");
     for (const ParmVarDecl *Param : Params) {
+      if (isCallbackParam(Param))
+        continue;
       CapExprSet UnderlyingLocks;
       for (const auto *Attr : Param->attrs()) {
         Loc = Attr->getLocation();

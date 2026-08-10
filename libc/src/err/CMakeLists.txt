@@ -2,6 +2,11 @@ if(NOT TARGET libc.src.__support.OSUtil.osutil)
   return()
 endif()
 
+set(extra_deps)
+if(LLVM_LIBC_FULL_BUILD)
+  list(APPEND extra_deps libc.src.errno.program_invocation_short_name)
+endif()
+
 add_object_library(
   report
   SRCS
@@ -18,6 +23,7 @@ add_object_library(
     libc.src.__support.printf_core.writer
     libc.src.__support.CPP.string_view
     libc.src.__support.macros.config
+    ${extra_deps}
 )
 
 add_entrypoint_object(

@@ -81,5 +81,5 @@ module {
     } {linear_var_types = [i32]}
     llvm.return
   }
-  // CHECK: !{!"llvm.loop.vectorize.enable", i1 true}
+  // CHECK: !{!"llvm.loop.vectorize.enable"}
 }

@@ -474,6 +474,13 @@ LLVM::InlineAsmOp PtxBuilder::build() {
     ptxInstruction = predicateStr + " " + ptxInstruction;
   }
 
+  // Clobbers go after all register constraints.
+  if (interfaceOp.hasMemoryClobber()) {
+    if (!registerConstraints.empty())
+      registerConstraints += ",";
+    registerConstraints += "~{memory}";
+  }
+
   // Operand placeholders are written as %0, %1, ... (and the predicate as
   // @%N), because TableGen string attributes cannot contain '$', which inline
   // assembly uses for operand substitution. Convert only a '%' that is

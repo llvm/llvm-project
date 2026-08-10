@@ -14,16 +14,16 @@ end
 
 subroutine f02(x)
   integer :: x(10)
-!WARNING: 'expectation' modifier is not supported in OpenMP v4.5, try -fopenmp-version=51
+!WARNING: 'present-modifier' modifier is not supported in OpenMP v4.5, try -fopenmp-version=51
 !WARNING: 'iterator' modifier is not supported in OpenMP v4.5, try -fopenmp-version=51
   !$omp target update to(present, iterator(i = 1:5): x(i))
 end
 
 subroutine f03(x)
   integer :: x(10)
-!WARNING: 'expectation' modifier is not supported in OpenMP v4.5, try -fopenmp-version=51
-!WARNING: 'expectation' modifier is not supported in OpenMP v4.5, try -fopenmp-version=51
-!ERROR: 'expectation' modifier cannot occur multiple times
+!WARNING: 'present-modifier' modifier is not supported in OpenMP v4.5, try -fopenmp-version=51
+!WARNING: 'present-modifier' modifier is not supported in OpenMP v4.5, try -fopenmp-version=51
+!ERROR: 'present-modifier' modifier cannot occur multiple times
   !$omp target update to(present, present: x)
 end
 

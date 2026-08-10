@@ -361,7 +361,7 @@ define void @test_start_zext(i32 %start, ptr %dst) {
 ; IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 2
 ; IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IC2:       [[VECTOR_PH]]:
-; IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 2
+; IC2-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 1
 ; IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; IC2-NEXT:    [[TMP1:%.*]] = add i64 [[START_EXT]], [[N_VEC]]
 ; IC2-NEXT:    [[TMP2:%.*]] = mul i64 [[N_VEC]], [[START_EXT]]
@@ -444,7 +444,7 @@ define i64 @induction_cast_chain_cleared_by_dce(i64 %n, i64 %mask.init) {
 ; VF4-NEXT:    [[TMP13:%.*]] = or i1 [[TMP11]], [[IDENT_CHECK]]
 ; VF4-NEXT:    br i1 [[TMP13]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; VF4:       [[VECTOR_PH]]:
-; VF4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP1]], 4
+; VF4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP1]], 3
 ; VF4-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[N_MOD_VF]]
 ; VF4-NEXT:    [[TMP14:%.*]] = mul i64 [[N_VEC]], [[TMP3]]
 ; VF4-NEXT:    [[TMP15:%.*]] = add i64 1, [[TMP14]]
@@ -514,7 +514,7 @@ define i64 @induction_cast_chain_cleared_by_dce(i64 %n, i64 %mask.init) {
 ; IC2-NEXT:    [[TMP13:%.*]] = or i1 [[TMP11]], [[IDENT_CHECK]]
 ; IC2-NEXT:    br i1 [[TMP13]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; IC2:       [[VECTOR_PH]]:
-; IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP1]], 2
+; IC2-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP1]], 1
 ; IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[N_MOD_VF]]
 ; IC2-NEXT:    [[TMP14:%.*]] = mul i64 [[N_VEC]], [[TMP3]]
 ; IC2-NEXT:    [[TMP15:%.*]] = add i64 1, [[TMP14]]

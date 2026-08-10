@@ -3696,8 +3696,8 @@ define amdgpu_kernel void @frem_f64(ptr addrspace(1) %out, ptr addrspace(1) %in1
 ; SI-NEXT:    s_sub_i32 s0, s7, s13
 ; SI-NEXT:    s_add_i32 s12, s0, 26
 ; SI-NEXT:    s_mov_b32 s7, 0x432fffff
-; SI-NEXT:    v_mov_b32_e32 v10, 0x43300000
 ; SI-NEXT:    v_mov_b32_e32 v6, 0
+; SI-NEXT:    v_mov_b32_e32 v10, 0x43300000
 ; SI-NEXT:  .LBB6_6: ; %frem.loop_body
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    v_mov_b32_e32 v9, v3
@@ -5827,9 +5827,8 @@ define amdgpu_kernel void @frem_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX9-NEXT:    v_cmp_nge_f16_e64 s[4:5], |v3|, s4
 ; GFX9-NEXT:    v_cndmask_b32_e32 v2, v1, v2, vcc
 ; GFX9-NEXT:    s_and_b64 vcc, s[4:5], s[2:3]
-; GFX9-NEXT:    v_cndmask_b32_e32 v0, v1, v4, vcc
-; GFX9-NEXT:    v_and_b32_e32 v1, 0xffff, v2
-; GFX9-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
+; GFX9-NEXT:    v_cndmask_b32_sdwa v0, v1, v4, vcc dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX9-NEXT:    v_or_b32_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX9-NEXT:    global_store_dword v5, v0, s[0:1]
 ; GFX9-NEXT:    s_endpgm
 ;
@@ -6006,11 +6005,11 @@ define amdgpu_kernel void @frem_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX10-NEXT:    s_and_b32 vcc_lo, s2, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e32 v1, 0x7e00, v2, vcc_lo
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 0
-; GFX10-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX10-NEXT:    v_cmp_lg_f16_sdwa s2, v0, v2 src0_sel:WORD_1 src1_sel:DWORD
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0x7e00
 ; GFX10-NEXT:    s_and_b32 vcc_lo, s3, s2
-; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0x7e00, v4, vcc_lo
-; GFX10-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
+; GFX10-NEXT:    v_cndmask_b32_sdwa v0, v0, v4, vcc_lo dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX10-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX10-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX10-NEXT:    s_endpgm
 ;
@@ -8827,7 +8826,7 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX9-NEXT:    v_cmp_nge_f16_e64 s[4:5], |v5|, s6
 ; GFX9-NEXT:    v_cndmask_b32_e32 v4, v2, v4, vcc
 ; GFX9-NEXT:    s_and_b64 vcc, s[4:5], s[2:3]
-; GFX9-NEXT:    v_cndmask_b32_e32 v0, v2, v6, vcc
+; GFX9-NEXT:    v_cndmask_b32_sdwa v0, v2, v6, vcc dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX9-NEXT:    v_cmp_lg_f16_e32 vcc, 0, v1
 ; GFX9-NEXT:    v_cmp_nge_f16_e64 s[2:3], |v3|, s6
 ; GFX9-NEXT:    s_and_b64 vcc, s[2:3], vcc
@@ -8835,11 +8834,9 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX9-NEXT:    v_cmp_nge_f16_e64 s[4:5], |v8|, s6
 ; GFX9-NEXT:    v_cndmask_b32_e32 v3, v2, v7, vcc
 ; GFX9-NEXT:    s_and_b64 vcc, s[4:5], s[2:3]
-; GFX9-NEXT:    v_cndmask_b32_e32 v1, v2, v9, vcc
-; GFX9-NEXT:    v_and_b32_e32 v2, 0xffff, v3
-; GFX9-NEXT:    v_lshl_or_b32 v1, v1, 16, v2
-; GFX9-NEXT:    v_and_b32_e32 v2, 0xffff, v4
-; GFX9-NEXT:    v_lshl_or_b32 v0, v0, 16, v2
+; GFX9-NEXT:    v_cndmask_b32_sdwa v1, v2, v9, vcc dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX9-NEXT:    v_or_b32_sdwa v1, v1, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_or_b32_sdwa v0, v0, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX9-NEXT:    global_store_dwordx2 v10, v[0:1], s[0:1]
 ; GFX9-NEXT:    s_endpgm
 ;
@@ -9171,21 +9168,20 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX10-NEXT:    s_and_b32 vcc_lo, s2, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e32 v2, 0x7e00, v4, vcc_lo
 ; GFX10-NEXT:    v_mov_b32_e32 v4, 0
-; GFX10-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; GFX10-NEXT:    v_cmp_lg_f16_sdwa s2, v0, v4 src0_sel:WORD_1 src1_sel:DWORD
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0x7e00
 ; GFX10-NEXT:    s_and_b32 vcc_lo, s3, s2
 ; GFX10-NEXT:    v_cmp_nle_f16_e64 s2, 0x7c00, |v3|
-; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0x7e00, v6, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_sdwa v5, v0, v6, vcc_lo dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX10-NEXT:    v_cmp_lg_f16_e32 vcc_lo, 0, v1
 ; GFX10-NEXT:    v_cmp_nle_f16_e64 s3, 0x7c00, |v8|
-; GFX10-NEXT:    v_lshl_or_b32 v0, v0, 16, v2
 ; GFX10-NEXT:    s_and_b32 vcc_lo, s2, vcc_lo
 ; GFX10-NEXT:    v_cmp_lg_f16_sdwa s2, v1, v4 src0_sel:WORD_1 src1_sel:DWORD
 ; GFX10-NEXT:    v_cndmask_b32_e32 v3, 0x7e00, v7, vcc_lo
 ; GFX10-NEXT:    s_and_b32 vcc_lo, s3, s2
-; GFX10-NEXT:    v_and_b32_e32 v3, 0xffff, v3
-; GFX10-NEXT:    v_cndmask_b32_e32 v1, 0x7e00, v9, vcc_lo
-; GFX10-NEXT:    v_lshl_or_b32 v1, v1, 16, v3
+; GFX10-NEXT:    v_cndmask_b32_sdwa v0, v0, v9, vcc_lo dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX10-NEXT:    v_or_b32_sdwa v1, v0, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX10-NEXT:    v_or_b32_sdwa v0, v5, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX10-NEXT:    global_store_dwordx2 v4, v[0:1], s[0:1]
 ; GFX10-NEXT:    s_endpgm
 ;
@@ -16520,8 +16516,8 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; SI-NEXT:    s_sub_i32 s0, s13, s17
 ; SI-NEXT:    s_add_i32 s16, s0, 26
 ; SI-NEXT:    s_mov_b32 s13, 0x432fffff
-; SI-NEXT:    v_mov_b32_e32 v10, 0x43300000
 ; SI-NEXT:    v_mov_b32_e32 v6, 0
+; SI-NEXT:    v_mov_b32_e32 v10, 0x43300000
 ; SI-NEXT:  .LBB13_6: ; %frem.loop_body23
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    v_mov_b32_e32 v9, v3
@@ -16647,8 +16643,8 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; SI-NEXT:    s_sub_i32 s0, s13, s17
 ; SI-NEXT:    s_add_i32 s16, s0, 26
 ; SI-NEXT:    s_mov_b32 s13, 0x432fffff
-; SI-NEXT:    v_mov_b32_e32 v12, 0x43300000
 ; SI-NEXT:    v_mov_b32_e32 v8, 0
+; SI-NEXT:    v_mov_b32_e32 v12, 0x43300000
 ; SI-NEXT:  .LBB13_16: ; %frem.loop_body
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    v_mov_b32_e32 v11, v5
@@ -18338,9 +18334,9 @@ define amdgpu_kernel void @frem_v2f64_const_one_denum(ptr addrspace(1) %out, ptr
 ; SI-NEXT:    s_cbranch_scc1 .LBB15_8
 ; SI-NEXT:  ; %bb.5: ; %frem.loop_body23.preheader
 ; SI-NEXT:    s_add_i32 s9, s7, 25
-; SI-NEXT:    v_mov_b32_e32 v5, 0x43300000
 ; SI-NEXT:    v_mov_b32_e32 v0, 0
 ; SI-NEXT:    s_mov_b32 s7, 0x432fffff
+; SI-NEXT:    v_mov_b32_e32 v5, 0x43300000
 ; SI-NEXT:  .LBB15_6: ; %frem.loop_body23
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    v_mov_b32_e32 v4, v2
@@ -18428,9 +18424,9 @@ define amdgpu_kernel void @frem_v2f64_const_one_denum(ptr addrspace(1) %out, ptr
 ; SI-NEXT:    s_cbranch_scc1 .LBB15_18
 ; SI-NEXT:  ; %bb.15: ; %frem.loop_body.preheader
 ; SI-NEXT:    s_add_i32 s9, s7, 25
-; SI-NEXT:    v_mov_b32_e32 v7, 0x43300000
 ; SI-NEXT:    v_mov_b32_e32 v2, 0
 ; SI-NEXT:    s_mov_b32 s7, 0x432fffff
+; SI-NEXT:    v_mov_b32_e32 v7, 0x43300000
 ; SI-NEXT:  .LBB15_16: ; %frem.loop_body
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    v_mov_b32_e32 v6, v4

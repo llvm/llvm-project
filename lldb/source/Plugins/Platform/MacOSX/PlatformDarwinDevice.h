@@ -27,7 +27,7 @@ protected:
   virtual Status GetSharedModuleWithLocalCache(
       const ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
       llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr,
-      lldb_private::Process *process);
+      Target &target);
 
   struct SDKDirectoryInfo {
     SDKDirectoryInfo(const FileSpec &sdk_dir_spec, llvm::StringRef dirname_str);

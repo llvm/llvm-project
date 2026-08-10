@@ -12,8 +12,8 @@
 int main() {
   int x = 111;
   // clang-format off
-  // DEBUG: omptarget --> HstPtrBegin 0x[[#%x,HOST_ADDR:]] was newly allocated for the current region
-  // DEBUG: omptarget --> Moving {{.*}} bytes (hst:0x{{0*}}[[#HOST_ADDR]]) -> (tgt:0x{{.*}})
+  // DEBUG: --> HstPtrBegin 0x[[#%x,HOST_ADDR:]] was newly allocated for the current region
+  // DEBUG: --> Moving {{.*}} bytes (hst:0x{{0*}}[[#HOST_ADDR]]) -> (tgt:0x{{.*}})
   // clang-format on
 #pragma omp target map(alloc : x) map(from : x) map(to : x) map(alloc : x)
   {

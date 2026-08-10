@@ -16,11 +16,12 @@
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/Target/LLVMIR/Import.h"
 
 #include "clang/AST/DeclGroup.h"
+#include "clang/CIR/CIRDataLayoutSpec.h"
 #include "clang/CIR/CIRGenerator.h"
 #include "clang/CIR/InitAllDialects.h"
+#include "clang/CIR/MissingFeatures.h"
 #include "llvm/IR/DataLayout.h"
 
 using namespace cir;
@@ -36,13 +37,6 @@ CIRGenerator::CIRGenerator(clang::DiagnosticsEngine &diags,
 CIRGenerator::~CIRGenerator() {
   // There should normally not be any leftover inline method definitions.
   assert(deferredInlineMemberFuncDefs.empty() || diags.hasErrorOccurred());
-}
-
-static void setMLIRDataLayout(mlir::ModuleOp &mod, const llvm::DataLayout &dl) {
-  mlir::MLIRContext *mlirContext = mod.getContext();
-  mlir::DataLayoutSpecInterface dlSpec =
-      mlir::translateDataLayout(dl, mlirContext);
-  mod->setAttr(mlir::DLTIDialect::kDataLayoutAttrName, dlSpec);
 }
 
 void CIRGenerator::Initialize(ASTContext &astContext) {
@@ -61,7 +55,7 @@ void CIRGenerator::Initialize(ASTContext &astContext) {
   mlir::ModuleOp mod = cgm->getModule();
   llvm::DataLayout layout =
       llvm::DataLayout(astContext.getTargetInfo().getDataLayoutString());
-  setMLIRDataLayout(mod, layout);
+  cir::setMLIRDataLayout(mod, layout);
 }
 
 bool CIRGenerator::verifyModule() const { return cgm->verifyModule(); }

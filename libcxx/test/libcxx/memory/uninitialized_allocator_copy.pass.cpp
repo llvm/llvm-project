@@ -65,4 +65,6 @@ int main(int, char**) {
 
   assert(constructed_count == 0);
   assert(max_constructed_count == 14);
+
+  return 0;
 }

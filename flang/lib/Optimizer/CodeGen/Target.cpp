@@ -17,6 +17,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/TypeRange.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include <cmath>
 
 #define DEBUG_TYPE "flang-codegen-target"
 

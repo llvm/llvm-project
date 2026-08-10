@@ -18,6 +18,7 @@ add_mlir_conversion_library(MLIRMathToXeVM
   MLIRLLVMCommonConversion
   MLIRLLVMDialect
   MLIRMathDialect
+  MLIRVectorDialect
   MLIRXeVMDialect
   MLIRPass
   MLIRTransforms

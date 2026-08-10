@@ -987,6 +987,27 @@ gpu.func @vector_insert_strided_slice_different_ranks() {
   gpu.return
 }
 
+// The lane-distributed dim (dim 1) is size 1 in the source and thus broadcast
+// across the lanes of that dim; the insert happens on dim 0 only, so the
+// distributed shapes are unchanged.
+// CHECK-LABEL: gpu.func @vector_insert_strided_slice_lane_broadcast_dim
+// CHECK: %[[ISS:.*]] = vector.insert_strided_slice %{{.*}}, %{{.*}} {offsets = [0, 0], strides = [1, 1]} : vector<1x1xf32> into vector<8x1xf32>
+gpu.func @vector_insert_strided_slice_lane_broadcast_dim() {
+  %0 = "some_op"()
+    : () -> vector<1x1xf32>
+  %1 = "some_op"()
+    : () -> vector<8x1xf32>
+  %2 = vector.insert_strided_slice %0, %1 { offsets = [0, 0], strides = [1, 1]
+    }
+    : vector<1x1xf32> into vector<8x1xf32>
+  %cl2 = xegpu.convert_layout %2
+    <{
+      input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+      target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+    }> : vector<8x1xf32>
+  gpu.return
+}
+
 // CHECK-LABEL: gpu.func @convert_layout_removed_when_compatible
 // CHECK-NOT: xegpu.convert_layout
 gpu.func @convert_layout_removed_when_compatible() {

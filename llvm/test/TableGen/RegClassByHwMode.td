@@ -98,11 +98,11 @@ include "Common/RegClassByHwModeCommon.td"
 // ASMMATCHER-NEXT:   MCK_Imm, // user defined class 'ImmAsmOperand'
 
 // ASMMATCHER: static unsigned validateOperandClass(MCParsedAsmOperand &GOp, MatchClassKind Kind, const MCSubtargetInfo &STI) {
-// ASMMATCHER: if (Operand.isToken() && Kind <= MCK_LAST_TOKEN)
+// ASMMATCHER: if (Kind <= MCK_LAST_TOKEN) {
 
 // ASMMATCHER: switch (Kind) {
 
-// ASMMATCHER: if (Operand.isReg() && Kind > MCK_LAST_REGISTER && Kind <= MCK_LAST_REGCLASS_BY_HWMODE) {
+// ASMMATCHER: if (Kind > MCK_LAST_REGISTER && Kind <= MCK_LAST_REGCLASS_BY_HWMODE) {
 // ASMMATCHER-NEXT:    static constexpr MatchClassKind RegClassByHwModeMatchTable[4][3] = {
 // ASMMATCHER-NEXT:      { // DefaultMode
 // ASMMATCHER-NEXT:        MCK_PtrRegs32, // MyPtrRC

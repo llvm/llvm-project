@@ -12,7 +12,7 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; IC1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 2
 ; IC1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IC1:       [[VECTOR_PH]]:
-; IC1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 2
+; IC1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 1
 ; IC1-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; IC1-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i64 [[N_VEC]]
 ; IC1-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -104,7 +104,7 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IC2:       [[VECTOR_PH]]:
-; IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 4
+; IC2-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 3
 ; IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; IC2-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i64 [[N_VEC]]
 ; IC2-NEXT:    br label %[[VECTOR_BODY:.*]]

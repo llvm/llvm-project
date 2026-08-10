@@ -470,7 +470,7 @@ set(LIBCXX_SHARED_OUTPUT_NAME "c++" CACHE STRING "Output name for the shared lib
 set(LIBCXX_STATIC_OUTPUT_NAME "c++" CACHE STRING "Output name for the static libc++ runtime library.")
 
 # TODO: Use common runtimes infrastructure for output and install paths
-if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
+if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
   set(LIBCXX_TARGET_SUBDIR ${LLVM_DEFAULT_TARGET_TRIPLE})
   if(LIBCXX_LIBDIR_SUBDIR)
     string(APPEND LIBCXX_TARGET_SUBDIR /${LIBCXX_LIBDIR_SUBDIR})

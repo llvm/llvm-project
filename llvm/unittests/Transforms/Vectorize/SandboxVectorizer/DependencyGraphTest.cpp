@@ -1516,3 +1516,46 @@ define void @foo(i8 %v0) {
   Add0->setOperand(0, Sched);
   EXPECT_EQ(Add0N->getNumUnscheduledPreds(), 0u);
 }
+
+// When erasing a non-mem instruction we must not touch the UnscheduledSuccs
+// of an already-scheduled predecessor, since that counter is set to
+// std::nullopt once a node is scheduled.
+TEST_F(DependencyGraphTest, EraseInstrCallbackNonMemWithScheduledPred) {
+  parseIR(C, R"IR(
+define void @foo(i8 %v0) {
+  %predSched = add i8 %v0, 0
+  %predUnsched = add i8 %v0, 1
+  %n = add i8 %predSched, %predUnsched
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *PredSched = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *PredUnsched = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *N = cast<sandboxir::BinaryOperator>(&*It++);
+
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
+  DAG.extend({PredSched, N});
+  auto *PredSchedN = DAG.getNode(PredSched);
+  auto *PredUnschedN = DAG.getNode(PredUnsched);
+  EXPECT_EQ(PredSchedN->getNumUnscheduledSuccs(), 1u);
+  EXPECT_EQ(PredUnschedN->getNumUnscheduledSuccs(), 1u);
+
+  // Mark one of N's predecessors as scheduled. Its UnscheduledSuccs becomes
+  // std::nullopt.
+  PredSchedN->setScheduled();
+
+  // Erase N, which is *not* scheduled. This must not attempt to decrement
+  // the (now invalid) UnscheduledSuccs of PredSchedN, but should still
+  // update the counter of the unscheduled predecessor.
+  N->eraseFromParent();
+  EXPECT_EQ(DAG.getNode(N), nullptr);
+  EXPECT_EQ(PredUnschedN->getNumUnscheduledSuccs(), 0u);
+#ifndef NDEBUG
+  EXPECT_FALSE(PredSchedN->validUnscheduledSuccs());
+#endif
+}

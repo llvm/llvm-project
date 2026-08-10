@@ -21,9 +21,9 @@ namespace clang::tidy::bugprone {
 using utils::lexer::CommentToken;
 namespace {
 AST_MATCHER(Decl, isFromStdNamespaceOrSystemHeader) {
-  if (const auto *D = Node.getDeclContext()->getEnclosingNamespaceContext())
-    if (D->isStdNamespace())
-      return true;
+  if (const auto *D = Node.getDeclContext()->getEnclosingNamespaceContext();
+      D && D->isStdNamespace())
+    return true;
   if (Node.getLocation().isInvalid())
     return false;
   return Node.getASTContext().getSourceManager().isInSystemHeader(
@@ -184,10 +184,11 @@ static const CXXMethodDecl *findMockedMethod(const CXXMethodDecl *Method) {
     return nullptr;
   }
   if (const auto *Next =
-          dyn_cast_or_null<CXXMethodDecl>(Method->getNextDeclInContext())) {
-    if (looksLikeExpectMethod(Next) && areMockAndExpectMethods(Method, Next))
-      return Method;
-  }
+          dyn_cast_or_null<CXXMethodDecl>(Method->getNextDeclInContext());
+      Next && looksLikeExpectMethod(Next) &&
+      areMockAndExpectMethods(Method, Next))
+    return Method;
+
   return nullptr;
 }
 
@@ -314,7 +315,8 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
   if ((NumArgs == 0) || (IgnoreSingleArgument && NumArgs == 1))
     return;
 
-  auto MakeFileCharRange = [Ctx](SourceLocation Begin, SourceLocation End) {
+  const auto MakeFileCharRange = [Ctx](SourceLocation Begin,
+                                       SourceLocation End) {
     return Lexer::makeFileCharRange(CharSourceRange::getCharRange(Begin, End),
                                     Ctx->getSourceManager(),
                                     Ctx->getLangOpts());
@@ -325,16 +327,14 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
     const IdentifierInfo *II = PVD->getIdentifier();
     if (!II)
       continue;
-    if (FunctionDecl *Template = Callee->getTemplateInstantiationPattern()) {
-      // Don't warn on arguments for parameters instantiated from template
-      // parameter packs. If we find more arguments than the template
-      // definition has, it also means that they correspond to a parameter
-      // pack.
-      if (Template->getNumParams() <= I ||
-          Template->getParamDecl(I)->isParameterPack()) {
-        continue;
-      }
-    }
+    // Don't warn on arguments for parameters instantiated from template
+    // parameter packs. If we find more arguments than the template
+    // definition has, it also means that they correspond to a parameter
+    // pack.
+    if (FunctionDecl *Template = Callee->getTemplateInstantiationPattern();
+        Template && (Template->getNumParams() <= I ||
+                     Template->getParamDecl(I)->isParameterPack()))
+      continue;
 
     const CharSourceRange BeforeArgument =
         MakeFileCharRange(ArgBeginLoc, Args[I]->getBeginLoc());

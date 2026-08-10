@@ -10,7 +10,7 @@
 #define _LIBCPP___LOCALE_DIR_WSTRING_CONVERT_H
 
 #include <__config>
-#include <__locale>
+#include <__locale_dir/codecvt.h>
 #include <__memory/allocator.h>
 #include <string>
 

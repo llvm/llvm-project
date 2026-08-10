@@ -51,6 +51,9 @@ static cl::opt<bool>
                          cl::init(false),
                          cl::desc("Enable C-SKY asm compressed instruction"));
 
+static cl::opt<bool> AddBuildAttributes("csky-add-build-attributes",
+                                        cl::init(true));
+
 namespace {
 struct CSKYOperand;
 
@@ -137,7 +140,8 @@ public:
     MRI = getContext().getRegisterInfo();
 
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
-    getTargetStreamer().emitTargetAttributes(STI);
+    if (AddBuildAttributes)
+      getTargetStreamer().emitTargetAttributes(STI, /*HardFloatABI=*/false);
   }
 };
 

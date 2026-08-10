@@ -126,6 +126,9 @@ private:
   llvm::Expected<lldb::ValueObjectSP>
   EvaluateBinaryRemainder(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
                           uint32_t location);
+  llvm::Expected<lldb::ValueObjectSP>
+  EvaluateBinaryBitwise(BinaryOpKind kind, lldb::ValueObjectSP lhs,
+                        lldb::ValueObjectSP rhs, uint32_t location);
   llvm::Expected<CompilerType>
   PickIntegerType(lldb::TypeSystemSP type_system, ExecutionContextScope &ctx,
                   const IntegerLiteralNode &literal);

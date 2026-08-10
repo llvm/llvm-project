@@ -9,7 +9,7 @@ define i32 @pred_select_const_i32_from_icmp(ptr noalias nocapture readonly %src1
 ; CHECK-VF2IC1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
 ; CHECK-VF2IC1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF2IC1:       [[VECTOR_PH]]:
-; CHECK-VF2IC1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 2
+; CHECK-VF2IC1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 1
 ; CHECK-VF2IC1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF2IC1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF2IC1:       [[VECTOR_BODY]]:
@@ -81,7 +81,7 @@ define i32 @pred_select_const_i32_from_icmp(ptr noalias nocapture readonly %src1
 ; CHECK-VF1IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
 ; CHECK-VF1IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF1IC2:       [[VECTOR_PH]]:
-; CHECK-VF1IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 2
+; CHECK-VF1IC2-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 1
 ; CHECK-VF1IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF1IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF1IC2:       [[VECTOR_BODY]]:

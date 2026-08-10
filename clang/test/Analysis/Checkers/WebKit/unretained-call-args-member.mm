@@ -20,7 +20,7 @@ private:
 
 void Foo::bar() {
   [m_constObj doWork]; // no-warning
-  [m_obj doWork]; // expected-warning{{Receiver 'this->m_obj' (to 'SomeObj::doWork') is a raw pointer to RetainPtr-capable type 'SomeObj'}}
+  [m_obj doWork]; // expected-warning{{Receiver 'this->m_obj' (to '-[SomeObj doWork]') is a raw pointer to RetainPtr-capable type 'SomeObj'}}
 }
 
 } // namespace call_args_const_retainptr_member
@@ -56,7 +56,7 @@ struct Bar {
 
 void Bar::baz() {
   [m_constObj doWork]; // no-warning
-  [m_obj doWork]; // expected-warning{{Receiver 'this->m_obj' (to 'SomeObj::doWork') is a raw pointer to RetainPtr-capable type 'SomeObj'}}
+  [m_obj doWork]; // expected-warning{{Receiver 'this->m_obj' (to '-[SomeObj doWork]') is a raw pointer to RetainPtr-capable type 'SomeObj'}}
 }
 
 } // namespace call_args_const_retainptr_struct_member
@@ -149,7 +149,7 @@ private:
 
 void Foo::bar() {
   [m_constObj doWork]; // no-warning
-  [m_obj doWork]; // expected-warning{{Receiver 'this->m_obj' (to 'SomeObj::doWork') is a raw pointer to RetainPtr-capable type 'SomeObj'}}
+  [m_obj doWork]; // expected-warning{{Receiver 'this->m_obj' (to '-[SomeObj doWork]') is a raw pointer to RetainPtr-capable type 'SomeObj'}}
 }
 
 } // namespace call_args_const_osobjectptr_receiver

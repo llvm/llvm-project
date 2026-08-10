@@ -27,7 +27,7 @@ define void @stride_exceeds_i32_max(ptr noalias readonly %src, ptr noalias %dst,
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[AVL:%.*]] = phi i32 [ [[TMP4]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 16, i1 true)
-; CHECK-NEXT:    [[TMP7:%.*]] = sext i32 [[INDEX]] to i64
+; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[INDEX]] to i64
 ; CHECK-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP7]], 3000000000
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[TMP11]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <vscale x 16 x i8> @llvm.experimental.vp.strided.load.nxv16i8.p0.i64(ptr align 1 [[TMP8]], i64 3000000000, <vscale x 16 x i1> splat (i1 true), i32 [[TMP6]])

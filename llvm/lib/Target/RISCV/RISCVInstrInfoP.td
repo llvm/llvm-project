@@ -1866,11 +1866,13 @@ def shiftMask64 : ComplexPattern<XLenVT, 1, "selectShiftMask<64>", [], [], 0>;
 def BuildGPRPair : OutPatFrag<(ops node:$lo, node:$hi),
   (REG_SEQUENCE GPRPair, $lo, sub_gpr_even, $hi, sub_gpr_odd)>;
 
-def SDT_RISCVPPairEven : SDTypeProfile<1, 2, [SDTCisVec<0>,
-                                              SDTCisSameAs<0, 1>,
-                                              SDTCisSameAs<0, 2>]>;
-def riscv_ppaire : RVSDNode<"PPAIRE", SDT_RISCVPPairEven>;
-def riscv_ppairo : RVSDNode<"PPAIRO", SDT_RISCVPPairEven>;
+def SDT_RISCVPPair : SDTypeProfile<1, 2, [SDTCisVec<0>,
+                                          SDTCisSameAs<0, 1>,
+                                          SDTCisSameAs<0, 2>]>;
+def riscv_ppaire : RVSDNode<"PPAIRE", SDT_RISCVPPair>;
+def riscv_ppaireo : RVSDNode<"PPAIREO", SDT_RISCVPPair>;
+def riscv_ppairoe : RVSDNode<"PPAIROE", SDT_RISCVPPair>;
+def riscv_ppairo : RVSDNode<"PPAIRO", SDT_RISCVPPair>;
 def SDT_RISCVPackedBinary : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                                  SDTCisSameAs<0, 1>,
                                                  SDTCisSameAs<0, 2>]>;
@@ -2321,14 +2323,26 @@ let append Predicates = [IsRV32] in {
   // Packed pair: pair the even/odd-position elements of rs1 and rs2.
   def : Pat<(v4i8 (riscv_ppaire (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))),
             (PPAIRE_B GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v4i8 (riscv_ppaireo (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))),
+            (PPAIREO_B GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v4i8 (riscv_ppairoe (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))),
+            (PPAIROE_B GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v4i8 (riscv_ppairo (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))),
             (PPAIRO_B GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v8i8 (riscv_ppaire GPRPair:$rs1, GPRPair:$rs2)),
             (PPAIRE_DB GPRPair:$rs1, GPRPair:$rs2)>;
+  def : Pat<(v8i8 (riscv_ppaireo GPRPair:$rs1, GPRPair:$rs2)),
+            (PPAIREO_DB GPRPair:$rs1, GPRPair:$rs2)>;
+  def : Pat<(v8i8 (riscv_ppairoe GPRPair:$rs1, GPRPair:$rs2)),
+            (PPAIROE_DB GPRPair:$rs1, GPRPair:$rs2)>;
   def : Pat<(v8i8 (riscv_ppairo GPRPair:$rs1, GPRPair:$rs2)),
             (PPAIRO_DB GPRPair:$rs1, GPRPair:$rs2)>;
   def : Pat<(v4i16 (riscv_ppaire GPRPair:$rs1, GPRPair:$rs2)),
             (PPAIRE_DH GPRPair:$rs1, GPRPair:$rs2)>;
+  def : Pat<(v4i16 (riscv_ppaireo GPRPair:$rs1, GPRPair:$rs2)),
+            (PPAIREO_DH GPRPair:$rs1, GPRPair:$rs2)>;
+  def : Pat<(v4i16 (riscv_ppairoe GPRPair:$rs1, GPRPair:$rs2)),
+            (PPAIROE_DH GPRPair:$rs1, GPRPair:$rs2)>;
   def : Pat<(v4i16 (riscv_ppairo GPRPair:$rs1, GPRPair:$rs2)),
             (PPAIRO_DH GPRPair:$rs1, GPRPair:$rs2)>;
 
@@ -2888,10 +2902,18 @@ let append Predicates = [IsRV64] in {
   // Packed pair: pair the even/odd-position elements of rs1 and rs2.
   def : Pat<(v8i8 (riscv_ppaire (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
             (PPAIRE_B GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v8i8 (riscv_ppaireo (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
+            (PPAIREO_B GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v8i8 (riscv_ppairoe (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
+            (PPAIROE_B GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v8i8 (riscv_ppairo (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
             (PPAIRO_B GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v4i16 (riscv_ppaire (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
             (PPAIRE_H GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v4i16 (riscv_ppaireo (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
+            (PPAIREO_H GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v4i16 (riscv_ppairoe (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
+            (PPAIROE_H GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v4i16 (riscv_ppairo (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
             (PPAIRO_H GPR:$rs1, GPR:$rs2)>;
 } // append Predicates = [IsRV64]

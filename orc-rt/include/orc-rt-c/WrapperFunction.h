@@ -55,20 +55,21 @@ typedef struct {
  * Asynchronous return function for an orc-rt wrapper function.
  */
 typedef void (*orc_rt_WrapperFunctionReturn)(
-    orc_rt_SessionRef S, uint64_t CallId,
-    orc_rt_WrapperFunctionBuffer ResultBytes);
+    orc_rt_SessionRef S, orc_rt_WrapperFunctionBuffer ResultBytes,
+    uint64_t CallId);
 
 /**
  * orc-rt wrapper function prototype.
  *
- * ArgBytes contains the serialized arguments for the wrapper function.
  * Session holds a reference to the session object.
- * CallId holds a pointer to the context object for this particular call.
+ * ArgBytes contains the serialized arguments for the wrapper function.
  * Return holds a pointer to the return function.
+ * CallId holds a pointer to the context object for this particular call.
  */
-typedef void (*orc_rt_WrapperFunction)(orc_rt_SessionRef S, uint64_t CallId,
+typedef void (*orc_rt_WrapperFunction)(orc_rt_SessionRef S,
+                                       orc_rt_WrapperFunctionBuffer ArgBytes,
                                        orc_rt_WrapperFunctionReturn Return,
-                                       orc_rt_WrapperFunctionBuffer ArgBytes);
+                                       uint64_t CallId);
 
 /**
  * Zero-initialize an orc_rt_WrapperFunctionBuffer.

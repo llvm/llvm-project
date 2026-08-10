@@ -723,16 +723,23 @@ define amdgpu_kernel void @call_i64(ptr addrspace(8) %tmp14, i64 %arg) {
   ret void
 }
 
-define amdgpu_cs void @_amdgpu_cs_main(<4 x i32> inreg %desc, i32 %index) {
+define amdgpu_cs void @_amdgpu_cs_main(ptr addrspace(8) inreg %desc, i32 %index) {
 ; GFX9-O0-LABEL: _amdgpu_cs_main:
 ; GFX9-O0:       ; %bb.0:
-; GFX9-O0-NEXT:    s_mov_b32 s4, s3
-; GFX9-O0-NEXT:    s_mov_b32 s5, s2
-; GFX9-O0-NEXT:    s_mov_b32 s6, s1
+; GFX9-O0-NEXT:    s_mov_b32 s6, s2
+; GFX9-O0-NEXT:    s_mov_b32 s4, s0
+; GFX9-O0-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX9-O0-NEXT:    s_mov_b32 s7, s3
+; GFX9-O0-NEXT:    s_mov_b32 s8, s7
+; GFX9-O0-NEXT:    s_mov_b32 s9, s6
+; GFX9-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX9-O0-NEXT:    s_mov_b32 s5, s1
+; GFX9-O0-NEXT:    s_mov_b32 s10, s5
+; GFX9-O0-NEXT:    s_mov_b32 s0, s4
 ; GFX9-O0-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
-; GFX9-O0-NEXT:    s_mov_b32 s1, s6
-; GFX9-O0-NEXT:    s_mov_b32 s2, s5
-; GFX9-O0-NEXT:    s_mov_b32 s3, s4
+; GFX9-O0-NEXT:    s_mov_b32 s1, s10
+; GFX9-O0-NEXT:    s_mov_b32 s2, s9
+; GFX9-O0-NEXT:    s_mov_b32 s3, s8
 ; GFX9-O0-NEXT:    s_mov_b32 s4, 5
 ; GFX9-O0-NEXT:    v_lshlrev_b32_e64 v0, s4, v0
 ; GFX9-O0-NEXT:    s_mov_b32 s4, 0
@@ -837,10 +844,10 @@ define amdgpu_cs void @_amdgpu_cs_main(<4 x i32> inreg %desc, i32 %index) {
 ; GFX9-O3-NEXT:    buffer_store_dwordx2 v[12:13], v0, s[0:3], 0 offen offset:16
 ; GFX9-O3-NEXT:    s_endpgm
   %tmp17 = shl i32 %index, 5
-  %tmp18 = tail call <4 x i32> @llvm.amdgcn.s.buffer.load.v4i32(<4 x i32> %desc, i32 %tmp17, i32 0)
+  %tmp18 = tail call <4 x i32> @llvm.amdgcn.ptr.s.buffer.load.v4i32(ptr addrspace(8) %desc, i32 %tmp17, i32 0), !invariant.load !{}
   %.i0.upto1.bc = bitcast <4 x i32> %tmp18 to <2 x i64>
   %tmp19 = or i32 %tmp17, 16
-  %tmp20 = tail call <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32> %desc, i32 %tmp19, i32 0)
+  %tmp20 = tail call <2 x i32> @llvm.amdgcn.ptr.s.buffer.load.v2i32(ptr addrspace(8) %desc, i32 %tmp19, i32 0), !invariant.load !{}
   %.i0.upto1.extract = extractelement <2 x i64> %.i0.upto1.bc, i32 0
   %tmp22 = tail call i64 @llvm.amdgcn.set.inactive.i64(i64 %.i0.upto1.extract, i64 9223372036854775807)
   %tmp97 = tail call i64 @llvm.amdgcn.wwm.i64(i64 %tmp22)
@@ -854,10 +861,8 @@ define amdgpu_cs void @_amdgpu_cs_main(<4 x i32> inreg %desc, i32 %index) {
   %.cast6 = bitcast i64 %tmp174 to <2 x float>
   %.cast7 = bitcast i64 %tmp251 to <2 x float>
   %tmp254 = shufflevector <2 x float> %.cast, <2 x float> %.cast6, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %desc.int = bitcast <4 x i32> %desc to i128
-  %desc.ptr = inttoptr i128 %desc.int to ptr addrspace(8)
-  tail call void @llvm.amdgcn.raw.ptr.buffer.store.v4f32(<4 x float> %tmp254, ptr addrspace(8) %desc.ptr, i32 %tmp17, i32 0, i32 0)
-  tail call void @llvm.amdgcn.raw.ptr.buffer.store.v2f32(<2 x float> %.cast7, ptr addrspace(8) %desc.ptr, i32 %tmp19, i32 0, i32 0)
+  tail call void @llvm.amdgcn.raw.ptr.buffer.store.v4f32(<4 x float> %tmp254, ptr addrspace(8) %desc, i32 %tmp17, i32 0, i32 0)
+  tail call void @llvm.amdgcn.raw.ptr.buffer.store.v2f32(<2 x float> %.cast7, ptr addrspace(8) %desc, i32 %tmp19, i32 0, i32 0)
   ret void
 }
 
@@ -1581,16 +1586,23 @@ define amdgpu_kernel void @strict_wwm_call_i64(ptr addrspace(8) %tmp14, i64 %arg
   ret void
 }
 
-define amdgpu_cs void @strict_wwm_amdgpu_cs_main(<4 x i32> inreg %desc, i32 %index) {
+define amdgpu_cs void @strict_wwm_amdgpu_cs_main(ptr addrspace(8) inreg %desc, i32 %index) {
 ; GFX9-O0-LABEL: strict_wwm_amdgpu_cs_main:
 ; GFX9-O0:       ; %bb.0:
-; GFX9-O0-NEXT:    s_mov_b32 s4, s3
-; GFX9-O0-NEXT:    s_mov_b32 s5, s2
-; GFX9-O0-NEXT:    s_mov_b32 s6, s1
+; GFX9-O0-NEXT:    s_mov_b32 s6, s2
+; GFX9-O0-NEXT:    s_mov_b32 s4, s0
+; GFX9-O0-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX9-O0-NEXT:    s_mov_b32 s7, s3
+; GFX9-O0-NEXT:    s_mov_b32 s8, s7
+; GFX9-O0-NEXT:    s_mov_b32 s9, s6
+; GFX9-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX9-O0-NEXT:    s_mov_b32 s5, s1
+; GFX9-O0-NEXT:    s_mov_b32 s10, s5
+; GFX9-O0-NEXT:    s_mov_b32 s0, s4
 ; GFX9-O0-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
-; GFX9-O0-NEXT:    s_mov_b32 s1, s6
-; GFX9-O0-NEXT:    s_mov_b32 s2, s5
-; GFX9-O0-NEXT:    s_mov_b32 s3, s4
+; GFX9-O0-NEXT:    s_mov_b32 s1, s10
+; GFX9-O0-NEXT:    s_mov_b32 s2, s9
+; GFX9-O0-NEXT:    s_mov_b32 s3, s8
 ; GFX9-O0-NEXT:    s_mov_b32 s4, 5
 ; GFX9-O0-NEXT:    v_lshlrev_b32_e64 v0, s4, v0
 ; GFX9-O0-NEXT:    s_mov_b32 s4, 0
@@ -1695,10 +1707,10 @@ define amdgpu_cs void @strict_wwm_amdgpu_cs_main(<4 x i32> inreg %desc, i32 %ind
 ; GFX9-O3-NEXT:    buffer_store_dwordx2 v[12:13], v0, s[0:3], 0 offen offset:16
 ; GFX9-O3-NEXT:    s_endpgm
   %tmp17 = shl i32 %index, 5
-  %tmp18 = tail call <4 x i32> @llvm.amdgcn.s.buffer.load.v4i32(<4 x i32> %desc, i32 %tmp17, i32 0)
+  %tmp18 = tail call <4 x i32> @llvm.amdgcn.ptr.s.buffer.load.v4i32(ptr addrspace(8) %desc, i32 %tmp17, i32 0), !invariant.load !{}
   %.i0.upto1.bc = bitcast <4 x i32> %tmp18 to <2 x i64>
   %tmp19 = or i32 %tmp17, 16
-  %tmp20 = tail call <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32> %desc, i32 %tmp19, i32 0)
+  %tmp20 = tail call <2 x i32> @llvm.amdgcn.ptr.s.buffer.load.v2i32(ptr addrspace(8) %desc, i32 %tmp19, i32 0), !invariant.load !{}
   %.i0.upto1.extract = extractelement <2 x i64> %.i0.upto1.bc, i32 0
   %tmp22 = tail call i64 @llvm.amdgcn.set.inactive.i64(i64 %.i0.upto1.extract, i64 9223372036854775807)
   %tmp97 = tail call i64 @llvm.amdgcn.strict.wwm.i64(i64 %tmp22)
@@ -1712,10 +1724,8 @@ define amdgpu_cs void @strict_wwm_amdgpu_cs_main(<4 x i32> inreg %desc, i32 %ind
   %.cast6 = bitcast i64 %tmp174 to <2 x float>
   %.cast7 = bitcast i64 %tmp251 to <2 x float>
   %tmp254 = shufflevector <2 x float> %.cast, <2 x float> %.cast6, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %desc.int = bitcast <4 x i32> %desc to i128
-  %desc.ptr = inttoptr i128 %desc.int to ptr addrspace(8)
-  tail call void @llvm.amdgcn.raw.ptr.buffer.store.v4f32(<4 x float> %tmp254, ptr addrspace(8) %desc.ptr, i32 %tmp17, i32 0, i32 0)
-  tail call void @llvm.amdgcn.raw.ptr.buffer.store.v2f32(<2 x float> %.cast7, ptr addrspace(8)%desc.ptr, i32 %tmp19, i32 0, i32 0)
+  tail call void @llvm.amdgcn.raw.ptr.buffer.store.v4f32(<4 x float> %tmp254, ptr addrspace(8) %desc, i32 %tmp17, i32 0, i32 0)
+  tail call void @llvm.amdgcn.raw.ptr.buffer.store.v2f32(<2 x float> %.cast7, ptr addrspace(8)%desc, i32 %tmp19, i32 0, i32 0)
   ret void
 }
 
@@ -1732,6 +1742,6 @@ declare void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32, ptr addrspace(8), i32, i
 declare void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32>, ptr addrspace(8), i32, i32, i32)
 declare void @llvm.amdgcn.raw.ptr.buffer.store.v2f32(<2 x float>, ptr addrspace(8), i32, i32, i32)
 declare void @llvm.amdgcn.raw.ptr.buffer.store.v4f32(<4 x float>, ptr addrspace(8), i32, i32, i32)
-declare <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32>, i32, i32)
-declare <4 x i32> @llvm.amdgcn.s.buffer.load.v4i32(<4 x i32>, i32, i32)
+declare <2 x i32> @llvm.amdgcn.ptr.s.buffer.load.v2i32(ptr addrspace(8), i32, i32)
+declare <4 x i32> @llvm.amdgcn.ptr.s.buffer.load.v4i32(ptr addrspace(8), i32, i32)
 

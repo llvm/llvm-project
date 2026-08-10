@@ -479,7 +479,7 @@ SampleProfileWriterExtBinaryBase::writeEytzingerNameTableSection(
     const SampleContext &Ctx = I.second.getContext();
     uint64_t GUID = Ctx.getFunction().getHashCode();
     if (TopLevelGUIDs.insert(GUID).second) {
-      if (Ctx.hasContext())
+      if (I.second.isContextSensitiveTopLevel())
         CSKeys.emplace_back(GUID);
       else
         FlatKeys.emplace_back(GUID);
@@ -661,7 +661,7 @@ static void splitProfileMapToTwo(const SampleProfileMap &ProfileMap,
                                  SampleProfileMap &ContextProfileMap,
                                  SampleProfileMap &NoContextProfileMap) {
   for (const auto &I : ProfileMap) {
-    if (I.second.getCallsiteSamples().size())
+    if (I.second.isContextSensitiveTopLevel())
       ContextProfileMap.insert({I.first, I.second});
     else
       NoContextProfileMap.insert({I.first, I.second});

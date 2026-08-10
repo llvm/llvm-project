@@ -1451,6 +1451,10 @@ void RewriteInstance::discoverFileObjects() {
   FileSymRefs.clear();
 
   discoverBOLTReserved();
+
+  // The name resolver is only needed while discovering and disambiguating file
+  // objects. Release its memory now that all names have been uniquified.
+  NR.clear();
 }
 
 void RewriteInstance::discoverBOLTReserved() {
@@ -2633,8 +2637,8 @@ void RewriteInstance::adjustCommandLineOptions() {
   BC->UseCompactAligner = opts::UseCompactAligner;
   BC->X86AlignBranchBoundaryHotOnly = opts::X86AlignBranchBoundaryHotOnly;
 
-  if (BC->isX86() && opts::Lite.getNumOccurrences() == 0 && !opts::StrictMode &&
-      !opts::UseOldText)
+  if ((BC->isX86() || BC->isAArch64()) && opts::Lite.getNumOccurrences() == 0 &&
+      !opts::StrictMode && !opts::UseOldText)
     opts::Lite = true;
 
   if (opts::Lite && opts::UseOldText) {
@@ -5990,7 +5994,7 @@ void RewriteInstance::patchELFAllocatableRelrSection(
       RelOffset = RelOffset == 0 ? SectionAddress + Rel.Offset : RelOffset;
       assert((RelOffset & 1) == 0 && "Wrong relocation offset");
       RelOffsets.emplace(RelOffset);
-      FixAddend(Section, Rel, RelOffset);
+      FixAddend(Section, Rel, getFileOffsetForAddress(RelOffset));
     }
   }
 

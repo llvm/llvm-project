@@ -275,7 +275,7 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
   }
 
 #if defined(EXPENSIVE_CHECKS)
-  LI.verify(DT);
+  LI.verify();
 #endif // EXPENSIVE_CHECKS
 
   return true;

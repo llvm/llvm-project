@@ -1084,11 +1084,10 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
     if (GetBFICallback)
       BFI = GetBFICallback(F);
     else if (F.hasProfileData()) {
-      LoopInfo LI{DT};
       CycleInfo CI;
       CI.compute(const_cast<Function &>(F));
       BranchProbabilityInfo BPI{F, CI};
-      BFIPtr = std::make_unique<BlockFrequencyInfo>(F, BPI, LI);
+      BFIPtr = std::make_unique<BlockFrequencyInfo>(F, BPI, CI);
       BFI = BFIPtr.get();
     }
 

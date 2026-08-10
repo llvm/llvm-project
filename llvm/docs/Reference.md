@@ -30,6 +30,7 @@ FaultMaps
 Atomics
 ExceptionHandling
 Extensions
+AlignedBundling
 HowToSetUpLLVMStyleRTTI
 BlockFrequencyTerminology
 BranchWeightMetadata
@@ -49,6 +50,7 @@ ConvergenceAndUniformity
 MLGO
 ContentAddressableStorage
 CIBestPractices
+GitHubActionsRunners
 AIToolPolicy
 CallGraphSection
 InterfaceExportAnnotations
@@ -168,6 +170,10 @@ XRayFDRFormat
 {doc}`Extensions`
 :   LLVM-specific extensions to tools and formats LLVM seeks compatibility with.
 
+{doc}`AlignedBundling`
+:   The `.bundle_align_mode`, `.bundle_lock`, and `.bundle_unlock` assembler
+    directives.
+
 {doc}`HowToSetUpLLVMStyleRTTI`
 :   How to make `isa<>`, `dyn_cast<>`, etc. available for clients of your
     class hierarchy.
@@ -234,3 +240,7 @@ XRayFDRFormat
 {doc}`CIBestPractices`
 :   A list of guidelines and best practices to use when working on LLVM's
     CI systems.
+
+{doc}`GitHubActionsRunners`
+:   A reference for LLVM's GitHub Actions runner pools and their
+    platform-specific constraints.

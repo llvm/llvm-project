@@ -293,7 +293,7 @@ void simple(float *a, float *b, int *c) {
 // CHECK: [[ACC_GRP4]] = distinct !{}
 // CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META6:![0-9]+]], [[META7:![0-9]+]]}
 // CHECK: [[META6]] = !{!"llvm.loop.parallel_accesses", [[ACC_GRP4]]}
-// CHECK: [[META7]] = !{!"llvm.loop.vectorize.enable", i1 true}
+// CHECK: [[META7]] = !{!"llvm.loop.vectorize.enable"}
 // CHECK: [[ACC_GRP8]] = distinct !{}
 // CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META10:![0-9]+]], [[META7]]}
 // CHECK: [[META10]] = !{!"llvm.loop.parallel_accesses", [[ACC_GRP8]]}

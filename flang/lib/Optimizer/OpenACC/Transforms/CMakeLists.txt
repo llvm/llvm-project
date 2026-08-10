@@ -1,5 +1,6 @@
 add_flang_library(FIROpenACCTransforms
   ACCDeclareActionConversion.cpp
+  ACCDevicePtrToCUFKernel.cpp
   ACCEmitNYIFlang.cpp
   ACCInitializeFIRAnalyses.cpp
   ACCPipeline.cpp
@@ -11,6 +12,7 @@ add_flang_library(FIROpenACCTransforms
   FIROpenACCPassesIncGen
 
   LINK_LIBS
+  CUFDialect
   FIRAnalysis
   FIRBuilder
   FIRDialect

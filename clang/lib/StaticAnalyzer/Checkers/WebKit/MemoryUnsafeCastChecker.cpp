@@ -54,6 +54,7 @@ static void emitDiagnostics(const BoundNodes &Nodes, BugReporter &BR,
                                BR.getSourceManager());
   auto Report = std::make_unique<BasicBugReport>(BT, OS.str(), BSLoc);
   Report->addRange(CE->getSourceRange());
+  Report->setDeclWithIssue(ADC->getDecl());
   BR.emitReport(std::move(Report));
 }
 
@@ -74,20 +75,35 @@ static void emitDiagnosticsUnrelated(const BoundNodes &Nodes, BugReporter &BR,
                                BR.getSourceManager());
   auto Report = std::make_unique<BasicBugReport>(BT, OS.str(), BSLoc);
   Report->addRange(CE->getSourceRange());
+  Report->setDeclWithIssue(ADC->getDecl());
   BR.emitReport(std::move(Report));
 }
 
-namespace clang {
-namespace ast_matchers {
-AST_MATCHER_P(StringLiteral, mentionsBoundType, std::string, BindingID) {
-  return Builder->removeBindings([this, &Node](const BoundNodesMap &Nodes) {
-    const auto &BN = Nodes.getNode(this->BindingID);
-    if (const auto *ND = BN.get<NamedDecl>()) {
-      return ND->getName() != Node.getString();
-    }
-    return true;
-  });
+static void emitDiagnosticsIdArg(const BoundNodes &Nodes, BugReporter &BR,
+                                 AnalysisDeclContext *ADC,
+                                 const MemoryUnsafeCastChecker *Checker,
+                                 const BugType &BT) {
+  const auto *CE = Nodes.getNodeAs<CastExpr>(WarnRecordDecl);
+  const NamedDecl *Derived = Nodes.getNodeAs<NamedDecl>(DerivedNode);
+  assert(CE && Derived);
+
+  std::string Diagnostics;
+  llvm::raw_string_ostream OS(Diagnostics);
+  OS << "Unsafe implicit cast from 'id' to specific type '"
+     << Derived->getNameAsString() << "'";
+  PathDiagnosticLocation BSLoc(CE->getSourceRange().getBegin(),
+                               BR.getSourceManager());
+  auto Report = std::make_unique<BasicBugReport>(BT, OS.str(), BSLoc);
+  Report->addRange(CE->getSourceRange());
+  Report->setDeclWithIssue(ADC->getDecl());
+  BR.emitReport(std::move(Report));
 }
+
+namespace {
+using BoundNodesMap = ::clang::ast_matchers::internal::BoundNodesMap;
+
+// Matches the plain `id` type.
+AST_MATCHER(QualType, isObjCIdType) { return Node->isObjCIdType(); }
 
 // Matches a cast whose previously-bound BaseID node is a class template
 // specialization and whose previously-bound DerivedID node is one of that
@@ -111,8 +127,7 @@ AST_MATCHER_P2(Expr, isCRTPCast, std::string, BaseID, std::string, DerivedID) {
     return true;
   });
 }
-} // end namespace ast_matchers
-} // end namespace clang
+} // end anonymous namespace
 
 static decltype(auto) hasTypePointingTo(DeclarationMatcher DeclM) {
   return hasType(pointerType(pointee(hasDeclaration(DeclM))));
@@ -239,6 +254,29 @@ void MemoryUnsafeCastChecker::checkASTCodeBody(const Decl *D,
                                      *D->getBody(), AM.getASTContext());
   for (BoundNodes Match : MatchesUnrelatedTypes)
     emitDiagnosticsUnrelated(Match, BR, ADC, this, BT);
+
+  // Match an `id`-typed argument implicitly converted to a specific
+  // Objective-C type at a call, message send, or constructor call, e.g.
+  // passing an `id` where an `NSString *` parameter is expected. Such
+  // conversions compile without a visible cast but throw at runtime if the
+  // object is not actually of that type.
+  auto CastArgFromIdToSpecificType =
+      implicitCastExpr(
+          hasCastKind(CK_BitCast),
+          hasSourceExpression(
+              ignoringParenImpCasts(hasType(qualType(isObjCIdType())))),
+          hasType(qualType(hasCanonicalType(objcObjectPointerType(pointee(
+              hasDeclaration(objcInterfaceDecl().bind(DerivedNode))))))))
+          .bind(WarnRecordDecl);
+  auto MatchCallArgFromId =
+      anyOf(callExpr(hasAnyArgument(CastArgFromIdToSpecificType)),
+            cxxConstructExpr(hasAnyArgument(CastArgFromIdToSpecificType)),
+            objcMessageExpr(hasAnyArgument(CastArgFromIdToSpecificType)));
+  auto MatchesCallArgFromId =
+      match(stmt(forEachDescendant(stmt(MatchCallArgFromId))), *D->getBody(),
+            AM.getASTContext());
+  for (BoundNodes Match : MatchesCallArgFromId)
+    emitDiagnosticsIdArg(Match, BR, ADC, this, BT);
 }
 
 void ento::registerMemoryUnsafeCastChecker(CheckerManager &Mgr) {

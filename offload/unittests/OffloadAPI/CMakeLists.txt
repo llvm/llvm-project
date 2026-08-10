@@ -12,8 +12,7 @@ add_offload_unittest("context"
 add_offload_unittest("device"
     device/olIterateDevices.cpp
     device/olGetDeviceInfo.cpp
-    device/olGetDeviceInfoSize.cpp
-    device/olGetHostInfo.cpp)
+    device/olGetDeviceInfoSize.cpp)
 
 add_offload_unittest("event"
     event/olCreateEvent.cpp
@@ -65,4 +64,5 @@ add_offload_unittest("queue"
 add_offload_unittest("symbol"
     symbol/olGetSymbol.cpp
     symbol/olGetSymbolInfo.cpp
-    symbol/olGetSymbolInfoSize.cpp)
+    symbol/olGetSymbolInfoSize.cpp
+    symbol/olIterateSymbols.cpp)

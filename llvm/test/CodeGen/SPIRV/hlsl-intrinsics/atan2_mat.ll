@@ -1,5 +1,5 @@
 ; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv-unknown-vulkan %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
 
 ; Vulkan/Shader does not allow the Vector16 capability, so an MxN HLSL matrix
 ; is represented as [M x <N x float>] in LLVM IR and elementwise atan2 is
@@ -41,6 +41,33 @@
 ; CHECK-DAG: %[[#fn_f16:]] = OpTypeFunction %[[#void]] %[[#ptr_arr_f16]] %[[#ptr_arr_f16]] %[[#ptr_arr_f16]]
 ; CHECK-DAG: %[[#fn3_f32:]] = OpTypeFunction %[[#void]] %[[#ptr_arr3_f32]] %[[#ptr_arr3_f32]] %[[#ptr_arr3_f32]]
 ; CHECK-DAG: %[[#fn3_f16:]] = OpTypeFunction %[[#void]] %[[#ptr_arr3_f16]] %[[#ptr_arr3_f16]] %[[#ptr_arr3_f16]]
+
+@wide_f32_6 = internal addrspace(10) global [6 x float] zeroinitializer
+@wide_f16_6 = internal addrspace(10) global [6 x half] zeroinitializer
+@wide_f32_8 = internal addrspace(10) global [8 x float] zeroinitializer
+@wide_f16_8 = internal addrspace(10) global [8 x half] zeroinitializer
+@wide_f32_9 = internal addrspace(10) global [9 x float] zeroinitializer
+@wide_f16_9 = internal addrspace(10) global [9 x half] zeroinitializer
+@wide_f32_12 = internal addrspace(10) global [12 x float] zeroinitializer
+@wide_f16_12 = internal addrspace(10) global [12 x half] zeroinitializer
+@wide_f32_16 = internal addrspace(10) global [16 x float] zeroinitializer
+@wide_f16_16 = internal addrspace(10) global [16 x half] zeroinitializer
+@shuffle_f32_4 = internal addrspace(10) global <4 x float> zeroinitializer
+@mat_f32_4x4 = internal addrspace(10) global [4 x <4 x float>] zeroinitializer
+@mat_f16_4x4 = internal addrspace(10) global [4 x <4 x half>] zeroinitializer
+@mat_f32_3x3 = internal addrspace(10) global [3 x <3 x float>] zeroinitializer
+@mat_f16_3x3 = internal addrspace(10) global [3 x <3 x half>] zeroinitializer
+@mat_f32_2x2 = internal addrspace(10) global [2 x <2 x float>] zeroinitializer
+@mat_f16_2x2 = internal addrspace(10) global [2 x <2 x half>] zeroinitializer
+@mat_f32_2x3 = internal addrspace(10) global [2 x <3 x float>] zeroinitializer
+@mat_f16_2x3 = internal addrspace(10) global [2 x <3 x half>] zeroinitializer
+@mat_f32_3x2 = internal addrspace(10) global [3 x <2 x float>] zeroinitializer
+@mat_f32_2x4 = internal addrspace(10) global [2 x <4 x float>] zeroinitializer
+@mat_f32_4x2 = internal addrspace(10) global [4 x <2 x float>] zeroinitializer
+@mat_f32_3x4 = internal addrspace(10) global [3 x <4 x float>] zeroinitializer
+@mat_f16_3x4 = internal addrspace(10) global [3 x <4 x half>] zeroinitializer
+@mat_f32_4x3 = internal addrspace(10) global [4 x <3 x float>] zeroinitializer
+@mat_f16_4x3 = internal addrspace(10) global [4 x <3 x half>] zeroinitializer
 
 define internal void @atan2_float4x4(ptr addrspace(10) %out, ptr addrspace(10) %a, ptr addrspace(10) %b) {
 entry:
@@ -543,9 +570,174 @@ entry:
   ret void
 }
 
+define internal void @atan2_float6_from_shuffle() {
+entry:
+  ; CHECK: OpFunction %[[#void]] None
+  ; CHECK: %[[#shuffle_f32:]] = OpLoad %[[#vec4_float_32]]
+  ; CHECK: OpCompositeExtract %[[#float_32]] %[[#shuffle_f32]] 0
+  ; CHECK-COUNT-2: OpExtInst {{%[0-9]+}} %[[#op_ext_glsl]] Atan2
+  ; CHECK: OpFunctionEnd
+  %vec = load <4 x float>, ptr addrspace(10) @shuffle_f32_4
+  %va = shufflevector <4 x float> %vec, <4 x float> %vec,
+            <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
+  %r = call <6 x float> @llvm.atan2.v6f32(<6 x float> %va, <6 x float> %va)
+  store <6 x float> %r, ptr addrspace(10) @wide_f32_6
+  ret void
+}
+
+define internal void @atan2_half6() {
+entry:
+  ; CHECK: OpFunction %[[#void]] None
+  ; CHECK-COUNT-2: OpExtInst {{%[0-9]+}} %[[#op_ext_glsl]] Atan2
+  ; CHECK: OpFunctionEnd
+  %va = load <6 x half>, ptr addrspace(10) @wide_f16_6
+  %vb = load <6 x half>, ptr addrspace(10) @wide_f16_6
+  %r = call <6 x half> @llvm.atan2.v6f16(<6 x half> %va, <6 x half> %vb)
+  store <6 x half> %r, ptr addrspace(10) @wide_f16_6
+  ret void
+}
+
+define internal void @atan2_float8() {
+entry:
+  ; CHECK: OpFunction %[[#void]] None
+  ; CHECK-COUNT-2: OpExtInst %[[#vec4_float_32]] %[[#op_ext_glsl]] Atan2
+  ; CHECK: OpFunctionEnd
+  %va = load <8 x float>, ptr addrspace(10) @wide_f32_8
+  %vb = load <8 x float>, ptr addrspace(10) @wide_f32_8
+  %r = call <8 x float> @llvm.atan2.v8f32(<8 x float> %va, <8 x float> %vb)
+  store <8 x float> %r, ptr addrspace(10) @wide_f32_8
+  ret void
+}
+
+define internal void @atan2_half8() {
+entry:
+  ; CHECK: OpFunction %[[#void]] None
+  ; CHECK-COUNT-2: OpExtInst %[[#vec4_float_16]] %[[#op_ext_glsl]] Atan2
+  ; CHECK: OpFunctionEnd
+  %va = load <8 x half>, ptr addrspace(10) @wide_f16_8
+  %vb = load <8 x half>, ptr addrspace(10) @wide_f16_8
+  %r = call <8 x half> @llvm.atan2.v8f16(<8 x half> %va, <8 x half> %vb)
+  store <8 x half> %r, ptr addrspace(10) @wide_f16_8
+  ret void
+}
+
+define internal void @atan2_float9() {
+entry:
+  ; CHECK: OpFunction %[[#void]] None
+  ; CHECK-COUNT-3: OpExtInst {{%[0-9]+}} %[[#op_ext_glsl]] Atan2
+  ; CHECK: OpFunctionEnd
+  %va = load <9 x float>, ptr addrspace(10) @wide_f32_9
+  %vb = load <9 x float>, ptr addrspace(10) @wide_f32_9
+  %r = call <9 x float> @llvm.atan2.v9f32(<9 x float> %va, <9 x float> %vb)
+  store <9 x float> %r, ptr addrspace(10) @wide_f32_9
+  ret void
+}
+
+define internal void @atan2_half9() {
+entry:
+  ; CHECK: OpFunction %[[#void]] None
+  ; CHECK-COUNT-3: OpExtInst {{%[0-9]+}} %[[#op_ext_glsl]] Atan2
+  ; CHECK: OpFunctionEnd
+  %va = load <9 x half>, ptr addrspace(10) @wide_f16_9
+  %vb = load <9 x half>, ptr addrspace(10) @wide_f16_9
+  %r = call <9 x half> @llvm.atan2.v9f16(<9 x half> %va, <9 x half> %vb)
+  store <9 x half> %r, ptr addrspace(10) @wide_f16_9
+  ret void
+}
+
+define internal void @atan2_float12() {
+entry:
+  ; CHECK: OpFunction %[[#void]] None
+  ; CHECK-COUNT-3: OpExtInst %[[#vec4_float_32]] %[[#op_ext_glsl]] Atan2
+  ; CHECK: OpFunctionEnd
+  %va = load <12 x float>, ptr addrspace(10) @wide_f32_12
+  %vb = load <12 x float>, ptr addrspace(10) @wide_f32_12
+  %r = call <12 x float> @llvm.atan2.v12f32(<12 x float> %va, <12 x float> %vb)
+  store <12 x float> %r, ptr addrspace(10) @wide_f32_12
+  ret void
+}
+
+define internal void @atan2_half12() {
+entry:
+  ; CHECK: OpFunction %[[#void]] None
+  ; CHECK-COUNT-3: OpExtInst %[[#vec4_float_16]] %[[#op_ext_glsl]] Atan2
+  ; CHECK: OpFunctionEnd
+  %va = load <12 x half>, ptr addrspace(10) @wide_f16_12
+  %vb = load <12 x half>, ptr addrspace(10) @wide_f16_12
+  %r = call <12 x half> @llvm.atan2.v12f16(<12 x half> %va, <12 x half> %vb)
+  store <12 x half> %r, ptr addrspace(10) @wide_f16_12
+  ret void
+}
+
+define internal void @atan2_float16() {
+entry:
+  ; CHECK: OpFunction %[[#void]] None
+  ; CHECK-COUNT-4: OpExtInst %[[#vec4_float_32]] %[[#op_ext_glsl]] Atan2
+  ; CHECK: OpFunctionEnd
+  %va = load <16 x float>, ptr addrspace(10) @wide_f32_16
+  %vb = load <16 x float>, ptr addrspace(10) @wide_f32_16
+  %r = call <16 x float> @llvm.atan2.v16f32(<16 x float> %va, <16 x float> %vb)
+  store <16 x float> %r, ptr addrspace(10) @wide_f32_16
+  ret void
+}
+
+define internal void @atan2_half16() {
+entry:
+  ; CHECK: OpFunction %[[#void]] None
+  ; CHECK-COUNT-4: OpExtInst %[[#vec4_float_16]] %[[#op_ext_glsl]] Atan2
+  ; CHECK: OpFunctionEnd
+  %va = load <16 x half>, ptr addrspace(10) @wide_f16_16
+  %vb = load <16 x half>, ptr addrspace(10) @wide_f16_16
+  %r = call <16 x half> @llvm.atan2.v16f16(<16 x half> %va, <16 x half> %vb)
+  store <16 x half> %r, ptr addrspace(10) @wide_f16_16
+  ret void
+}
+
+define void @main() #0 {
+entry:
+  call void @atan2_float4x4(ptr addrspace(10) @mat_f32_4x4, ptr addrspace(10) @mat_f32_4x4, ptr addrspace(10) @mat_f32_4x4)
+  call void @atan2_half4x4(ptr addrspace(10) @mat_f16_4x4, ptr addrspace(10) @mat_f16_4x4, ptr addrspace(10) @mat_f16_4x4)
+  call void @atan2_float3x3(ptr addrspace(10) @mat_f32_3x3, ptr addrspace(10) @mat_f32_3x3, ptr addrspace(10) @mat_f32_3x3)
+  call void @atan2_half3x3(ptr addrspace(10) @mat_f16_3x3, ptr addrspace(10) @mat_f16_3x3, ptr addrspace(10) @mat_f16_3x3)
+  call void @atan2_float2x2(ptr addrspace(10) @mat_f32_2x2, ptr addrspace(10) @mat_f32_2x2, ptr addrspace(10) @mat_f32_2x2)
+  call void @atan2_half2x2(ptr addrspace(10) @mat_f16_2x2, ptr addrspace(10) @mat_f16_2x2, ptr addrspace(10) @mat_f16_2x2)
+  call void @atan2_float2x3(ptr addrspace(10) @mat_f32_2x3, ptr addrspace(10) @mat_f32_2x3, ptr addrspace(10) @mat_f32_2x3)
+  call void @atan2_half2x3(ptr addrspace(10) @mat_f16_2x3, ptr addrspace(10) @mat_f16_2x3, ptr addrspace(10) @mat_f16_2x3)
+  call void @atan2_float3x2(ptr addrspace(10) @mat_f32_3x2, ptr addrspace(10) @mat_f32_3x2, ptr addrspace(10) @mat_f32_3x2)
+  call void @atan2_float2x4(ptr addrspace(10) @mat_f32_2x4, ptr addrspace(10) @mat_f32_2x4, ptr addrspace(10) @mat_f32_2x4)
+  call void @atan2_float4x2(ptr addrspace(10) @mat_f32_4x2, ptr addrspace(10) @mat_f32_4x2, ptr addrspace(10) @mat_f32_4x2)
+  call void @atan2_float3x4(ptr addrspace(10) @mat_f32_3x4, ptr addrspace(10) @mat_f32_3x4, ptr addrspace(10) @mat_f32_3x4)
+  call void @atan2_half3x4(ptr addrspace(10) @mat_f16_3x4, ptr addrspace(10) @mat_f16_3x4, ptr addrspace(10) @mat_f16_3x4)
+  call void @atan2_float4x3(ptr addrspace(10) @mat_f32_4x3, ptr addrspace(10) @mat_f32_4x3, ptr addrspace(10) @mat_f32_4x3)
+  call void @atan2_half4x3(ptr addrspace(10) @mat_f16_4x3, ptr addrspace(10) @mat_f16_4x3, ptr addrspace(10) @mat_f16_4x3)
+  call void @atan2_float6_from_shuffle()
+  call void @atan2_half6()
+  call void @atan2_float8()
+  call void @atan2_half8()
+  call void @atan2_float9()
+  call void @atan2_half9()
+  call void @atan2_float12()
+  call void @atan2_half12()
+  call void @atan2_float16()
+  call void @atan2_half16()
+  ret void
+}
+
 declare <4 x float> @llvm.atan2.v4f32(<4 x float>, <4 x float>)
 declare <4 x half> @llvm.atan2.v4f16(<4 x half>, <4 x half>)
 declare <3 x float> @llvm.atan2.v3f32(<3 x float>, <3 x float>)
 declare <3 x half> @llvm.atan2.v3f16(<3 x half>, <3 x half>)
 declare <2 x float> @llvm.atan2.v2f32(<2 x float>, <2 x float>)
 declare <2 x half> @llvm.atan2.v2f16(<2 x half>, <2 x half>)
+declare <6 x float> @llvm.atan2.v6f32(<6 x float>, <6 x float>)
+declare <6 x half> @llvm.atan2.v6f16(<6 x half>, <6 x half>)
+declare <8 x float> @llvm.atan2.v8f32(<8 x float>, <8 x float>)
+declare <8 x half> @llvm.atan2.v8f16(<8 x half>, <8 x half>)
+declare <9 x float> @llvm.atan2.v9f32(<9 x float>, <9 x float>)
+declare <9 x half> @llvm.atan2.v9f16(<9 x half>, <9 x half>)
+declare <12 x float> @llvm.atan2.v12f32(<12 x float>, <12 x float>)
+declare <12 x half> @llvm.atan2.v12f16(<12 x half>, <12 x half>)
+declare <16 x float> @llvm.atan2.v16f32(<16 x float>, <16 x float>)
+declare <16 x half> @llvm.atan2.v16f16(<16 x half>, <16 x half>)
+
+attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }

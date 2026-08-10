@@ -133,7 +133,6 @@ public:
   bool runOnFunction(Function &F) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addPreserved<DominatorTreeWrapperPass>();
     AU.addPreserved<ScalarEvolutionWrapperPass>();
     AU.addPreserved<TargetLibraryInfoWrapperPass>();
     AU.addRequired<AssumptionCacheTracker>();

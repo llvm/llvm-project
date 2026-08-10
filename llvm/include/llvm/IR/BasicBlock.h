@@ -280,21 +280,6 @@ public:
         static_cast<const BasicBlock *>(this)->getTerminatingMustTailCall());
   }
 
-  /// Returns a pointer to the first instruction in this block that is not a
-  /// PHINode instruction.
-  ///
-  /// When adding instructions to the beginning of the basic block, they should
-  /// be added before the returned value, not before the first instruction,
-  /// which might be PHI. Returns 0 is there's no non-PHI instruction.
-  ///
-  /// Deprecated in favour of getFirstNonPHIIt, which returns an iterator that
-  /// preserves some debugging information.
-  LLVM_ABI LLVM_DEPRECATED("Use iterators as instruction positions",
-                           "getFirstNonPHIIt") const
-      Instruction *getFirstNonPHI() const;
-  LLVM_ABI LLVM_DEPRECATED("Use iterators as instruction positions instead",
-                           "getFirstNonPHIIt") Instruction *getFirstNonPHI();
-
   /// Returns an iterator to the first instruction in this block that is not a
   /// PHINode instruction.
   ///

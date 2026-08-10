@@ -42,24 +42,24 @@ MisExpect diagnostics are also available in the form of optimization remarks,
 which can be serialized and processed through the `opt-viewer.py`
 scripts in LLVM.
 
-```{option} -Rpass=misexpect
+:::{option} -Rpass=misexpect
 
 Enables optimization remarks for misexpect when profiling data conflicts with
 use of `llvm.expect` intrinsics.
-```
+:::
 
-```{option} -Wmisexpect
+:::{option} -Wmisexpect
 
 Enables misexpect warnings when profiling data conflicts with use of
 `llvm.expect` intrinsics.
-```
+:::
 
-```{option} -fdiagnostic-misexpect-tolerance=N
+:::{option} -fdiagnostic-misexpect-tolerance=N
 
 Relaxes misexpect checking to tolerate profiling values within N% of the
 expected branch weight. e.g., a value of `N=5` allows misexpect to check against
 `0.95 * Threshold`
-```
+:::
 
 LLVM supports 4 types of profile formats: Frontend, IR, CS-IR, and
 Sampling. MisExpect Diagnostics are compatible with all Profiling formats.

@@ -12,6 +12,7 @@ define dso_local void @test_api(i32 %cond, i16 signext %row, i16 signext %col) n
 ; AVX512-NEXT:    andq $-1024, %rsp # imm = 0xFC00
 ; AVX512-NEXT:    subq $8192, %rsp # imm = 0x2000
 ; AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    # kill: def $zmm0 killed $xmm0
 ; AVX512-NEXT:    vmovups %zmm0, {{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    movb $1, {{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    movw %dx, %ax

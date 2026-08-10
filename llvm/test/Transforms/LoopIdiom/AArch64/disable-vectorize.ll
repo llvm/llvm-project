@@ -379,12 +379,12 @@ exit:
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.vectorize.width", i32 1}
 !2 = distinct !{!2, !3}
-!3 = !{!"llvm.loop.vectorize.enable", i1 false}
+!3 = !{!"llvm.loop.vectorize.disable"}
 
 attributes #0 = { "target-features"="+sve2" }
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.vectorize.width", i32 1}
 ; CHECK: [[LOOP2]] = distinct !{[[LOOP2]], [[META3:![0-9]+]]}
-; CHECK: [[META3]] = !{!"llvm.loop.vectorize.enable", i1 false}
+; CHECK: [[META3]] = !{!"llvm.loop.vectorize.disable"}
 ;.

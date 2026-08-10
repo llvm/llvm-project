@@ -129,7 +129,7 @@ program openacc_loop_validity
   !$acc end parallel
 
   !$acc parallel
-  !$acc loop worker(num: worker_size)
+  !$acc loop worker(num : worker_size)
   do i = 1, N
     a(i) = 3.14d0
   end do

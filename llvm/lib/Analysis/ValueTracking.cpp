@@ -5727,6 +5727,45 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       Known.knownNot(fcNan | fcInf | fcNegative);
       break;
     }
+    case Intrinsic::convert_from_arbitrary_fp: {
+      auto *MD = cast<MetadataAsValue>(II->getArgOperand(1))->getMetadata();
+      StringRef FormatStr = cast<MDString>(MD)->getString();
+
+      const fltSemantics *SrcSemantics =
+          APFloat::getArbitraryFPSemantics(FormatStr);
+      if (!SrcSemantics)
+        break;
+
+      const fltSemantics DstSemantics =
+          II->getType()->getScalarType()->getFltSemantics();
+
+      if (!APFloat::semanticsHasNaN(*SrcSemantics))
+        Known.knownNot(fcNan);
+
+      // fcInf can only be cleared if the source format has no Inf encoding
+      // and the dst max exp can accommodate src max exp.
+      if (!APFloat::semanticsHasInf(*SrcSemantics) &&
+          APFloat::semanticsMaxExponent(*SrcSemantics) <=
+              APFloat::semanticsMaxExponent(DstSemantics))
+        Known.knownNot(fcInf);
+
+      // Check and clear all neg flags for formats that do not have signed
+      // representation.
+      if (!APFloat::semanticsHasSignedRepr(*SrcSemantics))
+        Known.knownNot(fcNegative);
+
+      // Check if format has no zero at all (Float8E8M0FNU), or no negative
+      // zero.
+      if (!APFloat::semanticsHasZero(*SrcSemantics))
+        Known.knownNot(fcZero);
+      else if (SrcSemantics->nanEncoding == fltNanEncoding::NegativeZero)
+        Known.knownNot(fcNegZero);
+
+      // If src lands normally in dest, the result can never be subnormal.
+      if (APFloat::isRepresentableAsNormalIn(*SrcSemantics, DstSemantics))
+        Known.knownNot(fcSubnormal);
+      break;
+    }
     default:
       break;
     }

@@ -174,8 +174,7 @@ endif
 
 ifeq "$(OS)" "Darwin"
     ifeq "$(SDKROOT)" ""
-	# We haven't otherwise set the SDKROOT, so set it now to macosx
-	SDKROOT := $(shell xcrun --sdk macosx --show-sdk-path)
+        $(error SDKROOT must be set on Darwin)
     endif
     SYSROOT_FLAGS := -isysroot "$(SDKROOT)"
     GCC_TOOLCHAIN_FLAGS :=

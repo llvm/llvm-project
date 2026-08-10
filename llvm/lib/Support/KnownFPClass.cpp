@@ -614,8 +614,9 @@ KnownFPClass KnownFPClass::sinh(const KnownFPClass &KnownSrc) {
 KnownFPClass KnownFPClass::cosh(const KnownFPClass &KnownSrc) {
   KnownFPClass Known;
 
-  // cosh(x) >= 1 for all real x; cosh(+-Inf) = +Inf. Never negative.
-  Known.knownNot(fcNegative);
+  // cosh(x) >= 1 for all real x; cosh(+-Inf) = +Inf. Never negative,
+  // zero, or subnormal.
+  Known.knownNot(fcNegative | fcZero | fcSubnormal);
 
   Known.propagateNaN(KnownSrc);
 
@@ -649,8 +650,6 @@ KnownFPClass KnownFPClass::asin(const KnownFPClass &KnownSrc) {
 
   // NaN propagates. asin(x) is also NaN for |x| > 1, so we cannot rule
   // out NaN without knowing the source is in [-1, 1].
-  Known.propagateNaN(KnownSrc);
-
   return Known;
 }
 
@@ -663,8 +662,6 @@ KnownFPClass KnownFPClass::acos(const KnownFPClass &KnownSrc) {
 
   // NaN propagates. acos(x) is also NaN for |x| > 1, so we cannot rule
   // out NaN without knowing the source is in [-1, 1].
-  Known.propagateNaN(KnownSrc);
-
   return Known;
 }
 

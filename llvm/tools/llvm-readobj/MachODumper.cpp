@@ -47,6 +47,7 @@ public:
   // MachO-specific.
   void printMachODataInCode() override;
   void printMachOVersionMin() override;
+  void printMachOTargetTriple() override;
   void printMachODysymtab() override;
   void printMachOSegment() override;
   void printMachOIndirectSymbols() override;
@@ -925,6 +926,21 @@ void MachODumper::printMachOVersionMin() {
         SDK += "." + utostr(MachOObjectFile::getVersionMinUpdate(VMC, true));
     }
     W.printString("SDK", SDK);
+  }
+}
+
+void MachODumper::printMachOTargetTriple() {
+  for (const auto &Load : Obj->load_commands()) {
+    if (Load.C.cmd == MachO::LC_TARGET_TRIPLE) {
+      DictScope Group(W, "TargetTriple");
+      MachO::target_triple_command TTC = Obj->getTargetTripleLoadCommand(Load);
+      W.printString("Cmd", "LC_TARGET_TRIPLE");
+      W.printNumber("Size", TTC.cmdsize);
+      if (TTC.triple < TTC.cmdsize)
+        W.printString("Triple", Load.Ptr + TTC.triple);
+      else
+        W.printNumber("Triple ?(bad offset)", TTC.triple);
+    }
   }
 }
 

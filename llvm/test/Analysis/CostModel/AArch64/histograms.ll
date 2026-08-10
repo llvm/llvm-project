@@ -5,6 +5,7 @@
 
 define void @histograms() {
 ; CHECK-NEON-LABEL: 'histograms'
+; CHECK-NEON-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.add.nxv1p0.i64(<vscale x 1 x ptr> poison, i64 1, <vscale x 1 x i1> poison)
 ; CHECK-NEON-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.add.nxv2p0.i64(<vscale x 2 x ptr> poison, i64 1, <vscale x 2 x i1> poison)
 ; CHECK-NEON-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.add.nxv4p0.i32(<vscale x 4 x ptr> poison, i32 1, <vscale x 4 x i1> poison)
 ; CHECK-NEON-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.add.nxv8p0.i16(<vscale x 8 x ptr> poison, i16 1, <vscale x 8 x i1> poison)
@@ -13,6 +14,7 @@ define void @histograms() {
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: call void @llvm.experimental.vector.histogram.add.v4p0.i32(<4 x ptr> poison, i32 1, <4 x i1> poison)
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: call void @llvm.experimental.vector.histogram.add.v8p0.i16(<8 x ptr> poison, i16 1, <8 x i1> poison)
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: call void @llvm.experimental.vector.histogram.add.v16p0.i8(<16 x ptr> poison, i8 1, <16 x i1> poison)
+; CHECK-NEON-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.uadd.sat.nxv1p0.i64(<vscale x 1 x ptr> poison, i64 1, <vscale x 1 x i1> poison)
 ; CHECK-NEON-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.uadd.sat.nxv2p0.i64(<vscale x 2 x ptr> poison, i64 1, <vscale x 2 x i1> poison)
 ; CHECK-NEON-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.uadd.sat.nxv4p0.i32(<vscale x 4 x ptr> poison, i32 1, <vscale x 4 x i1> poison)
 ; CHECK-NEON-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.uadd.sat.nxv8p0.i16(<vscale x 8 x ptr> poison, i16 1, <vscale x 8 x i1> poison)
@@ -21,6 +23,7 @@ define void @histograms() {
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: call void @llvm.experimental.vector.histogram.uadd.sat.v4p0.i32(<4 x ptr> poison, i32 1, <4 x i1> poison)
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: call void @llvm.experimental.vector.histogram.uadd.sat.v8p0.i16(<8 x ptr> poison, i16 1, <8 x i1> poison)
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: call void @llvm.experimental.vector.histogram.uadd.sat.v16p0.i8(<16 x ptr> poison, i8 1, <16 x i1> poison)
+; CHECK-NEON-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.umax.nxv1p0.i64(<vscale x 1 x ptr> poison, i64 1, <vscale x 1 x i1> poison)
 ; CHECK-NEON-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.umax.nxv2p0.i64(<vscale x 2 x ptr> poison, i64 1, <vscale x 2 x i1> poison)
 ; CHECK-NEON-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.umax.nxv4p0.i32(<vscale x 4 x ptr> poison, i32 1, <vscale x 4 x i1> poison)
 ; CHECK-NEON-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.umax.nxv8p0.i16(<vscale x 8 x ptr> poison, i16 1, <vscale x 8 x i1> poison)
@@ -29,6 +32,7 @@ define void @histograms() {
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: call void @llvm.experimental.vector.histogram.umax.v4p0.i32(<4 x ptr> poison, i32 1, <4 x i1> poison)
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: call void @llvm.experimental.vector.histogram.umax.v8p0.i16(<8 x ptr> poison, i16 1, <8 x i1> poison)
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: call void @llvm.experimental.vector.histogram.umax.v16p0.i8(<16 x ptr> poison, i8 1, <16 x i1> poison)
+; CHECK-NEON-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.umin.nxv1p0.i64(<vscale x 1 x ptr> poison, i64 1, <vscale x 1 x i1> poison)
 ; CHECK-NEON-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.umin.nxv2p0.i64(<vscale x 2 x ptr> poison, i64 1, <vscale x 2 x i1> poison)
 ; CHECK-NEON-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.umin.nxv4p0.i32(<vscale x 4 x ptr> poison, i32 1, <vscale x 4 x i1> poison)
 ; CHECK-NEON-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.umin.nxv8p0.i16(<vscale x 8 x ptr> poison, i16 1, <vscale x 8 x i1> poison)
@@ -40,6 +44,7 @@ define void @histograms() {
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-SVE-LABEL: 'histograms'
+; CHECK-SVE-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.add.nxv1p0.i64(<vscale x 1 x ptr> poison, i64 1, <vscale x 1 x i1> poison)
 ; CHECK-SVE-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.add.nxv2p0.i64(<vscale x 2 x ptr> poison, i64 1, <vscale x 2 x i1> poison)
 ; CHECK-SVE-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.add.nxv4p0.i32(<vscale x 4 x ptr> poison, i32 1, <vscale x 4 x i1> poison)
 ; CHECK-SVE-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.add.nxv8p0.i16(<vscale x 8 x ptr> poison, i16 1, <vscale x 8 x i1> poison)
@@ -48,6 +53,7 @@ define void @histograms() {
 ; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: call void @llvm.experimental.vector.histogram.add.v4p0.i32(<4 x ptr> poison, i32 1, <4 x i1> poison)
 ; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: call void @llvm.experimental.vector.histogram.add.v8p0.i16(<8 x ptr> poison, i16 1, <8 x i1> poison)
 ; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: call void @llvm.experimental.vector.histogram.add.v16p0.i8(<16 x ptr> poison, i8 1, <16 x i1> poison)
+; CHECK-SVE-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.uadd.sat.nxv1p0.i64(<vscale x 1 x ptr> poison, i64 1, <vscale x 1 x i1> poison)
 ; CHECK-SVE-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.uadd.sat.nxv2p0.i64(<vscale x 2 x ptr> poison, i64 1, <vscale x 2 x i1> poison)
 ; CHECK-SVE-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.uadd.sat.nxv4p0.i32(<vscale x 4 x ptr> poison, i32 1, <vscale x 4 x i1> poison)
 ; CHECK-SVE-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.uadd.sat.nxv8p0.i16(<vscale x 8 x ptr> poison, i16 1, <vscale x 8 x i1> poison)
@@ -56,6 +62,7 @@ define void @histograms() {
 ; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: call void @llvm.experimental.vector.histogram.uadd.sat.v4p0.i32(<4 x ptr> poison, i32 1, <4 x i1> poison)
 ; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: call void @llvm.experimental.vector.histogram.uadd.sat.v8p0.i16(<8 x ptr> poison, i16 1, <8 x i1> poison)
 ; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: call void @llvm.experimental.vector.histogram.uadd.sat.v16p0.i8(<16 x ptr> poison, i8 1, <16 x i1> poison)
+; CHECK-SVE-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.umax.nxv1p0.i64(<vscale x 1 x ptr> poison, i64 1, <vscale x 1 x i1> poison)
 ; CHECK-SVE-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.umax.nxv2p0.i64(<vscale x 2 x ptr> poison, i64 1, <vscale x 2 x i1> poison)
 ; CHECK-SVE-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.umax.nxv4p0.i32(<vscale x 4 x ptr> poison, i32 1, <vscale x 4 x i1> poison)
 ; CHECK-SVE-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.umax.nxv8p0.i16(<vscale x 8 x ptr> poison, i16 1, <vscale x 8 x i1> poison)
@@ -64,6 +71,7 @@ define void @histograms() {
 ; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: call void @llvm.experimental.vector.histogram.umax.v4p0.i32(<4 x ptr> poison, i32 1, <4 x i1> poison)
 ; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: call void @llvm.experimental.vector.histogram.umax.v8p0.i16(<8 x ptr> poison, i16 1, <8 x i1> poison)
 ; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: call void @llvm.experimental.vector.histogram.umax.v16p0.i8(<16 x ptr> poison, i8 1, <16 x i1> poison)
+; CHECK-SVE-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.umin.nxv1p0.i64(<vscale x 1 x ptr> poison, i64 1, <vscale x 1 x i1> poison)
 ; CHECK-SVE-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.umin.nxv2p0.i64(<vscale x 2 x ptr> poison, i64 1, <vscale x 2 x i1> poison)
 ; CHECK-SVE-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.umin.nxv4p0.i32(<vscale x 4 x ptr> poison, i32 1, <vscale x 4 x i1> poison)
 ; CHECK-SVE-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.umin.nxv8p0.i16(<vscale x 8 x ptr> poison, i16 1, <vscale x 8 x i1> poison)
@@ -75,6 +83,7 @@ define void @histograms() {
 ; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-SVE2-LABEL: 'histograms'
+; CHECK-SVE2-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.add.nxv1p0.i64(<vscale x 1 x ptr> poison, i64 1, <vscale x 1 x i1> poison)
 ; CHECK-SVE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.experimental.vector.histogram.add.nxv2p0.i64(<vscale x 2 x ptr> poison, i64 1, <vscale x 2 x i1> poison)
 ; CHECK-SVE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.experimental.vector.histogram.add.nxv4p0.i32(<vscale x 4 x ptr> poison, i32 1, <vscale x 4 x i1> poison)
 ; CHECK-SVE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: call void @llvm.experimental.vector.histogram.add.nxv8p0.i16(<vscale x 8 x ptr> poison, i16 1, <vscale x 8 x i1> poison)
@@ -83,6 +92,7 @@ define void @histograms() {
 ; CHECK-SVE2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: call void @llvm.experimental.vector.histogram.add.v4p0.i32(<4 x ptr> poison, i32 1, <4 x i1> poison)
 ; CHECK-SVE2-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: call void @llvm.experimental.vector.histogram.add.v8p0.i16(<8 x ptr> poison, i16 1, <8 x i1> poison)
 ; CHECK-SVE2-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: call void @llvm.experimental.vector.histogram.add.v16p0.i8(<16 x ptr> poison, i8 1, <16 x i1> poison)
+; CHECK-SVE2-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.uadd.sat.nxv1p0.i64(<vscale x 1 x ptr> poison, i64 1, <vscale x 1 x i1> poison)
 ; CHECK-SVE2-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.uadd.sat.nxv2p0.i64(<vscale x 2 x ptr> poison, i64 1, <vscale x 2 x i1> poison)
 ; CHECK-SVE2-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.uadd.sat.nxv4p0.i32(<vscale x 4 x ptr> poison, i32 1, <vscale x 4 x i1> poison)
 ; CHECK-SVE2-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.uadd.sat.nxv8p0.i16(<vscale x 8 x ptr> poison, i16 1, <vscale x 8 x i1> poison)
@@ -91,6 +101,7 @@ define void @histograms() {
 ; CHECK-SVE2-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: call void @llvm.experimental.vector.histogram.uadd.sat.v4p0.i32(<4 x ptr> poison, i32 1, <4 x i1> poison)
 ; CHECK-SVE2-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: call void @llvm.experimental.vector.histogram.uadd.sat.v8p0.i16(<8 x ptr> poison, i16 1, <8 x i1> poison)
 ; CHECK-SVE2-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: call void @llvm.experimental.vector.histogram.uadd.sat.v16p0.i8(<16 x ptr> poison, i8 1, <16 x i1> poison)
+; CHECK-SVE2-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.umax.nxv1p0.i64(<vscale x 1 x ptr> poison, i64 1, <vscale x 1 x i1> poison)
 ; CHECK-SVE2-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.umax.nxv2p0.i64(<vscale x 2 x ptr> poison, i64 1, <vscale x 2 x i1> poison)
 ; CHECK-SVE2-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.umax.nxv4p0.i32(<vscale x 4 x ptr> poison, i32 1, <vscale x 4 x i1> poison)
 ; CHECK-SVE2-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.umax.nxv8p0.i16(<vscale x 8 x ptr> poison, i16 1, <vscale x 8 x i1> poison)
@@ -99,6 +110,7 @@ define void @histograms() {
 ; CHECK-SVE2-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: call void @llvm.experimental.vector.histogram.umax.v4p0.i32(<4 x ptr> poison, i32 1, <4 x i1> poison)
 ; CHECK-SVE2-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: call void @llvm.experimental.vector.histogram.umax.v8p0.i16(<8 x ptr> poison, i16 1, <8 x i1> poison)
 ; CHECK-SVE2-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: call void @llvm.experimental.vector.histogram.umax.v16p0.i8(<16 x ptr> poison, i8 1, <16 x i1> poison)
+; CHECK-SVE2-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.umin.nxv1p0.i64(<vscale x 1 x ptr> poison, i64 1, <vscale x 1 x i1> poison)
 ; CHECK-SVE2-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.umin.nxv2p0.i64(<vscale x 2 x ptr> poison, i64 1, <vscale x 2 x i1> poison)
 ; CHECK-SVE2-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.umin.nxv4p0.i32(<vscale x 4 x ptr> poison, i32 1, <vscale x 4 x i1> poison)
 ; CHECK-SVE2-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.umin.nxv8p0.i16(<vscale x 8 x ptr> poison, i16 1, <vscale x 8 x i1> poison)
@@ -109,6 +121,7 @@ define void @histograms() {
 ; CHECK-SVE2-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: call void @llvm.experimental.vector.histogram.umin.v16p0.i8(<16 x ptr> poison, i8 1, <16 x i1> poison)
 ; CHECK-SVE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
+  call void @llvm.experimental.vector.histogram.add.nxv1p0.i64(<vscale x 1 x ptr> poison, i64 1, <vscale x 1 x i1> poison)
   call void @llvm.experimental.vector.histogram.add.nxv2p0.i64(<vscale x 2 x ptr> poison, i64 1, <vscale x 2 x i1> poison)
   call void @llvm.experimental.vector.histogram.add.nxv4p0.i32(<vscale x 4 x ptr> poison, i32 1, <vscale x 4 x i1> poison)
   call void @llvm.experimental.vector.histogram.add.nxv8p0.i16(<vscale x 8 x ptr> poison, i16 1, <vscale x 8 x i1> poison)
@@ -117,6 +130,7 @@ define void @histograms() {
   call void @llvm.experimental.vector.histogram.add.v4p0.i32(<4 x ptr> poison, i32 1, <4 x i1> poison)
   call void @llvm.experimental.vector.histogram.add.v8p0.i16(<8 x ptr> poison, i16 1, <8 x i1> poison)
   call void @llvm.experimental.vector.histogram.add.v16p0.i8(<16 x ptr> poison, i8 1, <16 x i1> poison)
+  call void @llvm.experimental.vector.histogram.uadd.sat.nxv1p0.i64(<vscale x 1 x ptr> poison, i64 1, <vscale x 1 x i1> poison)
   call void @llvm.experimental.vector.histogram.uadd.sat.nxv2p0.i64(<vscale x 2 x ptr> poison, i64 1, <vscale x 2 x i1> poison)
   call void @llvm.experimental.vector.histogram.uadd.sat.nxv4p0.i32(<vscale x 4 x ptr> poison, i32 1, <vscale x 4 x i1> poison)
   call void @llvm.experimental.vector.histogram.uadd.sat.nxv8p0.i16(<vscale x 8 x ptr> poison, i16 1, <vscale x 8 x i1> poison)
@@ -125,6 +139,7 @@ define void @histograms() {
   call void @llvm.experimental.vector.histogram.uadd.sat.v4p0.i32(<4 x ptr> poison, i32 1, <4 x i1> poison)
   call void @llvm.experimental.vector.histogram.uadd.sat.v8p0.i16(<8 x ptr> poison, i16 1, <8 x i1> poison)
   call void @llvm.experimental.vector.histogram.uadd.sat.v16p0.i8(<16 x ptr> poison, i8 1, <16 x i1> poison)
+  call void @llvm.experimental.vector.histogram.umax.nxv1p0.i64(<vscale x 1 x ptr> poison, i64 1, <vscale x 1 x i1> poison)
   call void @llvm.experimental.vector.histogram.umax.nxv2p0.i64(<vscale x 2 x ptr> poison, i64 1, <vscale x 2 x i1> poison)
   call void @llvm.experimental.vector.histogram.umax.nxv4p0.i32(<vscale x 4 x ptr> poison, i32 1, <vscale x 4 x i1> poison)
   call void @llvm.experimental.vector.histogram.umax.nxv8p0.i16(<vscale x 8 x ptr> poison, i16 1, <vscale x 8 x i1> poison)
@@ -133,6 +148,7 @@ define void @histograms() {
   call void @llvm.experimental.vector.histogram.umax.v4p0.i32(<4 x ptr> poison, i32 1, <4 x i1> poison)
   call void @llvm.experimental.vector.histogram.umax.v8p0.i16(<8 x ptr> poison, i16 1, <8 x i1> poison)
   call void @llvm.experimental.vector.histogram.umax.v16p0.i8(<16 x ptr> poison, i8 1, <16 x i1> poison)
+  call void @llvm.experimental.vector.histogram.umin.nxv1p0.i64(<vscale x 1 x ptr> poison, i64 1, <vscale x 1 x i1> poison)
   call void @llvm.experimental.vector.histogram.umin.nxv2p0.i64(<vscale x 2 x ptr> poison, i64 1, <vscale x 2 x i1> poison)
   call void @llvm.experimental.vector.histogram.umin.nxv4p0.i32(<vscale x 4 x ptr> poison, i32 1, <vscale x 4 x i1> poison)
   call void @llvm.experimental.vector.histogram.umin.nxv8p0.i16(<vscale x 8 x ptr> poison, i16 1, <vscale x 8 x i1> poison)

@@ -639,8 +639,45 @@ static inline bool mlirOperationIsNull(MlirOperation op) { return !op.ptr; }
 MLIR_CAPI_EXPORTED bool mlirOperationEqual(MlirOperation op,
                                            MlirOperation other);
 
-/// Compute a hash for the given operation.
+/// Compute a hash for the given operation. Operand and result SSA values are
+/// hashed by identity and locations are significant, so equivalent-but-distinct
+/// operations hash differently; use mlirOperationStructuralHashValue for a hash
+/// that pairs with mlirOperationIsStructurallyEquivalent.
 MLIR_CAPI_EXPORTED size_t mlirOperationHashValue(MlirOperation op);
+
+/// Flags controlling structural operation equivalence and hashing. These mirror
+/// `mlir::OperationEquivalence::Flags` and may be combined with bitwise OR.
+typedef enum MlirOperationEquivalenceFlags {
+  /// No flags: locations, discardable attributes, properties and
+  /// commutativity are all significant.
+  MLIR_OPERATION_EQUIVALENCE_NONE = 0,
+  /// Ignore the locations attached to operations.
+  MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS = 1,
+  /// Ignore the discardable attributes attached to operations.
+  MLIR_OPERATION_EQUIVALENCE_IGNORE_DISCARDABLE_ATTRS = 2,
+  /// Ignore the properties attached to operations.
+  MLIR_OPERATION_EQUIVALENCE_IGNORE_PROPERTIES = 4,
+  /// Ignore commutativity, comparing operands in an order-sensitive way.
+  MLIR_OPERATION_EQUIVALENCE_IGNORE_COMMUTATIVITY = 8,
+} MlirOperationEquivalenceFlags;
+
+/// Checks whether two operations are structurally equivalent, i.e. they have
+/// the same name, attributes, operand and result types, and recursively
+/// equivalent regions. Operand equivalence is tracked structurally while
+/// recursing into regions, so operands defined inside the compared regions need
+/// not be the exact same SSA values; operands defined outside must be. `flags`
+/// is a bitwise OR of MlirOperationEquivalenceFlags values.
+MLIR_CAPI_EXPORTED bool mlirOperationIsStructurallyEquivalent(MlirOperation lhs,
+                                                              MlirOperation rhs,
+                                                              uint32_t flags);
+
+/// Computes a hash for the given operation that pairs with
+/// mlirOperationIsStructurallyEquivalent: two operations that are structurally
+/// equivalent under the same `flags` hash equally. Operands are hashed by
+/// identity, results are not hashed at all, and regions do not participate in
+/// the hash. `flags` is a bitwise OR of MlirOperationEquivalenceFlags values.
+MLIR_CAPI_EXPORTED size_t mlirOperationStructuralHashValue(MlirOperation op,
+                                                           uint32_t flags);
 
 /// Gets the context this operation is associated with
 MLIR_CAPI_EXPORTED MlirContext mlirOperationGetContext(MlirOperation op);
@@ -1129,6 +1166,21 @@ MLIR_CAPI_EXPORTED void
 mlirValueReplaceAllUsesExcept(MlirValue of, MlirValue with,
                               intptr_t numExceptions,
                               MlirOperation *exceptions);
+
+/// Callback deciding whether a particular use should be replaced. It is passed
+/// the use as an MlirOpOperand (from which the owner operation, operand number
+/// and value can be queried) and the user-provided `userData`. Returns true to
+/// replace this use.
+typedef bool (*MlirOpOperandReplaceFilterCallback)(MlirOpOperand opOperand,
+                                                   void *userData);
+
+/// Replace uses of 'of' value with 'with' value, but only for the uses for
+/// which the `filter` callback returns true. `filter` must not be NULL; this is
+/// only checked by an assertion, i.e. in builds with assertions enabled.
+MLIR_CAPI_EXPORTED void
+mlirValueReplaceUsesWithIf(MlirValue of, MlirValue with,
+                           MlirOpOperandReplaceFilterCallback filter,
+                           void *userData);
 
 /// Gets the location of the value.
 MLIR_CAPI_EXPORTED MlirLocation mlirValueGetLocation(MlirValue v);

@@ -28,6 +28,7 @@
 #include <cstddef>
 #include <execution>
 #include <numeric>
+#include <memory>
 
 #include "test_iterators.h"
 
@@ -68,6 +69,11 @@ void f(non_forward_iterator non_fwd,
   {
     (void)std::count(pol, non_fwd, non_fwd, val);     // expected-error@*:* {{static assertion failed: count}}
     (void)std::count_if(pol, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: count_if}}
+  }
+
+  {
+    (void)std::destroy(pol, non_fwd, non_fwd); // expected-error@*:* {{static assertion failed: destroy}}
+    (void)std::destroy_n(pol, non_fwd, n);     // expected-error@*:* {{static assertion failed: destroy_n}}
   }
 
   {
@@ -115,6 +121,21 @@ void f(non_forward_iterator non_fwd,
   }
 
   {
+    (void)std::lexicographical_compare(
+        pol, it, it, non_fwd, non_fwd); // expected-error@*:* {{static assertion failed: lexicographical_compare}}
+    (void)std::lexicographical_compare(
+        pol, it, it, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: lexicographical_compare}}
+    (void)std::lexicographical_compare(
+        pol, non_fwd, non_fwd, it, it); // expected-error@*:* {{static assertion failed: lexicographical_compare}}
+    (void)std::lexicographical_compare(
+        pol, non_fwd, non_fwd, it, it, pred); // expected-error@*:* {{static assertion failed: lexicographical_compare}}
+  }
+
+  {
+    std::reverse(pol, non_bidir, non_bidir); // expected-error@*:* {{static assertion failed: reverse}}
+  }
+
+  {
     (void)std::reverse_copy(
         pol, non_bidir, non_bidir, it);            // expected-error@*:* {{static assertion failed: reverse_copy}}
     (void)std::reverse_copy(pol, it, it, non_fwd); // expected-error@*:* {{static assertion failed: reverse_copy}}
@@ -123,6 +144,18 @@ void f(non_forward_iterator non_fwd,
   {
     (void)std::is_partitioned(
         pol, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: is_partitioned}}
+  }
+
+  {
+    (void)std::is_sorted(pol, non_fwd, non_fwd);       // expected-error@*:* {{static assertion failed: is_sorted}}
+    (void)std::is_sorted(pol, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: is_sorted}}
+  }
+
+  {
+    (void)std::is_sorted_until(
+        pol, non_fwd, non_fwd); // expected-error@*:* {{static assertion failed: is_sorted_until}}
+    (void)std::is_sorted_until(
+        pol, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: is_sorted_until}}
   }
 
   {
@@ -149,6 +182,12 @@ void f(non_forward_iterator non_fwd,
         pol, non_fwd, non_fwd, it, it, pred); // expected-error@*:* {{static assertion failed: mismatch}}
     (void)std::mismatch(
         pol, it, it, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: mismatch}}
+  }
+
+  {
+    (void)std::adjacent_find(pol, non_fwd, non_fwd); // expected-error@*:* {{static assertion failed: adjacent_find}}
+    (void)std::adjacent_find(
+        pol, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: adjacent_find}}
   }
 
   {

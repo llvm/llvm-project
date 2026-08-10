@@ -24,12 +24,6 @@ be always converted to stack allocations. It is much easier to swap heap
 allocations for stack allocations when they are first generated because the
 lifetime information is conveniently available.
 
-For example, to rewrite the heap allocation in the `array-value-copy` pass with
-a stack allocation using the first approach would require analysis to ensure
-that the heap allocation is always freed before the function returns. This is
-much more complex than never generating a heap allocation (and free) in the
-first place (the second approach).
-
 The plan is to take the more complex first approach so that newly added changes
 to lowering code do not need to be made to support the stack arrays option. The
 general problem of determining heap allocation lifetimes can be simplified in
@@ -47,7 +41,6 @@ understand the situations in which Flang will generate heap allocations.
 ### Known Heap Array Allocations
 Flang allocates most arrays on the stack by default, but there are a few cases
 where temporary arrays are allocated on the heap:
-- `flang/lib/Optimizer/Transforms/ArrayValueCopy.cpp`
 - `flang/lib/Optimizer/Transforms/MemoryAllocation.cpp`
 - `flang/lib/Lower/IntrinsicCall.cpp`
 - `flang/lib/Lower/ConvertVariable.cpp`
@@ -55,16 +48,6 @@ where temporary arrays are allocated on the heap:
 Lowering code is being updated and in the future, temporaries for expressions
 will be created in the HLFIR bufferization pass in
 `flang/lib/Optimizer/HLFIR/Trnasforms/BufferizeHLFIR.cpp`.
-
-#### `ArrayValueCopy.cpp`
-Memory is allocated for a temporary array in `allocateArrayTemp()`. This
-temporary array is used to ensure that assignments of one array to itself
-produce the required value. E.g.
-
-```
-integer, dimension(5), intent(inout) :: x
-x(3,4) = x(1,2)
-```
 
 #### `MemoryAllocation.cpp`
 The default options for the Memory Allocation transformation ensure that no

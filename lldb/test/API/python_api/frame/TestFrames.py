@@ -12,6 +12,7 @@ from lldbsuite.test import lldbutil
 
 
 class FrameAPITestCase(TestBase):
+    @skipIfWasm  # Wasm exposes no register sets, so there is no pc or sp register to read
     def test_get_arg_vals_for_call_stack(self):
         """Exercise SBFrame.GetVariables() API to get argument vals."""
         self.build()

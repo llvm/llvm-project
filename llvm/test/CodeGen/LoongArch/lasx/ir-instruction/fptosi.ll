@@ -61,8 +61,8 @@ define void @fptosi_v4f32_v4i64(ptr %res, ptr %in){
 ; CHECK-LABEL: fptosi_v4f32_v4i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    vftintrz.w.s $vr0, $vr0
-; CHECK-NEXT:    vext2xv.d.w $xr0, $xr0
+; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 216
+; CHECK-NEXT:    xvftintrzl.l.s $xr0, $xr0
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x float>, ptr %in

@@ -46,6 +46,17 @@ test.using_property_ref_in_custom 1 + 4 = 5
 %ci64 = arith.constant 0 : i64
 test.variadic_segment_prop %ci64, %ci64 : %ci64 : i64, i64 : i64 end
 
+// Tests that the variadic segment size properties survive a round-trip
+// through the *custom* (non-generic) parser/printer when the assembly format
+// uses a bulk `functional-type(operands, results)` directive, which prevents
+// the printer from eliding `operandSegmentSizes` / `resultSegmentSizes` from
+// `<{...}>`. Without the parser-side fix, re-parsing the CHECK line below
+// (which is exactly what the printer emits) fails with "duplicate or unknown
+// key 'operandSegmentSizes' in dictionary attribute".
+// CHECK: test.variadic_segment_prop_bulk_type(%[[CI64]], %[[CI64]], %[[CI64]]) : (i64, i64, i64) -> (i64, i64, i64) <{operandSegmentSizes = array<i32: 2, 1>, resultSegmentSizes = array<i32: 2, 1>}>
+// GENERIC: "test.variadic_segment_prop_bulk_type"(%[[CI64]], %[[CI64]], %[[CI64]]) <{operandSegmentSizes = array<i32: 2, 1>, resultSegmentSizes = array<i32: 2, 1>}> : (i64, i64, i64) -> (i64, i64, i64)
+test.variadic_segment_prop_bulk_type(%ci64, %ci64, %ci64) : (i64, i64, i64) -> (i64, i64, i64) <{operandSegmentSizes = array<i32: 2, 1>, resultSegmentSizes = array<i32: 2, 1>}>
+
 // CHECK:   test.with_default_valued_properties na{{$}}
 // GENERIC: "test.with_default_valued_properties"()
 // GENERIC-SAME: <{a = 0 : i32, b = "", c = -1 : i32, unit = false}> : () -> ()

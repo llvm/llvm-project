@@ -126,7 +126,7 @@ define weak ptx_kernel void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %
 ; CHECK-NEXT:    [[INC_I]] = add nuw nsw i32 [[I_0_I]], 1
 ; CHECK-NEXT:    br label [[FOR_COND_I]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       __omp_outlined__.exit:
-; CHECK-NEXT:    call void @__kmpc_parallel_60(ptr null, i32 0, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr @__omp_outlined__1_wrapper, ptr null, i64 0, i32 0)
+; CHECK-NEXT:    call void @__kmpc_parallel_60(ptr null, i32 0, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr null, ptr null, i64 0, i32 0)
 ; CHECK-NEXT:    [[CALL_I:%.*]] = call i32 @no_openmp(ptr nonnull [[X]]) #[[ATTR10:[0-9]+]], !noalias [[META7]]
 ; CHECK-NEXT:    [[IDXPROM6_I:%.*]] = sext i32 [[CALL_I]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX7_I:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 [[IDXPROM6_I]]

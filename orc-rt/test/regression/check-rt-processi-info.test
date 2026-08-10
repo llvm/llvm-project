@@ -1,0 +1,8 @@
+# REQUIRES: system-darwin
+#
+# RUN: orc-rt-process-info-check --print-triple --print-cpu-features --print-page-size  \
+# RUN:   | FileCheck %s -DVERSION=%macos-product-version
+
+# CHECK: {{arm64e?}}-apple-macosx[[VERSION]]
+# CHECK-NEXT: {{4096|16384}}
+# CHECK-NEXT: {{(\+[a-z0-9_.]+,)*\+neon(,\+[a-z0-9_.]+)*}}

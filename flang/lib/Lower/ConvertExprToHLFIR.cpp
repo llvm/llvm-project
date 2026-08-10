@@ -1863,6 +1863,11 @@ private:
     llvm_unreachable("unknown descriptor inquiry");
   }
 
+  hlfir::EntityWithAttributes
+  gen(const Fortran::evaluate::RankOneBoundElement &x) {
+    TODO(getLoc(), "rank-1 bound element lowering");
+  }
+
   /// Generate a conditional expression as an hlfir.conditional op whose
   /// regions yield the then/else values. Materialization into memory is
   /// deferred to the bufferization pass.

@@ -88,12 +88,19 @@ jobs:
             cpp_compiler: clang++-23
             target: armv7em-none-eabi
             testing: SKIP
-          - name: baremetal-armv8m
+          - name: baremetal-armv8m-softfp
             os: ubuntu-24.04
             build_type: MinSizeRel
             c_compiler: clang-23
             cpp_compiler: clang++-23
             target: armv8m.main-none-eabi
+            testing: SKIP
+          - name: baremetal-armv8m-hard
+            os: ubuntu-24.04
+            build_type: MinSizeRel
+            c_compiler: clang-23
+            cpp_compiler: clang++-23
+            target: armv8m.main-none-eabihf
             testing: SKIP
           - name: baremetal-armv8.1m
             os: ubuntu-24.04

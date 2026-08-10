@@ -26,11 +26,8 @@ using namespace clang;
 using namespace clang::CIRGen;
 
 namespace {
-/// Return true if the expression tree contains an AbstractConditionalOperator
-/// (ternary ?:), which is the only construct whose CIR codegen calls
-/// ConditionalEvaluation::beginEvaluation() and thus causes cleanups to be
-/// deferred via pushFullExprCleanup.  Logical &&/|| do NOT call
-/// beginEvaluation(); their branch-local cleanups are handled by LexicalScope.
+/// Return true if the expression tree contains a construct that causes cleanups
+/// to be deferred via pushFullExprCleanup.
 class ConditionalEvaluationFinder
     : public RecursiveASTVisitor<ConditionalEvaluationFinder> {
   bool foundConditional = false;
@@ -41,6 +38,17 @@ public:
   bool VisitAbstractConditionalOperator(AbstractConditionalOperator *) {
     foundConditional = true;
     return false;
+  }
+
+  bool VisitCXXNewExpr(CXXNewExpr *e) {
+    // If the new expression has an initializer, the initializer may contain a
+    // a temporary expression that requires deferred cleanup. If we're emitting
+    // a null check, we need to make this cleanup conditional.
+    if (e->hasInitializer() && e->shouldNullCheckAllocation()) {
+      foundConditional = true;
+      return false;
+    }
+    return true;
   }
 
   // Don't cross evaluation-context boundaries.

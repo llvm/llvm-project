@@ -1422,6 +1422,8 @@ void CodeGenAction::executeAction() {
 
   targetMachine.Options.MCOptions.AsmVerbose = targetOpts.asmVerbose;
   targetMachine.Options.MCOptions.SplitDwarfFile = codeGenOpts.SplitDwarfFile;
+  targetMachine.Options.MCOptions.CompressDebugSections =
+      codeGenOpts.getCompressDebugSections();
 
   const llvm::Triple &theTriple = targetMachine.getTargetTriple();
 

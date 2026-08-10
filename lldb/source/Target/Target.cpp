@@ -2209,7 +2209,17 @@ size_t Target::ReadMemory(const Address &addr, void *dst, size_t dst_len,
   if (!file_cache_read_buffer && resolved_addr.IsSectionOffset()) {
     // If we didn't already try and read from the object file cache, then try
     // it after failing to read from the process.
-    return ReadMemoryFromFileCache(resolved_addr, dst, dst_len, error);
+    error.Clear();
+    bytes_read = ReadMemoryFromFileCache(resolved_addr, dst, dst_len, error);
+    // A short read here is only a failure if a live read already failed too.
+    // Reaching this point with a valid process means the process contributed
+    // nothing.
+    if (bytes_read > 0 && bytes_read != dst_len && error.Success() &&
+        ProcessIsValid())
+      error = Status::FromErrorStringWithFormatv(
+          "only {0} of {1} bytes were read from the object file cache",
+          bytes_read, dst_len);
+    return bytes_read;
   }
   return 0;
 }
@@ -2531,8 +2541,7 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
         // module in the shared module cache.
         if (m_platform_sp) {
           error = m_platform_sp->GetSharedModule(
-              module_spec, m_process_sp.get(), module_sp, &old_modules,
-              &did_create_module);
+              module_spec, *this, module_sp, &old_modules, &did_create_module);
         } else {
           error = Status::FromErrorString("no platform is currently set");
         }
@@ -2729,13 +2738,15 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
                                                             create_on_demand);
 }
 
-CompilerType Target::GetRegisterType(const std::string &name,
-                                     const lldb_private::RegisterFlags &flags,
-                                     uint32_t byte_size) {
+CompilerType
+Target::GetRegisterType(const std::string &name,
+                        const lldb_private::RegisterType &type_info,
+                        uint32_t byte_size) {
   if (!m_register_type_builder_sp)
     m_register_type_builder_sp = PluginManager::GetRegisterTypeBuilder(*this);
   assert(m_register_type_builder_sp);
-  return m_register_type_builder_sp->GetRegisterType(name, flags, byte_size);
+  return m_register_type_builder_sp->GetRegisterType(name, type_info,
+                                                     byte_size);
 }
 
 std::vector<lldb::TypeSystemSP>
@@ -3119,11 +3130,13 @@ Target::ReadInstructions(const Address &start_addr, uint32_t count,
       ReadMemory(start_addr, data.GetBytes(), data.GetByteSize(), error,
                  force_live_memory, &load_addr);
 
-  if (error.Fail())
-    return llvm::createStringErrorV(
-        error.AsCString(
-            "Target::ReadInstructions failed to read memory at {:x}"),
-        start_addr.GetLoadAddress(this));
+  if (error.Fail()) {
+    return llvm::joinErrors(
+        llvm::createStringErrorV(
+            "Target::ReadInstructions failed to read memory at {:x}: ",
+            start_addr.GetLoadAddress(this)),
+        error.takeError());
+  }
 
   const bool data_from_file = load_addr == LLDB_INVALID_ADDRESS;
   if (!flavor_string || flavor_string[0] == '\0') {
@@ -4911,6 +4924,19 @@ static constexpr OptionEnumValueElement g_x86_dis_flavor_value_types[] = {
     },
 };
 
+static constexpr OptionEnumValueElement g_jit_engine_value_types[] = {
+    {
+        eJITEngineMCJIT,
+        "mcjit",
+        "Use LLVM's MCJIT execution engine.",
+    },
+    {
+        eJITEngineORC,
+        "orc",
+        "Use LLVM's ORC execution engine.",
+    },
+};
+
 static constexpr OptionEnumValueElement g_import_std_module_value_types[] = {
     {
         eImportStdModuleFalse,
@@ -5528,6 +5554,12 @@ bool TargetProperties::GetEnableNotifyAboutFixIts() const {
 FileSpec TargetProperties::GetSaveJITObjectsDir() const {
   const uint32_t idx = ePropertySaveObjectsDir;
   return GetPropertyAtIndexAs<FileSpec>(idx, {});
+}
+
+JITEngine TargetProperties::GetJITEngine() const {
+  const uint32_t idx = ePropertyJITEngine;
+  return GetPropertyAtIndexAs<JITEngine>(
+      idx, static_cast<JITEngine>(g_target_properties[idx].default_uint_value));
 }
 
 void TargetProperties::CheckJITObjectsDir() {

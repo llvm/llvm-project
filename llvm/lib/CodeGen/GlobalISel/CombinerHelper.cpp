@@ -3476,7 +3476,10 @@ bool CombinerHelper::matchAshrShlToSextInreg(
   if (ShlCst != AshrCst)
     return false;
   if (!isLegalOrBeforeLegalizer(
-          {TargetOpcode::G_SEXT_INREG, {MRI.getType(Src)}}))
+          {TargetOpcode::G_SEXT_INREG,
+           {MRI.getType(Src)},
+           {},
+           {MRI.getType(Src).getScalarSizeInBits() - ShlCst}}))
     return false;
   MatchInfo = std::make_tuple(Src, ShlCst);
   return true;

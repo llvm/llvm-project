@@ -1065,7 +1065,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
   if (Changed) {
     assert(DT->verify(DominatorTree::VerificationLevel::Fast) &&
            "Dominator tree verification failed");
-    LI->verify(*DT);
+    LI->verify();
   }
 #endif
 

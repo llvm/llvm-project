@@ -327,7 +327,7 @@ void CoreEngine::HandleBlockEdge(const BlockEdge &L, ExplodedNode *Pred) {
   BlockEntrance BE(L.getSrc(), L.getDst(), Pred->getStackFrame());
   ExplodedNodeSet DstNodes;
   NodeBuilder Builder(Pred, DstNodes, ExprEng.getBuilderContext());
-  ExprEng.processCFGBlockEntrance(L, BE, Builder, Pred);
+  ExprEng.processCFGBlockEntrance(BE, Builder, Pred);
 
   // Auto-generate a node.
   if (!Builder.hasGeneratedNodes()) {

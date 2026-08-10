@@ -23,6 +23,8 @@
 
 namespace clang::ssaf {
 
+class MultiArchCreateCLI;
+
 /// Represents a multi-architecture static library.
 ///
 /// A MultiArchStaticLibrary bundles per-architecture StaticLibrary members. All
@@ -30,6 +32,7 @@ namespace clang::ssaf {
 /// architectures; the wrapper's \c Namespace identifies that shared library and
 /// every member's namespace must agree on its name.
 class MultiArchStaticLibrary {
+  friend class MultiArchCreateCLI;
   friend class SerializationFormat;
   friend class TestFixture;
 

@@ -1,10 +1,10 @@
 # REQUIRES: asserts
 
-# RUN: llc -o /dev/null %s -mtriple=aarch64-linux-gnu -mattr=+fuse-fmin-fmax -passes=machine-scheduler -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=FUSE
-# RUN: llc -o /dev/null %s -mtriple=arm64-apple-macosx -mcpu=apple-m5 -passes=machine-scheduler -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=FUSE
+# RUN: llc -o /dev/null %s -mtriple=aarch64-linux-gnu -mattr=+fuse-fmin-fmax -passes=machine-scheduler -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -o /dev/null %s -mtriple=arm64-apple-macosx -mcpu=apple-m5 -passes=machine-scheduler -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
 
-# RUN: llc -o /dev/null %s -mtriple=aarch64-linux-gnu -passes=machine-scheduler -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=NOFUSE
-# RUN: llc -o /dev/null %s -mtriple=arm64-apple-macosx -mcpu=apple-m5 -mattr=-fuse-fmin-fmax -passes=machine-scheduler -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=NOFUSE
+# RUN: llc -o /dev/null %s -mtriple=aarch64-linux-gnu -passes=machine-scheduler -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,NOFUSE
+# RUN: llc -o /dev/null %s -mtriple=arm64-apple-macosx -mcpu=apple-m5 -mattr=-fuse-fmin-fmax -passes=machine-scheduler -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,NOFUSE
 
 ---
 name: fmax_fmax_h_waw
@@ -12,6 +12,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $h0, $h1, $h2, $h3, $h4
+    ; CHECK-LABEL: fmax_fmax_h_waw
     ; CHECK: SU(0): $h5 = FMAXHrr
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -27,6 +28,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $h0, $h1, $h2, $h3, $h4
+    ; CHECK-LABEL: fmax_fmax_h_nowaw
     ; CHECK: SU(0): $h5 = FMAXHrr
     ; CHECK: Successors:
     ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -42,6 +44,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $h0, $h1, $h2, $h3, $h4
+    ; CHECK-LABEL: fmax_fmin_h_waw
     ; CHECK: SU(0): $h5 = FMAXHrr
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -57,6 +60,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $h0, $h1, $h2, $h3, $h4
+    ; CHECK-LABEL: fmax_fmin_h_nowaw
     ; CHECK: SU(0): $h5 = FMAXHrr
     ; CHECK: Successors:
     ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -72,6 +76,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $h0, $h1, $h2, $h3, $h4
+    ; CHECK-LABEL: fmin_fmax_h_waw
     ; CHECK: SU(0): $h5 = FMINHrr
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -87,6 +92,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $h0, $h1, $h2, $h3, $h4
+    ; CHECK-LABEL: fmin_fmax_h_nowaw
     ; CHECK: SU(0): $h5 = FMINHrr
     ; CHECK: Successors:
     ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -102,6 +108,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $h0, $h1, $h2, $h3, $h4
+    ; CHECK-LABEL: fmin_fmin_h_waw
     ; CHECK: SU(0): $h5 = FMINHrr
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -117,6 +124,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $h0, $h1, $h2, $h3, $h4
+    ; CHECK-LABEL: fmin_fmin_h_nowaw
     ; CHECK: SU(0): $h5 = FMINHrr
     ; CHECK: Successors:
     ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -132,6 +140,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $s0, $s1, $s2, $s3, $s4
+    ; CHECK-LABEL: fmax_fmax_s_waw
     ; CHECK: SU(0): $s5 = FMAXSrr
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -147,6 +156,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $s0, $s1, $s2, $s3, $s4
+    ; CHECK-LABEL: fmax_fmax_s_nowaw
     ; CHECK: SU(0): $s5 = FMAXSrr
     ; CHECK: Successors:
     ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -162,6 +172,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $s0, $s1, $s2, $s3, $s4
+    ; CHECK-LABEL: fmax_fmin_s_waw
     ; CHECK: SU(0): $s5 = FMAXSrr
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -177,6 +188,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $s0, $s1, $s2, $s3, $s4
+    ; CHECK-LABEL: fmax_fmin_s_nowaw
     ; CHECK: SU(0): $s5 = FMAXSrr
     ; CHECK: Successors:
     ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -192,6 +204,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $s0, $s1, $s2, $s3, $s4
+    ; CHECK-LABEL: fmin_fmax_s_waw
     ; CHECK: SU(0): $s5 = FMINSrr
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -207,6 +220,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $s0, $s1, $s2, $s3, $s4
+    ; CHECK-LABEL: fmin_fmax_s_nowaw
     ; CHECK: SU(0): $s5 = FMINSrr
     ; CHECK: Successors:
     ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -222,6 +236,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $s0, $s1, $s2, $s3, $s4
+    ; CHECK-LABEL: fmin_fmin_s_waw
     ; CHECK: SU(0): $s5 = FMINSrr
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -237,6 +252,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $s0, $s1, $s2, $s3, $s4
+    ; CHECK-LABEL: fmin_fmin_s_nowaw
     ; CHECK: SU(0): $s5 = FMINSrr
     ; CHECK: Successors:
     ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -252,6 +268,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fmax_fmax_d_waw
     ; CHECK: SU(0): $d5 = FMAXDrr
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -267,6 +284,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fmax_fmax_d_nowaw
     ; CHECK: SU(0): $d5 = FMAXDrr
     ; CHECK: Successors:
     ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -282,6 +300,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fmax_fmin_d_waw
     ; CHECK: SU(0): $d5 = FMAXDrr
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -297,6 +316,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fmax_fmin_d_nowaw
     ; CHECK: SU(0): $d5 = FMAXDrr
     ; CHECK: Successors:
     ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -312,6 +332,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fmin_fmax_d_waw
     ; CHECK: SU(0): $d5 = FMINDrr
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -327,6 +348,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fmin_fmax_d_nowaw
     ; CHECK: SU(0): $d5 = FMINDrr
     ; CHECK: Successors:
     ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -342,6 +364,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fmin_fmin_d_waw
     ; CHECK: SU(0): $d5 = FMINDrr
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -357,6 +380,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fmin_fmin_d_nowaw
     ; CHECK: SU(0): $d5 = FMINDrr
     ; CHECK: Successors:
     ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -372,6 +396,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fmax_fmax_v4f16_waw
     ; CHECK: SU(0): $d5 = FMAXv4f16
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -387,6 +412,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fmax_fmax_v4f16_nowaw
     ; CHECK: SU(0): $d5 = FMAXv4f16
     ; CHECK: Successors:
     ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -402,6 +428,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fmax_fmin_v4f16_waw
     ; CHECK: SU(0): $d5 = FMAXv4f16
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -417,6 +444,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fmax_fmin_v4f16_nowaw
     ; CHECK: SU(0): $d5 = FMAXv4f16
     ; CHECK: Successors:
     ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -432,6 +460,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fmin_fmax_v4f16_waw
     ; CHECK: SU(0): $d5 = FMINv4f16
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -447,6 +476,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fmin_fmax_v4f16_nowaw
     ; CHECK: SU(0): $d5 = FMINv4f16
     ; CHECK: Successors:
     ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -462,6 +492,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fmin_fmin_v4f16_waw
     ; CHECK: SU(0): $d5 = FMINv4f16
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -477,6 +508,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fmin_fmin_v4f16_nowaw
     ; CHECK: SU(0): $d5 = FMINv4f16
     ; CHECK: Successors:
     ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -492,6 +524,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fmax_fmax_v8f16_waw
     ; CHECK: SU(0): $q5 = FMAXv8f16
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -507,6 +540,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fmax_fmax_v8f16_nowaw
     ; CHECK: SU(0): $q5 = FMAXv8f16
     ; CHECK: Successors:
     ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -522,6 +556,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fmax_fmin_v8f16_waw
     ; CHECK: SU(0): $q5 = FMAXv8f16
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -537,6 +572,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fmax_fmin_v8f16_nowaw
     ; CHECK: SU(0): $q5 = FMAXv8f16
     ; CHECK: Successors:
     ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -552,6 +588,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fmin_fmax_v8f16_waw
     ; CHECK: SU(0): $q5 = FMINv8f16
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -567,6 +604,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fmin_fmax_v8f16_nowaw
     ; CHECK: SU(0): $q5 = FMINv8f16
     ; CHECK: Successors:
     ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -582,6 +620,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fmin_fmin_v8f16_waw
     ; CHECK: SU(0): $q5 = FMINv8f16
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -597,6 +636,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fmin_fmin_v8f16_nowaw
     ; CHECK: SU(0): $q5 = FMINv8f16
     ; CHECK: Successors:
     ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -612,6 +652,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fmax_fmax_v2f32_waw
     ; CHECK: SU(0): $d5 = FMAXv2f32
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -627,6 +668,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fmax_fmax_v2f32_nowaw
     ; CHECK: SU(0): $d5 = FMAXv2f32
     ; CHECK: Successors:
     ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -642,6 +684,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fmax_fmin_v2f32_waw
     ; CHECK: SU(0): $d5 = FMAXv2f32
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -657,6 +700,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fmax_fmin_v2f32_nowaw
     ; CHECK: SU(0): $d5 = FMAXv2f32
     ; CHECK: Successors:
     ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -672,6 +716,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fmin_fmax_v2f32_waw
     ; CHECK: SU(0): $d5 = FMINv2f32
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -687,6 +732,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fmin_fmax_v2f32_nowaw
     ; CHECK: SU(0): $d5 = FMINv2f32
     ; CHECK: Successors:
     ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -702,6 +748,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fmin_fmin_v2f32_waw
     ; CHECK: SU(0): $d5 = FMINv2f32
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -717,6 +764,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
+    ; CHECK-LABEL: fmin_fmin_v2f32_nowaw
     ; CHECK: SU(0): $d5 = FMINv2f32
     ; CHECK: Successors:
     ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -732,6 +780,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fmax_fmax_v4f32_waw
     ; CHECK: SU(0): $q5 = FMAXv4f32
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -747,6 +796,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fmax_fmax_v4f32_nowaw
     ; CHECK: SU(0): $q5 = FMAXv4f32
     ; CHECK: Successors:
     ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -762,6 +812,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fmax_fmin_v4f32_waw
     ; CHECK: SU(0): $q5 = FMAXv4f32
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -777,6 +828,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fmax_fmin_v4f32_nowaw
     ; CHECK: SU(0): $q5 = FMAXv4f32
     ; CHECK: Successors:
     ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -792,6 +844,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fmin_fmax_v4f32_waw
     ; CHECK: SU(0): $q5 = FMINv4f32
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -807,6 +860,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fmin_fmax_v4f32_nowaw
     ; CHECK: SU(0): $q5 = FMINv4f32
     ; CHECK: Successors:
     ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -822,6 +876,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fmin_fmin_v4f32_waw
     ; CHECK: SU(0): $q5 = FMINv4f32
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -837,6 +892,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fmin_fmin_v4f32_nowaw
     ; CHECK: SU(0): $q5 = FMINv4f32
     ; CHECK: Successors:
     ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -852,6 +908,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fmax_fmax_v2f64_waw
     ; CHECK: SU(0): $q5 = FMAXv2f64
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -867,6 +924,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fmax_fmax_v2f64_nowaw
     ; CHECK: SU(0): $q5 = FMAXv2f64
     ; CHECK: Successors:
     ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -882,6 +940,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fmax_fmin_v2f64_waw
     ; CHECK: SU(0): $q5 = FMAXv2f64
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -897,6 +956,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fmax_fmin_v2f64_nowaw
     ; CHECK: SU(0): $q5 = FMAXv2f64
     ; CHECK: Successors:
     ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -912,6 +972,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fmin_fmax_v2f64_waw
     ; CHECK: SU(0): $q5 = FMINv2f64
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -927,6 +988,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fmin_fmax_v2f64_nowaw
     ; CHECK: SU(0): $q5 = FMINv2f64
     ; CHECK: Successors:
     ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -942,6 +1004,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fmin_fmin_v2f64_waw
     ; CHECK: SU(0): $q5 = FMINv2f64
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -957,6 +1020,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
+    ; CHECK-LABEL: fmin_fmin_v2f64_nowaw
     ; CHECK: SU(0): $q5 = FMINv2f64
     ; CHECK: Successors:
     ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster

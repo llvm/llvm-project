@@ -1,5 +1,7 @@
 // RUN: mlir-opt %s -affine-loop-normalize -split-input-file | FileCheck %s
 // RUN: mlir-opt %s -affine-loop-normalize='promote-single-iter=1' -split-input-file | FileCheck %s --check-prefix=PROMOTE-SINGLE-ITER
+// RUN: mlir-opt %s -affine-loop-normalize='use-expensive-math=1' -split-input-file | FileCheck %s --check-prefix=USE-EXPENSIVE-MATH
+// RUN: mlir-opt %s -affine-loop-normalize='use-expensive-math=1 promote-single-iter=1' -split-input-file | FileCheck %s --check-prefix=USE-EXPENSIVE-MATH-AND-PROMOTE
 
 // Normalize steps to 1 and lower bounds to 0.
 
@@ -323,3 +325,97 @@ func.func @multi_level_tiled_matmul() {
   }
   return
 }
+
+// -----
+
+// USE-EXPENSIVE-MATH-DAG: #[[$MAP_APPLY:.+]] = affine_map<(d0)[s0] -> (d0 * 2 + s0)>
+// USE-EXPENSIVE-MATH-DAG: #[[$MAP_UB:.+]] = affine_map<()[s0] -> ((-s0 + 9) ceildiv 2)>
+// USE-EXPENSIVE-MATH-LABEL: func @peeling_main_loop
+func.func @peeling_main_loop() {
+  %c0 = arith.constant 0 : index
+  %bound = test.value_with_bounds { min = 0 : index, max = 1 : index}
+  affine.for %iv = %bound to 9 step 2 iter_args(%arg = %c0) -> index {
+    %sum = arith.addi %arg, %bound : index
+    affine.yield %sum : index
+  }
+  return
+}
+
+// USE-EXPENSIVE-MATH: %[[C0:.*]] = arith.constant 0 : index
+// USE-EXPENSIVE-MATH: %[[BOUND:.*]] = test.value_with_bounds {max = 1 : index, min = 0 : index}
+// USE-EXPENSIVE-MATH: %[[MAIN_RES:.*]] = affine.for %[[IV_MAIN:.*]] = 0 to 4 iter_args(%[[ARG_MAIN:.*]] = %[[C0]]) -> (index)
+// USE-EXPENSIVE-MATH:   %{{.*}} = affine.apply #[[$MAP_APPLY]](%[[IV_MAIN]])[%[[BOUND]]]
+// USE-EXPENSIVE-MATH: %[[TAIL_RES:.*]] = affine.for %[[IV_TAIL:.*]] = 4 to #[[$MAP_UB]]()[%[[BOUND]]] iter_args(%[[ARG_TAIL:.*]] = %[[MAIN_RES]]) -> (index)
+// USE-EXPENSIVE-MATH:   %{{.*}} = affine.apply #[[$MAP_APPLY]](%[[IV_TAIL]])[%[[BOUND]]]
+
+// -----
+
+// USE-EXPENSIVE-MATH-DAG: #[[$MAP_APPLY:.+]] = affine_map<(d0)[s0] -> (d0 * 2 + s0)>
+// USE-EXPENSIVE-MATH-LABEL: func @fully_constantized_no_peeling
+func.func @fully_constantized_no_peeling() {
+  %c0 = arith.constant 0 : index
+  %bound = test.value_with_bounds { min = 0 : index, max = 1 : index}
+  affine.for %iv = %bound to 6 step 2 iter_args(%arg = %c0) -> index {
+    %sum = arith.addi %arg, %bound : index
+    affine.yield %sum : index
+  }
+  return
+}
+
+// USE-EXPENSIVE-MATH: %[[C0:.*]] = arith.constant 0 : index
+// USE-EXPENSIVE-MATH: %[[BOUND:.*]] = test.value_with_bounds {max = 1 : index, min = 0 : index}
+// USE-EXPENSIVE-MATH: %{{.*}} = affine.for %[[IV:.*]] = 0 to 3 iter_args(%{{.*}} = %[[C0]]) -> (index)
+// USE-EXPENSIVE-MATH:   %{{.*}} = affine.apply #[[$MAP_APPLY]](%[[IV]])[%[[BOUND]]]
+
+// -----
+
+// USE-EXPENSIVE-MATH-DAG: #[[$MAP_REMAIN:.*]] = affine_map<()[s0] -> ((-s0 + 7) ceildiv 2)>
+// USE-EXPENSIVE-MATH-LABEL: func @peel_nested_loops
+func.func @peel_nested_loops() {
+  %c0 = arith.constant 0 : index
+  %bound = test.value_with_bounds { min = 0 : index, max = 1 : index}
+  affine.for %i = %bound to 7 step 2 {
+    affine.for %j = %bound to 7 step 2 { 
+      "test.foo"() : () -> ()
+    }
+  }
+  return
+}
+
+// USE-EXPENSIVE-MATH: %[[BOUND:.*]] = test.value_with_bounds
+// USE-EXPENSIVE-MATH: affine.for %{{.*}} = 0 to 3
+// USE-EXPENSIVE-MATH:   affine.for %{{.*}} = 0 to 3
+// USE-EXPENSIVE-MATH:   affine.for %{{.*}} = 3 to #[[$MAP_REMAIN]]()[%[[BOUND]]]
+// USE-EXPENSIVE-MATH: affine.for %{{.*}} = 3 to #[[$MAP_REMAIN]]()[%[[BOUND]]]
+// USE-EXPENSIVE-MATH:   affine.for %{{.*}} = 0 to 3
+// USE-EXPENSIVE-MATH:   affine.for %{{.*}} = 3 to #[[$MAP_REMAIN]]()[%[[BOUND]]]
+
+// -----
+
+// USE-EXPENSIVE-MATH-AND-PROMOTE-LABEL: func @single_iter_promoted
+func.func @single_iter_promoted() {
+  %c0 = arith.constant 0 :index
+  %bound = test.value_with_bounds { min = 0 : index, max = 1 : index}
+  affine.for %iv = %bound to 2 step 2 {
+    "test.foo"() : () -> ()
+  }
+  return
+}
+
+// USE-EXPENSIVE-MATH-AND-PROMOTE-NOT: affine.for
+
+// -----
+
+// USE-EXPENSIVE-MATH-AND-PROMOTE-LABEL: func @single_iter_promoted_with_remainder
+func.func @single_iter_promoted_with_remainder() {
+  %c0 = arith.constant 0 : index
+  %bound = test.value_with_bounds { min = 0 : index, max = 1 : index}
+  affine.for %i = %bound to 3 step 2 {
+    "test.foo"() : () -> ()
+  }
+  return
+}
+
+// USE-EXPENSIVE-MATH-AND-PROMOTE: "test.foo"() : () -> ()
+// USE-EXPENSIVE-MATH-AND-PROMOTE: affine.for
+// USE-EXPENSIVE-MATH-AND-PROMOTE:   "test.foo"() : () -> ()

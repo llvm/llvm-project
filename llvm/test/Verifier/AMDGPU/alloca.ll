@@ -1,6 +1,6 @@
 ; RUN: not llvm-as %s --disable-output 2>&1 | FileCheck %s
 
-target triple = "amdgcn-amd-amdhsa"
+target triple = "amdgpu7.00-amd-amdhsa"
 
 ; CHECK: alloca on amdgpu must be in addrspace(5)
 ; CHECK-NEXT: %alloca.0 = alloca i32, align 4

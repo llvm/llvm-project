@@ -23,7 +23,7 @@ function(add_benchmark benchmark_name)
     DEPENDS
       libc.src.stdio.printf
       ${BENCHMARK_DEPENDS}
-    ${BENCHMARK_UNPARSED_ARGUMENTS}
+      ${BENCHMARK_UNPARSED_ARGUMENTS}
     COMPILE_OPTIONS
       -flto
   )
@@ -31,7 +31,7 @@ function(add_benchmark benchmark_name)
   set(fq_build_target_name ${fq_target_name}.__build__)
 
   add_dependencies(gpu-benchmark ${fq_target_name})
-endfunction(add_benchmark)
+endfunction()
 
 function(add_benchmark_framework_library name)
   cmake_parse_arguments(
@@ -43,7 +43,7 @@ function(add_benchmark_framework_library name)
   )
   if(NOT TEST_LIB_SRCS)
     message(FATAL_ERROR "'add_benchmark_framework_library' requires SRCS; for "
-                        "header only libraries, use 'add_header_library'")
+      "header only libraries, use 'add_header_library'")
   endif()
 
   foreach(lib IN ITEMS ${name}.hermetic)
@@ -51,8 +51,8 @@ function(add_benchmark_framework_library name)
       ${lib}
       STATIC
       EXCLUDE_FROM_ALL
-      ${TEST_LIB_SRCS}
-      ${TEST_LIB_HDRS}
+        ${TEST_LIB_SRCS}
+        ${TEST_LIB_HDRS}
     )
     target_include_directories(${lib} PRIVATE ${LIBC_SOURCE_DIR})
     if(TARGET libc.src.time.clock)

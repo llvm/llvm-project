@@ -398,7 +398,7 @@ ConstructDecompositionT<C, H>::addClauseSymsToMap(U &&item,
 // anything and return false, otherwise return true.
 template <typename C, typename H>
 bool ConstructDecompositionT<C, H>::applyToUnique(const ClauseTy *input) {
-  auto unique = detail::find_unique(leafs, [=](const auto &leaf) {
+  auto unique = ::detail::find_unique(leafs, [=](const auto &leaf) {
     return llvm::omp::isAllowedClauseForDirective(leaf.id, input->id, version);
   });
 

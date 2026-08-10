@@ -70,6 +70,20 @@ csrrs t1, scounteren, zero
 # uimm12
 csrrs t2, 0x106, zero
 
+# sijt
+# name
+# CHECK-INST: csrrs t1, sijt, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x70,0x10]
+# CHECK-INST-ALIAS: csrr t1, sijt
+# uimm12
+# CHECK-INST: csrrs t2, sijt, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x70,0x10]
+# CHECK-INST-ALIAS: csrr t2, sijt
+# name
+csrrs t1, sijt, zero
+# uimm12
+csrrs t2, 0x107, zero
+
 # stimecmp
 # name
 # CHECK-INST: csrrs t1, stimecmp, zero
@@ -176,6 +190,20 @@ csrrs t2, 0x143, zero
 csrrs t1, sip, zero
 # uimm12
 csrrs t2, 0x144, zero
+
+# sspcs
+# name
+# CHECK-INST: csrrs t1, sspcs, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x90,0x14]
+# CHECK-INST-ALIAS: csrr t1, sspcs
+# uimm12
+# CHECK-INST: csrrs t2, sspcs, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x90,0x14]
+# CHECK-INST-ALIAS: csrr t2, sspcs
+# name
+csrrs t1, sspcs, zero
+# uimm12
+csrrs t2, 0x149, zero
 
 
 #########################################

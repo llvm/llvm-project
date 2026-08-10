@@ -19,9 +19,6 @@ define void @test(i8 %a, i8 %b, ptr %p) {
 ; CHECK-NEXT:    [[BLOCK_COLOR_SROA_7_0_INSERT_SHIFT_I:%.*]] = shl i32 [[BLOCK_COLOR_SROA_7_0_INSERT_EXT_I]], 16
 ; CHECK-NEXT:    [[BLOCK_COLOR_SROA_5_0_INSERT_EXT_I:%.*]] = select i1 false, i32 0, i32 [[TMP0]]
 ; CHECK-NEXT:    [[BLOCK_COLOR_SROA_5_0_INSERT_SHIFT_I:%.*]] = shl i32 [[BLOCK_COLOR_SROA_5_0_INSERT_EXT_I]], 0
-; CHECK-NEXT:    [[OP_RDX:%.*]] = or i32 0, [[BLOCK_COLOR_SROA_7_0_INSERT_SHIFT_I]]
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = or i32 [[OP_RDX]], [[BLOCK_COLOR_SROA_5_0_INSERT_SHIFT_I]]
-; CHECK-NEXT:    store i32 [[OP_RDX1]], ptr null, align 4
 ; CHECK-NEXT:    [[ADD46_1_I:%.*]] = or i32 0, [[RETVAL_SROA_2_0_INSERT_EXT_I_I]]
 ; CHECK-NEXT:    [[ADD49_1_I:%.*]] = or i32 0, [[RETVAL_SROA_3_0_INSERT_EXT_I_I]]
 ; CHECK-NEXT:    [[CMP_I11_I_I_1_I:%.*]] = icmp slt i32 [[ADD46_1_I]], 0
@@ -30,10 +27,14 @@ define void @test(i8 %a, i8 %b, ptr %p) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <2 x i1> <i1 false, i1 poison>, i1 [[CMP_I11_I_I_1_I]], i64 1
 ; CHECK-NEXT:    [[TMP19:%.*]] = select <2 x i1> [[TMP17]], <2 x i32> zeroinitializer, <2 x i32> [[TMP18]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = shl <2 x i32> [[TMP19]], <i32 16, i32 0>
-; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <2 x i32> [[TMP20]], i64 0
-; CHECK-NEXT:    [[OP_RDX2:%.*]] = or i32 0, [[TMP21]]
-; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <2 x i32> [[TMP20]], i64 1
-; CHECK-NEXT:    [[OP_RDX3:%.*]] = or i32 [[OP_RDX2]], [[TMP22]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP20]], <2 x i32> poison, <2 x i32> <i32 poison, i32 0>
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> [[TMP6]], i32 [[BLOCK_COLOR_SROA_7_0_INSERT_SHIFT_I]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = or <2 x i32> zeroinitializer, [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i32> [[TMP20]], i32 [[BLOCK_COLOR_SROA_5_0_INSERT_SHIFT_I]], i64 0
+; CHECK-NEXT:    [[TMP10:%.*]] = or <2 x i32> [[TMP8]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i32> [[TMP10]], i64 0
+; CHECK-NEXT:    store i32 [[TMP11]], ptr null, align 4
+; CHECK-NEXT:    [[OP_RDX3:%.*]] = extractelement <2 x i32> [[TMP10]], i64 1
 ; CHECK-NEXT:    store i32 [[OP_RDX3]], ptr [[ARRAYIDX51_1_I]], align 4
 ; CHECK-NEXT:    ret void
 ;

@@ -69,18 +69,14 @@ extern ompt_get_callback_t lookupCallbackByCode;
 /// \p InterfaceFunctionName the name of the OMPT callback function to look up
 extern ompt_function_lookup_t lookupCallbackByName;
 
-/// This is the function called by the higher layer (libomp / libomtarget)
-/// responsible for initializing OMPT in this library. This is passed to libomp
-/// as part of the OMPT connector object.
+/// Initializes OMPT in this library. Passed to libomp via ompt_libomp_connect.
 /// \p lookup to be used to query callbacks registered with libomp
 /// \p initial_device_num initial device num (id) provided by libomp
 /// \p tool_data as provided by the tool
 int initializeLibrary(ompt_function_lookup_t lookup, int initial_device_num,
                       ompt_data_t *tool_data);
 
-/// This function is passed to libomp / libomtarget as part of the OMPT
-/// connector object. It is called by libomp during finalization of OMPT in
-/// libomptarget -OR- by libomptarget during finalization of OMPT in the plugin.
+/// Finalizes OMPT in this library. Passed to libomp via ompt_libomp_connect.
 /// \p tool_data as provided by the tool
 void finalizeLibrary(ompt_data_t *tool_data);
 

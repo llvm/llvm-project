@@ -761,8 +761,7 @@ class MapInfoFinalizationPass
       return mapTypeFlag;
     }
 
-    flags |=
-        MapFlags::to | (mapTypeFlag & (MapFlags::implicit | MapFlags::present));
+    flags |= MapFlags::to | (mapTypeFlag & MapFlags::implicit);
 
     // Descriptors for objects will always be copied. This is because the
     // descriptor can be rematerialized by the compiler, and so the address

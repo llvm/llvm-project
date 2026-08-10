@@ -89,6 +89,15 @@
 // RUN:   -Xcuda-ptxas -foo2 -- %s 2>&1 \
 // RUN: | FileCheck -check-prefixes=CHECK,SM35,PTXAS-EXTRA %s
 
+// Check that -Xcuda-ptxas reaches the device link job with '-fgpu-rdc' and LTO,
+// where 'ptxas' is run by the nvlink wrapper instead of the driver.
+// RUN: %clang -### --target=x86_64-linux-gnu -fgpu-rdc -foffload-lto \
+// RUN:   --offload-arch=sm_35 --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
+// RUN:   -Xcuda-ptxas -foo1 %s 2>&1 \
+// RUN: | FileCheck -check-prefix=RDC-LTO %s
+
+// RDC-LTO: clang-linker-wrapper{{.*}}"--device-compiler=nvptx64-nvidia-cuda=-Xcuda-ptxas" "--device-compiler=nvptx64-nvidia-cuda=-foo1"
+
 // MacOS spot-checks
 // RUN: %clang -### --target=x86_64-apple-macosx -O0 -c %s 2>&1 \
 // RUN:   --offload-arch=sm_35 --cuda-path=%S/Inputs/CUDA/usr/local/cuda \

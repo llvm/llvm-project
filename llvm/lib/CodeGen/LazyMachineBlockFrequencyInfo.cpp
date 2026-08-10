@@ -15,6 +15,7 @@
 
 #include "llvm/CodeGen/LazyMachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
+#include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/InitializePasses.h"
 
 using namespace llvm;
@@ -24,7 +25,7 @@ using namespace llvm;
 INITIALIZE_PASS_BEGIN(LazyMachineBlockFrequencyInfoPass, DEBUG_TYPE,
                       "Lazy Machine Block Frequency Analysis", true, true)
 INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineCycleInfoWrapperPass)
 INITIALIZE_PASS_END(LazyMachineBlockFrequencyInfoPass, DEBUG_TYPE,
                     "Lazy Machine Block Frequency Analysis", true, true)
 
@@ -42,8 +43,7 @@ void LazyMachineBlockFrequencyInfoPass::getAnalysisUsage(
 
 void LazyMachineBlockFrequencyInfoPass::releaseMemory() {
   OwnedMBFI.reset();
-  OwnedMLI.reset();
-  OwnedMDT.reset();
+  OwnedMCI.reset();
 }
 
 MachineBlockFrequencyInfo &
@@ -56,33 +56,20 @@ LazyMachineBlockFrequencyInfoPass::calculateIfNotAvailable() const {
   }
 
   auto &MBPI = getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
-  auto *MLIWrapper = getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
-  auto *MLI = MLIWrapper ? &MLIWrapper->getLI() : nullptr;
-  auto *MDTWrapper = getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
-  auto *MDT = MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
+  auto *MCIWrapper = getAnalysisIfAvailable<MachineCycleInfoWrapperPass>();
+  auto *MCI = MCIWrapper ? &MCIWrapper->getCycleInfo() : nullptr;
   LLVM_DEBUG(dbgs() << "Building MachineBlockFrequencyInfo on the fly\n");
-  LLVM_DEBUG(if (MLI) dbgs() << "LoopInfo is available\n");
+  LLVM_DEBUG(if (MCI) dbgs() << "CycleInfo is available\n");
 
-  if (!MLI) {
-    LLVM_DEBUG(dbgs() << "Building LoopInfo on the fly\n");
-    LLVM_DEBUG(if (MDT) dbgs() << "DominatorTree is available\n");
-
-    // A dominator tree is needed only for an irreducible CFG.
-    OwnedMLI = std::make_unique<MachineLoopInfo>();
-    OwnedMLI->calculate(*MF, [&]() -> const MachineDominatorTree & {
-      if (!MDT) {
-        LLVM_DEBUG(dbgs() << "Building DominatorTree on the fly\n");
-        OwnedMDT = std::make_unique<MachineDominatorTree>();
-        OwnedMDT->recalculate(*MF);
-        MDT = OwnedMDT.get();
-      }
-      return *MDT;
-    });
-    MLI = OwnedMLI.get();
+  if (!MCI) {
+    LLVM_DEBUG(dbgs() << "Building CycleInfo on the fly\n");
+    OwnedMCI = std::make_unique<MachineCycleInfo>();
+    OwnedMCI->compute(*MF);
+    MCI = OwnedMCI.get();
   }
 
   OwnedMBFI = std::make_unique<MachineBlockFrequencyInfo>();
-  OwnedMBFI->calculate(*MF, MBPI, *MLI);
+  OwnedMBFI->calculate(*MF, MBPI, *MCI);
   return *OwnedMBFI;
 }
 

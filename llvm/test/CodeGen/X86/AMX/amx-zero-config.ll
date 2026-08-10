@@ -68,6 +68,7 @@ define void @foo(ptr %buf) nounwind {
 ; AVX512-O0-NEXT:    andq $-1024, %rsp # imm = 0xFC00
 ; AVX512-O0-NEXT:    subq $3072, %rsp # imm = 0xC00
 ; AVX512-O0-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX512-O0-NEXT:    # kill: def $zmm0 killed $xmm0
 ; AVX512-O0-NEXT:    vmovups %zmm0, {{[0-9]+}}(%rsp)
 ; AVX512-O0-NEXT:    movb $1, {{[0-9]+}}(%rsp)
 ; AVX512-O0-NEXT:    movw $32, %cx
@@ -108,6 +109,7 @@ define void @foo(ptr %buf) nounwind {
 ; AVX2-O0-NEXT:    andq $-1024, %rsp # imm = 0xFC00
 ; AVX2-O0-NEXT:    subq $3072, %rsp # imm = 0xC00
 ; AVX2-O0-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX2-O0-NEXT:    # kill: def $ymm0 killed $xmm0
 ; AVX2-O0-NEXT:    vmovups %ymm0, {{[0-9]+}}(%rsp)
 ; AVX2-O0-NEXT:    vmovups %ymm0, {{[0-9]+}}(%rsp)
 ; AVX2-O0-NEXT:    movb $1, {{[0-9]+}}(%rsp)

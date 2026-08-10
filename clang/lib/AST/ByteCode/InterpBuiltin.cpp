@@ -6822,7 +6822,7 @@ bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
       CurrentType = AT->getElementType();
       CharUnits ElementSize = S.getASTContext().getTypeSizeInChars(CurrentType);
       int64_t ElemSize = ElementSize.getQuantity();
-      if (Index != 0 && ElemSize > llvm::maxIntN(64) / Index) {
+      if (Index != 0 && ElemSize > (llvm::maxIntN(64) / Index)) {
         S.FFDiag(S.Current->getLocation(OpPC),
                  diag::note_constexpr_offsetof_overflow)
             << S.Current->getRange(OpPC);

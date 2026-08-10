@@ -49,7 +49,8 @@
 // DELETE-SDL-NEW: "{{.*}}llvm-link" "-o" "{{.*}}.bc" "{{.*}}.o" "{{.*}}.o"
 
 // SDL-NEW-WRAPPER: clang{{.*}}" --no-default-config -o {{[^ ]*.img}}
-// SDL-NEW-WRAPPER-SAME: {{[^ ]*.o}} {{[^ ]*.o}}
+// SDL-NEW-WRAPPER-SAME: --target=spirv64-unknown-chipstar
+// SDL-NEW-WRAPPER-SAME: {{[^ ]*.o}}
 // SDL-NEW-WRAPPER-SAME: --hip-path=[[HIP_PATH]]
 
 // SDL: "{{.*}}opt"

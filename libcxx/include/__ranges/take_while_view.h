@@ -108,13 +108,15 @@ class take_while_view<_View, _Pred>::__sentinel {
   sentinel_t<_Base> __end_ = sentinel_t<_Base>();
   const _Pred* __pred_     = nullptr;
 
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __sentinel(sentinel_t<_Base> __end, const _Pred* __pred)
+      : __end_(std::move(__end)), __pred_(__pred) {}
+
+  friend class take_while_view<_View, _Pred>;
+
   friend class __sentinel<!_Const>;
 
 public:
   _LIBCPP_HIDE_FROM_ABI __sentinel() = default;
-
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __sentinel(sentinel_t<_Base> __end, const _Pred* __pred)
-      : __end_(std::move(__end)), __pred_(__pred) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr __sentinel(__sentinel<!_Const> __s)
     requires _Const && convertible_to<sentinel_t<_View>, sentinel_t<_Base>>

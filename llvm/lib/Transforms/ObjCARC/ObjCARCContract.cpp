@@ -639,7 +639,8 @@ bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
 
     // Function for replacing uses of Arg dominated by Inst.
     auto ReplaceArgUses = [Inst, this](Value *Arg) {
-      // If we're compiling bugpointed code, don't get in trouble.
+      // If we're compiling fuzzer generated/test reducer produced IR, don't get
+      // in trouble.
       if (!isa<Instruction>(Arg) && !isa<Argument>(Arg))
         return;
 

@@ -15,6 +15,7 @@
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -49,6 +50,7 @@ class SanitizerArgs {
   bool CfiICallNormalizeIntegers = false;
   bool CfiCanonicalJumpTables = false;
   bool KcfiArity = false;
+  std::optional<std::string> KcfiHash;
   int AsanFieldPadding = 0;
   bool SharedRuntime = false;
   bool StableABI = false;

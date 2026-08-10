@@ -13,6 +13,7 @@ types:
   - type_name: struct_timespec
   - type_name: struct_tm
   - type_name: time_t
+  - type_name: timer_t
   - type_name: clock_t
   - type_name: rsize_t
   - type_name: size_t

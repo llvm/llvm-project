@@ -43,6 +43,18 @@ public:
     FPM_Fast,
   };
 
+  /// Floating-point exception trap kinds for -ffpe-trap=.
+  /// Bit values match the Fortran IEEE_FLAG_TYPE encoding used by
+  /// the runtime's MapException().
+  enum FPExceptionTrapKind : unsigned {
+    FPE_Invalid = 1,
+    FPE_Denormal = 2,
+    FPE_DivByZero = 4,
+    FPE_Overflow = 8,
+    FPE_Underflow = 16,
+    FPE_Inexact = 32,
+  };
+
 #define LANGOPT(Name, Bits, Default) unsigned Name : Bits;
 #define ENUM_LANGOPT(Name, Type, Bits, Default)
 #include "LangOptions.def"

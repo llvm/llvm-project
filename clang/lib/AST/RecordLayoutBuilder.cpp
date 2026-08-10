@@ -3307,8 +3307,13 @@ void MicrosoftRecordLayoutBuilder::finalizeLayout(const RecordDecl *RD) {
 
   if (UseExternalLayout) {
     Size = Context.toCharUnitsFromBits(External.Size);
-    if (External.Align)
+    if (External.Align) {
       Alignment = Context.toCharUnitsFromBits(External.Align);
+      // An external layout provides the record's final alignment, with no way
+      // to tell how much of it was imposed via alignas / __declspec(align), so
+      // treat all of it as non-required alignment.
+      NonRequiredAlignment = Alignment;
+    }
     return;
   }
   unsigned CharBitNum = Context.getTargetInfo().getCharWidth();

@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -finclude-default-header -x hlsl -emit-llvm -o - %s | FileCheck %s
 
-using handle_float_t = __hlsl_resource_t [[hlsl::resource_class(UAV)]] [[hlsl::contained_type(float)]];
+using handle_float_t = __hlsl_resource_t [[hlsl::resource_class("UAV")]] [[hlsl::contained_type(float)]];
 
 struct CustomResource {
   handle_float_t h;

@@ -10,6 +10,7 @@
 #include "Plugins/Platform/WebAssembly/PlatformWasmRemoteGDBServer.h"
 #include "Plugins/Platform/WebAssembly/PlatformWebInspectorWasm.h"
 #include "Plugins/Process/wasm/ProcessWasm.h"
+#include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
@@ -183,7 +184,19 @@ lldb::ProcessSP PlatformWasm::DebugProcess(ProcessLaunchInfo &launch_info,
       args.AppendArgument(
           llvm::formatv("{0}{1}", env_arg, Environment::compose(kv)).str());
 
-  args.AppendArguments(launch_info.GetArguments());
+  // The runtime is handed the module to run as a path on this host. A launch
+  // takes its executable from the name the module goes by on the platform,
+  // which for a module reported by a stub is a name of the stub's choosing
+  // rather than a path that resolves here, so run the file the target has.
+  Args inferior_args = launch_info.GetArguments();
+  if (ModuleSP exe_module_sp = target.GetExecutableModule()) {
+    const std::string exe_path = exe_module_sp->GetFileSpec().GetPath();
+    if (inferior_args.GetArgumentCount() > 0)
+      inferior_args.ReplaceArgumentAtIndex(0, exe_path);
+    else
+      inferior_args.AppendArgument(exe_path);
+  }
+  args.AppendArguments(inferior_args);
 
   launch_info.SetArguments(args, true);
   launch_info.SetLaunchInSeparateProcessGroup(true);

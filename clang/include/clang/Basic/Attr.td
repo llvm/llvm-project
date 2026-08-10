@@ -2532,6 +2532,19 @@ def AMDGPUMaxNumWorkGroups : InheritableAttr {
   let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
 }
 
+def AMDGPUNamedBarrierWrapper : InheritableAttr {
+  let Spellings = [];
+  let Args = [];
+  let Documentation = [InternalOnly];
+  let SemaHandler = 0;
+}
+
+def AMDGPUAvailableVisible : StmtAttr, TargetSpecificAttr<TargetAMDGPU> {
+  let Spellings = [Clang<"amdgpu_av">];
+  let Args = [StringArgument<"Mode">];
+  let Documentation = [AMDGPUAvailableVisibleDocs];
+}
+
 def BPFPreserveAccessIndex : InheritableAttr,
                              TargetSpecificAttr<TargetBPF>  {
   let Spellings = [Clang<"preserve_access_index">];
@@ -2685,7 +2698,7 @@ def CountedByOrNull : DeclOrTypeAttr {
   let Args = [ExprArgument<"Count">, IntArgument<"NestedLevel", 1>];
   let LateParsed = LateAttrParseExperimentalExt;
   let ParseArgumentsAsUnevaluated = 1;
-  let Documentation = [CountedByDocs];
+  let Documentation = [CountedByOrNullDocs];
   let LangOpts = [COnly];
 }
 
@@ -2708,7 +2721,7 @@ def SizedBy : DeclOrTypeAttr {
   let Args = [ExprArgument<"Size">, IntArgument<"NestedLevel", 1>];
   let LateParsed = LateAttrParseExperimentalExt;
   let ParseArgumentsAsUnevaluated = 1;
-  let Documentation = [CountedByDocs];
+  let Documentation = [SizedByDocs];
   let LangOpts = [COnly];
 }
 
@@ -2718,7 +2731,7 @@ def SizedByOrNull : DeclOrTypeAttr {
   let Args = [ExprArgument<"Size">, IntArgument<"NestedLevel", 1>];
   let LateParsed = LateAttrParseExperimentalExt;
   let ParseArgumentsAsUnevaluated = 1;
-  let Documentation = [CountedByDocs];
+  let Documentation = [SizedByOrNullDocs];
   let LangOpts = [COnly];
 }
 
@@ -5333,7 +5346,7 @@ def HLSLVkLocation : HLSLAnnotationAttr {
 }
 
 // `row_major` / `column_major` are HLSL keywords that select the in-memory
-// layout of a matrix-typed declaration. 
+// layout of a matrix-typed declaration.
 def HLSLRowMajor : TypeAttr {
   let Spellings = [CustomKeyword<"row_major">];
   let LangOpts = [HLSL];

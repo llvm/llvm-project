@@ -169,9 +169,6 @@ define void @zero_k(<8 x i32> %arg, <8 x i1> %mask) #0 {
 ; AVX1-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -182,7 +179,6 @@ define void @zero_k(<8 x i32> %arg, <8 x i1> %mask) #0 {
 ; AVX2-NEXT:    vpmaskmovd %ymm0, %ymm1, 0
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -194,7 +190,6 @@ define void @zero_k(<8 x i32> %arg, <8 x i1> %mask) #0 {
 ; AVX512VL-NEXT:    vmovdqa32 %ymm0, 0 {%k1}
 ; AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512VL-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512VL-NEXT:    kxorw %k0, %k0, %k1
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq

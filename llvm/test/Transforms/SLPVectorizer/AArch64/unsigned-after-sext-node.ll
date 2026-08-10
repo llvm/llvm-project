@@ -4,12 +4,8 @@
 define i16 @test()  {
 ; CHECK-LABEL: define i16 @test() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LNOT:%.*]] = xor i1 true, true
-; CHECK-NEXT:    [[LNOT_EXT:%.*]] = zext i1 [[LNOT]] to i16
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i16 0, [[LNOT_EXT]]
-; CHECK-NEXT:    [[LNOT5:%.*]] = xor i1 true, true
-; CHECK-NEXT:    [[LNOT_EXT6:%.*]] = zext i1 [[LNOT5]] to i16
-; CHECK-NEXT:    [[ADD7:%.*]] = add nsw i16 [[ADD]], [[LNOT_EXT6]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i16 0, 0
+; CHECK-NEXT:    [[ADD7:%.*]] = add nsw i16 [[ADD]], 0
 ; CHECK-NEXT:    ret i16 [[ADD7]]
 ;
 entry:

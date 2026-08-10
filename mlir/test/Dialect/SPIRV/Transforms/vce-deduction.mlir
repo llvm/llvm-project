@@ -1,4 +1,4 @@
-// RUN: mlir-opt -spirv-update-vce %s | FileCheck %s
+// RUN: mlir-opt -spirv-update-vce -split-input-file -verify-diagnostics %s | FileCheck %s
 
 //===----------------------------------------------------------------------===//
 // Version
@@ -27,7 +27,7 @@ spirv.module Logical GLSL450 attributes {
     #spirv.vce<v1.5, [Shader, GroupNonUniformBallot], []>, #spirv.resource_limits<>>
 } {
   spirv.func @group_non_uniform_ballot(%predicate : i1) -> vector<4xi32> "None" {
-    %0 = spirv.GroupNonUniformBallot <Workgroup> %predicate : vector<4xi32>
+    %0 = spirv.GroupNonUniformBallot <Subgroup> %predicate : vector<4xi32>
     spirv.ReturnValue %0: vector<4xi32>
   }
 }
@@ -41,6 +41,25 @@ spirv.module Logical GLSL450 attributes {
     spirv.ReturnValue %0: vector<2xf32>
   }
 }
+
+// -----
+
+// Test rejecting an op whose max version is below what the target
+// environment allows.
+// spirv.AtomicCompareExchangeWeak is only available up to v1.3.
+
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.6, [Kernel], []>, #spirv.resource_limits<>>
+} {
+  spirv.func @atomic_compare_exchange_weak(%ptr : !spirv.ptr<i32, Workgroup>, %value : i32, %comparator : i32) -> i32 "None" {
+    // expected-error @+1 {{'spirv.AtomicCompareExchangeWeak' is missing after version v1.3 but target environment is v1.6}}
+    %0 = spirv.AtomicCompareExchangeWeak <Workgroup> <Acquire> <None> %ptr, %value, %comparator : !spirv.ptr<i32, Workgroup>
+    spirv.ReturnValue %0 : i32
+  }
+}
+
+// -----
 
 //===----------------------------------------------------------------------===//
 // Capability

@@ -225,6 +225,8 @@ struct KernelEnvironmentTy;
 
 int8_t __kmpc_is_spmd_exec_mode();
 
+int32_t __kmpc_is_team_main_thread();
+
 int32_t __kmpc_target_init(KernelEnvironmentTy &KernelEnvironment,
                            KernelLaunchEnvironmentTy *KernelLaunchEnvironment);
 

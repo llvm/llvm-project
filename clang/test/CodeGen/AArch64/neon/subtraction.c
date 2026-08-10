@@ -7,12 +7,13 @@
 //=============================================================================
 // NOTES
 //
-// Tests for vector subtraction intrinsics: Subtraction, Widening subtraction, Narrowing subtraction and Saturating subtract elements.
+// Tests for scalar and vector subtraction intrinsics: Subtraction, Widening
+// subtraction, Narrowing subtraction and Saturating subtract elements.
 //
 // ACLE section headings based on v2025Q2 of the ACLE specification:
 //  * https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#subtract
 //
-// TODO: Migrate Saturating subtract test cases.
+// TODO: Migrate vector saturating subtract test cases.
 //
 //=============================================================================
 
@@ -1083,4 +1084,121 @@ uint32x4_t test_vrsubhn_high_u64(uint32x2_t r, uint64x2_t a, uint64x2_t b) {
   // LLVM: [[RES:%.*]] = shufflevector <2 x i32> [[R]], <2 x i32> [[TMP]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // LLVM: ret <4 x i32> [[RES]]
   return vrsubhn_high_u64(r, a, b);
+}
+
+//===------------------------------------------------------===//
+// 2.1.1.5.4.  Scalar saturating subtract
+// https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#saturating-subtract
+//===------------------------------------------------------===//
+
+// LLVM-LABEL: @test_vqsubb_s8(
+// CIR-LABEL: @vqsubb_s8(
+int8_t test_vqsubb_s8(int8_t a, int8_t b) {
+  // CIR: [[INS0:%.*]] = cir.vec.insert {{%.*}}, {{%.*}}[{{%.*}} : !u64i] : !cir.vector<8 x !s8i>
+  // CIR: [[INS1:%.*]] = cir.vec.insert {{%.*}}, {{%.*}}[{{%.*}} : !u64i] : !cir.vector<8 x !s8i>
+  // CIR: [[RES:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.sqsub" [[INS0]], [[INS1]] : (!cir.vector<8 x !s8i>, !cir.vector<8 x !s8i>) -> !cir.vector<8 x !s8i>
+  // CIR: {{%.*}} = cir.vec.extract [[RES]][{{%.*}} : !u64i] : !cir.vector<8 x !s8i>
+
+  // LLVM-SAME: i8 {{.*}} [[A:%.*]], i8 {{.*}} [[B:%.*]])
+  // LLVM: [[TMP0:%.*]] = insertelement <8 x i8> poison, i8 [[A]], i64 0
+  // LLVM: [[TMP1:%.*]] = insertelement <8 x i8> poison, i8 [[B]], i64 0
+  // LLVM: [[VQSUBB_S8_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqsub.v8i8(<8 x i8> [[TMP0]], <8 x i8> [[TMP1]])
+  // LLVM: [[TMP2:%.*]] = extractelement <8 x i8> [[VQSUBB_S8_I]], i64 0
+  // LLVM: ret i8 [[TMP2]]
+  return vqsubb_s8(a, b);
+}
+
+// LLVM-LABEL: @test_vqsubh_s16(
+// CIR-LABEL: @vqsubh_s16(
+int16_t test_vqsubh_s16(int16_t a, int16_t b) {
+  // CIR: [[INS0:%.*]] = cir.vec.insert {{%.*}}, {{%.*}}[{{%.*}} : !u64i] : !cir.vector<4 x !s16i>
+  // CIR: [[INS1:%.*]] = cir.vec.insert {{%.*}}, {{%.*}}[{{%.*}} : !u64i] : !cir.vector<4 x !s16i>
+  // CIR: [[RES:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.sqsub" [[INS0]], [[INS1]] : (!cir.vector<4 x !s16i>, !cir.vector<4 x !s16i>) -> !cir.vector<4 x !s16i>
+  // CIR: {{%.*}} = cir.vec.extract [[RES]][{{%.*}} : !u64i] : !cir.vector<4 x !s16i>
+
+  // LLVM-SAME: i16 {{.*}} [[A:%.*]], i16 {{.*}} [[B:%.*]])
+  // LLVM: [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 [[A]], i64 0
+  // LLVM: [[TMP1:%.*]] = insertelement <4 x i16> poison, i16 [[B]], i64 0
+  // LLVM: [[VQSUBH_S16_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqsub.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
+  // LLVM: [[TMP2:%.*]] = extractelement <4 x i16> [[VQSUBH_S16_I]], i64 0
+  // LLVM: ret i16 [[TMP2]]
+  return vqsubh_s16(a, b);
+}
+
+// LLVM-LABEL: @test_vqsubs_s32(
+// CIR-LABEL: @vqsubs_s32(
+int32_t test_vqsubs_s32(int32_t a, int32_t b) {
+  // CIR: {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqsub" {{%.*}}, {{%.*}} : (!s32i, !s32i) -> !s32i
+
+  // LLVM-SAME: i32 {{.*}} [[A:%.*]], i32 {{.*}} [[B:%.*]])
+  // LLVM: [[VQSUBS_S32_I:%.*]] = call i32 @llvm.aarch64.neon.sqsub.i32(i32 [[A]], i32 [[B]])
+  // LLVM: ret i32 [[VQSUBS_S32_I]]
+  return vqsubs_s32(a, b);
+}
+
+// LLVM-LABEL: @test_vqsubd_s64(
+// CIR-LABEL: @vqsubd_s64(
+int64_t test_vqsubd_s64(int64_t a, int64_t b) {
+  // CIR: {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqsub" {{%.*}}, {{%.*}} : (!s64i, !s64i) -> !s64i
+
+  // LLVM-SAME: i64 {{.*}} [[A:%.*]], i64 {{.*}} [[B:%.*]])
+  // LLVM: [[VQSUBD_S64_I:%.*]] = call i64 @llvm.aarch64.neon.sqsub.i64(i64 [[A]], i64 [[B]])
+  // LLVM: ret i64 [[VQSUBD_S64_I]]
+  return vqsubd_s64(a, b);
+}
+
+// LLVM-LABEL: @test_vqsubb_u8(
+// CIR-LABEL: @vqsubb_u8(
+uint8_t test_vqsubb_u8(uint8_t a, uint8_t b) {
+  // CIR: [[INS0:%.*]] = cir.vec.insert {{%.*}}, {{%.*}}[{{%.*}} : !u64i] : !cir.vector<8 x !u8i>
+  // CIR: [[INS1:%.*]] = cir.vec.insert {{%.*}}, {{%.*}}[{{%.*}} : !u64i] : !cir.vector<8 x !u8i>
+  // CIR: [[RES:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.uqsub" [[INS0]], [[INS1]] : (!cir.vector<8 x !u8i>, !cir.vector<8 x !u8i>) -> !cir.vector<8 x !u8i>
+  // CIR: {{%.*}} = cir.vec.extract [[RES]][{{%.*}} : !u64i] : !cir.vector<8 x !u8i>
+
+  // LLVM-SAME: i8 {{.*}} [[A:%.*]], i8 {{.*}} [[B:%.*]])
+  // LLVM: [[TMP0:%.*]] = insertelement <8 x i8> poison, i8 [[A]], i64 0
+  // LLVM: [[TMP1:%.*]] = insertelement <8 x i8> poison, i8 [[B]], i64 0
+  // LLVM: [[VQSUBB_U8_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.uqsub.v8i8(<8 x i8> [[TMP0]], <8 x i8> [[TMP1]])
+  // LLVM: [[TMP2:%.*]] = extractelement <8 x i8> [[VQSUBB_U8_I]], i64 0
+  // LLVM: ret i8 [[TMP2]]
+  return vqsubb_u8(a, b);
+}
+
+// LLVM-LABEL: @test_vqsubh_u16(
+// CIR-LABEL: @vqsubh_u16(
+uint16_t test_vqsubh_u16(uint16_t a, uint16_t b) {
+  // CIR: [[INS0:%.*]] = cir.vec.insert {{%.*}}, {{%.*}}[{{%.*}} : !u64i] : !cir.vector<4 x !u16i>
+  // CIR: [[INS1:%.*]] = cir.vec.insert {{%.*}}, {{%.*}}[{{%.*}} : !u64i] : !cir.vector<4 x !u16i>
+  // CIR: [[RES:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.uqsub" [[INS0]], [[INS1]] : (!cir.vector<4 x !u16i>, !cir.vector<4 x !u16i>) -> !cir.vector<4 x !u16i>
+  // CIR: {{%.*}} = cir.vec.extract [[RES]][{{%.*}} : !u64i] : !cir.vector<4 x !u16i>
+
+  // LLVM-SAME: i16 {{.*}} [[A:%.*]], i16 {{.*}} [[B:%.*]])
+  // LLVM: [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 [[A]], i64 0
+  // LLVM: [[TMP1:%.*]] = insertelement <4 x i16> poison, i16 [[B]], i64 0
+  // LLVM: [[VQSUBH_U16_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.uqsub.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
+  // LLVM: [[TMP2:%.*]] = extractelement <4 x i16> [[VQSUBH_U16_I]], i64 0
+  // LLVM: ret i16 [[TMP2]]
+  return vqsubh_u16(a, b);
+}
+
+// LLVM-LABEL: @test_vqsubs_u32(
+// CIR-LABEL: @vqsubs_u32(
+uint32_t test_vqsubs_u32(uint32_t a, uint32_t b) {
+  // CIR: {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.uqsub" {{%.*}}, {{%.*}} : (!u32i, !u32i) -> !u32i
+
+  // LLVM-SAME: i32 {{.*}} [[A:%.*]], i32 {{.*}} [[B:%.*]])
+  // LLVM: [[VQSUBS_U32_I:%.*]] = call i32 @llvm.aarch64.neon.uqsub.i32(i32 [[A]], i32 [[B]])
+  // LLVM: ret i32 [[VQSUBS_U32_I]]
+  return vqsubs_u32(a, b);
+}
+
+// LLVM-LABEL: @test_vqsubd_u64(
+// CIR-LABEL: @vqsubd_u64(
+uint64_t test_vqsubd_u64(uint64_t a, uint64_t b) {
+  // CIR: {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.uqsub" {{%.*}}, {{%.*}} : (!u64i, !u64i) -> !u64i
+
+  // LLVM-SAME: i64 {{.*}} [[A:%.*]], i64 {{.*}} [[B:%.*]])
+  // LLVM: [[VQSUBD_U64_I:%.*]] = call i64 @llvm.aarch64.neon.uqsub.i64(i64 [[A]], i64 [[B]])
+  // LLVM: ret i64 [[VQSUBD_U64_I]]
+  return vqsubd_u64(a, b);
 }

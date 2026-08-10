@@ -72,7 +72,7 @@ public:
     // map lookup and shared_ptr bookkeeping per allocation. Instances here are
     // few and short-lived, so we prefer the O(1) vector index and accept that a
     // thread's Cache only grows with the number of instances created.
-    static thread_local std::vector<AllocatorTy *> Cache;
+    static LLVM_THREAD_LOCAL std::vector<AllocatorTy *> Cache;
     if (LLVM_UNLIKELY(Cache.size() <= Id))
       Cache.resize(Id + 1);
     AllocatorTy *&A = Cache[Id];

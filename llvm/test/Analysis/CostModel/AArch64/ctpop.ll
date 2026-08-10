@@ -4,8 +4,8 @@
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
-define void @ctpop() {
-; CHECK-BASE-LABEL: 'ctpop'
+define void @scalar() {
+; CHECK-BASE-LABEL: 'scalar'
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 5 for: %I8 = call i8 @llvm.ctpop.i8(i8 undef)
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 5 for: %I16 = call i16 @llvm.ctpop.i16(i16 undef)
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 5 for: %I32 = call i32 @llvm.ctpop.i32(i32 undef)
@@ -13,7 +13,7 @@ define void @ctpop() {
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 8 for: %I128 = call i128 @llvm.ctpop.i128(i128 undef)
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
-; CHECK-CSSC-LABEL: 'ctpop'
+; CHECK-CSSC-LABEL: 'scalar'
 ; CHECK-CSSC-NEXT:  Cost Model: Found costs of 2 for: %I8 = call i8 @llvm.ctpop.i8(i8 undef)
 ; CHECK-CSSC-NEXT:  Cost Model: Found costs of 2 for: %I16 = call i16 @llvm.ctpop.i16(i16 undef)
 ; CHECK-CSSC-NEXT:  Cost Model: Found costs of 1 for: %I32 = call i32 @llvm.ctpop.i32(i32 undef)

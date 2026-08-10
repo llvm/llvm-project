@@ -262,7 +262,11 @@ std::optional<Object> serializeDocComment(const DocComment &Comment) {
   Array LinesArray;
   for (const auto &CommentLine : Comment) {
     Object Line;
-    Line["text"] = CommentLine.Text;
+    // Comments in source files may contain invalid UTF-8. JSON values must be
+    // valid UTF-8, so replace any invalid sequences before serializing.
+    Line["text"] = json::isUTF8(CommentLine.Text)
+                       ? CommentLine.Text
+                       : json::fixUTF8(CommentLine.Text);
     serializeObject(Line, "range",
                     serializeSourceRange(CommentLine.Begin, CommentLine.End));
     LinesArray.emplace_back(std::move(Line));

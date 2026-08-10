@@ -63,11 +63,11 @@ define float @ret_sinh_nonneg(float nofpclass(ninf nzero nsub nnorm) %arg) {
   ret float %call
 }
 
-; cosh(x) >= 1 for all real x; cosh is always non-negative.
+; cosh(x) >= 1 for all real x; cosh is never negative, zero, or subnormal.
 define float @ret_cosh(float %arg) {
-; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_cosh
+; CHECK-LABEL: define nofpclass(ninf zero sub nnorm) float @ret_cosh
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.cosh.f32(float [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf zero sub nnorm) float @llvm.cosh.f32(float [[ARG]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.cosh.f32(float %arg)
@@ -75,9 +75,9 @@ define float @ret_cosh(float %arg) {
 }
 
 define float @ret_cosh_nonan(float nofpclass(nan) %arg) {
-; CHECK-LABEL: define nofpclass(nan ninf nzero nsub nnorm) float @ret_cosh_nonan
+; CHECK-LABEL: define nofpclass(nan ninf zero sub nnorm) float @ret_cosh_nonan
 ; CHECK-SAME: (float nofpclass(nan) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.cosh.f32(float nofpclass(nan) [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf zero sub nnorm) float @llvm.cosh.f32(float nofpclass(nan) [[ARG]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.cosh.f32(float %arg)
@@ -137,9 +137,9 @@ define float @ret_asin_nonneg(float nofpclass(ninf nzero nsub nnorm) %arg) {
 }
 
 define float @ret_asin_nonan(float nofpclass(nan) %arg) {
-; CHECK-LABEL: define nofpclass(nan inf) float @ret_asin_nonan
+; CHECK-LABEL: define nofpclass(inf) float @ret_asin_nonan
 ; CHECK-SAME: (float nofpclass(nan) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) float @llvm.asin.f32(float nofpclass(nan) [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.asin.f32(float nofpclass(nan) [[ARG]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.asin.f32(float %arg)
@@ -158,9 +158,9 @@ define float @ret_acos(float %arg) {
 }
 
 define float @ret_acos_nonan(float nofpclass(nan) %arg) {
-; CHECK-LABEL: define nofpclass(nan inf nzero nsub nnorm) float @ret_acos_nonan
+; CHECK-LABEL: define nofpclass(inf nzero nsub nnorm) float @ret_acos_nonan
 ; CHECK-SAME: (float nofpclass(nan) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf nzero nsub nnorm) float @llvm.acos.f32(float nofpclass(nan) [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf nzero nsub nnorm) float @llvm.acos.f32(float nofpclass(nan) [[ARG]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.acos.f32(float %arg)

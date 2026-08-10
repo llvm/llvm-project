@@ -32,7 +32,7 @@ define amdgpu_kernel void @add_reg_reg(ptr addrspace(1) %ptr) {
   ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.ptr.kernarg.offset, align 4, addrspace 4)
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2_SADDR [[S_LOAD_DWORDX2_IMM]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (volatile "amdgpu-noclobber" load (s64) from %ir.ptr.load, addrspace 1)
-  ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR1:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2_SADDR [[S_LOAD_DWORDX2_IMM]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (volatile load (s64) from %ir.ptr.load, addrspace 1)
+  ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR1:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2_SADDR [[S_LOAD_DWORDX2_IMM]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (volatile "amdgpu-noclobber" load (s64) from %ir.ptr.load, addrspace 1)
   ; CHECK-NEXT:   [[V_ADD_U:%[0-9]+]]:vreg_64 = V_ADD_U64_PSEUDO [[GLOBAL_LOAD_DWORDX2_SADDR]], [[GLOBAL_LOAD_DWORDX2_SADDR1]], implicit-def $vcc_lo, implicit $exec
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vreg_64 = COPY [[V_ADD_U]]
   ; CHECK-NEXT:   GLOBAL_STORE_DWORDX2_SADDR [[V_MOV_B32_e32_]], killed [[COPY1]], [[S_LOAD_DWORDX2_IMM]], 0, 0, implicit $exec :: (store (s64) into %ir.ptr.load, addrspace 1)
@@ -97,7 +97,7 @@ define amdgpu_kernel void @sub_reg_reg(ptr addrspace(1) %ptr) {
   ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.ptr.kernarg.offset, align 4, addrspace 4)
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2_SADDR [[S_LOAD_DWORDX2_IMM]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (volatile "amdgpu-noclobber" load (s64) from %ir.ptr.load, addrspace 1)
-  ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR1:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2_SADDR [[S_LOAD_DWORDX2_IMM]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (volatile load (s64) from %ir.ptr.load, addrspace 1)
+  ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR1:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2_SADDR [[S_LOAD_DWORDX2_IMM]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (volatile "amdgpu-noclobber" load (s64) from %ir.ptr.load, addrspace 1)
   ; CHECK-NEXT:   [[V_SUB_U:%[0-9]+]]:vreg_64 = V_SUB_U64_PSEUDO [[GLOBAL_LOAD_DWORDX2_SADDR]], [[GLOBAL_LOAD_DWORDX2_SADDR1]], implicit-def $vcc_lo, implicit $exec
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vreg_64 = COPY [[V_SUB_U]]
   ; CHECK-NEXT:   GLOBAL_STORE_DWORDX2_SADDR [[V_MOV_B32_e32_]], killed [[COPY1]], [[S_LOAD_DWORDX2_IMM]], 0, 0, implicit $exec :: (store (s64) into %ir.ptr.load, addrspace 1)

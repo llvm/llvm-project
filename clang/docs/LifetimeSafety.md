@@ -30,11 +30,11 @@ with attributes like [clang::lifetimebound](https://clang.llvm.org/docs/Attribut
 lifetime safety at call sites with higher accuracy. This approach supports
 gradual adoption in existing codebases.
 
-```{note}
+:::{note}
 This analysis is designed for bug finding, not verification. It may miss some
 lifetime issues and can produce false positives. It does not guarantee the
 absence of all lifetime bugs.
-```
+:::
 
 ### Getting Started
 
@@ -128,14 +128,14 @@ details on these attributes, see the Clang attribute reference for
 [gsl::Owner](https://clang.llvm.org/docs/AttributeReference.html#gsl-owner) and
 [gsl::Pointer](https://clang.llvm.org/docs/AttributeReference.html#gsl-pointer).
 
-```{note}
+:::{note}
 Types with mixed ownership semantics (owning some data while holding views to
 other data) or types with multiple view fields with different lifetimes should
 not be annotated. The analysis does not yet support expressing such nuanced
 lifetime relationships.
 Future enhancements, such as named lifetimes, may provide better support for
 these patterns.
-```
+:::
 
 ### LifetimeBound
 
@@ -384,9 +384,9 @@ as `std::unique_ptr` after operations like `reset`. For example, adding
 elements to `std::vector` may cause reallocation, invalidating all existing
 iterators, pointers and references to its elements.
 
-```{note}
+:::{note}
 Invalidation checking is highly experimental and may produce false positives.
-```
+:::
 
 ````{list-table}
 :widths: 50 50

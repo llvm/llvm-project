@@ -41,7 +41,7 @@ define void @test_invalidate_scevs_at_scope(ptr %p) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP7]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH1:.*]], label %[[VECTOR_PH2:.*]]
 ; CHECK:       [[VECTOR_PH2]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP7]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP7]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP7]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY3:.*]]
 ; CHECK:       [[VECTOR_BODY3]]:

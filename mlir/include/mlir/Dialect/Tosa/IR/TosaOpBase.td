@@ -339,111 +339,6 @@ def Tosa_ExtensionAttr
 def Tosa_ExtensionArrayAttr
     : TypedArrayAttrBase<Tosa_ExtensionAttr, "TOSA extension array attribute">;
 
-// The base class for defining op availability dimensions.
-class Availability {
-  // The following are fields for controlling the generated C++ OpInterface.
-
-  // The namespace for the generated C++ OpInterface subclass.
-  string cppNamespace = "::mlir::tosa";
-
-  // The name for the generated C++ OpInterface subclass.
-  string interfaceName = ?;
-
-  // The description for the generated C++ OpInterface subclass.
-  string interfaceDescription = "";
-
-  // The query function's return type in the generated C++ OpInterface subclass.
-  string queryFnRetType = ?;
-
-  // The query function's name in the generated C++ OpInterface subclass.
-  string queryFnName = ?;
-
-  // The logic for merging two availability requirements.
-  code mergeAction = ?;
-
-  // The initializer for the final availability requirement.
-  string initializer = ?;
-
-  // An availability instance's type.
-  string instanceType = ?;
-
-  // The following are fields for a concrete availability instance.
-
-  // The code for preparing a concrete instance. This should be C++ statements
-  // and will be generated before the `mergeAction` logic.
-  code instancePreparation = "";
-
-  // The availability requirement carried by a concrete instance.
-  string instance = ?;
-}
-
-
-class Profile<list<I32EnumAttrCase> profiles> : Availability {
-  let interfaceName = "QueryProfileInterface";
-  let interfaceDescription = [{
-    Querying interface for the supported set of Tosa profile.
-
-    This interface provides a `getProfiles()` method to query
-    the supported set of Tosa profile. The returned value is a
-    list of `mlir::Tosa::Profile` enum number.
-  }];
-
-  let queryFnRetType = "::llvm::SmallVector<::llvm::ArrayRef<"
-                          "::mlir::tosa::Profile>, 1>";
-  let queryFnName = "getProfiles";
-
-  let mergeAction = !if(
-      !empty(profiles), "", "$overall.emplace_back($instance)");
-
-  let initializer = "{}";
-
-  let instanceType = "::llvm::ArrayRef<::mlir::tosa::Profile>";
-
-  // Pack all profiles as a static array and get its reference.
-  let instancePreparation = !if(!empty(profiles), "",
-    "static const ::mlir::tosa::Profile profs[] = {" #
-    !interleave(!foreach(prof, profiles,
-                         "::mlir::tosa::Profile::" # prof.symbol), ", ") #
-    "}; " #
-    "ArrayRef<::mlir::tosa::Profile> " #
-      "ref(profs, std::size(profs));");
-
-  let instance = "ref";
-}
-
-class Extension<list<I32EnumAttrCase> extensions> : Availability {
-  let interfaceName = "QueryExtensionInterface";
-  let interfaceDescription = [{
-    Querying interface for the supported set of TOSA extension.
-
-    This interface provides a `getExtensions()` method to query
-    the supported set of Tosa extension. The returned value is a
-    list of `mlir::Tosa::Extension` enum number.
-  }];
-
-  let queryFnRetType = "::llvm::SmallVector<::llvm::ArrayRef<"
-                          "::mlir::tosa::Extension>, 1>";
-  let queryFnName = "getExtensions";
-
-  let mergeAction = !if(
-      !empty(extensions), "", "$overall.emplace_back($instance)");
-
-  let initializer = "{}";
-
-  let instanceType = "::llvm::ArrayRef<::mlir::tosa::Extension>";
-
-  // Pack all extensions as a static array and get its reference.
-  let instancePreparation = !if(!empty(extensions), "",
-    "static const ::mlir::tosa::Extension exts[] = {" #
-    !interleave(!foreach(ext, extensions,
-                         "::mlir::tosa::Extension::" # ext.symbol), ", ") #
-    "}; " #
-    "ArrayRef<::mlir::tosa::Extension> " #
-      "ref(exts, std::size(exts));");
-
-  let instance = "ref";
-}
-
 //===----------------------------------------------------------------------===//
 // TOSA Levels
 //===----------------------------------------------------------------------===//
@@ -546,30 +441,6 @@ def Tosa_BlockShapeAttr
   }];
 }
 
-//===----------------------------------------------------------------------===//
-// TOSA Interfaces.
-//===----------------------------------------------------------------------===//
-
-def QueryProfileInterface : OpInterface<"QueryProfileInterface"> {
-  let cppNamespace = "::mlir::tosa";
-  let methods = [InterfaceMethod<
-    "get supported profiles",
-    "::llvm::SmallVector<::llvm::ArrayRef<::mlir::tosa::Profile>, 1>",
-    "getProfiles">];
-}
-
-def QueryExtensionInterface : OpInterface<"QueryExtensionInterface"> {
-  let cppNamespace = "::mlir::tosa";
-  let methods = [InterfaceMethod<
-    "get supported extensions",
-    "::llvm::SmallVector<::llvm::ArrayRef<::mlir::tosa::Extension>, 1>",
-    "getExtensions">];
-}
-
-//===----------------------------------------------------------------------===//
-// TOSA Operator Trait.
-//===----------------------------------------------------------------------===//
-
 // Permits broadcasting. Elementwise trait is too strict.
 def TosaElementwiseOperator : NativeOpTrait<"TosaElementwiseOperator"> {
   let cppNamespace = "mlir::OpTrait::tosa";
@@ -589,18 +460,7 @@ def TosaResolvableShapeOperands : NativeOpTrait<"TosaResolvableShapeOperands"> {
 
 class Tosa_Op<string mnemonic, list<Trait> traits = []> :
     Op<Tosa_Dialect, mnemonic, !listconcat(traits, [TosaOpInterface,
-    DeclareOpInterfaceMethods<QueryProfileInterface>,
-    DeclareOpInterfaceMethods<QueryExtensionInterface>,
-    TosaResolvableShapeOperands])> {
-
-  // Default availability specification.
-  list<Availability> availability = [
-    Profile<[]>,
-    Extension<[]>];
-
-  // When not set, manual implementation of these methods is required.
-  bit autogenAvailability = 1;
-}
+    TosaResolvableShapeOperands])> {}
 
 class Tosa_ElementwiseOp<string mnemonic, list<Trait> traits = []> :
     Tosa_Op<mnemonic, !listconcat(traits, [

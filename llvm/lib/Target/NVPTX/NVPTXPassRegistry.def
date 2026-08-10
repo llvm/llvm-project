@@ -44,3 +44,9 @@ FUNCTION_PASS("nvptx-mark-kernel-ptrs-global", NVPTXMarkKernelPtrsGlobalPass())
 FUNCTION_PASS("nvptx-tag-invariant-loads", NVPTXTagInvariantLoadsPass())
 FUNCTION_PASS("nvptx-ir-peephole", NVPTXIRPeepholePass())
 #undef FUNCTION_PASS
+
+#ifndef MACHINE_FUNCTION_PASS
+#define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
+#endif
+MACHINE_FUNCTION_PASS("nvptx-isel", NVPTXISelDAGToDAGPass(*this, getOptLevel()))
+#undef MACHINE_FUNCTION_PASS

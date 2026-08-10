@@ -17,6 +17,7 @@
 #include "Basic/CodeGenIntrinsics.h"
 #include "Basic/SDNodeProperties.h"
 #include "CodeGenTarget.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -1101,6 +1102,7 @@ private:
   const RecordKeeper &Records;
   CodeGenTarget Target;
   CodeGenIntrinsicTable Intrinsics;
+  DenseMap<const Record *, unsigned> IntrinsicIDs;
 
   std::map<const Record *, SDNodeInfo, LessRecordByID> SDNodes;
 
@@ -1155,10 +1157,7 @@ public:
   }
 
   const CodeGenIntrinsic &getIntrinsic(const Record *R) const {
-    for (const CodeGenIntrinsic &Intrinsic : Intrinsics)
-      if (Intrinsic.TheDef == R)
-        return Intrinsic;
-    llvm_unreachable("Unknown intrinsic!");
+    return Intrinsics[getIntrinsicID(R)];
   }
 
   const CodeGenIntrinsic &getIntrinsicInfo(unsigned IID) const {
@@ -1168,10 +1167,9 @@ public:
   }
 
   unsigned getIntrinsicID(const Record *R) const {
-    for (unsigned i = 0, e = Intrinsics.size(); i != e; ++i)
-      if (Intrinsics[i].TheDef == R)
-        return i;
-    llvm_unreachable("Unknown intrinsic!");
+    auto I = IntrinsicIDs.find(R);
+    assert(I != IntrinsicIDs.end() && "Unknown intrinsic!");
+    return I->second;
   }
 
   const DAGDefaultOperand &getDefaultOperand(const Record *R) const {

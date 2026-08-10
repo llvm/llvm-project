@@ -24,16 +24,18 @@ define i32 @main(ptr %c, i32 %0, i1 %tobool4.not, i16 %1) {
 ; CHECK-NEXT:    br label %[[IF_END14]]
 ; CHECK:       [[IF_END14]]:
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[C]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i32> [[TMP3]], i64 1
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[TMP8]], 1
-; CHECK-NEXT:    [[AND25:%.*]] = and i32 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <2 x i32> <i32 1, i32 poison>
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x i32> [[TMP8]], i32 [[TMP0]], i64 1
+; CHECK-NEXT:    [[TMP24:%.*]] = and <2 x i32> [[TMP13]], splat (i32 1)
+; CHECK-NEXT:    [[AND:%.*]] = extractelement <2 x i32> [[TMP24]], i64 0
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[AND]], 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i32> [[TMP3]], i64 0
 ; CHECK-NEXT:    [[AND17:%.*]] = and i32 [[TMP9]], 1
 ; CHECK-NEXT:    [[DIV20:%.*]] = sdiv i32 [[AND17]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[AND17]], i64 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> [[TMP12]], i32 [[TMP10]], i64 2
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x i32> [[TMP11]], i32 [[AND25]], i64 3
+; CHECK-NEXT:    [[TMP27:%.*]] = shufflevector <2 x i32> [[TMP24]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x i32> [[TMP11]], <4 x i32> [[TMP27]], <4 x i32> <i32 0, i32 1, i32 2, i32 5>
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x i32> <i32 0, i32 1, i32 poison, i32 1>, i32 [[DIV20]], i64 2
 ; CHECK-NEXT:    [[TMP16:%.*]] = xor <4 x i32> [[TMP14]], [[TMP15]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> poison, <8 x i32> <i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>

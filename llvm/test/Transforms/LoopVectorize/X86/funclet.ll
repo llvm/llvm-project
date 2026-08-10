@@ -26,10 +26,9 @@ define void @test1() #0 personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 1024
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[TRY_CONT:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[TRY_CONT]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <16 x double> [[TMP2]], i64 15
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    store double [[TMP4]], ptr @sink, align 8
+; CHECK-NEXT:    store double 1.000000e+00, ptr @sink, align 8
 ; CHECK-NEXT:    catchret from [[TMP1]] to label %[[TRY_CONT1:.*]]
 ; CHECK:       [[TRY_CONT1]]:
 ; CHECK-NEXT:    ret void

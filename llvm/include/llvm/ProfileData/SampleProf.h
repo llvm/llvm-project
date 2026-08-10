@@ -1064,6 +1064,9 @@ public:
     return CallsiteSamples;
   }
 
+  /// Return whether this top-level function profile is context sensitive.
+  bool isContextSensitiveTopLevel() const { return !CallsiteSamples.empty(); }
+
   /// Returns vtable access samples for the C++ types collected in this
   /// function.
   const CallsiteTypeMap &getCallsiteTypeCounts() const {

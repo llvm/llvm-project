@@ -363,49 +363,6 @@ class SPIRVStructurizerImpl {
       return Output;
     }
 
-    // Returns the list of blocks that belong to a SPIR-V switch construct.
-    std::vector<BasicBlock *> getSwitchConstructBlocks(BasicBlock *Header,
-                                                       BasicBlock *Merge) {
-      const DomTreeBuilder::BBDomTree &DT = getDT();
-      assert(DT.dominates(Header, Merge));
-
-      std::vector<BasicBlock *> Output;
-      POV->partialOrderVisit(*Header, [&](BasicBlock *BB) {
-        // the blocks structurally dominated by a switch header,
-        if (!DT.dominates(Header, BB))
-          return false;
-        // excluding blocks structurally dominated by the switch header’s merge
-        // block.
-        if (DT.dominates(Merge, BB) || BB == Merge)
-          return false;
-        Output.push_back(BB);
-        return true;
-      });
-      return Output;
-    }
-
-    // Returns the list of blocks that belong to a SPIR-V case construct.
-    std::vector<BasicBlock *> getCaseConstructBlocks(BasicBlock *Target,
-                                                     BasicBlock *Merge) {
-      const DomTreeBuilder::BBDomTree &DT = getDT();
-      assert(DT.dominates(Target, Merge));
-
-      std::vector<BasicBlock *> Output;
-      POV->partialOrderVisit(*Target, [&](BasicBlock *BB) {
-        // the blocks structurally dominated by an OpSwitch Target or Default
-        // block
-        if (!DT.dominates(Target, BB))
-          return false;
-        // excluding the blocks structurally dominated by the OpSwitch
-        // construct’s corresponding merge block.
-        if (DT.dominates(Merge, BB) || BB == Merge)
-          return false;
-        Output.push_back(BB);
-        return true;
-      });
-      return Output;
-    }
-
     // Splits the given edges by recreating proxy nodes so that the destination
     // has unique incoming edges from this region.
     //
@@ -1182,7 +1139,6 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequired<SPIRVConvergenceRegionAnalysisWrapperPass>();
 
@@ -1197,7 +1153,6 @@ char SPIRVStructurizer::ID = 0;
 INITIALIZE_PASS_BEGIN(SPIRVStructurizer, "spirv-structurizer",
                       "structurize SPIRV", false, false)
 INITIALIZE_PASS_DEPENDENCY(LoopSimplify)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(SPIRVConvergenceRegionAnalysisWrapperPass)
 

@@ -24,13 +24,12 @@ public:
   AvailabilityPredicate(const Record *Def) : TheDef(Def) {
     if (!TheDef)
       return;
+    // An unset CondDag means the libcall is always available.
     if (const RecordVal *RV = TheDef->getValue("CondDag")) {
-      if (const auto *Dag = dyn_cast_or_null<DagInit>(RV->getValue())) {
+      if (const auto *Dag = dyn_cast_or_null<DagInit>(RV->getValue());
+          Dag && !isa<UnsetInit>(Dag->getOperator()))
         PredicateString = lowerCondDag(TheDef, Dag);
-        return;
-      }
     }
-    PredicateString = TheDef->getValueAsString("Cond").str();
   }
 
   const Record *getDef() const { return TheDef; }

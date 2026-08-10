@@ -326,8 +326,8 @@ func.func @_QPuse_in_multi_successor(%arg0: !fir.ref<i32>) {
 
 // -----
 
-// Test 10: A host-association store (fir.store to fir.llvm_ptr) is a use, so
-// the group sinks to just before it and the store is not moved.
+// Test 10: A host association store sinks with the group, so the allocation is
+// still delayed to the first real use.
 func.func @_QPhost_assoc() {
   %tuple = fir.alloca tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
   %c0_i32 = arith.constant 0 : i32
@@ -353,11 +353,11 @@ func.func private @_QFPcontained(!fir.ref<tuple<!fir.ref<!fir.box<!fir.heap<!fir
 // CHECK:         fir.coordinate_of
 // CHECK:         fir.zero_bits
 // CHECK:         fir.embox
+// CHECK:         arith.constant 99
 // CHECK:         cuf.alloc
 // CHECK:         fir.store {{.*}} : !fir.ref<!fir.box
 // CHECK:         fir.declare
 // CHECK:         fir.store {{.*}} : !fir.llvm_ptr
-// CHECK:         arith.constant 99
 // CHECK:         cuf.allocate
 // CHECK:         fir.call @_QFPcontained
 // CHECK:         cuf.free
@@ -365,9 +365,8 @@ func.func private @_QFPcontained(!fir.ref<tuple<!fir.ref<!fir.box<!fir.heap<!fir
 
 // -----
 
-// Test 11: The descriptor's only entry-block use is its host-association store
-// (the allocate happens inside the callee). The group and store stay before the
-// call, so the callee sees an initialized descriptor.
+// Test 11: The descriptor is only captured, never used in the host, so the group
+// and its store must still land before the call.
 func.func @_QPhost_assoc_call() {
   %tuple = fir.alloca tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
   %c0_i32 = arith.constant 0 : i32
@@ -397,9 +396,8 @@ func.func private @_QFPgo(!fir.ref<tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<
 
 // -----
 
-// Test 12: A shared tuple whose slots fill in order, so the descriptor's own
-// slot (index 1) is defined after an earlier coordinate_of of the same tuple
-// (index 0). The group must sink to before its host-association store.
+// Test 12: A shared tuple filled in slot order, so the descriptor's own slot is
+// defined after an earlier coordinate_of of the same tuple.
 func.func @_QPhost_assoc_late_slot() {
   %tuple = fir.alloca tuple<!fir.ref<i32>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
   %c0_i32 = arith.constant 0 : i32
@@ -433,3 +431,156 @@ func.func private @_QFPgo2(!fir.ref<tuple<!fir.ref<i32>, !fir.ref<!fir.box<!fir.
 // CHECK:         fir.call @_QFPgo2
 // CHECK:         cuf.free
 // CHECK:         return
+
+// -----
+
+// Test 13: The tuple is populated in the prologue but the descriptor is not used
+// until later, so the group and its store sink past the intervening call.
+func.func @_QPhost_assoc_prologue() {
+  %tuple = fir.alloca tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
+  %c0_i32 = arith.constant 0 : i32
+  %slot = fir.coordinate_of %tuple, %c0_i32 : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
+  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFhost_assoc_prologueEa"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %1 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
+  %c0 = arith.constant 0 : index
+  %2 = fir.shape %c0 : (index) -> !fir.shape<1>
+  %3 = fir.embox %1(%2) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+  fir.store %3 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %4 = fir.declare %0 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFhost_assoc_prologueEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  fir.store %4 to %slot : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
+  fir.call @_QPsetup() : () -> ()
+  %5 = cuf.allocate %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>} -> i32
+  fir.call @_QFPcontained2(%tuple) : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>>) -> ()
+  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>}
+  return
+}
+func.func private @_QPsetup()
+func.func private @_QFPcontained2(!fir.ref<tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>>)
+
+// CHECK-LABEL: func.func @_QPhost_assoc_prologue
+// CHECK:         fir.coordinate_of
+// CHECK:         fir.zero_bits
+// CHECK:         fir.embox
+// CHECK:         fir.call @_QPsetup
+// CHECK:         cuf.alloc
+// CHECK:         fir.store {{.*}} : !fir.ref<!fir.box
+// CHECK:         fir.declare
+// CHECK:         fir.store {{.*}} : !fir.llvm_ptr
+// CHECK:         cuf.allocate
+// CHECK:         fir.call @_QFPcontained2
+// CHECK:         cuf.free
+// CHECK:         return
+
+// -----
+
+// Test 14: Uses span several successor blocks, but ^bb2 dominates them all, so
+// the group sinks into ^bb2 instead of stopping at the entry terminator.
+func.func @_QPuse_in_dominating_successor(%arg0: !fir.ref<i32>) {
+  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFuse_in_dominating_successorEa"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %1 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
+  %c0 = arith.constant 0 : index
+  %2 = fir.shape %c0 : (index) -> !fir.shape<1>
+  %3 = fir.embox %1(%2) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+  fir.store %3 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %4 = fir.declare %0 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFuse_in_dominating_successorEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %c0_i32 = arith.constant 0 : i32
+  %5 = fir.load %arg0 : !fir.ref<i32>
+  %6 = arith.cmpi slt, %5, %c0_i32 : i32
+  cf.cond_br %6, ^bb1, ^bb2
+^bb1:
+  fir.call @_FortranAStopStatementText(%c0_i32, %c0_i32) : (i32, i32) -> none
+  fir.unreachable
+^bb2:
+  fir.call @_QPinit_runtime() : () -> ()
+  %7 = cuf.allocate %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>} -> i32
+  %8 = fir.load %arg0 : !fir.ref<i32>
+  %9 = arith.cmpi slt, %8, %c0_i32 : i32
+  cf.cond_br %9, ^bb3, ^bb4
+^bb3:
+  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>}
+  return
+^bb4:
+  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>}
+  return
+}
+func.func private @_FortranAStopStatementText(i32, i32) -> none
+func.func private @_QPinit_runtime()
+
+// CHECK-LABEL: func.func @_QPuse_in_dominating_successor
+// CHECK:         cf.cond_br
+// CHECK:       ^bb1:
+// CHECK:         fir.unreachable
+// CHECK:       ^bb2:
+// The allocation happens after the call, not before the branch.
+// CHECK:         fir.call @_QPinit_runtime
+// CHECK:         cuf.alloc
+// CHECK:         fir.store
+// CHECK:         fir.declare
+// CHECK:         cuf.allocate
+
+// -----
+
+// Test 15: A store into an !fir.llvm_ptr that is not a tuple slot goes to an
+// unknown destination, so it is an ordinary use and pins the group.
+func.func @_QPllvm_ptr_not_tuple(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) {
+  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFllvm_ptr_not_tupleEa"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %1 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
+  %c0 = arith.constant 0 : index
+  %2 = fir.shape %c0 : (index) -> !fir.shape<1>
+  %3 = fir.embox %1(%2) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+  fir.store %3 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %4 = fir.declare %0 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFllvm_ptr_not_tupleEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %opaque = fir.convert %arg0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
+  fir.store %4 to %opaque : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
+  fir.call @_QPsetup3() : () -> ()
+  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>}
+  return
+}
+func.func private @_QPsetup3()
+
+// CHECK-LABEL: func.func @_QPllvm_ptr_not_tuple
+// CHECK:         fir.convert
+// CHECK:         cuf.alloc
+// CHECK:         fir.store {{.*}} : !fir.ref<!fir.box
+// CHECK:         fir.declare
+// CHECK:         fir.store {{.*}} : !fir.llvm_ptr
+// CHECK:         fir.call @_QPsetup3
+// CHECK:         cuf.free
+
+// -----
+
+// Test 16: The tuple slot is read back in the host, so the group sinks past the
+// call but stays before the coordinate_of feeding that read.
+func.func @_QPtuple_slot_read() {
+  %tuple = fir.alloca tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
+  %c0_i32 = arith.constant 0 : i32
+  %slot = fir.coordinate_of %tuple, %c0_i32 : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
+  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFtuple_slot_readEa"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %1 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
+  %c0 = arith.constant 0 : index
+  %2 = fir.shape %c0 : (index) -> !fir.shape<1>
+  %3 = fir.embox %1(%2) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+  fir.store %3 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %4 = fir.declare %0 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtuple_slot_readEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  fir.store %4 to %slot : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
+  fir.call @_QPsetup4() : () -> ()
+  %reread = fir.coordinate_of %tuple, %c0_i32 : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
+  %5 = fir.load %reread : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
+  %6 = cuf.allocate %5 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>} -> i32
+  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>}
+  return
+}
+func.func private @_QPsetup4()
+
+// CHECK-LABEL: func.func @_QPtuple_slot_read
+// CHECK:         fir.coordinate_of
+// CHECK:         fir.embox
+// CHECK:         fir.call @_QPsetup4
+// CHECK:         cuf.alloc
+// CHECK:         fir.store {{.*}} : !fir.ref<!fir.box
+// CHECK:         fir.declare
+// CHECK:         fir.store {{.*}} : !fir.llvm_ptr
+// CHECK:         fir.coordinate_of
+// CHECK:         fir.load
+// CHECK:         cuf.allocate
+// CHECK:         cuf.free

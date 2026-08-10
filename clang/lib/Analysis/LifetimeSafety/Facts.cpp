@@ -10,8 +10,65 @@
 #include "clang/AST/Decl.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LoanPropagation.h"
 #include "clang/Analysis/Analyses/PostOrderCFGView.h"
+#include "llvm/Support/TimeProfiler.h"
 
 namespace clang::lifetimes::internal {
+
+void FactManager::computePersistentOrigins(const CFG &Cfg) {
+  llvm::TimeTraceScope TimeProfile("ComputePersistentOrigins");
+
+  unsigned NumOrigins = OriginMgr.getNumOrigins();
+  PersistentOrigins.resize(NumOrigins);
+  llvm::SmallVector<const CFGBlock *> OriginToFirstSeenBlock(NumOrigins,
+                                                             nullptr);
+  for (const CFGBlock *B : Cfg) {
+    for (const Fact *F : getFacts(B)) {
+      auto CheckOrigin = [&](OriginID OID) {
+        if (PersistentOrigins.test(OID.Value))
+          return;
+        auto &FirstSeenBlock = OriginToFirstSeenBlock[OID.Value];
+        if (FirstSeenBlock == nullptr)
+          FirstSeenBlock = B;
+        if (FirstSeenBlock != B) {
+          // We saw this origin in more than one block.
+          PersistentOrigins.set(OID.Value);
+        }
+      };
+
+      switch (F->getKind()) {
+      case Fact::Kind::Issue:
+        CheckOrigin(F->getAs<IssueFact>()->getOriginID());
+        break;
+      case Fact::Kind::OriginFlow: {
+        const auto *OF = F->getAs<OriginFlowFact>();
+        CheckOrigin(OF->getDestOriginID());
+        CheckOrigin(OF->getSrcOriginID());
+        break;
+      }
+      case Fact::Kind::Use:
+        for (const OriginList *Cur = F->getAs<UseFact>()->getUsedOrigins(); Cur;
+             Cur = Cur->peelOuterOrigin())
+          CheckOrigin(Cur->getOuterOriginID());
+        break;
+      case Fact::Kind::KillOrigin:
+        CheckOrigin(F->getAs<KillOriginFact>()->getKilledOrigin());
+        break;
+      case Fact::Kind::OriginEscapes:
+        // An escaping origin is read at the exit block but defined earlier, so
+        // it spans blocks and must participate in joins.
+        CheckOrigin(F->getAs<OriginEscapesFact>()->getEscapedOriginID());
+        break;
+      // `Expire` and `InvalidateOrigin` only ever clear an origin, so
+      // misclassifying one is harmless: the clear becomes a no-op.
+      case Fact::Kind::MovedOrigin:
+      case Fact::Kind::Expire:
+      case Fact::Kind::TestPoint:
+      case Fact::Kind::InvalidateOrigin:
+        break;
+      }
+    }
+  }
+}
 
 void Fact::dump(llvm::raw_ostream &OS, const LoanManager &,
                 const OriginManager &, const LoanPropagationAnalysis *) const {

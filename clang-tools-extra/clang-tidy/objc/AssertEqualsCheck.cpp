@@ -41,7 +41,7 @@ void AssertEqualsCheck::check(
     if (const auto *Root = Result.Nodes.getNodeAs<BinaryOperator>(CurrName)) {
       const SourceManager *Sm = Result.SourceManager;
       // The macros are nested two levels, so going up twice.
-      auto MacroCallsite = Sm->getImmediateMacroCallerLoc(
+      const auto MacroCallsite = Sm->getImmediateMacroCallerLoc(
           Sm->getImmediateMacroCallerLoc(Root->getBeginLoc()));
       diag(MacroCallsite,
            (Twine("use ") + TargetName + " for comparing objects").str())

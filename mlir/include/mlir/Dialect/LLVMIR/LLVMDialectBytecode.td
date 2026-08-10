@@ -133,6 +133,7 @@ def DICompileUnitAttr : DialectAttribute<(attr
   Bool:$isRecSelf,
   OptionalAttribute<"DistinctAttr">:$id,
   VarInt:$sourceLanguage,
+  VarInt:$sourceLanguageDialect,
   OptionalAttribute<"DIFileAttr">:$file,
   OptionalAttribute<"StringAttr">:$producer,
   Bool:$isOptimized,

@@ -27,6 +27,18 @@
 #include "tsan_platform.h"
 #include "tsan_rtl.h"
 
+#if SANITIZER_NETBSD
+#  // for __lwp_gettcb_fast() / __lwp_getprivate_fast()
+#  define _RTLD_SOURCE
+#  include <sys/types.h>
+#  include <machine/mcontext.h>
+#  undef _RTLD_SOURCE
+#  include <sys/param.h>
+#  if __NetBSD_Version__ >= 1099001200
+#    include <machine/lwp_private.h>
+#  endif
+#endif
+
 #include <fcntl.h>
 #include <pthread.h>
 #include <signal.h>

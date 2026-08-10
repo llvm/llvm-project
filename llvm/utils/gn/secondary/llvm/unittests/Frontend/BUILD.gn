@@ -16,6 +16,7 @@ unittest("LLVMFrontendTests") {
     "EnumSetTest.cpp",
     "HLSLBindingTest.cpp",
     "HLSLRootSignatureDumpTest.cpp",
+    "HLSLSemanticSignatureMetadataTest.cpp",
     "OpenACCTest.cpp",
     "OpenMPCompositionTest.cpp",
     "OpenMPContextTest.cpp",

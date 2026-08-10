@@ -1,11 +1,9 @@
-// RUN: not llvm-mc -triple=amdgcn -show-encoding %s | FileCheck --check-prefix=SICI %s
 // RUN: not llvm-mc -triple=amdgpu6.00 -show-encoding %s | FileCheck --check-prefix=SICI %s
 // RUN: not llvm-mc -triple=amdgpu8.02 -show-encoding %s | FileCheck --check-prefix=VI %s
 // RUN: not llvm-mc -triple=amdgpu9.00 -show-encoding %s | FileCheck -check-prefix=GFX9 %s
 // RUN: not llvm-mc -triple=amdgpu10.10 -show-encoding %s | FileCheck -check-prefix=GFX10 %s
 // RUN: not llvm-mc -triple=amdgpu11.00 -show-encoding %s | FileCheck -check-prefix=GFX11 %s
 
-// RUN: not llvm-mc -triple=amdgcn %s -filetype=null 2>&1 | FileCheck -check-prefixes=GCN,SICIVI-ERR --implicit-check-not=error: --strict-whitespace %s
 // RUN: not llvm-mc -triple=amdgpu6.00 %s -filetype=null 2>&1 | FileCheck -check-prefixes=GCN,SICIVI-ERR --implicit-check-not=error: --strict-whitespace %s
 // RUN: not llvm-mc -triple=amdgpu8.02 %s -filetype=null 2>&1 | FileCheck -check-prefixes=GCN,SICIVI-ERR --implicit-check-not=error: --strict-whitespace %s
 // RUN: not llvm-mc -triple=amdgpu9.00 %s -filetype=null 2>&1 | FileCheck -check-prefixes=GCN,GFX9-ERR --implicit-check-not=error: --strict-whitespace %s

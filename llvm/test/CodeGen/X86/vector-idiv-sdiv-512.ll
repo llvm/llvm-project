@@ -525,3 +525,64 @@ define <64 x i8> @test_remconstant_64i8(<64 x i8> %a) nounwind {
   %res = srem <64 x i8> %a, <i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 20, i8 21, i8 22, i8 23, i8 24, i8 25, i8 26, i8 27, i8 28, i8 29, i8 30, i8 31, i8 32, i8 33, i8 34, i8 35, i8 36, i8 37, i8 38, i8 38, i8 37, i8 36, i8 35, i8 34, i8 33, i8 32, i8 31, i8 30, i8 29, i8 28, i8 27, i8 26, i8 25, i8 24, i8 23, i8 22, i8 21, i8 20, i8 19, i8 18, i8 17, i8 16, i8 15, i8 14, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 7>
   ret <64 x i8> %res
 }
+
+define <16 x i32> @test_divv_16i32(<16 x i32> %a, <16 x i32> %b) nounwind {
+; AVX-LABEL: test_divv_16i32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vcvtdq2pd %ymm1, %zmm2
+; AVX-NEXT:    vcvtdq2pd %ymm0, %zmm3
+; AVX-NEXT:    vdivpd %zmm2, %zmm3, %zmm2
+; AVX-NEXT:    vcvttpd2dq %zmm2, %ymm2
+; AVX-NEXT:    vextractf64x4 $1, %zmm1, %ymm1
+; AVX-NEXT:    vcvtdq2pd %ymm1, %zmm1
+; AVX-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
+; AVX-NEXT:    vcvtdq2pd %ymm0, %zmm0
+; AVX-NEXT:    vdivpd %zmm1, %zmm0, %zmm0
+; AVX-NEXT:    vcvttpd2dq %zmm0, %ymm0
+; AVX-NEXT:    vinsertf64x4 $1, %ymm0, %zmm2, %zmm0
+; AVX-NEXT:    retq
+  %res = sdiv <16 x i32> %a, %b
+  ret <16 x i32> %res
+}
+define <16 x i32> @test_remv_16i32(<16 x i32> %a, <16 x i32> %b) nounwind {
+; AVX-LABEL: test_remv_16i32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vcvtdq2pd %ymm1, %zmm2
+; AVX-NEXT:    vcvtdq2pd %ymm0, %zmm3
+; AVX-NEXT:    vdivpd %zmm2, %zmm3, %zmm2
+; AVX-NEXT:    vcvttpd2dq %zmm2, %ymm2
+; AVX-NEXT:    vextracti64x4 $1, %zmm1, %ymm3
+; AVX-NEXT:    vcvtdq2pd %ymm3, %zmm3
+; AVX-NEXT:    vextracti64x4 $1, %zmm0, %ymm4
+; AVX-NEXT:    vcvtdq2pd %ymm4, %zmm4
+; AVX-NEXT:    vdivpd %zmm3, %zmm4, %zmm3
+; AVX-NEXT:    vcvttpd2dq %zmm3, %ymm3
+; AVX-NEXT:    vinserti64x4 $1, %ymm3, %zmm2, %zmm2
+; AVX-NEXT:    vpmulld %zmm1, %zmm2, %zmm1
+; AVX-NEXT:    vpsubd %zmm1, %zmm0, %zmm0
+; AVX-NEXT:    retq
+  %res = srem <16 x i32> %a, %b
+  ret <16 x i32> %res
+}
+
+define void @test_divv_16i32_sext16(ptr %dst, ptr %x, ptr %y) nounwind {
+; AVX-LABEL: test_divv_16i32_sext16:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpmovsxwd (%rsi), %zmm0
+; AVX-NEXT:    vpmovsxwd (%rdx), %zmm1
+; AVX-NEXT:    vcvtdq2ps %zmm1, %zmm1
+; AVX-NEXT:    vcvtdq2ps %zmm0, %zmm0
+; AVX-NEXT:    vdivps %zmm1, %zmm0, %zmm0
+; AVX-NEXT:    vcvttps2dq %zmm0, %zmm0
+; AVX-NEXT:    vpmovdw %zmm0, (%rdi)
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
+  %a16 = load <16 x i16>, ptr %x
+  %a = sext <16 x i16> %a16 to <16 x i32>
+  %b16 = load <16 x i16>, ptr %y
+  %b = sext <16 x i16> %b16 to <16 x i32>
+  %res = sdiv <16 x i32> %a, %b
+  %t = trunc <16 x i32> %res to <16 x i16>
+  store <16 x i16> %t, ptr %dst
+  ret void
+}

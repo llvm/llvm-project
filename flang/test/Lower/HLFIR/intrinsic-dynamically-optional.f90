@@ -171,7 +171,7 @@ end function
 ! CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_6]]) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFtest_elemental_optional_as_valueEreal"} : (!fir.ref<!fir.array<3xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<3xf32>>, !fir.ref<!fir.array<3xf32>>)
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 3 : index
-! CHECK:           %[[VAL_9:.*]] = fir.alloca !fir.array<3xcomplex<f32>> {bindc_name = "test_elemental_optional_as_value", uniq_name = "_QFtest_elemental_optional_as_valueEtest_elemental_optional_as_value"}
+! CHECK:           %[[VAL_9:.*]] = fir.alloca !fir.array<3xcomplex<f32>> {bindc_name = "test_elemental_optional_as_value", fir.must_be_stack = true, uniq_name = "_QFtest_elemental_optional_as_valueEtest_elemental_optional_as_value"}
 ! CHECK:           %[[VAL_10:.*]] = fir.shape %[[VAL_8]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_9]](%[[VAL_10]]) {uniq_name = "_QFtest_elemental_optional_as_valueEtest_elemental_optional_as_value"} : (!fir.ref<!fir.array<3xcomplex<f32>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3xcomplex<f32>>>, !fir.ref<!fir.array<3xcomplex<f32>>>)
 ! CHECK:           %[[VAL_12:.*]] = fir.is_present %[[VAL_4]]#0 : (!fir.ref<!fir.array<3xf32>>) -> i1

@@ -120,9 +120,8 @@ define { <2 x half>, <2 x half> } @test_modf_v2f16(<2 x half> %x) {
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v3, v6, 0, s[4:5]
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v3, 0x7fff, v3
 ; GFX9-GISEL-NEXT:    v_and_b32_sdwa v0, v0, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX9-GISEL-NEXT:    v_or_b32_e32 v0, v3, v0
-; GFX9-GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; GFX9-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 16, v2
+; GFX9-GISEL-NEXT:    v_or_b32_sdwa v0, v3, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX9-GISEL-NEXT:    v_or_b32_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX9-GISEL-NEXT:    v_pack_b32_f16 v1, v1, v5
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %result = call { <2 x half>, <2 x half> } @llvm.modf.v2f16(<2 x half> %x)
@@ -167,9 +166,8 @@ define <2 x half> @test_modf_v2f16_only_use_fract(<2 x half> %x) {
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v2, v4, 0, s[4:5]
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v2, 0x7fff, v2
 ; GFX9-GISEL-NEXT:    v_and_b32_sdwa v0, v0, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX9-GISEL-NEXT:    v_or_b32_e32 v0, v2, v0
-; GFX9-GISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX9-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
+; GFX9-GISEL-NEXT:    v_or_b32_sdwa v0, v2, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX9-GISEL-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %result = call { <2 x half>, <2 x half> } @llvm.modf.v2f16(<2 x half> %x)
   %result.0 = extractvalue { <2 x half>, <2 x half> } %result, 0

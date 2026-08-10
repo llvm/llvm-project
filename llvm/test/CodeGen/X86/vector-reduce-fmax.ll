@@ -1039,32 +1039,31 @@ define double @test_v16f64(<16 x double> %a0) {
 ;
 ; AVX512-LABEL: test_v16f64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmaxpd %zmm0, %zmm1, %zmm2
-; AVX512-NEXT:    vcmpunordpd %zmm0, %zmm0, %k1
-; AVX512-NEXT:    vmovapd %zmm1, %zmm2 {%k1}
-; AVX512-NEXT:    vshufpd {{.*#+}} xmm0 = xmm2[1,0]
-; AVX512-NEXT:    vmaxsd %xmm2, %xmm0, %xmm1
+; AVX512-NEXT:    vcmpordpd %zmm0, %zmm0, %k1
+; AVX512-NEXT:    vmaxpd %zmm0, %zmm1, %zmm1 {%k1}
+; AVX512-NEXT:    vshufpd {{.*#+}} xmm0 = xmm1[1,0]
+; AVX512-NEXT:    vmaxsd %xmm1, %xmm0, %xmm2
+; AVX512-NEXT:    vcmpunordsd %xmm1, %xmm1, %k1
+; AVX512-NEXT:    vmovsd %xmm0, %xmm2, %xmm2 {%k1}
 ; AVX512-NEXT:    vcmpunordsd %xmm2, %xmm2, %k1
-; AVX512-NEXT:    vmovsd %xmm0, %xmm1, %xmm1 {%k1}
-; AVX512-NEXT:    vcmpunordsd %xmm1, %xmm1, %k1
-; AVX512-NEXT:    vextractf128 $1, %ymm2, %xmm0
-; AVX512-NEXT:    vmaxsd %xmm1, %xmm0, %xmm1
-; AVX512-NEXT:    vmovsd %xmm0, %xmm1, %xmm1 {%k1}
-; AVX512-NEXT:    vcmpunordsd %xmm1, %xmm1, %k1
+; AVX512-NEXT:    vextractf128 $1, %ymm1, %xmm0
+; AVX512-NEXT:    vmaxsd %xmm2, %xmm0, %xmm2
+; AVX512-NEXT:    vmovsd %xmm0, %xmm2, %xmm2 {%k1}
+; AVX512-NEXT:    vcmpunordsd %xmm2, %xmm2, %k1
 ; AVX512-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX512-NEXT:    vmaxsd %xmm1, %xmm0, %xmm1
-; AVX512-NEXT:    vmovsd %xmm0, %xmm1, %xmm1 {%k1}
-; AVX512-NEXT:    vcmpunordsd %xmm1, %xmm1, %k1
-; AVX512-NEXT:    vextractf32x4 $2, %zmm2, %xmm0
-; AVX512-NEXT:    vmaxsd %xmm1, %xmm0, %xmm1
-; AVX512-NEXT:    vmovsd %xmm0, %xmm1, %xmm1 {%k1}
-; AVX512-NEXT:    vcmpunordsd %xmm1, %xmm1, %k1
+; AVX512-NEXT:    vmaxsd %xmm2, %xmm0, %xmm2
+; AVX512-NEXT:    vmovsd %xmm0, %xmm2, %xmm2 {%k1}
+; AVX512-NEXT:    vcmpunordsd %xmm2, %xmm2, %k1
+; AVX512-NEXT:    vextractf32x4 $2, %zmm1, %xmm0
+; AVX512-NEXT:    vmaxsd %xmm2, %xmm0, %xmm2
+; AVX512-NEXT:    vmovsd %xmm0, %xmm2, %xmm2 {%k1}
+; AVX512-NEXT:    vcmpunordsd %xmm2, %xmm2, %k1
 ; AVX512-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX512-NEXT:    vmaxsd %xmm1, %xmm0, %xmm1
-; AVX512-NEXT:    vmovsd %xmm0, %xmm1, %xmm1 {%k1}
-; AVX512-NEXT:    vcmpunordsd %xmm1, %xmm1, %k1
-; AVX512-NEXT:    vextractf32x4 $3, %zmm2, %xmm0
-; AVX512-NEXT:    vmaxsd %xmm1, %xmm0, %xmm1
+; AVX512-NEXT:    vmaxsd %xmm2, %xmm0, %xmm2
+; AVX512-NEXT:    vmovsd %xmm0, %xmm2, %xmm2 {%k1}
+; AVX512-NEXT:    vcmpunordsd %xmm2, %xmm2, %k1
+; AVX512-NEXT:    vextractf32x4 $3, %zmm1, %xmm0
+; AVX512-NEXT:    vmaxsd %xmm2, %xmm0, %xmm1
 ; AVX512-NEXT:    vmovsd %xmm0, %xmm1, %xmm1 {%k1}
 ; AVX512-NEXT:    vcmpunordsd %xmm1, %xmm1, %k1
 ; AVX512-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]

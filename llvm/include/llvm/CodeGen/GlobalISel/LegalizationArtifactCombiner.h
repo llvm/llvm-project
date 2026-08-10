@@ -205,11 +205,14 @@ public:
     Register TruncSrc;
     if (mi_match(SrcReg, MRI, m_GTrunc(m_Reg(TruncSrc)))) {
       LLT DstTy = MRI.getType(DstReg);
-      if (isInstUnsupported({TargetOpcode::G_SEXT_INREG, {DstTy}}))
-        return false;
-      LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI);
       LLT SrcTy = MRI.getType(SrcReg);
       uint64_t SizeInBits = SrcTy.getScalarSizeInBits();
+      if (isInstUnsupported({TargetOpcode::G_SEXT_INREG,
+                             {DstTy},
+                             {},
+                             {static_cast<int64_t>(SizeInBits)}}))
+        return false;
+      LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI);
       if (DstTy != MRI.getType(TruncSrc))
         TruncSrc = Builder.buildAnyExtOrTrunc(DstTy, TruncSrc).getReg(0);
       // Elide G_SEXT_INREG if possible. This is similar to eliding G_AND in
@@ -292,29 +295,40 @@ public:
       if (!DstTy.isScalar() || !MergeSrcTy.isScalar())
         return false;
 
+      // G_TRUNC/G_MERGE_VALUES operate on the raw bit pattern - if the merge
+      // feeds us float sources, reinterpret them as integers of the same size
+      // so we never emit a G_TRUNC or G_MERGE_VALUES with a floating-point
+      // source operand.
+      const LLT WorkTy =
+          MergeSrcTy.isFloat() ? LLT::integer(MergeSrcSize) : MergeSrcTy;
+      auto AsInt = [&](Register R) {
+        if (MergeSrcTy != WorkTy)
+          return Builder.buildBitcast(WorkTy, R).getReg(0);
+        return R;
+      };
+
       if (DstSize < MergeSrcSize) {
         // When the merge source is larger than the destination, we can just
         // truncate the merge source directly
-        if (isInstUnsupported({TargetOpcode::G_TRUNC, {DstTy, MergeSrcTy}}))
+        if (isInstUnsupported({TargetOpcode::G_TRUNC, {DstTy, WorkTy}}))
           return false;
 
         LLVM_DEBUG(dbgs() << "Combining G_TRUNC(G_MERGE_VALUES) to G_TRUNC: "
                           << MI);
 
-        Builder.buildTrunc(DstReg, MergeSrcReg);
+        Builder.buildTrunc(DstReg, AsInt(MergeSrcReg));
         UpdatedDefs.push_back(DstReg);
       } else if (DstSize == MergeSrcSize) {
         // If the sizes match we can simply try to replace the register
         LLVM_DEBUG(
             dbgs() << "Replacing G_TRUNC(G_MERGE_VALUES) with merge input: "
                    << MI);
-        replaceRegOrBuildCopy(DstReg, MergeSrcReg, MRI, Builder, UpdatedDefs,
-                              Observer);
+        replaceRegOrBuildCopy(DstReg, AsInt(MergeSrcReg), MRI, Builder,
+                              UpdatedDefs, Observer);
       } else if (DstSize % MergeSrcSize == 0) {
         // If the trunc size is a multiple of the merge source size we can use
         // a smaller merge instead
-        if (isInstUnsupported(
-                {TargetOpcode::G_MERGE_VALUES, {DstTy, MergeSrcTy}}))
+        if (isInstUnsupported({TargetOpcode::G_MERGE_VALUES, {DstTy, WorkTy}}))
           return false;
 
         LLVM_DEBUG(
@@ -326,7 +340,7 @@ public:
                "trunc(merge) should require less inputs than merge");
         SmallVector<Register, 8> SrcRegs(NumSrcs);
         for (unsigned i = 0; i < NumSrcs; ++i)
-          SrcRegs[i] = SrcMerge->getSourceReg(i);
+          SrcRegs[i] = AsInt(SrcMerge->getSourceReg(i));
 
         Builder.buildMergeValues(DstReg, SrcRegs);
         UpdatedDefs.push_back(DstReg);
@@ -987,6 +1001,8 @@ public:
       LLT DstTy = MRI.getType(Dst);
       Register UnmergeSrc = Unmerge->getSourceReg();
       LLT UnmergeSrcTy = MRI.getType(UnmergeSrc);
+      unsigned DstSize = DstTy.getSizeInBits();
+      unsigned UnmergeSrcSize = UnmergeSrcTy.getSizeInBits();
 
       // Recognize copy of UnmergeSrc to Dst.
       // Unmerge UnmergeSrc and reassemble it using merge-like opcode into Dst.
@@ -995,7 +1011,8 @@ public:
       // %Dst:_(Ty) = G_merge_like_opcode %0:_(EltTy), %1, ...
       //
       // %Dst:_(Ty) = COPY %UnmergeSrc:_(Ty)
-      if ((DstTy == UnmergeSrcTy) && (Elt0UnmergeIdx == 0)) {
+      if ((DstSize == UnmergeSrcSize) && (DstTy == UnmergeSrcTy) &&
+          (Elt0UnmergeIdx == 0)) {
         if (!isSequenceFromUnmerge(MI, 0, Unmerge, 0, NumMIElts, EltSize,
                                    /*AllowUndef=*/DstTy.isVector()))
           return false;
@@ -1016,7 +1033,8 @@ public:
       // %AnotherDst:_(DstTy) = G_merge_like_opcode %2:_(EltTy), %3
       //
       // %Dst:_(DstTy), %AnotherDst = G_UNMERGE_VALUES %UnmergeSrc
-      if (((!DstTy.isVector() && !UnmergeSrcTy.isVector()) ||
+      if ((DstSize < UnmergeSrcSize) &&
+          ((!DstTy.isVector() && !UnmergeSrcTy.isVector()) ||
            (DstTy.isVector() && UnmergeSrcTy.isVector() &&
             DstTy.getScalarType() == UnmergeSrcTy.getScalarType())) &&
           (Elt0UnmergeIdx % NumMIElts == 0) &&
@@ -1043,7 +1061,8 @@ public:
       //
       // %Dst:_(DstTy) = G_merge_like_opcode %UnmergeSrc, %AnotherUnmergeSrc
 
-      if ((DstTy.isVector() == UnmergeSrcTy.isVector()) &&
+      if ((DstSize > UnmergeSrcSize) &&
+          (DstTy.isVector() == UnmergeSrcTy.isVector()) &&
           getCoverTy(DstTy, UnmergeSrcTy) == DstTy) {
         SmallVector<Register, 4> ConcatSources;
         unsigned NumElts = Unmerge->getNumDefs();

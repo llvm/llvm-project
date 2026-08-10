@@ -440,6 +440,13 @@ mlir::LLVM::DIModuleAttr AddDebugInfoPass::getOrCreateModuleAttr(
   if (auto iter{moduleMap.find(name)}; iter != moduleMap.end()) {
     modAttr = iter->getValue();
   } else {
+    // A module defined in this compilation unit has a fir.module_debug_imports
+    // whose location is that of the MODULE statement. Prefer it over the
+    // caller's guess, which is derived from a member's declaration.
+    if (auto iter{moduleDebugImportsByName.find(name)};
+        iter != moduleDebugImportsByName.end())
+      line = getLineFromLoc(iter->second.getLoc());
+
     // When decl is true, it means that module is only being used in this
     // compilation unit and it is defined elsewhere. But if the file/line/scope
     // fields are valid, the module is not merged with its definition and is
@@ -478,9 +485,6 @@ AddDebugInfoPass::getModuleAttrFromGlobalOp(fir::GlobalOp globalOp,
   // one). The isInitialized() seems to provide the right information
   // but inverted. It is true where module is actually defined but false where
   // it is used.
-  // FIXME: Currently we don't have the line number on which a module was
-  // declared. We are using a best guess of line - 1 where line is the source
-  // line of the first member of the module that we encounter.
   unsigned line = getLineFromLoc(globalOp.getLoc());
 
   mlir::LLVM::DISubprogramAttr sp =

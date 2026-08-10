@@ -25,14 +25,14 @@ int main(int argc, char** argv) {
 
   // {std,ranges}::copy(normal container)
   {
-    auto bm = []<class Container>(std::string name, auto copy) {
+    auto bm = []<class InputContainer, class OutputContainer>(std::string name, auto copy) {
       benchmark::RegisterBenchmark(name, [copy](auto& st) {
         std::size_t const n = st.range(0);
-        using ValueType     = typename Container::value_type;
-        Container c;
+        using ValueType     = typename InputContainer::value_type;
+        InputContainer c;
         std::generate_n(std::back_inserter(c), n, [] { return Generate<ValueType>::random(); });
 
-        std::vector<ValueType> out(n);
+        OutputContainer out(n);
 
         for ([[maybe_unused]] auto _ : st) {
           benchmark::DoNotOptimize(c);
@@ -42,9 +42,11 @@ int main(int argc, char** argv) {
         }
       })->Range(8, 1 << 20);
     };
-    bm.operator()<std::vector<int>>("std::copy(vector<int>)", std_copy);
-    bm.operator()<std::deque<int>>("std::copy(deque<int>)", std_copy);
-    bm.operator()<std::list<int>>("std::copy(list<int>)", std_copy);
+    bm.operator()<std::vector<int>, std::vector<int>>("std::copy(vector<int>, vector<int>::iterator)", std_copy);
+    bm.operator()<std::vector<int>, std::deque<int>>("std::copy(vector<int>, deque<int>::iterator)", std_copy);
+    bm.operator()<std::deque<int>, std::vector<int>>("std::copy(deque<int>, vector<int>::iterator)", std_copy);
+    bm.operator()<std::deque<int>, std::deque<int>>("std::copy(deque<int>, deque<int>::iterator)", std_copy);
+    bm.operator()<std::list<int>, std::vector<int>>("std::copy(list<int>, vector<int>::iterator)", std_copy);
   }
 
   // {std,ranges}::copy(vector<bool>)
@@ -65,8 +67,8 @@ int main(int argc, char** argv) {
         }
       })->Range(64, 1 << 20);
     };
-    bm.operator()<true>("std::copy(vector<bool>) (aligned)", std_copy);
-    bm.operator()<false>("std::copy(vector<bool>) (unaligned)", std_copy);
+    bm.operator()<true>("std::copy(vector<bool>, vector<bool>::iterator) (aligned)", std_copy);
+    bm.operator()<false>("std::copy(vector<bool>, vector<bool>::iterator) (unaligned)", std_copy);
   }
 
   benchmark::Initialize(&argc, argv);

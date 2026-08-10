@@ -135,15 +135,14 @@ static bool isStandardPointerConvertible(QualType From, QualType To) {
   // be converted to a prvalue of type “pointer to cv B”, where B is a base
   // class of D. If B is an inaccessible or ambiguous base class of D, a program
   // that necessitates this conversion is ill-formed.
-  if (const auto *RD = From->getPointeeCXXRecordDecl()) {
-    if (RD->isCompleteDefinition() &&
-        isBaseOf(From->getPointeeType().getTypePtr(),
-                 To->getPointeeType().getTypePtr())) {
-      // If B is an inaccessible or ambiguous base class of D, a program
-      // that necessitates this conversion is ill-formed
-      return isUnambiguousPublicBaseClass(From->getPointeeType().getTypePtr(),
-                                          To->getPointeeType().getTypePtr());
-    }
+  if (const auto *RD = From->getPointeeCXXRecordDecl();
+      RD && RD->isCompleteDefinition() &&
+      isBaseOf(From->getPointeeType().getTypePtr(),
+               To->getPointeeType().getTypePtr())) {
+    // If B is an inaccessible or ambiguous base class of D, a program
+    // that necessitates this conversion is ill-formed
+    return isUnambiguousPublicBaseClass(From->getPointeeType().getTypePtr(),
+                                        To->getPointeeType().getTypePtr());
   }
 
   return false;
@@ -253,12 +252,10 @@ static bool isQualificationConvertiblePointer(QualType From, QualType To,
 
   int I = 0;
   bool ConstUntilI = true;
-  auto SatisfiesCVRules = [&I, &ConstUntilI](const QualType &From,
-                                             const QualType &To) {
-    if (I > 1) {
-      if (From.getQualifiers() != To.getQualifiers() && !ConstUntilI)
-        return false;
-    }
+  const auto SatisfiesCVRules = [&I, &ConstUntilI](const QualType &From,
+                                                   const QualType &To) {
+    if (I > 1 && From.getQualifiers() != To.getQualifiers() && !ConstUntilI)
+      return false;
 
     if (I > 0) {
       if (From.isConstQualified() && !To.isConstQualified())
@@ -439,14 +436,12 @@ ExceptionAnalyzer::ExceptionInfo::filterIgnoredExceptions(
     const Type *T = ThrownException.getFirst();
     if (!T)
       continue;
-    if (const auto *TD = T->getAsTagDecl()) {
-      if (TD->getDeclName().isIdentifier()) {
-        if ((IgnoreBadAlloc &&
-             (TD->getName() == "bad_alloc" && TD->isInStdNamespace())) ||
-            (IgnoredTypes.contains(TD->getName())))
-          TypesToDelete.push_back(T);
-      }
-    }
+    if (const auto *TD = T->getAsTagDecl();
+        TD && TD->getDeclName().isIdentifier() &&
+        ((IgnoreBadAlloc &&
+          (TD->getName() == "bad_alloc" && TD->isInStdNamespace())) ||
+         IgnoredTypes.contains(TD->getName())))
+      TypesToDelete.push_back(T);
   }
   for (const Type *T : TypesToDelete)
     ThrownExceptions.erase(T);

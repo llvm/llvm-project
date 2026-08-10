@@ -58,14 +58,7 @@ class Type;
 /// for example 'force', means a decision has been made. So, we need to be
 /// careful NOT to add them if the user hasn't specifically asked so.
 class LoopVectorizeHints {
-  enum HintKind {
-    HK_WIDTH,
-    HK_INTERLEAVE,
-    HK_FORCE,
-    HK_ISVECTORIZED,
-    HK_PREDICATE,
-    HK_SCALABLE
-  };
+  enum HintKind { HK_WIDTH, HK_INTERLEAVE, HK_ISVECTORIZED, HK_SCALABLE };
 
   /// Hint - associates name and validation with the hint value.
   struct Hint {
@@ -85,14 +78,15 @@ class LoopVectorizeHints {
   /// Vectorization interleave factor.
   Hint Interleave;
 
-  /// Vectorization forced
-  Hint Force;
+  /// Vectorization forced; one of ForceKind. Carried as a plain value because
+  /// the enable/disable pair is a standalone tag with no operand to validate.
+  unsigned Force;
 
   /// Already Vectorized
   Hint IsVectorized;
 
-  /// Vector Predicate
-  Hint Predicate;
+  /// Vector Predicate; one of ForceKind, carried as a plain value like Force.
+  unsigned Predicate;
 
   /// Says whether we should use fixed width or scalable vectorization.
   Hint Scalable;
@@ -155,12 +149,12 @@ public:
     return 0;
   }
   unsigned getIsVectorized() const { return IsVectorized.Value; }
-  unsigned getPredicate() const { return Predicate.Value; }
+  unsigned getPredicate() const { return Predicate; }
   enum ForceKind getForce() const {
-    if ((ForceKind)Force.Value == FK_Undefined &&
+    if ((ForceKind)Force == FK_Undefined &&
         hasDisableAllTransformsHint(TheLoop))
       return FK_Disabled;
-    return (ForceKind)Force.Value;
+    return (ForceKind)Force;
   }
 
   /// \return true if scalable vectorization has been explicitly disabled.

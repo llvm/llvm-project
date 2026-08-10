@@ -30,7 +30,7 @@ class TestGdbRemoteSegFault(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertIsNotNone(hex_exit_code)
         self.assertEqual(int(hex_exit_code, 16), expected_signo)
 
-    @skipIfWindows  # No signal is sent on Windows.
+    @requireNotWindows  # No signal is sent on Windows.
     def test_inferior_seg_fault_received(self):
         self.build()
         if self.platformIsDarwin():

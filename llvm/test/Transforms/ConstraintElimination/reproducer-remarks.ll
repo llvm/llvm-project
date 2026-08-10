@@ -264,6 +264,33 @@ entry:
   ret i1 %c.5
 }
 
+; Variable shared operand: with 'b <=u a' in scope the decomposed subs still
+; cancel, so the compare is retained (contrast @shared_operand above).
+define i1 @shared_operand_no_const(i8 %a, i8 %b) {
+; CHECK-LABEL: define i1 @"{{.+}}shared_operand_no_constrepro"(i8 %a, i8 %b) {
+; CHECK-NEXT: entry:
+; CHECK-NEXT:   %0 = icmp ule i8 %b, %a
+; CHECK-NEXT:   call void @llvm.assume(i1 %0)
+; CHECK-NEXT:   %sub = sub i8 %a, %b
+; CHECK-NEXT:   %sub.2 = sub nuw i8 %sub, 0
+; CHECK-NEXT:   %c.5 = icmp ult i8 %sub.2, %sub
+; CHECK-NEXT:   ret i1 %c.5
+; CHECK-NEXT: }
+;
+entry:
+  %precond = icmp ule i8 %b, %a
+  br i1 %precond, label %then, label %exit
+
+then:
+  %sub = sub i8 %a, %b
+  %sub.2 = sub nuw i8 %sub, 0
+  %c.5 = icmp ult i8 %sub.2, %sub
+  ret i1 %c.5
+
+exit:
+  ret i1 false
+}
+
 @glob = external global i32
 
 define i1 @load_global() {

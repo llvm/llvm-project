@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// The seed-collection pass of the bottom-up vectorizer.
+// The seed-collection pass of the bundle vectorizer.
 //
 
 #ifndef LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_PASSES_SEEDCOLLECTION_H

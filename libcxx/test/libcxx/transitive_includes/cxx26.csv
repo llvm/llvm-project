@@ -9,7 +9,6 @@ algorithm cwctype
 algorithm initializer_list
 algorithm iosfwd
 algorithm limits
-algorithm optional
 algorithm ratio
 algorithm tuple
 algorithm version
@@ -117,7 +116,6 @@ chrono ios
 chrono iosfwd
 chrono istream
 chrono limits
-chrono optional
 chrono ratio
 chrono sstream
 chrono stdexcept
@@ -331,7 +329,6 @@ flat_map cwchar
 flat_map cwctype
 flat_map initializer_list
 flat_map limits
-flat_map optional
 flat_map stdexcept
 flat_map tuple
 flat_map version
@@ -344,7 +341,6 @@ flat_set cwchar
 flat_set cwctype
 flat_set initializer_list
 flat_set limits
-flat_set optional
 flat_set stdexcept
 flat_set tuple
 flat_set version
@@ -362,10 +358,11 @@ format cstring
 format cwchar
 format cwctype
 format initializer_list
+format ios
 format iosfwd
 format limits
-format optional
 format stdexcept
+format streambuf
 format string
 format string_view
 format text_encoding
@@ -417,7 +414,6 @@ functional cwchar
 functional cwctype
 functional initializer_list
 functional limits
-functional optional
 functional stdexcept
 functional tuple
 functional typeinfo
@@ -510,7 +506,6 @@ iostream ios
 iostream iosfwd
 iostream istream
 iostream limits
-iostream optional
 iostream ostream
 iostream print
 iostream stdexcept
@@ -609,7 +604,6 @@ map cwchar
 map cwctype
 map initializer_list
 map limits
-map optional
 map stdexcept
 map tuple
 map version
@@ -625,11 +619,17 @@ mdspan limits
 mdspan span
 mdspan stdexcept
 mdspan version
+memory cctype
+memory climits
 memory compare
 memory cstdint
 memory cstring
+memory ctime
+memory cwchar
+memory cwctype
 memory initializer_list
 memory limits
+memory ratio
 memory tuple
 memory typeinfo
 memory version
@@ -665,7 +665,6 @@ numeric cwchar
 numeric cwctype
 numeric initializer_list
 numeric limits
-numeric optional
 numeric ratio
 numeric tuple
 numeric version
@@ -694,7 +693,6 @@ ostream initializer_list
 ostream ios
 ostream iosfwd
 ostream limits
-ostream optional
 ostream print
 ostream stdexcept
 ostream streambuf
@@ -719,10 +717,11 @@ print cwchar
 print cwctype
 print format
 print initializer_list
+print ios
 print iosfwd
 print limits
-print optional
 print stdexcept
+print streambuf
 print string
 print string_view
 print text_encoding
@@ -749,7 +748,6 @@ queue vector
 queue version
 random cctype
 random climits
-random cmath
 random compare
 random cstdint
 random cstdio
@@ -761,7 +759,6 @@ random initializer_list
 random iosfwd
 random limits
 random numeric
-random optional
 random ratio
 random stdexcept
 random string
@@ -781,7 +778,6 @@ ranges initializer_list
 ranges iosfwd
 ranges iterator
 ranges limits
-ranges optional
 ranges span
 ranges stdexcept
 ranges tuple
@@ -833,7 +829,6 @@ set cwchar
 set cwctype
 set initializer_list
 set limits
-set optional
 set tuple
 set version
 shared_mutex cerrno
@@ -992,7 +987,6 @@ syncstream ios
 syncstream iosfwd
 syncstream limits
 syncstream map
-syncstream optional
 syncstream ostream
 syncstream print
 syncstream ratio
@@ -1051,10 +1045,12 @@ thread ctime
 thread cwchar
 thread cwctype
 thread initializer_list
+thread ios
 thread iosfwd
 thread limits
 thread ratio
 thread stdexcept
+thread streambuf
 thread string
 thread string_view
 thread text_encoding
@@ -1079,7 +1075,6 @@ unordered_map cstdint
 unordered_map cstring
 unordered_map initializer_list
 unordered_map limits
-unordered_map optional
 unordered_map stdexcept
 unordered_map tuple
 unordered_map version
@@ -1088,7 +1083,6 @@ unordered_set cstdint
 unordered_set cstring
 unordered_set initializer_list
 unordered_set limits
-unordered_set optional
 unordered_set tuple
 unordered_set version
 utility compare

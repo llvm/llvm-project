@@ -24,7 +24,7 @@ TEST_F(LlvmLibcAccessTest, CreateAndTest) {
   // test that it is accessable in those modes but not in others.
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
-  constexpr const char *FILENAME = "access.test";
+  constexpr const char *FILENAME = APPEND_LIBC_TEST("access.test");
   auto TEST_FILE = libc_make_test_file_path(FILENAME);
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
   ASSERT_ERRNO_SUCCESS();

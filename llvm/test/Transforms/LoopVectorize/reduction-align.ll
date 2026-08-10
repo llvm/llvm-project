@@ -21,7 +21,7 @@ define void @fn(ptr %hbuf, ptr %ref, i32 %height) {
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[HEIGHT]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[HEIGHT]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[HEIGHT]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[REF]], align 1, !alias.scope [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i16> poison, i16 [[TMP0]], i64 0

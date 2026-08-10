@@ -20,6 +20,7 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
+#include "SIPreAllocateWWMRegs.h"
 #include "SISpillUtils.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineCycleAnalysis.h"
@@ -80,7 +81,9 @@ public:
   void updateLaneVGPRDomInstr(
       int FI, MachineBasicBlock *MBB, MachineBasicBlock::iterator InsertPt,
       DenseMap<Register, LaneVGPRInsertPt> &LaneVGPRDomInstr);
-  void determineRegsForWWMAllocation(MachineFunction &MF, BitVector &RegMask);
+  SmallVector<MCRegister> determineRegsForWWMAllocation(MachineFunction &MF);
+  void assignWWMRegs(MachineFunction &MF, ArrayRef<MCRegister> WWMRegCandidates,
+                     bool RequiresFullWWMPool);
 };
 
 class SILowerSGPRSpillsLegacy : public MachineFunctionPass {
@@ -372,42 +375,63 @@ void SILowerSGPRSpills::updateLaneVGPRDomInstr(
   }
 }
 
-void SILowerSGPRSpills::determineRegsForWWMAllocation(MachineFunction &MF,
-                                                      BitVector &RegMask) {
-  // Determine an optimal number of VGPRs for WWM allocation. The complement
-  // list will be available for allocating other VGPR virtual registers.
-  SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+SmallVector<MCRegister>
+SILowerSGPRSpills::determineRegsForWWMAllocation(MachineFunction &MF) {
+  SmallVector<MCRegister> WWMRegCandidates;
+  if (!MaxNumVGPRsForWwmAllocation)
+    return WWMRegCandidates;
+
   MachineRegisterInfo &MRI = MF.getRegInfo();
   BitVector ReservedRegs = TRI->getReservedRegs(MF);
-  BitVector NonWwmAllocMask(TRI->getNumRegs());
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  unsigned MaxNumVGPRs = ST.getMaxNumVectorRegs(MF.getFunction()).first;
 
-  // FIXME: MaxNumVGPRsForWwmAllocation might need to be adjusted in the future
-  // to have a balanced allocation between WWM values and per-thread vector
-  // register operands.
-  unsigned NumRegs = MaxNumVGPRsForWwmAllocation;
-  NumRegs =
-      std::min(static_cast<unsigned>(MFI->getSGPRSpillVGPRs().size()), NumRegs);
-
-  auto [MaxNumVGPRs, MaxNumAGPRs] = ST.getMaxNumVectorRegs(MF.getFunction());
   // Try to use the highest available registers for now. Later after
   // vgpr-regalloc, they can be shifted to the lowest range.
-  unsigned I = 0;
   for (unsigned Reg = AMDGPU::VGPR0 + MaxNumVGPRs - 1;
-       (I < NumRegs) && (Reg >= AMDGPU::VGPR0); --Reg) {
+       WWMRegCandidates.size() < MaxNumVGPRsForWwmAllocation &&
+       Reg >= AMDGPU::VGPR0;
+       --Reg) {
     if (!ReservedRegs.test(Reg) &&
-        !MRI.isPhysRegUsed(Reg, /*SkipRegMaskTest=*/true)) {
-      TRI->markSuperRegs(RegMask, Reg);
-      ++I;
-    }
+        !MRI.isPhysRegUsed(Reg, /*SkipRegMaskTest=*/true))
+      WWMRegCandidates.push_back(Reg);
   }
 
-  if (I != NumRegs) {
+  return WWMRegCandidates;
+}
+
+void SILowerSGPRSpills::assignWWMRegs(MachineFunction &MF,
+                                      ArrayRef<MCRegister> WWMRegCandidates,
+                                      bool RequiresFullWWMPool) {
+  SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
+  if (FuncInfo->getSGPRSpillVGPRs().empty())
+    return;
+
+  BitVector WwmRegMask(TRI->getNumRegs());
+
+  unsigned DesiredPoolSize =
+      std::min(static_cast<unsigned>(FuncInfo->getSGPRSpillVGPRs().size()),
+               static_cast<unsigned>(MaxNumVGPRsForWwmAllocation));
+  unsigned SelectedPoolSize =
+      std::min<unsigned>(DesiredPoolSize, WWMRegCandidates.size());
+  // WWM register candidates are ordered high-to-low, so take the highest
+  // available registers when the desired pool is smaller than the candidate
+  // list.
+  for (MCRegister Reg : WWMRegCandidates.take_front(SelectedPoolSize))
+    TRI->markSuperRegs(WwmRegMask, Reg);
+
+  if (RequiresFullWWMPool && SelectedPoolSize != DesiredPoolSize) {
     // Reserve an arbitrary register and report the error.
-    TRI->markSuperRegs(RegMask, AMDGPU::VGPR0);
+    TRI->markSuperRegs(WwmRegMask, AMDGPU::VGPR0);
     MF.getFunction().getContext().emitError(
         "cannot find enough VGPRs for wwm-regalloc");
   }
+
+  BitVector PerLaneVGPRMask(WwmRegMask);
+  PerLaneVGPRMask.flip().clearBitsNotInMask(TRI->getAllVGPRRegMask());
+
+  // The complement set will be the registers for per-lane VGPR allocation.
+  FuncInfo->updatePerLaneVGPRMask(PerLaneVGPRMask);
 }
 
 bool SILowerSGPRSpillsLegacy::runOnMachineFunction(MachineFunction &MF) {
@@ -465,8 +489,19 @@ bool SILowerSGPRSpills::run(MachineFunction &MF) {
     // To track the IMPLICIT_DEF insertion point for the lane vgprs.
     DenseMap<Register, LaneVGPRInsertPt> LaneVGPRDomInstr;
 
+    // Defer ordinary spills until physical CSR spills have reserved their
+    // lane VGPRs and the WWM allocation pool can be selected.
+    SmallVector<MachineInstr *> OrdinarySGPRSpills;
+    bool HasStrictWWMRegion = false;
+
     for (MachineBasicBlock &MBB : MF) {
       for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
+        if (MI.getOpcode() == AMDGPU::ENTER_STRICT_WWM ||
+            MI.getOpcode() == AMDGPU::ENTER_STRICT_WQM) {
+          HasStrictWWMRegion = true;
+          continue;
+        }
+
         if (!TII->isSGPRSpill(MI))
           continue;
 
@@ -500,18 +535,39 @@ bool SILowerSGPRSpills::run(MachineFunction &MF) {
               llvm_unreachable(
                   "failed to spill SGPR to physical VGPR lane when allocated");
           }
-        } else {
-          MachineInstrSpan MIS(&MI, &MBB);
-          if (FuncInfo->allocateSGPRSpillToVGPRLane(MF, FI)) {
-            bool Spilled = TRI->eliminateSGPRToVGPRSpillFrameIndex(
-                MI, FI, nullptr, Indexes, LIS);
-            if (!Spilled)
-              llvm_unreachable(
-                  "failed to spill SGPR to virtual VGPR lane when allocated");
-            SpillFIs.set(FI);
-            updateLaneVGPRDomInstr(FI, &MBB, MIS.begin(), LaneVGPRDomInstr);
-            SpilledToVirtVGPRLanes = true;
-          }
+        } else
+          OrdinarySGPRSpills.push_back(&MI);
+      }
+    }
+
+    // Select candidates once, before ordinary lane lowering creates virtual
+    // VGPRs and changes the number of registers desired for the WWM pool.
+    SmallVector<MCRegister> WWMRegCandidates;
+    // These non-spillable WWM users retain the old all-or-nothing pool policy.
+    const bool RequiresFullWWMPool =
+        HasStrictWWMRegion || isPreallocateSGPRSpillVGPRsEnabled(MF);
+    if (!OrdinarySGPRSpills.empty())
+      WWMRegCandidates = determineRegsForWWMAllocation(MF);
+
+    const bool ShouldLowerOrdinarySpillsToVGPRLanes =
+        RequiresFullWWMPool || !WWMRegCandidates.empty();
+    if (!ShouldLowerOrdinarySpillsToVGPRLanes && !OrdinarySGPRSpills.empty())
+      FuncInfo->setNoWWMPoolSGPRSpillFallback();
+
+    if (ShouldLowerOrdinarySpillsToVGPRLanes) {
+      for (MachineInstr *MI : OrdinarySGPRSpills) {
+        int FI = TII->getNamedOperand(*MI, AMDGPU::OpName::addr)->getIndex();
+        if (FuncInfo->allocateSGPRSpillToVGPRLane(MF, FI)) {
+          MachineBasicBlock *MBB = MI->getParent();
+          MachineInstrSpan MIS(MI, MBB);
+          bool Spilled = TRI->eliminateSGPRToVGPRSpillFrameIndex(
+              *MI, FI, nullptr, Indexes, LIS);
+          if (!Spilled)
+            llvm_unreachable(
+                "failed to spill SGPR to virtual VGPR lane when allocated");
+          SpillFIs.set(FI);
+          updateLaneVGPRDomInstr(FI, MBB, MIS.begin(), LaneVGPRDomInstr);
+          SpilledToVirtVGPRLanes = true;
         }
       }
     }
@@ -538,20 +594,9 @@ bool SILowerSGPRSpills::run(MachineFunction &MF) {
       }
     }
 
-    // Determine the registers for WWM allocation and also compute the register
-    // mask for non-wwm VGPR allocation.
-    if (FuncInfo->getSGPRSpillVGPRs().size()) {
-      BitVector WwmRegMask(TRI->getNumRegs());
-
-      determineRegsForWWMAllocation(MF, WwmRegMask);
-
-      BitVector NonWwmRegMask(WwmRegMask);
-      NonWwmRegMask.flip().clearBitsNotInMask(TRI->getAllVGPRRegMask());
-
-      // The complement set will be the registers for non-wwm (per-thread) vgpr
-      // allocation.
-      FuncInfo->updateNonWWMRegMask(NonWwmRegMask);
-    }
+    // Assign the WWM pool from the pre-selected candidates and compute the
+    // complement mask for per-thread VGPR allocation.
+    assignWWMRegs(MF, WWMRegCandidates, RequiresFullWWMPool);
 
     for (MachineBasicBlock &MBB : MF)
       clearDebugInfoForSpillFIs(MFI, MBB, SpillFIs);

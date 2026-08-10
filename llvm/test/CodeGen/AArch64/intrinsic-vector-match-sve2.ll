@@ -502,12 +502,11 @@ define <4 x i1> @match_v4xi32_v4i32(<4 x i32> %op1, <4 x i32> %op2, <4 x i1> %ma
 ; CHECK-NEXT:    dup v1.4s, v1.s[3]
 ; CHECK-NEXT:    cmeq v3.4s, v0.4s, v3.4s
 ; CHECK-NEXT:    cmeq v4.4s, v0.4s, v4.4s
-; CHECK-NEXT:    cmeq v5.4s, v0.4s, v5.4s
+; CHECK-NEXT:    orr v3.16b, v4.16b, v3.16b
+; CHECK-NEXT:    cmeq v4.4s, v0.4s, v5.4s
 ; CHECK-NEXT:    cmeq v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    orr v1.16b, v4.16b, v3.16b
-; CHECK-NEXT:    orr v0.16b, v5.16b, v0.16b
-; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
-; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    orr v3.16b, v3.16b, v4.16b
+; CHECK-NEXT:    addhn v0.4h, v3.4s, v0.4s
 ; CHECK-NEXT:    and v0.8b, v0.8b, v2.8b
 ; CHECK-NEXT:    ret
   %r = tail call <4 x i1> @llvm.experimental.vector.match(<4 x i32> %op1, <4 x i32> %op2, <4 x i1> %mask)
@@ -521,8 +520,7 @@ define <2 x i1> @match_v2xi64_v2i64(<2 x i64> %op1, <2 x i64> %op2, <2 x i1> %ma
 ; CHECK-NEXT:    dup v1.2d, v1.d[0]
 ; CHECK-NEXT:    cmeq v3.2d, v0.2d, v3.2d
 ; CHECK-NEXT:    cmeq v0.2d, v0.2d, v1.2d
-; CHECK-NEXT:    orr v0.16b, v0.16b, v3.16b
-; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    addhn v0.2s, v0.2d, v3.2d
 ; CHECK-NEXT:    and v0.8b, v0.8b, v2.8b
 ; CHECK-NEXT:    ret
   %r = tail call <2 x i1> @llvm.experimental.vector.match(<2 x i64> %op1, <2 x i64> %op2, <2 x i1> %mask)

@@ -350,24 +350,6 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 23
-#    include <atomic>
-#  endif
-
-#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
-#    include <concepts>
-#    include <cstdint>
-#    include <cstdlib>
-#    include <cstring>
-#    include <initializer_list>
-#    include <iosfwd>
-#    include <new>
-#    include <optional>
-#    include <stdexcept>
-#    include <system_error>
-#    include <type_traits>
-#    include <typeinfo>
-#  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_CONDITION_VARIABLE

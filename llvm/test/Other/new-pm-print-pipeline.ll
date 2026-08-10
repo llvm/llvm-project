@@ -43,9 +43,6 @@
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='module(hwasan<>,hwasan<kernel;recover>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-14
 ; CHECK-14: hwasan<>,hwasan<kernel;recover>
 
-; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='module(loop-extract<>,loop-extract<single>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-16
-; CHECK-16: loop-extract<>,loop-extract<single>
-
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(print<stack-lifetime><may>,print<stack-lifetime><must>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-17
 ; CHECK-17: function(print<stack-lifetime><may>,print<stack-lifetime><must>)
 
@@ -123,3 +120,6 @@
 
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='module(asan<>,asan<kernel;use-after-scope>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-37
 ; CHECK-37: asan<>,asan<kernel;use-after-scope>
+
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='drop-unnecessary-assumes,drop-unnecessary-assumes<drop-deref>' < %s | FileCheck %s --check-prefixes=CHECK-38
+; CHECK-38: drop-unnecessary-assumes,drop-unnecessary-assumes<drop-deref>

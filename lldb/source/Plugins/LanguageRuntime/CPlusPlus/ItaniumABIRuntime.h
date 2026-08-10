@@ -9,6 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_CPLUSPLUS_ITANIUMABIRUNTIME_H
 #define LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_CPLUSPLUS_ITANIUMABIRUNTIME_H
 
+#include "CommonABIRuntime.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/ValueObject/ValueObject.h"
 
@@ -16,43 +17,33 @@
 
 namespace lldb_private {
 
-class ItaniumABIRuntime {
+class ItaniumABIRuntime : public CommonABIRuntime {
 public:
   ItaniumABIRuntime(Process *process);
 
-  bool IsVTableSymbol(Mangled &manged) const;
+  llvm::StringRef GetName() const override;
+
+  bool IsVTableSymbol(Mangled &manged) const override;
 
   bool GetDynamicTypeAndAddress(ValueObject &in_value,
                                 lldb::DynamicValueType use_dynamic,
                                 const LanguageRuntime::VTableInfo &vtable_info,
                                 TypeAndOrName &class_type_or_name,
-                                Address &dynamic_address,
-                                Value::ValueType &value_type);
+                                Address &dynamic_address) override;
 
   void AppendExceptionBreakpointFunctions(std::vector<const char *> &names,
                                           bool catch_bp, bool throw_bp,
-                                          bool for_expressions);
+                                          bool for_expressions) override;
 
   void AppendExceptionBreakpointFilterModules(FileSpecList &list,
-                                              const Target &target);
+                                              const Target &target) override;
 
-  lldb::ValueObjectSP GetExceptionObjectForThread(lldb::ThreadSP thread_sp);
+  lldb::ValueObjectSP
+  GetExceptionObjectForThread(lldb::ThreadSP thread_sp) override;
 
 private:
   TypeAndOrName GetTypeInfo(ValueObject &in_value,
                             const LanguageRuntime::VTableInfo &vtable_info);
-
-  TypeAndOrName GetDynamicTypeInfo(const lldb_private::Address &vtable_addr);
-
-  void SetDynamicTypeInfo(const lldb_private::Address &vtable_addr,
-                          const TypeAndOrName &type_info);
-
-  using DynamicTypeCache = std::map<Address, TypeAndOrName>;
-
-  DynamicTypeCache m_dynamic_type_map;
-  std::mutex m_mutex;
-
-  Process *m_process;
 };
 
 } // namespace lldb_private

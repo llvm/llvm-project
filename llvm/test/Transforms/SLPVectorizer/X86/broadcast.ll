@@ -15,11 +15,12 @@ define void @bcast_vals(ptr %A, ptr %B, ptr %S) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A0:%.*]] = load i64, ptr [[A:%.*]], align 8
 ; CHECK-NEXT:    [[B0:%.*]] = load i64, ptr [[B:%.*]], align 8
-; CHECK-NEXT:    [[V1:%.*]] = sub i64 [[A0]], 1
-; CHECK-NEXT:    [[V2:%.*]] = sub i64 [[B0]], 1
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i64> poison, i64 [[V1]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i64> poison, i64 [[A0]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i64> [[TMP5]], i64 [[B0]], i64 1
+; CHECK-NEXT:    [[TMP7:%.*]] = sub <2 x i64> [[TMP6]], splat (i64 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <2 x i64> [[TMP7]], <2 x i64> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i64> [[TMP0]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i64> poison, i64 [[V2]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i64> [[TMP7]], <2 x i64> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i64> [[TMP2]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    store <4 x i64> [[TMP4]], ptr [[S:%.*]], align 8

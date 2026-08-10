@@ -64,8 +64,13 @@ AMDGPU::getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
   // Handle G_PTRTOINT (G_PTR_ADD base, const) case
   if (Def->getOpcode() == TargetOpcode::G_PTRTOINT) {
     MachineInstr *Base;
-    if (mi_match(Def->getOperand(1).getReg(), MRI,
-                 m_GPtrAdd(m_MInstr(Base), m_ICst(Offset)))) {
+    Register PtrAdd = Def->getOperand(1).getReg();
+    if (mi_match(PtrAdd, MRI, m_GPtrAdd(m_MInstr(Base), m_ICst(Offset)))) {
+      // Same check as for G_ADD; nuw comes from getelementptr inbounds.
+      if (CheckNUW && !MRI.getVRegDef(PtrAdd)->getFlag(MachineInstr::NoUWrap)) {
+        assert(MRI.getType(Reg).getScalarSizeInBits() == 32);
+        return std::pair(Reg, 0);
+      }
       // If Base was int converted to pointer, simply return int and offset.
       if (Base->getOpcode() == TargetOpcode::G_INTTOPTR)
         return std::pair(Base->getOperand(1).getReg(), Offset);

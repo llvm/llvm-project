@@ -16,8 +16,7 @@ define void @derived_int_ivs(ptr noalias %a, ptr noalias %b, i64 %end) {
 ; VF2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 2
 ; VF2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF2:       [[VECTOR_PH]]:
-; VF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 1
-; VF2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
+; VF2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], 0
 ; VF2-NEXT:    [[TMP3:%.*]] = shl i64 [[N_VEC]], 4
 ; VF2-NEXT:    [[TMP4:%.*]] = add i64 16, [[TMP3]]
 ; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -46,7 +45,7 @@ define void @derived_int_ivs(ptr noalias %a, ptr noalias %b, i64 %end) {
 ; VF2IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 4
 ; VF2IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF2IC2:       [[VECTOR_PH]]:
-; VF2IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 2
+; VF2IC2-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP2]], 1
 ; VF2IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
 ; VF2IC2-NEXT:    [[TMP3:%.*]] = shl i64 [[N_VEC]], 4
 ; VF2IC2-NEXT:    [[TMP4:%.*]] = add i64 16, [[TMP3]]
@@ -81,7 +80,7 @@ define void @derived_int_ivs(ptr noalias %a, ptr noalias %b, i64 %end) {
 ; VF4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 4
 ; VF4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF4:       [[VECTOR_PH]]:
-; VF4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 4
+; VF4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP2]], 3
 ; VF4-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
 ; VF4-NEXT:    [[TMP3:%.*]] = shl i64 [[N_VEC]], 4
 ; VF4-NEXT:    [[TMP4:%.*]] = add i64 16, [[TMP3]]
@@ -140,8 +139,7 @@ define void @derived_pointer_ivs(ptr noalias %a, ptr noalias %b, ptr %end) {
 ; VF2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 2
 ; VF2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF2:       [[VECTOR_PH]]:
-; VF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 1
-; VF2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
+; VF2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], 0
 ; VF2-NEXT:    [[TMP9:%.*]] = shl i64 [[N_VEC]], 4
 ; VF2-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP9]]
 ; VF2-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP9]]
@@ -173,7 +171,7 @@ define void @derived_pointer_ivs(ptr noalias %a, ptr noalias %b, ptr %end) {
 ; VF2IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 4
 ; VF2IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF2IC2:       [[VECTOR_PH]]:
-; VF2IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 2
+; VF2IC2-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 1
 ; VF2IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; VF2IC2-NEXT:    [[TMP9:%.*]] = shl i64 [[N_VEC]], 4
 ; VF2IC2-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP9]]
@@ -211,7 +209,7 @@ define void @derived_pointer_ivs(ptr noalias %a, ptr noalias %b, ptr %end) {
 ; VF4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 4
 ; VF4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF4:       [[VECTOR_PH]]:
-; VF4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 4
+; VF4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 3
 ; VF4-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; VF4-NEXT:    [[TMP9:%.*]] = shl i64 [[N_VEC]], 4
 ; VF4-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP9]]

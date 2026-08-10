@@ -34,12 +34,12 @@ StringFindStartswithCheck::StringFindStartswithCheck(StringRef Name,
           Options.get("AbseilStringsMatchHeader", "absl/strings/match.h")) {}
 
 void StringFindStartswithCheck::registerMatchers(MatchFinder *Finder) {
-  auto ZeroLiteral = integerLiteral(equals(0));
-  auto StringClassMatcher = cxxRecordDecl(hasAnyName(StringLikeClasses));
-  auto StringType = hasUnqualifiedDesugaredType(
+  const auto ZeroLiteral = integerLiteral(equals(0));
+  const auto StringClassMatcher = cxxRecordDecl(hasAnyName(StringLikeClasses));
+  const auto StringType = hasUnqualifiedDesugaredType(
       recordType(hasDeclaration(StringClassMatcher)));
 
-  auto StringFind = cxxMemberCallExpr(
+  const auto StringFind = cxxMemberCallExpr(
       // .find()-call on a string...
       callee(cxxMethodDecl(hasName("find")).bind("findfun")),
       on(hasType(StringType)),
@@ -57,7 +57,7 @@ void StringFindStartswithCheck::registerMatchers(MatchFinder *Finder) {
           .bind("expr"),
       this);
 
-  auto StringRFind = cxxMemberCallExpr(
+  const auto StringRFind = cxxMemberCallExpr(
       // .rfind()-call on a string...
       callee(cxxMethodDecl(hasName("rfind")).bind("findfun")),
       on(hasType(StringType)),
@@ -110,7 +110,7 @@ void StringFindStartswithCheck::check(const MatchFinder::MatchResult &Result) {
   const bool Neg = ComparisonExpr->getOpcode() == BO_NE;
 
   // Create the warning message and a FixIt hint replacing the original expr.
-  auto Diagnostic =
+  const auto Diagnostic =
       diag(ComparisonExpr->getBeginLoc(),
            "use %select{absl::StartsWith|!absl::StartsWith}0 "
            "instead of %select{find()|rfind()}1 %select{==|!=}0 0")

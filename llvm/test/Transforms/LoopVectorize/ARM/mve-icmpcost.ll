@@ -24,13 +24,13 @@ define void @expensive_icmp(ptr noalias nocapture %d, ptr nocapture readonly %s,
 ; CHECK:  Cost of 0 for VF 2: induction instruction %i.016 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.inc ]
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3:%[0-9]+]]>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; CHECK:  Cost of 0 for VF 2: CLONE ir<%arrayidx> = getelementptr inbounds ir<%s>, vp<[[VP4]]>
-; CHECK:  Cost of 0 for VF 2: vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%arrayidx>, ir<1>
+; CHECK:  Cost of 0 for VF 2: vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i16, ir<%arrayidx>, ir<1>
 ; CHECK:  Cost of 18 for VF 2: WIDEN ir<%1> = load vp<[[VP5]]>
 ; CHECK:  Cost of 4 for VF 2: WIDEN-CAST ir<%conv> = sext ir<%1> to i32
 ; CHECK:  Cost of 20 for VF 2: WIDEN ir<%cmp2> = icmp sgt ir<%conv>, ir<%conv1>
 ; CHECK:  Cost of 26 for VF 2: WIDEN ir<%conv6> = add ir<%1>, ir<%0>
 ; CHECK:  Cost of 0 for VF 2: CLONE ir<%arrayidx7> = getelementptr ir<%d>, vp<[[VP4]]>
-; CHECK:  Cost of 0 for VF 2: vp<[[VP6:%[0-9]+]]> = vector-pointer ir<%arrayidx7>, ir<1>
+; CHECK:  Cost of 0 for VF 2: vp<[[VP6:%[0-9]+]]> = vector-pointer i16, ir<%arrayidx7>, ir<1>
 ; CHECK:  Cost of 16 for VF 2: WIDEN store vp<[[VP6]]>, ir<%conv6>, ir<%cmp2>
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1:%[0-9]+]]>
 ; CHECK:  Cost of 1 for VF 2: EMIT branch-on-count vp<%index.next>, vp<[[VP2:%[0-9]+]]>
@@ -50,13 +50,13 @@ define void @expensive_icmp(ptr noalias nocapture %d, ptr nocapture readonly %s,
 ; CHECK:  Cost of 0 for VF 4: induction instruction %i.016 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.inc ]
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP4]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK:  Cost of 0 for VF 4: CLONE ir<%arrayidx> = getelementptr inbounds ir<%s>, vp<[[VP4]]>
-; CHECK:  Cost of 0 for VF 4: vp<[[VP5]]> = vector-pointer inbounds ir<%arrayidx>, ir<1>
+; CHECK:  Cost of 0 for VF 4: vp<[[VP5]]> = vector-pointer inbounds i16, ir<%arrayidx>, ir<1>
 ; CHECK:  Cost of 2 for VF 4: WIDEN ir<%1> = load vp<[[VP5]]>
 ; CHECK:  Cost of 0 for VF 4: WIDEN-CAST ir<%conv> = sext ir<%1> to i32
 ; CHECK:  Cost of 2 for VF 4: WIDEN ir<%cmp2> = icmp sgt ir<%conv>, ir<%conv1>
 ; CHECK:  Cost of 2 for VF 4: WIDEN ir<%conv6> = add ir<%1>, ir<%0>
 ; CHECK:  Cost of 0 for VF 4: CLONE ir<%arrayidx7> = getelementptr ir<%d>, vp<[[VP4]]>
-; CHECK:  Cost of 0 for VF 4: vp<[[VP6]]> = vector-pointer ir<%arrayidx7>, ir<1>
+; CHECK:  Cost of 0 for VF 4: vp<[[VP6]]> = vector-pointer i16, ir<%arrayidx7>, ir<1>
 ; CHECK:  Cost of 2 for VF 4: WIDEN store vp<[[VP6]]>, ir<%conv6>, ir<%cmp2>
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK:  Cost of 1 for VF 4: EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -76,13 +76,13 @@ define void @expensive_icmp(ptr noalias nocapture %d, ptr nocapture readonly %s,
 ; CHECK:  Cost of 0 for VF 8: induction instruction %i.016 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.inc ]
 ; CHECK:  Cost of 0 for VF 8: vp<[[VP4]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK:  Cost of 0 for VF 8: CLONE ir<%arrayidx> = getelementptr inbounds ir<%s>, vp<[[VP4]]>
-; CHECK:  Cost of 0 for VF 8: vp<[[VP5]]> = vector-pointer inbounds ir<%arrayidx>, ir<1>
+; CHECK:  Cost of 0 for VF 8: vp<[[VP5]]> = vector-pointer inbounds i16, ir<%arrayidx>, ir<1>
 ; CHECK:  Cost of 2 for VF 8: WIDEN ir<%1> = load vp<[[VP5]]>
 ; CHECK:  Cost of 2 for VF 8: WIDEN-CAST ir<%conv> = sext ir<%1> to i32
 ; CHECK:  Cost of 36 for VF 8: WIDEN ir<%cmp2> = icmp sgt ir<%conv>, ir<%conv1>
 ; CHECK:  Cost of 2 for VF 8: WIDEN ir<%conv6> = add ir<%1>, ir<%0>
 ; CHECK:  Cost of 0 for VF 8: CLONE ir<%arrayidx7> = getelementptr ir<%d>, vp<[[VP4]]>
-; CHECK:  Cost of 0 for VF 8: vp<[[VP6]]> = vector-pointer ir<%arrayidx7>, ir<1>
+; CHECK:  Cost of 0 for VF 8: vp<[[VP6]]> = vector-pointer i16, ir<%arrayidx7>, ir<1>
 ; CHECK:  Cost of 2 for VF 8: WIDEN store vp<[[VP6]]>, ir<%conv6>, ir<%cmp2>
 ; CHECK:  Cost of 0 for VF 8: EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK:  Cost of 1 for VF 8: EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -170,10 +170,10 @@ define void @cheap_icmp(ptr nocapture readonly %pSrcA, ptr nocapture readonly %p
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<%next.gep>.1 = ptradd ir<%pDst>, vp<[[VP9]]>
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP10:%[0-9]+]]> = SCALAR-STEPS vp<[[VP7]]>, ir<1>, vp<[[VP0]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<%next.gep>.2 = ptradd ir<%pSrcB>, vp<[[VP10]]>
-; CHECK:  Cost of 0 for VF 2: vp<[[VP11:%[0-9]+]]> = vector-pointer vp<%next.gep>, ir<1>
+; CHECK:  Cost of 0 for VF 2: vp<[[VP11:%[0-9]+]]> = vector-pointer i8, vp<%next.gep>, ir<1>
 ; CHECK:  Cost of 18 for VF 2: WIDEN ir<%0> = load vp<[[VP11]]>
 ; CHECK:  Cost of 4 for VF 2: WIDEN-CAST ir<%conv1> = sext ir<%0> to i32
-; CHECK:  Cost of 0 for VF 2: vp<[[VP12:%[0-9]+]]> = vector-pointer vp<%next.gep>.2, ir<1>
+; CHECK:  Cost of 0 for VF 2: vp<[[VP12:%[0-9]+]]> = vector-pointer i8, vp<%next.gep>.2, ir<1>
 ; CHECK:  Cost of 18 for VF 2: WIDEN ir<%1> = load vp<[[VP12]]>
 ; CHECK:  Cost of 4 for VF 2: WIDEN-CAST ir<%conv3> = sext ir<%1> to i32
 ; CHECK:  Cost of 26 for VF 2: WIDEN ir<%mul> = mul nsw ir<%conv3>, ir<%conv1>
@@ -181,7 +181,7 @@ define void @cheap_icmp(ptr nocapture readonly %pSrcA, ptr nocapture readonly %p
 ; CHECK:  Cost of 0 for VF 2: WIDEN ir<%2> = icmp slt ir<%shr>, ir<127>
 ; CHECK:  Cost of 22 for VF 2: WIDEN ir<%spec.select.i> = select ir<%2>, ir<%shr>, ir<127>
 ; CHECK:  Cost of 0 for VF 2: WIDEN-CAST ir<%conv4> = trunc ir<%spec.select.i> to i8
-; CHECK:  Cost of 0 for VF 2: vp<[[VP13:%[0-9]+]]> = vector-pointer vp<%next.gep>.1, ir<1>
+; CHECK:  Cost of 0 for VF 2: vp<[[VP13:%[0-9]+]]> = vector-pointer i8, vp<%next.gep>.1, ir<1>
 ; CHECK:  Cost of 18 for VF 2: WIDEN store vp<[[VP13]]>, ir<%conv4>
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<%index.next> = add nuw vp<[[VP7]]>, vp<[[VP1:%[0-9]+]]>
 ; CHECK:  Cost of 1 for VF 2: EMIT branch-on-count vp<%index.next>, vp<[[VP2:%[0-9]+]]>
@@ -230,10 +230,10 @@ define void @cheap_icmp(ptr nocapture readonly %pSrcA, ptr nocapture readonly %p
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<%next.gep>.1 = ptradd ir<%pDst>, vp<[[VP9]]>
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP10]]> = SCALAR-STEPS vp<[[VP7]]>, ir<1>, vp<[[VP0]]>
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<%next.gep>.2 = ptradd ir<%pSrcB>, vp<[[VP10]]>
-; CHECK:  Cost of 0 for VF 4: vp<[[VP11]]> = vector-pointer vp<%next.gep>, ir<1>
+; CHECK:  Cost of 0 for VF 4: vp<[[VP11]]> = vector-pointer i8, vp<%next.gep>, ir<1>
 ; CHECK:  Cost of 2 for VF 4: WIDEN ir<%0> = load vp<[[VP11]]>
 ; CHECK:  Cost of 0 for VF 4: WIDEN-CAST ir<%conv1> = sext ir<%0> to i32
-; CHECK:  Cost of 0 for VF 4: vp<[[VP12]]> = vector-pointer vp<%next.gep>.2, ir<1>
+; CHECK:  Cost of 0 for VF 4: vp<[[VP12]]> = vector-pointer i8, vp<%next.gep>.2, ir<1>
 ; CHECK:  Cost of 2 for VF 4: WIDEN ir<%1> = load vp<[[VP12]]>
 ; CHECK:  Cost of 0 for VF 4: WIDEN-CAST ir<%conv3> = sext ir<%1> to i32
 ; CHECK:  Cost of 2 for VF 4: WIDEN ir<%mul> = mul nsw ir<%conv3>, ir<%conv1>
@@ -241,7 +241,7 @@ define void @cheap_icmp(ptr nocapture readonly %pSrcA, ptr nocapture readonly %p
 ; CHECK:  Cost of 0 for VF 4: WIDEN ir<%2> = icmp slt ir<%shr>, ir<127>
 ; CHECK:  Cost of 2 for VF 4: WIDEN ir<%spec.select.i> = select ir<%2>, ir<%shr>, ir<127>
 ; CHECK:  Cost of 0 for VF 4: WIDEN-CAST ir<%conv4> = trunc ir<%spec.select.i> to i8
-; CHECK:  Cost of 0 for VF 4: vp<[[VP13]]> = vector-pointer vp<%next.gep>.1, ir<1>
+; CHECK:  Cost of 0 for VF 4: vp<[[VP13]]> = vector-pointer i8, vp<%next.gep>.1, ir<1>
 ; CHECK:  Cost of 2 for VF 4: WIDEN store vp<[[VP13]]>, ir<%conv4>
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<%index.next> = add nuw vp<[[VP7]]>, vp<[[VP1]]>
 ; CHECK:  Cost of 1 for VF 4: EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -290,10 +290,10 @@ define void @cheap_icmp(ptr nocapture readonly %pSrcA, ptr nocapture readonly %p
 ; CHECK:  Cost of 0 for VF 8: EMIT vp<%next.gep>.1 = ptradd ir<%pDst>, vp<[[VP9]]>
 ; CHECK:  Cost of 0 for VF 8: vp<[[VP10]]> = SCALAR-STEPS vp<[[VP7]]>, ir<1>, vp<[[VP0]]>
 ; CHECK:  Cost of 0 for VF 8: EMIT vp<%next.gep>.2 = ptradd ir<%pSrcB>, vp<[[VP10]]>
-; CHECK:  Cost of 0 for VF 8: vp<[[VP11]]> = vector-pointer vp<%next.gep>, ir<1>
+; CHECK:  Cost of 0 for VF 8: vp<[[VP11]]> = vector-pointer i8, vp<%next.gep>, ir<1>
 ; CHECK:  Cost of 2 for VF 8: WIDEN ir<%0> = load vp<[[VP11]]>
 ; CHECK:  Cost of 2 for VF 8: WIDEN-CAST ir<%conv1> = sext ir<%0> to i32
-; CHECK:  Cost of 0 for VF 8: vp<[[VP12]]> = vector-pointer vp<%next.gep>.2, ir<1>
+; CHECK:  Cost of 0 for VF 8: vp<[[VP12]]> = vector-pointer i8, vp<%next.gep>.2, ir<1>
 ; CHECK:  Cost of 2 for VF 8: WIDEN ir<%1> = load vp<[[VP12]]>
 ; CHECK:  Cost of 2 for VF 8: WIDEN-CAST ir<%conv3> = sext ir<%1> to i32
 ; CHECK:  Cost of 4 for VF 8: WIDEN ir<%mul> = mul nsw ir<%conv3>, ir<%conv1>
@@ -301,7 +301,7 @@ define void @cheap_icmp(ptr nocapture readonly %pSrcA, ptr nocapture readonly %p
 ; CHECK:  Cost of 0 for VF 8: WIDEN ir<%2> = icmp slt ir<%shr>, ir<127>
 ; CHECK:  Cost of 4 for VF 8: WIDEN ir<%spec.select.i> = select ir<%2>, ir<%shr>, ir<127>
 ; CHECK:  Cost of 2 for VF 8: WIDEN-CAST ir<%conv4> = trunc ir<%spec.select.i> to i8
-; CHECK:  Cost of 0 for VF 8: vp<[[VP13]]> = vector-pointer vp<%next.gep>.1, ir<1>
+; CHECK:  Cost of 0 for VF 8: vp<[[VP13]]> = vector-pointer i8, vp<%next.gep>.1, ir<1>
 ; CHECK:  Cost of 2 for VF 8: WIDEN store vp<[[VP13]]>, ir<%conv4>
 ; CHECK:  Cost of 0 for VF 8: EMIT vp<%index.next> = add nuw vp<[[VP7]]>, vp<[[VP1]]>
 ; CHECK:  Cost of 1 for VF 8: EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -350,10 +350,10 @@ define void @cheap_icmp(ptr nocapture readonly %pSrcA, ptr nocapture readonly %p
 ; CHECK:  Cost of 0 for VF 16: EMIT vp<%next.gep>.1 = ptradd ir<%pDst>, vp<[[VP9]]>
 ; CHECK:  Cost of 0 for VF 16: vp<[[VP10]]> = SCALAR-STEPS vp<[[VP7]]>, ir<1>, vp<[[VP0]]>
 ; CHECK:  Cost of 0 for VF 16: EMIT vp<%next.gep>.2 = ptradd ir<%pSrcB>, vp<[[VP10]]>
-; CHECK:  Cost of 0 for VF 16: vp<[[VP11]]> = vector-pointer vp<%next.gep>, ir<1>
+; CHECK:  Cost of 0 for VF 16: vp<[[VP11]]> = vector-pointer i8, vp<%next.gep>, ir<1>
 ; CHECK:  Cost of 2 for VF 16: WIDEN ir<%0> = load vp<[[VP11]]>
 ; CHECK:  Cost of 6 for VF 16: WIDEN-CAST ir<%conv1> = sext ir<%0> to i32
-; CHECK:  Cost of 0 for VF 16: vp<[[VP12]]> = vector-pointer vp<%next.gep>.2, ir<1>
+; CHECK:  Cost of 0 for VF 16: vp<[[VP12]]> = vector-pointer i8, vp<%next.gep>.2, ir<1>
 ; CHECK:  Cost of 2 for VF 16: WIDEN ir<%1> = load vp<[[VP12]]>
 ; CHECK:  Cost of 6 for VF 16: WIDEN-CAST ir<%conv3> = sext ir<%1> to i32
 ; CHECK:  Cost of 8 for VF 16: WIDEN ir<%mul> = mul nsw ir<%conv3>, ir<%conv1>
@@ -361,7 +361,7 @@ define void @cheap_icmp(ptr nocapture readonly %pSrcA, ptr nocapture readonly %p
 ; CHECK:  Cost of 0 for VF 16: WIDEN ir<%2> = icmp slt ir<%shr>, ir<127>
 ; CHECK:  Cost of 8 for VF 16: WIDEN ir<%spec.select.i> = select ir<%2>, ir<%shr>, ir<127>
 ; CHECK:  Cost of 6 for VF 16: WIDEN-CAST ir<%conv4> = trunc ir<%spec.select.i> to i8
-; CHECK:  Cost of 0 for VF 16: vp<[[VP13]]> = vector-pointer vp<%next.gep>.1, ir<1>
+; CHECK:  Cost of 0 for VF 16: vp<[[VP13]]> = vector-pointer i8, vp<%next.gep>.1, ir<1>
 ; CHECK:  Cost of 2 for VF 16: WIDEN store vp<[[VP13]]>, ir<%conv4>
 ; CHECK:  Cost of 0 for VF 16: EMIT vp<%index.next> = add nuw vp<[[VP7]]>, vp<[[VP1]]>
 ; CHECK:  Cost of 1 for VF 16: EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -463,12 +463,12 @@ define void @floatcmp(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 %bl
 ; CHECK:  Cost of 1 for VF 2: vp<[[VP9:%[0-9]+]]> = DERIVED-IV ir<0> + vp<[[VP6]]> * ir<4>
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP10:%[0-9]+]]> = SCALAR-STEPS vp<[[VP9]]>, ir<4>, vp<[[VP0]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<%next.gep>.1 = ptradd ir<%pDst>, vp<[[VP10]]>
-; CHECK:  Cost of 0 for VF 2: vp<[[VP11:%[0-9]+]]> = vector-pointer vp<%next.gep>, ir<1>
+; CHECK:  Cost of 0 for VF 2: vp<[[VP11:%[0-9]+]]> = vector-pointer float, vp<%next.gep>, ir<1>
 ; CHECK:  Cost of 6 for VF 2: WIDEN ir<%0> = load vp<[[VP11]]>
 ; CHECK:  Cost of 12 for VF 2: WIDEN ir<%cmp1> = fcmp olt nnan ninf nsz ir<%0>, ir<0.000000e+00>
 ; CHECK:  Cost of 8 for VF 2: WIDEN ir<%cond> = select nnan ninf nsz ir<%cmp1>, ir<1.000000e+01>, ir<%0>
 ; CHECK:  Cost of 36 for VF 2: WIDEN-CAST ir<%conv> = fptosi ir<%cond> to i32
-; CHECK:  Cost of 0 for VF 2: vp<[[VP12:%[0-9]+]]> = vector-pointer vp<%next.gep>.1, ir<1>
+; CHECK:  Cost of 0 for VF 2: vp<[[VP12:%[0-9]+]]> = vector-pointer i32, vp<%next.gep>.1, ir<1>
 ; CHECK:  Cost of 18 for VF 2: WIDEN store vp<[[VP12]]>, ir<%conv>
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<%index.next> = add nuw vp<[[VP6]]>, vp<[[VP1:%[0-9]+]]>
 ; CHECK:  Cost of 1 for VF 2: EMIT branch-on-count vp<%index.next>, vp<[[VP2:%[0-9]+]]>
@@ -506,12 +506,12 @@ define void @floatcmp(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 %bl
 ; CHECK:  Cost of 1 for VF 4: vp<[[VP9]]> = DERIVED-IV ir<0> + vp<[[VP6]]> * ir<4>
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP10]]> = SCALAR-STEPS vp<[[VP9]]>, ir<4>, vp<[[VP0]]>
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<%next.gep>.1 = ptradd ir<%pDst>, vp<[[VP10]]>
-; CHECK:  Cost of 0 for VF 4: vp<[[VP11]]> = vector-pointer vp<%next.gep>, ir<1>
+; CHECK:  Cost of 0 for VF 4: vp<[[VP11]]> = vector-pointer float, vp<%next.gep>, ir<1>
 ; CHECK:  Cost of 2 for VF 4: WIDEN ir<%0> = load vp<[[VP11]]>
 ; CHECK:  Cost of 24 for VF 4: WIDEN ir<%cmp1> = fcmp olt nnan ninf nsz ir<%0>, ir<0.000000e+00>
 ; CHECK:  Cost of 16 for VF 4: WIDEN ir<%cond> = select nnan ninf nsz ir<%cmp1>, ir<1.000000e+01>, ir<%0>
 ; CHECK:  Cost of 72 for VF 4: WIDEN-CAST ir<%conv> = fptosi ir<%cond> to i32
-; CHECK:  Cost of 0 for VF 4: vp<[[VP12]]> = vector-pointer vp<%next.gep>.1, ir<1>
+; CHECK:  Cost of 0 for VF 4: vp<[[VP12]]> = vector-pointer i32, vp<%next.gep>.1, ir<1>
 ; CHECK:  Cost of 2 for VF 4: WIDEN store vp<[[VP12]]>, ir<%conv>
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<%index.next> = add nuw vp<[[VP6]]>, vp<[[VP1]]>
 ; CHECK:  Cost of 1 for VF 4: EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>

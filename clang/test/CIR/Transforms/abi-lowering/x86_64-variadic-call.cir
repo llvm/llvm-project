@@ -1,0 +1,209 @@
+// RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 | FileCheck %s
+// RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 -cir-to-llvm -o - 2>/dev/null \
+// RUN:   | mlir-translate -mlir-to-llvmir --allow-unregistered-dialect \
+// RUN:   | FileCheck %s --check-prefix=LLVM
+
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!rec_Pair = !cir.struct<"Pair" {!s32i, !s32i}>
+!rec_Two = !cir.struct<"Two" {!s64i, !s64i}>
+!rec_Big = !cir.struct<"Big" {!s64i, !s64i, !s64i}>
+!rec_E0 = !cir.struct<"E0" {}>
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>,
+    #dlti.dl_entry<f64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func private @variadic(!cir.ptr<!s8i>, ...) -> !s32i
+  cir.func private @variadic_pair(!rec_Pair, ...) -> !s32i
+  cir.func private @variadic_big(!cir.ptr<!s8i>, ...) -> !rec_Big
+
+  // A rewritten variadic declaration keeps its ellipsis.
+  // CHECK: cir.func private @variadic_pair(!u64i, ...) -> !s32i
+  // CHECK: cir.func private @variadic_big(!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.sret = !rec_Big, llvm.writable}, !cir.ptr<!s8i>, ...)
+
+  // Passing nothing through the ellipsis leaves the call at the callee's
+  // declared parameters.
+  cir.func @pass_none(%arg0: !cir.ptr<!s8i>) {
+    %0 = cir.call @variadic(%arg0) : (!cir.ptr<!s8i>) -> !s32i
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @pass_none(%arg0: !cir.ptr<!s8i>)
+  // CHECK:   cir.call @variadic(%arg0) : (!cir.ptr<!s8i>) -> !s32i
+
+  cir.func @pass_scalar(%arg0: !cir.ptr<!s8i>, %arg1: !s32i) {
+    %0 = cir.call @variadic(%arg0, %arg1) : (!cir.ptr<!s8i>, !s32i) -> !s32i
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @pass_scalar(%arg0: !cir.ptr<!s8i>, %arg1: !s32i)
+  // CHECK:   cir.call @variadic(%arg0, %arg1) : (!cir.ptr<!s8i>, !s32i) -> !s32i
+
+  // An integer narrower than a word is extended at the ellipsis just as it is
+  // in a declared parameter position.
+  cir.func @pass_narrow(%arg0: !cir.ptr<!s8i>, %arg1: !s8i) {
+    %0 = cir.call @variadic(%arg0, %arg1) : (!cir.ptr<!s8i>, !s8i) -> !s32i
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @pass_narrow(%arg0: !cir.ptr<!s8i>, %arg1: !s8i {llvm.signext})
+  // CHECK:   cir.call @variadic(%arg0, %arg1) : (!cir.ptr<!s8i>, !s8i {llvm.signext}) -> !s32i
+
+  cir.func @pass_double(%arg0: !cir.ptr<!s8i>, %arg1: !cir.double) {
+    %0 = cir.call @variadic(%arg0, %arg1) : (!cir.ptr<!s8i>, !cir.double) -> !s32i
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @pass_double(%arg0: !cir.ptr<!s8i>, %arg1: !cir.double)
+  // CHECK:   cir.call @variadic(%arg0, %arg1) : (!cir.ptr<!s8i>, !cir.double) -> !s32i
+
+  // The format string consumes one INTEGER register, so the two eightbytes of
+  // this record still fit in registers and are passed flattened.
+  cir.func @pass_two_early(%arg0: !cir.ptr<!s8i>, %arg1: !rec_Two) {
+    %0 = cir.call @variadic(%arg0, %arg1) : (!cir.ptr<!s8i>, !rec_Two) -> !s32i
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @pass_two_early(%arg0: !cir.ptr<!s8i>, %arg1: !s64i, %arg2: !s64i)
+  // CHECK:   cir.call @variadic(%arg0, %{{.*}}, %{{.*}}) : (!cir.ptr<!s8i>, !s64i, !s64i) -> !s32i
+
+  // The same record after the format string and five ints have used all six
+  // INTEGER registers: it goes to memory instead, as a byval slot.
+  cir.func @pass_two_exhausted(%arg0: !cir.ptr<!s8i>, %arg1: !s32i, %arg2: !rec_Two) {
+    %0 = cir.call @variadic(%arg0, %arg1, %arg1, %arg1, %arg1, %arg1, %arg2)
+        : (!cir.ptr<!s8i>, !s32i, !s32i, !s32i, !s32i, !s32i, !rec_Two) -> !s32i
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @pass_two_exhausted(%arg0: !cir.ptr<!s8i>, %arg1: !s32i, %arg2: !s64i, %arg3: !s64i)
+  // CHECK:   %[[SLOT:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Two>
+  // CHECK:   cir.call @variadic(%arg0, %arg1, %arg1, %arg1, %arg1, %arg1, %[[SLOT]]) : (!cir.ptr<!s8i>, !s32i, !s32i, !s32i, !s32i, !s32i, !cir.ptr<!rec_Two> {llvm.align = 8 : i64, llvm.byval = !rec_Two, llvm.noalias, llvm.noundef}) -> !s32i
+
+  // A record larger than two eightbytes is memory class no matter how many
+  // registers are free.
+  cir.func @pass_big(%arg0: !cir.ptr<!s8i>, %arg1: !rec_Big) {
+    %0 = cir.call @variadic(%arg0, %arg1) : (!cir.ptr<!s8i>, !rec_Big) -> !s32i
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @pass_big(%arg0: !cir.ptr<!s8i>, %arg1: !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noalias, llvm.noundef})
+  // CHECK:   %[[BSLOT:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Big>
+  // CHECK:   cir.call @variadic(%arg0, %[[BSLOT]]) : (!cir.ptr<!s8i>, !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noalias, llvm.noundef}) -> !s32i
+
+  // An empty record occupies no register and is dropped, without displacing
+  // the argument behind it.
+  cir.func @pass_empty(%arg0: !cir.ptr<!s8i>, %arg1: !rec_E0, %arg2: !s32i) {
+    %0 = cir.call @variadic(%arg0, %arg1, %arg2)
+        : (!cir.ptr<!s8i>, !rec_E0, !s32i) -> !s32i
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @pass_empty(%arg0: !cir.ptr<!s8i>, %arg1: !s32i)
+  // CHECK:   cir.call @variadic(%arg0, %arg1) : (!cir.ptr<!s8i>, !s32i) -> !s32i
+
+  // A declared parameter is coerced the same way whether or not the call also
+  // passes ellipsis arguments.
+  cir.func @pass_declared_coerced(%arg0: !rec_Pair, %arg1: !s32i) {
+    %0 = cir.call @variadic_pair(%arg0, %arg1) : (!rec_Pair, !s32i) -> !s32i
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @pass_declared_coerced(%arg0: !u64i, %arg1: !s32i)
+  // CHECK:   cir.call @variadic_pair(%{{.*}}, %arg1) : (!u64i, !s32i) -> !s32i
+
+  // An sret slot is prepended ahead of the declared parameters, so the
+  // ellipsis arguments shift right by one.
+  cir.func @pass_sret_return(%arg0: !cir.ptr<!s8i>, %arg1: !s32i) -> !rec_Big {
+    %0 = cir.call @variadic_big(%arg0, %arg1) : (!cir.ptr<!s8i>, !s32i) -> !rec_Big
+    cir.return %0 : !rec_Big
+  }
+
+  // CHECK: cir.func{{.*}} @pass_sret_return(%arg0: !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_Big, llvm.writable}, %arg1: !cir.ptr<!s8i>, %arg2: !s32i)
+  // CHECK:   cir.call @variadic_big(%arg0, %arg1, %arg2) : (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.sret = !rec_Big, llvm.writable}, !cir.ptr<!s8i>, !s32i) -> ()
+
+  // An indirect variadic call whose ellipsis arguments all pass as written
+  // needs no rewrite, and the callee pointer keeps its ellipsis.
+  cir.func @indirect_scalar(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>,
+                            %arg1: !cir.ptr<!s8i>, %arg2: !s32i) {
+    %0 = cir.call %arg0(%arg1, %arg2)
+        : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>, !s32i) -> !s32i
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @indirect_scalar(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, %arg1: !cir.ptr<!s8i>, %arg2: !s32i)
+  // CHECK:   cir.call %arg0(%arg1, %arg2) : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>, !s32i) -> !s32i
+
+  // A void return is already its own wire form, so it does not by itself make
+  // the call need a rewrite.
+  cir.func @indirect_void(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...)>>,
+                          %arg1: !cir.ptr<!s8i>, %arg2: !s32i) {
+    cir.call %arg0(%arg1, %arg2)
+        : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...)>>, !cir.ptr<!s8i>, !s32i) -> ()
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @indirect_void(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...)>>, %arg1: !cir.ptr<!s8i>, %arg2: !s32i)
+  // CHECK:   cir.call %arg0(%arg1, %arg2) : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...)>>, !cir.ptr<!s8i>, !s32i) -> ()
+
+  // Coercing the declared parameter rebuilds the callee pointer, whose pointee
+  // has to stay variadic or the lowered call loses its ellipsis.
+  cir.func @indirect_coerced(%arg0: !cir.ptr<!cir.func<(!rec_Pair, ...) -> !s32i>>,
+                             %arg1: !rec_Pair) {
+    %0 = cir.call %arg0(%arg1)
+        : (!cir.ptr<!cir.func<(!rec_Pair, ...) -> !s32i>>, !rec_Pair) -> !s32i
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @indirect_coerced(%arg0: !cir.ptr<!cir.func<(!rec_Pair, ...) -> !s32i>>, %arg1: !u64i)
+  // CHECK:   %[[CALLEE:.*]] = cir.cast bitcast %arg0 : !cir.ptr<!cir.func<(!rec_Pair, ...) -> !s32i>> -> !cir.ptr<!cir.func<(!u64i, ...) -> !s32i>>
+  // CHECK:   cir.call %[[CALLEE]](%{{.*}}) : (!cir.ptr<!cir.func<(!u64i, ...) -> !s32i>>, !u64i) -> !s32i
+}
+
+// LLVM: declare i32 @variadic_pair(i64, ...)
+// LLVM: declare void @variadic_big(ptr dead_on_unwind writable sret(%struct.Big) align 8, ptr, ...)
+
+// LLVM: define void @pass_none(ptr %{{.+}})
+// LLVM:   call i32 (ptr, ...) @variadic(ptr %{{.+}})
+
+// LLVM: define void @pass_scalar(ptr %{{.+}}, i32 %{{.+}})
+// LLVM:   call i32 (ptr, ...) @variadic(ptr %{{.+}}, i32 %{{.+}})
+
+// LLVM: define void @pass_narrow(ptr %{{.+}}, i8 signext %{{.+}})
+// LLVM:   call i32 (ptr, ...) @variadic(ptr %{{.+}}, i8 signext %{{.+}})
+
+// LLVM: define void @pass_double(ptr %{{.+}}, double %{{.+}})
+// LLVM:   call i32 (ptr, ...) @variadic(ptr %{{.+}}, double %{{.+}})
+
+// LLVM: define void @pass_two_early(ptr %{{.+}}, i64 %{{.+}}, i64 %{{.+}})
+// LLVM:   call i32 (ptr, ...) @variadic(ptr %{{.+}}, i64 %{{.+}}, i64 %{{.+}})
+
+// LLVM: define void @pass_two_exhausted(ptr %{{.+}}, i32 %{{.+}}, i64 %{{.+}}, i64 %{{.+}})
+// LLVM:   call i32 (ptr, ...) @variadic(ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}}, i32 %{{.+}}, i32 %{{.+}}, i32 %{{.+}}, ptr noalias noundef byval(%struct.Two) align 8 %{{.+}})
+
+// LLVM: define void @pass_big(ptr %{{.+}}, ptr noalias noundef byval(%struct.Big) align 8 %{{.+}})
+// LLVM:   call i32 (ptr, ...) @variadic(ptr %{{.+}}, ptr noalias noundef byval(%struct.Big) align 8 %{{.+}})
+
+// LLVM: define void @pass_empty(ptr %{{.+}}, i32 %{{.+}})
+// LLVM:   call i32 (ptr, ...) @variadic(ptr %{{.+}}, i32 %{{.+}})
+
+// LLVM: define void @pass_declared_coerced(i64 %{{.+}}, i32 %{{.+}})
+// LLVM:   call i32 (i64, ...) @variadic_pair(i64 %{{.+}}, i32 %{{.+}})
+
+// LLVM: define void @pass_sret_return(ptr dead_on_unwind noalias writable sret(%struct.Big) align 8 %{{.+}}, ptr %{{.+}}, i32 %{{.+}})
+// LLVM:   call void (ptr, ptr, ...) @variadic_big(ptr dead_on_unwind writable sret(%struct.Big) align 8 %{{.+}}, ptr %{{.+}}, i32 %{{.+}})
+
+// LLVM: define void @indirect_scalar(ptr %{{.+}}, ptr %{{.+}}, i32 %{{.+}})
+// LLVM:   call i32 (ptr, ...) %{{.+}}(ptr %{{.+}}, i32 %{{.+}})
+
+// LLVM: define void @indirect_void(ptr %{{.+}}, ptr %{{.+}}, i32 %{{.+}})
+// LLVM:   call void (ptr, ...) %{{.+}}(ptr %{{.+}}, i32 %{{.+}})
+
+// LLVM: define void @indirect_coerced(ptr %{{.+}}, i64 %{{.+}})
+// LLVM:   call i32 (i64, ...) %{{.+}}(i64 %{{.+}})

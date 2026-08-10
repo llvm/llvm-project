@@ -1791,8 +1791,15 @@ void BinaryContext::preprocessDWODebugInfo() {
       }
       // Prevent failures when DWOName is already an absolute path.
       sys::path::make_absolute(DWOCompDir, AbsolutePath);
+      // Extract only the .dwo CU DIE here: we just need the DWO unit pointer
+      // (for DWOCUs) and the isDWOUnit()/DWOId checks. The full DIE vector is
+      // never read off this cached array -- every consumer streams the DIEs on
+      // demand with DWARFDebugInfoEntry::extractFast (DIEBuilder::
+      // constructFromUnit / collectReferencedTypeSignatures).
       DWARFUnit *DWOCU =
-          DwarfUnit->getNonSkeletonUnitDIE(false, AbsolutePath).getDwarfUnit();
+          DwarfUnit
+              ->getNonSkeletonUnitDIE(/*ExtractUnitDIEOnly=*/true, AbsolutePath)
+              .getDwarfUnit();
       if (!DWOCU->isDWOUnit()) {
         this->outs()
             << "BOLT-WARNING: Debug Fission: DWO debug information for "
@@ -2022,38 +2029,10 @@ void BinaryContext::collectDebugScopeBoundaries() {
       continue;
     DWARFUnit *DIEUnit = CUDie.getDwarfUnit();
 
-    // For split DWARF, preprocessDWODebugInfo already fully extracts the .dwo's
-    // DIE array.
-    if (DIEUnit->isDWOUnit()) {
-      for (const DWARFDebugInfoEntry &Entry : DIEUnit->dies())
-        processScopeDie(DWARFDie(DIEUnit, &Entry));
-      continue;
-    }
-    // Walk the unit's DIEs by streaming them one at a time. Track nesting depth
-    // with a counter: a DIE with children descends a level (++), a null entry
-    // (sibling-chain terminator) ascends (--), the unit-end offset limits the
-    // walk. This is done to avoid recording all DIEs in a vector like
-    // DWARFUnit's extractDIEsToVector() does, since that is more work than
-    // needed if we just want to lookup specific tags.
-    DWARFDataExtractor DebugInfoData = DIEUnit->getDebugInfoExtractor();
-    uint64_t DIEOffset = DIEUnit->getOffset() + DIEUnit->getHeaderSize();
-    const uint64_t NextCUOffset = DIEUnit->getNextUnitOffset();
-    DWARFDebugInfoEntry DIEEntry;
-    int32_t CurrentDepth = 1;
-    while (CurrentDepth > 0 && DIEOffset < NextCUOffset &&
-           DIEEntry.extractFast(*DIEUnit, &DIEOffset, DebugInfoData,
-                                NextCUOffset, 0)) {
-      const DWARFAbbreviationDeclaration *Abbrev =
-          DIEEntry.getAbbreviationDeclarationPtr();
-      if (!Abbrev) {
-        // End of the current sibling chain.
-        --CurrentDepth;
-        continue;
-      }
-      processScopeDie(DWARFDie(DIEUnit, &DIEEntry));
-      if (Abbrev->hasChildren())
-        ++CurrentDepth;
-    }
+    // Stream the unit's DIEs one at a time rather than recording them all in a
+    // vector (as DWARFUnit's extractDIEsToVector() does): only DIE tags/ranges
+    // are inspected, so the tree structure is not needed.
+    forEachDIEInUnit(*DIEUnit, processScopeDie);
   }
 }
 

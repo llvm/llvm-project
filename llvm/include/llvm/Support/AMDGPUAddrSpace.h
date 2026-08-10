@@ -47,7 +47,19 @@ enum : unsigned {
   BUFFER_STRIDED_POINTER = 9, ///< Address space for 192-bit fat buffer
                               ///< pointers with an additional index.
 
+  RESERVED_ADDRESS_SPACE_10 = 10, ///< Reserved for downstream use.
+
+  RESERVED_ADDRESS_SPACE_11 = 11, ///< Reserved for downstream use.
+
+  RESERVED_ADDRESS_SPACE_13 = 13, ///< Reserved for downstream use.
+
+  RESERVED_ADDRESS_SPACE_14 = 14, ///< Reserved for downstream use.
+
   RESERVED_ADDRESS_SPACE_16 = 16, ///< Reserved for downstream use.
+
+  RESERVED_ADDRESS_SPACE_17 = 17, ///< Reserved for downstream use.
+
+  RESERVED_ADDRESS_SPACE_18 = 18, ///< Reserved for downstream use.
 
   /// Internal address spaces. Can be freely renumbered.
   STREAMOUT_REGISTER = 128, ///< Address space for GS NGG Streamout registers.

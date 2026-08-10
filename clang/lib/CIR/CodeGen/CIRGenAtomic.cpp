@@ -1170,7 +1170,8 @@ static RValue emitAtomicLibCall(CIRGenFunction &cgf, llvm::StringRef funcName,
 
   cir::FuncOp fn = cgf.cgm.createRuntimeFunction(fnTy, funcName, fnAttrs);
   auto callee = CIRGenCallee::forDirect(fn);
-  return cgf.emitCall(fnInfo, callee, ReturnValueSlot(), args);
+  return cgf.emitCall(fnInfo, callee, ReturnValueSlot(), args,
+                      /*isMustTail=*/false);
 }
 
 static RValue emitLibCallForAtomicExpr(CIRGenFunction &cgf, AtomicExpr *e,

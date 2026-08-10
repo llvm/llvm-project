@@ -14,7 +14,7 @@
 #include "ScriptedInterface.h"
 
 namespace lldb_private {
-class ScriptedHookInterface : public ScriptedInterface {
+class ScriptedHookInterface : virtual public ScriptedInterface {
 public:
   /// Describes which hook callback methods the Python class implements.
   struct SupportedHookMethods {

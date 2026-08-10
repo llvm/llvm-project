@@ -7,7 +7,7 @@ define i8 @preserve_flags_when_cloning_trunc(i8 %start, ptr noalias %src, ptr no
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i8> splat (i8 1), i8 [[START]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i8> splat (i8 1), i8 [[START]], i64 0
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]

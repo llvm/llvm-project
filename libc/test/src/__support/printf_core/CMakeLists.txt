@@ -1,5 +1,6 @@
-add_libc_unittest(
+add_libc_test(
   parser_test
+  UNIT_TEST_ONLY # Fails to link on GPUs
   SUITE
     libc-support-tests
   SRCS
@@ -13,7 +14,7 @@ add_libc_unittest(
     libc.src.__support.arg_list
 )
 
-add_libc_unittest(
+add_libc_test(
   writer_test
   SUITE
     libc-support-tests
@@ -25,7 +26,7 @@ add_libc_unittest(
     libc.src.__support.CPP.string_view
 )
 
-add_libc_unittest(
+add_libc_test(
   converter_test
   SUITE
     libc-support-tests

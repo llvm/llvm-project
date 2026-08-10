@@ -173,6 +173,28 @@ bool TargetAddressSpaceAttr::isValidPtrIntCast(
 }
 
 //===----------------------------------------------------------------------===//
+// PtrSpecAttr definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult PtrSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                                  uint32_t size, uint32_t abi,
+                                  uint32_t preferred, uint32_t index) {
+  constexpr unsigned kBitsInByte = 8;
+  if (size % kBitsInByte != 0)
+    return emitError() << "size entry must be divisible by 8";
+  if (abi % kBitsInByte != 0)
+    return emitError() << "abi entry must be divisible by 8";
+  if (preferred % kBitsInByte != 0)
+    return emitError() << "preferred entry must be divisible by 8";
+  if (index != kOptionalSpecValue && index % kBitsInByte != 0)
+    return emitError() << "index entry must be divisible by 8";
+  if (abi > preferred)
+    return emitError() << "preferred alignment is expected to be at least "
+                          "as large as ABI alignment";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // General CIR parsing / printing
 //===----------------------------------------------------------------------===//
 
@@ -898,12 +920,20 @@ LogicalResult DynamicCastInfoAttr::verify(
 // RecordLayout lookup
 //===----------------------------------------------------------------------===//
 
-RecordLayoutAttr cir::getRecordLayout(mlir::ModuleOp module,
-                                      mlir::StringAttr name) {
-  auto dict = module->getAttrOfType<mlir::DictionaryAttr>(
+RecordLayoutAttr cir::tryGetRecordLayout(mlir::ModuleOp mod,
+                                         mlir::StringAttr name) {
+  if (!name)
+    return {};
+  auto dict = mod->getAttrOfType<mlir::DictionaryAttr>(
       CIRDialect::getRecordLayoutsAttrName());
-  assert(dict && "module missing cir.record_layouts attribute");
-  auto attr = dict.getAs<RecordLayoutAttr>(name);
+  if (!dict)
+    return {};
+  return dict.getAs<RecordLayoutAttr>(name);
+}
+
+RecordLayoutAttr cir::getRecordLayout(mlir::ModuleOp mod,
+                                      mlir::StringAttr name) {
+  RecordLayoutAttr attr = tryGetRecordLayout(mod, name);
   assert(attr && "record layout entry missing for named record");
   return attr;
 }

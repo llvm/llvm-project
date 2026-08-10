@@ -11,18 +11,24 @@ package(
 
 licenses(["notice"])
 
+POSIX_PROFILE_DEFINES = [
+    "COMPILER_RT_HAS_ATOMICS=1",
+    "COMPILER_RT_HAS_FCNTL_LCK=1",
+    "COMPILER_RT_HAS_UNAME=1",
+]
+
 cc_library(
     name = "config",
     defines = select({
-        "@platforms//os:linux": [
-            "COMPILER_RT_HAS_ATOMICS=1",
-            "COMPILER_RT_HAS_FCNTL_LCK=1",
-            "COMPILER_RT_HAS_UNAME=1",
-        ],
+        "@platforms//os:ios": POSIX_PROFILE_DEFINES,
+        "@platforms//os:linux": POSIX_PROFILE_DEFINES,
+        "@platforms//os:macos": POSIX_PROFILE_DEFINES,
         # Will raise error unless supported platforms.
     }),
     target_compatible_with = select({
+        "@platforms//os:ios": [],
         "@platforms//os:linux": [],
+        "@platforms//os:macos": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
 )

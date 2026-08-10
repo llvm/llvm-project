@@ -276,12 +276,17 @@ static void testDebugInfoAttributes(MlirContext ctx) {
   // CHECK: #llvm.di_file<"foo" in "bar">
   mlirAttributeDump(file);
 
-  MlirAttribute compile_unit = mlirLLVMDICompileUnitAttrGet(
-      ctx, recId0, false, id, LLVMDWARFSourceLanguageC99, file, foo, false,
-      MlirLLVMDIEmissionKindFull, false, MlirLLVMDINameTableKindDefault, bar, 0,
-      NULL);
+  // sourceLanguageDialect 1 is DW_LLVM_LANG_DIALECT_simt, as defined by
+  // LLVM's dwarf::LanguageDialectAttribute enum.
+  MlirAttribute compile_unit =
+      mlirLLVMDICompileUnitAttrGetWithSourceLanguageDialect(
+          ctx, recId0, false, id, LLVMDWARFSourceLanguageC99,
+          /*sourceLanguageDialect=*/1, file, foo, false,
+          MlirLLVMDIEmissionKindFull, false, MlirLLVMDINameTableKindDefault,
+          bar, 0, NULL);
 
-  // CHECK: #llvm.di_compile_unit<{{.*}}>
+  // CHECK: #llvm.di_compile_unit<{{.*}}sourceLanguageDialect =
+  // CHECK-SAME: DW_LLVM_LANG_DIALECT_simt{{.*}}>
   mlirAttributeDump(compile_unit);
 
   // CHECK: #llvm.di_compile_unit<recId = {{.*}}, isRecSelf = true>

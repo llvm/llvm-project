@@ -2967,7 +2967,40 @@ public:
 /// #pragma omp atomic update
 /// \endcode
 /// In this example directive '#pragma omp atomic' has 'update' clause.
-/// Also, this class represents 'update' clause in  '#pragma omp depobj'
+class OMPUpdateClause : public OMPClause {
+public:
+  /// Build 'update' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  OMPUpdateClause(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPClause(llvm::omp::OMPC_update, StartLoc, EndLoc) {}
+
+  /// Build an empty clause.
+  OMPUpdateClause()
+      : OMPClause(llvm::omp::OMPC_update, SourceLocation(), SourceLocation()) {}
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_update;
+  }
+};
+
+/// This class represents 'update' clause in '#pragma omp depobj'
 /// directive.
 ///
 /// \code
@@ -2975,38 +3008,32 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp depobj' has 'update' clause with 'in'
 /// dependence kind.
-class OMPUpdateClause final
+class OMPUpdateDependObjectsClause final
     : public OMPClause,
-      private llvm::TrailingObjects<OMPUpdateClause, SourceLocation,
-                                    OpenMPDependClauseKind> {
+      private llvm::TrailingObjects<OMPUpdateDependObjectsClause,
+                                    SourceLocation, OpenMPDependClauseKind> {
   friend class OMPClauseReader;
   friend TrailingObjects;
-
-  /// true if extended version of the clause for 'depobj' directive.
-  bool IsExtended = false;
 
   /// Define the sizes of each trailing object array except the last one. This
   /// is required for TrailingObjects to work properly.
   size_t numTrailingObjects(OverloadToken<SourceLocation>) const {
     // 2 locations: for '(' and argument location.
-    return IsExtended ? 2 : 0;
+    return 2;
   }
 
   /// Sets the location of '(' in clause for 'depobj' directive.
   void setLParenLoc(SourceLocation Loc) {
-    assert(IsExtended && "Expected extended clause.");
     *getTrailingObjects<SourceLocation>() = Loc;
   }
 
   /// Sets the location of '(' in clause for 'depobj' directive.
   void setArgumentLoc(SourceLocation Loc) {
-    assert(IsExtended && "Expected extended clause.");
     *std::next(getTrailingObjects<SourceLocation>(), 1) = Loc;
   }
 
   /// Sets the dependence kind for the clause for 'depobj' directive.
   void setDependencyKind(OpenMPDependClauseKind DK) {
-    assert(IsExtended && "Expected extended clause.");
     *getTrailingObjects<OpenMPDependClauseKind>() = DK;
   }
 
@@ -3014,25 +3041,15 @@ class OMPUpdateClause final
   ///
   /// \param StartLoc Starting location of the clause.
   /// \param EndLoc Ending location of the clause.
-  OMPUpdateClause(SourceLocation StartLoc, SourceLocation EndLoc,
-                  bool IsExtended)
-      : OMPClause(llvm::omp::OMPC_update, StartLoc, EndLoc),
-        IsExtended(IsExtended) {}
+  OMPUpdateDependObjectsClause(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPClause(llvm::omp::OMPC_update_depend_objects, StartLoc, EndLoc) {}
 
   /// Build an empty clause.
-  OMPUpdateClause(bool IsExtended)
-      : OMPClause(llvm::omp::OMPC_update, SourceLocation(), SourceLocation()),
-        IsExtended(IsExtended) {}
+  OMPUpdateDependObjectsClause()
+      : OMPClause(llvm::omp::OMPC_update_depend_objects, SourceLocation(),
+                  SourceLocation()) {}
 
 public:
-  /// Creates clause for 'atomic' directive.
-  ///
-  /// \param C AST context.
-  /// \param StartLoc Starting location of the clause.
-  /// \param EndLoc Ending location of the clause.
-  static OMPUpdateClause *Create(const ASTContext &C, SourceLocation StartLoc,
-                                 SourceLocation EndLoc);
-
   /// Creates clause for 'depobj' directive.
   ///
   /// \param C AST context.
@@ -3041,21 +3058,15 @@ public:
   /// \param ArgumentLoc Location of the argument.
   /// \param DK Dependence kind.
   /// \param EndLoc Ending location of the clause.
-  static OMPUpdateClause *Create(const ASTContext &C, SourceLocation StartLoc,
-                                 SourceLocation LParenLoc,
-                                 SourceLocation ArgumentLoc,
-                                 OpenMPDependClauseKind DK,
-                                 SourceLocation EndLoc);
+  static OMPUpdateDependObjectsClause *
+  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
+         SourceLocation ArgumentLoc, OpenMPDependClauseKind DK,
+         SourceLocation EndLoc);
 
   /// Creates an empty clause with the place for \a N variables.
   ///
   /// \param C AST context.
-  /// \param IsExtended true if extended clause for 'depobj' directive must be
-  /// created.
-  static OMPUpdateClause *CreateEmpty(const ASTContext &C, bool IsExtended);
-
-  /// Checks if the clause is the extended clauses for 'depobj' directive.
-  bool isExtended() const { return IsExtended; }
+  static OMPUpdateDependObjectsClause *CreateEmpty(const ASTContext &C);
 
   child_range children() {
     return child_range(child_iterator(), child_iterator());
@@ -3074,24 +3085,21 @@ public:
 
   /// Gets the location of '(' in clause for 'depobj' directive.
   SourceLocation getLParenLoc() const {
-    assert(IsExtended && "Expected extended clause.");
     return *getTrailingObjects<SourceLocation>();
   }
 
   /// Gets the location of argument in clause for 'depobj' directive.
   SourceLocation getArgumentLoc() const {
-    assert(IsExtended && "Expected extended clause.");
     return *std::next(getTrailingObjects<SourceLocation>(), 1);
   }
 
   /// Gets the dependence kind in clause for 'depobj' directive.
   OpenMPDependClauseKind getDependencyKind() const {
-    assert(IsExtended && "Expected extended clause.");
     return *getTrailingObjects<OpenMPDependClauseKind>();
   }
 
   static bool classof(const OMPClause *T) {
-    return T->getClauseKind() == llvm::omp::OMPC_update;
+    return T->getClauseKind() == llvm::omp::OMPC_update_depend_objects;
   }
 };
 

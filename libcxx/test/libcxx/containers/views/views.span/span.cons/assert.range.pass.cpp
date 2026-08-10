@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+// REQUIRES: can-test-hardening-assertions-fast
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // <span>
@@ -12,10 +13,6 @@
 // constexpr span<T, Extent>::span(Range&& r);
 //
 // Check that we ensure `size(r) == Extent`.
-
-// REQUIRES: has-unix-headers
-// UNSUPPORTED: libcpp-hardening-mode=none
-// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 #include <span>
 #include <vector>

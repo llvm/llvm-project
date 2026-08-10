@@ -1473,8 +1473,10 @@ def int_amdgcn_make_buffer_rsrc : PureIntrinsic <
 
 defset list<AMDGPURsrcIntrinsic> AMDGPUBufferIntrinsics = {
 
-// Generate a buffer_load instruction that may be optimized to s_buffer_load if
-// the offset argument is uniform.
+// Legacy form of the ptr.s.buffer.load intrinsic (will be deprecated) that uses a
+// <4 x i32> vector to hold the intrinsic instead of a pointer. While it is marked
+// as not accessing memory (to enable something equivalent to invariant load
+// optimizations), it does do so.
 def int_amdgcn_s_buffer_load : DefaultAttrsIntrinsic <
   [llvm_any_ty],
   [llvm_v4i32_ty,    // rsrc(SGPR)
@@ -1487,6 +1489,32 @@ def int_amdgcn_s_buffer_load : DefaultAttrsIntrinsic <
                      //                bit 6 = swz
                      // Note: volatile bit is **not** permitted here.
   [IntrNoMem, ImmArg<ArgIndex<2>>]>,
+  AMDGPURsrcIntrinsic<0>;
+
+// Generate an s_buffer_load instruction, falling back to buffer_load if the offset
+// is not uniform. Note that some architectures require the offset to be aligned to
+// the width of the type being loaded (or, in some cases the shorter of that
+// alignment and 4 bytes). No attempt is made to ensure this alignment requirement
+// has been satisfied during lowering.
+//
+// Also note that this data is loaded via a distinct cache than typical load
+// instructions or other buffer_load operations. Therefore, the data pointed to by
+// this load *must* be invariant to avoid coherence risks. Frontends emitting
+// this intrinsic *should* mark it `!invariant.load`, and the backend may also
+// add such markings.
+def int_amdgcn_ptr_s_buffer_load : DefaultAttrsIntrinsic <
+  [llvm_any_ty],
+  [AMDGPUBufferRsrcTy, // rsrc(SGPR)
+   llvm_i32_ty,        // byte offset
+   llvm_i32_ty],       // auxiliary/cachepolicy(imm):
+                       //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
+                       //                bit 3 = swz, bit 4 = scc (gfx90a)
+                       //        gfx942: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                       //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
+                       //                bit 6 = swz
+                       // Note: volatile bit is **not** permitted here.
+  [IntrArgMemOnly, IntrReadMem, ReadOnly<ArgIndex<0>>,
+   NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<2>>], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<0>;
 
 // Buffer intrinsics with separate raw and struct variants.  The raw
@@ -2043,8 +2071,11 @@ class AMDGPURawBufferLoadLDS : Intrinsic <
                               //           all: volatile op (bit 31, stripped at lowering)
   [IntrWillReturn, NoCapture<ArgIndex<1>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<5>>,
    ImmArg<ArgIndex<6>>, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>, AMDGPURsrcIntrinsic<0>;
-def int_amdgcn_raw_buffer_load_lds : AMDGPURawBufferLoadLDS;
-def int_amdgcn_raw_buffer_load_async_lds : AMDGPURawBufferLoadLDS;
+
+let TargetFeatures = "vmem-to-lds-load-insts" in {
+  def int_amdgcn_raw_buffer_load_lds : AMDGPURawBufferLoadLDS;
+  def int_amdgcn_raw_buffer_load_async_lds : AMDGPURawBufferLoadLDS;
+} // End TargetFeatures = "vmem-to-lds-load-insts"
 
 class AMDGPURawPtrBufferLoadLDS :
   Intrinsic <
@@ -2067,10 +2098,13 @@ class AMDGPURawPtrBufferLoadLDS :
    WriteOnly<ArgIndex<1>>, NoCapture<ArgIndex<1>>,
    ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<5>>,
    ImmArg<ArgIndex<6>>, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>, AMDGPURsrcIntrinsic<0>;
-def int_amdgcn_raw_ptr_buffer_load_lds : AMDGPURawPtrBufferLoadLDS,
-      ClangBuiltin<"__builtin_amdgcn_raw_ptr_buffer_load_lds">;
-def int_amdgcn_raw_ptr_buffer_load_async_lds : AMDGPURawPtrBufferLoadLDS,
-      ClangBuiltin<"__builtin_amdgcn_raw_ptr_buffer_load_async_lds">;
+
+let TargetFeatures = "vmem-to-lds-load-insts" in {
+  def int_amdgcn_raw_ptr_buffer_load_lds : AMDGPURawPtrBufferLoadLDS,
+        ClangBuiltin<"__builtin_amdgcn_raw_ptr_buffer_load_lds">;
+  def int_amdgcn_raw_ptr_buffer_load_async_lds : AMDGPURawPtrBufferLoadLDS,
+        ClangBuiltin<"__builtin_amdgcn_raw_ptr_buffer_load_async_lds">;
+} // End TargetFeatures = "vmem-to-lds-load-insts"
 
 
 class AMDGPUStructBufferLoadLDS : Intrinsic <
@@ -2091,8 +2125,11 @@ class AMDGPUStructBufferLoadLDS : Intrinsic <
                               //           all: volatile op (bit 31, stripped at lowering)
   [IntrWillReturn, NoCapture<ArgIndex<1>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<6>>,
    ImmArg<ArgIndex<7>>, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>, AMDGPURsrcIntrinsic<0>;
-def int_amdgcn_struct_buffer_load_lds : AMDGPUStructBufferLoadLDS;
-def int_amdgcn_struct_buffer_load_async_lds : AMDGPUStructBufferLoadLDS;
+
+let TargetFeatures = "vmem-to-lds-load-insts" in {
+  def int_amdgcn_struct_buffer_load_lds : AMDGPUStructBufferLoadLDS;
+  def int_amdgcn_struct_buffer_load_async_lds : AMDGPUStructBufferLoadLDS;
+} // End TargetFeatures = "vmem-to-lds-load-insts"
 
 class AMDGPUStructPtrBufferLoadLDS :
   Intrinsic <
@@ -2116,10 +2153,13 @@ class AMDGPUStructPtrBufferLoadLDS :
    WriteOnly<ArgIndex<1>>, NoCapture<ArgIndex<1>>,
    ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<6>>,
    ImmArg<ArgIndex<7>>, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>, AMDGPURsrcIntrinsic<0>;
-def int_amdgcn_struct_ptr_buffer_load_lds : AMDGPUStructPtrBufferLoadLDS,
-  ClangBuiltin<"__builtin_amdgcn_struct_ptr_buffer_load_lds">;
-def int_amdgcn_struct_ptr_buffer_load_async_lds : AMDGPUStructPtrBufferLoadLDS,
-  ClangBuiltin<"__builtin_amdgcn_struct_ptr_buffer_load_async_lds">;
+
+let TargetFeatures = "vmem-to-lds-load-insts" in {
+  def int_amdgcn_struct_ptr_buffer_load_lds : AMDGPUStructPtrBufferLoadLDS,
+    ClangBuiltin<"__builtin_amdgcn_struct_ptr_buffer_load_lds">;
+  def int_amdgcn_struct_ptr_buffer_load_async_lds : AMDGPUStructPtrBufferLoadLDS,
+    ClangBuiltin<"__builtin_amdgcn_struct_ptr_buffer_load_async_lds">;
+} // End TargetFeatures = "vmem-to-lds-load-insts"
 
 def int_amdgcn_s_buffer_prefetch_data : DefaultAttrsIntrinsic <
   [],
@@ -2871,6 +2911,7 @@ def int_amdgcn_global_load_lds : AMDGPUGlobalLoadLDS, ClangBuiltin<"__builtin_am
 def int_amdgcn_global_load_async_lds : AMDGPUGlobalLoadLDS, ClangBuiltin<"__builtin_amdgcn_global_load_async_lds">;
 
 // This is IntrHasSideEffects because it reads from a volatile hardware register.
+let TargetFeatures = "pops-exiting-wave-id" in
 def int_amdgcn_pops_exiting_wave_id :
   DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrHasSideEffects]>;
 

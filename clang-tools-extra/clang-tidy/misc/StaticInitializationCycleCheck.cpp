@@ -310,7 +310,7 @@ reportCycles(ArrayRef<const VarUseNode *> SCC,
              clang::tidy::misc::StaticInitializationCycleCheck &Chk) {
   // Check if the SCC contains any variable, otherwise it is a function
   // recursion.
-  auto NodeIsVar = [](const VarUseNode *N) { return N->isVar(); };
+  const auto NodeIsVar = [](const VarUseNode *N) { return N->isVar(); };
   const auto *VarNode = llvm::find_if(SCC, NodeIsVar);
   if (VarNode == SCC.end())
     return;
@@ -362,7 +362,7 @@ reportCycles(ArrayRef<const VarUseNode *> SCC,
 
     CycleOs << *N->getDecl() << " -> ";
   }
-  CycleOs << *(FoundPath.front()->getDecl());
+  CycleOs << *FoundPath.front()->getDecl();
 
   Chk.diag((*VarNode)->getDecl()->getLocation(),
            "possible cyclical initialization: %0", DiagnosticIDs::Note)

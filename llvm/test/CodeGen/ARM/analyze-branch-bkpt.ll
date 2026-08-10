@@ -1,4 +1,4 @@
-; RUN: llc -o - %s -mtriple thumbv4-unknown-linux-android | FileCheck --check-prefix=V4 %s
+; RUN: llc -o - %s -mtriple thumbv4t-unknown-linux-android | FileCheck --check-prefix=V4 %s
 ; RUN: llc -o - %s -mtriple thumbv5-unknown-linux-android | FileCheck --check-prefix=V5 %s
 
 ; V4: udf #254

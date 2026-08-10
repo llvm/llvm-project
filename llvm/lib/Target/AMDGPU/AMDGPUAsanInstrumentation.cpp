@@ -323,6 +323,7 @@ void getInterestingMemoryOperands(
     case Intrinsic::amdgcn_struct_tbuffer_load:
     case Intrinsic::amdgcn_struct_ptr_tbuffer_load:
     case Intrinsic::amdgcn_s_buffer_load:
+    case Intrinsic::amdgcn_ptr_s_buffer_load:
     case Intrinsic::amdgcn_global_load_tr_b64:
     case Intrinsic::amdgcn_global_load_tr_b128: {
       unsigned PtrOpNo = 0;

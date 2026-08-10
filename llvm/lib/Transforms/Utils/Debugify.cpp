@@ -29,6 +29,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/JSON.h"
+#include <cmath>
 #include <optional>
 #if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
 // We need the Signals header to operate on stacktraces if we're using DebugLoc

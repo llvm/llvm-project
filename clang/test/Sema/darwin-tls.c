@@ -16,6 +16,14 @@
 // RUN: %clang_cc1 -fsyntax-only -Wno-error=implicit-int -triple arm64-apple-xros %s 2>&1 | FileCheck %s --check-prefix TLS
 // RUN: %clang_cc1 -fsyntax-only -Wno-error=implicit-int -triple arm64-apple-xros-simulator %s 2>&1 | FileCheck %s --check-prefix TLS
 
+// RUN: not %clang_cc1 -fsyntax-only -triple thumbv6m-apple-firmware %s 2>&1 | FileCheck %s --check-prefix NO-TLS
+// RUN: %clang_cc1 -fsyntax-only -Wno-error=implicit-int -triple thumbv7-apple-firmware %s 2>&1 | FileCheck %s --check-prefix TLS
+// RUN: %clang_cc1 -fsyntax-only -Wno-error=implicit-int -triple armv7k-apple-firmware %s 2>&1 | FileCheck %s --check-prefix TLS
+// RUN: %clang_cc1 -fsyntax-only -Wno-error=implicit-int -triple thumbv7m-apple-firmware %s 2>&1 | FileCheck %s --check-prefix TLS
+// RUN: %clang_cc1 -fsyntax-only -Wno-error=implicit-int -triple thumbv7em-apple-firmware %s 2>&1 | FileCheck %s --check-prefix TLS
+// RUN: %clang_cc1 -fsyntax-only -Wno-error=implicit-int -triple arm64-apple-firmware %s 2>&1 | FileCheck %s --check-prefix TLS
+// RUN: %clang_cc1 -fsyntax-only -Wno-error=implicit-int -triple arm64e-apple-firmware %s 2>&1 | FileCheck %s --check-prefix TLS
+
 
 __thread int a;
 

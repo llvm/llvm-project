@@ -18,3 +18,9 @@
 #endif
 FUNCTION_PASS("riscv-codegenprepare", RISCVCodeGenPreparePass(this))
 #undef FUNCTION_PASS
+
+#ifndef MACHINE_FUNCTION_PASS
+#define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
+#endif
+MACHINE_FUNCTION_PASS("riscv-isel", RISCVISelDAGToDAGPass(*this, getOptLevel()))
+#undef MACHINE_FUNCTION_PASS

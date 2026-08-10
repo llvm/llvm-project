@@ -1,8 +1,8 @@
 # The LLVM Lexicon
 
-```{note}
+:::{note}
 This document is a work in progress!
-```
+:::
 
 ## Definitions
 

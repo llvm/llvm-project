@@ -108,7 +108,7 @@ ArgClassification classifyOne(Type type, const DataLayout &dl) {
 
 } // namespace
 
-FunctionClassification mlir::abi::test::classify(ArrayRef<Type> argTypes,
+FunctionClassification mlir::abi::test::classify(TypeRange argTypes,
                                                  Type returnType,
                                                  const DataLayout &dl) {
   FunctionClassification fc;

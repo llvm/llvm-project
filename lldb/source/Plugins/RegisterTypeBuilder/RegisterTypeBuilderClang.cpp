@@ -11,7 +11,7 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "RegisterTypeBuilderClang.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Utility/RegisterFlags.h"
+#include "lldb/Utility/RegisterTypeFlags.h"
 #include "lldb/lldb-enumerations.h"
 
 using namespace lldb_private;
@@ -36,13 +36,19 @@ RegisterTypeBuilderClang::RegisterTypeBuilderClang(Target &target)
     : m_target(target) {}
 
 CompilerType RegisterTypeBuilderClang::GetRegisterType(
-    const std::string &name, const lldb_private::RegisterFlags &flags,
+    const std::string &name, const lldb_private::RegisterType &type_info,
     uint32_t byte_size) {
   lldb::TypeSystemClangSP type_system =
       ScratchTypeSystemClang::GetForTarget(m_target);
   assert(type_system);
 
   std::string register_type_name = "__lldb_register_fields_" + name;
+  // For now we can only build sets of flags.
+  const RegisterTypeFlags *flags =
+      llvm::dyn_cast<RegisterTypeFlags>(&type_info);
+  if (!flags)
+    return {};
+
   // See if we have made this type before and can reuse it.
   CompilerType fields_type =
       type_system->GetTypeForIdentifier<clang::CXXRecordDecl>(
@@ -61,13 +67,14 @@ CompilerType RegisterTypeBuilderClang::GetRegisterType(
         llvm::to_underlying(clang::TagTypeKind::Struct), lldb::eLanguageTypeC);
     type_system->StartTagDeclarationDefinition(fields_type);
 
-    // We assume that RegisterFlags has padded and sorted the fields
+    // We assume that RegisterTypeFlags has padded and sorted the fields
     // already.
-    for (const RegisterFlags::Field &field : flags.GetFields()) {
+    for (const RegisterTypeFlags::Field &field : flags->GetFields()) {
       CompilerType field_type = field_uint_type;
 
-      if (const FieldEnum *enum_type = field.GetEnum()) {
-        const FieldEnum::Enumerators &enumerators = enum_type->GetEnumerators();
+      if (const RegisterTypeEnum *enum_type = field.GetEnum()) {
+        const RegisterTypeEnum::Enumerators &enumerators =
+            enum_type->GetEnumerators();
         if (!enumerators.empty()) {
           // Enums can be used by many registers and the size of each register
           // may be different. The register size is used as the underlying size
@@ -112,9 +119,9 @@ CompilerType RegisterTypeBuilderClang::GetRegisterType(
     // So that the size of the type matches the size of the register.
     type_system->SetIsPacked(fields_type);
 
-    // This should be true if RegisterFlags padded correctly.
+    // This should be true if RegisterTypeFlags padded correctly.
     assert(llvm::expectedToOptional(fields_type.GetByteSize(nullptr))
-               .value_or(0) == flags.GetSize());
+               .value_or(0) == flags->GetSize());
   }
 
   return fields_type;

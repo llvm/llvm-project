@@ -360,15 +360,16 @@ void Session::completeShutdown() {
   CV.notify_all();
 }
 
-void Session::sendWrapperResult(uint64_t CallId,
-                                WrapperFunctionBuffer ResultBytes) {
+void Session::sendWrapperResult(WrapperFunctionBuffer ResultBytes,
+                                uint64_t CallId) {
   if (auto TmpCA = std::atomic_load(&CA))
-    TmpCA->sendWrapperResult(CallId, std::move(ResultBytes));
+    TmpCA->sendWrapperResult(std::move(ResultBytes), CallId);
 }
 
-void Session::wrapperReturn(orc_rt_SessionRef S, uint64_t CallId,
-                            orc_rt_WrapperFunctionBuffer ResultBytes) {
-  unwrap(S)->sendWrapperResult(CallId, WrapperFunctionBuffer(ResultBytes));
+void Session::wrapperReturn(orc_rt_SessionRef S,
+                            orc_rt_WrapperFunctionBuffer ResultBytes,
+                            uint64_t CallId) {
+  unwrap(S)->sendWrapperResult(WrapperFunctionBuffer(ResultBytes), CallId);
 }
 
 // --- C API Implementation ---

@@ -338,3 +338,17 @@ namespace UnrelatedInitializingPtr {
   constexpr auto p = dynamic_cast<C &>(a); // both-error {{must be initialized by a constant expression}} \
                                            // both-note {{reference dynamic_cast failed: dynamic type 'UnrelatedInitializingPtr::D' of operand does not have a base class of type 'C'}}
 }
+
+namespace VirtualBase {
+  struct A { virtual constexpr ~A() = default; };
+  struct B : public virtual A {};
+  struct C : private virtual A {};
+  struct D : B, C {};
+
+  constexpr bool test() {
+    D d;
+    A *a = static_cast<B *>(&d);
+    return dynamic_cast<C *>(a) == static_cast<C *>(&d);
+  }
+  static_assert(test());
+}

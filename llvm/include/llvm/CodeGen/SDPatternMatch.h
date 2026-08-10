@@ -828,6 +828,18 @@ inline BinaryOpc_match<LHS, RHS, true> m_Add(const LHS &L, const RHS &R) {
 }
 
 template <typename LHS, typename RHS>
+inline auto m_NUWAdd(const LHS &L, const RHS &R) {
+  return BinaryOpc_match<LHS, RHS, true>(ISD::ADD, L, R,
+                                         SDNodeFlags::NoUnsignedWrap);
+}
+
+template <typename LHS, typename RHS>
+inline auto m_NSWAdd(const LHS &L, const RHS &R) {
+  return BinaryOpc_match<LHS, RHS, true>(ISD::ADD, L, R,
+                                         SDNodeFlags::NoSignedWrap);
+}
+
+template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS> m_Sub(const LHS &L, const RHS &R) {
   return BinaryOpc_match<LHS, RHS>(ISD::SUB, L, R);
 }
@@ -856,6 +868,16 @@ inline BinaryOpc_match<LHS, RHS, true> m_DisjointOr(const LHS &L,
 template <typename LHS, typename RHS>
 inline auto m_AddLike(const LHS &L, const RHS &R) {
   return m_AnyOf(m_Add(L, R), m_DisjointOr(L, R));
+}
+
+template <typename LHS, typename RHS>
+inline auto m_NSWAddLike(const LHS &L, const RHS &R) {
+  return m_AnyOf(m_NSWAdd(L, R), m_DisjointOr(L, R));
+}
+
+template <typename LHS, typename RHS>
+inline auto m_NUWAddLike(const LHS &L, const RHS &R) {
+  return m_AnyOf(m_NUWAdd(L, R), m_DisjointOr(L, R));
 }
 
 template <typename LHS, typename RHS>

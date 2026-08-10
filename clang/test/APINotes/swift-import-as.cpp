@@ -8,6 +8,9 @@
 // RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter CopyableType | FileCheck -check-prefix=CHECK-COPYABLE %s
 // RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter NonEscapableType | FileCheck -check-prefix=CHECK-NON-ESCAPABLE %s
 // RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter EscapableType | FileCheck -check-prefix=CHECK-ESCAPABLE %s
+// RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter EscapableAnnotatedInHeader | FileCheck -check-prefix=CHECK-ESCAPABLE-IN-HEADER %s
+// RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter NoncopyableAnnotatedInHeader | FileCheck -check-prefix=CHECK-NONCOPYABLE-IN-HEADER %s
+// RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter EscapabilityConflict | FileCheck -check-prefix=CHECK-ESCAPABILITY-CONFLICT %s
 // RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter functionReturningFrt__ | FileCheck -check-prefix=CHECK-FUNCTION-RETURNING-FRT %s
 // RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter functionReturningFrt_returns_unretained | FileCheck -check-prefix=CHECK-FUNCTION-RETURNING-FRT-UNRETAINED %s
 // RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -x c++ -ast-dump -ast-dump-filter functionReturningFrt_returns_retained | FileCheck -check-prefix=CHECK-FUNCTION-RETURNING-FRT-RETAINED %s
@@ -68,6 +71,23 @@
 // CHECK-ESCAPABLE: Dumping EscapableType:
 // CHECK-ESCAPABLE-NEXT: CXXRecordDecl {{.+}} imported in SwiftImportAs {{.+}} struct EscapableType
 // CHECK-ESCAPABLE: SwiftAttrAttr {{.+}} "Escapable"
+
+// An annotation from API notes does not repeat one that the header already has.
+// CHECK-ESCAPABLE-IN-HEADER: Dumping EscapableAnnotatedInHeader:
+// CHECK-ESCAPABLE-IN-HEADER-NEXT: CXXRecordDecl {{.+}} imported in SwiftImportAs {{.+}} struct EscapableAnnotatedInHeader
+// CHECK-ESCAPABLE-IN-HEADER: SwiftAttrAttr {{.+}} "Escapable"
+// CHECK-ESCAPABLE-IN-HEADER-NOT: SwiftAttrAttr {{.+}} "Escapable"
+
+// CHECK-NONCOPYABLE-IN-HEADER: Dumping NoncopyableAnnotatedInHeader:
+// CHECK-NONCOPYABLE-IN-HEADER-NEXT: CXXRecordDecl {{.+}} imported in SwiftImportAs {{.+}} struct NoncopyableAnnotatedInHeader
+// CHECK-NONCOPYABLE-IN-HEADER: SwiftAttrAttr {{.+}} "~Copyable"
+// CHECK-NONCOPYABLE-IN-HEADER-NOT: SwiftAttrAttr {{.+}} "~Copyable"
+
+// An annotation that disagrees with the header is still added.
+// CHECK-ESCAPABILITY-CONFLICT: Dumping EscapabilityConflict:
+// CHECK-ESCAPABILITY-CONFLICT-NEXT: CXXRecordDecl {{.+}} imported in SwiftImportAs {{.+}} struct EscapabilityConflict
+// CHECK-ESCAPABILITY-CONFLICT: SwiftAttrAttr {{.+}} "Escapable"
+// CHECK-ESCAPABILITY-CONFLICT: SwiftAttrAttr {{.+}} "~Escapable"
 
 // CHECK-FUNCTION-RETURNING-FRT: Dumping functionReturningFrt__:
 // CHECK-FUNCTION-RETURNING-FRT: FunctionDecl {{.+}} imported in SwiftImportAs functionReturningFrt__ 'ImmortalRefType *()'

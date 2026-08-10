@@ -23,6 +23,8 @@
 #include <__iterator/iterator_with_data.h>
 #include <__iterator/segmented_iterator.h>
 #include <__memory/addressof.h>
+#include <__optional/comparison.h>
+#include <__optional/optional.h>
 #include <__ranges/access.h>
 #include <__ranges/all.h>
 #include <__ranges/concepts.h>
@@ -31,11 +33,14 @@
 #include <__ranges/range_adaptor.h>
 #include <__ranges/view_interface.h>
 #include <__type_traits/common_type.h>
+#include <__type_traits/conditional.h>
+#include <__type_traits/is_reference.h>
 #include <__type_traits/maybe_const.h>
+#include <__type_traits/remove_cvref.h>
 #include <__utility/as_lvalue.h>
 #include <__utility/empty.h>
 #include <__utility/forward.h>
-#include <optional>
+#include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -160,10 +165,12 @@ private:
   using _Base _LIBCPP_NODEBUG   = __maybe_const<_Const, _View>;
   sentinel_t<_Base> __end_      = sentinel_t<_Base>();
 
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __sentinel(_Parent& __parent) : __end_(ranges::end(__parent.__base_)) {}
+
+  friend class join_view<_View>;
+
 public:
   _LIBCPP_HIDE_FROM_ABI __sentinel() = default;
-
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __sentinel(_Parent& __parent) : __end_(ranges::end(__parent.__base_)) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr __sentinel(__sentinel<!_Const> __s)
     requires _Const && convertible_to<sentinel_t<_View>, sentinel_t<_Base>>

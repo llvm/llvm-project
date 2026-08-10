@@ -41,7 +41,7 @@ UnwindWasm::DoCreateRegisterContextForFrame(lldb_private::StackFrame *frame) {
 
 uint32_t UnwindWasm::DoGetFrameCount() {
   if (m_unwind_complete)
-    return m_frames.size();
+    return GetVisibleFrameCount();
 
   m_unwind_complete = true;
   m_frames.clear();
@@ -57,7 +57,16 @@ uint32_t UnwindWasm::DoGetFrameCount() {
   }
 
   m_frames = *call_stack_pcs;
-  return m_frames.size();
+  return GetVisibleFrameCount();
+}
+
+uint32_t UnwindWasm::GetVisibleFrameCount() {
+  // A backtrace goes no deeper than the target asks for, which is what bounds
+  // the walk of a stack that recurses without end. The depth bounds what a
+  // caller is told rather than what is kept, because it can be raised after a
+  // stack has been fetched.
+  return std::min<uint64_t>(m_frames.size(),
+                            GetThread().GetMaxBacktraceDepth());
 }
 
 bool UnwindWasm::DoGetFrameInfoAtIndex(uint32_t frame_idx, lldb::addr_t &cfa,
@@ -66,7 +75,7 @@ bool UnwindWasm::DoGetFrameInfoAtIndex(uint32_t frame_idx, lldb::addr_t &cfa,
   if (m_frames.size() == 0)
     DoGetFrameCount();
 
-  if (frame_idx >= m_frames.size())
+  if (frame_idx >= GetVisibleFrameCount())
     return false;
 
   behaves_like_zeroth_frame = (frame_idx == 0);

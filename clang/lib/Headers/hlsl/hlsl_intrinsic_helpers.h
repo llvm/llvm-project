@@ -52,6 +52,14 @@ enable_if_t<is_same<double, T>::value, T> mul_vec_impl(vector<T, N> x,
 }
 
 template <typename T>
+constexpr enable_if_t<is_same<float, T>::value || is_same<half, T>::value,
+                      vector<T, 3>>
+cross_impl(vector<T, 3> x, vector<T, 3> y) {
+  return vector<T, 3>(x[1] * y[2] - y[1] * x[2], x[2] * y[0] - y[2] * x[0],
+                      x[0] * y[1] - y[0] * x[1]);
+}
+
+template <typename T>
 constexpr enable_if_t<is_same<float, T>::value || is_same<half, T>::value, T>
 reflect_impl(T I, T N) {
   return I - 2 * N * I * N;

@@ -178,9 +178,13 @@ static Attribute convertMetadataToAttrImpl(
     auto *fn = dyn_cast<llvm::Function>(vam->getValue());
     if (!fn)
       return {};
-    return MDFuncAttr::get(ctx, FlatSymbolRefAttr::get(ctx, fn->getName()));
+    return MDGlobalValueAttr::get(ctx,
+                                  FlatSymbolRefAttr::get(ctx, fn->getName()));
   }
   if (auto *node = dyn_cast<llvm::MDNode>(md)) {
+    // Metadata attributes cannot preserve distinctness, so bail out.
+    if (node->isDistinct())
+      return {};
     if (Attribute cached = attrMap.lookup(node))
       return cached;
     // If `node` is already on the current search path, this is a back-edge into
@@ -206,8 +210,9 @@ static Attribute convertMetadataToAttrImpl(
 
 /// Converts the metadata node `md` to the matching LLVM dialect metadata
 /// attribute. Returns a null attribute for shapes that the dialect's
-/// metadata-attribute hierarchy does not currently model, including cyclic
-/// metadata graphs that the immutable metadata attributes cannot express.
+/// metadata-attribute hierarchy does not currently model, including distinct
+/// nodes and cyclic metadata graphs that the immutable metadata attributes
+/// cannot express.
 static Attribute convertMetadataToAttr(MLIRContext *ctx,
                                        const llvm::Metadata *md) {
   SmallPtrSet<const llvm::Metadata *, 8> path;
@@ -1472,12 +1477,12 @@ LogicalResult ModuleImport::convertAlias(llvm::GlobalAlias *alias) {
   OpBuilder::InsertionGuard guard = setGlobalInsertionPoint();
 
   Type type = convertType(alias->getValueType());
-  AliasOp aliasOp = AliasOp::create(builder, mlirModule.getLoc(), type,
-                                    convertLinkageFromLLVM(alias->getLinkage()),
-                                    alias->getName(),
-                                    /*dsoLocal=*/alias->isDSOLocal(),
-                                    /*thread_local=*/alias->isThreadLocal(),
-                                    /*attrs=*/ArrayRef<NamedAttribute>());
+  AliasOp aliasOp = AliasOp::create(
+      builder, mlirModule.getLoc(), type,
+      convertLinkageFromLLVM(alias->getLinkage()), alias->getName(),
+      /*dsoLocal=*/alias->isDSOLocal(),
+      convertThreadLocalModeFromLLVM(alias->getThreadLocalMode()),
+      /*attrs=*/ArrayRef<NamedAttribute>());
   globalInsertionOp = aliasOp;
 
   clearRegionState();
@@ -1617,7 +1622,8 @@ LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
       convertLinkageFromLLVM(globalVar->getLinkage()), StringRef(globalName),
       valueAttr, alignment, /*addrSpace=*/globalVar->getAddressSpace(),
       /*dsoLocal=*/globalVar->isDSOLocal(),
-      /*thread_local=*/globalVar->isThreadLocal(), /*comdat=*/SymbolRefAttr(),
+      convertThreadLocalModeFromLLVM(globalVar->getThreadLocalMode()),
+      /*comdat=*/SymbolRefAttr(),
       /*attrs=*/ArrayRef<NamedAttribute>(), /*dbgExprs=*/globalExpressionAttrs);
   globalInsertionOp = globalOp;
 

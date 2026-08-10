@@ -6,11 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: has-unix-headers
+// REQUIRES: can-test-hardening-assertions-fast
 // REQUIRES: libcpp-has-abi-bounded-iterators-in-std-array
-// UNSUPPORTED: c++03
-// UNSUPPORTED: libcpp-hardening-mode=none
-// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 // <array>
 

@@ -2695,7 +2695,7 @@ static void unswitchNontrivialInvariants(
 #ifdef EXPENSIVE_CHECKS
   // Verify the entire loop structure to catch any incorrect updates before we
   // progress in the pass pipeline.
-  LI.verify(DT);
+  LI.verify();
 #endif
 
   // Now that we've unswitched something, make callbacks to report the changes.
@@ -2867,7 +2867,7 @@ static CondBrInst *turnGuardIntoBranch(IntrinsicInst *GI, Loop &L,
   }
 
   if (VerifyLoopInfo)
-    LI.verify(DT);
+    LI.verify();
   ++NumGuards;
   return CheckBI;
 }
@@ -3239,7 +3239,7 @@ injectPendingInvariantConditions(NonTrivialUnswitchCandidate Candidate, Loop &L,
 
 #ifndef NDEBUG
   DT.verify();
-  LI.verify(DT);
+  LI.verify();
   if (MSSAU && VerifyMemorySSA)
     MSSAU->getMemorySSA()->verifyMemorySSA();
 #endif

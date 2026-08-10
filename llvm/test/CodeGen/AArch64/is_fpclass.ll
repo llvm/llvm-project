@@ -477,8 +477,7 @@ define <4 x i1> @isfinite_v4f(<4 x float> %x) {
 ; CHECK-SD-NEXT:    fneg v1.4s, v1.4s
 ; CHECK-SD-NEXT:    fcmgt v2.4s, v0.4s, v1.4s
 ; CHECK-SD-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
-; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v2.16b
-; CHECK-SD-NEXT:    xtn v0.4h, v0.4s
+; CHECK-SD-NEXT:    addhn v0.4h, v0.4s, v2.4s
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: isfinite_v4f:
@@ -571,8 +570,7 @@ define <2 x i1> @isfinite_v2d(<2 x double> %x) {
 ; CHECK-SD-NEXT:    dup v1.2d, x8
 ; CHECK-SD-NEXT:    fcmgt v2.2d, v0.2d, v1.2d
 ; CHECK-SD-NEXT:    fcmgt v0.2d, v1.2d, v0.2d
-; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v2.16b
-; CHECK-SD-NEXT:    xtn v0.2s, v0.2d
+; CHECK-SD-NEXT:    addhn v0.2s, v0.2d, v2.2d
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: isfinite_v2d:

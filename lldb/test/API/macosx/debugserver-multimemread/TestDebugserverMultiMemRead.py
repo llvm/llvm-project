@@ -8,7 +8,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipUnlessDarwin
+@requireDarwin
 @skipIfOutOfTreeDebugserver
 class TestCase(TestBase):
     def check_invalid_packet(self, packet_str):

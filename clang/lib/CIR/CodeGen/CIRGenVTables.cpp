@@ -744,13 +744,13 @@ void CIRGenFunction::emitCallAndReturnForThunk(cir::FuncOp callee,
   CIRGenCallee cirCallee = CIRGenCallee::forDirect(callee, curGD);
   mlir::Location loc = builder.getUnknownLoc();
   RValue rv = emitCall(*curFnInfo, cirCallee, slot, callArgs,
-                       /*callOrTryCall=*/nullptr, loc);
+                       /*callOrTryCall=*/nullptr, /*isMustTail=*/false, loc);
 
   // Consider return adjustment if we have ThunkInfo.
   if (thunk && !thunk->Return.isEmpty())
     rv = performReturnAdjustment(*this, resultType, rv, *thunk);
   else
-    assert(!cir::MissingFeatures::opCallMustTail());
+    assert(!cir::MissingFeatures::opCallThunkTailHint());
 
   // Emit return.  For aggregate returns the call has already written the
   // result through the slot bound to returnValue above; emit the

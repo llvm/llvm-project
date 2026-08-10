@@ -10,6 +10,7 @@
 #include "llvm/ExecutionEngine/Orc/EPCGenericDylibManager.h"
 #include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/EPCGenericMemoryAccess.h"
+#include "llvm/ExecutionEngine/Orc/RTBridge/SPS/ProxySpecs.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -30,23 +31,6 @@ Expected<int32_t> SimpleRemoteEPC::runAsMain(ExecutorAddr MainFnAddr,
   int64_t Result = 0;
   if (auto Err = callSPSWrapper<rt::SPSRunAsMainSignature>(
           RunAsMainAddr, Result, MainFnAddr, Args))
-    return std::move(Err);
-  return Result;
-}
-
-Expected<int32_t> SimpleRemoteEPC::runAsVoidFunction(ExecutorAddr VoidFnAddr) {
-  int32_t Result = 0;
-  if (auto Err = callSPSWrapper<rt::SPSRunAsVoidFunctionSignature>(
-          RunAsVoidFunctionAddr, Result, VoidFnAddr))
-    return std::move(Err);
-  return Result;
-}
-
-Expected<int32_t> SimpleRemoteEPC::runAsIntFunction(ExecutorAddr IntFnAddr,
-                                                    int Arg) {
-  int32_t Result = 0;
-  if (auto Err = callSPSWrapper<rt::SPSRunAsIntFunctionSignature>(
-          RunAsIntFunctionAddr, Result, IntFnAddr, Arg))
     return std::move(Err);
   return Result;
 }
@@ -102,23 +86,7 @@ SimpleRemoteEPC::createDefaultDylibMgr() {
 
 Expected<std::unique_ptr<MemoryAccess>>
 SimpleRemoteEPC::createDefaultMemoryAccess() {
-  EPCGenericMemoryAccess::FuncAddrs FAs;
-  if (auto Err = getBootstrapSymbols(
-          {{FAs.WriteUInt8s, rt::MemoryWriteUInt8sWrapperName},
-           {FAs.WriteUInt16s, rt::MemoryWriteUInt16sWrapperName},
-           {FAs.WriteUInt32s, rt::MemoryWriteUInt32sWrapperName},
-           {FAs.WriteUInt64s, rt::MemoryWriteUInt64sWrapperName},
-           {FAs.WriteBuffers, rt::MemoryWriteBuffersWrapperName},
-           {FAs.WritePointers, rt::MemoryWritePointersWrapperName},
-           {FAs.ReadUInt8s, rt::MemoryReadUInt8sWrapperName},
-           {FAs.ReadUInt16s, rt::MemoryReadUInt16sWrapperName},
-           {FAs.ReadUInt32s, rt::MemoryReadUInt32sWrapperName},
-           {FAs.ReadUInt64s, rt::MemoryReadUInt64sWrapperName},
-           {FAs.ReadBuffers, rt::MemoryReadBuffersWrapperName},
-           {FAs.ReadStrings, rt::MemoryReadStringsWrapperName}}))
-    return std::move(Err);
-
-  return std::make_unique<EPCGenericMemoryAccess>(*this, FAs);
+  return EPCGenericMemoryAccess::Create(getExecutionSession());
 }
 
 Error SimpleRemoteEPC::disconnect() {
@@ -339,12 +307,12 @@ Error SimpleRemoteEPC::setup() {
   BootstrapMap = std::move(EI->BootstrapMap);
   BootstrapSymbols = std::move(EI->BootstrapSymbols);
 
-  if (auto Err = getBootstrapSymbols(
-          {{JDI.JITDispatchContext, ExecutorSessionObjectName},
-           {JDI.JITDispatchFunction, DispatchFnName},
-           {RunAsMainAddr, rt::RunAsMainWrapperName},
-           {RunAsVoidFunctionAddr, rt::RunAsVoidFunctionWrapperName},
-           {RunAsIntFunctionAddr, rt::RunAsIntFunctionWrapperName}}))
+  BootstrapSymbols[rt::DispatchName] = BootstrapSymbols[DispatchFnName];
+  BootstrapSymbols[rt::DispatchCtxName] =
+      BootstrapSymbols[ExecutorSessionObjectName];
+
+  if (auto Err =
+          getBootstrapSymbols({{RunAsMainAddr, rt::sps::CallMainCIName}}))
     return Err;
 
   return Error::success();

@@ -31,7 +31,7 @@ contains
   ! CHECK:     %[[V_4:.*]] = fir.convert %[[V_3]] : (i64) -> index
   ! CHECK:     %[[V_5:.*]] = arith.cmpi sgt, %[[V_4]], %c0{{.*}} : index
   ! CHECK:     %[[V_6:.*]] = arith.select %[[V_5]], %[[V_4]], %c0{{.*}} : index
-  ! CHECK:     %[[V_7:.*]] = fir.alloca !fir.array<?xi32>, %[[V_6]] {bindc_name = "ff2", uniq_name = "_QMmmSss1Fff2Eff2"}
+  ! CHECK:     %[[V_7:.*]] = fir.alloca !fir.array<?xi32>, %[[V_6]] {bindc_name = "ff2", fir.must_be_stack = true, uniq_name = "_QMmmSss1Fff2Eff2"}
   ! CHECK:     %[[V_8:.*]] = fir.shape %[[V_6]] : (index) -> !fir.shape<1>
   ! CHECK:     %[[V_9:.*]]:2 = hlfir.declare %[[V_7]](%[[V_8]]) {uniq_name = "_QMmmSss1Fff2Eff2"}
   ! CHECK:     %[[V_10:.*]] = fir.call @_QMmmSss1Pfff(%[[V_0]]#0) {{.*}} : (!fir.ref<i32>) -> i32
@@ -56,7 +56,7 @@ contains
   ! CHECK:     %[[V_6:.*]] = fir.convert %[[V_5]] : (i64) -> index
   ! CHECK:     %[[V_7:.*]] = arith.cmpi sgt, %[[V_6]], %c0{{.*}} : index
   ! CHECK:     %[[V_8:.*]] = arith.select %[[V_7]], %[[V_6]], %c0{{.*}} : index
-  ! CHECK:     %[[V_9:.*]] = fir.alloca !fir.array<?xi32>, %[[V_8]] {bindc_name = "ff1", uniq_name = "_QMmmSss1Sss2Fff1Eff1"}
+  ! CHECK:     %[[V_9:.*]] = fir.alloca !fir.array<?xi32>, %[[V_8]] {bindc_name = "ff1", fir.must_be_stack = true, uniq_name = "_QMmmSss1Sss2Fff1Eff1"}
   ! CHECK:     %[[V_10:.*]] = fir.shape %[[V_8]] : (index) -> !fir.shape<1>
   ! CHECK:     %[[V_11:.*]]:2 = hlfir.declare %[[V_9]](%[[V_10]]) {uniq_name = "_QMmmSss1Sss2Fff1Eff1"}
   ! CHECK:     %[[V_12:.*]] = fir.load %[[V_1]]#0 : !fir.ref<i32>
@@ -102,7 +102,7 @@ contains
   ! CHECK:     %[[V_6:.*]] = fir.convert %[[V_5]] : (i64) -> index
   ! CHECK:     %[[V_7:.*]] = arith.cmpi sgt, %[[V_6]], %c0{{.*}} : index
   ! CHECK:     %[[V_8:.*]] = arith.select %[[V_7]], %[[V_6]], %c0{{.*}} : index
-  ! CHECK:     %[[V_9:.*]] = fir.alloca !fir.array<?xi32>, %[[V_8]] {bindc_name = "ff3", uniq_name = "_QMmmSsssFff3Eff3"}
+  ! CHECK:     %[[V_9:.*]] = fir.alloca !fir.array<?xi32>, %[[V_8]] {bindc_name = "ff3", fir.must_be_stack = true, uniq_name = "_QMmmSsssFff3Eff3"}
   ! CHECK:     %[[V_10:.*]] = fir.shape %[[V_8]] : (index) -> !fir.shape<1>
   ! CHECK:     %[[V_11:.*]]:2 = hlfir.declare %[[V_9]](%[[V_10]]) {uniq_name = "_QMmmSsssFff3Eff3"}
   ! CHECK-DAG: %[[V_12:.*]] = fir.load %[[V_2]]#0 : !fir.ref<i32>

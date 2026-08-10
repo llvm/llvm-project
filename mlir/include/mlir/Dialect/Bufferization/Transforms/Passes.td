@@ -194,8 +194,14 @@ def StaticMemoryPlannerAnalysisPass
     For each `memref.alloc` the pass checks a conservative eligibility
     envelope:
     - Static memref shape.
-    - Unique same-block `memref.dealloc`.
-    - Allocations in nested blocks are ignored for now.
+    - The allocation lives directly in the function's entry block
+      (allocations nested in a region are skipped for now).
+    - Every `memref.dealloc` that may free the buffer is anchored in the entry
+      block. Deallocs reached indirectly through `arith.select`, `scf.if`
+      results, `cf` branches, or view ops are handled via the shared
+      `BufferViewFlowAnalysis`; a dealloc nested inside an entry-block op
+      (e.g. an `scf.if` body) is accepted and bounds the lifetime
+      conservatively.
 
     Eligible allocations are packed into a single arena using a configurable
     planning algorithm (see the `algorithm` option). The arena is an i8 byte

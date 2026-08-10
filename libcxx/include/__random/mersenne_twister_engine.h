@@ -201,10 +201,12 @@ public:
     const result_type __mask = __r == _Dt ? result_type(~0) : (result_type(1) << __r) - result_type(1);
     __i_                     = 0;
     if ((__x_[0] & ~__mask) == 0) {
-      for (size_t __i = 1; __i < __n; ++__i)
+      size_t __i = 1;
+      for (; __i < __n; ++__i)
         if (__x_[__i] != 0)
-          return;
-      __x_[0] = result_type(1) << (__w - 1);
+          break;
+      if (__i == __n)
+        __x_[0] = result_type(1) << (__w - 1);
     }
 #ifdef _LIBCPP_ABI_VECTORIZED_MERSENNE_TWISTER_ENGINE
     __update_all_states();

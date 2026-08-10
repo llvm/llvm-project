@@ -475,7 +475,8 @@ public:
   }
 
   /// Check whether this conditional branch can be reversed
-  virtual bool isReversibleBranch(const MCInst &Inst) const {
+  virtual bool isReversibleBranch(const MCInst &Inst,
+                                  bool MustPreserveFlags = true) const {
     assert(!isUnsupportedInstruction(Inst) && isConditionalBranch(Inst) &&
            "Instruction is not known conditional branch");
 
@@ -2150,9 +2151,13 @@ public:
     llvm_unreachable("not implemented");
   }
 
-  /// Reverses the branch condition in Inst and update its taken target to TBB.
-  virtual void reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
-                                      MCContext *Ctx) const {
+  /// Return the instruction sequence for the reversed branch condition of
+  /// \p Inst and update its taken target to \p TBB. Assumes that the branch is
+  /// reversible. It may replace Inst with a longer instruction sequence on some
+  /// targets.
+  virtual InstructionListType
+  reverseBranchCondition(MCInst Inst, const MCSymbol *TBB, MCContext *Ctx,
+                         bool MustPreserveFlags = true) const {
     llvm_unreachable("not implemented");
   }
 

@@ -574,6 +574,39 @@ Interpreter::Visit(const UnaryOpNode &node) {
     }
     return operand;
   }
+  case UnaryOpKind::Not: {
+    if (operand->GetCompilerType().IsReferenceType()) {
+      operand = operand->Dereference(error);
+      if (error.Fail())
+        return error.ToError();
+    }
+    llvm::Expected<lldb::ValueObjectSP> conv_op =
+        UnaryConversion(operand, node.GetLocation());
+    if (!conv_op)
+      return conv_op;
+    operand = *conv_op;
+    CompilerType operand_type = operand->GetCompilerType();
+    if (!operand_type.IsInteger()) {
+      std::string errMsg =
+          llvm::formatv("invalid argument type '{0}' to unary expression",
+                        operand_type.GetTypeName());
+      return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
+                                                  node.GetLocation());
+    }
+    Scalar scalar;
+    bool resolved = operand->ResolveValue(scalar);
+    if (!resolved) {
+      std::string errMsg = llvm::formatv("invalid operand value: {0}",
+                                         operand->GetError().AsCString());
+      return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
+                                                  node.GetLocation());
+    }
+
+    bool flipped = scalar.OnesComplement();
+    if (flipped)
+      return ValueObject::CreateValueObjectFromScalar(
+          m_stack_frame, scalar, operand->GetCompilerType(), "result");
+  }
   }
   return llvm::make_error<DILDiagnosticError>(m_expr, "invalid unary operation",
                                               node.GetLocation());
@@ -649,6 +682,12 @@ Interpreter::EvaluateScalarOp(BinaryOpKind kind, lldb::ValueObjectSP lhs,
     return value_object(l / r);
   case BinaryOpKind::Rem:
     return value_object(l % r);
+  case BinaryOpKind::And:
+    return value_object(l & r);
+  case BinaryOpKind::Xor:
+    return value_object(l ^ r);
+  case BinaryOpKind::Or:
+    return value_object(l | r);
   case BinaryOpKind::Shl:
     return value_object(l << r);
   case BinaryOpKind::Shr:
@@ -907,6 +946,28 @@ Interpreter::EvaluateAssignment(lldb::ValueObjectSP lhs,
 }
 
 llvm::Expected<lldb::ValueObjectSP>
+Interpreter::EvaluateBinaryBitwise(BinaryOpKind kind, lldb::ValueObjectSP lhs,
+                                   lldb::ValueObjectSP rhs, uint32_t location) {
+  // Operations {'&', '|', '^'} work for:
+  //  {integer,unscoped_enum} <-> {integer,unscoped_enum}
+  auto orig_lhs_type = lhs->GetCompilerType();
+  auto orig_rhs_type = rhs->GetCompilerType();
+  auto type_or_err = ArithmeticConversion(lhs, rhs, location);
+  if (!type_or_err)
+    return type_or_err.takeError();
+  CompilerType result_type = *type_or_err;
+
+  if (!result_type.IsInteger()) {
+    std::string errMsg =
+        llvm::formatv("invalid operands to binary expression ('{0}' and '{1}')",
+                      orig_lhs_type.GetTypeName(), orig_rhs_type.GetTypeName());
+    return llvm::make_error<DILDiagnosticError>(m_expr, errMsg, location);
+  }
+
+  return EvaluateScalarOp(kind, lhs, rhs, result_type, location);
+}
+
+llvm::Expected<lldb::ValueObjectSP>
 Interpreter::EvaluateBinaryShift(BinaryOpKind kind, lldb::ValueObjectSP lhs,
                                  lldb::ValueObjectSP rhs, uint32_t location) {
   // Operations {'>>', '<<'} work for:
@@ -992,6 +1053,10 @@ Interpreter::Visit(const BinaryOpNode &node) {
     return EvaluateBinaryDivision(lhs, rhs, node.GetLocation());
   case BinaryOpKind::Rem:
     return EvaluateBinaryRemainder(lhs, rhs, node.GetLocation());
+  case BinaryOpKind::And:
+  case BinaryOpKind::Xor:
+  case BinaryOpKind::Or:
+    return EvaluateBinaryBitwise(node.GetKind(), lhs, rhs, node.GetLocation());
   case BinaryOpKind::Shl:
   case BinaryOpKind::Shr:
     return EvaluateBinaryShift(node.GetKind(), lhs, rhs, node.GetLocation());
@@ -1277,14 +1342,53 @@ Interpreter::Visit(const BitFieldExtractionNode &node) {
     return llvm::make_error<DILDiagnosticError>(
         m_expr, "could not get the index as an integer", node.GetLocation());
 
+  // Reject negative indices before the swap below, so the diagnostic reports
+  // the range as the user wrote it. A negative index would also wrap to a huge
+  // offset in the uint32_t GetSyntheticBitFieldChild call below.
+  if (first_index < 0 || last_index < 0) {
+    std::string message =
+        llvm::formatv("bitfield range {0}:{1} is not valid (negative index)",
+                      first_index, last_index);
+    return llvm::make_error<DILDiagnosticError>(m_expr, message,
+                                                node.GetLocation());
+  }
+
   // if the format given is [high-low], swap range
   if (first_index > last_index)
     std::swap(first_index, last_index);
+
+  // GetMaxU64Bitfield in the data layer only supports up to 64 bits (it asserts
+  // bitfield_bit_size <= 64 and otherwise shifts out of bounds), so reject a
+  // wider range here.
+  if (last_index - first_index >= 64) {
+    std::string message =
+        llvm::formatv("bitfield range {0}:{1} is not valid (more than 64 bits)",
+                      first_index, last_index);
+    return llvm::make_error<DILDiagnosticError>(m_expr, message,
+                                                node.GetLocation());
+  }
 
   auto base_or_err = EvaluateAndDereference(node.GetBase());
   if (!base_or_err)
     return base_or_err;
   lldb::ValueObjectSP base = *base_or_err;
+
+  // The high index must lie within the base object's storage; a bit index past
+  // its bit size shifts out of bounds when the child is later read or formatted
+  // (GetMaxU64Bitfield).
+  llvm::Expected<uint64_t> base_bit_size =
+      base->GetCompilerType().GetBitSize(&m_stack_frame);
+  if (!base_bit_size)
+    return base_bit_size.takeError();
+  if (static_cast<uint64_t>(last_index) >= *base_bit_size) {
+    std::string message = llvm::formatv(
+        "bitfield range {0}:{1} is not valid for \"({2}) {3}\"", first_index,
+        last_index, base->GetTypeName().AsCString("<invalid type>"),
+        base->GetName().GetStringRef());
+    return llvm::make_error<DILDiagnosticError>(m_expr, message,
+                                                node.GetLocation());
+  }
+
   lldb::ValueObjectSP child_valobj_sp =
       base->GetSyntheticBitFieldChild(first_index, last_index, true);
   if (!child_valobj_sp) {

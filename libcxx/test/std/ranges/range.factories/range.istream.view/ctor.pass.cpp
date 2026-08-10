@@ -39,10 +39,9 @@ void test() {
 
   // LWG 3568. basic_istream_view needs to initialize value_
   {
-    auto iss = make_string_stream<CharT>("123");
+    auto iss = make_string_stream<CharT>("");
     std::ranges::basic_istream_view<int, CharT> isv{iss};
-    using Iter = std::ranges::iterator_t<decltype(isv)>;
-    Iter iter{isv};
+    auto iter = isv.begin();
     assert(*iter == 0);
   }
 }

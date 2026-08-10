@@ -64,13 +64,14 @@ DICompileUnitAttr DebugImporter::translateImpl(llvm::DICompileUnit *node) {
               translate(static_cast<llvm::DINode *>(importedEntity)))
         imports.push_back(nodeAttr);
   }
+  llvm::DISourceLanguageName sourceLanguage = node->getSourceLanguage();
   return DICompileUnitAttr::get(
       context, /*recId=*/DistinctAttr{}, /*isRecSelf=*/false,
-      getOrCreateDistinctID(node),
-      node->getSourceLanguage().getUnversionedName(),
-      translate(node->getFile()), getStringAttrOrNull(node->getRawProducer()),
-      node->isOptimized(), emissionKind.value(),
-      node->isDebugInfoForProfiling(), nameTableKind.value(),
+      getOrCreateDistinctID(node), sourceLanguage.getUnversionedName(),
+      sourceLanguage.getDialect(), translate(node->getFile()),
+      getStringAttrOrNull(node->getRawProducer()), node->isOptimized(),
+      emissionKind.value(), node->isDebugInfoForProfiling(),
+      nameTableKind.value(),
       getStringAttrOrNull(node->getRawSplitDebugFilename()), imports);
 }
 

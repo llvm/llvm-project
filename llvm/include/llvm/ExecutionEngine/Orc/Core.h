@@ -57,26 +57,6 @@ using WaitingOnGraph =
 using ResourceTrackerSP = IntrusiveRefCntPtr<ResourceTracker>;
 using JITDylibSP = IntrusiveRefCntPtr<JITDylib>;
 
-/// A definition of a Symbol within a JITDylib.
-class SymbolInstance {
-public:
-  using LookupAsyncOnCompleteFn =
-      unique_function<void(Expected<ExecutorSymbolDef>)>;
-
-  SymbolInstance(JITDylibSP JD, SymbolStringPtr Name)
-      : JD(std::move(JD)), Name(std::move(Name)) {}
-
-  const JITDylib &getJITDylib() const { return *JD; }
-  const SymbolStringPtr &getName() const { return Name; }
-
-  Expected<ExecutorSymbolDef> lookup() const;
-  LLVM_ABI void lookupAsync(LookupAsyncOnCompleteFn OnComplete) const;
-
-private:
-  JITDylibSP JD;
-  SymbolStringPtr Name;
-};
-
 using ResourceKey = uintptr_t;
 
 /// API to remove / transfer ownership of JIT resources.
@@ -1158,6 +1138,11 @@ public:
   /// object.
   LLVM_ABI ExecutionSession(std::unique_ptr<ExecutorProcessControl> EPC);
 
+  ExecutionSession(const ExecutionSession &) = delete;
+  ExecutionSession &operator=(const ExecutionSession &) = delete;
+  ExecutionSession(ExecutionSession &&) = delete;
+  ExecutionSession &operator=(ExecutionSession &&) = delete;
+
   /// Destroy an ExecutionSession. Verifies that endSession was called prior to
   /// destruction.
   LLVM_ABI ~ExecutionSession();
@@ -1633,10 +1618,6 @@ private:
   DenseMap<ExecutorAddr, std::shared_ptr<JITDispatchHandlerFunction>>
       JITDispatchHandlers;
 };
-
-inline Expected<ExecutorSymbolDef> SymbolInstance::lookup() const {
-  return JD->getExecutionSession().lookup({JD.get()}, Name);
-}
 
 template <typename Func> Error ResourceTracker::withResourceKeyDo(Func &&F) {
   return getJITDylib().getExecutionSession().runSessionLocked([&]() -> Error {

@@ -118,6 +118,15 @@ hasAllocatableDirectComponent(const Fortran::semantics::Symbol &sym) {
             *derivedTypeSpec);
   return false;
 }
+// Does this variable have a pointer  direct component?
+static bool hasPointerDirectComponent(const Fortran::semantics::Symbol &sym) {
+  if (sym.has<Fortran::semantics::ObjectEntityDetails>())
+    if (const Fortran::semantics::DeclTypeSpec *declTypeSpec = sym.GetType())
+      if (const Fortran::semantics::DerivedTypeSpec *derivedTypeSpec =
+              declTypeSpec->AsDerived())
+        return Fortran::semantics::HasPointerDirectComponent(*derivedTypeSpec);
+  return false;
+}
 //===----------------------------------------------------------------===//
 // Global variables instantiation (not for alias and common)
 //===----------------------------------------------------------------===//
@@ -675,9 +684,12 @@ static void instantiateGlobal(Fortran::lower::AbstractConverter &converter,
   fir::GlobalOp global;
 
   if (Fortran::evaluate::IsCoarray(sym)) {
-    if (hasFinalization(sym) || hasAllocatableDirectComponent(sym))
-      TODO(loc, "coarray: coarray with an allocatable direct component and/or "
-                "requiring finalization");
+    if (hasFinalization(sym) || hasAllocatableDirectComponent(sym) ||
+        hasPointerDirectComponent(sym))
+      TODO(
+          loc,
+          "coarray: coarray with a pointer/allocatable direct component and/or "
+          "requiring finalization.");
     const auto *details =
         sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
     if (details && details->init())
@@ -780,8 +792,21 @@ static mlir::Value createNewLocal(Fortran::lower::AbstractConverter &converter,
   }
 
   // Let the builder do all the heavy lifting.
-  if (!Fortran::semantics::IsProcedurePointer(ultimateSymbol))
-    return builder.allocateLocal(loc, ty, nm, symNm, shape, lenParams, isTarg);
+  if (!Fortran::semantics::IsProcedurePointer(ultimateSymbol)) {
+    mlir::Value local =
+        builder.allocateLocal(loc, ty, nm, symNm, shape, lenParams, isTarg);
+    // An array function result returned via the "result as argument" ABI has
+    // its local storage replaced by the caller-provided buffer by the
+    // abstract-result pass. Pin it to the stack so that allocation passes do
+    // not first promote it to the heap, which the abstract-result pass would
+    // then have to clean up.
+    if (mlir::isa<fir::SequenceType>(ty) &&
+        Fortran::semantics::IsFunctionResult(ultimateSymbol))
+      if (auto alloca = local.getDefiningOp<fir::AllocaOp>())
+        alloca->setAttr(fir::MustBeStackAttr::getAttrName(),
+                        fir::MustBeStackAttr::get(builder.getContext(), true));
+    return local;
+  }
 
   // Local procedure pointer.
   auto res{builder.allocateLocal(loc, ty, nm, symNm, shape, lenParams, isTarg)};

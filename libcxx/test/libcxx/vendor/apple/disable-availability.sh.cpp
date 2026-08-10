@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: stdlib=apple-libc++
+// UNSUPPORTED: libcpp-has-no-availability-markup
 
 // This test ensures that we retain a way to disable availability markup on Apple platforms
 // in order to work around Clang bug https://llvm.org/PR134151.

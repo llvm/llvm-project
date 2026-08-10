@@ -364,7 +364,7 @@ bool LoadStoreOpt::doSingleStoreMerge(SmallVectorImpl<GStore *> &Stores) {
   const unsigned NumStores = Stores.size();
   LLT SmallTy = MRI->getType(FirstStore->getValueReg());
   LLT WideValueTy =
-      LLT::scalar(NumStores * SmallTy.getSizeInBits().getFixedValue());
+      LLT::integer(NumStores * SmallTy.getSizeInBits().getFixedValue());
 
   // For each store, compute pairwise merged debug locs.
   DebugLoc MergedLoc = Stores.front()->getDebugLoc();

@@ -57,10 +57,8 @@ class WebAssemblyRegStackifyLegacy final : public MachineFunctionPass {
       AU.addRequired<LiveIntervalsWrapperPass>();
       AU.addRequired<MachineDominatorTreeWrapperPass>();
     }
-    AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
     AU.addPreserved<SlotIndexesWrapperPass>();
     AU.addPreserved<LiveIntervalsWrapperPass>();
-    AU.addPreserved<MachineDominatorTreeWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 

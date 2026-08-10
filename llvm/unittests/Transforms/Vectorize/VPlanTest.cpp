@@ -1924,6 +1924,34 @@ TEST_F(VPBasicBlockTest, VPRegionValueClonePropagatesMaterialized) {
   EXPECT_TRUE(ClonedCanIV->isMaterialized());
 }
 
+TEST_F(VPBasicBlockTest, VPRegionBlockCloneSyncsCanonicalIVNUW) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *Preheader = Plan.getEntry();
+  VPBasicBlock *Header = Plan.createVPBasicBlock("header");
+  VPBasicBlock *Latch = Plan.createVPBasicBlock("latch");
+
+  VPBuilder Builder(Latch);
+  Builder.createNaryOp(VPInstruction::BranchOnCond, Plan.getTrue());
+
+  VPRegionBlock *Region = Plan.createLoopRegion(Type::getInt64Ty(C), DebugLoc(),
+                                                "loop", Header, Latch);
+  VPBlockUtils::connectBlocks(Header, Latch);
+  VPBlockUtils::connectBlocks(Preheader, Region);
+  VPBlockUtils::connectBlocks(Region, Plan.getScalarHeader());
+
+  // Loop regions start out with NUW set for their canonical IV.
+  EXPECT_TRUE(Region->hasCanonicalIVNUW());
+
+  // Drop NUW, e.g. as done when the increment is proven to possibly wrap.
+  VPInstruction *Increment = Region->getOrCreateCanonicalIVIncrement();
+  Region->clearCanonicalIVNUW(Increment);
+  EXPECT_FALSE(Region->hasCanonicalIVNUW());
+
+  // The clone must carry over the cleared NUW flag rather than resetting it.
+  VPRegionBlock *Clone = Region->clone();
+  EXPECT_FALSE(Clone->hasCanonicalIVNUW());
+}
+
 #if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
 TEST_F(VPInstructionTest, VPSymbolicValueConstructUserAfterMaterialization) {
   VPlan &Plan = getPlan();

@@ -16,10 +16,13 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_PROCESSELFCORE_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_PROCESSELFCORE_H
 
+#include <functional>
 #include <list>
+#include <set>
 #include <unordered_map>
 #include <vector>
 
+#include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/PostMortemProcess.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/Status.h"
@@ -124,8 +127,6 @@ private:
   typedef lldb_private::Range<lldb::addr_t, lldb::addr_t> FileRange;
   typedef lldb_private::RangeDataVector<lldb::addr_t, lldb::addr_t, FileRange>
       VMRangeToFileOffset;
-  typedef lldb_private::RangeDataVector<lldb::addr_t, lldb::addr_t, uint32_t>
-      VMRangeToPermissions;
 
   lldb::ModuleSP m_core_module_sp;
   std::string m_dyld_plugin_name;
@@ -142,8 +143,8 @@ private:
   // Address ranges found in the core
   VMRangeToFileOffset m_core_aranges;
 
-  // Permissions for all ranges
-  VMRangeToPermissions m_core_range_infos;
+  // Information for all mapped ranges, ordered by address.
+  std::set<lldb_private::MemoryRegionInfo, std::less<>> m_core_range_infos;
 
   // Memory tag ranges found in the core
   VMRangeToFileOffset m_core_tag_ranges;
@@ -169,6 +170,9 @@ private:
 
   // Populate gnu uuid for each NT_FILE entry
   void UpdateBuildIdForNTFileEntries();
+
+  // Complete memory region information after all program headers are parsed.
+  void FinalizeMemoryRegionInfos();
 
   bool FindModuleUUID(lldb_private::ModuleSpec &spec) override;
 

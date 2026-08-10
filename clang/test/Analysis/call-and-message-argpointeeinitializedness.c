@@ -30,7 +30,7 @@ extern time_t mktime(struct tm *timeptr);
 
 void uninit_mbrlen(const char *mbs) {
   mbstate_t state;
-  mbrlen(mbs, 1, &state); // expected-warning{{3rd function call argument points to an uninitialized value}}
+  mbrlen(mbs, 1, &state); // expected-warning{{3rd function call argument points to an uninitialized value; function 'mbrlen' expects memory pointed to by this argument to be initialized}}
 }
 
 void init_mbrlen(const char *mbs) {
@@ -42,16 +42,16 @@ void init_mbrlen(const char *mbs) {
 void uninit_wcsnrtombs(const wchar_t *src) {
   char dst[10];
   mbstate_t state;
-  wcsnrtombs(dst, &src, 1, 2, &state); // expected-warning{{5th function call argument points to an uninitialized value}}
+  wcsnrtombs(dst, &src, 1, 2, &state); // expected-warning{{5th function call argument points to an uninitialized value; function 'wcsnrtombs' expects memory pointed to by this argument to be initialized}}
 }
 
 void uninit_mbrtoc16(const char *s) {
   char16_t pc16[10];
   mbstate_t state;
-  mbrtoc16(pc16, s, 1, &state); // expected-warning{{4th function call argument points to an uninitialized value}}
+  mbrtoc16(pc16, s, 1, &state); // expected-warning{{4th function call argument points to an uninitialized value; function 'mbrtoc16' expects memory pointed to by this argument to be initialized}}
 }
 
 void uninit_mktime() {
   struct tm time;
-  mktime(&time); // expected-warning{{1st function call argument points to an uninitialized value}}
+  mktime(&time); // expected-warning{{1st function call argument points to an uninitialized value; function 'mktime' expects memory pointed to by this argument to be initialized}}
 }

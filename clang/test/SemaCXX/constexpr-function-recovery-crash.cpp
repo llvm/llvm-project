@@ -36,7 +36,8 @@ constexpr int test4() {
 
 constexpr int test5() { // expected-error {{constexpr function never produce}}
   for (;; a++); // expected-error {{use of undeclared identifier}}  \
-                   expected-note {{constexpr evaluation hit maximum step limit; possible infinite loop?}}
+                   expected-note {{constexpr evaluation hit maximum step limit of 1048576; possible infinite loop?}} \
+                   expected-note {{use -fconstexpr-steps}}
   return 1;
 }
 
@@ -44,7 +45,8 @@ constexpr int test6() { // expected-error {{constexpr function never produce}}
   int n = 0;
   switch (n) {
     for (;; a++) { // expected-error {{use of undeclared identifier}}
-    case 0:; // expected-note {{constexpr evaluation hit maximum step limit; possible infinite loop?}}
+    case 0:; // expected-note {{constexpr evaluation hit maximum step limit of 1048576; possible infinite loop?}} \
+             // expected-note {{use -fconstexpr-steps}}
     }
   }
   return 0;
@@ -91,7 +93,8 @@ TEST_EVALUATE(SwitchCondValDep, switch (invalid_value) { default: break; });    
 TEST_EVALUATE(For, for (!!){}); // expected-error + {{}}
                                 // FIXME: should bail out instead of looping.
                                 // expected-note@-2 + {{infinite loop}}
-                                // expected-note@-3 {{in call}}
+                                // expected-note@-3 + {{use -fconstexpr-steps}}
+                                // expected-note@-4 {{in call}}
 TEST_EVALUATE(ForRange, for (auto x : !!){}); // expected-error + {{}}
 TEST_EVALUATE(While, while (!!){});           // expected-error + {{}}
 TEST_EVALUATE(DoWhile, do {} while (!!););    // expected-error + {{}}
@@ -101,9 +104,11 @@ TEST_EVALUATE(If, if (!!){};);                // expected-error + {{}}
 TEST_EVALUATE(IfInit, if (auto x = !!; 1){};);// expected-error + {{}}
 TEST_EVALUATE(ForInit, for (!!;;){};);// expected-error + {{}}
                                       // expected-note@-1 + {{infinite loop}}
-                                      // expected-note@-2 {{in call}}
+                                      // expected-note@-2 + {{use -fconstexpr-steps}}
+                                      // expected-note@-3 {{in call}}
 TEST_EVALUATE(ForCond, for (; !!;){};);// expected-error + {{}}
 TEST_EVALUATE(ForInc, for (;; !!){};);// expected-error + {{}}
                                       // expected-note@-1 + {{infinite loop}}
-                                      // expected-note@-2 {{in call}}
+                                      // expected-note@-2 + {{use -fconstexpr-steps}}
+                                      // expected-note@-3 {{in call}}
 TEST_EVALUATE(ForCondUnDef, for (;some_cond;){};);        // expected-error + {{}}

@@ -1414,7 +1414,6 @@ StraightLineStrengthReducePass::run(Function &F, FunctionAnalysisManager &AM) {
 
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
-  PA.preserve<DominatorTreeAnalysis>();
   PA.preserve<ScalarEvolutionAnalysis>();
   PA.preserve<TargetIRAnalysis>();
   return PA;

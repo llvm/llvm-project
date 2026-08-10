@@ -172,8 +172,8 @@ define dso_local void @psubus_64i8_max_512(ptr %xptr, ptr %yptr, ptr %zptr) "min
 define dso_local i32 @_Z9test_charPcS_i_256(ptr nocapture readonly, ptr nocapture readonly, i32) "min-legal-vector-width"="256" {
 ; CHECK-SKX-LABEL: _Z9test_charPcS_i_256:
 ; CHECK-SKX:       # %bb.0: # %entry
-; CHECK-SKX-NEXT:    movl %edx, %eax
 ; CHECK-SKX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; CHECK-SKX-NEXT:    movl %edx, %eax
 ; CHECK-SKX-NEXT:    xorl %ecx, %ecx
 ; CHECK-SKX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; CHECK-SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
@@ -207,8 +207,8 @@ define dso_local i32 @_Z9test_charPcS_i_256(ptr nocapture readonly, ptr nocaptur
 ;
 ; CHECK-AVX512-LABEL: _Z9test_charPcS_i_256:
 ; CHECK-AVX512:       # %bb.0: # %entry
-; CHECK-AVX512-NEXT:    movl %edx, %eax
 ; CHECK-AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    movl %edx, %eax
 ; CHECK-AVX512-NEXT:    xorl %ecx, %ecx
 ; CHECK-AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; CHECK-AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2
@@ -242,8 +242,8 @@ define dso_local i32 @_Z9test_charPcS_i_256(ptr nocapture readonly, ptr nocaptur
 ;
 ; CHECK-VBMI-LABEL: _Z9test_charPcS_i_256:
 ; CHECK-VBMI:       # %bb.0: # %entry
-; CHECK-VBMI-NEXT:    movl %edx, %eax
 ; CHECK-VBMI-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; CHECK-VBMI-NEXT:    movl %edx, %eax
 ; CHECK-VBMI-NEXT:    xorl %ecx, %ecx
 ; CHECK-VBMI-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; CHECK-VBMI-NEXT:    vpxor %xmm2, %xmm2, %xmm2
@@ -303,8 +303,8 @@ middle.block:
 define dso_local i32 @_Z9test_charPcS_i_512(ptr nocapture readonly, ptr nocapture readonly, i32) "min-legal-vector-width"="512" {
 ; CHECK-SKX-LABEL: _Z9test_charPcS_i_512:
 ; CHECK-SKX:       # %bb.0: # %entry
-; CHECK-SKX-NEXT:    movl %edx, %eax
 ; CHECK-SKX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; CHECK-SKX-NEXT:    movl %edx, %eax
 ; CHECK-SKX-NEXT:    xorl %ecx, %ecx
 ; CHECK-SKX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; CHECK-SKX-NEXT:    .p2align 4
@@ -333,8 +333,8 @@ define dso_local i32 @_Z9test_charPcS_i_512(ptr nocapture readonly, ptr nocaptur
 ;
 ; CHECK-AVX512-LABEL: _Z9test_charPcS_i_512:
 ; CHECK-AVX512:       # %bb.0: # %entry
-; CHECK-AVX512-NEXT:    movl %edx, %eax
 ; CHECK-AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    movl %edx, %eax
 ; CHECK-AVX512-NEXT:    xorl %ecx, %ecx
 ; CHECK-AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; CHECK-AVX512-NEXT:    .p2align 4
@@ -363,8 +363,8 @@ define dso_local i32 @_Z9test_charPcS_i_512(ptr nocapture readonly, ptr nocaptur
 ;
 ; CHECK-VBMI-LABEL: _Z9test_charPcS_i_512:
 ; CHECK-VBMI:       # %bb.0: # %entry
-; CHECK-VBMI-NEXT:    movl %edx, %eax
 ; CHECK-VBMI-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; CHECK-VBMI-NEXT:    movl %edx, %eax
 ; CHECK-VBMI-NEXT:    xorl %ecx, %ecx
 ; CHECK-VBMI-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; CHECK-VBMI-NEXT:    .p2align 4
@@ -1937,8 +1937,8 @@ define <16 x i8> @var_rotate_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind "min-leg
 define <32 x i8> @var_rotate_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind "min-legal-vector-width"="256" {
 ; CHECK-LABEL: var_rotate_v32i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm1
 ; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm1
 ; CHECK-NEXT:    vpunpckhbw {{.*#+}} ymm3 = ymm1[8],ymm2[8],ymm1[9],ymm2[9],ymm1[10],ymm2[10],ymm1[11],ymm2[11],ymm1[12],ymm2[12],ymm1[13],ymm2[13],ymm1[14],ymm2[14],ymm1[15],ymm2[15],ymm1[24],ymm2[24],ymm1[25],ymm2[25],ymm1[26],ymm2[26],ymm1[27],ymm2[27],ymm1[28],ymm2[28],ymm1[29],ymm2[29],ymm1[30],ymm2[30],ymm1[31],ymm2[31]
 ; CHECK-NEXT:    vpunpckhbw {{.*#+}} ymm4 = ymm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
 ; CHECK-NEXT:    vpsllvw %ymm3, %ymm4, %ymm3
@@ -2062,3 +2062,4 @@ define <32 x i8> @splatconstant_rotate_mask_v32i8(<32 x i8> %a) nounwind "min-le
   %or = or <32 x i8> %lmask, %rmask
   ret <32 x i8> %or
 }
+

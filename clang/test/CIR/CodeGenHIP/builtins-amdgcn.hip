@@ -223,3 +223,35 @@ __device__ void test_frexp_mant_f32(float* out, float a) {
 __device__ void test_frexp_mant_f64(double* out, double a) {
   *out = __builtin_amdgcn_frexp_mant(a);
 }
+
+// CIR-LABEL: @_Z19test_trig_preop_f32Pffi
+// CIR: cir.call_llvm_intrinsic "amdgcn.trig.preop" {{.*}} : (!cir.float, !s32i) -> !cir.float
+// LLVM: define{{.*}} void @_Z19test_trig_preop_f32Pffi
+// LLVM: call{{.*}} float @llvm.amdgcn.trig.preop.f32(float %{{.+}}, i32 %{{.+}})
+__device__ void test_trig_preop_f32(float* out, float a, int b) {
+  *out = __builtin_amdgcn_trig_preopf(a, b);
+}
+
+// CIR-LABEL: @_Z19test_trig_preop_f64Pddi
+// CIR: cir.call_llvm_intrinsic "amdgcn.trig.preop" {{.*}} : (!cir.double, !s32i) -> !cir.double
+// LLVM: define{{.*}} void @_Z19test_trig_preop_f64Pddi
+// LLVM: call{{.*}} double @llvm.amdgcn.trig.preop.f64(double %{{.+}}, i32 %{{.+}})
+__device__ void test_trig_preop_f64(double* out, double a, int b) {
+  *out = __builtin_amdgcn_trig_preop(a, b);
+}
+
+// CIR-LABEL: @_Z14test_ldexp_f32Pffi
+// CIR: cir.call_llvm_intrinsic "ldexp" {{.*}} : (!cir.float, !s32i) -> !cir.float
+// LLVM: define{{.*}} void @_Z14test_ldexp_f32Pffi
+// LLVM: call{{.*}} float @llvm.ldexp.f32.i32(float %{{.*}}, i32 %{{.*}})
+__device__ void test_ldexp_f32(float* out, float a, int b) {
+  *out = __builtin_amdgcn_ldexpf(a, b);
+}
+
+// CIR-LABEL: @_Z14test_ldexp_f64Pddi
+// CIR: cir.call_llvm_intrinsic "ldexp" {{.*}} : (!cir.double, !s32i) -> !cir.double
+// LLVM: define{{.*}} void @_Z14test_ldexp_f64Pddi
+// LLVM: call{{.*}} double @llvm.ldexp.f64.i32(double %{{.*}}, i32 %{{.*}})
+__device__ void test_ldexp_f64(double* out, double a, int b) {
+  *out = __builtin_amdgcn_ldexp(a, b);
+}

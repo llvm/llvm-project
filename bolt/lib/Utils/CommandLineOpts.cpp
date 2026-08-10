@@ -365,6 +365,12 @@ cl::opt<unsigned>
               cl::init(0), cl::ZeroOrMore, cl::cat(BoltCategory),
               cl::sub(cl::SubCommand::getAll()));
 
+cl::opt<bool> FixBranchesWithLiveness(
+    "fix-branches-with-liveness",
+    cl::desc("use liveness analysis during branch fixup "
+             "(needed for branch inversion on AArch64)"),
+    cl::init(false), cl::cat(BoltCategory));
+
 bool processAllFunctions() {
   if (opts::AggregateOnly)
     return false;

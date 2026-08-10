@@ -1,4 +1,3 @@
-// RUN: not llvm-mc -triple=amdgcn %s -filetype=null 2>&1 | FileCheck --check-prefixes=GCN,PREGFX11,SICI,SICIVI --implicit-check-not=error: %s
 // RUN: not llvm-mc -triple=amdgpu6.00 %s -filetype=null 2>&1 | FileCheck --check-prefixes=GCN,PREGFX11,SICI,SICIVI --implicit-check-not=error: %s
 // RUN: not llvm-mc -triple=amdgpu8.03 %s -filetype=null 2>&1 | FileCheck --check-prefixes=GCN,PREGFX11,VI,SICIVI --implicit-check-not=error: %s
 // RUN: not llvm-mc -triple=amdgpu10.10 %s -filetype=null 2>&1 | FileCheck --check-prefixes=GCN,PREGFX11,GFX10 --implicit-check-not=error: %s

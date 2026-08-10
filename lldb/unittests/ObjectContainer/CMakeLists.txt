@@ -3,6 +3,7 @@ add_lldb_unittest(ObjectContainerTests
 
   LINK_LIBS
     lldbPluginObjectContainerMachOArchive
+    lldbPluginObjectContainerMachOFileset
     lldbCore
     lldbUtilityHelpers
     LLVMTestingSupport
