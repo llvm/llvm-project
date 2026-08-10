@@ -8,12 +8,10 @@ define void @nuw_strict_vs_nonstrict(i64 %start, i64 %n, ptr %out) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[START]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[LT:%.*]] = icmp ult i64 [[IV]], [[START]]
-; CHECK-NEXT:    [[GE:%.*]] = icmp uge i64 [[IV]], [[START]]
 ; CHECK-NEXT:    [[GT:%.*]] = icmp ugt i64 [[IV]], [[START]]
 ; CHECK-NEXT:    [[LE:%.*]] = icmp ule i64 [[IV]], [[START]]
-; CHECK-NEXT:    store volatile i1 [[LT]], ptr [[OUT]], align 1
-; CHECK-NEXT:    store volatile i1 [[GE]], ptr [[OUT]], align 1
+; CHECK-NEXT:    store volatile i1 false, ptr [[OUT]], align 1
+; CHECK-NEXT:    store volatile i1 true, ptr [[OUT]], align 1
 ; CHECK-NEXT:    store volatile i1 [[GT]], ptr [[OUT]], align 1
 ; CHECK-NEXT:    store volatile i1 [[LE]], ptr [[OUT]], align 1
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 1
@@ -50,13 +48,11 @@ define void @nuw_addrec_on_rhs(i64 %start, i64 %n, ptr %out) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[START]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[GT:%.*]] = icmp ugt i64 [[START]], [[IV]]
 ; CHECK-NEXT:    [[GE:%.*]] = icmp uge i64 [[START]], [[IV]]
-; CHECK-NEXT:    [[LE:%.*]] = icmp ule i64 [[START]], [[IV]]
 ; CHECK-NEXT:    [[LT:%.*]] = icmp ult i64 [[START]], [[IV]]
-; CHECK-NEXT:    store volatile i1 [[GT]], ptr [[OUT]], align 1
+; CHECK-NEXT:    store volatile i1 false, ptr [[OUT]], align 1
 ; CHECK-NEXT:    store volatile i1 [[GE]], ptr [[OUT]], align 1
-; CHECK-NEXT:    store volatile i1 [[LE]], ptr [[OUT]], align 1
+; CHECK-NEXT:    store volatile i1 true, ptr [[OUT]], align 1
 ; CHECK-NEXT:    store volatile i1 [[LT]], ptr [[OUT]], align 1
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
@@ -136,10 +132,9 @@ define void @nsw_nonneg_step(i64 %start, i64 %n, i64 %step.raw, ptr %out) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[START]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[SLT:%.*]] = icmp slt i64 [[IV]], [[START]]
 ; CHECK-NEXT:    [[ULT:%.*]] = icmp ult i64 [[IV]], [[START]]
 ; CHECK-NEXT:    [[SGT:%.*]] = icmp sgt i64 [[IV]], [[START]]
-; CHECK-NEXT:    store volatile i1 [[SLT]], ptr [[OUT]], align 1
+; CHECK-NEXT:    store volatile i1 false, ptr [[OUT]], align 1
 ; CHECK-NEXT:    store volatile i1 [[ULT]], ptr [[OUT]], align 1
 ; CHECK-NEXT:    store volatile i1 [[SGT]], ptr [[OUT]], align 1
 ; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], [[STEP]]

@@ -13,13 +13,13 @@ define void @dec_to_start_of_nuw_ptr_addrec(ptr %start, i32 %n) {
 ; CHECK-NEXT:    %v.next = mul i32 %v, 10
 ; CHECK-NEXT:    --> (10 * %v) U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %up.header: Variant }
 ; CHECK-NEXT:    %q = phi ptr [ %p, %up.header ], [ %q.next, %down.latch ]
-; CHECK-NEXT:    --> {{\{\{}}%start,+,1}<nuw><%up.header>,+,-1}<%down.header> U: full-set S: full-set Exits: ((-1 * (ptrtoaddr ptr %start to i64)) + ({(ptrtoaddr ptr %start to i64),+,1}<nuw><%up.header> umin (ptrtoaddr ptr %start to i64)) + %start) LoopDispositions: { %down.header: Computable }
+; CHECK-NEXT:    --> {{\{\{}}%start,+,1}<nuw><%up.header>,+,-1}<%down.header> U: full-set S: full-set Exits: %start LoopDispositions: { %down.header: Computable }
 ; CHECK-NEXT:    %q.next = getelementptr i8, ptr %q, i64 -1
-; CHECK-NEXT:    --> {{\{\{}}(-1 + %start),+,1}<nw><%up.header>,+,-1}<%down.header> U: full-set S: full-set Exits: (-1 + (-1 * (ptrtoaddr ptr %start to i64)) + ({(ptrtoaddr ptr %start to i64),+,1}<nuw><%up.header> umin (ptrtoaddr ptr %start to i64)) + %start) LoopDispositions: { %down.header: Computable }
+; CHECK-NEXT:    --> {{\{\{}}(-1 + %start),+,1}<nw><%up.header>,+,-1}<%down.header> U: full-set S: full-set Exits: (-1 + %start) LoopDispositions: { %down.header: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @dec_to_start_of_nuw_ptr_addrec
-; CHECK-NEXT:  Loop %down.header: backedge-taken count is ((-1 * ({(ptrtoaddr ptr %start to i64),+,1}<nuw><%up.header> umin (ptrtoaddr ptr %start to i64))) + {(ptrtoaddr ptr %start to i64),+,1}<nuw><%up.header>)
+; CHECK-NEXT:  Loop %down.header: backedge-taken count is {0,+,1}<nuw><%up.header>
 ; CHECK-NEXT:  Loop %down.header: constant max backedge-taken count is i64 -1
-; CHECK-NEXT:  Loop %down.header: symbolic max backedge-taken count is ((-1 * ({(ptrtoaddr ptr %start to i64),+,1}<nuw><%up.header> umin (ptrtoaddr ptr %start to i64))) + {(ptrtoaddr ptr %start to i64),+,1}<nuw><%up.header>)
+; CHECK-NEXT:  Loop %down.header: symbolic max backedge-taken count is {0,+,1}<nuw><%up.header>
 ; CHECK-NEXT:  Loop %down.header: Trip multiple is 1
 ; CHECK-NEXT:  Loop %up.header: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %up.header: Unpredictable constant max backedge-taken count.
@@ -65,13 +65,13 @@ define void @dec_to_start_of_nuw_int_addrec(i64 %start, i32 %n) {
 ; CHECK-NEXT:    %v.next = mul i32 %v, 10
 ; CHECK-NEXT:    --> (10 * %v) U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %up.header: Variant }
 ; CHECK-NEXT:    %y = phi i64 [ %x, %up.header ], [ %y.next, %down.latch ]
-; CHECK-NEXT:    --> {{\{\{}}%start,+,1}<nuw><%up.header>,+,-1}<%down.header> U: full-set S: full-set Exits: ({%start,+,1}<nuw><%up.header> umin %start) LoopDispositions: { %down.header: Computable }
+; CHECK-NEXT:    --> {{\{\{}}%start,+,1}<nuw><%up.header>,+,-1}<%down.header> U: full-set S: full-set Exits: %start LoopDispositions: { %down.header: Computable }
 ; CHECK-NEXT:    %y.next = add i64 %y, -1
-; CHECK-NEXT:    --> {{\{\{}}(-1 + %start),+,1}<nw><%up.header>,+,-1}<%down.header> U: full-set S: full-set Exits: (-1 + ({%start,+,1}<nuw><%up.header> umin %start)) LoopDispositions: { %down.header: Computable }
+; CHECK-NEXT:    --> {{\{\{}}(-1 + %start),+,1}<nw><%up.header>,+,-1}<%down.header> U: full-set S: full-set Exits: (-1 + %start) LoopDispositions: { %down.header: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @dec_to_start_of_nuw_int_addrec
-; CHECK-NEXT:  Loop %down.header: backedge-taken count is ((-1 * ({%start,+,1}<nuw><%up.header> umin %start)) + {%start,+,1}<nuw><%up.header>)
+; CHECK-NEXT:  Loop %down.header: backedge-taken count is {0,+,1}<nuw><%up.header>
 ; CHECK-NEXT:  Loop %down.header: constant max backedge-taken count is i64 -1
-; CHECK-NEXT:  Loop %down.header: symbolic max backedge-taken count is ((-1 * ({%start,+,1}<nuw><%up.header> umin %start)) + {%start,+,1}<nuw><%up.header>)
+; CHECK-NEXT:  Loop %down.header: symbolic max backedge-taken count is {0,+,1}<nuw><%up.header>
 ; CHECK-NEXT:  Loop %down.header: Trip multiple is 1
 ; CHECK-NEXT:  Loop %up.header: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %up.header: Unpredictable constant max backedge-taken count.
@@ -171,13 +171,13 @@ define void @dec_to_start_of_nsw_addrec(i64 %start, i32 %n, i64 %step.raw) {
 ; CHECK-NEXT:    %v.next = mul i32 %v, 10
 ; CHECK-NEXT:    --> (10 * %v) U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %up.header: Variant }
 ; CHECK-NEXT:    %y = phi i64 [ %x, %up.header ], [ %y.next, %down.latch ]
-; CHECK-NEXT:    --> {{\{\{}}%start,+,(zext i3 (trunc i64 %step.raw to i3) to i64)}<nsw><%up.header>,+,-1}<%down.header> U: full-set S: full-set Exits: ({%start,+,(zext i3 (trunc i64 %step.raw to i3) to i64)}<nsw><%up.header> smin %start) LoopDispositions: { %down.header: Computable }
+; CHECK-NEXT:    --> {{\{\{}}%start,+,(zext i3 (trunc i64 %step.raw to i3) to i64)}<nsw><%up.header>,+,-1}<%down.header> U: full-set S: full-set Exits: %start LoopDispositions: { %down.header: Computable }
 ; CHECK-NEXT:    %y.next = add i64 %y, -1
-; CHECK-NEXT:    --> {{\{\{}}(-1 + %start),+,(zext i3 (trunc i64 %step.raw to i3) to i64)}<nw><%up.header>,+,-1}<%down.header> U: full-set S: full-set Exits: (-1 + ({%start,+,(zext i3 (trunc i64 %step.raw to i3) to i64)}<nsw><%up.header> smin %start)) LoopDispositions: { %down.header: Computable }
+; CHECK-NEXT:    --> {{\{\{}}(-1 + %start),+,(zext i3 (trunc i64 %step.raw to i3) to i64)}<nw><%up.header>,+,-1}<%down.header> U: full-set S: full-set Exits: (-1 + %start) LoopDispositions: { %down.header: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @dec_to_start_of_nsw_addrec
-; CHECK-NEXT:  Loop %down.header: backedge-taken count is ((-1 * ({%start,+,(zext i3 (trunc i64 %step.raw to i3) to i64)}<nsw><%up.header> smin %start)) + {%start,+,(zext i3 (trunc i64 %step.raw to i3) to i64)}<nsw><%up.header>)
+; CHECK-NEXT:  Loop %down.header: backedge-taken count is {0,+,(zext i3 (trunc i64 %step.raw to i3) to i64)}<nuw><%up.header>
 ; CHECK-NEXT:  Loop %down.header: constant max backedge-taken count is i64 -1
-; CHECK-NEXT:  Loop %down.header: symbolic max backedge-taken count is ((-1 * ({%start,+,(zext i3 (trunc i64 %step.raw to i3) to i64)}<nsw><%up.header> smin %start)) + {%start,+,(zext i3 (trunc i64 %step.raw to i3) to i64)}<nsw><%up.header>)
+; CHECK-NEXT:  Loop %down.header: symbolic max backedge-taken count is {0,+,(zext i3 (trunc i64 %step.raw to i3) to i64)}<nuw><%up.header>
 ; CHECK-NEXT:  Loop %down.header: Trip multiple is 1
 ; CHECK-NEXT:  Loop %up.header: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %up.header: Unpredictable constant max backedge-taken count.
