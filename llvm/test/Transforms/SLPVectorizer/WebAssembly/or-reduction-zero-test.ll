@@ -6,8 +6,8 @@ define i1 @or_reduction_nonzero(ptr %p) {
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[P]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <16 x i8> [[TMP0]], zeroinitializer
-; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[TMP1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.vector.reduce.or.v16i8(<16 x i8> [[TMP0]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:
@@ -66,8 +66,8 @@ define i1 @or_reduction_zero(ptr %p) {
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[P]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <16 x i8> [[TMP0]], zeroinitializer
-; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v16i1(<16 x i1> [[TMP1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.vector.reduce.or.v16i8(<16 x i8> [[TMP0]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:

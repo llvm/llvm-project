@@ -8,8 +8,8 @@ define i1 @or_reduction_nonzero_scalar(ptr %p) {
 ; CHECK-LABEL: define i1 @or_reduction_nonzero_scalar(
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i8>, ptr [[P]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <16 x i8> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[TMP2]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.vector.reduce.or.v16i8(<16 x i8> [[TMP1]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %v0 = load i8, ptr %p, align 1
@@ -67,7 +67,7 @@ define i1 @or_reduction_nonzero_scalar(ptr %p) {
 }
 
 ; COST-LABEL: Function:  or_reduction_nonzero_scalar_remainder
-; COST: Cost:            '-21'
+; COST: Cost:            '-28'
 define i1 @or_reduction_nonzero_scalar_remainder(ptr %p) {
 ; CHECK-LABEL: define i1 @or_reduction_nonzero_scalar_remainder(
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
