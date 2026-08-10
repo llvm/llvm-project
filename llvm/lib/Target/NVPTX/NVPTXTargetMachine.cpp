@@ -109,7 +109,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeGenericToNVVMLegacyPassPass(PR);
   initializeNVPTXAllocaHoistingPass(PR);
   initializeNVPTXAsmPrinterPass(PR);
-  initializeNVPTXAssignValidGlobalNamesPass(PR);
+  initializeNVPTXAssignValidGlobalNamesLegacyPassPass(PR);
   initializeNVPTXAtomicLowerPass(PR);
   initializeNVPTXLowerArgsLegacyPassPass(PR);
   initializeNVPTXPromoteParamAlignLegacyPassPass(PR);
@@ -119,7 +119,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeNVPTXCtorDtorLoweringLegacyPass(PR);
   initializeNVPTXLowerAggrCopiesPass(PR);
   initializeNVPTXProxyRegErasurePass(PR);
-  initializeNVPTXForwardParamsPassPass(PR);
+  initializeNVPTXForwardParamsLegacyPassPass(PR);
   initializeNVPTXAddressFolderPassPass(PR);
   initializeNVPTXDAGToDAGISelLegacyPass(PR);
   initializeNVPTXAAWrapperPassPass(PR);
@@ -166,7 +166,6 @@ public:
   bool addInstSelector() override;
   void addPreRegAlloc() override;
   void addPostRegAlloc() override;
-  void addMachineSSAOptimization() override;
 
   FunctionPass *createTargetRegisterAllocator(bool) override;
   void addFastRegAlloc() override;
@@ -343,7 +342,7 @@ void NVPTXPassConfig::addIRPasses() {
 
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createNVPTXImageOptimizerPass());
-  addPass(createNVPTXAssignValidGlobalNamesPass());
+  addPass(createNVPTXAssignValidGlobalNamesLegacyPass());
   addPass(createGenericToNVVMLegacyPass());
 
   // Lower variadic calls before address space inference.
@@ -410,7 +409,7 @@ bool NVPTXPassConfig::addInstSelector() {
 }
 
 void NVPTXPassConfig::addPreRegAlloc() {
-  addPass(createNVPTXForwardParamsPass());
+  addPass(createNVPTXForwardParamsLegacyPass());
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createNVPTXAddressFolderPass());
   // Remove Proxy Register pseudo instructions used to keep `callseq_end` alive.
@@ -455,44 +454,4 @@ void NVPTXPassConfig::addOptimizedRegAlloc() {
   // addPass(&MachineLICMID);
 
   printAndVerify("After StackSlotColoring");
-}
-
-void NVPTXPassConfig::addMachineSSAOptimization() {
-  // Pre-ra tail duplication.
-  if (addPass(&EarlyTailDuplicateLegacyID))
-    printAndVerify("After Pre-RegAlloc TailDuplicate");
-
-  // Optimize PHIs before DCE: removing dead PHI cycles may make more
-  // instructions dead.
-  addPass(&OptimizePHIsLegacyID);
-
-  // This pass merges large allocas. StackSlotColoring is a different pass
-  // which merges spill slots.
-  addPass(&StackColoringLegacyID);
-
-  // If the target requests it, assign local variables to stack slots relative
-  // to one another and simplify frame index references where possible.
-  addPass(&LocalStackSlotAllocationID);
-
-  // With optimization, dead code should already be eliminated. However
-  // there is one known exception: lowered code for arguments that are only
-  // used by tail calls, where the tail calls reuse the incoming stack
-  // arguments directly (see t11 in test/CodeGen/X86/sibcall.ll).
-  addPass(&DeadMachineInstructionElimID);
-  printAndVerify("After codegen DCE pass");
-
-  // Allow targets to insert passes that improve instruction level parallelism,
-  // like if-conversion. Such passes will typically need dominator trees and
-  // loop info, just like LICM and CSE below.
-  if (addILPOpts())
-    printAndVerify("After ILP optimizations");
-
-  addPass(&EarlyMachineLICMID);
-  addPass(&MachineCSELegacyID);
-
-  addPass(&MachineSinkingLegacyID);
-  printAndVerify("After Machine LICM, CSE and Sinking passes");
-
-  addPass(&PeepholeOptimizerLegacyID);
-  printAndVerify("After codegen peephole optimization pass");
 }

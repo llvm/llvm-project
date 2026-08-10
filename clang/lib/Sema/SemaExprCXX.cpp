@@ -2965,12 +2965,12 @@ ImplicitAllocationArguments::ImplicitAllocationArguments(
       PassAlignment(alignedAllocationModeFromBool(AlignArg)),
       IsMSVCCompatibilityFallback(IsMSVCCompatibilityFallback),
       ArgumentCount(0) {
-  ASTContext &Ctx = SemaRef.getASTContext();
   if (TypeIdentityArg) {
     assert(SemaRef.isStdTypeIdentity(TypeIdentityArg->getType(), nullptr));
     ImplicitArguments[ArgumentCount++] = TypeIdentityArg;
   }
   assert(SizeArg);
+  [[maybe_unused]] ASTContext &Ctx = SemaRef.getASTContext();
   assert(Ctx.hasSameType(SizeArg->getType(), Ctx.getSizeType()));
   ImplicitArguments[ArgumentCount++] = SizeArg;
   if (AlignArg) {
