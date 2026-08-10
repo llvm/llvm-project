@@ -29649,6 +29649,10 @@ namespace {
 class HorizontalReduction {
   using ReductionOpsType = SmallVector<Value *, 16>;
   using ReductionOpsListType = SmallVector<ReductionOpsType, 2>;
+  enum class ReductionContext {
+    None,
+    CmpZero,
+  };
 
   ReductionOpsListType ReductionOps;
   /// List of possibly reduced values.
