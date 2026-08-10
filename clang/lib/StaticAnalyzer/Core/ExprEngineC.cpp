@@ -250,18 +250,14 @@ ExprEngine::handleLValueBitCast(ProgramStateRef state, const Expr *Ex,
   return state;
 }
 
-void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
-                           ExplodedNode *Pred, ExplodedNodeSet &Dst) {
-
-  ExplodedNodeSet DstPreStmt;
-  getCheckerManager().runCheckersForPreStmt(DstPreStmt, Pred, CastE, *this);
+void ExprEngine::VisitCastExpr(const CastExpr *CastE, ExplodedNode *Pred,
+                               ExplodedNodeSet &Dst) {
+  const Expr *Ex = CastE->getSubExpr();
 
   if (CastE->getCastKind() == CK_LValueToRValue) {
-    for (ExplodedNode *Node : DstPreStmt) {
-      ProgramStateRef State = Node->getState();
-      const StackFrame *SF = Node->getStackFrame();
-      evalLoad(Dst, CastE, CastE, Node, State, State->getSVal(Ex, SF));
-    }
+    ProgramStateRef State = Pred->getState();
+    const StackFrame *SF = Pred->getStackFrame();
+    evalLoad(Dst, CastE, CastE, Pred, State, State->getSVal(Ex, SF));
     return;
   }
   if (CastE->getCastKind() == CK_LValueToRValueBitCast) {
@@ -269,12 +265,10 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
     ExplodedNodeSet DstEvalLoc;
 
     // Simulate the lvalue-to-rvalue conversion on `Ex`:
-    for (ExplodedNode *Node : DstPreStmt) {
-      ProgramStateRef State = Node->getState();
-      const StackFrame *SF = Node->getStackFrame();
-      evalLocation(DstEvalLoc, CastE, Ex, Node, State, State->getSVal(Ex, SF),
-                   true);
-    }
+    ProgramStateRef State = Pred->getState();
+    const StackFrame *SF = Pred->getStackFrame();
+    evalLocation(DstEvalLoc, CastE, Ex, Pred, State, State->getSVal(Ex, SF),
+                 true);
     // Simulate the operation that actually casts the original value to a new
     // value of the destination type :
 
@@ -303,228 +297,226 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
   if (const ExplicitCastExpr *ExCast=dyn_cast_or_null<ExplicitCastExpr>(CastE))
     T = ExCast->getTypeAsWritten();
 
-  for (ExplodedNode *Pred : DstPreStmt) {
+  ProgramStateRef state = Pred->getState();
+  const StackFrame *SF = Pred->getStackFrame();
+
+  switch (CastE->getCastKind()) {
+  case CK_LValueToRValue:
+  case CK_LValueToRValueBitCast:
+    llvm_unreachable("LValueToRValue casts handled earlier.");
+  case CK_ToVoid:
+    Dst.insert(Pred);
+    return;
+    // The analyzer doesn't do anything special with these casts,
+    // since it understands retain/release semantics already.
+  case CK_ARCProduceObject:
+  case CK_ARCConsumeObject:
+  case CK_ARCReclaimReturnedObject:
+  case CK_ARCExtendBlockObject: // Fall-through.
+  case CK_CopyAndAutoreleaseBlockObject:
+    // The analyser can ignore atomic casts for now, although some future
+    // checkers may want to make certain that you're not modifying the same
+    // value through atomic and nonatomic pointers.
+  case CK_AtomicToNonAtomic:
+  case CK_NonAtomicToAtomic:
+    // True no-ops.
+  case CK_NoOp:
+  case CK_ConstructorConversion:
+  case CK_UserDefinedConversion:
+  case CK_FunctionToPointerDecay:
+  case CK_BuiltinFnToFnPtr:
+  case CK_HLSLArrayRValue: {
+    // Copy the SVal of Ex to CastE.
     ProgramStateRef state = Pred->getState();
     const StackFrame *SF = Pred->getStackFrame();
+    SVal V = state->getSVal(Ex, SF);
+    Dst.insert(Engine.makeNodeWithBinding(Pred, CastE, V));
+    return;
+  }
+  case CK_MemberPointerToBoolean:
+  case CK_PointerToBoolean: {
+    SVal V = state->getSVal(Ex, SF);
+    auto PTMSV = V.getAs<nonloc::PointerToMember>();
+    if (PTMSV)
+      V = svalBuilder.makeTruthVal(!PTMSV->isNullMemberPointer(), ExTy);
+    if (V.isUndef() || PTMSV) {
+      Dst.insert(Engine.makeNodeWithBinding(Pred, CastE, V));
+      return;
+    }
+    // Explicitly proceed with default handler for this case cascade.
+    state = handleLValueBitCast(state, Ex, SF, T, ExTy, CastE, Dst, Pred);
+    return;
+  }
+  case CK_Dependent:
+  case CK_ArrayToPointerDecay:
+  case CK_BitCast:
+  case CK_AddressSpaceConversion:
+  case CK_BooleanToSignedIntegral:
+  case CK_IntegralToPointer:
+  case CK_PointerToIntegral: {
+    SVal V = state->getSVal(Ex, SF);
+    if (isa<nonloc::PointerToMember>(V)) {
+      Dst.insert(Engine.makeNodeWithBinding(Pred, CastE, UnknownVal()));
+      return;
+    }
+    // Explicitly proceed with default handler for this case cascade.
+    state = handleLValueBitCast(state, Ex, SF, T, ExTy, CastE, Dst, Pred);
+    return;
+  }
+  case CK_IntegralToBoolean:
+  case CK_IntegralToFloating:
+  case CK_FloatingToIntegral:
+  case CK_FloatingToBoolean:
+  case CK_FloatingCast:
+  case CK_FloatingRealToComplex:
+  case CK_FloatingComplexToReal:
+  case CK_FloatingComplexToBoolean:
+  case CK_FloatingComplexCast:
+  case CK_FloatingComplexToIntegralComplex:
+  case CK_IntegralRealToComplex:
+  case CK_IntegralComplexToReal:
+  case CK_IntegralComplexToBoolean:
+  case CK_IntegralComplexCast:
+  case CK_IntegralComplexToFloatingComplex:
+  case CK_CPointerToObjCPointerCast:
+  case CK_BlockPointerToObjCPointerCast:
+  case CK_AnyPointerToBlockPointerCast:
+  case CK_ObjCObjectLValueCast:
+  case CK_ZeroToOCLOpaqueType:
+  case CK_IntToOCLSampler:
+  case CK_LValueBitCast:
+  case CK_FloatingToFixedPoint:
+  case CK_FixedPointToFloating:
+  case CK_FixedPointCast:
+  case CK_FixedPointToBoolean:
+  case CK_FixedPointToIntegral:
+  case CK_IntegralToFixedPoint: {
+    state = handleLValueBitCast(state, Ex, SF, T, ExTy, CastE, Dst, Pred);
+    return;
+  }
+  case CK_IntegralCast: {
+    // Delegate to SValBuilder to process.
+    SVal V = state->getSVal(Ex, SF);
+    if (AMgr.options.analyzerSymbolicIntegerCasts())
+      V = svalBuilder.evalCast(V, T, ExTy);
+    else
+      V = svalBuilder.evalIntegralCast(state, V, T, ExTy);
+    Dst.insert(Engine.makeNodeWithBinding(Pred, CastE, V));
+    return;
+  }
+  case CK_DerivedToBase:
+  case CK_UncheckedDerivedToBase: {
+    // For DerivedToBase cast, delegate to the store manager.
+    SVal val = state->getSVal(Ex, SF);
+    val = getStoreManager().evalDerivedToBase(val, CastE);
+    Dst.insert(Engine.makeNodeWithBinding(Pred, CastE, val));
+    return;
+  }
+  // Handle C++ dyn_cast.
+  case CK_Dynamic: {
+    SVal val = state->getSVal(Ex, SF);
 
-    switch (CastE->getCastKind()) {
-      case CK_LValueToRValue:
-      case CK_LValueToRValueBitCast:
-        llvm_unreachable("LValueToRValue casts handled earlier.");
-      case CK_ToVoid:
-        Dst.insert(Pred);
-        continue;
-        // The analyzer doesn't do anything special with these casts,
-        // since it understands retain/release semantics already.
-      case CK_ARCProduceObject:
-      case CK_ARCConsumeObject:
-      case CK_ARCReclaimReturnedObject:
-      case CK_ARCExtendBlockObject: // Fall-through.
-      case CK_CopyAndAutoreleaseBlockObject:
-        // The analyser can ignore atomic casts for now, although some future
-        // checkers may want to make certain that you're not modifying the same
-        // value through atomic and nonatomic pointers.
-      case CK_AtomicToNonAtomic:
-      case CK_NonAtomicToAtomic:
-        // True no-ops.
-      case CK_NoOp:
-      case CK_ConstructorConversion:
-      case CK_UserDefinedConversion:
-      case CK_FunctionToPointerDecay:
-      case CK_BuiltinFnToFnPtr:
-      case CK_HLSLArrayRValue: {
-        // Copy the SVal of Ex to CastE.
-        ProgramStateRef state = Pred->getState();
-        const StackFrame *SF = Pred->getStackFrame();
-        SVal V = state->getSVal(Ex, SF);
-        Dst.insert(Engine.makeNodeWithBinding(Pred, CastE, V));
-        continue;
-      }
-      case CK_MemberPointerToBoolean:
-      case CK_PointerToBoolean: {
-        SVal V = state->getSVal(Ex, SF);
-        auto PTMSV = V.getAs<nonloc::PointerToMember>();
-        if (PTMSV)
-          V = svalBuilder.makeTruthVal(!PTMSV->isNullMemberPointer(), ExTy);
-        if (V.isUndef() || PTMSV) {
-          Dst.insert(Engine.makeNodeWithBinding(Pred, CastE, V));
-          continue;
-        }
-        // Explicitly proceed with default handler for this case cascade.
-        state = handleLValueBitCast(state, Ex, SF, T, ExTy, CastE, Dst, Pred);
-        continue;
-      }
-      case CK_Dependent:
-      case CK_ArrayToPointerDecay:
-      case CK_BitCast:
-      case CK_AddressSpaceConversion:
-      case CK_BooleanToSignedIntegral:
-      case CK_IntegralToPointer:
-      case CK_PointerToIntegral: {
-        SVal V = state->getSVal(Ex, SF);
-        if (isa<nonloc::PointerToMember>(V)) {
-          Dst.insert(Engine.makeNodeWithBinding(Pred, CastE, UnknownVal()));
-          continue;
-        }
-        // Explicitly proceed with default handler for this case cascade.
-        state = handleLValueBitCast(state, Ex, SF, T, ExTy, CastE, Dst, Pred);
-        continue;
-      }
-      case CK_IntegralToBoolean:
-      case CK_IntegralToFloating:
-      case CK_FloatingToIntegral:
-      case CK_FloatingToBoolean:
-      case CK_FloatingCast:
-      case CK_FloatingRealToComplex:
-      case CK_FloatingComplexToReal:
-      case CK_FloatingComplexToBoolean:
-      case CK_FloatingComplexCast:
-      case CK_FloatingComplexToIntegralComplex:
-      case CK_IntegralRealToComplex:
-      case CK_IntegralComplexToReal:
-      case CK_IntegralComplexToBoolean:
-      case CK_IntegralComplexCast:
-      case CK_IntegralComplexToFloatingComplex:
-      case CK_CPointerToObjCPointerCast:
-      case CK_BlockPointerToObjCPointerCast:
-      case CK_AnyPointerToBlockPointerCast:
-      case CK_ObjCObjectLValueCast:
-      case CK_ZeroToOCLOpaqueType:
-      case CK_IntToOCLSampler:
-      case CK_LValueBitCast:
-      case CK_FloatingToFixedPoint:
-      case CK_FixedPointToFloating:
-      case CK_FixedPointCast:
-      case CK_FixedPointToBoolean:
-      case CK_FixedPointToIntegral:
-      case CK_IntegralToFixedPoint: {
-        state = handleLValueBitCast(state, Ex, SF, T, ExTy, CastE, Dst, Pred);
-        continue;
-      }
-      case CK_IntegralCast: {
-        // Delegate to SValBuilder to process.
-        SVal V = state->getSVal(Ex, SF);
-        if (AMgr.options.analyzerSymbolicIntegerCasts())
-          V = svalBuilder.evalCast(V, T, ExTy);
-        else
-          V = svalBuilder.evalIntegralCast(state, V, T, ExTy);
-        Dst.insert(Engine.makeNodeWithBinding(Pred, CastE, V));
-        continue;
-      }
-      case CK_DerivedToBase:
-      case CK_UncheckedDerivedToBase: {
-        // For DerivedToBase cast, delegate to the store manager.
-        SVal val = state->getSVal(Ex, SF);
-        val = getStoreManager().evalDerivedToBase(val, CastE);
-        Dst.insert(Engine.makeNodeWithBinding(Pred, CastE, val));
-        continue;
-      }
-      // Handle C++ dyn_cast.
-      case CK_Dynamic: {
-        SVal val = state->getSVal(Ex, SF);
+    // Compute the type of the result.
+    QualType resultType = CastE->getType();
+    if (CastE->isGLValue())
+      resultType = getContext().getPointerType(resultType);
 
-        // Compute the type of the result.
-        QualType resultType = CastE->getType();
-        if (CastE->isGLValue())
-          resultType = getContext().getPointerType(resultType);
+    bool Failed = true;
 
-        bool Failed = true;
+    // Check if the value being cast does not evaluates to 0.
+    if (!val.isZeroConstant())
+      if (std::optional<SVal> V =
+              StateMgr.getStoreManager().evalBaseToDerived(val, T)) {
+        val = *V;
+        Failed = false;
+      }
 
-        // Check if the value being cast does not evaluates to 0.
-        if (!val.isZeroConstant())
-          if (std::optional<SVal> V =
-                  StateMgr.getStoreManager().evalBaseToDerived(val, T)) {
-          val = *V;
-          Failed = false;
-          }
-
-        if (Failed) {
-          if (T->isReferenceType()) {
-            // A bad_cast exception is thrown if input value is a reference.
-            // Currently, we model this, by generating a sink.
-            Engine.makePostStmtNode(CastE, state, Pred, /*MarkAsSink=*/true);
-            continue;
-          } else {
-            // If the cast fails on a pointer, bind to 0.
-            state = state->BindExpr(CastE, SF,
-                                    svalBuilder.makeNullWithType(resultType));
-          }
-        } else {
-          // If we don't know if the cast succeeded, conjure a new symbol.
-          if (val.isUnknown()) {
-            DefinedOrUnknownSVal NewSym = svalBuilder.conjureSymbolVal(
-                /*symbolTag=*/nullptr, getCFGElementRef(), SF, resultType,
-                getNumVisitedCurrent());
-            state = state->BindExpr(CastE, SF, NewSym);
-          } else
-            // Else, bind to the derived region value.
-            state = state->BindExpr(CastE, SF, val);
-        }
-        Dst.insert(Engine.makePostStmtNode(CastE, state, Pred));
-        continue;
+    if (Failed) {
+      if (T->isReferenceType()) {
+        // A bad_cast exception is thrown if input value is a reference.
+        // Currently, we model this, by generating a sink.
+        Engine.makePostStmtNode(CastE, state, Pred, /*MarkAsSink=*/true);
+        return;
+      } else {
+        // If the cast fails on a pointer, bind to 0.
+        state = state->BindExpr(CastE, SF,
+                                svalBuilder.makeNullWithType(resultType));
       }
-      case CK_BaseToDerived: {
-        SVal val = state->getSVal(Ex, SF);
-        QualType resultType = CastE->getType();
-        if (CastE->isGLValue())
-          resultType = getContext().getPointerType(resultType);
-
-        if (!val.isConstant()) {
-          std::optional<SVal> V = getStoreManager().evalBaseToDerived(val, T);
-          val = V ? *V : UnknownVal();
-        }
-
-        // Failed to cast or the result is unknown, fall back to conservative.
-        if (val.isUnknown()) {
-          val = svalBuilder.conjureSymbolVal(
-              /*symbolTag=*/nullptr, getCFGElementRef(), SF, resultType,
-              getNumVisitedCurrent());
-        }
-        Dst.insert(Engine.makeNodeWithBinding(Pred, CastE, val));
-        continue;
-      }
-      case CK_NullToPointer: {
-        SVal V = svalBuilder.makeNullWithType(CastE->getType());
-        Dst.insert(Engine.makeNodeWithBinding(Pred, CastE, V));
-        continue;
-      }
-      case CK_NullToMemberPointer: {
-        SVal V = svalBuilder.getMemberPointer(nullptr);
-        Dst.insert(Engine.makeNodeWithBinding(Pred, CastE, V));
-        continue;
-      }
-      case CK_DerivedToBaseMemberPointer:
-      case CK_BaseToDerivedMemberPointer:
-      case CK_ReinterpretMemberPointer: {
-        SVal V = state->getSVal(Ex, SF);
-        if (auto PTMSV = V.getAs<nonloc::PointerToMember>()) {
-          SVal CastedPTMSV =
-              svalBuilder.makePointerToMember(getBasicVals().accumCXXBase(
-                  CastE->path(), *PTMSV, CastE->getCastKind()));
-          Dst.insert(Engine.makeNodeWithBinding(Pred, CastE, CastedPTMSV));
-          continue;
-        }
-        // Explicitly proceed with default handler for this case cascade.
-      }
-        [[fallthrough]];
-      // Various C++ casts that are not handled yet.
-      case CK_ToUnion:
-      case CK_MatrixCast:
-      case CK_VectorSplat:
-      case CK_HLSLElementwiseCast:
-      case CK_HLSLAggregateSplatCast:
-      case CK_HLSLMatrixTruncation:
-      case CK_HLSLVectorTruncation: {
-        QualType resultType = CastE->getType();
-        if (CastE->isGLValue())
-          resultType = getContext().getPointerType(resultType);
-        SVal result = svalBuilder.conjureSymbolVal(
+    } else {
+      // If we don't know if the cast succeeded, conjure a new symbol.
+      if (val.isUnknown()) {
+        DefinedOrUnknownSVal NewSym = svalBuilder.conjureSymbolVal(
             /*symbolTag=*/nullptr, getCFGElementRef(), SF, resultType,
             getNumVisitedCurrent());
-        Dst.insert(Engine.makeNodeWithBinding(Pred, CastE, result));
-        continue;
-      }
+        state = state->BindExpr(CastE, SF, NewSym);
+      } else
+        // Else, bind to the derived region value.
+        state = state->BindExpr(CastE, SF, val);
     }
+    Dst.insert(Engine.makePostStmtNode(CastE, state, Pred));
+    return;
+  }
+  case CK_BaseToDerived: {
+    SVal val = state->getSVal(Ex, SF);
+    QualType resultType = CastE->getType();
+    if (CastE->isGLValue())
+      resultType = getContext().getPointerType(resultType);
+
+    if (!val.isConstant()) {
+      std::optional<SVal> V = getStoreManager().evalBaseToDerived(val, T);
+      val = V ? *V : UnknownVal();
+    }
+
+    // Failed to cast or the result is unknown, fall back to conservative.
+    if (val.isUnknown()) {
+      val = svalBuilder.conjureSymbolVal(
+          /*symbolTag=*/nullptr, getCFGElementRef(), SF, resultType,
+          getNumVisitedCurrent());
+    }
+    Dst.insert(Engine.makeNodeWithBinding(Pred, CastE, val));
+    return;
+  }
+  case CK_NullToPointer: {
+    SVal V = svalBuilder.makeNullWithType(CastE->getType());
+    Dst.insert(Engine.makeNodeWithBinding(Pred, CastE, V));
+    return;
+  }
+  case CK_NullToMemberPointer: {
+    SVal V = svalBuilder.getMemberPointer(nullptr);
+    Dst.insert(Engine.makeNodeWithBinding(Pred, CastE, V));
+    return;
+  }
+  case CK_DerivedToBaseMemberPointer:
+  case CK_BaseToDerivedMemberPointer:
+  case CK_ReinterpretMemberPointer: {
+    SVal V = state->getSVal(Ex, SF);
+    if (auto PTMSV = V.getAs<nonloc::PointerToMember>()) {
+      SVal CastedPTMSV =
+          svalBuilder.makePointerToMember(getBasicVals().accumCXXBase(
+              CastE->path(), *PTMSV, CastE->getCastKind()));
+      Dst.insert(Engine.makeNodeWithBinding(Pred, CastE, CastedPTMSV));
+      return;
+    }
+    // Explicitly proceed with default handler for this case cascade.
+  }
+    [[fallthrough]];
+  // Various C++ casts that are not handled yet.
+  case CK_ToUnion:
+  case CK_MatrixCast:
+  case CK_VectorSplat:
+  case CK_HLSLElementwiseCast:
+  case CK_HLSLAggregateSplatCast:
+  case CK_HLSLMatrixTruncation:
+  case CK_HLSLVectorTruncation: {
+    QualType resultType = CastE->getType();
+    if (CastE->isGLValue())
+      resultType = getContext().getPointerType(resultType);
+    SVal result = svalBuilder.conjureSymbolVal(
+        /*symbolTag=*/nullptr, getCFGElementRef(), SF, resultType,
+        getNumVisitedCurrent());
+    Dst.insert(Engine.makeNodeWithBinding(Pred, CastE, result));
+    return;
+  }
   }
 }
 

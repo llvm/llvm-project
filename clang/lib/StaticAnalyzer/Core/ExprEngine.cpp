@@ -1104,6 +1104,16 @@ static bool justRunCheckersAsPreVisit(const Stmt *S) {
   switch (S->getStmtClass()) {
   default:
     return false;
+  case Stmt::ImplicitCastExprClass:
+  case Stmt::CStyleCastExprClass:
+  case Stmt::CXXStaticCastExprClass:
+  case Stmt::CXXDynamicCastExprClass:
+  case Stmt::CXXReinterpretCastExprClass:
+  case Stmt::CXXConstCastExprClass:
+  case Stmt::CXXFunctionalCastExprClass:
+  case Stmt::BuiltinBitCastExprClass:
+  case Stmt::ObjCBridgedCastExprClass:
+  case Stmt::CXXAddrspaceCastExprClass:
   case Stmt::CXXBindTemporaryExprClass:
   case Stmt::MaterializeTemporaryExprClass:
   case Stmt::OffsetOfExprClass:
@@ -1116,6 +1126,16 @@ static bool justRunCheckersAsPostVisit(const Stmt *S) {
   switch (S->getStmtClass()) {
   default:
     return false;
+  case Stmt::ImplicitCastExprClass:
+  case Stmt::CStyleCastExprClass:
+  case Stmt::CXXStaticCastExprClass:
+  case Stmt::CXXDynamicCastExprClass:
+  case Stmt::CXXReinterpretCastExprClass:
+  case Stmt::CXXConstCastExprClass:
+  case Stmt::CXXFunctionalCastExprClass:
+  case Stmt::BuiltinBitCastExprClass:
+  case Stmt::ObjCBridgedCastExprClass:
+  case Stmt::CXXAddrspaceCastExprClass:
   case Stmt::CXXBindTemporaryExprClass:
   case Stmt::MaterializeTemporaryExprClass:
   case Stmt::OffsetOfExprClass:
@@ -2224,15 +2244,9 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::CXXFunctionalCastExprClass:
     case Stmt::BuiltinBitCastExprClass:
     case Stmt::ObjCBridgedCastExprClass:
-    case Stmt::CXXAddrspaceCastExprClass: {
-      const auto *C = cast<CastExpr>(S);
-      ExplodedNodeSet dstExpr;
-      VisitCast(C, C->getSubExpr(), Pred, dstExpr);
-
-      // Handle the postvisit checks.
-      getCheckerManager().runCheckersForPostStmt(Dst, dstExpr, C, *this);
+    case Stmt::CXXAddrspaceCastExprClass:
+      VisitCastExpr(cast<CastExpr>(S), Pred, Dst);
       break;
-    }
 
     case Expr::MaterializeTemporaryExprClass:
       VisitMaterializeTemporaryExpr(cast<MaterializeTemporaryExpr>(S), Pred,

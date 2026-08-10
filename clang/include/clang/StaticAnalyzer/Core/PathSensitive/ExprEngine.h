@@ -546,9 +546,10 @@ public:
   void VisitCallExpr(const CallExpr *CE, ExplodedNode *Pred,
                      ExplodedNodeSet &Dst);
 
-  /// VisitCast - Transfer function logic for all casts (implicit and explicit).
-  void VisitCast(const CastExpr *CastE, const Expr *Ex, ExplodedNode *Pred,
-                 ExplodedNodeSet &Dst);
+  /// VisitCastExpr - Transfer function logic for all casts (implicit and
+  /// explicit).
+  void VisitCastExpr(const CastExpr *CastE, ExplodedNode *Pred,
+                     ExplodedNodeSet &Dst);
 
   /// VisitCompoundLiteralExpr - Transfer function logic for compound literals.
   void VisitCompoundLiteralExpr(const CompoundLiteralExpr *CL,
