@@ -3381,7 +3381,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
     (`constant` $constant^)?
     $linkage
     (`comdat` $comdat^)?
-    (` ` custom<TLSModel>($tls_model)^ )?
+    (`tls_model` `=` $tls_model^)?
     (`dyn_tls_refs` `=` $dyn_tls_refs^)?
     (`dso_local` $dso_local^)?
     (`static_local_guard` `` $static_local_guard^)?

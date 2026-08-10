@@ -288,30 +288,6 @@ parseGlobalAddressSpaceValue(mlir::AsmParser &p,
 void printGlobalAddressSpaceValue(mlir::AsmPrinter &printer, cir::GlobalOp op,
                                   mlir::ptr::MemorySpaceAttrInterface attr);
 
-mlir::OptionalParseResult parseTLSModel(mlir::AsmParser &parser,
-                                        cir::TLSModelAttr &attr) {
-  static constexpr llvm::StringRef keywords[] = {
-      "tls_dyn", "tls_local_dyn", "tls_init_exec", "tls_local_exec"};
-  llvm::StringRef keyword;
-  if (parser.parseOptionalKeyword(&keyword, keywords).failed())
-    return success();
-
-  auto tlsModel = ::cir::symbolizeEnum<::cir::TLSModel>(keyword);
-  if (!tlsModel) {
-    return parser.emitError(parser.getCurrentLocation(), "expected one of [")
-           << llvm::join(llvm::ArrayRef(keywords), ", ")
-           << "] for TLSModel, got: " << keyword;
-  }
-
-  attr = ::cir::TLSModelAttr::get(parser.getContext(), *tlsModel);
-  return success();
-}
-
-void printTLSModel(mlir::AsmPrinter &printer, cir::GlobalOp op,
-                   const cir::TLSModelAttr &attr) {
-  printer << " " << stringifyTLSModel(attr.getValue());
-}
-
 //===----------------------------------------------------------------------===//
 // AllocaOp
 //===----------------------------------------------------------------------===//
