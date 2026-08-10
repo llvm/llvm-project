@@ -1018,8 +1018,8 @@ bool vputils::isDeadRecipe(VPRecipeBase &R) {
     return false;
 
   // Forbid removing trip-count expressions.
-  VPlan &Plan = *R.getParent()->getPlan();
-  if (isa<VPExpandSCEVRecipe>(R) && R.getVPSingleValue() == Plan.getTripCount())
+  if (isa<VPExpandSCEVRecipe>(R) &&
+      R.getVPSingleValue() == R.getParent()->getPlan()->getTripCount())
     return false;
 
   // Recipe is dead if no user keeps the recipe alive.
