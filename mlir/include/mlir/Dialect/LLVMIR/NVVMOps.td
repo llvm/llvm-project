@@ -4213,9 +4213,11 @@ def TMALoadModeAttr : EnumAttr<NVVM_Dialect, TMALoadMode, "tma_load_mode"> {
 def TMAStoreModeTile   : I32EnumAttrCase<"TILE", 0, "tile">;
 def TMAStoreModeIm2Col : I32EnumAttrCase<"IM2COL", 1, "im2col">;
 def TMAStoreModeTileScatter4 : I32EnumAttrCase<"TILE_SCATTER4", 2, "tile_scatter4">;
+def TMAStoreModeIm2ColW : I32EnumAttrCase<"IM2COL_W", 3, "im2col_w">;
 
 def TMAStoreMode : I32EnumAttr<"TMAStoreMode", "NVVM TMA Store Mode",
-    [TMAStoreModeTile, TMAStoreModeIm2Col, TMAStoreModeTileScatter4]> {
+    [TMAStoreModeTile, TMAStoreModeIm2Col,
+     TMAStoreModeTileScatter4, TMAStoreModeIm2ColW]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::NVVM";
 }
