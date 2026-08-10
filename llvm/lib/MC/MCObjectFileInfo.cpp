@@ -695,11 +695,15 @@ void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
   DwarfStrDWOSection = InitDebugSection("D_STR_DWO", ".debug_str.dwo");
   DwarfLineDWOSection = InitDebugSection("D_LINE_DWO", ".debug_line.dwo");
   DwarfLocDWOSection = InitDebugSection("D_LOC_DWO", ".debug_loc.dwo");
-  DwarfStrOffDWOSection = InitDebugSection("D_STROFFS_DWO", ".debug_str_offsets.dwo");
-  DwarfRnglistsDWOSection = InitDebugSection("D_RNGLISTS_DWO", ".debug_rnglists.dwo");
-  DwarfMacinfoDWOSection = InitDebugSection("D_MACINFO_DWO", ".debug_macinfo.dwo");
+  DwarfStrOffDWOSection =
+      InitDebugSection("D_STROFFS_DWO", ".debug_str_offsets.dwo");
+  DwarfRnglistsDWOSection =
+      InitDebugSection("D_RNGLISTS_DWO", ".debug_rnglists.dwo");
+  DwarfMacinfoDWOSection =
+      InitDebugSection("D_MACINFO_DWO", ".debug_macinfo.dwo");
   DwarfMacroDWOSection = InitDebugSection("D_MACRO_DWO", ".debug_macro.dwo");
-  DwarfLoclistsDWOSection = InitDebugSection("D_LOCLISTS_DWO", ".debug_loclists.dwo");
+  DwarfLoclistsDWOSection =
+      InitDebugSection("D_LOCLISTS_DWO", ".debug_loclists.dwo");
 }
 
 void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
