@@ -770,7 +770,7 @@ public:
     case AArch64::LDRSWl:
       AddrReg = DataReg;
       OpCode = AArch64::LDRSWui;
-      RelType = ELF::R_AARCH64_LDST64_ABS_LO12_NC;
+      RelType = ELF::R_AARCH64_LDST32_ABS_LO12_NC;
       break;
     case AArch64::LDRSl:
       AddrReg = AArch64::X16;
