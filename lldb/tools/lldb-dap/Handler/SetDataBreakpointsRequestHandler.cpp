@@ -25,7 +25,10 @@ SetDataBreakpointsRequestHandler::Run(
     const protocol::SetDataBreakpointsArguments &args) const {
   std::vector<protocol::Breakpoint> response_breakpoints;
 
-  dap.target.DeleteAllWatchpoints();
+  for (lldb::watch_id_t watch_id : dap.data_breakpoints)
+    dap.target.DeleteWatchpoint(watch_id);
+  dap.data_breakpoints.clear();
+
   std::vector<Watchpoint> watchpoints;
   for (const auto &bp : args.breakpoints)
     watchpoints.emplace_back(dap, bp);
@@ -38,6 +41,9 @@ SetDataBreakpointsRequestHandler::Run(
     if (addresses.count(iter->GetAddress()) == 0) {
       iter->SetWatchpoint();
       addresses.insert(iter->GetAddress());
+      if (lldb::watch_id_t watch_id = iter->GetID();
+          watch_id != LLDB_INVALID_WATCH_ID)
+        dap.data_breakpoints.push_back(watch_id);
     }
   }
   for (auto wp : watchpoints)

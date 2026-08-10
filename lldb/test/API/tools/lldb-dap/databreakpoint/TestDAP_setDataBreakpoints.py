@@ -183,6 +183,47 @@ class TestDAP_setDataBreakpoints(DAPTestCaseBase):
         self.assertEqual(session.top_frame_from(stop_event).locals["x"].value, "10")
 
     @skipIfWindows
+    def test_console_watchpoint_preserved(self):
+        """Test setDataBreakpoints must not delete watchpoints created via the console."""
+        source = "main.cpp"
+        program = self.getBuildArtifact("a.out")
+        session = self.build_and_create_session()
+        first_loop_break_line = line_number(source, "// first loop breakpoint")
+        with session.configure(LaunchArgs(program)) as ctx:
+            session.resolve_source_breakpoints(source, [first_loop_break_line])
+        stop_event = session.verify_stopped_on_breakpoint(after=ctx.process_event)
+        top_frame = session.top_frame_from(stop_event)
+
+        # Create a watchpoint via the LLDB console.
+        resp_body = session.evaluate("`watchpoint set variable x", context="repl")
+        session.verify_evaluate(resp_body, matches=r".*Watchpoint created.*")
+        resp_body = session.evaluate("`watchpoint list", context="repl")
+        session.verify_evaluate(resp_body, matches=r".*Watchpoint 1:.*")
+
+        # Set a data breakpoint via DAP.
+        arr = top_frame.locals["arr"]
+        arr_var_ref = self.expect_not_none(arr.variablesReference)
+        response_arr_2 = session.data_breakpoint_info(
+            "[2]", arr_var_ref, top_frame.frame.id
+        )
+        arr_2_data_id = self.expect_not_none(response_arr_2.body.dataId)
+        set_response = session.set_data_breakpoints(
+            [DataBreakpoint(dataId=arr_2_data_id, accessType="write")]
+        )
+        [bp_arr_2] = set_response.body.breakpoints
+        self.assertTrue(bp_arr_2.verified)
+
+        resp_body = session.evaluate("`watchpoint list", context="repl")
+        session.verify_evaluate(resp_body, matches=r".*Watchpoint 1:.*")
+
+        session.set_data_breakpoints([])
+        resp_body = session.evaluate("`watchpoint list", context="repl")
+        session.verify_evaluate(resp_body, matches=r".*Watchpoint 1:.*")
+
+        session.evaluate("`watchpoint delete 1", context="repl")
+        session.continue_to_exit()
+
+    @skipIfWindows
     def test_bytes(self):
         """Tests setting data breakpoints on memory range."""
         source = self.getSourcePath("main.cpp")

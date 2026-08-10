@@ -107,6 +107,7 @@ struct DAP final : public DAPTransport::MessageHandler {
   FunctionBreakpointMap function_breakpoints;
   InstructionBreakpointMap instruction_breakpoints;
   std::vector<ExceptionBreakpoint> exception_breakpoints;
+  std::vector<lldb::watch_id_t> data_breakpoints;
 
   /// Map step in target id to list of function targets that user can choose.
   llvm::DenseMap<lldb::addr_t, std::string> step_in_targets;
