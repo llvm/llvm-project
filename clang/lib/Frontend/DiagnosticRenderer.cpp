@@ -40,14 +40,12 @@ clang::getExpansionRangeInFile(CharSourceRange Range, FileID FID,
   if (Range.isInvalid())
     return std::nullopt;
 
-  SourceLocation Begin = SM.getExpansionLoc(Range.getBegin());
-  CharSourceRange EndRange = SM.getExpansionRange(Range.getEnd());
-  SourceLocation End = EndRange.getEnd();
-
-  if (SM.getFileID(Begin) != FID || SM.getFileID(End) != FID)
+  CharSourceRange Expansion = SM.getExpansionRange(Range);
+  if (SM.getFileID(Expansion.getBegin()) != FID ||
+      SM.getFileID(Expansion.getEnd()) != FID)
     return std::nullopt;
 
-  return CharSourceRange(SourceRange(Begin, End), EndRange.isTokenRange());
+  return Expansion;
 }
 
 namespace {
