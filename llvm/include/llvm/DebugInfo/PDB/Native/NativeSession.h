@@ -120,6 +120,10 @@ public:
                                 uint16_t &ModuleIndex) const;
   Expected<ModuleDebugStreamRef> getModuleDebugStream(uint32_t Index) const;
 
+#ifndef NDEBUG
+  void checkSymbolRange(uint64_t Start, uint64_t Stop) const;
+#endif
+
 private:
   void initializeExeSymbol();
   void parseSectionContribs();

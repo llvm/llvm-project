@@ -34,6 +34,32 @@ func.func @simple_loop(%arg0: !fir.ref<!fir.array<100xi32>>) {
 
 // -----
 
+// CHECK-LABEL: func.func @typed_loop(
+// CHECK-SAME: %[[LB:.*]]: i32, %[[UB:.*]]: i32, %[[STEP:.*]]: i32,
+// CHECK-SAME: %[[ADDR:.*]]: !fir.ref<i32>) {
+// CHECK: %[[LB_IDX:.*]] = fir.convert %[[LB]] : (i32) -> index
+// CHECK: %[[UB_IDX:.*]] = fir.convert %[[UB]] : (i32) -> index
+// CHECK: %[[STEP_IDX:.*]] = fir.convert %[[STEP]] : (i32) -> index
+// CHECK: %[[DIFF:.*]] = arith.subi %[[UB_IDX]], %[[LB_IDX]] : index
+// CHECK: %[[DISTANCE:.*]] = arith.addi %[[DIFF]], %[[STEP_IDX]] : index
+// CHECK: %[[TRIP:.*]] = arith.divsi %[[DISTANCE]], %[[STEP_IDX]] : index
+// CHECK: %[[C0:.*]] = arith.constant 0 : index
+// CHECK: %[[C1:.*]] = arith.constant 1 : index
+// CHECK: scf.for %{{.*}} = %[[C0]] to %[[TRIP]] step %[[C1]] iter_args(%[[IV:.*]] = %[[LB]]) -> (i32) {
+// CHECK:   %[[NEXT:.*]] = arith.addi %[[IV]], %[[STEP]] overflow<nsw> : i32
+// CHECK:   fir.store %[[IV]] to %[[ADDR]] : !fir.ref<i32>
+// CHECK:   scf.yield %[[NEXT]] : i32
+// CHECK: }
+func.func @typed_loop(%lb: i32, %ub: i32, %step: i32,
+                      %addr: !fir.ref<i32>) {
+  fir.do_loop %iv = %lb to %ub step %step : i32 {
+    fir.store %iv to %addr : !fir.ref<i32>
+  }
+  return
+}
+
+// -----
+
 // CHECK-LABEL:   func.func @loop_with_negtive_step(
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<100xi32>>) {
 // CHECK:           %[[VAL_0:.*]] = arith.constant 100 : index
@@ -150,6 +176,56 @@ func.func @loop_with_final_value(%arg0: !fir.ref<!fir.array<100xi32>>, %arg1: !f
   }
   fir.store %2#0 to %0 : !fir.ref<index>
   fir.store %2#1 to %arg1 : !fir.ref<i32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @loop_with_final_value_yielding_iv() {
+// CHECK:           %[[C1:.*]] = arith.constant 1 : index
+// CHECK:           %[[C10:.*]] = arith.constant 10 : index
+// CHECK:           %[[TRIP:.*]] = arith.divsi
+// CHECK:           %[[C0:.*]] = arith.constant 0 : index
+// CHECK:           %[[ONE:.*]] = arith.constant 1 : index
+// CHECK:           %[[FOR:.*]] = scf.for %{{.*}} = %[[C0]] to %[[TRIP]] step %[[ONE]] iter_args(%{{.*}} = %[[C1]]) -> (index) {
+// CHECK:             %[[NEXT:.*]] = arith.addi %{{.*}}, %[[C1]]
+// CHECK:             scf.yield %[[NEXT]] : index
+// CHECK:           }
+// CHECK:           return
+// CHECK:         }
+func.func @loop_with_final_value_yielding_iv() {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %0:1 = fir.do_loop %i = %c1 to %c10 step %c1 -> index {
+    fir.result %i : index
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @loop_with_final_value_and_result() {
+// CHECK:           %[[C1:.*]] = arith.constant 1 : index
+// CHECK:           %[[C0I32:.*]] = arith.constant 0 : i32
+// CHECK:           %[[C10:.*]] = arith.constant 10 : index
+// CHECK:           %[[TRIP:.*]] = arith.divsi
+// CHECK:           %[[C0:.*]] = arith.constant 0 : index
+// CHECK:           %[[ONE:.*]] = arith.constant 1 : index
+// CHECK:           %[[LOOP:.*]]:2 = scf.for %{{.*}} = %[[C0]] to %[[TRIP]] step %[[ONE]] iter_args(%[[IVIN:.*]] = %[[C1]], %[[ACCIN:.*]] = %[[C0I32]]) -> (index, i32) {
+// CHECK:             %[[IVNEXT:.*]] = arith.addi %{{.*}}, %[[C1]] overflow<nsw> : index
+// CHECK:             %[[ACCOUT:.*]] = arith.addi %[[ACCIN]], %[[ACCIN]] : i32
+// CHECK:             scf.yield %[[IVNEXT]], %[[ACCOUT]] : index, i32
+// CHECK:           }
+// CHECK:           return
+// CHECK:         }
+func.func @loop_with_final_value_and_result() {
+  %c1 = arith.constant 1 : index
+  %c0_i32 = arith.constant 0 : i32
+  %c10 = arith.constant 10 : index
+  %0:2 = fir.do_loop %i = %c1 to %c10 step %c1 iter_args(%acc = %c0_i32) -> (index, i32) {
+    %acc2 = arith.addi %acc, %acc : i32
+    fir.result %i, %acc2 : index, i32
+  }
   return
 }
 
@@ -276,6 +352,17 @@ func.func @nested_loop(%arg0: !fir.ref<!fir.array<100x100xi32>>) {
       %1 = fir.array_coor %arg0(%0) %arg2, %arg1 : (!fir.ref<!fir.array<100x100xi32>>, !fir.shape<2>, index, index) -> !fir.ref<i32>
       fir.store %c1_i32 to %1 : !fir.ref<i32>
     }
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @propagate_par_dims
+// CHECK:         scf.for {{.*}} {
+// CHECK:         } {acc.par_dims = #acc<par_dims[sequential]>}
+func.func @propagate_par_dims() {
+  %c1 = arith.constant 1 : index
+  %c100 = arith.constant 100 : index
+  fir.do_loop %arg1 = %c1 to %c100 step %c1 attributes {acc.par_dims = #acc<par_dims[sequential]>} {
   }
   return
 }

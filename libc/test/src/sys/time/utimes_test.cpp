@@ -26,7 +26,7 @@ using LlvmLibcUtimesTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 TEST_F(LlvmLibcUtimesTest, ChangeTimesSpecific) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
-  constexpr const char *FILE_PATH = "utimes_pass.test";
+  constexpr const char *FILE_PATH = APPEND_LIBC_TEST("utimes_pass.test");
   auto TEST_FILE = libc_make_test_file_path(FILE_PATH);
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
   ASSERT_ERRNO_SUCCESS();
@@ -50,12 +50,19 @@ TEST_F(LlvmLibcUtimesTest, ChangeTimesSpecific) {
   // seconds
   ASSERT_EQ(statbuf.st_atim.tv_sec, times[0].tv_sec);
   ASSERT_EQ(statbuf.st_mtim.tv_sec, times[1].tv_sec);
+  ASSERT_GT(statbuf.st_ctim.tv_sec, static_cast<time_t>(0));
 
   // microseconds
-  ASSERT_EQ(statbuf.st_atim.tv_nsec,
-            static_cast<long>(times[0].tv_usec * 1000));
-  ASSERT_EQ(statbuf.st_mtim.tv_nsec,
-            static_cast<long>(times[1].tv_usec * 1000));
+  ASSERT_EQ(
+      statbuf.st_atim.tv_nsec,
+      static_cast<decltype(statbuf.st_atim.tv_nsec)>(times[0].tv_usec * 1000));
+  ASSERT_EQ(
+      statbuf.st_mtim.tv_nsec,
+      static_cast<decltype(statbuf.st_mtim.tv_nsec)>(times[1].tv_usec * 1000));
+  // legacy way to check seconds
+  ASSERT_EQ(statbuf.st_atime, times[0].tv_sec);
+  ASSERT_EQ(statbuf.st_mtime, times[1].tv_sec);
+  ASSERT_GT(statbuf.st_ctime, static_cast<time_t>(0));
 
   ASSERT_THAT(LIBC_NAMESPACE::remove(TEST_FILE), Succeeds(0));
 }

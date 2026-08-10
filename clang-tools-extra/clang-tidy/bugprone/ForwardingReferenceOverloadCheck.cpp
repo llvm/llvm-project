@@ -17,7 +17,7 @@ namespace clang::tidy::bugprone {
 namespace {
 // Check if the given type is related to std::enable_if.
 AST_MATCHER(QualType, isEnableIf) {
-  auto CheckTemplate = [](const TemplateSpecializationType *Spec) {
+  const auto CheckTemplate = [](const TemplateSpecializationType *Spec) {
     if (!Spec)
       return false;
 
@@ -29,9 +29,8 @@ AST_MATCHER(QualType, isEnableIf) {
   };
   const Type *BaseType = Node.getTypePtr();
   // Case: pointer or reference to enable_if.
-  while (BaseType->isPointerType() || BaseType->isReferenceType()) {
+  while (BaseType->isPointerType() || BaseType->isReferenceType())
     BaseType = BaseType->getPointeeType().getTypePtr();
-  }
   // Case: type parameter dependent (enable_if<is_integral<T>>).
   if (const auto *Dependent = BaseType->getAs<DependentNameType>())
     BaseType = Dependent->getQualifier().getAsType();
@@ -41,13 +40,13 @@ AST_MATCHER(QualType, isEnableIf) {
     return true; // Case: enable_if_t< >.
   if (const auto *TT = BaseType->getAs<TypedefType>())
     if (const NestedNameSpecifier Q = TT->getQualifier();
-        Q.getKind() == NestedNameSpecifier::Kind::Type)
-      if (CheckTemplate(Q.getAsType()->getAs<TemplateSpecializationType>()))
-        return true; // Case: enable_if< >::type.
+        Q.getKind() == NestedNameSpecifier::Kind::Type &&
+        CheckTemplate(Q.getAsType()->getAs<TemplateSpecializationType>()))
+      return true; // Case: enable_if< >::type.
   return false;
 }
 AST_MATCHER_P(TemplateTypeParmDecl, hasDefaultArgument,
-              clang::ast_matchers::internal::Matcher<QualType>, TypeMatcher) {
+              ast_matchers::internal::Matcher<QualType>, TypeMatcher) {
   return Node.hasDefaultArgument() &&
          TypeMatcher.matches(
              Node.getDefaultArgument().getArgument().getAsType(), Finder,
@@ -59,7 +58,7 @@ AST_MATCHER(TemplateDecl, hasAssociatedConstraints) {
 } // namespace
 
 void ForwardingReferenceOverloadCheck::registerMatchers(MatchFinder *Finder) {
-  auto ForwardingRefParm =
+  const auto ForwardingRefParm =
       parmVarDecl(
           hasType(qualType(rValueReferenceType(),
                            references(templateTypeParmType(hasDeclaration(
@@ -114,10 +113,9 @@ void ForwardingReferenceOverloadCheck::check(
 
   // Every parameter after the first must have a default value.
   const auto *Ctor = Result.Nodes.getNodeAs<CXXConstructorDecl>("ctor");
-  for (const auto *Param : llvm::drop_begin(Ctor->parameters())) {
+  for (const auto *Param : llvm::drop_begin(Ctor->parameters()))
     if (!Param->hasDefaultArg())
       return;
-  }
   bool EnabledCopy = false, DisabledCopy = false, EnabledMove = false,
        DisabledMove = false;
   for (const auto *OtherCtor : Ctor->getParent()->ctors()) {

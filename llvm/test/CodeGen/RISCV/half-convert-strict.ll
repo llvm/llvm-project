@@ -120,7 +120,6 @@ define i16 @fcvt_si_h(half %a) nounwind strictfp {
   %1 = call i16 @llvm.experimental.constrained.fptosi.i16.f16(half %a, metadata !"fpexcept.strict")
   ret i16 %1
 }
-declare i16 @llvm.experimental.constrained.fptosi.i16.f16(half, metadata)
 
 define i16 @fcvt_ui_h(half %a) nounwind strictfp {
 ; CHECK32-IZFH-LABEL: fcvt_ui_h:
@@ -183,7 +182,6 @@ define i16 @fcvt_ui_h(half %a) nounwind strictfp {
   %1 = call i16 @llvm.experimental.constrained.fptoui.i16.f16(half %a, metadata !"fpexcept.strict")
   ret i16 %1
 }
-declare i16 @llvm.experimental.constrained.fptoui.i16.f16(half, metadata)
 
 define i32 @fcvt_w_h(half %a) nounwind strictfp {
 ; CHECKIZFH-LABEL: fcvt_w_h:
@@ -246,7 +244,6 @@ define i32 @fcvt_w_h(half %a) nounwind strictfp {
   %1 = call i32 @llvm.experimental.constrained.fptosi.i32.f16(half %a, metadata !"fpexcept.strict")
   ret i32 %1
 }
-declare i32 @llvm.experimental.constrained.fptosi.i32.f16(half, metadata)
 
 define i32 @fcvt_wu_h(half %a) nounwind strictfp {
 ; CHECKIZFH-LABEL: fcvt_wu_h:
@@ -309,7 +306,6 @@ define i32 @fcvt_wu_h(half %a) nounwind strictfp {
   %1 = call i32 @llvm.experimental.constrained.fptoui.i32.f16(half %a, metadata !"fpexcept.strict")
   ret i32 %1
 }
-declare i32 @llvm.experimental.constrained.fptoui.i32.f16(half, metadata)
 
 ; Test where the fptoui has multiple uses, one of which causes a sext to be
 ; inserted on RV64.
@@ -475,7 +471,6 @@ define i64 @fcvt_l_h(half %a) nounwind strictfp {
   %1 = call i64 @llvm.experimental.constrained.fptosi.i64.f16(half %a, metadata !"fpexcept.strict")
   ret i64 %1
 }
-declare i64 @llvm.experimental.constrained.fptosi.i64.f16(half, metadata)
 
 define i64 @fcvt_lu_h(half %a) nounwind strictfp {
 ; CHECK32-IZFH-LABEL: fcvt_lu_h:
@@ -552,7 +547,6 @@ define i64 @fcvt_lu_h(half %a) nounwind strictfp {
   %1 = call i64 @llvm.experimental.constrained.fptoui.i64.f16(half %a, metadata !"fpexcept.strict")
   ret i64 %1
 }
-declare i64 @llvm.experimental.constrained.fptoui.i64.f16(half, metadata)
 
 define half @fcvt_h_si(i16 %a) nounwind strictfp {
 ; CHECK32-IZFH-LABEL: fcvt_h_si:
@@ -633,7 +627,6 @@ define half @fcvt_h_si(i16 %a) nounwind strictfp {
   %1 = call half @llvm.experimental.constrained.sitofp.f16.i16(i16 %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret half %1
 }
-declare half @llvm.experimental.constrained.sitofp.f16.i16(i16, metadata, metadata)
 
 define half @fcvt_h_si_signext(i16 signext %a) nounwind strictfp {
 ; CHECKIZFH-LABEL: fcvt_h_si_signext:
@@ -776,7 +769,6 @@ define half @fcvt_h_ui(i16 %a) nounwind strictfp {
   %1 = call half @llvm.experimental.constrained.uitofp.f16.i16(i16 %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret half %1
 }
-declare half @llvm.experimental.constrained.uitofp.f16.i16(i16, metadata, metadata)
 
 define half @fcvt_h_ui_zeroext(i16 zeroext %a) nounwind strictfp {
 ; CHECKIZFH-LABEL: fcvt_h_ui_zeroext:
@@ -901,7 +893,6 @@ define half @fcvt_h_w(i32 %a) nounwind strictfp {
   %1 = call half @llvm.experimental.constrained.sitofp.f16.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret half %1
 }
-declare half @llvm.experimental.constrained.sitofp.f16.i32(i32, metadata, metadata)
 
 define half @fcvt_h_w_load(ptr %p) nounwind strictfp {
 ; CHECKIZFH-LABEL: fcvt_h_w_load:
@@ -1036,7 +1027,6 @@ define half @fcvt_h_wu(i32 %a) nounwind strictfp {
   %1 = call half @llvm.experimental.constrained.uitofp.f16.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret half %1
 }
-declare half @llvm.experimental.constrained.uitofp.f16.i32(i32, metadata, metadata)
 
 define half @fcvt_h_wu_load(ptr %p) nounwind strictfp {
 ; CHECKIZFH-LABEL: fcvt_h_wu_load:
@@ -1185,7 +1175,6 @@ define half @fcvt_h_l(i64 %a) nounwind strictfp {
   %1 = call half @llvm.experimental.constrained.sitofp.f16.i64(i64 %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret half %1
 }
-declare half @llvm.experimental.constrained.sitofp.f16.i64(i64, metadata, metadata)
 
 define half @fcvt_h_lu(i64 %a) nounwind strictfp {
 ; CHECK32-IZFH-LABEL: fcvt_h_lu:
@@ -1262,7 +1251,6 @@ define half @fcvt_h_lu(i64 %a) nounwind strictfp {
   %1 = call half @llvm.experimental.constrained.uitofp.f16.i64(i64 %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret half %1
 }
-declare half @llvm.experimental.constrained.uitofp.f16.i64(i64, metadata, metadata)
 
 define half @fcvt_h_s(float %a) nounwind strictfp {
 ; CHECKIZFH-LABEL: fcvt_h_s:
@@ -1320,7 +1308,6 @@ define half @fcvt_h_s(float %a) nounwind strictfp {
   %1 = call half @llvm.experimental.constrained.fptrunc.f16.f32(float %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret half %1
 }
-declare half @llvm.experimental.constrained.fptrunc.f16.f32(float, metadata, metadata)
 
 define float @fcvt_s_h(half %a) nounwind strictfp {
 ; CHECKIZFH-LABEL: fcvt_s_h:
@@ -1378,7 +1365,6 @@ define float @fcvt_s_h(half %a) nounwind strictfp {
   %1 = call float @llvm.experimental.constrained.fpext.f32.f16(half %a, metadata !"fpexcept.strict")
   ret float %1
 }
-declare float @llvm.experimental.constrained.fpext.f32.f16(half, metadata)
 
 define half @fcvt_h_d(double %a) nounwind strictfp {
 ; RV32IZFH-LABEL: fcvt_h_d:
@@ -1488,7 +1474,6 @@ define half @fcvt_h_d(double %a) nounwind strictfp {
   %1 = call half @llvm.experimental.constrained.fptrunc.f16.f64(double %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret half %1
 }
-declare half @llvm.experimental.constrained.fptrunc.f16.f64(double, metadata, metadata)
 
 define double @fcvt_d_h(half %a) nounwind strictfp {
 ; RV32IZFH-LABEL: fcvt_d_h:
@@ -1607,7 +1592,6 @@ define double @fcvt_d_h(half %a) nounwind strictfp {
   %1 = call double @llvm.experimental.constrained.fpext.f64.f16(half %a, metadata !"fpexcept.strict")
   ret double %1
 }
-declare double @llvm.experimental.constrained.fpext.f64.f16(half, metadata)
 
 ; Make sure we select W version of addi on RV64.
 define signext i32 @fcvt_h_w_demanded_bits(i32 signext %0, ptr %1) strictfp {
@@ -1681,13 +1665,13 @@ define signext i32 @fcvt_h_w_demanded_bits(i32 signext %0, ptr %1) strictfp {
 ; CHECK32-D-NEXT:    .cfi_offset ra, -4
 ; CHECK32-D-NEXT:    .cfi_offset s0, -8
 ; CHECK32-D-NEXT:    .cfi_offset s1, -12
-; CHECK32-D-NEXT:    mv s0, a1
-; CHECK32-D-NEXT:    addi s1, a0, 1
-; CHECK32-D-NEXT:    fcvt.s.w fa0, s1
+; CHECK32-D-NEXT:    addi s0, a0, 1
+; CHECK32-D-NEXT:    fcvt.s.w fa0, s0
+; CHECK32-D-NEXT:    mv s1, a1
 ; CHECK32-D-NEXT:    call __truncsfhf2
-; CHECK32-D-NEXT:    fmv.x.w a0, fa0
-; CHECK32-D-NEXT:    sh a0, 0(s0)
-; CHECK32-D-NEXT:    mv a0, s1
+; CHECK32-D-NEXT:    fmv.x.w a1, fa0
+; CHECK32-D-NEXT:    mv a0, s0
+; CHECK32-D-NEXT:    sh a1, 0(s1)
 ; CHECK32-D-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK32-D-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; CHECK32-D-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
@@ -1775,13 +1759,13 @@ define signext i32 @fcvt_h_wu_demanded_bits(i32 signext %0, ptr %1) strictfp {
 ; CHECK32-D-NEXT:    .cfi_offset ra, -4
 ; CHECK32-D-NEXT:    .cfi_offset s0, -8
 ; CHECK32-D-NEXT:    .cfi_offset s1, -12
-; CHECK32-D-NEXT:    mv s0, a1
-; CHECK32-D-NEXT:    addi s1, a0, 1
-; CHECK32-D-NEXT:    fcvt.s.wu fa0, s1
+; CHECK32-D-NEXT:    addi s0, a0, 1
+; CHECK32-D-NEXT:    fcvt.s.wu fa0, s0
+; CHECK32-D-NEXT:    mv s1, a1
 ; CHECK32-D-NEXT:    call __truncsfhf2
-; CHECK32-D-NEXT:    fmv.x.w a0, fa0
-; CHECK32-D-NEXT:    sh a0, 0(s0)
-; CHECK32-D-NEXT:    mv a0, s1
+; CHECK32-D-NEXT:    fmv.x.w a1, fa0
+; CHECK32-D-NEXT:    mv a0, s0
+; CHECK32-D-NEXT:    sh a1, 0(s1)
 ; CHECK32-D-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK32-D-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; CHECK32-D-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
@@ -1937,8 +1921,8 @@ define fp128 @fcvt_q_h(half %a) nounwind strictfp {
 ; CHECK32-IZFH-NEXT:    addi sp, sp, -32
 ; CHECK32-IZFH-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
 ; CHECK32-IZFH-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; CHECK32-IZFH-NEXT:    mv s0, a0
 ; CHECK32-IZFH-NEXT:    fcvt.s.h fa0, fa0
+; CHECK32-IZFH-NEXT:    mv s0, a0
 ; CHECK32-IZFH-NEXT:    addi a0, sp, 8
 ; CHECK32-IZFH-NEXT:    call __extendsftf2
 ; CHECK32-IZFH-NEXT:    lw a0, 8(sp)
@@ -1969,8 +1953,8 @@ define fp128 @fcvt_q_h(half %a) nounwind strictfp {
 ; CHECK32-IZHINX-NEXT:    addi sp, sp, -32
 ; CHECK32-IZHINX-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
 ; CHECK32-IZHINX-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; CHECK32-IZHINX-NEXT:    mv s0, a0
 ; CHECK32-IZHINX-NEXT:    fcvt.s.h a1, a1
+; CHECK32-IZHINX-NEXT:    mv s0, a0
 ; CHECK32-IZHINX-NEXT:    addi a0, sp, 8
 ; CHECK32-IZHINX-NEXT:    call __extendsftf2
 ; CHECK32-IZHINX-NEXT:    lw a0, 8(sp)
@@ -2001,8 +1985,8 @@ define fp128 @fcvt_q_h(half %a) nounwind strictfp {
 ; CHECK32-IZFHMIN-NEXT:    addi sp, sp, -32
 ; CHECK32-IZFHMIN-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
 ; CHECK32-IZFHMIN-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; CHECK32-IZFHMIN-NEXT:    mv s0, a0
 ; CHECK32-IZFHMIN-NEXT:    fcvt.s.h fa0, fa0
+; CHECK32-IZFHMIN-NEXT:    mv s0, a0
 ; CHECK32-IZFHMIN-NEXT:    addi a0, sp, 8
 ; CHECK32-IZFHMIN-NEXT:    call __extendsftf2
 ; CHECK32-IZFHMIN-NEXT:    lw a0, 8(sp)
@@ -2033,8 +2017,8 @@ define fp128 @fcvt_q_h(half %a) nounwind strictfp {
 ; CHECK32-IZHINXMIN-NEXT:    addi sp, sp, -32
 ; CHECK32-IZHINXMIN-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
 ; CHECK32-IZHINXMIN-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; CHECK32-IZHINXMIN-NEXT:    mv s0, a0
 ; CHECK32-IZHINXMIN-NEXT:    fcvt.s.h a1, a1
+; CHECK32-IZHINXMIN-NEXT:    mv s0, a0
 ; CHECK32-IZHINXMIN-NEXT:    addi a0, sp, 8
 ; CHECK32-IZHINXMIN-NEXT:    call __extendsftf2
 ; CHECK32-IZHINXMIN-NEXT:    lw a0, 8(sp)
@@ -2065,11 +2049,11 @@ define fp128 @fcvt_q_h(half %a) nounwind strictfp {
 ; CHECK32-D-NEXT:    addi sp, sp, -32
 ; CHECK32-D-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
 ; CHECK32-D-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
+; CHECK32-D-NEXT:    fmv.x.w a1, fa0
+; CHECK32-D-NEXT:    slli a1, a1, 16
+; CHECK32-D-NEXT:    srli a1, a1, 16
+; CHECK32-D-NEXT:    fmv.w.x fa0, a1
 ; CHECK32-D-NEXT:    mv s0, a0
-; CHECK32-D-NEXT:    fmv.x.w a0, fa0
-; CHECK32-D-NEXT:    slli a0, a0, 16
-; CHECK32-D-NEXT:    srli a0, a0, 16
-; CHECK32-D-NEXT:    fmv.w.x fa0, a0
 ; CHECK32-D-NEXT:    call __extendhfsf2
 ; CHECK32-D-NEXT:    addi a0, sp, 8
 ; CHECK32-D-NEXT:    call __extendsftf2
@@ -2088,4 +2072,3 @@ define fp128 @fcvt_q_h(half %a) nounwind strictfp {
   %1 = call fp128 @llvm.experimental.constrained.fpext.f128.f16(half %a, metadata !"fpexcept.strict")
   ret fp128 %1
 }
-declare fp128 @llvm.experimental.constrained.fpext.f128.f16(half, metadata)

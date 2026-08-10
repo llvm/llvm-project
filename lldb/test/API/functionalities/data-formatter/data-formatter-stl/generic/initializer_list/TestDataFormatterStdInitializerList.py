@@ -10,6 +10,8 @@ from lldbsuite.test import lldbutil
 
 
 class InitializerListTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def do_test(self):
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 

@@ -17,7 +17,7 @@ namespace {
 AST_MATCHER(SwitchStmt, hasDefaultCase) {
   const SwitchCase *Case = Node.getSwitchCaseList();
   while (Case) {
-    if (DefaultStmt::classof(Case))
+    if (isa<DefaultStmt>(Case))
       return true;
 
     Case = Case->getNextSwitchCase();

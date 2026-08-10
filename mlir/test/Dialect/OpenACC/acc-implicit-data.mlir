@@ -222,3 +222,114 @@ func.func @test_memref_view(%size: index) {
 // CHECK-LABEL: func.func @test_memref_view
 // CHECK: acc.present varPtr({{.*}} : memref<8x64xf32>) -> memref<8x64xf32> {implicit = true, name = ""}
 
+// -----
+
+// Test device data (memref with GPU address space) - should generate deviceptr
+func.func @test_device_data_in_parallel() {
+  %alloc = memref.alloca() : memref<10xf32, #gpu.address_space<global>>
+  acc.parallel {
+    %c0 = arith.constant 0 : index
+    %load = memref.load %alloc[%c0] : memref<10xf32, #gpu.address_space<global>>
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @test_device_data_in_parallel
+// CHECK: acc.deviceptr varPtr({{.*}} : memref<10xf32, #gpu.address_space<global>>) -> memref<10xf32, #gpu.address_space<global>> {implicit = true, name = ""}
+// CHECK-NOT: acc.copyin
+// CHECK-NOT: acc.copyout
+
+// -----
+
+// Test device global (memref.global with GPU address space) - should generate deviceptr
+memref.global @device_global : memref<10xf32, #gpu.address_space<global>>
+
+func.func @test_device_global_in_parallel() {
+  %global = memref.get_global @device_global : memref<10xf32, #gpu.address_space<global>>
+  acc.parallel {
+    %c0 = arith.constant 0 : index
+    %load = memref.load %global[%c0] : memref<10xf32, #gpu.address_space<global>>
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @test_device_global_in_parallel
+// CHECK: acc.deviceptr varPtr({{.*}} : memref<10xf32, #gpu.address_space<global>>) -> memref<10xf32, #gpu.address_space<global>> {implicit = true, name = ""}
+// CHECK-NOT: acc.copyin
+// CHECK-NOT: acc.copyout
+
+// -----
+
+// Test memref.view tagged with acc.declare deviceptr and used directly in region.
+func.func @test_declare_deviceptr_arg_in_parallel(%arg0: memref<?xi8>) {
+  %c0 = arith.constant 0 : index
+  %view = memref.view %arg0[%c0][] {acc.declare = #acc.declare<dataClause = acc_deviceptr>} : memref<?xi8> to memref<10xf32>
+  %devptr = acc.deviceptr varPtr(%view : memref<10xf32>) -> memref<10xf32> {name = "arg0"}
+  %token = acc.declare_enter dataOperands(%devptr : memref<10xf32>)
+  acc.parallel {
+    %c0_1 = arith.constant 0 : index
+    %load = memref.load %arg0[%c0_1] : memref<?xi8>
+    acc.yield
+  }
+  acc.declare_exit token(%token) dataOperands(%devptr : memref<10xf32>)
+  return
+}
+
+// CHECK-LABEL: func.func @test_declare_deviceptr_arg_in_parallel
+// CHECK: %[[VIEW:.*]] = memref.view %{{.*}}[{{.*}}][] {acc.declare = #acc.declare<dataClause = acc_deviceptr>} : memref<?xi8> to memref<10xf32>
+// CHECK: %[[DEVPTR:.*]] = acc.deviceptr varPtr(%[[VIEW]] : memref<10xf32>) -> memref<10xf32> {name = "arg0"}
+// CHECK: %[[TOKEN:.*]] = acc.declare_enter dataOperands(%[[DEVPTR]] : memref<10xf32>)
+// CHECK: %[[IMPLICIT_DEVPTR:.*]] = acc.deviceptr varPtr(%{{.*}} : memref<?xi8>) -> memref<?xi8> {implicit = true, name = ""}
+// CHECK: acc.parallel dataOperands(%[[IMPLICIT_DEVPTR]] : memref<?xi8>) {
+// CHECK: memref.load %[[IMPLICIT_DEVPTR]][{{.*}}] : memref<?xi8>
+// CHECK: acc.declare_exit token(%[[TOKEN]]) dataOperands(%[[DEVPTR]] : memref<10xf32>)
+// CHECK-NOT: acc.copyin
+// CHECK-NOT: acc.copyout
+
+// -----
+
+// Fold an explicit present of device data: drop present/delete and rewrite
+// region uses; subsequent implicit mapping should emit deviceptr.
+func.func @test_fold_present_device_value() {
+  %alloc = memref.alloca() : memref<10xf32, #gpu.address_space<global>>
+  %present = acc.present varPtr(%alloc : memref<10xf32, #gpu.address_space<global>>) -> memref<10xf32, #gpu.address_space<global>> {name = "a"}
+  acc.parallel dataOperands(%present : memref<10xf32, #gpu.address_space<global>>) {
+    %c0 = arith.constant 0 : index
+    %load = memref.load %present[%c0] : memref<10xf32, #gpu.address_space<global>>
+    acc.yield
+  }
+  acc.delete accPtr(%present : memref<10xf32, #gpu.address_space<global>>) {dataClause = #acc<data_clause acc_present>, name = "a"}
+  return
+}
+
+// CHECK-LABEL: func.func @test_fold_present_device_value
+// CHECK: %[[ALLOC:.*]] = memref.alloca() : memref<10xf32, #gpu.address_space<global>>
+// CHECK: %[[DEVPTR:.*]] = acc.deviceptr varPtr(%[[ALLOC]] : memref<10xf32, #gpu.address_space<global>>) -> memref<10xf32, #gpu.address_space<global>> {implicit = true, name = ""}
+// CHECK: acc.parallel dataOperands(%[[DEVPTR]] : memref<10xf32, #gpu.address_space<global>>) {
+// CHECK: memref.load %[[DEVPTR]][{{.*}}] : memref<10xf32, #gpu.address_space<global>>
+// CHECK-NOT: acc.present
+// CHECK-NOT: acc.delete
+
+// -----
+
+// Present of host data must not be folded away.
+func.func @test_present_host_not_folded() {
+  %alloc = memref.alloca() : memref<10xf32>
+  %present = acc.present varPtr(%alloc : memref<10xf32>) -> memref<10xf32> {name = "a"}
+  acc.parallel dataOperands(%present : memref<10xf32>) {
+    %c0 = arith.constant 0 : index
+    %load = memref.load %present[%c0] : memref<10xf32>
+    acc.yield
+  }
+  acc.delete accPtr(%present : memref<10xf32>) {dataClause = #acc<data_clause acc_present>, name = "a"}
+  return
+}
+
+// CHECK-LABEL: func.func @test_present_host_not_folded
+// CHECK: %[[ALLOC:.*]] = memref.alloca() : memref<10xf32>
+// CHECK: %[[PRESENT:.*]] = acc.present varPtr(%[[ALLOC]] : memref<10xf32>) -> memref<10xf32> {name = "a"}
+// CHECK: acc.parallel dataOperands(%[[PRESENT]] : memref<10xf32>) {
+// CHECK: memref.load %[[PRESENT]][{{.*}}] : memref<10xf32>
+// CHECK: acc.delete accPtr(%[[PRESENT]] : memref<10xf32>) {dataClause = #acc<data_clause acc_present>, name = "a"}

@@ -1,9 +1,10 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -ast-dump -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -std=hlsl202x -ast-dump -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -hlsl-entry entry -ast-dump -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -std=hlsl202x -hlsl-entry entry -ast-dump -o - %s | FileCheck %s
 
 typedef float float2 __attribute__((ext_vector_type(2)));
 typedef float float3 __attribute__((ext_vector_type(3)));
 
+[shader("compute")]
 [numthreads(1,1,1)]
 void entry() {
   float2 Vec2 = float2(1.0, 2.0);

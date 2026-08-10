@@ -295,6 +295,26 @@
 // CHECK-NEXT:       end
 // CHECK-NEXT:     ]
 // CHECK-NEXT:   }
+// CHECK-NEXT:   RuntimeFunction {
+// CHECK-NEXT:     Function: func19
+// CHECK-NEXT:     Fragment: No
+// CHECK-NEXT:     FunctionLength: 32
+// CHECK-NEXT:     RegF: 0
+// CHECK-NEXT:     RegI: 1
+// CHECK-NEXT:     HomedParameters: No
+// CHECK-NEXT:     CR: 1
+// CHECK-NEXT:     FrameSize: 80
+// CHECK-NEXT:     Prologue [
+// CHECK-NEXT:       sub sp, sp, #64
+// CHECK-NEXT:       stp x19, lr, [sp]
+// CHECK-NEXT:       sub sp, sp, #16
+// CHECK-NEXT:       end
+// CHECK-NEXT:     ]
+// CHECK-NEXT:   }
+// CHECK-NEXT:   RuntimeFunction {
+// CHECK-NEXT:     Function: notpacked_func20
+// CHECK-NEXT:     ExceptionRecord:
+// CHECK-NEXT:     ExceptionData {
 // CHECK:        RuntimeFunction {
 // CHECK-NEXT:     Function: nonpacked1
 // CHECK-NEXT:     ExceptionRecord:
@@ -372,6 +392,11 @@
 // CHECK:            EpiloguePacked: Yes
 // CHECK:        RuntimeFunction {
 // CHECK-NEXT:     Function: nonpacked16
+// CHECK-NEXT:     ExceptionRecord:
+// CHECK-NEXT:     ExceptionData {
+// CHECK:            EpiloguePacked: Yes
+// CHECK:        RuntimeFunction {
+// CHECK-NEXT:     Function: nonpacked17
 // CHECK-NEXT:     ExceptionRecord:
 // CHECK-NEXT:     ExceptionData {
 // CHECK:            EpiloguePacked: Yes
@@ -809,12 +834,65 @@ func18:
     ret
     .seh_endproc
 
+func19:
+    .seh_proc func19
+    sub sp, sp, #16
+    .seh_stackalloc 16
+    stp x19, lr, [sp]
+    .seh_save_lrpair x19, 0
+    sub sp,  sp,  #64
+    .seh_stackalloc 64
+    .seh_endprologue
+    nop
+    .seh_startepilogue
+    add sp, sp, #64
+    .seh_stackalloc 64
+    ldp x19, lr, [sp]
+    .seh_save_lrpair x19, 0
+    add sp,  sp,  #16
+    .seh_stackalloc 16
+    .seh_endepilogue
+    ret
+    .seh_endproc
+
+notpacked_func20:
+    // This function is expressible with packed unwind info, but older
+    // versions of Windows unwind cases with CR=01, RegI=1, RegF>0
+    // incorrectly; therefore, we choose not to pack this case.
+    .seh_proc notpacked_func20
+    sub sp, sp, #48
+    .seh_stackalloc 48
+    stp x19, lr, [sp]
+    .seh_save_lrpair x19, 0
+    stp d8,  d9,  [sp, #16]
+    .seh_save_fregp d8, 16
+    str d10,      [sp, #32]
+    .seh_save_freg d10, 32
+    sub sp,  sp,  #64
+    .seh_stackalloc 64
+    .seh_endprologue
+    nop
+    .seh_startepilogue
+    add sp, sp, #64
+    .seh_stackalloc 64
+    ldr d10,      [sp, #32]
+    .seh_save_freg d10, 32
+    ldp d8,  d9,  [sp, #16]
+    .seh_save_fregp d8, 16
+    ldp x19, lr, [sp]
+    .seh_save_lrpair x19, 0
+    add sp,  sp,  #48
+    .seh_stackalloc 48
+    .seh_endepilogue
+    ret
+    .seh_endproc
+
 nonpacked1:
     .seh_proc nonpacked1
     // Can't be packed; can't save integer registers after float registers.
     stp d8,  d9,  [sp, #-32]!
     .seh_save_fregp_x d8, 32
-    stp x19, x20, [sp, #16]!
+    stp x19, x20, [sp, #16]
     .seh_save_regp x19, 16
     .seh_endprologue
     nop
@@ -932,7 +1010,7 @@ nonpacked6:
     .seh_startepilogue
     mov sp,  x29
     .seh_set_fp
-    ldp x29, lr,  [sp], #32
+    ldp x29, lr,  [sp], #16
     .seh_save_fplr_x 16
     ldr lr, [sp, #16]
     .seh_save_reg lr, 16
@@ -1000,7 +1078,7 @@ nonpacked9:
     .seh_startepilogue
     mov sp,  x29
     .seh_set_fp
-    ldp x29, lr,  [sp], #32
+    ldp x29, lr,  [sp], #16
     .seh_save_fplr_x 16
     add sp, sp, #32
     .seh_stackalloc 32
@@ -1156,4 +1234,35 @@ nonpacked16:
     .seh_save_fplr_x        176
     .seh_endepilogue
     br      x9
+    .seh_endproc
+
+nonpacked17:
+    .seh_proc nonpacked17
+    // Can't be packed; more predecrement for SavSZ than used for
+    // corresponding RegI/RegF/LR saves
+    sub sp, sp, #64
+    .seh_stackalloc 64
+    stp x19, lr, [sp]
+    .seh_save_lrpair x19, 0
+    stp d8,  d9,  [sp, #16]
+    .seh_save_fregp d8, 16
+    str d10,      [sp, #32]
+    .seh_save_freg d10, 32
+    sub sp,  sp,  #64
+    .seh_stackalloc 64
+    .seh_endprologue
+    nop
+    .seh_startepilogue
+    add sp, sp, #64
+    .seh_stackalloc 64
+    ldr d10,      [sp, #32]
+    .seh_save_freg d10, 32
+    ldp d8,  d9,  [sp, #16]
+    .seh_save_fregp d8, 16
+    ldp x19, lr, [sp]
+    .seh_save_lrpair x19, 0
+    add sp,  sp,  #64
+    .seh_stackalloc 64
+    .seh_endepilogue
+    ret
     .seh_endproc

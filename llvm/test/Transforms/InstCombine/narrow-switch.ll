@@ -235,11 +235,10 @@ define i32 @trunc32to16(i32 %a0) #0 {
 ; ALL-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 ; ALL-NEXT:    [[XOR:%.*]] = lshr i32 [[A0]], 16
 ; ALL-NEXT:    [[TMP0:%.*]] = trunc nuw i32 [[XOR]] to i16
-; ALL-NEXT:    [[TRUNC:%.*]] = xor i16 [[TMP0]], 15784
-; ALL-NEXT:    switch i16 [[TRUNC]], label %[[SW_EPILOG:.*]] [
-; ALL-NEXT:      i16 63, label %[[SW_BB:.*]]
-; ALL-NEXT:      i16 1, label %[[SW_BB1:.*]]
-; ALL-NEXT:      i16 100, label %[[SW_BB2:.*]]
+; ALL-NEXT:    switch i16 [[TMP0]], label %[[SW_EPILOG:.*]] [
+; ALL-NEXT:      i16 15767, label %[[SW_BB:.*]]
+; ALL-NEXT:      i16 15785, label %[[SW_BB1:.*]]
+; ALL-NEXT:      i16 15820, label %[[SW_BB2:.*]]
 ; ALL-NEXT:    ]
 ; ALL:       [[SW_BB]]:
 ; ALL-NEXT:    store i32 90, ptr [[RETVAL]], align 4

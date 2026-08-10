@@ -8,9 +8,11 @@
 
 #include "mlir/Dialect/Linalg/Passes.h"
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/SmallVector.h"
@@ -90,6 +92,10 @@ transposePackedMatmul(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
                       linalg::PackOp packOp, AffineMap operandMap,
                       ArrayRef<unsigned> blocksStartDimPos,
                       bool transposeOuterBlocks, bool transposeInnerBlocks) {
+  // TODO: Support Memref PackOp. Temporarily return failure.
+  if (!packOp.hasPureTensorSemantics())
+    return failure();
+
   assert(operandMap.getNumDims() >= 4 &&
          "expected at least 4D prepacked matmul");
   assert(blocksStartDimPos.size() >= 2 &&
@@ -157,8 +163,33 @@ linalg::blockPackMatmul(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
   if (options->blockFactors.size() != 3)
     return rewriter.notifyMatchFailure(linalgOp, "require 3 tile factors");
 
-  SmallVector<OpFoldResult> mnkTiles =
-      getAsOpFoldResult(rewriter.getI64ArrayAttr(options->blockFactors));
+  bool hasScalable = !options->scalableBlockFactors.empty();
+  if (hasScalable && options->scalableBlockFactors.size() != 3)
+    return rewriter.notifyMatchFailure(
+        linalgOp, "scalableBlockFactors must be empty or have 3 elements");
+
+  // Scalable tile sizes are non-constant at compile time, so they can never
+  // satisfy the full-tile divisibility check. Reject early before creating
+  // any ops to avoid modifying IR before returning notifyMatchFailure.
+  if (!options->allowPadding && hasScalable)
+    return rewriter.notifyMatchFailure(
+        linalgOp, "scalable block factors require padding");
+
+  SmallVector<OpFoldResult> mnkTiles;
+  for (auto [idx, factor] : llvm::enumerate(options->blockFactors)) {
+    bool isScalable = hasScalable && options->scalableBlockFactors[idx];
+    if (!isScalable) {
+      mnkTiles.push_back(rewriter.getIndexAttr(factor));
+      continue;
+    }
+    Value cst =
+        arith::ConstantIndexOp::create(rewriter, linalgOp.getLoc(), factor);
+    Value vscale = vector::VectorScaleOp::create(rewriter, linalgOp.getLoc(),
+                                                 rewriter.getIndexType());
+    mnkTiles.push_back(
+        arith::MulIOp::create(rewriter, linalgOp.getLoc(), cst, vscale)
+            .getResult());
+  }
 
   // If padding is disabled, make sure that dimensions can be packed cleanly.
   if (!options->allowPadding &&
@@ -296,7 +327,28 @@ struct LinalgBlockPackMatmul
     ControlBlockPackMatmulFn controlFn =
         [&](linalg::LinalgOp op) -> BlockPackMatmulOptions {
       BlockPackMatmulOptions options;
-      options.blockFactors = SmallVector<int64_t>{*blockFactors};
+
+      // Parse block-factors strings. Each element is either "N" (static) or
+      // "[N]" (scalable, i.e. N * vscale at runtime).
+      for (const std::string &blockFactor : *blockFactors) {
+        StringRef factor(blockFactor);
+        if (factor.starts_with("[") && factor.ends_with("]")) {
+          int64_t val = 0;
+          factor.drop_front().drop_back().getAsInteger(10, val);
+          options.blockFactors.push_back(val);
+          options.scalableBlockFactors.push_back(true);
+        } else {
+          int64_t val = 0;
+          factor.getAsInteger(10, val);
+          options.blockFactors.push_back(val);
+          options.scalableBlockFactors.push_back(false);
+        }
+      }
+      // If all flags are false, clear the vector so blockPackMatmul can take
+      // the cheaper static path.
+      if (llvm::none_of(options.scalableBlockFactors, [](bool b) { return b; }))
+        options.scalableBlockFactors.clear();
+
       options.allowPadding = allowPadding;
       options.mnkPaddedSizesNextMultipleOf =
           SmallVector<int64_t>{*mnkPaddedSizesNextMultipleOf};

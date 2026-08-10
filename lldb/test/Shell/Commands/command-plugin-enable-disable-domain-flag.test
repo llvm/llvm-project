@@ -1,0 +1,58 @@
+# This test validates the --domain flag on the plugin enable and disable
+# commands.
+#
+# Note that commands that return errors will stop running a script, so we
+# have new RUN lines for any command that is expected to return an error.
+
+# RUN: %lldb -s %s -o exit 2>&1 | FileCheck %s
+
+# Test --domain global on a non-instrumentation runtime plugin.
+plugin disable --domain global language.cplusplus
+# CHECK-LABEL: plugin disable --domain global language.cplusplus
+# CHECK: language
+# CHECK:  [-] cplusplus
+
+plugin enable --domain global language.cplusplus
+# CHECK-LABEL: plugin enable --domain global language.cplusplus
+# CHECK: language
+# CHECK:  [+] cplusplus
+
+# Test --domain global on an instrumentation runtime plugin
+plugin disable --domain global instrumentation-runtime.UndefinedBehaviorSanitizer
+# CHECK-LABEL: plugin disable --domain global instrumentation-runtime.UndefinedBehaviorSanitizer
+# CHECK: instrumentation-runtime
+# CHECK:  [-] UndefinedBehaviorSanitizer
+
+plugin enable --domain global instrumentation-runtime.UndefinedBehaviorSanitizer
+# CHECK-LABEL: plugin enable --domain global instrumentation-runtime.UndefinedBehaviorSanitizer
+# CHECK: instrumentation-runtime
+# CHECK:  [+] UndefinedBehaviorSanitizer
+
+# Error cases for plugin that only supports the global domain (language.cplusplus).
+
+# RUN: %lldb -o "plugin enable --domain debugger language.cplusplus" 2>&1 | FileCheck %s --check-prefix=ERROR_ENABLE_GLOBAL_DEBUGGER
+# ERROR_ENABLE_GLOBAL_DEBUGGER: error: failed to enable plugin language.cplusplus: debugger domain is not supported
+
+# RUN: %lldb -o "plugin enable --domain target language.cplusplus" 2>&1 | FileCheck %s --check-prefix=ERROR_ENABLE_GLOBAL_TARGET
+# ERROR_ENABLE_GLOBAL_TARGET: error: failed to enable plugin language.cplusplus: target domain is not supported
+
+# RUN: %lldb -o "plugin disable --domain debugger language.cplusplus" 2>&1 | FileCheck %s --check-prefix=ERROR_DISABLE_GLOBAL_DEBUGGER
+# ERROR_DISABLE_GLOBAL_DEBUGGER: error: failed to disable plugin language.cplusplus: debugger domain is not supported
+
+# RUN: %lldb -o "plugin disable --domain target language.cplusplus" 2>&1 | FileCheck %s --check-prefix=ERROR_DISABLE_GLOBAL_TARGET
+# ERROR_DISABLE_GLOBAL_TARGET: error: failed to disable plugin language.cplusplus: target domain is not supported
+
+# Error cases for plugin that supports all domains
+# (instrumentation-runtime.UndefinedBehaviorSanitizer).
+
+# RUN: %lldb -o "plugin enable --domain debugger instrumentation-runtime.UndefinedBehaviorSanitizer" 2>&1 | FileCheck %s --check-prefix=ERROR_ENABLE_IR_DEBUGGER
+# ERROR_ENABLE_IR_DEBUGGER: error: failed to enable plugin instrumentation-runtime.UndefinedBehaviorSanitizer: debugger domain is not supported
+
+# RUN: %lldb -o "plugin enable --domain target instrumentation-runtime.UndefinedBehaviorSanitizer" 2>&1 | FileCheck %s --check-prefix=ERROR_ENABLE_IR_TARGET
+# ERROR_ENABLE_IR_TARGET: error: failed to enable plugin instrumentation-runtime.UndefinedBehaviorSanitizer: target domain is not supported
+
+# RUN: %lldb -o "plugin disable --domain debugger instrumentation-runtime.UndefinedBehaviorSanitizer" 2>&1 | FileCheck %s --check-prefix=ERROR_DISABLE_IR_DEBUGGER
+# ERROR_DISABLE_IR_DEBUGGER: error: failed to disable plugin instrumentation-runtime.UndefinedBehaviorSanitizer: debugger domain is not supported
+
+# RUN: %lldb -o "plugin disable --domain target instrumentation-runtime.UndefinedBehaviorSanitizer" 2>&1 | FileCheck %s --check-prefix=ERROR_DISABLE_IR_TARGET
+# ERROR_DISABLE_IR_TARGET: error: failed to disable plugin instrumentation-runtime.UndefinedBehaviorSanitizer: target domain is not supported

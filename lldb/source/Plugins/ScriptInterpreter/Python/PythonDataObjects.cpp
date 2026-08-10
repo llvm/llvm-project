@@ -6,10 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/Config.h"
-
-#if LLDB_ENABLE_PYTHON
-
 #include "PythonDataObjects.h"
 #include "ScriptInterpreterPython.h"
 
@@ -128,14 +124,13 @@ void PythonObject::Dump(Stream &strm) const {
   if (!py_str)
     return;
 
-  auto release_py_str = llvm::make_scope_exit([py_str] { Py_DECREF(py_str); });
+  llvm::scope_exit release_py_str([py_str] { Py_DECREF(py_str); });
 
   PyObject *py_bytes = PyUnicode_AsEncodedString(py_str, "utf-8", "replace");
   if (!py_bytes)
     return;
 
-  auto release_py_bytes =
-      llvm::make_scope_exit([py_bytes] { Py_DECREF(py_bytes); });
+  llvm::scope_exit release_py_bytes([py_bytes] { Py_DECREF(py_bytes); });
 
   char *buffer = nullptr;
   Py_ssize_t length = 0;
@@ -414,8 +409,7 @@ Expected<llvm::StringRef> PythonString::AsUTF8() const {
   PyObject *py_bytes = PyUnicode_AsUTF8String(m_py_obj);
   if (!py_bytes)
     return exception();
-  auto release_py_str =
-      llvm::make_scope_exit([py_bytes] { Py_DECREF(py_bytes); });
+  llvm::scope_exit release_py_str([py_bytes] { Py_DECREF(py_bytes); });
   Py_ssize_t size = PyBytes_Size(py_bytes);
   const char *str = PyBytes_AsString(py_bytes);
 
@@ -703,7 +697,7 @@ PythonObject PythonDictionary::GetItemForKey(const PythonObject &key) const {
 
 Expected<PythonObject>
 PythonDictionary::GetItem(const PythonObject &key) const {
-  if (!IsValid())
+  if (!IsValid() || !key.IsValid())
     return nullDeref();
   PyObject *o = PyDict_GetItemWithError(m_py_obj, key.get());
   if (PyErr_Occurred())
@@ -810,6 +804,17 @@ bool PythonCallable::Check(PyObject *py_obj) {
   if (!py_obj)
     return false;
 
+  PythonObject python_obj(PyRefType::Borrowed, py_obj);
+
+  // Handle staticmethod/classmethod descriptors by extracting the
+  // `__func__` attribute.
+  if (python_obj.HasAttribute("__func__")) {
+    PythonObject function_obj = python_obj.GetAttributeValue("__func__");
+    if (!function_obj.IsAllocated())
+      return false;
+    return PyCallable_Check(function_obj.release());
+  }
+
   return PyCallable_Check(py_obj);
 }
 
@@ -835,22 +840,116 @@ def main(f):
     return ArgInfo(count, varargs)
 )";
 
-Expected<PythonCallable::ArgInfo> PythonCallable::GetArgInfo() const {
-  ArgInfo result = {};
-  if (!IsValid())
-    return nullDeref();
-
+// inspect.signature() is deeply recursive and expensive in C-stack terms;
+// reentrant scripted callbacks dispatched through GetArgInfo() can turn
+// that into a fatal stack overflow instead of a catchable Python
+// RecursionError. GetArgInfo() never calls this itself; callers fall back
+// to it explicitly when they need to handle callables its cheaper,
+// attribute-only approach can't (e.g. builtins).
+Expected<PythonCallable::ArgInfo>
+PythonCallable::GetArgInfoFromInspectSignature(const PythonCallable &callable) {
+  PythonCallable::ArgInfo result = {};
   // no need to synchronize access to this global, we already have the GIL
   static PythonScript get_arg_info(get_arg_info_script);
-  Expected<PythonObject> pyarginfo = get_arg_info(*this);
+  Expected<PythonObject> pyarginfo = get_arg_info(callable);
   if (!pyarginfo)
     return pyarginfo.takeError();
   long long count =
       cantFail(As<long long>(pyarginfo.get().GetAttribute("count")));
   bool has_varargs =
       cantFail(As<bool>(pyarginfo.get().GetAttribute("has_varargs")));
-  result.max_positional_args = has_varargs ? ArgInfo::UNBOUNDED : count;
+  result.max_positional_args =
+      has_varargs ? PythonCallable::ArgInfo::UNBOUNDED : count;
+  return result;
+}
 
+// GetArgInfo()'s branches, top to bottom (`func` is what each branch ends up
+// introspecting; the final step is always func.__code__.co_argcount/co_flags):
+//
+//   callable
+//   |-- has __self__          -> func = __func__           (bound method;
+//   |                             fails for slot wrappers, e.g. (1).__add__)
+//   |-- has __code__ already  -> func = callable            (plain function)
+//   `-- neither
+//       |-- is a class
+//       |   |-- __init__ has __code__ -> func = __init__
+//       |   `-- else: check __new__ too (object.__init__ is lenient about
+//       |       extra args once __new__ is overridden)
+//       |       |-- __new__ has __code__ -> func = __new__
+//       |       `-- else                  -> ArgInfo{0} (object's defaults)
+//       `-- is an instance
+//           `-- func = __call__ (unwrap __func__ if bound)
+//               `-- no __code__ -> error (e.g. a builtin)
+Expected<PythonCallable::ArgInfo> PythonCallable::GetArgInfo() const {
+  if (!IsValid())
+    return nullDeref();
+
+  PythonObject func = *this;
+  bool implicit_first_arg = false;
+  if (HasAttribute("__self__")) {
+    implicit_first_arg = true;
+    Expected<PythonObject> func_or_err = GetAttribute("__func__");
+    if (!func_or_err)
+      return func_or_err.takeError();
+    func = *func_or_err;
+  } else if (!HasAttribute("__code__")) {
+    implicit_first_arg = true;
+    if (PyType_Check(m_py_obj)) {
+      Expected<PythonObject> init_or_err = GetAttribute("__init__");
+      if (!init_or_err)
+        return init_or_err.takeError();
+      func = *init_or_err;
+      if (!func.HasAttribute("__code__")) {
+        // __init__ is still object.__init__. A class may customize
+        // __new__ instead and leave __init__ untouched, which makes
+        // object.__init__ lenient about extra arguments -- so check
+        // __new__ too before concluding there are none.
+        Expected<PythonObject> new_or_err = GetAttribute("__new__");
+        if (!new_or_err)
+          return new_or_err.takeError();
+        func = *new_or_err;
+        if (!func.HasAttribute("__code__"))
+          return ArgInfo{0};
+      }
+    } else {
+      Expected<PythonObject> call_or_err = GetAttribute("__call__");
+      if (!call_or_err)
+        return call_or_err.takeError();
+      func = *call_or_err;
+      if (func.HasAttribute("__self__")) {
+        Expected<PythonObject> inner_or_err = func.GetAttribute("__func__");
+        if (!inner_or_err)
+          return inner_or_err.takeError();
+        func = *inner_or_err;
+      }
+      if (!func.HasAttribute("__code__"))
+        return llvm::createStringError("__call__ has no __code__");
+    }
+  }
+
+  Expected<PythonObject> code_or_err = func.GetAttribute("__code__");
+  if (!code_or_err)
+    return code_or_err.takeError();
+  PythonObject code = *code_or_err;
+
+  Expected<long long> argcount =
+      As<long long>(code.GetAttribute("co_argcount"));
+  if (!argcount)
+    return argcount.takeError();
+  Expected<long long> flags = As<long long>(code.GetAttribute("co_flags"));
+  if (!flags)
+    return flags.takeError();
+
+  ArgInfo result = {};
+  // Mirrors CPython's CO_VARARGS from <code.h>, which isn't reliably
+  // visible across the Python versions/platforms this file builds against.
+  constexpr long long kCoFlagVarArgs = 0x04;
+  if (*flags & kCoFlagVarArgs) {
+    result.max_positional_args = ArgInfo::UNBOUNDED;
+  } else {
+    long long count = *argcount - (implicit_first_arg ? 1 : 0);
+    result.max_positional_args = count > 0 ? static_cast<unsigned>(count) : 0;
+  }
   return result;
 }
 
@@ -960,10 +1059,7 @@ bool PythonException::Matches(PyObject *exc) const {
 const char read_exception_script[] = R"(
 import sys
 from traceback import print_exception
-if sys.version_info.major < 3:
-  from StringIO import StringIO
-else:
-  from io import StringIO
+from io import StringIO
 def main(exc_type, exc_value, tb):
   f = StringIO()
   print_exception(exc_type, exc_value, tb, file=f)
@@ -1479,4 +1575,3 @@ int lldb_private::python::RunSimpleString(const char *str) {
 
   return 0;
 }
-#endif

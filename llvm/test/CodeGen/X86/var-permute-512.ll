@@ -1067,7 +1067,7 @@ define void @var_cvt_shuffle_v64f32_v64i8_idx(ptr %dst, <64 x i8> %src, i32 %b) 
 ; AVX512F-NEXT:    subq $128, %rsp
 ; AVX512F-NEXT:    # kill: def $esi killed $esi def $rsi
 ; AVX512F-NEXT:    vpbroadcastd %esi, %zmm2
-; AVX512F-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm2, %zmm1
+; AVX512F-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm2, %zmm1 # [10,9,8,7,6,5,4,3,2,1,u,4294967295,4294967294,4294967293,4294967292,4294967291]
 ; AVX512F-NEXT:    vmovd %xmm1, %eax
 ; AVX512F-NEXT:    vmovaps %zmm0, (%rsp)
 ; AVX512F-NEXT:    andl $63, %eax
@@ -1102,9 +1102,9 @@ define void @var_cvt_shuffle_v64f32_v64i8_idx(ptr %dst, <64 x i8> %src, i32 %b) 
 ; AVX512F-NEXT:    vpextrd $1, %xmm5, %eax
 ; AVX512F-NEXT:    andl $63, %eax
 ; AVX512F-NEXT:    vpinsrb $9, (%rsp,%rax), %xmm0, %xmm0
-; AVX512F-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm2, %zmm4
-; AVX512F-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm2, %zmm3
-; AVX512F-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm2, %zmm2
+; AVX512F-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm2, %zmm4 # [26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11]
+; AVX512F-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm2, %zmm3 # [42,41,40,39,38,37,36,35,34,33,32,31,30,29,28,27]
+; AVX512F-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm2, %zmm2 # [58,57,56,55,54,53,52,51,50,49,48,47,46,45,44,43]
 ; AVX512F-NEXT:    andl $63, %esi
 ; AVX512F-NEXT:    vpinsrb $10, (%rsp,%rsi), %xmm0, %xmm0
 ; AVX512F-NEXT:    vpextrd $3, %xmm5, %eax
@@ -1318,7 +1318,7 @@ define void @var_cvt_shuffle_v64f32_v64i8_idx(ptr %dst, <64 x i8> %src, i32 %b) 
 ; AVX512BW-NEXT:    subq $128, %rsp
 ; AVX512BW-NEXT:    # kill: def $esi killed $esi def $rsi
 ; AVX512BW-NEXT:    vpbroadcastd %esi, %zmm2
-; AVX512BW-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm2, %zmm1
+; AVX512BW-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm2, %zmm1 # [10,9,8,7,6,5,4,3,2,1,u,4294967295,4294967294,4294967293,4294967292,4294967291]
 ; AVX512BW-NEXT:    vmovd %xmm1, %eax
 ; AVX512BW-NEXT:    vmovaps %zmm0, (%rsp)
 ; AVX512BW-NEXT:    andl $63, %eax
@@ -1353,9 +1353,9 @@ define void @var_cvt_shuffle_v64f32_v64i8_idx(ptr %dst, <64 x i8> %src, i32 %b) 
 ; AVX512BW-NEXT:    vpextrd $1, %xmm5, %eax
 ; AVX512BW-NEXT:    andl $63, %eax
 ; AVX512BW-NEXT:    vpinsrb $9, (%rsp,%rax), %xmm0, %xmm0
-; AVX512BW-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm2, %zmm4
-; AVX512BW-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm2, %zmm3
-; AVX512BW-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm2, %zmm2
+; AVX512BW-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm2, %zmm4 # [26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11]
+; AVX512BW-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm2, %zmm3 # [42,41,40,39,38,37,36,35,34,33,32,31,30,29,28,27]
+; AVX512BW-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm2, %zmm2 # [58,57,56,55,54,53,52,51,50,49,48,47,46,45,44,43]
 ; AVX512BW-NEXT:    andl $63, %esi
 ; AVX512BW-NEXT:    vpinsrb $10, (%rsp,%rsi), %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpextrd $3, %xmm5, %eax
@@ -1569,7 +1569,7 @@ define void @var_cvt_shuffle_v64f32_v64i8_idx(ptr %dst, <64 x i8> %src, i32 %b) 
 ; AVX512VBMI-NEXT:    subq $128, %rsp
 ; AVX512VBMI-NEXT:    # kill: def $esi killed $esi def $rsi
 ; AVX512VBMI-NEXT:    vpbroadcastd %esi, %zmm1
-; AVX512VBMI-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm2
+; AVX512VBMI-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm2 # [10,9,8,7,6,5,4,3,2,1,u,4294967295,4294967294,4294967293,4294967292,4294967291]
 ; AVX512VBMI-NEXT:    vmovd %xmm2, %eax
 ; AVX512VBMI-NEXT:    vmovdqa64 %zmm0, (%rsp)
 ; AVX512VBMI-NEXT:    andl $63, %eax
@@ -1622,11 +1622,11 @@ define void @var_cvt_shuffle_v64f32_v64i8_idx(ptr %dst, <64 x i8> %src, i32 %b) 
 ; AVX512VBMI-NEXT:    vpextrd $3, %xmm2, %eax
 ; AVX512VBMI-NEXT:    andl $63, %eax
 ; AVX512VBMI-NEXT:    vpinsrb $15, (%rsp,%rax), %xmm3, %xmm2
-; AVX512VBMI-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm3
+; AVX512VBMI-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm3 # [26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11]
 ; AVX512VBMI-NEXT:    vpmovdb %zmm3, %xmm3
-; AVX512VBMI-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm4
+; AVX512VBMI-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm4 # [42,41,40,39,38,37,36,35,34,33,32,31,30,29,28,27]
 ; AVX512VBMI-NEXT:    vpmovdb %zmm4, %xmm4
-; AVX512VBMI-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1
+; AVX512VBMI-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1 # [58,57,56,55,54,53,52,51,50,49,48,47,46,45,44,43]
 ; AVX512VBMI-NEXT:    vpmovdb %zmm1, %xmm1
 ; AVX512VBMI-NEXT:    vpmovsxbd %xmm2, %zmm2
 ; AVX512VBMI-NEXT:    vcvtdq2ps %zmm2, %zmm2

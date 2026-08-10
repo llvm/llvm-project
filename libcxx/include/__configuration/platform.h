@@ -30,6 +30,10 @@
 // ... add new file formats here ...
 #endif
 
+#if defined(__MVS__)
+#  include <features.h> // for __NATIVE_ASCII_F
+#endif
+
 // Need to detect which libc we're using if we're on Linux.
 #if (defined(__linux__) || defined(__AMDGPU__) || defined(__NVPTX__)) && __has_include(<features.h>)
 #  include <features.h>
@@ -40,13 +44,6 @@
 #  endif // defined(__GLIBC_PREREQ)
 #else
 #  define _LIBCPP_GLIBC_PREREQ(a, b) 0
-#endif
-
-// This is required in order for _NEWLIB_VERSION to be defined in places where we use it.
-// TODO: We shouldn't be including arbitrarily-named headers from libc++ since this can break valid
-//       user code. Move code paths that need _NEWLIB_VERSION to another customization mechanism.
-#if __has_include(<picolibc.h>)
-#  include <picolibc.h>
 #endif
 
 #ifndef __BYTE_ORDER__

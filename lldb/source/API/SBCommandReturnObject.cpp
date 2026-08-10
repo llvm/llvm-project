@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBCommandReturnObject.h"
+#include "SBCommandReturnObjectImpl.h"
 #include "Utils.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBFile.h"
@@ -25,30 +26,27 @@
 using namespace lldb;
 using namespace lldb_private;
 
-class lldb_private::SBCommandReturnObjectImpl {
-public:
-  SBCommandReturnObjectImpl() : m_ptr(new CommandReturnObject(false)) {}
-  SBCommandReturnObjectImpl(CommandReturnObject &ref)
-      : m_ptr(&ref), m_owned(false) {}
-  SBCommandReturnObjectImpl(const SBCommandReturnObjectImpl &rhs)
-      : m_ptr(new CommandReturnObject(*rhs.m_ptr)), m_owned(rhs.m_owned) {}
-  SBCommandReturnObjectImpl &operator=(const SBCommandReturnObjectImpl &rhs) {
-    SBCommandReturnObjectImpl copy(rhs);
-    std::swap(*this, copy);
-    return *this;
-  }
-  // rvalue ctor+assignment are not used by SBCommandReturnObject.
-  ~SBCommandReturnObjectImpl() {
-    if (m_owned)
-      delete m_ptr;
-  }
+SBCommandReturnObjectImpl::SBCommandReturnObjectImpl()
+    : m_ptr(new CommandReturnObject(false)) {}
 
-  CommandReturnObject &operator*() const { return *m_ptr; }
+SBCommandReturnObjectImpl::SBCommandReturnObjectImpl(CommandReturnObject &ref)
+    : m_ptr(&ref), m_owned(false) {}
 
-private:
-  CommandReturnObject *m_ptr;
-  bool m_owned = true;
-};
+SBCommandReturnObjectImpl::SBCommandReturnObjectImpl(
+    const SBCommandReturnObjectImpl &rhs)
+    : m_ptr(new CommandReturnObject(*rhs.m_ptr)), m_owned(rhs.m_owned) {}
+
+SBCommandReturnObjectImpl &
+SBCommandReturnObjectImpl::operator=(const SBCommandReturnObjectImpl &rhs) {
+  SBCommandReturnObjectImpl copy(rhs);
+  std::swap(*this, copy);
+  return *this;
+}
+
+SBCommandReturnObjectImpl::~SBCommandReturnObjectImpl() {
+  if (m_owned)
+    delete m_ptr;
+}
 
 SBCommandReturnObject::SBCommandReturnObject()
     : m_opaque_up(new SBCommandReturnObjectImpl()) {
@@ -221,19 +219,19 @@ void SBCommandReturnObject::AppendWarning(const char *message) {
 }
 
 CommandReturnObject *SBCommandReturnObject::operator->() const {
-  return &**m_opaque_up;
+  return m_opaque_up->get();
 }
 
 CommandReturnObject *SBCommandReturnObject::get() const {
-  return &**m_opaque_up;
+  return m_opaque_up->get();
 }
 
 CommandReturnObject &SBCommandReturnObject::operator*() const {
-  return **m_opaque_up;
+  return *m_opaque_up->get();
 }
 
 CommandReturnObject &SBCommandReturnObject::ref() const {
-  return **m_opaque_up;
+  return *m_opaque_up->get();
 }
 
 bool SBCommandReturnObject::GetDescription(SBStream &description) {
@@ -315,8 +313,8 @@ void SBCommandReturnObject::PutCString(const char *string, int len) {
   if (len == 0 || string == nullptr || *string == 0) {
     return;
   } else if (len > 0) {
-    std::string buffer(string, len);
-    ref().AppendMessage(buffer.c_str());
+    const llvm::StringRef buffer(string, static_cast<size_t>(len));
+    ref().AppendMessage(buffer);
   } else
     ref().AppendMessage(string);
 }

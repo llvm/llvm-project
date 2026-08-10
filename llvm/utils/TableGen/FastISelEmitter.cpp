@@ -175,10 +175,8 @@ struct OperandsSignature {
 
       // Emit the type check.
       TreePattern *TP = PredFn.getOrigPatFragRecord();
-      ValueTypeByHwMode VVT = TP->getTree(0)->getType(0);
-      assert(VVT.isSimple() &&
-             "Cannot use variable value types with fast isel");
-      OS << LS << "VT == " << getEnumName(VVT.getSimple().SimpleTy) << " && ";
+      MVT VT = TP->getTree(0)->getSimpleType(0);
+      OS << LS << "VT == " << getEnumName(VT) << " && ";
 
       OS << PredFn.getFnName() << "(imm" << Idx << ')';
     }

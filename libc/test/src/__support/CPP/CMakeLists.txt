@@ -8,7 +8,7 @@ add_libc_test(
     algorithm_test.cpp
   DEPENDS
     libc.src.__support.CPP.algorithm
-  )
+)
 
 add_libc_test(
   array_test
@@ -18,7 +18,7 @@ add_libc_test(
     array_test.cpp
   DEPENDS
     libc.src.__support.CPP.array
-  )
+)
 
 add_libc_test(
   bit_test
@@ -54,6 +54,17 @@ add_libc_test(
 )
 
 add_libc_test(
+  expected_test
+  SUITE
+    libc-cpp-utils-tests
+  SRCS
+    expected_test.cpp
+  DEPENDS
+    libc.src.__support.CPP.expected
+    libc.src.__support.CPP.type_traits
+)
+
+add_libc_test(
   stringview_test
   SUITE
     libc-cpp-utils-tests
@@ -61,6 +72,8 @@ add_libc_test(
     stringview_test.cpp
   DEPENDS
     libc.src.__support.CPP.string_view
+    libc.src.__support.CPP.type_traits
+    libc.src.string.memory_utils.inline_memcpy
 )
 
 add_libc_test(
@@ -141,6 +154,16 @@ add_libc_test(
 )
 
 add_libc_test(
+  scope_test
+  SUITE
+    libc-cpp-utils-tests
+  SRCS
+    scope_test.cpp
+  DEPENDS
+    libc.src.__support.CPP.scope
+)
+
+add_libc_test(
   span_test
   SUITE
     libc-cpp-utils-tests
@@ -157,8 +180,9 @@ add_libc_test(
   SRCS
     string_test.cpp
   DEPENDS
-  libc.src.__support.CPP.string
-  libc.src.__support.CPP.string_view
+    libc.hdr.func.free
+    libc.src.__support.CPP.string
+    libc.src.__support.CPP.string_view
 )
 
 add_libc_test(
@@ -166,9 +190,9 @@ add_libc_test(
   SUITE
     libc-cpp-utils-tests
   SRCS
-  type_traits_test.cpp
+    type_traits_test.cpp
   DEPENDS
-  libc.src.__support.CPP.type_traits
+    libc.src.__support.CPP.type_traits
 )
 
 if(LIBC_COMPILER_HAS_EXT_VECTOR_TYPE)

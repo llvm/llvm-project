@@ -77,7 +77,6 @@ public:
   SubSectionWriter(raw_ostream &OS) : OS(OS), StringStream(OutString) {}
 
   void done() {
-    StringStream.flush();
     encodeULEB128(OutString.size(), OS);
     OS << OutString;
     OutString.clear();
@@ -178,6 +177,27 @@ void WasmWriter::writeSectionContent(raw_ostream &OS,
     encodeULEB128(Section.Needed.size(), SubOS);
     for (StringRef Needed : Section.Needed)
       writeStringRef(Needed, SubOS);
+    SubSection.done();
+  }
+  if (Section.ExportInfo.size()) {
+    writeUint8(OS, wasm::WASM_DYLINK_EXPORT_INFO);
+    raw_ostream &SubOS = SubSection.getStream();
+    encodeULEB128(Section.ExportInfo.size(), SubOS);
+    for (const WasmYAML::DylinkExportInfo &Info : Section.ExportInfo) {
+      writeStringRef(Info.Name, SubOS);
+      encodeULEB128(Info.Flags, SubOS);
+    }
+    SubSection.done();
+  }
+  if (Section.ImportInfo.size()) {
+    writeUint8(OS, wasm::WASM_DYLINK_IMPORT_INFO);
+    raw_ostream &SubOS = SubSection.getStream();
+    encodeULEB128(Section.ImportInfo.size(), SubOS);
+    for (const WasmYAML::DylinkImportInfo &Info : Section.ImportInfo) {
+      writeStringRef(Info.Module, SubOS);
+      writeStringRef(Info.Field, SubOS);
+      encodeULEB128(Info.Flags, SubOS);
+    }
     SubSection.done();
   }
   if (Section.RuntimePath.size()) {
@@ -545,7 +565,6 @@ void WasmWriter::writeSectionContent(raw_ostream &OS,
     Func.Body.writeAsBinary(StringStream);
 
     // Write the section size followed by the content
-    StringStream.flush();
     encodeULEB128(OutString.size(), OS);
     OS << OutString;
   }
@@ -653,8 +672,6 @@ bool WasmWriter::writeWasm(raw_ostream &OS) {
     if (HasError)
       return false;
 
-    StringStream.flush();
-
     unsigned HeaderSecSizeEncodingLen =
         Sec->HeaderSecSizeEncodingLen.value_or(5);
     unsigned RequiredLen = getULEB128Size(OutString.size());
@@ -682,7 +699,6 @@ bool WasmWriter::writeWasm(raw_ostream &OS) {
     std::string OutString;
     raw_string_ostream StringStream(OutString);
     writeRelocSection(StringStream, *Sec, SectionIndex++);
-    StringStream.flush();
 
     encodeULEB128(OutString.size(), OS);
     OS << OutString;

@@ -15,6 +15,10 @@
 ; RUN: llvm-windres --target armv7-w64-mingw32 -### %p/Inputs/empty.rc %t.res | FileCheck %s --check-prefix=CHECK-ARMV7
 ; CHECK-ARMV7: "clang" "--driver-mode=gcc" "-target" "armv7-w64-mingw32"
 
+; RUN: llvm-windres -F mipsel-w64-mingw32 -### %p/Inputs/empty.rc %t.res | FileCheck %s --check-prefix=CHECK-MIPSEL
+; RUN: llvm-windres --target mipsel-w64-mingw32 -### %p/Inputs/empty.rc %t.res | FileCheck %s --check-prefix=CHECK-MIPSEL
+; CHECK-MIPSEL: "clang" "--driver-mode=gcc" "-target" "mipsel-w64-mingw32"
+
 ; Check the actual written object types.
 
 ; RUN: llvm-windres --no-preprocess -F i686-w64-mingw32 %p/Inputs/tag-stringtable-basic.rc %t.o
@@ -25,10 +29,13 @@
 ; RUN: llvm-readobj --coff-resources %t.o | FileCheck %s --check-prefixes=CHECK-OBJ,CHECK-OBJ-ARMV7
 ; RUN: llvm-windres --no-preprocess -F aarch64-w64-mingw32 %p/Inputs/tag-stringtable-basic.rc %t.o
 ; RUN: llvm-readobj --coff-resources %t.o | FileCheck %s --check-prefixes=CHECK-OBJ,CHECK-OBJ-AARCH64
+; RUN: llvm-windres --no-preprocess -F mipsel-w64-mingw32 %p/Inputs/tag-stringtable-basic.rc %t.o
+; RUN: llvm-readobj --coff-resources %t.o | FileCheck %s --check-prefixes=CHECK-OBJ,CHECK-OBJ-MIPSEL
 
 ; CHECK-OBJ-I686: Format: COFF-i386
 ; CHECK-OBJ-X86-64: Format: COFF-x86-64
 ; CHECK-OBJ-ARMV7: Format: COFF-ARM{{$}}
 ; CHECK-OBJ-AARCH64: Format: COFF-ARM64
+; CHECK-OBJ-MIPSEL: Format: COFF-MIPS
 ; CHECK-OBJ: Resources [
 ; CHECK-OBJ:   Total Number of Resources:

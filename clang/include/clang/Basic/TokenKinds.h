@@ -17,7 +17,15 @@
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Support/Compiler.h"
 
+#include <cassert>
+
 namespace clang {
+
+/// Constants for TokenKinds.def
+enum TokenKey : unsigned {
+#define EMIT_TOKENKEY
+#include "clang/Basic/BuiltinTraits.inc"
+};
 
 namespace tok {
 
@@ -76,6 +84,10 @@ const char *getPunctuatorSpelling(TokenKind Kind) LLVM_READNONE;
 /// tokens like 'int' and 'dynamic_cast'. Returns NULL for other token kinds.
 const char *getKeywordSpelling(TokenKind Kind) LLVM_READNONE;
 
+/// Determines the spelling of simple Objective-C keyword tokens like '@import'.
+/// Returns NULL for other token kinds.
+const char *getObjCKeywordSpelling(ObjCKeywordKind Kind) LLVM_READNONE;
+
 /// Returns the spelling of preprocessor keywords, such as "else".
 const char *getPPKeywordSpelling(PPKeywordKind Kind) LLVM_READNONE;
 
@@ -98,7 +110,7 @@ inline bool isLiteral(TokenKind K) {
   const bool isInLiteralRange =
       K >= tok::numeric_constant && K <= tok::utf32_string_literal;
 
-#if !NDEBUG
+#ifndef NDEBUG
   const bool isLiteralExplicit =
       K == tok::numeric_constant || K == tok::char_constant ||
       K == tok::wide_char_constant || K == tok::utf8_char_constant ||
@@ -129,12 +141,6 @@ inline constexpr bool isRegularKeywordAttribute(TokenKind K) {
 
 namespace llvm {
 template <> struct DenseMapInfo<clang::tok::PPKeywordKind> {
-  static inline clang::tok::PPKeywordKind getEmptyKey() {
-    return clang::tok::PPKeywordKind::pp_not_keyword;
-  }
-  static inline clang::tok::PPKeywordKind getTombstoneKey() {
-    return clang::tok::PPKeywordKind::NUM_PP_KEYWORDS;
-  }
   static unsigned getHashValue(const clang::tok::PPKeywordKind &Val) {
     return static_cast<unsigned>(Val);
   }

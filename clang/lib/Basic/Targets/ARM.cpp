@@ -39,36 +39,12 @@ void ARMTargetInfo::setABIAAPCS() {
 
   ZeroLengthBitfieldBoundary = 0;
 
-  // Thumb1 add sp, #imm requires the immediate value be multiple of 4,
-  // so set preferred for small types to 32.
-  if (T.isOSBinFormatMachO()) {
-    resetDataLayout(BigEndian
-                        ? "E-m:o-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
-                        : "e-m:o-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64",
-                    "_");
-  } else if (T.isOSWindows()) {
-    assert(!BigEndian && "Windows on ARM does not support big endian");
-    resetDataLayout("e"
-                    "-m:w"
-                    "-p:32:32"
-                    "-Fi8"
-                    "-i64:64"
-                    "-v128:64:128"
-                    "-a:0:32"
-                    "-n32"
-                    "-S64");
-  } else {
-    resetDataLayout(BigEndian
-                        ? "E-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
-                        : "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64");
-  }
+  resetDataLayout();
 
   // FIXME: Enumerated types are variable width in straight AAPCS.
 }
 
 void ARMTargetInfo::setABIAPCS(bool IsAAPCS16) {
-  const llvm::Triple &T = getTriple();
-
   IsAAPCS = false;
 
   if (IsAAPCS16)
@@ -89,20 +65,7 @@ void ARMTargetInfo::setABIAPCS(bool IsAAPCS16) {
   /// gcc.
   ZeroLengthBitfieldBoundary = 32;
 
-  if (T.isOSBinFormatMachO() && IsAAPCS16) {
-    assert(!BigEndian && "AAPCS16 does not support big-endian");
-    resetDataLayout("e-m:o-p:32:32-Fi8-i64:64-a:0:32-n32-S128", "_");
-  } else if (T.isOSBinFormatMachO())
-    resetDataLayout(
-        BigEndian
-            ? "E-m:o-p:32:32-Fi8-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32"
-            : "e-m:o-p:32:32-Fi8-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32",
-        "_");
-  else
-    resetDataLayout(
-        BigEndian
-            ? "E-m:e-p:32:32-Fi8-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32"
-            : "e-m:e-p:32:32-Fi8-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32");
+  resetDataLayout();
 
   // FIXME: Override "preferred align" for double and long long.
 }
@@ -412,7 +375,7 @@ bool ARMTargetInfo::validateBranchProtection(StringRef Spec, StringRef Arch,
                                              const LangOptions &LO,
                                              StringRef &Err) const {
   llvm::ARM::ParsedBranchProtection PBP;
-  if (!llvm::ARM::parseBranchProtection(Spec, PBP, Err))
+  if (!llvm::ARM::parseBranchProtection(Spec, PBP, Err, getTriple()))
     return false;
 
   if (!isBranchProtectionSupportedArch(Arch))
@@ -684,7 +647,7 @@ void ARMTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
   llvm::ARM::fillValidCPUArchList(Values);
 }
 
-bool ARMTargetInfo::setCPU(const std::string &Name) {
+bool ARMTargetInfo::setCPU(StringRef Name) {
   if (Name != "generic")
     setArchInfo(llvm::ARM::parseCPUArch(Name));
 
@@ -1149,22 +1112,30 @@ static constexpr std::array<Builtin::Info, NumCDEBuiltins> BuiltinInfos = {
 } // namespace CDE
 } // namespace
 
-static constexpr llvm::StringTable BuiltinStrings =
-    CLANG_BUILTIN_STR_TABLE_START
-#define BUILTIN CLANG_BUILTIN_STR_TABLE
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
-#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_STR_TABLE
-#include "clang/Basic/BuiltinsARM.def"
-    ; // namespace clang
+namespace clang {
+namespace ARM {
 
-static constexpr auto BuiltinInfos = Builtin::MakeInfos<NumARMBuiltins>({
-#define BUILTIN CLANG_BUILTIN_ENTRY
-#define LANGBUILTIN CLANG_LANGBUILTIN_ENTRY
-#define LIBBUILTIN CLANG_LIBBUILTIN_ENTRY
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
-#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_ENTRY
-#include "clang/Basic/BuiltinsARM.def"
-});
+#define GET_BUILTIN_STR_TABLE
+#include "clang/Basic/BuiltinsARM.inc"
+#undef GET_BUILTIN_STR_TABLE
+
+static constexpr Builtin::Info BuiltinInfos[] = {
+#define GET_BUILTIN_INFOS
+#include "clang/Basic/BuiltinsARM.inc"
+#undef GET_BUILTIN_INFOS
+};
+
+static constexpr Builtin::Info PrefixedBuiltinInfos[] = {
+#define GET_BUILTIN_PREFIXED_INFOS
+#include "clang/Basic/BuiltinsARM.inc"
+#undef GET_BUILTIN_PREFIXED_INFOS
+};
+
+static_assert((std::size(BuiltinInfos) + std::size(PrefixedBuiltinInfos)) ==
+              NumARMBuiltins);
+
+} // namespace ARM
+} // namespace clang
 
 llvm::SmallVector<Builtin::InfosShard>
 ARMTargetInfo::getTargetBuiltins() const {
@@ -1174,7 +1145,8 @@ ARMTargetInfo::getTargetBuiltins() const {
        "__builtin_neon_"},
       {&MVE::BuiltinStrings, MVE::BuiltinInfos, "__builtin_arm_mve_"},
       {&CDE::BuiltinStrings, CDE::BuiltinInfos, "__builtin_arm_cde_"},
-      {&BuiltinStrings, BuiltinInfos},
+      {&ARM::BuiltinStrings, ARM::BuiltinInfos},
+      {&ARM::BuiltinStrings, ARM::PrefixedBuiltinInfos, "__builtin_arm_"},
   };
 }
 
@@ -1545,7 +1517,7 @@ CygwinARMTargetInfo::CygwinARMTargetInfo(const llvm::Triple &Triple,
   this->WCharType = TargetInfo::UnsignedShort;
   TLSSupported = false;
   DoubleAlign = LongLongAlign = 64;
-  resetDataLayout("e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64");
+  resetDataLayout();
 }
 
 void CygwinARMTargetInfo::getTargetDefines(const LangOptions &Opts,

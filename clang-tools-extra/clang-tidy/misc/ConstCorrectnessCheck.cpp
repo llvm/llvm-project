@@ -16,6 +16,7 @@
 #include <cassert>
 
 using namespace clang::ast_matchers;
+using namespace clang::ast_matchers::internal;
 
 namespace clang::tidy::misc {
 
@@ -23,6 +24,12 @@ namespace {
 // FIXME: This matcher exists in some other code-review as well.
 // It should probably move to ASTMatchers.
 AST_MATCHER(VarDecl, isLocal) { return Node.isLocalVarDecl(); }
+// FIXME: The matcher 'hasName(Name)' asserts that its argument 'Name' is
+// nonempty. Perhaps remove that assertion and replace 'isUnnamed()' with
+// 'hasName("")'.
+AST_MATCHER(VarDecl, isUnnamed) {
+  return Node.getDeclName().isIdentifier() && Node.getName().empty();
+}
 AST_MATCHER_P(DeclStmt, containsAnyDeclaration,
               ast_matchers::internal::Matcher<Decl>, InnerMatcher) {
   return ast_matchers::internal::matchesFirstInPointerRange(
@@ -33,6 +40,18 @@ AST_MATCHER(ReferenceType, isSpelledAsLValue) {
   return Node.isSpelledAsLValue();
 }
 AST_MATCHER(Type, isDependentType) { return Node.isDependentType(); }
+
+AST_MATCHER(TypeLoc, hasContainedAutoType) {
+  return !Node.getContainedAutoTypeLoc().isNull();
+}
+
+AST_MATCHER(FunctionDecl, isTemplate) {
+  return Node.getDescribedFunctionTemplate() != nullptr;
+}
+
+AST_MATCHER(FunctionDecl, isFunctionTemplateSpecialization) {
+  return Node.isFunctionTemplateSpecialization();
+}
 } // namespace
 
 ConstCorrectnessCheck::ConstCorrectnessCheck(StringRef Name,
@@ -41,6 +60,9 @@ ConstCorrectnessCheck::ConstCorrectnessCheck(StringRef Name,
       AnalyzePointers(Options.get("AnalyzePointers", true)),
       AnalyzeReferences(Options.get("AnalyzeReferences", true)),
       AnalyzeValues(Options.get("AnalyzeValues", true)),
+      AnalyzeAutoVariables(Options.get("AnalyzeAutoVariables", true)),
+      AnalyzeLambdas(Options.get("AnalyzeLambdas", true)),
+      AnalyzeParameters(Options.get("AnalyzeParameters", true)),
 
       WarnPointersAsPointers(Options.get("WarnPointersAsPointers", true)),
       WarnPointersAsValues(Options.get("WarnPointersAsValues", false)),
@@ -60,12 +82,20 @@ ConstCorrectnessCheck::ConstCorrectnessCheck(StringRef Name,
         "The check 'misc-const-correctness' will not "
         "perform any analysis because 'AnalyzeValues', "
         "'AnalyzeReferences' and 'AnalyzePointers' are false.");
+
+  if (AnalyzeLambdas && !AnalyzeAutoVariables)
+    this->configurationDiag("The check 'misc-const-correctness' will not "
+                            "analyze lambdas because 'AnalyzeLambdas' has no "
+                            "effect while 'AnalyzeAutoVariables' is false.");
 }
 
 void ConstCorrectnessCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "AnalyzePointers", AnalyzePointers);
   Options.store(Opts, "AnalyzeReferences", AnalyzeReferences);
   Options.store(Opts, "AnalyzeValues", AnalyzeValues);
+  Options.store(Opts, "AnalyzeAutoVariables", AnalyzeAutoVariables);
+  Options.store(Opts, "AnalyzeLambdas", AnalyzeLambdas);
+  Options.store(Opts, "AnalyzeParameters", AnalyzeParameters);
 
   Options.store(Opts, "WarnPointersAsPointers", WarnPointersAsPointers);
   Options.store(Opts, "WarnPointersAsValues", WarnPointersAsValues);
@@ -98,8 +128,8 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
       hasType(referenceType(pointee(hasCanonicalType(templateTypeParmType())))),
       hasType(referenceType(pointee(substTemplateTypeParmType()))));
 
-  auto AllowedTypeDecl = namedDecl(
-      anyOf(matchers::matchesAnyListedName(AllowedTypes), usingShadowDecl()));
+  const auto AllowedTypeDecl = namedDecl(anyOf(
+      matchers::matchesAnyListedRegexName(AllowedTypes), usingShadowDecl()));
 
   const auto AllowedType = hasType(qualType(
       anyOf(hasDeclaration(AllowedTypeDecl), references(AllowedTypeDecl),
@@ -112,43 +142,106 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
   const auto FunctionPointerRef =
       hasType(hasCanonicalType(referenceType(pointee(functionType()))));
 
+  const auto CommonExcludeTypes =
+      anyOf(ConstType, ConstReference, RValueReference, TemplateType,
+            FunctionPointerRef, hasType(cxxRecordDecl(isLambda())),
+            AutoTemplateType, isImplicit(), AllowedType);
+
   // Match local variables which could be 'const' if not modified later.
   // Example: `int i = 10` would match `int i`.
   const auto LocalValDecl = varDecl(
       isLocal(), hasInitializer(anything()),
       unless(anyOf(ConstType, ConstReference, TemplateType,
-                   hasInitializer(isInstantiationDependent()), AutoTemplateType,
-                   RValueReference, FunctionPointerRef,
-                   hasType(cxxRecordDecl(isLambda())), isImplicit(),
-                   AllowedType)));
+                   hasInitializer(isInstantiationDependent()), RValueReference,
+                   FunctionPointerRef, isImplicit(), AllowedType)),
+      AnalyzeLambdas
+          ? Matcher<VarDecl>(anything())
+          : Matcher<VarDecl>(unless(hasType(cxxRecordDecl(isLambda())))),
+      AnalyzeAutoVariables
+          ? Matcher<VarDecl>(anything())
+          : Matcher<VarDecl>(unless(hasTypeLoc(hasContainedAutoType()))));
 
   // Match the function scope for which the analysis of all local variables
   // shall be run.
   const auto FunctionScope =
-      functionDecl(
-          hasBody(stmt(forEachDescendant(
-                           declStmt(containsAnyDeclaration(
-                                        LocalValDecl.bind("local-value")),
-                                    unless(has(decompositionDecl())))
-                               .bind("decl-stmt")))
-                      .bind("scope")))
+      functionDecl(hasBody(stmt(forEachDescendant(
+                                    declStmt(containsAnyDeclaration(
+                                                 LocalValDecl.bind("value")),
+                                             unless(has(decompositionDecl())))
+                                        .bind("decl-stmt")))
+                               .bind("scope")))
           .bind("function-decl");
 
   Finder->addMatcher(FunctionScope, this);
+
+  if (AnalyzeParameters) {
+    const auto ParamMatcher =
+        parmVarDecl(unless(CommonExcludeTypes), unless(isUnnamed()),
+                    anyOf(hasType(referenceType()), hasType(pointerType())))
+            .bind("value");
+
+    // Match function parameters which could be 'const' if not modified later.
+    // Example: `void foo(int* ptr)` would match `int* ptr`.
+    const auto FunctionWithParams =
+        functionDecl(
+            hasBody(stmt().bind("scope")), has(typeLoc(forEach(ParamMatcher))),
+            unless(cxxMethodDecl()), unless(isFunctionTemplateSpecialization()),
+            unless(isTemplate()))
+            .bind("function-decl");
+
+    Finder->addMatcher(FunctionWithParams, this);
+  }
 }
+
+static void addConstFixits(const DiagnosticBuilder &Diag,
+                           const VarDecl *Variable,
+                           const FunctionDecl *Function,
+                           const ASTContext &Context, Qualifiers::TQ Qualifier,
+                           utils::fixit::QualifierTarget Target,
+                           utils::fixit::QualifierPolicy Policy) {
+  // If this is a parameter, also add fixits for corresponding parameters in
+  // function declarations
+  if (const auto *ParamDecl = dyn_cast<ParmVarDecl>(Variable)) {
+    const unsigned ParamIdx = ParamDecl->getFunctionScopeIndex();
+    // Skip if all fix-its can not be applied properly due to 'using'/'typedef'
+    if (llvm::any_of(
+            Function->redecls(), [ParamIdx](const FunctionDecl *Redecl) {
+              const QualType Type = Redecl->getParamDecl(ParamIdx)->getType();
+              return Type->isTypedefNameType() || Type->getAs<UsingType>();
+            }))
+      return;
+
+    for (const FunctionDecl *Redecl : Function->redecls()) {
+      Diag << addQualifierToVarDecl(*Redecl->getParamDecl(ParamIdx), Context,
+                                    Qualifier, Target, Policy);
+    }
+  } else {
+    Diag << addQualifierToVarDecl(*Variable, Context, Qualifier, Target,
+                                  Policy);
+  }
+}
+
+namespace {
 
 /// Classify for a variable in what the Const-Check is interested.
 enum class VariableCategory { Value, Reference, Pointer };
 
+} // namespace
+
 void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *LocalScope = Result.Nodes.getNodeAs<Stmt>("scope");
-  const auto *Variable = Result.Nodes.getNodeAs<VarDecl>("local-value");
+  const auto *Variable = Result.Nodes.getNodeAs<VarDecl>("value");
   const auto *Function = Result.Nodes.getNodeAs<FunctionDecl>("function-decl");
   const auto *VarDeclStmt = Result.Nodes.getNodeAs<DeclStmt>("decl-stmt");
+
+  assert(Variable && LocalScope && Function);
+
   // It can not be guaranteed that the variable is declared isolated,
   // therefore a transformation might effect the other variables as well and
-  // be incorrect.
-  const bool CanBeFixIt = VarDeclStmt != nullptr && VarDeclStmt->isSingleDecl();
+  // be incorrect. Parameters don't need this check - they receive values from
+  // callers.
+  const bool CanBeFixIt = isa<ParmVarDecl>(Variable) ||
+                          (VarDeclStmt && VarDeclStmt->isSingleDecl());
 
   /// If the variable was declared in a template it might be analyzed multiple
   /// times. Only one of those instantiations shall emit a warning. NOTE: This
@@ -162,61 +255,58 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
 
   VariableCategory VC = VariableCategory::Value;
   const QualType VT = Variable->getType();
-  if (VT->isReferenceType()) {
+  if (VT->isReferenceType())
     VC = VariableCategory::Reference;
-  } else if (VT->isPointerType()) {
+  else if (VT->isPointerType())
     VC = VariableCategory::Pointer;
-  } else if (const auto *ArrayT = dyn_cast<ArrayType>(VT)) {
-    if (ArrayT->getElementType()->isPointerType())
-      VC = VariableCategory::Pointer;
-  }
+  else if (const auto *ArrayT = dyn_cast<ArrayType>(VT);
+           ArrayT && ArrayT->getElementType()->isPointerType())
+    VC = VariableCategory::Pointer;
 
-  auto CheckValue = [&]() {
-    // The scope is only registered if the analysis shall be run.
-    registerScope(LocalScope, Result.Context);
-
+  const auto CheckValue = [&]() {
     // Offload const-analysis to utility function.
-    if (ScopesCache[LocalScope]->isMutated(Variable))
+    if (isMutated(Variable, LocalScope, Function, Result.Context))
       return;
 
-    auto Diag = diag(Variable->getBeginLoc(),
-                     "variable %0 of type %1 can be declared 'const'")
-                << Variable << VT;
+    const auto Diag = diag(Variable->getBeginLoc(),
+                           "variable %0 of type %1 can be declared 'const'")
+                      << Variable << VT;
     if (IsNormalVariableInTemplate)
       TemplateDiagnosticsCache.insert(Variable->getBeginLoc());
     if (!CanBeFixIt)
       return;
     using namespace utils::fixit;
+
     if (VC == VariableCategory::Value && TransformValues) {
-      Diag << addQualifierToVarDecl(*Variable, *Result.Context,
-                                    Qualifiers::Const, QualifierTarget::Value,
-                                    QualifierPolicy::Right);
+      addConstFixits(Diag, Variable, Function, *Result.Context,
+                     Qualifiers::Const, QualifierTarget::Value,
+                     QualifierPolicy::Right);
       // FIXME: Add '{}' for default initialization if no user-defined default
       // constructor exists and there is no initializer.
       return;
     }
 
     if (VC == VariableCategory::Reference && TransformReferences) {
-      Diag << addQualifierToVarDecl(*Variable, *Result.Context,
-                                    Qualifiers::Const, QualifierTarget::Value,
-                                    QualifierPolicy::Right);
+      addConstFixits(Diag, Variable, Function, *Result.Context,
+                     Qualifiers::Const, QualifierTarget::Value,
+                     QualifierPolicy::Right);
       return;
     }
 
     if (VC == VariableCategory::Pointer && TransformPointersAsValues) {
-      Diag << addQualifierToVarDecl(*Variable, *Result.Context,
-                                    Qualifiers::Const, QualifierTarget::Value,
-                                    QualifierPolicy::Right);
+      addConstFixits(Diag, Variable, Function, *Result.Context,
+                     Qualifiers::Const, QualifierTarget::Value,
+                     QualifierPolicy::Right);
       return;
     }
   };
 
-  auto CheckPointee = [&]() {
+  const auto CheckPointee = [&]() {
     assert(VC == VariableCategory::Pointer);
     registerScope(LocalScope, Result.Context);
     if (ScopesCache[LocalScope]->isPointeeMutated(Variable))
       return;
-    auto Diag =
+    const auto Diag =
         diag(Variable->getBeginLoc(),
              "pointee of variable %0 of type %1 can be declared 'const'")
         << Variable << VT;
@@ -226,9 +316,9 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
       return;
     using namespace utils::fixit;
     if (TransformPointersAsPointers) {
-      Diag << addQualifierToVarDecl(*Variable, *Result.Context,
-                                    Qualifiers::Const, QualifierTarget::Pointee,
-                                    QualifierPolicy::Right);
+      addConstFixits(Diag, Variable, Function, *Result.Context,
+                     Qualifiers::Const, QualifierTarget::Pointee,
+                     QualifierPolicy::Right);
     }
   };
 
@@ -248,16 +338,15 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
     if (WarnPointersAsValues && !VT.isConstQualified())
       CheckValue();
     if (WarnPointersAsPointers) {
-      if (const auto *PT = dyn_cast<PointerType>(VT)) {
-        if (!PT->getPointeeType().isConstQualified() &&
-            !PT->getPointeeType()->isFunctionType())
-          CheckPointee();
-      }
+      if (const auto *PT = dyn_cast<PointerType>(VT);
+          PT && !PT->getPointeeType().isConstQualified() &&
+          !PT->getPointeeType()->isFunctionType())
+        CheckPointee();
+
       if (const auto *AT = dyn_cast<ArrayType>(VT)) {
-        if (!AT->getElementType().isConstQualified()) {
-          assert(AT->getElementType()->isPointerType());
+        assert(AT->getElementType()->isPointerType());
+        if (!AT->getElementType()->getPointeeType().isConstQualified())
           CheckPointee();
-        }
       }
     }
     return;
@@ -269,6 +358,20 @@ void ConstCorrectnessCheck::registerScope(const Stmt *LocalScope,
   auto &Analyzer = ScopesCache[LocalScope];
   if (!Analyzer)
     Analyzer = std::make_unique<ExprMutationAnalyzer>(*LocalScope, *Context);
+}
+
+bool ConstCorrectnessCheck::isMutated(const VarDecl *Variable,
+                                      const Stmt *Scope,
+                                      const FunctionDecl *Func,
+                                      ASTContext *Context) {
+  if (const auto *Param = dyn_cast<ParmVarDecl>(Variable)) {
+    return FunctionParmMutationAnalyzer::getFunctionParmMutationAnalyzer(
+               *Func, *Context, ParamMutationAnalyzerMemoized)
+        ->isMutated(Param);
+  }
+
+  registerScope(Scope, Context);
+  return ScopesCache[Scope]->isMutated(Variable);
 }
 
 } // namespace clang::tidy::misc

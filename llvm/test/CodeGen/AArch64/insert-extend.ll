@@ -66,57 +66,57 @@ define i32 @large(ptr nocapture noundef readonly %p1, i32 noundef %st1, ptr noca
 ; CHECK-NEXT:    ldr d5, [x11, x9]
 ; CHECK-NEXT:    shll2 v6.4s, v0.8h, #16
 ; CHECK-NEXT:    usubl v2.8h, v2.8b, v3.8b
+; CHECK-NEXT:    shll2 v7.4s, v1.8h, #16
 ; CHECK-NEXT:    usubl v3.8h, v4.8b, v5.8b
-; CHECK-NEXT:    shll2 v4.4s, v1.8h, #16
 ; CHECK-NEXT:    saddw v0.4s, v6.4s, v0.4h
-; CHECK-NEXT:    shll2 v6.4s, v2.8h, #16
+; CHECK-NEXT:    shll2 v4.4s, v2.8h, #16
+; CHECK-NEXT:    saddw v1.4s, v7.4s, v1.4h
 ; CHECK-NEXT:    shll2 v5.4s, v3.8h, #16
-; CHECK-NEXT:    saddw v1.4s, v4.4s, v1.4h
-; CHECK-NEXT:    rev64 v4.4s, v0.4s
-; CHECK-NEXT:    saddw v2.4s, v6.4s, v2.4h
+; CHECK-NEXT:    rev64 v6.4s, v0.4s
+; CHECK-NEXT:    saddw v2.4s, v4.4s, v2.4h
+; CHECK-NEXT:    rev64 v7.4s, v1.4s
 ; CHECK-NEXT:    saddw v3.4s, v5.4s, v3.4h
-; CHECK-NEXT:    rev64 v5.4s, v1.4s
-; CHECK-NEXT:    rev64 v6.4s, v2.4s
-; CHECK-NEXT:    sub v4.4s, v0.4s, v4.4s
+; CHECK-NEXT:    rev64 v4.4s, v2.4s
+; CHECK-NEXT:    sub v6.4s, v0.4s, v6.4s
 ; CHECK-NEXT:    addp v0.4s, v1.4s, v0.4s
-; CHECK-NEXT:    rev64 v7.4s, v3.4s
-; CHECK-NEXT:    sub v5.4s, v1.4s, v5.4s
-; CHECK-NEXT:    sub v6.4s, v2.4s, v6.4s
+; CHECK-NEXT:    rev64 v5.4s, v3.4s
+; CHECK-NEXT:    sub v7.4s, v1.4s, v7.4s
+; CHECK-NEXT:    sub v4.4s, v2.4s, v4.4s
 ; CHECK-NEXT:    addp v2.4s, v3.4s, v2.4s
-; CHECK-NEXT:    zip1 v16.4s, v5.4s, v4.4s
-; CHECK-NEXT:    sub v7.4s, v3.4s, v7.4s
-; CHECK-NEXT:    trn1 v4.4s, v5.4s, v4.4s
-; CHECK-NEXT:    zip2 v3.4s, v6.4s, v7.4s
-; CHECK-NEXT:    mov v6.s[1], v7.s[0]
+; CHECK-NEXT:    zip1 v16.4s, v7.4s, v6.4s
+; CHECK-NEXT:    sub v5.4s, v3.4s, v5.4s
+; CHECK-NEXT:    trn1 v3.4s, v7.4s, v6.4s
+; CHECK-NEXT:    zip1 v6.4s, v4.4s, v5.4s
+; CHECK-NEXT:    zip2 v4.4s, v4.4s, v5.4s
+; CHECK-NEXT:    ext v5.16b, v7.16b, v16.16b, #8
 ; CHECK-NEXT:    ext v7.16b, v2.16b, v2.16b, #8
-; CHECK-NEXT:    ext v5.16b, v5.16b, v16.16b, #8
-; CHECK-NEXT:    mov v3.d[1], v4.d[1]
-; CHECK-NEXT:    uzp1 v1.4s, v7.4s, v0.4s
-; CHECK-NEXT:    uzp2 v4.4s, v7.4s, v0.4s
+; CHECK-NEXT:    mov v4.d[1], v3.d[1]
 ; CHECK-NEXT:    mov v6.d[1], v5.d[1]
+; CHECK-NEXT:    uzp1 v1.4s, v7.4s, v0.4s
+; CHECK-NEXT:    uzp2 v3.4s, v7.4s, v0.4s
 ; CHECK-NEXT:    addp v0.4s, v2.4s, v0.4s
-; CHECK-NEXT:    sub v1.4s, v1.4s, v4.4s
+; CHECK-NEXT:    add v5.4s, v4.4s, v6.4s
+; CHECK-NEXT:    sub v4.4s, v6.4s, v4.4s
+; CHECK-NEXT:    sub v1.4s, v1.4s, v3.4s
 ; CHECK-NEXT:    rev64 v7.4s, v0.4s
-; CHECK-NEXT:    add v5.4s, v3.4s, v6.4s
-; CHECK-NEXT:    sub v3.4s, v6.4s, v3.4s
+; CHECK-NEXT:    rev64 v3.4s, v5.4s
+; CHECK-NEXT:    rev64 v6.4s, v4.4s
 ; CHECK-NEXT:    rev64 v2.4s, v1.4s
-; CHECK-NEXT:    rev64 v4.4s, v5.4s
-; CHECK-NEXT:    rev64 v6.4s, v3.4s
 ; CHECK-NEXT:    addp v16.4s, v0.4s, v5.4s
 ; CHECK-NEXT:    sub v0.4s, v0.4s, v7.4s
-; CHECK-NEXT:    zip1 v21.4s, v16.4s, v16.4s
-; CHECK-NEXT:    sub v4.4s, v5.4s, v4.4s
-; CHECK-NEXT:    addp v5.4s, v1.4s, v3.4s
-; CHECK-NEXT:    sub v3.4s, v3.4s, v6.4s
+; CHECK-NEXT:    sub v3.4s, v5.4s, v3.4s
+; CHECK-NEXT:    addp v5.4s, v1.4s, v4.4s
+; CHECK-NEXT:    sub v4.4s, v4.4s, v6.4s
 ; CHECK-NEXT:    sub v1.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    ext v7.16b, v0.16b, v16.16b, #4
-; CHECK-NEXT:    ext v2.16b, v16.16b, v4.16b, #4
-; CHECK-NEXT:    ext v6.16b, v5.16b, v3.16b, #4
-; CHECK-NEXT:    mov v19.16b, v4.16b
+; CHECK-NEXT:    zip1 v21.4s, v16.4s, v16.4s
+; CHECK-NEXT:    ext v2.16b, v16.16b, v3.16b, #4
+; CHECK-NEXT:    ext v6.16b, v5.16b, v4.16b, #4
+; CHECK-NEXT:    mov v19.16b, v3.16b
 ; CHECK-NEXT:    ext v17.16b, v1.16b, v5.16b, #8
-; CHECK-NEXT:    mov v20.16b, v3.16b
-; CHECK-NEXT:    trn2 v0.4s, v21.4s, v0.4s
+; CHECK-NEXT:    mov v20.16b, v4.16b
 ; CHECK-NEXT:    ext v7.16b, v7.16b, v7.16b, #4
+; CHECK-NEXT:    trn2 v0.4s, v21.4s, v0.4s
 ; CHECK-NEXT:    mov v19.s[2], v16.s[3]
 ; CHECK-NEXT:    zip2 v2.4s, v2.4s, v16.4s
 ; CHECK-NEXT:    zip2 v6.4s, v6.4s, v5.4s
@@ -125,8 +125,8 @@ define i32 @large(ptr nocapture noundef readonly %p1, i32 noundef %st1, ptr noca
 ; CHECK-NEXT:    mov v1.s[2], v5.s[1]
 ; CHECK-NEXT:    mov v21.16b, v7.16b
 ; CHECK-NEXT:    sub v7.4s, v0.4s, v7.4s
-; CHECK-NEXT:    ext v2.16b, v4.16b, v2.16b, #12
-; CHECK-NEXT:    ext v3.16b, v3.16b, v6.16b, #12
+; CHECK-NEXT:    ext v2.16b, v3.16b, v2.16b, #12
+; CHECK-NEXT:    ext v3.16b, v4.16b, v6.16b, #12
 ; CHECK-NEXT:    uzp2 v4.4s, v17.4s, v18.4s
 ; CHECK-NEXT:    mov v6.16b, v1.16b
 ; CHECK-NEXT:    mov v17.16b, v19.16b

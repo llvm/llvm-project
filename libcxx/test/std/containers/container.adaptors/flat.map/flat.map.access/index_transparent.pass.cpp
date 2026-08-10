@@ -97,7 +97,7 @@ constexpr bool test() {
     TransparentComparator c(transparent_used);
     std::flat_map<int, int, TransparentComparator> m(std::sorted_unique, {{1, 1}, {2, 2}, {3, 3}}, c);
     assert(!transparent_used);
-    m[ConvertibleTransparent<int>{3}];
+    (void)m[ConvertibleTransparent<int>{3}];
     assert(transparent_used);
   }
   {

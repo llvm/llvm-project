@@ -11,6 +11,7 @@ from lldbsuite.test import lldbutil
 
 class TestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
+    SHARED_BUILD_TESTCASE = False
 
     def test_enable_disable(self):
         """
@@ -80,6 +81,7 @@ class TestCase(TestBase):
             return debug_stats["commands"]
         return None
 
+    @skipIfWasm  # no expression evaluation
     def test_expressions_frame_var_counts(self):
         self.build()
         lldbutil.run_to_source_breakpoint(

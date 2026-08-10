@@ -92,6 +92,16 @@ public:
   /// predicate to simplify operations downstream.
   bool signBitIsZero(Register Op);
 
+  /// Return true if the value defined by \p R is provably never zero.
+  ///
+  /// \p DemandedElts selects the vector elements that must be proven nonzero.
+  /// For scalar values this is a one-bit mask. The overload without
+  /// \p DemandedElts demands every fixed-vector element, or the scalar value to
+  /// be non-zero.
+  bool isKnownNeverZero(Register R, unsigned Depth = 0);
+  bool isKnownNeverZero(Register R, const APInt &DemandedElts,
+                        unsigned Depth = 0);
+
   static void computeKnownBitsForAlignment(KnownBits &Known, Align Alignment) {
     // The low bits are known zero if the pointer is aligned.
     Known.Zero.setLowBits(Log2(Alignment));
@@ -142,6 +152,14 @@ public:
                                    FPClassTest InterestedClasses,
                                    unsigned Depth);
 
+  /// Returns true if \p Val can be assumed to never be a NaN. If \p SNaN is
+  /// true, this returns whether \p Val can be assumed to never be a signaling
+  /// NaN.
+  bool isKnownNeverNaN(Register Val, bool SNaN = false);
+
+  /// Returns true if \p Val can be assumed to never be a signaling NaN.
+  bool isKnownNeverSNaN(Register Val) { return isKnownNeverNaN(Val, true); }
+
   // Observer API. No-op for non-caching implementation.
   void erasingInstr(MachineInstr &MI) override {}
   void createdInstr(MachineInstr &MI) override {}
@@ -165,10 +183,7 @@ class LLVM_ABI GISelValueTrackingAnalysisLegacy : public MachineFunctionPass {
 
 public:
   static char ID;
-  GISelValueTrackingAnalysisLegacy() : MachineFunctionPass(ID) {
-    initializeGISelValueTrackingAnalysisLegacyPass(
-        *PassRegistry::getPassRegistry());
-  }
+  GISelValueTrackingAnalysisLegacy() : MachineFunctionPass(ID) {}
   GISelValueTracking &get(MachineFunction &MF);
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -188,7 +203,7 @@ public:
 };
 
 class GISelValueTrackingPrinterPass
-    : public PassInfoMixin<GISelValueTrackingPrinterPass> {
+    : public RequiredPassInfoMixin<GISelValueTrackingPrinterPass> {
   raw_ostream &OS;
 
 public:

@@ -5,4 +5,4 @@ mlir_tablegen(FuncOpsDialect.h.inc -gen-dialect-decls)
 mlir_tablegen(FuncOpsDialect.cpp.inc -gen-dialect-defs)
 add_mlir_dialect_tablegen_target(MLIRFuncOpsIncGen)
 
-add_mlir_doc(FuncOps FuncOps Dialects/ -gen-op-doc)
+add_mlir_doc(FuncOps FuncOps Dialects/ -gen-op-doc -dialect=func)

@@ -1,0 +1,122 @@
+# RUN: yaml2obj %s | llvm-dwarfdump -verify - | FileCheck %s --check-prefix=VERIFY
+# VERIFY: No errors.
+#
+# RUN: yaml2obj %s | llvm-dwarfdump - | FileCheck %s
+# CHECK: DW_AT_import ({{.*}} "Foo")
+# CHECK: DW_AT_import ({{.*}} "")
+# CHECK: DW_AT_import ({{.*}})
+# CHECK: DW_AT_import ({{.*}} "FooLinkage")
+# CHECK: DW_AT_import ({{.*}} "JustLinkage")
+# CHECK: DW_AT_import ({{.*}} "NoLinkage")
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AARCH64
+DWARF:
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x2
+          Tag:             DW_TAG_imported_declaration
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_import
+              Form:      DW_FORM_ref4
+        - Code:            0x3
+          Tag:             DW_TAG_module
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_string
+        - Code:            0x4
+          Tag:             DW_TAG_module
+          Children:        DW_CHILDREN_no
+        - Code:            0x5
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_string
+            - Attribute: DW_AT_linkage_name
+              Form:      DW_FORM_string
+        - Code:            0x6
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_linkage_name
+              Form:      DW_FORM_string
+        - Code:            0x7
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_string
+
+  debug_info:
+     - Version:  5
+       UnitType: DW_UT_compile
+       AddrSize: 8
+       Entries:
+
+        - AbbrCode: 0x1
+          Values:
+            - Value: 0x04
+
+        - AbbrCode: 0x2
+          Values:
+            - Value: 0x2d
+
+        - AbbrCode: 0x2
+          Values:
+            - Value: 0x32
+
+        - AbbrCode: 0x2
+          Values:
+            - Value: 0x34
+
+        - AbbrCode: 0x2
+          Values:
+            - Value: 0x35
+
+        - AbbrCode: 0x2
+          Values:
+            - Value: 0x45
+
+        - AbbrCode: 0x2
+          Values:
+            - Value: 0x52
+
+        - AbbrCode: 0x3
+          Values:
+            - CStr: Foo
+
+        - AbbrCode: 0x3
+          Values:
+            - CStr: ''
+
+        - AbbrCode: 0x4
+
+        - AbbrCode: 0x5
+          Values:
+            - CStr: Foo
+            - CStr: FooLinkage
+
+        - AbbrCode: 0x6
+          Values:
+            - CStr: JustLinkage
+
+        - AbbrCode: 0x7
+          Values:
+            - CStr: NoLinkage
+
+        - AbbrCode: 0x0
+...

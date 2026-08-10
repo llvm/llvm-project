@@ -12,7 +12,9 @@
 //   requires assignable_from<I&, const I2&>
 //     constexpr counted_iterator& operator=(const counted_iterator<I2>& x);
 
+#include <cassert>
 #include <iterator>
+#include <type_traits>
 
 #include "test_macros.h"
 #include "test_iterators.h"

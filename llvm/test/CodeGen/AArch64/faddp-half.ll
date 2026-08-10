@@ -107,14 +107,10 @@ define half @faddp_8xhalf(<8 x half> %a) {
 ; CHECKNOFP16-LABEL: faddp_8xhalf:
 ; CHECKNOFP16:       // %bb.0: // %entry
 ; CHECKNOFP16-NEXT:    dup v1.8h, v0.h[1]
-; CHECKNOFP16-NEXT:    fcvtl v2.4s, v0.4h
-; CHECKNOFP16-NEXT:    fcvtl2 v0.4s, v0.8h
-; CHECKNOFP16-NEXT:    fcvtl v3.4s, v1.4h
-; CHECKNOFP16-NEXT:    fcvtl2 v1.4s, v1.8h
-; CHECKNOFP16-NEXT:    fadd v2.4s, v2.4s, v3.4s
-; CHECKNOFP16-NEXT:    fadd v1.4s, v0.4s, v1.4s
-; CHECKNOFP16-NEXT:    fcvtn v0.4h, v2.4s
-; CHECKNOFP16-NEXT:    fcvtn2 v0.8h, v1.4s
+; CHECKNOFP16-NEXT:    fcvtl v0.4s, v0.4h
+; CHECKNOFP16-NEXT:    fcvtl v1.4s, v1.4h
+; CHECKNOFP16-NEXT:    fadd v0.4s, v0.4s, v1.4s
+; CHECKNOFP16-NEXT:    fcvtn v0.4h, v0.4s
 ; CHECKNOFP16-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; CHECKNOFP16-NEXT:    ret
 entry:
@@ -133,14 +129,10 @@ define half @faddp_8xhalf_commute(<8 x half> %a) {
 ; CHECKNOFP16-LABEL: faddp_8xhalf_commute:
 ; CHECKNOFP16:       // %bb.0: // %entry
 ; CHECKNOFP16-NEXT:    dup v1.8h, v0.h[1]
-; CHECKNOFP16-NEXT:    fcvtl v2.4s, v0.4h
-; CHECKNOFP16-NEXT:    fcvtl2 v0.4s, v0.8h
-; CHECKNOFP16-NEXT:    fcvtl v3.4s, v1.4h
-; CHECKNOFP16-NEXT:    fcvtl2 v1.4s, v1.8h
-; CHECKNOFP16-NEXT:    fadd v2.4s, v3.4s, v2.4s
-; CHECKNOFP16-NEXT:    fadd v1.4s, v1.4s, v0.4s
-; CHECKNOFP16-NEXT:    fcvtn v0.4h, v2.4s
-; CHECKNOFP16-NEXT:    fcvtn2 v0.8h, v1.4s
+; CHECKNOFP16-NEXT:    fcvtl v0.4s, v0.4h
+; CHECKNOFP16-NEXT:    fcvtl v1.4s, v1.4h
+; CHECKNOFP16-NEXT:    fadd v0.4s, v1.4s, v0.4s
+; CHECKNOFP16-NEXT:    fcvtn v0.4h, v0.4s
 ; CHECKNOFP16-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; CHECKNOFP16-NEXT:    ret
 entry:

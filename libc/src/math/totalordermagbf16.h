@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_MATH_TOTALORDERMAGF16_H
-#define LLVM_LIBC_SRC_MATH_TOTALORDERMAGF16_H
+#ifndef LLVM_LIBC_SRC_MATH_TOTALORDERMAGBF16_H
+#define LLVM_LIBC_SRC_MATH_TOTALORDERMAGBF16_H
 
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
@@ -18,4 +18,4 @@ int totalordermagbf16(const bfloat16 *x, const bfloat16 *y);
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_MATH_TOTALORDERMAGF16_H
+#endif // LLVM_LIBC_SRC_MATH_TOTALORDERMAGBF16_H

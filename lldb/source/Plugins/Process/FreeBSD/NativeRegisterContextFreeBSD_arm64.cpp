@@ -16,8 +16,8 @@
 
 #include "Plugins/Process/FreeBSD/NativeProcessFreeBSD.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
-#include "Plugins/Process/Utility/RegisterFlagsDetector_arm64.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
+#include "Plugins/Process/Utility/RegisterTypeDetector_arm64.h"
 
 // clang-format off
 #include <sys/param.h>
@@ -33,16 +33,16 @@ using namespace lldb_private::process_freebsd;
 // will contain the same fields. Therefore this mutex prevents each instance
 // competing with the other, and subsequent instances from having to detect the
 // fields all over again.
-static std::mutex g_register_flags_detector_mutex;
-static Arm64RegisterFlagsDetector g_register_flags_detector;
+static std::mutex g_register_type_detector_mutex;
+static Arm64RegisterTypeDetector g_register_type_detector;
 
 NativeRegisterContextFreeBSD *
 NativeRegisterContextFreeBSD::CreateHostNativeRegisterContextFreeBSD(
     const ArchSpec &target_arch, NativeThreadFreeBSD &native_thread) {
-  std::lock_guard<std::mutex> lock(g_register_flags_detector_mutex);
-  if (!g_register_flags_detector.HasDetected()) {
+  std::lock_guard<std::mutex> lock(g_register_type_detector_mutex);
+  if (!g_register_type_detector.HasDetected()) {
     NativeProcessFreeBSD &process = native_thread.GetProcess();
-    g_register_flags_detector.DetectFields(
+    g_register_type_detector.DetectTypes(
         process.GetAuxValue(AuxVector::AUXV_FREEBSD_AT_HWCAP).value_or(0),
         process.GetAuxValue(AuxVector::AUXV_AT_HWCAP2).value_or(0),
         /*hwcap3=*/0);
@@ -54,18 +54,11 @@ NativeRegisterContextFreeBSD::CreateHostNativeRegisterContextFreeBSD(
 NativeRegisterContextFreeBSD_arm64::NativeRegisterContextFreeBSD_arm64(
     const ArchSpec &target_arch, NativeThreadFreeBSD &native_thread)
     : NativeRegisterContextRegisterInfo(
-          native_thread, new RegisterInfoPOSIX_arm64(target_arch, 0))
-#ifdef LLDB_HAS_FREEBSD_WATCHPOINT
-      ,
-      m_read_dbreg(false)
-#endif
-{
-  g_register_flags_detector.UpdateRegisterInfo(
+          native_thread, new RegisterInfoPOSIX_arm64(target_arch, 0)),
+      m_read_dbreg(false) {
+  g_register_type_detector.UpdateRegisterInfo(
       GetRegisterInfoInterface().GetRegisterInfo(),
       GetRegisterInfoInterface().GetRegisterCount());
-
-  ::memset(&m_hwp_regs, 0, sizeof(m_hwp_regs));
-  ::memset(&m_hbp_regs, 0, sizeof(m_hbp_regs));
 }
 
 RegisterInfoPOSIX_arm64 &
@@ -225,7 +218,6 @@ Status NativeRegisterContextFreeBSD_arm64::WriteAllRegisterValues(
 
 llvm::Error NativeRegisterContextFreeBSD_arm64::CopyHardwareWatchpointsFrom(
     NativeRegisterContextFreeBSD &source) {
-#ifdef LLDB_HAS_FREEBSD_WATCHPOINT
   auto &r_source = static_cast<NativeRegisterContextFreeBSD_arm64 &>(source);
   llvm::Error error = r_source.ReadHardwareDebugInfo();
   if (error)
@@ -240,13 +232,9 @@ llvm::Error NativeRegisterContextFreeBSD_arm64::CopyHardwareWatchpointsFrom(
 
   // on FreeBSD this writes both breakpoints and watchpoints
   return WriteHardwareDebugRegs(eDREGTypeWATCH);
-#else
-  return llvm::Error::success();
-#endif
 }
 
 llvm::Error NativeRegisterContextFreeBSD_arm64::ReadHardwareDebugInfo() {
-#ifdef LLDB_HAS_FREEBSD_WATCHPOINT
   Log *log = GetLog(POSIXLog::Registers);
 
   // we're fully stateful, so no need to reread control registers ever
@@ -267,16 +255,10 @@ llvm::Error NativeRegisterContextFreeBSD_arm64::ReadHardwareDebugInfo() {
 
   m_read_dbreg = true;
   return llvm::Error::success();
-#else
-  return llvm::createStringError(
-      llvm::inconvertibleErrorCode(),
-      "Hardware breakpoints/watchpoints require FreeBSD 14.0");
-#endif
 }
 
 llvm::Error
 NativeRegisterContextFreeBSD_arm64::WriteHardwareDebugRegs(DREGType) {
-#ifdef LLDB_HAS_FREEBSD_WATCHPOINT
   assert(m_read_dbreg && "dbregs must be read before writing them back");
 
   // copy data from m_*_regs to m_dbreg before writing it back
@@ -292,11 +274,6 @@ NativeRegisterContextFreeBSD_arm64::WriteHardwareDebugRegs(DREGType) {
   return NativeProcessFreeBSD::PtraceWrapper(PT_SETDBREGS, m_thread.GetID(),
                                              &m_dbreg)
       .ToError();
-#else
-  return llvm::createStringError(
-      llvm::inconvertibleErrorCode(),
-      "Hardware breakpoints/watchpoints require FreeBSD 14.0");
-#endif
 }
 
 #endif // defined (__aarch64__)

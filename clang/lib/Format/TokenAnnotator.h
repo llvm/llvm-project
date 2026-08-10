@@ -40,6 +40,8 @@ enum LineType {
 enum ScopeType {
   // Contained in class declaration/definition.
   ST_Class,
+  // Contained in enum declaration/definition.
+  ST_Enum,
   // Contained in compound requirement.
   ST_CompoundRequirement,
   // Contained in other blocks (function, lambda, loop, if/else, child, etc).
@@ -56,6 +58,7 @@ public:
         InPPDirective(Line.InPPDirective),
         InPragmaDirective(Line.InPragmaDirective),
         InMacroBody(Line.InMacroBody),
+        IsModuleOrImportDecl(Line.IsModuleOrImportDecl),
         MustBeDeclaration(Line.MustBeDeclaration), MightBeFunctionDecl(false),
         IsMultiVariableDeclStmt(false), Affected(false),
         LeadingEmptyLinesAffected(false), ChildrenAffected(false),
@@ -182,6 +185,7 @@ public:
   bool InPPDirective;
   bool InPragmaDirective;
   bool InMacroBody;
+  bool IsModuleOrImportDecl;
   bool MustBeDeclaration;
   bool MightBeFunctionDecl;
   bool IsMultiVariableDeclStmt;
@@ -247,13 +251,14 @@ private:
   bool spaceRequiredBefore(const AnnotatedLine &Line,
                            const FormatToken &Right) const;
 
-  bool mustBreakBefore(const AnnotatedLine &Line,
-                       const FormatToken &Right) const;
+  bool mustBreakBefore(AnnotatedLine &Line, const FormatToken &Right) const;
 
   bool canBreakBefore(const AnnotatedLine &Line,
                       const FormatToken &Right) const;
 
   bool mustBreakForReturnType(const AnnotatedLine &Line) const;
+
+  bool mustBreakBeforeReturnType(const AnnotatedLine &Line) const;
 
   void printDebugInfo(const AnnotatedLine &Line) const;
 

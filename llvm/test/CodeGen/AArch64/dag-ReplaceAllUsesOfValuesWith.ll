@@ -27,10 +27,7 @@
 define i64 @g(ptr %p) {
 ; CHECK-LABEL: g:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr x8, [x0, #8]
-; CHECK-NEXT:    add x9, x8, x8
-; CHECK-NEXT:    add x8, x9, x8
-; CHECK-NEXT:    sub x0, x8, x8
+; CHECK-NEXT:    mov x0, xzr
 ; CHECK-NEXT:    ret
   %vec = load <2 x i64>, ptr %p, align 1
   %elt = extractelement <2 x i64> %vec, i32 1

@@ -33,7 +33,8 @@ public:
   typedef typename A::pint_t pint_t;
   typedef typename A::sint_t sint_t;
 
-  static int stepWithDwarf(A &addressSpace, const typename R::link_reg_t &pc,
+  static int stepWithDwarf(A &addressSpace,
+                           typename R::link_hardened_reg_arg_t pc,
                            pint_t fdeStart, R &registers, bool &isSignalFrame,
                            bool stage2);
 
@@ -75,10 +76,14 @@ private:
     __builtin_unreachable();
   }
 #if defined(_LIBUNWIND_TARGET_AARCH64)
-  static bool isReturnAddressSigned(A &addressSpace, R registers, pint_t cfa,
-                                    PrologInfo &prolog);
-  static bool isReturnAddressSignedWithPC(A &addressSpace, R registers,
-                                          pint_t cfa, PrologInfo &prolog);
+  enum RASignStatus {
+    RANotSigned = 0,
+    RASigned = 1,
+    RASignedWithPC = 2,
+  };
+  static RASignStatus getReturnAddressSignStatus(A &addressSpace, R registers,
+                                                 pint_t cfa,
+                                                 PrologInfo &prolog);
 #endif
 };
 
@@ -112,8 +117,14 @@ typename A::pint_t DwarfInstructions<A, R>::getSavedRegister(
 
   case CFI_Parser<A>::kRegisterInRegister:
     return registers.getRegister((int)savedReg.value);
+
   case CFI_Parser<A>::kRegisterUndefined:
     return 0;
+
+  case CFI_Parser<A>::kRegisterIsPseudo:
+#if defined(_LIBUNWIND_TARGET_AARCH64)
+    return savedReg.value;
+#endif
   case CFI_Parser<A>::kRegisterUnused:
   case CFI_Parser<A>::kRegisterOffsetFromCFA:
     // FIX ME
@@ -140,6 +151,7 @@ double DwarfInstructions<A, R>::getSavedFloatRegister(
 #ifndef _LIBUNWIND_TARGET_ARM
     return registers.getFloatRegister((int)savedReg.value);
 #endif
+  case CFI_Parser<A>::kRegisterIsPseudo:
   case CFI_Parser<A>::kRegisterIsExpression:
   case CFI_Parser<A>::kRegisterUnused:
   case CFI_Parser<A>::kRegisterOffsetFromCFA:
@@ -163,6 +175,7 @@ v128 DwarfInstructions<A, R>::getSavedVectorRegister(
         evaluateExpression((pint_t)savedReg.value, addressSpace,
                             registers, cfa));
 
+  case CFI_Parser<A>::kRegisterIsPseudo:
   case CFI_Parser<A>::kRegisterIsExpression:
   case CFI_Parser<A>::kRegisterUnused:
   case CFI_Parser<A>::kRegisterUndefined:
@@ -176,7 +189,8 @@ v128 DwarfInstructions<A, R>::getSavedVectorRegister(
 }
 #if defined(_LIBUNWIND_TARGET_AARCH64)
 template <typename A, typename R>
-bool DwarfInstructions<A, R>::isReturnAddressSigned(A &addressSpace,
+typename DwarfInstructions<A, R>::RASignStatus
+DwarfInstructions<A, R>::getReturnAddressSignStatus(A &addressSpace,
                                                     R registers, pint_t cfa,
                                                     PrologInfo &prolog) {
   pint_t raSignState;
@@ -186,39 +200,23 @@ bool DwarfInstructions<A, R>::isReturnAddressSigned(A &addressSpace,
   else
     raSignState = getSavedRegister(addressSpace, registers, cfa, regloc);
 
-  // Only bit[0] is meaningful.
-  return raSignState & 0x01;
-}
-
-template <typename A, typename R>
-bool DwarfInstructions<A, R>::isReturnAddressSignedWithPC(A &addressSpace,
-                                                          R registers,
-                                                          pint_t cfa,
-                                                          PrologInfo &prolog) {
-  pint_t raSignState;
-  auto regloc = prolog.savedRegisters[UNW_AARCH64_RA_SIGN_STATE];
-  if (regloc.location == CFI_Parser<A>::kRegisterUnused)
-    raSignState = static_cast<pint_t>(regloc.value);
-  else
-    raSignState = getSavedRegister(addressSpace, registers, cfa, regloc);
-
-  // Only bit[1] is meaningful.
-  return raSignState & 0x02;
+  // bits[1:0] describe how RA is signed.
+  assert((raSignState & 0x3) != 3 && "unexpected RA sign state");
+  return static_cast<RASignStatus>(raSignState & 0x3);
 }
 #endif
 
 template <typename A, typename R>
-int DwarfInstructions<A, R>::stepWithDwarf(A &addressSpace,
-                                           const typename R::link_reg_t &pc,
-                                           pint_t fdeStart, R &registers,
-                                           bool &isSignalFrame, bool stage2) {
+int DwarfInstructions<A, R>::stepWithDwarf(
+    A &addressSpace, typename R::link_hardened_reg_arg_t pc, pint_t fdeStart,
+    R &registers, bool &isSignalFrame, bool stage2) {
   FDE_Info fdeInfo;
   CIE_Info cieInfo;
   if (CFI_Parser<A>::decodeFDE(addressSpace, fdeStart, &fdeInfo,
                                &cieInfo) == NULL) {
     PrologInfo prolog;
-    if (CFI_Parser<A>::parseFDEInstructions(addressSpace, fdeInfo, cieInfo, pc,
-                                            R::getArch(), &prolog)) {
+    if (CFI_Parser<A>::template parseFDEInstructions<R>(
+            addressSpace, fdeInfo, cieInfo, pc, R::getArch(), &prolog)) {
       // get pointer to cfa (architecture specific)
       pint_t cfa = getCFA(addressSpace, prolog, registers);
 
@@ -226,7 +224,7 @@ int DwarfInstructions<A, R>::stepWithDwarf(A &addressSpace,
       // __unw_step_stage2 is not used for cross unwinding, so we use
       // __aarch64__ rather than LIBUNWIND_TARGET_AARCH64 to make sure we are
       // building for AArch64 natively.
-#if defined(__aarch64__)
+#if defined(__aarch64__) && !defined(__LFI__)
       if (stage2 && cieInfo.mteTaggedFrame) {
         pint_t sp = registers.getSP();
         pint_t p = sp;
@@ -302,23 +300,36 @@ int DwarfInstructions<A, R>::stepWithDwarf(A &addressSpace,
 
       isSignalFrame = cieInfo.isSignalFrame;
 
-#if defined(_LIBUNWIND_TARGET_AARCH64) &&                                      \
-    !defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+#if defined(_LIBUNWIND_TARGET_AARCH64)
       // There are two ways of return address signing: pac-ret (enabled via
       // -mbranch-protection=pac-ret) and ptrauth-returns (enabled as part of
       // Apple's arm64e or experimental pauthtest ABI on Linux). The code
-      // below handles signed RA for pac-ret, while ptrauth-returns uses
-      // different logic.
+      // below handles signed RA for ptrauth-returns, while pac-ret uses pacm
+      // instructions from the hint space.
+      //
       // TODO: unify logic for both cases, see
       // https://github.com/llvm/llvm-project/issues/160110
-      //
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+      if (getReturnAddressSignStatus(addressSpace, registers, cfa, prolog) ==
+          RASignedWithPC) {
+        newRegisters.setIPPAuthLR(returnAddress, prolog.ptrAuthDiversifier);
+      } else {
+        newRegisters.setIP(returnAddress);
+      }
+
+      // Simulate the step by replacing the register set with the new ones.
+      registers = newRegisters;
+
+      return UNW_STEP_SUCCESS;
+#else
       // If the target is aarch64 then the return address may have been signed
       // using the v8.3 pointer authentication extensions. The original
       // return address needs to be authenticated before the return address is
       // restored. autia1716 is used instead of autia as autia1716 assembles
       // to a NOP on pre-v8.3a architectures.
-      if ((R::getArch() == REGISTERS_ARM64) &&
-          isReturnAddressSigned(addressSpace, registers, cfa, prolog) &&
+      RASignStatus RAState =
+          getReturnAddressSignStatus(addressSpace, registers, cfa, prolog);
+      if ((R::getArch() == REGISTERS_ARM64) && RAState != RANotSigned &&
           returnAddress != 0) {
 #if !defined(_LIBUNWIND_IS_NATIVE_ONLY)
         return UNW_ECROSSRASIGNING;
@@ -329,7 +340,7 @@ int DwarfInstructions<A, R>::stepWithDwarf(A &addressSpace,
         // We use the hint versions of the authentication instructions below to
         // ensure they're assembled by the compiler even for targets with no
         // FEAT_PAuth/FEAT_PAuth_LR support.
-        if (isReturnAddressSignedWithPC(addressSpace, registers, cfa, prolog)) {
+        if (RAState == RASignedWithPC) {
           register unsigned long long x15 __asm("x15") =
               prolog.ptrAuthDiversifier;
           if (cieInfo.addressesSignedWithBKey) {
@@ -352,6 +363,7 @@ int DwarfInstructions<A, R>::stepWithDwarf(A &addressSpace,
         returnAddress = x17;
 #endif
       }
+#endif
 #endif
 
 #if defined(_LIBUNWIND_IS_NATIVE_ONLY) && defined(_LIBUNWIND_TARGET_ARM) &&    \

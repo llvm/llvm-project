@@ -29,7 +29,7 @@
 
 template <class KeyContainer, class ValueContainer, class Compare = std::less<>>
 constexpr void test() {
-  using M = std::flat_multimap<int, char, Compare, KeyContainer, ValueContainer>;
+  using M = std::flat_multimap<int, long, Compare, KeyContainer, ValueContainer>;
 
   auto make = [](std::initializer_list<int> il) {
     M m;
@@ -79,14 +79,14 @@ constexpr void test() {
 }
 
 constexpr bool test() {
-  test<std::vector<int>, std::vector<char>>();
-  test<std::vector<int>, std::vector<char>, std::greater<>>();
+  test<std::vector<int>, std::vector<long>>();
+  test<std::vector<int>, std::vector<long>, std::greater<>>();
 #ifndef __cpp_lib_constexpr_deque
   if (!TEST_IS_CONSTANT_EVALUATED)
 #endif
-    test<std::deque<int>, std::vector<char>>();
-  test<MinSequenceContainer<int>, MinSequenceContainer<char>>();
-  test<std::vector<int, min_allocator<int>>, std::vector<char, min_allocator<char>>>();
+    test<std::deque<int>, std::vector<long>>();
+  test<MinSequenceContainer<int>, MinSequenceContainer<long>>();
+  test<std::vector<int, min_allocator<int>>, std::vector<long, min_allocator<long>>>();
 
   if (!TEST_IS_CONSTANT_EVALUATED) {
     auto erase_function = [](auto& m, auto key_arg) {

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_REGISTERTYPEBUILDER_REGISTERTYPEBUILDERCLANG_H
-#define LLDB_PLUGINS_REGISTERTYPEBUILDER_REGISTERTYPEBUILDERCLANG_H
+#ifndef LLDB_SOURCE_PLUGINS_REGISTERTYPEBUILDER_REGISTERTYPEBUILDERCLANG_H
+#define LLDB_SOURCE_PLUGINS_REGISTERTYPEBUILDER_REGISTERTYPEBUILDERCLANG_H
 
 #include "lldb/Target/RegisterTypeBuilder.h"
 #include "lldb/Target/Target.h"
@@ -29,7 +29,7 @@ public:
   static lldb::RegisterTypeBuilderSP CreateInstance(Target &target);
 
   CompilerType GetRegisterType(const std::string &name,
-                               const lldb_private::RegisterFlags &flags,
+                               const lldb_private::RegisterType &type_info,
                                uint32_t byte_size) override;
 
 private:
@@ -37,4 +37,4 @@ private:
 };
 } // namespace lldb_private
 
-#endif // LLDB_PLUGINS_REGISTERTYPEBUILDER_REGISTERTYPEBUILDERCLANG_H
+#endif // LLDB_SOURCE_PLUGINS_REGISTERTYPEBUILDER_REGISTERTYPEBUILDERCLANG_H

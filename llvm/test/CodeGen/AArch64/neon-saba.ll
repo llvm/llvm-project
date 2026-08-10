@@ -382,16 +382,170 @@ define <8 x i16> @sabal_abs_zeros_8b(<8 x i16> %a, <8 x i8> %b) #0 {
   ret <8 x i16> %add
 }
 
-declare <4 x i32> @llvm.abs.v4i32(<4 x i32>, i1)
-declare <2 x i32> @llvm.abs.v2i32(<2 x i32>, i1)
-declare <8 x i16> @llvm.abs.v8i16(<8 x i16>, i1)
-declare <4 x i16> @llvm.abs.v4i16(<4 x i16>, i1)
-declare <16 x i8> @llvm.abs.v16i8(<16 x i8>, i1)
-declare <8 x i8> @llvm.abs.v8i8(<8 x i8>, i1)
+; SABA from OR(SABD)
 
-declare <4 x i32> @llvm.aarch64.neon.sabd.v4i32(<4 x i32>, <4 x i32>)
-declare <2 x i32> @llvm.aarch64.neon.sabd.v2i32(<2 x i32>, <2 x i32>)
-declare <8 x i16> @llvm.aarch64.neon.sabd.v8i16(<8 x i16>, <8 x i16>)
-declare <4 x i16> @llvm.aarch64.neon.sabd.v4i16(<4 x i16>, <4 x i16>)
-declare <16 x i8> @llvm.aarch64.neon.sabd.v16i8(<16 x i8>, <16 x i8>)
-declare <8 x i8> @llvm.aarch64.neon.sabd.v8i8(<8 x i8>, <8 x i8>)
+define <4 x i32> @saba_or_sabd_4s(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) #0 {
+; CHECK-LABEL: saba_or_sabd_4s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    saba v0.4s, v1.4s, v2.4s
+; CHECK-NEXT:    ret
+  %sabd = call <4 x i32> @llvm.aarch64.neon.sabd.v4i32(<4 x i32> %b, <4 x i32> %c)
+  %add = or disjoint <4 x i32> %sabd, %a
+  ret <4 x i32> %add
+}
+
+define <2 x i32> @saba_or_sabd_2s(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c) #0 {
+; CHECK-LABEL: saba_or_sabd_2s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    saba v0.2s, v1.2s, v2.2s
+; CHECK-NEXT:    ret
+  %sabd = call <2 x i32> @llvm.aarch64.neon.sabd.v2i32(<2 x i32> %b, <2 x i32> %c)
+  %add = or disjoint <2 x i32> %sabd, %a
+  ret <2 x i32> %add
+}
+
+define <8 x i16> @saba_or_sabd_8h(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c) #0 {
+; CHECK-LABEL: saba_or_sabd_8h:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    saba v0.8h, v1.8h, v2.8h
+; CHECK-NEXT:    ret
+  %sabd = call <8 x i16> @llvm.aarch64.neon.sabd.v8i16(<8 x i16> %b, <8 x i16> %c)
+  %add = or disjoint <8 x i16> %sabd, %a
+  ret <8 x i16> %add
+}
+
+define <4 x i16> @saba_or_sabd_4h(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c) #0 {
+; CHECK-LABEL: saba_or_sabd_4h:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    saba v0.4h, v1.4h, v2.4h
+; CHECK-NEXT:    ret
+  %sabd = call <4 x i16> @llvm.aarch64.neon.sabd.v4i16(<4 x i16> %b, <4 x i16> %c)
+  %add = or disjoint <4 x i16> %sabd, %a
+  ret <4 x i16> %add
+}
+
+define <16 x i8> @saba_or_sabd_16b(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c) #0 {
+; CHECK-LABEL: saba_or_sabd_16b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    saba v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    ret
+  %sabd = call <16 x i8> @llvm.aarch64.neon.sabd.v16i8(<16 x i8> %b, <16 x i8> %c)
+  %add = or disjoint <16 x i8> %sabd, %a
+  ret <16 x i8> %add
+}
+
+define <8 x i8> @saba_or_sabd_8b(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c) #0 {
+; CHECK-LABEL: saba_or_sabd_8b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    saba v0.8b, v1.8b, v2.8b
+; CHECK-NEXT:    ret
+  %sabd = call <8 x i8> @llvm.aarch64.neon.sabd.v8i8(<8 x i8> %b, <8 x i8> %c)
+  %add = or disjoint <8 x i8> %sabd, %a
+  ret <8 x i8> %add
+}
+
+; SABA from OR(SABS(X))
+
+define <4 x i32> @saba_or_abs_zeros_4s(<4 x i32> %a, <4 x i32> %b) #0 {
+; CHECK-LABEL: saba_or_abs_zeros_4s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    saba v0.4s, v1.4s, v2.4s
+; CHECK-NEXT:    ret
+  %abs = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %b, i1 true)
+  %add = or disjoint <4 x i32> %a, %abs
+  ret <4 x i32> %add
+}
+
+define <2 x i32> @saba_or_abs_zeros_2s(<2 x i32> %a, <2 x i32> %b) #0 {
+; CHECK-LABEL: saba_or_abs_zeros_2s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    saba v0.2s, v1.2s, v2.2s
+; CHECK-NEXT:    ret
+  %abs = call <2 x i32> @llvm.abs.v2i32(<2 x i32> %b, i1 true)
+  %add = or disjoint <2 x i32> %a, %abs
+  ret <2 x i32> %add
+}
+
+define <8 x i16> @saba_or_abs_zeros_8h(<8 x i16> %a, <8 x i16> %b) #0 {
+; CHECK-LABEL: saba_or_abs_zeros_8h:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    saba v0.8h, v1.8h, v2.8h
+; CHECK-NEXT:    ret
+  %abs = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %b, i1 true)
+  %add = or disjoint <8 x i16> %a, %abs
+  ret <8 x i16> %add
+}
+
+define <4 x i16> @saba_or_abs_zeros_4h(<4 x i16> %a, <4 x i16> %b) #0 {
+; CHECK-LABEL: saba_or_abs_zeros_4h:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    saba v0.4h, v1.4h, v2.4h
+; CHECK-NEXT:    ret
+  %abs = call <4 x i16> @llvm.abs.v4i16(<4 x i16> %b, i1 true)
+  %add = or disjoint <4 x i16> %a, %abs
+  ret <4 x i16> %add
+}
+
+define <16 x i8> @saba_or_abs_zeros_16b(<16 x i8> %a, <16 x i8> %b) #0 {
+; CHECK-LABEL: saba_or_abs_zeros_16b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    saba v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    ret
+  %abs = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %b, i1 true)
+  %add = or disjoint <16 x i8> %a, %abs
+  ret <16 x i8> %add
+}
+
+define <8 x i8> @saba_or_abs_zeros_8b(<8 x i8> %a, <8 x i8> %b) #0 {
+; CHECK-LABEL: saba_or_abs_zeros_8b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    saba v0.8b, v1.8b, v2.8b
+; CHECK-NEXT:    ret
+  %abs = call <8 x i8> @llvm.abs.v8i8(<8 x i8> %b, i1 true)
+  %add = or disjoint <8 x i8> %a, %abs
+  ret <8 x i8> %add
+}
+
+; SABAL from OR(ZEXT(SABS(X)))
+
+define <2 x i64> @sabal_or_abs_zeros_2s(<2 x i64> %a, <2 x i32> %b) #0 {
+; CHECK-LABEL: sabal_or_abs_zeros_2s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    sabal v0.2d, v1.2s, v2.2s
+; CHECK-NEXT:    ret
+  %abs = call <2 x i32> @llvm.abs.v2i32(<2 x i32> %b, i1 true)
+  %abs.zext = zext <2 x i32> %abs to <2 x i64>
+  %add = or disjoint <2 x i64> %a, %abs.zext
+  ret <2 x i64> %add
+}
+
+define <4 x i32> @sabal_or_abs_zeros_4h(<4 x i32> %a, <4 x i16> %b) #0 {
+; CHECK-LABEL: sabal_or_abs_zeros_4h:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    sabal v0.4s, v1.4h, v2.4h
+; CHECK-NEXT:    ret
+  %abs = call <4 x i16> @llvm.abs.v4i16(<4 x i16> %b, i1 true)
+  %abs.zext = zext <4 x i16> %abs to <4 x i32>
+  %add = or disjoint <4 x i32> %a, %abs.zext
+  ret <4 x i32> %add
+}
+
+define <8 x i16> @sabal_or_abs_zeros_8b(<8 x i16> %a, <8 x i8> %b) #0 {
+; CHECK-LABEL: sabal_or_abs_zeros_8b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    sabal v0.8h, v1.8b, v2.8b
+; CHECK-NEXT:    ret
+  %abs = call <8 x i8> @llvm.abs.v8i8(<8 x i8> %b, i1 true)
+  %abs.zext = zext <8 x i8> %abs to <8 x i16>
+  %add = or disjoint <8 x i16> %a, %abs.zext
+  ret <8 x i16> %add
+}

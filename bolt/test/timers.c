@@ -1,4 +1,7 @@
 // This test checks timers for metadata manager phases.
+
+// REQUIRES: system-linux
+
 // RUN: %clang %cflags %s -o %t.exe
 // RUN: link_fdata %s %t.exe %t.fdata
 // RUN: llvm-bolt %t.exe -o %t.null --data %t.fdata -w %t.yaml --time-rewrite \

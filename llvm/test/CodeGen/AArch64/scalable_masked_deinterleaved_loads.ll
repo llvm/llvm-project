@@ -219,9 +219,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8> } @foo_ld2_nxv16i8_bad_mask3(<vs
 define { <vscale x 8 x i8>, <vscale x 8 x i8> } @foo_ld2_nxv8i8(<vscale x 8 x i1> %mask, ptr %p) {
 ; CHECK-LABEL: foo_ld2_nxv8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip2 p1.h, p0.h, p0.h
-; CHECK-NEXT:    zip1 p0.h, p0.h, p0.h
-; CHECK-NEXT:    uzp1 p0.b, p0.b, p1.b
+; CHECK-NEXT:    trn1 p0.b, p0.b, p0.b
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
 ; CHECK-NEXT:    uunpkhi z1.h, z0.b
 ; CHECK-NEXT:    uunpklo z2.h, z0.b
@@ -270,9 +268,7 @@ define { <vscale x 8 x i16>, <vscale x 8 x i16> } @foo_deinterleave2_not_load(<v
 define { <vscale x 4 x i16>, <vscale x 4 x i16> } @foo_ld2_nxv8i8_exti16(<vscale x 4 x i1> %mask, ptr %p) {
 ; CHECK-LABEL: foo_ld2_nxv8i8_exti16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip2 p1.s, p0.s, p0.s
-; CHECK-NEXT:    zip1 p0.s, p0.s, p0.s
-; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
+; CHECK-NEXT:    trn1 p0.h, p0.h, p0.h
 ; CHECK-NEXT:    ld1b { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    uunpkhi z1.s, z0.h
 ; CHECK-NEXT:    uunpklo z2.s, z0.h

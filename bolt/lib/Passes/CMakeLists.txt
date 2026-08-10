@@ -4,6 +4,7 @@ add_llvm_library(LLVMBOLTPasses
   AllocCombiner.cpp
   AsmDump.cpp
   BinaryPasses.cpp
+  BranchLivenessUtils.cpp
   CMOVConversion.cpp
   CacheMetrics.cpp
   DataflowAnalysis.cpp
@@ -17,18 +18,18 @@ add_llvm_library(LLVMBOLTPasses
   IdenticalCodeFolding.cpp
   IndirectCallPromotion.cpp
   Inliner.cpp
-  InsertNegateRAStatePass.cpp
   Instrumentation.cpp
   JTFootprintReduction.cpp
   LongJmp.cpp
   LoopInversionPass.cpp
   LivenessAnalysis.cpp
   MCF.cpp
-  MarkRAStates.cpp
   PatchEntries.cpp
   PAuthGadgetScanner.cpp
   PettisAndHansen.cpp
   PLTCall.cpp
+  PointerAuthCFIAnalyzer.cpp
+  PointerAuthCFIFixup.cpp
   ProfileQualityStats.cpp
   RegAnalysis.cpp
   RegReAssign.cpp

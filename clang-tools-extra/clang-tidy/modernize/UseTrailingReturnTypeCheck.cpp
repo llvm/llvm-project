@@ -14,7 +14,6 @@
 #include "clang/Tooling/FixIt.h"
 #include "llvm/ADT/StringExtras.h"
 
-#include <cctype>
 #include <optional>
 
 namespace clang::tidy {
@@ -55,13 +54,12 @@ public:
 
   bool visitUnqualName(StringRef UnqualName) {
     // Check for collisions with function arguments.
-    for (const ParmVarDecl *Param : F.parameters())
+    Collision = llvm::any_of(F.parameters(), [&](const ParmVarDecl *Param) {
       if (const IdentifierInfo *Ident = Param->getIdentifier())
-        if (Ident->getName() == UnqualName) {
-          Collision = true;
-          return true;
-        }
-    return false;
+        return Ident->getName() == UnqualName;
+      return false;
+    });
+    return Collision;
   }
 
   bool TraverseTypeLoc(TypeLoc TL, bool TraverseQualifier = true) {
@@ -72,7 +70,7 @@ public:
     case TypeLoc::InjectedClassName:
     case TypeLoc::Record:
     case TypeLoc::Enum: {
-      auto TTL = TL.getAs<TagTypeLoc>();
+      const auto TTL = TL.getAs<TagTypeLoc>();
       const auto *T = TTL.getTypePtr();
       if (T->getKeyword() != ElaboratedTypeKeyword::None ||
           TTL.getQualifierLoc())
@@ -82,7 +80,7 @@ public:
       break;
     }
     case TypeLoc::TemplateSpecialization: {
-      auto TTL = TL.getAs<TemplateSpecializationTypeLoc>();
+      const auto TTL = TL.getAs<TemplateSpecializationTypeLoc>();
       const auto *T = TTL.getTypePtr();
       if (T->getKeyword() != ElaboratedTypeKeyword::None ||
           TTL.getQualifierLoc())
@@ -92,7 +90,7 @@ public:
       break;
     }
     case TypeLoc::Typedef: {
-      auto TTL = TL.getAs<TypedefTypeLoc>();
+      const auto TTL = TL.getAs<TypedefTypeLoc>();
       const auto *T = TTL.getTypePtr();
       if (T->getKeyword() != ElaboratedTypeKeyword::None ||
           TTL.getQualifierLoc())
@@ -102,7 +100,7 @@ public:
       break;
     }
     case TypeLoc::Using: {
-      auto TTL = TL.getAs<UsingTypeLoc>();
+      const auto TTL = TL.getAs<UsingTypeLoc>();
       const auto *T = TTL.getTypePtr();
       if (T->getKeyword() != ElaboratedTypeKeyword::None ||
           TTL.getQualifierLoc())
@@ -141,9 +139,9 @@ AST_MATCHER(LambdaExpr, hasExplicitResultType) {
 
 } // namespace
 
-constexpr llvm::StringLiteral ErrorMessageOnFunction =
+constexpr StringRef ErrorMessageOnFunction =
     "use a trailing return type for this function";
-constexpr llvm::StringLiteral ErrorMessageOnLambda =
+constexpr StringRef ErrorMessageOnLambda =
     "use a trailing return type for this lambda";
 
 static SourceLocation expandIfMacroId(SourceLocation Loc,
@@ -207,6 +205,16 @@ static bool isSpecifier(Token T) {
                    tok::kw_static, tok::kw_friend, tok::kw_virtual);
 }
 
+namespace {
+
+struct ClassifiedToken {
+  Token T;
+  bool IsQualifier;
+  bool IsSpecifier;
+};
+
+} // namespace
+
 static std::optional<ClassifiedToken>
 classifyToken(const FunctionDecl &F, Preprocessor &PP, Token Tok) {
   ClassifiedToken CT;
@@ -220,7 +228,7 @@ classifyToken(const FunctionDecl &F, Preprocessor &PP, Token Tok) {
   Token End;
   End.startToken();
   End.setKind(tok::eof);
-  const SmallVector<Token, 2> Stream{Tok, End};
+  const std::array<Token, 2> Stream{Tok, End};
 
   // FIXME: do not report these token to Preprocessor.TokenWatcher.
   PP.EnterTokenStream(Stream, false, /*IsReinject=*/false);
@@ -271,10 +279,8 @@ classifyTokensBeforeFunctionName(const FunctionDecl &F, const ASTContext &Ctx,
 
       if (Info.hasMacroDefinition()) {
         const MacroInfo *MI = PP->getMacroInfo(&Info);
-        if (!MI || MI->isFunctionLike()) {
-          // Cannot handle function style macros.
+        if (!MI || MI->isFunctionLike() || MI->isBuiltinMacro())
           return std::nullopt;
-        }
       }
 
       T.setIdentifierInfo(&Info);
@@ -472,7 +478,7 @@ void UseTrailingReturnTypeCheck::storeOptions(
 }
 
 void UseTrailingReturnTypeCheck::registerMatchers(MatchFinder *Finder) {
-  auto F =
+  const auto F =
       functionDecl(
           unless(anyOf(
               hasTrailingReturn(), returns(voidType()), cxxConversionDecl(),
@@ -538,7 +544,7 @@ void UseTrailingReturnTypeCheck::check(const MatchFinder::MatchResult &Result) {
   if (!TSI)
     return;
 
-  auto FTL = TSI->getTypeLoc().IgnoreParens().getAs<FunctionTypeLoc>();
+  const auto FTL = TSI->getTypeLoc().IgnoreParens().getAs<FunctionTypeLoc>();
   if (!FTL) {
     // FIXME: This may happen if we have __attribute__((...)) on the function.
     // We abort for now. Remove this when the function type location gets

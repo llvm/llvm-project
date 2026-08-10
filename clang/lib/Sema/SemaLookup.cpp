@@ -193,7 +193,7 @@ namespace {
       list.push_back(UnqualUsingEntry(UD->getNominatedNamespace(), Common));
     }
 
-    void done() { llvm::sort(list, UnqualUsingEntry::Comparator()); }
+    void done() { llvm::stable_sort(list, UnqualUsingEntry::Comparator()); }
 
     typedef ListTy::const_iterator const_iterator;
 
@@ -1575,7 +1575,7 @@ void Sema::makeMergedDefinitionVisible(NamedDecl *ND) {
   if (auto *ED = dyn_cast<EnumDecl>(ND);
       ED && ED->isFromGlobalModule() && !ED->isScoped()) {
     for (auto *ECD : ED->enumerators()) {
-      ECD->setVisibleDespiteOwningModule();
+      ECD->setVisiblePromoted();
       DeclContext *RedeclCtx = ED->getDeclContext()->getRedeclContext();
       if (RedeclCtx->lookup(ECD->getDeclName()).empty())
         RedeclCtx->makeDeclVisibleInContext(ECD);
@@ -1589,17 +1589,19 @@ static Module *getDefiningModule(Sema &S, Decl *Entity) {
     // If this function was instantiated from a template, the defining module is
     // the module containing the pattern.
     if (FunctionDecl *Pattern = FD->getTemplateInstantiationPattern())
-      Entity = Pattern;
+      Entity = Pattern->getDefinition();
   } else if (CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(Entity)) {
     if (CXXRecordDecl *Pattern = RD->getTemplateInstantiationPattern())
-      Entity = Pattern;
+      Entity = Pattern->getDefinition();
   } else if (EnumDecl *ED = dyn_cast<EnumDecl>(Entity)) {
     if (auto *Pattern = ED->getTemplateInstantiationPattern())
-      Entity = Pattern;
+      Entity = Pattern->getDefinition();
   } else if (VarDecl *VD = dyn_cast<VarDecl>(Entity)) {
     if (VarDecl *Pattern = VD->getTemplateInstantiationPattern())
-      Entity = Pattern;
+      Entity = Pattern->getDefinition();
   }
+  if (!Entity)
+    return nullptr;
 
   // Walk up to the containing context. That might also have been instantiated
   // from a template.
@@ -2032,7 +2034,8 @@ bool LookupResult::isReachableSlow(Sema &SemaRef, NamedDecl *D) {
   // Directly imported module are necessarily reachable.
   // Since we can't export import a module implementation partition unit, we
   // don't need to count for Exports here.
-  if (CurrentM && CurrentM->getTopLevelModule()->Imports.count(DeclTopModule))
+  if (CurrentM &&
+      llvm::is_contained(CurrentM->getTopLevelModule()->Imports, DeclTopModule))
     return true;
 
   // Then we treat all module implementation partition unit as unreachable.
@@ -3300,6 +3303,8 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
     // Inline SPIR-V types are treated as fundamental types.
     case Type::HLSLInlineSpirv:
       break;
+    case Type::OverflowBehavior:
+      T = cast<OverflowBehaviorType>(T)->getUnderlyingType().getTypePtr();
     }
 
     if (Queue.empty())
@@ -3927,7 +3932,8 @@ void Sema::ArgumentDependentLookup(DeclarationName Name, SourceLocation Loc,
             break;
           }
 
-          if (!getLangOpts().CPlusPlusModules)
+          if (!D->getOwningModule() ||
+              !D->getOwningModule()->getTopLevelModule()->isNamedModule())
             continue;
 
           if (D->isInExportDeclContext()) {
@@ -3959,7 +3965,9 @@ void Sema::ArgumentDependentLookup(DeclarationName Name, SourceLocation Loc,
               break;
             }
           }
-        } else if (D->getFriendObjectKind()) {
+        }
+
+        if (D->getFriendObjectKind()) {
           auto *RD = cast<CXXRecordDecl>(D->getLexicalDeclContext());
           // [basic.lookup.argdep]p4:
           //   Argument-dependent lookup finds all declarations of functions and
@@ -4455,13 +4463,16 @@ LabelDecl *Sema::LookupExistingLabel(IdentifierInfo *II, SourceLocation Loc) {
                                     RedeclarationKind::NotForRedeclaration);
   // If we found a label, check to see if it is in the same context as us.
   // When in a Block, we don't want to reuse a label in an enclosing function.
-  if (!Res || Res->getDeclContext() != CurContext)
+  if (!Res ||
+      Res->getDeclContext()->getEnclosingNonExpansionStatementContext() !=
+          CurContext->getEnclosingNonExpansionStatementContext())
     return nullptr;
   return cast<LabelDecl>(Res);
 }
 
 LabelDecl *Sema::LookupOrCreateLabel(IdentifierInfo *II, SourceLocation Loc,
-                                     SourceLocation GnuLabelLoc) {
+                                     SourceLocation GnuLabelLoc,
+                                     bool IsLabelStmt) {
   if (GnuLabelLoc.isValid()) {
     // Local label definitions always shadow existing labels.
     auto *Res = LabelDecl::Create(Context, CurContext, Loc, II, GnuLabelLoc);
@@ -4470,15 +4481,43 @@ LabelDecl *Sema::LookupOrCreateLabel(IdentifierInfo *II, SourceLocation Loc,
     return cast<LabelDecl>(Res);
   }
 
-  // Not a GNU local label.
-  LabelDecl *Res = LookupExistingLabel(II, Loc);
-  if (!Res) {
-    // If not forward referenced or defined already, create the backing decl.
-    Res = LabelDecl::Create(Context, CurContext, Loc, II);
-    Scope *S = CurScope->getFnParent();
-    assert(S && "Not in a function?");
-    PushOnScopeChains(Res, S, true);
+  LabelDecl *Existing = LookupExistingLabel(II, Loc);
+
+  // C++26 [stmt.label]p4 An identifier label shall not be enclosed by an
+  // expansion-statement.
+  //
+  // As an extension, we allow GNU local labels since they are logically
+  // scoped to the containing block, which prevents us from ending up with
+  // multiple copies of the same label in a function after instantiation.
+  //
+  // While allowing this is slightly more complicated, it also has the nice
+  // side-effect of avoiding otherwise rather horrible diagnostics you'd get
+  // when trying to use '__label__' if we didn't support this.
+  if (IsLabelStmt && CurContext->isExpansionStmt()) {
+    if (Existing && Existing->isGnuLocal())
+      return Existing;
+
+    // Drop the label from the AST as creating it anyway would cause us to
+    // either issue various unhelpful diagnostics (if we were to declare
+    // it in the function decl context) or shadow a valid label with the
+    // same name outside the expansion statement.
+    Diag(Loc, diag::err_expansion_stmt_label);
+    return nullptr;
   }
+
+  if (Existing)
+    return Existing;
+
+  // Declare non-local labels outside any expansion statements; this is required
+  // to support jumping out of an expansion statement.
+  ContextRAII Ctx{*this, CurContext->getEnclosingNonExpansionStatementContext(),
+                  /*NewThisContext=*/false};
+
+  // Not a GNU local label. Create the backing decl.
+  auto *Res = LabelDecl::Create(Context, CurContext, Loc, II);
+  Scope *S = CurScope->getFnParent();
+  assert(S && "Not in a function?");
+  PushOnScopeChains(Res, S, true);
   return Res;
 }
 
@@ -4745,7 +4784,7 @@ void TypoCorrectionConsumer::addCorrection(TypoCorrection Correction) {
           RI->getAsString(SemaRef.getLangOpts())};
 
       if (NewKey < PrevKey)
-        *RI = Correction;
+        *RI = std::move(Correction);
       return;
     }
   }
@@ -5482,7 +5521,7 @@ TypoCorrection Sema::CorrectTypo(const DeclarationNameInfo &TypoName,
 
     if (BestTC.getCorrection().getAsString() != "super") {
       if (SecondBestTC.getCorrection().getAsString() == "super")
-        BestTC = SecondBestTC;
+        BestTC = std::move(SecondBestTC);
       else if ((*Consumer)["super"].front().isKeyword())
         BestTC = (*Consumer)["super"].front();
     }

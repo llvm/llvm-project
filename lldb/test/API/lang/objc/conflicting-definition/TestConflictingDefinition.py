@@ -7,6 +7,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 class TestRealDefinition(TestBase):
     def test_frame_var_after_stop_at_implementation(self):
         """Test that we can find the implementation for an objective C type"""

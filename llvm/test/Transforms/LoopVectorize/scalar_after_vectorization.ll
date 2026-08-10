@@ -1,4 +1,4 @@
-; RUN: opt < %s -force-vector-width=4 -force-vector-interleave=2 -passes=loop-vectorize,instcombine -S | FileCheck %s
+; RUN: opt < %s -force-vector-width=4 -force-vector-interleave=2 -passes=loop-vectorize -S | FileCheck %s
 ; RUN: opt < %s -force-vector-width=4 -force-vector-interleave=2 -passes=loop-vectorize -S | FileCheck %s --check-prefix=NO-IC
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
@@ -7,11 +7,11 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 ;
 ; CHECK: vector.body:
 ; CHECK:   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; CHECK:   [[OFFSET_IDX:%.+]] = or disjoint i64 %index, 1
+; CHECK:   [[OFFSET_IDX:%.+]] = add i64 1, %index
 ; CHECK:   %[[T2:.+]] = add nuw nsw i64 [[OFFSET_IDX]], %tmp0
 ; CHECK:   %[[T3:.+]] = sub nsw i64 %[[T2]], %x
 ; CHECK:   %[[T4:.+]] = getelementptr inbounds i32, ptr %a, i64 %[[T3]]
-; CHECK:   %[[T6:.+]] = getelementptr inbounds nuw i8, ptr %[[T4]], i64 16
+; CHECK:   %[[T6:.+]] = getelementptr inbounds i32, ptr %[[T4]], i64 4
 ; CHECK:   load <4 x i32>, ptr %[[T4]], align 4
 ; CHECK:   load <4 x i32>, ptr %[[T6]], align 4
 ; CHECK:   br {{.*}}, label %middle.block, label %vector.body
@@ -24,7 +24,7 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 ; NO-IC:   %[[T4:.+]] = add nuw nsw i64 [[OFFSET_IDX]], %tmp0
 ; NO-IC:   %[[T6:.+]] = sub nsw i64 %[[T4]], %x
 ; NO-IC:   %[[T8:.+]] = getelementptr inbounds i32, ptr %a, i64 %[[T6]]
-; NO-IC:   %[[T12:.+]] = getelementptr inbounds i32, ptr %[[T8]], i32 4
+; NO-IC:   %[[T12:.+]] = getelementptr inbounds i32, ptr %[[T8]], i64 4
 ; NO-IC:   load <4 x i32>, ptr %[[T8]], align 4
 ; NO-IC:   load <4 x i32>, ptr %[[T12]], align 4
 ; NO-IC:   br {{.*}}, label %middle.block, label %vector.body

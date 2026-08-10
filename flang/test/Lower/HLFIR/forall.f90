@@ -1,5 +1,5 @@
 ! Test lowering of Forall to HLFIR.
-! RUN: bbc --hlfir -o - %s | FileCheck %s
+! RUN: bbc -o - %s | FileCheck %s
 
 module forall_defs
   integer :: x(10, 10), y(10)

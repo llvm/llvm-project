@@ -161,7 +161,7 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
         return success();
       }
       recursiveStack.push_back(type);
-      auto popConversionCallStack = llvm::make_scope_exit(
+      llvm::scope_exit popConversionCallStack(
           [&recursiveStack]() { recursiveStack.pop_back(); });
 
       SmallVector<Type> convertedElemTypes;
@@ -301,7 +301,7 @@ Type LLVMTypeConverter::convertFloatType(FloatType type) const {
   if (isa<Float8E5M2Type, Float8E4M3Type, Float8E4M3FNType, Float8E5M2FNUZType,
           Float8E4M3FNUZType, Float8E4M3B11FNUZType, Float8E3M4Type,
           Float4E2M1FNType, Float6E2M3FNType, Float6E3M2FNType,
-          Float8E8M0FNUType>(type))
+          Float8E8M0FNUType, Float8E5M3FNUType>(type))
     return IntegerType::get(&getContext(), type.getWidth());
 
   // Other floating-point types: A custom type conversion rule must be
@@ -770,7 +770,8 @@ SmallVector<Value, 4> LLVMTypeConverter::promoteOperands(
         MemRefDescriptor desc(llvmOperand.front());
         promotedOperands.push_back(desc.alignedPtr(builder, loc));
         continue;
-      } else if (isa<UnrankedMemRefType>(operand.getType())) {
+      }
+      if (isa<UnrankedMemRefType>(operand.getType())) {
         llvm_unreachable("Unranked memrefs are not supported");
       }
     } else {

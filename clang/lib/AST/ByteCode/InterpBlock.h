@@ -94,6 +94,8 @@ public:
   unsigned getEvalID() const { return EvalID; }
   /// Move all pointers from this block to \param B.
   void movePointersTo(Block *B);
+  /// Make all pointers that currently point to this block point to nullptr.
+  void removePointers();
 
   /// Returns a pointer to the stored data.
   /// You are allowed to read Desc->getSize() bytes from this address.
@@ -122,15 +124,28 @@ public:
   }
   template <typename T> T &deref() { return *reinterpret_cast<T *>(data()); }
 
+  template <typename T> T &getBlockDesc() {
+    assert(sizeof(T) == getDescriptor()->getMetadataSize());
+    return *reinterpret_cast<T *>(rawData());
+  }
+  template <typename T> const T &getBlockDesc() const {
+    return const_cast<Block *>(this)->getBlockDesc<T>();
+  }
+
   /// Invokes the constructor.
   void invokeCtor() {
     assert(!IsInitialized);
     std::memset(rawData(), 0, Desc->getAllocSize());
-    if (Desc->CtorFn) {
+    invokeCtorNoMemset();
+  }
+  /// The same, but won't memset() the memory first to zero.
+  void invokeCtorNoMemset() {
+    assert(!IsInitialized);
+    if (Desc->CtorFn)
       Desc->CtorFn(this, data(), Desc->IsConst, Desc->IsMutable,
                    Desc->IsVolatile,
                    /*isActive=*/true, /*InUnion=*/false, Desc);
-    }
+
     IsInitialized = true;
   }
 

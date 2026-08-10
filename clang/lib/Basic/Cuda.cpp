@@ -3,6 +3,8 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/VersionTuple.h"
+#include "llvm/TargetParser/NVPTXTargetParser.h"
+#include <cassert>
 
 namespace clang {
 
@@ -45,6 +47,11 @@ static const CudaVersionMapEntry CudaNameVersionMap[] = {
     CUDA_ENTRY(12, 6),
     CUDA_ENTRY(12, 8),
     CUDA_ENTRY(12, 9),
+    CUDA_ENTRY(13, 0),
+    CUDA_ENTRY(13, 1),
+    CUDA_ENTRY(13, 2),
+    CUDA_ENTRY(13, 3),
+    CUDA_ENTRY(13, 4),
     {"", CudaVersion::NEW, llvm::VersionTuple(std::numeric_limits<int>::max())},
     {"unknown", CudaVersion::UNKNOWN, {}} // End of list tombstone.
 };
@@ -74,57 +81,18 @@ CudaVersion ToCudaVersion(llvm::VersionTuple Version) {
 }
 
 CudaVersion MinVersionForOffloadArch(OffloadArch A) {
-  if (A == OffloadArch::UNKNOWN)
+  if (A.isUnknown())
     return CudaVersion::UNKNOWN;
 
   // AMD GPUs do not depend on CUDA versions.
-  if (IsAMDOffloadArch(A))
+  if (A.isAMDGPU() || A.isSPIRV())
     return CudaVersion::CUDA_70;
 
-  switch (A) {
-  case OffloadArch::SM_20:
-  case OffloadArch::SM_21:
-  case OffloadArch::SM_30:
-  case OffloadArch::SM_32_:
-  case OffloadArch::SM_35:
-  case OffloadArch::SM_37:
-  case OffloadArch::SM_50:
-  case OffloadArch::SM_52:
-  case OffloadArch::SM_53:
-    return CudaVersion::CUDA_70;
-  case OffloadArch::SM_60:
-  case OffloadArch::SM_61:
-  case OffloadArch::SM_62:
-    return CudaVersion::CUDA_80;
-  case OffloadArch::SM_70:
-    return CudaVersion::CUDA_90;
-  case OffloadArch::SM_72:
-    return CudaVersion::CUDA_91;
-  case OffloadArch::SM_75:
-    return CudaVersion::CUDA_100;
-  case OffloadArch::SM_80:
-    return CudaVersion::CUDA_110;
-  case OffloadArch::SM_86:
-    return CudaVersion::CUDA_111;
-  case OffloadArch::SM_87:
-    return CudaVersion::CUDA_114;
-  case OffloadArch::SM_89:
-  case OffloadArch::SM_90:
-    return CudaVersion::CUDA_118;
-  case OffloadArch::SM_90a:
-    return CudaVersion::CUDA_120;
-  case OffloadArch::SM_100:
-  case OffloadArch::SM_100a:
-  case OffloadArch::SM_101:
-  case OffloadArch::SM_101a:
-  case OffloadArch::SM_120:
-  case OffloadArch::SM_120a:
-    return CudaVersion::CUDA_128;
-  case OffloadArch::SM_103:
-  case OffloadArch::SM_103a:
-  case OffloadArch::SM_121:
-  case OffloadArch::SM_121a:
-    return CudaVersion::CUDA_129;
+  switch (A.nvptxKind()) {
+#define NVPTX_GPU(NAME, KIND, VIRTUAL, SM_ID, MIN_VER, MAX_VER, SUFFIX)        \
+  case llvm::NVPTX::GK_##KIND:                                                 \
+    return CudaVersion::MIN_VER;
+#include "llvm/TargetParser/NVPTXTargetParser.def"
   default:
     llvm_unreachable("invalid enum");
   }
@@ -132,21 +100,17 @@ CudaVersion MinVersionForOffloadArch(OffloadArch A) {
 
 CudaVersion MaxVersionForOffloadArch(OffloadArch A) {
   // AMD GPUs do not depend on CUDA versions.
-  if (IsAMDOffloadArch(A))
+  if (A.isAMDGPU() || A.isSPIRV())
     return CudaVersion::NEW;
 
-  switch (A) {
-  case OffloadArch::UNKNOWN:
+  if (!A.isNVPTX())
     return CudaVersion::UNKNOWN;
-  case OffloadArch::SM_20:
-  case OffloadArch::SM_21:
-    return CudaVersion::CUDA_80;
-  case OffloadArch::SM_30:
-  case OffloadArch::SM_32_:
-    return CudaVersion::CUDA_102;
-  case OffloadArch::SM_35:
-  case OffloadArch::SM_37:
-    return CudaVersion::CUDA_118;
+
+  switch (A.nvptxKind()) {
+#define NVPTX_GPU(NAME, KIND, VIRTUAL, SM_ID, MIN_VER, MAX_VER, SUFFIX)        \
+  case llvm::NVPTX::GK_##KIND:                                                 \
+    return CudaVersion::MAX_VER;
+#include "llvm/TargetParser/NVPTXTargetParser.def"
   default:
     return CudaVersion::NEW;
   }
@@ -164,5 +128,18 @@ bool CudaFeatureEnabled(CudaVersion Version, CudaFeature Feature) {
     return Version >= CudaVersion::CUDA_101;
   }
   llvm_unreachable("Unknown CUDA feature.");
+}
+
+unsigned CudaArchToID(OffloadArch Arch) {
+  assert(Arch.isNVPTX() && "invalid NVIDIA GPU architecture");
+  return llvm::NVPTX::getSmVersion(Arch.nvptxKind());
+}
+
+bool IsNVIDIAAcceleratedOffloadArch(OffloadArch Arch) {
+  return Arch.isNVPTX() && llvm::NVPTX::isAcceleratedArch(Arch.nvptxKind());
+}
+
+bool IsNVIDIAFamilySpecificOffloadArch(OffloadArch Arch) {
+  return Arch.isNVPTX() && llvm::NVPTX::isFamilySpecificArch(Arch.nvptxKind());
 }
 } // namespace clang

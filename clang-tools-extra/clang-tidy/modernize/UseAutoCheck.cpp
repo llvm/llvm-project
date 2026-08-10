@@ -21,10 +21,10 @@ using namespace clang::ast_matchers::internal;
 
 namespace clang::tidy::modernize {
 
-static const char IteratorDeclStmtId[] = "iterator_decl";
-static const char DeclWithNewId[] = "decl_new";
-static const char DeclWithCastId[] = "decl_cast";
-static const char DeclWithTemplateCastId[] = "decl_template";
+static constexpr char IteratorDeclStmtId[] = "iterator_decl";
+static constexpr char DeclWithNewId[] = "decl_new";
+static constexpr char DeclWithCastId[] = "decl_cast";
+static constexpr char DeclWithTemplateCastId[] = "decl_template";
 
 static size_t getTypeNameLength(bool RemoveStars, StringRef Text) {
   enum CharType { Space, Alpha, Punctuation };
@@ -188,10 +188,10 @@ static TypeMatcher nestedIterator() {
 /// Returns a TypeMatcher that matches types declared with using
 /// declarations and which name standard iterators for standard containers.
 static TypeMatcher iteratorFromUsingDeclaration() {
-  auto HasIteratorDecl = hasDeclaration(namedDecl(hasStdIteratorName()));
+  const auto HasIteratorDecl = hasDeclaration(namedDecl(hasStdIteratorName()));
   // Unwrap the nested name specifier to test for one of the standard
   // containers.
-  auto Qualifier = hasQualifier(specifiesType(templateSpecializationType(
+  const auto Qualifier = hasQualifier(specifiesType(templateSpecializationType(
       hasDeclaration(namedDecl(hasStdContainerName(), isInStdNamespace())))));
   // the named type is what comes after the final '::' in the type. It should
   // name one of the standard iterator names.
@@ -238,14 +238,14 @@ static StatementMatcher makeDeclWithTemplateCastMatcher() {
   auto ST =
       substTemplateTypeParmType(hasReplacementType(equalsBoundNode("arg")));
 
-  auto ExplicitCall =
+  const auto ExplicitCall =
       anyOf(has(memberExpr(hasExplicitTemplateArgs())),
             has(ignoringImpCasts(declRefExpr(hasExplicitTemplateArgs()))));
 
-  auto TemplateArg =
+  const auto TemplateArg =
       hasTemplateArgument(0, refersToType(qualType().bind("arg")));
 
-  auto TemplateCall = callExpr(
+  const auto TemplateCall = callExpr(
       ExplicitCall,
       callee(functionDecl(TemplateArg,
                           returns(anyOf(ST, pointsTo(ST), references(ST))))));
@@ -308,14 +308,15 @@ void UseAutoCheck::replaceIterators(const DeclStmt *D, ASTContext *Context) {
       return;
     }
 
-    if (const auto *NestedConstruct = dyn_cast<CXXConstructExpr>(E)) {
+    if (const auto *NestedConstruct = dyn_cast<CXXConstructExpr>(E);
+        NestedConstruct &&
+        NestedConstruct->getConstructor()->isConvertingConstructor(false)) {
       // If we ran into an implicit conversion constructor, can't convert.
       //
       // FIXME: The following only checks if the constructor can be used
       // implicitly, not if it actually was. Cases where the converting
       // constructor was used explicitly won't get converted.
-      if (NestedConstruct->getConstructor()->isConvertingConstructor(false))
-        return;
+      return;
     }
     if (!ASTContext::hasSameType(V->getType(), E->getType()))
       return;
@@ -421,20 +422,20 @@ void UseAutoCheck::replaceExpr(
           MinTypeNameLength)
     return;
 
-  auto Diag = diag(Range.getBegin(), Message);
+  const auto Diag = diag(Range.getBegin(), Message);
 
   const bool ShouldReplenishVariableName = isMultiLevelPointerToTypeLocClasses(
       TSI->getTypeLoc(), {TypeLoc::FunctionProto, TypeLoc::ConstantArray});
 
   // Space after 'auto' to handle cases where the '*' in the pointer type is
   // next to the identifier. This avoids changing 'int *p' into 'autop'.
-  const llvm::StringRef Auto = ShouldReplenishVariableName
-                                   ? (RemoveStars ? "auto " : "auto *")
-                                   : (RemoveStars ? "auto " : "auto");
+  const StringRef Auto = ShouldReplenishVariableName
+                             ? (RemoveStars ? "auto " : "auto *")
+                             : (RemoveStars ? "auto " : "auto");
   const std::string ReplenishedVariableName =
       ShouldReplenishVariableName ? FirstDecl->getQualifiedNameAsString() : "";
   const std::string Replacement =
-      (Auto + llvm::StringRef{ReplenishedVariableName}).str();
+      (Auto + StringRef{ReplenishedVariableName}).str();
   Diag << FixItHint::CreateReplacement(Range, Replacement) << StarRemovals;
 }
 

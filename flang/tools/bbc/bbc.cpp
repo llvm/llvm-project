@@ -17,6 +17,7 @@
 #include "flang/Frontend/CodeGenOptions.h"
 #include "flang/Frontend/TargetOptions.h"
 #include "flang/Lower/Bridge.h"
+#include "flang/Lower/LoweringOptions.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Support/Verifier.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
@@ -37,6 +38,7 @@
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/unparse-with-symbols.h"
+#include "flang/Support/FPMaxminBehavior.h"
 #include "flang/Support/Fortran-features.h"
 #include "flang/Support/LangOptions.h"
 #include "flang/Support/OpenMP-features.h"
@@ -93,10 +95,19 @@ static llvm::cl::alias includeAlias("module-directory",
 static llvm::cl::list<std::string>
     intrinsicIncludeDirs("J", llvm::cl::desc("intrinsic module search paths"));
 
+static llvm::cl::list<std::string> implicitUseModules(
+    "implicit-use-module",
+    llvm::cl::desc("implicitly USE the named module for testing"));
+
 static llvm::cl::alias
     intrinsicIncludeAlias("intrinsic-module-directory",
                           llvm::cl::desc("intrinsic module directory"),
                           llvm::cl::aliasopt(intrinsicIncludeDirs));
+
+static llvm::cl::alias
+    intrinsicModulePath("fintrinsic-modules-path",
+                        llvm::cl::desc("intrinsic module search paths"),
+                        llvm::cl::aliasopt(intrinsicIncludeDirs));
 
 static llvm::cl::opt<std::string>
     moduleDir("module", llvm::cl::desc("module output directory (default .)"),
@@ -215,13 +226,13 @@ static llvm::cl::opt<bool> enableNoPPCNativeVecElemOrder(
     llvm::cl::desc("no PowerPC native vector element order."),
     llvm::cl::init(false));
 
-static llvm::cl::opt<bool> useHLFIR("hlfir",
-                                    llvm::cl::desc("Lower to high level FIR"),
-                                    llvm::cl::init(true));
-
 static llvm::cl::opt<bool> enableCUDA("fcuda",
                                       llvm::cl::desc("enable CUDA Fortran"),
                                       llvm::cl::init(false));
+
+static llvm::cl::opt<bool> enableCUDAInit("fcuda-init",
+                                          llvm::cl::desc("enable CUDA Init"),
+                                          llvm::cl::init(false));
 
 static llvm::cl::opt<bool>
     enableDoConcurrentOffload("fdoconcurrent-offload",
@@ -234,8 +245,14 @@ static llvm::cl::opt<bool>
                             llvm::cl::init(false));
 
 static llvm::cl::opt<std::string>
-    enableGPUMode("gpu", llvm::cl::desc("Enable GPU Mode managed|unified"),
+    enableGPUMode("gpu",
+                  llvm::cl::desc("Enable GPU Mode managed|unified|pinned"),
                   llvm::cl::init(""));
+
+static llvm::cl::opt<std::string>
+    compilerDirectiveSentinel("sentinel-test",
+                              llvm::cl::desc("Test additional sentinel"),
+                              llvm::cl::init("dir$"));
 
 static llvm::cl::opt<bool> fixedForm("ffixed-form",
                                      llvm::cl::desc("enable fixed form"),
@@ -286,6 +303,22 @@ static llvm::cl::opt<std::string> complexRange(
     llvm::cl::desc("Controls the various implementations for complex "
                    "multiplication and division [full|improved|basic]"),
     llvm::cl::init(""));
+
+static llvm::cl::opt<Fortran::common::FPMaxminBehavior> fpMaxminBehavior(
+    "ffp-maxmin-behavior",
+    llvm::cl::desc("Control max/min and [max|min][loc|val] lowering "
+                   "[legacy|portable|extremum|extremenum]"),
+    llvm::cl::values(clEnumValN(Fortran::common::FPMaxminBehavior::Legacy,
+                                "legacy", "cmp+select"),
+                     clEnumValN(Fortran::common::FPMaxminBehavior::Portable,
+                                "portable",
+                                "cmp+select and arith.max/minnumf when nnan "
+                                "and nsz fast math flags are enabled"),
+                     clEnumValN(Fortran::common::FPMaxminBehavior::Extremum,
+                                "extremum", "arith.max/minimum"),
+                     clEnumValN(Fortran::common::FPMaxminBehavior::ExtremeNum,
+                                "extremenum", "arith.max/minnum")),
+    llvm::cl::init(Fortran::common::FPMaxminBehavior::Legacy));
 
 #define FLANG_EXCLUDE_CODEGEN
 #include "flang/Optimizer/Passes/CommandLineOpts.h"
@@ -369,6 +402,9 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
 
   // prep for prescan and parse
   Fortran::parser::Parsing parsing{semanticsContext.allCookedSources()};
+  if (!compilerDirectiveSentinel.empty()) {
+    options.compilerDirectiveSentinels.push_back(compilerDirectiveSentinel);
+  }
   parsing.Prescan(path, options);
   if (!parsing.messages().empty() && (parsing.messages().AnyFatalError())) {
     llvm::errs() << programPrefix << "could not scan " << path << '\n';
@@ -377,7 +413,7 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   }
 
   // parse the input Fortran
-  parsing.Parse(llvm::outs());
+  parsing.Parse(llvm::outs(), semanticsContext.langOptions());
   if (!parsing.consumedWholeFile()) {
     parsing.messages().Emit(llvm::errs(), parsing.allCooked());
     parsing.EmitMessage(llvm::errs(), parsing.finalRestingPlace(),
@@ -396,6 +432,27 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
 
   // run semantics
   auto &parseTree = *parsing.parseTree();
+  std::vector<std::string> implicitUseModuleNames;
+  for (const std::string &module : implicitUseModules) {
+    bool moduleIsDefinedInInput{false};
+    for (const Fortran::parser::ProgramUnit &unit : parseTree.v) {
+      if (const auto *indirectModule{std::get_if<
+              Fortran::common::Indirection<Fortran::parser::Module>>(
+              &unit.u)}) {
+        const auto &moduleStmt{
+            std::get<Fortran::parser::Statement<Fortran::parser::ModuleStmt>>(
+                indirectModule->value().t)};
+        if (moduleStmt.statement.v.source.ToString() == module) {
+          moduleIsDefinedInInput = true;
+          break;
+        }
+      }
+    }
+    if (!moduleIsDefinedInInput) {
+      implicitUseModuleNames.push_back(module);
+    }
+  }
+  semanticsContext.set_implicitUseModules(implicitUseModuleNames);
   Fortran::semantics::Semantics semantics(semanticsContext, parseTree);
   semantics.Perform();
   semantics.EmitMessages(llvm::errs());
@@ -418,7 +475,10 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   }
 
   if (pftDumpTest) {
-    if (auto ast = Fortran::lower::createPFT(parseTree, semanticsContext)) {
+    // Use default lowering options for PFT dump test
+    Fortran::lower::LoweringOptions loweringOptions{};
+    if (auto ast = Fortran::lower::createPFT(parseTree, semanticsContext,
+                                             loweringOptions)) {
       Fortran::lower::dumpPFT(llvm::outs(), *ast);
       return mlir::success();
     }
@@ -439,7 +499,6 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   // Use default lowering options for bbc.
   Fortran::lower::LoweringOptions loweringOptions{};
   loweringOptions.setNoPPCNativeVecElemOrder(enableNoPPCNativeVecElemOrder);
-  loweringOptions.setLowerToHighLevelFIR(useHLFIR || emitHLFIR);
   loweringOptions.setIntegerWrapAround(integerWrapAround);
   loweringOptions.setInitGlobalZero(initGlobalZero);
   loweringOptions.setReallocateLHS(reallocateLHS);
@@ -451,6 +510,7 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
     loweringOptions.setCUDARuntimeCheck(true);
   if (complexRange == "improved" || complexRange == "basic")
     loweringOptions.setComplexDivisionToRuntime(false);
+  loweringOptions.setFPMaxminBehavior(fpMaxminBehavior.getValue());
   std::vector<Fortran::lower::EnvironmentDefault> envDefaults = {};
   Fortran::frontend::TargetOptions targetOpts;
   Fortran::frontend::CodeGenOptions cgOpts;
@@ -472,13 +532,17 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
     for (llvm::StringRef s : targetTriplesOpenMP)
       targetTriples.emplace_back(s);
 
-    auto offloadModuleOpts = OffloadModuleOpts(
+    auto offloadModuleOpts = mlir::omp::OffloadModuleOpts(
         setOpenMPTargetDebug, setOpenMPTeamSubscription,
         setOpenMPThreadSubscription, setOpenMPNoThreadState,
         setOpenMPNoNestedParallelism, enableOpenMPDevice, enableOpenMPGPU,
-        enableOpenMPForceUSM, setOpenMPVersion, "", targetTriples, setNoGPULib);
-    setOffloadModuleInterfaceAttributes(mlirModule, offloadModuleOpts);
-    setOpenMPVersionAttribute(mlirModule, setOpenMPVersion);
+        enableOpenMPForceUSM, setOpenMPVersion, /*hostIRFile=*/"",
+        targetTriples, setNoGPULib);
+    mlir::omp::setOffloadModuleInterfaceAttributes(mlirModule,
+                                                   offloadModuleOpts);
+    mlir::omp::setOpenMPVersionAttribute(mlirModule, setOpenMPVersion);
+    if (!integerWrapAround)
+      setOpenMPIntegerWrapAround(mlirModule, false);
   }
   burnside.lower(parseTree, semanticsContext);
   std::error_code ec;
@@ -519,12 +583,13 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
       return mlir::failure();
     }
 
-    if (emitFIR && useHLFIR) {
+    if (emitFIR) {
       // lower HLFIR to FIR
       fir::EnableOpenMP enableOmp =
           enableOpenMP ? fir::EnableOpenMP::Full : fir::EnableOpenMP::None;
-      fir::createHLFIRToFIRPassPipeline(pm, enableOmp,
-                                        llvm::OptimizationLevel::O2);
+      MLIRToLLVMPassPipelineConfig config(llvm::OptimizationLevel::O2);
+      config.fpMaxminBehavior = loweringOptions.getFPMaxminBehavior();
+      fir::createHLFIRToFIRPassPipeline(pm, enableOmp, config);
       if (mlir::failed(pm.run(mlirModule))) {
         llvm::errs() << "FATAL: lowering from HLFIR to FIR failed";
         return mlir::failure();
@@ -539,9 +604,12 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
 
     // Add O2 optimizer pass pipeline.
     MLIRToLLVMPassPipelineConfig config(llvm::OptimizationLevel::O2);
+    config.fpMaxminBehavior = loweringOptions.getFPMaxminBehavior();
     config.SkipConvertComplexPow = targetMachine.getTargetTriple().isAMDGCN();
     if (enableOpenMP)
       config.EnableOpenMP = true;
+    if (enableOpenMPDevice)
+      config.EnableOpenMPIsTargetDevice = true;
     config.NSWOnLoopVarInc = !integerWrapAround;
     fir::registerDefaultInlinerPass(config);
     fir::createDefaultFIROptimizerPassPipeline(pm, config);
@@ -624,6 +692,9 @@ int main(int argc, char **argv) {
   if (enableCUDA) {
     options.features.Enable(Fortran::common::LanguageFeature::CUDA);
   }
+  if (enableCUDAInit) {
+    options.features.Enable(Fortran::common::LanguageFeature::CUDAInit);
+  }
 
   if (enableDoConcurrentOffload) {
     options.features.Enable(
@@ -635,11 +706,12 @@ int main(int argc, char **argv) {
         Fortran::common::LanguageFeature::CudaWarpMatchFunction, false);
   }
 
-  if (enableGPUMode == "managed") {
+  if (enableGPUMode == "managed")
     options.features.Enable(Fortran::common::LanguageFeature::CudaManaged);
-  } else if (enableGPUMode == "unified") {
+  else if (enableGPUMode == "unified")
     options.features.Enable(Fortran::common::LanguageFeature::CudaUnified);
-  }
+  else if (enableGPUMode == "pinned")
+    options.features.Enable(Fortran::common::LanguageFeature::CudaPinned);
 
   if (fixedForm) {
     options.isFixedForm = fixedForm;

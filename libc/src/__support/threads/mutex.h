@@ -21,8 +21,8 @@
 // Mutex with non-static methods having the following signature:
 //
 // MutexError lock();
-// MutexError trylock();
-// MutexError timedlock(...);
+// MutexError try_lock();
+// MutexError timed_lock(...);
 // MutexError unlock();
 // MutexError reset(); // Used to reset inconsistent robust mutexes.
 //
@@ -40,9 +40,9 @@
 // few global locks. So, to avoid static initialization order fiasco, we
 // want the constructors of the Mutex classes to be constexprs.
 
-#if defined(__linux__)
-#include "src/__support/threads/linux/mutex.h"
-#endif // __linux__
+#if defined(__linux__) || defined(__APPLE__)
+#include "src/__support/threads/unix_mutex.h"
+#endif
 
 #elif LIBC_THREAD_MODE == LIBC_THREAD_MODE_SINGLE
 
@@ -54,12 +54,15 @@ namespace LIBC_NAMESPACE_DECL {
 /// complete Mutex locks in general cannot be implemented on the GPU, or on some
 /// baremetal platforms. We simply define the Mutex interface and require that
 /// only a single thread executes code requiring a mutex lock.
+// TODO: declare abstract interface for timed_lock
 struct Mutex {
-  LIBC_INLINE constexpr Mutex(bool, bool, bool, bool) {}
+  LIBC_INLINE constexpr Mutex(bool, bool, bool, bool, bool = false) {}
 
   LIBC_INLINE MutexError lock() { return MutexError::NONE; }
   LIBC_INLINE MutexError unlock() { return MutexError::NONE; }
   LIBC_INLINE MutexError reset() { return MutexError::NONE; }
+  LIBC_INLINE MutexError try_lock() { return MutexError::NONE; }
+  LIBC_INLINE bool is_robust() const { return false; }
 };
 
 } // namespace LIBC_NAMESPACE_DECL

@@ -316,18 +316,14 @@ void RegReAssign::aggressivePassOverFunction(BinaryFunction &Function) {
       break;
     }
 
-    BitVector AnyAliasAlive = AliveAtStart;
-    AnyAliasAlive &= BC.MIB->getAliases(ClassicReg);
-    if (AnyAliasAlive.any()) {
+    if (AliveAtStart.anyCommon(BC.MIB->getAliases(ClassicReg))) {
       LLVM_DEBUG(dbgs() << " Bailed on " << BC.MRI->getName(ClassicReg)
                         << " with " << BC.MRI->getName(ExtReg)
                         << " because classic reg is alive\n");
       --End;
       continue;
     }
-    AnyAliasAlive = AliveAtStart;
-    AnyAliasAlive &= BC.MIB->getAliases(ExtReg);
-    if (AnyAliasAlive.any()) {
+    if (AliveAtStart.anyCommon(BC.MIB->getAliases(ExtReg))) {
       LLVM_DEBUG(dbgs() << " Bailed on " << BC.MRI->getName(ClassicReg)
                         << " with " << BC.MRI->getName(ExtReg)
                         << " because extended reg is alive\n");
@@ -453,6 +449,11 @@ void RegReAssign::setupConservativePass(
 }
 
 Error RegReAssign::runOnFunctions(BinaryContext &BC) {
+  if (!BC.isX86()) {
+    BC.errs() << "BOLT-ERROR: reg-reassign is specific to X86\n";
+    exit(1);
+  }
+
   RegScore = std::vector<int64_t>(BC.MRI->getNumRegs(), 0);
   RankedRegs = std::vector<size_t>(BC.MRI->getNumRegs(), 0);
 

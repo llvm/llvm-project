@@ -6,10 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/internal/clc.h>
+#include "clc/internal/clc.h"
+#include "clc/math/clc_fmin.h"
 
-#define __CLC_BODY <clc_min.inc>
-#include <clc/integer/gentype.inc>
+#define __CLC_BODY "clc_min.inc"
+#include "clc/integer/gentype.inc"
 
-#define __CLC_BODY <clc_min.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc_min.inc"
+#include "clc/math/gentype.inc"

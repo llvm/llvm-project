@@ -1,4 +1,4 @@
-//===- RedundantStringInitCheck.cpp - clang-tidy ----------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,13 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "RedundantStringInitCheck.h"
-#include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include <optional>
 
 using namespace clang::ast_matchers;
-using namespace clang::tidy::matchers;
 
 namespace clang::tidy::readability {
 
@@ -138,18 +136,18 @@ void RedundantStringInitCheck::check(const MatchFinder::MatchResult &Result) {
   }
   if (const auto *CtorInit =
           Result.Nodes.getNodeAs<CXXCtorInitializer>("ctorInit")) {
-    if (const FieldDecl *Member = CtorInit->getMember()) {
-      if (!Member->hasInClassInitializer() ||
-          Result.Nodes.getNodeAs<Expr>("empty_init")) {
-        // The String isn't declared in the class with an initializer or its
-        // declared with a redundant initializer, which will be removed. Either
-        // way the string will be default initialized, therefore we can remove
-        // the constructor initializer entirely.
-        diag(CtorInit->getMemberLocation(), "redundant string initialization")
-            << FixItHint::CreateRemoval(CtorInit->getSourceRange());
-        return;
-      }
+    if (const FieldDecl *Member = CtorInit->getMember();
+        Member && (!Member->hasInClassInitializer() ||
+                   Result.Nodes.getNodeAs<Expr>("empty_init"))) {
+      // The String isn't declared in the class with an initializer or its
+      // declared with a redundant initializer, which will be removed. Either
+      // way the string will be default initialized, therefore we can remove
+      // the constructor initializer entirely.
+      diag(CtorInit->getMemberLocation(), "redundant string initialization")
+          << FixItHint::CreateRemoval(CtorInit->getSourceRange());
+      return;
     }
+
     const CXXConstructExpr *Construct = getConstructExpr(*CtorInit);
     if (!Construct)
       return;

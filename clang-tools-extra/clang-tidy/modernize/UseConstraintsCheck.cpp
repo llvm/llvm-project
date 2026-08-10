@@ -21,15 +21,15 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
+namespace {
 struct EnableIfData {
   TemplateSpecializationTypeLoc Loc;
   TypeLoc Outer;
 };
 
-namespace {
 AST_MATCHER(FunctionDecl, hasOtherDeclarations) {
   auto It = Node.redecls_begin();
-  auto EndIt = Node.redecls_end();
+  const auto EndIt = Node.redecls_end();
 
   if (It == EndIt)
     return false;
@@ -42,8 +42,6 @@ AST_MATCHER(FunctionDecl, hasOtherDeclarations) {
 void UseConstraintsCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       functionTemplateDecl(
-          // Skip external libraries included as system headers
-          unless(isExpansionInSystemHeader()),
           has(functionDecl(unless(hasOtherDeclarations()), isDefinition(),
                            hasReturnTypeLoc(typeLoc().bind("return")))
                   .bind("function")))
@@ -70,8 +68,8 @@ matchEnableIfSpecializationImplTypename(TypeLoc TheType) {
 
   if (const auto SpecializationLoc =
           TheType.getAs<TemplateSpecializationTypeLoc>()) {
-    const auto *Specialization =
-        dyn_cast<TemplateSpecializationType>(SpecializationLoc.getTypePtr());
+    const TemplateSpecializationType *Specialization =
+        SpecializationLoc.getTypePtr();
     if (!Specialization)
       return std::nullopt;
 
@@ -100,8 +98,8 @@ static std::optional<TemplateSpecializationTypeLoc>
 matchEnableIfSpecializationImplTrait(TypeLoc TheType) {
   if (const auto SpecializationLoc =
           TheType.getAs<TemplateSpecializationTypeLoc>()) {
-    const auto *Specialization =
-        dyn_cast<TemplateSpecializationType>(SpecializationLoc.getTypePtr());
+    const TemplateSpecializationType *Specialization =
+        SpecializationLoc.getTypePtr();
     if (!Specialization)
       return std::nullopt;
 
@@ -188,16 +186,13 @@ matchTrailingTemplateParam(const FunctionTemplateDecl *FunctionTemplate) {
                 LastTemplateParam->getTypeSourceInfo()->getTypeLoc()),
             LastTemplateParam};
   }
-  if (const auto *LastTemplateParam =
-          dyn_cast<TemplateTypeParmDecl>(LastParam)) {
-    if (LastTemplateParam->hasDefaultArgument() &&
-        LastTemplateParam->getIdentifier() == nullptr) {
-      return {
-          matchEnableIfSpecialization(LastTemplateParam->getDefaultArgument()
-                                          .getTypeSourceInfo()
-                                          ->getTypeLoc()),
-          LastTemplateParam};
-    }
+  if (const auto *LastTemplateParam = dyn_cast<TemplateTypeParmDecl>(LastParam);
+      LastTemplateParam && LastTemplateParam->hasDefaultArgument() &&
+      LastTemplateParam->getIdentifier() == nullptr) {
+    return {matchEnableIfSpecialization(LastTemplateParam->getDefaultArgument()
+                                            .getTypeSourceInfo()
+                                            ->getTypeLoc()),
+            LastTemplateParam};
   }
   return {};
 }
@@ -270,11 +265,10 @@ findInsertionForConstraint(const FunctionDecl *Function, ASTContext &Context) {
   const LangOptions &LangOpts = Context.getLangOpts();
 
   if (const auto *Constructor = dyn_cast<CXXConstructorDecl>(Function)) {
-    for (const CXXCtorInitializer *Init : Constructor->inits()) {
+    for (const CXXCtorInitializer *Init : Constructor->inits())
       if (Init->getSourceOrder() == 0)
         return utils::lexer::findPreviousTokenKind(Init->getSourceLocation(),
                                                    SM, LangOpts, tok::colon);
-    }
     if (!Constructor->inits().empty())
       return std::nullopt;
   }
@@ -319,22 +313,22 @@ static std::optional<std::string> getConditionText(const Expr *ConditionExpr,
     return std::nullopt;
 
   const bool SkipComments = false;
-  Token PrevToken;
+  std::optional<Token> PrevToken;
   std::tie(PrevToken, PrevTokenLoc) = utils::lexer::getPreviousTokenAndStart(
       PrevTokenLoc, SM, LangOpts, SkipComments);
   const bool EndsWithDoubleSlash =
-      PrevToken.is(tok::comment) &&
+      PrevToken && PrevToken->is(tok::comment) &&
       Lexer::getSourceText(CharSourceRange::getCharRange(
                                PrevTokenLoc, PrevTokenLoc.getLocWithOffset(2)),
                            SM, LangOpts) == "//";
 
   bool Invalid = false;
-  const llvm::StringRef ConditionText = Lexer::getSourceText(
+  const StringRef ConditionText = Lexer::getSourceText(
       CharSourceRange::getCharRange(ConditionRange), SM, LangOpts, &Invalid);
   if (Invalid)
     return std::nullopt;
 
-  auto AddParens = [&](llvm::StringRef Text) -> std::string {
+  const auto AddParens = [&](StringRef Text) -> std::string {
     if (isPrimaryExpression(ConditionExpr))
       return Text.str();
     return "(" + Text.str() + ")";
