@@ -91,6 +91,7 @@ jobs:
       env:
         LLVM_VERSION_FROM_SOURCE: ${{ steps.version-from-source.outputs.full-no-suffix }}
         INPUTS_RUNS_ON: ${{ inputs.runs-on }}
+        INPUTS_RELEASE_VERSION: ${{ inputs.release-version }}
       shell: bash
       # In order for the test-release.sh script to run correctly, the LLVM
       # source needs to be at the following location relative to the build dir:
@@ -101,7 +102,7 @@ jobs:
       # | X.Y.Z-rcN | -rc N -test-asserts
       # | X.Y.Z     | -final
       run: |
-        trimmed=$(echo ${{ inputs.release-version }} | xargs)
+        trimmed=$(echo "$INPUTS_RELEASE_VERSION" | xargs)
         if [ -n "$trimmed" ]; then
           release_version="$trimmed"
           ref="llvmorg-$release_version"
