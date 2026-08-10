@@ -111,6 +111,26 @@ static RValue emitBuiltinBitOpWithFallback(CIRGenFunction &cgf,
   return RValue::get(builder.createSelect(loc, isZero, fallbackValue, result));
 }
 
+static RValue emitStdcBitWidth(CIRGenFunction &cfg, const CallExpr *e) {
+  CIRGenBuilderTy &builder = cfg.getBuilder();
+  mlir::Location loc = cfg.getLoc(e->getSourceRange());
+
+  mlir::Value arg = cfg.emitScalarExpr(e->getArg(0));
+  auto argTy = mlir::cast<cir::IntType>(arg.getType());
+
+  mlir::Value lz =
+      createBuiltinBitOp<cir::BitClzOp>(cfg, e, arg, /*poisonZero=*/false);
+
+  mlir::Value width = builder.getConstInt(loc, argTy, argTy.getWidth());
+  mlir::Value result = builder.createSub(loc, width, lz);
+
+  mlir::Type resultTy = cfg.convertType(e->getType());
+  if (result.getType() != resultTy)
+    result = builder.createIntCast(result, resultTy);
+
+  return RValue::get(result);
+}
+
 /// Emit the conversions required to turn the given value into an
 /// integer of the given size.
 static mlir::Value emitToInt(CIRGenFunction &cgf, mlir::Value v, QualType t,
@@ -1262,6 +1282,14 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BIstdc_leading_zeros_ull:
   case Builtin::BI__builtin_stdc_leading_zeros:
     return emitBuiltinBitOp<cir::BitClzOp>(*this, e, /*poisonZero=*/false);
+
+  case Builtin::BIstdc_bit_width_uc:
+  case Builtin::BIstdc_bit_width_us:
+  case Builtin::BIstdc_bit_width_ui:
+  case Builtin::BIstdc_bit_width_ul:
+  case Builtin::BIstdc_bit_width_ull:
+  case Builtin::BI__builtin_stdc_bit_width:
+    return emitStdcBitWidth(*this, e);
 
   case Builtin::BIstdc_count_ones_uc:
   case Builtin::BIstdc_count_ones_us:
