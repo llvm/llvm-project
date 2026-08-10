@@ -348,12 +348,12 @@ define amdgpu_kernel void @no_clobbering_loop2(ptr addrspace(1) noalias %arg, pt
 ; GCN-NEXT:  .LBB5_1: ; %while.cond
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_load_dword s5, s[0:1], 0x0
+; GCN-NEXT:    s_add_i32 s6, s6, -1
 ; GCN-NEXT:    ; wave barrier
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_add_i32 s4, s5, s4
 ; GCN-NEXT:    s_add_u32 s0, s0, 4
 ; GCN-NEXT:    s_addc_u32 s1, s1, 0
-; GCN-NEXT:    s_add_i32 s6, s6, -1
 ; GCN-NEXT:    s_cmp_eq_u32 s6, 0
 ; GCN-NEXT:    s_cbranch_scc1 .LBB5_1
 ; GCN-NEXT:  ; %bb.2: ; %end

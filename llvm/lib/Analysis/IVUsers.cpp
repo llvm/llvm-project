@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/IVUsers.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
@@ -170,12 +171,35 @@ bool IVUsers::AddUsersIfInteresting(Instruction *I) {
   if (!isInteresting(ISE, I, L, SE, LI))
     return false;
 
-  SmallPtrSet<Instruction *, 4> UniqueUsers;
-  for (Use &U : I->uses()) {
-    Instruction *User = cast<Instruction>(U.getUser());
-    if (!UniqueUsers.insert(User).second)
-      continue;
+  // Visit the users of I in reverse program order rather than in use-list
+  // order: use-list order depends on the IR's construction and mutation
+  // history, which printed IR does not preserve. The traversal order
+  // affects both which IV uses are collected (the Processed short-circuit
+  // and the non-invertible-normalization early return below are
+  // order-sensitive) and which solution LSR picks (both its cost-tie
+  // breaking and its search-space pruning follow enumeration order).
+  // Reverse program order is used because it closely matches the use-list
+  // order of freshly parsed IR, where uses are prepended on creation.
+  SmallVector<Instruction *, 8> Users;
+  {
+    SmallPtrSet<Instruction *, 4> UniqueUsers;
+    for (Use &U : I->uses()) {
+      Instruction *User = cast<Instruction>(U.getUser());
+      if (UniqueUsers.insert(User).second)
+        Users.push_back(User);
+    }
+  }
+  llvm::sort(Users, [this](Instruction *A, Instruction *B) {
+    assert(BBPositions.contains(A->getParent()) &&
+           BBPositions.contains(B->getParent()) &&
+           "IV user in a block not numbered at IVUsers construction");
+    if (A->getParent() != B->getParent())
+      return BBPositions.lookup(A->getParent()) >
+             BBPositions.lookup(B->getParent());
+    return B->comesBefore(A);
+  });
 
+  for (Instruction *User : Users) {
     // Do not infinitely recurse on PHI nodes.
     if (isa<PHINode>(User) && Processed.count(User))
       continue;
@@ -254,6 +278,10 @@ IVUsers::IVUsers(Loop *L, AssumptionCache *AC, LoopInfo *LI, DominatorTree *DT,
   // Collect ephemeral values so that AddUsersIfInteresting skips them.
   EphValues.clear();
   CodeMetrics::collectEphemeralValues(L, AC, EphValues);
+
+  unsigned Position = 0;
+  for (const BasicBlock &BB : *L->getHeader()->getParent())
+    BBPositions[&BB] = Position++;
 
   // Find all uses of induction variables in this loop, and categorize
   // them by stride.  Start by finding all of the PHI nodes in the header for
