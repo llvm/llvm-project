@@ -7752,8 +7752,7 @@ Instruction *InstCombinerImpl::foldICmpCommutative(CmpPredicate Pred,
         (CmpInst::isEquality(Pred) || Pred == ICmpInst::ICMP_ULT)) {
       ICmpInst::Predicate NewPred =
           CmpInst::isEquality(Pred) ? Pred.dropSameSign() : ICmpInst::ICMP_NE;
-      return new ICmpInst(NewPred, Op1,
-                          Constant::getNullValue(Op1->getType()));
+      return new ICmpInst(NewPred, Op1, Constant::getNullValue(Op1->getType()));
     }
   }
 
