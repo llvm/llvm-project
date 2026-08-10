@@ -1179,6 +1179,10 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
 
   SmallVector<mlir::Value, 16> cirCallArgs(args.size());
 
+  const Decl *targetDecl = callee.getAbstractInfo().getCalleeDecl().getDecl();
+  const FunctionDecl *callerDecl = dyn_cast_or_null<FunctionDecl>(curCodeDecl);
+  const FunctionDecl *calleeDecl = dyn_cast_or_null<FunctionDecl>(targetDecl);
+
   assert(!cir::MissingFeatures::emitLifetimeMarkers());
 
   // Translate all of the arguments as necessary to match the CIR lowering.
@@ -1349,6 +1353,17 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
 
   if (callOp)
     *callOp = theCall;
+
+  // Sema/emitAttributedStmt (see
+  // https://github.com/llvm/llvm-project/issues/214764) should one-day enforce
+  // that only one of these is valid at a time. For now, we have the same 'bug'
+  // as classic codegen where we can end up having BOTH of these.
+  if (inNoInlineAttributedStmt)
+    theCall.setInlineKind(cir::InlineKind::NoInline);
+  if (inAlwaysInlineAttributedStmt &&
+      !cgm.getTargetCIRGenInfo().wouldInliningViolateFunctionCallABI(
+          callerDecl, calleeDecl))
+    theCall.setInlineKind(cir::InlineKind::AlwaysInline);
 
   if (isMustTail) {
     // PPC/MIPS have some diagnostics for classic-codegen, but we don't support

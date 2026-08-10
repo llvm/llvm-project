@@ -6512,7 +6512,7 @@ class UnaryTransformType : public Type, public llvm::FoldingSetNode {
 public:
   enum UTTKind {
 #define TRANSFORM_TYPE_TRAIT_DEF(Enum, _) Enum,
-#include "clang/Basic/Traits.inc"
+#include "clang/Basic/BuiltinTraits.inc"
   };
 
 private:

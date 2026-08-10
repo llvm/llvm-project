@@ -1551,6 +1551,11 @@ defm VGPRBankConflict: AMDGPUSubtargetFeature<"vgpr-bank-conflict",
   "WMMA instruction will penalty for VGPR bank conflict"
 >;
 
+defm NeedsTDMDrain : AMDGPUSubtargetFeature<"needs-tdm-drain",
+  "Needs to keep tensor count low",
+  /*GenPredicate=*/0
+>;
+
 //===----------------------------------------------------------------------===//
 
 class GCNSubtargetFeatureGeneration <string Value,
@@ -2391,6 +2396,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureWMMACoexecutionHazards,
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
+   FeatureNeedsTDMDrain,
    ])>;
 
 def FeatureISAVersion12_51 : FeatureSet<
@@ -2420,6 +2426,7 @@ def FeatureISAVersion12_51 : FeatureSet<
    FeatureWMMACoexecutionHazards,
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
+   FeatureNeedsTDMDrain,
    ])>;
 
 def FeatureISAVersion12_Generic: FeatureSet<
@@ -2437,6 +2444,7 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
    FeatureWMMACoexecutionHazards,
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
+   FeatureNeedsTDMDrain,
    ])>;
 
 def FeatureISAVersion13 : FeatureSet<
