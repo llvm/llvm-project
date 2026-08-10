@@ -894,9 +894,16 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
 
     unsigned Opcode =
         S->getSCEVType() == scAddExpr ? Instruction::Add : Instruction::Mul;
-    // Iterate in reverse so that constants are emitted last.
+    // Iterate in reverse so that constants are emitted last. For adds, sort
+    // non-constant-negative operands last, matching SCEVExpander's LoopCompare,
+    // so that they are accumulated into the result rather than starting it.
+    SmallVector<const SCEV *, 2> SCEVOps(reverse(NAry->operands()));
+    if (Opcode == Instruction::Add)
+      stable_sort(SCEVOps, [](const SCEV *L, const SCEV *R) {
+        return !L->isNonConstantNegative() && R->isNonConstantNegative();
+      });
     SmallVector<VPValue *, 2> Ops;
-    for (const SCEVUse &Op : reverse(NAry->operands())) {
+    for (const SCEV *Op : SCEVOps) {
       VPValue *OpV = tryToExpand(Op);
       if (!OpV)
         return nullptr;
