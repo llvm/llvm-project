@@ -22,7 +22,6 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/Test.h"
-#include "utils/MPFRWrapper/MPFRUtils.h"
 
 using LlvmLibcExpfStaticRoundingTest = LIBC_NAMESPACE::testing::FPTest<float>;
 using RoundingMode = LIBC_NAMESPACE::fputil::testing::RoundingMode;

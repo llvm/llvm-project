@@ -13,9 +13,9 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, expf, (float x)) {
-#if defined(LIBC_MATH_HAS_SKIP_ACCURATE_PASS) &&                               \
-    defined(LIBC_MATH_SMALL_TABLES) &&                                         \
-    !defined(LIBC_TARGET_CPU_HAS_FPU_DOUBLE)
+#if !defined(LIBC_TARGET_CPU_HAS_FPU_DOUBLE) &&                                \
+    defined(LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY) &&                        \
+    defined(LIBC_MATH_HAS_NO_EXCEPT) && defined(LIBC_MATH_HAS_NO_ERRNO)
   return shared::math::static_rounding::expf(x, FE_TONEAREST);
 #else
   return math::expf(x);

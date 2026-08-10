@@ -22,10 +22,8 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/Test.h"
-#include "utils/MPFRWrapper/MPFRUtils.h"
 
 #include <atomic>
-#include <functional>
 #include <iostream>
 #include <mutex>
 #include <sstream>
