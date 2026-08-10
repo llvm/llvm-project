@@ -9,8 +9,6 @@ Motivation:
 
 Currently libc++ needs to link to the MSVC STL ``msvcprt`` library to implement part of the functionality on Windows. This dependency is counterintuitive since one standard library is depending on another standard library. Our goal is to remove this dependency by implementing the required functionality in libc++ itself.
 
-To achieve this, we have decided on the following:
-
 Goals:
 ------
 
