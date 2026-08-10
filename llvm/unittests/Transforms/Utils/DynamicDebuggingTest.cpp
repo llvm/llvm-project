@@ -467,7 +467,7 @@ TEST(DynamicDebugging, GlobalVariableLinkage) {
   GlobalVariable *G = M->getGlobalVariable("g");
   ASSERT_TRUE(G);
   G->setComdat(Comdat);
-  // These linkage types should no longer be promtoed.
+  // These linkage types should no longer be promoted.
   ExpectNotPromoted(GlobalValue::InternalLinkage,
                     GlobalValue::DefaultVisibility, __LINE__);
   ExpectNotPromoted(GlobalValue::PrivateLinkage, GlobalValue::DefaultVisibility,
