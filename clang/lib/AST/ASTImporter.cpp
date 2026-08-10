@@ -10038,8 +10038,8 @@ Expected<Decl *> ASTImporter::Import(Decl *FromD) {
       auto *ToD = CreatedToD;
       ImportedDecls.erase(Pos);
 
-      // Scrub the imported type mapping as well. Import(Type*) can add a
-      // type mapping linked to a declaration that ultimately fails.
+      // Remove the imported type mapping as well.
+      // The imported type can point to a declaration that failed to import later.
       if (const auto *FromTD = dyn_cast<TypeDecl>(FromD))
         ImportedTypes.erase(FromTD->getTypeForDecl());
 
