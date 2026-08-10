@@ -77,7 +77,7 @@ module attributes {transform.with_named_sequence} {
 // CHECK-NEXT:    %[[FLATTENED:.*]] = tensor.collapse_shape %[[ARG1]] {{\[}}[0, 1]]
 // CHECK-NEXT:    %[[FLATTENED_RESULT:.*]] = linalg.broadcast ins(%[[ARG0]] : tensor<i32>) outs(%[[FLATTENED]] : tensor<64xi32>) dimensions = [0]
 // CHECK:         %[[RESULT:.*]] = tensor.expand_shape %[[FLATTENED_RESULT]] {{\[}}[0, 1]] output_shape [32, 2] : tensor<64xi32> into tensor<32x2xi32>
-func.func @broadcast_rank0_named_tensor(%arg0: tensor<i32>, %arg1: tensor<32x2xi32>) -> tensor<32x2xi32> {
+func.func @broadcast_as_named_rank0_tensor(%arg0: tensor<i32>, %arg1: tensor<32x2xi32>) -> tensor<32x2xi32> {
   %0 = linalg.broadcast ins(%arg0 : tensor<i32>) outs(%arg1 : tensor<32x2xi32>) dimensions = [0, 1]
   return %0 : tensor<32x2xi32>
 }
