@@ -10,6 +10,14 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
+using namespace clang::ast_matchers::internal;
+
+namespace {
+// FIXME: The matcher 'hasName(Name)' asserts that its argument 'Name' is
+// nonempty. Perhaps remove that assertion and replace 'isUnnamed()' with
+// 'hasName("")'.
+AST_MATCHER(clang::EnumDecl, isUnnamed) { return Node.getName().empty(); }
+} // namespace
 
 namespace clang::tidy::cppcoreguidelines {
 
@@ -27,9 +35,9 @@ void UseEnumClassCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 
 void UseEnumClassCheck::registerMatchers(MatchFinder *Finder) {
   const auto EnumDecl = IgnoreUnscopedEnumsInClasses
-                            ? enumDecl(unless(isScoped()), unless(hasName("")),
+                            ? enumDecl(unless(isScoped()), unless(isUnnamed()),
                                        unless(hasParent(recordDecl())))
-                            : enumDecl(unless(isScoped()), unless(hasName("")));
+                            : enumDecl(unless(isScoped()), unless(isUnnamed()));
   Finder->addMatcher(EnumDecl.bind("unscoped_enum"), this);
 }
 
