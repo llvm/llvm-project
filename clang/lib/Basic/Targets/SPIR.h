@@ -196,18 +196,9 @@ public:
   }
 
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
-    return (CC == CC_SpirFunction || CC == CC_DeviceKernel) ? CCCR_OK
-                                                            : CCCR_Warning;
-  }
-
-  CallingConv getDefaultCallingConv() const override { return CC_C; }
-
-  bool supportsCallingConvVariadic(CallingConv CC) const override {
-    // CC_C is the AST-level default calling convention on this target, but it
-    // still lowers to spir_func, which cannot support variadic calls.
-    if (CC == CC_C)
-      return false;
-    return TargetInfo::supportsCallingConvVariadic(CC);
+    return (CC == CC_C || CC == CC_SpirFunction || CC == CC_DeviceKernel)
+               ? CCCR_OK
+               : CCCR_Warning;
   }
 
   void setAddressSpaceMap(bool DefaultIsGeneric) {
