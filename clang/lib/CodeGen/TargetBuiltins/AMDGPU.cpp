@@ -2106,8 +2106,9 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       Args.push_back(EmitScalarExpr(E->getArg(I)));
     llvm::PointerType *RetTy = llvm::PointerType::get(
         Builder.getContext(), llvm::AMDGPUAS::BUFFER_RESOURCE);
-    Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_make_buffer_rsrc,
-                                   {RetTy, Args[0]->getType()});
+    Function *F =
+        CGM.getIntrinsic(Intrinsic::amdgcn_make_buffer_rsrc,
+                         {RetTy, Args[0]->getType(), Args[2]->getType()});
     return Builder.CreateCall(F, Args);
   }
   case AMDGPU::BI__builtin_amdgcn_raw_buffer_store_b8:
