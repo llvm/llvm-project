@@ -4859,7 +4859,15 @@ cc_library(
     hdrs = glob(["include/llvm/HTTP/*.h"]),
     includes = ["include"],
     linkopts = select({
-        "@platforms//os:windows": [
+        ":is_windows_clang_mingw": [
+            "-lcrypt32",
+            "-lwinhttp",
+        ],
+        ":is_windows_clang_cl": [
+            "crypt32.lib",
+            "winhttp.lib",
+        ],
+        ":is_windows_msvc": [
             "crypt32.lib",
             "winhttp.lib",
         ],
