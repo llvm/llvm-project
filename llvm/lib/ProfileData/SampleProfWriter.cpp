@@ -58,7 +58,8 @@ static cl::opt<bool>
 
 static cl::opt<bool> WriteEytzingerNameTables(
     "sample-profile-write-eytzinger-name-tables", cl::init(false), cl::Hidden,
-    cl::desc("Write Eytzinger 3-span layout for NameTable"));
+    cl::desc("Write Eytzinger 3-span layout for NameTable and parallel "
+             "FuncOffsetTable"));
 
 namespace llvm {
 namespace support {
@@ -277,7 +278,62 @@ SampleProfileWriterExtBinaryBase::writeSample(const FunctionSamples &S) {
   return writeBody(S);
 }
 
-std::error_code SampleProfileWriterExtBinaryBase::writeFuncOffsetTable() {
+std::error_code
+SampleProfileWriterExtBinaryBase::writeFuncOffsetTable(bool IsCS) {
+  if (WriteEytzingerNameTables) {
+    // Eytzinger layout requires MD5 representation and does not support
+    // multi-context Context-Sensitive profiles.
+    if (!UseMD5 || FunctionSamples::ProfileIsCS)
+      return sampleprof_error::unsupported_writing_format;
+    return writeEytzingerFuncOffsetTable(IsCS);
+  }
+  return writeLegacyFuncOffsetTable();
+}
+
+std::error_code
+SampleProfileWriterExtBinaryBase::writeEytzingerFuncOffsetTable(bool IsCS) {
+  assert((NumCS + NumFlat > 0 || FuncOffsetTable.empty()) &&
+         "SecNameTable must be written before SecFuncOffsetTable to establish "
+         "Eytzinger indices!");
+
+  size_t SpanSize = IsCS ? NumCS : NumFlat;
+  size_t BaseIdx = IsCS ? 0 : NumCS;
+
+  std::vector<support::ulittle32_t> FuncOffsets(
+      SpanSize, support::ulittle32_t(UINT32_MAX));
+
+  // Populate the function offset array parallel to the Eytzinger span.
+  for (const auto &[Context, RelativeOffset] : FuncOffsetTable) {
+    if (RelativeOffset >= UINT32_MAX)
+      return sampleprof_error::too_large;
+
+    FunctionId FId = Context.getFunction();
+    auto It = NameTable.find(FId);
+    if (It == NameTable.end())
+      continue;
+
+    size_t GlobalIdx = It->second;
+    if (GlobalIdx < BaseIdx || (GlobalIdx - BaseIdx) >= SpanSize)
+      continue;
+
+    size_t LocalIdx = GlobalIdx - BaseIdx;
+    assert(
+        FuncOffsets[LocalIdx] == UINT32_MAX &&
+        "Function offset slot already populated; duplicate GUID or collision!");
+    FuncOffsets[LocalIdx] = static_cast<uint32_t>(RelativeOffset);
+  }
+
+  assert(!llvm::is_contained(FuncOffsets, support::ulittle32_t(UINT32_MAX)) &&
+         "Unpopulated slot in Eytzinger function offset array!");
+
+  OutputStream->write(reinterpret_cast<const char *>(FuncOffsets.data()),
+                      SpanSize * sizeof(support::ulittle32_t));
+  addSectionFlag(SecFuncOffsetTable, SecFuncOffsetFlags::SecFlagEytzinger);
+  FuncOffsetTable.clear();
+  return sampleprof_error::success;
+}
+
+std::error_code SampleProfileWriterExtBinaryBase::writeLegacyFuncOffsetTable() {
   auto &OS = *OutputStream;
 
   // Write out the table size.
@@ -409,6 +465,10 @@ std::error_code SampleProfileWriterExtBinaryBase::writeNameTableSection(
   }
 
   if (UseMD5 && WriteEytzingerNameTables) {
+    // Eytzinger name tables do not support CSSPGO profiles
+    // (FunctionSamples::ProfileIsCS).
+    if (FunctionSamples::ProfileIsCS)
+      return sampleprof_error::unsupported_writing_format;
     if (auto EC = writeEytzingerNameTableSection(ProfileMap))
       return EC;
     return sampleprof_error::success;
@@ -464,6 +524,10 @@ public:
       OS.write(reinterpret_cast<const char *>(Table.data()),
                Table.size() * sizeof(support::ulittle64_t));
   }
+
+  size_t size(EytzingerSpan S) const {
+    return Spans[static_cast<size_t>(S)].size();
+  }
 };
 
 } // end anonymous namespace
@@ -479,7 +543,9 @@ SampleProfileWriterExtBinaryBase::writeEytzingerNameTableSection(
     const SampleContext &Ctx = I.second.getContext();
     uint64_t GUID = Ctx.getFunction().getHashCode();
     if (TopLevelGUIDs.insert(GUID).second) {
-      if (I.second.isContextSensitiveTopLevel())
+      // In single-table default layouts, unify all top-level symbols in the CS
+      // partition so they match the single unflagged function offset table.
+      if (SecLayout != CtxSplitLayout || I.second.isContextSensitiveTopLevel())
         CSKeys.emplace_back(GUID);
       else
         FlatKeys.emplace_back(GUID);
@@ -502,6 +568,8 @@ SampleProfileWriterExtBinaryBase::writeEytzingerNameTableSection(
     Idx = Tables.findGlobalIdx(FId.getHashCode());
 
   Tables.write(*OutputStream);
+  NumCS = Tables.size(EytzingerSpan::CS);
+  NumFlat = Tables.size(EytzingerSpan::Flat);
 
   return sampleprof_error::success;
 }
@@ -606,10 +674,16 @@ std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
     if (std::error_code EC = writeFuncProfiles(ProfileMap))
       return EC;
     break;
-  case SecFuncOffsetTable:
-    if (auto EC = writeFuncOffsetTable())
+  case SecFuncOffsetTable: {
+    bool IsFlat =
+        hasSecFlag(SectionHdrLayout[LayoutIdx], SecCommonFlags::SecFlagFlat);
+    // An unflagged function offset table inherently indexes the primary
+    // context-sensitive symbol span.
+    bool IsCS = !IsFlat;
+    if (auto EC = writeFuncOffsetTable(IsCS))
       return EC;
     break;
+  }
   case SecFuncMetadata:
     if (std::error_code EC = writeFuncMetadata(ProfileMap))
       return EC;
