@@ -59,8 +59,8 @@ def WrapFuncInClassPass : Pass<"wrap-emitc-func-in-class", "ModuleOp"> {
       "matching the input function.">,
       Option<"classNameFormat", "class-name-format", "std::string",
       /*default=*/[{"{}Class"}],
-      "Format string for the generated class name where '{}' "
-      "is replaced with the function name.">
+      "Format string for the generated class name where the function name "
+      "placeholder '{}' is optional.">
   ];
 }
 
