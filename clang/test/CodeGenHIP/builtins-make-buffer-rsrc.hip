@@ -25,9 +25,8 @@
 // GFX601-NEXT:    [[TMP2:%.*]] = load i32, ptr [[NUM_ADDR_ASCAST]], align 4
 // GFX601-NEXT:    [[CONV:%.*]] = sext i32 [[TMP2]] to i64
 // GFX601-NEXT:    [[TMP3:%.*]] = load i32, ptr [[FLAGS_ADDR_ASCAST]], align 4
-// GFX601-NEXT:    [[TMP4:%.*]] = trunc i64 [[CONV]] to i32
-// GFX601-NEXT:    [[TMP5:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i32(ptr [[TMP0]], i16 [[TMP1]], i32 [[TMP4]], i32 [[TMP3]])
-// GFX601-NEXT:    ret ptr addrspace(8) [[TMP5]]
+// GFX601-NEXT:    [[TMP4:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[TMP0]], i16 [[TMP1]], i64 [[CONV]], i32 [[TMP3]])
+// GFX601-NEXT:    ret ptr addrspace(8) [[TMP4]]
 //
 // GFX1250-LABEL: define dso_local ptr addrspace(8) @_Z31test_amdgcn_make_buffer_rsrc_p0Pvsii(
 // GFX1250-SAME: ptr noundef [[P:%.*]], i16 noundef signext [[STRIDE:%.*]], i32 noundef [[NUM:%.*]], i32 noundef [[FLAGS:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -72,9 +71,8 @@ __device__ __amdgpu_buffer_rsrc_t test_amdgcn_make_buffer_rsrc_p0(void *p, short
 // GFX601-NEXT:    [[TMP1:%.*]] = load i32, ptr [[NUM_ADDR_ASCAST]], align 4
 // GFX601-NEXT:    [[CONV:%.*]] = sext i32 [[TMP1]] to i64
 // GFX601-NEXT:    [[TMP2:%.*]] = load i32, ptr [[FLAGS_ADDR_ASCAST]], align 4
-// GFX601-NEXT:    [[TMP3:%.*]] = trunc i64 [[CONV]] to i32
-// GFX601-NEXT:    [[TMP4:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i32(ptr [[TMP0]], i16 4, i32 [[TMP3]], i32 [[TMP2]])
-// GFX601-NEXT:    ret ptr addrspace(8) [[TMP4]]
+// GFX601-NEXT:    [[TMP3:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[TMP0]], i16 4, i64 [[CONV]], i32 [[TMP2]])
+// GFX601-NEXT:    ret ptr addrspace(8) [[TMP3]]
 //
 // GFX1250-LABEL: define dso_local ptr addrspace(8) @_Z47test_amdgcn_make_buffer_rsrc_p0_stride_constantPvii(
 // GFX1250-SAME: ptr noundef [[P:%.*]], i32 noundef [[NUM:%.*]], i32 noundef [[FLAGS:%.*]]) #[[ATTR0]] {
@@ -114,7 +112,7 @@ __device__ __amdgpu_buffer_rsrc_t test_amdgcn_make_buffer_rsrc_p0_stride_constan
 // GFX601-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR_ASCAST]], align 8
 // GFX601-NEXT:    [[TMP1:%.*]] = load i16, ptr [[STRIDE_ADDR_ASCAST]], align 2
 // GFX601-NEXT:    [[TMP2:%.*]] = load i32, ptr [[FLAGS_ADDR_ASCAST]], align 4
-// GFX601-NEXT:    [[TMP3:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i32(ptr [[TMP0]], i16 [[TMP1]], i32 1234, i32 [[TMP2]])
+// GFX601-NEXT:    [[TMP3:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[TMP0]], i16 [[TMP1]], i64 1234, i32 [[TMP2]])
 // GFX601-NEXT:    ret ptr addrspace(8) [[TMP3]]
 //
 // GFX1250-LABEL: define dso_local ptr addrspace(8) @_Z44test_amdgcn_make_buffer_rsrc_p0_num_constantPvsi(
@@ -155,9 +153,8 @@ __device__ __amdgpu_buffer_rsrc_t test_amdgcn_make_buffer_rsrc_p0_num_constant(v
 // GFX601-NEXT:    [[TMP1:%.*]] = load i16, ptr [[STRIDE_ADDR_ASCAST]], align 2
 // GFX601-NEXT:    [[TMP2:%.*]] = load i32, ptr [[NUM_ADDR_ASCAST]], align 4
 // GFX601-NEXT:    [[CONV:%.*]] = sext i32 [[TMP2]] to i64
-// GFX601-NEXT:    [[TMP3:%.*]] = trunc i64 [[CONV]] to i32
-// GFX601-NEXT:    [[TMP4:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i32(ptr [[TMP0]], i16 [[TMP1]], i32 [[TMP3]], i32 5678)
-// GFX601-NEXT:    ret ptr addrspace(8) [[TMP4]]
+// GFX601-NEXT:    [[TMP3:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[TMP0]], i16 [[TMP1]], i64 [[CONV]], i32 5678)
+// GFX601-NEXT:    ret ptr addrspace(8) [[TMP3]]
 //
 // GFX1250-LABEL: define dso_local ptr addrspace(8) @_Z46test_amdgcn_make_buffer_rsrc_p0_flags_constantPvsi(
 // GFX1250-SAME: ptr noundef [[P:%.*]], i16 noundef signext [[STRIDE:%.*]], i32 noundef [[NUM:%.*]]) #[[ATTR0]] {

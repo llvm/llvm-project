@@ -3091,8 +3091,7 @@ def WaveSizeVT : ValueTypeByHwMode<[
 // the backend.
 def AMDGPUFrontendVisibleFeatures {
   list<SubtargetFeature> Features = [
-  Feature16BitInsts, Feature45BitNumRecordsBufferResource,
-  FeatureAddMinMaxInsts, FeatureAshrPkInsts,
+  Feature16BitInsts, FeatureAddMinMaxInsts, FeatureAshrPkInsts,
   FeatureAsyncLoadToLDSInsts, FeatureAsyncStoreFromLDSInsts, FeatureAsynccnt,
   FeatureAtomicBufferGlobalPkAddF16Insts, FeatureAtomicBufferPkAddBF16Inst, FeatureAtomicDsPkAdd16Insts,
   FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF64GlobalInsts, FeatureAtomicFaddRtnInsts,

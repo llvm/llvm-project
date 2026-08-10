@@ -6,7 +6,8 @@
 // GFX601-LABEL: define dso_local noundef ptr addrspace(8) @test_amdgcn_make_buffer_rsrc_p0(
 // GFX601-SAME: ptr nofree noundef readnone captures(ret: address, provenance) [[P:%.*]], i16 noundef signext [[STRIDE:%.*]], i32 noundef [[NUM:%.*]], i32 noundef [[FLAGS:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // GFX601-NEXT:  [[ENTRY:.*:]]
-// GFX601-NEXT:    [[TMP0:%.*]] = tail call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i32(ptr [[P]], i16 [[STRIDE]], i32 [[NUM]], i32 [[FLAGS]])
+// GFX601-NEXT:    [[CONV:%.*]] = sext i32 [[NUM]] to i64
+// GFX601-NEXT:    [[TMP0:%.*]] = tail call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 [[STRIDE]], i64 [[CONV]], i32 [[FLAGS]])
 // GFX601-NEXT:    ret ptr addrspace(8) [[TMP0]]
 //
 // GFX1250-LABEL: define dso_local noundef ptr addrspace(8) @test_amdgcn_make_buffer_rsrc_p0(
@@ -23,7 +24,8 @@ __amdgpu_buffer_rsrc_t test_amdgcn_make_buffer_rsrc_p0(void *p, short stride, in
 // GFX601-LABEL: define dso_local noundef ptr addrspace(8) @test_amdgcn_make_buffer_rsrc_p0_stride_constant(
 // GFX601-SAME: ptr nofree noundef readnone captures(ret: address, provenance) [[P:%.*]], i32 noundef [[NUM:%.*]], i32 noundef [[FLAGS:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // GFX601-NEXT:  [[ENTRY:.*:]]
-// GFX601-NEXT:    [[TMP0:%.*]] = tail call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i32(ptr [[P]], i16 4, i32 [[NUM]], i32 [[FLAGS]])
+// GFX601-NEXT:    [[CONV:%.*]] = sext i32 [[NUM]] to i64
+// GFX601-NEXT:    [[TMP0:%.*]] = tail call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 4, i64 [[CONV]], i32 [[FLAGS]])
 // GFX601-NEXT:    ret ptr addrspace(8) [[TMP0]]
 //
 // GFX1250-LABEL: define dso_local noundef ptr addrspace(8) @test_amdgcn_make_buffer_rsrc_p0_stride_constant(
@@ -40,7 +42,7 @@ __amdgpu_buffer_rsrc_t test_amdgcn_make_buffer_rsrc_p0_stride_constant(void *p, 
 // GFX601-LABEL: define dso_local noundef ptr addrspace(8) @test_amdgcn_make_buffer_rsrc_p0_num_constant(
 // GFX601-SAME: ptr nofree noundef readnone captures(ret: address, provenance) [[P:%.*]], i16 noundef signext [[STRIDE:%.*]], i32 noundef [[FLAGS:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // GFX601-NEXT:  [[ENTRY:.*:]]
-// GFX601-NEXT:    [[TMP0:%.*]] = tail call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i32(ptr [[P]], i16 [[STRIDE]], i32 1234, i32 [[FLAGS]])
+// GFX601-NEXT:    [[TMP0:%.*]] = tail call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 [[STRIDE]], i64 1234, i32 [[FLAGS]])
 // GFX601-NEXT:    ret ptr addrspace(8) [[TMP0]]
 //
 // GFX1250-LABEL: define dso_local noundef ptr addrspace(8) @test_amdgcn_make_buffer_rsrc_p0_num_constant(
@@ -56,7 +58,8 @@ __amdgpu_buffer_rsrc_t test_amdgcn_make_buffer_rsrc_p0_num_constant(void *p, sho
 // GFX601-LABEL: define dso_local noundef ptr addrspace(8) @test_amdgcn_make_buffer_rsrc_p0_flags_constant(
 // GFX601-SAME: ptr nofree noundef readnone captures(ret: address, provenance) [[P:%.*]], i16 noundef signext [[STRIDE:%.*]], i32 noundef [[NUM:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // GFX601-NEXT:  [[ENTRY:.*:]]
-// GFX601-NEXT:    [[TMP0:%.*]] = tail call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i32(ptr [[P]], i16 [[STRIDE]], i32 [[NUM]], i32 5678)
+// GFX601-NEXT:    [[CONV:%.*]] = sext i32 [[NUM]] to i64
+// GFX601-NEXT:    [[TMP0:%.*]] = tail call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 [[STRIDE]], i64 [[CONV]], i32 5678)
 // GFX601-NEXT:    ret ptr addrspace(8) [[TMP0]]
 //
 // GFX1250-LABEL: define dso_local noundef ptr addrspace(8) @test_amdgcn_make_buffer_rsrc_p0_flags_constant(
@@ -73,7 +76,8 @@ __amdgpu_buffer_rsrc_t test_amdgcn_make_buffer_rsrc_p0_flags_constant(void *p, s
 // GFX601-LABEL: define dso_local noundef ptr addrspace(8) @test_amdgcn_make_buffer_rsrc_p1(
 // GFX601-SAME: ptr addrspace(1) nofree noundef readnone captures(ret: address, provenance) [[P:%.*]], i16 noundef signext [[STRIDE:%.*]], i32 noundef [[NUM:%.*]], i32 noundef [[FLAGS:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // GFX601-NEXT:  [[ENTRY:.*:]]
-// GFX601-NEXT:    [[TMP0:%.*]] = tail call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1.i32(ptr addrspace(1) [[P]], i16 [[STRIDE]], i32 [[NUM]], i32 [[FLAGS]])
+// GFX601-NEXT:    [[CONV:%.*]] = sext i32 [[NUM]] to i64
+// GFX601-NEXT:    [[TMP0:%.*]] = tail call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1.i64(ptr addrspace(1) [[P]], i16 [[STRIDE]], i64 [[CONV]], i32 [[FLAGS]])
 // GFX601-NEXT:    ret ptr addrspace(8) [[TMP0]]
 //
 // GFX1250-LABEL: define dso_local noundef ptr addrspace(8) @test_amdgcn_make_buffer_rsrc_p1(
@@ -90,7 +94,8 @@ __amdgpu_buffer_rsrc_t test_amdgcn_make_buffer_rsrc_p1(global void *p, short str
 // GFX601-LABEL: define dso_local noundef ptr addrspace(8) @test_amdgcn_make_buffer_rsrc_p1_stride_constant(
 // GFX601-SAME: ptr addrspace(1) nofree noundef readnone captures(ret: address, provenance) [[P:%.*]], i32 noundef [[NUM:%.*]], i32 noundef [[FLAGS:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // GFX601-NEXT:  [[ENTRY:.*:]]
-// GFX601-NEXT:    [[TMP0:%.*]] = tail call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1.i32(ptr addrspace(1) [[P]], i16 4, i32 [[NUM]], i32 [[FLAGS]])
+// GFX601-NEXT:    [[CONV:%.*]] = sext i32 [[NUM]] to i64
+// GFX601-NEXT:    [[TMP0:%.*]] = tail call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1.i64(ptr addrspace(1) [[P]], i16 4, i64 [[CONV]], i32 [[FLAGS]])
 // GFX601-NEXT:    ret ptr addrspace(8) [[TMP0]]
 //
 // GFX1250-LABEL: define dso_local noundef ptr addrspace(8) @test_amdgcn_make_buffer_rsrc_p1_stride_constant(
@@ -107,7 +112,7 @@ __amdgpu_buffer_rsrc_t test_amdgcn_make_buffer_rsrc_p1_stride_constant(global vo
 // GFX601-LABEL: define dso_local noundef ptr addrspace(8) @test_amdgcn_make_buffer_rsrc_p1_num_constant(
 // GFX601-SAME: ptr addrspace(1) nofree noundef readnone captures(ret: address, provenance) [[P:%.*]], i16 noundef signext [[STRIDE:%.*]], i32 noundef [[FLAGS:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // GFX601-NEXT:  [[ENTRY:.*:]]
-// GFX601-NEXT:    [[TMP0:%.*]] = tail call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1.i32(ptr addrspace(1) [[P]], i16 [[STRIDE]], i32 1234, i32 [[FLAGS]])
+// GFX601-NEXT:    [[TMP0:%.*]] = tail call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1.i64(ptr addrspace(1) [[P]], i16 [[STRIDE]], i64 1234, i32 [[FLAGS]])
 // GFX601-NEXT:    ret ptr addrspace(8) [[TMP0]]
 //
 // GFX1250-LABEL: define dso_local noundef ptr addrspace(8) @test_amdgcn_make_buffer_rsrc_p1_num_constant(
@@ -123,7 +128,8 @@ __amdgpu_buffer_rsrc_t test_amdgcn_make_buffer_rsrc_p1_num_constant(global void 
 // GFX601-LABEL: define dso_local noundef ptr addrspace(8) @test_amdgcn_make_buffer_rsrc_p1_flags_constant(
 // GFX601-SAME: ptr addrspace(1) nofree noundef readnone captures(ret: address, provenance) [[P:%.*]], i16 noundef signext [[STRIDE:%.*]], i32 noundef [[NUM:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // GFX601-NEXT:  [[ENTRY:.*:]]
-// GFX601-NEXT:    [[TMP0:%.*]] = tail call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1.i32(ptr addrspace(1) [[P]], i16 [[STRIDE]], i32 [[NUM]], i32 5678)
+// GFX601-NEXT:    [[CONV:%.*]] = sext i32 [[NUM]] to i64
+// GFX601-NEXT:    [[TMP0:%.*]] = tail call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1.i64(ptr addrspace(1) [[P]], i16 [[STRIDE]], i64 [[CONV]], i32 5678)
 // GFX601-NEXT:    ret ptr addrspace(8) [[TMP0]]
 //
 // GFX1250-LABEL: define dso_local noundef ptr addrspace(8) @test_amdgcn_make_buffer_rsrc_p1_flags_constant(
@@ -140,7 +146,8 @@ __amdgpu_buffer_rsrc_t test_amdgcn_make_buffer_rsrc_p1_flags_constant(global voi
 // GFX601-LABEL: define dso_local noundef ptr addrspace(8) @test_amdgcn_make_buffer_p0_nullptr(
 // GFX601-SAME: i16 noundef signext [[STRIDE:%.*]], i32 noundef [[NUM:%.*]], i32 noundef [[FLAGS:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // GFX601-NEXT:  [[ENTRY:.*:]]
-// GFX601-NEXT:    [[TMP0:%.*]] = tail call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i32(ptr null, i16 [[STRIDE]], i32 [[NUM]], i32 [[FLAGS]])
+// GFX601-NEXT:    [[CONV:%.*]] = sext i32 [[NUM]] to i64
+// GFX601-NEXT:    [[TMP0:%.*]] = tail call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr null, i16 [[STRIDE]], i64 [[CONV]], i32 [[FLAGS]])
 // GFX601-NEXT:    ret ptr addrspace(8) [[TMP0]]
 //
 // GFX1250-LABEL: define dso_local noundef ptr addrspace(8) @test_amdgcn_make_buffer_p0_nullptr(
@@ -157,7 +164,8 @@ __amdgpu_buffer_rsrc_t test_amdgcn_make_buffer_p0_nullptr(short stride, int num,
 // GFX601-LABEL: define dso_local noundef ptr addrspace(8) @test_amdgcn_make_buffer_p1_nullptr(
 // GFX601-SAME: i16 noundef signext [[STRIDE:%.*]], i32 noundef [[NUM:%.*]], i32 noundef [[FLAGS:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // GFX601-NEXT:  [[ENTRY:.*:]]
-// GFX601-NEXT:    [[TMP0:%.*]] = tail call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1.i32(ptr addrspace(1) null, i16 [[STRIDE]], i32 [[NUM]], i32 [[FLAGS]])
+// GFX601-NEXT:    [[CONV:%.*]] = sext i32 [[NUM]] to i64
+// GFX601-NEXT:    [[TMP0:%.*]] = tail call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1.i64(ptr addrspace(1) null, i16 [[STRIDE]], i64 [[CONV]], i32 [[FLAGS]])
 // GFX601-NEXT:    ret ptr addrspace(8) [[TMP0]]
 //
 // GFX1250-LABEL: define dso_local noundef ptr addrspace(8) @test_amdgcn_make_buffer_p1_nullptr(
