@@ -287,7 +287,6 @@ def int_dx_quad_read_across_x : DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchT
 def int_dx_quad_read_across_y : DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>], [IntrConvergent, IntrNoMem, IntrTriviallyScalarizable]>;
 def int_dx_quad_read_across_diagonal : DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>], [IntrConvergent, IntrNoMem, IntrTriviallyScalarizable]>;
 def int_dx_sign : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i32_ty>], [llvm_any_ty], [IntrNoMem]>;
-def int_dx_step : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty, LLVMMatchType<0>], [IntrNoMem]>;
 def int_dx_splitdouble : DefaultAttrsIntrinsic<[llvm_anyint_ty, LLVMMatchType<0>],
     [LLVMScalarOrSameVectorWidth<0, llvm_double_ty>], [IntrNoMem, IntrTriviallyScalarizable]>;
 def int_dx_imul : DefaultAttrsIntrinsic<[llvm_anyint_ty, LLVMMatchType<0>],
