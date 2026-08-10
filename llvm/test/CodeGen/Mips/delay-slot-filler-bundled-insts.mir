@@ -7,12 +7,11 @@
 
 # ASM:  # %bb.0:
 # ASM-NEXT: daddiu	$sp, $sp, -16
-# ASM-NEXT: sd	$ra, 8($sp)
 ## BUNDLE should be emitted in order:
 # ASM-NEXT: daddiu	$sp, $sp, -16
 # ASM-NEXT: daddiu	$sp, $sp, 16
 # ASM-NEXT: beqz	$4, .LBB0_2
-# ASM-NEXT: nop
+# ASM-NEXT: sd	$ra, 8($sp)
 --- |
   target datalayout = "E-m:e-i8:8:32-i16:16:32-i64:64-n32:64-S128"
   target triple = "mips64-unknown-freebsd"
@@ -87,15 +86,12 @@ body:             |
   ; CHECK: bb.0.entry:
   ; CHECK:   successors: %bb.2(0x30000000), %bb.1(0x50000000)
   ; CHECK:   $sp_64 = DADDiu $sp_64, -16
-  ; CHECK:   CFI_INSTRUCTION def_cfa_offset 16
-  ; CHECK:   SD killed $ra_64, $sp_64, 8 :: (store (s64) into %stack.0)
-  ; CHECK:   CFI_INSTRUCTION offset $ra_64, -8
   ; CHECK:   BUNDLE {
   ; CHECK:     $sp_64 = DADDiu $sp_64, -16
   ; CHECK:     $sp_64 = DADDiu $sp_64, 16
   ; CHECK:   }
   ; CHECK:   BEQ64 renamable $a0_64, $zero_64, %bb.2, implicit-def $at {
-  ; CHECK:     $zero = SLL $zero, 0
+  ; CHECK:     SD killed $ra_64, $sp_64, 8 :: (store (s64) into %stack.0)
   ; CHECK:   }
   ; CHECK: bb.1.if.then:
   ; CHECK:   successors: %bb.3(0x80000000)
@@ -120,15 +116,14 @@ body:             |
     liveins: $a0_64, $ra_64
 
     $sp_64 = DADDiu $sp_64, -16
-    CFI_INSTRUCTION def_cfa_offset 16
-    SD killed $ra_64, $sp_64, 8 :: (store (s64) into %stack.0)
-    CFI_INSTRUCTION offset $ra_64, -8
     ; This BUNDLE instruction must not be split by the delay slot filler:
     BUNDLE {
       $sp_64 = DADDiu $sp_64, -16
       $sp_64 = DADDiu $sp_64, 16
     }
-    BEQ64 renamable $a0_64, $zero_64, %bb.2, implicit-def $at
+    BEQ64 renamable $a0_64, $zero_64, %bb.2, implicit-def $at {
+      SD killed $ra_64, $sp_64, 8 :: (store (s64) into %stack.0)
+    }
 
   bb.1.if.then:
     successors: %bb.3(0x80000000)
