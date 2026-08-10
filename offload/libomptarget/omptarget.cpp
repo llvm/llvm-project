@@ -1151,6 +1151,24 @@ static int flushDeferredSubmits(DeviceTy &Device, StateInfoTy &StateInfo,
                         << "): its storage is shared with the original";
       continue;
     }
+    // The clobber check that guards this copy ran when the transfer was
+    // recorded, so it did not see a pointer attached to this storage later in
+    // the mapping. Repeat it: such a pointer holds a device address, and copying
+    // the original storage over it would put the host address back.
+    auto FailOnPtrFound = [HstPtrBegin = HstPtrBegin,
+                           Size = Size](ShadowPtrInfoTy &SP) {
+      if (SP.HstPtrAddr >= HstPtrBegin &&
+          SP.HstPtrAddr < (void *)((char *)HstPtrBegin + Size))
+        return OFFLOAD_FAIL;
+      return OFFLOAD_SUCCESS;
+    };
+    if (Entry->foreachShadowPointerInfo(FailOnPtrFound) == OFFLOAD_FAIL) {
+      ODBG(ODT_Mapping) << "Dropping the deferred transfer of " << Size
+                        << " bytes (hst:" << HstPtrBegin
+                        << "): a pointer is attached within it";
+      continue;
+    }
+
     void *TgtPtrBegin = reinterpret_cast<void *>(Entry->TgtPtrBegin);
     ODBG(ODT_Mapping) << "Moving " << Size
                       << " deferred bytes (hst:" << HstPtrBegin
