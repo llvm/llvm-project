@@ -31,7 +31,7 @@ std::string unittest::cas::getCASPluginPath() {
   std::string Executable =
       sys::fs::getMainExecutable(TestMainArgv0, &TestStringArg1);
   llvm::SmallString<256> PathBuf(sys::path::parent_path(Executable));
-#ifndef _WIN32
+#if !defined(_WIN32) || defined(__MINGW32__)
   sys::path::append(PathBuf, "libCASPluginTest" LLVM_PLUGIN_EXT);
 #else
   sys::path::append(PathBuf, "CASPluginTest" LLVM_PLUGIN_EXT);
