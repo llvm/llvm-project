@@ -169,7 +169,7 @@ protected:
     else
       structTy = cir::StructType::get(&context, getUniqueRecordName("S"),
                                       /*is_class=*/false);
-    structTy.complete({ty1, ty2}, false, false);
+    structTy.complete({ty1, ty2}, false);
     mlir::Type ptrTy = cir::PointerType::get(structTy);
 
     // Verify that the pointer points to the structure type.
@@ -251,7 +251,7 @@ protected:
     cir::RecordType structTy =
         cir::StructType::get(&context, getUniqueRecordName("S"),
                              /*is_class=*/false);
-    structTy.complete({ptrTy, ptrTy}, false, false);
+    structTy.complete({ptrTy, ptrTy}, false);
     mlir::Type structPptrTy = cir::PointerType::get(structTy);
 
     // Create an alloca for the struct.
@@ -361,6 +361,6 @@ TEST_F(CIROpenACCPointerLikeTest, testPointerToStructMember) {
   cir::RecordType structTy =
       cir::StructType::get(&context, getUniqueRecordName("S"),
                            /*is_class=*/false);
-  structTy.complete({i32Ty, i32Ty}, false, false);
+  structTy.complete({i32Ty, i32Ty}, false);
   testPointerToMemberType(structTy, mlir::acc::VariableTypeCategory::composite);
 }

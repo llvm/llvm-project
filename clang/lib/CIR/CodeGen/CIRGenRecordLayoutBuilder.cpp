@@ -224,7 +224,6 @@ struct CIRRecordLowering final {
     if (size.isZero())
       return;
     mlir::Type padTy = getByteArrayType(size);
-    padded = true;
     if (recordDecl->isUnion()) {
       assert(!unionPadding && "at most one union tail-padding type");
       unionPadding = padTy;
@@ -270,8 +269,6 @@ struct CIRRecordLowering final {
   unsigned zeroInitializableAsBase : 1;
   LLVM_PREFERRED_TYPE(bool)
   unsigned packed : 1;
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned padded : 1;
   /// Whether a field was dropped whose data no member can represent.  Reported
   /// as NYI.  Until that gap is closed the completed type reads as ABI-empty
   /// when it is not, so the differential asserts below cannot run on it.
@@ -299,7 +296,7 @@ CIRRecordLowering::CIRRecordLowering(CIRGenTypes &cirGenTypes,
           cirGenTypes.getASTContext().getASTRecordLayout(recordDecl)},
       dataLayout{cirGenTypes.getCGModule().getModule()},
       zeroInitializable{true}, zeroInitializableAsBase{true}, packed{packed},
-      padded{false}, droppedFieldHoldingData{false} {}
+      droppedFieldHoldingData{false} {}
 
 void CIRRecordLowering::setBitFieldInfo(const FieldDecl *fd,
                                         CharUnits startOffset,
@@ -767,7 +764,6 @@ void CIRRecordLowering::insertPadding() {
   }
   if (padding.empty())
     return;
-  padded = true;
   // Add the padding to the Members list and sort it.
   for (const std::pair<CharUnits, CharUnits> &paddingPair : padding)
     members.push_back(makeStorageInfo(paddingPair.first,
@@ -831,8 +827,8 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
       baseLowering.lower(/*nonVirtualBaseType=*/true);
       std::string baseIdentifier = getRecordTypeName(rd, ".base");
       baseTy = builder.getCompleteNamedRecordType(
-          baseLowering.getFieldTypes(), baseLowering.packed,
-          baseLowering.padded, baseIdentifier, baseLowering.getFieldKinds());
+          baseLowering.getFieldTypes(), baseLowering.packed, baseIdentifier,
+          baseLowering.getFieldKinds());
       // TODO(cir): add something like addRecordTypeName
 
       // BaseTy and Ty must agree on their packedness for getCIRFieldNo to work
@@ -856,8 +852,8 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
   // signifies that the type is no longer opaque and record layout is complete,
   // but we may need to recursively layout rd while laying D out as a base type.
   assert(!cir::MissingFeatures::astRecordDeclAttr());
-  ty->complete(lowering.getFieldTypes(), lowering.packed, lowering.padded,
-               lowering.unionPadding, lowering.getFieldKinds());
+  ty->complete(lowering.getFieldTypes(), lowering.packed, lowering.unionPadding,
+               lowering.getFieldKinds());
 
   // The marks exist so that emptiness can be read off the type, so check that
   // answer against the AST predicate on every record CIRGen lays out.  This
@@ -1025,10 +1021,8 @@ void CIRRecordLowering::lowerUnion(bool nonVirtualBaseType) {
     clearFields();
     addField(storageType, storageKind);
     CharUnits padding = layoutSize - getSize(storageType);
-    if (!padding.isZero()) {
+    if (!padding.isZero())
       addField(getByteArrayType(padding), cir::RecordMemberKind::Pad);
-      padded = true;
-    }
   } else {
     // Else we just add padding normally.
     appendPaddingBytes(layoutSize - getSize(storageType));

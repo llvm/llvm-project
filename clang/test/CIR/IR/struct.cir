@@ -25,24 +25,26 @@
 // CHECK-DAG: !rec_S1 = !cir.struct<"S1" {!s32i, !s32i}>
 // CHECK-DAG: !rec_Sc = !cir.struct<"Sc" {!u8i, !u16i, !u32i}>
 
-// Packed and padded structs
+// A packed struct, and a packed and unpacked pair with the same members
 !rec_P1 = !cir.struct<"P1" packed {!s32i, !s32i}>
-!rec_P2 = !cir.struct<"P2" padded {!u8i, !u16i, !u32i}>
-!rec_P3 = !cir.struct<"P3" packed padded {!u8i, !u16i, !u32i}>
+!rec_P2 = !cir.struct<"P2" {!u8i, pad !u8i, !u16i, !u32i}>
+!rec_P3 = !cir.struct<"P3" packed {!u8i, pad !u8i, !u16i, !u32i}>
 
 // Members marked pad or empty
 !rec_P4 = !cir.struct<"P4" {pad !u8i}>
 !rec_P5 = !cir.struct<"P5" {empty !u8i}>
 !rec_P6 = !cir.struct<"P6" {!u32i, empty !cir.array<!u8i x 3>, pad !u8i}>
-!rec_P7 = !cir.struct<"P7" packed padded {!u8i, pad !u8i}>
+!rec_P7 = !cir.struct<"P7" packed {!u8i, pad !u8i}>
+!rec_P8 = !cir.struct<"P8" {!u16i, pad !u8i, pad !u8i}>
 
 // CHECK-DAG: !rec_P1 = !cir.struct<"P1" packed {!s32i, !s32i}>
-// CHECK-DAG: !rec_P2 = !cir.struct<"P2" padded {!u8i, !u16i, !u32i}>
-// CHECK-DAG: !rec_P3 = !cir.struct<"P3" packed padded {!u8i, !u16i, !u32i}>
+// CHECK-DAG: !rec_P2 = !cir.struct<"P2" {!u8i, pad !u8i, !u16i, !u32i}>
+// CHECK-DAG: !rec_P3 = !cir.struct<"P3" packed {!u8i, pad !u8i, !u16i, !u32i}>
 // CHECK-DAG: !rec_P4 = !cir.struct<"P4" {pad !u8i}>
 // CHECK-DAG: !rec_P5 = !cir.struct<"P5" {empty !u8i}>
 // CHECK-DAG: !rec_P6 = !cir.struct<"P6" {!u32i, empty !cir.array<!u8i x 3>, pad !u8i}>
-// CHECK-DAG: !rec_P7 = !cir.struct<"P7" packed padded {!u8i, pad !u8i}>
+// CHECK-DAG: !rec_P7 = !cir.struct<"P7" packed {!u8i, pad !u8i}>
+// CHECK-DAG: !rec_P8 = !cir.struct<"P8" {!u16i, pad !u8i, pad !u8i}>
 
 // Records with identical member types, spelled apart by their marks.  The
 // anonymous pair must stay two distinct types, since an anonymous record keys
@@ -126,7 +128,8 @@ module  {
                      %arg20: !rec_PadNode,
                      %arg21: !rec_P7,
                      %arg22: !rec_anon_u_empty,
-                     %arg23: !rec_anon_u_plain) {
+                     %arg23: !rec_anon_u_plain,
+                     %arg24: !rec_P8) {
     cir.return
   }
 

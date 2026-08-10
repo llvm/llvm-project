@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -emit-llvm %s -o - | FileCheck %s --check-prefix=LLVM
 
 struct Empty {};
-// CIR-DAG: !rec_Empty = !cir.struct<"Empty" padded {pad !u8i}>
+// CIR-DAG: !rec_Empty = !cir.struct<"Empty" {pad !u8i}>
 // LLVM-DAG: %struct.Empty = type { i8 }
 
 // A C++ empty member is not empty for the ABI without [[no_unique_address]].
@@ -44,7 +44,7 @@ struct DerivesBitFieldBase : BitFieldBase { int i; };
 
 // A virtual base is marked the same way a non-virtual one is.
 struct HasBitFieldVBase : virtual BitFieldBase { int i; };
-// CIR-DAG: !rec_HasBitFieldVBase = !cir.struct<"HasBitFieldVBase" packed padded {!cir.vptr, !s32i, empty !rec_BitFieldBase, pad !cir.array<!u8i x 3>}>
+// CIR-DAG: !rec_HasBitFieldVBase = !cir.struct<"HasBitFieldVBase" packed {!cir.vptr, !s32i, empty !rec_BitFieldBase, pad !cir.array<!u8i x 3>}>
 
 struct ZeroLenEmptyArr { Empty e[0]; };
 // CIR-DAG: !rec_ZeroLenEmptyArr = !cir.struct<"ZeroLenEmptyArr" {empty !cir.array<!rec_Empty x 0>}>
@@ -59,7 +59,7 @@ struct NuaEmptyArr { [[no_unique_address]] Empty e[2]; int i; };
 // CIR-DAG: !rec_NuaEmptyArr = !cir.struct<"NuaEmptyArr" {!cir.array<!rec_Empty x 2>, !s32i}>
 
 struct AlignasTail { char c; alignas(8) int i; };
-// CIR-DAG: !rec_AlignasTail = !cir.struct<"AlignasTail" padded {!s8i, pad !cir.array<!u8i x 7>, !s32i, pad !cir.array<!u8i x 4>}>
+// CIR-DAG: !rec_AlignasTail = !cir.struct<"AlignasTail" {!s8i, pad !cir.array<!u8i x 7>, !s32i, pad !cir.array<!u8i x 4>}>
 // LLVM-DAG: %struct.AlignasTail = type { i8, [7 x i8], i32, [4 x i8] }
 
 // An unnamed bit-field unit is declared storage that holds no ABI data.
@@ -80,10 +80,10 @@ struct UnnamedFirst { int : 16; int a : 8; };
 // A zero-length bit-field separates one span into two units, and a record can
 // carry a data unit and an empty unit at once, in either order.
 struct SpanMixed { int a : 3; int : 0; int : 3; };
-// CIR-DAG: !rec_SpanMixed = !cir.struct<"SpanMixed" padded {!u8i, pad !cir.array<!u8i x 3>, empty !u8i, pad !cir.array<!u8i x 3>}>
+// CIR-DAG: !rec_SpanMixed = !cir.struct<"SpanMixed" {!u8i, pad !cir.array<!u8i x 3>, empty !u8i, pad !cir.array<!u8i x 3>}>
 
 struct SpanEmptyFirst { int : 3; int : 0; int b : 3; };
-// CIR-DAG: !rec_SpanEmptyFirst = !cir.struct<"SpanEmptyFirst" padded {empty !u8i, pad !cir.array<!u8i x 3>, !u8i, pad !cir.array<!u8i x 3>}>
+// CIR-DAG: !rec_SpanEmptyFirst = !cir.struct<"SpanEmptyFirst" {empty !u8i, pad !cir.array<!u8i x 3>, !u8i, pad !cir.array<!u8i x 3>}>
 
 union UnnamedBitUnion { int : 8; };
 // CIR-DAG: !rec_UnnamedBitUnion = !cir.union<"UnnamedBitUnion" {empty !u8i}>
@@ -99,13 +99,13 @@ struct NearlyEmptyVBase { virtual ~NearlyEmptyVBase(); };
 // CIR-DAG: !rec_NearlyEmptyVBase = !cir.struct<"NearlyEmptyVBase" {!cir.vptr}>
 
 struct HasNearlyEmptyVBase : virtual NearlyEmptyVBase { int i; };
-// CIR-DAG: !rec_HasNearlyEmptyVBase = !cir.struct<"HasNearlyEmptyVBase" packed padded {!rec_NearlyEmptyVBase, !s32i, pad !cir.array<!u8i x 4>}>
+// CIR-DAG: !rec_HasNearlyEmptyVBase = !cir.struct<"HasNearlyEmptyVBase" packed {!rec_NearlyEmptyVBase, !s32i, pad !cir.array<!u8i x 4>}>
 
 // Both marks appear on one record: the byte array is storage the source
 // declared for its unnamed bit-field, while the byte after it is inserted by
 // the compiler.  The storage keeps its mark in the base subobject type.
 struct Clipped { Clipped(const Clipped &); int i; int : 24; };
-// CIR-DAG: !rec_Clipped = !cir.struct<"Clipped" packed padded {!s32i, empty !cir.array<!u8i x 3>, pad !u8i}>
+// CIR-DAG: !rec_Clipped = !cir.struct<"Clipped" packed {!s32i, empty !cir.array<!u8i x 3>, pad !u8i}>
 // CIR-DAG: !rec_Clipped2Ebase = !cir.struct<"Clipped.base" packed {!s32i, empty !cir.array<!u8i x 3>}>
 
 struct DerivedClipped : Clipped { char c; };

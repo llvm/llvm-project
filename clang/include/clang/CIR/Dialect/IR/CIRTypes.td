@@ -700,7 +700,6 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
         !rec_incomplete = !cir.struct<"incomplete" incomplete>
         !anonymous    = !cir.struct<{!u8i}>
         !rec_packed   = !cir.struct<"p1" packed {!u8i, !u8i}>
-        !rec_padded   = !cir.struct<"p2" padded {!u8i, !u8i}>
         !rec_pad      = !cir.struct<"p3" {!u8i, pad !cir.array<!u8i x 3>}>
         !rec_empty    = !cir.struct<"e" {empty !u8i}>
         !recursive    = !cir.struct<"Node" {!cir.ptr<!cir.struct<"Node">>}>
@@ -712,7 +711,6 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
     OptionalParameter<"mlir::StringAttr">:$name,
     "bool":$incomplete,
     "bool":$packed,
-    "bool":$padded,
     OptionalArrayRefParameter<"cir::RecordMemberKind">:$member_kinds,
     "bool":$is_class
   );
@@ -730,11 +728,10 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
       "llvm::ArrayRef<mlir::Type>":$members,
       "mlir::StringAttr":$name,
       "bool":$packed,
-      "bool":$padded,
       "bool":$is_class,
       CArg<"llvm::ArrayRef<cir::RecordMemberKind>", "{}">:$member_kinds
     ), [{
-      return $_get($_ctxt, members, name, /*incomplete=*/false, packed, padded,
+      return $_get($_ctxt, members, name, /*incomplete=*/false, packed,
                    cir::normalizeRecordMemberKinds(member_kinds), is_class);
     }]>,
 
@@ -744,7 +741,7 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
       "bool":$is_class
     ), [{
       return $_get($_ctxt, /*members=*/llvm::ArrayRef<mlir::Type>{}, name,
-                   /*incomplete=*/true, /*packed=*/false, /*padded=*/false,
+                   /*incomplete=*/true, /*packed=*/false,
                    /*member_kinds=*/llvm::ArrayRef<cir::RecordMemberKind>{},
                    is_class);
     }]>,
@@ -753,13 +750,12 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
     TypeBuilder<(ins
       "llvm::ArrayRef<mlir::Type>":$members,
       "bool":$packed,
-      "bool":$padded,
       "bool":$is_class,
       CArg<"llvm::ArrayRef<cir::RecordMemberKind>", "{}">:$member_kinds
     ), [{
       return $_get($_ctxt, members, mlir::StringAttr{}, /*incomplete=*/false,
-                   packed, padded,
-                   cir::normalizeRecordMemberKinds(member_kinds), is_class);
+                   packed, cir::normalizeRecordMemberKinds(member_kinds),
+                   is_class);
     }]>
   ];
 
@@ -783,8 +779,10 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
     }
 
     void complete(llvm::ArrayRef<mlir::Type> members, bool packed,
-                  bool isPadded,
                   llvm::ArrayRef<cir::RecordMemberKind> memberKinds = {});
+
+    /// Whether any member is marked pad.
+    bool getPadded() const;
 
     uint64_t getElementOffset(const mlir::DataLayout &dataLayout,
                               unsigned idx) const;
@@ -809,7 +807,9 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
 
     bool isSized() const { return isComplete(); }
 
-    /// Returns the data size (excluding tail padding) for this struct type.
+    /// Returns the data size for this struct type.  Tail padding is the
+    /// trailing run of pad members, so interior padding and a trailing empty
+    /// member stay inside the data size.
     unsigned computeStructDataSize(const mlir::DataLayout &dataLayout) const;
 
   private:
@@ -918,9 +918,7 @@ def CIR_UnionType : CIR_Type<"Union", "union", [
     bool isComplete() const { return !isIncomplete(); }
     bool isIncomplete() const;
 
-    /// Returns true when this union carries a tail-padding type.
-    /// Derived from getPadding(): a union is padded iff it has a non-null
-    /// padding type.
+    /// Whether this union carries a tail-padding type.
     bool getPadded() const;
 
     size_t getNumElements() const { return getMembers().size(); }

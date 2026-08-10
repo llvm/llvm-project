@@ -18,8 +18,8 @@ void takesNTD(NonTrivialDtor n) {}
 
 // Record types should NOT contain ABI metadata keywords.
 // CIR-DAG: !rec_Trivial = !cir.struct<"Trivial" {!s32i, !s32i}>
-// CIR-DAG: !rec_Empty = !cir.struct<"Empty" padded {pad !u8i}>
-// CIR-DAG: !rec_Aligned = !cir.struct<"Aligned" padded {!s32i, !s32i, pad !cir.array<!u8i x 8>}>
+// CIR-DAG: !rec_Empty = !cir.struct<"Empty" {pad !u8i}>
+// CIR-DAG: !rec_Aligned = !cir.struct<"Aligned" {!s32i, !s32i, pad !cir.array<!u8i x 8>}>
 // CIR-DAG: !rec_NonTrivialDtor = !cir.struct<class "NonTrivialDtor" {!s32i}>
 
 // ABI metadata lives in module-level cir.record_layouts attribute.

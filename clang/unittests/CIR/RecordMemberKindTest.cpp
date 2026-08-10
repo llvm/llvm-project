@@ -50,7 +50,7 @@ protected:
                         llvm::ArrayRef<mlir::Type> members,
                         llvm::ArrayRef<RecordMemberKind> kinds) {
     auto ty = StructType::get(&context, getName(name), /*is_class=*/false);
-    ty.complete(members, /*packed=*/false, /*isPadded=*/false, kinds);
+    ty.complete(members, /*packed=*/false, kinds);
     return ty;
   }
 };
@@ -76,6 +76,39 @@ TEST_F(RecordMemberKindTest, EmptyForTheABIWhenNoMemberHoldsData) {
   EXPECT_FALSE(allMembersNonData(makeStruct("unmarked", {u8}, {})));
 }
 
+TEST_F(RecordMemberKindTest, PaddedFollowsThePadMarks) {
+  IntType u8 = getU8();
+  EXPECT_FALSE(makeStruct("d", {u8}, {RecordMemberKind::Data}).getPadded());
+  EXPECT_FALSE(makeStruct("e", {u8}, {RecordMemberKind::Empty}).getPadded());
+  EXPECT_TRUE(makeStruct("p", {u8}, {RecordMemberKind::Pad}).getPadded());
+  // Interior padding counts too, not just a trailing run.
+  EXPECT_TRUE(makeStruct("dpd", {u8, u8, u8},
+                         {RecordMemberKind::Data, RecordMemberKind::Pad,
+                          RecordMemberKind::Data})
+                  .getPadded());
+  // An incomplete struct has no members to read a mark from.
+  EXPECT_FALSE(StructType::get(&context, getName("inc"), /*is_class=*/false)
+                   .getPadded());
+}
+
+TEST_F(RecordMemberKindTest, AUnionsPaddingComesFromItsPaddingSlot) {
+  // A union keeps answering from its padding slot, not from the marks.
+  IntType u8 = getU8();
+  llvm::SmallVector<mlir::Type> members{u8};
+  llvm::ArrayRef<mlir::Type> membersRef(members);
+  EXPECT_FALSE(UnionType::get(&context, membersRef, getName("bare"),
+                              /*packed=*/false, /*padding=*/mlir::Type{})
+                   .getPadded());
+  EXPECT_TRUE(UnionType::get(&context, membersRef, getName("padded"),
+                             /*packed=*/false, /*padding=*/u8)
+                  .getPadded());
+  // An empty mark on a member is not padding.
+  EXPECT_FALSE(UnionType::get(&context, membersRef, getName("marked"),
+                              /*packed=*/false, /*padding=*/mlir::Type{},
+                              {RecordMemberKind::Empty})
+                   .getPadded());
+}
+
 TEST_F(RecordMemberKindTest, RejectsAMarkListThatDoesNotCoverEveryMember) {
   // The assembly syntax cannot express this, since it builds one kind per
   // member, but a C++ caller can.
@@ -86,8 +119,8 @@ TEST_F(RecordMemberKindTest, RejectsAMarkListThatDoesNotCoverEveryMember) {
   llvm::ArrayRef<mlir::Type> membersRef(members);
   llvm::ArrayRef<RecordMemberKind> kindsRef(tooFew);
   EXPECT_FALSE(StructType::getChecked(getLoc(), &context, membersRef,
-                                      /*packed=*/false, /*padded=*/false,
-                                      /*is_class=*/false, kindsRef));
+                                      /*packed=*/false, /*is_class=*/false,
+                                      kindsRef));
   EXPECT_EQ(diags.count, 1u);
 }
 
@@ -134,12 +167,12 @@ TEST_F(RecordMemberKindTest, AUnionsTailPaddingSlotIsNotAMember) {
 
 TEST_F(RecordMemberKindTest, MarksTakePartInAnonymousTypeIdentity) {
   IntType u8 = getU8();
-  auto marksPad = StructType::get(
-      &context, {u8, u8}, /*packed=*/false, /*padded=*/false,
-      /*is_class=*/false, {RecordMemberKind::Data, RecordMemberKind::Pad});
-  auto marksEmpty = StructType::get(
-      &context, {u8, u8}, /*packed=*/false, /*padded=*/false,
-      /*is_class=*/false, {RecordMemberKind::Data, RecordMemberKind::Empty});
+  auto marksPad =
+      StructType::get(&context, {u8, u8}, /*packed=*/false, /*is_class=*/false,
+                      {RecordMemberKind::Data, RecordMemberKind::Pad});
+  auto marksEmpty =
+      StructType::get(&context, {u8, u8}, /*packed=*/false, /*is_class=*/false,
+                      {RecordMemberKind::Data, RecordMemberKind::Empty});
   EXPECT_NE(marksPad, marksEmpty);
 
   // Marks are provenance rather than layout.
@@ -159,11 +192,11 @@ TEST_F(RecordMemberKindTest, MarksTakePartInAnonymousTypeIdentity) {
 
 TEST_F(RecordMemberKindTest, AnAllDataMarkListIsDropped) {
   IntType u8 = getU8();
-  auto allData = StructType::get(
-      &context, {u8, u8}, /*packed=*/false, /*padded=*/false,
-      /*is_class=*/false, {RecordMemberKind::Data, RecordMemberKind::Data});
-  auto noList = StructType::get(&context, {u8, u8}, /*packed=*/false,
-                                /*padded=*/false, /*is_class=*/false);
+  auto allData =
+      StructType::get(&context, {u8, u8}, /*packed=*/false, /*is_class=*/false,
+                      {RecordMemberKind::Data, RecordMemberKind::Data});
+  auto noList =
+      StructType::get(&context, {u8, u8}, /*packed=*/false, /*is_class=*/false);
   EXPECT_EQ(allData, noList);
   EXPECT_TRUE(allData.getMemberKinds().empty());
 }

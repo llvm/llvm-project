@@ -36,7 +36,7 @@ struct B {
 };
 
 // LLVM-DAG: [[STRUCT_C:%.*]] = type <{ [[STRUCT_B]], [[STRUCT_A]], i32, [4 x i8] }>
-// CIR-DAG: ![[STRUCT_C:.*]] = !cir.struct<"C" packed padded {![[STRUCT_B]], ![[STRUCT_A]], !s32i, pad !cir.array<!u8i x 4>}>
+// CIR-DAG: ![[STRUCT_C:.*]] = !cir.struct<"C" packed {![[STRUCT_B]], ![[STRUCT_A]], !s32i, pad !cir.array<!u8i x 4>}>
 struct C : public B, public A {
   int c;
 };
@@ -58,7 +58,7 @@ struct E {
   ~E() {};
 };
 
-// CIR-DAG: ![[STRUCT_F:.*]] = !cir.struct<"F" padded {pad !u8i}>
+// CIR-DAG: ![[STRUCT_F:.*]] = !cir.struct<"F" {pad !u8i}>
 struct F {
   F (int i = 1);
   F (const F &f) = delete;
@@ -67,7 +67,7 @@ struct F {
 
 // LLVMCIR-DAG: [[STRUCT_G:%.*]] = type <{ i32, %struct.F, [3 x i8] }>
 // OGCG-DAG:    [[STRUCT_G:%.*]] = type <{ i32, [4 x i8] }>
-// CIR-DAG: ![[STRUCT_G:.*]] = !cir.struct<"G" packed padded {!s32i, !rec_F, pad !cir.array<!u8i x 3>}>
+// CIR-DAG: ![[STRUCT_G:.*]] = !cir.struct<"G" packed {!s32i, !rec_F, pad !cir.array<!u8i x 3>}>
 struct G {
   int a;
   F f;
@@ -85,7 +85,7 @@ union U {
 
 namespace gh61145 {
   // LLVM-DAG: [[STRUCT_VEC:%.*Vec.*]] = type { i8 }
-  // CIR-DAG: ![[STRUCT_VEC:.*]] = !cir.struct<"gh61145::Vec" padded {pad !u8i}>
+  // CIR-DAG: ![[STRUCT_VEC:.*]] = !cir.struct<"gh61145::Vec" {pad !u8i}>
   struct Vec {
     Vec();
     Vec(Vec&&);

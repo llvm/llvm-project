@@ -13,8 +13,8 @@
 !rec_SWrapsOverAligned = !cir.struct<"SWrapsOverAligned" {!cir.double, !rec_UOverAligned}>
 !rec_UEmptyLarge = !cir.union<"UEmptyLarge" {}, padding = {!cir.array<!u8i x 32>}>
 !rec_P = !cir.struct<"P" packed {!s8i, !s32i}>
-!rec_Ov = !cir.struct<"Ov" padded {!s32i, !cir.array<!u8i x 12>}>
-!rec_E = !cir.struct<"E" padded {!u8i}>
+!rec_Ov = !cir.struct<"Ov" {!s32i, pad !cir.array<!u8i x 12>}>
+!rec_E = !cir.struct<"E" {pad !u8i}>
 !rec_FF = !cir.struct<"FF" {!cir.float, !cir.float}>
 !rec_RetFF = !cir.struct<"RetFF" {!cir.float, !cir.float}>
 
@@ -111,15 +111,15 @@ module attributes {
     cir.return
   }
 
-  // CHECK: not yet implemented for type '!cir.struct<"Ov" padded
+  // CHECK: not yet implemented for type '!cir.struct<"Ov" {!cir.int<s, 32>, pad !cir.array<!cir.int<u, 8> x 12>}>'
 
-  // An empty C++ class is laid out as a single padded byte, so it is rejected
-  // by the padded check; its Ignore classification is deferred.
+  // An empty C++ class is laid out as a single padding byte, so it is
+  // rejected as padded; its Ignore classification is deferred.
   cir.func @take_empty(%arg0: !rec_E) {
     cir.return
   }
 
-  // CHECK: not yet implemented for type '!cir.struct<"E" padded
+  // CHECK: not yet implemented for type '!cir.struct<"E" {pad !cir.int<u, 8>}>'
 
   // An all-float struct classifies to an SSE vector coerce this bridge does
   // not represent, so it is reported NYI rather than passed unchanged.

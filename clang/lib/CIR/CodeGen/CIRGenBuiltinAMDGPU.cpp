@@ -76,8 +76,7 @@ static mlir::Value emitLogbBuiltin(CIRGenFunction &cgf, const CallExpr *e,
   mlir::Type srcTy = src0.getType();
   mlir::Type int32Ty = builder.getSInt32Ty();
 
-  cir::RecordType frExpResTy =
-      builder.getAnonRecordTy({srcTy, int32Ty}, false, false);
+  cir::RecordType frExpResTy = builder.getAnonRecordTy({srcTy, int32Ty});
 
   mlir::Value frExpResult = builder.emitIntrinsicCallOp(
       loc, "frexp", frExpResTy, mlir::ValueRange{src0});
@@ -174,8 +173,7 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     mlir::Value z = emitScalarExpr(expr->getArg(2));
 
     auto i1Ty = builder.getUIntNTy(1);
-    cir::RecordType resTy = builder.getAnonRecordTy(
-        {x.getType(), i1Ty}, /*packed=*/false, /*padded=*/false);
+    cir::RecordType resTy = builder.getAnonRecordTy({x.getType(), i1Ty});
 
     mlir::Value structResult =
         cir::LLVMIntrinsicCallOp::create(builder, getLoc(expr->getExprLoc()),

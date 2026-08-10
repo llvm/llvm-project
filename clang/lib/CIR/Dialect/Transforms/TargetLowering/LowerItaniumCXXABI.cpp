@@ -191,8 +191,7 @@ mlir::Type LowerItaniumCXXABI::lowerMethodType(
   // Note that clang CodeGen emits struct{ptrdiff_t, ptrdiff_t} for member
   // function pointers. Let's follow this approach.
   return cir::StructType::get(type.getContext(), {ptrdiffCIRTy, ptrdiffCIRTy},
-                              /*packed=*/false, /*padded=*/false,
-                              /*is_class=*/false);
+                              /*packed=*/false, /*is_class=*/false);
 }
 
 mlir::TypedAttr LowerItaniumCXXABI::lowerDataMemberConstant(

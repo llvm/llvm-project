@@ -30,7 +30,7 @@ struct Outer {
 // Middle's tail padding.
 
 // CIR: !rec_Middle2Ebase = !cir.struct<"Middle.base" packed {!rec_Base, !s8i}>
-// CIR: !rec_Outer = !cir.struct<"Outer" padded {!rec_Middle2Ebase, !s8i, pad
+// CIR: !rec_Outer = !cir.struct<"Outer" {!rec_Middle2Ebase, !s8i, pad !cir.array<!u8i x 2>}>
 
 // CIR-LABEL: cir.func {{.*}} @_ZN5OuterC2ERK6Middlec(
 // CIR:         %[[THIS:.*]] = cir.load %{{.+}} : !cir.ptr<!cir.ptr<!rec_Outer>>, !cir.ptr<!rec_Outer>

@@ -86,7 +86,7 @@ Leading leadArr[2];
 // CIR-DAG: !rec_Leading = !cir.struct<"Leading" {!rec_Empty, !s32i}>
 // CIR-DAG: !rec_Trailing = !cir.struct<"Trailing" {!s32i, !rec_Empty}>
 // CIR-DAG: !rec_Middle = !cir.struct<"Middle" {!s32i, !rec_Empty, !s32i}>
-// CIR-DAG: !rec_LeadingOver = !cir.struct<"LeadingOver" padded {!rec_EmptyAligned, !s32i, pad !cir.array<!u8i x 12>}>
+// CIR-DAG: !rec_LeadingOver = !cir.struct<"LeadingOver" {!rec_EmptyAligned, !s32i, pad !cir.array<!u8i x 12>}>
 // CIR-DAG: !rec_LeadingZeroBitfield = !cir.struct<"LeadingZeroBitfield" {!rec_OnlyZeroBitfield, !s32i}>
 
 // CIR keeps the union's own named type as the record's field and leaves the
