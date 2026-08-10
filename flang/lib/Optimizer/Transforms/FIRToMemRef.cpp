@@ -1473,8 +1473,6 @@ MemRefInfo FIRToMemRef::getMemRefInfo(Value firMemref,
                                       PatternRewriter &rewriter,
                                       FIRToMemRefTypeConverter &typeConverter,
                                       Operation *memOp) {
-  firMemref = peelZeroOffsetViews(firMemref);
-
   Operation *memrefOp = firMemref.getDefiningOp();
   if (!memrefOp) {
     if (auto blockArg = dyn_cast<BlockArgument>(firMemref)) {
@@ -1571,6 +1569,54 @@ MemRefInfo FIRToMemRef::getMemRefInfo(Value firMemref,
         getFIRConvert(memOp, memrefOp, rewriter, typeConverter);
     if (failed(converted))
       return failure();
+    SmallVector<Value> indices;
+    return std::pair{*converted, indices};
+  }
+
+  // Some other zero-offset view (fir.declare, ref/box fir.convert,
+  // fir.box_addr, fir.volatile_cast, fir.create_box, unsliced
+  // fir.embox/fir.rebox): peek underneath for an fir.array_coor or indexing
+  // fir.coordinate_of that needs bounds-aware handling (e.g. fir.declare
+  // wrapping fir.array_coor); otherwise marshal the view itself so its
+  // naming is kept and getFIRConvert's dedup logic still applies.
+  if (isa<fir::FortranObjectViewOpInterface>(memrefOp)) {
+    if (Operation *peeledOp = peelZeroOffsetViews(firMemref).getDefiningOp()) {
+      if (auto arrayCoorOp = dyn_cast<fir::ArrayCoorOp>(peeledOp)) {
+        MemRefInfo memrefInfo =
+            convertArrayCoorOp(memOp, arrayCoorOp, rewriter, typeConverter);
+        if (succeeded(memrefInfo)) {
+          for (auto user : peeledOp->getUsers())
+            if (!isa<fir::LoadOp, fir::StoreOp>(user))
+              return memrefInfo;
+          eraseOps.insert(peeledOp);
+        }
+        return memrefInfo;
+      }
+
+      if (auto coordinateOp = dyn_cast<fir::CoordinateOp>(peeledOp);
+          coordinateOp &&
+          isArrayIndexingCoordinateOp(coordinateOp, typeConverter)) {
+        MemRefInfo memrefInfo = convertCoordinateArrayOp(
+            memOp, coordinateOp, rewriter, typeConverter);
+        if (succeeded(memrefInfo)) {
+          for (auto user : peeledOp->getUsers())
+            if (!isa<fir::LoadOp, fir::StoreOp>(user))
+              return memrefInfo;
+          eraseOps.insert(peeledOp);
+          return memrefInfo;
+        }
+      }
+    }
+
+    FailureOr<Value> converted =
+        getFIRConvert(memOp, memrefOp, rewriter, typeConverter);
+    if (failed(converted)) {
+      LLVM_DEBUG(llvm::dbgs()
+                     << "FIRToMemRef: unable to create convert for view "
+                        "memref:\n";
+                 firMemref.dump());
+      return failure();
+    }
     SmallVector<Value> indices;
     return std::pair{*converted, indices};
   }
