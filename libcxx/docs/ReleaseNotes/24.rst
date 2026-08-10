@@ -41,6 +41,8 @@ Implemented Papers
 - P0493R5: Atomic minimum/maximum (`Github <https://llvm.org/PR105418>`__)
 - P3059R2: Making user-defined constructors of view iterators/sentinels private (`Github <https://github.com/llvm/llvm-project/issues/189599>`__)
 - P0792R14: ``function_ref`` : a type-erased callable reference (`Github <https://llvm.org/PR105376>`__)
+- P3016R6: Resolve inconsistencies in begin/end for ``valarray`` and braced initializer lists
+  (`Github <https://llvm.org/PR171271>`__)
 - P3948R1: ``constant_wrapper`` is the only tool needed for passing constant expressions via function arguments (`Github <https://llvm.org/PR189604>`__)
 - P3961R1: Less double indirection in ``function_ref`` (RU-220) (`Github <https://llvm.org/PR189606>`__)
 - P1901R2: Enabling the Use of ``weak_ptr`` as Keys in Unordered Associative Containers (`Github <https://llvm.org/PR105372>`__)
@@ -48,7 +50,6 @@ Implemented Papers
 
 Improvements and New Features
 -----------------------------
-
 
 Deprecations and Removals
 -------------------------
@@ -59,9 +60,12 @@ Deprecations and Removals
 Potentially breaking changes
 ----------------------------
 
-- TODO: In LLVM 23, libc++ dropped a lot of transitive includes in all language modes. This improves compile time significantly,
+- In LLVM 23, libc++ dropped a lot of transitive includes in all language modes. This improves compile time significantly,
   but causes programs which rely on these includes to not compile anymore. The ``_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23``
   macro that was provided in LLVM 23 to ease the transition has been removed in this release.
+
+- Unused objects of containers are now diagnosed. To ease the transition ``_LIBCPP_DISABLE_UNUSED_STRUCT_WARNINGS`` can
+  be defined as an escape hatch. This escape hatch will be removed in LLVM 24.
 
 Announcements About Future Releases
 -----------------------------------
@@ -79,4 +83,3 @@ ABI Affecting Changes
 
 Build System Changes
 --------------------
-

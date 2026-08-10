@@ -114,6 +114,9 @@ add_header_library(
   optional
   HDRS
     optional.h
+  DEPENDS
+    .type_traits
+    .utility
 )
 
 add_header_library(
@@ -243,6 +246,7 @@ add_header_library(
     simd.h
   DEPENDS
     libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
     .utility
     .tuple
 )
