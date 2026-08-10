@@ -4582,12 +4582,15 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     }
   }
 
-  // canonicalize (sub X, (vscale * C)) to (add X, (vscale * -C))
+  // canonicalize (sub X, (vscale * C)) to (add X, (vscale * -C)) if this is the
+  // only use of the vscale value or if (vscale * -C) is a valid add immediate.
   // avoid if ISD::MUL handling is poor and ISD::SHL isn't an option.
-  if (N1.getOpcode() == ISD::VSCALE && N1.hasOneUse()) {
+  if (N1.getOpcode() == ISD::VSCALE) {
     const APInt &IntVal = N1.getConstantOperandAPInt(0);
-    if (!IntVal.isPowerOf2() ||
-        hasOperation(ISD::MUL, N1.getOperand(0).getValueType()))
+    if ((N1.hasOneUse() ||
+         TLI.isLegalAddScalableImmediate(-IntVal.getSExtValue())) &&
+        (!IntVal.isPowerOf2() ||
+         hasOperation(ISD::MUL, N1.getOperand(0).getValueType())))
       return DAG.getNode(ISD::ADD, DL, VT, N0, DAG.getVScale(DL, VT, -IntVal));
   }
 
@@ -21924,7 +21927,8 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
               InterVT.getVectorNumElements() - LDMemType.getVectorNumElements();
         }
 
-        if (!TLI.isExtractSubvectorCheap(LDMemType, InterVT, ExtIdx))
+        if (TLI.getExtractSubvectorCost(LDMemType, InterVT, ExtIdx) >
+            TargetLowering::ExtractSubvectorCost::Cheap)
           break;
         Val = DAG.getExtractSubvector(SDLoc(LD), LDMemType,
                                       DAG.getBitcast(InterVT, Val), ExtIdx);
@@ -26343,7 +26347,8 @@ SDValue DAGCombiner::createBuildVecShuffle(const SDLoc &DL, SDNode *N,
       VecIn1 = DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, ConcatOps);
       VecIn2 = SDValue();
     } else if (InVT1Size == VTSize * 2) {
-      if (!TLI.isExtractSubvectorCheap(VT, InVT1, NumElems))
+      if (TLI.getExtractSubvectorCost(VT, InVT1, NumElems) >
+          TargetLowering::ExtractSubvectorCost::Cheap)
         return SDValue();
 
       if (!VecIn2.getNode()) {
@@ -26382,7 +26387,8 @@ SDValue DAGCombiner::createBuildVecShuffle(const SDLoc &DL, SDNode *N,
       ConcatOps[0] = VecIn2;
       VecIn2 = DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, ConcatOps);
     } else if (InVT1Size / VTSize > 1 && InVT1Size % VTSize == 0) {
-      if (!TLI.isExtractSubvectorCheap(VT, InVT1, NumElems) ||
+      if (TLI.getExtractSubvectorCost(VT, InVT1, NumElems) >
+              TargetLowering::ExtractSubvectorCost::Cheap ||
           !TLI.isTypeLegal(InVT1) || !TLI.isTypeLegal(InVT2))
         return SDValue();
       // If dest vector has less than two elements, then use shuffle and extract
@@ -27944,7 +27950,8 @@ static SDValue narrowExtractedVectorBinOp(SDNode *N, EVT VT, SDValue Src,
   // bitcasted.
   unsigned ConcatOpNum = Index / VT.getVectorNumElements();
   unsigned ExtBOIdx = ConcatOpNum * NarrowBVT.getVectorNumElements();
-  if (TLI.isExtractSubvectorCheap(NarrowBVT, WideBVT, ExtBOIdx) &&
+  if (TLI.getExtractSubvectorCost(NarrowBVT, WideBVT, ExtBOIdx) <=
+          TargetLowering::ExtractSubvectorCost::Cheap &&
       BinOp.hasOneUse() && Src->hasOneUse()) {
     // extract (binop B0, B1), N --> binop (extract B0, N), (extract B1, N)
     SDValue NewExtIndex = DAG.getVectorIdxConstant(ExtBOIdx, DL);
@@ -28155,7 +28162,8 @@ static SDValue foldExtractSubvectorFromShuffleVector(EVT NarrowVT, SDValue Src,
       // How many elements into the WideVT does this subvector start?
       int Index = NumEltsExtracted * OpSubvecIdx;
       // Bail out if the extraction isn't going to be cheap.
-      if (!TLI.isExtractSubvectorCheap(NarrowVT, WideVT, Index))
+      if (TLI.getExtractSubvectorCost(NarrowVT, WideVT, Index) >
+          TargetLowering::ExtractSubvectorCost::Cheap)
         return SDValue();
     }
 
@@ -28278,8 +28286,9 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
     uint64_t NewExtIdx = InnerExtIdx + ExtIdx;
     if (V.getValueType().isScalableVector() == NVT.isScalableVector() &&
         NewExtIdx % NVT.getVectorMinNumElements() == 0 &&
-        TLI.isExtractSubvectorCheap(NVT, V.getOperand(0).getValueType(),
-                                    NewExtIdx) &&
+        TLI.getExtractSubvectorCost(NVT, V.getOperand(0).getValueType(),
+                                    NewExtIdx) <=
+            TargetLowering::ExtractSubvectorCost::Cheap &&
         TLI.isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, NVT))
       return DAG.getExtractSubvector(DL, NVT, V.getOperand(0), NewExtIdx);
   }
@@ -28288,7 +28297,8 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
   if (V.getOpcode() == ISD::SPLAT_VECTOR)
     if ((DAG.isConstantValueOfAnyType(V.getOperand(0)) &&
          !(NVT.isScalableVector() &&
-           TLI.isExtractSubvectorCheap(NVT, V.getValueType(), ExtIdx))) ||
+           TLI.getExtractSubvectorCost(NVT, V.getValueType(), ExtIdx) <=
+               TargetLowering::ExtractSubvectorCost::Cheap)) ||
         V.hasOneUse())
       if (!LegalOperations || TLI.isOperationLegal(ISD::SPLAT_VECTOR, NVT))
         return DAG.getSplatVector(NVT, DL, V.getOperand(0));
@@ -28312,7 +28322,8 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
     unsigned InsIdx = V.getConstantOperandVal(2);
     unsigned NumSubElts = NVT.getVectorMinNumElements();
     if (InsIdx <= ExtIdx && (ExtIdx + NumSubElts) <= (InsIdx + NumInsElts) &&
-        TLI.isExtractSubvectorCheap(NVT, InsSubVT, ExtIdx - InsIdx) &&
+        TLI.getExtractSubvectorCost(NVT, InsSubVT, ExtIdx - InsIdx) <=
+            TargetLowering::ExtractSubvectorCost::Cheap &&
         InsSubVT.isFixedLengthVector() && NVT.isFixedLengthVector() &&
         V.getValueType().isFixedLengthVector())
       return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NVT, InsSub,
