@@ -102,15 +102,18 @@ static bool isMarshalLike(Operation *op) {
 }
 
 /// Peel `FortranObjectViewOpInterface` ops with a statically-known zero
-/// offset (fir.declare, ref/box fir.convert, fir.box_addr,
-/// fir.volatile_cast, fir.create_box, unsliced fir.embox/fir.rebox) down to
-/// whatever produced the address underneath, e.g. fir.array_coor or a
-/// *sliced* embox/rebox (offset == nullopt, handled separately). Excludes a
-/// marshal-like fir.convert, which must go through its own dedicated path.
+/// offset (fir.declare, ref/box fir.convert, fir.box_addr, fir.create_box,
+/// unsliced fir.embox/fir.rebox) down to whatever produced the address
+/// underneath, e.g. fir.array_coor or a *sliced* embox/rebox (offset ==
+/// nullopt, handled separately). Excludes a marshal-like fir.convert, which
+/// must go through its own dedicated path. Also stops at fir.volatile_cast:
+/// since it is the only op that may change volatility, whatever it wraps may
+/// have different volatility than its result, so peeling past it could
+/// marshal a still-volatile value without going through the explicit cast.
 static Value peelZeroOffsetViews(Value memref) {
   while (Operation *defOp = memref.getDefiningOp()) {
     auto view = dyn_cast<fir::FortranObjectViewOpInterface>(defOp);
-    if (!view || isMarshalLike(defOp))
+    if (!view || isMarshalLike(defOp) || isa<fir::VolatileCastOp>(defOp))
       break;
     auto result = cast<OpResult>(memref);
     if (view.getViewOffset(result) != 0)
