@@ -2391,9 +2391,8 @@ define i32 @signum_i32_or_wrong_ext(i32 %x) {
 ; or disjoint(zext(xor X, C1), C2) -> xor(zext(X), C2 ^ zext(C1))
 define i32 @fold_disjoint_or_zext_xor(i8 %x) {
 ; CHECK-LABEL: @fold_disjoint_or_zext_xor(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -2
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i8 [[TMP1]], 3
-; CHECK-NEXT:    [[R:%.*]] = zext i8 [[TMP2]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[R:%.*]] = zext i8 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = xor i8 %x, 2
@@ -2404,9 +2403,8 @@ define i32 @fold_disjoint_or_zext_xor(i8 %x) {
 
 define <2 x i32> @fold_disjoint_or_zext_xor_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @fold_disjoint_or_zext_xor_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X:%.*]], splat (i8 -2)
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i8> [[TMP1]], splat (i8 3)
-; CHECK-NEXT:    [[R:%.*]] = zext <2 x i8> [[TMP2]] to <2 x i32>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[X:%.*]], splat (i8 3)
+; CHECK-NEXT:    [[R:%.*]] = zext <2 x i8> [[TMP1]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %a = xor <2 x i8> %x, splat (i8 2)

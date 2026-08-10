@@ -13,6 +13,7 @@
 #include "InstCombineInternal.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/CmpInstAnalysis.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/FloatingPointPredicateUtils.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/IR/ConstantRange.h"
@@ -3962,6 +3963,25 @@ Value *InstCombinerImpl::foldDisjointOr(Value *LHS, Value *RHS) {
     return Res;
   if (Value *Res = foldIntegerRepackThroughZExt(LHS, RHS, Builder))
     return Res;
+
+  Value *X;
+  Constant *C1, *C2;
+  if (match(LHS, m_OneUse(m_ZExt(m_OneUse(
+                    m_Xor(m_Value(X), m_Constant(C1)))))) &&
+      match(RHS, m_Constant(C2))) {
+    Type *DestTy = C2->getType();
+    Constant *ExtC1 =
+        ConstantFoldCastOperand(Instruction::ZExt, C1, DestTy, DL);
+    if (!ExtC1)
+      return nullptr;
+
+    Constant *FoldedC = ConstantFoldBinaryOpOperands(
+        Instruction::Xor, C2, ExtC1, DL);
+    if (!FoldedC)
+      return nullptr;
+
+    return Builder.CreateXor(Builder.CreateZExt(X, DestTy), FoldedC);
+  }
 
   return nullptr;
 }
