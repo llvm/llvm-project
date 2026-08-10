@@ -6591,8 +6591,8 @@ def err_static_non_static : Error<
   "static declaration of %0 follows non-static declaration"
   "%select{|; behavior is undefined}1">;
 def err_internal_extern_mismatch : Error<
-  "variable %0 declared with both internal and external linkage "
-  "in the same translation unit%select{; behavior is undefined|}1">;
+  "variable %0%select{| cannot be}1 declared with external linkage following "
+  "a declaration with internal linkage%select{; behavior is undefined|}1">;
 def err_different_language_linkage : Error<
   "declaration of %0 has a different language linkage">;
 def ext_retained_language_linkage : Extension<

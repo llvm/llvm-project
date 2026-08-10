@@ -4834,7 +4834,7 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
   // (C11 6.2.2p7).
   //
   // In C, a local shadow prevents a block-scope extern from inheriting the
-  // file-scope static's internal linkage (C2y 6.2.2p4), so it defaults to
+  // file-scope static's internal linkage (C2y 6.2.2p6), so it defaults to
   // external linkage, creating the conflict.
   //
   // In C++, block-scope extern declarations target the enclosing namespace

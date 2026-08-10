@@ -38,14 +38,14 @@ void func3(void) {
     {
       /* This 'c' is the same as the one declared at file scope, but because
          of the local scope 'c', the file scope 'c' is not visible. */
-      extern int c; /* c2y-error {{'c' declared with both internal and external linkage in the same translation unit}}
-                       c89-23-error {{'c' declared with both internal and external linkage in the same translation unit; behavior is undefined}}
+      extern int c; /* c2y-error {{variable 'c' cannot be declared with external linkage following a declaration with internal linkage}}
+                       c89-23-error {{variable 'c' declared with external linkage following a declaration with internal linkage; behavior is undefined}}
                      */
       /* This 'd' is the same as the one declared at file scope as well, but
          because of the enclosing block-scope 'd', the file scope 'd' is also
          not visible, same as with 'c'. */
-      extern int d; /* c2y-error {{'d' declared with both internal and external linkage in the same translation unit}}
-                       c89-23-error {{'d' declared with both internal and external linkage in the same translation unit; behavior is undefined}}
+      extern int d; /* c2y-error {{variable 'd' cannot be declared with external linkage following a declaration with internal linkage}}
+                       c89-23-error {{variable 'd' declared with external linkage following a declaration with internal linkage; behavior is undefined}}
                      */
     }
   }
@@ -63,8 +63,8 @@ void func3(void) {
 static int p; /* expected-note {{previous definition is here}} */
 void func4(int p) {
   {
-    extern int p; /* c2y-error {{'p' declared with both internal and external linkage in the same translation unit}}
-                     c89-23-error {{'p' declared with both internal and external linkage in the same translation unit; behavior is undefined}}
+    extern int p; /* c2y-error {{variable 'p' cannot be declared with external linkage following a declaration with internal linkage}}
+                     c89-23-error {{variable 'p' declared with external linkage following a declaration with internal linkage; behavior is undefined}}
                    */
   }
 }
@@ -79,8 +79,8 @@ void func5(void) {
     {
       /* The file-scope 'q' is now hidden, so this 'extern' has external
          linkage and conflicts with the internal-linkage declaration above. */
-      extern int q; /* c2y-error {{'q' declared with both internal and external linkage in the same translation unit}}
-                       c89-23-error {{'q' declared with both internal and external linkage in the same translation unit; behavior is undefined}}
+      extern int q; /* c2y-error {{variable 'q' cannot be declared with external linkage following a declaration with internal linkage}}
+                       c89-23-error {{variable 'q' declared with external linkage following a declaration with internal linkage; behavior is undefined}}
                        expected-note@#q {{previous declaration is here}}
                      */
     }
