@@ -212,11 +212,6 @@ public:
   static SectionKind getCommon() { return get(Common); }
   static SectionKind getData() { return get(Data); }
   static SectionKind getReadOnlyWithRel() { return get(ReadOnlyWithRel); }
-
-  unsigned getValue() const { return static_cast<unsigned>(K); }
-  static SectionKind fromValue(unsigned Val) {
-    return get(static_cast<Kind>(Val));
-  }
 };
 
 } // end namespace llvm

@@ -1864,10 +1864,17 @@ void Verifier::visitModuleRawSections() {
           "llvm.raw.sections entry operand 1 must be an integer "
           "(alignment)",
           N);
-    Check(mdconst::dyn_extract_or_null<ConstantInt>(N->getOperand(2)),
+    auto *FlagsCI = mdconst::dyn_extract_or_null<ConstantInt>(N->getOperand(2));
+    Check(FlagsCI,
           "llvm.raw.sections entry operand 2 must be an integer "
-          "(section kind)",
+          "(flags)",
           N);
+    if (!Module::isValidRawSectionFlags(FlagsCI->getZExtValue())) {
+      CheckFailed("llvm.raw.sections entry operand 2 is not a valid "
+                  "combination of section flags",
+                  N);
+      continue;
+    }
     Check(dyn_cast_or_null<MDString>(N->getOperand(3)),
           "llvm.raw.sections entry operand 3 must be a string "
           "(section data)",

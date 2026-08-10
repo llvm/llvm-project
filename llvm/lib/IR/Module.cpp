@@ -337,6 +337,27 @@ bool Module::isValidModFlagBehavior(Metadata *MD, ModFlagBehavior &MFB) {
   return false;
 }
 
+bool Module::isValidRawSectionFlags(uint64_t Flags) {
+  if (Flags & ~static_cast<uint64_t>(RawSectionFlagsMask))
+    return false;
+
+  // An excluded section is not present in the output, so it cannot also be
+  // allocated, written or executed.
+  if (Flags & RawSectionExclude)
+    return Flags == RawSectionExclude;
+
+  // Only an allocated section can be written to or executed.
+  if ((Flags & (RawSectionWrite | RawSectionExec)) &&
+      !(Flags & RawSectionAlloc))
+    return false;
+
+  // No section format represents writable executable data.
+  if ((Flags & RawSectionWrite) && (Flags & RawSectionExec))
+    return false;
+
+  return true;
+}
+
 /// getModuleFlagsMetadata - Returns the module flags in the provided vector.
 void Module::
 getModuleFlagsMetadata(SmallVectorImpl<ModuleFlagEntry> &Flags) const {

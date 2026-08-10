@@ -25,7 +25,6 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include "llvm/MC/SectionKind.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/Path.h"
@@ -316,8 +315,8 @@ public:
       llvm::Metadata *Ops[] = {
           llvm::MDString::get(*VMContext, SectionName),
           llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(Int32Ty, 8)),
-          llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
-              Int32Ty, llvm::SectionKind::getReadOnly().getValue())),
+          llvm::ConstantAsMetadata::get(
+              llvm::ConstantInt::get(Int32Ty, llvm::Module::RawSectionAlloc)),
           llvm::MDString::get(*VMContext,
                               StringRef(SerializedAST.data(), Size))};
       RawSections->addOperand(llvm::MDTuple::get(*VMContext, Ops));

@@ -3,5 +3,5 @@
 
 ; CHECK: __clangast        PROGBITS  {{[0-9a-f]+}} {{[0-9a-f]+}} {{[0-9a-f]+}} 00   A  0   0  8
 
-!0 = !{!"__clangast", i32 8, i32 4, !"\de\ad\be\ef"}
+!0 = !{!"__clangast", i32 8, i32 1, !"\de\ad\be\ef"}
 !llvm.raw.sections = !{!0}

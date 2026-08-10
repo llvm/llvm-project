@@ -9631,21 +9631,48 @@ binary data into named sections of the output object file. A
 following fields:
 
 ```
-!0 = !{!"section_name", i32 alignment, i32 section_kind, !"raw data"}
+!0 = !{!"section_name", i32 alignment, i32 flags, !"raw data"}
 ```
 
 - **section_name**: The name of the output section.
 - **alignment**: The byte alignment of the section data.
-- **section_kind**: An integer value corresponding to the `SectionKind` type
-  declared in the `<include/llvm/MC/SectionKind.h>` header file. This field
-  specifies the nature of the section (e.g. read-only, data, metadata). Each
-  target maps this to format-appropriate section flags.
+- **flags**: A bitmask describing the properties of the section. Each target
+  maps this onto format-appropriate section flags. The supported bits are
+  listed below.
 - **raw data**: The binary contents of the section.
+
+```{list-table}
+:header-rows: 1
+
+* - Value
+  - Name
+  - Description
+
+* - `0x1`
+  - Alloc
+  - The section occupies memory at load time.
+
+* - `0x2`
+  - Write
+  - The section is writable. Requires `Alloc`.
+
+* - `0x4`
+  - Exec
+  - The section is executable. Requires `Alloc`.
+
+* - `0x8`
+  - Exclude
+  - The section is dropped from the final link. Must not be combined with any
+    other bit.
+```
+
+A flags value of `0` describes a section that is present in the object file
+but is not loaded into memory. `Write` and `Exec` must not be combined.
 
 Example:
 ```
 !llvm.raw.sections = !{!0}
-!0 = !{!"__mydata", i32 8, i32 4, !"\DE\AD\BE\EF"}
+!0 = !{!"__mydata", i32 8, i32 1, !"\DE\AD\BE\EF"}
 ```
 
 Each of the nodes inside a `!llvm.raw.sections` metadata node gets lowered to

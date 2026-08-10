@@ -3,5 +3,5 @@
 
 ; CHECK: Name: __clangast
 
-!0 = !{!"__clangast", i32 8, i32 4, !"\de\ad\be\ef"}
+!0 = !{!"__clangast", i32 8, i32 1, !"\de\ad\be\ef"}
 !llvm.raw.sections = !{!0}
