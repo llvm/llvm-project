@@ -3191,17 +3191,10 @@ define amdgpu_ps float @v_fshr_i32_svs(i32 inreg %lhs, i32 %rhs, i32 inreg %amt)
 ; GFX10-NEXT:    v_alignbit_b32 v0, s0, v0, s1
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
-; GFX11-TRUE16-LABEL: v_fshr_i32_svs:
-; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, s1
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_alignbit_b32 v0, s0, v0, v1.l
-; GFX11-TRUE16-NEXT:    ; return to shader part epilog
-;
-; GFX11-FAKE16-LABEL: v_fshr_i32_svs:
-; GFX11-FAKE16:       ; %bb.0:
-; GFX11-FAKE16-NEXT:    v_alignbit_b32 v0, s0, v0, s1
-; GFX11-FAKE16-NEXT:    ; return to shader part epilog
+; GFX11-LABEL: v_fshr_i32_svs:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    v_alignbit_b32 v0, s0, v0, s1
+; GFX11-NEXT:    ; return to shader part epilog
   %result = call i32 @llvm.fshr.i32(i32 %lhs, i32 %rhs, i32 %amt)
   %cast.result = bitcast i32 %result to float
   ret float %cast.result
