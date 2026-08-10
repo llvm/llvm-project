@@ -122,7 +122,7 @@ mlir::ModRefResult CIRBasicAliasAnalysis::getModRef(mlir::Operation *op,
       }
     }
 
-    // If the affected location doesn't alias wuth the query location,
+    // If the affected location doesn't alias with the query location,
     // ignore this effect.
     if (aliasResult.isNo()) {
       LDBG() << "No alias with affected location";
