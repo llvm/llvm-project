@@ -2114,6 +2114,8 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
    List AMDGPU intrinsics.
 
+.. _amdgpu-av-load-store:
+
 '``llvm.amdgcn.av``' Intrinsics
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -20421,7 +20423,7 @@ after the source language arguments in the following order:
 
 1.  Work-Item ID (1 VGPR)
 
-    The X, Y and Z work-item ID are packed into a single VGRP with the following
+    The X, Y and Z work-item ID are packed into a single VGPR with the following
     layout. Only fields actually used by the function are set. The other bits
     are undefined.
 
