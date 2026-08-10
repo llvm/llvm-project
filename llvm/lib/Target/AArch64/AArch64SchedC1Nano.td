@@ -692,7 +692,14 @@ def : InstRW<[C1NanoWrite_1c_1LdSt_2rc], (instrs ST2GPreIndex, ST2GPostIndex,
 // -----------------------------------------------------------------------------
 
 // FP conditional compare
-def : InstRW<[C1NanoWrite_3c_2VALU_1rc], (instregex "FCCMP")>;
+def : InstRW<[C1NanoStreamingSchedWrite<C1NanoWrite_4c_1CMEVX0ALU,
+                                C1NanoWrite_3c_2VALU_1rc>],
+             (instregex "FCCMP")>;
+
+// FP compare
+def : InstRW<[C1NanoStreamingSchedWrite<C1NanoWrite_4c_1CMEVX0ALU,
+                                C1NanoWrite_3c_2VALU_1rc>],
+             (instregex "FCMP")>;
 
 // FP divide, H-form
 def : InstRW<[C1NanoWrite_8c_1VMC_5rc_4], (instrs FDIVHrr)>;
@@ -1123,6 +1130,11 @@ def : InstRW<[C1NanoStreamingSchedWrite<C1NanoWrite_4c_1CMEVXALU,
                                         C1NanoWrite_3c_1VMAC>],
              (instregex "^FML(A|S)v")>;
 
+// ASIMD FP convert between scalar floating-point formats
+def : InstRW<[C1NanoStreamingSchedWrite<C1NanoWrite_12c_1CMEPERMS_1CMEVXALU_1CMEVX0ALU_2rc,
+                                        C1NanoWrite_4c_1VALU>],
+             (instrs FCVTDSr, FCVTHSr, FCVTSDr, FCVTHDr, FCVTSHr, FCVTDHr)>;
+
 // ASIMD FP divide, D-form, F16
 def : InstRW<[C1NanoStreamingSchedWrite<C1NanoWrite_10c_1CMEMC_10rc,
                                         C1NanoWrite_8c_1VMC_5rc_2>],
@@ -1184,6 +1196,12 @@ def : InstRW<[C1NanoStreamingSchedWrite<C1NanoWrite_4c_1CMEVXMUL,
 // ASIMD FP multiply accumulate long
 def : InstRW<[C1NanoWrite_4c_1VMAC],
              (instregex "FML[AS]L2?(v|lane)")>;
+
+// ASIMD FP multiply-negate (scalar)
+def : InstRW<[C1NanoStreamingSchedWrite<C1NanoWrite_4c_1CMEVXALU_2rc,
+                                        C1NanoWrite_4c_1VMAC>],
+             (instrs FNMULHrr, FNMULSrr, FNMULDrr)>;
+
 
 // ASIMD BFloat16 (BF16) instructions
 // -----------------------------------------------------------------------------
