@@ -32,12 +32,11 @@ void test_lwg4196() {
     void operator()(pointer) const {}
   };
 
-  long l = 0;
-  std::unique_ptr<const int, Deleter> p(&l);
+  std::unique_ptr<const int, Deleter> p;
 
   // expected-error-re@*:* {{static assertion failed due to requirement {{.+}}The returned reference must not bind to a temporary object.}}
 #if TEST_STD_VER >= 26
   // expected-error@*:* {{returning reference to local temporary object}}
 #endif
-  [[maybe_unused]] int i = *p;
+  (void)*p;
 }
