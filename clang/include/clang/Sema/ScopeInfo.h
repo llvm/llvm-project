@@ -938,6 +938,11 @@ public:
   ///  if the enclosing full-expression is instantiation dependent).
   llvm::SmallPtrSet<Expr *, 8> NonODRUsedCapturingExprs;
 
+  /// Contains the subset of NonODRUsedCapturingExprs whose use is discarded.
+  /// These expressions remain non-odr-uses even if their full-expression is
+  /// instantiation-dependent.
+  llvm::SmallPtrSet<Expr *, 4> DiscardedValueCapturingExprs;
+
   /// A map of explicit capture indices to their introducer source ranges.
   llvm::DenseMap<unsigned, SourceRange> ExplicitCaptureRanges;
 
@@ -1045,17 +1050,26 @@ public:
   ///  seemingly harmless change elsewhere in Sema could cause us to start or stop
   ///  building such a node. So we need a rule that anyone can implement and get
   ///  exactly the same result".
-  void markVariableExprAsNonODRUsed(Expr *CapturingVarExpr) {
+  void markVariableExprAsNonODRUsed(Expr *CapturingVarExpr,
+                                    NonOdrUseReason NOUR) {
     assert(isa<DeclRefExpr>(CapturingVarExpr) ||
            isa<MemberExpr>(CapturingVarExpr) ||
            isa<FunctionParmPackExpr>(CapturingVarExpr));
     NonODRUsedCapturingExprs.insert(CapturingVarExpr);
+    if (NOUR == NOUR_Discarded)
+      DiscardedValueCapturingExprs.insert(CapturingVarExpr);
   }
   bool isVariableExprMarkedAsNonODRUsed(Expr *CapturingVarExpr) const {
     assert(isa<DeclRefExpr>(CapturingVarExpr) ||
            isa<MemberExpr>(CapturingVarExpr) ||
            isa<FunctionParmPackExpr>(CapturingVarExpr));
     return NonODRUsedCapturingExprs.count(CapturingVarExpr);
+  }
+  bool isVariableExprMarkedAsDiscarded(Expr *CapturingVarExpr) const {
+    assert(isa<DeclRefExpr>(CapturingVarExpr) ||
+           isa<MemberExpr>(CapturingVarExpr) ||
+           isa<FunctionParmPackExpr>(CapturingVarExpr));
+    return DiscardedValueCapturingExprs.count(CapturingVarExpr);
   }
   void removePotentialCapture(Expr *E) {
     llvm::erase(PotentiallyCapturingExprs, E);
@@ -1070,7 +1084,7 @@ public:
 
   bool hasPotentialCaptures() const {
     return getNumPotentialVariableCaptures() ||
-                                  PotentialThisCaptureLocation.isValid();
+           PotentialThisCaptureLocation.isValid();
   }
 
   void visitPotentialCaptures(

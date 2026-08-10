@@ -7183,6 +7183,7 @@ public:
                                          unsigned CapturingScopeIndex);
 
   ExprResult CheckLValueToRValueConversionOperand(Expr *E);
+  ExprResult CheckDiscardedValueExpression(Expr *E);
   void CleanupVarDeclMarking();
 
   /// Try to capture the given variable.
