@@ -1,4 +1,4 @@
-; RUN: not --crash llc -O3 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 < %s 2>&1 | FileCheck %s
+; RUN: not --crash llc -O3 -mtriple=amdgpu9.42-amd-amdhsa < %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; NOTE: SIRegisterInfo::eliminateFrameIndex currently asserts on a
