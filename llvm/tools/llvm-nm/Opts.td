@@ -18,7 +18,7 @@ def debug_syms : FF<"debug-syms", "Show all symbols, even debugger only">;
 def defined_only : FF<"defined-only", "Show only defined symbols">;
 defm demangle : BB<"demangle", "Demangle C++ symbol names", "Don't demangle symbol names">;
 def dynamic : FF<"dynamic", "Display dynamic symbols instead of normal symbols">;
-def export_symbols : FF<"export-symbols", "Export symbol list for all inputs">;
+def export_symbols : FF<"export-symbols", "Print the exportable symbols list for all inputs, currently only implemented for ELF and XCOFF">;
 def extern_only : FF<"extern-only", "Show only external symbols">;
 defm format : Eq<"format", "Specify output format: bsd (default), posix, sysv, darwin, just-symbols">, MetaVarName<"<format>">;
 def help : FF<"help", "Display this help">;
