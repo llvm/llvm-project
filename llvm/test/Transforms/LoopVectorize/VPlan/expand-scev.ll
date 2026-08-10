@@ -684,6 +684,48 @@ exit:
   ret void
 }
 
+define void @addrec_nonscevable(ptr %dst) {
+; CHECK-LABEL: VPlan for loop in 'addrec_nonscevable'
+; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
+; CHECK-NEXT:  Live-in ir<%2> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<outer>:
+; CHECK-NEXT:    IR   %fp.phi = phi float [ 0.000000e+00, %entry ], [ %fp.next, %outer.latch ]
+; CHECK-NEXT:    IR   %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
+; CHECK-NEXT:    IR   %0 = add i64 %outer.iv, 4
+; CHECK-NEXT:    IR   %1 = udiv i64 %0, 3
+; CHECK-NEXT:    IR   %2 = add nuw nsw i64 %1, 1
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%2>, ir<4>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
+;
+entry:
+  br label %outer
+
+outer:
+  %fp.phi = phi float [ 0.0, %entry ], [ %fp.next, %outer.latch ]
+  %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
+  br label %inner
+
+inner:
+  %iv = phi i64 [ 0, %outer ], [ %iv.next, %inner ]
+  %gep = getelementptr i8, ptr %dst, i64 %iv
+  store float %fp.phi, ptr %gep
+  %iv.next = add nuw i64 %iv, 3
+  %bound = add i64 %outer.iv, 5
+  %ec.inner = icmp ult i64 %iv.next, %bound
+  br i1 %ec.inner, label %inner, label %outer.latch
+
+outer.latch:
+  %fp.next = fadd float %fp.phi, 1.0
+  %outer.iv.next = add nuw i64 %outer.iv, 1
+  %ec.outer = icmp ult i64 %outer.iv.next, 100
+  br i1 %ec.outer, label %outer, label %exit
+
+exit:
+  ret void
+}
+
 !0 = distinct !{!0, !1, !2}
 !1 = !{!"llvm.loop.vectorize.scalable.enable"}
 !2 = !{!"llvm.loop.vectorize.width", i32 4}
