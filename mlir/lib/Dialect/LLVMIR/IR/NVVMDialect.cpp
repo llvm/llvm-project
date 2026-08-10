@@ -3697,8 +3697,8 @@ mlir::NVVM::IDArgPair AsyncStoreGlobalOp::getIntrinsicIDAndArgs(
                   : IDArgPair(llvm::Intrinsic::nvvm_st_async_sys,
                               {addr, value, isMultimem});
   } else if (scope == MemScopeKind::GPU) {
-    return NVVM::IDArgPair(llvm::Intrinsic::nvvm_st_async_gpu,
-                           {addr, value, isMultimem});
+    return IDArgPair(llvm::Intrinsic::nvvm_st_async_gpu,
+                     {addr, value, isMultimem});
   }
   llvm_unreachable("unsupported scope for AsyncStoreGlobalOp");
 }
