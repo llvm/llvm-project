@@ -1900,6 +1900,14 @@ bool IRTranslator::translateVectorDeinterleave2Intrinsic(
   ArrayRef<Register> Res = getOrCreateVRegs(CI);
 
   LLT ResTy = MRI->getType(Res[0]);
+  if (ResTy.isScalar()) {
+    MIRBuilder.buildExtractVectorElementConstant(Res[0], Op, 0);
+    MIRBuilder.buildExtractVectorElementConstant(Res[1], Op, 1);
+
+    return true;
+  }
+
+  assert(ResTy.isVector() && "Expected vector result type");
   MIRBuilder.buildShuffleVector(Res[0], Op, Undef,
                                 createStrideMask(0, 2, ResTy.getNumElements()));
   MIRBuilder.buildShuffleVector(Res[1], Op, Undef,
