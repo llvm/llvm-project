@@ -2720,7 +2720,8 @@ void DAGTypeLegalizer::SplitVecRes_MLOAD(MaskedLoadSDNode *MLD,
 
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MLD->getPointerInfo(), MMOFlags, LocationSize::beforeOrAfterPointer(),
-      Alignment, MMOMetadata(MLD->getAAInfo(), MLD->getRanges()));
+      Alignment, MMOMetadata(MLD->getAAInfo(), MLD->getRanges(),
+                             MLD->getMemCacheHint()));
 
   Lo = DAG.getMaskedLoad(LoVT, dl, Ch, Ptr, Offset, MaskLo, PassThruLo, LoMemVT,
                          MMO, MLD->getAddressingMode(), ExtType,
@@ -2744,7 +2745,8 @@ void DAGTypeLegalizer::SplitVecRes_MLOAD(MaskedLoadSDNode *MLD,
 
     MMO = DAG.getMachineFunction().getMachineMemOperand(
         MPI, MMOFlags, LocationSize::beforeOrAfterPointer(), Alignment,
-        MMOMetadata(MLD->getAAInfo(), MLD->getRanges()));
+        MMOMetadata(MLD->getAAInfo(), MLD->getRanges(),
+                    MLD->getMemCacheHint()));
 
     Hi = DAG.getMaskedLoad(HiVT, dl, Ch, Ptr, Offset, MaskHi, PassThruHi,
                            HiMemVT, MMO, MLD->getAddressingMode(), ExtType,
@@ -4648,7 +4650,8 @@ SDValue DAGTypeLegalizer::SplitVecOp_MSTORE(MaskedStoreSDNode *N,
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       N->getPointerInfo(), MachineMemOperand::MOStore,
       LocationSize::beforeOrAfterPointer(), Alignment,
-      MMOMetadata(N->getAAInfo(), N->getRanges()));
+      MMOMetadata(N->getAAInfo(), N->getRanges(),
+                  N->getMemCacheHint()));
 
   Lo = DAG.getMaskedStore(Ch, DL, DataLo, Ptr, Offset, MaskLo, LoMemVT, MMO,
                           N->getAddressingMode(), N->isTruncatingStore(),
@@ -4674,7 +4677,8 @@ SDValue DAGTypeLegalizer::SplitVecOp_MSTORE(MaskedStoreSDNode *N,
 
     MMO = DAG.getMachineFunction().getMachineMemOperand(
         MPI, MachineMemOperand::MOStore, LocationSize::beforeOrAfterPointer(),
-        Alignment, MMOMetadata(N->getAAInfo(), N->getRanges()));
+        Alignment, MMOMetadata(N->getAAInfo(), N->getRanges(),
+                               N->getMemCacheHint()));
 
     Hi = DAG.getMaskedStore(Ch, DL, DataHi, Ptr, Offset, MaskHi, HiMemVT, MMO,
                             N->getAddressingMode(), N->isTruncatingStore(),

@@ -5006,10 +5006,12 @@ void SelectionDAGBuilder::visitMaskedStore(const CallInst &I,
   if (I.hasMetadata(LLVMContext::MD_nontemporal))
     MMOFlags |= MachineMemOperand::MONonTemporal;
 
+  const MDNode *MemCacheHint = getMemCacheHintMetadata(I, /*OperandNo=*/1);
+
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(PtrOperand), MMOFlags,
       LocationSize::upperBound(VT.getStoreSize()), Alignment,
-      I.getAAMetadata());
+      MMOMetadata(I.getAAMetadata(), /*Ranges=*/nullptr, MemCacheHint));
 
   const auto &TLI = DAG.getTargetLoweringInfo();
 
@@ -5153,6 +5155,7 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
   EVT VT = Src0.getValueType();
   AAMDNodes AAInfo = I.getAAMetadata();
   const MDNode *Ranges = getRangeMetadata(I);
+  const MDNode *MemCacheHint = getMemCacheHintMetadata(I, /*OperandNo=*/0);
 
   // Do not serialize masked loads of constant memory with anything.
   MemoryLocation ML = MemoryLocation::getAfter(PtrOperand, AAInfo);
@@ -5169,7 +5172,7 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(PtrOperand), MMOFlags,
       LocationSize::upperBound(VT.getStoreSize()), Alignment,
-      MMOMetadata(AAInfo, Ranges));
+      MMOMetadata(AAInfo, Ranges, MemCacheHint));
 
   const auto &TLI = DAG.getTargetLoweringInfo();
 

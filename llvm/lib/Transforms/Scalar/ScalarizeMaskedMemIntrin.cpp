@@ -186,6 +186,8 @@ static void scalarizeMaskedLoad(const DataLayout &DL, bool HasBranchDivergence,
         continue;
       Value *Gep = Builder.CreateConstInBoundsGEP1_32(EltTy, Ptr, Idx);
       LoadInst *Load = Builder.CreateAlignedLoad(EltTy, Gep, AdjustedAlignVal);
+      Load->setMetadata(LLVMContext::MD_mem_cache_hint,
+                        CI->getMetadata(LLVMContext::MD_mem_cache_hint));
       VResult = Builder.CreateInsertElement(VResult, Load, Idx);
     }
     CI->replaceAllUsesWith(VResult);
@@ -267,6 +269,8 @@ static void scalarizeMaskedLoad(const DataLayout &DL, bool HasBranchDivergence,
     Builder.SetInsertPoint(CondBlock->getTerminator());
     Value *Gep = Builder.CreateConstInBoundsGEP1_32(EltTy, Ptr, Idx);
     LoadInst *Load = Builder.CreateAlignedLoad(EltTy, Gep, AdjustedAlignVal);
+    Load->setMetadata(LLVMContext::MD_mem_cache_hint,
+                      CI->getMetadata(LLVMContext::MD_mem_cache_hint));
     Value *NewVResult = Builder.CreateInsertElement(VResult, Load, Idx);
 
     // Create "else" block, fill it in the next iteration
@@ -352,7 +356,10 @@ static void scalarizeMaskedStore(const DataLayout &DL, bool HasBranchDivergence,
         continue;
       Value *OneElt = Builder.CreateExtractElement(Src, Idx);
       Value *Gep = Builder.CreateConstInBoundsGEP1_32(EltTy, Ptr, Idx);
-      Builder.CreateAlignedStore(OneElt, Gep, AdjustedAlignVal);
+      StoreInst *Store =
+          Builder.CreateAlignedStore(OneElt, Gep, AdjustedAlignVal);
+      Store->setMetadata(LLVMContext::MD_mem_cache_hint,
+                         CI->getMetadata(LLVMContext::MD_mem_cache_hint));
     }
     CI->eraseFromParent();
     return;
@@ -425,7 +432,10 @@ static void scalarizeMaskedStore(const DataLayout &DL, bool HasBranchDivergence,
     Builder.SetInsertPoint(CondBlock->getTerminator());
     Value *OneElt = Builder.CreateExtractElement(Src, Idx);
     Value *Gep = Builder.CreateConstInBoundsGEP1_32(EltTy, Ptr, Idx);
-    Builder.CreateAlignedStore(OneElt, Gep, AdjustedAlignVal);
+    StoreInst *Store =
+        Builder.CreateAlignedStore(OneElt, Gep, AdjustedAlignVal);
+    Store->setMetadata(LLVMContext::MD_mem_cache_hint,
+                       CI->getMetadata(LLVMContext::MD_mem_cache_hint));
 
     // Create "else" block, fill it in the next iteration
     BasicBlock *NewIfBlock = ThenTerm->getSuccessor(0);
