@@ -35,31 +35,29 @@ test()
     test(std::complex<T>(-1, -2), std::complex<T>(-1, -2));
 }
 
-void test_edges()
-{
-    const unsigned N = sizeof(testcases) / sizeof(testcases[0]);
-    for (unsigned i = 0; i < N; ++i)
-    {
-        std::complex<double> r = proj(testcases[i]);
-        switch (classify(testcases[i]))
-        {
-        case zero:
-        case non_zero:
-            assert(r == testcases[i]);
-            assert(std::signbit(real(r)) == std::signbit(real(testcases[i])));
-            assert(std::signbit(imag(r)) == std::signbit(imag(testcases[i])));
-            break;
-        case inf:
-            assert(std::isinf(real(r)) && real(r) > 0);
-            assert(imag(r) == 0);
-            assert(std::signbit(imag(r)) == std::signbit(imag(testcases[i])));
-            break;
-        case NaN:
-        case non_zero_nan:
-            assert(classify(r) == classify(testcases[i]));
-            break;
-        }
+template <class T>
+void test_edges() {
+  const unsigned N = sizeof(testcases<T>) / sizeof(testcases<T>[0]);
+  for (unsigned i = 0; i < N; ++i) {
+    std::complex<T> r = proj(testcases<T>[i]);
+    switch (classify(testcases<T>[i])) {
+    case zero:
+    case non_zero:
+      assert(r == testcases<T>[i]);
+      assert(std::signbit(real(r)) == std::signbit(real(testcases<T>[i])));
+      assert(std::signbit(imag(r)) == std::signbit(imag(testcases<T>[i])));
+      break;
+    case inf:
+      assert(std::isinf(real(r)) && real(r) > 0);
+      assert(imag(r) == 0);
+      assert(std::signbit(imag(r)) == std::signbit(imag(testcases<T>[i])));
+      break;
+    case NaN:
+    case non_zero_nan:
+      assert(classify(r) == classify(testcases<T>[i]));
+      break;
     }
+  }
 }
 
 int main(int, char**)
@@ -67,7 +65,9 @@ int main(int, char**)
     test<float>();
     test<double>();
     test<long double>();
-    test_edges();
+    test_edges<float>();
+    test_edges<double>();
+    test_edges<long double>();
 
-  return 0;
+    return 0;
 }
