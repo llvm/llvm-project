@@ -509,11 +509,11 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
     }
   }
 
-  cir::CoroEndOp::create(
-      builder, openCurlyLoc,
-      builder.getNullPtr(builder.getVoidPtrTy(), openCurlyLoc),
-      builder.getBool(false, openCurlyLoc),
-      cir::TokenNoneOp::create(builder, openCurlyLoc));
+  cir::ConstantOp nullHandler =
+      builder.getNullPtr(builder.getVoidPtrTy(), openCurlyLoc);
+  cir::ConstantOp noUnwind = builder.getBool(false, openCurlyLoc);
+  auto tkNone = cir::TokenNoneOp::create(builder, openCurlyLoc);
+  cir::CoroEndOp::create(builder, openCurlyLoc, nullHandler, noUnwind, tkNone);
 
   if (auto *ret = cast_or_null<ReturnStmt>(s.getReturnStmt())) {
     // Since we already emitted the return value above, so we shouldn't
