@@ -892,13 +892,13 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
       return Builder.createNoWrapPtrAdd(Base, Offset, GEPFlags, DL);
     }
 
-    unsigned Opcode =
-        S->getSCEVType() == scAddExpr ? Instruction::Add : Instruction::Mul;
+    bool IsAdd = isa<SCEVAddExpr>(S);
+    unsigned Opcode = IsAdd ? Instruction::Add : Instruction::Mul;
     // Iterate in reverse so that constants are emitted last. For adds, sort
     // non-constant-negative operands last, matching SCEVExpander's LoopCompare,
     // so that they are accumulated into the result rather than starting it.
     SmallVector<const SCEV *, 2> SCEVOps(reverse(NAry->operands()));
-    if (Opcode == Instruction::Add)
+    if (IsAdd)
       stable_sort(SCEVOps, [](const SCEV *L, const SCEV *R) {
         return !L->isNonConstantNegative() && R->isNonConstantNegative();
       });
