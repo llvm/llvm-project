@@ -16369,8 +16369,7 @@ SDValue SITargetLowering::getCanonicalConstantFP(SelectionDAG &DAG,
 
   if (C.isNaN()) {
     if (C.isSignaling()) {
-      // Quiet a signaling NaN by setting the quiet bit, preserving payload.
-      // This matches AMDGPU HW behavior (v_max_f32 sets bit 22, keeps rest).
+      // Quiet a signaling NaN.
       return DAG.getConstantFP(C.makeQuiet(), SL, VT);
     }
 
