@@ -287,10 +287,8 @@ public:
   virtual void iterBindings(Store store, BindingsHandler& f) = 0;
 
   /// The kind of a binding: either \c Direct, a value bound to one specific
-  /// location, or \c Default, a value covering every location of a region
-  /// without its own direct binding. Can't reuse BindingKey::Kind because it is
-  /// a file-local in RegionStore.cpp. Symbolic-ness is tracked by \c BitOffset
-  /// instead of in the enum.
+  /// location, or \c Default, a value covering every location of a region that
+  /// has no direct binding of its own.
   enum class BindingKind { Direct, Default };
 
   class ClusterBindingsHandler {
