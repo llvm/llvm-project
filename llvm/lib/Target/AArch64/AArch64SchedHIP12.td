@@ -21,7 +21,7 @@ def HIP12Model : SchedMachineModel {
 
   list<Predicate> UnsupportedFeatures = !listconcat(SMEUnsupported.F,
                                                     SVE2p1Unsupported.F,
-                                                    [HasSVE2p1, HasSVEB16B16, HasMTE,
+                                                    [HasSVEB16B16, HasMTE,
                                                      HasCPA, HasCSSC, HasMOPS, HasMOPS_GO]);
 }
 
