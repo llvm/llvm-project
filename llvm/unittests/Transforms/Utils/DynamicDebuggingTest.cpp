@@ -302,7 +302,7 @@ TEST(DynamicDebugging, FunctionLinkage) {
 }
 
 TEST(DynamicDebugging, GlobalVariableLinkage) {
-  // Test global vairables get expected linkage and names in the unoptimized and
+  // Test global variables get expected linkage and names in the unoptimized and
   // optimized modules. Each optimized module global should be referenced from
   // the unoptimized version, and ones with internal linkage should be
   // given external aliases to facilitate this.
