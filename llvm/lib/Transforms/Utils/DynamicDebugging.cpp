@@ -150,7 +150,7 @@ llvm::prepareForDynamicDebugging(Module *M, StringRef PromotionSuffix) {
     if (!ShouldPromoteGlobal(GV))
       continue;
 
-    // We need external aliases with a mangled name and hidden visability.
+    // We need external aliases with a mangled name and hidden visibility.
     auto *Alias = GlobalAlias::create(GlobalValue::ExternalLinkage,
                                       GV.getName() + PromotionSuffix, &GV);
     Alias->setVisibility(GlobalValue::HiddenVisibility);

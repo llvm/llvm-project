@@ -288,13 +288,13 @@ TEST(DynamicDebugging, FunctionLinkage) {
   ExpectNotPromoted(GlobalValue::ExternalWeakLinkage,
                     GlobalValue::ProtectedVisibility, __LINE__);
 
-  // Add a comadt group.
+  // Add a comdat group.
   Comdat *Comdat = M->getOrInsertComdat("c");
   Comdat->setSelectionKind(Comdat::Any);
   Function *F = M->getFunction("f");
   ASSERT_TRUE(F);
   F->setComdat(Comdat);
-  // These linkage types should no longer be promtoed.
+  // These linkage types should no longer be promoted.
   ExpectNotPromoted(GlobalValue::InternalLinkage,
                     GlobalValue::DefaultVisibility, __LINE__);
   ExpectNotPromoted(GlobalValue::PrivateLinkage, GlobalValue::DefaultVisibility,
