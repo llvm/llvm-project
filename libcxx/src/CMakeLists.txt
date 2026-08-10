@@ -39,6 +39,7 @@ set(LIBCXX_SOURCES
   ryu/d2fixed.cpp
   ryu/d2s.cpp
   ryu/f2s.cpp
+  stacktrace.cpp
   stdexcept.cpp
   string.cpp
   support/runtime/exception_fallback.ipp
