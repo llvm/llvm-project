@@ -90,7 +90,7 @@ static constexpr unsigned MaxGeometryStreams = 4;
 /// most eight components spread over at most two rows; if any element
 /// covers multiple rows, the two dedicated rows must be adjacent. These rules
 /// do not apply when a ClipDistance or CullDistance SemanticKind is categorized
-/// as an arbitrary value for the signature point.
+/// as an arbitrary value.
 ///
 /// Tessellation Factor: An element denoting a tessellation factor that covers
 /// multiple rows is searched for only in the last column.
