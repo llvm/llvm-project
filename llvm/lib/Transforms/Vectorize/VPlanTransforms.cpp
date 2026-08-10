@@ -6423,6 +6423,18 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
     return std::nullopt;
   };
 
+  // For a multi-use FP argmin/argmax loop handleMultiUseReductions rebuilds the
+  // final index from the stored index's induction, so a stored increment's
+  // offset (e.g. iv-1) must stay in the loop rather than being sunk to the
+  // exit. Disable sinking when such a reduction is present.
+  bool LoopHasMultiUseFPMinMax = any_of(
+      VectorLoopRegion->getEntryBasicBlock()->phis(), [](VPRecipeBase &R) {
+        auto *P = dyn_cast<VPReductionPHIRecipe>(&R);
+        return P && P->hasUsesOutsideReductionChain() &&
+               RecurrenceDescriptor::isFPMinMaxRecurrenceKind(
+                   P->getRecurrenceKind());
+      });
+
   VPValue *HeaderMask = VectorLoopRegion->getHeaderMask();
   for (VPRecipeBase &Phi :
        make_early_inc_range(VectorLoopRegion->getEntryBasicBlock()->phis())) {
@@ -6457,8 +6469,11 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
       continue;
 
     // Check if FindLastExpression is a simple expression of a widened IV. If
-    // so, we can track the underlying IV instead and sink the expression.
-    auto *IVOfExpressionToSink = getExpressionIV(FindLastExpression);
+    // so, we can track the underlying IV instead and sink the expression. For a
+    // multi-use argmin/argmax the offset must stay in the loop (see above), so
+    // skip sinking in that case.
+    auto *IVOfExpressionToSink =
+        LoopHasMultiUseFPMinMax ? nullptr : getExpressionIV(FindLastExpression);
     const SCEV *IVSCEV = vputils::getSCEVExprForVPValue(
         IVOfExpressionToSink ? IVOfExpressionToSink : FindLastExpression, PSE,
         &L);
@@ -6514,6 +6529,15 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
         UseSigned = true;
       else if (AR->hasNoUnsignedWrap())
         UseSigned = false;
+      else if (LoopHasMultiUseFPMinMax &&
+               AR->getNoWrapFlags(SCEV::FlagNW) != SCEV::FlagAnyWrap)
+        // Only no-self-wrap (FlagNW), not nsw/nuw: the recurrence never wraps
+        // back onto its start, which is weaker than signed/unsigned
+        // monotonicity. The chosen signedness is provisional and safe: the
+        // multi-use coupler reduces a canonical non-negative index instead, so
+        // the final result is independent of it. FlagNW is read off the
+        // plan-independent SCEV so scalar and vector VPlans accept alike.
+        UseSigned = true;
       else
         continue;
     }
