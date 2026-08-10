@@ -949,13 +949,27 @@ static int settleAttachStorage(DeviceTy &Device, StateInfoTy &StateInfo,
         return OFFLOAD_FAIL;
 
       // Anything attached to storage within the entry just moved, so it has to
-      // be able to hold a device address too.
+      // be able to hold a device address too. That covers both the attachments
+      // already in place from earlier constructs and the ones this construct is
+      // about to perform, which are not recorded yet.
+      auto IsInsideUpEntry = [&](void *HstPteeBegin) {
+        return reinterpret_cast<uintptr_t>(HstPteeBegin) >=
+                   UpEntry->HstPtrBegin &&
+               reinterpret_cast<uintptr_t>(HstPteeBegin) < UpEntry->HstPtrEnd;
+      };
+
       for (auto &[AttachedPtee, AttachedPtrs] : MappingInfo.AttachedPointers) {
-        if (reinterpret_cast<uintptr_t>(AttachedPtee) < UpEntry->HstPtrBegin ||
-            reinterpret_cast<uintptr_t>(AttachedPtee) >= UpEntry->HstPtrEnd)
+        if (!IsInsideUpEntry(AttachedPtee))
           continue;
         for (void **AttachedPtr : AttachedPtrs)
           ToUpgrade.emplace_back(AttachedPtr, sizeof(void *));
+      }
+
+      for (const auto &Pending : StateInfo.AttachEntries) {
+        if (!IsInsideUpEntry(Pending.PointeeBegin))
+          continue;
+        ToUpgrade.emplace_back(reinterpret_cast<void **>(Pending.PointerBase),
+                               Pending.PointerSize);
       }
     }
   }
