@@ -180,15 +180,73 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   // Regunits already claimed by a hard pin. A later pin overlapping any claimed
-  // unit falls back to soft, so two distinct live values never share a physreg.
-  // Reuse by a single value (e.g. an accumulation chain) is instead absorbed
-  // into the first pin's tie-connected component, making later pins on it
-  // no-ops.
+  // unit may only take the tuple over once the earlier occupant is dead there
+  // (see canTakeOverClaim); otherwise it falls back to soft, so two live values
+  // never share a physreg. Reuse by a single value (e.g. an accumulation chain)
+  // is instead absorbed into the first pin's tie-connected component, making
+  // later pins on it no-ops.
   DenseSet<MCRegUnit> Claimed;
   bool NeedRecomputeLiveIns = false;
   bool AnyHardPin = false;
   unsigned ReqVGPRs =
       0; // highest VGPR a pin needs, +1 (drives the occupancy cap)
+
+  // Whether a new value, defined by `Defs` as (instruction, physical target)
+  // pairs covering `PR`, can take `PR` over from whatever holds it now.
+  //
+  // Clang wraps every store to a pinned variable in its own pin, so
+  // `x = load; x = f(x);` arrives as two pins on one tuple. Refusing the second
+  // would leave the variable's later value wherever the allocator likes, which
+  // defeats the point of pinning it. The takeover is safe exactly when no lane
+  // of PR is touched after the instruction that rewrites it: judge that per
+  // lane, since each half of a tuple can be updated at a different point, and
+  // within one block, so instruction order is a plain index comparison. A lane
+  // may be rewritten by the very instruction that last reads it -- an in-place
+  // update reads its sources before writing its result.
+  auto canTakeOverClaim =
+      [&](MCRegister PR, MachineBasicBlock *MBB,
+          ArrayRef<std::pair<MachineInstr *, MCRegister>> Defs) {
+        DenseMap<MachineInstr *, unsigned> Order;
+        for (MachineInstr &MI : *MBB)
+          Order.insert({&MI, Order.size()});
+
+        DenseMap<MCRegUnit, unsigned> DefAt;
+        for (auto [DefMI, Phys] : Defs) {
+          if (!DefMI || DefMI->getParent() != MBB)
+            return false;
+          for (MCRegUnit U : TRI->regunits(Phys)) {
+            auto [It, New] = DefAt.try_emplace(U, Order[DefMI]);
+            if (!New)
+              It->second = std::min(It->second, Order[DefMI]);
+          }
+        }
+        // A lane the new value never writes would keep the old one alive under
+        // it, with no def to order the accesses against.
+        for (MCRegUnit U : TRI->regunits(PR))
+          if (!DefAt.contains(U))
+            return false;
+
+        for (MachineBasicBlock &B : MF)
+          for (MachineInstr &MI : B)
+            for (const MachineOperand &MO : MI.operands()) {
+              if (MO.isRegMask() && MO.clobbersPhysReg(PR))
+                return false;
+              if (!MO.isReg() || !MO.getReg().isPhysical())
+                continue;
+              for (MCRegUnit U : TRI->regunits(MO.getReg().asMCReg())) {
+                auto It = DefAt.find(U);
+                if (It == DefAt.end())
+                  continue;
+                if (&B != MBB)
+                  return false;
+                unsigned At = Order[&MI];
+                if (At > It->second || (At == It->second && MO.isDef()))
+                  return false;
+              }
+            }
+        return true;
+      };
+
   for (MachineInstr *Pin : Pins) {
     assert(Pin->getNumExplicitOperands() == 3 &&
            "pin pseudo must be (dst, src, regno)");
@@ -410,10 +468,6 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
                   WL.push_back(D.getReg());
           }
       }
-      for (MCRegUnit U : TRI->regunits(PR))
-        if (Ok && Claimed.contains(U))
-          Ok = false;
-
       // Map each element's defining register onto a physical (sub)register of
       // PR. An element either covers its REG_SEQUENCE slot outright, or is a
       // subregister slice of a wider def: a 32-byte load, for instance, is
@@ -484,6 +538,16 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
           if (!Ok)
             break;
         }
+
+      // Each element's def is where its share of the tuple is written, which
+      // is what decides whether an earlier occupant can be displaced.
+      if (Ok && any_of(TRI->regunits(PR),
+                       [&](MCRegUnit U) { return Claimed.contains(U); })) {
+        SmallVector<std::pair<MachineInstr *, MCRegister>, 16> Defs;
+        for (auto [Elem, Phys] : Elems)
+          Defs.emplace_back(MRI.getVRegDef(Elem), Phys);
+        Ok = canTakeOverClaim(PR, PinMBB, Defs);
+      }
 
       if (Ok) {
         // Point each element's def/uses at its physical (sub)register.
@@ -562,6 +626,27 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
       }
     }
 
+    // Conflict with an existing hard pin on overlapping regunits? Checked
+    // before the operand walk below, so an occupied tuple is reported as such
+    // rather than as whatever else the value's shape happens to trip over.
+    if (Hard && any_of(TRI->regunits(PR),
+                       [&](MCRegUnit U) { return Claimed.contains(U); })) {
+      SmallVector<std::pair<MachineInstr *, MCRegister>, 8> Defs;
+      for (Register R : Comp)
+        for (MachineInstr &D : MRI.def_instructions(R)) {
+          if (&D == Pin)
+            continue; // erased below; Dst is written by the component's def
+          for (const MachineOperand &MO : D.defs())
+            if (MO.isReg() && MO.getReg() == R)
+              Defs.emplace_back(
+                  &D, MO.getSubReg() ? TRI->getSubReg(PR, MO.getSubReg()) : PR);
+        }
+      if (!canTakeOverClaim(PR, Pin->getParent(), Defs)) {
+        Hard = false;
+        SoftWhy = "overlaps a live earlier hard pin";
+      }
+    }
+
     // Collect and validate every operand referencing a component register.
     SmallVector<MachineOperand *, 16> ToRewrite;
     if (Hard) {
@@ -623,17 +708,6 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
           MBB = B;
         else if (B != MBB) {
           NeedRecomputeLiveIns = true;
-          break;
-        }
-      }
-    }
-
-    // Conflict with an existing hard pin on overlapping regunits?
-    if (Hard) {
-      for (MCRegUnit U : TRI->regunits(PR)) {
-        if (Claimed.contains(U)) {
-          Hard = false;
-          SoftWhy = "overlaps an earlier hard pin";
           break;
         }
       }
