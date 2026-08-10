@@ -1014,6 +1014,17 @@ void ExprEngine::VisitPseudoObjectExpr(const PseudoObjectExpr *PE,
   Dst.insert(Engine.makeNodeWithBinding(Pred, PE, V));
 }
 
+void ExprEngine::VisitObjCIndirectCopyRestoreClass(
+    const ObjCIndirectCopyRestoreExpr *OIE, ExplodedNode *Pred,
+    ExplodedNodeSet &Dst) {
+  // ObjCIndirectCopyRestoreExpr implies passing a temporary for
+  // correctness of lifetime management.  Due to limited analysis
+  // of ARC, this is implemented as direct arg passing.
+  const Expr *E = OIE->getSubExpr();
+  SVal V = Pred->getState()->getSVal(E, Pred->getStackFrame());
+  Dst.insert(Engine.makeNodeWithBinding(Pred, OIE, V));
+}
+
 void ExprEngine::VisitIncrementDecrementOperator(const UnaryOperator* U,
                                                  ExplodedNode *Pred,
                                                  ExplodedNodeSet &Dst) {

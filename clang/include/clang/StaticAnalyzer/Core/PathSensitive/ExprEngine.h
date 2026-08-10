@@ -628,6 +628,10 @@ public:
   void VisitPseudoObjectExpr(const PseudoObjectExpr *PE, ExplodedNode *Pred,
                              ExplodedNodeSet &Dst);
 
+  void VisitObjCIndirectCopyRestoreClass(const ObjCIndirectCopyRestoreExpr *OIE,
+                                         ExplodedNode *Pred,
+                                         ExplodedNodeSet &Dst);
+
   /// Handle ++ and -- (both pre- and post-increment).
   void VisitIncrementDecrementOperator(const UnaryOperator* U,
                                        ExplodedNode *Pred,

@@ -2308,17 +2308,11 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       VisitPseudoObjectExpr(cast<PseudoObjectExpr>(S), Pred, Dst);
       break;
 
-    case Expr::ObjCIndirectCopyRestoreExprClass: {
-      // ObjCIndirectCopyRestoreExpr implies passing a temporary for
-      // correctness of lifetime management.  Due to limited analysis
-      // of ARC, this is implemented as direct arg passing.
-      const auto *OIE = cast<ObjCIndirectCopyRestoreExpr>(S);
-      const Expr *E = OIE->getSubExpr();
-      SVal V = Pred->getState()->getSVal(E, Pred->getStackFrame());
-      Dst.insert(Engine.makeNodeWithBinding(Pred, OIE, V));
+    case Expr::ObjCIndirectCopyRestoreExprClass:
+      VisitObjCIndirectCopyRestoreClass(cast<ObjCIndirectCopyRestoreExpr>(S),
+                                        Pred, Dst);
       break;
     }
-  }
 }
 
 bool ExprEngine::replayWithoutInlining(ExplodedNode *N,
