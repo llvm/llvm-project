@@ -115,10 +115,10 @@ jobs:
           ref="$GITHUB_SHA"
         fi
 
-        if [ "$RUNNER_OS" = "Windows" ] && grep 'rc' <<< $release_version; then
+        if [ "$RUNNER_OS" = "Windows" ] && grep -q 'rc' <<< "$release_version"; then
           # The Wix installer generator does not support strings in the version number,
           # so we need to fixup the version number for release candidates.
-          # For Example: 23.1.0-rc2 will be come 23.0.0.2
+          # For Example: 23.1.0-rc2 will become 23.0.0.2
           release_version="$LLVM_VERSION_MAJOR.0.0.$(cut -d c -f2 <<< $release_version)"
         fi
 
