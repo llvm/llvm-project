@@ -13,6 +13,10 @@
 
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
+#include "clang/Basic/DiagnosticFrontend.h"
+#include "llvm/Frontend/Offloading/OffloadWrapper.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <cassert>
 
 using namespace clang;
@@ -83,4 +87,20 @@ void CodeGenModule::EmitSYCLKernelCaller(const FunctionDecl *KernelEntryPointFn,
   setDSOLocal(Fn);
   SetLLVMFunctionAttributesForDefinition(cast<Decl>(OutlinedFnDecl), Fn);
   CGF.FinishFunction();
+}
+
+void CodeGenModule::embedSYCLTargetBinary() {
+  StringRef FileName = getCodeGenOpts().OffloadBinaryToEmbedFile;
+  auto BufferOrErr = getFileSystem()->getBufferForFile(FileName);
+  if (std::error_code EC = BufferOrErr.getError()) {
+    getDiags().Report(diag::err_cannot_open_file) << FileName << EC.message();
+    return;
+  }
+  std::unique_ptr<llvm::MemoryBuffer> Buffer = std::move(BufferOrErr.get());
+  if (llvm::Error Err = llvm::offloading::wrapSYCLBinaries(
+          getModule(),
+          ArrayRef<char>(Buffer->getBufferStart(), Buffer->getBufferSize()),
+          llvm::offloading::SYCLJITOptions(), /*IsFinalizedImage=*/true))
+    getDiags().Report(diag::err_fe_error_backend)
+        << llvm::toString(std::move(Err));
 }

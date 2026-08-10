@@ -1182,6 +1182,10 @@ void CodeGenModule::Release() {
   });
   EmitCtorList(GlobalCtors, "llvm.global_ctors");
   EmitCtorList(GlobalDtors, "llvm.global_dtors");
+  // The SYCL image registration functions are added to the constructor and
+  // destructor lists which merge into llvm.global_ctors and llvm.global_dtors.
+  if (LangOpts.SYCLIsHost && !CodeGenOpts.OffloadBinaryToEmbedFile.empty())
+    embedSYCLTargetBinary();
   EmitGlobalAnnotations();
   EmitStaticExternCAliases();
   checkAliases();

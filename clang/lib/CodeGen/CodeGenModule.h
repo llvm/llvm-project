@@ -2179,6 +2179,11 @@ private:
   /// by clang-sycl-linker during device-code splitting.
   void addSYCLModuleIdAttr(llvm::Function *Fn);
 
+  /// Embed the finalized SYCL device image named by -foffload-include-binary
+  /// into the host module and emit the registration constructors the SYCL
+  /// runtime expects.
+  void embedSYCLTargetBinary();
+
   /// Determine whether the definition must be emitted; if this returns \c
   /// false, the definition can be emitted lazily if it's used.
   bool MustBeEmitted(const ValueDecl *D);

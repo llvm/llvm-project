@@ -635,8 +635,9 @@ void createRegisterFatbinFunction(Module &M, GlobalVariable *FatbinDesc,
 /// SYCLWrapper helper class that creates all LLVM IRs wrapping given images.
 class SYCLWrapper {
 public:
-  SYCLWrapper(Module &M, const SYCLJITOptions &Options)
-      : M(M), C(M.getContext()), Options(Options) {}
+  SYCLWrapper(Module &M, const SYCLJITOptions &Options, bool IsFinalizedImage)
+      : M(M), C(M.getContext()), Options(Options),
+        IsFinalizedImage(IsFinalizedImage) {}
 
   /// Embeds \p Buffer (a raw OffloadBinary) as a global constant and returns
   /// a pair of (Start, Size), where Start points to the beginning of the
@@ -647,7 +648,10 @@ public:
         M, Arr->getType(), /*isConstant=*/true, GlobalValue::InternalLinkage,
         Arr, ".sycl_offloading.binary");
     BinaryGV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-    BinaryGV->setSection(".llvm.offloading");
+    // The linker wrapper scans ".llvm.offloading" for device code to link, so
+    // an already finalized image must go elsewhere to avoid being linked again.
+    BinaryGV->setSection(IsFinalizedImage ? ".sycl_fatbin"
+                                          : ".llvm.offloading");
 
     IntegerType *Int64Ty = Type::getInt64Ty(C);
     Constant *Zero = ConstantInt::get(Int64Ty, 0);
@@ -705,6 +709,7 @@ private:
   Module &M;
   LLVMContext &C;
   SYCLJITOptions Options;
+  bool IsFinalizedImage;
 }; // end of SYCLWrapper
 
 } // namespace
@@ -749,8 +754,9 @@ Error offloading::wrapHIPBinary(Module &M, ArrayRef<char> Image,
 }
 
 Error llvm::offloading::wrapSYCLBinaries(llvm::Module &M, ArrayRef<char> Buffer,
-                                         SYCLJITOptions Options) {
-  SYCLWrapper W(M, Options);
+                                         SYCLJITOptions Options,
+                                         bool IsFinalizedImage) {
+  SYCLWrapper W(M, Options, IsFinalizedImage);
   auto [Start, Size] = W.embedBinary(Buffer);
   W.createRegisterFatbinFunction(Start, Size);
   W.createUnregisterFunction(Start, Size);
