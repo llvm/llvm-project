@@ -31,8 +31,6 @@ constexpr size_t L0DefaultAlignment = 0;
 constexpr size_t L0StagingBufferSize = (1 << 14);
 /// Default staging buffer count.
 constexpr size_t L0StagingBufferCount = 64;
-/// Maximum memory fill pattern size supported by the Offload API.
-constexpr size_t L0MaxMemFillPatternSize = 1024;
 /// USM allocation threshold where preallocation does not pay off (128MB).
 constexpr size_t L0UsmPreAllocThreshold = (128 << 20);
 /// Host USM allocation threshold where preallocation does not pay off (8MB).

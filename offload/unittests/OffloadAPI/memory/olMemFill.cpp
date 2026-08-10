@@ -210,15 +210,6 @@ TEST_P(olMemFillTest, InvalidPatternSizeLargerThanFillSize) {
   olMemFree(Alloc);
 }
 
-TEST(olMemFillValidationTest, InvalidPatternSizeTooLarge) {
-  constexpr size_t Size = 1025;
-  std::array<unsigned char, Size> Alloc{};
-  std::array<unsigned char, Size> Pattern{};
-  ASSERT_ERROR(OL_ERRC_INVALID_SIZE,
-               olMemFill(nullptr, Alloc.data(), Pattern.size(), Pattern.data(),
-                         Alloc.size()));
-}
-
 // Even though L0, CUDA and HSA do not support non-power-of-two patterns,
 // plugins are currently expected to handle arbitrary pattern sizes.
 // The following tests are intended to cover the fallback paths

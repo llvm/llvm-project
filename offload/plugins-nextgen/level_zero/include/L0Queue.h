@@ -20,7 +20,6 @@
 #include <tuple>
 
 #include "L0CmdListManager.h"
-#include "L0Memory.h"
 #include "L0Options.h"
 
 namespace llvm::omp::target::plugin {
@@ -37,8 +36,6 @@ protected:
   L0CmdListManagerTy *CmdList = nullptr;
   /// Whether the queue is in-order or out-of-order.
   bool CreateQueueInOrder;
-  /// Host buffers that remain valid until this queue completes.
-  StagingBufferTy StagingBuffer;
 
 public:
   L0QueueTy(L0DeviceTy &Device, bool IsInorder = true)
@@ -50,8 +47,8 @@ public:
 
   Error init();
   Error deinit();
-  Error synchronize();
-  Expected<bool> hasPendingWork();
+  Error synchronize() { return synchronizeImpl(); }
+  Expected<bool> hasPendingWork() { return hasPendingWorkImpl(); }
 
   Error memoryCopy(void *Dst, const void *Src, size_t Size) {
     if (Size == 0)

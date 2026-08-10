@@ -211,7 +211,6 @@ def olMemFill : Function {
     "Filling with patterns of a different size than 1, 2 or 4 bytes may be less performant",
     "The destination pointer and queue must be associated with the same device",
     "The fill size must be a multiple of the pattern size",
-    "The pattern size must not exceed 1024 bytes",
   ];
   let params = [
       Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN_OPTIONAL>,
@@ -221,10 +220,7 @@ def olMemFill : Function {
       Param<"size_t", "FillSize", "number of bytes to fill", PARAM_IN>,
   ];
   let returns = [
-    Return<"OL_ERRC_INVALID_SIZE", [
-      "`FillSize % PatternSize != 0`",
-      "`PatternSize > 1024`",
-    ]>
+    Return<"OL_ERRC_INVALID_SIZE", ["`FillSize % PatternSize != 0`"]>
   ];
 }
 

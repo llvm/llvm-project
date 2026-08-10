@@ -18,6 +18,7 @@
 #include "llvm/Support/MathExtras.h"
 
 #include <algorithm>
+#include <vector>
 
 namespace llvm::omp::target::plugin {
 
@@ -28,44 +29,20 @@ Error L0QueueTy::init() {
   if (!CmdListOrErr)
     return CmdListOrErr.takeError();
   CmdList = *CmdListOrErr;
-
-  const auto &Options = Device.getPlugin().getOptions();
-  StagingBuffer.init(
-      Device.getZeContext(),
-      std::max(Options.StagingBufferSize, L0MaxMemFillPatternSize),
-      Options.StagingBufferCount);
   return initImpl();
 }
 
 Error L0QueueTy::deinit() {
-  Error AllErrors = deinitImpl();
+  if (auto Err = deinitImpl())
+    return Err;
   reset();
-
-  if (auto Err = StagingBuffer.clear())
-    AllErrors = joinErrors(std::move(AllErrors), std::move(Err));
 
   if (CmdList)
     if (auto Err = Device.releaseCmdListManager(CmdList))
-      AllErrors = joinErrors(std::move(AllErrors), std::move(Err));
+      return Err;
 
   CmdList = nullptr;
-  return AllErrors;
-}
-
-Error L0QueueTy::synchronize() {
-  if (auto Err = synchronizeImpl())
-    return Err;
-  StagingBuffer.reset();
   return Plugin::success();
-}
-
-Expected<bool> L0QueueTy::hasPendingWork() {
-  auto PendingWorkOrErr = hasPendingWorkImpl();
-  if (!PendingWorkOrErr)
-    return PendingWorkOrErr.takeError();
-  if (!*PendingWorkOrErr)
-    StagingBuffer.reset();
-  return *PendingWorkOrErr;
 }
 
 Error L0QueueTy::dispatchLaunchKernel(ze_kernel_handle_t Kernel,
@@ -86,11 +63,6 @@ Error L0QueueTy::memoryFill(void *Ptr, const void *Pattern, size_t PatternSize,
 
   if (Size == 0 || PatternSize == 0)
     return Plugin::success();
-
-  if (PatternSize > L0MaxMemFillPatternSize)
-    return Plugin::error(
-        ErrorCode::INVALID_SIZE,
-        "memory fill pattern size exceeds the 1024-byte maximum");
 
   if (llvm::isPowerOf2_64(PatternSize) && (Size % PatternSize == 0) &&
       PatternSize <= Device.getMaxMemFillPatternSize()) {
@@ -131,20 +103,24 @@ Error L0QueueTy::memoryFillReplicateImpl(void *Ptr, const void *Pattern,
                                          size_t PatternSize, size_t Size) {
   auto *Dst = static_cast<unsigned char *>(Ptr);
 
-  auto SeedOrErr = StagingBuffer.getNext();
-  if (!SeedOrErr)
-    return SeedOrErr.takeError();
-  auto *Seed = static_cast<unsigned char *>(*SeedOrErr);
-  if (!Seed)
-    return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
-                         "failed to allocate a memory fill staging buffer");
-
-  // Keep the seed pattern-aligned so each subsequent copy preserves it.
-  const size_t SeedLimit = std::min(Size, L0MaxMemFillPatternSize);
+  // Extend small patterns to avoid several inefficient device copies.
+  constexpr size_t MinExtendedSeedSize = 1024;
+  const size_t SeedLimit =
+      std::min(Size, std::max(PatternSize, MinExtendedSeedSize));
   size_t BytesFilled = (SeedLimit / PatternSize) * PatternSize;
-  extendPattern(Seed, BytesFilled, Pattern, PatternSize);
+  std::vector<unsigned char> Seed(BytesFilled);
+  extendPattern(Seed.data(), BytesFilled, Pattern, PatternSize);
 
-  if (auto Err = memoryCopy(Dst, Seed, BytesFilled))
+  const auto TgtType = Device.getMemAllocType(Ptr);
+  if (TgtType == ZE_MEMORY_TYPE_HOST || TgtType == ZE_MEMORY_TYPE_SHARED)
+    if (auto Err = synchronize())
+      return Err;
+
+  if (auto Err = dataSubmit(Dst, Seed.data(), BytesFilled))
+    return Err;
+
+  // Ensure the asynchronous submission no longer references the host seed.
+  if (auto Err = synchronize())
     return Err;
 
   // Clone the seed, doubling each time, until it fills the entire destination.
@@ -280,7 +256,7 @@ Error L0AsyncQueueTy::dataRetrieveImpl(void *HstPtr, const void *TgtPtr,
       static_cast<size_t>(Size) <=
           Device.getPlugin().getOptions().StagingBufferSize &&
       Device.getMemAllocType(HstPtr) != ZE_MEMORY_TYPE_HOST) {
-    auto PtrOrErr = StagingBuffer.getNext();
+    auto PtrOrErr = Device.getStagingBuffer().get(/*IsAsync*/ true);
     if (!PtrOrErr)
       return PtrOrErr.takeError();
     DstPtr = *PtrOrErr;
@@ -311,7 +287,7 @@ Error L0AsyncQueueTy::dataSubmitImpl(void *TgtPtr, const void *HstPtr,
       static_cast<size_t>(Size) <=
           Device.getPlugin().getOptions().StagingBufferSize &&
       Device.getMemAllocType(HstPtr) != ZE_MEMORY_TYPE_HOST) {
-    auto PtrOrErr = StagingBuffer.getNext();
+    auto PtrOrErr = Device.getStagingBuffer().get(/*IsAsync*/ true);
     if (!PtrOrErr)
       return PtrOrErr.takeError();
     SrcPtr = *PtrOrErr;

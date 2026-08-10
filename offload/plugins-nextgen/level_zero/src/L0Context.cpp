@@ -81,4 +81,14 @@ Error L0ContextTy::deinit() {
   return Plugin::success();
 }
 
+StagingBufferTy &L0ContextTy::getStagingBuffer() {
+  auto &TLS = Plugin.getContextTLS(getZeContext());
+  auto &Buffer = TLS.getStagingBuffer();
+  const auto &Options = Plugin.getOptions();
+  if (!Buffer.initialized())
+    Buffer.init(getZeContext(), Options.StagingBufferSize,
+                Options.StagingBufferCount);
+  return Buffer;
+}
+
 } // namespace llvm::omp::target::plugin

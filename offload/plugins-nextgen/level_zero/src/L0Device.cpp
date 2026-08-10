@@ -282,6 +282,7 @@ Error L0DeviceTy::synchronizeImpl(__tgt_async_info &AsyncInfo,
 
   if (ReleaseQueue) {
     releaseQueue(Queue);
+    getStagingBuffer().reset();
     AsyncInfo.Queue = nullptr;
   }
 
@@ -316,6 +317,7 @@ Error L0DeviceTy::queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
 
   if (ReleaseQueue) {
     releaseQueue(Queue);
+    getStagingBuffer().reset();
     AsyncInfo.Queue = nullptr;
   }
 

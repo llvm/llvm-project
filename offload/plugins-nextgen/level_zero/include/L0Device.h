@@ -463,6 +463,8 @@ public:
     return L0Context.getEventPool().releaseEventObject(EventObj);
   }
 
+  StagingBufferTy &getStagingBuffer() { return L0Context.getStagingBuffer(); }
+
   bool supportsLargeMem() const { return L0Context.supportsLargeMem(); }
 
   /// Returns the Queue from an async info object, or creates a new one if
