@@ -4668,17 +4668,19 @@ static bool interp__builtin_ia32_bmac(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static bool
-interp_builtin_ia32_cvt_scalar_to_int(InterpState &S, CodePtr OpPC,
-                                      const CallExpr *E, unsigned BitWidth,
-                                      llvm::RoundingMode RoundingMode) {
+static bool interp_builtin_ia32_cvt_scalar_to_int(InterpState &S, CodePtr OpPC,
+                                                  const CallExpr *E,
+                                                  unsigned BitWidth) {
   Pointer SrcVecPtr = S.Stk.pop<Pointer>();
   Pointer Lane0Ptr = SrcVecPtr.atIndex(0);
   const Floating &FloatElem = Lane0Ptr.deref<Floating>();
 
   llvm::APSInt IntResult(BitWidth, /*isUnsigned=*/false);
   bool IsExact = false;
-  FloatElem.getAPFloat().convertToInteger(IntResult, RoundingMode, &IsExact);
+  // We only allow exact conversions so rounding mode does not matter for cvt*
+  // and cvtt* builtins
+  FloatElem.getAPFloat().convertToInteger(
+      IntResult, llvm::APFloat::rmTowardZero, &IsExact);
   if (!IsExact)
     return false;
 
@@ -4686,9 +4688,9 @@ interp_builtin_ia32_cvt_scalar_to_int(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static bool interp_builtin_ia32_cvt_vector_to_int(
-    InterpState &S, CodePtr OpPC, const CallExpr *E,
-    llvm::RoundingMode RoundingMode, bool zeroPad = false) {
+static bool interp_builtin_ia32_cvt_vector_to_int(InterpState &S, CodePtr OpPC,
+                                                  const CallExpr *E,
+                                                  bool zeroPad = false) {
   Pointer SrcVecPtr = S.Stk.pop<Pointer>();
   const Pointer &Dst = S.Stk.peek<Pointer>();
 
@@ -4698,7 +4700,10 @@ static bool interp_builtin_ia32_cvt_vector_to_int(
     const Floating &FloatElem = SrcVecPtr.atIndex(I).deref<Floating>();
     llvm::APSInt IntResult(32, /*isUnsigned=*/false);
     bool IsExact = false;
-    FloatElem.getAPFloat().convertToInteger(IntResult, RoundingMode, &IsExact);
+    // We only allow exact conversions so rounding mode does not matter for cvt*
+    // and cvtt* builtins
+    FloatElem.getAPFloat().convertToInteger(
+        IntResult, llvm::APFloat::rmTowardZero, &IsExact);
     if (!IsExact)
       return false;
 
@@ -6825,36 +6830,24 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
     return interp__builtin_ia32_vpdp(S, OpPC, Call, true);
   case X86::BI__builtin_ia32_cvtss2si:
   case X86::BI__builtin_ia32_cvtsd2si:
-    return interp_builtin_ia32_cvt_scalar_to_int(
-        S, OpPC, Call, 32, llvm::RoundingMode::NearestTiesToEven);
-  case X86::BI__builtin_ia32_cvtss2si64:
-  case X86::BI__builtin_ia32_cvtsd2si64:
-    return interp_builtin_ia32_cvt_scalar_to_int(
-        S, OpPC, Call, 64, llvm::RoundingMode::NearestTiesToEven);
   case X86::BI__builtin_ia32_cvttss2si:
   case X86::BI__builtin_ia32_cvttsd2si:
-    return interp_builtin_ia32_cvt_scalar_to_int(
-        S, OpPC, Call, 32, llvm::RoundingMode::TowardZero);
+    return interp_builtin_ia32_cvt_scalar_to_int(S, OpPC, Call, 32);
+  case X86::BI__builtin_ia32_cvtss2si64:
+  case X86::BI__builtin_ia32_cvtsd2si64:
   case X86::BI__builtin_ia32_cvttss2si64:
   case X86::BI__builtin_ia32_cvttsd2si64:
-    return interp_builtin_ia32_cvt_scalar_to_int(
-        S, OpPC, Call, 64, llvm::RoundingMode::TowardZero);
+    return interp_builtin_ia32_cvt_scalar_to_int(S, OpPC, Call, 64);
   case X86::BI__builtin_ia32_cvtpd2dq:
-    return interp_builtin_ia32_cvt_vector_to_int(
-        S, OpPC, Call, llvm::RoundingMode::NearestTiesToEven, true);
+  case X86::BI__builtin_ia32_cvttpd2dq:
+    return interp_builtin_ia32_cvt_vector_to_int(S, OpPC, Call, true);
   case X86::BI__builtin_ia32_cvtps2dq:
   case X86::BI__builtin_ia32_cvtpd2dq256:
   case X86::BI__builtin_ia32_cvtps2dq256:
-    return interp_builtin_ia32_cvt_vector_to_int(
-        S, OpPC, Call, llvm::RoundingMode::NearestTiesToEven);
-  case X86::BI__builtin_ia32_cvttpd2dq:
-    return interp_builtin_ia32_cvt_vector_to_int(
-        S, OpPC, Call, llvm::RoundingMode::TowardZero, true);
   case X86::BI__builtin_ia32_cvttps2dq:
   case X86::BI__builtin_ia32_cvttpd2dq256:
   case X86::BI__builtin_ia32_cvttps2dq256:
-    return interp_builtin_ia32_cvt_vector_to_int(
-        S, OpPC, Call, llvm::RoundingMode::TowardZero);
+    return interp_builtin_ia32_cvt_vector_to_int(S, OpPC, Call);
   default:
     S.FFDiag(S.Current->getLocation(OpPC),
              diag::note_invalid_subexpr_in_const_expr)

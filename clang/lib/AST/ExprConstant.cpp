@@ -15278,19 +15278,6 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     if (!EvaluateAsRValue(Info, E->getArg(0), SrcVec) || !SrcVec.isVector())
       return false;
 
-    llvm::RoundingMode RoundingMode;
-    switch (BuiltinOp) {
-    case X86::BI__builtin_ia32_cvttpd2dq:
-    case X86::BI__builtin_ia32_cvttps2dq:
-    case X86::BI__builtin_ia32_cvttpd2dq256:
-    case X86::BI__builtin_ia32_cvttps2dq256:
-      RoundingMode = llvm::RoundingMode::TowardZero;
-      break;
-    default:
-      RoundingMode = llvm::RoundingMode::NearestTiesToEven;
-      break;
-    }
-
     unsigned NumSrcElts = SrcVec.getVectorLength();
     SmallVector<APValue, 8> ResultElts;
 
@@ -15298,7 +15285,10 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       llvm::APFloat FloatElem = SrcVec.getVectorElt(i).getFloat();
       llvm::APSInt IntResult(32, /*isUnsigned=*/false);
       bool IsExact = false;
-      FloatElem.convertToInteger(IntResult, RoundingMode, &IsExact);
+      // We only allow exact conversions so rounding mode does not matter for
+      // cvt* and cvtt* builtins
+      FloatElem.convertToInteger(IntResult, llvm::APFloat::rmTowardZero,
+                                 &IsExact);
       if (!IsExact)
         return false;
 
@@ -18747,14 +18737,8 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     if (!EvaluateAsRValue(Info, E->getArg(0), ArgVal))
       return false;
 
-    llvm::APFloat FloatElem(0.0f);
-    if (ArgVal.isVector()) {
-      FloatElem = ArgVal.getVectorElt(0).getFloat();
-    } else if (ArgVal.isFloat()) {
-      FloatElem = ArgVal.getFloat();
-    } else {
-      return false;
-    }
+    assert(ArgVal.isVector() && "Expected a vector argument");
+    llvm::APFloat FloatElem = ArgVal.getVectorElt(0).getFloat();
 
     unsigned BitWidth = 32;
     switch (BuiltinOp) {
@@ -18765,30 +18749,15 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       BitWidth = 64;
       break;
     default:
-      BitWidth = 32;
-      break;
-    }
-
-    llvm::RoundingMode RoundingMode;
-    switch (BuiltinOp) {
-    case X86::BI__builtin_ia32_cvttss2si:
-    case X86::BI__builtin_ia32_cvttsd2si:
-    case X86::BI__builtin_ia32_cvttss2si64:
-    case X86::BI__builtin_ia32_cvttsd2si64:
-      RoundingMode = llvm::RoundingMode::TowardZero;
-      break;
-    default:
-      // For builtins such as _mm_cvtss_si32, the default rounding is
-      // NearestTiesToEven as CPU reset default value. But, the actual rounding
-      // at runtime is read from MXCSR CPU register which is not known
-      // here. Hence, this cannot be deduced correctly here.
-      RoundingMode = llvm::RoundingMode::NearestTiesToEven;
       break;
     }
 
     llvm::APSInt IntResult(BitWidth, false);
     bool IsExact = false;
-    FloatElem.convertToInteger(IntResult, RoundingMode, &IsExact);
+    // We only allow exact conversions so rounding mode does not matter for cvt*
+    // and cvtt* builtins
+    FloatElem.convertToInteger(IntResult, llvm::APFloat::rmTowardZero,
+                               &IsExact);
     if (!IsExact)
       return false;
 
