@@ -3172,9 +3172,6 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   if (Opts.ProgramAction != frontend::GenerateModule && Opts.IsSystemModule)
     Diags.Report(diag::err_drv_argument_only_allowed_with) << "-fsystem-module"
                                                            << "-emit-module";
-  // -fclangir/-fno-clangir are marshalled into Opts.UseClangIRPipeline above,
-  // which already gives them last-wins semantics; don't clobber that here.
-  // -emit-cir is an action that implies the pipeline regardless.
   if (Args.hasArg(OPT_emit_cir))
     Opts.UseClangIRPipeline = true;
 
