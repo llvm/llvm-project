@@ -8484,9 +8484,7 @@ PreservedAnalyses LoopVectorizePass::run(Function &F,
   // CycleAnalysis may be stale (holding pointers to deleted blocks), causing
   // crashes.
   BlockFrequencyInfo &BFIRef = AM.getResult<BlockFrequencyAnalysis>(F);
-  GetBFI = [&BFIRef]() -> BlockFrequencyInfo & {
-    return BFIRef;
-  };
+  GetBFI = [&BFIRef]() -> BlockFrequencyInfo & { return BFIRef; };
   LoopVectorizeResult Result = runImpl(F);
   if (!Result.MadeAnyChange)
     return PreservedAnalyses::all();
