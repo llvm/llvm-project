@@ -3,22 +3,22 @@
 // Default options
 // RUN: %clang -### -x cl --target=amdgcn-amd-amdhsa -c -emit-llvm --no-offloadlib -nogpuinc %s 2>&1 | FileCheck -check-prefix=ASYNC-TABLES %s
 // RUN: %clang -### -x hip --offload-arch=gfx90a --offload-device-only --no-offloadlib -c -emit-llvm -nogpuinc %s 2>&1 | FileCheck -check-prefix=ASYNC-TABLES  %s
-// RUN: %clang -### -fopenmp --offload-arch=gfx90a --offload-device-only --no-offloadlib -c -emit-llvm -nogpuinc %s 2>&1 | FileCheck -check-prefix=ASYNC-TABLES  %s
+// RUN: %clang -### -fopenmp=libomp --offload-arch=gfx90a --offload-device-only --no-offloadlib -c -emit-llvm -nogpuinc %s 2>&1 | FileCheck -check-prefix=ASYNC-TABLES  %s
 
 // Explicitly enable sync-tables (somewhat surprisingly this is still preempted by the default-on async tables)
 // RUN: %clang -### -x cl --target=amdgcn-amd-amdhsa -c -emit-llvm --no-offloadlib -funwind-tables -nogpuinc %s 2>&1 | FileCheck -check-prefix=ASYNC-TABLES %s
 // RUN: %clang -### -x hip --offload-arch=gfx90a --offload-device-only --no-offloadlib -c -emit-llvm -funwind-tables -nogpuinc %s 2>&1 | FileCheck -check-prefix=ASYNC-TABLES  %s
-// RUN: %clang -### -fopenmp --offload-arch=gfx90a --offload-device-only --no-offloadlib -c -emit-llvm -funwind-tables -nogpuinc %s 2>&1 | FileCheck -check-prefix=ASYNC-TABLES  %s
+// RUN: %clang -### -fopenmp=libomp --offload-arch=gfx90a --offload-device-only --no-offloadlib -c -emit-llvm -funwind-tables -nogpuinc %s 2>&1 | FileCheck -check-prefix=ASYNC-TABLES  %s
 
 // Explicitly enable sync-tables and surpress default async-tables
 // RUN: %clang -### -x cl --target=amdgcn-amd-amdhsa -c -emit-llvm --no-offloadlib -funwind-tables -fno-asynchronous-unwind-tables -nogpuinc %s 2>&1 | FileCheck -check-prefix=SYNC-TABLES %s
 // RUN: %clang -### -x hip --offload-arch=gfx90a --offload-device-only --no-offloadlib -c -emit-llvm -funwind-tables -fno-asynchronous-unwind-tables -nogpuinc %s 2>&1 | FileCheck -check-prefix=SYNC-TABLES  %s
-// RUN: %clang -### -fopenmp --offload-arch=gfx90a --offload-device-only --no-offloadlib -c -emit-llvm -funwind-tables -fno-asynchronous-unwind-tables -nogpuinc %s 2>&1 | FileCheck -check-prefix=SYNC-TABLES  %s
+// RUN: %clang -### -fopenmp=libomp --offload-arch=gfx90a --offload-device-only --no-offloadlib -c -emit-llvm -funwind-tables -fno-asynchronous-unwind-tables -nogpuinc %s 2>&1 | FileCheck -check-prefix=SYNC-TABLES  %s
 
 // Suppress the default async-tables
 // RUN: %clang -### -x cl --target=amdgcn-amd-amdhsa -c -emit-llvm --no-offloadlib -fno-asynchronous-unwind-tables -nogpuinc %s 2>&1 | FileCheck -check-prefix=NO-TABLES %s
 // RUN: %clang -### -x hip --offload-arch=gfx90a --offload-device-only --no-offloadlib -c -emit-llvm -fno-asynchronous-unwind-tables -nogpuinc %s 2>&1 | FileCheck -check-prefix=NO-TABLES  %s
-// RUN: %clang -### -fopenmp --offload-arch=gfx90a --offload-device-only --no-offloadlib -c -emit-llvm -fno-asynchronous-unwind-tables -nogpuinc %s 2>&1 | FileCheck -check-prefix=NO-TABLES  %s
+// RUN: %clang -### -fopenmp=libomp --offload-arch=gfx90a --offload-device-only --no-offloadlib -c -emit-llvm -fno-asynchronous-unwind-tables -nogpuinc %s 2>&1 | FileCheck -check-prefix=NO-TABLES  %s
 
 
 // ASYNC-TABLES: "-triple" "amdgcn-amd-amdhsa" {{.*}} "-funwind-tables=2"

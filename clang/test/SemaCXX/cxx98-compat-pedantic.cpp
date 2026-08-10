@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++1y -DCXX1Y -Wc++98-compat -Werror %s -DCXX1Y2
 // RUN: %clang_cc1 -fsyntax-only -std=c++11 -Wc++98-compat-pedantic -verify %s
 // RUN: %clang_cc1 -fsyntax-only -std=c++11 -Wc++98-compat -Werror %s
-// RUN: %clang_cc1 -fsyntax-only -std=c++98 -Werror -Wno-gnu-zero-line-directive %s -DCXX98
+// RUN: %clang_cc1 -fsyntax-only -std=c++98 -Werror %s -DCXX98
 
 // RUN: %clang_cc1 -fsyntax-only -std=c++1y -Wc++98-compat-pedantic -verify %s -Wno-pre-c++14-compat-pedantic -DCXX1Y2
 

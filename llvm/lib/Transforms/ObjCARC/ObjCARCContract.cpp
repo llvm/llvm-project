@@ -529,8 +529,8 @@ bool ObjCARCContract::tryToPeepholeInstruction(
 /// Should we use objc_claimAutoreleasedReturnValue?
 static bool useClaimRuntimeCall(Module &M) {
   // Let the flag override our OS-based default.
-  if (UseObjCClaimRV != cl::BOU_UNSET)
-    return UseObjCClaimRV == cl::BOU_TRUE;
+  if (UseObjCClaimRV != cl::boolOrDefault::BOU_UNSET)
+    return UseObjCClaimRV == cl::boolOrDefault::BOU_TRUE;
 
   Triple TT(M.getTargetTriple());
 
@@ -639,7 +639,8 @@ bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
 
     // Function for replacing uses of Arg dominated by Inst.
     auto ReplaceArgUses = [Inst, this](Value *Arg) {
-      // If we're compiling bugpointed code, don't get in trouble.
+      // If we're compiling fuzzer generated/test reducer produced IR, don't get
+      // in trouble.
       if (!isa<Instruction>(Arg) && !isa<Argument>(Arg))
         return;
 

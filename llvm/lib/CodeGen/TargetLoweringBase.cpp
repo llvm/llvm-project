@@ -939,81 +939,6 @@ RTLIB::Libcall RTLIB::getMEMSET_ELEMENT_UNORDERED_ATOMIC(uint64_t ElementSize) {
   }
 }
 
-ISD::CondCode TargetLoweringBase::getSoftFloatCmpLibcallPredicate(
-    RTLIB::LibcallImpl Impl) const {
-  switch (Impl) {
-  case RTLIB::impl___aeabi_dcmpeq__une:
-  case RTLIB::impl___aeabi_fcmpeq__une:
-    // Usage in the eq case, so we have to invert the comparison.
-    return ISD::SETEQ;
-  case RTLIB::impl___aeabi_dcmpeq__oeq:
-  case RTLIB::impl___aeabi_fcmpeq__oeq:
-    // Normal comparison to boolean value.
-    return ISD::SETNE;
-  case RTLIB::impl___aeabi_dcmplt:
-  case RTLIB::impl___aeabi_dcmple:
-  case RTLIB::impl___aeabi_dcmpge:
-  case RTLIB::impl___aeabi_dcmpgt:
-  case RTLIB::impl___aeabi_dcmpun:
-  case RTLIB::impl___aeabi_fcmplt:
-  case RTLIB::impl___aeabi_fcmple:
-  case RTLIB::impl___aeabi_fcmpge:
-  case RTLIB::impl___aeabi_fcmpgt:
-    /// The AEABI versions return a typical boolean value, so we can compare
-    /// against the integer result as simply != 0.
-    return ISD::SETNE;
-  default:
-    break;
-  }
-
-  // Assume libgcc/compiler-rt behavior. Most of the cases are really aliases of
-  // each other, and return a 3-way comparison style result of -1, 0, or 1
-  // depending on lt/eq/gt.
-  //
-  // FIXME: It would be cleaner to directly express this as a 3-way comparison
-  // soft FP libcall instead of individual compares.
-  RTLIB::Libcall LC = RTLIB::RuntimeLibcallsInfo::getLibcallFromImpl(Impl);
-  switch (LC) {
-  case RTLIB::OEQ_F32:
-  case RTLIB::OEQ_F64:
-  case RTLIB::OEQ_F128:
-  case RTLIB::OEQ_PPCF128:
-    return ISD::SETEQ;
-  case RTLIB::UNE_F32:
-  case RTLIB::UNE_F64:
-  case RTLIB::UNE_F128:
-  case RTLIB::UNE_PPCF128:
-    return ISD::SETNE;
-  case RTLIB::OGE_F32:
-  case RTLIB::OGE_F64:
-  case RTLIB::OGE_F128:
-  case RTLIB::OGE_PPCF128:
-    return ISD::SETGE;
-  case RTLIB::OLT_F32:
-  case RTLIB::OLT_F64:
-  case RTLIB::OLT_F128:
-  case RTLIB::OLT_PPCF128:
-    return ISD::SETLT;
-  case RTLIB::OLE_F32:
-  case RTLIB::OLE_F64:
-  case RTLIB::OLE_F128:
-  case RTLIB::OLE_PPCF128:
-    return ISD::SETLE;
-  case RTLIB::OGT_F32:
-  case RTLIB::OGT_F64:
-  case RTLIB::OGT_F128:
-  case RTLIB::OGT_PPCF128:
-    return ISD::SETGT;
-  case RTLIB::UO_F32:
-  case RTLIB::UO_F64:
-  case RTLIB::UO_F128:
-  case RTLIB::UO_PPCF128:
-    return ISD::SETNE;
-  default:
-    llvm_unreachable("not a compare libcall");
-  }
-}
-
 /// NOTE: The TargetMachine owns TLOF.
 TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm,
                                        const TargetSubtargetInfo &STI)
@@ -1128,6 +1053,7 @@ void TargetLoweringBase::initActions() {
     // Most backends expect to see the node which just returns the value loaded.
     setOperationAction(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, VT, Expand);
 
+    // clang-format off
     // These operations default to expand.
     setOperationAction({ISD::FGETSIGN,       ISD::CONCAT_VECTORS,
                         ISD::FMINNUM,        ISD::FMAXNUM,
@@ -1157,8 +1083,11 @@ void TargetLoweringBase::initActions() {
                         ISD::FASIN,          ISD::FATAN,
                         ISD::FCOSH,          ISD::FSINH,
                         ISD::FTANH,          ISD::FATAN2,
-                        ISD::FMULADD,        ISD::CONVERT_FROM_ARBITRARY_FP},
+                        ISD::FMULADD,        ISD::CONVERT_FROM_ARBITRARY_FP,
+                        ISD::CONVERT_TO_ARBITRARY_FP,
+                        ISD::PSEUDO_FMIN,    ISD::PSEUDO_FMAX},
                        VT, Expand);
+    // clang-format on
 
     // Overflow operations default to expand
     setOperationAction({ISD::SADDO, ISD::SSUBO, ISD::UADDO, ISD::USUBO,
@@ -1187,6 +1116,9 @@ void TargetLoweringBase::initActions() {
 
     // Carry-less multiply
     setOperationAction({ISD::CLMUL, ISD::CLMULR, ISD::CLMULH}, VT, Expand);
+
+    // Bit extract/deposit (compress/expand)
+    setOperationAction({ISD::PEXT, ISD::PDEP}, VT, Expand);
 
     // Saturated trunc
     setOperationAction(ISD::TRUNCATE_SSAT_S, VT, Expand);
@@ -1221,6 +1153,8 @@ void TargetLoweringBase::initActions() {
 #define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
     setOperationAction(ISD::STRICT_##DAGN, VT, Expand);
 #include "llvm/IR/ConstrainedOps.def"
+    setOperationAction(ISD::STRICT_PSEUDO_FMIN, VT, Expand);
+    setOperationAction(ISD::STRICT_PSEUDO_FMAX, VT, Expand);
 
     // For most targets @llvm.get.dynamic.area.offset just returns 0.
     setOperationAction(ISD::GET_DYNAMIC_AREA_OFFSET, VT, Expand);
@@ -2798,9 +2732,9 @@ MachineMemOperand::Flags TargetLoweringBase::getLoadMemOperandFlags(
 
   // Dereferenceability analysis is expensive, skip at O0.
   if (OptLevel != CodeGenOptLevel::None &&
-      isDereferenceableAndAlignedPointer(LI.getPointerOperand(), LI.getType(),
-                                         LI.getAlign(), DL, &LI, AC,
-                                         /*DT=*/nullptr, LibInfo)) {
+      isDereferenceableAndAlignedPointer(
+          LI.getPointerOperand(), LI.getType(), LI.getAlign(),
+          SimplifyQuery(DL, LibInfo, /*DT=*/nullptr, AC, &LI))) {
     Flags |= MachineMemOperand::MODereferenceable;
   } else if (LI.hasMetadata(LLVMContext::MD_dereferenceable)) {
     Flags |= MachineMemOperand::MODereferenceable;

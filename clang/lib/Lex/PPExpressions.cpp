@@ -184,6 +184,11 @@ static bool EvaluateDefined(PPValue &Result, Token &PeekTok, DefinedTracker &DT,
   // clang and gcc will pick the #if branch while Visual Studio will take the
   // #else branch.  Emit a warning about this undefined behavior.
   if (beginLoc.isMacroID()) {
+    bool IsFunctionTypeMacro =
+        PP.getSourceManager()
+            .getSLocEntry(PP.getSourceManager().getFileID(beginLoc))
+            .getExpansion()
+            .isFunctionMacroExpansion();
     // For object-type macros, it's easy to replace
     //   #define FOO defined(BAR)
     // with
@@ -199,7 +204,10 @@ static bool EvaluateDefined(PPValue &Result, Token &PeekTok, DefinedTracker &DT,
     // in a different way, and compilers seem to agree on how to behave here.
     // So warn by default on object-type macros, but only warn in -pedantic
     // mode on function-type macros.
-    PP.Diag(beginLoc, diag::warn_defined_in_macro);
+    if (IsFunctionTypeMacro)
+      PP.Diag(beginLoc, diag::warn_defined_in_function_type_macro);
+    else
+      PP.Diag(beginLoc, diag::warn_defined_in_object_type_macro);
   }
 
   // Invoke the 'defined' callback.
@@ -975,9 +983,9 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
 }
 
 static std::optional<CXXStandardLibraryVersionInfo>
-getCXXStandardLibraryVersion(Preprocessor &PP, StringRef MacroName,
+getCXXStandardLibraryVersion(Preprocessor &PP, IdentifierInfo *MacroName,
                              CXXStandardLibraryVersionInfo::Library Lib) {
-  MacroInfo *Macro = PP.getMacroInfo(PP.getIdentifierInfo(MacroName));
+  MacroInfo *Macro = PP.getMacroInfo(MacroName);
   if (!Macro || Macro->getNumTokens() != 1 || !Macro->isObjectLike())
     return std::nullopt;
 
@@ -1000,7 +1008,7 @@ getCXXStandardLibraryVersion(Preprocessor &PP, StringRef MacroName,
 std::optional<uint64_t> Preprocessor::getStdLibCxxVersion() {
   if (!CXXStandardLibraryVersion)
     CXXStandardLibraryVersion = getCXXStandardLibraryVersion(
-        *this, "__GLIBCXX__", CXXStandardLibraryVersionInfo::LibStdCXX);
+        *this, Ident__GLIBCXX__, CXXStandardLibraryVersionInfo::LibStdCXX);
   if (!CXXStandardLibraryVersion)
     return std::nullopt;
 
@@ -1008,6 +1016,13 @@ std::optional<uint64_t> Preprocessor::getStdLibCxxVersion() {
       CXXStandardLibraryVersionInfo::LibStdCXX)
     return CXXStandardLibraryVersion->Version;
   return std::nullopt;
+}
+
+void Preprocessor::setStdLibCxxVersion(std::uint64_t Version) {
+  CXXStandardLibraryVersion = {
+      CXXStandardLibraryVersionInfo::LibStdCXX,
+      Version,
+  };
 }
 
 bool Preprocessor::NeedsStdLibCxxWorkaroundBefore(uint64_t FixedVersion) {

@@ -575,6 +575,9 @@ public:
   /// Calculate ctpop range.
   LLVM_ABI ConstantRange ctpop() const;
 
+  /// Calculate sqrtFloor range.  See APInt::sqrtFloor().
+  LLVM_ABI ConstantRange sqrtFloor() const;
+
   /// Represents whether an operation on the given constant range is known to
   /// always or never overflow.
   enum class OverflowResult {

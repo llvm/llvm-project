@@ -186,9 +186,13 @@ static bool isReservedCXXAttributeName(Preprocessor &PP, IdentifierInfo *II) {
   if (Lang.CPlusPlus &&
       hasAttribute(AttributeCommonInfo::AS_CXX11, /* Scope*/ nullptr, II,
                    PP.getTargetInfo(), Lang, /*CheckPlugins*/ false) > 0) {
-    StringRef Name = II->getName();
+    AttributeCommonInfo::AttrArgsInfo AttrArgsInfo =
+        AttributeCommonInfo::getCXX11AttrArgsInfo(II);
+    if (AttrArgsInfo == AttributeCommonInfo::AttrArgsInfo::Required)
+      return PP.isNextPPTokenOneOf(tok::l_paren);
+
     return !PP.isNextPPTokenOneOf(tok::l_paren) ||
-           (Name != "likely" && Name != "unlikely");
+           AttrArgsInfo == AttributeCommonInfo::AttrArgsInfo::Optional;
   }
   return false;
 }
@@ -209,11 +213,7 @@ static MacroDiag shouldWarnOnMacroDef(Preprocessor &PP, IdentifierInfo *II) {
 
 static MacroDiag shouldWarnOnMacroUndef(Preprocessor &PP, IdentifierInfo *II) {
   const LangOptions &Lang = PP.getLangOpts();
-  StringRef Text = II->getName();
-  if (II->isKeyword(Lang))
-    return MD_KeywordDef;
-  if (Lang.CPlusPlus11 && (Text == "override" || Text == "final"))
-    return MD_KeywordDef;
+  // Do not warn on keyword undef.  It is generally harmless and widely used.
   if (isReservedInAllContexts(II->isReserved(Lang)))
     return MD_ReservedMacro;
   if (isReservedCXXAttributeName(PP, II))
@@ -396,24 +396,21 @@ bool Preprocessor::CheckMacroName(Token &MacroNameTok, MacroUse isDefineUndef,
   // Macro names with reserved identifiers are accepted if built-in or passed
   // through the command line (the later may be present if -dD was used to
   // generate the preprocessed file).
-  // NB: isInPredefinedFile() is relatively expensive, so keep it at the end
-  // of the condition.
-  if (!SourceMgr.isInSystemHeader(MacroNameLoc) &&
+  // NB: isInPredefinedFile() (via getPresumedLoc) is relatively expensive, so
+  // only run it for names that can actually warn.
+  MacroDiag D = MD_NoWarn;
+  if (isDefineUndef == MU_Define) {
+    D = shouldWarnOnMacroDef(*this, II);
+  } else if (isDefineUndef == MU_Undef)
+    D = shouldWarnOnMacroUndef(*this, II);
+  if (D != MD_NoWarn && !SourceMgr.isInSystemHeader(MacroNameLoc) &&
       !SourceMgr.isInPredefinedFile(MacroNameLoc)) {
-    MacroDiag D = MD_NoWarn;
-    if (isDefineUndef == MU_Define) {
-      D = shouldWarnOnMacroDef(*this, II);
-    }
-    else if (isDefineUndef == MU_Undef)
-      D = shouldWarnOnMacroUndef(*this, II);
     if (D == MD_KeywordDef) {
       // We do not want to warn on some patterns widely used in configuration
       // scripts.  This requires analyzing next tokens, so do not issue warnings
       // now, only inform caller.
-      if (isDefineUndef == MU_Define && ShadowFlag)
+      if (ShadowFlag)
         *ShadowFlag = true;
-      else
-        Diag(MacroNameTok, diag::warn_pp_macro_name_is_keyword);
     }
     if (D == MD_ReservedMacro)
       Diag(MacroNameTok, diag::warn_pp_macro_is_reserved_id);
@@ -1197,9 +1194,8 @@ OptionalFileEntryRef Preprocessor::LookupEmbedFile(StringRef Filename,
   FileManager &FM = this->getFileManager();
   if (llvm::sys::path::is_absolute(Filename)) {
     // lookup path or immediately fail
-    llvm::Expected<FileEntryRef> ShouldBeEntry = FM.getFileRef(
-        Filename, OpenFile, /*CacheFailure=*/true, /*IsText=*/false);
-    return llvm::expectedToOptional(std::move(ShouldBeEntry));
+    return FM.getOptionalFileRef(Filename, OpenFile, /*CacheFailure=*/true,
+                                 /*IsText=*/false);
   }
 
   auto SeparateComponents = [](SmallVectorImpl<char> &LookupPath,
@@ -1226,27 +1222,25 @@ OptionalFileEntryRef Preprocessor::LookupEmbedFile(StringRef Filename,
       TmpDir = LookupFromFile->getDir().getName();
       llvm::sys::path::append(TmpDir, Filename);
       if (!TmpDir.empty()) {
-        llvm::Expected<FileEntryRef> ShouldBeEntry = FM.getFileRef(
+        OptionalFileEntryRef ShouldBeEntry = FM.getOptionalFileRef(
             TmpDir, OpenFile, /*CacheFailure=*/true, /*IsText=*/false);
         if (ShouldBeEntry)
-          return llvm::expectedToOptional(std::move(ShouldBeEntry));
-        llvm::consumeError(ShouldBeEntry.takeError());
+          return ShouldBeEntry;
       }
     }
 
     // Otherwise, do working directory lookup.
     LookupPath.clear();
-    auto MaybeWorkingDirEntry = FM.getDirectoryRef(".");
+    auto MaybeWorkingDirEntry = FM.getOptionalDirectoryRef(".");
     if (MaybeWorkingDirEntry) {
       DirectoryEntryRef WorkingDirEntry = *MaybeWorkingDirEntry;
       StringRef WorkingDir = WorkingDirEntry.getName();
       if (!WorkingDir.empty()) {
         SeparateComponents(LookupPath, WorkingDir, Filename, false);
-        llvm::Expected<FileEntryRef> ShouldBeEntry = FM.getFileRef(
+        OptionalFileEntryRef ShouldBeEntry = FM.getOptionalFileRef(
             LookupPath, OpenFile, /*CacheFailure=*/true, /*IsText=*/false);
         if (ShouldBeEntry)
-          return llvm::expectedToOptional(std::move(ShouldBeEntry));
-        llvm::consumeError(ShouldBeEntry.takeError());
+          return ShouldBeEntry;
       }
     }
   }
@@ -1254,11 +1248,10 @@ OptionalFileEntryRef Preprocessor::LookupEmbedFile(StringRef Filename,
   for (const auto &Entry : PPOpts.EmbedEntries) {
     LookupPath.clear();
     SeparateComponents(LookupPath, Entry, Filename, false);
-    llvm::Expected<FileEntryRef> ShouldBeEntry = FM.getFileRef(
+    OptionalFileEntryRef ShouldBeEntry = FM.getOptionalFileRef(
         LookupPath, OpenFile, /*CacheFailure=*/true, /*IsText=*/false);
     if (ShouldBeEntry)
-      return llvm::expectedToOptional(std::move(ShouldBeEntry));
-    llvm::consumeError(ShouldBeEntry.takeError());
+      return ShouldBeEntry;
   }
   return std::nullopt;
 }
@@ -1353,27 +1346,7 @@ void Preprocessor::HandleDirective(Token &Result) {
   // not support this for #include-like directives, since that can result in
   // terrible diagnostics, and does not work in GCC.
   if (InMacroArgs) {
-    enum IntroduceKind {
-      IK_HASH = 0,
-      IK_AT = 1,
-      IK_KEYWORD = 2,
-    };
-
-    IntroduceKind IK = IK_HASH;
-    switch (Introducer.getKind()) {
-    case tok::hash:
-      IK = IK_HASH;
-      break;
-    case tok::at:
-      IK = IK_AT;
-      break;
-    default:
-      IK = IK_KEYWORD;
-      break;
-    }
-    SmallString<16> DirectiveSpelling;
     if (IdentifierInfo *II = Result.getIdentifierInfo()) {
-      DirectiveSpelling.append(II->getName());
       switch (II->getPPKeywordID()) {
       case tok::pp_include:
       case tok::pp_import:
@@ -1383,19 +1356,18 @@ void Preprocessor::HandleDirective(Token &Result) {
       case tok::pp_embed:
       case tok::pp_module:
       case tok::pp___preprocessed_module:
-      case tok::pp___preprocessed_import: {
-        Diag(Result, diag::err_embedded_directive) << IK << DirectiveSpelling;
+      case tok::pp___preprocessed_import:
+        Diag(Result, diag::err_embedded_directive)
+            << Introducer.is(tok::hash) << II->getName();
         Diag(*ArgMacro, diag::note_macro_expansion_here)
             << ArgMacro->getIdentifierInfo();
         DiscardUntilEndOfDirective();
         return;
-      }
       default:
         break;
       }
     }
-
-    Diag(Result, diag::warn_embedded_directive) << IK << DirectiveSpelling;
+    Diag(Result, diag::ext_embedded_directive);
   }
 
   // Temporarily enable macro expansion if set so
@@ -1482,10 +1454,11 @@ void Preprocessor::HandleDirective(Token &Result) {
       return HandlePragmaDirective({PIK_HashPragma, Introducer.getLocation()});
     case tok::pp_module:
     case tok::pp___preprocessed_module:
-      return HandleCXXModuleDirective(Result);
+      if (Introducer.isModuleContextualKeyword())
+        return HandleCXXModuleDirective(Result);
+      break;
     case tok::pp___preprocessed_import:
       return HandleCXXImportDirective(Result);
-    // GNU Extensions.
     case tok::pp_import:
       switch (Introducer.getKind()) {
       case tok::hash:
@@ -1497,6 +1470,8 @@ void Preprocessor::HandleDirective(Token &Result) {
       default:
         llvm_unreachable("not a valid import directive");
       }
+
+    // GNU Extensions.
     case tok::pp_include_next:
       return HandleIncludeNextDirective(Introducer.getLocation(), Result);
 
@@ -1657,34 +1632,21 @@ void Preprocessor::HandleLineDirective() {
 
   int FilenameID = -1;
   Token StrTok;
-  Lex(StrTok);
+  LexHeaderName(StrTok);
 
   // If the StrTok is "eod", then it wasn't present.  Otherwise, it must be a
   // string followed by eod.
   if (StrTok.is(tok::eod))
     ; // ok
-  else if (StrTok.isNot(tok::string_literal)) {
+  else if (StrTok.isNot(tok::header_name)) {
     Diag(StrTok, diag::err_pp_line_invalid_filename);
     DiscardUntilEndOfDirective();
     return;
-  } else if (StrTok.hasUDSuffix()) {
-    Diag(StrTok, diag::err_invalid_string_udl);
-    DiscardUntilEndOfDirective();
-    return;
   } else {
-    // Parse and validate the string, converting it into a unique ID.
-    StringLiteralParser Literal(StrTok, *this);
-    assert(Literal.isOrdinary() && "Didn't allow wide strings in");
-    if (Literal.hadError) {
-      DiscardUntilEndOfDirective();
-      return;
-    }
-    if (Literal.Pascal) {
-      Diag(StrTok, diag::err_pp_linemarker_invalid_filename);
-      DiscardUntilEndOfDirective();
-      return;
-    }
-    FilenameID = SourceMgr.getLineTableFilenameID(Literal.GetString());
+    SmallString<128> FilenameBuffer;
+    StringRef Filename = getSpelling(StrTok, FilenameBuffer);
+    GetLineDirectiveFilenameSpelling(StrTok.getLocation(), Filename);
+    FilenameID = SourceMgr.getLineTableFilenameID(Filename);
 
     // Verify that there is nothing after the string, other than EOD.  Because
     // of C99 6.10.4p5, macros that expand to empty tokens are ok.
@@ -1802,7 +1764,7 @@ void Preprocessor::HandleDigitDirective(Token &DigitTok) {
     return;
 
   Token StrTok;
-  Lex(StrTok);
+  LexHeaderName(StrTok);
 
   bool IsFileEntry = false, IsFileExit = false;
   int FilenameID = -1;
@@ -1814,28 +1776,14 @@ void Preprocessor::HandleDigitDirective(Token &DigitTok) {
     Diag(StrTok, diag::ext_pp_gnu_line_directive);
     // Treat this like "#line NN", which doesn't change file characteristics.
     FileKind = SourceMgr.getFileCharacteristic(DigitTok.getLocation());
-  } else if (StrTok.isNot(tok::string_literal)) {
+  } else if (StrTok.isNot(tok::header_name)) {
     Diag(StrTok, diag::err_pp_linemarker_invalid_filename);
     DiscardUntilEndOfDirective();
     return;
-  } else if (StrTok.hasUDSuffix()) {
-    Diag(StrTok, diag::err_invalid_string_udl);
-    DiscardUntilEndOfDirective();
-    return;
   } else {
-    // Parse and validate the string, converting it into a unique ID.
-    StringLiteralParser Literal(StrTok, *this);
-    assert(Literal.isOrdinary() && "Didn't allow wide strings in");
-    if (Literal.hadError) {
-      DiscardUntilEndOfDirective();
-      return;
-    }
-    if (Literal.Pascal) {
-      Diag(StrTok, diag::err_pp_linemarker_invalid_filename);
-      DiscardUntilEndOfDirective();
-      return;
-    }
-
+    SmallString<128> FilenameBuffer;
+    StringRef Filename = getSpelling(StrTok, FilenameBuffer);
+    GetLineDirectiveFilenameSpelling(StrTok.getLocation(), Filename);
     // If a filename was present, read any flags that are present.
     if (ReadLineMarkerFlags(IsFileEntry, IsFileExit, FileKind, *this))
       return;
@@ -1844,8 +1792,8 @@ void Preprocessor::HandleDigitDirective(Token &DigitTok) {
 
     // Exiting to an empty string means pop to the including file, so leave
     // FilenameID as -1 in that case.
-    if (!(IsFileExit && Literal.GetString().empty()))
-      FilenameID = SourceMgr.getLineTableFilenameID(Literal.GetString());
+    if (!(IsFileExit && Filename.empty()))
+      FilenameID = SourceMgr.getLineTableFilenameID(Filename);
   }
 
   // Create a line note with this information.
@@ -2033,6 +1981,18 @@ bool Preprocessor::GetIncludeFilenameSpelling(SourceLocation Loc,
   // Skip the brackets.
   Buffer = Buffer.substr(1, Buffer.size()-2);
   return isAngled;
+}
+
+void Preprocessor::GetLineDirectiveFilenameSpelling(SourceLocation Loc,
+                                                    StringRef &Buffer) {
+  // Get the text form of the filename.
+  assert(!Buffer.empty() && "Can't have tokens with empty spellings!");
+  if (Buffer.size() < 2 || Buffer.front() != '"' || Buffer.back() != '"') {
+    Diag(Loc, diag::err_pp_line_invalid_filename);
+    Buffer = StringRef();
+    return;
+  }
+  Buffer = Buffer.substr(1, Buffer.size() - 2);
 }
 
 /// Push a token onto the token stream containing an annotation.
@@ -2405,6 +2365,11 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   // error.
   if (Filename.empty())
     return {ImportAction::None};
+  if (Filename.ends_with(' ') || Filename.ends_with('.')) {
+    unsigned Selection = Filename.ends_with('.') ? 1 : 0;
+    Diag(FilenameTok, diag::pp_nonportable_path_trailing)
+        << Filename << Selection;
+  }
 
   bool IsImportDecl = HashLoc.isInvalid();
   SourceLocation StartLoc = IsImportDecl ? IncludeTok.getLocation() : HashLoc;
@@ -3352,8 +3317,9 @@ void Preprocessor::HandleDefineDirective(
   if (!MI) return;
 
   if (MacroShadowsKeyword &&
-      !isConfigurationPattern(MacroNameTok, MI, getLangOpts()))
+      !isConfigurationPattern(MacroNameTok, MI, getLangOpts())) {
     Diag(MacroNameTok, diag::warn_pp_macro_hides_keyword);
+  }
   // Check that there is no paste (##) operator at the beginning or end of the
   // replacement list.
   unsigned NumTokens = MI->getNumTokens();

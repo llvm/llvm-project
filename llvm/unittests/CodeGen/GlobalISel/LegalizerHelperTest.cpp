@@ -305,12 +305,12 @@ TEST_F(AArch64GISelMITest, NarrowScalarCTTZ) {
   auto CheckStr = R"(
   CHECK: [[UNMERGE_LO:%[0-9]+]]:_(s32), [[UNMERGE_HI:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES %0:_(s64)
   CHECK: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  CHECK: [[CMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[UNMERGE_LO]]:_(s32), [[ZERO]]:_
+  CHECK: [[CMP:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[UNMERGE_LO]]:_(s32), [[ZERO]]:_
   CHECK: [[CTTZ_HI:%[0-9]+]]:_(s32) = G_CTTZ [[UNMERGE_HI]]:_(s32)
   CHECK: [[THIRTYTWO:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
   CHECK: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[CTTZ_HI]]:_, [[THIRTYTWO]]:_
   CHECK: [[CTTZ_LO:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_POISON [[UNMERGE_LO]]:_(s32)
-  CHECK: %{{[0-9]+}}:_(s32) = G_SELECT [[CMP]]:_(s1), [[ADD]]:_, [[CTTZ_LO]]:_
+  CHECK: %{{[0-9]+}}:_(s32) = G_SELECT [[CMP]]:_(i1), [[ADD]]:_, [[CTTZ_LO]]:_
   )";
 
   // Check
@@ -1435,7 +1435,6 @@ TEST_F(AArch64GISelMITest, MoreElementsAnd) {
   LI.getActionDefinitionsBuilder(TargetOpcode::G_AND)
     .legalFor({v6s32})
     .clampMinNumElements(0, s32, 6);
-  LI.getLegacyLegalizerInfo().computeTables();
 
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, LI, Observer, B);
@@ -1487,7 +1486,6 @@ TEST_F(AArch64GISelMITest, FewerElementsPhi) {
   LI.getActionDefinitionsBuilder(TargetOpcode::G_PHI)
     .legalFor({v2s32})
     .clampMinNumElements(0, s32, 2);
-  LI.getLegacyLegalizerInfo().computeTables();
 
   LLT PhiTy = v5s32;
   DummyGISelObserver Observer;
@@ -3370,6 +3368,34 @@ TEST_F(AArch64GISelMITest, LowerBSWAP) {
   )";
 
   // Check
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
+// Test lowering of scalar s64 G_BSWAP.
+TEST_F(AArch64GISelMITest, LowerBSWAPScalarS64) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  DefineLegalizerInfo(A, {});
+
+  auto BSwap = B.buildBSwap(LLT::scalar(64), Copies[0]);
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.lower(*BSwap, 0, LLT()));
+
+  // Per-byte AND masks the lowering loop emits for i = 1, 2, 3:
+  //   0x000000000000FF00 =     65280
+  //   0x0000000000FF0000 =  16711680
+  //   0x00000000FF000000 = 4278190080
+  auto CheckStr = R"(
+  CHECK-DAG: G_CONSTANT i64 65280
+  CHECK-DAG: G_CONSTANT i64 16711680
+  CHECK-DAG: G_CONSTANT i64 4278190080
+  )";
+
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 

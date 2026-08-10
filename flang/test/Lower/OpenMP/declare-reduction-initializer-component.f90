@@ -25,7 +25,7 @@ subroutine test_component_init()
   !$omp end parallel do
 end subroutine
 
-!CHECK: omp.declare_reduction @add_member : !fir.ref<!fir.type<_QFtest_component_initTt{member:i32}>>
+!CHECK: omp.declare_reduction @_QQFtest_component_initadd_member_byref_rec__QFtest_component_initTt : !fir.ref<!fir.type<_QFtest_component_initTt{member:i32}>>
 !CHECK-SAME: alloc {
 !CHECK:   %[[ALLOCA:.*]] = fir.alloca !fir.type<_QFtest_component_initTt{member:i32}>
 !CHECK:   omp.yield(%[[ALLOCA]] : !fir.ref<!fir.type<_QFtest_component_initTt{member:i32}>>)

@@ -5,8 +5,8 @@
 
 #ifdef TEST1
 
-#define assume // expected-warning {{assume is a reserved attribute identifier}}
-#undef assume  // expected-warning {{assume is a reserved attribute identifier}}
+#define assume
+#undef assume
 
 #define noreturn // expected-warning {{noreturn is a reserved attribute identifier}}
 #undef noreturn  // expected-warning {{noreturn is a reserved attribute identifier}}
@@ -37,8 +37,8 @@
 
 #elif TEST2
 
-#define assume "test" // expected-warning {{assume is a reserved attribute identifier}}
-#undef assume         // expected-warning {{assume is a reserved attribute identifier}}
+#define assume "test"
+#undef assume
 
 #define noreturn "test" // expected-warning {{noreturn is a reserved attribute identifier}}
 #undef noreturn         // expected-warning {{noreturn is a reserved attribute identifier}}
@@ -72,26 +72,26 @@
 #define assume() "test"     // expected-warning {{assume is a reserved attribute identifier}}
 #define deprecated() "test" // expected-warning {{deprecated is a reserved attribute identifier}}
 #define nodiscard() "test"  // expected-warning {{nodiscard is a reserved attribute identifier}}
-#define noreturn() "test" // expected-warning {{noreturn is a reserved attribute identifier}}
-#define carries_dependency() "test" // expected-warning {{carries_dependency is a reserved attribute identifier}}
-#define fallthrough() "test" // expected-warning {{fallthrough is a reserved attribute identifier}}
+#define noreturn() "test"
+#define carries_dependency() "test"
+#define fallthrough() "test"
 #define likely() "test"
-#define no_unique_address() "test" // expected-warning {{no_unique_address is a reserved attribute identifier}}
+#define no_unique_address() "test"
 #define unlikely() "test"
-#define maybe_unused() "test" // expected-warning {{maybe_unused is a reserved attribute identifier}}
+#define maybe_unused() "test"
 
 #elif TEST4
 
 #define assume()     // expected-warning {{assume is a reserved attribute identifier}}
 #define deprecated() // expected-warning {{deprecated is a reserved attribute identifier}}
 #define nodiscard()  // expected-warning {{nodiscard is a reserved attribute identifier}}
-#define noreturn() // expected-warning {{noreturn is a reserved attribute identifier}}
-#define carries_dependency() // expected-warning {{carries_dependency is a reserved attribute identifier}}
-#define fallthrough() // expected-warning {{fallthrough is a reserved attribute identifier}}
+#define noreturn()
+#define carries_dependency()
+#define fallthrough()
 #define likely()
-#define no_unique_address() // expected-warning {{no_unique_address is a reserved attribute identifier}}
+#define no_unique_address()
 #define unlikely()
-#define maybe_unused() // expected-warning {{maybe_unused is a reserved attribute identifier}}
+#define maybe_unused()
 
 #else
 

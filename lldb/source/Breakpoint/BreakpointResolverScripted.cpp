@@ -20,6 +20,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -84,11 +85,22 @@ void BreakpointResolverScripted::CreateImplementationIfNeeded(
     return;
   }
 
+  StructuredData::ObjectSP args_obj = m_args.GetObjectSP();
+  StructuredData::DictionarySP args_dict_sp;
+  if (args_obj && args_obj->GetType() == lldb::eStructuredDataTypeDictionary)
+    args_dict_sp =
+        std::static_pointer_cast<StructuredData::Dictionary>(args_obj);
+  ScriptedMetadata scripted_metadata(m_class_name, args_dict_sp);
   auto obj_or_err =
-      m_interface_sp->CreatePluginObject(m_class_name, breakpoint_sp, m_args);
+      m_interface_sp->CreatePluginObject(scripted_metadata, breakpoint_sp);
   if (!obj_or_err) {
     m_interface_sp.reset();
-    m_error = Status::FromError(obj_or_err.takeError());
+    std::string msg = llvm::toString(obj_or_err.takeError());
+    Debugger::ReportError(
+        llvm::formatv("failed to create BreakpointResolverScripted: {0}", msg)
+            .str(),
+        target.GetDebugger().GetID());
+    m_error = Status(msg);
     return;
   }
   StructuredData::ObjectSP object_sp = *obj_or_err;

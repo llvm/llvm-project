@@ -56,7 +56,8 @@ public:
   ///                       created from expanding braces otherwise disable
   ///                       brace expansion
   LLVM_ABI static Expected<GlobPattern>
-  create(StringRef Pat, std::optional<size_t> MaxSubPatterns = {});
+  create(StringRef Pat, std::optional<size_t> MaxSubPatterns = {},
+         bool SlashAgnostic = false);
   /// \returns \p true if \p S matches this glob pattern
   LLVM_ABI bool match(StringRef S) const;
 
@@ -81,18 +82,20 @@ public:
   StringRef suffix() const { return Pattern.take_back(SuffixSize); }
   // Returns the longest plain substring of the pattern between prefix and
   // suffix.
-  LLVM_ABI_FOR_TEST StringRef longest_substr() const;
+  LLVM_ABI StringRef longest_substr() const;
 
 private:
   StringRef Pattern;
   size_t PrefixSize = 0;
   size_t SuffixSize = 0;
+  bool SlashAgnostic = false;
 
   struct SubGlobPattern {
     /// \param Pat the pattern to match against
-    LLVM_ABI static Expected<SubGlobPattern> create(StringRef Pat);
+    LLVM_ABI static Expected<SubGlobPattern> create(StringRef Pat,
+                                                    bool SlashAgnostic);
     /// \returns \p true if \p S matches this glob pattern
-    LLVM_ABI bool match(StringRef S) const;
+    LLVM_ABI bool match(StringRef S, bool SlashAgnostic) const;
     StringRef getPat() const { return StringRef(Pat.data(), Pat.size()); }
 
     // Brackets with their end position and matched bytes.
