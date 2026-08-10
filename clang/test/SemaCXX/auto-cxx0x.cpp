@@ -11,6 +11,9 @@ void f() {
   auto int arr[10]; // expected-error {{'auto' cannot be combined with a type specifier}}
 }
 
+struct PR209000 {
+} auto; // expected-error {{'auto' cannot be combined with a type specifier}}
+
 typedef auto PR25449(); // expected-error {{'auto' not allowed in typedef}}
 
 thread_local auto x; // expected-error {{requires an initializer}}

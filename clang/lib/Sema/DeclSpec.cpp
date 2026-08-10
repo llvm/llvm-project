@@ -1365,6 +1365,7 @@ void DeclSpec::CheckTypeSpec(Sema &S, const PrintingPolicy &Policy) {
       }
       // Mark as error to prevent further processing
       TypeSpecType = TST_error;
+      TypeSpecOwned = false;
     } else if (!S.getLangOpts().CPlusPlus) {
       // For C, C23, etc., convert 'auto' to storage class specifier
       // (This is already handled above for C23, but keep for other C dialects)
