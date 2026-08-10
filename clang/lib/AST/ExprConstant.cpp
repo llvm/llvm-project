@@ -15298,11 +15298,8 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       llvm::APFloat FloatElem = SrcVec.getVectorElt(i).getFloat();
       llvm::APSInt IntResult(32, /*isUnsigned=*/false);
       bool IsExact = false;
-
-      llvm::APFloat::opStatus Status =
-          FloatElem.convertToInteger(IntResult, RoundingMode, &IsExact);
-
-      if (Status != llvm::APFloat::opOK || !IsExact)
+      FloatElem.convertToInteger(IntResult, RoundingMode, &IsExact);
+      if (!IsExact)
         return false;
 
       ResultElts.push_back(APValue(IntResult));
@@ -18781,15 +18778,18 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       RoundingMode = llvm::RoundingMode::TowardZero;
       break;
     default:
+      // For builtins such as _mm_cvtss_si32, the default rounding is
+      // NearestTiesToEven as CPU reset default value. But, the actual rounding
+      // at runtime is read from MXCSR CPU register which is not known
+      // here. Hence, this cannot be deduced correctly here.
       RoundingMode = llvm::RoundingMode::NearestTiesToEven;
       break;
     }
 
     llvm::APSInt IntResult(BitWidth, false);
     bool IsExact = false;
-    llvm::APFloat::opStatus Status =
-        FloatElem.convertToInteger(IntResult, RoundingMode, &IsExact);
-    if (Status != llvm::APFloat::opOK || !IsExact)
+    FloatElem.convertToInteger(IntResult, RoundingMode, &IsExact);
+    if (!IsExact)
       return false;
 
     return Success(IntResult, E);

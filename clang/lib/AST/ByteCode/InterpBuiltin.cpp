@@ -4678,10 +4678,8 @@ interp_builtin_ia32_cvt_scalar_to_int(InterpState &S, CodePtr OpPC,
 
   llvm::APSInt IntResult(BitWidth, /*isUnsigned=*/false);
   bool IsExact = false;
-  llvm::APFloat::opStatus Status = FloatElem.getAPFloat().convertToInteger(
-      IntResult, RoundingMode, &IsExact);
-
-  if (Status != llvm::APFloat::opOK || !IsExact)
+  FloatElem.getAPFloat().convertToInteger(IntResult, RoundingMode, &IsExact);
+  if (!IsExact)
     return false;
 
   pushInteger(S, IntResult, E->getType());
@@ -4700,10 +4698,8 @@ static bool interp_builtin_ia32_cvt_vector_to_int(
     const Floating &FloatElem = SrcVecPtr.atIndex(I).deref<Floating>();
     llvm::APSInt IntResult(32, /*isUnsigned=*/false);
     bool IsExact = false;
-
-    llvm::APFloat::opStatus Status = FloatElem.getAPFloat().convertToInteger(
-        IntResult, RoundingMode, &IsExact);
-    if (Status != llvm::APFloat::opOK || !IsExact)
+    FloatElem.getAPFloat().convertToInteger(IntResult, RoundingMode, &IsExact);
+    if (!IsExact)
       return false;
 
     ConvertedElts.push_back(IntResult.getSExtValue());
