@@ -61,8 +61,8 @@ bool SuperHFillDelaySlots::fillDelaySlot(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   if (auto *Prev = MBBI->getPrevNode()) {
 
-    // If the prior instruction does not have a delay slot
-    // we swap the instructions.
+    // If the prior instruction is capable of filling the delay slot
+    // swap the 2 instructions.
     if (TII->canFillDelaySlot(Prev->getOpcode())) {
       LDBG() << "Swapping " << TII->getName(MI.getOpcode()) 
              << " and " << TII->getName(Prev->getOpcode()) 
