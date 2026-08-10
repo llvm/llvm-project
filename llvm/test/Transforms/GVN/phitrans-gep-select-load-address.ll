@@ -4,17 +4,11 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
 target triple = "aarch64-unknown-linux-gnu"
 
-; Down-counting floating-point argmin after IndVarSimplify has widened the index
-; recurrence to i64, as it reaches GVN in the real pipeline. Each iteration
-; reloads a[minidx] to compare against the scanned element. minidx is the latch
-; select of the previous iteration, so the reload address is select-dependent.
-; The address is a typed [4 x i8] GEP composed with a byte-offset i8 GEP, so the
-; select arm is affine-equal to the scanned-element pointer but not syntactically
-; identical: upstream's syntactic PHITransAddr match fails on that arm. MemDep
-; rewrites the recurrence phi with the selected arm's SCEV, proves the reloaded
-; address equals a previously loaded pointer, and forwards the value. The
-; a[minidx] reload should be eliminated and replaced by a running-minimum phi
-; fed by the value select.
+; Down-counting FP argmin after IndVarSimplify widening. The reload of
+; a[minidx] uses gep([4 x i8], ...) + gep(i8, Off), so the select update arm
+; is affine-equal to the scanned pointer but not syntactically identical.
+; PHITransAddr folds the constant index delta into the byte offset and GVN
+; eliminates the reload.
 define i32 @fp_argmin_decreasing(ptr %a, i32 %start, i64 %tc0) {
 ; CHECK-LABEL: @fp_argmin_decreasing(
 ; CHECK-NEXT:  entry:

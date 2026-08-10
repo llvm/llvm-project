@@ -25,8 +25,6 @@
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/PHITransAddr.h"
-#include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
@@ -1058,73 +1056,6 @@ MemoryDependenceResults::lookupNonLocalPointerDepVisited(BasicBlock *BB) const {
   return NonLocalPointerDepVisited[BB->getNumber()].first;
 }
 
-// When the syntactic PHI translation of a select-dependent load address fails
-// for one arm, try to recover an equivalent, already-existing address with
-// SCEV.  The arm's address is the original address \p A with the recurrence
-// phi (whose \p PredBB incoming is a select on \p Cond) replaced by the value
-// chosen by \p CondVal.  If SCEV proves that address equals the SCEV of an
-// existing pointer that is loaded from and dominates \p PredBB's terminator,
-// that pointer is returned so the load-PRE-through-select path can reuse it.
-// This closes the affine-address gap (different index with compensating
-// offsets) that the syntactic operand match cannot see.  Returns null on
-// failure.
-static Value *recoverSelectArmAddr(Value *A, Value *Cond, BasicBlock *PredBB,
-                                   bool CondVal, ScalarEvolution &SE,
-                                   const DominatorTree &DT) {
-  if (!A || !SE.isSCEVable(A->getType()))
-    return nullptr;
-
-  const SCEV *S = SE.getSCEV(A);
-
-  // Locate the recurrence phi in the address whose PredBB incoming is a select
-  // on Cond, and the arm chosen by CondVal.
-  PHINode *RecPhi = nullptr;
-  Value *Arm = nullptr;
-  SCEVExprContains(S, [&](const SCEV *Sub) {
-    if (RecPhi)
-      return true;
-    auto *U = dyn_cast<SCEVUnknown>(Sub);
-    if (!U)
-      return false;
-    auto *PN = dyn_cast<PHINode>(U->getValue());
-    if (!PN || PN->getBasicBlockIndex(PredBB) < 0)
-      return false;
-    auto *SI = dyn_cast<SelectInst>(PN->getIncomingValueForBlock(PredBB));
-    if (!SI || SI->getCondition() != Cond)
-      return false;
-    RecPhi = PN;
-    Arm = CondVal ? SI->getTrueValue() : SI->getFalseValue();
-    return true;
-  });
-  if (!RecPhi || !Arm || !SE.isSCEVable(Arm->getType()))
-    return nullptr;
-
-  // The "keep" arm reproduces the original address exactly.
-  if (Arm == RecPhi)
-    return A;
-
-  ValueToSCEVMapTy Map;
-  Map[RecPhi] = SE.getSCEV(Arm);
-  const SCEV *Target = SCEVParameterRewriter::rewrite(S, SE, Map);
-  if (Target == S)
-    return nullptr;
-
-  // Return an existing loaded-from pointer with a matching address SCEV.
-  for (BasicBlock *BB = PredBB; BB; BB = BB->getSinglePredecessor())
-    for (Instruction &I : *BB) {
-      auto *LD = dyn_cast<LoadInst>(&I);
-      if (!LD)
-        continue;
-      Value *Ptr = LD->getPointerOperand();
-      if (!SE.isSCEVable(Ptr->getType()) ||
-          !DT.dominates(LD, PredBB->getTerminator()))
-        continue;
-      if (SE.getSCEV(Ptr) == Target)
-        return Ptr;
-    }
-  return nullptr;
-}
-
 /// Perform a dependency query based on pointer/pointeesize starting at the end
 /// of StartBB.
 ///
@@ -1447,18 +1378,6 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
         if (Value *Cond = PredPointer.getSelectCondition()) {
           SelectAddr::SelectAddrs SelAddrs =
               PHITransAddr(Pointer).translateValue(BB, Pred, &DT, Cond);
-          // If a side failed the syntactic match, try to recover an existing
-          // affine-equal address with SCEV (opt-in via setScalarEvolution).
-          if (SE && (!SelAddrs.first || !SelAddrs.second)) {
-            Value *A = Pointer.getAddr();
-            if (!SelAddrs.first)
-              SelAddrs.first = recoverSelectArmAddr(A, Cond, Pred,
-                                                    /*CondVal=*/true, *SE, DT);
-            if (!SelAddrs.second)
-              SelAddrs.second =
-                  recoverSelectArmAddr(A, Cond, Pred,
-                                       /*CondVal=*/false, *SE, DT);
-          }
           if (SelAddrs.first && SelAddrs.second) {
             Result.push_back(NonLocalDepResult(Pred, MemDepResult::getSelect(),
                                                SelectAddr(Cond, SelAddrs)));

@@ -32,7 +32,6 @@ namespace llvm {
 class AssumptionCache;
 class DominatorTree;
 class PHITransAddr;
-class ScalarEvolution;
 
 /// A memory dependence query can return one of three different answers.
 class MemDepResult {
@@ -383,12 +382,6 @@ private:
   PredIteratorCache PredCache;
   EarliestEscapeAnalysis EEA;
 
-  /// Optional, opt-in ScalarEvolution used only to recover select-dependent
-  /// load addresses that are affine-equal (but not syntactically identical) to
-  /// an existing pointer.  Null unless a client (currently GVN) sets it, so all
-  /// other MemDep users are unaffected.
-  ScalarEvolution *SE = nullptr;
-
   unsigned DefaultBlockScanLimit;
 
   /// Offsets to dependant clobber loads.
@@ -401,11 +394,6 @@ public:
                           unsigned DefaultBlockScanLimit)
       : AA(AA), AC(AC), TLI(TLI), DT(DT), EEA(DT),
         DefaultBlockScanLimit(DefaultBlockScanLimit) {}
-
-  /// Opt in to SCEV-based recovery of affine-equal select-dependent
-  /// addresses.  Passing null (the default) preserves the syntactic-only
-  /// behavior.
-  void setScalarEvolution(ScalarEvolution *S) { SE = S; }
 
   /// Handle invalidation in the new PM.
   LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
