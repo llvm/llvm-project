@@ -401,6 +401,10 @@ define <8 x i32> @test_masked_load_split_v8i32(ptr addrspace(1) %p) {
   ret <8 x i32> %v
 }
 
+; TODO: It makes sense to propagate eviction hints when splitting, but
+; duplicating the prefetch hint might cause a regression. We might need a
+; target hook to refine metadata after splitting. In this case, I think it
+; would be ideal to only preserve the prefetch on the first load.
 define <8 x i32> @test_masked_load_l2_prefetch_v8i32(ptr addrspace(1) %p) {
 ; SM80-LABEL: test_masked_load_l2_prefetch_v8i32(
 ; SM80:    ld.global.L2::256B.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
