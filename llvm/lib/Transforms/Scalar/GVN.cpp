@@ -3120,7 +3120,8 @@ bool isExprBuiltFromBaseOnly(Value *Expr, Value *Base) {
 // creating a new expression for the same value more than once and keeps the
 // clone as close as possible to its first use.
 Value *cloneExprReplacingOperand(Value *Expr, const Value *OldVal,
-                                 Value *NewVal, Instruction *InsertPt) {
+                                 Value *NewVal, Instruction *InsertPt,
+                                 DenseMap<Value *, Value *> &ClonedExprs) {
   if (!Expr || !OldVal || !NewVal || !InsertPt)
     return nullptr;
 
@@ -3130,6 +3131,11 @@ Value *cloneExprReplacingOperand(Value *Expr, const Value *OldVal,
   if (Expr == OldVal)
     return NewVal;
 
+  // Check if we already have a clone for this expression.
+  auto It = ClonedExprs.find(Expr);
+  if (It != ClonedExprs.end())
+    return It->second;
+
   // Only handle Cast, BinOp, UnaryOp for now.
   if (!isa<CastInst, BinaryOperator, UnaryOperator>(Expr))
     return nullptr;
@@ -3137,7 +3143,8 @@ Value *cloneExprReplacingOperand(Value *Expr, const Value *OldVal,
   auto *ExprInst = cast<Instruction>(Expr);
   SmallVector<Value *, 4> NewOps;
   for (Value *Op : ExprInst->operands()) {
-    auto *NewOp = cloneExprReplacingOperand(Op, OldVal, NewVal, InsertPt);
+    auto *NewOp =
+        cloneExprReplacingOperand(Op, OldVal, NewVal, InsertPt, ClonedExprs);
     if (!NewOp)
       return nullptr;
     NewOps.push_back(NewOp);
@@ -3148,6 +3155,9 @@ Value *cloneExprReplacingOperand(Value *Expr, const Value *OldVal,
 
   NewInst->insertBefore(InsertPt->getIterator());
   LLVM_DEBUG(dbgs() << "ConstPropExpr: Cloning Inst " << *NewInst << "\n");
+
+  // Store the clone in the map for future reuse.
+  ClonedExprs[Expr] = NewInst;
   return NewInst;
 }
 
@@ -3200,7 +3210,9 @@ bool GVNPass::propagateConstExpressions(Value *LHS, Value *RHS,
         if (!isExprBuiltFromBaseOnly(OpExpr, LHS))
           continue;
 
-        Value *ClonedExpr = cloneExprReplacingOperand(OpExpr, LHS, RHS, &I);
+        DenseMap<Value *, Value *> ClonedExprs;
+        Value *ClonedExpr =
+            cloneExprReplacingOperand(OpExpr, LHS, RHS, &I, ClonedExprs);
         if (!ClonedExpr || ClonedExpr == OpExpr)
           continue;
 
