@@ -295,21 +295,18 @@ PRESERVE_NONE bool Ret(InterpState &S) {
   assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
 #endif
 
-  if (!S.checkingPotentialConstantExpression() || S.Current->Caller)
-    cleanupAfterFunctionCall(S, S.Current->getFunction());
+  InterpFrame *Caller = S.Current->Caller;
 
-  if (InterpFrame *Caller = S.Current->Caller) {
-    S.PC = S.Current->getRetPC();
-    InterpFrame::free(S.Current);
-    S.Current = Caller;
-    S.Stk.push<T>(Ret);
-  } else {
-    InterpFrame::free(S.Current);
-    S.Current = nullptr;
-    // The topmost frame should come from an EvalEmitter,
-    // which has its own implementation of the Ret<> instruction.
-  }
+  // This only happens via Context::Run().
+  if (!Caller)
+    return true;
 
+  cleanupAfterFunctionCall(S, S.Current->getFunction());
+
+  S.PC = S.Current->getRetPC();
+  InterpFrame::free(S.Current);
+  S.Current = Caller;
+  S.Stk.push<T>(Ret);
   return true;
 }
 
@@ -318,18 +315,16 @@ PRESERVE_NONE inline bool RetVoid(InterpState &S) {
   assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
 #endif
 
-  if (!S.checkingPotentialConstantExpression() || S.Current->Caller)
-    cleanupAfterFunctionCall(S, S.Current->getFunction());
+  InterpFrame *Caller = S.Current->Caller;
+  // This only happens via Context::Run().
+  if (!Caller)
+    return true;
 
-  if (InterpFrame *Caller = S.Current->Caller) {
-    S.PC = S.Current->getRetPC();
-    InterpFrame::free(S.Current);
-    S.Current = Caller;
-  } else {
-    InterpFrame::free(S.Current);
-    S.Current = nullptr;
-  }
+  cleanupAfterFunctionCall(S, S.Current->getFunction());
 
+  S.PC = S.Current->getRetPC();
+  InterpFrame::free(S.Current);
+  S.Current = Caller;
   return true;
 }
 
