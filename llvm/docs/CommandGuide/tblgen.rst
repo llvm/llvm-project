@@ -103,6 +103,9 @@ General Options
 
   Write the output file only if it is new or has changed.
 
+.. option:: -E
+
+  Preprocess the source files instead of running any backend.
 
 clang-tblgen Options
 ~~~~~~~~~~~~~~~~~~~~
