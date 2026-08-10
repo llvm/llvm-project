@@ -108,6 +108,7 @@ namespace llvm {
     LLVM_ABI lltok::Kind LexToken();
 
     int getNextChar();
+    bool isLabelTail();
     void SkipLineComment();
     bool SkipCComment();
     lltok::Kind ReadString(lltok::Kind kind);
