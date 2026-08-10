@@ -7087,10 +7087,16 @@ const ToolChain &Driver::getOffloadToolChain(
                                                        Args);
       break;
     case llvm::Triple::AMDHSA:
-      // For AMDHSA offloading (HIP, OpenMP), use the unified AMDGPUToolChain
-      // This handles both amdgpu-amd-amdhsa and spirv64-amd-amdhsa
+      // For AMDHSA offloading (HIP, OpenMP), use the unified AMDGPUToolChain.
+      // This handles both amdgpu-amd-amdhsa and spirv64-amd-amdhsa.
+      // Exception: an AMDHSA OpenMP target whose architecture is SPIR-V
+      // (e.g. spirv64-amd-amdhsa) targets the AMDGCN-flavored SPIR-V ABI and
+      // requires the SPIR-V OpenMP toolchain rather than the native AMDGPU one.
       // FIXME: This should not key off language or OS.
-      if (Kind == Action::OFK_HIP || Kind == Action::OFK_OpenMP)
+      if (Kind == Action::OFK_OpenMP && Target.isSPIRV())
+        TC = std::make_unique<toolchains::SPIRVOpenMPToolChain>(
+            *this, Target, *HostTC, Args);
+      else if (Kind == Action::OFK_HIP || Kind == Action::OFK_OpenMP)
         TC = std::make_unique<toolchains::AMDGPUToolChain>(*this, Target, Args,
                                                            HostTC.get(), Kind);
       break;
