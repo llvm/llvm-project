@@ -14,6 +14,7 @@
 #include "NVPTX.h"
 #include "NVPTXAliasAnalysis.h"
 #include "NVPTXAllocaHoisting.h"
+#include "NVPTXAsmPrinter.h"
 #include "NVPTXAtomicLower.h"
 #include "NVPTXCtorDtorLowering.h"
 #include "NVPTXLowerAggrCopies.h"
@@ -102,7 +103,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeGenericToNVVMLegacyPassPass(PR);
   initializeNVPTXAllocaHoistingPass(PR);
   initializeNVPTXAsmPrinterPass(PR);
-  initializeNVPTXAssignValidGlobalNamesPass(PR);
+  initializeNVPTXAssignValidGlobalNamesLegacyPassPass(PR);
   initializeNVPTXAtomicLowerPass(PR);
   initializeNVPTXLowerArgsLegacyPassPass(PR);
   initializeNVPTXPromoteParamAlignLegacyPassPass(PR);
@@ -112,7 +113,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeNVPTXCtorDtorLoweringLegacyPass(PR);
   initializeNVPTXLowerAggrCopiesPass(PR);
   initializeNVPTXProxyRegErasurePass(PR);
-  initializeNVPTXForwardParamsPassPass(PR);
+  initializeNVPTXForwardParamsLegacyPassPass(PR);
   initializeNVPTXAddressFolderPassPass(PR);
   initializeNVPTXDAGToDAGISelLegacyPass(PR);
   initializeNVPTXAAWrapperPassPass(PR);
@@ -205,6 +206,16 @@ void NVPTXTargetMachine::registerEarlyDefaultAliasAnalyses(AAManager &AAM) {
 void NVPTXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #define GET_PASS_REGISTRY "NVPTXPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
+
+  // TODO: Move this into the base CodeGenPassBuilder once all targets that
+  // currently implement it have a ported asm-printer pass.
+  if (PIC) {
+    PIC->addClassToPassName(NVPTXAsmPrinterBeginPass::name(),
+                            "nvptx-asm-printer-begin");
+    PIC->addClassToPassName(NVPTXAsmPrinterPass::name(), "nvptx-asm-printer");
+    PIC->addClassToPassName(NVPTXAsmPrinterEndPass::name(),
+                            "nvptx-asm-printer-end");
+  }
 
   PB.registerPipelineStartEPCallback(
       [this](ModulePassManager &PM, OptimizationLevel Level) {
@@ -326,7 +337,7 @@ void NVPTXPassConfig::addIRPasses() {
 
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createNVPTXImageOptimizerPass());
-  addPass(createNVPTXAssignValidGlobalNamesPass());
+  addPass(createNVPTXAssignValidGlobalNamesLegacyPass());
   addPass(createGenericToNVVMLegacyPass());
 
   // Lower variadic calls before address space inference.
@@ -393,7 +404,7 @@ bool NVPTXPassConfig::addInstSelector() {
 }
 
 void NVPTXPassConfig::addPreRegAlloc() {
-  addPass(createNVPTXForwardParamsPass());
+  addPass(createNVPTXForwardParamsLegacyPass());
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createNVPTXAddressFolderPass());
   // Remove Proxy Register pseudo instructions used to keep `callseq_end` alive.
