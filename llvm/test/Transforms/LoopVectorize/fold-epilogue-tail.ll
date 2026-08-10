@@ -42,7 +42,7 @@ exit:
 
 define void @test_outer_loop(ptr %A, i64 %m) {
 ; CHECK-OUTER-LOOP-LABEL: Checking a loop in 'test_outer_loop'
-; CHECK-OUTER-LOOP: LV: Epilgue tail-folding is not supported for outer loop
+; CHECK-OUTER-LOOP: LV: Epilogue tail-folding is not supported for outer loop
 ;
 entry:
   br label %outer.header
