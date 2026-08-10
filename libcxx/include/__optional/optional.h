@@ -692,8 +692,6 @@ private:
   using __const_pointer _LIBCPP_NODEBUG = add_pointer_t<const _Tp>;
 
 public:
-  using __optional_move_assign_base<_Tp>::__optional_move_assign_base;
-
 #    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
   using iterator       = __bounded_iter<__pointer>;
   using const_iterator = __bounded_iter<__const_pointer>;
