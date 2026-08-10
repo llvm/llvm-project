@@ -13,7 +13,7 @@
 #ifdef __has_include
 #  if __has_include(<version>)
 #    include <version>
-#  else
+#  elif __has_include(<ciso646>)
 #    include <ciso646>
 #  endif
 #else
