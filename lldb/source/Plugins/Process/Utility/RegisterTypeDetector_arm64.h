@@ -75,26 +75,26 @@ private:
                                        uint64_t hwcap3);
 
   struct RegisterEntry {
-    RegisterEntry(llvm::StringRef name, DetectorFn detector)
-        : m_name(name), m_type(nullptr), m_detector(detector) {}
+    RegisterEntry(const std::vector<llvm::StringRef> &names,
+                  DetectorFn detector)
+        : m_names(names), m_type(nullptr), m_detector(detector) {}
 
-    llvm::StringRef m_name;
+    std::vector<llvm::StringRef> m_names;
     // A raw pointer to the top level type. This pointer's lifetime is managed
     // by a unique pointer of the same value in m_detected_types.
     const RegisterType *m_type;
     DetectorFn m_detector;
-  } m_registers[9] = {
-      RegisterEntry("cpsr", &Arm64RegisterTypeDetector::DetectCPSRType),
-      RegisterEntry("fpsr", &Arm64RegisterTypeDetector::DetectFPSRType),
-      RegisterEntry("fpcr", &Arm64RegisterTypeDetector::DetectFPCRType),
-      RegisterEntry("mte_ctrl", &Arm64RegisterTypeDetector::DetectMTECtrlType),
-      RegisterEntry("svcr", &Arm64RegisterTypeDetector::DetectSVCRType),
-      RegisterEntry("fpmr", &Arm64RegisterTypeDetector::DetectFPMRType),
-      RegisterEntry("gcs_features_enabled",
+  } m_registers[8] = {
+      RegisterEntry({"cpsr"}, &Arm64RegisterTypeDetector::DetectCPSRType),
+      RegisterEntry({"fpsr"}, &Arm64RegisterTypeDetector::DetectFPSRType),
+      RegisterEntry({"fpcr"}, &Arm64RegisterTypeDetector::DetectFPCRType),
+      RegisterEntry({"mte_ctrl"},
+                    &Arm64RegisterTypeDetector::DetectMTECtrlType),
+      RegisterEntry({"svcr"}, &Arm64RegisterTypeDetector::DetectSVCRType),
+      RegisterEntry({"fpmr"}, &Arm64RegisterTypeDetector::DetectFPMRType),
+      RegisterEntry({"gcs_features_enabled", "gcs_features_locked"},
                     &Arm64RegisterTypeDetector::DetectGCSFeaturesType),
-      RegisterEntry("gcs_features_locked",
-                    &Arm64RegisterTypeDetector::DetectGCSFeaturesType),
-      RegisterEntry("por_el0", &Arm64RegisterTypeDetector::DetectPOREL0Type),
+      RegisterEntry({"por_el0"}, &Arm64RegisterTypeDetector::DetectPOREL0Type),
   };
 
   // Becomes true once field detection has been run for all registers.
