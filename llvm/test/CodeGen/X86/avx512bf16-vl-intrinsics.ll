@@ -58,6 +58,23 @@ entry:
   ret <2 x i64> %4
 }
 
+; concatenation test for swapped operands
+define <2 x i64> @test_mm_cvtne2ps2bf16_128_concat(<4 x float> %A, <4 x float> %B) {
+; CHECK-LABEL: test_mm_cvtne2ps2bf16_128_concat:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vcvtneps2bf16 %xmm0, %xmm0 # encoding: [0x62,0xf2,0x7e,0x08,0x72,0xc0]
+; CHECK-NEXT:    vcvtneps2bf16 %xmm1, %xmm1 # encoding: [0x62,0xf2,0x7e,0x08,0x72,0xc9]
+; CHECK-NEXT:    vmovlhps %xmm1, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x16,0xc1]
+; CHECK-NEXT:    # xmm0 = xmm0[0],xmm1[0]
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+entry:
+  %0 = tail call <8 x bfloat> @llvm.x86.avx512bf16.mask.cvtneps2bf16.128(<4 x float> %A, <8 x bfloat> poison, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+  %1 = tail call <8 x bfloat> @llvm.x86.avx512bf16.mask.cvtneps2bf16.128(<4 x float> %B, <8 x bfloat> poison, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+  %2 = shufflevector <8 x bfloat> %0, <8 x bfloat> %1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+  %3 = bitcast <8 x bfloat> %2 to <2 x i64>
+  ret <2 x i64> %3
+}
+
 declare <16 x bfloat> @llvm.x86.avx512bf16.cvtne2ps2bf16.256(<8 x float>, <8 x float>) #3
 
 define <4 x i64> @test_mm256_cvtne2ps2bf16_256(<8 x float> %A, <8 x float> %B) local_unnamed_addr #1 {
@@ -110,6 +127,22 @@ entry:
   %3 = select <16 x i1> %2, <16 x bfloat> %0, <16 x bfloat> %1
   %4 = bitcast <16 x bfloat> %3 to <4 x i64>
   ret <4 x i64> %4
+}
+
+; concatenation test for swapped operands
+define <4 x i64> @test_mm256_cvtne2ps2bf16_256_concat(<8 x float> %A, <8 x float> %B) {
+; CHECK-LABEL: test_mm256_cvtne2ps2bf16_256_concat:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vcvtneps2bf16 %ymm0, %xmm0 # encoding: [0x62,0xf2,0x7e,0x28,0x72,0xc0]
+; CHECK-NEXT:    vcvtneps2bf16 %ymm1, %xmm1 # encoding: [0x62,0xf2,0x7e,0x28,0x72,0xc9]
+; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0x7d,0x18,0xc1,0x01]
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+entry:
+  %0 = tail call <8 x bfloat> @llvm.x86.avx512bf16.cvtneps2bf16.256(<8 x float> %A)
+  %1 = tail call <8 x bfloat> @llvm.x86.avx512bf16.cvtneps2bf16.256(<8 x float> %B)
+  %2 = shufflevector <8 x bfloat> %0, <8 x bfloat> %1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %3 = bitcast <16 x bfloat> %2 to <4 x i64>
+  ret <4 x i64> %3
 }
 
 declare <8 x bfloat> @llvm.x86.avx512bf16.cvtneps2bf16.256(<8 x float>) #3
