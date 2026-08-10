@@ -635,7 +635,7 @@ const char *const optionalOperandParserCode = R"(
 )";
 const char *const operandParserCode = R"(
   {0}OperandsLoc = parser.getCurrentLocation();
-  if (parser.parseOperand({0}RawOperand))
+  if (parser.parseOperand({0}RawOperands[0]))
     return ::mlir::failure();
 )";
 /// The code snippet used to generate a parser call for a VariadicOfVariadic
@@ -691,11 +691,11 @@ const char *const typeParserCode = R"(
     {0} type;
     if (parser.parseCustomTypeWithFallback(type))
       return ::mlir::failure();
-    {1}RawType = type;
+    {1}RawTypes[0] = type;
   }
 )";
 const char *const qualifiedTypeParserCode = R"(
-  if (parser.parseType({1}RawType))
+  if (parser.parseType({1}RawTypes[0]))
     return ::mlir::failure();
 )";
 
@@ -969,9 +969,9 @@ static void genElementParserStorage(FormatElement *element, const Operator &op,
       }
     } else {
       body << "  ::mlir::OpAsmParser::UnresolvedOperand " << name
-           << "RawOperand{};\n"
+           << "RawOperands[1] = {};\n"
            << "  ::llvm::ArrayRef<::mlir::OpAsmParser::UnresolvedOperand> "
-           << name << "Operands(&" << name << "RawOperand, 1);";
+           << name << "Operands(" << name << "RawOperands);";
     }
     body << formatv("  ::llvm::SMLoc {0}OperandsLoc;\n"
                     "  (void){0}OperandsLoc;\n",
@@ -1006,11 +1006,10 @@ static void genElementParserStorage(FormatElement *element, const Operator &op,
     if (lengthKind != ArgumentLengthKind::Single)
       body << "  ::llvm::SmallVector<::mlir::Type, 1> " << name << "Types;\n";
     else
-      body
-          << formatv("  ::mlir::Type {0}RawType{{};\n", name)
-          << formatv(
-                 "  ::llvm::ArrayRef<::mlir::Type> {0}Types(&{0}RawType, 1);\n",
-                 name);
+      body << formatv("  ::mlir::Type {0}RawTypes[1] = {{};\n", name)
+           << formatv(
+                  "  ::llvm::ArrayRef<::mlir::Type> {0}Types({0}RawTypes);\n",
+                  name);
   } else if (auto *dir = dyn_cast<FunctionalTypeDirective>(element)) {
     ArgumentLengthKind ignored;
     body << "  ::llvm::ArrayRef<::mlir::Type> "
@@ -1039,7 +1038,7 @@ static void genCustomParameterParser(FormatElement *param, MethodBody &body,
     else if (lengthKind == ArgumentLengthKind::Optional)
       body << formatv("{0}Operand", name);
     else
-      body << formatv("{0}RawOperand", name);
+      body << formatv("{0}RawOperands[0]", name);
 
   } else if (auto *region = dyn_cast<RegionVariable>(param)) {
     StringRef name = region->getVar()->name;
@@ -1068,7 +1067,7 @@ static void genCustomParameterParser(FormatElement *param, MethodBody &body,
     else if (lengthKind == ArgumentLengthKind::Optional)
       body << formatv("{0}Type", listName);
     else
-      body << formatv("{0}RawType", listName);
+      body << formatv("{0}RawTypes[0]", listName);
 
   } else if (auto *string = dyn_cast<StringElement>(param)) {
     FmtContext ctx;
