@@ -3246,8 +3246,10 @@ bool GVNPass::propagateConstExpressions(Value *LHS, Value *RHS,
 bool GVNPass::propagateEquality(
     Value *LHS, Value *RHS,
     const std::variant<BasicBlockEdge, Instruction *> &Root) {
+      
   SmallVector<std::pair<Value*, Value*>, 4> Worklist;
   Worklist.push_back(std::make_pair(LHS, RHS));
+  
   bool Changed = false;
   SmallVector<const BasicBlock *> DominatedBlocks;
   if (const BasicBlockEdge *Edge = std::get_if<BasicBlockEdge>(&Root)) {
@@ -3272,6 +3274,10 @@ bool GVNPass::propagateEquality(
     // Don't try to propagate equalities between constants.
     if (isa<Constant>(LHS) && isa<Constant>(RHS))
       continue;
+
+    // Clone constant expressions into dominated region for further folding.
+    if (auto *Edge = std::get_if<BasicBlockEdge>(&Root))
+      Changed |= propagateConstExpressions(LHS, RHS, *Edge);
 
     // Prefer a constant on the right-hand side, or an Argument if no constants.
     if (isa<Constant>(LHS) || (isa<Argument>(LHS) && !isa<Constant>(RHS)))
@@ -3509,25 +3515,10 @@ bool GVNPass::processInstruction(Instruction *I) {
     Value *TrueVal = ConstantInt::getTrue(TrueSucc->getContext());
     BasicBlockEdge TrueE(Parent, TrueSucc);
     Changed |= propagateEquality(BranchCond, TrueVal, TrueE);
-    Changed |= propagateConstExpressions(BranchCond, TrueVal, TrueE);
 
     Value *FalseVal = ConstantInt::getFalse(FalseSucc->getContext());
     BasicBlockEdge FalseE(Parent, FalseSucc);
     Changed |= propagateEquality(BranchCond, FalseVal, FalseE);
-    Changed |= propagateConstExpressions(BranchCond, FalseVal, FalseE);
-
-    // If the condition is a comparison, also propagate the equality (or
-    // disequality) between its operands into whichever edge it is known to
-    // hold along, e.g. for "if (x == 5) ... " propagate x == 5 into the
-    // true edge. This mirrors the equality propagateEquality() itself
-    // derives from CmpInst equivalences.
-    if (CmpInst *Cmp = dyn_cast<CmpInst>(BranchCond)) {
-      Value *Op0 = Cmp->getOperand(0), *Op1 = Cmp->getOperand(1);
-      if (Cmp->isEquivalence(/*Invert=*/false))
-        Changed |= propagateConstExpressions(Op0, Op1, TrueE);
-      if (Cmp->isEquivalence(/*Invert=*/true))
-        Changed |= propagateConstExpressions(Op0, Op1, FalseE);
-    }
 
     return Changed;
   }
@@ -3549,8 +3540,6 @@ bool GVNPass::processInstruction(Instruction *I) {
       if (SwitchEdges.lookup(Dst) == 1) {
         BasicBlockEdge E(Parent, Dst);
         Changed |= propagateEquality(SwitchCond, Case.getCaseValue(), E);
-        Changed |=
-            propagateConstExpressions(SwitchCond, Case.getCaseValue(), E);
       }
     }
     return Changed;
