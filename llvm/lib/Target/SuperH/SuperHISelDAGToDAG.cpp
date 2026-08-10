@@ -96,34 +96,6 @@ bool SuperHDAGToDAGISel::SelectAddr(SDNode *Root, SDValue N, SDValue Lhs, SDValu
 //                             Branch Lowering
 //===----------------------------------------------------------------------===//
 
-// Due to delay slots there needs to be a bit more smarts
-// in here.
-bool SuperHDAGToDAGISel::trySelectRET(SDNode *N) {
-  SDValue Chain = N->getOperand(0);
-  unsigned LastOpNum = N->getNumOperands() - 1;
-
-  // Skip the incoming flag if present
-  if (N->getOperand(LastOpNum).getValueType() == MVT::Glue) {
-    --LastOpNum;
-  }
-
-  SDLoc DL(N);
-  SmallVector<SDValue, 8> Ops;
-
-  // RTS implicitly depends on the R0 register for
-  // return values.
-  Ops.push_back(CurDAG->getRegister(SH::R0, MVT::i32));
-  Ops.push_back(Chain);
-  Ops.push_back(Chain.getValue(1));
-
-  SDNode *ResNode = CurDAG->getMachineNode(SH::RTS, DL, MVT::Other, Ops);
-  //ResNode = CurDAG->getMachineNode(SH::NOP, DL, MVT::Other, SDValue(ResNode, 0));
-
-  ReplaceUses(SDValue(N, 0), SDValue(ResNode, 0));
-  CurDAG->RemoveDeadNode(N);
-  return true;
-}
-
 bool SuperHDAGToDAGISel::trySelectFrameIndex(SDNode *N) {
   auto DL = CurDAG->getDataLayout();
 
@@ -140,8 +112,6 @@ bool SuperHDAGToDAGISel::trySelect(SDNode *N) {
   switch(Opcode) {
   case ISD::FrameIndex:
     return trySelectFrameIndex(N);
-  case SHISD::RET_GLUE:
-    return trySelectRET(N);
   default:
     return false;
   }

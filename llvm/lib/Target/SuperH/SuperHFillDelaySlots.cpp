@@ -44,7 +44,7 @@ private:
   typedef Block::iterator BlockIt;
 
   const SuperHRegisterInfo *TRI;
-  const TargetInstrInfo *TII;
+  const SuperHInstrInfo *TII;
 
   bool hasDelaySlot(MachineInstr &I);
   bool expandMBB(Block &MBB);
@@ -63,12 +63,7 @@ bool SuperHFillDelaySlots::fillDelaySlot(Block &MBB, BlockIt MBBI) {
 
     // If the prior instruction does not have a delay slot
     // we swap the instructions.
-    //
-    // NOTE:  SuperH does not allow branch instructions
-    //        of any kind to be situated in a delay slot.
-    //        as such we fall through to the NOP in that
-    //        instance.
-    if (!Prev->isBranch() && !Prev->hasDelaySlot()) {
+    if (TII->canFillDelaySlot(Prev->getOpcode())) {
       LDBG() << "Swapping " << TII->getName(MI.getOpcode()) 
              << " and " << TII->getName(Prev->getOpcode()) 
              << " @ " << MBB.getParent()->getName();
