@@ -27739,7 +27739,7 @@ SDValue DAGCombiner::visitVECTOR_INTERLEAVE(SDNode *N) {
 
   // Fold an interleave of fixed-length BUILD_VECTORs by rearranging their
   // scalar operands directly.
-  EVT EltVT = Op0.getValueType().getVectorElementType();
+  EVT EltVT = Op0.getOperand(0).getValueType();
   if (llvm::all_of(N->op_values(), [&](SDValue Op) {
         return Op.getOpcode() == ISD::BUILD_VECTOR &&
                Op.getOperand(0).getValueType() == EltVT;
