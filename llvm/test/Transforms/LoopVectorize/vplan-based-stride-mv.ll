@@ -10,9 +10,9 @@ define void @basic(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; COMPARE-NO-MV-LABEL: define void @basic(
 ; COMPARE-NO-MV-SAME: ptr noalias [[P_OUT:%.*]], ptr [[P:%.*]], i64 [[STRIDE:%.*]]) {
 ; COMPARE-NO-MV-NEXT:  [[ENTRY:.*:]]
-; COMPARE-NO-MV-NEXT:    [[STRIDES_MV_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_PH:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH]]:
+; COMPARE-NO-MV-NEXT:    [[STRIDES_MV_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-NO-MV-NEXT:    br i1 [[STRIDES_MV_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH1:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH1]]:
 ; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -45,9 +45,9 @@ define void @basic(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; COMPARE-LAA-MV-LABEL: define void @basic(
 ; COMPARE-LAA-MV-SAME: ptr noalias [[P_OUT:%.*]], ptr [[P:%.*]], i64 [[STRIDE:%.*]]) {
 ; COMPARE-LAA-MV-NEXT:  [[ENTRY:.*:]]
-; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_SCEVCHECK]]:
+; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-LAA-MV-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_PH]]:
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -314,9 +314,9 @@ define void @byte_gep_scaled_stride(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; COMPARE-NO-MV-LABEL: define void @byte_gep_scaled_stride(
 ; COMPARE-NO-MV-SAME: ptr noalias [[P_OUT:%.*]], ptr [[P:%.*]], i64 [[STRIDE:%.*]]) {
 ; COMPARE-NO-MV-NEXT:  [[ENTRY:.*:]]
-; COMPARE-NO-MV-NEXT:    [[STRIDES_MV_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_PH:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH]]:
+; COMPARE-NO-MV-NEXT:    [[STRIDES_MV_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-NO-MV-NEXT:    br i1 [[STRIDES_MV_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH1:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH1]]:
 ; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -351,9 +351,9 @@ define void @byte_gep_scaled_stride(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; COMPARE-LAA-MV-LABEL: define void @byte_gep_scaled_stride(
 ; COMPARE-LAA-MV-SAME: ptr noalias [[P_OUT:%.*]], ptr [[P:%.*]], i64 [[STRIDE:%.*]]) {
 ; COMPARE-LAA-MV-NEXT:  [[ENTRY:.*:]]
-; COMPARE-LAA-MV-NEXT:    [[STRIDES_MV_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_PH:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_PH]]:
+; COMPARE-LAA-MV-NEXT:    [[STRIDES_MV_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-LAA-MV-NEXT:    br i1 [[STRIDES_MV_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH1:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_PH1]]:
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -1057,9 +1057,9 @@ define void @shared_stride(ptr noalias %p.out, ptr %p0, ptr %p1, i64 %stride) {
 ; COMPARE-NO-MV-LABEL: define void @shared_stride(
 ; COMPARE-NO-MV-SAME: ptr noalias [[P_OUT:%.*]], ptr [[P0:%.*]], ptr [[P1:%.*]], i64 [[STRIDE:%.*]]) {
 ; COMPARE-NO-MV-NEXT:  [[ENTRY:.*:]]
-; COMPARE-NO-MV-NEXT:    [[STRIDES_MV_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_PH:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH]]:
+; COMPARE-NO-MV-NEXT:    [[STRIDES_MV_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-NO-MV-NEXT:    br i1 [[STRIDES_MV_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH1:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH1]]:
 ; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -1098,9 +1098,9 @@ define void @shared_stride(ptr noalias %p.out, ptr %p0, ptr %p1, i64 %stride) {
 ; COMPARE-LAA-MV-LABEL: define void @shared_stride(
 ; COMPARE-LAA-MV-SAME: ptr noalias [[P_OUT:%.*]], ptr [[P0:%.*]], ptr [[P1:%.*]], i64 [[STRIDE:%.*]]) {
 ; COMPARE-LAA-MV-NEXT:  [[ENTRY:.*:]]
-; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_SCEVCHECK]]:
+; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-LAA-MV-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_PH]]:
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -1166,11 +1166,11 @@ define void @independent_strides(ptr noalias %p.out, ptr %p0, ptr %p1, i64 %stri
 ; COMPARE-NO-MV-LABEL: define void @independent_strides(
 ; COMPARE-NO-MV-SAME: ptr noalias [[P_OUT:%.*]], ptr [[P0:%.*]], ptr [[P1:%.*]], i64 [[STRIDE0:%.*]], i64 [[STRIDE1:%.*]]) {
 ; COMPARE-NO-MV-NEXT:  [[ENTRY:.*:]]
+; COMPARE-NO-MV-NEXT:    br label %[[STRIDES_CHECK:.*]]
+; COMPARE-NO-MV:       [[STRIDES_CHECK]]:
 ; COMPARE-NO-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE0]], 1
 ; COMPARE-NO-MV-NEXT:    [[IDENT_CHECK1:%.*]] = icmp ne i64 [[STRIDE1]], 1
 ; COMPARE-NO-MV-NEXT:    [[STRIDES_MV_CHECK:%.*]] = or i1 [[IDENT_CHECK]], [[IDENT_CHECK1]]
-; COMPARE-NO-MV-NEXT:    br label %[[STRIDES_CHECK:.*]]
-; COMPARE-NO-MV:       [[STRIDES_CHECK]]:
 ; COMPARE-NO-MV-NEXT:    br i1 [[STRIDES_MV_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH]]:
 ; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -1210,11 +1210,11 @@ define void @independent_strides(ptr noalias %p.out, ptr %p0, ptr %p1, i64 %stri
 ; COMPARE-LAA-MV-LABEL: define void @independent_strides(
 ; COMPARE-LAA-MV-SAME: ptr noalias [[P_OUT:%.*]], ptr [[P0:%.*]], ptr [[P1:%.*]], i64 [[STRIDE0:%.*]], i64 [[STRIDE1:%.*]]) {
 ; COMPARE-LAA-MV-NEXT:  [[ENTRY:.*:]]
+; COMPARE-LAA-MV-NEXT:    br label %[[STRIDES_CHECK:.*]]
+; COMPARE-LAA-MV:       [[STRIDES_CHECK]]:
 ; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE0]], 1
 ; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK1:%.*]] = icmp ne i64 [[STRIDE1]], 1
 ; COMPARE-LAA-MV-NEXT:    [[STRIDES_MV_CHECK:%.*]] = or i1 [[IDENT_CHECK]], [[IDENT_CHECK1]]
-; COMPARE-LAA-MV-NEXT:    br label %[[STRIDES_CHECK:.*]]
-; COMPARE-LAA-MV:       [[STRIDES_CHECK]]:
 ; COMPARE-LAA-MV-NEXT:    br i1 [[STRIDES_MV_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_PH]]:
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -1282,9 +1282,9 @@ define void @dependent_strides(ptr noalias %p.out, ptr %p0, ptr %p1, i64 %stride
 ; COMPARE-NO-MV-LABEL: define void @dependent_strides(
 ; COMPARE-NO-MV-SAME: ptr noalias [[P_OUT:%.*]], ptr [[P0:%.*]], ptr [[P1:%.*]], i64 [[STRIDE:%.*]]) {
 ; COMPARE-NO-MV-NEXT:  [[ENTRY:.*:]]
-; COMPARE-NO-MV-NEXT:    [[STRIDES_MV_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_PH:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH]]:
+; COMPARE-NO-MV-NEXT:    [[STRIDES_MV_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-NO-MV-NEXT:    br i1 [[STRIDES_MV_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH1:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH1]]:
 ; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -1342,9 +1342,9 @@ define void @dependent_strides(ptr noalias %p.out, ptr %p0, ptr %p1, i64 %stride
 ; COMPARE-LAA-MV-LABEL: define void @dependent_strides(
 ; COMPARE-LAA-MV-SAME: ptr noalias [[P_OUT:%.*]], ptr [[P0:%.*]], ptr [[P1:%.*]], i64 [[STRIDE:%.*]]) {
 ; COMPARE-LAA-MV-NEXT:  [[ENTRY:.*:]]
-; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_SCEVCHECK]]:
+; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-LAA-MV-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_PH]]:
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -1433,9 +1433,9 @@ define void @dependent_strides_reverse_order(ptr noalias %p.out, ptr %p0, ptr %p
 ; COMPARE-NO-MV-LABEL: define void @dependent_strides_reverse_order(
 ; COMPARE-NO-MV-SAME: ptr noalias [[P_OUT:%.*]], ptr [[P0:%.*]], ptr [[P1:%.*]], i64 [[STRIDE:%.*]]) {
 ; COMPARE-NO-MV-NEXT:  [[ENTRY:.*:]]
-; COMPARE-NO-MV-NEXT:    [[STRIDES_MV_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_PH:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH]]:
+; COMPARE-NO-MV-NEXT:    [[STRIDES_MV_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-NO-MV-NEXT:    br i1 [[STRIDES_MV_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH1:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH1]]:
 ; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -1493,9 +1493,9 @@ define void @dependent_strides_reverse_order(ptr noalias %p.out, ptr %p0, ptr %p
 ; COMPARE-LAA-MV-LABEL: define void @dependent_strides_reverse_order(
 ; COMPARE-LAA-MV-SAME: ptr noalias [[P_OUT:%.*]], ptr [[P0:%.*]], ptr [[P1:%.*]], i64 [[STRIDE:%.*]]) {
 ; COMPARE-LAA-MV-NEXT:  [[ENTRY:.*:]]
-; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_SCEVCHECK]]:
+; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-LAA-MV-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_PH]]:
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -1857,9 +1857,9 @@ define void @strided_interleave(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; COMPARE-NO-MV-LABEL: define void @strided_interleave(
 ; COMPARE-NO-MV-SAME: ptr noalias [[P_OUT:%.*]], ptr [[P:%.*]], i64 [[STRIDE:%.*]]) {
 ; COMPARE-NO-MV-NEXT:  [[ENTRY:.*:]]
-; COMPARE-NO-MV-NEXT:    [[STRIDES_MV_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_PH:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH]]:
+; COMPARE-NO-MV-NEXT:    [[STRIDES_MV_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-NO-MV-NEXT:    br i1 [[STRIDES_MV_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH1:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH1]]:
 ; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -1898,9 +1898,9 @@ define void @strided_interleave(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; COMPARE-LAA-MV-LABEL: define void @strided_interleave(
 ; COMPARE-LAA-MV-SAME: ptr noalias [[P_OUT:%.*]], ptr [[P:%.*]], i64 [[STRIDE:%.*]]) {
 ; COMPARE-LAA-MV-NEXT:  [[ENTRY:.*:]]
-; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_SCEVCHECK]]:
+; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-LAA-MV-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_PH]]:
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -1969,9 +1969,9 @@ define void @in_loop_base(ptr noalias %p.out, ptr %p, i64 %stride, i64 %offset) 
 ; COMPARE-NO-MV-LABEL: define void @in_loop_base(
 ; COMPARE-NO-MV-SAME: ptr noalias [[P_OUT:%.*]], ptr [[P:%.*]], i64 [[STRIDE:%.*]], i64 [[OFFSET:%.*]]) {
 ; COMPARE-NO-MV-NEXT:  [[ENTRY:.*:]]
-; COMPARE-NO-MV-NEXT:    [[STRIDES_MV_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_PH:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH]]:
+; COMPARE-NO-MV-NEXT:    [[STRIDES_MV_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-NO-MV-NEXT:    br i1 [[STRIDES_MV_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH1:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH1]]:
 ; COMPARE-NO-MV-NEXT:    [[TMP0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET]]
@@ -2007,9 +2007,9 @@ define void @in_loop_base(ptr noalias %p.out, ptr %p, i64 %stride, i64 %offset) 
 ; COMPARE-LAA-MV-LABEL: define void @in_loop_base(
 ; COMPARE-LAA-MV-SAME: ptr noalias [[P_OUT:%.*]], ptr [[P:%.*]], i64 [[STRIDE:%.*]], i64 [[OFFSET:%.*]]) {
 ; COMPARE-LAA-MV-NEXT:  [[ENTRY:.*:]]
-; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_SCEVCHECK]]:
+; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-LAA-MV-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_PH]]:
 ; COMPARE-LAA-MV-NEXT:    [[TMP0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET]]
@@ -2072,9 +2072,9 @@ define void @base_not_in_ir(ptr noalias %p.out, ptr %p, i64 %stride, i64 %offset
 ; COMPARE-NO-MV-LABEL: define void @base_not_in_ir(
 ; COMPARE-NO-MV-SAME: ptr noalias [[P_OUT:%.*]], ptr [[P:%.*]], i64 [[STRIDE:%.*]], i64 [[OFFSET:%.*]]) {
 ; COMPARE-NO-MV-NEXT:  [[ENTRY:.*:]]
-; COMPARE-NO-MV-NEXT:    [[STRIDES_MV_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_PH:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH]]:
+; COMPARE-NO-MV-NEXT:    [[STRIDES_MV_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-NO-MV-NEXT:    br i1 [[STRIDES_MV_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH1:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH1]]:
 ; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -2109,9 +2109,9 @@ define void @base_not_in_ir(ptr noalias %p.out, ptr %p, i64 %stride, i64 %offset
 ; COMPARE-LAA-MV-LABEL: define void @base_not_in_ir(
 ; COMPARE-LAA-MV-SAME: ptr noalias [[P_OUT:%.*]], ptr [[P:%.*]], i64 [[STRIDE:%.*]], i64 [[OFFSET:%.*]]) {
 ; COMPARE-LAA-MV-NEXT:  [[ENTRY:.*:]]
-; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_SCEVCHECK]]:
+; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-LAA-MV-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_PH]]:
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -2397,10 +2397,10 @@ define void @non_constant_btc(ptr noalias %p.out, ptr %p, i64 %stride, i64 %n) {
 ; COMPARE-NO-MV-SAME: ptr noalias [[P_OUT:%.*]], ptr [[P:%.*]], i64 [[STRIDE:%.*]], i64 [[N:%.*]]) {
 ; COMPARE-NO-MV-NEXT:  [[ENTRY:.*]]:
 ; COMPARE-NO-MV-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
-; COMPARE-NO-MV-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-NO-MV-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 4
 ; COMPARE-NO-MV-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH]]:
+; COMPARE-NO-MV-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-NO-MV-NEXT:    br i1 [[TMP1]], label %[[SCALAR_PH]], label %[[VECTOR_PH1:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH1]]:
 ; COMPARE-NO-MV-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX]], 3
@@ -2438,10 +2438,10 @@ define void @non_constant_btc(ptr noalias %p.out, ptr %p, i64 %stride, i64 %n) {
 ; COMPARE-LAA-MV-SAME: ptr noalias [[P_OUT:%.*]], ptr [[P:%.*]], i64 [[STRIDE:%.*]], i64 [[N:%.*]]) {
 ; COMPARE-LAA-MV-NEXT:  [[ENTRY:.*]]:
 ; COMPARE-LAA-MV-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
-; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-LAA-MV-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 4
 ; COMPARE-LAA-MV-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_SCEVCHECK]]:
+; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-LAA-MV-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_PH]]:
 ; COMPARE-LAA-MV-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX]], 3
@@ -2787,10 +2787,10 @@ define void @stride_btc_checks_order(ptr noalias %p.out, ptr %p, i64 %stride, i6
 ; COMPARE-NO-MV-NEXT:  [[ENTRY:.*]]:
 ; COMPARE-NO-MV-NEXT:    [[N:%.*]] = mul i64 [[M]], [[STRIDE]]
 ; COMPARE-NO-MV-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[M]], i64 1)
-; COMPARE-NO-MV-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-NO-MV-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 4
 ; COMPARE-NO-MV-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH]]:
+; COMPARE-NO-MV-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-NO-MV-NEXT:    br i1 [[TMP1]], label %[[SCALAR_PH]], label %[[VECTOR_PH1:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH1]]:
 ; COMPARE-NO-MV-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX]], 3
@@ -2829,10 +2829,10 @@ define void @stride_btc_checks_order(ptr noalias %p.out, ptr %p, i64 %stride, i6
 ; COMPARE-LAA-MV-NEXT:  [[ENTRY:.*]]:
 ; COMPARE-LAA-MV-NEXT:    [[N:%.*]] = mul i64 [[M]], [[STRIDE]]
 ; COMPARE-LAA-MV-NEXT:    [[SMAX1:%.*]] = call i64 @llvm.smax.i64(i64 [[M]], i64 1)
-; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-LAA-MV-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX1]], 4
 ; COMPARE-LAA-MV-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_SCEVCHECK]]:
+; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-LAA-MV-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_PH]]:
 ; COMPARE-LAA-MV-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX1]], 3
@@ -2895,9 +2895,9 @@ define void @stride_dependent_btc_non_preventive(ptr noalias %p.out, ptr %p, i64
 ; COMPARE-NO-MV-SAME: ptr noalias [[P_OUT:%.*]], ptr [[P:%.*]], i64 [[STRIDE:%.*]]) {
 ; COMPARE-NO-MV-NEXT:  [[ENTRY:.*:]]
 ; COMPARE-NO-MV-NEXT:    [[N:%.*]] = add i64 [[STRIDE]], 3
-; COMPARE-NO-MV-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-NO-MV-NEXT:    br label %[[STRIDES_CHECK:.*]]
 ; COMPARE-NO-MV:       [[STRIDES_CHECK]]:
+; COMPARE-NO-MV-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-NO-MV-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH]]:
 ; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -2926,9 +2926,9 @@ define void @stride_dependent_btc_non_preventive(ptr noalias %p.out, ptr %p, i64
 ; COMPARE-LAA-MV-SAME: ptr noalias [[P_OUT:%.*]], ptr [[P:%.*]], i64 [[STRIDE:%.*]]) {
 ; COMPARE-LAA-MV-NEXT:  [[ENTRY:.*:]]
 ; COMPARE-LAA-MV-NEXT:    [[N:%.*]] = add i64 [[STRIDE]], 3
-; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_SCEVCHECK]]:
+; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-LAA-MV-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_PH]]:
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -3053,9 +3053,9 @@ define void @stride_btc_independent_memdep_triple_check(ptr %p, ptr noalias %p2,
 ; COMPARE-NO-MV-NEXT:  [[ENTRY:.*:]]
 ; COMPARE-NO-MV-NEXT:    [[P_OUT:%.*]] = getelementptr i8, ptr [[P2]], i64 [[OUT_OFFSET]]
 ; COMPARE-NO-MV-NEXT:    [[N:%.*]] = add i64 [[STRIDE]], 3
-; COMPARE-NO-MV-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-NO-MV-NEXT:    br label %[[STRIDES_CHECK:.*]]
 ; COMPARE-NO-MV:       [[STRIDES_CHECK]]:
+; COMPARE-NO-MV-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-NO-MV-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_MEMCHECK]]:
 ; COMPARE-NO-MV-NEXT:    [[TMP21:%.*]] = sub i64 [[OUT_OFFSET]], 1
@@ -3095,9 +3095,9 @@ define void @stride_btc_independent_memdep_triple_check(ptr %p, ptr noalias %p2,
 ; COMPARE-LAA-MV-NEXT:  [[ENTRY:.*:]]
 ; COMPARE-LAA-MV-NEXT:    [[P_OUT:%.*]] = getelementptr i8, ptr [[P2]], i64 [[OUT_OFFSET]]
 ; COMPARE-LAA-MV-NEXT:    [[N:%.*]] = add i64 [[STRIDE]], 3
-; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_SCEVCHECK]]:
+; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-LAA-MV-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_MEMCHECK]]:
 ; COMPARE-LAA-MV-NEXT:    [[TMP1:%.*]] = sub i64 [[OUT_OFFSET]], 1
@@ -3278,9 +3278,9 @@ define void @nd_array_last_idx(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; COMPARE-NO-MV-LABEL: define void @nd_array_last_idx(
 ; COMPARE-NO-MV-SAME: ptr noalias [[P_OUT:%.*]], ptr [[P:%.*]], i64 [[STRIDE:%.*]]) {
 ; COMPARE-NO-MV-NEXT:  [[ENTRY:.*:]]
-; COMPARE-NO-MV-NEXT:    [[STRIDES_MV_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_PH:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH]]:
+; COMPARE-NO-MV-NEXT:    [[STRIDES_MV_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-NO-MV-NEXT:    br i1 [[STRIDES_MV_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH1:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH1]]:
 ; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -3313,9 +3313,9 @@ define void @nd_array_last_idx(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; COMPARE-LAA-MV-LABEL: define void @nd_array_last_idx(
 ; COMPARE-LAA-MV-SAME: ptr noalias [[P_OUT:%.*]], ptr [[P:%.*]], i64 [[STRIDE:%.*]]) {
 ; COMPARE-LAA-MV-NEXT:  [[ENTRY:.*:]]
-; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_SCEVCHECK]]:
+; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-LAA-MV-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_PH]]:
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -3578,9 +3578,9 @@ define void @sext_stride(ptr noalias %p.out, ptr %p, i32 %stride.i32) {
 ; COMPARE-NO-MV-LABEL: define void @sext_stride(
 ; COMPARE-NO-MV-SAME: ptr noalias [[P_OUT:%.*]], ptr [[P:%.*]], i32 [[STRIDE_I32:%.*]]) {
 ; COMPARE-NO-MV-NEXT:  [[ENTRY:.*:]]
-; COMPARE-NO-MV-NEXT:    [[STRIDES_MV_CHECK:%.*]] = icmp ne i32 [[STRIDE_I32]], 1
 ; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_PH:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH]]:
+; COMPARE-NO-MV-NEXT:    [[STRIDES_MV_CHECK:%.*]] = icmp ne i32 [[STRIDE_I32]], 1
 ; COMPARE-NO-MV-NEXT:    br i1 [[STRIDES_MV_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH1:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH1]]:
 ; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -3614,9 +3614,9 @@ define void @sext_stride(ptr noalias %p.out, ptr %p, i32 %stride.i32) {
 ; COMPARE-LAA-MV-LABEL: define void @sext_stride(
 ; COMPARE-LAA-MV-SAME: ptr noalias [[P_OUT:%.*]], ptr [[P:%.*]], i32 [[STRIDE_I32:%.*]]) {
 ; COMPARE-LAA-MV-NEXT:  [[ENTRY:.*:]]
-; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[STRIDE_I32]], 1
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_SCEVCHECK]]:
+; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[STRIDE_I32]], 1
 ; COMPARE-LAA-MV-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_PH]]:
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -3901,9 +3901,9 @@ define void @trunc_ext_stride(ptr noalias %p.out, ptr %p0, ptr %p1, i32 %stride)
 ; COMPARE-NO-MV-NEXT:  [[ENTRY:.*:]]
 ; COMPARE-NO-MV-NEXT:    [[STRIDE_TRUNC:%.*]] = trunc i32 [[STRIDE]] to i16
 ; COMPARE-NO-MV-NEXT:    [[STRIDE_EXT:%.*]] = sext i32 [[STRIDE]] to i64
-; COMPARE-NO-MV-NEXT:    [[STRIDES_MV_CHECK:%.*]] = icmp ne i32 [[STRIDE]], 1
 ; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_SCEVCHECK]]:
+; COMPARE-NO-MV-NEXT:    [[STRIDES_MV_CHECK:%.*]] = icmp ne i32 [[STRIDE]], 1
 ; COMPARE-NO-MV-NEXT:    br i1 [[STRIDES_MV_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH]]:
 ; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -3949,9 +3949,9 @@ define void @trunc_ext_stride(ptr noalias %p.out, ptr %p0, ptr %p1, i32 %stride)
 ; COMPARE-LAA-MV-NEXT:  [[ENTRY:.*:]]
 ; COMPARE-LAA-MV-NEXT:    [[STRIDE_TRUNC:%.*]] = trunc i32 [[STRIDE]] to i16
 ; COMPARE-LAA-MV-NEXT:    [[STRIDE_EXT:%.*]] = sext i32 [[STRIDE]] to i64
-; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[STRIDE]], 1
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_SCEVCHECK]]:
+; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[STRIDE]], 1
 ; COMPARE-LAA-MV-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH1:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_PH1]]:
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -4292,9 +4292,9 @@ define void @basic_strided_store(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; COMPARE-NO-MV-LABEL: define void @basic_strided_store(
 ; COMPARE-NO-MV-SAME: ptr noalias [[P_OUT:%.*]], ptr [[P:%.*]], i64 [[STRIDE:%.*]]) {
 ; COMPARE-NO-MV-NEXT:  [[ENTRY:.*:]]
-; COMPARE-NO-MV-NEXT:    [[STRIDES_MV_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_PH:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH]]:
+; COMPARE-NO-MV-NEXT:    [[STRIDES_MV_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-NO-MV-NEXT:    br i1 [[STRIDES_MV_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH1:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH1]]:
 ; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -4327,9 +4327,9 @@ define void @basic_strided_store(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; COMPARE-LAA-MV-LABEL: define void @basic_strided_store(
 ; COMPARE-LAA-MV-SAME: ptr noalias [[P_OUT:%.*]], ptr [[P:%.*]], i64 [[STRIDE:%.*]]) {
 ; COMPARE-LAA-MV-NEXT:  [[ENTRY:.*:]]
-; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_SCEVCHECK]]:
+; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-LAA-MV-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_PH]]:
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -4387,9 +4387,9 @@ define void @ptr_vec_use(ptr noalias %p.out, ptr noalias %p.ptr.out, ptr %p, i64
 ; COMPARE-NO-MV-LABEL: define void @ptr_vec_use(
 ; COMPARE-NO-MV-SAME: ptr noalias [[P_OUT:%.*]], ptr noalias [[P_PTR_OUT:%.*]], ptr [[P:%.*]], i64 [[STRIDE:%.*]]) {
 ; COMPARE-NO-MV-NEXT:  [[ENTRY:.*:]]
-; COMPARE-NO-MV-NEXT:    [[STRIDES_MV_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_PH:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH]]:
+; COMPARE-NO-MV-NEXT:    [[STRIDES_MV_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-NO-MV-NEXT:    br i1 [[STRIDES_MV_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH1:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH1]]:
 ; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -4429,9 +4429,9 @@ define void @ptr_vec_use(ptr noalias %p.out, ptr noalias %p.ptr.out, ptr %p, i64
 ; COMPARE-LAA-MV-LABEL: define void @ptr_vec_use(
 ; COMPARE-LAA-MV-SAME: ptr noalias [[P_OUT:%.*]], ptr noalias [[P_PTR_OUT:%.*]], ptr [[P:%.*]], i64 [[STRIDE:%.*]]) {
 ; COMPARE-LAA-MV-NEXT:  [[ENTRY:.*:]]
-; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_SCEVCHECK]]:
+; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-LAA-MV-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_PH]]:
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -4499,9 +4499,9 @@ define void @stride_idx_vec_use(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; COMPARE-NO-MV-LABEL: define void @stride_idx_vec_use(
 ; COMPARE-NO-MV-SAME: ptr noalias [[P_OUT:%.*]], ptr [[P:%.*]], i64 [[STRIDE:%.*]]) {
 ; COMPARE-NO-MV-NEXT:  [[ENTRY:.*:]]
-; COMPARE-NO-MV-NEXT:    [[STRIDES_MV_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_PH:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH]]:
+; COMPARE-NO-MV-NEXT:    [[STRIDES_MV_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-NO-MV-NEXT:    br i1 [[STRIDES_MV_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH1:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH1]]:
 ; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -4538,9 +4538,9 @@ define void @stride_idx_vec_use(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; COMPARE-LAA-MV-LABEL: define void @stride_idx_vec_use(
 ; COMPARE-LAA-MV-SAME: ptr noalias [[P_OUT:%.*]], ptr [[P:%.*]], i64 [[STRIDE:%.*]]) {
 ; COMPARE-LAA-MV-NEXT:  [[ENTRY:.*:]]
-; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_SCEVCHECK]]:
+; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-LAA-MV-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_PH]]:
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -4603,9 +4603,9 @@ define void @offset_stride_idx_vec_use(ptr noalias %p.out, ptr %p, i64 %stride) 
 ; COMPARE-NO-MV-LABEL: define void @offset_stride_idx_vec_use(
 ; COMPARE-NO-MV-SAME: ptr noalias [[P_OUT:%.*]], ptr [[P:%.*]], i64 [[STRIDE:%.*]]) {
 ; COMPARE-NO-MV-NEXT:  [[ENTRY:.*:]]
-; COMPARE-NO-MV-NEXT:    [[STRIDES_MV_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_PH:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH]]:
+; COMPARE-NO-MV-NEXT:    [[STRIDES_MV_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-NO-MV-NEXT:    br i1 [[STRIDES_MV_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH1:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH1]]:
 ; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -4645,9 +4645,9 @@ define void @offset_stride_idx_vec_use(ptr noalias %p.out, ptr %p, i64 %stride) 
 ; COMPARE-LAA-MV-LABEL: define void @offset_stride_idx_vec_use(
 ; COMPARE-LAA-MV-SAME: ptr noalias [[P_OUT:%.*]], ptr [[P:%.*]], i64 [[STRIDE:%.*]]) {
 ; COMPARE-LAA-MV-NEXT:  [[ENTRY:.*:]]
-; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_SCEVCHECK]]:
+; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-LAA-MV-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_PH]]:
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -4778,9 +4778,9 @@ define void @test_rewrite_iv_scevs(i32 %start, ptr %dst) {
 ; COMPARE-NO-MV-SAME: i32 [[START:%.*]], ptr [[DST:%.*]]) {
 ; COMPARE-NO-MV-NEXT:  [[ENTRY:.*:]]
 ; COMPARE-NO-MV-NEXT:    [[START_EXT:%.*]] = zext i32 [[START]] to i64
-; COMPARE-NO-MV-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ne i32 [[START]], 1
 ; COMPARE-NO-MV-NEXT:    br label %[[STRIDES_CHECK:.*]]
 ; COMPARE-NO-MV:       [[STRIDES_CHECK]]:
+; COMPARE-NO-MV-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ne i32 [[START]], 1
 ; COMPARE-NO-MV-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH]]:
 ; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -4813,9 +4813,9 @@ define void @test_rewrite_iv_scevs(i32 %start, ptr %dst) {
 ; COMPARE-LAA-MV-SAME: i32 [[START:%.*]], ptr [[DST:%.*]]) {
 ; COMPARE-LAA-MV-NEXT:  [[ENTRY:.*:]]
 ; COMPARE-LAA-MV-NEXT:    [[START_EXT:%.*]] = zext i32 [[START]] to i64
-; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[START]], 1
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_SCEVCHECK]]:
+; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[START]], 1
 ; COMPARE-LAA-MV-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_PH]]:
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_BODY:.*]]

@@ -5703,8 +5703,12 @@ void VPlanTransforms::multiversionForUnitStridedMemOps(
   if (StridePredicates.isAlwaysTrue())
     return;
 
+  VPBasicBlock *StridesCheckVPBB = Plan.createVPBasicBlock("strides.check");
+  // We will replace the condition once we expand the predicate.
+  attachVPCheckBlock(Plan, Plan.getTrue(), StridesCheckVPBB,
+                     /*AddBranchWeights=*/false);
   VPBasicBlock *Entry = Plan.getEntry();
-  VPBuilder Builder(Entry);
+  VPBuilder Builder(&StridesCheckVPBB->back());
   DebugLoc DL = cast<VPIRBasicBlock>(Entry)
                     ->getIRBasicBlock()
                     ->getTerminator()
@@ -5712,9 +5716,7 @@ void VPlanTransforms::multiversionForUnitStridedMemOps(
   VPSCEVExpander Expander(Builder, *SE, DL);
   VPValue *Pred = Expander.tryToExpandPredicate(&StridePredicates);
   assert(Pred && "Must be expandable!");
-
-  VPBasicBlock *StridesCheckBB = Plan.createVPBasicBlock("strides.check");
-  attachVPCheckBlock(Plan, Pred, StridesCheckBB, /*AddBranchWeights=*/false);
+  StridesCheckVPBB->getTerminator()->setOperand(0, Pred);
 
   for (auto &R : make_early_inc_range(*Entry)) {
     auto *ExpandSCEV = dyn_cast<VPExpandSCEVRecipe>(&R);
