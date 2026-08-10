@@ -307,7 +307,9 @@ def hasAnyLocale(config, locales):
     program = (
         """
     #include <stddef.h>
-    #include <test_macros.h>
+
+    #include "test_macros.h"
+
     #ifdef TEST_HAS_NO_LOCALIZATION
       int main(int, char**) { return 1; }
     #else
