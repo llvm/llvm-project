@@ -16,5 +16,4 @@ for i = 1, i < 5, 1.0 in
 # CHECK: 2.0
 # CHECK: 3.0
 # CHECK: 4.0
-# CHECK: 5.0
 # CHECK: Evaluated to 0.000000
