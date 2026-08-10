@@ -105,7 +105,11 @@ jobs:
         run: pip install -r libcxx/utils/requirements.txt
 
       - name: Determine which commits should have benchmark data
-        run: libcxx/utils/ci/lnt/select-anchor-commits --since "${SINCE}" --every "${EVERY}" --output anchors.txt
+        run: |
+          libcxx/utils/ci/lnt/select-anchor-commits --since "${SINCE}" --every "${EVERY}" --output anchors.txt
+          # Anchor commits go from oldest to newest. Reverse them to prioritize newer commits first.
+          tac anchors.txt > tmp.txt
+          mv tmp.txt anchors.txt
 
       - name: Determine which of them are missing from LNT
         run: |
