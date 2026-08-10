@@ -90,9 +90,10 @@ void KnownFPClass::propagateExpRange(const KnownFPClass &Src, int LoExp,
     // 2^MantissaBits lifts even the smallest value 2^(emin - MantissaBits) into
     // the normal range. Double-double reports no precision and has no such
     // threshold, only its source can rule a subnormal out.
-    const unsigned Precision = APFloat::semanticsPrecision(Sem);
+    const int MantissaBits =
+        static_cast<int>(APFloat::semanticsPrecision(Sem)) - 1;
     const bool LiftsOutOfSubnormals =
-        Precision != 0 && LoExp >= static_cast<int>(Precision) - 1;
+        MantissaBits >= 0 && LoExp >= MantissaBits;
 
     Result |=
         LiftsOutOfSubnormals ? fcSubnormal : ~KnownFPClasses & fcSubnormal;
