@@ -144,6 +144,9 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/readability/use-std-min-max>` check by fixing spurious
   trailing semicolons and lost comments when the `if` body has no braces.
 
+- Fixed {doc}`cppcoreguidelines-use-enum-class
+  <clang-tidy/checks/cppcoreguidelines/use-enum-class>` suggesting `enum class` for unnamed enums (which is ill-formed).
+
 #### Removed checks
 
 - Removed the deprecated `zircon-temporary-objects` check. Users should migrate to
