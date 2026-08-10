@@ -14,14 +14,14 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr(p0) = COPY $x0
-    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:fpr(<2 x s32>) = G_LOAD [[COPY]](p0) :: (load (<2 x s32>))
-    ; CHECK-NEXT: [[SADDLP:%[0-9]+]]:fpr(s64) = G_SADDLP [[LOAD]]
-    ; CHECK-NEXT: $d0 = COPY [[SADDLP]](s64)
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:fpr(<2 x i32>) = G_LOAD [[COPY]](p0) :: (load (<2 x s32>))
+    ; CHECK-NEXT: [[SADDLP:%[0-9]+]]:fpr(i64) = G_SADDLP [[LOAD]]
+    ; CHECK-NEXT: $d0 = COPY [[SADDLP]](i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(p0) = COPY $x0
-    %1:_(<2 x s32>) = G_LOAD %0(p0) :: (load (<2 x s32>))
-    %2:_(s64) = G_SADDLP %1
-    $d0 = COPY %2(s64)
+    %1:_(<2 x i32>) = G_LOAD %0(p0) :: (load (<2 x s32>))
+    %2:_(i64) = G_SADDLP %1
+    $d0 = COPY %2(i64)
     RET_ReallyLR implicit $d0
 ...
 ---
@@ -38,13 +38,13 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr(p0) = COPY $x0
-    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:fpr(<2 x s32>) = G_LOAD [[COPY]](p0) :: (load (<2 x s32>))
-    ; CHECK-NEXT: [[UADDLP:%[0-9]+]]:fpr(s64) = G_UADDLP [[LOAD]]
-    ; CHECK-NEXT: $d0 = COPY [[UADDLP]](s64)
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:fpr(<2 x i32>) = G_LOAD [[COPY]](p0) :: (load (<2 x s32>))
+    ; CHECK-NEXT: [[UADDLP:%[0-9]+]]:fpr(i64) = G_UADDLP [[LOAD]]
+    ; CHECK-NEXT: $d0 = COPY [[UADDLP]](i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(p0) = COPY $x0
-    %1:_(<2 x s32>) = G_LOAD %0(p0) :: (load (<2 x s32>))
-    %2:_(s64) = G_UADDLP %1
-    $d0 = COPY %2(s64)
+    %1:_(<2 x i32>) = G_LOAD %0(p0) :: (load (<2 x s32>))
+    %2:_(i64) = G_UADDLP %1
+    $d0 = COPY %2(i64)
     RET_ReallyLR implicit $d0
 ...
