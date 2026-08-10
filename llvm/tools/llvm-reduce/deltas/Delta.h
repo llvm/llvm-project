@@ -55,13 +55,7 @@ struct Chunk {
   }
 };
 
-template<>
-struct DenseMapInfo<Chunk> {
-  static inline Chunk getEmptyKey() {
-    return {DenseMapInfo<int>::getEmptyKey(),
-            DenseMapInfo<int>::getEmptyKey()};
-  }
-
+template <> struct DenseMapInfo<Chunk> {
   static unsigned getHashValue(const Chunk Val) {
     std::pair<int, int> PairVal = std::make_pair(Val.Begin, Val.End);
     return DenseMapInfo<std::pair<int, int>>::getHashValue(PairVal);
@@ -71,7 +65,6 @@ struct DenseMapInfo<Chunk> {
     return LHS == RHS;
   }
 };
-
 
 /// Provides opaque interface for querying into ChunksToKeep without having to
 /// actually understand what is going on.

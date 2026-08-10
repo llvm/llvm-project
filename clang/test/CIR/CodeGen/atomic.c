@@ -25,7 +25,7 @@ void f1(void) {
 }
 
 // CIR-LABEL: @f1
-// CIR:         %[[SLOT:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init] {alignment = 4 : i64}
+// CIR:         %[[SLOT:.+]] = cir.alloca "x" align(4) init : !cir.ptr<!s32i>
 // CIR-NEXT:    %[[INIT:.+]] = cir.const #cir.int<42> : !s32i
 // CIR-NEXT:    cir.store align(4) %[[INIT]], %[[SLOT]] : !s32i, !cir.ptr<!s32i>
 // CIR:       }
@@ -46,7 +46,7 @@ void f2(void) {
 }
 
 // CIR-LABEL: @f2
-// CIR:         %[[SLOT:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x"] {alignment = 4 : i64}
+// CIR:         %[[SLOT:.+]] = cir.alloca "x" align(4) : !cir.ptr<!s32i>
 // CIR-NEXT:    %[[INIT:.+]] = cir.const #cir.int<42> : !s32i
 // CIR-NEXT:    cir.store align(4) %[[INIT]], %[[SLOT]] : !s32i, !cir.ptr<!s32i>
 // CIR:       }
@@ -335,7 +335,7 @@ void c11_atomic_cmpxchg_strong(_Atomic(int) *ptr, int *expected, int desired, in
   // CIR-LABEL: @c11_atomic_cmpxchg_strong
   // LLVM-LABEL: @c11_atomic_cmpxchg_strong
   // OGCG-LABEL: @c11_atomic_cmpxchg_strong
-  // CIR: %[[FAILURE:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["failure", init]
+  // CIR: %[[FAILURE:.*]] = cir.alloca "failure" {{.*}} init : !cir.ptr<!s32i>
 
   __c11_atomic_compare_exchange_strong(ptr, expected, desired,
                                        __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
@@ -417,7 +417,7 @@ void c11_atomic_cmpxchg_weak(_Atomic(int) *ptr, int *expected, int desired, int 
   // CIR-LABEL: @c11_atomic_cmpxchg_weak
   // LLVM-LABEL: @c11_atomic_cmpxchg_weak
   // OGCG-LABEL: @c11_atomic_cmpxchg_weak
-  // CIR: %[[FAILURE:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["failure", init]
+  // CIR: %[[FAILURE:.*]] = cir.alloca "failure" {{.*}} init : !cir.ptr<!s32i>
 
   __c11_atomic_compare_exchange_weak(ptr, expected, desired,
                                      __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
@@ -499,7 +499,7 @@ void atomic_cmpxchg(int *ptr, int *expected, int *desired, int failure) {
   // CIR-LABEL: @atomic_cmpxchg
   // LLVM-LABEL: @atomic_cmpxchg
   // OGCG-LABEL: @atomic_cmpxchg
-  // CIR: %[[FAILURE:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["failure", init]
+  // CIR: %[[FAILURE:.*]] = cir.alloca "failure" {{.*}} init : !cir.ptr<!s32i>
 
   __atomic_compare_exchange(ptr, expected, desired, /*weak=*/0, __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
   // CIR:         %[[OLD:.+]], %[[SUCCESS:.+]] = cir.atomic.cmpxchg success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
@@ -680,7 +680,7 @@ void atomic_cmpxchg_n(int *ptr, int *expected, int desired, int failure) {
   // CIR-LABEL: @atomic_cmpxchg_n
   // LLVM-LABEL: @atomic_cmpxchg_n
   // OGCG-LABEL: @atomic_cmpxchg_n
-  // CIR: %[[FAILURE:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["failure", init]
+  // CIR: %[[FAILURE:.*]] = cir.alloca "failure" {{.*}} init : !cir.ptr<!s32i>
 
   __atomic_compare_exchange_n(ptr, expected, desired, /*weak=*/0, __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
   // CIR:         %[[OLD:.+]], %[[SUCCESS:.+]] = cir.atomic.cmpxchg success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
@@ -1003,8 +1003,8 @@ float *atomic_fetch_ptr_to_ptr(float **ptr, int value) {
   // OGCG-LABEL: @atomic_fetch_ptr_to_ptr
 
   return __atomic_fetch_add(ptr, value, __ATOMIC_SEQ_CST);
-  // CIR: %[[PTR:.*]] = cir.alloca !cir.ptr<!cir.ptr<!cir.float>>, !cir.ptr<!cir.ptr<!cir.ptr<!cir.float>>>, ["ptr", init]
-  // CIR: %[[ATOMIC_TEMP:.*]] = cir.alloca !cir.ptr<!cir.float>, !cir.ptr<!cir.ptr<!cir.float>>, ["atomic-temp"] {alignment = 8 : i64}
+  // CIR: %[[PTR:.*]] = cir.alloca "ptr" {{.*}} init : !cir.ptr<!cir.ptr<!cir.ptr<!cir.float>>>
+  // CIR: %[[ATOMIC_TEMP:.*]] = cir.alloca "atomic-temp" align(8) : !cir.ptr<!cir.ptr<!cir.float>>
   // CIR: %[[PTR_LOAD:.*]] = cir.load align(8) %[[PTR]] : !cir.ptr<!cir.ptr<!cir.ptr<!cir.float>>>, !cir.ptr<!cir.ptr<!cir.float>>
   // CIR: %[[PTR_CAST:.*]] = cir.cast bitcast %[[PTR_LOAD]] : !cir.ptr<!cir.ptr<!cir.float>> -> !cir.ptr<!s64i>
   // CIR: %[[RESULT:.*]] = cir.atomic.fetch add seq_cst syncscope(system) fetch_first %[[PTR_CAST]], %{{.*}} : (!cir.ptr<!s64i>, !s64i) -> !s64i
@@ -1023,8 +1023,8 @@ float *atomic_fetch_ptr_to_ptr2(float **ptr, int value) {
   // LLVM-LABEL: @atomic_fetch_ptr_to_ptr2
   // OGCG-LABEL: @atomic_fetch_ptr_to_ptr2
   return __atomic_add_fetch(ptr, value, __ATOMIC_SEQ_CST);
-  // CIR: %[[PTR:.*]] = cir.alloca !cir.ptr<!cir.ptr<!cir.float>>, !cir.ptr<!cir.ptr<!cir.ptr<!cir.float>>>, ["ptr", init]
-  // CIR: %[[ATOMIC_TEMP:.*]] = cir.alloca !cir.ptr<!cir.float>, !cir.ptr<!cir.ptr<!cir.float>>, ["atomic-temp"] {alignment = 8 : i64}
+  // CIR: %[[PTR:.*]] = cir.alloca "ptr" {{.*}} init : !cir.ptr<!cir.ptr<!cir.ptr<!cir.float>>>
+  // CIR: %[[ATOMIC_TEMP:.*]] = cir.alloca "atomic-temp" align(8) : !cir.ptr<!cir.ptr<!cir.float>>
   // CIR: %[[PTR_LOAD:.*]] = cir.load align(8) %[[PTR]] : !cir.ptr<!cir.ptr<!cir.ptr<!cir.float>>>, !cir.ptr<!cir.ptr<!cir.float>>
   // CIR: %[[PTR_CAST:.*]] = cir.cast bitcast %[[PTR_LOAD]] : !cir.ptr<!cir.ptr<!cir.float>> -> !cir.ptr<!s64i>
   // CIR: %[[RESULT:.*]] = cir.atomic.fetch add seq_cst syncscope(system) %[[PTR_CAST]], %{{.*}} : (!cir.ptr<!s64i>, !s64i) -> !s64i
@@ -1567,6 +1567,66 @@ float c11_atomic_fetch_max_fp(_Atomic(float) *ptr, float value) {
 
   // OGCG:      %[[RES:.+]] = atomicrmw fmax ptr %{{.+}}, float %{{.+}} seq_cst, align 4
   // OGCG-NEXT: store float %[[RES]], ptr %{{.+}}, align 4
+}
+
+float atomic_fetch_fminimum_fp(float *ptr, float value) {
+  // CIR-LABEL: @atomic_fetch_fminimum_fp
+  // LLVM-LABEL: @atomic_fetch_fminimum_fp
+  // OGCG-LABEL: @atomic_fetch_fminimum_fp
+
+  return __atomic_fetch_fminimum(ptr, value, __ATOMIC_SEQ_CST);
+  // CIR: %{{.+}} = cir.atomic.fetch minimum seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
+
+  // LLVM:      %[[RES:.+]] = atomicrmw fminimum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
+  // LLVM-NEXT: store float %[[RES]], ptr %{{.+}}, align 4
+
+  // OGCG:      %[[RES:.+]] = atomicrmw fminimum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
+  // OGCG-NEXT: store float %[[RES]], ptr %{{.+}}, align 4
+}
+
+float atomic_fetch_fmaximum_fp(float *ptr, float value) {
+  // CIR-LABEL: @atomic_fetch_fmaximum_fp
+  // LLVM-LABEL: @atomic_fetch_fmaximum_fp
+  // OGCG-LABEL: @atomic_fetch_fmaximum_fp
+
+  return __atomic_fetch_fmaximum(ptr, value, __ATOMIC_SEQ_CST);
+  // CIR: %{{.+}} = cir.atomic.fetch maximum seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
+
+  // LLVM:      %[[RES:.+]] = atomicrmw fmaximum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
+  // LLVM-NEXT: store float %[[RES]], ptr %{{.+}} align 4
+
+  // OGCG:      %[[RES:.+]] = atomicrmw fmaximum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
+  // OGCG-NEXT: store float %[[RES]], ptr %{{.+}} align 4
+}
+
+float atomic_fetch_fminimum_num_fp(float *ptr, float value) {
+  // CIR-LABEL: @atomic_fetch_fminimum_num_fp
+  // LLVM-LABEL: @atomic_fetch_fminimum_num_fp
+  // OGCG-LABEL: @atomic_fetch_fminimum_num_fp
+
+  return __atomic_fetch_fminimum_num(ptr, value, __ATOMIC_SEQ_CST);
+  // CIR: %{{.+}} = cir.atomic.fetch minimum_num seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
+
+  // LLVM:      %[[RES:.+]] = atomicrmw fminimumnum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
+  // LLVM-NEXT: store float %[[RES]], ptr %{{.+}} align 4
+
+  // OGCG:      %[[RES:.+]] = atomicrmw fminimumnum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
+  // OGCG-NEXT: store float %[[RES]], ptr %{{.+}} align 4
+}
+
+float atomic_fetch_fmaximum_num_fp(float *ptr, float value) {
+  // CIR-LABEL: @atomic_fetch_fmaximum_num_fp
+  // LLVM-LABEL: @atomic_fetch_fmaximum_num_fp
+  // OGCG-LABEL: @atomic_fetch_fmaximum_num_fp
+
+  return __atomic_fetch_fmaximum_num(ptr, value, __ATOMIC_SEQ_CST);
+  // CIR: %{{.+}} = cir.atomic.fetch maximum_num seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
+
+  // LLVM:      %[[RES:.+]] = atomicrmw fmaximumnum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
+  // LLVM-NEXT: store float %[[RES]], ptr %{{.+}} align 4
+
+  // OGCG:      %[[RES:.+]] = atomicrmw fmaximumnum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
+  // OGCG-NEXT: store float %[[RES]], ptr %{{.+}} align 4
 }
 
 int atomic_fetch_and(int *ptr, int value) {
@@ -3328,8 +3388,8 @@ void atomic_cmpxchg_maybe_weak(int *ptr, int *expected, int *desired, int failur
   // CIR-LABEL: @atomic_cmpxchg_maybe_weak
   // LLVM-LABEL: @atomic_cmpxchg_maybe_weak
   // OGCG-LABEL: @atomic_cmpxchg_maybe_weak
-  // CIR: %[[FAILURE:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["failure", init]
-  // CIR: %[[WEAK:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["weak", init]
+  // CIR: %[[FAILURE:.*]] = cir.alloca "failure" {{.*}} init : !cir.ptr<!s32i>
+  // CIR: %[[WEAK:.*]] = cir.alloca "weak" {{.*}} init : !cir.ptr<!s32i>
 
   __atomic_compare_exchange(ptr, expected, desired, weak, __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
   // CIR:         %[[WEAK_LOAD:.*]] = cir.load{{.*}}%[[WEAK]]
@@ -3506,8 +3566,8 @@ void atomic_cmpxchg_n_maybe_weak(int *ptr, int *expected, int desired, int failu
   // CIR-LABEL: @atomic_cmpxchg_n_maybe_weak
   // LLVM-LABEL: @atomic_cmpxchg_n_maybe_weak
   // OGCG-LABEL: @atomic_cmpxchg_n_maybe_weak
-  // CIR: %[[FAILURE:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["failure", init]
-  // CIR: %[[WEAK:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["weak", init]
+  // CIR: %[[FAILURE:.*]] = cir.alloca "failure" {{.*}} init : !cir.ptr<!s32i>
+  // CIR: %[[WEAK:.*]] = cir.alloca "weak" {{.*}} init : !cir.ptr<!s32i>
 
   __atomic_compare_exchange_n(ptr, expected, desired, weak, __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
   // CIR:         %[[WEAK_LOAD:.*]] = cir.load{{.*}}%[[WEAK]]
@@ -3676,4 +3736,60 @@ void atomic_cmpxchg_n_maybe_weak(int *ptr, int *expected, int desired, int failu
   // OGCG:   cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire
   // OGCG: [[WEAK_SEQ_CST]]:
   // OGCG:   cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst seq_cst
+}
+
+typedef struct S {
+  char data[3];
+} S;
+
+void store_atomic_different_size(S a) {
+  // CIR-LABEL: @store_atomic_different_size
+  // LLVM-LABEL: @store_atomic_different_size
+  // OGCG-LABEL: @store_atomic_different_size
+
+  _Atomic(S) b;
+  __c11_atomic_store(&b, a, __ATOMIC_SEQ_CST);
+
+ // CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!rec_S>
+ // CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!rec_anon_struct1>
+ // CIR: %[[A_ATOMIC_TMP_ADDR:.*]] = cir.alloca ".atomictmp" {{.*}} : !cir.ptr<!rec_S>
+ // CIR: %[[ATOMIC_TMP_ADDR:.*]] = cir.alloca "atomic-temp" {{.*}} : !cir.ptr<!rec_anon_struct1>
+ // CIR: cir.store %[[A:.*]], %[[A_ADDR]] : !rec_S, !cir.ptr<!rec_S>
+ // CIR: cir.copy %[[A_ADDR]] {{.*}} to %[[A_ATOMIC_TMP_ADDR]] {{.*}} : !cir.ptr<!rec_S>
+ // CIR: %[[B_VOID_PTR:.*]] = cir.cast bitcast %[[B_ADDR]] : !cir.ptr<!rec_anon_struct1> -> !cir.ptr<!u32i>
+ // CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !u8i
+ // CIR: %[[MEMSET_SIZE:.*]] = cir.const #cir.int<4> : !u64i
+ // CIR: %[[A_VOID_PTR:.*]] = cir.cast bitcast %[[A_ATOMIC_TMP_ADDR]] : !cir.ptr<!rec_S> -> !cir.ptr<!void>
+ // CIR: cir.libc.memset %[[MEMSET_SIZE]] bytes at %[[A_VOID_PTR]] {{.*}} to %[[CONST_0]] : !cir.ptr<!void>, !u8i, !u64i
+ // CIR: %[[ATOMIC_TMP:.*]] = cir.cast bitcast %[[ATOMIC_TMP_ADDR]] : !cir.ptr<!rec_anon_struct1> -> !cir.ptr<!void>
+ // CIR: %[[MEMCPY_SIZE:.*]] = cir.const #cir.int<3> : !u64i
+ // CIR: cir.libc.memcpy %[[MEMCPY_SIZE]] bytes from %[[A_VOID_PTR]] to %[[ATOMIC_TMP]] : !u64i, !cir.ptr<!void> -> !cir.ptr<!void>
+ // CIR: %[[ATOMIC_TMP_U32:.*]] = cir.cast bitcast %[[ATOMIC_TMP]] : !cir.ptr<!void> -> !cir.ptr<!u32i>
+ // CIR: %[[DATA:.*]] = cir.load {{.*}} %[[ATOMIC_TMP_U32]] : !cir.ptr<!u32i>, !u32i
+ // CIR: cir.store {{.*}} syncscope(system) atomic(seq_cst) %[[DATA]], %[[B_VOID_PTR]] : !u32i, !cir.ptr<!u32i>
+
+ // FIXME(cir): The difference below is due to ABI lowering not being fully implemented for CIR.
+
+ // LLVM: %[[A_ADDR:.*]] = alloca %struct.S, i64 1, align 1
+ // LLVM: %[[B_ADDR:.*]] = alloca { %struct.S, [1 x i8] }, i64 1, align 4
+ // LLVM: %[[A_ATOMIC_TMP_ADDR:.*]] = alloca %struct.S, i64 1, align 1
+ // LLVM: %[[ATOMIC_TMP_ADDR:.*]] = alloca { %struct.S, [1 x i8] }, i64 1, align 4
+ // LLVM: store %struct.S %[[A:.*]], ptr %[[A_ADDR]], align 1
+ // LLVM: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %4, ptr align 1 %[[A_ADDR]], i64 3, i1 false)
+ // LLVM: call void @llvm.memset.p0.i64(ptr align 1 %[[A_ATOMIC_TMP_ADDR]], i8 0, i64 4, i1 false)
+ // LLVM: call void @llvm.memcpy.p0.p0.i64(ptr %[[ATOMIC_TMP_ADDR]], ptr %[[A_ATOMIC_TMP_ADDR]], i64 3, i1 false)
+ // LLVM: %[[ATOMIC_TMP:.*]] = load i32, ptr %[[ATOMIC_TMP_ADDR]], align 4
+ // LLVM: store atomic i32 %[[ATOMIC_TMP]], ptr %[[B_ADDR]] seq_cst, align 4
+
+ // OGCG: %[[A_ADDR:.*]] = alloca %struct.S, align 1
+ // OGCG: %[[B_ADDR:.*]] = alloca { %struct.S, [1 x i8] }, align 4
+ // OGCG: %[[A_ATOMIC_TMP_ADDR:.*]] = alloca %struct.S, align 1
+ // OGCG: %[[ATOMIC_TMP_ADDR:.*]] = alloca { %struct.S, [1 x i8] }, align 4
+ // OGCG: %[[A_PTR:.*]] = getelementptr inbounds nuw %struct.S, ptr %[[A_ADDR:.*]], i32 0, i32 0
+ // OGCG: store i24 %[[A:.*]], ptr %[[A_PTR]], align 1
+ // OGCG: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[A_ATOMIC_TMP_ADDR]], ptr align 1 %[[A_ADDR]], i64 3, i1 false)
+ // OGCG: call void @llvm.memset.p0.i64(ptr align 4 %[[ATOMIC_TMP_ADDR]], i8 0, i64 4, i1 false)
+ // OGCG: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[ATOMIC_TMP_ADDR]], ptr align 1 %[[A_ATOMIC_TMP_ADDR]], i64 3, i1 false)
+ // OGCG: %[[ATOMIC_TMP:.*]] = load i32, ptr %[[ATOMIC_TMP_ADDR]], align 4
+ // OGCG: store atomic i32 %[[ATOMIC_TMP]], ptr %[[B_ADDR]] seq_cst, align 4
 }

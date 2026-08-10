@@ -25,7 +25,7 @@ namespace cas {
 class CASID;
 
 /// Context for CAS identifiers.
-class CASContext {
+class LLVM_ABI CASContext {
   virtual void anchor();
 
 public:
@@ -57,7 +57,7 @@ protected:
 /// compared by hash, in which case the result of \a getHash() is compared.
 class CASID {
 public:
-  void dump() const;
+  LLVM_ABI void dump() const;
 
   friend raw_ostream &operator<<(raw_ostream &OS, const CASID &ID) {
     ID.print(OS);
@@ -80,7 +80,7 @@ public:
     if (LHS.Context == RHS.Context)
       return LHS.Hash == RHS.Hash;
 
-    // EmptyKey or TombstoneKey.
+    // TombstoneKey.
     if (!LHS.Context || !RHS.Context)
       return false;
 
@@ -99,13 +99,10 @@ public:
   }
 
   const CASContext &getContext() const {
-    assert(Context && "Tombstone or empty key for DenseMap?");
+    assert(Context && "Tombstone key for DenseMap?");
     return *Context;
   }
 
-  static CASID getDenseMapEmptyKey() {
-    return CASID(nullptr, DenseMapInfo<StringRef>::getEmptyKey());
-  }
   static CASID getDenseMapTombstoneKey() {
     // A reserved StringRef value distinct from the empty key, used only as a
     // DenseMap sentinel for CASID.
@@ -132,8 +129,6 @@ private:
 } // namespace cas
 
 template <> struct DenseMapInfo<cas::CASID> {
-  static cas::CASID getEmptyKey() { return cas::CASID::getDenseMapEmptyKey(); }
-
   static unsigned getHashValue(cas::CASID ID) {
     return (unsigned)hash_value(ID);
   }

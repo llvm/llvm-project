@@ -225,6 +225,8 @@
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
+#include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/Utils/Local.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -241,6 +243,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/IR/ValueHandle.h"
@@ -251,6 +254,7 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
@@ -259,6 +263,9 @@
 #define DEBUG_TYPE "amdgpu-lower-buffer-fat-pointers"
 
 using namespace llvm;
+
+using GetTTIFn = function_ref<const TargetTransformInfo *(Function &)>;
+using GetSEFn = function_ref<ScalarEvolution *(Function &)>;
 
 static constexpr unsigned BufferOffsetWidth = 32;
 
@@ -432,7 +439,9 @@ class StoreFatPtrsAsIntsAndExpandMemcpyVisitor
 
   IRBuilder<InstSimplifyFolder> IRB;
 
-  const TargetMachine *TM;
+  // Used for memcpy() lowering.
+  const TargetTransformInfo *TTI;
+  ScalarEvolution *SE;
 
   // Convert all the buffer fat pointers within the input value to inttegers
   // so that it can be stored in memory.
@@ -445,10 +454,10 @@ class StoreFatPtrsAsIntsAndExpandMemcpyVisitor
 public:
   StoreFatPtrsAsIntsAndExpandMemcpyVisitor(BufferFatPtrToIntTypeMap *TypeMap,
                                            const DataLayout &DL,
-                                           LLVMContext &Ctx,
-                                           const TargetMachine *TM)
-      : TypeMap(TypeMap), IRB(Ctx, InstSimplifyFolder(DL)), TM(TM) {}
-  bool processFunction(Function &F);
+                                           LLVMContext &Ctx)
+      : TypeMap(TypeMap), IRB(Ctx, InstSimplifyFolder(DL)) {}
+  bool processFunction(Function &F, const TargetTransformInfo *TTI,
+                       ScalarEvolution *SE);
 
   bool visitInstruction(Instruction &I) { return false; }
   bool visitAllocaInst(AllocaInst &I);
@@ -534,7 +543,10 @@ Value *StoreFatPtrsAsIntsAndExpandMemcpyVisitor::intsToFatPtrs(
   return Ret;
 }
 
-bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::processFunction(Function &F) {
+bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::processFunction(
+    Function &F, const TargetTransformInfo *TTI, ScalarEvolution *SE) {
+  this->TTI = TTI;
+  this->SE = SE;
   bool Changed = false;
   // Process memcpy-like instructions after the main iteration because they can
   // invalidate iterators.
@@ -549,6 +561,8 @@ bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::processFunction(Function &F) {
     Changed |= visit(cast<Instruction>(VH));
   }
   ConvertedForStore.clear();
+  this->TTI = nullptr;
+  this->SE = nullptr;
   return Changed;
 }
 
@@ -615,8 +629,7 @@ bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::visitMemCpyInst(
   if (MCI.getSourceAddressSpace() != AMDGPUAS::BUFFER_FAT_POINTER &&
       MCI.getDestAddressSpace() != AMDGPUAS::BUFFER_FAT_POINTER)
     return false;
-  llvm::expandMemCpyAsLoop(&MCI,
-                           TM->getTargetTransformInfo(*MCI.getFunction()));
+  llvm::expandMemCpyAsLoop(&MCI, *TTI, SE);
   MCI.eraseFromParent();
   return true;
 }
@@ -635,8 +648,7 @@ bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::visitMemSetInst(
     MemSetInst &MSI) {
   if (MSI.getDestAddressSpace() != AMDGPUAS::BUFFER_FAT_POINTER)
     return false;
-  llvm::expandMemSetAsLoop(&MSI,
-                           TM->getTargetTransformInfo(*MSI.getFunction()));
+  llvm::expandMemSetAsLoop(&MSI, TTI);
   MSI.eraseFromParent();
   return true;
 }
@@ -645,8 +657,7 @@ bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::visitMemSetPatternInst(
     MemSetPatternInst &MSPI) {
   if (MSPI.getDestAddressSpace() != AMDGPUAS::BUFFER_FAT_POINTER)
     return false;
-  llvm::expandMemSetPatternAsLoop(
-      &MSPI, TM->getTargetTransformInfo(*MSPI.getFunction()));
+  llvm::expandMemSetPatternAsLoop(&MSPI, *TTI);
   MSPI.eraseFromParent();
   return true;
 }
@@ -667,6 +678,11 @@ namespace {
 /// Note that this doesn't handle complex data strucures, but, in the future,
 /// the aggregate load splitter from SROA could be refactored to allow for that
 /// case.
+///
+/// Note that, if we can prove that the initial value of the pointer offset is 0
+/// and that the load/store won't wrap from the left or won't have bounds checks
+/// that straddle a word boundary, we can emit some of the strict bounds
+/// checking pessimizations even in strict OOB mode, and we attempt to do so.
 class LegalizeBufferContentTypesVisitor
     : public InstVisitor<LegalizeBufferContentTypesVisitor, bool> {
   friend class InstVisitor<LegalizeBufferContentTypesVisitor, bool>;
@@ -675,18 +691,73 @@ class LegalizeBufferContentTypesVisitor
 
   const DataLayout &DL;
 
+  ScalarEvolution *SE = nullptr;
+
+  // Map base (non-GEP'd) pointers to the number of records they have, if known.
+  // If a pointer is known to have a starting offset of 0 but it wasn't known to
+  // have a number of records (ex. it was `addrspacecast` from a buffer
+  // resource), it will be present in this map, but the key will be null.
+  // Otherwise, there will be no map entry.
+  ValueToValueMapTy ZeroBasePointerToNumRecords;
+
+  // Subtarget info, needed for determining what cache control bits to set.
+  const TargetMachine *TM;
+  const GCNSubtarget *ST = nullptr;
+
   /// If T is [N x U], where U is a scalar type, return the vector type
   /// <N x U>, otherwise, return T.
   Type *scalarArrayTypeAsVector(Type *MaybeArrayType);
   Value *arrayToVector(Value *V, Type *TargetType, const Twine &Name);
   Value *vectorToArray(Value *V, Type *OrigType, const Twine &Name);
 
+  /// Analyze how a given buffer access could be out of bounds. Used to optimize
+  /// the strict splitting used in strict bounds checking mode.
+  struct OobProperties {
+    // Offset is far enough from all-1s that we won't get wrapping around to 0.
+    bool NoWrapFromMax = false;
+    // Offset is either entirely in-bounds or entirely out of bounds.
+    bool NoPartialOOB = false;
+
+    OobProperties() = delete;
+    // Needed for some Clangs.
+    OobProperties(bool NoWrapFromMax, bool NoPartialOOB)
+        : NoWrapFromMax(NoWrapFromMax), NoPartialOOB(NoPartialOOB) {}
+  };
+  OobProperties analyzeOobProperties(Value *Ptr, Type *Ty, uint64_t ByteOffset);
+
   /// Break up the loads of a struct into the loads of its components
+
+  /// Return the maximum allowed load/store width for the given type and
+  /// alignment combination based on subtarget flags.
+  /// 1. If unaligned accesses are not enabled, then any load/store that is less
+  /// than word-aligned has to be handled one byte or ushort at a time.
+  /// 2. If relaxed OOB mode is not set, we must ensure that the in-bounds
+  /// part of a partially out of bounds read/write is performed correctly. This
+  /// means that any load that isn't naturally aligned has to be split into
+  /// parts that are naturally aligned, so that, after bitcasting, we don't have
+  /// unaligned loads that could discard valid data.
+  ///
+  /// For example, if we're loading a <8 x i8>, that's actually a load of a <2 x
+  /// i32>, and if we load from an align(2) address, that address might be 2
+  /// bytes from the end of the buffer. The hardware will, when performing the
+  /// <2 x i32> load, mask off the entire first word, causing the two in-bounds
+  /// bytes to be masked off. However,if we know the offset can't be too close
+  /// to the number of records in the buffer (if known), we can skip this
+  /// expansion.
+  ///
+  /// Unlike the complete disablement of unaligned accesses from point 1,
+  /// this does not apply to unaligned scalars, but will apply to cases like
+  /// `load <2 x i32>, align 4` since the left elemenvt might be out of bounds.
+  /// Note that if the we know that the base offset is known to be
+  /// less than `uint32_max - byte_size(Ty)`, we can skip these alignment
+  /// checks.
+  uint64_t maxIntrinsicWidth(Type *Ty, Align A, OobProperties OobProps);
 
   /// Convert a vector or scalar type that can't be operated on by buffer
   /// intrinsics to one that would be legal through bitcasts and/or truncation.
-  /// Uses the wider of i32, i16, or i8 where possible.
-  Type *legalNonAggregateFor(Type *T);
+  /// Uses the wider of i32, i16, or i8 where possible, clamping to the maximum
+  /// allowed width under the alignment rules and subtarget flags.
+  Type *legalNonAggregateForMemOp(Type *T, uint64_t MaxWidth);
   Value *makeLegalNonAggregate(Value *V, Type *TargetType, const Twine &Name);
   Value *makeIllegalNonAggregate(Value *V, Type *OrigType, const Twine &Name);
 
@@ -700,8 +771,9 @@ class LegalizeBufferContentTypesVisitor
   /// Return the [index, length] pairs into which `T` needs to be cut to form
   /// legal buffer load or store operations. Clears `Slices`. Creates an empty
   /// `Slices` for non-vector inputs and creates one slice if no slicing will be
-  /// needed.
-  void getVecSlices(Type *T, SmallVectorImpl<VecSlice> &Slices);
+  /// needed. No slice may be larger than `MaxWidth`.
+  void getVecSlices(Type *T, uint64_t MaxWidth,
+                    SmallVectorImpl<VecSlice> &Slices);
 
   Value *extractSlice(Value *Vec, VecSlice S, const Twine &Name);
   Value *insertSlice(Value *Whole, Value *Part, VecSlice S, const Twine &Name);
@@ -729,10 +801,15 @@ class LegalizeBufferContentTypesVisitor
   bool visitLoadInst(LoadInst &LI);
   bool visitStoreInst(StoreInst &SI);
 
+  // Record base pointer data and num_records (if known).
+  bool visitIntrinsicInst(IntrinsicInst &II);
+  bool visitAddrSpaceCastInst(AddrSpaceCastInst &ASCI);
+
 public:
-  LegalizeBufferContentTypesVisitor(const DataLayout &DL, LLVMContext &Ctx)
-      : IRB(Ctx, InstSimplifyFolder(DL)), DL(DL) {}
-  bool processFunction(Function &F);
+  LegalizeBufferContentTypesVisitor(const DataLayout &DL, LLVMContext &Ctx,
+                                    const TargetMachine *TM)
+      : IRB(Ctx, InstSimplifyFolder(DL)), DL(DL), TM(TM) {}
+  bool processFunction(Function &F, ScalarEvolution *SE);
 };
 } // namespace
 
@@ -778,9 +855,115 @@ Value *LegalizeBufferContentTypesVisitor::vectorToArray(Value *V,
   return ArrayRes;
 }
 
-Type *LegalizeBufferContentTypesVisitor::legalNonAggregateFor(Type *T) {
+LegalizeBufferContentTypesVisitor::OobProperties
+LegalizeBufferContentTypesVisitor::analyzeOobProperties(Value *Ptr, Type *Ty,
+                                                        uint64_t ByteOffset) {
+  OobProperties Result(false, false);
+
+  if (ST->hasRelaxedBufferOOBMode())
+    return OobProperties(true, true);
+
+  if (!SE)
+    return Result;
+  if (!SE->isSCEVable(Ptr->getType()))
+    return Result;
+  const SCEV *PtrOp = SE->getSCEV(Ptr);
+  if (ByteOffset > 0)
+    PtrOp = SE->getAddExpr(PtrOp, SE->getConstant(IRB.getInt32(ByteOffset)));
+  const auto *PtrBase = dyn_cast<SCEVUnknown>(SE->getPointerBase(PtrOp));
+  if (!PtrBase)
+    return Result;
+  Value *PtrBaseVal = PtrBase->getValue();
+  // We don't know if the offset field started at 0, so there's no safe analysis
+  // we can do. If it weren't for the fact that nuw / inbounds / ... are
+  // properties of the pointer, we might be able to use hem, but loads where the
+  // address computation for sub-parts of the loaded type wraps the address
+  // space are explicitly in scope here so there's not much we can do inside
+  // functions that can't "see" the fat pointer creation.
+  auto NumRecordsIfKnown = ZeroBasePointerToNumRecords.find(PtrBaseVal);
+  if (NumRecordsIfKnown == ZeroBasePointerToNumRecords.end())
+    return Result;
+
+  unsigned TypeSize = DL.getTypeStoreSize(Ty).getKnownMinValue();
+  const SCEV *PtrDiff = SE->getMinusSCEV(PtrOp, PtrBase);
+  APInt MaxNoWrapOffset = APInt::getAllOnes(BufferOffsetWidth) - TypeSize;
+  if (SE->isKnownNonNegative(PtrDiff) ||
+      SE->getUnsignedRangeMax(PtrDiff).ule(MaxNoWrapOffset))
+    Result.NoWrapFromMax = true;
+
+  // If we know that the pointer is zero-based but not what its upper bound is,
+  // we'll need to split up underaligned loads of small types.
+  if (!NumRecordsIfKnown->second)
+    return Result;
+  const SCEV *NumRecords = SE->getSCEV(NumRecordsIfKnown->second);
+  // All-1s is (per ISA or as a consequence of the bonud)check rules, depending
+  // on arcihtecture) no bounds check.
+  if (NumRecords->isAllOnesValue())
+    Result.NoPartialOOB = true;
+
+  const SCEV *BoundsDiff;
+  if (ST->has45BitNumRecordsBufferResource()) {
+    const SCEV *PtrDiffExt =
+        SE->getNoopOrZeroExtend(PtrDiff, NumRecords->getType());
+    BoundsDiff = SE->getMinusSCEV(NumRecords, PtrDiffExt);
+  } else {
+    const SCEV *NumRecordsI32 =
+        SE->getTruncateOrNoop(NumRecords, IRB.getInt32Ty());
+    BoundsDiff = SE->getMinusSCEV(NumRecordsI32, PtrDiff);
+  }
+
+  if (SE->getSignedRangeMin(BoundsDiff).sge(TypeSize) ||
+      SE->isKnownNonPositive(BoundsDiff))
+    Result.NoPartialOOB = true;
+  return Result;
+}
+
+uint64_t
+LegalizeBufferContentTypesVisitor::maxIntrinsicWidth(Type *T, Align A,
+                                                     OobProperties OobProps) {
+  Align Result(16);
+  if (!ST->hasUnalignedBufferAccessEnabled() && A < Align(4))
+    Result = A;
+  auto *VT = dyn_cast<VectorType>(T);
+  if (!ST->hasRelaxedBufferOOBMode() && VT) {
+    TypeSize ElemBits = DL.getTypeSizeInBits(VT->getElementType());
+    if (ElemBits.isKnownMultipleOf(32)) {
+      // Word-sized operations are bounds-checked per word. So, the only case we
+      // have to worry about is stores that start out of bounds and then go in,
+      // and those can only become in-bounds on a multiple of their alignment.
+      // Therefore, we can use the declared alignment of the operation as the
+      // maximum width, rounding up to 4.
+      if (!OobProps.NoWrapFromMax)
+        Result = std::min(Result, std::max(A, Align(4)));
+    } else if ((ElemBits.isKnownMultipleOf(8) ||
+                isPowerOf2_64(ElemBits.getKnownMinValue()))) {
+      // To ensure correct behavior for sub-word types, we must always scalarize
+      // unaligned loads of sub-word types. For example, if you load
+      // a <4 x i8> from offset 7 in an 8-byte buffer, expecting the vector
+      // to be padded out with 0s after that last byte, you'll get all 0s
+      // instead. To prevent this behavior when not requested, de-vectorize such
+      // loads.
+      //
+      // If we knew that the value that triggers bounds checks was a multiple of
+      // 4 along with the access being word-aligned, we could avoid the
+      // scalarization here, as the bitcast wouldn't change any check behavior,
+      // but we don't currently try to analyze this.
+      //
+      // Strict OOB checking isn't supported if the size of each element is a
+      // non-power-of-2 value less than 8, since there's no feasible way to
+      // apply such a strict bounds check.
+      if (!OobProps.NoPartialOOB)
+        Result =
+            commonAlignment(Result, divideCeil(ElemBits.getKnownMinValue(), 8));
+    }
+  }
+  return Result.value() * 8;
+}
+
+Type *LegalizeBufferContentTypesVisitor::legalNonAggregateForMemOp(
+    Type *T, uint64_t MaxWidth) {
   TypeSize Size = DL.getTypeStoreSizeInBits(T);
-  // Implicitly zero-extend to the next byte if needed
+  // Implicitly zero-extend to the next byte if needed.
   if (!DL.typeSizeEqualsStoreSize(T))
     T = IRB.getIntNTy(Size.getFixedValue());
   Type *ElemTy = T->getScalarType();
@@ -790,15 +973,16 @@ Type *LegalizeBufferContentTypesVisitor::legalNonAggregateFor(Type *T) {
     return T;
   }
   unsigned ElemSize = DL.getTypeSizeInBits(ElemTy).getFixedValue();
-  if (isPowerOf2_32(ElemSize) && ElemSize >= 16 && ElemSize <= 128) {
+  if (isPowerOf2_32(ElemSize) && ElemSize >= 16 && ElemSize <= MaxWidth) {
     // [vectors of] anything that's 16/32/64/128 bits can be cast and split into
-    // legal buffer operations.
+    // legal buffer operations, except that we might need to cut them into
+    // smaller values if we're not allowed to do unaligned vector loads.
     return T;
   }
   Type *BestVectorElemType = nullptr;
-  if (Size.isKnownMultipleOf(32))
+  if (Size.isKnownMultipleOf(32) && MaxWidth >= 32)
     BestVectorElemType = IRB.getInt32Ty();
-  else if (Size.isKnownMultipleOf(16))
+  else if (Size.isKnownMultipleOf(16) && MaxWidth >= 16)
     BestVectorElemType = IRB.getInt16Ty();
   else
     BestVectorElemType = IRB.getInt8Ty();
@@ -871,7 +1055,7 @@ Type *LegalizeBufferContentTypesVisitor::intrinsicTypeFor(Type *LegalType) {
 }
 
 void LegalizeBufferContentTypesVisitor::getVecSlices(
-    Type *T, SmallVectorImpl<VecSlice> &Slices) {
+    Type *T, uint64_t MaxWidth, SmallVectorImpl<VecSlice> &Slices) {
   Slices.clear();
   auto *VT = dyn_cast<FixedVectorType>(T);
   if (!VT)
@@ -892,8 +1076,8 @@ void LegalizeBufferContentTypesVisitor::getVecSlices(
 
   uint64_t TotalElems = VT->getNumElements();
   uint64_t Index = 0;
-  auto TrySlice = [&](unsigned MaybeLen) {
-    if (MaybeLen > 0 && Index + MaybeLen <= TotalElems) {
+  auto TrySlice = [&](unsigned MaybeLen, unsigned Width) {
+    if (MaybeLen > 0 && Width <= MaxWidth && Index + MaybeLen <= TotalElems) {
       VecSlice Slice{/*Index=*/Index, /*Length=*/MaybeLen};
       Slices.push_back(Slice);
       Index += MaybeLen;
@@ -902,9 +1086,9 @@ void LegalizeBufferContentTypesVisitor::getVecSlices(
     return false;
   };
   while (Index < TotalElems) {
-    TrySlice(ElemsPer4Words) || TrySlice(ElemsPer3Words) ||
-        TrySlice(ElemsPer2Words) || TrySlice(ElemsPerWord) ||
-        TrySlice(ElemsPerShort) || TrySlice(ElemsPerByte);
+    TrySlice(ElemsPer4Words, 128) || TrySlice(ElemsPer3Words, 96) ||
+        TrySlice(ElemsPer2Words, 64) || TrySlice(ElemsPerWord, 32) ||
+        TrySlice(ElemsPerShort, 16) || TrySlice(ElemsPerByte, 8);
   }
 }
 
@@ -975,13 +1159,13 @@ bool LegalizeBufferContentTypesVisitor::visitLoadImpl(
     Type *ElemTy = AT->getElementType();
     if (!ElemTy->isSingleValueType() || !DL.typeSizeEqualsStoreSize(ElemTy) ||
         ElemTy->isVectorTy()) {
-      TypeSize ElemStoreSize = DL.getTypeStoreSize(ElemTy);
+      TypeSize ElemAllocSize = DL.getTypeAllocSize(ElemTy);
       bool Changed = false;
       for (auto I : llvm::iota_range<uint32_t>(0, AT->getNumElements(),
                                                /*Inclusive=*/false)) {
         AggIdxs.push_back(I);
         Changed |= visitLoadImpl(OrigLI, ElemTy, AggIdxs,
-                                 AggByteOff + I * ElemStoreSize.getFixedValue(),
+                                 AggByteOff + I * ElemAllocSize.getFixedValue(),
                                  Result, Name + Twine(I));
         AggIdxs.pop_back();
       }
@@ -991,11 +1175,15 @@ bool LegalizeBufferContentTypesVisitor::visitLoadImpl(
 
   // Typical case
 
+  Align PartAlign = commonAlignment(OrigLI.getAlign(), AggByteOff);
   Type *ArrayAsVecType = scalarArrayTypeAsVector(PartType);
-  Type *LegalType = legalNonAggregateFor(ArrayAsVecType);
+  OobProperties OobProps =
+      analyzeOobProperties(OrigLI.getPointerOperand(), PartType, AggByteOff);
+  uint64_t MaxWidth = maxIntrinsicWidth(ArrayAsVecType, PartAlign, OobProps);
+  Type *LegalType = legalNonAggregateForMemOp(ArrayAsVecType, MaxWidth);
 
   SmallVector<VecSlice> Slices;
-  getVecSlices(LegalType, Slices);
+  getVecSlices(LegalType, MaxWidth, Slices);
   bool HasSlices = Slices.size() > 1;
   bool IsAggPart = !AggIdxs.empty();
   Value *LoadsRes;
@@ -1032,7 +1220,8 @@ bool LegalizeBufferContentTypesVisitor::visitLoadImpl(
       Value *NewPtr = IRB.CreateGEP(
           IRB.getInt8Ty(), OrigLI.getPointerOperand(), IRB.getInt32(ByteOffset),
           OrigPtr->getName() + ".off.ptr." + Twine(ByteOffset),
-          GEPNoWrapFlags::noUnsignedWrap());
+          ST->hasRelaxedBufferOOBMode() ? GEPNoWrapFlags::noUnsignedWrap()
+                                        : GEPNoWrapFlags::none());
       Type *LoadableType = intrinsicTypeFor(SliceType);
       LoadInst *NewLI = IRB.CreateAlignedLoad(
           LoadableType, NewPtr, commonAlignment(OrigLI.getAlign(), ByteOffset),
@@ -1095,14 +1284,14 @@ std::pair<bool, bool> LegalizeBufferContentTypesVisitor::visitStoreImpl(
     Type *ElemTy = AT->getElementType();
     if (!ElemTy->isSingleValueType() || !DL.typeSizeEqualsStoreSize(ElemTy) ||
         ElemTy->isVectorTy()) {
-      TypeSize ElemStoreSize = DL.getTypeStoreSize(ElemTy);
+      TypeSize ElemAllocSize = DL.getTypeAllocSize(ElemTy);
       bool Changed = false;
       for (auto I : llvm::iota_range<uint32_t>(0, AT->getNumElements(),
                                                /*Inclusive=*/false)) {
         AggIdxs.push_back(I);
         Changed |= std::get<0>(visitStoreImpl(
             OrigSI, ElemTy, AggIdxs,
-            AggByteOff + I * ElemStoreSize.getFixedValue(), Name + Twine(I)));
+            AggByteOff + I * ElemAllocSize.getFixedValue(), Name + Twine(I)));
         AggIdxs.pop_back();
       }
       return std::make_pair(Changed, /*ModifiedInPlace=*/false);
@@ -1121,13 +1310,17 @@ std::pair<bool, bool> LegalizeBufferContentTypesVisitor::visitStoreImpl(
     NewData = arrayToVector(NewData, ArrayAsVecType, Name);
   }
 
-  Type *LegalType = legalNonAggregateFor(ArrayAsVecType);
+  Align PartAlign = commonAlignment(OrigSI.getAlign(), AggByteOff);
+  OobProperties OobProps =
+      analyzeOobProperties(OrigSI.getPointerOperand(), PartType, AggByteOff);
+  uint64_t MaxWidth = maxIntrinsicWidth(ArrayAsVecType, PartAlign, OobProps);
+  Type *LegalType = legalNonAggregateForMemOp(ArrayAsVecType, MaxWidth);
   if (LegalType != ArrayAsVecType) {
     NewData = makeLegalNonAggregate(NewData, LegalType, Name);
   }
 
   SmallVector<VecSlice> Slices;
-  getVecSlices(LegalType, Slices);
+  getVecSlices(LegalType, MaxWidth, Slices);
   bool NeedToSplit = Slices.size() > 1 || IsAggPart;
   if (!NeedToSplit) {
     Type *StorableType = intrinsicTypeFor(LegalType);
@@ -1148,10 +1341,11 @@ std::pair<bool, bool> LegalizeBufferContentTypesVisitor::visitStoreImpl(
     Type *SliceType =
         S.Length != 1 ? FixedVectorType::get(ElemType, S.Length) : ElemType;
     int64_t ByteOffset = AggByteOff + S.Index * ElemBytes;
-    Value *NewPtr =
-        IRB.CreateGEP(IRB.getInt8Ty(), OrigPtr, IRB.getInt32(ByteOffset),
-                      OrigPtr->getName() + ".part." + Twine(S.Index),
-                      GEPNoWrapFlags::noUnsignedWrap());
+    Value *NewPtr = IRB.CreateGEP(
+        IRB.getInt8Ty(), OrigPtr, IRB.getInt32(ByteOffset),
+        OrigPtr->getName() + ".part." + Twine(S.Index),
+        ST->hasRelaxedBufferOOBMode() ? GEPNoWrapFlags::noUnsignedWrap()
+                                      : GEPNoWrapFlags::none());
     Value *DataSlice = extractSlice(NewData, S, Name);
     Type *StorableType = intrinsicTypeFor(SliceType);
     DataSlice = IRB.CreateBitCast(DataSlice, StorableType,
@@ -1179,12 +1373,37 @@ bool LegalizeBufferContentTypesVisitor::visitStoreInst(StoreInst &SI) {
   return Changed;
 }
 
-bool LegalizeBufferContentTypesVisitor::processFunction(Function &F) {
+bool LegalizeBufferContentTypesVisitor::visitAddrSpaceCastInst(
+    AddrSpaceCastInst &AI) {
+  if (AI.getSrcAddressSpace() != AMDGPUAS::BUFFER_RESOURCE ||
+      AI.getDestAddressSpace() != AMDGPUAS::BUFFER_FAT_POINTER)
+    return false;
+  Value *Src = AI.getPointerOperand();
+  auto Record = ZeroBasePointerToNumRecords.find(Src);
+  if (Record != ZeroBasePointerToNumRecords.end())
+    ZeroBasePointerToNumRecords.insert({&AI, Record->second});
+  else
+    ZeroBasePointerToNumRecords.insert({&AI, nullptr});
+  return false;
+}
+
+bool LegalizeBufferContentTypesVisitor::visitIntrinsicInst(IntrinsicInst &II) {
+  if (II.getIntrinsicID() != Intrinsic::amdgcn_make_buffer_rsrc)
+    return false;
+  ZeroBasePointerToNumRecords.insert({&II, II.getOperand(2)});
+  return false;
+}
+
+bool LegalizeBufferContentTypesVisitor::processFunction(Function &F,
+                                                        ScalarEvolution *SE) {
+  this->SE = SE;
+  ST = &TM->getSubtarget<GCNSubtarget>(F);
   bool Changed = false;
-  // Note, memory transfer intrinsics won't
   for (Instruction &I : make_early_inc_range(instructions(F))) {
     Changed |= visit(I);
   }
+  ZeroBasePointerToNumRecords.clear();
+  this->SE = nullptr;
   return Changed;
 }
 
@@ -1802,7 +2021,7 @@ Value *SplitPtrStructs::handleMemoryInst(Instruction *I, Value *Arg, Value *Ptr,
     }
   }
 
-  auto *Call = IRB.CreateIntrinsic(IID, Ty, Args);
+  CallInst *Call = IRB.CreateIntrinsicWithoutFolding(IID, Ty, Args);
   copyMetadata(Call, I);
   setAlign(Call, Alignment, Arg ? 1 : 0);
   Call->takeName(I);
@@ -1869,10 +2088,10 @@ PtrParts SplitPtrStructs::visitAtomicCmpXchgInst(AtomicCmpXchgInst &AI) {
     Aux |= AMDGPU::CPol::SLC;
   if (AI.isVolatile())
     Aux |= AMDGPU::CPol::VOLATILE;
-  auto *Call =
-      IRB.CreateIntrinsic(Intrinsic::amdgcn_raw_ptr_buffer_atomic_cmpswap, Ty,
-                          {AI.getNewValOperand(), AI.getCompareOperand(), Rsrc,
-                           Off, IRB.getInt32(0), IRB.getInt32(Aux)});
+  CallInst *Call = IRB.CreateIntrinsicWithoutFolding(
+      Intrinsic::amdgcn_raw_ptr_buffer_atomic_cmpswap, Ty,
+      {AI.getNewValOperand(), AI.getCompareOperand(), Rsrc, Off,
+       IRB.getInt32(0), IRB.getInt32(Aux)});
   copyMetadata(Call, &AI);
   setAlign(Call, AI.getAlign(), 2);
   Call->takeName(&AI);
@@ -1880,10 +2099,8 @@ PtrParts SplitPtrStructs::visitAtomicCmpXchgInst(AtomicCmpXchgInst &AI) {
 
   Value *Res = PoisonValue::get(AI.getType());
   Res = IRB.CreateInsertValue(Res, Call, 0);
-  if (!AI.isWeak()) {
-    Value *Succeeded = IRB.CreateICmpEQ(Call, AI.getCompareOperand());
-    Res = IRB.CreateInsertValue(Res, Succeeded, 1);
-  }
+  Value *Succeeded = IRB.CreateICmpEQ(Call, AI.getCompareOperand());
+  Res = IRB.CreateInsertValue(Res, Succeeded, 1);
   SplitUsers.insert(&AI);
   AI.replaceAllUsesWith(Res);
   return {nullptr, nullptr};
@@ -2326,7 +2543,7 @@ PtrParts SplitPtrStructs::visitIntrinsicInst(IntrinsicInst &I) {
         IID == Intrinsic::amdgcn_load_to_lds
             ? Intrinsic::amdgcn_raw_ptr_buffer_load_lds
             : Intrinsic::amdgcn_raw_ptr_buffer_load_async_lds;
-    Instruction *NewLoad = IRB.CreateIntrinsic(
+    Instruction *NewLoad = IRB.CreateIntrinsicWithoutFolding(
         NewIntr, {}, {Rsrc, LDSPtr, LoadSize, Off, SOffset, ImmOff, Aux});
     copyMetadata(NewLoad, &I);
     SplitUsers.insert(&I);
@@ -2376,7 +2593,7 @@ public:
 
   AMDGPULowerBufferFatPointers() : ModulePass(ID) {}
 
-  bool run(Module &M, const TargetMachine &TM);
+  bool run(Module &M, const TargetMachine &TM, GetTTIFn GetTTI, GetSEFn GetSE);
   bool runOnModule(Module &M) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
@@ -2468,7 +2685,8 @@ static void makeCloneInPraceMap(Function *F, ValueToValueMapTy &CloneMap) {
   }
 }
 
-bool AMDGPULowerBufferFatPointers::run(Module &M, const TargetMachine &TM) {
+bool AMDGPULowerBufferFatPointers::run(Module &M, const TargetMachine &TM,
+                                       GetTTIFn GetTTI, GetSEFn GetSE) {
   bool Changed = false;
   const DataLayout &DL = M.getDataLayout();
   // Record the functions which need to be remapped.
@@ -2535,16 +2753,18 @@ bool AMDGPULowerBufferFatPointers::run(Module &M, const TargetMachine &TM) {
   }
 
   StoreFatPtrsAsIntsAndExpandMemcpyVisitor MemOpsRewrite(&IntTM, DL,
-                                                         M.getContext(), &TM);
-  LegalizeBufferContentTypesVisitor BufferContentsTypeRewrite(DL,
-                                                              M.getContext());
+                                                         M.getContext());
+  LegalizeBufferContentTypesVisitor BufferContentsTypeRewrite(
+      DL, M.getContext(), &TM);
   for (Function &F : M.functions()) {
     bool InterfaceChange = hasFatPointerInterface(F, &StructTM);
     bool BodyChanges = containsBufferFatPointers(F, &StructTM);
-    Changed |= MemOpsRewrite.processFunction(F);
+    const TargetTransformInfo *TTI = GetTTI(F);
+    ScalarEvolution *SE = GetSE(F);
+    Changed |= MemOpsRewrite.processFunction(F, TTI, SE);
     if (InterfaceChange || BodyChanges) {
       NeedsRemap.push_back(std::make_pair(&F, InterfaceChange));
-      Changed |= BufferContentsTypeRewrite.processFunction(F);
+      Changed |= BufferContentsTypeRewrite.processFunction(F, SE);
     }
   }
   if (NeedsRemap.empty())
@@ -2600,7 +2820,17 @@ bool AMDGPULowerBufferFatPointers::run(Module &M, const TargetMachine &TM) {
 bool AMDGPULowerBufferFatPointers::runOnModule(Module &M) {
   TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
   const TargetMachine &TM = TPC.getTM<TargetMachine>();
-  return run(M, TM);
+  auto GetTTI = [&](Function &F) -> const TargetTransformInfo * {
+    if (F.isDeclaration())
+      return nullptr;
+    return &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+  };
+  auto GetSE = [&](Function &F) -> ScalarEvolution * {
+    if (F.isDeclaration())
+      return nullptr;
+    return &getAnalysis<ScalarEvolutionWrapperPass>(F).getSE();
+  };
+  return run(M, TM, GetTTI, GetSE);
 }
 
 char AMDGPULowerBufferFatPointers::ID = 0;
@@ -2609,12 +2839,16 @@ char &llvm::AMDGPULowerBufferFatPointersID = AMDGPULowerBufferFatPointers::ID;
 
 void AMDGPULowerBufferFatPointers::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();
+  AU.addRequired<TargetTransformInfoWrapperPass>();
+  AU.addRequired<ScalarEvolutionWrapperPass>();
 }
 
 #define PASS_DESC "Lower buffer fat pointer operations to buffer resources"
 INITIALIZE_PASS_BEGIN(AMDGPULowerBufferFatPointers, DEBUG_TYPE, PASS_DESC,
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
+INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
 INITIALIZE_PASS_END(AMDGPULowerBufferFatPointers, DEBUG_TYPE, PASS_DESC, false,
                     false)
 #undef PASS_DESC
@@ -2625,6 +2859,18 @@ ModulePass *llvm::createAMDGPULowerBufferFatPointersPass() {
 
 PreservedAnalyses
 AMDGPULowerBufferFatPointersPass::run(Module &M, ModuleAnalysisManager &MA) {
-  return AMDGPULowerBufferFatPointers().run(M, TM) ? PreservedAnalyses::none()
-                                                   : PreservedAnalyses::all();
+  auto &FA = MA.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  auto GetTTI = [&](Function &F) -> const TargetTransformInfo * {
+    if (F.isDeclaration())
+      return nullptr;
+    return &FA.getResult<TargetIRAnalysis>(F);
+  };
+  auto GetSE = [&](Function &F) -> ScalarEvolution * {
+    if (F.isDeclaration())
+      return nullptr;
+    return &FA.getResult<ScalarEvolutionAnalysis>(F);
+  };
+  return AMDGPULowerBufferFatPointers().run(M, TM, GetTTI, GetSE)
+             ? PreservedAnalyses::none()
+             : PreservedAnalyses::all();
 }

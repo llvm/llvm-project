@@ -600,7 +600,8 @@ private:
 
   bool Build(const InitListExpr *ILE, bool AllowOverwrite);
   bool Build(const APValue &Val, const RecordDecl *RD, bool IsPrimaryBase,
-             const CXXRecordDecl *VTableClass, CharUnits BaseOffset);
+             const CXXRecordDecl *VTableClass, CharUnits BaseOffset,
+             bool IsCompleteClass = true);
   bool DoZeroInitPadding(const ASTRecordLayout &Layout, unsigned FieldNo,
                          const FieldDecl &Field, bool AllowOverwrite,
                          CharUnits &SizeSoFar, bool &ZeroFieldSize);
@@ -841,44 +842,69 @@ struct BaseInfo {
 bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
                                bool IsPrimaryBase,
                                const CXXRecordDecl *VTableClass,
-                               CharUnits Offset) {
+                               CharUnits Offset, bool IsCompleteClass) {
+  assert(Val.isStruct() || Val.isUnion());
+
   const ASTRecordLayout &Layout = CGM.getContext().getASTRecordLayout(RD);
 
-  if (const CXXRecordDecl *CD = dyn_cast<CXXRecordDecl>(RD)) {
-    // Add a vtable pointer, if we need one and it hasn't already been added.
-    if (Layout.hasOwnVFPtr()) {
-      llvm::Constant *VTableAddressPoint =
-          CGM.getCXXABI().getVTableAddressPoint(BaseSubobject(CD, Offset),
-                                                VTableClass);
-      if (auto Authentication = CGM.getVTablePointerAuthentication(CD)) {
-        VTableAddressPoint = Emitter.tryEmitConstantSignedPointer(
-            VTableAddressPoint, *Authentication);
-        if (!VTableAddressPoint)
+  if (Val.isStruct()) {
+    if (const CXXRecordDecl *CD = dyn_cast<CXXRecordDecl>(RD)) {
+      // Add a vtable pointer, if we need one and it hasn't already been added.
+      if (Layout.hasOwnVFPtr()) {
+        llvm::Constant *VTableAddressPoint =
+            CGM.getCXXABI().getVTableAddressPoint(BaseSubobject(CD, Offset),
+                                                  VTableClass);
+        if (auto Authentication = CGM.getVTablePointerAuthentication(CD)) {
+          VTableAddressPoint = Emitter.tryEmitConstantSignedPointer(
+              VTableAddressPoint, *Authentication);
+          if (!VTableAddressPoint)
+            return false;
+        }
+        if (!AppendBytes(Offset, VTableAddressPoint))
           return false;
       }
-      if (!AppendBytes(Offset, VTableAddressPoint))
-        return false;
-    }
 
-    // Accumulate and sort bases, in order to visit them in address order, which
-    // may not be the same as declaration order.
-    SmallVector<BaseInfo, 8> Bases;
-    Bases.reserve(CD->getNumBases());
-    unsigned BaseNo = 0;
-    for (CXXRecordDecl::base_class_const_iterator Base = CD->bases_begin(),
-         BaseEnd = CD->bases_end(); Base != BaseEnd; ++Base, ++BaseNo) {
-      assert(!Base->isVirtual() && "should not have virtual bases here");
-      const CXXRecordDecl *BD = Base->getType()->getAsCXXRecordDecl();
-      CharUnits BaseOffset = Layout.getBaseClassOffset(BD);
-      Bases.push_back(BaseInfo(BD, BaseOffset, BaseNo));
-    }
-    llvm::stable_sort(Bases);
+      // Accumulate and sort bases, in order to visit them in address order,
+      // which may not be the same as declaration order.
+      SmallVector<BaseInfo, 8> Bases;
+      Bases.reserve(Val.getStructNumBases());
+      unsigned BaseNo = 0;
+      for (const CXXBaseSpecifier &Base : CD->bases()) {
+        if (Base.isVirtual())
+          continue;
+        const CXXRecordDecl *BD = Base.getType()->getAsCXXRecordDecl();
+        CharUnits BaseOffset = Layout.getBaseClassOffset(BD);
+        Bases.push_back(BaseInfo(BD, BaseOffset, BaseNo));
+        ++BaseNo;
+      }
+      llvm::stable_sort(Bases);
 
-    for (const BaseInfo &Base : Bases) {
-      bool IsPrimaryBase = Layout.getPrimaryBase() == Base.Decl;
-      if (!Build(Val.getStructBase(Base.Index), Base.Decl, IsPrimaryBase,
-                 VTableClass, Offset + Base.Offset))
-        return false;
+      for (const BaseInfo &Base : Bases) {
+        bool IsPrimaryBase = Layout.getPrimaryBase() == Base.Decl;
+        if (!Build(Val.getStructBase(Base.Index), Base.Decl, IsPrimaryBase,
+                   VTableClass, Offset + Base.Offset, false))
+          return false;
+      }
+
+      if (IsCompleteClass) {
+        Bases.clear();
+        BaseNo = 0;
+        Bases.reserve(Val.getStructNumVirtualBases());
+        for (const CXXBaseSpecifier &Base : CD->vbases()) {
+          const CXXRecordDecl *BD = Base.getType()->getAsCXXRecordDecl();
+          CharUnits BaseOffset = Layout.getVBaseClassOffset(BD);
+          Bases.push_back(BaseInfo(BD, BaseOffset, BaseNo));
+          ++BaseNo;
+        }
+        llvm::stable_sort(Bases);
+
+        for (const BaseInfo &Base : Bases) {
+          bool IsPrimaryBase = Layout.getPrimaryBase() == Base.Decl;
+          if (!Build(Val.getStructVirtualBase(Base.Index), Base.Decl,
+                     IsPrimaryBase, VTableClass, Offset + Base.Offset, false))
+            return false;
+        }
+      }
     }
   }
 
@@ -1923,7 +1949,7 @@ llvm::Constant *ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &D) {
 
   // Try to emit the initializer.  Note that this can allow some things that
   // are not allowed by tryEmitPrivateForMemory alone.
-  if (APValue *value = D.evaluateValue()) {
+  if (const APValue *value = D.evaluateValue()) {
     assert(!value->allowConstexprUnknown() &&
            "Constexpr unknown values are not allowed in CodeGen");
     return tryEmitPrivateForMemory(*value, destType);
@@ -2598,16 +2624,8 @@ ConstantEmitter::tryEmitPrivate(const APValue &Value, QualType DestType,
         llvm::StructType::get(Complex[0]->getType(), Complex[1]->getType());
     return llvm::ConstantStruct::get(STy, Complex);
   }
-  case APValue::Float: {
-    const llvm::APFloat &Init = Value.getFloat();
-    if (&Init.getSemantics() == &llvm::APFloat::IEEEhalf() &&
-        !CGM.getContext().getLangOpts().NativeHalfType &&
-        CGM.getContext().getTargetInfo().useFP16ConversionIntrinsics())
-      return llvm::ConstantInt::get(CGM.getLLVMContext(),
-                                    Init.bitcastToAPInt());
-    else
-      return llvm::ConstantFP::get(CGM.getLLVMContext(), Init);
-  }
+  case APValue::Float:
+    return llvm::ConstantFP::get(CGM.getLLVMContext(), Value.getFloat());
   case APValue::ComplexFloat: {
     llvm::Constant *Complex[2];
 
@@ -2881,9 +2899,14 @@ llvm::Constant *ConstantEmitter::emitNullForMemory(CodeGenModule &CGM,
 }
 
 llvm::Constant *CodeGenModule::EmitNullConstant(QualType T) {
-  if (T->getAs<PointerType>())
-    return getNullPointer(
-        cast<llvm::PointerType>(getTypes().ConvertTypeForMem(T)), T);
+  if (T->getAs<PointerType>()) {
+    llvm::Type *LT = getTypes().ConvertTypeForMem(T);
+    if (auto *PT = dyn_cast<llvm::PointerType>(LT))
+      return getNullPointer(PT, T);
+    // Some pointer types do not lower to an LLVM pointer (e.g. a WebAssembly
+    // funcref, which is an opaque reference type). Use the type's zero value.
+    return llvm::Constant::getNullValue(LT);
+  }
 
   if (getTypes().isZeroInitializable(T))
     return llvm::Constant::getNullValue(getTypes().ConvertTypeForMem(T));

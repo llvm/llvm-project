@@ -17,13 +17,14 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LiveOrigins.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LoanPropagation.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/Utils.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 
 namespace clang::lifetimes::internal {
 
 // Map from a loan to an expression responsible for moving the borrowed storage.
-using MovedLoansMap = llvm::ImmutableMap<LoanID, const Expr *>;
+using MovedLoansMap = utils::MapTy<LoanID, const Expr *>;
 
 class MovedLoansAnalysis {
 public:

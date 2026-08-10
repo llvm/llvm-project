@@ -8,9 +8,13 @@
 
 #include "TestDialect.h"
 #include "TestOps.h"
+#include "TestTypes.h"
+#include "mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Interfaces/FoldInterfaces.h"
 #include "mlir/Reducer/ReductionPatternInterface.h"
+#include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/InliningUtils.h"
 
 using namespace mlir;
@@ -432,6 +436,20 @@ public:
   }
 };
 
+struct TestToEmitCDialectInterface : public ConvertToEmitCPatternInterface {
+  explicit TestToEmitCDialectInterface(Dialect *dialect)
+      : ConvertToEmitCPatternInterface(dialect) {}
+
+  void populateConvertToEmitCConversionPatterns(
+      ConversionTarget &target, TypeConverter &typeConverter,
+      RewritePatternSet &patterns,
+      ::std::optional<bool> lowerToCpp) const final {
+    typeConverter.addConversion([](test::TestMemRefElementTypeType type) {
+      return emitc::OpaqueType::get(type.getContext(), "TestElementT");
+    });
+  }
+};
+
 } // namespace
 
 void TestDialect::registerInterfaces() {
@@ -440,4 +458,5 @@ void TestDialect::registerInterfaces() {
 
   addInterfaces<TestDialectFoldInterface, TestInlinerInterface,
                 TestReductionPatternInterface, TestBytecodeDialectInterface>();
+  addInterface<TestToEmitCDialectInterface>();
 }

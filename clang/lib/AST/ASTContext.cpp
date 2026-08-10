@@ -989,6 +989,8 @@ void ASTContext::cleanup() {
     A->second->~AttrVec();
   DeclAttrs.clear();
 
+  CtorClosureDefaultArgs.clear();
+
   for (const auto &Value : ModuleInitializers)
     Value.second->~PerModuleInitializers();
   ModuleInitializers.clear();
@@ -1476,16 +1478,17 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
   }
 
-  if (Target.getTriple().isAMDGPU() ||
-      (Target.getTriple().isSPIRV() &&
-       Target.getTriple().getVendor() == llvm::Triple::AMD) ||
-      (AuxTarget &&
-       (AuxTarget->getTriple().isAMDGPU() ||
-        ((AuxTarget->getTriple().isSPIRV() &&
-          AuxTarget->getTriple().getVendor() == llvm::Triple::AMD))))) {
+  if (Target.hasAMDGPUTypes() || (AuxTarget && (AuxTarget->hasAMDGPUTypes()))) {
 #define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)                       \
   InitBuiltinType(SingletonId, BuiltinType::Id);
 #include "clang/Basic/AMDGPUTypes.def"
+  }
+
+  if (Target.getTriple().isSPIRV() ||
+      (AuxTarget && AuxTarget->getTriple().isSPIRV())) {
+#define SPIRV_TYPE(Name, Id, SingletonId)                                      \
+  InitBuiltinType(SingletonId, BuiltinType::Id);
+#include "clang/Basic/SPIRVTypes.def"
   }
 
   // Builtin type for __objc_yes and __objc_no
@@ -1545,6 +1548,17 @@ void ASTContext::eraseDeclAttrs(const Decl *D) {
     Pos->second->~AttrVec();
     DeclAttrs.erase(Pos);
   }
+}
+
+ArrayRef<CXXDefaultArgExpr *>
+ASTContext::getCtorClosureDefaultArgs(const CXXConstructorDecl *CD) {
+  return CtorClosureDefaultArgs.lookup(CD);
+}
+
+void ASTContext::setCtorClosureDefaultArgs(const CXXConstructorDecl *CD,
+                                           ArrayRef<CXXDefaultArgExpr *> Args) {
+  assert(!CtorClosureDefaultArgs.contains(CD));
+  CtorClosureDefaultArgs[CD] = Args;
 }
 
 ArrayRef<ExplicitInstantiationDecl *>
@@ -2438,6 +2452,12 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
       Width = Target->getPointerWidth(LangAS::Default);
       Align = Target->getPointerAlign(LangAS::Default);
       break;
+#define SPIRV_TYPE(Name, Id, SingletonId)                                      \
+  case BuiltinType::Id:                                                        \
+    Width = Target->getPointerWidth(LangAS::Default);                          \
+    Align = Target->getPointerAlign(LangAS::Default);                          \
+    break;
+#include "clang/Basic/SPIRVTypes.def"
     }
     break;
   case Type::ObjCObjectPointer:
@@ -2580,6 +2600,9 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
 
   case Type::CountAttributed:
     return getTypeInfo(cast<CountAttributedType>(T)->desugar().getTypePtr());
+
+  case Type::LateParsedAttr:
+    return getTypeInfo(cast<LateParsedAttrType>(T)->desugar().getTypePtr());
 
   case Type::BTFTagAttributed:
     return getTypeInfo(
@@ -3584,6 +3607,8 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
     case BuiltinType::WasmExternRef:
 #define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/RISCVVTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/SPIRVTypes.def"
       llvm_unreachable("not yet implemented");
     }
     llvm_unreachable("should never get here");
@@ -3749,6 +3774,17 @@ QualType ASTContext::getCountAttributedType(
   CountAttributedTypes.InsertNode(CATy, InsertPos);
 
   return QualType(CATy, 0);
+}
+
+QualType ASTContext::getLateParsedAttrType(
+    QualType WrappedTy, LateParsedTypeAttribute *LateParsedAttr) const {
+  QualType CanonTy = getCanonicalType(WrappedTy);
+
+  auto *LPATy = new (*this, alignof(LateParsedAttrType))
+      LateParsedAttrType(WrappedTy, CanonTy, LateParsedAttr);
+
+  Types.push_back(LPATy);
+  return QualType(LPATy, 0);
 }
 
 QualType
@@ -7948,6 +7984,12 @@ bool ASTContext::isSameEntity(const NamedDecl *X, const NamedDecl *Y) const {
     return NAX->getNamespace()->Equals(NAY->getNamespace());
   }
 
+  if (const auto *UX = dyn_cast<UsingEnumDecl>(X)) {
+    const auto *UY = cast<UsingEnumDecl>(Y);
+    return isSameQualifier(UX->getQualifier(), UY->getQualifier()) &&
+           declaresSameEntity(UX->getEnumDecl(), UY->getEnumDecl());
+  }
+
   return false;
 }
 
@@ -9281,6 +9323,8 @@ static char getObjCEncodingForPrimitiveType(const ASTContext *C,
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
 #define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) case BuiltinType::Id:
 #include "clang/Basic/AMDGPUTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/SPIRVTypes.def"
       {
         DiagnosticsEngine &Diags = C->getDiagnostics();
         Diags.Report(diag::err_unsupported_objc_primitive_encoding)
@@ -9995,6 +10039,15 @@ static TypedefDecl *CreateMSVaListDecl(const ASTContext *Context) {
   return CreateCharPtrNamedVaListDecl(Context, "__builtin_ms_va_list");
 }
 
+static TypedefDecl *CreateZOSVaListDecl(const ASTContext *Context) {
+  // typedef char *__builtin_zos_va_list[2];
+  llvm::APInt Size(Context->getTypeSize(Context->getSizeType()), 2);
+  QualType T = Context->getPointerType(Context->CharTy);
+  QualType ArrayType = Context->getConstantArrayType(
+      T, Size, nullptr, ArraySizeModifier::Normal, 0);
+  return Context->buildImplicitTypedef(ArrayType, "__builtin_zos_va_list");
+}
+
 static TypedefDecl *CreateCharPtrBuiltinVaListDecl(const ASTContext *Context) {
   return CreateCharPtrNamedVaListDecl(Context, "__builtin_va_list");
 }
@@ -10420,6 +10473,13 @@ TypedefDecl *ASTContext::getBuiltinMSVaListDecl() const {
     BuiltinMSVaListDecl = CreateMSVaListDecl(this);
 
   return BuiltinMSVaListDecl;
+}
+
+TypedefDecl *ASTContext::getBuiltinZOSVaListDecl() const {
+  if (!BuiltinZOSVaListDecl)
+    BuiltinZOSVaListDecl = CreateZOSVaListDecl(this);
+
+  return BuiltinZOSVaListDecl;
 }
 
 bool ASTContext::canBuiltinBeRedeclared(const FunctionDecl *FD) const {
@@ -12583,6 +12643,7 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
   // Modifiers.
   int HowLong = 0;
   bool Signed = false, Unsigned = false;
+  bool IsChar = false, IsShort = false;
   RequiresICE = false;
 
   // Read the prefixed modifiers first.
@@ -12606,8 +12667,29 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
       assert(!Unsigned && "Can't use 'U' modifier multiple times!");
       Unsigned = true;
       break;
+    case 'B':
+      // This modifier represents int8 type (byte-width).
+      assert(!IsSpecial &&
+             "Can't use two 'N', 'W', 'Z', 'O', 'B', or 'T' modifiers!");
+      assert(HowLong == 0 && "Can't use both 'L' and 'B' modifiers!");
+#ifndef NDEBUG
+      IsSpecial = true;
+#endif
+      IsChar = true;
+      break;
+    case 'T':
+      // This modifier represents int16 type (short-width).
+      assert(!IsSpecial &&
+             "Can't use two 'N', 'W', 'Z', 'O', 'B', or 'T' modifiers!");
+      assert(HowLong == 0 && "Can't use both 'L' and 'T' modifiers!");
+#ifndef NDEBUG
+      IsSpecial = true;
+#endif
+      IsShort = true;
+      break;
     case 'L':
-      assert(!IsSpecial && "Can't use 'L' with 'W', 'N', 'Z' or 'O' modifiers");
+      assert(!IsSpecial &&
+             "Can't use 'L' with 'W', 'N', 'Z', 'O', 'B', or 'T' modifiers");
       assert(HowLong <= 2 && "Can't have LLLL modifier");
       ++HowLong;
       break;
@@ -12723,7 +12805,11 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
       Type = Context.ShortTy;
     break;
   case 'i':
-    if (HowLong == 3)
+    if (IsChar)
+      Type = Unsigned ? Context.UnsignedCharTy : Context.SignedCharTy;
+    else if (IsShort)
+      Type = Unsigned ? Context.UnsignedShortTy : Context.ShortTy;
+    else if (HowLong == 3)
       Type = Unsigned ? Context.UnsignedInt128Ty : Context.Int128Ty;
     else if (HowLong == 2)
       Type = Unsigned ? Context.UnsignedLongLongTy : Context.LongLongTy;
@@ -14894,6 +14980,10 @@ static QualType getCommonSugarTypeNode(const ASTContext &Ctx, const Type *X,
                                       DX->isCountInBytes(), DX->isOrNull(),
                                       CDX);
   }
+
+  case Type::LateParsedAttr:
+    return QualType();
+
   case Type::PredefinedSugar:
     assert(cast<PredefinedSugarType>(X)->getKind() !=
            cast<PredefinedSugarType>(Y)->getKind());

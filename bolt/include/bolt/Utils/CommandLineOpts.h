@@ -72,6 +72,14 @@ extern llvm::cl::OptionCategory BinaryAnalysisCategory;
 
 extern llvm::cl::opt<unsigned> AlignText;
 extern llvm::cl::opt<unsigned> AlignFunctions;
+extern llvm::cl::opt<bool> AlignBlocks;
+extern llvm::cl::opt<unsigned> AlignBlocksMinSize;
+extern llvm::cl::opt<unsigned> AlignBlocksThreshold;
+extern llvm::cl::opt<unsigned> AlignFunctionsMaxBytes;
+extern llvm::cl::opt<unsigned> BlockAlignment;
+extern llvm::cl::opt<bool> PreserveBlocksAlignment;
+extern llvm::cl::opt<bool> UseCompactAligner;
+extern llvm::cl::opt<bool> X86AlignBranchBoundaryHotOnly;
 extern llvm::cl::opt<bool> AggregateOnly;
 extern llvm::cl::opt<bool> ArmSPE;
 extern llvm::cl::opt<unsigned> BucketsPerLine;
@@ -126,7 +134,7 @@ extern llvm::cl::opt<unsigned> Verbosity;
 
 // Option to control whether liveness analysis should be used by
 // FixupBranches and LongJmpPass. Needed for branch inversion on AArch64.
-extern llvm::cl::opt<bool> LivenessAnalysis;
+extern llvm::cl::opt<bool> FixBranchesWithLiveness;
 
 /// Return true if we should process all functions in the binary.
 bool processAllFunctions();

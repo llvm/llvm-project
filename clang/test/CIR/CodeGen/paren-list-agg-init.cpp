@@ -65,8 +65,9 @@ struct F {
   F (F &&f) = default;
 };
 
-// LLVM-DAG: [[STRUCT_G:%.*]] = type <{ i32, [4 x i8] }>
-// CIR-DAG: ![[STRUCT_G:.*]] = !cir.struct<"G" packed padded {!s32i, !cir.array<!u8i x 4>}>
+// LLVMCIR-DAG: [[STRUCT_G:%.*]] = type <{ i32, %struct.F, [3 x i8] }>
+// OGCG-DAG:    [[STRUCT_G:%.*]] = type <{ i32, [4 x i8] }>
+// CIR-DAG: ![[STRUCT_G:.*]] = !cir.struct<"G" packed padded {!s32i, !rec_F, !cir.array<!u8i x 3>}>
 struct G {
   int a;
   F f;
@@ -91,14 +92,16 @@ namespace gh61145 {
     ~Vec();
   };
 
-  // LLVM-DAG: [[STRUCT_S1:%.*]] = type { i8 }
-  // CIR-DAG: ![[STRUCT_S1:.*]] = !cir.struct<"gh61145::S1" padded {!u8i}>
+  // LLVMCIR-DAG: [[STRUCT_S1:%.*]] = type { %"struct.gh61145::Vec" }
+  // OGCG-DAG:    [[STRUCT_S1:%.*]] = type { i8 }
+  // CIR-DAG: ![[STRUCT_S1:.*]] = !cir.struct<"gh61145::S1" {!rec_gh611453A3AVec}>
   struct S1 {
     Vec v;
   };
 
-  // LLVM-DAG: [[STRUCT_S2:%.*]] = type { i8, i8 }
-  // CIR-DAG: ![[STRUCT_S2:.*]] = !cir.struct<"gh61145::S2" padded {!u8i, !s8i}>
+  // LLVMCIR-DAG: [[STRUCT_S2:%.*]] = type { %"struct.gh61145::Vec", i8 }
+  // OGCG-DAG:    [[STRUCT_S2:%.*]] = type { i8, i8 }
+  // CIR-DAG: ![[STRUCT_S2:.*]] = !cir.struct<"gh61145::S2" {!rec_gh611453A3AVec, !s8i}>
   struct S2 {
     Vec v;
     char c;
@@ -133,55 +136,56 @@ constexpr auto a2 = static_cast<A>('c');
 // LLVM-DAG: [[B1:@.*b1.*]] = internal constant [[STRUCT_B]] { [[STRUCT_A]] { i8 99, double 0.000000e+00 }, i32 0 }, align 8
 // CIR-DAG: cir.global "private" constant internal dso_local @_ZL2b1 = #cir.const_record<{#cir.const_record<{#cir.int<99> : !s8i, #cir.fp<0.000000e+00> : !cir.double}> : ![[STRUCT_A]], #cir.int<0> : !s32i}> : ![[STRUCT_B]] {alignment = 8 : i64}
 constexpr B b1(A('c'));
-// LLVM-DAG: [[C1:@.*c1.*]] = internal constant { [[STRUCT_A]], i32, [4 x i8], i8, double, i32 } { [[STRUCT_A]] { i8 99, double 0.000000e+00 }, i32 0, [4 x i8] {{.*}}, i8 3, double 2.000000e+00, i32 0 }, align
-// CIR-DAG: cir.global "private" constant internal dso_local @_ZL2c1 = #cir.const_record<{#cir.const_record<{#cir.int<99> : !s8i, #cir.fp<0.000000e+00> : !cir.double}> : ![[STRUCT_A]], #cir.int<0> : !s32i, #cir.const_array<[#cir.zero : !u8i, #cir.zero : !u8i, #cir.zero : !u8i, #cir.zero : !u8i]> : !cir.array<!u8i x 4>, #cir.int<3> : !s8i, #cir.fp<2.000000e+00> : !cir.double, #cir.int<0> : !s32i}>
+// LLVMCIR-DAG: [[C1:@.*c1.*]] = internal constant [[STRUCT_C]] <{ [[STRUCT_B]] { [[STRUCT_A]] { i8 99, double 0.000000e+00 }, i32 0 }, [[STRUCT_A]] { i8 3, double 2.000000e+00 }, i32 0, [4 x i8] zeroinitializer }>, align 8
+// OGCG-DAG:    [[C1:@.*c1.*]] = internal constant { [[STRUCT_A]], i32, [4 x i8], i8, double, i32 } { [[STRUCT_A]] { i8 99, double 0.000000e+00 }, i32 0, [4 x i8] {{.*}}, i8 3, double 2.000000e+00, i32 0 }, align
+// CIR-DAG: cir.global "private" constant internal dso_local @_ZL2c1 = #cir.const_record<{#cir.const_record<{#cir.const_record<{#cir.int<99> : !s8i, #cir.fp<0.000000e+00> : !cir.double}> : ![[STRUCT_A]], #cir.int<0> : !s32i}> : !rec_B, #cir.const_record<{#cir.int<3> : !s8i, #cir.fp<2.000000e+00> : !cir.double}> : ![[STRUCT_A]], #cir.int<0> : !s32i, #cir.zero : !cir.array<!u8i x 4>}> : !rec_C
 constexpr C c1(b1, a1);
 // LLVM-DAG: [[U1:@.*]] = internal constant {{.*}} { [[STRUCT_A]] { i8 1, double 1.000000e+00 } }, align 8
 // CIR-DAG: cir.global "private" constant internal dso_local @_ZL2u1 = #cir.const_record<{#cir.const_record<{#cir.int<1> : !s8i, #cir.fp<1.000000e+00> : !cir.double}> : ![[STRUCT_A]]}> : !{{.*}}{alignment = 8 : i64}
 constexpr U u1(A(1, 1));
-// LLVM-DAG: [[D1:@.*d1.*]] = internal constant { [[STRUCT_A]], [[STRUCT_A]], [8 x i8], [[STRUCT_A]] } { [[STRUCT_A]] { i8 2, double 2.000000e+00 }, [[STRUCT_A]] { i8 2, double 2.000000e+00 }, [8 x i8] {{.*}}, [[STRUCT_A]] zeroinitializer }, align 8
-// CIR-DAG: cir.global "private" constant internal dso_local @_ZL2d1 = #cir.const_record<{#cir.const_record<{#cir.int<2> : !s8i, #cir.fp<2.000000e+00> : !cir.double}> : ![[STRUCT_A]], #cir.const_record<{#cir.int<2> : !s8i, #cir.fp<2.000000e+00> : !cir.double}> : ![[STRUCT_A]], #cir.const_array<[#cir.zero : !u8i, #cir.zero : !u8i, #cir.zero : !u8i, #cir.zero : !u8i, #cir.zero : !u8i, #cir.zero : !u8i, #cir.zero : !u8i, #cir.zero : !u8i]> : !cir.array<!u8i x 8>, #cir.zero : ![[STRUCT_A]]}>
+// LLVMCIR-DAG: [[D1:@.*d1.*]] = internal constant [[STRUCT_D]] { [[STRUCT_A]] { i8 2, double 2.000000e+00 }, [[STRUCT_A]] { i8 2, double 2.000000e+00 }, i8 0, [[STRUCT_A]] zeroinitializer }, align 8
+// OGCG-DAG:    [[D1:@.*d1.*]] = internal constant { [[STRUCT_A]], [[STRUCT_A]], [8 x i8], [[STRUCT_A]] } { [[STRUCT_A]] { i8 2, double 2.000000e+00 }, [[STRUCT_A]] { i8 2, double 2.000000e+00 }, [8 x i8] {{.*}}, [[STRUCT_A]] zeroinitializer }, align 8
+// CIR-DAG: cir.global "private" constant internal dso_local @_ZL2d1 = #cir.const_record<{#cir.const_record<{#cir.int<2> : !s8i, #cir.fp<2.000000e+00> : !cir.double}> : ![[STRUCT_A]], #cir.const_record<{#cir.int<2> : !s8i, #cir.fp<2.000000e+00> : !cir.double}> : ![[STRUCT_A]], #cir.int<0> : !u8i, #cir.zero : ![[STRUCT_A]]}> : !rec_D {alignment = 8 : i64} loc(#loc284)
 constexpr D d1(A(2, 2));
 // LLVM-DAG: [[ARR1:@.*arr1.*]] = internal constant [3 x i32] [i32 1, i32 2, i32 0], align 4
-// CIR-DAG: cir.global "private" constant internal dso_local @_ZL4arr1 = #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<0> : !s32i]> : !cir.array<!s32i x 3> {alignment = 4 : i64}
+// CIR-DAG: cir.global "private" constant internal dso_local @_ZL4arr1 = #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i], trailing_zeros> : !cir.array<!s32i x 3> {alignment = 4 : i64}
 constexpr int arr1[3](1, 2);
 // LLVM-DAG: [[ARR4:@.*arr4.*]] = internal constant [1 x i32] [i32 1], align 4
 // CIR-DAG: cir.global "private" constant internal dso_local @_ZL4arr4 = #cir.const_array<[#cir.int<1> : !s32i]> : !cir.array<!s32i x 1> {alignment = 4 : i64}
 constexpr int arr4[](1);
 // LLVM-DAG: [[ARR5:@.*arr5.*]] = internal constant [2 x i32] [i32 2, i32 0], align 4
-// CIR-DAG: cir.global "private" constant internal dso_local @_ZL4arr5 = #cir.const_array<[#cir.int<2> : !s32i, #cir.int<0> : !s32i]> : !cir.array<!s32i x 2> {alignment = 4 : i64}
+// CIR-DAG: cir.global "private" constant internal dso_local @_ZL4arr5 = #cir.const_array<[#cir.int<2> : !s32i], trailing_zeros> : !cir.array<!s32i x 2> {alignment = 4 : i64}
 constexpr int arr5[2](2);
 
 // LLVM: define dso_local {{.*}} @{{.*foo1.*}}
 // LLVM: [[RETVAL:%.*]] = alloca [[STRUCT_A]]
-// LLVM-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}[[RETVAL]], ptr {{.*}}[[A1]], i64 16, i1 false)
+// LLVM-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[RETVAL]], ptr align 8 [[A1]], i64 16, i1 false)
 // LLVM-NEXT: [[TMP_0:%.*]] = load {{.*}}, ptr [[RETVAL]], align 8
 // LLVM-NEXT: ret {{.*}}[[TMP_0]]
 // CIR-LABEL: cir.func {{.*}}@_Z4foo1v()
-// CIR: %[[A_ALLOCA:.*]] = cir.alloca ![[STRUCT_A]], !cir.ptr<![[STRUCT_A]]>, ["__retval"] {alignment = 8 : i64}
+// CIR: %[[A_ALLOCA:.*]] = cir.alloca "__retval" align(8) : !cir.ptr<![[STRUCT_A]]>
 // CIR: %[[GET_A1:.*]] = cir.get_global @_ZL2a1 : !cir.ptr<![[STRUCT_A]]>
-// CIR: cir.copy %[[GET_A1]] to %[[A_ALLOCA]] : !cir.ptr<![[STRUCT_A]]>
+// CIR: cir.copy %[[GET_A1]] align(8) to %[[A_ALLOCA]] align(8) : !cir.ptr<![[STRUCT_A]]>
 A foo1() {
   return a1;
 }
 
 // LLVM: define dso_local {{.*}}@{{.*foo2.*}}
-// LLVM: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}, ptr {{.*}}[[B1]], i64 24, i1 false)
+// LLVM: call void @llvm.memcpy.p0.p0.i64(ptr align 8 {{.*}}, ptr align 8 [[B1]], i64 24, i1 false)
 // CIR: cir.func {{.*}}@_Z4foo2v()
-// CIR: %[[B_ALLOCA:.*]] = cir.alloca ![[STRUCT_B]], !cir.ptr<![[STRUCT_B]]>, ["__retval"] {alignment = 8 : i64}
+// CIR: %[[B_ALLOCA:.*]] = cir.alloca "__retval" align(8) : !cir.ptr<![[STRUCT_B]]>
 // CIR: %[[GET_GLOB:.*]] = cir.get_global @_ZL2b1 : !cir.ptr<![[STRUCT_B]]>
-// CIR: cir.copy %[[GET_GLOB]] to %[[B_ALLOCA]] : !cir.ptr<![[STRUCT_B]]>
+// CIR: cir.copy %[[GET_GLOB]] align(8) to %[[B_ALLOCA]] align(8) : !cir.ptr<![[STRUCT_B]]>
 B foo2() {
   return b1;
 }
 
 // LLVM: define dso_local {{.*}}@{{.*foo3.*}}
-// LLVM: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}, ptr {{.*}}[[C1]], i64 48, i1 false)
+// LLVM: call void @llvm.memcpy.p0.p0.i64(ptr align 8 {{.*}}, ptr align 8 [[C1]], i64 48, i1 false)
 // CIR: cir.func {{.*}}@_Z4foo3v()
-// CIR: %[[C_ALLOCA:.*]] = cir.alloca ![[STRUCT_C]], !cir.ptr<![[STRUCT_C]]>, ["__retval"] {alignment = 8 : i64}
-// CIR: %[[GET_GLOB:.*]] = cir.get_global @_ZL2c1
-// CIR: %[[GLOB_CAST:.*]] = cir.cast bitcast %[[GET_GLOB]] : !cir.ptr<!{{.*}}> -> !cir.ptr<![[STRUCT_C]]>
-// CIR: cir.copy %[[GLOB_CAST]] to %[[C_ALLOCA]] : !cir.ptr<![[STRUCT_C]]>
+// CIR: %[[C_ALLOCA:.*]] = cir.alloca "__retval" align(8) : !cir.ptr<![[STRUCT_C]]>
+// CIR: %[[GET_GLOB:.*]] = cir.get_global @_ZL2c1 : !cir.ptr<![[STRUCT_C]]>
+// CIR: cir.copy %[[GET_GLOB]] align(8) to %[[C_ALLOCA]] align(8) : !cir.ptr<![[STRUCT_C]]>
 C foo3() {
   return c1;
 }
@@ -197,20 +201,20 @@ C foo3() {
 // LLVM-NEXT: store double 1.000000e+00, ptr [[J]], align 8
 // LLVM-NEXT: [[B:%.*]] = getelementptr {{.*}}[[STRUCT_B]], ptr [[REF_TMP]], i32 0, i32 1
 // LLVM-NEXT: store i32 1, ptr [[B]], align 8
-// LLVM-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}[[C2]], ptr {{.*}}[[REF_TMP]], i64 24, i1 false)
+// LLVM-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[C2]], ptr align 8 [[REF_TMP]], i64 24, i1 false)
 // LLVM-NEXT: [[TMP_0:%.*]] = getelementptr {{.*}}i8, ptr [[C2]], i{{.*}} 24
 // LLVM-NEXT: [[I2:%.*]] = getelementptr {{.*}}[[STRUCT_A]], ptr [[REF_TMP_1]], i32 0, i32 0
 // LLVM-NEXT: store i8 97, ptr [[I2]], align 8
 // LLVM-NEXT: [[J3:%.*]] = getelementptr {{.*}}[[STRUCT_A]], ptr [[REF_TMP_1]], i32 0, i32 1
 // LLVM-NEXT: store double 0.000000e+00, ptr [[J3]], align 8
-// LLVM-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}[[TMP_0]], ptr {{.*}}[[REF_TMP_1]], i64 16, i1 false)
+// LLVM-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP_0]], ptr align 8 [[REF_TMP_1]], i64 16, i1 false)
 // LLVM-NEXT: [[C:%.*]] = getelementptr {{.*}}[[STRUCT_C]], ptr [[C2]], i32 0, i32 2
 // LLVM-NEXT: store i32 2, ptr [[C]]
 // LLVM: ret void
 // CIR-LABEL: cir.func {{.*}}@_Z4foo4v()
-// CIR: %[[C2_ALLOCA:.*]] = cir.alloca ![[STRUCT_C]], !cir.ptr<![[STRUCT_C]]>, ["c2", init]
-// CIR: %[[B_TMP:.*]] = cir.alloca ![[STRUCT_B]], !cir.ptr<![[STRUCT_B]]>, ["ref.tmp0"]
-// CIR: %[[A_TMP:.*]] = cir.alloca ![[STRUCT_A]], !cir.ptr<![[STRUCT_A]]>, ["ref.tmp1"]
+// CIR: %[[C2_ALLOCA:.*]] = cir.alloca "c2" {{.*}} init : !cir.ptr<![[STRUCT_C]]>
+// CIR: %[[B_TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<![[STRUCT_B]]>
+// CIR: %[[A_TMP:.*]] = cir.alloca "ref.tmp1" {{.*}} : !cir.ptr<![[STRUCT_A]]>
 // CIR: %[[C_BASE:.*]] = cir.base_class_addr %[[C2_ALLOCA]] : !cir.ptr<![[STRUCT_C]]> nonnull [0] -> !cir.ptr<![[STRUCT_B]]>
 // CIR: %[[GET_A:.*]] = cir.get_member %[[B_TMP]][0] {name = "a"} : !cir.ptr<![[STRUCT_B]]> -> !cir.ptr<![[STRUCT_A]]>
 // CIR: %[[GET_I:.*]] = cir.get_member %[[GET_A]][0] {name = "i"} : !cir.ptr<![[STRUCT_A]]> -> !cir.ptr<!s8i>
@@ -223,7 +227,7 @@ C foo3() {
 // CIR: %[[GET_B:.*]] = cir.get_member %[[B_TMP]][1] {name = "b"} : !cir.ptr<![[STRUCT_B]]> -> !cir.ptr<!s32i>
 // CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
 // CIR: cir.store{{.*}} %[[ONE]], %[[GET_B]] : !s32i, !cir.ptr<!s32i>
-// CIR: cir.copy %[[B_TMP]] to %[[C_BASE]] : !cir.ptr<![[STRUCT_B]]>
+// CIR: cir.copy %[[B_TMP]] align(8) to %[[C_BASE]] align(8) : !cir.ptr<![[STRUCT_B]]>
 // CIR: %[[C_BASE_A:.*]] = cir.base_class_addr %[[C2_ALLOCA]] : !cir.ptr<![[STRUCT_C]]> nonnull [24] -> !cir.ptr<![[STRUCT_A]]>
 // CIR: %[[GET_I:.*]] = cir.get_member %[[A_TMP]][0] {name = "i"} : !cir.ptr<![[STRUCT_A]]> -> !cir.ptr<!s8i>
 // CIR: %[[NINETYSEVEN:.*]] = cir.const #cir.int<97> : !s8i
@@ -231,7 +235,7 @@ C foo3() {
 // CIR: %[[GET_J:.*]] = cir.get_member %[[A_TMP]][1] {name = "j"} : !cir.ptr<![[STRUCT_A]]> -> !cir.ptr<!cir.double>
 // CIR: %[[ZERO_F:.*]] = cir.const #cir.fp<0
 // CIR: cir.store{{.*}} %[[ZERO_F]], %[[GET_J]] : !cir.double, !cir.ptr<!cir.double>
-// CIR: cir.copy %[[A_TMP]] to %[[C_BASE_A]] : !cir.ptr<![[STRUCT_A]]>
+// CIR: cir.copy %[[A_TMP]] align(8) to %[[C_BASE_A]] align(8) : !cir.ptr<![[STRUCT_A]]>
 // CIR: %[[GET_C:.*]] = cir.get_member %[[C2_ALLOCA]][2] {name = "c"} : !cir.ptr<![[STRUCT_C]]> -> !cir.ptr<!s32i>
 // CIR: %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
 // CIR: cir.store{{.*}} %[[TWO]], %[[GET_C]] : !s32i, !cir.ptr<!s32i>
@@ -241,12 +245,11 @@ void foo4() {
 
 // LLVM: define dso_local {{.*}}@{{.*foo5.*}}
 // LLVM: [[RETVAL:%.*]] = alloca [[UNION_U]]
-// LLVM-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}[[RETVAL]], ptr {{.*}}[[U1]], i64 16, i1 false)
+// LLVM-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[RETVAL]], ptr align 8 [[U1]], i64 16, i1 false)
 // CIR-LABEL: cir.func no_inline dso_local @_Z4foo5v()
-// CIR:  %[[RET:.*]] = cir.alloca ![[UNION_U]], !cir.ptr<![[UNION_U]]>, ["__retval"] {alignment = 8 : i64}
-// CIR:  %[[GET_GLOB:.*]] = cir.get_global @_ZL2u1 : !cir.ptr<!{{.*}}>
-// CIR:  %[[GLOB_TO_U:.*]] = cir.cast bitcast %[[GET_GLOB]] : !cir.ptr<!{{.*}}> -> !cir.ptr<![[UNION_U]]>
-// CIR:  cir.copy %[[GLOB_TO_U]] to %[[RET]] : !cir.ptr<![[UNION_U]]>
+// CIR:  %[[RET:.*]] = cir.alloca "__retval" align(8) : !cir.ptr<![[UNION_U]]>
+// CIR:  %[[GET_GLOB:.*]] = cir.get_global @_ZL2u1 : !cir.ptr<![[UNION_U]]>
+// CIR:  cir.copy %[[GET_GLOB]] align(8) to %[[RET]] align(8) : !cir.ptr<![[UNION_U]]>
 U foo5() {
   return u1;
 }
@@ -255,12 +258,12 @@ U foo5() {
 // LLVM: define dso_local {{.*}}@{{.*foo6.*}}
 // LLVM-DAG:   [[RETVAL:%.*]] = alloca [[UNION_U]]
 // LLVM-DAG:   [[A:%.*]] = alloca [[STRUCT_A]]
-// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}[[RETVAL]], ptr {{.*}}[[A]], i64 16, i1 false)
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[RETVAL]], ptr align 8 [[A]], i64 16, i1 false)
 // CIR-LABEL: cir.func no_inline dso_local @_Z4foo61A(
-// CIR: %[[A_ALLOCA:.*]] = cir.alloca ![[STRUCT_A]], !cir.ptr<![[STRUCT_A]]>, ["a", init] {alignment = 8 : i64}
-// CIR: %[[RET_ALLOCA:.*]] = cir.alloca ![[UNION_U]], !cir.ptr<![[UNION_U]]>, ["__retval"] {alignment = 8 : i64}
+// CIR: %[[A_ALLOCA:.*]] = cir.alloca "a" align(8) init : !cir.ptr<![[STRUCT_A]]>
+// CIR: %[[RET_ALLOCA:.*]] = cir.alloca "__retval" align(8) : !cir.ptr<![[UNION_U]]>
 // CIR: %[[GET_A:.*]] = cir.get_member %[[RET_ALLOCA:.*]][1] {name = "a"} : !cir.ptr<![[UNION_U]]> -> !cir.ptr<![[STRUCT_A]]>
-// CIR: cir.copy %[[A_ALLOCA]] to %[[GET_A:.*]] : !cir.ptr<![[STRUCT_A]]>
+// CIR: cir.copy %[[A_ALLOCA]] align(8) to %[[GET_A:.*]] align(8) : !cir.ptr<![[STRUCT_A]]>
 U foo6(A a) {
   return U(a);
 }
@@ -284,7 +287,7 @@ U foo6(A a) {
 // LLVM-NEXT: store double 1.110000e+02, ptr [[J4]], align 8
 // LLVM-NEXT: ret void
 // CIR-LABEL; cir.func no_inline dso_local @_Z4foo7v()
-// CIR: %[[D_ALLOCA:.*]] = cir.alloca ![[STRUCT_D]], !cir.ptr<![[STRUCT_D]]>, ["d", init] {alignment = 8 : i64}
+// CIR: %[[D_ALLOCA:.*]] = cir.alloca "d" align(8) init : !cir.ptr<![[STRUCT_D]]>
 // CIR: %[[GET_A:.*]] = cir.get_member %[[D_ALLOCA]][0] {name = "a"} : !cir.ptr<![[STRUCT_D]]> -> !cir.ptr<![[STRUCT_A]]>
 // CIR: %[[GET_I:.*]] = cir.get_member %[[GET_A]][0] {name = "i"} : !cir.ptr<![[STRUCT_A]]> -> !cir.ptr<!s8i>
 // CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s8i
@@ -314,12 +317,11 @@ void foo7() {
 }
 
 // LLVM: dso_local {{.*}}@{{.*foo8.*}}(
-// LLVM: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}, ptr {{.*}}[[D1]], i64 56, i1 false)
+// LLVM: call void @llvm.memcpy.p0.p0.i64(ptr align 8 {{.*}}, ptr align 8 [[D1]], i64 56, i1 false)
 // CIR-LABEL: cir.func no_inline dso_local @_Z4foo8v() 
-// CIR: %[[RET_ALLOCA:.*]] = cir.alloca ![[STRUCT_D]], !cir.ptr<![[STRUCT_D]]>, ["__retval"] {alignment = 8 : i64}
-// CIR: %[[GET_GLOB:.*]] = cir.get_global @_ZL2d1 :
-// CIR: %[[GLOB_CAST:.*]] = cir.cast bitcast %[[GET_GLOB]] : !cir.ptr<!{{.*}}> -> !cir.ptr<![[STRUCT_D]]>
-// CIR: cir.copy %[[GLOB_CAST]] to %[[RET_ALLOCA]] : !cir.ptr<![[STRUCT_D]]>
+// CIR: %[[RET_ALLOCA:.*]] = cir.alloca "__retval" align(8) : !cir.ptr<![[STRUCT_D]]>
+// CIR: %[[GET_GLOB:.*]] = cir.get_global @_ZL2d1 : !cir.ptr<![[STRUCT_D]]>
+// CIR: cir.copy %[[GET_GLOB]] align(8) to %[[RET_ALLOCA]] align(8) : !cir.ptr<![[STRUCT_D]]>
 D foo8() {
   return d1;
 }
@@ -338,7 +340,7 @@ D foo8() {
 // LLVM-NEXT: store double 2.000000e+00, ptr [[J2]], align 8
 // LLVM-NEXT: [[C:%.*]] = getelementptr {{.*}}[[STRUCT_D]], ptr [[D]], i32 0, i32 3
 // CIR-LABEL: cir.func no_inline dso_local @_Z4foo9v()
-// CIR: %[[D_ALLOCA:.*]] = cir.alloca ![[STRUCT_D]], !cir.ptr<![[STRUCT_D]]>, ["d", init] {alignment = 8 : i64}
+// CIR: %[[D_ALLOCA:.*]] = cir.alloca "d" align(8) init : !cir.ptr<![[STRUCT_D]]>
 // CIR: %[[GET_A:.*]] = cir.get_member %[[D_ALLOCA]][0] {name = "a"} : !cir.ptr<![[STRUCT_D]]> -> !cir.ptr<![[STRUCT_A]]>
 // CIR: %[[GET_I:.*]] = cir.get_member %[[GET_A]][0] {name = "i"} : !cir.ptr<![[STRUCT_A]]> -> !cir.ptr<!s8i>
 // CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s8i
@@ -364,7 +366,7 @@ void foo9() {
 // LLVM: define dso_local noundef ptr @{{.*foo10.*}}()
 // FIXME: CIR lowering has an extra load here.
 // CIR-LABEL: cir.func no_inline dso_local @_Z5foo10v()
-// CIR: %[[RET_ALLOCA:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["__retval"] {alignment = 8 : i64}
+// CIR: %[[RET_ALLOCA:.*]] = cir.alloca "__retval" align(8) : !cir.ptr<!cir.ptr<!s32i>>
 // CIR: %[[GET_GLOB:.*]] = cir.get_global @_ZL4arr1 : !cir.ptr<!cir.array<!s32i x 3>>
 // CIR: %[[GLOB_DECAY:.*]] = cir.cast array_to_ptrdecay %[[GET_GLOB]] : !cir.ptr<!cir.array<!s32i x 3>> -> !cir.ptr<!s32i>
 // CIR: cir.store %[[GLOB_DECAY]], %[[RET_ALLOCA]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
@@ -390,10 +392,10 @@ const int* foo10() {
 // LLVM-NEXT: br i1 [[ARRINIT_DONE]], label 
 // LLVM: ret void
 // CIR-LABEL: cir.func no_inline dso_local @_Z5foo11ii
-// CIR: %[[A_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init] {alignment = 4 : i64}
-// CIR: %[[B_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init] {alignment = 4 : i64}
-// CIR: %[[ARR2_ALLOCA:.*]] = cir.alloca !cir.array<!s32i x 4>, !cir.ptr<!cir.array<!s32i x 4>>, ["arr2", init] {alignment = 16 : i64}
-// CIR: %[[ARR_ITR:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["arrayinit.temp", init] {alignment = 8 : i64}
+// CIR: %[[A_ALLOCA:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
+// CIR: %[[B_ALLOCA:.*]] = cir.alloca "b" align(4) init : !cir.ptr<!s32i>
+// CIR: %[[ARR2_ALLOCA:.*]] = cir.alloca "arr2" align(16) init : !cir.ptr<!cir.array<!s32i x 4>>
+// CIR: %[[ARR_ITR:.*]] = cir.alloca "arrayinit.temp" align(8) init : !cir.ptr<!cir.ptr<!s32i>>
 // CIR: %[[ARR2_DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARR2_ALLOCA]] : !cir.ptr<!cir.array<!s32i x 4>> -> !cir.ptr<!s32i>
 // CIR: %[[A_LOAD:.*]] = cir.load align(4) %[[A_ALLOCA]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.store align(4) %[[A_LOAD]], %[[ARR2_DECAY]] : !s32i, !cir.ptr<!s32i>
@@ -436,9 +438,9 @@ void foo11(int a, int b) {
 // LLVM-NEXT: store i32 [[TMP_1]], ptr [[ARRINIT_ELEMENT]], align 4
 // LLVM-NEXT: ret void
 // CIR-LABEL: cir.func no_inline dso_local @_Z5foo12ii
-// CIR: %[[A_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init] {alignment = 4 : i64}
-// CIR: %[[B_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init] {alignment = 4 : i64}
-// CIR: %[[ARR3_ALLOCA:.*]] = cir.alloca !cir.array<!s32i x 2>, !cir.ptr<!cir.array<!s32i x 2>>, ["arr3", init] {alignment = 4 : i64}
+// CIR: %[[A_ALLOCA:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
+// CIR: %[[B_ALLOCA:.*]] = cir.alloca "b" align(4) init : !cir.ptr<!s32i>
+// CIR: %[[ARR3_ALLOCA:.*]] = cir.alloca "arr3" align(4) init : !cir.ptr<!cir.array<!s32i x 2>>
 // CIR: %[[ARR_DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARR3_ALLOCA]] : !cir.ptr<!cir.array<!s32i x 2>> -> !cir.ptr<!s32i>
 // CIR: %[[A_LOAD:.*]] = cir.load align(4) %[[A_ALLOCA]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.store align(4) %[[A_LOAD]], %[[ARR_DECAY]] : !s32i, !cir.ptr<!s32i>
@@ -452,13 +454,13 @@ void foo12(int a, int b) {
 
 // LLVM: define {{.*}}@{{.*foo13.*}}
 // LLVM: [[RETVAL:%.*]] = alloca [[STRUCT_A]]
-// LLVM-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}[[RETVAL]], ptr {{.*}}[[A2]], i64 16, i1 false)
+// LLVM-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[RETVAL]], ptr align 8 [[A2]], i64 16, i1 false)
 // LLVM-NEXT: [[TMP_0:%.*]] = load {{.*}}, ptr [[RETVAL]], align 8
 // LLVM-NEXT: ret {{.*}}[[TMP_0]]
 // CIR-LABEL: cir.func no_inline dso_local @_Z5foo13v()
-// CIR: %[[RET_ALLOCA:.*]] = cir.alloca ![[STRUCT_A]], !cir.ptr<![[STRUCT_A]]>, ["__retval"] {alignment = 8 : i64}
+// CIR: %[[RET_ALLOCA:.*]] = cir.alloca "__retval" align(8) : !cir.ptr<![[STRUCT_A]]>
 // CIR; %[[GET_GLOB:.*]] = cir.get_global @_ZL2a2 : !cir.ptr<![[STRUCT_A]]>
-// CIR; cir.copy %[[GET_GLOB]] to %[[RET_ALLOCA]] : !cir.ptr<![[STRUCT_A]]>
+// CIR; cir.copy %[[GET_GLOB]] align(8) to %[[RET_ALLOCA]] align(8) : !cir.ptr<![[STRUCT_A]]>
 A foo13() {
   return a2;
 }
@@ -466,7 +468,7 @@ A foo13() {
 // LLVM: define dso_local noundef ptr @{{.*foo14.*}}()
 // LLVM: ret ptr 
 // CIR-LABEL: cir.func no_inline dso_local @_Z5foo14v()
-// CIR: %[[RET_ALLOCA:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["__retval"] {alignment = 8 : i64}
+// CIR: %[[RET_ALLOCA:.*]] = cir.alloca "__retval" align(8) : !cir.ptr<!cir.ptr<!s32i>>
 // CIR: %[[GET_GLOB:.*]] = cir.get_global @_ZL4arr4 : !cir.ptr<!cir.array<!s32i x 1>>
 // CIR: %[[GLOB_DECAY]] = cir.cast array_to_ptrdecay %[[GET_GLOB]] : !cir.ptr<!cir.array<!s32i x 1>> -> !cir.ptr<!s32i>
 // CIR: cir.store %[[GLOB_DECAY]], %[[RET_ALLOCA]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
@@ -477,7 +479,7 @@ const int* foo14() {
 // LLVM: define dso_local noundef ptr @{{.*foo15.*}}()
 // LLVM: ret ptr 
 // CIR-LABEL: cir.func {{.*}}@_Z5foo15v()
-// CIR: %[[RET_ALLOCA:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["__retval"] {alignment = 8 : i64}
+// CIR: %[[RET_ALLOCA:.*]] = cir.alloca "__retval" align(8) : !cir.ptr<!cir.ptr<!s32i>>
 // CIR: %[[GET_GLOB:.*]] = cir.get_global @_ZL4arr5 : !cir.ptr<!cir.array<!s32i x 2>>
 // CIR: %[[GLOB_DECAY:.*]] = cir.cast array_to_ptrdecay %[[GET_GLOB]] : !cir.ptr<!cir.array<!s32i x 2>> -> !cir.ptr<!s32i>
 // CIR: cir.store %[[GLOB_DECAY]], %[[RET_ALLOCA]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
@@ -492,8 +494,8 @@ const int* foo15() {
 // LLVM-NEXT: store ptr [[REF_TMP]], ptr [[ARR_6]], align 8
 // LLVM-NEXT: ret void
 // CIR-LABEL: cir.func no_inline dso_local @_Z5foo16v()
-// CIR: %[[TEMP_ALLOCA:.*]] = cir.alloca !cir.array<!s32i x 1>, !cir.ptr<!cir.array<!s32i x 1>>, ["ref.tmp0"] {alignment = 4 : i64}
-// CIR: %[[ARR6_ALLOCA:.*]] = cir.alloca !cir.ptr<!cir.array<!s32i x 0>>, !cir.ptr<!cir.ptr<!cir.array<!s32i x 0>>>, ["arr6", init, const] {alignment = 8 : i64}
+// CIR: %[[TEMP_ALLOCA:.*]] = cir.alloca "ref.tmp0" align(4) : !cir.ptr<!cir.array<!s32i x 1>>
+// CIR: %[[ARR6_ALLOCA:.*]] = cir.alloca "arr6" align(8) init const : !cir.ptr<!cir.ptr<!cir.array<!s32i x 0>>>
 // CIR: %[[TEMP_DECAY:.*]] = cir.cast array_to_ptrdecay %[[TEMP_ALLOCA]] : !cir.ptr<!cir.array<!s32i x 1>> -> !cir.ptr<!s32i>
 // CIR: %[[THREE:.*]] = cir.const #cir.int<3> : !s32i
 // CIR: cir.store align(4) %[[THREE]], %[[TEMP_DECAY]] : !s32i, !cir.ptr<!s32i>
@@ -515,9 +517,9 @@ void foo16() {
 // LLVM: store ptr [[REF_TMP]], ptr [[ARR_7]], align 8
 // LLVM: ret void
 // CIR-LABEL: cir.func no_inline dso_local @_Z5foo17v()
-// CIR: %[[ARR_TEMP:.*]] = cir.alloca !cir.array<!s32i x 2>, !cir.ptr<!cir.array<!s32i x 2>>, ["ref.tmp0"] {alignment = 4 : i64}
-// CIR: %[[ARR7_ALLOCA:.*]] = cir.alloca !cir.ptr<!cir.array<!s32i x 2>>, !cir.ptr<!cir.ptr<!cir.array<!s32i x 2>>>, ["arr7", init, const] {alignment = 8 : i64}
-// CIR: %[[ITR:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["arrayinit.temp", init] {alignment = 8 : i64}
+// CIR: %[[ARR_TEMP:.*]] = cir.alloca "ref.tmp0" align(4) : !cir.ptr<!cir.array<!s32i x 2>>
+// CIR: %[[ARR7_ALLOCA:.*]] = cir.alloca "arr7" align(8) init const : !cir.ptr<!cir.ptr<!cir.array<!s32i x 2>>>
+// CIR: %[[ITR:.*]] = cir.alloca "arrayinit.temp" align(8) init : !cir.ptr<!cir.ptr<!s32i>>
 // CIR: %[[TEMP_LOAD:.*]] = cir.cast array_to_ptrdecay %[[ARR_TEMP]] : !cir.ptr<!cir.array<!s32i x 2>> -> !cir.ptr<!s32i>
 // CIR: %[[FOUR:.*]] = cir.const #cir.int<4> : !s32i
 // CIR: cir.store align(4) %[[FOUR]], %[[TEMP_LOAD]] : !s32i, !cir.ptr<!s32i>
@@ -552,7 +554,7 @@ void foo17() {
 // LLVM-NEXT: store ptr [[STR]], ptr [[FN]], align 8
 // LLVM: ret void
 // CIR: cir.func {{.*}}@_Z5foo18v()
-// CIR: %[[E_ALLOCA:.*]] = cir.alloca ![[STRUCT_E]], !cir.ptr<![[STRUCT_E]]>, ["e", init]
+// CIR: %[[E_ALLOCA:.*]] = cir.alloca "e" {{.*}} init : !cir.ptr<![[STRUCT_E]]>
 // CIR: %[[GET_A:.*]] = cir.get_member %[[E_ALLOCA]][0] {name = "a"} : !cir.ptr<![[STRUCT_E]]> -> !cir.ptr<!s32i>
 // CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
 // CIR: cir.store{{.*}} %[[ONE]], %[[GET_A]] : !s32i, !cir.ptr<!s32i>
@@ -571,7 +573,7 @@ void foo18() {
 // LLVM-NEXT: call void @{{.*F.*}}(ptr noundef nonnull align 1 dereferenceable(1) [[F]], i32 noundef 1)
 // LLVM: ret void
 // CIR: cir.func no_inline dso_local @_Z5foo19v() attributes {{{.*}}nothrow} {
-// CIR: %[[G_ALLOCA:.*]] = cir.alloca ![[STRUCT_G]], !cir.ptr<![[STRUCT_G]]>, ["g", init]
+// CIR: %[[G_ALLOCA:.*]] = cir.alloca "g" {{.*}} init : !cir.ptr<![[STRUCT_G]]>
 // CIR: %[[GET_A:.*]] = cir.get_member %[[G_ALLOCA]][0] {name = "a"} : !cir.ptr<![[STRUCT_G]]> -> !cir.ptr<!s32i>
 // CIR: %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
 // CIR: cir.store{{.*}} %[[TWO]], %[[GET_A]] : !s32i, !cir.ptr<!s32i>
@@ -600,8 +602,8 @@ namespace gh61145 {
   // LLVM: call void @_ZN7gh611453VecD1Ev(ptr {{.*}}[[V]])
   // LLVM: ret void
   // CIR-LABEL: cir.func {{.*}}@_ZN7gh611455make1ILi0EEEvv()
-  // CIR: %[[V_ALLOCA:.*]] = cir.alloca ![[STRUCT_VEC]], !cir.ptr<![[STRUCT_VEC]]>, ["v", init] {alignment = 1 : i64}
-  // CIR: %[[TMP_ALLOCA:.*]] = cir.alloca ![[STRUCT_S1]], !cir.ptr<![[STRUCT_S1]]>, ["agg.tmp.ensured"]
+  // CIR: %[[V_ALLOCA:.*]] = cir.alloca "v" align(1) init : !cir.ptr<![[STRUCT_VEC]]>
+  // CIR: %[[TMP_ALLOCA:.*]] = cir.alloca "agg.tmp.ensured" {{.*}} : !cir.ptr<![[STRUCT_S1]]>
   // CIR: cir.call @_ZN7gh611453VecC1Ev(%[[V_ALLOCA]])
   // CIR: %[[S1_TO_VEC:.*]] = cir.cast bitcast %[[TMP_ALLOCA]] : !cir.ptr<![[STRUCT_S1]]> -> !cir.ptr<![[STRUCT_VEC]]>
   // CIR: cir.call @_ZN7gh611453VecC1EOS0_(%[[S1_TO_VEC]], %[[V_ALLOCA]]) 
@@ -629,8 +631,8 @@ namespace gh61145 {
   // LLVM: call void @_ZN7gh611453VecD1Ev(ptr {{.*}}[[V]])
   // LLVM: ret void
   // CIR-LABEL: cir.func {{.*}}@_ZN7gh611455make2ILi0EEEvv()
-  // CIR: %[[V_ALLOCA:.*]] = cir.alloca ![[STRUCT_VEC]], !cir.ptr<![[STRUCT_VEC]]>, ["v", init] {alignment = 1 : i64}
-  // CIR: %[[TMP_ALLOCA:.*]] = cir.alloca ![[STRUCT_S2]], !cir.ptr<![[STRUCT_S2]]>, ["agg.tmp.ensured"]
+  // CIR: %[[V_ALLOCA:.*]] = cir.alloca "v" align(1) init : !cir.ptr<![[STRUCT_VEC]]>
+  // CIR: %[[TMP_ALLOCA:.*]] = cir.alloca "agg.tmp.ensured" {{.*}} : !cir.ptr<![[STRUCT_S2]]>
   // CIR: cir.call @_ZN7gh611453VecC1Ev(%[[V_ALLOCA]])
   // CIR: %[[S2_TO_VEC:.*]] = cir.cast bitcast %[[TMP_ALLOCA]] : !cir.ptr<![[STRUCT_S2]]> -> !cir.ptr<![[STRUCT_VEC]]>
   // CIR: cir.call @_ZN7gh611453VecC1EOS0_(%[[S2_TO_VEC]], %[[V_ALLOCA]])
@@ -658,7 +660,7 @@ namespace gh62266 {
   // LLVM-NEXT: store i32 2, ptr [[J]], align 4
   // LLVM-NEXT: ret void
   // CIR-LABEL: cir.func {{.*}}@_ZN7gh622665foo20Ev()
-  // CIR: %[[TMP_ALLOCA:.*]] = cir.alloca ![[STRUCT_H]], !cir.ptr<![[STRUCT_H]]>, ["h", init]
+  // CIR: %[[TMP_ALLOCA:.*]] = cir.alloca "h" {{.*}} init : !cir.ptr<![[STRUCT_H]]>
   // CIR: %[[GET_I:.*]] = cir.get_member %[[TMP_ALLOCA]][0] {name = "i"} : !cir.ptr<![[STRUCT_H]]> -> !cir.ptr<!s32i>
   // CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
   // CIR: cir.store{{.*}} %[[ONE]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
@@ -684,8 +686,8 @@ namespace gh61567 {
   // LLVM-NEXT: store ptr [[REF_TMP]], ptr [[R]], align 8
   // LLVM: ret void
   // CIR-LABEL: cir.func {{.*}}@_ZN7gh615675foo21Ev()
-  // CIR: %[[TMP_ALLOCA:.*]] = cir.alloca ![[STRUCT_I]], !cir.ptr<![[STRUCT_I]]>, ["agg.tmp.ensured"]
-  // CIR: %[[INT_TMP:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["ref.tmp0"]
+  // CIR: %[[TMP_ALLOCA:.*]] = cir.alloca "agg.tmp.ensured" {{.*}} : !cir.ptr<![[STRUCT_I]]>
+  // CIR: %[[INT_TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!s32i>
   // CIR: %[[GET_A:.*]] = cir.get_member %[[TMP_ALLOCA]][0] {name = "a"} : !cir.ptr<![[STRUCT_I]]> -> !cir.ptr<!s32i>
   // CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
   // CIR: cir.store{{.*}} %[[ZERO]], %[[GET_A]] : !s32i, !cir.ptr<!s32i>
@@ -708,8 +710,8 @@ namespace gh61567 {
   // LLVM-NEXT: store ptr [[REF_TMP]], ptr [[R]], align 8
   // LLVM: ret void
   // CIR-LABEL: cir.func {{.*}}@_ZN7gh615675foo22Ev()
-  // CIR: %[[TMP_ALLOCA:.*]] = cir.alloca ![[STRUCT_I]], !cir.ptr<![[STRUCT_I]]>, ["agg.tmp.ensured"]
-  // CIR: %[[INT_TMP:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["ref.tmp0"]
+  // CIR: %[[TMP_ALLOCA:.*]] = cir.alloca "agg.tmp.ensured" {{.*}} : !cir.ptr<![[STRUCT_I]]>
+  // CIR: %[[INT_TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!s32i>
   // CIR: %[[GET_A:.*]] = cir.get_member %[[TMP_ALLOCA]][0] {name = "a"} : !cir.ptr<![[STRUCT_I]]> -> !cir.ptr<!s32i>
   // CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
   // CIR: cir.store{{.*}} %[[ZERO]], %[[GET_A]] : !s32i, !cir.ptr<!s32i>
@@ -730,8 +732,8 @@ namespace gh61567 {
   // LLVM-NEXT: store ptr [[I_ADDR]], ptr [[R]], align 8
   // LLVM-NEXT: ret void
   // CIR-LABEL: cir.func no_inline dso_local @_ZN7gh615675foo23Ei(%arg0: !s32i {llvm.noundef}
-  // CIR: %[[I_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init]
-  // CIR: %[[TMP_ALLOCA:.*]] = cir.alloca ![[STRUCT_I]], !cir.ptr<![[STRUCT_I]]>, ["agg.tmp.ensured"]
+  // CIR: %[[I_ALLOCA:.*]] = cir.alloca "i" {{.*}} init : !cir.ptr<!s32i>
+  // CIR: %[[TMP_ALLOCA:.*]] = cir.alloca "agg.tmp.ensured" {{.*}} : !cir.ptr<![[STRUCT_I]]>
   // CIR: %[[GET_A:.*]] = cir.get_member %[[TMP_ALLOCA]][0] {name = "a"} : !cir.ptr<![[STRUCT_I]]> -> !cir.ptr<!s32i>
   // CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
   // CIR: cir.store{{.*}} %[[ZERO]], %[[GET_A]] : !s32i, !cir.ptr<!s32i>
@@ -751,8 +753,8 @@ namespace gh61567 {
   // LLVM-NEXT: store ptr [[REF_TMP]], ptr [[R]], align 8
   // LLVM-NEXT: ret void
   // CIR-LABEL: cir.func {{.*}}@_ZN7gh615675foo24Ev()
-  // CIR: %[[TMP_ALLOCA:.*]] = cir.alloca ![[STRUCT_I]], !cir.ptr<![[STRUCT_I]]>, ["agg.tmp.ensured"]
-  // CIR: %[[INT_TMP:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["ref.tmp0"]
+  // CIR: %[[TMP_ALLOCA:.*]] = cir.alloca "agg.tmp.ensured" {{.*}} : !cir.ptr<![[STRUCT_I]]>
+  // CIR: %[[INT_TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!s32i>
   // CIR: %[[GET_A:.*]] = cir.get_member %[[TMP_ALLOCA:.*]][0] {name = "a"} : !cir.ptr<![[STRUCT_I]]> -> !cir.ptr<!s32i>
   // CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
   // CIR: cir.store{{.*}} %[[ZERO]], %[[GET_A]] : !s32i, !cir.ptr<!s32i>
@@ -776,7 +778,7 @@ namespace gh68198 {
   // LLVM-NEXT: store ptr [[CALL_PTR]], ptr [[ARR_8]], align 8
   // LLVM-NEXT: ret void
   // CIR-LABEL: cir.{{.*}}@_ZN7gh681985foo25Ev()
-  // CIR: %[[ARR_ALLOCA:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["arr8", init] {alignment = 8 : i64}
+  // CIR: %[[ARR_ALLOCA:.*]] = cir.alloca "arr8" align(8) init : !cir.ptr<!cir.ptr<!s32i>>
   // CIR: %[[SIZE:.*]] = cir.const #cir.int<8> : !u64i
   // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.nonnull, llvm.noundef})
   // CIR: %[[ALLOC_TO_ARR:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!s32i>
@@ -806,7 +808,7 @@ namespace gh68198 {
   // LLVM-NEXT: store ptr [[CALL_PTR]], ptr [[ARR_10]], align 8
   // LLVM-NEXT: ret void
   // CIR-LABEL: cir.{{.*}}@_ZN7gh681985foo26Ev()
-  // CIR: %[[ARR_ALLOCA:.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["arr9", init] {alignment = 8 : i64}
+  // CIR: %[[ARR_ALLOCA:.*]] = cir.alloca "arr9" align(8) init : !cir.ptr<!cir.ptr<!void>>
   // CIR: %[[SIZE:.*]] = cir.const #cir.int<16> : !u64i
   // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.nonnull, llvm.noundef})
   // CIR: %[[ALLOC_TO_ARR:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!cir.array<!s32i x 2>>
@@ -849,7 +851,7 @@ namespace gh68198 {
   // LLVM-NEXT: store ptr [[CALL_PTR]], ptr [[ARR_10]], align 8
   // LLVM-NEXT: ret void
   // CIR-LABEL: cir.{{.*}}@_ZN7gh681985foo27Ev()
-  // CIR: %[[ARR_ALLOCA:.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["arr10", init] {alignment = 8 : i64}
+  // CIR: %[[ARR_ALLOCA:.*]] = cir.alloca "arr10" align(8) init : !cir.ptr<!cir.ptr<!void>>
   // CIR: %[[SIZE:.*]] = cir.const #cir.int<32> : !u64i
   // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.nonnull, llvm.noundef})
   // CIR: %[[ALLOC_TO_ARR:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!cir.array<!s32i x 2>>
@@ -875,7 +877,7 @@ namespace gh68198 {
   // CIR: %[[ALLOC_DIFF:.*]] = cir.sub %[[SIZE]], %[[INIT_SIZE]] : !u64i
   // CIR: %[[ELT2_DECAY:.*]] = cir.cast bitcast %[[ELT2]] : !cir.ptr<!cir.array<!s32i x 2>> -> !cir.ptr<!void>
   // CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !u8i
-  // CIR: cir.libc.memset %[[ALLOC_DIFF]] bytes at %[[ELT2_DECAY]] to %[[ZERO]] : !cir.ptr<!void>, !u8i, !u64i
+  // CIR: cir.libc.memset %[[ALLOC_DIFF]] bytes at %[[ELT2_DECAY]]{{.*}} to %[[ZERO]] : !cir.ptr<!void>, !u8i, !u64i
   // CIR: %[[ARR_TO_VOID:.*]] = cir.cast bitcast %[[ALLOC_TO_ARR]] : !cir.ptr<!cir.array<!s32i x 2>> -> !cir.ptr<!void>
   // CIR: cir.store{{.*}} %[[ARR_TO_VOID]], %[[ARR_ALLOCA]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
   void foo27() {

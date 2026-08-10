@@ -1,11 +1,7 @@
 #include <pthread.h>
-#include <stdio.h>
 #include <stdlib.h>
 
-void *f1(void *p) {
-    printf("hello\n");
-    return NULL;
-}
+void *f1(void *p) { return NULL; }
 
 int main (int argc, char const *argv[])
 {
