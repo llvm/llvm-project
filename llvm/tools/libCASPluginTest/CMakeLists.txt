@@ -1,6 +1,7 @@
-if (NOT LLVM_ENABLE_ONDISK_CAS)
-  # The plugin is implemented on top of UnifiedOnDiskCache, which is only
-  # functional when the on-disk CAS is enabled.
+# The plugin is implemented on top of UnifiedOnDiskCache, which is only
+# functional when the on-disk CAS is enabled, and it is only useful as a shared
+# library, which requires PIC objects.
+if (NOT LLVM_ENABLE_ONDISK_CAS OR NOT LLVM_ENABLE_PIC)
   return()
 endif()
 
