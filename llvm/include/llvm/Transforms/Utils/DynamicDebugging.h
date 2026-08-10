@@ -18,7 +18,7 @@ class Module;
 /// Modify \p M to prepare it for dynamic debugging before running
 /// optimizations. Return a clone of the module which references global
 /// values in \p M. The names of the cloned function definitions in this
-//  module are prefixed with “__dyndbg.”.
+/// module are prefixed with “__dyndbg.”.
 ///
 /// \p M requires debug info. Note any instrumentation in \p M will be
 /// cloned into the returned module.
