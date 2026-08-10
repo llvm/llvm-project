@@ -318,6 +318,17 @@ namespace Nullptr {
     }
   }
   static_assert(test_zero());
+
+
+  constexpr int reference() {
+    try {
+      throw nullptr;
+    } catch (const int *&a) {
+      return 20;
+    }
+    return -1;
+  }
+  static_assert(reference() == 20);
 }
 
 namespace CatchAll {
@@ -428,6 +439,20 @@ namespace Inheritance {
     return 0;
   }
   static_assert(foo4() == 5);
+
+
+
+  class Base {};
+  class S : private Base {};
+  constexpr int foo5() {
+    try {
+      throw S{}; // expected-note {{uncaught exception of type 'S': '&S{}'}}
+    } catch (Base) {
+      return 10;
+    }
+    return -1;
+  }
+  static_assert(foo5() == -1); // expected-error {{not an integral constant expression}}
 }
 
 namespace Pointer {
@@ -490,6 +515,18 @@ namespace Pointer {
 
   constexpr auto r4 = test([] { throw new special_child{17}; });
   static_assert(r4 == 17 * via_special_child_catch);
+
+  constexpr int pointeeCatch() {
+    int x = 10;
+    try {
+      throw &x; // expected-note {{uncaught exception of type 'int *': '&x'}}
+    } catch (int ) {
+      return 10;
+    }
+    return 1;
+  }
+
+  static_assert(pointeeCatch() == 1); // expected-error {{not an integral constant expression}}
 }
 
 namespace References1 {
@@ -603,10 +640,6 @@ namespace References1 {
       }
   }
   static_assert(conversion_test(10) == 1);
-
-
-
-
 }
 
 namespace References2 {
@@ -1159,4 +1192,75 @@ namespace DifferentCastAfterRetgrow {
     return -1;
   }
   static_assert(c() == 10);
+}
+
+namespace MemberPointers {
+  struct S {
+    int m, n;
+  };
+  // constexpr int S::*pm = &S::m;
+  constexpr int S::* foo() {
+    try {
+      throw &S::m;
+    } catch (int S::* pm) {
+      return pm;
+    }
+    return nullptr;
+  }
+  static_assert(foo() == &S::m);
+}
+
+namespace CopCtors {
+  struct S {
+    int &ConstCC;
+    int &CC;
+
+    constexpr S(int &CC, int &ConstCC) : CC(CC), ConstCC(ConstCC) {}
+
+    constexpr S(const S& s) :CC(s.CC), ConstCC(s.ConstCC) {
+      ++ConstCC;
+    }
+    constexpr S(S& s) :CC(s.CC), ConstCC(s.ConstCC) {
+      ++CC;
+    }
+  };
+
+  constexpr int foo() {
+    int CopyCtorCalled = 0;
+    int ConstCopyCtorCalled = 0;
+    try {
+      throw S(CopyCtorCalled, ConstCopyCtorCalled);
+    } catch (S) {
+    }
+    return CopyCtorCalled + (ConstCopyCtorCalled * 10);
+  }
+  static_assert(foo() == 1);
+
+  constexpr int foo2() {
+    int CopyCtorCalled = 0;
+    int ConstCopyCtorCalled = 0;
+    auto M = S(CopyCtorCalled, ConstCopyCtorCalled);
+    try {
+      throw M;
+    } catch (S) {
+    }
+    return CopyCtorCalled + (ConstCopyCtorCalled * 10);
+  }
+  static_assert(foo2() == 2);
+
+  constexpr int foo3() {
+    int CopyCtorCalled = 0;
+    int ConstCopyCtorCalled = 0;
+
+    const auto M = S(CopyCtorCalled, ConstCopyCtorCalled);
+    try {
+      throw M;
+    } catch (S) {
+    }
+
+    return CopyCtorCalled + (ConstCopyCtorCalled * 10);
+  }
+  static_assert(foo3() == 11);
+
+
 }

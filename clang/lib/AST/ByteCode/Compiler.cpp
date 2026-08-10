@@ -61,6 +61,20 @@ static bool isSideEffectFree(const Expr *E) {
   return false;
 }
 
+const CXXConstructorDecl *findCopyCtor(const CXXRecordDecl *RD,
+                                       unsigned ExpectedQualifiers) {
+  if (!RD)
+    return nullptr;
+
+  unsigned Qualifiers;
+  for (CXXConstructorDecl *Ctor : RD->ctors()) {
+    if (Ctor->isCopyConstructor(Qualifiers) && Qualifiers == ExpectedQualifiers)
+      return Ctor;
+  }
+
+  return nullptr;
+}
+
 /// Scope chain managing the variable lifetimes.
 template <class Emitter> class VariableScope {
 public:
@@ -3859,10 +3873,22 @@ bool Compiler<Emitter>::visitCXXTryStmt(const CXXTryStmt *S) {
           return false;
         if (!this->emitGetPtrExceptionValue(Handler))
           return false;
-        if (!this->emitMemcpy(Handler))
-          return false;
-        if (!this->emitPopPtr(Handler))
-          return false;
+
+        // Copy the exception object to the local variable, either via copy ctor
+        // or memcpy.
+        if (const auto *Ctor = findCopyCtor(CatchType->getAsCXXRecordDecl(),
+                                            CatchType.getCVRQualifiers())) {
+          const Function *Func = getFunction(Ctor);
+          if (!Func)
+            return false;
+          if (!this->emitCall(Func, 0, Handler))
+            return false;
+        } else {
+          if (!this->emitMemcpy(Handler))
+            return false;
+          if (!this->emitPopPtr(Handler))
+            return false;
+        }
       }
     } else {
       // This is a catch-all handler.

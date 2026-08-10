@@ -8,11 +8,18 @@
 
 #include "Exceptions.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/CXXInheritance.h"
 
 using namespace clang;
 using namespace clang::interp;
 
-bool ExceptionTableEntry::canCatch(const Type *ThrowType) const {
+static bool isRecordOrPointerToRecordType(const Type *T) {
+  return T->isRecordType() ||
+         (T->isPointerOrReferenceType() && T->getPointeeType()->isRecordType());
+}
+
+bool ExceptionTableEntry::canCatch(const Type *ThrowType,
+                                   const ASTContext &ASTCtx) const {
   const Type *CatchType = this->CatchType;
 
   if (!CatchType || ASTContext::hasSameType(CatchType, ThrowType))
@@ -20,15 +27,34 @@ bool ExceptionTableEntry::canCatch(const Type *ThrowType) const {
 
   assert(CatchType);
 
-  // nullptr_t can be caught by any pointer type.
-  if (ThrowType->isNullPtrType() && CatchType->isPointerType())
-    return true;
+  llvm::errs() << __PRETTY_FUNCTION__ << '\n';
+  ThrowType->dump();
+  CatchType->dump();
+
+  // nullptr_t can be caught by any pointer type (including member pointers)
+  // and references of pointer types.
+  if (ThrowType->isNullPtrType()) {
+    if (CatchType->isPointerType() || CatchType->isMemberPointerType())
+      return true;
+    if (CatchType->isReferenceType() &&
+        CatchType->getPointeeType()->isPointerType())
+      return true;
+  }
 
   // void* can catch all thown pointer types.
   if (ThrowType->isPointerType() && CatchType->isVoidPointerType())
     return true;
 
-  if (CatchType->isPointerType() && !ThrowType->isPointerType())
+  // T& can catch T.
+  if (CatchType->isReferenceType() &&
+      ASTContext::hasSameType(CatchType->getPointeeType().getTypePtr(),
+                              ThrowType))
+    return true;
+
+  // From this point foward, we only care about T, T* or T& where T is a record
+  // type.
+  if (!isRecordOrPointerToRecordType(ThrowType) ||
+      !isRecordOrPointerToRecordType(CatchType))
     return false;
 
   if (CatchType->isPointerOrReferenceType())
@@ -48,8 +74,17 @@ bool ExceptionTableEntry::canCatch(const Type *ThrowType) const {
     if (CatchDecl == ThrowDecl)
       return true;
 
-    if (ThrowDecl->isDerivedFrom(CatchDecl))
+    // "T is an unambiguous public base class of E."
+    CXXBasePaths Paths;
+    if (ThrowDecl->isDerivedFrom(CatchDecl, Paths)) {
+      if (Paths.isAmbiguous(ASTCtx.getCanonicalTagType(CatchDecl)))
+        return false;
+
+      if (Paths.front().Access != AS_public)
+        return false;
+
       return true;
+    }
   }
 
   return false;

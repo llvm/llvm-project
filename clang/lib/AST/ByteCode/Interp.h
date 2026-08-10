@@ -383,6 +383,17 @@ bool GetExceptionValue(InterpState &S) {
     return true;
   }
 
+  if constexpr (std::is_same_v<T, MemberPointer>) {
+    PrimType BlockPrimT = S.ThrownValue->B->getDescriptor()->getPrimType();
+    if (BlockPrimT == PT_Ptr) {
+      // This should only happen for null pointers.
+      S.Stk.push<T>();
+      return true;
+    } else if (BlockPrimT != PT_MemberPtr)
+      return false;
+  }
+
+  assert(S.ThrownValue->B->getDescriptor()->getPrimType() == Name);
   S.Stk.push<T>(S.ThrownValue->B->deref<T>());
   return true;
 }

@@ -1898,7 +1898,8 @@ static bool catchException(InterpState &S, CodePtr OpPC) {
 
   unsigned CodeOffset = S.PC - CurrFunction->getCodeBegin();
   std::optional<ExceptionTableEntry> CatchEntry =
-      CurrFunction->findCatchHandler(CodeOffset, S.ThrownValue->Ty);
+      CurrFunction->findCatchHandler(CodeOffset, S.ThrownValue->Ty,
+                                     S.getASTContext());
 
   if (!CatchEntry) {
     // We didn't find an appropriate catch handler in the current function.

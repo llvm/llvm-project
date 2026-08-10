@@ -253,8 +253,9 @@ public:
     return ArgSize - (align(primSize(PT_Ptr)) * (hasThisPointer() + hasRVO()));
   }
 
-  std::optional<ExceptionTableEntry> findCatchHandler(unsigned CodeOffset,
-                                                      const Type *Ty) const;
+  std::optional<ExceptionTableEntry>
+  findCatchHandler(unsigned CodeOffset, const Type *Ty,
+                   const ASTContext &ASTCtx) const;
 
 private:
   /// Construct a function representing an actual function.

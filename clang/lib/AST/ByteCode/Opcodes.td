@@ -237,9 +237,10 @@ def SaveException : Opcode {
   let Args = [ArgTypePtr, ArgOptPrimType];
 }
 
-def GetExceptionValue : SuccessOpcode {
+def GetExceptionValue : Opcode {
   let Types = [AllTypeClass];
   let HasGroup = 1;
+  let NeedsOpPC = 0;
 }
 def GetPtrExceptionValue : SuccessOpcode;
 

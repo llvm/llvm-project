@@ -15,6 +15,7 @@
 
 namespace clang {
 class Type;
+class ASTContext;
 
 namespace interp {
 class Block;
@@ -29,7 +30,7 @@ struct ExceptionTableEntry {
 
   /// Check if this exception table entry can catch an exception thrown of the
   /// given type.
-  bool canCatch(const Type *ThrowType) const;
+  bool canCatch(const Type *ThrowType, const ASTContext &ASTCtx) const;
 };
 
 /// A thrown value.
