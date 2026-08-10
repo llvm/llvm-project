@@ -77,8 +77,8 @@ public:
   LogicalResult matchAndRewrite(FuncOp funcOp,
                                 PatternRewriter &rewriter) const override {
 
-    std::string className =
-        llvm::formatv(classNameFormat.c_str(), funcOp.getName());
+    std::string className = llvm::formatv(
+        /*Validate=*/false, classNameFormat.c_str(), funcOp.getName());
     ClassOp newClassOp = ClassOp::create(rewriter, funcOp.getLoc(), className);
 
     SmallVector<std::pair<StringAttr, TypeAttr>> fields;
@@ -152,8 +152,8 @@ private:
   /// function.
   std::string funcName;
 
-  /// Format string used to create the wrapper class name where '{}' is
-  /// replaced with the original function name.
+  /// Format string used to create the wrapper class name where the
+  /// function-name placeholder '{}' is optional.
   std::string classNameFormat;
 
   /// Map of FuncOp and the GlobalOps it uses which need to be moved into the

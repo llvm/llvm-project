@@ -385,6 +385,42 @@ void applyOrToBSP(MachineInstr &MI, MachineRegisterInfo &MRI,
   MI.eraseFromParent();
 }
 
+/// Match G_TRUNC (G_OR X, Y) => G_ADDHN X, Y when both inputs are sign
+/// extended from the result element type. The high half of the addition then
+/// equals the truncation of the OR.
+bool matchTruncOrToADDHN(MachineInstr &MI, MachineRegisterInfo &MRI,
+                         GISelValueTracking *VT, Register Dst, Register Or,
+                         Register Src0, Register Src1) {
+  if (!MRI.hasOneUse(Or))
+    return false;
+
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Or);
+  if (!((DstTy == LLT::fixed_vector(8, 8) &&
+         SrcTy == LLT::fixed_vector(8, 16)) ||
+        (DstTy == LLT::fixed_vector(4, 16) &&
+         SrcTy == LLT::fixed_vector(4, 32)) ||
+        (DstTy == LLT::fixed_vector(2, 32) &&
+         SrcTy == LLT::fixed_vector(2, 64))))
+    return false;
+
+  // If the narrow result is immediately any-extended back to the original type,
+  // the G_OR is cheaper than G_ADDHN followed by a vector widen.
+  if (MRI.hasOneNonDBGUse(Dst)) {
+    MachineInstr &UseMI = *MRI.use_nodbg_instructions(Dst).begin();
+    if (UseMI.getOpcode() == TargetOpcode::G_ANYEXT &&
+        MRI.getType(UseMI.getOperand(0).getReg()) == SrcTy)
+      return false;
+  }
+
+  unsigned EltSize = SrcTy.getScalarSizeInBits();
+  if (VT->computeNumSignBits(Src0) != EltSize ||
+      VT->computeNumSignBits(Src1) != EltSize)
+    return false;
+
+  return true;
+}
+
 // Combines Mul(And(Srl(X, 15), 0x10001), 0xffff) into CMLTz
 bool matchCombineMulCMLT(MachineInstr &MI, MachineRegisterInfo &MRI,
                          Register &SrcReg) {

@@ -14,6 +14,18 @@
 
 namespace llvm::sandboxir {
 
+#ifndef NDEBUG
+StringLiteral schedDirectionToStr(SchedDirection Dir) {
+  switch (Dir) {
+  case SchedDirection::BottomUp:
+    return "BottomUp";
+  case SchedDirection::TopDown:
+    return "TopDown";
+  }
+  llvm_unreachable("Unhandled Dir!");
+}
+#endif // NDEBUG
+
 User::op_iterator PredIterator::skipBadIt(User::op_iterator OpIt,
                                           User::op_iterator OpItE,
                                           const DependencyGraph &DAG) {
@@ -618,8 +630,10 @@ void DependencyGraph::notifySetUse(const Use &U, Value *NewSrc) {
     if (auto *CurrSrcN = getNode(CurrSrcI)) {
       // If CurrSrcN is scheduled there is no point in updating UnscheduleSuccs.
       if (!CurrSrcN->scheduled()) {
-        CurrSrcN->decrUnscheduledSuccs();
-        UserN->decrUnscheduledPreds();
+        if (Dir == SchedDirection::BottomUp)
+          CurrSrcN->decrUnscheduledSuccs();
+        else
+          UserN->decrUnscheduledPreds();
       }
     }
   }
@@ -627,8 +641,10 @@ void DependencyGraph::notifySetUse(const Use &U, Value *NewSrc) {
     if (auto *NewSrcN = getNode(NewSrcI)) {
       // If CurrSrcN is scheduled there is no point in updating UnscheduleSuccs.
       if (!NewSrcN->scheduled()) {
-        NewSrcN->incrUnscheduledSuccs();
-        UserN->incrUnscheduledPreds();
+        if (Dir == SchedDirection::BottomUp)
+          NewSrcN->incrUnscheduledSuccs();
+        else
+          UserN->incrUnscheduledPreds();
       }
     }
   }

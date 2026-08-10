@@ -75,8 +75,9 @@ class LongJmpPass : public BinaryFunctionPass {
 
   /// Relax all internal function branches including those between fragments.
   /// Assume that fragments are placed in different sections but are within
-  /// 128MB of each other.
-  void relaxLocalBranches(BinaryFunction &BF,
+  /// 128MB of each other. Return false and report an error if a branch cannot
+  /// be relaxed.
+  bool relaxLocalBranches(BinaryFunction &BF,
                           const BranchLivenessInfo *BLI = nullptr);
 
   ///                 -- Layout estimation methods --

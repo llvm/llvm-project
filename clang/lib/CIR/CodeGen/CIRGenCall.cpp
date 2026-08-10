@@ -43,6 +43,14 @@ CIRGenFunctionInfo *CIRGenFunctionInfo::create(
   fi->required = required;
   fi->numArgs = argTypes.size();
 
+  // requiredArguments() reads getNumRequiredArgs() entries out of the
+  // trailing-object array, so a signature that claims more required arguments
+  // than we have types for reads past the end and hands a null QualType to
+  // convertType.
+  assert((!required.allowsOptionalArgs() ||
+          required.getNumRequiredArgs() <= fi->numArgs) &&
+         "more required arguments than argument types");
+
   fi->getArgTypes()[0] = resultType;
   std::copy(argTypes.begin(), argTypes.end(), fi->argTypesBegin());
   assert(!cir::MissingFeatures::opCallCIRGenFuncInfoExtParamInfo());
@@ -930,9 +938,13 @@ arrangeFreeFunctionLikeCall(CIRGenTypes &cgt, CIRGenModule &cgm,
   RequiredArgs required = RequiredArgs::All;
 
   if (const auto *proto = dyn_cast<FunctionProtoType>(fnType)) {
-    unsigned numExtraSlots = getNumPassObjectSizeParams(proto);
+    // A free function call has no extra prefix arguments. Note that
+    // getFromProtoWithExtraSlots already accounts for the prototype's
+    // pass_object_size parameters; adding them here too would double-count
+    // them and make the signature claim more required arguments than `args`
+    // actually holds.
     if (proto->isVariadic())
-      required = RequiredArgs::getFromProtoWithExtraSlots(proto, numExtraSlots);
+      required = RequiredArgs::getFromProtoWithExtraSlots(proto, 0);
   } else if (cgm.getTargetCIRGenInfo().isNoProtoCallVariadic(
                  cast<FunctionNoProtoType>(fnType)))
     cgm.errorNYI("call to function without a prototype");

@@ -9149,6 +9149,9 @@ def fixedpoint_scalar_xform : SDNodeXForm<timm, [{
   (void)N;
   return V;
 }]>;
+def gi_fixedpoint_scalar_xform
+    : GICustomOperandRenderer<"renderFixedPointScalarXForm">,
+      GISDNodeXFormEquiv<fixedpoint_scalar_xform>;
 
 multiclass FPToFixedScalarPats<SDPatternOperator OpN, string INST > {
   // Allow integer result to remain in GPR register.
@@ -9162,12 +9165,7 @@ multiclass FPToFixedScalarPats<SDPatternOperator OpN, string INST > {
           (!cast<Instruction>(INST # "s") FPR32:$Rn, vecshiftR32:$imm)>;
   def : Pat<(f64 (bitconvert(i64 (OpN (f64 FPR64:$Rn), vecshiftR64:$imm)))),
           (!cast<Instruction>(INST # "d") FPR64:$Rn, vecshiftR64:$imm)>;
-
-  // FPR fallback patterns.
-  def : Pat<(i32 (OpN FPR32:$Rn, vecshiftR32:$imm)),
-          (!cast<Instruction>(INST # "s") FPR32:$Rn, vecshiftR32:$imm)>;
-  def : Pat<(i64 (OpN (f64 FPR64:$Rn), vecshiftR64:$imm)),
-          (!cast<Instruction>(INST # "d") FPR64:$Rn, vecshiftR64:$imm)>;
+          
   def : Pat<(v1i64 (OpN (v1f64 FPR64:$Rn), vecshiftR64:$imm)),
           (!cast<Instruction>(INST # "d") FPR64:$Rn, vecshiftR64:$imm)>;
   def : Pat<(i32 (OpN (f16 FPR16:$Rn), vecshiftR32:$imm)),

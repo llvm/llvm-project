@@ -36,6 +36,14 @@ class DependencyGraph;
 class MemDGNode;
 class SchedBundle;
 
+enum class SchedDirection {
+  BottomUp,
+  TopDown,
+};
+#ifndef NDEBUG
+StringLiteral schedDirectionToStr(SchedDirection Dir);
+#endif
+
 /// SubclassIDs for isa/dyn_cast etc.
 enum class DGNodeID {
   DGNode,
@@ -447,6 +455,8 @@ private:
   /// The DAG spans across all instructions in this interval.
   Interval<Instruction> DAGInterval;
 
+  SchedDirection Dir;
+
   Context *Ctx = nullptr;
   std::optional<Context::CallbackID> CreateInstrCB;
   std::optional<Context::CallbackID> EraseInstrCB;
@@ -512,8 +522,8 @@ private:
 
 public:
   /// This constructor also registers callbacks.
-  DependencyGraph(AAResults &AA, Context &Ctx)
-      : Ctx(&Ctx), BatchAA(std::make_unique<BatchAAResults>(AA)) {
+  DependencyGraph(SchedDirection Dir, AAResults &AA, Context &Ctx)
+      : Dir(Dir), Ctx(&Ctx), BatchAA(std::make_unique<BatchAAResults>(AA)) {
     CreateInstrCB = Ctx.registerCreateInstrCallback(
         [this](Instruction *I) { notifyCreateInstr(I); });
     EraseInstrCB = Ctx.registerEraseInstrCallback(

@@ -66,7 +66,7 @@ def AbsOp : ComplexUnaryOp<"abs",
 // AddOp
 //===----------------------------------------------------------------------===//
 
-def AddOp : ComplexArithmeticOp<"add"> {
+def AddOp : ComplexArithmeticOp<"add", [Commutative]> {
   let summary = "complex addition";
   let description = [{
     The `add` operation takes two complex numbers and returns their sum.

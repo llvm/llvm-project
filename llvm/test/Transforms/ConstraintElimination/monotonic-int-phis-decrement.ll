@@ -256,3 +256,166 @@ loop.latch:
 exit:
   ret void
 }
+
+; An nsw decrement is monotonically decreasing in the signed sense, so
+; %start >= %k.0 holds independently of where the loop exits.
+define void @add_rec_decreasing_nsw_signed_monotonic(i8 %start, i8 %b) {
+; CHECK-LABEL: define void @add_rec_decreasing_nsw_signed_monotonic(
+; CHECK-SAME: i8 [[START:%.*]], i8 [[B:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[K_0:%.*]] = phi i8 [ [[START]], [[ENTRY:%.*]] ], [ [[K_DEC:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[CMP2_NOT:%.*]] = icmp eq i8 [[K_0]], [[B]]
+; CHECK-NEXT:    br i1 [[CMP2_NOT]], label [[EXIT:%.*]], label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[S:%.*]] = icmp sle i8 [[K_0]], [[START]]
+; CHECK-NEXT:    call void @use(i1 [[S]])
+; CHECK-NEXT:    [[U:%.*]] = icmp ule i8 [[K_0]], [[START]]
+; CHECK-NEXT:    call void @use(i1 [[U]])
+; CHECK-NEXT:    [[K_DEC]] = add nsw i8 [[K_0]], -1
+; CHECK-NEXT:    br label [[LOOP_HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %k.0 = phi i8 [ %start, %entry ], [ %k.dec, %loop.latch ]
+  %cmp2.not = icmp eq i8 %k.0, %b
+  br i1 %cmp2.not, label %exit, label %loop.latch
+
+loop.latch:
+  %s = icmp sle i8 %k.0, %start
+  call void @use(i1 %s)
+  %u = icmp ule i8 %k.0, %start
+  call void @use(i1 %u)
+  %k.dec = add nsw i8 %k.0, -1
+  br label %loop.header
+
+exit:
+  ret void
+}
+
+; nuw on a negative-step increment does *not* imply unsigned monotonicity:
+; `add nuw i8 %k.0, -1` implies %k.0 == 0, i.e. the value wraps around to 255.
+; Neither compare must be folded.
+define void @add_rec_decreasing_nuw_not_unsigned_monotonic(i8 %start, i8 %b) {
+; CHECK-LABEL: define void @add_rec_decreasing_nuw_not_unsigned_monotonic(
+; CHECK-SAME: i8 [[START:%.*]], i8 [[B:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[K_0:%.*]] = phi i8 [ [[START]], [[ENTRY:%.*]] ], [ [[K_DEC:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[CMP2_NOT:%.*]] = icmp eq i8 [[K_0]], [[B]]
+; CHECK-NEXT:    br i1 [[CMP2_NOT]], label [[EXIT:%.*]], label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[U:%.*]] = icmp ule i8 [[K_0]], [[START]]
+; CHECK-NEXT:    call void @use(i1 [[U]])
+; CHECK-NEXT:    [[S:%.*]] = icmp sle i8 [[K_0]], [[START]]
+; CHECK-NEXT:    call void @use(i1 [[S]])
+; CHECK-NEXT:    [[K_DEC]] = add nuw i8 [[K_0]], -1
+; CHECK-NEXT:    br label [[LOOP_HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %k.0 = phi i8 [ %start, %entry ], [ %k.dec, %loop.latch ]
+  %cmp2.not = icmp eq i8 %k.0, %b
+  br i1 %cmp2.not, label %exit, label %loop.latch
+
+loop.latch:
+  %u = icmp ule i8 %k.0, %start
+  call void @use(i1 %u)
+  %s = icmp sle i8 %k.0, %start
+  call void @use(i1 %s)
+  %k.dec = add nuw i8 %k.0, -1
+  br label %loop.header
+
+exit:
+  ret void
+}
+
+; Without any wrap flags the decrement may wrap, nothing must be folded.
+define void @add_rec_decreasing_no_wrap_flags_not_monotonic(i8 %start, i8 %b) {
+; CHECK-LABEL: define void @add_rec_decreasing_no_wrap_flags_not_monotonic(
+; CHECK-SAME: i8 [[START:%.*]], i8 [[B:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[K_0:%.*]] = phi i8 [ [[START]], [[ENTRY:%.*]] ], [ [[K_DEC:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[CMP2_NOT:%.*]] = icmp eq i8 [[K_0]], [[B]]
+; CHECK-NEXT:    br i1 [[CMP2_NOT]], label [[EXIT:%.*]], label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[S:%.*]] = icmp sle i8 [[K_0]], [[START]]
+; CHECK-NEXT:    call void @use(i1 [[S]])
+; CHECK-NEXT:    [[K_DEC]] = add i8 [[K_0]], -1
+; CHECK-NEXT:    br label [[LOOP_HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %k.0 = phi i8 [ %start, %entry ], [ %k.dec, %loop.latch ]
+  %cmp2.not = icmp eq i8 %k.0, %b
+  br i1 %cmp2.not, label %exit, label %loop.latch
+
+loop.latch:
+  %s = icmp sle i8 %k.0, %start
+  call void @use(i1 %s)
+  %k.dec = add i8 %k.0, -1
+  br label %loop.header
+
+exit:
+  ret void
+}
+
+; The decrement has no wrap flags in the IR, but SCEV can infer nsw for the
+; induction from the guarded backedge.
+define void @add_rec_decreasing_nsw_from_scev(i8 %b) {
+; CHECK-LABEL: define void @add_rec_decreasing_nsw_from_scev(
+; CHECK-SAME: i8 [[B:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[K_0:%.*]] = phi i8 [ 100, [[ENTRY:%.*]] ], [ [[K_DEC:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[CMP2_NOT:%.*]] = icmp eq i8 [[K_0]], [[B]]
+; CHECK-NEXT:    br i1 [[CMP2_NOT]], label [[EXIT:%.*]], label [[LOOP_BODY:%.*]]
+; CHECK:       loop.body:
+; CHECK-NEXT:    [[S:%.*]] = icmp sle i8 [[K_0]], 100
+; CHECK-NEXT:    call void @use(i1 [[S]])
+; CHECK-NEXT:    [[POSITIVE:%.*]] = icmp sgt i8 [[K_0]], 0
+; CHECK-NEXT:    br i1 [[POSITIVE]], label [[LOOP_LATCH]], label [[EXIT]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[K_DEC]] = add i8 [[K_0]], -1
+; CHECK-NEXT:    br label [[LOOP_HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %k.0 = phi i8 [ 100, %entry ], [ %k.dec, %loop.latch ]
+  %cmp2.not = icmp eq i8 %k.0, %b
+  br i1 %cmp2.not, label %exit, label %loop.body
+
+loop.body:
+  %s = icmp sle i8 %k.0, 100
+  call void @use(i1 %s)
+  %positive = icmp sgt i8 %k.0, 0
+  br i1 %positive, label %loop.latch, label %exit
+
+loop.latch:
+  %k.dec = add i8 %k.0, -1
+  br label %loop.header
+
+exit:
+  ret void
+}

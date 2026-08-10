@@ -87,15 +87,6 @@ LogicalResult outlineIfOp(RewriterBase &b, scf::IfOp ifOp, func::FuncOp *thenFn,
 bool getInnermostParallelLoops(Operation *rootOp,
                                SmallVectorImpl<scf::ParallelOp> &result);
 
-/// Return the min/max expressions for `value` if it is an induction variable
-/// from scf.for or scf.parallel loop.
-/// if `loopFilter` is passed, the filter determines which loop to consider.
-/// Other induction variables are ignored.
-std::optional<std::pair<AffineExpr, AffineExpr>>
-getSCFMinMaxExpr(Value value, SmallVectorImpl<Value> &dims,
-                 SmallVectorImpl<Value> &symbols,
-                 llvm::function_ref<bool(Operation *)> loopFilter = nullptr);
-
 /// Replace a perfect nest of "for" loops with a single linearized loop. Assumes
 /// `loops` contains a list of perfectly nested loops with bounds and steps
 /// independent of any loop induction variable involved in the nest.

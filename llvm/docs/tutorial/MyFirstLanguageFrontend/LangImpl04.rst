@@ -262,7 +262,7 @@ be able to call it from the command line.
 
 In order to do this, we first prepare the environment to create code for
 the current native target and declare and initialize the JIT. This is
-done by calling some ``InitializeNativeTarget\*`` functions and
+done by calling some ``InitializeNativeTarget*`` functions and
 adding a global variable ``TheJIT``, and initializing it in
 ``main``:
 

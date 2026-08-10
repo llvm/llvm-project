@@ -60,6 +60,7 @@ define amdgpu_kernel void @fence_barrier_latency_test(ptr addrspace(1) %global_p
 ; CHECK-NEXT:    s_add_co_i32 s21, s21, s20
 ; CHECK-NEXT:    s_add_co_i32 s19, s19, s18
 ; CHECK-NEXT:    s_barrier_wait -1
+; CHECK-NEXT:    s_wait_tensorcnt 0xa
 ; CHECK-NEXT:    tensor_load_to_lds s[0:3], s[8:15]
 ; CHECK-NEXT:    s_add_co_i32 s21, s21, s20
 ; CHECK-NEXT:    s_add_co_i32 s7, s7, s6

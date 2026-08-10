@@ -217,6 +217,11 @@ tools = [
     ),
 ]
 
+# Some tests expect the command line to be verbatim what is specified on the
+# RUN: line.
+if not flang_extra_search_args:
+    config.available_features.add("flang-authentic-cmdline")
+
 # Flang has several unimplemented features. TODO messages are used to mark
 # and fail if these features are exercised. Some TODOs exit with a non-zero
 # exit code, but others abort the execution in assert builds.

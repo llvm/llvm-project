@@ -748,7 +748,6 @@ static bool intrinsicHasSideEffects(Intrinsic::ID ID) {
   case Intrinsic::spv_sdot:
   case Intrinsic::spv_sign:
   case Intrinsic::spv_smoothstep:
-  case Intrinsic::spv_step:
   case Intrinsic::spv_subgroup_id:
   case Intrinsic::spv_subgroup_local_invocation_id:
   case Intrinsic::spv_subgroup_max_size:
@@ -5625,8 +5624,6 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_quad_read_across_diagonal: {
     return selectQuadSwap(ResVReg, ResType, I, /*Direction*/ 2);
   }
-  case Intrinsic::spv_step:
-    return selectExtInst(ResVReg, ResType, I, CL::step, GL::Step);
   case Intrinsic::spv_radians:
     return selectExtInst(ResVReg, ResType, I, CL::radians, GL::Radians);
   // Discard intrinsics which we do not expect to actually represent code after

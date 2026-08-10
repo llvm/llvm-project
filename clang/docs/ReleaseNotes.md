@@ -170,6 +170,9 @@ features cannot lower the translation-unit ABI level;
 
 ### Non-comprehensive list of changes in this release
 
+- Clang now allows GNU computed `goto` extension in `constexpr` functions, matching the relaxed
+  `constexpr` function body rules introduced in C++23.
+
 ### New Compiler Flags
 
 - New option `-fdefined-pointer-subtraction` added to preserve stable semantics
@@ -178,6 +181,11 @@ features cannot lower the translation-unit ABI level;
 - Added `--print-cxx-stdlib` and `--print-cxx-stdlib-include-dirs` to print
   the C++ standard library selected by the driver and the include directories
   added for it.
+
+- Added `-mscs-reg=<reg>` on Hexagon to select which callee-saved register
+  (`r16`-`r27`, default `r18`) holds the shadow call stack pointer under
+  `-fsanitize=shadow-call-stack`. The selected register must also be reserved
+  with the matching `-ffixed-<reg>`.
 
 ### Deprecated Compiler Flags
 
@@ -362,7 +370,6 @@ features cannot lower the translation-unit ABI level;
 
 - Clang now attempts to print enumerator names rather than C-style cast expressions
   in more diagnostics.
-
 
 ### Improvements to Clang's time-trace
 

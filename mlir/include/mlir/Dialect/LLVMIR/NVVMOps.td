@@ -4213,9 +4213,11 @@ def TMALoadModeAttr : EnumAttr<NVVM_Dialect, TMALoadMode, "tma_load_mode"> {
 def TMAStoreModeTile   : I32EnumAttrCase<"TILE", 0, "tile">;
 def TMAStoreModeIm2Col : I32EnumAttrCase<"IM2COL", 1, "im2col">;
 def TMAStoreModeTileScatter4 : I32EnumAttrCase<"TILE_SCATTER4", 2, "tile_scatter4">;
+def TMAStoreModeIm2ColW : I32EnumAttrCase<"IM2COL_W", 3, "im2col_w">;
 
 def TMAStoreMode : I32EnumAttr<"TMAStoreMode", "NVVM TMA Store Mode",
-    [TMAStoreModeTile, TMAStoreModeIm2Col, TMAStoreModeTileScatter4]> {
+    [TMAStoreModeTile, TMAStoreModeIm2Col,
+     TMAStoreModeTileScatter4, TMAStoreModeIm2ColW]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::NVVM";
 }
@@ -6144,6 +6146,7 @@ def NVVM_Tcgen05MMAOp : NVVM_Op<"tcgen05.mma",
 
     Default Attributes:
     - collectorOp is a Tcgen05MMACollectorOp attribute with matrix A as the collector buffer
+    - collectorOpB is a Tcgen05MMACollectorOp attribute with matrix B as the collector buffer
 
     - `aShift` shifts the rows of the A matrix down by one row and can only be
        applied if A is in tensor memory
@@ -6156,6 +6159,8 @@ def NVVM_Tcgen05MMAOp : NVVM_Op<"tcgen05.mma",
       CTAGroupKindAttr:$ctaGroup,
       DefaultValuedAttr<Tcgen05MMACollectorOpAttr,
                         "Tcgen05MMACollectorOp::DISCARD">:$collectorOp,
+      DefaultValuedAttr<Tcgen05MMACollectorOpAttr,
+                        "Tcgen05MMACollectorOp::DISCARD">:$collectorOpB,
       UnitAttr:$aShift,
       LLVM_PointerTensor:$matrixD,
       AnyTypeOf<[LLVM_PointerTensor, I64]>:$matrixA,
@@ -6219,6 +6224,8 @@ def NVVM_Tcgen05MMASparseOp : NVVM_Op<"tcgen05.mma.sp",
     CTAGroupKindAttr:$ctaGroup,
     DefaultValuedAttr<Tcgen05MMACollectorOpAttr,
                       "Tcgen05MMACollectorOp::DISCARD">:$collectorOp,
+    DefaultValuedAttr<Tcgen05MMACollectorOpAttr,
+                      "Tcgen05MMACollectorOp::DISCARD">:$collectorOpB,
     UnitAttr:$aShift,
     LLVM_PointerTensor:$matrixD,
     AnyTypeOf<[LLVM_PointerTensor, I64]>:$matrixA,
@@ -6301,6 +6308,7 @@ def NVVM_Tcgen05MMABlockScaleOp : NVVM_Op<"tcgen05.mma.block_scale",
 
     Default Attributes:
     - collectorOp is a Tcgen05MMACollectorOp attribute with matrix A as the collector buffer
+    - collectorOpB is a Tcgen05MMACollectorOp attribute with matrix B as the collector buffer
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-mma-instructions-mma)
   }];
@@ -6312,6 +6320,8 @@ def NVVM_Tcgen05MMABlockScaleOp : NVVM_Op<"tcgen05.mma.block_scale",
                       "Tcgen05MMABlockScale::DEFAULT">:$blockScale,
       DefaultValuedAttr<Tcgen05MMACollectorOpAttr,
                         "Tcgen05MMACollectorOp::DISCARD">:$collectorOp,
+      DefaultValuedAttr<Tcgen05MMACollectorOpAttr,
+                        "Tcgen05MMACollectorOp::DISCARD">:$collectorOpB,
       LLVM_PointerTensor:$matrixD,
       AnyTypeOf<[LLVM_PointerTensor, I64]>:$matrixA,
       I64:$matrixB,
@@ -6374,6 +6384,8 @@ def NVVM_Tcgen05MMASparseBlockScaleOp : NVVM_Op<"tcgen05.mma.sp.block_scale",
                       "Tcgen05MMABlockScale::DEFAULT">:$blockScale,
     DefaultValuedAttr<Tcgen05MMACollectorOpAttr,
                       "Tcgen05MMACollectorOp::DISCARD">:$collectorOp,
+    DefaultValuedAttr<Tcgen05MMACollectorOpAttr,
+                      "Tcgen05MMACollectorOp::DISCARD">:$collectorOpB,
     LLVM_PointerTensor:$matrixD,
     AnyTypeOf<[LLVM_PointerTensor, I64]>:$matrixA,
     I64:$matrixB,

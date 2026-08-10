@@ -511,7 +511,7 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg1_bf16(ptr addrs
 ; FAKE16-NEXT:    v_nop
 ; FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
-; FAKE16-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x7fc0
+; FAKE16-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, -1
 ; FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
 ; FAKE16-NEXT:    s_endpgm
@@ -523,7 +523,7 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg1_bf16(ptr addrs
 ; REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; REAL16-NEXT:    v_mov_b32_e32 v1, 0
-; REAL16-NEXT:    v_mov_b16_e32 v0.l, 0x7fc0
+; REAL16-NEXT:    v_mov_b16_e32 v0.l, -1
 ; REAL16-NEXT:    s_wait_kmcnt 0x0
 ; REAL16-NEXT:    global_store_b16 v1, v0, s[0:1]
 ; REAL16-NEXT:    s_endpgm
@@ -539,7 +539,7 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg2_bf16(ptr addrs
 ; FAKE16-NEXT:    v_nop
 ; FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
-; FAKE16-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x7fc0
+; FAKE16-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, -2
 ; FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
 ; FAKE16-NEXT:    s_endpgm
@@ -551,7 +551,7 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg2_bf16(ptr addrs
 ; REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; REAL16-NEXT:    v_mov_b32_e32 v1, 0
-; REAL16-NEXT:    v_mov_b16_e32 v0.l, 0x7fc0
+; REAL16-NEXT:    v_mov_b16_e32 v0.l, -2
 ; REAL16-NEXT:    s_wait_kmcnt 0x0
 ; REAL16-NEXT:    global_store_b16 v1, v0, s[0:1]
 ; REAL16-NEXT:    s_endpgm
@@ -957,7 +957,7 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg1_v2bf16(ptr add
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
-; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x7fc07fc0
+; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, -1
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
@@ -973,7 +973,7 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg2_v2bf16(ptr add
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
-; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x7fc07fc0
+; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0xfffefffe
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm

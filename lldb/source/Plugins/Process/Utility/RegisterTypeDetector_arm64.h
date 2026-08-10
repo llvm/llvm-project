@@ -51,47 +51,76 @@ public:
   bool HasDetected() const { return m_has_detected; }
 
 private:
-  using DetectorFn =
-      std::function<const RegisterType *(uint64_t, uint64_t, uint64_t)>;
+  // A detector function inspects the hwcaps and builds a type for that
+  // register. All types should be made using MakeType, and a raw pointer to
+  // the top level type must be returned.
+  using DetectorFn = const RegisterType *(
+      Arm64RegisterTypeDetector::*)(uint64_t, uint64_t, uint64_t);
 
-  static const RegisterType *DetectCPSRType(uint64_t hwcap, uint64_t hwcap2,
+  const RegisterType *DetectCPSRType(uint64_t hwcap, uint64_t hwcap2,
+                                     uint64_t hwcap3);
+  const RegisterType *DetectFPSRType(uint64_t hwcap, uint64_t hwcap2,
+                                     uint64_t hwcap3);
+  const RegisterType *DetectFPCRType(uint64_t hwcap, uint64_t hwcap2,
+                                     uint64_t hwcap3);
+  const RegisterType *DetectMTECtrlType(uint64_t hwcap, uint64_t hwcap2,
+                                        uint64_t hwcap3);
+  const RegisterType *DetectSVCRType(uint64_t hwcap, uint64_t hwcap2,
+                                     uint64_t hwcap3);
+  const RegisterType *DetectFPMRType(uint64_t hwcap, uint64_t hwcap2,
+                                     uint64_t hwcap3);
+  const RegisterType *DetectGCSFeaturesType(uint64_t hwcap, uint64_t hwcap2,
                                             uint64_t hwcap3);
-  static const RegisterType *DetectFPSRType(uint64_t hwcap, uint64_t hwcap2,
-                                            uint64_t hwcap3);
-  static const RegisterType *DetectFPCRType(uint64_t hwcap, uint64_t hwcap2,
-                                            uint64_t hwcap3);
-  static const RegisterType *DetectMTECtrlType(uint64_t hwcap, uint64_t hwcap2,
-                                               uint64_t hwcap3);
-  static const RegisterType *DetectSVCRType(uint64_t hwcap, uint64_t hwcap2,
-                                            uint64_t hwcap3);
-  static const RegisterType *DetectFPMRType(uint64_t hwcap, uint64_t hwcap2,
-                                            uint64_t hwcap3);
-  static const RegisterType *
-  DetectGCSFeaturesType(uint64_t hwcap, uint64_t hwcap2, uint64_t hwcap3);
-  static const RegisterType *DetectPOREL0Type(uint64_t hwcap, uint64_t hwcap2,
-                                              uint64_t hwcap3);
+  const RegisterType *DetectPOREL0Type(uint64_t hwcap, uint64_t hwcap2,
+                                       uint64_t hwcap3);
 
   struct RegisterEntry {
-    RegisterEntry(llvm::StringRef name, unsigned size, DetectorFn detector)
-        : m_name(name), m_type(nullptr), m_detector(detector) {}
+    RegisterEntry(const std::vector<llvm::StringRef> &names,
+                  DetectorFn detector)
+        : m_names(names), m_type(nullptr), m_detector(detector) {}
 
-    llvm::StringRef m_name;
+    std::vector<llvm::StringRef> m_names;
+    // A raw pointer to the top level type. This pointer's lifetime is managed
+    // by a unique pointer of the same value in m_detected_types.
     const RegisterType *m_type;
     DetectorFn m_detector;
-  } m_registers[9] = {
-      RegisterEntry("cpsr", 4, DetectCPSRType),
-      RegisterEntry("fpsr", 4, DetectFPSRType),
-      RegisterEntry("fpcr", 4, DetectFPCRType),
-      RegisterEntry("mte_ctrl", 8, DetectMTECtrlType),
-      RegisterEntry("svcr", 8, DetectSVCRType),
-      RegisterEntry("fpmr", 8, DetectFPMRType),
-      RegisterEntry("gcs_features_enabled", 8, DetectGCSFeaturesType),
-      RegisterEntry("gcs_features_locked", 8, DetectGCSFeaturesType),
-      RegisterEntry("por_el0", 8, DetectPOREL0Type),
+  } m_registers[8] = {
+      RegisterEntry({"cpsr"}, &Arm64RegisterTypeDetector::DetectCPSRType),
+      RegisterEntry({"fpsr"}, &Arm64RegisterTypeDetector::DetectFPSRType),
+      RegisterEntry({"fpcr"}, &Arm64RegisterTypeDetector::DetectFPCRType),
+      RegisterEntry({"mte_ctrl"},
+                    &Arm64RegisterTypeDetector::DetectMTECtrlType),
+      RegisterEntry({"svcr"}, &Arm64RegisterTypeDetector::DetectSVCRType),
+      RegisterEntry({"fpmr"}, &Arm64RegisterTypeDetector::DetectFPMRType),
+      RegisterEntry({"gcs_features_enabled", "gcs_features_locked"},
+                    &Arm64RegisterTypeDetector::DetectGCSFeaturesType),
+      RegisterEntry({"por_el0"}, &Arm64RegisterTypeDetector::DetectPOREL0Type),
   };
 
   // Becomes true once field detection has been run for all registers.
   bool m_has_detected = false;
+
+  template <typename T, typename... Args> const T *MakeType(Args &&...args) {
+    static_assert(std::is_base_of_v<RegisterType, T>);
+
+    auto type = std::make_unique<T>(std::forward<Args>(args)...);
+    const T *type_ptr = type.get();
+    m_detected_types.detected_types.push_back(std::move(type));
+    return type_ptr;
+  }
+
+  // This stores all the types created. There may be > 1 type per register,
+  // as a register may nest types (enums for fields for example).
+  // We do not use a vector of RegisterType, because the address of the types
+  // must remain the same as new types are created.
+  // Code other than MakeType should not use this vector directly, hence the
+  // class wrapper to enforce that.
+  class DetectedTypesHolder {
+    std::vector<std::unique_ptr<RegisterType>> detected_types;
+
+    template <typename T, typename... Args>
+    friend const T *Arm64RegisterTypeDetector::MakeType(Args &&...args);
+  } m_detected_types;
 };
 
 } // namespace lldb_private

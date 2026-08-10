@@ -247,9 +247,7 @@ exit:
 ;
 ; flags[i] has stride 1 in units of i1, but i1 is bit-packed in vectors: 4
 ; consecutive i1 scalars span 4 bytes, while a <4 x i1> access covers a single
-; byte.
-; FIXME: The accesses are widened to a packed <4 x i1> load and store, which
-; cover the wrong bytes. They should remain a gather and scatter.
+; byte. Should remain a gather and scatter.
 define void @stride1_i1_load_store(ptr noalias %A, ptr noalias %flags, i64 %N, i64 %M) {
 ; CHECK-LABEL: define void @stride1_i1_load_store(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[FLAGS:%.*]], i64 [[N:%.*]], i64 [[M:%.*]]) {
@@ -266,8 +264,7 @@ define void @stride1_i1_load_store(ptr noalias %A, ptr noalias %flags, i64 %N, i
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[OUTER_LATCH4:.*]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[OUTER_LATCH4]] ]
 ; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds i1, ptr [[FLAGS]], <4 x i64> [[VEC_IND]]
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x ptr> [[WIDE_GEP]], i64 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i1>, ptr [[TMP1]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = call <4 x i1> @llvm.masked.gather.v4i1.v4p0(<4 x ptr> align 1 [[WIDE_GEP]], <4 x i1> splat (i1 true), <4 x i1> poison)
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul nsw <4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i1> [[WIDE_LOAD]] to <4 x i8>
 ; CHECK-NEXT:    br label %[[INNER_BODY1:.*]]
@@ -282,8 +279,7 @@ define void @stride1_i1_load_store(ptr noalias %A, ptr noalias %flags, i64 %N, i
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[OUTER_LATCH4]], label %[[INNER_BODY1]]
 ; CHECK:       [[OUTER_LATCH4]]:
 ; CHECK-NEXT:    [[TMP8:%.*]] = xor <4 x i1> [[WIDE_LOAD]], splat (i1 true)
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x ptr> [[WIDE_GEP]], i64 0
-; CHECK-NEXT:    store <4 x i1> [[TMP8]], ptr [[TMP9]], align 1
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i1.v4p0(<4 x i1> [[TMP8]], <4 x ptr> align 1 [[WIDE_GEP]], <4 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -327,8 +323,6 @@ exit:
 ; --- stride-1 i4 load and store (NOT contiguous) ---
 ; Same as above with i4, which is also bit-packed in vectors: 4 consecutive i4
 ; scalars span 4 bytes, while a <4 x i4> access covers 2 bytes.
-; FIXME: Same as above, the accesses are widened to a packed <4 x i4> load and
-; store.
 define void @stride1_i4_load_store(ptr noalias %A, ptr noalias %vals, i64 %N, i64 %M) {
 ; CHECK-LABEL: define void @stride1_i4_load_store(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[VALS:%.*]], i64 [[N:%.*]], i64 [[M:%.*]]) {
@@ -345,8 +339,7 @@ define void @stride1_i4_load_store(ptr noalias %A, ptr noalias %vals, i64 %N, i6
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[OUTER_LATCH4:.*]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[OUTER_LATCH4]] ]
 ; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds i4, ptr [[VALS]], <4 x i64> [[VEC_IND]]
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x ptr> [[WIDE_GEP]], i64 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i4>, ptr [[TMP1]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = call <4 x i4> @llvm.masked.gather.v4i4.v4p0(<4 x ptr> align 1 [[WIDE_GEP]], <4 x i1> splat (i1 true), <4 x i4> poison)
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul nsw <4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i4> [[WIDE_LOAD]] to <4 x i8>
 ; CHECK-NEXT:    br label %[[INNER_BODY1:.*]]
@@ -361,8 +354,7 @@ define void @stride1_i4_load_store(ptr noalias %A, ptr noalias %vals, i64 %N, i6
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[OUTER_LATCH4]], label %[[INNER_BODY1]]
 ; CHECK:       [[OUTER_LATCH4]]:
 ; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i4> [[WIDE_LOAD]], splat (i4 1)
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x ptr> [[WIDE_GEP]], i64 0
-; CHECK-NEXT:    store <4 x i4> [[TMP8]], ptr [[TMP9]], align 1
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i4.v4p0(<4 x i4> [[TMP8]], <4 x ptr> align 1 [[WIDE_GEP]], <4 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

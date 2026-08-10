@@ -11,18 +11,6 @@
 
 namespace llvm::sandboxir {
 
-#ifndef NDEBUG
-StringLiteral schedDirectionToStr(SchedDirection Dir) {
-  switch (Dir) {
-  case SchedDirection::BottomUp:
-    return "BottomUp";
-  case SchedDirection::TopDown:
-    return "TopDown";
-  }
-  llvm_unreachable("Unhandled Dir!");
-}
-#endif // NDEBUG
-
 // TODO: Check if we can cache top/bottom to reduce compile-time.
 DGNode *SchedBundle::getTop() const {
   DGNode *TopN = Nodes.front();

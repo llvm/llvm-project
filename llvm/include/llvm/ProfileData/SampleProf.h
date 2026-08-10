@@ -250,6 +250,9 @@ enum class SecFuncOffsetFlags : uint32_t {
   // Store function offsets in an order of contexts. The order ensures that
   // callee contexts of a given context laid out next to it.
   SecFlagOrdered = (1 << 0),
+  // Store function offsets in a parallel array aligned with Eytzinger NameTable
+  // span.
+  SecFlagEytzinger = (1 << 1),
 };
 
 // Verify section specific flag is used for the correct section.

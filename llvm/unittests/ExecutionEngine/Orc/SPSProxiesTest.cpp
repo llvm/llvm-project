@@ -207,3 +207,74 @@ TEST(SPSProxiesTest, Int32VoidSync) {
 
   cantFail(ES.endSession());
 }
+
+// Executor-side wrapper returning Error: fails iff its bool argument is true.
+static CWrapperFunctionBuffer errorFnWrapper(const char *ArgData,
+                                             size_t ArgSize) {
+  return WrapperFunction<SPSError(bool)>::handle(
+             ArgData, ArgSize,
+             [](bool ShouldFail) -> Error {
+               if (ShouldFail)
+                 return make_error<StringError>("requested failure",
+                                                inconvertibleErrorCode());
+               return Error::success();
+             })
+      .release();
+}
+
+inline constexpr char ErrorFnCIName[] = "test_sps_error_fn";
+using ErrorFnProxy = rt::Proxy<Error(bool)>;
+using ErrorFnProxySpec =
+    sps::ProxySpec<ErrorFnProxy, SPSError(bool), ErrorFnCIName>;
+
+// Exercises the Error -> Error mapping across the SPS boundary, including a
+// failure reported by the executor-side function itself.
+TEST(SPSProxiesTest, ErrorReturn) {
+  ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
+
+  ErrorFnProxy Call(ErrorFnProxySpec::dispatch,
+                    ExecutorAddr::fromPtr(errorFnWrapper));
+
+  EXPECT_THAT_ERROR(Call(ES, false), Succeeded());
+  EXPECT_THAT_ERROR(Call(ES, true), Failed());
+
+  cantFail(ES.endSession());
+}
+
+// Executor-side wrapper returning Expected<int32_t>: fails iff its argument is
+// negative, else returns the argument plus one.
+static CWrapperFunctionBuffer expectedFnWrapper(const char *ArgData,
+                                                size_t ArgSize) {
+  return WrapperFunction<SPSExpected<int32_t>(int32_t)>::handle(
+             ArgData, ArgSize,
+             [](int32_t X) -> Expected<int32_t> {
+               if (X < 0)
+                 return make_error<StringError>("negative argument",
+                                                inconvertibleErrorCode());
+               return X + 1;
+             })
+      .release();
+}
+
+inline constexpr char ExpectedFnCIName[] = "test_sps_expected_fn";
+using ExpectedFnProxy = rt::Proxy<Expected<int32_t>(int32_t)>;
+using ExpectedFnProxySpec =
+    sps::ProxySpec<ExpectedFnProxy, SPSExpected<int32_t>(int32_t),
+                   ExpectedFnCIName>;
+
+// Exercises the Expected<T> -> Expected<T> (flattening) mapping across the SPS
+// boundary, for both the value and the executor-reported-error cases.
+TEST(SPSProxiesTest, ExpectedReturn) {
+  ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
+
+  ExpectedFnProxy Call(ExpectedFnProxySpec::dispatch,
+                       ExecutorAddr::fromPtr(expectedFnWrapper));
+
+  Expected<int32_t> R = Call(ES, 41);
+  ASSERT_THAT_EXPECTED(R, Succeeded());
+  EXPECT_EQ(*R, 42);
+
+  EXPECT_THAT_EXPECTED(Call(ES, -1), Failed());
+
+  cantFail(ES.endSession());
+}

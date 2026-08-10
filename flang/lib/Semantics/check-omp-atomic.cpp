@@ -1648,6 +1648,21 @@ void OmpStructureChecker::Enter(const parser::OpenMPAtomicConstruct &x) {
 
   checkIncompatibleMemoryOrderClause(context_, x, atomic, memoryOrder);
 
+  // OpenMP 5.2 [15.8.3] extended-atomic Clauses: acq_rel and release cannot
+  // be specified as arguments to the fail clause, so its memory order argument
+  // must be SEQ_CST, ACQUIRE, or RELAXED.
+  for (const parser::OmpClause &clause : dirSpec.Clauses().v) {
+    if (const auto *fail{std::get_if<parser::OmpClause::Fail>(&clause.u)}) {
+      common::OmpMemoryOrderType ord{fail->v.v};
+      if (ord != common::OmpMemoryOrderType::Seq_Cst &&
+          ord != common::OmpMemoryOrderType::Acquire &&
+          ord != common::OmpMemoryOrderType::Relaxed) {
+        context_.Say(clause.source,
+            "The argument of the FAIL clause must be SEQ_CST, ACQUIRE, or RELAXED"_err_en_US);
+      }
+    }
+  }
+
   switch (kind) {
   case llvm::omp::Clause::OMPC_read:
     CheckAtomicRead(x);

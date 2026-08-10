@@ -21,6 +21,7 @@
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
+#include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
 
@@ -28,6 +29,7 @@
 #include <future>
 #include <string>
 #include <type_traits>
+#include <vector>
 
 namespace llvm::orc::rt {
 
@@ -48,6 +50,40 @@ private:
 
 template <typename FnT> class Proxy;
 
+namespace detail {
+
+/// Maps a proxy's callee return type to the type delivered to the client, so a
+/// dispatch failure can always be reported alongside the result:
+///
+///          void -> Error
+///         Error -> Error
+///             T -> Expected<T>
+///   Expected<T> -> Expected<T>
+template <typename T> struct ProxyErrorRet {
+  using type = Expected<T>;
+};
+template <> struct ProxyErrorRet<void> {
+  using type = Error;
+};
+template <> struct ProxyErrorRet<Error> {
+  using type = Error;
+};
+template <typename T> struct ProxyErrorRet<Expected<T>> {
+  using type = Expected<T>;
+};
+
+/// Maps a proxy's client-facing return type to the std::promise value type used
+/// by the blocking call operator (working around MSVC's std::promise).
+template <typename T> struct ProxyRetPromise;
+template <> struct ProxyRetPromise<Error> {
+  using type = std::promise<MSVCPError>;
+};
+template <typename T> struct ProxyRetPromise<Expected<T>> {
+  using type = std::promise<MSVCPExpected<T>>;
+};
+
+} // namespace detail
+
 /// Runtime-agnostic interface for invoking an executor-side operation with the
 /// signature RetT(ArgTs...).
 ///
@@ -65,11 +101,11 @@ public:
   /// The result type produced by the executor-side function itself.
   using CalleeRetT = RetT;
 
-  /// The result type delivered to the client: Expected<RetT>, or Error when
-  /// RetT is void, so that dispatch failures can be reported alongside the
-  /// result.
-  using ErrorRetT =
-      std::conditional_t<std::is_void_v<RetT>, Error, Expected<RetT>>;
+  /// The result type delivered to the client: Error when the callee returns
+  /// void or Error, otherwise Expected<T> (with Expected<T> callees flattened
+  /// rather than nested), so that dispatch failures can be reported alongside
+  /// the result.
+  using ErrorRetT = typename detail::ProxyErrorRet<RetT>::type;
 
   using DispatchFn = void (*)(unique_function<void(ErrorRetT)> OnComplete,
                               ExecutionSession &ES, ExecutorAddr Callee,
@@ -108,9 +144,7 @@ public:
   /// Invoke the operation with the given Args, blocking until its result (or an
   /// error) is available.
   ErrorRetT operator()(ExecutionSession &ES, const ArgTs &...Args) const {
-    using PromiseValT = std::conditional_t<std::is_void_v<RetT>, MSVCPError,
-                                           MSVCPExpected<RetT>>;
-    std::promise<PromiseValT> P;
+    typename detail::ProxyRetPromise<ErrorRetT>::type P;
     auto F = P.get_future();
     this->operator()(
         [P = std::move(P)](ErrorRetT R) mutable { P.set_value(std::move(R)); },
@@ -200,6 +234,30 @@ using CallInt32VoidProxy = Proxy<int32_t(ExecutorAddr)>;
 ///
 /// WARNING: This Proxy is experimental and may be removed.
 using CallInt32Int32Proxy = Proxy<int32_t(ExecutorAddr, int32_t)>;
+
+/// Runtime-agnostic interfaces for the memory-access operations. Unlike the
+/// Call* proxies above, these target wrappers that perform the operation
+/// directly, so they take the operation's data arguments rather than a callee
+/// address.
+using MemWriteUInt8sProxy = Proxy<void(ArrayRef<tpctypes::UInt8Write>)>;
+using MemWriteUInt16sProxy = Proxy<void(ArrayRef<tpctypes::UInt16Write>)>;
+using MemWriteUInt32sProxy = Proxy<void(ArrayRef<tpctypes::UInt32Write>)>;
+using MemWriteUInt64sProxy = Proxy<void(ArrayRef<tpctypes::UInt64Write>)>;
+using MemWritePointersProxy = Proxy<void(ArrayRef<tpctypes::PointerWrite>)>;
+using MemWriteBuffersProxy = Proxy<void(ArrayRef<tpctypes::BufferWrite>)>;
+using MemReadUInt8sProxy = Proxy<std::vector<uint8_t>(ArrayRef<ExecutorAddr>)>;
+using MemReadUInt16sProxy =
+    Proxy<std::vector<uint16_t>(ArrayRef<ExecutorAddr>)>;
+using MemReadUInt32sProxy =
+    Proxy<std::vector<uint32_t>(ArrayRef<ExecutorAddr>)>;
+using MemReadUInt64sProxy =
+    Proxy<std::vector<uint64_t>(ArrayRef<ExecutorAddr>)>;
+using MemReadPointersProxy =
+    Proxy<std::vector<ExecutorAddr>(ArrayRef<ExecutorAddr>)>;
+using MemReadBuffersProxy =
+    Proxy<std::vector<std::vector<uint8_t>>(ArrayRef<ExecutorAddrRange>)>;
+using MemReadStringsProxy =
+    Proxy<std::vector<std::string>(ArrayRef<ExecutorAddr>)>;
 
 } // namespace llvm::orc::rt
 

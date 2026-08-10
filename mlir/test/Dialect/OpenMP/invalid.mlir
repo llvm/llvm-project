@@ -1466,6 +1466,34 @@ func.func @omp_atomic_compare_invalid_hint2(%x: memref<i32>, %e: i32, %d: i32) {
 }
 
 // -----
+// OpenMP 5.2 [15.8.3]: 'release' is not a valid argument to the fail clause.
+
+func.func @omp_atomic_compare_invalid_fail_release(%x: memref<i32>, %e: i32, %d: i32) {
+  // expected-error @below {{fail_memory_order must be 'seq_cst', 'acquire' or 'relaxed'}}
+  omp.atomic.compare %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = llvm.icmp "eq" %xval, %e : i32
+    %sel = llvm.select %cmp, %d, %xval : i1, i32
+    omp.yield(%sel : i32)
+  } {fail_memory_order = #omp<memoryorderkind release>}
+  return
+}
+
+// -----
+// OpenMP 5.2 [15.8.3]: 'acq_rel' is not a valid argument to the fail clause.
+
+func.func @omp_atomic_compare_invalid_fail_acq_rel(%x: memref<i32>, %e: i32, %d: i32) {
+  // expected-error @below {{fail_memory_order must be 'seq_cst', 'acquire' or 'relaxed'}}
+  omp.atomic.compare %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = llvm.icmp "eq" %xval, %e : i32
+    %sel = llvm.select %cmp, %d, %xval : i1, i32
+    omp.yield(%sel : i32)
+  } {fail_memory_order = #omp<memoryorderkind acq_rel>}
+  return
+}
+
+// -----
 // float comparison operators mentionend in ArithBase.td not permitted for
 //     !omp atomic compare
 

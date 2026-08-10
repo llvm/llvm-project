@@ -1562,7 +1562,7 @@ def hlsl_sqrt : HLSLOneArgBuiltin<"sqrt", "__builtin_elementwise_sqrt"> {
 
 // Returns 1 if the x parameter is greater than or equal to the y parameter;
 // otherwise, 0.
-def hlsl_step : HLSLTwoArgBuiltin<"step", "__builtin_hlsl_step"> {
+def hlsl_step : HLSLTwoArgDetail<"step", "step_impl"> {
   let Doc = [{
 \fn T step(T y, T x)
 \brief Returns 1 if the x parameter is greater than or equal to the y
@@ -1572,6 +1572,7 @@ parameter; otherwise, 0.
 
 Step is based on the following formula: (x >= y) ? 1 : 0
 }];
+  let ParamNames = ["y", "x"];
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingMatDims = [];
 }

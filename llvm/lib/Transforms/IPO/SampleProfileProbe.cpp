@@ -85,24 +85,25 @@ bool PseudoProbeVerifier::shouldVerifyFunction(const Function *F) {
 void PseudoProbeVerifier::registerCallbacks(PassInstrumentationCallbacks &PIC) {
   if (VerifyPseudoProbe) {
     PIC.registerAfterPassCallback(
-        [this](StringRef P, Any IR, const PreservedAnalyses &) {
+        [this](StringRef P, const Any &IR, const PreservedAnalyses &) {
           this->runAfterPass(P, IR);
         });
   }
 }
 
 // Callback to run after each transformation for the new pass manager.
-void PseudoProbeVerifier::runAfterPass(StringRef PassID, Any IR) {
+void PseudoProbeVerifier::runAfterPass(StringRef PassID, const Any &IR) {
   std::string Banner =
       "\n*** Pseudo Probe Verification After " + PassID.str() + " ***\n";
   dbgs() << Banner;
-  if (const auto **M = llvm::any_cast<const Module *>(&IR))
+  if (const auto *const *M = llvm::any_cast<const Module *>(&IR))
     runAfterPass(*M);
-  else if (const auto **F = llvm::any_cast<const Function *>(&IR))
+  else if (const auto *const *F = llvm::any_cast<const Function *>(&IR))
     runAfterPass(*F);
-  else if (const auto **C = llvm::any_cast<const LazyCallGraph::SCC *>(&IR))
+  else if (const auto *const *C =
+               llvm::any_cast<const LazyCallGraph::SCC *>(&IR))
     runAfterPass(*C);
-  else if (const auto **L = llvm::any_cast<const Loop *>(&IR))
+  else if (const auto *const *L = llvm::any_cast<const Loop *>(&IR))
     runAfterPass(*L);
   else
     llvm_unreachable("Unknown IR unit");

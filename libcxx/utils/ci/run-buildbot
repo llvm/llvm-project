@@ -318,6 +318,19 @@ test-tools)
     step "Compare benchmark results" # perform a no-op comparison, just to run the tool
     "${MONOREPO_ROOT}/libcxx/utils/compare-benchmarks" "${BUILD_DIR}/results.lnt" "${BUILD_DIR}/results.lnt"
 
+    step "Testing the selection of anchor commits"
+    # Basic test with a known past window
+    "${MONOREPO_ROOT}/libcxx/utils/ci/lnt/select-anchor-commits" \
+        --git-repo "${MONOREPO_ROOT}"                            \
+        --since 2024-03-06 --until 2024-04-01 --every week       \
+        --output "${BUILD_DIR}/anchors.txt"
+    cat <<EOF > "${BUILD_DIR}/anchors-expected.txt"
+2a38551457cb2b38dcca35e30e9f2d7fce9ae3e7
+6cc8d54a75939b18b72cc631d457613de3bef3a4
+d179176f3e3505044ad14be19ccb3459a70206a9
+EOF
+    diff "${BUILD_DIR}/anchors-expected.txt" "${BUILD_DIR}/anchors.txt"
+
     # Exercise LNT tooling with --dry-run. Doing a real run is time consuming and would
     # submit to a LNT instance, which we obviously don't want.
     step "Run benchmarks using the LNT flow (dry-run)"
