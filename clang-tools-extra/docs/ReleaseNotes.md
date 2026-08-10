@@ -92,17 +92,17 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### New checks
 
-- New {doc}`performance-expensive-value-or
-  <clang-tidy/checks/performance/expensive-value-or>` check.
-
-  Finds calls to `value_or` (and alternative spellings `valueOr`,
-  `ValueOr`) on optional types where the return type is expensive to copy.
-
 - New {doc}`llvm-invalid-regex-pattern
   <clang-tidy/checks/llvm/invalid-regex-pattern>` check.
 
   Detects malformed regex patterns defined in a single string literal
   to catch mistakes at compile time.
+
+- New {doc}`performance-expensive-value-or
+  <clang-tidy/checks/performance/expensive-value-or>` check.
+
+  Finds calls to `value_or` (and alternative spellings `valueOr`,
+  `ValueOr`) on optional types where the return type is expensive to copy.
 
 #### New check aliases
 
