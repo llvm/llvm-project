@@ -126,7 +126,7 @@ jobs:
 
       - name: Request the missing runs
         env:
-          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           dry_run=()
           if [ "${DRY_RUN}" = "true" ]; then
