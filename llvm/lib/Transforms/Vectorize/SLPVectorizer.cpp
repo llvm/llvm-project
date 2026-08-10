@@ -30927,7 +30927,7 @@ public:
         else
           ReductionCost =
               getReductionCost(TTI, VL, SameValuesCounter, IsCmpSelMinMax,
-                               CostContext, RdxFMF, V, DT, DL, TLI);
+                               RdxFMF, V, DT, DL, TLI, CostContext);
         // If the root is a select (min/max idiom), the insert point is the
         // compare condition of that select.
         Instruction *RdxRootInst = cast<Instruction>(ReductionRoot);
@@ -31363,10 +31363,10 @@ public:
           V.calculateTreeCostAndTrimNonProfitable(VL, RdxRootInst);
       V.buildExternalUses(LocalExternallyUsedValues);
 
-      InstructionCost ReductionCost = getReductionCost(
-          TTI, VL, EmptySameValuesCounter,
-          /*IsCmpSelMinMax=*/false, TTI::VectorInstrContext::None, RdxFMF, V,
-          DT, DL, TLI);
+      InstructionCost ReductionCost =
+          getReductionCost(TTI, VL, EmptySameValuesCounter,
+                           /*IsCmpSelMinMax=*/false, RdxFMF, V, DT, DL, TLI,
+                           TTI::VectorInstrContext::None);
       InstructionCost Cost =
           V.getTreeCost(TreeCost, VL, ReductionCost, RdxRootInst);
       LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost
@@ -31549,9 +31549,9 @@ private:
   InstructionCost getReductionCost(
       TargetTransformInfo *TTI, ArrayRef<Value *> ReducedVals,
       const SmallMapVector<Value *, unsigned, 16> SameValuesCounter,
-      bool IsCmpSelMinMax, TargetTransformInfo::VectorInstrContext Context,
-      FastMathFlags FMF, const BoUpSLP &R, DominatorTree &DT,
-      const DataLayout &DL, const TargetLibraryInfo &TLI) {
+      bool IsCmpSelMinMax, FastMathFlags FMF, const BoUpSLP &R,
+      DominatorTree &DT, const DataLayout &DL, const TargetLibraryInfo &TLI,
+      TargetTransformInfo::VectorInstrContext Context) {
     TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
     Type *ScalarTy = ReducedVals.front()->getType();
     unsigned ReduxWidth = ReducedVals.size();
