@@ -151,3 +151,36 @@
 ; LINE-SUBST-PREFIX-NEXT: pushq
 ; LINE-SUBST-PREFIX: ; [[PREFIX]]{{[/\\]}}Inputs{{[/\\]}}source-interleave-x86_64.c:3
 ; LINE-SUBST-PREFIX-NEXT: movq
+
+;; Objects built on Windows record source paths with '\' separators, which are
+;; not separators on a POSIX host. Paths from the debug info are normalized
+;; before the rules below are applied, so the same object behaves the same way
+;; whatever the host is.
+
+; RUN: llc -o %t-winpath.o -filetype=obj -mtriple=x86_64-pc-linux \
+; RUN:   %p/Inputs/source-interleave-windows-path.ll
+
+;; Which separator a path is printed with depends on the host and, on Windows,
+;; on LLVM_WINDOWS_PREFER_FORWARD_SLASH, so it is not checked for here. What is
+;; checked is that one path does not mix the two styles: the separator is
+;; captured from its first occurrence and has to be the same one throughout.
+; RUN: llvm-objdump --no-print-imm-hex -d --line-numbers %t-winpath.o | \
+; RUN:   FileCheck %s --check-prefix=WINPATH-LINE
+
+; WINPATH-LINE: <foo>:
+; WINPATH-LINE-NEXT: ; foo():
+; WINPATH-LINE-NEXT: ; dx12[[SEP:[/\\]]]compute[[SEP]]no_rs[[SEP]]source-interleave-x86_64.c:2
+
+;; <from> may be spelled with either separator; both name the same directory.
+
+; RUN: llvm-objdump --no-print-imm-hex -d --source \
+; RUN:   --substitute-path 'dx12\compute\no_rs' %/p/Inputs %t-winpath.o | \
+; RUN:   FileCheck %s --check-prefix=SOURCE
+; RUN: llvm-objdump --no-print-imm-hex -d --source \
+; RUN:   --substitute-path dx12/compute/no_rs %/p/Inputs %t-winpath.o | \
+; RUN:   FileCheck %s --check-prefix=SOURCE
+
+;; --source-dir finds the same file by its base name.
+
+; RUN: llvm-objdump --no-print-imm-hex -d --source --source-dir %/p/Inputs \
+; RUN:   %t-winpath.o | FileCheck %s --check-prefix=SOURCE
