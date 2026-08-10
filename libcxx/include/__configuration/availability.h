@@ -39,8 +39,11 @@
 // in all versions of the library are available.
 #if !_LIBCPP_HAS_VENDOR_AVAILABILITY_ANNOTATIONS
 
-#  define _LIBCPP_INTRODUCED_IN_LLVM_23 1
-#  define _LIBCPP_INTRODUCED_IN_LLVM_23_ATTRIBUTE /* nothing */
+#  define _LIBCPP_INTRODUCED_IN_LLVM_24 1
+#  define _LIBCPP_INTRODUCED_IN_LLVM_24_ATTRIBUTE /* nothing */
+
+#  define _LIBCPP_INTRODUCED_IN_LLVM_24 1
+#  define _LIBCPP_INTRODUCED_IN_LLVM_24_ATTRIBUTE /* nothing */
 
 #  define _LIBCPP_INTRODUCED_IN_LLVM_22 1
 #  define _LIBCPP_INTRODUCED_IN_LLVM_22_ATTRIBUTE /* nothing */
@@ -315,8 +318,8 @@
 #define _LIBCPP_AVAILABILITY_TO_CHARS_FLOATING_POINT _LIBCPP_INTRODUCED_IN_LLVM_14_ATTRIBUTE
 
 // This controls the availability of C++23 <stacktrace>.
-#define _LIBCPP_AVAILABILITY_HAS_STACKTRACE _LIBCPP_INTRODUCED_IN_LLVM_21
-#define _LIBCPP_AVAILABILITY_STACKTRACE _LIBCPP_INTRODUCED_IN_LLVM_21_ATTRIBUTE
+#define _LIBCPP_AVAILABILITY_HAS_STACKTRACE _LIBCPP_INTRODUCED_IN_LLVM_24
+#define _LIBCPP_AVAILABILITY_STACKTRACE _LIBCPP_INTRODUCED_IN_LLVM_24_ATTRIBUTE
 
 // Enable additional explicit instantiations of iostreams components. This
 // reduces the number of weak definitions generated in programs that use
