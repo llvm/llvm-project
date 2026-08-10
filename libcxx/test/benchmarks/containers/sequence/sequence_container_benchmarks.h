@@ -312,9 +312,10 @@ void sequence_container_benchmarks(std::string container) {
   /////////////////////////
   // Appending elements
   /////////////////////////
-  static constexpr bool has_push_back = requires(Container c, ValueType v) { c.push_back(v); };
-  static constexpr bool has_capacity  = requires(Container c) { c.capacity(); };
-  static constexpr bool has_reserve   = requires(Container c) { c.reserve(0); };
+  static constexpr bool has_push_back    = requires(Container c, ValueType v) { c.push_back(v); };
+  static constexpr bool has_capacity     = requires(Container c) { c.capacity(); };
+  static constexpr bool has_reserve      = requires(Container c) { c.reserve(0); };
+  static constexpr bool has_append_range = requires(Container c, std::vector<ValueType> v) { c.append_range(v); };
   if constexpr (has_push_back) {
     if constexpr (has_capacity) {
       // For containers where we can observe capacity(), push_back a single element
@@ -398,26 +399,26 @@ void sequence_container_benchmarks(std::string container) {
         }
       });
 
-#if TEST_STD_VER >= 23
-    for (auto gen : generators)
-      bench("append_range() (into empty container)" + tostr(gen), [gen](auto& state) {
-        auto const size = state.range(0);
-        std::vector<ValueType> in;
-        std::generate_n(std::back_inserter(in), size, gen);
-        DoNotOptimizeData(in);
+    if constexpr (has_append_range) {
+      for (auto gen : generators)
+        bench("append_range() (into empty container)" + tostr(gen), [gen](auto& state) {
+          auto const size = state.range(0);
+          std::vector<ValueType> in;
+          std::generate_n(std::back_inserter(in), size, gen);
+          DoNotOptimizeData(in);
 
-        Container c;
-        DoNotOptimizeData(c);
-        for (auto _ : state) {
-          c.append_range(in);
+          Container c;
           DoNotOptimizeData(c);
+          for (auto _ : state) {
+            c.append_range(in);
+            DoNotOptimizeData(c);
 
-          state.PauseTiming();
-          c.clear();
-          state.ResumeTiming();
-        }
-      });
-#endif
+            state.PauseTiming();
+            c.clear();
+            state.ResumeTiming();
+          }
+        });
+    }
   }
 
   /////////////////////////
