@@ -253,6 +253,8 @@ private:
                            MachineInstr &I, unsigned Opcode) const;
   bool selectDebugTrap(Register ResVReg, SPIRVTypeInst ResType,
                        MachineInstr &I) const;
+  bool selectPrefetch(Register ResVReg, SPIRVTypeInst ResType,
+                       MachineInstr &I) const;
 
   bool selectIntegerDot(Register ResVReg, SPIRVTypeInst ResType,
                         MachineInstr &I, bool Signed) const;
@@ -1451,6 +1453,8 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
     return true;
   case TargetOpcode::G_DEBUGTRAP:
     return selectDebugTrap(ResVReg, ResType, I);
+  case TargetOpcode::G_PREFETCH:
+    return selectPrefetch(ResVReg, ResType, I);
 
   default:
     return false;
@@ -1464,6 +1468,37 @@ bool SPIRVInstructionSelector::selectDebugTrap(Register ResVReg,
   MachineBasicBlock &BB = *I.getParent();
   BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
       .constrainAllUses(TII, TRI, RBI);
+  return true;
+}
+
+bool SPIRVInstructionSelector::selectPrefetch(Register ResVReg,
+                                              SPIRVTypeInst ResType,
+                                              MachineInstr &I) const {
+  // llvm.prefetch is missing info about how many bytes to prefetch that
+  // OpUntypedPrefetchKHR instruction requires, so just drop the instruction
+  // in case untyped pointers are enabled since OCL prefetch cannot take
+  // untyped pointers.
+  if (STI.canUseExtension(SPIRV::Extension::SPV_KHR_untyped_pointers))
+    return true;
+
+  if (STI.canUseExtInstSet(SPIRV::InstructionSet::OpenCL_std)) {
+    MachineIRBuilder MIRBuilder(I);
+    const unsigned PointerSize = GR.getPointerSize();
+    const SPIRVTypeInst PointerSizeType =
+        GR.getOrCreateSPIRVIntegerType(PointerSize, MIRBuilder);
+    bool ZeroAsNull = !STI.isShader();
+
+    // Assume that a single element needs prefetch.
+    Register ConstIntOne =
+        GR.getOrCreateConstInt(1, I, PointerSizeType, TII, ZeroAsNull);
+
+    Register AddrVal = I.getOperand(0).getReg();
+    Register ExtReg = MRI->createVirtualRegister(
+        GR.getRegClass(GR.getOpTypeVoid(MIRBuilder)));
+    return selectExtInst(ExtReg, GR.getOpTypeVoid(MIRBuilder), I, CL::prefetch,
+                         /*setMIFlags=*/false, /*useMSSrc=*/false,
+                         {AddrVal, ConstIntOne});
+  }
   return true;
 }
 
