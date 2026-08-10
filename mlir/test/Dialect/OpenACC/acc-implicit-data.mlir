@@ -287,3 +287,49 @@ func.func @test_declare_deviceptr_arg_in_parallel(%arg0: memref<?xi8>) {
 // CHECK: acc.declare_exit token(%[[TOKEN]]) dataOperands(%[[DEVPTR]] : memref<10xf32>)
 // CHECK-NOT: acc.copyin
 // CHECK-NOT: acc.copyout
+
+// -----
+
+// Fold an explicit present of device data: drop present/delete and rewrite
+// region uses; subsequent implicit mapping should emit deviceptr.
+func.func @test_fold_present_device_value() {
+  %alloc = memref.alloca() : memref<10xf32, #gpu.address_space<global>>
+  %present = acc.present varPtr(%alloc : memref<10xf32, #gpu.address_space<global>>) -> memref<10xf32, #gpu.address_space<global>> {name = "a"}
+  acc.parallel dataOperands(%present : memref<10xf32, #gpu.address_space<global>>) {
+    %c0 = arith.constant 0 : index
+    %load = memref.load %present[%c0] : memref<10xf32, #gpu.address_space<global>>
+    acc.yield
+  }
+  acc.delete accPtr(%present : memref<10xf32, #gpu.address_space<global>>) {dataClause = #acc<data_clause acc_present>, name = "a"}
+  return
+}
+
+// CHECK-LABEL: func.func @test_fold_present_device_value
+// CHECK: %[[ALLOC:.*]] = memref.alloca() : memref<10xf32, #gpu.address_space<global>>
+// CHECK: %[[DEVPTR:.*]] = acc.deviceptr varPtr(%[[ALLOC]] : memref<10xf32, #gpu.address_space<global>>) -> memref<10xf32, #gpu.address_space<global>> {implicit = true, name = ""}
+// CHECK: acc.parallel dataOperands(%[[DEVPTR]] : memref<10xf32, #gpu.address_space<global>>) {
+// CHECK: memref.load %[[DEVPTR]][{{.*}}] : memref<10xf32, #gpu.address_space<global>>
+// CHECK-NOT: acc.present
+// CHECK-NOT: acc.delete
+
+// -----
+
+// Present of host data must not be folded away.
+func.func @test_present_host_not_folded() {
+  %alloc = memref.alloca() : memref<10xf32>
+  %present = acc.present varPtr(%alloc : memref<10xf32>) -> memref<10xf32> {name = "a"}
+  acc.parallel dataOperands(%present : memref<10xf32>) {
+    %c0 = arith.constant 0 : index
+    %load = memref.load %present[%c0] : memref<10xf32>
+    acc.yield
+  }
+  acc.delete accPtr(%present : memref<10xf32>) {dataClause = #acc<data_clause acc_present>, name = "a"}
+  return
+}
+
+// CHECK-LABEL: func.func @test_present_host_not_folded
+// CHECK: %[[ALLOC:.*]] = memref.alloca() : memref<10xf32>
+// CHECK: %[[PRESENT:.*]] = acc.present varPtr(%[[ALLOC]] : memref<10xf32>) -> memref<10xf32> {name = "a"}
+// CHECK: acc.parallel dataOperands(%[[PRESENT]] : memref<10xf32>) {
+// CHECK: memref.load %[[PRESENT]][{{.*}}] : memref<10xf32>
+// CHECK: acc.delete accPtr(%[[PRESENT]] : memref<10xf32>) {dataClause = #acc<data_clause acc_present>, name = "a"}
