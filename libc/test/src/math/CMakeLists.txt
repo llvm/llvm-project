@@ -1194,6 +1194,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  expf_static_rounding_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    expf_static_rounding_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   expf16_test
   NEED_MPFR
   SUITE
@@ -2569,7 +2581,7 @@ add_fp_unittest(
   SRCS
     asinf16_test.cpp
   DEPENDS
-    libc.src.math.asinf16  
+    libc.src.math.asinf16
 )
 
 add_fp_unittest(
@@ -2650,7 +2662,7 @@ add_fp_unittest(
   SRCS
     acosf16_test.cpp
   DEPENDS
-    libc.src.math.acosf16  
+    libc.src.math.acosf16
 )
 
 add_fp_unittest(
@@ -2672,7 +2684,7 @@ add_fp_unittest(
   SRCS
     acospif16_test.cpp
   DEPENDS
-    libc.src.math.acospif16  
+    libc.src.math.acospif16
 )
 
 add_fp_unittest(

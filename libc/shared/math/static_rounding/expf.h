@@ -7,30 +7,58 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the integer-only implementation of expf(x)
+/// This file contains the statically rounded implementation of expf(x)
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_EXP_INTEGER_EVAL_H
-#define LLVM_LIBC_SRC___SUPPORT_MATH_EXP_INTEGER_EVAL_H
+#ifndef LLVM_LIBC_SHARED_MATH_STATIC_ROUNDING_EXPF_H
+#define LLVM_LIBC_SHARED_MATH_STATIC_ROUNDING_EXPF_H
 
 #include "src/__support/CPP/bit.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
+#include "src/__support/frac64.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/math/check/exp_exceptions.h"
-#include "src/__support/math/exp_integer_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
+using math::check::exp_internal::Bounds;
+
+namespace shared {
+
 namespace math {
 
-namespace integer_only {
+namespace static_rounding {
 
-// Round-nearest, no except implementation of expf using integer-only
+// print(2+round(1/log(2), 64, RN));
+// LSB(INV_LN2) = 2^-63
+LIBC_INLINE_VAR constexpr Frac64 INV_LN2 = Frac64(0xb8aa'3b29'5c17'f0bc);
+
+// 64-bit polynomial approximation of 2^x coefficients generated with Sollya:
+// > P = fpminimax(2^x, 11, [|1, 64...|], [0, 1], absolute, fixed);
+// Store the fractional part of the coefficients below
+// > dirtyinfnorm(2^x - P(x), [0, 1]);
+// 0x1.6238...p-58
+// LSB(EXPF_COEFFS[i]) = 2^-64
+LIBC_INLINE_VAR constexpr Frac64 EXPF_COEFFS[] = {
+    Frac64(0xb172'17f7'd1cf'b7cf), // x
+    Frac64(0x3d7f'7bff'057d'4a5e), // x^2
+    Frac64(0x0e35'846b'8363'9484), // x^3
+    Frac64(0x0276'556d'ec97'dcd4), // x^4
+    Frac64(0x0057'61ff'dc04'c7ff), // x^5
+    Frac64(0x000a'1847'b6e7'92ec), // x^6
+    Frac64(0x0000'ffe8'14e5'7033), // x^7
+    Frac64(0x0000'1628'b6e9'70c8), // x^8
+    Frac64(0x0000'01b8'8ce7'4088), // x^9
+    Frac64(0x0000'001c'18d5'cb29), // x^10
+    Frac64(0x0000'0002'b43f'4490), // x^11
+};
+
+// Statically rounded, no except implementation of expf using integer-only
 // arithmetic.
-LIBC_INLINE float expf(float x) {
+LIBC_INLINE float expf(float x, int rounding) {
   using FPBits = typename fputil::FPBits<float>;
   FPBits xbits(x);
 
@@ -40,8 +68,7 @@ LIBC_INLINE float expf(float x) {
 
   // When |x| >= smallest value that will cause overflow, |x| <= 2^-25, or x is
   // NaN
-  if (LIBC_UNLIKELY(x_val_abs >=
-                        check::exp_internal::Bounds<float>::UPPER_BITS ||
+  if (LIBC_UNLIKELY(x_val_abs >= Bounds<float>::UPPER_BITS ||
                     x_val_abs <= 0x3300'0000U)) {
     // |x| <= 2^-25
     if (x_val_abs <= 0x3300'0000U) {
@@ -151,11 +178,20 @@ LIBC_INLINE float expf(float x) {
     uint64_t full_val =
         (uint64_t(1) << (64 - DROP_BITS)) | (p.val[0] >> DROP_BITS);
 
-    // add rounding bit
-    // TODO: skip for R0, RD
-    full_val += (uint64_t(1) << ((41 - DROP_BITS) + d));
+// add rounding bit
+// skip for R0, RD
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+    if (LIBC_UNLIKELY(rounding != FE_TONEAREST))
+#endif
+      full_val += (uint64_t(1) << ((41 - DROP_BITS) + d));
 
-    // TODO: RU --> mask
+    // RU
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+    if (LIBC_UNLIKELY(rounding == FE_UPWARD)) {
+      constexpr uint64_t ROUND_UP_MASK = (uint64_t(1) << DROP_BITS) - 1;
+      full_val += ROUND_UP_MASK;
+    }
+#endif
 
     // shift back to align to 32-bit float representation
     uint32_t result = static_cast<uint32_t>(full_val >> ((42 - DROP_BITS) + d));
@@ -176,10 +212,12 @@ LIBC_INLINE float expf(float x) {
   return cpp::bit_cast<float>(result);
 }
 
-} // namespace integer_only
+} // namespace static_rounding
 
 } // namespace math
 
+} // namespace shared
+
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC___SUPPORT_MATH_EXP_INTEGER_EVAL_H
+#endif // LLVM_LIBC_SHARED_MATH_STATIC_ROUNDING_EXPF_H

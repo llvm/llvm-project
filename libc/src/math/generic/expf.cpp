@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/expf.h"
+#include "shared/math/static_rounding/expf.h"
 #include "src/__support/math/expf.h"
-#include "src/__support/math/expf_integer_eval.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -16,7 +16,7 @@ LLVM_LIBC_FUNCTION(float, expf, (float x)) {
 #if defined(LIBC_MATH_HAS_SKIP_ACCURATE_PASS) &&                               \
     defined(LIBC_MATH_SMALL_TABLES) &&                                         \
     !defined(LIBC_TARGET_CPU_HAS_FPU_DOUBLE)
-  return math::integer_only::expf(x);
+  return shared::math::static_rounding::expf(x, FE_TONEAREST);
 #else
   return math::expf(x);
 #endif
