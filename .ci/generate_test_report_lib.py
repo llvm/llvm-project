@@ -366,5 +366,4 @@ def compute_platform_title() -> str:
         arch = "x64"
     else:
         arch = platform.machine()
-
     return f"{logo + ' ' if logo is not None else ''}{platform.system()} {arch} Test Results"
