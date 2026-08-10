@@ -384,7 +384,9 @@ jobs:
       - name: Upload Artifacts
         uses: $/.github/workflows/upload-release-artifact
         with:
-          release-version: ${{ needs.prepare.outputs.release-version }}
+          # We need to use the inputs.release-version here, because on Windows we
+          # need to fixup the rc version that's stored in needs.prepare.outputs.release-version
+          release-version: ${{ inputs.release-version }}
           artifact-id: ${{ needs.build-release-package.outputs.artifact-id }}
           attestation-name: ${{ needs.prepare.outputs.attestation-name }}
           digest: ${{ needs.build-release-package.outputs.digest }}
