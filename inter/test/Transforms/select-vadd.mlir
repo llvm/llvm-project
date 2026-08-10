@@ -1,6 +1,7 @@
 // Straight-line selection: vadd lowers to the prologue, gid computation,
 // A64 loads, a store, and EOT.
-// RUN: inter-opt %s --inter-normalize-cf --inter-convert-calls --inter-convert-memory --inter-select-to-machine | FileCheck %s
+// RUN: inter-opt %s --inter-normalize-cf --inter-convert-calls --inter-convert-memory --inter-select-to-machine --inter-insert-sync | FileCheck %s
+// RUN: inter-opt %s --inter-normalize-cf --inter-convert-calls --inter-convert-memory --inter-select-to-machine --inter-insert-sync | inter-translate --xemachine-to-iga -o /dev/null
 
 module {
   // CHECK: func.func @vadd
@@ -24,13 +25,14 @@ module {
 // Prologue: blob base and the two payload loads.
 // CHECK: xemachine.and
 // CHECK-COUNT-2: xemachine.load_block_a32
-// CHECK: xemachine.sync allrd
-// gid: mul into acc, add3 over local ids.
+// gid: mul into acc, then wait for the payload before add3 uses it.
 // CHECK: xemachine.mul
+// CHECK: xemachine.sync allwr
 // CHECK: xemachine.add3
 // Two A64 loads and one store with a data payload.
 // CHECK-COUNT-2: xemachine.load_a64
 // CHECK: xemachine.store_a64 {{.*}}data
 // CHECK: [[FINAL:%.*]] = xemachine.token_join
+// CHECK: xemachine.sync allrd
 // EOT via the gateway.
-// CHECK: xemachine.eot {{.*}} dep [[FINAL]]
+// CHECK-NEXT: xemachine.eot {{.*}} dep [[FINAL]]

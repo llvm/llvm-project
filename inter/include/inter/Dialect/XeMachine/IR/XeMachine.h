@@ -1,6 +1,8 @@
 #ifndef INTER_DIALECT_XEMACHINE_IR_XEMACHINE_H
 #define INTER_DIALECT_XEMACHINE_IR_XEMACHINE_H
 
+#include "inter/Dialect/XeMachine/IR/XeMachineTraits.h"
+
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"

@@ -126,7 +126,7 @@ xemachine (virtual regs, tokens, region CF ops)
   | inter-regalloc transform loop  (section 12)
   v
 xemachine (physical regs)
-  | inter-swsb-annotate            (section 14)
+  | inter-insert-sync              (conservative explicit waits; section 14)
   | inter-resource-info            (GRF/SLM/spill/barrier counts -> attrs)
   v
 emission (translation, not a pass)

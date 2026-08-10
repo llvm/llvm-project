@@ -32,4 +32,9 @@ def ConvertMemory : Pass<"inter-convert-memory", "::mlir::func::FuncOp"> {
                            "inter::xemachine::XeMachineDialect"];
 }
 
+def InsertSync : Pass<"inter-insert-sync", "::mlir::func::FuncOp"> {
+  let summary = "materialize machine sync operations with dense dataflow";
+  let dependentDialects = ["inter::xemachine::XeMachineDialect"];
+}
+
 #endif // INTER_TRANSFORMS_PASSES_TD

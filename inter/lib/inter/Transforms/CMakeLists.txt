@@ -3,6 +3,7 @@ add_mlir_library(InterTransforms
   InterNormalizeCf.cpp
   InterConvertCalls.cpp
   InterConvertMemory.cpp
+  InterInsertSync.cpp
 
   DEPENDS
   InterPassesIncGen
@@ -11,6 +12,7 @@ add_mlir_library(InterTransforms
   InterAnalysis
   InterXW
   InterXeMachine
+  MLIRAnalysis
   MLIRLLVMDialect
   MLIRControlFlowDialect
   MLIRControlFlowInterfaces

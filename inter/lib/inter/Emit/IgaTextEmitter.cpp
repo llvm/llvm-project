@@ -106,7 +106,7 @@ struct Emitter {
   void emitFunc(func::FuncOp func) {
     os << "L0:\n";
     func.walk([&](Operation *op) {
-      if (isa<ImmOp, ArchRegOp, ArfRegOp>(op))
+      if (op->hasTrait<OpTrait::xemachine::NoMachineInst>())
         return;
       for (Value r : op->getResults())
         defOp[r] = op;
@@ -116,10 +116,8 @@ struct Emitter {
 
   void emitBlock(Block &blk) {
     for (Operation &op : blk) {
-      if (isa<ImmOp, ArchRegOp, ArfRegOp>(op))
+      if (op.hasTrait<OpTrait::xemachine::NoAsmEmission>())
         continue;
-      if (isa<YieldOp>(op))
-        continue; // structural; merge movs carry the data
       insnIndex[&op] = nextInsn++;
       if (auto send = dyn_cast<SendOp>(&op))
         emitSend(send);

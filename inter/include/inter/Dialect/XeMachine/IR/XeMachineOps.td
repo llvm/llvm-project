@@ -24,9 +24,19 @@ class XeMachine_Op<string mnemonic, list<Trait> traits = []> :
 def XeMachine_RegOrImm : AnyTypeOf<[XeMachine_RegType, XeMachine_ImmType,
                                     XeMachine_ARFType], "reg/arf/imm">;
 
+def XeMachine_NoMachineInst
+    : NativeOpTrait<"xemachine::NoMachineInst">;
+def XeMachine_NoAsmEmission
+    : NativeOpTrait<"xemachine::NoAsmEmission">;
+def XeMachine_CompletionFree
+    : NativeOpTrait<"xemachine::CompletionFree">;
+def XeMachine_FullScoreboardDrain
+    : NativeOpTrait<"xemachine::FullScoreboardDrain">;
+
 // SSA immediate. Element type rides on the op: immediates are untyped in the
 // encoding, typed by the consuming instruction.
-def XeMachine_ImmOp : XeMachine_Op<"imm", [NoMemoryEffect]> {
+def XeMachine_ImmOp : XeMachine_Op<"imm", [NoMemoryEffect,
+    XeMachine_NoMachineInst, XeMachine_NoAsmEmission]> {
   let summary = "materialize an immediate";
   let arguments = (ins I64Attr:$value, TypeAttr:$elemType);
   let results = (outs XeMachine_ImmType:$result);
@@ -245,7 +255,8 @@ def XeMachine_BarrierSignalOp : XeMachine_MsgOp<"barrier_signal",
 }
 
 // End of thread.
-def XeMachine_EotOp : XeMachine_MsgOp<"eot", []> {
+def XeMachine_EotOp : XeMachine_MsgOp<"eot",
+    [XeMachine_FullScoreboardDrain]> {
   let arguments = (ins XeMachine_RegType:$payload,
                        Optional<XeMachine_MemTokenType>:$dependency);
   let assemblyFormat =
@@ -290,8 +301,10 @@ def XeMachine_UniformLoopOp : XeMachine_Op<"uniform_loop",
 }
 
 def XeMachine_YieldOp : XeMachine_Op<"yield",
-    [Pure, Terminator, ReturnLike,
-     DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>]> {
+    [Pure, Terminator, ReturnLike, XeMachine_NoMachineInst,
+     XeMachine_NoAsmEmission,
+     DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface,
+                               ["getMutableSuccessorOperands"]>]> {
   let summary = "region yield";
   let arguments = (ins Variadic<AnyType>:$values);
   let assemblyFormat = "attr-dict ($values^ `:` qualified(type($values)))?";
@@ -346,7 +359,8 @@ def XeMachine_CmpOp : XeMachine_Op<"cmp", [NoMemoryEffect]> {
 
 // Architectural register reference (r0 header, r1 inline args). The result
 // carries a fixed physical base; regalloc must not move it.
-def XeMachine_ArchRegOp : XeMachine_Op<"archreg", [NoMemoryEffect]> {
+def XeMachine_ArchRegOp : XeMachine_Op<"archreg", [NoMemoryEffect,
+    XeMachine_NoMachineInst, XeMachine_NoAsmEmission]> {
   let summary = "reference an architectural register (r0/r1)";
   let arguments = (ins I32Attr:$index);
   let results = (outs XeMachine_RegType:$result);
@@ -354,7 +368,8 @@ def XeMachine_ArchRegOp : XeMachine_Op<"archreg", [NoMemoryEffect]> {
 }
 
 // ARF register reference (acc, flags, ...).
-def XeMachine_ArfRegOp : XeMachine_Op<"arfreg", [NoMemoryEffect]> {
+def XeMachine_ArfRegOp : XeMachine_Op<"arfreg", [NoMemoryEffect,
+    XeMachine_NoMachineInst, XeMachine_NoAsmEmission]> {
   let summary = "reference an ARF register";
   let arguments = (ins XeMachine_ARFFile:$file, I32Attr:$index);
   let results = (outs XeMachine_ARFType:$result);
@@ -363,20 +378,24 @@ def XeMachine_ArfRegOp : XeMachine_Op<"arfreg", [NoMemoryEffect]> {
 
 // Token algebra. token: entry source. token_join: merge completions.
 // after: issue-order sequencing without a completion promise.
-def XeMachine_TokenOp : XeMachine_Op<"token", [NoMemoryEffect]> {
+def XeMachine_TokenOp : XeMachine_Op<"token", [NoMemoryEffect,
+    XeMachine_NoMachineInst, XeMachine_NoAsmEmission]> {
   let summary = "initial memory-ordering token";
   let results = (outs XeMachine_MemTokenType:$token);
   let assemblyFormat = "attr-dict";
 }
 
-def XeMachine_TokenJoinOp : XeMachine_Op<"token_join", [NoMemoryEffect]> {
+def XeMachine_TokenJoinOp : XeMachine_Op<"token_join", [NoMemoryEffect,
+    XeMachine_NoMachineInst, XeMachine_NoAsmEmission]> {
   let summary = "merge memory-ordering tokens";
   let arguments = (ins Variadic<XeMachine_MemTokenType>:$dependencies);
   let results = (outs XeMachine_MemTokenType:$token);
   let assemblyFormat = "$dependencies attr-dict `:` qualified(type($dependencies))";
 }
 
-def XeMachine_AfterOp : XeMachine_Op<"after", [NoMemoryEffect]> {
+def XeMachine_AfterOp : XeMachine_Op<"after", [NoMemoryEffect,
+    XeMachine_NoMachineInst, XeMachine_NoAsmEmission,
+    XeMachine_CompletionFree]> {
   let summary = "issue-order sequencing of memory ops";
   let arguments = (ins Variadic<XeMachine_MemTokenType>:$dependencies);
   let results = (outs XeMachine_MemTokenType:$token);

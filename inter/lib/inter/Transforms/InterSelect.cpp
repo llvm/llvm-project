@@ -73,7 +73,6 @@ struct SelectToMachine
   Value tailValue;
   Value byteOffLo, byteOffHi;
   bool prologueEmitted = false;
-  bool loadsPending = false;
 
   Type grf(int dwords) {
     int base = nextGRF;
@@ -141,7 +140,6 @@ struct SelectToMachine
     tailValue = nullptr;
     byteOffLo = byteOffHi = nullptr;
     prologueEmitted = false;
-    loadsPending = false;
 
     OpBuilder moduleBuilder(kernel);
     auto func = moduleBuilder.create<func::FuncOp>(
@@ -324,7 +322,6 @@ struct SelectToMachine
     CmpOperand rhs = cmpOperand(icmp.getRhs());
     if (!lhs.v || !rhs.v)
       return emitError(icmp.getLoc(), "icmp operand not lowered"), failure();
-    maybeSync({lhs.v, rhs.v});
     auto cond = mapPredicate(icmp.getPredicate());
     if (!cond)
       return emitError(icmp.getLoc(), "unsupported predicate"), failure();
@@ -386,13 +383,13 @@ struct SelectToMachine
                             : &cast<UniformIfOp>(ifm).getThenRegion();
     Region *elseR = varying ? &cast<ExecIfOp>(ifm).getElseRegion()
                             : &cast<UniformIfOp>(ifm).getElseRegion();
-    std::array<std::pair<Region *, Region *>, 2> regions = {
-        {{&ifOp.getThenRegion(), thenR}, {&ifOp.getElseRegion(), elseR}}};
+    SmallVector<std::pair<Region *, Region *>, 2> regions = {
+        {&ifOp.getThenRegion(), thenR}};
+    if (!ifOp.getElseRegion().empty())
+      regions.emplace_back(&ifOp.getElseRegion(), elseR);
     Value entryToken = memToken;
     for (auto [scfRegion, machineRegion] : regions) {
       memToken = entryToken; // each region starts from the if-entry token
-      bool savedLoadsPending = loadsPending;
-      loadsPending = false;
       b->setInsertionPointToStart(&machineRegion->emplaceBlock());
       if (failed(lowerBlock(scfRegion->front())))
         return failure();
@@ -411,7 +408,6 @@ struct SelectToMachine
         }
         // The mov result aliases the exec_if result register; yielding it
         // keeps types consistent along the region-branch edges.
-        maybeSync({v});
         auto merge =
             MovOp::create(*b, *loc, ifm->getResult(i).getType(), i32(),
                           /*execSize=*/32, dcanon(), rcanon(), IntegerAttr(),
@@ -420,7 +416,6 @@ struct SelectToMachine
         yieldVals.push_back(merge.getResult());
       }
       YieldOp::create(*b, *loc, yieldVals);
-      loadsPending = savedLoadsPending;
     }
     b->setInsertionPointAfter(ifm);
     return success();
@@ -453,8 +448,6 @@ struct SelectToMachine
     localXValue = localX;
     // Cross-thread tail: d32x8t at blob+0.
     tailValue = emitLoadBlock(grf(16), base, 8);
-    emitSync(SyncKind::allrd);
-
     // gid base: groupX * enq_local_size.x, via the accumulator.
     Value acc = MulOp::create(*b, *loc, ARFType::get(ctx, ARFFile::acc, 16, 0),
                               i32(), /*execSize=*/1, dcanon(), runiform(),
@@ -581,7 +574,6 @@ struct SelectToMachine
                                   addr, depTok, 32);
       memToken = op.getToken();
       vmap[result] = op.getDst();
-      loadsPending = true;
       return success();
     }
     if (!gidValue)
@@ -591,27 +583,10 @@ struct SelectToMachine
     auto [a0, a1] = emitAddress(byteOffLo, byteOffHi, argIndex);
     Value v = emitLoadA64(grf(32), a0, depTok);
     vmap[result] = v;
-    loadsPending = true;
     return success();
   }
 
-  // sync.allrd between a load and its first consumer; tokens/trackers are
-  // the SWSB milestone's business.
-  void maybeSync(ValueRange vs) {
-    if (!loadsPending)
-      return;
-    for (Value v : vs) {
-      if (v && (v.getDefiningOp<LoadA64Op>() || v.getDefiningOp<LoadSLMOp>() ||
-                v.getDefiningOp<LoadBlockA32Op>())) {
-        emitSync(SyncKind::allrd);
-        loadsPending = false;
-        return;
-      }
-    }
-  }
-
   LogicalResult emitSum(Operation *op) {
-    maybeSync({vmap.lookup(op->getOperand(0)), vmap.lookup(op->getOperand(1))});
     Value lhs = vmap.lookup(op->getOperand(0));
     Value rhs = vmap.lookup(op->getOperand(1));
     if (!lhs || !rhs)
@@ -631,7 +606,6 @@ struct SelectToMachine
       Value addr = emitSlmAddress(gep);
       if (!addr)
         return failure();
-      maybeSync({data});
       auto op = StoreSLMOp::create(*b, *loc, MemTokenType::get(ctx), addr,
                                    data, depTok, 32);
       memToken = op.getToken();

@@ -14,18 +14,27 @@ using namespace inter::xemachine;
 //===----------------------------------------------------------------------===//
 // Structured control flow region modeling.
 //
-// exec_if/uniform_if: parent -> both regions; regions -> parent (results).
+// exec_if: parent -> arms/fallthrough; then -> else/parent; else -> parent.
+// uniform_if: parent -> either arm/fallthrough; regions -> parent.
 // uniform_loop: parent -> body; body -> body (back-edge) or parent (exit).
 //===----------------------------------------------------------------------===//
 
 void ExecIfOp::getSuccessorRegions(RegionBranchPoint point,
                                    SmallVectorImpl<RegionSuccessor> &regions) {
+  bool hasElse = !getElseRegion().empty();
   if (point.isParent()) {
     regions.emplace_back(&getThenRegion());
-    if (!getElseRegion().empty())
+    if (hasElse)
       regions.emplace_back(&getElseRegion());
+    else if (getNumResults() == 0)
+      regions.emplace_back(getOperation());
     return;
   }
+
+  Region *source =
+      point.getTerminatorPredecessorOrNull()->getParentRegion();
+  if (source == &getThenRegion() && hasElse)
+    regions.emplace_back(&getElseRegion());
   regions.emplace_back(getOperation());
 }
 
@@ -33,7 +42,9 @@ void UniformIfOp::getSuccessorRegions(RegionBranchPoint point,
                                       SmallVectorImpl<RegionSuccessor> &regions) {
   if (point.isParent()) {
     regions.emplace_back(&getThenRegion());
-    if (!getElseRegion().empty())
+    if (getElseRegion().empty())
+      regions.emplace_back(getOperation());
+    else
       regions.emplace_back(&getElseRegion());
     return;
   }
@@ -64,11 +75,20 @@ ValueRange UniformIfOp::getSuccessorInputs(RegionSuccessor successor) {
 
 ValueRange UniformLoopOp::getSuccessorInputs(RegionSuccessor successor) {
   return successor.isOperation() ? ValueRange(getResults())
-                                 : ValueRange(getInits());
+                                  : getBody().getArguments();
 }
 
-OperandRange UniformLoopOp::getEntrySuccessorOperands(RegionSuccessor successor) {
+OperandRange
+UniformLoopOp::getEntrySuccessorOperands(RegionSuccessor successor) {
   return getInits();
+}
+
+MutableOperandRange
+YieldOp::getMutableSuccessorOperands(RegionSuccessor successor) {
+  MutableOperandRange values = getValuesMutable();
+  if (successor.isOperation())
+    return values;
+  return values.slice(0, 0);
 }
 
 MutableOperandRange
