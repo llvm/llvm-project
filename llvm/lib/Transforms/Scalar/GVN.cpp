@@ -3092,7 +3092,7 @@ namespace {
 
 /// Check if \p Expr is an expression involving only \p Base and/or constants.
 bool isExprBuiltFromBaseOnly(Value *Expr, Value *Base) {
-  if (!Expr || !Base) 
+  if (!Expr || !Base)
     return false;
 
   if (Expr == Base)
@@ -3116,13 +3116,13 @@ bool isExprBuiltFromBaseOnly(Value *Expr, Value *Base) {
 }
 
 /// Clone the expression \p Expr, replacing any use of \p OldVal with \p NewVal,
-/// inserting the cloned instructions right before \p InsertPt. This avoids 
-// creating a new expression for the same value more than once and keeps the 
+/// inserting the cloned instructions right before \p InsertPt. This avoids
+// creating a new expression for the same value more than once and keeps the
 // clone as close as possible to its first use.
 Value *cloneExprReplacingOperand(Value *Expr, const Value *OldVal,
                                  Value *NewVal, Instruction *InsertPt) {
   if (!Expr || !OldVal || !NewVal || !InsertPt)
-     return nullptr;
+    return nullptr;
 
   if (isa<Constant>(Expr))
     return Expr;
