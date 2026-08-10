@@ -187,4 +187,68 @@ for.end:
   ret void
 }
 
+define void @fixed_known_tc(ptr noalias readonly %dst, ptr noalias readonly %src) #0 {
+; CHECK-UF1-LABEL: define void @fixed_known_tc(
+; CHECK-UF1-SAME: ptr noalias readonly [[DST:%.*]], ptr noalias readonly [[SRC:%.*]]) #[[ATTR0]] {
+; CHECK-UF1-NEXT:  entry:
+; CHECK-UF1-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK-UF1:       vector.ph:
+; CHECK-UF1-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 0, i64 15)
+; CHECK-UF1-NEXT:    br label [[VECTOR_BODY1:%.*]]
+; CHECK-UF1:       vector.body:
+; CHECK-UF1-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[VECTOR_BODY]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY1]] ]
+; CHECK-UF1-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <4 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_BODY]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY1]] ]
+; CHECK-UF1-NEXT:    [[X:%.*]] = load i32, ptr [[SRC]], align 4
+; CHECK-UF1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
+; CHECK-UF1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-UF1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[IV]]
+; CHECK-UF1-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[BROADCAST_SPLAT]], ptr align 4 [[ARRAYIDX]], <4 x i1> [[ACTIVE_LANE_MASK]])
+; CHECK-UF1-NEXT:    [[INDEX_NEXT]] = add i64 [[IV]], 4
+; CHECK-UF1-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 [[INDEX_NEXT]], i64 15)
+; CHECK-UF1-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
+; CHECK-UF1-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP2]], true
+; CHECK-UF1-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY1]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-UF1:       middle.block:
+;
+; CHECK-UF4-LABEL: define void @fixed_known_tc(
+; CHECK-UF4-SAME: ptr noalias readonly [[DST:%.*]], ptr noalias readonly [[SRC:%.*]]) #[[ATTR0]] {
+; CHECK-UF4-NEXT:  entry:
+; CHECK-UF4-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK-UF4:       vector.ph:
+; CHECK-UF4-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 0, i64 15)
+; CHECK-UF4-NEXT:    [[EXTRACT_ENTRY_ALM_PART:%.*]] = call <4 x i1> @llvm.vector.extract.v4i1.v16i1(<16 x i1> [[ACTIVE_LANE_MASK_ENTRY]], i64 0)
+; CHECK-UF4-NEXT:    [[EXTRACT_ENTRY_ALM_PART1:%.*]] = call <4 x i1> @llvm.vector.extract.v4i1.v16i1(<16 x i1> [[ACTIVE_LANE_MASK_ENTRY]], i64 4)
+; CHECK-UF4-NEXT:    [[EXTRACT_ENTRY_ALM_PART2:%.*]] = call <4 x i1> @llvm.vector.extract.v4i1.v16i1(<16 x i1> [[ACTIVE_LANE_MASK_ENTRY]], i64 8)
+; CHECK-UF4-NEXT:    [[EXTRACT_ENTRY_ALM_PART3:%.*]] = call <4 x i1> @llvm.vector.extract.v4i1.v16i1(<16 x i1> [[ACTIVE_LANE_MASK_ENTRY]], i64 12)
+; CHECK-UF4-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK-UF4:       vector.body:
+; CHECK-UF4-NEXT:    [[X:%.*]] = load i32, ptr [[SRC]], align 4
+; CHECK-UF4-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
+; CHECK-UF4-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-UF4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 4
+; CHECK-UF4-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 8
+; CHECK-UF4-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 12
+; CHECK-UF4-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[BROADCAST_SPLAT]], ptr align 4 [[DST]], <4 x i1> [[EXTRACT_ENTRY_ALM_PART]])
+; CHECK-UF4-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[BROADCAST_SPLAT]], ptr align 4 [[TMP1]], <4 x i1> [[EXTRACT_ENTRY_ALM_PART1]])
+; CHECK-UF4-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[BROADCAST_SPLAT]], ptr align 4 [[TMP2]], <4 x i1> [[EXTRACT_ENTRY_ALM_PART2]])
+; CHECK-UF4-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[BROADCAST_SPLAT]], ptr align 4 [[TMP3]], <4 x i1> [[EXTRACT_ENTRY_ALM_PART3]])
+; CHECK-UF4-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
+; CHECK-UF4:       middle.block:
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %x = load i32, ptr %src
+  %gep = getelementptr inbounds i32, ptr %dst, i64 %iv
+  store i32 %x, ptr %gep
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 15
+  br i1 %exitcond.not, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
 attributes #0 = { nounwind "target-features"="+neon,+sve" }
