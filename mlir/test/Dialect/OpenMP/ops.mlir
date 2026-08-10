@@ -60,29 +60,54 @@ func.func @omp_flush(%arg0 : memref<i32>) -> () {
   return
 }
 
+// CHECK-LABEL: func @omp_error
+func.func @omp_error(%msg : !llvm.ptr) -> () {
+  // Warning severity with a message.
+  // CHECK: omp.error severity(warning) message("a warning")
+  omp.error severity(warning) message("a warning")
+
+  // Fatal severity with a message.
+  // CHECK: omp.error severity(fatal) message("fatal error")
+  omp.error severity(fatal) message("fatal error")
+
+  // Fatal severity without a message.
+  // CHECK: omp.error severity(fatal)
+  omp.error severity(fatal)
+
+  // Warning severity without a message.
+  // CHECK: omp.error severity(warning)
+  omp.error severity(warning)
+
+  // Warning severity with a runtime message operand.
+  // CHECK: omp.error severity(warning) message_expr(%{{.*}} : !llvm.ptr)
+  omp.error severity(warning) message_expr(%msg : !llvm.ptr)
+
+  return
+}
+
 func.func @omp_terminator() -> () {
   // CHECK: omp.terminator
   omp.terminator
 }
 
 func.func @omp_parallel(%data_var : memref<i32>, %if_cond : i1, %num_threads : i32, %idx : index) -> () {
-  // CHECK: omp.parallel allocate(%{{.*}} : memref<i32> -> %{{.*}} : memref<i32>) if(%{{.*}}) num_threads(%{{.*}} : i32)
-  "omp.parallel" (%data_var, %data_var, %if_cond, %num_threads) ({
+  // CHECK: omp.parallel if(%{{.*}}) num_threads(%{{.*}} : i32)
+  "omp.parallel" (%if_cond, %num_threads) ({
 
   // test without if condition
-  // CHECK: omp.parallel allocate(%{{.*}} : memref<i32> -> %{{.*}} : memref<i32>) num_threads(%{{.*}} : i32)
-    "omp.parallel"(%data_var, %data_var, %num_threads) ({
+  // CHECK: omp.parallel num_threads(%{{.*}} : i32)
+    "omp.parallel"(%num_threads) ({
       omp.terminator
-    }) {operandSegmentSizes = array<i32: 1,1,0,1,0,0>} : (memref<i32>, memref<i32>, i32) -> ()
+    }) {operandSegmentSizes = array<i32: 0,0,0,1,0,0>} : (i32) -> ()
 
   // CHECK: omp.barrier
     omp.barrier
 
   // test without num_threads
-  // CHECK: omp.parallel allocate(%{{.*}} : memref<i32> -> %{{.*}} : memref<i32>) if(%{{.*}})
-    "omp.parallel"(%data_var, %data_var, %if_cond) ({
+  // CHECK: omp.parallel if(%{{.*}})
+    "omp.parallel"(%if_cond) ({
       omp.terminator
-    }) {operandSegmentSizes = array<i32: 1,1,1,0,0,0>} : (memref<i32>, memref<i32>, i1) -> ()
+    }) {operandSegmentSizes = array<i32: 0,0,1,0,0,0>} : (i1) -> ()
 
   // test without allocate
   // CHECK: omp.parallel if(%{{.*}}) num_threads(%{{.*}} : i32)
@@ -91,13 +116,7 @@ func.func @omp_parallel(%data_var : memref<i32>, %if_cond : i1, %num_threads : i
     }) {operandSegmentSizes = array<i32: 0,0,1,1,0,0>} : (i1, i32) -> ()
 
     omp.terminator
-  }) {operandSegmentSizes = array<i32: 1,1,1,1,0,0>, proc_bind_kind = #omp<procbindkind spread>} : (memref<i32>, memref<i32>, i1, i32) -> ()
-
-  // test with multiple parameters for single variadic argument
-  // CHECK: omp.parallel allocate(%{{.*}} : memref<i32> -> %{{.*}} : memref<i32>)
-  "omp.parallel" (%data_var, %data_var) ({
-    omp.terminator
-  }) {operandSegmentSizes = array<i32: 1,1,0,0,0,0>} : (memref<i32>, memref<i32>) -> ()
+  }) {operandSegmentSizes = array<i32: 0,0,1,1,0,0>, proc_bind_kind = #omp<procbindkind spread>} : (i1, i32) -> ()
 
   // CHECK: omp.parallel
   omp.parallel {
@@ -137,6 +156,8 @@ func.func @omp_parallel(%data_var : memref<i32>, %if_cond : i1, %num_threads : i
   return
 }
 
+omp.private {type = private} @parallel_allocate_private : memref<i32>
+
 func.func @omp_parallel_pretty(%data_var : memref<i32>, %if_cond : i1, %num_threads : i32, %allocator : si32) -> () {
  // CHECK: omp.parallel
  omp.parallel {
@@ -172,10 +193,13 @@ func.func @omp_parallel_pretty(%data_var : memref<i32>, %if_cond : i1, %num_thre
    omp.terminator
  }
 
- // CHECK: omp.parallel allocate(%{{.*}} : memref<i32> -> %{{.*}} : memref<i32>)
- omp.parallel allocate(%data_var : memref<i32> -> %data_var : memref<i32>) {
+ // CHECK: omp.parallel allocate(
+ // CHECK-SAME: private(
+ // CHECK: } {allocate_alignments = array<i64: 64>, allocate_private_indices = array<i64: 0>}
+ omp.parallel allocate(%allocator : si32 -> %data_var : memref<i32>)
+     private(@parallel_allocate_private %data_var -> %private : memref<i32>) {
    omp.terminator
- }
+ } {allocate_alignments = array<i64: 64>, allocate_private_indices = array<i64: 0>}
 
  // CHECK: omp.parallel
  // CHECK-NEXT: omp.parallel if(%{{.*}})
@@ -2107,6 +2131,24 @@ func.func @omp_atomic_compare(%x: memref<i32>, %e: i32, %d: i32) {
     %sel = arith.select %cmp, %d, %xval : i32
     omp.yield(%sel : i32)
   } {weak}
+  return
+}
+
+// CHECK-LABEL: omp_atomic_compare_fail
+// CHECK-SAME: (%[[X:.*]]: memref<i32>, %[[E:.*]]: i32, %[[D:.*]]: i32)
+func.func @omp_atomic_compare_fail(%x: memref<i32>, %e: i32, %d: i32) {
+  // CHECK: omp.atomic.compare memory_order(seq_cst) %[[X]] : memref<i32> {
+  // CHECK-NEXT: ^bb0(%[[XVAL:.*]]: i32):
+  // CHECK-NEXT:   %[[CMP:.*]] = arith.cmpi eq, %[[XVAL]], %[[E]] : i32
+  // CHECK-NEXT:   %[[SEL:.*]] = arith.select %[[CMP]], %[[D]], %[[XVAL]] : i32
+  // CHECK-NEXT:   omp.yield(%[[SEL]] : i32)
+  // CHECK-NEXT: } {fail_memory_order = #omp<memoryorderkind acquire>}
+  omp.atomic.compare memory_order(seq_cst) %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = arith.cmpi eq, %xval, %e : i32
+    %sel = arith.select %cmp, %d, %xval : i32
+    omp.yield(%sel : i32)
+  } {fail_memory_order = #omp<memoryorderkind acquire>}
   return
 }
 
@@ -4232,5 +4274,59 @@ func.func @omp_target_map_iterated(%lb : index, %ub : index, %step : index,
   omp.target kernel_type(generic) map_iterated(%it : !omp.iterated<!llvm.ptr>) map_entries(%map -> %arg0 : !llvm.ptr) {
     omp.terminator
   }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @omp_interop_init
+func.func @omp_interop_init(%obj : !llvm.ptr, %device : i32) -> () {
+  // CHECK: omp.interop.init %{{.*}} : !llvm.ptr interop_types([#omp<interop_type(target)>])
+  omp.interop.init %obj : !llvm.ptr interop_types([#omp<interop_type(target)>])
+
+  // CHECK: omp.interop.init %{{.*}} : !llvm.ptr interop_types([#omp<interop_type(targetsync)>])
+  omp.interop.init %obj : !llvm.ptr interop_types([#omp<interop_type(targetsync)>])
+
+  // CHECK: omp.interop.init %{{.*}} : !llvm.ptr interop_types([#omp<interop_type(targetsync)>, #omp<interop_type(target)>]) prefer_type([1, 6]) device(%{{.*}} : i32) nowait
+  omp.interop.init %obj : !llvm.ptr interop_types([#omp<interop_type(targetsync)>, #omp<interop_type(target)>]) prefer_type([1, 6]) device(%device : i32) nowait
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @omp_interop_use
+func.func @omp_interop_use(%obj : !llvm.ptr, %device : i32) -> () {
+  // CHECK: omp.interop.use %{{.*}} : !llvm.ptr
+  omp.interop.use %obj : !llvm.ptr
+
+  // CHECK: omp.interop.use %{{.*}} : !llvm.ptr device(%{{.*}} : i32) nowait
+  omp.interop.use %obj : !llvm.ptr device(%device : i32) nowait
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @omp_interop_destroy
+func.func @omp_interop_destroy(%obj : !llvm.ptr, %device : i32) -> () {
+  // CHECK: omp.interop.destroy %{{.*}} : !llvm.ptr
+  omp.interop.destroy %obj : !llvm.ptr
+
+  // CHECK: omp.interop.destroy %{{.*}} : !llvm.ptr device(%{{.*}} : i32) nowait
+  omp.interop.destroy %obj : !llvm.ptr device(%device : i32) nowait
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @omp_interop_depend
+func.func @omp_interop_depend(%obj : !llvm.ptr, %dep : !llvm.ptr) -> () {
+  // CHECK: omp.interop.init %{{.*}} : !llvm.ptr interop_types([#omp<interop_type(targetsync)>]) depend(taskdependinout -> %{{.*}} : !llvm.ptr)
+  omp.interop.init %obj : !llvm.ptr interop_types([#omp<interop_type(targetsync)>]) depend(taskdependinout -> %dep : !llvm.ptr)
+
+  // CHECK: omp.interop.use %{{.*}} : !llvm.ptr depend(taskdependin -> %{{.*}} : !llvm.ptr)
+  omp.interop.use %obj : !llvm.ptr depend(taskdependin -> %dep : !llvm.ptr)
+
+  // CHECK: omp.interop.destroy %{{.*}} : !llvm.ptr depend(taskdependout -> %{{.*}} : !llvm.ptr)
+  omp.interop.destroy %obj : !llvm.ptr depend(taskdependout -> %dep : !llvm.ptr)
   return
 }

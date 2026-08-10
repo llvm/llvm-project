@@ -12,6 +12,7 @@
 
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Core/BinaryBasicBlock.h"
+#include "bolt/Core/BranchLivenessInfo.h"
 #include "bolt/Core/DynoStats.h"
 #include "bolt/Core/HashUtilities.h"
 #include "bolt/Core/MCPlusBuilder.h"
@@ -2874,6 +2875,7 @@ private:
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
     case MCCFIInstruction::OpNegateRAState:
+    case MCCFIInstruction::OpLLVMSetRAState:
       reportFatalUsageError("unsupported CFI opcode");
     case MCCFIInstruction::OpLLVMRegisterPair:
     case MCCFIInstruction::OpLLVMVectorRegisters:
@@ -3019,6 +3021,7 @@ struct CFISnapshotDiff : public CFISnapshot {
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
     case MCCFIInstruction::OpNegateRAState:
+    case MCCFIInstruction::OpLLVMSetRAState:
       reportFatalUsageError("unsupported CFI opcode");
     case MCCFIInstruction::OpLLVMRegisterPair:
     case MCCFIInstruction::OpLLVMVectorRegisters:
@@ -3174,6 +3177,7 @@ BinaryFunction::unwindCFIState(int32_t FromState, int32_t ToState,
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
     case MCCFIInstruction::OpNegateRAState:
+    case MCCFIInstruction::OpLLVMSetRAState:
       reportFatalUsageError("unsupported CFI opcode");
     case MCCFIInstruction::OpLLVMRegisterPair:
     case MCCFIInstruction::OpLLVMVectorRegisters:
@@ -3673,7 +3677,7 @@ bool BinaryFunction::validateCFG() const {
   return true;
 }
 
-void BinaryFunction::fixBranches() {
+void BinaryFunction::fixBranches(const BranchLivenessInfo *BLI) {
   assert(isSimple() && "Expected function with valid CFG.");
 
   auto &MIB = BC.MIB;
@@ -3732,7 +3736,8 @@ void BinaryFunction::fixBranches() {
 
       // Reverse branch condition and swap successors.
       auto swapSuccessors = [&]() {
-        if (!MIB->isReversibleBranch(*CondBranch)) {
+        bool PreserveFlags = BLI ? BLI->mustPreserveFlags(*CondBranch) : true;
+        if (!MIB->isReversibleBranch(*CondBranch, PreserveFlags)) {
           if (opts::Verbosity) {
             BC.outs() << "BOLT-INFO: unable to swap successors in " << *this
                       << '\n';
@@ -3742,7 +3747,11 @@ void BinaryFunction::fixBranches() {
         std::swap(TSuccessor, FSuccessor);
         BB->swapConditionalSuccessors();
         auto L = BC.scopeLock();
-        MIB->reverseBranchCondition(*CondBranch, TSuccessor->getLabel(), Ctx);
+        if (BLI)
+          BLI->removeAnnotation(*CondBranch);
+        InstructionListType Code = MIB->reverseBranchCondition(
+            *CondBranch, TSuccessor->getLabel(), Ctx, PreserveFlags);
+        BB->replaceInstruction(BB->findInstruction(CondBranch), Code);
         return true;
       };
 
@@ -4500,9 +4509,9 @@ void BinaryFunction::calculateLoopInfo() {
     L->EntryCount = L->getHeader()->getExecutionCount() - L->TotalBackEdgeCount;
 
     // Compute exit count.
-    SmallVector<BinaryLoop::Edge, 1> ExitEdges;
-    L->getExitEdges(ExitEdges);
-    for (BinaryLoop::Edge &Exit : ExitEdges) {
+    SmallVector<BinaryLoopInfo::Edge, 1> ExitEdges;
+    BLI->getExitEdges(*L, ExitEdges);
+    for (BinaryLoopInfo::Edge &Exit : ExitEdges) {
       const BinaryBasicBlock *Exiting = Exit.first;
       const BinaryBasicBlock *ExitTarget = Exit.second;
       auto BI = Exiting->branch_info_begin();

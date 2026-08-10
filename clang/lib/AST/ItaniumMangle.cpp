@@ -2544,6 +2544,7 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
   case Type::BitInt:
   case Type::DependentBitInt:
   case Type::CountAttributed:
+  case Type::LateParsedAttr:
     llvm_unreachable("type is illegal as a nested name specifier");
 
   case Type::SubstBuiltinTemplatePack:
@@ -3591,6 +3592,11 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
     mangleVendorType(#Name);                                                   \
     break;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId)                                      \
+  case BuiltinType::Id:                                                        \
+    mangleVendorType(Name);                                                    \
+    break;
+#include "clang/Basic/SPIRVTypes.def"
   }
 }
 
@@ -4647,7 +4653,7 @@ void CXXNameMangler::mangleType(const UnaryTransformType *T) {
   case UnaryTransformType::Enum:                                               \
     BuiltinName = "__" #Trait;                                                 \
     break;
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
     }
     mangleVendorType(BuiltinName);
   }
@@ -4757,6 +4763,8 @@ void CXXNameMangler::mangleType(const HLSLAttributedResourceType *T) {
     Str += "_Counter";
   if (Attrs.IsArray)
     Str += "_Array";
+  if (Attrs.IsMultiSampled)
+    Str += "_MS";
   if (T->hasContainedType())
     Str += "_CT";
   mangleVendorQualifier(Str);
@@ -7440,7 +7448,8 @@ static void mangleOverrideDiscrimination(CXXNameMangler &Mangler,
   const CXXRecordDecl *PtrauthClassRD =
       Context.baseForVTableAuthentication(ThisRD);
   unsigned TypedDiscriminator =
-      Context.getPointerAuthVTablePointerDiscriminator(ThisRD);
+      Context.getPointerAuthVTablePointerDiscriminator(ThisRD,
+                                                       /*IsVTTEntry=*/false);
   Mangler.mangleVendorQualifier("__vtptrauth");
   auto &ManglerStream = Mangler.getStream();
   ManglerStream << "I";
