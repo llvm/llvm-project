@@ -8098,6 +8098,7 @@ void Fortran::lower::materializeOpenMPDeclareMappers(
 
 void Fortran::lower::attachOpenMPDeclareTargetAttributes(
     lower::AbstractConverter &converter, const lower::pft::Variable &var) {
+  assert(var.isGlobal());
   auto module = converter.getModuleOp();
 
   mlir::Operation *globalOp =
@@ -8107,7 +8108,7 @@ void Fortran::lower::attachOpenMPDeclareTargetAttributes(
 
   if (globalOp && ultimateSymbol.IsFromModFile()) {
     auto declareTargetOp =
-        llvm::dyn_cast<mlir::omp::DeclareTargetInterface>(globalOp);
+        llvm::cast<mlir::omp::DeclareTargetInterface>(globalOp);
     Fortran::common::visit(
         [&](const auto &details) {
           if constexpr (std::is_base_of_v<semantics::WithOmpDeclarative,
