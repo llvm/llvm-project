@@ -222,7 +222,7 @@ body: |
     ; GFX10-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
     ; GFX10-NEXT: [[FPEXT1:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC1]](s16)
     ; GFX10-NEXT: [[FMA:%[0-9]+]]:_(s32) = contract G_FMA [[FPEXT]], [[FPEXT1]], %el1
-    ; GFX10-NEXT: [[FMA1:%[0-9]+]]:_(s32) = contract G_FMA [[COPY]], [[COPY1]], [[FMA]]
+    ; GFX10-NEXT: [[FMA1:%[0-9]+]]:_(s32) = G_FMA [[COPY]], [[COPY1]], [[FMA]]
     ; GFX10-NEXT: $vgpr0 = COPY [[FMA1]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
@@ -315,7 +315,7 @@ body: |
     ; GFX10-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
     ; GFX10-NEXT: [[FPEXT1:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC1]](s16)
     ; GFX10-NEXT: [[FMA:%[0-9]+]]:_(s32) = contract G_FMA [[FPEXT]], [[FPEXT1]], %el1
-    ; GFX10-NEXT: [[FMA1:%[0-9]+]]:_(s32) = contract G_FMA [[COPY]], [[COPY1]], [[FMA]]
+    ; GFX10-NEXT: [[FMA1:%[0-9]+]]:_(s32) = G_FMA [[COPY]], [[COPY1]], [[FMA]]
     ; GFX10-NEXT: $vgpr0 = COPY [[FMA1]](s32)
     %ptr:_(p1) = COPY $vgpr0_vgpr1
     %vec:_(<2 x s32>) = G_LOAD %ptr(p1) :: (load (<2 x s32>), addrspace 1)
