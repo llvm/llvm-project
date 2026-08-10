@@ -29,6 +29,15 @@ define void @test_target_dependent_scope() {
   ret void
 }
 
+; CHECK-LABEL: combine_target_dependent_scope
+; CHECK-NEXT: fence syncscope("agent") seq_cst
+; CHECK-NEXT: ret void
+define void @combine_target_dependent_scope() {
+  fence syncscope("agent") acq_rel
+  fence syncscope("agent") seq_cst
+  ret void
+}
+
 ; CHECK-LABEL: define void @dipsy
 ; CHECK-NEXT:   fence seq_cst
 ; CHECK-NEXT:   fence syncscope("singlethread") seq_cst
