@@ -137,6 +137,7 @@ LogicalResult CpAsyncBulkTensorSharedCTAToGlobalOp::verify() {
   case TMAStoreMode::TILE:
     return cpAsyncBulkTensorCommonVerifier(dims, false, 0, getLoc());
   case TMAStoreMode::IM2COL:
+  case TMAStoreMode::IM2COL_W:
     return cpAsyncBulkTensorCommonVerifier(dims, true, 0, getLoc());
   case TMAStoreMode::TILE_SCATTER4:
     if (dims != 5)
@@ -236,6 +237,7 @@ LogicalResult CpAsyncBulkTensorReduceOp::verify() {
   case TMAStoreMode::TILE:
     return cpAsyncBulkTensorCommonVerifier(dims, false, 0, getLoc());
   case TMAStoreMode::IM2COL:
+  case TMAStoreMode::IM2COL_W:
     return cpAsyncBulkTensorCommonVerifier(dims, true, 0, getLoc());
   case TMAStoreMode::TILE_SCATTER4:
     return emitError("Scatter mode unsupported for CpAsyncBulkTensorReduceOp");
@@ -4384,24 +4386,27 @@ CpAsyncBulkTensorSharedCTAToGlobalOp::getIntrinsicIDAndArgs(
   args.push_back(hasCacheHint ? mt.lookupValue(cacheHint) : i64Unused);
   args.push_back(builder.getInt1(hasCacheHint));
 
-  const unsigned NI = llvm::Intrinsic::not_intrinsic;
-  static constexpr llvm::Intrinsic::ID IDTable[][6] = {
-      {NI, llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_1d,
-       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_2d,
-       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_3d,
-       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_4d,
-       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_5d},
-      {NI, NI, NI, llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_im2col_3d,
-       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_im2col_4d,
-       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_im2col_5d},
-      {NI, NI, NI, NI, NI,
-       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_scatter4_2d}};
+  using namespace llvm::Intrinsic;
+  const unsigned NI = not_intrinsic;
+  static constexpr ID IDTable[][6] = {
+      {NI, nvvm_cp_async_bulk_tensor_s2g_tile_1d,
+       nvvm_cp_async_bulk_tensor_s2g_tile_2d,
+       nvvm_cp_async_bulk_tensor_s2g_tile_3d,
+       nvvm_cp_async_bulk_tensor_s2g_tile_4d,
+       nvvm_cp_async_bulk_tensor_s2g_tile_5d},
+      {NI, NI, NI, nvvm_cp_async_bulk_tensor_s2g_im2col_3d,
+       nvvm_cp_async_bulk_tensor_s2g_im2col_4d,
+       nvvm_cp_async_bulk_tensor_s2g_im2col_5d},
+      {NI, NI, NI, NI, NI, nvvm_cp_async_bulk_tensor_s2g_tile_scatter4_2d},
+      {NI, NI, NI, nvvm_cp_async_bulk_tensor_s2g_im2col_w_3d,
+       nvvm_cp_async_bulk_tensor_s2g_im2col_w_4d,
+       nvvm_cp_async_bulk_tensor_s2g_im2col_w_5d}};
 
   static_assert(getMaxEnumValForTMAStoreMode() == std::size(IDTable) - 1,
                 "TMAStoreModes must match number of rows in IDTable");
   size_t mode = static_cast<size_t>(thisOp.getMode());
   size_t dim = thisOp.getCoordinates().size();
-  llvm::Intrinsic::ID id = IDTable[mode][dim];
+  ID id = IDTable[mode][dim];
   if (id == llvm::Intrinsic::not_intrinsic)
     llvm_unreachable(
         "Invalid intrinsic for CpAsyncBulkTensorSharedCTAToGlobalOp.");
@@ -4436,7 +4441,11 @@ NVVM::IDArgPair CpAsyncBulkTensorReduceOp::getIntrinsicIDAndArgs(
        nvvm_cp_async_bulk_tensor_reduce_tile_5d},
       {NI, NI, NI, nvvm_cp_async_bulk_tensor_reduce_im2col_3d,
        nvvm_cp_async_bulk_tensor_reduce_im2col_4d,
-       nvvm_cp_async_bulk_tensor_reduce_im2col_5d}};
+       nvvm_cp_async_bulk_tensor_reduce_im2col_5d},
+      {NI, NI, NI, NI, NI, NI}, // scatter4 not supported for reduce
+      {NI, NI, NI, nvvm_cp_async_bulk_tensor_reduce_im2col_w_3d,
+       nvvm_cp_async_bulk_tensor_reduce_im2col_w_4d,
+       nvvm_cp_async_bulk_tensor_reduce_im2col_w_5d}};
 
   size_t mode = static_cast<size_t>(thisOp.getMode());
   size_t dim = thisOp.getCoordinates().size();
