@@ -6160,7 +6160,8 @@ bool VectorCombine::foldBitOrderReverseAndSwap(Instruction &I) {
                                 TTI.getInstructionCost(InnerCall, CostKind) +
                                 TTI.getInstructionCost(&I, CostKind);
       IntrinsicCostAttributes ICABSwap(Intrinsic::bswap, Ty, {Ty});
-      IntrinsicCostAttributes ICABFshl(Intrinsic::fshl, Ty, {X,X,HalfBW}, {Ty, Ty, Ty});
+      IntrinsicCostAttributes ICABFshl(Intrinsic::fshl, Ty, {X, X, HalfBW},
+                                       {Ty, Ty, Ty});
       IntrinsicCostAttributes ICABRev(Intrinsic::bitreverse, Ty, {Ty});
       InstructionCost NewCost =
           TTI.getIntrinsicInstrCost(CanUseBswap ? ICABSwap : ICABFshl,
@@ -6179,9 +6180,7 @@ bool VectorCombine::foldBitOrderReverseAndSwap(Instruction &I) {
         Value *Swap =
             CanUseBswap
                 ? Builder.CreateUnaryIntrinsic(Intrinsic::bswap, X)
-                : Builder.CreateIntrinsic(
-                      Ty, Intrinsic::fshl,
-                      {X, X, HalfBW});
+                : Builder.CreateIntrinsic(Ty, Intrinsic::fshl, {X, X, HalfBW});
         Worklist.pushValue(Swap);
         Value *BRev = Builder.CreateUnaryIntrinsic(Intrinsic::bitreverse, Swap);
         replaceValue(I, *BRev);
