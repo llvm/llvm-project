@@ -18,7 +18,7 @@ int main() {
 
   // CFI-DIAG: runtime error: control flow integrity check for type 'void (int)' failed during indirect function call
   // CFI-DIAG: bad-signature.c:[[@LINE-8]]{{(:[0-9]+)?}}: note: f defined here
-  // CFI-DIAG: SUMMARY: UndefinedBehaviorSanitizer: cfi-bad-type
+  // CFI-DIAG: SUMMARY: UndefinedBehaviorSanitizer: cfi-icall
   ((void (*)(int))f)(42); // UB here
 
   // CFI-NOT: 2

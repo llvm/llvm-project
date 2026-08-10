@@ -72,7 +72,7 @@ public:
   initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
                  StringRef CPU,
                  const std::vector<std::string> &FeaturesVec) const override {
-    if (GPU != OffloadArch::Unused)
+    if (!GPU.isUnused())
       Features[OffloadArchToString(GPU)] = true;
     // Only add PTX feature if explicitly requested. Otherwise, let the backend
     // use the minimum required PTX version for the target SM.
@@ -131,18 +131,16 @@ public:
   }
 
   bool isValidCPUName(StringRef Name) const override {
-    return StringToOffloadArch(Name) != OffloadArch::Unknown;
+    return !StringToOffloadArch(Name).isUnknown();
   }
 
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override {
-    for (int i = static_cast<int>(OffloadArch::SM_20);
-         i < static_cast<int>(OffloadArch::Generic); ++i)
-      Values.emplace_back(OffloadArchToString(static_cast<OffloadArch>(i)));
+    fillValidOffloadArchList(Values);
   }
 
   bool setCPU(StringRef Name) override {
     GPU = StringToOffloadArch(Name);
-    return GPU != OffloadArch::Unknown;
+    return !GPU.isUnknown();
   }
 
   void setSupportedOpenCLOpts() override {

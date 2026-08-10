@@ -18,8 +18,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_llvm_unittest(OrcJITTests
-  CallableTraitsHelperTest.cpp
-  CallSPSViaEPCTest.cpp
+  COFFAutoImportGeneratorTest.cpp
   CoreAPIsTest.cpp
   ExecutorAddressTest.cpp
   ExecutionSessionWrapperFunctionCallsTest.cpp
@@ -34,6 +33,7 @@ add_llvm_unittest(OrcJITTests
   LinkGraphLinkingLayerTest.cpp
   LookupAndRecordAddrsTest.cpp
   MachOBuilderTest.cpp
+  MangleAndInternerTest.cpp
   MachOPlatformTest.cpp
   MapperJITLinkMemoryManagerTest.cpp
   MemoryFlagsTest.cpp
@@ -42,12 +42,13 @@ add_llvm_unittest(OrcJITTests
   ObjectLinkingLayerTest.cpp
   OrcCAPITest.cpp
   OrcTestCommon.cpp
+  ProxyTest.cpp
   ResourceTrackerTest.cpp
   RTDyldObjectLinkingLayerTest.cpp
   SharedMemoryMapperTest.cpp
   SimpleExecutorMemoryManagerTest.cpp
   SimplePackedSerializationTest.cpp
-  SPSCallersTest.cpp
+  SPSProxiesTest.cpp
   SymbolStringPoolTest.cpp
   TaskDispatchTest.cpp
   ThreadSafeModuleTest.cpp
