@@ -1183,6 +1183,16 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
     unsigned BigTyIdx = Op == G_MERGE_VALUES ? 0 : 1;
     unsigned LitTyIdx = Op == G_MERGE_VALUES ? 1 : 0;
     getActionDefinitionsBuilder(Op)
+        .widenScalarToNextPow2(LitTyIdx, 8)
+        // Above s64 lowered shifts narrow back to a merge and never terminate
+        .lowerIf([=](const LegalityQuery &Q) {
+          const LLT BigTy = Q.Types[BigTyIdx];
+          return BigTy.isScalar() && !isPowerOf2_32(BigTy.getSizeInBits()) &&
+                 BigTy.getSizeInBits() < 64;
+        })
+        .widenScalarToNextPow2(BigTyIdx, 32)
+        .clampScalar(LitTyIdx, s8, s64)
+        .clampScalar(BigTyIdx, s32, s128)
         .legalIf([=](const LegalityQuery &Q) {
           switch (Q.Types[BigTyIdx].getSizeInBits()) {
           case 32:
@@ -1201,17 +1211,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           default:
             return false;
           }
-        })
-        .widenScalarToNextPow2(LitTyIdx, 8)
-        // below 64-bit build with shifts, above it the lowered shifts narrow
-        // back to a merge and never terminate
-        .lowerIf([=](const LegalityQuery &Q) {
-          const LLT BigTy = Q.Types[BigTyIdx];
-          return BigTy.isScalar() && BigTy.getSizeInBits() < 64;
-        })
-        .widenScalarToNextPow2(BigTyIdx, 32)
-        .clampScalar(LitTyIdx, s8, s64)
-        .clampScalar(BigTyIdx, s32, s128);
+        });
   }
 
   // TODO : nxv4s16, nxv2s16, nxv2s32
