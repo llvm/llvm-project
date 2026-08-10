@@ -177,3 +177,19 @@ namespace GH177545 {
   template<decltype(auto)()() volatile throw() -> char> // expected-error {{'decltype(auto)' can only be used as a return type in a function declaration}}
   struct T2;                                            // expected-error@* {{function cannot return function type 'auto () volatile throw() -> decltype(auto)'}}
 }
+
+namespace GH28877 {
+template <typename...> struct S;
+template <typename... Ts> auto f(Ts... args) -> S<decltype(args)...>;
+extern template auto f() -> S<>;
+}
+
+namespace GH46548 {
+template <typename... Ts> void a(Ts... args1, char... args2[][sizeof args1]);
+extern template void a();
+}
+
+namespace GH213760 {
+template <typename... Ts> void f(Ts... args, decltype(args)...);
+void g() { f(); }
+}

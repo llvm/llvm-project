@@ -77,11 +77,13 @@ inline std::optional<std::pair<unsigned, unsigned>>
 getDepthAndIndex(UnexpandedParameterPack UPP) {
   if (const auto *TTP = dyn_cast<const TemplateTypeParmType *>(UPP.first))
     return std::make_pair(TTP->getDepth(), TTP->getIndex());
-  if (isa<NamedDecl *>(UPP.first))
-    return getDepthAndIndex(cast<NamedDecl *>(UPP.first));
-  assert((isa<const TemplateSpecializationType *,
-              const SubstBuiltinTemplatePackType *>(UPP.first)));
-  return std::nullopt;
+  if (isa<const TemplateSpecializationType *,
+          const SubstBuiltinTemplatePackType *>(UPP.first))
+    return std::nullopt;
+  const auto *ND = cast<NamedDecl *>(UPP.first);
+  if (isa<ParmVarDecl>(ND))
+    return std::nullopt;
+  return getDepthAndIndex(ND);
 }
 
 class TypoCorrectionConsumer : public VisibleDeclConsumer {
