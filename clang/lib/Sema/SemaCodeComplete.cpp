@@ -10730,8 +10730,7 @@ void SemaCodeCompletion::GatherGlobalCodeCompletions(
 
 void SemaCodeCompletion::CodeCompleteHLSLAttributes(
     llvm::ArrayRef<AttributeCommonInfo::Syntax> Syntaxes,
-    std::optional<ParsedAttr::Kind> RestrictToKind,
-    bool RequireStmt,
+    std::optional<ParsedAttr::Kind> RestrictToKind, bool RequireStmt,
     std::optional<ParsedAttr::Kind> ExcludeKind) {
   ResultBuilder Results(SemaRef, CodeCompleter->getAllocator(),
                         CodeCompleter->getCodeCompletionTUInfo(),
@@ -10763,7 +10762,6 @@ void SemaCodeCompletion::CodeCompleteHLSLAttributes(
                             Results.getCompletionContext(), Results.data(),
                             Results.size());
 }
-
 
 SemaCodeCompletion::SemaCodeCompletion(Sema &S,
                                        CodeCompleteConsumer *CompletionConsumer)

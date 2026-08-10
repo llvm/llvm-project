@@ -2337,7 +2337,8 @@ private:
     return false;
   }
 
-  bool MaybeParseMicrosoftAttributes(ParsedAttributes &Attrs, bool IsStmtContext = false) {
+  bool MaybeParseMicrosoftAttributes(ParsedAttributes &Attrs,
+                                     bool IsStmtContext = false) {
     bool AttrsParsed = false;
     if ((getLangOpts().MicrosoftExt || getLangOpts().HLSL) &&
         Tok.is(tok::l_square)) {
@@ -3133,7 +3134,8 @@ private:
   ///             ms-attribute[opt]
   ///             ms-attribute ms-attribute-seq
   /// \endverbatim
-  void ParseMicrosoftAttributes(ParsedAttributes &Attrs, bool IsStmtContext = false);
+  void ParseMicrosoftAttributes(ParsedAttributes &Attrs,
+                                bool IsStmtContext = false);
 
   void ParseMicrosoftInheritanceClassAttributes(ParsedAttributes &attrs);
   void ParseNullabilityClassAttributes(ParsedAttributes &attrs);
