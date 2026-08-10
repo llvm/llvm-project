@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Whether the stack unwinds before std::terminate runs for an exception escaping
+// noexcept is implementation-defined. Wasm unwinds, so no exception is current
+// once terminate runs.
+// XFAIL: LIBCXX-WASI-FIXME
+
 // UNSUPPORTED: no-exceptions
 
 // We're testing the diagnosed behaviour here.
