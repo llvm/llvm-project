@@ -509,6 +509,9 @@ def SDT_AArch64Insr  : SDTypeProfile<1, 2, [SDTCisVec<0>]>;
 def SDT_AArch64Zip   : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                           SDTCisSameAs<0, 1>,
                                           SDTCisSameAs<0, 2>]>;
+def SDT_AArch64Addhn : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>,
+                                            SDTCisSameAs<1, 2>,
+                                            SDTCisOpSmallerThanOp<0, 1>]>;
 def SDT_AArch64MOVIedit : SDTypeProfile<1, 1, [SDTCisInt<1>]>;
 def SDT_AArch64MOVIshift : SDTypeProfile<1, 2, [SDTCisInt<1>, SDTCisInt<2>]>;
 def SDT_AArch64vecimm : SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisSameAs<0,1>,
@@ -1107,6 +1110,8 @@ def AArch64usdot    : SDNode<"AArch64ISD::USDOT", SDT_AArch64Dot>;
 // Only the lower result lane is defined.
 def AArch64saddv    : SDNode<"AArch64ISD::SADDV", SDT_AArch64UnaryVec>;
 def AArch64uaddv    : SDNode<"AArch64ISD::UADDV", SDT_AArch64UnaryVec>;
+
+def AArch64addhn     : SDNode<"AArch64ISD::ADDHN", SDT_AArch64Addhn>;
 
 // Vector across-lanes min/max
 // Only the lower result lane is defined.
@@ -7406,7 +7411,7 @@ def : Pat <(f64 (uint_to_fp (i32
 // Advanced SIMD three different-sized vector instructions.
 //===----------------------------------------------------------------------===//
 
-defm ADDHN   : SIMDNarrowThreeVectorBHS<0,0b0100,"addhn", int_aarch64_neon_addhn>;
+defm ADDHN   : SIMDNarrowThreeVectorBHS<0,0b0100,"addhn", AArch64addhn>;
 defm SUBHN   : SIMDNarrowThreeVectorBHS<0,0b0110,"subhn", int_aarch64_neon_subhn>;
 defm RADDHN  : SIMDNarrowThreeVectorBHS<1,0b0100,"raddhn",int_aarch64_neon_raddhn>;
 defm RSUBHN  : SIMDNarrowThreeVectorBHS<1,0b0110,"rsubhn",int_aarch64_neon_rsubhn>;
@@ -9144,6 +9149,9 @@ def fixedpoint_scalar_xform : SDNodeXForm<timm, [{
   (void)N;
   return V;
 }]>;
+def gi_fixedpoint_scalar_xform
+    : GICustomOperandRenderer<"renderFixedPointScalarXForm">,
+      GISDNodeXFormEquiv<fixedpoint_scalar_xform>;
 
 multiclass FPToFixedScalarPats<SDPatternOperator OpN, string INST > {
   // Allow integer result to remain in GPR register.
@@ -9157,12 +9165,7 @@ multiclass FPToFixedScalarPats<SDPatternOperator OpN, string INST > {
           (!cast<Instruction>(INST # "s") FPR32:$Rn, vecshiftR32:$imm)>;
   def : Pat<(f64 (bitconvert(i64 (OpN (f64 FPR64:$Rn), vecshiftR64:$imm)))),
           (!cast<Instruction>(INST # "d") FPR64:$Rn, vecshiftR64:$imm)>;
-
-  // FPR fallback patterns.
-  def : Pat<(i32 (OpN FPR32:$Rn, vecshiftR32:$imm)),
-          (!cast<Instruction>(INST # "s") FPR32:$Rn, vecshiftR32:$imm)>;
-  def : Pat<(i64 (OpN (f64 FPR64:$Rn), vecshiftR64:$imm)),
-          (!cast<Instruction>(INST # "d") FPR64:$Rn, vecshiftR64:$imm)>;
+          
   def : Pat<(v1i64 (OpN (v1f64 FPR64:$Rn), vecshiftR64:$imm)),
           (!cast<Instruction>(INST # "d") FPR64:$Rn, vecshiftR64:$imm)>;
   def : Pat<(i32 (OpN (f16 FPR16:$Rn), vecshiftR32:$imm)),
