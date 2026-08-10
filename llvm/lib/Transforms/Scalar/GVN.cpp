@@ -3094,11 +3094,14 @@ namespace {
 bool isExprBuiltFromBaseOnly(Value *Expr, Value *Base) {
   if (!Expr || !Base) 
     return false;
+  
   if (Expr == Base)
     return true;
+  
   // Only handle Cast, BinOp, UnaryOp for now.
   if (!isa<CastInst, BinaryOperator, UnaryOperator>(Expr))
       return false;
+    
   auto *ExprInst = cast<Instruction>(Expr);
   bool isUsedAtLeastOnce = false;
   for (Value *Op : ExprInst->operands()) {
@@ -3108,6 +3111,7 @@ bool isExprBuiltFromBaseOnly(Value *Expr, Value *Base) {
       return false;
     isUsedAtLeastOnce = true;
   }
+  
   return isUsedAtLeastOnce;
 }
 
@@ -3119,13 +3123,17 @@ Value *cloneExprReplacingOperand(Value *Expr, const Value *OldVal,
                                  Value *NewVal, Instruction *InsertPt) {
   if (!Expr || !OldVal || !NewVal || !InsertPt)
      return nullptr;
+    
   if (isa<Constant>(Expr))
     return Expr;
+  
   if (Expr == OldVal)
     return NewVal;
+  
   // Only handle Cast, BinOp, UnaryOp for now.
   if (!isa<CastInst, BinaryOperator, UnaryOperator>(Expr))
     return nullptr;
+  
   auto *ExprInst = cast<Instruction>(Expr);
   SmallVector<Value *, 4> NewOps;
   for (Value *Op : ExprInst->operands()) {
@@ -3149,6 +3157,9 @@ bool GVNPass::propagateConstExpressions(Value *LHS, Value *RHS,
                                         const BasicBlockEdge &Root) {
   if (!GVNPropagateConstExp)
     return false;
+  
+  if (!LHS || !RHS || !DT)
+    return false;
 
   // Restrict to integer type for now.
   if (!LHS->getType()->isIntegerTy())
@@ -3164,14 +3175,11 @@ bool GVNPass::propagateConstExpressions(Value *LHS, Value *RHS,
 
   if (!isOnlyReachableViaThisEdge(Root, DT))
     return false;
-
-  BasicBlock *RootBB = const_cast<BasicBlock *>(Root.getEnd());
-  bool ChangedIR = false;
-  for (BasicBlock *BB : depth_first(RootBB)) {
-    if (!DT->dominates(Root.getEnd(), BB))
-      continue;
-
-    for (Instruction &I : *BB) {
+  
+  auto processBlock = [&](BasicBlock *Block) {
+    bool Changed = false;
+    for (auto &I : *Block) {
+      
       if (isa<PHINode>(&I))
         continue;
 
@@ -3200,7 +3208,7 @@ bool GVNPass::propagateConstExpressions(Value *LHS, Value *RHS,
         I.setOperand(OpNum, ClonedExpr);
         LLVM_DEBUG(dbgs() << "\nConstPropExpr: To: " << I << "\n");
 
-        if (isa<Instruction>(ClonedExpr) && ClonedExpr->hasOneUse()) {
+        if (isa<Instruction>(ClonedExpr)) {
           auto *CI = cast<Instruction>(ClonedExpr);
           const DataLayout &DL = I.getDataLayout();
           if (Value *V = simplifyInstruction(CI, {DL, TLI, DT, AC})) {
@@ -3213,6 +3221,15 @@ bool GVNPass::propagateConstExpressions(Value *LHS, Value *RHS,
         Changed = true;
       }
     }
+    
+    return Changed;
+  };
+  
+  bool Changed = false;
+  auto *RootNode = DT->getNode(Root.getEnd());
+  Changed |= processBlock(const_cast<BasicBlock *>(Root.getEnd()));
+  for (auto *DominatedNode : *RootNode) {
+    Changed |= processBlock(DominatedNode->getBlock());
   }
 
   if (Changed)
