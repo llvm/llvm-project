@@ -828,31 +828,70 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
 ///
 /// One of the two sides has to change its storage so that this does not happen,
 /// and only a mapping created by this construct can, since the device address
-/// of a mapping that was already present may have been obtained by the program.
-/// So, for each pending attachment whose pointer is shared with the original:
+/// of a mapping that was already present may have been obtained by the program,
+/// through omp_get_mapped_ptr, use_device_ptr, or having been passed to an
+/// earlier kernel.
 ///
-///  - if the pointee's storage was allocated for this construct, it gives that
-///    allocation up and shares storage with the original, which makes the
-///    address to be attached the original one;
-///  - otherwise, if the pointer's mapping was created by this construct, the
-///    pointer takes a device allocation, so that the assignment does not reach
-///    the original pointer;
-///  - otherwise neither side can change, and processAttachEntries reports it.
+/// Both changes are available:
 ///
-/// This runs as a pre-pass, over all the entries, for two reasons.
+///  - releasing the pointee's allocation, so that the address to be attached is
+///    the original one and the assignment is a no-op;
+///  - giving the pointer a device allocation, so that the assignment does not
+///    reach the original pointer.
 ///
-/// Giving up an allocation moves the pointee's device address, which
-/// invalidates any pointer already attached to it. Deciding per-entry while
-/// interleaving attachments would make the outcome depend on the order the
-/// entries happen to be in: a pointee could be attached to through one pointer
-/// and only then be demoted for another, stranding the first. Settling every
-/// entry first means a demotion cannot strand an attachment, so it never has to
-/// be undone.
+/// Releasing is preferred, because it settles that attachment outright, whereas
+/// giving a pointer device storage moves that pointer's own address and so
+/// propagates to everything attached to it. But an attachment whose pointee is
+/// device-bound from an enclosing construct has no choice: the pointee cannot
+/// be released, so the pointer must be upgraded. Those obligations therefore
+/// have to be known before anything is released, or a release can turn out to
+/// have been pointless -- and worse, releasing something that was obliged to
+/// stay device-bound reintroduces a conflict that then has no resolution.
 ///
-/// The demotions are also all applied before any upgrade is considered. A
-/// demotion removes the very disparity that would make the other side need an
-/// upgrade, so this avoids giving a pointer a device allocation that a
-/// subsequent demotion would have made unnecessary.
+/// Hence three phases, none of which mutates before the obligations are known:
+///
+///     attach entries
+///           |
+///           v
+///   +-------------------+   an attachment only happens if a side was newly
+///   | 0. eligible?      |   mapped here, or it is unconditional; settling one
+///   +-------------------+   that will be skipped would report a false conflict
+///           |
+///           v
+///   +-------------------+   seed: pointees that are device-bound and NOT
+///   | 1. forced set     |   allocated here, so immovable
+///   |    (no mutation)  |   propagate: anything attached inside a forced entry
+///   +-------------------+   is forced too, transitively
+///           |
+///           v
+///   +-------------------+   upgrade those pointers, cascading backwards over
+///   | 2. forced         |   the recorded attachments and the pending ones
+///   |    upgrades       |   reaching a pre-existing host-bound entry => error
+///   +-------------------+
+///           |
+///           v
+///   +-------------------+   everything still unsettled has a pointee this
+///   | 3. releases,      |   construct allocated, so release it; skip the
+///   |    to a fixpoint  |   forced set. Repeat: a release can leave another
+///   +-------------------+   attachment unsettled, since the storage just
+///           |               released may itself hold a pointer whose own
+///           v               pointee is device-bound
+///     all settled
+///
+/// Each phase moves in one direction only, and phase 3 never touches what phase
+/// 2 forced, so no decision is ever reversed. Phase 2 terminates because an
+/// upgrade makes an entry device-bound and only host-bound entries are visited;
+/// phase 3 terminates because each release frees an allocation made by this
+/// construct and none are created here.
+///
+/// Attachments for PTR_AND_OBJ map entries are not covered: those are performed
+/// as the mapping is processed, before this runs, so such a pointer can still
+/// be assigned a device address in its original storage. That encoding is on
+/// its way out, as attachment becomes the way every pointer mapping is
+/// expressed, and the remaining users are shrinking: declare-mapper members no
+/// longer lower to it after a recent change to mapper code generation, which
+/// leaves C++ by-reference captures. Deferring these the same way is what fixes
+/// it, once they are no longer emitted at all.
 static int settleAttachStorage(DeviceTy &Device, StateInfoTy &StateInfo,
                                AsyncInfoTy &AsyncInfo) {
   MappingInfoTy &MappingInfo = Device.getMappingInfo();
@@ -1039,8 +1078,8 @@ static int settleAttachStorage(DeviceTy &Device, StateInfoTy &StateInfo,
   // device-bound. So keep going until a pass releases nothing. Each release
   // frees an allocation made by this construct, and none are created here, so
   // this terminates.
-  for (bool Demoted = true; Demoted;) {
-    Demoted = false;
+  for (bool Released = true; Released;) {
+    Released = false;
     for (const auto &AttachEntry : StateInfo.AttachEntries) {
       void **HstPtr = reinterpret_cast<void **>(AttachEntry.PointerBase);
       void *HstPteeBegin = AttachEntry.PointeeBegin;
@@ -1074,7 +1113,7 @@ static int settleAttachStorage(DeviceTy &Device, StateInfoTy &StateInfo,
       if (MappingInfo.shareEntryStorageWithOriginal(
               HDTTMap, PteeEntry, AsyncInfo) != OFFLOAD_SUCCESS)
         return OFFLOAD_FAIL;
-      Demoted = true;
+      Released = true;
     }
   }
 
@@ -1102,7 +1141,7 @@ int processAttachEntries(DeviceTy &Device, StateInfoTy &StateInfo,
                     << " deferred ATTACH map entries";
 
   // Decide which side of each attachment holds device storage before performing
-  // any of them, so that a demotion cannot strand an earlier attachment.
+  // any of them, so that a release cannot strand an earlier attachment.
   if (settleAttachStorage(Device, StateInfo, AsyncInfo) != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
 
