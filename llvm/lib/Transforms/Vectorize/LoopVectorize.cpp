@@ -5512,8 +5512,7 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   LLVM_DEBUG(printPlans(dbgs()));
 }
 
-bool LoopVectorizationPlanner::planForEpilogueTF(ElementCount UserVF,
-                                                 unsigned UserIC) {
+bool LoopVectorizationPlanner::planForEpilogueTF() {
   if (VPlans.empty()) {
     LLVM_DEBUG(dbgs() << "LV: no vplans have been built for main loop VF, bail "
                          "out of epilogue tail-folding\n");
@@ -8191,7 +8190,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   if (EpilogueTailFoldingCM) {
     // Enable the epilogue tail-folding CM
     LVP.enableEpilogueTFCM();
-    if (!LVP.planForEpilogueTF(UserVF, UserIC)) {
+    if (!LVP.planForEpilogueTF()) {
       // we can't apply epilogue TF:
       reportVectorizationInfo(
           "Applying epilogue tail-folding failed, disable it.",
