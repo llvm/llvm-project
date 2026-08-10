@@ -1573,39 +1573,23 @@ MemRefInfo FIRToMemRef::getMemRefInfo(Value firMemref,
     return std::pair{*converted, indices};
   }
 
-  // Some other zero-offset view (fir.declare, ref/box fir.convert,
-  // fir.box_addr, fir.volatile_cast, fir.create_box, unsliced
-  // fir.embox/fir.rebox): peek underneath for an fir.array_coor or indexing
-  // fir.coordinate_of that needs bounds-aware handling (e.g. fir.declare
+  // Some other zero-offset, ref-producing view (fir.declare, ref-to-ref
+  // fir.convert, fir.box_addr, fir.volatile_cast): peek underneath for an
+  // fir.array_coor that needs bounds-aware handling (e.g. fir.declare
   // wrapping fir.array_coor); otherwise marshal the view itself so its
   // naming is kept and getFIRConvert's dedup logic still applies.
   if (isa<fir::FortranObjectViewOpInterface>(memrefOp)) {
-    if (Operation *peeledOp = peelZeroOffsetViews(firMemref).getDefiningOp()) {
-      if (auto arrayCoorOp = dyn_cast<fir::ArrayCoorOp>(peeledOp)) {
-        MemRefInfo memrefInfo =
-            convertArrayCoorOp(memOp, arrayCoorOp, rewriter, typeConverter);
-        if (succeeded(memrefInfo)) {
-          for (auto user : peeledOp->getUsers())
-            if (!isa<fir::LoadOp, fir::StoreOp>(user))
-              return memrefInfo;
-          eraseOps.insert(peeledOp);
-        }
-        return memrefInfo;
+    if (auto arrayCoorOp = dyn_cast_or_null<fir::ArrayCoorOp>(
+            peelZeroOffsetViews(firMemref).getDefiningOp())) {
+      MemRefInfo memrefInfo =
+          convertArrayCoorOp(memOp, arrayCoorOp, rewriter, typeConverter);
+      if (succeeded(memrefInfo)) {
+        for (auto user : arrayCoorOp->getUsers())
+          if (!isa<fir::LoadOp, fir::StoreOp>(user))
+            return memrefInfo;
+        eraseOps.insert(arrayCoorOp);
       }
-
-      if (auto coordinateOp = dyn_cast<fir::CoordinateOp>(peeledOp);
-          coordinateOp &&
-          isArrayIndexingCoordinateOp(coordinateOp, typeConverter)) {
-        MemRefInfo memrefInfo = convertCoordinateArrayOp(
-            memOp, coordinateOp, rewriter, typeConverter);
-        if (succeeded(memrefInfo)) {
-          for (auto user : peeledOp->getUsers())
-            if (!isa<fir::LoadOp, fir::StoreOp>(user))
-              return memrefInfo;
-          eraseOps.insert(peeledOp);
-          return memrefInfo;
-        }
-      }
+      return memrefInfo;
     }
 
     FailureOr<Value> converted =
