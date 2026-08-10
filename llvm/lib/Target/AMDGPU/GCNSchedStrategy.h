@@ -456,7 +456,8 @@ private:
   bool
   initHeuristics(std::vector<std::pair<MachineInstr *, unsigned>> &RewriteCands,
                  DenseMap<MachineBasicBlock *, std::set<Register>> &CopyForUse,
-                 SmallPtrSetImpl<MachineInstr *> &CopyForDef);
+                 SmallPtrSetImpl<MachineInstr *> &CopyForDef,
+                 const SmallPtrSetImpl<MachineInstr *> &RewriteSet);
 
   /// Calculate the rewrite cost and undo the state change (e.g. rewriting) done
   /// in initHeuristics. Uses \p CopyForUse and \p CopyForDef to calculate copy
