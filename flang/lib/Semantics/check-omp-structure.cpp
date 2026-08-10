@@ -478,9 +478,16 @@ bool OmpStructureChecker::CheckAllowedClause(llvm::omp::Clause clauseId,
           GetUpperName(clauseId, version), GetUpperName(dirId, version),
           ThisVersion(version), TryVersion(allowedInVersion));
     } else {
+      llvm::StringRef annot{
+          dirId == llvm::omp::Directive::OMPD_ordered_standalone
+              ? " (standalone)"
+              : dirId == llvm::omp::Directive::OMPD_ordered_blockassoc
+              ? " (block-associated)"
+              : ""};
       context_.Say(clauseSource,
-          "%s clause is not allowed on %s directive"_err_en_US,
-          GetUpperName(clauseId, version), GetUpperName(dirId, version));
+          "%s clause is not allowed on %s%s directive"_err_en_US,
+          GetUpperName(clauseId, version), GetUpperName(dirId, version),
+          annot.str());
     }
     return false;
   }
