@@ -159,7 +159,7 @@ function(builtin_default_target compiler_rt_path)
                                                 SANITIZER
                            USE_TOOLCHAIN
                            TARGET_TRIPLE ${LLVM_TARGET_TRIPLE}
-                           FOLDER "Compiler-RT"
+                           FOLDER "compiler-rt"
                            ${EXTRA_ARGS})
 endfunction()
 
@@ -183,7 +183,7 @@ function(builtin_register_target compiler_rt_path name)
                                       ${COMMON_CMAKE_ARGS}
                                       ${${name}_extra_args}
                            USE_TOOLCHAIN
-                           FOLDER "Compiler-RT"
+                           FOLDER "compiler-rt"
                            ${EXTRA_ARGS} ${ARG_EXTRA_ARGS})
 endfunction()
 
@@ -214,7 +214,7 @@ if(compiler_rt_path)
     add_custom_target(install-builtins-stripped)
     set_target_properties(
       builtins install-builtins install-builtins-stripped
-      PROPERTIES FOLDER "Compiler-RT"
+      PROPERTIES FOLDER "compiler-rt"
     )
   endif()
 
@@ -643,21 +643,21 @@ if(build_runtimes)
       endif()
     endforeach()
   endif()
-  if(LLVM_LIBC_GPU_BUILD)
-    set(_gpu_loader "${LLVM_TOOLS_BINARY_DIR}/llvm-gpu-loader${CMAKE_EXECUTABLE_SUFFIX}")
-    foreach(name ${LLVM_RUNTIME_TARGETS})
-      if(name MATCHES "^(amdgcn|amdgpu|nvptx)")
-        set(RUNTIMES_${name}_CMAKE_CROSSCOMPILING_EMULATOR "${_gpu_loader}" CACHE STRING "")
+  set(_gpu_loader "${LLVM_TOOLS_BINARY_DIR}/llvm-gpu-loader${CMAKE_EXECUTABLE_SUFFIX}")
+  foreach(name ${LLVM_RUNTIME_TARGETS})
+    if(name MATCHES "^amdgpu|^amdgcn|^nvptx|^spirv")
+      set(RUNTIMES_${name}_CMAKE_CROSSCOMPILING_EMULATOR "${_gpu_loader}" CACHE STRING "")
+      if(TARGET llvm-offload-binary)
+        list(APPEND extra_deps llvm-offload-binary)
       endif()
-    endforeach()
-    list(APPEND extra_cmake_args "-DLLVM_LIBC_GPU_BUILD=ON")
-    if(TARGET llvm-offload-binary)
-      list(APPEND extra_deps llvm-offload-binary)
+      if(TARGET clang-nvlink-wrapper)
+        list(APPEND extra_deps clang-nvlink-wrapper)
+      endif()
+      if(TARGET llvm-link)
+        list(APPEND extra_deps llvm-link)
+      endif()
     endif()
-    if(TARGET clang-nvlink-wrapper)
-      list(APPEND extra_deps clang-nvlink-wrapper)
-    endif()
-  endif()
+  endforeach()
   if(LLVM_LIBC_FULL_BUILD)
     list(APPEND extra_cmake_args "-DLLVM_LIBC_FULL_BUILD=ON")
   endif()
@@ -715,7 +715,7 @@ if(build_runtimes)
         add_custom_target(check-builtins)
         set_target_properties(
           check-builtins
-          PROPERTIES FOLDER "Compiler-RT"
+          PROPERTIES FOLDER "compiler-rt"
         )
       endif()
       if(LLVM_RUNTIME_DISTRIBUTION_COMPONENTS)

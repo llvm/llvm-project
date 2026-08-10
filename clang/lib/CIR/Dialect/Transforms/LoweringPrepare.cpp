@@ -98,7 +98,7 @@ struct LoweringPreparePass
   void lowerTrivialCopyCall(cir::CallOp op);
   void lowerStoreOfConstAggregate(cir::StoreOp op);
   void lowerLocalInitOp(cir::LocalInitOp op);
-  template <typename StdOpTy> void lowerStdOp(StdOpTy op);
+  void lowerStdOp(cir::StdOpInterface op);
 
   /// Return the FuncOp called by `callOp`.  Uses the cached `symbolTables`
   /// member to avoid the O(M) module-wide scan that the static
@@ -1172,6 +1172,15 @@ LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
   auto fnType = cir::FuncType::get({}, voidTy);
   FuncOp f = buildRuntimeFunction(builder, fnName, op.getLoc(), fnType,
                                   cir::GlobalLinkageKind::InternalLinkage);
+
+  // Forward the constrained floating-point marker recorded on the global by
+  // CodeGen onto the generated initializer function. The marker on the global
+  // is no longer meaningful once its regions have been moved out, so clear it.
+  if (op.getStrictfp()) {
+    f->setAttr(cir::CIRDialect::getStrictFPAttrName(),
+               mlir::UnitAttr::get(&getContext()));
+    op.setStrictfp(false);
+  }
 
   // Move over the initialization code of the ctor region.
   // The ctor region may have multiple blocks when exception handling
@@ -2255,8 +2264,7 @@ void LoweringPreparePass::lowerStoreOfConstAggregate(cir::StoreOp op) {
 // Every raised operation carries the original callee, the operands, and the
 // attributes of the call, so this one function lowers any of them back to an
 // equivalent plain call.
-template <typename StdOpTy>
-void LoweringPreparePass::lowerStdOp(StdOpTy typedOp) {
+void LoweringPreparePass::lowerStdOp(cir::StdOpInterface typedOp) {
   mlir::Operation *op = typedOp.getOperation();
   cir::CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointAfter(op);
@@ -2278,8 +2286,8 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
     lowerArrayCtor(arrayCtor);
   } else if (auto arrayDtor = dyn_cast<cir::ArrayDtor>(op)) {
     lowerArrayDtor(arrayDtor);
-  } else if (auto findOp = mlir::dyn_cast<cir::StdFindOp>(op)) {
-    lowerStdOp(findOp);
+  } else if (auto stdOp = mlir::dyn_cast<cir::StdOpInterface>(op)) {
+    lowerStdOp(stdOp);
   } else if (auto cast = mlir::dyn_cast<cir::CastOp>(op)) {
     lowerCastOp(cast);
   } else if (auto complexConj = mlir::dyn_cast<cir::ComplexConjOp>(op)) {
@@ -2918,7 +2926,8 @@ void LoweringPreparePass::runOnOperation() {
                   cir::ComplexConjOp, cir::ComplexMulOp, cir::ComplexDivOp,
                   cir::DynamicCastOp, cir::FuncOp, cir::CallOp,
                   cir::GetGlobalOp, cir::GlobalOp, cir::StoreOp,
-                  cir::CmpThreeWayOp, cir::LocalInitOp, cir::StdFindOp>(op))
+                  cir::CmpThreeWayOp, cir::LocalInitOp, cir::StdOpInterface>(
+            op))
       opsToTransform.push_back(op);
   });
 

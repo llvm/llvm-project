@@ -322,16 +322,24 @@ void SPIRVAsmPrinter::emitInstruction(const MachineInstr *MI) {
   SPIRV_MC::verifyInstructionPredicates(MI->getOpcode(),
                                         getSubtargetInfo().getFeatureBits());
 
-  if (!MAI->getSkipEmission(MI))
+  bool InstructionEmitted = !MAI->getSkipEmission(MI);
+  if (InstructionEmitted)
     outputInstruction(MI);
 
   // Output OpLabel after OpFunction and OpFunctionParameter in the first MBB.
   const MachineInstr *NextMI = MI->getNextNode();
-  if (!LabeledMBB.contains(MI->getParent()) && isFuncOrHeaderInstr(MI, TII) &&
-      (!NextMI || !isFuncOrHeaderInstr(NextMI, TII))) {
+  bool BlockHasLabel = LabeledMBB.contains(MI->getParent());
+  bool IsFunctionPreambleInstruction = isFuncOrHeaderInstr(MI, TII);
+  bool IsNextInstructionFunctionPreamble =
+      NextMI && isFuncOrHeaderInstr(NextMI, TII);
+  bool ShouldEmitEntryLabel = !BlockHasLabel && IsFunctionPreambleInstruction &&
+                              !IsNextInstructionFunctionPreamble;
+  if (ShouldEmitEntryLabel) {
     assert(MI->getParent()->getNumber() == MF->front().getNumber() &&
            "OpFunction is not in the front MBB of MF");
     emitOpLabel(*MI->getParent());
+    if (NSDebugHandler && !isHidden())
+      NSDebugHandler->notifyEntryLabelEmitted(*MF);
   }
 }
 
@@ -398,7 +406,8 @@ void SPIRVAsmPrinter::outputEntryPoints() {
   // Find all OpVariable IDs with required StorageClass.
   DenseSet<MCRegister> InterfaceIDs;
   for (const MachineInstr *MI : MAI->GlobalVarList) {
-    assert(MI->getOpcode() == SPIRV::OpVariable);
+    assert(MI->getOpcode() == SPIRV::OpVariable ||
+           MI->getOpcode() == SPIRV::OpUntypedVariableKHR);
     auto SC = static_cast<SPIRV::StorageClass::StorageClass>(
         MI->getOperand(2).getImm());
     // Before version 1.4, the interface's storage classes are limited to
@@ -739,10 +748,7 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
 void SPIRVAsmPrinter::outputAnnotations(const Module &M) {
   outputModuleSection(SPIRV::MB_Annotations);
   // Process llvm.global.annotations special global variable.
-  for (auto F = M.global_begin(), E = M.global_end(); F != E; ++F) {
-    if ((*F).getName() != "llvm.global.annotations")
-      continue;
-    const GlobalVariable *V = &(*F);
+  if (const GlobalVariable *V = M.getNamedGlobal("llvm.global.annotations")) {
     const ConstantArray *CA = cast<ConstantArray>(V->getOperand(0));
     for (Value *Op : CA->operands()) {
       ConstantStruct *CS = cast<ConstantStruct>(Op);

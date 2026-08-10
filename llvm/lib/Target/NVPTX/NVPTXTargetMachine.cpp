@@ -14,6 +14,7 @@
 #include "NVPTX.h"
 #include "NVPTXAliasAnalysis.h"
 #include "NVPTXAllocaHoisting.h"
+#include "NVPTXAsmPrinter.h"
 #include "NVPTXAtomicLower.h"
 #include "NVPTXCtorDtorLowering.h"
 #include "NVPTXLowerAggrCopies.h"
@@ -97,8 +98,8 @@ static cl::opt<bool> EarlyByValArgsCopy(
 
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   // Register the target.
-  RegisterTargetMachine<NVPTXTargetMachine32> X(getTheNVPTXTarget32());
-  RegisterTargetMachine<NVPTXTargetMachine64> Y(getTheNVPTXTarget64());
+  RegisterTargetMachine<NVPTXTargetMachine> X(getTheNVPTXTarget32());
+  RegisterTargetMachine<NVPTXTargetMachine> Y(getTheNVPTXTarget64());
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   // FIXME: This pass is really intended to be invoked during IR optimization,
@@ -108,7 +109,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeGenericToNVVMLegacyPassPass(PR);
   initializeNVPTXAllocaHoistingPass(PR);
   initializeNVPTXAsmPrinterPass(PR);
-  initializeNVPTXAssignValidGlobalNamesPass(PR);
+  initializeNVPTXAssignValidGlobalNamesLegacyPassPass(PR);
   initializeNVPTXAtomicLowerPass(PR);
   initializeNVPTXLowerArgsLegacyPassPass(PR);
   initializeNVPTXPromoteParamAlignLegacyPassPass(PR);
@@ -118,7 +119,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeNVPTXCtorDtorLoweringLegacyPass(PR);
   initializeNVPTXLowerAggrCopiesPass(PR);
   initializeNVPTXProxyRegErasurePass(PR);
-  initializeNVPTXForwardParamsPassPass(PR);
+  initializeNVPTXForwardParamsLegacyPassPass(PR);
   initializeNVPTXAddressFolderPassPass(PR);
   initializeNVPTXDAGToDAGISelLegacyPass(PR);
   initializeNVPTXAAWrapperPassPass(PR);
@@ -134,46 +135,21 @@ NVPTXTargetMachine::NVPTXTargetMachine(const Target &T, const Triple &TT,
                                        const TargetOptions &Options,
                                        std::optional<Reloc::Model> RM,
                                        std::optional<CodeModel::Model> CM,
-                                       CodeGenOptLevel OL, bool is64bit)
+                                       CodeGenOptLevel OL, bool JIT)
     // The pic relocation model is used regardless of what the client has
     // specified, as it is the only relocation model currently supported.
     : CodeGenTargetMachineImpl(
           T, TT.computeDataLayout(UseShortPointersOpt ? "shortptr" : ""), TT,
           CPU, FS, Options, Reloc::PIC_,
           getEffectiveCodeModel(CM, CodeModel::Small), OL),
-      is64bit(is64bit), TLOF(std::make_unique<NVPTXTargetObjectFile>()),
-      Subtarget(TT, std::string(CPU), std::string(FS), *this),
-      StrPool(StrAlloc) {
-  if (TT.getOS() == Triple::NVCL)
-    drvInterface = NVPTX::NVCL;
-  else
-    drvInterface = NVPTX::CUDA;
+      TLOF(std::make_unique<NVPTXTargetObjectFile>()),
+      Subtarget(TT, CPU, FS, *this), StrPool(StrAlloc) {
   if (!DisableRequireStructuredCFG)
     setRequiresStructuredCFG(true);
   initAsmInfo();
 }
 
 NVPTXTargetMachine::~NVPTXTargetMachine() = default;
-
-void NVPTXTargetMachine32::anchor() {}
-
-NVPTXTargetMachine32::NVPTXTargetMachine32(const Target &T, const Triple &TT,
-                                           StringRef CPU, StringRef FS,
-                                           const TargetOptions &Options,
-                                           std::optional<Reloc::Model> RM,
-                                           std::optional<CodeModel::Model> CM,
-                                           CodeGenOptLevel OL, bool JIT)
-    : NVPTXTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, false) {}
-
-void NVPTXTargetMachine64::anchor() {}
-
-NVPTXTargetMachine64::NVPTXTargetMachine64(const Target &T, const Triple &TT,
-                                           StringRef CPU, StringRef FS,
-                                           const TargetOptions &Options,
-                                           std::optional<Reloc::Model> RM,
-                                           std::optional<CodeModel::Model> CM,
-                                           CodeGenOptLevel OL, bool JIT)
-    : NVPTXTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, true) {}
 
 namespace {
 
@@ -190,7 +166,6 @@ public:
   bool addInstSelector() override;
   void addPreRegAlloc() override;
   void addPostRegAlloc() override;
-  void addMachineSSAOptimization() override;
 
   FunctionPass *createTargetRegisterAllocator(bool) override;
   void addFastRegAlloc() override;
@@ -236,6 +211,16 @@ void NVPTXTargetMachine::registerEarlyDefaultAliasAnalyses(AAManager &AAM) {
 void NVPTXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #define GET_PASS_REGISTRY "NVPTXPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
+
+  // TODO: Move this into the base CodeGenPassBuilder once all targets that
+  // currently implement it have a ported asm-printer pass.
+  if (PIC) {
+    PIC->addClassToPassName(NVPTXAsmPrinterBeginPass::name(),
+                            "nvptx-asm-printer-begin");
+    PIC->addClassToPassName(NVPTXAsmPrinterPass::name(), "nvptx-asm-printer");
+    PIC->addClassToPassName(NVPTXAsmPrinterEndPass::name(),
+                            "nvptx-asm-printer-end");
+  }
 
   PB.registerPipelineStartEPCallback(
       [this](ModulePassManager &PM, OptimizationLevel Level) {
@@ -357,7 +342,7 @@ void NVPTXPassConfig::addIRPasses() {
 
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createNVPTXImageOptimizerPass());
-  addPass(createNVPTXAssignValidGlobalNamesPass());
+  addPass(createNVPTXAssignValidGlobalNamesLegacyPass());
   addPass(createGenericToNVVMLegacyPass());
 
   // Lower variadic calls before address space inference.
@@ -372,6 +357,9 @@ void NVPTXPassConfig::addIRPasses() {
   if (getOptLevel() != CodeGenOptLevel::None) {
     addAddressSpaceInferencePasses();
     addStraightLineScalarOptimizationPasses();
+  } else {
+    // Required for correct stack lowering
+    addPass(createNVPTXLowerAllocaPass());
   }
 
   addPass(createAtomicExpandLegacyPass());
@@ -421,7 +409,7 @@ bool NVPTXPassConfig::addInstSelector() {
 }
 
 void NVPTXPassConfig::addPreRegAlloc() {
-  addPass(createNVPTXForwardParamsPass());
+  addPass(createNVPTXForwardParamsLegacyPass());
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createNVPTXAddressFolderPass());
   // Remove Proxy Register pseudo instructions used to keep `callseq_end` alive.
@@ -466,44 +454,4 @@ void NVPTXPassConfig::addOptimizedRegAlloc() {
   // addPass(&MachineLICMID);
 
   printAndVerify("After StackSlotColoring");
-}
-
-void NVPTXPassConfig::addMachineSSAOptimization() {
-  // Pre-ra tail duplication.
-  if (addPass(&EarlyTailDuplicateLegacyID))
-    printAndVerify("After Pre-RegAlloc TailDuplicate");
-
-  // Optimize PHIs before DCE: removing dead PHI cycles may make more
-  // instructions dead.
-  addPass(&OptimizePHIsLegacyID);
-
-  // This pass merges large allocas. StackSlotColoring is a different pass
-  // which merges spill slots.
-  addPass(&StackColoringLegacyID);
-
-  // If the target requests it, assign local variables to stack slots relative
-  // to one another and simplify frame index references where possible.
-  addPass(&LocalStackSlotAllocationID);
-
-  // With optimization, dead code should already be eliminated. However
-  // there is one known exception: lowered code for arguments that are only
-  // used by tail calls, where the tail calls reuse the incoming stack
-  // arguments directly (see t11 in test/CodeGen/X86/sibcall.ll).
-  addPass(&DeadMachineInstructionElimID);
-  printAndVerify("After codegen DCE pass");
-
-  // Allow targets to insert passes that improve instruction level parallelism,
-  // like if-conversion. Such passes will typically need dominator trees and
-  // loop info, just like LICM and CSE below.
-  if (addILPOpts())
-    printAndVerify("After ILP optimizations");
-
-  addPass(&EarlyMachineLICMID);
-  addPass(&MachineCSELegacyID);
-
-  addPass(&MachineSinkingLegacyID);
-  printAndVerify("After Machine LICM, CSE and Sinking passes");
-
-  addPass(&PeepholeOptimizerLegacyID);
-  printAndVerify("After codegen peephole optimization pass");
 }
