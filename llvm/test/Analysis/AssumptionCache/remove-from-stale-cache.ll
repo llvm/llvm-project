@@ -1,4 +1,4 @@
-; RUN: opt < %s -disable-output -passes='module(print<assumptions>),loop-rotate,simplifycfg,hotcoldsplit' 2>&1 | FileCheck %s
+; RUN: opt < %s -disable-output -passes='no-op-module,loop-rotate,simplifycfg,print<assumptions>,hotcoldsplit' 2>&1 | FileCheck %s
 
 ; Check that we don't crash on deletion from a stale assumption cache.
 ;
@@ -9,7 +9,7 @@
 
 define void @dont_crash(i1 %cond.1, ptr %ptr) {
 ; CHECK-LABEL: Cached assumptions for function: dont_crash
-; CHECK-NEXT: [ "nonnull"(ptr %phi) ]
+; CHECK-NEXT: [ "nonnull"(ptr %ptr) ]
 ; CHECK-NEXT: [ "dereferenceable"(ptr %ptr, i64 8) ]
 entry:
   br i1 %cond.1, label %loop.cond, label %assume
