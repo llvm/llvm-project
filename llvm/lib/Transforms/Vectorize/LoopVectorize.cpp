@@ -5655,6 +5655,9 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
   // and skip all recipes that represent induction phis and increments (the
   // former case) later on, if they exist, to avoid counting them twice.
   // Similarly we pre-compute the cost of any optimized truncates.
+  // Inductions that are represented by a VPWidenIntOrFpInductionRecipe are an
+  // exception: their cost is computed by the recipe's computeCost (see below),
+  // so they are not precomputed here.
   // TODO: Switch to more accurate costing based on VPlan.
 
   // If the vector loop gets executed exactly once with the given VF, ignore the
@@ -5663,28 +5666,24 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
   // TODO: Remove this code after stepping away from the legacy cost model and
   // adding code to simplify VPlans before calculating their costs.
   auto TC = getSmallConstantTripCount(PSE.getSE(), OrigLoop);
-  bool IsFullyUnrolled = TC == VF && !Plan.hasTailFolded();
   SmallPtrSet<const Value *, 4> WidenedIVs;
-  bool HasTruncatedIV = false;
-  if (IsFullyUnrolled) {
+  if (TC == VF && !Plan.hasTailFolded()) {
     addFullyUnrolledInstructionsToIgnore(OrigLoop, Legal->getInductionVars(),
                                          CostCtx.SkipCostComputation);
   } else {
     // Inductions represented by a VPWidenIntOrFpInductionRecipe have their cost
     // computed by the recipe, so collect their phis to skip the legacy
-    // increment cost below. If any induction is truncated the VPlan-based cost
-    // will diverge. Still fall back to the legacy cost model for now.
+    // increment cost below.
     VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
     for (VPRecipeBase &R : *LoopRegion->getEntryBasicBlock())
       if (auto *WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R)) {
-        HasTruncatedIV |= WideIV->getTruncInst() != nullptr;
         if (PHINode *IVPhi = WideIV->getPHINode())
           WidenedIVs.insert(IVPhi);
       }
   }
 
   for (const auto &[IV, IndDesc] : Legal->getInductionVars()) {
-    if (!HasTruncatedIV && WidenedIVs.contains(IV))
+    if (WidenedIVs.contains(IV))
       continue;
     Instruction *IVInc = cast<Instruction>(
         IV->getIncomingValueForBlock(OrigLoop->getLoopLatch()));
