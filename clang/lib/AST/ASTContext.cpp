@@ -2370,8 +2370,10 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
       Align = Target->getPointerAlign(LangAS::Default);
       break;
     case BuiltinType::MetaInfo:
-      Width = Target->getMetaInfoWidth();
-      Align = Target->getMetaInfoAlign();
+      // sizeof(std::meta::info) == sizeof(void*)
+      Width = Target->getPointerWidth(LangAS::Default);
+      // alignof(std::meta::info) == alignof(void*)
+      Align = Target->getPointerAlign(LangAS::Default);
       break;
     case BuiltinType::ObjCId:
     case BuiltinType::ObjCClass:
