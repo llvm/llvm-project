@@ -173,6 +173,7 @@ void LifetimeModeling::checkDeadSymbols(SymbolReaper &SymReaper,
   ProgramStateRef State = C.getState();
   LifetimeBoundMapTy LBMap = State->get<LifetimeBoundMap>();
   DeallocatedSourceSetTy Sources = State->get<DeallocatedSourceSet>();
+  ReportedDeadRegionsTy Reported = State->get<ReportedDeadRegions>();
 
   for (SVal Val : llvm::make_first_range(LBMap)) {
     if (const auto *R = Val.getAsRegion(); R && SymReaper.isLiveRegion(R))
@@ -188,6 +189,11 @@ void LifetimeModeling::checkDeadSymbols(SymbolReaper &SymReaper,
   for (const MemRegion *Region : Sources) {
     if (!SymReaper.isLiveRegion(Region))
       State = State->remove<DeallocatedSourceSet>(Region);
+  }
+
+  for (const MemRegion *Region : Reported) {
+    if (!SymReaper.isLiveRegion(Region))
+      State = State->remove<ReportedDeadRegions>(Region);
   }
   C.addTransition(State);
 }
