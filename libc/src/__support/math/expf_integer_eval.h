@@ -48,7 +48,7 @@ LIBC_INLINE float expf(float x) {
                         check::exp_internal::Bounds<float>::UPPER_BITS ||
                     x_val_abs <= 0x3300'0000U)) {
     // |x| <= 2^-25
-    if (xbits.get_biased_exponent() <= 102) {
+    if (x_val_abs <= 0x3300'0000U) {
       return 1.0f;
     }
 
