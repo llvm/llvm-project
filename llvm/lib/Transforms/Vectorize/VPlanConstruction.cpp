@@ -1248,15 +1248,6 @@ bool VPlanTransforms::handleEarlyExits(VPlan &Plan, UncountableExitStyle Style,
                                        PredicatedScalarEvolution &PSE,
                                        DominatorTree &DT, AssumptionCache *AC) {
   auto *MiddleVPBB = VPBlockUtils::getPlainCFGMiddleBlock(Plan);
-  bool HasEarlyExits =
-      any_of(Plan.getExitBlocks(), [MiddleVPBB](VPIRBasicBlock *EB) {
-        return any_of(EB->getPredecessors(), [MiddleVPBB](VPBlockBase *Pred) {
-          return Pred != MiddleVPBB;
-        });
-      });
-  if (!HasEarlyExits)
-    return true;
-
   auto [HeaderVPBB, LatchVPBB] = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan);
 
   // TODO: We would like to detect uncountable exits and stores within loops
@@ -1275,6 +1266,11 @@ bool VPlanTransforms::handleEarlyExits(VPlan &Plan, UncountableExitStyle Style,
                                        TheLoop, PSE, DT, AC, Style);
   }
 
+  auto EarlyExits = vputils::getEarlyExits(Plan, MiddleVPBB);
+  // There are no countable early exits.
+  if (EarlyExits.empty())
+    return true;
+
   // A scalar epilogue is required if vectorized loop includes countable early
   // exits.
   if (MiddleVPBB->getNumSuccessors() == 2) {
@@ -1286,7 +1282,7 @@ bool VPlanTransforms::handleEarlyExits(VPlan &Plan, UncountableExitStyle Style,
 
   // Disconnect countable early exits from the loop, leaving it with a single
   // exit from the latch. Countable early exits are left for a scalar epilog.
-  for (auto [EarlyExitingVPBB, EB] : vputils::getEarlyExits(Plan, MiddleVPBB)) {
+  for (auto [EarlyExitingVPBB, EB] : EarlyExits) {
     // Remove phi operands for the early exiting block.
     for (VPRecipeBase &R : EB->phis())
       cast<VPIRPhi>(&R)->removeIncomingValueFor(EarlyExitingVPBB);
