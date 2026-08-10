@@ -8478,8 +8478,14 @@ PreservedAnalyses LoopVectorizePass::run(Function &F,
 
   auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
   PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
-  GetBFI = [&AM, &F]() -> BlockFrequencyInfo & {
-    return AM.getResult<BlockFrequencyAnalysis>(F);
+  // Compute BFI eagerly rather than lazily. LoopVectorize may modify the
+  // function (vectorizing earlier loops) before requesting BFI for later loops.
+  // If BFI is computed lazily after such modifications, its dependency
+  // CycleAnalysis may be stale (holding pointers to deleted blocks), causing
+  // crashes.
+  BlockFrequencyInfo &BFIRef = AM.getResult<BlockFrequencyAnalysis>(F);
+  GetBFI = [&BFIRef]() -> BlockFrequencyInfo & {
+    return BFIRef;
   };
   LoopVectorizeResult Result = runImpl(F);
   if (!Result.MadeAnyChange)
