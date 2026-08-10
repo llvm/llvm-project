@@ -778,7 +778,7 @@ def OMP_EndDeclareVariant : Directive<[Spelling<"end declare variant", 1, 52>,
   let association = AS_Delimited;
   let category = OMP_BeginDeclareVariant.category;
   let languages = OMP_BeginDeclareVariant.languages;
-  let pureSince = 50;
+  let pureSince = OMP_BeginDeclareVariant.pureSince;
 }
 def OMP_Cancel : Directive<[Spelling<"cancel">]> {
   let allowedClauses = [
