@@ -2,8 +2,6 @@
 Kaleidoscope: Extending the Language: Mutable Variables
 =======================================================
 
-.. contents::
-   :local:
 
 Chapter 7 Introduction
 ======================
@@ -600,11 +598,11 @@ allowed.
           return nullptr;
 
         // Look up the name.
-        Value *Variable = NamedValues[LHSE->getName()];
-        if (!Variable)
+        AllocaInst *Alloca = NamedValues[LHSE->getName()];
+        if (!Alloca)
           return LogErrorV("Unknown variable name");
 
-        Builder->CreateStore(Val, Variable);
+        Builder->CreateStore(Val, Alloca);
         return Val;
       }
       ...

@@ -28,16 +28,21 @@ namespace object {
 struct BBAddrMap {
 
   // Bitfield of optional features to control the extra information
-  // emitted/encoded in the section.
+  // emitted/encoded in the section. The feature list lives in BBAddrMap.def.
   struct Features {
-    bool FuncEntryCount : 1;
-    bool BBFreq : 1;
-    bool BrProb : 1;
-    bool MultiBBRange : 1;
-    bool OmitBBEntries : 1;
-    bool CallsiteEndOffsets : 1;
-    bool BBHash : 1;
-    bool PostLinkCfg : 1;
+    enum {
+#define HANDLE_BB_ADDR_MAP_FEATURE(Name) Name##Bit,
+#include "llvm/Object/BBAddrMap.def"
+      NumBits,
+    };
+    static_assert(NumBits <= 16,
+                  "BBAddrMap::Features is encoded as a uint16_t");
+
+#define HANDLE_BB_ADDR_MAP_FEATURE(Name) bool Name : 1;
+#include "llvm/Object/BBAddrMap.def"
+
+    static constexpr uint16_t KnownMask =
+        (static_cast<uint16_t>(1) << NumBits) - 1;
 
     bool hasPGOAnalysis() const { return FuncEntryCount || BBFreq || BrProb; }
 
@@ -45,24 +50,21 @@ struct BBAddrMap {
 
     // Encodes to minimum bit width representation.
     uint16_t encode() const {
-      return (static_cast<uint16_t>(FuncEntryCount) << 0) |
-             (static_cast<uint16_t>(BBFreq) << 1) |
-             (static_cast<uint16_t>(BrProb) << 2) |
-             (static_cast<uint16_t>(MultiBBRange) << 3) |
-             (static_cast<uint16_t>(OmitBBEntries) << 4) |
-             (static_cast<uint16_t>(CallsiteEndOffsets) << 5) |
-             (static_cast<uint16_t>(BBHash) << 6) |
-             (static_cast<uint16_t>(PostLinkCfg) << 7);
+      uint16_t V = 0;
+#define HANDLE_BB_ADDR_MAP_FEATURE(Name)                                       \
+  V |= static_cast<uint16_t>(Name) << Name##Bit;
+#include "llvm/Object/BBAddrMap.def"
+      return V;
     }
 
     // Decodes from minimum bit width representation and validates no
     // unnecessary bits are used.
     static Expected<Features> decode(uint16_t Val) {
       Features Feat{
-          static_cast<bool>(Val & (1 << 0)), static_cast<bool>(Val & (1 << 1)),
-          static_cast<bool>(Val & (1 << 2)), static_cast<bool>(Val & (1 << 3)),
-          static_cast<bool>(Val & (1 << 4)), static_cast<bool>(Val & (1 << 5)),
-          static_cast<bool>(Val & (1 << 6)), static_cast<bool>(Val & (1 << 7))};
+#define HANDLE_BB_ADDR_MAP_FEATURE(Name)                                       \
+  static_cast<bool>(Val & (uint16_t{1} << Name##Bit)),
+#include "llvm/Object/BBAddrMap.def"
+      };
       if (Feat.encode() != Val)
         return createStringError(
             "invalid encoding for BBAddrMap::Features: 0x%x", Val);
@@ -70,49 +72,44 @@ struct BBAddrMap {
     }
 
     bool operator==(const Features &Other) const {
-      return std::tie(FuncEntryCount, BBFreq, BrProb, MultiBBRange,
-                      OmitBBEntries, CallsiteEndOffsets, BBHash, PostLinkCfg) ==
-             std::tie(Other.FuncEntryCount, Other.BBFreq, Other.BrProb,
-                      Other.MultiBBRange, Other.OmitBBEntries,
-                      Other.CallsiteEndOffsets, Other.BBHash,
-                      Other.PostLinkCfg);
+      return encode() == Other.encode();
     }
   };
 
   // Struct representing the BBAddrMap information for one basic block.
   struct BBEntry {
     struct Metadata {
-      bool HasReturn : 1;         // If this block ends with a return (or tail
-                                  // call).
-      bool HasTailCall : 1;       // If this block ends with a tail call.
-      bool IsEHPad : 1;           // If this is an exception handling block.
-      bool CanFallThrough : 1;    // If this block can fall through to its next.
-      bool HasIndirectBranch : 1; // If this block ends with an indirect branch
-                                  // (branch via a register).
+      enum {
+#define HANDLE_BB_ADDR_MAP_BB_METADATA(Name) Name##Bit,
+#include "llvm/Object/BBAddrMap.def"
+        NumBits,
+      };
+      static_assert(NumBits <= 32,
+                    "BBAddrMap::BBEntry::Metadata is encoded as a uint32_t");
+
+#define HANDLE_BB_ADDR_MAP_BB_METADATA(Name) bool Name : 1;
+#include "llvm/Object/BBAddrMap.def"
 
       bool operator==(const Metadata &Other) const {
-        return HasReturn == Other.HasReturn &&
-               HasTailCall == Other.HasTailCall && IsEHPad == Other.IsEHPad &&
-               CanFallThrough == Other.CanFallThrough &&
-               HasIndirectBranch == Other.HasIndirectBranch;
+        return encode() == Other.encode();
       }
 
       // Encodes this struct as a uint32_t value.
       uint32_t encode() const {
-        return static_cast<uint32_t>(HasReturn) |
-               (static_cast<uint32_t>(HasTailCall) << 1) |
-               (static_cast<uint32_t>(IsEHPad) << 2) |
-               (static_cast<uint32_t>(CanFallThrough) << 3) |
-               (static_cast<uint32_t>(HasIndirectBranch) << 4);
+        uint32_t V = 0;
+#define HANDLE_BB_ADDR_MAP_BB_METADATA(Name)                                   \
+  V |= static_cast<uint32_t>(Name) << Name##Bit;
+#include "llvm/Object/BBAddrMap.def"
+        return V;
       }
 
       // Decodes and returns a Metadata struct from a uint32_t value.
       static Expected<Metadata> decode(uint32_t V) {
-        Metadata MD{/*HasReturn=*/static_cast<bool>(V & 1),
-                    /*HasTailCall=*/static_cast<bool>(V & (1 << 1)),
-                    /*IsEHPad=*/static_cast<bool>(V & (1 << 2)),
-                    /*CanFallThrough=*/static_cast<bool>(V & (1 << 3)),
-                    /*HasIndirectBranch=*/static_cast<bool>(V & (1 << 4))};
+        Metadata MD{
+#define HANDLE_BB_ADDR_MAP_BB_METADATA(Name)                                   \
+  static_cast<bool>(V & (uint32_t{1} << Name##Bit)),
+#include "llvm/Object/BBAddrMap.def"
+        };
         if (MD.encode() != V)
           return createStringError(
               "invalid encoding for BBEntry::Metadata: 0x%x", V);
@@ -282,7 +279,7 @@ public:
 /// \p Extractor provides address extraction and the underlying DataExtractor.
 /// \p PGOAnalyses if non-null, receives the decoded PGO analysis data. On
 ///   error, \p PGOAnalyses may be partially populated.
-Expected<std::vector<BBAddrMap>>
+LLVM_ABI Expected<std::vector<BBAddrMap>>
 decodeBBAddrMapPayload(AddressExtractor &Extractor,
                        std::vector<PGOAnalysisMap> *PGOAnalyses = nullptr);
 

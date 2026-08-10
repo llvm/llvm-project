@@ -32,9 +32,6 @@
  *  - xxHash source repository : https://github.com/Cyan4973/xxHash
  */
 
-// xxhash64 is based on commit d2df04efcbef7d7f6886d345861e5dfda4edacc1. Removed
-// everything but a simple interface for computing xxh64.
-
 // xxh3_64bits is based on commit d5891596637d21366b9b1dcf2c0007a3edb26a9e (July
 // 2023).
 
@@ -77,20 +74,6 @@ static const uint64_t PRIME64_3 = 1609587929392839161ULL;
 static const uint64_t PRIME64_4 = 9650029242287828579ULL;
 static const uint64_t PRIME64_5 = 2870177450012600261ULL;
 
-static uint64_t round(uint64_t Acc, uint64_t Input) {
-  Acc += Input * PRIME64_2;
-  Acc = rotl64(Acc, 31);
-  Acc *= PRIME64_1;
-  return Acc;
-}
-
-static uint64_t mergeRound(uint64_t Acc, uint64_t Val) {
-  Val = round(0, Val);
-  Acc ^= Val;
-  Acc = Acc * PRIME64_1 + PRIME64_4;
-  return Acc;
-}
-
 static uint64_t XXH64_avalanche(uint64_t hash) {
   hash ^= hash >> 33;
   hash *= PRIME64_2;
@@ -98,64 +81,6 @@ static uint64_t XXH64_avalanche(uint64_t hash) {
   hash *= PRIME64_3;
   hash ^= hash >> 32;
   return hash;
-}
-
-uint64_t llvm::xxHash64(const uint8_t *P, size_t Len) {
-  uint64_t Seed = 0;
-  const uint8_t *const BEnd = P + Len;
-  uint64_t H64;
-
-  if (Len >= 32) {
-    const unsigned char *const Limit = BEnd - 32;
-    uint64_t V1 = Seed + PRIME64_1 + PRIME64_2;
-    uint64_t V2 = Seed + PRIME64_2;
-    uint64_t V3 = Seed + 0;
-    uint64_t V4 = Seed - PRIME64_1;
-
-    do {
-      V1 = round(V1, endian::read64le(P));
-      P += 8;
-      V2 = round(V2, endian::read64le(P));
-      P += 8;
-      V3 = round(V3, endian::read64le(P));
-      P += 8;
-      V4 = round(V4, endian::read64le(P));
-      P += 8;
-    } while (P <= Limit);
-
-    H64 = rotl64(V1, 1) + rotl64(V2, 7) + rotl64(V3, 12) + rotl64(V4, 18);
-    H64 = mergeRound(H64, V1);
-    H64 = mergeRound(H64, V2);
-    H64 = mergeRound(H64, V3);
-    H64 = mergeRound(H64, V4);
-
-  } else {
-    H64 = Seed + PRIME64_5;
-  }
-
-  H64 += (uint64_t)Len;
-
-  while (reinterpret_cast<uintptr_t>(P) + 8 <=
-         reinterpret_cast<uintptr_t>(BEnd)) {
-    uint64_t const K1 = round(0, endian::read64le(P));
-    H64 ^= K1;
-    H64 = rotl64(H64, 27) * PRIME64_1 + PRIME64_4;
-    P += 8;
-  }
-
-  if (reinterpret_cast<uintptr_t>(P) + 4 <= reinterpret_cast<uintptr_t>(BEnd)) {
-    H64 ^= (uint64_t)(endian::read32le(P)) * PRIME64_1;
-    H64 = rotl64(H64, 23) * PRIME64_2 + PRIME64_3;
-    P += 4;
-  }
-
-  while (P < BEnd) {
-    H64 ^= (*P) * PRIME64_5;
-    H64 = rotl64(H64, 11) * PRIME64_1;
-    P++;
-  }
-
-  return XXH64_avalanche(H64);
 }
 
 constexpr size_t XXH3_SECRETSIZE_MIN = 136;

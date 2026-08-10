@@ -683,8 +683,7 @@ Register ARMFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
   if (!isLoadTypeLegal(AI->getType(), VT))
     return Register();
 
-  DenseMap<const AllocaInst*, int>::iterator SI =
-    FuncInfo.StaticAllocaMap.find(AI);
+  auto SI = FuncInfo.StaticAllocaMap.find(AI);
 
   // This will get lowered later into the correct offsets and registers
   // via rewriteXFrameIndex.
@@ -817,8 +816,7 @@ bool ARMFastISel::ARMComputeAddress(const Value *Obj, Address &Addr) {
     }
     case Instruction::Alloca: {
       const AllocaInst *AI = cast<AllocaInst>(Obj);
-      DenseMap<const AllocaInst*, int>::iterator SI =
-        FuncInfo.StaticAllocaMap.find(AI);
+      auto SI = FuncInfo.StaticAllocaMap.find(AI);
       if (SI != FuncInfo.StaticAllocaMap.end()) {
         Addr.setKind(Address::FrameIndexBase);
         Addr.setFI(SI->second);
@@ -1908,8 +1906,7 @@ CCAssignFn *ARMFastISel::CCAssignFnForCall(CallingConv::ID CC,
   case CallingConv::CXX_FAST_TLS:
     // Use target triple & subtarget features to do actual dispatch.
     if (TM.isAAPCS_ABI()) {
-      if (Subtarget->hasFPRegs() &&
-          TM.Options.FloatABIType == FloatABI::Hard && !isVarArg)
+      if (Subtarget->hasFPRegs() && Subtarget->isTargetHardFloat() && !isVarArg)
         return (Return ? RetCC_ARM_AAPCS_VFP: CC_ARM_AAPCS_VFP);
       else
         return (Return ? RetCC_ARM_AAPCS: CC_ARM_AAPCS);

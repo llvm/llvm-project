@@ -26,7 +26,8 @@
 # CHECK:         bb.2:
 # CHECK-NEXT:      successors: %bb.4(0x80000000)
 # CHECK-NEXT: {{  $}}
-# CHECK-NEXT:      %12:fp32bit = nofpexcept SEB %9, %fixed-stack.2, 4, $noreg, implicit-def dead $cc, implicit $fpc :: (load (s32) from %fixed-stack.2)
+# CHECK-NEXT:      %12:fp32bit = COPY %9
+# CHECK-NEXT:      %12:fp32bit = nofpexcept SEB %12, %fixed-stack.2, 4, $noreg, implicit-def dead $cc, implicit $fpc :: (load (s32) from %fixed-stack.2)
 # CHECK-NEXT:      %13:vr32bit = nofpexcept WFMSB %5, %12, implicit $fpc
 # CHECK-NEXT:      %14:fp32bit = nofpexcept WFMSB %13, %9, implicit $fpc
 # CHECK-NEXT:      J %bb.4
@@ -80,7 +81,8 @@ body:             |
   bb.2:
     successors: %bb.4(0x80000000)
   
-    %12:vr32bit = nofpexcept WFSSB %9, %7, implicit $fpc
+    %12:vr32bit = COPY %9
+    %12:vr32bit = nofpexcept WFSSB %12, %7, implicit $fpc
     %13:vr32bit = nofpexcept WFMSB %2, %12, implicit $fpc
     %14:fp32bit = nofpexcept WFMSB %13, %9, implicit $fpc
     J %bb.4

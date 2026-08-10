@@ -4,34 +4,34 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @h(i8 %x) !type !2 {
+define void @h(i8 %x) !type !2 !guid !{i64 8124147457056772133} {
   ret void
 }
 
 declare !type !8 void @f(i32 %x)
-define available_externally void @f2(i32 %x) !type !8 {
+define available_externally void @f2(i32 %x) !type !8 !guid !{i64 8471399308421654326} {
   ret void
 }
-define void @f3(i32 %x) !type !8 {
+define void @f3(i32 %x) !type !8 !guid !{i64 4197650231481825559} {
   ret void
 }
 
 !cfi.functions = !{!0, !1, !3, !9, !10, !4, !5, !6}
 
 ; declaration of @h with a different type is ignored
-!0 = !{!"h", i8 1, !7}
+!0 = !{!"h", i8 1, i64 8124147457056772133, !7}
 
 ; extern_weak declaration of @h with a different type is ignored as well
-!1 = !{!"h", i8 2, !8}
+!1 = !{!"h", i8 2, i64 8124147457056772133, !8}
 !2 = !{i64 0, !"typeid1"}
 
 ; definitions of @f and @f2 replace types on the IR declarations above
-!3 = !{!"f", i8 0, !2}
-!9 = !{!"f2", i8 0, !2}
-!10 = !{!"f3", i8 0, !2}
-!4 = !{!"external", i8 1, !2}
-!5 = !{!"external_weak", i8 2, !2}
-!6 = !{!"g", i8 0, !7}
+!3 = !{!"f", i8 0, i64 14740650423002898831, !2}
+!9 = !{!"f2", i8 0, i64 8471399308421654326, !2}
+!10 = !{!"f3", i8 0, i64 4197650231481825559, !2}
+!4 = !{!"external", i8 1, i64 5224464028922159466, !2}
+!5 = !{!"external_weak", i8 2, i64 5227079976482001346, !2}
+!6 = !{!"g", i8 0, i64 13146401226427987378, !7}
 !7 = !{i64 0, !"typeid2"}
 !8 = !{i64 0, !"typeid3"}
 
@@ -50,14 +50,21 @@ define void @f3(i32 %x) !type !8 {
 
 ; CHECK-DAG: @g                    = alias [8 x i8], ptr [[JT2]]
 
-; CHECK-DAG: define hidden void @h.cfi(i8 {{.*}}) !type !{{.*}}
-; CHECK-DAG: declare !type !{{.*}} void @external()
-; CHECK-DAG: declare !type !{{.*}} void @external_weak()
+; CHECK-DAG: define hidden void @h.cfi(i8 {{.*}}) !type !{{.*}} !guid ![[H_GUID:[0-9]+]] {
+; CHECK-DAG: declare !type !{{.*}} !guid ![[EXTERNAL_GUID:[0-9]+]] void @external()
+; CHECK-DAG: declare !type !{{.*}} !guid ![[EXTERNAL_WEAK_GUID:[0-9]+]] extern_weak void @external_weak()
 ; CHECK-DAG: declare !type !{{.*}} void @f.cfi(i32)
-; CHECK-DAG: declare !type !{{.*}} void @f2.cfi(i32)
-; CHECK-DAG: define void @f3(i32 {{.*}}) !type !3
-; CHECK-DAG: !3 = !{i64 0, !"typeid3"}
-; CHECK-DAG: declare !type !{{.*}} void @g.cfi()
+; CHECK-DAG: declare !type !{{.*}} !guid ![[F2_GUID:[0-9]+]] hidden void @f2.cfi(i32)
+; CHECK-DAG: define void @f3(i32 {{.*}}) !type ![[F3_TYPE:[0-9]+]] !guid ![[F3_GUID:[0-9]+]] {
+; CHECK-DAG: declare !type !{{.*}} !guid ![[G_GUID:[0-9]+]] hidden void @g.cfi()
+; CHECK-DAG: ![[F3_TYPE]] = !{i64 0, !"typeid3"}
+; CHECK-DAG: ![[H_GUID]] = !{i64 8124147457056772133}
+; CHECK-DAG: ![[F2_GUID]] = !{i64 8471399308421654326}
+; CHECK-DAG: ![[F3_GUID]] = !{i64 4197650231481825559}
+; CHECK-DAG: ![[EXTERNAL_GUID]] = !{i64 5224464028922159466}
+; CHECK-DAG: ![[EXTERNAL_WEAK_GUID]] = !{i64 5227079976482001346}
+; -5300342847281564238 is (int64_t)(13146401226427987378)
+; CHECK-DAG: ![[G_GUID]] = !{i64 -5300342847281564238}
 
 
 ; SUMMARY:      TypeIdMap:
@@ -81,11 +88,17 @@ define void @f3(i32 %x) !type !8 {
 ; SUMMARY-NEXT:     WPDRes:
 
 ; SUMMARY:      CfiFunctionDefs:
-; SUMMARY-NEXT:   - f
-; SUMMARY-NEXT:   - f2
-; SUMMARY-NEXT:   - g
-; SUMMARY-NEXT:   - h
+; SUMMARY-NEXT:   - Name:            f
+; SUMMARY-NEXT:     GUID:            14740650423002898831
+; SUMMARY-NEXT:   - Name:            f2
+; SUMMARY-NEXT:     GUID:            8471399308421654326
+; SUMMARY-NEXT:   - Name:            g
+; SUMMARY-NEXT:     GUID:            13146401226427987378
+; SUMMARY-NEXT:   - Name:            h
+; SUMMARY-NEXT:     GUID:            8124147457056772133
 ; SUMMARY-NEXT: CfiFunctionDecls:
-; SUMMARY-NEXT:   - external
-; SUMMARY-NEXT:   - external_weak
+; SUMMARY-NEXT:   - Name:            external
+; SUMMARY-NEXT:     GUID:            5224464028922159466
+; SUMMARY-NEXT:   - Name:            external_weak
+; SUMMARY-NEXT:     GUID:            5227079976482001346
 ; SUMMARY-NEXT: ...

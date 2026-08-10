@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_RISCV_RISCV_H
 
 #include "MCTargetDesc/RISCVBaseInfo.h"
+#include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
@@ -49,6 +50,11 @@ void initializeRISCVLandingPadSetupPass(PassRegistry &);
 
 FunctionPass *createRISCVISelDag(RISCVTargetMachine &TM,
                                  CodeGenOptLevel OptLevel);
+
+class RISCVISelDAGToDAGPass : public SelectionDAGISelPass {
+public:
+  RISCVISelDAGToDAGPass(RISCVTargetMachine &TM, CodeGenOptLevel OptLevel);
+};
 
 FunctionPass *createRISCVLateBranchOptPass();
 void initializeRISCVLateBranchOptPass(PassRegistry &);
@@ -132,6 +138,9 @@ void initializeRISCVVLOptimizerPass(PassRegistry &);
 
 FunctionPass *createRISCVVMV0EliminationPass();
 void initializeRISCVVMV0EliminationPass(PassRegistry &);
+
+FunctionPass *createRISCVQCRelaxMarkingPass();
+void initializeRISCVQCRelaxMarkingPass(PassRegistry &);
 
 void initializeRISCVAsmPrinterPass(PassRegistry &);
 } // namespace llvm
