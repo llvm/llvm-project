@@ -5890,8 +5890,12 @@ class InterleavedElementwiseChain {
     SmallVector<Instruction *, 8> Insts;
     unsigned ChainOperand;
 
-    ElementwiseStep(ArrayRef<Instruction *> Insts, unsigned ChainOperand)
-        : Insts(Insts.begin(), Insts.end()), ChainOperand(ChainOperand) {}
+    ElementwiseStep(ArrayRef<Use *> Uses, unsigned ChainOperand)
+        : ChainOperand(ChainOperand) {
+      Insts.reserve(Uses.size());
+      for (Use *U : Uses)
+        Insts.push_back(cast<Instruction>(U->getUser()));
+    }
   };
 
   IRBuilderBase &Builder;
@@ -5961,21 +5965,26 @@ public:
 
   /// Visit a list  of instructions and check if they can be rewritten as a
   /// single wider instruction. If so, the list is appened to \p Steps.
-  bool visitInstLevel(ArrayRef<Instruction *> Insts,
-                      ArrayRef<unsigned> OperandNumbers) {
-    if (Insts.empty() || Insts.size() != OperandNumbers.size())
+  bool visitInstLevel(ArrayRef<Use *> Uses) {
+    if (Uses.empty())
       return false;
 
-    Instruction *FirstInst = Insts.front();
-    unsigned ChainOperand = OperandNumbers.front();
+    Instruction *FirstInst = cast<Instruction>(Uses.front()->getUser());
 
     if (!isSupportedElementwise(FirstInst))
       return false;
 
-    for (unsigned Index = 1; Index != Insts.size(); ++Index)
-      if (OperandNumbers[Index] != ChainOperand ||
-          !FirstInst->isSameOperationAs(Insts[Index]))
-        return false;
+    unsigned ChainOperand = Uses.front()->getOperandNo();
+
+    if (!FirstInst || !isSupportedElementwise(FirstInst))
+      return false;
+
+    if (any_of(Uses.drop_front(), [&](Use *U) {
+          auto *Inst = dyn_cast<Instruction>(U->getUser());
+          return !Inst || U->getOperandNo() != ChainOperand ||
+                 !FirstInst->isSameOperationAs(Inst);
+        }))
+      return false;
 
     // Non-chain operands must be either the same scalar or splats of that
     // scalar. This intentionally rejects differing poison/undef or non-splat
@@ -5985,13 +5994,14 @@ public:
         continue;
 
       Value *CommonValue = getSplatOrScalar(FirstInst->getOperand(Op));
-      if (!CommonValue || any_of(drop_begin(Insts), [&](Instruction *Inst) {
+      if (!CommonValue || any_of(Uses.drop_front(), [&](Use *U) {
+            Instruction *Inst = cast<Instruction>(U->getUser());
             return getSplatOrScalar(Inst->getOperand(Op)) != CommonValue;
           }))
         return false;
     }
 
-    Steps.emplace_back(Insts, ChainOperand);
+    Steps.emplace_back(Uses, ChainOperand);
     return true;
   }
 
@@ -6100,18 +6110,18 @@ bool VectorCombine::foldDeinterleaveInterleavePair(Instruction &I) {
   // At each level, expect every chain to perform the same operation with the
   // preceding chain value at the same operand position, until they all reach
   // the matching interleave.
-  SmallVector<unsigned, 8> OperandNumbers(CurrentInsts.size());
+  SmallVector<Use *, 8> CurrentUses(CurrentInsts.size());
   while (NumVisited + Factor <= MaxInstrsToScan) {
     NumVisited += Factor;
 
-    for (auto [Current, OpNumber] : zip_equal(CurrentInsts, OperandNumbers)) {
+    for (auto [Current, CurrentUse] : zip_equal(CurrentInsts, CurrentUses)) {
       Use *U = Current->getSingleUndroppableUse();
       auto *Next = U ? dyn_cast<Instruction>(U->getUser()) : nullptr;
       if (!Next)
         return false;
 
       Current = Next;
-      OpNumber = U->getOperandNo();
+      CurrentUse = U;
     }
 
     // Check whether every chain has reached the same interleave.
@@ -6121,14 +6131,15 @@ bool VectorCombine::foldDeinterleaveInterleavePair(Instruction &I) {
         return false;
 
       for (unsigned Index = 0; Index != Factor; ++Index)
-        if (CurrentInsts[Index] != II || OperandNumbers[Index] != Index)
+        if (CurrentInsts[Index] != II ||
+            CurrentUses[Index]->getOperandNo() != Index)
           return false;
 
       Interleave = II;
       break;
     }
 
-    if (!Chain.visitInstLevel(CurrentInsts, OperandNumbers))
+    if (!Chain.visitInstLevel(CurrentUses))
       return false;
   }
 
