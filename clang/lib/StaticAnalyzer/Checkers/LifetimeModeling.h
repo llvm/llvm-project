@@ -23,8 +23,8 @@ bool isBoundToLifetimeSource(ProgramStateRef State, SVal Val);
 /// descriptive name cannot be constructed for it.
 std::string getRegionName(const MemRegion *Reg);
 
-/// Returns true if \p R is seen the first time. If R was alreay reported
-/// before returns false.
+/// Returns the updated \p State with \p R marked as reported if \p R is seen
+/// the first time. Returns nullptr if \p R was already reported.
 ProgramStateRef markAsReported(ProgramStateRef State, const MemRegion *Region);
 
 } // namespace clang::ento::lifetime_modeling
