@@ -291,13 +291,13 @@ SampleProfileWriterExtBinaryBase::writeFuncOffsetTable(bool IsCS) {
 }
 
 std::error_code
-SampleProfileWriterExtBinaryBase::writeEytzingerFuncOffsetTable(bool IsCS) {
+SampleProfileWriterExtBinaryBase::writeEytzingerFuncOffsetTable(bool IsNested) {
   assert((NumCS + NumFlat > 0 || FuncOffsetTable.empty()) &&
          "SecNameTable must be written before SecFuncOffsetTable to establish "
          "Eytzinger indices!");
 
-  size_t SpanSize = IsCS ? NumCS : NumFlat;
-  size_t BaseIdx = IsCS ? 0 : NumCS;
+  size_t SpanSize = IsNested ? NumCS : NumFlat;
+  size_t BaseIdx = IsNested ? 0 : NumCS;
 
   std::vector<support::ulittle32_t> FuncOffsets(
       SpanSize, support::ulittle32_t(UINT32_MAX));
@@ -486,11 +486,11 @@ namespace {
 //
 // The on-disk layout of the Eytzinger name table section consists of symbol
 // counts followed by three contiguous Eytzinger hash arrays:
-// - ULEB128 count of Context-Sensitive (CS) top-level profile symbol keys
+// - ULEB128 count of Nested top-level profile symbol keys
 // - ULEB128 count of Flat top-level profile symbol keys
 // - ULEB128 count of Inlinee and auxiliary profile symbol keys
-// - Array of 64-bit little-endian MD5 hash keys for CS profiles in Eytzinger
-//   order
+// - Array of 64-bit little-endian MD5 hash keys for Nested profiles in
+//   Eytzinger order
 // - Array of 64-bit little-endian MD5 hash keys for Flat profiles in Eytzinger
 //   order
 // - Array of 64-bit little-endian MD5 hash keys for Inlinees in Eytzinger order
@@ -499,10 +499,10 @@ class EytzingerNameTable {
   std::array<TableT, static_cast<size_t>(EytzingerSpan::NumSpans)> Spans;
 
 public:
-  EytzingerNameTable(std::vector<support::ulittle64_t> CSKeys,
+  EytzingerNameTable(std::vector<support::ulittle64_t> NestedKeys,
                      std::vector<support::ulittle64_t> FlatKeys,
                      std::vector<support::ulittle64_t> InlineeKeys)
-      : Spans{TableT::create(std::move(CSKeys)),
+      : Spans{TableT::create(std::move(NestedKeys)),
               TableT::create(std::move(FlatKeys)),
               TableT::create(std::move(InlineeKeys))} {}
 
@@ -536,7 +536,7 @@ std::error_code
 SampleProfileWriterExtBinaryBase::writeEytzingerNameTableSection(
     const SampleProfileMap &ProfileMap) {
   DenseSet<uint64_t> TopLevelGUIDs;
-  std::vector<support::ulittle64_t> CSKeys, FlatKeys, InlineeKeys;
+  std::vector<support::ulittle64_t> NestedKeys, FlatKeys, InlineeKeys;
 
   // Collect top-level CS and Flat keys directly from ProfileMap.
   for (const auto &I : ProfileMap) {
@@ -545,8 +545,8 @@ SampleProfileWriterExtBinaryBase::writeEytzingerNameTableSection(
     if (TopLevelGUIDs.insert(GUID).second) {
       // In single-table default layouts, unify all top-level symbols in the CS
       // partition so they match the single unflagged function offset table.
-      if (SecLayout != CtxSplitLayout || I.second.isContextSensitiveTopLevel())
-        CSKeys.emplace_back(GUID);
+      if (SecLayout != CtxSplitLayout || I.second.hasCallsiteSamples())
+        NestedKeys.emplace_back(GUID);
       else
         FlatKeys.emplace_back(GUID);
     }
@@ -560,7 +560,7 @@ SampleProfileWriterExtBinaryBase::writeEytzingerNameTableSection(
       InlineeKeys.emplace_back(GUID);
   }
 
-  EytzingerNameTable Tables(std::move(CSKeys), std::move(FlatKeys),
+  EytzingerNameTable Tables(std::move(NestedKeys), std::move(FlatKeys),
                             std::move(InlineeKeys));
 
   // Assign each symbol its corresponding index in the Eytzinger layout.
@@ -568,7 +568,7 @@ SampleProfileWriterExtBinaryBase::writeEytzingerNameTableSection(
     Idx = Tables.findGlobalIdx(FId.getHashCode());
 
   Tables.write(*OutputStream);
-  NumCS = Tables.size(EytzingerSpan::CS);
+  NumCS = Tables.size(EytzingerSpan::Nested);
   NumFlat = Tables.size(EytzingerSpan::Flat);
 
   return sampleprof_error::success;
@@ -735,7 +735,7 @@ static void splitProfileMapToTwo(const SampleProfileMap &ProfileMap,
                                  SampleProfileMap &ContextProfileMap,
                                  SampleProfileMap &NoContextProfileMap) {
   for (const auto &I : ProfileMap) {
-    if (I.second.isContextSensitiveTopLevel())
+    if (I.second.hasCallsiteSamples())
       ContextProfileMap.insert({I.first, I.second});
     else
       NoContextProfileMap.insert({I.first, I.second});

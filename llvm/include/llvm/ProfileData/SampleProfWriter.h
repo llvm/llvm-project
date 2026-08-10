@@ -418,7 +418,7 @@ protected:
   std::error_code
   writeEytzingerNameTableSection(const SampleProfileMap &ProfileMap);
   std::error_code writeFuncOffsetTable(bool IsCS);
-  std::error_code writeEytzingerFuncOffsetTable(bool IsCS);
+  std::error_code writeEytzingerFuncOffsetTable(bool IsNested);
   std::error_code writeLegacyFuncOffsetTable();
   std::error_code writeProfileSymbolListSection();
   std::error_code writeStringBasedProfileSymbolListSection();
