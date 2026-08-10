@@ -170,6 +170,12 @@ features cannot lower the translation-unit ABI level;
 
 ### Non-comprehensive list of changes in this release
 
+- Atomic operations on `_BitInt(N)` are now supported, including
+  `_Atomic(_BitInt(N))`, the `__c11_atomic_*` / `__atomic_*` builtins, and
+  `std::atomic`. Widths the target cannot operate on inline use the
+  `__atomic_*` libcalls; arithmetic read-modify-write on a width with padding
+  bits is emitted as a compare-exchange loop computing at the value width.
+
 ### New Compiler Flags
 
 - New option `-fdefined-pointer-subtraction` added to preserve stable semantics
