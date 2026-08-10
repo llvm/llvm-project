@@ -4,19 +4,19 @@
 // TODO: In the future, clang should not emit the flag for targets that don't support
 // xnack control.
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx12-5-generic \
+// RUN: %clang_cc1 -triple amdgpu12.5-amd-amdhsa \
 // RUN:   -mxnack -emit-llvm -o - %s | FileCheck %s --check-prefix=XNACK-ON
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx12-5-generic \
+// RUN: %clang_cc1 -triple amdgpu12.5-amd-amdhsa \
 // RUN:   -mno-xnack -emit-llvm -o - %s | FileCheck %s --check-prefix=XNACK-OFF
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx12-5-generic \
+// RUN: %clang_cc1 -triple amdgpu12.5-amd-amdhsa \
 // RUN:   -emit-llvm -o - %s | FileCheck %s --check-prefix=NO-FLAGS
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx1250 \
+// RUN: %clang_cc1 -triple amdgpu12.50-amd-amdhsa \
 // RUN:   -mxnack -emit-llvm -o - %s | FileCheck %s --check-prefix=XNACK-ON
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx1250 \
+// RUN: %clang_cc1 -triple amdgpu12.50-amd-amdhsa \
 // RUN:   -mno-xnack -emit-llvm -o - %s | FileCheck %s --check-prefix=XNACK-OFF
 
 // Module flags are emitted regardless of target support

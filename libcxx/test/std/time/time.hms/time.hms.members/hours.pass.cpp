@@ -47,6 +47,8 @@ int main(int, char**)
     static_assert( check_hours(std::chrono::minutes( 1)) == 0, "");
     static_assert( check_hours(std::chrono::minutes(-1)) == 0, "");
 
+    static_assert(check_hours(std::chrono::duration<unsigned, std::milli>(123456789)) == 34, "");
+
     assert( check_hours(std::chrono::seconds( 5000)) == 1);
     assert( check_hours(std::chrono::seconds(-5000)) == 1);
     assert( check_hours(std::chrono::minutes( 5000)) == 83);
