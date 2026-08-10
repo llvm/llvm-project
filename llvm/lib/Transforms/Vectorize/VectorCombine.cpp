@@ -222,7 +222,7 @@ static Value *peekThroughBitcasts(Value *V) {
 /// Helper to peek through bitcasts to the same value.
 static bool isEquivBitcast(Value *X, Value *Y) {
   return X->getType() == Y->getType() &&
-          peekThroughBitcasts(X) == peekThroughBitcasts(Y);
+         peekThroughBitcasts(X) == peekThroughBitcasts(Y);
 }
 
 static bool canWidenLoad(LoadInst *Load, const TargetTransformInfo &TTI) {
