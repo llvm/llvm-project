@@ -13,6 +13,8 @@ namespace hlsl {
 
 namespace __detail {
 
+constexpr double pi = 3.141592653589793;
+
 template <typename T, typename U> struct is_same {
   static const bool value = false;
 };
