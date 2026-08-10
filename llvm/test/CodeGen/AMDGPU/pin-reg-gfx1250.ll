@@ -45,10 +45,15 @@ define amdgpu_kernel void @pin_two_load_tuple(ptr addrspace(1) %o, ptr addrspace
 ; A 32-byte load off a divergent address is selected as two dwordx4 loads whose
 ; lanes reach the REG_SEQUENCE as subregister slices of the wider load. Placing
 ; a lane on its own would strand the rest of its load, so each load is placed as
-; a whole onto its half of the pinned tuple.
+; a whole onto its half of the pinned tuple. The stores read the pinned tuple
+; directly: the REG_SEQUENCEs that reassemble each half are folded away rather
+; than materialised as a copy per lane.
 ; CHECK-LABEL: {{^}}pin_split_wide_load:
 ; CHECK: global_load_b128 v[{{[0-9:]+}}] /*v[304:307]*/
 ; CHECK: global_load_b128 v[{{[0-9:]+}}] /*v[300:303]*/
+; CHECK-NOT: v_mov
+; CHECK: global_store_b128 v{{[0-9]+}}, v[{{[0-9:]+}}] /*v[304:307]*/
+; CHECK: global_store_b128 v{{[0-9]+}}, v[{{[0-9:]+}}] /*v[300:303]*/
 ; CHECK: .set .Lpin_split_wide_load.num_vgpr, 308
 define amdgpu_kernel void @pin_split_wide_load(ptr addrspace(1) %in, ptr addrspace(1) %out) {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()

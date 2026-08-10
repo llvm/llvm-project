@@ -107,6 +107,63 @@ static MCRegister getPinPhysReg(const SIRegisterInfo *TRI,
   return MCRegister();
 }
 
+// Rewriting a pinned value's operands can leave a REG_SEQUENCE that does
+// nothing but reassemble a run of the pinned tuple back into a virtual
+// register -- the two halves a 32-byte store reads, say. The allocator
+// materializes that as one copy per lane, undoing the placement. If the run
+// names a physical tuple outright, forward it to the uses and drop the
+// REG_SEQUENCE. Returns true if it was folded away.
+static bool foldPhysRegSequence(const SIInstrInfo *TII,
+                                const SIRegisterInfo *TRI,
+                                MachineRegisterInfo &MRI, MachineInstr &RS) {
+  Register Def = RS.getOperand(0).getReg();
+  if (!Def.isVirtual() || RS.getNumOperands() < 3)
+    return false;
+
+  MCRegister Tuple;
+  for (unsigned I = 1; I + 1 < RS.getNumOperands(); I += 2) {
+    const MachineOperand &Src = RS.getOperand(I);
+    const MachineOperand &Sub = RS.getOperand(I + 1);
+    if (!Src.isReg() || !Src.getReg().isPhysical() || Src.getSubReg() ||
+        !Sub.isImm())
+      return false;
+    MCRegister Phys = Src.getReg().asMCReg();
+    // The first lane fixes the candidate tuple; the rest must agree with it,
+    // which rejects a permuted, gapped or misaligned run.
+    if (!Tuple)
+      Tuple =
+          TRI->getMatchingSuperReg(Phys, Sub.getImm(), MRI.getRegClass(Def));
+    else if (TRI->getSubReg(Tuple, Sub.getImm()) != Phys)
+      return false;
+    if (!Tuple)
+      return false;
+  }
+
+  SmallVector<MachineOperand *, 8> Uses;
+  for (MachineOperand &MO : MRI.reg_operands(Def)) {
+    if (MO.getParent() == &RS)
+      continue;
+    MCRegister T = MO.getSubReg() ? TRI->getSubReg(Tuple, MO.getSubReg())
+                                  : MCRegister(Tuple);
+    if (MO.isDef() || !T)
+      return false;
+    const TargetRegisterClass *OpRC =
+        MO.getParent()->getRegClassConstraint(MO.getOperandNo(), TII, TRI);
+    if (OpRC && !OpRC->contains(T))
+      return false;
+    Uses.push_back(&MO);
+  }
+
+  for (MachineOperand *MO : Uses) {
+    MO->setReg(MO->getSubReg() ? TRI->getSubReg(Tuple, MO->getSubReg())
+                               : MCRegister(Tuple));
+    MO->setSubReg(0);
+    MO->setIsRenamable(false);
+  }
+  RS.eraseFromParent();
+  return true;
+}
+
 bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
@@ -129,6 +186,7 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
   // no-ops.
   DenseSet<MCRegUnit> Claimed;
   bool NeedRecomputeLiveIns = false;
+  bool AnyHardPin = false;
   unsigned ReqVGPRs =
       0; // highest VGPR a pin needs, +1 (drives the occupancy cap)
   for (MachineInstr *Pin : Pins) {
@@ -459,6 +517,7 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
         Pin->eraseFromParent();
         NeedRecomputeLiveIns = true;
         RecordVGPRFootprint();
+        AnyHardPin = true;
         ++NumHardPins;
         continue;
       }
@@ -640,6 +699,7 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
         Claimed.insert(U);
       Pin->eraseFromParent();
       RecordVGPRFootprint();
+      AnyHardPin = true;
       ++NumHardPins;
       continue;
     }
@@ -658,6 +718,18 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
         MRI.setSimpleHint(Src, PR);
     }
     Pin->eraseFromParent();
+  }
+
+  // Clean up the REG_SEQUENCEs the rewrite left behind. Folding one can expose
+  // another (a wide tuple reassembled in stages), so iterate to a fixpoint.
+  for (bool Folded = AnyHardPin; Folded;) {
+    Folded = false;
+    for (MachineBasicBlock &MBB : MF)
+      for (MachineInstr &MI : make_early_inc_range(MBB))
+        if (MI.isRegSequence() && foldPhysRegSequence(TII, TRI, MRI, MI)) {
+          Folded = true;
+          NeedRecomputeLiveIns = true;
+        }
   }
 
   // Cross-BB hard pins introduce physical registers that are live across basic
