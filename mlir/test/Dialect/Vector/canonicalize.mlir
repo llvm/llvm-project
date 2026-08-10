@@ -1404,6 +1404,37 @@ func.func @fold_vector_transfer_masks(%A: memref<?x?xf32>) -> (vector<4x8xf32>, 
 
 // -----
 
+// A scalable vector dimension holds `vscale * N` elements, so the static size N
+// is only a lower bound and cannot prove that the transfer is in bounds. Here
+// `vector<[4]xf32>` reads `4 * vscale` elements from a 4-element memref, which
+// is out of bounds for every `vscale > 1`.
+
+// CHECK-LABEL: func @no_fold_transfer_read_in_bounds_scalable
+//       CHECK:   vector.transfer_read
+//   CHECK-NOT:   in_bounds
+//       CHECK:   : memref<4xf32>, vector<[4]xf32>
+func.func @no_fold_transfer_read_in_bounds_scalable(%m: memref<4xf32>, %p: f32) -> vector<[4]xf32> {
+  %c0 = arith.constant 0 : index
+  %v = vector.transfer_read %m[%c0], %p : memref<4xf32>, vector<[4]xf32>
+  return %v : vector<[4]xf32>
+}
+
+// -----
+
+// Same for the write path, where an unsound fold is an out-of-bounds store.
+
+// CHECK-LABEL: func @no_fold_transfer_write_in_bounds_scalable
+//       CHECK:   vector.transfer_write
+//   CHECK-NOT:   in_bounds
+//       CHECK:   : vector<[4]xf32>, memref<4xf32>
+func.func @no_fold_transfer_write_in_bounds_scalable(%m: memref<4xf32>, %v: vector<[4]xf32>) {
+  %c0 = arith.constant 0 : index
+  vector.transfer_write %v, %m[%c0] : vector<[4]xf32>, memref<4xf32>
+  return
+}
+
+// -----
+
 // CHECK-LABEL: fold_vector_transfers
 func.func @fold_vector_transfers(%A: memref<?x8xf32>) -> (vector<4x8xf32>, vector<4x9xf32>) {
   %c0 = arith.constant 0 : index
