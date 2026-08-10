@@ -43,7 +43,7 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// CHECK-LABEL: func.func @broadcast_rank0_tensor(
+// CHECK-LABEL: func.func @broadcast_as_generic_rank0_tensor(
 // CHECK-SAME:                         %[[ARG0:.*]]: tensor<i32>,
 // CHECK-SAME:                         %[[ARG1:.*]]: tensor<32x2xi32>
 // CHECK-NEXT:    %[[FLATTENED:.*]] = tensor.collapse_shape %[[ARG1]] {{\[}}[0, 1]]
@@ -71,7 +71,7 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// CHECK-LABEL: func.func @broadcast_rank0_named_tensor(
+// CHECK-LABEL: func.func @broadcast_as_named_rank0_tensor(
 // CHECK-SAME:                         %[[ARG0:.*]]: tensor<i32>,
 // CHECK-SAME:                         %[[ARG1:.*]]: tensor<32x2xi32>
 // CHECK-NEXT:    %[[FLATTENED:.*]] = tensor.collapse_shape %[[ARG1]] {{\[}}[0, 1]]
