@@ -2,9 +2,6 @@
 
 LLVM welcomes contributions of all kinds. To get started, please review the following topics:
 
-```{contents}
-:local:
-```
 
 ```{toctree}
 :hidden:
@@ -17,7 +14,6 @@ SphinxQuickstartTemplate
 HowToSubmitABug
 BugLifeCycle
 CodingStandards
-GitHub
 GitBisecting
 GitRepositoryPolicy
 ```
@@ -257,6 +253,10 @@ what to add to your calendar invite.
      - [ics](https://calendar.google.com/calendar/ical/2d77f9a2624d18cd46e5299d15cc0fa0c90dca53fd68802261d52121d21a0573%40group.calendar.google.com/public/basic.ics)
        [gcal](https://calendar.google.com/calendar/u/0?cid=MmQ3N2Y5YTI2MjRkMThjZDQ2ZTUyOTlkMTVjYzBmYTBjOTBkY2E1M2ZkNjg4MDIyNjFkNTIxMjFkMjFhMDU3M0Bncm91cC5jYWxlbmRhci5nb29nbGUuY29t)
      - [Meeting notes](https://docs.google.com/document/d/1DkCik6BTnO-cox_9y_BTKzPaJJOo_hBxiNFP3lInvOM/edit?tab=t.nvvd6cfloi81)
+   * - [HLSL Working Group](https://github.com/llvm/wg-hlsl)
+     - Every week on Thursday
+     -
+     - [Meeting notes](https://github.com/llvm/wg-hlsl/tree/main/meetings)
 ```
 
 For event owners, our Discord bot also supports sending automated announcements
@@ -363,7 +363,7 @@ The {doc}`CodeOfConduct` applies to all office hours.
   * - Maksim Panchenko
     - BOLT internals, IR, new passes, proposals, etc.
     - Monthly, 2nd Wednesday of the month at 11:00am PT, for 30 minutes.
-    - [Zoom](https://fb.zoom.us/j/97065697120?pwd=NTFaUWJjZW9uVkJuaVlPTE9qclE3dz09)
+    - [Zoom](https://fb.zoom.us/j/97358910859?pwd=FamcLANMN7umLlFTTTkqXUCAG81SH0.1)
     - English, Russian
   * - Quentin Colombet (he/him)
     - LLVM/MLIR; Codegen (Instruction selection (GlobalISel/SDISel), Machine IR,
@@ -518,7 +518,6 @@ can be better.
 :hidden:
 
 Proposals/GitHubMove
-BugpointRedesign
 Proposals/TestSuite
 Proposals/VariableNames
 Proposals/VectorPredication
@@ -527,10 +526,6 @@ Proposals/VectorPredication
 * {doc}`Proposals/GitHubMove`
 
   Proposal to move from SVN/Git to GitHub.
-
-* {doc}`BugpointRedesign`
-
-  Design doc for a redesign of the Bugpoint tool.
 
 * {doc}`Proposals/TestSuite`
 

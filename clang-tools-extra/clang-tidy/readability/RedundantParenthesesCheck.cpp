@@ -39,7 +39,7 @@ static FixItHint createSpacedRemoval(SourceLocation Loc,
                                      const SourceManager &SM,
                                      const LangOptions &LangOpts) {
   if (Loc.isValid() && !Loc.isMacroID()) {
-    auto LocInfo = SM.getDecomposedLoc(Loc);
+    const auto LocInfo = SM.getDecomposedLoc(Loc);
     bool Invalid = false;
     StringRef Buffer = SM.getBufferData(LocInfo.first, &Invalid);
     if (!Invalid && LocInfo.second > 0 && LocInfo.second + 1 < Buffer.size() &&
@@ -73,7 +73,10 @@ void RedundantParenthesesCheck::registerMatchers(MatchFinder *Finder) {
                     parenExpr(), ConstantExpr,
                     declRefExpr(to(namedDecl(unless(
                         matchers::matchesAnyListedRegexName(AllowedDecls))))),
-                    memberExpr(), callExpr(unless(cxxOperatorCallExpr())))),
+                    memberExpr(),
+                    callExpr(unless(cxxOperatorCallExpr(
+                        unless(hasAnyOperatorName("()", "[]"))))),
+                    arraySubscriptExpr())),
                 unless(anyOf(isInMacro(),
                              // sizeof(...) is common used.
                              hasParent(unaryExprOrTypeTraitExpr()))))

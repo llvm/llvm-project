@@ -10,12 +10,23 @@ set(ONDISK_CAS_TEST_SOURCES
   UnifiedOnDiskCacheTest.cpp
   )
 
+set(PLUGIN_CAS_TEST_SOURCES
+  PluginCASTest.cpp
+  )
+
 set(LLVM_OPTIONAL_SOURCES
   ${ONDISK_CAS_TEST_SOURCES}
+  ${PLUGIN_CAS_TEST_SOURCES}
   )
 
 if (NOT LLVM_ENABLE_ONDISK_CAS)
   unset(ONDISK_CAS_TEST_SOURCES)
+endif()
+
+# The plugin tests need the libCASPluginTest shared library, which is not
+# always built (it requires the on-disk CAS and PIC).
+if (NOT TARGET CASPluginTest)
+  unset(PLUGIN_CAS_TEST_SOURCES)
 endif()
 
 set(LLVM_LINK_COMPONENTS
@@ -32,6 +43,11 @@ add_llvm_unittest(CASTests
   OnDiskCommonUtils.cpp
 
   ${ONDISK_CAS_TEST_SOURCES}
+  ${PLUGIN_CAS_TEST_SOURCES}
   )
 
 target_link_libraries(CASTests PRIVATE LLVMTestingSupport)
+
+if (TARGET CASPluginTest)
+  add_dependencies(CASTests CASPluginTest)
+endif()

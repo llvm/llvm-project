@@ -10,17 +10,19 @@
 #include "hdr/elf_proxy.h"
 #include "hdr/link_macros.h"
 #include "hdr/stdint_proxy.h"
+#include "hdr/sys_mman_macros.h"
 #include "src/__support/OSUtil/linux/auxv.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/thread.h"
+#include "src/errno/program_invocation_name.h"
+#include "src/errno/program_invocation_short_name.h"
 #include "src/stdlib/atexit.h"
 #include "src/stdlib/exit.h"
 #include "src/unistd/environ.h"
 #include "startup/linux/gnu_property_section.h"
 #include "startup/linux/irelative.h"
 
-#include <sys/mman.h>
 #include <sys/syscall.h>
 
 extern "C" int main(int argc, char **argv, char **envp);
@@ -82,6 +84,15 @@ static TLSDescriptor tls;
 
   // Initialize the POSIX global declared in unistd.h
   environ = reinterpret_cast<char **>(env_ptr);
+
+  if (app.args->argc > 0 && app.args->argv[0] != 0) {
+    program_invocation_name = reinterpret_cast<char *>(app.args->argv[0]);
+    program_invocation_short_name = program_invocation_name;
+    for (char *p = program_invocation_name; *p != '\0'; ++p) {
+      if (*p == '/')
+        program_invocation_short_name = p + 1;
+    }
+  }
 
   // After the env array, is the aux-vector. The end of the aux-vector is
   // denoted by an AT_NULL entry.
