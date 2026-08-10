@@ -3398,7 +3398,10 @@ Value *OpenMPIRBuilder::createRuntimeShuffleFunction(InsertPointTy AllocaIP,
       Builder.CreateIntCast(WarpSize, Builder.getInt16Ty(), /*isSigned=*/true);
   Value *ShuffleCall =
       createRuntimeFunctionCall(ShuffleFunc, {ElemCast, Offset, WarpSizeCast});
-  return castValueToType(AllocaIP, ShuffleCall, CastTy);
+  // The shuffle runtime functions return a 32- or 64-bit value. Cast it back
+  // down to the requested element type, otherwise storing the result would
+  // write past the end of an element narrower than the shuffle width.
+  return castValueToType(AllocaIP, ShuffleCall, ElementType);
 }
 
 void OpenMPIRBuilder::shuffleAndStore(InsertPointTy AllocaIP, Value *SrcAddr,
@@ -3472,11 +3475,10 @@ void OpenMPIRBuilder::shuffleAndStore(InsertPointTy AllocaIP, Value *SrcAddr,
       emitBranch(PreCondBB);
       emitBlock(ExitBB, CurFunc);
     } else {
+      // The shuffled value comes back as the chunk's integer type, so the
+      // store covers exactly this chunk regardless of what ElemType is.
       Value *Res = createRuntimeShuffleFunction(
           AllocaIP, Builder.CreateLoad(IntType, Ptr), IntType, Offset);
-      if (ElemType->isIntegerTy() && ElemType->getScalarSizeInBits() <
-                                         Res->getType()->getScalarSizeInBits())
-        Res = Builder.CreateTrunc(Res, ElemType);
       Builder.CreateStore(Res, ElemPtr);
       Ptr = Builder.CreateGEP(IntType, Ptr, {ConstantInt::get(IndexTy, 1)});
       ElemPtr =

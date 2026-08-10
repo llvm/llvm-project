@@ -7757,6 +7757,35 @@ def CIR_FMAOp : CIR_TernaryFPToFPBuiltinOp<"fma", "FMAOp"> {
   }];
 }
 
+def CIR_FMulAddOp : CIR_TernaryFPToFPBuiltinOp<"fmuladd", "FMulAddOp"> {
+  let summary = "Contractable fused multiply-add operation";
+
+  let description = [{
+    Computes `(a * b) + c`, allowing the multiply and add to be fused (or not)
+    into a single rounding step at the target's discretion. It lowers to the
+    `llvm.fmuladd` intrinsic (or its constrained variant when an `fenv`
+    attribute is present).
+
+    Unlike `cir.fma`, which maps to `llvm.fma` and guarantees a single
+    rounding, `cir.fmuladd` expresses the FP-contraction relaxation used for
+    `a * b + c` under `-ffp-contract=on` / `fast`, where the backend is free to
+    emit either a fused or an unfused sequence.
+
+    The inputs must be either:
+      • floating-point scalar types, or
+      • vectors whose element type is floating-point.
+
+    The result type must match the input type exactly.
+
+    Examples:
+      // scalar
+      %r = cir.fmuladd %a, %b, %c : !cir.float
+
+      // vector
+      %v = cir.fmuladd %a, %b, %c : !cir.vector<4 x !cir.float>
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // Variadic Operations
 //===----------------------------------------------------------------------===//
