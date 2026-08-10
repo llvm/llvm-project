@@ -172,6 +172,7 @@ public:
   NODE(parser, AssumedImpliedSpec)
   NODE(parser, AssumedRankSpec)
   NODE(parser, AssumedShapeSpec)
+  NODE(parser, AssumedShapeBoundsSpec)
   NODE(parser, AssumedSizeSpec)
   NODE(parser, Asynchronous)
   NODE(parser, AsynchronousStmt)
@@ -556,6 +557,15 @@ public:
   NODE_ENUM(OmpAlwaysModifier, Value)
   NODE(parser, OmpAppendArgsClause)
   NODE(OmpAppendArgsClause, OmpAppendOp)
+  NODE(parser, OmpLoopModifier)
+
+  static std::string GetNodeName(const llvm::omp::LoopModifier &x) {
+    return llvm::Twine(
+        "llvm::omp::LoopModifier = ", llvm::omp::getLoopModifierName(x))
+        .str();
+  }
+  NODE(parser, OmpApplyClause)
+  NODE(OmpApplyClause, Modifier)
   NODE(parser, OmpArgument)
   NODE(parser, OmpArgumentList)
   NODE(parser, OmpAssumeDirective)
@@ -592,6 +602,7 @@ public:
   NODE(parser, OmpDefaultClause)
   NODE_ENUM(OmpDefaultClause, DataSharingAttribute)
   NODE(parser, OmpDefaultmapClause)
+  NODE(parser, OmpDefaultVariantClause)
   NODE(OmpDefaultmapClause, Modifier)
   NODE_ENUM(OmpDefaultmapClause, ImplicitBehavior)
   NODE(parser, OmpDeleteModifier)
@@ -666,8 +677,8 @@ public:
   NODE(OmpLinearClause, Modifier)
   NODE(parser, OmpLinearModifier)
   NODE_ENUM(OmpLinearModifier, Value)
+  NODE(parser, OmpLinearStep)
   NODE(parser, OmpLocator)
-  NODE(parser, OmpLocatorList)
   NODE(parser, OmpLooprangeClause)
   NODE(parser, OmpLowerBound)
   NODE(parser, OmpMapClause)
@@ -722,6 +733,7 @@ public:
   NODE_ENUM(OmpRefModifier, Value)
   NODE(parser, OmpReplayableClause)
   NODE(parser, OmpRequiresDirective)
+  NODE(parser, OmpReservedIdentifier)
   NODE(parser, OmpReverseOffloadClause)
   NODE(parser, OmpScheduleClause)
   NODE(OmpScheduleClause, Modifier)
@@ -765,7 +777,7 @@ public:
   NODE(parser, OmpTypeNameList)
   NODE(parser, OmpUnifiedAddressClause)
   NODE(parser, OmpUnifiedSharedMemoryClause)
-  NODE(parser, OmpUpdateClause)
+  NODE(parser, OmpUpdateDependObjectsClause)
   NODE(parser, OmpUseClause)
   NODE(parser, OmpUtilityDirective)
   NODE(parser, OmpVariableCategory)

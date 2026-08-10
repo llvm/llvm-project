@@ -5,7 +5,7 @@
 // RUN: mkdir %t
 //
 // Install the mock libc++ (simulates the libc++ directory structure).
-// RUN: cp -r %S/Inputs/mock-libcxx %t/
+// RUN: cp -R %S/Inputs/mock-libcxx %t/
 //
 // Pretend clang is installed beside the mock library that we provided.
 // RUN: echo '[{"directory":"%t","command":"mock-libcxx/bin/clang++ -stdlib=libc++ -target x86_64-apple-darwin -c test.cpp","file":"test.cpp"}]' | sed -e 's/\\/\//g' > %t/compile_commands.json

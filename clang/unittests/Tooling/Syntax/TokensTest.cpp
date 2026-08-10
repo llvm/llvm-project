@@ -552,6 +552,18 @@ file './input.cpp'
   }
 }
 
+TEST_F(TokenCollectorTest, FeatureLikeBuiltinMacros) {
+  recordTokens("__has_builtin(__builtin_allow_runtime_check)\n");
+  EXPECT_THAT(Buffer.expandedTokens(),
+              ElementsAre(AllOf(Kind(tok::numeric_constant), HasText("1")),
+                          Kind(tok::eof)));
+  auto ExpansionRange =
+      SourceMgr->getExpansionRange(findExpanded("1").front().location());
+  EXPECT_EQ(findSpelled("__has_builtin").front().location(),
+            ExpansionRange.getBegin());
+  EXPECT_EQ(findSpelled(")").front().location(), ExpansionRange.getEnd());
+}
+
 TEST_F(TokenCollectorTest, SpecialTokens) {
   // Tokens coming from concatenations.
   recordTokens(R"cpp(

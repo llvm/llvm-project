@@ -8,8 +8,8 @@ body:             |
   ; CHECK-LABEL: name: @Scalable
   ; CHECK-NEXT: %0:_ KnownBits:0000000000001010 SignBits:12
   ; CHECK-NEXT: %1:_ KnownBits:0000000000001010 SignBits:12
-    %0:_(s16) = G_CONSTANT i16 10
-    %1:_(<vscale x 8 x s16>) = G_SPLAT_VECTOR %0(s16)
+    %0:_(i16) = G_CONSTANT i16 10
+    %1:_(<vscale x 8 x i16>) = G_SPLAT_VECTOR %0(i16)
 ...
 ---
 name:            Scalable_trunc
@@ -18,8 +18,8 @@ body:             |
   ; CHECK-LABEL: name: @Scalable_trunc
   ; CHECK-NEXT: %0:_ KnownBits:00000000000000000000000000001010 SignBits:28
   ; CHECK-NEXT: %1:_ KnownBits:0000000000001010 SignBits:12
-    %0:_(s32) = G_CONSTANT i32 10
-    %1:_(<vscale x 8 x s16>) = G_SPLAT_VECTOR %0(s32)
+    %0:_(i32) = G_CONSTANT i32 10
+    %1:_(<vscale x 8 x i16>) = G_SPLAT_VECTOR %0(i32)
 ...
 ---
 name:            Scalable_signbits
@@ -29,7 +29,7 @@ body:             |
   ; CHECK-NEXT: %0:_ KnownBits:???????????????? SignBits:1
   ; CHECK-NEXT: %1:_ KnownBits:???????????????????????????????? SignBits:17
   ; CHECK-NEXT: %2:_ KnownBits:???????????????????????????????? SignBits:17
-    %0:_(s16) = COPY $h0
-    %1:_(s32) = G_SEXT %0(s16)
-    %2:_(<vscale x 4 x s32>) = G_SPLAT_VECTOR %1(s32)
+    %0:_(i16) = COPY $h0
+    %1:_(i32) = G_SEXT %0(i16)
+    %2:_(<vscale x 4 x i32>) = G_SPLAT_VECTOR %1(i32)
 ...

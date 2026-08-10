@@ -6,16 +6,7 @@
 #
 # ===----------------------------------------------------------------------===##
 
-from . import (
-    availability,
-    compiler,
-    gdb,
-    lldb,
-    libcxx_macros,
-    localization,
-    misc,
-    platform,
-)
+from . import availability, compiler, gdb, lldb, hardening, libcxx_macros, localization, misc, platform
 
 # Lit features are evaluated in order. Some features depend on other features, so
 # we are careful to define them in the correct order. For example, several features
@@ -29,3 +20,4 @@ DEFAULT_FEATURES += gdb.features
 DEFAULT_FEATURES += lldb.features
 DEFAULT_FEATURES += misc.features
 DEFAULT_FEATURES += availability.features
+DEFAULT_FEATURES += hardening.features # this depends on availability, misc and libc++ macro features
