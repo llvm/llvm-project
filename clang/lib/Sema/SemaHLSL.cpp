@@ -2238,15 +2238,10 @@ bool SemaHLSL::handleResourceTypeAttr(QualType T, const ParsedAttr &AL) {
 
   switch (AL.getKind()) {
   case ParsedAttr::AT_HLSLResourceClass: {
-    if (!AL.isArgIdent(0)) {
-      Diag(AL.getLoc(), diag::err_attribute_argument_type)
-          << AL << AANT_ArgumentIdentifier;
+    StringRef Identifier;
+    SourceLocation ArgLoc;
+    if (!SemaRef.checkStringLiteralArgumentAttr(AL, 0, Identifier, &ArgLoc))
       return false;
-    }
-
-    IdentifierLoc *Loc = AL.getArgAsIdent(0);
-    StringRef Identifier = Loc->getIdentifierInfo()->getName();
-    SourceLocation ArgLoc = Loc->getLoc();
 
     // Validate resource class value
     ResourceClass RC;
@@ -4584,19 +4579,6 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
                                    CheckFloatingOrIntRepresentation))
       return true;
     SetElementTypeAsReturnType(&SemaRef, TheCall, getASTContext().IntTy);
-    break;
-  }
-  case Builtin::BI__builtin_hlsl_step: {
-    if (SemaRef.checkArgCount(TheCall, 2))
-      return true;
-    if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall,
-                                   CheckFloatOrHalfRepresentation))
-      return true;
-
-    ExprResult A = TheCall->getArg(0);
-    QualType ArgTyA = A.get()->getType();
-    // return type is the same as the input type
-    TheCall->setType(ArgTyA);
     break;
   }
   case Builtin::BI__builtin_hlsl_wave_active_all_equal: {
