@@ -15,12 +15,15 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 static cl::opt<bool> EnableAddPhiTranslation(
     "gvn-add-phi-translation", cl::init(false), cl::Hidden,
@@ -35,6 +38,31 @@ static bool canPHITrans(Instruction *Inst) {
     return true;
 
   return false;
+}
+
+/// Return an existing GEP of \p SrcTy over \p Ops that dominates \p PredBB.
+static GetElementPtrInst *findAvailableGEP(Type *ResultTy, Type *SrcTy,
+                                           ArrayRef<Value *> Ops,
+                                           BasicBlock *CurBB,
+                                           BasicBlock *PredBB,
+                                           const DominatorTree *DT) {
+  assert(!Ops.empty() && "GEP needs a pointer operand");
+  Value *Ptr = Ops[0];
+  if (isa<ConstantData>(Ptr))
+    return nullptr;
+
+  for (User *U : Ptr->users()) {
+    auto *GEPI = dyn_cast<GetElementPtrInst>(U);
+    if (!GEPI || GEPI->getType() != ResultTy ||
+        GEPI->getSourceElementType() != SrcTy ||
+        GEPI->getNumOperands() != Ops.size() ||
+        GEPI->getParent()->getParent() != CurBB->getParent() ||
+        (DT && !DT->dominates(GEPI->getParent(), PredBB)))
+      continue;
+    if (std::equal(Ops.begin(), Ops.end(), GEPI->op_begin()))
+      return GEPI;
+  }
+  return nullptr;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -236,22 +264,8 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
     }
 
     // Scan to see if we have this GEP available.
-    Value *APHIOp = GEPOps[0];
-    if (isa<ConstantData>(APHIOp))
-      return nullptr;
-
-    for (User *U : APHIOp->users()) {
-      if (GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(U))
-        if (GEPI->getType() == GEP->getType() &&
-            GEPI->getSourceElementType() == GEP->getSourceElementType() &&
-            GEPI->getNumOperands() == GEPOps.size() &&
-            GEPI->getParent()->getParent() == CurBB->getParent() &&
-            (!DT || DT->dominates(GEPI->getParent(), PredBB))) {
-          if (std::equal(GEPOps.begin(), GEPOps.end(), GEPI->op_begin()))
-            return GEPI;
-        }
-    }
-    return nullptr;
+    return findAvailableGEP(GEP->getType(), GEP->getSourceElementType(), GEPOps,
+                            CurBB, PredBB, DT);
   }
 
   // Handle add with a constant RHS.
@@ -347,10 +361,68 @@ SelectAddr::SelectAddrs PHITransAddr::translateValue(BasicBlock *CurBB,
     // Work on a copy so that the original address state is preserved and the
     // other side can be translated independently.
     PHITransAddr Tmp(*this);
-    return Tmp.translateSubExpr(Tmp.Addr, CurBB, PredBB, DT, Cond, CondVal);
+    if (Value *V =
+            Tmp.translateSubExpr(Tmp.Addr, CurBB, PredBB, DT, Cond, CondVal))
+      return V;
+    // Syntactic match misses when a constant index delta is folded into an i8
+    // offset. Recover the affine-equal available pointer instead.
+    return findAvailableSelectArmAddr(Cond, CurBB, PredBB, DT, CondVal);
   };
 
   return {TranslateSide(/*CondVal=*/true), TranslateSide(/*CondVal=*/false)};
+}
+
+Value *PHITransAddr::findAvailableSelectArmAddr(Value *Cond, BasicBlock *CurBB,
+                                                BasicBlock *PredBB,
+                                                const DominatorTree *DT,
+                                                bool CondVal) const {
+  // Addr must be: gep i8, (gep Ty, Base, Index), Off.
+  auto *Outer = dyn_cast<GetElementPtrInst>(Addr);
+  if (!Outer || Outer->getNumIndices() != 1 ||
+      !Outer->getSourceElementType()->isIntegerTy(8))
+    return nullptr;
+  auto *OffCI = dyn_cast<ConstantInt>(Outer->getOperand(1));
+  auto *Inner = dyn_cast<GetElementPtrInst>(Outer->getPointerOperand());
+  if (!OffCI || !Inner || Inner->getNumIndices() != 1)
+    return nullptr;
+
+  auto *RecPhi = dyn_cast<PHINode>(Inner->getOperand(1));
+  if (!RecPhi || RecPhi->getParent() != CurBB)
+    return nullptr;
+  auto *SI = dyn_cast<SelectInst>(RecPhi->getIncomingValueForBlock(PredBB));
+  if (!SI || SI->getCondition() != Cond)
+    return nullptr;
+
+  Value *Arm = CondVal ? SI->getTrueValue() : SI->getFalseValue();
+  if (Arm == RecPhi)
+    return Addr;
+
+  // Fold add(IV, C) into the outer byte offset and look for that GEP.
+  Value *IV = nullptr;
+  const APInt *C = nullptr;
+  if (!match(Arm, m_c_Add(m_Value(IV), m_APInt(C))))
+    return nullptr;
+
+  Type *Ty = Inner->getSourceElementType();
+  TypeSize ElemSize = DL.getTypeAllocSize(Ty);
+  if (ElemSize.isScalable())
+    return nullptr;
+
+  unsigned BitWidth = OffCI->getBitWidth();
+  APInt TargetOff =
+      OffCI->getValue() +
+      C->sextOrTrunc(BitWidth) * APInt(BitWidth, ElemSize.getFixedValue());
+
+  Value *InnerOps[] = {Inner->getPointerOperand(), IV};
+  auto *InnerAvail =
+      findAvailableGEP(Inner->getType(), Ty, InnerOps, CurBB, PredBB, DT);
+  if (!InnerAvail)
+    return nullptr;
+
+  Value *OuterOps[] = {InnerAvail,
+                       ConstantInt::get(Outer->getContext(), TargetOff)};
+  return findAvailableGEP(Outer->getType(), Outer->getSourceElementType(),
+                          OuterOps, CurBB, PredBB, DT);
 }
 
 Value *PHITransAddr::getSelectCondition() const {

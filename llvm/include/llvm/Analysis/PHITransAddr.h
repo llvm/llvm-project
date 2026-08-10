@@ -146,6 +146,12 @@ public:
   LLVM_ABI bool verify() const;
 
 private:
+  /// Recover an available address when select-arm translation only fails
+  /// because a constant index delta is folded into a nested i8 GEP offset.
+  Value *findAvailableSelectArmAddr(Value *Cond, BasicBlock *CurBB,
+                                    BasicBlock *PredBB, const DominatorTree *DT,
+                                    bool CondVal) const;
+
   Value *translateSubExpr(Value *V, BasicBlock *CurBB, BasicBlock *PredBB,
                           const DominatorTree *DT, Value *Cond = nullptr,
                           bool CondVal = false);
