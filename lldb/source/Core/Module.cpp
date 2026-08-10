@@ -54,6 +54,7 @@
 #endif
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DJB.h"
 #include "llvm/Support/FileSystem.h"
@@ -1455,6 +1456,25 @@ bool Module::SetLoadAddress(Target &target, lldb::addr_t value,
   return false;
 }
 
+// A module's stored path can be an alias of the same on-disk file that a lookup
+// spec refers to:
+//   - Windows: a subst/mapped drive or a symbolic link
+//   - POSIX: a symbolic link
+// In those cases, MatchesModuleSpec fails even though both name the same file.
+// This is a fall back which compares the canonicalized real paths.
+static bool FileSpecsResolveToSameFile(const FileSpec &lhs,
+                                       const FileSpec &rhs) {
+  if (lhs.GetDirectory().empty() || rhs.GetDirectory().empty())
+    return false;
+  FileSystem &fs = FileSystem::Instance();
+  llvm::SmallString<256> lhs_real, rhs_real;
+  if (fs.GetRealPath(lhs.GetPath(), lhs_real) ||
+      fs.GetRealPath(rhs.GetPath(), rhs_real))
+    return false;
+  return FileSpec::Equal(FileSpec(lhs_real), FileSpec(rhs_real),
+                         /*full=*/true);
+}
+
 bool Module::MatchesModuleSpec(const ModuleSpec &module_ref) {
   const UUID &uuid = module_ref.GetUUID();
 
@@ -1465,7 +1485,9 @@ bool Module::MatchesModuleSpec(const ModuleSpec &module_ref) {
 
   const FileSpec &file_spec = module_ref.GetFileSpec();
   if (!FileSpec::Match(file_spec, m_file) &&
-      !FileSpec::Match(file_spec, m_platform_file))
+      !FileSpec::Match(file_spec, m_platform_file) &&
+      !FileSpecsResolveToSameFile(file_spec, m_file) &&
+      !FileSpecsResolveToSameFile(file_spec, m_platform_file))
     return false;
 
   const FileSpec &platform_file_spec = module_ref.GetPlatformFileSpec();
