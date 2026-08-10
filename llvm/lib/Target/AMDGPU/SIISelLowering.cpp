@@ -16372,7 +16372,6 @@ SDValue SITargetLowering::getCanonicalConstantFP(SelectionDAG &DAG,
       // Quiet a signaling NaN.
       return DAG.getConstantFP(C.makeQuiet(), SL, VT);
     }
-
   }
 
   // Already canonical.
