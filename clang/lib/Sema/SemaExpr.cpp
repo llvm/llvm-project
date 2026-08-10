@@ -18241,6 +18241,16 @@ Sema::PushExpressionEvaluationContext(
   ExprEvalContexts.back().InImmediateEscalatingFunctionContext =
       Prev.InImmediateEscalatingFunctionContext;
 
+  if (LambdaScopeInfo *LSI = getCurLambda(/*IgnoreCapturedRegions=*/true)) {
+    ExprEvalContexts.back().PotentialCaptureContext = LSI;
+    ExprEvalContexts.back().NumPotentialVariableCaptures =
+        LSI->getNumPotentialVariableCaptures();
+    ExprEvalContexts.back().NumPotentialThisCaptures =
+        LSI->getNumPotentialThisCaptures();
+    ExprEvalContexts.back().PotentialThisCaptureLocation =
+        LSI->PotentialThisCaptureLocation;
+  }
+
   Cleanup.reset();
   if (!MaybeODRUseExprs.empty())
     std::swap(MaybeODRUseExprs, ExprEvalContexts.back().SavedMaybeODRUseExprs);

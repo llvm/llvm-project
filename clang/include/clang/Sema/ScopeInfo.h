@@ -956,6 +956,7 @@ public:
   llvm::SmallVector<ShadowedOuterDecl, 4> ShadowingDecls;
 
   SourceLocation PotentialThisCaptureLocation;
+  unsigned NumPotentialThisCaptures = 0;
 
   /// Variables that are potentially ODR-used in CUDA/HIP.
   llvm::SmallPtrSet<VarDecl *, 4> CUDAPotentialODRUsedVars;
@@ -1005,11 +1006,10 @@ public:
 
   void addPotentialThisCapture(SourceLocation Loc) {
     PotentialThisCaptureLocation = Loc;
+    ++NumPotentialThisCaptures;
   }
 
-  bool hasPotentialThisCapture() const {
-    return PotentialThisCaptureLocation.isValid();
-  }
+  bool hasPotentialThisCapture() const { return NumPotentialThisCaptures != 0; }
 
   /// Mark a variable's reference in a lambda as non-odr using.
   ///
@@ -1077,18 +1077,31 @@ public:
   void clearPotentialCaptures() {
     PotentiallyCapturingExprs.clear();
     PotentialThisCaptureLocation = SourceLocation();
+    NumPotentialThisCaptures = 0;
+  }
+  void clearPotentialCaptures(unsigned NumVariableCaptures,
+                              unsigned NumThisCaptures,
+                              SourceLocation ThisCaptureLocation) {
+    PotentiallyCapturingExprs.resize(NumVariableCaptures);
+    NumPotentialThisCaptures = NumThisCaptures;
+    PotentialThisCaptureLocation = ThisCaptureLocation;
   }
   unsigned getNumPotentialVariableCaptures() const {
     return PotentiallyCapturingExprs.size();
   }
-
-  bool hasPotentialCaptures() const {
-    return getNumPotentialVariableCaptures() ||
-           PotentialThisCaptureLocation.isValid();
+  unsigned getNumPotentialThisCaptures() const {
+    return NumPotentialThisCaptures;
   }
 
-  void visitPotentialCaptures(
-      llvm::function_ref<void(ValueDecl *, Expr *)> Callback) const;
+  bool hasPotentialCaptures(unsigned NumVariableCaptures = 0,
+                            unsigned NumThisCaptures = 0) const {
+    return getNumPotentialVariableCaptures() != NumVariableCaptures ||
+           getNumPotentialThisCaptures() != NumThisCaptures;
+  }
+
+  void
+  visitPotentialCaptures(llvm::function_ref<void(ValueDecl *, Expr *)> Callback,
+                         unsigned FirstCapture = 0) const;
 
   bool lambdaCaptureShouldBeConst() const;
 };

@@ -45,6 +45,23 @@ void discarded_potential_results() {
   [] { (side_effect(), i); };
 }
 
+template <int>
+void templ() {}
+
+template <typename>
+void template_argument() {
+  constexpr bool b = true;
+  [] {
+    b, templ<0>();
+  };
+}
+
+template <typename T>
+void dependent_initializer() {
+  constexpr bool b = T::b;
+  [] { b; };
+}
+
 template <typename T>
 void dependent_parameter(T t) {
   [] { t; };
@@ -83,6 +100,35 @@ void dependent_discarded_constant() {
   [=](auto) { n; }(T());
 }
 
+template <char...>
+int operator""_literal() {
+  return 0;
+}
+
+template <typename T>
+void literal_template_argument() {
+  constexpr bool b = T::b;
+  [] {
+    b, 0_literal;
+  };
+}
+
+template <typename T>
+void dependent_conditional() {
+  constexpr bool b = T::b;
+  [] {
+    b ? 0_literal : 0;
+  };
+}
+
+struct S {
+  static constexpr bool b = true;
+};
+
+template void template_argument<void>();
+template void dependent_initializer<S>();
 template void dependent_parameter<int>(int);
 template void dependent_capture_default<int>(int);
 template void dependent_discarded_constant<int>();
+template void literal_template_argument<S>();
+template void dependent_conditional<S>();

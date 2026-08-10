@@ -7756,7 +7756,9 @@ static inline bool VariableCanNeverBeAConstantExpression(VarDecl *Var,
 /// need to be captured.
 
 static void CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
-    Expr *const FE, LambdaScopeInfo *const CurrentLSI, Sema &S) {
+    Expr *const FE, LambdaScopeInfo *const CurrentLSI, Sema &S,
+    unsigned FirstVariableCapture, unsigned FirstThisCapture,
+    SourceLocation SavedThisCaptureLocation) {
 
   assert(!S.isUnevaluatedContext());
 #ifndef NDEBUG
@@ -7840,10 +7842,10 @@ static void CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
       }
     }
   };
-  CurrentLSI->visitPotentialCaptures(CheckCapture);
+  CurrentLSI->visitPotentialCaptures(CheckCapture, FirstVariableCapture);
 
   // Check if 'this' needs to be captured.
-  if (CurrentLSI->hasPotentialThisCapture()) {
+  if (CurrentLSI->getNumPotentialThisCaptures() != FirstThisCapture) {
     // If we have a capture-capable lambda for 'this', go ahead and capture
     // 'this' in that lambda (and all its enclosing lambdas).
     if (const UnsignedOrNone Index =
@@ -7857,7 +7859,8 @@ static void CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
   }
 
   // Reset all the potential captures at the end of each full-expression.
-  CurrentLSI->clearPotentialCaptures();
+  CurrentLSI->clearPotentialCaptures(FirstVariableCapture, FirstThisCapture,
+                                     SavedThisCaptureLocation);
 }
 
 ExprResult Sema::ActOnFinishFullExpr(Expr *FE, SourceLocation CC,
@@ -7946,10 +7949,22 @@ ExprResult Sema::ActOnFinishFullExpr(Expr *FE, SourceLocation CC,
   while (isa_and_nonnull<CapturedDecl>(DC))
     DC = DC->getParent();
   const bool IsInLambdaDeclContext = isLambdaCallOperator(DC);
-  if (IsInLambdaDeclContext && CurrentLSI &&
-      CurrentLSI->hasPotentialCaptures() && !FullExpr.isInvalid())
-    CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(FE, CurrentLSI,
-                                                              *this);
+  if (IsInLambdaDeclContext && CurrentLSI && !FullExpr.isInvalid()) {
+    const ExpressionEvaluationContextRecord &Rec = currentEvaluationContext();
+    const bool IsSameCaptureContext = Rec.PotentialCaptureContext == CurrentLSI;
+    const unsigned FirstVariableCapture =
+        IsSameCaptureContext ? Rec.NumPotentialVariableCaptures : 0;
+    const unsigned FirstThisCapture =
+        IsSameCaptureContext ? Rec.NumPotentialThisCaptures : 0;
+    const SourceLocation SavedThisCaptureLocation =
+        IsSameCaptureContext ? Rec.PotentialThisCaptureLocation
+                             : SourceLocation();
+    if (CurrentLSI->hasPotentialCaptures(FirstVariableCapture,
+                                         FirstThisCapture))
+      CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
+          FE, CurrentLSI, *this, FirstVariableCapture, FirstThisCapture,
+          SavedThisCaptureLocation);
+  }
   return MaybeCreateExprWithCleanups(FullExpr);
 }
 
