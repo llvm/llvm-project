@@ -180,6 +180,7 @@ _LIBCPP_PUSH_MACROS
 #    include <__concepts/assignable.h>
 #    include <__cstddef/ptrdiff_t.h>
 #    include <__cstddef/size_t.h>
+#    include <__fwd/optional.h>
 #    include <__iterator/bounded_iter.h>
 #    include <__iterator/capacity_aware_iterator.h>
 #    include <__iterator/concepts.h>
@@ -195,7 +196,6 @@ _LIBCPP_PUSH_MACROS
 #    include <__memory/uninitialized_algorithms.h>
 #    include <__new/exceptions.h>
 #    include <__optional/nullopt_t.h>
-#    include <__optional/optional.h>
 #    include <__optional/optional_ref.h>
 #    include <__ranges/access.h>
 #    include <__ranges/concepts.h>
