@@ -304,10 +304,13 @@ class TimeTraceReport(Report):
         }
 
 
-def _wtt_attr(text):
-    # Prepare text for a WTT XML attribute value: flatten newlines/tabs to
-    # spaces (raw newlines are illegal in XML attributes), drop invalid XML
-    # chars using the shared helper, then quote. quoteattr adds the quotes.
+def _wtt_attr(text: str) -> str:
+    """Prepare text for a WTT XML attribute value.
+
+    Flattens newlines/tabs to spaces (raw newlines are illegal in XML
+    attributes), drops invalid XML chars using the shared helper, then
+    quotes. quoteattr adds the quotes.
+    """
     text = (
         text.replace("\r\n", " ")
         .replace("\n", " ")
@@ -318,11 +321,11 @@ def _wtt_attr(text):
 
 
 class WttReport(Report):
-    def write_results(self, tests, elapsed):
+    def write_results(self, tests, elapsed: float) -> None:
         with open(self.output_file, "w", encoding="utf-16") as f:
             self._write_results_to_file(tests, elapsed, f)
 
-    def _write_results_to_file(self, tests, elapsed, file):
+    def _write_results_to_file(self, tests, elapsed: float, file) -> None:
         tests.sort(key=by_suite_and_test_path)
 
         machine = os.getenv("COMPUTERNAME", "")
@@ -331,17 +334,11 @@ class WttReport(Report):
         starts = [t.result.start for t in tests if t.result and t.result.start]
         base = min(starts) if starts else 0.0
         base_dt = datetime.datetime.fromtimestamp(base)
-        base_time = "%d:%d:%d %d:%d:%d:%d" % (
-            base_dt.year,
-            base_dt.month,
-            base_dt.day,
-            base_dt.hour,
-            base_dt.minute,
-            base_dt.second,
-            base_dt.microsecond // 1000,
+        base_time = base_dt.strftime("%Y:%m:%d %H:%M:%S") + ":%03d" % (
+            base_dt.microsecond // 1000
         )
 
-        def times(test):
+        def times(test) -> tuple[int, int]:
             elapsed_time = test.result.elapsed or 0.0
             start_time = test.result.start - base if test.result.start else 0.0
             return int(start_time), int(start_time + elapsed_time)
@@ -349,7 +346,7 @@ class WttReport(Report):
         root_ctx = 1
         end_ticks = int(elapsed)
 
-        def rc(ref_ctx):
+        def rc(ref_ctx: str) -> str:
             return f'\t<rti id="" />\n\t<ctx id="{ref_ctx}" />\n'
 
         file.write('<?xml version="1.0" encoding="utf-16"?>\n')
