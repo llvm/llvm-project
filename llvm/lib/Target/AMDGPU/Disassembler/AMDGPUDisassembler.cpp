@@ -962,11 +962,11 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   if (SIInstrFlags::isSDWA(*MCII, MI))
     convertSDWAInst(MI);
 
-  if (SIInstrFlags::isMAI(*MCII, MI))
-    convertMAIInst(MI);
+  if (SIInstrFlags::isMAI(*MCII, MI) && !convertMAIInst(MI))
+    return MCDisassembler::Fail;
 
-  if (SIInstrFlags::isWMMA(*MCII, MI))
-    convertWMMAInst(MI);
+  if (SIInstrFlags::isWMMA(*MCII, MI) && !convertWMMAInst(MI))
+    return MCDisassembler::Fail;
 
   int VDstIn_Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
                                               AMDGPU::OpName::vdst_in);
@@ -1065,33 +1065,50 @@ void AMDGPUDisassembler::convertSDWAInst(MCInst &MI) const {
 
 /// Adjust the register values used by V_MFMA_F8F6F4_f8_f8 instructions to the
 /// appropriate subregister for the used format width.
-static void adjustMFMA_F8F6F4OpRegClass(const MCRegisterInfo &MRI,
+///
+/// \returns false if the operand cannot be narrowed down to \p NumRegs, which
+/// means the encoding is malformed.
+static bool adjustMFMA_F8F6F4OpRegClass(const MCRegisterInfo &MRI,
                                         MCOperand &MO, uint8_t NumRegs) {
+  // A malformed encoding can select an operand that is not a register at all.
+  if (!MO.isReg())
+    return false;
+
+  MCRegister NewReg;
   switch (NumRegs) {
   case 4:
-    return MO.setReg(MRI.getSubReg(MO.getReg(), AMDGPU::sub0_sub1_sub2_sub3));
+    NewReg = MRI.getSubReg(MO.getReg(), AMDGPU::sub0_sub1_sub2_sub3);
+    break;
   case 6:
-    return MO.setReg(
-        MRI.getSubReg(MO.getReg(), AMDGPU::sub0_sub1_sub2_sub3_sub4_sub5));
+    NewReg = MRI.getSubReg(MO.getReg(), AMDGPU::sub0_sub1_sub2_sub3_sub4_sub5);
+    break;
   case 8:
-    if (MCRegister NewReg = MRI.getSubReg(
-            MO.getReg(), AMDGPU::sub0_sub1_sub2_sub3_sub4_sub5_sub6_sub7)) {
-      MO.setReg(NewReg);
-    }
-    return;
-  case 12: {
+    NewReg = MRI.getSubReg(MO.getReg(),
+                           AMDGPU::sub0_sub1_sub2_sub3_sub4_sub5_sub6_sub7);
+    // For mfma f8/f8 is the widest format, so the operand already has the
+    // requested width and there is no subregister to select.
+    if (!NewReg)
+      return true;
+    break;
+  case 12:
     // There is no 384-bit subreg index defined.
-    MCRegister BaseReg = MRI.getSubReg(MO.getReg(), AMDGPU::sub0);
-    MCRegister NewReg = MRI.getMatchingSuperReg(
-        BaseReg, AMDGPU::sub0, &MRI.getRegClass(AMDGPU::VReg_384RegClassID));
-    return MO.setReg(NewReg);
-  }
+    if (MCRegister BaseReg = MRI.getSubReg(MO.getReg(), AMDGPU::sub0)) {
+      NewReg = MRI.getMatchingSuperReg(
+          BaseReg, AMDGPU::sub0, &MRI.getRegClass(AMDGPU::VReg_384RegClassID));
+    }
+    break;
   case 16:
     // No-op in cases where one operand is still f8/bf8.
-    return;
+    return true;
   default:
     llvm_unreachable("Unexpected size for mfma/wmma f8f6f4 operand");
   }
+
+  if (!NewReg)
+    return false;
+
+  MO.setReg(NewReg);
+  return true;
 }
 
 /// f8f6f4 instructions have different pseudos depending on the used formats. In
@@ -1099,11 +1116,11 @@ static void adjustMFMA_F8F6F4OpRegClass(const MCRegisterInfo &MRI,
 /// classes which assume using an fp8/bf8 format for both operands. The actual
 /// register class depends on the format in blgp and cbsz operands. Adjust the
 /// register classes depending on the used format.
-void AMDGPUDisassembler::convertMAIInst(MCInst &MI) const {
+bool AMDGPUDisassembler::convertMAIInst(MCInst &MI) const {
   int BlgpIdx =
       AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::blgp);
   if (BlgpIdx == -1)
-    return;
+    return true;
 
   int CbszIdx =
       AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::cbsz);
@@ -1115,24 +1132,24 @@ void AMDGPUDisassembler::convertMAIInst(MCInst &MI) const {
       AMDGPU::getMFMA_F8F6F4_WithFormatArgs(CBSZ, BLGP, MI.getOpcode());
   if (!AdjustedRegClassOpcode ||
       AdjustedRegClassOpcode->Opcode == MI.getOpcode())
-    return;
+    return true;
 
   MI.setOpcode(AdjustedRegClassOpcode->Opcode);
   int Src0Idx =
       AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src0);
   int Src1Idx =
       AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src1);
-  adjustMFMA_F8F6F4OpRegClass(MRI, MI.getOperand(Src0Idx),
-                              AdjustedRegClassOpcode->NumRegsSrcA);
-  adjustMFMA_F8F6F4OpRegClass(MRI, MI.getOperand(Src1Idx),
-                              AdjustedRegClassOpcode->NumRegsSrcB);
+  return adjustMFMA_F8F6F4OpRegClass(MRI, MI.getOperand(Src0Idx),
+                                     AdjustedRegClassOpcode->NumRegsSrcA) &&
+         adjustMFMA_F8F6F4OpRegClass(MRI, MI.getOperand(Src1Idx),
+                                     AdjustedRegClassOpcode->NumRegsSrcB);
 }
 
-void AMDGPUDisassembler::convertWMMAInst(MCInst &MI) const {
+bool AMDGPUDisassembler::convertWMMAInst(MCInst &MI) const {
   int FmtAIdx =
       AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::matrix_a_fmt);
   if (FmtAIdx == -1)
-    return;
+    return true;
 
   int FmtBIdx =
       AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::matrix_b_fmt);
@@ -1144,17 +1161,17 @@ void AMDGPUDisassembler::convertWMMAInst(MCInst &MI) const {
       AMDGPU::getWMMA_F8F6F4_WithFormatArgs(FmtA, FmtB, MI.getOpcode());
   if (!AdjustedRegClassOpcode ||
       AdjustedRegClassOpcode->Opcode == MI.getOpcode())
-    return;
+    return true;
 
   MI.setOpcode(AdjustedRegClassOpcode->Opcode);
   int Src0Idx =
       AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src0);
   int Src1Idx =
       AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src1);
-  adjustMFMA_F8F6F4OpRegClass(MRI, MI.getOperand(Src0Idx),
-                              AdjustedRegClassOpcode->NumRegsSrcA);
-  adjustMFMA_F8F6F4OpRegClass(MRI, MI.getOperand(Src1Idx),
-                              AdjustedRegClassOpcode->NumRegsSrcB);
+  return adjustMFMA_F8F6F4OpRegClass(MRI, MI.getOperand(Src0Idx),
+                                     AdjustedRegClassOpcode->NumRegsSrcA) &&
+         adjustMFMA_F8F6F4OpRegClass(MRI, MI.getOperand(Src1Idx),
+                                     AdjustedRegClassOpcode->NumRegsSrcB);
 }
 
 struct VOPModifiers {
