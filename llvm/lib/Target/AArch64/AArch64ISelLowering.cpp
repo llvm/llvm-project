@@ -1968,6 +1968,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECTOR_SPLICE_RIGHT, VT, Custom);
     }
 
+    // Broadcasts to unpacked SVE type require explicit unpacking to add spacing
+    // between elements.
+    for (auto VT : {MVT::nxv2f16, MVT::nxv4f16, MVT::nxv2f32, MVT::nxv2bf16,
+                    MVT::nxv4bf16})
+      setOperationAction(ISD::VECTOR_BROADCAST, VT, Custom);
+
     if (Subtarget->hasSVEB16B16() &&
         Subtarget->isNonStreamingSVEorSME2Available()) {
       // Note: Use SVE for bfloat16 operations when +sve-b16b16 is available.
@@ -8780,6 +8786,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerEXTEND_VECTOR_INREG(Op, DAG);
   case ISD::ZERO_EXTEND_VECTOR_INREG:
     return LowerZERO_EXTEND_VECTOR_INREG(Op, DAG);
+  case ISD::VECTOR_BROADCAST:
+    return LowerVECTOR_BROADCAST(Op, DAG);
   case ISD::VECTOR_SHUFFLE:
     return LowerVECTOR_SHUFFLE(Op, DAG);
   case ISD::SPLAT_VECTOR:
@@ -17775,6 +17783,20 @@ SDValue AArch64TargetLowering::LowerEXTRACT_SUBVECTOR(SDValue Op,
   }
 
   return SDValue();
+}
+
+SDValue AArch64TargetLowering::LowerVECTOR_BROADCAST(SDValue Op,
+                                                     SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  EVT VT = Op.getValueType();
+  assert(isUnpackedType(VT, DAG) && "Expected an unpacked vector type!");
+
+  // Broadcast into a packed container before extracting the low lanes, which
+  // places the result elements at the spacing required by the unpacked type.
+  EVT PackedVT = getPackedSVEVectorVT(VT.getVectorElementType());
+  SDValue Broadcast =
+      DAG.getNode(ISD::VECTOR_BROADCAST, DL, PackedVT, Op.getOperand(0));
+  return DAG.getExtractSubvector(DL, VT, Broadcast, 0);
 }
 
 SDValue AArch64TargetLowering::LowerINSERT_SUBVECTOR(SDValue Op,
