@@ -15,6 +15,8 @@
 #define LLVM_LIB_TARGET_NVPTX_NVPTX_H
 
 #include "llvm/ADT/Bitfields.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/AtomicOrdering.h"
@@ -134,6 +136,11 @@ struct NVPTXMarkKernelPtrsGlobalPass
 struct NVPTXTagInvariantLoadsPass
     : OptionalPassInfoMixin<NVPTXTagInvariantLoadsPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
+class NVPTXISelDAGToDAGPass : public SelectionDAGISelPass {
+public:
+  NVPTXISelDAGToDAGPass(NVPTXTargetMachine &TM, CodeGenOptLevel OptLevel);
 };
 
 namespace NVPTX {
