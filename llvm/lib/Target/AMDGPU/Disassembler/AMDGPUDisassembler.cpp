@@ -396,7 +396,8 @@ static DecodeStatus decodeOperand_VGPR_16(MCInst &Inst, unsigned Imm,
                                           uint64_t /*Addr*/,
                                           const MCDisassembler *Decoder) {
   assert(isUInt<10>(Imm) && "10-bit encoding expected");
-  assert(Imm & AMDGPU::EncValues::IS_VGPR && "VGPR expected");
+  if (!(Imm & AMDGPU::EncValues::IS_VGPR))
+    return MCDisassembler::Fail;
 
   const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
 
@@ -1971,7 +1972,8 @@ unsigned AMDGPUDisassembler::getAgprClassId(unsigned Width) const {
   llvm_unreachable("Invalid register width!");
 }
 
-unsigned AMDGPUDisassembler::getSgprClassId(unsigned Width) const {
+std::optional<unsigned>
+AMDGPUDisassembler::getSgprClassId(unsigned Width) const {
   using namespace AMDGPU;
 
   switch (Width) {
@@ -1999,10 +2001,11 @@ unsigned AMDGPUDisassembler::getSgprClassId(unsigned Width) const {
   case 512:
     return SGPR_512RegClassID;
   }
-  llvm_unreachable("Invalid register width!");
+  return std::nullopt;
 }
 
-unsigned AMDGPUDisassembler::getTtmpClassId(unsigned Width) const {
+std::optional<unsigned>
+AMDGPUDisassembler::getTtmpClassId(unsigned Width) const {
   using namespace AMDGPU;
 
   switch (Width) {
@@ -2026,7 +2029,7 @@ unsigned AMDGPUDisassembler::getTtmpClassId(unsigned Width) const {
   case 512:
     return TTMP_512RegClassID;
   }
-  llvm_unreachable("Invalid register width!");
+  return std::nullopt;
 }
 
 int AMDGPUDisassembler::getTTmpIdx(unsigned Val) const {
@@ -2062,15 +2065,28 @@ MCOperand AMDGPUDisassembler::decodeNonVGPRSrcOp(const MCInst &Inst,
   assert(Val < (1 << 8) && "9-bit Src encoding when Val{8} is 0");
   using namespace AMDGPU::EncValues;
 
+  // Not every operand width has a supported non-VGPR source encoding.
+  // Selecting an unsupported SGPR, ttmp, or special register is malformed.
+  auto UnsupportedWidth = [&]() {
+    return errOperand(Val, "unsupported " + Twine(Width) +
+                               "-bit non-VGPR operand encoding " + Twine(Val));
+  };
+
   if (Val <= SGPR_MAX) {
     // "SGPR_MIN <= Val" is always true and causes compilation warning.
     static_assert(SGPR_MIN == 0);
-    return createSRegOperand(getSgprClassId(Width), Val - SGPR_MIN);
+    std::optional<unsigned> ClassId = getSgprClassId(Width);
+    if (!ClassId)
+      return UnsupportedWidth();
+    return createSRegOperand(*ClassId, Val - SGPR_MIN);
   }
 
   int TTmpIdx = getTTmpIdx(Val);
   if (TTmpIdx >= 0) {
-    return createSRegOperand(getTtmpClassId(Width), TTmpIdx);
+    std::optional<unsigned> ClassId = getTtmpClassId(Width);
+    if (!ClassId)
+      return UnsupportedWidth();
+    return createSRegOperand(*ClassId, TTmpIdx);
   }
 
   if ((INLINE_INTEGER_C_MIN <= Val && Val <= INLINE_INTEGER_C_MAX) ||
@@ -2094,7 +2110,7 @@ MCOperand AMDGPUDisassembler::decodeNonVGPRSrcOp(const MCInst &Inst,
   case 512:
     return decodeSpecialReg96Plus(Val);
   default:
-    llvm_unreachable("unexpected immediate type");
+    return UnsupportedWidth();
   }
 }
 
@@ -2246,12 +2262,12 @@ MCOperand AMDGPUDisassembler::decodeSDWASrc(unsigned Width,
     if (SDWA9EncValues::SRC_SGPR_MIN <= Val &&
         Val <= (isGFX10Plus() ? SDWA9EncValues::SRC_SGPR_MAX_GFX10
                               : SDWA9EncValues::SRC_SGPR_MAX_SI)) {
-      return createSRegOperand(getSgprClassId(Width),
+      return createSRegOperand(*getSgprClassId(Width),
                                Val - SDWA9EncValues::SRC_SGPR_MIN);
     }
     if (SDWA9EncValues::SRC_TTMP_MIN <= Val &&
         Val <= SDWA9EncValues::SRC_TTMP_MAX) {
-      return createSRegOperand(getTtmpClassId(Width),
+      return createSRegOperand(*getTtmpClassId(Width),
                                Val - SDWA9EncValues::SRC_TTMP_MIN);
     }
 
@@ -2289,14 +2305,12 @@ MCOperand AMDGPUDisassembler::decodeSDWAVopcDst(unsigned Val) const {
     Val &= SDWA9EncValues::VOPC_DST_SGPR_MASK;
 
     int TTmpIdx = getTTmpIdx(Val);
-    if (TTmpIdx >= 0) {
-      auto TTmpClsId = getTtmpClassId(IsWave32 ? 32 : 64);
-      return createSRegOperand(TTmpClsId, TTmpIdx);
-    }
+    if (TTmpIdx >= 0)
+      return createSRegOperand(*getTtmpClassId(IsWave32 ? 32 : 64), TTmpIdx);
     if (Val > SGPR_MAX) {
       return IsWave32 ? decodeSpecialReg32(Val) : decodeSpecialReg64(Val);
     }
-    return createSRegOperand(getSgprClassId(IsWave32 ? 32 : 64), Val);
+    return createSRegOperand(*getSgprClassId(IsWave32 ? 32 : 64), Val);
   }
   return createRegOperand(IsWave32 ? AMDGPU::VCC_LO : AMDGPU::VCC);
 }

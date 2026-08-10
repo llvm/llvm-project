@@ -18,6 +18,19 @@
 # GFX12-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
 0xfa,0x00,0x80,0xd6,0x01,0x00,0x01,0x02
 
+# VINTERP true16 source operands must have the VGPR selector bit set.
+# GFX12-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
+0x00,0x00,0x02,0xcd,0x00,0x00,0x00,0x00
+
+# GFX12-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
+0x00,0x00,0x03,0xcd,0x00,0x00,0x00,0x00
+
+# GFX12-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
+0x00,0x00,0x04,0xcd,0x00,0x00,0x00,0x00
+
+# GFX12-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
+0x00,0x00,0x05,0xcd,0x00,0x00,0x00,0x00
+
 # this is s_waitcnt_vscnt exec_hi, 0x1234, which is valid on gfx11, but not on gfx12
 # GFX12-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
 0x34,0x12,0x7f,0xbc
@@ -124,6 +137,11 @@
 # scalar registers have no 384-bit tuple.
 # GFX1250-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
 0x00,0x18,0x33,0xcc,0x08,0x30,0xa2,0x04
+
+# This is s_load_b96 with a ttmp destination, which is not a supported
+# 96-bit scalar destination encoding.
+# GFX12-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
+0x00,0xbb,0x00,0xf4,0x00,0x00,0x00,0xf8
 
 # This encoding references a missing trailing literal.
 # GFX1250-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
