@@ -5653,7 +5653,10 @@ public:
     ///! Language semantics require left-to-right evaluation.
     ForceLeftToRight,
     ///! Language semantics require right-to-left evaluation.
-    ForceRightToLeft
+    ForceRightToLeft,
+    ///! Language semantics require only the first argument to be evaluated
+    ///! first; the others are indeterminately sequenced.
+    ForceFirstBeforeRest
   };
 
   // Wrapper for function prototype sources. Wraps either a FunctionProtoType or
