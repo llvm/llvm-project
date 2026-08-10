@@ -29,7 +29,7 @@ namespace llvm {
 class CachedFileStream {
 public:
   CachedFileStream(std::unique_ptr<raw_pwrite_stream> OS,
-                   std::string OSPath = "")
+                   const std::string &OSPath = "")
       : OS(std::move(OS)), ObjectPathName(OSPath) {}
 
   /// Must be called exactly once after the writes to OS have been completed
