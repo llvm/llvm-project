@@ -7547,7 +7547,7 @@ void DAGTypeLegalizer::WidenVecRes_VECTOR_INTERLEAVE(SDNode *N) {
     SDValue Narrow = DAG.getExtractSubvector(
         DL, VT, Packed, OrigEC.multiplyCoefficientBy(Idx).getKnownMinValue());
     SDValue Wide =
-        DAG.getInsertSubvector(DL, DAG.getUNDEF(WidenVT), Narrow, /*Idx=*/0U);
+        DAG.getInsertSubvector(DL, DAG.getPOISON(WidenVT), Narrow, /*Idx=*/0U);
     SetWidenedVector(SDValue(N, Idx), Wide);
   }
 }
