@@ -8,6 +8,7 @@
 declare <4 x float> @llvm.amdgcn.pin.vgpr.v4f32(<4 x float>, i32 immarg)
 declare <8 x i32> @llvm.amdgcn.pin.vgpr.v8i32(<8 x i32>, i32 immarg)
 declare <8 x float> @llvm.amdgcn.wmma.f32.16x16x32.bf16(i1, <16 x bfloat>, i1, <16 x bfloat>, i16, <8 x float>, i1, i1)
+declare i32 @llvm.amdgcn.workitem.id.x()
 
 ; CHECK-LABEL: {{^}}pin_high_vgpr:
 ; CHECK: s_set_vgpr_msb
@@ -41,14 +42,35 @@ define amdgpu_kernel void @pin_two_load_tuple(ptr addrspace(1) %o, ptr addrspace
   ret void
 }
 
+; A 32-byte load off a divergent address is selected as two dwordx4 loads whose
+; lanes reach the REG_SEQUENCE as subregister slices of the wider load. Placing
+; a lane on its own would strand the rest of its load, so each load is placed as
+; a whole onto its half of the pinned tuple.
+; CHECK-LABEL: {{^}}pin_split_wide_load:
+; CHECK: global_load_b128 v[{{[0-9:]+}}] /*v[304:307]*/
+; CHECK: global_load_b128 v[{{[0-9:]+}}] /*v[300:303]*/
+; CHECK: .set .Lpin_split_wide_load.num_vgpr, 308
+define amdgpu_kernel void @pin_split_wide_load(ptr addrspace(1) %in, ptr addrspace(1) %out) {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %idx = sext i32 %tid to i64
+  %a = getelementptr inbounds <8 x i32>, ptr addrspace(1) %in, i64 %idx
+  %v = load <8 x i32>, ptr addrspace(1) %a, align 32
+  %pv = call <8 x i32> @llvm.amdgcn.pin.vgpr.v8i32(<8 x i32> %v, i32 300)
+  %o = getelementptr inbounds <8 x i32>, ptr addrspace(1) %out, i64 %idx
+  store <8 x i32> %pv, ptr addrspace(1) %o, align 32
+  ret void
+}
+
 ; A pinned value defined outside a loop and carried into it reaches a PHI. The
 ; physical tuple must not be substituted into the PHI operand: LiveVariables
 ; walks PHI sources through getVarInfo(), which asserts on a physical register,
 ; so the pin falls back to the soft path instead. Two pinned accumulators keep
-; both PHIs live across the back edge.
+; both PHIs live across the back edge. A soft hint costs no occupancy: the VGPR
+; count reflects what the allocator used, not the range the pins asked for.
 ; CHECK-LABEL: {{^}}pin_into_loop_phi:
 ; CHECK: v_wmma_f32_16x16x32_bf16
 ; CHECK: s_endpgm
+; CHECK: .set .Lpin_into_loop_phi.num_vgpr, 16
 define amdgpu_kernel void @pin_into_loop_phi(ptr addrspace(1) %o) {
 entry:
   %i0 = call <8 x i32> @llvm.amdgcn.pin.vgpr.v8i32(<8 x i32> zeroinitializer, i32 100)

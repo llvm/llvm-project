@@ -157,10 +157,15 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
       ++NumNoOpPins;
       continue;
     }
-    // Only VGPR pins drive the occupancy cap (see below); AGPRs are a separate
+    // Only a VGPR pin that is actually honored drives the occupancy cap (see
+    // below), so this is recorded at the pre-coloring sites rather than here:
+    // a soft hint is free to go unused, and paying occupancy for a hint the
+    // allocator then ignores costs waves for nothing. AGPRs are a separate
     // file that does not affect the VGPR budget.
-    if (!WantAGPR)
-      ReqVGPRs = std::max(ReqVGPRs, RegNo + NumRegs);
+    auto RecordVGPRFootprint = [&] {
+      if (!WantAGPR)
+        ReqVGPRs = std::max(ReqVGPRs, RegNo + NumRegs);
+    };
 
     // Narrow the pinned value's register file to VGPR or AGPR (a class
     // narrowing, not a physreg pin, so it also works for loop-carried PHIs and
@@ -351,23 +356,41 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
         if (Ok && Claimed.contains(U))
           Ok = false;
 
-      // Collect element (reg, subreg-index) pairs. Each element must be defined
-      // directly by a memory load: this path retargets those load defs to fixed
-      // physical AGPR sub-registers. If an element is instead a subregister copy
-      // of a wider load (e.g. a dwordx4 load split into dword lanes), retargeting
-      // it produces malformed physreg liveness, so bail and let the general path
-      // fall back to soft.
-      SmallVector<std::pair<Register, unsigned>, 16> Elems;
+      // Map each element's defining register onto a physical (sub)register of
+      // PR. An element either covers its REG_SEQUENCE slot outright, or is a
+      // subregister slice of a wider def: a 32-byte load, for instance, is
+      // selected as two dwordx4 loads whose lanes reach the REG_SEQUENCE as
+      // %wide.subN. Retargeting such a lane on its own would leave the rest of
+      // the wider def behind, so the whole def is placed instead --
+      // getMatchingSuperReg derives the tuple it must occupy and rejects a
+      // permuted or misaligned layout, and the tuple has to stay inside PR.
+      SmallVector<std::pair<Register, MCRegister>, 16> Elems;
       if (Ok)
         for (unsigned I = 1; I + 1 < RS->getNumOperands(); I += 2) {
           const MachineOperand &Reg = RS->getOperand(I);
           const MachineOperand &Sub = RS->getOperand(I + 1);
-          if (!Reg.isReg() || !Reg.getReg().isVirtual() || Reg.getSubReg() ||
-              !Sub.isImm() || !TRI->getSubReg(PR, Sub.getImm())) {
+          if (!Reg.isReg() || !Reg.getReg().isVirtual() || !Sub.isImm()) {
             Ok = false;
             break;
           }
-          Elems.push_back({Reg.getReg(), (unsigned)Sub.getImm()});
+          MCRegister Tgt = TRI->getSubReg(PR, Sub.getImm());
+          if (Tgt && Reg.getSubReg())
+            Tgt = TRI->getMatchingSuperReg(Tgt, Reg.getSubReg(),
+                                           MRI.getRegClass(Reg.getReg()));
+          if (!Tgt || !TRI->isSubRegisterEq(PR, Tgt)) {
+            Ok = false;
+            break;
+          }
+          auto *Prev =
+              find_if(Elems, [&](const std::pair<Register, MCRegister> &E) {
+                return E.first == Reg.getReg();
+              });
+          if (Prev == Elems.end())
+            Elems.emplace_back(Reg.getReg(), Tgt);
+          else if (Prev->second != Tgt) {
+            Ok = false;
+            break;
+          }
         }
 
       // Every use of the pinned result and of each element must legally accept
@@ -391,26 +414,29 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
           }
         }
       if (Ok)
-        for (auto [Elem, SubIdx] : Elems) {
-          MCRegister PhysSub = TRI->getSubReg(PR, SubIdx);
-          for (MachineOperand &MO : MRI.reg_operands(Elem))
-            if (!LegalHere(MO, PhysSub)) {
+        for (auto [Elem, Phys] : Elems) {
+          for (MachineOperand &MO : MRI.reg_operands(Elem)) {
+            MCRegister T =
+                MO.getSubReg() ? TRI->getSubReg(Phys, MO.getSubReg()) : Phys;
+            if (!LegalHere(MO, T)) {
               Ok = false;
               break;
             }
+          }
           if (!Ok)
             break;
         }
 
       if (Ok) {
-        // Point each element's def/uses at its physical AGPR sub-register.
-        for (auto [Elem, SubIdx] : Elems) {
-          MCRegister PhysSub = TRI->getSubReg(PR, SubIdx);
+        // Point each element's def/uses at its physical (sub)register.
+        for (auto [Elem, Phys] : Elems) {
           SmallVector<MachineOperand *, 4> Ops;
           for (MachineOperand &MO : MRI.reg_operands(Elem))
             Ops.push_back(&MO);
           for (MachineOperand *MO : Ops) {
-            MO->setReg(PhysSub);
+            MCRegister T =
+                MO->getSubReg() ? TRI->getSubReg(Phys, MO->getSubReg()) : Phys;
+            MO->setReg(T);
             MO->setSubReg(0);
             MO->setIsRenamable(false);
           }
@@ -432,6 +458,7 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
         RS->eraseFromParent();
         Pin->eraseFromParent();
         NeedRecomputeLiveIns = true;
+        RecordVGPRFootprint();
         ++NumHardPins;
         continue;
       }
@@ -612,6 +639,7 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
       for (MCRegUnit U : TRI->regunits(PR))
         Claimed.insert(U);
       Pin->eraseFromParent();
+      RecordVGPRFootprint();
       ++NumHardPins;
       continue;
     }
@@ -643,10 +671,10 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
   }
 
   // Cap occupancy so a wide VGPR-resident pinned value fits the per-wave budget
-  // without the user setting __launch_bounds__. Only VGPR footprints drive
-  // this: AGPRs are a separate file, so feeding an AGPR count into the VGPR
-  // occupancy formula would wrongly raise occupancy and spill the VGPR
-  // accumulator.
+  // without the user setting __launch_bounds__. Only the VGPR footprint of a
+  // pre-colored pin drives this: AGPRs are a separate file, so feeding an AGPR
+  // count into the VGPR occupancy formula would wrongly raise occupancy and
+  // spill the VGPR accumulator.
   auto *MFI = MF.getInfo<SIMachineFunctionInfo>();
   if (unsigned Req = ReqVGPRs) {
     // Occupancy achievable while reserving `Req` registers per wave; cap the
