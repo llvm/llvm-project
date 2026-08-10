@@ -2557,6 +2557,11 @@ APFloat::opStatus IEEEFloat::convert(const fltSemantics &toSemantics,
         semantics->nanEncoding != fltNanEncoding::NegativeZero)
       makeNaN(false, false);
 
+    // If the source has no significand, there are no payload bits to carry
+    // over, and an all-zero significand would encode an Inf. Create a new NaN.
+    if (!APFloat::hasSignificand(fromSemantics))
+      makeNaN(false, sign);
+
     *losesInfo = lostFraction != lfExactlyZero || X86SpecialNan;
 
     // For x87 extended precision, we want to make a NaN, not a special NaN if
@@ -3378,34 +3383,8 @@ hash_code hash_value(const IEEEFloat &Arg) {
 // the actual IEEE respresentations.  We compensate for that here.
 
 APInt IEEEFloat::convertF80LongDoubleAPFloatToAPInt() const {
-  assert(semantics ==
-         (const llvm::fltSemantics *)&APFloatBase::semX87DoubleExtended);
-  assert(partCount()==2);
-
-  uint64_t myexponent, mysignificand;
-
-  if (isFiniteNonZero()) {
-    myexponent = exponent+16383; //bias
-    mysignificand = significandParts()[0];
-    if (myexponent==1 && !(mysignificand & 0x8000000000000000ULL))
-      myexponent = 0;   // denormal
-  } else if (category==fcZero) {
-    myexponent = 0;
-    mysignificand = 0;
-  } else if (category==fcInfinity) {
-    myexponent = 0x7fff;
-    mysignificand = 0x8000000000000000ULL;
-  } else {
-    assert(category == fcNaN && "Unknown category");
-    myexponent = 0x7fff;
-    mysignificand = significandParts()[0];
-  }
-
-  uint64_t words[2];
-  words[0] = mysignificand;
-  words[1] =  ((uint64_t)(sign & 1) << 15) |
-              (myexponent & 0x7fffLL);
-  return APInt(80, words);
+  assert(partCount() == 2);
+  return convertIEEEFloatToAPInt<APFloatBase::semX87DoubleExtended>();
 }
 
 APInt IEEEFloat::convertPPCDoubleDoubleLegacyAPFloatToAPInt() const {
@@ -3457,10 +3436,11 @@ APInt IEEEFloat::convertPPCDoubleDoubleLegacyAPFloatToAPInt() const {
 template <const fltSemantics &S>
 APInt IEEEFloat::convertIEEEFloatToAPInt() const {
   assert(semantics == &S);
-  constexpr unsigned int trailing_significand_bits = S.precision - 1;
-  constexpr int integer_bit_part = trailing_significand_bits / integerPartWidth;
-  constexpr integerPart integer_bit =
-      integerPart{1} << (trailing_significand_bits % integerPartWidth);
+  constexpr unsigned int trailing_significand_bits =
+      S.precision - 1 + S.hasExplicitIntegerBit;
+  constexpr int integer_bit_part = (S.precision - 1) / integerPartWidth;
+  constexpr integerPart integer_bit = integerPart{1}
+                                      << ((S.precision - 1) % integerPartWidth);
   constexpr uint64_t significand_mask = integer_bit - 1;
   constexpr unsigned int exponent_bits =
       S.sizeInBits - (S.hasSignedRepr ? 1 : 0) - trailing_significand_bits;
@@ -3491,6 +3471,9 @@ APInt IEEEFloat::convertIEEEFloatToAPInt() const {
       llvm_unreachable("semantics don't support inf!");
     myexponent = ::exponentInf(S) + bias;
     mysignificand.fill(0);
+    if constexpr (S.hasExplicitIntegerBit) {
+      mysignificand[0] = integerPart{1} << (trailing_significand_bits - 1);
+    }
   } else {
     assert(category == fcNaN && "Unknown category!");
     if (S.nonFiniteBehavior == fltNonfiniteBehavior::FiniteOnly)
@@ -3502,9 +3485,11 @@ APInt IEEEFloat::convertIEEEFloatToAPInt() const {
   std::array<uint64_t, (S.sizeInBits + 63) / 64> words;
   auto words_iter =
       std::copy_n(mysignificand.begin(), mysignificand.size(), words.begin());
-  if constexpr (significand_mask != 0 || trailing_significand_bits == 0) {
-    // Clear the integer bit.
-    words[mysignificand.size() - 1] &= significand_mask;
+  if constexpr (!S.hasExplicitIntegerBit) {
+    if constexpr (significand_mask != 0 || trailing_significand_bits == 0) {
+      // Clear the integer bit.
+      words[mysignificand.size() - 1] &= significand_mask;
+    }
   }
   std::fill(words_iter, words.end(), uint64_t{0});
   constexpr size_t last_word = words.size() - 1;

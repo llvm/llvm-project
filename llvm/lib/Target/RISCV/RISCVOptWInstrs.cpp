@@ -671,7 +671,8 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
       return false;
     }
 
-    case RISCV::LD: {
+    case RISCV::LD:
+    case RISCV::LXD: {
       if (MI->hasOneMemOperand() && !(*MI->memoperands_begin())->isVolatile() &&
           hasAllWUsers(*MI, ST, MRI)) {
         FixableDef.insert(MI);
@@ -689,6 +690,7 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
       [[fallthrough]];
     case RISCV::ADD:
     case RISCV::LWU:
+    case RISCV::LXWU:
     case RISCV::MUL:
     case RISCV::SUB:
       if (hasAllWUsers(*MI, ST, MRI)) {
@@ -713,6 +715,9 @@ static unsigned getWOp(unsigned Opcode) {
   case RISCV::LD:
   case RISCV::LWU:
     return RISCV::LW;
+  case RISCV::LXD:
+  case RISCV::LXWU:
+    return RISCV::LXW;
   case RISCV::MUL:
     return RISCV::MULW;
   case RISCV::SLLI:
@@ -834,6 +839,14 @@ bool RISCVOptWInstrs::canonicalizeWSuffixes(MachineFunction &MF,
         break;
       case RISCV::LWU:
         WOpc = RISCV::LW;
+        break;
+      case RISCV::LXD:
+        if (!MI.hasOneMemOperand() || (*MI.memoperands_begin())->isVolatile())
+          continue;
+        WOpc = RISCV::LXW;
+        break;
+      case RISCV::LXWU:
+        WOpc = RISCV::LXW;
         break;
       }
 
