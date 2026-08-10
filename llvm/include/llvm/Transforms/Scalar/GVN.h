@@ -506,12 +506,8 @@ private:
   bool
   propagateEquality(Value *LHS, Value *RHS,
                     const std::variant<BasicBlockEdge, Instruction *> &Root);
-  /// Given that LHS and RHS are known to be equal along the \p Root edge (one
-  /// of them being a constant), clone expressions that are solely built from
-  /// the non-constant value and are used outside the block(s) dominated by
-  /// \p Root into that dominated region with the constant substituted in.
-  /// This exposes further constant folding for uses that propagateEquality
-  /// cannot handle because they are not a direct use of LHS.
+  /// Clone expressions built from a non-constant value into the dominated
+  /// region with the constant substituted, enabling further constant folding.
   bool propagateConstExpressions(Value *LHS, Value *RHS,
                                  const BasicBlockEdge &Root);
   bool processFoldableCondBr(CondBrInst *BI);

@@ -146,7 +146,7 @@ static cl::opt<uint32_t> MaxNumInsnsPerBlock(
              "(default = 100)"));
 
 static cl::opt<bool> GVNPropagateConstExp(
-    "gvn-const-expr-prop", cl::ReallyHidden, cl::init(true),
+    "gvn-const-expr-prop", cl::Hidden, cl::init(true),
     cl::desc("Propagate expressions defined outside the dominating blocks "
              "for equality checks"));
 
@@ -3091,50 +3091,44 @@ void GVNPass::assignBlockRPONumber(Function &F) {
 namespace {
 
 /// Check if \p Expr is an expression involving only \p Base and/or constants.
-bool isExprBuiltFromOnly(Value *Expr, Value *Base) {
-  if (isa<Constant>(Expr))
+bool isExprBuiltFromBaseOnly(Value *Expr, Value *Base) {
+  if (!Expr || !Base) 
     return false;
   if (Expr == Base)
     return true;
-  if (!isa<Instruction>(Expr))
-    return false;
+  // Only handle Cast, BinOp, UnaryOp for now.
   if (!isa<CastInst, BinaryOperator, UnaryOperator>(Expr))
-    return false;
-  if (auto *II = dyn_cast<IntrinsicInst>(Expr))
-    if (II->getIntrinsicID() == Intrinsic::fake_use)
       return false;
   auto *ExprInst = cast<Instruction>(Expr);
-  bool UsedAtleastOnce = false;
-  for (unsigned i = 0, e = ExprInst->getNumOperands(); i != e; ++i) {
-    auto *Op = ExprInst->getOperand(i);
+  bool isUsedAtLeastOnce = false;
+  for (Value *Op : ExprInst->operands()) {
     if (isa<Constant>(Op))
       continue;
-    if (!isExprBuiltFromOnly(Op, Base))
+    if (!isExprBuiltFromBaseOnly(Op, Base))
       return false;
-    UsedAtleastOnce = true;
+    isUsedAtLeastOnce = true;
   }
-  return UsedAtleastOnce;
+  return isUsedAtLeastOnce;
 }
 
-/// Clone the valid-use expression \p Expr, replacing any use of \p OldVal
-/// with \p NewVal, inserting the cloned instructions right before
-/// \p InsertPt. This avoids creating a new expression for the same value
-/// more than once and keeps the clone as close as possible to its first use.
+/// Clone the expression \p Expr, replacing any use of \p OldVal with \p NewVal,
+/// inserting the cloned instructions right before \p InsertPt. This avoids 
+// creating a new expression for the same value more than once and keeps the 
+// clone as close as possible to its first use.
 Value *cloneExprReplacingOperand(Value *Expr, const Value *OldVal,
                                  Value *NewVal, Instruction *InsertPt) {
+  if (!Expr || !OldVal || !NewVal || !InsertPt)
+     return nullptr;
   if (isa<Constant>(Expr))
     return Expr;
   if (Expr == OldVal)
     return NewVal;
-  if (!isa<Instruction>(Expr))
-    return nullptr;
   // Only handle Cast, BinOp, UnaryOp for now.
   if (!isa<CastInst, BinaryOperator, UnaryOperator>(Expr))
     return nullptr;
   auto *ExprInst = cast<Instruction>(Expr);
   SmallVector<Value *, 4> NewOps;
-  for (unsigned i = 0, e = ExprInst->getNumOperands(); i != e; ++i) {
-    auto *Op = ExprInst->getOperand(i);
+  for (Value *Op : ExprInst->operands()) {
     auto *NewOp = cloneExprReplacingOperand(Op, OldVal, NewVal, InsertPt);
     if (!NewOp)
       return nullptr;
@@ -3151,13 +3145,6 @@ Value *cloneExprReplacingOperand(Value *Expr, const Value *OldVal,
 
 } // end anonymous namespace
 
-/// LHS and RHS are known to be equal along the \p Root edge, with one of
-/// them being a constant. Look for instructions dominated by \p Root that
-/// use an expression built solely from the non-constant value but whose
-/// operand is defined outside the region dominated by \p Root (so
-/// propagateEquality's direct-use replacement cannot reach it). Clone such
-/// expressions into the dominated region with the constant substituted in,
-/// exposing further constant folding. Returns whether a change was made.
 bool GVNPass::propagateConstExpressions(Value *LHS, Value *RHS,
                                         const BasicBlockEdge &Root) {
   if (!GVNPropagateConstExp)
@@ -3202,7 +3189,7 @@ bool GVNPass::propagateConstExpressions(Value *LHS, Value *RHS,
           continue;
 
         // Make sure the expression is built only from LHS.
-        if (!isExprBuiltFromOnly(OpExpr, LHS))
+        if (!isExprBuiltFromBaseOnly(OpExpr, LHS))
           continue;
 
         Value *ClonedExpr = cloneExprReplacingOperand(OpExpr, LHS, RHS, &I);
@@ -3223,15 +3210,15 @@ bool GVNPass::propagateConstExpressions(Value *LHS, Value *RHS,
           }
           ++NumGVNEqProp;
         }
-        ChangedIR = true;
+        Changed = true;
       }
     }
   }
 
-  if (ChangedIR)
+  if (Changed)
     LLVM_DEBUG(dbgs() << "ConstPropExpr: With " << *LHS << " == " << *RHS
                       << "\n");
-  return ChangedIR;
+  return Changed;
 }
 
 /// The given values are known to be equal in every use
