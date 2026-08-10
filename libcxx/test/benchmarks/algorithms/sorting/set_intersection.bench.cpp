@@ -11,7 +11,6 @@
 #include <algorithm>
 #include <cstddef>
 #include <deque>
-#include <iterator>
 #include <set>
 #include <string>
 #include <type_traits>
@@ -21,37 +20,19 @@
 #include "benchmark/benchmark.h"
 #include "../../GenerateInput.h"
 
-// Each benchmarking scenario produces the two sorted ranges to intersect, with `n` the size of the
-// larger of the two. The size of the smaller range is derived from `n`, and the ratio between the
-// two appears in the benchmark's name. That ratio is used to exercise implementation choices that
-// make a difference when the two ranges have very different sizes.
-
-// Generate `n` random values and return two independently allocated sorted copies of them.
-//
-// The copy is made before sorting, so that the two copies don't end up with their out-of-line
-// storage laid out in the same order.
-template <class T>
-std::pair<std::vector<T>, std::vector<T>> two_sorted_copies(std::size_t n) {
-  std::vector<T> a(n);
-  std::generate_n(a.begin(), n, [] { return Generate<T>::random(); });
-  std::vector<T> b = a;
-  std::sort(a.begin(), a.end());
-  std::sort(b.begin(), b.end());
-  return std::make_pair(std::move(a), std::move(b));
-}
-
 // Generate two ranges where the larger range holds `n` elements and the smaller one holds every `ratio`th
 // element of it, so the whole smaller range matches and the matches are spread evenly through the larger
-// one. Whether searching within the larger range beats scanning it depends on how far apart the matches
-// are, which is why this scenario is instantiated with several ratios. With a ratio of 1 the two ranges
-// are identical, which is the worst case for the number of elements written to the output.
+// one.
 template <class T>
 std::pair<std::vector<T>, std::vector<T>> spread(std::size_t n, std::size_t ratio) {
-  auto [large, sampled] = two_sorted_copies<T>(n);
+  std::vector<T> large(n);
+  std::generate_n(large.begin(), n, [] { return Generate<T>::random(); });
+  std::sort(large.begin(), large.end());
+
   std::vector<T> small;
   small.reserve(n / ratio + 1);
   for (std::size_t i = 0; i < n; i += ratio)
-    small.push_back(std::move(sampled[i]));
+    small.push_back(large[i]);
   return std::make_pair(std::move(large), std::move(small));
 }
 
@@ -89,11 +70,14 @@ int main(int argc, char** argv) {
     });
   };
 
-  // Every scenario is registered with 32, which is small enough that constant factors dominate, 8192,
-  // which fits in cache, and 1 << 18, which does not. The std::string rows stop at 8192, because those
-  // elements are large and expensive to compare and to copy, so beyond that the benchmark spends most
-  // of its time in its own setup. Most benchmarks on std::set stop at 8192, because they are too noisy
-  // above that.
+  // Each scenario below produces the two sorted ranges to intersect. `n` is the size of the larger range, and
+  // when the two sizes differ, the size of the smaller one is `n` divided by a ratio. That ratio exercises
+  // implementation choices that make a difference when the two ranges have very different sizes.
+  //
+  // Every scenario is registered with 32, which is small enough that constant factors dominate, 8192, which
+  // fits in cache, and 1 << 18, which does not. The std::string rows stop at 8192, because those elements are
+  // large and expensive to compare and to copy, so beyond that the benchmark spends most of its time in its
+  // own setup. Most benchmarks on std::set stop at 8192, because they are too noisy above that.
 
   {
     // The two ranges have no element in common, and every element of the first range compares less
@@ -103,8 +87,8 @@ int main(int argc, char** argv) {
       std::vector<T> values(2 * n);
       std::generate_n(values.begin(), 2 * n, [] { return Generate<T>::random(); });
       std::sort(values.begin(), values.end());
-      std::vector<T> first(std::make_move_iterator(values.begin()), std::make_move_iterator(values.begin() + n));
-      std::vector<T> second(std::make_move_iterator(values.begin() + n), std::make_move_iterator(values.end()));
+      std::vector<T> first(values.begin(), values.begin() + n);
+      std::vector<T> second(values.begin() + n, values.end());
       return std::make_pair(std::move(first), std::move(second));
     };
 
@@ -130,7 +114,7 @@ int main(int argc, char** argv) {
       first.reserve(n);
       second.reserve(n);
       for (std::size_t i = 0; i != values.size(); ++i)
-        (i % 2 == 0 ? first : second).push_back(std::move(values[i]));
+        (i % 2 == 0 ? first : second).push_back(values[i]);
       return std::make_pair(std::move(first), std::move(second));
     };
 
@@ -144,6 +128,7 @@ int main(int argc, char** argv) {
   }
 
   {
+    // Both ranges are identical, which is the worst case for the algorithm in terms of output size.
     auto identical = []<class T>(std::type_identity<T>, std::size_t n) { return spread<T>(n, 1); };
 
     // clang-format off
@@ -187,9 +172,12 @@ int main(int argc, char** argv) {
     //
     // Here we bother testing std::set with a large range since we don't actually go through the full set.
     auto prefix = []<class T>(std::type_identity<T>, std::size_t n, std::size_t ratio) {
-      auto [large, sampled] = two_sorted_copies<T>(n);
-      sampled.erase(sampled.begin() + std::max<std::size_t>(1, n / ratio), sampled.end());
-      return std::make_pair(std::move(large), std::move(sampled));
+      std::vector<T> large(n);
+      std::generate_n(large.begin(), n, [] { return Generate<T>::random(); });
+      std::sort(large.begin(), large.end());
+
+      std::vector<T> small(large.begin(), large.begin() + (n / ratio));
+      return std::make_pair(std::move(large), std::move(small));
     };
     auto prefix_1_1024 = [prefix](auto type, std::size_t n) { return prefix(type, n, 1024); };
 
