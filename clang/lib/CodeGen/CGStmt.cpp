@@ -782,10 +782,10 @@ void CodeGenFunction::EmitLabelStmt(const LabelStmt &S) {
 }
 
 void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
-  bool nomerge = false;
-  bool noinline = false;
-  bool alwaysinline = false;
-  bool noconvergent = false;
+  bool nomerge = InNoMergeAttributedStmt;
+  bool noinline = InNoInlineAttributedStmt;
+  bool alwaysinline = InAlwaysInlineAttributedStmt;
+  bool noconvergent = InNoConvergentAttributedStmt;
   StringRef amdgpuAVMode;
   HLSLControlFlowHintAttr::Spelling flattenOrBranch =
       HLSLControlFlowHintAttr::SpellingNotCalculated;
@@ -801,9 +801,11 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
       break;
     case attr::NoInline:
       noinline = true;
+      alwaysinline = false;
       break;
     case attr::AlwaysInline:
       alwaysinline = true;
+      noinline = false;
       break;
     case attr::NoConvergent:
       noconvergent = true;
@@ -832,6 +834,10 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
     } break;
     }
   }
+
+  assert(!(alwaysinline && noinline) &&
+         "alwaysinline and noinline are mutually exclusive");
+
   SaveAndRestore save_nomerge(InNoMergeAttributedStmt, nomerge);
   SaveAndRestore save_noinline(InNoInlineAttributedStmt, noinline);
   SaveAndRestore save_alwaysinline(InAlwaysInlineAttributedStmt, alwaysinline);
