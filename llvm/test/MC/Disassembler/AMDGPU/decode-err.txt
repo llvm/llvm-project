@@ -125,6 +125,11 @@
 # GFX1250-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
 0x00,0x18,0x33,0xcc,0x08,0x30,0xa2,0x04
 
+# This is s_load_b96 with a ttmp destination, which is not a supported
+# 96-bit scalar destination encoding.
+# GFX12-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
+0x00,0xbb,0x00,0xf4,0x00,0x00,0x00,0xf8
+
 # This encoding references a missing trailing literal.
 # GFX1250-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
 0x00,0x00,0x33,0xcc,0xff,0x68,0x02,0x02
