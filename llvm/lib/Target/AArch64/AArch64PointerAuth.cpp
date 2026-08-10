@@ -343,7 +343,7 @@ void AArch64PointerAuthImpl::authenticateLR(
   // with a hardcoded SP discriminator.
   if (!Offset) {
     // The AUTIASP instruction assembles to a hint instruction before v8.3a so
-    // this instruction can safely used for any v8a architecture.
+    // this instruction can safely be used for any v8a architecture.
     // From v8.3a onwards there are optimised authenticate LR and return
     // instructions, namely RETA{A,B}, that can be used instead. In this case
     // the DW_CFA_AARCH64_negate_ra_state can't be emitted. Additionally,
