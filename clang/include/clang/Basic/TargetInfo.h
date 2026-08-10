@@ -831,7 +831,6 @@ public:
   unsigned getIbm128Align() const { return Ibm128Align; }
   const llvm::fltSemantics &getIbm128Format() const { return *Ibm128Format; }
 
-
   /// Return the mangled code of long double.
   virtual const char *getLongDoubleMangling() const { return "e"; }
 

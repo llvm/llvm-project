@@ -16388,7 +16388,7 @@ GCCTypeClass EvaluateBuiltinClassifyType(QualType T,
 #include "clang/Basic/HLSLIntangibleTypes.def"
 #define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/SPIRVTypes.def"
-     case BuiltinType::MetaInfo:
+    case BuiltinType::MetaInfo:
       return GCCTypeClass::None;
 
     case BuiltinType::Dependent:
