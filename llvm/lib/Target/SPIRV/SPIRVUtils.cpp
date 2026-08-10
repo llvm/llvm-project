@@ -450,7 +450,8 @@ SPIRV::MemorySemantics::MemorySemantics getMemSemantics(AtomicOrdering Ord) {
 
 SPIRV::MemorySemantics::MemorySemantics
 getMemSemanticsForAtomic(AtomicOrdering Ord,
-                         SPIRV::StorageClass::StorageClass SC, bool IsVulkan) {
+                         SPIRV::StorageClass::StorageClass SC,
+                         bool IsVulkan) {
   SPIRV::MemorySemantics::MemorySemantics Sem = getMemSemantics(Ord);
   if (!IsVulkan || Sem != SPIRV::MemorySemantics::None)
     return Sem;
@@ -491,9 +492,8 @@ SPIRV::Scope::Scope getMemScope(LLVMContext &Ctx, SyncScope::ID Id) {
   return SPIRV::Scope::CrossDevice;
 }
 
-SPIRV::Scope::Scope
-legalizeScopeForVulkan(SPIRV::Scope::Scope Scope,
-                       SPIRV::StorageClass::StorageClass SC) {
+SPIRV::Scope::Scope legalizeScopeForVulkan(SPIRV::Scope::Scope Scope,
+                                           SPIRV::StorageClass::StorageClass SC) {
   if (Scope != SPIRV::Scope::CrossDevice)
     return Scope;
   if (SC == SPIRV::StorageClass::Workgroup)

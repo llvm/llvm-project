@@ -2100,10 +2100,9 @@ bool SPIRVInstructionSelector::selectAtomicLoad(Register ResVReg,
   AtomicOrdering AO = MemOp.getSuccessOrdering();
   SPIRV::StorageClass::StorageClass PtrSC =
       addressSpaceToStorageClass(MemOp.getAddrSpace(), STI);
-  uint32_t StorageClass =
-      static_cast<uint32_t>(getMemSemanticsForStorageClass(PtrSC));
+  uint32_t StorageClass = static_cast<uint32_t>(getMemSemanticsForStorageClass(PtrSC));
   uint32_t MemSem = static_cast<uint32_t>(getMemSemanticsForAtomic(
-                        AO, PtrSC, STI.getTargetTriple().isVulkanOS())) |
+                      AO, PtrSC, STI.getTargetTriple().isVulkanOS())) |
                     StorageClass;
   if (MemOp.isVolatile() && STI.getTargetTriple().isVulkanOS())
     MemSem |= static_cast<uint32_t>(SPIRV::MemorySemantics::Volatile);
@@ -2255,10 +2254,9 @@ bool SPIRVInstructionSelector::selectAtomicStore(MachineInstr &I) const {
   AtomicOrdering AO = MemOp.getSuccessOrdering();
   SPIRV::StorageClass::StorageClass PtrSC =
       addressSpaceToStorageClass(MemOp.getAddrSpace(), STI);
-  uint32_t StorageClass =
-      static_cast<uint32_t>(getMemSemanticsForStorageClass(PtrSC));
+  uint32_t StorageClass = static_cast<uint32_t>(getMemSemanticsForStorageClass(PtrSC));
   uint32_t MemSem = static_cast<uint32_t>(getMemSemanticsForAtomic(
-                        AO, PtrSC, STI.getTargetTriple().isVulkanOS())) |
+                      AO, PtrSC, STI.getTargetTriple().isVulkanOS())) |
                     StorageClass;
   if (MemOp.isVolatile() && STI.getTargetTriple().isVulkanOS())
     MemSem |= static_cast<uint32_t>(SPIRV::MemorySemantics::Volatile);
@@ -2536,8 +2534,9 @@ bool SPIRVInstructionSelector::selectAtomicRMW(Register ResVReg,
 
   uint32_t ScSem = static_cast<uint32_t>(getMemSemanticsForStorageClass(PtrSC));
   AtomicOrdering AO = MemOp->getSuccessOrdering();
-  uint32_t MemSem = static_cast<uint32_t>(getMemSemanticsForAtomic(
-                        AO, PtrSC, STI.getTargetTriple().isVulkanOS())) |
+  uint32_t MemSem = static_cast<uint32_t>(
+                        getMemSemanticsForAtomic(AO, PtrSC,
+                                                 STI.getTargetTriple().isVulkanOS())) |
                     ScSem;
   Register MemSemReg = buildI32Constant(MemSem, I);
 
@@ -2658,8 +2657,8 @@ bool SPIRVInstructionSelector::selectFence(MachineInstr &I) const {
   Register MemSemReg = buildI32Constant(MemSem, I);
   SyncScope::ID Ord = SyncScope::ID(I.getOperand(1).getImm());
   uint32_t Scope = static_cast<uint32_t>(getMemScopeForAtomic(
-      GR.CurMF->getFunction().getContext(), Ord, SPIRV::StorageClass::Uniform,
-      STI.getTargetTriple().isVulkanOS()));
+      GR.CurMF->getFunction().getContext(), Ord,
+      SPIRV::StorageClass::Uniform, STI.getTargetTriple().isVulkanOS()));
   Register ScopeReg = buildI32Constant(Scope, I);
   MachineBasicBlock &BB = *I.getParent();
   BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpMemoryBarrier))
