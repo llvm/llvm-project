@@ -536,6 +536,10 @@ void AddDebugInfoPass::handleGlobalOp(fir::GlobalOp globalOp,
     if (!isModuleLevelName(result.second) &&
         !mlir::isa<mlir::LLVM::DISubprogramAttr>(scope))
       return;
+    // Don't describe a constant for which we only have a declaration. It could
+    // leave an unresolved symbol in the debug information.
+    if (!globalOp.isInitialized())
+      return;
     break;
   default:
     return;
