@@ -44,12 +44,14 @@ declare void @callee2(ptr, ptr, ptr, ptr, ptr,
 ; COMMON:  Successors:
 ; COMMON:   SU([[DEPSTORE_FIRST:.*]]): Ord  Latency=0
 
+; GlobalISel outputs DEPSTOREB before DEPSTOREA, but the dependency relationship
+; still holds.
 ; SDAG: SU([[DEPSTORE_FIRST]]):   STRXui %{{.*}}, %fixed-stack.0
 ; SDAG:  Successors:
-; SDAG:   SU([[DEPSTORE_SECOND:.*]]): Ord  Latency=0
+; SDAG-NEXT:   SU([[DEPSTORE_SECOND:.*]]): Ord  Latency=0
 ; SDAG: SU([[DEPSTORE_SECOND]]):   STRXui %{{.*}}, %fixed-stack.1
 
 ; GISEL: SU([[DEPSTORE_FIRST]]):   STRXui %{{.*}}, %fixed-stack.1
 ; GISEL:  Successors:
-; GISEL:   SU([[DEPSTORE_SECOND:.*]]): Ord  Latency=0
+; GISEL-NEXT:   SU([[DEPSTORE_SECOND:.*]]): Ord  Latency=0
 ; GISEL: SU([[DEPSTORE_SECOND]]):   STRXui %{{.*}}, %fixed-stack.0
