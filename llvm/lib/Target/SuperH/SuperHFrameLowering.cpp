@@ -40,11 +40,15 @@ static unsigned getShiftAmt(uint32_t Val) {
 }
 
 // Helper to emit stack pointer adjustment.
-static void emitSPAdj(MachineFunction &MF, MachineBasicBlock &MBB,  MachineBasicBlock::iterator MBBI, int32_t AdjValue) {
+static bool emitSPAdj(MachineFunction &MF, MachineBasicBlock &MBB,  MachineBasicBlock::iterator MBBI, int32_t AdjValue) {
   DebugLoc dl;
   const SuperHInstrInfo &TII = *static_cast<const SuperHInstrInfo *>(MF.getSubtarget().getInstrInfo());
   const SuperHRegisterInfo &RII = *static_cast<const SuperHRegisterInfo *>(MF.getSubtarget().getRegisterInfo());
   MachineInstr::MIFlag MFlag = AdjValue < 0 ? MachineInstr::FrameSetup : MachineInstr::FrameDestroy;
+  
+  // No stack frame allocation neccesary.
+  if (AdjValue == 0)
+    return false;
 
   Register SP = RII.getStackRegister();
 
@@ -56,7 +60,7 @@ static void emitSPAdj(MachineFunction &MF, MachineBasicBlock &MBB,  MachineBasic
       .addImm((int)AdjValue)
       .addReg(SP);
 
-    return;
+    return true;
   }
 
   // Slow path, shift 8 bits at a time into r0.
@@ -93,6 +97,7 @@ static void emitSPAdj(MachineFunction &MF, MachineBasicBlock &MBB,  MachineBasic
     .addReg(SH::R0, RegState::Kill)
     .addReg(SP)
     .setMIFlag(MFlag);
+  return true;
 }
 
 void SuperHFrameLowering::emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const {
@@ -162,7 +167,8 @@ void SuperHFrameLowering::emitEpilogue(MachineFunction &MF, MachineBasicBlock &M
     .setMIFlag(MachineInstr::FrameDestroy);
 
   // 3. Delete stack frame, restoring stack pointer.
-  emitSPAdj(MF, MBB, MBBI, StackSize);
+  if (StackSize > 0)
+    emitSPAdj(MF, MBB, MBBI, StackSize);
 }
 
 MachineBasicBlock::iterator
