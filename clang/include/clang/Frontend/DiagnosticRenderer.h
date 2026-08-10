@@ -35,6 +35,8 @@ using DiagOrStoredDiag =
 
 /// Maps both endpoints of \p Range to their macro expansion, so that the range
 /// can be shown to a user.
+///
+/// \returns nullopt if \p Range is invalid, if an endpoint lies outside \p FID.
 std::optional<CharSourceRange> getExpansionRangeInFile(CharSourceRange Range,
                                                        FileID FID,
                                                        const SourceManager &SM);
