@@ -329,11 +329,11 @@ body: |
     ; DEFAULT-NEXT: [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF4:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; DEFAULT-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF4]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    ; DEFAULT-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF4]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
     ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
     ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
     ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
     ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_3:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF4]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
     ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_4:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
     ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_5:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
     ; DEFAULT-NEXT: SCHED_GROUP_BARRIER 32, 1, 0
@@ -606,11 +606,11 @@ body: |
     ; DEFAULT-NEXT: [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF4:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; DEFAULT-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF4]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    ; DEFAULT-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF4]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
     ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
     ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
     ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
     ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_3:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF4]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
     ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_4:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
     ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_5:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
     ; DEFAULT-NEXT: SCHED_GROUP_BARRIER 32, 1, 0
