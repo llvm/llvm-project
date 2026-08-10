@@ -63,9 +63,9 @@ void local_string_capture() {
     std::string local_string1, local_string2;
     captureString(local_string1, x);                // cfg-warning {{local variable 'local_string1' does not live long enough}}
     captureRValString(std::move(local_string2), x); // cfg-warning {{local variable 'local_string2' does not live long enough}} \
-                                    // cfg-note {{result of call to 'move<std::basic_string<char> &>' aliases the storage of local variable 'local_string2'}}
-  }                                 // cfg-note 2 {{destroyed here}}                                 
-  (void)x;                          // cfg-note 2 {{later used here}}                         
+                                                    // cfg-note {{result of call to 'move<std::basic_string<char> &>' aliases the storage of local variable 'local_string2'}}
+  }                                                 // cfg-note 2 {{destroyed here}}                                 
+  (void)x;                                          // cfg-note 2 {{later used here}}                         
 }
 
 void safe_string_captures() {
@@ -165,14 +165,15 @@ void safe_captures() {
 } // namespace capture_string_view
 
 namespace multiple_capture_by_attrs {
-struct X {} x1;
+struct X {} x1;               // cfg-note {{this global dangles}}
 void capture(std::string_view s [[clang::lifetime_capture_by(x1),
                                   clang::lifetime_capture_by_global]],
              X &x1);
 
 void use() {
-  capture(std::string(), // expected-warning {{object whose reference is captured by 'x1' will be destroyed at the end of the full-expression}} expected-warning {{object whose reference is captured will be destroyed at the end of the full-expression}}
-          x1);
+  capture(std::string(), x1); // expected-warning {{object whose reference is captured by 'x1' will be destroyed at the end of the full-expression}} \
+                              // expected-warning {{object whose reference is captured will be destroyed at the end of the full-expression}} \
+                              // cfg-warning {{stack memory associated with temporary object escapes to the global variable 'x1' which will dangle}}          
 }
 } // namespace multiple_capture_by_attrs
 
@@ -446,18 +447,17 @@ void use_container() {
   MyVector<const std::string*> vector_of_pointer;
   vector_of_pointer.push_back(getLifetimeBoundPointer(std::string())); // expected-warning {{object whose reference is captured by 'vector_of_pointer' will be destroyed at the end of the full-expression}} \
                                                                        // cfg-warning {{temporary object does not live long enough}} \
-                                                                       // cfg-note {{destroyed here}}
+                                                                       // cfg-note {{destroyed here}} \
+                                                                       // cfg-note {{result of call to 'getLifetimeBoundPointer' aliases the storage of temporary object}}
   (void)vector_of_pointer;                                             // cfg-note {{later used here}}
   vector_of_pointer.push_back(getLifetimeBoundPointer(*getLifetimeBoundPointer(std::string()))); // expected-warning {{object whose reference is captured by 'vector_of_pointer' will be destroyed at the end of the full-expression}} \
                                                                                                  // cfg-warning {{temporary object does not live long enough}} \
-                                                                                                 // cfg-note {{destroyed here}}
+                                                                                                 // cfg-note {{destroyed here}} \
+                                                                                                 // cfg-note 2 {{result of call to 'getLifetimeBoundPointer' aliases the storage of temporary object}}
   (void)vector_of_pointer;                                                                       // cfg-note {{later used here}}
-  vector_of_pointer.push_back(getLifetimeBoundPointer(local));              // cfg-warning {{temporary object does not live long enough}} \
-                                                                            // cfg-note {{destroyed here}}
-  (void)vector_of_pointer;                                                  // cfg-note {{later used here}}
-  vector_of_pointer.push_back(getNotLifetimeBoundPointer(std::string()));   // cfg-warning {{temporary object does not live long enough}} \
-                                                                            // cfg-note {{destroyed here}}
-  (void)vector_of_pointer;                                                  // cfg-note {{later used here}}
+  vector_of_pointer.push_back(getLifetimeBoundPointer(local));
+  vector_of_pointer.push_back(getNotLifetimeBoundPointer(std::string()));
+  (void)vector_of_pointer;
 }
 
 // ****************************************************************************

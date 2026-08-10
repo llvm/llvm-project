@@ -1066,13 +1066,13 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
     OriginList *CapturedOriginList = getOriginsList(*Args[I]);
     if (!CapturedOriginList)
       continue;
+    // For references to pointer-like types, peel the outer origin (the pointer
+    // object itself) so that we capture the underlying data (the inner origin).
     if (QualType ParamType = PVD->getType();
-        ParamType->isReferenceType() &&
-        isGslPointerType(ParamType->getPointeeType())) {
-      if (CapturedOriginList->getLength() > 1) {
-        CapturedOriginList = CapturedOriginList->peelOuterOrigin();
-      }
-    }
+        (ParamType->isReferenceType() &&
+         isPointerLikeType(ParamType->getPointeeType())) &&
+        CapturedOriginList->getLength() > 1)
+      CapturedOriginList = CapturedOriginList->peelOuterOrigin();
     for (int CapturingArgIdx : Attr->params()) {
       // FIXME: Add support for capturing to Global/unknown.
       if (CapturingArgIdx == LifetimeCaptureByAttr::Global ||
