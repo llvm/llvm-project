@@ -10044,7 +10044,8 @@ Expected<Decl *> ASTImporter::Import(Decl *FromD) {
       ImportedDecls.erase(Pos);
 
       // Remove the imported type mapping as well.
-      // The imported type can point to a declaration that failed to import later.
+      // The imported type can point to a declaration that failed to import
+      // later.
       if (const auto *FromTD = dyn_cast<TypeDecl>(FromD))
         ImportedTypes.erase(FromTD->getTypeForDecl());
 
