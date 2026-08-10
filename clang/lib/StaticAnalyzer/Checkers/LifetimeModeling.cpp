@@ -15,6 +15,7 @@ REGISTER_SET_FACTORY_WITH_PROGRAMSTATE(LifetimeSourceSet, const MemRegion *)
 REGISTER_MAP_WITH_PROGRAMSTATE(LifetimeBoundMap, SVal, LifetimeSourceSet)
 
 REGISTER_SET_WITH_PROGRAMSTATE(DeallocatedSourceSet, const MemRegion *)
+REGISTER_SET_WITH_PROGRAMSTATE(ReportedDeadRegions, const MemRegion *)
 
 namespace {
 
@@ -84,6 +85,13 @@ bool lifetime_modeling::isBoundToLifetimeSource(ProgramStateRef State,
 bool lifetime_modeling::isDeallocated(ProgramStateRef State,
                                       const MemRegion *Region) {
   return State->contains<DeallocatedSourceSet>(Region->getBaseRegion());
+}
+
+ProgramStateRef lifetime_modeling::markAsReported(ProgramStateRef State,
+                                                  const MemRegion *Region) {
+  if (State->contains<ReportedDeadRegions>(Region->getBaseRegion()))
+    return nullptr;
+  return State->add<ReportedDeadRegions>(Region->getBaseRegion());
 }
 
 static ProgramStateRef bindSource(ProgramStateRef State, SVal RetVal,
