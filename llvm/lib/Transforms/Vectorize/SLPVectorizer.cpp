@@ -12742,10 +12742,10 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
   std::tuple<unsigned, unsigned, unsigned, int> ReassocPeeledQuality;
   if (VectorizeReassociatedOps && Operands.size() == 2 &&
       all_of(VL, [&](Value *V) {
+        if (!S.isAltShuffle() && S.isCopyableElement(V))
+          return true;
         auto *I = dyn_cast<BinaryOperator>(V);
-        if (S.isAltShuffle())
-          return I && isReassocChainLink(I);
-        return S.isCopyableElement(V) || (I && isReassocChainLink(I));
+        return I && isReassocChainLink(I);
       })) {
     NaturalTwoColumns = Operands;
     if (S.isAltShuffle()) {

@@ -858,8 +858,8 @@ SmallVector<SmallVector<Value *>> scanAltAssociativeOperands(
     }
     Columns.insert(std::next(Columns.begin()), std::move(NewColumn));
   }
-  if (ReassocScalars.empty())
-    return {};
+  assert(!ReassocScalars.empty() &&
+         "Normalization guarantees at least one peeled level.");
   SubLanes.resize(NumLanes);
   for (unsigned Lane : seq<unsigned>(NumLanes))
     if (LaneOpcodes[Lane] == Instruction::Sub ||
