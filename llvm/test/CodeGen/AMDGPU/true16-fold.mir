@@ -265,3 +265,125 @@ body:             |
     $vgpr0 = COPY %5
     SI_RETURN implicit $vgpr0
 ...
+
+---
+name:            fold_sreg32_to_lo16_1
+tracksRegLiveness: true
+registers:
+body:             |
+  bb.0:
+    liveins: $sgpr0
+    ; CHECK-LABEL: name: fold_sreg32_to_lo16_1
+    ; CHECK: liveins: $sgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; CHECK-NEXT: [[V_MAX_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_MAX_F16_t16_e64 0, [[COPY]], 0, [[COPY]], -1, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0
+    %0:sreg_32 = COPY $sgpr0
+    %1:vgpr_32 = COPY %0:sreg_32
+    %2:vgpr_16 = nofpexcept V_MAX_F16_t16_e64 0, %1.lo16, 0, %1.lo16, -1, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0
+...
+
+---
+name:            fold_sreg32_to_lo16_2
+tracksRegLiveness: true
+registers:
+body:             |
+  bb.0:
+    liveins: $sgpr0
+    ; CHECK-LABEL: name: fold_sreg32_to_lo16_2
+    ; CHECK: liveins: $sgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[V_MAX_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_MAX_F16_t16_e64 0, [[DEF]].sub1, 0, [[DEF]].sub1, -1, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0
+    %0:sreg_64 = IMPLICIT_DEF
+    %1:vgpr_32 = COPY %0.sub1:sreg_64
+    %2:vgpr_16 = nofpexcept V_MAX_F16_t16_e64 0, %1.lo16, 0, %1.lo16, -1, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0
+...
+
+# Should not fold
+---
+name:            fold_sreg32_to_hi16
+tracksRegLiveness: true
+registers:
+body:             |
+  bb.0:
+    liveins: $sgpr0
+    ; CHECK-LABEL: name: fold_sreg32_to_hi16
+    ; CHECK: liveins: $sgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
+    ; CHECK-NEXT: [[V_MAX_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_MAX_F16_t16_e64 0, [[COPY1]].hi16, 0, [[COPY1]].hi16, -1, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0
+    %0:sreg_32 = COPY $sgpr0
+    %1:vgpr_32 = COPY %0:sreg_32
+    %2:vgpr_16 = nofpexcept V_MAX_F16_t16_e64 0, %1.hi16, 0, %1.hi16, -1, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0
+...
+
+
+---
+name:            fold_sreg32_cross_lo16_copy_1
+tracksRegLiveness: true
+registers:
+body:             |
+  bb.0:
+    liveins: $sgpr0
+    ; CHECK-LABEL: name: fold_sreg32_cross_lo16_copy_1
+    ; CHECK: liveins: $sgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; CHECK-NEXT: [[V_MAX_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_MAX_F16_t16_e64 0, [[COPY]], 0, [[COPY]], -1, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0
+    %0:sreg_32 = COPY $sgpr0
+    %1:vgpr_32 = COPY %0:sreg_32
+    %2:vgpr_16 = COPY %1.lo16:vgpr_32
+    %3:vgpr_16 = nofpexcept V_MAX_F16_t16_e64 0, %2, 0, %2, -1, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0
+...
+
+---
+name:            fold_sreg32_cross_lo16_copy_2
+tracksRegLiveness: true
+registers:
+body:             |
+  bb.0:
+    liveins: $sgpr0
+    ; CHECK-LABEL: name: fold_sreg32_cross_lo16_copy_2
+    ; CHECK: liveins: $sgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[V_MAX_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_MAX_F16_t16_e64 0, [[DEF]].sub1, 0, [[DEF]].sub1, -1, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0
+    %0:sreg_64 = IMPLICIT_DEF
+    %1:vgpr_32 = COPY %0.sub1:sreg_64
+    %2:vgpr_16 = COPY %1.lo16:vgpr_32
+    %3:vgpr_16 = nofpexcept V_MAX_F16_t16_e64 0, %2, 0, %2, -1, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0
+...
+
+# Should not fold
+---
+name:            fold_sreg32_cross_hi16
+tracksRegLiveness: true
+registers:
+body:             |
+  bb.0:
+    liveins: $sgpr0
+    ; CHECK-LABEL: name: fold_sreg32_cross_hi16
+    ; CHECK: liveins: $sgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
+    ; CHECK-NEXT: [[V_MAX_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_MAX_F16_t16_e64 0, [[COPY1]].hi16, 0, [[COPY1]].hi16, -1, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0
+    %0:sreg_32 = COPY $sgpr0
+    %1:vgpr_32 = COPY %0:sreg_32
+    %2:vgpr_16 = COPY %1.hi16:vgpr_32
+    %3:vgpr_16 = nofpexcept V_MAX_F16_t16_e64 0, %2, 0, %2, -1, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0
+...
