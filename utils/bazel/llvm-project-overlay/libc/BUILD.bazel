@@ -2741,7 +2741,7 @@ libc_support_library(
         ],
         "@platforms//os:macos": [
             "src/__support/OSUtil/darwin/syscall.h",
-            "src/__support/OSUtil/darwin/arm/syscall.h",
+            "src/__support/OSUtil/darwin/aarch64/syscall.h",
         ],
         "@platforms//os:windows": [],
     }),
