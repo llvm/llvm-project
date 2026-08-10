@@ -46,6 +46,12 @@ clang::getExpansionRangeInFile(CharSourceRange Range, FileID FID,
     return std::nullopt;
   }
 
+  // Both endpoints are in FID, so comparing their offsets is meaningful.
+  if (SM.getFileOffset(Expansion.getBegin()) >
+      SM.getFileOffset(Expansion.getEnd())) {
+    return std::nullopt;
+  }
+
   return Expansion;
 }
 
