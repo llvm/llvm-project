@@ -279,25 +279,25 @@ SampleProfileWriterExtBinaryBase::writeSample(const FunctionSamples &S) {
 }
 
 std::error_code
-SampleProfileWriterExtBinaryBase::writeFuncOffsetTable(bool IsCS) {
+SampleProfileWriterExtBinaryBase::writeFuncOffsetTable(bool IsNested) {
   if (WriteEytzingerNameTables) {
     // Eytzinger layout requires MD5 representation and does not support
     // multi-context Context-Sensitive profiles.
     if (!UseMD5 || FunctionSamples::ProfileIsCS)
       return sampleprof_error::unsupported_writing_format;
-    return writeEytzingerFuncOffsetTable(IsCS);
+    return writeEytzingerFuncOffsetTable(IsNested);
   }
   return writeLegacyFuncOffsetTable();
 }
 
 std::error_code
 SampleProfileWriterExtBinaryBase::writeEytzingerFuncOffsetTable(bool IsNested) {
-  assert((NumCS + NumFlat > 0 || FuncOffsetTable.empty()) &&
+  assert((NumNested + NumFlat > 0 || FuncOffsetTable.empty()) &&
          "SecNameTable must be written before SecFuncOffsetTable to establish "
          "Eytzinger indices!");
 
-  size_t SpanSize = IsNested ? NumCS : NumFlat;
-  size_t BaseIdx = IsNested ? 0 : NumCS;
+  size_t SpanSize = IsNested ? NumNested : NumFlat;
+  size_t BaseIdx = IsNested ? 0 : NumNested;
 
   std::vector<support::ulittle32_t> FuncOffsets(
       SpanSize, support::ulittle32_t(UINT32_MAX));
@@ -538,13 +538,14 @@ SampleProfileWriterExtBinaryBase::writeEytzingerNameTableSection(
   DenseSet<uint64_t> TopLevelGUIDs;
   std::vector<support::ulittle64_t> NestedKeys, FlatKeys, InlineeKeys;
 
-  // Collect top-level CS and Flat keys directly from ProfileMap.
+  // Collect top-level Nested and Flat keys directly from ProfileMap.
   for (const auto &I : ProfileMap) {
     const SampleContext &Ctx = I.second.getContext();
     uint64_t GUID = Ctx.getFunction().getHashCode();
     if (TopLevelGUIDs.insert(GUID).second) {
-      // In single-table default layouts, unify all top-level symbols in the CS
-      // partition so they match the single unflagged function offset table.
+      // In single-table default layouts, unify all top-level symbols in the
+      // Nested partition so they match the single unflagged function offset
+      // table.
       if (SecLayout != CtxSplitLayout || I.second.hasCallsiteSamples())
         NestedKeys.emplace_back(GUID);
       else
@@ -568,7 +569,7 @@ SampleProfileWriterExtBinaryBase::writeEytzingerNameTableSection(
     Idx = Tables.findGlobalIdx(FId.getHashCode());
 
   Tables.write(*OutputStream);
-  NumCS = Tables.size(EytzingerSpan::Nested);
+  NumNested = Tables.size(EytzingerSpan::Nested);
   NumFlat = Tables.size(EytzingerSpan::Flat);
 
   return sampleprof_error::success;
@@ -678,9 +679,9 @@ std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
     bool IsFlat =
         hasSecFlag(SectionHdrLayout[LayoutIdx], SecCommonFlags::SecFlagFlat);
     // An unflagged function offset table inherently indexes the primary
-    // context-sensitive symbol span.
-    bool IsCS = !IsFlat;
-    if (auto EC = writeFuncOffsetTable(IsCS))
+    // Nested symbol span.
+    bool IsNested = !IsFlat;
+    if (auto EC = writeFuncOffsetTable(IsNested))
       return EC;
     break;
   }
@@ -732,38 +733,38 @@ std::error_code SampleProfileWriterExtBinary::writeDefaultLayout(
 }
 
 static void splitProfileMapToTwo(const SampleProfileMap &ProfileMap,
-                                 SampleProfileMap &ContextProfileMap,
-                                 SampleProfileMap &NoContextProfileMap) {
+                                 SampleProfileMap &NestedProfileMap,
+                                 SampleProfileMap &FlatProfileMap) {
   for (const auto &I : ProfileMap) {
     if (I.second.hasCallsiteSamples())
-      ContextProfileMap.insert({I.first, I.second});
+      NestedProfileMap.insert({I.first, I.second});
     else
-      NoContextProfileMap.insert({I.first, I.second});
+      FlatProfileMap.insert({I.first, I.second});
   }
 }
 
 std::error_code SampleProfileWriterExtBinary::writeCtxSplitLayout(
     const SampleProfileMap &ProfileMap) {
-  SampleProfileMap ContextProfileMap, NoContextProfileMap;
-  splitProfileMapToTwo(ProfileMap, ContextProfileMap, NoContextProfileMap);
+  SampleProfileMap NestedProfileMap, FlatProfileMap;
+  splitProfileMapToTwo(ProfileMap, NestedProfileMap, FlatProfileMap);
 
   if (auto EC = writeOneSection(SecProfSummary, 0, ProfileMap))
     return EC;
   if (auto EC = writeOneSection(SecNameTable, 1, ProfileMap))
     return EC;
-  if (auto EC = writeOneSection(SecLBRProfile, 3, ContextProfileMap))
+  if (auto EC = writeOneSection(SecLBRProfile, 3, NestedProfileMap))
     return EC;
-  if (auto EC = writeOneSection(SecFuncOffsetTable, 2, ContextProfileMap))
+  if (auto EC = writeOneSection(SecFuncOffsetTable, 2, NestedProfileMap))
     return EC;
-  // Mark the section to have no context. Note section flag needs to be set
-  // before writing the section.
+  // Mark the section as flat (without callsite samples). Note section flag
+  // needs to be set before writing the section.
   addSectionFlag(5, SecCommonFlags::SecFlagFlat);
-  if (auto EC = writeOneSection(SecLBRProfile, 5, NoContextProfileMap))
+  if (auto EC = writeOneSection(SecLBRProfile, 5, FlatProfileMap))
     return EC;
-  // Mark the section to have no context. Note section flag needs to be set
-  // before writing the section.
+  // Mark the section as flat (without callsite samples). Note section flag
+  // needs to be set before writing the section.
   addSectionFlag(4, SecCommonFlags::SecFlagFlat);
-  if (auto EC = writeOneSection(SecFuncOffsetTable, 4, NoContextProfileMap))
+  if (auto EC = writeOneSection(SecFuncOffsetTable, 4, FlatProfileMap))
     return EC;
   if (auto EC = writeOneSection(SecProfileSymbolList, 6, ProfileMap))
     return EC;

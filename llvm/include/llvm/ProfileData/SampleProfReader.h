@@ -507,12 +507,12 @@ class EytzingerSampleProfileNameTable final : public SampleProfileNameTable {
 
 public:
   EytzingerSampleProfileNameTable(const support::ulittle64_t *Data,
-                                  size_t NumCS, size_t NumFlat,
+                                  size_t NumNested, size_t NumFlat,
                                   size_t NumInlinees)
-      : Array(Data, NumCS + NumFlat + NumInlinees),
-        Spans{{{Data, NumCS},
-               {Data + NumCS, NumFlat},
-               {Data + NumCS + NumFlat, NumInlinees}}} {}
+      : Array(Data, NumNested + NumFlat + NumInlinees),
+        Spans{{{Data, NumNested},
+               {Data + NumNested, NumFlat},
+               {Data + NumNested + NumFlat, NumInlinees}}} {}
 
   size_t size() const override { return Array.size(); }
 

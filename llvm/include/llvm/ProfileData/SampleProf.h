@@ -193,7 +193,7 @@ struct SecHdrTableEntry {
 enum class SecCommonFlags : uint32_t {
   SecFlagInValid = 0,
   SecFlagCompress = (1 << 0),
-  // Indicate the section contains only profile without context.
+  // Indicate the section contains flat profiles (without callsite samples).
   SecFlagFlat = (1 << 1)
 };
 
