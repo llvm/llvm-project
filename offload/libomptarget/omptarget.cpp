@@ -879,6 +879,21 @@ static int settleAttachStorage(DeviceTy &Device, StateInfoTy &StateInfo,
     return Entry ? NameOf(Entry->HstPtrName) : "unknown";
   };
 
+  const bool TreatAttachAutoAsAlways =
+      MappingConfig::get().TreatAttachAutoAsAlways;
+
+  // Attachment is only performed when one of the two sides was newly mapped by
+  // this construct, or when it is unconditional. processAttachEntries applies
+  // the same test; settling an entry it will skip would report a conflict for
+  // an assignment that never happens.
+  auto WillAttach = [&](const AttachMapInfo &AttachEntry) {
+    if ((AttachEntry.MapType & OMP_TGT_MAPTYPE_ALWAYS) ||
+        TreatAttachAutoAsAlways)
+      return true;
+    return StateInfo.wasNewlyMapped(AttachEntry.PointeeBegin).has_value() ||
+           StateInfo.wasNewlyMapped(AttachEntry.PointerBase).has_value();
+  };
+
   // An attachment only needs settling if the pointer is shared with the
   // original, and the pointee has device storage for its address to differ.
   auto NeedsSettling = [&](void *HstPtr, int64_t PtrSize,
@@ -890,17 +905,25 @@ static int settleAttachStorage(DeviceTy &Device, StateInfoTy &StateInfo,
     return PteeEntry && !PteeEntry->isHostBound();
   };
 
-  for (const auto &AttachEntry : StateInfo.AttachEntries) {
-    void **HstPtr = reinterpret_cast<void **>(AttachEntry.PointerBase);
-    void *HstPteeBegin = AttachEntry.PointeeBegin;
-    if (!NeedsSettling(HstPtr, AttachEntry.PointerSize, HstPteeBegin))
-      continue;
+  // Demoting one pointee can leave another attachment unsettled: the demoted
+  // storage may itself hold a pointer whose own pointee is device-bound. So
+  // keep going until a pass demotes nothing. Each demotion releases an
+  // allocation made by this construct, and none are created here, so this
+  // terminates.
+  for (bool Demoted = true; Demoted;) {
+    Demoted = false;
+    for (const auto &AttachEntry : StateInfo.AttachEntries) {
+      void **HstPtr = reinterpret_cast<void **>(AttachEntry.PointerBase);
+      void *HstPteeBegin = AttachEntry.PointeeBegin;
+      if (!WillAttach(AttachEntry) ||
+          !NeedsSettling(HstPtr, AttachEntry.PointerSize, HstPteeBegin))
+        continue;
 
-    // Only a pointee allocated for this construct may give its allocation up.
-    if (!StateInfo.wasNewlyAllocated(HstPteeBegin).has_value())
-      continue;
+      // Only a pointee allocated for this construct may give its allocation up.
+      if (!StateInfo.wasNewlyAllocated(HstPteeBegin).has_value())
+        continue;
 
-    HostDataToTargetTy *PteeEntry = FindEntry(HstPteeBegin, /*Size=*/0);
+      HostDataToTargetTy *PteeEntry = FindEntry(HstPteeBegin, /*Size=*/0);
 #ifndef NDEBUG
     // Giving the allocation up moves the pointee's device address, which would
     // strand any pointer already attached to it. That cannot happen here: the
@@ -919,11 +942,14 @@ static int settleAttachStorage(DeviceTy &Device, StateInfoTy &StateInfo,
     if (MappingInfo.shareEntryStorageWithOriginal(HDTTMap, PteeEntry,
                                                   AsyncInfo) != OFFLOAD_SUCCESS)
       return OFFLOAD_FAIL;
+    Demoted = true;
+    }
   }
 
   for (const auto &AttachEntry : StateInfo.AttachEntries) {
     void **HstPtr = reinterpret_cast<void **>(AttachEntry.PointerBase);
-    if (!NeedsSettling(HstPtr, AttachEntry.PointerSize,
+    if (!WillAttach(AttachEntry) ||
+        !NeedsSettling(HstPtr, AttachEntry.PointerSize,
                        AttachEntry.PointeeBegin))
       continue;
 
