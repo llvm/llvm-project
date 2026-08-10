@@ -558,6 +558,27 @@ int MappingInfoTy::eraseMapEntry(HDTTMapAccessorTy &HDTTMap,
     return OFFLOAD_FAIL;
   }
 
+  // The storage is no longer mapped, so nothing can be attached to it, and the
+  // host addresses it covers may be reused by an unrelated allocation. Drop the
+  // records that fall within it, both as a pointee and as a pointer.
+  auto IsInEntry = [&](const void *HstAddr) {
+    uintptr_t Addr = reinterpret_cast<uintptr_t>(HstAddr);
+    return Addr >= Entry->HstPtrBegin && Addr < Entry->HstPtrEnd;
+  };
+
+  llvm::SmallVector<void *> EmptiedPointees;
+  for (auto &[HstPteeBegin, AttachedPtrs] : AttachedPointers) {
+    if (IsInEntry(HstPteeBegin)) {
+      EmptiedPointees.push_back(HstPteeBegin);
+      continue;
+    }
+    llvm::erase_if(AttachedPtrs, IsInEntry);
+    if (AttachedPtrs.empty())
+      EmptiedPointees.push_back(HstPteeBegin);
+  }
+  for (void *HstPteeBegin : EmptiedPointees)
+    AttachedPointers.erase(HstPteeBegin);
+
   return OFFLOAD_SUCCESS;
 }
 
