@@ -4589,6 +4589,12 @@ void AMDGPULegalizerInfo::buildMultiply(LegalizerHelper &Helper,
             LocalAccum[1] = Unmerge.getReg(1);
         }
 
+        // Every partial product contributing to this destination index was
+        // skipped because an operand half is known zero, so nothing has been
+        // accumulated and the result is zero.
+        if (!LocalAccum[0])
+          LocalAccum[0] = getZero32();
+
         return CarryOut;
       };
 
