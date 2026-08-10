@@ -1164,7 +1164,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   with external linkage from shared libraries. It provides compatibility with the IBM XL C/C++
   compiler.
 - Add support for variable argument lists on z/OS.
-- Add compare-and-swap builtin functions, as provided by the IBM XL C/C++ compiler.
+- Add compare-and-swap builtin functions, as provided by the IBM C/C++ compiler for z/OS.
 - Add new wrapper headers for z/OS to improve compatibility with the system headers.
 - Raised minimal supported target OS level to z/OS 3.1.
 
