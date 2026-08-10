@@ -285,22 +285,7 @@ getMemSemanticsForStorageClass(SPIRV::StorageClass::StorageClass SC);
 
 SPIRV::MemorySemantics::MemorySemantics getMemSemantics(AtomicOrdering Ord);
 
-// Vulkan requires Acquire, Release, or AcquireRelease when storage-class
-// semantics are present on atomic operations.
-SPIRV::MemorySemantics::MemorySemantics
-getMemSemanticsForAtomic(AtomicOrdering Ord,
-                         SPIRV::StorageClass::StorageClass SC, bool IsVulkan);
-
 SPIRV::Scope::Scope getMemScope(LLVMContext &Ctx, SyncScope::ID Id);
-
-// Vulkan forbids CrossDevice for atomics and memory barriers. Remap it using
-// the accessed storage class when targeting Vulkan.
-SPIRV::Scope::Scope legalizeScopeForVulkan(SPIRV::Scope::Scope Scope,
-                                           SPIRV::StorageClass::StorageClass SC);
-
-SPIRV::Scope::Scope getMemScopeForAtomic(LLVMContext &Ctx, SyncScope::ID Id,
-                                         SPIRV::StorageClass::StorageClass SC,
-                                         bool IsVulkan);
 
 // Find def instruction for the given ConstReg, walking through
 // spv_track_constant and ASSIGN_TYPE instructions. Updates ConstReg by def

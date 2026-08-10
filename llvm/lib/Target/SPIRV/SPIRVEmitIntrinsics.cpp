@@ -2590,24 +2590,19 @@ SPIRVEmitIntrinsicsImpl::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
   assert(I.getType()->isAggregateType() && "Aggregate result is expected");
   IRBuilder<> B(I.getParent());
   B.SetInsertPoint(&I);
-  const SPIRVSubtarget &ST = TM.getSubtarget<SPIRVSubtarget>(*I.getFunction());
-  unsigned AS = I.getPointerOperand()->getType()->getPointerAddressSpace();
   SmallVector<Value *> Args(I.operands());
-  Args.push_back(B.getInt32(static_cast<uint32_t>(getMemScopeForAtomic(
-      I.getContext(), I.getSyncScopeID(),
-      addressSpaceToStorageClass(AS, ST), ST.getTargetTriple().isVulkanOS()))));
+  Args.push_back(B.getInt32(
+      static_cast<uint32_t>(getMemScope(I.getContext(), I.getSyncScopeID()))));
   // Per SPIR-V spec atomic ops must combine the ordering bits with the
   // storage-class bit.
-  SPIRV::StorageClass::StorageClass SC = addressSpaceToStorageClass(AS, ST);
-  uint32_t ScSem = static_cast<uint32_t>(getMemSemanticsForStorageClass(SC));
-  Args.push_back(B.getInt32(static_cast<uint32_t>(
-                     getMemSemanticsForAtomic(I.getSuccessOrdering(), SC,
-                                              ST.getTargetTriple().isVulkanOS())) |
-                 ScSem));
-  Args.push_back(B.getInt32(static_cast<uint32_t>(
-                     getMemSemanticsForAtomic(I.getFailureOrdering(), SC,
-                                              ST.getTargetTriple().isVulkanOS())) |
-                 ScSem));
+  const SPIRVSubtarget &ST = TM.getSubtarget<SPIRVSubtarget>(*I.getFunction());
+  unsigned AS = I.getPointerOperand()->getType()->getPointerAddressSpace();
+  uint32_t ScSem = static_cast<uint32_t>(
+      getMemSemanticsForStorageClass(addressSpaceToStorageClass(AS, ST)));
+  Args.push_back(B.getInt32(
+      static_cast<uint32_t>(getMemSemantics(I.getSuccessOrdering())) | ScSem));
+  Args.push_back(B.getInt32(
+      static_cast<uint32_t>(getMemSemantics(I.getFailureOrdering())) | ScSem));
   Instruction *NewI = B.CreateIntrinsicWithoutFolding(
       Intrinsic::spv_cmpxchg, {I.getPointerOperand()->getType()}, {Args});
   replaceMemInstrUses(&I, NewI, B);
