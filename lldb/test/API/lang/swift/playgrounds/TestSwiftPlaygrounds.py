@@ -35,6 +35,8 @@ def execute_command(command):
 
 @skipIfRemote
 class TestSwiftPlaygrounds(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def get_build_triple(self):
         """We want to build the file with a deployment target earlier than the
            availability set in the source file."""

@@ -20,6 +20,7 @@ import os
 
 
 class TestSwiftDeploymentTarget(TestBase):
+    SHARED_BUILD_TESTCASE = False
     NO_DEBUG_INFO_TESTCASE = True
 
     @requireNotEmbeddedSwift

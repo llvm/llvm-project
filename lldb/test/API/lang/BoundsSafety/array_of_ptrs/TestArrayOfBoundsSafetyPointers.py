@@ -4,6 +4,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 class TestArrayOfBoundsSafetyPointers(TestBase):
+    SHARED_BUILD_TESTCASE = False
     def __run(self, build_dict):
         self.build(dictionary = build_dict)
 
