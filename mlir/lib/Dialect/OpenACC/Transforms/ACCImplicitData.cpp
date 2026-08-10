@@ -458,15 +458,6 @@ Operation *ACCImplicitData::generateDataClauseOpForCandidate(
       typeCategory, acc::VariableTypeCategory::aggregate);
   Location loc = computeConstructOp->getLoc();
 
-  if (acc::isDeviceValue(var)) {
-    // If the variable is device data, use deviceptr clause.
-    LLVM_DEBUG(llvm::dbgs() << "Using deviceptr clause because variable is "
-                               "device data\n");
-    return acc::DevicePtrOp::create(builder, loc, var,
-                                    /*structured=*/true, /*implicit=*/true,
-                                    accSupport.getVariableName(var));
-  }
-
   Operation *op = nullptr;
   op = getOriginalDataClauseOpForAlias(var, builder, computeConstructOp,
                                        dominatingDataClauses);
@@ -489,6 +480,16 @@ Operation *ACCImplicitData::generateDataClauseOpForCandidate(
                                   /*structured=*/true, /*implicit=*/true,
                                   accSupport.getVariableName(var),
                                   acc::getBounds(op));
+  }
+
+  if (acc::isDeviceValue(var)) {
+    // Variable is device data with no existing dominating mapping: use
+    // deviceptr clause.
+    LLVM_DEBUG(llvm::dbgs() << "Using deviceptr clause because variable is "
+                               "device data\n");
+    return acc::DevicePtrOp::create(builder, loc, var,
+                                    /*structured=*/true, /*implicit=*/true,
+                                    accSupport.getVariableName(var));
   }
 
   if (isScalar) {
