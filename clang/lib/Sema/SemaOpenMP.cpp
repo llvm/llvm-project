@@ -10040,24 +10040,6 @@ static Stmt *buildPreInits(ASTContext &Context, ArrayRef<Stmt *> PreInits) {
 }
 
 /// Helper to determine if a loop should skip finalization.
-/// Returns true for range-based for loops or loops with non-arithmetic
-/// counters.
-static bool shouldSkipLoopFinalization(Stmt *LoopStmt) {
-  if (isa<CXXForRangeStmt>(LoopStmt))
-    return true;
-
-  auto *For = dyn_cast<ForStmt>(LoopStmt);
-  if (!For)
-    return false;
-
-  auto *InitDecl = dyn_cast_or_null<DeclStmt>(For->getInit());
-  if (!InitDecl || !InitDecl->isSingleDecl())
-    return false;
-
-  auto *InitVar = dyn_cast<VarDecl>(InitDecl->getSingleDecl());
-  return InitVar && !InitVar->getType()->isArithmeticType();
-}
-
 /// Build postupdate expression for the given list of postupdates expressions.
 static Expr *buildPostUpdate(Sema &S, ArrayRef<Expr *> PostUpdates) {
   Expr *PostUpdate = nullptr;
@@ -10771,10 +10753,10 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
         // explicit finalization - the iterator is already at the end.
         Final = nullptr;
       } else {
-        Final = buildCounterUpdate(SemaRef, CurScope, UpdLoc, CounterVar,
-                                   IS.CounterInit, IS.NumIterations,
-                                   IS.CounterStep, IS.Subtract,
-                                   IS.IsNonRectangularLB, &Captures);
+        Final =
+            buildCounterUpdate(SemaRef, CurScope, UpdLoc, CounterVar,
+                               IS.CounterInit, IS.NumIterations, IS.CounterStep,
+                               IS.Subtract, IS.IsNonRectangularLB, &Captures);
         if (!Final.isUsable()) {
           HasErrors = true;
           break;
@@ -15142,9 +15124,9 @@ static Expr *makeFloorIVRef(Sema &SemaRef, ArrayRef<VarDecl *> FloorIndVars,
 /// if there are no finalization statements.
 /// Note: Loops with non-arithmetic loop variables (e.g., iterators) are skipped
 /// because finalization only applies to integer/floating-point counters.
-static Stmt *
-buildLoopFinalization(ASTContext &Context,
-                      ArrayRef<OMPLoopBasedDirective::HelperExprs> LoopHelpers) {
+static Stmt *buildLoopFinalization(
+    ASTContext &Context,
+    ArrayRef<OMPLoopBasedDirective::HelperExprs> LoopHelpers) {
   SmallVector<Stmt *, 8> FinalizationStmts;
 
   for (size_t I : llvm::seq<size_t>(LoopHelpers.size())) {
@@ -15430,10 +15412,10 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
                 LoopHelper.Init->getBeginLoc(), LoopHelper.Inc->getEndLoc());
   }
 
-  return OMPTileDirective::Create(
-      Context, StartLoc, EndLoc, Clauses, NumLoops, AStmt, Inner,
-      buildPreInits(Context, PreInits),
-      buildLoopFinalization(Context, LoopHelpers));
+  return OMPTileDirective::Create(Context, StartLoc, EndLoc, Clauses, NumLoops,
+                                  AStmt, Inner,
+                                  buildPreInits(Context, PreInits),
+                                  buildLoopFinalization(Context, LoopHelpers));
 }
 
 StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
