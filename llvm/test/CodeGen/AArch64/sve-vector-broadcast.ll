@@ -165,6 +165,7 @@ define <vscale x 4 x half> @broadcast_double_f16_to_double_sve(<4 x half> %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z0.d, d0
+; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    ret
   %out = call <vscale x 4 x half> @llvm.vector.broadcast.nxv4f16(<4 x half> %a)
   ret <vscale x 4 x half> %out
@@ -188,10 +189,38 @@ define <vscale x 4 x half> @broadcast_2f16_to_nxv4f16(<4 x half> %a) {
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    dup v0.2s, v0.s[0]
 ; CHECK-NEXT:    mov z0.d, d0
+; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    ret
   %a.legal = call <2 x half> @llvm.vector.extract.v2f16.v4f16(<4 x half> %a, i64 0)
   %out = call <vscale x 4 x half> @llvm.vector.broadcast.nxv4f16(<2 x half> %a.legal)
   ret <vscale x 4 x half> %out
+}
+
+define <vscale x 8 x half> @broadcast_2f16_to_nxv8f16_lo(<4 x half> %a) {
+; CHECK-LABEL: broadcast_2f16_to_nxv8f16_lo:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    dup v0.2s, v0.s[0]
+; CHECK-NEXT:    mov z0.d, d0
+; CHECK-NEXT:    ret
+  %a.legal = call <2 x half> @llvm.vector.extract.v2f16.v4f16(<4 x half> %a, i64 0)
+  %out = call <vscale x 4 x half> @llvm.vector.broadcast.nxv4f16(<2 x half> %a.legal)
+  %out.in.lo = call <vscale x 8 x half> @llvm.vector.insert.nxv8f16.nxv4f16(<vscale x 8 x half> poison, <vscale x 4 x half> %out, i64 0)
+  ret <vscale x 8 x half> %out.in.lo
+}
+
+define <vscale x 2 x half> @broadcast_2f16_to_nxv2f16(<4 x half> %a) {
+; CHECK-LABEL: broadcast_2f16_to_nxv2f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    dup v0.2s, v0.s[0]
+; CHECK-NEXT:    mov z0.d, d0
+; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    ret
+  %a.legal = call <2 x half> @llvm.vector.extract.v2f16.v4f16(<4 x half> %a, i64 0)
+  %out = call <vscale x 2 x half> @llvm.vector.broadcast.nxv2f16(<2 x half> %a.legal)
+  ret <vscale x 2 x half> %out
 }
 
 define <vscale x 8 x bfloat> @broadcast_quad_bf16(<8 x bfloat> %a) #0 {
@@ -212,6 +241,28 @@ define <vscale x 4 x float> @broadcast_quad_f32(<4 x float> %a) {
 ; CHECK-NEXT:    ret
   %out = call <vscale x 4 x float> @llvm.vector.broadcast.nxv4f32.v4f32(<4 x float> %a)
   ret <vscale x 4 x float> %out
+}
+
+define <vscale x 2 x float> @broadcast_double_f32_to_nxv2f32(<2 x float> %a) {
+; CHECK-LABEL: broadcast_double_f32_to_nxv2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    mov z0.d, d0
+; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    ret
+  %out = call <vscale x 2 x float> @llvm.vector.broadcast.nxv2f32.v2f32(<2 x float> %a)
+  ret <vscale x 2 x float> %out
+}
+
+define <vscale x 4 x bfloat> @broadcast_double_bf16_to_nxv4bf16(<4 x bfloat> %a) #0 {
+; CHECK-LABEL: broadcast_double_bf16_to_nxv4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    mov z0.d, d0
+; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    ret
+  %out = call <vscale x 4 x bfloat> @llvm.vector.broadcast.nxv4bf16.v4bf16(<4 x bfloat> %a)
+  ret <vscale x 4 x bfloat> %out
 }
 
 define <vscale x 2 x double> @broadcast_quad_f64(<2 x double> %a) {
