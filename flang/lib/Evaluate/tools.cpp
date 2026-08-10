@@ -1354,6 +1354,16 @@ struct HasProcedureRefHelper : public AnyTraverse<HasProcedureRefHelper> {
   bool operator()(const ProcedureRef &) const { return true; }
 };
 
+struct HasImpureProcedureRefHelper
+    : public AnyTraverse<HasImpureProcedureRefHelper> {
+  using Base = AnyTraverse<HasImpureProcedureRefHelper>;
+  HasImpureProcedureRefHelper() : Base{*this} {}
+  using Base::operator();
+  bool operator()(const ProcedureRef &ref) const {
+    return ref.proc().IsPure() ? Base::operator()(ref) : true;
+  }
+};
+
 struct HasVolatileOrAsynchronousSymbolHelper
     : public AnyTraverse<HasVolatileOrAsynchronousSymbolHelper> {
   using Base = AnyTraverse<HasVolatileOrAsynchronousSymbolHelper>;
@@ -1541,7 +1551,7 @@ static std::optional<Expr<SomeType>> tryBuildSplitSumExpressionTree(
 bool CanBuildSplitSumExpressionTree(
     const Expr<SomeType> &lhs, const Expr<SomeType> &rhs) {
   return rhs.Rank() == 0 && lhs.Rank() == 0 && !HasVectorSubscript(rhs) &&
-      !HasVectorSubscript(lhs) && !HasProcedureRef(rhs) &&
+      !HasVectorSubscript(lhs) && !HasImpureProcedureRefHelper{}(rhs) &&
       !HasProcedureRef(lhs) && !HasVolatileOrAsynchronousSymbol(rhs) &&
       !HasVolatileOrAsynchronousSymbol(lhs);
 }
