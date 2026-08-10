@@ -1005,6 +1005,15 @@ void ExprEngine::VisitUnaryOperator(const UnaryOperator *U, ExplodedNode *Pred,
     VisitUnaryOperatorImpl(Dst);
 }
 
+void ExprEngine::VisitPseudoObjectExpr(const PseudoObjectExpr *PE,
+                                       ExplodedNode *Pred,
+                                       ExplodedNodeSet &Dst) {
+  SVal V = UnknownVal();
+  if (const Expr *Result = PE->getResultExpr())
+    V = Pred->getState()->getSVal(Result, Pred->getStackFrame());
+  Dst.insert(Engine.makeNodeWithBinding(Pred, PE, V));
+}
+
 void ExprEngine::VisitIncrementDecrementOperator(const UnaryOperator* U,
                                                  ExplodedNode *Pred,
                                                  ExplodedNodeSet &Dst) {

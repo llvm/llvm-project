@@ -625,6 +625,9 @@ public:
   void VisitUnaryOperator(const UnaryOperator* B, ExplodedNode *Pred,
                           ExplodedNodeSet &Dst);
 
+  void VisitPseudoObjectExpr(const PseudoObjectExpr *PE, ExplodedNode *Pred,
+                             ExplodedNodeSet &Dst);
+
   /// Handle ++ and -- (both pre- and post-increment).
   void VisitIncrementDecrementOperator(const UnaryOperator* U,
                                        ExplodedNode *Pred,

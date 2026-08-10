@@ -2304,14 +2304,9 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       VisitUnaryOperator(cast<UnaryOperator>(S), Pred, Dst);
       break;
 
-    case Stmt::PseudoObjectExprClass: {
-      const auto *PE = cast<PseudoObjectExpr>(S);
-      SVal V = UnknownVal();
-      if (const Expr *Result = PE->getResultExpr())
-        V = Pred->getState()->getSVal(Result, Pred->getStackFrame());
-      Dst.insert(Engine.makeNodeWithBinding(Pred, PE, V));
+    case Stmt::PseudoObjectExprClass:
+      VisitPseudoObjectExpr(cast<PseudoObjectExpr>(S), Pred, Dst);
       break;
-    }
 
     case Expr::ObjCIndirectCopyRestoreExprClass: {
       // ObjCIndirectCopyRestoreExpr implies passing a temporary for
