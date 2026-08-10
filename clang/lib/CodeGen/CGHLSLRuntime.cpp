@@ -1200,6 +1200,18 @@ struct SemanticShape {
       Rows *= Dimension;
     return Rows;
   }
+
+  SmallVector<unsigned> getArrayIndicesForRow(unsigned Row) const {
+    assert(Row < getNumRows() && "row exceeds semantic shape");
+
+    SmallVector<unsigned> Indices(Dimensions.size());
+    for (auto [Index, Dimension] :
+         llvm::zip_equal(llvm::reverse(Indices), llvm::reverse(Dimensions))) {
+      Index = Row % Dimension;
+      Row /= Dimension;
+    }
+    return Indices;
+  }
 };
 } // namespace
 
@@ -1257,10 +1269,10 @@ llvm::Value *CGHLSLRuntime::emitDXILUserSemanticLoad(
   llvm::Type *LeafTy = CGM.getTypes().ConvertType(Shape.RowType);
   llvm::Value *Result = llvm::PoisonValue::get(Type);
 
-  SmallVector<unsigned> Indices(Shape.Dimensions.size());
   const unsigned NumRows = Shape.getNumRows();
 
   for (unsigned Row = 0; Row < NumRows; ++Row) {
+    SmallVector<unsigned> Indices = Shape.getArrayIndicesForRow(Row);
     std::array<Value *, 4> Args{
         /*SigElementId=*/B.getInt32(SigId),
         /*RowIndex=*/B.getInt32(Row),
@@ -1279,14 +1291,6 @@ llvm::Value *CGHLSLRuntime::emitDXILUserSemanticLoad(
 
     Result =
         Indices.empty() ? Value : B.CreateInsertValue(Result, Value, Indices);
-
-    // Advance the multidimensional index
-    for (unsigned I = Indices.size(); I > 0; I--) {
-      Indices[I] += 1;
-      if (Indices[I] < Shape.Dimensions[I])
-        break;
-      Indices[I] = 0;
-    }
   }
   return Result;
 }
@@ -1312,9 +1316,9 @@ void CGHLSLRuntime::emitDXILUserSemanticStore(llvm::IRBuilder<> &B,
 
   unsigned SigId = DXILOutputSemanticIndex++;
 
-  SmallVector<unsigned> Indices(Shape.Dimensions.size());
   const unsigned NumRows = Shape.getNumRows();
   for (unsigned Row = 0; Row < NumRows; ++Row) {
+    SmallVector<unsigned> Indices = Shape.getArrayIndicesForRow(Row);
     llvm::Value *Val =
         Indices.empty() ? Source : B.CreateExtractValue(Source, Indices);
 
@@ -1330,14 +1334,6 @@ void CGHLSLRuntime::emitDXILUserSemanticStore(llvm::IRBuilder<> &B,
                                 /*RowIndex=*/B.getInt32(Row),
                                 /*ColIndex=*/B.getInt8(0), /*Value=*/Val};
     B.CreateCall(IntrFn, Args, OB);
-
-    // Advance the multidimensional index
-    for (unsigned I = Indices.size(); I > 0; I--) {
-      Indices[I] += 1;
-      if (Indices[I] < Shape.Dimensions[I])
-        break;
-      Indices[I] = 0;
-    }
   }
 }
 
