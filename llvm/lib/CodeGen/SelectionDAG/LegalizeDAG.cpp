@@ -1008,19 +1008,6 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   TargetLowering::LegalizeAction Action = TargetLowering::Legal;
   bool SimpleFinishLegalizing = true;
   switch (Node->getOpcode()) {
-  case ISD::POISON: {
-    // TODO: Currently, POISON is being lowered to UNDEF here. However, there is
-    // an open concern that this transformation may not be ideal, as targets
-    // should ideally handle POISON directly. Changing this behavior would
-    // require adding support for POISON in TableGen, which is a large change.
-    // Additionally, many existing test cases rely on the current behavior
-    // (e.g., llvm/test/CodeGen/PowerPC/vec_shuffle.ll). A broader discussion
-    // and incremental changes might be needed to properly support POISON
-    // without breaking existing targets and tests.
-    SDValue UndefNode = DAG.getUNDEF(Node->getValueType(0));
-    ReplaceNode(Node, UndefNode.getNode());
-    return;
-  }
   case ISD::INTRINSIC_W_CHAIN:
   case ISD::INTRINSIC_WO_CHAIN:
   case ISD::INTRINSIC_VOID:
@@ -1800,6 +1787,9 @@ SDValue SelectionDAGLegalize::ExpandFABS(SDNode *Node) const {
     return DAG.getNode(ISD::FCOPYSIGN, DL, FloatVT, Value, Zero);
   }
 
+  if (FloatVT.isVector())
+    return DAG.UnrollVectorOp(Node);
+
   // Transform value to integer, clear the sign bit and transform back.
   FloatSignAsInt ValueAsInt;
   getSignAsIntValue(ValueAsInt, DL, Value);
@@ -2174,7 +2164,10 @@ SelectionDAGLegalize::ExpandLibCall(RTLIB::Libcall LC, SDNode *Node,
   const Function &F = DAG.getMachineFunction().getFunction();
   bool isTailCall =
       TLI.isInTailCallPosition(DAG, Node, TCChain) &&
-      (RetTy == F.getReturnType() || F.getReturnType()->isVoidTy());
+      (RetTy == F.getReturnType() || F.getReturnType()->isVoidTy()) &&
+      // Lowering doesn't support tail calling inside a function with
+      // a swifterror argument yet.
+      !DAG.hasSwiftErrorArg();
   if (isTailCall)
     InChain = TCChain;
 
