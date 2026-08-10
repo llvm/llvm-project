@@ -3246,10 +3246,8 @@ bool GVNPass::propagateConstExpressions(Value *LHS, Value *RHS,
 bool GVNPass::propagateEquality(
     Value *LHS, Value *RHS,
     const std::variant<BasicBlockEdge, Instruction *> &Root) {
-      
   SmallVector<std::pair<Value*, Value*>, 4> Worklist;
   Worklist.push_back(std::make_pair(LHS, RHS));
-  
   bool Changed = false;
   SmallVector<const BasicBlock *> DominatedBlocks;
   if (const BasicBlockEdge *Edge = std::get_if<BasicBlockEdge>(&Root)) {
