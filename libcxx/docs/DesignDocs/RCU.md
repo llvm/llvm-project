@@ -77,7 +77,7 @@ There are several key properties that an implementation of `rcu` must satisfy:
 - On the reader side, `rcu_domain::lock` and `rcu_domain::unlock` must not block the thread while the writer thread
   is performing updates.
 
-- On the writer side, `retire`-ing an object in principle should not block at all. However, it is technically conforming to block (e.g. evaluate the `deleter`s directly inside `run_retire`).
+- On the writer side, `retire`-ing an object in principle should not block at all. However, it is technically conforming to block (e.g. evaluate the `deleter`s directly inside `rcu_retire`).
 
 - On the writer side, `rcu_synchronize` should block until at least all the existing readers exit their critical sections
   via `rcu_domain::unlock` . Note that this is a key difference between `rcu` and read-write locks:
@@ -99,7 +99,7 @@ The core idea of `rcu` can be described by this image from lwn.net
 - Each row is a thread. The last row is the writer thread and the rows above are the reader threads.
 - Each "Reader" block represents a critical section, which starts with `rcu_domain::lock` and ends with `rcu_domain::unlock` .
 - When `rcu_retire` is called from the writer thread, it starts the "Removal" block.
-- When `run_synchronize` is called from the writer thread, it starts the "Grace Period" block. We need to wait until all the 
+- When `rcu_synchronize` is called from the writer thread, it starts the "Grace Period" block. We need to wait until all the 
   "Reader" blocks that started before the "Grace Period" started, to exit via `rcu_domain::unlock`, then we can end the "Grace Period".
   Note that the "Grace Period" ends after the 4th row's "Reader" block ends. Also note that the "Grace Period" does not need to wait
   for the late "Reader" blocks.
@@ -111,14 +111,14 @@ Some key details of this design are:
 
 - There is a global state which has two phases and it flips between the two phases.
 - Each thread stores its state: whether there is a reader in the critical section, and which phase it was when it entered the critical section.
-- When `run_synchronize` is called, it
+- When `rcu_synchronize` is called, it
 
   - flips the global state to the next phase
   - Going through a grace period: waits until all the threads that are in the critical section with the previous phase to exit the critical section.
   - flips the global state back to the original phase
   - Going through another grace period: waits until all the threads that are in the critical section with the next phase to exit the critical section.
 
-When `run_synchronize` returns, we can be sure that all the readers that were in the critical section before `run_synchronize` are now out of the critical section.
+When `rcu_synchronize` returns, we can be sure that all the readers that were in the critical section before `rcu_synchronize` are now out of the critical section.
 The paper explains why we need to wait two phases instead of just one phase in detail. The key point is that, if we only wait for the readers in the previous phase to exit,
 there might be a late reader that enters the critical section after we flip the global state and before we wait for the previous phase's readers to exit.
 
@@ -172,9 +172,9 @@ For the derived class of `rcu_obj_base`, the `retire` is `noexcept`, which means
 
 This is the main class that implements the `rcu` logic. It contains
 
-- `std::atomic<reader_states::state_type> global_reader_phase_` : the global state that flips between two phases. The readers will record the phase when they enter the critical section, and the writer will flip the global state when it calls `run_synchronize` to start a new grace period.
+- `std::atomic<reader_states::state_type> global_reader_phase_` : the global state that flips between two phases. The readers will record the phase when they enter the critical section, and the writer will flip the global state when it calls `rcu_synchronize` to start a new grace period.
 
-- `std::mutex grace_period_mutex_` : If we have multiple writer threads calling `run_synchronize` concurrenly, we need to make sure only one of them is performing the phase flipping and deleter queue draining.
+- `std::mutex grace_period_mutex_` : If we have multiple writer threads calling `rcu_synchronize` concurrenly, we need to make sure only one of them is performing the phase flipping and deleter queue draining.
   TODO: `mutex` can throw, we need to consider how to replace it.
 
 - `std::atomic<bool> grace_period_waiting_flag_` : This flag is used to sleep/wake up the writer thread that is waiting for the grace period to end.
@@ -249,8 +249,8 @@ And Thomas Rodgers (libstdc++'s RCU implementer) also said:
   thread. But on the other hand, users of the library might find it surprising that then gave the library permission
   to also do work on those threads in ways they might not expect.
 
-In libc++'s design, we would like to follow Folly's approach to run these deleters inline when `run_synchronize` or
-`run_barrier` is called.
+In libc++'s design, we would like to follow Folly's approach to run these deleters inline when `rcu_synchronize` or
+`rcu_barrier` is called.
 
 When should we run the deleters
 -------------------------------
@@ -261,23 +261,23 @@ inline, we have to decide when to run them.
 
 There are few places we can run the deleters:
 
-- Inside `run_synchronize` after the writer thread is unblocked. This approach has the advantage that the writer thread
+- Inside `rcu_synchronize` after the writer thread is unblocked. This approach has the advantage that the writer thread
   can reclaim the retired objects as soon as possible. However, it has the disadvantage that the writer thread may be
   blocked for a long time if there are many retired objects to reclaim.
 
-- Inside `run_barrier` after the writer thread is unblocked. Since `run_barrier` is designed to block until all the retired
-  objects that happen before the `run_barrier` call are reclaimed, it is natural to run the deleters here.
+- Inside `rcu_barrier` after the writer thread is unblocked. Since `rcu_barrier` is designed to block until all the retired
+  objects that happen before the `rcu_barrier` call are reclaimed, it is natural to run the deleters here.
 
-- Inside `run_retire` after the deleter is put into the queue. `run_retire` is designed not to block. However, if there are
+- Inside `rcu_retire` after the deleter is put into the queue. `rcu_retire` is designed not to block. However, if there are
   objects that are safe to reclaim due to readers have exited their critical sections, and at the same time, there is no other
   writer threads that are currently draining the deleter queue, we can take the opportunity to run the deleters.
 
 Folly currently takes the inline approach and runs the deleters at all three places mentioned above.
 
-In libc++'s design, we would like to start with the inline approach and only run the deleters inside `run_synchronize` and
-`run_barrier` for simplicity. Whether or not running the deleters inside `run_retire` is debatable. On the one hand, running
-them will make `run_retire`  take more time to return. But not running them will make the retired objects stay in the queue
-for a longer time. In an extreme case, if the user never calls `run_synchronize` or `run_barrier` after calling `run_retire`,
+In libc++'s design, we would like to start with the inline approach and only run the deleters inside `rcu_synchronize` and
+`rcu_barrier` for simplicity. Whether or not running the deleters inside `rcu_retire` is debatable. On the one hand, running
+them will make `rcu_retire`  take more time to return. But not running them will make the retired objects stay in the queue
+for a longer time. In an extreme case, if the user never calls `rcu_synchronize` or `rcu_barrier` after calling `rcu_retire`,
 the retired objects will never be reclaimed (without a background thread to drain the queue).
 
 Almost all APIs are `noexcept` . Is it designed to avoid memory allocation and avoid using `mutex` ?
@@ -299,7 +299,7 @@ There are few places that might need to use `mutex`:
 
 - The destruction of a thread, which might need to do some clean up work for the `rcu` states.
 
-Memory Allocation can throw as well. Luckily `run_retire` is not marked as `noexcept` in the paper, as `run_retire` is
+Memory Allocation can throw as well. Luckily `rcu_retire` is not marked as `noexcept` in the paper, as `rcu_retire` is
 likely to allocate memory to create a type erased object into the deleter queue.
 
 However, there are other places where it might need to allocate memory. For example, see Folly's comments
