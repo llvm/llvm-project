@@ -12,21 +12,22 @@
 // LLVM's own ORC-runtime-lite. Concrete implementations live in subdirectories
 // (e.g. RTBridge/SPS).
 //
+// This header provides only the core Proxy machinery. Named proxies for
+// specific operation families live in sibling headers (e.g. CallProxies.h,
+// MemoryAccessProxies.h).
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_EXECUTIONENGINE_ORC_RTBRIDGE_PROXY_H
 #define LLVM_EXECUTIONENGINE_ORC_RTBRIDGE_PROXY_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
 
-#include <cstdint>
 #include <future>
-#include <string>
 #include <type_traits>
 
 namespace llvm::orc::rt {
@@ -48,6 +49,40 @@ private:
 
 template <typename FnT> class Proxy;
 
+namespace detail {
+
+/// Maps a proxy's callee return type to the type delivered to the client, so a
+/// dispatch failure can always be reported alongside the result:
+///
+///          void -> Error
+///         Error -> Error
+///             T -> Expected<T>
+///   Expected<T> -> Expected<T>
+template <typename T> struct ProxyErrorRet {
+  using type = Expected<T>;
+};
+template <> struct ProxyErrorRet<void> {
+  using type = Error;
+};
+template <> struct ProxyErrorRet<Error> {
+  using type = Error;
+};
+template <typename T> struct ProxyErrorRet<Expected<T>> {
+  using type = Expected<T>;
+};
+
+/// Maps a proxy's client-facing return type to the std::promise value type used
+/// by the blocking call operator (working around MSVC's std::promise).
+template <typename T> struct ProxyRetPromise;
+template <> struct ProxyRetPromise<Error> {
+  using type = std::promise<MSVCPError>;
+};
+template <typename T> struct ProxyRetPromise<Expected<T>> {
+  using type = std::promise<MSVCPExpected<T>>;
+};
+
+} // namespace detail
+
 /// Runtime-agnostic interface for invoking an executor-side operation with the
 /// signature RetT(ArgTs...).
 ///
@@ -65,11 +100,11 @@ public:
   /// The result type produced by the executor-side function itself.
   using CalleeRetT = RetT;
 
-  /// The result type delivered to the client: Expected<RetT>, or Error when
-  /// RetT is void, so that dispatch failures can be reported alongside the
-  /// result.
-  using ErrorRetT =
-      std::conditional_t<std::is_void_v<RetT>, Error, Expected<RetT>>;
+  /// The result type delivered to the client: Error when the callee returns
+  /// void or Error, otherwise Expected<T> (with Expected<T> callees flattened
+  /// rather than nested), so that dispatch failures can be reported alongside
+  /// the result.
+  using ErrorRetT = typename detail::ProxyErrorRet<RetT>::type;
 
   using DispatchFn = void (*)(unique_function<void(ErrorRetT)> OnComplete,
                               ExecutionSession &ES, ExecutorAddr Callee,
@@ -108,9 +143,7 @@ public:
   /// Invoke the operation with the given Args, blocking until its result (or an
   /// error) is available.
   ErrorRetT operator()(ExecutionSession &ES, const ArgTs &...Args) const {
-    using PromiseValT = std::conditional_t<std::is_void_v<RetT>, MSVCPError,
-                                           MSVCPExpected<RetT>>;
-    std::promise<PromiseValT> P;
+    typename detail::ProxyRetPromise<ErrorRetT>::type P;
     auto F = P.get_future();
     this->operator()(
         [P = std::move(P)](ErrorRetT R) mutable { P.set_value(std::move(R)); },
@@ -170,36 +203,6 @@ Error buildProxies(JITDylib &JD, ProxyInit<FnT> PI, ProxyInit<FnTs>... PIs) {
     return POrErr.takeError();
   return buildProxies(JD, PIs...);
 }
-
-/// Runtime-agnostic interface for running a main-like function
-/// (int(int argc, char *argv[])) in the executor.
-///
-/// The function to run is given by its ExecutorAddr, its arguments as an
-/// argument vector, and its int64_t result is returned.
-using CallMainProxy = Proxy<int64_t(ExecutorAddr, ArrayRef<std::string>)>;
-
-/// Runtime-agnostic interface for running a void() function in the executor.
-///
-/// The function to run is given by its ExecutorAddr.
-///
-/// WARNING: This Proxy is experimental and may be removed.
-using CallVoidVoidProxy = Proxy<void(ExecutorAddr)>;
-
-/// Runtime-agnostic interface for running an int32_t() function in the
-/// executor.
-///
-/// The function to run is given by its ExecutorAddr.
-///
-/// WARNING: This Proxy is experimental and may be removed.
-using CallInt32VoidProxy = Proxy<int32_t(ExecutorAddr)>;
-
-/// Runtime-agnostic interface for running an int32_t(int32_t) function in the
-/// executor.
-///
-/// The function to run is given by its ExecutorAddr.
-///
-/// WARNING: This Proxy is experimental and may be removed.
-using CallInt32Int32Proxy = Proxy<int32_t(ExecutorAddr, int32_t)>;
 
 } // namespace llvm::orc::rt
 
