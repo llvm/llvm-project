@@ -5092,7 +5092,7 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     // shift vector. Account for a shift and materialization per legalized
     // vector, together with shared setup.
     // This cost is for (ldr, shl) + adrp
-    // TODO: These costs are based on CodeSz only, consider other CostKinds.
+    // TODO: These costs are based on CodeSize only, consider other CostKinds.
     if (Op2Info.isConstant() && !Op2Info.isUniform() &&
         LT.second.isFixedLengthVector())
       return 2 * LT.first + 1;
