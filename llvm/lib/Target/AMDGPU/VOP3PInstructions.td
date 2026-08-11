@@ -444,6 +444,38 @@ class MinimumMaximumByMinimum3Maximum3VOP3P<SDPatternOperator node,
   (inst $src0_mods, $src0, $src1_mods, $src1, $src1_mods, $src1)
 >;
 
+class MinimumMaximumV2F16VOP3P<SDPatternOperator node, Instruction inst> : GCNPat<
+  (v2f16 (node (VOP3PMods v2f16:$src0, i32:$src0_mods), (VOP3PMods v2f16:$src1, i32:$src1_mods))),
+  (inst $src0_mods, $src0, $src1_mods, $src1)
+>;
+
+class MinimumMaximum3V2F16VOP3P<SDPatternOperator node, Instruction inst> : GCNPat<
+  (v2f16 (node (VOP3PMods v2f16:$src0, i32:$src0_mods),
+               (node (VOP3PMods v2f16:$src1, i32:$src1_mods),
+                     (VOP3PMods v2f16:$src2, i32:$src2_mods)))),
+  (inst $src0_mods, $src0, $src1_mods, $src1, $src2_mods, $src2)
+>;
+
+class MinimumMaximum3CommuteV2F16VOP3P<SDPatternOperator node,
+                                       Instruction inst> : GCNPat<
+  (v2f16 (node (node (VOP3PMods v2f16:$src0, i32:$src0_mods),
+                     (VOP3PMods v2f16:$src1, i32:$src1_mods)),
+               (VOP3PMods v2f16:$src2, i32:$src2_mods))),
+  (inst $src0_mods, $src0, $src1_mods, $src1, $src2_mods, $src2)
+>;
+
+let SubtargetPredicate = HasMinimum3Maximum3PKF16, AddedComplexity = 2 in {
+  def : MinimumMaximum3V2F16VOP3P<fminimum, V_PK_MINIMUM3_F16>;
+  def : MinimumMaximum3V2F16VOP3P<fmaximum, V_PK_MAXIMUM3_F16>;
+  def : MinimumMaximum3CommuteV2F16VOP3P<fminimum, V_PK_MINIMUM3_F16>;
+  def : MinimumMaximum3CommuteV2F16VOP3P<fmaximum, V_PK_MAXIMUM3_F16>;
+}
+
+let SubtargetPredicate = HasIEEEMinimumMaximumInsts, AddedComplexity = 1 in {
+  def : MinimumMaximumV2F16VOP3P<fminimum, V_PK_MINIMUM_F16>;
+  def : MinimumMaximumV2F16VOP3P<fmaximum, V_PK_MAXIMUM_F16>;
+}
+
 let SubtargetPredicate = HasMinimum3Maximum3PKF16 in {
 def : MinimumMaximumByMinimum3Maximum3VOP3P<fminimum, V_PK_MINIMUM3_F16>;
 def : MinimumMaximumByMinimum3Maximum3VOP3P<fmaximum, V_PK_MAXIMUM3_F16>;
