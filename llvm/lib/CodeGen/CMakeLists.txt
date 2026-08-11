@@ -151,6 +151,7 @@ add_llvm_component_library(LLVMCodeGen
   MachineSizeOpts.cpp
   MachineSSAContext.cpp
   MachineSSAUpdater.cpp
+  MachineLaneSSAUpdater.cpp
   MachineStripDebug.cpp
   MachineTraceMetrics.cpp
   MachineUniformityAnalysis.cpp
