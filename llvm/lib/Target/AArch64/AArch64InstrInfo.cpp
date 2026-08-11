@@ -490,7 +490,7 @@ void AArch64InstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
   bool HasBTI = AFI && AFI->branchTargetEnforcement();
   if (MBB.getSectionID() == MBBSectionID::ColdSectionID && !HasBTI) {
     Register Scavenged = RS->FindUnusedReg(&AArch64::GPR64RegClass);
-    if (Scavenged != AArch64::NoRegister) {
+    if (Scavenged.isValid()) {
       buildIndirectBranch(Scavenged, NewDestBB);
       RS->setRegUsed(Scavenged);
       return;
@@ -6593,7 +6593,7 @@ void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   unsigned Opc = 0;
   bool Offset = true;
   unsigned StackID = TargetStackID::Default;
-  Register PNRReg = MCRegister::NoRegister;
+  Register PNRReg;
   switch (TRI.getSpillSize(*RC)) {
   case 1:
     if (AArch64::FPR8RegClass.hasSubClassEq(RC))

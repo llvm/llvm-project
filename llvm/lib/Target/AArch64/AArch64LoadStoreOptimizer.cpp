@@ -1107,7 +1107,7 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
                 else
                   MatchingReg = GetMatchingSubReg(
                       TRI->getMinimalPhysRegClass(MOP.getReg()));
-                assert(MatchingReg != AArch64::NoRegister &&
+                assert(MatchingReg.isValid() &&
                        "Cannot find matching regs for renaming");
                 MOP.setReg(MatchingReg);
               }
@@ -2654,7 +2654,7 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnBackward(
   bool IsPairedInsn = AArch64InstrInfo::isPairedLdSt(MemMI);
   Register DestReg[] = {getLdStRegOp(MemMI, 0).getReg(),
                         IsPairedInsn ? getLdStRegOp(MemMI, 1).getReg()
-                                     : AArch64::NoRegister};
+                                     : Register()};
 
   // If the load/store is the first instruction in the block, there's obviously
   // not any matching update. Ditto if the memory offset isn't zero.
@@ -2719,12 +2719,10 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnBackward(
     // i.e. the combined instruction is put in the place of the memory
     // instruction. Same applies if we see a memory access or side effects.
     if (MI.mayLoadOrStore() || MI.hasUnmodeledSideEffects() ||
-        (DestReg[0] != AArch64::NoRegister &&
-         !(ModifiedRegUnits.available(DestReg[0]) &&
-           UsedRegUnits.available(DestReg[0]))) ||
-        (DestReg[1] != AArch64::NoRegister &&
-         !(ModifiedRegUnits.available(DestReg[1]) &&
-           UsedRegUnits.available(DestReg[1]))))
+        (DestReg[0].isValid() && !(ModifiedRegUnits.available(DestReg[0]) &&
+                                   UsedRegUnits.available(DestReg[0]))) ||
+        (DestReg[1].isValid() && !(ModifiedRegUnits.available(DestReg[1]) &&
+                                   UsedRegUnits.available(DestReg[1]))))
       MergeEither = false;
 
     // Keep track if we have a memory access before an SP pre-increment, in this

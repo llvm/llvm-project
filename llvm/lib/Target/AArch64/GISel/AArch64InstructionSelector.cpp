@@ -6764,7 +6764,7 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
     std::tie(PACConstDiscC, PACAddrDisc) =
         extractPtrauthBlendDiscriminators(PACDisc, MRI);
 
-    if (PACAddrDisc == AArch64::NoRegister)
+    if (!PACAddrDisc.isValid())
       PACAddrDisc = AArch64::XZR;
 
     MIB.buildCopy({AArch64::X17}, {ValReg});

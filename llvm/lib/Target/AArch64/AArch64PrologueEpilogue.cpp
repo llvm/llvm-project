@@ -543,7 +543,7 @@ void AArch64PrologueEmitter::allocateStackSpace(
   // have SVE objects, we can use a more efficient sequence for stack probing.
   if (AllocSize.getScalable() == 0 && RealignmentPadding == 0) {
     Register ScratchReg = AFL.findScratchNonCalleeSaveRegister(&MBB);
-    assert(ScratchReg != AArch64::NoRegister);
+    assert(ScratchReg.isValid());
     BuildMI(MBB, MBBI, DL, TII->get(AArch64::PROBED_STACKALLOC))
         .addDef(ScratchReg)
         .addImm(AllocSize.getFixed())
@@ -578,7 +578,7 @@ void AArch64PrologueEmitter::allocateStackSpace(
     Register ScratchReg = RealignmentPadding
                               ? AFL.findScratchNonCalleeSaveRegister(&MBB)
                               : AArch64::SP;
-    assert(ScratchReg != AArch64::NoRegister);
+    assert(ScratchReg.isValid());
     // SUB Xd, SP, AllocSize
     emitFrameOffset(MBB, MBBI, DL, ScratchReg, AArch64::SP, -AllocSize, TII,
                     MachineInstr::FrameSetup, false, NeedsWinCFI, &HasWinCFI,
@@ -611,7 +611,7 @@ void AArch64PrologueEmitter::allocateStackSpace(
   // TODO: As an optimisation, the loop can be "unrolled" into a few parts,
   // each of them guaranteed to adjust the stack by less than the probe size.
   Register TargetReg = AFL.findScratchNonCalleeSaveRegister(&MBB);
-  assert(TargetReg != AArch64::NoRegister);
+  assert(TargetReg.isValid());
   // SUB Xd, SP, AllocSize
   emitFrameOffset(MBB, MBBI, DL, TargetReg, AArch64::SP, -AllocSize, TII,
                   MachineInstr::FrameSetup, false, NeedsWinCFI, &HasWinCFI,
@@ -1089,14 +1089,14 @@ void AArch64PrologueEmitter::emitWindowsStackProbe(
 
   // Find an available register to spill the value of X15 to, if X15 is being
   // used already for nest.
-  unsigned X15Scratch = AArch64::NoRegister;
+  Register X15Scratch;
   if (llvm::any_of(MBB.liveins(),
                    [this](const MachineBasicBlock::RegisterMaskPair &LiveIn) {
                      return RegInfo.isSuperOrSubRegisterEq(AArch64::X15,
                                                            LiveIn.PhysReg);
                    })) {
     X15Scratch = AFL.findScratchNonCalleeSaveRegister(&MBB, /*HasCall=*/true);
-    assert(X15Scratch != AArch64::NoRegister &&
+    assert(X15Scratch.isValid() &&
            (X15Scratch < AArch64::X15 || X15Scratch > AArch64::X17));
 #ifndef NDEBUG
     LiveRegs.removeReg(AArch64::X15); // ignore X15 since we restore it
@@ -1241,7 +1241,7 @@ void AArch64PrologueEmitter::emitWindowsStackProbe(
     // we've set a frame pointer and already finished the SEH prologue.
     assert(!NeedsWinCFI);
   }
-  if (X15Scratch != AArch64::NoRegister) {
+  if (X15Scratch.isValid()) {
     BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrr), AArch64::X15)
         .addReg(AArch64::XZR)
         .addReg(X15Scratch, RegState::Undef)
