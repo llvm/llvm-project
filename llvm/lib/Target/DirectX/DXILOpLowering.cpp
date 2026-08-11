@@ -946,7 +946,7 @@ public:
 
   /// Erase the chain of `insertelement`s that only existed to build up the
   /// value operand of a store we've just replaced.
-  static void cleanupStoreData(Value *Data) {
+  static void eraseDeadInsertElementChain(Value *Data) {
     auto *IEI = dyn_cast<InsertElementInst>(Data);
     while (IEI && IEI->use_empty()) {
       InsertElementInst *Tmp = IEI;
@@ -1010,7 +1010,7 @@ public:
         return E;
 
       CI->eraseFromParent();
-      cleanupStoreData(Data);
+      eraseDeadInsertElementChain(Data);
 
       return Error::success();
     });
@@ -1058,7 +1058,7 @@ public:
         return E;
 
       CI->eraseFromParent();
-      cleanupStoreData(Data);
+      eraseDeadInsertElementChain(Data);
 
       return Error::success();
     });
