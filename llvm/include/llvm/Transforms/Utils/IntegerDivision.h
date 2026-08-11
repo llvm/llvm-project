@@ -17,21 +17,29 @@
 #define LLVM_TRANSFORMS_UTILS_INTEGERDIVISION_H
 
 #include "llvm/Support/Compiler.h"
+#include <functional>
 
 namespace llvm {
   class BinaryOperator;
+  class Value;
 }
 
 namespace llvm {
 
-  /// Generate code to calculate the remainder of two integers, replacing Rem
-  /// with the generated code. This currently generates code using the udiv
-  /// expansion, but future work includes generating more specialized code,
-  /// e.g. when more information about the operands are known. Implements both
-  /// 32bit and 64bit scalar division.
-  ///
-  /// Replace Rem with generated code.
-LLVM_ABI bool expandRemainder(BinaryOperator *Rem);
+/// Mirrors the AboutToDeleteCallback convention in
+/// llvm/Transforms/Utils/Local.h.
+using AboutToDeleteCallback = std::function<void(Value *)>;
+
+/// Generate code to calculate the remainder of two integers, replacing Rem
+/// with the generated code. This currently generates code using the udiv
+/// expansion, but future work includes generating more specialized code,
+/// e.g. when more information about the operands are known. Implements both
+/// 32bit and 64bit scalar division.
+///
+/// Replace Rem with generated code.
+LLVM_ABI bool
+expandRemainder(BinaryOperator *Rem,
+                AboutToDeleteCallback OnErased = AboutToDeleteCallback());
 
 /// Generate code to divide two integers, replacing Div with the generated
 /// code. This currently generates code similarly to compiler-rt's
@@ -40,7 +48,9 @@ LLVM_ABI bool expandRemainder(BinaryOperator *Rem);
 /// 32bit and 64bit scalar division.
 ///
 /// Replace Div with generated code.
-LLVM_ABI bool expandDivision(BinaryOperator *Div);
+LLVM_ABI bool
+expandDivision(BinaryOperator *Div,
+               AboutToDeleteCallback OnErased = AboutToDeleteCallback());
 
 /// Generate code to calculate the remainder of two integers, replacing Rem
 /// with the generated code. Uses ExpandReminder with a 32bit Rem which
@@ -48,26 +58,34 @@ LLVM_ABI bool expandDivision(BinaryOperator *Div);
 /// 32 bit arithmetic.
 ///
 /// Replace Rem with generated code.
-LLVM_ABI bool expandRemainderUpTo32Bits(BinaryOperator *Rem);
+LLVM_ABI bool expandRemainderUpTo32Bits(
+    BinaryOperator *Rem,
+    AboutToDeleteCallback OnErased = AboutToDeleteCallback());
 
 /// Generate code to calculate the remainder of two integers, replacing Rem
 /// with the generated code. Uses ExpandReminder with a 64bit Rem.
 ///
 /// Replace Rem with generated code.
-LLVM_ABI bool expandRemainderUpTo64Bits(BinaryOperator *Rem);
+LLVM_ABI bool expandRemainderUpTo64Bits(
+    BinaryOperator *Rem,
+    AboutToDeleteCallback OnErased = AboutToDeleteCallback());
 
 /// Generate code to divide two integers, replacing Div with the generated
 /// code. Uses ExpandDivision with a 32bit Div which makes it useful for
 /// targets with little or no support for less than 32 bit arithmetic.
 ///
 /// Replace Rem with generated code.
-LLVM_ABI bool expandDivisionUpTo32Bits(BinaryOperator *Div);
+LLVM_ABI bool expandDivisionUpTo32Bits(
+    BinaryOperator *Div,
+    AboutToDeleteCallback OnErased = AboutToDeleteCallback());
 
 /// Generate code to divide two integers, replacing Div with the generated
 /// code. Uses ExpandDivision with a 64bit Div.
 ///
 /// Replace Rem with generated code.
-LLVM_ABI bool expandDivisionUpTo64Bits(BinaryOperator *Div);
+LLVM_ABI bool expandDivisionUpTo64Bits(
+    BinaryOperator *Div,
+    AboutToDeleteCallback OnErased = AboutToDeleteCallback());
 
 } // End llvm namespace
 
