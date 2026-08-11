@@ -1722,6 +1722,8 @@ def err_omp_expected_fr_or_attr_selector : Error<
   "expected 'fr' or 'attr' selector in 'prefer_type'">;
 def err_omp_expected_pref_spec : Error<
   "expected preference-specification in 'prefer_type'">;
+def err_omp_append_args_prefer_type_60 : Error<
+  "'prefer_type' in 'append_args' requires OpenMP version 6.0 or later">;
 def err_expected_sequence_or_directive : Error<
   "expected an OpenMP 'directive' or 'sequence' attribute argument">;
 def ext_omp_attributes : ExtWarn<

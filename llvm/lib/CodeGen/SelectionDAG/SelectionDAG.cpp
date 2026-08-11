@@ -3452,6 +3452,9 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
         continue;
 
       SDValue SrcOp = Op.getOperand(i);
+      if (SrcOp.getOpcode() == ISD::POISON)
+        continue;
+
       Known2 = computeKnownBits(SrcOp, Depth + 1);
 
       // BUILD_VECTOR can implicitly truncate sources, we must handle this.
@@ -3468,6 +3471,10 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
       if (Known.isUnknown())
         break;
     }
+
+    // If every demanded element was poison, we know nothing.
+    if (Known.hasConflict())
+      Known.resetAll();
     break;
   case ISD::VECTOR_COMPRESS: {
     SDValue Vec = Op.getOperand(0);
@@ -5245,26 +5252,14 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
       return VTBits;
     break;
   case ISD::ROTL:
-  case ISD::ROTR:
+  case ISD::ROTR: {
     Tmp = ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
-
-    // If we're rotating an 0/-1 value, then it stays an 0/-1 value.
-    if (Tmp == VTBits)
-      return VTBits;
-
-    if (ConstantSDNode *C =
-            isConstOrConstSplat(Op.getOperand(1), DemandedElts)) {
-      unsigned RotAmt = C->getAPIntValue().urem(VTBits);
-
-      // Handle rotate right by N like a rotate left by 32-N.
-      if (Opcode == ISD::ROTR)
-        RotAmt = (VTBits - RotAmt) % VTBits;
-
-      // If we aren't rotating out all of the known-in sign bits, return the
-      // number that are left.  This handles rotl(sext(x), 1) for example.
-      if (Tmp > (RotAmt + 1)) return (Tmp - RotAmt);
-    }
+    ConstantSDNode *C = isConstOrConstSplat(Op.getOperand(1), DemandedElts);
+    FirstAnswer = SignBitsOps::rot(
+        Tmp, VTBits, C ? std::optional(C->getAPIntValue()) : std::nullopt,
+        Opcode == ISD::ROTR);
     break;
+  }
   case ISD::ADD:
   case ISD::ADDC:
     // TODO: Move Operand 1 check before Operand 0 check
