@@ -35,6 +35,18 @@ module m
   real(8), parameter :: rvia8(2) = transfer([1.5, 2.5, 3.5], 0._8, 2)
   logical, parameter :: test_rt_real_arr = all(transfer(rvia8, 0.0, 3) == [1.5, 2.5, 3.5])
 
+  ! Rank-2 SOURCE: flattened, then the same trailing partial coverage
+  ! and zero fill as the rank-one cases
+  integer(8), parameter :: via8c(*) = transfer(reshape([1_4, 2_4, 3_4], [3, 1]), [0_8])
+  logical, parameter :: test_rt_rank2 = all(transfer(via8c, 0_4, 3) == [1_4, 2_4, 3_4])
+  logical, parameter :: test_rank2_zfill = via8c(2) == 3_8 .or. via8c(2) == 12884901888_8
+  ! ... and with ORDER= so that array element order (1,4,2,5,3,6 here)
+  ! differs from the constructor's sequence, proving the flattening
+  ! order, plus a trailing element wholly beyond SOURCE
+  integer(4), parameter :: r2(2, 3) = reshape([1_4, 2_4, 3_4, 4_4, 5_4, 6_4], [2, 3], order=[2, 1])
+  integer(8), parameter :: via8d(4) = transfer(r2, 0_8, 4)
+  logical, parameter :: test_rt_rank2b = all(transfer(via8d, 0_4, 8) == [1_4, 4_4, 2_4, 5_4, 3_4, 6_4, 0_4, 0_4])
+
   ! The standard's own Case (ii) example (16.9.212 p.6): the second
   ! element's real part has the value 3.3; its imaginary part is
   ! processor dependent
