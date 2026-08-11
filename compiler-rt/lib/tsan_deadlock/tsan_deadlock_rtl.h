@@ -40,14 +40,13 @@ struct Flags : DDFlags {
 
 struct UserMutex {
   DDMutex dd;
-  atomic_uintptr_t owner_tid; // DDLogicalThread* cast to uptr; 0 = unlocked
+  atomic_uintptr_t owner_tid;
   u32 recursion;
   u32 creation_stk;
   u32 last_lock_stk;
   bool reentrant;
 };
 
-// Stored in TLS; shadow_stack_pos is first for cache-line friendliness.
 struct Thread {
   uptr *shadow_stack_pos;
   uptr *shadow_stack;
@@ -81,9 +80,13 @@ struct Context {
 extern Flags tsan_deadlock_flags;
 inline Flags *flags() { return &tsan_deadlock_flags; }
 
-extern THREADLOCAL Thread thr_tls;
-
+#if SANITIZER_APPLE
 Thread *cur_thread();
+void set_cur_thread(Thread *thr);
+#else
+__attribute__((tls_model("initial-exec"))) extern THREADLOCAL Thread thr_tls;
+inline Thread *cur_thread() { return thr_tls.is_inited ? &thr_tls : nullptr; }
+#endif
 
 void Initialize();
 void InitializeInterceptors();

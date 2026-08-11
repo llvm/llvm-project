@@ -12,6 +12,7 @@
 
 #include "tsan_deadlock_rtl.h"
 
+#include "sanitizer_common/sanitizer_allocator_internal.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_flag_parser.h"
 #include "sanitizer_common/sanitizer_flags.h"
@@ -19,6 +20,10 @@
 #include "sanitizer_common/sanitizer_report_decorator.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
+
+#if SANITIZER_APPLE
+#include <pthread.h>
+#endif
 
 namespace __tsan_deadlock {
 
@@ -29,9 +34,39 @@ static atomic_uint32_t error_count;
 
 static const uptr kShadowStackSize = 64 * 1024;
 
-__attribute__((tls_model("initial-exec"))) THREADLOCAL Thread thr_tls;
+#if SANITIZER_APPLE
+static char main_thread_state[sizeof(Thread)];
+static pthread_key_t thread_key;
 
-Thread *cur_thread() { return thr_tls.is_inited ? &thr_tls : nullptr; }
+static void ThreadKeyDestructor(void *thr) {
+  pthread_setspecific(thread_key, thr);
+}
+
+static void InitializeThreadStorage() {
+  CHECK_EQ(thread_key, 0);
+  int res = pthread_key_create(&thread_key, ThreadKeyDestructor);
+  CHECK_EQ(res, 0);
+  res = pthread_setspecific(thread_key, main_thread_state);
+  CHECK_EQ(res, 0);
+}
+
+Thread *cur_thread() {
+  if (UNLIKELY(!thread_key))
+    return (Thread *)main_thread_state;
+  Thread *thr = (Thread *)pthread_getspecific(thread_key);
+  if (UNLIKELY(!thr)) {
+    thr = (Thread *)InternalAlloc(sizeof(Thread));
+    internal_memset(thr, 0, sizeof(Thread));
+    int res = pthread_setspecific(thread_key, thr);
+    CHECK_EQ(res, 0);
+  }
+  return thr;
+}
+
+void set_cur_thread(Thread *thr) { pthread_setspecific(thread_key, thr); }
+#else
+__attribute__((tls_model("initial-exec"))) THREADLOCAL Thread thr_tls;
+#endif
 
 class Decorator : public __sanitizer::SanitizerCommonDecorator {
 public:
@@ -186,6 +221,9 @@ void Initialize() {
   SanitizerToolName = "DeadlockSanitizer";
   InitializeFlags();
   ctx->dd = DDetector::Create(flags());
+#if SANITIZER_APPLE
+  InitializeThreadStorage();
+#endif
   InitializeInterceptors();
   Atexit(Finalize);
 }
@@ -213,6 +251,12 @@ void ThreadDestroy(Thread *thr) {
   thr->shadow_stack_end = nullptr;
   ctx->dd->DestroyPhysicalThread(thr->dd_pt);
   thr->dd_pt = nullptr;
+#if SANITIZER_APPLE
+  if (thr != (Thread *)main_thread_state) {
+    set_cur_thread(nullptr);
+    InternalFree(thr);
+  }
+#endif
 }
 
 static void EnsureMutexInit(Callback *cb, MutexHashMap::Handle *h, uptr m,

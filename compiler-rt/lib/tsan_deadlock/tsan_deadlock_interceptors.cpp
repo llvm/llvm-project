@@ -27,10 +27,23 @@ const int PTHREAD_MUTEX_RECURSIVE = 2;
 
 using namespace __tsan_deadlock;
 
+#if !SANITIZER_APPLE
 __attribute__((tls_model("initial-exec"))) static __thread volatile int initing;
+#endif
 static bool inited;
 
 static bool InitThread() {
+#if SANITIZER_APPLE
+  Thread *thr = cur_thread();
+  if (thr->is_inited)
+    return true;
+  if (!inited) {
+    inited = true;
+    Initialize();
+  }
+  ThreadInit(thr);
+  return true;
+#else
   if (initing)
     return false;
   if (cur_thread())
@@ -43,6 +56,7 @@ static bool InitThread() {
   ThreadInit(&thr_tls);
   initing = false;
   return true;
+#endif
 }
 
 struct ThreadArg {
@@ -55,12 +69,13 @@ static void *ThreadTrampoline(void *arg) {
   void *(*fn)(void *) = targ->fn;
   void *fn_arg = targ->arg;
   InternalFree(targ);
-  ThreadInit(&thr_tls);
+  Thread *thr = cur_thread();
+  ThreadInit(thr);
   void *retval = fn(fn_arg);
   // Also called from the pthread_exit interceptor; guard with is_inited to
   // stay idempotent.
-  if (thr_tls.is_inited)
-    ThreadDestroy(&thr_tls);
+  if (thr->is_inited)
+    ThreadDestroy(thr);
   return retval;
 }
 
@@ -79,8 +94,9 @@ INTERCEPTOR(int, pthread_join, void *t, void **retval) {
 }
 
 INTERCEPTOR(void, pthread_exit, void *retval) {
-  if (thr_tls.is_inited)
-    ThreadDestroy(&thr_tls);
+  Thread *thr = cur_thread();
+  if (thr && thr->is_inited)
+    ThreadDestroy(thr);
   REAL(pthread_exit)(retval);
 }
 
@@ -127,6 +143,7 @@ INTERCEPTOR(int, pthread_mutex_trylock, void *m) {
   return res;
 }
 
+#if !SANITIZER_APPLE
 INTERCEPTOR(int, pthread_mutex_timedlock, void *m, void *abstime) {
   uptr pc = GET_CURRENT_PC();
   InitThread();
@@ -135,6 +152,7 @@ INTERCEPTOR(int, pthread_mutex_timedlock, void *m, void *abstime) {
     MutexAfterLock(cur_thread(), (uptr)m, true, true, pc);
   return res;
 }
+#endif
 
 INTERCEPTOR(int, pthread_mutex_unlock, void *m) {
   uptr pc = GET_CURRENT_PC();
@@ -186,7 +204,7 @@ INTERCEPTOR(int, pthread_spin_unlock, void *m) {
   MutexBeforeUnlock(cur_thread(), (uptr)m, true, pc);
   return REAL(pthread_spin_unlock)(m);
 }
-#endif // !SANITIZER_APPLE
+#endif
 
 INTERCEPTOR(int, pthread_rwlock_init, void *m, void *attr) {
   uptr pc = GET_CURRENT_PC();
@@ -222,6 +240,7 @@ INTERCEPTOR(int, pthread_rwlock_tryrdlock, void *m) {
   return res;
 }
 
+#if !SANITIZER_APPLE
 INTERCEPTOR(int, pthread_rwlock_timedrdlock, void *m, void *abstime) {
   uptr pc = GET_CURRENT_PC();
   InitThread();
@@ -230,6 +249,7 @@ INTERCEPTOR(int, pthread_rwlock_timedrdlock, void *m, void *abstime) {
     MutexAfterLock(cur_thread(), (uptr)m, false, true, pc);
   return res;
 }
+#endif
 
 INTERCEPTOR(int, pthread_rwlock_wrlock, void *m) {
   uptr pc = GET_CURRENT_PC();
@@ -249,6 +269,7 @@ INTERCEPTOR(int, pthread_rwlock_trywrlock, void *m) {
   return res;
 }
 
+#if !SANITIZER_APPLE
 INTERCEPTOR(int, pthread_rwlock_timedwrlock, void *m, void *abstime) {
   uptr pc = GET_CURRENT_PC();
   InitThread();
@@ -257,6 +278,7 @@ INTERCEPTOR(int, pthread_rwlock_timedwrlock, void *m, void *abstime) {
     MutexAfterLock(cur_thread(), (uptr)m, true, true, pc);
   return res;
 }
+#endif
 
 INTERCEPTOR(int, pthread_rwlock_unlock, void *m) {
   uptr pc = GET_CURRENT_PC();
@@ -356,13 +378,11 @@ void InitializeInterceptors() {
   INTERCEPT_FUNCTION(pthread_mutex_timedlock);
   INTERCEPT_FUNCTION(pthread_mutex_unlock);
 
-#if !SANITIZER_APPLE
   INTERCEPT_FUNCTION(pthread_spin_init);
   INTERCEPT_FUNCTION(pthread_spin_destroy);
   INTERCEPT_FUNCTION(pthread_spin_lock);
   INTERCEPT_FUNCTION(pthread_spin_trylock);
   INTERCEPT_FUNCTION(pthread_spin_unlock);
-#endif // !SANITIZER_APPLE
 
   INTERCEPT_FUNCTION(pthread_rwlock_init);
   INTERCEPT_FUNCTION(pthread_rwlock_destroy);
