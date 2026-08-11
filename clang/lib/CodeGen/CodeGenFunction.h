@@ -1228,7 +1228,7 @@ public:
     OMPMapVars MappedVars;
     OMPPrivateScope(const OMPPrivateScope &) = delete;
     void operator=(const OMPPrivateScope &) = delete;
-    SmallVector<std::pair<const BindingDecl *, Address>, 4> BindingChanges;
+    llvm::DenseMap<const BindingDecl *, Address> BindingChanges;
 
   public:
     /// Enter a new OpenMP private scope.
@@ -1243,9 +1243,9 @@ public:
       assert(PerformCleanup && "adding private to dead scope");
       if (const auto *BD = dyn_cast<BindingDecl>(LocalVD->getCanonicalDecl())) {
         auto It = CGF.OMPPrivatizedBindings.find(BD);
-        BindingChanges.emplace_back(BD, It != CGF.OMPPrivatizedBindings.end()
-                                            ? It->second
-                                            : Address::invalid());
+        BindingChanges.insert({BD, It != CGF.OMPPrivatizedBindings.end()
+                                        ? It->second
+                                        : Address::invalid()});
       }
       return MappedVars.setVarAddr(CGF, LocalVD, Addr);
     }
@@ -2275,6 +2275,17 @@ public:
 
   const TargetInfo &getTarget() const { return Target; }
   llvm::LLVMContext &getLLVMContext() { return CGM.getLLVMContext(); }
+
+  /// Accessors for LocalDeclMap.
+  DeclMapTy::iterator findLocalDecl(const Decl *D) {
+    return LocalDeclMap.find(D);
+  }
+  DeclMapTy::iterator localDeclMapEnd() { return LocalDeclMap.end(); }
+  std::pair<DeclMapTy::iterator, bool>
+  insertLocalDecl(const Decl *D, Address Addr) {
+    return LocalDeclMap.insert({D, Addr});
+  }
+  void eraseLocalDecl(const Decl *D) { LocalDeclMap.erase(D); }
   const TargetCodeGenInfo &getTargetHooks() const {
     return CGM.getTargetCodeGenInfo();
   }

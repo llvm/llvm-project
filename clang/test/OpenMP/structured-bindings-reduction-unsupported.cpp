@@ -21,8 +21,7 @@ void test_udr_reduction() {
   Point p{0, 0};
   auto [a, b] = p;
 
-#pragma omp parallel for reduction(mysum:a) // expected-error {{user-defined re\
-ductions on structured bindings are not yet supported}}                         
+#pragma omp parallel for reduction(mysum:a) // expected-error {{array-type or class-type reductions on structured bindings are not yet supported}}
   for (int i = 0; i < 10; ++i) {
     a += i;
   }
@@ -32,7 +31,7 @@ void test_simple_scalar_reduction() {
   Point p{0, 0};
   auto [a, b] = p;
 
-#pragma omp parallel for reduction(+:a)
+#pragma omp parallel for reduction(+:a) // expected-error {{array-type or class-type reductions on structured bindings are not yet supported}}
   for (int i = 0; i < 10; ++i) {
     a += i;
   }
