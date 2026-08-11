@@ -111,6 +111,33 @@ static RValue emitBuiltinBitOpWithFallback(CIRGenFunction &cgf,
   return RValue::get(builder.createSelect(loc, isZero, fallbackValue, result));
 }
 
+static bool isStdcBitOpWidthSupported(cir::IntType intTy) {
+  switch (intTy.getWidth()) {
+  case 8:
+  case 16:
+  case 32:
+  case 64:
+  case 128:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static RValue errorStdcBitOpWidthNYI(CIRGenFunction &cgf, const CallExpr *e) {
+  cgf.cgm.errorNYI(e->getSourceRange(),
+                   "stdc bit builtin with unsupported argument integer width");
+  return cgf.getUndefRValue(e->getType());
+}
+
+static RValue errorBuiltinCallNYI(CIRGenFunction &cgf, const CallExpr *e,
+                                  unsigned builtinID) {
+  cgf.cgm.errorNYI(e->getSourceRange(),
+                   std::string("unimplemented builtin call: ") +
+                       cgf.getContext().BuiltinInfo.getName(builtinID));
+  return cgf.getUndefRValue(e->getType());
+}
+
 // stdc_{leading,trailing}_{zeros,ones} and stdc_count_ones: counts bits using
 // clz, ctz, or popcount. InvertArg flips the input to count the opposite bit
 // value.
@@ -120,6 +147,8 @@ static RValue emitStdcCountOp(CIRGenFunction &cgf, const CallExpr *e,
   CIRGenBuilderTy &builder = cgf.getBuilder();
   mlir::Location loc = cgf.getLoc(e->getSourceRange());
   mlir::Value arg = cgf.emitScalarExpr(e->getArg(0));
+  if (!isStdcBitOpWidthSupported(mlir::cast<cir::IntType>(arg.getType())))
+    return errorStdcBitOpWidthNYI(cgf, e);
   mlir::Value actualArg = invertArg ? builder.createNot(loc, arg) : arg;
   mlir::Value result = Op::create(builder, loc, actualArg, args...).getResult();
 
@@ -138,6 +167,8 @@ static RValue emitStdcBitWidthMinus(CIRGenFunction &cgf, const CallExpr *e,
   mlir::Location loc = cgf.getLoc(e->getSourceRange());
   mlir::Value arg = cgf.emitScalarExpr(e->getArg(0));
   auto argTy = mlir::cast<cir::IntType>(arg.getType());
+  if (!isStdcBitOpWidthSupported(argTy))
+    return errorStdcBitOpWidthNYI(cgf, e);
 
   mlir::Value cnt = Op::create(builder, loc, arg, args...).getResult();
   mlir::Value width = builder.getConstInt(loc, argTy, argTy.getWidth());
@@ -147,6 +178,21 @@ static RValue emitStdcBitWidthMinus(CIRGenFunction &cgf, const CallExpr *e,
   if (result.getType() != resultTy)
     result = builder.createIntCast(result, resultTy);
 
+  return RValue::get(result);
+}
+
+static RValue emitStdcHasSingleBit(CIRGenFunction &cgf, const CallExpr *e) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Location loc = cgf.getLoc(e->getSourceRange());
+  mlir::Value arg = cgf.emitScalarExpr(e->getArg(0));
+  if (!isStdcBitOpWidthSupported(mlir::cast<cir::IntType>(arg.getType())))
+    return errorStdcBitOpWidthNYI(cgf, e);
+
+  mlir::Value popCount =
+      cir::BitPopcountOp::create(builder, loc, arg).getResult();
+  mlir::Value one = builder.getConstInt(loc, popCount.getType(), 1);
+  mlir::Value result =
+      builder.createCompare(loc, cir::CmpOpKind::eq, popCount, one);
   return RValue::get(result);
 }
 
@@ -1354,7 +1400,33 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BIstdc_has_single_bit_ul:
   case Builtin::BIstdc_has_single_bit_ull:
   case Builtin::BI__builtin_stdc_has_single_bit:
-    return errorBuiltinNYI(*this, e, builtinID);
+    return emitStdcHasSingleBit(*this, e);
+
+  case Builtin::BIstdc_first_leading_zero_uc:
+  case Builtin::BIstdc_first_leading_zero_us:
+  case Builtin::BIstdc_first_leading_zero_ui:
+  case Builtin::BIstdc_first_leading_zero_ul:
+  case Builtin::BIstdc_first_leading_zero_ull:
+  case Builtin::BI__builtin_stdc_first_leading_zero:
+  case Builtin::BIstdc_first_leading_one_uc:
+  case Builtin::BIstdc_first_leading_one_us:
+  case Builtin::BIstdc_first_leading_one_ui:
+  case Builtin::BIstdc_first_leading_one_ul:
+  case Builtin::BIstdc_first_leading_one_ull:
+  case Builtin::BI__builtin_stdc_first_leading_one:
+  case Builtin::BIstdc_first_trailing_zero_uc:
+  case Builtin::BIstdc_first_trailing_zero_us:
+  case Builtin::BIstdc_first_trailing_zero_ui:
+  case Builtin::BIstdc_first_trailing_zero_ul:
+  case Builtin::BIstdc_first_trailing_zero_ull:
+  case Builtin::BI__builtin_stdc_first_trailing_zero:
+  case Builtin::BIstdc_first_trailing_one_uc:
+  case Builtin::BIstdc_first_trailing_one_us:
+  case Builtin::BIstdc_first_trailing_one_ui:
+  case Builtin::BIstdc_first_trailing_one_ul:
+  case Builtin::BIstdc_first_trailing_one_ull:
+  case Builtin::BI__builtin_stdc_first_trailing_one:
+    return errorBuiltinCallNYI(*this, e, builtinID);
 
   case Builtin::BIstdc_bit_ceil_uc:
   case Builtin::BIstdc_bit_ceil_us:
@@ -1362,7 +1434,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BIstdc_bit_ceil_ul:
   case Builtin::BIstdc_bit_ceil_ull:
   case Builtin::BI__builtin_stdc_bit_ceil:
-    return errorBuiltinNYI(*this, e, builtinID);
+    return errorBuiltinCallNYI(*this, e, builtinID);
 
   case Builtin::BIstdc_bit_floor_uc:
   case Builtin::BIstdc_bit_floor_us:
@@ -1370,7 +1442,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BIstdc_bit_floor_ul:
   case Builtin::BIstdc_bit_floor_ull:
   case Builtin::BI__builtin_stdc_bit_floor:
-    return errorBuiltinNYI(*this, e, builtinID);
+    return errorBuiltinCallNYI(*this, e, builtinID);
 
   case Builtin::BI__builtin_clzs:
   case Builtin::BI__builtin_clz:

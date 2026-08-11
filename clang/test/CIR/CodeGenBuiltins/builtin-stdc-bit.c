@@ -185,16 +185,75 @@ unsigned int test_stdc_count_ones(unsigned char uc, unsigned short us,
 // CIR: cir.popcount %{{.+}} : !u64i
 // LLVM-LABEL: @test_stdc_count_ones(
 // LLVM: call i8 @llvm.ctpop.i8(i8 %{{.*}})
+// LLVM: zext i8 %{{.*}} to i32
 // LLVM: call i16 @llvm.ctpop.i16(i16 %{{.*}})
+// LLVM: zext i16 %{{.*}} to i32
 // LLVM: call i32 @llvm.ctpop.i32(i32 %{{.*}})
 // LLVM: call i64 @llvm.ctpop.i64(i64 %{{.*}})
+// LLVM: trunc i64 %{{.*}} to i32
 // LLVM: call i64 @llvm.ctpop.i64(i64 %{{.*}})
+// LLVM: trunc i64 %{{.*}} to i32
 // OGCG-LABEL: @test_stdc_count_ones(
 // OGCG: call i8 @llvm.ctpop.i8(i8 %{{.*}})
+// OGCG: zext i8 %{{.*}} to i32
 // OGCG: call i16 @llvm.ctpop.i16(i16 %{{.*}})
+// OGCG: zext i16 %{{.*}} to i32
 // OGCG: call i32 @llvm.ctpop.i32(i32 %{{.*}})
 // OGCG: call i64 @llvm.ctpop.i64(i64 %{{.*}})
+// OGCG: trunc i64 %{{.*}} to i32
 // OGCG: call i64 @llvm.ctpop.i64(i64 %{{.*}})
+// OGCG: trunc i64 %{{.*}} to i32
+
+_Bool test_stdc_has_single_bit(unsigned char uc, unsigned short us,
+                               unsigned int ui, unsigned long ul,
+                               unsigned long long ull) {
+  volatile _Bool r;
+  r = __builtin_stdc_has_single_bit(uc);
+  r = __builtin_stdc_has_single_bit(us);
+  r = __builtin_stdc_has_single_bit(ui);
+  r = __builtin_stdc_has_single_bit(ul);
+  r = __builtin_stdc_has_single_bit(ull);
+  return r;
+}
+
+// CIR-LABEL: @test_stdc_has_single_bit(
+// CIR: %[[POPCOUNT_UC:.+]] = cir.popcount %{{.+}} : !u8i
+// CIR: %[[ONE_UC:.+]] = cir.const #cir.int<1> : !u8i
+// CIR: cir.cmp eq %[[POPCOUNT_UC]], %[[ONE_UC]] : !u8i
+// CIR: %[[POPCOUNT_US:.+]] = cir.popcount %{{.+}} : !u16i
+// CIR: %[[ONE_US:.+]] = cir.const #cir.int<1> : !u16i
+// CIR: cir.cmp eq %[[POPCOUNT_US]], %[[ONE_US]] : !u16i
+// CIR: %[[POPCOUNT_UI:.+]] = cir.popcount %{{.+}} : !u32i
+// CIR: %[[ONE_UI:.+]] = cir.const #cir.int<1> : !u32i
+// CIR: cir.cmp eq %[[POPCOUNT_UI]], %[[ONE_UI]] : !u32i
+// CIR: %[[POPCOUNT_UL:.+]] = cir.popcount %{{.+}} : !u64i
+// CIR: %[[ONE_UL:.+]] = cir.const #cir.int<1> : !u64i
+// CIR: cir.cmp eq %[[POPCOUNT_UL]], %[[ONE_UL]] : !u64i
+// CIR: %[[POPCOUNT_ULL:.+]] = cir.popcount %{{.+}} : !u64i
+// CIR: %[[ONE_ULL:.+]] = cir.const #cir.int<1> : !u64i
+// CIR: cir.cmp eq %[[POPCOUNT_ULL]], %[[ONE_ULL]] : !u64i
+// LLVM-LABEL: @test_stdc_has_single_bit(
+// LLVM: call i8 @llvm.ctpop.i8(i8 %{{.*}})
+// LLVM: icmp eq i8 %{{.*}}, 1
+// LLVM: call i16 @llvm.ctpop.i16(i16 %{{.*}})
+// LLVM: icmp eq i16 %{{.*}}, 1
+// LLVM: call i32 @llvm.ctpop.i32(i32 %{{.*}})
+// LLVM: icmp eq i32 %{{.*}}, 1
+// LLVM: call i64 @llvm.ctpop.i64(i64 %{{.*}})
+// LLVM: icmp eq i64 %{{.*}}, 1
+// LLVM: call i64 @llvm.ctpop.i64(i64 %{{.*}})
+// LLVM: icmp eq i64 %{{.*}}, 1
+// OGCG-LABEL: @test_stdc_has_single_bit(
+// OGCG: call i8 @llvm.ctpop.i8(i8 %{{.*}})
+// OGCG: icmp eq i8 %{{.*}}, 1
+// OGCG: call i16 @llvm.ctpop.i16(i16 %{{.*}})
+// OGCG: icmp eq i16 %{{.*}}, 1
+// OGCG: call i32 @llvm.ctpop.i32(i32 %{{.*}})
+// OGCG: icmp eq i32 %{{.*}}, 1
+// OGCG: call i64 @llvm.ctpop.i64(i64 %{{.*}})
+// OGCG: icmp eq i64 %{{.*}}, 1
+// OGCG: call i64 @llvm.ctpop.i64(i64 %{{.*}})
+// OGCG: icmp eq i64 %{{.*}}, 1
 
 unsigned int test_stdc_count_zeros(unsigned char uc, unsigned short us,
                                    unsigned int ui, unsigned long ul,
@@ -268,25 +327,33 @@ unsigned int test_stdc_bit_width(unsigned char uc, unsigned short us,
 // LLVM-LABEL: @test_stdc_bit_width(
 // LLVM: call i8 @llvm.ctlz.i8(i8 %{{.*}}, i1 false)
 // LLVM: sub i8 8, %{{.*}}
+// LLVM: zext i8 %{{.*}} to i32
 // LLVM: call i16 @llvm.ctlz.i16(i16 %{{.*}}, i1 false)
 // LLVM: sub i16 16, %{{.*}}
+// LLVM: zext i16 %{{.*}} to i32
 // LLVM: call i32 @llvm.ctlz.i32(i32 %{{.*}}, i1 false)
 // LLVM: sub i32 32, %{{.*}}
 // LLVM: call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 false)
 // LLVM: sub i64 64, %{{.*}}
+// LLVM: trunc i64 %{{.*}} to i32
 // LLVM: call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 false)
 // LLVM: sub i64 64, %{{.*}}
+// LLVM: trunc i64 %{{.*}} to i32
 // OGCG-LABEL: @test_stdc_bit_width(
 // OGCG: call i8 @llvm.ctlz.i8(i8 %{{.*}}, i1 false)
 // OGCG: sub i8 8, %{{.*}}
+// OGCG: zext i8 %{{.*}} to i32
 // OGCG: call i16 @llvm.ctlz.i16(i16 %{{.*}}, i1 false)
 // OGCG: sub i16 16, %{{.*}}
+// OGCG: zext i16 %{{.*}} to i32
 // OGCG: call i32 @llvm.ctlz.i32(i32 %{{.*}}, i1 false)
 // OGCG: sub i32 32, %{{.*}}
 // OGCG: call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 false)
 // OGCG: sub i64 64, %{{.*}}
+// OGCG: trunc i64 %{{.*}} to i32
 // OGCG: call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 false)
 // OGCG: sub i64 64, %{{.*}}
+// OGCG: trunc i64 %{{.*}} to i32
 
 #else
 
@@ -337,6 +404,35 @@ unsigned int test_stdc_leading_ones_lib(unsigned char uc, unsigned short us,
 // LIB-CIR: cir.clz %{{.+}} : !u64i
 // LIB-CIR: cir.not %{{.+}} : !u64i
 // LIB-CIR: cir.clz %{{.+}} : !u64i
+
+_Bool test_stdc_has_single_bit_lib(unsigned char uc, unsigned short us,
+                                   unsigned int ui, unsigned long ul,
+                                   unsigned long long ull) {
+  volatile _Bool r;
+  r = stdc_has_single_bit_uc(uc);
+  r = stdc_has_single_bit_us(us);
+  r = stdc_has_single_bit_ui(ui);
+  r = stdc_has_single_bit_ul(ul);
+  r = stdc_has_single_bit_ull(ull);
+  return r;
+}
+
+// LIB-CIR-LABEL: @test_stdc_has_single_bit_lib(
+// LIB-CIR: %[[LIB_POPCOUNT_UC:.+]] = cir.popcount %{{.+}} : !u8i
+// LIB-CIR: %[[LIB_ONE_UC:.+]] = cir.const #cir.int<1> : !u8i
+// LIB-CIR: cir.cmp eq %[[LIB_POPCOUNT_UC]], %[[LIB_ONE_UC]] : !u8i
+// LIB-CIR: %[[LIB_POPCOUNT_US:.+]] = cir.popcount %{{.+}} : !u16i
+// LIB-CIR: %[[LIB_ONE_US:.+]] = cir.const #cir.int<1> : !u16i
+// LIB-CIR: cir.cmp eq %[[LIB_POPCOUNT_US]], %[[LIB_ONE_US]] : !u16i
+// LIB-CIR: %[[LIB_POPCOUNT_UI:.+]] = cir.popcount %{{.+}} : !u32i
+// LIB-CIR: %[[LIB_ONE_UI:.+]] = cir.const #cir.int<1> : !u32i
+// LIB-CIR: cir.cmp eq %[[LIB_POPCOUNT_UI]], %[[LIB_ONE_UI]] : !u32i
+// LIB-CIR: %[[LIB_POPCOUNT_UL:.+]] = cir.popcount %{{.+}} : !u64i
+// LIB-CIR: %[[LIB_ONE_UL:.+]] = cir.const #cir.int<1> : !u64i
+// LIB-CIR: cir.cmp eq %[[LIB_POPCOUNT_UL]], %[[LIB_ONE_UL]] : !u64i
+// LIB-CIR: %[[LIB_POPCOUNT_ULL:.+]] = cir.popcount %{{.+}} : !u64i
+// LIB-CIR: %[[LIB_ONE_ULL:.+]] = cir.const #cir.int<1> : !u64i
+// LIB-CIR: cir.cmp eq %[[LIB_POPCOUNT_ULL]], %[[LIB_ONE_ULL]] : !u64i
 
 unsigned int test_stdc_count_zeros_lib(unsigned char uc, unsigned short us,
                                        unsigned int ui, unsigned long ul,
