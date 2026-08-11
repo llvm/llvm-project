@@ -6844,8 +6844,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     // The only allowed 'mixed' case is inserting a fixed vector into a
     // scalable vector.
     if (SubVecEC.isScalable()) {
-      Check(VecEC.isScalable(), "Scalable vectors can only be inserted into "
-                                "other scalable vectors.");
+      Check(VecEC.isScalable(), "cannot vector_insert a scalable vector into "
+                                "a fixed vector.");
     }
 
     // If this insertion is not the 'mixed' case where a fixed vector is
@@ -6881,8 +6881,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     // The only allowed 'mixed' case is extracting a fixed vector from a
     // scalable vector.
     if (ResultEC.isScalable()) {
-      Check(VecEC.isScalable(), "Scalable vectors can only be extracted from "
-                                "other scalable vectors.");
+      Check(VecEC.isScalable(), "cannot vector_extract a scalable vector from "
+                                "a fixed vector.");
     }
 
     // If this extraction is not the 'mixed' case where a fixed vector is

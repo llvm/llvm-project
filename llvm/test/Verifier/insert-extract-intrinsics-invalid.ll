@@ -83,13 +83,13 @@ define <vscale x 8 x i32> @insert_overrun_scalable_fixed(<vscale x 8 x i32> %vec
 ; are captured.
 ;
 
-; CHECK: Scalable vectors can only be extracted from other scalable vectors.
+; CHECK: cannot vector_extract a scalable vector from a fixed vector.
 define <vscale x 4 x i32> @extract_scalable_from_fixed(<8 x i32> %vec) {
   %1 = call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.v8i32(<8 x i32> %vec, i64 0)
   ret <vscale x 4 x i32> %1
 }
 
-; CHECK: Scalable vectors can only be inserted into other scalable vectors.
+; CHECK: cannot vector_insert a scalable vector into a fixed vector.
 define <8 x i32> @insert_scalable_into_fixed(<8 x i32> %vec, <vscale x 4 x i32> %subvec) {
   %1 = call <8 x i32> @llvm.vector.insert.v8i32.nxv4i32(<8 x i32> %vec, <vscale x 4 x i32> %subvec, i64 0)
   ret <8 x i32> %1
