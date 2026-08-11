@@ -5247,6 +5247,57 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Lastprivate &x) {
     using LastprivateModifier = parser::OmpLastprivateModifier;
     if (auto *modifier{OmpGetUniqueModifier<LastprivateModifier>(modifiers)}) {
       CheckLastprivateModifier(*modifier);
+      if (modifier->v == LastprivateModifier::Value::Conditional) {
+        // A conditional lastprivate list item must be a scalar variable of
+        // intrinsic Numeric or Logical category.  Arrays are excluded by the
+        // rank check; character, derived, and polymorphic entities by the
+        // category check.
+        auto checkConditionalItem{[&](const Symbol &symbol,
+                                      const parser::CharBlock &source) {
+          // Resolve host/use-association so the type and attribute checks see
+          // the entity's real properties, not the local association symbol.
+          const Symbol &ultimate{symbol.GetUltimate()};
+          const DeclTypeSpec *type{ultimate.GetType()};
+          bool isScalarIntrinsicNonChar{ultimate.Rank() == 0 && type &&
+              (type->category() == DeclTypeSpec::Category::Numeric ||
+                  type->category() == DeclTypeSpec::Category::Logical)};
+          if (!isScalarIntrinsicNonChar) {
+            context_.Say(source,
+                "A list item that appears in a LASTPRIVATE clause with the "
+                "CONDITIONAL modifier must be a scalar variable with intrinsic "
+                "type, as defined by the Fortran language, excluding character "
+                "type, but '%s' is not"_err_en_US,
+                symbol.name());
+          } else if (IsAllocatableOrPointer(ultimate)) {
+            // Standard-legal, but lowering does not yet preserve descriptors.
+            // TODO: support POINTER/ALLOCATABLE conditional lastprivate.
+            context_.Say(source,
+                "A POINTER or ALLOCATABLE list item is not yet supported by "
+                "Flang in a LASTPRIVATE clause with the CONDITIONAL modifier, "
+                "'%s'"_err_en_US,
+                symbol.name());
+          }
+        }};
+        // Check whole variables (Designator -> DataRef -> Name) and
+        // common blocks (a bare Name, rejected above as having no type).
+        // Array elements, sections, components, and substrings are other
+        // designator forms, left to the general OpenMP object diagnostics.
+        for (const parser::OmpObject &object : objectList.v) {
+          const parser::Name *name{std::get_if<parser::Name>(&object.u)};
+          if (!name) {
+            if (const auto *designator{
+                    std::get_if<parser::Designator>(&object.u)}) {
+              if (const auto *dataRef{
+                      std::get_if<parser::DataRef>(&designator->u)}) {
+                name = std::get_if<parser::Name>(&dataRef->u);
+              }
+            }
+          }
+          if (name && name->symbol) {
+            checkConditionalItem(*name->symbol, name->source);
+          }
+        }
+      }
     }
   }
 }
@@ -5257,12 +5308,22 @@ void OmpStructureChecker::CheckLastprivateModifier(
     const parser::OmpLastprivateModifier &modifier) {
   using LastprivateModifier = parser::OmpLastprivateModifier;
   const DirectiveContext &dirCtx{GetContext()};
-  if (modifier.v == LastprivateModifier::Value::Conditional &&
-      dirCtx.directive == llvm::omp::Directive::OMPD_taskloop) {
-    // [5.2:268:17]
-    // The conditional lastprivate-modifier must not be specified.
+  if (modifier.v != LastprivateModifier::Value::Conditional) {
+    return;
+  }
+  // The conditional lastprivate-modifier must not be specified on a taskloop
+  // or distribute directive.  Checking leaf constructs also covers combined
+  // and composite forms such as `teams distribute` or `taskloop simd`.
+  llvm::ArrayRef<llvm::omp::Directive> leafs{
+      llvm::omp::getLeafConstructsOrSelf(dirCtx.directive)};
+  if (llvm::is_contained(leafs, llvm::omp::Directive::OMPD_taskloop)) {
     context_.Say(GetContext().clauseSource,
         "'CONDITIONAL' modifier on lastprivate clause with TASKLOOP "
+        "directive is not allowed"_err_en_US);
+  }
+  if (llvm::is_contained(leafs, llvm::omp::Directive::OMPD_distribute)) {
+    context_.Say(GetContext().clauseSource,
+        "'CONDITIONAL' modifier on lastprivate clause with DISTRIBUTE "
         "directive is not allowed"_err_en_US);
   }
 }
