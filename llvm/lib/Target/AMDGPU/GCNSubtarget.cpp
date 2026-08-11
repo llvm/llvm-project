@@ -246,8 +246,10 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
   LLVM_DEBUG(dbgs() << "sramecc setting for subtarget: "
                     << TargetID.getSramEccSetting() << '\n');
 
-  MaxWavesPerEU = AMDGPU::IsaInfo::getMaxWavesPerEU(*this);
-  EUsPerCU = AMDGPU::IsaInfo::getEUsPerCU(*this);
+  MaxWavesPerEU = AMDGPU::getMaxWavesPerEU(TargetID.getGPUKind());
+  // CU mode confines a work-group to half of the block's SIMDs.
+  WorkGroupSIMDs = AMDGPU::getWorkGroupSIMDs(
+      TargetID.getGPUKind(), /*FullSIMDMode=*/!isCuModeEnabled());
 
   TSInfo = std::make_unique<AMDGPUSelectionDAGInfo>();
 

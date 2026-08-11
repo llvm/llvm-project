@@ -202,6 +202,19 @@ LLVM_ABI unsigned getAddressableNumSGPRs(Triple::SubArchType SubArch);
 LLVM_ABI unsigned getSGPRAllocGranule(GPUKind AK);
 LLVM_ABI unsigned getSGPRAllocGranule(Triple::SubArchType SubArch);
 
+/// \returns Number of SIMDs (execution units) a work-group's waves run on. In
+/// full-SIMD mode that is every SIMD of the functional block; otherwise the
+/// work-group is confined to half of them. Hardware that cannot split the
+/// block reports the same count either way.
+LLVM_ABI unsigned getWorkGroupSIMDs(GPUKind AK, bool FullSIMDMode);
+LLVM_ABI unsigned getWorkGroupSIMDs(Triple::SubArchType SubArch,
+                                    bool FullSIMDMode);
+
+/// \returns Maximum number of waves per execution unit without any kind of
+/// limitation.
+LLVM_ABI unsigned getMaxWavesPerEU(GPUKind AK);
+LLVM_ABI unsigned getMaxWavesPerEU(Triple::SubArchType SubArch);
+
 /// Fills Features map with default values for given target GPU.
 /// \p Features contains overriding target features and this function returns
 /// default target features with entries overridden by \p Features.

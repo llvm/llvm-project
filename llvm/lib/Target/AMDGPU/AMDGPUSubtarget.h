@@ -54,7 +54,7 @@ protected:
   bool HasSMulHi = false;
   bool HasFminFmaxLegacy = true;
 
-  unsigned EUsPerCU = 4;
+  unsigned WorkGroupSIMDs = 4;
   unsigned MaxWavesPerEU = 10;
   unsigned LocalMemorySize = 0;
   unsigned AddressableLocalMemorySize = 0;
@@ -237,10 +237,10 @@ public:
     return AddressableLocalMemorySize;
   }
 
-  /// Number of SIMDs/EUs (execution units) per "CU" ("compute unit"), where the
-  /// "CU" is the unit onto which workgroups are mapped. This takes WGP mode vs.
-  /// CU mode into account.
-  unsigned getEUsPerCU() const { return EUsPerCU; }
+  /// Number of SIMDs (execution units) a work-group's waves run on: all four
+  /// of the block's SIMDs in full-SIMD mode, two when the work-group is
+  /// confined to half of them.
+  unsigned getWorkGroupSIMDs() const { return WorkGroupSIMDs; }
 
   Align getAlignmentForImplicitArgPtr() const {
     return isAmdHsaOS() ? Align(8) : Align(4);
