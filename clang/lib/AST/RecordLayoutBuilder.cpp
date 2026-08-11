@@ -189,6 +189,10 @@ void EmptySubobjectMap::ComputeEmptySubobjectSizes() {
     const CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
     assert(BaseDecl != Class && "Class cannot inherit from itself.");
 
+    // Skip invalid base declarations to avoid assert in getASTRecordLayout
+    if (BaseDecl->isInvalidDecl())
+      continue;
+
     CharUnits EmptySize;
     const ASTRecordLayout &Layout = Context.getASTRecordLayout(BaseDecl);
     if (BaseDecl->isEmpty()) {
@@ -209,6 +213,10 @@ void EmptySubobjectMap::ComputeEmptySubobjectSizes() {
     const auto *MemberDecl =
         Context.getBaseElementType(FD->getType())->getAsCXXRecordDecl();
     if (!MemberDecl)
+      continue;
+
+    // Skip invalid member declarations to avoid assert in getASTRecordLayout
+    if (MemberDecl->isInvalidDecl())
       continue;
 
     CharUnits EmptySize;
@@ -378,6 +386,12 @@ EmptySubobjectMap::CanPlaceFieldSubobjectAtOffset(const CXXRecordDecl *RD,
 
   if (!CanPlaceSubobjectAtOffset(RD, Offset))
     return false;
+
+  // For invalid declarations, be permissive during error recovery.
+  // Return true to allow placement and avoid triggering assert in getASTRecordLayout.
+  // Layout constraints don't matter for types that are already marked invalid.
+  if (RD->isInvalidDecl())
+    return true;
 
   const ASTRecordLayout &Layout = Context.getASTRecordLayout(RD);
 
@@ -3384,30 +3398,9 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
   // not a complete definition (which is what isCompleteDefinition() tests)
   // until we *finish* parsing the definition.
   D = D->getDefinition();
-
-  // Handle invalid declarations gracefully during error recovery
-  // This can happen when there are template specialization errors
-  if (!D || D->isInvalidDecl() || !D->isCompleteDefinition()) {
-    // Check if we already have a cached layout
-    const ASTRecordLayout *Entry = ASTRecordLayouts[D];
-    if (Entry)
-      return *Entry;
-
-    // Create a minimal safe layout for error recovery
-    // Use 1-byte size and alignment to avoid division by zero or other issues
-    ASTRecordLayout *NewEntry =
-        new (*this) ASTRecordLayout(*this,
-                                    /*Size=*/CharUnits::One(),
-                                    /*Alignment=*/CharUnits::One(),
-                                    /*PreferredAlignment=*/CharUnits::One(),
-                                    /*UnadjustedAlignment=*/CharUnits::One(),
-                                    /*RequiredAlignment=*/CharUnits::One(),
-                                    /*DataSize=*/CharUnits::One(),
-                                    /*FieldOffsets=*/ArrayRef<uint64_t>());
-
-    ASTRecordLayouts[D] = NewEntry;
-    return *NewEntry;
-  }
+  assert(D && "Cannot get layout of forward declarations!");
+  assert(!D->isInvalidDecl() && "Cannot get layout of invalid decl!");
+  assert(D->isCompleteDefinition() && "Cannot layout type before complete!");
 
   // Look up this layout, if already laid out, return what we have.
   // Note that we can't save a reference to the entry because this function
