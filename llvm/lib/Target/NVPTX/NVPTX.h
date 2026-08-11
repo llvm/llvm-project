@@ -58,6 +58,7 @@ FunctionPass *createNVPTXAllocaHoistingLegacyPass();
 FunctionPass *createNVPTXLowerAllocaLegacyPass();
 FunctionPass *createNVPTXLowerUnreachableLegacyPass(bool TrapUnreachable,
                                                     bool NoTrapAfterNoreturn);
+FunctionPass *createNVPTXLowerAggrCopiesLegacyPass();
 FunctionPass *createNVPTXMarkKernelPtrsGlobalPass();
 FunctionPass *createNVPTXTagInvariantLoadsPass();
 FunctionPass *createNVPTXIRPeepholePass();

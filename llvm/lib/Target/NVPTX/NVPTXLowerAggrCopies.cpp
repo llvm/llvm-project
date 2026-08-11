@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "NVPTXLowerAggrCopies.h"
 #include "NVPTX.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -149,7 +148,6 @@ static bool lowerAggrCopies(Function &F, const TargetTransformInfo &TTI,
 
 namespace {
 
-// actual analysis class, which is a functionpass
 struct NVPTXLowerAggrCopiesLegacyPass : public FunctionPass {
   static char ID;
 
@@ -191,8 +189,11 @@ FunctionPass *llvm::createNVPTXLowerAggrCopiesLegacyPass() {
 
 PreservedAnalyses NVPTXLowerAggrCopiesPass::run(Function &F,
                                                 FunctionAnalysisManager &FAM) {
-  return lowerAggrCopies(F, FAM.getResult<TargetIRAnalysis>(F),
-                         FAM.getResult<AAManager>(F))
-             ? PreservedAnalyses::none()
-             : PreservedAnalyses::all();
+  if (!lowerAggrCopies(F, FAM.getResult<TargetIRAnalysis>(F),
+                       FAM.getResult<AAManager>(F)))
+    return PreservedAnalyses::all();
+  // Copies are expanded into loops, so the CFG is not preserved.
+  PreservedAnalyses PA;
+  PA.preserve<SSPLayoutAnalysis>();
+  return PA;
 }
