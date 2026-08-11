@@ -528,7 +528,7 @@ define double @movz_movk16_movk32_movk48() {
   ret double 0xABCD9ABC56781234
 }
 
-;; 32 bit FP immediate expansion shouldnt be affected by the limit,
+;; 32 bit FP immediate expansion shouldn't be affected by the limit,
 ;; because we can always materialize it using up to 2 instructions - as
 ;; `AArch64ExpandImm.cpp` asserts, which is already the default limit
 ;; for non-optsize functions.
