@@ -139,7 +139,45 @@ cont1:                                            ; preds = %cont
   ret i32 0
 }
 
+;; The branches in entry and cont have different !annotation metadata. Make sure
+;; the annotations are merged in the OR and the remaning branch.
+;; FIXME: Currently, the resulting branch in the entry block does not get the !1
+;; annotation (because it is not newly created).  Similarly, the OR does get the
+;; !1 annotation, but not the !0 annotation; since it also represents a merge of
+;; the two branches it should have both.
+define i32 @test_merge_annotations(ptr %a, ptr %b, ptr %c, ptr %d) {
+; CHECK-LABEL: define i32 @test_merge_annotations({{.*}}
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ult ptr [[A:%.*]], [[B:%.*]], !annotation !0
+; CHECK-NEXT:    [[C_2:%.*]] = icmp uge ptr [[C:%.*]], [[D:%.*]], !annotation !1
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[C_1]], i1 [[C_2]], i1 false, !annotation !1
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT1:%.*]], label [[TRAP:%.*]], !annotation !0
+; CHECK:       trap: ; preds = %entry
+; CHECK-NEXT:    call void @fn1()
+; CHECK-NEXT:    unreachable
+; CHECK:       cont1:  ; preds = %entry
+; CHECK-NEXT:    call void @fn2()
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %c.1 = icmp ult ptr %a, %b, !annotation !0
+  br i1 %c.1, label %cont, label %trap, !annotation !0
+
+cont:                                             ; preds = %entry
+  %c.2 = icmp uge ptr %c, %d, !annotation !1
+  br i1 %c.2, label %cont1, label %trap, !annotation !1
+
+trap:                                             ; preds = %cont, %entry
+  call void @fn1()
+  unreachable
+
+cont1:                                            ; preds = %cont
+  call void @fn2()
+  ret i32 0
+}
+
 declare void @fn1()
 declare void @fn2()
 
 !0 = !{!"foo"}
+!1 = !{!"foo1"}
