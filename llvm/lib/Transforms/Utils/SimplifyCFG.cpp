@@ -4392,9 +4392,10 @@ static bool isSameGEPAddress(Value *A, Value *B) {
 
 /// Find the unique simple store in \p BB. Returns nullptr if there is no
 /// store, if there are multiple stores, or if the store is not simple.
-/// Also rejects blocks containing non-store instructions that read/write
-/// memory or have side effects, as they cannot be safely speculated.
-static StoreInst *findUniqueSimpleStoreInBlock(BasicBlock *BB) {
+/// Also rejects blocks containing non-store instructions that are not safe
+/// to speculatively execute.
+static StoreInst *findUniqueSimpleStoreInBlock(BasicBlock *BB,
+                                               AssumptionCache *AC) {
   StoreInst *Found = nullptr;
   unsigned NumOther = 0;
   for (Instruction &I : *BB) {
@@ -4407,9 +4408,8 @@ static StoreInst *findUniqueSimpleStoreInBlock(BasicBlock *BB) {
       Found = SI;
       continue;
     }
-    // Reject if any non-store instruction reads/writes memory or has
-    // side effects — it cannot be safely speculated.
-    if (I.mayReadOrWriteMemory() || I.mayHaveSideEffects())
+    // Reject if non-store instruction is not safe to speculatively execute.
+    if (!isSafeToSpeculativelyExecute(&I, &I, AC))
       return nullptr;
     // Allow at most one non-store, non-terminator instruction. This ensures
     // that HoistIfNeeded (which moves a single instruction) is sufficient —
@@ -4426,15 +4426,10 @@ static StoreInst *findUniqueSimpleStoreInBlock(BasicBlock *BB) {
 /// \p FoldedStore is the store being folded and is considered free.
 static bool isBlockCheapToSpeculate(BasicBlock *BB, StoreInst *FoldedStore,
                                     const TargetTransformInfo &TTI) {
-  for (Instruction &I : *BB) {
-    if (I.isTerminator())
-      continue;
-    if (&I == FoldedStore)
-      continue;
-    if (TTI.isExpensiveToSpeculativelyExecute(&I))
-      return false;
-  }
-  return true;
+  return all_of(*BB, [FoldedStore, &TTI](const Instruction &I) {
+    return I.isTerminator() || &I == FoldedStore ||
+           !TTI.isExpensiveToSpeculativelyExecute(&I);
+  });
 }
 
 /// Fold a triangle+diamond CFG pattern where all three branches store to the
@@ -4456,7 +4451,8 @@ static bool isBlockCheapToSpeculate(BasicBlock *BB, StoreInst *FoldedStore,
 /// four speculated blocks (ThenBB, ElseBB, ElseThenBB, ElseElseBB) — HeadBB
 /// instructions already execute unconditionally so they are not checked.
 static bool foldCondStoreToSelectImpl(CondBrInst *BI, DomTreeUpdater *DTU,
-                                      const TargetTransformInfo &TTI) {
+                                      const TargetTransformInfo &TTI,
+                                      AssumptionCache *AC) {
   BasicBlock *HeadBB = BI->getParent();
   BasicBlock *ThenBB = BI->getSuccessor(0);
   BasicBlock *ElseBB = BI->getSuccessor(1);
@@ -4470,7 +4466,7 @@ static bool foldCondStoreToSelectImpl(CondBrInst *BI, DomTreeUpdater *DTU,
     return false;
   BasicBlock *MergeBB = ThenTerm->getSuccessor(0);
 
-  StoreInst *ThenStore = findUniqueSimpleStoreInBlock(ThenBB);
+  StoreInst *ThenStore = findUniqueSimpleStoreInBlock(ThenBB, AC);
   if (!ThenStore)
     return false;
 
@@ -4504,7 +4500,7 @@ static bool foldCondStoreToSelectImpl(CondBrInst *BI, DomTreeUpdater *DTU,
     UncondBrInst *Term = dyn_cast<UncondBrInst>(BB->getTerminator());
     if (!Term || Term->getSuccessor(0) != MergeBB)
       return false;
-    Store = findUniqueSimpleStoreInBlock(BB);
+    Store = findUniqueSimpleStoreInBlock(BB, AC);
     return Store != nullptr;
   };
 
@@ -9248,7 +9244,8 @@ bool SimplifyCFGOpt::simplifyCondBranch(CondBrInst *BI, IRBuilder<> &Builder) {
 
   // Fold triangle+diamond pattern where three branches all store to the same
   // address into a select+store in the head block, enabling vectorization.
-  if (Options.FoldCondStoreToSelect && foldCondStoreToSelectImpl(BI, DTU, TTI))
+  if (Options.FoldCondStoreToSelect &&
+      foldCondStoreToSelectImpl(BI, DTU, TTI, Options.AC))
     return requestResimplify();
 
   return false;
