@@ -1154,7 +1154,7 @@ def gi_opsel_i1timm : GICustomOperandRenderer<"renderOpSelTImm">,
   GISDNodeXFormEquiv<opsel_i1timm>;
 
 class SrcAndDstSelToOpSelXForm<int modifier_idx, bit dest_sel> : SDNodeXForm<timm, [{
-  unsigned Val = static_cast<unsigned>(N->getZExtValue());
+  uint64_t Val = N->getZExtValue();
   unsigned New = 0;
   if (}] # modifier_idx # [{ == 0) {
     New = (}] # dest_sel # [{ == 1) ? ((Val & 0x1) ? (SISrcMods::OP_SEL_0 | SISrcMods::DST_OP_SEL) : SISrcMods::DST_OP_SEL)
@@ -1204,7 +1204,7 @@ def gi_SrcSelToOpSelXForm : GICustomOperandRenderer<"renderSrcSelToOpSelXForm">,
   GISDNodeXFormEquiv<SrcSelToOpSelXForm>;
 
 def DstSelToOpSel3XForm : SDNodeXForm<timm, [{
-  uint32_t V = static_cast<uint32_t>(N->getZExtValue());
+  uint64_t V = N->getZExtValue();
   return CurDAG->getTargetConstant(
       (V & 0x2) ? SISrcMods::DST_OP_SEL : SISrcMods::NONE,
       SDLoc(N), MVT::i32);
