@@ -1809,21 +1809,20 @@ GenericOp cloneToCollapsedOp<GenericOp>(RewriterBase &rewriter,
   return collapsedOp;
 }
 
-/// Collapse a `BroadcastOp`. Flattening leaves a single dimension, so a 0-D
-/// input broadcasts into it (`dimensions = [0]`) and any other input adds none.
+/// Collapse a `BroadcastOp` with a 0-D input into the single flattened
+/// dimension (`dimensions = [0]`).
 template <>
 BroadcastOp
 cloneToCollapsedOp<BroadcastOp>(RewriterBase &rewriter, BroadcastOp origOp,
                                 const CollapsingInfo &collapsingInfo) {
+  assert(origOp.getInput().getType().getRank() == 0 && "expected a 0-D input");
+
   SmallVector<Value> inputOperands, outputOperands;
   SmallVector<Type> resultTypes;
   collapseOperandsAndResults(origOp, collapsingInfo, rewriter, inputOperands,
                              outputOperands, resultTypes);
 
-  SmallVector<int64_t> newDimensions;
-  if (origOp.getInput().getType().getRank() == 0)
-    newDimensions.push_back(0);
-
+  SmallVector<int64_t> newDimensions = {0};
   return BroadcastOp::create(rewriter, origOp.getLoc(), inputOperands[0],
                              outputOperands[0], newDimensions);
 }
