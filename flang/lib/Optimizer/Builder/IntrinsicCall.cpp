@@ -5222,13 +5222,13 @@ void IntrinsicLibrary::genIeeeGetOrSetModesOrStatus(
       //   bytes  [0, 20) - fenv_t saved by fegetenv / restored by fesetenv
       //   bytes [20, 28) - raw FPSCR double from mffs (trap-enable bits [7:3])
       static constexpr int kAIXFenvTSize = 20; // sizeof(fenv_t) on AIX
-      mlir::Type i8Ty  = builder.getIntegerType(8);
+      mlir::Type i8Ty = builder.getIntegerType(8);
       mlir::Type f64Ty = builder.getF64Type();
       mlir::Type idxTy = builder.getIndexType();
-      mlir::Type i8SeqTy = fir::SequenceType::get(
-          {fir::SequenceType::getUnknownExtent()}, i8Ty);
+      mlir::Type i8SeqTy =
+          fir::SequenceType::get({fir::SequenceType::getUnknownExtent()}, i8Ty);
       mlir::Type i8SeqPtrTy = builder.getRefType(i8SeqTy);
-      mlir::Type f64PtrTy   = builder.getRefType(f64Ty);
+      mlir::Type f64PtrTy = builder.getRefType(f64Ty);
 
       // Cast __data base pointer to !fir.ref<!fir.array<?xi8>> for GEP
       mlir::Value base = fir::ConvertOp::create(builder, loc, i8SeqPtrTy,
@@ -5246,8 +5246,7 @@ void IntrinsicLibrary::genIeeeGetOrSetModesOrStatus(
           builder.createIntegerConstant(loc, idxTy, kAIXFenvTSize);
       mlir::Value fpGep = fir::CoordinateOp::create(
           builder, loc, builder.getRefType(i8Ty), base, fpIdx);
-      mlir::Value fpPtr =
-          fir::ConvertOp::create(builder, loc, f64PtrTy, fpGep);
+      mlir::Value fpPtr = fir::ConvertOp::create(builder, loc, f64PtrTy, fpGep);
 
       if constexpr (isGet) {
         mlir::func::FuncOp readFlm = fir::factory::getLlvmPpcReadflm(builder);
@@ -5260,7 +5259,7 @@ void IntrinsicLibrary::genIeeeGetOrSetModesOrStatus(
         // Store the raw FPSCR double at offset kAIXFenvTSize
         fir::StoreOp::create(builder, loc, fpscr, fpPtr);
       } else {
-        mlir::func::FuncOp setFlm  = fir::factory::getLlvmPpcSetflm(builder);
+        mlir::func::FuncOp setFlm = fir::factory::getLlvmPpcSetflm(builder);
         // Restore the floating-point environment
         genRuntimeCall("fesetenv", i32Ty, fenvPtr);
         // Load the raw FPSCR double from offset kAIXFenvTSize
