@@ -225,15 +225,18 @@ LLVM fixed-vector dimensions are per-work-item data; they are not hardware
 subgroup lanes. The semantic Inter layer makes the lane axis explicit:
 
 ```
-uniform<T>
-lane_bundle<W, T>
+T                 // uniform across the hardware thread
+simd<T, N>        // N compact values distributed across the thread
 ```
 
-`W` is a per-kernel target decision (commonly SIMD16 for DPAS), not a constant
-embedded in generic lowering. Every lane bundle carries an active mask through
-divergent branches, loops, tails, and masked memory operations. Lane ID,
-subgroup ID, workgroup ID, local/global IDs, shuffle, broadcast, ballot, and
-reduction are semantic operations before they become EU regions or control
+The enclosing kernel carries one selected hardware width `W` (for example,
+`xw.simd_width = 32`). `N` is the number of stored values and must divide `W`:
+`simd<T, W>` is fully lane-varying, while `simd<T, W / 2>` stores one value per
+adjacent lane pair. Ordinary bare values are uniform, following wave-mlir; no
+uniform wrapper type is required. Every SIMD value carries an active mask
+through divergent branches, loops, tails, and masked memory operations. Lane
+ID, subgroup ID, workgroup ID, local/global IDs, shuffle, broadcast, ballot,
+and reduction are semantic operations before they become EU regions or control
 flow.
 
 Uniformity is dense forward dataflow above target selection. Its advisory
@@ -267,37 +270,48 @@ const  <  uniform  <  affine-strided(k, base-uniform)  <  varying
   annotation or the explicit type. Failure to prove uniformity selects the
   varying fallback rather than rejecting a legal program.
 
-### Typed lane distributions (future work)
+### Typed compact SIMD values (future work)
 
-The production semantic Inter layer should preserve proved lane distribution
-in types, following the useful precedent established by wave-mlir. This is not
-merely a cached uniformity result: it is a representation contract checked
-across operation results, block arguments, loop-carried values, region yields,
-and function boundaries. Broadcast, expansion, and redistribution must be
-explicit when producer and consumer distributions differ.
+The production semantic Inter layer should preserve uniform versus SIMD values
+in types, following wave-mlir's useful rule that ordinary bare types are
+uniform and only lane-distributed values use a wrapper. This is not merely a
+cached uniformity result: it is a representation contract checked across
+operation results, block arguments, loop-carried values, region yields, and
+function boundaries.
 
-The type system should eventually distinguish at least:
+Inter extends the Wave model by interpreting `N` in `simd<T, N>` as compact
+storage cardinality under the enclosing kernel width `W`. The logical value for
+lane `L` is stored element `floor(L * N / W)`, so the mapping is contiguous:
 
 ```
-uniform<T>                              // one stored value
-lane_bundle<W, T, clustered<K>>         // W/K stored values
-lane_bundle<W, T, identity>             // W stored values
+i32                 under W=32       // one uniform value
+simd<i32, 8>         under W=32       // one value per four adjacent lanes
+simd<i32, 16>        under W=32       // one value per adjacent lane pair
+simd<i32, 32>        under W=32       // one value per lane
 ```
 
-`clustered<K>` means each aligned group of K logical lanes shares one value.
-For example, `lane_bundle<32, i32, clustered<2>>` has 32-lane semantics but may
-use 16 stored dwords. Xe selection can produce it with SIMD16 and consume it in
-SIMD32 through a source region such as `<1;2,0>`. A SIMD32 destination must not
-write multiple active lanes to the same compact element; compact values are
-produced at their storage width and broadcast only on reads. Sends and other
-operations requiring one physical payload element per lane must explicitly
-expand the value.
+No separate clustered type or layout attribute is needed for this initial
+model. Xe selection produces a `simd<i32, 16>` value with SIMD16 and can consume
+it in SIMD32 through a source region such as `<1;2,0>`. A SIMD32 destination
+must not write multiple active lanes to the same compact element; compact
+values are produced at their storage width and broadcast only on reads. Sends
+and other operations requiring one physical payload element per lane must
+explicitly expand the value.
 
-Clustered representations are legal across divergent control flow only when
-the active mask is compatible with the same lane partition. If two lanes in a
-cluster can have different activity, selection must expand to a finer
-distribution before the divergent region or use the fully varying fallback.
-Uniformity and affine-stride analysis prove candidate distributions; typed
+Elementwise operations use the least common compatible cardinality. Bare plus
+bare remains bare; bare plus `simd<T, N>` produces `simd<T, N>`; and
+`simd<T, A>` plus `simd<T, B>` produces `simd<T, lcm(A, B)>`, provided the
+cardinality divides `W`. Coarser operands broadcast on read. Conversion from a
+finer cardinality to a coarser one is never implicit and requires a proof that
+the values agree in every destination group. Operations and region boundaries
+that require an exact cardinality use explicit splat, expand, or proven-compact
+conversion operations.
+
+Compact SIMD representations are legal across divergent control flow only
+when the active mask is compatible with the same lane grouping. If lanes that
+share a stored element can have different activity while defining that value,
+selection must expand before the divergent region or use `simd<T, W>`.
+Uniformity and affine-stride analysis prove candidate cardinalities; typed
 conversion makes the chosen representation durable through later rewrites.
 
 This does not justify types for machine decomposition details. In particular,
@@ -882,7 +896,7 @@ at the pinned commit from section 3.
 | Token synthesis (AA) | — | new; wave-mlir refuses this by policy |
 | Symbolic engine | `third_party/ixsimpl`, `WaveSymbols.*`, `WaveGenerateIndexExprs.cpp` | direct; submodule |
 | Address planner shape | `WaveAMDMachineIndexExpr.cpp`, `WaveAMDMachineSelector.h` | shape direct; slot rules are Intel message trivia |
-| Uniformity and lane distribution | types declared in wave-mlir | typed distribution is direct; affine proofs are new, with `WaitLattice`/`HazardLattice` as dataflow exemplars |
+| Uniformity and lane distribution | bare uniform values plus `!wave.simd<T, W>` | bare/SIMD distinction is direct; compact `N < W` and affine proofs are Inter extensions, with `WaitLattice`/`HazardLattice` as dataflow exemplars |
 | Structured machine CF | `uniform_loop`/`uniform_if`/`exec_if`, `WaveAMDMachineScfFor.cpp`, `WaveAMDExecIfUtils.cpp` | direct concept match to EU CF + mask stack |
 | Regalloc transform loop | `lib/Dialect/Wave/Transforms/RegAlloc/` | direct in shape; drop AGPR provider; region aliasing is new |
 | Scheduler + cost model split | `WaveAMDMachineGreedySchedule.cpp`, `WaveAMDMachineScheduleModel.*`, `CostModel/` | greedy scheduler architecture direct; timing policy adapted from IGC |
