@@ -135,9 +135,9 @@ static std::vector<Instruction *> getMergeInstructions(BasicBlock &BB) {
   return Output;
 }
 
-// Bundles the header/merge/continue block sets computed by
-// getHeaderMergeContinueBlocks so callers only needing a subset of them can
-// still share the single underlying scan.
+// Bundles the header/merge/continue block sets for a function, computed in a
+// single scan since they all classify the same instructions. Callers only
+// needing a subset of them still share the single underlying scan.
 struct HeaderMergeContinueBlocks {
   // Blocks in F having at least one OpLoopMerge or OpSelectionMerge
   // instruction.
@@ -148,24 +148,20 @@ struct HeaderMergeContinueBlocks {
   // Blocks in F referenced as continue target by at least 1 OpLoopMerge
   // instruction.
   SmallPtrSet<BasicBlock *, 2> Continue;
-};
 
-// Computes Header, Merge and Continue block sets for |F| in a single scan,
-// since they all classify the same instructions.
-static HeaderMergeContinueBlocks getHeaderMergeContinueBlocks(Function &F) {
-  HeaderMergeContinueBlocks Output;
-  for (BasicBlock &BB : F) {
-    for (Instruction &I : BB) {
-      if (BasicBlock *MB = getDesignatedMergeBlock(&I)) {
-        Output.Header.insert(&BB);
-        Output.Merge.insert(MB);
+  HeaderMergeContinueBlocks(Function &F) {
+    for (BasicBlock &BB : F) {
+      for (Instruction &I : BB) {
+        if (BasicBlock *MB = getDesignatedMergeBlock(&I)) {
+          Header.insert(&BB);
+          Merge.insert(MB);
+        }
+        if (BasicBlock *CB = getDesignatedContinueBlock(&I))
+          Continue.insert(CB);
       }
-      if (BasicBlock *CB = getDesignatedContinueBlock(&I))
-        Output.Continue.insert(CB);
     }
   }
-  return Output;
-}
+};
 
 // Do a preorder traversal of the CFG starting from the BB |Start|.
 // point. Calls |op| on each basic block encountered during the traversal.
@@ -638,7 +634,7 @@ class SPIRVStructurizerImpl {
     PDT.recalculate(F);
     bool Modified = false;
 
-    HeaderMergeContinueBlocks Blocks = getHeaderMergeContinueBlocks(F);
+    HeaderMergeContinueBlocks Blocks(F);
     auto &MergeBlocks = Blocks.Merge;
     auto &ContinueBlocks = Blocks.Continue;
 
@@ -916,7 +912,7 @@ class SPIRVStructurizerImpl {
   bool removeUselessBlocks(Function &F) {
     std::vector<BasicBlock *> ToRemove;
 
-    HeaderMergeContinueBlocks Blocks = getHeaderMergeContinueBlocks(F);
+    HeaderMergeContinueBlocks Blocks(F);
     auto &MergeBlocks = Blocks.Merge;
     auto &ContinueBlocks = Blocks.Continue;
 
@@ -950,7 +946,7 @@ class SPIRVStructurizerImpl {
   bool addHeaderToRemainingDivergentDAG(Function &F) {
     bool Modified = false;
 
-    HeaderMergeContinueBlocks Blocks = getHeaderMergeContinueBlocks(F);
+    HeaderMergeContinueBlocks Blocks(F);
     auto &MergeBlocks = Blocks.Merge;
     auto &ContinueBlocks = Blocks.Continue;
     auto &HeaderBlocks = Blocks.Header;
