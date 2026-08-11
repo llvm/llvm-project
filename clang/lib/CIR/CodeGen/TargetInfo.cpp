@@ -4,6 +4,7 @@
 #include "CIRGenModule.h"
 #include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "clang/Basic/AddressSpaces.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
@@ -50,6 +51,10 @@ namespace {
 class AMDGPUABIInfo : public ABIInfo {
 public:
   AMDGPUABIInfo(CIRGenTypes &cgt) : ABIInfo(cgt) {}
+
+  cir::VectorType
+  getOptimalVectorMemoryType(cir::VectorType type,
+                             const clang::LangOptions &langOpts) const override;
 };
 
 class AMDGPUTargetCIRGenInfo : public TargetCIRGenInfo {
@@ -130,6 +135,26 @@ clang::CIRGen::createAMDGPUTargetCIRGenInfo(CIRGenTypes &cgt) {
 std::unique_ptr<TargetCIRGenInfo>
 clang::CIRGen::createX8664TargetCIRGenInfo(CIRGenTypes &cgt) {
   return std::make_unique<X8664TargetCIRGenInfo>(cgt);
+}
+
+cir::VectorType
+ABIInfo::getOptimalVectorMemoryType(cir::VectorType type,
+                                    const clang::LangOptions &langOpts) const {
+  if (type.getSize() == 3 && !langOpts.PreserveVec3Type)
+    return cir::VectorType::get(type.getElementType(), 4);
+  return type;
+}
+
+cir::VectorType AMDGPUABIInfo::getOptimalVectorMemoryType(
+    cir::VectorType type, const clang::LangOptions &langOpts) const {
+  // AMDGPU has legal instructions for 96-bit vectors, so 3 x 32-bit vectors
+  // do not need to be widened for memory operations.
+  // FIXME: This check should be a subtarget feature as technically SI doesn't
+  // support it.
+  if (type.getSize() == 3 &&
+      cgt.getCGModule().getDataLayout().getTypeSizeInBits(type) == 96)
+    return type;
+  return ABIInfo::getOptimalVectorMemoryType(type, langOpts);
 }
 
 ABIInfo::~ABIInfo() noexcept = default;

@@ -201,7 +201,6 @@ struct MissingFeatures {
   static bool cgCapturedStmtInfo() { return false; }
   static bool countedBySize() { return false; }
   static bool checkBitfieldClipping() { return false; }
-  static bool cirgenABIInfo() { return false; }
   static bool cleanupAfterErrorDiags() { return false; }
   static bool cleanupDeactivationScope() { return false; }
   static bool cleanupsToDeactivate() { return false; }
