@@ -1,5 +1,6 @@
 ! RUN: %flang_fc1 -fdebug-unparse %s 2>&1 | FileCheck %s
 ! REQUIRES: target=x86_64{{.*}}
+! UNSUPPORTED: system-windows
 
 ! REAL(10) is the x87 extended format: 80 significant bits held in a 16-byte
 ! container, so its raw bits occupy 16 bytes rather than 10.  Constant
