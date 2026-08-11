@@ -84,6 +84,55 @@ int main(int argc, char** argv) {
     register_bm(support::single_element_data<int>, "repeated");
   }
 
+  // Benchmark std::nth_element on many independent fixed-size windows. This models
+  // the median-of-3 / median-of-5 filter use case from #214238, where the window
+  // size is a compile-time constant and the specialized sorting-network path is
+  // expected to constant-fold away the general algorithm.
+  {
+    auto bm = []<std::size_t Window>(std::string name, auto generate_data) {
+      benchmark::RegisterBenchmark(
+          name,
+          [generate_data](auto& st) {
+            std::size_t const num_windows   = st.range(0);
+            constexpr std::size_t BatchSize = 32;
+            std::vector<int> flat           = generate_data(num_windows * Window);
+            std::array<std::vector<std::array<int, Window>>, BatchSize> batches;
+            for (std::size_t b = 0; b != BatchSize; ++b) {
+              batches[b].resize(num_windows);
+              for (std::size_t i = 0; i != num_windows; ++i) {
+                std::copy_n(flat.begin() + static_cast<std::ptrdiff_t>(i * Window), Window, batches[b][i].begin());
+              }
+            }
+
+            constexpr std::size_t Median = Window / 2;
+            while (st.KeepRunningBatch(BatchSize)) {
+              for (std::size_t b = 0; b != BatchSize; ++b) {
+                for (std::size_t i = 0; i != num_windows; ++i) {
+                  benchmark::DoNotOptimize(batches[b][i]);
+                  std::nth_element(batches[b][i].begin(), batches[b][i].begin() + Median, batches[b][i].end());
+                  benchmark::DoNotOptimize(batches[b][i]);
+                }
+              }
+
+              st.PauseTiming();
+              for (std::size_t b = 0; b != BatchSize; ++b) {
+                for (std::size_t i = 0; i != num_windows; ++i) {
+                  std::copy_n(flat.begin() + static_cast<std::ptrdiff_t>(i * Window), Window, batches[b][i].begin());
+                }
+              }
+              st.ResumeTiming();
+            }
+          })
+          ->Arg(1024)
+          ->Arg(8192);
+    };
+
+    bm.operator()<3>("std::nth_element(median-of-3 windows) (shuffled)", support::shuffled_data<int>);
+    bm.operator()<5>("std::nth_element(median-of-5 windows) (shuffled)", support::shuffled_data<int>);
+    bm.operator()<3>("std::nth_element(median-of-3 windows) (ascending)", support::ascending_sorted_data<int>);
+    bm.operator()<5>("std::nth_element(median-of-5 windows) (ascending)", support::ascending_sorted_data<int>);
+  }
+
   benchmark::Initialize(&argc, argv);
   benchmark::RunSpecifiedBenchmarks();
   benchmark::Shutdown();
