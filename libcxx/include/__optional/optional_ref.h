@@ -71,7 +71,7 @@ struct __optional_ref_iterator_base<_Tp&> {
 #  endif
 
 template <class _Tp>
-class _LIBCPP_DECLSPEC_EMPTY_BASES optional<_Tp&> : public __optional_ref_iterator_base<_Tp&> {
+class optional<_Tp&> : public __optional_ref_iterator_base<_Tp&> {
 public:
   using value_type = _Tp;
   static_assert(!is_same_v<remove_cv_t<_Tp>, in_place_t>, "instantiation of optional with in_place_t is ill-formed");
