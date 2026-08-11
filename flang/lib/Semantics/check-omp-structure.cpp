@@ -5395,14 +5395,30 @@ static constexpr std::string_view predefinedAllocatorNames[]{
     "omp_high_bw_mem_alloc", "omp_low_lat_mem_alloc", "omp_cgroup_mem_alloc",
     "omp_pteam_mem_alloc", "omp_thread_mem_alloc"};
 
-static constexpr std::string_view predefinedMemSpaceNames[]{
-    "omp_default_mem_space", "omp_large_cap_mem_space", "omp_const_mem_space",
-    "omp_high_bw_mem_space", "omp_low_lat_mem_space"};
-
 // omp_null_allocator and omp_null_mem_space are not themselves predefined
 // handles, but [6.0:315-316] gives each its own allowance.
 static constexpr std::string_view nullAllocatorName[]{"omp_null_allocator"};
-static constexpr std::string_view nullMemSpaceName[]{"omp_null_mem_space"};
+
+struct UsesAllocatorsMemSpaceName {
+  std::string_view name;
+  unsigned since;
+};
+
+static constexpr UsesAllocatorsMemSpaceName usesAllocatorsMemSpaceNames[]{
+    {"omp_default_mem_space", 50},
+    {"omp_large_cap_mem_space", 50},
+    {"omp_const_mem_space", 50},
+    {"omp_high_bw_mem_space", 50},
+    {"omp_low_lat_mem_space", 50},
+    {"omp_null_mem_space", 60},
+};
+
+static bool IsUsesAllocatorsMemSpaceName(
+    const parser::Name &name, unsigned version) {
+  return llvm::any_of(usesAllocatorsMemSpaceNames, [&](const auto &candidate) {
+    return version >= candidate.since && name.ToString() == candidate.name;
+  });
+}
 
 // Whether the ultimate symbol is an entity of the intrinsic omp_lib module
 // shipped with the compiler, as opposed to a same-named entity of a
@@ -5427,7 +5443,7 @@ static bool IsIntrinsicOmpAlloctrait(
       &derived.typeSymbol() == &symbol->GetUltimate();
 }
 
-// Recognition of a predefined allocator or memory space differs by version.
+// Recognition of a predefined allocator differs by version.
 //
 // [5.2:182] asks whether the allocator *is* a predefined allocator, so it
 // identifies the entity: a use-associated rename of the intrinsic omp_lib
@@ -5452,86 +5468,36 @@ static bool IsPredefinedHandle(const parser::Name &name,
   return false;
 }
 
-// The integer kind of an OpenMP allocator or memory-space handle, which
-// omp_lib declares as c_intptr_t. iso_c_binding is an intrinsic module and is
-// read on demand, so the kind is available even when the source uses neither
-// module.
-static std::optional<std::int64_t> GetOmpHandleKind(SemanticsContext &context) {
-  const Scope *scope{context.GetBuiltinModule("iso_c_binding")};
-  if (!scope) {
-    return std::nullopt;
-  }
-  const Symbol *kindSymbol{
-      scope->FindSymbol(SourceName{"c_intptr_t", std::strlen("c_intptr_t")})};
-  if (!kindSymbol) {
-    return std::nullopt;
-  }
-  const auto *object{
-      kindSymbol->GetUltimate().detailsIf<ObjectEntityDetails>()};
-  const auto *init{object ? &object->init() : nullptr};
-  return init && *init ? evaluate::ToInt64(**init) : std::nullopt;
-}
-
-// Whether `symbol` has the integer kind that omp_lib gives its handles. The
-// check is skipped for a non-integer allocator, whose type is diagnosed
-// separately.
-static bool HasOmpHandleKind(
-    const Symbol &symbol, SemanticsContext &context, std::int64_t &expected) {
-  const DeclTypeSpec *type{symbol.GetUltimate().GetType()};
-  if (!type || !type->IsNumeric(TypeCategory::Integer)) {
-    return true;
-  }
-  auto want{GetOmpHandleKind(context)};
-  if (!want) {
-    return true;
-  }
-  expected = *want;
-  auto got{evaluate::ToInt64(type->numericTypeSpec().kind())};
-  return !got || *got == *want;
-}
-
-static bool ClauseHasTargetEffect(
-    llvm::omp::Directive directive, llvm::omp::Clause clause) {
+static bool ClauseHasTargetEffect(llvm::omp::Directive directive,
+    llvm::omp::Clause clause, unsigned version) {
   llvm::ArrayRef<llvm::omp::Directive> leafs{
       llvm::omp::getLeafConstructsOrSelf(directive)};
   if (!llvm::is_contained(leafs, llvm::omp::Directive::OMPD_target)) {
     return false;
   }
   if (leafs.size() == 1) {
-    return true;
+    return llvm::omp::isAllowedClauseForDirective(
+        llvm::omp::Directive::OMPD_target, clause, version);
   }
 
-  // Keep this narrow mirror synchronized with the authoritative distribution
-  // rules in llvm/include/llvm/Frontend/OpenMP/ConstructDecompositionT.h.
+  // Compound distribution can override direct TARGET clause permission.
   switch (clause) {
   case llvm::omp::Clause::OMPC_private:
-    // [5.2:340:1-2] Applies to the innermost permitting leaf.
-    return false;
   case llvm::omp::Clause::OMPC_shared:
-    // [5.2:340:31-32] TARGET is not a permitting leaf.
     return false;
   case llvm::omp::Clause::OMPC_firstprivate:
-    // [5.2:340:3-14] Applies to TARGET.
-    return true;
-  case llvm::omp::Clause::OMPC_map:
-    return true;
   case llvm::omp::Clause::OMPC_lastprivate:
-    // [5.2:340:21-30] Synthesizes TARGET map(tofrom).
-    return true;
   case llvm::omp::Clause::OMPC_reduction:
-    // [5.2:341:11-13] Synthesizes TARGET map(tofrom).
-    return true;
   case llvm::omp::Clause::OMPC_linear:
-    // [5.2:341:15-22] Creates outer FIRSTPRIVATE/LASTPRIVATE state.
-    return true;
-  case llvm::omp::Clause::OMPC_in_reduction:
-  case llvm::omp::Clause::OMPC_is_device_ptr:
-  case llvm::omp::Clause::OMPC_has_device_addr:
-    // [5.2:339-341] These clauses are TARGET-owned.
     return true;
   default:
-    return true;
+    break;
   }
+
+  return (llvm::omp::isDataSharingAttributeClause(clause, version) ||
+             clause == llvm::omp::Clause::OMPC_map) &&
+      llvm::omp::isAllowedClauseForDirective(
+          llvm::omp::Directive::OMPD_target, clause, version);
 }
 
 void OmpStructureChecker::CheckUsesAllocatorsSpec(
@@ -5592,21 +5558,14 @@ void OmpStructureChecker::CheckUsesAllocatorsSpec(
       context_.Say(allocatorSource,
           "A non-predefined allocator '%s' in a USES_ALLOCATORS clause must be a variable"_err_en_US,
           allocatorName->ToString());
-    } else if (std::int64_t kind{0};
-        !HasOmpHandleKind(*symbol, context_, kind)) {
-      // [5.2:181], [6.0:315] The allocator argument is an expression of
-      // allocator_handle type.
-      context_.Say(allocatorSource,
-          "The allocator '%s' in a USES_ALLOCATORS clause must be of type INTEGER(KIND=%jd), i.e. OMP_ALLOCATOR_HANDLE_KIND"_err_en_US,
-          allocatorName->ToString(), static_cast<std::intmax_t>(kind));
     }
     // [5.0:175], [5.1:203] Non-predefined allocators appearing in a
     // uses_allocators clause must have traits specified. The requirement was
     // removed in 5.2, where omitted traits mean an empty traits array.
     if (version < 52 && !traits) {
       context_.Say(allocatorSource,
-          "A non-predefined allocator '%s' in a USES_ALLOCATORS clause must have traits specified in OpenMP v%d.%d"_err_en_US,
-          allocatorName->ToString(), version / 10, version % 10);
+          "A non-predefined allocator '%s' in a USES_ALLOCATORS clause must have traits specified in %s"_err_en_US,
+          allocatorName->ToString(), ThisVersion(version));
     }
   }
 
@@ -5624,7 +5583,7 @@ void OmpStructureChecker::CheckUsesAllocatorsSpec(
           id != llvm::omp::Clause::OMPC_map) {
         continue;
       }
-      if (!ClauseHasTargetEffect(GetContext().directive, id)) {
+      if (!ClauseHasTargetEffect(GetContext().directive, id, version)) {
         continue;
       }
       const parser::OmpObjectList *objects{GetOmpObjectList(clause)};
@@ -5652,15 +5611,13 @@ void OmpStructureChecker::CheckUsesAllocatorsSpec(
     parser::CharBlock memSpaceSource{OmpGetModifierSource(modifiers, memSpace)};
     const parser::Name *memSpaceName{
         parser::Unwrap<parser::Name>(memSpaceExpr)};
-    bool ok{memSpaceName &&
-        (llvm::is_contained(
-             predefinedMemSpaceNames, memSpaceName->ToString()) ||
-            (version >= 60 &&
-                llvm::is_contained(
-                    nullMemSpaceName, memSpaceName->ToString())))};
+    bool ok{
+        memSpaceName && IsUsesAllocatorsMemSpaceName(*memSpaceName, version)};
     if (!ok) {
+      auto name{OmpGetDescriptor<parser::OmpMemSpace>().name};
       context_.Say(memSpaceSource,
-          "The MEMSPACE modifier must name a predefined memory space"_err_en_US);
+          "The '%s' modifier must name a predefined memory space"_err_en_US,
+          name.str());
     }
   }
 
@@ -5763,8 +5720,8 @@ void OmpStructureChecker::Enter(const parser::OmpClause::UsesAllocators &x) {
     // [5.2:181] uses_allocators takes a single clause-argument-specification,
     // and only the deprecated list syntax may repeat it.
     context_.Say(GetContext().clauseSource,
-        "The USES_ALLOCATORS clause accepts a single allocator specification in OpenMP v%d.%d"_err_en_US,
-        version / 10, version % 10);
+        "The USES_ALLOCATORS clause accepts a single allocator specification in %s"_err_en_US,
+        ThisVersion(version));
   } else if (version >= 52 && isLegacyList) {
     // [5.2:181] The comma-separated "allocator[(traits)]" list syntax has been
     // deprecated.

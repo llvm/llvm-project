@@ -127,12 +127,12 @@ subroutine uses_allocators_errors
   !$omp end target
 
   ! The memspace-handle must name a predefined memory space.
-  !ERROR: The MEMSPACE modifier must name a predefined memory space
+  !ERROR: The 'mem-space' modifier must name a predefined memory space
   !$omp target uses_allocators(memspace(omp_null_mem_space): my_alloc)
   x = 6
   !$omp end target
 
-  !ERROR: The MEMSPACE modifier must name a predefined memory space
+  !ERROR: The 'mem-space' modifier must name a predefined memory space
   !$omp target uses_allocators(memspace(my_space): my_alloc)
   x = 7
   !$omp end target
@@ -360,7 +360,7 @@ subroutine uses_allocators_predefined_identity
   !$omp end target
 
   ! A memory space must use the written name of a predefined memory space.
-  !ERROR: The MEMSPACE modifier must name a predefined memory space
+  !ERROR: The 'mem-space' modifier must name a predefined memory space
   !$omp target uses_allocators(memspace(renamed_space): my_alloc)
   x = 4
   !$omp end target
