@@ -1975,13 +1975,13 @@ def ROCDL_TensorStoreFromLDSOp : ROCDL_TensorLDSIntrOp<"tensor.store.from.lds">;
 def ROCDLBufferRsrc : LLVM_PointerInAddressSpace<8>;
 
 def ROCDL_MakeBufferRsrcOp :
-  ROCDL_IntrOp<"make.buffer.rsrc", [0], [0], [Pure], 1>,
+  ROCDL_IntrOp<"make.buffer.rsrc", [0], [0, 2], [Pure], 1>,
   Arguments<(ins LLVM_AnyPointer:$base,
                  I16:$stride,
-                 I64:$numRecords,
+                 AnySignlessInteger:$numRecords,
                  I32:$flags)> {
   let results = (outs LLVM_AnyPointer:$res);
-  let assemblyFormat = "operands attr-dict `:` type($base) `to` type($res)";
+  let assemblyFormat = "operands attr-dict `:` type($base) `,` type($numRecords) `to` type($res)";
 }
 
 def ROCDL_RawPtrBufferLoadOp :
@@ -1992,6 +1992,24 @@ def ROCDL_RawPtrBufferLoadOp :
                   ROCDL_DefaultCachePolicyAttr<ROCDL_NonAtomicBufferCachePolicyCompatAttr>:$aux);
   let arguments = !con(args, baseArgs);
   let assemblyFormat = "$rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) attr-dict `:` type($res)";
+  let extraClassDefinition = [{
+    ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
+      return {getRsrc()};
+    }
+  }];
+}
+
+def ROCDL_PtrSBufferLoadOp :
+  ROCDL_IntrOp<"ptr.s.buffer.load", [0], [], [], 1, 0, 1, 0, [2], ["aux"]> {
+  dag args = (ins Arg<ROCDLBufferRsrc, "", [MemRead]>:$rsrc,
+                  I32:$offset,
+                  ROCDL_DefaultCachePolicyAttr<ROCDL_NonAtomicBufferCachePolicyCompatAttr>:$aux);
+  let arguments = !con(args, baseArgs);
+  let assemblyFormat = "$rsrc `,` $offset `,` custom<CachePolicy>($aux) attr-dict `:` type($res)";
+  string llvmBuilder = baseLlvmBuilder # [{
+    llvm::MDNode *metadata = llvm::MDNode::get(inst->getContext(), {});
+    inst->setMetadata(llvm::LLVMContext::MD_invariant_load, metadata);
+  }] # setAliasAnalysisMetadataCode # baseLlvmBuilderCoda;
   let extraClassDefinition = [{
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
       return {getRsrc()};

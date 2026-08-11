@@ -318,7 +318,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     for (MVT VT : LSXVTs) {
       setOperationAction({ISD::LOAD, ISD::STORE}, VT, Legal);
       setOperationAction(ISD::BITCAST, VT, Legal);
-      setOperationAction(ISD::UNDEF, VT, Legal);
+      setOperationAction({ISD::UNDEF, ISD::POISON}, VT, Legal);
 
       setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Legal);
@@ -419,7 +419,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     for (MVT VT : LASXVTs) {
       setOperationAction({ISD::LOAD, ISD::STORE}, VT, Legal);
       setOperationAction(ISD::BITCAST, VT, Legal);
-      setOperationAction(ISD::UNDEF, VT, Legal);
+      setOperationAction({ISD::UNDEF, ISD::POISON}, VT, Legal);
 
       setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
@@ -11327,6 +11327,8 @@ LoongArchTargetLowering::getRegForInlineAsmConstraint(
       if (Subtarget.hasExtLSX() &&
           TRI->isTypeLegalForClass(LoongArch::LSX128RegClass, VT))
         return std::make_pair(0U, &LoongArch::LSX128RegClass);
+      if (Subtarget.hasExtLSX() && VT == MVT::i128)
+        return std::make_pair(0U, &LoongArch::LSX128RegClass);
       if (Subtarget.hasExtLASX() &&
           TRI->isTypeLegalForClass(LoongArch::LASX256RegClass, VT))
         return std::make_pair(0U, &LoongArch::LASX256RegClass);
@@ -11785,13 +11787,16 @@ bool LoongArchTargetLowering::shouldScalarizeBinop(SDValue VecOp) const {
   return isOperationLegalOrCustomOrPromote(Opc, ScalarVT);
 }
 
-bool LoongArchTargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
-                                                      unsigned Index) const {
+TargetLowering::ExtractSubvectorCost
+LoongArchTargetLowering::getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
+                                                 unsigned Index) const {
   if (!isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, ResVT))
-    return false;
+    return ExtractSubvectorCost::Expensive;
 
   // Extract a 128-bit subvector from index 0 of a 256-bit vector is free.
-  return Index == 0;
+  if (Index == 0)
+    return ExtractSubvectorCost::Free;
+  return ExtractSubvectorCost::Expensive;
 }
 
 bool LoongArchTargetLowering::isExtractVecEltCheap(EVT VT,

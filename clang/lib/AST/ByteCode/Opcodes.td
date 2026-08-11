@@ -795,8 +795,9 @@ def APOnlyTypeClass : TypeClass {
   let Types = [IntAP, IntAPS];
 }
 
-// Cast from an AP integer type to Sint64, failing if the value doesn't fit.
-def CastNoOverflow : Opcode {
+// Cast from an AP integer type to Sint64 for use as an offsetof array index,
+// failing if the value is negative or doesn't fit in Sint64.
+def CastAPToOffsetIndex : Opcode {
   let Types = [APOnlyTypeClass];
   let HasGroup = 1;
 }

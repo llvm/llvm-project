@@ -181,6 +181,8 @@ bool AMDGPUDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
 bool AMDGPUDAGToDAGISel::fp16SrcZerosHighBits(unsigned Opc) const {
   // XXX - only need to list legal operations.
   switch (Opc) {
+  case ISD::POISON:
+    return true;
   case ISD::FADD:
   case ISD::FSUB:
   case ISD::FMUL:
@@ -996,10 +998,13 @@ AMDGPUISelDAGToDAGPass::AMDGPUISelDAGToDAGPass(TargetMachine &TM)
 PreservedAnalyses
 AMDGPUISelDAGToDAGPass::run(MachineFunction &MF,
                             MachineFunctionAnalysisManager &MFAM) {
-#ifdef EXPENSIVE_CHECKS
   auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
                   .getManager();
   auto &F = MF.getFunction();
+  // UniformityInfoAnalysis is optional in generic dag isel,
+  // AMDGPUISelDAGToDAGPass requires it, calculate it explicitly.
+  FAM.getResult<UniformityInfoAnalysis>(F);
+#ifdef EXPENSIVE_CHECKS
   DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   LoopInfo &LI = FAM.getResult<LoopAnalysis>(F);
   for (auto &L : LI.getLoopsInPreorder())
@@ -2133,8 +2138,7 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N, SDValue Addr,
     }
   }
 
-  if (Addr->isDivergent() || Addr.getOpcode() == ISD::UNDEF ||
-      isa<ConstantSDNode>(Addr))
+  if (Addr->isDivergent() || Addr.isUndef() || isa<ConstantSDNode>(Addr))
     return false;
 
   // It's cheaper to materialize a single 32-bit zero for vaddr than the two
@@ -4356,6 +4360,25 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixMods(SDValue In, SDValue &Src,
   return true;
 }
 
+bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixModsExtNeg(SDValue In, SDValue &Src,
+                                                     SDValue &SrcMods) const {
+  unsigned Mods = 0;
+  if (!SelectVOP3PMadMixModsImpl(In, Src, Mods, MVT::f16))
+    return false;
+  SrcMods =
+      CurDAG->getTargetConstant(Mods ^ SISrcMods::NEG, SDLoc(In), MVT::i32);
+  return true;
+}
+
+bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixModsNeg(SDValue In, SDValue &Src,
+                                                  SDValue &SrcMods) const {
+  unsigned Mods = 0;
+  SelectVOP3PMadMixModsImpl(In, Src, Mods, MVT::f16);
+  SrcMods =
+      CurDAG->getTargetConstant(Mods ^ SISrcMods::NEG, SDLoc(In), MVT::i32);
+  return true;
+}
+
 bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixBF16ModsExt(SDValue In, SDValue &Src,
                                                       SDValue &SrcMods) const {
   unsigned Mods = 0;
@@ -4370,6 +4393,25 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixBF16Mods(SDValue In, SDValue &Src,
   unsigned Mods = 0;
   SelectVOP3PMadMixModsImpl(In, Src, Mods, MVT::bf16);
   SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
+  return true;
+}
+
+bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixBF16ModsExtNeg(
+    SDValue In, SDValue &Src, SDValue &SrcMods) const {
+  unsigned Mods = 0;
+  if (!SelectVOP3PMadMixModsImpl(In, Src, Mods, MVT::bf16))
+    return false;
+  SrcMods =
+      CurDAG->getTargetConstant(Mods ^ SISrcMods::NEG, SDLoc(In), MVT::i32);
+  return true;
+}
+
+bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixBF16ModsNeg(SDValue In, SDValue &Src,
+                                                      SDValue &SrcMods) const {
+  unsigned Mods = 0;
+  SelectVOP3PMadMixModsImpl(In, Src, Mods, MVT::bf16);
+  SrcMods =
+      CurDAG->getTargetConstant(Mods ^ SISrcMods::NEG, SDLoc(In), MVT::i32);
   return true;
 }
 
@@ -4635,7 +4677,10 @@ bool AMDGPUDAGToDAGISel::SelectBITOP3(SDValue In, SDValue &Src0, SDValue &Src1,
 }
 
 SDValue AMDGPUDAGToDAGISel::getHi16Elt(SDValue In) const {
-  if (In.isUndef())
+  if (In.getOpcode() == ISD::POISON)
+    return CurDAG->getPOISON(MVT::i32);
+
+  if (In.getOpcode() == ISD::UNDEF)
     return CurDAG->getUNDEF(MVT::i32);
 
   if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(In)) {
