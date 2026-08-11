@@ -1570,8 +1570,8 @@ uses it to set the cache-bypass bits and to insert the cache invalidations and
 writebacks the memory model requires.
 
 ``AMDGPULowerBufferFatPointers`` populates the argument from the ``atomicrmw``,
-``cmpxchg``, ``load`` or ``store`` instruction it lowers. Frontends that call
-these intrinsics directly and cannot express atomicity should pass ``!{}``.
+``cmpxchg``, ``load`` or ``store`` instruction it lowers. A non-atomic access
+should pass ``!{}``.
 For compatibility, bitcode from before this argument existed is upgraded by
 appending ``!{}``.
 

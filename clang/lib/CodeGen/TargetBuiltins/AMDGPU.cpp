@@ -32,7 +32,8 @@ using namespace llvm;
 
 namespace {
 
-// No builtin can express atomicity, so the trailing atomicity metadata arg is
+// No builtin can specify the ordering or scope of an atomic buffer access
+// (only that it performs one), so the trailing atomicity metadata arg is
 // always the empty node. OverloadTy defaults to the first argument type.
 static Value *emitAMDGPUBufferBuiltin(CodeGenFunction &CGF, const CallExpr *E,
                                       unsigned IntrinsicID,
