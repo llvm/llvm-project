@@ -13,10 +13,10 @@ define spir_kernel void @foo(ptr addrspace(1) %p) {
 
 ; NO-EXT: %[[#PTR:]] = OpTypePointer CrossWorkgroup
 ; NO-EXT: %[[#VOID:]] = OpTypeVoid
-; NO-EXT: %5 = OpTypeFunction %4 %3
+; NO-EXT: %[[#FTY:]] = OpTypeFunction %[[#VOID]] %[[#PTR]]
 ; NO-EXT: %[[#I64:]] = OpTypeInt 64 0
 ; NO-EXT: %[[#ONE:]] = OpConstant %[[#I64]] 1
-; NO-EXT: %9 = OpFunction %4 None %5
+; NO-EXT: %[[#]] = OpFunction %[[#VOID]] None %[[#FTY]]
 ; NO-EXT: %[[#P:]] = OpFunctionParameter %[[#PTR]]
 ; NO-EXT: OpExtInst %[[#VOID]] %[[#EXTSET]] prefetch %[[#P]] %[[#ONE]]
 
