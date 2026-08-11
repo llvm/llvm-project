@@ -2185,15 +2185,6 @@ public:
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
 
-  /// Return the histogram intrinsic ID for this recipe's update kind.
-  Intrinsic::ID getHistogramIntrinsicID() const;
-
-  /// Return true if the increment should be negated before passing to the
-  /// histogram intrinsic (only for Sub).
-  bool mustNegateIncrement() const {
-    return UpdateKind == HistogramUpdateKind::Sub;
-  }
-
   /// Return the mask operand if one was provided, or a null pointer if all
   /// lanes should be executed unconditionally.
   VPValue *getMask() const {
@@ -2205,6 +2196,16 @@ public:
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return Op == getOperand(1);
+  }
+
+private:
+  /// Return the histogram intrinsic ID for this recipe's update kind.
+  Intrinsic::ID getHistogramIntrinsicID() const;
+
+  /// Return true if the increment should be negated before passing to the
+  /// histogram intrinsic (only for Sub).
+  bool mustNegateIncrement() const {
+    return UpdateKind == HistogramUpdateKind::Sub;
   }
 
 protected:
