@@ -45,6 +45,64 @@ class StepScriptedTestCase(TestBase):
             "ValueError: scripted plan construction failed", result.GetError()
         )
 
+    def run_scripted_plan_between_breakpoints(self, plan_name):
+        """Stop at the first breakpoint, set a second one further on, run
+        plan_name from there, and return the thread and the second breakpoint."""
+        self.build()
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "Set a breakpoint here", self.main_source_file
+        )
+        second = target.BreakpointCreateBySourceRegex(
+            "Run to this breakpoint", self.main_source_file
+        )
+        self.assertTrue(second.GetNumLocations() > 0, VALID_BREAKPOINT)
+        err = thread.StepUsingScriptedThreadPlan(plan_name)
+        self.assertSuccess(err)
+        return thread, second
+
+    def assert_plan_steps_one_instruction(self, plan_name):
+        thread, second = self.run_scripted_plan_between_breakpoints(plan_name)
+        self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonPlanComplete)
+        self.assertEqual(second.GetHitCount(), 0)
+
+    def test_should_step_false_runs_to_the_next_breakpoint(self):
+        """should_step returning False lets the process run to the next
+        breakpoint instead of single-stepping."""
+        thread, second = self.run_scripted_plan_between_breakpoints(
+            "Steps.RunToNextBreakpoint"
+        )
+        self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonBreakpoint)
+        self.assertEqual(second.GetHitCount(), 1)
+
+    def test_should_step_true_steps_one_instruction(self):
+        """should_step returning True single-steps, so the next breakpoint is
+        not reached."""
+        self.assert_plan_steps_one_instruction("Steps.StepOneInstruction")
+
+    def test_should_step_returning_zero_steps(self):
+        """should_step returning an int instead of a bool is not an answer, and
+        the plan steps."""
+        self.assert_plan_steps_one_instruction("Steps.ReturnsZeroFromShouldStep")
+
+    def test_should_step_returning_one_steps(self):
+        """should_step returning an int instead of a bool is not an answer, and
+        the plan steps."""
+        self.assert_plan_steps_one_instruction("Steps.ReturnsOneFromShouldStep")
+
+    def test_should_step_returning_state_running_steps(self):
+        """should_step returning a StateType instead of a bool is not an answer,
+        and the plan steps."""
+        self.assert_plan_steps_one_instruction(
+            "Steps.ReturnsStateRunningFromShouldStep"
+        )
+
+    def test_should_step_returning_state_stepping_steps(self):
+        """should_step returning a StateType instead of a bool is not an answer,
+        and the plan steps."""
+        self.assert_plan_steps_one_instruction(
+            "Steps.ReturnsStateSteppingFromShouldStep"
+        )
+
     def step_out_with_scripted_plan(self, name):
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "Set a breakpoint here", self.main_source_file
