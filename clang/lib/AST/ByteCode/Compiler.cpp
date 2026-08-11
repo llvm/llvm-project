@@ -6967,7 +6967,7 @@ bool Compiler<Emitter>::visitBreakStmt(const BreakStmt *S) {
       }
     }
   } else {
-    for (auto LI : LabelInfoStack) {
+    for (const auto &LI : LabelInfoStack) {
       if (LI.Name == TargetLoop) {
         TargetLabel = *LI.BreakLabel;
         BreakScope = LI.BreakOrContinueScope;
