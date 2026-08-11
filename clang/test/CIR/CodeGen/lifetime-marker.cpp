@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O2 -fclangir -emit-llvm -disable-llvm-passes %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t-o0.cir
-// RUN: FileCheck --input-file=%t-o0.cir %s --check-prefix=O0
+// RUN: FileCheck --input-file=%t-o0.cir %s --implicit-check-not "cir.lifetime"
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O2 -fcxx-exceptions -fexceptions -fclangir -emit-cir %s -o %t-eh.cir
 // RUN: FileCheck --input-file=%t-eh.cir %s --check-prefix=CIR-EH
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O2 -fcxx-exceptions -fexceptions -fclangir -emit-llvm -disable-llvm-passes %s -o %t-eh.ll
@@ -22,6 +22,7 @@ void f() {
 // CIR:         %[[X:.*]] = cir.alloca "x" {{.*}} : !cir.ptr<!s32i>
 // CIR:         cir.lifetime.start %[[X]] : !cir.ptr<!s32i>
 // CIR:         cir.cleanup.scope {
+// CIR:           cir.call @_Z3usei
 // CIR:         } cleanup normal {
 // CIR:           cir.lifetime.end %[[X]] : !cir.ptr<!s32i>
 // CIR:         }
@@ -29,12 +30,8 @@ void f() {
 // LLVM-LABEL: define{{.*}} void @_Z1fv()
 // LLVM:         %[[X:.*]] = alloca i32
 // LLVM:         call void @llvm.lifetime.start.p0(ptr %[[X]])
+// LLVM:         call void @_Z3usei
 // LLVM:         call void @llvm.lifetime.end.p0(ptr %[[X]])
-
-// Without optimization no lifetime markers are emitted. Checked per function so
-// a regression in a single function can't hide behind a passing global check.
-// O0-LABEL: cir.func{{.*}} @_Z1fv()
-// O0-NOT:     cir.lifetime
 
 struct S {
   ~S();
@@ -59,9 +56,6 @@ void g() {
 // LLVM:         call void @_ZN1SD1Ev(ptr {{.*}} %[[S]])
 // LLVM:         call void @llvm.lifetime.end.p0(ptr %[[S]])
 
-// O0-LABEL: cir.func{{.*}} @_Z1gv()
-// O0-NOT:     cir.lifetime
-
 // A statement that can bypass a local's initialization -- switch, label, or
 // indirect goto -- miscompiles under stack coloring (PR28267). Lacking classic
 // CodeGen's per-decl bypass analysis, we conservatively drop lifetime markers
@@ -83,9 +77,6 @@ void bypass_switch(int n) {
 // LLVM-LABEL: define{{.*}}bypass_switch
 // LLVM-NOT:    call void @llvm.lifetime
 
-// O0-LABEL: cir.func{{.*}}bypass_switch
-// O0-NOT:     cir.lifetime
-
 void bypass_label(int n) {
   int x;
   use(x);
@@ -96,9 +87,6 @@ target:
 
 // CIR-LABEL: cir.func{{.*}}bypass_label
 // CIR-NOT:     cir.lifetime
-
-// O0-LABEL: cir.func{{.*}}bypass_label
-// O0-NOT:     cir.lifetime
 
 void bypass_indirect_goto() {
   int x;
@@ -112,9 +100,6 @@ target:
 // CIR-LABEL: cir.func{{.*}}bypass_indirect_goto
 // CIR-NOT:     cir.lifetime
 
-// O0-LABEL: cir.func{{.*}}bypass_indirect_goto
-// O0-NOT:     cir.lifetime
-
 // A local declared inside the body region of an if statement is scoped to that
 // region: its lifetime.start/end are nested in the region and the end marker
 // is the region's cleanup, not the function's.
@@ -123,24 +108,31 @@ void if_body(int n) {
     int x;
     use(x);
   }
+  use(n);
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z7if_bodyi
-// CIR:         cir.if
+// CIR:         cir.if %{{.*}} {
 // CIR:           %[[X:.*]] = cir.alloca "x" {{.*}} : !cir.ptr<!s32i>
 // CIR:           cir.lifetime.start %[[X]] : !cir.ptr<!s32i>
 // CIR:           cir.cleanup.scope {
+// CIR:             cir.call @_Z3usei
 // CIR:           } cleanup normal {
 // CIR:             cir.lifetime.end %[[X]] : !cir.ptr<!s32i>
-// CIR:           }
+// CIR-NEXT:        cir.yield
+// CIR-NEXT:      }
+// CIR-NEXT:    }
+// CIR:         cir.call @_Z3usei
 
 // LLVM-LABEL: define{{.*}} void @_Z7if_bodyi
 // LLVM:         %[[X:.*]] = alloca i32
+// LLVM:         br i1 %{{.*}}, label %[[IF_BODY:[0-9]+]], label %[[IF_END:[0-9]+]]
+// LLVM:       [[IF_BODY]]:
 // LLVM:         call void @llvm.lifetime.start.p0(ptr %[[X]])
+// LLVM:         call void @_Z3usei
 // LLVM:         call void @llvm.lifetime.end.p0(ptr %[[X]])
-
-// O0-LABEL: cir.func{{.*}} @_Z7if_bodyi
-// O0-NOT:     cir.lifetime
+// LLVM:       [[IF_END]]:
+// LLVM:         call void @_Z3usei
 
 // With exceptions enabled the scope cleanup runs on both the normal and the
 // exceptional edge, so the cleanup kind is "all" and lifetime.end is emitted in
@@ -196,9 +188,6 @@ void while_condvar() {
 // LLVM:         call void @llvm.lifetime.start.p0(ptr %[[C:.*]])
 // LLVM:         call void @llvm.lifetime.end.p0(ptr %[[C]])
 
-// O0-LABEL: cir.func{{.*}} @_Z13while_condvarv
-// O0-NOT:     cir.lifetime
-
 // CIR-EH-LABEL: cir.func{{.*}} @_Z13while_condvarv
 // CIR-EH:         %[[C:.*]] = cir.alloca "c" {{.*}} : !cir.ptr<!s32i>
 // CIR-EH:         cir.while {
@@ -232,9 +221,6 @@ void for_condvar() {
 // LLVM:         call void @llvm.lifetime.start.p0(ptr %[[C:.*]])
 // LLVM:         call void @llvm.lifetime.end.p0(ptr %[[C]])
 
-// O0-LABEL: cir.func{{.*}} @_Z11for_condvarv
-// O0-NOT:     cir.lifetime
-
 // CIR-EH-LABEL: cir.func{{.*}} @_Z11for_condvarv
 // CIR-EH:         %[[C:.*]] = cir.alloca "c" {{.*}} : !cir.ptr<!s32i>
 // CIR-EH:         cir.for : cond {
@@ -256,12 +242,10 @@ struct LoopCond {
   ~LoopCond();
 };
 
-LoopCond make_loop_cond();
-
 // A non-trivial condition variable runs its destructor before lifetime.end in
 // the loop cleanup region.
 void while_record_condvar() {
-  while (LoopCond c = make_loop_cond()) {}
+  while (LoopCond c{}) {}
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z20while_record_condvarv
@@ -277,9 +261,6 @@ void while_record_condvar() {
 // LLVM:         call void @llvm.lifetime.start.p0(ptr %[[C:.*]])
 // LLVM:         call void @_ZN8LoopCondD1Ev(ptr {{.*}} %[[C]])
 // LLVM:         call void @llvm.lifetime.end.p0(ptr %[[C]])
-
-// O0-LABEL: cir.func{{.*}} @_Z20while_record_condvarv
-// O0-NOT:     cir.lifetime
 
 // CIR-EH-LABEL: cir.func{{.*}} @_Z20while_record_condvarv
 // CIR-EH:         %[[C:.*]] = cir.alloca "c" {{.*}} : !cir.ptr<!rec_LoopCond>
