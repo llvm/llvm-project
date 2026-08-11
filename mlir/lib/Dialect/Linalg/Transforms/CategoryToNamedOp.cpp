@@ -37,17 +37,7 @@ struct ElementwiseToNamedPattern : public OpRewritePattern<ElementwiseOp> {
     auto inits = op.getDpsInits();
     auto loc = op.getLoc();
 
-    // Helper to create a named op and replace the elementwise op.
-    auto replaceWith = [&](auto namedOp) {
-      using OpTy = decltype(namedOp);
-      rewriter.replaceOp(op, OpTy::create(rewriter, loc, inputs, inits,
-                                          ArrayRef<NamedAttribute>{}));
-      return success();
-    };
-
     switch (op.getKind()) {
-    case ElementwiseKind::select:
-      return replaceWith(SelectOp{});
     default:
       return failure();
     }

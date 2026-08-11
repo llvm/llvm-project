@@ -28,7 +28,6 @@ using namespace mlir::linalg;
 namespace {
 ElementwiseKind getKind(Operation *op) {
   return llvm::TypeSwitch<Operation *, ElementwiseKind>(op)
-      .Case([](SelectOp) { return ElementwiseKind::select; })
       .DefaultUnreachable("unhandled case in named to elementwise");
 }
 
@@ -53,5 +52,4 @@ struct NamedToElementwisePattern : public OpRewritePattern<NamedOpTy> {
 
 void mlir::linalg::populateLinalgNamedToElementwisePatterns(
     RewritePatternSet &patterns) {
-  patterns.add<NamedToElementwisePattern<SelectOp>>(patterns.getContext());
 }
