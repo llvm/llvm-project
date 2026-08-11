@@ -5364,7 +5364,6 @@ void OmpStructureChecker::CheckStructureComponent(
 
 void OmpStructureChecker::Enter(
     const parser::OmpClause::UpdateDependObjects &x) {
-  llvm::omp::Directive dir{GetContext().directive};
   unsigned version{context_.langOptions().OpenMPVersion};
 
   auto *depType = std::get_if<parser::OmpDependenceType>(&x.v.u);
@@ -5381,7 +5380,8 @@ void OmpStructureChecker::Enter(
   // as dependence-type.
   // [5.2:322:3]
   // task-dependence-type must not be depobj.
-  assert(dir == llvm::omp::OMPD_depobj && "Unexpected directive");
+  assert(GetContext().directive == llvm::omp::OMPD_depobj &&
+      "Unexpected directive");
 
   if (version >= 51) {
     bool invalidDep{false};
