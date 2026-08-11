@@ -182,8 +182,7 @@ static FailureOr<LinalgOp> specializeLinalgElementwise(RewriterBase &rewriter,
                             scalarBroadcastMap);
       }
       newOp = ElementwiseOp::create(
-          rewriter, genericOp.getLoc(), inputs, genericOp.getDpsInits(),
-          ElementwiseKindAttr::get(rewriter.getContext(), kind),
+          rewriter, genericOp.getLoc(), inputs, genericOp.getDpsInits(), kind,
           rewriter.getAffineMapArrayAttr(indexingMaps));
     }
 
