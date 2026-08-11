@@ -15423,8 +15423,8 @@ void ASTContext::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
       StringRef VersionStr = TC->getFeatureStr(GD.getMultiVersionIndex());
       if (VersionStr.starts_with("cpu="))
         TargetCPU = VersionStr.drop_front(sizeof("cpu=") - 1);
-      else
-        assert(VersionStr == "default");
+      else if (VersionStr != "default")
+        Features = Target->parseTargetAttr(VersionStr).Features;
       Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Features);
     } else {
       std::vector<std::string> Features;

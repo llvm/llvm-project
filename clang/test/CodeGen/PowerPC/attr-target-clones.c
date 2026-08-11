@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -triple powerpc-ibm-aix-xcoff -target-cpu pwr7 -emit-llvm %s -o - | FileCheck %s
 // RUN: %clang_cc1 -triple powerpc64-ibm-aix-xcoff -target-cpu pwr7 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple powerpc64-ibm-aix-xcoff -target-cpu pwr10 -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK-P10
 
 // CHECK: @internal = internal ifunc i32 (), ptr @internal.resolver
 // CHECK: @foo = ifunc i32 (), ptr @foo.resolver
@@ -133,6 +134,106 @@ foo_priority(int x) { return x & (x - 1); }
 // CHECK: ret ptr @foo_priority.cpu_pwr7
 // CHECK: ret ptr @foo_priority.default
 
+
+// Test feature-based target_clones
+int __attribute__((target_clones("altivec", "default")))
+foo_altivec(void) { return 0; }
+// CHECK: define internal {{.*}}i32 @foo_altivec.altivec()
+// CHECK: define internal {{.*}}i32 @foo_altivec.default()
+// CHECK: define internal ptr @foo_altivec.resolver()
+//   if (__builtin_cpu_supports("altivec")) return &foo_altivec.altivec;
+// CHECK: %[[#ALTIVEC:]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @_system_configuration, {{i32|i64}} 204)
+// CHECK-NEXT: icmp ugt i32 %[[#ALTIVEC]], 0
+// CHECK: ret ptr @foo_altivec.altivec
+// CHECK: ret ptr @foo_altivec.default
+
+int __attribute__((target_clones("vsx", "default")))
+foo_vsx(void) { return 0; }
+// CHECK: define internal {{.*}}i32 @foo_vsx.vsx()
+// CHECK: define internal {{.*}}i32 @foo_vsx.default()
+// CHECK: define internal ptr @foo_vsx.resolver()
+//   if (__builtin_cpu_supports("vsx")) return &foo_vsx.vsx;
+// CHECK: %[[#VSX:]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @_system_configuration, {{i32|i64}} 204)
+// CHECK-NEXT: icmp ugt i32 %[[#VSX]], 1
+// CHECK: ret ptr @foo_vsx.vsx
+// CHECK: ret ptr @foo_vsx.default
+
+int __attribute__((target_clones("htm", "default")))
+foo_htm(void) { return 0; }
+// CHECK: define internal {{.*}}i32 @foo_htm.htm()
+// CHECK: define internal {{.*}}i32 @foo_htm.default()
+// CHECK: define internal ptr @foo_htm.resolver()
+//   if (__builtin_cpu_supports("htm")) return &foo_htm.htm;
+// CHECK: %[[#HTM:]] = call i64 @getsystemcfg(i32 59)
+// CHECK-NEXT: icmp ugt i64 %[[#HTM]], 0
+// CHECK: ret ptr @foo_htm.htm
+// CHECK: ret ptr @foo_htm.default
+
+#ifdef _ARCH_PWR10
+int __attribute__((target_clones("mma", "default")))
+foo_mma(void) { return 0; }
+#endif
+// CHECK-P10: define internal {{.*}}i32 @foo_mma.mma()
+// CHECK-P10: define internal {{.*}}i32 @foo_mma.default()
+// CHECK-P10: define internal ptr @foo_mma.resolver()
+//   if (__builtin_cpu_supports("mma")) return &foo_mma.mma;
+// CHECK-P10: %[[#MMA:]] = call i64 @getsystemcfg(i32 62)
+// CHECK-P10-NEXT: icmp ugt i64 %[[#MMA]], 0
+// CHECK-P10: ret ptr @foo_mma.mma
+// CHECK-P10: ret ptr @foo_mma.default
+
+// Test multiple features with priority ordering (random source order)
+// Source order: altivec, power8-vector, cpu=pwr11, vsx, power9-vector, default
+// Resolver order by priority: cpu=pwr11 (500) > power9-vector (311) > power8-vector (212) > vsx (111) > altivec (50) > default (0)
+int __attribute__((target_clones("altivec", "power8-vector", "cpu=pwr11", "vsx", "power9-vector", "default")))
+foo_multi_features(void) { return 0; }
+// CHECK: define internal {{.*}}i32 @foo_multi_features.altivec()
+// CHECK: define internal {{.*}}i32 @foo_multi_features.power8_vector()
+// CHECK: define internal {{.*}}i32 @foo_multi_features.cpu_pwr11() #[[#ATTR_P11]]
+// CHECK: define internal {{.*}}i32 @foo_multi_features.vsx()
+// CHECK: define internal {{.*}}i32 @foo_multi_features.power9_vector()
+// CHECK: define internal {{.*}}i32 @foo_multi_features.default()
+// CHECK: define internal ptr @foo_multi_features.resolver()
+//   Resolver checks in priority order (highest first):
+//   if (__builtin_cpu_supports("arch_3_1")) return &foo_multi_features.cpu_pwr11;
+// CHECK: load i32, ptr getelementptr inbounds nuw (i8, ptr @_system_configuration, {{i32|i64}} 4)
+// CHECK-NEXT: icmp uge i32 {{.*}}, 262144
+// CHECK: ret ptr @foo_multi_features.cpu_pwr11
+//   if (__builtin_cpu_supports("arch_3_00")) return &foo_multi_features.power9_vector;
+// CHECK: load i32, ptr getelementptr inbounds nuw (i8, ptr @_system_configuration, {{i32|i64}} 4)
+// CHECK-NEXT: icmp uge i32 {{.*}}, 131072
+// CHECK: ret ptr @foo_multi_features.power9_vector
+//   if (__builtin_cpu_supports("arch_2_07")) return &foo_multi_features.power8_vector;
+// CHECK: load i32, ptr getelementptr inbounds nuw (i8, ptr @_system_configuration, {{i32|i64}} 4)
+// CHECK-NEXT: icmp uge i32 {{.*}}, 65536
+// CHECK: ret ptr @foo_multi_features.power8_vector
+//   if (__builtin_cpu_supports("vsx")) return &foo_multi_features.vsx;
+// CHECK: %[[#VSX2:]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @_system_configuration, {{i32|i64}} 204)
+// CHECK-NEXT: icmp ugt i32 %[[#VSX2]], 1
+// CHECK: ret ptr @foo_multi_features.vsx
+//   if (__builtin_cpu_supports("altivec")) return &foo_multi_features.altivec;
+// CHECK: %[[#ALTIVEC2:]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @_system_configuration, {{i32|i64}} 204)
+// CHECK-NEXT: icmp ugt i32 %[[#ALTIVEC2]], 0
+// CHECK: ret ptr @foo_multi_features.altivec
+// CHECK: ret ptr @foo_multi_features.default
+
+// Test negated feature (no-altivec) - should negate the condition
+int __attribute__((target_clones("no-altivec", "default")))
+foo_no_altivec(void) { return 0; }
+// CHECK: define internal {{.*}}i32 @foo_no_altivec.no_altivec()
+// CHECK: define internal {{.*}}i32 @foo_no_altivec.default()
+// CHECK: define internal ptr @foo_no_altivec.resolver()
+//   if (!__builtin_cpu_supports("altivec")) return &foo_no_altivec.no_altivec;
+// CHECK: load i32, ptr getelementptr inbounds nuw (i8, ptr @_system_configuration, {{i32|i64}} 204)
+// CHECK-NEXT: icmp ugt i32
+// CHECK-NEXT: %neg = xor i1 {{.*}}, true
+// CHECK-NEXT: br i1 %neg, label %if.version, label %if.else
+// CHECK: if.version:
+// CHECK-NEXT: ret ptr @foo_no_altivec.no_altivec
+// CHECK: if.else:
+// CHECK-NEXT: ret ptr @foo_no_altivec.default
+
+// CHECK: declare i64 @getsystemcfg(i32)
 
 // CHECK: attributes #[[#ATTR_P7]] = {{.*}} "target-cpu"="pwr7"
 // CHECK: attributes #[[#ATTR_P10]] = {{.*}} "target-cpu"="pwr10"

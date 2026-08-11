@@ -98,7 +98,10 @@ public:
   bool isValidCPUName(StringRef Name) const override;
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
 
-  bool setCPU(StringRef Name) override {
+  // Validate if given feature name is supported on target_clones
+  bool isValidClonesFeatureName(StringRef Name) const override;
+
+  bool setCPU(StringRef &Name) override {
     bool CPUKnown = isValidCPUName(Name);
     if (CPUKnown) {
       CPU = Name;

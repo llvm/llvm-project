@@ -1469,6 +1469,11 @@ public:
     return true;
   }
 
+  /// Does this TargetInfo support the given feature on target_clones?
+  virtual bool isValidClonesFeatureName(StringRef Feature) const {
+    return isValidFeatureName(Feature);
+  }
+
   /// Returns true if feature has an impact on target code
   /// generation.
   virtual bool doesFeatureAffectCodeGen(StringRef Feature) const {

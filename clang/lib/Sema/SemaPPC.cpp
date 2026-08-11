@@ -633,6 +633,10 @@ bool SemaPPC::checkTargetClonesAttr(const SmallVectorImpl<StringRef> &Params,
       const SourceLocation &CurLoc =
           Loc.getLocWithOffset(LHS.data() - Param.data());
 
+      if (LHS.empty())
+        return Diag(CurLoc, diag::warn_unsupported_target_attribute)
+               << Unsupported << None << "" << TargetClones;
+
       if (LHS.starts_with("cpu=")) {
         StringRef CPUStr = LHS.drop_front(sizeof("cpu=") - 1);
         if (!TargetInfo.isValidCPUName(CPUStr))
@@ -644,9 +648,12 @@ bool SemaPPC::checkTargetClonesAttr(const SmallVectorImpl<StringRef> &Params,
       } else if (LHS == "default") {
         HasDefault = true;
       } else {
-        // it's a feature string, but not supported yet.
-        return Diag(CurLoc, diag::warn_unsupported_target_attribute)
-               << Unsupported << None << LHS << TargetClones;
+        StringRef FeatureName = LHS.starts_with("no-") ? LHS.drop_front(3) : LHS;
+        if (!TargetInfo.isValidClonesFeatureName(FeatureName))
+          return Diag(CurLoc, diag::err_ppc_feature_no_runtime_detection)
+                 << FeatureName;
+        // All target_clones feature names must be valid target feature names.
+        assert(isValidFeatureName(FeatureName));
       }
       SmallString<64> CPU;
       if (LHS.starts_with("cpu=")) {

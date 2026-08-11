@@ -727,18 +727,35 @@ llvm::APInt PPCTargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
     return llvm::APInt(32, 0);
   assert(Features.size() == 1 && "one feature/cpu per clone on PowerPC");
   ParsedTargetAttr ParsedAttr = parseTargetAttr(Features[0]);
+
+  // Priority scheme: Features requiring POWERXX are higher than cpu=pwrXX
+  // but lower than cpu=pwr(XX+1). This ensures proper version selection.
+  // Example: mma (POWER10 feature) > cpu=pwr10 > power9-vector (POWER9 feature)
+
   if (!ParsedAttr.CPU.empty()) {
     int Priority = llvm::StringSwitch<int>(ParsedAttr.CPU)
-                       .Case("pwr7", 1)
-                       .Case("pwr8", 2)
-                       .Case("pwr9", 3)
-                       .Case("pwr10", 4)
-                       .Case("pwr11", 5)
+#define PPC_AIX_CLONES_CPU(CPU_NAME, _, PRIORITY)                      \
+  .Case(CPU_NAME, PRIORITY)
+#include "llvm/TargetParser/PPCTargetParser.def"
                        .Default(0);
     return llvm::APInt(32, Priority);
   }
-  assert(false && "unimplemented");
-  return llvm::APInt(32, 0);
+
+  // Feature strings: priority between cpu=pwrN and cpu=pwr(N+1)
+  if (!ParsedAttr.Features.empty()) {
+    StringRef Feature = ParsedAttr.Features[0];
+    // Remove leading '+' or '-'
+    if (Feature.starts_with("+") || Feature.starts_with("-"))
+      Feature = Feature.drop_front(1);
+
+    int Priority = llvm::StringSwitch<int>(Feature)
+#define PPC_AIX_CLONES_FEATURE(FEATURE_NAME, _, PRIORITY)                      \
+  .Case(FEATURE_NAME, PRIORITY)
+#include "llvm/TargetParser/PPCTargetParser.def"
+                       .Default(0);
+    return llvm::APInt(32, Priority);
+  }
+  llvm_unreachable("Invalid target_clones parameter");
 }
 
 // Make sure that registers are added in the correct array index which should be
@@ -828,6 +845,14 @@ bool PPCTargetInfo::isValidCPUName(StringRef Name) const {
 
 void PPCTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
   llvm::PPC::fillValidCPUList(Values);
+}
+
+bool PPCTargetInfo::isValidClonesFeatureName(StringRef FeatureStr) const {
+  // Only features with runtime detection are valid for target_clones
+  return llvm::StringSwitch<bool>(FeatureStr)
+#define PPC_AIX_CLONES_FEATURE(FEATURE_NAME, _, __) .Case(FEATURE_NAME, true)
+#include "llvm/TargetParser/PPCTargetParser.def"
+      .Default(false);
 }
 
 void PPCTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
