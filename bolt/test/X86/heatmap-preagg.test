@@ -40,9 +40,13 @@ CHECK-HEATMAP-BAT-1K-NOT: HEATMAP: dumping heatmap with bucket size
 CHECK-HEATMAP: PERF2BOLT: read 81 aggregated brstack entries
 CHECK-HEATMAP: HEATMAP: invalid traces: 1
 CHECK-HEATMAP: HEATMAP: dumping heatmap with bucket size 64
+CHECK-HEATMAP: HEATMAP: working set @ bucket size 64 p99/total: 28/43
 CHECK-HEATMAP: HEATMAP: dumping heatmap with bucket size 128
+CHECK-HEATMAP: HEATMAP: working set @ bucket size 128 p99/total: 16/23
 CHECK-HEATMAP: HEATMAP: dumping heatmap with bucket size 1024
+CHECK-HEATMAP: HEATMAP: working set @ bucket size 1024 p99/total: 3/3
 CHECK-HEATMAP-NOT: HEATMAP: dumping heatmap with bucket size
+CHECK-HEATMAP-NOT: HEATMAP: working set @ bucket size
 
 CHECK-SEC-HOT: Section Name, Begin Address, End Address, Percentage Hotness, Utilization Pct, Partition Score
 CHECK-SEC-HOT-NEXT: .init, 0x401000, 0x40101b, 16.8545, 100.0000, 0.1685

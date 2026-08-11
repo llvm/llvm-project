@@ -1805,6 +1805,8 @@ std::error_code DataAggregator::printLBRHeatMap() {
       HM.print(opts::HeatmapOutput);
     else
       HM.print(formatv("{0}-{1}", opts::HeatmapOutput, NewBucketSize).str());
+    // Working set only; the table is emitted once, at the finest granularity.
+    HM.printCDF(nulls());
   }
 
   return std::error_code();
