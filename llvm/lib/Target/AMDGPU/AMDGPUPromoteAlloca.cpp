@@ -1479,13 +1479,53 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVGPR(AllocaAnalysis &AA) const {
 // Move the alloca into the VGPR ("as memory") address space. Pointers into it
 // are the same size in both address spaces, so the pointers derived from it
 // only need their type changed, and allocateVgprs then gives the object its
-// place in that address space.
+// place in that address space. This mirrors what the LDS promotion below does
+// to the same kind of closed set of derived pointers.
 void AMDGPUPromoteAllocaImpl::promoteAllocaToVGPR(AllocaAnalysis &AA) {
   LLVM_DEBUG(dbgs() << "Promoting alloca to VGPRs: " << *AA.Alloca << '\n');
 
   Type *PtrTy = PointerType::get(Mod.getContext(), AMDGPUAS::VGPR);
-  for (Value *Ptr : AA.Pointers)
+  for (Value *Ptr : AA.Pointers) {
     Ptr->mutateType(PtrTy);
+
+    // A select or phi may pick between a pointer into the object and a null
+    // one, which collectAllocaUses allows. Changing the address space of the
+    // result leaves such a constant behind in the old one, so adjust it too.
+    if (auto *SI = dyn_cast<SelectInst>(Ptr)) {
+      for (unsigned I : {1, 2})
+        if (isa<ConstantPointerNull, ConstantAggregateZero>(SI->getOperand(I)))
+          SI->setOperand(I, Constant::getNullValue(PtrTy));
+    } else if (auto *Phi = dyn_cast<PHINode>(Ptr)) {
+      for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I)
+        if (isa<ConstantPointerNull, ConstantAggregateZero>(
+                Phi->getIncomingValue(I)))
+          Phi->setIncomingValue(I, Constant::getNullValue(PtrTy));
+    }
+  }
+
+  // An intrinsic overloaded on the pointer type still names the old address
+  // space in its mangled name, which no longer matches the argument it is being
+  // given. Rebuild those, letting the builder derive the name from the types.
+  // The lifetime markers are left alone: allocateVgprs replaces them with the
+  // address-space specific ones below.
+  SmallSetVector<IntrinsicInst *, 4> Rebuild;
+  for (Use *U : AA.Uses) {
+    auto *II = dyn_cast<IntrinsicInst>(U->getUser());
+    if (II && !II->isLifetimeStartOrEnd())
+      Rebuild.insert(II);
+  }
+
+  for (IntrinsicInst *II : Rebuild) {
+    IRBuilder<> B(II);
+    SmallVector<Value *> Args(II->args());
+    Value *New = B.CreateIntrinsic(II->getType(), II->getIntrinsicID(), Args);
+    if (auto *NewCall = dyn_cast<CallInst>(New)) {
+      NewCall->copyMetadata(*II);
+      NewCall->takeName(II);
+    }
+    II->replaceAllUsesWith(New);
+    II->eraseFromParent();
+  }
 
   allocateVgprs(AA);
 }
