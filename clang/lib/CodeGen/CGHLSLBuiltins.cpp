@@ -320,8 +320,16 @@ static Value *handleInterlockedOp(CodeGenFunction &CGF, const CallExpr *E,
   assert(E->getArg(1)->getType()->isIntegerType() &&
          "Intrinsic InterlockedOp value operand must be an integer");
 
+  // Scopeless atomics will default to CrossDevice, which is illegal in Vulkan.
+  // Set the memory scope: Workgroup for groupshared, otherwise Device.
+  StringRef ScopeName = DestLV.getAddressSpace() == LangAS::hlsl_groupshared
+                            ? "workgroup"
+                            : "device";
+  llvm::SyncScope::ID SSID =
+      CGF.getLLVMContext().getOrInsertSyncScopeID(ScopeName);
+
   llvm::AtomicRMWInst *Call = CGF.Builder.CreateAtomicRMW(
-      Op, DestAddr, Val, llvm::AtomicOrdering::Monotonic);
+      Op, DestAddr, Val, llvm::AtomicOrdering::Monotonic, SSID);
 
   // The 3-arg overload writes the old value (the RMW's return value) into
   // the `original_value` reference parameter.
