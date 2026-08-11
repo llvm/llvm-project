@@ -114,6 +114,7 @@ class OpenMP_AllocateClauseSkip<
   let arguments = (ins
     Variadic<AnyType>:$allocate_vars,
     Variadic<AnyType>:$allocator_vars,
+    OptionalAttr<DenseI64ArrayAttr>:$allocate_alignments,
     OptionalAttr<DenseI64ArrayAttr>:$allocate_private_indices
   );
 
@@ -131,8 +132,11 @@ class OpenMP_AllocateClauseSkip<
   let description = [{
     The `allocate_vars` and `allocator_vars` parameters are parallel lists that
     pair each allocated private value with the allocator used to obtain its
-    storage. When present, `allocate_private_indices` maps each allocate variable
-    to the corresponding position in the operation's private variables.
+    storage. When present, `allocate_alignments` has one entry per allocate
+    variable; zero means omitted alignment, and nonzero entries must be powers
+    of two.
+    `allocate_private_indices` maps each allocate variable to the corresponding
+    position in the operation's private variables.
   }];
 }
 
