@@ -2047,7 +2047,8 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
 
   // Assign locations to all of the incoming arguments.
   SmallVector<CCValAssign, 16> ArgLocs;
-  CCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
+  SystemZCCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
+  CCInfo.setIsFormalArgLowering();
   CCInfo.AnalyzeFormalArguments(Ins, CC_SystemZ);
   FuncInfo->setSizeOfFnParams(CCInfo.getStackSize());
 
@@ -2152,8 +2153,24 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
           assert(PartOffset && "Offset should be non-zero.");
         }
       }
-    } else
-      InVals.push_back(convertLocVTToValVT(DAG, DL, VA, Chain, ArgValue));
+    } else {
+      SDValue Val = convertLocVTToValVT(DAG, DL, VA, Chain, ArgValue);
+      // For i8/i16 formals under XPLINK64, CC_XPLINK_Promote_i32 either keeps
+      // LocVT=i32 (register arg) or uses LocVT=i64 (stack arg, 8-byte slot).
+      // Either way convertLocVTToValVT yields ValVT=i32 (legalized).  Truncate
+      // down to the true original i8/i16 so the DAG folds the truncate+extend
+      // into a narrow instruction (LGBR/LGHR/LGB/LGH etc).
+      // Only for XPLINK64: ELF receives i8/i16 already correctly widened.
+      // Guard with isSimple() since non-simple EVTs must not reach
+      // getSimpleVT().
+      if (Subtarget.isTargetXPLINK64() && Ins[I].ArgVT.isSimple()) {
+        MVT OrigVT = Ins[I].ArgVT.getSimpleVT();
+        if (OrigVT != VA.getValVT() && OrigVT.isScalarInteger() &&
+            OrigVT.getSizeInBits() < VA.getValVT().getSizeInBits())
+          Val = DAG.getNode(ISD::TRUNCATE, DL, OrigVT, Val);
+      }
+      InVals.push_back(Val);
+    }
   }
 
   if (IsVarArg && Subtarget.isTargetXPLINK64()) {
@@ -2360,8 +2377,10 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
   verifyNarrowIntegerArgs_Call(Outs, &MF.getFunction(), Callee);
 
   // Analyze the operands of the call, assigning locations to each operand.
+  // Use SystemZCCState so CC_XPLINK_Promote_i32 can safely cast State to
+  // SystemZCCState& (isFormalArgLowering() returns false by default).
   SmallVector<CCValAssign, 16> ArgLocs;
-  CCState ArgCCInfo(CallConv, IsVarArg, MF, ArgLocs, Ctx);
+  SystemZCCState ArgCCInfo(CallConv, IsVarArg, MF, ArgLocs, Ctx);
   ArgCCInfo.AnalyzeCallOperands(Outs, CC_SystemZ);
 
   // We don't support GuaranteedTailCallOpt, only automatically-detected

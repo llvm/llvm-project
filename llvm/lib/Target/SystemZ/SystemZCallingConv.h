@@ -85,6 +85,45 @@ inline bool CC_SystemZ_I128Indirect(unsigned &ValNo, MVT &ValVT,
   return true;
 }
 
+// Extends CCState with:
+//   - a flag to distinguish formal-argument lowering from outgoing-call
+//     lowering (used by CC_XPLINK_Promote_i32)
+//   - the pre-legalization original MVT for each argument (needed because
+//     i8/i16 are both legalized to i32 before the CC table runs, so ValVT
+//     alone cannot distinguish them)
+class SystemZCCState : public CCState {
+  bool IsFormalArgLowering = false;
+  SmallVector<MVT, 8> ArgOrigVTs;
+
+public:
+  using CCState::CCState;
+
+  void AnalyzeFormalArguments(const SmallVectorImpl<ISD::InputArg> &Ins,
+                              CCAssignFn Fn) {
+    // Record the pre-legalization original type for each argument.
+    // Use MVT::Other as a sentinel when ArgVT is not a simple type (e.g.
+    // split or extended EVTs that occur in 32-bit mode).
+    ArgOrigVTs.clear();
+    for (const auto &In : Ins)
+      ArgOrigVTs.push_back(In.ArgVT.isSimple() ? In.ArgVT.getSimpleVT()
+                                               : MVT::Other);
+    CCState::AnalyzeFormalArguments(Ins, Fn);
+  }
+
+  // Returns the pre-legalization MVT for argument ValNo.
+  // Only valid after AnalyzeFormalArguments; returns MVT::Other if out of
+  // range (e.g. called from AnalyzeCallOperands context where ArgOrigVTs
+  // was never populated).
+  MVT getArgOrigVT(unsigned ValNo) const {
+    if (ValNo >= ArgOrigVTs.size())
+      return MVT::Other;
+    return ArgOrigVTs[ValNo];
+  }
+
+  bool isFormalArgLowering() const { return IsFormalArgLowering; }
+  void setIsFormalArgLowering() { IsFormalArgLowering = true; }
+};
+
 // A pointer in 64bit mode is always passed as 64bit.
 inline bool CC_XPLINK64_Pointer(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
                                 CCValAssign::LocInfo &LocInfo,
@@ -92,6 +131,46 @@ inline bool CC_XPLINK64_Pointer(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
   if (LocVT != MVT::i64) {
     LocVT = MVT::i64;
     LocInfo = CCValAssign::ZExt;
+  }
+  return false;
+}
+
+inline bool CC_XPLINK_Promote_i32(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
+                                  CCValAssign::LocInfo &LocInfo,
+                                  ISD::ArgFlagsTy &ArgFlags, CCState &State) {
+  SystemZCCState *SZState = static_cast<SystemZCCState *>(&State);
+  if (SZState->isFormalArgLowering()) {
+    // For formal arguments, use the pre-legalization original MVT to
+    // distinguish i8/i16 from i32 — all three are legalized to i32 (ValVT)
+    // before the CC table runs, so ValVT alone cannot tell them apart.
+    MVT OrigVT = SZState->getArgOrigVT(ValNo);
+    if (OrigVT == MVT::i8 || OrigVT == MVT::i16) {
+      // Keep LocVT=i32 (GR32 live-in) only if a GR32 register is still free.
+      // The CC table assigns i32 args to R1L/R2L/R3L in XPLINK64; if all
+      // three are taken, this arg goes to an 8-byte stack slot.  The caller
+      // stores a sign-extended i64 in that slot (value in bytes 6-7), so we
+      // must use LocVT=i64 to load all 8 bytes correctly.
+      // We probe the 64-bit register aliases: AllocateReg marks all aliases,
+      // so if R1D is allocated (by a prior i64/ptr arg) R1L is also marked.
+      static const MCPhysReg GPR64s[] = {SystemZ::R1D, SystemZ::R2D,
+                                         SystemZ::R3D};
+      if (State.getFirstUnallocated(GPR64s) < 3) {
+        LocInfo = CCValAssign::AExt;
+        return false;
+      }
+      // All GR64s (and their GR32 aliases) taken — stack path: promote to i64.
+    }
+    // i32 formal (or stack-bound i8/i16): promote to GR64 via AExt.
+    LocVT = MVT::i64;
+    LocInfo = CCValAssign::AExt;
+  } else {
+    LocVT = MVT::i64;
+    if (ArgFlags.isSExt())
+      LocInfo = CCValAssign::SExt;
+    else if (ArgFlags.isZExt())
+      LocInfo = CCValAssign::ZExt;
+    else
+      LocInfo = CCValAssign::AExt;
   }
   return false;
 }
