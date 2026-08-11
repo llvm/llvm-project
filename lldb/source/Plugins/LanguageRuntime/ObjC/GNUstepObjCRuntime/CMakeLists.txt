@@ -1,4 +1,5 @@
 add_lldb_library(lldbPluginGNUstepObjCRuntime PLUGIN
+  GNUstepObjCClassDescriptor.cpp
   GNUstepObjCRuntime.cpp
 
   LINK_COMPONENTS
