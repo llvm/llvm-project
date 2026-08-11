@@ -1,4 +1,4 @@
-; RUN: not --crash llc -O3 -mtriple=amdgpu9.42-amd-amdhsa < %s 2>&1 | FileCheck %s
+; RUN: not --crash llc -mtriple=amdgpu9.42-amd-amdhsa -amdgpu-stress-sgpr=16 < %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; NOTE: SIRegisterInfo::eliminateFrameIndex currently asserts on a
@@ -25,7 +25,7 @@ define fastcc i64 @no_scavengeable_sgpr_with_frame_register(
     i64 %l5, i32 %i2, i32 %i3, i32 %i4,
     double %d0, double %d1, double %d2,
     i64 %l6, i64 %l7, i64 %l8, i64 %l9
-) #0 {
+) {
 entry:
   %local = alloca i64, align 8, addrspace(5)
   %asm = call {i64, i64, i64, i64, i64, i64, i64, i64}
@@ -54,5 +54,3 @@ entry:
 
   ret i64 0
 }
-
-attributes #0 = { "amdgpu-num-sgpr"="16" }
