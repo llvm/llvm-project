@@ -16,8 +16,6 @@
 
 #include "DLWrap.h"
 
-#include <tuple>
-
 #define API_HELPER_STRINGIFY_INNER(x) #x
 #define API_HELPER_STRINGIFY(x) API_HELPER_STRINGIFY_INNER(x)
 
@@ -53,29 +51,6 @@ template <auto Fn> bool canCall() {
   static_assert(sizeof(decltype(Fn) *) == 0,
                 "api_helper::canCall() should only be called on symbols "
                 "decorated with API_HELPER_OPTIONAL!");
-}
-
-// Currently APIHelpers.h supports only interatctions with lvalue references
-template <typename Fn> struct FunctionArgs {
-  static_assert(sizeof(Fn) == 0,
-                "FunctionArgs: Fn should be an lvalue reference to a function! "
-                "Supported form: R(A...).");
-};
-// Arguments to a function are just a tuple with all the types inside
-template <typename ReturnType, typename... ArgsTypes>
-struct FunctionArgs<ReturnType(ArgsTypes...)> {
-  using type = std::tuple<ArgsTypes...>;
-};
-
-// Template to call function with all arguments initialized
-// with default values, so we can check if APIs are not returning
-// any kind of NOT_SUPPORTED errors
-template <typename Fn> auto callWithDefaultArgs(Fn &FunctionByLValue) {
-  // Get arguments tuple type corresponding to the function
-  using FunctionArgsType = typename FunctionArgs<Fn>::type;
-
-  // Call the function
-  return std::apply(FunctionByLValue, FunctionArgsType{});
 }
 
 } // namespace api_helper
