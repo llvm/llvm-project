@@ -617,8 +617,7 @@ define <2 x i1> @not_isfinite_v2d(<2 x double> %x) {
 ; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI17_0]
 ; CHECK-GI-NEXT:    cmeq v2.2d, v0.2d, v1.2d
 ; CHECK-GI-NEXT:    cmhi v0.2d, v0.2d, v1.2d
-; CHECK-GI-NEXT:    orr v0.16b, v2.16b, v0.16b
-; CHECK-GI-NEXT:    xtn v0.2s, v0.2d
+; CHECK-GI-NEXT:    addhn v0.2s, v2.2d, v0.2d
 ; CHECK-GI-NEXT:    ret
 ;
 ; CHECK-NOFP-LABEL: not_isfinite_v2d:
