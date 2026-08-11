@@ -1586,6 +1586,8 @@ bool CursorVisitor::VisitBuiltinTypeLoc(BuiltinTypeLoc TL) {
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/SPIRVTypes.def"
 #define BUILTIN_TYPE(Id, SingletonId)
 #define SIGNED_TYPE(Id, SingletonId) case BuiltinType::Id:
 #define UNSIGNED_TYPE(Id, SingletonId) case BuiltinType::Id:
@@ -1735,6 +1737,10 @@ bool CursorVisitor::VisitAttributedTypeLoc(AttributedTypeLoc TL) {
 }
 
 bool CursorVisitor::VisitCountAttributedTypeLoc(CountAttributedTypeLoc TL) {
+  return Visit(TL.getInnerLoc());
+}
+
+bool CursorVisitor::VisitLateParsedAttrTypeLoc(LateParsedAttrTypeLoc TL) {
   return Visit(TL.getInnerLoc());
 }
 
@@ -2416,6 +2422,9 @@ void OMPClauseEnqueue::VisitOMPReadClause(const OMPReadClause *) {}
 void OMPClauseEnqueue::VisitOMPWriteClause(const OMPWriteClause *) {}
 
 void OMPClauseEnqueue::VisitOMPUpdateClause(const OMPUpdateClause *) {}
+
+void OMPClauseEnqueue::VisitOMPUpdateDependObjectsClause(
+    const OMPUpdateDependObjectsClause *) {}
 
 void OMPClauseEnqueue::VisitOMPCaptureClause(const OMPCaptureClause *) {}
 
@@ -3924,19 +3933,20 @@ bool CursorVisitor::RunVisitorWorkList(VisitorWorkList &WL) {
       for (LambdaExpr::capture_iterator C = E->explicit_capture_begin(),
                                         CEnd = E->explicit_capture_end();
            C != CEnd; ++C) {
+
         if (!C->capturesVariable())
           continue;
-        // TODO: handle structured bindings here ?
-        if (!isa<VarDecl>(C->getCapturedVar()))
-          continue;
-        if (Visit(MakeCursorVariableRef(cast<VarDecl>(C->getCapturedVar()),
-                                        C->getLocation(), TU)))
-          return true;
-      }
-      // Visit init captures
-      for (auto InitExpr : E->capture_inits()) {
-        if (InitExpr && Visit(InitExpr))
-          return true;
+
+        if (const auto *CV = dyn_cast_or_null<VarDecl>(C->getCapturedVar())) {
+          if (CV->isInitCapture()) {
+            // Init capture is a declaration, create VarDecl cursor
+            if (Visit(MakeCXCursor(CV, TU, RegionOfInterest)))
+              return true;
+          } else
+            // Non init capture is a VariableRef
+            if (Visit(MakeCursorVariableRef(CV, C->getLocation(), TU)))
+              return true;
+        }
       }
 
       TypeLoc TL = E->getCallOperator()->getTypeSourceInfo()->getTypeLoc();

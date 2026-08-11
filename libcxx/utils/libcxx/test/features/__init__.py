@@ -10,6 +10,7 @@ from . import (
     availability,
     compiler,
     debugger,
+    hardening,
     libcxx_macros,
     localization,
     misc,
@@ -27,3 +28,4 @@ DEFAULT_FEATURES += localization.features
 DEFAULT_FEATURES += debugger.features
 DEFAULT_FEATURES += misc.features
 DEFAULT_FEATURES += availability.features
+DEFAULT_FEATURES += hardening.features # this depends on availability, misc and libc++ macro features
