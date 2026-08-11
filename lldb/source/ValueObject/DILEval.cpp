@@ -1682,4 +1682,44 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const CastNode &node) {
                                               node.GetLocation());
 }
 
+llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const SizeOfNode &node) {
+  CompilerType typearg = node.GetTypeArg();
+  Scalar size;
+  if (typearg.IsValid()) {
+    if (typearg.IsReferenceType())
+      typearg = typearg.GetNonReferenceType();
+    llvm::Expected<uint64_t> byte_size = typearg.GetByteSize(m_target.get());
+    if (!byte_size)
+      return byte_size.takeError();
+    size = *byte_size;
+  } else {
+    auto arg_or_err = EvaluateAndDereference(node.GetNodeArg());
+    if (!arg_or_err)
+      return arg_or_err;
+    lldb::ValueObjectSP arg = *arg_or_err;
+
+    if (arg->IsBitfield())
+      return llvm::make_error<DILDiagnosticError>(
+          m_expr, "invalid application of 'sizeof' to bit-field",
+          node.GetLocation());
+
+    llvm::Expected<uint64_t> byte_size = arg->GetByteSize();
+    if (!byte_size)
+      return byte_size.takeError();
+    size = *byte_size;
+  }
+
+  llvm::Expected<lldb::TypeSystemSP> type_system =
+      GetTypeSystemFromCU(m_stack_frame);
+  if (!type_system)
+    return type_system.takeError();
+  CompilerType size_type = type_system.get()->GetSizeType();
+  if (!size_type)
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr, "unable to determine size type", node.GetLocation());
+
+  return ValueObject::CreateValueObjectFromScalar(m_stack_frame, size,
+                                                  size_type, "result");
+}
+
 } // namespace lldb_private::dil
