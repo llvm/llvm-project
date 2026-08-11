@@ -14074,6 +14074,11 @@ void ScalarEvolution::SCEVCallbackVH::allUsesReplacedWith(Value *V) {
   // Forget all the expressions associated with users of the old value,
   // so that future queries will recompute the expressions using the new
   // value.
+  if (const SCEV *S = SE->getExistingSCEV(getValPtr()))
+    if (auto *AR = dyn_cast<SCEVAddRecExpr>(S))
+      const_cast<SCEVAddRecExpr *>(AR)->SubclassData &=
+          ~static_cast<unsigned short>(SCEV::NoWrapMask);
+
   SE->forgetValue(getValPtr());
   // this now dangles!
 }
@@ -14702,8 +14707,6 @@ void ScalarEvolution::forgetMemoizedResultsImpl(const SCEV *S) {
   if (auto *AR = dyn_cast<SCEVAddRecExpr>(S)) {
     UnsignedWrapViaInductionTried.erase(AR);
     SignedWrapViaInductionTried.erase(AR);
-    const_cast<SCEVAddRecExpr *>(AR)->SubclassData &=
-        ~static_cast<unsigned short>(SCEV::NoWrapMask);
   }
 
   auto ExprIt = ExprValueMap.find(S);
