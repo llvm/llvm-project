@@ -19,6 +19,14 @@ module attributes {transform.with_named_sequence} {
         : (!transform.any_op) -> !transform.any_op
     %funcs2 = transform.apply_registered_pass "inter-convert-memory" to %funcs1
         : (!transform.any_op) -> !transform.any_op
+    %funcs3 = transform.apply_registered_pass "inter-normalize-pointers" to %funcs2
+        : (!transform.any_op) -> !transform.any_op
+    %funcs4 = transform.apply_registered_pass "inter-decompose-wide" to %funcs3
+        : (!transform.any_op) -> !transform.any_op
+    %funcs5 = transform.apply_registered_pass "canonicalize" to %funcs4
+        : (!transform.any_op) -> !transform.any_op
+    %funcs6 = transform.apply_registered_pass "cse" to %funcs5
+        : (!transform.any_op) -> !transform.any_op
     %r2 = transform.apply_registered_pass "inter-select-to-machine" to %r1
         : (!transform.any_op) -> !transform.any_op
     transform.yield %r2 : !transform.any_op

@@ -1,6 +1,7 @@
 // inter-normalize-cf: llvm.func -> func.func, llvm branches -> cf branches.
 // Prepares imported kernels for the upstream lift-cf-to-scf pass.
 
+#include "inter/Dialect/XeMachine/IR/XeMachine.h"
 #include "inter/Transforms/Passes.h"
 
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
@@ -10,6 +11,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
+#include "llvm/Support/MathExtras.h"
 
 namespace inter {
 #define GEN_PASS_DEF_NORMALIZECF
@@ -19,6 +21,12 @@ namespace inter {
 using namespace mlir;
 
 namespace {
+
+using namespace inter::xemachine;
+
+constexpr uint64_t kFirstExplicitArgOffset = 24;
+constexpr uint64_t kExplicitArgSlotSize = 8;
+constexpr uint64_t kLoadedCrossThreadBytes = 64;
 
 struct NormalizeCf : public inter::impl::NormalizeCfBase<NormalizeCf> {
   void runOnOperation() override {
@@ -63,6 +71,40 @@ struct NormalizeCf : public inter::impl::NormalizeCfBase<NormalizeCf> {
       func.setAllResultAttrs(attrs);
     for (NamedAttribute attr : llvmFunc->getDiscardableAttrs())
       func->setDiscardableAttr(attr.getName(), attr.getValue());
+
+    SmallVector<Attribute> kernelArgs;
+    for (auto [index, type] : llvm::enumerate(llvmFunc.getArgumentTypes())) {
+      KernelArgKind kind;
+      uint64_t size;
+      if (auto pointer = dyn_cast<LLVM::LLVMPointerType>(type)) {
+        if (pointer.getAddressSpace() != 1)
+          return llvmFunc.emitOpError(
+                     "only global pointer kernel arguments are supported"),
+                 failure();
+        kind = KernelArgKind::by_pointer;
+        size = 8;
+      } else if (auto integer = dyn_cast<IntegerType>(type)) {
+        if (integer.getWidth() > 64)
+          return llvmFunc.emitOpError(
+                     "kernel integer arguments wider than 64 bits are not "
+                     "supported"),
+                 failure();
+        kind = KernelArgKind::by_value;
+        size = llvm::divideCeil(integer.getWidth(), 8u);
+      } else {
+        llvmFunc.emitOpError("unsupported kernel argument type ") << type;
+        return failure();
+      }
+      uint64_t offset = kFirstExplicitArgOffset + index * kExplicitArgSlotSize;
+      if (offset + size > kLoadedCrossThreadBytes)
+        return llvmFunc.emitOpError(
+                   "kernel argument payload exceeds the loaded cross-thread "
+                   "data"),
+               failure();
+      kernelArgs.push_back(
+          KernelArgAttr::get(llvmFunc.getContext(), kind, offset, size));
+    }
+    func->setAttr(kKernelArgsAttrName, b.getArrayAttr(kernelArgs));
 
     // Keep LLVM-only function properties inspectable until the semantic import
     // gives each supported property an Inter representation.

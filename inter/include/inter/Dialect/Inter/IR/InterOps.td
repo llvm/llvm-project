@@ -30,6 +30,41 @@ def XW_PtrAddOp : XW_Op<"ptradd", [Pure,
   let hasVerifier = 1;
 }
 
+def XW_WideConstantOp : XW_Op<"wide_constant", [Pure]> {
+  let summary = "materialize a wide integer constant";
+  let arguments = (ins I64Attr:$value);
+  let results = (outs I64:$result);
+  let assemblyFormat = "$value attr-dict";
+}
+
+def XW_WideExtendOp : XW_Op<"wide_extend", [Pure]> {
+  let summary = "extend a packed integer to a wide value";
+  let arguments = (ins AnySignlessInteger:$input, UnitAttr:$signed_);
+  let results = (outs I64:$result);
+  let assemblyFormat = "$input (`signed` $signed_^)? attr-dict `:` type($input)";
+}
+
+def XW_WideAddOp : XW_Op<"wide_add", [Pure]> {
+  let summary = "add two wide values";
+  let arguments = (ins I64:$lhs, I64:$rhs);
+  let results = (outs I64:$result);
+  let assemblyFormat = "$lhs `,` $rhs attr-dict";
+}
+
+def XW_WideSubOp : XW_Op<"wide_sub", [Pure]> {
+  let summary = "subtract two wide values";
+  let arguments = (ins I64:$lhs, I64:$rhs);
+  let results = (outs I64:$result);
+  let assemblyFormat = "$lhs `,` $rhs attr-dict";
+}
+
+def XW_WideShlOp : XW_Op<"wide_shl", [Pure]> {
+  let summary = "shift a wide value left by a constant amount";
+  let arguments = (ins I64:$input, I64Attr:$amount);
+  let results = (outs I64:$result);
+  let assemblyFormat = "$input `,` $amount attr-dict";
+}
+
 // Memory ordering token: the entry source for a kernel's token graph.
 def XW_TokenOp : XW_Op<"token", [NoMemoryEffect]> {
   let summary = "initial memory-ordering token";

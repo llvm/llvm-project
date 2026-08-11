@@ -368,9 +368,10 @@ private:
 
   LogicalResult setBasicSource(ged_ins_t &instruction, uint32_t index,
                                const SourceOperand &source) {
-    GED_DATA_TYPE type = getDataType(source.type);
+    GED_DATA_TYPE type =
+        source.isSigned ? GED_DATA_TYPE_d : getDataType(source.type);
     if (const auto *immediate = std::get_if<Immediate>(&source.value)) {
-      GED_DATA_TYPE immediateType = getDataType(immediate->type);
+      GED_DATA_TYPE immediateType = type;
       if (index == 0) {
         RETURN_IF_GED_ERROR(GED_SetSrc0RegFile(&instruction, GED_REG_FILE_IMM));
         RETURN_IF_GED_ERROR(GED_SetSrc0DataType(&instruction, immediateType));
@@ -488,7 +489,8 @@ private:
     uint32_t subRegister;
     if (failed(getRegister(reference, source.type, file, number, subRegister)))
       return failure();
-    GED_DATA_TYPE type = getDataType(source.type);
+    GED_DATA_TYPE type =
+        source.isSigned ? GED_DATA_TYPE_d : getDataType(source.type);
     GED_SRC_MOD modifier =
         source.negate ? GED_SRC_MOD_Negative : GED_SRC_MOD_Normal;
     if (index == 0) {

@@ -65,10 +65,10 @@ def XeMachine_MovOp : XeMachine_ALUOp<"mov"> {
                        DefaultValuedAttr<I32Attr, "16">:$execSize,
                        OptionalAttr<XeMachine_DstRegionAttr>:$dstRegion,
                        OptionalAttr<XeMachine_RegionAttr>:$src0Region,
-                       OptionalAttr<I32Attr>:$dstSub,
-                       OptionalAttr<I32Attr>:$src0Sub,
-                       OptionalAttr<TypeAttr>:$src0Type,
-                       UnitAttr:$noMask,
+                        OptionalAttr<I32Attr>:$dstSub,
+                        OptionalAttr<I32Attr>:$src0Sub,
+                        OptionalAttr<TypeAttr>:$src0Type,
+                        UnitAttr:$noMask,
                        DefaultValuedAttr<I32Attr, "0">:$maskOffset,
                        XeMachine_RegOrImm:$src);
   let results = (outs XeMachine_RegOrARF:$dst);

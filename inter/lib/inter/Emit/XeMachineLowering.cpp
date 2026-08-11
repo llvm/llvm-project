@@ -97,14 +97,14 @@ private:
     if (ImmOp immediate = value.getDefiningOp<ImmOp>()) {
       DataType type = getDataType(immediate.getElemType());
       return {Immediate{static_cast<uint64_t>(immediate.getValue()), type},
-              type, region, false};
+              type, region, false, false};
     }
 
     DataType type = getDataType(elementType);
     if (auto arf = dyn_cast<ARFType>(value.getType()))
-      return {getArfReference(arf, sub), type, region, false};
+      return {getArfReference(arf, sub), type, region, false, false};
     return {getGrfReference(cast<RegType>(value.getType()), sub, elementType),
-            type, region, false};
+            type, region, false, false};
   }
 
   struct ProducerDistance {
@@ -412,6 +412,7 @@ private:
     instruction.flag =
         getArfReference(cast<ARFType>(compare.getFlag().getType()), 0);
     instruction.dataType = getDataType(compare.getElemType());
+    instruction.isSigned = compare->hasAttr("signed");
 
     constexpr std::array<StringLiteral, 2> regionNames = {"src0Region",
                                                           "src1Region"};
@@ -425,9 +426,11 @@ private:
       if (ImmOp immediate = operand.getDefiningOp<ImmOp>())
         if (failed(validateDataType(compare, immediate.getElemType())))
           return failure();
-      instruction.sources.push_back(getSourceOperand(
+      SourceOperand source = getSourceOperand(
           operand, getSub(compare, subNames[index]), sourceType,
-          getSourceRegion(compare, regionNames[index])));
+          getSourceRegion(compare, regionNames[index]));
+      source.isSigned = instruction.isSigned;
+      instruction.sources.push_back(std::move(source));
     }
     instruction.swsb = getInOrderSwsb(compare, compare.getOperands());
     program.items.push_back(std::move(instruction));
@@ -501,6 +504,7 @@ private:
           operand, getSub(operation, subNames[index]), sourceType,
           getSourceRegion(operation, regionNames[index]));
       source.negate = negateFirstSource && index == 0;
+      source.isSigned = index == 0 && operation->hasAttr("signedSource");
       instruction.sources.push_back(std::move(source));
     }
     instruction.swsb = getInOrderSwsb(operation, operation->getOperands());

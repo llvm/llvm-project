@@ -17,6 +17,7 @@ def NormalizeCf : Pass<"inter-normalize-cf", "::mlir::ModuleOp"> {
   let dependentDialects = [
     "mlir::func::FuncDialect",
     "mlir::cf::ControlFlowDialect",
+    "inter::xemachine::XeMachineDialect",
   ];
 }
 
@@ -34,6 +35,11 @@ def ConvertMemory : Pass<"inter-convert-memory", "::mlir::func::FuncOp"> {
 
 def NormalizePointers : Pass<"inter-normalize-pointers", "::mlir::func::FuncOp"> {
   let summary = "normalize LLVM GEPs to bytewise xw.ptradd operations";
+  let dependentDialects = ["xw::XWDialect", "mlir::LLVM::LLVMDialect"];
+}
+
+def DecomposeWide : Pass<"inter-decompose-wide", "::mlir::func::FuncOp"> {
+  let summary = "decompose global pointer offsets into xw wide operations";
   let dependentDialects = ["xw::XWDialect", "mlir::LLVM::LLVMDialect"];
 }
 

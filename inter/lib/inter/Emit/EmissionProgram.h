@@ -58,6 +58,7 @@ struct SourceOperand {
   DataType type = DataType::ud;
   SourceRegion region;
   bool negate = false;
+  bool isSigned = false;
 };
 
 struct Destination {
@@ -87,6 +88,7 @@ struct CompareInstruction {
   xemachine::CondModifier condition = xemachine::CondModifier::eq;
   ArfReference flag;
   DataType dataType = DataType::ud;
+  bool isSigned = false;
   llvm::SmallVector<SourceOperand, 2> sources;
   SwsbInfo swsb;
 };

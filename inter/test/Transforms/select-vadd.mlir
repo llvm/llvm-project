@@ -9,7 +9,7 @@ module {
   // CHECK: func.func @vadd
   // CHECK-SAME: xemachine.barrier_count = 0 : i32
   // CHECK-SAME: xemachine.grf_count = 128 : i32
-  // CHECK-SAME: xemachine.grf_used = 28 : i32
+  // CHECK-SAME: xemachine.grf_used = 22 : i32
   // CHECK-SAME: xemachine.has_global_atomics = false
   // CHECK-SAME: xemachine.has_no_stateless_write = false
   // CHECK-SAME: xemachine.inline_data_payload_size = 32 : i32
@@ -49,10 +49,6 @@ module {
 // CHECK: xemachine.mul
 // CHECK: xemachine.load_block_a32
 // CHECK: xemachine.add3
-// The named backend pipeline prepares destructive updates before scheduling.
-// CHECK: [[UPDATE_BASE:%.*]] = xemachine.mov {{.*}}xemachine.regalloc_copy = "update-base"
-// CHECK-NEXT: [[UPDATE_VALUE:%.*]] = xemachine.mov {{.*}}xemachine.regalloc_copy = "update-value"
-// CHECK-NEXT: xemachine.update_tuple [[UPDATE_BASE]], [[UPDATE_VALUE]]
 // Two A64 loads and one store, each with an explicit four-GRF address tuple.
 // CHECK: [[ADDR0:%.*]] = xemachine.tuple_from_elements
 // CHECK-SAME: -> !xemachine.reg<64,
@@ -62,19 +58,18 @@ module {
 // CHECK-NEXT: xemachine.load_a64 [[ADDR1]]
 // CHECK: [[ADDR2:%.*]] = xemachine.tuple_from_elements
 // CHECK-SAME: -> !xemachine.reg<64,
-// CHECK-NEXT: xemachine.store_a64 [[ADDR2]] {{.*}}data
-// CHECK: [[FINAL:%.*]] = xemachine.token_join
+// CHECK-NEXT: [[FINAL:%.*]] = xemachine.store_a64 [[ADDR2]] {{.*}}data
 // CHECK: xemachine.sync allrd
 // EOT via the gateway.
 // CHECK-NEXT: xemachine.eot {{.*}} dep [[FINAL]]
 
-// GED: pc=144 opcode=sync {{.*}}function=allwr
+// GED: pc=112 opcode=sync {{.*}}function=allwr
 // GED: opcode=mul
 // GED: opcode=add3
 // GED: opcode=shl
-// GED: pc=464 opcode=add
-// GED-NEXT: pc=480 opcode=add
-// GED-NEXT: pc=496 opcode=send exec=32 swsb=0x322
+// GED: pc=496 opcode=add
+// GED-NEXT: pc=512 opcode=add
+// GED-NEXT: pc=528 opcode=send exec=32 swsb=0x322
 // GED: opcode=send {{.*}}sfid=ugm {{.*}}len=2 eot=0
 // GED: opcode=send {{.*}}sfid=gateway {{.*}}len=0 eot=1
 

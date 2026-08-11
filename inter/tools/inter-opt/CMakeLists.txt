@@ -12,6 +12,7 @@ target_link_libraries(inter-opt PRIVATE
   MLIRDLTIDialect
   MLIRControlFlowToSCF
   MLIRTransformDialectTransforms
+  MLIRTransforms
   MLIRUBDialect
 )
 mlir_check_link_libraries(inter-opt)

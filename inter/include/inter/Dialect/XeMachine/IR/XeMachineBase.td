@@ -48,6 +48,23 @@ def XeMachine_TargetAttr : AttrDef<XeMachineDialect, "Target"> {
   let assemblyFormat = "`<` `chip` `=` $chip `>`";
 }
 
+def XeMachine_KernelArgKind : I32EnumAttr<"KernelArgKind",
+    "kernel argument payload kind", [
+      I32EnumAttrCase<"by_value", 0>,
+      I32EnumAttrCase<"by_pointer", 1>,
+    ]> {
+  let cppNamespace = "::inter::xemachine";
+}
+
+def XeMachine_KernelArgAttr : AttrDef<XeMachineDialect, "KernelArg"> {
+  let mnemonic = "kernel_arg";
+  let summary = "explicit kernel argument payload location";
+  let parameters = (ins "KernelArgKind":$kind, "uint64_t":$offset,
+                         "uint64_t":$size);
+  let assemblyFormat =
+      "`<` `kind` `=` $kind `,` `offset` `=` $offset `,` `size` `=` $size `>`";
+}
+
 // Register region: <vstride;width,hstride> on sources. Destination regions
 // carry only hstride; see DstRegion.
 def XeMachine_RegionAttr : AttrDef<XeMachineDialect, "Region"> {

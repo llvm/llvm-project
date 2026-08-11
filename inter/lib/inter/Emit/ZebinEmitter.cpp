@@ -7,6 +7,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/Support/MathExtras.h"
 
 #include <cstdint>
 #include <string>
@@ -112,6 +113,12 @@ FailureOr<std::string> buildZeInfo(func::FuncOp kernel) {
   if (!kernelType || kernelType.getNumResults() != 0)
     return kernel.emitOpError("missing supported xemachine.kernel_type"),
            failure();
+  ArrayAttr kernelArgs = kernel->getAttrOfType<ArrayAttr>(kKernelArgsAttrName);
+  if (!kernelArgs && kernelType.getNumInputs() == 0)
+    kernelArgs = ArrayAttr::get(kernel.getContext(), {});
+  if (failed(
+          verifyKernelArgLayout(kernelType, kernelArgs, kernel.getOperation())))
+    return failure();
 
   auto grfCount = kernel->getAttrOfType<IntegerAttr>(kGrfCountAttrName);
   auto grfUsed = kernel->getAttrOfType<IntegerAttr>(kGrfUsedAttrName);
@@ -144,39 +151,27 @@ FailureOr<std::string> buildZeInfo(func::FuncOp kernel) {
 
   bool hasBufferArguments = false;
   for (Type argument : kernelType.getInputs()) {
-    if (auto pointer = dyn_cast<LLVM::LLVMPointerType>(argument)) {
-      if (pointer.getAddressSpace() != 1)
-        return kernel.emitOpError(
-                   "only global pointer arguments are supported"),
-               failure();
+    if (isa<LLVM::LLVMPointerType>(argument)) {
       hasBufferArguments = true;
-      continue;
     }
-    auto integer = dyn_cast<IntegerType>(argument);
-    if (!integer || integer.getWidth() != 32)
-      return kernel.emitOpError(
-                 "only global pointers and i32 arguments are supported"),
-             failure();
   }
 
   bool usesThreadIds = kernel->hasAttr(kUsesThreadIdsAttrName);
-  if (!usesThreadIds && kernelType.getNumInputs() != 0)
-    return kernel.emitOpError(
-               "kernel arguments require the current thread payload ABI"),
-           failure();
+  bool usesPayload = usesThreadIds || kernelType.getNumInputs() != 0;
   auto inlineSize =
       kernel->getAttrOfType<IntegerAttr>(kInlineDataPayloadSizeAttrName);
   auto perThreadSize =
       kernel->getAttrOfType<IntegerAttr>(kPerThreadPayloadSizeAttrName);
   auto entryOffset =
       kernel->getAttrOfType<IntegerAttr>(kPayloadEntryOffsetAttrName);
-  if (usesThreadIds && (!inlineSize || !perThreadSize || !entryOffset))
+  if (usesPayload && (!inlineSize || !entryOffset))
     return kernel.emitOpError("incomplete thread payload attributes"),
            failure();
-  if (usesThreadIds &&
-      (inlineSize.getInt() != 32 || perThreadSize.getInt() != 192 ||
-       entryOffset.getInt() != 192))
+  if (usesPayload && (inlineSize.getInt() != 32 || entryOffset.getInt() != 192))
     return kernel.emitOpError("unsupported thread payload layout"), failure();
+  if (usesThreadIds && (!perThreadSize || perThreadSize.getInt() != 192))
+    return kernel.emitOpError("unsupported per-thread payload layout"),
+           failure();
 
   std::string yaml;
   llvm::raw_string_ostream output(yaml);
@@ -193,7 +188,7 @@ FailureOr<std::string> buildZeInfo(func::FuncOp kernel) {
     output << "      has_global_atomics: true\n";
   output << "      has_no_stateless_write: "
          << (hasNoStatelessWrite.getValue() ? "true" : "false") << "\n";
-  if (usesThreadIds) {
+  if (usesPayload) {
     output << "      inline_data_payload_size: " << inlineSize.getInt() << "\n"
            << "      offset_to_skip_per_thread_data_load: "
            << entryOffset.getInt() << "\n";
@@ -217,20 +212,20 @@ FailureOr<std::string> buildZeInfo(func::FuncOp kernel) {
              << "        offset: 12\n"
              << "        size: 12\n";
     }
-    for (auto [index, argument] : llvm::enumerate(kernelType.getInputs())) {
-      uint64_t offset = 24 + index * 8;
-      if (isa<LLVM::LLVMPointerType>(argument)) {
+    for (auto [index, descriptorAttr] : llvm::enumerate(kernelArgs)) {
+      auto descriptor = cast<KernelArgAttr>(descriptorAttr);
+      if (descriptor.getKind() == KernelArgKind::by_pointer) {
         output << "      - arg_type: arg_bypointer\n"
-               << "        offset: " << offset << "\n"
-               << "        size: 8\n"
+               << "        offset: " << descriptor.getOffset() << "\n"
+               << "        size: " << descriptor.getSize() << "\n"
                << "        arg_index: " << index << "\n"
                << "        addrmode: stateless\n"
                << "        addrspace: global\n"
                << "        access_type: readwrite\n";
       } else {
         output << "      - arg_type: arg_byvalue\n"
-               << "        offset: " << offset << "\n"
-               << "        size: 4\n"
+               << "        offset: " << descriptor.getOffset() << "\n"
+               << "        size: " << descriptor.getSize() << "\n"
                << "        arg_index: " << index << "\n";
       }
     }

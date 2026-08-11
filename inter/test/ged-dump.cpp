@@ -95,6 +95,8 @@ static const char *getDataTypeName(GED_DATA_TYPE type) {
     return "uw";
   case GED_DATA_TYPE_ud:
     return "ud";
+  case GED_DATA_TYPE_d:
+    return "d";
   case GED_DATA_TYPE_q:
     return "q";
   case GED_DATA_TYPE_f:

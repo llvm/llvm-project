@@ -1,8 +1,8 @@
 #ifndef INTER_DIALECT_XEMACHINE_IR_XEMACHINE_H
 #define INTER_DIALECT_XEMACHINE_IR_XEMACHINE_H
 
-#include "inter/Dialect/XeMachine/IR/XeMachineTraits.h"
 #include "inter/Dialect/XeMachine/IR/Xe2Timing.h"
+#include "inter/Dialect/XeMachine/IR/XeMachineTraits.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
@@ -19,6 +19,8 @@ namespace inter::xemachine {
 inline constexpr llvm::StringLiteral kTargetAttrName = "xemachine.target";
 inline constexpr llvm::StringLiteral kKernelTypeAttrName =
     "xemachine.kernel_type";
+inline constexpr llvm::StringLiteral kKernelArgsAttrName =
+    "xemachine.kernel_args";
 inline constexpr llvm::StringLiteral kGrfCountAttrName = "xemachine.grf_count";
 inline constexpr llvm::StringLiteral kGrfUsedAttrName = "xemachine.grf_used";
 inline constexpr llvm::StringLiteral kReservedGrfCountAttrName =
@@ -55,6 +57,10 @@ struct KernelResourceUsage {
 
 mlir::FailureOr<KernelResourceUsage>
 analyzeKernelResources(mlir::func::FuncOp function, int64_t grfCount);
+
+mlir::LogicalResult verifyKernelArgLayout(mlir::FunctionType functionType,
+                                          mlir::ArrayAttr arguments,
+                                          mlir::Operation *owner);
 
 /// Relative register-storage constraint, in dwords.
 struct RegisterStorageAlias {

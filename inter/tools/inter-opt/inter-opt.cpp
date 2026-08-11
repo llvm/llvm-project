@@ -13,6 +13,7 @@
 #include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
+#include "mlir/Transforms/Passes.h"
 
 namespace mlir {
 std::unique_ptr<Pass> createLiftControlFlowToSCFPass();
@@ -43,6 +44,7 @@ public:
 
 int main(int argc, char **argv) {
   inter::registerInterPasses();
+  mlir::registerTransformsPasses();
   mlir::transform::registerTransformPasses();
   mlir::registerPass([]() -> std::unique_ptr<mlir::Pass> {
     return mlir::createLiftControlFlowToSCFPass();

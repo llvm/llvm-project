@@ -15,6 +15,8 @@ LogicalResult PtrAddOp::verify() {
   constexpr uint32_t kNoUnsignedSignedWrap = 2;
   constexpr uint32_t kKnownFlags = 7;
   uint32_t flags = getGepFlags();
+  if (!isa<IntegerType>(getOffset().getType()))
+    return emitOpError("offset must be a signless integer");
   if (flags & ~kKnownFlags)
     return emitOpError("has unknown LLVM GEP no-wrap flag bits");
   if ((flags & kInBounds) && !(flags & kNoUnsignedSignedWrap))

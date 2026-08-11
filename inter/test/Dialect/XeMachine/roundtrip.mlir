@@ -2,9 +2,16 @@
 // RUN: inter-opt %s | inter-opt | FileCheck %s
 
 // CHECK-LABEL: func.func @kernel
+// CHECK-SAME: xemachine.kernel_args = [#xemachine.kernel_arg<kind = by_pointer, offset = 24, size = 8>, #xemachine.kernel_arg<kind = by_value, offset = 32, size = 4>]
 // CHECK-SAME: #xemachine.target<chip = "bmg">
 func.func @kernel(%arg0: !xemachine.reg<32, -1>, %flag: !xemachine.arf<f, 2, -1>)
-    attributes {xemachine.target = #xemachine.target<chip = "bmg">} {
+    attributes {
+      xemachine.kernel_args = [
+        #xemachine.kernel_arg<kind = by_pointer, offset = 24, size = 8>,
+        #xemachine.kernel_arg<kind = by_value, offset = 32, size = 4>
+      ],
+      xemachine.target = #xemachine.target<chip = "bmg">
+    } {
   // CHECK: %[[IMM:.*]] = xemachine.imm 42 : i32
   %imm = xemachine.imm 42 : i32
   // CHECK: %[[ADD:.*]] = xemachine.add %arg0, %[[IMM]] {execSize = 32 : i32} : (!xemachine.reg<32, -1>, !xemachine.imm, i32) -> !xemachine.reg<32, -1>

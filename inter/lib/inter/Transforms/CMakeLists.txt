@@ -4,6 +4,7 @@ add_mlir_library(InterTransforms
   InterConvertCalls.cpp
   InterConvertMemory.cpp
   InterNormalizePointers.cpp
+  InterDecomposeWide.cpp
   InterInsertSync.cpp
   InterPrepareRegAlloc.cpp
   InterMachineSchedule.cpp

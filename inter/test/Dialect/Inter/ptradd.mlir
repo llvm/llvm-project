@@ -9,4 +9,12 @@ module {
         : !llvm.ptr<1>, i64
     return
   }
+
+  func.func @wide_ptradd(%base: !llvm.ptr<1>, %input: i32) {
+    // CHECK: [[WIDE:%.*]] = xw.wide_extend %{{.*}} signed : i32
+    %wide = xw.wide_extend %input signed : i32
+    // CHECK: xw.ptradd %{{.*}}, [[WIDE]] : !llvm.ptr<1>, i64
+    %ptr = xw.ptradd %base, %wide : !llvm.ptr<1>, i64
+    return
+  }
 }
