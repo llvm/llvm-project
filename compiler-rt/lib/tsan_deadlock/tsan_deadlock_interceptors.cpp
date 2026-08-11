@@ -10,14 +10,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <pthread.h>
-
 #include "interception/interception.h"
 #include "sanitizer_common/sanitizer_allocator_internal.h"
 #include "sanitizer_common/sanitizer_errno.h"
 #include "sanitizer_common/sanitizer_glibc_version.h"
+#include "sanitizer_common/sanitizer_platform_limits_posix.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
 #include "tsan_deadlock_rtl.h"
+
+extern "C" int pthread_mutexattr_gettype(void *, void *);
+#if !SANITIZER_FREEBSD && !SANITIZER_APPLE && !SANITIZER_NETBSD
+const int PTHREAD_MUTEX_RECURSIVE = 1;
+#else
+const int PTHREAD_MUTEX_RECURSIVE = 2;
+#endif
 
 using namespace __tsan_deadlock;
 
@@ -58,8 +64,8 @@ static void *ThreadTrampoline(void *arg) {
   return retval;
 }
 
-INTERCEPTOR(int, pthread_create, pthread_t *th, const pthread_attr_t *attr,
-            void *(*fn)(void *), void *arg) {
+INTERCEPTOR(int, pthread_create, void *th, void *attr, void *(*fn)(void *),
+            void *arg) {
   InitThread();
   ThreadArg *targ = static_cast<ThreadArg *>(InternalAlloc(sizeof(ThreadArg)));
   targ->fn = fn;
@@ -67,7 +73,7 @@ INTERCEPTOR(int, pthread_create, pthread_t *th, const pthread_attr_t *attr,
   return REAL(pthread_create)(th, attr, ThreadTrampoline, targ);
 }
 
-INTERCEPTOR(int, pthread_join, pthread_t t, void **retval) {
+INTERCEPTOR(int, pthread_join, void *t, void **retval) {
   InitThread();
   return REAL(pthread_join)(t, retval);
 }
@@ -78,8 +84,7 @@ INTERCEPTOR(void, pthread_exit, void *retval) {
   REAL(pthread_exit)(retval);
 }
 
-INTERCEPTOR(int, pthread_mutex_init, pthread_mutex_t *m,
-            const pthread_mutexattr_t *attr) {
+INTERCEPTOR(int, pthread_mutex_init, void *m, void *attr) {
   uptr pc = GET_CURRENT_PC();
   InitThread();
   int res = REAL(pthread_mutex_init)(m, attr);
@@ -95,7 +100,7 @@ INTERCEPTOR(int, pthread_mutex_init, pthread_mutex_t *m,
   return res;
 }
 
-INTERCEPTOR(int, pthread_mutex_destroy, pthread_mutex_t *m) {
+INTERCEPTOR(int, pthread_mutex_destroy, void *m) {
   uptr pc = GET_CURRENT_PC();
   InitThread();
   int res = REAL(pthread_mutex_destroy)(m);
@@ -104,7 +109,7 @@ INTERCEPTOR(int, pthread_mutex_destroy, pthread_mutex_t *m) {
   return res;
 }
 
-INTERCEPTOR(int, pthread_mutex_lock, pthread_mutex_t *m) {
+INTERCEPTOR(int, pthread_mutex_lock, void *m) {
   uptr pc = GET_CURRENT_PC();
   InitThread();
   MutexBeforeLock(cur_thread(), (uptr)m, true, pc);
@@ -113,7 +118,7 @@ INTERCEPTOR(int, pthread_mutex_lock, pthread_mutex_t *m) {
   return res;
 }
 
-INTERCEPTOR(int, pthread_mutex_trylock, pthread_mutex_t *m) {
+INTERCEPTOR(int, pthread_mutex_trylock, void *m) {
   uptr pc = GET_CURRENT_PC();
   InitThread();
   int res = REAL(pthread_mutex_trylock)(m);
@@ -122,8 +127,7 @@ INTERCEPTOR(int, pthread_mutex_trylock, pthread_mutex_t *m) {
   return res;
 }
 
-INTERCEPTOR(int, pthread_mutex_timedlock, pthread_mutex_t *m,
-            const struct timespec *abstime) {
+INTERCEPTOR(int, pthread_mutex_timedlock, void *m, void *abstime) {
   uptr pc = GET_CURRENT_PC();
   InitThread();
   int res = REAL(pthread_mutex_timedlock)(m, abstime);
@@ -132,14 +136,15 @@ INTERCEPTOR(int, pthread_mutex_timedlock, pthread_mutex_t *m,
   return res;
 }
 
-INTERCEPTOR(int, pthread_mutex_unlock, pthread_mutex_t *m) {
+INTERCEPTOR(int, pthread_mutex_unlock, void *m) {
   uptr pc = GET_CURRENT_PC();
   InitThread();
   MutexBeforeUnlock(cur_thread(), (uptr)m, true, pc);
   return REAL(pthread_mutex_unlock)(m);
 }
 
-INTERCEPTOR(int, pthread_spin_init, pthread_spinlock_t *m, int pshared) {
+#if !SANITIZER_APPLE
+INTERCEPTOR(int, pthread_spin_init, void *m, int pshared) {
   uptr pc = GET_CURRENT_PC();
   InitThread();
   int res = REAL(pthread_spin_init)(m, pshared);
@@ -148,7 +153,7 @@ INTERCEPTOR(int, pthread_spin_init, pthread_spinlock_t *m, int pshared) {
   return res;
 }
 
-INTERCEPTOR(int, pthread_spin_destroy, pthread_spinlock_t *m) {
+INTERCEPTOR(int, pthread_spin_destroy, void *m) {
   uptr pc = GET_CURRENT_PC();
   InitThread();
   int res = REAL(pthread_spin_destroy)(m);
@@ -157,7 +162,7 @@ INTERCEPTOR(int, pthread_spin_destroy, pthread_spinlock_t *m) {
   return res;
 }
 
-INTERCEPTOR(int, pthread_spin_lock, pthread_spinlock_t *m) {
+INTERCEPTOR(int, pthread_spin_lock, void *m) {
   uptr pc = GET_CURRENT_PC();
   InitThread();
   MutexBeforeLock(cur_thread(), (uptr)m, true, pc);
@@ -166,7 +171,7 @@ INTERCEPTOR(int, pthread_spin_lock, pthread_spinlock_t *m) {
   return res;
 }
 
-INTERCEPTOR(int, pthread_spin_trylock, pthread_spinlock_t *m) {
+INTERCEPTOR(int, pthread_spin_trylock, void *m) {
   uptr pc = GET_CURRENT_PC();
   InitThread();
   int res = REAL(pthread_spin_trylock)(m);
@@ -175,15 +180,15 @@ INTERCEPTOR(int, pthread_spin_trylock, pthread_spinlock_t *m) {
   return res;
 }
 
-INTERCEPTOR(int, pthread_spin_unlock, pthread_spinlock_t *m) {
+INTERCEPTOR(int, pthread_spin_unlock, void *m) {
   uptr pc = GET_CURRENT_PC();
   InitThread();
   MutexBeforeUnlock(cur_thread(), (uptr)m, true, pc);
   return REAL(pthread_spin_unlock)(m);
 }
+#endif // !SANITIZER_APPLE
 
-INTERCEPTOR(int, pthread_rwlock_init, pthread_rwlock_t *m,
-            const pthread_rwlockattr_t *attr) {
+INTERCEPTOR(int, pthread_rwlock_init, void *m, void *attr) {
   uptr pc = GET_CURRENT_PC();
   InitThread();
   int res = REAL(pthread_rwlock_init)(m, attr);
@@ -192,14 +197,14 @@ INTERCEPTOR(int, pthread_rwlock_init, pthread_rwlock_t *m,
   return res;
 }
 
-INTERCEPTOR(int, pthread_rwlock_destroy, pthread_rwlock_t *m) {
+INTERCEPTOR(int, pthread_rwlock_destroy, void *m) {
   uptr pc = GET_CURRENT_PC();
   InitThread();
   MutexDestroy(cur_thread(), (uptr)m, pc);
   return REAL(pthread_rwlock_destroy)(m);
 }
 
-INTERCEPTOR(int, pthread_rwlock_rdlock, pthread_rwlock_t *m) {
+INTERCEPTOR(int, pthread_rwlock_rdlock, void *m) {
   uptr pc = GET_CURRENT_PC();
   InitThread();
   MutexBeforeLock(cur_thread(), (uptr)m, false, pc);
@@ -208,7 +213,7 @@ INTERCEPTOR(int, pthread_rwlock_rdlock, pthread_rwlock_t *m) {
   return res;
 }
 
-INTERCEPTOR(int, pthread_rwlock_tryrdlock, pthread_rwlock_t *m) {
+INTERCEPTOR(int, pthread_rwlock_tryrdlock, void *m) {
   uptr pc = GET_CURRENT_PC();
   InitThread();
   int res = REAL(pthread_rwlock_tryrdlock)(m);
@@ -217,8 +222,7 @@ INTERCEPTOR(int, pthread_rwlock_tryrdlock, pthread_rwlock_t *m) {
   return res;
 }
 
-INTERCEPTOR(int, pthread_rwlock_timedrdlock, pthread_rwlock_t *m,
-            const timespec *abstime) {
+INTERCEPTOR(int, pthread_rwlock_timedrdlock, void *m, void *abstime) {
   uptr pc = GET_CURRENT_PC();
   InitThread();
   int res = REAL(pthread_rwlock_timedrdlock)(m, abstime);
@@ -227,7 +231,7 @@ INTERCEPTOR(int, pthread_rwlock_timedrdlock, pthread_rwlock_t *m,
   return res;
 }
 
-INTERCEPTOR(int, pthread_rwlock_wrlock, pthread_rwlock_t *m) {
+INTERCEPTOR(int, pthread_rwlock_wrlock, void *m) {
   uptr pc = GET_CURRENT_PC();
   InitThread();
   MutexBeforeLock(cur_thread(), (uptr)m, true, pc);
@@ -236,7 +240,7 @@ INTERCEPTOR(int, pthread_rwlock_wrlock, pthread_rwlock_t *m) {
   return res;
 }
 
-INTERCEPTOR(int, pthread_rwlock_trywrlock, pthread_rwlock_t *m) {
+INTERCEPTOR(int, pthread_rwlock_trywrlock, void *m) {
   uptr pc = GET_CURRENT_PC();
   InitThread();
   int res = REAL(pthread_rwlock_trywrlock)(m);
@@ -245,8 +249,7 @@ INTERCEPTOR(int, pthread_rwlock_trywrlock, pthread_rwlock_t *m) {
   return res;
 }
 
-INTERCEPTOR(int, pthread_rwlock_timedwrlock, pthread_rwlock_t *m,
-            const timespec *abstime) {
+INTERCEPTOR(int, pthread_rwlock_timedwrlock, void *m, void *abstime) {
   uptr pc = GET_CURRENT_PC();
   InitThread();
   int res = REAL(pthread_rwlock_timedwrlock)(m, abstime);
@@ -255,36 +258,35 @@ INTERCEPTOR(int, pthread_rwlock_timedwrlock, pthread_rwlock_t *m,
   return res;
 }
 
-INTERCEPTOR(int, pthread_rwlock_unlock, pthread_rwlock_t *m) {
+INTERCEPTOR(int, pthread_rwlock_unlock, void *m) {
   uptr pc = GET_CURRENT_PC();
   InitThread();
   MutexBeforeUnlock(cur_thread(), (uptr)m, false, pc);
   return REAL(pthread_rwlock_unlock)(m);
 }
 
-static pthread_cond_t *init_cond(pthread_cond_t *c, bool force = false) {
+static void *init_cond(void *c, bool force = false) {
   if (!common_flags()->legacy_pthread_cond)
     return c;
   atomic_uintptr_t *p = (atomic_uintptr_t *)c;
   uptr cond = atomic_load(p, memory_order_acquire);
   if (!force && cond != 0)
-    return (pthread_cond_t *)cond;
-  void *newcond = InternalAlloc(sizeof(pthread_cond_t));
-  internal_memset(newcond, 0, sizeof(pthread_cond_t));
+    return (void *)cond;
+  void *newcond = InternalAlloc(pthread_cond_t_sz);
+  internal_memset(newcond, 0, pthread_cond_t_sz);
   if (atomic_compare_exchange_strong(p, &cond, (uptr)newcond,
                                      memory_order_acq_rel))
-    return (pthread_cond_t *)newcond;
+    return newcond;
   InternalFree(newcond);
-  return (pthread_cond_t *)cond;
+  return (void *)cond;
 }
 
-INTERCEPTOR(int, pthread_cond_init, pthread_cond_t *c,
-            const pthread_condattr_t *a) {
+INTERCEPTOR(int, pthread_cond_init, void *c, void *a) {
   InitThread();
   return REAL(pthread_cond_init)(init_cond(c, true), a);
 }
 
-INTERCEPTOR(int, pthread_cond_wait, pthread_cond_t *c, pthread_mutex_t *m) {
+INTERCEPTOR(int, pthread_cond_wait, void *c, void *m) {
   uptr pc = GET_CURRENT_PC();
   InitThread();
   MutexBeforeUnlock(cur_thread(), (uptr)m, true, pc);
@@ -294,8 +296,7 @@ INTERCEPTOR(int, pthread_cond_wait, pthread_cond_t *c, pthread_mutex_t *m) {
   return res;
 }
 
-INTERCEPTOR(int, pthread_cond_timedwait, pthread_cond_t *c, pthread_mutex_t *m,
-            const timespec *abstime) {
+INTERCEPTOR(int, pthread_cond_timedwait, void *c, void *m, void *abstime) {
   uptr pc = GET_CURRENT_PC();
   InitThread();
   MutexBeforeUnlock(cur_thread(), (uptr)m, true, pc);
@@ -305,19 +306,19 @@ INTERCEPTOR(int, pthread_cond_timedwait, pthread_cond_t *c, pthread_mutex_t *m,
   return res;
 }
 
-INTERCEPTOR(int, pthread_cond_signal, pthread_cond_t *c) {
+INTERCEPTOR(int, pthread_cond_signal, void *c) {
   InitThread();
   return REAL(pthread_cond_signal)(init_cond(c));
 }
 
-INTERCEPTOR(int, pthread_cond_broadcast, pthread_cond_t *c) {
+INTERCEPTOR(int, pthread_cond_broadcast, void *c) {
   InitThread();
   return REAL(pthread_cond_broadcast)(init_cond(c));
 }
 
-INTERCEPTOR(int, pthread_cond_destroy, pthread_cond_t *c) {
+INTERCEPTOR(int, pthread_cond_destroy, void *c) {
   InitThread();
-  pthread_cond_t *cond = init_cond(c);
+  void *cond = init_cond(c);
   int res = REAL(pthread_cond_destroy)(cond);
   if (common_flags()->legacy_pthread_cond) {
     InternalFree(cond);
@@ -355,11 +356,13 @@ void InitializeInterceptors() {
   INTERCEPT_FUNCTION(pthread_mutex_timedlock);
   INTERCEPT_FUNCTION(pthread_mutex_unlock);
 
+#if !SANITIZER_APPLE
   INTERCEPT_FUNCTION(pthread_spin_init);
   INTERCEPT_FUNCTION(pthread_spin_destroy);
   INTERCEPT_FUNCTION(pthread_spin_lock);
   INTERCEPT_FUNCTION(pthread_spin_trylock);
   INTERCEPT_FUNCTION(pthread_spin_unlock);
+#endif // !SANITIZER_APPLE
 
   INTERCEPT_FUNCTION(pthread_rwlock_init);
   INTERCEPT_FUNCTION(pthread_rwlock_destroy);
