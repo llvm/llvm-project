@@ -4595,6 +4595,11 @@ void AMDGPULegalizerInfo::buildMultiply(LegalizerHelper &Helper,
         if (!LocalAccum[0])
           LocalAccum[0] = getZero32();
 
+        // A second element is only ever requested when the full 64-bit multiply
+        // block above runs, which always writes it.
+        assert((LocalAccum.size() == 1 || LocalAccum[1]) &&
+               "Uninitialized accumulator part");
+
         return CarryOut;
       };
 
