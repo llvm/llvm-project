@@ -36,8 +36,7 @@ define amdgpu_kernel void @caller_with_aliasing_args(ptr addrspace(1) %out) {
 ;
   %slot = alloca i32, addrspace(5)
   store i32 1, ptr addrspace(5) %slot
-  %result = call i32 @callee_with_aliasing_args(ptr addrspace(5) %slot,
-  ptr addrspace(5) %slot)
+  %result = call i32 @callee_with_aliasing_args(ptr addrspace(5) %slot, ptr addrspace(5) %slot)
   store i32 %result, ptr addrspace(1) %out
   ret void
 }
