@@ -5006,10 +5006,13 @@ SDValue SITargetLowering::lowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
       DAG.getNode(ISD::BITCAST, SL, SrcVT.changeTypeToInteger(), Src);
 
   EVT DstVT = Op.getValueType();
+  SDValue Result = DAG.getNode(ISD::BF16_TO_FP, SL, DstVT, BitCast);
+  // bf16 -> f32/f64 extension is exact and cannot raise an FP exception, so
+  // the strict chain can pass through unchanged.
   if (IsStrict)
-    llvm_unreachable("Need STRICT_BF16_TO_FP");
+    return DAG.getMergeValues({Result, Op.getOperand(0)}, SL);
 
-  return DAG.getNode(ISD::BF16_TO_FP, SL, DstVT, BitCast);
+  return Result;
 }
 
 SDValue SITargetLowering::lowerGET_FPENV(SDValue Op, SelectionDAG &DAG) const {
