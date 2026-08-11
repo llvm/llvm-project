@@ -61,7 +61,7 @@ FunctionPass *createNVPTXLowerUnreachableLegacyPass(bool TrapUnreachable,
 FunctionPass *createNVPTXMarkKernelPtrsGlobalPass();
 FunctionPass *createNVPTXTagInvariantLoadsPass();
 FunctionPass *createNVPTXIRPeepholePass();
-MachineFunctionPass *createNVPTXPeephole();
+MachineFunctionPass *createNVPTXPeepholeLegacyPass();
 MachineFunctionPass *createNVPTXProxyRegErasurePass();
 MachineFunctionPass *createNVPTXForwardParamsLegacyPass();
 MachineFunctionPass *createNVPTXAddressFolderPass();
@@ -85,7 +85,7 @@ void initializeNVVMIntrRangePass(PassRegistry &);
 void initializeNVVMReflectPass(PassRegistry &);
 void initializeNVPTXAAWrapperPassPass(PassRegistry &);
 void initializeNVPTXExternalAAWrapperPass(PassRegistry &);
-void initializeNVPTXPeepholePass(PassRegistry &);
+void initializeNVPTXPeepholeLegacyPassPass(PassRegistry &);
 void initializeNVPTXMarkKernelPtrsGlobalLegacyPassPass(PassRegistry &);
 void initializeNVPTXTagInvariantLoadLegacyPassPass(PassRegistry &);
 void initializeNVPTXIRPeepholePass(PassRegistry &);
@@ -97,6 +97,12 @@ struct NVVMIntrRangePass : OptionalPassInfoMixin<NVVMIntrRangePass> {
 
 struct NVPTXIRPeepholePass : OptionalPassInfoMixin<NVPTXIRPeepholePass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
+class NVPTXPeepholePass : public OptionalPassInfoMixin<NVPTXPeepholePass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
 };
 
 struct NVVMReflectPass : OptionalPassInfoMixin<NVVMReflectPass> {

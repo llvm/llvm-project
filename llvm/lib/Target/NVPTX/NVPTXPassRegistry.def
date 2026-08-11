@@ -58,4 +58,5 @@ FUNCTION_PASS("nvptx-lower-alloca", NVPTXLowerAllocaPass())
 #endif
 MACHINE_FUNCTION_PASS("nvptx-isel", NVPTXISelDAGToDAGPass(*this, getOptLevel()))
 MACHINE_FUNCTION_PASS("nvptx-forward-params", NVPTXForwardParamsPass())
+MACHINE_FUNCTION_PASS("nvptx-peephole", NVPTXPeepholePass())
 #undef MACHINE_FUNCTION_PASS
