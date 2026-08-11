@@ -2,7 +2,7 @@
 ## tentative layout. Either padding request puts target outside the range of
 ## foo's direct call and requires a stub.
 
-# REQUIRES: system-linux, asserts, target=aarch64{{.*}}
+# REQUIRES: system-linux
 
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown %s -o %t.o
 # RUN: %clang %cflags %t.o -o %t.exe -nostdlib -Wl,-q

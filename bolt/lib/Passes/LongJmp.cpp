@@ -91,7 +91,7 @@ LongJmpPass::createNewStub(BinaryBasicBlock &SourceBB, const MCSymbol *TgtSym,
                            bool TgtIsFunc, uint64_t AtAddress) {
   BinaryFunction &Func = *SourceBB.getFunction();
   const BinaryContext &BC = Func.getBinaryContext();
-  const bool IsCold = Func.isSplit() && SourceBB.isCold();
+  const bool IsCold = SourceBB.isCold();
   MCSymbol *StubSym = BC.Ctx->createNamedTempSymbol("Stub");
   std::unique_ptr<BinaryBasicBlock> StubBB = Func.createBasicBlock(StubSym);
   MCInst Inst;
@@ -178,7 +178,7 @@ LongJmpPass::lookupGlobalStub(const BinaryBasicBlock &SourceBB,
                               uint64_t DotAddress) const {
   const BinaryFunction &Func = *SourceBB.getFunction();
   const StubGroupsTy &StubGroups =
-      Func.isSplit() && SourceBB.isCold() ? ColdStubGroups : HotStubGroups;
+      SourceBB.isCold() ? ColdStubGroups : HotStubGroups;
   return lookupStubFromGroup(StubGroups, Func, Inst, TgtSym, DotAddress);
 }
 
@@ -188,7 +188,7 @@ BinaryBasicBlock *LongJmpPass::lookupLocalStub(const BinaryBasicBlock &SourceBB,
                                                uint64_t DotAddress) const {
   const BinaryFunction &Func = *SourceBB.getFunction();
   const DenseMap<const BinaryFunction *, StubGroupsTy> &StubGroups =
-      Func.isSplit() && SourceBB.isCold() ? ColdLocalStubs : HotLocalStubs;
+      SourceBB.isCold() ? ColdLocalStubs : HotLocalStubs;
   const auto Iter = StubGroups.find(&Func);
   if (Iter == StubGroups.end())
     return nullptr;
@@ -264,7 +264,7 @@ LongJmpPass::replaceTargetWithStub(BinaryBasicBlock &BB, MCInst &Inst,
     StubBB->setExecutionCount(StubBB->getExecutionCount() + OrigCount);
     if (NewBB) {
       StubBB->addSuccessor(TgtBB, OrigCount, OrigMispreds);
-      StubBB->setIsCold(Func.isSplit() && BB.isCold());
+      StubBB->setIsCold(BB.isCold());
     }
     // Call / tail call
   } else {
@@ -272,7 +272,7 @@ LongJmpPass::replaceTargetWithStub(BinaryBasicBlock &BB, MCInst &Inst,
                               BB.getExecutionCount());
     if (NewBB) {
       assert(TgtBB == nullptr);
-      StubBB->setIsCold(Func.isSplit() && BB.isCold());
+      StubBB->setIsCold(BB.isCold());
       // Set as entry point because this block is valid but we have no preds
       StubBB->getFunction()->addEntryPoint(*StubBB);
     }
@@ -305,7 +305,7 @@ void LongJmpPass::tentativeBBLayout(const BinaryFunction &Func) {
   uint64_t ColdDot = ColdAddresses[&Func];
   bool Cold = false;
   for (const BinaryBasicBlock *BB : Func.getLayout().blocks()) {
-    if (Func.isSplit() && (Cold || BB->isCold())) {
+    if (Cold || BB->isCold()) {
       Cold = true;
       BBAddresses[BB] = ColdDot;
       ColdDot += BC.computeCodeSize(BB->begin(), BB->end());
