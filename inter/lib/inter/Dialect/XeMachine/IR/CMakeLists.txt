@@ -1,4 +1,5 @@
 add_mlir_dialect_library(InterXeMachine
+  Xe2Timing.cpp
   XeMachineDialect.cpp
   XeMachineOps.cpp
   XeMachineRegAlloc.cpp

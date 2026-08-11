@@ -2,6 +2,7 @@
 #define INTER_DIALECT_XEMACHINE_IR_XEMACHINE_H
 
 #include "inter/Dialect/XeMachine/IR/XeMachineTraits.h"
+#include "inter/Dialect/XeMachine/IR/Xe2Timing.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"

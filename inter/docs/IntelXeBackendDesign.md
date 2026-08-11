@@ -31,8 +31,8 @@ MLIR. No pass keeps hidden C++ state across an IR rewrite.
   sections 4 and 12.
 - Multiple Intel platforms. Everything is Xe2; arch gating exists but only
   `xe2` is populated.
-- Performance. The scheduler starts as a legal-order passthrough with a stub
-  cost model.
+- Performance. The scheduler starts as a legal-order passthrough. Its static
+  Xe2 timing model is adapted from the pinned IGC scheduler.
 
 ## 3. Ground truths
 
@@ -42,6 +42,7 @@ requires reverse engineering.
 | What | Where | Role |
 |---|---|---|
 | EU encoding, Xe2 bit-exact | `intel/intel-graphics-compiler`, `visa/iga/GEDLibrary` (GED) | encoder/decoder library, MIT, C API; XE2 tables annotated per-field in `ged_enumerations.h` |
+| Xe2 scheduling timing | same repo, `visa/LocalScheduler/LatencyTable.*` | static completion latency, issue occupancy, send-source read time, and dependency-gap policy |
 | Reference assembler/disassembler | same repo, `visa/iga` (IGA CLI and `iga.h`) | `iga -p xe2 -a/-d`; verification oracle |
 | Container format | `intel/compute-runtime`, `shared/source/device_binary_format/zebin/` | zebin decoder; ground truth for ELF + `.note.zeinfo` |
 | Reference backend | Mesa `src/intel/compiler/elk_*` | RA, SWSB scheduling, regioning legality, payload setup |
@@ -367,9 +368,11 @@ Transform-loop linear scan, transplanted from wave-mlir
   model.
 - One timing oracle shared by scheduler preview and any simulation. No
   second oracle (documented failure mode in wave-mlir).
-- Latency data ships as a JSON overlay produced by a microbenchmark harness
-  on the B60; compiled-in defaults are placeholders. Nothing perf-critical
-  is compiled in.
+- Completion latency, issue occupancy, send-source read time, and dependency
+  gap rules are adapted from IGC's pinned Xe2 scheduler model. XeMachine ops
+  classify themselves; the target timing oracle owns the policy constants.
+  The scheduler algorithm remains wave-mlir's deterministic greedy gap filler,
+  not IGC's list scheduler.
 
 ## 14. SWSB annotation
 
@@ -496,7 +499,7 @@ kernels; drift is a review stop with mandatory A/B benchmark on the B60.
   with symbolic AA; message-form selection via the address planner.
 - **M4 — regalloc + SWSB.** Transform-loop RA with spills; conservative SWSB
   pass; torture tests (deep register pressure, nested CF, mixed sends).
-- **M5 — performance.** Real latency tables from microbench calibration,
+- **M5 — performance.** IGC-derived Xe2 timing tables, greedy gap-filling
   scheduler engagement, block-message selection, compaction, then `dpas`.
 
 ## 19. Risks and open questions
@@ -519,8 +522,9 @@ kernels; drift is a review stop with mandatory A/B benchmark on the B60.
   API is not frozen.
 - **zebin drift.** Pin the NEO commit used for decoder ground truth; CI
   should fail loudly on decoder rejection, not on our writer's opinion.
-- **Latency data.** Nothing public. The microbench harness is the plan;
-  until it exists, the scheduler is a passthrough and perf claims are void.
+- **Latency data.** Intel does not publish a B60 latency table. Use the timing
+  constants and heuristics in the pinned IGC scheduler as the source of truth,
+  preserving latency, occupancy, and send-source read time as distinct values.
 - **Open: exec-width strategy.** Compile per-kernel at a single width chosen
   from zeinfo constraints vs. multi-width specialization. v1: single width,
   chosen up front (default SIMD16, SIMD32 where legal and profitable).
@@ -543,7 +547,7 @@ at the pinned commit from section 3.
 | Uniformity analysis | — (declared in types there) | new; `WaitLattice`/`HazardLattice` as dataflow exemplars |
 | Structured machine CF | `uniform_loop`/`uniform_if`/`exec_if`, `WaveAMDMachineScfFor.cpp`, `WaveAMDExecIfUtils.cpp` | direct concept match to EU CF + mask stack |
 | Regalloc transform loop | `lib/Dialect/Wave/Transforms/RegAlloc/` | direct in shape; drop AGPR provider; region aliasing is new |
-| Scheduler + cost model split | `WaveAMDMachineGreedySchedule.cpp`, `WaveAMDMachineScheduleModel.*`, `CostModel/` | architecture direct; all tables replaced |
+| Scheduler + cost model split | `WaveAMDMachineGreedySchedule.cpp`, `WaveAMDMachineScheduleModel.*`, `CostModel/` | greedy scheduler architecture direct; timing policy adapted from IGC |
 | SWSB pass | `WaveAMDMachineWaitcnt.cpp` (`WaitLattice`, physical source tickets) | closest analog; counter model replaced |
 | Resource info / metadata attrs | `WaveAMDResourceInfo.cpp`, `WaveAMDMetadata.cpp` | pattern direct; zeinfo replaces HSA metadata |
 | Emission buffering + fixups | `lib/Target/Wave/AMDGPU.cpp` buffered MC pattern | pattern direct; GED replaces MCInst/printer |

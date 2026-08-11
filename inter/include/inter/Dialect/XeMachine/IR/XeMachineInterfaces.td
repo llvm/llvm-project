@@ -42,9 +42,10 @@ def XeMachine_InstructionIssueOpInterface : OpInterface<"InstructionIssueOpInter
   }];
   let cppNamespace = "::inter::xemachine";
   let methods = [
-    InterfaceMethod<"Cost-model issue class index.",
-                    "unsigned", "getIssueClass", (ins), "",
-                    "return 0;">,
+    InterfaceMethod<"Target-independent instruction issue class.",
+                    "::inter::xemachine::InstructionIssueClass",
+                    "getIssueClass", (ins), "",
+                    "return ::inter::xemachine::InstructionIssueClass::none;">,
   ];
 }
 

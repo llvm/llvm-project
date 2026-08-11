@@ -9,15 +9,21 @@ include "inter/Dialect/XeMachine/IR/XeMachineInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
-class XeMachine_Op<string mnemonic, list<Trait> traits = []> :
+class XeMachine_Op<string mnemonic, list<Trait> traits = [],
+                   string issueClass = "none"> :
     Op<XeMachineDialect, mnemonic, traits # [
       DeclareOpInterfaceMethods<XeMachine_SWSBInfoOpInterface>,
       DeclareOpInterfaceMethods<XeMachine_RegionLegalityOpInterface>,
       DeclareOpInterfaceMethods<XeMachine_InstructionIssueOpInterface>,
       DeclareOpInterfaceMethods<XeMachine_FixedPhysicalRegisterDefsOpInterface>,
       DeclareOpInterfaceMethods<XeMachine_SendDescriptorOpInterface>,
-    ]> {
+  ]> {
   let cppNamespace = "::inter::xemachine";
+  let extraClassDeclaration = [{
+    ::inter::xemachine::InstructionIssueClass getIssueClass() {
+      return ::inter::xemachine::InstructionIssueClass::}] # issueClass # [{;
+    }
+  }];
 }
 
 def XeMachine_RegOrImm : AnyTypeOf<[XeMachine_RegType, XeMachine_ImmType,
@@ -47,8 +53,9 @@ def XeMachine_ImmOp : XeMachine_Op<"imm", [NoMemoryEffect,
 // Region annotations are operand-register-region strings ("<1;1,0>" etc).
 // Absent means canonical: dst <1>, src <1;1,0>. Region legality is checked
 // by a pass via RegionLegalityOpInterface, not by op verifiers.
-class XeMachine_ALUOp<string mnemonic, list<Trait> traits = []> :
-    XeMachine_Op<mnemonic, traits # [NoMemoryEffect]> {
+class XeMachine_ALUOp<string mnemonic, list<Trait> traits = [],
+                      string issueClass = "moveOrLogic"> :
+    XeMachine_Op<mnemonic, traits # [NoMemoryEffect], issueClass> {
   let cppNamespace = "::inter::xemachine";
 }
 
@@ -69,7 +76,8 @@ def XeMachine_MovOp : XeMachine_ALUOp<"mov"> {
       "$src attr-dict `:` `(` qualified(type($src)) `,` $elemType `)` `->` qualified(type($dst))";
 }
 
-class XeMachine_BinOp<string mnemonic> : XeMachine_ALUOp<mnemonic> {
+class XeMachine_BinOp<string mnemonic, string issueClass = "arithmetic"> :
+    XeMachine_ALUOp<mnemonic, [], issueClass> {
   let arguments = (ins TypeAttr:$elemType,
                        DefaultValuedAttr<I32Attr, "16">:$execSize,
                        OptionalAttr<XeMachine_DstRegionAttr>:$dstRegion,
@@ -93,14 +101,18 @@ def XeMachine_ShlOp : XeMachine_BinOp<"shl"> { let summary = "shift left"; }
 def XeMachine_ShrOp : XeMachine_BinOp<"shr"> {
   let summary = "logical shift right";
 }
-def XeMachine_AndOp : XeMachine_BinOp<"and"> { let summary = "bitwise and"; }
-def XeMachine_OrOp  : XeMachine_BinOp<"or">  { let summary = "bitwise or"; }
+def XeMachine_AndOp : XeMachine_BinOp<"and", "moveOrLogic"> {
+  let summary = "bitwise and";
+}
+def XeMachine_OrOp : XeMachine_BinOp<"or", "moveOrLogic"> {
+  let summary = "bitwise or";
+}
 
 // EU sub is add with a negated first source; the emitter prints the add
 // mnemonic with a negated src0.
 def XeMachine_SubOp : XeMachine_BinOp<"sub"> { let summary = "sub: add(-s0, s1)"; }
 
-def XeMachine_Add3Op : XeMachine_ALUOp<"add3"> {
+def XeMachine_Add3Op : XeMachine_ALUOp<"add3", [], "arithmetic"> {
   let summary = "three-input add";
   let arguments = (ins TypeAttr:$elemType,
                        DefaultValuedAttr<I32Attr, "16">:$execSize,
@@ -128,7 +140,7 @@ def XeMachine_Add3Op : XeMachine_ALUOp<"add3"> {
 // (stores, EOT). Descriptor immediates stay raw until the send-descriptor
 // subsystem lands.
 def XeMachine_SendOp : XeMachine_Op<"send",
-    [MemoryEffects<[MemRead, MemWrite]>, AttrSizedOperandSegments]> {
+    [MemoryEffects<[MemRead, MemWrite]>, AttrSizedOperandSegments], "send"> {
   let summary = "shared-function message";
   let arguments = (ins XeMachine_SendFn:$fn, I32Attr:$sfid, I32Attr:$desc,
                        I32Attr:$exdesc,
@@ -147,7 +159,7 @@ def XeMachine_SendOp : XeMachine_Op<"send",
 
 // Scoreboard/fence synchronization. kind: "nop", "allrd", "allwr", "bar".
 // Token-connected like everything else that orders memory.
-def XeMachine_SyncOp : XeMachine_Op<"sync"> {
+def XeMachine_SyncOp : XeMachine_Op<"sync", [], "sync"> {
   let summary = "software scoreboard synchronization";
   let arguments = (ins XeMachine_SyncKind:$kind,
                        Optional<XeMachine_MemTokenType>:$dependency);
@@ -160,7 +172,7 @@ def XeMachine_SyncOp : XeMachine_Op<"sync"> {
 // message semantics; the emitter owns the descriptor encodings. Memory
 // ordering between them is explicit token edges (design doc section 9).
 class XeMachine_MsgOp<string mnemonic, list<Trait> traits = []> :
-    XeMachine_Op<mnemonic, traits> {
+    XeMachine_Op<mnemonic, traits, "send"> {
   let cppNamespace = "::inter::xemachine";
 }
 
@@ -244,7 +256,7 @@ def XeMachine_FenceSLMOp : XeMachine_MsgOp<"fence_slm",
 }
 
 // Fence drain: waits for the fence readback. Prints as a null-dst mov.
-def XeMachine_FenceAwaitOp : XeMachine_MsgOp<"fence_await", []> {
+def XeMachine_FenceAwaitOp : XeMachine_Op<"fence_await", [], "moveOrLogic"> {
   let arguments = (ins XeMachine_RegType:$readback,
                        Optional<XeMachine_MemTokenType>:$dependency);
   let results = (outs XeMachine_MemTokenType:$token);
@@ -328,7 +340,8 @@ def XeMachine_ContinueIfOp : XeMachine_Op<"continue_if",
       "$cond `:` qualified(type($cond)) attr-dict (`(` $carried^ `:` qualified(type($carried)) `)`)?";
 }
 
-def XeMachine_MulOp : XeMachine_ALUOp<"mul"> {
+def XeMachine_MulOp :
+    XeMachine_ALUOp<"mul", [], "accumulatorArithmetic"> {
   let summary = "multiply, accumulator destination";
   let arguments = (ins TypeAttr:$elemType,
                        DefaultValuedAttr<I32Attr, "16">:$execSize,
@@ -348,7 +361,7 @@ def XeMachine_MulOp : XeMachine_ALUOp<"mul"> {
 
 // Compare: writes a flag register, no GRF destination.
 // cmp (exec|M0) (gt)f0.0 null<1>:ud src0 src1
-def XeMachine_CmpOp : XeMachine_Op<"cmp", [NoMemoryEffect]> {
+def XeMachine_CmpOp : XeMachine_Op<"cmp", [NoMemoryEffect], "arfWrite"> {
   let summary = "compare into a flag register";
   let arguments = (ins XeMachine_CondModifier:$cond,
                        TypeAttr:$elemType,
