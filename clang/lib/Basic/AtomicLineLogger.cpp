@@ -106,11 +106,16 @@ LogLine::~LogLine() {
     DroppedLines->fetch_add(1, std::memory_order_relaxed);
 }
 
+void AtomicLineLogger::setFD(StringRef Path) {
+  LogPath = Path.str();
+  FD.store(openLogFile(Path), std::memory_order_release);
+  log() << "logging_start";
+}
+
 AtomicLineLogger::AtomicLineLogger(StringRef LogFilePath) {
   if (LogFilePath.empty())
     return;
-  LogPath = LogFilePath.str();
-  FD.store(openLogFile(LogFilePath), std::memory_order_release);
+  setFD(LogFilePath);
 }
 
 void AtomicLineLogger::enable(StringRef LogFilePath) {
@@ -129,8 +134,7 @@ void AtomicLineLogger::enable(StringRef LogFilePath) {
   int NewFD = openLogFile(LogFilePath);
   if (NewFD == -1)
     return;
-  LogPath = LogFilePath.str();
-  FD.store(NewFD, std::memory_order_relaxed);
+  setFD(LogFilePath);
   return;
 }
 
@@ -145,6 +149,7 @@ AtomicLineLogger::~AtomicLineLogger() {
   int CurFD = FD.load(std::memory_order_relaxed);
   if (CurFD == -1)
     return;
+  log() << "logging_end";
   if (uint64_t Dropped = DroppedLines.load(std::memory_order_relaxed))
     llvm::errs() << "warning: log '" << LogPath
                  << "' is incomplete: " << Dropped
