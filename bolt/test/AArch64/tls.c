@@ -5,6 +5,8 @@ __thread struct str {
   int b;
 } tbssstruct = {}, tdatastruct = {4, 2};
 
+__thread int directaccess;
+
 extern __thread struct str extstruct;
 
 extern void processAddr(volatile void *);
@@ -18,6 +20,9 @@ int main() {
   processAddr(&tbssstruct.b);
   processAddr(&tdatastruct.b);
 
+  // R_AARCH64_TLSLE_LDST32_TPREL_LO12_NC for a direct access
+  directaccess++;
+
   // The R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21 and
   // R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC relocations
   processAddr(&extstruct.b);
@@ -28,6 +33,8 @@ int main() {
 // RUN:   -Wl,--unresolved-symbols=ignore-all \
 // RUN:   -fuse-ld=lld \
 // RUN:   -nostdlib
+// RUN: llvm-objdump -d -r --disassemble-symbols=main %t.exe \
+// RUN:   | FileCheck %s --check-prefix=CHECK-DIRECT-ACCESS
 // RUN: llvm-bolt %t.exe -o %t.bolt
 // RUN: %clang %cflags -fPIC -pie %s -o %t_pie.exe -Wl,-q \
 // RUN:   -Wl,--unresolved-symbols=ignore-all \
@@ -39,6 +46,11 @@ int main() {
 // RUN:   %t.so -Wl,-q -fuse-ld=lld
 // RUN: llvm-objdump -d -r --disassemble-symbols=main %t.so | FileCheck %s
 // RUN: llvm-bolt %t.so -o %t.bolt.so
+
+// CHECK-DIRECT-ACCESS: R_AARCH64_TLSLE_LDST32_TPREL_LO12_NC directaccess
+// CHECK-DIRECT-ACCESS-NEXT: add {{.*}} #0x1
+// CHECK-DIRECT-ACCESS-NEXT: str {{.*}}
+// CHECK-DIRECT-ACCESS-NEXT: R_AARCH64_TLSLE_LDST32_TPREL_LO12_NC directaccess
 
 // Verify that unoptimized TLS access was generated for shared object.
 // CHECK:      adrp    x0
