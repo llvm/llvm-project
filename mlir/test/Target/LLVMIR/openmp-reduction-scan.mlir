@@ -139,3 +139,11 @@ llvm.mlir.global internal @_QFEb() {addr_space = 0 : i32} : !llvm.array<100 x i3
 //CHECK-NEXT:   %[[REDPRIVVAL:.+]] = load i32, ptr %{{.*}}, align 4
 //CHECK:   store i32 %[[REDPRIVVAL]], ptr %[[ARRAYOFFSET2]], align 4
 //CHECK:   br label %omp.scan.loop.exit
+
+// The shared scan buffer is allocated with malloc in the masked region. The
+// element count is multiplied by the element size in the target's pointer-width
+// integer type (size_t), not the loop index type, so the size computation
+// cannot overflow a narrow (e.g. i32) index before the call to malloc.
+//CHECK: %[[MALLOCSZ:.+]] = mul i64 {{.*}}ptrtoint
+//CHECK: %[[ARR:.+]] = tail call ptr @malloc(i64 %[[MALLOCSZ]])
+//CHECK: store ptr %[[ARR]], ptr %{{.*}}, align 8

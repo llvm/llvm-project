@@ -5128,18 +5128,21 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
       opInst.getReductionMod() == omp::ReductionModifier::task &&
       opInst.getNumReductionVars() > 0;
 
-  // Mark the enclosing alloca stack frame as containing a parallel op. Scan
-  // reductions use the alloca insertion point of the function enclosing the
-  // parallel region to allocate their shared temporary buffer.
-  bool foundParallelOp = false;
+  // Mark the alloca stack frame of the region immediately enclosing this
+  // parallel op as containing a parallel op. Scan reductions allocate a shared
+  // temporary buffer at that frame's alloca insertion point: the buffer must be
+  // shared across this parallel's team (one buffer per team) yet private to each
+  // instance of the enclosing region, so that independent nested parallel teams
+  // do not race on a single buffer. `stackWalk` visits the innermost frame
+  // first, and this parallel op's own frame has not been pushed yet (that
+  // happens later inside `bodyGenCB`), so the first frame visited is exactly the
+  // immediately enclosing region. If there is no enclosing frame (a top-level
+  // parallel), nothing is marked and `findParallelAllocaIP` falls back to the
+  // enclosing function's entry block.
   moduleTranslation.stackWalk<OpenMPAllocStackFrame>(
       [&](OpenMPAllocStackFrame &frame) {
-        if (foundParallelOp) {
-          frame.containsParallelOp = true;
-          return WalkResult::interrupt();
-        }
-        foundParallelOp = true;
-        return WalkResult::skip();
+        frame.containsParallelOp = true;
+        return WalkResult::interrupt();
       });
 
   auto bodyGenCB =

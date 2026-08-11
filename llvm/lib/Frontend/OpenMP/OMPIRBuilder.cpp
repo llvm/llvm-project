@@ -5530,8 +5530,14 @@ Error OpenMPIRBuilder::emitScanBasedDirectiveDeclsIR(
     Type *IndexTy = ScanRedInfo->Span->getType();
     Value *AllocSpan =
         Builder.CreateAdd(ScanRedInfo->Span, ConstantInt::get(IndexTy, 1));
+    // Compute the allocation size in the target's pointer-width integer type
+    // (size_t) rather than the loop index type. `CreateMalloc` multiplies the
+    // element size by the element count in this type, and performing that
+    // multiplication in a narrow index type (e.g. i32) could overflow before
+    // the call to malloc for large scans; the element count is instead
+    // zero-extended to this wider type.
+    Type *IntPtrTy = M.getDataLayout().getIntPtrType(M.getContext());
     for (size_t i = 0; i < ScanVars.size(); i++) {
-      Type *IntPtrTy = IndexTy;
       Constant *Allocsize = ConstantExpr::getSizeOf(ScanVarsType[i]);
       Allocsize = ConstantExpr::getTruncOrBitCast(Allocsize, IntPtrTy);
       Value *Buff = Builder.CreateMalloc(IntPtrTy, ScanVarsType[i], Allocsize,
