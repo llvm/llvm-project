@@ -84,3 +84,8 @@ module RedeclAnnotation {
   header "RedeclAnnotation.h"
   export *
 }
+
+module WhereObjectQualifiers {
+  header "WhereObjectQualifiers.h"
+  export *
+}

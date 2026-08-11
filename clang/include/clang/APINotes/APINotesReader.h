@@ -170,6 +170,12 @@ public:
   lookupCXXMethod(ContextID CtxID, llvm::StringRef Name,
                   llvm::ArrayRef<std::string> Parameters);
 
+  /// Look for information regarding the given C++ method with a composed
+  /// selector. Omitted selector components use the broad name-based key.
+  VersionedInfo<CXXMethodInfo>
+  lookupCXXMethod(ContextID CtxID, llvm::StringRef Name,
+                  const FunctionSelector &Selector);
+
   /// Build the selector key for the given C++ method.
   std::optional<APINotesFunctionSelectorKey>
   getCXXMethodSelectorKey(ContextID CtxID, llvm::StringRef Name);
@@ -179,6 +185,12 @@ public:
   std::optional<APINotesFunctionSelectorKey>
   getCXXMethodSelectorKey(ContextID CtxID, llvm::StringRef Name,
                           llvm::ArrayRef<std::string> Parameters);
+
+  /// Build the selector key for the given C++ method with a composed
+  /// selector.
+  std::optional<APINotesFunctionSelectorKey>
+  getCXXMethodSelectorKey(ContextID CtxID, llvm::StringRef Name,
+                          const FunctionSelector &Selector);
 
   /// Look for information regarding the given global variable.
   ///
@@ -218,8 +230,9 @@ public:
                                llvm::ArrayRef<std::string> Parameters,
                                std::optional<Context> Ctx = std::nullopt);
 
-  /// Collect exact parameter selector keys stored by this reader.
-  void collectExactFunctionParameterSelectors(
+  /// Collect selector keys stored by this reader that should be diagnosed if
+  /// unmatched.
+  void collectFunctionSelectorsForDiagnostics(
       llvm::SmallVectorImpl<APINotesFunctionSelectorKey> &Selectors);
 
   /// Reconstruct parameter selector strings for a stored exact selector key.
@@ -275,10 +288,9 @@ public:
 private:
   VersionedInfo<CXXMethodInfo> lookupCXXMethodImpl(ContextID CtxID,
                                                    llvm::StringRef Name);
-  template <typename ParameterT>
   VersionedInfo<CXXMethodInfo>
   lookupCXXMethodImpl(ContextID CtxID, llvm::StringRef Name,
-                      llvm::ArrayRef<ParameterT> Parameters);
+                      const FunctionSelector &Selector);
 
   VersionedInfo<GlobalFunctionInfo>
   lookupGlobalFunctionImpl(llvm::StringRef Name, std::optional<Context> Ctx);
