@@ -219,6 +219,78 @@ the design intent of the convention; the discriminant-lowering support in
 LLVM is independent of WinCall and is not part of this calling convention
 itself.
 
+## Examples
+
+The following examples show how common C++ types are passed and returned
+under WinCall (``x86_64apx-windows-msvc``, optimized output).
+
+### Empty objects
+
+An empty object (``struct empty {}``) consumes **no register slots**. The
+``int`` that follows it takes the first GPR (ECX):
+
+```c
+struct empty {};
+
+__attribute__((wincall)) void f(struct empty e, int x) { sink(x); }
+```
+
+```asm
+f@win:
+        callq   sink@win        # x is forwarded from ECX; e took no register
+```
+
+An empty object as a return type also uses no register. This makes C++ types
+that contain empty base classes or members cheaper to pass and return than
+under the MS x64 ABI.
+
+### ``__uint128_t`` (and ``__int128_t``, ``std::float128_t``)
+
+A 128-bit integer is split into **two GPRs**: passed in RCX (low) + RDX
+(high), returned in RAX (low) + RDX (high).
+
+```c
+__attribute__((wincall)) __uint128_t f(__uint128_t v);
+```
+
+```asm
+f@win:
+        movq    %rcx, %rax      # low 64 bits: RCX -> RAX
+        retq                    # high 64 bits already in RDX
+```
+
+The same two-register rule applies to ``__int128_t`` and to
+``std::float128_t``.
+
+### ``std::span`` (two-word aggregates)
+
+A ``{pointer, size}`` aggregate such as ``std::span`` or
+``std::string_view`` is 16 bytes, so it is passed in **two** GPRs: the
+pointer in RCX and the length in RDX, and returned in RAX (pointer) + RDX
+(length).
+
+```c
+struct span { void *base; unsigned long long len; };
+
+__attribute__((wincall)) void f(struct span s);
+__attribute__((wincall)) struct span g(void);
+```
+
+```asm
+        callq   g@win           # returns {RAX = base, RDX = len}
+        movq    %rax, %rcx      # pass base in RCX (len already in RDX)
+        callq   f@win
+```
+
+Under the MS x64 ABI this same ``std::span`` argument would be passed by
+pointer; WinCall makes it a zero-cost, purely-register argument.
+
+### Four-word aggregates (``std::string`` / ``std::vector``)
+
+A four-word object such as ``std::string`` or ``std::vector`` (32 bytes) is
+passed in **four** GPRs (RCX, RDX, R8, R9) and returned in RAX, RDX, RCX,
+R8. See the FAQ below for the exact code.
+
 ## FAQ
 
 ### R30 and R31 are callee-saved — can they still be used as scratch registers?
