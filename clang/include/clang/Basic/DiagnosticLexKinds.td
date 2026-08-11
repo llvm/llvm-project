@@ -866,6 +866,13 @@ def err_pp_include_in_arc_cf_code_audited : Error<
 def err_pp_eof_in_arc_cf_code_audited : Error<
   "'#pragma clang arc_cf_code_audited' was not ended within this file">;
 
+def err_pp_pragma_set_pp_state_expected_name : Error<
+  "expected identifier after '#pragma clang __set_pp_state'">;
+def err_pp_pragma_set_pp_state_expected_int_after : Error<
+  "expected integer after '#pragma clang __set_pp_state %0'">;
+def err_pp_pragma_set_pp_state_invalid_arg : Error<
+  "invalid argument %0 in '#pragma clang __set_pp_state'">;
+
 def warn_pp_date_time : Warning<
   "expansion of date or time macro is not reproducible">,
   ShowInSystemHeader, DefaultIgnore, InGroup<DiagGroup<"date-time">>;

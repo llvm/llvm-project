@@ -270,7 +270,9 @@ enum ScriptedExtension {
   eScriptedExtensionScriptedStackFrameRecognizer,
   eScriptedExtensionScriptedCommand,
   eScriptedExtensionParsedCommand,
-  kLastScriptedExtension = eScriptedExtensionParsedCommand
+  eScriptedExtensionScriptedStringSummary,
+  eScriptedExtensionScriptedSyntheticChildren,
+  kLastScriptedExtension = eScriptedExtensionScriptedSyntheticChildren
 };
 
 /// Register numbering types.

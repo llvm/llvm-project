@@ -4919,7 +4919,7 @@ bool AMDGPUAsmParser::validateOpSel(const MCInst &Inst) {
   // Packed math FP32 instructions typically accept SGPRs or VGPRs as source
   // operands. On gfx12+, if a source operand uses SGPRs, the HW can only read
   // the first SGPR and use it for both the low and high operations.
-  if (isPackedFP32Inst(Opc) && isGFX12Plus()) {
+  if (isPackedSingleSGPRFP32Inst(Opc)) {
     int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
     int Src1Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1);
     int OpSelIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel);
@@ -7072,16 +7072,17 @@ bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
   case SRC_SHARED_BASE:
   case SRC_SHARED_LIMIT_LO:
   case SRC_SHARED_LIMIT:
+    return isGFX9Plus();
   case SRC_PRIVATE_BASE_LO:
   case SRC_PRIVATE_BASE:
   case SRC_PRIVATE_LIMIT_LO:
   case SRC_PRIVATE_LIMIT:
-    return isGFX9Plus();
+    return AMDGPU::hasPrivateApertureRegs(getSTI());
   case SRC_FLAT_SCRATCH_BASE_LO:
   case SRC_FLAT_SCRATCH_BASE_HI:
     return hasGloballyAddressableScratch();
   case SRC_POPS_EXITING_WAVE_ID:
-    return isGFX9Plus() && !isGFX11Plus();
+    return hasPopsExitingWaveID(getSTI());
   case TBA:
   case TBA_LO:
   case TBA_HI:
@@ -10839,4 +10840,11 @@ bool AMDGPUOperand::isEndpgm() const { return isImmTy(ImmTyEndpgm); }
 // Split Barrier
 //===----------------------------------------------------------------------===//
 
-bool AMDGPUOperand::isSplitBarrier() const { return isInlinableImm(MVT::i32); }
+bool AMDGPUOperand::isSplitBarrier() const {
+  if (!isImm())
+    return false;
+
+  int64_t Imm = getImm();
+  return isUInt<5>(Imm) || (AMDGPU::Barrier::CLUSTER_TRAP <= Imm &&
+                            Imm <= AMDGPU::Barrier::WORKGROUP);
+}
