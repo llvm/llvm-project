@@ -34874,13 +34874,9 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
       (OpVT.is64BitVector() || OpVT.is128BitVector()) &&
       ResultVT.getScalarSizeInBits() == OpVT.getScalarSizeInBits() * 2 &&
       ResultVT.getVectorNumElements() * 2 == OpVT.getVectorNumElements()) {
-    // A pure partial reduction can lower to a [SU]ADALP.
-    if (isOneVector(RHS)) {
-      bool IsUnsigned = Op.getOpcode() == ISD::PARTIAL_REDUCE_UMLA;
-      unsigned Opc = IsUnsigned ? AArch64ISD::UADDLP : AArch64ISD::SADDLP;
-      return DAG.getNode(ISD::ADD, DL, ResultVT, Acc,
-                         DAG.getNode(Opc, DL, ResultVT, LHS));
-    }
+    // A pure partial reduction can lower to [SU]ADALP via patterns.
+    if (isOneVector(RHS))
+      return Op;
     // Otherwise, expand operations without efficient SVE lowering.
     if (OpVT.getScalarType() == MVT::i8 &&
         !(Subtarget->isSVEorStreamingSVEAvailable() &&

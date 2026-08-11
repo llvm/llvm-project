@@ -6078,6 +6078,22 @@ defm URSQRTE: SIMDTwoVectorS<1, 1, 0b11100, "ursqrte", int_aarch64_neon_ursqrte>
 defm USQADD : SIMDTwoVectorBHSDTied<1, 0b00011, "usqadd",int_aarch64_neon_usqadd>;
 defm XTN    : SIMDMixedTwoVector<0, 0b10010, "xtn", trunc>;
 
+// Patterns for plain partial add reductions, which lower to [SU]ADALP.
+multiclass SelectVectorPartialReduceAdd<ValueType DstVT, ValueType SrcVT, dag immOneV> {
+  def : Pat<(DstVT (partial_reduce_smla DstVT:$Acc, SrcVT:$Input, (SrcVT immOneV))),
+            (!cast<Instruction>("SADALP" # SrcVT # "_" # DstVT) $Acc, $Input)>;
+
+  def : Pat<(DstVT (partial_reduce_umla DstVT:$Acc, SrcVT:$Input, (SrcVT immOneV))),
+            (!cast<Instruction>("UADALP" # SrcVT # "_" # DstVT) $Acc, $Input)>;
+}
+
+defm : SelectVectorPartialReduceAdd<v4i16, v8i8, (AArch64movi (i32 1))>;
+defm : SelectVectorPartialReduceAdd<v2i32, v4i16, (AArch64movi_shift (i32 1), (i32 0))>;
+defm : SelectVectorPartialReduceAdd<v1i64, v2i32, (AArch64movi_shift (i32 1), (i32 0))>;
+defm : SelectVectorPartialReduceAdd<v8i16, v16i8, (AArch64movi (i32 1))>;
+defm : SelectVectorPartialReduceAdd<v4i32, v8i16, (AArch64movi_shift (i32 1), (i32 0))>;
+defm : SelectVectorPartialReduceAdd<v2i64, v4i32, (AArch64movi_shift (i32 1), (i32 0))>;
+
 def : Pat<(v4f16  (AArch64rev32 V64:$Rn)),  (REV32v4i16 V64:$Rn)>;
 def : Pat<(v4f16  (AArch64rev64 V64:$Rn)),  (REV64v4i16 V64:$Rn)>;
 def : Pat<(v4bf16 (AArch64rev32 V64:$Rn)),  (REV32v4i16 V64:$Rn)>;
