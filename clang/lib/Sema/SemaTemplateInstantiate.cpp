@@ -3912,7 +3912,6 @@ bool Sema::InstantiateInClassInitializer(
         << OutermostClass << Pattern;
     Diag(Pattern->getEndLoc(),
          diag::note_default_member_initializer_not_yet_parsed);
-    Instantiation->setInvalidDecl();
     return true;
   }
 
