@@ -110,10 +110,8 @@ MDNode *buildSemanticSignatureMD(
     return nullptr;
 
   SmallVector<Metadata *> ElementMD;
-  llvm::transform(Elements, std::back_inserter(ElementMD),
-                  [&Ctx](const llvm::hlsl::SemanticSignatureElement &Element) {
-                    return Element.toMetadata(Ctx);
-                  });
+  for (const llvm::hlsl::SemanticSignatureElement &Element : Elements)
+    ElementMD.push_back(Element.toMetadata(Ctx));
   return MDNode::get(Ctx, ElementMD);
 }
 
