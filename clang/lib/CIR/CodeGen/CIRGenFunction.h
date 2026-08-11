@@ -2321,6 +2321,12 @@ public:
   /// representation to its value representation.
   mlir::Value emitFromMemory(mlir::Value value, clang::QualType ty);
 
+  /// Reshape a vector of `!cir.bool` to \p numElementsDst lanes, padding with
+  /// poison when widening and dropping the tail when narrowing. Used to move
+  /// packed boolean vectors between their value and memory lane counts.
+  mlir::Value emitBoolVecConversion(mlir::Value srcVec,
+                                    unsigned numElementsDst);
+
   /// Emit a trap instruction, which is used to abort the program in an abnormal
   /// way, usually for debugging purposes.
   /// \p createNewBlock indicates whether to create a new block for the IR

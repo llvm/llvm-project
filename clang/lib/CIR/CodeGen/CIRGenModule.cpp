@@ -1455,6 +1455,16 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
   const VarDecl *initDecl;
   const Expr *initExpr = vd->getAnyInitializer(initDecl);
 
+  // A packed boolean vector is stored as an integer with one bit per lane, so
+  // its initializer has to be folded down to that integer. Classic codegen
+  // sidesteps this by giving the global the vector type, which typed CIR
+  // pointers do not allow.
+  if (initExpr && vd->getType()->isPackedVectorBoolType(astContext)) {
+    errorNYI(vd->getSourceRange(),
+             "emitGlobalVarDefinition: packed boolean vector initializer");
+    return;
+  }
+
   std::optional<ConstantEmitter> emitter;
 
   // CUDA E.2.4.1 "__shared__ variables cannot have an initialization
@@ -1491,7 +1501,7 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
     // exists. A use may still exists, however, so we still may need
     // to do a RAUW.
     assert(!vd->getType()->isIncompleteType() && "Unexpected incomplete type");
-    init = builder.getZeroInitAttr(convertType(vd->getType()));
+    init = builder.getZeroInitAttr(getTypes().convertTypeForMem(vd->getType()));
   } else {
     emitter.emplace(*this);
     mlir::Attribute initializer = emitter->tryEmitForInitializer(*initDecl);

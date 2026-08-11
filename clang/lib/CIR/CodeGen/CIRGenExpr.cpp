@@ -395,10 +395,22 @@ void CIRGenFunction::emitStoreThroughLValue(RValue src, LValue dst,
     if (dst.isVectorElt()) {
       // Read/modify/write the vector, inserting the new element
       const mlir::Location loc = dst.getVectorPointer().getLoc();
-      const mlir::Value vector =
-          builder.createLoad(loc, dst.getVectorAddress());
-      const mlir::Value newVector = cir::VecInsertOp::create(
+      mlir::Value vector = builder.createLoad(loc, dst.getVectorAddress());
+
+      // A packed boolean vector is stored as an integer with one bit per lane,
+      // so unpack it before inserting and pack it again afterwards.
+      auto storeTy = mlir::dyn_cast<cir::IntType>(vector.getType());
+      if (storeTy)
+        vector = builder.createBitcast(
+            vector,
+            cir::VectorType::get(builder.getBoolTy(), storeTy.getWidth()));
+
+      mlir::Value newVector = cir::VecInsertOp::create(
           builder, loc, vector, src.getValue(), dst.getVectorIdx());
+
+      if (storeTy)
+        newVector = builder.createBitcast(newVector, storeTy);
+
       builder.createStore(loc, newVector, dst.getVectorAddress());
       return;
     }
@@ -469,20 +481,24 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
                                        bool isNontemporal) {
 
   if (const auto *clangVecTy = ty->getAs<clang::VectorType>()) {
-    // Boolean vectors use `iN` as storage type.
-    if (clangVecTy->isExtVectorBoolType())
+    if (clangVecTy->isExtVectorBoolType() &&
+        !clangVecTy->isPackedVectorBoolType(getContext())) {
       cgm.errorNYI(addr.getPointer().getLoc(),
-                   "emitStoreOfScalar ExtVectorBoolType");
+                   "emitStoreOfScalar: HLSL bool vector");
+      return;
+    }
 
-    // Handle vectors of size 3 like size 4 for better performance.
-    const mlir::Type elementType = addr.getElementType();
-    const auto vecTy = cast<cir::VectorType>(elementType);
-
-    // TODO(CIR): Use `ABIInfo::getOptimalVectorMemoryType` once it upstreamed
-    assert(!cir::MissingFeatures::cirgenABIInfo());
-    if (vecTy.getSize() == 3 && !getLangOpts().PreserveVec3Type)
-      cgm.errorNYI(addr.getPointer().getLoc(),
-                   "emitStoreOfScalar Vec3 & PreserveVec3Type disabled");
+    // A packed boolean vector is stored as an integer, so the element type is
+    // not a vector and the fixup below does not apply to it. emitToMemory does
+    // the bit-packing instead.
+    if (auto vecTy = mlir::dyn_cast<cir::VectorType>(addr.getElementType())) {
+      // Handle vectors of size 3 like size 4 for better performance.
+      // TODO(CIR): Use `ABIInfo::getOptimalVectorMemoryType` once it upstreamed
+      assert(!cir::MissingFeatures::cirgenABIInfo());
+      if (vecTy.getSize() == 3 && !getLangOpts().PreserveVec3Type)
+        cgm.errorNYI(addr.getPointer().getLoc(),
+                     "emitStoreOfScalar Vec3 & PreserveVec3Type disabled");
+    }
   }
 
   value = emitToMemory(value, ty);
@@ -702,6 +718,21 @@ LValue CIRGenFunction::emitLValueForFieldInitialization(
   return makeAddrLValue(v, fieldType, fieldBaseInfo);
 }
 
+mlir::Value CIRGenFunction::emitBoolVecConversion(mlir::Value srcVec,
+                                                  unsigned numElementsDst) {
+  auto srcTy = mlir::cast<cir::VectorType>(srcVec.getType());
+  unsigned numElementsSrc = srcTy.getSize();
+  if (numElementsSrc == numElementsDst)
+    return srcVec;
+
+  // -1 selects poison, which is what the padding lanes get when widening.
+  SmallVector<int64_t, 16> mask(numElementsDst, -1);
+  for (unsigned i : llvm::seq(std::min(numElementsDst, numElementsSrc)))
+    mask[i] = i;
+
+  return builder.createVecShuffle(srcVec.getLoc(), srcVec, mask);
+}
+
 /// Converts a scalar value from its primary IR type (as returned
 /// by ConvertType) to its load/store type.
 mlir::Value CIRGenFunction::emitToMemory(mlir::Value value, QualType ty) {
@@ -709,7 +740,18 @@ mlir::Value CIRGenFunction::emitToMemory(mlir::Value value, QualType ty) {
     ty = atomicTy->getValueType();
 
   if (ty->isExtVectorBoolType()) {
-    cgm.errorNYI("emitToMemory: extVectorBoolType");
+    if (!ty->isPackedVectorBoolType(getContext())) {
+      // HLSL stores a bool vector as a vector of i32 rather than bit-packing
+      // it, so it needs a zero-extend here instead of the code below.
+      cgm.errorNYI("emitToMemory: HLSL bool vector");
+      return value;
+    }
+
+    // Widen <N x !cir.bool> to the padded lane count, then bitcast the whole
+    // vector to the iP it is stored as.
+    auto storeTy = mlir::cast<cir::IntType>(convertTypeForMem(ty));
+    value = emitBoolVecConversion(value, storeTy.getWidth());
+    return builder.createBitcast(value, storeTy);
   }
 
   // Unlike in classic codegen CIR, bools are kept as `cir.bool` and BitInts are
@@ -723,7 +765,13 @@ mlir::Value CIRGenFunction::emitFromMemory(mlir::Value value, QualType ty) {
     ty = atomicTy->getValueType();
 
   if (ty->isPackedVectorBoolType(getContext())) {
-    cgm.errorNYI("emitFromMemory: PackedVectorBoolType");
+    // Undo emitToMemory: bitcast the iP back to a vector of that many bool
+    // lanes, then narrow it to the type's actual lane count.
+    auto storeTy = mlir::cast<cir::IntType>(value.getType());
+    auto valueTy = mlir::cast<cir::VectorType>(convertType(ty));
+    mlir::Value paddedVec = builder.createBitcast(
+        value, cir::VectorType::get(builder.getBoolTy(), storeTy.getWidth()));
+    return emitBoolVecConversion(paddedVec, valueTy.getSize());
   }
 
   return value;
@@ -750,18 +798,22 @@ mlir::Value CIRGenFunction::emitLoadOfScalar(Address addr, bool isVolatile,
   mlir::Type eltTy = addr.getElementType();
 
   if (const auto *clangVecTy = ty->getAs<clang::VectorType>()) {
-    if (clangVecTy->isExtVectorBoolType()) {
-      cgm.errorNYI(loc, "emitLoadOfScalar: ExtVectorBoolType");
+    if (clangVecTy->isExtVectorBoolType() &&
+        !clangVecTy->isPackedVectorBoolType(getContext())) {
+      cgm.errorNYI(loc, "emitLoadOfScalar: HLSL bool vector");
       return nullptr;
     }
 
-    const auto vecTy = cast<cir::VectorType>(eltTy);
-
-    // Handle vectors of size 3 like size 4 for better performance.
-    assert(!cir::MissingFeatures::cirgenABIInfo());
-    if (vecTy.getSize() == 3 && !getLangOpts().PreserveVec3Type)
-      cgm.errorNYI(addr.getPointer().getLoc(),
-                   "emitLoadOfScalar Vec3 & PreserveVec3Type disabled");
+    // A packed boolean vector is stored as an integer, so the element type is
+    // not a vector and the fixup below does not apply to it. emitFromMemory
+    // unpacks the loaded integer back into lanes.
+    if (auto vecTy = mlir::dyn_cast<cir::VectorType>(eltTy)) {
+      // Handle vectors of size 3 like size 4 for better performance.
+      assert(!cir::MissingFeatures::cirgenABIInfo());
+      if (vecTy.getSize() == 3 && !getLangOpts().PreserveVec3Type)
+        cgm.errorNYI(addr.getPointer().getLoc(),
+                     "emitLoadOfScalar Vec3 & PreserveVec3Type disabled");
+    }
   }
 
   assert(!cir::MissingFeatures::opLoadStoreTbaa());
@@ -782,7 +834,7 @@ mlir::Value CIRGenFunction::emitLoadOfScalar(Address addr, bool isVolatile,
   // conversion here: like bool and _BitInt(N), CIR keeps them in their literal
   // type until LowerToLLVM widens them to the in-memory integer type (see
   // emitToMemory).
-  return loadOp;
+  return emitFromMemory(loadOp, ty);
 }
 
 mlir::Value CIRGenFunction::emitLoadOfScalar(LValue lvalue,

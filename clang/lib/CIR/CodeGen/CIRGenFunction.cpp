@@ -221,7 +221,12 @@ void CIRGenFunction::emitAndUpdateRetAlloca(QualType type, mlir::Location loc,
                                             CharUnits alignment) {
   if (!type->isVoidType()) {
     Address allocaAddr = Address::invalid();
-    returnValue = createMemTemp(type, alignment, loc, "__retval", &allocaAddr);
+    // As in classic codegen's CreateIRTemp, the return slot is typed with the
+    // value representation of the type rather than the in-memory one. The two
+    // only differ for packed boolean vectors.
+    returnValue = createTempAlloca(convertType(type), /*destAddrSpace=*/{},
+                                   alignment, loc, "__retval",
+                                   /*arraySize=*/nullptr, &allocaAddr);
     fnRetAlloca = allocaAddr.getPointer();
   }
 }
@@ -447,7 +452,7 @@ void CIRGenFunction::emitFunctionProlog(const FunctionArgList &args,
 
     mlir::Value addrVal =
         emitAlloca(cast<NamedDecl>(paramVar)->getName(),
-                   convertType(paramVar->getType()), paramLoc, alignment,
+                   convertTypeForMem(paramVar->getType()), paramLoc, alignment,
                    /*insertIntoFnEntryBlock=*/true);
 
     declare(addrVal, paramVar, paramVar->getType(), paramLoc, alignment,
@@ -464,6 +469,11 @@ void CIRGenFunction::emitFunctionProlog(const FunctionArgList &args,
     // Location of the store to the param storage tracked as beginning of
     // the function body.
     mlir::Location fnBodyBegin = getLoc(bodyBeginLoc);
+    // The argument arrives in its register form; convert it to the in-memory
+    // form the alloca was typed for. This is a no-op except for packed boolean
+    // vectors, which are held as <N x !cir.bool> but stored bit-packed in an
+    // integer.
+    paramVal = emitToMemory(paramVal, paramVar->getType());
     builder.CIRBaseBuilderTy::createStore(fnBodyBegin, paramVal, addrVal);
   }
   assert(builder.getInsertionBlock() && "Should be valid");

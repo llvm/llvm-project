@@ -549,7 +549,9 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     QualType elemTy = ptrTy->getPointeeType();
     assert(!elemTy->isConstantMatrixType() && "not implemented");
 
-    mlir::Type pointeeType = convertType(elemTy);
+    // The pointee is spelled with its in-memory type, matching references
+    // above. This only differs from convertType for packed boolean vectors.
+    mlir::Type pointeeType = convertTypeForMem(elemTy);
 
     resultType = builder.getPointerTo(pointeeType, elemTy.getAddressSpace());
     break;
@@ -688,6 +690,15 @@ mlir::Type CIRGenTypes::convertTypeForMem(clang::QualType qualType,
   }
 
   mlir::Type convertedType = convertType(qualType);
+
+  // A packed boolean vector (an ext_vector_type of bool outside of HLSL) is a
+  // vector of bits: it is held in registers as <N x !cir.bool> but stored as a
+  // single integer with one bit per lane, padded up to at least a byte.
+  if (qualType->isPackedVectorBoolType(astContext)) {
+    uint64_t numElems = mlir::cast<cir::VectorType>(convertedType).getSize();
+    return cir::IntType::get(&getMLIRContext(), std::max<uint64_t>(numElems, 8),
+                             /*isSigned=*/false);
+  }
 
   assert(!forBitField && "Bit fields NYI");
 
