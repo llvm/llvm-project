@@ -2416,8 +2416,7 @@ private:
     Fortran::lower::omp::ReductionProcessor rp;
     bool result = rp.processReductionArguments<fir::DeclareReductionOp>(
         toLocation(), *this, info.reduceOperatorList, reduceVars,
-        reduceVarByRef, reductionDeclSymbols, info.reduceSymList,
-        /*reductionObjects=*/{}, getSymbolMap());
+        reduceVarByRef, reductionDeclSymbols, info.reduceSymList);
     if (!result)
       TODO(toLocation(), "Lowering unrecognised reduction type");
 
