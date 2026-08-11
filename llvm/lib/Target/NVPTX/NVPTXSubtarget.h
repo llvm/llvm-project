@@ -157,6 +157,7 @@ public:
 
   // Checks Rubin family extensions support.
   //  - TMA S2G im2col_w mode support
+  //  - tcgen05.commit shared mem A variants.
   bool hasRubinFamilySupport() const { return hasAnyFeature({NVPTX::SM107f}); }
 
   // Checks tcgen05.shift instruction support.
@@ -253,6 +254,11 @@ public:
   bool hasNarrowFPToBF16x2ConversionSupport() const {
     return PTXVersion >= 92 &&
            hasAnyFeature({NVPTX::SM100f, NVPTX::SM110f, NVPTX::SM120f});
+  }
+
+  // Checks support for conversions involving ue5m3x2.
+  bool hasUE5M3TypeSupport() const {
+    return PTXVersion >= 94 && hasAnyFeature({NVPTX::SM107f});
   }
 
   bool hasTensormapReplaceSupport() const {

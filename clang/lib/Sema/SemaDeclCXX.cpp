@@ -2351,6 +2351,7 @@ CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
 
   case Stmt::LabelStmtClass:
   case Stmt::GotoStmtClass:
+  case Stmt::IndirectGotoStmtClass:
     if (Cxx2bLoc.isInvalid())
       Cxx2bLoc = S->getBeginLoc();
     for (Stmt *SubStmt : S->children()) {

@@ -617,6 +617,12 @@ public:
     }
   };
 
+  /// True if the current statement has noinline attribute.
+  bool inNoInlineAttributedStmt = false;
+
+  /// True if the current statement has always_inline attribute.
+  bool inAlwaysInlineAttributedStmt = false;
+
   // The CallExpr within the current statement that the musttail attribute
   // applies to.  nullptr if there is no 'musttail' on the current statement.
   const CallExpr *mustTailCall = nullptr;
@@ -2569,7 +2575,10 @@ public:
   mlir::LogicalResult emitOMPFlushDirective(const OMPFlushDirective &s);
   mlir::LogicalResult emitOMPDepobjDirective(const OMPDepobjDirective &s);
   mlir::LogicalResult emitOMPScanDirective(const OMPScanDirective &s);
-  mlir::LogicalResult emitOMPOrderedDirective(const OMPOrderedDirective &s);
+  mlir::LogicalResult
+  emitOMPOrderedStandaloneDirective(const OMPOrderedStandaloneDirective &s);
+  mlir::LogicalResult
+  emitOMPOrderedBlockAssocDirective(const OMPOrderedBlockAssocDirective &s);
   mlir::LogicalResult emitOMPAtomicDirective(const OMPAtomicDirective &s);
   mlir::LogicalResult emitOMPTargetDirective(const OMPTargetDirective &s);
   mlir::LogicalResult emitOMPTeamsDirective(const OMPTeamsDirective &s);
