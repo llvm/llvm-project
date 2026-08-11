@@ -6,7 +6,7 @@ from lldbsuite.test.decorators import *
 
 class TestProcessHandle(TestBase):
     @no_debug_info_test
-    @skipIfWindows
+    @requireNotWindows
     def test_process_handle(self):
         """Test that calling process handle before we have a target, and before we
         have a process will affect the process.  Also that the signal settings
