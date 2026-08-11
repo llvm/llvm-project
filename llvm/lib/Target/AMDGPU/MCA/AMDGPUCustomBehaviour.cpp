@@ -246,7 +246,7 @@ void AMDGPUCustomBehaviour::generateWaitCntInfo() {
 
   for (const auto &EN : llvm::enumerate(SrcMgr.getInstructions())) {
     const std::unique_ptr<Instruction> &Inst = EN.value();
-    unsigned Index = static_cast<unsigned>(EN.index());
+    size_t Index = EN.index();
     unsigned Opcode = Inst->getOpcode();
     const MCInstrDesc &MCID = MCII.get(Opcode);
     if (SIInstrFlags::isDS(MCID) && SIInstrFlags::usesLGKM_CNT(MCID)) {
