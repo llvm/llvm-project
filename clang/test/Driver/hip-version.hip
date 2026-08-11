@@ -78,3 +78,46 @@
 // RUN:   | FileCheck -check-prefixes=INVALID %s
 
 // INVALID: error: invalid value 'x.y' in '--hip-version=x.y'
+
+// Test that the HIP_RUNTIME_SANITIZER field of the HIP version file is
+// parsed with -fsanitize= semantics. A missing field, or a "none" value,
+// means the runtime has no sanitizer. A comma-separated list containing
+// "address" means the runtime was built with the address sanitizer.
+
+// RUN: rm -rf %t/Inputs
+// RUN: mkdir -p %t/Inputs
+
+// No HIP_RUNTIME_SANITIZER field at all.
+// RUN: cp -R %S/Inputs/rocm %t/Inputs/rocm-no-field
+// RUN: %clang -v --rocm-path=%t/Inputs/rocm-no-field 2>&1 \
+// RUN:   | FileCheck -check-prefixes=NOASAN %s
+
+// HIP_RUNTIME_SANITIZER=none.
+// RUN: cp -R %S/Inputs/rocm %t/Inputs/rocm-none
+// RUN: printf 'HIP_RUNTIME_SANITIZER=none\n' >> %t/Inputs/rocm-none/bin/.hipVersion
+// RUN: %clang -v --rocm-path=%t/Inputs/rocm-none 2>&1 \
+// RUN:   | FileCheck -check-prefixes=NOASAN %s
+
+// HIP_RUNTIME_SANITIZER set to a sanitizer other than address.
+// RUN: cp -R %S/Inputs/rocm %t/Inputs/rocm-other
+// RUN: printf 'HIP_RUNTIME_SANITIZER=undefined\n' >> %t/Inputs/rocm-other/bin/.hipVersion
+// RUN: %clang -v --rocm-path=%t/Inputs/rocm-other 2>&1 \
+// RUN:   | FileCheck -check-prefixes=NOASAN %s
+
+// HIP_RUNTIME_SANITIZER=address.
+// RUN: cp -R %S/Inputs/rocm %t/Inputs/rocm-address
+// RUN: printf 'HIP_RUNTIME_SANITIZER=address\n' >> %t/Inputs/rocm-address/bin/.hipVersion
+// RUN: %clang -v --rocm-path=%t/Inputs/rocm-address 2>&1 \
+// RUN:   | FileCheck -check-prefixes=ASAN %s
+
+// HIP_RUNTIME_SANITIZER as a comma-separated list including address.
+// RUN: cp -R %S/Inputs/rocm %t/Inputs/rocm-multi
+// RUN: printf 'HIP_RUNTIME_SANITIZER=undefined,address\n' >> %t/Inputs/rocm-multi/bin/.hipVersion
+// RUN: %clang -v --rocm-path=%t/Inputs/rocm-multi 2>&1 \
+// RUN:   | FileCheck -check-prefixes=ASAN %s
+
+// ASAN: Found HIP installation: {{.*}}
+// ASAN-NEXT: HIP runtime is built with the address sanitizer enabled
+
+// NOASAN: Found HIP installation: {{.*}}
+// NOASAN-NOT: HIP runtime is built with the address sanitizer enabled

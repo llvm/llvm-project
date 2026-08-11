@@ -16,6 +16,7 @@
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "clang/Options/Options.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Option/ArgList.h"
@@ -163,6 +164,8 @@ bool RocmInstallationDetector::parseHIPVersionFile(llvm::StringRef V) {
   V.split(VersionParts, '\n');
   unsigned Major = ~0U;
   unsigned Minor = ~0U;
+  // Assume no runtime sanitizer unless the version file says otherwise.
+  HasHIPRuntimeAsan = false;
   for (auto Part : VersionParts) {
     auto Splits = Part.rtrim().split('=');
     if (Splits.first == "HIP_VERSION_MAJOR") {
@@ -173,6 +176,11 @@ bool RocmInstallationDetector::parseHIPVersionFile(llvm::StringRef V) {
         return true;
     } else if (Splits.first == "HIP_VERSION_PATCH")
       VersionPatch = Splits.second.str();
+    else if (Splits.first == "HIP_RUNTIME_SANITIZER") {
+      SmallVector<StringRef, 4> Sanitizers;
+      Splits.second.split(Sanitizers, ',');
+      HasHIPRuntimeAsan = llvm::is_contained(Sanitizers, "address");
+    }
   }
   if (Major == ~0U || Minor == ~0U)
     return true;
@@ -523,9 +531,12 @@ void RocmInstallationDetector::detectHIPRuntime(
 }
 
 void RocmInstallationDetector::print(raw_ostream &OS) const {
-  if (hasHIPRuntime())
+  if (hasHIPRuntime()) {
     OS << "Found HIP installation: " << InstallPath << ", version "
        << DetectedVersion << '\n';
+    if (hasHIPRuntimeAsan())
+      OS << "HIP runtime is built with the address sanitizer enabled\n";
+  }
 }
 
 void RocmInstallationDetector::AddHIPIncludeArgs(const ArgList &DriverArgs,
