@@ -1,7 +1,5 @@
 # Clang-Doc
 
-```{contents}
-```
 
 ```{toctree}
 :maxdepth: 1
