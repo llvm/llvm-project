@@ -12,6 +12,8 @@
 
 #include <level_zero/zes_api.h>
 
+#include "APIHelpers.h"
+#include "L0Compat.h"
 #include "L0Device.h"
 #include "L0Interop.h"
 #include "L0Kernel.h"
@@ -292,8 +294,8 @@ LevelZeroPluginTy::createPluginContext(
 
   ze_context_handle_t ZeContext = nullptr;
   bool OwnsZeContext = false;
-  if (IsFullDriver && DriverCtx.zeDriverGetDefaultContext)
-    ZeContext = DriverCtx.zeDriverGetDefaultContext(Driver);
+  if (IsFullDriver && api_helper::canCall<zeDriverGetDefaultContext>())
+    ZeContext = zeDriverGetDefaultContext(Driver);
   if (!ZeContext) {
     ze_context_desc_t Desc{ZE_STRUCTURE_TYPE_CONTEXT_DESC, nullptr, 0};
     CALL_ZE_RET_ERROR(zeContextCreate, Driver, &Desc, &ZeContext);
