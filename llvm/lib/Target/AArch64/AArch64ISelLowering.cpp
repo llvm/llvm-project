@@ -1630,6 +1630,14 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::GET_ACTIVE_LANE_MASK, VT, Legal);
     }
 
+    if (Subtarget->hasSVE2() && Subtarget->isSVEAvailable()) {
+      for (MVT VT : {MVT::nxv16i1, MVT::nxv8i1})
+        setOperationAction(ISD::VECTOR_MATCH, VT, Custom);
+
+      for (MVT VT : {MVT::v16i1, MVT::v8i1, MVT::v16i8, MVT::v8i8})
+        setOperationAction(ISD::VECTOR_MATCH, VT, Custom);
+    }
+
     setOperationAction(ISD::GET_ACTIVE_LANE_MASK, MVT::nxv1i1, Custom);
 
     if (Subtarget->isSVEorStreamingSVEAvailable() &&
@@ -2457,19 +2465,6 @@ bool AArch64TargetLowering::shouldExpandCttzElements(EVT VT) const {
   return VT != MVT::nxv16i1 && VT != MVT::nxv8i1 && VT != MVT::nxv4i1 &&
          VT != MVT::nxv2i1 && VT != MVT::v16i1 && VT != MVT::v8i1 &&
          VT != MVT::v4i1 && VT != MVT::v2i1;
-}
-
-bool AArch64TargetLowering::shouldExpandVectorMatch(EVT VT,
-                                                    unsigned SearchSize) const {
-  // MATCH is SVE2 and only available in non-streaming mode.
-  if (!Subtarget->hasSVE2() || !Subtarget->isSVEAvailable())
-    return true;
-  // Furthermore, we can only use it for 8-bit or 16-bit elements.
-  if (VT == MVT::nxv8i16 || VT == MVT::v8i16)
-    return SearchSize != 8;
-  if (VT == MVT::nxv16i8 || VT == MVT::v16i8 || VT == MVT::v8i8)
-    return SearchSize != 8 && SearchSize != 16;
-  return true;
 }
 
 void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
@@ -6459,20 +6454,28 @@ static SDValue LowerSMELdrStr(SDValue N, SelectionDAG &DAG, bool IsLoad) {
 
 static SDValue LowerVectorMatch(SDValue Op, SelectionDAG &DAG) {
   SDLoc DL(Op);
-  SDValue ID =
-      DAG.getTargetConstant(Intrinsic::aarch64_sve_match, DL, MVT::i64);
-
-  auto Op1 = Op.getOperand(1);
-  auto Op2 = Op.getOperand(2);
-  auto Mask = Op.getOperand(3);
+  auto Op1 = Op.getOperand(0);
+  auto Op2 = Op.getOperand(1);
+  auto Mask = Op.getOperand(2);
 
   EVT Op1VT = Op1.getValueType();
   EVT Op2VT = Op2.getValueType();
   EVT ResVT = Op.getValueType();
+  unsigned SearchSize = Op2VT.getVectorNumElements();
 
   assert((Op1VT.getVectorElementType() == MVT::i8 ||
           Op1VT.getVectorElementType() == MVT::i16) &&
          "Expected 8-bit or 16-bit characters.");
+
+  if ((Op1VT == MVT::nxv8i16 || Op1VT == MVT::v8i16) && SearchSize != 8)
+    return SDValue();
+
+  if ((Op1VT == MVT::nxv16i8 || Op1VT == MVT::v16i8 || Op1VT == MVT::v8i8) &&
+      SearchSize != 8 && SearchSize != 16)
+    return SDValue();
+
+  SDValue ID =
+      DAG.getTargetConstant(Intrinsic::aarch64_sve_match, DL, MVT::i64);
 
   // Scalable vector type used to wrap operands.
   // A single container is enough for both operands because ultimately the
@@ -7199,9 +7202,6 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
         ISD::EXTRACT_VECTOR_ELT, DL, ResVT == MVT::i32 ? MVT::i32 : MVT::i64,
         ADDLV, DAG.getConstant(0, DL, MVT::i64));
     return EXTRACT_VEC_ELT;
-  }
-  case Intrinsic::experimental_vector_match: {
-    return LowerVectorMatch(Op, DAG);
   }
   case Intrinsic::aarch64_cls:
   case Intrinsic::aarch64_cls64: {
@@ -8836,6 +8836,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerVECTOR_INTERLEAVE(Op, DAG);
   case ISD::GET_ACTIVE_LANE_MASK:
     return LowerGET_ACTIVE_LANE_MASK(Op, DAG);
+  case ISD::VECTOR_MATCH:
+    return LowerVectorMatch(Op, DAG);
   case ISD::LRINT:
   case ISD::LLRINT:
     if (Op.getValueType().isVector())
@@ -32334,6 +32336,21 @@ void AArch64TargetLowering::ReplaceNodeResults(
   case ISD::GET_ACTIVE_LANE_MASK:
     ReplaceGetActiveLaneMaskResults(N, Results, DAG);
     return;
+  case ISD::VECTOR_MATCH: {
+    EVT VT = N->getValueType(0);
+    if (!VT.isFixedLengthVectorOf(MVT::i1))
+      return;
+
+    // NOTE: Only trivial type promotion is supported.
+    EVT NewVT = getTypeToTransformTo(*DAG.getContext(), VT);
+    if (NewVT.getVectorNumElements() != VT.getVectorNumElements())
+      return;
+
+    SDLoc DL(N);
+    SDValue V = DAG.getNode(ISD::VECTOR_MATCH, DL, NewVT, N->ops());
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, V));
+    return;
+  }
   case ISD::INTRINSIC_WO_CHAIN: {
     EVT VT = N->getValueType(0);
 
@@ -32388,20 +32405,6 @@ void AArch64TargetLowering::ReplaceNodeResults(
           getRuntimePStateSM(DAG, Chain, DL, N->getValueType(0));
       Results.push_back(
           DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, RuntimePStateSM));
-      return;
-    }
-    case Intrinsic::experimental_vector_match: {
-      if (!VT.isFixedLengthVectorOf(MVT::i1))
-        return;
-
-      // NOTE: Only trivial type promotion is supported.
-      EVT NewVT = getTypeToTransformTo(*DAG.getContext(), VT);
-      if (NewVT.getVectorNumElements() != VT.getVectorNumElements())
-        return;
-
-      SDLoc DL(N);
-      auto V = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, NewVT, N->ops());
-      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, V));
       return;
     }
     }

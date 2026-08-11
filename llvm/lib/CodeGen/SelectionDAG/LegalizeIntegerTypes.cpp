@@ -168,6 +168,9 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::GET_ACTIVE_LANE_MASK:
     Res = PromoteIntRes_GET_ACTIVE_LANE_MASK(N);
     break;
+  case ISD::VECTOR_MATCH:
+    Res = PromoteIntRes_VECTOR_MATCH(N);
+    break;
 
   case ISD::PARTIAL_REDUCE_UMLA:
   case ISD::PARTIAL_REDUCE_SMLA:
@@ -2293,6 +2296,9 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::GET_ACTIVE_LANE_MASK:
     Res = PromoteIntOp_GET_ACTIVE_LANE_MASK(N);
     break;
+  case ISD::VECTOR_MATCH:
+    Res = PromoteIntOp_VECTOR_MATCH(N, OpNo);
+    break;
   case ISD::MASKED_UDIV:
   case ISD::MASKED_SDIV:
   case ISD::MASKED_UREM:
@@ -3163,6 +3169,16 @@ SDValue DAGTypeLegalizer::PromoteIntOp_GET_ACTIVE_LANE_MASK(SDNode *N) {
   SmallVector<SDValue, 1> NewOps(N->ops());
   NewOps[0] = ZExtPromotedInteger(N->getOperand(0));
   NewOps[1] = ZExtPromotedInteger(N->getOperand(1));
+  return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntOp_VECTOR_MATCH(SDNode *N, unsigned OpNo) {
+  assert(OpNo < 3 && "Unexpected operand for promotion");
+  if (OpNo != 2)
+    return TLI.expandVectorMatch(N, DAG);
+
+  SmallVector<SDValue, 3> NewOps(N->ops());
+  NewOps[2] = PromoteTargetBoolean(N->getOperand(2), N->getValueType(0));
   return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
 }
 
@@ -6603,6 +6619,14 @@ SDValue DAGTypeLegalizer::PromoteIntRes_GET_ACTIVE_LANE_MASK(SDNode *N) {
   EVT VT = N->getValueType(0);
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
   return DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, SDLoc(N), NVT, N->ops());
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_MATCH(SDNode *N) {
+  EVT VT = N->getValueType(0);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  SmallVector<SDValue, 3> NewOps(N->ops());
+  NewOps[2] = PromoteTargetBoolean(N->getOperand(2), NVT);
+  return DAG.getNode(ISD::VECTOR_MATCH, SDLoc(N), NVT, NewOps, N->getFlags());
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_PARTIAL_REDUCE_MLA(SDNode *N) {
