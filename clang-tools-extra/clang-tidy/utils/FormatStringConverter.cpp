@@ -618,11 +618,10 @@ bool FormatStringConverter::convertArgument(const PrintfSpecifier &FS,
 }
 
 /// Called for each format specifier by ParsePrintfString.
-bool FormatStringConverter::HandlePrintfSpecifier(const PrintfSpecifier &FS,
-                                                  const char *StartSpecifier,
-                                                  unsigned SpecifierLen,
-                                                  const TargetInfo &Target,
-                                                  const llvm::TextEncodingConverter &) {
+bool FormatStringConverter::HandlePrintfSpecifier(
+    const PrintfSpecifier &FS, const char *StartSpecifier,
+    unsigned SpecifierLen, const TargetInfo &Target,
+    const llvm::TextEncodingConverter &) {
   const size_t StartSpecifierPos = StartSpecifier - PrintfFormatString.data();
   assert(StartSpecifierPos + SpecifierLen <= PrintfFormatString.size());
 
