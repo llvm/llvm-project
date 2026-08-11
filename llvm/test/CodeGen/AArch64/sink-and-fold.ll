@@ -231,30 +231,30 @@ define void @f5(ptr %a, i32 %n, i32 %k) nounwind {
 ; CHECK-NEXT:  // %bb.1: // %L.preheader
 ; CHECK-NEXT:    str x30, [sp, #-48]! // 8-byte Folded Spill
 ; CHECK-NEXT:    mov w8, #12 // =0xc
+; CHECK-NEXT:    stp x22, x21, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    add x22, x0, #8
+; CHECK-NEXT:    smaddl x21, w2, w8, x0
 ; CHECK-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov w19, w1
-; CHECK-NEXT:    smaddl x20, w2, w8, x0
-; CHECK-NEXT:    stp x22, x21, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    add x21, x0, #8
-; CHECK-NEXT:    mov w22, #-1 // =0xffffffff
+; CHECK-NEXT:    mov w20, wzr
 ; CHECK-NEXT:    b .LBB5_4
 ; CHECK-NEXT:  .LBB5_2: // %if.else
 ; CHECK-NEXT:    // in Loop: Header=BB5_4 Depth=1
-; CHECK-NEXT:    ldur w0, [x20, #4]
+; CHECK-NEXT:    ldur w0, [x21, #4]
 ; CHECK-NEXT:  .LBB5_3: // %L.latch
 ; CHECK-NEXT:    // in Loop: Header=BB5_4 Depth=1
-; CHECK-NEXT:    add w22, w22, #1
-; CHECK-NEXT:    str w0, [x21], #12
-; CHECK-NEXT:    cmp w22, w19
+; CHECK-NEXT:    cmp w20, w19
+; CHECK-NEXT:    add w20, w20, #1
+; CHECK-NEXT:    str w0, [x22], #12
 ; CHECK-NEXT:    b.ge .LBB5_6
 ; CHECK-NEXT:  .LBB5_4: // %L
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr w8, [x21]
+; CHECK-NEXT:    ldr w8, [x22]
 ; CHECK-NEXT:    tbz w8, #31, .LBB5_2
 ; CHECK-NEXT:  // %bb.5: // %if.then
 ; CHECK-NEXT:    // in Loop: Header=BB5_4 Depth=1
-; CHECK-NEXT:    add x0, x20, #4
-; CHECK-NEXT:    add w1, w22, #1
+; CHECK-NEXT:    add x0, x21, #4
+; CHECK-NEXT:    mov w1, w20
 ; CHECK-NEXT:    bl use
 ; CHECK-NEXT:    b .LBB5_3
 ; CHECK-NEXT:  .LBB5_6:

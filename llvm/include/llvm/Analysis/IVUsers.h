@@ -14,7 +14,6 @@
 #ifndef LLVM_ANALYSIS_IVUSERS_H
 #define LLVM_ANALYSIS_IVUSERS_H
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/ScalarEvolutionNormalization.h"
@@ -106,10 +105,6 @@ class IVUsers {
   // Ephemeral values used by @llvm.assume in this function.
   SmallPtrSet<const Value *, 32> EphValues;
 
-  /// The position of every basic block within its function, used to visit
-  /// the users of an instruction in a use-list-order-independent order.
-  DenseMap<const BasicBlock *, unsigned> BBPositions;
-
 public:
   LLVM_ABI IVUsers(Loop *L, AssumptionCache *AC, LoopInfo *LI,
                    DominatorTree *DT, ScalarEvolution *SE);
@@ -117,8 +112,7 @@ public:
   IVUsers(IVUsers &&X)
       : L(std::move(X.L)), AC(std::move(X.AC)), DT(std::move(X.DT)),
         SE(std::move(X.SE)), Processed(std::move(X.Processed)),
-        IVUses(std::move(X.IVUses)), EphValues(std::move(X.EphValues)),
-        BBPositions(std::move(X.BBPositions)) {
+        IVUses(std::move(X.IVUses)), EphValues(std::move(X.EphValues)) {
     for (IVStrideUse &U : IVUses)
       U.Parent = this;
   }

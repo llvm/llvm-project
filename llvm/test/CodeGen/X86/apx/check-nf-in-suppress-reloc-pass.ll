@@ -7,42 +7,35 @@
 define fastcc void @foo(i32 %0, i1 %or.cond) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    pushq %r15
 ; CHECK-NEXT:    pushq %r14
-; CHECK-NEXT:    pushq %r13
 ; CHECK-NEXT:    pushq %r12
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    movl %esi, %ebx
-; CHECK-NEXT:    movslq %edi, %r15
-; CHECK-NEXT:    leaq (,%r15,4), %rax
-; CHECK-NEXT:    leaq (%rax,%rax,4), %r14
-; CHECK-NEXT:    movl %r15d, %r12d
-; CHECK-NEXT:    xorl %r13d, %r13d
-; CHECK-NEXT:    xorl %ebp, %ebp
+; CHECK-NEXT:    movslq %edi, %r14
+; CHECK-NEXT:    leaq (,%r14,4), %rax
+; CHECK-NEXT:    leaq (%rax,%rax,4), %r15
+; CHECK-NEXT:    xorl %r12d, %r12d
 ; CHECK-NEXT:    jmp .LBB0_1
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_3: # %if.end41
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    leaq (%r12,%rbp), %rdi
-; CHECK-NEXT:    # kill: def $edi killed $edi killed $rdi
+; CHECK-NEXT:    movl %r14d, %edi
 ; CHECK-NEXT:    xorl %esi, %esi
-; CHECK-NEXT:    movq %r14, %rdx
-; CHECK-NEXT:    callq *%r13
-; CHECK-NEXT:    incq %rbp
-; CHECK-NEXT:    addq $20, %r14
+; CHECK-NEXT:    movq %r15, %rdx
+; CHECK-NEXT:    callq *%r12
+; CHECK-NEXT:    incq %r14
+; CHECK-NEXT:    addq $20, %r15
 ; CHECK-NEXT:  .LBB0_1: # %for.body30
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    testb $1, %bl
 ; CHECK-NEXT:    je .LBB0_3
 ; CHECK-NEXT:  # %bb.2: # %if.then37
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    movq %r15, %rax
-; CHECK-NEXT:    addq %rbp, %rax
 ; CHECK-NEXT:    movq 0, %rax
-; CHECK-NEXT:    {nf} addq %r15, %rax
-; CHECK-NEXT:    movb $0, (%rbp,%rax)
+; CHECK-NEXT:    movb $0, (%rax,%r14)
+; CHECK-NEXT:    testq %r14, %r14
 ; CHECK-NEXT:    jmp .LBB0_3
 entry:
   %1 = sext i32 %0 to i64

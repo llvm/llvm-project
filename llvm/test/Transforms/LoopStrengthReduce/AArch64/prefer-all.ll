@@ -237,8 +237,8 @@ define void @middle_block_load(ptr %p, ptr %q, i64 %n) {
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[LSR_IV2:%.*]] = phi ptr [ [[SCEVGEP3:%.*]], %[[FOR_INC:.*]] ], [ [[P]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[SCEVGEP:%.*]], %[[FOR_INC]] ], [ [[Q]], %[[ENTRY]] ]
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], %[[FOR_INC]] ], [ [[N]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[SCEVGEP:%.*]], %[[FOR_INC]] ], [ [[Q]], %[[ENTRY]] ]
 ; CHECK-NEXT:    [[PVAL:%.*]] = load i32, ptr [[LSR_IV2]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[PVAL]], 0
 ; CHECK-NEXT:    [[SCEVGEP3]] = getelementptr i8, ptr [[LSR_IV2]], i64 4
