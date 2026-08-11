@@ -5081,6 +5081,49 @@ static bool isElementwiseMul(ElementwiseOp op) {
          groupAndKind.kind.binaryFn == BinaryFn::mul;
 }
 
+/// Check if the given operation is a linalg multiplication operation.
+static bool isLinalgMul(Operation *op) {
+  if (auto elemOp = dyn_cast_or_null<ElementwiseOp>(op))
+    return isElementwiseMul(elemOp);
+  return isa_and_nonnull<linalg::MulOp>(op);
+}
+
+/// Multiply two scalar attributes and return the result.
+/// Returns nullptr if the multiplication fails or types are incompatible.
+static TypedAttr mulScalarAttrs(TypedAttr lhs, TypedAttr rhs) {
+  Type lhsType = lhs.getType();
+  Type rhsType = rhs.getType();
+  
+  // Both must be the same type
+  if (lhsType != rhsType)
+    return nullptr;
+  
+  // Handle integer types
+  if (auto intType = dyn_cast<IntegerType>(lhsType)) {
+    auto lhsInt = dyn_cast<IntegerAttr>(lhs);
+    auto rhsInt = dyn_cast<IntegerAttr>(rhs);
+    if (!lhsInt || !rhsInt)
+      return nullptr;
+    
+    APInt result = lhsInt.getValue() * rhsInt.getValue();
+    return IntegerAttr::get(intType, result);
+  }
+  
+  // Handle float types
+  if (isa<FloatType>(lhsType)) {
+    auto lhsFloat = dyn_cast<FloatAttr>(lhs);
+    auto rhsFloat = dyn_cast<FloatAttr>(rhs);
+    if (!lhsFloat || !rhsFloat)
+      return nullptr;
+    
+    APFloat result = lhsFloat.getValue();
+    result.multiply(rhsFloat.getValue(), APFloat::rmNearestTiesToEven);
+    return FloatAttr::get(lhsType, result);
+  }
+  
+  return nullptr;
+}
+
 /// Try to extract the scalar constant value from a Value that is either:
 /// - a dense splat constant (tensor<...xf32> with all same elements), or
 /// - a scalar constant that was broadcast.
@@ -5101,135 +5144,105 @@ static std::optional<TypedAttr> getScalarConstant(Value val) {
   return std::nullopt;
 }
 
-/// Fold two consecutive scalar multiplications into one:
+/// Fold two consecutive scalar multiplications into one.
+/// Analogous to arith's muli(muli(x, c0), c1) -> muli(x, c0 * c1).
 ///
-///   %c1 = arith.constant dense<s1> : tensor<...>
-///   %mul1 = linalg.elementwise kind=#linalg.elementwise_kind<mul>
-///       ins(%x, %c1 : ...) outs(...)
-///   %c2 = arith.constant dense<s2> : tensor<...>
-///   %mul2 = linalg.elementwise kind=#linalg.elementwise_kind<mul>
-///       ins(%mul1, %c2 : ...) outs(...)
+///   mul(mul(x, c0), c1) -> mul(x, c0 * c1)
 ///
-/// Into:
-///
-///   %c = arith.constant dense<s1 * s2> : tensor<...>
-///   %mul = linalg.elementwise kind=#linalg.elementwise_kind<mul>
-///       ins(%x, %c : ...) outs(...)
-///
-struct FoldConsecutiveScalarMulPattern
-    : public OpRewritePattern<ElementwiseOp> {
-  using OpRewritePattern<ElementwiseOp>::OpRewritePattern;
+/// Works for both linalg.mul and linalg.elemwise_binary{fun = mul}.
+template <typename MulOpTy>
+struct FoldConsecutiveScalarMulPattern : public OpRewritePattern<MulOpTy> {
+  using OpRewritePattern<MulOpTy>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(ElementwiseOp outerMul,
+  /// Helper to identify const/non-const operands. Returns {nonConst, scalar, scalarOperand}.
+  static std::tuple<Value, std::optional<TypedAttr>, Value>
+  splitConstOperands(Value lhs, Value rhs) {
+    if (auto scalar = getScalarConstant(rhs))
+      return {lhs, scalar, rhs};
+    if (auto scalar = getScalarConstant(lhs))
+      return {rhs, scalar, lhs};
+    return {Value(), std::nullopt, Value()};
+  }
+
+  /// Create a constant matching the form of the reference operand (scalar or splat tensor).
+  static FailureOr<Value> createMatchingConstant(PatternRewriter &rewriter, Location loc,
+                                                  TypedAttr scalarValue, Value referenceOperand) {
+    if (auto tensorType = dyn_cast<RankedTensorType>(referenceOperand.getType())) {
+      // Reference is a splat tensor: create splat constant.
+      if (scalarValue.getType() != tensorType.getElementType())
+        return failure();
+      auto splatAttr = DenseElementsAttr::get(tensorType, scalarValue);
+      return rewriter.create<arith::ConstantOp>(loc, tensorType, splatAttr).getResult();
+    }
+    // Reference is a raw scalar: create scalar constant.
+    return rewriter.create<arith::ConstantOp>(loc, scalarValue).getResult();
+  }
+
+  LogicalResult matchAndRewrite(MulOpTy outerMul,
                                 PatternRewriter &rewriter) const override {
     if (!outerMul.hasPureTensorSemantics())
       return failure();
 
-    // Check that the outer op is a mul.
-    if (!isElementwiseMul(outerMul))
-      return failure();
+    // For ElementwiseOp, verify the function is actually mul.
+    if constexpr (std::is_same_v<MulOpTy, ElementwiseOp>) {
+      if (!isElementwiseMul(outerMul))
+        return failure();
+    }
 
-    // The outer op has exactly 2 inputs for binary mul.
-    Value outerLhs = outerMul.getInputs()[0];
-    Value outerRhs = outerMul.getInputs()[1];
-
-    // Find which operand of the outer mul is the scalar constant, and which
-    // is the inner mul.
-    Value outerNonConst = nullptr;
+    // Split outer mul into const and non-const operands.
+    Value outerNonConst, outerScalarOperand;
     std::optional<TypedAttr> outerScalar;
-
-    // Try outerRhs as scalar, outerLhs as inner mul.
-    outerScalar = getScalarConstant(outerRhs);
-    if (outerScalar) {
-      outerNonConst = outerLhs;
-    } else {
-      // Try outerLhs as scalar, outerRhs as inner mul.
-      outerScalar = getScalarConstant(outerLhs);
-      if (!outerScalar)
-        return failure();
-      outerNonConst = outerRhs;
-    }
-
-    // The non-constant operand must be produced by another elementwise mul.
-    auto innerMul =
-        dyn_cast_or_null<ElementwiseOp>(outerNonConst.getDefiningOp());
-    if (!innerMul || !isElementwiseMul(innerMul))
+    std::tie(outerNonConst, outerScalar, outerScalarOperand) =
+        splitConstOperands(outerMul.getInputs()[0], outerMul.getInputs()[1]);
+    if (!outerScalar)
       return failure();
 
-    if (!innerMul.hasPureTensorSemantics())
+    // The non-constant operand must be another linalg mul.
+    Operation *innerMulOp = outerNonConst.getDefiningOp();
+    if (!isLinalgMul(innerMulOp))
+      return failure();
+    if (!cast<linalg::LinalgOp>(innerMulOp).hasPureTensorSemantics())
+      return failure();
+    if (!innerMulOp->hasOneUse())
       return failure();
 
-    // The inner mul result should only be used by the outer mul (to avoid
-    // duplicating computation).
-    if (!innerMul->hasOneUse())
-      return failure();
-
-    Value innerLhs = innerMul.getInputs()[0];
-    Value innerRhs = innerMul.getInputs()[1];
-
-    // Find the scalar constant in the inner mul.
-    Value innerNonConst = nullptr;
+    // Split inner mul into const and non-const operands.
+    Value innerNonConst, innerScalarOperand;
     std::optional<TypedAttr> innerScalar;
-
-    innerScalar = getScalarConstant(innerRhs);
-    if (innerScalar) {
-      innerNonConst = innerLhs;
-    } else {
-      innerScalar = getScalarConstant(innerLhs);
-      if (!innerScalar)
-        return failure();
-      innerNonConst = innerRhs;
-    }
-
-    // Fold the two scalar constants: compute s1 * s2 at compile time.
-    Location loc = outerMul.getLoc();
-    auto innerAttr = *innerScalar;
-    auto outerAttr = *outerScalar;
-
-    // Both scalars must have the same element type.
-    if (innerAttr.getType() != outerAttr.getType())
+    std::tie(innerNonConst, innerScalar, innerScalarOperand) =
+        splitConstOperands(innerMulOp->getOperand(0), innerMulOp->getOperand(1));
+    if (!innerScalar)
       return failure();
 
-    TypedAttr foldedAttr;
-    if (isa<FloatType>(innerAttr.getType())) {
-      auto lhs = cast<FloatAttr>(innerAttr);
-      auto rhs = cast<FloatAttr>(outerAttr);
-      foldedAttr = 
-          FloatAttr::get(lhs.getType(), lhs.getValue() * rhs.getValue());
-    } else if (isa<IntegerType>(innerAttr.getType())) {
-      auto lhs = cast<IntegerAttr>(innerAttr);
-      auto rhs = cast<IntegerAttr>(outerAttr);
-      foldedAttr = 
-          IntegerAttr::get(lhs.getType(), lhs.getValue() * rhs.getValue());
-    } else {
+    // Ensure type compatibility: innerNonConst must match the inner mul's result type.
+    // This prevents folding when ElemwiseBinaryOp uses cast semantics.
+    if (innerNonConst.getType() != outerNonConst.getType())
       return failure();
-    }
 
-    // Create the combined splat constant with the same type as the outer
-    // scalar operand.
-    Value outerScalarOperand =
-        (getScalarConstant(outerRhs)) ? outerRhs : outerLhs;
-    auto scalarOperandType =
-        cast<RankedTensorType>(outerScalarOperand.getType());
-    auto combinedSplat = DenseElementsAttr::get(scalarOperandType, foldedAttr);
-    Value combinedConst = arith::ConstantOp::create(
-        rewriter, loc, scalarOperandType, combinedSplat);
+    // Fold the two scalar constants: c0 * c1.
+    TypedAttr foldedScalar = mulScalarAttrs(*innerScalar, *outerScalar);
+    if (!foldedScalar)
+      return failure();
 
-    // Create the new single mul: innerNonConst * combinedConst.
-    // Use the same indexing maps as the outer mul, since both operands have
-    // matching shapes (the inner non-const input may need the inner mul's
-    // indexing map).
-    SmallVector<Value> newInputs = {innerNonConst, combinedConst};
-    rewriter.replaceOpWithNewOp<ElementwiseOp>(
-        outerMul, newInputs, outerMul.getDpsInits(), outerMul.getKindAttr(),
-        rewriter.getAffineMapArrayAttr(outerMul.getIndexingMapsArray()));
+    // Create the combined constant, matching the form of the outer scalar operand.
+    FailureOr<Value> combinedConst = 
+        createMatchingConstant(rewriter, outerMul.getLoc(), foldedScalar, outerScalarOperand);
+    if (failed(combinedConst))
+      return failure();
+
+    // Replace: mul(mul(x, c0), c1) -> mul(x, c0*c1).
+    rewriter.modifyOpInPlace(outerMul, [&]() {
+      outerMul.getDpsInputOperand(0)->set(innerNonConst);
+      outerMul.getDpsInputOperand(1)->set(*combinedConst);
+    });
+    rewriter.eraseOp(innerMulOp);
     return success();
   }
 };
 
 void ElementwiseOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                 MLIRContext *context) {
-  results.add<FoldConsecutiveScalarMulPattern>(context);
+  results.add<FoldConsecutiveScalarMulPattern<linalg::ElementwiseOp>>(context);
 }
 
 //===----------------------------------------------------------------------===//
