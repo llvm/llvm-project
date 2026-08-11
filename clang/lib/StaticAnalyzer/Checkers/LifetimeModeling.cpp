@@ -89,9 +89,10 @@ bool lifetime_modeling::isDeallocated(ProgramStateRef State,
 
 ProgramStateRef lifetime_modeling::markAsReported(ProgramStateRef State,
                                                   const MemRegion *Region) {
-  if (State->contains<ReportedDeadRegions>(Region->getBaseRegion()))
-    return nullptr;
-  return State->add<ReportedDeadRegions>(Region->getBaseRegion());
+  ProgramStateRef NewState =
+      State->add<ReportedDeadRegions>(Region->getBaseRegion());
+
+  return (NewState != State) ? NewState : nullptr;
 }
 
 static ProgramStateRef bindSource(ProgramStateRef State, SVal RetVal,
@@ -201,14 +202,21 @@ void LifetimeModeling::checkDeadSymbols(SymbolReaper &SymReaper,
 void LifetimeModeling::printState(raw_ostream &Out, ProgramStateRef State,
                                   const char *NL, const char *Sep) const {
   auto LBMap = State->get<LifetimeBoundMap>();
+  ReportedDeadRegionsTy Reported = State->get<ReportedDeadRegions>();
 
-  if (LBMap.isEmpty())
-    return;
+  if (!LBMap.isEmpty()) {
+    Out << Sep << "LifetimeBound bindings:" << NL;
+    for (auto &&[OriginSym, SourceSet] : LBMap) {
+      for (const auto *Region : SourceSet)
+        Out << " Origin " << OriginSym << " contains Loan " << Region << NL;
+    }
+  }
 
-  Out << Sep << "LifetimeBound bindings:" << NL;
-  for (auto &&[OriginSym, SourceSet] : LBMap) {
-    for (const auto *Region : SourceSet)
-      Out << " Origin " << OriginSym << " contains Loan " << Region << NL;
+  if (!Reported.isEmpty()) {
+    Out << Sep << "Reported regions: " << NL;
+    for (const auto *Region : Reported) {
+      Out << " " << Region << NL;
+    }
   }
 }
 

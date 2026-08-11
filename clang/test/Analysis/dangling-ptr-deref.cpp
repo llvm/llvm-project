@@ -342,5 +342,5 @@ void multiple_deref() {
   } // expected-note            {{'a' is destroyed here}}
   *ptr = 6; // expected-note    {{Use of 'a' after its lifetime ended}}
   // expected-warning@-1        {{Use of 'a' after its lifetime ended}}
-  *ptr = 7;
+  *ptr = 7; // no-warning: Already reported this base region.
 }
