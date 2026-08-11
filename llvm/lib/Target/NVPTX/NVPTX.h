@@ -73,7 +73,7 @@ void initializeNVPTXAsmPrinterPass(PassRegistry &);
 void initializeNVPTXAssignValidGlobalNamesLegacyPassPass(PassRegistry &);
 void initializeNVPTXAtomicLowerLegacyPassPass(PassRegistry &);
 void initializeNVPTXCtorDtorLoweringLegacyPass(PassRegistry &);
-void initializeNVPTXLowerAggrCopiesPass(PassRegistry &);
+void initializeNVPTXLowerAggrCopiesLegacyPassPass(PassRegistry &);
 void initializeNVPTXLowerAllocaLegacyPassPass(PassRegistry &);
 void initializeNVPTXLowerUnreachableLegacyPassPass(PassRegistry &);
 void initializeNVPTXLowerArgsLegacyPassPass(PassRegistry &);
@@ -132,6 +132,12 @@ public:
 
 struct NVPTXCopyByValArgsPass : OptionalPassInfoMixin<NVPTXCopyByValArgsPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
+class NVPTXLowerAggrCopiesPass
+    : public RequiredPassInfoMixin<NVPTXLowerAggrCopiesPass> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 struct NVPTXPromoteParamAlignPass
