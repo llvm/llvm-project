@@ -10,6 +10,7 @@
 #include "CodeGenTestBase.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/Targets.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/TargetSelect.h"
