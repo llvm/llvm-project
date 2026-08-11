@@ -38,10 +38,107 @@
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/ValueObject/ValueObject.h"
 
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/Module.h"
+#include "llvm/Pass.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
 LLDB_PLUGIN_DEFINE(GNUstepObjCRuntime)
+
+namespace {
+/// Registers the Objective-C selectors of a JIT'd expression module with the
+/// libobjc2 runtime.
+///
+/// clang emits each selector as a `.objc_selector_<name>_<types>` global in
+/// the `__objc_selectors` section: a {name, types} string pair that the
+/// runtime's __objc_load rewrites into a registered selector when a module
+/// is loaded. Expression modules are never loaded that way, so passing the
+/// raw structure to objc_msgSend dispatches an unregistered selector (which
+/// gnustep-base reports as e.g. "-[NSSmallInt ]"). Replace every use with
+/// the result of sel_registerTypedName_np()/sel_registerName(), which
+/// resolve against libobjc2 at expression link time.
+class GNUstepObjCSelectorRegistrationPass : public llvm::ModulePass {
+public:
+  static char ID;
+
+  GNUstepObjCSelectorRegistrationPass() : llvm::ModulePass(ID) {}
+
+  llvm::StringRef getPassName() const override {
+    return "GNUstep ObjC selector registration";
+  }
+
+  bool runOnModule(llvm::Module &module) override {
+    llvm::SmallVector<llvm::GlobalVariable *, 8> sel_globals;
+    for (llvm::GlobalVariable &gv : module.globals())
+      if (gv.hasSection() &&
+          llvm::StringRef(gv.getSection()).starts_with("__objc_selectors"))
+        sel_globals.push_back(&gv);
+    if (sel_globals.empty())
+      return false;
+
+    llvm::LLVMContext &ctx = module.getContext();
+    llvm::PointerType *ptr_ty = llvm::PointerType::get(ctx, 0);
+    llvm::FunctionCallee typed_reg;
+    llvm::FunctionCallee untyped_reg;
+
+    bool changed = false;
+    for (llvm::GlobalVariable *gv : sel_globals) {
+      if (!gv->hasInitializer())
+        continue;
+      auto *init = llvm::dyn_cast<llvm::ConstantStruct>(gv->getInitializer());
+      if (!init || init->getNumOperands() < 1)
+        continue;
+      llvm::Constant *name_ptr = init->getOperand(0);
+      llvm::Constant *types_ptr =
+          init->getNumOperands() > 1 ? init->getOperand(1) : nullptr;
+      const bool has_types = types_ptr && !types_ptr->isNullValue();
+
+      // One registration call per function; the entry block dominates all
+      // uses, including PHI incoming edges.
+      llvm::SmallDenseMap<llvm::Function *, llvm::Value *, 4> call_per_fn;
+      llvm::SmallVector<llvm::Use *, 8> uses;
+      for (llvm::Use &use : gv->uses())
+        uses.push_back(&use);
+      for (llvm::Use *use : uses) {
+        auto *inst = llvm::dyn_cast<llvm::Instruction>(use->getUser());
+        if (!inst)
+          continue;
+        llvm::Function *func = inst->getFunction();
+        llvm::Value *&reg_call = call_per_fn[func];
+        if (!reg_call) {
+          llvm::IRBuilder<> builder(
+              &*func->getEntryBlock().getFirstInsertionPt());
+          if (has_types) {
+            if (!typed_reg)
+              typed_reg = module.getOrInsertFunction(
+                  "sel_registerTypedName_np",
+                  llvm::FunctionType::get(ptr_ty, {ptr_ty, ptr_ty},
+                                          /*isVarArg=*/false));
+            reg_call = builder.CreateCall(typed_reg, {name_ptr, types_ptr},
+                                          "lldb.objc.sel");
+          } else {
+            if (!untyped_reg)
+              untyped_reg = module.getOrInsertFunction(
+                  "sel_registerName",
+                  llvm::FunctionType::get(ptr_ty, {ptr_ty},
+                                          /*isVarArg=*/false));
+            reg_call =
+                builder.CreateCall(untyped_reg, {name_ptr}, "lldb.objc.sel");
+          }
+        }
+        use->set(reg_call);
+        changed = true;
+      }
+    }
+    return changed;
+  }
+};
+
+char GNUstepObjCSelectorRegistrationPass::ID = 0;
+} // namespace
 
 char GNUstepObjCRuntime::ID = 0;
 
@@ -572,6 +669,13 @@ void GNUstepObjCRuntime::UpdateISAToDescriptorMapIfNeeded() {
 
   m_isa_map_dirty = false;
   m_isa_to_descriptor_stop_id = stop_id;
+}
+
+bool GNUstepObjCRuntime::GetIRPasses(
+    LLVMUserExpression::IRPasses &custom_passes) {
+  custom_passes.EarlyPasses = std::make_shared<llvm::legacy::PassManager>();
+  custom_passes.EarlyPasses->add(new GNUstepObjCSelectorRegistrationPass());
+  return true;
 }
 
 ObjCLanguageRuntime::TaggedPointerVendor *

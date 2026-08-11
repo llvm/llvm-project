@@ -106,6 +106,16 @@ public:
 
   void UpdateISAToDescriptorMapIfNeeded() override;
 
+  /// Provides an IR pass that registers the expression module's Objective-C
+  /// selectors with the runtime. JIT'd expression modules never run
+  /// __objc_load, so their selector structures would otherwise reach
+  /// objc_msgSend unregistered.
+  bool GetIRPasses(LLVMUserExpression::IRPasses &custom_passes) override;
+
+  /// gnustep-base implements the container-literal and boxed-expression
+  /// protocol methods, so @[...], @{...} and @(...) are available.
+  bool CalculateHasNewLiteralsAndIndexing() override { return true; }
+
   TaggedPointerVendor *GetTaggedPointerVendor() override;
 
   ClassDescriptorSP GetClassDescriptor(ValueObject &in_value) override;
