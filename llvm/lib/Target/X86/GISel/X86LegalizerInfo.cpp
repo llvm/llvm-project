@@ -792,8 +792,40 @@ bool X86LegalizerInfo::legalizeBuildVector(MachineInstr &MI,
     return true;
   }
 
-  // Non-constant: lower to a sequence of G_INSERT_VECTOR_ELT.
+  // Non-constant: lower to G_INSERT_VECTOR_ELT sequences.
+  // For vectors wider than 128 bits, split into 128-bit sub-vectors to avoid
+  // redundant extract/insert pairs on every element.
   LLT IdxTy = LLT::scalar(Subtarget.is64Bit() ? 64 : 32);
+  unsigned VecSize = DstTy.getSizeInBits();
+
+  if (VecSize > 128) {
+    unsigned SubNumElts = 128 / EltSize;
+    LLT SubVecTy = LLT::fixed_vector(SubNumElts, EltSize);
+    unsigned NumSubVecs = NumElts / SubNumElts;
+
+    Register Vec = MIRBuilder.buildUndef(DstTy).getReg(0);
+    for (unsigned Sub = 0; Sub < NumSubVecs; ++Sub) {
+      // Build a 128-bit sub-vector using G_INSERT_VECTOR_ELT.
+      Register SubVec = MIRBuilder.buildUndef(SubVecTy).getReg(0);
+      bool HasNonUndef = false;
+      for (unsigned i = 0; i < SubNumElts; ++i) {
+        Register Src = BuildVector.getSourceReg(Sub * SubNumElts + i);
+        if (getOpcodeDef<GImplicitDef>(Src, MRI))
+          continue;
+        HasNonUndef = true;
+        auto Idx = MIRBuilder.buildConstant(IdxTy, i);
+        SubVec =
+            MIRBuilder.buildInsertVectorElement(SubVecTy, SubVec, Src, Idx)
+                .getReg(0);
+      }
+      if (HasNonUndef)
+        Vec = MIRBuilder.buildInsert(DstTy, Vec, SubVec, Sub * 128).getReg(0);
+    }
+
+    MIRBuilder.buildCopy(Dst, Vec);
+    MI.eraseFromParent();
+    return true;
+  }
 
   Register Vec = MIRBuilder.buildUndef(DstTy).getReg(0);
   for (unsigned i = 0; i < NumElts; ++i) {

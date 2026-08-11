@@ -433,6 +433,14 @@ bool X86InstructionSelector::select(MachineInstr &I) {
   assert(I.getNumOperands() == I.getNumExplicitOperands() &&
          "Generic instruction has unexpected implicit operands\n");
 
+  // Handle G_SCALAR_TO_VECTOR with a VECR-bank source before tablegen.
+  // Tablegen always selects MOVDI2PDI (GPR->XMM) which forces a pointless
+  // XMM->GPR->XMM round-trip for float sources.
+  if (I.getOpcode() == TargetOpcode::G_SCALAR_TO_VECTOR) {
+    if (selectScalarToVector(I, MRI))
+      return true;
+  }
+
   if (selectImpl(I, *CoverageInfo))
     return true;
 
@@ -2129,6 +2137,37 @@ bool X86InstructionSelector::selectInsertVectorElt(MachineInstr &I,
     }
   }
 
+  // For 32-bit elements in a v4f32 vector, check if the element source
+  // originates from a VECR-bank register (i.e., it's a float value). If so,
+  // use INSERTPS/VINSERTPS which takes an XMM source directly, avoiding the
+  // GPR round-trip that PINSRD would require.
+  if (EltSize == 32 && NumElts == 4 && STI.hasSSE41()) {
+    MachineInstr *EltDef = MRI.getVRegDef(EltReg);
+    if (EltDef && EltDef->isCopy()) {
+      Register CopySrc = EltDef->getOperand(1).getReg();
+      if (CopySrc.isVirtual() &&
+          RBI.getRegBank(CopySrc, MRI, TRI)->getID() == X86::VECRRegBankID) {
+        unsigned InsertPSOpc =
+            STI.hasAVX512() ? X86::VINSERTPSZrri
+            : STI.hasAVX()  ? X86::VINSERTPSrri
+                            : X86::INSERTPSrri;
+        // INSERTPS imm8: src_select[7:6]=0 (pick element 0 from src2),
+        // dst_select[5:4]=Idx, zmask[3:0]=0.
+        uint8_t Imm = Idx << 4;
+        MRI.setRegClass(CopySrc, &X86::VR128RegClass);
+        auto &MIB =
+            *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(InsertPSOpc),
+                     DstReg)
+                 .addReg(VecReg)
+                 .addReg(CopySrc)
+                 .addImm(Imm);
+        constrainSelectedInstRegOperands(MIB, TII, TRI, RBI);
+        I.eraseFromParent();
+        return true;
+      }
+    }
+  }
+
   unsigned Opc = getMachineOpcodeForInsert(EltSize);
   if (!Opc)
     return false;
@@ -2149,17 +2188,23 @@ bool X86InstructionSelector::selectScalarToVector(MachineInstr &I,
 
   Register DstReg = I.getOperand(0).getReg();
   Register SrcReg = I.getOperand(1).getReg();
-  LLT DstTy = MRI.getType(DstReg);
-  unsigned EltSize = DstTy.getScalarSizeInBits();
 
-  unsigned Opc = getScalarToVecOpcode(EltSize);
-  if (!Opc)
+  // When the source is a COPY from a VECR-bank register (e.g., a float param
+  // in an XMM register), the value is already in the low bits of a vector
+  // register. Emit a COPY instead of MOVDI2PDI to avoid a pointless
+  // XMM->GPR->XMM round-trip.
+  MachineInstr *SrcDef = MRI.getVRegDef(SrcReg);
+  if (!SrcDef || !SrcDef->isCopy())
+    return false;
+  Register CopySrc = SrcDef->getOperand(1).getReg();
+  if (!CopySrc.isVirtual() ||
+      RBI.getRegBank(CopySrc, MRI, TRI)->getID() != X86::VECRRegBankID)
     return false;
 
-  auto &MIB = *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opc), DstReg)
-                   .addReg(SrcReg);
-
-  constrainSelectedInstRegOperands(MIB, TII, TRI, RBI);
+  MRI.setRegClass(CopySrc, &X86::VR128RegClass);
+  MRI.setRegClass(DstReg, &X86::VR128RegClass);
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::COPY), DstReg)
+      .addReg(CopySrc);
   I.eraseFromParent();
   return true;
 }
