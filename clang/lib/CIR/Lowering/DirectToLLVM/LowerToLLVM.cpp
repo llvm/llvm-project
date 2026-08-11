@@ -1965,7 +1965,7 @@ mlir::LogicalResult CIRToLLVMAllocaOpLowering::matchAndRewrite(
           ? adaptor.getDynAllocSize()
           : mlir::LLVM::ConstantOp::create(
                 rewriter, op.getLoc(),
-                typeConverter->convertType(rewriter.getIndexType()), 1);
+                typeConverter->convertType(rewriter.getI32Type()), 1);
   mlir::Type elementTy =
       convertTypeForMemory(*getTypeConverter(), dataLayout, op.getAllocaType());
   if (!elementTy)
