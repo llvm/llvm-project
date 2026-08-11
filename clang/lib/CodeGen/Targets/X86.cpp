@@ -3451,6 +3451,7 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
                                       bool IsReturnType, unsigned CC) const {
   bool IsVectorCall = CC == llvm::CallingConv::X86_VectorCall;
   bool IsRegCall = CC == llvm::CallingConv::X86_RegCall;
+  bool IsWinCall = CC == llvm::CallingConv::X86_WinCall;
 
   if (Ty->isVoidType())
     return ABIArgInfo::getIgnore();
@@ -3473,6 +3474,21 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
     if (RT->getDecl()->getDefinitionOrSelf()->hasFlexibleArrayMember())
       return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
                                      /*ByVal=*/false);
+
+    // wincall passes/returns aggregates that fit in 1, 2, 4, 8, 16 or 32 bytes
+    // (e.g. 4x size_t, like std::string/std::vector) directly in registers,
+    // instead of by pointer/sret like the MS x64 ABI.
+    if (IsWinCall && Width <= 256 && !Ty->isAnyComplexType() &&
+        !Ty->isMemberPointerType()) {
+      if (IsReturnType)
+        return ABIArgInfo::getDirect();
+      // Pass as an integer of the aggregate size when it fits in one register,
+      // otherwise expand it into its 8-byte parts.
+      if (Width <= 64)
+        return ABIArgInfo::getDirect(
+            llvm::IntegerType::get(getVMContext(), Width));
+      return ABIArgInfo::getExpand();
+    }
   }
 
   const Type *Base = nullptr;
@@ -3548,6 +3564,22 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
     case BuiltinType::Int128:
     case BuiltinType::UInt128:
     case BuiltinType::Float128:
+      // wincall passes 128-bit integers in two integer registers and returns
+      // them in RAX (low) and RDX (high), per the spec.
+      if (IsWinCall && BT->getKind() != BuiltinType::Float128) {
+        if (IsReturnType)
+          return ABIArgInfo::getDirect();
+        return ABIArgInfo::getExpand();
+      }
+      if (IsWinCall) {
+        // std::float128_t is passed like __int128: in two integer registers.
+        if (IsReturnType)
+          return ABIArgInfo::getDirect(
+              llvm::FixedVectorType::get(
+                  llvm::Type::getInt64Ty(getVMContext()), 2));
+        return ABIArgInfo::getExpand();
+      }
+
       // If it's a parameter type, the normal ABI rule is that arguments larger
       // than 8 bytes are passed indirectly. GCC follows it. We follow it too,
       // even though it isn't particularly efficient.

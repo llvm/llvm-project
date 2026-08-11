@@ -389,6 +389,43 @@ def RetCC_X86_Win64_C : CallingConv<[
   CCDelegateTo<RetCC_X86_64_C>
 ]>;
 
+// X86-Win64 wincall return-value convention.
+//
+// Per the wincall spec:
+//   - a scalar return value that fits in 64 bits is returned in RAX,
+//   - a scalar return value that fits in 128 bits is returned in RAX (low)
+//     and RDX (high),
+//   - non-scalar types (float, double, and vector types such as __m128)
+//     are returned in XMM0,
+//   - user-defined types of length 1, 2, 4, 8, 16, 32, 64 or 128 bits are
+//     returned in RAX (RDX for 128 bits).
+def RetCC_X86_Win64_WinCall : CallingConv<[
+  // The first 2 FP/Vector values are returned in XMM0/XMM1 (the spec says
+  // non-scalar types are returned in XMM0).
+  CCIfType<[f16, f32, f64, f128, v16i8, v8i16, v4i32, v2i64, v8f16, v8bf16, v4f32, v2f64],
+           CCIfSubtarget<"hasSSE1()",
+            CCAssignToReg<[XMM0, XMM1]>>>,
+
+  // 256-bit vectors are returned in YMM0.
+  CCIfType<[v32i8, v16i16, v8i32, v4i64, v16f16, v16bf16, v8f32, v4f64],
+           CCIfSubtarget<"hasAVX()",
+            CCAssignToReg<[YMM0]>>>,
+
+  // 512-bit vectors are returned in ZMM0.
+  CCIfType<[v64i8, v32i16, v16i32, v32f16, v32bf16, v16f32, v8f64, v8i64],
+           CCIfSubtarget<"hasAVX512()",
+            CCAssignToReg<[ZMM0]>>>,
+
+  // Scalars and user-defined types of length 1,2,4,8,16,32,64 or 128 bits are
+  // returned in RAX (and RDX for 128-bit values). Aggregates of up to 32 bytes
+  // (e.g. 4x size_t, like std::string/std::vector) are returned in
+  // RAX, RDX, RCX, R8.
+  CCIfType<[i8 ], CCAssignToReg<[AL, DL, CL, R8B]>>,
+  CCIfType<[i16], CCAssignToReg<[AX, DX, CX, R8W]>>,
+  CCIfType<[i32], CCAssignToReg<[EAX, EDX, ECX, R8D]>>,
+  CCIfType<[i64], CCAssignToReg<[RAX, RDX, RCX, R8]>>
+]>;
+
 // X86-64 vectorcall return-value convention.
 def RetCC_X86_64_Vectorcall : CallingConv<[
   // Vectorcall calling convention always returns FP values in XMMs.
@@ -483,6 +520,7 @@ def RetCC_X86_64 : CallingConv<[
   // Handle explicit CC selection
   CCIfCC<"CallingConv::Win64", CCDelegateTo<RetCC_X86_Win64_C>>,
   CCIfCC<"CallingConv::X86_64_SysV", CCDelegateTo<RetCC_X86_64_C>>,
+  CCIfCC<"CallingConv::X86_WinCall", CCDelegateTo<RetCC_X86_Win64_WinCall>>,
 
   // Handle Vectorcall CC
   CCIfCC<"CallingConv::X86_VectorCall", CCDelegateTo<RetCC_X86_64_Vectorcall>>,
@@ -1083,12 +1121,6 @@ def CC_X86_Win64_WinCall : CallingConv<[
   // The 'CFGuardTarget' parameter, if any, is passed in RAX.
   CCIfCFGuardTarget<CCAssignToReg<[RAX]>>,
 
-  // 256 bit vectors are passed by pointer
-  CCIfType<[v32i8, v16i16, v8i32, v4i64, v16f16, v16bf16, v8f32, v4f64], CCPassIndirect<i64>>,
-
-  // 512 bit vectors are passed by pointer
-  CCIfType<[v64i8, v32i16, v16i32, v32f16, v32bf16, v16f32, v8f64, v8i64], CCPassIndirect<i64>>,
-
   // Long doubles are passed by pointer
   CCIfType<[f80], CCPassIndirect<i64>>,
 
@@ -1098,33 +1130,27 @@ def CC_X86_Win64_WinCall : CallingConv<[
   CCIfType<[f32], CCIfNotSubtarget<"hasSSE1()", CCBitConvertToType<i32>>>,
   CCIfType<[f64], CCIfNotSubtarget<"hasSSE1()", CCBitConvertToType<i64>>>,
 
-  // The first 8 FP/Vector arguments are passed in XMM registers.
+  // The first 8 FP/Vector arguments are passed in XMM registers. Integer and
+  // FP arguments are allocated independently (unlike Win64, which pairs each
+  // integer register with an XMM register and skips the partner); this uses
+  // all 8 GPRs and all 8 XMMs of the APX register file.
   CCIfType<[f16, f32, f64, v16i8, v8i16, v4i32, v2i64, v8f16, v8bf16, v4f32, v2f64],
            CCIfSubtarget<"hasSSE1()",
-           CCAssignToRegWithShadow<[XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7],
-                                   [RCX , RDX , R8  , R9  , R16, R17, R18, R19]>>>,
+           CCAssignToReg<[XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7]>>>,
   // 256 bit vectors are passed in YMM registers.
   CCIfType<[v32i8, v16i16, v8i32, v4i64, v16f16, v16bf16, v8f32, v4f64],
            CCIfSubtarget<"hasAVX()",
-            CCAssignToRegWithShadow<[YMM0, YMM1, YMM2, YMM3, YMM4, YMM5, YMM6, YMM7],
-                                   [RCX , RDX , R8  , R9  , R16, R17, R18, R19]>>>,
+            CCAssignToReg<[YMM0, YMM1, YMM2, YMM3, YMM4, YMM5, YMM6, YMM7]>>>,
   // 512 bit vectors are passed in ZMM registers.
   CCIfType<[v64i8, v32i16, v16i32, v32f16, v32bf16, v16f32, v8f64, v8i64],
            CCIfSubtarget<"hasAVX512()",
-            CCAssignToRegWithShadow<[ZMM0, ZMM1, ZMM2, ZMM3, ZMM4, ZMM5, ZMM6, ZMM7],
-                                   [RCX , RDX , R8  , R9  , R16, R17, R18, R19]>>>,
-  // 512 bit vectors are passed by pointer
-  CCIfType<[v64i8, v32i16, v16i32, v32f16, v32bf16, v16f32, v8f64, v8i64], CCPassIndirect<i64>>,
+            CCAssignToReg<[ZMM0, ZMM1, ZMM2, ZMM3, ZMM4, ZMM5, ZMM6, ZMM7]>>>,
 
-  // The first 4 integer arguments are passed in integer registers.
-  CCIfType<[i8 ], CCAssignToRegWithShadow<[CL  , DL  , R8B , R9B , R16B, R17B, R18B, R19B],
-                                          [XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7]>>,
-  CCIfType<[i16], CCAssignToRegWithShadow<[CX  , DX  , R8W , R9W , R16W, R17W, R18W, R19W],
-                                          [XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7]>>,
-  CCIfType<[i32], CCAssignToRegWithShadow<[ECX , EDX , R8D , R9D , R16D, R17D, R18D, R19D],
-                                          [XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7]>>,
-  CCIfType<[i64], CCAssignToRegWithShadow<[RCX , RDX , R8  , R9  , R16,  R17,  R18,  R19],
-                                          [XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7]>>,
+  // The first 8 integer arguments are passed in integer registers.
+  CCIfType<[i8 ], CCAssignToReg<[CL  , DL  , R8B , R9B , R16B, R17B, R18B, R19B]>>,
+  CCIfType<[i16], CCAssignToReg<[CX  , DX  , R8W , R9W , R16W, R17W, R18W, R19W]>>,
+  CCIfType<[i32], CCAssignToReg<[ECX , EDX , R8D , R9D , R16D, R17D, R18D, R19D]>>,
+  CCIfType<[i64], CCAssignToReg<[RCX , RDX , R8  , R9  , R16,  R17,  R18,  R19]>>,
 
   // Integer/FP values get stored in stack slots that are 8 bytes in size and
   // 8-byte aligned if there are no more registers to hold them.

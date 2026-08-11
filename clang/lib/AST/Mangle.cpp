@@ -330,6 +330,13 @@ void MangleContext::mangleName(GlobalDecl GD, raw_ostream &Out) {
   const FunctionProtoType *Proto = dyn_cast<FunctionProtoType>(FT);
   if (CC == CCM_Vector)
     Out << '@';
+  if (CC == CCM_WinCall) {
+    // wincall symbols get a @win suffix so the linker can catch calling
+    // convention mismatches, like the @N parameter-size suffix does for
+    // stdcall on i386.
+    Out << "@win";
+    return;
+  }
   Out << '@';
   if (!Proto) {
     Out << '0';
