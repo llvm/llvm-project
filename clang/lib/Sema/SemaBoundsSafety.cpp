@@ -105,7 +105,6 @@ static std::optional<bool> checkBoundsAttrTypeConflictsAndMisc(
   // than direct checks (e.g. `dyn_cast<>`).
 
   assert(AttrSpelling.size() > 0);
-  const Type *T = Ty.getTypePtr();
 
   // A __terminated_by pointer cannot also carry a count or range attribute
   // unless the terminator was auto-inferred via __ptrauto.
@@ -188,15 +187,9 @@ static std::optional<bool> checkBoundsAttrTypeConflictsAndMisc(
     }
   }
 
-  // FIXME: the AtomicType check below still uses `dyn_cast` on the
-  // top node. It returns `true` and lets the caller continue, so making it
-  // sugar-walking is only safe once the caller runs the type-shape check once
-  // (the ShapeCheckedLevelZero guard); until then a sugar-wrapped atomic would
-  // double-emit.
-  //
   // An AtomicType wrapping a pointer: emit the diagnostic but return true so
   // the caller still constructs the AtomicType instead of bailing out.
-  if (const auto *ATy = dyn_cast<AtomicType>(T)) {
+  if (const auto *ATy = Ty->getAs<AtomicType>()) {
     if (ATy->getValueType()->isPointerType()) {
       if (Flags.IsEndedBy) {
         S.Diag(AttrLoc, diag::err_bounds_safety_atomic_unsupported_attribute)
