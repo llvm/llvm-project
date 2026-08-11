@@ -8,7 +8,7 @@ from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 from lldbsuite.test.tools.lldb_dap.types import LaunchArgs, StoppedReason, ThreadsArgs
 
 
-@requireThreadSupport()
+@requireThreadSupport
 class TestDAP_threads(DAPTestCaseBase):
     def test_correct_thread(self):
         """

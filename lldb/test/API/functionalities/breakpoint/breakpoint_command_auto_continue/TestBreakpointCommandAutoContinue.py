@@ -11,7 +11,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.lldbpexpect import PExpectTest
 
 
-@requireThreadSupport()
+@requireThreadSupport
 @skipIfAsan
 @skipIfEditlineSupportMissing
 class BreakpointCommandAutoContinueTestCase(PExpectTest):

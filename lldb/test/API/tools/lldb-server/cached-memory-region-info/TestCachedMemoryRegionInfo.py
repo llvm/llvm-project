@@ -9,7 +9,7 @@ from lldbsuite.test import lldbutil
 
 
 @skipIfWindowsAndNoLLDBServer
-@requireThreadSupport()
+@requireThreadSupport
 class MemoryRegionInfoPacketsCached(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

@@ -9,7 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@requireThreadSupport()
+@requireThreadSupport
 class ProcessSaveCoreMinidumpTestCase(TestBase):
     def verify_core_file(
         self,

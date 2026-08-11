@@ -8,7 +8,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@requireThreadSupport()
+@requireThreadSupport
 @skipIfTargetDoesNotSupportSharedLibraries()
 class TlsGlobalTestCase(TestBase):
     def setUp(self):
