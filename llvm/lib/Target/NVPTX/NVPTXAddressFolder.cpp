@@ -102,10 +102,13 @@ struct NVPTXAddressFolderLegacyPass : public MachineFunctionPass {
   NVPTXAddressFolderLegacyPass() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
+    if (skipFunction(MF.getFunction()))
+      return false;
     return foldAddresses(MF);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
