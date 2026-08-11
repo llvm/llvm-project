@@ -2475,6 +2475,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureSALUFloatInsts,
    FeaturePseudoScalarTrans,
    FeatureRestrictedSOffset,
+   Feature45BitNumRecordsBufferResource,
    FeatureScalarDwordx3Loads,
    FeatureDPPSrc1SGPR,
    FeatureBitOp3Insts,

@@ -13269,6 +13269,9 @@ SDValue SITargetLowering::lowerPointerAsRsrcIntrin(SDNode *Op,
   SDValue Rsrc;
 
   if (Subtarget->has45BitNumRecordsBufferResource()) {
+    NumRecords = DAG.getZExtOrTrunc(NumRecords, Loc, MVT::i64);
+    NumRecords = DAG.getNode(ISD::AND, Loc, MVT::i64, NumRecords,
+                             DAG.getConstant((1ULL << 45) - 1, Loc, MVT::i64));
     SDValue Zero = DAG.getConstant(0, Loc, MVT::i32);
     // Build the lower 64-bit value, which has a 57-bit base and the lower 7-bit
     // num_records.
@@ -13305,7 +13308,7 @@ SDValue SITargetLowering::lowerPointerAsRsrcIntrin(SDNode *Op,
 
     Rsrc = DAG.getNode(ISD::BUILD_VECTOR, Loc, MVT::v2i64, LowHalf, HighHalf);
   } else {
-    NumRecords = DAG.getAnyExtOrTrunc(NumRecords, Loc, MVT::i32);
+    NumRecords = DAG.getZExtOrTrunc(NumRecords, Loc, MVT::i32);
     auto [LowHalf, HighHalf] =
         DAG.SplitScalar(Pointer, Loc, MVT::i32, MVT::i32);
     SDValue Mask = DAG.getConstant(0x0000ffff, Loc, MVT::i32);
@@ -16431,19 +16434,10 @@ SDValue SITargetLowering::getCanonicalConstantFP(SelectionDAG &DAG,
   }
 
   if (C.isNaN()) {
-    APFloat CanonicalQNaN = APFloat::getQNaN(C.getSemantics());
     if (C.isSignaling()) {
       // Quiet a signaling NaN.
-      // FIXME: Is this supposed to preserve payload bits?
-      return DAG.getConstantFP(CanonicalQNaN, SL, VT);
+      return DAG.getConstantFP(C.makeQuiet(), SL, VT);
     }
-
-    // Make sure it is the canonical NaN bitpattern.
-    //
-    // TODO: Can we use -1 as the canonical NaN value since it's an inline
-    // immediate?
-    if (C.bitcastToAPInt() != CanonicalQNaN.bitcastToAPInt())
-      return DAG.getConstantFP(CanonicalQNaN, SL, VT);
   }
 
   // Already canonical.
@@ -16467,10 +16461,8 @@ SITargetLowering::performFCanonicalizeCombine(SDNode *N,
     return DAG.getConstantFP(QNaN, SDLoc(N), VT);
   }
 
-  if (ConstantFPSDNode *CFP = isConstOrConstSplatFP(N0)) {
-    EVT VT = N->getValueType(0);
+  if (ConstantFPSDNode *CFP = isConstOrConstSplatFP(N0))
     return getCanonicalConstantFP(DAG, SDLoc(N), VT, CFP->getValueAPF());
-  }
 
   // fcanonicalize (build_vector x, k) -> build_vector (fcanonicalize x),
   //                                                   (fcanonicalize k)
@@ -16479,13 +16471,19 @@ SITargetLowering::performFCanonicalizeCombine(SDNode *N,
 
   // TODO: This could be better with wider vectors that will be split to v2f16,
   // and to consider uses since there aren't that many packed operations.
-  if (N0.getOpcode() == ISD::BUILD_VECTOR && VT == MVT::v2f16 &&
-      isTypeLegal(MVT::v2f16)) {
+  if (N0.getOpcode() == ISD::BUILD_VECTOR && N0.getNumOperands() == 2 &&
+      isTypeLegal(VT)) {
     SDLoc SL(N);
     SDValue NewElts[2];
     SDValue Lo = N0.getOperand(0);
     SDValue Hi = N0.getOperand(1);
     EVT EltVT = Lo.getValueType();
+
+    // Only apply this optimization if scalar canonicalize is legal for the
+    // element type. Otherwise, scalarizing may require widening the scalar back
+    // to a vector, adding overhead (e.g., bf16 has no scalar instructions).
+    if (getOperationAction(ISD::FCANONICALIZE, EltVT) != Legal)
+      return SDValue();
 
     if (vectorEltWillFoldAway(Lo) || vectorEltWillFoldAway(Hi)) {
       for (unsigned I = 0; I != 2; ++I) {
