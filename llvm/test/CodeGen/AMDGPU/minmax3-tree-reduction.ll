@@ -796,14 +796,3 @@ define <2 x half> @v_max3_maxnum_ternary_2level_v2f16(
   %R  = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %AB, <2 x half> %C)
   ret <2 x half> %R
 }
-
-declare float @llvm.maxnum.f32(float, float)
-declare float @llvm.minnum.f32(float, float)
-declare float @llvm.maximum.f32(float, float)
-declare float @llvm.minimum.f32(float, float)
-declare half @llvm.maxnum.f16(half, half)
-declare double @llvm.maxnum.f64(double, double)
-declare bfloat @llvm.maxnum.bf16(bfloat, bfloat)
-declare bfloat @llvm.minnum.bf16(bfloat, bfloat)
-declare <2 x float> @llvm.maxnum.v2f32(<2 x float>, <2 x float>)
-declare <2 x half> @llvm.maxnum.v2f16(<2 x half>, <2 x half>)
