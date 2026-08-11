@@ -555,6 +555,36 @@ func.func @simple_arith.ceildivsi_minint_div_minus_one() -> (i8, i16, i32) {
 
 // -----
 
+// One overflow flag is shared by every element of a vector fold, so a single
+// element whose result is not representable discards the whole fold, wherever
+// in the vector it sits.
+
+// CHECK-LABEL: func @simple_arith.ceildivsi_vector
+//   CHECK-DAG: %[[FOLDED:.*]] = arith.constant dense<[-18, 1, -1]> : vector<3xi8>
+//       CHECK: %[[LAST:.*]] = arith.ceildivsi
+//  CHECK-NEXT: %[[FIRST:.*]] = arith.ceildivsi
+//  CHECK-NEXT: return %[[FOLDED]], %[[LAST]], %[[FIRST]]
+func.func @simple_arith.ceildivsi_vector() -> (vector<3xi8>, vector<3xi8>, vector<3xi8>) {
+  // ceil(-128 / 7) = -18, ceil(-9 / -128) = 1, ceil(5 / -3) = -1
+  %0 = arith.constant dense<[-128, -9, 5]> : vector<3xi8>
+  %1 = arith.constant dense<[7, -128, -3]> : vector<3xi8>
+
+  // MININT / -1 as the last element, then as the first, so that the flag is
+  // set both after and before the representable elements are visited.
+  %2 = arith.constant dense<[-128, -9, -128]> : vector<3xi8>
+  %3 = arith.constant dense<[7, -128, -1]> : vector<3xi8>
+  %4 = arith.constant dense<[-128, -128, -9]> : vector<3xi8>
+  %5 = arith.constant dense<[-1, 7, -128]> : vector<3xi8>
+
+  %6 = arith.ceildivsi %0, %1 : vector<3xi8>
+  %7 = arith.ceildivsi %2, %3 : vector<3xi8>
+  %8 = arith.ceildivsi %4, %5 : vector<3xi8>
+
+  return %6, %7, %8 : vector<3xi8>, vector<3xi8>, vector<3xi8>
+}
+
+// -----
+
 // CHECK-LABEL: func @simple_arith.ceildivui
 func.func @simple_arith.ceildivui() -> (i32, i32, i32, i32, i32) {
   // CHECK-DAG: [[C0:%.+]] = arith.constant 0
