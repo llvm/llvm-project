@@ -2231,17 +2231,6 @@ public:
 };
 } // namespace
 
-/// Helper function to look through the droppable intra-tile hint wrapper
-/// (OMPInvariantPredicateBoundAttr) to the loop statement it annotates.
-static const Stmt *lookThroughOMPIntraTileHint(const Stmt *S) {
-  if (const auto *AS = dyn_cast_or_null<AttributedStmt>(S))
-    if (llvm::any_of(AS->getAttrs(), [](const Attr *A) {
-          return isa<OMPInvariantPredicateBoundAttr>(A);
-        }))
-      return AS->getSubStmt();
-  return S;
-}
-
 static void emitBody(CodeGenFunction &CGF, const Stmt *S, const Stmt *NextLoop,
                      int MaxLevel, int Level = 0) {
   assert(Level < MaxLevel && "Too deep lookup during loop body codegen.");
@@ -2258,10 +2247,10 @@ static void emitBody(CodeGenFunction &CGF, const Stmt *S, const Stmt *NextLoop,
     return;
   }
 
-  // The loop walker may hand back the intra-tile hint wrapper as `NextLoop`;
-  // match against the loop it annotates. The tile overshoot guard is emitted
+  // `tryToFindNextInnerLoop` keeps the intra-tile hint wrapper around, so match
+  // against the loop it annotates. The tile overshoot guard is emitted
   // separately via EmitOMPLoopBody's finals-conditions handling.
-  if (SimplifiedS == lookThroughOMPIntraTileHint(NextLoop)) {
+  if (SimplifiedS == OMPLoopBasedDirective::ignoreIntraTileHint(NextLoop)) {
     if (auto *Dir = dyn_cast<OMPLoopTransformationDirective>(SimplifiedS))
       SimplifiedS = Dir->getTransformedStmt();
     if (const auto *CanonLoop = dyn_cast<OMPCanonicalLoop>(SimplifiedS))

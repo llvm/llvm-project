@@ -18,22 +18,19 @@
 using namespace clang;
 using namespace llvm::omp;
 
-/// Returns true if the attributed statement carries the internal `omp tile`
-/// intra-tile reinterpretation hint (see OMPInvariantPredicateBoundAttr).
-static bool hasOMPInvariantPredicateBound(const AttributedStmt *AS) {
-  for (const Attr *A : AS->getAttrs())
-    if (isa<OMPInvariantPredicateBoundAttr>(A))
-      return true;
-  return false;
+/// Returns the intra-tile hint attribute for the given statement.
+const OMPInvariantPredicateBoundAttr *
+OMPLoopBasedDirective::getIntraTileHint(const Stmt *S) {
+  if (const auto *AS = dyn_cast_or_null<AttributedStmt>(S))
+    return getSpecificAttr<OMPInvariantPredicateBoundAttr>(AS->getAttrs());
+  return nullptr;
 }
 
-/// Peeks through an intra-tile hint wrapper to return the underlying loop;
-/// otherwise returns \p S unchanged. Used by the loop walker once the hint has
-/// already been delivered to the analysis callback and we need to look through
-/// the wrapper to reach the loop body.
-static Stmt *ignoreOMPIntraTileHint(Stmt *S) {
+/// Peek through an intra-tile hint wrapper to return the underlying loop.
+/// The hint is delivered as the third argument to the loop callback.
+Stmt *OMPLoopBasedDirective::ignoreIntraTileHint(Stmt *S) {
   if (auto *AS = dyn_cast_or_null<AttributedStmt>(S))
-    if (hasOMPInvariantPredicateBound(AS))
+    if (hasSpecificAttr<OMPInvariantPredicateBoundAttr>(AS->getAttrs()))
       return AS->getSubStmt();
   return S;
 }
@@ -45,7 +42,7 @@ static Stmt *ignoreOMPIntraTileHint(Stmt *S) {
 static Stmt *ignoreContainersKeepingIntraTileHint(Stmt *S) {
   while (true) {
     if (auto *AS = dyn_cast_or_null<AttributedStmt>(S)) {
-      if (hasOMPInvariantPredicateBound(AS))
+      if (hasSpecificAttr<OMPInvariantPredicateBoundAttr>(AS->getAttrs()))
         break;
       S = AS->getSubStmt();
       continue;
@@ -144,7 +141,7 @@ OMPLoopBasedDirective::tryToFindNextInnerLoop(Stmt *CurStmt,
           Stmt *Inner = S;
           if (auto *CanonLoop = dyn_cast<OMPCanonicalLoop>(Inner))
             Inner = CanonLoop->getLoopStmt();
-          Inner = ignoreOMPIntraTileHint(Inner);
+          Inner = OMPLoopBasedDirective::ignoreIntraTileHint(Inner);
           if (isa<ForStmt>(Inner) || isa<CXXForRangeStmt>(Inner) ||
               (isa<OMPLoopBasedDirective>(Inner) &&
                !isa<OMPLoopDirective>(Inner))) {
@@ -176,7 +173,9 @@ OMPLoopBasedDirective::tryToFindNextInnerLoop(Stmt *CurStmt,
 
 bool OMPLoopBasedDirective::doForAllLoops(
     Stmt *CurStmt, bool TryImperfectlyNestedLoops, unsigned NumLoops,
-    llvm::function_ref<bool(unsigned, Stmt *)> Callback,
+    llvm::function_ref<bool(unsigned, Stmt *,
+                            const OMPInvariantPredicateBoundAttr *)>
+        Callback,
     llvm::function_ref<void(OMPLoopTransformationDirective *)>
         OnTransformationCallback) {
   CurStmt = ignoreContainersKeepingIntraTileHint(CurStmt);
@@ -209,12 +208,12 @@ bool OMPLoopBasedDirective::doForAllLoops(
     }
     if (auto *CanonLoop = dyn_cast<OMPCanonicalLoop>(CurStmt))
       CurStmt = CanonLoop->getLoopStmt();
-    // Deliver the (possibly hint-wrapped) loop node to the callback so it can
-    // read the intra-tile reinterpretation hint, then look through the wrapper
-    // to reach the loop body.
-    if (Callback(Cnt, CurStmt))
+    // The walker keeps the intra-tile hint wrapper around so that it can be
+    // handed to the analysis, but the callback only ever sees the loop itself.
+    const OMPInvariantPredicateBoundAttr *Hint = getIntraTileHint(CurStmt);
+    Stmt *LoopStmt = ignoreIntraTileHint(CurStmt);
+    if (Callback(Cnt, LoopStmt, Hint))
       return false;
-    Stmt *LoopStmt = ignoreOMPIntraTileHint(CurStmt);
     // Move on to the next nested for loop, or to the loop body.
     // OpenMP [2.8.1, simd construct, Restrictions]
     // All loops associated with the construct must be perfectly nested; that
@@ -239,8 +238,6 @@ void OMPLoopBasedDirective::doForAllLoopsBodies(
   bool Res = OMPLoopBasedDirective::doForAllLoops(
       CurStmt, TryImperfectlyNestedLoops, NumLoops,
       [Callback](unsigned Cnt, Stmt *Loop) {
-        // Look through an intra-tile hint wrapper to reach the loop itself.
-        Loop = ignoreOMPIntraTileHint(Loop);
         Stmt *Body = nullptr;
         if (auto *For = dyn_cast<ForStmt>(Loop)) {
           Body = For->getBody();

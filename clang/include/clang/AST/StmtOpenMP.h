@@ -25,6 +25,8 @@
 
 namespace clang {
 
+class OMPInvariantPredicateBoundAttr;
+
 //===----------------------------------------------------------------------===//
 // AST classes for directives.
 //===----------------------------------------------------------------------===//
@@ -892,6 +894,31 @@ public:
                                   TryImperfectlyNestedLoops);
   }
 
+  /// Returns the intra-tile reinterpretation hint attached to \p S, or nullptr
+  /// if \p S does not carry one. See OMPInvariantPredicateBoundAttr.
+  static const OMPInvariantPredicateBoundAttr *getIntraTileHint(const Stmt *S);
+
+  /// If \p S is an intra-tile reinterpretation wrapper, returns the loop it
+  /// annotates; otherwise returns \p S unchanged.
+  static Stmt *ignoreIntraTileHint(Stmt *S);
+  static const Stmt *ignoreIntraTileHint(const Stmt *S) {
+    return ignoreIntraTileHint(const_cast<Stmt *>(S));
+  }
+
+  /// Calls the specified callback function for all the loops in \p CurStmt,
+  /// from the outermost to the innermost. The callback is always passed a
+  /// ForStmt or CXXForRangeStmt; when that loop carries the intra-tile
+  /// reinterpretation hint, it is delivered as a separate argument instead of
+  /// wrapping the loop, so callers that only expect a loop cannot trip over it.
+  static bool
+  doForAllLoops(Stmt *CurStmt, bool TryImperfectlyNestedLoops,
+                unsigned NumLoops,
+                llvm::function_ref<bool(unsigned, Stmt *,
+                                        const OMPInvariantPredicateBoundAttr *)>
+                    Callback,
+                llvm::function_ref<void(OMPLoopTransformationDirective *)>
+                    OnTransformationCallback);
+
   /// Calls the specified callback function for all the loops in \p CurStmt,
   /// from the outermost to the innermost.
   static bool
@@ -899,7 +926,14 @@ public:
                 unsigned NumLoops,
                 llvm::function_ref<bool(unsigned, Stmt *)> Callback,
                 llvm::function_ref<void(OMPLoopTransformationDirective *)>
-                    OnTransformationCallback);
+                    OnTransformationCallback) {
+    auto &&NewCallback = [Callback](unsigned Cnt, Stmt *Loop,
+                                    const OMPInvariantPredicateBoundAttr *) {
+      return Callback(Cnt, Loop);
+    };
+    return doForAllLoops(CurStmt, TryImperfectlyNestedLoops, NumLoops,
+                         NewCallback, OnTransformationCallback);
+  }
   static bool
   doForAllLoops(const Stmt *CurStmt, bool TryImperfectlyNestedLoops,
                 unsigned NumLoops,

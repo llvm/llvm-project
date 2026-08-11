@@ -17,6 +17,7 @@
 #include "TreeTransform.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTMutationListener.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -8021,6 +8022,8 @@ struct LoopIterationSpace final {
   /// True if this is a reinterpreted intra-tile loop whose lower bound is a
   /// live floor dependence.
   bool ReinterpretTileLB = false;
+  /// Location of the reinterpreted intra-tile loop, for diagnostics.
+  SourceLocation ReinterpretTileLoc;
 };
 
 /// Scan an AST subtree, checking that no decls in the CollapsedLoopVarDecls
@@ -9578,24 +9581,24 @@ static bool checkOpenMPIterationSpace(
     llvm::MutableArrayRef<LoopIterationSpace> ResultIterSpaces,
     llvm::MapVector<const Expr *, DeclRefExpr *> &Captures,
     const llvm::SmallPtrSetImpl<const Decl *> &CollapsedLoopVarDecls,
-    llvm::SmallPtrSetImpl<const Decl *> &CollapsedLoopInductionVars) {
+    llvm::SmallPtrSetImpl<const Decl *> &CollapsedLoopInductionVars,
+    const OMPInvariantPredicateBoundAttr *IntraTileHint) {
   bool SupportsNonRectangular = !isOpenMPLoopTransformationDirective(DKind);
   // See the tile reinterpretation design note in ActOnOpenMPTileDirective.
   // If the loop carries the hint, analyze its rectangular form instead.
+  //
+  // Only directives that emit the per-iteration body guard (i.e. those going
+  // through EmitOMPLoopBody's finals-conditions handling) may reinterpret the
+  // loop; a loop transformation such as an enclosing 'tile' has nowhere to put
+  // the overshoot guard, so for those the stored min-bounded form is analyzed
+  // exactly as it is on a build without this hint.
   Expr *TileRectCond = nullptr;
   Expr *TileBodyPredicate = nullptr;
   Expr *TileTripCount = nullptr;
-  if (auto *AS = dyn_cast_or_null<AttributedStmt>(S)) {
-    for (const Attr *A : AS->getAttrs()) {
-      if (const auto *H = dyn_cast<OMPInvariantPredicateBoundAttr>(A)) {
-        TileRectCond = H->getRectCond();
-        TileBodyPredicate = H->getPredicate();
-        TileTripCount = H->getTileSize();
-        break;
-      }
-    }
-    if (TileRectCond)
-      S = AS->getSubStmt();
+  if (IntraTileHint && !isOpenMPLoopTransformationDirective(DKind)) {
+    TileRectCond = IntraTileHint->getRectCond();
+    TileBodyPredicate = IntraTileHint->getPredicate();
+    TileTripCount = IntraTileHint->getTileSize();
   }
   // OpenMP [2.9.1, Canonical Loop Form]
   //   for (init-expr; test-expr; incr-expr) structured-block
@@ -9693,11 +9696,13 @@ static bool checkOpenMPIterationSpace(
     return HasErrors;
 
   // Build the loop's iteration space representation.
-  ResultIterSpaces[CurrentNestedLoopCount].PreCond =
-      ISC.buildPreCond(DSA.getCurScope(), EffectiveCond, Captures);
-  // Reinterpreted intra-tile: precondition is trivially true (.floor.iv
-  // unreadable here); overshoot handled by Predicate.
-  if (TileRectCond)
+  //
+  // A reinterpreted intra-tile loop takes all three of these from the hint
+  // instead of deriving them: the precondition is trivially true (the floor
+  // loop's own precondition already covers an empty iteration space), the trip
+  // count is the constant tile size, and any overshoot on the remainder tile
+  // is handled by the body guard.
+  if (TileRectCond) {
     ResultIterSpaces[CurrentNestedLoopCount].PreCond =
         SemaRef
             .PerformImplicitConversion(
@@ -9705,17 +9710,19 @@ static bool checkOpenMPIterationSpace(
                 SemaRef.Context.BoolTy, AssignmentAction::Casting,
                 /*AllowExplicit=*/true)
             .get();
-  ResultIterSpaces[CurrentNestedLoopCount].NumIterations =
-      ISC.buildNumIterations(DSA.getCurScope(), ResultIterSpaces,
-                             (isOpenMPWorksharingDirective(DKind) ||
-                              isOpenMPGenericLoopDirective(DKind) ||
-                              isOpenMPTaskLoopDirective(DKind) ||
-                              isOpenMPDistributeDirective(DKind) ||
-                              isOpenMPLoopTransformationDirective(DKind)),
-                             Captures);
-  // Reinterpreted intra-tile: trip count is the constant TileSize.
-  if (TileTripCount)
     ResultIterSpaces[CurrentNestedLoopCount].NumIterations = TileTripCount;
+  } else {
+    ResultIterSpaces[CurrentNestedLoopCount].PreCond =
+        ISC.buildPreCond(DSA.getCurScope(), EffectiveCond, Captures);
+    ResultIterSpaces[CurrentNestedLoopCount].NumIterations =
+        ISC.buildNumIterations(DSA.getCurScope(), ResultIterSpaces,
+                               (isOpenMPWorksharingDirective(DKind) ||
+                                isOpenMPGenericLoopDirective(DKind) ||
+                                isOpenMPTaskLoopDirective(DKind) ||
+                                isOpenMPDistributeDirective(DKind) ||
+                                isOpenMPLoopTransformationDirective(DKind)),
+                               Captures);
+  }
   ResultIterSpaces[CurrentNestedLoopCount].CounterVar =
       ISC.buildCounterVar(Captures, DSA);
   ResultIterSpaces[CurrentNestedLoopCount].PrivateCounterVar =
@@ -9733,15 +9740,19 @@ static bool checkOpenMPIterationSpace(
   std::tie(ResultIterSpaces[CurrentNestedLoopCount].MinValue,
            ResultIterSpaces[CurrentNestedLoopCount].MaxValue) =
       ISC.buildMinMaxValues(DSA.getCurScope(), Captures);
-  ResultIterSpaces[CurrentNestedLoopCount].FinalCondition =
-      ISC.buildFinalCondition(DSA.getCurScope());
-  // Reinterpreted intra-tile: body guard is the overshoot Predicate.
-  if (TileBodyPredicate)
+  if (TileRectCond) {
+    // The body guard is the overshoot predicate, which is absent when the tile
+    // can never be partial. Lower bound is the live .floor.iv; wire as a floor
+    // dependence for collapse
+    // (see design note in ActOnOpenMPTileDirective).
     ResultIterSpaces[CurrentNestedLoopCount].FinalCondition = TileBodyPredicate;
-  // Lower bound is the live .floor.iv; wire as a floor dependence for collapse
-  // (see design note in ActOnOpenMPTileDirective).
-  if (TileRectCond)
     ResultIterSpaces[CurrentNestedLoopCount].ReinterpretTileLB = true;
+    ResultIterSpaces[CurrentNestedLoopCount].ReinterpretTileLoc =
+        ISC.getInitSrcRange().getBegin();
+  } else {
+    ResultIterSpaces[CurrentNestedLoopCount].FinalCondition =
+        ISC.buildFinalCondition(DSA.getCurScope());
+  }
   ResultIterSpaces[CurrentNestedLoopCount].IsNonRectangularLB =
       ISC.doesInitDependOnLC();
   ResultIterSpaces[CurrentNestedLoopCount].IsNonRectangularUB =
@@ -10139,12 +10150,15 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
           [DKind, &SemaRef, &DSA, NumLoops, NestedLoopCount,
            CollapseLoopCountExpr, OrderedLoopCountExpr, &VarsWithImplicitDSA,
            &IterSpaces, &Captures, &CollapsedLoopVarDecls,
-           &CollapsedLoopInductionVars](unsigned Cnt, Stmt *CurStmt) {
+           &CollapsedLoopInductionVars](
+              unsigned Cnt, Stmt *CurStmt,
+              const OMPInvariantPredicateBoundAttr *IntraTileHint) {
             if (checkOpenMPIterationSpace(
                     DKind, CurStmt, SemaRef, DSA, Cnt, NestedLoopCount,
                     NumLoops, CollapseLoopCountExpr, OrderedLoopCountExpr,
                     VarsWithImplicitDSA, IterSpaces, Captures,
-                    CollapsedLoopVarDecls, CollapsedLoopInductionVars))
+                    CollapsedLoopVarDecls, CollapsedLoopInductionVars,
+                    IntraTileHint))
               return true;
             if (Cnt > 0 && Cnt >= NestedLoopCount &&
                 IterSpaces[Cnt].CounterVar) {
@@ -10669,6 +10683,7 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
       // Wire the reinterpreted lower bound to its floor dependence (see design
       // note in ActOnOpenMPTileDirective).
       if (IS.ReinterpretTileLB && IS.CounterInit) {
+        bool FoundFloor = false;
         if (const auto *LBRef =
                 dyn_cast<DeclRefExpr>(IS.CounterInit->IgnoreParenImpCasts())) {
           const Decl *FloorDecl = LBRef->getDecl()->getCanonicalDecl();
@@ -10677,9 +10692,21 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
             if (CV && CV->getDecl()->getCanonicalDecl() == FloorDecl) {
               IS.IsNonRectangularLB = true;
               IS.LoopDependentIdx = K + 1;
+              FoundFloor = true;
               break;
             }
           }
+        }
+        if (!FoundFloor) {
+          // The floor this intra-tile loop starts from is not one of the
+          // collapsed counters: it is assigned in the body of an enclosing
+          // transformed loop, so the collapsed nest would read a stale value
+          // instead of recomputing it per iteration. Diagnose to avoid silently
+          // producing the wrong iteration space.
+          SemaRef.Diag(IS.ReinterpretTileLoc,
+                       diag::err_omp_collapse_stacked_tile);
+          HasErrors = true;
+          break;
         }
       }
 
@@ -15242,9 +15269,11 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
   // below carrying an equivalent rectangular reinterpretation:
   //   RectCond  : .tile.iv < .floor.iv + T   -- rectangular bound, analyzed by
   //               checkOpenMPIterationSpace in place of the stored condition
-  //   Predicate : .tile.iv < N               -- remainder-tile overshoot,
-  //               applied as a body guard instead of shortening the trip count
   //   TileSize  : T                          -- constant per-tile trip count
+  //   Predicate : .tile.iv < N               -- remainder-tile overshoot,
+  //               applied as a body guard instead of shortening the trip count;
+  //               omitted when N is known to be a multiple of T, as there is
+  //               then no partial tile to guard against
   // Because the reinterpreted lower bound is still `.floor.iv`, checkOpenMPLoop
   // wires it as a live dependence on the matching floor counter, so a
   // collapsed `.tile.iv` re-reads the floor's current value instead of a
@@ -15314,8 +15343,8 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
     if (!IncrStmt.isUsable())
       return StmtError();
 
-    // Build OMPInvariantPredicateBoundAttr hint (RectCond, Predicate,
-    // TileSize).
+    // Build OMPInvariantPredicateBoundAttr hint (RectCond, TileSize,
+    // Predicate).
     Expr *RectDimTileSize = MakeDimTileSize(I);
     if (!RectDimTileSize)
       return StmtError();
@@ -15328,17 +15357,40 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
     ExprResult RectCond =
         SemaRef.BuildBinOp(CurScope, LoopHelper.Cond->getExprLoc(), BO_LT,
                            MakeTileIVRef(), RectEndOfTile.get());
-    ExprResult Predicate =
-        SemaRef.BuildBinOp(CurScope, LoopHelper.Cond->getExprLoc(), BO_LT,
-                           MakeTileIVRef(), NumIterations);
     Expr *TileSizeExpr = MakeDimTileSize(I);
     if (!TileSizeExpr)
       return StmtError();
     ExprResult TileSize = SemaRef.PerformImplicitConversion(
         TileSizeExpr, IVTy, AssignmentAction::Converting,
         /*AllowExplicit=*/true);
-    if (!RectCond.isUsable() || !Predicate.isUsable() || !TileSize.isUsable())
+    if (!RectCond.isUsable() || !TileSize.isUsable())
       return StmtError();
+
+    // The overshoot guard is only needed if the last tile can be partial. When
+    // both the trip count and the tile size are known at compile time and the
+    // former is a multiple of the latter, every tile is full, so leave the
+    // predicate out. A dependent or run-time value makes
+    // the evaluation fail, which keeps the guard.
+    bool NoPartialTile = false;
+    Expr::EvalResult TileSizeVal, NumIterationsVal;
+    if (TileSizeExpr->EvaluateAsInt(TileSizeVal, Context) &&
+        NumIterations->EvaluateAsInt(NumIterationsVal, Context)) {
+      llvm::APSInt TS = TileSizeVal.Val.getInt();
+      llvm::APSInt N = NumIterationsVal.Val.getInt();
+      unsigned Width = std::max(TS.getBitWidth(), N.getBitWidth());
+      TS = TS.extend(Width);
+      N = N.extend(Width);
+      NoPartialTile =
+          TS.isStrictlyPositive() && N.isStrictlyPositive() && N.urem(TS) == 0;
+    }
+
+    ExprResult Predicate;
+    if (!NoPartialTile) {
+      Predicate = SemaRef.BuildBinOp(CurScope, LoopHelper.Cond->getExprLoc(),
+                                     BO_LT, MakeTileIVRef(), NumIterations);
+      if (!Predicate.isUsable())
+        return StmtError();
+    }
 
     // Statements to set the original iteration variable's value from the
     // logical iteration number.
@@ -15370,7 +15422,8 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
 
     // Attach the droppable reinterpretation attribute to the intra-tile loop.
     auto *Hint = OMPInvariantPredicateBoundAttr::CreateImplicit(
-        Context, RectCond.get(), Predicate.get(), TileSize.get(),
+        Context, RectCond.get(), TileSize.get(),
+        Predicate.isUsable() ? Predicate.get() : nullptr,
         Inner->getSourceRange());
     Inner =
         AttributedStmt::Create(Context, Inner->getBeginLoc(), {Hint}, Inner);
