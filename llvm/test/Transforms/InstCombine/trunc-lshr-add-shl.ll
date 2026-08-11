@@ -187,6 +187,23 @@ define i8 @positive_and_misaligned_c(i32 %y) {
   ret i8 %v17
 }
 
+; Regression test: an "and" mask (not just trunc) used to crash the fold
+; with a dominance violation.
+define i32 @regression_and_mask_dominance(i32 %x) {
+; CHECK-LABEL: define i32 @regression_and_mask_dominance(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], 136
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[TMP2]], 248
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %v2 = shl i32 %x, 12
+  %v3 = add i32 %v2, 34816
+  %v16 = lshr i32 %v3, 8
+  %r = and i32 %v16, 255
+  ret i32 %r
+}
+
 ; Negative test: ShrAmt (4) < ShAmt is fine, but here ShrAmt (8) > ShAmt (4),
 ; which would require a negative shift amount, so the fold must not fire.
 define i8 @negative_shramt_gt_shamt(i32 %y) {

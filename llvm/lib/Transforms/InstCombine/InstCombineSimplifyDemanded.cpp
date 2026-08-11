@@ -876,8 +876,10 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
             InnerShAmt->uge(ShiftAmt) &&
             (BO->isBitwiseLogicOp() || (BO->getOpcode() == Instruction::Add &&
                                         BOC->countr_zero() >= ShiftAmt))) {
-          Value *NewShl = Builder.CreateShl(
-              InnerX, ConstantInt::get(VTy, *InnerShAmt - ShiftAmt));
+          Value *NewShl = InsertNewInstWith(
+              BinaryOperator::CreateShl(
+                  InnerX, ConstantInt::get(VTy, *InnerShAmt - ShiftAmt)),
+              I->getIterator());
           Constant *NewBOC = ConstantInt::get(VTy, BOC->lshr(ShiftAmt));
           Instruction *NewBO =
               BinaryOperator::Create(BO->getOpcode(), NewShl, NewBOC);
