@@ -8,5 +8,7 @@ add_mlir_dialect_library(InterXW
   LINK_LIBS PUBLIC
   InterXeMachine
   MLIRIR
+  MLIRLLVMDialect
   MLIRSupport
+  MLIRViewLikeInterface
 )

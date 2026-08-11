@@ -1,6 +1,22 @@
 // RUN: inter-opt %s --inter-normalize-cf --inter-convert-calls --inter-convert-memory | FileCheck %s
 
 module {
+  // CHECK-LABEL: func.func @ptradd_aliases
+  // CHECK: [[ENTRY:%.*]] = xw.token
+  // CHECK: {{%.*}}, [[READ:%.*]] = xw.load {{%.*}} dep [[ENTRY]]
+  // CHECK: xw.store {{.*}} dep [[ENTRY]]
+  // CHECK: xw.store {{.*}} dep [[READ]]
+  func.func @ptradd_aliases(%a: !llvm.ptr<1>, %b: !llvm.ptr<1>,
+                           %offset: i64, %value: i32) attributes {
+      xemachine.kernel} {
+    %pa = xw.ptradd %a, %offset : !llvm.ptr<1>, i64
+    %pb = xw.ptradd %b, %offset : !llvm.ptr<1>, i64
+    %loaded = llvm.load %pa : !llvm.ptr<1> -> i32
+    llvm.store %value, %pb : i32, !llvm.ptr<1>
+    llvm.store %value, %pa : i32, !llvm.ptr<1>
+    return
+  }
+
   // CHECK-LABEL: func.func @read_join
   // CHECK: [[ENTRY:%.*]] = xw.token
   // CHECK: {{%.*}}, [[READ0:%.*]] = xw.load {{%.*}} dep [[ENTRY]]

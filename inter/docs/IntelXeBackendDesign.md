@@ -274,15 +274,20 @@ join/back-edge handling included.
 
 ## 8. Symbolic addressing
 
-Every memory operation consumes one exact semantic address object:
+Every memory operation consumes:
 
 ```
-{ address-space, base/provenance, byte-offset expression, integer width,
-  known range, known alignment, access size/type, active mask }
+opaque LLVM pointer SSA value plus the memory operation's access type,
+alignment, and active mask
 ```
 
-- GEP offsets are computed from the LLVM data layout and GEP source element
-  type. The expression DAG preserves sign/zero extension, truncation, shifts,
+- Opaque pointers retain their LLVM address space and SSA structure through the
+  semantic layer. Typed GEPs normalize to `xw.ptradd(base, byteOffset)`, where
+  the offset uses the address-space-specific index width and the source element
+  type plus data layout determines byte strides. GEP no-wrap/inbounds semantics
+  are preserved. Loads/stores continue to consume pointers rather than a second
+  target-independent address object.
+- Byte-offset arithmetic preserves sign/zero extension, truncation, shifts,
   division/remainder, selects, PHI/add recurrences, `inbounds`, `nuw`/`nsw`,
   and modular integer width. Algebra may use ixsimpl or an equivalent
   hash-consed engine, but only after LLVM semantics are represented exactly.
@@ -291,10 +296,11 @@ Every memory operation consumes one exact semantic address object:
   a general address. Generic address-space pointers are specialized only when
   provenance proves a concrete space, otherwise rejected until a documented
   generic-pointer ABI exists.
-- Range, divisibility, alignment, recurrence, and non-overlap proofs come from
+- Provenance is not reconstructed when LLVM transformations have erased it.
+  Range, divisibility, alignment, recurrence, and non-overlap proofs come from
   imported LLVM analysis facts plus MLIR integer-range/dataflow analysis. Passes
-  query a common API; target selectors do not walk arbitrary SSA looking for a
-  favorite shape.
+  query a common API and become conservative when facts are unavailable; target
+  selectors do not walk arbitrary SSA looking for a favorite shape.
 - Message selection evaluates each access against target capability tables and
   demotes through a correctness-preserving chain:
 
@@ -313,7 +319,7 @@ Every memory operation consumes one exact semantic address object:
 - Address-space lowering: global -> A64 stateless UGM; local -> bounded SLM
   offsets; constant -> stateless read-only; private -> GRF when promoted,
   otherwise scratch. Scalar, vector, block, 2D, and prefetch operations all use
-  this same address abstraction.
+  this same pointer representation.
 
 ## 9. Memory model: tokens and early alias analysis
 

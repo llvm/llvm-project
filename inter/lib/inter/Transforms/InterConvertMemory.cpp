@@ -44,8 +44,17 @@ struct ConvertMemory : public inter::impl::ConvertMemoryBase<ConvertMemory> {
   // Alias class keys are kernel argument indices or one class for all SLM
   // globals. Unknown addresses alias every class.
   int aliasClass(Value address) const {
-    while (LLVM::GEPOp gep = address.getDefiningOp<LLVM::GEPOp>())
-      address = gep.getBase();
+    while (Operation *definingOp = address.getDefiningOp()) {
+      if (auto gep = dyn_cast<LLVM::GEPOp>(definingOp)) {
+        address = gep.getBase();
+        continue;
+      }
+      if (auto ptrAdd = dyn_cast<xw::PtrAddOp>(definingOp)) {
+        address = ptrAdd.getBase();
+        continue;
+      }
+      break;
+    }
 
     if (BlockArgument argument = dyn_cast<BlockArgument>(address)) {
       Block *owner = argument.getOwner();

@@ -7,11 +7,27 @@
 
 include "inter/Dialect/Inter/IR/InterBase.td"
 include "inter/Dialect/XeMachine/IR/XeMachineTypes.td"
+include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/Interfaces/ViewLikeInterface.td"
 
 class XW_Op<string mnemonic, list<Trait> traits = []> :
     Op<XWDialect, mnemonic, traits> {
   let cppNamespace = "::xw";
+}
+
+// Bytewise pointer arithmetic. The base/result remain opaque LLVM pointers;
+// gep_flags stores the raw LLVM GEP no-wrap bits for later lowering.
+def XW_PtrAddOp : XW_Op<"ptradd", [Pure,
+    DeclareOpInterfaceMethods<ViewLikeOpInterface>,
+    AllTypesMatch<["base", "result"]>]> {
+  let summary = "add a byte offset to an opaque pointer";
+  let arguments = (ins LLVM_AnyPointer:$base, AnySignlessInteger:$offset,
+                        DefaultValuedAttr<I32Attr, "0">:$gep_flags);
+  let results = (outs LLVM_AnyPointer:$result);
+  let assemblyFormat =
+      "$base `,` $offset attr-dict `:` qualified(type($base)) `,` type($offset)";
+  let hasVerifier = 1;
 }
 
 // Memory ordering token: the entry source for a kernel's token graph.

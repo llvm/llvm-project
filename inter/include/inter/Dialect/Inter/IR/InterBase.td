@@ -12,9 +12,10 @@ def XWDialect : Dialect {
   let name = "xw";
   let summary = "Kernel-level frontend ops with explicit memory tokens";
   let description = [{
-    Load/store/barrier/atomic with token operands and results, work-item id
-    special ops, and the token algebra. Legality is SSA dominance plus
-    explicit token edges; no pass below the AA conversion may infer ordering.
+    Opaque-pointer byte arithmetic, load/store/barrier/atomic with token
+    operands and results, work-item id special ops, and the token algebra.
+    Legality is SSA dominance plus explicit token edges; no pass below the AA
+    conversion may infer ordering.
   }];
   let cppNamespace = "::xw";
 }

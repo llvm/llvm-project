@@ -3,7 +3,9 @@
 
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 
 #include "inter/Dialect/XeMachine/IR/XeMachine.h"
 

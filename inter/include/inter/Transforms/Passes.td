@@ -32,6 +32,11 @@ def ConvertMemory : Pass<"inter-convert-memory", "::mlir::func::FuncOp"> {
                            "inter::xemachine::XeMachineDialect"];
 }
 
+def NormalizePointers : Pass<"inter-normalize-pointers", "::mlir::func::FuncOp"> {
+  let summary = "normalize LLVM GEPs to bytewise xw.ptradd operations";
+  let dependentDialects = ["xw::XWDialect", "mlir::LLVM::LLVMDialect"];
+}
+
 def InsertSync : Pass<"inter-insert-sync", "::mlir::func::FuncOp"> {
   let summary = "materialize machine sync operations with dense dataflow";
   let dependentDialects = ["inter::xemachine::XeMachineDialect"];
