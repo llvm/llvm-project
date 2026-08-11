@@ -54,29 +54,39 @@ func.func @ceildivs(%n: index, %m: index) -> index {
   // CHECK-DAG: %[[N:.*]] = builtin.unrealized_conversion_cast %[[NI]]
   // CHECK-DAG: %[[M:.*]] = builtin.unrealized_conversion_cast %[[MI]]
   // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0 :
-  // CHECK: %[[POS_ONE:.*]] = llvm.mlir.constant(1 :
-  // CHECK: %[[NEG_ONE:.*]] = llvm.mlir.constant(-1 :
+  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1 :
 
-  // CHECK: %[[M_POS:.*]] = llvm.icmp "sgt" %[[M]], %[[ZERO]]
-  // CHECK: %[[X:.*]] = llvm.select %[[M_POS]], %[[NEG_ONE]], %[[POS_ONE]]
+  // CHECK: %[[QUOTIENT:.*]] = llvm.sdiv %[[N]], %[[M]]
+  // CHECK: %[[QUOTIENT_PLUS_ONE:.*]] = llvm.add %[[QUOTIENT]], %[[ONE]]
 
-  // CHECK: %[[N_PLUS_X:.*]] = llvm.add %[[N]], %[[X]]
-  // CHECK: %[[N_PLUS_X_DIV_M:.*]] = llvm.sdiv %[[N_PLUS_X]], %[[M]]
-  // CHECK: %[[POS_RES:.*]] = llvm.add %[[N_PLUS_X_DIV_M]], %[[POS_ONE]]
-
-  // CHECK: %[[NEG_N:.*]] = llvm.sub %[[ZERO]], %[[N]]
-  // CHECK: %[[NEG_N_DIV_M:.*]] = llvm.sdiv %[[NEG_N]], %[[M]]
-  // CHECK: %[[NEG_RES:.*]] = llvm.sub %[[ZERO]], %[[NEG_N_DIV_M]]
-
-  // CHECK: %[[N_POS:.*]] = llvm.icmp "sgt" %[[N]], %[[ZERO]]
-  // CHECK: %[[SAME_SIGN:.*]] = llvm.icmp "eq" %[[N_POS]], %[[M_POS]]
-  // CHECK: %[[N_NON_ZERO:.*]] = llvm.icmp "ne" %[[N]], %[[ZERO]]
-  // CHECK: %[[CMP:.*]] = llvm.and %[[SAME_SIGN]], %[[N_NON_ZERO]]
-  // CHECK: %[[RESULT:.*]] = llvm.select %[[CMP]], %[[POS_RES]], %[[NEG_RES]]
+  // CHECK: %[[PRODUCT:.*]] = llvm.mul %[[QUOTIENT]], %[[M]]
+  // CHECK: %[[INEXACT:.*]] = llvm.icmp "ne" %[[N]], %[[PRODUCT]]
+  // CHECK: %[[N_NEG:.*]] = llvm.icmp "slt" %[[N]], %[[ZERO]]
+  // CHECK: %[[M_NEG:.*]] = llvm.icmp "slt" %[[M]], %[[ZERO]]
+  // CHECK: %[[SAME_SIGN:.*]] = llvm.icmp "eq" %[[N_NEG]], %[[M_NEG]]
+  // CHECK: %[[CMP:.*]] = llvm.and %[[INEXACT]], %[[SAME_SIGN]]
+  // CHECK: %[[RESULT:.*]] = llvm.select %[[CMP]], %[[QUOTIENT_PLUS_ONE]], %[[QUOTIENT]]
   %result = index.ceildivs %n, %m
 
   // CHECK: %[[RESULTI:.*]] = builtin.unrealized_conversion_cast %[[RESULT]]
   // CHECK: return %[[RESULTI]]
+  return %result : index
+}
+
+// INDEX32-LABEL: @ceildivs_intmin_dividend
+// INDEX64-LABEL: @ceildivs_intmin_dividend
+func.func @ceildivs_intmin_dividend() -> index {
+  %n = index.constant -2147483648
+  %m = index.constant 7
+
+  // The conversion folds an op before it looks for a pattern, and the fold
+  // needs the 32-bit and the 64-bit result to agree, which they now do. They
+  // did not while the dividend was negated, so the sequence above ran instead
+  // and computed 306783378 on 32-bit.
+  // INDEX32: llvm.mlir.constant(-306783378 : i32) : i32
+  // INDEX64: llvm.mlir.constant(-306783378 : i64) : i64
+  %result = index.ceildivs %n, %m
+
   return %result : index
 }
 
