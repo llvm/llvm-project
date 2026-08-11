@@ -36,6 +36,12 @@
 using namespace llvm;
 using namespace llvm::dxil;
 
+/// Write mask covering all four components of a UAV element. Typed UAV stores
+/// (textures and typed buffers) must always use this mask - the DXIL validator
+/// rejects anything narrower. Only raw and / structured buffer stores may use a
+/// partial mask.
+static constexpr uint8_t TypedUAVStoreWriteMask = 0xF;
+
 namespace {
 class OpLowerer {
   Module &M;
@@ -976,8 +982,8 @@ public:
 
       uint64_t NumElements =
           DL.getTypeSizeInBits(DataTy) / DL.getTypeSizeInBits(ScalarTy);
-      Value *Mask =
-          ConstantInt::get(Int8Ty, IsRaw ? ~(~0U << NumElements) : 15U);
+      Value *Mask = ConstantInt::get(Int8Ty, IsRaw ? ~(~0U << NumElements)
+                                                   : TypedUAVStoreWriteMask);
 
       // TODO: check that we only have vector or scalar...
       if (NumElements > 4)
@@ -1033,7 +1039,7 @@ public:
             "Texture store data must have at most 4 elements",
             inconvertibleErrorCode());
 
-      Value *Mask = ConstantInt::get(Int8Ty, 15U);
+      Value *Mask = ConstantInt::get(Int8Ty, TypedUAVStoreWriteMask);
       std::array<Value *, 4> DataElements =
           splitStoreData(IRB, Data, NumElements, /*FillWithUndef=*/false);
 
