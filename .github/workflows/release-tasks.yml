@@ -103,6 +103,7 @@ jobs:
       id-token: write # Requred for pypi publishing
     needs:
       - validate-tag
+    if: ${{ !contains(needs.validate-tag.outputs.release-version, 'rc') }}
     environment: pypi
     steps:
       - name: Checkout LLVM
