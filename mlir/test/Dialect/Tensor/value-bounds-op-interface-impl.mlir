@@ -30,6 +30,59 @@ func.func @cast_unranked(%t: tensor<*xf32>) -> index {
 
 // -----
 
+//       CHECK: #[[$MAP:.+]] = affine_map<()[s0, s1] -> (s0 + s1)>
+// CHECK-LABEL: func @concat(
+//  CHECK-SAME:     %[[t0:[a-zA-Z0-9]+]]: tensor<?x4xf32>, %[[t1:[a-zA-Z0-9]+]]: tensor<?x4xf32>
+//       CHECK:   %[[dim0:.*]] = tensor.dim %[[t0]]
+//       CHECK:   %[[dim1:.*]] = tensor.dim %[[t1]]
+//       CHECK:   %[[sum:.*]] = affine.apply #[[$MAP]]()[%[[dim0]], %[[dim1]]]
+//       CHECK:   return %[[sum]]
+func.func @concat(%t0: tensor<?x4xf32>, %t1: tensor<?x4xf32>) -> index {
+  %0 = tensor.concat dim(0) %t0, %t1
+      : (tensor<?x4xf32>, tensor<?x4xf32>) -> tensor<?x4xf32>
+  %1 = "test.reify_bound"(%0) {dim = 0} : (tensor<?x4xf32>) -> (index)
+  return %1 : index
+}
+
+// -----
+
+// The size of a dimension that is not concatenated is the same in the result
+// and in every input. The first input is dynamic in dimension 1, so the
+// constant size can only come from the second one.
+
+// CHECK-LABEL: func @concat_non_concatenated_dim(
+//       CHECK:   %[[c4:.*]] = arith.constant 4 : index
+//       CHECK:   return %[[c4]]
+func.func @concat_non_concatenated_dim(%t0: tensor<?x?xf32>,
+                                       %t1: tensor<?x4xf32>) -> index {
+  %0 = tensor.concat dim(0) %t0, %t1
+      : (tensor<?x?xf32>, tensor<?x4xf32>) -> tensor<?x?xf32>
+  %1 = "test.reify_bound"(%0) {dim = 1, constant} : (tensor<?x?xf32>) -> (index)
+  return %1 : index
+}
+
+// -----
+
+// Every input is dynamic in a dimension that is not concatenated, so the size
+// of the result is the size of any of them. The bound is reified in terms of
+// the first input.
+
+// CHECK-LABEL: func @concat_non_concatenated_dim_dynamic(
+//  CHECK-SAME:     %[[t0:[a-zA-Z0-9]+]]: tensor<?x?xf32>
+//       CHECK:   %[[c1:.*]] = arith.constant 1 : index
+//       CHECK:   %[[dim:.*]] = tensor.dim %[[t0]], %[[c1]]
+//       CHECK:   return %[[dim]]
+func.func @concat_non_concatenated_dim_dynamic(%t0: tensor<?x?xf32>,
+                                               %t1: tensor<?x?xf32>,
+                                               %t2: tensor<?x?xf32>) -> index {
+  %0 = tensor.concat dim(0) %t0, %t1, %t2
+      : (tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>) -> tensor<?x?xf32>
+  %1 = "test.reify_bound"(%0) {dim = 1} : (tensor<?x?xf32>) -> (index)
+  return %1 : index
+}
+
+// -----
+
 // CHECK-LABEL: func @dim(
 //  CHECK-SAME:     %[[t:.*]]: tensor<?xf32>
 //       CHECK:   %[[dim:.*]] = tensor.dim %[[t]]
