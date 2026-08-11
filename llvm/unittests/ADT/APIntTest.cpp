@@ -1099,8 +1099,7 @@ TEST(APIntTest, divrem_big7) {
 
 TEST(APIntTest, divrem_big8) {
   // A test for KnuthDiv step D3 when qp = b + 1.
-  testDiv({128, "8000000080000001", 16},
-          {128, "ffffffff", 16},
+  testDiv({128, "8000000080000001", 16}, {128, "ffffffff", 16},
           {128, "7fffffff80000001", 16});
 }
 

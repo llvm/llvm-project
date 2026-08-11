@@ -1385,10 +1385,10 @@ static void KnuthDiv(uint32_t *u, uint32_t *v, uint32_t *q, uint32_t* r,
     DEBUG_KNUTH(dbgs() << "KnuthDiv: dividend == " << dividend << '\n');
     uint64_t qp = dividend / v[n-1];
     uint64_t rp = dividend % v[n-1];
-    if (qp >= b || qp*v[n-2] > b*rp + u[j+n-2]) {
+    if (qp >= b || qp * v[n - 2] > b * rp + u[j + n - 2]) {
       qp--;
       rp += v[n-1];
-      if (rp < b && (qp >= b || qp*v[n-2] > b*rp + u[j+n-2]))
+      if (rp < b && (qp >= b || qp * v[n - 2] > b * rp + u[j + n - 2]))
         qp--;
     }
     DEBUG_KNUTH(dbgs() << "KnuthDiv: qp == " << qp << ", rp == " << rp << '\n');
