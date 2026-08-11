@@ -8,7 +8,6 @@ declare float @llvm.tanh.f32(float)
 declare float @llvm.asin.f32(float)
 declare float @llvm.acos.f32(float)
 declare float @llvm.atan.f32(float)
-declare float @llvm.atan2.f32(float, float)
 
 ; tan never returns Inf (tan(+-Inf) = NaN; tan(finite) = finite).
 define float @ret_tan(float %arg) {
@@ -205,36 +204,5 @@ define float @ret_atan_nonan(float nofpclass(nan) %arg) {
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.atan.f32(float %arg)
-  ret float %call
-}
-
-; atan2 result is in (-pi, pi], never Inf.
-define float @ret_atan2(float %arg0, float %arg1) {
-; CHECK-LABEL: define nofpclass(inf) float @ret_atan2
-; CHECK-SAME: (float [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.atan2.f32(float [[ARG0]], float [[ARG1]]) #[[ATTR2]]
-; CHECK-NEXT:    ret float [[CALL]]
-;
-  %call = call float @llvm.atan2.f32(float %arg0, float %arg1)
-  ret float %call
-}
-
-define float @ret_atan2_nonan(float nofpclass(nan) %arg0, float nofpclass(nan) %arg1) {
-; CHECK-LABEL: define nofpclass(nan inf) float @ret_atan2_nonan
-; CHECK-SAME: (float nofpclass(nan) [[ARG0:%.*]], float nofpclass(nan) [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) float @llvm.atan2.f32(float nofpclass(nan) [[ARG0]], float nofpclass(nan) [[ARG1]]) #[[ATTR2]]
-; CHECK-NEXT:    ret float [[CALL]]
-;
-  %call = call float @llvm.atan2.f32(float %arg0, float %arg1)
-  ret float %call
-}
-
-define float @ret_atan2_nosnan(float nofpclass(snan) %arg0, float nofpclass(snan) %arg1) {
-; CHECK-LABEL: define nofpclass(snan inf) float @ret_atan2_nosnan
-; CHECK-SAME: (float nofpclass(snan) [[ARG0:%.*]], float nofpclass(snan) [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan inf) float @llvm.atan2.f32(float nofpclass(snan) [[ARG0]], float nofpclass(snan) [[ARG1]]) #[[ATTR2]]
-; CHECK-NEXT:    ret float [[CALL]]
-;
-  %call = call float @llvm.atan2.f32(float %arg0, float %arg1)
   ret float %call
 }

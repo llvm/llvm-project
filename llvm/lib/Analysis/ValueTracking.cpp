@@ -5427,12 +5427,25 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       break;
     }
     case Intrinsic::atan2: {
-      KnownFPClass KnownLHS, KnownRHS;
-      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
-                          KnownLHS, Q, Depth + 1);
-      computeKnownFPClass(II->getArgOperand(1), DemandedElts, InterestedClasses,
-                          KnownRHS, Q, Depth + 1);
-      Known = KnownFPClass::atan2(KnownLHS, KnownRHS);
+      FPClassTest InterestedY = InterestedClasses;
+      FPClassTest InterestedX = InterestedClasses;
+
+      // We can rule out zero and subnormal if x cannot have a positive value.
+      if ((InterestedClasses & (fcZero | fcSubnormal)) != fcNone)
+        InterestedX |= fcPositive | fcNegSubnormal;
+
+      KnownFPClass KnownY, KnownX;
+      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedY,
+                          KnownY, Q, Depth + 1);
+      computeKnownFPClass(II->getArgOperand(1), DemandedElts, InterestedX,
+                          KnownX, Q, Depth + 1);
+
+      const Function *F = II->getFunction();
+      DenormalMode Mode =
+          F ? F->getDenormalMode(
+                  II->getType()->getScalarType()->getFltSemantics())
+            : DenormalMode::getDynamic();
+      Known = KnownFPClass::atan2(KnownY, KnownX, Mode);
       break;
     }
     case Intrinsic::maxnum:

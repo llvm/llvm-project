@@ -336,8 +336,9 @@ struct KnownFPClass {
   LLVM_ABI static KnownFPClass atan(const KnownFPClass &Src);
 
   /// Report known values for atan2
-  LLVM_ABI static KnownFPClass atan2(const KnownFPClass &LHS,
-                                     const KnownFPClass &RHS);
+  LLVM_ABI static KnownFPClass
+  atan2(const KnownFPClass &LHS, const KnownFPClass &RHS,
+        DenormalMode Mode = DenormalMode::getDynamic());
 
   /// Return true if the sign bit must be 0, ignoring the sign of nans.
   bool signBitIsZeroOrNaN() const { return isKnownNever(fcNegative); }

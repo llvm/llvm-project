@@ -729,14 +729,28 @@ KnownFPClass KnownFPClass::atan(const KnownFPClass &KnownSrc) {
   return Known;
 }
 
-KnownFPClass KnownFPClass::atan2(const KnownFPClass &KnownLHS,
-                                 const KnownFPClass &KnownRHS) {
+KnownFPClass KnownFPClass::atan2(const KnownFPClass &KnownY,
+                                 const KnownFPClass &KnownX,
+                                 DenormalMode Mode) {
   KnownFPClass Known;
+
+  // Even though these deductions are correct, we are ignoring the following
+  // potentially erroneous cases:
+  //   * atan2(y, inf) is not subnormal
+  //   * atan2(inf, x) is not zero or subnormal
 
   // atan2 result is in (-pi, pi], never Inf.
   Known.knownNot(fcInf);
 
-  Known.propagateNonNaN(KnownLHS, KnownRHS);
+  Known.propagateNonNaN(KnownY, KnownX);
+
+  // Negative subnormals could be treated like positive zero.
+  const bool XCannotHavePositiveValue = KnownX.isKnownNever(fcPositive) &&
+                                        KnownX.isKnownNeverLogicalPosZero(Mode);
+
+  // If x <= -0.0, then |atan2(y, x)| >= pi/2
+  if (XCannotHavePositiveValue)
+    Known.knownNot(fcZero | fcSubnormal);
 
   return Known;
 }
