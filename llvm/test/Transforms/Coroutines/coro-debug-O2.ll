@@ -2,7 +2,7 @@
 
 ; Checks the dbg informations about promise and coroutine frames under O2.
 
-; CHECK-LABEL: define internal fastcc void @f.resume({{.*}})
+; CHECK-LABEL: define internal void @f.resume({{.*}})
 ; CHECK:       entry.resume:
 ; CHECK:        #dbg_value(ptr poison, ![[PROMISEVAR_RESUME:[0-9]+]], !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 16
 ; CHECK:        #dbg_value(ptr %begin, ![[CORO_FRAME:[0-9]+]], !DIExpression(DW_OP_deref)

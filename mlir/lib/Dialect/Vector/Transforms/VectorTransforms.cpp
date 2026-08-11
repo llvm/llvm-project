@@ -244,7 +244,7 @@ struct CombineContractResultTranspose final
   }
 };
 
-/// Merge BroadcastOp into ContractionOp user.
+/// Merge BroadcastOp (and broadcast-like ShapeCastOp) into ContractionOp user.
 /// Ex:
 /// ```
 ///   %0 = vector.broadcast %arg0 : vector<32x16xf32> to vector<8x32x16xf32>
@@ -282,21 +282,34 @@ FailureOr<Value> combineContractAndBroadcast(vector::ContractionOp contractOp,
   bool changed = false;
   for (Value *operand : {&lhs, &rhs}) {
     AffineMap &map = maps[index++];
+
+    // Accept operands defined by vector.broadcast and broadcast-like
+    // vector.shape_cast.
+    auto sc = operand->getDefiningOp<vector::ShapeCastOp>();
     auto broadcast = operand->getDefiningOp<vector::BroadcastOp>();
-    if (!broadcast)
+    if (!broadcast && !sc)
       continue;
+
+    if (sc && !sc.isBroadcastLike())
+      return rewriter.notifyMatchFailure(
+          contractOp, "Operand defined via vector.shape_cast that has "
+                      "non-broadcast semantics");
+
+    // Get the source and the result types.
+    VectorType srcType = sc ? sc.getSourceVectorType()
+                            : dyn_cast<VectorType>(broadcast.getSourceType());
+    VectorType resType =
+        sc ? sc.getResultVectorType() : broadcast.getResultVectorType();
+
     // contractionOp can only take vector as operands.
-    auto srcType = dyn_cast<VectorType>(broadcast.getSourceType());
-    if (!srcType ||
-        srcType.getRank() == broadcast.getResultVectorType().getRank())
+    // auto srcType = dyn_cast<VectorType>(broadcast.getSourceVectorType());
+    if (!srcType || srcType.getRank() >= resType.getRank())
       continue;
-    int64_t rankDiff =
-        broadcast.getResultVectorType().getRank() - srcType.getRank();
+    int64_t rankDiff = resType.getRank() - srcType.getRank();
     bool innerDimBroadcast = false;
     SmallVector<AffineExpr> originalDims;
     for (const auto &dim : llvm::enumerate(srcType.getShape())) {
-      if (dim.value() !=
-          broadcast.getResultVectorType().getDimSize(rankDiff + dim.index())) {
+      if (dim.value() != resType.getDimSize(rankDiff + dim.index())) {
         innerDimBroadcast = true;
         break;
       }
@@ -311,7 +324,7 @@ FailureOr<Value> combineContractAndBroadcast(vector::ContractionOp contractOp,
     // of non-unit size.
     bool nonUnitDimReductionBroadcast = false;
     for (int64_t i = 0; i < rankDiff; ++i) {
-      if (broadcast.getResultVectorType().getDimSize(i) != 1 &&
+      if (resType.getDimSize(i) != 1 &&
           isReductionIterator(contractOp.getIteratorTypes()
                                   .getValue()[map.getDimPosition(i)])) {
         nonUnitDimReductionBroadcast = true;
@@ -321,11 +334,10 @@ FailureOr<Value> combineContractAndBroadcast(vector::ContractionOp contractOp,
     if (nonUnitDimReductionBroadcast)
       continue;
 
-    AffineMap broadcastMap =
-        AffineMap::get(broadcast.getResultVectorType().getRank(), 0,
-                       originalDims, contractOp.getContext());
+    AffineMap broadcastMap = AffineMap::get(resType.getRank(), 0, originalDims,
+                                            contractOp.getContext());
     map = broadcastMap.compose(map);
-    *operand = broadcast.getSource();
+    *operand = broadcast ? broadcast.getSource() : sc.getSource();
     changed = true;
   }
 
@@ -1031,12 +1043,6 @@ struct ReorderElementwiseOpsOnBroadcast final
           op, "Op doesn't have ElementwiseMappableTraits");
     if (op->getNumOperands() == 0)
       return failure();
-    if (isa<vector::FMAOp>(op)) {
-      return rewriter.notifyMatchFailure(
-          op,
-          "Op only accepts vector types - not supported as broadcast source "
-          "might be a scalar");
-    }
 
     Type resultElemType = resultType.getElementType();
 
@@ -1055,6 +1061,17 @@ struct ReorderElementwiseOpsOnBroadcast final
       return failure();
     Type unbroadcastResultType =
         cloneOrReplace(broadcastSource.getType(), resultElemType);
+
+    // Some ops, e.g. `vector.fma`, only accept vector types. For such ops the
+    // reordering is only possible when the broadcast source is a vector as
+    // well; sinking past a broadcast from a scalar would create an invalid op.
+    // TODO: It may be better to support scalar sources by promoting the scalar
+    // to a single element vector.
+    if (isa<vector::FMAOp>(op) && !isa<VectorType>(unbroadcastResultType)) {
+      return rewriter.notifyMatchFailure(
+          op, "Op only accepts vector types, but the broadcast source is a "
+              "scalar");
+    }
 
     // Make sure that all operands are broadcast from identically-shaped types:
     //  * scalar (`vector.broadcast`), or
@@ -1931,12 +1948,12 @@ struct ChainedReduction final : OpRewritePattern<vector::ReductionOp> {
   }
 };
 
-// Helper function dropping unit non-scalable dimension from a VectorType.
-// Scalable unit dimensions are not dropped. Folding such dimensions would
-// require "shifting" the scalable flag onto some other fixed-width dim (e.g.
-// vector<[1]x4xf32> -> vector<[4]xf32>).
-static VectorType dropNonScalableUnitDimFromType(VectorType inVecTy,
-                                                 bool zeroDimsAllowed) {
+// Helper function dropping unit non-scalable dimension from a VectorType
+// keeping at least 1 dimension to avoid generating 0-D vectors. Scalable unit
+// dimensions are not dropped. Folding such dimensions would require "shifting"
+// the scalable flag onto some other fixed-width dim (e.g. vector<[1]x4xf32> ->
+// vector<[4]xf32>). This could be implemented in the future.
+static VectorType dropNonScalableUnitDimFromType(VectorType inVecTy) {
   auto inVecShape = inVecTy.getShape();
   SmallVector<int64_t> newShape;
   SmallVector<bool> newScalableDims;
@@ -1948,8 +1965,8 @@ static VectorType dropNonScalableUnitDimFromType(VectorType inVecTy,
     newShape.push_back(dim);
     newScalableDims.push_back(isScalable);
   }
-  // Some vector ops forbid 0-D vectors.
-  if (!zeroDimsAllowed && newShape.empty()) {
+  // All dims have been dropped, return vector<1xeType>.
+  if (newShape.empty()) {
     newShape.push_back(1);
     newScalableDims.push_back(false);
   }
@@ -2000,12 +2017,14 @@ struct DropUnitDimFromElementwiseOps final
     auto sourceVectorType = dyn_cast<VectorType>(op->getOperand(0).getType());
     if (!sourceVectorType)
       return failure();
+    if (sourceVectorType.getRank() < 2)
+      return failure();
+
     SmallVector<Value> newOperands;
     auto loc = op->getLoc();
     for (auto operand : op->getOperands()) {
       auto opVectorType = cast<VectorType>(operand.getType());
-      auto newVType = dropNonScalableUnitDimFromType(opVectorType,
-                                                     /*zeroDimsAllowed=*/true);
+      auto newVType = dropNonScalableUnitDimFromType(opVectorType);
       if (newVType == opVectorType)
         return rewriter.notifyMatchFailure(op, "No unit dimension to remove.");
 
@@ -2014,8 +2033,7 @@ struct DropUnitDimFromElementwiseOps final
     }
 
     VectorType newResultVectorType =
-        dropNonScalableUnitDimFromType(resultVectorType,
-                                       /*zeroDimsAllowed=*/true);
+        dropNonScalableUnitDimFromType(resultVectorType);
     // Create an updated elementwise Op without unit dim.
     Operation *elementwiseOp =
         rewriter.create(loc, op->getName().getIdentifier(), newOperands,
@@ -2056,8 +2074,7 @@ struct DropUnitDimsFromTransposeOp final
                                 PatternRewriter &rewriter) const override {
     VectorType sourceType = op.getSourceVectorType();
     VectorType sourceTypeWithoutUnitDims =
-        dropNonScalableUnitDimFromType(sourceType,
-                                       /*zeroDimsAllowed=*/true);
+        dropNonScalableUnitDimFromType(sourceType);
 
     if (sourceType == sourceTypeWithoutUnitDims)
       return failure();
@@ -2082,9 +2099,9 @@ struct DropUnitDimsFromTransposeOp final
     }
 
     // Fixup for `newPerm`. The `sourceTypeWithoutUnitDims` could be vector<1xT>
-    // type when the dimensions are unit dimensions and 0-D vectors are not
-    // allowed. In this case, the newPerm should be [0].
-    if (newPerm.empty() && sourceTypeWithoutUnitDims.getRank() > 0) {
+    // type when the dimensions are unit dimensions. In this case, the newPerm
+    // should be [0].
+    if (newPerm.empty()) {
       newPerm.push_back(0);
     }
 
@@ -2139,9 +2156,7 @@ struct DropUnitDimsFromScfForOp final : OpRewritePattern<scf::ForOp> {
       if (!vectorType)
         continue;
 
-      VectorType newVectorType =
-          dropNonScalableUnitDimFromType(vectorType,
-                                         /*zeroDimsAllowed=*/true);
+      VectorType newVectorType = dropNonScalableUnitDimFromType(vectorType);
       if (vectorType == newVectorType)
         continue;
 

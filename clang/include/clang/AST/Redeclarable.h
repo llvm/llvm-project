@@ -383,20 +383,6 @@ struct DenseMapInfo<clang::CanonicalDeclPtr<decl_type>> {
   using CanonicalDeclPtr = clang::CanonicalDeclPtr<decl_type>;
   using BaseInfo = DenseMapInfo<decl_type *>;
 
-  static CanonicalDeclPtr getEmptyKey() {
-    // Construct our CanonicalDeclPtr this way because the regular constructor
-    // would dereference P.Ptr, which is not allowed.
-    CanonicalDeclPtr P;
-    P.Ptr = BaseInfo::getEmptyKey();
-    return P;
-  }
-
-  static CanonicalDeclPtr getTombstoneKey() {
-    CanonicalDeclPtr P;
-    P.Ptr = BaseInfo::getTombstoneKey();
-    return P;
-  }
-
   static unsigned getHashValue(const CanonicalDeclPtr &P) {
     return BaseInfo::getHashValue(P);
   }

@@ -44,7 +44,6 @@ void buildPreGPUCommonPassPipeline(
     OpPassManager &pm, const mlir::gpu::GPUToXeVMPipelineOptions &options) {
   // builtin.module scope passes.
   pm.addPass(createCSEPass());
-  pm.addPass(createConvertVectorToSCFPass());
   {
     GpuXeVMAttachTargetOptions xevmTargetOptions;
     xevmTargetOptions.moduleMatcher = options.xevmModuleMatcher;
@@ -67,6 +66,8 @@ void buildGPUPassPipeline(OpPassManager &pm,
   laneLayoutOptions.indexBitWidth = options.use64bitIndex ? 64 : 32;
   laneLayoutOptions.layoutKind = "lane";
   pm.addNestedPass<ModuleOp>(createCSEPass());
+  if (options.enableVectorToXeGPU)
+    pm.addNestedPass<gpu::GPUModuleOp>(createConvertVectorToXeGPU());
   if (options.xegpuOpLevel == "workgroup") {
     xegpu::XeGPUPropagateLayoutOptions sgLayoutOptions;
     sgLayoutOptions.layoutKind = "subgroup";
@@ -91,8 +92,7 @@ void buildGPUPassPipeline(OpPassManager &pm,
     pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
     pm.addNestedPass<gpu::GPUModuleOp>(
         xegpu::createXeGPUPropagateLayout(laneLayoutOptions));
-    pm.addNestedPass<gpu::GPUModuleOp>(
-        xegpu::createXeGPUSgToWiDistributeExperimental());
+    pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUSgToLaneDistribute());
     pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createLoopInvariantCodeMotionPass());
@@ -100,6 +100,19 @@ void buildGPUPassPipeline(OpPassManager &pm,
     pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUVectorLinearize());
     pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
+  }
+  // Break down high-level micro-scaling (MX) ops (arith.scaling_extf and
+  // arith.scaling_truncf) into standard arith ops (extf/truncf + mulf), and
+  // expand extf/truncf on f8E8M0FNU into integer bit manipulation. This runs
+  // before the XeVM/LLVM conversions. The f4E2M1FN expansion patterns are
+  // intentionally left disabled: f4E2M1FN extf/truncf are lowered by the XeVM
+  // conversions (xevm.extf), whereas f8E8M0FNU is not supported there and so
+  // must be expanded here.
+  {
+    arith::ArithExpandOpsPassOptions arithExpandOptions;
+    arithExpandOptions.includeF8E8M0 = true;
+    pm.addNestedPass<gpu::GPUModuleOp>(
+        arith::createArithExpandOpsPass(arithExpandOptions));
   }
   pm.addNestedPass<gpu::GPUModuleOp>(createConvertMathToXeVM());
   ConvertXeGPUToXeVMPassOptions xegpuToXeVMOptions;
@@ -142,6 +155,7 @@ void buildGPUPassPipeline(OpPassManager &pm,
 void buildPostGPUCommonPassPipeline(
     OpPassManager &pm, const mlir::gpu::GPUToXeVMPipelineOptions &options) {
   // builtin.module scope passes.
+  pm.addPass(createConvertVectorToSCFPass());
   pm.addPass(createSCFToControlFlowPass());
   pm.addPass(memref::createExpandStridedMetadataPass());
   {

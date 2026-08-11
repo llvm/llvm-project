@@ -13,15 +13,13 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include "hdr/math_macros.h"
-
 template <typename T>
 class IsNanTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
 public:
-  typedef int (*IsNanFunc)(T);
+  using IsNanFunc = int (*)(T);
 
   void testSpecialNumbers(IsNanFunc func) {
     EXPECT_EQ(func(aNaN), 1);
@@ -50,11 +48,9 @@ public:
   }
 };
 
-#define LIST_ISNAN_TESTS(T, func)                                        \
-  using LlvmLibcIsNanTest = IsNanTest<T>;                          \
-  TEST_F(LlvmLibcIsNanTest, SpecialNumbers) {                            \
-    testSpecialNumbers(&func);                                                 \
-  }                                                                            \
+#define LIST_ISNAN_TESTS(T, func)                                              \
+  using LlvmLibcIsNanTest = IsNanTest<T>;                                      \
+  TEST_F(LlvmLibcIsNanTest, SpecialNumbers) { testSpecialNumbers(&func); }     \
   TEST_F(LlvmLibcIsNanTest, RoundedNumbers) { testRoundedNumbers(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_ISNANTEST_H

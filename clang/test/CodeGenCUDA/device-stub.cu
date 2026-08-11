@@ -56,13 +56,26 @@
 // RUN: %clang_cc1 -cuid=123 -triple x86_64-linux-gnu -emit-llvm %s -o - -x hip\
 // RUN:   | FileCheck -allow-deprecated-dag-overlap %s -check-prefixes=ALL,LNX,NORDC,HIP,HIPNEF
 
-// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -aux-triple amdgcn -emit-llvm %s \
+// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -aux-triple amdgpu -emit-llvm %s \
 // RUN:     -fcuda-include-gpubinary %t -o - -x hip\
 // RUN:   | FileCheck -allow-deprecated-dag-overlap %s --check-prefixes=ALL,WIN
 
-// RUN: %clang_cc1 -cuid=123 -triple x86_64-pc-windows-msvc -aux-triple amdgcn -emit-llvm %s \
+// RUN: %clang_cc1 -cuid=123 -triple x86_64-pc-windows-msvc -aux-triple amdgpu -emit-llvm %s \
 // RUN:     -o - -x hip\
 // RUN:   | FileCheck -allow-deprecated-dag-overlap %s --check-prefixes=ALL,WIN,HIP,HIPNEF
+
+// Verify that module IDs are distinct when the module source path is distinct.
+// RUN: rm -rf %t_distinct
+// RUN: mkdir -p %t_distinct
+// RUN: cp %s %t_distinct/filename1.cu
+// RUN: cp %s %t_distinct/filename2.cu
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %t_distinct/filename1.cu -I%S \
+// RUN:     -target-sdk-version=8.0 -fgpu-rdc -fcuda-include-gpubinary %t \
+// RUN:     -o - | grep __nv_module_id &> %t_module_id_1
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %t_distinct/filename2.cu -I%S \
+// RUN:     -target-sdk-version=8.0 -fgpu-rdc -fcuda-include-gpubinary %t \
+// RUN:     -o - | grep __nv_module_id &> %t_module_id_2
+// RUN: not diff %t_module_id_1 %t_module_id_2
 
 #include "Inputs/cuda.h"
 

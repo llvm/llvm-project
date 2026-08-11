@@ -43,6 +43,7 @@ config.libcxx_libs_dir = "@LIBCXX_LIBRARY_DIR@"
 config.libcxx_include_dir = "@LIBCXX_GENERATED_INCLUDE_DIR@"
 config.libcxx_include_target_dir = "@LIBCXX_GENERATED_INCLUDE_TARGET_DIR@"
 config.lldb_launcher = "@LLDB_LAUNCHER@"
+config.test_resource_dir = "@LLDB_TEST_RESOURCE_DIR@"
 config.lldb_enable_mte = @LLDB_ENABLE_MTE@
 config.lldb_enable_arm64e_debugserver = @LLDB_USE_ARM64E_DEBUGSERVER@
 config.lldb_use_lldb_server = @LLDB_TEST_USE_LLDB_SERVER@
@@ -54,6 +55,9 @@ config.clang_module_cache = os.path.join("@LLDB_TEST_MODULE_CACHE_CLANG@", "lldb
 lldb_build_intel_pt = '@LLDB_BUILD_INTEL_PT@'
 if lldb_build_intel_pt == '1':
     config.enabled_plugins.append('intel-pt')
+lldb_build_mock_accelerator = '@LLDB_ENABLE_MOCK_ACCELERATOR_PLUGIN@'
+if lldb_build_mock_accelerator == '1':
+    config.enabled_plugins.append('mock-accelerator')
 
 # Additional dotest arguments can be passed to lit by providing a
 # semicolon-separates list: --param dotest-args="arg;arg".
