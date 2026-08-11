@@ -353,6 +353,9 @@ _start:
   .size _start, .-_start
 .endif
 
+## Check that LDR relaxation does not fail for constant islands whose location
+## and alignment are likely to change during optimization.
+
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown \
 # RUN:    --defsym RELAX_CONSTANT_ISLANDS=1 %s -o %t.o
 # RUN: %clang %cflags %t.o -o %t.so -Wl,-q
@@ -393,6 +396,8 @@ _start:
   .size _start, .-_start
 .endif
 
+## Check that LDR relaxation does not fail for misaligned integer loads.
+
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown \
 # RUN:    --defsym RELAX_MISALIGNED_LDR=1 %s -o %t.o
 # RUN: %clang %cflags %t.o -o %t.so -Wl,-q
@@ -415,6 +420,8 @@ _start:
   .cfi_endproc
   .size _start, .-_start
 .endif
+
+## Check that LDR relaxation does not fail for misaligned floating-point loads.
 
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown \
 # RUN:    --defsym RELAX_MISALIGNED_LDR_FP=1 %s -o %t.o
