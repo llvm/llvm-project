@@ -23,6 +23,7 @@
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/ThreadPool.h"
 #include <mutex>
