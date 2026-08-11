@@ -8824,6 +8824,68 @@ flag.
   }];
 }
 
+def ZeroizeOnReturnDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+This attribute, when attached to a function, requests that the compiler clear
+the function's stack frame and the caller-observable register state before
+control leaves the function. It is meant for code that holds key material,
+plaintext, or other secrets in local variables, where whatever the function
+leaves behind in its frame or in registers stays readable to the code that
+runs on that storage next.
+
+The name is shorthand for *supported exits*, not only ``return`` statements.
+Clearing is emitted on explicit cleanup paths taken during an exception
+unwind as well, on targets whose exception model provides them.
+
+The attribute takes no arguments. It is a single request rather than a set of
+modes because it states an obligation over machine state, not a choice of how
+much hardening to apply.
+
+**What is cleared.** The stack memory the function used, including storage the
+compiler introduced rather than the source named, such as spill slots and
+alignment padding: those can hold copies of a local. And the registers a
+caller can observe once the function returns.
+
+The function's declared return value is excluded. So are the registers the
+calling convention requires the function to preserve, since the epilogue
+restores those to the values the caller already had.
+
+**What is not covered.** The guarantee is about the annotated function's own
+frame and the machine state at its exits. Specifically:
+
+- The property is not inductive across the call graph. A protected function
+  does not clear the frames of the functions it calls; a callee that handles a
+  secret has to carry the attribute itself.
+- Stack memory below the stack pointer at the point of the clear, which is
+  where a callee's frame lived, is not reached.
+- Leaving the frame by a route that never runs its exit code escapes the
+  guarantee entirely. ``longjmp`` past the frame is the common case, as is an
+  unwind for which the target's exception model offers no cleanup path.
+- Copies the program itself made elsewhere, on the heap or in a caller's
+  frame, are neither tracked nor cleared.
+
+On a target that has not implemented the clearing this attribute requests, the
+request has no effect and compilation still succeeds.
+
+.. code-block:: c
+
+  [[clang::zeroize_on_return]]
+  void chacha20_block(uint32_t out[16], const uint32_t key[8], uint32_t ctr) {
+    uint32_t state[16];                 // secret-bearing working state
+    /* ... rounds ... */
+    memcpy(out, state, sizeof(state));  // declared output: not cleared
+  }                                     // at each supported exit, the frame
+                                        // holding `state` and the
+                                        // caller-observable registers are
+                                        // cleared
+
+This attribute asks for more than ``zero_call_used_regs``, which requests only
+that some subset of the call-used registers be zeroed and leaves the stack
+frame alone.
+  }];
+}
+
 def DocHLSLSemantics : DocumentationCategory<"HLSL Semantics"> {
   let Content = [{
 A semantic is a string attached to a shader input or output that conveys
