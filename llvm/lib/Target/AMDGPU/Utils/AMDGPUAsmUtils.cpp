@@ -23,12 +23,12 @@ namespace llvm::AMDGPU {
 /// Map from the encoding of a sendmsg/hwreg asm operand to it's name.
 template <size_t N>
 static StringRef getNameFromOperandTable(const CustomOperand (&Table)[N],
-                                         unsigned Encoding,
+                                         uint64_t Encoding,
                                          const MCSubtargetInfo &STI) {
   // Find the first entry with the target encoding
   auto First =
       std::lower_bound(Table, Table + N, Encoding,
-                       [](const CustomOperand &Entry, unsigned TargetEncoding) {
+                       [](const CustomOperand &Entry, uint64_t TargetEncoding) {
                          return Entry.Encoding < TargetEncoding;
                        });
 
@@ -136,8 +136,7 @@ int64_t getMsgId(StringRef Name, const MCSubtargetInfo &STI) {
 }
 
 StringRef getMsgName(uint64_t Encoding, const MCSubtargetInfo &STI) {
-  return getNameFromOperandTable(MsgOperands, static_cast<unsigned>(Encoding),
-                                 STI);
+  return getNameFromOperandTable(MsgOperands, Encoding, STI);
 }
 
 int64_t getMsgOpId(int64_t MsgId, StringRef Name, const MCSubtargetInfo &STI) {
@@ -151,10 +150,8 @@ StringRef getMsgOpName(int64_t MsgId, uint64_t Encoding,
   assert(msgRequiresOp(MsgId, STI) && "must have an operand");
 
   if (MsgId == ID_SYSMSG)
-    return getNameFromOperandTable(SysMsgOperands,
-                                   static_cast<unsigned>(Encoding), STI);
-  return getNameFromOperandTable(StreamMsgOperands,
-                                 static_cast<unsigned>(Encoding), STI);
+    return getNameFromOperandTable(SysMsgOperands, Encoding, STI);
+  return getNameFromOperandTable(StreamMsgOperands, Encoding, STI);
 }
 
 } // namespace SendMsg
@@ -175,8 +172,7 @@ int64_t getWaitEventMask(StringRef Name, const MCSubtargetInfo &STI) {
 }
 
 StringRef getWaitEventMaskName(uint64_t Encoding, const MCSubtargetInfo &STI) {
-  return getNameFromOperandTable(WaitEventOperands,
-                                 static_cast<unsigned>(Encoding), STI);
+  return getNameFromOperandTable(WaitEventOperands, Encoding, STI);
 }
 } // namespace WaitEvent
 
@@ -257,8 +253,7 @@ int64_t getHwregId(StringRef Name, const MCSubtargetInfo &STI) {
 }
 
 StringRef getHwreg(uint64_t Encoding, const MCSubtargetInfo &STI) {
-  return getNameFromOperandTable(Operands, static_cast<unsigned>(Encoding),
-                                 STI);
+  return getNameFromOperandTable(Operands, Encoding, STI);
 }
 
 } // namespace Hwreg
