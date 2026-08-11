@@ -39,6 +39,7 @@ template <int Bits>
 static DecodeStatus DecodeSImm(MCInst &Inst, uint64_t Imm, uint64_t Address,
                                const MCDisassembler *Decoder);
 template <int Bits>
+[[maybe_unused]]
 static DecodeStatus DecodeUImm(MCInst &Inst, uint64_t Imm, uint64_t Address,
                                const MCDisassembler *Decoder);
 
