@@ -2663,9 +2663,15 @@ Instruction *SPIRVEmitIntrinsicsImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
   // Encode the address space and the value type in the name, the same way
   // lowerLLVMIntrinsicName() does for spirv.llvm_memset_p1_i64. A module may
   // need several mutually incompatible signatures, while SPIR-V resolves an
-  // imported function by its linkage name alone.
-  FuncName += "_p" + std::to_string(AS) + "_i" +
-              std::to_string(ValTy->getIntegerBitWidth());
+  // imported function by its linkage name alone. The value may also be a fixed
+  // vector of integers, spelled the LLVM way: _p1_v2i32. Anything wider than
+  // the target's maximum atomic size never reaches here, because AtomicExpand
+  // rejects it first.
+  std::string TypeSuffix;
+  if (auto *VecTy = dyn_cast<FixedVectorType>(ValTy))
+    TypeSuffix = "v" + std::to_string(VecTy->getNumElements());
+  TypeSuffix += "i" + std::to_string(ValTy->getScalarSizeInBits());
+  FuncName += "_p" + std::to_string(AS) + "_" + TypeSuffix;
 
   Type *Int32Ty = B.getInt32Ty();
   SmallVector<Type *, 4> ArgTys = {PtrTy, Int32Ty, Int32Ty, ValTy};
