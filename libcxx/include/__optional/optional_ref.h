@@ -78,7 +78,7 @@ public:
   static_assert(!is_same_v<remove_cv_t<_Tp>, nullopt_t>, "instantiation of optional with nullopt_t is ill-formed");
 
 private:
-  _Tp* __value_{nullptr};
+  _Tp* __value_ = nullptr;
 
   template <class _Up>
   _LIBCPP_HIDE_FROM_ABI constexpr void __convert_init_ref_val(_Up&& __val) {
