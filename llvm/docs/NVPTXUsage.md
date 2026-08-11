@@ -3161,6 +3161,7 @@ that are supported:
 | tf32     | TF32                                                                   |
 | f8f6f4   | All combinations of F8, F6, and F4                                     |
 | i8       | Signed and Unsigned 8-bit Integers                                     |
+| ti16     | 16-bit integer types for non-block-scale operations                    |
 | mxf8f6f4 | MX-floating point formats                                              |
 | mxf4     | MX-floating point formats (FP4)                                        |
 | mxf4nvf4 | MXF4 + custom NVIDIA 4-bit floating point (with common scaling factor) |
@@ -3319,6 +3320,7 @@ The following tables describe the possible values of the flag arguments
 | TF32        | 1     |
 | F8F6F4      | 2     |
 | I8          | 3     |
+| TI16        | 4     |
 
 `%cta_group_flag` flag:
 
@@ -3495,6 +3497,7 @@ The following tables describes the possible values of the flag arguments
 | TF32        | 1     |
 | F8F6F4      | 2     |
 | I8          | 3     |
+| TI16        | 4     |
 
 The `cg1` and `cg2` suffixes select CTA group 1 and CTA group 2, respectively.
 
@@ -3569,6 +3572,7 @@ The following tables describes the possible values of the flag arguments
 | TF32        | 1     |
 | F8F6F4      | 2     |
 | I8          | 3     |
+| TI16        | 4     |
 
 `%collector_usage_b_buffer_flag`:
 

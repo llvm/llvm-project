@@ -333,6 +333,115 @@ define void @tcgen05_mma_sp_collector_b_f8f6f4_cta2(ptr addrspace(6) %dtmem, ptr
 }
 
 ; ---------------------------------------------------------------------------
+; ti16, cta_group::1
+; ---------------------------------------------------------------------------
+
+define void @tcgen05_mma_sp_collector_b_ti16_cta1(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata) {
+; CHECK-LABEL: tcgen05_mma_sp_collector_b_ti16_cta1(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<2>;
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b8 %rs1, [tcgen05_mma_sp_collector_b_ti16_cta1_param_5];
+; CHECK-NEXT:    and.b16 %rs2, %rs1, 1;
+; CHECK-NEXT:    setp.ne.b16 %p1, %rs2, 0;
+; CHECK-NEXT:    ld.param.b32 %r1, [tcgen05_mma_sp_collector_b_ti16_cta1_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [tcgen05_mma_sp_collector_b_ti16_cta1_param_2];
+; CHECK-NEXT:    ld.param.b64 %rd2, [tcgen05_mma_sp_collector_b_ti16_cta1_param_3];
+; CHECK-NEXT:    ld.param.b32 %r2, [tcgen05_mma_sp_collector_b_ti16_cta1_param_4];
+; CHECK-NEXT:    ld.param.b32 %r3, [tcgen05_mma_sp_collector_b_ti16_cta1_param_6];
+; CHECK-NEXT:    tcgen05.mma.sp.cta_group::1.kind::ti16.collector::a::discard.collector::b::lastuse [%r1], %rd1, %rd2, [%r3], %r2, %p1;
+; CHECK-NEXT:    ld.param.b32 %r4, [tcgen05_mma_sp_collector_b_ti16_cta1_param_1];
+; CHECK-NEXT:    tcgen05.mma.sp.cta_group::1.kind::ti16.collector::a::discard.collector::b::fill [%r1], %rd1, %rd2, [%r3], %r2, %p1;
+; CHECK-NEXT:    tcgen05.mma.sp.cta_group::1.kind::ti16.collector::a::discard.collector::b::use [%r1], %rd1, %rd2, [%r3], %r2, %p1;
+; CHECK-NEXT:    tcgen05.mma.sp.cta_group::1.kind::ti16.collector::a::discard.collector::b::lastuse [%r1], [%r4], %rd2, [%r3], %r2, %p1;
+; CHECK-NEXT:    tcgen05.mma.sp.cta_group::1.kind::ti16.collector::a::discard.collector::b::fill [%r1], [%r4], %rd2, [%r3], %r2, %p1;
+; CHECK-NEXT:    tcgen05.mma.sp.cta_group::1.kind::ti16.collector::a::discard.collector::b::use [%r1], [%r4], %rd2, [%r3], %r2, %p1;
+; CHECK-NEXT:    tcgen05.mma.sp.cta_group::1.kind::ti16.ashift.collector::a::discard.collector::b::lastuse [%r1], [%r4], %rd2, [%r3], %r2, %p1;
+; CHECK-NEXT:    tcgen05.mma.sp.cta_group::1.kind::ti16.collector::a::lastuse.collector::b::lastuse [%r1], %rd1, %rd2, [%r3], %r2, %p1;
+; CHECK-NEXT:    tcgen05.mma.sp.cta_group::1.kind::ti16.collector::a::lastuse.collector::b::lastuse [%r1], [%r4], %rd2, [%r3], %r2, %p1;
+; CHECK-NEXT:    tcgen05.mma.sp.cta_group::1.kind::ti16.collector::a::fill.collector::b::use [%r1], %rd1, %rd2, [%r3], %r2, %p1;
+; CHECK-NEXT:    tcgen05.mma.sp.cta_group::1.kind::ti16.collector::a::use.collector::b::fill [%r1], [%r4], %rd2, [%r3], %r2, %p1;
+; CHECK-NEXT:    tcgen05.mma.sp.cta_group::1.kind::ti16.collector::a::use [%r1], [%r4], %rd2, [%r3], %r2, %p1;
+; CHECK-NEXT:    tcgen05.mma.sp.cta_group::1.kind::ti16.collector::a::discard [%r1], %rd1, %rd2, [%r3], %r2, %p1;
+; CHECK-NEXT:    ret;
+  ; kind=ti16(4), cta_group=1, collector_a=discard(0), collector_b=lastuse(1)
+  call void @llvm.nvvm.tcgen05.mma.sp.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i32 4, i32 1, i32 0, i32 1)
+  ; kind=ti16(4), cta_group=1, collector_a=discard(0), collector_b=fill(2)
+  call void @llvm.nvvm.tcgen05.mma.sp.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i32 4, i32 1, i32 0, i32 2)
+  ; kind=ti16(4), cta_group=1, collector_a=discard(0), collector_b=use(3)
+  call void @llvm.nvvm.tcgen05.mma.sp.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i32 4, i32 1, i32 0, i32 3)
+  ; kind=ti16(4), cta_group=1, collector_a=discard(0), collector_b=lastuse(1)
+  call void @llvm.nvvm.tcgen05.mma.sp.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i32 4, i32 1, i32 0, i32 1)
+  ; kind=ti16(4), cta_group=1, collector_a=discard(0), collector_b=fill(2)
+  call void @llvm.nvvm.tcgen05.mma.sp.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i32 4, i32 1, i32 0, i32 2)
+  ; kind=ti16(4), cta_group=1, collector_a=discard(0), collector_b=use(3)
+  call void @llvm.nvvm.tcgen05.mma.sp.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i32 4, i32 1, i32 0, i32 3)
+  ; kind=ti16(4), cta_group=1, collector_a=discard(0), collector_b=lastuse(1), ashift
+  call void @llvm.nvvm.tcgen05.mma.sp.tensor.ashift(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i32 4, i32 1, i32 0, i32 1)
+  ; kind=ti16(4), cta_group=1, collector_a=lastuse(1), collector_b=lastuse(1)
+  call void @llvm.nvvm.tcgen05.mma.sp.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i32 4, i32 1, i32 1, i32 1)
+  ; kind=ti16(4), cta_group=1, collector_a=lastuse(1), collector_b=lastuse(1)
+  call void @llvm.nvvm.tcgen05.mma.sp.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i32 4, i32 1, i32 1, i32 1)
+  ; kind=ti16(4), cta_group=1, collector_a=fill(2), collector_b=use(3)
+  call void @llvm.nvvm.tcgen05.mma.sp.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i32 4, i32 1, i32 2, i32 3)
+  ; kind=ti16(4), cta_group=1, collector_a=use(3), collector_b=fill(2)
+  call void @llvm.nvvm.tcgen05.mma.sp.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i32 4, i32 1, i32 3, i32 2)
+  ; kind=ti16(4), cta_group=1, collector_a=use(3), collector_b=discard(0)
+  call void @llvm.nvvm.tcgen05.mma.sp.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i32 4, i32 1, i32 3, i32 0)
+  ; kind=ti16(4), cta_group=1, collector_a=discard(0), collector_b=discard(0)
+  call void @llvm.nvvm.tcgen05.mma.sp.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i32 4, i32 1, i32 0, i32 0)
+  ret void
+}
+
+; ---------------------------------------------------------------------------
+; ti16, cta_group::2
+; ---------------------------------------------------------------------------
+
+define void @tcgen05_mma_sp_collector_b_ti16_cta2(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata) {
+; CHECK-LABEL: tcgen05_mma_sp_collector_b_ti16_cta2(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<2>;
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b8 %rs1, [tcgen05_mma_sp_collector_b_ti16_cta2_param_5];
+; CHECK-NEXT:    and.b16 %rs2, %rs1, 1;
+; CHECK-NEXT:    setp.ne.b16 %p1, %rs2, 0;
+; CHECK-NEXT:    ld.param.b32 %r1, [tcgen05_mma_sp_collector_b_ti16_cta2_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [tcgen05_mma_sp_collector_b_ti16_cta2_param_2];
+; CHECK-NEXT:    ld.param.b64 %rd2, [tcgen05_mma_sp_collector_b_ti16_cta2_param_3];
+; CHECK-NEXT:    ld.param.b32 %r2, [tcgen05_mma_sp_collector_b_ti16_cta2_param_4];
+; CHECK-NEXT:    ld.param.b32 %r3, [tcgen05_mma_sp_collector_b_ti16_cta2_param_6];
+; CHECK-NEXT:    tcgen05.mma.sp.cta_group::2.kind::ti16.collector::a::discard.collector::b::lastuse [%r1], %rd1, %rd2, [%r3], %r2, %p1;
+; CHECK-NEXT:    ld.param.b32 %r4, [tcgen05_mma_sp_collector_b_ti16_cta2_param_1];
+; CHECK-NEXT:    tcgen05.mma.sp.cta_group::2.kind::ti16.collector::a::discard.collector::b::lastuse [%r1], [%r4], %rd2, [%r3], %r2, %p1;
+; CHECK-NEXT:    tcgen05.mma.sp.cta_group::2.kind::ti16.collector::a::lastuse.collector::b::fill [%r1], %rd1, %rd2, [%r3], %r2, %p1;
+; CHECK-NEXT:    tcgen05.mma.sp.cta_group::2.kind::ti16.ashift.collector::a::discard.collector::b::lastuse [%r1], [%r4], %rd2, [%r3], %r2, %p1;
+; CHECK-NEXT:    tcgen05.mma.sp.cta_group::2.kind::ti16.ashift.collector::a::discard [%r1], [%r4], %rd2, [%r3], %r2, %p1;
+; CHECK-NEXT:    tcgen05.mma.sp.cta_group::2.kind::ti16.collector::a::discard [%r1], %rd1, %rd2, [%r3], %r2, %p1;
+; CHECK-NEXT:    ret;
+  ; kind=ti16(4), cta_group=2, collector_a=discard(0), collector_b=lastuse(1)
+  call void @llvm.nvvm.tcgen05.mma.sp.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i32 4, i32 2, i32 0, i32 1)
+  ; kind=ti16(4), cta_group=2, collector_a=discard(0), collector_b=lastuse(1)
+  call void @llvm.nvvm.tcgen05.mma.sp.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i32 4, i32 2, i32 0, i32 1)
+  ; kind=ti16(4), cta_group=2, collector_a=lastuse(1), collector_b=fill(2)
+  call void @llvm.nvvm.tcgen05.mma.sp.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i32 4, i32 2, i32 1, i32 2)
+  ; kind=ti16(4), cta_group=2, collector_a=discard(0), collector_b=lastuse(1), ashift
+  call void @llvm.nvvm.tcgen05.mma.sp.tensor.ashift(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i32 4, i32 2, i32 0, i32 1)
+  ; kind=ti16(4), cta_group=2, collector_a=discard(0), collector_b=discard(0), ashift
+  call void @llvm.nvvm.tcgen05.mma.sp.tensor.ashift(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i32 4, i32 2, i32 0, i32 0)
+  ; kind=ti16(4), cta_group=2, collector_a=discard(0), collector_b=discard(0)
+  call void @llvm.nvvm.tcgen05.mma.sp.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i32 4, i32 2, i32 0, i32 0)
+  ret void
+}
+
+; ---------------------------------------------------------------------------
 ; scale_input_d + collector_b, f16, cta_group::1
 ; ---------------------------------------------------------------------------
 

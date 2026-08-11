@@ -73,7 +73,13 @@ enum class CTAGroupKind : uint8_t {
   CG_2 = 2,    // cta_group::2 modifier
 };
 
-enum class Tcgen05MMAKind : uint8_t { F16 = 0, TF32 = 1, F8F6F4 = 2, I8 = 3 };
+enum class Tcgen05MMAKind : uint8_t {
+  F16 = 0,
+  TF32 = 1,
+  F8F6F4 = 2,
+  I8 = 3,
+  TI16 = 4,
+};
 
 enum class Tcgen05CollectorUsageOp : uint8_t {
   DISCARD = 0,

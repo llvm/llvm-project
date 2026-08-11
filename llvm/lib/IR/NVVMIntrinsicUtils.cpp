@@ -42,6 +42,9 @@ void nvvm::printTcgen05MMAKind(raw_ostream &OS, const Constant *ImmArgVal) {
     case Tcgen05MMAKind::I8:
       OS << "i8";
       return;
+    case Tcgen05MMAKind::TI16:
+      OS << "ti16";
+      return;
     }
   }
 }
