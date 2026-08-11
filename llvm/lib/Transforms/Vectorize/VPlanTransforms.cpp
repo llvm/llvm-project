@@ -1735,6 +1735,8 @@ void VPlanTransforms::narrowScatters(VPlan &Plan, VPCostContext &Ctx,
               [&](ElementCount VF) {
                 InstructionCost ScatterCost = WidenStoreR->computeCost(VF, Ctx);
                 Type *ValTy = WidenStoreR->getStoredValue()->getScalarType();
+                Type *AddrTy = WidenStoreR->getAddr()->getScalarType();
+                Type *IndexTy = Plan.getDataLayout().getIndexType(AddrTy);
 
                 // ScalarCost = LastActiveLaneCost + ExtractLaneCost +
                 // ScalarStoreCost.
@@ -1746,15 +1748,19 @@ void VPlanTransforms::narrowScatters(VPlan &Plan, VPCostContext &Ctx,
                     FoldTailWithEVL
                         ? VPInstruction::getCostForRecipeWithOpcodeAndTypes(
                               Instruction::Sub, Type::getInt32Ty(Ctx.LLVMCtx),
-                              nullptr, ElementCount::getFixed(1), Ctx)
+                              {}, nullptr, ElementCount::getFixed(1), Ctx) +
+                              VPInstruction::getCostForRecipeWithOpcodeAndTypes(
+                                  Instruction::ZExt, IndexTy,
+                                  {Type::getInt32Ty(Ctx.LLVMCtx)}, nullptr, VF,
+                                  Ctx)
                         : VPInstruction::getCostForRecipeWithOpcodeAndTypes(
-                              VPInstruction::LastActiveLane,
-                              Type::getInt1Ty(Ctx.LLVMCtx), nullptr, VF, Ctx);
+                              VPInstruction::LastActiveLane, IndexTy,
+                              {Type::getInt1Ty(Ctx.LLVMCtx)}, nullptr, VF, Ctx);
                 ScalarCost += VPInstruction::getCostForRecipeWithOpcodeAndTypes(
-                    VPInstruction::ExtractLane, ValTy, nullptr, VF, Ctx);
+                    VPInstruction::ExtractLane, ValTy, {}, nullptr, VF, Ctx);
                 ScalarCost += VPInstruction::getCostForRecipeWithOpcodeAndTypes(
-                    Instruction::Store, ValTy, &WidenStoreR->getIngredient(),
-                    VF, Ctx);
+                    Instruction::Store, nullptr, {ValTy, AddrTy},
+                    &WidenStoreR->getIngredient(), VF, Ctx);
 
                 return ScalarCost <= ScatterCost;
               },
@@ -2456,8 +2462,9 @@ static void licm(VPlan &Plan) {
 }
 
 void VPlanTransforms::truncateToMinimalBitwidths(
-    VPlan &Plan, const MapVector<Instruction *, uint64_t> &MinBWs) {
-  if (Plan.hasScalarVFOnly())
+    VPlan &Plan, const MapVector<Instruction *, uint64_t> &MinBWs,
+    VFRange &Range) {
+  if (Range.Start.isScalar())
     return;
   // Keep track of created truncates, so they can be re-used. Note that we
   // cannot use RAUW after creating a new truncate, as this would could make

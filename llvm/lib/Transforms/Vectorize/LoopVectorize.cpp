@@ -6825,7 +6825,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
     Range.End = Range.Start * 2;
 
   RUN_VPLAN_PASS(VPlanTransforms::truncateToMinimalBitwidths, *Plan,
-                 Config.getMinimalBitwidths());
+                 Config.getMinimalBitwidths(), Range);
   RUN_VPLAN_PASS(VPlanTransforms::simplifyRecipes, *Plan);
   RUN_VPLAN_PASS(VPlanTransforms::narrowScatters, *Plan, CostCtx, Range,
                  CM.foldTailWithEVL());

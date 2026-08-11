@@ -1536,11 +1536,10 @@ public:
   /// Compute the cost for a recipe with \p VF using \p Opcode, \p ValTy.
   /// This function may not be as accurate as
   /// `getCostForRecipeWithOpcode` since it only provides type-based queries.
-  static InstructionCost getCostForRecipeWithOpcodeAndTypes(unsigned Opcode,
-                                                            Type *ValTy,
-                                                            Instruction *I,
-                                                            ElementCount VF,
-                                                            VPCostContext &Ctx);
+  static InstructionCost
+  getCostForRecipeWithOpcodeAndTypes(unsigned Opcode, Type *ResultTy,
+                                     ArrayRef<Type *> OpTys, Instruction *I,
+                                     ElementCount VF, VPCostContext &Ctx);
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

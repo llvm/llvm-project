@@ -1125,19 +1125,18 @@ Value *VPInstruction::generate(VPTransformState &State) {
 }
 
 InstructionCost VPInstruction::getCostForRecipeWithOpcodeAndTypes(
-    unsigned Opcode, Type *ValTy, Instruction *I, ElementCount VF,
-    VPCostContext &Ctx) {
+    unsigned Opcode, Type *ResultTy, ArrayRef<Type *> OpTys, Instruction *I,
+    ElementCount VF, VPCostContext &Ctx) {
   switch (Opcode) {
   case VPInstruction::LastActiveLane: {
     // LastActiveLane computes the index of the last active lane in a
     // predicate mask: NOT + cttz_elts + SUB.
     if (VF.isScalar())
-      return Ctx.TTI.getCmpSelInstrCost(Instruction::ICmp, ValTy,
-                                        CmpInst::makeCmpResultType(ValTy),
+      return Ctx.TTI.getCmpSelInstrCost(Instruction::ICmp, OpTys[0],
+                                        CmpInst::makeCmpResultType(OpTys[0]),
                                         CmpInst::ICMP_EQ, Ctx.CostKind);
-    auto *PredTy = toVectorTy(ValTy, VF);
-    IntrinsicCostAttributes Attrs(Intrinsic::experimental_cttz_elts,
-                                  Type::getInt64Ty(Ctx.LLVMCtx),
+    auto *PredTy = toVectorTy(OpTys[0], VF);
+    IntrinsicCostAttributes Attrs(Intrinsic::experimental_cttz_elts, ResultTy,
                                   {PredTy, Type::getInt1Ty(Ctx.LLVMCtx)});
     InstructionCost Cost = Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
     // Add cost of NOT operation on the predicate.
@@ -1147,10 +1146,11 @@ InstructionCost VPInstruction::getCostForRecipeWithOpcodeAndTypes(
         {TargetTransformInfo::OK_UniformConstantValue,
          TargetTransformInfo::OP_None});
     // Add cost of SUB operation on the index.
-    Cost += Ctx.TTI.getArithmeticInstrCost(
-        Instruction::Sub, Type::getInt64Ty(Ctx.LLVMCtx), Ctx.CostKind);
+    Cost += Ctx.TTI.getArithmeticInstrCost(Instruction::Sub, ResultTy,
+                                           Ctx.CostKind);
     return Cost;
   }
+  case Instruction::ExtractElement:
   case VPInstruction::ExtractLane: {
     // Compute the cost of ExtractLane for a vector with the given scalar
     // element type. ExtractLane extracts an element at a runtime-determined
@@ -1158,17 +1158,23 @@ InstructionCost VPInstruction::getCostForRecipeWithOpcodeAndTypes(
     if (VF.isScalar())
       return 0;
     return Ctx.TTI.getVectorInstrCost(Instruction::ExtractElement,
-                                      toVectorTy(ValTy, VF), Ctx.CostKind);
+                                      toVectorTy(ResultTy, VF), Ctx.CostKind);
   }
   case Instruction::Store: {
     assert(I && "Querying cost for store must have underlying instruction.");
-    return Ctx.TTI.getMemoryOpCost(Opcode, ValTy, getLoadStoreAlignment(I),
-                                   getLoadStoreAddressSpace(I), Ctx.CostKind,
-                                   TTI::getOperandInfo(I->getOperand(0)), I);
+    return Ctx.TTI.getMemoryOpCost(
+        Opcode, OpTys[0], getLoadStoreAlignment(I),
+        cast<PointerType>(OpTys[1])->getAddressSpace(), Ctx.CostKind,
+        TTI::getOperandInfo(I->getOperand(0)), I);
   }
   case Instruction::Sub: {
-    return Ctx.TTI.getArithmeticInstrCost(Opcode, toVectorTy(ValTy, VF),
+    return Ctx.TTI.getArithmeticInstrCost(Opcode, toVectorTy(ResultTy, VF),
                                           Ctx.CostKind);
+  }
+  case Instruction::ZExt: {
+    return Ctx.TTI.getCastInstrCost(Opcode, toVectorTy(ResultTy, VF),
+                                    toVectorTy(OpTys[0], VF),
+                                    TTI::CastContextHint::None, Ctx.CostKind);
   }
   default:
     llvm_unreachable("Unsupported opcode");
@@ -1410,8 +1416,8 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
   }
   case Instruction::ExtractElement:
   case VPInstruction::ExtractLane: {
-    return getCostForRecipeWithOpcodeAndTypes(
-        getOpcode(), getOperand(0)->getScalarType(), nullptr, VF, Ctx);
+    return getCostForRecipeWithOpcodeAndTypes(getOpcode(), getScalarType(), {},
+                                              nullptr, VF, Ctx);
   }
   case VPInstruction::AnyOf: {
     auto *VecTy = toVectorTy(this->getScalarType(), VF);
@@ -1432,9 +1438,9 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     return Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
   }
   case VPInstruction::LastActiveLane: {
-    return getCostForRecipeWithOpcodeAndTypes(VPInstruction::LastActiveLane,
-                                              getOperand(0)->getScalarType(),
-                                              nullptr, VF, Ctx);
+    return getCostForRecipeWithOpcodeAndTypes(
+        VPInstruction::LastActiveLane, getScalarType(),
+        {getOperand(0)->getScalarType()}, nullptr, VF, Ctx);
   }
   case VPInstruction::ExtractLastActive: {
     Type *ScalarTy = this->getScalarType();

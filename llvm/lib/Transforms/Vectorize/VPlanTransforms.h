@@ -308,7 +308,8 @@ struct VPlanTransforms {
   /// will be folded later.
   static void
   truncateToMinimalBitwidths(VPlan &Plan,
-                             const MapVector<Instruction *, uint64_t> &MinBWs);
+                             const MapVector<Instruction *, uint64_t> &MinBWs,
+                             VFRange &Range);
 
   /// Check \p Plan's live-ins and replace them with constants, if they can be
   /// simplified via SCEV.
