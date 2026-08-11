@@ -1,20 +1,20 @@
-.. title:: clang-tidy - bugprone-unused-raii
+```{title} clang-tidy - bugprone-unused-raii
+```
 
-bugprone-unused-raii
-====================
+# bugprone-unused-raii
 
 Finds temporaries that look like RAII objects.
 
 The canonical example for this is a scoped lock.
 
-.. code-block:: c++
+```c++
+{
+  scoped_lock(&global_mutex);
+  critical_section();
+}
+```
 
-  {
-    scoped_lock(&global_mutex);
-    critical_section();
-  }
-
-The destructor of the scoped_lock is called before the ``critical_section`` is
+The destructor of the scoped_lock is called before the `critical_section` is
 entered, leaving it unprotected.
 
 We apply a number of heuristics to reduce the false positive count of this
