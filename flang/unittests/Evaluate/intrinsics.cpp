@@ -168,9 +168,7 @@ void TestIntrinsics() {
   using Complex8 = Type<TypeCategory::Complex>;
   Complex8 complex8{8};
   using Char = Type<TypeCategory::Character>;
-  Char ascii{1};
   using Log4 = Type<TypeCategory::Logical>;
-  Log4 log4{4};
 
   TestCall{defaults, table, "bad"}
       .Push(Const(Scalar<Int4>::Zero(4)))

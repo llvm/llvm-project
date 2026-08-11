@@ -489,7 +489,7 @@ struct TypeBuilderImpl {
         converter.getFoldingContext(),
         Fortran::evaluate::Expr<TC>{
             Fortran::evaluate::Designator<TC>{kind, symbol}});
-    if (auto len = toInt64(std::move(designator.LEN())))
+    if (auto len = toInt64(designator.LEN()))
       return *len;
     return fir::SequenceType::getUnknownExtent();
   }
