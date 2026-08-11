@@ -1993,6 +1993,22 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         return NewFn != F;
       }
 
+      // Upgrade the FP add intrinsics, which are overloaded on the operand type
+      // llvm.nvvm.add.<rnd>{.ftz}{.sat}.<type> =>
+      //     llvm.nvvm.fadd.<rnd>{.ftz}{.sat}.<mangled type>
+      if (Name.starts_with("add.")) {
+        auto [Base, TypeSuffix] = Name.rsplit('.');
+        if (TypeSuffix == "f" || TypeSuffix == "d" || TypeSuffix == "f16" ||
+            TypeSuffix == "v2f16") {
+          IID = Intrinsic::lookupIntrinsicID(("llvm.nvvm.f" + Base).str());
+          if (IID != Intrinsic::not_intrinsic) {
+            NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID,
+                                                      {F->getReturnType()});
+            return true;
+          }
+        }
+      }
+
       // The following nvvm intrinsics correspond exactly to an LLVM idiom, but
       // not to an intrinsic alone.  We expand them in UpgradeIntrinsicCall.
       //

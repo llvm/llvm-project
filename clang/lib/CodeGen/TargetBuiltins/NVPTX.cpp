@@ -433,6 +433,13 @@ static Value *MakeFMAOOB(unsigned IntrinsicID, llvm::Type *Ty,
                                  CGF.EmitScalarExpr(E->getArg(2))});
 }
 
+static Value *MakeBinaryIntrinsic(unsigned IntrinsicID, const CallExpr *E,
+                                  CodeGenFunction &CGF) {
+  return CGF.Builder.CreateBinaryIntrinsic(IntrinsicID,
+                                           CGF.EmitScalarExpr(E->getArg(0)),
+                                           CGF.EmitScalarExpr(E->getArg(1)));
+}
+
 } // namespace
 
 Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
@@ -1181,6 +1188,60 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
   case NVPTX::BI__nvvm_ex2_approx_ftz_f:
     return Builder.CreateUnaryIntrinsic(Intrinsic::nvvm_ex2_approx_ftz,
                                         EmitScalarExpr(E->getArg(0)));
+  case NVPTX::BI__nvvm_add_rn_f:
+  case NVPTX::BI__nvvm_add_rn_d:
+    return MakeBinaryIntrinsic(Intrinsic::nvvm_fadd_rn, E, *this);
+  case NVPTX::BI__nvvm_add_rz_f:
+  case NVPTX::BI__nvvm_add_rz_d:
+    return MakeBinaryIntrinsic(Intrinsic::nvvm_fadd_rz, E, *this);
+  case NVPTX::BI__nvvm_add_rm_f:
+  case NVPTX::BI__nvvm_add_rm_d:
+    return MakeBinaryIntrinsic(Intrinsic::nvvm_fadd_rm, E, *this);
+  case NVPTX::BI__nvvm_add_rp_f:
+  case NVPTX::BI__nvvm_add_rp_d:
+    return MakeBinaryIntrinsic(Intrinsic::nvvm_fadd_rp, E, *this);
+  case NVPTX::BI__nvvm_add_rn_ftz_f:
+    return MakeBinaryIntrinsic(Intrinsic::nvvm_fadd_rn_ftz, E, *this);
+  case NVPTX::BI__nvvm_add_rz_ftz_f:
+    return MakeBinaryIntrinsic(Intrinsic::nvvm_fadd_rz_ftz, E, *this);
+  case NVPTX::BI__nvvm_add_rm_ftz_f:
+    return MakeBinaryIntrinsic(Intrinsic::nvvm_fadd_rm_ftz, E, *this);
+  case NVPTX::BI__nvvm_add_rp_ftz_f:
+    return MakeBinaryIntrinsic(Intrinsic::nvvm_fadd_rp_ftz, E, *this);
+  case NVPTX::BI__nvvm_add_rn_sat_f:
+    return MakeBinaryIntrinsic(Intrinsic::nvvm_fadd_rn_sat, E, *this);
+  case NVPTX::BI__nvvm_add_rz_sat_f:
+    return MakeBinaryIntrinsic(Intrinsic::nvvm_fadd_rz_sat, E, *this);
+  case NVPTX::BI__nvvm_add_rm_sat_f:
+    return MakeBinaryIntrinsic(Intrinsic::nvvm_fadd_rm_sat, E, *this);
+  case NVPTX::BI__nvvm_add_rp_sat_f:
+    return MakeBinaryIntrinsic(Intrinsic::nvvm_fadd_rp_sat, E, *this);
+  case NVPTX::BI__nvvm_add_rn_ftz_sat_f:
+    return MakeBinaryIntrinsic(Intrinsic::nvvm_fadd_rn_ftz_sat, E, *this);
+  case NVPTX::BI__nvvm_add_rz_ftz_sat_f:
+    return MakeBinaryIntrinsic(Intrinsic::nvvm_fadd_rz_ftz_sat, E, *this);
+  case NVPTX::BI__nvvm_add_rm_ftz_sat_f:
+    return MakeBinaryIntrinsic(Intrinsic::nvvm_fadd_rm_ftz_sat, E, *this);
+  case NVPTX::BI__nvvm_add_rp_ftz_sat_f:
+    return MakeBinaryIntrinsic(Intrinsic::nvvm_fadd_rp_ftz_sat, E, *this);
+  case NVPTX::BI__nvvm_add_rn_sat_f16:
+    return MakeHalfType(
+        CGM.getIntrinsic(Intrinsic::nvvm_fadd_rn_sat, Builder.getHalfTy()),
+        BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_add_rn_sat_v2f16:
+    return MakeHalfType(
+        CGM.getIntrinsic(Intrinsic::nvvm_fadd_rn_sat,
+                         FixedVectorType::get(Builder.getHalfTy(), 2)),
+        BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_add_rn_ftz_sat_f16:
+    return MakeHalfType(
+        CGM.getIntrinsic(Intrinsic::nvvm_fadd_rn_ftz_sat, Builder.getHalfTy()),
+        BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_add_rn_ftz_sat_v2f16:
+    return MakeHalfType(
+        CGM.getIntrinsic(Intrinsic::nvvm_fadd_rn_ftz_sat,
+                         FixedVectorType::get(Builder.getHalfTy(), 2)),
+        BuiltinID, E, *this);
   case NVPTX::BI__nvvm_ldg_h:
   case NVPTX::BI__nvvm_ldg_h2:
     return MakeLdg(*this, E);

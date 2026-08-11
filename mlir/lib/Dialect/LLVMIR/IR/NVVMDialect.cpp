@@ -3609,14 +3609,6 @@ static LogicalResult verifyAddSubFOp(OpType op) {
                             "vector<2xbf16> additions/subtractions");
   }
 
-  // FIXME: This is a temporary check disallowing lowering to add.rn.ftz.f16(x2)
-  // PTX instructions since the corresponding LLVM intrinsic is missing. This
-  // should be removed once the intrinsics for f16 addition (with FTZ only) are
-  // available.
-  if (opBaseType.isF16() && isFTZ && satMode == NVVM::SaturationMode::NONE)
-    return op.emitOpError("FTZ with no saturation is not supported for f16 and "
-                          "vector<2xf16> additions/subtractions");
-
   return success();
 }
 

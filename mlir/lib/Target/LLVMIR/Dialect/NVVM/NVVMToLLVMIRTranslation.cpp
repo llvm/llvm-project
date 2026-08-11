@@ -481,87 +481,39 @@ void NVVM::AddFOp::lowerAddFToLLVMIR(llvm::Value *argLHS, llvm::Value *argRHS,
                                      LLVM::ModuleTranslation &mt,
                                      llvm::IRBuilderBase &builder) {
   llvm::Type *opTypeLLVM = argLHS->getType();
-  bool isVectorOp = opTypeLLVM->isVectorTy();
   bool isSat = satMode != NVVM::SaturationMode::NONE;
 
-  // FIXME: Add intrinsics for add.rn.ftz.f16x2 and add.rn.ftz.f16 here when
-  // they are available.
-  static constexpr llvm::Intrinsic::ID f16IDs[] = {
-      llvm::Intrinsic::nvvm_add_rn_sat_f16,
-      llvm::Intrinsic::nvvm_add_rn_ftz_sat_f16,
-      llvm::Intrinsic::nvvm_add_rn_sat_v2f16,
-      llvm::Intrinsic::nvvm_add_rn_ftz_sat_v2f16,
-  };
+  static constexpr llvm::Intrinsic::ID addIDs[2][2][5] = {
+      {{llvm::Intrinsic::nvvm_fadd_rn, llvm::Intrinsic::nvvm_fadd_rn,
+        llvm::Intrinsic::nvvm_fadd_rm, llvm::Intrinsic::nvvm_fadd_rp,
+        llvm::Intrinsic::nvvm_fadd_rz},
+       {llvm::Intrinsic::nvvm_fadd_rn_sat, llvm::Intrinsic::nvvm_fadd_rn_sat,
+        llvm::Intrinsic::nvvm_fadd_rm_sat, llvm::Intrinsic::nvvm_fadd_rp_sat,
+        llvm::Intrinsic::nvvm_fadd_rz_sat}},
+      {{llvm::Intrinsic::nvvm_fadd_rn_ftz, llvm::Intrinsic::nvvm_fadd_rn_ftz,
+        llvm::Intrinsic::nvvm_fadd_rm_ftz, llvm::Intrinsic::nvvm_fadd_rp_ftz,
+        llvm::Intrinsic::nvvm_fadd_rz_ftz},
+       {llvm::Intrinsic::nvvm_fadd_rn_ftz_sat,
+        llvm::Intrinsic::nvvm_fadd_rn_ftz_sat,
+        llvm::Intrinsic::nvvm_fadd_rm_ftz_sat,
+        llvm::Intrinsic::nvvm_fadd_rp_ftz_sat,
+        llvm::Intrinsic::nvvm_fadd_rz_ftz_sat}}};
 
-  static constexpr llvm::Intrinsic::ID f32IDs[] = {
-      llvm::Intrinsic::nvvm_add_rn_f, // default rounding mode RN
-      llvm::Intrinsic::nvvm_add_rn_f,
-      llvm::Intrinsic::nvvm_add_rm_f,
-      llvm::Intrinsic::nvvm_add_rp_f,
-      llvm::Intrinsic::nvvm_add_rz_f,
-      llvm::Intrinsic::nvvm_add_rn_sat_f, // default rounding mode RN
-      llvm::Intrinsic::nvvm_add_rn_sat_f,
-      llvm::Intrinsic::nvvm_add_rm_sat_f,
-      llvm::Intrinsic::nvvm_add_rp_sat_f,
-      llvm::Intrinsic::nvvm_add_rz_sat_f,
-      llvm::Intrinsic::nvvm_add_rn_ftz_f, // default rounding mode RN
-      llvm::Intrinsic::nvvm_add_rn_ftz_f,
-      llvm::Intrinsic::nvvm_add_rm_ftz_f,
-      llvm::Intrinsic::nvvm_add_rp_ftz_f,
-      llvm::Intrinsic::nvvm_add_rz_ftz_f,
-      llvm::Intrinsic::nvvm_add_rn_ftz_sat_f, // default rounding mode RN
-      llvm::Intrinsic::nvvm_add_rn_ftz_sat_f,
-      llvm::Intrinsic::nvvm_add_rm_ftz_sat_f,
-      llvm::Intrinsic::nvvm_add_rp_ftz_sat_f,
-      llvm::Intrinsic::nvvm_add_rz_ftz_sat_f,
-  };
+  llvm::Intrinsic::ID id = addIDs[isFTZ][isSat][static_cast<unsigned>(rndMode)];
 
-  static constexpr llvm::Intrinsic::ID f64IDs[] = {
-      llvm::Intrinsic::nvvm_add_rn_d, // default rounding mode RN
-      llvm::Intrinsic::nvvm_add_rn_d, llvm::Intrinsic::nvvm_add_rm_d,
-      llvm::Intrinsic::nvvm_add_rp_d, llvm::Intrinsic::nvvm_add_rz_d};
-
-  auto addIntrinsic = [&](llvm::Intrinsic::ID IID) -> llvm::Value * {
-    return createScalarizedIntrinsicCall(builder, IID, opTypeLLVM,
-                                         {argLHS, argRHS}, opTypeLLVM);
-  };
-
-  // f16 + f16 -> f16 / vector<2xf16> + vector<2xf16> -> vector<2xf16>
-  // FIXME: Allow lowering to add.rn.ftz.f16x2 and add.rn.ftz.f16 here when the
-  // intrinsics are available.
-  if (opTypeLLVM->getScalarType()->isHalfTy()) {
-    llvm::Value *result;
-    if (isSat) {
-      unsigned index = (isVectorOp << 1) | isFTZ;
-      result = addIntrinsic(f16IDs[index]);
-    } else {
-      result = builder.CreateFAdd(argLHS, argRHS);
-    }
-    mt.mapValue(res, result);
+  // For f64 vector addition, and f32 vector addition with saturation,
+  // we need to scalarize the intrinsic call.
+  llvm::Type *scalarTypeLLVM = opTypeLLVM->getScalarType();
+  if (opTypeLLVM->isVectorTy() && (scalarTypeLLVM->isDoubleTy() ||
+                                   (isSat && scalarTypeLLVM->isFloatTy()))) {
+    mt.mapValue(res, createScalarizedIntrinsicCall(builder, id, opTypeLLVM,
+                                                   {argLHS, argRHS},
+                                                   scalarTypeLLVM));
     return;
   }
 
-  // bf16 + bf16 -> bf16 / vector<2xbf16> + vector<2xbf16> -> vector<2xbf16>
-  if (opTypeLLVM->getScalarType()->isBFloatTy()) {
-    mt.mapValue(res, builder.CreateFAdd(argLHS, argRHS));
-    return;
-  }
-
-  // f64 + f64 -> f64 / vector<2xf64> + vector<2xf64> -> vector<2xf64>
-  if (opTypeLLVM->getScalarType()->isDoubleTy()) {
-    unsigned index = static_cast<unsigned>(rndMode);
-    mt.mapValue(res, addIntrinsic(f64IDs[index]));
-    return;
-  }
-
-  // f32 + f32 -> f32 / vector<2xf32> + vector<2xf32> -> vector<2xf32>
-  const unsigned numRndModes = 5; // NONE, RM, RN, RP, RZ
-  if (opTypeLLVM->getScalarType()->isFloatTy()) {
-    unsigned index =
-        ((isFTZ << 1) | isSat) * numRndModes + static_cast<unsigned>(rndMode);
-    mt.mapValue(res, addIntrinsic(f32IDs[index]));
-    return;
-  }
+  mt.mapValue(res,
+              createIntrinsicCall(builder, id, opTypeLLVM, {argLHS, argRHS}));
 }
 
 void NVVM::FmaOp::lowerFmaToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
