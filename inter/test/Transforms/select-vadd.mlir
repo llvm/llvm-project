@@ -1,7 +1,7 @@
 // Straight-line selection: vadd lowers to the prologue, gid computation,
 // A64 loads, a store, and EOT.
-// RUN: inter-opt %s --inter-normalize-cf --inter-convert-calls --inter-convert-memory --inter-select-to-machine --inter-insert-sync | FileCheck %s
-// RUN: inter-opt %s --inter-normalize-cf --inter-convert-calls --inter-convert-memory --inter-select-to-machine --inter-insert-sync | inter-translate --xemachine-to-ged -o %t
+// RUN: inter-opt %s --inter-normalize-cf --inter-convert-calls --inter-convert-memory --inter-select-to-machine --inter-regalloc --inter-insert-sync | FileCheck %s
+// RUN: inter-opt %s --inter-normalize-cf --inter-convert-calls --inter-convert-memory --inter-select-to-machine --inter-regalloc --inter-insert-sync | inter-translate --xemachine-to-ged -o %t
 // RUN: inter-ged-dump %t | FileCheck %s --check-prefix=GED
 
 module {
@@ -11,6 +11,7 @@ module {
   // CHECK-SAME: xemachine.kernel_type = (!llvm.ptr<1>, !llvm.ptr<1>, !llvm.ptr<1>) -> ()
   // CHECK-SAME: xemachine.payload_entry_offset = 192 : i32
   // CHECK-SAME: xemachine.per_thread_payload_size = 192 : i32
+  // CHECK-SAME: xemachine.reserved_grf_count = 5 : i32
   // CHECK-SAME: xemachine.simd_size = 32 : i32
   // CHECK-SAME: xemachine.target = #xemachine.target<chip = "bmg">
   // CHECK-SAME: xemachine.uses_thread_ids
@@ -60,8 +61,8 @@ module {
 // GED: opcode=mul
 // GED: opcode=add3
 // GED: opcode=shl
-// GED: pc=384 opcode=add
-// GED-NEXT: pc=400 opcode=add
-// GED-NEXT: pc=416 opcode=send exec=32 swsb=0x322
+// GED: pc=400 opcode=add
+// GED-NEXT: pc=416 opcode=add
+// GED-NEXT: pc=432 opcode=send exec=32 swsb=0x322
 // GED: opcode=send {{.*}}sfid=ugm {{.*}}len=2 eot=0
 // GED: opcode=send {{.*}}sfid=gateway {{.*}}len=0 eot=1

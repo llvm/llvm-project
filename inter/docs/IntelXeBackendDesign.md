@@ -322,25 +322,27 @@ before instantiation. Only `xe2` is populated; the enum leaves room.
 Transform-loop linear scan, transplanted from wave-mlir
 `lib/Dialect/Wave/Transforms/RegAlloc/`:
 
-- IR-resident state: positions, stable per-epoch value IDs, intervals, alias
-  sets, failure records live in a function attribute. No C++ state survives
-  an IR rewrite; each iteration rebuilds from current IR.
+- IR-resident epoch state lives in a function attribute while an allocation
+  attempt is active. No C++ state survives an IR rewrite; each relief rewrite
+  clears the attribute and the next iteration rebuilds positions, value IDs,
+  intervals, weighted alias sets, and send-source lifetimes from current IR.
 - Linear scan consumes alias state and either commits physical indices or
   emits one precise failure record. It never picks a relief strategy.
-- Relief provider chain, first legal plan wins:
-  `Remat -> SLM spill -> Scratch spill`. SLM is budget-limited; scratch is
-  the unlimited last resort. Whole alias sets always.
+- The v1 relief provider chain is `Remat -> Scratch spill`; the first legal
+  plan wins. SLM spilling and the AMD-specific register-file providers are not
+  present. Scratch spill/fill uses Xe2 LSC UGM transpose messages and a
+  register extended descriptor in `a0.2`. Relief never splits an alias
+  component; v1 providers currently accept singleton components only.
 - New work vs. the AMD original: region-aware aliasing (`<V;W,H>` overlap
   between a def and its uses constrains placement; 64-bit alignment; exec
-  width affects footprint), and ARF allocation for `a0`/`f` as separate
-  small problems with hard capacity (2 flags, address registers) — modeled
-  as their own provider, not folded into GRF pressure.
-- Pressure accounting: the GRF budget is a parameter, not a constant. v1
-  pins it at 128 GRFs minus reserved payload/copy-temp space (Large GRF
-  mode's 256 is a non-goal, section 2). The budget and the occupancy target
-  are the same knob — GRF mode selects both register file size and hardware
-  threads per core — so both arrive together as a fixed per-kernel decision
-  feeding the limit; regalloc consumes the limit, it does not choose it.
+  width affects footprint). ARF allocation for `a0`/`f` remains a separate
+  predecessor problem with hard capacity; the GRF pass rejects virtual ARFs
+  rather than folding them into GRF pressure.
+- Pressure accounting: the GRF budget is a function input, not a pass option
+  or allocator constant. `xemachine.grf_count` supplies the selected GRF mode
+  and `xemachine.reserved_grf_count` supplies the ABI-reserved prefix. The
+  budget and occupancy target are the same knob, so selection records the
+  per-kernel decision and regalloc only consumes it.
 
 ## 13. Scheduling
 
@@ -402,8 +404,9 @@ no LLVM MC target for Xe; the MC-equivalent layer is owned here.
   finalize: branch targets (JIP/UIP), SWSB finalization if layout moved,
   optional compaction later.
 - Selection currently preserves the kernel ABI and fixed target resources as
-  function attrs (`kernel_type`, `grf_count`, `simd_size`, payload sizes, and
-  `slm_size`). The emitter validates those attrs and derives operation-local
+  function attrs (`kernel_type`, `grf_count`, `reserved_grf_count`,
+  `simd_size`, payload sizes, `scratch_size`, and `slm_size`). The emitter
+  validates those attrs and derives operation-local
   facts such as barrier, atomic, and stateless-write use. M4 moves all of this
   into the dedicated resource-info pass.
 - ELF + `.ze_info` + `.note.intelgt.compat` writer; ground truth is NEO's decoder

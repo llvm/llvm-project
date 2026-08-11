@@ -22,6 +22,8 @@ class XeMachine_Op<string mnemonic, list<Trait> traits = []> :
 
 def XeMachine_RegOrImm : AnyTypeOf<[XeMachine_RegType, XeMachine_ImmType,
                                     XeMachine_ARFType], "reg/arf/imm">;
+def XeMachine_RegOrARF : AnyTypeOf<[XeMachine_RegType, XeMachine_ARFType],
+                                    "reg/arf">;
 
 def XeMachine_NoMachineInst
     : NativeOpTrait<"xemachine::NoMachineInst">;
@@ -62,7 +64,7 @@ def XeMachine_MovOp : XeMachine_ALUOp<"mov"> {
                        UnitAttr:$noMask,
                        DefaultValuedAttr<I32Attr, "0">:$maskOffset,
                        XeMachine_RegOrImm:$src);
-  let results = (outs XeMachine_RegType:$dst);
+  let results = (outs XeMachine_RegOrARF:$dst);
   let assemblyFormat =
       "$src attr-dict `:` `(` qualified(type($src)) `,` $elemType `)` `->` qualified(type($dst))";
 }
@@ -81,13 +83,16 @@ class XeMachine_BinOp<string mnemonic> : XeMachine_ALUOp<mnemonic> {
                        UnitAttr:$noMask,
                        DefaultValuedAttr<I32Attr, "0">:$maskOffset,
                        XeMachine_RegOrImm:$src0, XeMachine_RegOrImm:$src1);
-  let results = (outs XeMachine_RegType:$dst);
+  let results = (outs XeMachine_RegOrARF:$dst);
   let assemblyFormat =
       "$src0 `,` $src1 attr-dict `:` `(` qualified(type($src0)) `,` qualified(type($src1)) `,` $elemType `)` `->` qualified(type($dst))";
 }
 
 def XeMachine_AddOp : XeMachine_BinOp<"add"> { let summary = "add"; }
 def XeMachine_ShlOp : XeMachine_BinOp<"shl"> { let summary = "shift left"; }
+def XeMachine_ShrOp : XeMachine_BinOp<"shr"> {
+  let summary = "logical shift right";
+}
 def XeMachine_AndOp : XeMachine_BinOp<"and"> { let summary = "bitwise and"; }
 def XeMachine_OrOp  : XeMachine_BinOp<"or">  { let summary = "bitwise or"; }
 
@@ -132,11 +137,12 @@ def XeMachine_SendOp : XeMachine_Op<"send",
                        UnitAttr:$eot,
                        XeMachine_RegType:$addrPayload,
                        Optional<XeMachine_RegType>:$dataPayload,
+                       Optional<XeMachine_ARFType>:$exdescReg,
                        Optional<XeMachine_MemTokenType>:$dependency,
                        OptionalAttr<I64Attr>:$swsb);
   let results = (outs XeMachine_RegType:$dst, XeMachine_MemTokenType:$token);
   let assemblyFormat =
-      "$fn $addrPayload (`data` $dataPayload^)? (`dep` $dependency^)? attr-dict `:` `(` qualified(type($addrPayload)) (`,` qualified(type($dataPayload))^)? `)` `->` `(` qualified(type($dst)) `,` qualified(type($token)) `)`";
+      "$fn $addrPayload (`data` $dataPayload^)? (`exdesc` $exdescReg^ `:` qualified(type($exdescReg)))? (`dep` $dependency^)? attr-dict `:` `(` qualified(type($addrPayload)) (`,` qualified(type($dataPayload))^)? `)` `->` `(` qualified(type($dst)) `,` qualified(type($token)) `)`";
 }
 
 // Scoreboard/fence synchronization. kind: "nop", "allrd", "allwr", "bar".

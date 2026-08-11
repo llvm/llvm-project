@@ -1,6 +1,6 @@
 ; REQUIRES: host-supports-inter-bmg
 ; RUN: inter-translate %s --import-llvm -o %t.mlir
-; RUN: inter-opt %t.mlir --inter-normalize-cf --lift-cf-to-scf --inter-convert-calls --inter-convert-memory --inter-select-to-machine --inter-insert-sync -o %t.xemachine.mlir
+; RUN: inter-opt %t.mlir --inter-normalize-cf --lift-cf-to-scf --inter-convert-calls --inter-convert-memory --inter-select-to-machine --inter-regalloc --inter-insert-sync -o %t.xemachine.mlir
 ; RUN: inter-translate %t.xemachine.mlir --xemachine-to-zebin -o %t.bin
 ; RUN: inter-runner --compact %t.bin vadd 32 in:1 in:1000 out | FileCheck %s
 

@@ -1,10 +1,8 @@
 // inter-select-to-machine: lower an llvm-dialect kernel to xemachine ops.
 //
 // M1 scope: straight-line kernels, i32 lane values, A64 stateless global
-// memory, one work-item id builtin. Physical GRFs are assigned by
-// construction (bump allocation in emission order); the real regalloc
-// transform loop replaces this in M4. Address-payload contiguity for
-// scattered sends is guaranteed by allocation order.
+// memory, one work-item id builtin. Ordinary values remain virtual for the
+// register allocator; only architectural payload/prologue values are pinned.
 
 #include "inter/Analysis/UniformityAnalysis.h"
 #include "inter/Dialect/Inter/IR/XW.h"
@@ -98,7 +96,6 @@ struct SelectToMachine
   DataFlowSolver *uniformity = nullptr;
   std::optional<Location> loc;
   std::optional<OpBuilder> b;
-  int nextGRF = 4; // The dual-entry payload prologue reserves r0-r9.
   DenseMap<Value, Value> vmap;
   Value gidValue;
   Value localXValue;
@@ -106,11 +103,7 @@ struct SelectToMachine
   Value byteOffLo, byteOffHi;
   bool prologueEmitted = false;
 
-  Type grf(int dwords) {
-    int base = nextGRF;
-    nextGRF += (dwords + 15) / 16;
-    return RegType::get(ctx, dwords, base);
-  }
+  Type grf(int dwords) { return RegType::get(ctx, dwords, -1); }
   Type i32() { return IntegerType::get(ctx, 32); }
   Type i16() { return IntegerType::get(ctx, 16); }
   Type i64() { return IntegerType::get(ctx, 64); }
@@ -214,8 +207,9 @@ struct SelectToMachine
                       perThreadBase, threadOffset)
             .getResult();
     auto load = LoadBlockA32Op::create(*b, *loc, RegType::get(ctx, 16, 1),
-                                       MemTokenType::get(ctx), perThreadAddr,
-                                       Value(), 16);
+                                        MemTokenType::get(ctx), perThreadAddr,
+                                        Value(), 16);
+    load->setAttr(kAllowFixedOverlapAttrName, b->getUnitAttr());
     memToken = load.getToken();
 
     // Keep the hardware-generated-local-ID entry at the zeinfo offset.
@@ -223,13 +217,11 @@ struct SelectToMachine
     emitSync(SyncKind::nop);
     emitSync(SyncKind::nop);
     emitSync(SyncKind::nop);
-    nextGRF = 10;
   }
 
   LogicalResult lowerKernel(func::FuncOp kernel) {
     ctx = kernel.getContext();
     loc = kernel.getLoc();
-    nextGRF = 4; // The dual-entry payload prologue reserves r0-r9.
     vmap.clear();
     memToken = nullptr;
     gidValue = nullptr;
@@ -254,6 +246,8 @@ struct SelectToMachine
       return failure();
     func->setAttr(kKernelTypeAttrName, TypeAttr::get(kernel.getFunctionType()));
     func->setAttr(kGrfCountAttrName, moduleBuilder.getI32IntegerAttr(128));
+    func->setAttr(kReservedGrfCountAttrName,
+                  moduleBuilder.getI32IntegerAttr(5));
     func->setAttr(kSimdSizeAttrName, moduleBuilder.getI32IntegerAttr(32));
     if (usesThreadIds) {
       func->setAttr(kUsesThreadIdsAttrName, moduleBuilder.getUnitAttr());
@@ -605,16 +599,24 @@ struct SelectToMachine
                                  IntegerAttr(), TypeAttr(), /*noMask=*/false,
                                  /*maskOffset=*/0, imm(0, i32()))
                        .getResult();
-    Value w0 = MovOp::create(*b, *loc, zeroLo.getType(), i32(),
-                             /*execSize=*/16, dstride2(), rcanon(),
-                             IntegerAttr(), IntegerAttr(), TypeAttr(),
-                             /*noMask=*/false, /*maskOffset=*/0, gidValue)
-                   .getResult();
-    Value w1 =
-        MovOp::create(*b, *loc, zeroHi.getType(), i32(),
+    Value w0Part = MovOp::create(*b, *loc, grf(32), i32(),
+                                 /*execSize=*/16, dstride2(), rcanon(),
+                                 IntegerAttr(), IntegerAttr(), TypeAttr(),
+                                 /*noMask=*/false, /*maskOffset=*/0, gidValue)
+                       .getResult();
+    Value w1Part =
+        MovOp::create(*b, *loc, grf(32), i32(),
                       /*execSize=*/16, dstride2(), rcanon(), IntegerAttr(),
                       b->getI32IntegerAttr(16), TypeAttr(), /*noMask=*/false,
                       /*maskOffset=*/16, gidValue)
+            .getResult();
+    Value w0 =
+        UpdateTupleOp::create(*b, *loc, grf(32), zeroLo, ValueRange{w0Part},
+                              b->getArrayAttr({b->getI64IntegerAttr(0)}))
+            .getResult();
+    Value w1 =
+        UpdateTupleOp::create(*b, *loc, grf(32), zeroHi, ValueRange{w1Part},
+                              b->getArrayAttr({b->getI64IntegerAttr(0)}))
             .getResult();
     byteOffLo =
         ShlOp::create(*b, *loc, grf(32), i64(), /*execSize=*/16, dcanon(),
@@ -653,8 +655,7 @@ struct SelectToMachine
                              TypeAttr(), TypeAttr(), /*noMask=*/false,
                              /*maskOffset=*/16, hi, ptr)
                    .getResult();
-    RegType firstType = cast<RegType>(a0.getType());
-    Type payloadType = RegType::get(ctx, 64, firstType.getBaseGRF());
+    Type payloadType = grf(64);
     return TupleFromElementsOp::create(*b, *loc, payloadType,
                                        ValueRange{a0, a1})
         .getTuple();
@@ -766,17 +767,26 @@ struct SelectToMachine
                                   IntegerAttr(), TypeAttr(), /*noMask=*/true,
                                   /*maskOffset=*/0, imm(0, i32()))
                         .getResult();
-    payload = MovOp::create(*b, *loc, payload.getType(), i32(), /*execSize=*/1,
-                            dcanon(), RegionAttr(), b->getI32IntegerAttr(2),
-                            IntegerAttr(), TypeAttr(), /*noMask=*/true,
-                            /*maskOffset=*/0, imm(0x100, i32()))
-                  .getResult();
-    payload = MovOp::create(*b, *loc, payload.getType(),
-                            IntegerType::get(ctx, 8), /*execSize=*/2, dcanon(),
-                            runiform(), b->getI32IntegerAttr(10),
-                            b->getI32IntegerAttr(11), TypeAttr(),
-                            /*noMask=*/true, /*maskOffset=*/0, r0)
-                  .getResult();
+    Value control =
+        MovOp::create(*b, *loc, grf(16), i32(), /*execSize=*/1, dcanon(),
+                      RegionAttr(), b->getI32IntegerAttr(2), IntegerAttr(),
+                      TypeAttr(), /*noMask=*/true, /*maskOffset=*/0,
+                      imm(0x100, i32()))
+            .getResult();
+    payload =
+        UpdateTupleOp::create(*b, *loc, grf(16), payload, ValueRange{control},
+                              b->getArrayAttr({b->getI64IntegerAttr(0)}))
+            .getResult();
+    Value header =
+        MovOp::create(*b, *loc, grf(16), IntegerType::get(ctx, 8),
+                      /*execSize=*/2, dcanon(), runiform(),
+                      b->getI32IntegerAttr(10), b->getI32IntegerAttr(11),
+                      TypeAttr(), /*noMask=*/true, /*maskOffset=*/0, r0)
+            .getResult();
+    payload =
+        UpdateTupleOp::create(*b, *loc, grf(16), payload, ValueRange{header},
+                              b->getArrayAttr({b->getI64IntegerAttr(0)}))
+            .getResult();
     auto sig = BarrierSignalOp::create(*b, *loc, MemTokenType::get(ctx),
                                        payload, memToken);
     memToken = sig.getToken();
@@ -807,11 +817,9 @@ struct SelectToMachine
                              b->getI32IntegerAttr(sub), TypeAttr(),
                              /*noMask=*/false, /*maskOffset=*/16, ptr)
                    .getResult();
-    RegType firstType = cast<RegType>(a0.getType());
-    Value address = TupleFromElementsOp::create(
-                        *b, *loc, RegType::get(ctx, 64, firstType.getBaseGRF()),
-                        ValueRange{a0, a1})
-                        .getTuple();
+    Value address =
+        TupleFromElementsOp::create(*b, *loc, grf(64), ValueRange{a0, a1})
+            .getTuple();
     Value ones = MovOp::create(*b, *loc, grf(32), i32(), /*execSize=*/32,
                                DstRegionAttr(), RegionAttr(), IntegerAttr(),
                                IntegerAttr(), TypeAttr(), /*noMask=*/false,

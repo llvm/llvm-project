@@ -15,7 +15,7 @@ namespace inter::detail {
 
 enum class DataType { ub, uw, ud, q, f };
 
-enum class AluOpcode { mov, add, shl, and_, or_, add3, mul };
+enum class AluOpcode { mov, add, shl, shr, and_, or_, add3, mul };
 
 struct ExecutionInfo {
   uint32_t size = 1;
@@ -92,7 +92,7 @@ struct SendInstruction {
   std::optional<GrfReference> destination;
   GrfReference address;
   std::optional<GrfReference> data;
-  uint32_t exdesc = 0;
+  std::variant<uint32_t, ArfReference> exdesc = uint32_t{0};
   uint32_t desc = 0;
   bool eot = false;
   SwsbInfo swsb;

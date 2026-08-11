@@ -379,7 +379,17 @@ private:
         getGrfReference(cast<RegType>(send.getAddrPayload().getType()), 0, i32);
     if (Value data = send.getDataPayload())
       instruction.data = getGrfReference(cast<RegType>(data.getType()), 0, i32);
-    instruction.exdesc = send.getExdesc();
+    if (Value exdesc = send.getExdescReg()) {
+      ARFType type = cast<ARFType>(exdesc.getType());
+      Operation *definition = exdesc.getDefiningOp();
+      if (send.getExdesc() != 0 || type.getFile() != ARFFile::a0 ||
+          type.getIndex() != 0 || !definition ||
+          getSub(definition, "dstSub") != 2)
+        return send.emitError(
+            "register exdesc requires a zero immediate and a value in a0.2");
+      instruction.exdesc = getArfReference(type, /*sub=*/2);
+    } else
+      instruction.exdesc = static_cast<uint32_t>(send.getExdesc());
     instruction.desc = send.getDesc();
     instruction.eot = send.getEot();
     if (std::optional<uint64_t> rawSwsb = send.getSwsb()) {
@@ -433,6 +443,8 @@ private:
       instruction.opcode = AluOpcode::add;
     else if (isa<ShlOp>(operation))
       instruction.opcode = AluOpcode::shl;
+    else if (isa<ShrOp>(operation))
+      instruction.opcode = AluOpcode::shr;
     else if (isa<AndOp>(operation))
       instruction.opcode = AluOpcode::and_;
     else if (isa<OrOp>(operation))

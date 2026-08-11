@@ -17,6 +17,8 @@ inline constexpr llvm::StringLiteral kTargetAttrName = "xemachine.target";
 inline constexpr llvm::StringLiteral kKernelTypeAttrName =
     "xemachine.kernel_type";
 inline constexpr llvm::StringLiteral kGrfCountAttrName = "xemachine.grf_count";
+inline constexpr llvm::StringLiteral kReservedGrfCountAttrName =
+    "xemachine.reserved_grf_count";
 inline constexpr llvm::StringLiteral kSimdSizeAttrName = "xemachine.simd_size";
 inline constexpr llvm::StringLiteral kUsesThreadIdsAttrName =
     "xemachine.uses_thread_ids";
@@ -27,6 +29,10 @@ inline constexpr llvm::StringLiteral kPerThreadPayloadSizeAttrName =
 inline constexpr llvm::StringLiteral kPayloadEntryOffsetAttrName =
     "xemachine.payload_entry_offset";
 inline constexpr llvm::StringLiteral kSlmSizeAttrName = "xemachine.slm_size";
+inline constexpr llvm::StringLiteral kScratchSizeAttrName =
+    "xemachine.scratch_size";
+inline constexpr llvm::StringLiteral kAllowFixedOverlapAttrName =
+    "xemachine.allow_fixed_overlap";
 
 /// Relative register-storage constraint, in dwords.
 struct RegisterStorageAlias {

@@ -17,6 +17,8 @@ static const char *getOpcodeName(GED_OPCODE opcode) {
     return "add";
   case GED_OPCODE_shl:
     return "shl";
+  case GED_OPCODE_shr:
+    return "shr";
   case GED_OPCODE_and:
     return "and";
   case GED_OPCODE_or:
@@ -274,10 +276,21 @@ int main(int argc, char **argv) {
       GED_SFID sfid = getField<GED_SFID>(GED_GetSFID, instruction, "SFID");
       uint32_t desc =
           getField<uint32_t>(GED_GetMsgDesc, instruction, "MsgDesc");
-      uint32_t exdesc =
-          getField<uint32_t>(GED_GetExMsgDescImm, instruction, "ExMsgDescImm");
-      std::cout << " sfid=" << getSfidName(sfid) << " exdesc=0x" << exdesc
-                << " desc=0x" << desc;
+      GED_REG_FILE exdescFile = getField<GED_REG_FILE>(
+          GED_GetExDescRegFile, instruction, "ExDescRegFile");
+      std::cout << " sfid=" << getSfidName(sfid)
+                << " exdescRegFile=" << getRegFileName(exdescFile);
+      if (exdescFile == GED_REG_FILE_IMM) {
+        uint32_t exdesc = getField<uint32_t>(GED_GetExMsgDescImm, instruction,
+                                             "ExMsgDescImm");
+        std::cout << " exdesc=0x" << exdesc;
+      } else {
+        uint32_t sub = getField<uint32_t>(GED_GetExDescAddrSubRegNum,
+                                          instruction, "ExDescAddrSubRegNum");
+        std::cout << " exdescAddrSubRegNum=" << sub / 2
+                  << " exdescAddrSubRegRaw=" << sub;
+      }
+      std::cout << " desc=0x" << desc;
     } else if (opcode == GED_OPCODE_sync) {
       GED_SYNC_FC function =
           getField<GED_SYNC_FC>(GED_GetSyncFC, instruction, "SyncFC");
@@ -345,9 +358,10 @@ int main(int argc, char **argv) {
                 << " src1=" << getRegFileName(source1File) << source1
                 << " len=" << sourceLength << " eot=" << (eot == GED_EOT_EOT);
     } else if (opcode == GED_OPCODE_mov || opcode == GED_OPCODE_add ||
-               opcode == GED_OPCODE_shl || opcode == GED_OPCODE_and ||
-               opcode == GED_OPCODE_or || opcode == GED_OPCODE_add3 ||
-               opcode == GED_OPCODE_mul || opcode == GED_OPCODE_cmp) {
+               opcode == GED_OPCODE_shl || opcode == GED_OPCODE_shr ||
+               opcode == GED_OPCODE_and || opcode == GED_OPCODE_or ||
+               opcode == GED_OPCODE_add3 || opcode == GED_OPCODE_mul ||
+               opcode == GED_OPCODE_cmp) {
       GED_REG_FILE destinationFile =
           getField<GED_REG_FILE>(GED_GetDstRegFile, instruction, "DstRegFile");
       GED_DATA_TYPE destinationType = getField<GED_DATA_TYPE>(

@@ -107,6 +107,8 @@ private:
       return GED_OPCODE_add;
     case AluOpcode::shl:
       return GED_OPCODE_shl;
+    case AluOpcode::shr:
+      return GED_OPCODE_shr;
     case AluOpcode::and_:
       return GED_OPCODE_and;
     case AluOpcode::or_:
@@ -693,8 +695,19 @@ private:
       RETURN_IF_GED_ERROR(GED_SetSrc1RegNum(&instruction, value.data->number));
     }
 
-    RETURN_IF_GED_ERROR(GED_SetExDescRegFile(&instruction, GED_REG_FILE_IMM));
-    RETURN_IF_GED_ERROR(GED_SetExMsgDescImm(&instruction, value.exdesc));
+    if (const auto *immediate = std::get_if<uint32_t>(&value.exdesc)) {
+      RETURN_IF_GED_ERROR(GED_SetExDescRegFile(&instruction, GED_REG_FILE_IMM));
+      RETURN_IF_GED_ERROR(GED_SetExMsgDescImm(&instruction, *immediate));
+    } else {
+      const ArfReference &exdesc = std::get<ArfReference>(value.exdesc);
+      if (exdesc.file != ARFFile::a0 || exdesc.number != 0 || exdesc.sub != 2) {
+        moduleOp.emitError("Xe2 register exdesc must use a0.2");
+        return failure();
+      }
+      RETURN_IF_GED_ERROR(GED_SetExDescRegFile(&instruction, GED_REG_FILE_ARF));
+      RETURN_IF_GED_ERROR(
+          GED_SetExDescAddrSubRegNum(&instruction, 2 * exdesc.sub));
+    }
     RETURN_IF_GED_ERROR(GED_SetSrc1Length(&instruction, sourceLength));
     RETURN_IF_GED_ERROR(GED_SetDescRegFile(&instruction, GED_REG_FILE_IMM));
     RETURN_IF_GED_ERROR(GED_SetMsgDesc(&instruction, value.desc));

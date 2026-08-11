@@ -1,6 +1,6 @@
 // Uniformity analysis drives uniform_if vs exec_if selection.
-// RUN: inter-opt %s --inter-normalize-cf --lift-cf-to-scf --inter-convert-calls --inter-convert-memory --inter-select-to-machine | FileCheck %s
-// RUN: inter-opt %s --inter-normalize-cf --lift-cf-to-scf --inter-convert-calls --inter-convert-memory --inter-select-to-machine | inter-translate --xemachine-to-ged -o %t
+// RUN: inter-opt %s --inter-normalize-cf --lift-cf-to-scf --inter-convert-calls --inter-convert-memory --inter-select-to-machine --inter-regalloc | FileCheck %s
+// RUN: inter-opt %s --inter-normalize-cf --lift-cf-to-scf --inter-convert-calls --inter-convert-memory --inter-select-to-machine --inter-regalloc | inter-translate --xemachine-to-ged -o %t
 // RUN: inter-ged-dump %t | FileCheck %s --check-prefix=GED
 
 module {

@@ -163,7 +163,7 @@ int main(int argc, char **argv) {
     ++firstArg;
   }
 
-  if (argc - firstArg < 4) {
+  if (argc - firstArg < 3) {
     fprintf(stderr,
             "usage: %s [--compact] [--sort-output] "
             "<zebin.bin> <kernel> <n> <spec>...\n"

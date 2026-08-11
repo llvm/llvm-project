@@ -216,6 +216,9 @@ FailureOr<std::string> buildZeInfo(func::FuncOp kernel) {
     output << "      barrier_count: 1\n";
   if (auto slmSize = kernel->getAttrOfType<IntegerAttr>(kSlmSizeAttrName))
     output << "      slm_size: " << slmSize.getInt() << "\n";
+  if (auto scratchSize =
+          kernel->getAttrOfType<IntegerAttr>(kScratchSizeAttrName))
+    output << "      spill_size: " << scratchSize.getInt() << "\n";
 
   if (usesThreadIds || kernelType.getNumInputs() != 0) {
     output << "    payload_arguments:\n";
@@ -250,6 +253,14 @@ FailureOr<std::string> buildZeInfo(func::FuncOp kernel) {
            << "      - arg_type: local_id\n"
            << "        offset: 0\n"
            << "        size: " << perThreadSize.getInt() << "\n";
+  if (auto scratchSize =
+          kernel->getAttrOfType<IntegerAttr>(kScratchSizeAttrName))
+    output << "    per_thread_memory_buffers:\n"
+           << "      - type: scratch\n"
+           << "        usage: spill_fill_space\n"
+           << "        size: " << scratchSize.getInt() << "\n"
+           << "        slot: 0\n"
+           << "        is_simt_thread: true\n";
   output << "...\n";
   return yaml;
 }

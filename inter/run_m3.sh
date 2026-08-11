@@ -13,7 +13,7 @@ run_kernel() {
   mkdir -p $OUT/$name
   inter/build/tools/inter-translate/inter-translate inter/test/Integration/$ir --import-llvm -o $OUT/$name/k.mlir
   inter/build/tools/inter-opt/inter-opt $OUT/$name/k.mlir \
-    --inter-normalize-cf --lift-cf-to-scf --inter-convert-calls --inter-convert-memory --inter-select-to-machine --inter-insert-sync \
+    --inter-normalize-cf --lift-cf-to-scf --inter-convert-calls --inter-convert-memory --inter-select-to-machine --inter-regalloc --inter-insert-sync \
     -o $OUT/$name/k.xemachine.mlir
   inter/build/tools/inter-translate/inter-translate $OUT/$name/k.xemachine.mlir \
     --xemachine-to-zebin -o $OUT/$name/final.bin
