@@ -51,6 +51,16 @@ ifeq "$(findstring -target,$(SWIFTFLAGS))" ""
   SWIFTFLAGS += $(TARGET_SWIFTFLAGS)
 endif
 
+# A test whose sources use an API that was introduced in a specific OS
+# version sets SWIFT_DEPLOYMENT_TARGET to that version. Note that this
+# only works with versions >= 26 when the versioning scheme was unified.
+ifneq "$(SWIFT_DEPLOYMENT_TARGET)" ""
+ifneq "$(findstring -apple-,$(TARGET_SWIFTFLAGS))" ""
+  SWIFT_DEPLOYMENT_TRIPLE := $(shell echo '$(TARGET_SWIFTFLAGS)' | sed -E 's/.*-target ([^ ]+).*/\1/; s/^([^-]*-[^-]*-[a-zA-Z]+)[0-9.]*/\1$(SWIFT_DEPLOYMENT_TARGET)/')
+  SWIFTFLAGS += -target $(SWIFT_DEPLOYMENT_TRIPLE)
+endif
+endif
+
 ifeq "$(OS)" "Windows_NT"
   SWIFTFLAGS += -resource-dir "$(SWIFTSDKROOT)/usr/lib/swift"
 endif
