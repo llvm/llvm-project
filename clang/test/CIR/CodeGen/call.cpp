@@ -92,7 +92,7 @@ void f11() {
 // CIR-NEXT:    cir.store align(4) %[[#s]], %{{.+}} : !rec_S, !cir.ptr<!rec_S>
 
 // LLVM-LABEL: define{{.*}} void @_Z3f11v(){{.*}}
-// LLVM:         %[[#coerce:]] = alloca i64, i64 1, align 8
+// LLVM:         %[[#coerce:]] = alloca i64, align 8
 // LLVM:         %[[#ret:]] = call i64 @_Z3f10v()
 // LLVM-NEXT:    store i64 %[[#ret]], ptr %[[#coerce]], align 8
 // LLVM-NEXT:    %[[#s:]] = load %struct.S, ptr %[[#coerce]], align 4
@@ -117,8 +117,8 @@ void f12() {
 // CIR-NEXT:    cir.store align(4) %[[#val]], %[[#slot]] : !rec_S, !cir.ptr<!rec_S>
 
 // LLVM-LABEL: define{{.*}} void @_Z3f12v(){{.*}} {
-// LLVM:         %[[#coerce:]] = alloca i64, i64 1, align 8
-// LLVM-NEXT:    %[[#slot:]] = alloca %struct.S, i64 1, align 4
+// LLVM:         %[[#coerce:]] = alloca i64, align 8
+// LLVM-NEXT:    %[[#slot:]] = alloca %struct.S, align 4
 // LLVM-NEXT:    %[[#ret:]] = call i64 @_Z3f10v()
 // LLVM-NEXT:    store i64 %[[#ret]], ptr %[[#coerce]], align 8
 // LLVM-NEXT:    %[[#val:]] = load %struct.S, ptr %[[#coerce]], align 4

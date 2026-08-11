@@ -171,7 +171,7 @@ void f(void) {
 // CIR-NEXT:   cir.return
 
 // LLVM:      define{{.*}} void @f()
-// LLVM-NEXT:   %[[P:.*]] = alloca ptr, i64 1, align 8
+// LLVM-NEXT:   %[[P:.*]] = alloca ptr, align 8
 // LLVM-NEXT:   ret void
 
 // OGCG:      define{{.*}} void @f()
@@ -188,7 +188,7 @@ void f2(void) {
 // CIR-NEXT:   cir.return
 
 // LLVM:      define{{.*}} void @f2()
-// LLVM-NEXT:   %[[S:.*]] = alloca %struct.CompleteS, i64 1, align 4
+// LLVM-NEXT:   %[[S:.*]] = alloca %struct.CompleteS, align 4
 // LLVM-NEXT:   ret void
 
 // OGCG:      define{{.*}} void @f2()
@@ -217,8 +217,8 @@ char f3(int a) {
 // CIR-NEXT:   cir.return %[[RETVAL]]
 
 // LLVM:      define{{.*}} i8 @f3(i32{{.*}} %[[ARG_A:.*]])
-// LLVM-NEXT:   %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM-NEXT:   %[[RETVAL_ADDR:.*]] = alloca i8, i64 1, align 1
+// LLVM-NEXT:   %[[A_ADDR:.*]] = alloca i32, align 4
+// LLVM-NEXT:   %[[RETVAL_ADDR:.*]] = alloca i8, align 1
 // LLVM-NEXT:   store i32 %[[ARG_A]], ptr %[[A_ADDR]], align 4
 // LLVM-NEXT:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR]], align 4
 // LLVM-NEXT:   store i32 %[[A_VAL]], ptr @cs, align 4
@@ -259,9 +259,9 @@ char f4(int a, struct CompleteS *p) {
 // CIR-NEXT:   cir.return %[[RETVAL]]
 
 // LLVM:      define{{.*}} i8 @f4(i32{{.*}} %[[ARG_A:.*]], ptr{{.*}} %[[ARG_P:.*]])
-// LLVM-NEXT:   %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM-NEXT:   %[[P_ADDR:.*]] = alloca ptr, i64 1, align 8
-// LLVM-NEXT:   %[[RETVAL_ADDR:.*]] = alloca i8, i64 1, align 1
+// LLVM-NEXT:   %[[A_ADDR:.*]] = alloca i32, align 4
+// LLVM-NEXT:   %[[P_ADDR:.*]] = alloca ptr, align 8
+// LLVM-NEXT:   %[[RETVAL_ADDR:.*]] = alloca i8, align 1
 // LLVM-NEXT:   store i32 %[[ARG_A]], ptr %[[A_ADDR]], align 4
 // LLVM-NEXT:   store ptr %[[ARG_P]], ptr %[[P_ADDR]], align 8
 // LLVM-NEXT:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR]], align 4

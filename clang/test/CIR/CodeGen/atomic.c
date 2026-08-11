@@ -31,7 +31,7 @@ void f1(void) {
 // CIR:       }
 
 // LLVM-LABEL: @f1
-// LLVM:         %[[SLOT:.+]] = alloca i32, i64 1, align 4
+// LLVM:         %[[SLOT:.+]] = alloca i32, align 4
 // LLVM-NEXT:    store i32 42, ptr %[[SLOT]], align 4
 // LLVM:       }
 
@@ -52,7 +52,7 @@ void f2(void) {
 // CIR:       }
 
 // LLVM-LABEL: @f2
-// LLVM:         %[[SLOT:.+]] = alloca i32, i64 1, align 4
+// LLVM:         %[[SLOT:.+]] = alloca i32, align 4
 // LLVM-NEXT:    store i32 42, ptr %[[SLOT]], align 4
 // LLVM:       }
 
@@ -3768,13 +3768,13 @@ void store_atomic_different_size(S a) {
  // CIR: %[[DATA:.*]] = cir.load {{.*}} %[[ATOMIC_TMP_U32]] : !cir.ptr<!u32i>, !u32i
  // CIR: cir.store {{.*}} syncscope(system) atomic(seq_cst) %[[DATA]], %[[B_VOID_PTR]] : !u32i, !cir.ptr<!u32i>
 
- // LLVM: %[[COERCE:.*]] = alloca i24, i64 1, align 4
+ // LLVM: %[[COERCE:.*]] = alloca i24, align 4
  // LLVM: store i24 %{{.+}}, ptr %[[COERCE]], align 4
  // LLVM: %[[A:.*]] = load %struct.S, ptr %[[COERCE]], align 1
- // LLVM: %[[A_ADDR:.*]] = alloca %struct.S, i64 1, align 1
- // LLVM: %[[B_ADDR:.*]] = alloca { %struct.S, [1 x i8] }, i64 1, align 4
- // LLVM: %[[A_ATOMIC_TMP_ADDR:.*]] = alloca %struct.S, i64 1, align 1
- // LLVM: %[[ATOMIC_TMP_ADDR:.*]] = alloca { %struct.S, [1 x i8] }, i64 1, align 4
+ // LLVM: %[[A_ADDR:.*]] = alloca %struct.S, align 1
+ // LLVM: %[[B_ADDR:.*]] = alloca { %struct.S, [1 x i8] }, align 4
+ // LLVM: %[[A_ATOMIC_TMP_ADDR:.*]] = alloca %struct.S, align 1
+ // LLVM: %[[ATOMIC_TMP_ADDR:.*]] = alloca { %struct.S, [1 x i8] }, align 4
  // LLVM: store %struct.S %[[A]], ptr %[[A_ADDR]], align 1
  // LLVM: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[A_ATOMIC_TMP_ADDR]], ptr align 1 %[[A_ADDR]], i64 3, i1 false)
  // LLVM: call void @llvm.memset.p0.i64(ptr align 1 %[[A_ATOMIC_TMP_ADDR]], i8 0, i64 4, i1 false)
