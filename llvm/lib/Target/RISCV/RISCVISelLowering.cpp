@@ -2154,8 +2154,7 @@ bool RISCVTargetLowering::shouldExpandGetVectorLength(EVT TripCountVT,
 }
 
 bool RISCVTargetLowering::shouldExpandCttzElements(EVT VT) const {
-  return !Subtarget.hasVInstructions() ||
-         VT.getVectorElementType() != MVT::i1 || !isTypeLegal(VT);
+  return !Subtarget.hasVInstructions();
 }
 
 void RISCVTargetLowering::getTgtMemIntrinsic(
