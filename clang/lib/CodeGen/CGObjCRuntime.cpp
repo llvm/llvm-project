@@ -163,9 +163,8 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
       FinallyInfo.enter(CGF, Finally->getFinallyBody(), beginCatchFn,
                         endCatchFn, exceptionRethrowFn);
     } else if (IsWasm) {
-      CGF.ErrorUnsupported(
-          Finally,
-          "@finally is not implemented for WebAssembly");
+      CGF.ErrorUnsupported(Finally,
+                           "@finally is not implemented for WebAssembly");
     }
   }
 
