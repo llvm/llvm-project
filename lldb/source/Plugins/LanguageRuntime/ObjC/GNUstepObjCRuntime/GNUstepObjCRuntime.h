@@ -14,6 +14,7 @@
 
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 
@@ -126,6 +127,20 @@ protected:
   // Call CreateInstance instead.
   GNUstepObjCRuntime(Process *process);
 
+  /// A libobjc2 message dispatch entry point, identified by the load address
+  /// of its first instruction (resolved by symbol name, so it is robust to
+  /// local labels sharing the address).
+  struct DispatchEntryPoint {
+    lldb::addr_t address;
+    bool is_stret;
+    bool is_sender;
+  };
+
+  /// Returns the dispatch entry point whose first instruction is at \p pc, or
+  /// nullptr. The entry-point address table is resolved and cached on first
+  /// use.
+  const DispatchEntryPoint *FindDispatchEntryPoint(lldb::addr_t pc);
+
   /// Finds a complete Objective-C interface type named \p class_name in the
   /// target's debug info. Used to attach a real type to a dynamic value when
   /// the base class's symbol-name-keyed cache misses (the gnustep-2.x class
@@ -138,11 +153,12 @@ protected:
   Address *GetPrintForDebuggerAddr();
 
 public:
-  /// Lazily-built FunctionCaller for libobjc2's
+  /// Lazily-built FunctionCaller for a utility function that resolves a
+  /// method implementation via libobjc2's
   /// `IMP objc_msg_lookup(id receiver, SEL selector)`, used by the
-  /// step-through-trampoline plan. Returns nullptr if the symbol cannot be
-  /// resolved.
-  FunctionCaller *GetMsgLookupFunctionCaller();
+  /// step-through-trampoline plan. Returns nullptr on failure. The caller is
+  /// owned by the utility function and stays valid for the runtime's life.
+  FunctionCaller *GetMsgLookupFunctionCaller(Thread &thread);
 
 protected:
 
@@ -152,7 +168,12 @@ protected:
 
   std::unique_ptr<FunctionCaller> m_print_object_caller_up;
 
-  std::unique_ptr<FunctionCaller> m_msg_lookup_caller_up;
+  /// Utility function wrapping objc_msg_lookup; owns m_msg_lookup_caller.
+  std::unique_ptr<UtilityFunction> m_msg_lookup_utility_up;
+  FunctionCaller *m_msg_lookup_caller = nullptr;
+
+  llvm::SmallVector<DispatchEntryPoint, 5> m_dispatch_entry_points;
+  bool m_dispatch_entry_points_resolved = false;
 
   std::unique_ptr<GNUstepTaggedPointerVendor> m_tagged_pointer_vendor_up;
 

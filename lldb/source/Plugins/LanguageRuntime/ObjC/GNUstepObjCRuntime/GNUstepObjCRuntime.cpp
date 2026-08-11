@@ -498,33 +498,22 @@ GNUstepObjCRuntime::GetStepThroughTrampolinePlan(Thread &thread,
                                                  bool stop_others) {
   // Only act when stopped at the first instruction of a known libobjc2
   // dispatch entry point (where the argument registers still hold the
-  // receiver and selector).
+  // receiver and selector). Match by resolving each entry point's address by
+  // name rather than by the symbol at the PC: libobjc2's hand-written
+  // assembly places local labels (e.g. __objc_block_trampoline_end_sret) at
+  // the same address as objc_msgSend, so the symbol found at an address is
+  // not reliably the dispatch symbol.
   Process *process = thread.GetProcess().get();
   if (!process)
     return {};
   const addr_t pc = thread.GetRegisterContext()->GetPC();
   Target &target = GetTargetRef();
-  Address pc_addr;
-  if (!target.ResolveLoadAddress(pc, pc_addr))
-    return {};
-  Symbol *symbol = pc_addr.CalculateSymbolContextSymbol();
-  if (!symbol || symbol->GetAddress().GetLoadAddress(&target) != pc)
-    return {};
 
-  // Dispatch entry points exported by libobjc2 (objc_msgSend.S, sendmsg2.c).
-  // The `_super` variants are omitted: super sends compile to a lookup plus
-  // a direct call, and the direct call steps normally.
-  llvm::StringRef name = symbol->GetName().GetStringRef();
-  bool is_stret = false, is_sender = false;
-  if (name == "objc_msgSend" || name == "objc_msgSend_fpret" ||
-      name == "objc_msg_lookup") {
-  } else if (name == "objc_msgSend_stret") {
-    is_stret = true;
-  } else if (name == "objc_msg_lookup_sender") {
-    is_sender = true;
-  } else {
+  const DispatchEntryPoint *entry = FindDispatchEntryPoint(pc);
+  if (!entry)
     return {};
-  }
+  const bool is_stret = entry->is_stret;
+  const bool is_sender = entry->is_sender;
 
   ABISP abi_sp = process->GetABI();
   if (!abi_sp)
@@ -586,7 +575,7 @@ GNUstepObjCRuntime::GetStepThroughTrampolinePlan(Thread &thread,
     }
   }
 
-  if (!GetMsgLookupFunctionCaller())
+  if (!GetMsgLookupFunctionCaller(thread))
     return {};
 
   ValueList lookup_args;
@@ -601,30 +590,82 @@ GNUstepObjCRuntime::GetStepThroughTrampolinePlan(Thread &thread,
       thread, *this, lookup_args, isa, selector);
 }
 
-FunctionCaller *GNUstepObjCRuntime::GetMsgLookupFunctionCaller() {
-  if (m_msg_lookup_caller_up)
-    return m_msg_lookup_caller_up.get();
-
-  Target &target = GetTargetRef();
-  SymbolContextList sc_list;
-  target.GetImages().FindSymbolsWithNameAndType(ConstString("objc_msg_lookup"),
-                                                eSymbolTypeCode, sc_list);
-  Address lookup_addr;
-  for (const SymbolContext &sc : sc_list) {
-    if (sc.symbol) {
-      lookup_addr = sc.symbol->GetAddress();
-      break;
+const GNUstepObjCRuntime::DispatchEntryPoint *
+GNUstepObjCRuntime::FindDispatchEntryPoint(lldb::addr_t pc) {
+  if (!m_dispatch_entry_points_resolved) {
+    m_dispatch_entry_points_resolved = true;
+    // Dispatch entry points exported by libobjc2 (objc_msgSend.S,
+    // sendmsg2.c). The `_super` variants are omitted: super sends compile to
+    // a lookup plus a direct call, and the direct call steps normally.
+    static const struct {
+      const char *name;
+      bool is_stret;
+      bool is_sender;
+    } kEntryPoints[] = {
+        {"objc_msgSend", false, false},
+        {"objc_msgSend_fpret", false, false},
+        {"objc_msgSend_stret", true, false},
+        {"objc_msg_lookup", false, false},
+        {"objc_msg_lookup_sender", false, true},
+    };
+    Target &target = GetTargetRef();
+    for (const auto &ep : kEntryPoints) {
+      SymbolContextList sc_list;
+      target.GetImages().FindSymbolsWithNameAndType(ConstString(ep.name),
+                                                    eSymbolTypeCode, sc_list);
+      for (const SymbolContext &sc : sc_list) {
+        if (!sc.symbol)
+          continue;
+        const addr_t addr = sc.symbol->GetLoadAddress(&target);
+        if (addr != LLDB_INVALID_ADDRESS) {
+          m_dispatch_entry_points.push_back({addr, ep.is_stret, ep.is_sender});
+          break;
+        }
+      }
     }
   }
-  if (!lookup_addr.IsValid())
+
+  for (const DispatchEntryPoint &ep : m_dispatch_entry_points)
+    if (ep.address == pc)
+      return &ep;
+  return nullptr;
+}
+
+FunctionCaller *GNUstepObjCRuntime::GetMsgLookupFunctionCaller(Thread &thread) {
+  // Build (once) a utility function that resolves a method implementation by
+  // calling libobjc2's objc_msg_lookup, and a FunctionCaller to invoke it.
+  // This mirrors AppleObjCTrampolineHandler's dispatch-lookup utility and is
+  // the JIT path that works from inside a step's PreResume action.
+  static const char *g_lookup_name = "$__lldb_gnustep_objc_msg_lookup";
+  static const char *g_lookup_code =
+      "void *objc_msg_lookup(void *receiver, void *selector);\n"
+      "void *$__lldb_gnustep_objc_msg_lookup(void *receiver, void *selector) {\n"
+      "  return objc_msg_lookup(receiver, selector);\n"
+      "}\n";
+
+  if (m_msg_lookup_caller)
+    return m_msg_lookup_caller;
+
+  ThreadSP thread_sp(thread.shared_from_this());
+  ExecutionContext exe_ctx(thread_sp);
+  Log *log = GetLog(LLDBLog::Step);
+
+  auto utility_fn_or_error = exe_ctx.GetTargetRef().CreateUtilityFunction(
+      g_lookup_code, g_lookup_name, eLanguageTypeC, exe_ctx);
+  if (!utility_fn_or_error) {
+    LLDB_LOG_ERROR(log, utility_fn_or_error.takeError(),
+                   "[GNUstep] failed to build objc_msg_lookup utility: {0}");
     return nullptr;
+  }
+  m_msg_lookup_utility_up = std::move(*utility_fn_or_error);
 
   TypeSystemClangSP scratch_ts_sp =
-      ScratchTypeSystemClang::GetForTarget(target);
+      ScratchTypeSystemClang::GetForTarget(GetTargetRef());
   if (!scratch_ts_sp)
     return nullptr;
   CompilerType void_ptr_type =
       scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
+
   Value void_ptr_value;
   void_ptr_value.SetValueType(Value::ValueType::Scalar);
   void_ptr_value.SetCompilerType(void_ptr_type);
@@ -633,14 +674,16 @@ FunctionCaller *GNUstepObjCRuntime::GetMsgLookupFunctionCaller() {
   args.PushValue(void_ptr_value);
 
   Status error;
-  m_msg_lookup_caller_up.reset(target.GetFunctionCallerForLanguage(
-      eLanguageTypeC, void_ptr_type, lookup_addr, args, "gnustep-msg-lookup",
-      error));
+  m_msg_lookup_caller =
+      m_msg_lookup_utility_up->MakeFunctionCaller(void_ptr_type, args,
+                                                  thread_sp, error);
   if (error.Fail()) {
-    m_msg_lookup_caller_up.reset();
+    LLDB_LOG(log, "[GNUstep] failed to make objc_msg_lookup caller: {0}",
+             error.AsCString());
+    m_msg_lookup_caller = nullptr;
     return nullptr;
   }
-  return m_msg_lookup_caller_up.get();
+  return m_msg_lookup_caller;
 }
 
 void GNUstepObjCRuntime::UpdateISAToDescriptorMapIfNeeded() {

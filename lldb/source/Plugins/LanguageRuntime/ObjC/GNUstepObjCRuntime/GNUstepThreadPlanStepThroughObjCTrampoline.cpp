@@ -58,16 +58,18 @@ bool GNUstepThreadPlanStepThroughObjCTrampoline::InitializeFunctionCaller() {
   if (m_func_sp)
     return true;
 
-  m_lookup_function = m_runtime.GetMsgLookupFunctionCaller();
+  m_lookup_function = m_runtime.GetMsgLookupFunctionCaller(GetThread());
   if (!m_lookup_function)
     return false;
 
   ExecutionContext exe_ctx;
   GetThread().CalculateExecutionContext(exe_ctx);
 
+  // The wrapper was already compiled into the inferior when the caller was
+  // built (GetMsgLookupFunctionCaller); only write a fresh argument struct
+  // here. m_args_addr starts invalid so WriteFunctionArguments allocates one.
   DiagnosticManager diagnostics;
-  if (!m_lookup_function->InsertFunction(exe_ctx, m_args_addr, diagnostics))
-    return false;
+  m_args_addr = LLDB_INVALID_ADDRESS;
   if (!m_lookup_function->WriteFunctionArguments(exe_ctx, m_args_addr,
                                                  m_input_values, diagnostics))
     return false;
