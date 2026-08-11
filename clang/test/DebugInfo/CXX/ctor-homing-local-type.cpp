@@ -13,11 +13,11 @@
 // Check that DIBuilder processes the limited debug info case correctly, and doesn't add the same
 // local type to retainedNodes fields of both DISubprograms (C1 and C2).
 
-// CHECK: ![[C2:[0-9]+]] = distinct !DISubprogram(name: "l", linkageName: "_ZN1lC2Ev", {{.*}}, retainedNodes: ![[EMPTY:[0-9]+]])
-// CHECK: ![[EMPTY]] = !{}
-// CHECK: ![[N:[0-9]+]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "n",
-// CHECK: ![[C1:[0-9]+]] = distinct !DISubprogram(name: "l", linkageName: "_ZN1lC1Ev", {{.*}}, retainedNodes: ![[RN:[0-9]+]])
-// CHECK: ![[RN]] = !{![[N]]}
+// CHECK: ![[C2:[0-9]+]] = distinct !DISubprogram(name: "l", linkageName: "_ZN1lC2Ev", {{.*}}, retainedNodes: ![[RN:[0-9]+]])
+// CHECK: ![[RN]] = !{![[N:[0-9]+]]}
+// CHECK: ![[N]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "n",
+// CHECK: ![[EMPTY:[0-9]+]] = !{}
+// CHECK: ![[C1:[0-9]+]] = distinct !DISubprogram(name: "l", linkageName: "_ZN1lC1Ev", {{.*}}, retainedNodes: ![[EMPTY]])
 
 template <class d>
 struct k {
