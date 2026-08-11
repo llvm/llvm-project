@@ -555,8 +555,7 @@ void Sema::handleLambdaNumbering(
   }
 
   auto LambdaInfo =
-      std::make_pair(Class->getLambdaContextDecl()->getCanonicalDecl(),
-                     Class->getLambdaIndexInContext());
+      std::make_pair(ContextDecl->getCanonicalDecl(), Numbering.IndexInContext);
   // This lambda might redeclare a previous lambda if this is not the first
   // definition of the context declaration. We might have a definition from
   // another translation unit.
