@@ -69,18 +69,10 @@ Error SimpleExecutorDylibManager::shutdown() {
 
 void SimpleExecutorDylibManager::addBootstrapSymbols(
     StringMap<ExecutorAddr> &M) {
-  M[rt::SimpleExecutorDylibManagerInstanceName] = ExecutorAddr::fromPtr(this);
-  M[rt::SimpleExecutorDylibManagerOpenWrapperName] =
-      ExecutorAddr::fromPtr(&openWrapper);
-  M[rt::SimpleExecutorDylibManagerResolveWrapperName] =
-      ExecutorAddr::fromPtr(&resolveWrapper);
-
-  // Also provide NativeDylibManager symbols for compatibility with
-  // controllers configured to use the ORC runtime's NativeDylibManager
-  // interface.
-  // FIXME: We should codify a "simple" dylib manager interface and make
-  // SimpleExecutorDylibManager its LLVM-based implementation, and
-  // NativeDylibManager its ORC-runtime implementation.
+  // SimpleExecutorDylibManager is the LLVM-side implementation of the runtime's
+  // NativeDylibManager controller interface, so it publishes its bootstrap
+  // symbols under the NativeDylibManager_* names. The class itself will be
+  // renamed to NativeDylibManager to match in a future cleanup.
   M[rt::NativeDylibManagerInstanceName] = ExecutorAddr::fromPtr(this);
   M[rt::NativeDylibManagerLoadWrapperName] =
       ExecutorAddr::fromPtr(&openWrapper);

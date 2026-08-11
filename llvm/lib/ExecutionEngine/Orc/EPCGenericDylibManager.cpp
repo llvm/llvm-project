@@ -58,29 +58,6 @@ using ResolveSpec =
 
 } // namespace
 
-Expected<EPCGenericDylibManager>
-EPCGenericDylibManager::CreateWithDefaultBootstrapSymbols(
-    ExecutorProcessControl &EPC) {
-  auto &ES = EPC.getExecutionSession();
-  auto &JD = ES.getBootstrapJITDylib();
-  Bindings B;
-  // Instance is the executor-side manager object -- a data symbol passed as the
-  // first argument to each call, not a wrapper to proxy.
-  if (auto Err = lookupAndRecordAddrs(
-          ES, LookupKind::Static, makeJITDylibSearchOrder({&JD}),
-          {{ES.intern(rt::SimpleExecutorDylibManagerInstanceName),
-            &B.Instance}}))
-    return std::move(Err);
-  if (auto Err = rt::buildProxies(
-          JD,
-          rt::proxyInit<OpenSpec>(
-              &B.Open, rt::SimpleExecutorDylibManagerOpenWrapperName),
-          rt::proxyInit<ResolveSpec>(
-              &B.Resolve, rt::SimpleExecutorDylibManagerResolveWrapperName)))
-    return std::move(Err);
-  return EPCGenericDylibManager(ES, std::move(B));
-}
-
 Expected<EPCGenericDylibManager> EPCGenericDylibManager::Create(JITDylib &JD) {
   auto &ES = JD.getExecutionSession();
   Bindings B;
