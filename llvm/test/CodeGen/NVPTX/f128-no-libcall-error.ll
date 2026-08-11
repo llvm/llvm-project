@@ -16,6 +16,18 @@ define fp128 @test_maximum(fp128 %x, fp128 %y) nounwind {
   ret fp128 %r
 }
 
+; CHECK: error: no libcall available for fma
+define fp128 @test_fma(fp128 %x, fp128 %y, fp128 %z) nounwind {
+  %r = call fp128 @llvm.fma.f128(fp128 %x, fp128 %y, fp128 %z)
+  ret fp128 %r
+}
+
+; CHECK: error: no libcall available for strict_fma
+define fp128 @test_strict_fma(fp128 %x, fp128 %y, fp128 %z) nounwind strictfp {
+  %r = call fp128 @llvm.experimental.constrained.fma.f128(fp128 %x, fp128 %y, fp128 %z, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  ret fp128 %r
+}
+
 ; CHECK: error: no libcall available for ffrexp
 define { fp128, i32 } @test_frexp(fp128 %x) nounwind {
   %r = call { fp128, i32 } @llvm.frexp.f128.i32(fp128 %x)
