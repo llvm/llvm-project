@@ -118,12 +118,12 @@ Clang's ``WinX86_64ABIInfo::classify`` implements the aggregate rules for
 ``CC_WinCall`` (this is a frontend rule layered on top of the IR-level
 convention):
 
-- A record that fits in **1, 2, 4, 8, 16 or 32 bytes** is passed **directly
-  in registers** (not by pointer/sret like the MS x64 ABI). A 4-``size_t``
-  struct therefore travels in RCX, RDX, R8, R9.
-- A record of up to 64 bits is coerced to an integer of its size and uses
-  **one** GPR; a larger record (up to 32 bytes) is **expanded** into its
-  8-byte parts.
+- A record of up to **32 bytes** is passed **directly in registers** (not by
+  pointer/sret like the MS x64 ABI): a record of up to 64 bits is coerced to
+  an integer of its size and uses **one** GPR; a larger record (e.g. 16, 24
+  or 32 bytes) is **expanded** into its 8-byte parts. A 4-``size_t`` struct
+  therefore travels in RCX, RDX, R8, R9, and a 3-``size_t`` (24-byte) struct
+  in RCX, RDX, R8.
 - **Empty records** (``struct empty {}``) consume **no register slots**;
   ``classify`` returns ``ABIArgInfo::getIgnore()`` for them.
 - Records larger than 32 bytes, records with a flexible array member, and
