@@ -1,6 +1,8 @@
 // Allocate XeMachine GRFs with transactional retries and ordered relief.
 
 #include "inter/Dialect/XeMachine/IR/XeMachine.h"
+#include "inter/Dialect/XeMachine/IR/XeMachineAliasAnalysis.h"
+#include "inter/Dialect/XeMachine/IR/XeMachineRegAllocPreparation.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Transform/IR/TransformOps.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
@@ -42,13 +44,8 @@ constexpr unsigned kMaxSwsbDistance = 7;
 constexpr int64_t kScratchAddressBias = 0x10000;
 constexpr uint32_t kScratchExdescBias = 0x80000000u;
 
-struct AliasEdge {
-  unsigned target;
-  int64_t offset;
-};
-
 struct AllocationComponent {
-  SmallVector<unsigned> nodes;
+  SmallVector<Value> values;
   int64_t minOffset = 0;
   int64_t maxOffset = 0;
   int64_t start = std::numeric_limits<int64_t>::max();
@@ -63,11 +60,7 @@ struct AllocationComponent {
 };
 
 struct AllocationState {
-  SmallVector<Value> values;
-  DenseMap<Value, unsigned> valueToNode;
-  SmallVector<SmallVector<AliasEdge>> graph;
-  SmallVector<int64_t> offsets;
-  SmallVector<unsigned> nodeToComponent;
+  RegisterAliasAnalysis aliases;
   SmallVector<AllocationComponent> components;
   DenseMap<Operation *, int64_t> positions;
 };
@@ -154,89 +147,6 @@ static LogicalResult validateAluFootprint(Operation *operation) {
   return success();
 }
 
-static void addAlias(AllocationState &state, Value storage, Value alias,
-                     int64_t offset) {
-  if (!isRegister(storage) || !isRegister(alias))
-    return;
-  unsigned storageNode = state.valueToNode.lookup(storage);
-  unsigned aliasNode = state.valueToNode.lookup(alias);
-  state.graph[storageNode].push_back({aliasNode, offset});
-  state.graph[aliasNode].push_back({storageNode, -offset});
-}
-
-static void addRegionAliases(AllocationState &state, Operation *operation) {
-  auto addYields = [&](Region &region) {
-    if (region.empty())
-      return;
-    auto yield = dyn_cast<YieldOp>(region.front().getTerminator());
-    if (!yield)
-      return;
-    for (auto [result, yielded] :
-         llvm::zip_equal(operation->getResults(), yield.getValues()))
-      addAlias(state, result, yielded, 0);
-  };
-
-  if (auto ifOp = dyn_cast<ExecIfOp>(operation)) {
-    addYields(ifOp.getThenRegion());
-    addYields(ifOp.getElseRegion());
-    return;
-  }
-  if (auto ifOp = dyn_cast<UniformIfOp>(operation)) {
-    addYields(ifOp.getThenRegion());
-    addYields(ifOp.getElseRegion());
-    return;
-  }
-  auto loop = dyn_cast<UniformLoopOp>(operation);
-  if (!loop || loop.getBody().empty())
-    return;
-  Block &body = loop.getBody().front();
-  auto terminator = dyn_cast<ContinueIfOp>(body.getTerminator());
-  if (!terminator)
-    return;
-  for (auto [init, argument, carried, result] :
-       llvm::zip_equal(loop.getInits(), body.getArguments(),
-                       terminator.getCarried(), loop.getResults())) {
-    addAlias(state, result, init, 0);
-    addAlias(state, result, argument, 0);
-    addAlias(state, result, carried, 0);
-  }
-}
-
-static LogicalResult assignComponentOffsets(func::FuncOp function,
-                                            AllocationState &state) {
-  state.offsets.assign(state.values.size(), 0);
-  state.nodeToComponent.assign(state.values.size(),
-                               std::numeric_limits<unsigned>::max());
-  SmallVector<unsigned> worklist;
-
-  for (unsigned root : llvm::seq<unsigned>(0, state.values.size())) {
-    if (state.nodeToComponent[root] != std::numeric_limits<unsigned>::max())
-      continue;
-    unsigned componentIndex = state.components.size();
-    state.components.emplace_back();
-    state.nodeToComponent[root] = componentIndex;
-    worklist.push_back(root);
-    while (!worklist.empty()) {
-      unsigned node = worklist.pop_back_val();
-      state.components[componentIndex].nodes.push_back(node);
-      for (AliasEdge edge : state.graph[node]) {
-        int64_t expected = state.offsets[node] + edge.offset;
-        if (state.nodeToComponent[edge.target] ==
-            std::numeric_limits<unsigned>::max()) {
-          state.nodeToComponent[edge.target] = componentIndex;
-          state.offsets[edge.target] = expected;
-          worklist.push_back(edge.target);
-          continue;
-        }
-        if (state.nodeToComponent[edge.target] != componentIndex ||
-            state.offsets[edge.target] != expected)
-          return function.emitError("inconsistent register-storage aliases");
-      }
-    }
-  }
-  return success();
-}
-
 static int64_t getFirstMachineUsePosition(Value value,
                                           const AllocationState &state,
                                           SmallPtrSetImpl<Value> &visited) {
@@ -282,40 +192,37 @@ static int64_t getDefinitionPosition(Value value,
 
 static LogicalResult finalizeComponents(func::FuncOp function,
                                         AllocationState &state) {
-  for (AllocationComponent &component : state.components) {
-    component.minOffset = std::numeric_limits<int64_t>::max();
-    component.maxOffset = std::numeric_limits<int64_t>::min();
-    for (unsigned node : component.nodes) {
-      Value value = state.values[node];
-      RegType type = cast<RegType>(value.getType());
+  ArrayRef<RegisterAliasAnalysis::Component> aliasComponents =
+      state.aliases.getComponents();
+  state.components.resize(aliasComponents.size());
+  for (auto [index, aliasComponent] : llvm::enumerate(aliasComponents)) {
+    AllocationComponent &component = state.components[index];
+    component.values.assign(aliasComponent.members.begin(),
+                            aliasComponent.members.end());
+    component.minOffset = 0;
+    component.maxOffset = aliasComponent.widthDwords;
+    if (aliasComponent.fixedOriginDwords) {
+      if (*aliasComponent.fixedOriginDwords % 16 != 0)
+        return function.emitError(
+            "fixed register-storage alias is not GRF-aligned");
+      component.fixedBase = *aliasComponent.fixedOriginDwords / 16;
+    }
+    for (Value value : component.values) {
+      const RegisterAliasAnalysis::ValueInfo *valueInfo =
+          state.aliases.lookup(value);
+      assert(valueInfo && "register value is missing alias information");
+      if (valueInfo->offsetDwords % 16 != 0)
+        return function.emitError(
+            "register-storage alias is not GRF-aligned after selection");
       if (Operation *definition = value.getDefiningOp())
         component.allowFixedOverlap |=
             definition->hasAttr(kAllowFixedOverlapAttrName);
-      int64_t offset = state.offsets[node];
-      component.minOffset = std::min(component.minOffset, offset);
-      component.maxOffset =
-          std::max(component.maxOffset, offset + type.getWidthDwords());
       component.start =
           std::min(component.start, getDefinitionPosition(value, state));
       component.end = std::max(component.end, component.start);
       for (OpOperand &use : value.getUses())
         component.end =
             std::max(component.end, state.positions.lookup(use.getOwner()));
-    }
-
-    for (unsigned node : component.nodes) {
-      Value value = state.values[node];
-      RegType type = cast<RegType>(value.getType());
-      int64_t normalizedOffset = state.offsets[node] - component.minOffset;
-      if (normalizedOffset % 16 != 0)
-        return function.emitError(
-            "register-storage alias is not GRF-aligned after selection");
-      if (type.getBaseGRF() < 0)
-        continue;
-      int64_t candidate = type.getBaseGRF() - normalizedOffset / 16;
-      if (component.fixedBase && *component.fixedBase != candidate)
-        return function.emitError("conflicting physical register aliases");
-      component.fixedBase = candidate;
     }
   }
 
@@ -361,9 +268,11 @@ static LogicalResult finalizeComponents(func::FuncOp function,
     for (Value operand : operation->getOperands()) {
       if (!isRegister(operand))
         continue;
-      unsigned node = state.valueToNode.lookup(operand);
-      state.components[state.nodeToComponent[node]].end = std::max(
-          state.components[state.nodeToComponent[node]].end, completion);
+      const RegisterAliasAnalysis::ValueInfo *valueInfo =
+          state.aliases.lookup(operand);
+      assert(valueInfo && "register operand is missing alias information");
+      AllocationComponent &component = state.components[valueInfo->component];
+      component.end = std::max(component.end, completion);
     }
   });
 
@@ -384,9 +293,10 @@ static LogicalResult finalizeComponents(func::FuncOp function,
           if (parent && loop->isProperAncestor(parent))
             continue;
         }
-        unsigned node = state.valueToNode.lookup(operand);
-        AllocationComponent &component =
-            state.components[state.nodeToComponent[node]];
+        const RegisterAliasAnalysis::ValueInfo *valueInfo =
+            state.aliases.lookup(operand);
+        assert(valueInfo && "register operand is missing alias information");
+        AllocationComponent &component = state.components[valueInfo->component];
         component.end = std::max(component.end, loopEnd);
       }
     });
@@ -406,43 +316,12 @@ static LogicalResult buildState(func::FuncOp function, AllocationState &state) {
   int64_t nextPosition = 0;
   function.walk([&](Operation *operation) {
     state.positions[operation] = nextPosition++;
-    for (Value result : operation->getResults()) {
-      if (!isRegister(result))
-        continue;
-      state.valueToNode[result] = state.values.size();
-      state.values.push_back(result);
-    }
-    for (Region &region : operation->getRegions())
-      for (Block &block : region)
-        for (BlockArgument argument : block.getArguments()) {
-          if (!isRegister(argument))
-            continue;
-          state.valueToNode[argument] = state.values.size();
-          state.values.push_back(argument);
-        }
   });
-  state.graph.resize(state.values.size());
-
-  DenseMap<int64_t, Value> architecturalRegisters;
-  function.walk([&](Operation *operation) {
-    if (auto aliases = dyn_cast<RegisterStorageAliasOpInterface>(operation)) {
-      SmallVector<RegisterStorageAlias> relations;
-      aliases.getRegisterStorageAliases(relations);
-      for (const RegisterStorageAlias &relation : relations)
-        addAlias(state, relation.storage, relation.alias, relation.offset);
-    }
-    if (auto archreg = dyn_cast<ArchRegOp>(operation)) {
-      Value previous = architecturalRegisters.lookup(archreg.getIndex());
-      if (previous)
-        addAlias(state, previous, archreg.getResult(), 0);
-      else
-        architecturalRegisters[archreg.getIndex()] = archreg.getResult();
-    }
-    addRegionAliases(state, operation);
-  });
-
-  if (failed(assignComponentOffsets(function, state)))
+  FailureOr<RegisterAliasAnalysis> aliases =
+      RegisterAliasAnalysis::create(function);
+  if (failed(aliases))
     return failure();
+  state.aliases = std::move(*aliases);
   return finalizeComponents(function, state);
 }
 
@@ -474,10 +353,13 @@ static DictionaryAttr packState(Builder &builder, unsigned iteration,
     intervals.push_back(component.assignment);
   }
   SmallVector<int64_t> aliases;
-  for (unsigned node : llvm::seq<unsigned>(0, state.values.size())) {
-    aliases.push_back(node);
-    aliases.push_back(state.nodeToComponent[node]);
-    aliases.push_back(state.offsets[node]);
+  for (auto [index, value] : llvm::enumerate(state.aliases.getValues())) {
+    const RegisterAliasAnalysis::ValueInfo *valueInfo =
+        state.aliases.lookup(value);
+    assert(valueInfo && "register value is missing alias information");
+    aliases.push_back(index);
+    aliases.push_back(valueInfo->component);
+    aliases.push_back(valueInfo->offsetDwords);
   }
   SmallVector<NamedAttribute> attributes = {
       builder.getNamedAttr("iteration", builder.getI32IntegerAttr(iteration)),
@@ -577,10 +459,10 @@ static bool rematerialize(AllocationState &state,
                           const AllocationFailure &failure) {
   AllocationComponent *candidate = nullptr;
   for (AllocationComponent &component : state.components) {
-    if (component.fixedBase || component.nodes.size() != 1 ||
+    if (component.fixedBase || component.values.size() != 1 ||
         component.start >= failure.position || component.end < failure.position)
       continue;
-    Value value = state.values[component.nodes.front()];
+    Value value = component.values.front();
     if (!isRematerializable(value.getDefiningOp()))
       continue;
     if (!candidate || candidate->end < component.end)
@@ -589,7 +471,7 @@ static bool rematerialize(AllocationState &state,
   if (!candidate)
     return false;
 
-  Value value = state.values[candidate->nodes.front()];
+  Value value = candidate->values.front();
   Operation *definition = value.getDefiningOp();
   SmallVector<OpOperand *> uses;
   for (OpOperand &use : value.getUses()) {
@@ -734,10 +616,10 @@ static bool spillToScratch(func::FuncOp function, AllocationState &state,
 
   AllocationComponent *candidate = nullptr;
   for (AllocationComponent &component : state.components) {
-    if (component.fixedBase || component.nodes.size() != 1 ||
+    if (component.fixedBase || component.values.size() != 1 ||
         component.start >= failure.position || component.end < failure.position)
       continue;
-    Value value = state.values[component.nodes.front()];
+    Value value = component.values.front();
     Operation *definition = value.getDefiningOp();
     RegType type = cast<RegType>(value.getType());
     if (!definition || definition->hasAttr(kSpilledAttr) ||
@@ -750,7 +632,7 @@ static bool spillToScratch(func::FuncOp function, AllocationState &state,
   if (!candidate)
     return false;
 
-  Value value = state.values[candidate->nodes.front()];
+  Value value = candidate->values.front();
   Operation *definition = value.getDefiningOp();
   RegType type = cast<RegType>(value.getType());
   SmallVector<OpOperand *> uses;
@@ -807,13 +689,16 @@ static bool spillToScratch(func::FuncOp function, AllocationState &state,
 }
 
 static void commitAllocation(AllocationState &state) {
-  for (auto [node, value] : llvm::enumerate(state.values)) {
+  for (Value value : state.aliases.getValues()) {
+    const RegisterAliasAnalysis::ValueInfo *valueInfo =
+        state.aliases.lookup(value);
+    assert(valueInfo && "register value is missing alias information");
     const AllocationComponent &component =
-        state.components[state.nodeToComponent[node]];
-    int64_t offset = state.offsets[node] - component.minOffset;
+        state.components[valueInfo->component];
     RegType oldType = cast<RegType>(value.getType());
-    value.setType(RegType::get(value.getContext(), oldType.getWidthDwords(),
-                               component.assignment + offset / 16));
+    value.setType(
+        RegType::get(value.getContext(), oldType.getWidthDwords(),
+                     component.assignment + valueInfo->offsetDwords / 16));
   }
 }
 
@@ -894,7 +779,8 @@ static LogicalResult buildTransformState(Operation *target) {
   SmallVector<func::FuncOp> functions;
   collectFunctions(target, functions);
   for (func::FuncOp function : functions) {
-    if (failed(validateRegAllocFunction(function)))
+    if (failed(validateRegAllocFunction(function)) ||
+        failed(prepareRegisterAllocation(function)))
       return failure();
     AllocationState state;
     if (failed(buildState(function, state)))

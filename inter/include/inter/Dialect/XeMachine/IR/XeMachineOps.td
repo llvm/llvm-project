@@ -287,7 +287,8 @@ def XeMachine_EotOp : XeMachine_MsgOp<"eot",
 // scalar-condition branch. The emitter sees control flow only as these
 // region ops.
 class XeMachine_IfOp<string mnemonic> :
-    XeMachine_Op<mnemonic, [DeclareOpInterfaceMethods<RegionBranchOpInterface,
+    XeMachine_Op<mnemonic, [SingleBlock,
+                            DeclareOpInterfaceMethods<RegionBranchOpInterface,
                                                       ["getSuccessorInputs"]>]> {
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region AnyRegion:$thenRegion, AnyRegion:$elseRegion);
@@ -309,9 +310,9 @@ def XeMachine_UniformIfOp : XeMachine_IfOp<"uniform_if"> {
 }
 
 def XeMachine_UniformLoopOp : XeMachine_Op<"uniform_loop",
-    [DeclareOpInterfaceMethods<RegionBranchOpInterface,
-                               ["getEntrySuccessorOperands",
-                                "getSuccessorInputs"]>]> {
+    [SingleBlock, DeclareOpInterfaceMethods<RegionBranchOpInterface,
+                                            ["getEntrySuccessorOperands",
+                                             "getSuccessorInputs"]>]> {
   let summary = "structured loop with explicit carried values";
   let arguments = (ins Variadic<AnyType>:$inits);
   let results = (outs Variadic<AnyType>:$results);

@@ -55,5 +55,5 @@ module {
   llvm.func spir_funccc @_Z13get_global_idj(i32) -> i64
 }
 
-// GED: pc=400 opcode=jmpi exec=1 swsb=0x0 jip=96 {{.*}}pred=sequential inverse=1 flag=0.0
-// GED: pc=480 opcode=jmpi exec=1 swsb=0x0 jip=80 {{.*}}pred=normal
+// GED: pc=464 opcode=jmpi exec=1 swsb=0x0 jip=96 {{.*}}pred=sequential inverse=1 flag=0.0
+// GED: pc=544 opcode=jmpi exec=1 swsb=0x0 jip=80 {{.*}}pred=normal

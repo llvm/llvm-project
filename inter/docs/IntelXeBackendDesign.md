@@ -118,6 +118,9 @@ xemachine (virtual regs, tokens, region CF ops)
   | machine opts: copy folding, region narrowing, message-form selection
   |   via symbolic address planner, dead code, canonicalization
   v
+  | inter-prepare-regalloc          (normalize destructive, tuple, and region
+  |                                 aliases with explicit copies; section 12)
+  v
   | inter-machine-schedule         (stall filler + cost model; section 13.
   |                                 Scheduling is pre-RA by design: the scan
   |                                 needs freedom to move virtual-reg code;
@@ -335,6 +338,18 @@ Transform-loop linear scan, transplanted from wave-mlir
   attempt is active. No C++ state survives an IR rewrite; each relief rewrite
   clears the attribute and the next iteration rebuilds positions, value IDs,
   intervals, weighted alias sets, and send-source lifetimes from current IR.
+- Alias preparation runs before scheduling and defensively before every state
+  rebuild. It materializes mask-respecting parallel copies for destructive
+  tuple updates and branch joins, plus copies for incompatible horizontal tuple
+  layouts, duplicate or live-through loop entries, and cyclic or overlapping
+  backedges. Wide copies are split into SIMD32/SIMD16 moves and reassembled as
+  tuples.
+- Scheduler and allocator consume one shared immutable weighted-alias analysis.
+  Raw tuple and structured-region constraints must be normalized before this
+  analysis; inconsistent weighted cycles remain hard errors after preparation.
+- Xe2 allocation represents tuple offsets in whole GRFs. Tuple elements and
+  update slices therefore require 16-dword-aligned boundaries; unsupported
+  sub-GRF layouts are rejected by the operation verifier.
 - Linear scan consumes alias state and either commits physical indices or
   emits one precise failure record. It never picks a relief strategy.
 - The v1 relief provider chain is `Remat -> Scratch spill`; the first legal
@@ -374,7 +389,8 @@ Transform-loop linear scan, transplanted from wave-mlir
   operations and scheduling their blocks recursively. One immutable Xe2 model
   serves the function; each collected region gets fresh issue and pressure
   state.
-- The Xe2 model builds function-wide register-alias metadata once. Candidate
+- The Xe2 model builds the shared function-wide register-alias analysis once.
+  Candidate
   pressure uses the allocator's whole alias components, including fixed GRFs,
   cross-region live ranges, and send payload lifetime through token completion;
   a filler cannot raise the original schedule's peak pressure.

@@ -3,6 +3,7 @@
 #include "Xe2ScheduleModel.h"
 
 #include "inter/Dialect/XeMachine/IR/XeMachine.h"
+#include "inter/Dialect/XeMachine/IR/XeMachineAliasAnalysis.h"
 #include "inter/Transforms/MachineScheduler.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -44,162 +45,10 @@ static uint64_t getGrfResource(unsigned grf) {
   return (uint64_t{1} << 63) | grf;
 }
 
-struct RegisterAliasEdge {
-  Value target;
-  int64_t offset;
-};
-
-struct RegisterAliasValueInfo {
-  unsigned component;
-  int64_t offset;
-};
-
-struct RegisterAliasComponentInfo {
-  int64_t minOffset = 0;
-  int64_t maxOffset = 0;
-  std::optional<int64_t> fixedOrigin;
-  SmallVector<Value, 4> members;
-};
-
-struct RegisterAliasInfo {
-  DenseMap<Value, RegisterAliasValueInfo> values;
-  SmallVector<RegisterAliasComponentInfo> components;
-  DenseMap<Operation *, int64_t> positions;
-};
-
-static void addAlias(DenseMap<Value, SmallVector<RegisterAliasEdge, 4>> &graph,
-                     Value storage, Value alias, int64_t offset) {
-  if (!isa<RegType>(storage.getType()) || !isa<RegType>(alias.getType()))
-    return;
-  graph[storage].push_back({alias, offset});
-  graph[alias].push_back({storage, -offset});
-}
-
-static void
-addRegionAliases(DenseMap<Value, SmallVector<RegisterAliasEdge, 4>> &graph,
-                 Operation *operation) {
-  auto addYields = [&](Region &region) {
-    if (region.empty())
-      return;
-    auto yield = dyn_cast<YieldOp>(region.front().getTerminator());
-    if (!yield)
-      return;
-    for (auto [result, yielded] :
-         llvm::zip_equal(operation->getResults(), yield.getValues()))
-      addAlias(graph, result, yielded, 0);
-  };
-
-  if (auto ifOp = dyn_cast<ExecIfOp>(operation)) {
-    addYields(ifOp.getThenRegion());
-    addYields(ifOp.getElseRegion());
-    return;
-  }
-  if (auto ifOp = dyn_cast<UniformIfOp>(operation)) {
-    addYields(ifOp.getThenRegion());
-    addYields(ifOp.getElseRegion());
-    return;
-  }
-  auto loop = dyn_cast<UniformLoopOp>(operation);
-  if (!loop || loop.getBody().empty())
-    return;
-  Block &body = loop.getBody().front();
-  auto terminator = dyn_cast<ContinueIfOp>(body.getTerminator());
-  if (!terminator)
-    return;
-  for (auto [init, argument, carried, result] :
-       llvm::zip_equal(loop.getInits(), body.getArguments(),
-                       terminator.getCarried(), loop.getResults())) {
-    addAlias(graph, result, init, 0);
-    addAlias(graph, result, argument, 0);
-    addAlias(graph, result, carried, 0);
-  }
-}
-
-static FailureOr<RegisterAliasInfo>
-buildRegisterAliasInfo(func::FuncOp function) {
-  SmallVector<Value> orderedValues;
-  DenseMap<Value, SmallVector<RegisterAliasEdge, 4>> graph;
-  DenseMap<Operation *, int64_t> positions;
-  int64_t nextPosition = 0;
-  function.walk([&](Operation *operation) {
-    positions.try_emplace(operation, nextPosition++);
-    for (Value result : operation->getResults())
-      if (isa<RegType>(result.getType()) && graph.try_emplace(result).second)
-        orderedValues.push_back(result);
-    for (Region &region : operation->getRegions())
-      for (Block &block : region)
-        for (BlockArgument argument : block.getArguments())
-          if (isa<RegType>(argument.getType()) &&
-              graph.try_emplace(argument).second)
-            orderedValues.push_back(argument);
-  });
-
-  DenseMap<int64_t, Value> architecturalRegisters;
-  function.walk([&](Operation *operation) {
-    if (auto aliases = dyn_cast<RegisterStorageAliasOpInterface>(operation)) {
-      SmallVector<RegisterStorageAlias, 4> relations;
-      aliases.getRegisterStorageAliases(relations);
-      for (const RegisterStorageAlias &relation : relations)
-        addAlias(graph, relation.storage, relation.alias, relation.offset);
-    }
-    if (auto archreg = dyn_cast<ArchRegOp>(operation)) {
-      Value previous = architecturalRegisters.lookup(archreg.getIndex());
-      if (previous)
-        addAlias(graph, previous, archreg.getResult(), 0);
-      else
-        architecturalRegisters[archreg.getIndex()] = archreg.getResult();
-    }
-    addRegionAliases(graph, operation);
-  });
-
-  RegisterAliasInfo info;
-  info.positions = std::move(positions);
-  SmallVector<Value, 16> pending;
-  for (Value root : orderedValues) {
-    if (info.values.count(root))
-      continue;
-    unsigned componentIndex = info.components.size();
-    RegisterAliasComponentInfo &component = info.components.emplace_back();
-    info.values.try_emplace(root, RegisterAliasValueInfo{componentIndex, 0});
-    pending.push_back(root);
-    while (!pending.empty()) {
-      Value value = pending.pop_back_val();
-      int64_t valueOffset = info.values.lookup(value).offset;
-      RegType type = cast<RegType>(value.getType());
-      component.members.push_back(value);
-      component.minOffset = std::min(component.minOffset, valueOffset);
-      component.maxOffset =
-          std::max(component.maxOffset,
-                   valueOffset + static_cast<int64_t>(type.getWidthDwords()));
-      if (type.getBaseGRF() >= 0) {
-        int64_t origin =
-            static_cast<int64_t>(type.getBaseGRF()) * 16 - valueOffset;
-        if (component.fixedOrigin && *component.fixedOrigin != origin)
-          return function.emitError("conflicting physical register aliases");
-        component.fixedOrigin = origin;
-      }
-      for (RegisterAliasEdge edge : graph.lookup(value)) {
-        int64_t expected = valueOffset + edge.offset;
-        DenseMap<Value, RegisterAliasValueInfo>::iterator existing =
-            info.values.find(edge.target);
-        if (existing == info.values.end()) {
-          info.values.try_emplace(
-              edge.target, RegisterAliasValueInfo{componentIndex, expected});
-          pending.push_back(edge.target);
-          continue;
-        }
-        if (existing->second.component != componentIndex ||
-            existing->second.offset != expected)
-          return function.emitError("inconsistent register-storage aliases");
-      }
-    }
-  }
-  return info;
-}
-
 static void
 collectAliasDefinitions(Value root,
                         const DenseMap<Operation *, unsigned> &nodes,
+                        const RegisterAliasAnalysis &aliases,
                         SmallVectorImpl<Operation *> &definitions) {
   SmallVector<Value, 4> pending{root};
   SmallPtrSet<Value, 16> visited;
@@ -211,29 +60,16 @@ collectAliasDefinitions(Value root,
     if (!definition)
       continue;
 
-    if (UpdateTupleOp update = dyn_cast<UpdateTupleOp>(definition)) {
-      if (value == update.getResult()) {
-        pending.push_back(update.getBase());
-        llvm::append_range(pending, update.getUpdates());
+    bool followed = false;
+    for (const RegisterAliasAnalysis::Alias &alias :
+         aliases.getAliases(value)) {
+      if (alias.owner != definition)
         continue;
-      }
+      pending.push_back(alias.value);
+      followed = true;
     }
-    if (auto alias = dyn_cast<RegisterStorageAliasOpInterface>(definition)) {
-      SmallVector<RegisterStorageAlias, 4> aliases;
-      alias.getRegisterStorageAliases(aliases);
-      bool followed = false;
-      for (const RegisterStorageAlias &constraint : aliases) {
-        if (constraint.storage == value) {
-          pending.push_back(constraint.alias);
-          followed = true;
-        } else if (constraint.alias == value) {
-          pending.push_back(constraint.storage);
-          followed = true;
-        }
-      }
-      if (followed)
-        continue;
-    }
+    if (followed)
+      continue;
     if (!definition->hasTrait<OpTrait::xemachine::NoMachineInst>() &&
         nodes.count(definition) && !llvm::is_contained(definitions, definition))
       definitions.push_back(definition);
@@ -242,7 +78,8 @@ collectAliasDefinitions(Value root,
 
 static bool
 requiresPinnedDefinition(Value root,
-                         const DenseMap<Operation *, unsigned> &nodes) {
+                         const DenseMap<Operation *, unsigned> &nodes,
+                         const RegisterAliasAnalysis &aliases) {
   SmallVector<Value, 4> pending{root};
   SmallPtrSet<Value, 16> visited;
   while (!pending.empty()) {
@@ -253,16 +90,18 @@ requiresPinnedDefinition(Value root,
       Operation *user = use.getOwner();
       if (!nodes.count(user))
         return true;
-      auto alias = dyn_cast<RegisterStorageAliasOpInterface>(user);
-      if (!alias)
-        continue;
-      SmallVector<RegisterStorageAlias, 4> aliases;
-      alias.getRegisterStorageAliases(aliases);
-      for (const RegisterStorageAlias &constraint : aliases)
-        if (constraint.destructive &&
-            (constraint.storage == value || constraint.alias == value))
+      bool forwards = false;
+      for (const RegisterAliasAnalysis::Alias &alias :
+           aliases.getAliases(value)) {
+        if (alias.owner != user)
+          continue;
+        if (alias.destructive)
           return true;
-      llvm::append_range(pending, user->getResults());
+        pending.push_back(alias.value);
+        forwards = true;
+      }
+      if (!forwards)
+        continue;
     }
   }
   return false;
@@ -358,13 +197,15 @@ static bool extendsPayloadToTokenCompletion(Operation *operation) {
              EotOp>(operation);
 }
 
-static PressureModel buildPressureModel(ArrayRef<Operation *> operations,
-                                        const RegisterAliasInfo &aliases) {
+static PressureModel
+buildPressureModel(ArrayRef<Operation *> operations,
+                   const RegisterAliasAnalysis &aliases,
+                   const DenseMap<Operation *, int64_t> &positions) {
   DenseMap<Operation *, unsigned> nodes;
   for (auto [index, operation] : llvm::enumerate(operations))
     nodes.try_emplace(operation, index);
-  int64_t regionBegin = aliases.positions.lookup(operations.front());
-  int64_t regionEnd = aliases.positions.lookup(operations.back());
+  int64_t regionBegin = positions.lookup(operations.front());
+  int64_t regionEnd = positions.lookup(operations.back());
 
   llvm::SmallSetVector<unsigned, 16> components;
   for (Operation *operation : operations) {
@@ -372,23 +213,28 @@ static PressureModel buildPressureModel(ArrayRef<Operation *> operations,
       RegType reg = dyn_cast<RegType>(result.getType());
       if (!reg || reg.getWidthDwords() == 0)
         continue;
-      components.insert(aliases.values.lookup(result).component);
+      const RegisterAliasAnalysis::ValueInfo *valueInfo =
+          aliases.lookup(result);
+      assert(valueInfo && "register result is missing alias information");
+      components.insert(valueInfo->component);
     }
     for (Value operand : operation->getOperands()) {
       RegType reg = dyn_cast<RegType>(operand.getType());
       if (!reg || reg.getWidthDwords() == 0)
         continue;
-      components.insert(aliases.values.lookup(operand).component);
+      const RegisterAliasAnalysis::ValueInfo *valueInfo =
+          aliases.lookup(operand);
+      assert(valueInfo && "register operand is missing alias information");
+      components.insert(valueInfo->component);
     }
   }
 
   PressureModel model;
   for (unsigned componentIndex : components) {
-    const RegisterAliasComponentInfo &component =
-        aliases.components[componentIndex];
+    const RegisterAliasAnalysis::Component &component =
+        aliases.getComponents()[componentIndex];
     PressureValue &pressure = model.values.emplace_back();
-    pressure.units = llvm::divideCeil(component.maxOffset - component.minOffset,
-                                      int64_t{16});
+    pressure.units = llvm::divideCeil(component.widthDwords, int64_t{16});
     for (Value value : component.members) {
       Operation *definition = value.getDefiningOp();
       if (definition &&
@@ -399,7 +245,7 @@ static PressureModel buildPressureModel(ArrayRef<Operation *> operations,
           if (!llvm::is_contained(pressure.definitions, node->second))
             pressure.definitions.push_back(node->second);
         } else {
-          int64_t position = aliases.positions.lookup(definition);
+          int64_t position = positions.lookup(definition);
           pressure.liveIn |= position < regionBegin;
           pressure.liveAfter |= position > regionEnd;
         }
@@ -411,8 +257,8 @@ static PressureModel buildPressureModel(ArrayRef<Operation *> operations,
       SmallVector<unsigned, 4> uses;
       bool liveBefore = false;
       bool liveAfter = false;
-      collectPressureUses(value, nodes, aliases.positions, regionBegin,
-                          regionEnd, uses, liveBefore, liveAfter, visited);
+      collectPressureUses(value, nodes, positions, regionBegin, regionEnd, uses,
+                          liveBefore, liveAfter, visited);
       for (OpOperand &use : value.getUses()) {
         Operation *owner = use.getOwner();
         if (!extendsPayloadToTokenCompletion(owner))
@@ -420,9 +266,9 @@ static PressureModel buildPressureModel(ArrayRef<Operation *> operations,
         SmallPtrSet<Value, 8> visitedTokens;
         for (Value result : owner->getResults())
           if (isa<MemTokenType>(result.getType()))
-            collectTokenCompletionUses(result, nodes, aliases.positions,
-                                       regionBegin, regionEnd, uses, liveBefore,
-                                       liveAfter, visitedTokens);
+            collectTokenCompletionUses(result, nodes, positions, regionBegin,
+                                       regionEnd, uses, liveBefore, liveAfter,
+                                       visitedTokens);
       }
       for (unsigned use : uses) {
         if (!llvm::is_contained(pressure.uses, use))
@@ -489,8 +335,9 @@ static unsigned getPeakPressure(ArrayRef<unsigned> order,
 class Xe2RegionSession final : public inter::MachineScheduleRegionSession {
 public:
   Xe2RegionSession(ArrayRef<Operation *> operations,
-                   const RegisterAliasInfo &aliases)
-      : pressureModel(buildPressureModel(operations, aliases)),
+                   const RegisterAliasAnalysis &aliases,
+                   const DenseMap<Operation *, int64_t> &positions)
+      : pressureModel(buildPressureModel(operations, aliases, positions)),
         nodeCount(operations.size()) {
     SmallVector<unsigned, 16> original;
     llvm::append_range(original, llvm::seq<unsigned>(nodeCount));
@@ -510,8 +357,9 @@ private:
 
 class Xe2ScheduleModel final : public inter::MachineScheduleModel {
 public:
-  explicit Xe2ScheduleModel(RegisterAliasInfo aliases)
-      : aliases(std::move(aliases)) {}
+  Xe2ScheduleModel(RegisterAliasAnalysis aliases,
+                   DenseMap<Operation *, int64_t> positions)
+      : aliases(std::move(aliases)), positions(std::move(positions)) {}
 
   bool isSchedulable(Operation *operation) const override {
     if (!isa<InstructionIssueOpInterface>(operation) ||
@@ -560,14 +408,13 @@ public:
       if (!reg || reg.getWidthDwords() == 0)
         return;
       int64_t firstDword = static_cast<int64_t>(reg.getBaseGRF()) * 16;
-      DenseMap<Value, RegisterAliasValueInfo>::const_iterator valueInfo =
-          aliases.values.find(value);
-      if (valueInfo != aliases.values.end()) {
-        const RegisterAliasComponentInfo &component =
-            aliases.components[valueInfo->second.component];
-        if (!component.fixedOrigin)
+      const RegisterAliasAnalysis::ValueInfo *valueInfo = aliases.lookup(value);
+      if (valueInfo) {
+        const RegisterAliasAnalysis::Component &component =
+            aliases.getComponents()[valueInfo->component];
+        if (!component.fixedOriginDwords)
           return;
-        firstDword = *component.fixedOrigin + valueInfo->second.offset;
+        firstDword = *component.fixedOriginDwords + valueInfo->offsetDwords;
       } else if (reg.getBaseGRF() < 0) {
         return;
       }
@@ -593,7 +440,7 @@ public:
     for (auto [index, operation] : llvm::enumerate(operations)) {
       if (operation->hasTrait<OpTrait::xemachine::NoMachineInst>() ||
           !llvm::any_of(operation->getResults(), [&](Value result) {
-            return requiresPinnedDefinition(result, nodes);
+            return requiresPinnedDefinition(result, nodes, aliases);
           }))
         continue;
       for (unsigned predecessor : llvm::seq<unsigned>(index))
@@ -615,7 +462,7 @@ public:
       if (!isa<RegType, ARFType>(argument.getType()))
         continue;
       SmallVector<Operation *, 4> definitions;
-      collectAliasDefinitions(carried, nodes, definitions);
+      collectAliasDefinitions(carried, nodes, aliases, definitions);
       if (definitions.empty())
         continue;
 
@@ -644,13 +491,14 @@ public:
 
   std::unique_ptr<inter::MachineScheduleRegionSession>
   createRegionSession(ArrayRef<Operation *> operations) const override {
-    return std::make_unique<Xe2RegionSession>(operations, aliases);
+    return std::make_unique<Xe2RegionSession>(operations, aliases, positions);
   }
 
   std::unique_ptr<inter::MachineScheduleState> createState() const override;
 
 private:
-  RegisterAliasInfo aliases;
+  RegisterAliasAnalysis aliases;
+  DenseMap<Operation *, int64_t> positions;
 };
 
 class Xe2ScheduleState final : public inter::MachineScheduleState {
@@ -747,10 +595,16 @@ Xe2ScheduleModel::createState() const {
 
 FailureOr<std::unique_ptr<inter::MachineScheduleModel>>
 inter::createXe2ScheduleModel(func::FuncOp function) {
-  FailureOr<RegisterAliasInfo> aliases = buildRegisterAliasInfo(function);
+  FailureOr<RegisterAliasAnalysis> aliases =
+      RegisterAliasAnalysis::create(function);
   if (failed(aliases))
     return failure();
+  DenseMap<Operation *, int64_t> positions;
+  int64_t nextPosition = 0;
+  function.walk(
+      [&](Operation *operation) { positions[operation] = nextPosition++; });
   std::unique_ptr<inter::MachineScheduleModel> model =
-      std::make_unique<Xe2ScheduleModel>(std::move(*aliases));
+      std::make_unique<Xe2ScheduleModel>(std::move(*aliases),
+                                         std::move(positions));
   return model;
 }

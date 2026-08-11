@@ -24,12 +24,30 @@ module attributes {transform.with_named_sequence} {
     transform.yield %r2 : !transform.any_op
   }
 
-  transform.named_sequence @inter_regalloc(
+  transform.named_sequence private @inter_prepare_regalloc(
+      %root: !transform.any_op {transform.readonly}) -> !transform.any_op {
+    %funcs0 = transform.collect_matching @match_func in %root
+        : (!transform.any_op) -> !transform.any_op
+    %funcs1 = transform.apply_registered_pass "inter-prepare-regalloc" to %funcs0
+        : (!transform.any_op) -> !transform.any_op
+    transform.yield %root : !transform.any_op
+  }
+
+  transform.named_sequence private @inter_allocate_registers(
       %root: !transform.any_op {transform.consumed}) -> !transform.any_op {
     %r0 = xemachine.transform.regalloc_loop from %root
         body = @inter_regalloc_iteration
         : (!transform.any_op) -> !transform.any_op
     transform.yield %r0 : !transform.any_op
+  }
+
+  transform.named_sequence @inter_regalloc(
+      %root: !transform.any_op {transform.readonly}) -> !transform.any_op {
+    %r0 = transform.include @inter_prepare_regalloc failures(propagate) (%root)
+        : (!transform.any_op) -> !transform.any_op
+    %r1 = transform.include @inter_allocate_registers failures(propagate) (%r0)
+        : (!transform.any_op) -> !transform.any_op
+    transform.yield %r1 : !transform.any_op
   }
 
   transform.named_sequence private @inter_regalloc_iteration(
@@ -49,13 +67,15 @@ module attributes {transform.with_named_sequence} {
       %root: !transform.any_op {transform.consumed}) -> !transform.any_op {
     %r0 = transform.include @inter_lower_to_machine failures(propagate) (%root)
         : (!transform.any_op) -> !transform.any_op
-    %funcs0 = transform.collect_matching @match_func in %r0
+    %r1 = transform.include @inter_prepare_regalloc failures(propagate) (%r0)
+        : (!transform.any_op) -> !transform.any_op
+    %funcs0 = transform.collect_matching @match_func in %r1
         : (!transform.any_op) -> !transform.any_op
     %funcs1 = transform.apply_registered_pass "inter-machine-schedule" to %funcs0
         : (!transform.any_op) -> !transform.any_op
-    %r1 = transform.include @inter_regalloc failures(propagate) (%r0)
+    %r2 = transform.include @inter_allocate_registers failures(propagate) (%r1)
         : (!transform.any_op) -> !transform.any_op
-    transform.yield %r1 : !transform.any_op
+    transform.yield %r2 : !transform.any_op
   }
 
   transform.named_sequence @inter_backend(

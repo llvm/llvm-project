@@ -48,6 +48,10 @@ module {
 // CHECK: xemachine.mul
 // CHECK: xemachine.load_block_a32
 // CHECK: xemachine.add3
+// The named backend pipeline prepares destructive updates before scheduling.
+// CHECK: [[UPDATE_BASE:%.*]] = xemachine.mov {{.*}}xemachine.regalloc_copy = "update-base"
+// CHECK-NEXT: [[UPDATE_VALUE:%.*]] = xemachine.mov {{.*}}xemachine.regalloc_copy = "update-value"
+// CHECK-NEXT: xemachine.update_tuple [[UPDATE_BASE]], [[UPDATE_VALUE]]
 // Two A64 loads and one store, each with an explicit four-GRF address tuple.
 // CHECK: [[ADDR0:%.*]] = xemachine.tuple_from_elements
 // CHECK-SAME: -> !xemachine.reg<64,
@@ -63,12 +67,12 @@ module {
 // EOT via the gateway.
 // CHECK-NEXT: xemachine.eot {{.*}} dep [[FINAL]]
 
-// GED: pc=112 opcode=sync {{.*}}function=allwr
+// GED: pc=144 opcode=sync {{.*}}function=allwr
 // GED: opcode=mul
 // GED: opcode=add3
 // GED: opcode=shl
-// GED: pc=400 opcode=add
-// GED-NEXT: pc=416 opcode=add
-// GED-NEXT: pc=432 opcode=send exec=32 swsb=0x322
+// GED: pc=464 opcode=add
+// GED-NEXT: pc=480 opcode=add
+// GED-NEXT: pc=496 opcode=send exec=32 swsb=0x322
 // GED: opcode=send {{.*}}sfid=ugm {{.*}}len=2 eot=0
 // GED: opcode=send {{.*}}sfid=gateway {{.*}}len=0 eot=1
