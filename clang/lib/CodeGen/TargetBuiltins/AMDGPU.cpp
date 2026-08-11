@@ -1398,6 +1398,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     return emitAMDGCNImageOverloadedReturnType(
         *this, E, Intrinsic::amdgcn_image_sample_d_2darray, false);
   case clang::AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f32_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f16_f32:
     return emitAMDGCNImageOverloadedReturnType(
         *this, E, Intrinsic::amdgcn_image_gather4_lz_2d, false);
   case AMDGPU::BI__builtin_amdgcn_mfma_scale_f32_16x16x128_f8f6f4:
@@ -2105,8 +2106,9 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       Args.push_back(EmitScalarExpr(E->getArg(I)));
     llvm::PointerType *RetTy = llvm::PointerType::get(
         Builder.getContext(), llvm::AMDGPUAS::BUFFER_RESOURCE);
-    Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_make_buffer_rsrc,
-                                   {RetTy, Args[0]->getType()});
+    Function *F =
+        CGM.getIntrinsic(Intrinsic::amdgcn_make_buffer_rsrc,
+                         {RetTy, Args[0]->getType(), Args[2]->getType()});
     return Builder.CreateCall(F, Args);
   }
   case AMDGPU::BI__builtin_amdgcn_raw_buffer_store_b8:

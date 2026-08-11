@@ -83,10 +83,12 @@ offload_libdir = getattr(config, "libclc_offload_libdir", "")
 if test_arch and offload_libdir and os.path.isfile(path):
     clang = os.path.join(config.llvm_tools_dir, "clang")
     loader = os.path.join(config.llvm_tools_dir, "llvm-gpu-loader")
+    # Shared headers are included by name from any depth below conformance/.
+    conformance_dir = os.path.join(config.test_source_root, "conformance")
     compile_cmd = (
         f"{clang} --target={config.libclc_target} "
         f"-march={test_arch} -cl-std=CL3.0 -nogpulib "
-        f"--libclc-lib=:{path} %s -o %t"
+        f"--libclc-lib=:{path} -I{conformance_dir} %s -o %t"
     )
     config.environment["LD_LIBRARY_PATH"] = os.pathsep.join(
         [offload_libdir, config.environment.get("LD_LIBRARY_PATH", "")]

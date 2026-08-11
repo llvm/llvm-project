@@ -2775,8 +2775,6 @@ def err_decltype_auto_invalid : Error<
   "'decltype(auto)' not allowed here">;
 def err_decltype_auto_cannot_be_combined : Error<
   "'decltype(auto)' cannot be combined with other type specifiers">;
-def err_auto_type_specifier : Error<
-  "'auto' cannot be combined with a type specifier">;
 def err_decltype_auto_function_declarator_not_declaration : Error<
   "'decltype(auto)' can only be used as a return type "
   "in a function declaration">;
@@ -5523,6 +5521,10 @@ def err_no_viable_destructor : Error<
   "no viable destructor found for class %0">;
 def err_ambiguous_destructor : Error<
   "destructor of class %0 is ambiguous">;
+
+def note_ovl_ms_allocation_fallback_failed : Note<
+  "Microsoft compatibility array allocation fallback to "
+  "'::operator new(size_t)' failed">;
 
 def err_ovl_no_viable_object_call : Error<
   "no matching function for call to object of type %0">;
@@ -13909,8 +13911,12 @@ def note_unsafe_buffer_variable_fixit_together : Note<
 def note_safe_buffer_usage_suggestions_disabled : Note<
   "pass -fsafe-buffer-usage-suggestions to receive code hardening suggestions">;
 def warn_unsafe_buffer_usage_in_container : Warning<
-  "the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information">,
+  "the two-parameter %0 construction is unsafe as it can introduce mismatch "
+  "between buffer size and the bound information">,
   InGroup<UnsafeBufferUsageInContainer>, DefaultIgnore;
+def warn_unsafe_buffer_usage_in_string_view : Warning<
+  "the two-parameter std::string_view construction is unsafe">,
+  InGroup<UnsafeBufferUsageInStringView>, DefaultIgnore;
 def warn_unsafe_buffer_usage_unique_ptr_array_access : Warning<"direct access using operator[] on std::unique_ptr<T[]> is unsafe due to lack of bounds checking">,
   InGroup<UnsafeBufferUsageInUniquePtrArrayAccess>, DefaultIgnore;
 def warn_unsafe_buffer_usage_in_static_sized_array : Warning<"direct access on T[N] is unsafe due to the lack of bounds checking">,
