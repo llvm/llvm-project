@@ -148,3 +148,33 @@ define i32 @isolated_no_match(i32 %x) {
   %shl = shl i32 %xor, 2
   ret i32 %shl
 }
+
+; Negative test: with a variable shift amount the folded constant shift cannot
+; be constant-folded, so it would add a shift rather than remove one. The
+; combine requires a constant shift amount and leaves these alone.
+define void @variable_shift_amount(i32 %x, i32 %s, ptr %p0, ptr %p1) {
+; CHECK-LABEL: variable_shift_amount(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<7>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [variable_shift_amount_param_0];
+; CHECK-NEXT:    and.b32 %r2, %r1, 5;
+; CHECK-NEXT:    ld.param.b32 %r3, [variable_shift_amount_param_1];
+; CHECK-NEXT:    shl.b32 %r4, %r2, %r3;
+; CHECK-NEXT:    ld.param.b64 %rd1, [variable_shift_amount_param_2];
+; CHECK-NEXT:    st.b32 [%rd1], %r4;
+; CHECK-NEXT:    ld.param.b64 %rd2, [variable_shift_amount_param_3];
+; CHECK-NEXT:    or.b32 %r5, %r1, 6;
+; CHECK-NEXT:    shl.b32 %r6, %r5, %r3;
+; CHECK-NEXT:    st.b32 [%rd2], %r6;
+; CHECK-NEXT:    ret;
+  %and = and i32 %x, 5
+  %and.shl = shl i32 %and, %s
+  store i32 %and.shl, ptr %p0, align 4
+  %or = or i32 %x, 6
+  %or.shl = shl i32 %or, %s
+  store i32 %or.shl, ptr %p1, align 4
+  ret void
+}
