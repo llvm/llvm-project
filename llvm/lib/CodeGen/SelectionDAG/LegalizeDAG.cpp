@@ -2568,6 +2568,12 @@ SDValue SelectionDAGLegalize::expandLdexp(SDNode *Node) const {
   if (AsIntVT == EVT()) // TODO: How to handle f80?
     return SDValue();
 
+  // The expansion works through the integer-equivalent type; if that is not
+  // legal, bail out and let the caller use a libcall (or diagnose a missing
+  // one).
+  if (!TLI.isTypeLegal(AsIntVT))
+    return SDValue();
+
   if (Node->getOpcode() == ISD::STRICT_FLDEXP) // TODO
     return SDValue();
 
@@ -2677,6 +2683,12 @@ SDValue SelectionDAGLegalize::expandFrexp(SDNode *Node) const {
   EVT ExpVT = Node->getValueType(1);
   EVT AsIntVT = VT.changeTypeToInteger();
   if (AsIntVT == EVT()) // TODO: How to handle f80?
+    return SDValue();
+
+  // The expansion works through the integer-equivalent type; if that is not
+  // legal, bail out and let the caller use a libcall (or diagnose a missing
+  // one).
+  if (!TLI.isTypeLegal(AsIntVT))
     return SDValue();
 
   const fltSemantics &FltSem = VT.getFltSemantics();
@@ -5060,8 +5072,12 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
                                                         : RTLIB::getFREXP(VT);
     bool Expanded = TLI.expandMultipleResultFPLibCall(DAG, LC, Node, Results,
                                                       /*CallRetResNo=*/0);
-    if (!Expanded)
-      llvm_unreachable("Expected scalar FFREXP/FMODF to expand to libcall!");
+    if (!Expanded) {
+      DAG.getContext()->emitError(Twine("no libcall available for ") +
+                                  Node->getOperationName(&DAG));
+      for (unsigned I = 0, E = Node->getNumValues(); I != E; ++I)
+        Results.push_back(DAG.getPOISON(Node->getValueType(I)));
+    }
     break;
   }
   case ISD::FPOWI:
