@@ -10,7 +10,7 @@
 #include "llvm/ExecutionEngine/Orc/EPCGenericDylibManager.h"
 #include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/EPCGenericMemoryAccess.h"
-#include "llvm/ExecutionEngine/Orc/RTBridge/SPS/ProxySpecs.h"
+#include "llvm/ExecutionEngine/Orc/RTBridge/SPS/CallProxySpecs.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -78,7 +78,7 @@ SimpleRemoteEPC::createDefaultMemoryManager() {
 
 Expected<std::unique_ptr<DylibManager>>
 SimpleRemoteEPC::createDefaultDylibMgr() {
-  auto DM = EPCGenericDylibManager::CreateWithDefaultBootstrapSymbols(*this);
+  auto DM = EPCGenericDylibManager::Create(getExecutionSession());
   if (!DM)
     return DM.takeError();
   return std::make_unique<EPCGenericDylibManager>(std::move(*DM));
