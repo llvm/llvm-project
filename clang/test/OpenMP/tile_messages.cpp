@@ -170,3 +170,33 @@ void f(void) {
     ;
 }
 } // namespace GH139073
+
+// A tile's intra-tile loop is wrapped in an internal reinterpretation hint. A
+// loop transformation consuming that loop must see through the wrapper, so
+// check that these still parse and analyze without diagnostics.
+namespace consumed_by_transformation {
+// Codegen: tile_collapse_reinterpret_codegen.cpp and tile_codegen_tile_for.cpp;
+// run time: libomp transform/tile/parallel-wsloop-collapse-stacked-tile.cpp.
+void tile_of_tile() {
+#pragma omp tile sizes(3, 5)
+#pragma omp tile sizes(2)
+  for (int i = 0; i < 100; ++i)
+    ;
+}
+
+// Same, for a range-based for loop.
+void tile_of_tile_range_for(int (&A)[100]) {
+#pragma omp tile sizes(3, 5)
+#pragma omp tile sizes(2)
+  for (int &v : A)
+    (void)v;
+}
+
+// 'unroll' is a loop transformation too, so it consumes the tile the same way.
+void unroll_of_tile() {
+#pragma omp unroll partial(4)
+#pragma omp tile sizes(2)
+  for (int i = 0; i < 100; ++i)
+    ;
+}
+} // namespace consumed_by_transformation
