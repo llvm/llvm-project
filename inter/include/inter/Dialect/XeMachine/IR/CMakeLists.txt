@@ -10,6 +10,10 @@ mlir_tablegen(XeMachineTypes.cpp.inc -gen-typedef-defs)
 mlir_tablegen(XeMachineOps.h.inc -gen-op-decls)
 mlir_tablegen(XeMachineOps.cpp.inc -gen-op-defs)
 
+set(LLVM_TARGET_DEFINITIONS XeMachineTransformOps.td)
+mlir_tablegen(XeMachineTransformOps.h.inc -gen-op-decls)
+mlir_tablegen(XeMachineTransformOps.cpp.inc -gen-op-defs)
+
 # The op-interface generator ignores records outside the top-level input
 # file, so the interfaces .td must be tablegen'd on its own.
 set(LLVM_TARGET_DEFINITIONS XeMachineInterfaces.td)

@@ -7,6 +7,7 @@ cd "$(dirname "$0")/.."
 B=build-m0
 OUT=inter/out
 K=scale
+PIPELINES=inter/build/share/inter/pipelines/pipelines.mlir
 
 rm -rf $OUT
 mkdir -p $OUT/ref $OUT/extracted $OUT/mod $OUT/mod2x
@@ -58,8 +59,7 @@ $OUT/launcher $OUT/mod_ours.bin $K 128 out u32:7 | python3 inter/verify.py 'i*4+
 inter/build/tools/inter-translate/inter-translate \
   inter/test/Integration/vadd.ll --import-llvm -o $OUT/vadd.mlir
 inter/build/tools/inter-opt/inter-opt $OUT/vadd.mlir \
-  --inter-normalize-cf --lift-cf-to-scf --inter-convert-calls \
-  --inter-convert-memory --inter-select-to-machine --inter-regalloc --inter-insert-sync \
+  --pass-pipeline="builtin.module(transform-preload-library{transform-library-paths=$PIPELINES},transform-interpreter{entry-point=inter_backend})" \
   -o $OUT/vadd.xemachine.mlir
 inter/build/tools/inter-translate/inter-translate $OUT/vadd.xemachine.mlir \
   --xemachine-to-zebin -o $OUT/vadd.bin

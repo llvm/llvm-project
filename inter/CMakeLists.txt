@@ -31,6 +31,15 @@ include_directories(BEFORE
   ${CMAKE_CURRENT_BINARY_DIR}/include)
 include_directories(SYSTEM ${LLVM_INCLUDE_DIRS} ${MLIR_INCLUDE_DIRS})
 
+set(INTER_PIPELINES_FILE
+    "${PROJECT_BINARY_DIR}/share/inter/pipelines/pipelines.mlir")
+get_filename_component(INTER_PIPELINES_DIR "${INTER_PIPELINES_FILE}" DIRECTORY)
+file(MAKE_DIRECTORY "${INTER_PIPELINES_DIR}")
+configure_file(lib/inter/pipelines/pipelines.mlir "${INTER_PIPELINES_FILE}"
+               COPYONLY)
+install(FILES lib/inter/pipelines/pipelines.mlir
+        DESTINATION share/inter/pipelines)
+
 add_subdirectory(include/inter/Dialect/XeMachine/IR)
 add_subdirectory(include/inter/Dialect/Inter/IR)
 add_subdirectory(include/inter/Transforms)

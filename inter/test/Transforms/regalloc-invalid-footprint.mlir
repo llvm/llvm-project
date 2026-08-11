@@ -1,4 +1,4 @@
-// RUN: not inter-opt %s --inter-regalloc 2>&1 | FileCheck %s
+// RUN: not inter-opt %s --pass-pipeline='builtin.module(transform-preload-library{transform-library-paths=%inter_pipelines},transform-interpreter{entry-point=inter_regalloc})' 2>&1 | FileCheck %s
 
 module {
   func.func @invalid_footprint() attributes {xemachine.grf_count = 4 : i32, xemachine.reserved_grf_count = 1 : i32} {

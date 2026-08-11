@@ -1,4 +1,4 @@
-// RUN: inter-opt %s --inter-regalloc --inter-insert-sync -o %t.mlir
+// RUN: inter-opt %s --pass-pipeline='builtin.module(transform-preload-library{transform-library-paths=%inter_pipelines},transform-interpreter{entry-point=inter_regalloc},func.func(inter-insert-sync))' -o %t.mlir
 // RUN: inter-translate %t.mlir --xemachine-to-ged -o %t.ged
 // RUN: inter-ged-dump %t.ged | FileCheck %s --check-prefix=GED
 

@@ -25,5 +25,8 @@ void XeMachineDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
 #include "inter/Dialect/XeMachine/IR/XeMachineOps.cpp.inc"
+      ,
+#define GET_OP_LIST
+#include "inter/Dialect/XeMachine/IR/XeMachineTransformOps.cpp.inc"
       >();
 }

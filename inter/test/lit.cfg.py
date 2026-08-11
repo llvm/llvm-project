@@ -1,4 +1,5 @@
 import subprocess
+from pathlib import Path
 
 import lit.formats
 from lit.llvm import llvm_config
@@ -13,6 +14,12 @@ if not config.inter_test_is_integration:
 
 config.test_source_root = config.inter_test_source_root
 config.test_exec_root = config.inter_test_exec_root
+
+inter_pipelines = Path(config.inter_pipelines)
+if inter_pipelines.exists():
+    config.substitutions.append(("%inter_pipelines", str(inter_pipelines)))
+else:
+    lit_config.fatal(f"missing Inter pipeline library: {inter_pipelines}")
 
 llvm_config.with_system_environment(
     ["HOME", "INCLUDE", "LIB", "LD_LIBRARY_PATH", "TMP", "TEMP"]

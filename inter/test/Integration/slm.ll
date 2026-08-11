@@ -1,6 +1,6 @@
 ; REQUIRES: host-supports-inter-bmg
 ; RUN: inter-translate %s --import-llvm -o %t.mlir
-; RUN: inter-opt %t.mlir --inter-normalize-cf --lift-cf-to-scf --inter-convert-calls --inter-convert-memory --inter-select-to-machine --inter-regalloc --inter-insert-sync -o %t.xemachine.mlir
+; RUN: inter-opt %t.mlir --pass-pipeline='builtin.module(transform-preload-library{transform-library-paths=%inter_pipelines},transform-interpreter{entry-point=inter_backend})' -o %t.xemachine.mlir
 ; RUN: inter-translate %t.xemachine.mlir --xemachine-to-zebin -o %t.bin
 ; RUN: inter-runner --compact %t.bin slm_kernel 32 out in:1 | FileCheck %s
 

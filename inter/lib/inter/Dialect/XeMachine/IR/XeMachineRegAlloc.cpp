@@ -1,10 +1,11 @@
 // Allocate XeMachine GRFs with transactional retries and ordered relief.
 
 #include "inter/Dialect/XeMachine/IR/XeMachine.h"
-#include "inter/Transforms/Passes.h"
-
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Transform/IR/TransformOps.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/SymbolTable.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -18,10 +19,8 @@
 #include <limits>
 #include <optional>
 
-namespace inter {
-#define GEN_PASS_DEF_REGALLOC
-#include "inter/Transforms/Passes.h.inc"
-} // namespace inter
+#define GET_OP_CLASSES
+#include "inter/Dialect/XeMachine/IR/XeMachineTransformOps.cpp.inc"
 
 using namespace mlir;
 using namespace inter::xemachine;
@@ -33,6 +32,12 @@ constexpr StringLiteral kIterationAttr = "xemachine.regalloc_iterations";
 constexpr StringLiteral kRematerializedAttr = "xemachine.rematerialized";
 constexpr StringLiteral kSpilledAttr = "xemachine.spilled";
 constexpr StringLiteral kScratchSetupAttr = "xemachine.scratch_setup";
+constexpr StringLiteral kLoopIterationAttr =
+    "xemachine.regalloc_loop_iteration";
+constexpr StringLiteral kStageAttr = "stage";
+constexpr StringLiteral kBuildStage = "alias-state";
+constexpr StringLiteral kSuccessStage = "linear-scan-success";
+constexpr StringLiteral kFailureStage = "linear-scan-failure";
 
 struct AliasEdge {
   unsigned target;
@@ -420,7 +425,7 @@ struct AllocationFailure {
 };
 
 static DictionaryAttr packState(Builder &builder, unsigned iteration,
-                                const AllocationState &state,
+                                StringRef stage, const AllocationState &state,
                                 std::optional<AllocationFailure> failure = {}) {
   SmallVector<int64_t> intervals;
   for (const AllocationComponent &component : state.components) {
@@ -439,6 +444,7 @@ static DictionaryAttr packState(Builder &builder, unsigned iteration,
   }
   SmallVector<NamedAttribute> attributes = {
       builder.getNamedAttr("iteration", builder.getI32IntegerAttr(iteration)),
+      builder.getNamedAttr(kStageAttr, builder.getStringAttr(stage)),
       builder.getNamedAttr(
           "component_intervals",
           DenseI64ArrayAttr::get(builder.getContext(), intervals)),
@@ -752,103 +758,433 @@ static void commitAllocation(AllocationState &state) {
   }
 }
 
-struct RegAlloc : public inter::impl::RegAllocBase<RegAlloc> {
-  using Base = inter::impl::RegAllocBase<RegAlloc>;
-  using Base::Base;
-
-  void runOnOperation() override {
-    func::FuncOp function = getOperation();
-    Builder builder(function.getContext());
-    FunctionType functionType = function.getFunctionType();
-    auto isRegisterType = [](Type type) { return isa<RegType, ARFType>(type); };
-    if (llvm::any_of(functionType.getInputs(), isRegisterType) ||
-        llvm::any_of(functionType.getResults(), isRegisterType)) {
-      function.emitError(
-          "register allocation does not support register-valued signatures");
-      return signalPassFailure();
-    }
-    WalkResult virtualArf = function.walk([&](Operation *operation) {
-      SmallVector<Type> types(operation->getResultTypes());
-      for (Region &region : operation->getRegions())
-        for (Block &block : region)
-          llvm::append_range(types, block.getArgumentTypes());
-      for (Type type : types) {
-        auto arf = dyn_cast<ARFType>(type);
-        if (!arf || arf.getIndex() >= 0)
-          continue;
-        operation->emitError(
-            "GRF allocation requires ARF values to be allocated first");
-        return WalkResult::interrupt();
-      }
-      return WalkResult::advance();
-    });
-    if (virtualArf.wasInterrupted())
-      return signalPassFailure();
-    IntegerAttr grfCount =
-        function->getAttrOfType<IntegerAttr>(kGrfCountAttrName);
-    if (!grfCount || grfCount.getInt() <= 0) {
-      function.emitError("register allocation requires a positive ")
-          << kGrfCountAttrName << " function attribute";
-      return signalPassFailure();
-    }
-    unsigned grfLimit = static_cast<unsigned>(grfCount.getInt());
-    IntegerAttr reservedGrfCount =
-        function->getAttrOfType<IntegerAttr>(kReservedGrfCountAttrName);
-    if (!reservedGrfCount || reservedGrfCount.getInt() < 0 ||
-        reservedGrfCount.getInt() > grfCount.getInt()) {
-      function.emitError("register allocation requires a valid ")
-          << kReservedGrfCountAttrName << " function attribute";
-      return signalPassFailure();
-    }
-    IntegerAttr scratchSize =
-        function->getAttrOfType<IntegerAttr>(kScratchSizeAttrName);
-    if (scratchSize && scratchSize.getInt() < 0) {
-      function.emitError("register allocation requires a nonnegative ")
-          << kScratchSizeAttrName << " function attribute";
-      return signalPassFailure();
-    }
-    int64_t nextScratchOffset = scratchSize ? scratchSize.getInt() : 0;
-    for (unsigned iteration = 1; iteration <= maxIterations; ++iteration) {
-      function->setAttr(
-          kStateAttr, builder.getDictionaryAttr({builder.getNamedAttr(
-                          "iteration", builder.getI32IntegerAttr(iteration))}));
-
-      AllocationState state;
-      if (failed(buildState(function, state))) {
-        function->removeAttr(kStateAttr);
-        return signalPassFailure();
-      }
-      function->setAttr(kStateAttr, packState(builder, iteration, state));
-      std::optional<AllocationFailure> allocationFailure = tryAllocate(
-          state, grfLimit, static_cast<unsigned>(reservedGrfCount.getInt()));
-      if (!allocationFailure) {
-        commitAllocation(state);
-        function->removeAttr(kStateAttr);
-        function->setAttr(kIterationAttr, builder.getI32IntegerAttr(iteration));
-        return;
-      }
-
-      function->setAttr(
-          kStateAttr, packState(builder, iteration, state, allocationFailure));
-      if (rematerialize(state, *allocationFailure)) {
-        function->removeAttr(kStateAttr);
-        continue;
-      }
-      if (spillToScratch(function, state, *allocationFailure,
-                         nextScratchOffset)) {
-        function->removeAttr(kStateAttr);
-        continue;
-      }
-      function.emitError("register allocation exhausted ")
-          << static_cast<unsigned>(grfLimit)
-          << " GRFs and no rematerialization or scratch candidate can relieve "
-             "pressure";
-      return signalPassFailure();
-    }
-    function->removeAttr(kStateAttr);
-    function.emitError("register allocation exceeded the iteration limit");
-    return signalPassFailure();
-  }
+struct RegAllocConfig {
+  unsigned grfLimit;
+  unsigned reservedGrfCount;
+  int64_t scratchSize;
 };
 
+static FailureOr<RegAllocConfig>
+validateRegAllocFunction(func::FuncOp function) {
+  FunctionType functionType = function.getFunctionType();
+  auto isRegisterType = [](Type type) { return isa<RegType, ARFType>(type); };
+  if (llvm::any_of(functionType.getInputs(), isRegisterType) ||
+      llvm::any_of(functionType.getResults(), isRegisterType))
+    return function.emitError("register allocation does not support "
+                              "register-valued signatures"),
+           failure();
+
+  if (function
+          .walk([&](Operation *operation) {
+            SmallVector<Type> types(operation->getResultTypes());
+            for (Region &region : operation->getRegions())
+              for (Block &block : region)
+                llvm::append_range(types, block.getArgumentTypes());
+            for (Type type : types) {
+              auto arf = dyn_cast<ARFType>(type);
+              if (!arf || arf.getIndex() >= 0)
+                continue;
+              operation->emitError(
+                  "GRF allocation requires ARF values to be allocated first");
+              return WalkResult::interrupt();
+            }
+            return WalkResult::advance();
+          })
+          .wasInterrupted())
+    return failure();
+
+  IntegerAttr grfCount =
+      function->getAttrOfType<IntegerAttr>(kGrfCountAttrName);
+  if (!grfCount || grfCount.getInt() <= 0)
+    return function.emitError("register allocation requires a positive ")
+               << kGrfCountAttrName << " function attribute",
+           failure();
+  IntegerAttr reserved =
+      function->getAttrOfType<IntegerAttr>(kReservedGrfCountAttrName);
+  if (!reserved || reserved.getInt() < 0 ||
+      reserved.getInt() > grfCount.getInt())
+    return function.emitError("register allocation requires a valid ")
+               << kReservedGrfCountAttrName << " function attribute",
+           failure();
+  IntegerAttr scratch =
+      function->getAttrOfType<IntegerAttr>(kScratchSizeAttrName);
+  if (scratch && scratch.getInt() < 0)
+    return function.emitError("register allocation requires a nonnegative ")
+               << kScratchSizeAttrName << " function attribute",
+           failure();
+  return RegAllocConfig{static_cast<unsigned>(grfCount.getInt()),
+                        static_cast<unsigned>(reserved.getInt()),
+                        scratch ? scratch.getInt() : 0};
+}
+
+static void collectFunctions(Operation *target,
+                             SmallVectorImpl<func::FuncOp> &functions) {
+  if (auto function = dyn_cast<func::FuncOp>(target)) {
+    functions.push_back(function);
+    return;
+  }
+  target->walk([&](func::FuncOp function) { functions.push_back(function); });
+}
+
+static unsigned getLoopIteration(func::FuncOp function) {
+  IntegerAttr attr = function->getAttrOfType<IntegerAttr>(kLoopIterationAttr);
+  return attr ? static_cast<unsigned>(attr.getInt()) : 1;
+}
+
+static LogicalResult buildTransformState(Operation *target) {
+  SmallVector<func::FuncOp> functions;
+  collectFunctions(target, functions);
+  for (func::FuncOp function : functions) {
+    if (failed(validateRegAllocFunction(function)))
+      return failure();
+    AllocationState state;
+    if (failed(buildState(function, state)))
+      return failure();
+    Builder builder(function.getContext());
+    function->setAttr(kStateAttr, packState(builder, getLoopIteration(function),
+                                            kBuildStage, state));
+  }
+  return success();
+}
+
+static LogicalResult runTransformLinearScan(Operation *target) {
+  SmallVector<func::FuncOp> functions;
+  collectFunctions(target, functions);
+  for (func::FuncOp function : functions) {
+    FailureOr<RegAllocConfig> config = validateRegAllocFunction(function);
+    if (failed(config))
+      return failure();
+    DictionaryAttr packed = function->getAttrOfType<DictionaryAttr>(kStateAttr);
+    if (!packed ||
+        packed.getAs<StringAttr>(kStageAttr).getValue() != kBuildStage)
+      return function.emitError("linear scan requires alias-state input"),
+             failure();
+    AllocationState state;
+    if (failed(buildState(function, state)))
+      return failure();
+    std::optional<AllocationFailure> allocationFailure =
+        tryAllocate(state, config->grfLimit, config->reservedGrfCount);
+    Builder builder(function.getContext());
+    if (!allocationFailure) {
+      commitAllocation(state);
+      function->setAttr(
+          kStateAttr,
+          packState(builder, getLoopIteration(function), kSuccessStage, state));
+      continue;
+    }
+    function->setAttr(kStateAttr,
+                      packState(builder, getLoopIteration(function),
+                                kFailureStage, state, allocationFailure));
+  }
+  return success();
+}
+
+static FailureOr<std::optional<AllocationFailure>>
+readTransformFailure(func::FuncOp function) {
+  DictionaryAttr packed = function->getAttrOfType<DictionaryAttr>(kStateAttr);
+  if (!packed)
+    return std::optional<AllocationFailure>();
+  StringAttr stage = packed.getAs<StringAttr>(kStageAttr);
+  if (!stage)
+    return function.emitError("regalloc state is missing its stage"), failure();
+  if (stage.getValue() != kFailureStage)
+    return std::optional<AllocationFailure>();
+  IntegerAttr component = packed.getAs<IntegerAttr>("failed_component");
+  IntegerAttr position = packed.getAs<IntegerAttr>("failure_position");
+  if (!component || !position)
+    return function.emitError("regalloc failure state is incomplete"),
+           failure();
+  return std::optional<AllocationFailure>(AllocationFailure{
+      static_cast<unsigned>(component.getInt()), position.getInt()});
+}
+
+static LogicalResult runTransformRematRelief(Operation *target) {
+  SmallVector<func::FuncOp> functions;
+  collectFunctions(target, functions);
+  for (func::FuncOp function : functions) {
+    FailureOr<std::optional<AllocationFailure>> failureRecord =
+        readTransformFailure(function);
+    if (failed(failureRecord))
+      return failure();
+    if (!*failureRecord)
+      continue;
+    AllocationState state;
+    if (failed(buildState(function, state)))
+      return failure();
+    if (rematerialize(state, **failureRecord))
+      function->removeAttr(kStateAttr);
+  }
+  return success();
+}
+
+static LogicalResult runTransformScratchRelief(Operation *target) {
+  SmallVector<func::FuncOp> functions;
+  collectFunctions(target, functions);
+  for (func::FuncOp function : functions) {
+    FailureOr<std::optional<AllocationFailure>> failureRecord =
+        readTransformFailure(function);
+    if (failed(failureRecord))
+      return failure();
+    if (!*failureRecord)
+      continue;
+    FailureOr<RegAllocConfig> config = validateRegAllocFunction(function);
+    if (failed(config))
+      return failure();
+    AllocationState state;
+    if (failed(buildState(function, state)))
+      return failure();
+    int64_t nextScratchOffset = config->scratchSize;
+    if (spillToScratch(function, state, **failureRecord, nextScratchOffset))
+      function->removeAttr(kStateAttr);
+  }
+  return success();
+}
+
+static SmallVector<transform::MappedValue>
+buildHandleMapping(ArrayRef<Operation *> targets) {
+  SmallVector<transform::MappedValue> mapping;
+  for (Operation *target : targets)
+    mapping.push_back(target);
+  return mapping;
+}
+
+static DiagnosedSilenceableFailure
+runNamedSequence(transform::TransformOpInterface caller,
+                 transform::NamedSequenceOp callee,
+                 MutableArrayRef<SmallVector<transform::MappedValue>> bindings,
+                 transform::TransformState &state,
+                 SmallVectorImpl<SmallVector<transform::MappedValue>> &out) {
+  if (callee.isExternal())
+    return caller.emitDefiniteFailure()
+           << "named sequence `" << callee.getSymName()
+           << "` is external; cannot invoke";
+  Block &block = callee.getBody().front();
+  if (block.getNumArguments() != bindings.size())
+    return caller.emitDefiniteFailure()
+           << "named sequence `" << callee.getSymName() << "` expects "
+           << block.getNumArguments() << " arguments, got " << bindings.size();
+  auto scope = state.make_region_scope(callee.getBody());
+  for (auto [argument, mapping] :
+       llvm::zip_equal(block.getArguments(), bindings))
+    if (failed(state.mapBlockArgument(argument, mapping)))
+      return DiagnosedSilenceableFailure::definiteFailure();
+  for (Operation &operation : block.without_terminator()) {
+    DiagnosedSilenceableFailure result =
+        state.applyTransform(cast<transform::TransformOpInterface>(operation));
+    if (!result.succeeded())
+      return result;
+  }
+  transform::detail::prepareValueMappings(
+      out, block.getTerminator()->getOperands(), state);
+  return DiagnosedSilenceableFailure::success();
+}
+
+enum class LoopDecision { Restart, Done, Stalled };
+
+static FailureOr<LoopDecision> classifyLoop(ArrayRef<Operation *> targets) {
+  LoopDecision decision = LoopDecision::Done;
+  SmallVector<func::FuncOp> functions;
+  SmallVector<func::FuncOp> stalledFunctions;
+  for (Operation *target : targets)
+    collectFunctions(target, functions);
+  if (functions.empty())
+    return failure();
+  for (func::FuncOp function : functions) {
+    DictionaryAttr packed = function->getAttrOfType<DictionaryAttr>(kStateAttr);
+    if (!packed) {
+      decision = LoopDecision::Restart;
+      continue;
+    }
+    StringAttr stage = packed.getAs<StringAttr>(kStageAttr);
+    if (!stage)
+      return failure();
+    if (stage.getValue() == kFailureStage) {
+      stalledFunctions.push_back(function);
+      if (decision != LoopDecision::Restart)
+        decision = LoopDecision::Stalled;
+    } else if (stage.getValue() != kSuccessStage)
+      return failure();
+  }
+  if (decision != LoopDecision::Stalled)
+    return decision;
+  for (func::FuncOp function : stalledFunctions) {
+    IntegerAttr grfCount =
+        function->getAttrOfType<IntegerAttr>(kGrfCountAttrName);
+    function.emitError("register allocation exhausted ")
+        << grfCount.getInt()
+        << " GRFs and no rematerialization or scratch candidate can relieve "
+           "pressure";
+  }
+  return decision;
+}
+
+static void clearLoopState(ArrayRef<Operation *> targets, unsigned iteration) {
+  SmallVector<func::FuncOp> functions;
+  for (Operation *target : targets)
+    collectFunctions(target, functions);
+  for (func::FuncOp function : functions) {
+    function->removeAttr(kStateAttr);
+    function->setAttr(
+        kLoopIterationAttr,
+        IntegerAttr::get(IntegerType::get(function.getContext(), 32),
+                         iteration));
+  }
+}
+
+static void finishLoop(ArrayRef<Operation *> targets, unsigned iterations) {
+  SmallVector<func::FuncOp> functions;
+  for (Operation *target : targets)
+    collectFunctions(target, functions);
+  for (func::FuncOp function : functions) {
+    function->removeAttr(kStateAttr);
+    function->removeAttr(kLoopIterationAttr);
+    function->setAttr(
+        kIterationAttr,
+        IntegerAttr::get(IntegerType::get(function.getContext(), 32),
+                         iterations));
+  }
+}
+
+template <typename OpTy, typename ApplyFn>
+static DiagnosedSilenceableFailure
+applyStage(OpTy op, transform::TransformResults &results,
+           transform::TransformState &state, ApplyFn apply) {
+  SmallVector<Operation *> targets;
+  for (Operation *target : state.getPayloadOps(op.getTarget())) {
+    targets.push_back(target);
+    if (failed(apply(target)))
+      return op.emitDefiniteFailure() << "regalloc transform stage failed";
+  }
+  results.set(cast<OpResult>(op.getResult()), targets);
+  return DiagnosedSilenceableFailure::success();
+}
+
+template <typename OpTy>
+static void
+getStageEffects(OpTy op,
+                SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::consumesHandle(op.getTargetMutable(), effects);
+  transform::producesHandle(op->getOpResults(), effects);
+  transform::modifiesPayload(effects);
+}
+
 } // namespace
+
+namespace inter::xemachine {
+
+LogicalResult
+TransformRegAllocLoopOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  transform::NamedSequenceOp body =
+      symbolTable.lookupNearestSymbolFrom<transform::NamedSequenceOp>(
+          getOperation(), getBodyAttr());
+  if (!body)
+    return emitOpError() << "body symbol `" << getBody()
+                         << "` does not resolve to a transform.named_sequence";
+  if (getMaxIterations() == 0 ||
+      getMaxIterations() > std::numeric_limits<unsigned>::max())
+    return emitOpError("requires max_iterations in the unsigned integer range");
+  return success();
+}
+
+DiagnosedSilenceableFailure
+TransformRegAllocLoopOp::apply(transform::TransformRewriter &,
+                               transform::TransformResults &results,
+                               transform::TransformState &state) {
+  transform::NamedSequenceOp body =
+      SymbolTable::lookupNearestSymbolFrom<transform::NamedSequenceOp>(
+          getOperation(), getBodyAttr());
+  SmallVector<Operation *> current;
+  llvm::append_range(current, state.getPayloadOps(getTarget()));
+  unsigned maxIterations = static_cast<unsigned>(getMaxIterations());
+  for (unsigned iteration = 1; iteration <= maxIterations; ++iteration) {
+    clearLoopState(current, iteration);
+    SmallVector<SmallVector<transform::MappedValue>> bindings;
+    bindings.push_back(buildHandleMapping(current));
+    SmallVector<SmallVector<transform::MappedValue>> output;
+    DiagnosedSilenceableFailure status =
+        runNamedSequence(*this, body, bindings, state, output);
+    if (!status.succeeded())
+      return status;
+    if (output.size() != 1)
+      return emitDefiniteFailure(
+          "regalloc loop body must yield one operation handle");
+    SmallVector<Operation *> yielded;
+    for (transform::MappedValue mapping : output.front()) {
+      Operation *payload = mapping.dyn_cast<Operation *>();
+      if (!payload)
+        return emitDefiniteFailure(
+            "regalloc loop body must yield operation handles");
+      yielded.push_back(payload);
+    }
+    FailureOr<LoopDecision> decision = classifyLoop(yielded);
+    if (failed(decision))
+      return emitDefiniteFailure("failed to classify regalloc loop state");
+    if (*decision == LoopDecision::Restart) {
+      current = std::move(yielded);
+      continue;
+    }
+    if (*decision == LoopDecision::Stalled)
+      return emitDefiniteFailure(
+          "register allocation stalled after all relief providers");
+    finishLoop(yielded, iteration);
+    results.set(cast<OpResult>(getResult()), yielded);
+    return DiagnosedSilenceableFailure::success();
+  }
+  return emitDefiniteFailure() << "regalloc transform loop exceeded "
+                               << getMaxIterations() << " iterations";
+}
+
+void TransformRegAllocLoopOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  getStageEffects(*this, effects);
+}
+
+DiagnosedSilenceableFailure
+TransformRegAllocBuildStateOp::apply(transform::TransformRewriter &,
+                                     transform::TransformResults &results,
+                                     transform::TransformState &state) {
+  return applyStage(*this, results, state, buildTransformState);
+}
+
+void TransformRegAllocBuildStateOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  getStageEffects(*this, effects);
+}
+
+DiagnosedSilenceableFailure
+TransformRegAllocLinearScanOp::apply(transform::TransformRewriter &,
+                                     transform::TransformResults &results,
+                                     transform::TransformState &state) {
+  return applyStage(*this, results, state, runTransformLinearScan);
+}
+
+void TransformRegAllocLinearScanOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  getStageEffects(*this, effects);
+}
+
+DiagnosedSilenceableFailure
+TransformRegAllocRematReliefOp::apply(transform::TransformRewriter &,
+                                      transform::TransformResults &results,
+                                      transform::TransformState &state) {
+  return applyStage(*this, results, state, runTransformRematRelief);
+}
+
+void TransformRegAllocRematReliefOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  getStageEffects(*this, effects);
+}
+
+DiagnosedSilenceableFailure
+TransformRegAllocScratchReliefOp::apply(transform::TransformRewriter &,
+                                        transform::TransformResults &results,
+                                        transform::TransformState &state) {
+  return applyStage(*this, results, state, runTransformScratchRelief);
+}
+
+void TransformRegAllocScratchReliefOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  getStageEffects(*this, effects);
+}
+
+} // namespace inter::xemachine

@@ -1,7 +1,7 @@
 // Straight-line selection: vadd lowers to the prologue, gid computation,
 // A64 loads, a store, and EOT.
-// RUN: inter-opt %s --inter-normalize-cf --inter-convert-calls --inter-convert-memory --inter-select-to-machine --inter-regalloc --inter-insert-sync | FileCheck %s
-// RUN: inter-opt %s --inter-normalize-cf --inter-convert-calls --inter-convert-memory --inter-select-to-machine --inter-regalloc --inter-insert-sync | inter-translate --xemachine-to-ged -o %t
+// RUN: inter-opt %s --pass-pipeline='builtin.module(transform-preload-library{transform-library-paths=%inter_pipelines},transform-interpreter{entry-point=inter_backend})' | FileCheck %s
+// RUN: inter-opt %s --pass-pipeline='builtin.module(transform-preload-library{transform-library-paths=%inter_pipelines},transform-interpreter{entry-point=inter_backend})' | inter-translate --xemachine-to-ged -o %t
 // RUN: inter-ged-dump %t | FileCheck %s --check-prefix=GED
 
 module {

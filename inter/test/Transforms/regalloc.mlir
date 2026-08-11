@@ -1,4 +1,4 @@
-// RUN: inter-opt %s --split-input-file --inter-regalloc | FileCheck %s --check-prefixes=REMAT,SCRATCH,LOOP
+// RUN: inter-opt %s --split-input-file --pass-pipeline='builtin.module(transform-preload-library{transform-library-paths=%inter_pipelines},transform-interpreter{entry-point=inter_regalloc})' | FileCheck %s --check-prefixes=REMAT,SCRATCH,LOOP
 
 module {
   func.func @rematerialize() attributes {xemachine.grf_count = 5 : i32, xemachine.reserved_grf_count = 0 : i32} {

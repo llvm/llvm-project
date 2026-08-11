@@ -1,6 +1,7 @@
 add_llvm_executable(inter-opt inter-opt.cpp)
 target_link_libraries(inter-opt PRIVATE
   InterXeMachine
+  InterXW
   InterTransforms
   MLIROptLib
   MLIRFuncDialect
@@ -10,5 +11,7 @@ target_link_libraries(inter-opt PRIVATE
   MLIRLLVMDialect
   MLIRDLTIDialect
   MLIRControlFlowToSCF
+  MLIRTransformDialectTransforms
+  MLIRUBDialect
 )
 mlir_check_link_libraries(inter-opt)

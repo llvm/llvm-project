@@ -1,6 +1,6 @@
 // Branch selection: llvm branches lift to scf.if, then lower to cmp +
 // exec_if with merged results.
-// RUN: inter-opt %s --inter-normalize-cf --lift-cf-to-scf --inter-convert-calls --inter-convert-memory --inter-select-to-machine --inter-regalloc --inter-insert-sync | FileCheck %s
+// RUN: inter-opt %s --pass-pipeline='builtin.module(transform-preload-library{transform-library-paths=%inter_pipelines},transform-interpreter{entry-point=inter_backend})' | FileCheck %s
 
 module {
   llvm.func spir_kernelcc @branch_kernel(%out: !llvm.ptr<1>, %a: !llvm.ptr<1>,

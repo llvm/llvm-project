@@ -1,6 +1,7 @@
 add_mlir_dialect_library(InterXeMachine
   XeMachineDialect.cpp
   XeMachineOps.cpp
+  XeMachineRegAlloc.cpp
 
   DEPENDS
   InterXeMachineIRIncGen
@@ -9,4 +10,6 @@ add_mlir_dialect_library(InterXeMachine
   MLIRIR
   MLIRSupport
   MLIRControlFlowInterfaces
+  MLIRFuncDialect
+  MLIRTransformDialect
 )

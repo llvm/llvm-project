@@ -1,6 +1,6 @@
 // The fixed dual-entry payload prologue must precede source-ordered machine
 // operations even when the first thread-ID use occurs later in the kernel.
-// RUN: inter-opt %s --inter-normalize-cf --inter-convert-calls --inter-convert-memory --inter-select-to-machine --inter-regalloc | FileCheck %s
+// RUN: inter-opt %s --pass-pipeline='builtin.module(transform-preload-library{transform-library-paths=%inter_pipelines},transform-interpreter{entry-point=inter_backend_no_sync})' | FileCheck %s
 
 module {
   llvm.func spir_kernelcc @atomic_before_id(%out: !llvm.ptr<1>,

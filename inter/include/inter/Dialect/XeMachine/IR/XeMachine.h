@@ -3,6 +3,7 @@
 
 #include "inter/Dialect/XeMachine/IR/XeMachineTraits.h"
 
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Value.h"
@@ -60,5 +61,8 @@ struct RegisterStorageAlias {
 
 #define GET_OP_CLASSES
 #include "inter/Dialect/XeMachine/IR/XeMachineOps.h.inc"
+
+#define GET_OP_CLASSES
+#include "inter/Dialect/XeMachine/IR/XeMachineTransformOps.h.inc"
 
 #endif // INTER_DIALECT_XEMACHINE_IR_XEMACHINE_H

@@ -142,9 +142,17 @@ Pipeline is data: a `transform.with_named_sequence` library interpreted by
 are preloaded before the interpreter runs (its multi-threaded context refuses
 late registration — known pitfall, documented in wave-mlir).
 
+The checked-in library is `lib/inter/pipelines/pipelines.mlir`, staged in the
+build tree as `share/inter/pipelines/pipelines.mlir`. A complete backend run is
+invoked with:
+
+```
+--pass-pipeline='builtin.module(transform-preload-library{transform-library-paths=<pipelines.mlir>},transform-interpreter{entry-point=inter_backend})'
+```
+
 Stage discipline: one dialect mix per stage, every boundary FileCheck-able,
-tests enter at named entry points (`@inter_backend_preschedule`,
-`@inter_backend_emit_only`, ...).
+tests enter at named entry points (`@inter_lower_to_machine`,
+`@inter_regalloc`, `@inter_backend_no_sync`, and `@inter_backend`).
 
 ## 6. Frontend: LLVM IR import
 

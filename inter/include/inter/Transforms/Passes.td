@@ -11,15 +11,6 @@ def SelectToMachine : Pass<"inter-select-to-machine", "::mlir::ModuleOp"> {
   ];
 }
 
-def RegAlloc : Pass<"inter-regalloc", "::mlir::func::FuncOp"> {
-  let summary = "allocate XeMachine virtual GRFs with iterative relief";
-  let dependentDialects = ["inter::xemachine::XeMachineDialect"];
-  let options = [
-    Option<"maxIterations", "max-iterations", "unsigned", "32",
-           "maximum allocation and relief iterations">,
-  ];
-}
-
 // Rooted on the module: rewrites the symbol table (llvm.func -> func.func).
 def NormalizeCf : Pass<"inter-normalize-cf", "::mlir::ModuleOp"> {
   let summary = "llvm.func -> func.func, llvm branches -> cf branches";
