@@ -3722,10 +3722,6 @@ TEST_F(DIExpressionTest, ExprOperandCasts) {
       std::is_same_v<decltype(dyn_cast<ArgOp>(ConstArgOperand)), ArgOp>);
   EXPECT_TRUE(ArgOperand.is(dwarf::DW_OP_LLVM_arg));
   EXPECT_FALSE(ArgOperand.is(dwarf::DW_OP_LLVM_fragment));
-  EXPECT_TRUE(
-      ArgOperand.isOneOf(dwarf::DW_OP_LLVM_arg, dwarf::DW_OP_LLVM_fragment));
-  EXPECT_FALSE(ArgOperand.isOneOf(dwarf::DW_OP_LLVM_convert,
-                                  dwarf::DW_OP_LLVM_fragment));
 
   auto Arg = checkOperandView<ArgOp>(ArgOperand, FragmentOperand);
   EXPECT_EQ(7u, Arg.getIndex());

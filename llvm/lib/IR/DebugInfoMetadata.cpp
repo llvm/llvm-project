@@ -1770,8 +1770,8 @@ bool DIExpression::FragmentOp::classof(const ExprOperand *Op) {
 }
 
 bool DIExpression::ExtractBitsOp::classof(const ExprOperand *Op) {
-  return Op->isOneOf(dwarf::DW_OP_LLVM_extract_bits_sext,
-                     dwarf::DW_OP_LLVM_extract_bits_zext);
+  return Op->is(dwarf::DW_OP_LLVM_extract_bits_sext) ||
+         Op->is(dwarf::DW_OP_LLVM_extract_bits_zext);
 }
 
 bool DIExpression::ExtractBitsOp::isSigned() const {
