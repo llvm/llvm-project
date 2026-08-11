@@ -345,12 +345,11 @@ scratch registers rather than saving and restoring them.
 
 ### Implementations that were considered
 
-Alternative implementations were considered, but not pursued. Some of these are
-described in this section.
+Alternative implementations were considered, but not pursued:
 
-Reusing the
-[libffi](https://github.com/libffi/libffi) implementation for __static
-trampolines__ was one option. Extracting the static-trampoline implementation
-from `libffi` into a separate library was another alternative that was considered
-(e.g. `libstatictramp`, as
-mentioned [here](https://sourceware.org/pipermail/libffi-discuss/2021/002592.html)).
+* Reusing the
+  [libffi](https://github.com/libffi/libffi) implementation for __static
+  trampolines__.
+* Extracting the static-trampoline implementation from `libffi` into a
+  separate library (e.g. `libstatictramp`, as
+  mentioned [here](https://sourceware.org/pipermail/libffi-discuss/2021/002592.html)).
