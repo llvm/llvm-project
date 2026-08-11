@@ -78,16 +78,15 @@ def XeMachine_SendDescriptorOpInterface : OpInterface<"SendDescriptorOpInterface
 def XeMachine_RegisterStorageAliasOpInterface
     : OpInterface<"RegisterStorageAliasOpInterface"> {
   let description = [{
-    Storage aliasing between results and operands (tuples, region yields,
-    loop carries). Regalloc groups aliased values into one live interval.
+    Zero-cost relative storage constraints exposed to register allocation.
   }];
   let cppNamespace = "::inter::xemachine";
   let methods = [
     InterfaceMethod<
-        "Appends (result, operand) pairs that must share storage.",
-        "void", "collectStorageAliases",
-        (ins "llvm::SmallVectorImpl<std::pair<mlir::OpResult, mlir::OpOperand *>> &":$aliases),
-        "", "/* no aliases by default */">,
+        "Appends register values constrained to share tuple storage.",
+        "void", "getRegisterStorageAliases",
+        (ins "llvm::SmallVectorImpl<"
+             "::inter::xemachine::RegisterStorageAlias> &":$aliases)>,
   ];
 }
 

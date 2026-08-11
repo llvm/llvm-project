@@ -638,9 +638,8 @@ struct SelectToMachine
     return {tailValue, (offset - kInlineMirrorSize) / 8};
   }
 
-  // addr = byteOff + ptr per 16-lane half. The two results are adjacent GRF
-  // pairs by allocation order; the send payload uses the first.
-  std::pair<Value, Value> emitAddress(Value lo, Value hi, int argIndex) {
+  // addr = byteOff + ptr per 16-lane half, joined into one four-GRF payload.
+  Value emitAddress(Value lo, Value hi, int argIndex) {
     auto [ptr, sub] = pointerArg(argIndex);
     Value a0 = AddOp::create(*b, *loc, grf(32), i64(), /*execSize=*/16,
                              dcanon(), rcanon(), runiform(), IntegerAttr(),
@@ -654,7 +653,11 @@ struct SelectToMachine
                              TypeAttr(), TypeAttr(), /*noMask=*/false,
                              /*maskOffset=*/16, hi, ptr)
                    .getResult();
-    return {a0, a1};
+    RegType firstType = cast<RegType>(a0.getType());
+    Type payloadType = RegType::get(ctx, 64, firstType.getBaseGRF());
+    return TupleFromElementsOp::create(*b, *loc, payloadType,
+                                       ValueRange{a0, a1})
+        .getTuple();
   }
 
   bool isSlmAddress(Value ptr) {
@@ -700,8 +703,8 @@ struct SelectToMachine
       return emitError(gep.getLoc(), "memory op before global id"), failure();
     int argIndex = cast<BlockArgument>(gep.getBase()).getArgNumber();
     emitByteOffsets();
-    auto [a0, a1] = emitAddress(byteOffLo, byteOffHi, argIndex);
-    Value v = emitLoadA64(grf(32), a0, depTok);
+    Value address = emitAddress(byteOffLo, byteOffHi, argIndex);
+    Value v = emitLoadA64(grf(32), address, depTok);
     vmap[result] = v;
     return success();
   }
@@ -732,8 +735,8 @@ struct SelectToMachine
       return success();
     }
     int argIndex = cast<BlockArgument>(gep.getBase()).getArgNumber();
-    auto [a0, a1] = emitAddress(byteOffLo, byteOffHi, argIndex);
-    emitStoreA64(a0, data, depTok);
+    Value address = emitAddress(byteOffLo, byteOffHi, argIndex);
+    emitStoreA64(address, data, depTok);
     return success();
   }
 
@@ -799,16 +802,23 @@ struct SelectToMachine
                              b->getI32IntegerAttr(sub), TypeAttr(),
                              /*noMask=*/false, /*maskOffset=*/0, ptr)
                    .getResult();
-    MovOp::create(*b, *loc, grf(32), i64t, /*execSize=*/16, dcanon(),
-                  runiform(), IntegerAttr(), b->getI32IntegerAttr(sub),
-                  TypeAttr(), /*noMask=*/false, /*maskOffset=*/16, ptr);
+    Value a1 = MovOp::create(*b, *loc, grf(32), i64t, /*execSize=*/16, dcanon(),
+                             runiform(), IntegerAttr(),
+                             b->getI32IntegerAttr(sub), TypeAttr(),
+                             /*noMask=*/false, /*maskOffset=*/16, ptr)
+                   .getResult();
+    RegType firstType = cast<RegType>(a0.getType());
+    Value address = TupleFromElementsOp::create(
+                        *b, *loc, RegType::get(ctx, 64, firstType.getBaseGRF()),
+                        ValueRange{a0, a1})
+                        .getTuple();
     Value ones = MovOp::create(*b, *loc, grf(32), i32(), /*execSize=*/32,
                                DstRegionAttr(), RegionAttr(), IntegerAttr(),
                                IntegerAttr(), TypeAttr(), /*noMask=*/false,
                                /*maskOffset=*/0, imm(1, i16()))
                      .getResult();
     auto op = AtomicIAddA64Op::create(*b, *loc, grf(32), MemTokenType::get(ctx),
-                                      a0, ones, *dependency, 32);
+                                      address, ones, *dependency, 32);
     memToken = op.getToken();
     vmap[call.getToken()] = memToken;
     vmap[call.getOld()] = op.getDst();

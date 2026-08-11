@@ -7,6 +7,7 @@ config.inter_test_exec_root = "@INTER_TEST_EXEC_ROOT@"
 config.inter_test_is_integration = @INTER_TEST_IS_INTEGRATION@
 config.inter_opt = "@PROJECT_BINARY_DIR@/tools/inter-opt/inter-opt"
 config.inter_translate = "@PROJECT_BINARY_DIR@/tools/inter-translate/inter-translate"
+config.inter_alias_dump = "@CMAKE_CURRENT_BINARY_DIR@/inter-alias-dump"
 config.inter_ged_dump = "@CMAKE_CURRENT_BINARY_DIR@/inter-ged-dump"
 config.filecheck = "@LLVM_TOOLS_BINARY_DIR@/FileCheck"
 config.llvm_objcopy = "@LLVM_TOOLS_BINARY_DIR@/llvm-objcopy"

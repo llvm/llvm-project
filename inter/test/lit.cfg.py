@@ -24,6 +24,9 @@ tools = [
     ToolSubst("llvm-readobj", command=config.llvm_readobj, unresolved="fatal"),
     ToolSubst("inter-opt", command=config.inter_opt, unresolved="fatal"),
     ToolSubst(
+        "inter-alias-dump", command=config.inter_alias_dump, unresolved="fatal"
+    ),
+    ToolSubst(
         "inter-translate", command=config.inter_translate, unresolved="fatal"
     ),
     ToolSubst(

@@ -6,13 +6,14 @@ module {
     %root = xemachine.token
     %addr = xemachine.archreg 4 : !xemachine.reg<32, 4>
     %data = xemachine.archreg 8 : !xemachine.reg<32, 8>
+    %a64 = xemachine.archreg 20 : !xemachine.reg<64, 20>
 
     // CHECK: opcode=send exec=32 {{.*}}sfid=slm exdesc=0x0 desc=0x4200500 {{.*}}dst=grf12 src0=grf4 src1=arf0 len=0 eot=0
     %loaded, %load = xemachine.load_slm %addr dep %root : !xemachine.reg<32, 4> -> (!xemachine.reg<32, 12>, !xemachine.mem.token)
     // CHECK-NEXT: {{.*}}opcode=send exec=32 {{.*}}sfid=slm exdesc=0x0 desc=0x4000504 {{.*}}dst=arf0 src0=grf4 src1=grf8 len=2 eot=0
     %store = xemachine.store_slm %addr data %data dep %load : (!xemachine.reg<32, 4>, !xemachine.reg<32, 8>) -> !xemachine.mem.token
-    // CHECK-NEXT: {{.*}}opcode=send exec=32 {{.*}}sfid=ugm exdesc=0x0 desc=0x820058c {{.*}}dst=grf14 src0=grf4 src1=grf8 len=2 eot=0
-    %old, %atomic = xemachine.atomic_iadd_a64 %addr data %data dep %store : (!xemachine.reg<32, 4>, !xemachine.reg<32, 8>) -> (!xemachine.reg<32, 14>, !xemachine.mem.token)
+    // CHECK-NEXT: {{.*}}opcode=send exec=32 {{.*}}sfid=ugm exdesc=0x0 desc=0x820058c {{.*}}dst=grf14 src0=grf20 src1=grf8 len=2 eot=0
+    %old, %atomic = xemachine.atomic_iadd_a64 %a64 data %data dep %store : (!xemachine.reg<64, 20>, !xemachine.reg<32, 8>) -> (!xemachine.reg<32, 14>, !xemachine.mem.token)
 
     %r0 = xemachine.archreg 0 : !xemachine.reg<16, 0>
     // CHECK-NEXT: {{.*}}opcode=send exec=1 {{.*}}sfid=slm exdesc=0x0 desc=0x210001f {{.*}}dst=grf16 src0=grf0 src1=arf0 len=0 eot=0

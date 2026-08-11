@@ -16,7 +16,6 @@ class XeMachine_Op<string mnemonic, list<Trait> traits = []> :
       DeclareOpInterfaceMethods<XeMachine_InstructionIssueOpInterface>,
       DeclareOpInterfaceMethods<XeMachine_FixedPhysicalRegisterDefsOpInterface>,
       DeclareOpInterfaceMethods<XeMachine_SendDescriptorOpInterface>,
-      DeclareOpInterfaceMethods<XeMachine_RegisterStorageAliasOpInterface>,
     ]> {
   let cppNamespace = "::inter::xemachine";
 }
@@ -167,6 +166,7 @@ def XeMachine_LoadA64Op : XeMachine_MsgOp<"load_a64", [MemoryEffects<[MemRead]>]
   let results = (outs XeMachine_RegType:$dst, XeMachine_MemTokenType:$token);
   let assemblyFormat =
       "$addrPayload (`dep` $dependency^)? attr-dict `:` qualified(type($addrPayload)) `->` `(` qualified(type($dst)) `,` qualified(type($token)) `)`";
+  let hasVerifier = 1;
 }
 
 // A64 scattered dword store: store.ugm.d32.a64.
@@ -178,6 +178,7 @@ def XeMachine_StoreA64Op : XeMachine_MsgOp<"store_a64", [MemoryEffects<[MemWrite
   let results = (outs XeMachine_MemTokenType:$token);
   let assemblyFormat =
       "$addrPayload `data` $dataPayload (`dep` $dependency^)? attr-dict `:` `(` qualified(type($addrPayload)) `,` qualified(type($dataPayload)) `)` `->` qualified(type($token))";
+  let hasVerifier = 1;
 }
 
 // SLM dword load/store: load/store.slm.d32.a32.
@@ -210,6 +211,7 @@ def XeMachine_AtomicIAddA64Op : XeMachine_MsgOp<"atomic_iadd_a64",
   let results = (outs XeMachine_RegType:$dst, XeMachine_MemTokenType:$token);
   let assemblyFormat =
       "$addrPayload `data` $dataPayload (`dep` $dependency^)? attr-dict `:` `(` qualified(type($addrPayload)) `,` qualified(type($dataPayload)) `)` `->` `(` qualified(type($dst)) `,` qualified(type($token)) `)`";
+  let hasVerifier = 1;
 }
 
 // a32 block (transpose) load via bti[255]; used by the payload prologue.
@@ -374,6 +376,43 @@ def XeMachine_ArfRegOp : XeMachine_Op<"arfreg", [NoMemoryEffect,
   let arguments = (ins XeMachine_ARFFile:$file, I32Attr:$index);
   let results = (outs XeMachine_ARFType:$result);
   let assemblyFormat = "$file `,` $index attr-dict `:` qualified(type($result))";
+}
+
+// Zero-cost views between contiguous register storage and mixed-width pieces.
+// Alias offsets are cumulative dword widths, matching RegType::widthDwords.
+def XeMachine_TupleToElementsOp : XeMachine_Op<"tuple_to_elements", [Pure,
+    XeMachine_NoMachineInst, XeMachine_NoAsmEmission,
+    DeclareOpInterfaceMethods<XeMachine_RegisterStorageAliasOpInterface>]> {
+  let summary = "split register storage into mixed-width pieces";
+  let arguments = (ins XeMachine_RegType:$tuple);
+  let results = (outs Variadic<XeMachine_RegType>:$elements);
+  let assemblyFormat = "$tuple attr-dict `:` functional-type(operands, results)";
+  let hasVerifier = 1;
+  let hasFolder = 1;
+}
+
+def XeMachine_TupleFromElementsOp : XeMachine_Op<"tuple_from_elements", [Pure,
+    XeMachine_NoMachineInst, XeMachine_NoAsmEmission,
+    DeclareOpInterfaceMethods<XeMachine_RegisterStorageAliasOpInterface>]> {
+  let summary = "concatenate mixed-width pieces into register storage";
+  let arguments = (ins Variadic<XeMachine_RegType>:$elements);
+  let results = (outs XeMachine_RegType:$tuple);
+  let assemblyFormat = "$elements attr-dict `:` functional-type(operands, results)";
+  let hasVerifier = 1;
+  let hasFolder = 1;
+}
+
+def XeMachine_UpdateTupleOp : XeMachine_Op<"update_tuple", [Pure,
+    XeMachine_NoMachineInst, XeMachine_NoAsmEmission,
+    DeclareOpInterfaceMethods<XeMachine_RegisterStorageAliasOpInterface>]> {
+  let summary = "replace selected tuple slots while preserving storage";
+  let arguments = (ins XeMachine_RegType:$base,
+                        Variadic<XeMachine_RegType>:$updates,
+                        ArrayAttr:$offsets);
+  let results = (outs XeMachine_RegType:$result);
+  let assemblyFormat =
+      "$base `,` $updates attr-dict `:` functional-type(operands, results)";
+  let hasVerifier = 1;
 }
 
 // Token algebra. token: entry source. token_join: merge completions.

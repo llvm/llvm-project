@@ -41,9 +41,16 @@ module {
 // gid: mul into acc, then add the hardware- or software-provided local ID.
 // CHECK: xemachine.mul
 // CHECK: xemachine.add3
-// Two A64 loads and one store with a data payload.
-// CHECK-COUNT-2: xemachine.load_a64
-// CHECK: xemachine.store_a64 {{.*}}data
+// Two A64 loads and one store, each with an explicit four-GRF address tuple.
+// CHECK: [[ADDR0:%.*]] = xemachine.tuple_from_elements
+// CHECK-SAME: -> !xemachine.reg<64,
+// CHECK-NEXT: xemachine.load_a64 [[ADDR0]]
+// CHECK: [[ADDR1:%.*]] = xemachine.tuple_from_elements
+// CHECK-SAME: -> !xemachine.reg<64,
+// CHECK-NEXT: xemachine.load_a64 [[ADDR1]]
+// CHECK: [[ADDR2:%.*]] = xemachine.tuple_from_elements
+// CHECK-SAME: -> !xemachine.reg<64,
+// CHECK-NEXT: xemachine.store_a64 [[ADDR2]] {{.*}}data
 // CHECK: [[FINAL:%.*]] = xemachine.token_join
 // CHECK: xemachine.sync allrd
 // EOT via the gateway.
@@ -53,5 +60,8 @@ module {
 // GED: opcode=mul
 // GED: opcode=add3
 // GED: opcode=shl
+// GED: pc=384 opcode=add
+// GED-NEXT: pc=400 opcode=add
+// GED-NEXT: pc=416 opcode=send exec=32 swsb=0x322
 // GED: opcode=send {{.*}}sfid=ugm {{.*}}len=2 eot=0
 // GED: opcode=send {{.*}}sfid=gateway {{.*}}len=0 eot=1

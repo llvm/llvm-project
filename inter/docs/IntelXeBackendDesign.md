@@ -248,8 +248,8 @@ codegen involvement.
 
 ### Types
 
-- `!xemachine.reg<width, index>` — GRF storage. `width` in GRFs (or bits;
-  decide once), `index` = physical base GRF, `-1` = virtual. Virtual and
+- `!xemachine.reg<width, index>` — GRF storage. `width` is in 32-bit dwords;
+  `index` = physical base GRF, `-1` = virtual. Virtual and
   physical share the type; regalloc rewrites the index slot. (Same trick as
   wave-mlir's `!waveamdmachine.reg<class,width,index>`. One bank, so no
   class field; element type lives on the instruction, matching EU encoding.)
@@ -276,6 +276,11 @@ codegen involvement.
 - Send ops: descriptor fields as attributes + payload operands; an op
   interface exposes the descriptor spec so the address planner can query
   operand shapes without hardcoding message tables in the planner.
+- `tuple_from_elements`, `tuple_to_elements`, and `update_tuple` are zero-cost
+  storage views, not recursive tuple types. They expose weighted dword offsets
+  through `RegisterStorageAliasOpInterface`; destructive updates are marked
+  explicitly. A64 SIMD32 addresses are one 64-dword tuple, so all four payload
+  GRFs remain allocator-visible.
 - Pseudo ops: `token`, `token_join`, `after`, `reg_after`, copies, payload
   materialization. Pseudos are erased or materialized by emission; they never
   reach the encoder.
@@ -289,8 +294,9 @@ codegen involvement.
 - `FixedPhysicalRegisterDefsOpInterface` — r0 payload, implicit ARF uses.
 - `InstructionIssueOpInterface` — issue latency/throughput classes for the
   cost model.
-- `RegisterStorageAliasOpInterface` — aliasing for tuples, region yields,
-  loop carries (regalloc alias sets).
+- `RegisterStorageAliasOpInterface` — arbitrary `Value` storage aliases with
+  weighted dword offsets and destructive-use markers. Tuple ops provide local
+  edges; region flow adds yields and loop carries to the same alias sets.
 
 Arch gating is a static C++ predicate per op (`isSupportedOn(isa)`), queried
 before instantiation. Only `xe2` is populated; the enum leaves room.

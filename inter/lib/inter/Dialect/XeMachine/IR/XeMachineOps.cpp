@@ -1,6 +1,7 @@
 #include "inter/Dialect/XeMachine/IR/XeMachine.h"
 
 #include "mlir/IR/OpImplementation.h"
+#include "llvm/ADT/STLExtras.h"
 
 using namespace mlir;
 using namespace inter::xemachine;
@@ -10,6 +11,204 @@ using namespace inter::xemachine;
 
 #define GET_OP_INTERFACE_CLASSES
 #include "inter/Dialect/XeMachine/IR/XeMachineInterfaces.cpp.inc"
+
+static void
+getTupleElementStorageAliases(Value tuple, ValueRange elements,
+                              SmallVectorImpl<RegisterStorageAlias> &aliases) {
+  int64_t offset = 0;
+  for (Value element : elements) {
+    aliases.push_back({tuple, element, offset});
+    offset += cast<RegType>(element.getType()).getWidthDwords();
+  }
+}
+
+void TupleToElementsOp::getRegisterStorageAliases(
+    SmallVectorImpl<RegisterStorageAlias> &aliases) {
+  getTupleElementStorageAliases(getTuple(), getElements(), aliases);
+}
+
+void TupleFromElementsOp::getRegisterStorageAliases(
+    SmallVectorImpl<RegisterStorageAlias> &aliases) {
+  getTupleElementStorageAliases(getTuple(), getElements(), aliases);
+}
+
+void UpdateTupleOp::getRegisterStorageAliases(
+    SmallVectorImpl<RegisterStorageAlias> &aliases) {
+  aliases.push_back({getResult(), getBase(), 0, /*destructive=*/true});
+  for (auto [value, offset] : llvm::zip_equal(getUpdates(), getOffsets()))
+    aliases.push_back({getResult(), value, cast<IntegerAttr>(offset).getInt(),
+                       /*destructive=*/true});
+}
+
+static int64_t sumElementWidths(ValueRange elements) {
+  int64_t total = 0;
+  for (Value element : elements)
+    total += cast<RegType>(element.getType()).getWidthDwords();
+  return total;
+}
+
+static LogicalResult verifyTupleElements(Operation *operation,
+                                         RegType tupleType,
+                                         ValueRange elements) {
+  int64_t total = sumElementWidths(elements);
+  if (tupleType.getWidthDwords() != total)
+    return operation->emitOpError("element widths sum (")
+           << total << ") must match tuple register width ("
+           << tupleType.getWidthDwords() << ")";
+  int64_t offset = 0;
+  for (Value element : elements) {
+    RegType elementType = cast<RegType>(element.getType());
+    if (tupleType.getBaseGRF() >= 0 && elementType.getBaseGRF() >= 0 &&
+        (offset % 16 != 0 ||
+         elementType.getBaseGRF() != tupleType.getBaseGRF() + offset / 16))
+      return operation->emitOpError(
+          "physical element placement must match its tuple offset");
+    offset += elementType.getWidthDwords();
+  }
+  return success();
+}
+
+LogicalResult TupleToElementsOp::verify() {
+  return verifyTupleElements(*this, cast<RegType>(getTuple().getType()),
+                             getElements());
+}
+
+static bool canFoldTupleJoinSplit(TupleFromElementsOp joined,
+                                  ValueRange splitElements) {
+  if (joined.getElements().size() != splitElements.size())
+    return false;
+  RegType tupleType = cast<RegType>(joined.getTuple().getType());
+  int64_t offset = 0;
+  for (auto [source, result] :
+       llvm::zip_equal(joined.getElements(), splitElements)) {
+    if (source.getType() != result.getType())
+      return false;
+    RegType sourceType = cast<RegType>(source.getType());
+    if (tupleType.getBaseGRF() >= 0 &&
+        (offset % 16 != 0 ||
+         sourceType.getBaseGRF() != tupleType.getBaseGRF() + offset / 16))
+      return false;
+    offset += sourceType.getWidthDwords();
+  }
+  return true;
+}
+
+LogicalResult TupleToElementsOp::fold(FoldAdaptor,
+                                      SmallVectorImpl<OpFoldResult> &results) {
+  if (getElements().size() == 1 &&
+      getElements().front().getType() == getTuple().getType()) {
+    results.push_back(getTuple());
+    return success();
+  }
+  TupleFromElementsOp joined = getTuple().getDefiningOp<TupleFromElementsOp>();
+  if (!joined || !canFoldTupleJoinSplit(joined, getElements()))
+    return failure();
+  llvm::append_range(results, joined.getElements());
+  return success();
+}
+
+LogicalResult TupleFromElementsOp::verify() {
+  return verifyTupleElements(*this, cast<RegType>(getTuple().getType()),
+                             getElements());
+}
+
+static TupleToElementsOp getExactRoundTripSplit(Value element, unsigned index,
+                                                size_t resultCount) {
+  auto result = dyn_cast<OpResult>(element);
+  if (!result || result.getResultNumber() != index)
+    return {};
+  auto split = dyn_cast_or_null<TupleToElementsOp>(result.getOwner());
+  if (!split || split->getNumResults() != resultCount)
+    return {};
+  return split;
+}
+
+static Value getExactRoundTripSource(ValueRange elements) {
+  Value sourceTuple;
+  for (auto [index, element] : llvm::enumerate(elements)) {
+    TupleToElementsOp split =
+        getExactRoundTripSplit(element, index, elements.size());
+    if (!split)
+      return {};
+    if (!sourceTuple) {
+      sourceTuple = split.getTuple();
+      continue;
+    }
+    if (sourceTuple != split.getTuple())
+      return {};
+  }
+  return sourceTuple;
+}
+
+OpFoldResult TupleFromElementsOp::fold(FoldAdaptor) {
+  if (getElements().size() == 1 &&
+      getElements().front().getType() == getTuple().getType())
+    return getElements().front();
+  Value sourceTuple = getExactRoundTripSource(getElements());
+  if (sourceTuple && sourceTuple.getType() == getTuple().getType())
+    return sourceTuple;
+  return {};
+}
+
+LogicalResult UpdateTupleOp::verify() {
+  RegType baseType = cast<RegType>(getBase().getType());
+  RegType resultType = cast<RegType>(getResult().getType());
+  if (baseType.getWidthDwords() != resultType.getWidthDwords())
+    return emitOpError("base width must match result width");
+  if (baseType.getBaseGRF() >= 0 && resultType.getBaseGRF() >= 0 &&
+      baseType.getBaseGRF() != resultType.getBaseGRF())
+    return emitOpError("physical base must match result storage");
+
+  ArrayAttr offsets = getOffsets();
+  if (offsets.size() != getUpdates().size())
+    return emitOpError("offset count must match update count");
+
+  int64_t lastEnd = 0;
+  for (auto [offsetAttr, update] : llvm::zip_equal(offsets, getUpdates())) {
+    auto offsetInt = dyn_cast<IntegerAttr>(offsetAttr);
+    if (!offsetInt)
+      return emitOpError("offsets must be integer attributes");
+    int64_t offset = offsetInt.getInt();
+    if (offset < 0)
+      return emitOpError("offsets must be non-negative");
+    if (offset < lastEnd)
+      return emitOpError("offsets must be sorted and non-overlapping");
+    RegType updateType = cast<RegType>(update.getType());
+    int64_t end = offset + updateType.getWidthDwords();
+    if (end > baseType.getWidthDwords())
+      return emitOpError("update exceeds tuple width");
+    if (resultType.getBaseGRF() >= 0 && updateType.getBaseGRF() >= 0 &&
+        (offset % 16 != 0 ||
+         updateType.getBaseGRF() != resultType.getBaseGRF() + offset / 16))
+      return emitOpError(
+          "physical update placement must match its tuple offset");
+    lastEnd = end;
+  }
+  return success();
+}
+
+static LogicalResult verifyA64AddressPayload(Operation *operation,
+                                             Value address,
+                                             int64_t executionSize) {
+  if (executionSize != 32)
+    return operation->emitOpError("requires SIMD32 execution");
+  if (cast<RegType>(address.getType()).getWidthDwords() != 64)
+    return operation->emitOpError(
+        "requires a 64-dword address payload for SIMD32 A64");
+  return success();
+}
+
+LogicalResult LoadA64Op::verify() {
+  return verifyA64AddressPayload(*this, getAddrPayload(), getExecSize());
+}
+
+LogicalResult StoreA64Op::verify() {
+  return verifyA64AddressPayload(*this, getAddrPayload(), getExecSize());
+}
+
+LogicalResult AtomicIAddA64Op::verify() {
+  return verifyA64AddressPayload(*this, getAddrPayload(), getExecSize());
+}
 
 //===----------------------------------------------------------------------===//
 // Structured control flow region modeling.
@@ -31,15 +230,14 @@ void ExecIfOp::getSuccessorRegions(RegionBranchPoint point,
     return;
   }
 
-  Region *source =
-      point.getTerminatorPredecessorOrNull()->getParentRegion();
+  Region *source = point.getTerminatorPredecessorOrNull()->getParentRegion();
   if (source == &getThenRegion() && hasElse)
     regions.emplace_back(&getElseRegion());
   regions.emplace_back(getOperation());
 }
 
-void UniformIfOp::getSuccessorRegions(RegionBranchPoint point,
-                                      SmallVectorImpl<RegionSuccessor> &regions) {
+void UniformIfOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   if (point.isParent()) {
     regions.emplace_back(&getThenRegion());
     if (getElseRegion().empty())
@@ -75,7 +273,7 @@ ValueRange UniformIfOp::getSuccessorInputs(RegionSuccessor successor) {
 
 ValueRange UniformLoopOp::getSuccessorInputs(RegionSuccessor successor) {
   return successor.isOperation() ? ValueRange(getResults())
-                                  : getBody().getArguments();
+                                 : getBody().getArguments();
 }
 
 OperandRange
@@ -94,6 +292,5 @@ YieldOp::getMutableSuccessorOperands(RegionSuccessor successor) {
 MutableOperandRange
 ContinueIfOp::getMutableSuccessorOperands(RegionSuccessor point) {
   // Operand 0 is the condition; only carried values flow to successors.
-  return MutableOperandRange(getOperation(), /*start=*/1,
-                             getNumOperands() - 1);
+  return MutableOperandRange(getOperation(), /*start=*/1, getNumOperands() - 1);
 }

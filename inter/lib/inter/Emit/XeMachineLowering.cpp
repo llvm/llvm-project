@@ -115,9 +115,17 @@ private:
   ProducerDistance getYoungestProducer(Operation *operation,
                                        ValueRange operands) const {
     ProducerDistance youngest;
-    for (Value operand : operands) {
+    SmallVector<Value> worklist(operands.begin(), operands.end());
+    while (!worklist.empty()) {
+      Value operand = worklist.pop_back_val();
       if (isa<MemTokenType>(operand.getType()))
         continue;
+      Operation *ssaDefinition = operand.getDefiningOp();
+      if (ssaDefinition &&
+          ssaDefinition->hasTrait<OpTrait::xemachine::NoMachineInst>()) {
+        llvm::append_range(worklist, ssaDefinition->getOperands());
+        continue;
+      }
       Operation *definingOperation = definingOperations.lookup(operand);
       if (!definingOperation || isa<SendOp>(definingOperation))
         continue;

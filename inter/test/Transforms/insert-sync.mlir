@@ -9,9 +9,9 @@
 // CHECK-NEXT: xemachine.add
 func.func @load_consumer() {
   %root = xemachine.token
-  %address = xemachine.archreg 1 : !xemachine.reg<16, 1>
+  %address = xemachine.archreg 20 : !xemachine.reg<64, 20>
   %loaded, %load_token = xemachine.load_a64 %address dep %root
-      : !xemachine.reg<16, 1> -> (!xemachine.reg<32, 4>, !xemachine.mem.token)
+      : !xemachine.reg<64, 20> -> (!xemachine.reg<32, 4>, !xemachine.mem.token)
   %sum = xemachine.add %loaded, %loaded {execSize = 32 : i32}
       : (!xemachine.reg<32, 4>, !xemachine.reg<32, 4>, i32)
       -> !xemachine.reg<32, 6>
@@ -26,13 +26,13 @@ func.func @load_consumer() {
 // CHECK-NEXT: {{%.*}}, {{%.*}} = xemachine.load_a64 {{.*}} dep [[STORE]]
 func.func @store_order() {
   %root = xemachine.token
-  %address = xemachine.archreg 1 : !xemachine.reg<16, 1>
+  %address = xemachine.archreg 20 : !xemachine.reg<64, 20>
   %data = xemachine.archreg 2 : !xemachine.reg<16, 2>
   %store = xemachine.store_a64 %address data %data dep %root
-      : (!xemachine.reg<16, 1>, !xemachine.reg<16, 2>)
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 2>)
       -> !xemachine.mem.token
   %loaded, %load_token = xemachine.load_a64 %address dep %store
-      : !xemachine.reg<16, 1> -> (!xemachine.reg<32, 4>, !xemachine.mem.token)
+      : !xemachine.reg<64, 20> -> (!xemachine.reg<32, 4>, !xemachine.mem.token)
   return
 }
 
@@ -43,10 +43,10 @@ func.func @store_order() {
 // CHECK-NEXT: xemachine.mov
 func.func @payload_reuse() {
   %root = xemachine.token
-  %address = xemachine.archreg 1 : !xemachine.reg<16, 1>
+  %address = xemachine.archreg 20 : !xemachine.reg<64, 20>
   %data = xemachine.archreg 4 : !xemachine.reg<16, 4>
   %store = xemachine.store_a64 %address data %data dep %root
-      : (!xemachine.reg<16, 1>, !xemachine.reg<16, 4>)
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>)
       -> !xemachine.mem.token
   %zero = xemachine.imm 0 : i32
   %reuse = xemachine.mov %zero : (!xemachine.imm, i32)
@@ -61,9 +61,9 @@ func.func @payload_reuse() {
 // CHECK-NEXT: xemachine.mov
 func.func @destination_reuse() {
   %root = xemachine.token
-  %address = xemachine.archreg 1 : !xemachine.reg<16, 1>
+  %address = xemachine.archreg 20 : !xemachine.reg<64, 20>
   %loaded, %load_token = xemachine.load_a64 %address dep %root
-      : !xemachine.reg<16, 1> -> (!xemachine.reg<32, 4>, !xemachine.mem.token)
+      : !xemachine.reg<64, 20> -> (!xemachine.reg<32, 4>, !xemachine.mem.token)
   %zero = xemachine.imm 0 : i32
   %reuse = xemachine.mov %zero : (!xemachine.imm, i32)
       -> !xemachine.reg<16, 4>
@@ -77,9 +77,9 @@ func.func @destination_reuse() {
 // CHECK-NEXT: xemachine.add
 func.func @virtual_destination() {
   %root = xemachine.token
-  %address = xemachine.archreg 1 : !xemachine.reg<16, 1>
+  %address = xemachine.archreg 20 : !xemachine.reg<64, 20>
   %loaded, %load_token = xemachine.load_a64 %address dep %root
-      : !xemachine.reg<16, 1> -> (!xemachine.reg<32, -1>, !xemachine.mem.token)
+      : !xemachine.reg<64, 20> -> (!xemachine.reg<32, -1>, !xemachine.mem.token)
   %sum = xemachine.add %loaded, %loaded {execSize = 32 : i32}
       : (!xemachine.reg<32, -1>, !xemachine.reg<32, -1>, i32)
       -> !xemachine.reg<32, -1>
@@ -94,14 +94,14 @@ func.func @virtual_destination() {
 // CHECK: xemachine.load_a64 {{.*}} dep [[AFTER]]
 func.func @issue_only() {
   %root = xemachine.token
-  %address = xemachine.archreg 1 : !xemachine.reg<16, 1>
+  %address = xemachine.archreg 20 : !xemachine.reg<64, 20>
   %data = xemachine.archreg 2 : !xemachine.reg<16, 2>
   %store = xemachine.store_a64 %address data %data dep %root
-      : (!xemachine.reg<16, 1>, !xemachine.reg<16, 2>)
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 2>)
       -> !xemachine.mem.token
   %after = xemachine.after %store : !xemachine.mem.token
   %loaded, %load_token = xemachine.load_a64 %address dep %after
-      : !xemachine.reg<16, 1> -> (!xemachine.reg<32, 4>, !xemachine.mem.token)
+      : !xemachine.reg<64, 20> -> (!xemachine.reg<32, 4>, !xemachine.mem.token)
   return
 }
 
@@ -113,9 +113,9 @@ func.func @issue_only() {
 // CHECK-NEXT: xemachine.add
 func.func @bar_preserves_scoreboard() {
   %root = xemachine.token
-  %address = xemachine.archreg 1 : !xemachine.reg<16, 1>
+  %address = xemachine.archreg 20 : !xemachine.reg<64, 20>
   %loaded, %load_token = xemachine.load_a64 %address dep %root
-      : !xemachine.reg<16, 1> -> (!xemachine.reg<32, 4>, !xemachine.mem.token)
+      : !xemachine.reg<64, 20> -> (!xemachine.reg<32, 4>, !xemachine.mem.token)
   %bar = xemachine.sync bar dep %load_token : !xemachine.mem.token
   %sum = xemachine.add %loaded, %loaded {execSize = 32 : i32}
       : (!xemachine.reg<32, 4>, !xemachine.reg<32, 4>, i32)
@@ -130,14 +130,14 @@ func.func @bar_preserves_scoreboard() {
 // CHECK-NEXT: {{%.*}}, {{%.*}} = xemachine.load_a64 {{.*}} dep [[BAR]]
 func.func @bar_retires_reads() {
   %root = xemachine.token
-  %address = xemachine.archreg 1 : !xemachine.reg<16, 1>
+  %address = xemachine.archreg 20 : !xemachine.reg<64, 20>
   %data = xemachine.archreg 2 : !xemachine.reg<16, 2>
   %store = xemachine.store_a64 %address data %data dep %root
-      : (!xemachine.reg<16, 1>, !xemachine.reg<16, 2>)
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 2>)
       -> !xemachine.mem.token
   %bar = xemachine.sync bar dep %store : !xemachine.mem.token
   %loaded, %load_token = xemachine.load_a64 %address dep %bar
-      : !xemachine.reg<16, 1> -> (!xemachine.reg<32, 4>, !xemachine.mem.token)
+      : !xemachine.reg<64, 20> -> (!xemachine.reg<32, 4>, !xemachine.mem.token)
   return
 }
 
@@ -150,12 +150,12 @@ func.func @bar_retires_reads() {
 // CHECK-NEXT: xemachine.eot {{.*}} dep [[JOIN]]
 func.func @joined_eot() {
   %root = xemachine.token
-  %address = xemachine.archreg 1 : !xemachine.reg<16, 1>
+  %address = xemachine.archreg 20 : !xemachine.reg<64, 20>
   %data = xemachine.archreg 2 : !xemachine.reg<16, 2>
   %loaded, %load = xemachine.load_a64 %address dep %root
-      : !xemachine.reg<16, 1> -> (!xemachine.reg<32, 4>, !xemachine.mem.token)
+      : !xemachine.reg<64, 20> -> (!xemachine.reg<32, 4>, !xemachine.mem.token)
   %store = xemachine.store_a64 %address data %data dep %root
-      : (!xemachine.reg<16, 1>, !xemachine.reg<16, 2>)
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 2>)
       -> !xemachine.mem.token
   %join = xemachine.token_join %load, %store
       : !xemachine.mem.token, !xemachine.mem.token
@@ -174,18 +174,18 @@ func.func @joined_eot() {
 // CHECK-NEXT: xemachine.load_a64 {{.*}} dep [[IF]]
 func.func @branch_join(%flag: !xemachine.arf<f, 2, 0>) {
   %root = xemachine.token
-  %address = xemachine.archreg 1 : !xemachine.reg<16, 1>
+  %address = xemachine.archreg 20 : !xemachine.reg<64, 20>
   %data = xemachine.archreg 2 : !xemachine.reg<16, 2>
   %if_token = xemachine.exec_if %flag : !xemachine.arf<f, 2, 0> {
     %store = xemachine.store_a64 %address data %data dep %root
-        : (!xemachine.reg<16, 1>, !xemachine.reg<16, 2>)
+        : (!xemachine.reg<64, 20>, !xemachine.reg<16, 2>)
         -> !xemachine.mem.token
     xemachine.yield %store : !xemachine.mem.token
   } otherwise {
     xemachine.yield %root : !xemachine.mem.token
   } -> !xemachine.mem.token
   %loaded, %load_token = xemachine.load_a64 %address dep %if_token
-      : !xemachine.reg<16, 1> -> (!xemachine.reg<32, 4>, !xemachine.mem.token)
+      : !xemachine.reg<64, 20> -> (!xemachine.reg<32, 4>, !xemachine.mem.token)
   return
 }
 
@@ -200,11 +200,11 @@ func.func @branch_join(%flag: !xemachine.arf<f, 2, 0>) {
 // CHECK-NEXT: xemachine.add [[RESULTS]]#0, [[RESULTS]]#0
 func.func @branch_data_result(%flag: !xemachine.arf<f, 2, 0>) {
   %root = xemachine.token
-  %address = xemachine.archreg 1 : !xemachine.reg<16, 1>
+  %address = xemachine.archreg 20 : !xemachine.reg<64, 20>
   %data_result, %token_result =
       xemachine.uniform_if %flag : !xemachine.arf<f, 2, 0> {
     %loaded, %load = xemachine.load_a64 %address dep %root
-        : !xemachine.reg<16, 1>
+        : !xemachine.reg<64, 20>
         -> (!xemachine.reg<32, 4>, !xemachine.mem.token)
     xemachine.yield %loaded, %load
         : !xemachine.reg<32, 4>, !xemachine.mem.token
@@ -230,10 +230,10 @@ func.func @branch_data_result(%flag: !xemachine.arf<f, 2, 0>) {
 // CHECK: xemachine.sync allrd
 func.func @branch_without_else(%flag: !xemachine.arf<f, 2, 0>) {
   %root = xemachine.token
-  %address = xemachine.archreg 1 : !xemachine.reg<16, 1>
+  %address = xemachine.archreg 20 : !xemachine.reg<64, 20>
   %data = xemachine.archreg 2 : !xemachine.reg<16, 2>
   %store = xemachine.store_a64 %address data %data dep %root
-      : (!xemachine.reg<16, 1>, !xemachine.reg<16, 2>)
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 2>)
       -> !xemachine.mem.token
   xemachine.exec_if %flag : !xemachine.arf<f, 2, 0> {
     %zero = xemachine.imm 0 : i32
@@ -259,15 +259,15 @@ func.func @branch_without_else(%flag: !xemachine.arf<f, 2, 0>) {
 // CHECK-NEXT: xemachine.mov {{.*}}noMask{{.*}} -> !xemachine.reg<16, 6>
 func.func @cross_arm_hazards(%flag: !xemachine.arf<f, 2, 0>) {
   %root = xemachine.token
-  %address = xemachine.archreg 1 : !xemachine.reg<16, 1>
+  %address = xemachine.archreg 20 : !xemachine.reg<64, 20>
   %payload = xemachine.archreg 6 : !xemachine.reg<16, 6>
   %zero = xemachine.imm 0 : i32
   xemachine.exec_if %flag : !xemachine.arf<f, 2, 0> {
     %loaded, %load = xemachine.load_a64 %address dep %root
-        : !xemachine.reg<16, 1>
+        : !xemachine.reg<64, 20>
         -> (!xemachine.reg<32, 4>, !xemachine.mem.token)
     %store = xemachine.store_a64 %address data %payload dep %root
-        : (!xemachine.reg<16, 1>, !xemachine.reg<16, 6>)
+        : (!xemachine.reg<64, 20>, !xemachine.reg<16, 6>)
         -> !xemachine.mem.token
     xemachine.yield
   } otherwise {
@@ -289,19 +289,19 @@ func.func @cross_arm_hazards(%flag: !xemachine.arf<f, 2, 0>) {
 // CHECK-NEXT: xemachine.sync allwr
 // CHECK-NEXT: xemachine.mov [[ZERO]] {{.*}} -> !xemachine.reg<16, 4>
 // CHECK-NEXT: xemachine.sync allrd
-// CHECK-NEXT: xemachine.mov [[ZERO]] {{.*}} -> !xemachine.reg<16, 1>
+// CHECK-NEXT: xemachine.mov [[ZERO]] {{.*}} -> !xemachine.reg<64, 20>
 func.func @multiple_branch_tokens(%flag: !xemachine.arf<f, 2, 0>) {
   %root = xemachine.token
-  %address = xemachine.archreg 1 : !xemachine.reg<16, 1>
+  %address = xemachine.archreg 20 : !xemachine.reg<64, 20>
   %data = xemachine.archreg 2 : !xemachine.reg<16, 2>
   %zero = xemachine.imm 0 : i32
   %load_result, %store_result =
       xemachine.uniform_if %flag : !xemachine.arf<f, 2, 0> {
     %loaded, %load = xemachine.load_a64 %address dep %root
-        : !xemachine.reg<16, 1>
+        : !xemachine.reg<64, 20>
         -> (!xemachine.reg<32, 4>, !xemachine.mem.token)
     %store = xemachine.store_a64 %address data %data dep %root
-        : (!xemachine.reg<16, 1>, !xemachine.reg<16, 2>)
+        : (!xemachine.reg<64, 20>, !xemachine.reg<16, 2>)
         -> !xemachine.mem.token
     xemachine.yield %load, %store
         : !xemachine.mem.token, !xemachine.mem.token
@@ -312,7 +312,7 @@ func.func @multiple_branch_tokens(%flag: !xemachine.arf<f, 2, 0>) {
   %reuse_destination = xemachine.mov %zero : (!xemachine.imm, i32)
       -> !xemachine.reg<16, 4>
   %reuse_address = xemachine.mov %zero : (!xemachine.imm, i32)
-      -> !xemachine.reg<16, 1>
+      -> !xemachine.reg<64, 20>
   return
 }
 
@@ -327,18 +327,18 @@ func.func @multiple_branch_tokens(%flag: !xemachine.arf<f, 2, 0>) {
 // CHECK-NEXT: xemachine.load_a64 {{.*}} dep [[LOOP]]
 func.func @loop_carried_token(%flag: !xemachine.arf<f, 2, 0>) {
   %root = xemachine.token
-  %address = xemachine.archreg 1 : !xemachine.reg<16, 1>
+  %address = xemachine.archreg 20 : !xemachine.reg<64, 20>
   %data = xemachine.archreg 2 : !xemachine.reg<16, 2>
   %loop_token = xemachine.uniform_loop (%root) {
   ^bb0(%iter: !xemachine.mem.token):
     %store = xemachine.store_a64 %address data %data dep %iter
-        : (!xemachine.reg<16, 1>, !xemachine.reg<16, 2>)
+        : (!xemachine.reg<64, 20>, !xemachine.reg<16, 2>)
         -> !xemachine.mem.token
     xemachine.continue_if %flag : !xemachine.arf<f, 2, 0>
         (%store : !xemachine.mem.token)
   } : (!xemachine.mem.token) -> !xemachine.mem.token
   %loaded, %load_token = xemachine.load_a64 %address dep %loop_token
-      : !xemachine.reg<16, 1>
+      : !xemachine.reg<64, 20>
       -> (!xemachine.reg<32, 4>, !xemachine.mem.token)
   return
 }
@@ -354,14 +354,14 @@ func.func @loop_carried_token(%flag: !xemachine.arf<f, 2, 0>) {
 // CHECK-NEXT: xemachine.eot {{.*}} dep [[LOOP]]
 func.func @nested_loop_branch(%flag: !xemachine.arf<f, 2, 0>) {
   %root = xemachine.token
-  %address = xemachine.archreg 1 : !xemachine.reg<16, 1>
+  %address = xemachine.archreg 20 : !xemachine.reg<64, 20>
   %data = xemachine.archreg 2 : !xemachine.reg<16, 2>
   %loop_token = xemachine.uniform_loop (%root) {
   ^bb0(%iter: !xemachine.mem.token):
     %branch_token =
         xemachine.uniform_if %flag : !xemachine.arf<f, 2, 0> {
       %store = xemachine.store_a64 %address data %data dep %iter
-          : (!xemachine.reg<16, 1>, !xemachine.reg<16, 2>)
+          : (!xemachine.reg<64, 20>, !xemachine.reg<16, 2>)
           -> !xemachine.mem.token
       xemachine.yield %store : !xemachine.mem.token
     } otherwise {
@@ -384,9 +384,9 @@ func.func @nested_loop_branch(%flag: !xemachine.arf<f, 2, 0>) {
 // CHECK-NEXT: xemachine.add [[ITER]], [[ITER]]
 func.func @loop_forwarded_init(%flag: !xemachine.arf<f, 2, 0>) {
   %root = xemachine.token
-  %address = xemachine.archreg 1 : !xemachine.reg<16, 1>
+  %address = xemachine.archreg 20 : !xemachine.reg<64, 20>
   %loaded, %load_token = xemachine.load_a64 %address dep %root
-      : !xemachine.reg<16, 1>
+      : !xemachine.reg<64, 20>
       -> (!xemachine.reg<32, 4>, !xemachine.mem.token)
   %loop_result = xemachine.uniform_loop (%loaded) {
   ^bb0(%iter: !xemachine.reg<32, 4>):
@@ -409,7 +409,7 @@ func.func @loop_forwarded_init(%flag: !xemachine.arf<f, 2, 0>) {
 // CHECK-NEXT: xemachine.load_a64 {{.*}} dep [[LOOP]]
 func.func @generic_region_branch_loop() {
   %root = xemachine.token
-  %address = xemachine.archreg 1 : !xemachine.reg<16, 1>
+  %address = xemachine.archreg 20 : !xemachine.reg<64, 20>
   %data = xemachine.archreg 2 : !xemachine.reg<16, 2>
   %lb = arith.constant 0 : index
   %ub = arith.constant 4 : index
@@ -417,12 +417,12 @@ func.func @generic_region_branch_loop() {
   %loop_token = scf.for %iv = %lb to %ub step %step
       iter_args(%iter = %root) -> !xemachine.mem.token {
     %store = xemachine.store_a64 %address data %data dep %iter
-        : (!xemachine.reg<16, 1>, !xemachine.reg<16, 2>)
+        : (!xemachine.reg<64, 20>, !xemachine.reg<16, 2>)
         -> !xemachine.mem.token
     scf.yield %store : !xemachine.mem.token
   }
   %loaded, %load_token = xemachine.load_a64 %address dep %loop_token
-      : !xemachine.reg<16, 1>
+      : !xemachine.reg<64, 20>
       -> (!xemachine.reg<32, 4>, !xemachine.mem.token)
   return
 }
@@ -438,19 +438,19 @@ func.func @generic_region_branch_loop() {
 // CHECK-NEXT: xemachine.mov {{.*}} -> !xemachine.reg<16, 8>
 func.func @nested_replay_after_fixpoint(%flag: !xemachine.arf<f, 2, 0>) {
   %root = xemachine.token
-  %address = xemachine.archreg 1 : !xemachine.reg<16, 1>
+  %address = xemachine.archreg 20 : !xemachine.reg<64, 20>
   %zero = xemachine.imm 0 : i32
   %loop = xemachine.uniform_loop (%root) {
   ^bb0(%iter: !xemachine.mem.token):
     xemachine.uniform_if %flag : !xemachine.arf<f, 2, 0> {
       %x, %x_token = xemachine.load_a64 %address dep %root
-          : !xemachine.reg<16, 1>
+          : !xemachine.reg<64, 20>
           -> (!xemachine.reg<32, 4>, !xemachine.mem.token)
       %a, %a_token = xemachine.load_a64 %address dep %iter
-          : !xemachine.reg<16, 1>
+          : !xemachine.reg<64, 20>
           -> (!xemachine.reg<32, 12>, !xemachine.mem.token)
       %w, %w_token = xemachine.load_a64 %address dep %root
-          : !xemachine.reg<16, 1>
+          : !xemachine.reg<64, 20>
           -> (!xemachine.reg<32, 8>, !xemachine.mem.token)
       %sum = xemachine.add %x, %x {execSize = 32 : i32}
           : (!xemachine.reg<32, 4>, !xemachine.reg<32, 4>, i32)
@@ -460,7 +460,7 @@ func.func @nested_replay_after_fixpoint(%flag: !xemachine.arf<f, 2, 0>) {
     %reuse = xemachine.mov %zero : (!xemachine.imm, i32)
         -> !xemachine.reg<16, 8>
     %z, %z_token = xemachine.load_a64 %address dep %root
-        : !xemachine.reg<16, 1>
+        : !xemachine.reg<64, 20>
         -> (!xemachine.reg<32, 16>, !xemachine.mem.token)
     xemachine.continue_if %flag : !xemachine.arf<f, 2, 0>
         (%z_token : !xemachine.mem.token)
@@ -480,12 +480,12 @@ func.func @nested_replay_after_fixpoint(%flag: !xemachine.arf<f, 2, 0>) {
 // CHECK-NEXT: xemachine.mov
 func.func @loop_physical_waw(%flag: !xemachine.arf<f, 2, 0>) {
   %root = xemachine.token
-  %address = xemachine.archreg 1 : !xemachine.reg<16, 1>
+  %address = xemachine.archreg 20 : !xemachine.reg<64, 20>
   %zero = xemachine.imm 0 : i32
   xemachine.uniform_loop () {
   ^bb0:
     %loaded, %load_token = xemachine.load_a64 %address dep %root
-        : !xemachine.reg<16, 1>
+        : !xemachine.reg<64, 20>
         -> (!xemachine.reg<32, 4>, !xemachine.mem.token)
     xemachine.continue_if %flag : !xemachine.arf<f, 2, 0>
   } : () -> ()

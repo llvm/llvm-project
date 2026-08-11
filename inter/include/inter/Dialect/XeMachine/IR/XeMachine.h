@@ -5,8 +5,11 @@
 
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "llvm/ADT/StringRef.h"
+
+#include <cstdint>
 
 namespace inter::xemachine {
 
@@ -24,6 +27,16 @@ inline constexpr llvm::StringLiteral kPerThreadPayloadSizeAttrName =
 inline constexpr llvm::StringLiteral kPayloadEntryOffsetAttrName =
     "xemachine.payload_entry_offset";
 inline constexpr llvm::StringLiteral kSlmSizeAttrName = "xemachine.slm_size";
+
+/// Relative register-storage constraint, in dwords.
+struct RegisterStorageAlias {
+  mlir::Value storage;
+  mlir::Value alias;
+  int64_t offset = 0;
+
+  /// The alias is consumed while storage is overwritten.
+  bool destructive = false;
+};
 
 } // namespace inter::xemachine
 

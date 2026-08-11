@@ -25,4 +25,6 @@ module {
 // CHECK: xemachine.mov [[R1]] {{.*}}-> !xemachine.reg<16, 4>
 // CHECK: xemachine.load_block_a32 {{.*}}words = 16
 // CHECK: xemachine.sync allwr
-// CHECK: xemachine.atomic_iadd_a64
+// CHECK: [[ADDR:%.*]] = xemachine.tuple_from_elements
+// CHECK-SAME: -> !xemachine.reg<64,
+// CHECK: xemachine.atomic_iadd_a64 [[ADDR]]
