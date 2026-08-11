@@ -18,6 +18,7 @@
 #include "RISCVTargetMachine.h"
 #include "RISCVVLOptimizer.h"
 #include "RISCVVectorPeephole.h"
+#include "RISCVZacasABIFix.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/BranchRelaxation.h"
 #include "llvm/CodeGen/InterleavedAccess.h"

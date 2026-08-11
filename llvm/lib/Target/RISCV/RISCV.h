@@ -88,18 +88,6 @@ void initializeRISCVLoadStoreOptPass(PassRegistry &);
 FunctionPass *createRISCVPreAllocZilsdOptPass();
 void initializeRISCVPreAllocZilsdOptPass(PassRegistry &);
 
-class RISCVZacasABIFixPass
-    : public RequiredPassInfoMixin<RISCVZacasABIFixPass> {
-private:
-  const RISCVTargetMachine *TM;
-
-public:
-  RISCVZacasABIFixPass(const RISCVTargetMachine *TM) : TM(TM) {}
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
-};
-FunctionPass *createRISCVZacasABIFixPass();
-void initializeRISCVZacasABIFixLegacyPass(PassRegistry &);
-
 InstructionSelector *
 createRISCVInstructionSelector(const RISCVTargetMachine &,
                                const RISCVSubtarget &,

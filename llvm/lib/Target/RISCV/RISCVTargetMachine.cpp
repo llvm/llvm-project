@@ -23,6 +23,7 @@
 #include "RISCVTargetTransformInfo.h"
 #include "RISCVVLOptimizer.h"
 #include "RISCVVectorPeephole.h"
+#include "RISCVZacasABIFix.h"
 #include "TargetInfo/RISCVTargetInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
