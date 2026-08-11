@@ -59,12 +59,12 @@ bool SystemZXPLINKAsmPrinter::doInitialization(Module &M) {
     if (IsFunc) {
       if (Alias.hasWeakLinkage() || Alias.hasLinkOnceLinkage())
         OutContext.reportError({},
-                                "Weak alias/reference not supported on z/OS");
+                               "Weak alias/reference not supported on z/OS");
 
       GOAliasMap[Aliasee].push_back(&Alias);
     } else
-      OutContext.reportError(
-          {}, "Only aliases to functions is supported in GOFF.");
+      OutContext.reportError({},
+                             "Only aliases to functions is supported in GOFF.");
   }
   return AsmPrinter::doInitialization(M);
 }
@@ -81,8 +81,9 @@ void SystemZXPLINKAsmPrinter::emitCallInformation(CallType CT) {
                      .addReg(SystemZMC::GR64Regs[static_cast<unsigned>(CT)]));
 }
 
-uint32_t SystemZXPLINKAsmPrinter::AssociatedDataAreaTable::insert(
-    const MCSymbol *Sym, unsigned SlotKind) {
+uint32_t
+SystemZXPLINKAsmPrinter::AssociatedDataAreaTable::insert(const MCSymbol *Sym,
+                                                         unsigned SlotKind) {
   auto Key = std::make_pair(Sym, SlotKind);
   auto It = Displacements.find(Key);
 
@@ -131,27 +132,23 @@ void SystemZXPLINKAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   switch (MI->getOpcode()) {
   case SystemZ::CallBRASL_XPLINK64:
-    EmitToStreamer(*OutStreamer,
-                   MCInstBuilder(SystemZ::BRASL)
-                       .addReg(SystemZ::R7D)
-                       .addExpr(Lower.getExpr(MI->getOperand(0),
-                                              SystemZ::S_None)));
+    EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::BRASL)
+                                     .addReg(SystemZ::R7D)
+                                     .addExpr(Lower.getExpr(MI->getOperand(0),
+                                                            SystemZ::S_None)));
     emitCallInformation(CallType::BRASL7);
     return;
 
   case SystemZ::CallBASR_XPLINK64:
-    EmitToStreamer(*OutStreamer,
-                   MCInstBuilder(SystemZ::BASR)
-                       .addReg(SystemZ::R7D)
-                       .addReg(MI->getOperand(0).getReg()));
+    EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::BASR)
+                                     .addReg(SystemZ::R7D)
+                                     .addReg(MI->getOperand(0).getReg()));
     emitCallInformation(CallType::BASR76);
     return;
 
   case SystemZ::Return_XPLINK:
-    LoweredMI = MCInstBuilder(SystemZ::B)
-                    .addReg(SystemZ::R7D)
-                    .addImm(2)
-                    .addReg(0);
+    LoweredMI =
+        MCInstBuilder(SystemZ::B).addReg(SystemZ::R7D).addImm(2).addReg(0);
     break;
 
   case SystemZ::CondReturn_XPLINK:
@@ -164,10 +161,9 @@ void SystemZXPLINKAsmPrinter::emitInstruction(const MachineInstr *MI) {
     break;
 
   case SystemZ::CallBASR_STACKEXT:
-    EmitToStreamer(*OutStreamer,
-                   MCInstBuilder(SystemZ::BASR)
-                       .addReg(SystemZ::R3D)
-                       .addReg(MI->getOperand(0).getReg()));
+    EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::BASR)
+                                     .addReg(SystemZ::R3D)
+                                     .addReg(MI->getOperand(0).getReg()));
     emitCallInformation(CallType::BASR33);
     return;
 
@@ -195,17 +191,16 @@ void SystemZXPLINKAsmPrinter::emitInstruction(const MachineInstr *MI) {
             MCInstBuilder(SystemZ::LLILF).addReg(TargetReg).addImm(Disp));
       } else
         EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::ALGFI)
-                                        .addReg(TargetReg)
-                                        .addReg(TargetReg)
-                                        .addImm(Disp));
+                                         .addReg(TargetReg)
+                                         .addReg(TargetReg)
+                                         .addImm(Disp));
       Disp = 0;
       Op = Op0;
     }
-    EmitToStreamer(*OutStreamer, MCInstBuilder(Op)
-                                    .addReg(TargetReg)
-                                    .addReg(ADAReg)
-                                    .addImm(Disp)
-                                    .addReg(IndexReg));
+    EmitToStreamer(
+        *OutStreamer,
+        MCInstBuilder(Op).addReg(TargetReg).addReg(ADAReg).addImm(Disp).addReg(
+            IndexReg));
     return;
   }
 
@@ -217,8 +212,8 @@ void SystemZXPLINKAsmPrinter::emitInstruction(const MachineInstr *MI) {
 }
 
 void SystemZXPLINKAsmPrinter::emitXXStructorList(const DataLayout &DL,
-                                                  const Constant *List,
-                                                  bool IsCtor) {
+                                                 const Constant *List,
+                                                 bool IsCtor) {
   assert(TM.getTargetTriple().isOSBinFormatGOFF() && "Only GOFF supported");
 
   SmallVector<Structor, 8> Structors;
@@ -756,7 +751,7 @@ void SystemZXPLINKAsmPrinter::emitPPA2(Module &M) {
 }
 
 void SystemZXPLINKAsmPrinter::emitGlobalAlias(const Module &M,
-                                               const GlobalAlias &GA) {
+                                              const GlobalAlias &GA) {
   if (!TM.getTargetTriple().isOSzOS())
     return AsmPrinter::emitGlobalAlias(M, GA);
 
@@ -764,8 +759,8 @@ void SystemZXPLINKAsmPrinter::emitGlobalAlias(const Module &M,
 }
 
 const MCExpr *SystemZXPLINKAsmPrinter::lowerConstant(const Constant *CV,
-                                                      const Constant *BaseCV,
-                                                      uint64_t Offset) {
+                                                     const Constant *BaseCV,
+                                                     uint64_t Offset) {
   const GlobalAlias *GA = dyn_cast<GlobalAlias>(CV);
   const GlobalVariable *GV = dyn_cast<GlobalVariable>(CV);
   const Function *FV = dyn_cast<Function>(CV);
@@ -784,7 +779,7 @@ const MCExpr *SystemZXPLINKAsmPrinter::lowerConstant(const Constant *CV,
     OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeFunction);
     if (FV->hasExternalLinkage())
       return MCSpecifierExpr::create(MCSymbolRefExpr::create(Sym, OutContext),
-                                      SystemZ::S_VCon, OutContext);
+                                     SystemZ::S_VCon, OutContext);
     // Trigger creation of function descriptor in ADA for internal
     // functions.
     unsigned Disp = ADATable.insert(Sym, SystemZII::MO_ADA_DIRECT_FUNC_DESC);

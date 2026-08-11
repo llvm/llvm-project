@@ -43,7 +43,7 @@ private:
                                      SystemZMCInstLower &Lower);
   void LowerPATCHABLE_RET(const MachineInstr &MI, SystemZMCInstLower &Lower);
   void lowerLOAD_TLS_BLOCK_ADDR(const MachineInstr &MI,
-                                 SystemZMCInstLower &Lower);
+                                SystemZMCInstLower &Lower);
   void lowerLOAD_GLOBAL_STACKGUARD_ADDR(const MachineInstr &MI,
                                         SystemZMCInstLower &Lower);
   void emitAttributes(Module &M);

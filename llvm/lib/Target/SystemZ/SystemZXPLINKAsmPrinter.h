@@ -105,7 +105,7 @@ class LLVM_LIBRARY_VISIBILITY SystemZXPLINKAsmPrinter
 
 public:
   SystemZXPLINKAsmPrinter(TargetMachine &TM,
-                           std::unique_ptr<MCStreamer> Streamer);
+                          std::unique_ptr<MCStreamer> Streamer);
 
   // Override AsmPrinter.
   void emitInstruction(const MachineInstr *MI) override;

@@ -33,19 +33,16 @@ static unsigned EmitNop(MCContext &OutContext, MCStreamer &OutStreamer,
   if (NumBytes < 2) {
     llvm_unreachable("Zero nops?");
     return 0;
-  }
-  else if (NumBytes < 4) {
+  } else if (NumBytes < 4) {
     OutStreamer.emitInstruction(
         MCInstBuilder(SystemZ::BCRAsm).addImm(0).addReg(SystemZ::R0D), STI);
     return 2;
-  }
-  else if (NumBytes < 6) {
+  } else if (NumBytes < 6) {
     OutStreamer.emitInstruction(
         MCInstBuilder(SystemZ::BCAsm).addImm(0).addReg(0).addImm(0).addReg(0),
         STI);
     return 4;
-  }
-  else {
+  } else {
     MCSymbol *DotSym = OutContext.createTempSymbol();
     const MCSymbolRefExpr *Dot = MCSymbolRefExpr::create(DotSym, OutContext);
     OutStreamer.emitLabel(DotSym);
@@ -63,12 +60,11 @@ static const MCSymbolRefExpr *getTLSGetOffset(MCContext &Context) {
 
 static const MCSymbolRefExpr *getGlobalOffsetTable(MCContext &Context) {
   StringRef Name = "_GLOBAL_OFFSET_TABLE_";
-  return MCSymbolRefExpr::create(Context.getOrCreateSymbol(Name),
-                                 Context);
+  return MCSymbolRefExpr::create(Context.getOrCreateSymbol(Name), Context);
 }
 
-SystemZELFAsmPrinter::SystemZELFAsmPrinter(
-    TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
+SystemZELFAsmPrinter::SystemZELFAsmPrinter(TargetMachine &TM,
+                                           std::unique_ptr<MCStreamer> Streamer)
     : SystemZAsmPrinter(TM, std::move(Streamer)) {}
 
 void SystemZELFAsmPrinter::emitInstruction(const MachineInstr *MI) {
@@ -102,46 +98,45 @@ void SystemZELFAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case SystemZ::CallBRASL: {
     const SystemZSubtarget &Subtarget = MF->getSubtarget<SystemZSubtarget>();
     SystemZCallingConventionRegisters *Regs = Subtarget.getSpecialRegisters();
-    EmitToStreamer(*OutStreamer,
-                   MCInstBuilder(SystemZ::BRASL)
-                       .addReg(Regs->getReturnFunctionAddressRegister())
-                       .addExpr(Lower.getExpr(MI->getOperand(0),
-                                              SystemZ::S_PLT)));
+    EmitToStreamer(
+        *OutStreamer,
+        MCInstBuilder(SystemZ::BRASL)
+            .addReg(Regs->getReturnFunctionAddressRegister())
+            .addExpr(Lower.getExpr(MI->getOperand(0), SystemZ::S_PLT)));
     return;
   }
   case SystemZ::CallJG:
-    EmitToStreamer(*OutStreamer,
-                   MCInstBuilder(SystemZ::JG).addExpr(
-                       Lower.getExpr(MI->getOperand(0), SystemZ::S_PLT)));
+    EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::JG)
+                                     .addExpr(Lower.getExpr(MI->getOperand(0),
+                                                            SystemZ::S_PLT)));
     return;
   case SystemZ::CallBRCL:
-    EmitToStreamer(*OutStreamer,
-                   MCInstBuilder(SystemZ::BRCL)
-                       .addImm(MI->getOperand(0).getImm())
-                       .addImm(MI->getOperand(1).getImm())
-                       .addExpr(Lower.getExpr(MI->getOperand(2),
-                                              SystemZ::S_PLT)));
+    EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::BRCL)
+                                     .addImm(MI->getOperand(0).getImm())
+                                     .addImm(MI->getOperand(1).getImm())
+                                     .addExpr(Lower.getExpr(MI->getOperand(2),
+                                                            SystemZ::S_PLT)));
     return;
   case SystemZ::TLS_GDCALL: {
     const SystemZSubtarget &Subtarget = MF->getSubtarget<SystemZSubtarget>();
     SystemZCallingConventionRegisters *Regs = Subtarget.getSpecialRegisters();
-    EmitToStreamer(*OutStreamer,
-                   MCInstBuilder(SystemZ::BRASL)
-                       .addReg(Regs->getReturnFunctionAddressRegister())
-                       .addExpr(getTLSGetOffset(MF->getContext()))
-                       .addExpr(Lower.getExpr(MI->getOperand(0),
-                                              SystemZ::S_TLSGD)));
+    EmitToStreamer(
+        *OutStreamer,
+        MCInstBuilder(SystemZ::BRASL)
+            .addReg(Regs->getReturnFunctionAddressRegister())
+            .addExpr(getTLSGetOffset(MF->getContext()))
+            .addExpr(Lower.getExpr(MI->getOperand(0), SystemZ::S_TLSGD)));
     return;
   }
   case SystemZ::TLS_LDCALL: {
     const SystemZSubtarget &Subtarget = MF->getSubtarget<SystemZSubtarget>();
     SystemZCallingConventionRegisters *Regs = Subtarget.getSpecialRegisters();
-    EmitToStreamer(*OutStreamer,
-                   MCInstBuilder(SystemZ::BRASL)
-                       .addReg(Regs->getReturnFunctionAddressRegister())
-                       .addExpr(getTLSGetOffset(MF->getContext()))
-                       .addExpr(Lower.getExpr(MI->getOperand(0),
-                                              SystemZ::S_TLSLDM)));
+    EmitToStreamer(
+        *OutStreamer,
+        MCInstBuilder(SystemZ::BRASL)
+            .addReg(Regs->getReturnFunctionAddressRegister())
+            .addExpr(getTLSGetOffset(MF->getContext()))
+            .addExpr(Lower.getExpr(MI->getOperand(0), SystemZ::S_TLSLDM)));
     return;
   }
   case SystemZ::GOT:
@@ -163,7 +158,7 @@ void SystemZELFAsmPrinter::emitInstruction(const MachineInstr *MI) {
 }
 
 void SystemZELFAsmPrinter::LowerFENTRY_CALL(const MachineInstr &MI,
-                                             SystemZMCInstLower &Lower) {
+                                            SystemZMCInstLower &Lower) {
   MCContext &Ctx = MF->getContext();
   if (MF->getFunction().hasFnAttribute("mrecord-mcount")) {
     MCSymbol *DotSym = OutContext.createTempSymbol();
@@ -206,8 +201,7 @@ void SystemZELFAsmPrinter::LowerSTACKMAP(const MachineInstr &MI) {
   MachineBasicBlock::const_iterator MII(MI);
   ++MII;
   while (ShadowBytes < NumNOPBytes) {
-    if (MII == MBB.end() ||
-        MII->getOpcode() == TargetOpcode::PATCHPOINT ||
+    if (MII == MBB.end() || MII->getOpcode() == TargetOpcode::PATCHPOINT ||
         MII->getOpcode() == TargetOpcode::STACKMAP)
       break;
     ShadowBytes += TII->getInstSizeInBytes(*MII);
@@ -225,7 +219,7 @@ void SystemZELFAsmPrinter::LowerSTACKMAP(const MachineInstr &MI) {
 // Lower a patchpoint of the form:
 // [<def>], <id>, <numBytes>, <target>, <numArgs>
 void SystemZELFAsmPrinter::LowerPATCHPOINT(const MachineInstr &MI,
-                                            SystemZMCInstLower &Lower) {
+                                           SystemZMCInstLower &Lower) {
   auto &Ctx = OutStreamer->getContext();
   MCSymbol *MILabel = Ctx.createTempSymbol();
   OutStreamer->emitLabel(MILabel);
@@ -248,26 +242,26 @@ void SystemZELFAsmPrinter::LowerPATCHPOINT(const MachineInstr &MI,
 
       // Materialize the call target address
       EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::LLILF)
-                                      .addReg(ScratchReg)
-                                      .addImm(CallTarget & 0xFFFFFFFF));
+                                       .addReg(ScratchReg)
+                                       .addImm(CallTarget & 0xFFFFFFFF));
       EncodedBytes += 6;
       if (CallTarget >> 32) {
         EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::IIHF)
-                                        .addReg(ScratchReg)
-                                        .addImm(CallTarget >> 32));
+                                         .addReg(ScratchReg)
+                                         .addImm(CallTarget >> 32));
         EncodedBytes += 6;
       }
 
       EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::BASR)
-                                     .addReg(SystemZ::R14D)
-                                     .addReg(ScratchReg));
+                                       .addReg(SystemZ::R14D)
+                                       .addReg(ScratchReg));
       EncodedBytes += 2;
     }
   } else if (CalleeMO.isGlobal()) {
     const MCExpr *Expr = Lower.getExpr(CalleeMO, SystemZ::S_PLT);
-    EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::BRASL)
-                                   .addReg(SystemZ::R14D)
-                                   .addExpr(Expr));
+    EmitToStreamer(
+        *OutStreamer,
+        MCInstBuilder(SystemZ::BRASL).addReg(SystemZ::R14D).addExpr(Expr));
     EncodedBytes += 6;
   }
 
@@ -313,34 +307,32 @@ void SystemZELFAsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(
   MCSymbol *EndOfSled = OutContext.createTempSymbol();
   OutStreamer->emitLabel(BeginOfSled);
   EmitToStreamer(*OutStreamer,
-                 MCInstBuilder(SystemZ::J).addExpr(
-                     MCSymbolRefExpr::create(EndOfSled, OutContext)));
+                 MCInstBuilder(SystemZ::J)
+                     .addExpr(MCSymbolRefExpr::create(EndOfSled, OutContext)));
   EmitNop(OutContext, *OutStreamer, 2, getSubtargetInfo());
   EmitToStreamer(*OutStreamer,
                  MCInstBuilder(SystemZ::LLILF).addReg(SystemZ::R2D).addImm(0));
-  EmitToStreamer(*OutStreamer,
-                 MCInstBuilder(SystemZ::BRASL)
-                     .addReg(SystemZ::R14D)
-                     .addExpr(MCSymbolRefExpr::create(
-                         FuncEntry, SystemZ::S_PLT, OutContext)));
+  EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::BRASL)
+                                   .addReg(SystemZ::R14D)
+                                   .addExpr(MCSymbolRefExpr::create(
+                                       FuncEntry, SystemZ::S_PLT, OutContext)));
   OutStreamer->emitLabel(EndOfSled);
   recordSled(BeginOfSled, MI, SledKind::FUNCTION_ENTER, 2);
 }
 
 void SystemZELFAsmPrinter::LowerPATCHABLE_RET(const MachineInstr &MI,
-                                               SystemZMCInstLower &Lower) {
+                                              SystemZMCInstLower &Lower) {
   unsigned OpCode = MI.getOperand(0).getImm();
   MCSymbol *FallthroughLabel = nullptr;
   if (OpCode == SystemZ::CondReturn) {
     FallthroughLabel = OutContext.createTempSymbol();
     int64_t Cond0 = MI.getOperand(1).getImm();
     int64_t Cond1 = MI.getOperand(2).getImm();
-    EmitToStreamer(*OutStreamer,
-                   MCInstBuilder(SystemZ::BRC)
-                       .addImm(Cond0)
-                       .addImm(Cond1 ^ Cond0)
-                       .addExpr(MCSymbolRefExpr::create(FallthroughLabel,
-                                                        OutContext)));
+    EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::BRC)
+                                     .addImm(Cond0)
+                                     .addImm(Cond1 ^ Cond0)
+                                     .addExpr(MCSymbolRefExpr::create(
+                                         FallthroughLabel, OutContext)));
   }
   // .begin:
   //   br %r14    # -> stmg    %r2, %r15, 24(%r15)
@@ -363,16 +355,16 @@ void SystemZELFAsmPrinter::LowerPATCHABLE_RET(const MachineInstr &MI,
   EmitNop(OutContext, *OutStreamer, 4, getSubtargetInfo());
   EmitToStreamer(*OutStreamer,
                  MCInstBuilder(SystemZ::LLILF).addReg(SystemZ::R2D).addImm(0));
-  EmitToStreamer(*OutStreamer,
-                 MCInstBuilder(SystemZ::J).addExpr(MCSymbolRefExpr::create(
-                     FuncExit, SystemZ::S_PLT, OutContext)));
+  EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::J)
+                                   .addExpr(MCSymbolRefExpr::create(
+                                       FuncExit, SystemZ::S_PLT, OutContext)));
   if (FallthroughLabel)
     OutStreamer->emitLabel(FallthroughLabel);
   recordSled(BeginOfSled, MI, SledKind::FUNCTION_EXIT, 2);
 }
 
-void SystemZELFAsmPrinter::lowerLOAD_TLS_BLOCK_ADDR(
-    const MachineInstr &MI, SystemZMCInstLower &Lower) {
+void SystemZELFAsmPrinter::lowerLOAD_TLS_BLOCK_ADDR(const MachineInstr &MI,
+                                                    SystemZMCInstLower &Lower) {
   Register AddrReg = MI.getOperand(0).getReg();
   const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
 
@@ -420,11 +412,10 @@ void SystemZELFAsmPrinter::lowerLOAD_GLOBAL_STACKGUARD_ADDR(
   }
   // Emit the address load.
   if (M->getPICLevel() == PICLevel::NotPIC) {
-    EmitToStreamer(*OutStreamer,
-                   MCInstBuilder(SystemZ::LARL)
-                       .addReg(AddrReg)
-                       .addExpr(MCSymbolRefExpr::create(getSymbol(GV),
-                                                        OutContext)));
+    EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::LARL)
+                                     .addReg(AddrReg)
+                                     .addExpr(MCSymbolRefExpr::create(
+                                         getSymbol(GV), OutContext)));
   } else {
     EmitToStreamer(*OutStreamer,
                    MCInstBuilder(SystemZ::LGRL)
@@ -463,7 +454,7 @@ static uint8_t getSpecifierFromModifier(SystemZCP::SystemZCPModifier Modifier) {
 
 void SystemZELFAsmPrinter::emitMachineConstantPoolValue(
     MachineConstantPoolValue *MCPV) {
-  auto *ZCPV = static_cast<SystemZConstantPoolValue*>(MCPV);
+  auto *ZCPV = static_cast<SystemZConstantPoolValue *>(MCPV);
 
   const MCExpr *Expr = MCSymbolRefExpr::create(
       getSymbol(ZCPV->getGlobalValue()),
@@ -473,6 +464,4 @@ void SystemZELFAsmPrinter::emitMachineConstantPoolValue(
   OutStreamer->emitValue(Expr, Size);
 }
 
-void SystemZELFAsmPrinter::emitEndOfAsmFile(Module &M) {
-  emitAttributes(M);
-}
+void SystemZELFAsmPrinter::emitEndOfAsmFile(Module &M) { emitAttributes(M); }

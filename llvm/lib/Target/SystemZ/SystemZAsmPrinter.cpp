@@ -12,14 +12,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZAsmPrinter.h"
-#include "SystemZELFAsmPrinter.h"
-#include "SystemZXPLINKAsmPrinter.h"
 #include "MCTargetDesc/SystemZGNUInstPrinter.h"
 #include "MCTargetDesc/SystemZHLASMInstPrinter.h"
 #include "MCTargetDesc/SystemZMCAsmInfo.h"
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
+#include "SystemZELFAsmPrinter.h"
 #include "SystemZMCInstLower.h"
 #include "SystemZSubtarget.h"
+#include "SystemZXPLINKAsmPrinter.h"
 #include "TargetInfo/SystemZTargetInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/MC/MCExpr.h"
@@ -634,8 +634,9 @@ char SystemZAsmPrinter::ID = 0;
 INITIALIZE_PASS(SystemZAsmPrinter, "systemz-asm-printer",
                 "SystemZ Assembly Printer", false, false)
 
-static AsmPrinter *createSystemZAsmPrinter(TargetMachine &TM,
-                                           std::unique_ptr<MCStreamer> &&Streamer) {
+static AsmPrinter *
+createSystemZAsmPrinter(TargetMachine &TM,
+                        std::unique_ptr<MCStreamer> &&Streamer) {
   if (TM.getTargetTriple().isOSzOS())
     return new SystemZXPLINKAsmPrinter(TM, std::move(Streamer));
   return new SystemZELFAsmPrinter(TM, std::move(Streamer));
