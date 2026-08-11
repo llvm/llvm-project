@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s
 
 template <typename T>
 [[clang::noinline]] void foo(T) {}
@@ -18,25 +18,36 @@ void caller() {
 void inner_fn();
 
 void outer_fn() {
-    [[clang::noinline]]
-    {
-        [[clang::nomerge]] // unrelated to inling
-        inner_fn();
-    }
+  [[clang::noinline]]
+  {
+    [[clang::nomerge]] // unrelated to inlining
+    inner_fn();
+  }
 }
 // CHECK: call void @_Z8inner_fnv() #[[NOINLINE_NOMERGE:[0-9]+]]
 
-// Inner function should clobber a conflicting attribute
 void inner_fn2();
 
 void outer_fn2() {
-    [[clang::noinline]]
-    {
-        [[clang::always_inline]]
-        inner_fn2();
-    }
+  [[clang::nomerge]]
+  {
+    [[clang::noinline]] // unrelated to nomerge
+    inner_fn2();
+  }
 }
-// CHECK: call void @_Z9inner_fn2v() #[[ALWAYSINLINE_ONLY:[0-9]+]]
+// CHECK: call void @_Z9inner_fn2v() #[[NOINLINE_NOMERGE]]
+
+// Inner function should clobber a conflicting attribute
+void inner_fn3();
+
+void outer_fn3() {
+  [[clang::noinline]]
+  {
+    [[clang::always_inline]]
+    inner_fn3();
+  }
+}
+// CHECK: call void @_Z9inner_fn3v() #[[ALWAYSINLINE_ONLY:[0-9]+]]
 
 // CHECK: attributes #[[ALWAYSINLINE]] = {
 // CHECK-SAME: alwaysinline
