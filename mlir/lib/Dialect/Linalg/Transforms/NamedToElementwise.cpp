@@ -28,7 +28,6 @@ using namespace mlir::linalg;
 namespace {
 ElementwiseKind getKind(Operation *op) {
   return llvm::TypeSwitch<Operation *, ElementwiseKind>(op)
-      .Case([](SelectOp) { return ElementwiseKind::select; })
       .Case([](AddOp) { return ElementwiseKind::add; })
       .Case([](SubOp) { return ElementwiseKind::sub; })
       .Case([](MulOp) { return ElementwiseKind::mul; })
@@ -72,7 +71,6 @@ struct NamedToElementwisePattern : public OpRewritePattern<NamedOpTy> {
 
 void mlir::linalg::populateLinalgNamedToElementwisePatterns(
     RewritePatternSet &patterns) {
-  patterns.add<NamedToElementwisePattern<SelectOp>>(patterns.getContext());
   patterns.add<NamedToElementwisePattern<AddOp>>(patterns.getContext());
   patterns.add<NamedToElementwisePattern<SubOp>>(patterns.getContext());
   patterns.add<NamedToElementwisePattern<MulOp>>(patterns.getContext());

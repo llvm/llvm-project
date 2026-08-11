@@ -88,8 +88,6 @@ struct ElementwiseToNamedPattern : public OpRewritePattern<ElementwiseOp> {
       return replaceWith(MinOp{});
     case ElementwiseKind::powf:
       return replaceWith(PowFOp{});
-    case ElementwiseKind::select:
-      return replaceWith(SelectOp{});
     default:
       return failure();
     }
