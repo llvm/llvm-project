@@ -1424,12 +1424,8 @@ define <16 x i8> @bitcast_narrow4_widen4_add(<16 x i8> %a, <16 x i8> %b) {
 
 define <8 x half> @splat_and_identity_commuted(<8 x half> %a) {
 ; CHECK-LABEL: @splat_and_identity_commuted(
-; CHECK-NEXT:    [[AB:%.*]] = shufflevector <8 x half> [[A:%.*]], <8 x half> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[AT:%.*]] = shufflevector <8 x half> [[A]], <8 x half> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
-; CHECK-NEXT:    [[BS:%.*]] = shufflevector <8 x half> [[A]], <8 x half> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[ABT:%.*]] = fadd <4 x half> [[AT]], [[BS]]
-; CHECK-NEXT:    [[ABB:%.*]] = fadd <4 x half> [[BS]], [[AB]]
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x half> [[ABT]], <4 x half> [[ABB]], <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x half> [[A:%.*]], <8 x half> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = fadd <8 x half> [[TMP1]], [[A]]
 ; CHECK-NEXT:    ret <8 x half> [[R]]
 ;
   %ab = shufflevector <8 x half> %a, <8 x half> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
@@ -1443,13 +1439,7 @@ define <8 x half> @splat_and_identity_commuted(<8 x half> %a) {
 
 define <8 x half> @fadd_commuted(<8 x half> %a, <8 x half> %b) {
 ; CHECK-LABEL: @fadd_commuted(
-; CHECK-NEXT:    [[AB:%.*]] = shufflevector <8 x half> [[A:%.*]], <8 x half> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[AT:%.*]] = shufflevector <8 x half> [[A]], <8 x half> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[BB:%.*]] = shufflevector <8 x half> [[B:%.*]], <8 x half> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[BT:%.*]] = shufflevector <8 x half> [[B]], <8 x half> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[XB:%.*]] = fadd <4 x half> [[AB]], [[BB]]
-; CHECK-NEXT:    [[XT:%.*]] = fadd <4 x half> [[BT]], [[AT]]
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x half> [[XB]], <4 x half> [[XT]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[R:%.*]] = fadd <8 x half> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret <8 x half> [[R]]
 ;
   %ab = shufflevector <8 x half> %a, <8 x half> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -1464,11 +1454,7 @@ define <8 x half> @fadd_commuted(<8 x half> %a, <8 x half> %b) {
 
 define <8 x i8> @constantsplat_commuted(<8 x i8> %a) {
 ; CHECK-LABEL: @constantsplat_commuted(
-; CHECK-NEXT:    [[AB:%.*]] = shufflevector <8 x i8> [[A:%.*]], <8 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[AT:%.*]] = shufflevector <8 x i8> [[A]], <8 x i8> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[XB:%.*]] = add <4 x i8> [[AB]], splat (i8 10)
-; CHECK-NEXT:    [[XT:%.*]] = add <4 x i8> splat (i8 10), [[AT]]
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i8> [[XB]], <4 x i8> [[XT]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[R:%.*]] = add <8 x i8> [[A:%.*]], splat (i8 10)
 ; CHECK-NEXT:    ret <8 x i8> [[R]]
 ;
   %ab = shufflevector <8 x i8> %a, <8 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -1481,13 +1467,7 @@ define <8 x i8> @constantsplat_commuted(<8 x i8> %a) {
 
 define <8 x i8> @undeflane_commuted(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: @undeflane_commuted(
-; CHECK-NEXT:    [[AB:%.*]] = shufflevector <8 x i8> [[A:%.*]], <8 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[AT:%.*]] = shufflevector <8 x i8> [[A]], <8 x i8> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
-; CHECK-NEXT:    [[BB:%.*]] = shufflevector <8 x i8> [[B:%.*]], <8 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[BT:%.*]] = shufflevector <8 x i8> [[B]], <8 x i8> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
-; CHECK-NEXT:    [[ABT:%.*]] = add <4 x i8> [[AT]], [[BT]]
-; CHECK-NEXT:    [[ABB:%.*]] = add <4 x i8> [[BB]], [[AB]]
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i8> [[ABT]], <4 x i8> [[ABB]], <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 poison, i32 1, i32 0>
+; CHECK-NEXT:    [[R:%.*]] = add <8 x i8> [[B:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    ret <8 x i8> [[R]]
 ;
   %ab = shufflevector <8 x i8> %a, <8 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
@@ -1502,13 +1482,7 @@ define <8 x i8> @undeflane_commuted(<8 x i8> %a, <8 x i8> %b) {
 
 define <8 x half> @commuted_poison_operand(<8 x half> %a, <8 x half> %b) {
 ; CHECK-LABEL: @commuted_poison_operand(
-; CHECK-NEXT:    [[AB:%.*]] = shufflevector <8 x half> [[A:%.*]], <8 x half> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[AT:%.*]] = shufflevector <8 x half> [[A]], <8 x half> poison, <4 x i32> <i32 4, i32 poison, i32 6, i32 7>
-; CHECK-NEXT:    [[BB:%.*]] = shufflevector <8 x half> [[B:%.*]], <8 x half> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[BT:%.*]] = shufflevector <8 x half> [[B]], <8 x half> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[XB:%.*]] = fadd <4 x half> [[AB]], [[BB]]
-; CHECK-NEXT:    [[XT:%.*]] = fadd <4 x half> [[BT]], [[AT]]
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x half> [[XB]], <4 x half> [[XT]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[R:%.*]] = fadd <8 x half> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret <8 x half> [[R]]
 ;
   %ab = shufflevector <8 x half> %a, <8 x half> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
