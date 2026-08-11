@@ -10,8 +10,8 @@
 #define HEADER
 
 // CHECK-NOT: class_type_info
-// CHECK-DAG: @_ZTV7Derived = linkonce_odr protected constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr null, ptr @_ZN7Derived3fooEv] }
-// CHECK-DAG: @_ZTV4Base = linkonce_odr protected constant { [3 x ptr] } zeroinitializer
+// CHECK-DAG: @_ZTV7Derived = linkonce_odr protected unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr null, ptr @_ZN7Derived3fooEv] }
+// CHECK-DAG: @_ZTV4Base = linkonce_odr protected unnamed_addr constant { [3 x ptr] } zeroinitializer
 // CHECK-NOT: class_type_info
 class Base {
   public:

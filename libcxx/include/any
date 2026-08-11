@@ -13,6 +13,9 @@
 /*
    any synopsis
 
+#include <initializer_list>
+#include <typeinfo>
+
 namespace std {
 
   class bad_any_cast : public bad_cast
@@ -108,9 +111,13 @@ namespace std {
 #  include <__utility/move.h>
 #  include <__utility/unreachable.h>
 #  include <__verbose_abort>
+#  include <version>
+
+// standard-mandated includes
+
+// [any.synop]
 #  include <initializer_list>
 #  include <typeinfo>
-#  include <version>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
@@ -130,9 +137,9 @@ public:
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_UNVERSIONED_NAMESPACE_STD
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #  if _LIBCPP_STD_VER >= 17
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 [[noreturn]] inline _LIBCPP_HIDE_FROM_ABI void __throw_bad_any_cast() {
 #    if _LIBCPP_HAS_EXCEPTIONS
@@ -552,32 +559,12 @@ template <class _ValueType>
   return nullptr;
 }
 
-#  endif // _LIBCPP_STD_VER >= 17
-
 _LIBCPP_END_NAMESPACE_STD
+
+#  endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_POP_MACROS
 
-#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 17
-#    include <chrono>
-#  endif
-
-#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#    include <atomic>
-#    include <concepts>
-#    include <cstdlib>
-#    include <iosfwd>
-#    include <iterator>
-#    include <memory>
-#    include <stdexcept>
-#    include <type_traits>
-#    include <variant>
-#  endif
-
-#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 23
-#    include <cstring>
-#    include <limits>
-#  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_ANY

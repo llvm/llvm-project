@@ -1238,15 +1238,6 @@ template <> struct DenseMapInfo<PrivateMethodKey> {
   using InterfaceInfo = DenseMapInfo<const ObjCInterfaceDecl *>;
   using SelectorInfo = DenseMapInfo<Selector>;
 
-  static inline PrivateMethodKey getEmptyKey() {
-    return {InterfaceInfo::getEmptyKey(), SelectorInfo::getEmptyKey(), false};
-  }
-
-  static inline PrivateMethodKey getTombstoneKey() {
-    return {InterfaceInfo::getTombstoneKey(), SelectorInfo::getTombstoneKey(),
-            true};
-  }
-
   static unsigned getHashValue(const PrivateMethodKey &Key) {
     return llvm::hash_combine(
         llvm::hash_code(InterfaceInfo::getHashValue(Key.Interface)),

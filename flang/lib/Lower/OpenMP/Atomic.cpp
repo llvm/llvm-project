@@ -34,7 +34,6 @@
 #include <string>
 #include <type_traits>
 #include <variant>
-#include <vector>
 
 static llvm::cl::opt<bool> DumpAtomicAnalysis("fdebug-dump-atomic-analysis");
 
@@ -160,6 +159,24 @@ getMemoryOrderKind(common::OmpMemoryOrderType kind) {
   llvm_unreachable("Unexpected kind");
 }
 
+static mlir::omp::ClauseMemoryOrderKind
+getMemoryOrderKind(omp::clause::Fail::MemoryOrder kind) {
+  using MemoryOrder = omp::clause::Fail::MemoryOrder;
+  switch (kind) {
+  case MemoryOrder::AcqRel:
+    return mlir::omp::ClauseMemoryOrderKind::Acq_rel;
+  case MemoryOrder::Acquire:
+    return mlir::omp::ClauseMemoryOrderKind::Acquire;
+  case MemoryOrder::Relaxed:
+    return mlir::omp::ClauseMemoryOrderKind::Relaxed;
+  case MemoryOrder::Release:
+    return mlir::omp::ClauseMemoryOrderKind::Release;
+  case MemoryOrder::SeqCst:
+    return mlir::omp::ClauseMemoryOrderKind::Seq_cst;
+  }
+  llvm_unreachable("Unexpected memory order");
+}
+
 static std::optional<mlir::omp::ClauseMemoryOrderKind>
 getMemoryOrderKind(llvm::omp::Clause clauseId) {
   switch (clauseId) {
@@ -192,7 +209,9 @@ getMemoryOrderFromRequires(const semantics::Scope &scope) {
           using WithOmpDeclarative = semantics::WithOmpDeclarative;
           if constexpr (std::is_convertible_v<decltype(s),
                                               const WithOmpDeclarative &>) {
-            return s.ompAtomicDefaultMemOrder();
+            if (auto &admo{s.ompAtomicDefaultMemOrder()}) {
+              return &*admo;
+            }
           }
           return static_cast<const common::OmpMemoryOrderType *>(nullptr);
         },
@@ -563,14 +582,21 @@ void Fortran::lower::omp::lowerAtomic(
     // e : expecteVal
     // d : desiredVal
 
-    // Check for compound clauses (fail, capture, weak) that are not yet
-    // supported with atomic compare.
+    // Atomic compare with capture is not yet supported.
     if (llvm::any_of(clauses, [](const omp::Clause &clause) {
-          return clause.id == llvm::omp::Clause::OMPC_fail ||
-                 clause.id == llvm::omp::Clause::OMPC_capture ||
-                 clause.id == llvm::omp::Clause::OMPC_weak;
+          return clause.id == llvm::omp::Clause::OMPC_capture;
         })) {
       TODO(loc, "Compound clauses of OpenMP ATOMIC COMPARE");
+    }
+
+    // The `fail` clause sets the memory ordering for a failed compare;
+    // extract its argument to attach to the omp.atomic.compare op below.
+    std::optional<mlir::omp::ClauseMemoryOrderKind> failMemOrder;
+    for (const omp::Clause &clause : clauses) {
+      if (const auto *fail = std::get_if<omp::clause::Fail>(&clause.u)) {
+        failMemOrder = getMemoryOrderKind(fail->v);
+        break;
+      }
     }
 
     common::RelationalOperator relOpr = common::RelationalOperator::EQ;
@@ -617,9 +643,15 @@ void Fortran::lower::omp::lowerAtomic(
     }
 
     mlir::UnitAttr weakAttr = nullptr;
+    if (llvm::any_of(clauses, [](const omp::Clause &clause) {
+          return clause.id == llvm::omp::Clause::OMPC_weak;
+        })) {
+      weakAttr = builder.getUnitAttr();
+    }
     mlir::Operation *atomicOp = mlir::omp::AtomicCompareOp::create(
         builder, loc, atomAddr, weakAttr, hint,
-        makeMemOrderAttr(converter, memOrder));
+        makeMemOrderAttr(converter, memOrder),
+        makeMemOrderAttr(converter, failMemOrder));
     mlir::Block *block = builder.createBlock(&atomicOp->getRegion(0));
     mlir::Value blockArg = block->addArgument(elemTypeOfX, loc);
     builder.setInsertionPointToEnd(block);
@@ -650,7 +682,7 @@ void Fortran::lower::omp::lowerAtomic(
     // writeActionCond is a bitmask combining the following flags:
     //  1) the action type (Read/Write/Update)
     //  2) condition (IfTrue/IfFalse)
-    int writeActionCond = 0;
+    [[maybe_unused]] int writeActionCond = 0;
     const evaluate::Assignment *writeAssign = nullptr;
     if (analysis.op0.what & analysis.Write) {
       writeAssign = get(analysis.op0.assign);

@@ -143,7 +143,7 @@ struct ValueUnion {
   }
 
   template <class T, int N>
-  std::array<T, N> GetAsArray() {
+  BENCHMARK_MAYBE_UNUSED std::array<T, N> GetAsArray() {
     const int arr_size = sizeof(T) * N;
     BM_CHECK_LE(arr_size, size);
     std::array<T, N> arr;
@@ -204,7 +204,8 @@ bool GetSysctl(std::string const& name, Tp* out) {
 }
 
 template <class Tp, size_t N>
-bool GetSysctl(std::string const& name, std::array<Tp, N>* out) {
+BENCHMARK_MAYBE_UNUSED bool GetSysctl(std::string const& name,
+                                      std::array<Tp, N>* out) {
   auto buff = GetSysctlImp(name);
   if (!buff) return false;
   *out = buff.GetAsArray<Tp, N>();
@@ -370,6 +371,7 @@ std::vector<CPUInfo::CacheInfo> GetCacheSizesWindows() {
     C.num_sharing = static_cast<int>(b.count());
     C.level = cache.Level;
     C.size = static_cast<int>(cache.Size);
+    C.type = "Unknown";
     switch (cache.Type) {
 // Windows SDK version >= 10.0.26100.0
 #ifdef NTDDI_WIN11_GE
@@ -387,9 +389,6 @@ std::vector<CPUInfo::CacheInfo> GetCacheSizesWindows() {
         break;
       case CacheTrace:
         C.type = "Trace";
-        break;
-      default:
-        C.type = "Unknown";
         break;
     }
     res.push_back(C);

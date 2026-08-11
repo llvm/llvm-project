@@ -31,6 +31,7 @@
 #include "RISCVSubtarget.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 
@@ -56,6 +57,12 @@ public:
 
   StringRef getPassName() const override {
     return "RISC-V Vector Peephole Optimization";
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
   }
 
 private:
@@ -105,7 +112,7 @@ RISCVVectorPeephole::getConstant(const MachineOperand &VL) const {
     return VL.getImm();
 
   MachineInstr *Def = MRI->getVRegDef(VL.getReg());
-  if (!Def || Def->getOpcode() != RISCV::ADDI ||
+  if (!Def || Def->getOpcode() != RISCV::ADDI || !Def->getOperand(1).isReg() ||
       Def->getOperand(1).getReg() != RISCV::X0)
     return std::nullopt;
   return Def->getOperand(2).getImm();
@@ -448,9 +455,11 @@ bool RISCVVectorPeephole::convertToUnmasked(MachineInstr &MI) const {
 }
 
 /// Given A and B are in the same MBB, returns true if A comes before B.
-static bool dominates(MachineBasicBlock::const_iterator A,
-                      MachineBasicBlock::const_iterator B) {
+static bool strictlyDominates(MachineBasicBlock::const_iterator A,
+                              MachineBasicBlock::const_iterator B) {
   assert(A->getParent() == B->getParent());
+  if (A == B)
+    return false;
   const MachineBasicBlock *MBB = A->getParent();
   auto MBBEnd = MBB->end();
   if (B == MBBEnd)
@@ -476,7 +485,8 @@ bool RISCVVectorPeephole::ensureDominates(ArrayRef<const MachineOperand *> Defs,
       continue;
 
     MachineInstr *Def = MRI->getVRegDef(MO->getReg());
-    if (Def->getParent() == Dest->getParent() && !dominates(Def, *Dest)) {
+    if (Def->getParent() == Dest->getParent() &&
+        !strictlyDominates(Def, *Dest)) {
       if (!RISCVInstrInfo::isSafeToMove(*Dest, *Def->getNextNode()))
         return false;
       Dest = Def->getNextNode();

@@ -159,7 +159,7 @@
 // CUDA-NEXT:   ret void
 // CUDA-NEXT: }
 
-// RUN: llvm-offload-binary -o %t.out --image=file=%t.elf.o,kind=hip,triple=amdgcn-amd-amdhsa,arch=gfx908
+// RUN: llvm-offload-binary -o %t.out --image=file=%t.elf.o,kind=hip,triple=amdgpu-amd-amdhsa,arch=gfx908
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o \
 // RUN:   -fembed-offload-object=%t.out
 // RUN: clang-linker-wrapper --print-wrapped-module --dry-run --host-triple=x86_64-unknown-linux-gnu \
@@ -311,16 +311,16 @@
 // RUN: clang-linker-wrapper --print-wrapped-module --dry-run --host-triple=x86_64-unknown-linux-gnu -r \
 // RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefixes=SYCL
 
-//      SYCL: @.sycl_offloading.binary = internal unnamed_addr constant [[[SIZE:[0-9]+]] x i8] c"{{.*}}", section ".llvm.offloading"
+//      SYCL: @.sycl_offloading.binary = internal unnamed_addr constant [0 x i8] zeroinitializer, section ".llvm.offloading"
 
 //      SYCL: define internal void @sycl.descriptor_reg() section ".text.startup" {
 // SYCL-NEXT: entry:
-// SYCL-NEXT:   call void @__sycl_register_lib(ptr @.sycl_offloading.binary, i64 [[SIZE]])
+// SYCL-NEXT:   call void @__sycl_register_lib(ptr @.sycl_offloading.binary, i64 0)
 // SYCL-NEXT:   ret void
 // SYCL-NEXT: }
 
 //      SYCL: define internal void @sycl.descriptor_unreg() section ".text.startup" {
 // SYCL-NEXT: entry:
-// SYCL-NEXT:   call void @__sycl_unregister_lib(ptr @.sycl_offloading.binary, i64 [[SIZE]])
+// SYCL-NEXT:   call void @__sycl_unregister_lib(ptr @.sycl_offloading.binary, i64 0)
 // SYCL-NEXT:   ret void
 // SYCL-NEXT: }

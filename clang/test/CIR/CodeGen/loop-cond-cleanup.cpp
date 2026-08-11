@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 -no-enable-noundef-analysis %s -triple=x86_64-linux-gnu -fclangir -emit-cir -std=c++17 -fcxx-exceptions -fexceptions -o %t.cir
+// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
+// supports parameters of an empty or tag class.
+// RUN: %clang_cc1 -no-enable-noundef-analysis %s -triple=x86_64-linux-gnu -fclangir -fno-clangir-call-conv-lowering -emit-cir -std=c++17 -fcxx-exceptions -fexceptions -o %t.cir
 // RUN: FileCheck -check-prefixes=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis %s -triple=x86_64-linux-gnu -fclangir -emit-llvm -std=c++17 -fcxx-exceptions -fexceptions -o %t-cir.ll
+// RUN: %clang_cc1 -no-enable-noundef-analysis %s -triple=x86_64-linux-gnu -fclangir -fno-clangir-call-conv-lowering -emit-llvm -std=c++17 -fcxx-exceptions -fexceptions -o %t-cir.ll
 // RUN: FileCheck -check-prefixes=LLVM --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis %s -triple=x86_64-linux-gnu -emit-llvm -std=c++17 -fcxx-exceptions -fexceptions -o %t.ll
 // RUN: FileCheck -check-prefixes=OGCG --input-file=%t.ll %s
@@ -279,9 +281,9 @@ void while_body_temp_ref() {
 // LLVM: [[FALSE]]:
 // LLVM:   call void @_ZN1SC1Ev(ptr {{.*}} %[[REF_TMP]])
 // LLVM:   store ptr %[[REF_TMP]], ptr %[[SPILL]]
-// LLVM:   call void @_ZN1SD1Ev(ptr {{.*}} %[[REF_TMP]])
 // LLVM:   %[[RELOAD:.*]] = load ptr, ptr %[[SPILL]]
 // LLVM:   store ptr %[[RELOAD]], ptr %[[OP]]
+// LLVM:   call void @_ZN1SD1Ev(ptr {{.*}} %[[REF_TMP]])
 // LLVM:   br label %[[LOOP_COND]]
 // LLVM: [[AFTER]]:
 // LLVM:   ret void
@@ -346,9 +348,9 @@ void for_body_temp_ref() {
 // LLVM: [[FALSE]]:
 // LLVM:   call void @_ZN1SC1Ev(ptr {{.*}} %[[REF_TMP]])
 // LLVM:   store ptr %[[REF_TMP]], ptr %[[SPILL]]
-// LLVM:   call void @_ZN1SD1Ev(ptr {{.*}} %[[REF_TMP]])
 // LLVM:   %[[RELOAD:.*]] = load ptr, ptr %[[SPILL]]
 // LLVM:   store ptr %[[RELOAD]], ptr %[[OP]]
+// LLVM:   call void @_ZN1SD1Ev(ptr {{.*}} %[[REF_TMP]])
 // LLVM:   %[[OLDI:.*]] = load i32, ptr %[[I]]
 // LLVM:   %[[NEWI:.*]] = add nsw i32 %[[OLDI]], 1
 // LLVM:   store i32 %[[NEWI]], ptr %[[I]]
@@ -421,9 +423,9 @@ void do_body_temp_ref() {
 // LLVM: [[FALSE]]:
 // LLVM:   call void @_ZN1SC1Ev(ptr {{.*}} %[[REF_TMP]])
 // LLVM:   store ptr %[[REF_TMP]], ptr %[[SPILL]]
-// LLVM:   call void @_ZN1SD1Ev(ptr {{.*}} %[[REF_TMP]])
 // LLVM:   %[[RELOAD:.*]] = load ptr, ptr %[[SPILL]]
 // LLVM:   store ptr %[[RELOAD]], ptr %[[OP]]
+// LLVM:   call void @_ZN1SD1Ev(ptr {{.*}} %[[REF_TMP]])
 // LLVM:   br label %[[LOOP_COND]]
 // LLVM: [[AFTER]]:
 // LLVM:   ret void

@@ -19,9 +19,10 @@ STRING_EXTENSION_OUTSIDE(SBValue)
 
             def __getitem__(self, key):
                 if isinstance(key, int):
-                    count = len(self)
-                    if -count <= key < count:
-                        key %= count
+                    if key < 0:
+                        # Support pythonic negative indexing.
+                        key += len(self)
+                    if key >= 0:
                         return self.sbvalue.GetChildAtIndex(key)
                 return None
 
@@ -55,7 +56,8 @@ STRING_EXTENSION_OUTSIDE(SBValue)
 
         def __iter__(self):
             '''Iterate over all child values of a lldb.SBValue object.'''
-            return lldb_iter(self, 'GetNumChildren', 'GetChildAtIndex')
+            for i in range(self.GetNumChildren()):
+                yield self.GetChildAtIndex(i)
 
         def __len__(self):
             '''Return the number of child values of a lldb.SBValue object.'''

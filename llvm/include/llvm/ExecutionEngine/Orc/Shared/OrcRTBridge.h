@@ -41,29 +41,13 @@ LLVM_ABI extern const char
     *ExecutorSharedMemoryMapperServiceDeinitializeWrapperName;
 LLVM_ABI extern const char *ExecutorSharedMemoryMapperServiceReleaseWrapperName;
 
-LLVM_ABI extern const char *MemoryWriteUInt8sWrapperName;
-LLVM_ABI extern const char *MemoryWriteUInt16sWrapperName;
-LLVM_ABI extern const char *MemoryWriteUInt32sWrapperName;
-LLVM_ABI extern const char *MemoryWriteUInt64sWrapperName;
-LLVM_ABI extern const char *MemoryWritePointersWrapperName;
-LLVM_ABI extern const char *MemoryWriteBuffersWrapperName;
-
-LLVM_ABI extern const char *MemoryReadUInt8sWrapperName;
-LLVM_ABI extern const char *MemoryReadUInt16sWrapperName;
-LLVM_ABI extern const char *MemoryReadUInt32sWrapperName;
-LLVM_ABI extern const char *MemoryReadUInt64sWrapperName;
-LLVM_ABI extern const char *MemoryReadPointersWrapperName;
-LLVM_ABI extern const char *MemoryReadBuffersWrapperName;
-LLVM_ABI extern const char *MemoryReadStringsWrapperName;
-
 LLVM_ABI extern const char *RegisterEHFrameSectionAllocActionName;
 LLVM_ABI extern const char *DeregisterEHFrameSectionAllocActionName;
 
 LLVM_ABI extern const char *RegisterJITLoaderGDBAllocActionName;
 
-LLVM_ABI extern const char *RunAsMainWrapperName;
-LLVM_ABI extern const char *RunAsVoidFunctionWrapperName;
-LLVM_ABI extern const char *RunAsIntFunctionWrapperName;
+LLVM_ABI extern const char *const DispatchName;
+LLVM_ABI extern const char *const DispatchCtxName;
 
 /// Symbol names for memory management implementation.
 /// FIXME: We should find a better home for this struct.
@@ -77,16 +61,37 @@ struct SimpleExecutorMemoryManagerSymbolNames {
 
 /// Default symbol names for the ORC runtime's SimpleNativeMemoryMap SPS
 /// interface.
-extern const SimpleExecutorMemoryManagerSymbolNames
+extern const LLVM_ABI SimpleExecutorMemoryManagerSymbolNames
     orc_rt_SimpleNativeMemoryMapSPSSymbols;
+
+/// Symbol names for the ORC runtime's NativeDylibManager SPS interface.
+inline constexpr char NativeDylibManagerInstanceName[] =
+    "orc_rt_ci_NativeDylibManager_Instance";
+inline constexpr char NativeDylibManagerLoadWrapperName[] =
+    "orc_rt_ci_sps_NativeDylibManager_load";
+inline constexpr char NativeDylibManagerLookupWrapperName[] =
+    "orc_rt_ci_sps_NativeDylibManager_lookup";
+
+/// Symbol names for the ORC runtime's StandaloneMachOUnwindInfoRegistrar
+/// SPS interface.
+struct MachOUnwindInfoRegistrarSymbolNames {
+  StringRef RegisterSectionsName;
+  StringRef DeregisterSectionsName;
+};
+
+/// Default symbol names for the ORC runtime's
+/// StandaloneMachOUnwindInfoRegistrar SPS interface.
+extern const LLVM_ABI MachOUnwindInfoRegistrarSymbolNames
+    orc_rt_MachOUnwindInfoRegistrarSPSSymbols;
 
 using SPSSimpleExecutorDylibManagerOpenSignature =
     shared::SPSExpected<shared::SPSExecutorAddr>(shared::SPSExecutorAddr,
                                                  shared::SPSString, uint64_t);
 
 using SPSSimpleExecutorDylibManagerResolveSignature = shared::SPSExpected<
-    shared::SPSSequence<shared::SPSOptional<shared::SPSExecutorSymbolDef>>>(
-    shared::SPSExecutorAddr, shared::SPSRemoteSymbolLookupSet);
+    shared::SPSSequence<shared::SPSOptional<shared::SPSExecutorAddr>>>(
+    shared::SPSExecutorAddr, shared::SPSExecutorAddr,
+    shared::SPSRemoteSymbolLookupSet);
 
 using SPSSimpleExecutorMemoryManagerReserveSignature =
     shared::SPSExpected<shared::SPSExecutorAddr>(shared::SPSExecutorAddr,
@@ -128,8 +133,6 @@ using SPSSimpleRemoteMemoryMapReleaseSignature = shared::SPSError(
 
 using SPSRunAsMainSignature = int64_t(shared::SPSExecutorAddr,
                                       shared::SPSSequence<shared::SPSString>);
-using SPSRunAsVoidFunctionSignature = int32_t(shared::SPSExecutorAddr);
-using SPSRunAsIntFunctionSignature = int32_t(shared::SPSExecutorAddr, int32_t);
 } // end namespace rt
 
 namespace rt_alt {

@@ -25,23 +25,21 @@
 
 namespace llvm {
 
-class AssignGUIDPass : public PassInfoMixin<AssignGUIDPass> {
+class AssignGUIDPass : public RequiredPassInfoMixin<AssignGUIDPass> {
 public:
   AssignGUIDPass() = default;
 
-  static void runOnModule(Module &M);
+  LLVM_ABI static void runOnModule(Module &M);
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM) {
     AssignGUIDPass::runOnModule(M);
     return PreservedAnalyses::all();
   }
 
-  static bool isRequired() { return true; }
-
   // Let GlobalMerge assign a GUID for merged GVs, instead of needing to
   // traverse all the module; or instead of making GlobalValue::assignGUID
   // public.
-  static void assignGUIDForMergedGV(GlobalVariable &GV);
+  LLVM_ABI static void assignGUIDForMergedGV(GlobalVariable &GV);
 };
 
 } // end namespace llvm
