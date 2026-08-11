@@ -14,8 +14,6 @@
 #include "FormatStringParsing.h"
 #include "clang/AST/FormatString.h"
 #include "clang/AST/OSLog.h"
-#include "clang/Basic/TargetInfo.h"
-#include "llvm/Support/TextEncoding.h"
 #include "llvm/Support/Regex.h"
 
 using clang::analyze_format_string::ArgType;
@@ -288,8 +286,7 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
     return true;
 
   // Look for the length modifier.
-  if (ParseLengthModifier(FS, I, E, LO, FormatStrConverter) &&
-      I == E) {
+  if (ParseLengthModifier(FS, I, E, LO, FormatStrConverter) && I == E) {
     // No more characters left?
     if (Warn)
       H.HandleIncompleteSpecifier(Start, E - Start);
@@ -316,8 +313,7 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
       }
       // Did we find the closing ']'?
       if (FormatStrConverter.convertBasicChar(*I) == u8']') {
-        if (ParseObjCFlags(H, FS, flagStart, I, Warn,
-                           FormatStrConverter))
+        if (ParseObjCFlags(H, FS, flagStart, I, Warn, FormatStrConverter))
           return true;
         ++I;
         break;
@@ -500,24 +496,10 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
       FS.setConversionSpecifier(CS);
     }
     // Assume the conversion takes one argument.
-    return !H.HandleInvalidPrintfConversionSpecifier(
-        FS, Start, Len, FormatStrConverter);
+    return !H.HandleInvalidPrintfConversionSpecifier(FS, Start, Len,
+                                                     FormatStrConverter);
   }
   return PrintfSpecifierResult(Start, FS);
-}
-
-// Creates a converter for format string character analysis. On z/OS format
-// strings are IBM-1047 encoded, so we convert each byte to UTF-8 before
-// comparing against ASCII specifier characters. On other targets a no-op
-// converter is used. Created once per format string parse and passed through.
-static llvm::TextEncodingConverter makeFormatStrConverter(const TargetInfo &T) {
-  auto MaybeConverter =
-      T.getTriple().isOSzOS()
-          ? llvm::TextEncodingConverter::create(llvm::TextEncoding::IBM1047,
-                                                llvm::TextEncoding::UTF8)
-          : llvm::TextEncodingConverter::createNoopConverter();
-  assert(MaybeConverter && "Failed to create format string converter");
-  return std::move(*MaybeConverter);
 }
 
 bool clang::analyze_format_string::ParsePrintfString(

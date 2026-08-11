@@ -371,6 +371,8 @@ public:
   }
 
   void reset() override {}
+
+  bool isNoop() const override { return true; }
 };
 
 ErrorOr<TextEncodingConverter> TextEncodingConverter::createNoopConverter() {
