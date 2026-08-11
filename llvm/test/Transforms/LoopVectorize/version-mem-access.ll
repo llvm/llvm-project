@@ -77,7 +77,6 @@ define void @fn1(ptr noalias %x, ptr noalias %c, double %a) {
 ; CHECK-NEXT:    [[CMP8:%.*]] = icmp sgt i32 [[CONV2]], 0
 ; CHECK-NEXT:    br i1 [[CMP8]], label %[[LOOP_PREHEADER:.*]], [[EXIT:label %.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[CONV2]] to i64
 ; CHECK-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
 ; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[CONV]], 1

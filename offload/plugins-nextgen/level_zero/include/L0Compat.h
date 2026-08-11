@@ -23,6 +23,16 @@ API_HELPER_OPTIONAL(ze_result_t, zeCommandListAppendLaunchKernelWithArguments,
                     const ze_group_count_t groupCounts,
                     const ze_group_size_t groupSizes, void **pArguments,
                     const void *pNext, ze_event_handle_t hSignalEvent,
-                    uint32_t numWaitEvents, ze_event_handle_t *phWaitEvents);
+                    uint32_t numWaitEvents, ze_event_handle_t *phWaitEvents)
+
+API_HELPER_OPTIONAL(ze_context_handle_t, zeDriverGetDefaultContext,
+                    ze_driver_handle_t hDriver);
+
+API_HELPER_OPTIONAL(ze_result_t, zeCommandListAppendHostFunction,
+                    ze_command_list_handle_t hCommandList,
+                    ze_host_function_callback_t pfnHostFunction,
+                    void *pUserData, const void *pNext,
+                    ze_event_handle_t hSignalEvent, uint32_t numWaitEvents,
+                    ze_event_handle_t *phWaitEvents);
 
 #endif // OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0COMPAT_H

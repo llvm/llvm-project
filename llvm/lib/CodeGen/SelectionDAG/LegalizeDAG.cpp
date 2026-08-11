@@ -1704,6 +1704,9 @@ SDValue SelectionDAGLegalize::ExpandFCOPYSIGN(SDNode *Node) const {
   SDValue Mag = Node->getOperand(0);
   SDValue Sign = Node->getOperand(1);
 
+  if (Sign.getValueType().isVector())
+    return DAG.UnrollVectorOp(Node);
+
   // Get sign bit into an integer value.
   FloatSignAsInt SignAsInt;
   getSignAsIntValue(SignAsInt, DL, Sign);
@@ -1763,6 +1766,9 @@ SDValue SelectionDAGLegalize::ExpandFCOPYSIGN(SDNode *Node) const {
 SDValue SelectionDAGLegalize::ExpandFNEG(SDNode *Node) const {
   // Get the sign bit as an integer.
   SDLoc DL(Node);
+  if (Node->getValueType(0).isVector())
+    return DAG.UnrollVectorOp(Node);
+
   FloatSignAsInt SignAsInt;
   getSignAsIntValue(SignAsInt, DL, Node->getOperand(0));
   EVT IntVT = SignAsInt.IntValue.getValueType();
@@ -2164,7 +2170,10 @@ SelectionDAGLegalize::ExpandLibCall(RTLIB::Libcall LC, SDNode *Node,
   const Function &F = DAG.getMachineFunction().getFunction();
   bool isTailCall =
       TLI.isInTailCallPosition(DAG, Node, TCChain) &&
-      (RetTy == F.getReturnType() || F.getReturnType()->isVoidTy());
+      (RetTy == F.getReturnType() || F.getReturnType()->isVoidTy()) &&
+      // Lowering doesn't support tail calling inside a function with
+      // a swifterror argument yet.
+      !DAG.hasSwiftErrorArg();
   if (isTailCall)
     InChain = TCChain;
 
