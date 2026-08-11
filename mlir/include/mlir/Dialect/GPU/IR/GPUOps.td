@@ -637,13 +637,21 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
     operation has a symbol attribute named `kernel` to identify the fully
     specified kernel function to launch (both the gpu.module and func).
 
-    The `gpu.launch_func` supports async dependencies: the kernel does not start
+    By default, the host implicitly blocks until kernel execution has completed.
+
+    Otherwise, the operation supports two async models.
+
+    The first one is dependency-based and is enabled when the `async` keyword is
+    present in text form, and corresponds to when the operation produces the
+    optional token result of type `!gpu.async.token`. Other async GPU ops can
+    take this token as dependency. In this case, the `gpu.launch_func` does not
+    block, and supports specifying async dependencies: the kernel does not start
     executing until the ops producing those async dependencies have completed.
 
-    By the default, the host implicitly blocks until kernel execution has
-    completed. If the `async` keyword is present, the host does not block but
-    instead a `!gpu.async.token` is returned. Other async GPU ops can take this
-    token as dependency.
+    The second async model is stream-based. When `asyncObject` is present, the
+    launch operation is queued to execute on the queue represented by it.
+
+    The two async models are mutually exclusive.
 
     The operation requires at least the grid and block sizes along the x,y,z
     dimensions as arguments. When a lower-dimensional kernel is required,
@@ -734,16 +742,13 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
       "ValueRange":$kernelOperands,
       CArg<"Type", "nullptr">:$asyncTokenType,
       CArg<"ValueRange", "{}">:$asyncDependencies,
+      CArg<"Value", "nullptr">:$asyncObject,
       CArg<"std::optional<KernelDim3>", "std::nullopt">:$clusterSize)>,
     OpBuilder<(ins "SymbolRefAttr":$kernel, "KernelDim3":$gridSize,
       "KernelDim3":$blockSize, "Value":$dynamicSharedMemorySize,
       "ValueRange":$kernelOperands,
-      "Type":$asyncTokenType,
+      CArg<"Type", "nullptr">:$asyncTokenType,
       CArg<"ValueRange", "{}">:$asyncDependencies,
-      CArg<"std::optional<KernelDim3>", "std::nullopt">:$clusterSize)>,
-    OpBuilder<(ins "SymbolRefAttr":$kernel, "KernelDim3":$gridSize,
-      "KernelDim3":$blockSize, "Value":$dynamicSharedMemorySize,
-      "ValueRange":$kernelOperands,
       CArg<"Value", "nullptr">:$asyncObject,
       CArg<"std::optional<KernelDim3>", "std::nullopt">:$clusterSize)>
   ];
@@ -813,20 +818,17 @@ def GPU_LaunchOp : GPU_Op<"launch", [
                UnitAttr:$cooperative,
                OptionalAttr<FlatSymbolRefAttr>:$module,
                OptionalAttr<FlatSymbolRefAttr>:$function,
-               OptionalAttr<ConfinedAttr<I64Attr, [IntNonNegative]>>:$workgroup_attributions)>,
+               OptionalAttr<ConfinedAttr<I64Attr, [IntNonNegative]>>:$workgroup_attributions,
+               Optional<AnyType>:$asyncObject)>,
     Results<(outs Optional<GPU_AsyncToken>:$asyncToken)> {
   let summary = "GPU kernel launch operation";
 
   let description = [{
     Launch a kernel on the specified grid of thread blocks. The body of the
-    kernel is defined by the single region that this operation contains. The
-    operation takes an optional list of async dependencies followed by six
-    operands and an optional operand.
+    kernel is defined by the single region that this operation contains.
 
-    The `async` keyword indicates the kernel should be launched asynchronously;
-    the operation returns a new !gpu.async.token when the keyword is specified.
-    The kernel launched does not start executing until the ops producing its
-    async dependencies (optional operands) have completed.
+    The async execution model is equivalent to the `gpu.launch_func` op, refer
+    to its description.
 
     The first three operands (following any async dependencies) are grid sizes
     along the x,y,z dimensions and the following three are block sizes along the
@@ -945,6 +947,7 @@ def GPU_LaunchOp : GPU_Op<"launch", [
       CArg<"Value", "nullptr">:$dynamicSharedMemorySize,
       CArg<"Type", "nullptr">:$asyncTokenType,
       CArg<"ValueRange", "{}">:$asyncDependencies,
+      CArg<"Value", "nullptr">:$asyncObject,
       CArg<"TypeRange", "{}">:$workgroupAttributions,
       CArg<"TypeRange", "{}">:$privateAttributions,
       CArg<"Value", "nullptr">:$clusterSizeX,

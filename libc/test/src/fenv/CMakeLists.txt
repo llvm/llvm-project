@@ -1,6 +1,6 @@
 add_custom_target(libc_fenv_unittests)
 
-add_libc_unittest(
+add_libc_test(
   rounding_mode_test
   SUITE
     libc_fenv_unittests
@@ -13,7 +13,7 @@ add_libc_unittest(
     LibcFPTestHelpers
 )
 
-add_libc_unittest(
+add_libc_test(
   exception_status_test
   SUITE
     libc_fenv_unittests
@@ -29,7 +29,7 @@ add_libc_unittest(
     LibcFPTestHelpers
 )
 
-add_libc_unittest(
+add_libc_test(
   getenv_and_setenv_test
   SUITE
     libc_fenv_unittests
@@ -46,7 +46,7 @@ add_libc_unittest(
     LibcFPTestHelpers
 )
 
-add_libc_unittest(
+add_libc_test(
   exception_flags_test
   SUITE
     libc_fenv_unittests
@@ -61,7 +61,7 @@ add_libc_unittest(
     LibcFPTestHelpers
 )
 
-add_libc_unittest(
+add_libc_test(
   feupdateenv_test
   SUITE
     libc_fenv_unittests
@@ -75,7 +75,7 @@ add_libc_unittest(
     LibcFPTestHelpers
 )
 
-add_libc_unittest(
+add_libc_test(
   feclearexcept_test
   SUITE
     libc_fenv_unittests
@@ -88,7 +88,7 @@ add_libc_unittest(
     LibcFPTestHelpers
 )
 
-add_libc_unittest(
+add_libc_test(
   feenableexcept_test
   SUITE
     libc_fenv_unittests
@@ -102,8 +102,8 @@ add_libc_unittest(
     LibcFPTestHelpers
 )
 
-if (NOT (LLVM_USE_SANITIZER OR (${LIBC_TARGET_OS} STREQUAL "windows")
-         OR (${LIBC_TARGET_OS} STREQUAL "darwin")))
+if(NOT (LLVM_USE_SANITIZER OR (${LIBC_TARGET_OS} STREQUAL "windows")
+  OR (${LIBC_TARGET_OS} STREQUAL "darwin")))
   # Sanitizers don't like SIGFPE. So, we will run the
   # tests which raise SIGFPE only in non-sanitizer builds.
   # The tests are also disabled for Windows and MacOS as they fail currently.
@@ -111,7 +111,6 @@ if (NOT (LLVM_USE_SANITIZER OR (${LIBC_TARGET_OS} STREQUAL "windows")
   # and MacOS.
   add_fp_unittest(
     enabled_exceptions_test
-    UNIT_TEST_ONLY
     SUITE
       libc_fenv_unittests
     SRCS
@@ -129,7 +128,6 @@ if (NOT (LLVM_USE_SANITIZER OR (${LIBC_TARGET_OS} STREQUAL "windows")
 
   add_fp_unittest(
     feholdexcept_test
-    UNIT_TEST_ONLY
     SUITE
       libc_fenv_unittests
     SRCS

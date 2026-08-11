@@ -201,7 +201,7 @@ void InProcessControllerAccess::disconnect() {
 }
 
 void InProcessControllerAccess::callController(
-    OnControllerCallReturnFn OnComplete, HandlerTag T,
+    OnControllerCallReturn OnComplete, orc_rt_ControllerHandlerTag T,
     WrapperFunctionBuffer ArgBytes) {
   assert(C && "callController called before connect");
   if (C->EnterMessageScope(C)) {
@@ -209,12 +209,13 @@ void InProcessControllerAccess::callController(
                        T, ArgBytes.release());
     C->LeaveMessageScope(C);
   } else
-    OnComplete(
-        WrapperFunctionBuffer::createOutOfBandError("connection closed"));
+    // Synchronous failure: the connection is already gone, so the call can't be
+    // sent. The caller is still on the stack, so fail the handler inline.
+    failControllerCallInline(std::move(OnComplete));
 }
 
 void InProcessControllerAccess::sendWrapperResult(
-    uint64_t CallId, WrapperFunctionBuffer ResultBytes) {
+    WrapperFunctionBuffer ResultBytes, uint64_t CallId) {
   assert(C && "sendWrapperResult called before connect");
   if (C->EnterMessageScope(C)) {
     C->ReturnWrapperResult(C->IPEPC, CallId, ResultBytes.release());
@@ -223,7 +224,7 @@ void InProcessControllerAccess::sendWrapperResult(
 }
 
 uint64_t InProcessControllerAccess::registerPendingHandler(
-    OnControllerCallReturnFn OnComplete) {
+    OnControllerCallReturn OnComplete) {
   std::scoped_lock<std::mutex> Lock(M);
   PendingCalls[NextPendingCall] = std::move(OnComplete);
   return NextPendingCall++;
@@ -237,15 +238,15 @@ void InProcessControllerAccess::doDisconnect() {
     ToDrain = std::move(PendingCalls);
   }
   for (auto &[_, H] : ToDrain)
-    H(WrapperFunctionBuffer::createOutOfBandError("disconnected"));
+    failPendingControllerCall(std::move(H));
 
   notifyDisconnected();
 }
 
 void InProcessControllerAccess::callWrapper(
     uint64_t CallId, void *Fn, orc_rt_WrapperFunctionBuffer ArgBytes) {
-  handleWrapperCall(CallId, reinterpret_cast<orc_rt_WrapperFunction>(Fn),
-                    WrapperFunctionBuffer(ArgBytes));
+  handleWrapperCall(reinterpret_cast<orc_rt_WrapperFunction>(Fn),
+                    WrapperFunctionBuffer(ArgBytes), CallId);
 }
 
 void InProcessControllerAccess::callWrapperEntry(
@@ -259,7 +260,7 @@ void InProcessControllerAccess::callWrapperEntry(
 void InProcessControllerAccess::returnJITDispatchResult(
     uint64_t CallId, orc_rt_WrapperFunctionBuffer ResultBytes) {
 
-  OnControllerCallReturnFn OnComplete;
+  OnControllerCallReturn OnComplete;
   {
     std::scoped_lock<std::mutex> Lock(M);
     auto I = PendingCalls.find(CallId);
@@ -272,7 +273,8 @@ void InProcessControllerAccess::returnJITDispatchResult(
   if (!OnComplete)
     return reportError(make_error<StringError>("Invalid call id"));
 
-  OnComplete(WrapperFunctionBuffer(ResultBytes));
+  handleControllerCallResult(std::move(OnComplete),
+                             WrapperFunctionBuffer(ResultBytes));
 }
 
 void InProcessControllerAccess::returnJITDispatchResultEntry(

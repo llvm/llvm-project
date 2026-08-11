@@ -242,7 +242,6 @@ template <typename ContextT> class GenericCycleInfoCompute {
   // Per-cycle scratch built in run() and consumed by flatten(), keyed by
   // header-preorder rank.
   struct CycleBuild {
-    BlockT *Header;
     unsigned ChildHead;
     unsigned NextSibling;
     unsigned OwnCount;
@@ -329,6 +328,9 @@ void GenericCycleInfo<ContextT>::addBlockToCycle(BlockT *Block, CycleRef C) {
       ++X.IdxBegin;
       ++X.IdxEnd;
     }
+    // An entry list sits either at IdxBegin or past the tour; both shift.
+    if (X.EntryBegin >= Pos)
+      ++X.EntryBegin;
   }
   addToBlockMap(Block, C);
   // Cyc and its ancestors gain the new block: extend each one's slice and
@@ -368,7 +370,9 @@ void GenericCycleInfoCompute<ContextT>::flatten(ArrayRef<CycleBuild> Build,
     CycleT &Flat = Info.Cycles[ID];
     Flat.Parent = Parent;
     Flat.Depth = Parent ? Info.deref(Parent).Depth + 1 : 1;
-    Flat.appendEntry(Build[C].Header);
+    // Initialize as one-element entry list (just the header).
+    Flat.EntryBegin = Cursor;
+    Flat.EntrySize = 1;
     Cursor += Build[C].OwnCount;
     Flat.IdxBegin = Cursor;
     Stack.push_back({ID, Build[C].ChildHead});
@@ -428,7 +432,7 @@ void GenericCycleInfoCompute<ContextT>::run(FunctionT *F) {
       unsigned &Head = BI.LoopHeader != NoBlock
                            ? Build[info(BI.LoopHeader).LoopIdx].ChildHead
                            : TopHead;
-      Build.push_back({BI.getBlock(), NoCycle, Head, 1}); // OwnCount 1: header.
+      Build.push_back({NoCycle, Head, 1}); // OwnCount 1: the header.
       Head = I;
       LLVM_DEBUG(dbgs() << "Found cycle for header: "
                         << Info.Context.print(BI.getBlock()) << "\n");
@@ -445,18 +449,28 @@ void GenericCycleInfoCompute<ContextT>::run(FunctionT *F) {
 
   // Add the non-header entries recorded during the DFS. Sorting by (header,
   // block) groups each cycle's entries together and in block preorder; a block
-  // may re-enter a cycle via several edges, so skip duplicates.
+  // may re-enter a cycle via several edges, so skip duplicates. Each group
+  // opens an entry slice seeded with the header.
   SmallVector<unsigned, 8> Rank(BlockInfos.size());
   for (auto [R, N] : enumerate(Preorder))
     Rank[N] = R;
   for (auto &[H, B] : Reentries)
     B = Rank[B];
   llvm::sort(Reentries);
+  unsigned PrevH = NoBlock;
   for (unsigned I = 0, E = Reentries.size(); I != E; ++I) {
     if (I && Reentries[I] == Reentries[I - 1])
       continue;
     auto [H, R] = Reentries[I];
-    Info.deref(Info.BlockMap[H]).appendEntry(info(Preorder[R]).getBlock());
+    CycleT &Cyc = Info.deref(Info.BlockMap[H]);
+    if (H != PrevH) {
+      BlockT *Header = Info.BlockLayout[Cyc.EntryBegin];
+      Cyc.EntryBegin = Info.BlockLayout.size();
+      Info.BlockLayout.push_back(Header);
+      PrevH = H;
+    }
+    Info.BlockLayout.push_back(info(Preorder[R]).getBlock());
+    Cyc.EntrySize = Info.BlockLayout.size() - Cyc.EntryBegin;
   }
 }
 

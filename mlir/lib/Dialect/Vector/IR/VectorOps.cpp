@@ -5377,6 +5377,10 @@ static bool isInBounds(TransferOp op, int64_t resultIdx, int64_t indicesIdx) {
   // op.getIndices()[indicesIdx] + vectorType < dim(op.getSource(), indicesIdx)
   if (op.getShapedType().isDynamicDim(indicesIdx))
     return false;
+  // Scalable dimensions are `vscale` times larger at runtime, so the static
+  // size is only a lower bound and cannot prove that the transfer fits.
+  if (op.getVectorType().getScalableDims()[resultIdx])
+    return false;
   Value index = op.getIndices()[indicesIdx];
   std::optional<int64_t> cstOp = getConstantIntValue(index);
   if (!cstOp.has_value())
@@ -6655,6 +6659,9 @@ LogicalResult ExpandLoadOp::verify() {
     return emitOpError("requires ") << memType.getRank() << " indices";
   if (resVType.getShape() != maskVType.getShape())
     return emitOpError("expected result shape to match mask shape");
+  if (resVType.getScalableDims() != maskVType.getScalableDims())
+    return emitOpError(
+        "expected result scalable dims to match mask scalable dims");
   if (resVType != passVType)
     return emitOpError("expected pass_thru of same type as result type");
   return success();
@@ -6709,6 +6716,9 @@ LogicalResult CompressStoreOp::verify() {
     return emitOpError("requires ") << memType.getRank() << " indices";
   if (valueVType.getShape() != maskVType.getShape())
     return emitOpError("expected valueToStore shape to match mask shape");
+  if (valueVType.getScalableDims() != maskVType.getScalableDims())
+    return emitOpError(
+        "expected valueToStore scalable dims to match mask scalable dims");
   return success();
 }
 

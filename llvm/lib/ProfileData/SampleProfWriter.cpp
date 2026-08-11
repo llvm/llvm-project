@@ -18,6 +18,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ProfileData/SampleProfWriter.h"
+#include "llvm/ADT/Eytzinger.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/ProfileData/SampleProf.h"
@@ -28,6 +29,7 @@
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/raw_ostream.h"
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <memory>
@@ -53,6 +55,11 @@ static cl::opt<bool>
     WriteMD5ProfSymList("md5-prof-sym-list", cl::init(false), cl::Hidden,
                         cl::desc("Write ProfileSymbolList (Cold Symbols) as "
                                  "64-bit MD5 hashes in Eytzinger layout"));
+
+static cl::opt<bool> WriteEytzingerNameTables(
+    "sample-profile-write-eytzinger-name-tables", cl::init(false), cl::Hidden,
+    cl::desc("Write Eytzinger 3-span layout for NameTable and parallel "
+             "FuncOffsetTable"));
 
 namespace llvm {
 namespace support {
@@ -271,7 +278,62 @@ SampleProfileWriterExtBinaryBase::writeSample(const FunctionSamples &S) {
   return writeBody(S);
 }
 
-std::error_code SampleProfileWriterExtBinaryBase::writeFuncOffsetTable() {
+std::error_code
+SampleProfileWriterExtBinaryBase::writeFuncOffsetTable(bool IsCS) {
+  if (WriteEytzingerNameTables) {
+    // Eytzinger layout requires MD5 representation and does not support
+    // multi-context Context-Sensitive profiles.
+    if (!UseMD5 || FunctionSamples::ProfileIsCS)
+      return sampleprof_error::unsupported_writing_format;
+    return writeEytzingerFuncOffsetTable(IsCS);
+  }
+  return writeLegacyFuncOffsetTable();
+}
+
+std::error_code
+SampleProfileWriterExtBinaryBase::writeEytzingerFuncOffsetTable(bool IsCS) {
+  assert((NumCS + NumFlat > 0 || FuncOffsetTable.empty()) &&
+         "SecNameTable must be written before SecFuncOffsetTable to establish "
+         "Eytzinger indices!");
+
+  size_t SpanSize = IsCS ? NumCS : NumFlat;
+  size_t BaseIdx = IsCS ? 0 : NumCS;
+
+  std::vector<support::ulittle32_t> FuncOffsets(
+      SpanSize, support::ulittle32_t(UINT32_MAX));
+
+  // Populate the function offset array parallel to the Eytzinger span.
+  for (const auto &[Context, RelativeOffset] : FuncOffsetTable) {
+    if (RelativeOffset >= UINT32_MAX)
+      return sampleprof_error::too_large;
+
+    FunctionId FId = Context.getFunction();
+    auto It = NameTable.find(FId);
+    if (It == NameTable.end())
+      continue;
+
+    size_t GlobalIdx = It->second;
+    if (GlobalIdx < BaseIdx || (GlobalIdx - BaseIdx) >= SpanSize)
+      continue;
+
+    size_t LocalIdx = GlobalIdx - BaseIdx;
+    assert(
+        FuncOffsets[LocalIdx] == UINT32_MAX &&
+        "Function offset slot already populated; duplicate GUID or collision!");
+    FuncOffsets[LocalIdx] = static_cast<uint32_t>(RelativeOffset);
+  }
+
+  assert(!llvm::is_contained(FuncOffsets, support::ulittle32_t(UINT32_MAX)) &&
+         "Unpopulated slot in Eytzinger function offset array!");
+
+  OutputStream->write(reinterpret_cast<const char *>(FuncOffsets.data()),
+                      SpanSize * sizeof(support::ulittle32_t));
+  addSectionFlag(SecFuncOffsetTable, SecFuncOffsetFlags::SecFlagEytzinger);
+  FuncOffsetTable.clear();
+  return sampleprof_error::success;
+}
+
+std::error_code SampleProfileWriterExtBinaryBase::writeLegacyFuncOffsetTable() {
   auto &OS = *OutputStream;
 
   // Write out the table size.
@@ -402,8 +464,113 @@ std::error_code SampleProfileWriterExtBinaryBase::writeNameTableSection(
     }
   }
 
+  if (UseMD5 && WriteEytzingerNameTables) {
+    // Eytzinger name tables do not support CSSPGO profiles
+    // (FunctionSamples::ProfileIsCS).
+    if (FunctionSamples::ProfileIsCS)
+      return sampleprof_error::unsupported_writing_format;
+    if (auto EC = writeEytzingerNameTableSection(ProfileMap))
+      return EC;
+    return sampleprof_error::success;
+  }
+
   if (auto EC = writeNameTable())
     return EC;
+  return sampleprof_error::success;
+}
+
+namespace {
+
+// Helper class to construct and write the SecNameTable section in Eytzinger
+// layout for ExtBinary MD5 profiles.
+//
+// The on-disk layout of the Eytzinger name table section consists of symbol
+// counts followed by three contiguous Eytzinger hash arrays:
+// - ULEB128 count of Context-Sensitive (CS) top-level profile symbol keys
+// - ULEB128 count of Flat top-level profile symbol keys
+// - ULEB128 count of Inlinee and auxiliary profile symbol keys
+// - Array of 64-bit little-endian MD5 hash keys for CS profiles in Eytzinger
+//   order
+// - Array of 64-bit little-endian MD5 hash keys for Flat profiles in Eytzinger
+//   order
+// - Array of 64-bit little-endian MD5 hash keys for Inlinees in Eytzinger order
+class EytzingerNameTable {
+  using TableT = llvm::EytzingerTable<support::ulittle64_t>;
+  std::array<TableT, static_cast<size_t>(EytzingerSpan::NumSpans)> Spans;
+
+public:
+  EytzingerNameTable(std::vector<support::ulittle64_t> CSKeys,
+                     std::vector<support::ulittle64_t> FlatKeys,
+                     std::vector<support::ulittle64_t> InlineeKeys)
+      : Spans{TableT::create(std::move(CSKeys)),
+              TableT::create(std::move(FlatKeys)),
+              TableT::create(std::move(InlineeKeys))} {}
+
+  // Find the global index of GUID across the three Eytzinger table spans.
+  uint64_t findGlobalIdx(uint64_t GUID) const {
+    uint64_t BaseIdx = 0;
+    for (const auto &Table : Spans) {
+      if (std::optional<size_t> LocalIdx = Table.findIndex(GUID))
+        return BaseIdx + *LocalIdx;
+      BaseIdx += Table.size();
+    }
+    llvm_unreachable("Symbol in NameTable missing from Eytzinger spans");
+  }
+
+  void write(raw_ostream &OS) const {
+    for (const auto &Table : Spans)
+      encodeULEB128(uint64_t(Table.size()), OS);
+    for (const auto &Table : Spans)
+      OS.write(reinterpret_cast<const char *>(Table.data()),
+               Table.size() * sizeof(support::ulittle64_t));
+  }
+
+  size_t size(EytzingerSpan S) const {
+    return Spans[static_cast<size_t>(S)].size();
+  }
+};
+
+} // end anonymous namespace
+
+std::error_code
+SampleProfileWriterExtBinaryBase::writeEytzingerNameTableSection(
+    const SampleProfileMap &ProfileMap) {
+  DenseSet<uint64_t> TopLevelGUIDs;
+  std::vector<support::ulittle64_t> CSKeys, FlatKeys, InlineeKeys;
+
+  // Collect top-level CS and Flat keys directly from ProfileMap.
+  for (const auto &I : ProfileMap) {
+    const SampleContext &Ctx = I.second.getContext();
+    uint64_t GUID = Ctx.getFunction().getHashCode();
+    if (TopLevelGUIDs.insert(GUID).second) {
+      // In single-table default layouts, unify all top-level symbols in the CS
+      // partition so they match the single unflagged function offset table.
+      if (SecLayout != CtxSplitLayout || I.second.isContextSensitiveTopLevel())
+        CSKeys.emplace_back(GUID);
+      else
+        FlatKeys.emplace_back(GUID);
+    }
+  }
+
+  // Collect remaining non-top-level symbols (inlinees, targets, vtables) from
+  // NameTable.
+  for (const auto &Entry : NameTable) {
+    uint64_t GUID = Entry.first.getHashCode();
+    if (!TopLevelGUIDs.contains(GUID))
+      InlineeKeys.emplace_back(GUID);
+  }
+
+  EytzingerNameTable Tables(std::move(CSKeys), std::move(FlatKeys),
+                            std::move(InlineeKeys));
+
+  // Assign each symbol its corresponding index in the Eytzinger layout.
+  for (auto &[FId, Idx] : NameTable)
+    Idx = Tables.findGlobalIdx(FId.getHashCode());
+
+  Tables.write(*OutputStream);
+  NumCS = Tables.size(EytzingerSpan::CS);
+  NumFlat = Tables.size(EytzingerSpan::Flat);
+
   return sampleprof_error::success;
 }
 
@@ -484,6 +651,8 @@ std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
                    SecProfSummaryFlags::SecFlagHasVTableTypeProf);
   if (Type == SecProfileSymbolList && WriteMD5ProfSymList)
     addSectionFlag(SecProfileSymbolList, SecProfileSymbolListFlags::SecFlagMD5);
+  if (Type == SecNameTable && WriteEytzingerNameTables && UseMD5)
+    addSectionFlag(SecNameTable, SecNameTableFlags::SecFlagEytzinger);
 
   uint64_t SectionStart = markSectionStart(Type, LayoutIdx);
   switch (Type) {
@@ -505,10 +674,16 @@ std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
     if (std::error_code EC = writeFuncProfiles(ProfileMap))
       return EC;
     break;
-  case SecFuncOffsetTable:
-    if (auto EC = writeFuncOffsetTable())
+  case SecFuncOffsetTable: {
+    bool IsFlat =
+        hasSecFlag(SectionHdrLayout[LayoutIdx], SecCommonFlags::SecFlagFlat);
+    // An unflagged function offset table inherently indexes the primary
+    // context-sensitive symbol span.
+    bool IsCS = !IsFlat;
+    if (auto EC = writeFuncOffsetTable(IsCS))
       return EC;
     break;
+  }
   case SecFuncMetadata:
     if (std::error_code EC = writeFuncMetadata(ProfileMap))
       return EC;
@@ -560,7 +735,7 @@ static void splitProfileMapToTwo(const SampleProfileMap &ProfileMap,
                                  SampleProfileMap &ContextProfileMap,
                                  SampleProfileMap &NoContextProfileMap) {
   for (const auto &I : ProfileMap) {
-    if (I.second.getCallsiteSamples().size())
+    if (I.second.isContextSensitiveTopLevel())
       ContextProfileMap.insert({I.first, I.second});
     else
       NoContextProfileMap.insert({I.first, I.second});
