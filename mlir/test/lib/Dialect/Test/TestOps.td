@@ -1130,6 +1130,33 @@ def TestInternalBranchOp : TEST_Op<"internal_br",
   let successors = (successor AnySuccessor:$successPath, AnySuccessor:$errorPath);
 }
 
+// A successor that must be the block immediately following the op's block.
+def FallthroughSuccessor : Successor<
+    CPred<"$_self == ($_op).getBlock()->getNextNode()">,
+    "the fallthrough block (the block immediately following the op's block)">;
+
+// A successor that must be a block listed after the op's block.
+def ForwardSuccessor : Successor<
+    CPred<[{
+      [&] {
+        for (::mlir::Block *block = ($_op).getBlock()->getNextNode(); block;
+             block = block->getNextNode())
+          if (block == $_self)
+            return true;
+        return false;
+      }()
+    }]>,
+    "a forward block (a block listed after the op's block)">;
+
+def TestFallthroughBranchOp : TEST_Op<"fallthrough_br", [Terminator]> {
+  let summary = "branch whose successors are constrained by predicates";
+  let successors = (successor FallthroughSuccessor:$target,
+                              VariadicSuccessor<ForwardSuccessor>:$forwardTargets);
+  let assemblyFormat = [{
+    $target `forward` `[` $forwardTargets `]` attr-dict
+  }];
+}
+
 def AttrSizedOperandOp : TEST_Op<"attr_sized_operands",
                                  [AttrSizedOperandSegments]> {
   let arguments = (ins
@@ -3286,6 +3313,8 @@ def TestDefaultAttrPrintOp : TEST_Op<"default_value_print"> {
 //===----------------------------------------------------------------------===//
 
 def TestResource : Resource<"TestResource">;
+def ParameterizedTestResource : Resource<"TestResource",
+    [{::mlir::StringAttr::get(getContext(), "test parameter")}]>;
 
 def TestEffectsOpA : TEST_Op<"op_with_effects_a"> {
   let arguments = (ins
@@ -3300,6 +3329,11 @@ def TestEffectsOpA : TEST_Op<"op_with_effects_a"> {
 
 def TestEffectsOpB : TEST_Op<"op_with_effects_b",
     [MemoryEffects<[MemWrite<TestResource, 0>]>]>;
+
+def TestParameterizedEffectsOp : TEST_Op<"op_with_parameterized_effects"> {
+  let arguments =
+      (ins Arg<AnyMemRef, "", [MemRead<ParameterizedTestResource>]>:$input);
+}
 
 def TestEffectsRead : TEST_Op<"op_with_memread",
     [MemoryEffects<[MemRead]>]> {
@@ -3656,6 +3690,22 @@ def TestOpWithVariadicSegmentProperties : TEST_Op<"variadic_segment_prop",
   let results = (outs Variadic<I64>:$b1, Variadic<I64>:$b2);
   let assemblyFormat = [{
     $a1 `:` $a2 `:` type($b1) `:` type($b2) prop-dict attr-dict `end`
+  }];
+}
+
+// Same as `TestOpWithVariadicSegmentProperties`, but the assembly format uses
+// the bulk `type(operands)` / `type(results)` directives instead of spelling
+// out the type of each individual variadic group. This prevents the printer
+// from eliding `operandSegmentSizes` / `resultSegmentSizes` from the
+// `<{...}>` properties dictionary (since there is no other way to recover the
+// segment sizes on re-parse), so this op exercises the parser's ability to
+// read those trait-injected properties back out of `prop-dict`.
+def TestOpWithBulkTypesAndSegmentProperties : TEST_Op<"variadic_segment_prop_bulk_type",
+    [AttrSizedOperandSegments, AttrSizedResultSegments]> {
+  let arguments = (ins Variadic<I64>:$a1, Variadic<I64>:$a2);
+  let results = (outs Variadic<I64>:$b1, Variadic<I64>:$b2);
+  let assemblyFormat = [{
+    `(` operands `)` `:` functional-type(operands, results) prop-dict attr-dict
   }];
 }
 
@@ -4212,7 +4262,7 @@ def TestTensorWithFutureLayoutOp
   }];
 
   let arguments = (ins TestMemRefLayoutAttr:$layout);
-  let results = (outs AnyRankedTensor:$output);
+  let results = (outs Bufferization_TensorLikeTypeInterface:$output);
   let extraClassDefinition = [{
     bool test::TestTensorWithFutureLayoutOp::bufferizesToMemoryRead(
         ::mlir::OpOperand&,
@@ -4258,10 +4308,10 @@ def TestForceNewLayoutOp
   }];
 
   let arguments = (ins
-    AnyRankedTensor:$input,
+    Bufferization_TensorLikeTypeInterface:$input,
     TestMemRefLayoutAttr:$layout
   );
-  let results = (outs AnyRankedTensor:$output);
+  let results = (outs Bufferization_TensorLikeTypeInterface:$output);
   let extraClassDefinition = [{
     bool test::TestForceNewLayoutOp::bufferizesToMemoryRead(::mlir::OpOperand&,
         const ::mlir::bufferization::AnalysisState&) {
@@ -4293,6 +4343,16 @@ def TestForceNewLayoutOp
                /*isDefinite=*/true}};
     }
   }];
+}
+
+def TestDummyCastOp : TEST_Op<"dummy_cast_op", []> {
+  let arguments = (ins
+    Arg<Bufferization_BufferLikeTypeInterface>:$source
+  );
+  let results = (outs
+    Arg<Bufferization_BufferLikeTypeInterface>:$dest
+  );
+  let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
 }
 
 //===----------------------------------------------------------------------===//

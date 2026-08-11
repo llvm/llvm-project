@@ -58,11 +58,13 @@ bool CheckRange(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                 CheckSubobjectKind CSK);
 
 /// Checks if a pointer points to a mutable field.
-bool CheckMutable(InterpState &S, CodePtr OpPC, PtrView Ptr);
-inline bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+bool CheckMutable(InterpState &S, CodePtr OpPC, PtrView Ptr,
+                  AccessKinds AK = AK_Read);
+inline bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                         AccessKinds AK = AK_Read) {
   if (!Ptr.isBlockPointer())
     return true;
-  return CheckMutable(S, OpPC, Ptr.view());
+  return CheckMutable(S, OpPC, Ptr.view(), AK);
 }
 
 /// Checks if a value can be loaded from a block.
@@ -92,8 +94,9 @@ inline bool CheckArraySize(InterpState &S, CodePtr OpPC, uint64_t NumElems) {
   uint64_t Limit = S.getLangOpts().ConstexprStepLimit;
   if (Limit != 0 && NumElems > Limit) {
     S.FFDiag(S.Current->getSource(OpPC),
-             diag::note_constexpr_new_exceeds_limits)
+             diag::note_constexpr_new_exceeds_limits, 1)
         << NumElems << Limit;
+    S.Note(S.Current->getSource(OpPC), diag::note_constexpr_steps);
     return false;
   }
   return true;
@@ -116,6 +119,10 @@ inline bool Invalid(InterpState &S, CodePtr OpPC) {
 template <typename SizeT>
 bool CheckArraySize(InterpState &S, CodePtr OpPC, SizeT *NumElements,
                     unsigned ElemSize, bool IsNoThrow) {
+
+  if (ElemSize == 0)
+    return true;
+
   // FIXME: Both the SizeT::from() as well as the
   // NumElements.toAPSInt() in this function are rather expensive.
 

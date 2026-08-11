@@ -19,42 +19,39 @@
 #define AMDGPU_LAST_HW_EVENT(X)
 #endif
 
-#ifndef AMDGPU_FIRST_HW_EVENT
-#define AMDGPU_FIRST_HW_EVENT(X)
-#endif
+AMDGPU_HW_EVENT(VMEM_READ_ACCESS,           0)  /* vmem read */
+AMDGPU_HW_EVENT(VMEM_SAMPLER_READ_ACCESS,   1)  /* vmem SAMPLER read (gfx12+ only) */
+AMDGPU_HW_EVENT(VMEM_BVH_READ_ACCESS,       2)  /* vmem BVH read (gfx12+ only) */
+AMDGPU_HW_EVENT(GLOBAL_INV_ACCESS,          3)  /* GLOBAL_INV (gfx12+ only) */
+AMDGPU_HW_EVENT(VMEM_WRITE_ACCESS,          4)  /* vmem write that is not scratch */
+AMDGPU_HW_EVENT(SCRATCH_WRITE_ACCESS,       5)  /* vmwrite that may be scratch */
+AMDGPU_HW_EVENT(VMEM_GROUP,                 6)  /* vmem group */
+AMDGPU_HW_EVENT(LDS_ACCESS,                 7)  /* lds read & write */
+AMDGPU_HW_EVENT(GDS_ACCESS,                 8)  /* gds read & write */
+AMDGPU_HW_EVENT(SQ_MESSAGE,                 9)  /* send message */
+AMDGPU_HW_EVENT(SCC_WRITE,                  10) /* write to SCC from barrier */
+AMDGPU_HW_EVENT(SMEM_ACCESS,                11) /* scalar-memory read & write */
+AMDGPU_HW_EVENT(SMEM_GROUP,                 12) /* scalar-memory group */
+AMDGPU_HW_EVENT(EXP_GPR_LOCK,               13) /* export holding on its data src */
+AMDGPU_HW_EVENT(GDS_GPR_LOCK,               14) /* GDS holding on its data and addr src */
+AMDGPU_HW_EVENT(EXP_POS_ACCESS,             15) /* write to export position */
+AMDGPU_HW_EVENT(EXP_PARAM_ACCESS,           16) /* write to export parameter */
+AMDGPU_HW_EVENT(VMW_GPR_LOCK,               17) /* vmem write holding on its data src */
+AMDGPU_HW_EVENT(EXP_LDS_ACCESS,             18) /* read by ldsdir counting as export */
+AMDGPU_HW_EVENT(VGPR_CSMACC_READ,           19) /* read VGPR source in Core/Side-MACC VALU */
+AMDGPU_HW_EVENT(VGPR_DPMACC_READ,           20) /* read VGPR source in DPMACC VALU */
+AMDGPU_HW_EVENT(VGPR_TRANS_READ,            21) /* read VGPR source in TRANS VALU */
+AMDGPU_HW_EVENT(VGPR_XDL_READ,              22) /* read VGPR source in XDL VALU */
+AMDGPU_HW_EVENT(VGPR_CSMACC_WRITE,          23) /* write VGPR dest in Core/Side-MACC VALU */
+AMDGPU_HW_EVENT(VGPR_DPMACC_WRITE,          24) /* write VGPR dest in DPMACC VALU */
+AMDGPU_HW_EVENT(VGPR_TRANS_WRITE,           25) /* write VGPR dest in TRANS VALU */
+AMDGPU_HW_EVENT(VGPR_XDL_WRITE,             26) /* write VGPR dest in XDL VALU */
+AMDGPU_HW_EVENT(VGPR_LDS_READ,              27) /* read VGPR source in LDS */
+AMDGPU_HW_EVENT(VGPR_FLAT_READ,             28) /* read VGPR source in FLAT */
+AMDGPU_HW_EVENT(VGPR_VMEM_READ,             29) /* read VGPR source in other VMEM */
+AMDGPU_HW_EVENT(ASYNC_ACCESS,               30) /* access that uses ASYNC_CNT */
+AMDGPU_HW_EVENT(TENSOR_ACCESS,              31) /* access that uses TENSOR_CNT */
 
-// TODO: VMEM_ACCESS should be broken up and be target-independent, not interpreted differently
-// depending on the target.
-AMDGPU_HW_EVENT(VMEM_ACCESS)              /* vmem read & write (pre-gfx10), vmem read (gfx10+) */
-AMDGPU_HW_EVENT(VMEM_SAMPLER_READ_ACCESS) /* vmem SAMPLER read (gfx12+ only) */
-AMDGPU_HW_EVENT(VMEM_BVH_READ_ACCESS)     /* vmem BVH read (gfx12+ only) */
-AMDGPU_HW_EVENT(GLOBAL_INV_ACCESS)        /* GLOBAL_INV (gfx12+ only) */
-AMDGPU_HW_EVENT(VMEM_WRITE_ACCESS)        /* vmem write that is not scratch */
-AMDGPU_HW_EVENT(SCRATCH_WRITE_ACCESS)     /* vmem write that may be scratch */
-AMDGPU_HW_EVENT(VMEM_GROUP)               /* vmem group */
-AMDGPU_HW_EVENT(LDS_ACCESS)               /* lds read & write */
-AMDGPU_HW_EVENT(GDS_ACCESS)               /* gds read & write */
-AMDGPU_HW_EVENT(SQ_MESSAGE)               /* send message */
-AMDGPU_HW_EVENT(SCC_WRITE)                /* write to SCC from barrier */
-AMDGPU_HW_EVENT(SMEM_ACCESS)              /* scalar-memory read & write */
-AMDGPU_HW_EVENT(SMEM_GROUP)               /* scalar-memory group */
-AMDGPU_HW_EVENT(EXP_GPR_LOCK)             /* export holding on its data src */
-AMDGPU_HW_EVENT(GDS_GPR_LOCK)             /* GDS holding on its data and addr src */
-AMDGPU_HW_EVENT(EXP_POS_ACCESS)           /* write to export position */
-AMDGPU_HW_EVENT(EXP_PARAM_ACCESS)         /* write to export parameter */
-AMDGPU_HW_EVENT(VMW_GPR_LOCK)             /* vmem write holding on its data src */
-AMDGPU_HW_EVENT(EXP_LDS_ACCESS)           /* read by ldsdir counting as export */
-AMDGPU_HW_EVENT(VGPR_CSMACC_WRITE)        /* write VGPR dest in Core/Side-MACC VALU */
-AMDGPU_HW_EVENT(VGPR_DPMACC_WRITE)        /* write VGPR dest in DPMACC VALU */
-AMDGPU_HW_EVENT(VGPR_TRANS_WRITE)         /* write VGPR dest in TRANS VALU */
-AMDGPU_HW_EVENT(VGPR_XDL_WRITE)           /* write VGPR dest in XDL VALU */
-AMDGPU_HW_EVENT(VGPR_LDS_READ)            /* read VGPR source in LDS */
-AMDGPU_HW_EVENT(VGPR_FLAT_READ)           /* read VGPR source in FLAT */
-AMDGPU_HW_EVENT(VGPR_VMEM_READ)           /* read VGPR source in other VMEM */
-AMDGPU_HW_EVENT(ASYNC_ACCESS)             /* access that uses ASYNC_CNT */
-AMDGPU_HW_EVENT(TENSOR_ACCESS)            /* access that uses TENSOR_CNT */
-
-AMDGPU_FIRST_HW_EVENT(VMEM_ACCESS)
 AMDGPU_LAST_HW_EVENT(TENSOR_ACCESS)
 
 
@@ -62,4 +59,3 @@ AMDGPU_LAST_HW_EVENT(TENSOR_ACCESS)
 
 #undef AMDGPU_HW_EVENT
 #undef AMDGPU_LAST_HW_EVENT
-#undef AMDGPU_FIRST_HW_EVENT

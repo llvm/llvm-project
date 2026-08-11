@@ -34,7 +34,6 @@
 #include "llvm/IR/AssemblyAnnotationWriter.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/Dominators.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/InlineAsm.h"
@@ -1083,11 +1082,11 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
     // movement, require a certain amount of setup, etc. So when optimising for
     // size, we penalise any call sites that perform loops. We do this after all
     // other costs here, so will likely only be dealing with relatively small
-    // functions (and hence DT and LI will hopefully be cheap).
+    // functions (and hence LI will hopefully be cheap).
     auto *Caller = CandidateCall.getFunction();
     if (Caller->hasMinSize()) {
-      DominatorTree DT(F);
-      LoopInfo LI(DT);
+      LoopInfo LI;
+      LI.analyze(&F);
       int NumLoops = 0;
       for (Loop *L : LI) {
         // Ignore loops that will not be executed
@@ -1395,8 +1394,8 @@ private:
   InlineResult finalizeAnalysis() override {
     auto *Caller = CandidateCall.getFunction();
     if (Caller->hasMinSize()) {
-      DominatorTree DT(F);
-      LoopInfo LI(DT);
+      LoopInfo LI;
+      LI.analyze(&F);
       for (Loop *L : LI) {
         // Ignore loops that will not be executed
         if (DeadBlocks.count(L->getHeader()))
@@ -3081,16 +3080,14 @@ LLVM_DUMP_METHOD void InlineCostCallAnalyzer::dump() { print(dbgs()); }
 /// Test that there are no attribute conflicts between Caller and Callee
 ///        that prevent inlining.
 static bool functionsHaveCompatibleAttributes(
-    Function *Caller, Function *Callee, TargetTransformInfo &TTI,
+    Function *Caller, Function *Callee,
     function_ref<const TargetLibraryInfo &(Function &)> &GetTLI) {
   // Note that CalleeTLI must be a copy not a reference. The legacy pass manager
   // caches the most recently created TLI in the TargetLibraryInfoWrapperPass
   // object, and always returns the same object (which is overwritten on each
   // GetTLI call). Therefore we copy the first result.
   auto CalleeTLI = GetTLI(*Callee);
-  return (IgnoreTTIInlineCompatible ||
-          TTI.areInlineCompatible(Caller, Callee)) &&
-         GetTLI(*Caller).areInlineCompatible(CalleeTLI,
+  return GetTLI(*Caller).areInlineCompatible(CalleeTLI,
                                              InlineCallerSupersetNoBuiltin) &&
          AttributeFuncs::areInlineCompatible(*Caller, *Callee);
 }
@@ -3199,25 +3196,21 @@ std::optional<InlineResult> llvm::getAttributeBasedInliningDecision(
   if (Callee->isPresplitCoroutine())
     return InlineResult::failure("unsplited coroutine call");
 
-  // Never inline calls with byval arguments that does not have the alloca
-  // address space. Since byval arguments can be replaced with a copy to an
-  // alloca, the inlined code would need to be adjusted to handle that the
-  // argument is in the alloca address space (so it is a little bit complicated
-  // to solve).
-  unsigned AllocaAS = Callee->getDataLayout().getAllocaAddrSpace();
-  for (unsigned I = 0, E = Call.arg_size(); I != E; ++I)
-    if (Call.isByValArgument(I)) {
-      PointerType *PTy = cast<PointerType>(Call.getArgOperand(I)->getType());
-      if (PTy->getAddressSpace() != AllocaAS)
-        return InlineResult::failure("byval arguments without alloca"
-                                     " address space");
-    }
+  // Inlining into a function with less target features is unsound, so enforce
+  // this even if alwaysinline is used.
+  Function *Caller = Call.getCaller();
+  if (!IgnoreTTIInlineCompatible &&
+      !CalleeTTI.areInlineCompatible(Caller, Callee))
+    return InlineResult::failure("conflicting target features");
 
   // Calls to functions with always-inline attributes should be inlined
   // whenever possible.
   if (Call.hasFnAttr(Attribute::AlwaysInline)) {
     if (Call.getAttributes().hasFnAttr(Attribute::NoInline))
       return InlineResult::failure("noinline call site attribute");
+
+    if (!AttributeFuncs::isStrictFPInlineCompatible(*Caller, *Callee))
+      return InlineResult::failure("incompatible strictfp attributes");
 
     auto IsViable = isInlineViable(*Callee);
     if (IsViable.isSuccess())
@@ -3227,8 +3220,7 @@ std::optional<InlineResult> llvm::getAttributeBasedInliningDecision(
 
   // Never inline functions with conflicting attributes (unless callee has
   // always-inline attribute).
-  Function *Caller = Call.getCaller();
-  if (!functionsHaveCompatibleAttributes(Caller, Callee, CalleeTTI, GetTLI))
+  if (!functionsHaveCompatibleAttributes(Caller, Callee, GetTLI))
     return InlineResult::failure("conflicting attributes");
 
   // Flatten: inline all viable calls from flatten functions regardless of cost.
@@ -3245,7 +3237,7 @@ std::optional<InlineResult> llvm::getAttributeBasedInliningDecision(
     return InlineResult::failure("optnone attribute");
 
   // Don't inline functions which can be interposed at link-time.
-  if (Callee->isInterposable())
+  if (Callee->isInterposable(/*CheckNoIPA=*/false))
     return InlineResult::failure("interposable");
 
   // Don't inline functions marked noinline.

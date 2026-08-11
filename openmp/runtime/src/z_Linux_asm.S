@@ -2512,7 +2512,7 @@ KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr):
 #if KMP_OS_LINUX
 # if KMP_ARCH_ARM || KMP_ARCH_AARCH64
 .section .note.GNU-stack,"",%progbits
-# elif !KMP_ARCH_WASM
+# elif !KMP_ARCH_WASM32 && !KMP_ARCH_WASM64 
 .section .note.GNU-stack,"",@progbits
 # endif
 #endif

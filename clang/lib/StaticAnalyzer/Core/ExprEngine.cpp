@@ -1196,7 +1196,7 @@ void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
       }
 
       SVal InitVal;
-      if (Init->getType()->isArrayType()) {
+      if (Field->getType()->isArrayType()) {
         // Handle arrays of trivial type. We can represent this with a
         // primitive load/copy from the base array region.
         const ArraySubscriptExpr *ASE;
@@ -1716,6 +1716,9 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::SEHExceptStmtClass:
     case Stmt::SEHLeaveStmtClass:
     case Stmt::SEHFinallyStmtClass:
+    case Stmt::CXXExpansionStmtPatternClass:
+    case Stmt::CXXExpansionStmtInstantiationClass:
+    case Stmt::CXXExpansionSelectExprClass:
     case Stmt::OMPCanonicalLoopClass:
     case Stmt::OMPParallelDirectiveClass:
     case Stmt::OMPSimdDirectiveClass:
@@ -2387,11 +2390,7 @@ bool ExprEngine::replayWithoutInlining(ExplodedNode *N,
 }
 
 /// Block entrance.  (Update counters).
-/// FIXME: `BlockEdge &L` is only used for debug statistics, consider removing
-/// it and using `BlockEntrance &BE` (where `BlockEntrance` is a subtype of
-/// `ProgramPoint`) for statistical purposes.
-void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
-                                         const BlockEntrance &BE,
+void ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
                                          NodeBuilder &Builder,
                                          ExplodedNode *Pred) {
   // If we reach a loop which has a known bound (and meets
@@ -2469,7 +2468,7 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
       NumMaxBlockCountReached++;
 
     // Make sink nodes as exhausted(for stats) only if retry failed.
-    Engine.blocksExhausted.push_back(std::make_pair(L, Sink));
+    Engine.blocksExhausted.push_back(std::make_pair(BE, Sink));
   }
 }
 
@@ -2661,7 +2660,6 @@ assumeCondition(const Stmt *ConditionStmt, ExplodedNode *N) {
 
   DefinedSVal V = X.castAs<DefinedSVal>();
 
-  ProgramStateRef StTrue, StFalse;
   return State->assume(V);
 }
 
@@ -3190,20 +3188,20 @@ void ExprEngine::VisitCommonDeclRefExpr(const Expr *Ex, const NamedDecl *D,
 void ExprEngine::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *Ex,
                                         ExplodedNode *Pred,
                                         ExplodedNodeSet &Dst) {
+  const Expr *Arr = Ex->getCommonExpr()->getSourceExpr();
+
   ExplodedNodeSet CheckerPreStmt;
   getCheckerManager().runCheckersForPreStmt(CheckerPreStmt, Pred, Ex, *this);
 
   ExplodedNodeSet EvalSet;
-  NodeBuilder Bldr(CheckerPreStmt, EvalSet, *currBldrCtx);
-
-  const Expr *Arr = Ex->getCommonExpr()->getSourceExpr();
+  if (isa<CXXConstructExpr>(Ex->getSubExpr())) {
+    // The constructor visitor has already handled everything, so let's skip
+    // forward to PostStmt handling by clearing the range of the 'for' loop.
+    EvalSet.insert(CheckerPreStmt);
+    CheckerPreStmt.clear();
+  }
 
   for (auto *Node : CheckerPreStmt) {
-
-    // The constructor visitior has already taken care of everything.
-    if (isa<CXXConstructExpr>(Ex->getSubExpr()))
-      break;
-
     const StackFrame *SF = Node->getStackFrame();
     ProgramStateRef state = Node->getState();
 
@@ -3278,7 +3276,7 @@ void ExprEngine::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *Ex,
     else
       Base = UnknownVal();
 
-    Bldr.generateNode(Ex, Node, state->BindExpr(Ex, SF, Base));
+    EvalSet.insert(Engine.makeNodeWithBinding(Node, Ex, Base));
   }
 
   getCheckerManager().runCheckersForPostStmt(Dst, EvalSet, Ex, *this);
@@ -3349,7 +3347,6 @@ void ExprEngine::VisitMemberExpr(const MemberExpr *M, ExplodedNode *Pred,
     for (const auto I : CheckedSet)
       VisitCommonDeclRefExpr(M, Member, I, EvalSet);
   } else {
-    ExplodedNodeSet Tmp;
 
     for (const auto I : CheckedSet) {
       ProgramStateRef state = I->getState();
@@ -3410,10 +3407,7 @@ void ExprEngine::VisitMemberExpr(const MemberExpr *M, ExplodedNode *Pred,
         EvalSet.insert(Engine.makeNodeWithBinding(
             I, M, L, state, ProgramPoint::PostLValueKind));
       } else {
-        // FIXME: When evalLoad no longer uses NodeBuilders, eliminate Tmp and
-        // pass EvalSet as the first argument of evalLoad.
-        evalLoad(Tmp, M, M, I, state, L);
-        EvalSet.insert(Tmp);
+        evalLoad(EvalSet, M, M, I, state, L);
       }
     }
   }
@@ -3638,9 +3632,10 @@ void ExprEngine::evalLoad(ExplodedNodeSet &Dst,
   if (Tmp.empty())
     return;
 
-  NodeBuilder Bldr(Tmp, Dst, *currBldrCtx);
-  if (location.isUndef())
+  if (location.isUndef()) {
+    Dst.insert(Tmp);
     return;
+  }
 
   // Proceed with the load.
   for (const auto I : Tmp) {
@@ -3653,29 +3648,26 @@ void ExprEngine::evalLoad(ExplodedNodeSet &Dst,
       V = state->getSVal(location.castAs<Loc>(), LoadTy);
     }
 
-    Bldr.generateNode(NodeEx, I,
-                      state->BindExpr(BoundEx, I->getStackFrame(), V), tag,
-                      ProgramPoint::PostLoadKind);
+    const auto *SF = I->getStackFrame();
+    PostLoad Loc(NodeEx, SF, tag);
+    Dst.insert(Engine.makeNode(Loc, state->BindExpr(BoundEx, SF, V), I));
   }
 }
 
-void ExprEngine::evalLocation(ExplodedNodeSet &Dst,
-                              const Stmt *NodeEx,
-                              const Stmt *BoundEx,
-                              ExplodedNode *Pred,
-                              ProgramStateRef state,
-                              SVal location,
+void ExprEngine::evalLocation(ExplodedNodeSet &Dst, const Stmt *NodeEx,
+                              const Stmt *BoundEx, ExplodedNode *Pred,
+                              ProgramStateRef state, SVal location,
                               bool isLoad) {
-  NodeBuilder BldrTop(Pred, Dst, *currBldrCtx);
   // Early checks for performance reason.
   if (location.isUnknown()) {
+    Dst.insert(Pred);
     return;
   }
 
   ExplodedNodeSet Src;
-  BldrTop.takeNodes(Pred);
-  NodeBuilder Bldr(Pred, Src, *currBldrCtx);
-  if (Pred->getState() != state) {
+  if (Pred->getState() == state) {
+    Src.insert(Pred);
+  } else {
     // Associate this new state with an ExplodedNode.
     // FIXME: If I pass null tag, the graph is incorrect, e.g for
     //   int *p;
@@ -3686,12 +3678,14 @@ void ExprEngine::evalLocation(ExplodedNodeSet &Dst,
     // "Variable 'p' initialized to a null pointer value"
 
     static SimpleProgramPointTag tag(TagProviderName, "Location");
-    Bldr.generateNode(NodeEx, Pred, state, &tag);
+    PostStmt Loc(NodeEx, Pred->getStackFrame(), &tag);
+    Src.insert(Engine.makeNode(Loc, state, Pred));
   }
+
   ExplodedNodeSet Tmp;
   getCheckerManager().runCheckersForLocation(Tmp, Src, location, isLoad,
                                              NodeEx, BoundEx, *this);
-  BldrTop.addNodes(Tmp);
+  Dst.insert(Tmp);
 }
 
 std::pair<const ProgramPointTag *, const ProgramPointTag *>
@@ -3711,20 +3705,20 @@ REGISTER_TRAIT_WITH_PROGRAMSTATE(LastEagerlyAssumeExprIfSuccessful,
 void ExprEngine::evalEagerlyAssumeBifurcation(ExplodedNodeSet &Dst,
                                               ExplodedNodeSet &Src,
                                               const Expr *Ex) {
-  NodeBuilder Bldr(Src, Dst, *currBldrCtx);
-
   for (ExplodedNode *Pred : Src) {
+    const StackFrame *SF = Pred->getStackFrame();
     // Test if the previous node was as the same expression.  This can happen
     // when the expression fails to evaluate to anything meaningful and
     // (as an optimization) we don't generate a node.
     ProgramPoint P = Pred->getLocation();
     if (!P.getAs<PostStmt>() || P.castAs<PostStmt>().getStmt() != Ex) {
+      Dst.insert(Pred);
       continue;
     }
 
     ProgramStateRef State = Pred->getState();
     State = State->set<LastEagerlyAssumeExprIfSuccessful>(nullptr);
-    SVal V = State->getSVal(Ex, Pred->getStackFrame());
+    SVal V = State->getSVal(Ex, SF);
     std::optional<nonloc::SymbolVal> SEV = V.getAs<nonloc::SymbolVal>();
     if (SEV && SEV->isExpression()) {
       const auto &[TrueTag, FalseTag] = getEagerlyAssumeBifurcationTags();
@@ -3739,16 +3733,20 @@ void ExprEngine::evalEagerlyAssumeBifurcation(ExplodedNodeSet &Dst,
       // First assume that the condition is true.
       if (StateTrue) {
         SVal Val = svalBuilder.makeIntVal(1U, Ex->getType());
-        StateTrue = StateTrue->BindExpr(Ex, Pred->getStackFrame(), Val);
-        Bldr.generateNode(Ex, Pred, StateTrue, TrueTag);
+        StateTrue = StateTrue->BindExpr(Ex, SF, Val);
+        PostStmt PostStmtTrue(Ex, SF, TrueTag);
+        Dst.insert(Engine.makeNode(PostStmtTrue, StateTrue, Pred));
       }
 
       // Next, assume that the condition is false.
       if (StateFalse) {
         SVal Val = svalBuilder.makeIntVal(0U, Ex->getType());
-        StateFalse = StateFalse->BindExpr(Ex, Pred->getStackFrame(), Val);
-        Bldr.generateNode(Ex, Pred, StateFalse, FalseTag);
+        StateFalse = StateFalse->BindExpr(Ex, SF, Val);
+        PostStmt PostStmtFalse(Ex, SF, FalseTag);
+        Dst.insert(Engine.makeNode(PostStmtFalse, StateFalse, Pred));
       }
+    } else {
+      Dst.insert(Pred);
     }
   }
 }

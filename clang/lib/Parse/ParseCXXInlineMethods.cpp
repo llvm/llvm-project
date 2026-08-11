@@ -101,7 +101,6 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(
 
     bool Delete = false;
     SourceLocation KWLoc;
-    SourceLocation KWEndLoc = Tok.getEndLoc().getLocWithOffset(-1);
     if (TryConsumeToken(tok::kw_delete, KWLoc)) {
       Diag(KWLoc, getLangOpts().CPlusPlus11
                       ? diag::warn_cxx98_compat_defaulted_deleted_function
@@ -111,7 +110,7 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(
       Actions.SetDeclDeleted(FnD, KWLoc, Message);
       Delete = true;
       if (auto *DeclAsFunction = dyn_cast<FunctionDecl>(FnD)) {
-        DeclAsFunction->setRangeEnd(KWEndLoc);
+        DeclAsFunction->setRangeEnd(PrevTokLocation);
       }
     } else if (TryConsumeToken(tok::kw_default, KWLoc)) {
       Diag(KWLoc, getLangOpts().CPlusPlus11
@@ -120,7 +119,7 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(
         << 0 /* defaulted */;
       Actions.SetDeclDefaulted(FnD, KWLoc);
       if (auto *DeclAsFunction = dyn_cast<FunctionDecl>(FnD)) {
-        DeclAsFunction->setRangeEnd(KWEndLoc);
+        DeclAsFunction->setRangeEnd(PrevTokLocation);
       }
     } else {
       llvm_unreachable("function definition after = not 'delete' or 'default'");
@@ -421,7 +420,7 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
       PP.EnterTokenStream(*Toks, true, /*IsReinject*/ true);
 
       // Consume the previously-pushed token.
-      ConsumeAnyToken();
+      ConsumeAnyToken(/*ConsumeCodeCompletionTok=*/true);
 
       // Consume the '='.
       assert(Tok.is(tok::equal) && "Default argument not starting with '='");
@@ -501,7 +500,7 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
     PP.EnterTokenStream(*Toks, true, /*IsReinject*/true);
 
     // Consume the previously-pushed token.
-    ConsumeAnyToken();
+    ConsumeAnyToken(/*ConsumeCodeCompletionTok=*/true);
 
     // C++11 [expr.prim.general]p3:
     //   If a declaration declares a member function or member function
@@ -870,6 +869,27 @@ bool Parser::ConsumeAndStoreUntil(tok::TokenKind T1, tok::TokenKind T2,
     case tok::annot_repl_input_end:
       // Ran out of tokens.
       return false;
+
+    case tok::annot_pragma_openacc:
+    case tok::annot_pragma_openmp:
+    case tok::annot_attr_openmp: {
+      // Ignore any tokens inside of a OMP/OpenACC pragma, as these should just
+      // be taken as 1.
+      tok::TokenKind EndKind = Tok.is(tok::annot_pragma_openacc)
+                                   ? tok::annot_pragma_openacc_end
+                                   : tok::annot_pragma_openmp_end;
+      Toks.push_back(Tok);
+      ConsumeAnnotationToken();
+      while (Tok.isNot(EndKind) && Tok.isNot(tok::eof)) {
+        Toks.push_back(Tok);
+        ConsumeAnyToken();
+      }
+      if (Tok.is(EndKind)) {
+        Toks.push_back(Tok);
+        ConsumeAnnotationToken();
+      }
+      break;
+    }
 
     case tok::l_paren:
       // Recursively consume properly-nested parens.

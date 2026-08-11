@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
+// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
+// supports padded, packed, and over-aligned record shapes.
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -fno-clangir-call-conv-lowering -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s --check-prefix=LLVM
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
@@ -26,6 +28,16 @@ typedef struct {
 // CIR-DAG:  !rec_T = !cir.struct<"T" {!u8i, !u32i}>
 // LLVM-DAG: %struct.T = type { i8, i32 }
 // OGCG-DAG: %struct.T = type { i8, i32 }
+
+union U { int x : 3; };
+const U u = {5};
+// CIR-DAG: cir.global "private" {{.*}}@_ZL1u = #cir.const_record<{#cir.int<5> : !u8i}> : !rec_U
+// LLVM-DAG: @_ZL1u = internal constant %union.U { i8 5, [3 x i8] undef }
+// OGCG-DAG: @_ZL1u = internal constant %union.U { i8 5, [3 x i8] undef }
+auto use() {
+  return u;
+}
+
 
 void def() {
   S s;
