@@ -51,6 +51,12 @@ The previous behavior can be restored with `-Wno-error=unicode-whitespace`.
 Clang will stop accepting non-ascii whitespaces as token separators
 in a future version of Clang.
 
+- Offload compilations that pair a SPIR, physical SPIR-V, or NVPTX device target
+  with a host of a different pointer width are now rejected, for example
+  `--offload=spirv32` with an `x86_64` host. These targets take `size_t`,
+  `ptrdiff_t`, and `intptr_t` from the host, so a mismatch disagreed with the
+  device data layout. Select a device target whose width matches the host's.
+
 ### C++ Specific Potentially Breaking Changes
 
 ### ABI Changes in This Version

@@ -835,6 +835,15 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
 } // namespace clang
 
 using namespace clang::targets;
+
+/// Returns true if Triple names a target that takes its pointer related types
+/// from a host target. Logical SPIR-V is excluded; it uses fixed values for
+/// those types regardless of the host.
+static bool adaptsToHostTarget(const llvm::Triple &Triple) {
+  return (Triple.isSPIROrSPIRV() && Triple.getArch() != llvm::Triple::spirv) ||
+         Triple.isNVPTX();
+}
+
 /// CreateTargetInfo - Return the target info object for the specified target
 /// options.
 TargetInfo *TargetInfo::CreateTargetInfo(DiagnosticsEngine &Diags,
@@ -842,6 +851,21 @@ TargetInfo *TargetInfo::CreateTargetInfo(DiagnosticsEngine &Diags,
   TargetOptions *Opts = &OptsRef;
 
   llvm::Triple Triple(llvm::Triple::normalize(Opts->Triple));
+
+  // Host and device pointer related type widths must match. Reject a mismatch
+  // before constructing the device target, which asserts on this.
+  if (adaptsToHostTarget(Triple) && !Opts->HostTriple.empty()) {
+    llvm::Triple HostTriple(llvm::Triple::normalize(Opts->HostTriple));
+    if (!adaptsToHostTarget(HostTriple) &&
+        HostTriple.getArch() != llvm::Triple::UnknownArch &&
+        Triple.getArchPointerBitWidth() !=
+            HostTriple.getArchPointerBitWidth()) {
+      Diags.Report(diag::err_target_unsupported_host_device_pointer_width)
+          << Triple.str() << Triple.getArchPointerBitWidth() << HostTriple.str()
+          << HostTriple.getArchPointerBitWidth();
+      return nullptr;
+    }
+  }
 
   // Construct the target
   std::unique_ptr<TargetInfo> Target = AllocateTarget(Triple, *Opts);

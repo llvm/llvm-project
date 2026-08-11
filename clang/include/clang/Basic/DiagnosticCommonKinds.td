@@ -338,6 +338,9 @@ def err_target_unknown_cpu : Error<"unknown target CPU '%0'">;
 def note_valid_options : Note<"valid target CPU values are: %0">;
 def err_target_unsupported_cpu_for_micromips : Error<
   "micromips is not supported for target CPU '%0'">;
+def err_target_unsupported_host_device_pointer_width : Error<
+  "device target '%0' with %1-bit pointers is incompatible with host target "
+  "'%2' with %3-bit pointers">;
 def err_target_unknown_abi : Error<"unknown target ABI '%0'">;
 def err_target_unsupported_abi : Error<"ABI '%0' is not supported on CPU '%1'">;
 def err_target_unsupported_abi_for_triple : Error<

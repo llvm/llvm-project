@@ -1129,6 +1129,22 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
         continue;
       }
 
+      const llvm::Triple &HostTriple = C.getDefaultToolChain().getTriple();
+      // Logical SPIR-V is excluded; it overrides those types with fixed values.
+      auto AdaptsToHostTarget = [](const llvm::Triple &T) {
+        return (T.isSPIROrSPIRV() && T.getArch() != llvm::Triple::spirv) ||
+               T.isNVPTX();
+      };
+      // Target and host pointer related type widths must match.
+      if (AdaptsToHostTarget(Target) && !AdaptsToHostTarget(HostTriple) &&
+          Target.getArchPointerBitWidth() !=
+              HostTriple.getArchPointerBitWidth()) {
+        Diag(diag::err_target_unsupported_host_device_pointer_width)
+            << Target.str() << Target.getArchPointerBitWidth()
+            << HostTriple.str() << HostTriple.getArchPointerBitWidth();
+        continue;
+      }
+
       std::string NormalizedName = Target.normalize();
       auto [TripleIt, Inserted] =
           FoundNormalizedTriples.try_emplace(NormalizedName, Target.str());
