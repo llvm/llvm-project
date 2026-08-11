@@ -415,6 +415,9 @@ DebuggerThread::HandleExceptionEvent(const EXCEPTION_DEBUG_INFO &info,
     std::lock_guard<std::mutex> guard(m_active_exception_mutex);
     m_active_exception = active_exception;
   }
+  // Set this before calling the delegate. The delegate can wake up the thread
+  // driving the debugger, and that thread can call ContinueAsyncException
+  // before OnDebugException returns.
   m_exception_pred.SetValue(ExceptionResult::BreakInDebugger, eBroadcastNever);
 
   LLDB_LOG(log, "encountered {0} chance exception {1:x} on thread {2:x}",
@@ -423,8 +426,10 @@ DebuggerThread::HandleExceptionEvent(const EXCEPTION_DEBUG_INFO &info,
 
   ExceptionResult result =
       m_debug_delegate->OnDebugException(first_chance, *active_exception);
-  // If the delegate dealt with the exception itself, continue it now.  This is
-  // a no-op if the other thread got there first, in which case its result wins.
+  // The delegate only says what to do, it never continues the exception. If the
+  // result is not BreakInDebugger, continue it here, or the wait below never
+  // ends. If the other thread already continued it, this does nothing and its
+  // result is what the wait below returns.
   if (result != ExceptionResult::BreakInDebugger)
     ContinueAsyncException(result);
 
