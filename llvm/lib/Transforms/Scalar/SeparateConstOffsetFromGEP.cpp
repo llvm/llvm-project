@@ -1257,7 +1257,7 @@ bool SeparateConstOffsetFromGEP::collectVectorGEPCandidate(
     return false;
 
   Loop *L = LI->getLoopFor(GEP->getParent());
-  if (!L)
+  if (!L || !L->getLoopPreheader())
     return false;
 
   SmallVector<VectorGEPOffsetTerm, 4> OffsetTerms;

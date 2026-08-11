@@ -10,19 +10,20 @@ define void @scalable_vector_geps(i64 %n, ptr %base, ptr %out0, ptr %out1, ptr %
 ; CHECK-NEXT:    index z1.d, x0, #-1
 ; CHECK-NEXT:    mov z3.d, #56 // =0x38
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mvn x9, x8
-; CHECK-NEXT:    mov z0.d, x8
-; CHECK-NEXT:    lsl x10, x9, #6
 ; CHECK-NEXT:    mov z2.d, x1
-; CHECK-NEXT:    sub x10, x10, x9, lsl #3
-; CHECK-NEXT:    sub x9, x9, x8
-; CHECK-NEXT:    lsl x11, x9, #6
-; CHECK-NEXT:    sub x8, x9, x8
-; CHECK-NEXT:    mov z4.d, x10
-; CHECK-NEXT:    sub x11, x11, x9, lsl #3
+; CHECK-NEXT:    mov z0.d, x8
+; CHECK-NEXT:    mvn x8, x8
 ; CHECK-NEXT:    lsl x9, x8, #6
-; CHECK-NEXT:    sub x8, x9, x8, lsl #3
-; CHECK-NEXT:    mov z5.d, x11
+; CHECK-NEXT:    mov x10, x8
+; CHECK-NEXT:    decd x10
+; CHECK-NEXT:    sub x9, x9, x8, lsl #3
+; CHECK-NEXT:    lsl x11, x10, #6
+; CHECK-NEXT:    decw x8
+; CHECK-NEXT:    sub x10, x11, x10, lsl #3
+; CHECK-NEXT:    lsl x11, x8, #6
+; CHECK-NEXT:    mov z4.d, x9
+; CHECK-NEXT:    sub x8, x11, x8, lsl #3
+; CHECK-NEXT:    mov z5.d, x10
 ; CHECK-NEXT:    mov z6.d, x8
 ; CHECK-NEXT:    .p2align 5, , 16
 ; CHECK-NEXT:  .LBB0_1: // %loop
