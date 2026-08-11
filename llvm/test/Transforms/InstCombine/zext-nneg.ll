@@ -136,7 +136,7 @@ define i64 @zext_nneg_of_zext_large_negative(i16 %arg) {
 ; CHECK-SAME: i16 [[ARG:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[SEXT:%.*]] = zext i16 [[ARG]] to i64
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[SEXT]], -2147450881
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[SEXT]], 2147516415
 ; CHECK-NEXT:    ret i64 [[ADD]]
 ;
 entry:
