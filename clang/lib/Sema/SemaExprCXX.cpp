@@ -3063,8 +3063,7 @@ Sema::resolveAllocationArguments(LookupResult &R,
     FoundArguments.push_back(AlignedArguments);
   FoundArguments.push_back(UnalignedArguments);
   if (IAP.PassAlignment == AlignedAllocationMode::No &&
-      AllocationAlignmentExpr && getLangOpts().AlignedAllocation &&
-      !getLangOpts().AlignedAllocationUnavailable)
+      AllocationAlignmentExpr && getLangOpts().AlignedAllocation)
     FoundArguments.push_back(AlignedArguments);
 
   // The MSVC global fallback path
