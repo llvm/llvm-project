@@ -15279,27 +15279,24 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       return false;
 
     unsigned NumSrcElts = SrcVec.getVectorLength();
+    unsigned NumDestElts = E->getType()->castAs<VectorType>()->getNumElements();
+
     SmallVector<APValue, 8> ResultElts;
-
-    for (unsigned i = 0; i < NumSrcElts; ++i) {
-      llvm::APFloat FloatElem = SrcVec.getVectorElt(i).getFloat();
-      llvm::APSInt IntResult(32, /*isUnsigned=*/false);
-      bool IsExact = false;
-      // We only allow exact conversions so rounding mode does not matter for
-      // cvt* and cvtt* builtins
-      FloatElem.convertToInteger(IntResult, llvm::APFloat::rmTowardZero,
-                                 &IsExact);
-      if (!IsExact)
-        return false;
-
-      ResultElts.push_back(APValue(IntResult));
-    }
-
-    if (BuiltinOp == X86::BI__builtin_ia32_cvtpd2dq ||
-        BuiltinOp == X86::BI__builtin_ia32_cvttpd2dq) {
-      llvm::APSInt ZeroInt(32, /*isUnsigned=*/false);
-      ResultElts.push_back(APValue(ZeroInt));
-      ResultElts.push_back(APValue(ZeroInt));
+    for (unsigned i = 0; i < NumDestElts; ++i) {
+      if (i < NumSrcElts) {
+        llvm::APFloat FloatElem = SrcVec.getVectorElt(i).getFloat();
+        llvm::APSInt IntResult(32, /*isUnsigned=*/false);
+        bool IsExact = false;
+        // We only allow exact conversions so rounding mode does not matter for
+        // cvt* and cvtt* builtins
+        FloatElem.convertToInteger(IntResult, llvm::APFloat::rmTowardZero,
+                                   &IsExact);
+        if (!IsExact)
+          return false;
+        ResultElts.push_back(APValue(IntResult));
+      } else
+        // Pad remaining lanes with zero
+        ResultElts.push_back(APValue(llvm::APSInt(32, /*isUnsigned=*/false)));
     }
     return Success(ResultElts, E);
   }
@@ -18739,18 +18736,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
     assert(ArgVal.isVector() && "Expected a vector argument");
     llvm::APFloat FloatElem = ArgVal.getVectorElt(0).getFloat();
-
-    unsigned BitWidth = 32;
-    switch (BuiltinOp) {
-    case X86::BI__builtin_ia32_cvtss2si64:
-    case X86::BI__builtin_ia32_cvtsd2si64:
-    case X86::BI__builtin_ia32_cvttss2si64:
-    case X86::BI__builtin_ia32_cvttsd2si64:
-      BitWidth = 64;
-      break;
-    default:
-      break;
-    }
+    unsigned BitWidth = Info.Ctx.getIntWidth(E->getType());
 
     llvm::APSInt IntResult(BitWidth, false);
     bool IsExact = false;

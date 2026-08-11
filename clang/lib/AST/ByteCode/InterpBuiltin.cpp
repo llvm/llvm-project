@@ -4669,11 +4669,11 @@ static bool interp__builtin_ia32_bmac(InterpState &S, CodePtr OpPC,
 }
 
 static bool interp_builtin_ia32_cvt_scalar_to_int(InterpState &S, CodePtr OpPC,
-                                                  const CallExpr *E,
-                                                  unsigned BitWidth) {
+                                                  const CallExpr *E) {
   Pointer SrcVecPtr = S.Stk.pop<Pointer>();
   Pointer Lane0Ptr = SrcVecPtr.atIndex(0);
   const Floating &FloatElem = Lane0Ptr.deref<Floating>();
+  unsigned BitWidth = S.getASTContext().getIntWidth(E->getType());
 
   llvm::APSInt IntResult(BitWidth, /*isUnsigned=*/false);
   bool IsExact = false;
@@ -4689,12 +4689,12 @@ static bool interp_builtin_ia32_cvt_scalar_to_int(InterpState &S, CodePtr OpPC,
 }
 
 static bool interp_builtin_ia32_cvt_vector_to_int(InterpState &S, CodePtr OpPC,
-                                                  const CallExpr *E,
-                                                  bool zeroPad = false) {
+                                                  const CallExpr *E) {
   Pointer SrcVecPtr = S.Stk.pop<Pointer>();
   const Pointer &Dst = S.Stk.peek<Pointer>();
 
   unsigned NumSrcElts = SrcVecPtr.getNumElems();
+  unsigned NumDstElts = Dst.getNumElems();
   llvm::SmallVector<int32_t, 8> ConvertedElts;
   for (unsigned I = 0; I < NumSrcElts; ++I) {
     const Floating &FloatElem = SrcVecPtr.atIndex(I).deref<Floating>();
@@ -4710,14 +4710,11 @@ static bool interp_builtin_ia32_cvt_vector_to_int(InterpState &S, CodePtr OpPC,
     ConvertedElts.push_back(IntResult.getSExtValue());
   }
 
-  for (unsigned I = 0; I < NumSrcElts; ++I)
+  for (unsigned I = 0; I < NumDstElts; ++I)
     Dst.atIndex(I).deref<Integral<32, true>>() =
-        Integral<32, true>::from(ConvertedElts[I]);
+        I < NumSrcElts ? Integral<32, true>::from(ConvertedElts[I])
+                       : Integral<32, true>::zero();
 
-  if (zeroPad) {
-    Dst.atIndex(2).deref<Integral<32, true>>() = Integral<32, true>::zero();
-    Dst.atIndex(3).deref<Integral<32, true>>() = Integral<32, true>::zero();
-  }
   Dst.initializeAllElements();
   return true;
 }
@@ -6832,15 +6829,13 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_cvtsd2si:
   case X86::BI__builtin_ia32_cvttss2si:
   case X86::BI__builtin_ia32_cvttsd2si:
-    return interp_builtin_ia32_cvt_scalar_to_int(S, OpPC, Call, 32);
   case X86::BI__builtin_ia32_cvtss2si64:
   case X86::BI__builtin_ia32_cvtsd2si64:
   case X86::BI__builtin_ia32_cvttss2si64:
   case X86::BI__builtin_ia32_cvttsd2si64:
-    return interp_builtin_ia32_cvt_scalar_to_int(S, OpPC, Call, 64);
+    return interp_builtin_ia32_cvt_scalar_to_int(S, OpPC, Call);
   case X86::BI__builtin_ia32_cvtpd2dq:
   case X86::BI__builtin_ia32_cvttpd2dq:
-    return interp_builtin_ia32_cvt_vector_to_int(S, OpPC, Call, true);
   case X86::BI__builtin_ia32_cvtps2dq:
   case X86::BI__builtin_ia32_cvtpd2dq256:
   case X86::BI__builtin_ia32_cvtps2dq256:
