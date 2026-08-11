@@ -16,11 +16,14 @@
 
 ; CHECK-DAG: %[[#Int:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#Bool:]] = OpTypeBool
-; CHECK-DAG: %[[#PointerType:]] = OpTypePointer CrossWorkgroup %[[#Int]]
+; AMD targets enable every valid extension by default, SPV_KHR_untyped_pointers
+; among them, so an ordinary data pointer is untyped here and carries its
+; pointee per instruction instead.
+; CHECK-DAG: %[[#PointerType:]] = OpTypeUntypedPointerKHR CrossWorkgroup
 ; CHECK-DAG: %[[#MemSem_SequentiallyConsistent:]] = OpConstant %[[#Int]] 528
 ; CHECK-DAG: %[[#Value:]] = OpConstant %[[#Int]] 42
 ; CHECK-DAG: %[[#Scope_CrossDevice:]] = OpConstantNull %[[#Int]]
-; CHECK-DAG: %[[#Pointer:]] = OpVariable %[[#PointerType]] CrossWorkgroup
+; CHECK-DAG: %[[#Pointer:]] = OpUntypedVariableKHR %[[#PointerType]] CrossWorkgroup %[[#Int]]
 ; CHECK-DAG: %[[#AllOnes:]] = OpConstant %[[#Int]] 4294967295
 
 ; CHECK-DAG: OpDecorate %[[#UIncWrapFn:]] LinkageAttributes "__translate_spirv_atomic_uinc_wrap_p1_i32" Import
