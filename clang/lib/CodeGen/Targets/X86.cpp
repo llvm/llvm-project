@@ -3475,6 +3475,48 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
       return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
                                      /*ByVal=*/false);
 
+    // WinCall passes a record that is a single FP/SIMD member exactly like the
+    // scalar it wraps (in a vector register), as long as the record's size and
+    // alignment match the member's natural size and alignment. If the user
+    // bumped the alignment so that the record is bigger than the member (e.g.
+    // a 16-byte-aligned struct holding one double), fall through to the normal
+    // aggregate rules.
+    if (IsWinCall && !Ty->isAnyComplexType() && !Ty->isMemberPointerType() &&
+        !RT->getDecl()->isUnion()) {
+      unsigned NumFields = 0;
+      const FieldDecl *SingleField = nullptr;
+      for (const FieldDecl *FD : RT->getDecl()->fields()) {
+        if (FD->isUnnamedBitField())
+          continue;
+        if (FD->isBitField()) {
+          NumFields = 0;
+          break;
+        }
+        ++NumFields;
+        SingleField = FD;
+      }
+      if (NumFields == 1 && SingleField) {
+        QualType FieldTy = SingleField->getType();
+        llvm::Type *FieldLLTy = CGT.ConvertType(FieldTy);
+        bool IsScalarFP =
+            FieldTy->isFloatingType() && !FieldTy->isComplexType();
+        bool IsVector = FieldTy->isVectorType();
+        if ((IsScalarFP || IsVector) &&
+            (FieldLLTy->isFloatingPointTy() || FieldLLTy->isVectorTy())) {
+          // The record must be exactly as big as the single member so that no
+          // padding/alignment is being carried by the struct.
+          if (getContext().getTypeSize(Ty) ==
+              getContext().getTypeSize(FieldTy)) {
+            if (IsReturnType)
+              return ABIArgInfo::getDirect(FieldLLTy);
+            if (Width <= 128)
+              return ABIArgInfo::getDirect(FieldLLTy);
+            return ABIArgInfo::getExpand();
+          }
+        }
+      }
+    }
+
     // wincall passes/returns aggregates that fit in 1, 2, 4, 8, 16 or 32 bytes
     // (e.g. 4x size_t, like std::string/std::vector) directly in registers,
     // instead of by pointer/sret like the MS x64 ABI.
@@ -3490,6 +3532,25 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
       if (Width <= 64)
         return ABIArgInfo::getDirect(
             llvm::IntegerType::get(getVMContext(), Width));
+      return ABIArgInfo::getExpand();
+    }
+  }
+
+  // WinCall passes complex scalars in the vector registers: a complex value is
+  // just two elements of its component type, so coerce _Complex float/double
+  // to v2f32/v2f64 and pass/return them in XMM registers instead of by
+  // pointer/sret like the MS x64 ABI.
+  if (IsWinCall && Ty->isAnyComplexType()) {
+    QualType ElemTy = cast<ComplexType>(Ty)->getElementType();
+    llvm::Type *ElemLLTy = CGT.ConvertType(ElemTy);
+    if (llvm::FixedVectorType::isValidElementType(ElemLLTy)) {
+      auto *V2 = llvm::FixedVectorType::get(ElemLLTy, 2);
+      if (IsReturnType)
+        return ABIArgInfo::getDirect(V2);
+      // A 128-bit complex value fits in one XMM register; a wider one (e.g.
+      // long double complex) is expanded into its 64-bit parts.
+      if (Width <= 128)
+        return ABIArgInfo::getDirect(V2);
       return ABIArgInfo::getExpand();
     }
   }

@@ -8,13 +8,13 @@
 declare x86_wincallcc void @wincall_thunk(i64, i64, i64, i64, i64, i64, i64, i64)
 
 ; CHECK-LABEL: call_8_int:
-; CHECK:       subq $40, %rsp
-; CHECK-NEXT:  movq 80(%rsp), %r16
-; CHECK-NEXT:  movq 88(%rsp), %r17
-; CHECK-NEXT:  movq 96(%rsp), %r18
-; CHECK-NEXT:  movq 104(%rsp), %r19
+; CHECK:       subq $56, %rsp
+; CHECK-NEXT:  movq 96(%rsp), %r16
+; CHECK-NEXT:  movq 104(%rsp), %r17
+; CHECK-NEXT:  movq 112(%rsp), %r18
+; CHECK-NEXT:  movq 120(%rsp), %r19
 ; CHECK-NEXT:  callq wincall_thunk
-; CHECK-NEXT:  addq $40, %rsp
+; CHECK-NEXT:  addq $56, %rsp
 ; CHECK-NEXT:  retq
 define void @call_8_int(i64 %a, i64 %b, i64 %c, i64 %d,
                         i64 %e, i64 %f, i64 %g, i64 %h) nounwind {

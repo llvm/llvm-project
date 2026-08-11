@@ -164,6 +164,9 @@ bool X86TargetInfo::initFeatureMap(
     for (const char *Sub :
          {"egpr", "push2pop2", "ppx", "ndd", "ccmp", "nf", "zu", "jmpabs"})
       setFeatureEnabled(Features, Sub, true);
+    // APX (EVEX) implies AVX-512, and WinCall expects every instruction to be
+    // EVEX-encoded so that no vzeroupper is needed at WinCall boundaries.
+    setFeatureEnabled(Features, "avx512f", true);
   }
 
   using namespace llvm::X86;

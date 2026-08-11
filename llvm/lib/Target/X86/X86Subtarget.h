@@ -290,6 +290,10 @@ public:
 
   const Triple &getTargetTriple() const { return TargetTriple; }
 
+  /// Tests whether the target is the Windows x86_64apx target, which defaults
+  /// to the WinCall calling convention.
+  bool isWindowsAPX() const { return TargetTriple.isWindowsAPX(); }
+
   bool isTargetDarwin() const { return TargetTriple.isOSDarwin(); }
   bool isTargetFreeBSD() const { return TargetTriple.isOSFreeBSD(); }
   bool isTargetDragonFly() const { return TargetTriple.isOSDragonFly(); }

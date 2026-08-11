@@ -212,6 +212,22 @@ and ``MinGW.cpp``, not by the assembler. If the user passes their own
 section-alignment ``-Wl`` flag, the driver's default is suppressed in favour
 of the user's value.
 
+## Stack alignment
+
+On ``x86_64apx-windows`` targets the stack is kept **64-byte aligned** at
+every call site (``X86Subtarget`` sets the stack alignment to 64 for
+``isWindowsAPX()`` targets, instead of the 16-byte alignment of the classic
+Windows ABI). This is a deliberate part of the WinCall ABI: it means the
+backend can use aligned 64-byte moves (``vmovaps``/``vmovdqa64``) for
+AVX-512 ZMM spills and aligned stack slots without dynamic stack realignment.
+
+This matters in practice because the classic Windows x64 ABI only guarantees
+16-byte stack alignment, which is not enough for 64-byte ZMM registers — this
+is why GCC still cannot support AVX-512 on Windows correctly. WinCall's 64-byte
+guarantee removes that limitation. Only ``x86_64apx-windows`` gets the 64-byte
+alignment; other ``x86_64apx`` targets (e.g. ``x86_64apx-linux``) keep the
+16-byte default, and a user-supplied ``-mstack-alignment`` still overrides it.
+
 ## Building a DLL that works with both WinCall and the classic ABI
 
 A function's ABI is decided at the *call boundary*, not inside the function.

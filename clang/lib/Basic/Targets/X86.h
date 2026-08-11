@@ -976,6 +976,14 @@ class LLVM_LIBRARY_VISIBILITY MinGWX86_64TargetInfo
 public:
   MinGWX86_64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : WindowsX86_64TargetInfo(Triple, Opts) {
+    if (Triple.isX86_64APX()) {
+      // WinCall unifies long double to f64 (like the MSVC ABI) so that the
+      // WinCall ABI never needs x87.
+      LongDoubleWidth = LongDoubleAlign = 64;
+      LongDoubleFormat = &llvm::APFloat::IEEEdouble();
+      HasFloat128 = true;
+      return;
+    }
     // Mingw64 rounds long double size and alignment up to 16 bytes, but sticks
     // with x86 FP ops. Weird.
     LongDoubleWidth = LongDoubleAlign = 128;
