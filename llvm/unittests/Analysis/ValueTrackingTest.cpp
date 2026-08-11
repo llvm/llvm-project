@@ -1912,6 +1912,18 @@ TEST_F(ComputeKnownFPClassTest, MaximumNumSignBit) {
   expectKnownFPClass(fcPositive, false, A7);
 }
 
+TEST_F(ComputeKnownFPClassTest, PowUseRHSToRuleOutNegativeResults) {
+  parseAssembly("declare float @llvm.pow.f32(float, float)\n"
+                "define float @test(float nofpclass(ninf nsub nnorm) %base,\n"
+                "                   float nofpclass(pnorm) %exp) {\n"
+                "  %A = call float @llvm.pow.f32(float %base, float %exp)\n"
+                "  ret float %A\n"
+                "}\n");
+
+  KnownFPClass Known = computeKnownFPClass(A, M->getDataLayout(), fcNegative);
+  EXPECT_EQ(~(fcNegNormal | fcNegSubnormal | fcNegZero), Known.KnownFPClasses);
+}
+
 TEST_F(ComputeKnownFPClassTest, PowiInfFirst) {
   parseAssembly(
       "declare float @llvm.powi.f32.i32(float, i32)\n"

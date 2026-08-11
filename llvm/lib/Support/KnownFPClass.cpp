@@ -886,6 +886,48 @@ KnownFPClass KnownFPClass::ldexp(const KnownFPClass &KnownSrc,
                ExpBits.getSignedMaxValue(), Flt, Mode);
 }
 
+KnownFPClass KnownFPClass::pow(const KnownFPClass &KnownLHS,
+                               const KnownFPClass &KnownRHS) {
+  KnownFPClass Known;
+
+  Known.propagateNonSNaN(KnownLHS, KnownRHS);
+
+  // pow may return NaN if one of the arguments is NaN. NaN may be produced from
+  // a non-zero-finite-negative base and a non-integer exponent.
+  if (KnownLHS.isKnownNever(fcNan | fcNegNormal | fcNegSubnormal) &&
+      KnownRHS.isKnownNeverNaN())
+    Known.knownNot(fcNan);
+
+  // We could rule out negative and subnormal results when exponent is known to
+  // never be a normal value, but having either argument being known to never be
+  // normal is unlikely and not worth considering.
+
+  // Only a negative base raised to an odd power returns a negative value.
+  if (KnownLHS.isKnownNever(fcNegative)) {
+    Known.knownNot(fcNegative);
+  } else if (KnownLHS.isKnownNever(fcNegNormal | fcNegSubnormal)) {
+    Known.knownNot(fcNegNormal | fcNegSubnormal);
+    // See if we can also rule out -0.0 or -inf.
+    // Here at least one of -0.0 or -inf is a possible base.
+
+    // pow(-0.0, odd-positive) = -0.0
+    // pow(-inf, odd-negative) = -0.0
+    if ((KnownLHS.isKnownNever(fcNegZero) ||
+         KnownRHS.isKnownNever(fcPosNormal)) &&
+        (KnownLHS.isKnownNever(fcNegInf) || KnownRHS.isKnownNever(fcNegNormal)))
+      Known.knownNot(fcNegZero);
+
+    // pow(-0.0, odd-negative) = -inf
+    // pow(-inf, odd-positive) = -inf
+    if ((KnownLHS.isKnownNever(fcNegZero) ||
+         KnownRHS.isKnownNever(fcNegNormal)) &&
+        (KnownLHS.isKnownNever(fcNegInf) || KnownRHS.isKnownNever(fcPosNormal)))
+      Known.knownNot(fcNegInf);
+  }
+
+  return Known;
+}
+
 KnownFPClass KnownFPClass::powi(const KnownFPClass &KnownSrc,
                                 const KnownBits &ExponentKnownBits) {
   KnownFPClass Known;
