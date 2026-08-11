@@ -8860,6 +8860,54 @@ void BoUpSLP::buildExternalUses(
       }
     }
   }
+
+  // The expansion of the runtime stride may reuse an in-tree instruction with
+  // the matching SCEV, which gets erased upon vectorization. Register an
+  // external use for it to replace the stride operand with the extract.
+  SmallVector<std::pair<const SCEV *, BasicBlock *>> Strides;
+  for (const auto &[StridedTE, SPtrInfo] : TreeEntryToStridedPtrInfoMap)
+    if (SPtrInfo.StrideSCEV && !SPtrInfo.StrideVal &&
+        !DeletedNodes.contains(StridedTE) &&
+        !TransformedToGatherNodes.contains(StridedTE))
+      Strides.emplace_back(SPtrInfo.StrideSCEV,
+                           StridedTE->getMainOp()->getParent());
+  if (Strides.empty())
+    return;
+  for (const std::unique_ptr<TreeEntry> &TEPtr : VectorizableTree) {
+    TreeEntry *Entry = TEPtr.get();
+    if (Entry->isGather() || Entry->State == TreeEntry::SplitVectorize ||
+        DeletedNodes.contains(Entry) ||
+        TransformedToGatherNodes.contains(Entry))
+      continue;
+    for (Value *Scalar : Entry->Scalars) {
+      auto *I = dyn_cast<Instruction>(Scalar);
+      if (!I || Entry->isCopyableElement(I) || !SE->isSCEVable(I->getType()))
+        continue;
+      const SCEV *ScalarSCEV = SE->getSCEV(I);
+      if (isa<SCEVConstant>(ScalarSCEV) ||
+          none_of(Strides, [&](const auto &Stride) {
+            return DT->dominates(I, Stride.second->getTerminator()) &&
+                   SCEVExprContains(Stride.first, [ScalarSCEV](const SCEV *S) {
+                     return S == ScalarSCEV;
+                   });
+          }))
+        continue;
+      auto It = ScalarToExtUses.find(Scalar);
+      if (It != ScalarToExtUses.end()) {
+        // Replace all uses: the stride operand is emitted later, during the
+        // codegen.
+        ExternalUses[It->second].User = nullptr;
+        continue;
+      }
+      unsigned FoundLane = Entry->findLaneForValue(Scalar);
+      LLVM_DEBUG(dbgs() << "SLP: Need to extract: strided load stride from "
+                           "lane "
+                        << FoundLane << " from " << *Scalar << ".\n");
+      ScalarToExtUses.try_emplace(Scalar, ExternalUses.size());
+      ExternalUses.emplace_back(Scalar, nullptr, *Entry, FoundLane);
+      ExternalUsesWithNonUsers.insert(Scalar);
+    }
+  }
 }
 
 SmallVector<SmallVector<StoreInst *>>
