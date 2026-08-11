@@ -1191,9 +1191,9 @@ static int flushDeferredSubmits(DeviceTy &Device, StateInfoTy &StateInfo,
     // range, not only if it starts there.
     auto FailOnPtrFound = [HstPtrBegin = HstPtrBegin,
                            Size = Size](ShadowPtrInfoTy &SP) {
-      char *SPBegin = reinterpret_cast<char *>(SP.HstPtrAddr);
-      char *SPEnd = SPBegin + SP.PtrSize;
-      char *Begin = reinterpret_cast<char *>(HstPtrBegin);
+      uintptr_t SPBegin = reinterpret_cast<uintptr_t>(SP.HstPtrAddr);
+      uintptr_t SPEnd = SPBegin + SP.PtrSize;
+      uintptr_t Begin = reinterpret_cast<uintptr_t>(HstPtrBegin);
       if (SPBegin < Begin + Size && Begin < SPEnd)
         return OFFLOAD_FAIL;
       return OFFLOAD_SUCCESS;
