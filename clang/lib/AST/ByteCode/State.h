@@ -85,7 +85,6 @@ public:
   virtual ~State();
 
   virtual const Frame *getCurrentFrame() = 0;
-  virtual const Frame *getBottomFrame() const = 0;
   virtual unsigned getCallStackDepth() = 0;
   virtual bool stepsLeft() const = 0;
 
@@ -163,6 +162,7 @@ public:
 
   /// Add a note to a prior diagnostic.
   OptionalDiagnostic Note(SourceLocation Loc, diag::kind DiagId);
+  OptionalDiagnostic Note(SourceInfo Loc, diag::kind DiagId);
 
   /// Add a stack of notes to a prior diagnostic.
   void addNotes(ArrayRef<PartialDiagnosticAt> Diags);

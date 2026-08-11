@@ -14,16 +14,17 @@
 #ifndef MLIR_TARGET_SPIRV_SPIRVEXTINSTSETS_H
 #define MLIR_TARGET_SPIRV_SPIRVEXTINSTSETS_H
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include <cstdint>
 
 namespace mlir::spirv {
 
 /// Extension set name for TOSA ops.
-constexpr StringLiteral extTosa{"TOSA.001000.1"};
+constexpr llvm::StringLiteral extTosa{"TOSA.001000.1"};
 
 /// Extension set name for non-semantic graph debug info.
-constexpr StringLiteral extDebugInfo{"NonSemantic.Graph.DebugInfo.1"};
+constexpr llvm::StringLiteral extDebugInfo{"NonSemantic.Graph.DebugInfo.1"};
 
 /// Instruction opcodes in the NonSemantic.Graph.DebugInfo.1 extended
 /// instruction set.

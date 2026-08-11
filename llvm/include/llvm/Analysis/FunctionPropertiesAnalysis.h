@@ -185,14 +185,14 @@ public:
 
 /// Statistics pass for the FunctionPropertiesAnalysis results.
 class FunctionPropertiesStatisticsPass
-    : public PassInfoMixin<FunctionPropertiesStatisticsPass> {
+    : public RequiredPassInfoMixin<FunctionPropertiesStatisticsPass> {
   bool IsPreOptimization;
 
 public:
   explicit FunctionPropertiesStatisticsPass(bool IsPreOptimization = false)
       : IsPreOptimization(IsPreOptimization) {}
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 /// Correctly update FunctionPropertiesInfo post-inlining. A

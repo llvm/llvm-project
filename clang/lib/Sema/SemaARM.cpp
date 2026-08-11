@@ -452,6 +452,10 @@ bool SemaARM::CheckImmediateArg(CallExpr *TheCall, unsigned CheckTy,
     if (SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 0, EltBitWidth - 1))
       return true;
     break;
+  case ImmCheckType::ImmCheckShiftLeftLong:
+    if (SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 0, (EltBitWidth / 2)))
+      return true;
+    break;
   case ImmCheckType::ImmCheckLaneIndex:
     if (SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 0,
                                         (ContainerBitWidth / EltBitWidth) - 1))
@@ -1176,8 +1180,12 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
   if (BuiltinID == AArch64::BI__sys)
     return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 0x3fff);
 
-  if (BuiltinID == AArch64::BI__getReg)
+  if (BuiltinID == AArch64::BI__getReg || BuiltinID == AArch64::BI__setReg ||
+      BuiltinID == AArch64::BI__getRegFp || BuiltinID == AArch64::BI__setRegFp)
     return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 31);
+
+  if (BuiltinID == AArch64::BI__prefetch2)
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 31);
 
   if (BuiltinID == AArch64::BI__break)
     return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 0xffff);

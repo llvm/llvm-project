@@ -15,9 +15,13 @@
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyTargetMachine.h"
 #include "WebAssemblyUtilities.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Target/TargetMachine.h"
@@ -26,12 +30,7 @@ using namespace llvm;
 #define DEBUG_TYPE "wasm-late-eh-prepare"
 
 namespace {
-class WebAssemblyLateEHPrepare final : public MachineFunctionPass {
-  StringRef getPassName() const override {
-    return "WebAssembly Late Prepare Exception";
-  }
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
+class WebAssemblyLateEHPrepareImpl {
   bool removeUnreachableEHPads(MachineFunction &MF);
   void recordCatchRetBBs(MachineFunction &MF);
   bool hoistCatches(MachineFunction &MF);
@@ -45,17 +44,28 @@ class WebAssemblyLateEHPrepare final : public MachineFunctionPass {
   SmallPtrSet<MachineBasicBlock *, 8> CatchRetBBs;
 
 public:
+  bool runOnMachineFunction(MachineFunction &MF);
+};
+
+class WebAssemblyLateEHPrepareLegacy final : public MachineFunctionPass {
+  StringRef getPassName() const override {
+    return "WebAssembly Late Prepare Exception";
+  }
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+public:
   static char ID; // Pass identification, replacement for typeid
-  WebAssemblyLateEHPrepare() : MachineFunctionPass(ID) {}
+  WebAssemblyLateEHPrepareLegacy() : MachineFunctionPass(ID) {}
 };
 } // end anonymous namespace
 
-char WebAssemblyLateEHPrepare::ID = 0;
-INITIALIZE_PASS(WebAssemblyLateEHPrepare, DEBUG_TYPE,
+char WebAssemblyLateEHPrepareLegacy::ID = 0;
+INITIALIZE_PASS(WebAssemblyLateEHPrepareLegacy, DEBUG_TYPE,
                 "WebAssembly Late Exception Preparation", false, false)
 
-FunctionPass *llvm::createWebAssemblyLateEHPrepare() {
-  return new WebAssemblyLateEHPrepare();
+FunctionPass *llvm::createWebAssemblyLateEHPrepareLegacyPass() {
+  return new WebAssemblyLateEHPrepareLegacy();
 }
 
 // Returns the nearest EH pad that dominates this instruction. This does not use
@@ -65,7 +75,7 @@ FunctionPass *llvm::createWebAssemblyLateEHPrepare() {
 // Returns nullptr in case it does not find any EH pad in the search, or finds
 // multiple different EH pads.
 MachineBasicBlock *
-WebAssemblyLateEHPrepare::getMatchingEHPad(MachineInstr *MI) {
+WebAssemblyLateEHPrepareImpl::getMatchingEHPad(MachineInstr *MI) {
   MachineFunction *MF = MI->getParent()->getParent();
   SmallVector<MachineBasicBlock *, 2> WL;
   SmallPtrSet<MachineBasicBlock *, 2> Visited;
@@ -111,7 +121,7 @@ static void eraseDeadBBsAndChildren(const Container &MBBs) {
   }
 }
 
-bool WebAssemblyLateEHPrepare::runOnMachineFunction(MachineFunction &MF) {
+bool WebAssemblyLateEHPrepareImpl::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** Late EH Prepare **********\n"
                        "********** Function: "
                     << MF.getName() << '\n');
@@ -138,7 +148,8 @@ bool WebAssemblyLateEHPrepare::runOnMachineFunction(MachineFunction &MF) {
 
 // Remove unreachable EH pads and its children. If they remain, CFG
 // stackification can be tricky.
-bool WebAssemblyLateEHPrepare::removeUnreachableEHPads(MachineFunction &MF) {
+bool WebAssemblyLateEHPrepareImpl::removeUnreachableEHPads(
+    MachineFunction &MF) {
   SmallVector<MachineBasicBlock *, 4> ToDelete;
   for (auto &MBB : MF)
     if (MBB.isEHPad() && MBB.pred_empty())
@@ -150,7 +161,7 @@ bool WebAssemblyLateEHPrepare::removeUnreachableEHPads(MachineFunction &MF) {
 // Record which BB ends with catchret instruction, because this will be replaced
 // with 'br's later. This set of catchret BBs is necessary in 'getMatchingEHPad'
 // function.
-void WebAssemblyLateEHPrepare::recordCatchRetBBs(MachineFunction &MF) {
+void WebAssemblyLateEHPrepareImpl::recordCatchRetBBs(MachineFunction &MF) {
   CatchRetBBs.clear();
   for (auto &MBB : MF) {
     auto Pos = MBB.getFirstTerminator();
@@ -174,7 +185,7 @@ void WebAssemblyLateEHPrepare::recordCatchRetBBs(MachineFunction &MF) {
 //   br bb0
 // bb0:
 //   %exn = catch 0
-bool WebAssemblyLateEHPrepare::hoistCatches(MachineFunction &MF) {
+bool WebAssemblyLateEHPrepareImpl::hoistCatches(MachineFunction &MF) {
   bool Changed = false;
   SmallVector<MachineInstr *, 16> Catches;
   for (auto &MBB : MF)
@@ -200,7 +211,7 @@ bool WebAssemblyLateEHPrepare::hoistCatches(MachineFunction &MF) {
 }
 
 // Add catch_all to beginning of cleanup pads.
-bool WebAssemblyLateEHPrepare::addCatchAlls(MachineFunction &MF) {
+bool WebAssemblyLateEHPrepareImpl::addCatchAlls(MachineFunction &MF) {
   bool Changed = false;
   const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
 
@@ -229,7 +240,7 @@ bool WebAssemblyLateEHPrepare::addCatchAlls(MachineFunction &MF) {
 
 // Replace pseudo-instructions catchret and cleanupret with br and rethrow
 // respectively.
-bool WebAssemblyLateEHPrepare::replaceFuncletReturns(MachineFunction &MF) {
+bool WebAssemblyLateEHPrepareImpl::replaceFuncletReturns(MachineFunction &MF) {
   bool Changed = false;
   const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
 
@@ -294,10 +305,12 @@ bool WebAssemblyLateEHPrepare::replaceFuncletReturns(MachineFunction &MF) {
 
 // Add CATCH_REF and CATCH_ALL_REF pseudo instructions to EH pads, and convert
 // RETHROWs to THROW_REFs.
-bool WebAssemblyLateEHPrepare::addCatchRefsAndThrowRefs(MachineFunction &MF) {
+bool WebAssemblyLateEHPrepareImpl::addCatchRefsAndThrowRefs(
+    MachineFunction &MF) {
   const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
   auto &MRI = MF.getRegInfo();
-  DenseMap<MachineBasicBlock *, SmallVector<MachineInstr *, 2>> EHPadToRethrows;
+  MapVector<MachineBasicBlock *, SmallVector<MachineInstr *, 2>>
+      EHPadToRethrows;
 
   // Create a map of <EH pad, a vector of RETHROWs rethrowing its exception>
   for (auto &MBB : MF)
@@ -311,7 +324,8 @@ bool WebAssemblyLateEHPrepare::addCatchRefsAndThrowRefs(MachineFunction &MF) {
   // caught exception is rethrown. And convert RETHROWs to THROW_REFs.
   for (auto &[EHPad, Rethrows] : EHPadToRethrows) {
     auto *Catch = WebAssembly::findCatch(EHPad);
-    auto *InsertPos = Catch->getIterator()->getNextNode();
+    assert(Catch && "CATCH not found in EHPad");
+    auto InsertPos = std::next(Catch->getIterator());
     auto ExnReg = MRI.createVirtualRegister(&WebAssembly::EXNREFRegClass);
     if (Catch->getOpcode() == WebAssembly::CATCH) {
       MachineInstrBuilder MIB = BuildMI(*EHPad, InsertPos, Catch->getDebugLoc(),
@@ -348,7 +362,7 @@ bool WebAssemblyLateEHPrepare::addCatchRefsAndThrowRefs(MachineFunction &MF) {
 }
 
 // Remove unnecessary unreachables after a throw/rethrow/throw_ref.
-bool WebAssemblyLateEHPrepare::removeUnnecessaryUnreachables(
+bool WebAssemblyLateEHPrepareImpl::removeUnnecessaryUnreachables(
     MachineFunction &MF) {
   bool Changed = false;
   for (auto &MBB : MF) {
@@ -378,7 +392,7 @@ bool WebAssemblyLateEHPrepare::removeUnnecessaryUnreachables(
 // After the stack is unwound due to a thrown exception, the __stack_pointer
 // global/__wasm_get_stack_pointer() can point to an invalid address. This
 // inserts instructions that restore the stack pointer state.
-bool WebAssemblyLateEHPrepare::restoreStackPointer(MachineFunction &MF) {
+bool WebAssemblyLateEHPrepareImpl::restoreStackPointer(MachineFunction &MF) {
   const auto *FrameLowering = static_cast<const WebAssemblyFrameLowering *>(
       MF.getSubtarget().getFrameLowering());
   if (!FrameLowering->needsPrologForEH(MF))
@@ -408,4 +422,18 @@ bool WebAssemblyLateEHPrepare::restoreStackPointer(MachineFunction &MF) {
                                MBB.begin()->getDebugLoc());
   }
   return Changed;
+}
+
+bool WebAssemblyLateEHPrepareLegacy::runOnMachineFunction(MachineFunction &MF) {
+  WebAssemblyLateEHPrepareImpl Impl;
+  return Impl.runOnMachineFunction(MF);
+}
+
+PreservedAnalyses
+WebAssemblyLateEHPreparePass::run(MachineFunction &MF,
+                                  MachineFunctionAnalysisManager &MFAM) {
+  WebAssemblyLateEHPrepareImpl Impl;
+  return Impl.runOnMachineFunction(MF)
+             ? getMachineFunctionPassPreservedAnalyses()
+             : PreservedAnalyses::all();
 }

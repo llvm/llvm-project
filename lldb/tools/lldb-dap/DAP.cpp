@@ -786,24 +786,7 @@ lldb::SBTarget DAP::CreateTarget(lldb::SBError &error) {
   return target;
 }
 
-void DAP::SetTarget(const lldb::SBTarget target) {
-  this->target = target;
-
-  if (target.IsValid()) {
-    // Configure breakpoint event listeners for the target.
-    lldb::SBListener listener = this->debugger.GetListener();
-    listener.StartListeningForEvents(
-        this->target.GetBroadcaster(),
-        lldb::SBTarget::eBroadcastBitBreakpointChanged |
-            lldb::SBTarget::eBroadcastBitModulesLoaded |
-            lldb::SBTarget::eBroadcastBitModulesUnloaded |
-            lldb::SBTarget::eBroadcastBitSymbolsLoaded |
-            lldb::SBTarget::eBroadcastBitSymbolsChanged |
-            lldb::SBTarget::eBroadcastBitNewTargetCreated);
-    listener.StartListeningForEvents(this->broadcaster,
-                                     eBroadcastBitStopEventThread);
-  }
-}
+void DAP::SetTarget(const lldb::SBTarget target) { this->target = target; }
 
 bool DAP::HandleObject(const Message &M) {
   TelemetryDispatcher dispatcher(&debugger);
@@ -959,8 +942,10 @@ void DAP::Received(const protocol::Event &event) {
 }
 
 void DAP::Received(const protocol::Request &request) {
-  if (request.command == "disconnect")
+  if (request.command == "disconnect") {
+    std::lock_guard<std::mutex> guard(m_queue_mutex);
     m_disconnecting = true;
+  }
 
   const std::optional<CancelArguments> cancel_args =
       getArgumentsIfRequest<CancelArguments>(request, "cancel");

@@ -1,3 +1,4 @@
+import abc
 import itertools
 import os
 from json import JSONEncoder
@@ -25,7 +26,7 @@ class ResultCode:
     def __new__(cls, name, label, isFailure):
         res = cls._instances.get(name)
         if res is None:
-            cls._instances[name] = res = super(ResultCode, cls).__new__(cls)
+            cls._instances[name] = res = super().__new__(cls)
         return res
 
     def __getnewargs__(self):
@@ -59,7 +60,8 @@ XPASS = ResultCode("XPASS", "Unexpectedly Passed", True)
 # Test metric values.
 
 
-class MetricValue:
+class MetricValue(abc.ABC):
+    @abc.abstractmethod
     def format(self):
         """
         format() -> str
@@ -67,8 +69,8 @@ class MetricValue:
         Convert this metric to a string suitable for displaying as part of the
         console output.
         """
-        raise RuntimeError("abstract method")
 
+    @abc.abstractmethod
     def todata(self):
         """
         todata() -> json-serializable data
@@ -76,7 +78,6 @@ class MetricValue:
         Convert this metric to content suitable for serializing in the JSON test
         output.
         """
-        raise RuntimeError("abstract method")
 
 
 class IntMetricValue(MetricValue):

@@ -277,10 +277,6 @@ PWACtx SCEVAffinator::visitPtrToAddrExpr(const SCEVPtrToAddrExpr *Expr) {
   return visit(Expr->getOperand(0));
 }
 
-PWACtx SCEVAffinator::visitPtrToIntExpr(const SCEVPtrToIntExpr *Expr) {
-  return visit(Expr->getOperand(0));
-}
-
 PWACtx SCEVAffinator::visitTruncateExpr(const SCEVTruncateExpr *Expr) {
   // Truncate operations are basically modulo operations, thus we can
   // model them that way. However, for large types we assume the operand

@@ -253,20 +253,9 @@ define void @test_minbws_for_trunc(i32 %n, ptr noalias %p1, ptr noalias %p2) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[MUL:%.*]] = call { i16, i1 } @llvm.umul.with.overflow.i16(i16 4, i16 255)
-; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i16, i1 } [[MUL]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i16, i1 } [[MUL]], 1
-; CHECK-NEXT:    [[TMP0:%.*]] = add i16 4, [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i16 [[TMP0]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = or i1 [[TMP1]], [[MUL_OVERFLOW]]
-; CHECK-NEXT:    [[MUL1:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 32, i64 255)
-; CHECK-NEXT:    [[MUL_RESULT2:%.*]] = extractvalue { i64, i1 } [[MUL1]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW3:%.*]] = extractvalue { i64, i1 } [[MUL1]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[P2]], i64 [[MUL_RESULT2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[P2]], i64 8160
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult ptr [[TMP3]], [[P2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = or i1 [[TMP4]], [[MUL_OVERFLOW3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = or i1 [[TMP2]], [[TMP5]]
-; CHECK-NEXT:    br i1 [[TMP6]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P2]], i64 2042
 ; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, ptr [[P2]], i64 1021
@@ -297,9 +286,10 @@ define void @test_minbws_for_trunc(i32 %n, ptr noalias %p1, ptr noalias %p2) {
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i16> poison, i16 [[TMP11]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i16> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP12:%.*]] = sext <vscale x 2 x i16> [[VEC_IND]] to <vscale x 2 x i64>
-; CHECK-NEXT:    [[TMP13:%.*]] = shl i32 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[P1]], i32 [[TMP13]]
-; CHECK-NEXT:    [[TMP15:%.*]] = call <vscale x 2 x i32> @llvm.experimental.vp.strided.load.nxv2i32.p0.i32(ptr align 4 [[TMP14]], i32 16, <vscale x 2 x i1> splat (i1 true), i32 [[TMP9]])
+; CHECK-NEXT:    [[TMP13:%.*]] = zext i32 [[INDEX]] to i64
+; CHECK-NEXT:    [[TMP22:%.*]] = shl i64 [[TMP13]], 4
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[P1]], i64 [[TMP22]]
+; CHECK-NEXT:    [[TMP15:%.*]] = call <vscale x 2 x i32> @llvm.experimental.vp.strided.load.nxv2i32.p0.i64(ptr align 4 [[TMP14]], i64 16, <vscale x 2 x i1> splat (i1 true), i32 [[TMP9]])
 ; CHECK-NEXT:    [[TMP16:%.*]] = trunc <vscale x 2 x i32> [[TMP15]] to <vscale x 2 x i16>
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr [1 x [1 x i16]], ptr [[P2]], <vscale x 2 x i64> [[TMP12]]
 ; CHECK-NEXT:    call void @llvm.vp.scatter.nxv2i16.nxv2p0(<vscale x 2 x i16> [[TMP16]], <vscale x 2 x ptr> align 2 [[TMP17]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP9]]), !alias.scope [[META6:![0-9]+]], !noalias [[META9:![0-9]+]]

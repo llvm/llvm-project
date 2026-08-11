@@ -878,3 +878,199 @@ func.func @test30_rebox_rank_reducing_2d(
   %ac = fir.array_coor %b %row : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
   return %ac : !fir.ref<f32>
 }
+
+// Pull a previous fir.array_coor through a fir.convert into the current
+// fir.array_coor. This mirrors how ConvertHLFIRtoFIR lowers a contiguous
+// slice designator (e.g. `dx(1:3)`): the outer array_coor produces the
+// address of the first element, fir.convert reinterprets it as a fixed-size
+// array ref, and the inner array_coor indexes into that view.
+//
+// 1-D case: dx(1:3)(k) -> dx(k). When outer's index is the constant 1, the
+// arith identity c1 + (k - 1) == k makes the canonicalizer collapse the
+// combined index back to the inner index.
+// CHECK-LABEL:   func.func @test31_merge_array_coor_1d(
+// CHECK-SAME:                      %[[VAL_0:.*]]: !fir.ref<!fir.array<?xf64>>,
+// CHECK-SAME:                      %[[VAL_1:.*]]: index,
+// CHECK-SAME:                      %[[VAL_2:.*]]: index) -> !fir.ref<f64> {
+// CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_1]] : (index) -> !fir.shape<1>
+// CHECK:           %[[VAL_4:.*]] = fir.array_coor %[[VAL_0]](%[[VAL_3]]) %[[VAL_2]] : (!fir.ref<!fir.array<?xf64>>, !fir.shape<1>, index) -> !fir.ref<f64>
+// CHECK:           return %[[VAL_4]] : !fir.ref<f64>
+// CHECK-NOT:       fir.convert
+// CHECK-NOT:       fir.array_coor %{{.*}} -> !fir.ref<!fir.array
+func.func @test31_merge_array_coor_1d(%base: !fir.ref<!fir.array<?xf64>>,
+                                      %n: index,
+                                      %k: index) -> !fir.ref<f64> {
+  %c1 = arith.constant 1 : index
+  %c3 = arith.constant 3 : index
+  %base_shape = fir.shape %n : (index) -> !fir.shape<1>
+  %inner_shape = fir.shape %c3 : (index) -> !fir.shape<1>
+  %outer = fir.array_coor %base(%base_shape) %c1 : (!fir.ref<!fir.array<?xf64>>, !fir.shape<1>, index) -> !fir.ref<f64>
+  %view = fir.convert %outer : (!fir.ref<f64>) -> !fir.ref<!fir.array<3xf64>>
+  %inner = fir.array_coor %view(%inner_shape) %k : (!fir.ref<!fir.array<3xf64>>, !fir.shape<1>, index) -> !fir.ref<f64>
+  return %inner : !fir.ref<f64>
+}
+
+// 2-D base with 1-D inner view: dx(4:6, 4)(k) -> dx(4 + k - 1, 4). Outer
+// index is not 1 here, so the index arithmetic doesn't fully collapse;
+// canonicalizer reassociates to a single arith.addi.
+// CHECK-LABEL:   func.func @test32a_merge_array_coor_2d_offset(
+// CHECK-SAME:        %[[ARG0:[A-Za-z0-9_]+]]: !fir.ref<!fir.array<?x?xf64>>,
+// CHECK-SAME:        %[[ARG1:[A-Za-z0-9_]+]]: index, %[[ARG2:[A-Za-z0-9_]+]]: index, %[[ARG3:[A-Za-z0-9_]+]]: index)
+// CHECK:           %[[C3:.*]] = arith.constant 3 : index
+// CHECK:           %[[C4:.*]] = arith.constant 4 : index
+// CHECK:           %[[SH:.*]] = fir.shape %[[ARG1]], %[[ARG2]]
+// CHECK:           %[[IDX:.*]] = arith.addi %[[ARG3]], %[[C3]]
+// CHECK:           %[[AC:.*]] = fir.array_coor %[[ARG0]](%[[SH]]) %[[IDX]], %[[C4]]
+// CHECK:           return %[[AC]] : !fir.ref<f64>
+// CHECK-NOT:       fir.convert
+func.func @test32a_merge_array_coor_2d_offset(%base: !fir.ref<!fir.array<?x?xf64>>,
+                                              %d1: index, %d2: index,
+                                              %k: index) -> !fir.ref<f64> {
+  %c3 = arith.constant 3 : index
+  %c4 = arith.constant 4 : index
+  %base_shape = fir.shape %d1, %d2 : (index, index) -> !fir.shape<2>
+  %inner_shape = fir.shape %c3 : (index) -> !fir.shape<1>
+  %outer = fir.array_coor %base(%base_shape) %c4, %c4 : (!fir.ref<!fir.array<?x?xf64>>, !fir.shape<2>, index, index) -> !fir.ref<f64>
+  %view = fir.convert %outer : (!fir.ref<f64>) -> !fir.ref<!fir.array<3xf64>>
+  %inner = fir.array_coor %view(%inner_shape) %k : (!fir.ref<!fir.array<3xf64>>, !fir.shape<1>, index) -> !fir.ref<f64>
+  return %inner : !fir.ref<f64>
+}
+
+// 2-D base with 1-D inner view: dx(1:3, 4)(k) -> dx(k, 4). Inner index
+// arithmetic folds away as in test31.
+// CHECK-LABEL:   func.func @test32_merge_array_coor_2d_inner_1d(
+// CHECK-SAME:                      %[[VAL_0:.*]]: !fir.ref<!fir.array<?x?xf64>>,
+// CHECK-SAME:                      %[[VAL_1:.*]]: index, %[[VAL_2:.*]]: index,
+// CHECK-SAME:                      %[[VAL_3:.*]]: index) -> !fir.ref<f64> {
+// CHECK:           %[[VAL_4:.*]] = arith.constant 4 : index
+// CHECK:           %[[VAL_5:.*]] = fir.shape %[[VAL_1]], %[[VAL_2]] : (index, index) -> !fir.shape<2>
+// CHECK:           %[[VAL_6:.*]] = fir.array_coor %[[VAL_0]](%[[VAL_5]]) %[[VAL_3]], %[[VAL_4]] : (!fir.ref<!fir.array<?x?xf64>>, !fir.shape<2>, index, index) -> !fir.ref<f64>
+// CHECK:           return %[[VAL_6]] : !fir.ref<f64>
+// CHECK-NOT:       fir.convert
+func.func @test32_merge_array_coor_2d_inner_1d(%base: !fir.ref<!fir.array<?x?xf64>>,
+                                               %d1: index, %d2: index,
+                                               %k: index) -> !fir.ref<f64> {
+  %c1 = arith.constant 1 : index
+  %c3 = arith.constant 3 : index
+  %c4 = arith.constant 4 : index
+  %base_shape = fir.shape %d1, %d2 : (index, index) -> !fir.shape<2>
+  %inner_shape = fir.shape %c3 : (index) -> !fir.shape<1>
+  %outer = fir.array_coor %base(%base_shape) %c1, %c4 : (!fir.ref<!fir.array<?x?xf64>>, !fir.shape<2>, index, index) -> !fir.ref<f64>
+  %view = fir.convert %outer : (!fir.ref<f64>) -> !fir.ref<!fir.array<3xf64>>
+  %inner = fir.array_coor %view(%inner_shape) %k : (!fir.ref<!fir.array<3xf64>>, !fir.shape<1>, index) -> !fir.ref<f64>
+  return %inner : !fir.ref<f64>
+}
+
+// 3-D base with 2-D inner view: dx(1:3, 1:4, 5)(i, j) -> dx(i, j, 5).
+// CHECK-LABEL:   func.func @test33_merge_array_coor_3d_inner_2d(
+// CHECK-SAME:        %[[ARG0:[A-Za-z0-9_]+]]: !fir.ref<!fir.array<?x?x?xf64>>,
+// CHECK-SAME:        %[[ARG1:[A-Za-z0-9_]+]]: index, %[[ARG2:[A-Za-z0-9_]+]]: index, %[[ARG3:[A-Za-z0-9_]+]]: index,
+// CHECK-SAME:        %[[ARG4:[A-Za-z0-9_]+]]: index, %[[ARG5:[A-Za-z0-9_]+]]: index)
+// CHECK:           %[[C5:.*]] = arith.constant 5 : index
+// CHECK:           %[[SH:.*]] = fir.shape %[[ARG1]], %[[ARG2]], %[[ARG3]]
+// CHECK:           %[[AC:.*]] = fir.array_coor %[[ARG0]](%[[SH]]) %[[ARG4]], %[[ARG5]], %[[C5]]
+// CHECK:           return %[[AC]] : !fir.ref<f64>
+func.func @test33_merge_array_coor_3d_inner_2d(%base: !fir.ref<!fir.array<?x?x?xf64>>,
+                                               %d1: index, %d2: index, %d3: index,
+                                               %i: index, %j: index) -> !fir.ref<f64> {
+  %c1 = arith.constant 1 : index
+  %c3 = arith.constant 3 : index
+  %c4 = arith.constant 4 : index
+  %c5 = arith.constant 5 : index
+  %base_shape = fir.shape %d1, %d2, %d3 : (index, index, index) -> !fir.shape<3>
+  %inner_shape = fir.shape %c3, %c4 : (index, index) -> !fir.shape<2>
+  %outer = fir.array_coor %base(%base_shape) %c1, %c1, %c5 : (!fir.ref<!fir.array<?x?x?xf64>>, !fir.shape<3>, index, index, index) -> !fir.ref<f64>
+  %view = fir.convert %outer : (!fir.ref<f64>) -> !fir.ref<!fir.array<3x4xf64>>
+  %inner = fir.array_coor %view(%inner_shape) %i, %j : (!fir.ref<!fir.array<3x4xf64>>, !fir.shape<2>, index, index) -> !fir.ref<f64>
+  return %inner : !fir.ref<f64>
+}
+
+// No fold: inner shape carries a shift (non-default lower bound).
+// CHECK-LABEL:   func.func @test34_merge_no_fold_inner_shape_shift(
+// CHECK:           fir.array_coor %{{.*}} -> !fir.ref<f64>
+// CHECK:           fir.convert
+// CHECK:           fir.array_coor %{{.*}} : (!fir.ref<!fir.array<3xf64>>, !fir.shapeshift<1>, index) -> !fir.ref<f64>
+func.func @test34_merge_no_fold_inner_shape_shift(%base: !fir.ref<!fir.array<?xf64>>,
+                                                  %n: index,
+                                                  %k: index) -> !fir.ref<f64> {
+  %c1 = arith.constant 1 : index
+  %c3 = arith.constant 3 : index
+  %base_shape = fir.shape %n : (index) -> !fir.shape<1>
+  %inner_shape = fir.shape_shift %c1, %c3 : (index, index) -> !fir.shapeshift<1>
+  %outer = fir.array_coor %base(%base_shape) %c1 : (!fir.ref<!fir.array<?xf64>>, !fir.shape<1>, index) -> !fir.ref<f64>
+  %view = fir.convert %outer : (!fir.ref<f64>) -> !fir.ref<!fir.array<3xf64>>
+  %inner = fir.array_coor %view(%inner_shape) %k : (!fir.ref<!fir.array<3xf64>>, !fir.shapeshift<1>, index) -> !fir.ref<f64>
+  return %inner : !fir.ref<f64>
+}
+
+// No fold: inner has a slice.
+// CHECK-LABEL:   func.func @test35_merge_no_fold_inner_slice(
+// CHECK:           fir.array_coor %{{.*}} -> !fir.ref<f64>
+// CHECK:           fir.convert
+// CHECK:           fir.array_coor %{{.*}} {{\[}}%{{.*}}]
+func.func @test35_merge_no_fold_inner_slice(%base: !fir.ref<!fir.array<?xf64>>,
+                                            %n: index,
+                                            %k: index) -> !fir.ref<f64> {
+  %c1 = arith.constant 1 : index
+  %c3 = arith.constant 3 : index
+  %base_shape = fir.shape %n : (index) -> !fir.shape<1>
+  %inner_shape = fir.shape %c3 : (index) -> !fir.shape<1>
+  %slice = fir.slice %c1, %c3, %c1 : (index, index, index) -> !fir.slice<1>
+  %outer = fir.array_coor %base(%base_shape) %c1 : (!fir.ref<!fir.array<?xf64>>, !fir.shape<1>, index) -> !fir.ref<f64>
+  %view = fir.convert %outer : (!fir.ref<f64>) -> !fir.ref<!fir.array<3xf64>>
+  %inner = fir.array_coor %view(%inner_shape) [%slice] %k : (!fir.ref<!fir.array<3xf64>>, !fir.shape<1>, !fir.slice<1>, index) -> !fir.ref<f64>
+  return %inner : !fir.ref<f64>
+}
+
+// No fold: convert reinterprets to a different element type.
+// CHECK-LABEL:   func.func @test36_merge_no_fold_element_type_mismatch(
+// CHECK:           fir.array_coor %{{.*}} -> !fir.ref<f64>
+// CHECK:           fir.convert
+// CHECK:           fir.array_coor %{{.*}} : (!fir.ref<!fir.array<6xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
+func.func @test36_merge_no_fold_element_type_mismatch(%base: !fir.ref<!fir.array<?xf64>>,
+                                                      %n: index,
+                                                      %k: index) -> !fir.ref<i32> {
+  %c1 = arith.constant 1 : index
+  %c6 = arith.constant 6 : index
+  %base_shape = fir.shape %n : (index) -> !fir.shape<1>
+  %inner_shape = fir.shape %c6 : (index) -> !fir.shape<1>
+  %outer = fir.array_coor %base(%base_shape) %c1 : (!fir.ref<!fir.array<?xf64>>, !fir.shape<1>, index) -> !fir.ref<f64>
+  %view = fir.convert %outer : (!fir.ref<f64>) -> !fir.ref<!fir.array<6xi32>>
+  %inner = fir.array_coor %view(%inner_shape) %k : (!fir.ref<!fir.array<6xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
+  return %inner : !fir.ref<i32>
+}
+
+// No fold: inner rank exceeds outer rank.
+// CHECK-LABEL:   func.func @test37_merge_no_fold_inner_rank_too_large(
+// CHECK:           fir.array_coor %{{.*}} -> !fir.ref<f64>
+// CHECK:           fir.convert
+// CHECK:           fir.array_coor %{{.*}} : (!fir.ref<!fir.array<3x4xf64>>, !fir.shape<2>, index, index) -> !fir.ref<f64>
+func.func @test37_merge_no_fold_inner_rank_too_large(%base: !fir.ref<!fir.array<?xf64>>,
+                                                     %n: index,
+                                                     %i: index,
+                                                     %j: index) -> !fir.ref<f64> {
+  %c1 = arith.constant 1 : index
+  %c3 = arith.constant 3 : index
+  %c4 = arith.constant 4 : index
+  %base_shape = fir.shape %n : (index) -> !fir.shape<1>
+  %inner_shape = fir.shape %c3, %c4 : (index, index) -> !fir.shape<2>
+  %outer = fir.array_coor %base(%base_shape) %c1 : (!fir.ref<!fir.array<?xf64>>, !fir.shape<1>, index) -> !fir.ref<f64>
+  %view = fir.convert %outer : (!fir.ref<f64>) -> !fir.ref<!fir.array<3x4xf64>>
+  %inner = fir.array_coor %view(%inner_shape) %i, %j : (!fir.ref<!fir.array<3x4xf64>>, !fir.shape<2>, index, index) -> !fir.ref<f64>
+  return %inner : !fir.ref<f64>
+}
+
+// No fold: a fir.array_coor on a descriptor built by fir.create_box must not be
+// rewritten into an array_coor on the base pointer. create_box carries
+// arbitrary byte strides that an array_coor on a ref+shape cannot express, so
+// keeping the array_coor on the box is what preserves those strides.
+// CHECK-LABEL:   func.func @test38_no_fold_array_coor_create_box(
+// CHECK:           %[[BOX:.*]] = fir.create_box
+// CHECK:           fir.array_coor %[[BOX]]
+func.func @test38_no_fold_array_coor_create_box(%arg0: !fir.ref<!fir.array<?xf32>>,
+                                                %lb: index, %ext: index,
+                                                %sm: index, %idx: index) -> !fir.ref<f32> {
+  %0 = fir.create_box %arg0 lbs(%lb) extents(%ext) strides(%sm) : (!fir.ref<!fir.array<?xf32>>, index, index, index) -> !fir.box<!fir.array<?xf32>>
+  %1 = fir.array_coor %0 %idx : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+  return %1 : !fir.ref<f32>
+}

@@ -86,6 +86,10 @@ def SDT_PPCst_vec_be : SDTypeProfile<0, 2, [
 def SDT_PPCxxperm : SDTypeProfile<1, 3, [
   SDTCisVT<0, v2f64>, SDTCisVT<1, v2f64>,
   SDTCisVT<2, v2f64>, SDTCisVT<3, v4i32>]>;
+
+def SDT_PPCxvcvsxwsp : SDTypeProfile<1, 1, [
+  SDTCisVT<0, v4f32>, SDTCisVT<1, v4i32>
+]>;
 //--------------------------- Custom PPC nodes -------------------------------//
 
 // VSRC, CHAIN = LXVD2X_LE CHAIN, Ptr - Occurs only for little endian.
@@ -176,6 +180,8 @@ def PPCSToV : SDNode<"PPCISD::SCALAR_TO_VECTOR_PERMUTED",
                      SDTypeProfile<1, 1, []>, []>;
 
 def PPCxxperm : SDNode<"PPCISD::XXPERM", SDT_PPCxxperm, []>;
+
+def PPCxvcvsxwsp : SDNode<"PPCISD::XVCVSXWSP", SDT_PPCxvcvsxwsp, []>;
 
 def PPCldsplatAlign16 : PatFrag<(ops node:$ptr), (PPCldsplat node:$ptr), [{
   return cast<MemIntrinsicSDNode>(N)->getAlign() >= Align(16) &&
@@ -3387,6 +3393,10 @@ def : Pat<(f64 (int_ppc_insert_exp f64:$A, i64:$B)),
 def : Pat<(int_ppc_stfiw ForceXForm:$dst, f64:$XT),
           (STXSIWX f64:$XT, ForceXForm:$dst)>;
 def : Pat<(int_ppc_frsqrtes vssrc:$XB), (XSRSQRTESP $XB)>;
+
+def : Pat<(PPCxvcvsxwsp (v4i32 VRRC:$XB)),
+           (XVCVSXWSP (COPY_TO_REGCLASS $XB, VSRC))>;
+
 } // HasVSX, HasP8Vector
 
 // Any big endian Power8 VSX subtarget.
