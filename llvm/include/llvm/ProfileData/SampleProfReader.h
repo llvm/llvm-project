@@ -399,7 +399,7 @@ public:
   virtual FunctionId operator[](size_t Idx) const = 0;
 
   virtual EytzingerTableSpan<support::ulittle64_t>
-  getEytzingerSpan(bool IsCS) const {
+  getEytzingerSpan(bool IsNested) const {
     llvm_unreachable(
         "getEytzingerSpan is exclusively supported for Eytzinger layout");
   }
@@ -507,12 +507,12 @@ class EytzingerSampleProfileNameTable final : public SampleProfileNameTable {
 
 public:
   EytzingerSampleProfileNameTable(const support::ulittle64_t *Data,
-                                  size_t NumCS, size_t NumFlat,
+                                  size_t NumNested, size_t NumFlat,
                                   size_t NumInlinees)
-      : Array(Data, NumCS + NumFlat + NumInlinees),
-        Spans{{{Data, NumCS},
-               {Data + NumCS, NumFlat},
-               {Data + NumCS + NumFlat, NumInlinees}}} {}
+      : Array(Data, NumNested + NumFlat + NumInlinees),
+        Spans{{{Data, NumNested},
+               {Data + NumNested, NumFlat},
+               {Data + NumNested + NumFlat, NumInlinees}}} {}
 
   size_t size() const override { return Array.size(); }
 
@@ -521,9 +521,9 @@ public:
   }
 
   EytzingerTableSpan<support::ulittle64_t>
-  getEytzingerSpan(bool IsCS) const override {
-    return Spans[static_cast<size_t>(IsCS ? EytzingerSpan::CS
-                                          : EytzingerSpan::Flat)];
+  getEytzingerSpan(bool IsNested) const override {
+    return Spans[static_cast<size_t>(IsNested ? EytzingerSpan::Nested
+                                              : EytzingerSpan::Flat)];
   }
 
   bool contains(uint64_t GUID) const override {
@@ -1166,8 +1166,8 @@ protected:
   std::error_code readFuncMetadata(DenseSet<FunctionSamples *> &Profiles);
   std::error_code readFuncMetadata();
   std::error_code readFuncMetadata(FunctionSamples *FProfile);
-  std::error_code readFuncOffsetTable(bool IsEytzinger, bool IsCS);
-  std::error_code readEytzingerFuncOffsetTable(bool IsCS);
+  std::error_code readFuncOffsetTable(bool IsEytzinger, bool IsNested);
+  std::error_code readEytzingerFuncOffsetTable(bool IsNested);
   std::error_code readLegacyFuncOffsetTable();
   std::error_code readFuncProfiles();
   std::error_code readFuncProfiles(const DenseSet<StringRef> &FuncsToUse,
