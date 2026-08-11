@@ -178,7 +178,7 @@ static bool UpdateRegister(RegisterContext *reg_ctx,
 
   const RegisterInfo *reg_info = reg_ctx->GetRegisterInfo(reg_kind, reg_num);
 
-  LLDB_LOG(log, "Writing {0}: 0x{1:x}", reg_info->name,
+  LLDB_LOG(log, "Writing {0}: {1:x}", reg_info->name,
            static_cast<uint64_t>(value));
   if (!reg_ctx->WriteRegisterFromUnsigned(reg_info, value)) {
     LLDB_LOG(log, "Writing {0}: failed", reg_info->name);
@@ -224,11 +224,11 @@ bool ABISysV_riscv::PrepareTrivialCall(Thread &thread, addr_t sp,
   for (auto [idx, arg] : enumerate(args)) {
     const RegisterInfo *reg_info = reg_ctx_sp->GetRegisterInfo(
         eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1 + idx);
-    LLDB_LOG(log, "About to write arg{0} (0x{1:x}) into {2}", idx, arg,
+    LLDB_LOG(log, "About to write arg{0} ({1:x}) into {2}", idx, arg,
              reg_info->name);
 
     if (!reg_ctx_sp->WriteRegisterFromUnsigned(reg_info, arg)) {
-      LLDB_LOG(log, "Failed to write arg{0} (0x{1:x}) into {2}", idx, arg,
+      LLDB_LOG(log, "Failed to write arg{0} ({1:x}) into {2}", idx, arg,
                reg_info->name);
       return false;
     }

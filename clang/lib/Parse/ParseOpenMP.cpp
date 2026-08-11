@@ -3569,8 +3569,9 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
     } while (TryConsumeToken(tok::comma));
     RLoc = Tok.getLocation();
     T.consumeClose();
-    Clause = Actions.OpenMP().ActOnOpenMPDirectivePresenceClause(
-        CKind, DKVec, Loc, LLoc, RLoc);
+    if (!WrongDirective)
+      Clause = Actions.OpenMP().ActOnOpenMPDirectivePresenceClause(
+          CKind, DKVec, Loc, LLoc, RLoc);
     break;
   }
   case OMPC_no_openmp:
@@ -3584,8 +3585,9 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
       ErrorFound = true;
     }
     SourceLocation Loc = ConsumeToken();
-    Clause = Actions.OpenMP().ActOnOpenMPNullaryAssumptionClause(
-        CKind, Loc, Tok.getLocation());
+    if (!WrongDirective)
+      Clause = Actions.OpenMP().ActOnOpenMPNullaryAssumptionClause(
+          CKind, Loc, Tok.getLocation());
     break;
   }
   case OMPC_ompx_attribute:
@@ -3765,9 +3767,10 @@ bool Parser::ParseOMPInteropInfo(OMPInteropInfo &InteropInfo,
   bool IsTargetSync = false;
 
   while (Tok.is(tok::identifier)) {
-    // Currently prefer_type is only allowed with 'init' and it must be first.
-    bool PreferTypeAllowed = Kind == OMPC_init && InteropInfo.Prefs.empty() &&
-                             !IsTarget && !IsTargetSync;
+    // prefer_type is allowed with 'init' and 'append_args' and must be first.
+    bool PreferTypeAllowed = (Kind == OMPC_init || Kind == OMPC_append_args) &&
+                             InteropInfo.Prefs.empty() && !IsTarget &&
+                             !IsTargetSync;
     if (Tok.getIdentifierInfo()->isStr("target")) {
       // OpenMP 5.1 [2.15.1, interop Construct, Restrictions]
       // Each interop-type may be specified on an action-clause at most
@@ -3783,6 +3786,10 @@ bool Parser::ParseOMPInteropInfo(OMPInteropInfo &InteropInfo,
       ConsumeToken();
     } else if (Tok.getIdentifierInfo()->isStr("prefer_type") &&
                PreferTypeAllowed) {
+      if (Kind == OMPC_append_args && getLangOpts().OpenMP < 60) {
+        Diag(Tok, diag::err_omp_append_args_prefer_type_60);
+        HasError = true;
+      }
       ConsumeToken();
       BalancedDelimiterTracker PT(*this, tok::l_paren,
                                   tok::annot_pragma_openmp_end);

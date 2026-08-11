@@ -49,6 +49,8 @@ using namespace SCEVPatternMatch;
 static std::optional<int64_t> getConstantStride(VPValue *Addr, Type *AccessTy,
                                                 PredicatedScalarEvolution &PSE,
                                                 const Loop *L) {
+  assert(!hasIrregularType(AccessTy, L->getHeader()->getDataLayout()) &&
+         "should not try to widen irregular types");
   const SCEV *AddrSCEV = vputils::getSCEVExprForVPValue(Addr, PSE, L);
   auto *AddRec = dyn_cast<SCEVAddRecExpr>(AddrSCEV);
   if (!AddRec)
@@ -60,6 +62,13 @@ static std::optional<int64_t> getConstantStride(VPValue *Addr, Type *AccessTy,
 bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
     VPlan &Plan, const TargetLibraryInfo &TLI, PredicatedScalarEvolution &PSE,
     Loop *OuterLoop) {
+
+  // Returns true if the access of \p AccessTy at \p Addr can be widened to a
+  // consecutive vector access.
+  auto IsConsecutiveAccess = [&](VPValue *Addr, Type *AccessTy) {
+    return !hasIrregularType(AccessTy, Plan.getDataLayout()) &&
+           getConstantStride(Addr, AccessTy, PSE, OuterLoop) == 1;
+  };
 
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getVectorLoopRegion());
@@ -94,16 +103,13 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
         // Create VPWidenMemoryRecipe for loads and stores.
         if (LoadInst *Load = dyn_cast<LoadInst>(Inst)) {
           bool IsConsecutive =
-              getConstantStride(VPI->getOperand(0), VPI->getScalarType(), PSE,
-                                OuterLoop) == 1;
+              IsConsecutiveAccess(VPI->getOperand(0), VPI->getScalarType());
           NewRecipe = new VPWidenLoadRecipe(*Load, Ingredient.getOperand(0),
                                             nullptr /*Mask*/, IsConsecutive,
                                             *VPI, Ingredient.getDebugLoc());
         } else if (StoreInst *Store = dyn_cast<StoreInst>(Inst)) {
-          bool IsConsecutive =
-              getConstantStride(VPI->getOperand(1),
-                                VPI->getOperand(0)->getScalarType(), PSE,
-                                OuterLoop) == 1;
+          bool IsConsecutive = IsConsecutiveAccess(
+              VPI->getOperand(1), VPI->getOperand(0)->getScalarType());
           NewRecipe = new VPWidenStoreRecipe(
               *Store, Ingredient.getOperand(1), Ingredient.getOperand(0),
               nullptr /*Mask*/, IsConsecutive, *VPI, Ingredient.getDebugLoc());
@@ -1366,6 +1372,12 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
   }
 
   const APInt *APC;
+  if (CanCreateNewRecipe && match(Def, m_URem(m_VPValue(X), m_APInt(APC))) &&
+      APC->isPowerOf2()) {
+    return Def->replaceAllUsesWith(Builder.createAnd(
+        X, Plan->getConstantInt(*APC - 1), Def->getDebugLoc()));
+  }
+
   if (CanCreateNewRecipe && match(Def, m_c_Mul(m_VPValue(A), m_APInt(APC))) &&
       APC->isPowerOf2()) {
     auto *MulR = cast<VPRecipeWithIRFlags>(Def);
@@ -4439,6 +4451,22 @@ static VPValue *cloneBinOpForScalarIV(VPWidenRecipe *BinOp, VPValue *ScalarIV,
   return ClonedOp;
 }
 
+/// If \p S is an affine AddRec, returns true if its step is known to be
+/// positive and false if it is known to be negative. Returns std::nullopt if
+/// \p S is not an affine AddRec, or if the sign of its step cannot be
+/// determined.
+static std::optional<bool> getStepDirection(const SCEV *S,
+                                            ScalarEvolution &SE) {
+  const SCEV *Step;
+  if (!match(S, m_scev_AffineAddRec(m_SCEV(), m_SCEV(Step))))
+    return std::nullopt;
+  if (SE.isKnownPositive(Step))
+    return true;
+  if (SE.isKnownNegative(Step))
+    return false;
+  return std::nullopt;
+}
+
 void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
                                                PredicatedScalarEvolution &PSE,
                                                Loop &L) {
@@ -4502,8 +4530,7 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
     const SCEV *IVSCEV = vputils::getSCEVExprForVPValue(
         IVOfExpressionToSink ? IVOfExpressionToSink : FindLastExpression, PSE,
         &L);
-    const SCEV *Step;
-    if (!match(IVSCEV, m_scev_AffineAddRec(m_SCEV(), m_SCEV(Step)))) {
+    if (!match(IVSCEV, m_scev_AffineAddRec(m_SCEV(), m_SCEV()))) {
       assert(!match(vputils::getSCEVExprForVPValue(FindLastExpression, PSE, &L),
                     m_scev_AffineAddRec(m_SCEV(), m_SCEV())) &&
              "IVOfExpressionToSink not being an AddRec must imply "
@@ -4511,13 +4538,12 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
       continue;
     }
 
-    // Determine direction from SCEV step.
-    if (!SE.isKnownNonZero(Step))
+    // Determine direction from the step of IVSCEV, if possible.
+    std::optional<bool> StepDirection = getStepDirection(IVSCEV, SE);
+    if (!StepDirection)
       continue;
 
-    // Positive step means we need UMax/SMax to find the last IV value, and
-    // UMin/SMin otherwise.
-    bool UseMax = SE.isKnownPositive(Step);
+    bool UseMax = *StepDirection;
     std::optional<APSInt> SentinelVal = CheckSentinel(IVSCEV, UseMax);
     bool UseSigned = SentinelVal && SentinelVal->isSigned();
 
@@ -4529,16 +4555,15 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
     if (IVOfExpressionToSink) {
       const SCEV *FindLastExpressionSCEV =
           vputils::getSCEVExprForVPValue(FindLastExpression, PSE, &L);
-      if (match(FindLastExpressionSCEV,
-                m_scev_AffineAddRec(m_SCEV(), m_SCEV(Step)))) {
-        bool NewUseMax = SE.isKnownPositive(Step);
+      if (std::optional<bool> NewUseMax =
+              getStepDirection(FindLastExpressionSCEV, SE)) {
         if (auto NewSentinel =
-                CheckSentinel(FindLastExpressionSCEV, NewUseMax)) {
+                CheckSentinel(FindLastExpressionSCEV, *NewUseMax)) {
           // The original expression already has a sentinel, so prefer not
           // sinking to keep epilogue vectorization possible.
           SentinelVal = *NewSentinel;
           UseSigned = NewSentinel->isSigned();
-          UseMax = NewUseMax;
+          UseMax = *NewUseMax;
           IVSCEV = FindLastExpressionSCEV;
           IVOfExpressionToSink = nullptr;
         }

@@ -767,6 +767,11 @@ def LLVM_InvokeOp
   let extraClassDeclaration = [{
     /// Returns the callee function type.
     LLVMFunctionType getCalleeFunctionType();
+
+    /// Successor operands are restricted to LLVM-compatible types.
+    bool mayForwardTypeToSuccessor(unsigned index, Type type) {
+      return isCompatibleType(type);
+    }
   }];
 }
 
@@ -1123,6 +1128,12 @@ def LLVM_BrOp : LLVM_TerminatorOp<"br",
     }]>,
     LLVM_TerminatorPassthroughOpBuilder
   ];
+  let extraClassDeclaration = [{
+    /// Successor operands are restricted to LLVM-compatible types.
+    bool mayForwardTypeToSuccessor(unsigned index, Type type) {
+      return isCompatibleType(type);
+    }
+  }];
 }
 def LLVM_CondBrOp
     : LLVM_TerminatorOp<
@@ -1160,6 +1171,12 @@ def LLVM_CondBrOp
       build($_builder, $_state, condition, trueOperands, falseOperands, branchWeights,
       {}, trueDest, falseDest);
   }]>, LLVM_TerminatorPassthroughOpBuilder];
+  let extraClassDeclaration = [{
+    /// Successor operands are restricted to LLVM-compatible types.
+    bool mayForwardTypeToSuccessor(unsigned index, Type type) {
+      return isCompatibleType(type);
+    }
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1278,6 +1295,11 @@ def LLVM_SwitchOp
     MutableOperandRange getCaseOperandsMutable(unsigned index) {
       return getCaseOperandsMutable()[index];
     }
+
+    /// Successor operands are restricted to LLVM-compatible types.
+    bool mayForwardTypeToSuccessor(unsigned index, Type type) {
+      return isCompatibleType(type);
+    }
   }];
 }
 
@@ -1386,7 +1408,7 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     StrAttr:$sym_name,
     Linkage:$linkage,
     UnitAttr:$dso_local,
-    UnitAttr:$thread_local_,
+    DefaultValuedAttr<LLVM_TLSMode, "mlir::LLVM::ThreadLocalMode::NotThreadLocal">:$tls_mode,
     UnitAttr:$externally_initialized,
     OptionalAttr<AnyAttr>:$value,
     OptionalAttr<I64Attr>:$alignment,
@@ -1518,7 +1540,7 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
       CArg<"uint64_t", "0">:$alignment,
       CArg<"unsigned", "0">:$addrSpace,
       CArg<"bool", "false">:$dsoLocal,
-      CArg<"bool", "false">:$thread_local_,
+      CArg<"ThreadLocalMode", "ThreadLocalMode::NotThreadLocal">:$tls_mode,
       CArg<"SymbolRefAttr", "{}">:$comdat,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs,
       CArg<"ArrayRef<Attribute>", "{}">:$dbgExprs)>
@@ -1631,7 +1653,7 @@ def LLVM_AliasOp : LLVM_Op<"mlir.alias",
     StrAttr:$sym_name,
     Linkage:$linkage,
     UnitAttr:$dso_local,
-    UnitAttr:$thread_local_,
+    DefaultValuedAttr<LLVM_TLSMode, "mlir::LLVM::ThreadLocalMode::NotThreadLocal">:$tls_mode,
     OptionalAttr<UnnamedAddr>:$unnamed_addr,
     DefaultValuedAttr<Visibility, "mlir::LLVM::Visibility::Default">:$visibility_
   );
@@ -1676,7 +1698,7 @@ def LLVM_AliasOp : LLVM_Op<"mlir.alias",
     OpBuilder<(ins "Type":$type, "Linkage":$linkage,
       "StringRef":$name,
       CArg<"bool", "false">:$dsoLocal,
-      CArg<"bool", "false">:$thread_local_,
+      CArg<"ThreadLocalMode", "ThreadLocalMode::NotThreadLocal">:$tls_mode,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
   ];
 
@@ -1937,6 +1959,12 @@ def LLVM_IndirectBrOp : LLVM_TerminatorOp<"indirectbr",
       CArg<"BlockRange", "{}">:$successors
       )>
   ];
+  let extraClassDeclaration = [{
+    /// Successor operands are restricted to LLVM-compatible types.
+    bool mayForwardTypeToSuccessor(unsigned index, Type type) {
+      return isCompatibleType(type);
+    }
+  }];
 }
 
 def LLVM_ComdatSelectorOp : LLVM_Op<"comdat_selector", [Symbol]> {
