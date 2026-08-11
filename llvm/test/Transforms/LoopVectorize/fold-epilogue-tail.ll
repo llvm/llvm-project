@@ -83,6 +83,7 @@ exit:
 define i16 @require_scalar_epilogue(ptr %dst, i64 %x) {
 ; CHECK-LABEL: Checking a loop in 'require_scalar_epilogue'
 ; CHECK: remark: <unknown>:0:0: Epilogue tail-folding can't be applied because scalar epilogue is required. Fall back to a normal epilogue
+; CHECK-NOT: LV: epilogue tail-folding is enabled
 ;
 entry:
   br label %loop.header
@@ -111,6 +112,7 @@ exit.2:
 define i32 @opt_for_size(ptr %p, i32 %n, i8 %val) optsize {
 ; CHECK-LABEL: Checking a loop in 'opt_for_size'
 ; CHECK: remark: <unknown>:0:0: Not applying tail-folding to the epilogue, since no epilogue is allowed
+; CHECK-NOT: LV: epilogue tail-folding is enabled
 ;
 entry:
   br label %for.body
@@ -196,34 +198,6 @@ exit:
   ret void
 }
 
-define void @test_outer_loop(ptr %A, i64 %m) {
-; CHECK-OUTER-LOOP-LABEL: Checking a loop in 'test_outer_loop'
-; CHECK-OUTER-LOOP: remark: <unknown>:0:0: Epilogue tail-folding is not supported for outer loop
-;
-entry:
-  br label %outer.header
-
-outer.header:
-  %iv.outer = phi i64 [ 0, %entry ], [ %iv.outer.next, %outer.latch ]
-  br label %inner
-
-inner:
-  %iv.inner = phi i64 [ 0, %outer.header ], [ %iv.inner.next, %inner ]
-  %gep = getelementptr inbounds i8, ptr %A, i64 %iv.inner
-  store i8 0, ptr %gep, align 1
-  %iv.inner.next = add nuw nsw i64 %iv.inner, 1
-  %inner.ec = icmp eq i64 %iv.inner.next, 8
-  br i1 %inner.ec, label %outer.latch, label %inner
-
-outer.latch:
-  %iv.outer.next = add nuw nsw i64 %iv.outer, 1
-  %outer.ec = icmp eq i64 %iv.outer.next, %m
-  br i1 %outer.ec, label %exit, label %outer.header, !llvm.loop !1
-
-exit:
-  ret void
-}
-
 ; Can't build a valid vplan for this case because too many SCEV checks needed,
 ; more than the specfied limit.
 define i64 @test_no_vplan_built(ptr %dst, i64 %n) {
@@ -249,6 +223,35 @@ loop:
 exit:
   %result = phi i64 [ %ext, %loop ]
   ret i64 %result
+}
+
+define void @test_outer_loop(ptr %A, i64 %m) {
+; CHECK-OUTER-LOOP-LABEL: Checking a loop in 'test_outer_loop'
+; CHECK-OUTER-LOOP: remark: <unknown>:0:0: Epilogue tail-folding is not supported for outer loop
+; CHECK-OUTER-LOOP-NOT: LV: epilogue tail-folding is enabled
+;
+entry:
+  br label %outer.header
+
+outer.header:
+  %iv.outer = phi i64 [ 0, %entry ], [ %iv.outer.next, %outer.latch ]
+  br label %inner
+
+inner:
+  %iv.inner = phi i64 [ 0, %outer.header ], [ %iv.inner.next, %inner ]
+  %gep = getelementptr inbounds i32, ptr %A, i64 %iv.inner
+  store i32 0, ptr %gep, align 4
+  %iv.inner.next = add nuw nsw i64 %iv.inner, 1
+  %inner.ec = icmp eq i64 %iv.inner.next, 8
+  br i1 %inner.ec, label %outer.latch, label %inner
+
+outer.latch:
+  %iv.outer.next = add nuw nsw i64 %iv.outer, 1
+  %outer.ec = icmp eq i64 %iv.outer.next, %m
+  br i1 %outer.ec, label %exit, label %outer.header, !llvm.loop !1
+
+exit:
+  ret void
 }
 
 !1 = distinct !{!1, !2}
