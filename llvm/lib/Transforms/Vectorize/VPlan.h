@@ -2188,6 +2188,13 @@ public:
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
 
+  /// Return the mask operand if one was provided, or a null pointer if all
+  /// lanes should be executed unconditionally.
+  VPValue *getMask() const {
+    return getNumOperands() == 3 ? getOperand(2) : nullptr;
+  }
+
+private:
   /// Return the histogram intrinsic ID for this recipe's update kind.
   Intrinsic::ID getHistogramIntrinsicID() const;
 
@@ -2195,12 +2202,6 @@ public:
   /// histogram intrinsic (only for Sub).
   bool mustNegateIncrement() const {
     return UpdateKind == HistogramUpdateKind::Sub;
-  }
-
-  /// Return the mask operand if one was provided, or a null pointer if all
-  /// lanes should be executed unconditionally.
-  VPValue *getMask() const {
-    return getNumOperands() == 3 ? getOperand(2) : nullptr;
   }
 
 protected:
