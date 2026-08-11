@@ -5,7 +5,7 @@
 name: "[libc++] Run benchmark suite against commit"
 
 # Keep in sync with libcxx/utils/ci/lnt/dispatch-benchmarks
-run-name: "[libc++] Run benchmark suite against ${{ inputs.commit }} on ${{ inputs.lnt-machine }}"
+run-name: "[libc++] Run benchmark suite against ${{ inputs.commit }} on ${{ inputs.lnt-machine }}${{ !inputs.submit-lnt && ' (dry run)' || '' }}"
 
 permissions:
   contents: read

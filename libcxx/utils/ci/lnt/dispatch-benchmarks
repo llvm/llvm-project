@@ -7,7 +7,7 @@
 #
 # ===----------------------------------------------------------------------===##
 
-from typing import Dict, List, NamedTuple, Optional, Sequence, TextIO
+from typing import Dict, List, NamedTuple, Optional, Sequence, Set, TextIO
 import argparse
 import common
 import github
@@ -18,6 +18,12 @@ import pathlib
 import re
 import sys
 import tabulate
+
+
+class RunName(NamedTuple):
+    """The name of a workflow run and the information it encodes."""
+    target: common.Target
+    dry_run: bool # whether that workflow run was only a dry-run
 
 
 class WorkflowRun(NamedTuple):
@@ -55,7 +61,7 @@ WORKFLOW = 'libcxx-benchmark-commit.yml'
 # not available from the API) so this format is a contract with the
 # libcxx-benchmark-commit.yml workflow.
 RUN_NAME_PREFIX = '[libc++] Run benchmark suite against '
-RUN_NAME = re.compile(re.escape(RUN_NAME_PREFIX) + r'([0-9a-fA-F]{40}) on (\S+)$')
+RUN_NAME = re.compile(re.escape(RUN_NAME_PREFIX) + r'([0-9a-fA-F]{40}) on (\S+)( \(dry run\))?$')
 
 
 class HelpFormatter(argparse.ArgumentDefaultsHelpFormatter,
@@ -102,14 +108,17 @@ def collapse(items: Sequence[common.WorkItem]) -> List[common.WorkItem]:
     return ordered
 
 
-def target_of_run(title: str) -> Optional[common.Target]:
+def parse_run_name(title: str) -> Optional[RunName]:
     """
-    Return what a workflow run is benchmarking, or None if it can't be told.
+    Return the information encoded in a worfklow's run-name, or None if it can't be parsed.
 
     The name has to match the workflow's `run-name` exactly.
     """
     match = RUN_NAME.match(title.strip())
-    return common.Target(match.group(1).lower(), match.group(2)) if match else None
+    if match is None:
+        return None
+    return RunName(target=common.Target(match.group(1).lower(), match.group(2)),
+                   dry_run=match.group(3) is not None)
 
 
 def connect(token: str, repository: str, workflow: str) -> github.Workflow.Workflow:
@@ -132,19 +141,25 @@ def workflow_runs(workflow: github.Workflow.Workflow) -> List[WorkflowRun]:
 
     Cancelled runs or runs named in any other format are ignored: they either
     predate this tooling or don't represent expended capacity towards benchmarking
-    a target.
+    a target. Dry-runs are ignored too, since they never submit to LNT.
     """
     runs: Dict[int, WorkflowRun] = {}
+    dry: Set[int] = set()
     try:
         for run in workflow.get_runs():
-            target = target_of_run(run.display_title) if run.display_title else None
-            if target is None or run.conclusion == 'cancelled':
+            parsed = parse_run_name(run.display_title) if run.display_title else None
+            if parsed is None or run.conclusion == 'cancelled':
+                continue
+            if parsed.dry_run:
+                dry.add(run.id)
                 continue
             # Deduplicate by id: pages can overlap while runs are being created.
-            runs[run.id] = WorkflowRun(identifier=run.id, target=target,
+            runs[run.id] = WorkflowRun(identifier=run.id, target=parsed.target,
                                        finished=run.status == 'completed')
     except github.GithubException as error:
         raise GithubError(f'could not list the runs of {workflow.path}: {error}')
+    if dry:
+        logging.info(f'ignoring {len(dry)} dry runs')
     return list(runs.values())
 
 
@@ -242,9 +257,10 @@ def workflow_inputs(args: argparse.Namespace, item: common.WorkItem) -> Dict[str
     """Return the inputs to dispatch the workflow with for a work item."""
     inputs = {'commit': item.commit,
               'lnt-machine': item.machine,
-              # Submission is not optional: a run whose results are not recorded
-              # anywhere would be requested again on every future invocation.
-              # During a dry run nothing runs, so nothing is submitted either.
+              # Submitting to LNT is mandatory, since a run whose results are not recorded
+              # anywhere would be requested again on every future invocation. When run
+              # with --dry-run, this tool never actually dispatches the workflow with
+              # `submit-lnt: false`.
               'submit-lnt': 'false' if args.dry_run else 'true'}
     if args.lnt_url:
         inputs['lnt-url'] = args.lnt_url
