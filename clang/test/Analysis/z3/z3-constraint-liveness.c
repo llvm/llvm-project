@@ -5,7 +5,7 @@
 
 void clang_analyzer_eval(int);
 
-void transitive_constraints(int a, int b, int c) {
+void indirect_constraints(int a, int b, int c) {
   if (a != b && b == c && c == 42) {
     clang_analyzer_eval(b == 42); // expected-warning{{TRUE}}
     clang_analyzer_eval(a != 42); // expected-warning{{TRUE}}
