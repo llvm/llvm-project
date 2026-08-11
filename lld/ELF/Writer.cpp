@@ -1920,26 +1920,46 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     scanRelocations<ELFT>(ctx);
 
     // Process symbols referenced by the embedded unoptimized part of dynamic
-    // debugging.
+    // debugging. Report references to undefined symbols and ensure that
+    // references to shared symbols have PLT/GOT entries as appropriate.
     if (ctx.hasDynDbg) {
       bool ignoreUnresolved =
           (ctx.arg.unresolvedSymbols == UnresolvedPolicy::Ignore);
-      bool warnOnly = (ctx.arg.unresolvedSymbols == UnresolvedPolicy::Warn);
+      bool warnUnresolved =
+          (ctx.arg.unresolvedSymbols == UnresolvedPolicy::Warn);
       for (Symbol *sym : ctx.symtab->getSymbols()) {
         if (!sym->isDynDbgRef)
           continue;
 
         if (sym->isUndefined()) {
-          if (ignoreUnresolved || sym->isWeak())
-            continue;
+          bool isWarning;
 
+          // If versioned, issue an error (even if the symbol is weak) because
+          // we don't know the defining filename which is required to construct
+          // a Verneed entry.
+          if (sym->hasVersionSuffix)
+            isWarning = false;
+          else {
+            if (sym->isWeak())
+              continue;
+
+            bool canBeExternal =
+                !sym->isLocal() && sym->visibility() == STV_DEFAULT;
+            if (ignoreUnresolved && canBeExternal)
+              continue;
+
+            isWarning =
+                (warnUnresolved && canBeExternal) || ctx.arg.noinhibitExec;
+          }
+
+          // Report with actual dynamic debugging input section if available.
           static InputSection dummy(ctx.internalFile, dynDbgSecName, 0, 0, 0, 0,
                                     ArrayRef<uint8_t>());
           ObjFile<ELFT> *dbgObj = dyn_cast<ObjFile<ELFT>>(sym->file);
           InputSectionBase *isec =
               dbgObj && dbgObj->dynDbgSec ? dbgObj->dynDbgSec.get() : &dummy;
           ctx.undefErrs.push_back(
-              {cast<Undefined>(sym), {{isec, 0}}, warnOnly});
+              {cast<Undefined>(sym), {{isec, 0}}, isWarning});
           continue;
         }
 
