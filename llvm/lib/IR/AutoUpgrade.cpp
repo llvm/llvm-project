@@ -14,6 +14,7 @@
 
 #include "llvm/IR/AutoUpgrade.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -1416,57 +1417,55 @@ static bool upgradeIntrinsicDeclWithDefaultArgs(Function *F, Function *&NewFn) {
 // The intrinsics carrying a trailing atomicity metadata argument. Excludes the
 // tbuffer and buffer-to-LDS intrinsics, which do not.
 static bool isAMDGCNBufferMemIntrinsic(Intrinsic::ID IID) {
-  switch (IID) {
-  case Intrinsic::amdgcn_raw_ptr_buffer_load:
-  case Intrinsic::amdgcn_raw_ptr_buffer_load_format:
-  case Intrinsic::amdgcn_raw_ptr_atomic_buffer_load:
-  case Intrinsic::amdgcn_struct_ptr_buffer_load:
-  case Intrinsic::amdgcn_struct_ptr_buffer_load_format:
-  case Intrinsic::amdgcn_struct_ptr_atomic_buffer_load:
-  case Intrinsic::amdgcn_raw_ptr_buffer_store:
-  case Intrinsic::amdgcn_raw_ptr_buffer_store_format:
-  case Intrinsic::amdgcn_struct_ptr_buffer_store:
-  case Intrinsic::amdgcn_struct_ptr_buffer_store_format:
-  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_swap:
-  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_add:
-  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_sub:
-  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_smin:
-  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_umin:
-  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_fmin:
-  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_smax:
-  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_umax:
-  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_fmax:
-  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_and:
-  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_or:
-  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_xor:
-  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_inc:
-  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_dec:
-  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_cond_sub_u32:
-  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_sub_clamp_u32:
-  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_fadd:
-  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_cmpswap:
-  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_swap:
-  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_add:
-  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_sub:
-  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_smin:
-  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_umin:
-  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_fmin:
-  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_smax:
-  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_umax:
-  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_fmax:
-  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_and:
-  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_or:
-  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_xor:
-  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_inc:
-  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_dec:
-  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_cond_sub_u32:
-  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_sub_clamp_u32:
-  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_fadd:
-  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_cmpswap:
-    return true;
-  default:
-    return false;
-  }
+  static constexpr Intrinsic::ID BufferMemIntrinsics[] = {
+      Intrinsic::amdgcn_raw_ptr_buffer_load,
+      Intrinsic::amdgcn_raw_ptr_buffer_load_format,
+      Intrinsic::amdgcn_raw_ptr_atomic_buffer_load,
+      Intrinsic::amdgcn_struct_ptr_buffer_load,
+      Intrinsic::amdgcn_struct_ptr_buffer_load_format,
+      Intrinsic::amdgcn_struct_ptr_atomic_buffer_load,
+      Intrinsic::amdgcn_raw_ptr_buffer_store,
+      Intrinsic::amdgcn_raw_ptr_buffer_store_format,
+      Intrinsic::amdgcn_struct_ptr_buffer_store,
+      Intrinsic::amdgcn_struct_ptr_buffer_store_format,
+      Intrinsic::amdgcn_raw_ptr_buffer_atomic_swap,
+      Intrinsic::amdgcn_raw_ptr_buffer_atomic_add,
+      Intrinsic::amdgcn_raw_ptr_buffer_atomic_sub,
+      Intrinsic::amdgcn_raw_ptr_buffer_atomic_smin,
+      Intrinsic::amdgcn_raw_ptr_buffer_atomic_umin,
+      Intrinsic::amdgcn_raw_ptr_buffer_atomic_fmin,
+      Intrinsic::amdgcn_raw_ptr_buffer_atomic_smax,
+      Intrinsic::amdgcn_raw_ptr_buffer_atomic_umax,
+      Intrinsic::amdgcn_raw_ptr_buffer_atomic_fmax,
+      Intrinsic::amdgcn_raw_ptr_buffer_atomic_and,
+      Intrinsic::amdgcn_raw_ptr_buffer_atomic_or,
+      Intrinsic::amdgcn_raw_ptr_buffer_atomic_xor,
+      Intrinsic::amdgcn_raw_ptr_buffer_atomic_inc,
+      Intrinsic::amdgcn_raw_ptr_buffer_atomic_dec,
+      Intrinsic::amdgcn_raw_ptr_buffer_atomic_cond_sub_u32,
+      Intrinsic::amdgcn_raw_ptr_buffer_atomic_sub_clamp_u32,
+      Intrinsic::amdgcn_raw_ptr_buffer_atomic_fadd,
+      Intrinsic::amdgcn_raw_ptr_buffer_atomic_cmpswap,
+      Intrinsic::amdgcn_struct_ptr_buffer_atomic_swap,
+      Intrinsic::amdgcn_struct_ptr_buffer_atomic_add,
+      Intrinsic::amdgcn_struct_ptr_buffer_atomic_sub,
+      Intrinsic::amdgcn_struct_ptr_buffer_atomic_smin,
+      Intrinsic::amdgcn_struct_ptr_buffer_atomic_umin,
+      Intrinsic::amdgcn_struct_ptr_buffer_atomic_fmin,
+      Intrinsic::amdgcn_struct_ptr_buffer_atomic_smax,
+      Intrinsic::amdgcn_struct_ptr_buffer_atomic_umax,
+      Intrinsic::amdgcn_struct_ptr_buffer_atomic_fmax,
+      Intrinsic::amdgcn_struct_ptr_buffer_atomic_and,
+      Intrinsic::amdgcn_struct_ptr_buffer_atomic_or,
+      Intrinsic::amdgcn_struct_ptr_buffer_atomic_xor,
+      Intrinsic::amdgcn_struct_ptr_buffer_atomic_inc,
+      Intrinsic::amdgcn_struct_ptr_buffer_atomic_dec,
+      Intrinsic::amdgcn_struct_ptr_buffer_atomic_cond_sub_u32,
+      Intrinsic::amdgcn_struct_ptr_buffer_atomic_sub_clamp_u32,
+      Intrinsic::amdgcn_struct_ptr_buffer_atomic_fadd,
+      Intrinsic::amdgcn_struct_ptr_buffer_atomic_cmpswap,
+  };
+  return llvm::is_contained(BufferMemIntrinsics, IID);
 }
 
 static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,

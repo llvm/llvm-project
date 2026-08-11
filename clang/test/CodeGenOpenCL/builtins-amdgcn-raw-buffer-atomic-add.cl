@@ -14,7 +14,7 @@ typedef half __attribute__((ext_vector_type(2))) float16x2_t;
 // CHECK-NEXT:    ret i32 [[TMP0]]
 //
 int test_atomic_add_i32(__amdgpu_buffer_rsrc_t rsrc, int x, int offset, int soffset) {
-  return __builtin_amdgcn_raw_ptr_buffer_atomic_add_i32(x, rsrc, offset, soffset, 0);
+  return __builtin_amdgcn_raw_ptr_buffer_atomic_add_i32(x, rsrc, offset, soffset, 0, __ATOMIC_SEQ_CST, "agent");
 }
 
 // CHECK-LABEL: define dso_local float @test_atomic_fadd_f32(
@@ -24,7 +24,7 @@ int test_atomic_add_i32(__amdgpu_buffer_rsrc_t rsrc, int x, int offset, int soff
 // CHECK-NEXT:    ret float [[TMP0]]
 //
 float test_atomic_fadd_f32(__amdgpu_buffer_rsrc_t rsrc, float x, int offset, int soffset) {
-  return __builtin_amdgcn_raw_ptr_buffer_atomic_fadd_f32(x, rsrc, offset, soffset, 0);
+  return __builtin_amdgcn_raw_ptr_buffer_atomic_fadd_f32(x, rsrc, offset, soffset, 0, __ATOMIC_SEQ_CST, "agent");
 }
 
 // CHECK-LABEL: define dso_local <2 x half> @test_atomic_fadd_v2f16(
@@ -34,8 +34,8 @@ float test_atomic_fadd_f32(__amdgpu_buffer_rsrc_t rsrc, float x, int offset, int
 // CHECK-NEXT:    ret <2 x half> [[TMP0]]
 //
 float16x2_t test_atomic_fadd_v2f16(__amdgpu_buffer_rsrc_t rsrc, float16x2_t x, int offset, int soffset) {
-  return __builtin_amdgcn_raw_ptr_buffer_atomic_fadd_v2f16(x, rsrc, offset, soffset, 0);
+  return __builtin_amdgcn_raw_ptr_buffer_atomic_fadd_v2f16(x, rsrc, offset, soffset, 0, __ATOMIC_SEQ_CST, "agent");
 }
 //.
-// CHECK: [[META8]] = !{}
+// CHECK: [[META8]] = !{!"seq_cst", !"agent"}
 //.

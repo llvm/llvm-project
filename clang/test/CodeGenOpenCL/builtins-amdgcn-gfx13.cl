@@ -97,10 +97,10 @@ void test_cvt_scalef32_pk32_fp6_f32(global uint6 *out, float32 srcf32, float src
 //
 void test_raw_ptr_buffer_atomic_fmin_fmax(global float *fout, global double *dout, __amdgpu_buffer_rsrc_t rsrc, float f, double d, int offset, int soffset)
 {
-  *fout = __builtin_amdgcn_raw_ptr_buffer_atomic_fmin_f32(f, rsrc, offset, soffset, 0);
-  *fout = __builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f32(f, rsrc, offset, soffset, 0);
-  *dout = __builtin_amdgcn_raw_ptr_buffer_atomic_fmin_f64(d, rsrc, offset, soffset, 0);
-  *dout = __builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f64(d, rsrc, offset, soffset, 0);
+  *fout = __builtin_amdgcn_raw_ptr_buffer_atomic_fmin_f32(f, rsrc, offset, soffset, 0, __ATOMIC_SEQ_CST, "agent");
+  *fout = __builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f32(f, rsrc, offset, soffset, 0, __ATOMIC_SEQ_CST, "agent");
+  *dout = __builtin_amdgcn_raw_ptr_buffer_atomic_fmin_f64(d, rsrc, offset, soffset, 0, __ATOMIC_SEQ_CST, "agent");
+  *dout = __builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f64(d, rsrc, offset, soffset, 0, __ATOMIC_SEQ_CST, "agent");
 }
 
 // CHECK-LABEL: @test_cvt_sr_pk_bf16_f32(

@@ -1442,20 +1442,12 @@ parseBufferAtomicityMDArg(const CallBase &CI) {
     return std::nullopt;
 
   StringRef OrderStr = cast<MDString>(MD->getOperand(0))->getString();
-  AtomicOrdering Order =
-      StringSwitch<AtomicOrdering>(OrderStr)
-          .Case("unordered", AtomicOrdering::Unordered)
-          .Case("monotonic", AtomicOrdering::Monotonic)
-          .Case("acquire", AtomicOrdering::Acquire)
-          .Case("release", AtomicOrdering::Release)
-          .Case("acq_rel", AtomicOrdering::AcquireRelease)
-          .Case("seq_cst", AtomicOrdering::SequentiallyConsistent)
-          .Default(AtomicOrdering::NotAtomic);
-  if (Order == AtomicOrdering::NotAtomic)
+  std::optional<AtomicOrdering> Order = parseAtomicOrdering(OrderStr);
+  if (!Order)
     return std::nullopt;
 
   StringRef Scope = cast<MDString>(MD->getOperand(1))->getString();
-  return std::make_pair(Order, CI.getContext().getOrInsertSyncScopeID(Scope));
+  return std::make_pair(*Order, CI.getContext().getOrInsertSyncScopeID(Scope));
 }
 
 void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,

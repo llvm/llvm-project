@@ -32,9 +32,8 @@ using namespace llvm;
 
 namespace {
 
-// No builtin can specify the ordering or scope of an atomic buffer access
-// (only that it performs one), so the trailing atomicity metadata arg is
-// always the empty node. OverloadTy defaults to the first argument type.
+// Non-atomic buffer builtins have no ordering/scope, so the trailing
+// atomicity metadata arg is always the empty node.
 static Value *emitAMDGPUBufferBuiltin(CodeGenFunction &CGF, const CallExpr *E,
                                       unsigned IntrinsicID,
                                       llvm::Type *OverloadTy = nullptr) {
@@ -45,6 +44,30 @@ static Value *emitAMDGPUBufferBuiltin(CodeGenFunction &CGF, const CallExpr *E,
                                       MDNode::get(CGF.getLLVMContext(), {})));
   Function *F = CGF.CGM.getIntrinsic(
       IntrinsicID, OverloadTy ? OverloadTy : Args[0]->getType());
+  return CGF.Builder.CreateCall(F, Args);
+}
+
+// Trailing order/scope args become the real `!{ordering, syncscope}` node.
+static Value *emitAMDGPUBufferAtomicBuiltin(CodeGenFunction &CGF,
+                                            const CallExpr *E,
+                                            unsigned IntrinsicID) {
+  unsigned NumArgs = E->getNumArgs() - 2;
+  llvm::SmallVector<Value *, 7> Args;
+  for (unsigned I = 0; I != NumArgs; ++I)
+    Args.push_back(CGF.EmitScalarExpr(E->getArg(I)));
+
+  llvm::AtomicOrdering AO;
+  llvm::SyncScope::ID SSID;
+  CGF.ProcessOrderScopeAMDGCN(CGF.EmitScalarExpr(E->getArg(NumArgs)),
+                              CGF.EmitScalarExpr(E->getArg(NumArgs + 1)), AO,
+                              SSID);
+  llvm::LLVMContext &Ctx = CGF.getLLVMContext();
+  StringRef Scope = Ctx.getSyncScopeName(SSID).value_or("");
+  Metadata *Ops[] = {MDString::get(Ctx, toIRString(AO)),
+                     MDString::get(Ctx, Scope)};
+  Args.push_back(MetadataAsValue::get(Ctx, MDNode::get(Ctx, Ops)));
+
+  Function *F = CGF.CGM.getIntrinsic(IntrinsicID, Args[0]->getType());
   return CGF.Builder.CreateCall(F, Args);
 }
 
@@ -2184,19 +2207,19 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
         *this, E, Intrinsic::amdgcn_struct_ptr_buffer_load_format,
         ConvertType(E->getType()));
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_add_i32:
-    return emitAMDGPUBufferBuiltin(*this, E,
-                                   Intrinsic::amdgcn_raw_ptr_buffer_atomic_add);
+    return emitAMDGPUBufferAtomicBuiltin(
+        *this, E, Intrinsic::amdgcn_raw_ptr_buffer_atomic_add);
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_f32:
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_v2f16:
-    return emitAMDGPUBufferBuiltin(
+    return emitAMDGPUBufferAtomicBuiltin(
         *this, E, Intrinsic::amdgcn_raw_ptr_buffer_atomic_fadd);
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fmin_f32:
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fmin_f64:
-    return emitAMDGPUBufferBuiltin(
+    return emitAMDGPUBufferAtomicBuiltin(
         *this, E, Intrinsic::amdgcn_raw_ptr_buffer_atomic_fmin);
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f32:
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f64:
-    return emitAMDGPUBufferBuiltin(
+    return emitAMDGPUBufferAtomicBuiltin(
         *this, E, Intrinsic::amdgcn_raw_ptr_buffer_atomic_fmax);
   case AMDGPU::BI__builtin_amdgcn_s_buffer_load_i32:
   case AMDGPU::BI__builtin_amdgcn_s_buffer_load_v2i32:

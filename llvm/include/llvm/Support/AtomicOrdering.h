@@ -17,7 +17,10 @@
 #ifndef LLVM_SUPPORT_ATOMICORDERING_H
 #define LLVM_SUPPORT_ATOMICORDERING_H
 
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include <cstddef>
+#include <optional>
 
 namespace llvm {
 
@@ -84,6 +87,18 @@ inline const char *toIRString(AtomicOrdering ao) {
                                  "consume",    "acquire",   "release",
                                  "acq_rel",    "seq_cst"};
   return names[static_cast<size_t>(ao)];
+}
+
+/// Inverse of toIRString. Returns std::nullopt if Str does not name one.
+inline std::optional<AtomicOrdering> parseAtomicOrdering(StringRef Str) {
+  return StringSwitch<std::optional<AtomicOrdering>>(Str)
+      .Case("unordered", AtomicOrdering::Unordered)
+      .Case("monotonic", AtomicOrdering::Monotonic)
+      .Case("acquire", AtomicOrdering::Acquire)
+      .Case("release", AtomicOrdering::Release)
+      .Case("acq_rel", AtomicOrdering::AcquireRelease)
+      .Case("seq_cst", AtomicOrdering::SequentiallyConsistent)
+      .Default(std::nullopt);
 }
 
 /// Returns true if ao is stronger than other as defined by the AtomicOrdering

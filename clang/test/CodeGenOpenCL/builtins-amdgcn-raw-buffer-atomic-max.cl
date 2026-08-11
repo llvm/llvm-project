@@ -12,7 +12,7 @@
 // CHECK-NEXT:    ret float [[TMP0]]
 //
 float test_atomic_fmax_f32(__amdgpu_buffer_rsrc_t rsrc, float x, int offset, int soffset) {
-  return __builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f32(x, rsrc, offset, soffset, 0);
+  return __builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f32(x, rsrc, offset, soffset, 0, __ATOMIC_SEQ_CST, "agent");
 }
 
 // CHECK-LABEL: define dso_local double @test_atomic_fmax_f64(
@@ -22,8 +22,8 @@ float test_atomic_fmax_f32(__amdgpu_buffer_rsrc_t rsrc, float x, int offset, int
 // CHECK-NEXT:    ret double [[TMP0]]
 //
 double test_atomic_fmax_f64(__amdgpu_buffer_rsrc_t rsrc, double x, int offset, int soffset) {
-  return __builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f64(x, rsrc, offset, soffset, 0);
+  return __builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f64(x, rsrc, offset, soffset, 0, __ATOMIC_SEQ_CST, "agent");
 }
 //.
-// CHECK: [[META8]] = !{}
+// CHECK: [[META8]] = !{!"seq_cst", !"agent"}
 //.
