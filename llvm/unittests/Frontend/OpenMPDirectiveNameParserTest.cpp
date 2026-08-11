@@ -86,8 +86,7 @@ static std::vector<omp::Directive> getDirectiveSet() {
   // use one of them, otherwise the test will fail to instantiate.
   std::vector<omp::Directive> Dirs;
   for (omp::Directive D : llvm::omp::directives()) {
-    if (D == omp::Directive::OMPD_ordered ||
-        D == omp::Directive::OMPD_ordered_blockassoc)
+    if (D == omp::Directive::OMPD_ordered_blockassoc)
       continue;
     Dirs.push_back(D);
   }

@@ -211,8 +211,7 @@ struct OmpDirectiveNameParser {
         OmpDirectiveName n;
         // We can't tell which one "ordered" corresponds to here,
         // so normalize it to OMPD_ordered_standalone.
-        if (nid.second == llvm::omp::Directive::OMPD_ordered ||
-            nid.second == llvm::omp::Directive::OMPD_ordered_blockassoc) {
+        if (nid.second == llvm::omp::Directive::OMPD_ordered_blockassoc) {
           n.v = llvm::omp::Directive::OMPD_ordered_standalone;
         } else {
           n.v = nid.second;

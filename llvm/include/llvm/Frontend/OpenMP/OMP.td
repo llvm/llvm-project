@@ -1083,19 +1083,6 @@ def OMP_Nothing : Directive<[Spelling<"nothing">]> {
     LM_Identity,
   ];
 }
-def OMP_Ordered : Directive<[Spelling<"ordered">]> {
-  let allowedClauses = [
-    VersionedClause<OMPC_Depend>,
-    VersionedClause<OMPC_Doacross, 52>,
-  ];
-  let allowedOnceClauses = [
-    VersionedClause<OMPC_Simd>,
-    VersionedClause<OMPC_Threads>,
-  ];
-  let association = AS_None;
-  // There is also a block-associated "ordered" directive.
-  let category = CA_Executable;
-}
 def OMP_OrderedStandalone : Directive<[Spelling<"ordered">]> {
   let name = "ordered_standalone";
   let allowedClauses = [

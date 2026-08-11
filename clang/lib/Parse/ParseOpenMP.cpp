@@ -64,7 +64,7 @@ static OpenMPDirectiveKind checkOpenMPDirectiveName(Parser &P,
   unsigned Version = P.getLangOpts().OpenMP;
   auto [D, VR] = getOpenMPDirectiveKindAndVersions(Name);
   // "ORDERED" is parsed as OMPD_ordered_standalone.
-  if (D == Directive::OMPD_ordered || D == Directive::OMPD_ordered_blockassoc)
+  if (D == Directive::OMPD_ordered_blockassoc)
     D = Directive::OMPD_ordered_standalone;
   assert(D == Kind && "Directive kind mismatch");
   // Ignore the case Version > VR.Max: In OpenMP 6.0 all prior spellings
