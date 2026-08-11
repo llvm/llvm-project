@@ -795,7 +795,7 @@ static void addGotAuthEntry(Ctx &ctx, Symbol &sym) {
 
   // Signed GOT requires dynamic relocation unless the symbol is
   // non-preemptible and undefined weak.
-  if (!sym.isUndefWeak())
+  if (!sym.isUndefined())
     ctx.in.relaDyn->addReloc(
         {R_AARCH64_AUTH_RELATIVE, ctx.in.got.get(), off, false, sym, 0, R_ABS});
 }
@@ -858,8 +858,8 @@ bool RelocScan::isStaticLinkTimeConstant(RelExpr e, RelType type,
   if (e == R_GOT || e == R_PLT)
     return ctx.target->usesOnlyLowPageBits(type) || !ctx.arg.isPic;
   // R_AARCH64_AUTH_ABS64 requires a dynamic relocation unless the symbol is
-  // non-preemptible and undefined weak.
-  if (e == RE_AARCH64_AUTH && (!sym.isUndefWeak() || sym.isPreemptible))
+  // non-preemptible and undefined.
+  if (e == RE_AARCH64_AUTH && (!sym.isUndefined() || sym.isPreemptible))
     return false;
   // iRelSymbolicRel requires a dynamic relocation.
   if (type == ctx.target->iRelSymbolicRel)

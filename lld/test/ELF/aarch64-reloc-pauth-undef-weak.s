@@ -6,8 +6,8 @@
 # RUN: llvm-readelf -x.got  %t | FileCheck %s --check-prefix=GOT
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s --check-prefix=DIS
 
-## Verify that R_AARCH64_AUTH_ABS64 against a weak non-preemptible
-## undefined symbol is resolved to NULL (plus addend).
+## Verify that R_AARCH64_AUTH_ABS64 against a non-preemptible
+## undefined weak symbol is resolved to NULL (plus addend).
 
 # RELA-LABEL: Relocations [
 # RELA-NEXT:  ]
