@@ -268,8 +268,7 @@ AMDGPUPerfHintAnalysis::FuncInfo *AMDGPUPerfHint::visit(const Function &F) {
     }
 
     if (!FI.HasDenseGlobalMemAcc) {
-      unsigned GlobalMemAccPercentage =
-          static_cast<unsigned>(UsedGlobalLoadsInBB * 100 / B.size());
+      size_t GlobalMemAccPercentage = UsedGlobalLoadsInBB * 100 / B.size();
       if (GlobalMemAccPercentage > 50) {
         LLVM_DEBUG(dbgs() << "[HasDenseGlobalMemAcc] Set to true since "
                           << B.getName() << " has " << GlobalMemAccPercentage

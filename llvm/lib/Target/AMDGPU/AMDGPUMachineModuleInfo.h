@@ -122,12 +122,12 @@ public:
 
     // Returns {level, isOneAS} for a given scope, or nullopt if unsupported.
     auto GetLevelAndOneAS =
-        [&](SyncScope::ID SSID) -> std::optional<std::pair<unsigned, bool>> {
+        [&](SyncScope::ID SSID) -> std::optional<std::pair<size_t, bool>> {
       for (auto [I, Cross, One] : llvm::enumerate(CrossAS, OneAS)) {
         if (Cross == SSID)
-          return std::make_pair(static_cast<unsigned>(I), false);
+          return std::make_pair(I, false);
         if (One == SSID)
-          return std::make_pair(static_cast<unsigned>(I), true);
+          return std::make_pair(I, true);
       }
       return std::nullopt;
     };
@@ -137,7 +137,7 @@ public:
     if (!AI || !BI)
       return std::nullopt;
 
-    unsigned Level = std::max(AI->first, BI->first);
+    size_t Level = std::max(AI->first, BI->first);
     // If either scope is cross-AS, the result must be cross-AS.
     return (AI->second && BI->second) ? OneAS[Level] : CrossAS[Level];
   }
