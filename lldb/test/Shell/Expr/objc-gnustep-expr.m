@@ -48,7 +48,7 @@ int main() {
 }
 //
 // CHECK: (lldb) expr [c addFourtyTwoTo:100]
-// CHECK: (int) {{.*}} = 142
+// CHECK: (int) {{\$[0-9]+}} = 142
 //
-// CHECK: (lldb) expr (int)[[Calc new] addFourtyTwoTo:1]
-// CHECK: (int) {{.*}} = 43
+// CHECK: addFourtyTwoTo:1]
+// CHECK: (int) {{\$[0-9]+}} = 43
