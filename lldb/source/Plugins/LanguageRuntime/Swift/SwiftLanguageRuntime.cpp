@@ -1180,9 +1180,10 @@ SwiftLanguageRuntime::PrintObjectViaPointer(Stream &strm, ValueObject &object,
   Flags flags(object.GetCompilerType().GetTypeInfo());
   addr_t addr = LLDB_INVALID_ADDRESS;
   if (flags.Test(eTypeInstanceIsPointer)) {
-    // Objects are pointers.
+    // Objects are pointers. The inferior dereferences this pointer, so the
+    // metadata bits that authenticate a memory access have to be preserved.
     addr = object.GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
-    addr = process.FixDataAddress(addr);
+    addr = process.FixAnyAddressPreservingAuthentication(addr);
   } else {
     // Get the address of non-object values (structs, enums).
     auto addr_and_type = object.GetAddressOf(false);
