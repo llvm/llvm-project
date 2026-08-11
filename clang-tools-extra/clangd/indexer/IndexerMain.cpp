@@ -59,7 +59,7 @@ static llvm::cl::list<std::string> QueryDriverGlobs{
 static llvm::cl::opt<bool> EnableConfig{
     "enable-config",
     llvm::cl::desc(config::Provider::EnableConfigFlagDesc),
-    llvm::cl::init(true),
+    llvm::cl::init(false),
 };
 
 class IndexActionFactory : public tooling::FrontendActionFactory {
