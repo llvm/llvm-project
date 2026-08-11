@@ -554,10 +554,13 @@ struct StateInfoTy {
   /// back until the decisions are made so that a released allocation is never
   /// copied into. Flushed by processAttachEntries, which drops the ones whose
   /// entry ended up sharing storage with the original.
+  /// Identified by host address and size, not by a pointer to the entry: the
+  /// entry can be erased before the transfer is issued, by another thread
+  /// deleting the mapping, so it has to be looked up again under the mapping
+  /// table when the transfer happens.
   struct DeferredSubmitTy {
     void *HstPtrBegin;
     int64_t Size;
-    HostDataToTargetTy *Entry;
   };
   llvm::SmallVector<DeferredSubmitTy> DeferredSubmits;
 

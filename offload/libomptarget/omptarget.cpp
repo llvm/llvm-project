@@ -1149,21 +1149,52 @@ static int settleAttachStorage(DeviceTy &Device, StateInfoTy &StateInfo,
 /// else has a device allocation that is now known to be staying.
 static int flushDeferredSubmits(DeviceTy &Device, StateInfoTy &StateInfo,
                                 AsyncInfoTy &AsyncInfo) {
-  for (const auto &[HstPtrBegin, Size, Entry] : StateInfo.DeferredSubmits) {
+  if (StateInfo.DeferredSubmits.empty())
+    return OFFLOAD_SUCCESS;
+
+  MappingInfoTy &MappingInfo = Device.getMappingInfo();
+
+  // Hold the mapping table across the whole flush. The entry has to be found
+  // again rather than remembered, because another thread deleting the mapping
+  // can erase it in between, and the checks below and the transfer itself all
+  // have to see the same entry: releasing the table between looking it up and
+  // copying into it would let it be erased in that window instead.
+  MappingInfoTy::HDTTMapAccessorTy HDTTMap =
+      MappingInfo.HostDataToTargetMap.getExclusiveAccessor();
+
+  for (const auto &[HstPtrBegin, Size] : StateInfo.DeferredSubmits) {
+    LookupResult LR = MappingInfo.lookupMapping(HDTTMap, HstPtrBegin, Size);
+    HostDataToTargetTy *Entry =
+        LR.Flags.IsContained ? LR.TPR.getEntry() : nullptr;
+
+    if (!Entry) {
+      ODBG(ODT_Mapping) << "Dropping the deferred transfer of " << Size
+                        << " bytes (hst:" << HstPtrBegin
+                        << "): the mapping is gone";
+      LR.TPR.setEntry(nullptr);
+      continue;
+    }
+
     if (Entry->isHostBound()) {
       ODBG(ODT_Mapping) << "Dropping the deferred transfer of " << Size
                         << " bytes (hst:" << HstPtrBegin
                         << "): its storage is shared with the original";
+      LR.TPR.setEntry(nullptr);
       continue;
     }
+
     // The clobber check that guards this copy ran when the transfer was
     // recorded, so it did not see a pointer attached to this storage later in
-    // the mapping. Repeat it: such a pointer holds a device address, and copying
-    // the original storage over it would put the host address back.
+    // the mapping. Repeat it: such a pointer holds a device address, and
+    // copying the original storage over it would put the host address back. A
+    // shadow pointer counts as overlapping if any of it lies in the copied
+    // range, not only if it starts there.
     auto FailOnPtrFound = [HstPtrBegin = HstPtrBegin,
                            Size = Size](ShadowPtrInfoTy &SP) {
-      if (SP.HstPtrAddr >= HstPtrBegin &&
-          SP.HstPtrAddr < (void *)((char *)HstPtrBegin + Size))
+      char *SPBegin = reinterpret_cast<char *>(SP.HstPtrAddr);
+      char *SPEnd = SPBegin + SP.PtrSize;
+      char *Begin = reinterpret_cast<char *>(HstPtrBegin);
+      if (SPBegin < Begin + Size && Begin < SPEnd)
         return OFFLOAD_FAIL;
       return OFFLOAD_SUCCESS;
     };
@@ -1171,19 +1202,25 @@ static int flushDeferredSubmits(DeviceTy &Device, StateInfoTy &StateInfo,
       ODBG(ODT_Mapping) << "Dropping the deferred transfer of " << Size
                         << " bytes (hst:" << HstPtrBegin
                         << "): a pointer is attached within it";
+      LR.TPR.setEntry(nullptr);
       continue;
     }
 
-    void *TgtPtrBegin = reinterpret_cast<void *>(Entry->TgtPtrBegin);
+    void *TgtPtrBegin = reinterpret_cast<void *>(
+        Entry->TgtPtrBegin +
+        (reinterpret_cast<uintptr_t>(HstPtrBegin) - Entry->HstPtrBegin));
     ODBG(ODT_Mapping) << "Moving " << Size
                       << " deferred bytes (hst:" << HstPtrBegin
                       << ") -> (tgt:" << TgtPtrBegin << ")";
-    if (Device.submitData(TgtPtrBegin, HstPtrBegin, Size, AsyncInfo, Entry) !=
-        OFFLOAD_SUCCESS) {
+    int Ret =
+        Device.submitData(TgtPtrBegin, HstPtrBegin, Size, AsyncInfo, Entry);
+    LR.TPR.setEntry(nullptr);
+    if (Ret != OFFLOAD_SUCCESS) {
       REPORT() << "Copying data to device failed.";
       return OFFLOAD_FAIL;
     }
   }
+
   StateInfo.DeferredSubmits.clear();
   return OFFLOAD_SUCCESS;
 }

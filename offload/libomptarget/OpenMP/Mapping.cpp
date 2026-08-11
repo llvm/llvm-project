@@ -436,8 +436,7 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
                         << ") -> (tgt:" << LR.TPR.TargetPointer
                         << ") until the storage for pointer attachment is "
                            "settled";
-      StateInfo->DeferredSubmits.push_back(
-          {HstPtrBegin, Size, LR.TPR.getEntry()});
+      StateInfo->DeferredSubmits.push_back({HstPtrBegin, Size});
       return std::move(LR.TPR);
     }
 
