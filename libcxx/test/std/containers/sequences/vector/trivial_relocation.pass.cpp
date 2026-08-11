@@ -6,6 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// MSVC does not support [[clang::trivial_abi]], while GCC supports it only since GCC 17.
+// UNSUPPORTED: msvc
+// UNSUPPORTED: gcc-15, gcc-16
+
 // <vector>
 
 // Make sure we don't miscompile vector operations for types that shouldn't be considered
@@ -19,18 +23,11 @@
 
 #include "test_macros.h"
 
-// The test should pass regardless of whether the compiler supports [[clang::trivial_abi]].
-#if __has_cpp_attribute(clang::trivial_abi)
-#  define TEST_CLANG_TRIVIAL_ABI [[clang::trivial_abi]]
-#else
-#  define TEST_CLANG_TRIVIAL_ABI
-#endif
-
 struct Tracker {
   std::size_t move_constructs = 0;
 };
 
-struct TEST_CLANG_TRIVIAL_ABI Inner {
+struct [[clang::trivial_abi]] Inner {
   TEST_CONSTEXPR_CXX20 explicit Inner(Tracker* tracker) : tracker_(tracker) {}
   TEST_CONSTEXPR_CXX20 Inner(const Inner& rhs) : tracker_(rhs.tracker_) { tracker_->move_constructs += 1; }
   TEST_CONSTEXPR_CXX20 Inner(Inner&& rhs) : tracker_(rhs.tracker_) { tracker_->move_constructs += 1; }
