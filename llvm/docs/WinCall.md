@@ -219,6 +219,61 @@ the design intent of the convention; the discriminant-lowering support in
 LLVM is independent of WinCall and is not part of this calling convention
 itself.
 
+## FAQ
+
+### R30 and R31 are callee-saved — can they still be used as scratch registers?
+
+Yes. R30 and R31 are callee-saved registers under the Windows APX ABI, so a
+callee may freely use them as scratch registers as long as it preserves them
+across the call. The compiler does exactly that: when a WinCall function uses
+R30 or R31 it pushes them in the prologue and pops them in the epilogue using
+the APX ``pushp``/``popp`` instructions:
+
+```asm
+use_r31@win:
+        pushp   %r31           # preserve R31
+        movq    %rcx, %r31     # use R31 as a scratch register
+        callq   g
+        popp    %r31           # restore R31
+        retq
+```
+
+This mirrors how the other callee-saved registers (RBX, RDI, RSI, R12-R15,
+XMM6-XMM15) work on the standard Windows x64 ABI. The only restriction is in
+functions that call ``setjmp``/``longjmp``: because the Windows unwinder
+cannot restore the APX extended registers across a jump, clang reserves
+R30/R31 there (and warns on large functions), so they are not allocated.
+
+### Does a 4-pointer struct split into four registers?
+
+Yes. A struct of four pointers (32 bytes) is classified by
+``WinX86_64ABIInfo::classify`` as a direct record: it is returned in
+``RAX, RDX, RCX, R8`` and passed as an argument in ``RCX, RDX, R8, R9`` —
+four separate GPR slots, one per 8-byte field. At ``-O2`` the words move
+directly from the return registers to the argument registers with no stack
+round-trip:
+
+```asm
+caller@win:
+        callq   make@win       # returns the 4-pointer struct in RAX/RDX/RCX/R8
+        movq    %rcx, %r9      # save words 3,4 in scratch regs
+        movq    %r8,  %r10
+        movq    %rax, %rcx     # arg 1
+        movq    %rdx, %rdx     # arg 2
+        movq    %r9,  %r8      # arg 3
+        movq    %r10, %r9      # arg 4
+        callq   take@win
+```
+
+(With optimization disabled the four words are spilled to and reloaded from
+the stack frame between the two calls, but the argument registers are still
+RCX, RDX, R8, R9.)
+
+An integer argument following the struct is placed in the next free GPR
+(R16). This is what makes ``std::string`` and ``std::vector`` (four-word
+objects) travel entirely in registers under WinCall, unlike the MS x64 ABI
+which would pass them by pointer.
+
 ## Implementation notes
 
 - IR calling convention: ``x86_wincallcc`` / ``CallingConv::X86_WinCall``
