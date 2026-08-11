@@ -139,6 +139,10 @@ class NVPTXLowerUnreachableLegacyPass : public FunctionPass {
     return lowerUnreachable(F, TrapUnreachable, NoTrapAfterNoreturn);
   }
 
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+  }
+
 public:
   static char ID; // Pass identification, replacement for typeid
   NVPTXLowerUnreachableLegacyPass(bool TrapUnreachable,
