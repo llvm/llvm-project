@@ -13403,21 +13403,26 @@ def err_builtin_is_within_lifetime_invalid_arg : Error<
 def err_builtin_invalid_arg_type: Error<
   "%ordinal0 argument must be a "
   // First component: scalar or container types
-  "%select{|scalar|vector|matrix|vector of|scalar or vector of}1"
+  "%enum_select<BuiltinArgContainerKind>{%None{}|%Scalar{scalar}|"
+  "%Vector{vector}|%Matrix{matrix}|%VectorOf{vector of}|"
+  "%ScalarOrVectorOf{scalar or vector of}}1"
   // A comma after generic vector/matrix types if there are non-empty second
   // and third components, to initiate a list.
   "%plural{[2,3]:%plural{0:|:%plural{0:|:,}2}3|:}1"
   // A space after a non-empty first component
   "%plural{0:|: }1"
   // Second component: integer-like types
-  "%select{|integer|signed integer|unsigned integer|'int'|"
-  "pointer to a valid matrix element|boolean}2"
+  "%enum_select<BuiltinArgIntegerKind>{%None{}|%Integer{integer}|"
+  "%SignedInteger{signed integer}|%UnsignedInteger{unsigned integer}|"
+  "%Int{'int'}|%MatrixElementPointer{pointer to a valid matrix element}|"
+  "%Boolean{boolean}}2"
   // A space after a non-empty second component
   "%plural{0:|: }2"
   // An 'or' if non-empty second and third components are combined
   "%plural{0:|:%plural{0:|:or }2}3"
   // Third component: floating-point types
-  "%select{|floating-point|16 or 32 bit floating-point}3"
+  "%enum_select<BuiltinArgFloatingKind>{%None{}|%FloatingPoint{floating-point}|"
+  "%Float16Or32{16 or 32 bit floating-point}}3"
   // A space after a non-empty third component
   "%plural{0:|: }3"
   "%plural{[0,3]:type|:types}1 (was %4)">;

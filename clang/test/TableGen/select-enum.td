@@ -24,3 +24,13 @@ def Missing3 : Error<"%enum_select<DupeEnumName3>{%Val1{V1}|%Val2{V2}|V3}0">;
 // CHECK-NEXT: DIAG_ENUM_ITEM(0, Val1)
 // CHECK-NEXT: DIAG_ENUM_ITEM(1, Val2)
 // CHECK-NEXT: DIAG_ENUM_END()
+
+// An option with empty text can still be named, which lets callers spell out
+// the 'nothing selected' case instead of passing a bare 0. Note that the
+// enumerations are emitted in order of the record names, so this has to sort
+// after the ones checked above.
+def NamedEmpty : Error<"%enum_select<EmptyOptEnumName>{%None{}|%Val2{V2}}0">;
+// CHECK: DIAG_ENUM(EmptyOptEnumName)
+// CHECK-NEXT: DIAG_ENUM_ITEM(0, None)
+// CHECK-NEXT: DIAG_ENUM_ITEM(1, Val2)
+// CHECK-NEXT: DIAG_ENUM_END()

@@ -21,3 +21,13 @@ bool test_expr_bool_type_check(bool p0) {
   return __builtin_hlsl_wave_active_bit_or(p0);
   // expected-error@-1 {{invalid operand of type 'bool'}}
 }
+
+double test_expr_double_type_check(double p0) {
+  return __builtin_hlsl_wave_active_bit_or(p0);
+  // expected-error@-1 {{1st argument must be a scalar or vector of integer types (was 'double')}}
+}
+
+float2 test_expr_float_vector_type_check(float2 p0) {
+  return __builtin_hlsl_wave_active_bit_or(p0);
+  // expected-error@-1 {{1st argument must be a scalar or vector of integer types (was 'float2' (aka 'vector<float, 2>'))}}
+}

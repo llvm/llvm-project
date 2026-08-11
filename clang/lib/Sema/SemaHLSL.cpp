@@ -3387,8 +3387,9 @@ static bool CheckFloatRepresentation(Sema *S, SourceLocation Loc,
           : PassedType;
   if (!BaseType->isFloat32Type())
     return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
-           << ArgOrdinal << /* scalar or vector of */ 5 << /* no int */ 0
-           << /* float */ 1 << PassedType;
+           << ArgOrdinal << diag::BuiltinArgContainerKind::ScalarOrVectorOf
+           << diag::BuiltinArgIntegerKind::None
+           << diag::BuiltinArgFloatingKind::FloatingPoint << PassedType;
   return false;
 }
 
@@ -3403,8 +3404,9 @@ static bool CheckFloatOrHalfRepresentation(Sema *S, SourceLocation Loc,
 
   if (!BaseType->isHalfType() && !BaseType->isFloat32Type())
     return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
-           << ArgOrdinal << /* scalar or vector of */ 5 << /* no int */ 0
-           << /* half or float */ 2 << PassedType;
+           << ArgOrdinal << diag::BuiltinArgContainerKind::ScalarOrVectorOf
+           << diag::BuiltinArgIntegerKind::None
+           << diag::BuiltinArgFloatingKind::Float16Or32 << PassedType;
   return false;
 }
 
@@ -3460,8 +3462,9 @@ static bool CheckNoDoubleVectors(Sema *S, SourceLocation Loc, int ArgOrdinal,
 
   if (VecTy->getElementType()->isDoubleType())
     return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
-           << ArgOrdinal << /* scalar */ 1 << /* no int */ 0 << /* fp */ 1
-           << PassedType;
+           << ArgOrdinal << diag::BuiltinArgContainerKind::Scalar
+           << diag::BuiltinArgIntegerKind::None
+           << diag::BuiltinArgFloatingKind::FloatingPoint << PassedType;
   return false;
 }
 
@@ -3471,8 +3474,9 @@ static bool CheckFloatingOrIntRepresentation(Sema *S, SourceLocation Loc,
   if (!PassedType->hasIntegerRepresentation() &&
       !PassedType->hasFloatingRepresentation())
     return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
-           << ArgOrdinal << /* scalar or vector of */ 5 << /* integer */ 1
-           << /* fp */ 1 << PassedType;
+           << ArgOrdinal << diag::BuiltinArgContainerKind::ScalarOrVectorOf
+           << diag::BuiltinArgIntegerKind::Integer
+           << diag::BuiltinArgFloatingKind::FloatingPoint << PassedType;
   return false;
 }
 
@@ -3484,8 +3488,9 @@ static bool CheckUnsignedIntVecRepresentation(Sema *S, SourceLocation Loc,
       return false;
 
   return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
-         << ArgOrdinal << /* vector of */ 4 << /* uint */ 3 << /* no fp */ 0
-         << PassedType;
+         << ArgOrdinal << diag::BuiltinArgContainerKind::VectorOf
+         << diag::BuiltinArgIntegerKind::UnsignedInteger
+         << diag::BuiltinArgFloatingKind::None << PassedType;
 }
 
 // checks for unsigned ints of all sizes
@@ -3494,8 +3499,9 @@ static bool CheckUnsignedIntRepresentation(Sema *S, SourceLocation Loc,
                                            clang::QualType PassedType) {
   if (!PassedType->hasUnsignedIntegerRepresentation())
     return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
-           << ArgOrdinal << /* scalar or vector of */ 5 << /* unsigned int */ 3
-           << /* no fp */ 0 << PassedType;
+           << ArgOrdinal << diag::BuiltinArgContainerKind::ScalarOrVectorOf
+           << diag::BuiltinArgIntegerKind::UnsignedInteger
+           << diag::BuiltinArgFloatingKind::None << PassedType;
   return false;
 }
 
@@ -4397,8 +4403,9 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 
     if (!EltTy->isIntegerType()) {
       Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
-          << 1 << /* scalar or vector of */ 5 << /* integer ty */ 1
-          << /* no fp */ 0 << ArgTy;
+          << 1 << diag::BuiltinArgContainerKind::ScalarOrVectorOf
+          << diag::BuiltinArgIntegerKind::Integer
+          << diag::BuiltinArgFloatingKind::None << ArgTy;
       return true;
     }
 
@@ -4428,8 +4435,10 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
              ->hasFloatingRepresentation()) // half or float or double
       return SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
                           diag::err_builtin_invalid_arg_type)
-             << /* ordinal */ 1 << /* scalar or vector */ 5 << /* no int */ 0
-             << /* fp */ 1 << TheCall->getArg(0)->getType();
+             << 1 << diag::BuiltinArgContainerKind::ScalarOrVectorOf
+             << diag::BuiltinArgIntegerKind::None
+             << diag::BuiltinArgFloatingKind::FloatingPoint
+             << TheCall->getArg(0)->getType();
     if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(TheCall))
       return true;
     break;
@@ -4563,7 +4572,9 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     const auto *MatTy = ArgTy->getAs<ConstantMatrixType>();
     if (!MatTy) {
       SemaRef.Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
-          << 1 << /* matrix */ 3 << /* no int */ 0 << /* no fp */ 0 << ArgTy;
+          << 1 << diag::BuiltinArgContainerKind::Matrix
+          << diag::BuiltinArgIntegerKind::None
+          << diag::BuiltinArgFloatingKind::None << ArgTy;
       return true;
     }
 
@@ -4644,7 +4655,9 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
           (VTy && VTy->getElementType()->isIntegerType()))) {
       SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
                    diag::err_builtin_invalid_arg_type)
-          << ArgTyExpr << SemaRef.Context.UnsignedIntTy << 1 << 0 << 0;
+          << 1 << diag::BuiltinArgContainerKind::ScalarOrVectorOf
+          << diag::BuiltinArgIntegerKind::Integer
+          << diag::BuiltinArgFloatingKind::None << ArgTyExpr;
       return true;
     }
 
@@ -4676,8 +4689,9 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (!DestTy->isIntegerType()) {
       SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
                    diag::err_builtin_invalid_arg_type)
-          << /*ordinal=*/1 << /*scalar*/ 1 << /*integer*/ 1 << /*no float*/ 0
-          << DestTy;
+          << 1 << diag::BuiltinArgContainerKind::Scalar
+          << diag::BuiltinArgIntegerKind::Integer
+          << diag::BuiltinArgFloatingKind::None << DestTy;
       return true;
     }
 
@@ -4893,8 +4907,10 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (ArgTy->isBooleanType()) {
       SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
                    diag::err_builtin_invalid_arg_type)
-          << 1 << /* scalar or vector of */ 5 << /* unsigned int */ 3
-          << /* no fp */ 0 << TheCall->getArg(0)->getType();
+          << 1 << diag::BuiltinArgContainerKind::ScalarOrVectorOf
+          << diag::BuiltinArgIntegerKind::UnsignedInteger
+          << diag::BuiltinArgFloatingKind::None
+          << TheCall->getArg(0)->getType();
       return true;
     }
 
