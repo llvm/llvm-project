@@ -7720,7 +7720,7 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FSUB:
     if (Op.getValueType() == MVT::bf16) {
       // Custom expansion:
-      //   fsub bf16 %a, %b → fadd v2bf16(widen %a), fneg v2bf16(widen %b)
+      //   fsub bf16 %a, %b -> fadd v2bf16(widen %a), fneg v2bf16(widen %b)
       // Then extract back to bf16.
       //
       // We create fneg on v2bf16 (not bf16) so the instruction selector can
