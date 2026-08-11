@@ -54,6 +54,7 @@ _start:
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s --check-prefix=RELAX
 
 # RELAX: adrp
+# RELAX-NEXT: add
 # RELAX-NEXT: ldr
 
 .ifdef RELAX_SIMPLE
@@ -86,6 +87,7 @@ _start:
   br x2
   ldr x0, _foo
   nop
+  nop
   ret
   .cfi_endproc
   .size _start, .-_start
@@ -100,6 +102,7 @@ _start:
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s --check-prefix=RELAXW
 
 # RELAXW: adrp x0
+# RELAXW-NEXT: add x0, x0
 # RELAXW-NEXT: ldr w0
 
 .ifdef RELAX_SIMPLE_WREG
@@ -123,6 +126,7 @@ _start:
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s --check-prefix=RELAX_LDRSW
 
 # RELAX_LDRSW: adrp
+# RELAX_LDRSW-NEXT: add
 # RELAX_LDRSW-NEXT: ldrsw
 
 .ifdef RELAX_SIMPLE_LDRSW
@@ -148,6 +152,7 @@ _start:
 # RELAX_LDR_FP32: _start
 # RELAX_LDR_FP32-NEXT: stp x16, x17, [sp, #-0x10]!
 # RELAX_LDR_FP32-NEXT: adrp x16
+# RELAX_LDR_FP32-NEXT: add x16, x16
 # RELAX_LDR_FP32-NEXT: ldr s0
 # RELAX_LDR_FP32-NEXT: ldp x16, x17, [sp], #0x10
 # RELAX_LDR_FP32-NEXT: ret
@@ -174,6 +179,7 @@ _start:
 # RELAX_LDR_FP64: _start
 # RELAX_LDR_FP64-NEXT: stp x16, x17, [sp, #-0x10]!
 # RELAX_LDR_FP64-NEXT: adrp x16
+# RELAX_LDR_FP64-NEXT: add x16, x16
 # RELAX_LDR_FP64-NEXT: ldr d0
 # RELAX_LDR_FP64-NEXT: ldp x16, x17, [sp], #0x10
 # RELAX_LDR_FP64-NEXT: ret
@@ -200,6 +206,7 @@ _start:
 # RELAX_LDR_FP128: _start
 # RELAX_LDR_FP128-NEXT: stp x16, x17, [sp, #-0x10]!
 # RELAX_LDR_FP128-NEXT: adrp x16
+# RELAX_LDR_FP128-NEXT: add x16, x16
 # RELAX_LDR_FP128-NEXT: ldr q0
 # RELAX_LDR_FP128-NEXT: ldp x16, x17, [sp], #0x10
 # RELAX_LDR_FP128-NEXT: ret
@@ -229,6 +236,7 @@ _start:
 # PRECEDED_BY_NOPS-NEXT: nop
 # PRECEDED_BY_NOPS-NEXT: stp x16, x17, [sp, #-0x10]!
 # PRECEDED_BY_NOPS-NEXT: adrp x16
+# PRECEDED_BY_NOPS-NEXT: add x16, x16
 # PRECEDED_BY_NOPS-NEXT: ldr q0
 # PRECEDED_BY_NOPS-NEXT: ldp x16, x17, [sp], #0x10
 # PRECEDED_BY_NOPS-NEXT: ret
@@ -239,6 +247,7 @@ _start:
 _start:
   .cfi_startproc
   br x2
+  nop
   nop
   nop
   nop
@@ -262,6 +271,7 @@ _start:
 # FOLLOWED_BY_NOPS-NEXT: br x2
 # FOLLOWED_BY_NOPS-NEXT: stp x16, x17, [sp, #-0x10]!
 # FOLLOWED_BY_NOPS-NEXT: adrp x16
+# FOLLOWED_BY_NOPS-NEXT: add x16, x16
 # FOLLOWED_BY_NOPS-NEXT: ldr q0
 # FOLLOWED_BY_NOPS-NEXT: ldp x16, x17, [sp], #0x10
 # FOLLOWED_BY_NOPS-NEXT: nop
@@ -274,6 +284,7 @@ _start:
   .cfi_startproc
   br x2
   ldr q0, _bar
+  nop
   nop
   nop
   nop
@@ -296,6 +307,7 @@ _start:
 # SURROUNDED_BY_NOPS-NEXT: br x2
 # SURROUNDED_BY_NOPS-NEXT: stp x16, x17, [sp, #-0x10]!
 # SURROUNDED_BY_NOPS-NEXT: adrp x16
+# SURROUNDED_BY_NOPS-NEXT: add x16, x16
 # SURROUNDED_BY_NOPS-NEXT: ldr q0
 # SURROUNDED_BY_NOPS-NEXT: ldp x16, x17, [sp], #0x10
 # SURROUNDED_BY_NOPS-NEXT: ret
@@ -309,6 +321,7 @@ _start:
   nop
   nop
   ldr q0, _bar
+  nop
   nop
   ret
   .cfi_endproc
@@ -343,10 +356,16 @@ _start:
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown \
 # RUN:    --defsym RELAX_CONSTANT_ISLANDS=1 %s -o %t.o
 # RUN: %clang %cflags %t.o -o %t.so -Wl,-q
-# RUN: not llvm-bolt %t.so -o %t.bolt -clone-constant-island=false 2>&1 | \
-# RUN:    FileCheck %s --check-prefix=CONSTANT_ISLANDS
+# RUN: llvm-bolt %t.so -o %t.bolt -clone-constant-island=false
+# RUN: llvm-objdump -d %t.bolt | FileCheck %s --check-prefix=CONSTANT_ISLANDS
 
-# CONSTANT_ISLANDS: BOLT-ERROR: JITLink failed: PAGEOFF12 target is not aligned
+# CONSTANT_ISLANDS: _start
+# CONSTANT_ISLANDS-NEXT: stp x16, x17, [sp, #-0x10]!
+# CONSTANT_ISLANDS-NEXT: adrp x16
+# CONSTANT_ISLANDS-NEXT: add x16, x16
+# CONSTANT_ISLANDS-NEXT: ldr q0
+# CONSTANT_ISLANDS-NEXT: ldp x16, x17, [sp], #0x10
+# CONSTANT_ISLANDS-NEXT: ret
 .ifdef RELAX_CONSTANT_ISLANDS
   .text
   .align 4
@@ -377,10 +396,14 @@ _start:
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown \
 # RUN:    --defsym RELAX_MISALIGNED_LDR=1 %s -o %t.o
 # RUN: %clang %cflags %t.o -o %t.so -Wl,-q
-# RUN: not llvm-bolt %t.so -o %t.bolt 2>&1 | \
-# RUN:    FileCheck %s --check-prefix=MISALIGNED_LDR
+# RUN: llvm-bolt %t.so -o %t.bolt
+# RUN: llvm-objdump -d %t.bolt | FileCheck %s --check-prefix=MISALIGNED_LDR
 
-# MISALIGNED_LDR: BOLT-ERROR: JITLink failed: PAGEOFF12 target is not aligned
+# MISALIGNED_LDR: _start
+# MISALIGNED_LDR-NEXT: adrp x0
+# MISALIGNED_LDR-NEXT: add x0, x0
+# MISALIGNED_LDR-NEXT: ldr x0
+# MISALIGNED_LDR-NEXT: ret
 .ifdef RELAX_MISALIGNED_LDR
   .text
   .global _start
@@ -396,10 +419,16 @@ _start:
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown \
 # RUN:    --defsym RELAX_MISALIGNED_LDR_FP=1 %s -o %t.o
 # RUN: %clang %cflags %t.o -o %t.so -Wl,-q
-# RUN: not llvm-bolt %t.so -o %t.bolt -clone-constant-island=false 2>&1 | \
-# RUN:    FileCheck %s --check-prefix=MISALIGNED_LDR_FP
+# RUN: llvm-bolt %t.so -o %t.bolt -clone-constant-island=false
+# RUN: llvm-objdump -d %t.bolt | FileCheck %s --check-prefix=MISALIGNED_LDR_FP
 
-# MISALIGNED_LDR_FP: BOLT-ERROR: JITLink failed: PAGEOFF12 target is not aligned
+# MISALIGNED_LDR_FP: _start
+# MISALIGNED_LDR_FP-NEXT: stp x16, x17, [sp, #-0x10]!
+# MISALIGNED_LDR_FP-NEXT: adrp x16
+# MISALIGNED_LDR_FP-NEXT: add x16, x16
+# MISALIGNED_LDR_FP-NEXT: ldr q0
+# MISALIGNED_LDR_FP-NEXT: ldp x16, x17, [sp], #0x10
+# MISALIGNED_LDR_FP-NEXT: ret
 .ifdef RELAX_MISALIGNED_LDR_FP
   .text
   .global _start

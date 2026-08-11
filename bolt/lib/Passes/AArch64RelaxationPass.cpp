@@ -76,10 +76,13 @@ void AArch64RelaxationPass::runOnFunction(BinaryFunction &BF) {
 
       InstructionListType AdrpMaterialization;
       {
+        // TODO: If possible, use the actual alignment of the target label
+        // instead of conservatively assuming 1-byte alignment when relaxing a
+        // LoadLiteral instruction.
         auto L = BC.scopeLock();
         AdrpMaterialization =
             IsADR ? BC.MIB->undoAdrpAddRelaxation(Inst, BC.Ctx.get())
-                  : BC.MIB->createAdrpLdr(Inst, BC.Ctx.get());
+                  : BC.MIB->relaxLoadLiteral(Inst, BC.Ctx.get(), 1);
       }
 
       size_t PrecedingNopCount = 0;

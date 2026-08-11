@@ -746,14 +746,17 @@ public:
     return materializeAddress(Target, Ctx, Reg, Addend);
   }
 
-  InstructionListType createAdrpLdr(const MCInst &LDRInst,
-                                    MCContext *Ctx) const override {
+  InstructionListType relaxLoadLiteral(const MCInst &LDRInst, MCContext *Ctx,
+                                       uint16_t TargetAlign) const override {
     assert(LDRInst.getOperand(0).isReg() &&
            "unexpected operand in LDR instruction");
+    assert(llvm::isPowerOf2_32(TargetAlign) &&
+           "TargetAlign should be power of 2");
     const MCPhysReg DataReg = LDRInst.getOperand(0).getReg();
     MCPhysReg AddrReg;
     unsigned OpCode;
     uint32_t RelType;
+    uint16_t RequiredAlign;
     switch (LDRInst.getOpcode()) {
     case AArch64::LDRWl:
       AddrReg = (MCPhysReg)RegInfo->getMatchingSuperReg(
@@ -761,31 +764,37 @@ public:
           &RegInfo->getRegClass(AArch64::GPR64RegClassID));
       OpCode = AArch64::LDRWui;
       RelType = ELF::R_AARCH64_LDST32_ABS_LO12_NC;
+      RequiredAlign = 4;
       break;
     case AArch64::LDRXl:
       AddrReg = DataReg;
       OpCode = AArch64::LDRXui;
       RelType = ELF::R_AARCH64_LDST64_ABS_LO12_NC;
+      RequiredAlign = 8;
       break;
     case AArch64::LDRSWl:
       AddrReg = DataReg;
       OpCode = AArch64::LDRSWui;
       RelType = ELF::R_AARCH64_LDST32_ABS_LO12_NC;
+      RequiredAlign = 4;
       break;
     case AArch64::LDRSl:
       AddrReg = AArch64::X16;
       OpCode = AArch64::LDRSui;
       RelType = ELF::R_AARCH64_LDST32_ABS_LO12_NC;
+      RequiredAlign = 4;
       break;
     case AArch64::LDRDl:
       AddrReg = AArch64::X16;
       OpCode = AArch64::LDRDui;
       RelType = ELF::R_AARCH64_LDST64_ABS_LO12_NC;
+      RequiredAlign = 8;
       break;
     case AArch64::LDRQl:
       AddrReg = AArch64::X16;
       OpCode = AArch64::LDRQui;
       RelType = ELF::R_AARCH64_LDST128_ABS_LO12_NC;
+      RequiredAlign = 16;
       break;
     default:
       llvm_unreachable("LDR (literal), LDRSW (literal), LDR (literal, SIMD&FP) "
@@ -813,21 +822,38 @@ public:
       Insts.emplace_back();
       createPushRegisters(Insts.back(), AArch64::X16, AArch64::X17);
     }
-    Insts.emplace_back();
-    Insts.back().setOpcode(AArch64::ADRP);
-    Insts.back().clear();
-    Insts.back().addOperand(MCOperand::createReg(AddrReg));
-    Insts.back().addOperand(MCOperand::createImm(0));
-    setOperandToSymbolRef(Insts.back(), /* OpNum */ 1, Target, 0, Ctx,
-                          ELF::R_AARCH64_NONE);
-    Insts.emplace_back();
-    Insts.back().setOpcode(OpCode);
-    Insts.back().clear();
-    Insts.back().addOperand(MCOperand::createReg(DataReg));
-    Insts.back().addOperand(MCOperand::createReg(AddrReg));
-    Insts.back().addOperand(MCOperand::createImm(0));
-    Insts.back().addOperand(MCOperand::createImm(0));
-    setOperandToSymbolRef(Insts.back(), /* OpNum */ 2, Target, 0, Ctx, RelType);
+
+    if (TargetAlign < RequiredAlign) {
+      // Use ADRP+ADD+LDR
+      InstructionListType Addr = materializeAddress(Target, Ctx, AddrReg, 0);
+      Insts.insert(Insts.end(), Addr.begin(), Addr.end());
+      Insts.emplace_back();
+      Insts.back().setOpcode(OpCode);
+      Insts.back().clear();
+      Insts.back().addOperand(MCOperand::createReg(DataReg));
+      Insts.back().addOperand(MCOperand::createReg(AddrReg));
+      Insts.back().addOperand(MCOperand::createImm(0));
+      Insts.back().addOperand(MCOperand::createImm(0));
+    } else {
+      // Use ADRP+LDR
+      Insts.emplace_back();
+      Insts.back().setOpcode(AArch64::ADRP);
+      Insts.back().clear();
+      Insts.back().addOperand(MCOperand::createReg(AddrReg));
+      Insts.back().addOperand(MCOperand::createImm(0));
+      setOperandToSymbolRef(Insts.back(), /* OpNum */ 1, Target, 0, Ctx,
+                            ELF::R_AARCH64_NONE);
+      Insts.emplace_back();
+      Insts.back().setOpcode(OpCode);
+      Insts.back().clear();
+      Insts.back().addOperand(MCOperand::createReg(DataReg));
+      Insts.back().addOperand(MCOperand::createReg(AddrReg));
+      Insts.back().addOperand(MCOperand::createImm(0));
+      Insts.back().addOperand(MCOperand::createImm(0));
+      setOperandToSymbolRef(Insts.back(), /* OpNum */ 2, Target, 0, Ctx,
+                            RelType);
+    }
+
     if (PreserveRegisters) {
       Insts.emplace_back();
       createPopRegisters(Insts.back(), AArch64::X16, AArch64::X17);
