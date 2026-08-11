@@ -7764,8 +7764,7 @@ Instruction *InstCombinerImpl::foldICmpCommutative(CmpPredicate Pred,
     // (X s% C) == X --> X in [1-C, C)
     // (X s% C) != X --> X outside [1-C, C)
     if (ICmpInst::isEquality(Pred) &&
-        match(Op0, m_OneUse(m_SRem(m_Specific(Op1), m_APInt(C)))) &&
-        C->isStrictlyPositive()) {
+        match(Op0, m_OneUse(m_SRem(m_Specific(Op1), m_StrictlyPositive(C))))) {
       APInt Lo = -*C + 1;
       return replaceInstUsesWith(
           CxtI, insertRangeTest(Op1, Lo, *C, /*isSigned=*/true,
