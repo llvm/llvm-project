@@ -678,10 +678,7 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertCharacterType(
     }
   }
 
-  // FIXME: Currently the DIStringType in llvm does not have the option to set
-  // type of the underlying character. This restricts out ability to represent
-  // string with non-default characters. Please see issue #95440 for more
-  // details.
+  // Set type of the underlying characters in the string
   unsigned charBitSize = kindMapping.getCharacterBitsize(charTy.getFKind());
   mlir::LLVM::DITypeAttr charTypeAttr = genBasicType(
       context,

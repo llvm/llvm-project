@@ -374,6 +374,8 @@ static void testDebugInfoAttributes(MlirContext ctx) {
   // CHECK: #llvm.di_expression<[(1)]>
   mlirAttributeDump(expression);
 
+  MlirAttribute basic_type = mlirLLVMDIBasicTypeAttrGet(
+      ctx, 0x0, foo, 8, MlirLLVMTypeEncodingUnsignedChar);
   MlirAttribute string_type = mlirLLVMDIStringTypeAttrGet(
       ctx, 0x0, foo, 16, 0, local_var, expression, expression,
       MlirLLVMTypeEncodingSigned, basic_type);
