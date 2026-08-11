@@ -1176,9 +1176,33 @@ static bool processSIToFP(SIToFPInst *SIToFP, LazyValueInfo *LVI) {
   return true;
 }
 
-static bool processBinOp(BinaryOperator *BinOp, LazyValueInfo *LVI) {
-  using OBO = OverflowingBinaryOperator;
+namespace {
+struct NoWrapFlags {
+  bool NSW = false;
+  bool NUW = false;
+};
+} // namespace
 
+// Check if the requested no-wrap flags are valid for \p Opcode on \p LRange and
+// \p RRange.
+static NoWrapFlags computeNoWrapFlags(Instruction::BinaryOps Opcode,
+                                      const ConstantRange &LRange,
+                                      const ConstantRange &RRange,
+                                      bool CheckNSW, bool CheckNUW) {
+  using OBO = OverflowingBinaryOperator;
+  NoWrapFlags Flags;
+  if (CheckNUW)
+    Flags.NUW = ConstantRange::makeGuaranteedNoWrapRegion(Opcode, RRange,
+                                                          OBO::NoUnsignedWrap)
+                    .contains(LRange);
+  if (CheckNSW)
+    Flags.NSW = ConstantRange::makeGuaranteedNoWrapRegion(Opcode, RRange,
+                                                          OBO::NoSignedWrap)
+                    .contains(LRange);
+  return Flags;
+}
+
+static bool processBinOp(BinaryOperator *BinOp, LazyValueInfo *LVI) {
   bool NSW = BinOp->hasNoSignedWrap();
   bool NUW = BinOp->hasNoUnsignedWrap();
   if (NSW && NUW)
@@ -1190,24 +1214,13 @@ static bool processBinOp(BinaryOperator *BinOp, LazyValueInfo *LVI) {
   ConstantRange RRange = LVI->getConstantRangeAtUse(BinOp->getOperandUse(1),
                                                     /*UndefAllowed=*/false);
 
-  bool Changed = false;
-  bool NewNUW = false, NewNSW = false;
-  if (!NUW) {
-    ConstantRange NUWRange = ConstantRange::makeGuaranteedNoWrapRegion(
-        Opcode, RRange, OBO::NoUnsignedWrap);
-    NewNUW = NUWRange.contains(LRange);
-    Changed |= NewNUW;
-  }
-  if (!NSW) {
-    ConstantRange NSWRange = ConstantRange::makeGuaranteedNoWrapRegion(
-        Opcode, RRange, OBO::NoSignedWrap);
-    NewNSW = NSWRange.contains(LRange);
-    Changed |= NewNSW;
-  }
+  NoWrapFlags New =
+      computeNoWrapFlags(Opcode, LRange, RRange, /*CheckNSW=*/!NSW,
+                         /*CheckNUW=*/!NUW);
 
-  setDeducedOverflowingFlags(BinOp, Opcode, NewNSW, NewNUW);
+  setDeducedOverflowingFlags(BinOp, Opcode, New.NSW, New.NUW);
 
-  return Changed;
+  return New.NSW || New.NUW;
 }
 
 static bool processAnd(BinaryOperator *BinOp, LazyValueInfo *LVI) {
