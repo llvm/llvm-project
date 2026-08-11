@@ -1536,6 +1536,10 @@ struct AAAMDGPURegisterBudget
             return true;
           }
         }
+        if (isa<SelectInst>(U.getUser()) || isa<PHINode>(U.getUser())) {
+          Follow = true;
+          return true;
+        }
         AbstractCallSite ACS(&U);
         const Use *EffectiveUse = ACS && ACS.isCallbackCall() ? &ACS.getCalleeUseForCallback() : &U;
         if(!ACS || !ACS.isCallee(EffectiveUse)) 
