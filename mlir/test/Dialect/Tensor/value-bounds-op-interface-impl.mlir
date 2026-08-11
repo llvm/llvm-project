@@ -170,6 +170,34 @@ func.func @rank(%t: tensor<5xf32>) -> index {
 
 // -----
 
+// CHECK-LABEL: func @splat(
+//  CHECK-SAME:     %[[sz:[a-zA-Z0-9]+]]: index
+//       CHECK:   %[[c17:.*]] = arith.constant 17 : index
+//       CHECK:   return %[[sz]], %[[c17]]
+func.func @splat(%f: f32, %sz: index) -> (index, index) {
+  %0 = tensor.splat %f[%sz] : tensor<?x17xf32>
+  %1 = "test.reify_bound"(%0) {dim = 0} : (tensor<?x17xf32>) -> (index)
+  %2 = "test.reify_bound"(%0) {dim = 1} : (tensor<?x17xf32>) -> (index)
+  return %1, %2 : index, index
+}
+
+// -----
+
+// A dimension that is dynamic in the result type is mapped to its own size
+// operand, and not to the first one.
+
+// CHECK-LABEL: func @splat_multiple_dynamic_dims(
+//  CHECK-SAME:     %[[sz1:[a-zA-Z0-9]+]]: index, %[[sz2:[a-zA-Z0-9]+]]: index
+//       CHECK:   return %[[sz2]]
+func.func @splat_multiple_dynamic_dims(%f: f32, %sz1: index,
+                                       %sz2: index) -> index {
+  %0 = tensor.splat %f[%sz1, %sz2] : tensor<?x20x?xf32>
+  %1 = "test.reify_bound"(%0) {dim = 2} : (tensor<?x20x?xf32>) -> (index)
+  return %1 : index
+}
+
+// -----
+
 func.func @dynamic_dims_are_equal(%t: tensor<?xf32>) {
   %c0 = arith.constant 0 : index
   %dim0 = tensor.dim %t, %c0 : tensor<?xf32>
