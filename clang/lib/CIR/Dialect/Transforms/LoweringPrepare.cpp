@@ -1193,13 +1193,13 @@ LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
 
   // If this is a global TLS variable (that is, declared at namespace scope), we
   // have to emit the guard variable here.
-  bool needsTlsGuard = op.getDynTlsRefs() && op.getDynTlsRefs()->getGuardName();
+  bool needsTlsGuard = op.getTlsRefs() && op.getTlsRefs()->getGuardName();
   cir::IfOp guardIf;
   if (needsTlsGuard) {
     guardIf = buildGlobalTlsGuardCheck(
         builder, op.getLoc(),
         getOrCreateStaticLocalDeclGuardAddress(
-            builder, op, op.getDynTlsRefs()->getGuardName().getValue(),
+            builder, op, op.getTlsRefs()->getGuardName().getValue(),
             /*isLocalVarDecl=*/false,
             /*useInt8GuardVariable=*/op.hasInternalLinkage()));
     builder.setInsertionPointToEnd(&guardIf.getThenRegion().front());
@@ -1460,10 +1460,18 @@ void LoweringPreparePass::lowerLocalInitOp(cir::LocalInitOp initOp) {
   // Remove the init local op, now that we've done everything we need with it.
   initOp.erase();
 }
-static bool isThreadWrapperReplaceable(cir::TLSModel tls,
+static bool isThreadWrapperReplaceable(mlir::Operation *op, cir::TLSModel tls,
                                        clang::ASTContext &astCtx) {
-  return tls == cir::TLSModel::GeneralDynamic &&
-         astCtx.getTargetInfo().getTriple().isOSDarwin();
+  // Note: we can't really test this as we don't have darwin properly done for a
+  // target-info, so for now just emit an NYI. The OGCG implementation of this
+  // checks against the variable-decl being a TLS_Dynamic (NOT the same as
+  // TLS_Model::GeneralDynamic!), but it isn't clear to me that we can get here
+  // in any case where this isn't just 'isOSDarwin'.
+  if (astCtx.getTargetInfo().getTriple().isOSDarwin())
+    op->emitError(
+        "NYI: Darwin replaceable thread-wrapper determination for linakge");
+
+  return astCtx.getTargetInfo().getTriple().isOSDarwin();
 }
 
 static cir::GlobalLinkageKind
@@ -1471,7 +1479,7 @@ getThreadLocalWrapperLinkage(GlobalOp op, clang::ASTContext &astCtx) {
   if (isLocalLinkage(op.getLinkage()))
     return op.getLinkage();
 
-  if (isThreadWrapperReplaceable(*op.getTlsModel(), astCtx))
+  if (isThreadWrapperReplaceable(op, *op.getTlsModel(), astCtx))
     if (!isLinkOnceLinkage(op.getLinkage()) &&
         !isWeakODRLinkage(op.getLinkage()))
       return op.getLinkage();
@@ -1489,7 +1497,7 @@ LoweringPreparePass::getOrCreateThreadLocalWrapper(CIRBaseBuilderTy &builder,
   mlir::OpBuilder::InsertionGuard insertGuard(builder);
   builder.setInsertionPointToStart(&mlirModule.getBodyRegion().front());
 
-  mlir::StringAttr wrapperName = op.getDynTlsRefs()->getWrapperName();
+  mlir::StringAttr wrapperName = op.getTlsRefs()->getWrapperName();
 
   auto existingWrapperIter = threadLocalWrappers.find(wrapperName.getValue());
   if (existingWrapperIter != threadLocalWrappers.end())
@@ -1515,12 +1523,12 @@ LoweringPreparePass::getOrCreateThreadLocalWrapper(CIRBaseBuilderTy &builder,
       func, mlir::SymbolTable::Visibility::Private);
 
   if (!isLocalLinkage(linkageKind)) {
-    if (!isThreadWrapperReplaceable(*op.getTlsModel(), *astCtx) ||
+    if (!isThreadWrapperReplaceable(op, *op.getTlsModel(), *astCtx) ||
         isLinkOnceLinkage(linkageKind) || isWeakODRLinkage(linkageKind) ||
         op.getGlobalVisibility() == cir::VisibilityKind::Hidden)
       func.setGlobalVisibility(cir::VisibilityKind::Hidden);
   }
-  if (isThreadWrapperReplaceable(*op.getTlsModel(), *astCtx))
+  if (isThreadWrapperReplaceable(op, *op.getTlsModel(), *astCtx))
     op->emitError("Unhandled thread wrapper attributes for CC and Nounwind");
 
   threadLocalWrappers.insert({wrapperName.getValue(), func});
@@ -1568,7 +1576,7 @@ LoweringPreparePass::defineGlobalThreadLocalInitAlias(cir::GlobalOp op,
   CIRBaseBuilderTy builder(getContext());
   mlir::OpBuilder::InsertionGuard insertGuard(builder);
   builder.setInsertionPointToStart(&mlirModule.getBodyRegion().front());
-  mlir::StringAttr aliasName = op.getDynTlsRefs()->getInitName();
+  mlir::StringAttr aliasName = op.getTlsRefs()->getInitName();
   auto existingAliasIter = threadLocalInitAliases.find(aliasName.getValue());
 
   if (existingAliasIter != threadLocalInitAliases.end())
@@ -1625,7 +1633,7 @@ void LoweringPreparePass::lowerGlobalOp(GlobalOp op) {
       // a guard variable for them (since they cannot use the global guard), so
       // we differentiate them that way.
 
-      if (op.getDynTlsRefs()->getGuardName()) {
+      if (op.getTlsRefs()->getGuardName()) {
         // Unordered: the alias is the function we just generated.
         initAlias = defineGlobalThreadLocalInitAlias(op, f);
       } else {
@@ -1639,16 +1647,16 @@ void LoweringPreparePass::lowerGlobalOp(GlobalOp op) {
     } else {
       dynamicInitializers.push_back(f);
     }
-  } else if (op.getTlsModel() && op.getDynTlsRefs() && op.isDeclaration()) {
+  } else if (op.getTlsModel() && op.getTlsRefs() && op.isDeclaration()) {
     // If this is a declaration and has no init function, we probably DO have to
     // create an alias that needs checking, so create it as extern-weak.
     initAlias = defineGlobalThreadLocalInitAlias(op, {});
   }
 
   // We need a wrapper for TLS globals that MIGHT have a non-constant
-  // initialization. The FE will have generated the DynTlsRefs for any with
+  // initialization. The FE will have generated the TlsRefs for any with
   // known dynamic init, or unknown (extern) init.
-  if (op.getTlsModel() && op.getDynTlsRefs())
+  if (op.getTlsModel() && op.getTlsRefs())
     defineGlobalThreadLocalWrapper(op, initAlias, !op.isDeclaration());
 
   assert(!cir::MissingFeatures::opGlobalAnnotations());
@@ -1664,7 +1672,7 @@ void LoweringPreparePass::lowerGetGlobalOp(GetGlobalOp op) {
   // get-global operations rewritten to be calls to a wrapper function.  If
   // we're not in a dynamic TLS (or one without the TLS markers), we can leave
   // this one as a get-global and return early.
-  if (!globalOp.getTlsModel() || !globalOp.getDynTlsRefs())
+  if (!globalOp.getTlsModel() || !globalOp.getTlsRefs())
     return;
 
   // If this is a global TLS, we need to replace the call to 'get_global' with a
