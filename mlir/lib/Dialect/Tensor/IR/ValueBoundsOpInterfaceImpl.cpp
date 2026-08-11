@@ -53,6 +53,32 @@ struct CollapseShapeOpInterface
   }
 };
 
+struct ConcatOpInterface
+    : public ValueBoundsOpInterface::ExternalModel<ConcatOpInterface,
+                                                   ConcatOp> {
+  void populateBoundsForShapedValueDim(Operation *op, Value value, int64_t dim,
+                                       ValueBoundsConstraintSet &cstr) const {
+    auto concatOp = cast<ConcatOp>(op);
+    assert(value == concatOp.getResult() && "invalid value");
+
+    ValueRange inputs = concatOp.getInputs();
+    if (dim != static_cast<int64_t>(concatOp.getDim())) {
+      // All inputs have the same size as the result in a dimension that is not
+      // concatenated. Relate the result to every input: relating it to a single
+      // input loses the bound when that input is the unbounded one.
+      for (Value input : inputs)
+        cstr.bound(value)[dim] == cstr.getExpr(input, dim);
+      return;
+    }
+
+    // The concatenated dimension is the sum of the input sizes.
+    AffineExpr sum = cstr.getExpr(inputs.front(), dim);
+    for (Value input : inputs.drop_front())
+      sum = sum + cstr.getExpr(input, dim);
+    cstr.bound(value)[dim] == sum;
+  }
+};
+
 struct DimOpInterface
     : public ValueBoundsOpInterface::ExternalModel<DimOpInterface, DimOp> {
   void populateBoundsForIndexValue(Operation *op, Value value,
@@ -166,6 +192,7 @@ void mlir::tensor::registerValueBoundsOpInterfaceExternalModels(
     tensor::CastOp::attachInterface<tensor::CastOpInterface>(*ctx);
     tensor::CollapseShapeOp::attachInterface<tensor::CollapseShapeOpInterface>(
         *ctx);
+    tensor::ConcatOp::attachInterface<tensor::ConcatOpInterface>(*ctx);
     tensor::DimOp::attachInterface<tensor::DimOpInterface>(*ctx);
     tensor::EmptyOp::attachInterface<tensor::EmptyOpInterface>(*ctx);
     tensor::ExpandShapeOp::attachInterface<tensor::ExpandShapeOpInterface>(
