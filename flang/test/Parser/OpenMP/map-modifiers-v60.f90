@@ -1,5 +1,5 @@
-!RUN: %flang_fc1 -fdebug-unparse-no-sema -fopenmp -fopenmp-version=60 %s | FileCheck --ignore-case --check-prefix="UNPARSE" %s
-!RUN: %flang_fc1 -fdebug-dump-parse-tree-no-sema -fopenmp -fopenmp-version=60 %s | FileCheck --check-prefix="PARSE-TREE" %s
+!RUN: %flang_fc1 -fdebug-unparse -fopenmp -fopenmp-version=60 %s | FileCheck --ignore-case --check-prefix="UNPARSE" %s
+!RUN: %flang_fc1 -fdebug-dump-parse-tree -fopenmp -fopenmp-version=60 %s | FileCheck --check-prefix="PARSE-TREE" %s
 
 subroutine f00(x)
   integer :: x
@@ -11,7 +11,7 @@ end
 !UNPARSE: SUBROUTINE f00 (x)
 !UNPARSE:  INTEGER x
 !UNPARSE: !$OMP TARGET  MAP(ALWAYS, CLOSE, DELETE, PRESENT, OMPX_HOLD: x)
-!UNPARSE:   x = x+1
+!UNPARSE:   x=x+1_4
 !UNPARSE: !$OMP END TARGET
 !UNPARSE: END SUBROUTINE
 
@@ -34,7 +34,7 @@ subroutine f01(x)
 end
 
 !UNPARSE: !$OMP TARGET  MAP(SELF, STORAGE: x)
-!UNPARSE:   x = x+1
+!UNPARSE:   x=x+1_4
 !UNPARSE: !$OMP END TARGET
 !UNPARSE: END SUBROUTINE
 
@@ -56,7 +56,7 @@ end
 !UNPARSE: SUBROUTINE f02 (x)
 !UNPARSE:  INTEGER, POINTER :: x
 !UNPARSE: !$OMP TARGET  MAP(REF_PTR, TO: x)
-!UNPARSE:   x = x+1
+!UNPARSE:   x=x+1_4
 !UNPARSE: !$OMP END TARGET
 !UNPARSE: END SUBROUTINE
 
@@ -78,7 +78,7 @@ end
 !UNPARSE: SUBROUTINE f03 (x)
 !UNPARSE:  INTEGER, POINTER :: x
 !UNPARSE: !$OMP TARGET  MAP(REF_PTEE, TO: x)
-!UNPARSE:   x = x+1
+!UNPARSE:   x=x+1_4
 !UNPARSE: !$OMP END TARGET
 !UNPARSE: END SUBROUTINE
 
@@ -100,7 +100,7 @@ end
 !UNPARSE: SUBROUTINE f04 (x)
 !UNPARSE:  INTEGER, POINTER :: x
 !UNPARSE: !$OMP TARGET  MAP(REF_PTR_PTEE, TO: x)
-!UNPARSE:   x = x+1
+!UNPARSE:   x=x+1_4
 !UNPARSE: !$OMP END TARGET
 !UNPARSE: END SUBROUTINE
 

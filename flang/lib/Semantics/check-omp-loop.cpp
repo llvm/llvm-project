@@ -160,7 +160,7 @@ void OmpStructureChecker::HasInvalidLoopBinding(
         "strictly nested inside a `TEAMS` region."_err_en_US);
   }
 
-  if (OmpDirectiveSet{
+  if (llvm::omp::DirectiveSet{
           llvm::omp::OMPD_teams_loop, llvm::omp::OMPD_target_teams_loop}
           .test(beginName.v)) {
     teamsBindingChecker(
@@ -186,7 +186,8 @@ void OmpStructureChecker::CheckSIMDNest(const parser::OpenMPConstruct &c) {
           // Allow `!$OMP ORDERED SIMD`
           [&](const parser::OmpBlockConstruct &c) {
             const parser::OmpDirectiveSpecification &beginSpec{c.BeginDir()};
-            if (beginSpec.DirId() == llvm::omp::Directive::OMPD_ordered) {
+            if (beginSpec.DirId() ==
+                llvm::omp::Directive::OMPD_ordered_blockassoc) {
               if (parser::omp::FindClause(
                       beginSpec, llvm::omp::Clause::OMPC_simd)) {
                 eligibleSIMD = true;
@@ -197,7 +198,7 @@ void OmpStructureChecker::CheckSIMDNest(const parser::OpenMPConstruct &c) {
             if (auto *ssc{std::get_if<parser::OpenMPSimpleStandaloneConstruct>(
                     &c.u)}) {
               llvm::omp::Directive dirId{ssc->v.DirId()};
-              if (dirId == llvm::omp::Directive::OMPD_ordered) {
+              if (dirId == llvm::omp::Directive::OMPD_ordered_standalone) {
                 if (parser::omp::FindClause(
                         ssc->v, llvm::omp::Clause::OMPC_simd)) {
                   eligibleSIMD = true;

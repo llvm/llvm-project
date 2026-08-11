@@ -7,9 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/CIR/FrontendAction/CIRGenAction.h"
+#include "CIRDiagnosticHandler.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OwningOpRef.h"
-#include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/Basic/DiagnosticCodeGen.h"
 #include "clang/CIR/CIRGenerator.h"
 #include "clang/CIR/CIRToCIRPasses.h"
 #include "clang/CIR/LowerToLLVM.h"
@@ -83,6 +84,8 @@ class CIRGenConsumer : public clang::ASTConsumer {
   llvm::LLVMContext &LLVMCtx;
   SmallVectorImpl<::clang::LinkModule> &LinkModules;
 
+  std::optional<CIRDiagnosticHandler> MLIRDiagHandler;
+
 public:
   CIRGenConsumer(CIRGenAction::OutputType Action, CompilerInstance &CI,
                  CodeGenOptions &CGO, std::unique_ptr<raw_pwrite_stream> OS,
@@ -99,6 +102,11 @@ public:
     assert(!Context && "initialized multiple times");
     Context = &Ctx;
     Gen->Initialize(Ctx);
+    // Install the MLIR diagnostic handler now that CIRGenerator owns its
+    // MLIRContext. Lifetime is tied to this consumer, which spans CIRGen,
+    // CIR-to-CIR passes, and CIR-to-LLVM lowering.
+    MLIRDiagHandler.emplace(&Gen->getMLIRContext(), CI.getDiagnostics(),
+                            CI.getSourceManager(), CI.getFileManager());
   }
 
   bool HandleTopLevelDecl(DeclGroupRef D) override {
@@ -124,8 +132,11 @@ public:
 
     if (!FEOptions.ClangIRDisableCIRVerifier) {
       if (!Gen->verifyModule()) {
-        CI.getDiagnostics().Report(
-            diag::err_cir_verification_failed_pre_passes);
+        // Verifier output already routed through ClangIRDiagnosticHandler.
+        // Only emit the generic fatal if nothing more specific was reported.
+        if (!CI.getDiagnostics().hasErrorOccurred())
+          CI.getDiagnostics().Report(
+              diag::err_cir_verification_failed_pre_passes);
         llvm::report_fatal_error(
             "CIR codegen: module verification error before running CIR passes");
         return;
@@ -144,9 +155,12 @@ public:
       if (runCIRToCIRPasses(
               MlirModule, MlirCtx, C, !FEOptions.ClangIRDisableCIRVerifier,
               FEOptions.ClangIREnableIdiomRecognizer, CGO.OptimizationLevel > 0,
-              EnableLibOpt, LibOptOptions)
+              EnableLibOpt, LibOptOptions, FEOptions.ClangIRCallConvLowering)
               .failed()) {
-        CI.getDiagnostics().Report(diag::err_cir_to_cir_transform_failed);
+        // Pass-side errors already routed through ClangIRDiagnosticHandler.
+        // Skip the generic catch-all if a specific diagnostic was emitted.
+        if (!CI.getDiagnostics().hasErrorOccurred())
+          CI.getDiagnostics().Report(diag::err_cir_to_cir_transform_failed);
         return;
       }
     }

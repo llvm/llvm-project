@@ -21,4 +21,5 @@ void test() {
   std::forward_list<operator_hijacker> lo;
   std::forward_list<operator_hijacker> l;
   l = lo;
+  (void)l;
 }

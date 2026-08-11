@@ -8,6 +8,7 @@ import lit.util
 
 from lit.llvm import llvm_config
 from lit.llvm.subst import ToolSubst
+import platform
 
 config.name = "ORC-RT"
 config.test_format = lit.formats.ShTest()
@@ -60,7 +61,6 @@ def add_logging_features():
     for level in levels.split():
         config.available_features.add("orc-rt-log-level-" + level.lower())
 
-
 add_logging_features()
 
 # The os_log delivery tests scrape the unified log (via `log show`), which is
@@ -86,3 +86,7 @@ if lit_config.params.get("run-os-log-tests"):
 # inherited from the developer's shell. Tests opt in with `env ORC_RT_LOG=...`.
 for var in ("ORC_RT_LOG", "ORC_RT_LOG_OUTPUT"):
     config.environment.pop(var, None)
+
+if platform.system() == "Darwin":
+    config.substitutions.append(("%macos-product-version", platform.mac_ver()[0]))
+config.substitutions.append(("%target_triple", config.target_triple))

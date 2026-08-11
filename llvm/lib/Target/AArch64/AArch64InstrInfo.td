@@ -509,6 +509,9 @@ def SDT_AArch64Insr  : SDTypeProfile<1, 2, [SDTCisVec<0>]>;
 def SDT_AArch64Zip   : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                           SDTCisSameAs<0, 1>,
                                           SDTCisSameAs<0, 2>]>;
+def SDT_AArch64Addhn : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>,
+                                            SDTCisSameAs<1, 2>,
+                                            SDTCisOpSmallerThanOp<0, 1>]>;
 def SDT_AArch64MOVIedit : SDTypeProfile<1, 1, [SDTCisInt<1>]>;
 def SDT_AArch64MOVIshift : SDTypeProfile<1, 2, [SDTCisInt<1>, SDTCisInt<2>]>;
 def SDT_AArch64vecimm : SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisSameAs<0,1>,
@@ -1107,6 +1110,8 @@ def AArch64usdot    : SDNode<"AArch64ISD::USDOT", SDT_AArch64Dot>;
 // Only the lower result lane is defined.
 def AArch64saddv    : SDNode<"AArch64ISD::SADDV", SDT_AArch64UnaryVec>;
 def AArch64uaddv    : SDNode<"AArch64ISD::UADDV", SDT_AArch64UnaryVec>;
+
+def AArch64addhn     : SDNode<"AArch64ISD::ADDHN", SDT_AArch64Addhn>;
 
 // Vector across-lanes min/max
 // Only the lower result lane is defined.
@@ -2850,6 +2855,17 @@ def : Pat<(AArch64sub_flag GPR64:$Rn, neg_addsub_shifted_imm64:$imm),
           (ADDSXri GPR64:$Rn, neg_addsub_shifted_imm64:$imm)>;
 }
 
+def negate_imm : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(-N->getAPIntValue(), SDLoc(N), N->getValueType(0));
+}]>;
+def neg_cheaper_imm32 : PatLeaf<(i32 imm), [{ return isWorthNegatingImm(Op); }], negate_imm>;
+def neg_cheaper_imm64 : PatLeaf<(i64 imm), [{ return isWorthNegatingImm(Op); }], negate_imm>;
+
+// Prefer (sub x, -c) over (add x, c) if -c is cheaper to materialise than c.
+def : Pat<(add GPR32:$Rn, neg_cheaper_imm32:$imm),
+          (SUBSWrr GPR32:$Rn, (MOVi32imm neg_cheaper_imm32:$imm))>;
+def : Pat<(add GPR64:$Rn, neg_cheaper_imm64:$imm),
+          (SUBSXrr GPR64:$Rn, (MOVi64imm neg_cheaper_imm64:$imm))>;
 
 def trunc_isWorthFoldingALU : PatFrag<(ops node:$src), (trunc $src)> {
   let PredicateCode = [{ return isWorthFoldingALU(SDValue(N, 0)); }];
@@ -3786,6 +3802,17 @@ def : Pat<(AArch64call texternalsym:$func), (BL texternalsym:$func)>;
 //===----------------------------------------------------------------------===//
 // Exception generation instructions.
 //===----------------------------------------------------------------------===//
+
+// Nodes for the HVC/SVC exception-generating calls.  The single operand is the
+// 16-bit instruction immediate; the argument registers, clobber mask and glue
+// are attached as variadic operands during lowering.
+def AArch64hvc : SDNode<"AArch64ISD::HVC", SDTypeProfile<0, 1, [SDTCisInt<0>]>,
+                        [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue, SDNPVariadic,
+                         SDNPMayLoad, SDNPMayStore]>;
+def AArch64svc : SDNode<"AArch64ISD::SVC", SDTypeProfile<0, 1, [SDTCisInt<0>]>,
+                        [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue, SDNPVariadic,
+                         SDNPMayLoad, SDNPMayStore]>;
+
 let isTrap = 1 in {
 def BRK   : ExceptionGeneration<0b001, 0b00, "brk",
                                 [(int_aarch64_break timm32_0_65535:$imm)]>;
@@ -3795,9 +3822,18 @@ def DCPS2 : ExceptionGeneration<0b101, 0b10, "dcps2">;
 def DCPS3 : ExceptionGeneration<0b101, 0b11, "dcps3">, Requires<[HasEL3]>;
 def HLT   : ExceptionGeneration<0b010, 0b00, "hlt",
                                 [(int_aarch64_hlt timm32_0_65535:$imm)]>;
+// Following the Microsoft __hvc/__svc calling convention (a software
+// convention, not an architectural rule), HVC and SVC pass up to four arguments
+// in X0-X3 and return a value in X0.  They are therefore selected from the
+// AArch64hvc/AArch64svc nodes (built by LowerINTRINSIC_W_CHAIN) rather than a
+// plain intrinsic pattern, and define X0 for the result.
+let mayLoad = 1, mayStore = 1, Defs = [X0] in
 def HVC   : ExceptionGeneration<0b000, 0b10, "hvc">;
 def SMC   : ExceptionGeneration<0b000, 0b11, "smc">, Requires<[HasEL3]>;
+let mayLoad = 1, mayStore = 1, Defs = [X0] in
 def SVC   : ExceptionGeneration<0b000, 0b01, "svc">;
+def : Pat<(AArch64hvc timm32_0_65535:$imm), (HVC timm32_0_65535:$imm)>;
+def : Pat<(AArch64svc timm32_0_65535:$imm), (SVC timm32_0_65535:$imm)>;
 
 // DCPSn defaults to an immediate operand of zero if unspecified.
 def : InstAlias<"dcps1", (DCPS1 0)>;
@@ -7395,7 +7431,7 @@ def : Pat <(f64 (uint_to_fp (i32
 // Advanced SIMD three different-sized vector instructions.
 //===----------------------------------------------------------------------===//
 
-defm ADDHN   : SIMDNarrowThreeVectorBHS<0,0b0100,"addhn", int_aarch64_neon_addhn>;
+defm ADDHN   : SIMDNarrowThreeVectorBHS<0,0b0100,"addhn", AArch64addhn>;
 defm SUBHN   : SIMDNarrowThreeVectorBHS<0,0b0110,"subhn", int_aarch64_neon_subhn>;
 defm RADDHN  : SIMDNarrowThreeVectorBHS<1,0b0100,"raddhn",int_aarch64_neon_raddhn>;
 defm RSUBHN  : SIMDNarrowThreeVectorBHS<1,0b0110,"rsubhn",int_aarch64_neon_rsubhn>;
@@ -9127,23 +9163,48 @@ defm FCVTZS : SIMDFPScalarRShift<0, 0b11111, "fcvtzs">;
 defm FCVTZU : SIMDFPScalarRShift<1, 0b11111, "fcvtzu">;
 defm SCVTF  : SIMDFPScalarRShift<0, 0b11100, "scvtf">;
 defm UCVTF  : SIMDFPScalarRShift<1, 0b11100, "ucvtf">;
-// Codegen patterns for the above. We don't put these directly on the
+
+// Transformation for SIMD shift imm to fixed point imm for FPR-to-GPR result.
+def fixedpoint_scalar_xform : SDNodeXForm<timm, [{
+  (void)N;
+  return V;
+}]>;
+def gi_fixedpoint_scalar_xform
+    : GICustomOperandRenderer<"renderFixedPointScalarXForm">,
+      GISDNodeXFormEquiv<fixedpoint_scalar_xform>;
+
+multiclass FPToFixedScalarPats<SDPatternOperator OpN, string INST > {
+  // Allow integer result to remain in GPR register.
+  def : Pat<(i32 (OpN FPR32:$Rn, vecshiftR32:$imm)),
+          (!cast<Instruction>(INST # "SWSri") FPR32:$Rn, (fixedpoint_scalar_xform vecshiftR32:$imm))>;
+  def : Pat<(i64 (OpN (f64 FPR64:$Rn), vecshiftR64:$imm)),
+          (!cast<Instruction>(INST # "SXDri") FPR64:$Rn, (fixedpoint_scalar_xform vecshiftR64:$imm))>;
+
+  // Explicit Bitcast results kept in FP/SIMD registers.
+  def : Pat<(f32 (bitconvert(i32 (OpN FPR32:$Rn, vecshiftR32:$imm)))),
+          (!cast<Instruction>(INST # "s") FPR32:$Rn, vecshiftR32:$imm)>;
+  def : Pat<(f64 (bitconvert(i64 (OpN (f64 FPR64:$Rn), vecshiftR64:$imm)))),
+          (!cast<Instruction>(INST # "d") FPR64:$Rn, vecshiftR64:$imm)>;
+          
+  def : Pat<(v1i64 (OpN (v1f64 FPR64:$Rn), vecshiftR64:$imm)),
+          (!cast<Instruction>(INST # "d") FPR64:$Rn, vecshiftR64:$imm)>;
+  def : Pat<(i32 (OpN (f16 FPR16:$Rn), vecshiftR32:$imm)),
+          (i32 (INSERT_SUBREG
+            (i32 (IMPLICIT_DEF)),
+            (!cast<Instruction>(INST # "h") FPR16:$Rn, vecshiftR32:$imm),
+            hsub))>;
+  def : Pat<(i64 (OpN (f16 FPR16:$Rn), vecshiftR64:$imm)),
+            (i64 (INSERT_SUBREG
+              (i64 (IMPLICIT_DEF)),
+              (!cast<Instruction>(INST # "h") FPR16:$Rn, vecshiftR64:$imm),
+              hsub))>;
+}
+defm : FPToFixedScalarPats<int_aarch64_neon_vcvtfp2fxs, "FCVTZS">;
+defm : FPToFixedScalarPats<int_aarch64_neon_vcvtfp2fxu, "FCVTZU">;
+
+// Codegen patterns for SCVTF and UCVTF. We don't put these directly on the
 // instructions because TableGen's type inference can't handle the truth.
 // Having the same base pattern for fp <--> int totally freaks it out.
-def : Pat<(int_aarch64_neon_vcvtfp2fxs FPR32:$Rn, vecshiftR32:$imm),
-          (FCVTZSs FPR32:$Rn, vecshiftR32:$imm)>;
-def : Pat<(int_aarch64_neon_vcvtfp2fxu FPR32:$Rn, vecshiftR32:$imm),
-          (FCVTZUs FPR32:$Rn, vecshiftR32:$imm)>;
-def : Pat<(i64 (int_aarch64_neon_vcvtfp2fxs (f64 FPR64:$Rn), vecshiftR64:$imm)),
-          (FCVTZSd FPR64:$Rn, vecshiftR64:$imm)>;
-def : Pat<(i64 (int_aarch64_neon_vcvtfp2fxu (f64 FPR64:$Rn), vecshiftR64:$imm)),
-          (FCVTZUd FPR64:$Rn, vecshiftR64:$imm)>;
-def : Pat<(v1i64 (int_aarch64_neon_vcvtfp2fxs (v1f64 FPR64:$Rn),
-                                            vecshiftR64:$imm)),
-          (FCVTZSd FPR64:$Rn, vecshiftR64:$imm)>;
-def : Pat<(v1i64 (int_aarch64_neon_vcvtfp2fxu (v1f64 FPR64:$Rn),
-                                            vecshiftR64:$imm)),
-          (FCVTZUd FPR64:$Rn, vecshiftR64:$imm)>;
 def : Pat<(int_aarch64_neon_vcvtfxu2fp FPR32:$Rn, vecshiftR32:$imm),
           (UCVTFs FPR32:$Rn, vecshiftR32:$imm)>;
 def : Pat<(f64 (int_aarch64_neon_vcvtfxu2fp (i64 FPR64:$Rn), vecshiftR64:$imm)),
@@ -9175,26 +9236,6 @@ def : Pat<(f16 (int_aarch64_neon_vcvtfxu2fp FPR32:$Rn, vecshiftR16:$imm)),
           (UCVTFh (f16 (EXTRACT_SUBREG FPR32:$Rn, hsub)), vecshiftR16:$imm)>;
 def : Pat<(f16 (int_aarch64_neon_vcvtfxu2fp (i64 FPR64:$Rn), vecshiftR16:$imm)),
           (UCVTFh (f16 (EXTRACT_SUBREG FPR64:$Rn, hsub)), vecshiftR16:$imm)>;
-def : Pat<(i32 (int_aarch64_neon_vcvtfp2fxs (f16 FPR16:$Rn), vecshiftR32:$imm)),
-          (i32 (INSERT_SUBREG
-            (i32 (IMPLICIT_DEF)),
-            (FCVTZSh FPR16:$Rn, vecshiftR32:$imm),
-            hsub))>;
-def : Pat<(i64 (int_aarch64_neon_vcvtfp2fxs (f16 FPR16:$Rn), vecshiftR64:$imm)),
-          (i64 (INSERT_SUBREG
-            (i64 (IMPLICIT_DEF)),
-            (FCVTZSh FPR16:$Rn, vecshiftR64:$imm),
-            hsub))>;
-def : Pat<(i32 (int_aarch64_neon_vcvtfp2fxu (f16 FPR16:$Rn), vecshiftR32:$imm)),
-          (i32 (INSERT_SUBREG
-            (i32 (IMPLICIT_DEF)),
-            (FCVTZUh FPR16:$Rn, vecshiftR32:$imm),
-            hsub))>;
-def : Pat<(i64 (int_aarch64_neon_vcvtfp2fxu (f16 FPR16:$Rn), vecshiftR64:$imm)),
-          (i64 (INSERT_SUBREG
-            (i64 (IMPLICIT_DEF)),
-            (FCVTZUh FPR16:$Rn, vecshiftR64:$imm),
-            hsub))>;
 def : Pat<(i32 (int_aarch64_neon_facge (f16 FPR16:$Rn), (f16 FPR16:$Rm))),
           (i32 (INSERT_SUBREG
             (i32 (IMPLICIT_DEF)),
