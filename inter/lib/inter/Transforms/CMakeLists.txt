@@ -18,6 +18,7 @@ add_mlir_library(InterTransforms
   InterXW
   InterXeMachine
   MLIRAnalysis
+  MLIRArithDialect
   MLIRLLVMDialect
   MLIRControlFlowDialect
   MLIRControlFlowInterfaces

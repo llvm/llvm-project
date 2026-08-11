@@ -12,6 +12,7 @@
 
 #include "mlir/Analysis/DataFlow/Utils.h"
 #include "mlir/Analysis/DataFlowFramework.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -207,8 +208,8 @@ struct SelectToMachine
                       perThreadBase, threadOffset)
             .getResult();
     auto load = LoadBlockA32Op::create(*b, *loc, RegType::get(ctx, 16, 1),
-                                        MemTokenType::get(ctx), perThreadAddr,
-                                        Value(), 16);
+                                       MemTokenType::get(ctx), perThreadAddr,
+                                       Value(), 16);
     load->setAttr(kAllowFixedOverlapAttrName, b->getUnitAttr());
     memToken = load.getToken();
 
@@ -325,13 +326,13 @@ struct SelectToMachine
       } else if (isa<LLVM::AndOp, LLVM::TruncOp, LLVM::ZExtOp>(&op)) {
         // 64->32 id truncations: forward the mapped source value.
         vmap[op.getResult(0)] = vmap.lookup(op.getOperand(0));
-      } else if (auto c = dyn_cast<LLVM::ConstantOp>(&op)) {
-        auto intAttr = dyn_cast<IntegerAttr>(c.getValue());
+      } else if (isa<LLVM::GEPOp, LLVM::AddressOfOp>(&op)) {
+        continue; // lowered lazily at the memory op
+      } else if (isa<LLVM::ConstantOp, arith::ConstantOp>(&op)) {
+        auto intAttr = dyn_cast<IntegerAttr>(op.getAttr("value"));
         if (!intAttr)
           return emitError(op.getLoc(), "non-integer constant"), failure();
         vmap[op.getResult(0)] = imm(intAttr.getValue().getSExtValue(), i32());
-      } else if (isa<LLVM::GEPOp>(&op)) {
-        continue; // lowered lazily at the memory op
       } else if (auto icmp = dyn_cast<LLVM::ICmpOp>(&op)) {
         if (failed(emitCmp(icmp)))
           return failure();
@@ -380,6 +381,10 @@ struct SelectToMachine
         vmap[store.getToken()] = memToken;
       } else if (isa<LLVM::ReturnOp, func::ReturnOp>(&op)) {
         emitEot();
+      } else {
+        return op.emitOpError("unsupported operation during Inter machine "
+                              "selection"),
+               failure();
       }
     }
     return success();

@@ -42,31 +42,32 @@ struct ConvertCalls : public inter::impl::ConvertCallsBase<ConvertCalls> {
   LogicalResult convertCall(LLVM::CallOp call) {
     auto callee = call.getCallee();
     if (!callee)
-      return emitError(call.getLoc(), "indirect call"), failure();
+      return call.emitOpError("indirect function calls are not supported"),
+             failure();
 
     OpBuilder b(call);
     Location loc = call.getLoc();
     Type i64 = b.getI64Type();
 
-    if (callee->starts_with(inter::builtins::kGetGlobalId)) {
+    if (*callee == inter::builtins::kGetGlobalId) {
       int dim =
           call.getNumOperands() ? constOperand(call.getArgOperands()[0]) : -1;
       if (dim < 0)
         return emitError(call.getLoc(), "non-constant id dimension"), failure();
       auto op = xw::GlobalIdOp::create(b, loc, i64, b.getI32IntegerAttr(dim));
       call->replaceAllUsesWith(ValueRange{op.getId()});
-    } else if (callee->starts_with(inter::builtins::kGetLocalId)) {
+    } else if (*callee == inter::builtins::kGetLocalId) {
       int dim =
           call.getNumOperands() ? constOperand(call.getArgOperands()[0]) : -1;
       if (dim < 0)
         return emitError(call.getLoc(), "non-constant id dimension"), failure();
       auto op = xw::LocalIdOp::create(b, loc, i64, b.getI32IntegerAttr(dim));
       call->replaceAllUsesWith(ValueRange{op.getId()});
-    } else if (callee->starts_with(inter::builtins::kBarrier)) {
+    } else if (*callee == inter::builtins::kBarrier) {
       xw::BarrierOp::create(
           b, loc, inter::xemachine::MemTokenType::get(call.getContext()),
           /*dependency=*/Value());
-    } else if (callee->starts_with(inter::builtins::kAtomicAdd)) {
+    } else if (*callee == inter::builtins::kAtomicAdd) {
       auto op = xw::AtomicAddOp::create(
           b, loc, b.getI32Type(),
           inter::xemachine::MemTokenType::get(call.getContext()),
@@ -74,8 +75,9 @@ struct ConvertCalls : public inter::impl::ConvertCallsBase<ConvertCalls> {
           /*dependency=*/Value());
       call->replaceAllUsesWith(ValueRange{op.getOld()});
     } else {
-      return emitError(call.getLoc(), "unsupported call: " + *callee),
-             failure();
+      call.emitOpError("function calls are not supported; '")
+          << *callee << "' is not a recognized builtin";
+      return failure();
     }
     call->erase();
     return success();

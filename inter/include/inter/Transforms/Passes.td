@@ -13,7 +13,7 @@ def SelectToMachine : Pass<"inter-select-to-machine", "::mlir::ModuleOp"> {
 
 // Rooted on the module: rewrites the symbol table (llvm.func -> func.func).
 def NormalizeCf : Pass<"inter-normalize-cf", "::mlir::ModuleOp"> {
-  let summary = "llvm.func -> func.func, llvm branches -> cf branches";
+  let summary = "import SPIR kernels and normalize LLVM branches to cf";
   let dependentDialects = [
     "mlir::func::FuncDialect",
     "mlir::cf::ControlFlowDialect",

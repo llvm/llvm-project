@@ -1,14 +1,23 @@
 // inter-normalize-cf: llvm.func -> func.func, llvm branches -> cf branches.
 // RUN: inter-opt %s --inter-normalize-cf | FileCheck %s
 
-module {
+module attributes {
+    llvm.data_layout = "e-p:64:64-p1:64:64-i64:64-G1"} {
+  // CHECK: module attributes {llvm.data_layout = "e-p:64:64-p1:64:64-i64:64-G1"}
   // CHECK-NOT: llvm.func @k
-  // CHECK: func.func @k(%{{.*}}: !llvm.ptr<1>) attributes {xemachine.kernel}
-  llvm.func spir_kernelcc @k(%arg0: !llvm.ptr<1>) {
+  // CHECK: func.func @k(%{{.*}}: !llvm.ptr<1> {llvm.align = 64 : i64, llvm.noalias})
+  // CHECK-SAME: attributes {
+  // CHECK-SAME: marker = "preserved"
+  // CHECK-SAME: xemachine.kernel
+  // CHECK-SAME: xemachine.llvm_func_properties
+  llvm.func spir_kernelcc @k(
+      %arg0: !llvm.ptr<1> {llvm.align = 64 : i64, llvm.noalias})
+      attributes {marker = "preserved", intel_reqd_sub_group_size = 16 : i32} {
     %c = llvm.mlir.constant(true) : i1
     // CHECK: cf.cond_br
+    // CHECK-SAME: weights([80, 20])
     // CHECK-NOT: llvm.cond_br
-    llvm.cond_br %c, ^bb1, ^bb2
+    llvm.cond_br %c weights([80, 20]), ^bb1, ^bb2
   ^bb1:
     // CHECK: cf.br
     // CHECK-NOT: llvm.br
