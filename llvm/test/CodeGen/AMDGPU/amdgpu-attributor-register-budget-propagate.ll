@@ -695,7 +695,7 @@ define amdgpu_kernel void @room_kernel_agpr12() {
 }
 
 ;; ;; ===========================================================================
-;; Scenario 3: the same merge seen from a single kernel fanning out.
+;; Scenario 7: the same merge seen from a single kernel fanning out.
 ;;
 ;;       A
 ;;     /   \
@@ -704,7 +704,7 @@ define amdgpu_kernel void @room_kernel_agpr12() {
 ;;   B = @fanout_agpr   : clobbers a15, so 16 flows up into A
 ;;   C = @fanout_noagpr : uses no AGPRs of its own, but inheriets 112,16
 ;;
-===========================================================================
+;; ===========================================================================
 
 define internal void @fanout_use_most() {
 ; CHECK-LABEL: define internal void @fanout_use_most(
