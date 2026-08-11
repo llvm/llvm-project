@@ -7750,6 +7750,8 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
     auto *ExpandR = dyn_cast<VPExpandSCEVRecipe>(&R);
     if (!ExpandR)
       continue;
+    assert(ExpandedSCEVs.contains(ExpandR->getSCEV()) &&
+           "Epilogue plan needs a SCEV not expanded for the main loop");
     VPValue *ExpandedVal =
         Plan.getOrAddLiveIn(ExpandedSCEVs.lookup(ExpandR->getSCEV()));
     ExpandR->replaceAllUsesWith(ExpandedVal);
