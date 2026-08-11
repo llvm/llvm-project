@@ -4616,10 +4616,10 @@ void Sema::CheckConstructorCall(FunctionDecl *FDecl, QualType ThisType,
                                   : VariadicCallType::DoesNotApply;
 
   auto *Ctor = cast<CXXConstructorDecl>(FDecl);
-  bool InvalidThisType = false;                                                                                                                                     
-  if (const auto *RT = ThisType->getAs<RecordType>())                                                                                                                           
+  bool InvalidThisType = false;
+  if (const auto *RT = ThisType->getAs<RecordType>())
     InvalidThisType = RT->getDecl()->isInvalidDecl();
-  if (!InvalidThisType){
+  if (!InvalidThisType) {
     CheckArgAlignment(
         Loc, FDecl, "'this'", Context.getPointerType(ThisType),
         Context.getPointerType(Ctor->getFunctionObjectParameterType()));

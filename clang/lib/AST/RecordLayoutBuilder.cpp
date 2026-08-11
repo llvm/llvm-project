@@ -388,8 +388,9 @@ EmptySubobjectMap::CanPlaceFieldSubobjectAtOffset(const CXXRecordDecl *RD,
     return false;
 
   // For invalid declarations, be permissive during error recovery.
-  // Return true to allow placement and avoid triggering assert in getASTRecordLayout.
-  // Layout constraints don't matter for types that are already marked invalid.
+  // Return true to allow placement and avoid triggering assert in
+  // getASTRecordLayout. Layout constraints don't matter for types that are
+  // already marked invalid.
   if (RD->isInvalidDecl())
     return true;
 
