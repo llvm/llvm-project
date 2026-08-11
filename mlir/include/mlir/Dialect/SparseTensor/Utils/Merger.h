@@ -387,6 +387,12 @@ public:
   /// sparse vector a.
   bool isSingleCondition(TensorId t, ExprId e) const;
 
+  /// Returns true if every nonzero produced by the expression requires the
+  /// given tensor to be present. `equivalent` denotes the same coordinate
+  /// condition while retaining a distinct value buffer.
+  bool isConditionedOn(TensorId t, ExprId e,
+                       std::optional<TensorId> equivalent = std::nullopt) const;
+
   /// Returns true if any `TensorLoopId` in the bitvector corresponds
   /// to sparse level-type.
   bool hasAnySparse(const BitVector &bits) const;
@@ -467,6 +473,10 @@ public:
 
   /// Sets whether the output tensor is sparse or not.
   void setHasSparseOut(bool s) { hasSparseOut = s; }
+
+  /// Indicates that a materialized output has the same stored coordinates as
+  /// an input tensor.  Their values remain separate.
+  void setOutStructure(TensorId t) { outStructure = t; }
 
   /// Establishes the two-way map that i <-> <t, lvl, lt>.
   void setLoopDependentTensorLevel(LoopId i, TensorId t, Level lvl,
@@ -628,6 +638,7 @@ private:
   const unsigned numTensors;
   const unsigned numLoops;
   bool hasSparseOut;
+  std::optional<TensorId> outStructure;
 
   // Below we use `std::vector` for things which have a priori fixed
   // sizes, whereas we use `llvm::SmallVector` for things with variable
