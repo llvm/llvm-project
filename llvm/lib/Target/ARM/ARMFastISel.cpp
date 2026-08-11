@@ -2057,12 +2057,21 @@ bool ARMFastISel::ProcessCallArgs(SmallVectorImpl<Value*> &Args,
       assert(VA.isRegLoc() && NextVA.isRegLoc() &&
              "We only handle register args!");
 
-      AddOptionalDefs(BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-                              TII.get(ARM::VMOVRRD), VA.getLocReg())
-                      .addReg(NextVA.getLocReg(), RegState::Define)
-                      .addReg(Arg));
-      RegArgs.push_back(VA.getLocReg());
-      RegArgs.push_back(NextVA.getLocReg());
+      if (MF->getDataLayout().isBigEndian()) {
+        AddOptionalDefs(BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+                                TII.get(ARM::VMOVRRD), NextVA.getLocReg())
+                            .addReg(VA.getLocReg(), RegState::Define)
+                            .addReg(Arg));
+        RegArgs.push_back(NextVA.getLocReg());
+        RegArgs.push_back(VA.getLocReg());
+      } else {
+        AddOptionalDefs(BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+                                TII.get(ARM::VMOVRRD), VA.getLocReg())
+                            .addReg(NextVA.getLocReg(), RegState::Define)
+                            .addReg(Arg));
+        RegArgs.push_back(VA.getLocReg());
+        RegArgs.push_back(NextVA.getLocReg());
+      }
     } else {
       assert(VA.isMemLoc());
       // Need to store on the stack.
