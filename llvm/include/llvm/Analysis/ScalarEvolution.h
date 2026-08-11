@@ -90,6 +90,14 @@ LLVM_ABI extern bool VerifySCEV;
 /// either implies NW. For convenience, NW will be set for a recurrence
 /// whenever either NUW or NSW are set.
 ///
+/// If Signed is a function that takes an n-bit tuple and maps to the
+/// integer domain as the tuples value interpreted as twos complement,
+/// and Unsigned a function that takes an n-bit tuple and maps to the
+/// integer domain as the base two value of input tuple, then a + b
+/// has NUSW iff:
+///
+/// 0 <= Unsigned(a) + Signed(b) < 2^n
+///
 /// We require that the flag on a SCEV apply to the entire scope in which
 /// that SCEV is defined.  A SCEV's scope is set of locations dominated by
 /// a defining location, which is in turn described by the following rules:
@@ -110,9 +118,9 @@ LLVM_ABI extern bool VerifySCEV;
 enum class SCEVNoWrapFlags {
   FlagAnyWrap = 0,     // No guarantee.
   FlagNW = (1 << 0),   // No self-wrap.
-  FlagNUW = (1 << 1),  // No unsigned wrap.
-  FlagNSW = (1 << 2),  // No signed wrap.
-  FlagNUSW = (1 << 3), // No unsigned signed wrap.
+  FlagNUSW = (1 << 1), // No unsigned signed wrap.
+  FlagNUW = (1 << 2),  // No unsigned wrap.
+  FlagNSW = (1 << 3),  // No signed wrap.
   NoWrapMask = (1 << 4) - 1,
   LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/NoWrapMask)
 };
@@ -295,9 +303,9 @@ public:
   using NoWrapFlags = SCEVNoWrapFlags;
   static constexpr auto FlagAnyWrap = SCEVNoWrapFlags::FlagAnyWrap;
   static constexpr auto FlagNW = SCEVNoWrapFlags::FlagNW;
+  static constexpr auto FlagNUSW = SCEVNoWrapFlags::FlagNUSW;
   static constexpr auto FlagNUW = SCEVNoWrapFlags::FlagNUW;
   static constexpr auto FlagNSW = SCEVNoWrapFlags::FlagNSW;
-  static constexpr auto FlagNUSW = SCEVNoWrapFlags::FlagNUSW;
   static constexpr auto NoWrapMask = SCEVNoWrapFlags::NoWrapMask;
 
   explicit SCEV(const FoldingSetNodeIDRef ID, SCEVTypes SCEVTy,
@@ -500,36 +508,6 @@ public:
 /// have more than X iterations.
 class LLVM_ABI SCEVWrapPredicate final : public SCEVPredicate {
 public:
-  /// Similar to SCEV::NoWrapFlags, but with slightly different semantics
-  /// for FlagNUSW. The increment is considered to be signed, and a + b
-  /// (where b is the increment) is considered to wrap if:
-  ///    zext(a + b) != zext(a) + sext(b)
-  ///
-  /// If Signed is a function that takes an n-bit tuple and maps to the
-  /// integer domain as the tuples value interpreted as twos complement,
-  /// and Unsigned a function that takes an n-bit tuple and maps to the
-  /// integer domain as the base two value of input tuple, then a + b
-  /// has IncrementNUSW iff:
-  ///
-  /// 0 <= Unsigned(a) + Signed(b) < 2^n
-  ///
-  /// The IncrementNSSW flag has identical semantics with SCEV::FlagNSW.
-  ///
-  /// Note that the IncrementNUSW flag is not commutative: if base + inc
-  /// has IncrementNUSW, then inc + base doesn't neccessarily have this
-  /// property. The reason for this is that this is used for sign/zero
-  /// extending affine AddRec SCEV expressions when a SCEVWrapPredicate is
-  /// assumed. A {base,+,inc} expression is already non-commutative with
-  /// regards to base and inc, since it is interpreted as:
-  ///     (((base + inc) + inc) + inc) ...
-  enum IncrementWrapFlags {
-    IncrementAnyWrap = 0,     // No guarantee.
-    IncrementNUSW = (1 << 0), // No unsigned with signed increment wrap.
-    IncrementNSSW = (1 << 1), // No signed with signed increment wrap
-                              // (equivalent with SCEV::NSW)
-    IncrementNoWrapMask = (1 << 2) - 1
-  };
-
   /// Returns the set of SCEVWrapPredicate no wrap flags implied by a
   /// SCEVAddRecExpr.
   [[nodiscard]] static SCEVNoWrapFlags getImpliedFlags(const SCEVAddRecExpr *AR,
