@@ -171,7 +171,7 @@ private:
       channelOffset = GED_CHANNEL_OFFSET_M24;
       break;
     default:
-      moduleOp.emitError() << "unsupported Xe2 mask offset "
+      moduleOp.emitError() << "unsupported mask offset "
                            << execution.maskOffset;
       return failure();
     }
@@ -206,12 +206,11 @@ private:
 
   FailureOr<uint32_t> getSwsb(const SwsbInfo &swsb, bool isSend) {
     if (swsb.distance > 7) {
-      moduleOp.emitError() << "Xe2 SWSB distance exceeds 7 at byte "
-                           << currentPc;
+      moduleOp.emitError() << "SWSB distance exceeds 7 at byte " << currentPc;
       return failure();
     }
     if (swsb.token > 31) {
-      moduleOp.emitError() << "Xe2 SWSB token exceeds 31 at byte " << currentPc;
+      moduleOp.emitError() << "SWSB token exceeds 31 at byte " << currentPc;
       return failure();
     }
     if (swsb.distance >= 0 && swsb.pipe == DistancePipe::none) {
@@ -583,7 +582,7 @@ private:
           });
       if (immediateCount > 1) {
         moduleOp.emitError(
-            "basic Xe2 instructions cannot encode two immediate sources");
+            "basic instructions cannot encode two immediate sources");
         return failure();
       }
       if (expectedSources == 2 &&
@@ -671,12 +670,12 @@ private:
     RETURN_IF_GED_ERROR(GED_SetDstRegNum(
         &instruction, value.destination ? value.destination->number : 0));
     if (value.destination && value.destination->sub != 0) {
-      moduleOp.emitError("Xe2 send destination must be GRF-aligned");
+      moduleOp.emitError("send destination must be GRF-aligned");
       return failure();
     }
 
     if (value.address.sub != 0) {
-      moduleOp.emitError("Xe2 send address must be GRF-aligned");
+      moduleOp.emitError("send address must be GRF-aligned");
       return failure();
     }
     RETURN_IF_GED_ERROR(GED_SetSrc0RegFile(&instruction, GED_REG_FILE_GRF));
@@ -688,7 +687,7 @@ private:
     if (value.data) {
       if (value.data->sub != 0 || value.data->widthDwords % 16 != 0) {
         moduleOp.emitError(
-            "Xe2 send data must contain whole, GRF-aligned registers");
+            "send data must contain whole, GRF-aligned registers");
         return failure();
       }
       sourceLength = value.data->widthDwords / 16;
@@ -703,7 +702,7 @@ private:
           std::get<ExtendedDescriptorReference>(value.exdesc);
       if (exdesc.base.file != ARFFile::a0 || exdesc.base.number != 0 ||
           exdesc.base.sub != 2) {
-        moduleOp.emitError("Xe2 register exdesc must use a0.2");
+        moduleOp.emitError("register exdesc must use a0.2");
         return failure();
       }
       RETURN_IF_GED_ERROR(GED_SetExDescRegFile(&instruction, GED_REG_FILE_ARF));

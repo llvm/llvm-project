@@ -1,6 +1,7 @@
 // GED encoding for ALU ops, sends, and sync.
 // RUN: inter-translate --xemachine-to-ged %s -o %t
 // RUN: inter-ged-dump %t | FileCheck %s
+// RUN: inter-translate --xemachine-to-asm %s | FileCheck %s --check-prefix=ASM
 
 func.func @k() {
   %root = xemachine.token
@@ -23,3 +24,23 @@ func.func @k() {
   xemachine.eot %eot_payload dep %tok2 : !xemachine.reg<16, 10>
   return
 }
+
+// ASM: /* [0000]
+// ASM-SAME: and (1|M0)
+// ASM-SAME: r4.0<1>:ud
+// ASM-SAME: r0.0<0;1,0>:ud
+// ASM-NEXT: /* [0010]
+// ASM-SAME: add (32|M0)
+// ASM-SAME: r6.0<1>:ud
+// ASM-SAME: {I@1}
+// ASM-NEXT: /* [0020]
+// ASM-SAME: send.ugm (1|M0)
+// ASM-SAME: load.ugm.d32x16t.a32.ca.cc.bti[255]
+// ASM-NEXT: /* [0030]
+// ASM-SAME: sync.allrd
+// ASM-NEXT: /* [0040]
+// ASM-SAME: send.ugm (32|M0)
+// ASM-SAME: store.ugm.d32.a64
+// ASM-NEXT: /* [0050]
+// ASM-SAME: send.gtwy (1|M0)
+// ASM-SAME: {EOT,$2}

@@ -10,7 +10,7 @@ include "mlir/IR/EnumAttr.td"
 
 def XeMachineDialect : Dialect {
   let name = "xemachine";
-  let summary = "Intel EU machine-level dialect. Xe2 first.";
+  let summary = "Intel EU machine-level dialect.";
   let description = [{
     Machine-level IR for Intel Execution Units: register-class-and-width in
     the type, explicit memory tokens, structured control flow as region ops.

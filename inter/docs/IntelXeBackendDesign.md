@@ -441,8 +441,9 @@ no LLVM MC target for Xe; the MC-equivalent layer is owned here.
   free disassembly for tests and debugging.
 - The standalone build fetches IGC v2.38.2 at a pinned commit and archive
   hash. `inter-translate --xemachine-to-ged` emits native 16-byte Xe2
-  instructions directly; `--xemachine-to-zebin` packages them as a runnable
-  ELF device binary. There is no assembly-text emission path.
+  instructions directly; `--xemachine-to-asm` formats those final encoded
+  bytes with IGA's GED decoder, and `--xemachine-to-zebin` packages them as a
+  runnable ELF device binary.
 - Buffered emission: instructions accumulate in a buffer (variant of
   instruction / label / alignment / directive) so fixups apply before
   finalize: branch targets (JIP/UIP), SWSB finalization if layout moved,
@@ -505,11 +506,11 @@ Three tiers, wave-mlir structure:
 
 1. **LIT + FileCheck unit tests** per pass and per emission feature. Machine
    IR is text; CHECK lines capture SSA names with placeholders.
-2. **Disassembly goldens.** Emit binary, decode with GED (or `iga -p xe2
-   -d`), FileCheck the disassembly. This replaces wave-mlir's text-ASM
-   golden tier — binary drift review only works if a human can read the
-   diff, and the decoder gives us that. A small number of binary smoke
-   goldens guard the encoder directly.
+2. **Disassembly goldens.** `inter-translate --xemachine-to-asm` encodes with
+   GED and formats the resulting bytes through IGA's GED decoder; FileCheck
+   validates the final assembly. This replaces wave-mlir's text-ASM golden
+   tier — binary drift review only works if a human can read the diff. The
+   field-oriented `inter-ged-dump` tests remain as direct encoder checks.
 3. **End-to-end via `inter-runner`**, built on `liboffload` (section 16):
    wraps emitted zebins in the OffloadBinary container, loads them with
    `olCreateProgram`, and launches them through the generic argument ABI. No

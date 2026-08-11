@@ -3,6 +3,7 @@
 // RUN: inter-opt %s --pass-pipeline='builtin.module(transform-preload-library{transform-library-paths=%inter_pipelines},transform-interpreter{entry-point=inter_backend})' | FileCheck %s
 // RUN: inter-opt %s --pass-pipeline='builtin.module(transform-preload-library{transform-library-paths=%inter_pipelines},transform-interpreter{entry-point=inter_backend})' | inter-translate --xemachine-to-ged -o %t
 // RUN: inter-ged-dump %t | FileCheck %s --check-prefix=GED
+// RUN: inter-opt %s --pass-pipeline='builtin.module(transform-preload-library{transform-library-paths=%inter_pipelines},transform-interpreter{entry-point=inter_backend})' | inter-translate --xemachine-to-asm | FileCheck %s --check-prefix=ASM
 
 module {
   // CHECK: func.func @vadd
@@ -76,3 +77,10 @@ module {
 // GED-NEXT: pc=496 opcode=send exec=32 swsb=0x322
 // GED: opcode=send {{.*}}sfid=ugm {{.*}}len=2 eot=0
 // GED: opcode=send {{.*}}sfid=gateway {{.*}}len=0 eot=1
+
+// ASM: add3 (32|M0)
+// ASM: send.ugm (32|M0) null
+// ASM-SAME: store.ugm.d32.a64
+// ASM: sync.allrd
+// ASM: send.gtwy (1|M0)
+// ASM-SAME: EOT

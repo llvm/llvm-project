@@ -1,5 +1,6 @@
 add_llvm_executable(inter-translate inter-translate.cpp)
 target_link_libraries(inter-translate PRIVATE
+  IGA_SLIB
   InterXeMachine
   InterEmit
   MLIRFuncDialect

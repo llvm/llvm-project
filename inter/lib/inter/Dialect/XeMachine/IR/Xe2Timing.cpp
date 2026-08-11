@@ -161,7 +161,7 @@ FailureOr<Xe2InstructionTiming>
 inter::xemachine::getXe2InstructionTiming(Operation *operation) {
   auto issue = dyn_cast<InstructionIssueOpInterface>(operation);
   if (!issue)
-    return operation->emitError("Xe2 timing requires an instruction issue "
+    return operation->emitError("timing model requires an instruction issue "
                                 "interface"),
            failure();
 
@@ -179,8 +179,9 @@ inter::xemachine::getXe2InstructionTiming(Operation *operation) {
 
   unsigned executionSize = getExecutionSize(operation);
   if (executionSize > 32 || !llvm::isPowerOf2_32(executionSize))
-    return operation->emitError("Xe2 timing requires a power-of-two execution "
-                                "size no greater than 32"),
+    return operation->emitError(
+               "timing model requires a power-of-two execution "
+               "size no greater than 32"),
            failure();
   timing.occupancy = getOccupancy(executionSize);
   if (hasI64Destination(operation))
@@ -236,7 +237,7 @@ inter::xemachine::getXe2RequiredGap(const Xe2InstructionTiming &producer,
   case Xe2DependencyKind::order:
     return producer.sendSourceReadLatency.value_or(producer.occupancy);
   }
-  llvm_unreachable("unknown Xe2 dependency kind");
+  llvm_unreachable("unknown dependency kind");
 }
 
 StringRef
@@ -271,5 +272,5 @@ StringRef inter::xemachine::stringifyXe2IssuePipe(Xe2IssuePipe value) {
   case Xe2IssuePipe::send:
     return "send";
   }
-  llvm_unreachable("unknown Xe2 issue pipe");
+  llvm_unreachable("unknown issue pipe");
 }

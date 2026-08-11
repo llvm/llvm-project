@@ -12,4 +12,4 @@ module {
   }
 }
 
-// CHECK: error: Xe2 timing requires a power-of-two execution size no greater than 32
+// CHECK: error: timing model requires a power-of-two execution size no greater than 32

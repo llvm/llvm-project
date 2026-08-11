@@ -40,7 +40,7 @@ private:
       return DataType::q;
     if (type.isF32())
       return DataType::f;
-    assert(type.isInteger(32) && "unsupported Xe2 data type");
+    assert(type.isInteger(32) && "unsupported machine data type");
     return DataType::ud;
   }
 
@@ -48,7 +48,7 @@ private:
     if (type.isInteger(8) || type.isInteger(16) || type.isInteger(32) ||
         type.isInteger(64) || type.isF32())
       return success();
-    return operation->emitError("unsupported Xe2 data type ") << type;
+    return operation->emitError("unsupported machine data type ") << type;
   }
 
   GrfReference getGrfReference(RegType type, int32_t sub,
@@ -511,7 +511,7 @@ private:
       if (instruction.swsb.pipe != DistancePipe::none &&
           instruction.swsb.pipe != DistancePipe::floating)
         return operation->emitError(
-            "first Xe2 a0 write has an unresolved in-order dependency");
+            "first a0 write has an unresolved in-order dependency");
       instruction.swsb.pipe = DistancePipe::floating;
       instruction.swsb.distance = 1;
       hasWrittenAddressRegister = true;

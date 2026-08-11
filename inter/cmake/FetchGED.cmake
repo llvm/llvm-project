@@ -34,10 +34,24 @@ add_subdirectory(
   EXCLUDE_FROM_ALL
 )
 
+set(GED_BRANCH GED_external)
+set(LINK_AS_STATIC_LIB FALSE)
+add_subdirectory(
+  "${inter_igc_SOURCE_DIR}/visa/iga/IGALibrary"
+  "${inter_igc_BINARY_DIR}/iga"
+  EXCLUDE_FROM_ALL
+)
+unset(GED_BRANCH)
+unset(LINK_AS_STATIC_LIB)
+
 if(MSVC)
   target_compile_options(GEDLibrary PRIVATE /w)
+  target_compile_options(IGA_OLIB PRIVATE /w)
+  target_compile_options(IGA_SLIB PRIVATE /w)
 else()
   target_compile_options(GEDLibrary PRIVATE -w)
+  target_compile_options(IGA_OLIB PRIVATE -w)
+  target_compile_options(IGA_SLIB PRIVATE -w)
 endif()
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 4)
@@ -55,5 +69,8 @@ set(INTER_GED_INCLUDE_DIRS
 
 add_library(InterGED STATIC $<TARGET_OBJECTS:GEDLibrary>)
 target_include_directories(InterGED SYSTEM PUBLIC ${INTER_GED_INCLUDE_DIRS})
+
+target_include_directories(IGA_SLIB SYSTEM PUBLIC
+  "${inter_igc_SOURCE_DIR}/visa/iga/IGALibrary/api")
 
 cmake_policy(POP)
