@@ -73,3 +73,20 @@ body: |
     %2:_(<3 x s32>) = G_ANYEXT %1
     $vgpr0_vgpr1_vgpr2 = COPY %2
 ...
+
+---
+name: test_anyext_trunc_i32_to_i16_to_f32
+body: |
+  bb.0:
+    liveins: $vgpr0
+    ; CHECK-LABEL: name: test_anyext_trunc_i32_to_i16_to_f32
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(f32) = G_BITCAST [[COPY]](i32)
+    ; CHECK-NEXT: $vgpr0 = COPY [[BITCAST]](f32)
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i16) = G_TRUNC %0(i32)
+    %2:_(f32) = G_ANYEXT %1(i16)
+    $vgpr0 = COPY %2(f32)
+...

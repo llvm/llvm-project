@@ -71,9 +71,13 @@ public:
     Register TruncSrc;
     if (mi_match(SrcReg, MRI, m_GTrunc(m_Reg(TruncSrc)))) {
       LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI);
-      if (MRI.getType(DstReg) == MRI.getType(TruncSrc))
+      auto DstType = MRI.getType(DstReg);
+      auto SrcType = MRI.getType(TruncSrc);
+      if (DstType == SrcType)
         replaceRegOrBuildCopy(DstReg, TruncSrc, MRI, Builder, UpdatedDefs,
                               Observer);
+      else if (DstType.getSizeInBits() == SrcType.getSizeInBits())
+        Builder.buildBitcast(DstReg, TruncSrc);
       else
         Builder.buildAnyExtOrTrunc(DstReg, TruncSrc);
       UpdatedDefs.push_back(DstReg);

@@ -428,11 +428,11 @@ define amdgpu_ps <4 x float> @image_load_v4f32_dmask_1100(<8 x i32> inreg %rsrc,
   ; GCN-NEXT:   [[BITCAST:%[0-9]+]]:_(f32) = G_BITCAST [[UV]](i32)
   ; GCN-NEXT:   [[BITCAST1:%[0-9]+]]:_(f32) = G_BITCAST [[UV1]](i32)
   ; GCN-NEXT:   [[BITCAST2:%[0-9]+]]:_(f32) = G_BITCAST [[DEF]](i32)
-  ; GCN-NEXT:   [[BITCAST3:%[0-9]+]]:_(f32) = G_BITCAST [[DEF]](i32)
+  ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(f32) = COPY [[BITCAST2]](f32)
   ; GCN-NEXT:   $vgpr0 = COPY [[BITCAST]](f32)
   ; GCN-NEXT:   $vgpr1 = COPY [[BITCAST1]](f32)
   ; GCN-NEXT:   $vgpr2 = COPY [[BITCAST2]](f32)
-  ; GCN-NEXT:   $vgpr3 = COPY [[BITCAST3]](f32)
+  ; GCN-NEXT:   $vgpr3 = COPY [[COPY10]](f32)
   ; GCN-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   %tex = call <4 x float> @llvm.amdgcn.image.load.2d.v4f32.i32(i32 3, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
   ret <4 x float> %tex
@@ -643,10 +643,10 @@ define amdgpu_ps <3 x float> @image_load_tfe_v3f32_dmask_1000(<8 x i32> inreg %r
   ; GCN-NEXT:   G_STORE [[UV1]](i32), [[DEF]](p1) :: (store (i32) into `ptr addrspace(1) poison`, addrspace 1)
   ; GCN-NEXT:   [[BITCAST:%[0-9]+]]:_(f32) = G_BITCAST [[UV]](i32)
   ; GCN-NEXT:   [[BITCAST1:%[0-9]+]]:_(f32) = G_BITCAST [[DEF1]](i32)
-  ; GCN-NEXT:   [[BITCAST2:%[0-9]+]]:_(f32) = G_BITCAST [[DEF1]](i32)
+  ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(f32) = COPY [[BITCAST1]](f32)
   ; GCN-NEXT:   $vgpr0 = COPY [[BITCAST]](f32)
   ; GCN-NEXT:   $vgpr1 = COPY [[BITCAST1]](f32)
-  ; GCN-NEXT:   $vgpr2 = COPY [[BITCAST2]](f32)
+  ; GCN-NEXT:   $vgpr2 = COPY [[COPY10]](f32)
   ; GCN-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2
   %res = call { <3 x float>, i32 } @llvm.amdgcn.image.load.2d.sl_v3f32i32s.i32(i32 1, i32 %s, i32 %t, <8 x i32> %rsrc, i32 1, i32 0)
   %tex = extractvalue { <3 x float>, i32 } %res, 0
@@ -679,10 +679,10 @@ define amdgpu_ps <3 x float> @image_load_tfe_v3f32_dmask_0000(<8 x i32> inreg %r
   ; GCN-NEXT:   G_STORE [[UV1]](i32), [[DEF]](p1) :: (store (i32) into `ptr addrspace(1) poison`, addrspace 1)
   ; GCN-NEXT:   [[BITCAST:%[0-9]+]]:_(f32) = G_BITCAST [[UV]](i32)
   ; GCN-NEXT:   [[BITCAST1:%[0-9]+]]:_(f32) = G_BITCAST [[DEF1]](i32)
-  ; GCN-NEXT:   [[BITCAST2:%[0-9]+]]:_(f32) = G_BITCAST [[DEF1]](i32)
+  ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(f32) = COPY [[BITCAST1]](f32)
   ; GCN-NEXT:   $vgpr0 = COPY [[BITCAST]](f32)
   ; GCN-NEXT:   $vgpr1 = COPY [[BITCAST1]](f32)
-  ; GCN-NEXT:   $vgpr2 = COPY [[BITCAST2]](f32)
+  ; GCN-NEXT:   $vgpr2 = COPY [[COPY10]](f32)
   ; GCN-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2
   %res = call { <3 x float>, i32 } @llvm.amdgcn.image.load.2d.sl_v3f32i32s.i32(i32 0, i32 %s, i32 %t, <8 x i32> %rsrc, i32 1, i32 0)
   %tex = extractvalue { <3 x float>, i32 } %res, 0
@@ -754,11 +754,11 @@ define amdgpu_ps <4 x float> @image_load_tfe_v4f32_dmask_1100(<8 x i32> inreg %r
   ; GCN-NEXT:   [[BITCAST:%[0-9]+]]:_(f32) = G_BITCAST [[UV]](i32)
   ; GCN-NEXT:   [[BITCAST1:%[0-9]+]]:_(f32) = G_BITCAST [[UV1]](i32)
   ; GCN-NEXT:   [[BITCAST2:%[0-9]+]]:_(f32) = G_BITCAST [[DEF1]](i32)
-  ; GCN-NEXT:   [[BITCAST3:%[0-9]+]]:_(f32) = G_BITCAST [[DEF1]](i32)
+  ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(f32) = COPY [[BITCAST2]](f32)
   ; GCN-NEXT:   $vgpr0 = COPY [[BITCAST]](f32)
   ; GCN-NEXT:   $vgpr1 = COPY [[BITCAST1]](f32)
   ; GCN-NEXT:   $vgpr2 = COPY [[BITCAST2]](f32)
-  ; GCN-NEXT:   $vgpr3 = COPY [[BITCAST3]](f32)
+  ; GCN-NEXT:   $vgpr3 = COPY [[COPY10]](f32)
   ; GCN-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   %res = call { <4 x float>, i32 } @llvm.amdgcn.image.load.2d.sl_v4f32i32s.i32(i32 3, i32 %s, i32 %t, <8 x i32> %rsrc, i32 1, i32 0)
   %tex = extractvalue { <4 x float>, i32 } %res, 0
@@ -791,12 +791,12 @@ define amdgpu_ps <4 x float> @image_load_tfe_v4f32_dmask_1000(<8 x i32> inreg %r
   ; GCN-NEXT:   G_STORE [[UV1]](i32), [[DEF]](p1) :: (store (i32) into `ptr addrspace(1) poison`, addrspace 1)
   ; GCN-NEXT:   [[BITCAST:%[0-9]+]]:_(f32) = G_BITCAST [[UV]](i32)
   ; GCN-NEXT:   [[BITCAST1:%[0-9]+]]:_(f32) = G_BITCAST [[DEF1]](i32)
-  ; GCN-NEXT:   [[BITCAST2:%[0-9]+]]:_(f32) = G_BITCAST [[DEF1]](i32)
-  ; GCN-NEXT:   [[BITCAST3:%[0-9]+]]:_(f32) = G_BITCAST [[DEF1]](i32)
+  ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(f32) = COPY [[BITCAST1]](f32)
+  ; GCN-NEXT:   [[COPY11:%[0-9]+]]:_(f32) = COPY [[BITCAST1]](f32)
   ; GCN-NEXT:   $vgpr0 = COPY [[BITCAST]](f32)
   ; GCN-NEXT:   $vgpr1 = COPY [[BITCAST1]](f32)
-  ; GCN-NEXT:   $vgpr2 = COPY [[BITCAST2]](f32)
-  ; GCN-NEXT:   $vgpr3 = COPY [[BITCAST3]](f32)
+  ; GCN-NEXT:   $vgpr2 = COPY [[COPY10]](f32)
+  ; GCN-NEXT:   $vgpr3 = COPY [[COPY11]](f32)
   ; GCN-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   %res = call { <4 x float>, i32 } @llvm.amdgcn.image.load.2d.sl_v4f32i32s.i32(i32 1, i32 %s, i32 %t, <8 x i32> %rsrc, i32 1, i32 0)
   %tex = extractvalue { <4 x float>, i32 } %res, 0
@@ -829,12 +829,12 @@ define amdgpu_ps <4 x float> @image_load_tfe_v4f32_dmask_0000(<8 x i32> inreg %r
   ; GCN-NEXT:   G_STORE [[UV1]](i32), [[DEF]](p1) :: (store (i32) into `ptr addrspace(1) poison`, addrspace 1)
   ; GCN-NEXT:   [[BITCAST:%[0-9]+]]:_(f32) = G_BITCAST [[UV]](i32)
   ; GCN-NEXT:   [[BITCAST1:%[0-9]+]]:_(f32) = G_BITCAST [[DEF1]](i32)
-  ; GCN-NEXT:   [[BITCAST2:%[0-9]+]]:_(f32) = G_BITCAST [[DEF1]](i32)
-  ; GCN-NEXT:   [[BITCAST3:%[0-9]+]]:_(f32) = G_BITCAST [[DEF1]](i32)
+  ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(f32) = COPY [[BITCAST1]](f32)
+  ; GCN-NEXT:   [[COPY11:%[0-9]+]]:_(f32) = COPY [[BITCAST1]](f32)
   ; GCN-NEXT:   $vgpr0 = COPY [[BITCAST]](f32)
   ; GCN-NEXT:   $vgpr1 = COPY [[BITCAST1]](f32)
-  ; GCN-NEXT:   $vgpr2 = COPY [[BITCAST2]](f32)
-  ; GCN-NEXT:   $vgpr3 = COPY [[BITCAST3]](f32)
+  ; GCN-NEXT:   $vgpr2 = COPY [[COPY10]](f32)
+  ; GCN-NEXT:   $vgpr3 = COPY [[COPY11]](f32)
   ; GCN-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   %res = call { <4 x float>, i32 } @llvm.amdgcn.image.load.2d.sl_v4f32i32s.i32(i32 0, i32 %s, i32 %t, <8 x i32> %rsrc, i32 1, i32 0)
   %tex = extractvalue { <4 x float>, i32 } %res, 0
