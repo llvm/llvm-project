@@ -1011,7 +1011,10 @@ LoopInfo LoopAnalysis::run(Function &F, FunctionAnalysisManager &AM) {
   // objects. I don't want to add that kind of complexity until the scope of
   // the problem is better understood.
   LoopInfo LI;
-  LI.analyze(AM.getResult<DominatorTreeAnalysis>(F));
+  // The dominator tree is needed only for an irreducible CFG.
+  LI.analyze(&F, [&]() -> const DominatorTree & {
+    return AM.getResult<DominatorTreeAnalysis>(F);
+  });
   return LI;
 }
 
@@ -1268,10 +1271,8 @@ void LoopInfoWrapperPass::verifyAnalysis() const {
   // -verify-loop-info option can enable this. In order to perform some
   // checking by default, LoopPass has been taught to call verifyLoop manually
   // during loop pass sequences.
-  if (VerifyLoopInfo) {
-    auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    LI.verify(DT);
-  }
+  if (VerifyLoopInfo)
+    LI.verify();
 }
 
 void LoopInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
@@ -1286,8 +1287,7 @@ void LoopInfoWrapperPass::print(raw_ostream &OS, const Module *) const {
 PreservedAnalyses LoopVerifierPass::run(Function &F,
                                         FunctionAnalysisManager &AM) {
   LoopInfo &LI = AM.getResult<LoopAnalysis>(F);
-  auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
-  LI.verify(DT);
+  LI.verify();
   return PreservedAnalyses::all();
 }
 

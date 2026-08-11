@@ -132,7 +132,7 @@ add_entrypoint_object(
   remap_file_pages
   ALIAS
   DEPENDS
-  .${LIBC_TARGET_OS}.remap_file_pages
+    .${LIBC_TARGET_OS}.remap_file_pages
 )
 
 add_entrypoint_object(

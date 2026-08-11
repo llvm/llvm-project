@@ -303,23 +303,26 @@ class SPIRVStructurizerImpl {
   // the boundary of multiple constructs.
   struct Splitter {
     Function &F;
-    LoopInfo &LI;
     DomTreeBuilder::BBDomTree DT;
     DomTreeBuilder::BBPostDomTree PDT;
     std::optional<PartialOrderingVisitor> POV;
 
-    Splitter(Function &F, LoopInfo &LI) : F(F), LI(LI) { invalidate(); }
+    Splitter(Function &F) : F(F) { invalidate(); }
 
     void invalidate() {
       PDT.recalculate(F);
-      DT.recalculate(F);
       POV.emplace(F);
+    }
+
+    const DomTreeBuilder::BBDomTree &getDT() const {
+      return POV->getDominatorTree();
     }
 
     // Returns the list of blocks that belong to a SPIR-V loop construct,
     // including the continue construct.
     std::vector<BasicBlock *> getLoopConstructBlocks(BasicBlock *Header,
                                                      BasicBlock *Merge) {
+      const DomTreeBuilder::BBDomTree &DT = getDT();
       assert(DT.dominates(Header, Merge));
       std::vector<BasicBlock *> Output;
       POV->partialOrderVisit(*Header, [&](BasicBlock *BB) {
@@ -336,6 +339,7 @@ class SPIRVStructurizerImpl {
     // Returns the list of blocks that belong to a SPIR-V selection construct.
     std::vector<BasicBlock *>
     getSelectionConstructBlocks(DivergentConstruct *Node) {
+      const DomTreeBuilder::BBDomTree &DT = getDT();
       assert(DT.dominates(Node->Header, Node->Merge));
       BlockSet OutsideBlocks;
       OutsideBlocks.insert(Node->Merge);
@@ -352,47 +356,6 @@ class SPIRVStructurizerImpl {
         if (OutsideBlocks.count(BB) != 0)
           return false;
         if (DT.dominates(Node->Merge, BB) || !DT.dominates(Node->Header, BB))
-          return false;
-        Output.push_back(BB);
-        return true;
-      });
-      return Output;
-    }
-
-    // Returns the list of blocks that belong to a SPIR-V switch construct.
-    std::vector<BasicBlock *> getSwitchConstructBlocks(BasicBlock *Header,
-                                                       BasicBlock *Merge) {
-      assert(DT.dominates(Header, Merge));
-
-      std::vector<BasicBlock *> Output;
-      POV->partialOrderVisit(*Header, [&](BasicBlock *BB) {
-        // the blocks structurally dominated by a switch header,
-        if (!DT.dominates(Header, BB))
-          return false;
-        // excluding blocks structurally dominated by the switch header’s merge
-        // block.
-        if (DT.dominates(Merge, BB) || BB == Merge)
-          return false;
-        Output.push_back(BB);
-        return true;
-      });
-      return Output;
-    }
-
-    // Returns the list of blocks that belong to a SPIR-V case construct.
-    std::vector<BasicBlock *> getCaseConstructBlocks(BasicBlock *Target,
-                                                     BasicBlock *Merge) {
-      assert(DT.dominates(Target, Merge));
-
-      std::vector<BasicBlock *> Output;
-      POV->partialOrderVisit(*Target, [&](BasicBlock *BB) {
-        // the blocks structurally dominated by an OpSwitch Target or Default
-        // block
-        if (!DT.dominates(Target, BB))
-          return false;
-        // excluding the blocks structurally dominated by the OpSwitch
-        // construct’s corresponding merge block.
-        if (DT.dominates(Merge, BB) || BB == Merge)
           return false;
         Output.push_back(BB);
         return true;
@@ -868,7 +831,7 @@ class SPIRVStructurizerImpl {
   }
 
   bool splitCriticalEdges(Function &F) {
-    Splitter S(F, LI);
+    Splitter S(F);
 
     DivergentConstruct Root;
     BlockSet Visited;
@@ -1176,7 +1139,6 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequired<SPIRVConvergenceRegionAnalysisWrapperPass>();
 
@@ -1191,7 +1153,6 @@ char SPIRVStructurizer::ID = 0;
 INITIALIZE_PASS_BEGIN(SPIRVStructurizer, "spirv-structurizer",
                       "structurize SPIRV", false, false)
 INITIALIZE_PASS_DEPENDENCY(LoopSimplify)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(SPIRVConvergenceRegionAnalysisWrapperPass)
 
