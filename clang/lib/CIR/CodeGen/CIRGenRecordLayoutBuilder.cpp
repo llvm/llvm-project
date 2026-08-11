@@ -835,11 +835,10 @@ void CIRRecordLowering::lowerUnion(bool nonVirtualBaseType) {
   // an enclosing [[no_unique_address]] union field must use this smaller type.
   CharUnits layoutSize = nonVirtualBaseType ? astRecordLayout.getDataSize()
                                             : astRecordLayout.getSize();
-  mlir::Type storageType = nullptr;
-  bool seenNamedMember = false;
+  // Accumulate bitfields and fields, and figure out what our difference between
+  // storage type and padding is.
 
-  // Iterate through the fields setting bitFieldInfo and the Fields array. Also
-  // locate the "most appropriate" storage type.
+  // First, accumulate all the types.
   for (const FieldDecl *field : recordDecl->fields()) {
     mlir::Type fieldType;
     if (field->isBitField()) {
@@ -851,59 +850,52 @@ void CIRRecordLowering::lowerUnion(bool nonVirtualBaseType) {
       fieldType = getStorageType(field);
     }
 
-    // This maps a field to its index. For unions, the index is always 0.
     fieldIdxMap[field->getCanonicalDecl()] = 0;
-
-    // Compute zero-initializable status.
-    // This union might not be zero initialized: it may contain a pointer to
-    // data member which might have some exotic initialization sequence.
-    // If this is the case, then we ought not to try and come up with a "better"
-    // type, it might not be very easy to come up with a Constant which
-    // correctly initializes it.
-    if (!seenNamedMember) {
-      seenNamedMember = field->getIdentifier();
-      if (!seenNamedMember)
-        if (const RecordDecl *fieldRD = field->getType()->getAsRecordDecl())
-          seenNamedMember = fieldRD->findFirstNamedDataMember();
-      if (seenNamedMember && !isZeroInitializable(field)) {
-        zeroInitializable = zeroInitializableAsBase = false;
-        storageType = fieldType;
-      }
-    }
-
-    // Because our union isn't zero initializable, we won't be getting a better
-    // storage type.
-    if (!zeroInitializable)
-      continue;
-
-    // Conditionally update our storage type if we've got a new "better" one.
-    if (!storageType || getAlignment(fieldType) > getAlignment(storageType) ||
-        (getAlignment(fieldType) == getAlignment(storageType) &&
-         getSize(fieldType) > getSize(storageType)))
-      storageType = fieldType;
-
-    // NOTE(cir): Track all union member's types, not just the largest one. It
-    // allows for proper type-checking and retain more info for analisys.
-    //
-    // The base-subobject type instead uses a single (possibly clipped) storage
-    // type, mirroring classic CodeGen, so that it exposes the union's reusable
-    // tail padding.
-    if (!nonVirtualBaseType)
-      fieldTypes.push_back(fieldType);
+    fieldTypes.push_back(fieldType);
   }
 
-  if (!storageType) {
+  // Compute zero-initializable status.
+  // This union might not be zero initialized: it may contain a pointer to
+  // data member which might have some exotic initialization sequence.
+  // This chooses the first 'named' member and is zero-initializable based on
+  // that.
+  auto hasNamedMember = [](const FieldDecl *curField) -> bool {
+    const auto *rd = curField->getType()->getAsRecordDecl();
+    return rd && rd->findFirstNamedDataMember();
+  };
+  // Whether this is usable for zero-init as a 'named member'. It is a field
+  // with a name (or a record type with a named member itself), that isn't a
+  // zero-width bitfield.
+  auto isNamedMember = [hasNamedMember](const FieldDecl *curField) -> bool {
+    if (curField->isZeroLengthBitField())
+      return false;
+    return curField->getIdentifier() || hasNamedMember(curField);
+  };
+  auto firstNamedMemberItr = llvm::find_if(recordDecl->fields(), isNamedMember);
+
+  if (firstNamedMemberItr != recordDecl->fields().end() &&
+      !isZeroInitializable(*firstNamedMemberItr))
+    zeroInitializable = zeroInitializableAsBase = false;
+
+  // If we have no candidates for storage, we are JUST padding.
+  if (fieldTypes.empty()) {
     appendPaddingBytes(layoutSize);
     return;
   }
 
+  mlir::Type storageType =
+      cir::UnionType::getUnionStorageType(dataLayout.layout, fieldTypes);
+
+  // If our storage size was bigger than our required size (can happen in the
+  // case of packed bitfields on Itanium) then just use an I8 array.
   if (layoutSize < getSize(storageType))
     storageType = getByteArrayType(layoutSize);
 
+  // The base-subobject record is built as a struct from fieldTypes, so add
+  // the storage type and any trailing padding as ordinary fields rather than
+  // routing padding through the union's single tail-padding slot.
   if (nonVirtualBaseType) {
-    // The base-subobject record is built as a struct from fieldTypes, so add
-    // the storage type and any trailing padding as ordinary fields rather than
-    // routing padding through the union's single tail-padding slot.
+    fieldTypes.clear();
     fieldTypes.push_back(storageType);
     CharUnits padding = layoutSize - getSize(storageType);
     if (!padding.isZero()) {
@@ -911,12 +903,10 @@ void CIRRecordLowering::lowerUnion(bool nonVirtualBaseType) {
       padded = true;
     }
   } else {
+    // Else we just add padding normally.
     appendPaddingBytes(layoutSize - getSize(storageType));
   }
-
-  // Set packed if we need it.
-  if (!layoutSize.isMultipleOf(getAlignment(storageType)))
-    packed = true;
+  packed = !layoutSize.isMultipleOf(getAlignment(storageType));
 }
 
 bool CIRRecordLowering::hasOwnStorage(const CXXRecordDecl *decl,

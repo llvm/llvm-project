@@ -544,15 +544,15 @@ public:
   SourceLocation getDeclLoc() const { return getDeclDesc()->getLocation(); }
 
   /// Returns the expression or declaration the pointer has been created for.
-  DeclTy getSource() const {
+  DeclOrExpr getSource() const {
     if (isBlockPointer())
       return getDeclDesc()->getSource();
     if (isFunctionPointer()) {
       const Function *F = Fn.Func;
-      return F ? F->getDecl() : DeclTy();
+      return F ? F->getDecl() : DeclOrExpr();
     }
     llvm_unreachable("Unsupported pointer type in getSource()");
-    return DeclTy();
+    return DeclOrExpr();
   }
 
   /// Returns a pointer to the object of which this pointer is a field.
@@ -957,23 +957,7 @@ public:
   Lifetime getLifetime() const {
     if (!isBlockPointer())
       return Lifetime::Started;
-    if (BS.Base < sizeof(InlineDescriptor))
-      return Lifetime::Started;
-
-    if (inArray() && !isArrayRoot()) {
-      InitMapPtr &IM = getInitMap();
-
-      if (!IM.hasInitMap()) {
-        if (IM.allInitialized())
-          return Lifetime::Started;
-        return getArray().getLifetime();
-      }
-
-      return IM->isElementAlive(getIndex()) ? Lifetime::Started
-                                            : Lifetime::Ended;
-    }
-
-    return getInlineDesc()->LifeState;
+    return view().getLifetime();
   }
 
   /// Start the lifetime of this pointer. This works for pointer with an
@@ -1015,7 +999,7 @@ public:
   /// Checks if two pointers are comparable.
   static bool hasSameBase(const Pointer &A, const Pointer &B);
   /// Checks if two pointers can be subtracted.
-  static bool hasSameArray(const Pointer &A, const Pointer &B);
+  static bool elemsOfSameArray(const Pointer &A, const Pointer &B);
   /// Checks if both given pointers point to the same block.
   static bool pointToSameBlock(const Pointer &A, const Pointer &B);
 

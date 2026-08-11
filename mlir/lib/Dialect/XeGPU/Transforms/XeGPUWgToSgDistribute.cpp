@@ -530,7 +530,7 @@ struct WgToSgConvertLayoutOp
   matchAndRewrite(xegpu::ConvertLayoutOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
-    auto inputLayout = op.getInputLayout();
+    auto inputLayout = op.getEffectiveInputLayout();
     auto targetLayout = op.getTargetLayout();
 
     if (!inputLayout || !targetLayout || !inputLayout.isForWorkgroup() ||
@@ -1661,7 +1661,8 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
 
   target.addDynamicallyLegalOp<xegpu::ConvertLayoutOp>(
       [=](xegpu::ConvertLayoutOp op) -> bool {
-        return isLegal(op.getInputLayout()) && isLegal(op.getTargetLayout());
+        return isLegal(op.getEffectiveInputLayout()) &&
+               isLegal(op.getTargetLayout());
       });
 
   target.addDynamicallyLegalDialect<math::MathDialect, arith::ArithDialect>(

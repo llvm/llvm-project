@@ -25,36 +25,10 @@
 namespace clang {
 namespace targets {
 
-static const unsigned X86AddrSpaceMap[] = {
-    0,   // Default
-    0,   // opencl_global
-    0,   // opencl_local
-    0,   // opencl_constant
-    0,   // opencl_private
-    0,   // opencl_generic
-    0,   // opencl_global_device
-    0,   // opencl_global_host
-    0,   // cuda_device
-    0,   // cuda_constant
-    0,   // cuda_shared
-    0,   // sycl_global
-    0,   // sycl_global_device
-    0,   // sycl_global_host
-    0,   // sycl_local
-    0,   // sycl_private
-    270, // ptr32_sptr
-    271, // ptr32_uptr
-    272, // ptr64
-    0,   // hlsl_groupshared
-    0,   // hlsl_constant
-    0,   // hlsl_private
-    0,   // hlsl_device
-    0,   // hlsl_input
-    0,   // hlsl_output
-    0,   // hlsl_push_constant
-    // Wasm address space values for this target are dummy values,
-    // as it is only enabled for Wasm targets.
-    20, // wasm_funcref
+static constexpr LangASMap X86AddrSpaceMap = {
+    {LangAS::ptr32_sptr, 270},
+    {LangAS::ptr32_uptr, 271},
+    {LangAS::ptr64, 272},
 };
 
 // X86 target abstract base class; x86-32 and x86-64 are very close, so
@@ -982,6 +956,14 @@ public:
 
   unsigned getMinGlobalAlign(uint64_t TypeSize,
                              bool HasNonWeakDef) const override;
+
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+              const TargetInfo *Aux) override;
+
+private:
+  // Whether to apply the MSVC size-based global-alignment scheme. Disabled by
+  // -fclang-abi-compat<=22 to restore prior x86_64-windows-msvc behavior.
+  bool UseMSVCCompatGlobalAlign = true;
 };
 
 // x86-64 MinGW target

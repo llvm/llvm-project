@@ -1879,6 +1879,18 @@ let TargetPrefix = "nvvm" in {
   def int_nvvm_ue8m0x2_to_bf16x2 : NVVMBuiltin,
       PureIntrinsic<[llvm_v2bf16_ty], [llvm_i16_ty]>;
 
+  // UE5M3x2 conversions.
+  def int_nvvm_ue5m3x2_to_f16x2_rn
+      : PureIntrinsic<[llvm_v2f16_ty], [llvm_i16_ty]>;
+
+  foreach satfinite = ["", "_satfinite"] in {
+    def int_nvvm_ue5m3x2_to_bf16x2_rn # satfinite
+        : PureIntrinsic<[llvm_v2bf16_ty], [llvm_i16_ty]>;
+
+    def int_nvvm_ue5m3x2_to_bf16x2_rn # satfinite # _scale_n2_ue8m0
+        : PureIntrinsic<[llvm_v2bf16_ty], [llvm_i16_ty, llvm_i16_ty]>;
+  }
+
   //
   // Bar.Sync
   //
@@ -2823,7 +2835,7 @@ class DefaultAttrsIntrinsicFlags<list<LLVMType> ret_types,
 // TMA Tensor Copy Intrinsics: S2G -> From Shared to Global memory variants
 foreach dim = 1...5 in {
   defvar tensor_dim_args = !listsplat(llvm_i32_ty, dim);
-  foreach mode = !if(!ge(dim, 3), ["tile", "im2col"], ["tile"]) in {
+  foreach mode = !if(!ge(dim, 3), ["tile", "im2col", "im2col_w"], ["tile"]) in {
     def int_nvvm_cp_async_bulk_tensor_s2g_ # mode # _ # dim # d :
       DefaultAttrsIntrinsicFlags<[],
           !listconcat([llvm_shared_ptr_ty,  // src_smem_ptr
@@ -2833,16 +2845,22 @@ foreach dim = 1...5 in {
           [llvm_i1_ty],                     // Flag for cache_hint
           [IntrConvergent, ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>]>;
 
-    // Intrinsics for TMA Copy with reduction
-    foreach red_op = ["add", "min", "max", "inc", "dec", "and", "or", "xor"] in
-      def int_nvvm_cp_async_bulk_tensor_reduce_ # red_op # _ # mode # _ # dim # d :
-        DefaultAttrsIntrinsicFlags<[],
-            !listconcat([llvm_shared_ptr_ty,  // src_smem_ptr
-                         llvm_ptr_ty],        // tensormap_ptr
-                         tensor_dim_args,     // actual tensor dims
-                        [llvm_i64_ty]),       // cache_hint
-          [llvm_i1_ty],                       // Flag for cache_hint
-          [IntrConvergent, ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>]>;
+    defvar reduce_params =
+        !listconcat([llvm_shared_ptr_ty, // src_smem_ptr
+                     llvm_ptr_ty],       // tensormap_ptr
+                    tensor_dim_args,     // actual tensor dims
+                    [llvm_i64_ty]);      // cache_hint
+    defvar red_op_idx = !size(reduce_params);
+    def int_nvvm_cp_async_bulk_tensor_reduce_ # mode # _ # dim # d :
+      DefaultAttrsIntrinsicFlags<[],
+        reduce_params,
+        [llvm_i32_ty,    // reduction operation
+         llvm_i1_ty],    // Flag for cache_hint
+        [IntrConvergent, ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
+        // Allowed values for red_op are {0..7} i.e. [0, 8).
+        Range<ArgIndex<red_op_idx>, 0, 8>,
+        ArgInfo<ArgIndex<red_op_idx>, [ArgName<"red_op">,
+        ImmArgPrinter<"printTMAReductionOp">]>]>;
   }
 }
 
@@ -3085,25 +3103,17 @@ foreach cta_group = ["cg1", "cg2"] in {
   def int_nvvm_tcgen05_relinq_alloc_permit_ # cta_group : Intrinsic<[], [],
     [IntrConvergent, IntrInaccessibleMemOnly]>;
 
-  def int_nvvm_tcgen05_commit_ # cta_group : Intrinsic<[],
-    [llvm_ptr_ty],        // mbar_ptr
-    [IntrConvergent, IntrInaccessibleMemOrArgMemOnly,
-     NoCapture<ArgIndex<0>>]>;
+  foreach smem_a_read = ["", "smem_a_read_"] in {
+    def int_nvvm_tcgen05_commit_ # smem_a_read # cta_group : Intrinsic<[],
+      [llvm_anyptr_ty],        // mbar_ptr
+      [IntrConvergent, IntrInaccessibleMemOrArgMemOnly,
+       NoCapture<ArgIndex<0>>]>;
 
-  def int_nvvm_tcgen05_commit_shared_ # cta_group : Intrinsic<[],
-    [llvm_shared_ptr_ty], // mbar_ptr
-    [IntrConvergent, IntrInaccessibleMemOrArgMemOnly,
-     NoCapture<ArgIndex<0>>]>;
-
-  def int_nvvm_tcgen05_commit_mc_ # cta_group : Intrinsic<[],
-    [llvm_ptr_ty, llvm_i16_ty], // mbar_ptr, cta_mask
-    [IntrConvergent, IntrInaccessibleMemOrArgMemOnly,
-     NoCapture<ArgIndex<0>>]>;
-
-  def int_nvvm_tcgen05_commit_mc_shared_ # cta_group : Intrinsic<[],
-    [llvm_shared_ptr_ty, llvm_i16_ty], // mbar_ptr, cta_mask
-    [IntrConvergent, IntrInaccessibleMemOrArgMemOnly,
-     NoCapture<ArgIndex<0>>]>;
+    def int_nvvm_tcgen05_commit_ # smem_a_read # mc_ # cta_group : Intrinsic<[],
+      [llvm_anyptr_ty, llvm_anyint_ty], // mbar_ptr, cta_mask[16 or 32 bits]
+      [IntrConvergent, IntrInaccessibleMemOrArgMemOnly,
+       NoCapture<ArgIndex<0>>]>;
+  }
 
   def int_nvvm_tcgen05_shift_down_ # cta_group : Intrinsic<[],
     [llvm_tmem_ptr_ty],   // tmem_addr
@@ -3278,33 +3288,28 @@ foreach sparse = [0, 1] in {
         );
         defvar flags = [llvm_i32_ty,   // kind
                         llvm_i32_ty,   // cta_group
-                        llvm_i32_ty];  // collector_usage_a
+                        llvm_i32_ty,   // collector_usage_a
+                        llvm_i32_ty];  // collector_usage_b
         defvar nargs = !size(args);
         defvar scale_d_imm = ArgIndex<!sub(nargs, 1)>;
         defvar scale_d_imm_range = [ImmArg<scale_d_imm>, Range<scale_d_imm, 0, 16>];
+        defvar kind_idx        = ArgIndex<nargs>;
+        defvar cta_group_idx   = ArgIndex<!add(nargs, 1)>;
+        defvar collector_a_idx = ArgIndex<!add(nargs, 2)>;
+        defvar collector_b_idx = ArgIndex<!add(nargs, 3)>;
 
-        // Check if this is the specific llvm.nvvm.tcgen05.mma.tensor intrinsic.
-        defvar is_target_intrinsic = !and(!eq(sparse, 0),
-                                          !eq(space, "tensor"),
-                                          !eq(scale_d, 0),
-                                          !eq(ashift, 0));
-
-        defvar base_properties = !listconcat(
+        defvar intrinsic_properties = !listconcat(
           mma.common_intr_props,
           !if(!eq(scale_d, 1), scale_d_imm_range, []),
-          [Range<ArgIndex<nargs>, 0, !if(!eq(scale_d, 1), 2, 4)>, // kind
-           Range<ArgIndex<!add(nargs, 1)>, 1, 3>,                 // cta_group
-           Range<ArgIndex<!add(nargs, 2)>, 0,
-                          !if(!eq(ashift, 1), 2, 4)>              // collector_usage
-          ]
+          [Range<kind_idx,        0, !if(!eq(scale_d, 1), 2, 4)>,
+           Range<cta_group_idx,   1, 3>,
+           Range<collector_a_idx, 0, !if(!eq(ashift, 1), 2, 4)>,
+           Range<collector_b_idx, 0, 4>,
+           ArgInfo<kind_idx, [ArgName<"kind">, ImmArgPrinter<"printTcgen05MMAKind">]>,
+           ArgInfo<cta_group_idx, [ArgName<"cta_group">]>,
+           ArgInfo<collector_a_idx, [ArgName<"collector_a">, ImmArgPrinter<"printTcgen05CollectorUsageOp">]>,
+           ArgInfo<collector_b_idx, [ArgName<"collector_b">, ImmArgPrinter<"printTcgen05CollectorUsageOp">]>]
         );
-
-        defvar intrinsic_properties = !if(is_target_intrinsic,
-          !listconcat(base_properties,
-            [ArgInfo<ArgIndex<nargs>, [ArgName<"kind">, ImmArgPrinter<"printTcgen05MMAKind">]>,
-             ArgInfo<ArgIndex<!add(nargs, 1)>, [ArgName<"cta_group">]>,
-             ArgInfo<ArgIndex<!add(nargs, 2)>, [ArgName<"collector">, ImmArgPrinter<"printTcgen05CollectorUsageOp">]>]),
-          base_properties);
 
         def mma.record_name:
               DefaultAttrsIntrinsicFlags<[], args, flags, intrinsic_properties,
@@ -3332,15 +3337,23 @@ foreach sparse = [0, 1] in {
                           [disable_output_lane_type]
                         );
           defvar flags = [llvm_i32_ty,  // kind_flag
-                          llvm_i32_ty]; // collector_usage_a_flag
+                          llvm_i32_ty,  // collector_usage_a_flag
+                          llvm_i32_ty]; // collector_usage_b_flag
           defvar nargs = !size(args);
           defvar scale_d_imm = ArgIndex<!sub(nargs, 2)>;
           defvar scale_d_imm_range = [ImmArg<scale_d_imm>, Range<scale_d_imm, 0, 16>];
+          defvar kind_idx        = ArgIndex<nargs>;
+          defvar collector_a_idx = ArgIndex<!add(nargs, 1)>;
+          defvar collector_b_idx = ArgIndex<!add(nargs, 2)>;
           defvar intrinsic_properties = !listconcat(
                     mma.common_intr_props,
                     !if(!eq(scale_d, 1), scale_d_imm_range, []),
-                    [Range<ArgIndex<nargs>, 0, !if(!eq(scale_d, 1), 2, 4)>,
-                     Range<ArgIndex<!add(nargs, 1)>, 0, !if(!eq(ashift, 1), 2, 4)>]
+                    [Range<kind_idx,        0, !if(!eq(scale_d, 1), 2, 4)>,
+                     Range<collector_a_idx, 0, !if(!eq(ashift, 1), 2, 4)>,
+                     Range<collector_b_idx, 0, 4>,
+                     ArgInfo<kind_idx, [ArgName<"kind">, ImmArgPrinter<"printTcgen05MMAKind">]>,
+                     ArgInfo<collector_a_idx, [ArgName<"collector_a">, ImmArgPrinter<"printTcgen05CollectorUsageOp">]>,
+                     ArgInfo<collector_b_idx, [ArgName<"collector_b">, ImmArgPrinter<"printTcgen05CollectorUsageOp">]>]
                   );
 
           def mma.record_name : DefaultAttrsIntrinsicFlags<[], args, flags,
@@ -3363,16 +3376,22 @@ foreach sparse = [0, 1] in {
                                   [llvm_tmem_ptr_ty,   // scale_a
                                    llvm_tmem_ptr_ty]); // scale_b
         defvar flags = [llvm_i32_ty,  // cta_group
-                        llvm_i32_ty]; // collector_usage_a
+                        llvm_i32_ty,  // collector_usage_a
+                        llvm_i32_ty]; // collector_usage_b
         defvar nargs = !size(args);
         defvar cta_group = ArgIndex<nargs>;
-        defvar collector_usage = ArgIndex<!add(nargs, 1)>;
+        defvar collector_usage_a = ArgIndex<!add(nargs, 1)>;
+        defvar collector_usage_b = ArgIndex<!add(nargs, 2)>;
 
         if NVVM_TCGEN05_MMA_BLOCKSCALE_SUPPORTED<kind, scale_vec_size>.ret then {
           def mma.record_name : DefaultAttrsIntrinsicFlags<[], args, flags,
             !listconcat(mma.common_intr_props,
                         [Range<cta_group, 1, 3>,
-                         Range<collector_usage, 0, 4>]),
+                         Range<collector_usage_a, 0, 4>,
+                         Range<collector_usage_b, 0, 4>,
+                         ArgInfo<cta_group, [ArgName<"cta_group">]>,
+                         ArgInfo<collector_usage_a, [ArgName<"collector_a">, ImmArgPrinter<"printTcgen05CollectorUsageOp">]>,
+                         ArgInfo<collector_usage_b, [ArgName<"collector_b">, ImmArgPrinter<"printTcgen05CollectorUsageOp">]>]),
             mma.intr_name>;
         }
       } // scale_vec_size

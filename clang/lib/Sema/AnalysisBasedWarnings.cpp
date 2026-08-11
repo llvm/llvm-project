@@ -2591,16 +2591,46 @@ public:
     SourceRange Range;
     unsigned MsgParam = 0;
 
-    // This function only handles SpanTwoParamConstructorGadget so far, which
-    // always gives a CXXConstructExpr.
     const auto *CtorExpr = cast<CXXConstructExpr>(Operation);
     Loc = CtorExpr->getLocation();
+    Range = CtorExpr->getSourceRange();
 
-    S.Diag(Loc, diag::warn_unsafe_buffer_usage_in_container);
+    std::string ContainerName = "std::span";
+    if (auto *TD = CtorExpr->getConstructor()->getParent()) {
+      // This will provide "std::span" if it's in the std namespace
+      ContainerName = TD->getQualifiedNameAsString();
+    }
+
+    // FIX: Pass the container name to fill the %0 parameter
+    S.Diag(Loc, diag::warn_unsafe_buffer_usage_in_container) << ContainerName;
+
     if (IsRelatedToDecl) {
       assert(!SuggestSuggestions &&
              "Variables blamed for unsafe buffer usage without suggestions!");
       S.Diag(Loc, diag::note_unsafe_buffer_operation) << MsgParam << Range;
+    }
+  }
+
+  void handleUnsafeOperationInStringView(const Stmt *Operation,
+                                         bool IsRelatedToDecl,
+                                         ASTContext &Ctx) override {
+    // Extracting location: prioritize the specific location of the constructor
+    SourceLocation Loc = Operation->getBeginLoc();
+    SourceRange Range = Operation->getSourceRange();
+
+    if (const auto *CtorExpr = dyn_cast<CXXConstructExpr>(Operation)) {
+      Loc = CtorExpr->getLocation();
+    }
+
+    // 1. Emit the primary warning for string_view
+    S.Diag(Loc, diag::warn_unsafe_buffer_usage_in_container)
+        << "std::string_view";
+
+    // 2. If a specific variable is 'blamed', emit the note
+    if (IsRelatedToDecl) {
+      // MsgParam 0 is "unsafe operation"
+      // Range helps the IDE underline the whole expression
+      S.Diag(Loc, diag::note_unsafe_buffer_operation) << 0 << Range;
     }
   }
 
@@ -2761,21 +2791,55 @@ sema::AnalysisBasedWarnings::Policy
 sema::AnalysisBasedWarnings::getPolicyInEffectAt(SourceLocation Loc) {
   using namespace diag;
   DiagnosticsEngine &D = S.getDiagnostics();
+
+  // This runs at the end of every function definition, and the checks below
+  // resolve Loc against the pragma diagnostic state (and system header/macro
+  // classification) once per queried diagnostic. Those inputs fully determine
+  // the result, so cache the policy on them instead (PolicyOverrides are
+  // transient per-function state and are applied after the cache lookup).
+  const bool Cacheable = !D.hasDiagSuppressionMapping() && Loc.isValid();
+  const void *StateKey = nullptr;
+  unsigned SysIdx = 0;
+  if (Cacheable) {
+    StateKey = D.getDiagStateKeyForLoc(Loc);
+    const SourceManager &SM = D.getSourceManager();
+    SysIdx = (SM.isInSystemHeader(SM.getExpansionLoc(Loc)) ? 2u : 0u) |
+             (SM.isInSystemMacro(Loc) ? 1u : 0u);
+    auto It = PolicyCache[SysIdx].find(StateKey);
+    if (It != PolicyCache[SysIdx].end()) {
+      Policy P = It->second;
+      P.enableCheckUnreachable |= PolicyOverrides.enableCheckUnreachable;
+      P.enableThreadSafetyAnalysis |=
+          PolicyOverrides.enableThreadSafetyAnalysis;
+      P.enableConsumedAnalysis |= PolicyOverrides.enableConsumedAnalysis;
+      return P;
+    }
+  }
+
   Policy P;
 
   // Note: The enabled checks should be kept in sync with the switch in
   // SemaPPCallbacks::PragmaDiagnostic().
   P.enableCheckUnreachable =
-      PolicyOverrides.enableCheckUnreachable ||
       areAnyEnabled(D, Loc, warn_unreachable, warn_unreachable_break,
                     warn_unreachable_return, warn_unreachable_loop_increment);
 
-  P.enableThreadSafetyAnalysis = PolicyOverrides.enableThreadSafetyAnalysis ||
-                                 areAnyEnabled(D, Loc, warn_double_lock);
+  P.enableThreadSafetyAnalysis = areAnyEnabled(D, Loc, warn_double_lock);
 
-  P.enableConsumedAnalysis = PolicyOverrides.enableConsumedAnalysis ||
-                             areAnyEnabled(D, Loc, warn_use_in_invalid_state);
+  P.enableConsumedAnalysis = areAnyEnabled(D, Loc, warn_use_in_invalid_state);
+
+  if (Cacheable)
+    PolicyCache[SysIdx][StateKey] = P;
+
+  P.enableCheckUnreachable |= PolicyOverrides.enableCheckUnreachable;
+  P.enableThreadSafetyAnalysis |= PolicyOverrides.enableThreadSafetyAnalysis;
+  P.enableConsumedAnalysis |= PolicyOverrides.enableConsumedAnalysis;
   return P;
+}
+
+void sema::AnalysisBasedWarnings::clearPolicyCache() {
+  for (auto &M : PolicyCache)
+    M.clear();
 }
 
 void sema::AnalysisBasedWarnings::clearOverrides() {
