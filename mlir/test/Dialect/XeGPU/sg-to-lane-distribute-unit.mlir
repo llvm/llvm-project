@@ -1578,4 +1578,80 @@ gpu.func @convert_layout_partial_subgroup() {
   } : (vector<8x64xf4E2M1FN>, vector<64x16xf4E2M1FN>, vector<8x2xf8E8M0FNU>, vector<2x16xf8E8M0FNU>) -> vector<8x16xf32>
   gpu.return
 }
+
+// A convert_layout whose input layout broadcasts the value over two groups of
+// eight lanes: lanes [0, 8) hold one column of the source and lanes [8, 16) the
+// other. The target gives each of the first eight lanes a row, i.e. one element
+// out of each column, so lane `i` extracts element `i % 8` of the copy it holds.
+//
+// Element 0 of the result is the one lane `i` already holds, so it is taken
+// locally. Element 1 lives in the other group and is the only one that has to
+// cross lanes. Lanes [8, 16) are outside the target lane layout, so what they
+// end up holding is irrelevant.
+// CHECK-LABEL: gpu.func @convert_layout_broadcast_to_lane_distributed
+// CHECK:         %[[SRC:.*]] = arith.constant dense<1.000000e+00> : vector<8x1xf8E8M0FNU>
+// CHECK:         %[[FLAT:.*]] = vector.shape_cast %[[SRC]] : vector<8x1xf8E8M0FNU> to vector<8xf8E8M0FNU>
+// CHECK:         %[[BITS:.*]] = vector.bitcast %[[FLAT]] : vector<8xf8E8M0FNU> to vector<8xi8>
+// CHECK:         %[[LANE:.*]] = gpu.lane_id
+// CHECK:         %[[C8:.*]] = arith.constant 8 : index
+// CHECK:         %[[ROW:.*]] = arith.remui %[[LANE]], %[[C8]] : index
+// CHECK:         %[[ZERO:.*]] = arith.constant dense<0> : vector<2xi8>
+// CHECK:         %[[ELEM:.*]] = vector.extract %[[BITS]][%[[ROW]]] : i8 from vector<8xi8>
+// Element 0: no shuffle, the lane already holds it.
+// CHECK:         %[[INS0:.*]] = vector.insert %[[ELEM]], %[[ZERO]] [0] : i8 into vector<2xi8>
+// Element 1: shuffled in from the lane `8` further on, which holds the other column.
+// CHECK:         %[[WIDTH:.*]] = arith.constant 16 : i32
+// CHECK:         %[[ROW_I32:.*]] = arith.index_cast %[[ROW]] : index to i32
+// CHECK:         %[[C8_I32:.*]] = arith.constant 8 : i32
+// CHECK:         %[[LANE1:.*]] = arith.addi %[[ROW_I32]], %[[C8_I32]] : i32
+// CHECK:         %[[SHUF1:.*]], %{{.*}} = gpu.shuffle idx %[[ELEM]], %[[LANE1]], %[[WIDTH]] : i8
+// CHECK:         %[[INS1:.*]] = vector.insert %[[SHUF1]], %[[INS0]] [1] : i8 into vector<2xi8>
+// CHECK:         %[[BACK:.*]] = vector.bitcast %[[INS1]] : vector<2xi8> to vector<2xf8E8M0FNU>
+// CHECK:         vector.shape_cast %[[BACK]] : vector<2xf8E8M0FNU> to vector<1x2xf8E8M0FNU>
+gpu.func @convert_layout_broadcast_to_lane_distributed() {
+  %scale_a_src = arith.constant dense<1.0> : vector<8x2xf8E8M0FNU>
+  %cvt = xegpu.convert_layout %scale_a_src
+    <{
+      input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [8, 1, 2], lane_data = [4, 1, 1], order = [0, 2, 1]>, dims = [0]>,
+      target_layout = #xegpu.layout<lane_layout = [8, 1], lane_data = [1, 1]>
+    }> : vector<8x2xf8E8M0FNU>
+  "some_use"(%cvt) : (vector<8x2xf8E8M0FNU>) -> ()
+  gpu.return
+}
+
+// Same redistribution, but from a layout that broadcasts the value to all
+// lanes. Every lane already holds the row it owns, so the values are only
+// extracted using the lane id and no data has to be moved across lanes.
+// CHECK-LABEL: gpu.func @convert_layout_broadcast_all_lanes
+// CHECK:         %[[SRC:.*]] = arith.constant dense<1.000000e+00> : vector<8x2xf8E8M0FNU>
+// CHECK:         %[[FLAT:.*]] = vector.shape_cast %[[SRC]] : vector<8x2xf8E8M0FNU> to vector<16xf8E8M0FNU>
+// CHECK:         %[[BITS:.*]] = vector.bitcast %[[FLAT]] : vector<16xf8E8M0FNU> to vector<16xi8>
+// CHECK:         %[[LANE:.*]] = gpu.lane_id
+// CHECK:         %[[C8:.*]] = arith.constant 8 : index
+// CHECK:         %[[ROW:.*]] = arith.remui %[[LANE]], %[[C8]] : index
+// CHECK:         %[[ZERO:.*]] = arith.constant dense<0> : vector<2xi8>
+// CHECK:         %[[C2:.*]] = arith.constant 2 : index
+// CHECK:         %[[IDX0:.*]] = arith.muli %[[ROW]], %[[C2]] : index
+// CHECK:         %[[ELEM0:.*]] = vector.extract %[[BITS]][%[[IDX0]]] : i8 from vector<16xi8>
+// CHECK:         %[[INS0:.*]] = vector.insert %[[ELEM0]], %[[ZERO]] [0] : i8 into vector<2xi8>
+// CHECK:         %[[C2_1:.*]] = arith.constant 2 : index
+// CHECK:         %[[MUL1:.*]] = arith.muli %[[ROW]], %[[C2_1]] : index
+// CHECK:         %[[C1:.*]] = arith.constant 1 : index
+// CHECK:         %[[IDX1:.*]] = arith.addi %[[MUL1]], %[[C1]] : index
+// CHECK:         %[[ELEM1:.*]] = vector.extract %[[BITS]][%[[IDX1]]] : i8 from vector<16xi8>
+// CHECK:         %[[INS1:.*]] = vector.insert %[[ELEM1]], %[[INS0]] [1] : i8 into vector<2xi8>
+// CHECK:         %[[BACK:.*]] = vector.bitcast %[[INS1]] : vector<2xi8> to vector<2xf8E8M0FNU>
+// CHECK:         vector.shape_cast %[[BACK]] : vector<2xf8E8M0FNU> to vector<1x2xf8E8M0FNU>
+// CHECK:         gpu.return
+// CHECK-NOT:     gpu.shuffle
+gpu.func @convert_layout_broadcast_all_lanes() {
+  %scale_a_src = arith.constant dense<1.0> : vector<8x2xf8E8M0FNU>
+  %cvt = xegpu.convert_layout %scale_a_src
+    <{
+      input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>, dims = [2]>,
+      target_layout = #xegpu.layout<lane_layout = [8, 1], lane_data = [1, 1]>
+    }> : vector<8x2xf8E8M0FNU>
+  "some_use"(%cvt) : (vector<8x2xf8E8M0FNU>) -> ()
+  gpu.return
+}
 }
