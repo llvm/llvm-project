@@ -162,10 +162,10 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
       // implemented in FinallyInfo. Here we enter a new EHCatchScope.
       FinallyInfo.enter(CGF, Finally->getFinallyBody(), beginCatchFn,
                         endCatchFn, exceptionRethrowFn);
-    } else {
+    } else if (IsWasm) {
       CGF.ErrorUnsupported(
           Finally,
-          "@finally is not implemented for funclet based exception handling");
+          "@finally is not implemented for WebAssembly");
     }
   }
 
