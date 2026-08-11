@@ -10,6 +10,7 @@
 # REQUIRES: has-filecheck
 # REQUIRES: has-splitfile
 # REQUIRES: optimization=none
+# UNSUPPORTED: c++03
 
 # RUN: split-file %s %{temp}
 # RUN: %{cxx} %{flags} %{temp}/main.cpp -o %t.out %{compile_flags} -g %{link_flags}
@@ -34,6 +35,7 @@ int main(int, char**) {
     {1, 2},
     {3, 4},
   };
+  (void)mii;
 
   return 0;
 }
