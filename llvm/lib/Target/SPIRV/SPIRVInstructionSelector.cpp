@@ -254,7 +254,7 @@ private:
   bool selectDebugTrap(Register ResVReg, SPIRVTypeInst ResType,
                        MachineInstr &I) const;
   bool selectPrefetch(Register ResVReg, SPIRVTypeInst ResType,
-                       MachineInstr &I) const;
+                      MachineInstr &I) const;
 
   bool selectIntegerDot(Register ResVReg, SPIRVTypeInst ResType,
                         MachineInstr &I, bool Signed) const;
