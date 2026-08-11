@@ -236,15 +236,6 @@ def SDT_AArch64FMA : SDTypeProfile<1, 4, [
 
 // Predicated operations with the result of inactive lanes being unspecified.
 def AArch64asr_p  : SDNode<"AArch64ISD::SRA_PRED",  SDT_AArch64Arith>;
-def AArch64fadd_p : SDNode<"AArch64ISD::FADD_PRED", SDT_AArch64Arith>;
-def AArch64fdiv_p : SDNode<"AArch64ISD::FDIV_PRED", SDT_AArch64Arith>;
-def AArch64fma_p  : SDNode<"AArch64ISD::FMA_PRED",  SDT_AArch64FMA>;
-def AArch64fmax_p : SDNode<"AArch64ISD::FMAX_PRED", SDT_AArch64Arith>;
-def AArch64fmaxnm_p : SDNode<"AArch64ISD::FMAXNM_PRED", SDT_AArch64Arith>;
-def AArch64fmin_p : SDNode<"AArch64ISD::FMIN_PRED", SDT_AArch64Arith>;
-def AArch64fminnm_p : SDNode<"AArch64ISD::FMINNM_PRED", SDT_AArch64Arith>;
-def AArch64fmul_p : SDNode<"AArch64ISD::FMUL_PRED", SDT_AArch64Arith>;
-def AArch64fsub_p : SDNode<"AArch64ISD::FSUB_PRED", SDT_AArch64Arith>;
 def AArch64lsl_p  : SDNode<"AArch64ISD::SHL_PRED",  SDT_AArch64Arith>;
 def AArch64lsr_p  : SDNode<"AArch64ISD::SRL_PRED",  SDT_AArch64Arith>;
 def AArch64mul_p  : SDNode<"AArch64ISD::MUL_PRED",  SDT_AArch64Arith>;
@@ -260,6 +251,37 @@ def AArch64urhadd_p : SDNode<"AArch64ISD::RHADDU_PRED", SDT_AArch64Arith>;
 def AArch64umax_p : SDNode<"AArch64ISD::UMAX_PRED", SDT_AArch64Arith>;
 def AArch64umin_p : SDNode<"AArch64ISD::UMIN_PRED", SDT_AArch64Arith>;
 def AArch64umulh_p : SDNode<"AArch64ISD::MULHU_PRED", SDT_AArch64Arith>;
+
+multiclass def_strict_fp_op<string short_opcode, SDTypeProfile typeprof> {
+  def _nonstrict : SDNode<"AArch64ISD::" # short_opcode,        typeprof>;
+  def _strict    : SDNode<"AArch64ISD::STRICT_" # short_opcode, typeprof, [SDNPHasChain]>;
+}
+
+multiclass def_strict_fp_3op<string short_opcode, SDTypeProfile typeprof>
+: def_strict_fp_op<short_opcode, typeprof> {
+  def NAME : PatFrags<
+    (ops node:$op1, node:$op2, node:$op3),
+    [(!cast<SDPatternOperator>(NAME # "_nonstrict") node:$op1, node:$op2, node:$op3),
+     (!cast<SDPatternOperator>(NAME # "_strict")    node:$op1, node:$op2, node:$op3)]>;
+}
+
+multiclass def_strict_fp_4op<string short_opcode, SDTypeProfile typeprof>
+: def_strict_fp_op<short_opcode, typeprof> {
+  def NAME : PatFrags<
+    (ops node:$op1, node:$op2, node:$op3, node:$op4),
+    [(!cast<SDPatternOperator>(NAME # "_nonstrict") node:$op1, node:$op2, node:$op3, node:$op4),
+     (!cast<SDPatternOperator>(NAME # "_strict")    node:$op1, node:$op2, node:$op3, node:$op4)]>;
+}
+
+defm AArch64fadd_p   : def_strict_fp_3op<"FADD_PRED",   SDT_AArch64Arith>;
+defm AArch64fdiv_p   : def_strict_fp_3op<"FDIV_PRED",   SDT_AArch64Arith>;
+defm AArch64fma_p    : def_strict_fp_4op<"FMA_PRED",    SDT_AArch64FMA>;
+defm AArch64fmax_p   : def_strict_fp_3op<"FMAX_PRED",   SDT_AArch64Arith>;
+defm AArch64fmaxnm_p : def_strict_fp_3op<"FMAXNM_PRED", SDT_AArch64Arith>;
+defm AArch64fmin_p   : def_strict_fp_3op<"FMIN_PRED",   SDT_AArch64Arith>;
+defm AArch64fminnm_p : def_strict_fp_3op<"FMINNM_PRED", SDT_AArch64Arith>;
+defm AArch64fmul_p   : def_strict_fp_3op<"FMUL_PRED",   SDT_AArch64Arith>;
+defm AArch64fsub_p   : def_strict_fp_3op<"FSUB_PRED",   SDT_AArch64Arith>;
 
 def AArch64fadd_p_contract : PatFrag<(ops node:$op1, node:$op2, node:$op3),
                                      (AArch64fadd_p node:$op1, node:$op2, node:$op3), [{
@@ -313,24 +335,25 @@ def AArch64abs_mt    : SDNode<"AArch64ISD::ABS_MERGE_PASSTHRU", SDT_AArch64Arith
 def AArch64neg_mt    : SDNode<"AArch64ISD::NEG_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64sxt_mt    : SDNode<"AArch64ISD::SIGN_EXTEND_INREG_MERGE_PASSTHRU", SDT_AArch64IntExtend>;
 def AArch64uxt_mt    : SDNode<"AArch64ISD::ZERO_EXTEND_INREG_MERGE_PASSTHRU", SDT_AArch64IntExtend>;
-def AArch64frintp_mt : SDNode<"AArch64ISD::FCEIL_MERGE_PASSTHRU", SDT_AArch64Arith>;
-def AArch64frintm_mt : SDNode<"AArch64ISD::FFLOOR_MERGE_PASSTHRU", SDT_AArch64Arith>;
-def AArch64frinti_mt : SDNode<"AArch64ISD::FNEARBYINT_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64frintx_mt : SDNode<"AArch64ISD::FRINT_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64frint32x_mt : SDNode<"AArch64ISD::FRINT32_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64frint64x_mt : SDNode<"AArch64ISD::FRINT64_MERGE_PASSTHRU", SDT_AArch64Arith>;
-def AArch64frinta_mt : SDNode<"AArch64ISD::FROUND_MERGE_PASSTHRU", SDT_AArch64Arith>;
-def AArch64frintn_mt : SDNode<"AArch64ISD::FROUNDEVEN_MERGE_PASSTHRU", SDT_AArch64Arith>;
-def AArch64frintz_mt : SDNode<"AArch64ISD::FTRUNC_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64frint32z_mt : SDNode<"AArch64ISD::FTRUNC32_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64frint64z_mt : SDNode<"AArch64ISD::FTRUNC64_MERGE_PASSTHRU", SDT_AArch64Arith>;
-def AArch64fsqrt_mt  : SDNode<"AArch64ISD::FSQRT_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64frecpx_mt : SDNode<"AArch64ISD::FRECPX_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64rbit_mt   : SDNode<"AArch64ISD::BITREVERSE_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64revb_mt   : SDNode<"AArch64ISD::BSWAP_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64revh_mt   : SDNode<"AArch64ISD::REVH_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64revw_mt   : SDNode<"AArch64ISD::REVW_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64revd_mt   : SDNode<"AArch64ISD::REVD_MERGE_PASSTHRU", SDT_AArch64Arith>;
+
+defm AArch64frintp_mt : def_strict_fp_3op<"FCEIL_MERGE_PASSTHRU",      SDT_AArch64Arith>;
+defm AArch64frintm_mt : def_strict_fp_3op<"FFLOOR_MERGE_PASSTHRU",     SDT_AArch64Arith>;
+defm AArch64frinti_mt : def_strict_fp_3op<"FNEARBYINT_MERGE_PASSTHRU", SDT_AArch64Arith>;
+defm AArch64frinta_mt : def_strict_fp_3op<"FROUND_MERGE_PASSTHRU",     SDT_AArch64Arith>;
+defm AArch64frintn_mt : def_strict_fp_3op<"FROUNDEVEN_MERGE_PASSTHRU", SDT_AArch64Arith>;
+defm AArch64frintz_mt : def_strict_fp_3op<"FTRUNC_MERGE_PASSTHRU",     SDT_AArch64Arith>;
+defm AArch64fsqrt_mt  : def_strict_fp_3op<"FSQRT_MERGE_PASSTHRU",      SDT_AArch64Arith>;
 
 def AArch64fneg_mt_nsz : PatFrag<(ops node:$pred, node:$op, node:$pt),
                                  (AArch64fneg_mt node:$pred, node:$op, node:$pt), [{
