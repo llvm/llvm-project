@@ -11901,8 +11901,11 @@ SemaOpenMP::ActOnOpenMPOrderedDirective(ArrayRef<OMPClause *> Clauses,
     SemaRef.setFunctionHasBranchProtectedScope();
   }
 
-  return OMPOrderedDirective::Create(getASTContext(), StartLoc, EndLoc, Clauses,
-                                     AStmt);
+  if (!AStmt)
+    return OMPOrderedStandaloneDirective::Create(getASTContext(), StartLoc,
+                                                 EndLoc, Clauses);
+  return OMPOrderedBlockAssocDirective::Create(getASTContext(), StartLoc,
+                                               EndLoc, Clauses, AStmt);
 }
 
 namespace {
