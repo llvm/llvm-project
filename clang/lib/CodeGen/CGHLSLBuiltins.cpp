@@ -666,8 +666,15 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return CI;
   }
   case Builtin::BI__builtin_hlsl_maybe_transpose_matrix: {
-    Value *ValueOp = EmitScalarExpr(E->getArg(0));
-    const auto *MatTy = E->getArg(0)->getType()->getAs<ConstantMatrixType>();
+    const Expr *ValueExpr = E->getArg(0);
+    if (hasAggregateEvaluationKind(ValueExpr->getType())) {
+      EmitAnyExprToMem(ValueExpr, ReturnValue.getAddress(),
+                       ValueExpr->getType().getQualifiers(), /*IsInit=*/true);
+      return ReturnValue.getAddress().getBasePointer();
+    }
+
+    Value *ValueOp = EmitScalarExpr(ValueExpr);
+    const auto *MatTy = ValueExpr->getType()->getAs<ConstantMatrixType>();
     if (!MatTy || !CGM.getTriple().isSPIRV() ||
         !getLangOpts().HLSLSpvUseLegacyBufferMatrixOrder)
       return ValueOp;
