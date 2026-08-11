@@ -717,8 +717,7 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                                 ArrayRef<uint8_t> Bytes_,
                                                 uint64_t Address,
                                                 raw_ostream &CS) const {
-  unsigned MaxInstBytesNum = static_cast<unsigned>(
-      std::min((size_t)TargetMaxInstBytes, Bytes_.size()));
+  size_t MaxInstBytesNum = std::min((size_t)TargetMaxInstBytes, Bytes_.size());
   Bytes = Bytes_.slice(0, MaxInstBytesNum);
 
   // In case the opcode is not recognized we'll assume a Size of 4 bytes (unless
@@ -1002,7 +1001,7 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     int OffsetIdx =
         AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::offset);
     if (OffsetIdx != -1) {
-      uint32_t Imm = static_cast<uint32_t>(MI.getOperand(OffsetIdx).getImm());
+      int64_t Imm = MI.getOperand(OffsetIdx).getImm();
       int64_t SignedOffset = SignExtend64<24>(Imm);
       if (SignedOffset < 0)
         return MCDisassembler::Fail;
@@ -1288,7 +1287,7 @@ static VOPModifiers collectVOPModifiers(const MCInst &MI,
     if (OpIdx == -1)
       continue;
 
-    unsigned Val = static_cast<unsigned>(MI.getOperand(OpIdx).getImm());
+    int64_t Val = MI.getOperand(OpIdx).getImm();
 
     Modifiers.OpSel |= !!(Val & SISrcMods::OP_SEL_0) << J;
     if (IsVOP3P) {
@@ -1330,7 +1329,7 @@ void AMDGPUDisassembler::convertTrue16OpSel(MCInst &MI) const {
       continue;
     unsigned OpEnc = MRI.getEncodingValue(Op.getReg());
     const MCOperand &OpMods = MI.getOperand(OpModsIdx);
-    unsigned ModVal = static_cast<unsigned>(OpMods.getImm());
+    int64_t ModVal = OpMods.getImm();
     if (ModVal & OpSelMask) { // isHi
       unsigned RegIdx = OpEnc & AMDGPU::HWEncoding::REG_IDX_MASK;
       Op.setReg(ConversionRC.getRegister(RegIdx * 2 + 1));
