@@ -3091,9 +3091,8 @@ void GVNPass::assignBlockRPONumber(Function &F) {
 bool GVNPass::propagateEquality(
     Value *LHS, Value *RHS,
     const std::variant<BasicBlockEdge, Instruction *> &Root) {
-  SmallVector<std::pair<Value*, Value*>, 4> Worklist;
-  SmallDenseSet<std::pair<Value *, Value *>, 4> Visited;
-  Worklist.push_back(std::make_pair(LHS, RHS));
+  SmallSetVector<std::pair<Value *, Value *>, 4> Worklist;
+  Worklist.insert({LHS, RHS});
   bool Changed = false;
   SmallVector<const BasicBlock *> DominatedBlocks;
   if (const BasicBlockEdge *Edge = std::get_if<BasicBlockEdge>(&Root)) {
@@ -3107,8 +3106,9 @@ bool GVNPass::propagateEquality(
       DominatedBlocks.push_back(Node->getBlock());
   }
 
-  while (!Worklist.empty()) {
-    std::pair<Value*, Value*> Item = Worklist.pop_back_val();
+  unsigned WorklistIdx = 0;
+  while (WorklistIdx != Worklist.size()) {
+    std::pair<Value *, Value *> Item = Worklist[WorklistIdx++];
     LHS = Item.first; RHS = Item.second;
 
     if (LHS == RHS)
@@ -3143,9 +3143,6 @@ bool GVNPass::propagateEquality(
         LVN = RVN;
       }
     }
-
-    if (!Visited.insert({LHS, RHS}).second)
-      continue;
 
     // If value numbering later sees that an instruction in the scope is equal
     // to 'LHS' then ensure it will be turned into 'RHS'.  In order to preserve
@@ -3206,8 +3203,8 @@ bool GVNPass::propagateEquality(
     Value *A, *B;
     if ((IsKnownTrue && match(LHS, m_LogicalAnd(m_Value(A), m_Value(B)))) ||
         (IsKnownFalse && match(LHS, m_LogicalOr(m_Value(A), m_Value(B))))) {
-      Worklist.push_back(std::make_pair(A, RHS));
-      Worklist.push_back(std::make_pair(B, RHS));
+      Worklist.insert({A, RHS});
+      Worklist.insert({B, RHS});
       continue;
     }
 
@@ -3221,7 +3218,7 @@ bool GVNPass::propagateEquality(
       // A with B everywhere in the scope.  For floating point operations, we
       // have to be careful since equality does not always imply equivalance.
       if (Cmp->isEquivalence(IsKnownFalse))
-        Worklist.push_back(std::make_pair(Op0, Op1));
+        Worklist.insert({Op0, Op1});
 
       // If "A >= B" is known true, replace "A < B" with false everywhere.
       CmpInst::Predicate NotPred = Cmp->getInversePredicate();
@@ -3281,12 +3278,12 @@ bool GVNPass::propagateEquality(
     // like (trunc nuw i64 %v to i1) == "true" or (trunc nuw i64 %v to i1) ==
     // "false"
     if (match(LHS, m_NUWTrunc(m_Value(A)))) {
-      Worklist.emplace_back(A, ConstantInt::get(A->getType(), IsKnownTrue));
+      Worklist.insert({A, ConstantInt::get(A->getType(), IsKnownTrue)});
       continue;
     }
 
     if (match(LHS, m_Not(m_Value(A)))) {
-      Worklist.emplace_back(A, ConstantInt::get(A->getType(), !IsKnownTrue));
+      Worklist.insert({A, ConstantInt::get(A->getType(), !IsKnownTrue)});
       continue;
     }
   }
