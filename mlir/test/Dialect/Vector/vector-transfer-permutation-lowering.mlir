@@ -362,6 +362,34 @@ func.func @xfer_read_minor_identity_transposed_masked_scalable(
   return %res : vector<8x[4]x2xf32>
 }
 
+// The permutation is a rotation rather than a swap, so the passthru transpose
+// is not its own inverse.
+// CHECK-LABEL: func @xfer_read_minor_identity_transposed_masked_with_passthru(
+//  CHECK-SAME:   %[[DEST:.*]]: tensor<?x?x?xf32>,
+//  CHECK-SAME:   %[[MASK:.*]]: vector<3x4x2xi1>,
+//  CHECK-SAME:   %[[PASSTHRU:.*]]: vector<2x3x4xf32>,
+//  CHECK-SAME:   %[[IDX:.*]]: index
+//       CHECK:   %[[PT:.*]] = vector.transpose %[[PASSTHRU]], [1, 2, 0] : vector<2x3x4xf32> to vector<3x4x2xf32>
+//       CHECK:   %[[T_READ:.*]] = vector.mask %[[MASK]], %[[PT]] { vector.transfer_read %[[DEST]]{{.*}} : tensor<?x?x?xf32>, vector<3x4x2xf32> } : vector<3x4x2xi1> -> vector<3x4x2xf32>
+//       CHECK:   vector.transpose %[[T_READ]], [2, 0, 1] : vector<3x4x2xf32> to vector<2x3x4xf32>
+func.func @xfer_read_minor_identity_transposed_masked_with_passthru(
+    %dest: tensor<?x?x?xf32>,
+    %mask: vector<3x4x2xi1>,
+    %passthru: vector<2x3x4xf32>,
+    %idx: index) -> (vector<2x3x4xf32>) {
+
+  %pad = arith.constant 0.000000e+00 : f32
+
+  %res = vector.mask %mask, %passthru {
+    vector.transfer_read %dest[%idx, %idx, %idx], %pad {
+      in_bounds = [true, true, true],
+      permutation_map = affine_map<(d0, d1, d2) -> (d2, d0, d1)>
+    } : tensor<?x?x?xf32>, vector<2x3x4xf32>
+  } : vector<3x4x2xi1> -> vector<2x3x4xf32>
+
+  return %res : vector<2x3x4xf32>
+}
+
 ///----------------------------------------------------------------------------------------
 /// [Pattern: TransferOpReduceRank]
 ///

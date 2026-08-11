@@ -139,8 +139,8 @@ struct TransferReadPermutationLowering
 
     SmallVector<int64_t> transposePerm(permutation.begin(), permutation.end());
 
-    // Re-apply an enclosing vector.mask. Its mask is indexed in memory order
-    // and needs no transpose; its passthru follows the vector and does.
+    // Re-apply an enclosing vector.mask. Its mask is indexed in memory order,
+    // so only the passthru has to be transposed.
     if (maskOp) {
       Value passthru = maskOp.getPassthru();
       if (passthru)
