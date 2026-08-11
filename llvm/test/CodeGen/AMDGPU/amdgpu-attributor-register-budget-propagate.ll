@@ -509,6 +509,292 @@ define amdgpu_kernel void @shared_k2(ptr %p) {
   call void @shared_f2(ptr %p)
   ret void
 }
+
+;; ;; ===========================================================================
+;; Scenario 5: one kernel reserves no AGPRs at all, so the shared callee gets
+;; no AGPR headroom even though the other kernel reserved 16.
+;;
+;;     A   B
+;;      \ /
+;;       C
+;;
+;;   A = @noroom_kernel_agpr16 : agpr 16 vgpr 128 - 16 -> 112,16
+;;   B = @noroom_kernel_noagpr : agpr 0  vgpr 128 - 0  -> 128,0
+;;   C = @noroom_shared          112,16 | 128,0        -> 112,0
+;;
+;; C may use 112 VGPRs and 128 - 128 = 0 AGPRs: any AGPR use would push it past
+;; the 128-register limit when it runs under B's accum_offset.
+;; ===========================================================================
+
+define internal void @noroom_use_most() {
+; CHECK-LABEL: define internal void @noroom_use_most(
+; CHECK-SAME: ) #[[ATTR8:[0-9]+]] {
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [256 x i8], align 1, addrspace(5)
+; CHECK-NEXT:    [[ALLOCA_CAST:%.*]] = addrspacecast ptr addrspace(5) [[ALLOCA]] to ptr
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.workitem.id.y()
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.workitem.id.z()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.workgroup.id.x()
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.workgroup.id.y()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.workgroup.id.z()
+; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.amdgcn.cluster.id.x()
+; CHECK-NEXT:    [[TMP8:%.*]] = call i32 @llvm.amdgcn.cluster.id.y()
+; CHECK-NEXT:    [[TMP9:%.*]] = call i32 @llvm.amdgcn.cluster.id.z()
+; CHECK-NEXT:    [[TMP10:%.*]] = call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+; CHECK-NEXT:    [[TMP11:%.*]] = call ptr addrspace(4) @llvm.amdgcn.queue.ptr()
+; CHECK-NEXT:    [[TMP12:%.*]] = call i64 @llvm.amdgcn.dispatch.id()
+; CHECK-NEXT:    [[TMP13:%.*]] = call i32 @llvm.amdgcn.lds.kernel.id()
+; CHECK-NEXT:    [[IMPLICIT_ARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p4.i64(ptr [[ALLOCA_CAST]], ptr addrspace(4) [[IMPLICIT_ARG_PTR]], i64 256, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %alloca = alloca [256 x i8], addrspace(5)
+  %alloca.cast = addrspacecast ptr addrspace(5) %alloca to ptr
+  call i32 @llvm.amdgcn.workitem.id.x()
+  call i32 @llvm.amdgcn.workitem.id.y()
+  call i32 @llvm.amdgcn.workitem.id.z()
+  call i32 @llvm.amdgcn.workgroup.id.x()
+  call i32 @llvm.amdgcn.workgroup.id.y()
+  call i32 @llvm.amdgcn.workgroup.id.z()
+  call i32 @llvm.amdgcn.cluster.id.x()
+  call i32 @llvm.amdgcn.cluster.id.y()
+  call i32 @llvm.amdgcn.cluster.id.z()
+  call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+  call ptr addrspace(4) @llvm.amdgcn.queue.ptr()
+  call i64 @llvm.amdgcn.dispatch.id()
+  call i32 @llvm.amdgcn.lds.kernel.id()
+  %implicit.arg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  call void @llvm.memcpy.p0.p4(ptr %alloca.cast, ptr addrspace(4) %implicit.arg.ptr, i64 256, i1 false)
+  ret void
+}
+
+; C: shared by both kernels, so it takes the VGPR ceiling from A and the AGPR
+; ceiling from B.
+define internal void @noroom_shared() {
+; CHECK-LABEL: define internal void @noroom_shared(
+; CHECK-SAME: ) #[[ATTR8]] {
+; CHECK-NEXT:    call void @noroom_use_most()
+; CHECK-NEXT:    ret void
+;
+  call void @noroom_use_most()
+  ret void
+}
+
+define amdgpu_kernel void @noroom_kernel_agpr16() {
+; CHECK-LABEL: define amdgpu_kernel void @noroom_kernel_agpr16(
+; CHECK-SAME: ) #[[ATTR9:[0-9]+]] {
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    call void @noroom_shared()
+; CHECK-NEXT:    ret void
+;
+  call void asm sideeffect "; touch a15", "~{a15}"()
+  call void @noroom_shared()
+  ret void
+}
+
+define amdgpu_kernel void @noroom_kernel_noagpr() {
+; CHECK-LABEL: define amdgpu_kernel void @noroom_kernel_noagpr(
+; CHECK-SAME: ) #[[ATTR7]] {
+; CHECK-NEXT:    call void @noroom_shared()
+; CHECK-NEXT:    ret void
+;
+  call void @noroom_shared()
+  ret void
+}
+
+;; ;; ===========================================================================
+;; Scenario 6: both kernels reserve some AGPRs, so the shared callee keeps the
+;; headroom common to both.
+;;
+;;     A   B
+;;      \ /
+;;       C
+;;
+;;   A = @room_kernel_agpr16 : 16 AGPRs 128 - 16 -> 112,16
+;;   B = @room_kernel_agpr12 : 12 AGPRs 128 - 12 -> 116,12
+;;   C = @room_shared          112,16 | 116,12 -> 112,12
+;;
+;; C may use 112 VGPRs and 128 - 116 = 12 AGPRs, which it could spill into.
+;; Note this is the smaller of the two kernels' reservations, not the larger.
+;; ===========================================================================
+
+define internal void @room_use_most() {
+; CHECK-LABEL: define internal void @room_use_most(
+; CHECK-SAME: ) #[[ATTR10:[0-9]+]] {
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [256 x i8], align 1, addrspace(5)
+; CHECK-NEXT:    [[ALLOCA_CAST:%.*]] = addrspacecast ptr addrspace(5) [[ALLOCA]] to ptr
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.workitem.id.y()
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.workitem.id.z()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.workgroup.id.x()
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.workgroup.id.y()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.workgroup.id.z()
+; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.amdgcn.cluster.id.x()
+; CHECK-NEXT:    [[TMP8:%.*]] = call i32 @llvm.amdgcn.cluster.id.y()
+; CHECK-NEXT:    [[TMP9:%.*]] = call i32 @llvm.amdgcn.cluster.id.z()
+; CHECK-NEXT:    [[TMP10:%.*]] = call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+; CHECK-NEXT:    [[TMP11:%.*]] = call ptr addrspace(4) @llvm.amdgcn.queue.ptr()
+; CHECK-NEXT:    [[TMP12:%.*]] = call i64 @llvm.amdgcn.dispatch.id()
+; CHECK-NEXT:    [[TMP13:%.*]] = call i32 @llvm.amdgcn.lds.kernel.id()
+; CHECK-NEXT:    [[IMPLICIT_ARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p4.i64(ptr [[ALLOCA_CAST]], ptr addrspace(4) [[IMPLICIT_ARG_PTR]], i64 256, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %alloca = alloca [256 x i8], addrspace(5)
+  %alloca.cast = addrspacecast ptr addrspace(5) %alloca to ptr
+  call i32 @llvm.amdgcn.workitem.id.x()
+  call i32 @llvm.amdgcn.workitem.id.y()
+  call i32 @llvm.amdgcn.workitem.id.z()
+  call i32 @llvm.amdgcn.workgroup.id.x()
+  call i32 @llvm.amdgcn.workgroup.id.y()
+  call i32 @llvm.amdgcn.workgroup.id.z()
+  call i32 @llvm.amdgcn.cluster.id.x()
+  call i32 @llvm.amdgcn.cluster.id.y()
+  call i32 @llvm.amdgcn.cluster.id.z()
+  call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+  call ptr addrspace(4) @llvm.amdgcn.queue.ptr()
+  call i64 @llvm.amdgcn.dispatch.id()
+  call i32 @llvm.amdgcn.lds.kernel.id()
+  %implicit.arg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  call void @llvm.memcpy.p0.p4(ptr %alloca.cast, ptr addrspace(4) %implicit.arg.ptr, i64 256, i1 false)
+  ret void
+}
+
+define internal void @room_shared() {
+; CHECK-LABEL: define internal void @room_shared(
+; CHECK-SAME: ) #[[ATTR10]] {
+; CHECK-NEXT:    call void @room_use_most()
+; CHECK-NEXT:    ret void
+;
+  call void @room_use_most()
+  ret void
+}
+
+define amdgpu_kernel void @room_kernel_agpr16() {
+; CHECK-LABEL: define amdgpu_kernel void @room_kernel_agpr16(
+; CHECK-SAME: ) #[[ATTR9]] {
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    call void @room_shared()
+; CHECK-NEXT:    ret void
+;
+  call void asm sideeffect "; touch a15", "~{a15}"()
+  call void @room_shared()
+  ret void
+}
+
+define amdgpu_kernel void @room_kernel_agpr12() {
+; CHECK-LABEL: define amdgpu_kernel void @room_kernel_agpr12(
+; CHECK-SAME: ) #[[ATTR11:[0-9]+]] {
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    call void @room_shared()
+; CHECK-NEXT:    ret void
+;
+  call void asm sideeffect "; touch a11", "~{a11}"()
+  call void @room_shared()
+  ret void
+}
+
+;; ;; ===========================================================================
+;; Scenario 3: the same merge seen from a single kernel fanning out.
+;;
+;;       A
+;;     /   \
+;;    B     C
+;;   A = @fanout_kernel : agpr 16 | vgpr 128 - 16 = 112,16
+;;   B = @fanout_agpr   : clobbers a15, so 16 flows up into A
+;;   C = @fanout_noagpr : uses no AGPRs of its own, but inheriets 112,16
+;;
+===========================================================================
+
+define internal void @fanout_use_most() {
+; CHECK-LABEL: define internal void @fanout_use_most(
+; CHECK-SAME: ) #[[ATTR12:[0-9]+]] {
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [256 x i8], align 1, addrspace(5)
+; CHECK-NEXT:    [[ALLOCA_CAST:%.*]] = addrspacecast ptr addrspace(5) [[ALLOCA]] to ptr
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.workitem.id.y()
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.workitem.id.z()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.workgroup.id.x()
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.workgroup.id.y()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.workgroup.id.z()
+; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.amdgcn.cluster.id.x()
+; CHECK-NEXT:    [[TMP8:%.*]] = call i32 @llvm.amdgcn.cluster.id.y()
+; CHECK-NEXT:    [[TMP9:%.*]] = call i32 @llvm.amdgcn.cluster.id.z()
+; CHECK-NEXT:    [[TMP10:%.*]] = call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+; CHECK-NEXT:    [[TMP11:%.*]] = call ptr addrspace(4) @llvm.amdgcn.queue.ptr()
+; CHECK-NEXT:    [[TMP12:%.*]] = call i64 @llvm.amdgcn.dispatch.id()
+; CHECK-NEXT:    [[TMP13:%.*]] = call i32 @llvm.amdgcn.lds.kernel.id()
+; CHECK-NEXT:    [[IMPLICIT_ARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p4.i64(ptr [[ALLOCA_CAST]], ptr addrspace(4) [[IMPLICIT_ARG_PTR]], i64 256, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %alloca = alloca [256 x i8], addrspace(5)
+  %alloca.cast = addrspacecast ptr addrspace(5) %alloca to ptr
+  call i32 @llvm.amdgcn.workitem.id.x()
+  call i32 @llvm.amdgcn.workitem.id.y()
+  call i32 @llvm.amdgcn.workitem.id.z()
+  call i32 @llvm.amdgcn.workgroup.id.x()
+  call i32 @llvm.amdgcn.workgroup.id.y()
+  call i32 @llvm.amdgcn.workgroup.id.z()
+  call i32 @llvm.amdgcn.cluster.id.x()
+  call i32 @llvm.amdgcn.cluster.id.y()
+  call i32 @llvm.amdgcn.cluster.id.z()
+  call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+  call ptr addrspace(4) @llvm.amdgcn.queue.ptr()
+  call i64 @llvm.amdgcn.dispatch.id()
+  call i32 @llvm.amdgcn.lds.kernel.id()
+  %implicit.arg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  call void @llvm.memcpy.p0.p4(ptr %alloca.cast, ptr addrspace(4) %implicit.arg.ptr, i64 256, i1 false)
+  ret void
+}
+
+define internal void @fanout_sink() {
+; CHECK-LABEL: define internal void @fanout_sink(
+; CHECK-SAME: ) #[[ATTR12]] {
+; CHECK-NEXT:    call void @fanout_use_most()
+; CHECK-NEXT:    ret void
+;
+  call void @fanout_use_most()
+  ret void
+}
+
+define internal void @fanout_agpr() {
+; CHECK-LABEL: define internal void @fanout_agpr(
+; CHECK-SAME: ) #[[ATTR9]] {
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    call void @fanout_sink()
+; CHECK-NEXT:    ret void
+;
+  call void asm sideeffect "; touch a15", "~{a15}"()
+  call void @fanout_sink()
+  ret void
+}
+
+define internal void @fanout_noagpr(ptr %p) {
+; CHECK-LABEL: define internal void @fanout_noagpr(
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR12]] {
+; CHECK-NEXT:    [[V:%.*]] = load volatile <128 x i32>, ptr [[P]], align 512
+; CHECK-NEXT:    store volatile <128 x i32> [[V]], ptr [[P]], align 512
+; CHECK-NEXT:    call void @fanout_sink()
+; CHECK-NEXT:    ret void
+;
+  %v = load volatile <128 x i32>, ptr %p
+  store volatile <128 x i32> %v, ptr %p
+  call void @fanout_sink()
+  ret void
+}
+
+define amdgpu_kernel void @fanout_kernel(ptr %p) {
+; CHECK-LABEL: define amdgpu_kernel void @fanout_kernel(
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR9]] {
+; CHECK-NEXT:    call void @fanout_agpr()
+; CHECK-NEXT:    call void @fanout_noagpr(ptr [[P]])
+; CHECK-NEXT:    ret void
+;
+  call void @fanout_agpr()
+  call void @fanout_noagpr(ptr %p)
+  ret void
+}
 ;.
 ; CHECK: attributes #[[ATTR0]] = { "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" "amdgpu-register-budget"="76,52" }
 ; CHECK: attributes #[[ATTR1]] = { "amdgpu-agpr-alloc"="50" "amdgpu-no-wwm" "amdgpu-register-budget"="76,52" }
@@ -518,6 +804,11 @@ define amdgpu_kernel void @shared_k2(ptr %p) {
 ; CHECK: attributes #[[ATTR5]] = { "amdgpu-agpr-alloc"="32" "amdgpu-no-wwm" "amdgpu-register-budget"="96,32" }
 ; CHECK: attributes #[[ATTR6]] = { "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" "amdgpu-register-budget"="76,0" }
 ; CHECK: attributes #[[ATTR7]] = { "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" "amdgpu-register-budget"="128,0" }
-; CHECK: attributes #[[ATTR8:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-; CHECK: attributes #[[ATTR9:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+; CHECK: attributes #[[ATTR8]] = { "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" "amdgpu-register-budget"="112,0" }
+; CHECK: attributes #[[ATTR9]] = { "amdgpu-agpr-alloc"="16" "amdgpu-no-wwm" "amdgpu-register-budget"="112,16" }
+; CHECK: attributes #[[ATTR10]] = { "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" "amdgpu-register-budget"="112,12" }
+; CHECK: attributes #[[ATTR11]] = { "amdgpu-agpr-alloc"="12" "amdgpu-no-wwm" "amdgpu-register-budget"="116,12" }
+; CHECK: attributes #[[ATTR12]] = { "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" "amdgpu-register-budget"="112,16" }
+; CHECK: attributes #[[ATTR13:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR14:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ;.
