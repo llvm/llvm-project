@@ -14,5 +14,5 @@ inline auto a = [] {};
 #pragma clang module import M.X
 #pragma clang module import M.Y
 
-//expected-no-diagnostics
+// expected-no-diagnostics
 void use_a() { a(); }
