@@ -1616,9 +1616,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::TRUNCATE_USAT_U, VT, Legal);
   }
 
-  if (Subtarget->hasSME()) {
-    setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
-  }
+  setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
 
   // FIXME: Move lowering for more nodes here if those are common between
   // SVE and SME.
@@ -6616,6 +6614,47 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   switch (IntNo) {
   default:
     return SDValue(); // Don't custom lower most intrinsics.
+  case Intrinsic::aarch64_svc:
+  case Intrinsic::aarch64_hvc: {
+    // The MSVC __svc/__hvc intrinsic takes the 16-bit instruction immediate as
+    // their first operand and four further operands passed in X0-X3 (an unused
+    // argument is passed as poison) and returns the value left in X0.  Matching
+    // MSVC, the instruction is not treated as clobbering the caller-saved
+    // registers; only X0 (the result) is defined.
+    SDValue Chain = Op.getOperand(0);
+    unsigned Imm = Op.getConstantOperandVal(2);
+
+    static const MCPhysReg ArgGPRs[] = {AArch64::X0, AArch64::X1, AArch64::X2,
+                                        AArch64::X3};
+
+    SDValue Glue;
+    SmallVector<SDValue, 4> RegOps;
+    for (unsigned I = 0; I < std::size(ArgGPRs); ++I) {
+      SDValue Arg = Op.getOperand(3 + I);
+      if (Arg.isUndef())
+        continue;
+      Chain = DAG.getCopyToReg(Chain, DL, ArgGPRs[I], Arg, Glue);
+      Glue = Chain.getValue(1);
+      RegOps.push_back(DAG.getRegister(ArgGPRs[I], MVT::i64));
+    }
+
+    SmallVector<SDValue, 8> Ops;
+    Ops.push_back(Chain);
+    Ops.push_back(DAG.getTargetConstant(Imm, DL, MVT::i32));
+    Ops.append(RegOps.begin(), RegOps.end());
+    if (Glue.getNode())
+      Ops.push_back(Glue);
+
+    unsigned Opc =
+        IntNo == Intrinsic::aarch64_svc ? AArch64ISD::SVC : AArch64ISD::HVC;
+    SDValue Node =
+        DAG.getNode(Opc, DL, DAG.getVTList(MVT::Other, MVT::Glue), Ops);
+    Chain = Node.getValue(0);
+    Glue = Node.getValue(1);
+
+    SDValue Result = DAG.getCopyFromReg(Chain, DL, AArch64::X0, MVT::i64, Glue);
+    return DAG.getMergeValues({Result.getValue(0), Result.getValue(1)}, DL);
+  }
   case Intrinsic::aarch64_mops_memset_tag: {
     auto Node = cast<MemIntrinsicSDNode>(Op.getNode());
     SDValue Chain = Node->getChain();

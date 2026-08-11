@@ -9646,6 +9646,9 @@ def err_atomic_builtin_cannot_be_const : Error<
 def err_atomic_builtin_must_be_pointer_intfltptr : Error<
   "address argument to atomic builtin must be a pointer to integer,"
   " floating-point or pointer (%0 invalid)">;
+def err_aarch64_svc_hvc_invalid_arg_type : Error<
+  "%ordinal0 argument to %1 must have integer, floating-point, or pointer "
+  "type (%2 invalid)">;
 def err_atomic_builtin_pointer_size : Error<
   "address argument to atomic builtin must be a pointer to 1,2,4,8 or 16 byte "
   "type (%0 invalid)">;
