@@ -6230,7 +6230,7 @@ static bool RebuildDeclaratorInCurrentInstantiation(Sema &S, Declarator &D,
   case DeclSpec::TST_typeofType:
   case DeclSpec::TST_typeof_unqualType:
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case DeclSpec::TST_##Trait:
-#include "clang/Basic/Traits.inc"
+#include "clang/Basic/BuiltinTraits.inc"
   case DeclSpec::TST_atomic: {
     // Grab the type from the parser.
     TypeSourceInfo *TSI = nullptr;
@@ -9238,6 +9238,13 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
     Context.getFunctionFeatureMap(CallerFeatureMap, FD);
     RISCV().checkRVVTypeSupport(T, NewVD->getLocation(), cast<Decl>(CurContext),
                                 CallerFeatureMap);
+  }
+
+  if (Context.getTargetInfo().hasAMDGPUTypes()) {
+    if (!AMDGPU().checkAMDGPUTypeSupport(T, NewVD->getLocation())) {
+      NewVD->setInvalidDecl();
+      return;
+    }
   }
 
   if (T.hasAddressSpace() &&
@@ -19661,6 +19668,11 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
       PPC().CheckPPCMMAType(T, NewFD->getLocation()))
     NewFD->setInvalidDecl();
 
+  if (Context.getTargetInfo().hasAMDGPUTypes()) {
+    if (!AMDGPU().checkAMDGPUTypeSupport(T, NewFD->getLocation()))
+      NewFD->setInvalidDecl();
+  }
+
   NewFD->setAccess(AS);
   return NewFD;
 }
@@ -20508,6 +20520,10 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
       CDecl->setIvarRBraceLoc(RBrac);
     }
   }
+
+  if (Record)
+    AMDGPU().checkNamedBarrierWrapper(Record);
+
   if (Record && !isa<ClassTemplateSpecializationDecl>(Record))
     ProcessAPINotes(Record);
 }
