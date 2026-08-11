@@ -821,63 +821,63 @@ else()
       libc.src.__support.math.totalordermagf16
       libc.src.__support.math.totalordermagl
   )
-  endif() # LIBC_TEST_SKIP_SHARED_MATH_TESTS
+endif() # LIBC_TEST_SKIP_SHARED_MATH_TESTS
 
-  add_fp_unittest(
-    shared_builtins_test
-    SUITE
-      libc-shared-tests
-    SRCS
-      shared_builtins_test.cpp
-    DEPENDS
-      libc.src.__support.builtins.adddf3
-      libc.src.__support.builtins.addsf3
-      libc.src.__support.builtins.addtf3
-      libc.src.__support.builtins.divdf3
-      libc.src.__support.builtins.divsf3
-      libc.src.__support.builtins.divtf3
-      libc.src.__support.builtins.extenddftf2
-      libc.src.__support.builtins.extendsfdf2
-      libc.src.__support.builtins.extendsftf2
-      libc.src.__support.builtins.extendxftf2
-      libc.src.__support.builtins.fixdfdi
-      libc.src.__support.builtins.fixdfsi
-      libc.src.__support.builtins.fixdfti
-      libc.src.__support.builtins.fixsfdi
-      libc.src.__support.builtins.fixsfsi
-      libc.src.__support.builtins.fixsfti
-      libc.src.__support.builtins.fixunsdfdi
-      libc.src.__support.builtins.fixunsdfsi
-      libc.src.__support.builtins.fixunsdfti
-      libc.src.__support.builtins.fixunssfdi
-      libc.src.__support.builtins.fixunssfsi
-      libc.src.__support.builtins.fixunssfti
-      libc.src.__support.builtins.floatdidf
-      libc.src.__support.builtins.floatdisf
-      libc.src.__support.builtins.floatsidf
-      libc.src.__support.builtins.floatsisf
-      libc.src.__support.builtins.floattidf
-      libc.src.__support.builtins.floattisf
-      libc.src.__support.builtins.floatundidf
-      libc.src.__support.builtins.floatundisf
-      libc.src.__support.builtins.floatunsidf
-      libc.src.__support.builtins.floatunsisf
-      libc.src.__support.builtins.floatuntidf
-      libc.src.__support.builtins.floatuntisf
-      libc.src.__support.builtins.muldf3
-      libc.src.__support.builtins.mulsf3
-      libc.src.__support.builtins.multf3
-      libc.src.__support.builtins.negdf3
-      libc.src.__support.builtins.negsf3
-      libc.src.__support.builtins.subdf3
-      libc.src.__support.builtins.subsf3
-      libc.src.__support.builtins.subtf3
-      libc.src.__support.builtins.truncdfsf2
-      libc.src.__support.builtins.trunctfdf2
-      libc.src.__support.builtins.trunctfsf2
-      libc.src.__support.builtins.trunctfxf2
-      libc.src.__support.uint128
-  )
+add_fp_unittest(
+  shared_builtins_test
+  SUITE
+    libc-shared-tests
+  SRCS
+    shared_builtins_test.cpp
+  DEPENDS
+    libc.src.__support.builtins.adddf3
+    libc.src.__support.builtins.addsf3
+    libc.src.__support.builtins.addtf3
+    libc.src.__support.builtins.divdf3
+    libc.src.__support.builtins.divsf3
+    libc.src.__support.builtins.divtf3
+    libc.src.__support.builtins.extenddftf2
+    libc.src.__support.builtins.extendsfdf2
+    libc.src.__support.builtins.extendsftf2
+    libc.src.__support.builtins.extendxftf2
+    libc.src.__support.builtins.fixdfdi
+    libc.src.__support.builtins.fixdfsi
+    libc.src.__support.builtins.fixdfti
+    libc.src.__support.builtins.fixsfdi
+    libc.src.__support.builtins.fixsfsi
+    libc.src.__support.builtins.fixsfti
+    libc.src.__support.builtins.fixunsdfdi
+    libc.src.__support.builtins.fixunsdfsi
+    libc.src.__support.builtins.fixunsdfti
+    libc.src.__support.builtins.fixunssfdi
+    libc.src.__support.builtins.fixunssfsi
+    libc.src.__support.builtins.fixunssfti
+    libc.src.__support.builtins.floatdidf
+    libc.src.__support.builtins.floatdisf
+    libc.src.__support.builtins.floatsidf
+    libc.src.__support.builtins.floatsisf
+    libc.src.__support.builtins.floattidf
+    libc.src.__support.builtins.floattisf
+    libc.src.__support.builtins.floatundidf
+    libc.src.__support.builtins.floatundisf
+    libc.src.__support.builtins.floatunsidf
+    libc.src.__support.builtins.floatunsisf
+    libc.src.__support.builtins.floatuntidf
+    libc.src.__support.builtins.floatuntisf
+    libc.src.__support.builtins.muldf3
+    libc.src.__support.builtins.mulsf3
+    libc.src.__support.builtins.multf3
+    libc.src.__support.builtins.negdf3
+    libc.src.__support.builtins.negsf3
+    libc.src.__support.builtins.subdf3
+    libc.src.__support.builtins.subsf3
+    libc.src.__support.builtins.subtf3
+    libc.src.__support.builtins.truncdfsf2
+    libc.src.__support.builtins.trunctfdf2
+    libc.src.__support.builtins.trunctfsf2
+    libc.src.__support.builtins.trunctfxf2
+    libc.src.__support.uint128
+)
 
 add_fp_unittest(
   shared_str_to_num_test
