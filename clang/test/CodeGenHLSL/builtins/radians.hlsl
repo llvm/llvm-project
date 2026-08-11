@@ -2,6 +2,8 @@
 // RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type -fnative-int16-type \
 // RUN:   -emit-llvm -O1 -o - | FileCheck %s
 
+// Note: the constants 1.745610e-02 and f0x3C8EFA35 below equal Pi/180.
+
 // CHECK-LABEL: test_radians_half
 // CHECK: [[MUL:%.*]] = fmul reassoc nnan ninf nsz arcp afn half %{{.*}}, 1.745610e-02
 // CHECK-NEXT: ret half [[MUL]]

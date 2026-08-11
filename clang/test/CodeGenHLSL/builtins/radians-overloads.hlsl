@@ -4,6 +4,8 @@
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple dxil-pc-shadermodel6.3-library %s  \
 // RUN:   -verify -verify-ignore-unexpected=note
 
+// Note: the f0x3C8EFA35 constants below equal Pi/180.
+
 // CHECK-LABEL: test_radians_double
 // CHECK:    [[CONVI:%.*]] = fptrunc {{.*}} double %{{.*}} to float
 // CHECK:    [[MUL:%.*]] = fmul reassoc nnan ninf nsz arcp afn float %{{.*}}, f0x3C8EFA35

@@ -177,7 +177,7 @@ template <typename T> constexpr T fwidth_impl(T input) {
 }
 
 template <typename T> constexpr T radians_impl(T Val) {
-  return Val * (T)(pi / 180);
+  return Val * (T)(Pi / 180);
 }
 
 } // namespace __detail
