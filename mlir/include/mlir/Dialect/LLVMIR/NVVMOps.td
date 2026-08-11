@@ -5329,7 +5329,7 @@ def NVVM_Tcgen05CommitOp : NVVM_Op<"tcgen05.commit", [NVVMRequiresSMf<[100, 101,
     AnyTypeOf<[LLVM_AnyPointer, LLVM_PointerShared]>:$addr,
     Optional<AnyTypeOf<[I16, I32]>>:$multicastMask,
     DefaultValuedAttr<CTAGroupKindAttr, "CTAGroupKind::CTA_1">:$group,
-    UnitAttr:$smem_a_read);
+    DefaultValuedAttr<BoolAttr, "false">:$smem_a_read);
 
   let assemblyFormat = [{
     $addr (`,` `multicast_mask` `=` $multicastMask^)?
