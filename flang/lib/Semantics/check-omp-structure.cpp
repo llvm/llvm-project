@@ -478,9 +478,16 @@ bool OmpStructureChecker::CheckAllowedClause(llvm::omp::Clause clauseId,
           GetUpperName(clauseId, version), GetUpperName(dirId, version),
           ThisVersion(version), TryVersion(allowedInVersion));
     } else {
+      llvm::StringRef annot{
+          dirId == llvm::omp::Directive::OMPD_ordered_standalone
+              ? " (standalone)"
+              : dirId == llvm::omp::Directive::OMPD_ordered_blockassoc
+              ? " (block-associated)"
+              : ""};
       context_.Say(clauseSource,
-          "%s clause is not allowed on %s directive"_err_en_US,
-          GetUpperName(clauseId, version), GetUpperName(dirId, version));
+          "%s clause is not allowed on %s%s directive"_err_en_US,
+          GetUpperName(clauseId, version), GetUpperName(dirId, version),
+          annot.str());
     }
     return false;
   }
@@ -903,7 +910,11 @@ void OmpStructureChecker::CheckDirectiveSpelling(
     }
     llvm::StringRef name{llvm::omp::getOpenMPDirectiveName(id, v)};
     auto [kind, versions]{llvm::omp::getOpenMPDirectiveKindAndVersions(name)};
-    assert(kind == id && "Directive kind mismatch");
+    if (kind != llvm::omp::Directive::OMPD_ordered &&
+        kind != llvm::omp::Directive::OMPD_ordered_blockassoc &&
+        kind != llvm::omp::Directive::OMPD_ordered_standalone) {
+      assert(kind == id && "Directive kind mismatch");
+    }
 
     if (static_cast<int>(version) >= versions.Min) {
       continue;
@@ -1497,7 +1508,7 @@ void OmpStructureChecker::Enter(const parser::OmpBlockConstruct &x) {
         parser::omp::GetUpperName(dirId, version))};
     // ORDERED has two variants, so be explicit about which variant we think
     // this is.
-    if (dirId == llvm::omp::Directive::OMPD_ordered) {
+    if (dirId == llvm::omp::Directive::OMPD_ordered_blockassoc) {
       msg.Attach(
           beginSpec.source, "The ORDERED directive is block-associated"_en_US);
     }
@@ -1775,7 +1786,7 @@ void OmpStructureChecker::Enter(const parser::OmpBeginDirective &x) {
 
 void OmpStructureChecker::Leave(const parser::OmpBeginDirective &x) {
   switch (x.DirId()) {
-  case llvm::omp::Directive::OMPD_ordered:
+  case llvm::omp::Directive::OMPD_ordered_blockassoc:
     // [5.1] 2.19.9 Ordered Construct Restriction
     ChecksOnOrderedAsBlock();
     break;
@@ -3275,7 +3286,7 @@ void OmpStructureChecker::Enter(
 void OmpStructureChecker::Leave(
     const parser::OpenMPSimpleStandaloneConstruct &x) {
   switch (GetContext().directive) {
-  case llvm::omp::Directive::OMPD_ordered:
+  case llvm::omp::Directive::OMPD_ordered_standalone:
     // [5.1] 2.19.9 Ordered Construct Restriction
     ChecksOnOrderedAsStandalone();
     break;
@@ -5072,7 +5083,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
             version == 50 ? "SINK, SOURCE or DEPOBJ" : "SINK or SOURCE");
       }
     }
-  } else if (dir != llvm::omp::OMPD_ordered) {
+  } else if (dir != llvm::omp::OMPD_ordered_standalone) {
     if (doaDep) {
       context_.Say(GetContext().clauseSource,
           "The SINK and SOURCE dependence types can only be used with the ORDERED directive, used here in the %s construct"_err_en_US,
