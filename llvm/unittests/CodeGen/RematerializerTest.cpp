@@ -825,12 +825,10 @@ TEST_F(RematerializerTest, SplitSubRegDeadDef) {
       PreRemat);
 }
 
-/// The rematerializer had a bug where rematerializing a register which has uses
-/// of undefined lanes could create empty sub-ranges during live-interval
+/// Uses of undefined lanes may create empty sub-ranges during live-interval
 /// refinement. Empty sub-ranges are illegal and are only allowed to exist
-/// temporarily, so we would hit an assert when extending the live interval of
-/// the rematerialized register. The rematerializer now automatically deletes
-/// empty sub-ranges.
+/// temporarily. The rematerializer now automatically deletes these empty
+/// sub-ranges.
 TEST_F(RematerializerTest, RemoveEmptySubRanges) {
   StringRef MIRBody = R"MIR(
   bb.0:
