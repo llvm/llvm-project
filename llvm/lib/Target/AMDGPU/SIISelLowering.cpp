@@ -7747,13 +7747,9 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
                          DAG.getConstant(0, DL, MVT::i32));
     }
     return SDValue();
-  case ISD::FADD:
-  case ISD::FMUL:
   case ISD::FMINNUM:
   case ISD::FMAXNUM:
-    if (Op.getOpcode() == ISD::FMINNUM || Op.getOpcode() == ISD::FMAXNUM)
-      return lowerFMINNUM_FMAXNUM(Op, DAG);
-    return splitBinaryVectorOp(Op, DAG);
+    return lowerFMINNUM_FMAXNUM(Op, DAG);
   case ISD::FMINIMUMNUM:
   case ISD::FMAXIMUMNUM:
     return lowerFMINIMUMNUM_FMAXIMUMNUM(Op, DAG);
@@ -7788,6 +7784,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::USUBSAT:
   case ISD::SADDSAT:
   case ISD::SSUBSAT:
+  case ISD::FADD:
+  case ISD::FMUL:
     return splitBinaryVectorOp(Op, DAG);
   case ISD::FCOPYSIGN:
     return lowerFCOPYSIGN(Op, DAG);
