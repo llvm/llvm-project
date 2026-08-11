@@ -716,7 +716,7 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     // examples when vectorising loops with low trip counts.
     bool IsSigned =
         ICA.getID() == Intrinsic::smin || ICA.getID() == Intrinsic::smax;
-    MVT VT = MVT::getVT(RetTy);
+    EVT VT = TLI->getValueType(DL, RetTy, /*AllowUnknown=*/true);
     if (VT == MVT::v2i8 || VT == MVT::v2i16 || VT == MVT::v4i8)
       return LT.first * (IsSigned ? 5 : 3);
     // v2i64 types get converted to cmp+bif hence the cost of 2
