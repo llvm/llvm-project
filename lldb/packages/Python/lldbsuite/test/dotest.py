@@ -509,16 +509,11 @@ def registerFaulthandler():
     if sys.platform != "win32":
         return
 
-    # lit kills a hung test with TerminateProcess on Windows, so the SIGTERM
-    # handler above never runs and a timeout is reported with no indication of
-    # where it hung. Dump every thread's stack shortly before lit's own
-    # per-test timeout (--timeout, forwarded from lit's `maxIndividualTestTime`
-    # by lldbtest.py) would kill the process.
+    # Dump every thread's stack shortly before lit's own per-test timeout would
+    # kill the process.
     if configuration.timeout <= 0:
         return
 
-    # Leave some headroom so the dump has time to reach lit's output before
-    # the process is terminated.
     secs = max(1.0, configuration.timeout * 0.9)
     faulthandler.dump_traceback_later(secs, exit=False)
 
