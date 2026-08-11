@@ -221,6 +221,10 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
   SDValue Or  = DAG->getNode(ISD::OR, DL, Int32VT, Op0, Op1);
   SDValue DisOr =
       DAG->getNode(ISD::OR, DL, Int32VT, Op0, Op3, SDNodeFlags::Disjoint);
+  SDValue NUWAdd =
+      DAG->getNode(ISD::ADD, DL, Int32VT, Or, Xor, SDNodeFlags::NoUnsignedWrap);
+  SDValue NSWAdd =
+      DAG->getNode(ISD::ADD, DL, Int32VT, And, Xor, SDNodeFlags::NoSignedWrap);
   SDValue SMax = DAG->getNode(ISD::SMAX, DL, Int32VT, Op0, Op1);
   SDValue SMin = DAG->getNode(ISD::SMIN, DL, Int32VT, Op1, Op0);
   SDValue UMax = DAG->getNode(ISD::UMAX, DL, Int32VT, Op0, Op1);
@@ -320,6 +324,20 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
   EXPECT_TRUE(sd_match(Add, m_c_BinOp(ISD::ADD, m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(Add, m_Add(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(Add, m_AddLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(NUWAdd, m_NUWAdd(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(NSWAdd, m_NSWAdd(m_Value(), m_Value())));
+  EXPECT_FALSE(sd_match(NUWAdd, m_NSWAdd(m_Value(), m_Value())));
+  EXPECT_FALSE(sd_match(NSWAdd, m_NUWAdd(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(NUWAdd, m_Add(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(NSWAdd, m_Add(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(NUWAdd, m_AddLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(NSWAdd, m_AddLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(NUWAdd, m_NUWAddLike(m_Value(), m_Value())));
+  EXPECT_FALSE(sd_match(NSWAdd, m_NUWAddLike(m_Value(), m_Value())));
+  EXPECT_FALSE(sd_match(Add, m_NUWAddLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(NSWAdd, m_NSWAddLike(m_Value(), m_Value())));
+  EXPECT_FALSE(sd_match(NUWAdd, m_NSWAddLike(m_Value(), m_Value())));
+  EXPECT_FALSE(sd_match(Add, m_NSWAddLike(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(Mul, m_Mul(m_OneUse(m_SpecificOpc(ISD::SUB)),
                                   m_NUses<2>(m_Specific(Add)))));
   EXPECT_TRUE(
@@ -347,6 +365,8 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
   EXPECT_TRUE(sd_match(DisOr, m_DisjointOr(m_Value(), m_Value())));
   EXPECT_FALSE(sd_match(DisOr, m_Add(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(DisOr, m_AddLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(DisOr, m_NUWAddLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(DisOr, m_NSWAddLike(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(
       DisOr, m_BinOp(ISD::OR, m_Value(), m_Value(), SDNodeFlags::Disjoint)));
   EXPECT_TRUE(sd_match(

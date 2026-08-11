@@ -11,6 +11,8 @@
 #include "lldb/Utility/StreamString.h"
 #include "gtest/gtest.h"
 
+#include "llvm/Support/Casting.h"
+
 using namespace lldb_private;
 
 TEST(DoDumpRegisterInfoTest, MinimumInfo) {
@@ -95,7 +97,8 @@ TEST(DoDumpRegisterInfoTest, FieldsTable) {
                            RegisterTypeFlags::Field("C", 8, 15),
                            RegisterTypeFlags::Field("D", 0, 7)});
 
-  DoDumpRegisterInfo(strm, "foo", nullptr, 4, {}, {}, {}, &flags, 100);
+  const RegisterType *register_type = llvm::dyn_cast<RegisterType>(&flags);
+  DoDumpRegisterInfo(strm, "foo", nullptr, 4, {}, {}, {}, register_type, 100);
   ASSERT_EQ(strm.GetString(), "       Name: foo\n"
                               "       Size: 4 bytes (32 bits)\n"
                               "\n"
@@ -116,7 +119,8 @@ TEST(DoDumpRegisterInfoTest, Enumerators) {
                            RegisterTypeFlags::Field("B", 16, 23),
                            RegisterTypeFlags::Field("C", 8, 15, &enum_two)});
 
-  DoDumpRegisterInfo(strm, "abc", nullptr, 4, {}, {}, {}, &flags, 100);
+  const RegisterType *register_type = llvm::dyn_cast<RegisterType>(&flags);
+  DoDumpRegisterInfo(strm, "abc", nullptr, 4, {}, {}, {}, register_type, 100);
   ASSERT_EQ(strm.GetString(),
             "       Name: abc\n"
             "       Size: 4 bytes (32 bits)\n"
