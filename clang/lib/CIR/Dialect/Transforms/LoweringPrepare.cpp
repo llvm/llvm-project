@@ -2426,8 +2426,10 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
   if (isHIP) {
     const unsigned HIPCodeObjectAlign = 4096;
     fatbinStr.setAlignment(HIPCodeObjectAlign);
-  } else
+  } else {
     fatbinStr.setAlignment(8);
+  }
+
   fatbinStr.setInitialValueAttr(cir::ConstArrayAttr::get(
       fatbinType, StringAttr::get(gpuBinary->getBuffer(), fatbinType)));
   fatbinStr.setSection(fatbinConstName);
