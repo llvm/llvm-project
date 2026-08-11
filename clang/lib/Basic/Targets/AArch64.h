@@ -35,6 +35,7 @@ using AArch64FeatureSet = llvm::SmallDenseSet<StringRef, 32>;
 class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   static const TargetInfo::GCCRegAlias GCCRegAliases[];
   static const char *const GCCRegNames[];
+  static const char *const SystemRegNames[];
 
   enum FPUModeEnum {
     FPUMode = (1 << 0),
@@ -215,6 +216,8 @@ public:
 
   ArrayRef<const char *> getGCCRegNames() const override;
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override;
+
+  ArrayRef<const char *> getSystemRegNames() const override;
 
   std::string convertConstraint(const char *&Constraint) const override;
 
