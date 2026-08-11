@@ -5093,34 +5093,34 @@ static bool isLinalgMul(Operation *op) {
 static TypedAttr mulScalarAttrs(TypedAttr lhs, TypedAttr rhs) {
   Type lhsType = lhs.getType();
   Type rhsType = rhs.getType();
-  
+
   // Both must be the same type
   if (lhsType != rhsType)
     return nullptr;
-  
+
   // Handle integer types
   if (auto intType = dyn_cast<IntegerType>(lhsType)) {
     auto lhsInt = dyn_cast<IntegerAttr>(lhs);
     auto rhsInt = dyn_cast<IntegerAttr>(rhs);
     if (!lhsInt || !rhsInt)
       return nullptr;
-    
+
     APInt result = lhsInt.getValue() * rhsInt.getValue();
     return IntegerAttr::get(intType, result);
   }
-  
+
   // Handle float types
   if (isa<FloatType>(lhsType)) {
     auto lhsFloat = dyn_cast<FloatAttr>(lhs);
     auto rhsFloat = dyn_cast<FloatAttr>(rhs);
     if (!lhsFloat || !rhsFloat)
       return nullptr;
-    
+
     APFloat result = lhsFloat.getValue();
     result.multiply(rhsFloat.getValue(), APFloat::rmNearestTiesToEven);
     return FloatAttr::get(lhsType, result);
   }
-  
+
   return nullptr;
 }
 
@@ -5154,7 +5154,8 @@ template <typename MulOpTy>
 struct FoldConsecutiveScalarMulPattern : public OpRewritePattern<MulOpTy> {
   using OpRewritePattern<MulOpTy>::OpRewritePattern;
 
-  /// Helper to identify const/non-const operands. Returns {nonConst, scalar, scalarOperand}.
+  /// Helper to identify const/non-const operands. Returns {nonConst, scalar,
+  /// scalarOperand}.
   static std::tuple<Value, std::optional<TypedAttr>, Value>
   splitConstOperands(Value lhs, Value rhs) {
     if (auto scalar = getScalarConstant(rhs))
@@ -5164,15 +5165,20 @@ struct FoldConsecutiveScalarMulPattern : public OpRewritePattern<MulOpTy> {
     return {Value(), std::nullopt, Value()};
   }
 
-  /// Create a constant matching the form of the reference operand (scalar or splat tensor).
-  static FailureOr<Value> createMatchingConstant(PatternRewriter &rewriter, Location loc,
-                                                  TypedAttr scalarValue, Value referenceOperand) {
-    if (auto tensorType = dyn_cast<RankedTensorType>(referenceOperand.getType())) {
+  /// Create a constant matching the form of the reference operand (scalar or
+  /// splat tensor).
+  static FailureOr<Value> createMatchingConstant(PatternRewriter &rewriter,
+                                                 Location loc,
+                                                 TypedAttr scalarValue,
+                                                 Value referenceOperand) {
+    if (auto tensorType =
+            dyn_cast<RankedTensorType>(referenceOperand.getType())) {
       // Reference is a splat tensor: create splat constant.
       if (scalarValue.getType() != tensorType.getElementType())
         return failure();
       auto splatAttr = DenseElementsAttr::get(tensorType, scalarValue);
-      return rewriter.create<arith::ConstantOp>(loc, tensorType, splatAttr).getResult();
+      return rewriter.create<arith::ConstantOp>(loc, tensorType, splatAttr)
+          .getResult();
     }
     // Reference is a raw scalar: create scalar constant.
     return rewriter.create<arith::ConstantOp>(loc, scalarValue).getResult();
@@ -5210,12 +5216,14 @@ struct FoldConsecutiveScalarMulPattern : public OpRewritePattern<MulOpTy> {
     Value innerNonConst, innerScalarOperand;
     std::optional<TypedAttr> innerScalar;
     std::tie(innerNonConst, innerScalar, innerScalarOperand) =
-        splitConstOperands(innerMulOp->getOperand(0), innerMulOp->getOperand(1));
+        splitConstOperands(innerMulOp->getOperand(0),
+                           innerMulOp->getOperand(1));
     if (!innerScalar)
       return failure();
 
-    // Ensure type compatibility: innerNonConst must match the inner mul's result type.
-    // This prevents folding when ElemwiseBinaryOp uses cast semantics.
+    // Ensure type compatibility: innerNonConst must match the inner mul's
+    // result type. This prevents folding when ElemwiseBinaryOp uses cast
+    // semantics.
     if (innerNonConst.getType() != outerNonConst.getType())
       return failure();
 
@@ -5224,9 +5232,10 @@ struct FoldConsecutiveScalarMulPattern : public OpRewritePattern<MulOpTy> {
     if (!foldedScalar)
       return failure();
 
-    // Create the combined constant, matching the form of the outer scalar operand.
-    FailureOr<Value> combinedConst = 
-        createMatchingConstant(rewriter, outerMul.getLoc(), foldedScalar, outerScalarOperand);
+    // Create the combined constant, matching the form of the outer scalar
+    // operand.
+    FailureOr<Value> combinedConst = createMatchingConstant(
+        rewriter, outerMul.getLoc(), foldedScalar, outerScalarOperand);
     if (failed(combinedConst))
       return failure();
 
