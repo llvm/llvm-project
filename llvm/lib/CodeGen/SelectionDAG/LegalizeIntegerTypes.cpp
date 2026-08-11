@@ -4586,11 +4586,21 @@ void DAGTypeLegalizer::ExpandIntRes_XROUND_XRINT(SDNode *N, SDValue &Lo,
 
   EVT RetVT = N->getValueType(0);
 
+  RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
+  if (LCImpl == RTLIB::Unsupported) {
+    DAG.getContext()->emitError(Twine("no libcall available for ") +
+                                N->getOperationName(&DAG));
+    SDValue Poison = DAG.getPOISON(N->getValueType(0));
+    SplitInteger(Poison, Lo, Hi);
+    if (N->isStrictFPOpcode())
+      ReplaceValueWith(SDValue(N, 1), N->getOperand(0));
+    return;
+  }
+
   TargetLowering::MakeLibCallOptions CallOptions;
   CallOptions.setIsSigned(true);
-  std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(DAG, LC, RetVT,
-                                                    Op, CallOptions, dl,
-                                                    Chain);
+  std::pair<SDValue, SDValue> Tmp =
+      TLI.makeLibCall(DAG, LCImpl, RetVT, Op, CallOptions, dl, Chain);
   SplitInteger(Tmp.first, Lo, Hi);
 
   if (N->isStrictFPOpcode())
