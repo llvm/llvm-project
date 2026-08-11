@@ -6514,6 +6514,7 @@ protected:
   bool ScopeCheck;
   bool AllowRedecl;
   bool AutoPtrAttributed = false;
+  bool ShapeCheckedLevelZero = false;
   bool AtomicErrorEmitted = false;
 
 public:
@@ -6529,32 +6530,17 @@ public:
     // Validate applying the attribute at this level is we are going to apply
     // it.
     //
-    // Skip for:
-    //
-    // * Function types: the attribute targets the return type. Firing on the
-    //   function type itself would emit a spurious "attribute only applies to a
-    //   pointer" error and abort before reaching the return type.
-    //   VisitFunctionProtoType / VisitFunctionNoProtoType recurse on the return
-    //   type at the same Level, where the validation fires on the actual wrap
-    //   target.
-    // * AttributedType: This is desugared and visited again at the same level.
-    //   To avoid duplicate diagnostics we need to skip these until we hit
-    //   something that isn't an AttributedType.
-    //
-    // FIXME: This is buggy for all sugar types we handle. E.g. For
-    // `TypedefType` we visit the `TypedefType` and it the desugared type which
-    // could cause issues with diagnostics being emitted multiple times (see
-    // `counted-by-typedef-duplicate-diagnostic-bug.c`). Although we could try
-    // to guard against this here this will get increasingly messy if we try to
-    // enumerate every kind of sugar here. When we change
-    // `ValidateBoundsAttrTypeShape` to handle desugaring itself this problem
-    // will just disappear.
-    if (Level == 0 && !T->isFunctionType() &&
-        !isa<AttributedType>(T.getTypePtr()) &&
-        !S.ValidateBoundsAttrTypeShape(T, Loc, SourceRange(Loc), Flags,
-                                       DiagName, AllowRedecl, AutoPtrAttributed,
-                                       ArgExpr)) {
-      return QualType();
+    // Skip for Function types. The attribute targets the return type. Firing on
+    // the function type itself would emit a spurious "attribute only applies to
+    // a pointer" error and abort before reaching the return type.
+    // VisitFunctionProtoType / VisitFunctionNoProtoType recurse on the return
+    // type at the same Level, where the validation fires on the actual wrap
+    // target.
+    if (Level == 0 && !ShapeCheckedLevelZero && !T->isFunctionType()) {
+      ShapeCheckedLevelZero = true;
+      if (!S.ValidateBoundsAttrTypeShape(T, Loc, SourceRange(Loc), Flags,
+                                         DiagName, AllowRedecl, ArgExpr))
+        return QualType();
     }
     SplitQualType SQT = T.split();
     QualType InnerTy = BaseClass::Visit(SQT.Ty);
@@ -6580,33 +6566,22 @@ public:
     // Note several important type sugars do not take this path due to having
     // their own visitors (e.g. `TypedefType` and `AttributedType`).
     //
-    // This is here for two reasons:
+    // This is here because we need to explicitly do `Visit(T_desugared)` so
+    // that other visitor methods in this class get a chance to be called. E.g.
+    // this sugar type wraps an `AttributedType` which we want to handle.
     //
-    // 1. We need to explicitly do `Visit(T_desugared)` so that other visitor
-    //    methods in this class get a chance to be called. E.g. this sugar type
-    //    wraps an `AttributedType` which we want to handle.
-    //
-    // 2. To support the fact that `ValidateBoundsAttrTypeShape` currently
-    //    doesn't fully handle its own desugaring. So we desugar here (and in
-    //    other visitors like `VisitTypedefType`) so that
-    //    `ValidateBoundsAttrTypeShape` has a chance to run again on the
-    //    desugared type. This is the wrong design because it is problematic for
-    //    warnings (they might get emitted multiple times) and does lots of
-    //    redundant work. FIXME: Fix `ValidateBoundsAttrTypeShape` to do its
-    //    own desugaring.
     QualType QT(T, 0);
     QualType Desugared = QT.getSingleStepDesugaredType(S.Context);
     if (Desugared != QT)
       return Visit(Desugared);
 
-    // T is a non-sugar, non-pointer, non-array, so there is no pointer nor
+    // T is a non-sugar, non-pointer, non-array type, so there is no pointer nor
     // array here for the bounds attribute to attach to. Run the type-shape
-    // check to emit a diagnostic to reject this. Reachable when the requested
-    // `Level` exceeds the type's pointer nesting, e.g. an out-of-range level
-    // from API Notes.
+    // check to emit the diagnostic. Reachable when the requested `Level`
+    // exceeds the type's pointer nesting, e.g. an out-of-range level from API
+    // Notes.
     bool Valid = S.ValidateBoundsAttrTypeShape(QT, Loc, SourceRange(Loc), Flags,
-                                               DiagName, AllowRedecl,
-                                               AutoPtrAttributed, ArgExpr);
+                                               DiagName, AllowRedecl, ArgExpr);
     assert(!Valid &&
            "T should have been rejected because its not an array or pointer");
     (void)Valid;

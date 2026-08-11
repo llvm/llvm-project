@@ -70,10 +70,31 @@ enum class CountedByInvalidPointeeTypeKind {
   VALID,
 };
 
+// Helper similar to getAs<T> except it only returns a pointer to T if no
+// AttributedType with `attr::PtrAutoAttr` on it was encountered while walking
+// the sugar types to reach T. Returns nullptr if `T` is not found after walking
+// all sugar.
+// FIXME: This probably belongs as a method on `Type` instead.
+template <typename TargetType>
+static const TargetType *getAsExplicitlyWritten(const Type *Cur,
+                                                const ASTContext &Ctx) {
+  while (true) {
+    if (const auto *Target = dyn_cast<TargetType>(Cur))
+      return Target; // Reached the target with no enclosing PtrAutoAttr.
+    if (const auto *AT = dyn_cast<AttributedType>(Cur);
+        AT && AT->getAttrKind() == attr::PtrAutoAttr)
+      return nullptr; // Auto-inferred: a PtrAutoAttr encloses the target.
+    QualType Next = QualType(Cur, 0).getSingleStepDesugaredType(Ctx);
+    if (Next.getTypePtr() == Cur)
+      return nullptr; // Not sugar: reached the pointer/array; no target node.
+    Cur = Next.getTypePtr();
+  }
+}
+
 static std::optional<bool> checkBoundsAttrTypeConflictsAndMisc(
     Sema &S, QualType Ty, SourceLocation AttrLoc,
     const Sema::BoundsAttrFlags &Flags, StringRef AttrSpelling,
-    bool AllowRedecl, bool AutoPtrAttributed, Expr *AttrArg) {
+    bool AllowRedecl, Expr *AttrArg) {
   // FIXME: The diagnostics here need re-working:
   // * Some of these clearly could be upstream checks as they don't depend on
   //   attributes missing from upstream.
@@ -88,7 +109,8 @@ static std::optional<bool> checkBoundsAttrTypeConflictsAndMisc(
 
   // A __terminated_by pointer cannot also carry a count or range attribute
   // unless the terminator was auto-inferred via __ptrauto.
-  if (Ty->getAs<ValueTerminatedType>() && !AutoPtrAttributed) {
+  if (getAsExplicitlyWritten<ValueTerminatedType>(Ty.getTypePtr(),
+                                                  S.getASTContext())) {
     S.Diag(AttrLoc, diag::err_bounds_safety_terminated_by_wrong_pointer_type);
     return false;
   }
@@ -168,8 +190,8 @@ static std::optional<bool> checkBoundsAttrTypeConflictsAndMisc(
 
   // FIXME: the AtomicType check below still uses `dyn_cast` on the
   // top node. It returns `true` and lets the caller continue, so making it
-  // sugar-walking is only safe once the caller runs the leaf once per level
-  // (the once-per-level guard); until then a sugar-wrapped atomic would
+  // sugar-walking is only safe once the caller runs the type-shape check once
+  // (the ShapeCheckedLevelZero guard); until then a sugar-wrapped atomic would
   // double-emit.
   //
   // An AtomicType wrapping a pointer: emit the diagnostic but return true so
@@ -192,9 +214,10 @@ static std::optional<bool> checkBoundsAttrTypeConflictsAndMisc(
 
   // Pointer with explicit upper-bound (__bidi_indexable / __indexable):
   // conflict with count/end attributes.
-  if (const auto *PT = Ty->getAs<PointerType>()) {
+  if (const auto *PT = getAsExplicitlyWritten<PointerType>(Ty.getTypePtr(),
+                                                           S.getASTContext())) {
     auto FAttr = PT->getPointerAttributes();
-    if (FAttr.hasUpperBound() && !AutoPtrAttributed) {
+    if (FAttr.hasUpperBound()) {
       S.Diag(AttrLoc,
              diag::err_bounds_safety_conflicting_count_bound_attributes)
           << AttrSpelling << (FAttr.hasLowerBound() ? 0 : 1);
@@ -227,11 +250,10 @@ bool Sema::ValidateBoundsAttrTypeShape(QualType Ty, SourceLocation AttrLoc,
                                        SourceRange AttrRange,
                                        BoundsAttrFlags &Flags,
                                        StringRef AttrSpelling, bool AllowRedecl,
-                                       bool AutoPtrAttributed, Expr *AttrArg) {
+                                       Expr *AttrArg) {
   if (getLangOpts().hasBoundsSafetyAttributes())
     if (std::optional<bool> Result = checkBoundsAttrTypeConflictsAndMisc(
-            *this, Ty, AttrLoc, Flags, AttrSpelling, AllowRedecl,
-            AutoPtrAttributed, AttrArg))
+            *this, Ty, AttrLoc, Flags, AttrSpelling, AllowRedecl, AttrArg))
       return *Result;
 
   BoundsAttributedType::BoundsAttrKind Kind = getBoundsAttrKind(Flags);

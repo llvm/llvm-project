@@ -1,18 +1,11 @@
 // RUN: %clang_cc1 -fsyntax-only -fbounds-safety -verify %s
 
-// The bounds-attribute construction visitor (ConstructDynamicBoundType) walks
-// sugar one layer at a time and re-runs the `Sema::ValidateBoundsAttrTypeShape`
-// at level 0 on each desugared layer. The emitted diagnostics must fire exactly
-// once when the attribute target is reached through several layers of sugar
-// (nested typedefs). Hence we check below a diagnostic through sugar types is
-// only seen once.
-
 #include <ptrcheck.h>
 
+// The goal of this test is to check that duplicate diagnostics are not emitted.
+
 // A wide pointer reached through three typedef layers conflicts with every
-// count/bound attribute. This `ValidateBoundsAttrTypeShape` check returns
-// "invalid" on the bare-pointer layer, so the conflict is reported exactly
-// once.
+// count/bound attribute.
 typedef int * __bidi_indexable bidi_t;
 typedef bidi_t bidi2_t;
 typedef bidi2_t bidi3_t;
@@ -30,10 +23,7 @@ void ended(bidi3_t __ended_by(e) p, int *e);
 
 // A pointer with an unknown-size pointee ('void') reached through three typedef
 // layers. Unlike the conflict above, `ValidateBoundsAttrTypeShape` emits and
-// then *continues* (recovering by treating the count as a byte count), so the
-// recovery must suppress a repeat of the diagnostic on the later desugar
-// layers. Only the counted_by family reaches this path: __sized_by counts bytes
-// (valid on 'void *'), and __ended_by is a range attribute.
+// then *continues* (recovering by treating the count as a byte count).
 typedef void * vp_t;
 typedef vp_t vp2_t;
 typedef vp2_t vp3_t;

@@ -2937,7 +2937,6 @@ public:
                                    BoundsAttrFlags &Flags,
                                    StringRef AttrSpelling = {},
                                    bool AllowRedecl = false,
-                                   bool AutoPtrAttributed = false,
                                    Expr *AttrArg = nullptr);
 
   /* TO_UPSTREAM(BoundsSafety) OFF*/
