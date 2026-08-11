@@ -1368,6 +1368,10 @@ bool SeparateConstOffsetFromGEP::shareScalableVectorGEPBase(BasicBlock &BB) {
     GetElementPtrInst *FirstGEP = Leader.GEP;
     IRBuilder<> BaseBuilder(FirstGEP);
     BaseBuilder.SetCurrentDebugLocation(FirstGEP->getDebugLoc());
+    Loop *L = LI->getLoopFor(FirstGEP->getParent());
+    assert(L && L->getLoopPreheader() &&
+           "candidate must belong to a loop with a preheader");
+    Instruction *PreheaderTerminator = L->getLoopPreheader()->getTerminator();
 
     // Computing the varying portion once avoids a vector multiply-add for every
     // unrolled part. The remaining uniform offsets can be calculated scalarly.
@@ -1379,6 +1383,8 @@ bool SeparateConstOffsetFromGEP::shareScalableVectorGEPBase(BasicBlock &BB) {
       VectorGEPCandidate &Current = Candidates[CandidateIndex];
       GetElementPtrInst *GEP = Current.GEP;
 
+      IRBuilder<> OffsetBuilder(PreheaderTerminator);
+      OffsetBuilder.SetCurrentDebugLocation(GEP->getDebugLoc());
       IRBuilder<> Builder(GEP);
       Builder.SetCurrentDebugLocation(GEP->getDebugLoc());
 
@@ -1387,13 +1393,13 @@ bool SeparateConstOffsetFromGEP::shareScalableVectorGEPBase(BasicBlock &BB) {
       Value *Offset = ConstantInt::get(OffsetType, 0);
 
       for (const VectorGEPOffsetTerm &Term : Current.OffsetTerms) {
-        Offset =
-            Term.IsSub
-                ? Builder.CreateSub(Offset, Term.Scalar, "vector.gep.offset")
-                : Builder.CreateAdd(Offset, Term.Scalar, "vector.gep.offset");
+        Offset = Term.IsSub ? OffsetBuilder.CreateSub(Offset, Term.Scalar,
+                                                      "vector.gep.offset")
+                            : OffsetBuilder.CreateAdd(Offset, Term.Scalar,
+                                                      "vector.gep.offset");
       }
 
-      Value *ByteOffset = Builder.CreateMul(
+      Value *ByteOffset = OffsetBuilder.CreateMul(
           Offset, ConstantInt::get(OffsetType, Current.Stride),
           "vector.gep.byte.offset");
       Value *NewGEP =

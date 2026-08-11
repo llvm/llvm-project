@@ -9,14 +9,14 @@ define void @scalable_gep_common_base(ptr %base, ptr %out0, ptr %out1, i64 %offs
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[INSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[OFFSET]], i64 0
 ; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[INSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+; CHECK-NEXT:    [[VECTOR_GEP_OFFSET:%.*]] = sub i64 -1, [[OFFSET]]
+; CHECK-NEXT:    [[VECTOR_GEP_BYTE_OFFSET:%.*]] = mul i64 [[VECTOR_GEP_OFFSET]], 56
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi <vscale x 2 x i64> [ zeroinitializer, %[[ENTRY]] ], [ [[NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[NEXT]] = sub <vscale x 2 x i64> [[IV]], [[SPLAT]]
 ; CHECK-NEXT:    [[VECTOR_GEP_BASE:%.*]] = getelementptr [56 x i8], ptr [[BASE]], <vscale x 2 x i64> [[IV]]
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr i8, <vscale x 2 x ptr> [[VECTOR_GEP_BASE]], i64 -56
-; CHECK-NEXT:    [[VECTOR_GEP_OFFSET:%.*]] = sub i64 -1, [[OFFSET]]
-; CHECK-NEXT:    [[VECTOR_GEP_BYTE_OFFSET:%.*]] = mul i64 [[VECTOR_GEP_OFFSET]], 56
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, <vscale x 2 x ptr> [[VECTOR_GEP_BASE]], i64 [[VECTOR_GEP_BYTE_OFFSET]]
 ; CHECK-NEXT:    store <vscale x 2 x ptr> [[GEP0]], ptr [[OUT0]], align 16
 ; CHECK-NEXT:    store <vscale x 2 x ptr> [[GEP1]], ptr [[OUT1]], align 16

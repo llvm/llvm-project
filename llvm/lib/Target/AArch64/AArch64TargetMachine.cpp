@@ -691,7 +691,6 @@ void AArch64PassConfig::addIRPasses() {
   } else if (TM->getOptLevel() >= CodeGenOptLevel::Default &&
              EnableScalableVectorGEPOpt) {
     addPass(createShareScalableVectorGEPBasePass());
-    addPass(createLICMPass());
   }
 
   TargetPassConfig::addIRPasses();

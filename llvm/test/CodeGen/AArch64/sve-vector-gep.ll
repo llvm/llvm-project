@@ -7,14 +7,13 @@ define void @scalable_vector_geps(i64 %n, ptr %base, ptr %out0, ptr %out1, ptr %
 ; CHECK-LABEL: scalable_vector_geps:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cntd x8
-; CHECK-NEXT:    cnth x9
-; CHECK-NEXT:    mov z3.d, #56 // =0x38
-; CHECK-NEXT:    mov z2.d, x1
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov z0.d, x9
-; CHECK-NEXT:    mvn x9, x8
 ; CHECK-NEXT:    index z1.d, x0, #-1
+; CHECK-NEXT:    mov z3.d, #56 // =0x38
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mvn x9, x8
+; CHECK-NEXT:    mov z0.d, x8
 ; CHECK-NEXT:    lsl x10, x9, #6
+; CHECK-NEXT:    mov z2.d, x1
 ; CHECK-NEXT:    sub x10, x10, x9, lsl #3
 ; CHECK-NEXT:    sub x9, x9, x8
 ; CHECK-NEXT:    lsl x11, x9, #6
@@ -28,18 +27,21 @@ define void @scalable_vector_geps(i64 %n, ptr %base, ptr %out0, ptr %out1, ptr %
 ; CHECK-NEXT:    .p2align 5, , 16
 ; CHECK-NEXT:  .LBB0_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movprfx z7, z2
-; CHECK-NEXT:    mla z7.d, p0/m, z1.d, z3.d
-; CHECK-NEXT:    sub z1.d, z1.d, z0.d
-; CHECK-NEXT:    movprfx z16, z7
+; CHECK-NEXT:    sub z7.d, z1.d, z0.d
+; CHECK-NEXT:    mad z1.d, p0/m, z3.d, z2.d
+; CHECK-NEXT:    sub z7.d, z7.d, z0.d
+; CHECK-NEXT:    sub z7.d, z7.d, z0.d
+; CHECK-NEXT:    movprfx z16, z1
 ; CHECK-NEXT:    sub z16.d, z16.d, #56 // =0x38
-; CHECK-NEXT:    add z17.d, z7.d, z4.d
-; CHECK-NEXT:    add z18.d, z7.d, z5.d
-; CHECK-NEXT:    add z7.d, z7.d, z6.d
+; CHECK-NEXT:    add z17.d, z1.d, z4.d
+; CHECK-NEXT:    add z18.d, z1.d, z5.d
+; CHECK-NEXT:    add z1.d, z1.d, z6.d
+; CHECK-NEXT:    sub z7.d, z7.d, z0.d
 ; CHECK-NEXT:    str z16, [x2]
 ; CHECK-NEXT:    str z17, [x3]
 ; CHECK-NEXT:    str z18, [x4]
-; CHECK-NEXT:    str z7, [x5]
+; CHECK-NEXT:    str z1, [x5]
+; CHECK-NEXT:    mov z1.d, z7.d
 ; CHECK-NEXT:    tbnz w6, #0, .LBB0_1
 ; CHECK-NEXT:  // %bb.2: // %exit
 ; CHECK-NEXT:    ret
