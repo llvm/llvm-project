@@ -59,6 +59,10 @@ private:
 public:
   virtual ~TextEncodingConverterImplBase() = default;
 
+  /// Returns true if this converter performs no conversion (UTF-8 to
+  /// UTF-8).
+  virtual bool isNoop() const { return false; }
+
   /// Converts a string and resets the converter to the initial state.
   std::error_code convert(StringRef Source, SmallVectorImpl<char> &Result) {
     auto EC = convertString(Source, Result);
@@ -136,6 +140,9 @@ public:
       return std::string(Result);
     return EC;
   }
+
+  /// Returns true if this converter performs no conversion.
+  bool isNoop() const { return Converter->isNoop(); }
 
   // This method is used in format string handling and is only intended
   // to support basic charsets, not multibyte characters.
