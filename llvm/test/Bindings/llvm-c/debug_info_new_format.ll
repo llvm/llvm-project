@@ -39,7 +39,7 @@
 ; CHECK-NEXT: !3 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "EnumTest", scope: !4, file: !1, baseType: !6, size: 64, elements: !7)
 ; CHECK-NEXT: !4 = !DINamespace(name: "NameSpace", scope: !5)
 ; CHECK-NEXT: !5 = !DIModule(scope: null, name: "llvm-c-test", includePath: "/test/include/llvm-c-test.h")
-; CHECK-NEXT: !6 = !DIBasicType(name: "Int64", size: 64)
+; CHECK-NEXT: !6 = !DIBasicType(name: "Int64", size: 64, encoding: DW_ATE_signed)
 ; CHECK-NEXT: !7 = !{!8, !9, !10}
 ; CHECK-NEXT: !8 = !DIEnumerator(name: "Test_A", value: 0, isUnsigned: true)
 ; CHECK-NEXT: !9 = !DIEnumerator(name: "Test_B", value: 1, isUnsigned: true)
