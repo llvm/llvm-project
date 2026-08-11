@@ -244,14 +244,12 @@ bool LPPassManager::runOnFunction(Function &F) {
           assert(CurrentLoop->isRecursivelyLCSSAForm(*DT, *LI));
 #endif
 
-        // Then call the regular verifyAnalysis functions.
-        verifyPreservedAnalysis(P);
-
         F.getContext().yield();
       }
 
       if (LocalChanged)
         removeNotPreservedAnalysis(P);
+      verifyAvailableAnalyses();
       recordAvailableAnalysis(P);
       removeDeadPasses(P,
                        CurrentLoopDeleted ? "<deleted>"
