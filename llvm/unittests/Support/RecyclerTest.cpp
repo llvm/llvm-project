@@ -31,7 +31,7 @@ public:
     MallocAllocator::Deallocate(Ptr, Size, Alignment);
   }
 
-  template <typename T> void Deallocate(T *Ptr) {
+  template <typename T> [[maybe_unused]] void Deallocate(T *Ptr) {
     DeallocCount++;
     MallocAllocator::Deallocate(Ptr);
   }
