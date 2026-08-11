@@ -462,7 +462,7 @@ bool X86PassConfig::addInstSelector() {
 }
 
 bool X86PassConfig::addIRTranslator() {
-  addPass(new IRTranslator(getOptLevel()));
+  addPass(new IRTranslatorLegacy(getOptLevel()));
   return false;
 }
 

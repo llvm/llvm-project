@@ -24,8 +24,10 @@
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/SwiftErrorValueTracking.h"
 #include "llvm/CodeGen/SwitchLoweringUtils.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CodeGen.h"
 #include <memory>
@@ -43,6 +45,9 @@ class ConstrainedFPIntrinsic;
 class DataLayout;
 class DbgDeclareInst;
 class DbgValueInst;
+class BranchProbabilityInfo;
+class GISelCSEInfo;
+class GISelCSEAnalysisWrapper;
 class Instruction;
 class MachineBasicBlock;
 class MachineFunction;
@@ -50,6 +55,7 @@ class MachineInstr;
 class MachineRegisterInfo;
 class OptimizationRemarkEmitter;
 class PHINode;
+class SSPLayoutInfo;
 class TargetLibraryInfo;
 class TargetPassConfig;
 class User;
@@ -63,11 +69,26 @@ class Value;
 // the information from the LLVM IR.
 // The idea is that ultimately we would be able to free up the memory used
 // by the LLVM IR as soon as the translation is over.
-class LLVM_ABI IRTranslator : public MachineFunctionPass {
+class LLVM_ABI IRTranslatorLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
+  IRTranslatorLegacy(CodeGenOptLevel OptLevel = CodeGenOptLevel::None);
+
+  StringRef getPassName() const override { return "IRTranslator"; }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
 private:
+  CodeGenOptLevel OptLevel;
+};
+
+class LLVM_ABI IRTranslatorImpl {
+  friend class IRTranslatorLegacy;
+  friend class IRTranslator;
+
   /// Interface used to lower the everything related to calls.
   const CallLowering *CLI = nullptr;
 
@@ -640,6 +661,10 @@ private:
   const TargetLowering *TLI = nullptr;
   FunctionLoweringInfo FuncInfo;
 
+  GISelCSEInfo *CSEInfo = nullptr;
+  bool EnableCSE = false;
+  SSPLayoutInfo *SPInfo = nullptr;
+
   // True when either the Target Machine specifies no optimizations or the
   // function has the optnone attribute.
   bool EnableOpts = false;
@@ -655,7 +680,7 @@ private:
   /// Switch analysis and optimization.
   class GISelSwitchLowering : public SwitchCG::SwitchLowering {
   public:
-    GISelSwitchLowering(IRTranslator *irt, FunctionLoweringInfo &funcinfo)
+    GISelSwitchLowering(IRTranslatorImpl *irt, FunctionLoweringInfo &funcinfo)
         : SwitchLowering(funcinfo), IRT(irt) {
       assert(irt && "irt is null!");
     }
@@ -669,7 +694,7 @@ private:
     ~GISelSwitchLowering() override = default;
 
   private:
-    IRTranslator *IRT;
+    IRTranslatorImpl *IRT;
   };
 
   std::unique_ptr<GISelSwitchLowering> SL;
@@ -786,11 +811,7 @@ private:
       BranchProbability Prob = BranchProbability::getUnknown());
 
 public:
-  IRTranslator(CodeGenOptLevel OptLevel = CodeGenOptLevel::None);
-
-  StringRef getPassName() const override { return "IRTranslator"; }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  IRTranslatorImpl(CodeGenOptLevel OptLevel = CodeGenOptLevel::None);
 
   // Algo:
   //   CallLowering = MF.subtarget.getCallLowering()
@@ -804,7 +825,20 @@ public:
   //       if (!translate(MIRBuilder, inst, ValToVReg, ConstantToSequence))
   //         reportFatalUsageError("Don't know how to translate input");
   //   finalize()
-  bool runOnMachineFunction(MachineFunction &MF) override;
+  bool run(MachineFunction &MF);
+};
+
+class LLVM_ABI IRTranslator : public RequiredPassInfoMixin<IRTranslator> {
+  CodeGenOptLevel OptLevel;
+  bool EnableCSE;
+
+public:
+  IRTranslator(CodeGenOptLevel OptLevel = CodeGenOptLevel::None,
+               bool EnableCSE = false)
+      : OptLevel(OptLevel), EnableCSE(EnableCSE) {}
+
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
 };
 
 } // end namespace llvm

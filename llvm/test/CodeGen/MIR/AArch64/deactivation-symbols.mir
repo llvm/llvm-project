@@ -1,5 +1,8 @@
 # RUN: llc < %s -O0 -mtriple=aarch64-none-linux-gnu -mattr=+pauth -run-pass irtranslator -x mir | \
 # RUN:   llc -x mir -run-pass legalizer | FileCheck %s
+# RUN: llc < %s -O0 -mtriple=aarch64-none-linux-gnu -mattr=+pauth -x mir \
+# RUN:   -passes='require<libcall-lowering-info>,function(machine-function(ir-translator))' | \
+# RUN:   llc -x mir -run-pass legalizer | FileCheck %s
 
 --- |
   @ds = external global i8

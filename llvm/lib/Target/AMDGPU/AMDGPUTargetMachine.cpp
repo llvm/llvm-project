@@ -1778,7 +1778,7 @@ bool GCNPassConfig::addInstSelector() {
 }
 
 bool GCNPassConfig::addIRTranslator() {
-  addPass(new IRTranslator(getOptLevel()));
+  addPass(new IRTranslatorLegacy(getOptLevel()));
   return false;
 }
 

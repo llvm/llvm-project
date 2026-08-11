@@ -531,7 +531,7 @@ bool RISCVPassConfig::addInstSelector() {
 }
 
 bool RISCVPassConfig::addIRTranslator() {
-  addPass(new IRTranslator(getOptLevel()));
+  addPass(new IRTranslatorLegacy(getOptLevel()));
   return false;
 }
 
