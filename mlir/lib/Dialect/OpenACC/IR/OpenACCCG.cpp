@@ -271,9 +271,9 @@ parseGPUParallelDimList(AsmParser &parser) {
 static void printGPUParallelDimList(AsmPrinter &printer,
                                     ArrayRef<GPUParallelDimAttr> dims) {
   printer << "[";
-  llvm::interleaveComma(
-      dims, printer,
-      [&printer](const GPUParallelDimAttr &p) { printProcessorValue(printer, p); });
+  llvm::interleaveComma(dims, printer, [&printer](const GPUParallelDimAttr &p) {
+    printProcessorValue(printer, p);
+  });
   printer << "]";
 }
 
