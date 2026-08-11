@@ -3552,6 +3552,8 @@ foreach sparse = [0, 1] in {
          Range<collector_usage_b_op_idx, 0, 4>,
          ArgInfo<kind_idx, [ArgName<"kind">,
                             ImmArgPrinter<"printTcgen05MMAKind">]>,
+         ArgInfo<collector_buffer_b_idx, [ArgName<"collector_b_buffer">,
+                                          ImmArgPrinter<"printTcgen05MMACollectorBBuffer">]>,
          ArgInfo<collector_usage_b_op_idx, [ArgName<"collector_b">,
                                             ImmArgPrinter<"printTcgen05CollectorUsageOp">]>]
       );

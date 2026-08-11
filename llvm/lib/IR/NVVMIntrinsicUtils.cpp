@@ -70,6 +70,27 @@ void nvvm::printTcgen05CollectorUsageOp(raw_ostream &OS,
   }
 }
 
+void nvvm::printTcgen05MMACollectorBBuffer(raw_ostream &OS,
+                                           const Constant *ImmArgVal) {
+  if (const auto *CI = dyn_cast<ConstantInt>(ImmArgVal)) {
+    uint64_t Val = CI->getZExtValue();
+    switch (static_cast<Tcgen05MMACollectorBBuffer>(Val)) {
+    case Tcgen05MMACollectorBBuffer::B0:
+      OS << "b0";
+      return;
+    case Tcgen05MMACollectorBBuffer::B1:
+      OS << "b1";
+      return;
+    case Tcgen05MMACollectorBBuffer::B2:
+      OS << "b2";
+      return;
+    case Tcgen05MMACollectorBBuffer::B3:
+      OS << "b3";
+      return;
+    }
+  }
+}
+
 void nvvm::printTensormapElemType(raw_ostream &OS, const Constant *ImmArgVal) {
   static constexpr StringRef TensormapElemTypes[] = {
       "u8",       "u16",   "u32",       "s32",      "u64",  "s64",

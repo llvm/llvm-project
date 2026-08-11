@@ -88,6 +88,13 @@ enum class Tcgen05CollectorUsageOp : uint8_t {
   USE = 3,
 };
 
+enum class Tcgen05MMACollectorBBuffer : uint8_t {
+  B0 = 0,
+  B1 = 1,
+  B2 = 2,
+  B3 = 3,
+};
+
 enum class TensormapElemType : uint8_t {
   U8 = 0,
   U16 = 1,
@@ -139,6 +146,9 @@ LLVM_ABI void printTMAReductionOp(raw_ostream &OS, const Constant *ImmArgVal);
 
 LLVM_ABI void printTcgen05CollectorUsageOp(raw_ostream &OS,
                                            const Constant *ImmArgVal);
+
+LLVM_ABI void printTcgen05MMACollectorBBuffer(raw_ostream &OS,
+                                              const Constant *ImmArgVal);
 
 LLVM_ABI void printTensormapElemType(raw_ostream &OS,
                                      const Constant *ImmArgVal);

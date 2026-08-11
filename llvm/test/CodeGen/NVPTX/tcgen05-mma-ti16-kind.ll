@@ -223,14 +223,14 @@ define void @tcgen05_mma_sp_ti16_cta2(ptr addrspace(6) %dtmem, ptr addrspace(6) 
 
 define void @tcgen05_mma_ws_ti16(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d) {
 ; FORMAT-LABEL: define void @tcgen05_mma_ws_ti16(
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=ti16 */ i32 4, i32 0, /* collector_b=discard */ i32 0)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=ti16 */ i32 4, i32 0, /* collector_b=discard */ i32 0)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=ti16 */ i32 4, i32 0, /* collector_b=lastuse */ i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=ti16 */ i32 4, i32 0, /* collector_b=lastuse */ i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=ti16 */ i32 4, i32 0, /* collector_b=fill */ i32 2)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=ti16 */ i32 4, i32 0, /* collector_b=fill */ i32 2)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=ti16 */ i32 4, i32 0, /* collector_b=use */ i32 3)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=ti16 */ i32 4, i32 0, /* collector_b=use */ i32 3)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=ti16 */ i32 4, /* collector_b_buffer=b0 */ i32 0, /* collector_b=discard */ i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=ti16 */ i32 4, /* collector_b_buffer=b0 */ i32 0, /* collector_b=discard */ i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=ti16 */ i32 4, /* collector_b_buffer=b0 */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=ti16 */ i32 4, /* collector_b_buffer=b0 */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=ti16 */ i32 4, /* collector_b_buffer=b0 */ i32 0, /* collector_b=fill */ i32 2)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=ti16 */ i32 4, /* collector_b_buffer=b0 */ i32 0, /* collector_b=fill */ i32 2)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=ti16 */ i32 4, /* collector_b_buffer=b0 */ i32 0, /* collector_b=use */ i32 3)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=ti16 */ i32 4, /* collector_b_buffer=b0 */ i32 0, /* collector_b=use */ i32 3)
 ; CHECK-LABEL: tcgen05_mma_ws_ti16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -445,14 +445,14 @@ define void @tcgen05_mma_sp_ti16_disable_output_lane_cta2(ptr addrspace(6) %dtme
 
 define void @tcgen05_mma_ws_sp_ti16(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata) {
 ; FORMAT-LABEL: define void @tcgen05_mma_ws_sp_ti16(
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.sp.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, /* kind=ti16 */ i32 4, i32 0, /* collector_b=discard */ i32 0)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.sp.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, /* kind=ti16 */ i32 4, i32 0, /* collector_b=discard */ i32 0)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.sp.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, /* kind=ti16 */ i32 4, i32 0, /* collector_b=lastuse */ i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.sp.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, /* kind=ti16 */ i32 4, i32 0, /* collector_b=lastuse */ i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.sp.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, /* kind=ti16 */ i32 4, i32 0, /* collector_b=fill */ i32 2)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.sp.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, /* kind=ti16 */ i32 4, i32 0, /* collector_b=fill */ i32 2)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.sp.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, /* kind=ti16 */ i32 4, i32 0, /* collector_b=use */ i32 3)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.sp.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, /* kind=ti16 */ i32 4, i32 0, /* collector_b=use */ i32 3)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.sp.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, /* kind=ti16 */ i32 4, /* collector_b_buffer=b0 */ i32 0, /* collector_b=discard */ i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.sp.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, /* kind=ti16 */ i32 4, /* collector_b_buffer=b0 */ i32 0, /* collector_b=discard */ i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.sp.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, /* kind=ti16 */ i32 4, /* collector_b_buffer=b0 */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.sp.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, /* kind=ti16 */ i32 4, /* collector_b_buffer=b0 */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.sp.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, /* kind=ti16 */ i32 4, /* collector_b_buffer=b0 */ i32 0, /* collector_b=fill */ i32 2)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.sp.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, /* kind=ti16 */ i32 4, /* collector_b_buffer=b0 */ i32 0, /* collector_b=fill */ i32 2)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.sp.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, /* kind=ti16 */ i32 4, /* collector_b_buffer=b0 */ i32 0, /* collector_b=use */ i32 3)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.sp.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, /* kind=ti16 */ i32 4, /* collector_b_buffer=b0 */ i32 0, /* collector_b=use */ i32 3)
 ; CHECK-LABEL: tcgen05_mma_ws_sp_ti16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -496,12 +496,12 @@ define void @tcgen05_mma_ws_sp_ti16(ptr addrspace(6) %dtmem, ptr addrspace(6) %a
 
 define void @tcgen05_mma_ws_ti16_b1_b2_b3(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d) {
 ; FORMAT-LABEL: define void @tcgen05_mma_ws_ti16_b1_b2_b3(
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=ti16 */ i32 4, i32 1, /* collector_b=discard */ i32 0)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=ti16 */ i32 4, i32 1, /* collector_b=discard */ i32 0)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=ti16 */ i32 4, i32 2, /* collector_b=discard */ i32 0)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=ti16 */ i32 4, i32 2, /* collector_b=discard */ i32 0)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=ti16 */ i32 4, i32 3, /* collector_b=discard */ i32 0)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=ti16 */ i32 4, i32 3, /* collector_b=discard */ i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=ti16 */ i32 4, /* collector_b_buffer=b1 */ i32 1, /* collector_b=discard */ i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=ti16 */ i32 4, /* collector_b_buffer=b1 */ i32 1, /* collector_b=discard */ i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=ti16 */ i32 4, /* collector_b_buffer=b2 */ i32 2, /* collector_b=discard */ i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=ti16 */ i32 4, /* collector_b_buffer=b2 */ i32 2, /* collector_b=discard */ i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=ti16 */ i32 4, /* collector_b_buffer=b3 */ i32 3, /* collector_b=discard */ i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=ti16 */ i32 4, /* collector_b_buffer=b3 */ i32 3, /* collector_b=discard */ i32 0)
 ; CHECK-LABEL: tcgen05_mma_ws_ti16_b1_b2_b3(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -540,10 +540,10 @@ define void @tcgen05_mma_ws_ti16_b1_b2_b3(ptr addrspace(6) %dtmem, ptr addrspace
 
 define void @tcgen05_mma_ws_ti16_zero_col_mask(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 %zero_col_mask) {
 ; FORMAT-LABEL: define void @tcgen05_mma_ws_ti16_zero_col_mask(
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.shared.zero_col_mask(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 %zero_col_mask, /* kind=ti16 */ i32 4, i32 0, /* collector_b=discard */ i32 0)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.tensor.zero_col_mask(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 %zero_col_mask, /* kind=ti16 */ i32 4, i32 0, /* collector_b=discard */ i32 0)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.shared.zero_col_mask(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 %zero_col_mask, /* kind=ti16 */ i32 4, i32 0, /* collector_b=lastuse */ i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.tensor.zero_col_mask(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 %zero_col_mask, /* kind=ti16 */ i32 4, i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.shared.zero_col_mask(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 %zero_col_mask, /* kind=ti16 */ i32 4, /* collector_b_buffer=b0 */ i32 0, /* collector_b=discard */ i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.tensor.zero_col_mask(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 %zero_col_mask, /* kind=ti16 */ i32 4, /* collector_b_buffer=b0 */ i32 0, /* collector_b=discard */ i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.shared.zero_col_mask(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 %zero_col_mask, /* kind=ti16 */ i32 4, /* collector_b_buffer=b0 */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.tensor.zero_col_mask(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 %zero_col_mask, /* kind=ti16 */ i32 4, /* collector_b_buffer=b0 */ i32 0, /* collector_b=lastuse */ i32 1)
 ; CHECK-LABEL: tcgen05_mma_ws_ti16_zero_col_mask(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -579,10 +579,10 @@ define void @tcgen05_mma_ws_ti16_zero_col_mask(ptr addrspace(6) %dtmem, ptr addr
 
 define void @tcgen05_mma_ws_sp_ti16_zero_col_mask(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i64 %zero_col_mask) {
 ; FORMAT-LABEL: define void @tcgen05_mma_ws_sp_ti16_zero_col_mask(
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.sp.shared.zero_col_mask(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i64 %zero_col_mask, /* kind=ti16 */ i32 4, i32 0, /* collector_b=discard */ i32 0)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.sp.tensor.zero_col_mask(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i64 %zero_col_mask, /* kind=ti16 */ i32 4, i32 0, /* collector_b=discard */ i32 0)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.sp.shared.zero_col_mask(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i64 %zero_col_mask, /* kind=ti16 */ i32 4, i32 0, /* collector_b=lastuse */ i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.sp.tensor.zero_col_mask(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i64 %zero_col_mask, /* kind=ti16 */ i32 4, i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.sp.shared.zero_col_mask(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i64 %zero_col_mask, /* kind=ti16 */ i32 4, /* collector_b_buffer=b0 */ i32 0, /* collector_b=discard */ i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.sp.tensor.zero_col_mask(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i64 %zero_col_mask, /* kind=ti16 */ i32 4, /* collector_b_buffer=b0 */ i32 0, /* collector_b=discard */ i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.sp.shared.zero_col_mask(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i64 %zero_col_mask, /* kind=ti16 */ i32 4, /* collector_b_buffer=b0 */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.ws.sp.tensor.zero_col_mask(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i64 %zero_col_mask, /* kind=ti16 */ i32 4, /* collector_b_buffer=b0 */ i32 0, /* collector_b=lastuse */ i32 1)
 ; CHECK-LABEL: tcgen05_mma_ws_sp_ti16_zero_col_mask(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
