@@ -7,7 +7,7 @@
 // CHECK: Trying to match opcode SLLG
 // CHECK: Matching formal operand class MCK_GR64 against actual operand at index 1 (Reg:r3): match success using generic matcher
 // CHECK: Matching formal operand class MCK_GR64 against actual operand at index 2 (Reg:r0): match success using generic matcher
-// CHECK: Matching formal operand class MCK_BDAddr32Disp20 against actual operand at index 3 (Mem:3): match success using generic matcher
+// CHECK: Matching formal operand class MCK_BDAddrDisp20 against actual operand at index 3 (Mem:3): match success using generic matcher
 // CHECK: Matching formal operand class InvalidMatchClass against actual operand at index 4: actual operand index out of range
 // CHECK: Opcode result: complete match, selecting this opcode
 // CHECK: AsmMatcher: found 1 encodings with mnemonic 'llill'
@@ -25,32 +25,32 @@
 // CHECK: AsmMatcher: found 1 encodings with mnemonic 'lg'
 // CHECK: Trying to match opcode LG
 // CHECK: Matching formal operand class MCK_GR64 against actual operand at index 1 (Reg:r1): match success using generic matcher
-// CHECK: Matching formal operand class MCK_BDXAddr64Disp20 against actual operand at index 2 (Mem:16(r2)): match success using generic matcher
+// CHECK: Matching formal operand class MCK_BDXAddrDisp20 against actual operand at index 2 (Mem:16(r2)): match success using generic matcher
 // CHECK: Matching formal operand class InvalidMatchClass against actual operand at index 3: actual operand index out of range
 // CHECK: Opcode result: complete match, selecting this opcode
 // CHECK: AsmMatcher: found 1 encodings with mnemonic 'lg'
 // CHECK: Trying to match opcode LG
 // CHECK: Matching formal operand class MCK_GR64 against actual operand at index 1 (Reg:r1): match success using generic matcher
-// CHECK: Matching formal operand class MCK_BDXAddr64Disp20 against actual operand at index 2 (Mem:16(r2,r3)): match success using generic matcher
+// CHECK: Matching formal operand class MCK_BDXAddrDisp20 against actual operand at index 2 (Mem:16(r2,r3)): match success using generic matcher
 // CHECK: Matching formal operand class InvalidMatchClass against actual operand at index 3: actual operand index out of range
 // CHECK: Opcode result: complete match, selecting this opcode
 // CHECK: AsmMatcher: found 1 encodings with mnemonic 'stmg'
 // CHECK: Trying to match opcode STMG
 // CHECK: Matching formal operand class MCK_GR64 against actual operand at index 1 (Reg:r13): match success using generic matcher
 // CHECK: Matching formal operand class MCK_GR64 against actual operand at index 2 (Reg:r15): match success using generic matcher
-// CHECK: Matching formal operand class MCK_BDAddr64Disp20 against actual operand at index 3 (Mem:104(r15)): match success using generic matcher
+// CHECK: Matching formal operand class MCK_BDAddrDisp20 against actual operand at index 3 (Mem:104(r15)): match success using generic matcher
 // CHECK: Matching formal operand class InvalidMatchClass against actual operand at index 4: actual operand index out of range
 // CHECK: Opcode result: complete match, selecting this opcode
 // CHECK: AsmMatcher: found 1 encodings with mnemonic 'mvc'
 // CHECK: Trying to match opcode MVC
-// CHECK: Matching formal operand class MCK_BDLAddr64Disp12Len8 against actual operand at index 1 (Mem:184(8,r15)): match success using generic matcher
-// CHECK: Matching formal operand class MCK_BDAddr64Disp12 against actual operand at index 2 (Mem:8(r2)): match success using generic matcher
+// CHECK: Matching formal operand class MCK_BDLAddrDisp12Len8 against actual operand at index 1 (Mem:184(8,r15)): match success using generic matcher
+// CHECK: Matching formal operand class MCK_BDAddrDisp12 against actual operand at index 2 (Mem:8(r2)): match success using generic matcher
 // CHECK: Matching formal operand class InvalidMatchClass against actual operand at index 3: actual operand index out of range
 // CHECK: Opcode result: complete match, selecting this opcode
 // CHECK: AsmMatcher: found 1 encodings with mnemonic 'mvck'
 // CHECK: Trying to match opcode MVCK
-// CHECK: Matching formal operand class MCK_BDRAddr64Disp12 against actual operand at index 1 (Mem:0(r0,r1)): match success using generic matcher
-// CHECK: Matching formal operand class MCK_BDAddr64Disp12 against actual operand at index 2 (Mem:4095(r15)): match success using generic matcher
+// CHECK: Matching formal operand class MCK_BDRAddrDisp12 against actual operand at index 1 (Mem:0(r0,r1)): match success using generic matcher
+// CHECK: Matching formal operand class MCK_BDAddrDisp12 against actual operand at index 2 (Mem:4095(r15)): match success using generic matcher
 // CHECK: Matching formal operand class MCK_GR64 against actual operand at index 3 (Reg:r2): match success using generic matcher
 // CHECK: Matching formal operand class InvalidMatchClass against actual operand at index 4: actual operand index out of range
 // CHECK: Opcode result: complete match, selecting this opcode
