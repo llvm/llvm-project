@@ -944,6 +944,9 @@ bool Thread::ShouldStop(Event *event_ptr) {
             override_stop = true;
             LLDB_LOGF(log, "Plan %s auto-continue: true.",
                       current_plan->GetName());
+            // The ShouldAutoContinue contract: subsequent plans are not asked.
+            PopPlan();
+            break;
           }
 
           // If a Controlling Plan wants to stop, we let it. Otherwise, see if

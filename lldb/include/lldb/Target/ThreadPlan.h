@@ -380,8 +380,8 @@ public:
   /// subsequently processed plans.
   ///
   /// When processing the thread plan stack, this function gives plans the
-  /// ability to continue - even when subsequent plans return true from
-  /// `ShouldStop`. \see Thread::ShouldStop
+  /// ability to continue. If it returns true, the `ShouldStop` of
+  /// subsequently processed plans is not consulted. \see Thread::ShouldStop
   virtual bool ShouldAutoContinue(Event *event_ptr) { return false; }
 
   // Whether a "stop class" event should be reported to the "outside world".
