@@ -129,9 +129,8 @@ def _libc_srcs_filegroup_impl(ctx):
         for fn in ctx.attr.libs
     ])
     if ctx.attr.enforce_headers_only:
-        paths = [f.short_path for f in srcs.to_list() if f.extension != "h"]
-        if paths:
-            fail("Unexpected non-header files: {}".format(paths))
+        headers_only = [f for f in srcs.to_list() if f.extension == "h"]
+        return DefaultInfo(files = depset(headers_only))
     return DefaultInfo(files = srcs)
 
 _libc_srcs_filegroup = rule(
