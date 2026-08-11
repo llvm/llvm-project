@@ -1953,10 +1953,9 @@ static bool isIntegerVectorBinOp(mlir::Type ty) {
 // the addend respectively. This allows fmuladd to represent a*b-c, or c-a*b.
 // Patterns in LLVM should catch the negated forms and translate them to
 // efficient operations.
-static mlir::Value buildFMulAdd(cir::FMulOp mulOp, mlir::Value addend,
-                                CIRGenBuilderTy &builder, bool negMul,
-                                bool negAdd) {
-  const mlir::Location loc = mulOp.getLoc();
+static mlir::Value buildFMulAdd(mlir::Location loc, cir::FMulOp mulOp,
+                                mlir::Value addend, CIRGenBuilderTy &builder,
+                                bool negMul, bool negAdd) {
   mlir::Value mulOp0 = mulOp.getLhs();
   mlir::Value mulOp1 = mulOp.getRhs();
   if (negMul)
@@ -1964,9 +1963,11 @@ static mlir::Value buildFMulAdd(cir::FMulOp mulOp, mlir::Value addend,
   if (negAdd)
     addend = builder.createFNeg(loc, addend);
 
-  mlir::Value fmuladd =
-      cir::FMulAddOp::create(builder, loc, addend.getType(), mulOp0, mulOp1,
-                             addend, builder.getConstrainedFPAttr());
+  // Carry the mul's fenv attribute so a constrained fmul yields a constrained
+  // fmuladd; the builder is under the add's FP options, not the mul's.
+  mlir::Value fmuladd = cir::FMulAddOp::create(
+      builder, loc, addend.getType(), mulOp0, mulOp1, addend,
+      mulOp.getFenvAttr());
   mulOp.erase();
   return fmuladd;
 }
@@ -1977,13 +1978,16 @@ static mlir::Value buildFMulAdd(cir::FMulOp mulOp, mlir::Value addend,
 // Checks that (a) the operation is fusable, and (b) -ffp-contract=on.
 // Does NOT check the type of the operation - it's assumed that this function
 // will be called from contexts where it's known that the type is contractable.
-static mlir::Value tryEmitFMulAdd(const BinOpInfo &op, CIRGenBuilderTy &builder,
-                                  bool isSub = false) {
+static mlir::Value tryEmitFMulAdd(mlir::Location loc, const BinOpInfo &op,
+                                  CIRGenBuilderTy &builder, bool isSub = false) {
   assert((op.opcode == BO_Add || op.opcode == BO_AddAssign ||
           op.opcode == BO_Sub || op.opcode == BO_SubAssign) &&
          "Only fadd/fsub can be the root of an fmuladd.");
 
-  // Check whether this op is marked as fusable.
+  // Check whether this op is fusable, i.e. -ffp-contract=on. -ffp-contract=fast
+  // needs fast-math flags on the fmul/fadd, which CIR does not model yet, so it
+  // fuses nowhere for now.
+  assert(!cir::MissingFeatures::fastMathFlags());
   if (!op.fpFeatures.allowFPContractWithinStatement())
     return nullptr;
 
@@ -2016,7 +2020,7 @@ static mlir::Value tryEmitFMulAdd(const BinOpInfo &op, CIRGenBuilderTy &builder,
       // If we looked through fneg, erase it.
       if (negLHS)
         op.lhs.getDefiningOp<cir::FNegOp>().erase();
-      return buildFMulAdd(lhsMul, op.rhs, builder, negLHS, isSub);
+      return buildFMulAdd(loc, lhsMul, op.rhs, builder, negLHS, isSub);
     }
   }
   if (auto rhsMul = rhs.getDefiningOp<cir::FMulOp>()) {
@@ -2024,7 +2028,7 @@ static mlir::Value tryEmitFMulAdd(const BinOpInfo &op, CIRGenBuilderTy &builder,
       // If we looked through fneg, erase it.
       if (negRHS)
         op.rhs.getDefiningOp<cir::FNegOp>().erase();
-      return buildFMulAdd(rhsMul, op.lhs, builder, isSub ^ negRHS, false);
+      return buildFMulAdd(loc, rhsMul, op.lhs, builder, isSub ^ negRHS, false);
     }
   }
 
@@ -2131,7 +2135,7 @@ mlir::Value ScalarExprEmitter::emitAdd(const BinOpInfo &ops) {
   if (cir::isFPOrVectorOfFPType(ops.lhs.getType())) {
     CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, ops.fpFeatures);
     // Try to form an fmuladd.
-    if (mlir::Value fmuladd = tryEmitFMulAdd(ops, builder))
+    if (mlir::Value fmuladd = tryEmitFMulAdd(loc, ops, builder))
       return fmuladd;
     return builder.createFAdd(loc, ops.lhs, ops.rhs);
   }
@@ -2182,7 +2186,7 @@ mlir::Value ScalarExprEmitter::emitSub(const BinOpInfo &ops) {
     if (cir::isFPOrVectorOfFPType(ops.lhs.getType())) {
       CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, ops.fpFeatures);
       // Try to form an fmuladd.
-      if (mlir::Value fmuladd = tryEmitFMulAdd(ops, builder, /*isSub=*/true))
+      if (mlir::Value fmuladd = tryEmitFMulAdd(loc, ops, builder, /*isSub=*/true))
         return fmuladd;
       return builder.createFSub(loc, ops.lhs, ops.rhs);
     }
