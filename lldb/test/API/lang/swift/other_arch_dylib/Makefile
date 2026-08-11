@@ -2,6 +2,10 @@ export SWIFT_ENABLE_EXPLICIT_MODULES := NO
 SWIFT_SOURCES := main.swift
 SWIFTFLAGS_EXTRAS = -F$(BUILDDIR) -Xlinker -rpath -Xlinker $(BUILDDIR)
 
+# OtherArch.framework below is built for macOS 15, and a module cannot be
+# imported by code with a lower deployment target.
+SWIFT_DEPLOYMENT_TARGET := 26
+
 all: OtherArch.framework/Versions/A/OtherArch $(EXE)
 
 include Makefile.rules

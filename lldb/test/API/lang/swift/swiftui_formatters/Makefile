@@ -6,5 +6,6 @@ SWIFT_SOURCES := main.swift
 # the plugin server can't start ("malformed response") and the macro fails to
 # resolve. Disable the macro-plugin sandbox so the test subject builds.
 SWIFTFLAGS_EXTRAS := -Xfrontend -disable-sandbox
+SWIFT_DEPLOYMENT_TARGET := 26
 
 include Makefile.rules
