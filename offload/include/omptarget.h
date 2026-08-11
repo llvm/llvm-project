@@ -28,8 +28,11 @@
 
 #include "llvm/ADT/SmallVector.h"
 
-#define OFFLOAD_SUCCESS (0)
-#define OFFLOAD_FAIL (~0)
+/// Return status of the internal offload and plugin interfaces.
+enum OffloadStatusTy : int32_t {
+  OFFLOAD_SUCCESS = 0,
+  OFFLOAD_FAIL = ~0,
+};
 
 #define OFFLOAD_DEVICE_DEFAULT -1
 
