@@ -924,9 +924,18 @@ spirv::Deserializer::processGraphEndARM(ArrayRef<uint32_t> operands) {
 std::optional<std::pair<Attribute, Type>>
 spirv::Deserializer::getConstant(uint32_t id) {
   auto constIt = constantMap.find(id);
-  if (constIt == constantMap.end())
+  if (constIt != constantMap.end())
+    return constIt->getSecond();
+
+  auto replicatedConstIt = constantCompositeReplicateMap.find(id);
+  if (replicatedConstIt == constantCompositeReplicateMap.end())
     return std::nullopt;
-  return constIt->getSecond();
+
+  auto [value, type] = replicatedConstIt->getSecond();
+  auto shapedType = dyn_cast<ShapedType>(type);
+  if (!shapedType)
+    return std::nullopt;
+  return std::make_pair(SplatElementsAttr::get(shapedType, value), type);
 }
 
 std::optional<std::pair<Attribute, Type>>
@@ -1949,19 +1958,19 @@ LogicalResult spirv::Deserializer::processConstantCompositeReplicateEXT(
   uint32_t resultID = operands[1];
   uint32_t constantID = operands[2];
 
-  std::optional<std::pair<Attribute, Type>> constantInfo =
-      getConstant(constantID);
-  if (constantInfo.has_value()) {
-    constantCompositeReplicateMap.try_emplace(
-        resultID, constantInfo.value().first, resultType);
-    return success();
-  }
-
   std::optional<std::pair<Attribute, Type>> replicatedConstantCompositeInfo =
       getConstantCompositeReplicate(constantID);
   if (replicatedConstantCompositeInfo.has_value()) {
     constantCompositeReplicateMap.try_emplace(
         resultID, replicatedConstantCompositeInfo.value().first, resultType);
+    return success();
+  }
+
+  std::optional<std::pair<Attribute, Type>> constantInfo =
+      getConstant(constantID);
+  if (constantInfo.has_value()) {
+    constantCompositeReplicateMap.try_emplace(
+        resultID, constantInfo.value().first, resultType);
     return success();
   }
 

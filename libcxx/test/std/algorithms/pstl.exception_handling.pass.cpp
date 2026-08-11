@@ -21,6 +21,7 @@
 
 #include <algorithm>
 #include <numeric>
+#include <memory>
 
 #include "check_assertion.h"
 #include "test_execution_policies.h"
@@ -125,6 +126,14 @@ int main(int, char**) {
 
         // count_if(first, last, pred)
         assert_non_throwing([=, &policy] { (void)std::count_if(policy, std::move(first1), std::move(last1), pred); });
+      }
+
+      {
+        // destroy(first, last)
+        assert_non_throwing([=, &policy] { (void)std::destroy(policy, std::move(first1), std::move(last1)); });
+
+        // destroy_n(first, n)
+        assert_non_throwing([=, &policy] { (void)std::destroy_n(policy, std::move(first1), n); });
       }
 
       {
@@ -447,4 +456,6 @@ int main(int, char**) {
       }
     }
   });
+
+  return 0;
 }

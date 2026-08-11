@@ -294,6 +294,7 @@ set(files
   __chrono/year_month_day.h
   __chrono/year_month_weekday.h
   __chrono/zoned_time.h
+  __cmath/lerp.h
   __cmath/special_functions.h
   __compare/common_comparison_category.h
   __compare/compare_partial_order_fallback.h
@@ -618,6 +619,7 @@ set(files
   __memory/noexcept_move_assign_container.h
   __memory/out_ptr.h
   __memory/pointer_traits.h
+  __memory/pstl.h  
   __memory/ranges_construct_at.h
   __memory/ranges_destroy.h
   __memory/ranges_uninitialized_algorithms.h
@@ -1710,9 +1712,11 @@ set(files
 configure_file("__config_site.in" "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site" @ONLY)
 configure_file("${LIBCXX_ASSERTION_HANDLER_FILE}" "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler" COPYONLY)
 
-# We generate the modulemap file so that we can include __config_site in it. For now, we don't know how to
-# make __config_site modular when per-target runtime directories are used.
-if (NOT LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
+# We generate the main modulemap file so that we can include __config_site in it. When using a target-specific
+# include directory, give it its own modulemap.
+if (LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
+  configure_file("target.modulemap" "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/module.modulemap" COPYONLY)
+else()
   set(LIBCXX_CONFIG_SITE_MODULE_ENTRY "textual header \"__config_site\"")
 endif()
 configure_file("module.modulemap.in" "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap" @ONLY)
@@ -1720,6 +1724,9 @@ configure_file("module.modulemap.in" "${LIBCXX_GENERATED_INCLUDE_DIR}/module.mod
 set(_all_includes "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site"
                   "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler"
                   "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap")
+if (LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
+  list(APPEND _all_includes "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/module.modulemap")
+endif()
 foreach(f ${files})
   set(src "${CMAKE_CURRENT_SOURCE_DIR}/${f}")
   set(dst "${LIBCXX_GENERATED_INCLUDE_DIR}/${f}")
@@ -1787,6 +1794,14 @@ if (LIBCXX_INSTALL_HEADERS)
     DESTINATION "${LIBCXX_INSTALL_INCLUDE_DIR}"
     PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     COMPONENT cxx-headers)
+
+  # Install the per-target modulemap when we use per-target include dirs.
+  if (LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
+    install(FILES "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/module.modulemap"
+      DESTINATION "${LIBCXX_INSTALL_INCLUDE_TARGET_DIR}"
+      PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+      COMPONENT cxx-headers)
+  endif()
 
   if (NOT CMAKE_CONFIGURATION_TYPES)
     add_custom_target(install-cxx-headers
