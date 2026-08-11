@@ -6480,12 +6480,9 @@ bool VectorCombine::foldShuffleOfAdjacentLoads(Instruction &I) {
   bool LowComesFirst = LowLoad->comesBefore(HighLoad);
   if (!LowComesFirst)
     std::swap(FirstLoad, LastLoad);
-  MemoryLocation WideLoc(
-      LowLoad->getPointerOperand(),
-      LocationSize::precise(DL->getTypeStoreSize(WideTy)),
-      LowLoad->getAAMetadata().concat(HighLoad->getAAMetadata()));
+  MemoryLocation FirstLoc = MemoryLocation::get(FirstLoad);
   if (isMemModifiedBetween(std::next(FirstLoad->getIterator()),
-                           LastLoad->getIterator(), WideLoc, AA))
+                           LastLoad->getIterator(), FirstLoc, AA))
     return false;
 
   // case 1: wide load = LowLoad + HighLoad   ,
