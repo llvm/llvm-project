@@ -59,6 +59,7 @@ private:
   MachineBasicBlock *CommonDominator = nullptr;
   bool Deleted = false;
   RestorePlacement WhereToRestore;
+  LaneBitmask Mask = LaneBitmask::getNone();
 
 public:
   DomGroup(MachineInstr *MI, MachineBasicBlock *RestoreBlock,
@@ -72,6 +73,7 @@ public:
   DomGroup() = default;
   MachineInstr *getHead() const { return Uses.front(); }
   bool isDeleted() const { return Deleted; }
+  void setDeleted() { Deleted = true; }
   void merge(DomGroup &Other) {
     for (auto *MI : Other.Uses)
       Uses.push_back(MI);
@@ -82,7 +84,7 @@ public:
     PHIInstrToRestoreBlock.insert(Other.PHIInstrToRestoreBlock.begin(),
                                   Other.PHIInstrToRestoreBlock.end());
 
-    Other.Deleted = true;
+    Other.setDeleted();
   }
   const auto &getUses() const { return Uses; }
   const auto &getUseBlocks() const { return UseBlocks; }
@@ -105,6 +107,12 @@ public:
   }
   RestorePlacement getWhereToRestore() const { return WhereToRestore; }
   void setWhereToRestore(RestorePlacement RP) { WhereToRestore = RP; }
+  LaneBitmask getLaneBitmask() const { return Mask; }
+  void setLaneBitmask(LaneBitmask M) { Mask = M; }
+
+  bool operator==(const DomGroup &Other) const {
+    return getHead() == Other.getHead();
+  }
 };
 
 class AMDGPUEarlyRegisterSpilling : public MachineFunctionPass {
@@ -124,6 +132,7 @@ class AMDGPUEarlyRegisterSpilling : public MachineFunctionPass {
   DenseSet<Register> SpilledRegs;
   // We do not spill the registers that are returned by restore instructions.
   DenseMap<Register, DomGroup> RestoreRegToDomGroup;
+  DenseMap<MachineLoop *, SmallVector<DomGroup>> LoopToDomGroups;
 
   unsigned MaxVGPRs = 0;
   unsigned MaxSGPRs = 0;
@@ -174,7 +183,8 @@ class AMDGPUEarlyRegisterSpilling : public MachineFunctionPass {
                              const SetVectorType &NonDominatedReachableUses);
 
   /// Collect Non Dominated Reachable and Unreachable uses.
-  void classifyUses(MachineBasicBlock *SpillBlock, Register RegToSpill,
+  /// Returns true if there is a use in a loop nest.
+  bool classifyUses(MachineBasicBlock *SpillBlock, Register RegToSpill,
                     MachineInstr *CurMI, SetVectorType &DominatedUses,
                     SetVectorType &NonDominatedReachableUses,
                     SetVectorType &UnreachableUses);
