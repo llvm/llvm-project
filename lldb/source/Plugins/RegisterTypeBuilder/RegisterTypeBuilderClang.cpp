@@ -35,7 +35,7 @@ RegisterTypeBuilderClang::RegisterTypeBuilderClang(Target &target)
 
 static std::string MakeTypeName(const RegisterType &type_info,
                                 uint32_t register_byte_size) {
-  std::string type_name = "__lldb_register_fields_";
+  std::string type_name = "__lldb_register_";
   switch (type_info.getKind()) {
   case RegisterType::eRegisterTypeKindFlags:
     type_name += "flags_";
