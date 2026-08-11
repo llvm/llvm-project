@@ -440,6 +440,9 @@ features cannot lower the translation-unit ABI level;
   copy so the union's object representation is copied, matching the defaulted
   union copy constructor.
 
+- Fixed friend declarations sometimes making non-visible default arguments
+  incorrectly visible to default argument redefinition checks across modules.
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
