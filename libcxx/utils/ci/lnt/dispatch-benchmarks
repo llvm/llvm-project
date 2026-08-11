@@ -110,7 +110,7 @@ def collapse(items: Sequence[common.WorkItem]) -> List[common.WorkItem]:
 
 def parse_run_name(title: str) -> Optional[RunName]:
     """
-    Return what a workflow run is doing, or None if it can't be told.
+    Return the information encoded in a worfklow's run-name, or None if it can't be parsed.
 
     The name has to match the workflow's `run-name` exactly.
     """
