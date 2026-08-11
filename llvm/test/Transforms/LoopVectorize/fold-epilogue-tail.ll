@@ -40,34 +40,6 @@ exit:
   ret void
 }
 
-define void @test_outer_loop(ptr %A, i64 %m) {
-; CHECK-OUTER-LOOP-LABEL: Checking a loop in 'test_outer_loop'
-; CHECK-OUTER-LOOP: LV: Epilogue tail-folding is not supported for outer loop
-;
-entry:
-  br label %outer.header
-
-outer.header:
-  %iv.outer = phi i64 [ 0, %entry ], [ %iv.outer.next, %outer.latch ]
-  br label %inner
-
-inner:
-  %iv.inner = phi i64 [ 0, %outer.header ], [ %iv.inner.next, %inner ]
-  %gep = getelementptr inbounds i32, ptr %A, i64 %iv.inner
-  store i32 0, ptr %gep, align 4
-  %iv.inner.next = add nuw nsw i64 %iv.inner, 1
-  %inner.ec = icmp eq i64 %iv.inner.next, 8
-  br i1 %inner.ec, label %outer.latch, label %inner
-
-outer.latch:
-  %iv.outer.next = add nuw nsw i64 %iv.outer, 1
-  %outer.ec = icmp eq i64 %iv.outer.next, %m
-  br i1 %outer.ec, label %exit, label %outer.header, !llvm.loop !1
-
-exit:
-  ret void
-}
-
 ; This case can't be tail-folded because all the iterations will be executed by
 ; main vector loop.
 define void @test_no_iterations_left(ptr %A) {
@@ -91,12 +63,41 @@ exit:
   ret void
 }
 
-define void @test_no_fv(ptr %A, i64 %n) {
-; CHECK-NO-FORCED-MAIN-VF-LABEL: Checking a loop in 'test_no_fv'
-; CHECK-NO-FORCED-MAIN-VF: remark: <unknown>:0:0: For now, Epilogue tail-folding can't be applied without forced epilogue/main loop VF
+; Can't build a valid vplan for this case because too many SCEV checks needed,
+; more than the specfied limit.
+define i64 @test_no_vplan_built(ptr %dst, i64 %n) {
+; CHECK-NO-VPLANS-LABEL: Checking a loop in 'test_no_vplan_built'
+; CHECK-NO-VPLANS: LV: epilogue tail-folding is enabled
+; CHECK-NO-VPLANS: LV: no vplans have been built for main loop VF, bail out of epilogue tail-folding
+;
+entry:
+  br label %loop
 
-; CHECK-NO-FORCED-EPILOGUE-VF-LABEL: Checking a loop in 'test_no_fv'
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %dead.iv = phi i16 [ 0, %entry ], [ %dead.iv.next, %loop ]
+  %prev = phi i64 [ 0, %entry ], [ %ext, %loop ]
+  %iv.next = add nuw nsw i64 %iv, 1
+  %dead.iv.next = add i16 %dead.iv, 1
+  %ext = zext i16 %dead.iv.next to i64
+  %gep = getelementptr inbounds i64, ptr %dst, i64 %prev
+  store i64 %iv, ptr %gep, align 8
+  %cmp = icmp slt i64 %iv.next, %n
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  %result = phi i64 [ %ext, %loop ]
+  ret i64 %result
+}
+
+define void @test_no_vf(ptr %A, i64 %n) {
+; CHECK-NO-FORCED-MAIN-VF-LABEL: Checking a loop in 'test_no_vf'
+; CHECK-NO-FORCED-MAIN-VF: remark: <unknown>:0:0: For now, Epilogue tail-folding can't be applied without forced epilogue/main loop VF
+; CHECK-NO-FORCED-MAIN-VF-NOT: LV: epilogue tail-folding is enabled
+
+; CHECK-NO-FORCED-EPILOGUE-VF-LABEL: Checking a loop in 'test_no_vf'
 ; CHECK-NO-FORCED-EPILOGUE-VF: remark: <unknown>:0:0: For now, Epilogue tail-folding can't be applied without forced epilogue/main loop VF
+; CHECK-NO-FORCED-EPILOGUE-VF-NOT: LV: epilogue tail-folding is enabled
 ;
 entry:
   br label %for.body
@@ -116,6 +117,7 @@ exit:
 define void @epilogue_is_disabled(ptr %a, i64 %n) {
 ; CHECK-DISABLED-EPILOG-LABEL: Checking a loop in 'epilogue_is_disabled'
 ; CHECK-DISABLED-EPILOG: remark: <unknown>:0:0: Options conflict, epilogue vectorization is disallowed while epilogue tail-folding allowed!
+; CHECK-DISABLED-EPILOG-NOT: LV: epilogue tail-folding is enabled
 ;
 entry:
   br label %for.body
@@ -136,6 +138,7 @@ define i16 @require_scalar_epilogue(ptr %dst, i64 %x) {
 ; CHECK-LABEL: Checking a loop in 'require_scalar_epilogue'
 ; CHECK: LV: Epilogue tail-folding can't be applied because scalar epilogue is required
 ; CHECK-NEXT: LV: Fall back to a normal epilogue
+; CHECK-NOT: LV: epilogue tail-folding is enabled
 ;
 entry:
   br label %loop.header
@@ -165,6 +168,7 @@ define i32 @opt_for_size(ptr %p, i32 %n) optsize {
 ; CHECK-LABEL: Checking a loop in 'opt_for_size'
 ; CHECK: LV: No epilogue to apply tail-folding for.
 ; CHECK-NEXT: LV: Fall back to a normal epilogue
+; CHECK-NOT: LV: epilogue tail-folding is enabled
 ;
 entry:
   br label %for.body
@@ -184,31 +188,33 @@ for.end:
   ret i32 0
 }
 
-; Can't build a valid vplan for this case because too many SCEV checks needed,
-; more than the specfied limit.
-define i64 @test_no_vplan_built(ptr %dst, i64 %n) {
-; CHECK-NO-VPLANS-LABEL: Checking a loop in 'test_no_vplan_built'
-; CHECK-NO-VPLANS: LV: epilogue tail-folding is enabled
-; CHECK-NO-VPLANS: LV: no vplans have been built for main loop VF, bail out of epilogue tail-folding
+define void @test_outer_loop(ptr %A, i64 %m) {
+; CHECK-OUTER-LOOP-LABEL: Checking a loop in 'test_outer_loop'
+; CHECK-OUTER-LOOP: remark: <unknown>:0:0: Epilogue tail-folding is not supported for outer loop
+; CHECK-OUTER-LOOP-NOT: LV: epilogue tail-folding is enabled
 ;
 entry:
-  br label %loop
+  br label %outer.header
 
-loop:
-  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %dead.iv = phi i16 [ 0, %entry ], [ %dead.iv.next, %loop ]
-  %prev = phi i64 [ 0, %entry ], [ %ext, %loop ]
-  %iv.next = add nuw nsw i64 %iv, 1
-  %dead.iv.next = add i16 %dead.iv, 1
-  %ext = zext i16 %dead.iv.next to i64
-  %gep = getelementptr inbounds i64, ptr %dst, i64 %prev
-  store i64 %iv, ptr %gep, align 8
-  %cmp = icmp slt i64 %iv.next, %n
-  br i1 %cmp, label %loop, label %exit
+outer.header:
+  %iv.outer = phi i64 [ 0, %entry ], [ %iv.outer.next, %outer.latch ]
+  br label %inner
+
+inner:
+  %iv.inner = phi i64 [ 0, %outer.header ], [ %iv.inner.next, %inner ]
+  %gep = getelementptr inbounds i32, ptr %A, i64 %iv.inner
+  store i32 0, ptr %gep, align 4
+  %iv.inner.next = add nuw nsw i64 %iv.inner, 1
+  %inner.ec = icmp eq i64 %iv.inner.next, 8
+  br i1 %inner.ec, label %outer.latch, label %inner
+
+outer.latch:
+  %iv.outer.next = add nuw nsw i64 %iv.outer, 1
+  %outer.ec = icmp eq i64 %iv.outer.next, %m
+  br i1 %outer.ec, label %exit, label %outer.header, !llvm.loop !1
 
 exit:
-  %result = phi i64 [ %ext, %loop ]
-  ret i64 %result
+  ret void
 }
 
 !1 = distinct !{!1, !2}

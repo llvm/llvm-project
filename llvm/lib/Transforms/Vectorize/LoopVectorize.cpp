@@ -7300,10 +7300,12 @@ getEpilogueTailLowering(const LoopVectorizationCostModel &MainCM, const Loop *L,
       EpilogueTailFoldingPolicy != TailFoldingPolicyTy::PreferFoldTail)
     return CM_EpilogueAllowed;
 
-  if (!L->isInnermost())
+  if (!L->isInnermost()) {
     reportVectorizationInfo(
         "Epilogue tail-folding is not supported for outer loop",
         "InvalidTailFoldedEpilogue", ORE, L);
+    return CM_EpilogueAllowed;
+  }
 
   if (!EnableEpilogueVectorization) {
     reportVectorizationInfo(
