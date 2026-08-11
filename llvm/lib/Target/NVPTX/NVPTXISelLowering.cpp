@@ -14,7 +14,6 @@
 #include "NVPTXISelLowering.h"
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
-#include "NVPTXISelDAGToDAG.h"
 #include "NVPTXMachineFunctionInfo.h"
 #include "NVPTXSelectionDAGInfo.h"
 #include "NVPTXSubtarget.h"
@@ -3400,8 +3399,7 @@ static SDValue lowerMSTORE(SDValue Op, SelectionDAG &DAG) {
   // Finally, the offset operand. We expect this to always be undef, and it will
   // be ignored in lowering, but to mirror the handling of the other vector
   // store instructions we include it in the new SDNode.
-  assert(Offset.getOpcode() == ISD::UNDEF &&
-         "Offset operand expected to be undef");
+  assert(Offset.isUndef() && "Offset operand expected to be undef or poison");
   Ops.push_back(Offset);
 
   SDValue NewSt =
@@ -7523,6 +7521,9 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   if (AI->isFloatingPointOperation())
     return AtomicExpansionKind::CmpXChg;
 
+  if (Ty->isVectorTy())
+    return AtomicExpansionKind::CmpXChg;
+
   assert(Ty->isIntegerTy() && "Ty should be integer at this point");
   const unsigned BitWidth = cast<IntegerType>(Ty)->getBitWidth();
 
@@ -7780,7 +7781,7 @@ static void computeKnownBitsForLoadV(const SDValue Op, KnownBits &Known) {
     return;
 
   assert(Known.getBitWidth() == DestVT.getSizeInBits());
-  auto ElementBitWidth = NVPTXDAGToDAGISel::getFromTypeWidthForLoad(LD);
+  auto ElementBitWidth = getFromTypeWidthForLoad(LD);
   Known.Zero.setHighBits(Known.getBitWidth() - ElementBitWidth);
 }
 
