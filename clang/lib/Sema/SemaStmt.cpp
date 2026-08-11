@@ -4768,7 +4768,12 @@ buildCapturedStmtCaptureList(Sema &S, CapturedRegionScopeInfo *RSI,
       assert(Cap.isVariableCapture() && "unknown kind of capture");
 
       if (S.getLangOpts().OpenMP && RSI->CapRegionKind == CR_OpenMP) {
-        ValueDecl *DSAVar = Cap.getVariable();
+        const ValueDecl *DSAVar = Cap.getVariable();
+        // DSAs are tracked per binding; a captured DecompositionDecl has no
+        // own DSA entry.
+        if (const auto *DD = dyn_cast<DecompositionDecl>(DSAVar))
+          if (!DD->bindings().empty())
+            DSAVar = *DD->bindings().begin();
         S.OpenMP().setOpenMPCaptureKind(Field, DSAVar, RSI->OpenMPLevel);
       }
       Captures.emplace_back(Cap.getLocation(),

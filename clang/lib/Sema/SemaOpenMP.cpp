@@ -573,11 +573,6 @@ public:
               DeclRefExpr *PrivateCopy = nullptr, unsigned Modifier = 0,
               bool AppliedToPointee = false);
 
-  /// Check if bindings from the same DecompositionDecl have conflicting DSA.
-  /// Returns the conflicting DSAInfo if found, nullptr otherwise.
-  const DSAInfo *hasConflictingDecompositionDSA(const DecompositionDecl *DD,
-                                                OpenMPClauseKind A) const;
-
   /// Adds additional information for the reduction items with the reduction id
   /// represented as an operator.
   void addTaskgroupReductionData(const ValueDecl *D, SourceRange SR,
@@ -1611,27 +1606,6 @@ void DSAStackTy::addDSA(const ValueDecl *D, const Expr *E, OpenMPClauseKind A,
       }
     }
   }
-}
-
-const DSAStackTy::DSAInfo *
-DSAStackTy::hasConflictingDecompositionDSA(const DecompositionDecl *DD,
-                                           OpenMPClauseKind A) const {
-  if (isStackEmpty())
-    return nullptr;
-
-  auto It = getTopOfStack().DecompositionDSA.find(DD);
-  if (It == getTopOfStack().DecompositionDSA.end())
-    return nullptr;
-
-  const DSAInfo &ExistingDSA = It->second;
-
-  // Check if the new attribute conflicts with the existing one.
-  // Allow firstprivate + lastprivate on the same decomposition.
-  if (ExistingDSA.Attributes != A &&
-      !(A == OMPC_firstprivate && ExistingDSA.Attributes == OMPC_lastprivate) &&
-      !(A == OMPC_lastprivate && ExistingDSA.Attributes == OMPC_firstprivate))
-    return &ExistingDSA;
-  return nullptr;
 }
 
 /// Build a variable declaration for OpenMP loop iteration variable.
@@ -3937,20 +3911,6 @@ static void reportOriginalDsa(Sema &SemaRef, const DSAStackTy *Stack,
     SemaRef.Diag(DVar.ImplicitDSALoc, diag::note_omp_implicit_dsa)
         << getOpenMPClauseNameForDiag(DVar.CKind);
   }
-}
-
-/// Check for conflicting data-sharing attributes on bindings from the same
-/// structured binding declaration. Returns true if a conflict was found and
-/// diagnosed.
-/// NOTE: Bindings from the same structured binding are distinct variables
-/// and are allowed to have different data-sharing attributes.
-static bool checkDecompositionDSAConflict(Sema &SemaRef, DSAStackTy *Stack,
-                                          const ValueDecl *D,
-                                          SourceLocation ELoc,
-                                          OpenMPClauseKind NewDSA) {
-  // Bindings from the same structured binding declaration are independent
-  // variables and can have different DSA. This check is disabled.
-  return false;
 }
 
 /// Check if bindings from the same structured binding have conflicting
@@ -20351,9 +20311,6 @@ OMPClause *SemaOpenMP::ActOnOpenMPPrivateClause(ArrayRef<Expr *> VarList,
         Ref = buildCapture(SemaRef, D, SimpleRefExpr, /*WithInit=*/false);
     }
     if (!IsImplicitClause) {
-      if (checkDecompositionDSAConflict(SemaRef, DSAStack, D, ELoc,
-                                        OMPC_private))
-        continue;
       DSAStack->addDSA(D, RefExpr->IgnoreParens(), OMPC_private, Ref);
     }
     Vars.push_back(
@@ -20629,9 +20586,6 @@ OMPClause *SemaOpenMP::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
         SemaRef, VDPrivate, RefExpr->getType().getUnqualifiedType(),
         RefExpr->getExprLoc());
     DeclRefExpr *Ref = nullptr;
-    if (checkDecompositionDSAConflict(SemaRef, DSAStack, D, ELoc,
-                                      OMPC_firstprivate))
-      continue;
     bool IsBindingDecl = isa<BindingDecl>(D);
     if (!VD && !SemaRef.CurContext->isDependentContext()) {
       if (TopDVar.CKind == OMPC_lastprivate) {
@@ -20841,9 +20795,6 @@ OMPClause *SemaOpenMP::ActOnOpenMPLastprivateClause(
             SemaRef.IgnoredValueConversions(PostUpdateRes.get()).get());
       }
     }
-    if (checkDecompositionDSAConflict(SemaRef, DSAStack, D, ELoc,
-                                      OMPC_lastprivate))
-      continue;
     DSAStack->addDSA(D, RefExpr->IgnoreParens(), OMPC_lastprivate, Ref);
     bool IsBindingDecl = isa<BindingDecl>(D);
     Vars.push_back(
@@ -20906,8 +20857,6 @@ OMPClause *SemaOpenMP::ActOnOpenMPSharedClause(ArrayRef<Expr *> VarList,
     if (!VD && isOpenMPCapturedDecl(D) &&
         !SemaRef.CurContext->isDependentContext())
       Ref = buildCapture(SemaRef, D, SimpleRefExpr, /*WithInit=*/true);
-    if (checkDecompositionDSAConflict(SemaRef, DSAStack, D, ELoc, OMPC_shared))
-      continue;
     DSAStack->addDSA(D, RefExpr->IgnoreParens(), OMPC_shared, Ref);
     Vars.push_back((VD || !Ref || SemaRef.CurContext->isDependentContext())
                        ? RefExpr->IgnoreParens()
@@ -21541,24 +21490,10 @@ static bool actOnOMPReductionKindClause(
     }
     auto *VD = dyn_cast<VarDecl>(D);
 
-    // Check for unsupported reduction forms on structured bindings.
     auto *BD = dyn_cast<BindingDecl>(D);
-    if (BD && !D->getType().getNonReferenceType()->isScalarType()) {
-      // FIXME: Array-type and class-type reductions on bindings are
-      // rejected.
+    if (BD) {
+      // FIXME: reductions on bindings are rejected.
       S.Diag(ELoc, diag::err_omp_unsupported_on_binding) << 0;
-      continue;
-    }
-    if (BD && BOK == BO_Comma) {
-      // User-defined reductions (declare reduction) are not supported.
-      S.Diag(ELoc, diag::err_omp_unsupported_on_binding) << 1;
-      continue;
-    }
-    if (BD && (RD.RedModifier == OMPC_REDUCTION_task ||
-               RD.RedModifier == OMPC_REDUCTION_inscan)) {
-      // Task and inscan reductions are not supported.
-      S.Diag(ELoc, diag::err_omp_unsupported_on_binding)
-          << (RD.RedModifier == OMPC_REDUCTION_inscan ? 3 : 2);
       continue;
     }
 
@@ -22158,8 +22093,6 @@ static bool actOnOMPReductionKindClause(
     // correct analysis of in_reduction clauses.
     if (CurrDir == OMPD_taskgroup && ClauseKind == OMPC_task_reduction)
       Modifier = OMPC_REDUCTION_task;
-    if (checkDecompositionDSAConflict(S, Stack, D, ELoc, OMPC_reduction))
-      continue;
     Stack->addDSA(D, RefExpr->IgnoreParens(), OMPC_reduction, Ref, Modifier,
                   ASE || OASE);
     if (Modifier == OMPC_REDUCTION_task &&
@@ -22417,8 +22350,6 @@ OMPClause *SemaOpenMP::ActOnOpenMPLinearClause(
         /*DirectInit=*/false);
     DeclRefExpr *InitRef = buildDeclRefExpr(SemaRef, Init, Type, ELoc);
 
-    if (checkDecompositionDSAConflict(SemaRef, DSAStack, D, ELoc, OMPC_linear))
-      continue;
     DSAStack->addDSA(D, RefExpr->IgnoreParens(), OMPC_linear, Ref);
     Vars.push_back(
         (VD || IsBindingDecl || SemaRef.CurContext->isDependentContext())

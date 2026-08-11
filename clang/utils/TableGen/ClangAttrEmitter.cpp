@@ -5316,6 +5316,10 @@ void EmitClangAttrTextNodeDump(const RecordKeeper &Records, raw_ostream &OS) {
     if (Spellings.size() > 1 && !SpellingNamesAreCommon(Spellings))
       SS << "    OS << \" \" << A->getSpelling();\n";
 
+    // Skip attributes with custom text node dump implementations.
+    if (Attr->getValueAsBit("HasCustomTextNodeDump"))
+      continue;
+
     std::vector<const Record *> Args = R.getValueAsListOfDefs("Args");
     for (const auto *Arg : Args)
       createArgument(*Arg, R.getName())->writeDump(SS);

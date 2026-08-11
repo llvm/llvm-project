@@ -3518,12 +3518,22 @@ static void emitPrivatesInit(CodeGenFunction &CGF,
             if (const auto *DRE =
                     dyn_cast<DeclRefExpr>(Pair.second.OriginalRef)) {
               if (const auto *BD = dyn_cast<BindingDecl>(DRE->getDecl())) {
-                if (const auto *ME = dyn_cast<MemberExpr>(BD->getBinding())) {
-                  if (const auto *FD =
-                          dyn_cast<FieldDecl>(ME->getMemberDecl())) {
-                    SharedRefLValue =
-                        CGF.EmitLValueForField(SharedRefLValue, FD);
-                  }
+                // Emit the binding subobject (member or array element) with
+                // the decomposed decl temporarily mapped to the capture.
+                const VarDecl *DD = cast<VarDecl>(BD->getDecomposedDecl());
+                auto It = CGF.findLocalDecl(DD);
+                bool WasMapped = It != CGF.localDeclMapEnd();
+                Address Saved = WasMapped ? It->second : Address::invalid();
+                if (WasMapped)
+                  It->second = SharedRefLValue.getAddress();
+                else
+                  CGF.insertLocalDecl(DD, SharedRefLValue.getAddress());
+                SharedRefLValue = CGF.EmitLValue(BD->getBinding());
+                if (WasMapped) {
+                  auto RestoreIt = CGF.findLocalDecl(DD);
+                  RestoreIt->second = Saved;
+                } else {
+                  CGF.eraseLocalDecl(DD);
                 }
               }
             }
@@ -9424,9 +9434,12 @@ public:
       : CurDir(&Dir), CGF(CGF), AttachPtrComparator(*this) {
     // Extract firstprivate clause information.
     for (const auto *C : Dir.getClausesOfKind<OMPFirstprivateClause>())
-      for (const auto *D : C->varlist())
-        FirstPrivateDecls.try_emplace(
-            cast<VarDecl>(cast<DeclRefExpr>(D)->getDecl()), C->isImplicit());
+      for (const auto *D : C->varlist()) {
+        const ValueDecl *VD = cast<DeclRefExpr>(D)->getDecl();
+        if (const auto *BD = dyn_cast<BindingDecl>(VD))
+          VD = cast<VarDecl>(BD->getDecomposedDecl());
+        FirstPrivateDecls.try_emplace(cast<VarDecl>(VD), C->isImplicit());
+      }
     // Extract implicit firstprivates from uses_allocators clauses.
     for (const auto *C : Dir.getClausesOfKind<OMPUsesAllocatorsClause>()) {
       for (unsigned I = 0, E = C->getNumberOfAllocators(); I < E; ++I) {

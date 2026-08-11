@@ -389,8 +389,15 @@ static void emitCommonOMPTargetDirective(CodeGenFunction &CGF,
 
 Address CodeGenFunction::EmitOMPBindingOriginalAddr(const BindingDecl *BD,
                                                     SourceLocation Loc) {
+  if (CapturedStmtInfo &&
+      CapturedStmtInfo->getKind() == CapturedRegionKind::CR_OpenMP) {
+    if (const auto *DD = dyn_cast<VarDecl>(BD->getDecomposedDecl())) {
+      if (CapturedStmtInfo->lookup(DD))
+        return EmitOMPCapturedBindingLValue(BD).getAddress();
+    }
+  }
   DeclRefExpr DRE(getContext(), const_cast<BindingDecl *>(BD),
-                  /*RefersToEnclosingVariableOrCapture=*/true, BD->getType(),
+                  /*RefersToEnclosingVariableOrCapture=*/false, BD->getType(),
                   VK_LValue, Loc);
   return EmitLValue(&DRE).getAddress();
 }
@@ -1628,16 +1635,11 @@ void CodeGenFunction::EmitOMPLastprivateClauseFinal(
           PrivateVD ? PrivateVD->getCanonicalDecl() : nullptr;
 
       // Check if already emitted.
-      bool ShouldEmit = false;
-      if (CanonicalVD) {
-        ShouldEmit = AlreadyEmittedVars.insert(CanonicalVD).second;
-      } else {
-        // For BindingDecls, we can't use AlreadyEmittedVars (which is for
-        // VarDecls). Just emit once based on the BindingDecl pointer.
-        llvm::DenseSet<const BindingDecl *> EmittedBindings;
-        ShouldEmit = EmittedBindings.insert(BD).second;
-      }
-
+      bool ShouldEmit =
+          AlreadyEmittedVars
+              .insert(PrivateVD ? static_cast<const ValueDecl *>(CanonicalVD)
+                                : static_cast<const ValueDecl *>(BD))
+              .second;
       if (ShouldEmit) {
         // If lastprivate variable is a loop control variable for loop-based
         // directive, update its value before copyin back to original
