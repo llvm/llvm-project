@@ -288,14 +288,14 @@ static void emitUseStmtOp(Fortran::lower::AbstractConverter &converter,
                          renamesAttr, hasOnlyWithRenamesAttr);
 }
 
-/// Emit fir.module_debug_imports for USE statements in a module.
+/// Emit fir.module_debug_imports for USE statements in a module. The operation
+/// is emitted for every module, even one with no USE statement, because its
+/// location is also what tells AddDebugInfo the line of the MODULE statement.
 static void
 emitModuleDebugImports(Fortran::lower::AbstractConverter &converter,
                        mlir::OpBuilder &builder, mlir::Location loc,
                        const Fortran::lower::pft::ModuleLikeUnit &mod) {
   if (!converter.getLoweringOptions().getPreserveUseDebugInfo())
-    return;
-  if (mod.preservedUseStmts.empty())
     return;
 
   const Fortran::semantics::Scope &modScope = mod.getScope();
@@ -614,14 +614,15 @@ public:
     // Generate the `main` entry point if necessary
     if (hasMainProgram)
       createBuilderOutsideOfFuncOpAndDo([&]() {
-        fir::runtime::genMain(*builder, toLocation(),
-                              bridge.getEnvironmentDefaults(),
-                              (getFoldingContext().languageFeatures().IsEnabled(
-                                   Fortran::common::LanguageFeature::CUDA) &&
-                               getFoldingContext().languageFeatures().IsEnabled(
-                                   Fortran::common::LanguageFeature::CUDAInit)),
-                              getFoldingContext().languageFeatures().IsEnabled(
-                                  Fortran::common::LanguageFeature::Coarray));
+        fir::runtime::genMain(
+            *builder, toLocation(), bridge.getEnvironmentDefaults(),
+            (getFoldingContext().languageFeatures().IsEnabled(
+                 Fortran::common::LanguageFeature::CUDA) &&
+             getFoldingContext().languageFeatures().IsEnabled(
+                 Fortran::common::LanguageFeature::CUDAInit)),
+            getFoldingContext().languageFeatures().IsEnabled(
+                Fortran::common::LanguageFeature::Coarray),
+            bridge.getLoweringOptions().getFPExceptionTraps());
       });
 
     finalizeOpenMPLowering(globalOmpRequiresSymbols);
@@ -5590,9 +5591,22 @@ private:
           if (lhs.getDefiningOp())
             attachInlineAttributes(*lhs.getDefiningOp(), dirs);
         }
-        hlfir::AssignOp::create(builder, loc, rhs, lhs,
-                                isWholeAllocatableAssignment,
-                                keepLhsLengthInAllocatableAssignment);
+        if (isCUDATransfer && hasCUDAImplicitTransfer &&
+            Fortran::evaluate::HasCUDADeviceAttrs(assign.lhs)) {
+          auto [temp, cleanup] = hlfir::createTempFromMold(loc, builder, lhs);
+          hlfir::AssignOp::create(builder, loc, rhs, temp,
+                                  isWholeAllocatableAssignment,
+                                  keepLhsLengthInAllocatableAssignment);
+          auto transferKindAttr = cuf::DataTransferKindAttr::get(
+              builder.getContext(), cuf::DataTransferKind::HostDevice);
+          cuf::DataTransferOp::create(builder, loc, temp, lhs,
+                                      /*shape=*/mlir::Value{},
+                                      transferKindAttr);
+        } else {
+          hlfir::AssignOp::create(builder, loc, rhs, lhs,
+                                  isWholeAllocatableAssignment,
+                                  keepLhsLengthInAllocatableAssignment);
+        }
       }
       if (hasCUDAImplicitTransfer && !isInDeviceContext) {
         localSymbols.popScope();
