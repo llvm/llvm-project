@@ -77,18 +77,12 @@ namespace cwg2006 { // cwg2006: 2.7
   }
 
 #if __cplusplus >= 201103L
-  template <typename T, typename U>
-  struct is_same { static constexpr bool value = false; };
-
-  template <typename T>
-  struct is_same<T, T> { static constexpr bool value = true; };
-
   void test_cxx11() {
     decltype(get_const_void()) *p = nullptr;
     static_assert(noexcept(get_const_void()), "");
 
     using CommonType = decltype(true ? get_const_void() : get_volatile_void());
-    static_assert(is_same<CommonType, void>::value, "");
+    static_assert(__is_same(CommonType, void), "");
   }
 #endif
 } // namespace cwg2006
