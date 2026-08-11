@@ -70,26 +70,53 @@ bool Qualifiers::isStrictSupersetOf(Qualifiers Other) const {
           (hasObjCLifetime() && !Other.hasObjCLifetime()));
 }
 
+// The memory region designated by a SYCL or OpenCL address space. Address
+// spaces that are neither SYCL nor OpenCL map to NotOpenCLSYCL.
+enum class MemoryRegion {
+  Global,
+  Local,
+  Private,
+  Generic,
+  Constant,
+  GlobalDevice,
+  GlobalHost,
+  NotOpenCLSYCL,
+};
+
+static MemoryRegion getMemoryRegion(LangAS AS) {
+  switch (AS) {
+  case LangAS::sycl_global:
+  case LangAS::opencl_global:
+    return MemoryRegion::Global;
+  case LangAS::sycl_local:
+  case LangAS::opencl_local:
+    return MemoryRegion::Local;
+  case LangAS::sycl_private:
+  case LangAS::opencl_private:
+    return MemoryRegion::Private;
+  case LangAS::sycl_generic:
+  case LangAS::opencl_generic:
+    return MemoryRegion::Generic;
+  case LangAS::sycl_constant:
+  case LangAS::opencl_constant:
+    return MemoryRegion::Constant;
+  case LangAS::sycl_global_device:
+  case LangAS::opencl_global_device:
+    return MemoryRegion::GlobalDevice;
+  case LangAS::sycl_global_host:
+  case LangAS::opencl_global_host:
+    return MemoryRegion::GlobalHost;
+  default:
+    return MemoryRegion::NotOpenCLSYCL;
+  }
+}
+
 // When targeting the OpenCL execution environment, corresponding SYCL and
-// OpenCL address spaces designate the same underlying address space and are
-// mutually convertible.
+// OpenCL address spaces designate are mutually convertible.
 static bool isConvertibleOpenCLSYCLAddressSpace(LangAS A, LangAS B) {
-  return (A == LangAS::sycl_global && B == LangAS::opencl_global) ||
-         (A == LangAS::opencl_global && B == LangAS::sycl_global) ||
-         (A == LangAS::sycl_global_device &&
-          B == LangAS::opencl_global_device) ||
-         (A == LangAS::opencl_global_device &&
-          B == LangAS::sycl_global_device) ||
-         (A == LangAS::sycl_global_host && B == LangAS::opencl_global_host) ||
-         (A == LangAS::opencl_global_host && B == LangAS::sycl_global_host) ||
-         (A == LangAS::sycl_local && B == LangAS::opencl_local) ||
-         (A == LangAS::opencl_local && B == LangAS::sycl_local) ||
-         (A == LangAS::sycl_private && B == LangAS::opencl_private) ||
-         (A == LangAS::opencl_private && B == LangAS::sycl_private) ||
-         (A == LangAS::sycl_generic && B == LangAS::opencl_generic) ||
-         (A == LangAS::opencl_generic && B == LangAS::sycl_generic) ||
-         (A == LangAS::sycl_constant && B == LangAS::opencl_constant) ||
-         (A == LangAS::opencl_constant && B == LangAS::sycl_constant);
+  MemoryRegion RegionA = getMemoryRegion(A);
+  return RegionA != MemoryRegion::NotOpenCLSYCL &&
+         RegionA == getMemoryRegion(B);
 }
 
 bool Qualifiers::isTargetAddressSpaceSupersetOf(LangAS A, LangAS B,

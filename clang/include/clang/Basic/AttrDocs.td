@@ -934,15 +934,6 @@ follows.
 * Types attributed with the global, local, or private address space attributes
   are implicitly convertible to matching types with the generic address space
   attribute.
-* Types attributed with the generic address space attribute may be converted
-  to a matching type with the global, local, or private address space attribute
-  by ``static_cast``.
-* All other conversions between matched types with either different address
-  space attributes or where one type lacks an address space attribute may be
-  performed by ``reinterpret_cast``.
-  However, dereference of the result produces undefined behavior if the
-  resulting address is not valid for the address space designated by the target
-  address space attribute.
 
 The mapping of SYCL address spaces to physical address spaces is target
 dependent.
@@ -954,8 +945,7 @@ distinct types both of which map to the same underlying address space.
 Corresponding SYCL and OpenCL address space attributed types are implicitly
 convertible; other conversions are permitted as described above; e.g.,
 ``int [[clang::sycl_global]]*`` is implicitly convertible to
-``int [[clang::opencl_generic]]*`` and ``int [[clang::opencl_generic]]*`` is
-explicitly convertible via ``static_cast`` to ``int [[clang::sycl_global]]*``.
+``int [[clang::opencl_generic]]*``.
 
 .. _attr-opencl-addrspace:
    https://clang.llvm.org/docs/AttributeReference.html#opencl-address-spaces
