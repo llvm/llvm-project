@@ -177,8 +177,8 @@ int main(int argc, char **argv) {
 
 `mlir-reduce` is missing several features,
 
-*   `-reduction-tree` now only supports `Single-Path` traversal mode, extends it
-with different traversal strategies may reduce the input better.
+*   `-reduction-tree` now only supports `Single-Path` and `Multi-Path` traversal modes,
+extending it with different traversal strategies may reduce the input better.
 *   Produce the optimal result when interrupted. The reduction process may take
 a quite long time, it'll be better to get an optimal result so far while an
 interrupt is triggered.
