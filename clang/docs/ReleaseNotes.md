@@ -371,6 +371,9 @@ features cannot lower the translation-unit ABI level;
 - Clang now attempts to print enumerator names rather than C-style cast expressions
   in more diagnostics.
 
+- `-Wunsafe-buffer-usage` now warns about unsafe two-parameter constructors of
+  `std::string_view` (pointer and size), consistent with the existing warning for `std::span`.
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
@@ -492,6 +495,10 @@ features cannot lower the translation-unit ABI level;
 #### X86 Support
 
 #### Arm and AArch64 Support
+
+- Added support for pointer authentication discrimination of C++ virtual table
+  pointers stored in VTTs via the `-fptrauth-vtt-vtable-pointer-discrimination`
+  option.
 
 #### Android Support
 

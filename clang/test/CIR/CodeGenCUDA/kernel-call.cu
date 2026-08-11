@@ -62,7 +62,7 @@
 //
 // Check cudaLaunchKernel is called with all 6 arguments:
 // func ptr, gridDim, blockDim, args, sharedMem, stream
-// CUDA-NEW: cir.call @cudaLaunchKernel({{.*}}) : (!cir.ptr<!void>{{.*}}, !rec_dim3, !rec_dim3, !cir.ptr<!cir.ptr<!void>>{{.*}}, !u64i{{.*}}, !cir.ptr<!rec_cudaStream>{{.*}}) -> (!u32i {llvm.noundef})
+// CUDA-NEW: cir.call @cudaLaunchKernel({{.*}}) : (!cir.ptr<!void>{{.*}}, !u64i, !u32i, !u64i, !u32i, !cir.ptr<!cir.ptr<!void>>{{.*}}, !u64i{{.*}}, !cir.ptr<!rec_cudaStream>{{.*}}) -> (!u32i {llvm.noundef})
 // CUDA-PTH: cir.call @cudaLaunchKernel_ptsz
 
 //
@@ -71,7 +71,7 @@
 // HIP-NEW: cir.alloca "stream" {{.*}} : !cir.ptr<!cir.ptr<!rec_hipStream>>
 // HIP-NEW: cir.call @__hipPopCallConfiguration({{.*}}) : (!cir.ptr<!rec_dim3>, !cir.ptr<!rec_dim3>, !cir.ptr<!u64i>, !cir.ptr<!cir.ptr<!rec_hipStream>>) -> !s32i
 // HIP-NEW: cir.get_global @_Z6kernelif : !cir.ptr<!cir.ptr<!cir.func<(!s32i, !cir.float)>>>
-// HIP-NEW: cir.call @hipLaunchKernel({{.*}}) : (!cir.ptr<!void> {{.*}}, !rec_dim3, !rec_dim3, !cir.ptr<!cir.ptr<!void>>{{.*}}, !u64i{{.*}}, !cir.ptr<!rec_hipStream>{{.*}}) -> (!u32i {llvm.noundef})
+// HIP-NEW: cir.call @hipLaunchKernel({{.*}}) : (!cir.ptr<!void> {{.*}}, !u64i, !u32i, !u64i, !u32i, !cir.ptr<!cir.ptr<!void>>{{.*}}, !u64i{{.*}}, !cir.ptr<!rec_hipStream>{{.*}}) -> (!u32i {llvm.noundef})
 // HIP-PTH: cir.call @hipLaunchKernel_spt
 
 __global__ void kernel(int x, float y) {}
@@ -106,8 +106,8 @@ int main(void) {
   // HIP-NEW: cir.const #cir.ptr<null> : !cir.ptr<!rec_hipStream>
   //
   // Check Push call configuration is called with grid, block, shared mem, stream
-  // CUDA-NEW: cir.call @__cudaPushCallConfiguration({{.*}}) : (!rec_dim3, !rec_dim3, !u64i {llvm.noundef}, !cir.ptr<!rec_cudaStream> {llvm.noundef}) -> !s32i
-  // HIP-NEW: cir.call @__hipPushCallConfiguration({{.*}}) : (!rec_dim3, !rec_dim3, !u64i {llvm.noundef}, !cir.ptr<!rec_hipStream> {llvm.noundef}) -> !u32i
+  // CUDA-NEW: cir.call @__cudaPushCallConfiguration({{.*}}) : (!u64i, !u32i, !u64i, !u32i, !u64i {llvm.noundef}, !cir.ptr<!rec_cudaStream> {llvm.noundef}) -> !s32i
+  // HIP-NEW: cir.call @__hipPushCallConfiguration({{.*}}) : (!u64i, !u32i, !u64i, !u32i, !u64i {llvm.noundef}, !cir.ptr<!rec_hipStream> {llvm.noundef}) -> !u32i
   //
   // Check the config result is cast to bool for the conditional
   // CUDA-NEW: cir.cast int_to_bool {{.*}} : !s32i -> !cir.bool

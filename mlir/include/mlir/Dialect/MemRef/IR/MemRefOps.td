@@ -419,14 +419,13 @@ def MemRef_AllocaOp : AllocLikeOp<"alloca", AutomaticAllocationScopeResource,[
 // AllocaScopeOp
 //===----------------------------------------------------------------------===//
 
-def MemRef_AllocaScopeOp
-    : MemRef_Op<"alloca_scope",
-                [AutomaticAllocationScope,
-                 DeclareOpInterfaceMethods<
-                     RegionBranchOpInterface, ["getSuccessorInputs"]>,
-                 DeclareOpInterfaceMethods<PromotableRegionOpInterface>,
-                 SingleBlockImplicitTerminator<"AllocaScopeReturnOp">,
-                 RecursiveMemoryEffects, NoRegionArguments]> {
+def MemRef_AllocaScopeOp : MemRef_Op<"alloca_scope",
+      [AutomaticAllocationScope,
+       DeclareOpInterfaceMethods<RegionBranchOpInterface, [
+          "getSuccessorInputs"]>,
+       SingleBlockImplicitTerminator<"AllocaScopeReturnOp">,
+       RecursiveMemoryEffects,
+       NoRegionArguments]> {
   let summary = "explicitly delimited scope for stack allocation";
   let description = [{
     The `memref.alloca_scope` operation represents an explicitly-delimited
@@ -1511,6 +1510,12 @@ def MemRef_ReinterpretCastOp
 
     Consecutive `reinterpret_cast` operations on memref's with static
     dimensions.
+
+    This operation is intended for cases where the user can guarantee the
+    validity of the constructed descriptor. Neither static nor runtime
+    verification check that the resulting descriptor is in-bounds. Accessing
+    memory outside the underlying allocation through the resulting memref is
+    undefined behavior.
 
     We distinguish between *underlying memory* — the sequence of elements as
     they appear in the contiguous memory of the memref — and the

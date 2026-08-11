@@ -43,7 +43,7 @@ enum CondCodes {
 
 FunctionPass *createNVPTXISelDag(NVPTXTargetMachine &TM,
                                  llvm::CodeGenOptLevel OptLevel);
-ModulePass *createNVPTXAssignValidGlobalNamesPass();
+ModulePass *createNVPTXAssignValidGlobalNamesLegacyPass();
 ModulePass *createGenericToNVVMLegacyPass();
 ModulePass *createNVPTXCtorDtorLoweringLegacyPass();
 FunctionPass *createNVVMIntrRangePass();
@@ -53,7 +53,7 @@ MachineFunctionPass *createNVPTXReplaceImageHandlesPass();
 FunctionPass *createNVPTXImageOptimizerPass();
 ModulePass *createNVPTXLowerArgsPass();
 ModulePass *createNVPTXPromoteParamAlignPass();
-FunctionPass *createNVPTXLowerAllocaPass();
+FunctionPass *createNVPTXLowerAllocaLegacyPass();
 FunctionPass *createNVPTXLowerUnreachablePass(bool TrapUnreachable,
                                               bool NoTrapAfterNoreturn);
 FunctionPass *createNVPTXMarkKernelPtrsGlobalPass();
@@ -68,11 +68,11 @@ void initializeNVVMReflectLegacyPassPass(PassRegistry &);
 void initializeGenericToNVVMLegacyPassPass(PassRegistry &);
 void initializeNVPTXAllocaHoistingPass(PassRegistry &);
 void initializeNVPTXAsmPrinterPass(PassRegistry &);
-void initializeNVPTXAssignValidGlobalNamesPass(PassRegistry &);
+void initializeNVPTXAssignValidGlobalNamesLegacyPassPass(PassRegistry &);
 void initializeNVPTXAtomicLowerPass(PassRegistry &);
 void initializeNVPTXCtorDtorLoweringLegacyPass(PassRegistry &);
 void initializeNVPTXLowerAggrCopiesPass(PassRegistry &);
-void initializeNVPTXLowerAllocaPass(PassRegistry &);
+void initializeNVPTXLowerAllocaLegacyPassPass(PassRegistry &);
 void initializeNVPTXLowerUnreachablePass(PassRegistry &);
 void initializeNVPTXLowerArgsLegacyPassPass(PassRegistry &);
 void initializeNVPTXPromoteParamAlignLegacyPassPass(PassRegistry &);
@@ -148,6 +148,18 @@ class NVPTXForwardParamsPass
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
+};
+
+class NVPTXAssignValidGlobalNamesPass
+    : public RequiredPassInfoMixin<NVPTXAssignValidGlobalNamesPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+};
+
+class NVPTXLowerAllocaPass
+    : public RequiredPassInfoMixin<NVPTXLowerAllocaPass> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 namespace NVPTX {
