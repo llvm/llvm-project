@@ -5,34 +5,49 @@ G21 (Arc Pro B60, PCI 8086:e211), Linux, `xe` KMD, Level Zero runtime.
 
 ## 1. Goal
 
-A compiler:
+A compiler for verified, optimized SPIR64 LLVM IR:
 
 ```
-LLVM IR (spir64 kernel shape) -> MLIR LLVM dialect -> scf -> xemachine dialect -> Intel EU binary -> zebin ELF -> Level Zero
+LLVM IR after the normal LLVM -O2/-O3 pipeline
+  -> MLIR LLVM dialect
+  -> semantic Inter SPMD/tile IR
+  -> xemachine dialect
+  -> Intel EU binary
+  -> zebin ELF
+  -> Level Zero
 ```
 
 No IGC, no vISA, no SPIR-V, no NEO compiler interfaces on the device path.
 The host side uses LLVM's `liboffload` (in this repo) over Level Zero as
-module loader and runtime; the only L0 entry point ever exercised is
-`zeModuleCreate(ZE_MODULE_FORMAT_NATIVE)`. All device-side knowledge below
-the machine dialect — encoding, scoreboarding, container format — is owned
-here.
+module loader and runtime; Inter makes no direct `ze*` calls, and liboffload's
+L0 plugin loads the emitted image through
+`zeModuleCreate(ZE_MODULE_FORMAT_NATIVE)`. All device-side knowledge below the
+machine dialect — encoding, scoreboarding, container format — is owned here.
 
 Correctness before performance. Every pipeline stage is printable, inspectable
-MLIR. No pass keeps hidden C++ state across an IR rewrite.
+MLIR. No pass keeps hidden C++ state across an IR rewrite. Optimized LLVM forms
+are accepted by semantics, not by matching one kernel, one argument order, one
+GEP shape, one unroll factor, or one optimization level.
 
-## 2. Non-goals (v1)
+## 2. Non-goals for the production-matmul milestone
 
-- XMX / `dpas` and matrix fragment layouts.
-- Instruction compaction (64-bit forms). v1 emits 128-bit instructions only.
+- Instruction compaction (64-bit forms). The milestone emits 128-bit
+  instructions only.
 - Function calls, relocations, indirect branches, SIP/debug support.
 - Ray tracing, media fixed functions, bindless-only kernels.
-- Large GRF mode (256 GRFs/thread). v1 targets the 128-GRF mode only; see
-  sections 4 and 12.
 - Multiple Intel platforms. Everything is Xe2; arch gating exists but only
   `xe2` is populated.
-- Performance tuning beyond deterministic greedy gap filling. The static Xe2
-  timing model is adapted from the pinned IGC scheduler.
+- Automatic discovery of arbitrary tensor programs. The milestone recognizes
+  semantically valid contraction recurrences in optimized LLVM and exact
+  subgroup matrix intrinsics; unrelated algorithms remain on the generic path.
+- Beating every vendor-tuned GEMM shape. The first release must be correct,
+  general over its declared types/layouts/tails, and measurably use block
+  messages and DPAS. Tuning breadth follows correctness.
+
+XMX/DPAS, matrix fragment layouts, SIMD16, 2D block load/store, constrained
+register allocation, reusable SWSB tokens, and production matmul validation are
+goals, not deferred work. Both 128- and 256-GRF modes belong to the target cost
+model; the initial accepted kernel may choose 128 GRFs when it fits.
 
 ## 3. Ground truths
 
@@ -61,12 +76,13 @@ formats drift.
 - One register bank: 128 GRFs per thread, 512-bit each on Xe2, in the
   default mode. Xe2 also has a Large GRF mode: 256 GRFs per thread at
   halved hardware threads per core. GRF mode is a per-kernel decision that
-  couples the register budget to occupancy; v1 compiles for 128-GRF mode
-  only (section 12), but nothing in the dialect assumes 128. Plus small ARF
-  files: address registers `a0`, flags `f0/f1`, accumulators `acc`, `mme`,
-  and specials (`sr0`, `cr0`, `n0`, `ip`, `tm0`, ...). No separate scalar
-  bank — uniformity pays through message selection and region narrowing, not
-  through a cheaper register class.
+  couples the register budget to occupancy. The current prototype uses
+  128-GRF mode; production tile planning chooses 128 or 256 from pressure and
+  occupancy cost, and no dialect type assumes either count. Plus small ARF files:
+  address registers `a0`, flags `f0/f1`, accumulators `acc`, `mme`, and specials
+  (`sr0`, `cr0`, `n0`, `ip`, `tm0`, ...). No separate scalar bank; uniformity
+  pays through message selection and region narrowing, not through a cheaper
+  register class.
 - Operands are register **regions**: sources `<V;W,H>`, destination `<H>`.
   Producer/consumer region compatibility, stride legality, and alignment
   (64-bit types even-aligned, etc.) are hard encoding constraints, not
@@ -95,46 +111,48 @@ formats drift.
 ## 5. Pipeline overview
 
 ```
-LLVM IR (spir64)
-  | mlir-translate --import-llvm                     (upstream)
+verified spir64 LLVM IR after opt -O2/-O3
+  | inter-translate --import-llvm
+  | preserve calling convention, data layout, attributes, alias metadata,
+  | fast-math/overflow flags, loop metadata, and intrinsic identity
   v
-llvm dialect + func
-  | inter-import-cleanup: canonicalize, strip host IR, normalize
-  |   kernel metadata, attach xemachine.target attr
+MLIR LLVM dialect
+  | inter-llvm-legalize
+  |   explicit conversion target: no selector fallthrough, no dropped ops
+  |   preserve exact integer/pointer/poison/FP semantics
+  | inter-structure-cfg
+  |   reducible CFG -> structured loops/regions; retain general loop state
   v
-llvm/cf mix
-  | lift-cf-to-scf                                    (upstream; rejects
-  |                                                     irreducible CFGs)
+Inter SPMD core
+  | explicit uniform/lane-bundle values and active masks
+  | exact byte-address expressions with provenance/range/alignment
+  | semantic memory-dependence graph and async event operations
+  | general scalar/fixed-vector ALU, branches, loops, gathers/scatters
   v
-scf + arith + llvm remnants
-  | inter-uniformity-analysis      (dense dataflow; section 7)
-  | inter-generate-index-exprs     (SSA -> ixsimpl; section 8)
-  | inter-memory-token-synthesis   (early AA -> explicit tokens; section 9)
+Inter contraction/tile level
+  | recover legal contractions from optimized scalar/vector reductions
+  | normalize exact subgroup matrix intrinsics to the same operation
+  | choose SIMD width, M/N/K tiles, fragment layouts, tails, and staging
+  | generic ALU + gather/scatter path remains available for correctness
   v
-annotated scf level  === selection boundary ===
-  | inter-select-to-machine
+Intel semantic selection
+  | legality/cost-driven 2D block -> block -> gather/scatter fallback
+  | legality/cost-driven DPAS -> generic contraction fallback
+  | no raw descriptor constants outside target message encoding
   v
-xemachine (virtual regs, tokens, region CF ops)
-  | machine opts: copy folding, region narrowing, message-form selection
-  |   via symbolic address planner, dead code, canonicalization
+xemachine virtual-register IR
+  | software-pipeline/prefetch scheduling
+  | pressure-aware machine scheduling
+  | alias preparation and constrained register-allocation transform loop
+  | restricted post-RA scheduling after spill/copy repair
   v
-  | inter-prepare-regalloc          (normalize destructive, tuple, and region
-  |                                 aliases with explicit copies; section 12)
-  v
-  | inter-machine-schedule         (stall filler + cost model; section 13.
-  |                                 Scheduling is pre-RA by design: the scan
-  |                                 needs freedom to move virtual-reg code;
-  |                                 RA copies get their dependencies from the
-  |                                 post-RA SWSB pass, section 14)
-  v
-  | inter-regalloc transform loop  (section 12)
-  v
-xemachine (physical regs)
-  | inter-insert-sync              (conservative explicit waits; section 14)
-  | inter-resource-info            (GRF/SLM/spill/barrier counts -> attrs)
+xemachine physical-register IR
+  | final SWSB/SBID allocation and physical-hazard verification
+  | resource-info: GRF mode, SLM, spill, barrier, DPAS, SIMD -> attrs
   v
 emission (translation, not a pass)
-  | GED encode, buffered fixups, branch targets
+  | GED serialization only; no dependency inference in the encoder
+  | buffered fixups and branch targets
   | zeinfo YAML + ELF write
   v
 zebin ELF  ->  OffloadBinary wrapper  ->  liboffload olCreateProgram
@@ -155,51 +173,99 @@ invoked with:
 ```
 
 Stage discipline: one dialect mix per stage, every boundary FileCheck-able,
-tests enter at named entry points (`@inter_lower_to_machine`,
-`@inter_regalloc`, `@inter_backend_no_sync`, and `@inter_backend`).
+and every conversion uses an explicit legality target. The current direct
+LLVM-to-`xemachine` selector is prototype debt and must be split at the semantic
+SPMD and tile boundaries above; it is not the architecture to extend.
 
 ## 6. Frontend: LLVM IR import
 
-- Input contract: clang `spir64` output. Address spaces: private=0, global=1,
-  constant=2, local=3, generic=4. `spir_kernel` calling convention. SPIR-V
-  intrinsics for IDs/barriers/subgroups.
-- Upstream `import-llvm` produces the llvm dialect. A cleanup pass converts
-  what remains to arith/func form and rejects unsupported shapes with hard
-  errors (no silent feature drops).
-- Irreducible CFGs are rejected at `lift-cf-to-scf`. Kernels from structured
-  frontends are always reducible; if irreducible input ever matters, add a
-  structurizer pass rather than weakening the machine dialect.
-- The function-signature -> payload-argument mapping is computed here and
-  carried as attributes; zeinfo emission later just serializes it.
+- Input contract: LLVM-verified `spir64` IR after a normal target-independent
+  LLVM `-O2` or `-O3` pipeline. Address spaces are private=0, global=1,
+  constant=2, local=3, generic=4. Kernel entry points are identified from the
+  `spir_kernel` calling convention, never from function names or from "every
+  defined function". Defined non-kernel functions are helpers to inline or
+  reject explicitly, not extra kernels.
+- O2/O3 forms are normal input: PHIs, selects, `freeze`, fixed vectors,
+  shuffles, masked/VP operations, `llvm.fma`/`llvm.fmuladd`, vector reductions,
+  unrolled/peeled loops, main-loop plus epilogue, and optimizer-generated
+  pointer arithmetic. The accepted subset grows through a declared conversion
+  target. Any unlegalized operation is a hard diagnostic at the boundary; an
+  unrecognized selector case may never silently disappear.
+- Import preserves data layout and all semantic facts needed later: calling
+  convention, parameter/call attributes, `noalias`, alias scopes, TBAA, access
+  groups, volatility, atomic ordering/scope, alignment, dereferenceability,
+  `inbounds`/no-wrap flags, fast-math flags, and loop metadata.
+- LLVM-native analyses (`LoopInfo`, ScalarEvolution, AA, MemorySSA,
+  LoopAccessAnalysis, and dependence analysis) run while the original CFG and
+  metadata are intact. Proven recurrences, trip counts, ranges, alignments,
+  disjointness, and runtime alias checks are materialized into IR attributes or
+  semantic operations; they do not survive only as hidden C++ state.
+- Reducible CFGs are structured without requiring one canonical optimizer
+  shape. Eligible loop state becomes `scf.for`; other reducible loops retain an
+  explicit general loop form. Irreducible CFGs are initially rejected with a
+  precise diagnostic and later handled by a dedicated structurizer.
+- The function-signature -> kernel ABI descriptor is computed from the calling
+  convention, LLVM data layout, and target ABI table. It carries argument type,
+  size, alignment, address space, access mode, and payload location. Zeinfo and
+  prologue generation consume the same descriptor.
 
-## 7. Uniformity analysis
+### Prototype debt that must be removed
 
-Dense forward dataflow over the MLIR dataflow framework, above selection.
+The current `InterSelect.cpp` implementation is deliberately not accepted as a
+general lowering path. In particular, `emitByteOffsets()` hardcodes
+`global_id.x * 4`, global load/store require a single GEP whose base is a direct
+block argument, `pointerArg()` derives payload locations from argument index,
+SLM uses only the last GEP index times four, and selection assumes i32/SIMD32.
+These shortcuts made the first hardware proof possible; matmul work deletes
+them rather than adding more cases around them.
 
-Lattice per value (join in this order):
+## 7. SPMD value model and uniformity
+
+LLVM fixed-vector dimensions are per-work-item data; they are not hardware
+subgroup lanes. The semantic Inter layer makes the lane axis explicit:
+
+```
+uniform<T>
+lane_bundle<W, T>
+```
+
+`W` is a per-kernel target decision (commonly SIMD16 for DPAS), not a constant
+embedded in generic lowering. Every lane bundle carries an active mask through
+divergent branches, loops, tails, and masked memory operations. Lane ID,
+subgroup ID, workgroup ID, local/global IDs, shuffle, broadcast, ballot, and
+reduction are semantic operations before they become EU regions or control
+flow.
+
+Uniformity is dense forward dataflow above target selection. Its advisory
+lattice is:
 
 ```
 const  <  uniform  <  affine-strided(k, base-uniform)  <  varying
 ```
 
-- `const`: compile-time known.
+- `const`: compile-time known, retaining exact integer width and poison/no-wrap
+  semantics.
 - `uniform`: same in all lanes of the subgroup (and, where provable, the
   workgroup — needed for barrier-safety reasoning).
 - `affine-strided`: lane-affine with uniform base and constant stride k.
   This is the class that selects block vs. scatter message forms; it is why
   boolean uniformity is insufficient.
-- Sources: lane id (strided k=1), workgroup id (uniform), constants, and
-  propagation rules through arith/scf ops. Region-boundary propagation via
-  `RegionBranchOpInterface`.
+- Sources: lane id (strided k=1), workgroup/subgroup IDs (uniform at their
+  documented scope), constants, kernel arguments, and propagation rules
+  through scalar/vector arithmetic and structured regions. Shift propagation
+  uses the actual shift amount and exact modular width; the current prototype's
+  "every shift doubles stride" rule is invalid and must be removed.
 - The strided-ness proofs delegate to ixsimpl range/divisibility queries
   under assumptions (`wave.assume`-style: predicates attach to SSA results,
   recovered only through def chains).
-- Results are consumed by: message-form selection (block/gather/scatter),
+- Results are consumed by: message-form selection (2D/block/gather/scatter),
   branch classification (uniform condition -> `uniform_if`/`uniform_loop`,
   else `exec_if`), and region narrowing (uniform producer allows
   `<0;1,0>`-style broadcast reads).
-- Analysis results are advisory annotations. Nothing below selection may
-  re-derive uniformity; passes read the annotation or the explicit type.
+- Analysis results are advisory annotations, never permission to change LLVM
+  semantics. Nothing below selection may re-derive uniformity; passes read the
+  annotation or the explicit type. Failure to prove uniformity selects the
+  varying fallback rather than rejecting a legal program.
 
 Exemplars to mine for lattice plumbing: `WaitLattice`/`HazardLattice` in
 wave-mlir (`lib/Dialect/Wave/Transforms/WaveAMDMachineWaitcnt.cpp`,
@@ -208,50 +274,76 @@ join/back-edge handling included.
 
 ## 8. Symbolic addressing
 
-Reuse `ixsimpl` (C99, hash-consed, arena DAG; wave-mlir repo,
-`third_party/ixsimpl` at the pinned commit)
-as a submodule. Same ownership rule as wave-mlir: algebra lives in ixsimpl,
-SSA and target policy live in the dialect; passes never walk expressions to
-prove equality.
+Every memory operation consumes one exact semantic address object:
 
-- Carrier op `inter.index_expr`: symbolic expr attribute + named SSA
-  bindings. Structural identity gives free CSE.
-- `inter-generate-index-exprs` reconstructs expressions from arith SSA chains
-  (depth-capped walk with `IntegerRangeAnalysis` under a `DataFlowSolver`).
-  Frontends that already know index structure may emit `index_expr` directly.
-- The address planner (at selection time) classifies each address as
-  `{ const-slot, uniform-base, lane-affine, full-remainder }` against the
-  target message's operand spec, proves what fits via range queries, and
-  demotes along a fixed chain to a general A64 gather/scatter form.
-  Message forms v1: stateless A64 byte/dword scatter and A64 block load/store.
-  2D block messages are post-v1.
-- Address-space lowering: global -> A64 stateless UGM sends; local -> SLM
-  sends; constant -> stateless read-only; private -> GRF when promotable,
-  else scratch surface via the per-thread scratch pointer implicit argument.
+```
+{ address-space, base/provenance, byte-offset expression, integer width,
+  known range, known alignment, access size/type, active mask }
+```
+
+- GEP offsets are computed from the LLVM data layout and GEP source element
+  type. The expression DAG preserves sign/zero extension, truncation, shifts,
+  division/remainder, selects, PHI/add recurrences, `inbounds`, `nuw`/`nsw`,
+  and modular integer width. Algebra may use ixsimpl or an equivalent
+  hash-consed engine, but only after LLVM semantics are represented exactly.
+- Pointer provenance survives GEP, bitcast, and address-space cast. Arbitrary
+  ptr-to-int arithmetic is conservative; absent a proved base/range it remains
+  a general address. Generic address-space pointers are specialized only when
+  provenance proves a concrete space, otherwise rejected until a documented
+  generic-pointer ABI exists.
+- Range, divisibility, alignment, recurrence, and non-overlap proofs come from
+  imported LLVM analysis facts plus MLIR integer-range/dataflow analysis. Passes
+  query a common API; target selectors do not walk arbitrary SSA looking for a
+  favorite shape.
+- Message selection evaluates each access against target capability tables and
+  demotes through a correctness-preserving chain:
+
+  ```
+  legal 2D block message
+    -> legal 1D/subgroup block message
+    -> vector gather/scatter
+    -> split or scalar masked gather/scatter
+  ```
+
+  A 2D candidate requires a proved rectangular affine lane/tile mapping, legal
+  dimensions, pitch/base alignment, coordinate ranges, element type, register
+  layout, transpose/VNNI mode, and out-of-bounds behavior. Dynamic legality may
+  use a runtime guard plus the generic fallback. Failure to prove a block form
+  never changes the address and never rejects an otherwise supported access.
+- Address-space lowering: global -> A64 stateless UGM; local -> bounded SLM
+  offsets; constant -> stateless read-only; private -> GRF when promoted,
+  otherwise scratch. Scalar, vector, block, 2D, and prefetch operations all use
+  this same address abstraction.
 
 ## 9. Memory model: tokens and early alias analysis
 
 Memory ordering is explicit. Legality is SSA dominance plus token edges. No
 pass below token synthesis may infer ordering.
 
-- `!inter.mem.token`; memory ops take a dependency token operand and return
-  a result token. `join` merges, `after` sequences without data dependence.
+- `!inter.mem.token`; memory ops take a dependency token operand and return a
+  result token. `join` merges, `after` sequences without data dependence. This
+  semantic token is distinct from machine send-completion/SBID state.
 - Two tiers: completion tokens (data ready) and issue tokens (ordered issue,
   no completion promise). Sends consume issue-order edges; their completion
   is modeled by SWSB, not by the token graph — the token graph orders
   *issue*, the scoreboard orders *writeback*.
 - Tokens thread through regions as ordinary SSA: yielded by `scf.if` /
   machine `exec_if`, carried by `scf.for` / `uniform_loop` iter args.
-- **Token synthesis is the one place alias analysis exists.** It runs at the
-  scf level, above selection, where ixsimpl can prove non-overlap of
-  lane-affine addresses and kernel-argument provenance (`noalias`, distinct
-  buffer arguments) is still visible. Output is a minimal explicit token
-  graph. Below this point the wave-mlir religion applies: no implicit AA, no
-  barrier inference, no loop-carried memory dependencies rediscovered by
-  transforms.
+- **Token synthesis is the one place semantic alias analysis exists.** It runs
+  above selection while LLVM `noalias`, alias scopes, TBAA, access groups,
+  MemorySSA, address-space facts, and proved byte ranges remain visible.
+  Distinct pointer arguments are *not* assumed disjoint without `noalias` or an
+  equivalent proof. Read/read operations need no edge; writes, volatile and
+  atomic operations, fences, and potentially aliasing accesses receive the
+  necessary edges. Runtime alias checks may split fast and fallback paths.
+  Output is a minimal explicit dependence graph. Below this point there is no
+  implicit AA, barrier inference, or loop dependence rediscovery.
 - Barriers: `inter.barrier` joins incoming tokens; lowering is `sync.bar`
   plus the required fence sends, with fence scope from the memory-model
   attributes on the op.
+- Tiling, unrolling, contraction recovery, and software pipelining must
+  transform the dependence graph explicitly. A pass may not discard ordering
+  and ask physical instruction analysis to reconstruct source semantics later.
 
 ## 10. The `xemachine` dialect
 
@@ -259,6 +351,15 @@ Machine-level MLIR dialect; live from selection through emission. No LLVM
 codegen involvement.
 
 ### Types
+
+- Above the machine dialect, matrix fragments carry logical shape, element and
+  accumulator type, signedness/precision, A/B/C/D role, subgroup/lane
+  distribution, VNNI/transpose packing, and target layout. Reuse upstream
+  XeGPU layout attributes and Xe2 capability tables where possible; do not
+  route through XeVM/OpenCL because Inter owns physical lowering and SWSB.
+- Fragment lowering produces ordinary `!xemachine.reg` storage plus explicit
+  relative-placement/alignment constraints. Logical tile identity does not
+  survive as a recursive machine tuple that hides GRF footprints.
 
 - `!xemachine.reg<width, index>` — GRF storage. `width` is in 32-bit dwords;
   `index` = physical base GRF, `-1` = virtual. Virtual and
@@ -288,6 +389,14 @@ codegen involvement.
 - Send ops: descriptor fields as attributes + payload operands; an op
   interface exposes the descriptor spec so the address planner can query
   operand shapes without hardcoding message tables in the planner.
+- Named semantic machine sends cover A64 gather/scatter, block/2D
+  load/store/prefetch, SLM, fences, and barriers. Target encoding code owns raw
+  descriptor bitfields. Selection and tests do not copy descriptor constants.
+- `xemachine.dpas` is a first-class instruction op, not a raw ALU escape hatch.
+  It records execution size, systolic depth, repeat count, source precisions,
+  accumulator/destination precision, fragment footprints, packing, target
+  availability, and destructive accumulator/result storage. Its verifier owns
+  all shape, alignment, overlap, and contiguous-bundle constraints.
 - `tuple_from_elements`, `tuple_to_elements`, and `update_tuple` are zero-cost
   storage views, not recursive tuple types. They expose weighted dword offsets
   through `RegisterStorageAliasOpInterface`; destructive updates are marked
@@ -313,21 +422,54 @@ codegen involvement.
 Arch gating is a static C++ predicate per op (`isSupportedOn(isa)`), queried
 before instantiation. Only `xe2` is populated; the enum leaves room.
 
-## 11. Selection
+Initial DPAS coverage is capability-table driven: f16/bf16 to f32 and selected
+i8 signedness combinations. Unsupported type/shape/fast-math combinations stay
+as generic contraction loops; they are not rounded into a convenient DPAS form.
 
-`scf` + arith + llvm-remnants -> `xemachine` with virtual registers.
+## 11. Contraction recovery, layout planning, and selection
 
-- Type legalization here: i64 mul/div expansion (no integer divide
-  instruction; sequences lifted from Mesa elk), i8/i16 ALU promotion,
-  vector shreds to per-lane form.
-- Subgroup ops lower to regioned moves: broadcast = `<0;1,0>` region read,
-  shuffle = address-register indirect move, reductions = strided region ops.
-- Control flow maps one-to-one: `scf.if` -> `exec_if`/`uniform_if` (via
-  uniformity annotation), `scf.for`/`scf.while` -> `uniform_loop`/
-  predicated loop forms.
-- Threading-model intrinsics (`local_id`, `workgroup_id`, ...) lower to
-  payload reads per the PRM payload layout (mirrored from elk's compute
-  payload code).
+Optimized LLVM first reaches the complete semantic SPMD layer. Direct
+LLVM-to-machine pattern matching is forbidden.
+
+- General legalization covers exact scalar/fixed-vector arithmetic, casts,
+  aggregates, shuffles, masks, branches, and loops. Type expansion/promotion
+  preserves overflow, poison, and fast-math behavior. Unsupported semantics
+  fail at the declared boundary; they do not fall through a dispatch loop.
+- Contraction recovery recognizes semantics rather than syntax: one accumulator
+  recurrence, multiply-add/dot-product update, two input addresses sharing a
+  reduction dimension, output coordinates independent of that dimension, a
+  proved extent/tail, and no interfering dependence. Accepted forms include
+  scalar fmul+fadd, explicit FMA, vector FMA plus reduction, masked/VP forms,
+  unrolled trees, and main-loop plus epilogue. Near misses remain generic.
+- Strict FP is never reassociated into DPAS. FMA contraction requires explicit
+  fused semantics or `contract`; reduction reordering requires `reassoc` or an
+  equivalent contract. Reduced precision/TF32 requires explicit permission.
+- Exact Intel subgroup matrix builtins are decoded through a signature and
+  attribute registry, not symbol-prefix matching. Intrinsic and idiom paths
+  normalize to the same target-independent contraction operation; intrinsic
+  identity does not bypass memory-layout legality.
+- Tile planning chooses kernel SIMD width, workgroup/subgroup M/N/K tiles,
+  direct-global versus SLM staging, prefetch depth, fragment packing, tails,
+  and 128/256-GRF mode from target capabilities, occupancy, SLM, and pressure.
+  Dimensions such as 8/16/32 originate only in capability tables.
+- Every contraction has a generic ALU/reduction lowering. DPAS is selected only
+  when type, fast-math, shape, layout, packing, alignment, and target constraints
+  are all proved. Every memory access follows the 2D -> block -> gather/scatter
+  fallback chain from section 8.
+- Selection emits structured optimization remarks for contraction recovery,
+  rejected legality predicates, chosen message fallback, tile/layout choice,
+  GRF mode, expected occupancy, and spill estimate. Tests may assert decisions
+  through remarks but correctness never depends on their text.
+- Subgroup ops lower to regioned moves only after the lane layout is explicit:
+  broadcast = `<0;1,0>` region read, shuffle = legal indirect/region sequence,
+  reductions = target-planned trees or contraction fragments.
+- Control flow maps semantic uniform/divergent regions and loops to structured
+  machine operations with explicit carried state and active masks. Uniform and
+  divergent loops, continue/break, and edge masks must be emitted end-to-end.
+- Threading-model intrinsics lower through the kernel ABI descriptor and target
+  payload table. X/Y/Z IDs, group/local sizes, subgroup IDs, and required
+  workgroup/subgroup sizes are semantic operations, not hardcoded r0 offsets in
+  the generic selector.
 
 ## 12. Register allocation
 
@@ -339,40 +481,54 @@ Transform-loop linear scan, transplanted from wave-mlir
   clears the attribute and the next iteration rebuilds positions, value IDs,
   intervals, weighted alias sets, and send-source lifetimes from current IR.
 - Alias preparation runs before scheduling and defensively before every state
-  rebuild. It materializes mask-respecting parallel copies for destructive
-  tuple updates and branch joins, plus copies for incompatible horizontal tuple
-  layouts, duplicate or live-through loop entries, and cyclic or overlapping
-  backedges. Wide copies are split into SIMD32/SIMD16 moves and reassembled as
-  tuples.
+  rebuild. It materializes legal parallel copies for destructive updates,
+  branch joins, loop entries/backedges, and incompatible relative placements.
+  DPAS accumulator chains and send/fragment bundles participate in the same
+  storage-constraint graph.
 - Scheduler and allocator consume one shared immutable weighted-alias analysis.
   Raw tuple and structured-region constraints must be normalized before this
   analysis; inconsistent weighted cycles remain hard errors after preparation.
-- Xe2 allocation represents tuple offsets in whole GRFs. Tuple elements and
-  update slices therefore require 16-dword-aligned boundaries; unsupported
-  sub-GRF layouts are rejected by the operation verifier.
+- Production allocation uses dword/byte-granular footprints, not the current
+  whole-GRF-only prototype. It supports sub-GRF live ranges, per-operand
+  alignment, contiguous multi-GRF send/DPAS bundles, relative placement,
+  VNNI-packed fragments, destructive accumulator/result ties, fixed payload
+  GRFs, and overlapping source/destination regions.
 - Linear scan consumes alias state and either commits physical indices or
   emits one precise failure record. It never picks a relief strategy.
-- The v1 relief provider chain is `Remat -> Scratch spill`; the first legal
-  plan wins. SLM spilling and the AMD-specific register-file providers are not
-  present. Scratch spill/fill uses Xe2 LSC UGM transpose messages and a
-  register extended descriptor in `a0.2`. Relief never splits an alias
-  component; v1 providers currently accept singleton components only.
-- New work vs. the AMD original: region-aware aliasing (`<V;W,H>` overlap
-  between a def and its uses constrains placement; 64-bit alignment; exec
-  width affects footprint). ARF allocation for `a0`/`f` remains a separate
-  predecessor problem with hard capacity; the GRF pass rejects virtual ARFs
-  rather than folding them into GRF pressure.
+- Relief starts with rematerialization and live-range splitting, then scratch
+  spill; fragment and loop-carried accumulator spills receive prohibitive cost
+  unless no legal allocation exists. Spill/fill supports arbitrary legal
+  footprints and rebuilds scheduling/SWSB state. SLM spilling is optional only
+  where capacity and synchronization semantics prove it safe.
+- Region-aware liveness uses exact `<V;W,H>` byte footprints. ARF allocation
+  for flags, `a0`, accumulators, and MME state is a separate constrained
+  problem with hard capacity and interference; production selection may not
+  require every ARF to be preassigned.
 - Pressure accounting: the GRF budget is a function input, not a pass option
   or allocator constant. `xemachine.grf_count` supplies the selected GRF mode
   and `xemachine.reserved_grf_count` supplies the ABI-reserved prefix. The
   budget and occupancy target are the same knob, so selection records the
   per-kernel decision and regalloc only consumes it.
+- Every allocation attempt ends with a physical-footprint and instruction-
+  constraint verifier. The verifier checks all send and DPAS bundles,
+  accumulator ties, region bounds, alignment, fixed-register overlap, and GRF
+  mode before SWSB is allowed to run.
 
 ## 13. Scheduling
 
 "Scheduler is a stall filler; the cost model owns policy." Copied as law.
 
-- Walks each straight-line machine region in original program order; if the
+Matmul has two distinct scheduling levels:
+
+- Semantic loop scheduling chooses prefetch placement, direct-global versus SLM
+  staging, K-loop software-pipeline stages, and double/multi-buffered fragment
+  rotation before physical instruction selection. Async issue and await points
+  are explicit IR operations; stage count is cost-model data, not kernel code.
+- Machine scheduling runs pressure-aware before RA, then a restricted repair
+  schedule runs after spill/copy insertion. The final instruction order is
+  frozen before SWSB. No instruction moves after scoreboard annotation.
+
+- The baseline machine scheduler walks each machine region in original program order; if the
   next op issues stall-free per the timing oracle, it stays; otherwise a
   legal ready instruction fills the gap. Remaining stalls are left for
   SWSB/sync to make correct.
@@ -390,10 +546,10 @@ Transform-loop linear scan, transplanted from wave-mlir
   serves the function; each collected region gets fresh issue and pressure
   state.
 - The Xe2 model builds the shared function-wide register-alias analysis once.
-  Candidate
-  pressure uses the allocator's whole alias components, including fixed GRFs,
-  cross-region live ranges, and send payload lifetime through token completion;
-  a filler cannot raise the original schedule's peak pressure.
+  Candidate pressure uses exact live byte/dword footprints while preserving
+  alias-component placement constraints, fixed GRFs, cross-region live ranges,
+  fragment bundles, and send payload lifetime through source-read completion; a
+  filler cannot raise the original schedule's peak pressure.
 - Ready zero-byte operations are drained to closure before each greedy choice.
   They forward value/token readiness without consuming an issue slot.
 - The scheduler never queries memory effects or alias information. Memory
@@ -402,28 +558,38 @@ Transform-loop linear scan, transplanted from wave-mlir
 - One timing oracle shared by scheduler preview and any simulation. No
   second oracle (documented failure mode in wave-mlir).
 - Completion latency, issue occupancy, send-source read time, and dependency
-  gap rules are adapted from IGC's pinned Xe2 scheduler model. XeMachine ops
+  gap rules are adapted from IGC's pinned target scheduler model. XeMachine ops
   classify themselves; the target timing oracle owns the policy constants.
   The scheduler algorithm remains wave-mlir's deterministic greedy gap filler,
-  not IGC's list scheduler.
+  not IGC's list scheduler. The target model additionally owns DPAS completion,
+  occupancy/read windows, systolic-pipe resources, block-message timing, SBID
+  pressure, and read-suppression legality. SLM-bank/cache effects may influence
+  cost but never correctness.
 
 ## 14. SWSB annotation
 
-Runs after regalloc (RA-inserted copies create dependencies too — same
-ordering lesson as wave-mlir's ticket waits after regalloc).
+Runs after the final register allocation, spill/copy repair, and instruction
+order. RA-inserted operations create dependencies too; no instruction moves
+after this pass.
 
-- Dense forward dataflow over the region CFG, tracking in-flight
-  producers per pipe and per register range, plus send-issue state.
-- v1 policy is conservative correctness: every producer/consumer hazard gets
-  a dependency annotation; sync functions where token tracking cannot
-  express the dependency. Token budget per hardware rules is never exceeded;
-  the pass prefers correctness-preserving `sync` over clever reuse.
-- Join policy at region boundaries: merge in-flight state conservatively
-  (union of producers; distances recomputed). Documented in the pass, not
-  implied.
-- Output lives as attributes on instruction ops (not fixed in place until
-  emission, since emission-time fixups like branch-target patching may
-  adjust layout). Final encode happens in the emitter's buffered stage.
+- Dense forward dataflow tracks exact physical GRF/ARF read/write footprints,
+  per-pipe producers, send source-read retirement, send destination completion,
+  DPAS read/accumulator windows, and region/loop state.
+- The pass allocates and reuses hardware SBIDs `0..31`. It frees a token only
+  after all represented source/destination obligations complete, propagates
+  state across branches/joins/backedges, and inserts `.src`, `.dst`, distance,
+  or `sync` dependencies. More than 32 sends is a normal stress case, not an
+  encoder failure. If CFG merge or token pressure cannot be represented, drain
+  conservatively and continue.
+- DPAS dependencies include the systolic pipeline, destructive accumulator
+  chain, source-read window, read suppression, and interleaved send completion.
+- Output is final SWSB attributes on physical instructions. A verifier then
+  simulates every RAW/WAR/WAW, fixed-register, send, DPAS, and loop/join hazard.
+  Fault-injection tests must prove that removing any required dependency is
+  diagnosed.
+- The encoder serializes final attributes and performs no token allocation,
+  distance inference, or independent send numbering. Raw SWSB overrides are
+  test-only.
 
 `WaveAMDMachineWaitcnt.cpp`'s `WaitLattice` is the structural template;
 Intel's counter-less token model replaces the AMD counter model. Mesa elk's
@@ -446,13 +612,14 @@ no LLVM MC target for Xe; the MC-equivalent layer is owned here.
   runnable ELF device binary.
 - Buffered emission: instructions accumulate in a buffer (variant of
   instruction / label / alignment / directive) so fixups apply before
-  finalize: branch targets (JIP/UIP), SWSB finalization if layout moved,
-  optional compaction later.
+  finalize: branch targets (JIP/UIP) and optional compaction later. If a layout
+  change would invalidate final SWSB, it must happen before SWSB or trigger a
+  full re-run; emission never repairs dependencies.
 - Selection records the kernel ABI and fixed target-resource inputs as function
   attrs (`kernel_type`, `grf_count`, `reserved_grf_count`, `simd_size`, payload
   sizes, and `slm_size`); regalloc records `scratch_size`. After synchronization,
   `inter-resource-info` validates physical allocation and publishes
-  `grf_used`, `barrier_count`, `has_global_atomics`, and
+  `grf_used`, `barrier_count`, `has_global_atomics`, `has_dpas`, and
   `has_no_stateless_write`. The emitter requires this final resource contract,
   cross-checks it through the shared XeMachine resource analyzer, and
   serializes it without owning a second metadata policy.
@@ -486,6 +653,11 @@ repo), never through hand-rolled `ze*` calls:
 
 ### Device ABI: payload and zeinfo
 
+- One IR-resident kernel ABI descriptor, created at import and consumed by both
+  prologue generation and zebin emission, owns explicit/implicit arguments,
+  offsets, sizes, alignment, address spaces, access modes, inline/indirect
+  placement, local-ID payload, entry offsets, required workgroup/subgroup sizes,
+  SIMD width, and GRF mode. No pass recomputes placement from argument index.
 - Thread payload has dual entries. The software-local-ID prologue copies
   inline arguments from r1 to r4 and loads local IDs into r1-r3; NEO's
   hardware-local-ID path enters at byte 192 with that same register layout
@@ -495,10 +667,16 @@ repo), never through hand-rolled `ze*` calls:
   scratch pointer, sync buffer, ...) are requested explicitly in zeinfo only
   when the kernel uses them.
 - Execution environment in zeinfo: SIMD size, SLM size, barrier count, GRF
-  count, atomic use, and stateless-write use. These are cross-checked against
-  the machine IR and resource attrs at emission; mismatch is a hard error.
-- v1: one kernel per module is supported end-to-end; the writer already
-  emits per-kernel sections so multi-kernel is format-trivial later.
+  count/mode, DPAS use, required workgroup/subgroup size, atomic use, and
+  stateless-write use. These are cross-checked against machine IR and resource
+  attrs at emission; mismatch is a hard error.
+- The runner accepts configurable 1D/2D/3D group and local sizes, typed
+  f16/bf16/f32/i8/i32 buffers and scalars, deterministic/random/file inputs,
+  dynamic SLM where supported, multiple outputs, floating tolerance, and a CPU
+  reference callback. The current fixed 1D `{32,1,1}` uint32 runner is prototype
+  debt, not the matmul test ABI.
+- Multi-kernel sections and symbols are emitted independently. One-kernel-only
+  support may remain during bring-up, but ABI data structures may not assume it.
 
 ## 17. Testing
 
@@ -517,30 +695,109 @@ Three tiers, wave-mlir structure:
    raw `ze*` calls anywhere in the project. Gated on hardware presence
    (`REQUIRES: host-supports-inter-bmg`).
 
-Perf tier (later): frozen pipeline inputs + disassembly goldens for perf
-kernels; drift is a review stop with mandatory A/B benchmark on the B60.
+The optimized-LLVM corpus freezes both `opt -O2` and `opt -O3` output for each
+source kernel. Tests include scalar, vectorized, unrolled, peeled, masked/VP,
+FMA, reduction, dynamic-stride, transpose, aliasing, and tail forms. O2 and O3
+must produce identical answers even when only one form is contraction- or
+block-message-eligible.
+
+Lighthouse supplies three references, not selector templates:
+
+- Lighthouse's `test/run/pipeline-check.mlir` is the first reproducible matmul
+  corpus. Lower it to LLVM IR, freeze pre-opt plus `opt -O2/-O3` IR, and use its
+  deterministic inputs/reference for generic-path bring-up.
+- Lighthouse's `examples/xegpu/matmul.py` is the Intel performance and layout
+  oracle: f16/bf16->f32, M8xN16xK16 DPAS geometry, 2D block
+  load/store/prefetch, transpose, bias/ReLU, Level Zero validation, and staged
+  MLIR dumps. Inter does not pattern-match its generated names or operation
+  order.
+- The pinned KernelBench `level1/2_Standard_matrix_multiplication_` becomes the
+  production corpus once initialized. Capture its LLVM-dialect output, translate
+  to LLVM IR, run `opt -O2/-O3`, and validate against PyTorch before benchmarking.
+
+Differential tests compare generic and optimized paths on dynamic M/N/K,
+arbitrary leading dimensions, non-square and irregular shapes, transpose A/B,
+tails, aliasing near misses, strict FP versus fast-math, alpha/beta, bias,
+batched layouts, and multiple launch geometries. Every optimization has positive
+legality tests, structurally perturbed positive cases, and near-miss negatives.
+
+The M11 performance tier uses frozen pipeline inputs plus disassembly goldens;
+drift is a review stop with a mandatory A/B benchmark on the B60.
 
 ## 18. Milestones
 
-- **M0 — container proof.** Hand-written kernel (assembled with IGA), wrapped
-  by our zebin writer, loaded and launched on the B60 through `liboffload`
-  (section 16). Validates zeinfo/payload contract before any codegen exists.
-- **M1 — straight line.** LLVM import -> scf -> selection for arithmetic +
-  stateless A64 load/store; GED emission; `a[i] = b[i] + c[i]` end-to-end.
-- **M2 — control flow.** `exec_if`/`uniform_if`/`uniform_loop`, predication,
-  flags; uniform vs divergent branch selection via the uniformity analysis.
-- **M3 — memory model.** SLM, barriers, fences, atomics; token synthesis
-  with symbolic AA; message-form selection via the address planner.
-- **M4 — regalloc + SWSB.** Transform-loop RA with spills; conservative SWSB
-  pass; torture tests (deep register pressure, nested CF, mixed sends).
-- **M5 — performance.** IGC-derived Xe2 timing tables, greedy gap-filling
-  scheduler engagement, block-message selection, compaction, then `dpas`.
+- **M0-M4 — executable backend spine (complete prototype).** Native zebin,
+  LLVM import, straight-line integer kernels, branches, SLM/barriers/atomics,
+  pre-RA scheduling, whole-GRF allocation, conservative synchronization, GED
+  encoding/disassembly, and B60 hardware tests. These prove the container and
+  machine path; they do not certify a general LLVM lowering.
+- **M5 — optimized LLVM semantic baseline.** Freeze Lighthouse's small matmul
+  as pre-opt, O2, and O3 LLVM IR. Introduce explicit conversion legality,
+  kernel/helper identification, proof/metadata preservation, exact scalar and
+  fixed-vector arithmetic, general reducible loops, masks/tails, and exact
+  address objects. Delete `gid*4`, direct-GEP/block-argument, argument-index,
+  i32-only, and X-only selection shortcuts. Acceptance: O2 and O3 generic paths
+  execute multiple dynamic/irregular f32 matmuls correctly with no block message
+  or DPAS required; unknown LLVM operations fail loudly.
+- **M6 — general ABI and execution model.** Implement the shared ABI descriptor,
+  SIMD8/16/32 selection, X/Y/Z and subgroup/workgroup builtins, configurable
+  1D/2D/3D launch, typed buffers/scalars, arbitrary argument payload coverage,
+  and CPU-reference validation. Acceptance: the same generic matmul runs at
+  multiple shapes, leading dimensions, launch geometries, and SIMD widths.
+- **M7 — semantic contraction and layout level.** Recover legal contractions
+  from scalar/vector/FMA/reduction O2/O3 forms and normalize exact Intel matrix
+  intrinsics. Add target-independent fragment/layout operations, strict-FP
+  gates, dynamic tails, transpose/VNNI conversions, and generic fallback.
+  Acceptance: structurally different O2/O3 reductions converge on equivalent
+  contraction IR when legal; strict/near-miss cases remain generic and correct.
+- **M8 — block/2D memory vertical slice.** Add target capability tables, named
+  block/2D load/store/prefetch ops, descriptor/payload construction, timing,
+  verification, and 2D->block->gather fallback. Acceptance: eligible A/B/C tiles
+  from the Lighthouse XeGPU reference disassemble as block2D messages; dynamic
+  misalignment, pitch, transpose, and edge cases take tested fallbacks.
+- **M9 — DPAS vertical slice.** Add `xemachine.dpas`, fragment footprints and
+  accumulator aliases, f16/bf16->f32 precision support, GED setters, timing and
+  issue resources, `has_dpas` resource/zeinfo metadata, and IGA goldens.
+  Acceptance: a hand-authored then selected M8xN16xK16 subgroup tile encodes the
+  expected DPAS and matches the generic path on B60.
+- **M10 — production physical pipeline.** Add sub-GRF constrained allocation,
+  contiguous fragment/send bundles, ARF/MME allocation, 128/256-GRF cost choice,
+  fragment-aware spill/splitting, post-RA scheduling, reusable SBID allocation,
+  DPAS/send SWSB, and final hazard verification. Acceptance: loops with more
+  than 32 sends, double-buffered fragments, spills, branches, and backedges pass
+  fault-injected verifier and hardware stress tests.
+- **M11 — production matmul qualification.** Software-pipeline the K loop,
+  overlap block prefetch/load with DPAS, choose direct-global versus SLM staging,
+  and tune through target cost data. Validate Lighthouse XeGPU f16/bf16 kernels
+  and KernelBench level1/2 O2/O3 IR across dynamic/non-square/tail/transpose/
+  bias/ReLU cases before adding performance gates. Acceptance: correctness,
+  NEO zebin validation, reviewed final assembly, stable resource usage, and a
+  documented B60 performance baseline against the generic Inter path.
 
 ## 19. Risks and open questions
 
 - **SWSB debuggability.** Failures are silent corruption. Mitigation:
-  over-conservative v1, a verification mode that cross-checks annotated
-  dependencies against a def-use recomputation, and disassembly goldens.
+  start over-conservative, require the independent physical-hazard verifier,
+  fault-inject missing dependencies, stress token reuse across loops/joins, and
+  keep disassembly goldens.
+- **Optimized-LLVM shape drift.** LLVM releases and `-O2/-O3` produce different
+  loop, vector, and intrinsic forms. Mitigation: freeze representative IR from
+  each supported toolchain, test semantics rather than exact operation order,
+  and retain the generic path whenever contraction recovery does not fire.
+- **False contraction recovery.** A syntactically plausible reduction may have
+  aliasing, strict-FP, poison, overflow, or loop-carried side effects that make
+  reassociation invalid. Mitigation: use imported LLVM proofs and explicit
+  legality predicates, compare optimized and generic paths, and maintain more
+  negative/near-miss tests than positive patterns.
+- **Fragment-layout completeness.** DPAS operand packing, VNNI, transpose,
+  block-message result layout, and accumulator layout must agree exactly.
+  Mitigation: one target capability/layout table feeds selection, verifiers,
+  allocation constraints, GED emission, and IGA assembly goldens; no pass keeps
+  an independent shape table.
+- **2D message dynamic legality.** Runtime base alignment, pitch, dimensions,
+  and edge behavior may invalidate an otherwise useful tile. Mitigation: prove
+  static legality, guard profitable dynamic cases, and always retain block or
+  masked gather/scatter fallback.
 - **Region legality completeness.** The compatibility matrix lives in GED
   validation and elk source, not in any document. Expect a legality-test
   sweep enumerating producer/consumer region pairs against GED's validator.
@@ -559,12 +816,15 @@ kernels; drift is a review stop with mandatory A/B benchmark on the B60.
 - **Latency data.** Intel does not publish a B60 latency table. Use the timing
   constants and heuristics in the pinned IGC scheduler as the source of truth,
   preserving latency, occupancy, and send-source read time as distinct values.
-- **Open: exec-width strategy.** Compile per-kernel at a single width chosen
-  from zeinfo constraints vs. multi-width specialization. v1: single width,
-  chosen up front (default SIMD16, SIMD32 where legal and profitable).
-- **Open: 2D block messages and `dpas`.** Post-v1; fragment layout machinery
-  does not transfer from wave-mlir (DPAS packing != WMMA layouts), only the
-  typed-fragment-with-verifier pattern does.
+- **Exec-width strategy.** Compile each kernel variant at one width chosen
+  before semantic layout planning (normally SIMD16 for the initial DPAS path;
+  SIMD8/32 where legal and profitable). Future multiversioning creates separate
+  variants and zeinfo entries rather than making width dynamic inside a kernel.
+- **Performance cliffs.** DPAS selection can lose to generic code through poor
+  occupancy, spills, excess layout conversion, or tail overhead. Mitigation:
+  keep block messages and DPAS as independent choices, cost 128/256-GRF modes,
+  report selection remarks/resource usage, and require B60 A/B data before
+  making an optimization default.
 
 ## 20. Transplant map from wave-mlir
 
