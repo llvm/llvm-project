@@ -197,6 +197,12 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
             language.AsLanguageType()))
       if (auto var_sp = state->GetVariable(expr))
         if (auto valobj_sp = var_sp->GetValueObject()) {
+
+          if (verbosity == eDWIMPrintVerbosityFull) {
+            result.AppendNoteWithFormatv(
+                "looked up `{0}` in persistent variables", expr);
+          }
+
           dump_val_object(*valobj_sp);
           return;
         }

@@ -14,3 +14,11 @@
 # RUN: echo quit | %lldb -o "settings set show-inline-diagnostics false" \
 # RUN:   -o "dwim-print a" 2>&1 | FileCheck %s --check-prefix=CHECK4
 # CHECK4: error: <user expression 0>:1:1: use of undeclared identifier
+
+# RUN: %clang_host -g %S/Inputs/main.c -o %t
+# RUN: echo quit | %lldb %t -o "b main" -o "r" -o \
+# RUN: "dwim-print --persistent-result true -- foo" -o \
+# RUN: "settings set dwim-print-verbosity full" -o \
+# RUN: "dwim-print -l C11 -- $0" | FileCheck %s --check-prefix=CHECK5
+#            (lldb) dwim-print -l C11 -- $0
+# CHECK5:note: looked up `$0` in persistent variables
