@@ -54637,16 +54637,30 @@ static SDValue combineScalarMinMaxAbsStore(StoreSDNode *St, const SDLoc &DL,
       Subtarget.useSoftFloat() || F.hasOptSize())
     return SDValue();
 
-  // i32: SSE4.1 (min/max) / SSSE3 (abs). i64: AVX512F+VLX (no VLX widens to
-  // zmm + vzeroupper). i16: AVX512FP16 (needs VMOVW for mem->XMM).
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+
+  // Pick the widened vector type; require a legal vector op and that
+  // SCALAR_TO_VECTOR can fold the scalar load into XMM (i32/i64: SSE2
+  // movd/movq; i16: FP16 vmovw). i64 also needs VLX to avoid zmm widen +
+  // vzeroupper.
   auto getVecVT = [&]() -> std::optional<MVT> {
-    if (VT == MVT::i32 && (IsAbs ? Subtarget.hasSSSE3() : Subtarget.hasSSE41()))
-      return MVT::v4i32;
-    if (VT == MVT::i64 && Subtarget.hasAVX512() && Subtarget.hasVLX())
-      return MVT::v2i64;
-    if (VT == MVT::i16 && Subtarget.hasFP16())
-      return MVT::v8i16;
-    return std::nullopt;
+    MVT VecVT;
+    if (VT == MVT::i32)
+      VecVT = MVT::v4i32;
+    else if (VT == MVT::i64)
+      VecVT = MVT::v2i64;
+    else if (VT == MVT::i16)
+      VecVT = MVT::v8i16;
+    else
+      return std::nullopt;
+
+    if (VT == MVT::i16 ? !Subtarget.hasFP16() : !Subtarget.hasSSE2())
+      return std::nullopt;
+    if (VT == MVT::i64 && !Subtarget.hasVLX())
+      return std::nullopt;
+    if (!TLI.isOperationLegal(Opc, VecVT))
+      return std::nullopt;
+    return VecVT;
   };
   std::optional<MVT> VecVTOpt = getVecVT();
   if (!VecVTOpt)
