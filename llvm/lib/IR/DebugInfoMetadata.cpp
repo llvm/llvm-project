@@ -13,6 +13,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "LLVMContextImpl.h"
 #include "MetadataImpl.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -26,6 +27,7 @@
 
 #include <numeric>
 #include <optional>
+#include <tuple>
 
 using namespace llvm;
 
@@ -60,15 +62,17 @@ DebugVariableAggregate::DebugVariableAggregate(const DbgVariableRecord *DVR)
 
 DILocation::DILocation(LLVMContext &C, StorageType Storage, unsigned Line,
                        unsigned Column, uint64_t AtomGroup, uint8_t AtomRank,
-                       ArrayRef<Metadata *> MDs, bool ImplicitCode)
+                       bool HasIRLayers, ArrayRef<Metadata *> MDs,
+                       bool ImplicitCode)
     : MDNode(C, DILocationKind, Storage, MDs), AtomGroup(AtomGroup),
-      AtomRank(AtomRank) {
+      AtomRank(AtomRank), HasIRLayers(HasIRLayers) {
   assert(AtomRank <= 7 && "AtomRank number should fit in 3 bits");
+  assert(AtomGroup < (1ULL << 60) && "AtomGroup number should fit in 60 bits");
   if (AtomGroup)
     C.updateDILocationAtomGroupWaterline(AtomGroup + 1);
 
-  assert((MDs.size() == 1 || MDs.size() == 2) &&
-         "Expected a scope and optional inlined-at");
+  assert(MDs.size() >= 1 && MDs.size() <= 3 &&
+         "Expected a scope and optional inlined-at + irlayers");
   // Set line and column.
   assert(Column < (1u << 16) && "Expected 16-bit column");
 
@@ -88,15 +92,20 @@ DILocation *DILocation::getImpl(LLVMContext &Context, unsigned Line,
                                 unsigned Column, Metadata *Scope,
                                 Metadata *InlinedAt, bool ImplicitCode,
                                 uint64_t AtomGroup, uint8_t AtomRank,
-                                StorageType Storage, bool ShouldCreate) {
+                                Metadata *IRLayers, StorageType Storage,
+                                bool ShouldCreate) {
   // Fixup column.
   adjustColumn(Column);
 
+  // Clamp rather than truncate, which would wrap into a different valid group.
+  if (AtomGroup >= (1ULL << 60))
+    AtomGroup = 0;
+
   if (Storage == Uniqued) {
-    if (auto *N = getUniqued(Context.pImpl->DILocations,
-                             DILocationInfo::KeyTy(Line, Column, Scope,
-                                                   InlinedAt, ImplicitCode,
-                                                   AtomGroup, AtomRank)))
+    if (auto *N = getUniqued(
+            Context.pImpl->DILocations,
+            DILocationInfo::KeyTy(Line, Column, Scope, InlinedAt, ImplicitCode,
+                                  AtomGroup, AtomRank, IRLayers)))
       return N;
     if (!ShouldCreate)
       return nullptr;
@@ -104,14 +113,60 @@ DILocation *DILocation::getImpl(LLVMContext &Context, unsigned Line,
     assert(ShouldCreate && "Expected non-uniqued nodes to always be created");
   }
 
-  SmallVector<Metadata *, 2> Ops;
+  SmallVector<Metadata *, 3> Ops;
   Ops.push_back(Scope);
   if (InlinedAt)
     Ops.push_back(InlinedAt);
-  return storeImpl(new (Ops.size(), Storage)
-                       DILocation(Context, Storage, Line, Column, AtomGroup,
-                                  AtomRank, Ops, ImplicitCode),
+  if (IRLayers)
+    Ops.push_back(IRLayers);
+  return storeImpl(new (Ops.size(), Storage) DILocation(
+                       Context, Storage, Line, Column, AtomGroup, AtomRank,
+                       /*HasIRLayers=*/IRLayers != nullptr, Ops, ImplicitCode),
                    Storage, Context.pImpl->DILocations);
+}
+
+DILayerLoc *DILayerLoc::getImpl(LLVMContext &Context, MDString *Kind,
+                                Metadata *File, unsigned Line, unsigned Column,
+                                StorageType Storage, bool ShouldCreate) {
+  // Clamp an out-of-range column to 0 (the 16-bit SubclassData limit), as
+  // DILocation::getImpl does; the ctor otherwise asserts and release builds
+  // truncate.
+  adjustColumn(Column);
+  if (Storage == Uniqued) {
+    if (auto *N = getUniqued(Context.pImpl->DILayerLocs,
+                             DILayerLocInfo::KeyTy(Kind, File, Line, Column)))
+      return N;
+    if (!ShouldCreate)
+      return nullptr;
+  }
+  Metadata *Ops[] = {Kind, File};
+  return storeImpl(new (std::size(Ops), Storage)
+                       DILayerLoc(Context, Storage, Line, Column, Ops),
+                   Storage, Context.pImpl->DILayerLocs);
+}
+
+DILayerLocList *DILayerLocList::getImpl(LLVMContext &Context,
+                                        ArrayRef<Metadata *> Layers,
+                                        StorageType Storage,
+                                        bool ShouldCreate) {
+  unsigned Hash = 0;
+  if (Storage == Uniqued) {
+    DILayerLocListInfo::KeyTy Key(Layers);
+    if (auto *N = getUniqued(Context.pImpl->DILayerLocLists, Key))
+      return N;
+    if (!ShouldCreate)
+      return nullptr;
+    Hash = Key.getHash();
+  } else {
+    assert(ShouldCreate && "Expected non-uniqued nodes to always be created");
+  }
+  return storeImpl(new (Layers.size(), Storage)
+                       DILayerLocList(Context, Storage, Hash, Layers),
+                   Storage, Context.pImpl->DILayerLocLists);
+}
+
+void DILayerLocList::recalculateHash() {
+  setHash(DILayerLocListInfo::KeyTy::calculateHash(this));
 }
 
 DILocation *DILocation::getMergedLocations(ArrayRef<DILocation *> Locs) {
@@ -220,6 +275,40 @@ struct ScopeLocationsMatcher {
   }
 };
 
+// Returns a uniqued DILayerLocList holding the intersection of LocA's and
+// LocB's layer sets, or null if either has no layers or they share none.
+// Entries keep LocA's relative order: LLVM assigns no meaning to layer order,
+// but it is part of a list's identity and visible to consumers, so preserve
+// rather than sort.
+static Metadata *mergeIRLayers(LLVMContext &C, const DILocation *LocA,
+                               const DILocation *LocB) {
+  DILayerLocList *LA = LocA->getIRLayers();
+  DILayerLocList *LB = LocB->getIRLayers();
+  if (!LA || !LB)
+    return nullptr;
+  // Entries match on their fields rather than by pointer: DILayerLocs are
+  // uniqued, but `distinct` ones are legal and must not look disjoint. Keying
+  // on the fields also keeps the intersection linear in the two list lengths.
+  using LayerKey = std::tuple<Metadata *, Metadata *, unsigned, unsigned>;
+  auto keyOf = [](const DILayerLoc *L) {
+    return LayerKey(L->getRawKind(), L->getRawFile(), L->getLine(),
+                    L->getColumn());
+  };
+  SmallDenseSet<LayerKey, 2> BLayers;
+  for (unsigned I = 0, E = LB->getNumLayers(); I != E; ++I)
+    if (const DILayerLoc *R = LB->getLayer(I))
+      BLayers.insert(keyOf(R));
+  SmallVector<Metadata *, 2> Keep;
+  for (unsigned I = 0, E = LA->getNumLayers(); I != E; ++I) {
+    DILayerLoc *L = LA->getLayer(I);
+    if (L && BLayers.contains(keyOf(L)))
+      Keep.push_back(L);
+  }
+  if (Keep.empty())
+    return nullptr;
+  return DILayerLocList::get(C, Keep);
+}
+
 DILocation *DILocation::getMergedLocation(DILocation *LocA, DILocation *LocB) {
   if (LocA == LocB)
     return LocA;
@@ -304,12 +393,18 @@ DILocation *DILocation::getMergedLocation(DILocation *LocA, DILocation *LocB) {
     if (L1 == L2)
       return DILocation::get(C, L1->getLine(), L1->getColumn(), L1->getScope(),
                              InlinedAt, L1->isImplicitCode(),
-                             L1->getAtomGroup(), L1->getAtomRank());
+                             L1->getAtomGroup(), L1->getAtomRank(),
+                             L1->getRawIRLayers());
 
     // If the locations originate from different subprograms we can't produce
     // a common location.
     if (L1->getScope()->getSubprogram() != L2->getScope()->getSubprogram())
       return nullptr;
+
+    // Each merged frame keeps the intersection of the two frames'
+    // intermediate-IR layer sets, so a layer on any frame (e.g. the shared
+    // outermost kernel frame) survives the merge.
+    Metadata *MergedLayers = mergeIRLayers(C, L1, L2);
 
     // Find nearest common scope inside subprogram.
     DIScope *Scope = getNearestMatchingScope<EqualScopesMatcher>(L1, L2).first;
@@ -333,7 +428,9 @@ DILocation *DILocation::getMergedLocation(DILocation *LocA, DILocation *LocB) {
       // from CommonLoc. Use it as merged location.
       if (Scope->getFile() != L1->getFile() || L1->getFile() != L2->getFile())
         return DILocation::get(C, CommonLoc.first, CommonLoc.second,
-                               CommonLocScope, InlinedAt);
+                               CommonLocScope, InlinedAt,
+                               /*ImplicitCode=*/false, /*AtomGroup=*/0,
+                               /*AtomRank=*/0, MergedLayers);
     }
 
     bool SameLine = L1->getLine() == L2->getLine();
@@ -346,7 +443,7 @@ DILocation *DILocation::getMergedLocation(DILocation *LocA, DILocation *LocB) {
     // further to do if neither location has an atom number.
     if (!SameLine || !(L1->getAtomGroup() || L2->getAtomGroup()))
       return DILocation::get(C, Line, Col, Scope, InlinedAt, IsImplicitCode,
-                             /*AtomGroup*/ 0, /*AtomRank*/ 0);
+                             /*AtomGroup*/ 0, /*AtomRank*/ 0, MergedLayers);
 
     uint64_t Group = 0;
     uint64_t Rank = 0;
@@ -380,7 +477,7 @@ DILocation *DILocation::getMergedLocation(DILocation *LocA, DILocation *LocB) {
       Rank = 1;
     }
     return DILocation::get(C, Line, Col, Scope, InlinedAt, IsImplicitCode,
-                           Group, Rank);
+                           Group, Rank, MergedLayers);
   };
 
   DILocation *Result = ARIt != ALocs.rend() ? (*ARIt)->getInlinedAt() : nullptr;
