@@ -199,9 +199,6 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.fopen
     libc.src.stdio.fread
   )
-  # This is to be used for tests which write to libc's platform streams
-  # under full build but write to system-lib's streams otherwise.
-  set(hermetic_test_only HERMETIC_TEST_ONLY)
 else()
   # Else in overlay mode they use the system's FILE.
   libc_set_definition(use_system_file "LIBC_COPT_STDIO_USE_SYSTEM_FILE")
@@ -225,7 +222,6 @@ add_libc_test(
 
 add_libc_test(
   printf_test
-  ${hermetic_test_only}
   SUITE
     libc_stdio_unittests
   SRCS
@@ -282,7 +278,6 @@ add_libc_test(
 
 add_libc_test(
   vprintf_test
-  ${hermetic_test_only}
   SUITE
     libc_stdio_unittests
   SRCS
@@ -384,7 +379,6 @@ add_libc_test(
 
 add_libc_test(
   puts_test
-  HERMETIC_TEST_ONLY # writes to libc's stdout
   SUITE
     libc_stdio_unittests
   SRCS
@@ -395,7 +389,6 @@ add_libc_test(
 
 add_libc_test(
   perror_test
-  HERMETIC_TEST_ONLY # writes to libc's stderr
   SUITE
     libc_stdio_unittests
   SRCS
@@ -407,7 +400,6 @@ add_libc_test(
 
 add_libc_test(
   fputs_test
-  HERMETIC_TEST_ONLY # writes to libc's stdout and stderr
   SUITE
     libc_stdio_unittests
   SRCS
@@ -420,7 +412,6 @@ add_libc_test(
 
 add_libc_test(
   fputc_test
-  HERMETIC_TEST_ONLY # writes to libc's stdout and stderr
   SUITE
     libc_stdio_unittests
   SRCS
