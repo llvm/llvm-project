@@ -235,6 +235,10 @@ KnownFPClass KnownFPClass::bitcast(const fltSemantics &FltSemantics,
          "Bitcast operand has incorrect bit width");
   KnownFPClass Known;
 
+  // Conflicting known bits do not describe a concrete value. Return unknown.
+  if (Bits.hasConflict())
+    return Known;
+
   // Transfer information from the sign bit.
   if (Bits.isNonNegative())
     Known.signBitMustBeZero();
@@ -242,41 +246,49 @@ KnownFPClass KnownFPClass::bitcast(const fltSemantics &FltSemantics,
     Known.signBitMustBeOne();
 
   if (APFloat::isIEEELikeFP(FltSemantics)) {
-    // IEEE floats are NaN when all bits of the exponent plus at least one of
-    // the fraction bits are 1. This means:
-    //   - If we assume unknown bits are 0 and the value is NaN, it will
-    //     always be NaN
-    //   - If we assume unknown bits are 1 and the value is not NaN, it can
-    //     never be NaN
-    // Note: They do not hold for x86_fp80 format.
-    if (APFloat(FltSemantics, Bits.One).isNaN())
-      Known.KnownFPClasses = fcNan;
-    else if (!APFloat(FltSemantics, ~Bits.Zero).isNaN())
-      Known.knownNot(fcNan);
+    const unsigned MantissaBits = FltSemantics.precision - 1;
+    const APInt ExponentMask = APInt::getBitsSet(
+        FltSemantics.sizeInBits, MantissaBits, FltSemantics.sizeInBits - 1);
+    const APInt MantissaMask =
+        APInt::getLowBitsSet(FltSemantics.sizeInBits, MantissaBits);
 
-    // Build KnownBits representing Inf and check if it must be equal or
-    // unequal to this value.
-    auto InfKB =
-        KnownBits::makeConstant(APFloat::getInf(FltSemantics).bitcastToAPInt());
-    InfKB.Zero.clearSignBit();
-    if (const auto InfResult = KnownBits::eq(Bits, InfKB)) {
-      assert(!InfResult.value());
-      Known.knownNot(fcInf);
-    } else if (Bits == InfKB) {
-      Known.KnownFPClasses = fcInf;
-    }
+    const bool ExponentKnownAllZeros =
+        (Bits.Zero & ExponentMask) == ExponentMask;
+    const bool ExponentKnownAllOnes = (Bits.One & ExponentMask) == ExponentMask;
+    const bool ExponentKnownNotAllZeros = !(Bits.One & ExponentMask).isZero();
+    const bool ExponentKnownNotAllOnes = !(Bits.Zero & ExponentMask).isZero();
 
-    // Build KnownBits representing Zero and check if it must be equal or
-    // unequal to this value.
-    auto ZeroKB = KnownBits::makeConstant(
-        APFloat::getZero(FltSemantics).bitcastToAPInt());
-    ZeroKB.Zero.clearSignBit();
-    if (const auto ZeroResult = KnownBits::eq(Bits, ZeroKB)) {
-      assert(!ZeroResult.value());
-      Known.knownNot(fcZero);
-    } else if (Bits == ZeroKB) {
-      Known.KnownFPClasses = fcZero;
-    }
+    const bool MantissaKnownAllZeros =
+        (Bits.Zero & MantissaMask) == MantissaMask;
+    const bool MantissaKnownNotAllZeros = !(Bits.One & MantissaMask).isZero();
+
+    // Zero and subnormal require an exponent with all zero bits.
+    if (ExponentKnownNotAllZeros)
+      Known.knownNot(fcZero | fcSubnormal);
+
+    // Infinity and NaN require an exponent with all one bits.
+    if (ExponentKnownNotAllOnes)
+      Known.knownNot(fcInf | fcNan);
+
+    // Normal values have an exponent that is not all zeros or all ones.
+    if (ExponentKnownAllZeros || ExponentKnownAllOnes)
+      Known.knownNot(fcNormal);
+
+    // Zero and infinity require a mantissa with all zero bits.
+    if (MantissaKnownNotAllZeros)
+      Known.knownNot(fcZero | fcInf);
+
+    // Subnormal and NaN require a non-zero mantissa.
+    if (MantissaKnownAllZeros)
+      Known.knownNot(fcSubnormal | fcNan);
+
+    const bool QuietBitKnownSet = Bits.One[MantissaBits - 1];
+    const bool QuietBitKnownClear = Bits.Zero[MantissaBits - 1];
+
+    if (QuietBitKnownSet)
+      Known.knownNot(fcSNan);
+    else if (QuietBitKnownClear)
+      Known.knownNot(fcQNan);
   }
 
   return Known;
