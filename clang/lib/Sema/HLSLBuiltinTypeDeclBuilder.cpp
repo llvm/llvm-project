@@ -1686,8 +1686,7 @@ BuiltinTypeDeclBuilder::addByteAddressBufferLoadMethods() {
   AddLoads("Load3", AST.getExtVectorType(AST.UnsignedIntTy, 3));
   AddLoads("Load4", AST.getExtVectorType(AST.UnsignedIntTy, 4));
 
-  // Templated Load<T>() needs buffer-order-aware handling for matrix T; see
-  // __builtin_hlsl_resource_load_typed in CGHLSLBuiltins.cpp.
+  // Templated Load<T>() needs buffer-order-aware handling for matrix T.
   {
     IdentifierInfo &II = AST.Idents.get("Load", tok::TokenKind::identifier);
     DeclarationName Load(&II);
@@ -2478,10 +2477,16 @@ BuiltinTypeDeclBuilder::addRawBufferGenericLoadFunction(DeclarationName &Name) {
   BuiltinTypeMethodBuilder MMB(*this, Name, QualType(), /*IsConst=*/true);
   QualType ElemTy = MMB.addTemplateTypeParam("element_type");
   MMB.ReturnTy = ElemTy;
+  QualType AddrSpaceElemTy =
+      AST.getAddrSpaceQualType(ElemTy, LangAS::hlsl_device);
+  QualType ElemPtrTy = AST.getPointerType(AddrSpaceElemTy);
 
   return MMB.addParam("Index", AST.UnsignedIntTy)
-      .callBuiltin("__builtin_hlsl_resource_load_typed", ElemTy, PH::Handle,
-                   PH::_0, ElemTy)
+      .callBuiltin("__builtin_hlsl_resource_getpointer_typed", ElemPtrTy,
+                   PH::Handle, PH::_0, ElemTy)
+      .dereference(PH::LastStmt)
+      .callBuiltin("__builtin_hlsl_maybe_transpose_matrix", ElemTy,
+                   PH::LastStmt, getConstantIntExpr(1))
       .finalize();
 }
 
@@ -2494,11 +2499,18 @@ BuiltinTypeDeclBuilder::addRawBufferGenericStoreFunction(
 
   BuiltinTypeMethodBuilder MMB(*this, Name, AST.VoidTy, /*IsConst=*/false);
   QualType ElemTy = MMB.addTemplateTypeParam("element_type");
+  QualType AddrSpaceElemTy =
+      AST.getAddrSpaceQualType(ElemTy, LangAS::hlsl_device);
+  QualType ElemPtrTy = AST.getPointerType(AddrSpaceElemTy);
 
   return MMB.addParam("Index", AST.UnsignedIntTy)
       .addParam("Value", ElemTy)
-      .callBuiltin("__builtin_hlsl_resource_store_typed", AST.VoidTy,
-                   PH::Handle, PH::_0, PH::_1)
+      .callBuiltin("__builtin_hlsl_maybe_transpose_matrix", ElemTy, PH::_1,
+                   getConstantIntExpr(0))
+      .callBuiltin("__builtin_hlsl_resource_getpointer_typed", ElemPtrTy,
+                   PH::Handle, PH::_0, ElemTy)
+      .dereference(PH::LastStmt)
+      .assign(PH::LastStmt, PH::LastStmt)
       .finalize();
 }
 

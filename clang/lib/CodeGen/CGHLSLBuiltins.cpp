@@ -665,74 +665,20 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     CI->setCallingConv(IntrFn->getCallingConv());
     return CI;
   }
-  case Builtin::BI__builtin_hlsl_resource_load_typed: {
-    Value *HandleOp = EmitScalarExpr(E->getArg(0));
-    Value *IndexOp = EmitScalarExpr(E->getArg(1));
+  case Builtin::BI__builtin_hlsl_maybe_transpose_matrix: {
+    Value *ValueOp = EmitScalarExpr(E->getArg(0));
+    const auto *MatTy = E->getArg(0)->getType()->getAs<ConstantMatrixType>();
+    if (!MatTy || !CGM.getTriple().isSPIRV() ||
+        !getLangOpts().HLSLSpvUseLegacyBufferMatrixOrder)
+      return ValueOp;
 
-    QualType ElemQTy = E->getType();
-    QualType PtrQTy = getContext().getPointerType(
-        getContext().getAddrSpaceQualType(ElemQTy, LangAS::hlsl_device));
-    llvm::Type *PtrTy = ConvertType(PtrQTy);
-    llvm::Type *ElemTy = ConvertType(ElemQTy);
-
-    llvm::Function *IntrFn = llvm::Intrinsic::getOrInsertDeclaration(
-        &CGM.getModule(),
-        CGM.getHLSLRuntime().getCreateResourceGetPointerIntrinsic(),
-        {PtrTy, HandleOp->getType(), IndexOp->getType()});
-    llvm::CallInst *Ptr = EmitRuntimeCall(IntrFn, {HandleOp, IndexOp});
-    Ptr->setCallingConv(IntrFn->getCallingConv());
-
-    Address Addr(Ptr, ElemTy, getContext().getTypeAlignInChars(ElemQTy));
-    Value *Loaded = Builder.CreateLoad(Addr);
-
-    // Legacy row-major buffer order loads the transposed shape; transpose back.
-    if (const auto *MatTy = ElemQTy->getAs<ConstantMatrixType>()) {
-      const HLSLAttributedResourceType *RT = getRequiredHandleType(E, 0);
-      if (RT->isRaw() && CGM.getTriple().isSPIRV() &&
-          getLangOpts().HLSLSpvUseLegacyBufferMatrixOrder) {
-        llvm::MatrixBuilder MB(Builder);
-        Loaded = MB.CreateMatrixTranspose(Loaded, MatTy->getNumColumns(),
-                                          MatTy->getNumRows());
-      }
-    }
-    return Loaded;
-  }
-  case Builtin::BI__builtin_hlsl_resource_store_typed: {
-    // Value is evaluated before Handle/Index to match the IR shape of the
-    // other (non-templated) Store overloads.
-    Value *ValueOp = EmitScalarExpr(E->getArg(2));
-    Value *HandleOp = EmitScalarExpr(E->getArg(0));
-    Value *IndexOp = EmitScalarExpr(E->getArg(1));
-
-    QualType ElemQTy = E->getArg(2)->getType();
-
-    // See the load_typed case above.
-    if (const auto *MatTy = ElemQTy->getAs<ConstantMatrixType>()) {
-      const HLSLAttributedResourceType *RT = getRequiredHandleType(E, 0);
-      if (RT->isRaw() && CGM.getTriple().isSPIRV() &&
-          getLangOpts().HLSLSpvUseLegacyBufferMatrixOrder) {
-        llvm::MatrixBuilder MB(Builder);
-        ValueOp = MB.CreateMatrixTranspose(ValueOp, MatTy->getNumRows(),
-                                           MatTy->getNumColumns());
-      }
-    }
-
-    QualType PtrQTy = getContext().getPointerType(
-        getContext().getAddrSpaceQualType(ElemQTy, LangAS::hlsl_device));
-    llvm::Type *PtrTy = ConvertType(PtrQTy);
-
-    llvm::Function *IntrFn = llvm::Intrinsic::getOrInsertDeclaration(
-        &CGM.getModule(),
-        CGM.getHLSLRuntime().getCreateResourceGetPointerIntrinsic(),
-        {PtrTy, HandleOp->getType(), IndexOp->getType()});
-    llvm::CallInst *Ptr = EmitRuntimeCall(IntrFn, {HandleOp, IndexOp});
-    Ptr->setCallingConv(IntrFn->getCallingConv());
-
-    Address Addr(Ptr, ValueOp->getType(),
-                 getContext().getTypeAlignInChars(ElemQTy));
-    // Returning the (void-typed) store instruction, rather than nullptr,
-    // signals to the caller that this builtin was handled.
-    return Builder.CreateStore(ValueOp, Addr);
+    bool IsLoad =
+        E->getArg(1)->EvaluateKnownConstInt(getContext()).getBoolValue();
+    unsigned Rows = MatTy->getNumRows();
+    unsigned Columns = MatTy->getNumColumns();
+    llvm::MatrixBuilder MB(Builder);
+    return IsLoad ? MB.CreateMatrixTranspose(ValueOp, Columns, Rows)
+                  : MB.CreateMatrixTranspose(ValueOp, Rows, Columns);
   }
   case Builtin::BI__builtin_hlsl_resource_sample: {
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
