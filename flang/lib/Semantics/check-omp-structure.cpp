@@ -5595,7 +5595,7 @@ void OmpStructureChecker::CheckUsesAllocatorsSpec(
             other == &ultimate) {
           context_.Say(allocatorSource,
               "An allocator in a USES_ALLOCATORS clause cannot also appear in the %s clause on the same construct"_err_en_US,
-              parser::ToUpperCaseLetters(llvm::omp::getOpenMPClauseName(id)));
+              parser::omp::GetUpperName(id, version));
           break;
         }
       }
