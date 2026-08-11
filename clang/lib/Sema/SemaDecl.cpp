@@ -4845,7 +4845,7 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
       Old->getFormalLinkage() == Linkage::Internal) {
     Diag(New->getLocation(), diag::err_internal_extern_mismatch)
         << New->getDeclName() << getLangOpts().C2y;
-    Diag(OldLocation, PrevDiag);
+    Diag(OldLocation, diag::note_previous_declaration);
     return New->setInvalidDecl();
   }
 
