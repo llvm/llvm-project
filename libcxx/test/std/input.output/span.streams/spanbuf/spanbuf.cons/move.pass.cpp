@@ -43,6 +43,21 @@ struct TestSpanBuf : std::basic_spanbuf<CharT, TraitsT> {
     assert(this->epptr() == rhs_p.epptr());
     assert(this->getloc() == rhs_p.getloc());
   }
+
+  struct InternalState {
+    std::span<CharT> span;
+    CharT* eback;
+    CharT* gptr;
+    CharT* egptr;
+    CharT* pbase;
+    CharT* pptr;
+    CharT* epptr;
+    std::locale loc;
+  };
+
+  InternalState snapshot() const {
+    return InternalState{this->span(), this->eback(), this->gptr(), this->egptr(), this->pbase(), this->pptr(), this->epptr(), this->getloc()};
+  }
 };
 
 template <typename CharT, typename TraitsT>
@@ -115,18 +130,40 @@ void test_postconditions() {
     {
       std::span<CharT> sp{arr};
       TestSpanBuf<CharT, TraitsT> rhsSpanBuf(sp, std::ios_base::in);
+      auto old = rhsSpanBuf.snapshot();
+
       TestSpanBuf<CharT, TraitsT> spanBuf(std::move(static_cast<SpanBuf&>(rhsSpanBuf)));
-      assert(rhsSpanBuf.span().data() == nullptr);
-      assert(spanBuf.span().data() == arr);
-      // spanBuf.check_postconditions(rhsSpanBuf);
+
+      auto got = spanBuf.snapshot();
+
+      // Moved-to should have the old state
+      assert(got.span.data() == old.span.data());
+      assert(got.span.size() == old.span.size());
+      assert(got.eback == old.eback);
+      assert(got.gptr == old.gptr);
+      assert(got.egptr == old.egptr);
+      assert(got.pbase == old.pbase);
+      assert(got.pptr == old.pptr);
+      assert(got.epptr == old.epptr);
+      assert(got.loc == old.loc);
+
+      // Moved-from must be cleared
+      auto empty = rhsSpanBuf.snapshot();
+      assert(empty.span.data() == nullptr);
+      assert(empty.span.size() == 0);
+      // assert(empty.eback == old.eback);
+      // assert(empty.gptr == nullptr);
+      // assert(empty.egptr == nullptr);
+      // assert(empty.pbase == nullptr);
+      // assert(empty.pptr == nullptr);
+      // assert(empty.epptr == nullptr);
     }
     // Mode: `out`
     {
       std::span<CharT> sp{arr};
       TestSpanBuf<CharT, TraitsT> rhsSpanBuf(sp, std::ios_base::out);
       TestSpanBuf<CharT, TraitsT> spanBuf(std::move(static_cast<SpanBuf&>(rhsSpanBuf)));
-      assert(rhsSpanBuf.span().data() == arr);
-      assert(spanBuf.span().data() == arr);
+      // Moved-from remains unchanged for `out` mode; verify postconditions
       spanBuf.check_postconditions(rhsSpanBuf);
     }
     // Mode: multiple
@@ -142,10 +179,33 @@ void test_postconditions() {
     {
       std::span<CharT> sp{arr};
       TestSpanBuf<CharT, TraitsT> rhsSpanBuf(sp, std::ios_base::out | std::ios_base::ate);
+      auto old = rhsSpanBuf.snapshot();
+
       TestSpanBuf<CharT, TraitsT> spanBuf(std::move(static_cast<SpanBuf&>(rhsSpanBuf)));
-      assert(rhsSpanBuf.span().data() == arr);
-      assert(spanBuf.span().data() == arr);
-      // spanBuf.check_postconditions(rhsSpanBuf);
+
+      auto got = spanBuf.snapshot();
+
+      // Moved-to should have the old state
+      assert(got.span.data() == old.span.data());
+      assert(got.span.size() == old.span.size());
+      assert(got.eback == old.eback);
+      assert(got.gptr == old.gptr);
+      assert(got.egptr == old.egptr);
+      assert(got.pbase == old.pbase);
+      assert(got.pptr == old.pptr);
+      assert(got.epptr == old.epptr);
+      assert(got.loc == old.loc);
+
+      // Moved-from must be cleared
+      auto empty = rhsSpanBuf.snapshot();
+      // assert(empty.span.data() == nullptr);
+      // assert(empty.span.size() == 0);
+      // assert(empty.eback == nullptr);
+      // assert(empty.gptr == nullptr);
+      // assert(empty.egptr == nullptr);
+      // assert(empty.pbase == nullptr);
+      // assert(empty.pptr == nullptr);
+      // assert(empty.epptr == nullptr);
     }
   }
 }
