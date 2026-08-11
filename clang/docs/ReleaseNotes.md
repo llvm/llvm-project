@@ -411,6 +411,7 @@ features cannot lower the translation-unit ABI level;
   they are now correctly accepted on such pointers.
 
 #### Bug Fixes to C++ Support
+- Instantiate constexpr functions as needed before they are evaluated. (#GH73232) (#GH35052) (#GH100897)
 
 - Fixed an issue where `__typeof__` incorrectly rejected cv-qualified function types.
 

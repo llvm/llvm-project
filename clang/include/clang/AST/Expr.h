@@ -55,6 +55,7 @@ namespace clang {
   class ObjCPropertyRefExpr;
   class OpaqueValueExpr;
   class ParmVarDecl;
+  class SemaProxy;
   class StringLiteral;
   class TargetInfo;
   class ValueDecl;
@@ -667,6 +668,13 @@ public:
   bool EvaluateAsRValue(EvalResult &Result, const ASTContext &Ctx,
                         bool InConstantContext = false) const;
 
+  /// Evaluate an expression that is required by the language to be a constant
+  /// expression, and fold the resulting rvalue constant into Result. If the
+  /// expression is a glvalue, an lvalue-to-rvalue conversion will be applied.
+  bool EvaluateAsMandatedConstantRValue(EvalResult &Result,
+                                        const ASTContext &Ctx,
+                                        SemaProxy &SP) const;
+
   /// EvaluateAsBooleanCondition - Return true if this is a constant
   /// which we can fold and convert to a boolean condition using
   /// any crazy technique that we want to, even if the expression has
@@ -743,6 +751,13 @@ public:
                              EvalResult &Result,
                              bool IsConstantInitializer) const;
 
+  /// Evaluate an expression that is required by the language to be a constant
+  /// expression.
+  bool EvaluateAsMandatedConstantInitializer(EvalResult &Result,
+                                             const ASTContext &Ctx,
+                                             SemaProxy &SP,
+                                             const VarDecl *VD) const;
+
   /// EvaluateWithSubstitution - Evaluate an expression as if from the context
   /// of a call to the given function with the given arguments, inside an
   /// unevaluated context. Returns true if the expression could be folded to a
@@ -773,6 +788,12 @@ public:
       EvalResult &Result, const ASTContext &Ctx,
       ConstantExprKind Kind = ConstantExprKind::Normal) const;
 
+  /// Evaluate an expression that is required by the language to be a constant
+  /// expression.
+  bool EvaluateAsMandatedConstantExpr(
+      EvalResult &Result, const ASTContext &Ctx, SemaProxy &SP,
+      ConstantExprKind Kind = ConstantExprKind::Normal) const;
+
   /// If the current Expr is a pointer, this will try to statically
   /// determine the number of bytes available where the pointer is pointing.
   /// Returns true if all of the above holds and we were able to figure out the
@@ -792,11 +813,11 @@ public:
   bool EvaluateCharRangeAsString(std::string &Result,
                                  const Expr *SizeExpression,
                                  const Expr *PtrExpression, ASTContext &Ctx,
-                                 EvalResult &Status) const;
+                                 SemaProxy &SP, EvalResult &Status) const;
 
   bool EvaluateCharRangeAsString(APValue &Result, const Expr *SizeExpression,
                                  const Expr *PtrExpression, ASTContext &Ctx,
-                                 EvalResult &Status) const;
+                                 SemaProxy &SP, EvalResult &Status) const;
 
   /// If the current Expr can be evaluated to a pointer to a null-terminated
   /// constant string, return the constant string (without the terminating
