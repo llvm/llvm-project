@@ -3233,13 +3233,6 @@ private:
   /// \p E.
   Value *vectorizeOperand(TreeEntry *E, unsigned NodeIdx);
 
-  /// Pass a hint to the TTI when building vectors for special use cases
-  /// Backends may have a fast path for splatting scalar operands (i.e. rather
-  /// than generating the splat vector, the vector instruction may be able to
-  /// take a scalar operand), for example RISCV vfoo.vx instructions.
-  TargetTransformInfo::VectorInstrContext
-  getBuildVectorContextHint(const TreeEntry *E, ArrayRef<int> ReuseMask);
-
   /// Create a new vector from a list of scalar values.  Produces a sequence
   /// which exploits values reused across lanes, and arranges the inserts
   /// for ease of later optimization.
@@ -22140,35 +22133,6 @@ Value *BoUpSLP::vectorizeOperand(TreeEntry *E, unsigned NodeIdx) {
   return vectorizeTree(getOperandEntry(E, NodeIdx));
 }
 
-TargetTransformInfo::VectorInstrContext
-BoUpSLP::getBuildVectorContextHint(const TreeEntry *E,
-                                   ArrayRef<int> ReuseMask) {
-  if (ShuffleVectorInst::isZeroEltSplatMask(ReuseMask, ReuseMask.size())) {
-    Value *SplatVal = E->Scalars.front();
-    if (!isa<VectorType>(SplatVal->getType()) &&
-        !isa<ExtractElementInst>(SplatVal)) {
-      SmallVector<TreeEntry *> MatchingTEs;
-      for (const auto &TE : VectorizableTree) {
-        if (DeletedNodes.contains(TE.get()))
-          continue;
-        if (TE->isGather() && E->isSame(TE->Scalars))
-          MatchingTEs.emplace_back(TE.get());
-      }
-      assert(MatchingTEs.size() &&
-             "Ought to at least match with current entry");
-      if (all_of(MatchingTEs, [this](auto *TE) {
-            auto *UserTE = TE->UserTreeIndex.UserTE;
-            if (!UserTE || !UserTE->hasState() || UserTE->isAltShuffle())
-              return false;
-            return TTI->canSplatOperand(UserTE->getOpcode(),
-                                        TE->UserTreeIndex.EdgeIdx);
-          }))
-        return TTI::VectorInstrContext::SplatOpFolded;
-    }
-  }
-  return TTI::VectorInstrContext::None;
-}
-
 template <typename BVTy, typename ResTy, typename... Args>
 ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
                                   Args &...Params) {
@@ -22720,7 +22684,25 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
     // Gather unique scalars and all constants.
     SmallVector<int> ReuseMask(GatheredScalars.size(), PoisonMaskElem);
     TryPackScalars(GatheredScalars, ReuseMask, /*IsRootPoison=*/true);
-    auto ContextHint = getBuildVectorContextHint(E, ReuseMask);
+    auto GatherUserOps = [&](SmallVectorImpl<TTI::BuildVectorUseOp> &UserOps) {
+      bool HasMatches = false;
+      for (const auto &TE : VectorizableTree) {
+        if (DeletedNodes.contains(TE.get()))
+          continue;
+        if (!(TE->isGather() && E->isSame(TE->Scalars)))
+          continue;
+        HasMatches = true;
+        auto *UserTE = TE->UserTreeIndex.UserTE;
+        if (!UserTE || !UserTE->hasState() || UserTE->isAltShuffle())
+          return false;
+        UserOps.push_back(
+            {UserTE->getOpcode(), static_cast<int>(TE->UserTreeIndex.EdgeIdx)});
+      }
+      assert(HasMatches && "Ought to at least match with current entry");
+      return HasMatches;
+    };
+    TargetTransformInfo::VectorInstrContext ContextHint =
+        TTI->getBuildVectorContextHint(ReuseMask, E->Scalars, GatherUserOps);
     Value *BV = ShuffleBuilder.gather(GatheredScalars, ReuseMask.size(),
                                       /*Root*/ nullptr, ContextHint);
     ShuffleBuilder.add(BV, ReuseMask, /*ForExtract*/ false, ContextHint);

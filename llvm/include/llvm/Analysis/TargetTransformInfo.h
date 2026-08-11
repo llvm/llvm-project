@@ -24,6 +24,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/Uniformity.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/InterestingMemoryOperand.h"
@@ -1075,9 +1076,25 @@ public:
 
   using VectorInstrContext = llvm::VectorInstrContext;
 
+  /// Stores information about the uses of a build vector
+  struct BuildVectorUseOp {
+    unsigned Opcode;
+    int OperandIndex;
+  };
+
   /// Calculates a VectorInstrContext from \p I.
   LLVM_ABI static VectorInstrContext
   getVectorInstrContextHint(const Instruction *I);
+
+  /// Calculates a VectorInstrContext for buildvector-like gather sequences.
+  ///
+  /// \p GatherUserOps must collect all users of \p Scalars relevant for
+  /// determining whether a splat can be folded as a scalar operand. It returns
+  /// false if those users cannot be gathered in the required form.
+  LLVM_ABI VectorInstrContext getBuildVectorContextHint(
+      ArrayRef<int> Mask, ArrayRef<Value *> Scalars,
+      function_ref<bool(SmallVectorImpl<BuildVectorUseOp> &)> GatherUseOps)
+      const;
 
   /// Estimate the overhead of scalarizing an instruction. Insert and Extract
   /// are set if the demanded result elements need to be inserted and/or
