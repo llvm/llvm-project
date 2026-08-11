@@ -19,7 +19,8 @@ define void @pr56319(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [3 x i8], ptr [[SRC:%.*]], i64 [[INDEX]], i64 0
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <96 x i8>, ptr [[TMP1]], align 1
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <96 x i8> [[WIDE_VEC]], <96 x i8> poison, <32 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 18, i32 21, i32 24, i32 27, i32 30, i32 33, i32 36, i32 39, i32 42, i32 45, i32 48, i32 51, i32 54, i32 57, i32 60, i32 63, i32 66, i32 69, i32 72, i32 75, i32 78, i32 81, i32 84, i32 87, i32 90, i32 93>
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = call { <32 x i8>, <32 x i8>, <32 x i8> } @llvm.vector.deinterleave3.v96i8(<96 x i8> [[WIDE_VEC]])
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <32 x i8>, <32 x i8>, <32 x i8> } [[STRIDED_VEC1]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[DST:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <32 x i8> [[STRIDED_VEC]], ptr [[TMP3]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
@@ -28,7 +29,7 @@ define void @pr56319(ptr noalias %src, ptr noalias %dst) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
-; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
+; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 32, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
@@ -36,12 +37,13 @@ define void @pr56319(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT4:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [3 x i8], ptr [[SRC]], i64 [[INDEX1]], i64 0
 ; CHECK-NEXT:    [[WIDE_VEC2:%.*]] = load <6 x i8>, ptr [[TMP7]], align 1
-; CHECK-NEXT:    [[STRIDED_VEC3:%.*]] = shufflevector <6 x i8> [[WIDE_VEC2]], <6 x i8> poison, <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[STRIDED_VEC4:%.*]] = call { <2 x i8>, <2 x i8>, <2 x i8> } @llvm.vector.deinterleave3.v6i8(<6 x i8> [[WIDE_VEC2]])
+; CHECK-NEXT:    [[STRIDED_VEC3:%.*]] = extractvalue { <2 x i8>, <2 x i8>, <2 x i8> } [[STRIDED_VEC4]], 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[INDEX1]]
 ; CHECK-NEXT:    store <2 x i8> [[STRIDED_VEC3]], ptr [[TMP9]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT4]] = add nuw i64 [[INDEX1]], 2
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT4]], 36
-; CHECK-NEXT:    br i1 [[TMP11]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP11]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
 ; CHECK-NEXT:    br label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
@@ -55,7 +57,7 @@ define void @pr56319(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-NEXT:    store i8 [[L]], ptr [[GEP_DST]], align 1
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], 37
-; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;

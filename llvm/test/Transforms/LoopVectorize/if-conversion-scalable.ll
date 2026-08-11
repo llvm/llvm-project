@@ -71,10 +71,11 @@ define void @conv_interleaved_loads_load(ptr noalias %a, ptr readonly %b, ptr re
 ; CHECK-GATHER-DISABLED-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x i64>, ptr [[TMP1]], align 8
 ; CHECK-GATHER-DISABLED-NEXT:    [[TMP2:%.*]] = icmp ne <8 x i64> [[WIDE_LOAD1]], [[BROADCAST_SPLAT]]
 ; CHECK-GATHER-DISABLED-NEXT:    [[TMP3:%.*]] = getelementptr [2 x i16], ptr [[C]], i64 [[INDEX]], i64 0
-; CHECK-GATHER-DISABLED-NEXT:    [[INTERLEAVED_MASK:%.*]] = shufflevector <8 x i1> [[TMP2]], <8 x i1> poison, <16 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7>
+; CHECK-GATHER-DISABLED-NEXT:    [[INTERLEAVED_MASK:%.*]] = call <16 x i1> @llvm.vector.interleave2.v16i1(<8 x i1> [[TMP2]], <8 x i1> [[TMP2]])
 ; CHECK-GATHER-DISABLED-NEXT:    [[WIDE_MASKED_VEC:%.*]] = call <16 x i16> @llvm.masked.load.v16i16.p0(ptr align 2 [[TMP3]], <16 x i1> [[INTERLEAVED_MASK]], <16 x i16> poison)
-; CHECK-GATHER-DISABLED-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x i16> [[WIDE_MASKED_VEC]], <16 x i16> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
-; CHECK-GATHER-DISABLED-NEXT:    [[STRIDED_VEC2:%.*]] = shufflevector <16 x i16> [[WIDE_MASKED_VEC]], <16 x i16> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+; CHECK-GATHER-DISABLED-NEXT:    [[STRIDED_VEC1:%.*]] = call { <8 x i16>, <8 x i16> } @llvm.vector.deinterleave2.v16i16(<16 x i16> [[WIDE_MASKED_VEC]])
+; CHECK-GATHER-DISABLED-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <8 x i16>, <8 x i16> } [[STRIDED_VEC1]], 0
+; CHECK-GATHER-DISABLED-NEXT:    [[STRIDED_VEC2:%.*]] = extractvalue { <8 x i16>, <8 x i16> } [[STRIDED_VEC1]], 1
 ; CHECK-GATHER-DISABLED-NEXT:    [[TMP4:%.*]] = add <8 x i16> [[STRIDED_VEC]], [[STRIDED_VEC2]]
 ; CHECK-GATHER-DISABLED-NEXT:    [[PREDPHI:%.*]] = select <8 x i1> [[TMP2]], <8 x i16> [[TMP4]], <8 x i16> zeroinitializer
 ; CHECK-GATHER-DISABLED-NEXT:    [[TMP5:%.*]] = add <8 x i16> [[WIDE_LOAD]], [[PREDPHI]]
