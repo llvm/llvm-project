@@ -111,8 +111,9 @@ static RValue emitBuiltinBitOpWithFallback(CIRGenFunction &cgf,
   return RValue::get(builder.createSelect(loc, isZero, fallbackValue, result));
 }
 
-// stdc_{leading,trailing}_zeros and stdc_count_ones: counts bits using clz,
-// ctz, or popcount. InvertArg flips the input to count the opposite bit value.
+// stdc_{leading,trailing}_{zeros,ones} and stdc_count_ones: counts bits using
+// clz, ctz, or popcount. InvertArg flips the input to count the opposite bit
+// value.
 template <typename Op, typename... Args>
 static RValue emitStdcCountOp(CIRGenFunction &cgf, const CallExpr *e,
                               bool invertArg, Args... args) {
@@ -1303,6 +1304,24 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return emitStdcCountOp<cir::BitClzOp>(*this, e, /*invertArg=*/false,
                                           /*poisonZero=*/false);
 
+  case Builtin::BIstdc_trailing_ones_uc:
+  case Builtin::BIstdc_trailing_ones_us:
+  case Builtin::BIstdc_trailing_ones_ui:
+  case Builtin::BIstdc_trailing_ones_ul:
+  case Builtin::BIstdc_trailing_ones_ull:
+  case Builtin::BI__builtin_stdc_trailing_ones:
+    return emitStdcCountOp<cir::BitCtzOp>(*this, e, /*invertArg=*/true,
+                                          /*poisonZero=*/false);
+
+  case Builtin::BIstdc_leading_ones_uc:
+  case Builtin::BIstdc_leading_ones_us:
+  case Builtin::BIstdc_leading_ones_ui:
+  case Builtin::BIstdc_leading_ones_ul:
+  case Builtin::BIstdc_leading_ones_ull:
+  case Builtin::BI__builtin_stdc_leading_ones:
+    return emitStdcCountOp<cir::BitClzOp>(*this, e, /*invertArg=*/true,
+                                          /*poisonZero=*/false);
+
   case Builtin::BIstdc_bit_width_uc:
   case Builtin::BIstdc_bit_width_us:
   case Builtin::BIstdc_bit_width_ui:
@@ -1328,6 +1347,30 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_stdc_count_ones:
     return emitStdcCountOp<cir::BitPopcountOp>(*this, e,
                                                /*invertArg=*/false);
+
+  case Builtin::BIstdc_has_single_bit_uc:
+  case Builtin::BIstdc_has_single_bit_us:
+  case Builtin::BIstdc_has_single_bit_ui:
+  case Builtin::BIstdc_has_single_bit_ul:
+  case Builtin::BIstdc_has_single_bit_ull:
+  case Builtin::BI__builtin_stdc_has_single_bit:
+    return errorBuiltinNYI(*this, e, builtinID);
+
+  case Builtin::BIstdc_bit_ceil_uc:
+  case Builtin::BIstdc_bit_ceil_us:
+  case Builtin::BIstdc_bit_ceil_ui:
+  case Builtin::BIstdc_bit_ceil_ul:
+  case Builtin::BIstdc_bit_ceil_ull:
+  case Builtin::BI__builtin_stdc_bit_ceil:
+    return errorBuiltinNYI(*this, e, builtinID);
+
+  case Builtin::BIstdc_bit_floor_uc:
+  case Builtin::BIstdc_bit_floor_us:
+  case Builtin::BIstdc_bit_floor_ui:
+  case Builtin::BIstdc_bit_floor_ul:
+  case Builtin::BIstdc_bit_floor_ull:
+  case Builtin::BI__builtin_stdc_bit_floor:
+    return errorBuiltinNYI(*this, e, builtinID);
 
   case Builtin::BI__builtin_clzs:
   case Builtin::BI__builtin_clz:
