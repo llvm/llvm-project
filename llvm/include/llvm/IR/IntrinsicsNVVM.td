@@ -1268,6 +1268,93 @@ class NVVMPureIntrinsic<list<LLVMType> ret_types,
   DefaultAttrsIntrinsic<ret_types, param_types,
                         intr_properties # [IntrNoMem, IntrSpeculatable], name> {}
 
+// Class to handle TMA Copy Override Support
+class TMAOverrideHandler<int dim, string mode> {
+  // TMA Override Support:
+  // +----------------+------------------+-------------------------+
+  // | Mode           | Dimensions       | Supported Overrides     |
+  // +----------------+------------------+-------------------------+
+  // | Tile           | 1D               | override_addr           |
+  // |                |                  | override_addr_dim       |
+  // +----------------+------------------+-------------------------+
+  // | Tile           | 2D and higher    | override_addr           |
+  // |                |                  | override_addr_dim_stride|
+  // +----------------+------------------+-------------------------+
+  // | Im2col         | 3D and higher    | override_addr           |
+  // +----------------+------------------+-------------------------+
+  list<string> common_overrides = ["override_addr"];
+  list<string> tile_overrides_1d = !listconcat(common_overrides, ["override_addr_dim"]);
+  list<string> tile_overrides_nd = !listconcat(common_overrides, ["override_addr_dim_stride"]);
+
+  // Return the applicable overrides based on mode and dimension
+  list<string> applicable_overrides = !if(!eq(mode, "tile"),
+                                !if(!eq(dim, 1), tile_overrides_1d, tile_overrides_nd),
+                                common_overrides);
+}
+
+class CP_ASYNC_BULK_TENSOR_OVERRIDE_BASE<int dim, string mode, string override> {
+  list<LLVMType> OverrideTy = [llvm_global_ptr_ty];
+  list<LLVMType> TensorSizeTy = !listsplat(llvm_i16_ty, dim);
+  list<LLVMType> LowerStrideTy = !listsplat(llvm_i32_ty, !add(dim, -1));
+  list<LLVMType> UpperStrideTy = [llvm_i16_ty];
+  list<LLVMType> OverrideDimTy = !listconcat(OverrideTy, TensorSizeTy);
+  list<LLVMType> OverrideDimStrideTy = !listconcat(OverrideTy, TensorSizeTy, LowerStrideTy, UpperStrideTy);
+  list<LLVMType> OverrideAddrTy = !cond(!eq(override, "override_addr"): OverrideTy,
+                                        !eq(override, "override_addr_dim"): OverrideDimTy,
+                                        !eq(override, "override_addr_dim_stride"): OverrideDimStrideTy);
+  list<LLVMType> TensorDimsTy = !listsplat(llvm_i32_ty, dim);
+
+  // For im2col_w/w128 mode, NumIm2ColOffsets is always 2 irrespective of the
+  // dim (wHalo and wOffset)
+  int NumIm2ColOffsets =
+      !cond(!eq(mode, "im2col_w") : 2,
+            !eq(mode, "im2col_w_128") : 2,
+            !eq(mode, "im2col") : !add(dim, -2),
+            true : 0);
+  list<LLVMType> Im2ColOffsetsTy = !listsplat(llvm_i16_ty, NumIm2ColOffsets);
+
+  string Prefix = "int_nvvm_cp_async_bulk_tensor_";
+  string Suffix = "_" # mode # "_" # override # "_" # dim # "d";
+}
+
+class CP_ASYNC_BULK_TENSOR_S2G_OVERRIDE_INTR<int dim, string mode, string override>
+      : CP_ASYNC_BULK_TENSOR_OVERRIDE_BASE<dim, mode, override> {
+  string Name = Prefix # "s2g" # Suffix;
+
+  list<LLVMType> ArgsTy = !listconcat(
+                          [llvm_shared_ptr_ty,  // src_smem_ptr
+                           llvm_ptr_ty],        // tensormap_ptr
+                           OverrideAddrTy,      // override_addr
+                           TensorDimsTy,        // actual tensor dims
+                          [llvm_i64_ty]         // cache_hint
+                          );
+  list<LLVMType> FlagsTy = [llvm_i1_ty];
+  defvar FlagCacheHintIdx = !size(ArgsTy);
+  list<IntrinsicProperty> IntrProp = [
+        IntrConvergent,
+        ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>, WriteOnly<ArgIndex<2>>,
+        ArgInfo<ArgIndex<FlagCacheHintIdx>, [ArgName<"flag_cache_hint">]>
+  ];
+}
+
+class CP_ASYNC_BULK_TENSOR_REDUCE_OVERRIDE_INTR<int dim, string mode, string override>
+      : CP_ASYNC_BULK_TENSOR_S2G_OVERRIDE_INTR<dim, mode, override> {
+  string Name = Prefix # "reduce" # Suffix;
+
+  defvar RedOpIdx = !size(ArgsTy);
+  list<LLVMType> FlagsTy = [llvm_i32_ty,  // reduction operation
+                            llvm_i1_ty];  // Flag for cache_hint
+  list<IntrinsicProperty> IntrProp = [
+        IntrConvergent,
+        ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
+        // Allowed values for red_op are {0..7} i.e. [0, 8).
+        Range<ArgIndex<RedOpIdx>, 0, 8>,
+        ArgInfo<ArgIndex<RedOpIdx>, [ArgName<"red_op">,
+                                     ImmArgPrinter<"printTMAReductionOp">]>,
+        ArgInfo<ArgIndex<!add(RedOpIdx, 1)>, [ArgName<"flag_cache_hint">]>
+  ];
+}
+
 let TargetPrefix = "nvvm" in {
 
   //
@@ -2873,6 +2960,42 @@ def int_nvvm_cp_async_bulk_tensor_s2g_tile_scatter4_2d
                   [llvm_i64_ty]),             // cache_hint
       [llvm_i1_ty],                           // Flag for cache_hint
       [IntrConvergent, ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>]>;
+
+// TMA Tensor Copy Intrinsics: S2G -> From shared to global memory with override address variants
+foreach dim = 1...5 in {
+  foreach mode = !if(!ge(dim, 3), ["tile", "im2col", "im2col_w"], ["tile"]) in {
+    foreach override = TMAOverrideHandler<dim, mode>.applicable_overrides in {
+      // Reduce + Override
+      foreach reduce_override =
+          [CP_ASYNC_BULK_TENSOR_REDUCE_OVERRIDE_INTR<dim, mode, override>] in
+        def reduce_override.Name
+            : DefaultAttrsIntrinsicFlags<[], reduce_override.ArgsTy,
+                                    reduce_override.FlagsTy,
+                                    reduce_override.IntrProp>;
+
+      // S2G + Override
+      foreach s2g_override =
+          [CP_ASYNC_BULK_TENSOR_S2G_OVERRIDE_INTR<dim, mode, override>] in
+        def s2g_override.Name
+            : DefaultAttrsIntrinsicFlags<[], s2g_override.ArgsTy,
+                                    s2g_override.FlagsTy,
+                                    s2g_override.IntrProp>;
+    }
+  }
+}
+
+// S2G + Override + tile::scatter4
+def int_nvvm_cp_async_bulk_tensor_s2g_tile_scatter4_override_addr_2d
+  : DefaultAttrsIntrinsicFlags<[],
+      !listconcat([llvm_shared_ptr_ty,        // src_smem_ptr
+                   llvm_ptr_ty,               // tensormap_ptr
+                   llvm_global_ptr_ty],       // override_addr
+                  !listsplat(llvm_i32_ty, 5), // dims
+                  [llvm_i64_ty]),             // cache_hint
+      [llvm_i1_ty],                           // Flag for cache_hint
+      [IntrConvergent, ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
+       WriteOnly<ArgIndex<2>>, ArgInfo<ArgIndex<9>,
+      [ArgName<"flag_cache_hint">]>]>;
 
 // TMA Tensor Copy Intrinsics: G2S -> From Global to Shared memory variants
 foreach dim = 1...5 in {
