@@ -353,10 +353,18 @@ class SeparateConstOffsetFromGEPLegacyPass : public FunctionPass {
 public:
   static char ID;
 
-  SeparateConstOffsetFromGEPLegacyPass(bool LowerGEP = false)
-      : FunctionPass(ID), LowerGEP(LowerGEP) {
+  SeparateConstOffsetFromGEPLegacyPass(
+      bool LowerGEP = false, bool ShareScalableVectorGEPBaseOnly = false)
+      : FunctionPass(ID), LowerGEP(LowerGEP),
+        ShareScalableVectorGEPBaseOnly(ShareScalableVectorGEPBaseOnly) {
     initializeSeparateConstOffsetFromGEPLegacyPassPass(
         *PassRegistry::getPassRegistry());
+  }
+
+  StringRef getPassName() const override {
+    if (ShareScalableVectorGEPBaseOnly)
+      return "Share bases of scalable-vector GEPs";
+    return FunctionPass::getPassName();
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -371,6 +379,7 @@ public:
 
 private:
   bool LowerGEP;
+  bool ShareScalableVectorGEPBaseOnly;
 };
 
 /// A pass that tries to split every GEP in the function into a variadic
@@ -380,8 +389,10 @@ class SeparateConstOffsetFromGEP {
 public:
   SeparateConstOffsetFromGEP(
       DominatorTree *DT, LoopInfo *LI, TargetLibraryInfo *TLI,
-      function_ref<TargetTransformInfo &(Function &)> GetTTI, bool LowerGEP)
-      : DT(DT), LI(LI), TLI(TLI), GetTTI(GetTTI), LowerGEP(LowerGEP) {}
+      function_ref<TargetTransformInfo &(Function &)> GetTTI, bool LowerGEP,
+      bool ShareScalableVectorGEPBaseOnly = false)
+      : DT(DT), LI(LI), TLI(TLI), GetTTI(GetTTI), LowerGEP(LowerGEP),
+        ShareScalableVectorGEPBaseOnly(ShareScalableVectorGEPBaseOnly) {}
 
   bool run(Function &F);
 
@@ -501,6 +512,10 @@ private:
   /// multiple GEPs with a single index.
   bool LowerGEP;
 
+  /// Run only scalable-vector base sharing, without splitting or lowering
+  /// scalar GEPs.
+  bool ShareScalableVectorGEPBaseOnly;
+
   DenseMap<ExprKey, SmallVector<Instruction *, 2>> DominatingAdds;
   DenseMap<ExprKey, SmallVector<Instruction *, 2>> DominatingSubs;
 };
@@ -525,6 +540,10 @@ INITIALIZE_PASS_END(
 
 FunctionPass *llvm::createSeparateConstOffsetFromGEPPass(bool LowerGEP) {
   return new SeparateConstOffsetFromGEPLegacyPass(LowerGEP);
+}
+
+FunctionPass *llvm::createShareScalableVectorGEPBasePass() {
+  return new SeparateConstOffsetFromGEPLegacyPass(false, true);
 }
 
 // Checks if it is safe to reorder an add/sext result used in a GEP.
@@ -1618,7 +1637,8 @@ bool SeparateConstOffsetFromGEPLegacyPass::runOnFunction(Function &F) {
   auto GetTTI = [this](Function &F) -> TargetTransformInfo & {
     return this->getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
   };
-  SeparateConstOffsetFromGEP Impl(DT, LI, TLI, GetTTI, LowerGEP);
+  SeparateConstOffsetFromGEP Impl(DT, LI, TLI, GetTTI, LowerGEP,
+                                  ShareScalableVectorGEPBaseOnly);
   return Impl.run(F);
 }
 
@@ -1634,17 +1654,19 @@ bool SeparateConstOffsetFromGEP::run(Function &F) {
     if (!DT->isReachableFromEntry(B))
       continue;
 
-    for (Instruction &I : llvm::make_early_inc_range(*B))
-      if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(&I))
-        Changed |= splitGEP(GEP);
-    // No need to split GEP ConstantExprs because all its indices are constant
-    // already.
-
-    if (LowerGEP)
+    if (!ShareScalableVectorGEPBaseOnly) {
+      for (Instruction &I : llvm::make_early_inc_range(*B))
+        if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(&I))
+          Changed |= splitGEP(GEP);
+      // No need to split GEP ConstantExprs because all its indices are
+      // constant already.
+    }
+    if (LowerGEP || ShareScalableVectorGEPBaseOnly)
       Changed |= shareScalableVectorGEPBase(*B);
   }
 
-  Changed |= reuniteExts(F);
+  if (!ShareScalableVectorGEPBaseOnly)
+    Changed |= reuniteExts(F);
 
   if (VerifyNoDeadCode)
     verifyNoDeadCode(F);
