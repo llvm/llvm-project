@@ -25,26 +25,29 @@ define void @two_masked_same_mask(ptr noalias %a, ptr noalias %b, ptr noalias %c
 ; CHECK-NEXT:    store <4 x i32> [[PREDPHI]], ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[TMP5]], label %[[IF:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       [[IF]]:
-; CHECK-NEXT:    br label %[[LATCH:.*]]
-; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
   br label %loop
+
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
   %gep.c = getelementptr inbounds i32, ptr %cond, i64 %iv
   %c = load i32, ptr %gep.c, align 4
   %cmp = icmp ne i32 %c, 0
   br i1 %cmp, label %if, label %latch
+
 if:
   %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
   %x = load i32, ptr %gep.a, align 4
   %y = load i32, ptr %gep.a, align 4
   %s = add i32 %x, %y
   br label %latch
+
 latch:
   %m = phi i32 [ 0, %loop ], [ %s, %if ]
   %gep.b = getelementptr inbounds i32, ptr %b, i64 %iv
@@ -52,6 +55,7 @@ latch:
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv.next, 1024
   br i1 %ec, label %exit, label %loop
+
 exit:
   ret void
 }
@@ -82,14 +86,15 @@ define void @two_masked_diff_mask(ptr noalias %a, ptr noalias %b, ptr noalias %c
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[TMP7]], label %[[IF2:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
-; CHECK:       [[IF2]]:
-; CHECK-NEXT:    br label %[[LATCH2:.*]]
-; CHECK:       [[LATCH2]]:
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
   br label %loop
+
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch2 ]
   %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
@@ -97,18 +102,22 @@ loop:
   %v1 = load i32, ptr %gp1, align 4
   %cmp1 = icmp ne i32 %v1, 0
   br i1 %cmp1, label %if1, label %latch1
+
 if1:
   %x = load i32, ptr %gep.a, align 4
   br label %latch1
+
 latch1:
   %mx = phi i32 [ 0, %loop ], [ %x, %if1 ]
   %gp2 = getelementptr inbounds i32, ptr %c2, i64 %iv
   %v2 = load i32, ptr %gp2, align 4
   %cmp2 = icmp ne i32 %v2, 0
   br i1 %cmp2, label %if2, label %latch2
+
 if2:
   %y = load i32, ptr %gep.a, align 4
   br label %latch2
+
 latch2:
   %my = phi i32 [ 0, %latch1 ], [ %y, %if2 ]
   %sum = add i32 %mx, %my
@@ -117,11 +126,13 @@ latch2:
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv.next, 1024
   br i1 %ec, label %exit, label %loop
+
 exit:
   ret void
 }
 
-; A duplicated regular load and a duplicated masked load are each CSE'd independently.
+; A duplicated regular load and a duplicated masked load are each CSE'd
+; independently.
 define void @masked_and_regular_mix(ptr noalias %a, ptr noalias %b, ptr noalias %cond, ptr noalias %out) {
 ; CHECK-LABEL: define void @masked_and_regular_mix(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[COND:%.*]], ptr noalias [[OUT:%.*]]) {
@@ -146,14 +157,15 @@ define void @masked_and_regular_mix(ptr noalias %a, ptr noalias %b, ptr noalias 
 ; CHECK-NEXT:    store <4 x i32> [[TMP6]], ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[TMP8]], label %[[IF:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
-; CHECK:       [[IF]]:
-; CHECK-NEXT:    br label %[[LATCH:.*]]
-; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
   br label %loop
+
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
   %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
@@ -163,12 +175,14 @@ loop:
   %c = load i32, ptr %gep.c, align 4
   %cmp = icmp ne i32 %c, 0
   br i1 %cmp, label %if, label %latch
+
 if:
   %gep.b = getelementptr inbounds i32, ptr %b, i64 %iv
   %m1 = load i32, ptr %gep.b, align 4
   %m2 = load i32, ptr %gep.b, align 4
   %ms = add i32 %m1, %m2
   br label %latch
+
 latch:
   %mm = phi i32 [ 0, %loop ], [ %ms, %if ]
   %rr = add i32 %r1, %r2
@@ -178,6 +192,7 @@ latch:
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv.next, 1024
   br i1 %ec, label %exit, label %loop
+
 exit:
   ret void
 }

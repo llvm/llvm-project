@@ -2232,9 +2232,8 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
                              C->second == Instruction::ExtractValue)))
       return false;
 
-    // Widened loads only read memory; the cse() routine guards their reuse with
-    // an aliasing check. Reject anything that may write, and any other recipe
-    // that reads memory.
+    // Widened loads are handled, as cse() guards their reuse with an aliasing
+    // check. Any other memory access is rejected.
     if (Def->mayWriteToMemory())
       return false;
     return !Def->mayReadFromMemory() || isa<VPWidenLoadRecipe>(Def);
@@ -2251,11 +2250,10 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
         return hash_combine(Result, RFlags->getPredicate());
     if (auto *SIVSteps = dyn_cast<VPScalarIVStepsRecipe>(Def))
       return hash_combine(Result, SIVSteps->getInductionOpcode());
-    // Alignment and the consecutive/masked flags are stored separately from
-    // the operands, so fold them in here.
+    // Fold in the separately stored consecutive/masked flags. Alignment is left
+    // out of the key and checked by cse().
     if (auto *Load = dyn_cast<VPWidenLoadRecipe>(Def))
-      return hash_combine(Result, Load->getAlign().value(),
-                          Load->isConsecutive(), Load->isMasked());
+      return hash_combine(Result, Load->isConsecutive(), Load->isMasked());
     return Result;
   }
 
@@ -2280,12 +2278,11 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
       if (LSIV->getInductionOpcode() !=
           cast<VPScalarIVStepsRecipe>(R)->getInductionOpcode())
         return false;
-    // Alignment and the consecutive/masked flags are stored separately from
-    // the operands, so compare them explicitly.
+    // Compare the separately stored consecutive/masked flags. Alignment is left
+    // out and checked by cse().
     if (auto *LL = dyn_cast<VPWidenLoadRecipe>(L)) {
       auto *RL = cast<VPWidenLoadRecipe>(R);
-      if (LL->getAlign() != RL->getAlign() ||
-          LL->isConsecutive() != RL->isConsecutive() ||
+      if (LL->isConsecutive() != RL->isConsecutive() ||
           LL->isMasked() != RL->isMasked())
         return false;
     }
@@ -2324,13 +2321,21 @@ void VPlanTransforms::cse(VPlan &Plan) {
         // V must dominate Def for a valid replacement.
         if (!VPDT.dominates(V->getParent(), VPBB))
           continue;
-        // Reuse an earlier widened load only if no aliasing write lies between
-        // the two loads.
         if (auto *EarlierLoad = dyn_cast<VPWidenLoadRecipe>(V)) {
           auto *Load = cast<VPWidenLoadRecipe>(Def);
-          auto Loc = vputils::getMemoryLocation(*EarlierLoad);
-          if (!canCSEWithNoAliasCheck(*Loc, EarlierLoad, Load))
+          // Reuse EarlierLoad only if it is at least as aligned as Load and no
+          // aliasing write lies between the two loads.
+          bool CanReuse = EarlierLoad->getAlign() >= Load->getAlign();
+          if (CanReuse) {
+            auto Loc = vputils::getMemoryLocation(*EarlierLoad);
+            CanReuse = canCSEWithNoAliasCheck(*Loc, EarlierLoad, Def);
+          }
+          if (!CanReuse) {
+            // Record Load as the candidate for subsequent loads, as it may be
+            // reusable where EarlierLoad is not.
+            CSEMap[Def] = Def;
             continue;
+          }
           // Keep only metadata common to both loads on the survivor.
           EarlierLoad->intersect(*Load);
         }

@@ -31,6 +31,7 @@ define void @dup_gather(ptr noalias %a, ptr noalias %b, ptr noalias %out) {
 ;
 entry:
   br label %loop
+
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %gep.b = getelementptr inbounds i64, ptr %b, i64 %iv
@@ -44,6 +45,7 @@ loop:
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv.next, 1024
   br i1 %ec, label %exit, label %loop
+
 exit:
   ret void
 }
@@ -79,6 +81,7 @@ define void @dup_gather_diff_index(ptr noalias %a, ptr noalias %b, ptr noalias %
 ;
 entry:
   br label %loop
+
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %gep.b = getelementptr inbounds i64, ptr %b, i64 %iv
@@ -95,6 +98,7 @@ loop:
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv.next, 1024
   br i1 %ec, label %exit, label %loop
+
 exit:
   ret void
 }

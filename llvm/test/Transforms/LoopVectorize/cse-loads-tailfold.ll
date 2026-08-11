@@ -32,6 +32,7 @@ define void @cse_duplicate_masked_load(ptr noalias %a, ptr noalias %b, i64 %n) {
 ;
 entry:
   br label %loop
+
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
@@ -43,6 +44,7 @@ loop:
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv.next, %n
   br i1 %ec, label %exit, label %loop
+
 exit:
   ret void
 }
