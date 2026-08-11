@@ -31,10 +31,10 @@ void main() {
   Tex2[valid_index] = 8.0;
   Tex3[valid_index] = int3(9, 10, 11);
 
-  // Reading back through the same subscript is still allowed.
+  // Reading back through the subscript.
   float4 val = Tex[valid_index];
 
-  // The index still has to be convertible to the coordinate vector.
+  // The index has to be convertible to the coordinate vector.
   S s = { 1 };
   // expected-error-re@+2 {{no viable overloaded operator[] for type 'RWTexture{{.*}}<float4>'}}
   // expected-note-re@*:* {{candidate function not viable: no known conversion from 'S' to 'vector<unsigned int, {{[0-9]}}>'}}
