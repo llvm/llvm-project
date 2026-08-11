@@ -2766,12 +2766,13 @@ def hexagon_memcpy_forward_vp4cp4n2 : RuntimeLibcallImpl<HEXAGON_VOLATILE_MEMCPY
 
 def isHexagon : RuntimeLibcallAvailability<(all_of IsHexagon)>;
 
+// The generic arithmetic/division helpers (__adddf3, __divsi3, ...) exist in
+// Hexagon's compiler-rt alongside the preferred __hexagon_* variants, so both
+// are available. Selection of the __hexagon_* variants is handled in
+// HexagonSubtarget::initLibcallLoweringInfo.
 def HexagonSystemLibrary
     : SystemRuntimeLibrary<isHexagon,
-    (add (sub DefaultLibcallImpls32,
-    __adddf3, __divsf3, __udivsi3, __udivdi3,
-    __umoddi3, __divdf3, __muldf3, __divsi3, __subdf3,
-    __divdi3, __umodsi3, __moddi3, __modsi3), HexagonLibcalls,
+    (add DefaultLibcallImpls32, HexagonLibcalls,
     LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
     exp10f, exp10, exp10l_f128, __stack_chk_fail, __stack_chk_guard,
     DefaultSafeStackGlobals)>;
