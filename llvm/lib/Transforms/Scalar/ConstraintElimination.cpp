@@ -76,6 +76,9 @@ static Instruction *getContextInstForUse(Use &U) {
 }
 
 namespace {
+using Entry = ConstraintSystem::Entry;
+using RowTy = ConstraintSystem::RowTy;
+
 /// Struct to express a condition of the form %Op0 Pred %Op1.
 struct ConditionTy {
   CmpPredicate Pred;
@@ -212,20 +215,22 @@ struct StackEntry {
 };
 
 struct ConstraintTy {
-  SmallVector<int64_t, 8> Coefficients;
+  RowTy Coefficients;
+
+  /// Number of columns the constraint is defined over, i.e. the number of
+  /// variables of the system it was built for plus one for the constant.
+  unsigned NumCols = 0;
 
   bool IsSigned = false;
 
   ConstraintTy() = default;
 
-  ConstraintTy(SmallVector<int64_t, 8> Coefficients, bool IsSigned, bool IsEq,
+  ConstraintTy(RowTy Coefficients, unsigned NumCols, bool IsSigned, bool IsEq,
                bool IsNe)
-      : Coefficients(std::move(Coefficients)), IsSigned(IsSigned), IsEq(IsEq),
-        IsNe(IsNe) {}
+      : Coefficients(std::move(Coefficients)), NumCols(NumCols),
+        IsSigned(IsSigned), IsEq(IsEq), IsNe(IsNe) {}
 
-  unsigned size() const { return Coefficients.size(); }
-
-  bool empty() const { return Coefficients.empty(); }
+  bool empty() const { return NumCols == 0; }
 
   bool isEq() const { return IsEq; }
 
@@ -261,12 +266,9 @@ public:
       : UnsignedCS(FunctionArgs), SignedCS(FunctionArgs), DL(DL) {
     auto &Value2Index = getValue2Index(false);
     // Add Arg > -1 constraints to unsigned system for all function arguments.
-    for (Value *Arg : FunctionArgs) {
-      ConstraintTy VarPos(SmallVector<int64_t, 8>(Value2Index.size() + 1, 0),
-                          false, false, false);
-      VarPos.Coefficients[Value2Index[Arg]] = -1;
-      UnsignedCS.addVariableRow(VarPos.Coefficients);
-    }
+    for (Value *Arg : FunctionArgs)
+      UnsignedCS.addRow({Entry(0, 0), Entry(-1, Value2Index.at(Arg))},
+                        Value2Index.size() + 1);
   }
 
   DenseMap<Value *, unsigned> &getValue2Index(bool Signed) {
@@ -759,34 +761,34 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
 
   // First try to look up \p V in Value2Index and NewVariables. Otherwise add a
   // new entry to NewVariables.
-  SmallDenseMap<Value *, unsigned> NewIndexMap;
-  auto GetOrAddIndex = [&Value2Index, &NewVariables,
-                        &NewIndexMap](Value *V) -> unsigned {
+  auto GetOrAddIndex = [&Value2Index, &NewVariables](Value *V) -> unsigned {
     auto V2I = Value2Index.find(V);
     if (V2I != Value2Index.end())
       return V2I->second;
-    auto [It, Inserted] = NewIndexMap.try_emplace(
-        V, Value2Index.size() + NewVariables.size() + 1);
-    if (Inserted)
+    unsigned Idx = find(NewVariables, V) - NewVariables.begin();
+    if (Idx == NewVariables.size())
       NewVariables.push_back(V);
-    return It->second;
+    return Value2Index.size() + Idx + 1;
   };
-
-  // Make sure all variables have entries in Value2Index or NewVariables.
-  for (const auto &KV : concat<DecompEntry>(VariablesA, VariablesB))
-    GetOrAddIndex(KV.Variable);
 
   // Build result constraint, by first adding all coefficients from A and then
   // subtracting all coefficients from B.
-  ConstraintTy Res(
-      SmallVector<int64_t, 8>(Value2Index.size() + NewVariables.size() + 1, 0),
-      IsSigned, IsEq, IsNe);
-  auto &R = Res.Coefficients;
+  RowTy R(1, Entry(0, 0));
+  // Returns a reference to the coefficient for the variable with index Idx.
+  auto GetCoefficient = [&R](unsigned Idx) -> int64_t & {
+    // The entry for Idx, or the place to insert it at, is the first entry with
+    // an index >= Idx.
+    Entry *I =
+        find_if(drop_begin(R), [Idx](const Entry &E) { return E.Id >= Idx; });
+    if (I == R.end() || I->Id != Idx)
+      I = R.insert(I, Entry(0, Idx));
+    return I->Coefficient;
+  };
   for (const auto &KV : VariablesA)
-    R[GetOrAddIndex(KV.Variable)] += KV.Coefficient;
+    GetCoefficient(GetOrAddIndex(KV.Variable)) += KV.Coefficient;
 
   for (const auto &KV : VariablesB) {
-    auto &Coeff = R[GetOrAddIndex(KV.Variable)];
+    auto &Coeff = GetCoefficient(GetOrAddIndex(KV.Variable));
     if (SubOverflow(Coeff, KV.Coefficient, Coeff))
       return {};
   }
@@ -797,20 +799,19 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   if (Pred == CmpInst::ICMP_SLT || Pred == CmpInst::ICMP_ULT)
     if (AddOverflow(OffsetSum, int64_t(-1), OffsetSum))
       return {};
-  R[0] = OffsetSum;
+  R[0].Coefficient = OffsetSum;
 
-  // Remove any (Coefficient, Variable) entry where the Coefficient is 0 for new
-  // variables.
-  while (!NewVariables.empty()) {
-    int64_t Last = R.back();
-    if (Last != 0)
-      break;
-    R.pop_back();
-    Value *RemovedV = NewVariables.pop_back_val();
-    NewIndexMap.erase(RemovedV);
-  }
+  // Drop coefficients that cancelled out.
+  erase_if(R, [](const Entry &E) { return E.Id != 0 && E.Coefficient == 0; });
 
-  return Res;
+  // Remove any new variable without a coefficient in the row.
+  while (!NewVariables.empty() &&
+         R.back().Id < Value2Index.size() + NewVariables.size())
+    NewVariables.pop_back();
+
+  return ConstraintTy(std::move(R),
+                      Value2Index.size() + NewVariables.size() + 1, IsSigned,
+                      IsEq, IsNe);
 }
 
 ConstraintTy ConstraintInfo::getConstraintForSolving(CmpInst::Predicate Pred,
@@ -821,10 +822,10 @@ ConstraintTy ConstraintInfo::getConstraintForSolving(CmpInst::Predicate Pred,
   // for all variables in the unsigned system.
   if ((Pred == CmpInst::ICMP_ULE && Op0 == NullC) ||
       (Pred == CmpInst::ICMP_UGE && Op1 == NullC)) {
-    auto &Value2Index = getValue2Index(false);
     // Return constraint that's trivially true.
-    return ConstraintTy(SmallVector<int64_t, 8>(Value2Index.size() + 1, 0),
-                        false, false, false);
+    return ConstraintTy(RowTy(1, Entry(0, 0)),
+                        getValue2Index(false).size() + 1, /*IsSigned=*/false,
+                        /*IsEq=*/false, /*IsNe=*/false);
   }
 
   // If both operands are known to be non-negative, change signed predicates to
@@ -957,10 +958,10 @@ void ConstraintInfo::transferToOtherSystem(
 
 #ifndef NDEBUG
 
-static void dumpConstraint(ArrayRef<int64_t> C,
+static void dumpConstraint(ArrayRef<Entry> C,
                            const DenseMap<Value *, unsigned> &Value2Index) {
   ConstraintSystem CS(Value2Index);
-  CS.addVariableRowFill(C);
+  CS.addRow(C, Value2Index.size() + 1);
   CS.dump();
 }
 #endif
@@ -1876,10 +1877,7 @@ void ConstraintInfo::addFactImpl(CmpInst::Predicate Pred, Value *A, Value *B,
   LLVM_DEBUG(dbgs() << "Adding '"; dumpUnpackedICmp(dbgs(), Pred, A, B);
              dbgs() << "'\n");
   auto &CSToUse = getCS(R.IsSigned);
-  if (R.Coefficients.empty())
-    return;
-
-  bool Added = CSToUse.addVariableRowFill(R.Coefficients);
+  bool Added = CSToUse.addRow(R.Coefficients, R.NumCols);
   if (!Added)
     return;
 
@@ -1903,10 +1901,9 @@ void ConstraintInfo::addFactImpl(CmpInst::Predicate Pred, Value *A, Value *B,
 
   if (!R.IsSigned) {
     for (Value *V : NewVariables) {
-      ConstraintTy VarPos(SmallVector<int64_t, 8>(Value2Index.size() + 1, 0),
-                          false, false, false);
-      VarPos.Coefficients[Value2Index[V]] = -1;
-      CSToUse.addVariableRow(VarPos.Coefficients);
+      // Add V > -1 constraints for all new variables.
+      CSToUse.addRow({Entry(0, 0), Entry(-1, Value2Index.at(V))},
+                     Value2Index.size() + 1);
       DFSInStack.emplace_back(NumIn, NumOut, R.IsSigned,
                               SmallVector<Value *, 2>());
     }
@@ -1914,10 +1911,10 @@ void ConstraintInfo::addFactImpl(CmpInst::Predicate Pred, Value *A, Value *B,
 
   if (R.isEq()) {
     // Also add the inverted constraint for equality constraints.
-    for (auto &Coeff : R.Coefficients)
-      if (MulOverflow(Coeff, int64_t(-1), Coeff))
+    for (Entry &E : R.Coefficients)
+      if (MulOverflow(E.Coefficient, int64_t(-1), E.Coefficient))
         return;
-    CSToUse.addVariableRowFill(R.Coefficients);
+    CSToUse.addRow(R.Coefficients, R.NumCols);
 
     DFSInStack.emplace_back(NumIn, NumOut, R.IsSigned,
                             SmallVector<Value *, 2>());
@@ -1965,7 +1962,8 @@ tryToSimplifyOverflowMath(IntrinsicInst *II, ConstraintInfo &Info,
   auto DoesConditionHold = [](CmpInst::Predicate Pred, Value *A, Value *B,
                               ConstraintInfo &Info) {
     auto R = Info.getConstraintForSolving(Pred, A, B);
-    if (R.size() < 2)
+    // Nothing can be proven if the system has no variables.
+    if (R.NumCols < 2)
       return false;
 
     auto &CSToUse = Info.getCS(R.IsSigned);

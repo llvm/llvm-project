@@ -34,9 +34,9 @@ bool ConstraintSystem::eliminateUsingFM() {
 
   // First, either remove the variable in place if it is 0 or add the row to
   // RemainingRows and remove it from the system.
-  SmallVector<SmallVector<Entry, 8>, 4> RemainingRows;
+  SmallVector<RowTy, 4> RemainingRows;
   for (unsigned R1 = 0; R1 < Constraints.size();) {
-    SmallVector<Entry, 8> &Row1 = Constraints[R1];
+    RowTy &Row1 = Constraints[R1];
     if (getLastCoefficient(Row1, LastIdx) == 0) {
       if (Row1.size() > 0 && Row1.back().Id == LastIdx)
         Row1.pop_back();
@@ -75,7 +75,7 @@ bool ConstraintSystem::eliminateUsingFM() {
         std::swap(LowerLast, UpperLast);
       }
 
-      SmallVector<Entry, 8> NR;
+      RowTy NR;
       unsigned IdxUpper = 0;
       unsigned IdxLower = 0;
       auto &LowerRow = RemainingRows[LowerR];
@@ -160,16 +160,10 @@ bool ConstraintSystem::mayHaveSolutionImpl() {
       return true;
   }
 
-  if (Constraints.empty() || NumVariables > 1)
-    return true;
-
-  return all_of(Constraints, [](auto &R) {
-    if (R.empty())
-      return true;
-    if (R[0].Id == 0)
-      return R[0].Coefficient >= 0;
-    return true;
-  });
+  // All variables have been eliminated, so all remaining rows are of the form
+  // 'c >= 0'.
+  return all_of(Constraints,
+                [](ArrayRef<Entry> R) { return getConstant(R) >= 0; });
 }
 
 SmallVector<std::string> ConstraintSystem::getVarNamesList() const {
@@ -210,11 +204,7 @@ void ConstraintSystem::dump() const {
       Parts.push_back(Coefficient + Name);
     }
     // assert(!Parts.empty() && "need to have at least some parts");
-    int64_t ConstPart = 0;
-    if (Row[0].Id == 0)
-      ConstPart = Row[0].Coefficient;
-    LLVM_DEBUG(dbgs() << join(Parts, std::string(" + "))
-                      << " <= " << std::to_string(ConstPart) << "\n");
+    dbgs() << join(Parts, " + ") << " <= " << getConstant(Row) << "\n";
   }
 #endif
 }
@@ -227,8 +217,8 @@ bool ConstraintSystem::mayHaveSolution() {
   return HasSolution;
 }
 
-std::pair<ConstraintSystem, SmallVector<int64_t, 8>>
-ConstraintSystem::getSubSystem(ArrayRef<int64_t> R) const {
+std::pair<ConstraintSystem, ConstraintSystem::RowTy>
+ConstraintSystem::getSubSystem(ArrayRef<Entry> R) const {
   // Only constraints that share a variable (transitively) with a query R can
   // affect whether system + !R has a solution.
   //
@@ -236,16 +226,20 @@ ConstraintSystem::getSubSystem(ArrayRef<int64_t> R) const {
   // variables that co-occur in a constraint row.
   ConstraintSystem SubSystem;
   SmallBitVector InSystem(NumVariables + 1, false);
-  for (unsigned Id = 1, E = R.size(); Id < E; ++Id)
-    if (R[Id] != 0)
-      InSystem[Id] = true;
+  for (const Entry &E : R)
+    if (E.Id != 0)
+      InSystem[E.Id] = true;
+  auto SharesVariable = [&InSystem](ArrayRef<Entry> Row) {
+    return any_of(Row, [&InSystem](const Entry &E) {
+      return E.Id != 0 && InSystem[E.Id];
+    });
+  };
   bool Changed = true;
   while (Changed) {
     Changed = false;
-    for (const auto &Row : Constraints) {
+    for (const RowTy &Row : Constraints) {
       // No common variables, skip.
-      if (none_of(Row,
-                  [&](const Entry &E) { return E.Id != 0 && InSystem[E.Id]; }))
+      if (!SharesVariable(Row))
         continue;
       for (const Entry &E : Row)
         if (E.Id != 0 && !InSystem[E.Id]) {
@@ -256,19 +250,17 @@ ConstraintSystem::getSubSystem(ArrayRef<int64_t> R) const {
   }
 
   // Assign compact indices to the variables of the sub-system.
-  SmallVector<unsigned, 16> OldToNew;
-  OldToNew.assign(NumVariables + 1, 0);
+  SmallVector<unsigned, 16> OldToNew(NumVariables + 1, 0);
   unsigned NextIdx = 1;
   for (unsigned Id : InSystem.set_bits())
     OldToNew[Id] = NextIdx++;
 
   // Build new compact set of rows.
   SubSystem.NumVariables = NextIdx;
-  for (const auto &Row : Constraints) {
-    if (none_of(Row,
-                [&](const Entry &E) { return E.Id != 0 && InSystem[E.Id]; }))
+  for (const RowTy &Row : Constraints) {
+    if (!SharesVariable(Row))
       continue;
-    SmallVector<Entry, 8> NewRow;
+    RowTy NewRow;
     for (const Entry &E : Row) {
       if (!E.Id)
         NewRow.emplace_back(E.Coefficient, E.Id);
@@ -279,40 +271,38 @@ ConstraintSystem::getSubSystem(ArrayRef<int64_t> R) const {
   }
 
   // Remap the query row into the component's compact index space.
-  SmallVector<int64_t, 8> NewR(SubSystem.NumVariables, 0);
-  NewR[0] = R[0];
-  for (unsigned Id = 1, E = R.size(); Id < E; ++Id)
-    if (R[Id] != 0)
-      NewR[OldToNew[Id]] = R[Id];
+  RowTy NewR(1, Entry(getConstant(R), 0));
+  for (const Entry &E : R)
+    if (E.Id != 0)
+      NewR.emplace_back(E.Coefficient, OldToNew[E.Id]);
   return {std::move(SubSystem), std::move(NewR)};
 }
 
-bool ConstraintSystem::isConditionImplied(SmallVector<int64_t, 8> R) const {
+bool ConstraintSystem::isConditionImplied(RowTy R) const {
   // If all variable coefficients are 0, we have 'C >= 0'. If the constant is >=
   // 0, R is always true, regardless of the system.
-  if (all_of(ArrayRef(R).drop_front(1), equal_to(0)))
-    return R[0] >= 0;
+  if (isConstantOnly(R))
+    return getConstant(R) >= 0;
 
   // If there is no solution with the negation of R added to the system, the
   // condition must hold based on the existing constraints.
-  R = ConstraintSystem::negate(R);
+  R = ConstraintSystem::negate(std::move(R));
   if (R.empty())
     return false;
 
   auto Copy = *this;
-  Copy.addVariableRow(R);
+  Copy.addRow(R, NumVariables);
   return !Copy.mayHaveSolution();
 }
 
-bool ConstraintSystem::isConditionImpliedInSubSystem(
-    SmallVector<int64_t, 8> R) const {
+bool ConstraintSystem::isConditionImpliedInSubSystem(ArrayRef<Entry> R) const {
   if (R.empty())
     return false;
 
   // Queries with no variables are trivially decided without building any
   // component.
-  if (all_of(ArrayRef(R).drop_front(1), equal_to(0)))
-    return R[0] >= 0;
+  if (isConstantOnly(R))
+    return getConstant(R) >= 0;
 
   // A single query: build the component and solve it in place.
   const auto &[SubCS, NewR] = getSubSystem(R);
