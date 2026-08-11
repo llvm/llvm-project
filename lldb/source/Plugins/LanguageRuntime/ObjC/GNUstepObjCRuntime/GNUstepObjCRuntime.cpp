@@ -395,24 +395,36 @@ bool GNUstepObjCRuntime::GetDynamicTypeAndAddress(
   address.SetRawAddress(object_ptr);
   class_type_or_name.SetName(class_name);
 
-  // Try to upgrade the bare name to a real type: first from the cache of
-  // classes already realized from debug info, then - should a decl vendor
-  // exist one day - from that.
+  // Upgrade the bare class name to a real type when the inferior's debug
+  // info defines the class. LookupInCompleteClassCache keys on an
+  // eSymbolTypeObjCClass symbol named exactly after the class, which the
+  // Apple ABI emits but the gnustep-2.x ABI does not (its class symbol is
+  // "._OBJC_CLASS_<name>"), so on a cache miss query the debug info directly.
   TypeSP type_sp(objc_class_sp->GetType());
   if (!type_sp) {
     type_sp = LookupInCompleteClassCache(class_name);
+    if (!type_sp)
+      type_sp = LookupClassTypeInDebugInfo(class_name);
     if (type_sp)
       objc_class_sp->SetType(type_sp);
   }
   if (type_sp)
     class_type_or_name.SetTypeSP(type_sp);
-  else if (auto *vendor = GetDeclVendor()) {
-    auto types = vendor->FindTypes(class_name, /*max_matches*/ 1);
-    if (!types.empty())
-      class_type_or_name.SetCompilerType(types.front());
-  }
 
   return !class_type_or_name.IsEmpty();
+}
+
+lldb::TypeSP
+GNUstepObjCRuntime::LookupClassTypeInDebugInfo(ConstString class_name) {
+  TypeQuery query(class_name.GetStringRef(), TypeQueryOptions::e_exact_match);
+  TypeResults results;
+  GetTargetRef().GetImages().FindTypes(nullptr, query, results);
+  for (const TypeSP &type_sp : results.GetTypeMap().Types()) {
+    if (type_sp && TypeSystemClang::IsObjCObjectOrInterfaceType(
+                       type_sp->GetForwardCompilerType()))
+      return type_sp;
+  }
+  return TypeSP();
 }
 
 TypeAndOrName

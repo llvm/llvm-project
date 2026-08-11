@@ -126,6 +126,12 @@ protected:
   // Call CreateInstance instead.
   GNUstepObjCRuntime(Process *process);
 
+  /// Finds a complete Objective-C interface type named \p class_name in the
+  /// target's debug info. Used to attach a real type to a dynamic value when
+  /// the base class's symbol-name-keyed cache misses (the gnustep-2.x class
+  /// symbol is not named after the class).
+  lldb::TypeSP LookupClassTypeInDebugInfo(ConstString class_name);
+
   /// Address of gnustep-base's `const char *_NSPrintForDebugger(id)`, the
   /// same debugger hook AppleObjCRuntime uses. Resolved lazily; nullptr when
   /// gnustep-base is not loaded in the inferior.
