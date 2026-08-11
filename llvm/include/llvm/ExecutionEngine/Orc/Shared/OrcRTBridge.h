@@ -23,10 +23,6 @@ namespace llvm {
 namespace orc {
 namespace rt {
 
-LLVM_ABI extern const char *SimpleExecutorDylibManagerInstanceName;
-LLVM_ABI extern const char *SimpleExecutorDylibManagerOpenWrapperName;
-LLVM_ABI extern const char *SimpleExecutorDylibManagerResolveWrapperName;
-
 LLVM_ABI extern const char *SimpleExecutorMemoryManagerInstanceName;
 LLVM_ABI extern const char *SimpleExecutorMemoryManagerReserveWrapperName;
 LLVM_ABI extern const char *SimpleExecutorMemoryManagerInitializeWrapperName;

@@ -14,13 +14,6 @@ namespace llvm {
 namespace orc {
 namespace rt {
 
-const char *SimpleExecutorDylibManagerInstanceName =
-    "__llvm_orc_SimpleExecutorDylibManager_Instance";
-const char *SimpleExecutorDylibManagerOpenWrapperName =
-    "__llvm_orc_SimpleExecutorDylibManager_open_wrapper";
-const char *SimpleExecutorDylibManagerResolveWrapperName =
-    "__llvm_orc_SimpleExecutorDylibManager_resolve_wrapper";
-
 const char *SimpleExecutorMemoryManagerInstanceName =
     "__llvm_orc_SimpleExecutorMemoryManager_Instance";
 const char *SimpleExecutorMemoryManagerReserveWrapperName =

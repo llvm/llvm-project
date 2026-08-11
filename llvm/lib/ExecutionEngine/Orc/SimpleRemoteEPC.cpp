@@ -78,7 +78,7 @@ SimpleRemoteEPC::createDefaultMemoryManager() {
 
 Expected<std::unique_ptr<DylibManager>>
 SimpleRemoteEPC::createDefaultDylibMgr() {
-  auto DM = EPCGenericDylibManager::CreateWithDefaultBootstrapSymbols(*this);
+  auto DM = EPCGenericDylibManager::Create(getExecutionSession());
   if (!DM)
     return DM.takeError();
   return std::make_unique<EPCGenericDylibManager>(std::move(*DM));

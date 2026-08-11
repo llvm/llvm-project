@@ -93,23 +93,18 @@ class RemoteResolver : public LegacyJITSymbolResolver {
 public:
   static Expected<std::unique_ptr<RemoteResolver>>
   Create(orc::ExecutionSession &ES) {
-    auto DylibMgr =
-        orc::EPCGenericDylibManager::CreateWithDefaultBootstrapSymbols(
-            ES.getExecutorProcessControl());
+    auto DylibMgr = orc::EPCGenericDylibManager::Create(ES);
     if (!DylibMgr)
       return DylibMgr.takeError();
     auto H = DylibMgr->open("", 0);
     if (!H)
       return H.takeError();
-    return std::make_unique<RemoteResolver>(
-        std::move(*DylibMgr), std::move(*H),
-        std::make_shared<orc::SymbolStringPool>());
+    return std::make_unique<RemoteResolver>(ES, std::move(*DylibMgr),
+                                            std::move(*H));
   }
 
   JITSymbol findSymbol(const std::string &Name) override {
-    // This legacy resolver has no ExecutionSession string pool of its own, so
-    // it interns lookup names into a standalone pool to form the lookup set.
-    orc::SymbolLookupSet LS(SSP->intern(Name),
+    orc::SymbolLookupSet LS(ES.intern(Name),
                             orc::SymbolLookupFlags::WeaklyReferencedSymbol);
     if (auto Syms = DylibMgr.lookup(H, LS)) {
       if (Syms->size() != 1)
@@ -128,14 +123,14 @@ public:
   }
 
 public:
-  RemoteResolver(orc::EPCGenericDylibManager DylibMgr,
-                 orc::tpctypes::DylibHandle H,
-                 std::shared_ptr<orc::SymbolStringPool> SSP)
-      : DylibMgr(std::move(DylibMgr)), H(std::move(H)), SSP(std::move(SSP)) {}
+  RemoteResolver(orc::ExecutionSession &ES,
+                 orc::EPCGenericDylibManager DylibMgr,
+                 orc::tpctypes::DylibHandle H)
+      : ES(ES), DylibMgr(std::move(DylibMgr)), H(std::move(H)) {}
 
+  orc::ExecutionSession &ES;
   orc::EPCGenericDylibManager DylibMgr;
   orc::tpctypes::DylibHandle H;
-  std::shared_ptr<orc::SymbolStringPool> SSP;
 };
 } // namespace llvm
 
