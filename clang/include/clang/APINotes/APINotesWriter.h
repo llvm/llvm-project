@@ -95,6 +95,12 @@ public:
                     llvm::ArrayRef<llvm::StringRef> Parameters,
                     const CXXMethodInfo &Info, llvm::VersionTuple SwiftVersion);
 
+  /// Add information about a C++ method with a composed selector. Omitted
+  /// selector components use the broad name-based key.
+  void addCXXMethod(ContextID CtxID, llvm::StringRef Name,
+                    const FunctionSelector &Selector, const CXXMethodInfo &Info,
+                    llvm::VersionTuple SwiftVersion);
+
   /// Add information about a specific C record field.
   ///
   /// \param CtxID The context in which this field resides, i.e. a C/C++ tag.

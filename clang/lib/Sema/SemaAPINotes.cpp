@@ -23,6 +23,7 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaSwift.h"
+#include "llvm/ADT/bit.h"
 #include <stack>
 
 using namespace clang;
@@ -1085,7 +1086,7 @@ APINotesSelectorDiagnosticState::getOrCreateReaderState(
     return State;
 
   SmallVector<api_notes::APINotesFunctionSelectorKey, 4> Selectors;
-  Reader.collectExactFunctionParameterSelectors(Selectors);
+  Reader.collectFunctionSelectorsForDiagnostics(Selectors);
   State.addSelectors(Selectors);
   return State;
 }
@@ -1109,6 +1110,58 @@ void APINotesSelectorDiagnosticReaderState::markCandidatesUsed(
   if (Candidates.Desugared) {
     if (auto Key = GetSelectorKey(Candidates.Desugared->Parameters))
       markUsed(*Key);
+  }
+}
+
+static api_notes::FunctionObjectSelector
+getAPINotesObjectSelector(const CXXMethodDecl *Method) {
+  api_notes::FunctionObjectSelector Selector;
+  Selector.Const = Method->isConst();
+  Selector.Volatile = Method->isVolatile();
+  switch (Method->getRefQualifier()) {
+  case RQ_None:
+    Selector.Ref = api_notes::FunctionObjectRefQualifier::None;
+    break;
+  case RQ_LValue:
+    Selector.Ref = api_notes::FunctionObjectRefQualifier::LValue;
+    break;
+  case RQ_RValue:
+    Selector.Ref = api_notes::FunctionObjectRefQualifier::RValue;
+    break;
+  }
+  return Selector;
+}
+
+static void getAPINotesObjectSelectorSubsets(
+    api_notes::FunctionObjectSelector ObjectSelector,
+    SmallVectorImpl<api_notes::FunctionObjectSelector> &Subsets) {
+  enum ObjectSelectorField : unsigned {
+    ConstField = 1u << 0,
+    VolatileField = 1u << 1,
+    RefField = 1u << 2,
+  };
+
+  constexpr unsigned ObjectSelectorSubsetMasks[] = {
+      ConstField,
+      VolatileField,
+      RefField,
+      ConstField | VolatileField,
+      ConstField | RefField,
+      VolatileField | RefField,
+      ConstField | VolatileField | RefField,
+  };
+
+  // Apply less-constrained object selectors before more-constrained ones so
+  // entries that specify more Object fields can refine earlier effects.
+  for (unsigned Mask : ObjectSelectorSubsetMasks) {
+    api_notes::FunctionObjectSelector Subset;
+    if (Mask & ConstField)
+      Subset.Const = ObjectSelector.Const;
+    if (Mask & VolatileField)
+      Subset.Volatile = ObjectSelector.Volatile;
+    if (Mask & RefField)
+      Subset.Ref = ObjectSelector.Ref;
+    Subsets.push_back(Subset);
   }
 }
 
@@ -1397,27 +1450,72 @@ void Sema::ProcessAPINotes(Decl *D) {
             auto Info = Reader->lookupCXXMethod(Context->id, MethodName);
             ProcessVersionedAPINotes(*this, CXXMethod, Info);
 
-            if (ParameterSelectorCandidates)
+            auto &DiagnosticState =
+                getAPINotesSelectorDiagnosticState(*this, Reader);
+            if (auto NameOnlyKey =
+                    Reader->getCXXMethodSelectorKey(Context->id, MethodName))
+              DiagnosticState.noteSeenDeclaration(*NameOnlyKey, MethodName,
+                                                  CXXMethod->getLocation());
+
+            if (ParameterSelectorCandidates) {
               processExactAPINotes<api_notes::CXXMethodInfo>(
                   *this, CXXMethod, *ParameterSelectorCandidates,
                   [&](ArrayRef<std::string> Parameters) {
                     return Reader->lookupCXXMethod(Context->id, MethodName,
                                                    Parameters);
                   });
-
-            if (ParameterSelectorCandidates) {
-              auto &DiagnosticState =
-                  getAPINotesSelectorDiagnosticState(*this, Reader);
-              if (auto BroadKey =
-                      Reader->getCXXMethodSelectorKey(Context->id, MethodName))
-                DiagnosticState.noteSeenDeclaration(*BroadKey, MethodName,
-                                                    CXXMethod->getLocation());
               DiagnosticState.markCandidatesUsed(
                   [&](ArrayRef<std::string> Parameters) {
                     return Reader->getCXXMethodSelectorKey(
                         Context->id, MethodName, Parameters);
                   },
                   *ParameterSelectorCandidates);
+            }
+
+            if (!CXXMethod->isStatic()) {
+              SmallVector<api_notes::FunctionObjectSelector, 7> ObjectSelectors;
+              getAPINotesObjectSelectorSubsets(
+                  getAPINotesObjectSelector(CXXMethod), ObjectSelectors);
+              // Apply every matching object selector in increasing specificity.
+              // Wildcard object constraints are broad refinements. Selectors
+              // that also constrain explicit parameters are applied last.
+              for (api_notes::FunctionObjectSelector ObjectSelector :
+                   ObjectSelectors) {
+                api_notes::FunctionSelector Selector;
+                Selector.Object = ObjectSelector;
+                auto ObjectInfo =
+                    Reader->lookupCXXMethod(Context->id, MethodName, Selector);
+                ProcessVersionedAPINotes(*this, CXXMethod, ObjectInfo);
+                if (auto ObjectKey = Reader->getCXXMethodSelectorKey(
+                        Context->id, MethodName, Selector))
+                  DiagnosticState.markUsed(*ObjectKey);
+              }
+
+              if (ParameterSelectorCandidates) {
+                for (api_notes::FunctionObjectSelector ObjectSelector :
+                     ObjectSelectors) {
+                  processExactAPINotes<api_notes::CXXMethodInfo>(
+                      *this, CXXMethod, *ParameterSelectorCandidates,
+                      [&](ArrayRef<std::string> Parameters) {
+                        api_notes::FunctionSelector Selector;
+                        Selector.Parameters.emplace(Parameters.begin(),
+                                                    Parameters.end());
+                        Selector.Object = ObjectSelector;
+                        return Reader->lookupCXXMethod(Context->id, MethodName,
+                                                       Selector);
+                      });
+                  DiagnosticState.markCandidatesUsed(
+                      [&](ArrayRef<std::string> Parameters) {
+                        api_notes::FunctionSelector Selector;
+                        Selector.Parameters.emplace(Parameters.begin(),
+                                                    Parameters.end());
+                        Selector.Object = ObjectSelector;
+                        return Reader->getCXXMethodSelectorKey(
+                            Context->id, MethodName, Selector);
+                      },
+                      *ParameterSelectorCandidates);
+                }
+              }
             }
           }
         }
@@ -1452,20 +1550,27 @@ void APINotesSelectorDiagnosticReaderState::diagnoseUnused(
     if (Selector.second)
       continue;
 
-    auto SeenName =
-        SeenNames.find(Selector.first.getWithoutParameterSelector());
+    auto SeenName = SeenNames.find(Selector.first.getNameOnlyKey());
     if (SeenName == SeenNames.end())
       continue;
 
-    std::optional<SmallVector<std::string, 4>> ParameterSpellings =
-        Reader.getParameterSelectorSpellingsForDiagnostics(Selector.first);
-    if (!ParameterSpellings)
-      continue;
+    std::optional<SmallVector<std::string, 4>> ParameterSpellings;
+    if (Selector.first.Key.parameterTypeIDs) {
+      ParameterSpellings =
+          Reader.getParameterSelectorSpellingsForDiagnostics(Selector.first);
+      if (!ParameterSpellings)
+        continue;
+    }
+
+    std::optional<ArrayRef<std::string>> ParameterRefs;
+    if (ParameterSpellings)
+      ParameterRefs = ArrayRef<std::string>(*ParameterSpellings);
 
     S.Diag(SeenName->second.Loc, diag::warn_apinotes_message)
         << (llvm::Twine("API notes entry for '") + SeenName->second.Name +
-            "' has unmatched Where.Parameters " +
-            api_notes::formatAPINotesParameterSelector(*ParameterSpellings))
+            "' has unmatched " +
+            api_notes::formatAPINotesFunctionSelector(
+                ParameterRefs, Selector.first.Key.objectSelector))
                .str();
   }
 }

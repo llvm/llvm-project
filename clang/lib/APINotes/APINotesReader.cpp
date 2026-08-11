@@ -72,14 +72,47 @@ static FunctionTableKey readFunctionTableKey(const uint8_t *Data,
     ParameterTypeIDs.push_back(
         endian::readNext<uint32_t, llvm::endianness::little>(Data));
 
-  assert((FunctionKeyFlags & ~FunctionKeyHasParameterSelector) == 0 &&
-         "Unexpected function table key flags");
-  if (FunctionKeyFlags & FunctionKeyHasParameterSelector)
-    return {CtxID, NameID, ParameterTypeIDs};
+  if (FunctionKeyFlags & FunctionKeyObjectRefLValue)
+    assert(!(FunctionKeyFlags & FunctionKeyObjectRefRValue) &&
+           "Unexpected function table key ref qualifier flags");
+  assert(((FunctionKeyFlags & FunctionKeyObjectConstValue) == 0 ||
+          (FunctionKeyFlags & FunctionKeyObjectConstPresent)) &&
+         "Function table key const value requires presence flag");
+  assert(((FunctionKeyFlags & FunctionKeyObjectVolatileValue) == 0 ||
+          (FunctionKeyFlags & FunctionKeyObjectVolatilePresent)) &&
+         "Function table key volatile value requires presence flag");
+  assert(((FunctionKeyFlags &
+           (FunctionKeyObjectRefLValue | FunctionKeyObjectRefRValue)) == 0 ||
+          (FunctionKeyFlags & FunctionKeyObjectRefPresent)) &&
+         "Function table key ref value requires presence flag");
+  std::optional<FunctionObjectSelector> ObjectSelector;
+  if (FunctionKeyFlags & FunctionKeyObjectSelectorMask) {
+    FunctionObjectSelector Selector;
+    if (FunctionKeyFlags & FunctionKeyObjectConstPresent)
+      Selector.Const = (FunctionKeyFlags & FunctionKeyObjectConstValue) != 0;
+    if (FunctionKeyFlags & FunctionKeyObjectVolatilePresent)
+      Selector.Volatile =
+          (FunctionKeyFlags & FunctionKeyObjectVolatileValue) != 0;
+    if (FunctionKeyFlags & FunctionKeyObjectRefPresent) {
+      if (FunctionKeyFlags & FunctionKeyObjectRefLValue)
+        Selector.Ref = FunctionObjectRefQualifier::LValue;
+      else if (FunctionKeyFlags & FunctionKeyObjectRefRValue)
+        Selector.Ref = FunctionObjectRefQualifier::RValue;
+      else
+        Selector.Ref = FunctionObjectRefQualifier::None;
+    }
+    ObjectSelector = Selector;
+  }
 
-  assert(ParameterTypeIDs.empty() &&
-         "Broad function table key should not store parameters");
-  return {CtxID, NameID};
+  FunctionTableSelectorKey Selector;
+  if (FunctionKeyFlags & FunctionKeyHasParameterSelector)
+    Selector.Parameters.emplace(ParameterTypeIDs.begin(),
+                                ParameterTypeIDs.end());
+  else
+    assert(ParameterTypeIDs.empty() &&
+           "Broad function table key should not store parameters");
+  Selector.Object = ObjectSelector;
+  return FunctionTableKey(CtxID, NameID, std::move(Selector));
 }
 
 /// An on-disk hash table whose data is versioned based on the Swift version.
@@ -844,10 +877,10 @@ public:
   /// the ID is unknown.
   std::optional<llvm::StringRef> getIdentifierString(IdentifierID ID);
 
-  /// Collect exact parameter selector keys stored in the given function-like
-  /// table.
+  /// Collect selector keys stored in the given function-like table that
+  /// should be diagnosed if unmatched.
   template <typename TableT>
-  void collectExactFunctionParameterSelectors(
+  void collectFunctionSelectorsForDiagnostics(
       TableT &Table,
       llvm::SmallVectorImpl<APINotesFunctionSelectorKey> &Selectors);
 
@@ -880,11 +913,17 @@ public:
   getFunctionKey(uint32_t ParentContextID, llvm::StringRef Name,
                  llvm::ArrayRef<ParameterT> Parameters);
   std::optional<FunctionTableKey>
+  getFunctionKey(uint32_t ParentContextID, llvm::StringRef Name,
+                 const FunctionSelector &Selector);
+  std::optional<FunctionTableKey>
   getFunctionKey(std::optional<Context> ParentContext, llvm::StringRef Name);
   template <typename ParameterT>
   std::optional<FunctionTableKey>
   getFunctionKey(std::optional<Context> ParentContext, llvm::StringRef Name,
                  llvm::ArrayRef<ParameterT> Parameters);
+  std::optional<FunctionTableKey>
+  getFunctionKey(std::optional<Context> ParentContext, llvm::StringRef Name,
+                 const FunctionSelector &Selector);
 
   llvm::Error readGlobalFunctionBlock(llvm::BitstreamCursor &Cursor,
                                       llvm::SmallVectorImpl<uint64_t> &Scratch);
@@ -944,7 +983,7 @@ APINotesReader::Implementation::getIdentifierString(IdentifierID ID) {
 }
 
 template <typename TableT>
-void APINotesReader::Implementation::collectExactFunctionParameterSelectors(
+void APINotesReader::Implementation::collectFunctionSelectorsForDiagnostics(
     TableT &Table,
     llvm::SmallVectorImpl<APINotesFunctionSelectorKey> &Selectors) {
   static_assert(std::is_same_v<TableT, SerializedGlobalFunctionTable> ||
@@ -952,7 +991,7 @@ void APINotesReader::Implementation::collectExactFunctionParameterSelectors(
   constexpr bool IsCXXMethod = std::is_same_v<TableT, SerializedCXXMethodTable>;
 
   for (const FunctionTableKey &Key : Table.keys()) {
-    if (!Key.parameterTypeIDs)
+    if (!Key.parameterTypeIDs && !Key.objectSelector)
       continue;
 
     Selectors.push_back(APINotesFunctionSelectorKey{Key, IsCXXMethod});
@@ -977,6 +1016,26 @@ std::optional<FunctionTableKey> APINotesReader::Implementation::getFunctionKey(
 }
 
 std::optional<FunctionTableKey> APINotesReader::Implementation::getFunctionKey(
+    uint32_t ParentContextID, llvm::StringRef Name,
+    const FunctionSelector &Selector) {
+  auto GetIdentifier = [this](llvm::StringRef S) { return getIdentifier(S); };
+  if (Selector.Parameters) {
+    if (Selector.Object)
+      return getFunctionKeyImpl(
+          ParentContextID, Name,
+          llvm::ArrayRef<std::string>(*Selector.Parameters), *Selector.Object,
+          GetIdentifier);
+    return getFunctionKeyImpl(ParentContextID, Name,
+                              llvm::ArrayRef<std::string>(*Selector.Parameters),
+                              GetIdentifier);
+  }
+  if (Selector.Object)
+    return getFunctionKeyImpl(ParentContextID, Name, *Selector.Object,
+                              GetIdentifier);
+  return getFunctionKeyImpl(ParentContextID, Name, GetIdentifier);
+}
+
+std::optional<FunctionTableKey> APINotesReader::Implementation::getFunctionKey(
     std::optional<Context> ParentContext, llvm::StringRef Name) {
   uint32_t ParentContextID =
       ParentContext ? ParentContext->id.Value : static_cast<uint32_t>(-1);
@@ -990,6 +1049,14 @@ std::optional<FunctionTableKey> APINotesReader::Implementation::getFunctionKey(
   uint32_t ParentContextID =
       ParentContext ? ParentContext->id.Value : static_cast<uint32_t>(-1);
   return getFunctionKey(ParentContextID, Name, Parameters);
+}
+
+std::optional<FunctionTableKey> APINotesReader::Implementation::getFunctionKey(
+    std::optional<Context> ParentContext, llvm::StringRef Name,
+    const FunctionSelector &Selector) {
+  uint32_t ParentContextID =
+      ParentContext ? ParentContext->id.Value : static_cast<uint32_t>(-1);
+  return getFunctionKey(ParentContextID, Name, Selector);
 }
 
 std::optional<SelectorID>
@@ -2414,7 +2481,15 @@ auto APINotesReader::lookupCXXMethod(ContextID CtxID, llvm::StringRef Name)
 auto APINotesReader::lookupCXXMethod(ContextID CtxID, llvm::StringRef Name,
                                      llvm::ArrayRef<std::string> Parameters)
     -> VersionedInfo<CXXMethodInfo> {
-  return lookupCXXMethodImpl(CtxID, Name, Parameters);
+  FunctionSelector Selector;
+  Selector.Parameters.emplace(Parameters.begin(), Parameters.end());
+  return lookupCXXMethodImpl(CtxID, Name, Selector);
+}
+
+auto APINotesReader::lookupCXXMethod(ContextID CtxID, llvm::StringRef Name,
+                                     const FunctionSelector &Selector)
+    -> VersionedInfo<CXXMethodInfo> {
+  return lookupCXXMethodImpl(CtxID, Name, Selector);
 }
 
 std::optional<APINotesFunctionSelectorKey>
@@ -2437,6 +2512,16 @@ APINotesReader::getCXXMethodSelectorKey(
   return APINotesFunctionSelectorKey{*Key, /*IsCXXMethod=*/true};
 }
 
+std::optional<APINotesFunctionSelectorKey>
+APINotesReader::getCXXMethodSelectorKey(ContextID CtxID, llvm::StringRef Name,
+                                        const FunctionSelector &Selector) {
+  std::optional<FunctionTableKey> Key =
+      Implementation->getFunctionKey(CtxID.Value, Name, Selector);
+  if (!Key)
+    return std::nullopt;
+  return APINotesFunctionSelectorKey{*Key, /*IsCXXMethod=*/true};
+}
+
 auto APINotesReader::lookupCXXMethodImpl(ContextID CtxID, llvm::StringRef Name)
     -> VersionedInfo<CXXMethodInfo> {
   if (!Implementation->CXXMethodTable)
@@ -2454,15 +2539,14 @@ auto APINotesReader::lookupCXXMethodImpl(ContextID CtxID, llvm::StringRef Name)
   return {Implementation->SwiftVersion, *Known};
 }
 
-template <typename ParameterT>
 auto APINotesReader::lookupCXXMethodImpl(ContextID CtxID, llvm::StringRef Name,
-                                         llvm::ArrayRef<ParameterT> Parameters)
+                                         const FunctionSelector &Selector)
     -> VersionedInfo<CXXMethodInfo> {
   if (!Implementation->CXXMethodTable)
     return std::nullopt;
 
   std::optional<FunctionTableKey> Key =
-      Implementation->getFunctionKey(CtxID.Value, Name, Parameters);
+      Implementation->getFunctionKey(CtxID.Value, Name, Selector);
   if (!Key)
     return std::nullopt;
 
@@ -2525,13 +2609,13 @@ APINotesReader::getGlobalFunctionSelectorKey(
   return APINotesFunctionSelectorKey{*Key, /*IsCXXMethod=*/false};
 }
 
-void APINotesReader::collectExactFunctionParameterSelectors(
+void APINotesReader::collectFunctionSelectorsForDiagnostics(
     llvm::SmallVectorImpl<APINotesFunctionSelectorKey> &Selectors) {
   if (Implementation->GlobalFunctionTable)
-    Implementation->collectExactFunctionParameterSelectors(
+    Implementation->collectFunctionSelectorsForDiagnostics(
         *Implementation->GlobalFunctionTable, Selectors);
   if (Implementation->CXXMethodTable)
-    Implementation->collectExactFunctionParameterSelectors(
+    Implementation->collectFunctionSelectorsForDiagnostics(
         *Implementation->CXXMethodTable, Selectors);
 }
 
