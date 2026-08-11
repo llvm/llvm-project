@@ -777,9 +777,15 @@ bool xegpu::requirePacked(const xegpu::DistributeLayoutAttr layout) {
   if (!layout)
     return false;
   auto laneData = layout.getEffectiveLaneDataAsInt();
-  if (laneData.size() != 2)
+  // Packing (VNNI) applies to the innermost 2 dims. A >2D layout is accepted
+  // only when its leading (batch) dims are unit; packed iff lane_data[rank-2]
+  // (the second-to-last, "col") dim is not 1.
+  if (laneData.size() < 2)
     return false;
-  return laneData[0] != 1;
+  for (int64_t d : ArrayRef<int64_t>(laneData).drop_back(2))
+    if (d != 1)
+      return false;
+  return laneData[laneData.size() - 2] != 1;
 }
 
 bool xegpu::requireTranspose(const xegpu::DistributeLayoutAttr layout,
@@ -791,9 +797,16 @@ bool xegpu::requireTranspose(const xegpu::DistributeLayoutAttr layout,
   if (!layout)
     return false;
   auto laneLayout = layout.getEffectiveLaneLayoutAsInt();
-  if (laneLayout.size() != 2)
+  // The transpose acts on the innermost 2 dims. A >2D layout is accepted only
+  // when its leading (batch) dims are unit; the inner 2 dims must be the
+  // transposed [subgroupSize, 1] form.
+  if (laneLayout.size() < 2)
     return false;
-  return laneLayout[0] == uArch->getSubgroupSize() && laneLayout[1] == 1;
+  for (int64_t d : ArrayRef<int64_t>(laneLayout).drop_back(2))
+    if (d != 1)
+      return false;
+  return laneLayout[laneLayout.size() - 2] == uArch->getSubgroupSize() &&
+         laneLayout[laneLayout.size() - 1] == 1;
 }
 
 // Check if dst shape is an expansion of src shape by inserting unit dimensions.

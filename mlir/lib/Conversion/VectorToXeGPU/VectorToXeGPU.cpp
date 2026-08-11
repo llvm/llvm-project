@@ -130,50 +130,17 @@ static xegpu::CreateNdDescOp createNdDescriptor(PatternRewriter &rewriter,
                                                 Location loc,
                                                 xegpu::TensorDescType descType,
                                                 TypedValue<MemRefType> src) {
-  MemRefType srcTy = src.getType();
+  [[maybe_unused]] MemRefType srcTy = src.getType();
   assert(srcTy.isStrided() && "Expected strided memref type");
-  auto [strides, offset] = srcTy.getStridesAndOffset();
-  bool isStatic = true;
 
-  // Memref is dynamic if any of its shape, offset or strides is dynamic.
-  if (!srcTy.hasStaticShape())
-    isStatic = false;
-
-  if (!ShapedType::isStatic(offset))
-    isStatic = false;
-
-  for (auto stride : strides) {
-    if (!ShapedType::isStatic(stride)) {
-      isStatic = false;
-      break;
-    }
-  }
-
-  xegpu::CreateNdDescOp ndDesc;
-  if (isStatic) {
-    ndDesc = xegpu::CreateNdDescOp::create(rewriter, loc, descType, src);
-  } else {
-    // In case of ranked dynamic memref, instead of passing on the memref,
-    // i64 base address, source's offset, shape and strides have to be
-    // explicitly provided.
-    auto meta = memref::ExtractStridedMetadataOp::create(rewriter, loc, src);
-    auto baseAddrIndex = memref::ExtractAlignedPointerAsIndexOp::create(
-        rewriter, loc, meta.getBaseBuffer());
-    auto offset = meta.getOffset();
-    auto elemByteSize = srcTy.getElementTypeBitWidth() / 8;
-    auto offsetInBytes = arith::MulIOp::create(
-        rewriter, loc, offset,
-        arith::ConstantIndexOp::create(rewriter, loc, elemByteSize));
-    auto adjustedBaseAddr = arith::AddIOp::create(
-        rewriter, loc, baseAddrIndex.getResult(), offsetInBytes);
-    auto adjustedAddrI64 = arith::IndexCastOp::create(
-        rewriter, loc, rewriter.getI64Type(), adjustedBaseAddr);
-    ndDesc = xegpu::CreateNdDescOp::create(
-        rewriter, loc, descType, adjustedAddrI64,
-        meta.getConstifiedMixedSizes(), meta.getConstifiedMixedStrides());
-  }
-
-  return ndDesc;
+  // Keep the memref itself as the source (static or dynamic) rather than
+  // collapsing it to an i64 base address. The memref value carries the base
+  // pointer *and* the (possibly dynamic) offset/shape/strides, which the XeGPU
+  // -> XeVM lowering recovers via memref metadata. In particular, for a >2D
+  // descriptor the leading (batch) offsets stay on the load/store and are
+  // folded into the base pointer at lowering time, so a dynamic-shape source
+  // never needs a per-batch subview (which could not guarantee a valid base).
+  return xegpu::CreateNdDescOp::create(rewriter, loc, descType, src);
 }
 
 // Adjusts the strides of a memref according to a given permutation map for

@@ -44,28 +44,39 @@ using namespace mlir;
 
 namespace {
 
-/// Get the 2D lane data from a tensor desc type if it exists.
+/// Get the 2D lane data from a tensor desc type if it exists. The transpose
+/// optimization acts on the innermost 2 dims; a >2D descriptor is accepted only
+/// when its leading (batch) dims are unit, in which case the inner 2 dims are
+/// returned.
 static std::optional<SmallVector<int64_t>>
 getMaybeLaneData(xegpu::TensorDescType tdescType) {
   auto layout = tdescType.getLayoutAttr();
   if (!layout)
     return std::nullopt;
   auto laneData = layout.getEffectiveLaneDataAsInt();
-  if (laneData.size() != 2)
+  if (laneData.size() < 2)
     return std::nullopt;
-  return laneData;
+  for (int64_t d : ArrayRef<int64_t>(laneData).drop_back(2))
+    if (d != 1)
+      return std::nullopt;
+  return SmallVector<int64_t>(laneData.end() - 2, laneData.end());
 }
 
-/// Get the 2D lane layout from a tensor desc type if it exists.
+/// Get the 2D lane layout from a tensor desc type if it exists. As with
+/// getMaybeLaneData, a >2D descriptor with unit leading dims yields its
+/// inner 2.
 static std::optional<SmallVector<int64_t>>
 getMaybeLaneLayout(xegpu::TensorDescType tdescType) {
   auto layout = tdescType.getLayoutAttr();
   if (!layout)
     return std::nullopt;
   auto laneLayout = layout.getEffectiveLaneLayoutAsInt();
-  if (laneLayout.size() != 2)
+  if (laneLayout.size() < 2)
     return std::nullopt;
-  return laneLayout;
+  for (int64_t d : ArrayRef<int64_t>(laneLayout).drop_back(2))
+    if (d != 1)
+      return std::nullopt;
+  return SmallVector<int64_t>(laneLayout.end() - 2, laneLayout.end());
 }
 
 /// A layout can be optimized if its lane layout is transposed (lane[0] != 1 &&
@@ -139,15 +150,22 @@ tryOptimize(xegpu::TensorDescType tdescType,
   if (counts.size() != 1 || counts[0] != 1)
     return tdescType;
   int arrayLen = counts[0];
-  int supportedHeight =
-      xegpu::getLargestDivisor(static_cast<int>(requiredShape[0]), heights);
-  int supportedWidth =
-      xegpu::getLargestDivisor(static_cast<int>(requiredShape[1]), widths);
+  // The transpose acts on the innermost 2 dims; any leading dims are unit
+  // batch.
+  int64_t rank = requiredShape.size();
+  int supportedHeight = xegpu::getLargestDivisor(
+      static_cast<int>(requiredShape[rank - 2]), heights);
+  int supportedWidth = xegpu::getLargestDivisor(
+      static_cast<int>(requiredShape[rank - 1]), widths);
   // If no supported height or width found, return the original type.
   if (supportedHeight == -1 || supportedWidth == -1)
     return tdescType;
 
-  SmallVector<int64_t> supportedShape = {supportedHeight, supportedWidth};
+  // Preserve leading (unit) batch dims; only the inner 2 dims are reshaped.
+  SmallVector<int64_t> supportedShape(requiredShape.begin(),
+                                      requiredShape.end() - 2);
+  supportedShape.push_back(supportedHeight);
+  supportedShape.push_back(supportedWidth);
   auto ctx = tdescType.getContext();
   auto origLayout = tdescType.getLayoutAttr();
   auto laneLayoutI64 = origLayout.getEffectiveLaneLayoutAsInt();
@@ -156,7 +174,9 @@ tryOptimize(xegpu::TensorDescType tdescType,
 
   xegpu::LayoutAttr newLayout = xegpu::LayoutAttr::get(
       ctx, /*lane_layout=*/DenseI32ArrayAttr::get(ctx, laneLayoutI32),
-      /*lane_data=*/DenseI32ArrayAttr::get(ctx, {1, 1}),
+      /*lane_data=*/
+      DenseI32ArrayAttr::get(ctx,
+                             SmallVector<int32_t>(laneLayoutI32.size(), 1)),
       /*order=*/origLayout.getOrder());
 
   // Array length can not be larger than 1 for transpose case.
@@ -201,6 +221,7 @@ static Value generateLoads(ConversionPatternRewriter &rewriter,
                            xegpu::LoadNdOp origLoadOp) {
   Location loc = data.getLoc();
   assert(offsets.size() >= 2 && "Expecting at least 2 offsets for 2D LoadNdOp");
+  int64_t rank = data.getType().getRank();
   Value offsetDim0 = convertToValue(rewriter, loc, offsets[offsets.size() - 2]);
   Value offsetDim1 = convertToValue(rewriter, loc, offsets[offsets.size() - 1]);
   SmallVector<int64_t> supportedShape(newTensorDesc.getType().getShape());
@@ -209,10 +230,14 @@ static Value generateLoads(ConversionPatternRewriter &rewriter,
   auto shapeRatio = computeShapeRatio(data.getType().getShape(),
                                       supportedShape)
                         .value(); // `ratio` must be defined if we reach here.
-  for (int64_t h = 0; h < shapeRatio[0]; ++h) {
-    for (int64_t w = 0; w < shapeRatio[1]; ++w) {
-      int64_t localOffsetDim0 = h * supportedShape[0];
-      int64_t localOffsetDim1 = w * supportedShape[1];
+  // The transpose reshapes only the innermost 2 dims; any leading (batch) dims
+  // are unit, so their offsets pass through unchanged and they are not tiled.
+  int64_t suppDim0 = supportedShape[rank - 2];
+  int64_t suppDim1 = supportedShape[rank - 1];
+  for (int64_t h = 0; h < shapeRatio[rank - 2]; ++h) {
+    for (int64_t w = 0; w < shapeRatio[rank - 1]; ++w) {
+      int64_t localOffsetDim0 = h * suppDim0;
+      int64_t localOffsetDim1 = w * suppDim1;
       Value loadOffsetX = arith::AddIOp::create(
           rewriter, loc, offsetDim0,
           arith::ConstantIndexOp::create(rewriter, loc, localOffsetDim0)
@@ -221,21 +246,28 @@ static Value generateLoads(ConversionPatternRewriter &rewriter,
           rewriter, loc, offsetDim1,
           arith::ConstantIndexOp::create(rewriter, loc, localOffsetDim1)
               .getResult());
+      // Keep the leading (batch) offsets; replace only the inner 2.
+      SmallVector<OpFoldResult> loadOffsets(offsets.begin(), offsets.end());
+      loadOffsets[loadOffsets.size() - 2] = loadOffsetX;
+      loadOffsets[loadOffsets.size() - 1] = loadOffsetY;
       auto loadOp = xegpu::LoadNdOp::create(
           rewriter, loc,
           VectorType::get(supportedShape, data.getType().getElementType()),
-          newTensorDesc, ArrayRef<OpFoldResult>{loadOffsetX, loadOffsetY},
-          origLoadOp.getPackedAttr(), origLoadOp.getTransposeAttr(),
-          origLoadOp.getL1HintAttr(), origLoadOp.getL2HintAttr(),
-          origLoadOp.getL3HintAttr(), origLoadOp.getLayoutAttr());
+          newTensorDesc, loadOffsets, origLoadOp.getPackedAttr(),
+          origLoadOp.getTransposeAttr(), origLoadOp.getL1HintAttr(),
+          origLoadOp.getL2HintAttr(), origLoadOp.getL3HintAttr(),
+          origLoadOp.getLayoutAttr());
       // Set the layout for the loadOp.
       auto layoutAttr = newTensorDesc.getType().getLayoutAttr();
       loadOp.setAnchorLayout(layoutAttr);
-      // Insert the loaded block into the right position in data.
+      // Insert the loaded block into the right position in data (leading dims
+      // at 0, inner 2 dims at the local tile offset).
+      SmallVector<int64_t> insertPos(rank, 0);
+      insertPos[rank - 2] = localOffsetDim0;
+      insertPos[rank - 1] = localOffsetDim1;
+      SmallVector<int64_t> insertStrides(rank, 1);
       auto insertOp = vector::InsertStridedSliceOp::create(
-          rewriter, loc, loadOp.getResult(), data,
-          ArrayRef<int64_t>{localOffsetDim0, localOffsetDim1},
-          ArrayRef<int64_t>{1, 1});
+          rewriter, loc, loadOp.getResult(), data, insertPos, insertStrides);
       // InsertOp must have the same layout as newTensorDesc.
       xegpu::setTemporaryLayout(insertOp->getOpResult(0), layoutAttr);
       data = insertOp.getResult();
@@ -269,48 +301,90 @@ public:
     auto convertType = tryOptimize(tdescTy, targetuArch);
     if (convertType == tdescTy)
       return failure();
-    auto strides = createNdOp.getMixedStrides();
-    auto maybeConstInnerStride = getConstantIntValue(strides.back());
+    Location loc = createNdOp.getLoc();
+    Value source = createNdOp.getSource();
+    auto memrefType = dyn_cast<MemRefType>(source.getType());
+
+    // A fully static memref (static shape and strides) can use the op
+    // accessors directly. A dynamic memref cannot -- getMixedSizes/getMixed
+    // Strides can't represent a dynamic dim that has no SSA operand -- so its
+    // shape/strides are recovered from runtime metadata.
+    auto isStaticMemref = [](MemRefType mt) {
+      if (!mt.hasStaticShape())
+        return false;
+      SmallVector<int64_t> st;
+      int64_t off;
+      return succeeded(mt.getStridesAndOffset(st, off)) &&
+             llvm::none_of(st, ShapedType::isDynamic);
+    };
+    bool dynamicMemref = memrefType && !isStaticMemref(memrefType);
+
+    SmallVector<OpFoldResult> mixedSizes;
+    SmallVector<OpFoldResult> mixedStrides;
+    memref::ExtractStridedMetadataOp meta;
+    if (dynamicMemref) {
+      meta = memref::ExtractStridedMetadataOp::create(rewriter, loc, source);
+      mixedSizes = meta.getConstifiedMixedSizes();
+      mixedStrides = meta.getConstifiedMixedStrides();
+    } else {
+      mixedSizes = createNdOp.getMixedSizes();
+      mixedStrides = createNdOp.getMixedStrides();
+    }
+
+    auto maybeConstInnerStride = getConstantIntValue(mixedStrides.back());
     // Only row-major memrefs are expected for now.
     if (!maybeConstInnerStride || *maybeConstInnerStride != 1)
       return rewriter.notifyMatchFailure(
           createNdOp, "Expecting row-major memref for transpose optimization.");
-    Value source = createNdOp.getSource();
     auto optionalLaneData = getMaybeLaneData(tdescTy);
     assert(optionalLaneData && "Expected 2D lane data");
     auto laneData = optionalLaneData.value();
     int64_t innerLaneData = laneData[1];
-    auto memrefType = dyn_cast<MemRefType>(source.getType());
     // Inner dimension of the shape must be adjusted based on innerLaneData.
-    SmallVector<OpFoldResult> modifiedShape(createNdOp.getMixedSizes());
+    SmallVector<OpFoldResult> modifiedShape(mixedSizes);
     modifiedShape.back() = divideByConstant(
-        rewriter, createNdOp.getLoc(),
-        convertToValue(rewriter, createNdOp.getLoc(), modifiedShape.back()),
+        rewriter, loc, convertToValue(rewriter, loc, modifiedShape.back()),
         innerLaneData);
-    // Similarly, second to last stride must be adjusted.
-    assert(strides.size() >= 2 &&
+    // Repacking narrow elements into wider ones (f16 -> i32) reinterprets the
+    // innermost dim, so every stride *except* the innermost (which stays 1)
+    // counts the wider element and must be divided by innerLaneData. This
+    // includes the pitch (second-to-last) and, for a >2D descriptor, the
+    // leading (batch) strides -- the latter are read back by the XeVM load/
+    // store fold, which multiplies them by the *repacked* element byte size,
+    // so they must already be in repacked-element units. (For a 2D descriptor
+    // this is exactly the second-to-last stride, matching prior behavior.)
+    assert(mixedStrides.size() >= 2 &&
            "Expected at least 2 strides for CreateNdDescOp");
-    SmallVector<OpFoldResult> modifiedStrides(strides);
-    modifiedStrides[modifiedStrides.size() - 2] = divideByConstant(
-        rewriter, createNdOp.getLoc(),
-        convertToValue(rewriter, createNdOp.getLoc(),
-                       modifiedStrides[modifiedStrides.size() - 2]),
-        innerLaneData);
+    SmallVector<OpFoldResult> modifiedStrides(mixedStrides);
+    for (size_t i = 0; i + 1 < modifiedStrides.size(); ++i)
+      modifiedStrides[i] = divideByConstant(
+          rewriter, loc, convertToValue(rewriter, loc, modifiedStrides[i]),
+          innerLaneData);
 
-    // If the source is a static memref, we need to extract the pointer to
-    // base address.
-    if (memrefType && memrefType.hasStaticShape()) {
-      auto extractOp = memref::ExtractAlignedPointerAsIndexOp::create(
-          rewriter, createNdOp.getLoc(), source);
-      source = arith::IndexCastOp::create(rewriter, createNdOp.getLoc(),
-                                          rewriter.getI64Type(),
-                                          extractOp.getResult())
-                   .getResult();
+    // The repacked shape/strides differ from the memref's own layout, so a
+    // memref source must be lowered to an i64 base pointer -- specifying
+    // explicit shape/strides on a memref create_nd is not allowed.
+    if (memrefType) {
+      Value baseIdx;
+      if (dynamicMemref) {
+        // Base = aligned base pointer + structural offset (in bytes).
+        Value alignedPtr = memref::ExtractAlignedPointerAsIndexOp::create(
+            rewriter, loc, meta.getBaseBuffer());
+        Value elemBytes = arith::ConstantIndexOp::create(
+            rewriter, loc, memrefType.getElementTypeBitWidth() / 8);
+        Value offBytes =
+            arith::MulIOp::create(rewriter, loc, meta.getOffset(), elemBytes);
+        baseIdx = arith::AddIOp::create(rewriter, loc, alignedPtr, offBytes);
+      } else {
+        baseIdx = memref::ExtractAlignedPointerAsIndexOp::create(rewriter, loc,
+                                                                 source);
+      }
+      source = arith::IndexCastOp::create(rewriter, loc, rewriter.getI64Type(),
+                                          baseIdx);
     }
     // Create a new CreateNdDescOp with the modified shape and converted type.
     auto newCreateNdDescOp = xegpu::CreateNdDescOp::create(
-        rewriter, createNdOp.getLoc(), convertType, source, modifiedShape,
-        modifiedStrides);
+        rewriter, loc, convertType, source, modifiedShape, modifiedStrides);
     rewriter.replaceOp(createNdOp, newCreateNdDescOp.getResult());
     return success();
   }

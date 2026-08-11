@@ -44,23 +44,20 @@ gpu.module @create_nd_tdesc {
         // CHECK: %[[VAR19:.*]] = vector.insert %[[PITCH2]], %[[VAR18]] [4] : i32 into vector<8xi32>
         %src_tdesc = xegpu.create_nd_tdesc %srcce : memref<16x32xf32> -> !xegpu.tensor_desc<8x16xf32>
 
-        // CHECK: %[[C1:.*]] = arith.constant 1 : index
-        %c1 = arith.constant 1 : index
-        // CHECK: %[[C64:.*]] = arith.constant 64 : index
-        %size_x = arith.constant 64 : index
-        // CHECK: %[[C16:.*]] = arith.constant 16 : index
-        %BLOCK_DMODEL = arith.constant 16 : index
+        // A dynamic memref uses the bare form: its shape/strides are recovered
+        // from the memref via extract_strided_metadata (no explicit operands).
         // CHECK: %[[CST_3:.*]] = arith.constant dense<0> : vector<8xi32>
-        // CHECK: %[[SHAPE_W3:.*]] = arith.index_cast %[[C16]] : index to i32
-        // CHECK: %[[SHAPE_H3:.*]] = arith.index_cast %[[C64]] : index to i32
-        // CHECK: %[[PITCH3:.*]] = arith.index_cast %[[C16]] : index to i32
+        // CHECK: %{{.*}}, %{{.*}}, %[[SIZES:.*]]:2, %[[STRIDES:.*]]:2 = memref.extract_strided_metadata %[[DYN]] : memref<?x?xf16>
+        // CHECK: %[[SHAPE_W3:.*]] = arith.index_cast %[[SIZES]]#1 : index to i32
+        // CHECK: %[[SHAPE_H3:.*]] = arith.index_cast %[[SIZES]]#0 : index to i32
+        // CHECK: %[[PITCH3:.*]] = arith.index_cast %[[STRIDES]]#0 : index to i32
         // CHECK: %[[VAR25:.*]] = vector.bitcast %[[CST_3]] : vector<8xi32> to vector<4xi64>
-        // CHECK: %[[VAR26:.*]] = vector.insert %[[DYN_ADDR_OFFSET:.*]], %[[VAR25]] [0] : i64 into vector<4xi64>
+        // CHECK: %[[VAR26:.*]] = vector.insert %{{.*}}, %[[VAR25]] [0] : i64 into vector<4xi64>
         // CHECK: %[[VAR27:.*]] = vector.bitcast %[[VAR26]] : vector<4xi64> to vector<8xi32>
         // CHECK: %[[VAR28:.*]] = vector.insert %[[SHAPE_W3]], %[[VAR27]] [2] : i32 into vector<8xi32>
         // CHECK: %[[VAR29:.*]] = vector.insert %[[SHAPE_H3]], %[[VAR28]] [3] : i32 into vector<8xi32>
         // CHECK: %[[VAR30:.*]] = vector.insert %[[PITCH3]], %[[VAR29]] [4] : i32 into vector<8xi32>
-        %dyn_tdesc  = xegpu.create_nd_tdesc %dyn, shape: [%size_x, %BLOCK_DMODEL], strides: [%BLOCK_DMODEL, %c1] : memref<?x?xf16> -> !xegpu.tensor_desc<16x16xf16>
+        %dyn_tdesc  = xegpu.create_nd_tdesc %dyn : memref<?x?xf16> -> !xegpu.tensor_desc<16x16xf16>
         gpu.return
     }
 }

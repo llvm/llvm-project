@@ -51,10 +51,15 @@ static constexpr int32_t executionSize{16};
 
 // Offsets to individual fields of the 8xi32 layout nd tensor descriptor.
 enum class NdTdescOffset : uint32_t {
-  BasePtr = 0,    // Base pointer (i64)
-  BaseShapeW = 2, // Base shape width (i32)
-  BaseShapeH = 3, // Base shape height (i32)
-  BasePitch = 4,  // Base pitch/stride of dim rank-2 (i32)
+  BasePtr = 0,        // Base pointer (i64)
+  BaseShapeW = 2,     // Base shape width (i32)
+  BaseShapeH = 3,     // Base shape height (i32)
+  BasePitch = 4,      // Base pitch/stride of dim rank-2 (i32)
+  LeadingStride0 = 5, // Element strides of the leading (batch) dims of a >2D
+  LeadingStride1 = 6, // descriptor (i32). The load/store/prefetch lowering
+  LeadingStride2 = 7, // uses these to fold the batch offsets into the base
+                      // pointer, keeping the 2D-block surface at the innermost
+                      // matrix. Left at 0 for 2D descriptors.
 };
 
 static int32_t getNumericXeVMAddrSpace(xegpu::MemorySpace xeGpuMemspace) {
@@ -232,28 +237,61 @@ class CreateNdDescToXeVMPattern
     Value baseShapeH;
 
     // Source can be a memref or a pointer (ui64, ui32, i64 or i32).
-    SmallVector<OpFoldResult> mixedSizes = op.getMixedSizes();
-    SmallVector<OpFoldResult> mixedStrides = op.getMixedStrides();
-    // Descriptor shape is expected to be 2D.
-    int64_t rank = mixedSizes.size();
     auto sourceTy = source.getType();
     auto sourceMemrefTy = dyn_cast<MemRefType>(sourceTy);
+
+    // Shape and strides. For a memref source they are recovered from the memref
+    // value itself (a dynamic memref carries them at runtime and does not
+    // attach them as op operands); otherwise they come from the op's explicit
+    // operands.
+    SmallVector<OpFoldResult> mixedSizes;
+    SmallVector<OpFoldResult> mixedStrides;
+    memref::ExtractStridedMetadataOp srcMeta;
+    // Lazily materialize memref metadata (base buffer, offset, sizes, strides).
+    auto getSrcMeta = [&]() -> memref::ExtractStridedMetadataOp {
+      if (!srcMeta)
+        srcMeta =
+            memref::ExtractStridedMetadataOp::create(rewriter, loc, source);
+      return srcMeta;
+    };
     // If source is a memref, we need to extract the aligned pointer as index.
     // Pointer type is passed as i32 or i64 by type converter.
     if (sourceMemrefTy) {
       if (!sourceMemrefTy.hasRank()) {
         return rewriter.notifyMatchFailure(op, "Expected ranked Memref.");
       }
+      SmallVector<int64_t> staticStrides;
+      int64_t staticOffset;
+      if (failed(
+              sourceMemrefTy.getStridesAndOffset(staticStrides, staticOffset)))
+        return rewriter.notifyMatchFailure(op, "Expected strided Memref.");
+      // A memref is authoritative for its own shape/strides (explicit
+      // shape/strides on a memref create_nd are deprecated). A fully static
+      // memref yields constants directly; a dynamic one recovers its dynamic
+      // dims from runtime metadata (getConstified* keeps static dims as attrs).
+      bool allStatic = sourceMemrefTy.hasStaticShape() &&
+                       llvm::none_of(staticStrides, ShapedType::isDynamic);
+      if (allStatic) {
+        mixedSizes = op.getMixedSizes();
+        mixedStrides = op.getMixedStrides();
+      } else {
+        mixedSizes = getSrcMeta().getConstifiedMixedSizes();
+        mixedStrides = getSrcMeta().getConstifiedMixedStrides();
+      }
       // Access adaptor after failure check to avoid rolling back generated code
       // for materialization cast.
       baseAddr = adaptor.getSource();
     } else {
+      mixedSizes = op.getMixedSizes();
+      mixedStrides = op.getMixedStrides();
       baseAddr = adaptor.getSource();
       if (baseAddr.getType() != i64Ty) {
         // Pointer type may be i32. Cast to i64 if needed.
         baseAddr = arith::ExtUIOp::create(rewriter, loc, i64Ty, baseAddr);
       }
     }
+    // Descriptor shape rank.
+    int64_t rank = mixedSizes.size();
     // 1D tensor descriptor is just the base address.
     if (rank == 1) {
       rewriter.replaceOp(op, baseAddr);
@@ -288,6 +326,27 @@ class CreateNdDescToXeVMPattern
     payload =
         vector::InsertOp::create(rewriter, loc, basePitch, payload,
                                  static_cast<int>(NdTdescOffset::BasePitch));
+    // For a >2D descriptor, encode the leading (batch) dim element strides into
+    // the spare payload slots. The load/store/prefetch lowering folds the batch
+    // offsets into the base pointer using these, so the batch position stays
+    // out of the 2D-block surface (which remains the innermost matrix computed
+    // above). This applies to both memref sources and integer (pointer) sources
+    // with explicit shape/strides -- e.g. a batched descriptor whose source was
+    // rewritten to an i64 base by the transpose peephole; in that case the
+    // strides come from the op's explicit operands. 2D descriptors leave these
+    // slots at 0 and the load/store path skips reading them (2D path
+    // unchanged).
+    if (rank > 2) {
+      if (rank - 2 > 3)
+        return rewriter.notifyMatchFailure(
+            op, "Batched nd descriptor supports at most 3 leading dims.");
+      for (int64_t d = 0; d < rank - 2; ++d) {
+        Value leadingStride = createOffset(mixedStrides, d);
+        payload = vector::InsertOp::create(
+            rewriter, loc, leadingStride, payload,
+            static_cast<int>(NdTdescOffset::LeadingStride0) + d);
+      }
+    }
     rewriter.replaceOp(op, payload);
     return success();
   }
@@ -387,9 +446,8 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
       Value basePitch = vector::ExtractOp::create(
           rewriter, loc, tdesc, static_cast<int>(NdTdescOffset::BasePitch));
 
-      // For rank > 2, leading (batch) dim offsets should be 0 after unrolling
-      // (batch is baked into the base pointer via memref.subview during
-      // blocking). Use only the last 2 offsets for the 2D block operation.
+      // x = innermost offset; y = second-to-last offset. These address the 2D
+      // tile within the innermost-matrix surface.
       Value offsetW = getValueOrCreateConstantIntOp(rewriter, loc,
                                                     mixedOffsets[tileRank - 1]);
       offsetW = getValueOrCreateCastToIndexLike(rewriter, loc,
@@ -398,6 +456,38 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
                                                     mixedOffsets[tileRank - 2]);
       offsetH = getValueOrCreateCastToIndexLike(rewriter, loc,
                                                 rewriter.getI32Type(), offsetH);
+      // For a >2D descriptor, fold the leading (batch) offsets into the base
+      // pointer: basePtr += (sum_d offset[d] * leadingStride[d]) * elemBytes.
+      // The batch element strides were encoded into the payload at create time
+      // (see CreateNdDescToXeVMPattern). This keeps the 2D-block surface at the
+      // innermost matrix (so the HW surface-size limits are unaffected) instead
+      // of baking the batch into a (possibly out-of-range) collapsed surface.
+      if (tileRank > 2) {
+        Type i64Ty = rewriter.getI64Type();
+        Value batchElemOffset;
+        for (int64_t d = 0; d < tileRank - 2; ++d) {
+          Value off =
+              getValueOrCreateConstantIntOp(rewriter, loc, mixedOffsets[d]);
+          off = getValueOrCreateCastToIndexLike(rewriter, loc, i64Ty, off);
+          Value strideI32 = vector::ExtractOp::create(
+              rewriter, loc, tdesc,
+              static_cast<int>(NdTdescOffset::LeadingStride0) + d);
+          Value stride =
+              arith::ExtUIOp::create(rewriter, loc, i64Ty, strideI32);
+          Value term = arith::MulIOp::create(rewriter, loc, off, stride);
+          batchElemOffset =
+              batchElemOffset
+                  ? arith::AddIOp::create(rewriter, loc, batchElemOffset, term)
+                        .getResult()
+                  : term;
+        }
+        Value elemByteSizeI64 =
+            arith::ConstantIntOp::create(rewriter, loc, i64Ty, elemBitSize / 8);
+        Value batchByteOffset = arith::MulIOp::create(
+            rewriter, loc, batchElemOffset, elemByteSizeI64);
+        basePtr =
+            arith::AddIOp::create(rewriter, loc, basePtr, batchByteOffset);
+      }
       // Convert base pointer (i64) to LLVM pointer type.
       Value basePtrLLVM =
           LLVM::IntToPtrOp::create(rewriter, loc, ptrTypeLLVM, basePtr);
