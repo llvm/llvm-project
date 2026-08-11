@@ -1309,7 +1309,7 @@ static llvm::hlsl::SemanticSignatureElement createSemanticSignatureElement(
   Element.SemanticName = Semantic->getAttrName()->getName();
   Element.CompType = getSignatureComponentType(CGM, Shape.RowType);
   Element.SemanticKind = getSignatureSemanticKind(Element.SemanticName);
-  Element.Rows = Shape.Rows;
+  Element.Rows = Shape.getNumRows();
   Element.Cols = static_cast<uint8_t>(Shape.Cols);
   // All members with a default value will be filled at a later stage, either
   // during packing or analysis of usage
@@ -1317,7 +1317,7 @@ static llvm::hlsl::SemanticSignatureElement createSemanticSignatureElement(
   // FIXME #189762: Element.InterpMode is to be set
 
   uint32_t FirstSemanticIndex = Index.value_or(0);
-  for (uint32_t I = 0; I < Shape.Rows; ++I)
+  for (uint32_t I = 0; I < Element.Rows; ++I)
     Element.SemanticIndices.push_back(FirstSemanticIndex + I);
 
   return Element;
