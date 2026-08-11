@@ -122,8 +122,8 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` check by treating
   `std::array` the same as built-in arrays when `IgnoreArrays` option is enabled.
   
-- Fixed {doc}`cppcoreguidelines-use-enum-class
-  <clang-tidy/checks/cppcoreguidelines/use-enum-class>` suggesting `enum class` for unnamed enums (which is ill-formed).
+- Improved {doc}`cppcoreguidelines-use-enum-class
+  <clang-tidy/checks/cppcoreguidelines/use-enum-class>` check by omitting unnamed enums from the `enum class` requirement, as previously the check suggested users an ill-formed fix.
 
 - Improved {doc}`misc-redundant-expression
   <clang-tidy/checks/misc/redundant-expression>` by fixing false positives in
