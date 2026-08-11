@@ -3273,9 +3273,9 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
     }
   }
 
-  // Return the right resolution, if there is one.  Explicit intrinsics
-  // are preferred, then non-elements specifics, then elementals, and
-  // lastly structure constructors.
+  // Return the right resolution, if there is one. Non Elemental specifics
+  // are preferred, then elementals, then explicit intrinsics, and lastly 
+  // structure constructors.
   if (nonElemental) {
     return {&AccessSpecific(symbol, *nonElemental), false};
   } else if (elemental) {
