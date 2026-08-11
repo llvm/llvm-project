@@ -3658,15 +3658,13 @@ genScanOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   mlir::Value indexVal = fir::getBase(region.getArgument(0));
   lower::pft::Evaluation *doConstructEval = eval.parentConstruct;
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-  lower::pft::Evaluation *doLoop = &doConstructEval->getFirstNestedEvaluation();
-  auto *doStmt = doLoop->getIf<parser::NonLabelDoStmt>();
-  assert(doStmt && "Expected do loop to be in the nested evaluation");
-  const auto &loopControl =
-      std::get<std::optional<parser::LoopControl>>(doStmt->t);
-  const parser::LoopControl::Bounds *bounds =
-      std::get_if<parser::LoopControl::Bounds>(&loopControl->u);
-  mlir::Operation *storeOp =
-      setLoopVar(converter, loc, indexVal, bounds->Name().thing.symbol);
+  // Fetch the associated DO loop's induction variable symbol.
+  // getIterationVariableSymbol safely handles a missing loop control or a
+  // non-bounds DO (e.g. DO WHILE) by returning null, rather than dereferencing
+  // the optional loop control and the bounds variant unconditionally.
+  semantics::Symbol *loopVarSym = getIterationVariableSymbol(*doConstructEval);
+  assert(loopVarSym && "Expected the scan loop's iteration variable symbol");
+  mlir::Operation *storeOp = setLoopVar(converter, loc, indexVal, loopVarSym);
   firOpBuilder.setInsertionPointAfter(storeOp);
   return scanOp;
 }
