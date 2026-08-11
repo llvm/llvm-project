@@ -13864,6 +13864,51 @@ SDValue TargetLowering::expandCttzElts(SDNode *Node, SelectionDAG &DAG) const {
   return DAG.getZExtOrTrunc(Sub, DL, VT);
 }
 
+SDValue TargetLowering::expandVectorMatch(SDNode *N, SelectionDAG &DAG) const {
+  SDLoc DL(N);
+  SDValue Source = N->getOperand(0);
+  SDValue Needle = N->getOperand(1);
+  SDValue Mask = N->getOperand(2);
+  EVT SourceVT = Source.getValueType();
+  EVT NeedleVT = Needle.getValueType();
+  EVT ResVT = N->getValueType(0);
+  EVT CmpVT =
+      getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), SourceVT);
+
+  assert(NeedleVT.isFixedLengthVector() && "Needle must be a fixed vector");
+
+  SDValue Ret = DAG.getConstant(0, DL, CmpVT);
+  EVT NeedleEltVT = NeedleVT.getVectorElementType();
+  for (unsigned I = 0, E = NeedleVT.getVectorNumElements(); I != E; ++I) {
+    SDValue Splat;
+    if (NeedleVT == SourceVT) {
+      // Prefer a shuffle over scalar extracts + splat for fixed vectors.
+      Splat = DAG.getVectorShuffle(
+          SourceVT, DL, Needle, DAG.getUNDEF(SourceVT),
+          SmallVector<int>(NeedleVT.getVectorNumElements(), I));
+    } else {
+      SDValue NeedleElt = DAG.getExtractVectorElt(DL, NeedleEltVT, Needle, I);
+      Splat = DAG.getNode(ISD::SPLAT_VECTOR, DL, SourceVT, NeedleElt);
+    }
+    SDValue Cmp = DAG.getSetCC(DL, CmpVT, Source, Splat, ISD::SETEQ);
+    Ret = DAG.getNode(ISD::OR, DL, CmpVT, Ret, Cmp);
+  }
+
+  EVT UseVT = ResVT;
+  // If the result is immediately truncated, only extend to that type (to avoid
+  // unnecessary sign/zero extends).
+  if (N->hasOneUse() && N->user_begin()->getOpcode() == ISD::TRUNCATE)
+    UseVT = N->user_begin()->getValueType(0);
+
+  Mask = DAG.getBoolExtOrTrunc(Mask, DL, UseVT, Mask.getValueType());
+  Ret = DAG.getBoolExtOrTrunc(Ret, DL, UseVT, Ret.getValueType());
+
+  Ret = DAG.getNode(ISD::AND, DL, UseVT, Ret, Mask);
+  if (UseVT != ResVT)
+    Ret = DAG.getNode(ISD::ANY_EXTEND, DL, ResVT, Ret);
+  return Ret;
+}
+
 SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,
                                                SelectionDAG &DAG) const {
   SDLoc DL(N);

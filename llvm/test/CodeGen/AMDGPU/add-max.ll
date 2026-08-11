@@ -5,8 +5,9 @@
 define amdgpu_ps float @add_max_u32_vvv(i32 %a, i32 %b, i32 %c) {
 ; GCN-LABEL: add_max_u32_vvv:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
 ; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    v_add_max_u32 v0, v0, v1, v2
 ; GCN-NEXT:    ; return to shader part epilog
@@ -19,8 +20,9 @@ define amdgpu_ps float @add_max_u32_vvv(i32 %a, i32 %b, i32 %c) {
 define amdgpu_ps float @add_max_u32_svv(i32 inreg %a, i32 %b, i32 %c) {
 ; GCN-LABEL: add_max_u32_svv:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
 ; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    v_add_max_u32 v0, s0, v0, v1
 ; GCN-NEXT:    ; return to shader part epilog
@@ -33,8 +35,9 @@ define amdgpu_ps float @add_max_u32_svv(i32 inreg %a, i32 %b, i32 %c) {
 define amdgpu_ps float @add_max_u32_ssv(i32 inreg %a, i32 inreg %b, i32 %c) {
 ; GCN-LABEL: add_max_u32_ssv:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
 ; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    v_add_max_u32 v0, s0, s1, v0
 ; GCN-NEXT:    ; return to shader part epilog
@@ -47,8 +50,9 @@ define amdgpu_ps float @add_max_u32_ssv(i32 inreg %a, i32 inreg %b, i32 %c) {
 define amdgpu_ps float @add_max_u32_sss(i32 inreg %a, i32 inreg %b, i32 inreg %c) {
 ; SDAG-LABEL: add_max_u32_sss:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
+; SDAG-NEXT:    s_mov_b64 s[64:65], 0
 ; SDAG-NEXT:    v_nop
+; SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-NEXT:    s_not_b32 s3, s1
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
@@ -61,8 +65,9 @@ define amdgpu_ps float @add_max_u32_sss(i32 inreg %a, i32 inreg %b, i32 inreg %c
 ;
 ; GISEL-LABEL: add_max_u32_sss:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
+; GISEL-NEXT:    s_mov_b64 s[64:65], 0
 ; GISEL-NEXT:    v_nop
+; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-NEXT:    v_add_nc_u32_e64 v0, s0, s1 clamp
 ; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
@@ -79,8 +84,9 @@ define amdgpu_ps float @add_max_u32_sss(i32 inreg %a, i32 inreg %b, i32 inreg %c
 define amdgpu_ps float @add_max_u32_vsi(i32 %a, i32 inreg %b) {
 ; GCN-LABEL: add_max_u32_vsi:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
 ; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    v_add_max_u32 v0, v0, s0, 4
 ; GCN-NEXT:    ; return to shader part epilog
@@ -93,8 +99,9 @@ define amdgpu_ps float @add_max_u32_vsi(i32 %a, i32 inreg %b) {
 define amdgpu_ps float @add_max_u32_svl(i32 inreg %a, i32 %b) {
 ; GCN-LABEL: add_max_u32_svl:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
 ; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    v_add_max_u32 v0, s0, v0, 0x64
 ; GCN-NEXT:    ; return to shader part epilog
@@ -107,8 +114,9 @@ define amdgpu_ps float @add_max_u32_svl(i32 inreg %a, i32 %b) {
 define amdgpu_ps float @add_max_u32_slv(i32 inreg %a, i32 %b, i32 %c) {
 ; GCN-LABEL: add_max_u32_slv:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
 ; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    v_add_max_u32 v0, s0, v0, v1
 ; GCN-NEXT:    ; return to shader part epilog
@@ -121,8 +129,9 @@ define amdgpu_ps float @add_max_u32_slv(i32 inreg %a, i32 %b, i32 %c) {
 define amdgpu_ps float @add_max_i32_vvv(i32 %a, i32 %b, i32 %c) {
 ; GCN-LABEL: add_max_i32_vvv:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
 ; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    v_add_max_i32 v0, v0, v1, v2
 ; GCN-NEXT:    ; return to shader part epilog
@@ -135,8 +144,9 @@ define amdgpu_ps float @add_max_i32_vvv(i32 %a, i32 %b, i32 %c) {
 define amdgpu_ps float @add_min_u32_vvv(i32 %a, i32 %b, i32 %c) {
 ; GCN-LABEL: add_min_u32_vvv:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
 ; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    v_add_min_u32 v0, v0, v1, v2
 ; GCN-NEXT:    ; return to shader part epilog
@@ -149,8 +159,9 @@ define amdgpu_ps float @add_min_u32_vvv(i32 %a, i32 %b, i32 %c) {
 define amdgpu_ps float @add_min_i32_vvv(i32 %a, i32 %b, i32 %c) {
 ; GCN-LABEL: add_min_i32_vvv:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
 ; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    v_add_min_i32 v0, v0, v1, v2
 ; GCN-NEXT:    ; return to shader part epilog
@@ -163,8 +174,9 @@ define amdgpu_ps float @add_min_i32_vvv(i32 %a, i32 %b, i32 %c) {
 define amdgpu_ps float @add_max_v2u16_vvv(<2 x i16> %a, <2 x i16> %b, <2 x i16> %c) {
 ; GCN-LABEL: add_max_v2u16_vvv:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
 ; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    v_pk_add_max_u16 v0, v0, v1, v2
 ; GCN-NEXT:    ; return to shader part epilog
@@ -177,8 +189,9 @@ define amdgpu_ps float @add_max_v2u16_vvv(<2 x i16> %a, <2 x i16> %b, <2 x i16> 
 define amdgpu_ps float @add_max_v2u16_svv(<2 x i16> inreg %a, <2 x i16> %b, <2 x i16> %c) {
 ; GCN-LABEL: add_max_v2u16_svv:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
 ; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    v_pk_add_max_u16 v0, s0, v0, v1
 ; GCN-NEXT:    ; return to shader part epilog
@@ -191,8 +204,9 @@ define amdgpu_ps float @add_max_v2u16_svv(<2 x i16> inreg %a, <2 x i16> %b, <2 x
 define amdgpu_ps float @add_max_v2u16_ssv(<2 x i16> inreg %a, <2 x i16> inreg %b, <2 x i16> %c) {
 ; GCN-LABEL: add_max_v2u16_ssv:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
 ; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    v_pk_add_max_u16 v0, s0, s1, v0
 ; GCN-NEXT:    ; return to shader part epilog
@@ -205,8 +219,9 @@ define amdgpu_ps float @add_max_v2u16_ssv(<2 x i16> inreg %a, <2 x i16> inreg %b
 define amdgpu_ps float @add_max_v2u16_sss(<2 x i16> inreg %a, <2 x i16> inreg %b, <2 x i16> inreg %c) {
 ; SDAG-LABEL: add_max_v2u16_sss:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
+; SDAG-NEXT:    s_mov_b64 s[64:65], 0
 ; SDAG-NEXT:    v_nop
+; SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-NEXT:    v_pk_add_u16 v0, s0, s1 clamp
 ; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -215,8 +230,9 @@ define amdgpu_ps float @add_max_v2u16_sss(<2 x i16> inreg %a, <2 x i16> inreg %b
 ;
 ; GISEL-LABEL: add_max_v2u16_sss:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
+; GISEL-NEXT:    s_mov_b64 s[64:65], 0
 ; GISEL-NEXT:    v_nop
+; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-NEXT:    v_pk_add_u16 v0, s0, s1 clamp
 ; GISEL-NEXT:    s_and_b32 s1, s2, 0xffff
@@ -240,8 +256,9 @@ define amdgpu_ps float @add_max_v2u16_sss(<2 x i16> inreg %a, <2 x i16> inreg %b
 define amdgpu_ps float @add_max_v2u16_vsi(<2 x i16> %a, <2 x i16> inreg %b) {
 ; GCN-LABEL: add_max_v2u16_vsi:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
 ; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    v_pk_add_max_u16 v0, v0, s0, 4
 ; GCN-NEXT:    ; return to shader part epilog
@@ -254,8 +271,9 @@ define amdgpu_ps float @add_max_v2u16_vsi(<2 x i16> %a, <2 x i16> inreg %b) {
 define amdgpu_ps float @add_max_v2u16_svl(<2 x i16> inreg %a, <2 x i16> %b) {
 ; GCN-LABEL: add_max_v2u16_svl:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
 ; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    v_pk_add_max_u16 v0, s0, v0, 0x650064
 ; GCN-NEXT:    ; return to shader part epilog
@@ -268,8 +286,9 @@ define amdgpu_ps float @add_max_v2u16_svl(<2 x i16> inreg %a, <2 x i16> %b) {
 define amdgpu_ps float @add_max_v2u16_slv(<2 x i16> inreg %a, <2 x i16> %b) {
 ; GCN-LABEL: add_max_v2u16_slv:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
 ; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    v_pk_add_max_u16 v0, 0x640064, s0, v0
 ; GCN-NEXT:    ; return to shader part epilog
@@ -282,8 +301,9 @@ define amdgpu_ps float @add_max_v2u16_slv(<2 x i16> inreg %a, <2 x i16> %b) {
 define amdgpu_ps float @add_max_v2s16_vvv(<2 x i16> %a, <2 x i16> %b, <2 x i16> %c) {
 ; GCN-LABEL: add_max_v2s16_vvv:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
 ; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    v_pk_add_max_i16 v0, v0, v1, v2
 ; GCN-NEXT:    ; return to shader part epilog
@@ -296,8 +316,9 @@ define amdgpu_ps float @add_max_v2s16_vvv(<2 x i16> %a, <2 x i16> %b, <2 x i16> 
 define amdgpu_ps float @add_min_v2u16_vvv(<2 x i16> %a, <2 x i16> %b, <2 x i16> %c) {
 ; GCN-LABEL: add_min_v2u16_vvv:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
 ; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    v_pk_add_min_u16 v0, v0, v1, v2
 ; GCN-NEXT:    ; return to shader part epilog
@@ -310,8 +331,9 @@ define amdgpu_ps float @add_min_v2u16_vvv(<2 x i16> %a, <2 x i16> %b, <2 x i16> 
 define amdgpu_ps float @add_min_v2s16_vvv(<2 x i16> %a, <2 x i16> %b, <2 x i16> %c) {
 ; GCN-LABEL: add_min_v2s16_vvv:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
 ; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    v_pk_add_min_i16 v0, v0, v1, v2
 ; GCN-NEXT:    ; return to shader part epilog
