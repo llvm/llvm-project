@@ -16,7 +16,7 @@
 namespace llvm {
 class FunctionPass;
 
-FunctionPass *createAllocaHoisting();
+FunctionPass *createNVPTXAllocaHoistingLegacyPass();
 } // end namespace llvm
 
 #endif

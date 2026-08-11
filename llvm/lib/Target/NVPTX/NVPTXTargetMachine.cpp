@@ -101,7 +101,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeNVVMReflectLegacyPassPass(PR);
   initializeNVVMIntrRangePass(PR);
   initializeGenericToNVVMLegacyPassPass(PR);
-  initializeNVPTXAllocaHoistingPass(PR);
+  initializeNVPTXAllocaHoistingLegacyPassPass(PR);
   initializeNVPTXAsmPrinterPass(PR);
   initializeNVPTXAssignValidGlobalNamesLegacyPassPass(PR);
   initializeNVPTXAtomicLowerPass(PR);
@@ -395,7 +395,7 @@ void NVPTXPassConfig::addIRPasses() {
 
 bool NVPTXPassConfig::addInstSelector() {
   addPass(createLowerAggrCopies());
-  addPass(createAllocaHoisting());
+  addPass(createNVPTXAllocaHoistingLegacyPass());
   addPass(createNVPTXISelDag(getNVPTXTargetMachine(), getOptLevel()));
   addPass(createNVPTXReplaceImageHandlesPass());
 

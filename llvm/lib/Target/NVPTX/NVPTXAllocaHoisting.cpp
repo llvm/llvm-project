@@ -18,27 +18,7 @@
 #include "llvm/IR/Instructions.h"
 using namespace llvm;
 
-namespace {
-// Hoisting the alloca instructions in the non-entry blocks to the entry
-// block.
-class NVPTXAllocaHoisting : public FunctionPass {
-public:
-  static char ID; // Pass ID
-  NVPTXAllocaHoisting() : FunctionPass(ID) {}
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addPreserved<StackProtector>();
-  }
-
-  StringRef getPassName() const override {
-    return "NVPTX specific alloca hoisting";
-  }
-
-  bool runOnFunction(Function &function) override;
-};
-} // namespace
-
-bool NVPTXAllocaHoisting::runOnFunction(Function &function) {
+static bool hoistAllocas(Function &function) {
   bool functionModified = false;
   Function::iterator I = function.begin();
   Instruction *firstTerminatorInst = (I++)->getTerminator();
@@ -56,11 +36,42 @@ bool NVPTXAllocaHoisting::runOnFunction(Function &function) {
   return functionModified;
 }
 
-char NVPTXAllocaHoisting::ID = 0;
+namespace {
+// Hoisting the alloca instructions in the non-entry blocks to the entry
+// block.
+class NVPTXAllocaHoistingLegacyPass : public FunctionPass {
+public:
+  static char ID; // Pass ID
+  NVPTXAllocaHoistingLegacyPass() : FunctionPass(ID) {}
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addPreserved<StackProtector>();
+  }
+
+  StringRef getPassName() const override {
+    return "NVPTX specific alloca hoisting";
+  }
+
+  bool runOnFunction(Function &function) override {
+    return hoistAllocas(function);
+  }
+};
+} // namespace
+
+char NVPTXAllocaHoistingLegacyPass::ID = 0;
 
 INITIALIZE_PASS(
-    NVPTXAllocaHoisting, "alloca-hoisting",
+    NVPTXAllocaHoistingLegacyPass, "alloca-hoisting",
     "Hoisting alloca instructions in non-entry blocks to the entry block",
     false, false)
 
-FunctionPass *llvm::createAllocaHoisting() { return new NVPTXAllocaHoisting; }
+FunctionPass *llvm::createNVPTXAllocaHoistingLegacyPass() {
+  return new NVPTXAllocaHoistingLegacyPass;
+}
+
+PreservedAnalyses NVPTXAllocaHoistingPass::run(Function &F,
+                                               FunctionAnalysisManager &FAM) {
+  if (!hoistAllocas(F))
+    return PreservedAnalyses::all();
+  return PreservedAnalyses::none().preserveSet<CFGAnalyses>();
+}
