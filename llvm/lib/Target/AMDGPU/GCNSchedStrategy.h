@@ -492,6 +492,9 @@ private:
   bool hasUseRequiringVGPR(ArrayRef<SlotIndex> Src2ReachingDefs,
                            const SmallPtrSetImpl<MachineInstr *> &RewriteSet);
 
+  /// \returns true if operand \p OpIdx of \p MI accepts an AGPR-class register.
+  bool operandAcceptsAGPR(const MachineInstr &MI, unsigned OpIdx) const;
+
 public:
   bool initGCNSchedStage() override;
 
