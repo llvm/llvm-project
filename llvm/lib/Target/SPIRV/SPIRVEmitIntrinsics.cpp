@@ -2684,6 +2684,12 @@ Instruction *SPIRVEmitIntrinsicsImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
                                   B.getInt32(MemSem), I.getValOperand()};
   CallInst *CI = B.CreateCall(FC, Args);
   CI->setCallingConv(CallingConv::SPIR_FUNC);
+  // Keep the metadata, as the other memory instructions lowered here do.
+  // SPIRVCallLowering reads alias.scope/noalias off the call to build the
+  // aliasing decorations, and it runs after this pass, so dropping them here
+  // would silently lose them. insertSpirvDecorations() has already run for the
+  // atomicrmw and does not revisit the call, so nothing is encoded twice.
+  CI->copyMetadata(I);
 
   replaceAllUsesWithAndErase(B, &I, CI);
   return CI;
