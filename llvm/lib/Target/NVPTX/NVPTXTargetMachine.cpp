@@ -108,7 +108,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeNVPTXPromoteParamAlignLegacyPassPass(PR);
   initializeNVPTXMarkKernelPtrsGlobalLegacyPassPass(PR);
   initializeNVPTXLowerAllocaLegacyPassPass(PR);
-  initializeNVPTXLowerUnreachablePass(PR);
+  initializeNVPTXLowerUnreachableLegacyPassPass(PR);
   initializeNVPTXCtorDtorLoweringLegacyPass(PR);
   initializeNVPTXLowerAggrCopiesPass(PR);
   initializeNVPTXProxyRegErasurePass(PR);
@@ -387,8 +387,8 @@ void NVPTXPassConfig::addIRPasses() {
     // Run LowerUnreachable to WAR a ptxas bug. See the commit description of
     // 1ee4d880e8760256c606fe55b7af85a4f70d006d for more details.
     const auto &Options = getNVPTXTargetMachine().Options;
-    addPass(createNVPTXLowerUnreachablePass(Options.TrapUnreachable,
-                                            Options.NoTrapAfterNoreturn));
+    addPass(createNVPTXLowerUnreachableLegacyPass(Options.TrapUnreachable,
+                                                  Options.NoTrapAfterNoreturn));
   }
 }
 
