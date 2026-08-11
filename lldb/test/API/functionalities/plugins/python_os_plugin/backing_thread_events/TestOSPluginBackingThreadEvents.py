@@ -1,6 +1,8 @@
 """
-Test that ProcessWindows keeps working when an OS plugin populates the
-user-facing thread list with virtual threads.
+Test that a process plugin keeps correctly resuming, detaching, and
+reporting events for the real threads backing an OS plugin's virtual
+threads, wherever the OS plugin replaces a real thread in the user-facing
+thread list.
 """
 
 import os
@@ -14,9 +16,8 @@ import lldbsuite.test.lldbutil as lldbutil
 OS_TID = 0x111111111
 
 
-@requireWindows
-@skipIfWindowsAndLLDBServer
-class TestWindowsOSPluginThreads(TestBase):
+@skipIfTargetDoesNotSupportThreads()
+class TestOSPluginBackingThreadEvents(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
@@ -38,12 +39,6 @@ class TestWindowsOSPluginThreads(TestBase):
         target, process, thread, _ = lldbutil.run_to_source_breakpoint(
             self, stop_regex, self.source, launch_info=launch_info
         )
-
-        # These paths only exist in the in-process plugin. LLDB_USE_LLDB_SERVER
-        # is not the only thing that can select lldb-server, so check what we
-        # actually got rather than trusting the decorator.
-        if process.GetPluginName() != "windows":
-            self.skipTest("test covers the in-process Windows process plugin")
 
         # main is core 0; the worker thread keeps a second real thread around.
         self.assertGreaterEqual(process.GetNumThreads(), 2)
@@ -115,6 +110,7 @@ class TestWindowsOSPluginThreads(TestBase):
 
         _, process = self.stop_and_load_os_plugin("// Break here", args=[marker])
 
+        self.assertFalse(os.path.exists(marker), "marker was not yet created")
         self.assertSuccess(process.Detach())
         self.assertState(process.GetState(), lldb.eStateDetached)
 
