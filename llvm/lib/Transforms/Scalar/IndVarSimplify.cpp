@@ -88,6 +88,7 @@ STATISTIC(NumReplaced    , "Number of exit values replaced");
 STATISTIC(NumLFTR        , "Number of loop exit tests replaced");
 STATISTIC(NumElimExt     , "Number of IV sign/zero extends eliminated");
 STATISTIC(NumElimIV      , "Number of congruent IVs eliminated");
+STATISTIC(NumElimOffsetIV, "Number of offset-congruent pointer IVs eliminated");
 
 static cl::opt<ReplaceExitVal> ReplaceExitValue(
     "replexitval", cl::Hidden, cl::init(OnlyCheapRepl),
@@ -2101,6 +2102,7 @@ bool IndVarSimplify::run(Loop *L) {
 
   // Eliminate redundant IV cycles.
   NumElimIV += Rewriter.replaceCongruentIVs(L, DT, DeadInsts, TTI);
+  NumElimOffsetIV += Rewriter.replaceOffsetCongruentIVs(L, DeadInsts);
 
   // Try to convert exit conditions to unsigned and rotate computation
   // out of the loop.  Note: Handles invalidation internally if needed.

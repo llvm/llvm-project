@@ -307,6 +307,13 @@ public:
                       SmallVectorImpl<WeakTrackingVH> &DeadInsts,
                       const TargetTransformInfo *TTI = nullptr);
 
+  /// Replace pointer phis that are provably a constant byte offset apart from
+  /// another pointer phi in the same header with a GEP off that phi, so both
+  /// share a getPointerBase(). Return the number of phis eliminated.
+  LLVM_ABI unsigned
+  replaceOffsetCongruentIVs(Loop *L,
+                            SmallVectorImpl<WeakTrackingVH> &DeadInsts);
+
   /// Return true if the given expression is safe to expand in the sense that
   /// all materialized values are safe to speculate anywhere their operands are
   /// defined, and the expander is capable of expanding the expression.

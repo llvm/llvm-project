@@ -1971,6 +1971,134 @@ SCEVExpander::replaceCongruentIVs(Loop *L, const DominatorTree *DT,
   return NumElim;
 }
 
+/// Constant byte delta (Q - P), or nullopt if no constant one is provable.
+static std::optional<APInt> getConstantPtrDelta(ScalarEvolution &SE,
+                                                const SCEV *P, const SCEV *Q,
+                                                ValueToSCEVMapTy &Hyp) {
+  if (!Hyp.empty()) {
+    P = SCEVParameterRewriter::rewrite(P, SE, Hyp);
+    Q = SCEVParameterRewriter::rewrite(Q, SE, Hyp);
+  }
+  if (const auto *C = dyn_cast<SCEVConstant>(SE.getMinusSCEV(Q, P)))
+    return C->getAPInt();
+  return std::nullopt;
+}
+
+static std::optional<APInt> proveConstPtrOffset(ScalarEvolution &SE, Loop *L,
+                                                PHINode *P, PHINode *Q,
+                                                ValueToSCEVMapTy &Hyp) {
+  BasicBlock *Preheader = L->getLoopPreheader();
+  BasicBlock *Latch = L->getLoopLatch();
+  if (!Preheader || !Latch || P->getType() != Q->getType())
+    return std::nullopt;
+
+  Value *PPre = P->getIncomingValueForBlock(Preheader);
+  Value *QPre = Q->getIncomingValueForBlock(Preheader);
+
+  if (!getConstantPtrDelta(SE, SE.getSCEV(PPre), SE.getSCEV(QPre), Hyp)) {
+    Loop *Parent = L->getParentLoop();
+    auto *PPhi = dyn_cast<PHINode>(PPre);
+    auto *QPhi = dyn_cast<PHINode>(QPre);
+    if (!Parent || !PPhi || !QPhi || PPhi->getParent() != Parent->getHeader() ||
+        QPhi->getParent() != Parent->getHeader() ||
+        !proveConstPtrOffset(SE, Parent, PPhi, QPhi, Hyp))
+      return std::nullopt;
+  }
+
+  if (auto Delta = getConstantPtrDelta(SE, SE.getSCEV(P), SE.getSCEV(Q), Hyp))
+    return Delta;
+
+  // SCEV gave up on these phis, so induct by hand: assume Q == P + C and check
+  // that the backedge values still differ by C.
+  auto C = getConstantPtrDelta(SE, SE.getSCEV(PPre), SE.getSCEV(QPre), Hyp);
+  if (!C)
+    return std::nullopt;
+
+  ValueToSCEVMapTy Trial = Hyp;
+  Trial[Q] =
+      SE.getAddExpr(SCEVParameterRewriter::rewrite(SE.getSCEV(P), SE, Trial),
+                    SE.getConstant(*C));
+  auto Step = getConstantPtrDelta(
+      SE, SE.getSCEV(P->getIncomingValueForBlock(Latch)),
+      SE.getSCEV(Q->getIncomingValueForBlock(Latch)), Trial);
+  if (!Step || *Step != *C)
+    return std::nullopt;
+
+  Hyp[Q] = Trial[Q];
+  return C;
+}
+
+unsigned SCEVExpander::replaceOffsetCongruentIVs(
+    Loop *L, SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
+  BasicBlock *Header = L->getHeader();
+  if (!L->getLoopPreheader() || !L->getLoopLatch())
+    return 0;
+
+  SmallVector<PHINode *, 4> PtrIVs;
+  for (PHINode &Phi : Header->phis())
+    if (Phi.getType()->isPointerTy() && !Phi.use_empty())
+      PtrIVs.push_back(&Phi);
+
+  if (PtrIVs.size() < 2)
+    return 0;
+
+  ValueToSCEVMapTy Hyp;
+  SmallPtrSet<PHINode *, 4> Handled;
+  unsigned NumElim = 0;
+
+  for (PHINode *B : PtrIVs) {
+    if (!Handled.insert(B).second)
+      continue;
+
+    SmallVector<std::pair<PHINode *, APInt>, 2> Group;
+    Group.emplace_back(B, APInt(DL.getIndexTypeSizeInBits(B->getType()), 0));
+    for (PHINode *A : PtrIVs) {
+      if (Handled.count(A) || A->getType() != B->getType())
+        continue;
+      if (auto Delta = proveConstPtrOffset(SE, L, B, A, Hyp)) {
+        Group.emplace_back(A, *Delta);
+        Handled.insert(A);
+      }
+    }
+
+    if (Group.size() < 2)
+      continue;
+
+    auto *Keep = llvm::min_element(Group, [](const auto &A, const auto &B) {
+      return A.second.slt(B.second);
+    });
+    PHINode *Keeper = Keep->first;
+    APInt KeeperOff = Keep->second;
+
+    IRBuilder<> Builder(Header, Header->getFirstInsertionPt());
+    for (auto &Entry : Group) {
+      PHINode *Phi = Entry.first;
+      if (Phi == Keeper)
+        continue;
+
+      Builder.SetCurrentDebugLocation(Phi->getDebugLoc());
+      APInt Off = Entry.second - KeeperOff;
+      Value *NewPtr = Keeper;
+      if (!Off.isZero())
+        NewPtr = Builder.CreatePtrAdd(Keeper,
+                                      ConstantInt::get(Phi->getContext(), Off),
+                                      Phi->getName() + ".off");
+
+      SCEV_DEBUG_WITH_TYPE(DebugType,
+                           dbgs() << "INDVARS: Eliminated offset congruent iv: "
+                                  << *Phi << '\n');
+      SCEV_DEBUG_WITH_TYPE(
+          DebugType, dbgs() << "INDVARS: Original iv: " << *Keeper << '\n');
+
+      SE.forgetValue(Phi);
+      Phi->replaceAllUsesWith(NewPtr);
+      DeadInsts.emplace_back(Phi);
+      ++NumElim;
+    }
+  }
+  return NumElim;
+}
+
 bool SCEVExpander::hasRelatedExistingExpansion(const SCEV *S,
                                                const Instruction *At,
                                                Loop *L) {
