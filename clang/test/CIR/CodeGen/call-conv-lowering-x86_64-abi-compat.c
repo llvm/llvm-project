@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -clangir-enable-call-conv-lowering -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --check-prefix=LINUX-CIR --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LINUX-OGCG --input-file=%t.ll %s
 
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -fclangir -clangir-enable-call-conv-lowering -emit-llvm %s -o %t-darwin-cir.ll
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -fclangir -emit-llvm %s -o %t-darwin-cir.ll
 // RUN: FileCheck --check-prefix=DARWIN --input-file=%t-darwin-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm %s -o %t-darwin.ll
 // RUN: FileCheck --check-prefix=DARWIN --input-file=%t-darwin.ll %s
