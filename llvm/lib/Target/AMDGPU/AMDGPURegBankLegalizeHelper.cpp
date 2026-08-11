@@ -754,9 +754,10 @@ bool RegBankLegalizeHelper::lowerV_BFE(MachineInstr &MI) {
     // SHRSrc Hi|Lo: ????????|???syyyl -> ????????|ssssyyyl
     Register Lo = SHRSrcLo;
     // V_BFE masks its width to 5 bits, so 32 would extract zero bits.
-    if (WidthImm < 32)
+    if (WidthImm < 32) {
       Lo =
           B.buildInstr(BFXOpc, {VgprRB_I32}, {SHRSrcLo, Zero, Width}).getReg(0);
+    }
     MachineInstrBuilder Hi;
     if (Signed) {
       // SHRSrc Hi|Lo: ????????|ssssyyyl -> ssssssss|ssssyyyl
