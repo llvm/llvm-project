@@ -61,6 +61,32 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// CHECK-DAG: memref.global "private" @[[ALLOC:alloc.*]] : memref<2xf32>
+
+// CHECK-DAG: func.func @func_alloc_with_uses(%[[VAL:.*]]: f32, %[[IDX:.*]]: index)
+func.func @func_alloc_with_uses(%val: f32, %idx: index) {
+  // CHECK-DAG: %[[MR:.*]] = memref.get_global @[[ALLOC]] : memref<2xf32>
+  // CHECK-DAG: memref.store %[[VAL]], %[[MR]][%[[IDX]]] : memref<2xf32>
+  // CHECK-NOT: memref.dealloc
+  %mr = memref.alloc() : memref<2xf32>
+  memref.store %val, %mr[%idx] : memref<2xf32>
+  memref.dealloc %mr : memref<2xf32>
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %alloc = transform.structured.match ops{["memref.alloc"]} in %arg0
+        : (!transform.any_op) -> !transform.op<"memref.alloc">
+    %get_global, %global = transform.memref.alloc_to_global %alloc
+          : (!transform.op<"memref.alloc">)
+            -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
 // Test failure when memref.alloc has dynamic shape.
 func.func @alloc_to_global_dynamic_shape(%arg0: index) {
   // expected-error @below {{conversion to a global op requires statically shaped memrefs, but got 'memref<?xf32>'}}
