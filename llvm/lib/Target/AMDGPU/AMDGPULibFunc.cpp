@@ -625,7 +625,7 @@ bool ItaniumParamParser::parseItaniumParam(StringRef& param,
   // parse type
   char const TC = param.front();
   if (isDigit(TC)) {
-    res.ArgType = static_cast<unsigned char>(
+    res.ArgType =
         StringSwitch<AMDGPULibFunc::EType>(eatLengthPrefixedName(param))
             .StartsWith("ocl_image1d_array", AMDGPULibFunc::IMG1DA)
             .StartsWith("ocl_image1d_buffer", AMDGPULibFunc::IMG1DB)
@@ -635,7 +635,7 @@ bool ItaniumParamParser::parseItaniumParam(StringRef& param,
             .StartsWith("ocl_image3d", AMDGPULibFunc::IMG3D)
             .Case("ocl_event", AMDGPULibFunc::DUMMY)
             .Case("ocl_sampler", AMDGPULibFunc::DUMMY)
-            .Default(AMDGPULibFunc::DUMMY));
+            .Default(AMDGPULibFunc::DUMMY);
   } else {
     drop_front(param);
     switch (TC) {
@@ -911,20 +911,16 @@ AMDGPULibFuncBase::Param AMDGPULibFuncBase::Param::getFromTy(Type *Ty,
   case Type::IntegerTyID:
     switch (cast<IntegerType>(Ty)->getBitWidth()) {
     case 8:
-      P.ArgType = static_cast<unsigned char>(Signed ? AMDGPULibFunc::I8
-                                                    : AMDGPULibFunc::U8);
+      P.ArgType = Signed ? AMDGPULibFunc::I8 : AMDGPULibFunc::U8;
       break;
     case 16:
-      P.ArgType = static_cast<unsigned char>(Signed ? AMDGPULibFunc::I16
-                                                    : AMDGPULibFunc::U16);
+      P.ArgType = Signed ? AMDGPULibFunc::I16 : AMDGPULibFunc::U16;
       break;
     case 32:
-      P.ArgType = static_cast<unsigned char>(Signed ? AMDGPULibFunc::I32
-                                                    : AMDGPULibFunc::U32);
+      P.ArgType = Signed ? AMDGPULibFunc::I32 : AMDGPULibFunc::U32;
       break;
     case 64:
-      P.ArgType = static_cast<unsigned char>(Signed ? AMDGPULibFunc::I64
-                                                    : AMDGPULibFunc::U64);
+      P.ArgType = Signed ? AMDGPULibFunc::I64 : AMDGPULibFunc::U64;
       break;
     default:
       llvm_unreachable("unhandled libcall argument type");

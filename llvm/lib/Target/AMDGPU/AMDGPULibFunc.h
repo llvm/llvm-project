@@ -255,7 +255,7 @@ public:
     HALF
   };
 
-  enum EType {
+  enum EType : unsigned char {
     B8  = 1,
     B16 = 2,
     B32 = 3,
