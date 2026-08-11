@@ -1392,13 +1392,14 @@ let hasSideEffects = false, mayLoad = true, mayStore = false, Size = 4,
     isCodeGenOnly = false in
 class PseudoQCAccessLoad_ri<string opcodestr>
   : Pseudo<(outs GPR:$rd),
-           (ins BasePtr:$rs1, simm12_optional:$imm12, qc_access_symbol:$expr), [],
-           opcodestr, "$rd, ${imm12}(${rs1}), $expr">;
+           (ins BasePtr:$rs1, simm12_optional:$imm12, qc_access_symbol:$expr),
+           [], opcodestr, "$rd, ${imm12}(${rs1}), $expr">;
 
 let hasSideEffects = false, mayLoad = false, mayStore = true, Size = 4,
     isCodeGenOnly = false in
 class PseudoQCAccessStore_rri<string opcodestr>
-  : Pseudo<(outs), (ins GPR:$rs2, BasePtr:$rs1, simm12_optional:$imm12, qc_access_symbol:$expr),
+  : Pseudo<(outs), (ins GPR:$rs2, BasePtr:$rs1, simm12_optional:$imm12,
+                        qc_access_symbol:$expr),
            [], opcodestr, "$rs2, ${imm12}(${rs1}), $expr">;
 
 
@@ -1430,42 +1431,18 @@ class PseudoQCAccessCStore_rri<string opcodestr, DAGOperand immop>
            [], opcodestr, "$rs2, ${imm}(${rs1}), $expr">;
 
 let Predicates = [IsRV32, HasStdExtZca] in {
-def PseudoQCAccessC_LW : PseudoQCAccessCLoad_ri<"c.lw", uimm7_lsb00>;
-let EmitPriority = 0 in
-def : InstAlias<"c.lw $rd, (${rs1}), $expr",
-                (PseudoQCAccessC_LW GPRC:$rd, BasePtrC:$rs1, 0, qc_access_symbol:$expr)>;
-
-def PseudoQCAccessC_SW : PseudoQCAccessCStore_rri<"c.sw", uimm7_lsb00>;
-let EmitPriority = 0 in
-def : InstAlias<"c.sw $rs2, (${rs1}), $expr",
-               (PseudoQCAccessC_SW GPRC:$rs2, BasePtrC:$rs1, 0, qc_access_symbol:$expr)>;
+def PseudoQCAccessC_LW : PseudoQCAccessCLoad_ri<"c.lw", uimm7_lsb00_optional>;
+def PseudoQCAccessC_SW : PseudoQCAccessCStore_rri<"c.sw", uimm7_lsb00_optional>;
 }
 
 let Predicates = [IsRV32, HasStdExtZcb] in {
 // no C_LB so no PseudoQCAccessC_LB
-def PseudoQCAccessC_LBU : PseudoQCAccessCLoad_ri<"c.lbu", uimm2>;
-def PseudoQCAccessC_LH  : PseudoQCAccessCLoad_ri<"c.lh", uimm2_lsb0>;
-def PseudoQCAccessC_LHU : PseudoQCAccessCLoad_ri<"c.lhu", uimm2_lsb0>;
+def PseudoQCAccessC_LBU : PseudoQCAccessCLoad_ri<"c.lbu", uimm2_optional>;
+def PseudoQCAccessC_LH  : PseudoQCAccessCLoad_ri<"c.lh", uimm2_lsb0_optional>;
+def PseudoQCAccessC_LHU : PseudoQCAccessCLoad_ri<"c.lhu", uimm2_lsb0_optional>;
 
-let EmitPriority = 0 in {
-// No c.lb so no alias
-def : InstAlias<"c.lbu $rd, (${rs1}), $expr",
-                (PseudoQCAccessC_LBU GPRC:$rd, BasePtrC:$rs1, 0, qc_access_symbol:$expr)>;
-def : InstAlias<"c.lh $rd, (${rs1}), $expr",
-                (PseudoQCAccessC_LH GPRC:$rd, BasePtrC:$rs1, 0, qc_access_symbol:$expr)>;
-def : InstAlias<"c.lhu $rd, (${rs1}), $expr",
-                (PseudoQCAccessC_LHU GPRC:$rd, BasePtrC:$rs1, 0, qc_access_symbol:$expr)>;
-}
-
-def PseudoQCAccessC_SB : PseudoQCAccessCStore_rri<"c.sb", uimm2>;
-def PseudoQCAccessC_SH : PseudoQCAccessCStore_rri<"c.sh", uimm2_lsb0>;
-
-let EmitPriority = 0 in {
-def : InstAlias<"c.sb $rs2, (${rs1}), $expr",
-                (PseudoQCAccessC_SB GPRC:$rs2, BasePtrC:$rs1, 0, qc_access_symbol:$expr)>;
-def : InstAlias<"c.sh $rs2, (${rs1}), $expr",
-                (PseudoQCAccessC_SH GPRC:$rs2, BasePtrC:$rs1, 0, qc_access_symbol:$expr)>;
-}
+def PseudoQCAccessC_SB : PseudoQCAccessCStore_rri<"c.sb", uimm2_optional>;
+def PseudoQCAccessC_SH : PseudoQCAccessCStore_rri<"c.sh", uimm2_lsb0_optional>;
 }
 
 // FIXME: We would like to add these but they are not supported by CompressPat.
