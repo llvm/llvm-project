@@ -78,7 +78,8 @@ jobs:
               return;
             }
 
-            // Make sure we don't submit if an incorrect override is provided.
+            // Honor benchmark suite version override and make sure we don't submit if an incorrect
+            // override is provided.
             const version_override = (process.env.BENCHMARK_SUITE_OVERRIDE || '').trim().toLowerCase();
             for (const cfg of selected) {
               const pinned = cfg['benchmark-suite-version'];
