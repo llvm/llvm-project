@@ -45,6 +45,12 @@ LLDB_PLUGIN_DEFINE(PlatformWindows)
 
 static uint32_t g_initialize_count = 0;
 
+// Upper bound on the timeout used when running a utility expression with
+// only one thread allowed to run.
+static std::chrono::microseconds GetLoaderOneThreadTimeout(Process *process) {
+  return std::chrono::microseconds(process->GetUtilityExpressionTimeout()) / 2;
+}
+
 namespace {
 
 #define LLDB_PROPERTIES_windows
@@ -422,6 +428,7 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
   // handle currently.
   options.SetTrapExceptions(false);
   options.SetTimeout(process->GetUtilityExpressionTimeout());
+  options.SetOneThreadTimeout(GetLoaderOneThreadTimeout(process));
   options.SetIsForUtilityExpr(true);
 
   ExpressionResults result =
@@ -932,6 +939,7 @@ extern "C" {
   // handle currently.
   options.SetTrapExceptions(false);
   options.SetTimeout(process->GetUtilityExpressionTimeout());
+  options.SetOneThreadTimeout(GetLoaderOneThreadTimeout(process));
 
   ExpressionResults result = UserExpression::Evaluate(
       context, options, expression, kLoaderDecls, value);
