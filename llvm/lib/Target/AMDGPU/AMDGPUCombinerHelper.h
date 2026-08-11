@@ -48,6 +48,9 @@ public:
       std::function<void(MachineIRBuilder &)> &MatchInfo) const;
 
   bool matchConstantIs32BitMask(Register Reg) const;
+
+  // Narrow a 64-bit shift when the amount is KnownBits->=32 but not constant.
+  bool matchShiftKnownGeHalfWidth(MachineInstr &MI, BuildFnTy &MatchInfo) const;
 };
 
 } // namespace llvm

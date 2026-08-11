@@ -203,6 +203,13 @@ def binop_s64_with_s32_mask_combines : GICombineGroup<[
   combine_or_s64_with_s32_mask, combine_and_s64_with_s32_mask
 ]>;
 
+// Narrow a 64-bit shift to 32-bit when the amount is KnownBits->=32 but not constant.
+def shift_known_ge_half_width : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_SHL, G_LSHR, G_ASHR):$root,
+         [{ return Helper.matchShiftKnownGeHalfWidth(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
 // (or i64:x, (zext i32:y)) -> i64:(merge (or lo_32(x), i32:y), hi_32(x))
 // (or (zext i32:y), i64:x) -> i64:(merge (or lo_32(x), i32:y), hi_32(x))
 def or_s64_zext_s32_frag : GICombinePatFrag<(outs root:$dst), (ins $src_s64, $src_s32),
@@ -256,7 +263,7 @@ def AMDGPUPostLegalizerCombiner: GICombiner<
   [all_combines, gfx6gfx7_combines, gfx8_combines, combine_fmul_with_select_to_fldexp,
    uchar_to_float, cvt_f32_ubyteN, remove_fcanonicalize, foldable_fneg,
    fold_fabs_fptrunc, rcp_sqrt_to_rsq, fdiv_by_sqrt_to_rsq_f16,
-   sign_extension_in_reg, smulu64,
+   sign_extension_in_reg, smulu64, shift_known_ge_half_width,
    binop_s64_with_s32_mask_combines, combine_or_s64_s32]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
