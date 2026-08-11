@@ -163,3 +163,246 @@ entry:
   %r6 = fadd reassoc float %r5, %l7
   ret float %r6
 }
+
+
+define double @ordered_fadd_fptrunc_fpext_links(ptr %x) {
+; CHECK-LABEL: define double @ordered_fadd_fptrunc_fpext_links(
+; CHECK-SAME: ptr [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[L0:%.*]] = load double, ptr [[X]], align 8
+; CHECK-NEXT:    [[A0:%.*]] = fadd double [[L0]], 1.000000e+00
+; CHECK-NEXT:    [[T0:%.*]] = fptrunc double [[A0]] to float
+; CHECK-NEXT:    [[TMP12:%.*]] = fpext float [[T0]] to double
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 8
+; CHECK-NEXT:    [[TMP11:%.*]] = load double, ptr [[P1]], align 8
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = fadd double [[TMP11]], [[TMP12]]
+; CHECK-NEXT:    [[TMP13:%.*]] = fptrunc double [[OP_RDX1]] to float
+; CHECK-NEXT:    [[TMP15:%.*]] = fpext float [[TMP13]] to double
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 16
+; CHECK-NEXT:    [[TMP14:%.*]] = load double, ptr [[P2]], align 8
+; CHECK-NEXT:    [[OP_RDX2:%.*]] = fadd double [[TMP14]], [[TMP15]]
+; CHECK-NEXT:    [[TMP16:%.*]] = fptrunc double [[OP_RDX2]] to float
+; CHECK-NEXT:    [[TMP18:%.*]] = fpext float [[TMP16]] to double
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 24
+; CHECK-NEXT:    [[TMP17:%.*]] = load double, ptr [[P3]], align 8
+; CHECK-NEXT:    [[OP_RDX3:%.*]] = fadd double [[TMP17]], [[TMP18]]
+; CHECK-NEXT:    [[TMP19:%.*]] = fptrunc double [[OP_RDX3]] to float
+; CHECK-NEXT:    [[TMP21:%.*]] = fpext float [[TMP19]] to double
+; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 32
+; CHECK-NEXT:    [[TMP20:%.*]] = load double, ptr [[P4]], align 8
+; CHECK-NEXT:    [[OP_RDX4:%.*]] = fadd double [[TMP20]], [[TMP21]]
+; CHECK-NEXT:    [[TMP22:%.*]] = fptrunc double [[OP_RDX4]] to float
+; CHECK-NEXT:    [[TMP24:%.*]] = fpext float [[TMP22]] to double
+; CHECK-NEXT:    [[P5:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 40
+; CHECK-NEXT:    [[TMP23:%.*]] = load double, ptr [[P5]], align 8
+; CHECK-NEXT:    [[OP_RDX5:%.*]] = fadd double [[TMP23]], [[TMP24]]
+; CHECK-NEXT:    [[TMP25:%.*]] = fptrunc double [[OP_RDX5]] to float
+; CHECK-NEXT:    [[TMP27:%.*]] = fpext float [[TMP25]] to double
+; CHECK-NEXT:    [[P6:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 48
+; CHECK-NEXT:    [[TMP26:%.*]] = load double, ptr [[P6]], align 8
+; CHECK-NEXT:    [[OP_RDX6:%.*]] = fadd double [[TMP26]], [[TMP27]]
+; CHECK-NEXT:    [[TMP28:%.*]] = fptrunc double [[OP_RDX6]] to float
+; CHECK-NEXT:    [[L7:%.*]] = fpext float [[TMP28]] to double
+; CHECK-NEXT:    [[P7:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 56
+; CHECK-NEXT:    [[TMP29:%.*]] = load double, ptr [[P7]], align 8
+; CHECK-NEXT:    [[OP_RDX7:%.*]] = fadd double [[TMP29]], [[L7]]
+; CHECK-NEXT:    [[T7:%.*]] = fptrunc double [[OP_RDX7]] to float
+; CHECK-NEXT:    [[E7:%.*]] = fpext float [[T7]] to double
+; CHECK-NEXT:    ret double [[E7]]
+;
+  %l0 = load double, ptr %x, align 8
+  %a0 = fadd double %l0, 1.000000e+00
+  %t0 = fptrunc double %a0 to float
+  %e0 = fpext float %t0 to double
+  %p1 = getelementptr inbounds i8, ptr %x, i64 8
+  %l1 = load double, ptr %p1, align 8
+  %a1 = fadd double %l1, %e0
+  %t1 = fptrunc double %a1 to float
+  %e1 = fpext float %t1 to double
+  %p2 = getelementptr inbounds i8, ptr %x, i64 16
+  %l2 = load double, ptr %p2, align 8
+  %a2 = fadd double %l2, %e1
+  %t2 = fptrunc double %a2 to float
+  %e2 = fpext float %t2 to double
+  %p3 = getelementptr inbounds i8, ptr %x, i64 24
+  %l3 = load double, ptr %p3, align 8
+  %a3 = fadd double %l3, %e2
+  %t3 = fptrunc double %a3 to float
+  %e3 = fpext float %t3 to double
+  %p4 = getelementptr inbounds i8, ptr %x, i64 32
+  %l4 = load double, ptr %p4, align 8
+  %a4 = fadd double %l4, %e3
+  %t4 = fptrunc double %a4 to float
+  %e4 = fpext float %t4 to double
+  %p5 = getelementptr inbounds i8, ptr %x, i64 40
+  %l5 = load double, ptr %p5, align 8
+  %a5 = fadd double %l5, %e4
+  %t5 = fptrunc double %a5 to float
+  %e5 = fpext float %t5 to double
+  %p6 = getelementptr inbounds i8, ptr %x, i64 48
+  %l6 = load double, ptr %p6, align 8
+  %a6 = fadd double %l6, %e5
+  %t6 = fptrunc double %a6 to float
+  %e6 = fpext float %t6 to double
+  %p7 = getelementptr inbounds i8, ptr %x, i64 56
+  %l7 = load double, ptr %p7, align 8
+  %a7 = fadd double %l7, %e6
+  %t7 = fptrunc double %a7 to float
+  %e7 = fpext float %t7 to double
+  ret double %e7
+}
+
+define double @ordered_fadd_mixed_links(ptr %x) {
+; CHECK-LABEL: define double @ordered_fadd_mixed_links(
+; CHECK-SAME: ptr [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[L0:%.*]] = load double, ptr [[X]], align 8
+; CHECK-NEXT:    [[OP_RDX:%.*]] = fadd double [[L0]], 1.000000e+00
+; CHECK-NEXT:    [[TMP10:%.*]] = fptrunc double [[OP_RDX]] to float
+; CHECK-NEXT:    [[TMP11:%.*]] = fpext float [[TMP10]] to double
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 8
+; CHECK-NEXT:    [[L1:%.*]] = load double, ptr [[P1]], align 8
+; CHECK-NEXT:    [[TMP13:%.*]] = fadd double [[L1]], [[TMP11]]
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 16
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = load double, ptr [[P2]], align 8
+; CHECK-NEXT:    [[OP_RDX2:%.*]] = fadd double [[OP_RDX1]], [[TMP13]]
+; CHECK-NEXT:    [[TMP14:%.*]] = fptrunc double [[OP_RDX2]] to float
+; CHECK-NEXT:    [[TMP15:%.*]] = fpext float [[TMP14]] to double
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 24
+; CHECK-NEXT:    [[L3:%.*]] = load double, ptr [[P3]], align 8
+; CHECK-NEXT:    [[TMP17:%.*]] = fadd double [[L3]], [[TMP15]]
+; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 32
+; CHECK-NEXT:    [[OP_RDX3:%.*]] = load double, ptr [[P4]], align 8
+; CHECK-NEXT:    [[OP_RDX4:%.*]] = fadd double [[OP_RDX3]], [[TMP17]]
+; CHECK-NEXT:    [[TMP18:%.*]] = fptrunc double [[OP_RDX4]] to float
+; CHECK-NEXT:    [[TMP19:%.*]] = fpext float [[TMP18]] to double
+; CHECK-NEXT:    [[P5:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 40
+; CHECK-NEXT:    [[L5:%.*]] = load double, ptr [[P5]], align 8
+; CHECK-NEXT:    [[TMP21:%.*]] = fadd double [[L5]], [[TMP19]]
+; CHECK-NEXT:    [[P6:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 48
+; CHECK-NEXT:    [[OP_RDX5:%.*]] = load double, ptr [[P6]], align 8
+; CHECK-NEXT:    [[OP_RDX6:%.*]] = fadd double [[OP_RDX5]], [[TMP21]]
+; CHECK-NEXT:    [[TMP22:%.*]] = fptrunc double [[OP_RDX6]] to float
+; CHECK-NEXT:    [[TMP23:%.*]] = fpext float [[TMP22]] to double
+; CHECK-NEXT:    [[P7:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 56
+; CHECK-NEXT:    [[L7:%.*]] = load double, ptr [[P7]], align 8
+; CHECK-NEXT:    [[OP_RDX7:%.*]] = fadd double [[L7]], [[TMP23]]
+; CHECK-NEXT:    ret double [[OP_RDX7]]
+;
+  %l0 = load double, ptr %x, align 8
+  %a0 = fadd double %l0, 1.000000e+00
+  %t0 = fptrunc double %a0 to float
+  %e0 = fpext float %t0 to double
+  %p1 = getelementptr inbounds i8, ptr %x, i64 8
+  %l1 = load double, ptr %p1, align 8
+  %a1 = fadd double %l1, %e0
+  %p2 = getelementptr inbounds i8, ptr %x, i64 16
+  %l2 = load double, ptr %p2, align 8
+  %a2 = fadd double %l2, %a1
+  %t2 = fptrunc double %a2 to float
+  %e2 = fpext float %t2 to double
+  %p3 = getelementptr inbounds i8, ptr %x, i64 24
+  %l3 = load double, ptr %p3, align 8
+  %a3 = fadd double %l3, %e2
+  %p4 = getelementptr inbounds i8, ptr %x, i64 32
+  %l4 = load double, ptr %p4, align 8
+  %a4 = fadd double %l4, %a3
+  %t4 = fptrunc double %a4 to float
+  %e4 = fpext float %t4 to double
+  %p5 = getelementptr inbounds i8, ptr %x, i64 40
+  %l5 = load double, ptr %p5, align 8
+  %a5 = fadd double %l5, %e4
+  %p6 = getelementptr inbounds i8, ptr %x, i64 48
+  %l6 = load double, ptr %p6, align 8
+  %a6 = fadd double %l6, %a5
+  %t6 = fptrunc double %a6 to float
+  %e6 = fpext float %t6 to double
+  %p7 = getelementptr inbounds i8, ptr %x, i64 56
+  %l7 = load double, ptr %p7, align 8
+  %a7 = fadd double %l7, %e6
+  ret double %a7
+}
+
+define double @ordered_fadd_reassoc_nonelidable_casts(ptr %x) {
+; CHECK-LABEL: define double @ordered_fadd_reassoc_nonelidable_casts(
+; CHECK-SAME: ptr [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[L0:%.*]] = load double, ptr [[X]], align 8
+; CHECK-NEXT:    [[OP_RDX:%.*]] = fadd fast double [[L0]], 1.000000e+00
+; CHECK-NEXT:    [[TMP10:%.*]] = fptrunc nnan ninf double [[OP_RDX]] to float
+; CHECK-NEXT:    [[TMP11:%.*]] = fpext nnan ninf float [[TMP10]] to double
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 8
+; CHECK-NEXT:    [[L1:%.*]] = load double, ptr [[P1]], align 8
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = fadd fast double [[L1]], [[TMP11]]
+; CHECK-NEXT:    [[TMP13:%.*]] = fptrunc nnan ninf double [[OP_RDX1]] to float
+; CHECK-NEXT:    [[TMP14:%.*]] = fpext nnan ninf float [[TMP13]] to double
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 16
+; CHECK-NEXT:    [[L2:%.*]] = load double, ptr [[P2]], align 8
+; CHECK-NEXT:    [[OP_RDX2:%.*]] = fadd fast double [[L2]], [[TMP14]]
+; CHECK-NEXT:    [[TMP16:%.*]] = fptrunc nnan ninf double [[OP_RDX2]] to float
+; CHECK-NEXT:    [[TMP17:%.*]] = fpext nnan ninf float [[TMP16]] to double
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 24
+; CHECK-NEXT:    [[L3:%.*]] = load double, ptr [[P3]], align 8
+; CHECK-NEXT:    [[OP_RDX3:%.*]] = fadd fast double [[L3]], [[TMP17]]
+; CHECK-NEXT:    [[TMP19:%.*]] = fptrunc nnan ninf double [[OP_RDX3]] to float
+; CHECK-NEXT:    [[TMP20:%.*]] = fpext nnan ninf float [[TMP19]] to double
+; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 32
+; CHECK-NEXT:    [[L4:%.*]] = load double, ptr [[P4]], align 8
+; CHECK-NEXT:    [[OP_RDX4:%.*]] = fadd fast double [[L4]], [[TMP20]]
+; CHECK-NEXT:    [[TMP22:%.*]] = fptrunc nnan ninf double [[OP_RDX4]] to float
+; CHECK-NEXT:    [[TMP23:%.*]] = fpext nnan ninf float [[TMP22]] to double
+; CHECK-NEXT:    [[P5:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 40
+; CHECK-NEXT:    [[L5:%.*]] = load double, ptr [[P5]], align 8
+; CHECK-NEXT:    [[OP_RDX5:%.*]] = fadd fast double [[L5]], [[TMP23]]
+; CHECK-NEXT:    [[TMP25:%.*]] = fptrunc nnan ninf double [[OP_RDX5]] to float
+; CHECK-NEXT:    [[TMP26:%.*]] = fpext nnan ninf float [[TMP25]] to double
+; CHECK-NEXT:    [[P6:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 48
+; CHECK-NEXT:    [[L6:%.*]] = load double, ptr [[P6]], align 8
+; CHECK-NEXT:    [[OP_RDX6:%.*]] = fadd fast double [[L6]], [[TMP26]]
+; CHECK-NEXT:    [[TMP28:%.*]] = fptrunc nnan ninf double [[OP_RDX6]] to float
+; CHECK-NEXT:    [[TMP29:%.*]] = fpext nnan ninf float [[TMP28]] to double
+; CHECK-NEXT:    [[P7:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 56
+; CHECK-NEXT:    [[L7:%.*]] = load double, ptr [[P7]], align 8
+; CHECK-NEXT:    [[OP_RDX7:%.*]] = fadd fast double [[L7]], [[TMP29]]
+; CHECK-NEXT:    [[T7:%.*]] = fptrunc nnan ninf double [[OP_RDX7]] to float
+; CHECK-NEXT:    [[E7:%.*]] = fpext nnan ninf float [[T7]] to double
+; CHECK-NEXT:    ret double [[E7]]
+;
+  %l0 = load double, ptr %x, align 8
+  %a0 = fadd fast double %l0, 1.000000e+00
+  %t0 = fptrunc nnan ninf double %a0 to float
+  %e0 = fpext nnan ninf float %t0 to double
+  %p1 = getelementptr inbounds i8, ptr %x, i64 8
+  %l1 = load double, ptr %p1, align 8
+  %a1 = fadd fast double %l1, %e0
+  %t1 = fptrunc nnan ninf double %a1 to float
+  %e1 = fpext nnan ninf float %t1 to double
+  %p2 = getelementptr inbounds i8, ptr %x, i64 16
+  %l2 = load double, ptr %p2, align 8
+  %a2 = fadd fast double %l2, %e1
+  %t2 = fptrunc nnan ninf double %a2 to float
+  %e2 = fpext nnan ninf float %t2 to double
+  %p3 = getelementptr inbounds i8, ptr %x, i64 24
+  %l3 = load double, ptr %p3, align 8
+  %a3 = fadd fast double %l3, %e2
+  %t3 = fptrunc nnan ninf double %a3 to float
+  %e3 = fpext nnan ninf float %t3 to double
+  %p4 = getelementptr inbounds i8, ptr %x, i64 32
+  %l4 = load double, ptr %p4, align 8
+  %a4 = fadd fast double %l4, %e3
+  %t4 = fptrunc nnan ninf double %a4 to float
+  %e4 = fpext nnan ninf float %t4 to double
+  %p5 = getelementptr inbounds i8, ptr %x, i64 40
+  %l5 = load double, ptr %p5, align 8
+  %a5 = fadd fast double %l5, %e4
+  %t5 = fptrunc nnan ninf double %a5 to float
+  %e5 = fpext nnan ninf float %t5 to double
+  %p6 = getelementptr inbounds i8, ptr %x, i64 48
+  %l6 = load double, ptr %p6, align 8
+  %a6 = fadd fast double %l6, %e5
+  %t6 = fptrunc nnan ninf double %a6 to float
+  %e6 = fpext nnan ninf float %t6 to double
+  %p7 = getelementptr inbounds i8, ptr %x, i64 56
+  %l7 = load double, ptr %p7, align 8
+  %a7 = fadd fast double %l7, %e6
+  %t7 = fptrunc nnan ninf double %a7 to float
+  %e7 = fpext nnan ninf float %t7 to double
+  ret double %e7
+}
