@@ -46,6 +46,7 @@ FunctionPass *createNVPTXISelDag(NVPTXTargetMachine &TM,
 ModulePass *createNVPTXAssignValidGlobalNamesLegacyPass();
 ModulePass *createGenericToNVVMLegacyPass();
 ModulePass *createNVPTXCtorDtorLoweringLegacyPass();
+FunctionPass *createNVPTXAtomicLowerLegacyPass();
 FunctionPass *createNVVMIntrRangePass();
 ModulePass *createNVVMReflectPass(unsigned int SmVersion);
 MachineFunctionPass *createNVPTXPrologEpilogPass();
@@ -69,7 +70,7 @@ void initializeGenericToNVVMLegacyPassPass(PassRegistry &);
 void initializeNVPTXAllocaHoistingPass(PassRegistry &);
 void initializeNVPTXAsmPrinterPass(PassRegistry &);
 void initializeNVPTXAssignValidGlobalNamesLegacyPassPass(PassRegistry &);
-void initializeNVPTXAtomicLowerPass(PassRegistry &);
+void initializeNVPTXAtomicLowerLegacyPassPass(PassRegistry &);
 void initializeNVPTXCtorDtorLoweringLegacyPass(PassRegistry &);
 void initializeNVPTXLowerAggrCopiesPass(PassRegistry &);
 void initializeNVPTXLowerAllocaLegacyPassPass(PassRegistry &);
@@ -104,6 +105,12 @@ struct NVVMReflectPass : OptionalPassInfoMixin<NVVMReflectPass> {
 
 private:
   unsigned SmVersion;
+};
+
+class NVPTXAtomicLowerPass
+    : public RequiredPassInfoMixin<NVPTXAtomicLowerPass> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 struct GenericToNVVMPass : OptionalPassInfoMixin<GenericToNVVMPass> {

@@ -15,7 +15,6 @@
 #include "NVPTXAliasAnalysis.h"
 #include "NVPTXAllocaHoisting.h"
 #include "NVPTXAsmPrinter.h"
-#include "NVPTXAtomicLower.h"
 #include "NVPTXCtorDtorLowering.h"
 #include "NVPTXLowerAggrCopies.h"
 #include "NVPTXMachineFunctionInfo.h"
@@ -104,7 +103,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeNVPTXAllocaHoistingPass(PR);
   initializeNVPTXAsmPrinterPass(PR);
   initializeNVPTXAssignValidGlobalNamesLegacyPassPass(PR);
-  initializeNVPTXAtomicLowerPass(PR);
+  initializeNVPTXAtomicLowerLegacyPassPass(PR);
   initializeNVPTXLowerArgsLegacyPassPass(PR);
   initializeNVPTXPromoteParamAlignLegacyPassPass(PR);
   initializeNVPTXMarkKernelPtrsGlobalLegacyPassPass(PR);
@@ -286,7 +285,7 @@ void NVPTXPassConfig::addAddressSpaceInferencePasses() {
   // TODO: Consider running InferAddressSpaces during opt, earlier in the
   // compilation flow.
   addPass(createInferAddressSpacesPass());
-  addPass(createNVPTXAtomicLowerPass());
+  addPass(createNVPTXAtomicLowerLegacyPass());
 }
 
 void NVPTXPassConfig::addStraightLineScalarOptimizationPasses() {
