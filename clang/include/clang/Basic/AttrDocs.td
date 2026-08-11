@@ -3756,15 +3756,16 @@ The ``wincall`` attribute applies the WinCall calling convention to a
 function. WinCall is an x86-64-only calling convention for Windows targets
 that makes use of the registers added by Intel APX.
 
-Unlike the Microsoft x64 ABI, WinCall:
-- passes the first eight integer arguments in RCX, RDX, R8, R9, R16, R17,
-  R18, R19 (R16-R19 are APX registers),
-- passes the first eight floating-point/vector arguments in XMM0-XMM7
+Unlike the Microsoft x64 ABI, WinCall differs in the following ways.
+
+- It passes the first eight integer arguments in RCX, RDX, R8, R9, R16, R17,
+  R18, R19 (R16-R19 are APX registers).
+- It passes the first eight floating-point/vector arguments in XMM0-XMM7
   (YMM0-YMM7 for ``__m256``, ZMM0-ZMM7 for ``__m512``), allocated
-  independently of the integer registers,
-- passes/returns aggregates up to 32 bytes directly in registers instead of
-  by pointer, and
-- takes no register slots for empty C++ objects.
+  independently of the integer registers.
+- It passes/returns aggregates up to 32 bytes directly in registers instead
+  of by pointer.
+- It takes no register slots for empty C++ objects.
 
 On targets where WinCall is not supported the attribute is ignored with a
 warning.
