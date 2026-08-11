@@ -55,6 +55,9 @@ class LLDBTest(TestFormat):
         # python exe as the first parameter of the command.
         cmd = [executable] + self.dotest_cmd + [testPath, "-p", testFile]
 
+        if test.config.maxIndividualTestTime > 0:
+            cmd += ["--timeout", str(test.config.maxIndividualTestTime)]
+
         launcher = getattr(test.config, "lldb_launcher", None)
         if launcher:
             cmd = [launcher] + cmd

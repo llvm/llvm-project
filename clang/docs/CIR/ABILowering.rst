@@ -568,6 +568,20 @@ The pass takes one of two driver modes via pass options:
 
 Exactly one of the two options must be set.
 
+Enabling the Pass
+-----------------
+
+``cir-call-conv-lowering`` runs by default whenever ClangIR code generation is
+enabled on an x86_64 target.  On every other triple the pipeline omits the
+pass, because x86_64 System V is the only classifier implemented so far, and
+signatures reach the LLVM dialect in their high-level form.
+
+``-fno-clangir-call-conv-lowering`` turns the pass off and
+``-fclangir-call-conv-lowering`` turns it back on.  The last one on the
+command line wins, so a build can disable the pass globally and re-enable it
+for a single translation unit.  Both are ``-cc1`` options, so reach them from
+the driver through ``-Xclang``.
+
 Open Questions
 ==============
 

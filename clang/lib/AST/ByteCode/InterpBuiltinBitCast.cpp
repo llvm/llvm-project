@@ -511,11 +511,10 @@ bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
 }
 
 using PrimTypeVariant =
-    std::variant<Pointer, FunctionPointer, MemberPointer, FixedPoint,
-                 Char<false>, Char<true>, Integral<16, false>,
-                 Integral<16, true>, Integral<32, false>, Integral<32, true>,
-                 Integral<64, false>, Integral<64, true>, IntegralAP<true>,
-                 IntegralAP<false>, Boolean, Floating>;
+    std::variant<Pointer, MemberPointer, FixedPoint, Char<false>, Char<true>,
+                 Integral<16, false>, Integral<16, true>, Integral<32, false>,
+                 Integral<32, true>, Integral<64, false>, Integral<64, true>,
+                 IntegralAP<true>, IntegralAP<false>, Boolean, Floating>;
 
 // NB: This implementation isn't exactly ideal, but:
 //   1) We can't just do a bitcast here since we need to be able to

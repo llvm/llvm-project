@@ -2025,7 +2025,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     llvm_unreachable("BTFTypeTag attribute handled separately");
 
   case attr::HLSLResourceClass:
-  case attr::HLSLROV:
+  case attr::HLSLIsROV:
   case attr::HLSLRawBuffer:
   case attr::HLSLContainedType:
   case attr::HLSLIsCounter:

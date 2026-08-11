@@ -265,6 +265,10 @@ static DecodeStatus decodeSrcReg9(MCInst &Inst, unsigned Imm,
 template <unsigned OpWidth>
 static DecodeStatus decodeSrcA9(MCInst &Inst, unsigned Imm, uint64_t /* Addr */,
                                 const MCDisassembler *Decoder) {
+  // A clear Imm{8} names an SGPR or an inline constant, which this
+  // register-only operand cannot hold.
+  if (!(Imm & AMDGPU::EncValues::IS_VGPR))
+    return MCDisassembler::Fail;
   return decodeSrcOp(Inst, 9, OpWidth, Imm, Imm | 512, Decoder);
 }
 
@@ -274,6 +278,10 @@ template <unsigned OpWidth>
 static DecodeStatus decodeSrcAV10(MCInst &Inst, unsigned Imm,
                                   uint64_t /* Addr */,
                                   const MCDisassembler *Decoder) {
+  // A clear Imm{8} names an SGPR or an inline constant, which this
+  // register-only operand cannot hold.
+  if (!(Imm & AMDGPU::EncValues::IS_VGPR))
+    return MCDisassembler::Fail;
   return decodeSrcOp(Inst, 10, OpWidth, Imm, Imm, Decoder);
 }
 

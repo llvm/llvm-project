@@ -1,0 +1,75 @@
+// RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 | FileCheck %s
+// RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 -cir-to-llvm -o - 2>/dev/null \
+// RUN:   | mlir-translate -mlir-to-llvmir --allow-unregistered-dialect \
+// RUN:   | FileCheck %s --check-prefix=LLVM
+
+!s16i = !cir.int<s, 16>
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+
+// Anonymous record aliases are numbered in the order they are printed, so
+// capture each pair rather than naming it.
+// CHECK-DAG: ![[X87PAIR:rec_anon_struct[0-9]*]] = !cir.struct<{!cir.f80, !cir.f80}>
+// CHECK-DAG: ![[F64PAIR:rec_anon_struct[0-9]*]] = !cir.struct<{!cir.double, !cir.double}>
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i16, dense<16>: vector<2xi64>>,
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>,
+    #dlti.dl_entry<f32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<f64, dense<64>: vector<2xi64>>>
+} {
+
+  // Both halves of a _Complex float share one SSE eightbyte, so it coerces to
+  // a two-element vector rather than passing as a CIR complex.
+  cir.func @cfloat(%arg0: !cir.complex<!cir.float>) -> !cir.complex<!cir.float> {
+    cir.return %arg0 : !cir.complex<!cir.float>
+  }
+
+  // CHECK: cir.func{{.*}} @cfloat(%arg0: !cir.vector<2 x !cir.float>) -> !cir.vector<2 x !cir.float>
+
+  // _Complex double needs two SSE eightbytes, so it becomes a register pair
+  // and the arguments flatten.
+  cir.func @cdouble(%arg0: !cir.complex<!cir.double>) -> !cir.complex<!cir.double> {
+    cir.return %arg0 : !cir.complex<!cir.double>
+  }
+
+  // CHECK: cir.func{{.*}} @cdouble(%arg0: !cir.double, %arg1: !cir.double) -> ![[F64PAIR]]
+
+  // A _Complex of a sub-eightbyte integer packs both halves into one INTEGER
+  // eightbyte.
+  cir.func @cshort(%arg0: !cir.complex<!s16i>) -> !cir.complex<!s16i> {
+    cir.return %arg0 : !cir.complex<!s16i>
+  }
+
+  // CHECK: cir.func{{.*}} @cshort(%arg0: !u32i) -> !u32i
+
+  cir.func @cint(%arg0: !cir.complex<!s32i>) -> !cir.complex<!s32i> {
+    cir.return %arg0 : !cir.complex<!s32i>
+  }
+
+  // CHECK: cir.func{{.*}} @cint(%arg0: !u64i) -> !u64i
+
+  // A complex x87 long double passes its argument in memory while the return
+  // comes back as the st0/st1 pair.
+  cir.func @clongdouble(%arg0: !cir.complex<!cir.long_double<!cir.f80>>)
+      -> !cir.complex<!cir.long_double<!cir.f80>> {
+    cir.return %arg0 : !cir.complex<!cir.long_double<!cir.f80>>
+  }
+
+  // CHECK: cir.func{{.*}} @clongdouble(%arg0: !cir.ptr<!cir.complex<!cir.long_double<!cir.f80>>> {{.*}}llvm.byval = !cir.complex<!cir.long_double<!cir.f80>>{{.*}}) -> ![[X87PAIR]]
+
+  cir.func @call_cfloat(%arg0: !cir.complex<!cir.float>) -> !cir.complex<!cir.float> {
+    %0 = cir.call @cfloat(%arg0) : (!cir.complex<!cir.float>) -> !cir.complex<!cir.float>
+    cir.return %0 : !cir.complex<!cir.float>
+  }
+
+  // CHECK: cir.call @cfloat(%{{.+}}) : (!cir.vector<2 x !cir.float>) -> !cir.vector<2 x !cir.float>
+}
+
+// LLVM: define <2 x float> @cfloat(<2 x float> %{{.+}})
+// LLVM: define { double, double } @cdouble(double %{{.+}}, double %{{.+}})
+// LLVM: define i32 @cshort(i32 %{{.+}})
+// LLVM: define i64 @cint(i64 %{{.+}})
+// LLVM: define { x86_fp80, x86_fp80 } @clongdouble(ptr noalias noundef byval({ x86_fp80, x86_fp80 }) align 16 %{{.+}})

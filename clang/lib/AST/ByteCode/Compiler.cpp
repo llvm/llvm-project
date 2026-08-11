@@ -340,6 +340,8 @@ bool InitLink::emit(Compiler<Emitter> *Ctx, const Expr *E) const {
   case K_Field:
     // We're assuming there's a base pointer on the stack already.
     return Ctx->emitGetPtrFieldPop(Offset, E);
+  case K_Base:
+    return Ctx->emitGetPtrBasePop(Offset, false, E);
   case K_Temp:
     return Ctx->emitGetPtrLocal(Offset, E);
   case K_Decl:
@@ -2398,6 +2400,8 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     for (unsigned BI = 0; BI != R->getNumBases(); ++BI) {
       const Expr *Init = Inits[BI];
       const Record::Base *B = R->getBase(BI);
+      InitStackScope<Emitter> ISS(this, isa<CXXDefaultInitExpr>(Init));
+      InitLinkScope<Emitter> ILS(this, InitLink::Base(B->Offset));
       if (!this->emitGetPtrBase(B->Offset, Init))
         return false;
       if (!this->visitInitializerPop(Init))
@@ -6468,12 +6472,18 @@ bool Compiler<Emitter>::VisitCXXThisExpr(const CXXThisExpr *E) {
 
     if (InitStack[StartIndex].Kind != InitLink::K_Field &&
         InitStack[StartIndex].Kind != InitLink::K_Elem &&
+        InitStack[StartIndex].Kind != InitLink::K_Base &&
         InitStack[StartIndex].Kind != InitLink::K_DIE)
       break;
   }
 
   if (StartIndex == 0 && EndIndex == 0)
     EndIndex = InitStack.size() - 1;
+
+  assert(InitStack[StartIndex].Kind == InitLink::K_Decl ||
+         InitStack[StartIndex].Kind == InitLink::K_This ||
+         InitStack[StartIndex].Kind == InitLink::K_Temp ||
+         InitStack[StartIndex].Kind == InitLink::K_RVO);
 
   // NOTE: This could be StartIndex < EndIndex, but we're also abusing the
   // InitStack mechanism in visitWithSubstitutions to have the This pointer

@@ -22,6 +22,7 @@ endmacro(clang_diag_gen)
 
 clang_diag_gen(Analysis)
 clang_diag_gen(AST)
+clang_diag_gen(CodeGen)
 clang_diag_gen(Comment)
 clang_diag_gen(Common)
 clang_diag_gen(CrossTU)

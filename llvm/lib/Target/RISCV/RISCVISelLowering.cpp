@@ -2022,6 +2022,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT});
   if (Subtarget.hasVInstructions())
     setTargetDAGCombine({ISD::FCOPYSIGN,
+                         ISD::VECTOR_MATCH,
                          ISD::MGATHER,
                          ISD::MSCATTER,
                          ISD::VP_GATHER,
@@ -2154,8 +2155,7 @@ bool RISCVTargetLowering::shouldExpandGetVectorLength(EVT TripCountVT,
 }
 
 bool RISCVTargetLowering::shouldExpandCttzElements(EVT VT) const {
-  return !Subtarget.hasVInstructions() ||
-         VT.getVectorElementType() != MVT::i1 || !isTypeLegal(VT);
+  return !Subtarget.hasVInstructions();
 }
 
 void RISCVTargetLowering::getTgtMemIntrinsic(
@@ -23046,6 +23046,10 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     SDValue Fneg = DAG.getNode(ISD::FNEG, DL, VT, Splat);
     return DAG.getNode(ISD::FMA, DL, VT, Fneg, N1, N->getOperand(2));
   }
+  case ISD::VECTOR_MATCH:
+    if (DCI.isBeforeLegalize())
+      return expandVectorMatch(N, DAG);
+    return SDValue();
   case ISD::SETCC:
     return performSETCCCombine(N, DCI, Subtarget);
   case ISD::SIGN_EXTEND_INREG:

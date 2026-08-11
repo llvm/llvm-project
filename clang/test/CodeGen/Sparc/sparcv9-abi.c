@@ -131,14 +131,14 @@ struct medium_aligned {
   int *b, *c, *d;
 };
 
-// CHECK-LABEL: define{{.*}} %struct.medium @f_medium(ptr noundef align 8 dead_on_return %x)
+// CHECK-LABEL: define{{.*}} %struct.medium @f_medium(ptr nofree noundef align 8 dead_on_return dereferenceable(32) %x)
 struct medium f_medium(struct medium x) {
   x.a += *x.b;
   x.b = 0;
   return x;
 }
 
-// CHECK-LABEL: define{{.*}} %struct.medium_aligned @f_medium_aligned(ptr noundef align 16 dead_on_return %x)
+// CHECK-LABEL: define{{.*}} %struct.medium_aligned @f_medium_aligned(ptr nofree noundef align 16 dead_on_return dereferenceable(32) %x)
 struct medium_aligned f_medium_aligned(struct medium_aligned x) {
   x.a += *x.b;
   x.b = 0;
@@ -152,7 +152,7 @@ struct large {
   int x;
 };
 
-// CHECK-LABEL: define{{.*}} void @f_large(ptr dead_on_unwind noalias writable sret(%struct.large) align 8 %agg.result, ptr noundef align 8 dead_on_return %x)
+// CHECK-LABEL: define{{.*}} void @f_large(ptr dead_on_unwind noalias writable sret(%struct.large) align 8 %agg.result, ptr nofree noundef align 8 dead_on_return dereferenceable(40) %x)
 struct large f_large(struct large x) {
   x.a += *x.b;
   x.b = 0;

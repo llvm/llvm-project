@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRABIRewriteContext.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Dominance.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
@@ -203,10 +204,12 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx,
       auto recTy = cast<cir::RecordType>(origArgTypes[oldIdx]);
       newArgAttrs.append(recTy.getNumElements(), builder.getDictionaryAttr({}));
     } else if (ac.kind == ArgKind::Extend) {
-      StringRef attrName = ac.signExtend ? "llvm.signext" : "llvm.zeroext";
-      SmallVector<mlir::NamedAttribute> attrs(existing.begin(), existing.end());
-      attrs.push_back(builder.getNamedAttr(attrName, builder.getUnitAttr()));
-      newArgAttrs.push_back(builder.getDictionaryAttr(attrs));
+      StringRef attrName = ac.signExtend
+                               ? mlir::LLVM::LLVMDialect::getSExtAttrName()
+                               : mlir::LLVM::LLVMDialect::getZExtAttrName();
+      mlir::NamedAttrList attrs(existing);
+      attrs.set(attrName, builder.getUnitAttr());
+      newArgAttrs.push_back(attrs.getDictionary(ctx));
     } else if (ac.kind == ArgKind::Indirect) {
       // byval: caller-allocated copy; callee receives pointer to copy.
       // byref: callee receives pointer to the caller's original storage.
@@ -225,19 +228,20 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx,
       //     emit it unconditionally because our call-site rewrite always
       //     produces a fresh alloca+store.
       mlir::Type pointeeTy = origArgTypes[oldIdx];
-      StringRef ownershipAttr = ac.byVal ? "llvm.byval" : "llvm.byref";
-      SmallVector<mlir::NamedAttribute> attrs(existing.begin(), existing.end());
-      attrs.push_back(builder.getNamedAttr(
-          "llvm.align", builder.getI64IntegerAttr(ac.indirectAlign.value())));
-      attrs.push_back(
-          builder.getNamedAttr(ownershipAttr, mlir::TypeAttr::get(pointeeTy)));
+      StringRef ownershipAttr =
+          ac.byVal ? mlir::LLVM::LLVMDialect::getByValAttrName()
+                   : mlir::LLVM::LLVMDialect::getByRefAttrName();
+      mlir::NamedAttrList attrs(existing);
+      attrs.set(mlir::LLVM::LLVMDialect::getAlignAttrName(),
+                builder.getI64IntegerAttr(ac.indirectAlign.value()));
+      attrs.set(ownershipAttr, mlir::TypeAttr::get(pointeeTy));
       if (ac.byVal) {
-        attrs.push_back(
-            builder.getNamedAttr("llvm.noalias", builder.getUnitAttr()));
-        attrs.push_back(
-            builder.getNamedAttr("llvm.noundef", builder.getUnitAttr()));
+        attrs.set(mlir::LLVM::LLVMDialect::getNoAliasAttrName(),
+                  builder.getUnitAttr());
+        attrs.set(mlir::LLVM::LLVMDialect::getNoUndefAttrName(),
+                  builder.getUnitAttr());
       }
-      newArgAttrs.push_back(builder.getDictionaryAttr(attrs));
+      newArgAttrs.push_back(attrs.getDictionary(ctx));
     } else {
       newArgAttrs.push_back(existing);
     }

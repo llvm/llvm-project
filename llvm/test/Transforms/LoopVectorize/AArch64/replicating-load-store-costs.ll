@@ -452,11 +452,10 @@ define void @test_prefer_vector_addressing(ptr %start, ptr %ms, ptr noalias %src
 ; CHECK-NEXT:    [[START2:%.*]] = ptrtoaddr ptr [[START]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[START2]], 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP10]], i64 [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], [[START2]]
-; CHECK-NEXT:    [[TMP23:%.*]] = add i64 [[TMP2]], -3
+; CHECK-NEXT:    [[TMP25:%.*]] = add i64 [[TMP1]], -3
+; CHECK-NEXT:    [[TMP23:%.*]] = sub i64 [[TMP25]], [[START2]]
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP23]], i64 1)
-; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], [[UMIN]]
-; CHECK-NEXT:    [[TMP24:%.*]] = add i64 [[TMP3]], -3
+; CHECK-NEXT:    [[TMP24:%.*]] = sub i64 [[TMP23]], [[UMIN]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = udiv i64 [[TMP24]], 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[UMIN]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], 1

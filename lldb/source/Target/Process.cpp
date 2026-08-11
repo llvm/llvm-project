@@ -1365,7 +1365,7 @@ Status Process::ResumeSynchronous(Stream *stream) {
   }
 
   ListenerSP listener_sp(
-      Listener::MakeListener(ResumeSynchronousHijackListenerName.data()));
+      Listener::MakeListener(ResumeSynchronousHijackListenerName));
   HijackProcessEvents(listener_sp);
 
   Status error = PrivateResume();

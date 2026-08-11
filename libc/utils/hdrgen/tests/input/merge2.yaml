@@ -15,4 +15,4 @@ functions:
     arguments: []
     standards:
       - stdc
-    guard: LIBC_TYPES_HAS_FLOAT128
+    guard: LIBC_TYPES_HAS_NATIVE_FLOAT128

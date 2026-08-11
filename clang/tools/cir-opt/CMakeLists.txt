@@ -15,9 +15,17 @@ if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND (NOT "${CMAKE_CXX_COMPILER_ID}" MATCHES 
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-overloaded-virtual")
 endif()
 
+if(CLANG_INCLUDE_TESTS)
+  set(cir_opt_test_libs CIRTestAnalysis)
+endif()
+
 add_clang_tool(cir-opt
   cir-opt.cpp
 )
+
+if(CLANG_INCLUDE_TESTS)
+  target_compile_definitions(cir-opt PRIVATE CLANG_INCLUDE_TESTS)
+endif()
 
 clang_target_link_libraries(cir-opt
   PRIVATE
@@ -26,6 +34,7 @@ clang_target_link_libraries(cir-opt
   CIRRegisterAllDialects
   MLIRCIR
   MLIRCIRTransforms
+  ${cir_opt_test_libs}
 )
 
 target_link_libraries(cir-opt

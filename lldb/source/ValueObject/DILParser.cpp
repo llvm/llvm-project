@@ -472,8 +472,24 @@ ASTNodeUP DILParser::ParsePrimaryExpression() {
     uint32_t loc = CurToken().GetLocation();
     std::string identifier = ParseIdExpression();
 
-    if (!identifier.empty())
+    if (!identifier.empty()) {
+      if (identifier == "sizeof" && CurToken().Is(Token::l_paren)) {
+        m_dil_lexer.Advance();
+        uint32_t save_token_idx = m_dil_lexer.GetCurrentTokenIdx();
+        auto type_id = ParseTypeId();
+        if (type_id) {
+          Expect(Token::r_paren);
+          m_dil_lexer.Advance();
+          return std::make_unique<SizeOfNode>(loc, *type_id);
+        }
+        TentativeParsingRollback(save_token_idx);
+        ASTNodeUP expr = ParseExpression();
+        Expect(Token::r_paren);
+        m_dil_lexer.Advance();
+        return std::make_unique<SizeOfNode>(loc, std::move(expr));
+      }
       return std::make_unique<IdentifierNode>(loc, identifier);
+    }
   }
 
   if (CurToken().Is(Token::l_paren)) {

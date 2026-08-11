@@ -509,12 +509,12 @@ define void @diff_check_via_i32_ptrarith(ptr %origin, ptr %dst, ptr %base, i32 %
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[OP]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP_PH:.*]], [[EXIT:label %.*]]
 ; CHECK:       [[LOOP_PH]]:
-; CHECK-NEXT:    [[TMP9:%.*]] = trunc i64 [[LHS]] to i32
 ; CHECK-NEXT:    [[TMP11:%.*]] = trunc i64 [[RHS]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[D]], [[TMP9]]
-; CHECK-NEXT:    [[TMP14:%.*]] = add i32 [[TMP2]], [[TMP11]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[LHS]] to i32
+; CHECK-NEXT:    [[TMP14:%.*]] = add i32 [[D]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP14]], -1
-; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP4]] to i64
+; CHECK-NEXT:    [[TMP7:%.*]] = sub i32 [[TMP4]], [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP7]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = add nuw nsw i64 [[TMP5]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP6]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], [[SCALAR_PH:label %.*]], label %[[VECTOR_MEMCHECK:.*]]

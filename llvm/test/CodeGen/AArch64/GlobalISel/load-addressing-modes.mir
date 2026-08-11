@@ -259,7 +259,7 @@ body:             |
     %2:gpr(i64) = G_SHL %0, %1(i64)
     %3:gpr(p0) = COPY $x1
     %4:gpr(p0) = G_PTR_ADD %3, %2
-    %5:fpr(s128) = G_LOAD %4(p0) :: (load (s128) from %ir.addr)
+    %5:fpr(i128) = G_LOAD %4(p0) :: (load (s128) from %ir.addr)
     RET_ReallyLR implicit %5
 
 ...
@@ -762,7 +762,7 @@ body:             |
     %2:gpr(i64) = G_SHL %0, %1(i64)
     %3:gpr(p0) = COPY $x1
     %4:gpr(p0) = G_PTR_ADD %3, %2
-    %20:fpr(s128) = G_LOAD %4(p0) :: (load (s128) from %ir.addr)
+    %20:fpr(i128) = G_LOAD %4(p0) :: (load (s128) from %ir.addr)
     %6:gpr(i64) = G_ADD %2, %1
     %200:fpr(i64) = G_TRUNC %20
     %2000:gpr(i64) = COPY %200
@@ -917,8 +917,8 @@ body:             |
     %0:gpr(p0) = COPY $x0
     %1:gpr(i64) = COPY $x1
     %2:gpr(p0) = G_PTR_ADD %0, %1
-    %4:fpr(s16) = G_LOAD %2(p0) :: (load (s16) from %ir.addr)
-    $h2 = COPY %4(s16)
+    %4:fpr(f16) = G_LOAD %2(p0) :: (load (s16) from %ir.addr)
+    $h2 = COPY %4(f16)
     RET_ReallyLR implicit $h2
 ...
 ---

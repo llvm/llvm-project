@@ -1234,12 +1234,34 @@ let ReadsModeReg = 0 in {
                                                       VOP1_CVT_PK_F8_F16_Profile<VSrc_NoInline_v2f16>,
                                                       VOP1_CVT_PK_F8_F16_True16_Profile<VSrc_NoInline_v2f16>,
                                                       VOP1_CVT_PK_F8_F16_Fake16_Profile<VSrc_NoInline_v2f16>,
-                                                      int_amdgcn_cvt_pk_fp8_f16>;
+                                                      cvt_pk_fp8_f16>;
   defm V_CVT_PK_BF8_F16 : VOP1Inst_t16_with_profiles<"v_cvt_pk_bf8_f16",
                                                       VOP1_CVT_PK_F8_F16_Profile<VSrc_NoInline_v2f16>,
                                                       VOP1_CVT_PK_F8_F16_True16_Profile<VSrc_NoInline_v2f16>,
                                                       VOP1_CVT_PK_F8_F16_Fake16_Profile<VSrc_NoInline_v2f16>,
-                                                      int_amdgcn_cvt_pk_bf8_f16>;
+                                                      cvt_pk_bf8_f16>;
+}
+
+// A scalar conversion converts the low lane and leaves the high one undefined.
+// The vector form is custom lowered instead, its <2 x i8> result type has to
+// be legalized first.
+let OtherPredicates = [HasOCPFP8ConversionInsts] in {
+let True16Predicate = UseRealTrue16Insts in {
+  def : GCNPat<(i16 (cvt_to_fp8 (f16 VGPR_16:$src))),
+    (V_CVT_PK_FP8_F16_t16_e64 0,
+      (REG_SEQUENCE VGPR_32, $src, lo16, (f16 (IMPLICIT_DEF)), hi16), 0)>;
+  def : GCNPat<(i16 (cvt_to_bf8 (f16 VGPR_16:$src))),
+    (V_CVT_PK_BF8_F16_t16_e64 0,
+      (REG_SEQUENCE VGPR_32, $src, lo16, (f16 (IMPLICIT_DEF)), hi16), 0)>;
+}
+let True16Predicate = UseFakeTrue16Insts in {
+  def : GCNPat<(i16 (cvt_to_fp8 f16:$src)),
+    (V_CVT_PK_FP8_F16_fake16_e64 0,
+      (v2f16 (COPY_TO_REGCLASS $src, VGPR_32)), 0)>;
+  def : GCNPat<(i16 (cvt_to_bf8 f16:$src)),
+    (V_CVT_PK_BF8_F16_fake16_e64 0,
+      (v2f16 (COPY_TO_REGCLASS $src, VGPR_32)), 0)>;
+}
 }
 }
 

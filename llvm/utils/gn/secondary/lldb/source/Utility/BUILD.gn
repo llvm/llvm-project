@@ -8,6 +8,7 @@ static_library("Utility") {
   ]
   sources = [
     "AcceleratorGDBRemotePackets.cpp",
+    "AddressSpace.cpp",
     "AddressableBits.cpp",
     "ArchSpec.cpp",
     "Args.cpp",

@@ -10,7 +10,18 @@
 #if defined(KERNEL_USE)
 extern "C" void ubsan_message(const char *msg);
 static void message(const char *msg) { ubsan_message(msg); }
-#elif SANITIZER_GPU
+#elif SANITIZER_AMDGPU || SANITIZER_NVPTX
+// Manually declared until we hook up the C headers correctly.
+extern "C" {
+struct FILE;
+extern FILE *stderr;
+int fprintf(FILE *stream, const char *fmt, ...);
+}
+template <typename... Args>
+static void message(const char *msg, Args &&...args) {
+  fprintf(stderr, msg, args...);
+}
+#elif SANITIZER_SPIRV
 extern "C" int printf(const char *fmt, ...);
 template <typename... Args>
 static void message(const char *msg, Args &&...args) {

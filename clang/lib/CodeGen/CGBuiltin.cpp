@@ -4164,10 +4164,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_stdc_bit_ceil: {
     Value *ArgValue = EmitScalarExpr(E->getArg(0));
     llvm::Type *ArgType = ArgValue->getType();
-    unsigned BitWidth = ArgType->getIntegerBitWidth();
     Value *One = ConstantInt::get(ArgType, 1);
-    Value *Two = ConstantInt::get(ArgType, 2);
-
     Value *IsLEOne = Builder.CreateICmpULE(ArgValue, One, "isleone");
 
     BasicBlock *EntryBB = Builder.GetInsertBlock();
@@ -4183,8 +4180,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     // 2<<(BitWidth-1-LZ) to get the next power of two. The shift
     // amount is always in [0, BitWidth-1], so when LZ==0 (argument has its MSB
     // set), the result wraps to 0
+    unsigned BitWidth = ArgType->getIntegerBitWidth();
     Value *ShiftAmt =
         Builder.CreateSub(ConstantInt::get(ArgType, BitWidth - 1), LZ);
+    Value *Two = Builder.CreateShl(One, One);
     Value *Tmp = Builder.CreateShl(Two, ShiftAmt);
     Builder.CreateBr(MergeBB);
 

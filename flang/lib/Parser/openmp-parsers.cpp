@@ -209,7 +209,13 @@ struct OmpDirectiveNameParser {
     for (const NameWithId &nid : directives_starting_with(next)) {
       if (attempt(Token(nid.first.data())).Parse(state)) {
         OmpDirectiveName n;
-        n.v = nid.second;
+        // We can't tell which one "ordered" corresponds to here,
+        // so normalize it to OMPD_ordered_standalone.
+        if (nid.second == llvm::omp::Directive::OMPD_ordered_blockassoc) {
+          n.v = llvm::omp::Directive::OMPD_ordered_standalone;
+        } else {
+          n.v = nid.second;
+        }
         n.source = parser::CharBlock(begin, state.GetLocation());
         return n;
       }
@@ -1903,8 +1909,10 @@ auto OmpDirectiveSpecificationParser::Parse(ParseState &state) const
 }
 
 static bool IsStandaloneOrdered(const OmpDirectiveSpecification &spec) {
-  // An ORDERED construct is standalone if it has DOACROSS or DEPEND clause.
-  return spec.DirId() == llvm::omp::Directive::OMPD_ordered &&
+  // An ORDERED directive is standalone if it has DOACROSS or DEPEND clause.
+  // The directive name parser will always use OMPD_ordered_standalone
+  // for "ORDERED".
+  return spec.DirId() == llvm::omp::Directive::OMPD_ordered_standalone &&
       llvm::any_of(spec.Clauses().v, [](const OmpClause &clause) {
         llvm::omp::Clause id{clause.Id()};
         return id == llvm::omp::Clause::OMPC_depend ||
@@ -2184,6 +2192,7 @@ struct OmpBlockConstructParser {
       if (auto &&body{attempt(StrictlyStructuredBlockParser{}).Parse(state)}) {
         // Try strictly-structured block with an optional end-directive
         auto end{maybe(OmpEndDirectiveParser{dir_}).Parse(state)};
+        SwitchToBlockOrdered(*begin, *end);
         return OmpBlockConstruct{OmpBeginDirective(std::move(*begin)),
             std::move(*body),
             llvm::transformOptional(std::move(*end),
@@ -2194,6 +2203,7 @@ struct OmpBlockConstructParser {
         auto end{maybe(OmpEndDirectiveParser{dir_}).Parse(state)};
         // Delay the error for a missing end-directive until semantics so that
         // we have better control over the output.
+        SwitchToBlockOrdered(*begin, *end);
         return OmpBlockConstruct{OmpBeginDirective(std::move(*begin)),
             std::move(*body),
             llvm::transformOptional(std::move(*end),
@@ -2204,6 +2214,22 @@ struct OmpBlockConstructParser {
   }
 
 private:
+  // There are two directive ids corresponding to "ORDERED", and the
+  // directive name parser will always use OMPD_ordered_standalone.
+  // Change it to OMPD_ordered_blockassoc once we've confirmed that
+  // this is the block-associated variant.
+  void SwitchToBlockOrdered(const OmpDirectiveSpecification &begin,
+      const std::optional<OmpDirectiveSpecification> &end) const {
+    if (begin.DirId() == llvm::omp::Directive::OMPD_ordered_standalone) {
+      const_cast<OmpDirectiveName &>(begin.DirName()).v =
+          llvm::omp::Directive::OMPD_ordered_blockassoc;
+      if (end) {
+        const_cast<OmpDirectiveName &>(end->DirName()).v =
+            llvm::omp::Directive::OMPD_ordered_blockassoc;
+      }
+    }
+  }
+
   llvm::omp::Directive dir_;
   bool implicit_;
 };
@@ -2614,7 +2640,7 @@ TYPE_PARSER(sourced(construct<OmpAssumeDirective>(
 TYPE_PARSER( //
     MakeBlockConstruct(llvm::omp::Directive::OMPD_masked) ||
     MakeBlockConstruct(llvm::omp::Directive::OMPD_master) ||
-    MakeBlockConstruct(llvm::omp::Directive::OMPD_ordered) ||
+    MakeBlockConstruct(llvm::omp::Directive::OMPD_ordered_standalone) ||
     MakeBlockConstruct(llvm::omp::Directive::OMPD_parallel_masked) ||
     MakeBlockConstruct(llvm::omp::Directive::OMPD_parallel_master) ||
     MakeBlockConstruct(llvm::omp::Directive::OMPD_parallel_workshare) ||

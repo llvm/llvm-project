@@ -1411,12 +1411,8 @@ void CodeGenModule::Release() {
     else if (flt == &llvm::APFloat::IEEEsingle())
       Format = llvm::LongDoubleFormat::IEEEsingle;
 
-    if (Format) {
-      getModule().addModuleFlag(
-          llvm::Module::Error, "long-double-type",
-          llvm::MDString::get(VMContext,
-                              llvm::getLongDoubleFormatName(*Format)));
-    }
+    if (Format)
+      getModule().setLongDoubleFormat(*Format);
   }
 
   if (getTriple().isOSzOS()) {

@@ -4,7 +4,7 @@
 ; Check latencies of vmul/vfma accumulate chains.
 
 define arm_aapcs_vfpcc float @Test1(float %f1, float %f2, float %f3, float %f4, float %f5, float %f6) {
-; CHECK:       ********** MI Scheduling **********
+; CHECK:       Current Schedule Region
 ; CHECK:       Test1:%bb.0
 
 ; CHECK:       VMULS
@@ -43,7 +43,7 @@ define arm_aapcs_vfpcc float @Test1(float %f1, float %f2, float %f3, float %f4, 
 
 ; ASIMD form
 define arm_aapcs_vfpcc <2 x float> @Test2(<2 x float> %f1, <2 x float> %f2, <2 x float> %f3, <2 x float> %f4, <2 x float> %f5, <2 x float> %f6) {
-; CHECK:       ********** MI Scheduling **********
+; CHECK:       Current Schedule Region
 ; CHECK:       Test2:%bb.0
 
 ; CHECK:       VMULfd
@@ -81,7 +81,7 @@ define arm_aapcs_vfpcc <2 x float> @Test2(<2 x float> %f1, <2 x float> %f2, <2 x
 }
 
 define arm_aapcs_vfpcc float @Test3(float %f1, float %f2, float %f3, float %f4, float %f5, float %f6) {
-; CHECK:       ********** MI Scheduling **********
+; CHECK:       Current Schedule Region
 ; CHECK:       Test3:%bb.0
 
 ; CHECK:       VMULS
@@ -120,7 +120,7 @@ define arm_aapcs_vfpcc float @Test3(float %f1, float %f2, float %f3, float %f4, 
 
 ; ASIMD form
 define arm_aapcs_vfpcc <2 x float> @Test4(<2 x float> %f1, <2 x float> %f2, <2 x float> %f3, <2 x float> %f4, <2 x float> %f5, <2 x float> %f6) {
-; CHECK:       ********** MI Scheduling **********
+; CHECK:       Current Schedule Region
 ; CHECK:       Test4:%bb.0
 
 ; CHECK:       VMULfd
@@ -158,7 +158,7 @@ define arm_aapcs_vfpcc <2 x float> @Test4(<2 x float> %f1, <2 x float> %f2, <2 x
 }
 
 define arm_aapcs_vfpcc float @Test5(float %f1, float %f2, float %f3) {
-; CHECK:       ********** MI Scheduling **********
+; CHECK:       Current Schedule Region
 ; CHECK:       Test5:%bb.0
 
 ; CHECK-DEFAULT: VNMLS
@@ -177,7 +177,7 @@ define arm_aapcs_vfpcc float @Test5(float %f1, float %f2, float %f3) {
 
 
 define arm_aapcs_vfpcc float @Test6(float %f1, float %f2, float %f3) {
-; CHECK:       ********** MI Scheduling **********
+; CHECK:       Current Schedule Region
 ; CHECK:       Test6:%bb.0
 
 ; CHECK-DEFAULT: VNMLA

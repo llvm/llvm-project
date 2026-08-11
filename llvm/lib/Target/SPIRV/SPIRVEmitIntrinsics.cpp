@@ -3665,6 +3665,13 @@ bool SPIRVEmitIntrinsicsImpl::runOnFunction(Function &Func) {
   // Data structure for dead instructions that were simplified and replaced.
   SmallPtrSet<Instruction *, 4> DeadInsts;
   for (auto &I : instructions(Func)) {
+    if (StoreInst *SI = dyn_cast<StoreInst>(&I)) {
+      Type *ElTy = SI->getValueOperand()->getType();
+      if (ElTy->isAggregateType() || ElTy->isVectorTy())
+        AggrStores.insert(&I);
+      continue;
+    }
+
     auto *GEP = dyn_cast<GetElementPtrInst>(&I);
     auto *SGEP = dyn_cast<StructuredGEPInst>(&I);
 
@@ -3690,18 +3697,6 @@ bool SPIRVEmitIntrinsicsImpl::runOnFunction(Function &Func) {
   for (auto *I : DeadInsts) {
     assert(I->use_empty() && "Dead instruction should not have any uses left");
     I->eraseFromParent();
-  }
-
-  // StoreInst's operand type can be changed during the next
-  // transformations, so we need to store it in the set. Also store already
-  // transformed types.
-  for (auto &I : instructions(Func)) {
-    StoreInst *SI = dyn_cast<StoreInst>(&I);
-    if (!SI)
-      continue;
-    Type *ElTy = SI->getValueOperand()->getType();
-    if (ElTy->isAggregateType() || ElTy->isVectorTy())
-      AggrStores.insert(&I);
   }
 
   B.SetInsertPoint(&Func.getEntryBlock(), Func.getEntryBlock().begin());
