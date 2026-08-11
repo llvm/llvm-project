@@ -242,8 +242,11 @@ bool AMDGPUPrivateObjectVGPRsImpl::run(MachineFunction &MF) {
 
   // An object lives in caller-saved registers, so a callee is free to overwrite
   // it. Being live across a call is diagnosed rather than left to read back
-  // whatever the callee happened to leave behind. One diagnostic per object:
-  // the rest of its calls would say the same thing.
+  // whatever the callee happened to leave behind. Inline asm is diagnosed too,
+  // but only when it clobbers registers the object occupies: unlike a call it
+  // names registers directly, so the liveness above cannot keep it away from
+  // them. One diagnostic per object: the rest would say the same thing.
+  const SIRegisterInfo &TRI = TII->getRegisterInfo();
   SmallPtrSet<const AllocaInst *, 4> Diagnosed;
   for (auto [BBIdx, MBB] : enumerate(IndexToBlock)) {
     for (const auto &ABBI : BBInfos[BBIdx]) {
@@ -257,14 +260,37 @@ bool AMDGPUPrivateObjectVGPRsImpl::run(MachineFunction &MF) {
             Live = Marker->isStart();
           continue;
         }
-        if (!Live || !MI.isCall())
+        if (!Live)
+          continue;
+
+        std::string What;
+        if (MI.isCall()) {
+          What = "is live across a call";
+        } else if (MI.isInlineAsm()) {
+          const ObjectRegs &Regs = AllocaObjectRegs.at(ABBI.Alloca).first;
+          if (any_of(Regs, [&](MCPhysReg Reg) {
+                return MI.modifiesRegister(Reg, &TRI);
+              })) {
+            // Name the registers the object occupies. Unlike a callee, which
+            // may write any caller-saved register, the asm names a fixed set,
+            // so seeing the two side by side is what makes this fixable: either
+            // the asm gives those registers up, or the object is placed
+            // elsewhere.
+            const auto &MD = AMDGPU::AllocatedVGPRsMetadata::get(*ABBI.Alloca);
+            unsigned Begin = MD.getAddress() / 4;
+            unsigned End = (MD.getAddress() + MD.getSize() - 1) / 4;
+            What = ("at v[" + Twine(Begin) + ":" + Twine(End) +
+                    "] is clobbered by inline asm")
+                       .str();
+          }
+        }
+        if (What.empty())
           continue;
 
         const Function &F = MF.getFunction();
         F.getContext().diagnose(DiagnosticInfoUnsupported(
             F,
-            "object in the VGPR 'as memory' address space (13) is live across "
-            "a call",
+            Twine("object in the VGPR 'as memory' address space (13) ") + What,
             MI.getDebugLoc()));
         Diagnosed.insert(ABBI.Alloca);
         break;
