@@ -440,6 +440,21 @@ namespace Inheritance {
   }
   static_assert(foo4() == 5);
 
+  constexpr int doublePointer() {
+    auto s = Child{};
+    auto *ss = &s;
+
+    try {
+      throw &ss;;
+    } catch (Parent**) {
+      return 2;
+    } catch(...) {
+      return 1;
+    }
+    return -1;
+  }
+  static_assert(doublePointer() == 1);
+
 
 
   class Base {};
@@ -453,6 +468,108 @@ namespace Inheritance {
     return -1;
   }
   static_assert(foo5() == -1); // expected-error {{not an integral constant expression}}
+
+  constexpr int foo6() {
+    auto s = Child{};
+    try {
+      throw &s;
+    } catch (Child*) {
+      return 2;
+    } catch(...) {
+      return 1;
+    }
+
+    return -1;
+  }
+  static_assert(foo6() == 2);
+
+  constexpr int foo7() {
+    try {
+      throw Child{};
+    } catch (Child*) {
+      return 2;
+    } catch(...) {
+      return 1;
+    }
+
+    return -1;
+  }
+  static_assert(foo7() == 1);
+
+  constexpr int foo8() {
+    auto s = Child{};
+    try {
+      throw &s;
+    } catch (Parent&) {
+      return 2;
+    } catch(...) {
+      return 1;
+    }
+
+    return -1;
+  }
+  static_assert(foo8() == 1);
+
+  constexpr int foo9() {
+    auto s = Child{};
+    try {
+      throw (Child&)s;
+    } catch (Parent&) {
+      return 2;
+    } catch(...) {
+      return 1;
+    }
+
+    return -1;
+  }
+  static_assert(foo9() == 2);
+
+  constexpr int foo10() {
+    auto s = Child{};
+    try {
+      throw (Child&)s;
+    } catch (Parent) {
+      return 2;
+    } catch(...) {
+      return 1;
+    }
+
+    return -1;
+  }
+  static_assert(foo10() == 2);
+
+  constexpr int foo11() {
+    auto s = Child{};
+    try {
+      throw (Child&&)s;
+    } catch (Parent2) {
+      return 2;
+    } catch(...) {
+      return 1;
+    }
+
+    return -1;
+  }
+  static_assert(foo11() == 2);
+
+
+  constexpr int foo12() {
+    auto s = Child{};
+    try {
+      throw s;
+    } catch (Parent&&) { // expected-error {{cannot catch exceptions by rvalue reference}}
+      return 2;
+    } catch(...) {
+      return 1;
+    }
+
+    return -1;
+  }
+  static_assert(foo12() == 2);
+
+
+
+
 }
 
 namespace Pointer {

@@ -27,10 +27,6 @@ bool ExceptionTableEntry::canCatch(const Type *ThrowType,
 
   assert(CatchType);
 
-  llvm::errs() << __PRETTY_FUNCTION__ << '\n';
-  ThrowType->dump();
-  CatchType->dump();
-
   // nullptr_t can be caught by any pointer type (including member pointers)
   // and references of pointer types.
   if (ThrowType->isNullPtrType()) {
@@ -57,14 +53,21 @@ bool ExceptionTableEntry::canCatch(const Type *ThrowType,
       !isRecordOrPointerToRecordType(CatchType))
     return false;
 
-  if (CatchType->isPointerOrReferenceType())
-    CatchType = CatchType->getPointeeType().getTypePtr();
-  if (ThrowType->isPointerOrReferenceType())
-    ThrowType = ThrowType->getPointeeType().getTypePtr();
-
+  // T can catch T.
   if (CatchType == ThrowType)
     return true;
 
+  // T& can catch T.
+  if (CatchType->isReferenceType())
+    CatchType = CatchType->getPointeeType().getTypePtr();
+
+  // T* can only catch T*, not T.
+  if (CatchType->isPointerType() && ThrowType->isPointerType()) {
+    CatchType = CatchType->getPointeeType().getTypePtr();
+    ThrowType = ThrowType->getPointeeType().getTypePtr();
+  }
+
+  // Check for base casts.
   if (CatchType->isRecordType() && ThrowType->isRecordType()) {
     const CXXRecordDecl *CatchDecl = CatchType->getAsCXXRecordDecl();
     const CXXRecordDecl *ThrowDecl = ThrowType->getAsCXXRecordDecl();
