@@ -6,6 +6,19 @@
 ; RUN: opt -S -mtriple=amdgpu12.00-- -passes=amdgpu-promote-alloca -o - %s \
 ; RUN:     | FileCheck %s --check-prefix=OFF
 
+; Promoting decides for itself whether an object can live in registers, and the
+; backend decides the same thing again and reports an error when it cannot. The
+; two have to agree: promoting something the backend then rejects turns a
+; working program into a failed compile. Feeding the promoted IR straight to the
+; backend is what holds them together - these two runs fail, with the backend's
+; own diagnostic, the moment promoting admits something the backend does not.
+; RUN: opt -S -mtriple=amdgpu12.00-- -passes=amdgpu-promote-alloca \
+; RUN:     -amdgpu-promote-private -o - %s \
+; RUN:   | llc -global-isel=0 -mtriple=amdgpu12.00-- -filetype=null
+; RUN: opt -S -mtriple=amdgpu12.00-- -passes=amdgpu-promote-alloca \
+; RUN:     -amdgpu-promote-private -o - %s \
+; RUN:   | llc -global-isel=1 -mtriple=amdgpu12.00-- -filetype=null
+
 ; A private alloca can be moved into the VGPR "as memory" address space (13),
 ; where it lives in registers rather than in scratch. The pointers derived from
 ; it change address space and the object is then allocated exactly as one
@@ -122,10 +135,9 @@ define amdgpu_kernel void @not_promoted_call(ptr addrspace(1) %out, i32 %i) {
 define amdgpu_kernel void @not_promoted_misaligned(ptr addrspace(1) %out, i32 %i) {
 ; CHECK-LABEL: define amdgpu_kernel void @not_promoted_misaligned(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[I:%.*]]) {
-; CHECK-NEXT:    [[OBJ:%.*]] = alloca [8 x i32], align 4, addrspace(13), !amdgpu.allocated.vgprs [[META0]]
-; CHECK-NEXT:    call void @llvm.amdgcn.vgpr.lifetime.start.p13(ptr addrspace(13) [[OBJ]])
-; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, ptr addrspace(13) [[OBJ]], i32 [[I]]
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr addrspace(13) [[P]], align 1
+; CHECK-NEXT:    [[OBJ:%.*]] = alloca [8 x i32], align 4, addrspace(5)
+; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, ptr addrspace(5) [[OBJ]], i32 [[I]]
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr addrspace(5) [[P]], align 1
 ; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -246,6 +258,173 @@ define amdgpu_kernel void @not_promoted_memcpy(ptr addrspace(1) %out, i32 %i) {
   i32 32, i1 false)
   %p = getelementptr i8, ptr addrspace(5) %obj, i32 %i
   %v = load i32, ptr addrspace(5) %p, align 4
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+declare void @llvm.lifetime.start.p5(ptr addrspace(5) nocapture)
+declare void @llvm.lifetime.end.p5(ptr addrspace(5) nocapture)
+
+; A call only matters where the object is live, which the lifetime markers
+; bound. The backend decides this the same way, so promoting here cannot
+; produce something it then rejects.
+define amdgpu_kernel void @call_before_lifetime(ptr addrspace(1) %out, i32 %i) {
+; CHECK-LABEL: define amdgpu_kernel void @call_before_lifetime(
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[I:%.*]]) {
+; CHECK-NEXT:    [[OBJ:%.*]] = alloca [8 x i32], align 4, addrspace(13), !amdgpu.allocated.vgprs [[META0]]
+; CHECK-NEXT:    call void @extern()
+; CHECK-NEXT:    call void @llvm.amdgcn.vgpr.lifetime.start.p13(ptr addrspace(13) [[OBJ]])
+; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, ptr addrspace(13) [[OBJ]], i32 [[I]]
+; CHECK-NEXT:    store i32 7, ptr addrspace(13) [[P]], align 4
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr addrspace(13) [[P]], align 4
+; CHECK-NEXT:    call void @llvm.amdgcn.vgpr.lifetime.end.p13(ptr addrspace(13) [[OBJ]])
+; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    ret void
+;
+; OFF-LABEL: define amdgpu_kernel void @call_before_lifetime(
+; OFF-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[I:%.*]]) {
+; OFF-NEXT:    [[OBJ:%.*]] = alloca [8 x i32], align 4, addrspace(5)
+; OFF-NEXT:    call void @extern()
+; OFF-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[OBJ]])
+; OFF-NEXT:    [[P:%.*]] = getelementptr i8, ptr addrspace(5) [[OBJ]], i32 [[I]]
+; OFF-NEXT:    store i32 7, ptr addrspace(5) [[P]], align 4
+; OFF-NEXT:    [[V:%.*]] = load i32, ptr addrspace(5) [[P]], align 4
+; OFF-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[OBJ]])
+; OFF-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT]], align 4
+; OFF-NEXT:    ret void
+;
+  %obj = alloca [8 x i32], align 4, addrspace(5)
+  call void @extern()
+  call void @llvm.lifetime.start.p5(ptr addrspace(5) %obj)
+  %p = getelementptr i8, ptr addrspace(5) %obj, i32 %i
+  store i32 7, ptr addrspace(5) %p, align 4
+  %v = load i32, ptr addrspace(5) %p, align 4
+  call void @llvm.lifetime.end.p5(ptr addrspace(5) %obj)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @call_after_lifetime(ptr addrspace(1) %out, i32 %i) {
+; CHECK-LABEL: define amdgpu_kernel void @call_after_lifetime(
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[I:%.*]]) {
+; CHECK-NEXT:    [[OBJ:%.*]] = alloca [8 x i32], align 4, addrspace(13), !amdgpu.allocated.vgprs [[META0]]
+; CHECK-NEXT:    call void @llvm.amdgcn.vgpr.lifetime.start.p13(ptr addrspace(13) [[OBJ]])
+; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, ptr addrspace(13) [[OBJ]], i32 [[I]]
+; CHECK-NEXT:    store i32 7, ptr addrspace(13) [[P]], align 4
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr addrspace(13) [[P]], align 4
+; CHECK-NEXT:    call void @llvm.amdgcn.vgpr.lifetime.end.p13(ptr addrspace(13) [[OBJ]])
+; CHECK-NEXT:    call void @extern()
+; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    ret void
+;
+; OFF-LABEL: define amdgpu_kernel void @call_after_lifetime(
+; OFF-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[I:%.*]]) {
+; OFF-NEXT:    [[OBJ:%.*]] = alloca [8 x i32], align 4, addrspace(5)
+; OFF-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[OBJ]])
+; OFF-NEXT:    [[P:%.*]] = getelementptr i8, ptr addrspace(5) [[OBJ]], i32 [[I]]
+; OFF-NEXT:    store i32 7, ptr addrspace(5) [[P]], align 4
+; OFF-NEXT:    [[V:%.*]] = load i32, ptr addrspace(5) [[P]], align 4
+; OFF-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[OBJ]])
+; OFF-NEXT:    call void @extern()
+; OFF-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT]], align 4
+; OFF-NEXT:    ret void
+;
+  %obj = alloca [8 x i32], align 4, addrspace(5)
+  call void @llvm.lifetime.start.p5(ptr addrspace(5) %obj)
+  %p = getelementptr i8, ptr addrspace(5) %obj, i32 %i
+  store i32 7, ptr addrspace(5) %p, align 4
+  %v = load i32, ptr addrspace(5) %p, align 4
+  call void @llvm.lifetime.end.p5(ptr addrspace(5) %obj)
+  call void @extern()
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+; The call is on a path the object is not live on.
+define amdgpu_kernel void @call_other_branch(ptr addrspace(1) %out, i32 %i, i1 %c) {
+; CHECK-LABEL: define amdgpu_kernel void @call_other_branch(
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[I:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[OBJ:%.*]] = alloca [8 x i32], align 4, addrspace(13), !amdgpu.allocated.vgprs [[META0]]
+; CHECK-NEXT:    call void @llvm.amdgcn.vgpr.lifetime.start.p13(ptr addrspace(13) [[OBJ]])
+; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, ptr addrspace(13) [[OBJ]], i32 [[I]]
+; CHECK-NEXT:    store i32 7, ptr addrspace(13) [[P]], align 4
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr addrspace(13) [[P]], align 4
+; CHECK-NEXT:    call void @llvm.amdgcn.vgpr.lifetime.end.p13(ptr addrspace(13) [[OBJ]])
+; CHECK-NEXT:    br i1 [[C]], label %[[SLOW:.*]], label %[[DONE:.*]]
+; CHECK:       [[SLOW]]:
+; CHECK-NEXT:    call void @extern()
+; CHECK-NEXT:    br label %[[DONE]]
+; CHECK:       [[DONE]]:
+; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    ret void
+;
+; OFF-LABEL: define amdgpu_kernel void @call_other_branch(
+; OFF-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[I:%.*]], i1 [[C:%.*]]) {
+; OFF-NEXT:  [[ENTRY:.*:]]
+; OFF-NEXT:    [[OBJ:%.*]] = alloca [8 x i32], align 4, addrspace(5)
+; OFF-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[OBJ]])
+; OFF-NEXT:    [[P:%.*]] = getelementptr i8, ptr addrspace(5) [[OBJ]], i32 [[I]]
+; OFF-NEXT:    store i32 7, ptr addrspace(5) [[P]], align 4
+; OFF-NEXT:    [[V:%.*]] = load i32, ptr addrspace(5) [[P]], align 4
+; OFF-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[OBJ]])
+; OFF-NEXT:    br i1 [[C]], label %[[SLOW:.*]], label %[[DONE:.*]]
+; OFF:       [[SLOW]]:
+; OFF-NEXT:    call void @extern()
+; OFF-NEXT:    br label %[[DONE]]
+; OFF:       [[DONE]]:
+; OFF-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT]], align 4
+; OFF-NEXT:    ret void
+;
+entry:
+  %obj = alloca [8 x i32], align 4, addrspace(5)
+  call void @llvm.lifetime.start.p5(ptr addrspace(5) %obj)
+  %p = getelementptr i8, ptr addrspace(5) %obj, i32 %i
+  store i32 7, ptr addrspace(5) %p, align 4
+  %v = load i32, ptr addrspace(5) %p, align 4
+  call void @llvm.lifetime.end.p5(ptr addrspace(5) %obj)
+  br i1 %c, label %slow, label %done
+slow:
+  call void @extern()
+  br label %done
+done:
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+; Genuinely spanning the live range: still refused.
+define amdgpu_kernel void @call_spans_lifetime(ptr addrspace(1) %out, i32 %i) {
+; CHECK-LABEL: define amdgpu_kernel void @call_spans_lifetime(
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[I:%.*]]) {
+; CHECK-NEXT:    [[OBJ:%.*]] = alloca [8 x i32], align 4, addrspace(5)
+; CHECK-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[OBJ]])
+; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, ptr addrspace(5) [[OBJ]], i32 [[I]]
+; CHECK-NEXT:    store i32 7, ptr addrspace(5) [[P]], align 4
+; CHECK-NEXT:    call void @extern()
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr addrspace(5) [[P]], align 4
+; CHECK-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[OBJ]])
+; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    ret void
+;
+; OFF-LABEL: define amdgpu_kernel void @call_spans_lifetime(
+; OFF-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[I:%.*]]) {
+; OFF-NEXT:    [[OBJ:%.*]] = alloca [8 x i32], align 4, addrspace(5)
+; OFF-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[OBJ]])
+; OFF-NEXT:    [[P:%.*]] = getelementptr i8, ptr addrspace(5) [[OBJ]], i32 [[I]]
+; OFF-NEXT:    store i32 7, ptr addrspace(5) [[P]], align 4
+; OFF-NEXT:    call void @extern()
+; OFF-NEXT:    [[V:%.*]] = load i32, ptr addrspace(5) [[P]], align 4
+; OFF-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[OBJ]])
+; OFF-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT]], align 4
+; OFF-NEXT:    ret void
+;
+  %obj = alloca [8 x i32], align 4, addrspace(5)
+  call void @llvm.lifetime.start.p5(ptr addrspace(5) %obj)
+  %p = getelementptr i8, ptr addrspace(5) %obj, i32 %i
+  store i32 7, ptr addrspace(5) %p, align 4
+  call void @extern()
+  %v = load i32, ptr addrspace(5) %p, align 4
+  call void @llvm.lifetime.end.p5(ptr addrspace(5) %obj)
   store i32 %v, ptr addrspace(1) %out
   ret void
 }

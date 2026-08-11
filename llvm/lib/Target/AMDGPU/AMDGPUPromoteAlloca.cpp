@@ -158,6 +158,10 @@ private:
   /// Next free byte offset in the VGPR ("as memory") address space.
   unsigned AllocVGPROffset = 0;
 
+  /// Blocks holding a call an object in the VGPR address space could be live
+  /// across. Empty unless that promotion is enabled; see isLiveAcrossCall.
+  SmallPtrSet<const BasicBlock *, 8> CallBlocks;
+
   std::pair<Value *, Value *> getLocalSizeYZ(IRBuilder<> &Builder);
   Value *getWorkitemID(IRBuilder<> &Builder, unsigned N);
 
@@ -177,6 +181,7 @@ private:
   FixedVectorType *getVectorTypeForAlloca(Type *AllocaTy) const;
   void analyzePromoteToVector(AllocaAnalysis &AA) const;
   void promoteAllocaToVector(AllocaAnalysis &AA);
+  bool isLiveAcrossCall(const AllocaInst *AI) const;
   void analyzePromoteToVGPR(AllocaAnalysis &AA) const;
   void promoteAllocaToVGPR(AllocaAnalysis &AA);
   void analyzePromoteToLDS(AllocaAnalysis &AA) const;
@@ -414,26 +419,22 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool IsLatePass, bool NoOpt) {
     return false;
 
   const bool PromoteToLDS = IsLatePass && !NoOpt;
-  bool PromoteToVGPR = EnablePromoteToVGPR && IsLatePass && !NoOpt;
+  const bool PromoteToVGPR = EnablePromoteToVGPR && IsLatePass && !NoOpt;
 
-  // An object in the VGPR ("as memory") address space occupies fixed registers
-  // for the whole of its live range. Those registers are caller-saved and the
-  // object cannot be spilled, so one that is live across a call has nowhere to
-  // be, and AMDGPUPrivateObjectVGPRs diagnoses it. Promoting nothing in a
-  // function that makes a call keeps this from turning working code into an
-  // error.
+  // Whether an object could be live across one of these is decided per alloca,
+  // in analyzePromoteToVGPR. Collected once here because the answer is a
+  // property of the function, not of the object.
   //
   // Intrinsics do not count: on this target they lower to instructions rather
-  // than to calls. Were one ever to lower to a call, the result would be that
-  // diagnostic rather than a wrong answer.
-  //
-  // TODO: This is conservative. Only a call the object is live across matters,
-  // and then only one that does not preserve the registers it occupies.
+  // than to calls. Were one ever to lower to a call, the result would be the
+  // backend's diagnostic rather than a wrong answer.
+  CallBlocks.clear();
   if (PromoteToVGPR) {
-    PromoteToVGPR = none_of(instructions(F), [](const Instruction &I) {
+    for (const Instruction &I : instructions(F)) {
       const auto *CB = dyn_cast<CallBase>(&I);
-      return CB && !isa<IntrinsicInst>(CB);
-    });
+      if (CB && !isa<IntrinsicInst>(CB))
+        CallBlocks.insert(I.getParent());
+    }
   }
 
   bool SufficientLDS = PromoteToLDS && hasSufficientLocalMem(F);
@@ -1398,6 +1399,94 @@ void AMDGPUPromoteAllocaImpl::promoteAllocaToVector(AllocaAnalysis &AA) {
   AA.Alloca->eraseFromParent();
 }
 
+// Whether a call can execute while \p AI is live.
+//
+// An object in the VGPR ("as memory") address space occupies fixed registers
+// for the whole of its live range. Those registers are caller-saved and the
+// object cannot be spilled, so one that is live across a call has nowhere to
+// be, and AMDGPUPrivateObjectVGPRs diagnoses it. Declining to promote in that
+// case keeps this from turning a working program into an error.
+//
+// The live range is the one that pass will use, not the one the uses imply: an
+// object is live from its lifetime start - or from the alloca, if it has none,
+// since allocateVgprs then inserts a start there - until its lifetime end, or
+// the end of the function. An object with no use after a call is still live
+// across it if nothing ended it, which is why this cannot be answered by
+// looking at uses.
+bool AMDGPUPromoteAllocaImpl::isLiveAcrossCall(const AllocaInst *AI) const {
+  if (CallBlocks.empty())
+    return false;
+
+  const Function &F = *AI->getFunction();
+
+  // Without an explicit start the object is live from the alloca, so a call
+  // anywhere after it counts, and the alloca is in the entry block.
+  bool HaveStart = false;
+  for (const User *U : AI->users()) {
+    const auto *II = dyn_cast<IntrinsicInst>(U);
+    if (II && II->getIntrinsicID() == Intrinsic::lifetime_start) {
+      HaveStart = true;
+      break;
+    }
+  }
+
+  // Live-in state per block, to a fixed point over the CFG. Walking a block
+  // from its live-in state gives its live-out, and a call seen while live is
+  // the answer.
+  DenseMap<const BasicBlock *, bool> LiveIn;
+  SmallVector<const BasicBlock *> Worklist;
+
+  // Walk a block, returning whether the object is live on exit, and reporting
+  // whether a call is reached while it is live.
+  const auto scan = [&](const BasicBlock &BB, bool Live, bool *SawCall) {
+    for (const Instruction &I : BB) {
+      if (const auto *II = dyn_cast<IntrinsicInst>(&I)) {
+        Intrinsic::ID ID = II->getIntrinsicID();
+        if ((ID == Intrinsic::lifetime_start ||
+             ID == Intrinsic::lifetime_end) &&
+            II->getArgOperand(0)->stripPointerCasts() == AI) {
+          Live = ID == Intrinsic::lifetime_start;
+          continue;
+        }
+        continue;
+      }
+      if (!HaveStart && &I == static_cast<const Instruction *>(AI))
+        Live = true;
+      if (Live && SawCall && isa<CallBase>(&I))
+        *SawCall = true;
+    }
+    return Live;
+  };
+
+  LiveIn[&F.getEntryBlock()] = false;
+  Worklist.push_back(&F.getEntryBlock());
+  while (!Worklist.empty()) {
+    const BasicBlock *BB = Worklist.pop_back_val();
+    bool Out = scan(*BB, LiveIn[BB], nullptr);
+    for (const BasicBlock *Succ : successors(BB)) {
+      auto It = LiveIn.find(Succ);
+      if (It == LiveIn.end()) {
+        LiveIn[Succ] = Out;
+        Worklist.push_back(Succ);
+      } else if (Out && !It->second) {
+        It->second = true;
+        Worklist.push_back(Succ);
+      }
+    }
+  }
+
+  for (const BasicBlock *BB : CallBlocks) {
+    auto It = LiveIn.find(BB);
+    if (It == LiveIn.end())
+      continue; // unreachable
+    bool SawCall = false;
+    scan(*BB, It->second, &SawCall);
+    if (SawCall)
+      return true;
+  }
+  return false;
+}
+
 // Decide whether an alloca can be moved into the VGPR ("as memory") address
 // space, where it lives in registers rather than in scratch and is reached with
 // an indexed register access instead of a load or store.
@@ -1436,6 +1525,14 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVGPR(AllocaAnalysis &AA) const {
       if (!AMDGPU::isVGPRLoadStoreSupported(Bits, Bits, Alignment))
         return Reject(Inst, "unsupported access size or alignment");
 
+      // Be stricter than the lowering about alignment. It derives the dword
+      // index as pointer >> 2, so an access that is not naturally aligned reads
+      // or writes the dword containing it rather than straddling two. Whole
+      // dword accesses are tolerated there without complaint; an object should
+      // not be moved into a place where that starts happening to it.
+      if (Alignment.value() < std::min<uint64_t>(Bits / 8, 4))
+        return Reject(Inst, "insufficiently aligned access");
+
       continue;
     }
 
@@ -1472,6 +1569,11 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVGPR(AllocaAnalysis &AA) const {
 
     return Reject(Inst, "unhandled alloca user");
   }
+
+  // Last, because it is the only check here that walks the function rather than
+  // the alloca's own uses.
+  if (isLiveAcrossCall(AA.Alloca))
+    return Reject(AA.Alloca, "live across a call");
 
   AA.VGPR.Enable = true;
 }
