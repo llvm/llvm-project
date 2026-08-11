@@ -144,7 +144,6 @@ public:
 
   bool empty() const { return First == Last; }
   size_t size() const { return static_cast<size_t>(Last - First); }
-  size_t capacity() const { return static_cast<size_t>(Cap - First); }
   T &back() {
     DEMANGLE_ASSERT(Last != First, "Calling back() on empty vector!");
     return *(Last - 1);
