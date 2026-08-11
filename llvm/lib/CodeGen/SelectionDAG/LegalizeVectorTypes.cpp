@@ -2907,8 +2907,22 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_COMPRESS(SDNode *N, SDValue &Lo,
 
   SDValue Compressed = DAG.getLoad(VecVT, DL, Chain, StackPtr, PtrInfo);
   if (!Passthru.isUndef()) {
-    Compressed =
-        DAG.getNode(ISD::VSELECT, DL, VecVT, Mask, Compressed, Passthru);
+    // Compress the input mask so only inactive lanes of the result are replaced
+    // by their passthrough value.
+    EVT MaskVT = Mask.getValueType();
+    EVT WideMaskVT = EVT::getVectorVT(*DAG.getContext(), MVT::i32,
+                                      MaskVT.getVectorElementCount());
+    SDValue WideMask = DAG.getNode(ISD::ZERO_EXTEND, DL, WideMaskVT, Mask);
+    SDValue NumActiveElts =
+        DAG.getNode(ISD::VECREDUCE_ADD, DL, MVT::i32, WideMask);
+
+    SDValue StepVector = DAG.getStepVector(DL, WideMaskVT);
+    SDValue SplatNumActiveElts = DAG.getSplat(WideMaskVT, DL, NumActiveElts);
+    SDValue CompressedMask =
+        DAG.getSetCC(DL, MaskVT, StepVector, SplatNumActiveElts, ISD::SETULT);
+
+    Compressed = DAG.getNode(ISD::VSELECT, DL, VecVT, CompressedMask,
+                             Compressed, Passthru);
   }
   std::tie(Lo, Hi) = DAG.SplitVector(Compressed, DL);
 }
