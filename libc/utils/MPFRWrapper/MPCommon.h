@@ -22,7 +22,7 @@ using LIBC_NAMESPACE::fputil::Float128;
 
 #include "mpfr_inc.h"
 
-#ifdef LIBC_TYPES_HAS_FLOAT128
+#ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
 extern "C" {
 int mpfr_set_float128(mpfr_ptr, float128, mpfr_rnd_t);
 float128 mpfr_get_float128(mpfr_srcptr, mpfr_rnd_t);
