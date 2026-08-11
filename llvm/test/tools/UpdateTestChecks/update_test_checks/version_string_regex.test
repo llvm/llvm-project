@@ -1,0 +1,5 @@
+# We check that if a version string emitted by a tool repeats "version", we generate
+# the correct pattern for FileCheck.
+RUN: cp -f %S/Inputs/version_string_regex.ll %t.ll
+RUN: %update_test_checks --no-generate-body-for-unused-prefixes --check-globals all %t.ll
+RUN: diff -u %t.ll %S/Inputs/version_string_regex.ll.expected
