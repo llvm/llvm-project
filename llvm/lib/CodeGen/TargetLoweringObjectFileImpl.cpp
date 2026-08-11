@@ -1057,15 +1057,9 @@ bool TargetLoweringObjectFileELF::isLargeConstant(const DataLayout &DL,
   return false;
 }
 
-MCSection *TargetLoweringObjectFileELF::getSectionForConstant(
-    const DataLayout &DL, SectionKind Kind, const Constant *C, Align &Alignment,
-    const Function *F) const {
-  return getSectionForConstant(DL, Kind, C, Alignment, F, "");
-}
-
-MCSection *TargetLoweringObjectFileELF::getSectionForConstant(
-    const DataLayout &DL, SectionKind Kind, const Constant *C, Align &Alignment,
-    const Function *F, StringRef SectionSuffix) const {
+MCSection *TargetLoweringObjectFileELF::getSectionForConstantImpl(
+    const DataLayout &DL, SectionKind Kind, const Constant *C,
+    StringRef SectionSuffix) const {
   auto &Context = getContext();
   unsigned MergeableCstFlags = ELF::SHF_ALLOC;
   if (Kind.isMergeableConst() || Kind.isMergeableCString())
@@ -1102,6 +1096,21 @@ MCSection *TargetLoweringObjectFileELF::getSectionForConstant(
   return Context.getELFSection(".data.rel.ro" + SectionSuffixStr,
                                ELF::SHT_PROGBITS,
                                ELF::SHF_ALLOC | ELF::SHF_WRITE);
+}
+
+MCSection *TargetLoweringObjectFileELF::getSectionForConstant(
+    const DataLayout &DL, SectionKind Kind, const Constant *C, Align &Alignment,
+    const Function *F) const {
+  return getSectionForConstantImpl(DL, Kind, C, "");
+}
+
+MCSection *TargetLoweringObjectFileELF::getSectionForConstant(
+    const DataLayout &DL, SectionKind Kind, const Constant *C, Align &Alignment,
+    const Function *F, StringRef SectionSuffix) const {
+  if (SectionSuffix.empty())
+    return getSectionForConstant(DL, Kind, C, Alignment, F);
+
+  return getSectionForConstantImpl(DL, Kind, C, SectionSuffix);
 }
 
 /// Returns a unique section for the given machine basic block.
