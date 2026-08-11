@@ -550,6 +550,64 @@ SPIR-V backend, along with their descriptions and argument details.
        data must be a 4-element vector.
 ```
 
+The backend does not provide a stability guarantee for these target intrinsics.
+
+#### Intrinsics That Map to Core SPIR-V Instructions
+
+The SPIR-V backend maps some target intrinsics to core SPIR-V instructions or
+short instruction sequences. The table contains representative mappings.
+
+```{list-table}
+:widths: 25 25 50
+:header-rows: 1
+
+   * - LLVM intrinsic
+     - Input shape
+     - SPIR-V result
+   * - `llvm.spv.any.*`
+     - Scalar Boolean
+     - Passes through the input value.
+   * - `llvm.spv.any.*`
+     - Scalar numeric
+     - Compares the value with zero through `OpINotEqual` or `OpFOrdNotEqual`.
+   * - `llvm.spv.any.*`
+     - Boolean vector
+     - Uses `OpAny`.
+   * - `llvm.spv.any.*`
+     - Numeric vector
+     - Compares each element with zero, then uses `OpAny`.
+   * - `llvm.spv.all.*`
+     - Scalar Boolean
+     - Passes through the input value.
+   * - `llvm.spv.all.*`
+     - Scalar numeric
+     - Compares the value with zero through `OpINotEqual` or `OpFOrdNotEqual`.
+   * - `llvm.spv.all.*`
+     - Boolean vector
+     - Uses `OpAll`.
+   * - `llvm.spv.all.*`
+     - Numeric vector
+     - Compares each element with zero, then uses `OpAll`.
+```
+
+#### Intrinsics That Map to Extended Instruction Sets
+
+The backend selects an extended instruction set from the target environment.
+The table contains a representative mapping.
+
+```{list-table}
+:widths: 30 35 35
+:header-rows: 1
+
+   * - LLVM intrinsic
+     - Vulkan environment
+     - OpenCL environment
+   * - `llvm.spv.lerp.*`
+     - `FMix` from
+       [`GLSL.std.450`](https://registry.khronos.org/SPIR-V/specs/unified1/GLSL.std.450.html)
+     - `mix` from `OpenCL.std`
+```
+
 (spirv-builtin-functions)=
 
 ### Builtin Functions
@@ -585,61 +643,6 @@ acos_f32
 
 represents the `acos` function from the OpenCL extended instruction set for a float32
 input.
-
-#### HLSL Intrinsics
-
-When targeting SPIR-V, Clang lowers HLSL builtin functions to LLVM IR calls that
-the SPIR-V backend recognizes. The backend then selects the corresponding core
-SPIR-V instruction, extended instruction, or instruction sequence. The regression
-tests in `llvm/test/CodeGen/SPIRV/hlsl-intrinsics` show the currently supported
-lowerings.
-
-Some representative HLSL intrinsic mappings are:
-
-- `any` uses `llvm.spv.any.*`.
-
-  ```{list-table}
-  :widths: 35 65
-  :header-rows: 1
-
-     * - Source shape
-       - SPIR-V lowering
-     * - Scalar numeric
-       - Compares the value with zero.
-     * - Boolean vector
-       - `OpAny`
-     * - Numeric vector
-       - Compares each element with zero, then applies `OpAny`.
-  ```
-
-- `all` uses `llvm.spv.all.*`.
-
-  ```{list-table}
-  :widths: 35 65
-  :header-rows: 1
-
-     * - Source shape
-       - SPIR-V lowering
-     * - Scalar numeric
-       - Compares the value with zero.
-     * - Boolean vector
-       - `OpAll`
-     * - Numeric vector
-       - Compares each element with zero, then applies `OpAll`.
-  ```
-
-- `lerp` uses `llvm.spv.lerp.*`.
-
-  ```{list-table}
-  :widths: 35 65
-  :header-rows: 1
-
-     * - Source shape
-       - SPIR-V lowering
-     * - Floating-point scalar or vector
-       - Lowers to the GLSL extended instruction `FMix` from
-         [`GLSL.std.450`](https://registry.khronos.org/SPIR-V/specs/unified1/GLSL.std.450.html).
-  ```
 
 #### Builtin Variables
 
