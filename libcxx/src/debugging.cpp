@@ -12,7 +12,7 @@
 #include <__config>
 #include <debugging>
 
-#if defined(_LIBCPP_WIN32API)
+#if defined(_WIN32)
 #  define WIN32_LEAN_AND_MEAN
 #  define NOMINMAX
 #  include <windows.h>
@@ -56,11 +56,11 @@ _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 // `breakpoint()` implementation
 
 void __breakpoint() noexcept {
-#if defined(_LIBCPP_WIN32API)
+#if defined(_WIN32)
   DebugBreak();
 #else
   raise(SIGTRAP);
-#endif // defined(_LIBCPP_WIN32API)
+#endif // defined(_WIN32)
 }
 
 // `is_debugger_present()` implementation
@@ -69,7 +69,7 @@ OVERRIDABLE_FUNCTION bool is_debugger_present() noexcept {
   if (__gnu_cxx::debugger_signal_for_breakpoint != 0)
     return true;
 
-#if defined(_LIBCPP_WIN32API)
+#if defined(_WIN32)
 
   return IsDebuggerPresent();
 
@@ -184,7 +184,7 @@ OVERRIDABLE_FUNCTION bool is_debugger_present() noexcept {
   // The implementation returns 'false' by default.
   return false;
 
-#endif // defined(_LIBCPP_WIN32API)
+#endif // defined(_WIN32)
 }
 
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
