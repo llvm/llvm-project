@@ -2098,8 +2098,7 @@ mlir::LogicalResult cir::GlobalOp::verify() {
 
   if (getTlsRefs()) {
     if (getStaticLocalGuard().has_value())
-      return emitOpError(
-          "cannot have both static local and tls references");
+      return emitOpError("cannot have both static local and tls references");
     if (!getTlsModel())
       return emitOpError("'tls_refs' only valid for tls");
   }
