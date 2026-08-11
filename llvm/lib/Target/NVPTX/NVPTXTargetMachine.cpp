@@ -15,7 +15,6 @@
 #include "NVPTXAliasAnalysis.h"
 #include "NVPTXAsmPrinter.h"
 #include "NVPTXCtorDtorLowering.h"
-#include "NVPTXLowerAggrCopies.h"
 #include "NVPTXMachineFunctionInfo.h"
 #include "NVPTXTargetObjectFile.h"
 #include "NVPTXTargetTransformInfo.h"
@@ -109,7 +108,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeNVPTXLowerAllocaLegacyPassPass(PR);
   initializeNVPTXLowerUnreachableLegacyPassPass(PR);
   initializeNVPTXCtorDtorLoweringLegacyPass(PR);
-  initializeNVPTXLowerAggrCopiesPass(PR);
+  initializeNVPTXLowerAggrCopiesLegacyPassPass(PR);
   initializeNVPTXProxyRegErasurePass(PR);
   initializeNVPTXForwardParamsLegacyPassPass(PR);
   initializeNVPTXAddressFolderLegacyPassPass(PR);
@@ -392,7 +391,7 @@ void NVPTXPassConfig::addIRPasses() {
 }
 
 bool NVPTXPassConfig::addInstSelector() {
-  addPass(createLowerAggrCopies());
+  addPass(createNVPTXLowerAggrCopiesLegacyPass());
   addPass(createNVPTXAllocaHoistingLegacyPass());
   addPass(createNVPTXISelDag(getNVPTXTargetMachine(), getOptLevel()));
   addPass(createNVPTXReplaceImageHandlesLegacyPass());

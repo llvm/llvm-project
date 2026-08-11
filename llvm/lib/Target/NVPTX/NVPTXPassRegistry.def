@@ -44,6 +44,7 @@ FUNCTION_PASS("nvptx-image-optimizer", NVPTXImageOptimizerPass())
 FUNCTION_PASS("nvptx-copy-byval-args", NVPTXCopyByValArgsPass())
 FUNCTION_PASS("nvptx-atomic-lower", NVPTXAtomicLowerPass())
 FUNCTION_PASS("nvptx-mark-kernel-ptrs-global", NVPTXMarkKernelPtrsGlobalPass())
+FUNCTION_PASS("nvptx-lower-aggr-copies", NVPTXLowerAggrCopiesPass())
 FUNCTION_PASS("nvptx-tag-invariant-loads", NVPTXTagInvariantLoadsPass())
 FUNCTION_PASS("nvptx-lower-unreachable",
               NVPTXLowerUnreachablePass(Options.TrapUnreachable,
