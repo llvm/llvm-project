@@ -5320,7 +5320,7 @@ void OmpStructureChecker::Enter(
   // [5.2:322:3]
   // task-dependence-type must not be depobj.
   assert(GetContext().directive == llvm::omp::OMPD_depobj &&
-         "Unexpected directive");
+      "Unexpected directive");
 
   if (version >= 51) {
     bool invalidDep{false};
