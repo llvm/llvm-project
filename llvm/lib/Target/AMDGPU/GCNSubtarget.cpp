@@ -53,17 +53,17 @@ static cl::opt<unsigned>
                  cl::desc("Number of addresses from which to enable MIMG NSA."),
                  cl::init(2), cl::Hidden);
 
-static cl::opt<unsigned> StressVGPRLimit(
-    "amdgpu-stress-vgpr", cl::Hidden, cl::init(0),
-    cl::desc("Limit VGPRs to N arch registers"));
+static cl::opt<unsigned>
+    StressVGPRLimit("amdgpu-stress-vgpr", cl::Hidden, cl::init(0),
+                    cl::desc("Limit VGPRs to N arch registers"));
 
-static cl::opt<unsigned> StressAGPRLimit(
-    "amdgpu-stress-agpr", cl::Hidden, cl::init(0),
-    cl::desc("Limit AGPRs to N registers"));
+static cl::opt<unsigned>
+    StressAGPRLimit("amdgpu-stress-agpr", cl::Hidden, cl::init(0),
+                    cl::desc("Limit AGPRs to N registers"));
 
-static cl::opt<unsigned> StressSGPRLimit(
-    "amdgpu-stress-sgpr", cl::Hidden, cl::init(0),
-    cl::desc("Limit SGPRs to N registers"));
+static cl::opt<unsigned>
+    StressSGPRLimit("amdgpu-stress-sgpr", cl::Hidden, cl::init(0),
+                    cl::desc("Limit SGPRs to N registers"));
 
 GCNSubtarget::~GCNSubtarget() = default;
 
