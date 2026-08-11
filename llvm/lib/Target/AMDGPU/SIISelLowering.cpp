@@ -248,12 +248,11 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
       // to fsub, causing a libcall (which doesn't exist for bf16). Instead,
       // directly expand to widened v2bf16 operations.
       setOperationAction(ISD::FSUB, MVT::bf16, Custom);
-      // Widen scalar operations to a v2bf16 operation with an unused high lane.
+      // Promote scalar operations to a v2bf16 operation with an unused high
+      // lane.
       for (unsigned Opc : {ISD::FADD, ISD::FMUL, ISD::FMAXNUM, ISD::FMINNUM,
-                           ISD::FCANONICALIZE}) {
-        setOperationAction(Opc, MVT::bf16, Promote);
+                           ISD::FCANONICALIZE})
         AddPromotedToType(Opc, MVT::bf16, MVT::v2bf16);
-      }
     }
 
     setOperationAction(ISD::FP_ROUND, MVT::bf16, Expand);
