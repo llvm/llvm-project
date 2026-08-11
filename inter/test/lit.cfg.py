@@ -1,4 +1,5 @@
 import subprocess
+import sys
 from pathlib import Path
 
 import lit.formats
@@ -20,6 +21,7 @@ if inter_pipelines.exists():
     config.substitutions.append(("%inter_pipelines", str(inter_pipelines)))
 else:
     lit_config.fatal(f"missing Inter pipeline library: {inter_pipelines}")
+config.substitutions.append(("%python", f'"{sys.executable}"'))
 
 llvm_config.with_system_environment(
     ["HOME", "INCLUDE", "LIB", "LD_LIBRARY_PATH", "TMP", "TEMP"]

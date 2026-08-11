@@ -2,7 +2,8 @@
 
 Each `.ll` test contains its LLVM IR input, exposes the Inter compilation stages
 in its `RUN` lines, emits a complete zebin, invokes `inter-runner`, and checks
-the device result with `FileCheck`.
+the device result with `FileCheck` or the shared expression verifier. The M1-M3
+kernels also run at 128 lanes to cover multiple hardware workgroups.
 
 Build the LLVM offload runtime first, then enable the opt-in suite when
 configuring Inter:

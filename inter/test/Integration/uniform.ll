@@ -3,6 +3,7 @@
 ; RUN: inter-opt %t.mlir --pass-pipeline='builtin.module(transform-preload-library{transform-library-paths=%inter_pipelines},transform-interpreter{entry-point=inter_backend})' -o %t.xemachine.mlir
 ; RUN: inter-translate %t.xemachine.mlir --xemachine-to-zebin -o %t.bin
 ; RUN: inter-runner --compact %t.bin uniform_kernel 32 out in:1 in:1000 u32:7 | FileCheck %s
+; RUN: inter-runner %t.bin uniform_kernel 128 out in:1 in:1000 u32:7 | %python %S/../../verify.py 'i + 100 + 0*i'
 
 ; CHECK: out0 = [0x00000064, 0x00000065, 0x00000066, 0x00000067, 0x00000068, 0x00000069, 0x0000006a, 0x0000006b, 0x0000006c, 0x0000006d, 0x0000006e, 0x0000006f, 0x00000070, 0x00000071, 0x00000072, 0x00000073, 0x00000074, 0x00000075, 0x00000076, 0x00000077, 0x00000078, 0x00000079, 0x0000007a, 0x0000007b, 0x0000007c, 0x0000007d, 0x0000007e, 0x0000007f, 0x00000080, 0x00000081, 0x00000082, 0x00000083]
 
