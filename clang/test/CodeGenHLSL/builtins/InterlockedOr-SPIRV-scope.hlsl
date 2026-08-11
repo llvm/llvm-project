@@ -1,3 +1,4 @@
+// REQUIRES: spirv-registered-target
 // RUN: %clang_cc1 -std=hlsl2021 -finclude-default-header -triple \
 // RUN:   spirv1.6-unknown-vulkan1.3-compute %s -S -o - | FileCheck %s
 
@@ -7,7 +8,7 @@
 groupshared uint gs;
 
 // CHECK-DAG: %[[#UINT:]] = OpTypeInt 32 0
-// CHECK-DAG: %[[#WORKGROUP:]] = OpConstant %[[#UINT]] 2
+// CHECK-DAG: %[[#WORKGROUP:]] = OpConstant %[[#UINT]] 2{{$}}
 // CHECK: OpAtomicOr %[[#UINT]] %[[#]] %[[#WORKGROUP]] %[[#]] %[[#]]
 // CHECK-NOT: OpConstantNull
 
