@@ -21,7 +21,7 @@ import tabulate
 
 
 class RunName(NamedTuple):
-    """What the name of a workflow run says that run is doing."""
+    """The name of a workflow run and the information it encodes."""
     target: common.Target
     dry_run: bool # whether that workflow run was only a dry-run
 
