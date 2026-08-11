@@ -1837,6 +1837,11 @@ public:
   StringRef getPassName() const override {
     return "NVPTX Replace Image Handles";
   }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
 };
 } // namespace
 
