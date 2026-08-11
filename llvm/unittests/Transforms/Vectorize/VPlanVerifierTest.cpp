@@ -612,46 +612,4 @@ TEST_F(VPIRVerifierTest, BranchOnTwoCondsLatchHeaderVerification) {
 #endif
 }
 
-TEST_F(VPIRVerifierTest, testVerifyLastActiveWideActiveLaneMask) {
-  const char *ModuleString =
-      "define i32 @f(ptr %A, i64 %N) {\n"
-      "entry:\n"
-      "  br label %loop\n"
-      "loop:\n"
-      "  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]\n"
-      "  %gep = getelementptr i32, ptr %A, i64 %iv\n"
-      "  %ld = load i32, ptr %gep \n"
-      "  %iv.next = add i64 %iv, 1\n"
-      "  %exitcond = icmp eq i64 %iv.next, %N\n"
-      "  br i1 %exitcond, label %exit, label %loop\n"
-      "exit:\n"
-      "  ret i32 %ld\n"
-      "}\n";
-
-  Module &M = parseModule(ModuleString);
-
-  Function *F = M.getFunction("f");
-  BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
-  auto Plan = buildVPlan(LoopHeader);
-
-  VPValue *Start = Plan->getConstantInt(64, 0);
-  VPValue *TC = Plan->getTripCount();
-  VPValue *One = Plan->getConstantInt(64, 1);
-  Type *MaskTy = FixedVectorType::get(Type::getInt1Ty(*Ctx), 4);
-  Type *IndexTy = Plan->getDataLayout().getIndexType(Plan->getContext(), 0);
-
-  auto *WideALM =
-      new VPInstruction(VPInstruction::WideActiveLaneMask, {Start, TC, One}, {},
-                        {}, DebugLoc(), "", MaskTy);
-  auto *Preheader = Plan->getVectorPreheader();
-  WideALM->insertBefore(*Preheader, Preheader->end());
-
-  auto *LastActiveLane =
-      new VPInstruction(VPInstruction::LastActiveLane, {WideALM}, {}, {},
-                        DebugLoc(), "", IndexTy);
-  LastActiveLane->insertBefore(Plan->getMiddleBlock()->getTerminator());
-
-  EXPECT_TRUE(verifyVPlanIsValid(*Plan));
-}
-
 } // namespace

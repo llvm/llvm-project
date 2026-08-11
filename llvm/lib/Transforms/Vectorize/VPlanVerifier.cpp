@@ -196,8 +196,7 @@ bool VPlanVerifier::verifyLastActiveLaneRecipe(
     // loop region's abstract header mask; afterwards it is an active lane mask
     // (an intrinsic or a phi), or the icmp checked below.
     if (match(Mask, m_HeaderMask()) || isa<VPActiveLaneMaskPHIRecipe>(Mask) ||
-        match(Mask, m_VPInstruction<VPInstruction::ActiveLaneMask>()) ||
-        match(Mask, m_VPInstruction<VPInstruction::WideActiveLaneMask>()))
+        match(Mask, m_VPInstruction<VPInstruction::ActiveLaneMask>()))
       continue;
 
     CmpPredicate Pred;
