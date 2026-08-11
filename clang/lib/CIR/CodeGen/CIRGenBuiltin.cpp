@@ -1388,7 +1388,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return coroBeg ? RValue::get(coroBeg.getResult())
                    : getUndefRValue(e->getType());
   }
-
+  case Builtin::BI__builtin_coro_end:
+    return RValue::get(emitCoroEndBuiltinCall(e).getResult());
   case Builtin::BI__builtin_coro_promise:
     cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_promise NYI");
     return getUndefRValue(e->getType());
@@ -1403,9 +1404,6 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return getUndefRValue(e->getType());
   case Builtin::BI__builtin_coro_done:
     cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_done NYI");
-    return getUndefRValue(e->getType());
-  case Builtin::BI__builtin_coro_end:
-    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_end NYI");
     return getUndefRValue(e->getType());
   case Builtin::BI__builtin_coro_suspend:
     cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_suspend NYI");

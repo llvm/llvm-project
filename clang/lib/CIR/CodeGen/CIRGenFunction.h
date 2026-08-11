@@ -1887,8 +1887,7 @@ public:
   void emitConstructorBody(FunctionArgList &args);
 
   mlir::LogicalResult emitCoroutineBody(const CoroutineBodyStmt &s);
-  cir::CoroEndOp emitCoroEndBuiltinCall(mlir::Location loc,
-                                        mlir::Value nullPtr);
+  cir::CoroEndOp emitCoroEndBuiltinCall(const CallExpr *e);
   cir::CoroIdOp emitCoroIDBuiltinCall(const CallExpr *e);
   cir::CoroAllocOp emitCoroAllocBuiltinCall(const CallExpr *e);
   cir::CoroBeginOp emitCoroBeginBuiltinCall(const CallExpr *e);

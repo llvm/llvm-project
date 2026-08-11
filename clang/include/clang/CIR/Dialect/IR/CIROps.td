@@ -4906,8 +4906,8 @@ def CIR_CoroBeginOp : CIR_CoroIntrinsicOp<"begin",
 //===----------------------------------------------------------------------===//
 
 def CIR_CoroEndOp : CIR_CoroIntrinsicOp<"end",
-    (ins CIR_VoidPtrType:$handle, CIR_AnyBoolType:$unwind),
-    (outs CIR_AnyBoolType:$result)> {
+    (ins CIR_VoidPtrType:$handle, CIR_AnyBoolType:$unwind, Token:$resultToken),
+    (outs CIR_AnyVoidType:$result), [TokenConsumerTrait]> {
   let summary = "Represents llvm.coro.end";
   let description = [{
     Marks a point at which a coroutine must be suspended or destroyed for the
@@ -8762,6 +8762,23 @@ def CIR_ConstructCatchParamOp : CIR_Op<"construct_catch_param", [
   }];
 
   let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
+// TokenNoneOp
+//===----------------------------------------------------------------------===//
+
+def CIR_TokenNoneOp : CIR_Op<"token.none", [
+  Pure, TokenProducerTrait
+]> {
+  let summary = "Produces an empty token value.";
+  let description = [{
+    Produces a `none` token value, mirroring LLVM IR's `none` token
+    literal. Lowers to `llvm::ConstantTokenNone`.
+  }];
+
+  let results = (outs Token:$result);
+  let assemblyFormat = "attr-dict";
 }
 
 //===----------------------------------------------------------------------===//
