@@ -1317,6 +1317,25 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
   llvm_unreachable("called for unsupported opcode");
 }
 
+InstructionCost VPInstruction::computeAnyOfCost(VectorType *MaskTy,
+                                                VPCostContext &Ctx) {
+  return Ctx.TTI.getArithmeticReductionCost(Instruction::Or, MaskTy,
+                                            std::nullopt, Ctx.CostKind);
+}
+
+InstructionCost VPInstruction::computeExtractElementCost(VectorType *VecTy,
+                                                         VPCostContext &Ctx) {
+  return Ctx.TTI.getVectorInstrCost(Instruction::ExtractElement, VecTy,
+                                    Ctx.CostKind);
+}
+
+InstructionCost
+VPInstruction::computeShuffleCost(TargetTransformInfo::ShuffleKind Kind,
+                                 VectorType *VecTy, VPCostContext &Ctx) {
+  return Ctx.TTI.getShuffleCost(Kind, VecTy, VecTy, /*Mask=*/{}, Ctx.CostKind,
+                                /*Index=*/0);
+}
+
 InstructionCost VPInstruction::computeCost(ElementCount VF,
                                            VPCostContext &Ctx) const {
   if (Instruction::isBinaryOp(getOpcode())) {
@@ -1356,14 +1375,13 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     }
 
     // Add on the cost of extracting the element.
-    auto *VecTy = toVectorTy(getOperand(0)->getScalarType(), VF);
-    return Ctx.TTI.getVectorInstrCost(Instruction::ExtractElement, VecTy,
-                                      Ctx.CostKind);
+    auto *VecTy =
+        cast<VectorType>(toVectorTy(getOperand(0)->getScalarType(), VF));
+    return computeExtractElementCost(VecTy, Ctx);
   }
   case VPInstruction::AnyOf: {
-    auto *VecTy = toVectorTy(this->getScalarType(), VF);
-    return Ctx.TTI.getArithmeticReductionCost(
-        Instruction::Or, cast<VectorType>(VecTy), std::nullopt, Ctx.CostKind);
+    auto *VecTy = cast<VectorType>(toVectorTy(this->getScalarType(), VF));
+    return computeAnyOfCost(VecTy, Ctx);
   }
   case VPInstruction::FirstActiveLane: {
     Type *Ty = this->getScalarType();
@@ -4128,6 +4146,17 @@ const VPRecipeBase *VPWidenStoreRecipe::getAsRecipe() const { return this; }
 VPRecipeBase *VPWidenStoreEVLRecipe::getAsRecipe() { return this; }
 const VPRecipeBase *VPWidenStoreEVLRecipe::getAsRecipe() const { return this; }
 
+InstructionCost VPWidenMemoryRecipe::computeMaskedCost(unsigned Opcode,
+                                                       Type *DataTy,
+                                                       Align Alignment,
+                                                       unsigned AS,
+                                                       VPCostContext &Ctx) {
+  unsigned IID = Opcode == Instruction::Load ? Intrinsic::masked_load
+                                             : Intrinsic::masked_store;
+  return Ctx.TTI.getMemIntrinsicInstrCost(
+      MemIntrinsicCostAttributes(IID, DataTy, Alignment, AS), Ctx.CostKind);
+}
+
 InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
                                                  VPCostContext &Ctx) const {
   const VPRecipeBase *R = getAsRecipe();
@@ -4165,10 +4194,7 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
 
   InstructionCost Cost = 0;
   if (IsMasked) {
-    unsigned IID = isa<VPWidenLoadRecipe>(R) ? Intrinsic::masked_load
-                                             : Intrinsic::masked_store;
-    Cost += Ctx.TTI.getMemIntrinsicInstrCost(
-        MemIntrinsicCostAttributes(IID, Ty, Alignment, AS), Ctx.CostKind);
+    Cost += computeMaskedCost(Opcode, Ty, Alignment, AS, Ctx);
   } else {
     TTI::OperandValueInfo OpInfo = Ctx.getOperandInfo(
         isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(R) ? R->getOperand(0)

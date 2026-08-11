@@ -40,6 +40,7 @@ struct VFRange;
 
 LLVM_ABI_FOR_TEST extern cl::opt<bool> VerifyEachVPlan;
 LLVM_ABI_FOR_TEST extern cl::opt<bool> EnableWideActiveLaneMask;
+LLVM_ABI_FOR_TEST extern cl::opt<bool> ForceTargetSupportsMaskedMemoryOps;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_ABI_FOR_TEST extern cl::opt<bool> VPlanPrintBeforeAll;
@@ -428,6 +429,14 @@ struct VPlanTransforms {
   /// with complementary masks P and NOT P).
   static void hoistPredicatedLoads(VPlan &Plan, PredicatedScalarEvolution &PSE,
                                    const Loop *L);
+
+  /// Rewrite predicated VPReplicateRecipe loads from a loop-invariant address
+  /// into a single-lane masked load + broadcast pattern. Only applied when
+  /// the target reports isLegalMaskedLoad for the element type and when the new
+  /// lowering is not more expensive than the scalarized predicated load for all
+  /// vector VFs of \p Plan. Gated by -enable-masked-invariant-load.
+  static void widenPredicatedInvariantLoads(VPlan &Plan,
+                                            VPCostContext &CostCtx);
 
   /// Sink predicated stores to the same address with complementary predicates
   /// (P and NOT P) to an unconditional store with select recipes for the
