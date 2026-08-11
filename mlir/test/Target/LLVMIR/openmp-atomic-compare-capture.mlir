@@ -249,6 +249,61 @@ llvm.func @compare_capture_complex_failonly(%x : !llvm.ptr, %e : !llvm.ptr, %d :
   llvm.return
 }
 
+// Complex acquire compare+capture: when the component comparison fails we
+// branch around the cmpxchg, so the initial atomic load (the only memory
+// operation on the failure path) must carry the acquire failure ordering.
+// CHECK-LABEL: define void @compare_capture_complex_acquire(
+// CHECK:         load atomic i64, ptr %{{.*}} acquire
+// CHECK:         cmpxchg ptr %{{.*}}, i64 %{{.*}}, i64 %{{.*}} acquire acquire
+// CHECK:         store { float, float } %{{.*}}, ptr %{{.*}}
+llvm.func @compare_capture_complex_acquire(%x : !llvm.ptr, %e : !llvm.ptr, %d : !llvm.ptr, %v : !llvm.ptr) {
+  %eval = llvm.load %e : !llvm.ptr -> !llvm.struct<(f32, f32)>
+  %dval = llvm.load %d : !llvm.ptr -> !llvm.struct<(f32, f32)>
+  omp.atomic.capture memory_order(acquire) {
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, !llvm.struct<(f32, f32)>
+    omp.atomic.compare %x : !llvm.ptr {
+    ^bb0(%xval: !llvm.struct<(f32, f32)>):
+      %xr = llvm.extractvalue %xval[0] : !llvm.struct<(f32, f32)>
+      %er = llvm.extractvalue %eval[0] : !llvm.struct<(f32, f32)>
+      %cmpr = llvm.fcmp "oeq" %xr, %er : f32
+      %xi = llvm.extractvalue %xval[1] : !llvm.struct<(f32, f32)>
+      %ei = llvm.extractvalue %eval[1] : !llvm.struct<(f32, f32)>
+      %cmpi = llvm.fcmp "oeq" %xi, %ei : f32
+      %cmp = llvm.and %cmpr, %cmpi : i1
+      %sel = llvm.select %cmp, %dval, %xval : i1, !llvm.struct<(f32, f32)>
+      omp.yield(%sel : !llvm.struct<(f32, f32)>)
+    }
+  }
+  llvm.return
+}
+
+// Complex seq_cst compare+capture: the failure path load must carry the
+// seq_cst failure ordering.
+// CHECK-LABEL: define void @compare_capture_complex_seqcst(
+// CHECK:         load atomic i64, ptr %{{.*}} seq_cst
+// CHECK:         cmpxchg ptr %{{.*}}, i64 %{{.*}}, i64 %{{.*}} seq_cst seq_cst
+// CHECK:         store { float, float } %{{.*}}, ptr %{{.*}}
+llvm.func @compare_capture_complex_seqcst(%x : !llvm.ptr, %e : !llvm.ptr, %d : !llvm.ptr, %v : !llvm.ptr) {
+  %eval = llvm.load %e : !llvm.ptr -> !llvm.struct<(f32, f32)>
+  %dval = llvm.load %d : !llvm.ptr -> !llvm.struct<(f32, f32)>
+  omp.atomic.capture memory_order(seq_cst) {
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, !llvm.struct<(f32, f32)>
+    omp.atomic.compare %x : !llvm.ptr {
+    ^bb0(%xval: !llvm.struct<(f32, f32)>):
+      %xr = llvm.extractvalue %xval[0] : !llvm.struct<(f32, f32)>
+      %er = llvm.extractvalue %eval[0] : !llvm.struct<(f32, f32)>
+      %cmpr = llvm.fcmp "oeq" %xr, %er : f32
+      %xi = llvm.extractvalue %xval[1] : !llvm.struct<(f32, f32)>
+      %ei = llvm.extractvalue %eval[1] : !llvm.struct<(f32, f32)>
+      %cmpi = llvm.fcmp "oeq" %xi, %ei : f32
+      %cmp = llvm.and %cmpr, %cmpi : i1
+      %sel = llvm.select %cmp, %dval, %xval : i1, !llvm.struct<(f32, f32)>
+      omp.yield(%sel : !llvm.struct<(f32, f32)>)
+    }
+  }
+  llvm.return
+}
+
 // ===== Weak clause with float =====
 
 // Float weak prefix: cmpxchg weak with FP neg-zero handling

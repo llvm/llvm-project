@@ -5440,6 +5440,12 @@ static void emitComplexAtomicCmpXchg(llvm::IRBuilderBase &builder,
   llvm::Align intAlign = DL.getABITypeAlign(intTy);
   llvm::Align maxAlign = std::max(complexAlign, intAlign);
 
+  // On a failed component comparison we branch around the cmpxchg, so the
+  // initial load is the only memory op on that path and must use the failure
+  // ordering.
+  llvm::AtomicOrdering failOrdering =
+      llvm::AtomicCmpXchgInst::getStrongestFailureOrdering(atomicOrdering);
+
   // Spill D to obtain its integer bit pattern for the swap value.
   llvm::AllocaInst *dAlloca =
       builder.CreateAlloca(complexTy, nullptr, "cmplx.d");
@@ -5448,10 +5454,10 @@ static void emitComplexAtomicCmpXchg(llvm::IRBuilderBase &builder,
   llvm::Value *dInt =
       builder.CreateAlignedLoad(intTy, dAlloca, maxAlign, "cmplx.d.int");
 
-  // Load the current value of X atomically and reinterpret it as complex.
+  // Load X atomically (failure ordering, see above) and reinterpret as complex.
   llvm::LoadInst *xCurr =
       builder.CreateAlignedLoad(intTy, llvmX, maxAlign, "cmplx.x.load");
-  xCurr->setAtomic(llvm::AtomicOrdering::Monotonic);
+  xCurr->setAtomic(failOrdering);
   llvm::AllocaInst *xAlloca =
       builder.CreateAlloca(complexTy, nullptr, "cmplx.x");
   xAlloca->setAlignment(maxAlign);
@@ -5482,8 +5488,6 @@ static void emitComplexAtomicCmpXchg(llvm::IRBuilderBase &builder,
   builder.CreateCondBr(fpEqual, swapBB, exitBB);
 
   builder.SetInsertPoint(swapBB);
-  llvm::AtomicOrdering failOrdering =
-      llvm::AtomicCmpXchgInst::getStrongestFailureOrdering(atomicOrdering);
   llvm::AtomicCmpXchgInst *cmpXchg = builder.CreateAtomicCmpXchg(
       llvmX, xCurr, dInt, maxAlign, atomicOrdering, failOrdering);
   cmpXchg->setWeak(isWeak);
