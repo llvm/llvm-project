@@ -143,10 +143,8 @@ public:
                             QualType ReturnTy = QualType());
   BuiltinTypeDeclBuilder &addStoreFunction(DeclarationName &Name, bool IsConst,
                                            QualType ValueType);
-  BuiltinTypeDeclBuilder &
-  addRawBufferGenericLoadFunction(DeclarationName &Name);
-  BuiltinTypeDeclBuilder &
-  addRawBufferGenericStoreFunction(DeclarationName &Name);
+  BuiltinTypeDeclBuilder &addRawBufferTypedLoadFunction(DeclarationName &Name);
+  BuiltinTypeDeclBuilder &addRawBufferTypedStoreFunction(DeclarationName &Name);
   BuiltinTypeDeclBuilder &
   addByteAddressBufferInterlockedMethod(StringRef MethodName, QualType ValueTy,
                                         StringRef BuiltinName);

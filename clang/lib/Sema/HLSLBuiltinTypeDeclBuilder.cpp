@@ -1690,7 +1690,7 @@ BuiltinTypeDeclBuilder::addByteAddressBufferLoadMethods() {
   {
     IdentifierInfo &II = AST.Idents.get("Load", tok::TokenKind::identifier);
     DeclarationName Load(&II);
-    addRawBufferGenericLoadFunction(Load);
+    addRawBufferTypedLoadFunction(Load);
     addLoadWithStatusFunction(Load, AST.DependentTy);
   }
 
@@ -1719,7 +1719,7 @@ BuiltinTypeDeclBuilder::addByteAddressBufferStoreMethods() {
   {
     IdentifierInfo &II = AST.Idents.get("Store", tok::TokenKind::identifier);
     DeclarationName Store(&II);
-    addRawBufferGenericStoreFunction(Store);
+    addRawBufferTypedStoreFunction(Store);
   }
 
   return *this;
@@ -2466,7 +2466,7 @@ BuiltinTypeDeclBuilder::addLoadWithStatusFunction(DeclarationName &Name,
 }
 
 BuiltinTypeDeclBuilder &
-BuiltinTypeDeclBuilder::addRawBufferGenericLoadFunction(DeclarationName &Name) {
+BuiltinTypeDeclBuilder::addRawBufferTypedLoadFunction(DeclarationName &Name) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = SemaRef.getASTContext();
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
@@ -2491,8 +2491,7 @@ BuiltinTypeDeclBuilder::addRawBufferGenericLoadFunction(DeclarationName &Name) {
 }
 
 BuiltinTypeDeclBuilder &
-BuiltinTypeDeclBuilder::addRawBufferGenericStoreFunction(
-    DeclarationName &Name) {
+BuiltinTypeDeclBuilder::addRawBufferTypedStoreFunction(DeclarationName &Name) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = SemaRef.getASTContext();
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
