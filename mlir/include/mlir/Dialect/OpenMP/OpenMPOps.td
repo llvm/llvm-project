@@ -1621,10 +1621,10 @@ def TargetUpdateOp: OpenMP_Op<"target_update", traits = [
 
 def TargetOp : OpenMP_Op<"target", traits = [
     AttrSizedOperandSegments, BlockArgOpenMPOpInterface,
-    DeclareOpInterfaceMethods<ComposableOpInterface>, IsolatedFromAbove,
-    OutlineableOpenMPOpInterface, 
+    DeclareOpInterfaceMethods<ComposableOpInterface>,
     DeclareOpInterfaceMethods<RegionBranchOpInterface,
-      ["getEntrySuccessorOperands", "getSuccessorInputs"]>
+      ["getEntrySuccessorOperands", "getSuccessorInputs"]>,
+    IsolatedFromAbove, OutlineableOpenMPOpInterface
   ], clauses = [
     // TODO: Complete clause list (defaultmap, uses_allocators).
     OpenMP_AllocateClause, OpenMP_DependClause, OpenMP_DeviceClause,

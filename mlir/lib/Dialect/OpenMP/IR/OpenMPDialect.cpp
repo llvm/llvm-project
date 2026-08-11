@@ -2575,15 +2575,13 @@ LogicalResult TargetDataOp::verify() {
   return verifyMapClause(*this, getMapVars(), getMapIterated());
 }
 
-// Adapted from scf.if implementation.
 void TargetDataOp::getSuccessorRegions(
-    mlir::RegionBranchPoint point,
-    llvm::SmallVectorImpl<::mlir::RegionSuccessor> &regions) {
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   if (!point.isParent()) {
-    regions.push_back(mlir::RegionSuccessor(getOperation()));
+    regions.push_back(RegionSuccessor(getOperation()));
     return;
   }
-  regions.push_back(mlir::RegionSuccessor(&getRegion()));
+  regions.push_back(RegionSuccessor(&getRegion()));
 }
 
 //===----------------------------------------------------------------------===//
@@ -2868,23 +2866,21 @@ LogicalResult TargetOp::verifyRegions() {
   return success();
 }
 
-void TargetOp::getSuccessorRegions(
-    mlir::RegionBranchPoint point,
-    llvm::SmallVectorImpl<::mlir::RegionSuccessor> &regions) {
+void TargetOp::getSuccessorRegions(RegionBranchPoint point,
+                                   SmallVectorImpl<RegionSuccessor> &regions) {
   if (!point.isParent()) {
-    regions.push_back(mlir::RegionSuccessor(getOperation()));
+    regions.push_back(RegionSuccessor(getOperation()));
     return;
   }
-  regions.push_back(mlir::RegionSuccessor(&getRegion()));
+  regions.push_back(RegionSuccessor(&getRegion()));
 }
 
-OperandRange
-TargetOp::getEntrySuccessorOperands(mlir::RegionSuccessor successor) {
+OperandRange TargetOp::getEntrySuccessorOperands(RegionSuccessor successor) {
   assert(successor.getSuccessor() == &getRegion());
   return getHostEvalVars();
 }
 
-mlir::ValueRange TargetOp::getSuccessorInputs(mlir::RegionSuccessor successor) {
+mlir::ValueRange TargetOp::getSuccessorInputs(RegionSuccessor successor) {
   if (successor.isOperation())
     return {};
   assert(successor == &getRegion());
