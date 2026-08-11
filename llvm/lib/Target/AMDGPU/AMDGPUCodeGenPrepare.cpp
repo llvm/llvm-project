@@ -1358,22 +1358,18 @@ Value *AMDGPUCodeGenPrepareImpl::shrinkDivRem64(IRBuilder<> &Builder,
 
 void AMDGPUCodeGenPrepareImpl::expandDivRem64(BinaryOperator &I) {
   Instruction::BinaryOps Opc = I.getOpcode();
-  // Bypasses the DeadVals worklist, so forget erased values from UA now to
+  // Bypasses the DeadVals worklist, so forget I from UA if it got erased to
   // avoid a stale entry for a reused instruction address.
-  auto OnErased = [&](Value *Erased) { UA.forgetValue(Erased); };
+  bool Erased;
+  if (Opc == Instruction::UDiv || Opc == Instruction::SDiv)
+    Erased = expandDivisionUpTo64Bits(&I);
+  else if (Opc == Instruction::URem || Opc == Instruction::SRem)
+    Erased = expandRemainderUpTo64Bits(&I);
+  else
+    llvm_unreachable("not a division");
 
-  // Do the general expansion.
-  if (Opc == Instruction::UDiv || Opc == Instruction::SDiv) {
-    expandDivisionUpTo64Bits(&I, OnErased);
-    return;
-  }
-
-  if (Opc == Instruction::URem || Opc == Instruction::SRem) {
-    expandRemainderUpTo64Bits(&I, OnErased);
-    return;
-  }
-
-  llvm_unreachable("not a division");
+  if (Erased)
+    UA.forgetValue(&I);
 }
 
 /*

@@ -29,13 +29,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "integer-division"
 
-static void eraseInstruction(Instruction *I, AboutToDeleteCallback OnErased) {
-  if (OnErased)
-    OnErased(I);
-  I->dropAllReferences();
-  I->eraseFromParent();
-}
-
 /// Generate code to compute the remainder of two signed integers. Returns the
 /// remainder, which will have the sign of the dividend. Builder's insert point
 /// should be pointing where the caller wants code generated, e.g. at the srem
@@ -407,8 +400,7 @@ static Value *generateUnsignedDivisionCode(Value *Dividend, Value *Divisor,
 /// information about the operands are known.
 ///
 /// Replace Rem with generated code.
-bool llvm::expandRemainder(BinaryOperator *Rem,
-                           AboutToDeleteCallback OnErased) {
+bool llvm::expandRemainder(BinaryOperator *Rem) {
   assert((Rem->getOpcode() == Instruction::SRem ||
           Rem->getOpcode() == Instruction::URem) &&
          "Trying to expand remainder from a non-remainder function");
@@ -425,7 +417,8 @@ bool llvm::expandRemainder(BinaryOperator *Rem,
     // Check whether this is the insert point while Rem is still valid.
     bool IsInsertPoint = Rem->getIterator() == Builder.GetInsertPoint();
     Rem->replaceAllUsesWith(Remainder);
-    eraseInstruction(Rem, OnErased);
+    Rem->dropAllReferences();
+    Rem->eraseFromParent();
 
     // If we didn't actually generate an urem instruction, we're done
     // This happens for example if the input were constant. In this case the
@@ -441,12 +434,13 @@ bool llvm::expandRemainder(BinaryOperator *Rem,
                                                    Rem->getOperand(1), Builder);
 
   Rem->replaceAllUsesWith(Remainder);
-  eraseInstruction(Rem, OnErased);
+  Rem->dropAllReferences();
+  Rem->eraseFromParent();
 
   // Expand the udiv
   if (BinaryOperator *UDiv = dyn_cast<BinaryOperator>(Builder.GetInsertPoint())) {
     assert(UDiv->getOpcode() == Instruction::UDiv && "Non-udiv in expansion?");
-    expandDivision(UDiv, OnErased);
+    expandDivision(UDiv);
   }
 
   return true;
@@ -458,7 +452,7 @@ bool llvm::expandRemainder(BinaryOperator *Rem,
 /// when more information about the operands are known.
 ///
 /// Replace Div with generated code.
-bool llvm::expandDivision(BinaryOperator *Div, AboutToDeleteCallback OnErased) {
+bool llvm::expandDivision(BinaryOperator *Div) {
   assert((Div->getOpcode() == Instruction::SDiv ||
           Div->getOpcode() == Instruction::UDiv) &&
          "Trying to expand division from a non-division function");
@@ -476,7 +470,8 @@ bool llvm::expandDivision(BinaryOperator *Div, AboutToDeleteCallback OnErased) {
     // Check whether this is the insert point while Div is still valid.
     bool IsInsertPoint = Div->getIterator() == Builder.GetInsertPoint();
     Div->replaceAllUsesWith(Quotient);
-    eraseInstruction(Div, OnErased);
+    Div->dropAllReferences();
+    Div->eraseFromParent();
 
     // If we didn't actually generate an udiv instruction, we're done
     // This happens for example if the input were constant. In this case the
@@ -493,7 +488,8 @@ bool llvm::expandDivision(BinaryOperator *Div, AboutToDeleteCallback OnErased) {
                                                  Div->getOperand(1),
                                                  Builder);
   Div->replaceAllUsesWith(Quotient);
-  eraseInstruction(Div, OnErased);
+  Div->dropAllReferences();
+  Div->eraseFromParent();
 
   return true;
 }
@@ -505,8 +501,7 @@ bool llvm::expandDivision(BinaryOperator *Div, AboutToDeleteCallback OnErased) {
 /// arithmetic.
 ///
 /// Replace Rem with emulation code.
-bool llvm::expandRemainderUpTo32Bits(BinaryOperator *Rem,
-                                     AboutToDeleteCallback OnErased) {
+bool llvm::expandRemainderUpTo32Bits(BinaryOperator *Rem) {
   assert((Rem->getOpcode() == Instruction::SRem ||
           Rem->getOpcode() == Instruction::URem) &&
           "Trying to expand remainder from a non-remainder function");
@@ -520,7 +515,7 @@ bool llvm::expandRemainderUpTo32Bits(BinaryOperator *Rem,
          "Div of bitwidth greater than 32 not supported");
 
   if (RemTyBitWidth == 32)
-    return expandRemainder(Rem, OnErased);
+    return expandRemainder(Rem);
 
   // If bitwidth smaller than 32 extend inputs, extend output and proceed
   // with 32 bit division.
@@ -544,9 +539,10 @@ bool llvm::expandRemainderUpTo32Bits(BinaryOperator *Rem,
   Trunc = Builder.CreateTrunc(ExtRem, RemTy);
 
   Rem->replaceAllUsesWith(Trunc);
-  eraseInstruction(Rem, OnErased);
+  Rem->dropAllReferences();
+  Rem->eraseFromParent();
 
-  return expandRemainder(cast<BinaryOperator>(ExtRem), OnErased);
+  return expandRemainder(cast<BinaryOperator>(ExtRem));
 }
 
 /// Generate code to compute the remainder of two integers of bitwidth up to
@@ -554,8 +550,7 @@ bool llvm::expandRemainderUpTo32Bits(BinaryOperator *Rem,
 /// outputs to operate in 64 bits.
 ///
 /// Replace Rem with emulation code.
-bool llvm::expandRemainderUpTo64Bits(BinaryOperator *Rem,
-                                     AboutToDeleteCallback OnErased) {
+bool llvm::expandRemainderUpTo64Bits(BinaryOperator *Rem) {
   assert((Rem->getOpcode() == Instruction::SRem ||
           Rem->getOpcode() == Instruction::URem) &&
           "Trying to expand remainder from a non-remainder function");
@@ -566,7 +561,7 @@ bool llvm::expandRemainderUpTo64Bits(BinaryOperator *Rem,
   unsigned RemTyBitWidth = RemTy->getIntegerBitWidth();
 
   if (RemTyBitWidth >= 64)
-    return expandRemainder(Rem, OnErased);
+    return expandRemainder(Rem);
 
   // If bitwidth smaller than 64 extend inputs, extend output and proceed
   // with 64 bit division.
@@ -590,9 +585,10 @@ bool llvm::expandRemainderUpTo64Bits(BinaryOperator *Rem,
   Trunc = Builder.CreateTrunc(ExtRem, RemTy);
 
   Rem->replaceAllUsesWith(Trunc);
-  eraseInstruction(Rem, OnErased);
+  Rem->dropAllReferences();
+  Rem->eraseFromParent();
 
-  return expandRemainder(cast<BinaryOperator>(ExtRem), OnErased);
+  return expandRemainder(cast<BinaryOperator>(ExtRem));
 }
 
 /// Generate code to divide two integers of bitwidth up to 32 bits. Uses the
@@ -601,8 +597,7 @@ bool llvm::expandRemainderUpTo64Bits(BinaryOperator *Rem,
 /// or very little support for smaller than 32 bit integer arithmetic.
 ///
 /// Replace Div with emulation code.
-bool llvm::expandDivisionUpTo32Bits(BinaryOperator *Div,
-                                    AboutToDeleteCallback OnErased) {
+bool llvm::expandDivisionUpTo32Bits(BinaryOperator *Div) {
   assert((Div->getOpcode() == Instruction::SDiv ||
           Div->getOpcode() == Instruction::UDiv) &&
           "Trying to expand division from a non-division function");
@@ -615,7 +610,7 @@ bool llvm::expandDivisionUpTo32Bits(BinaryOperator *Div,
   assert(DivTyBitWidth <= 32 && "Div of bitwidth greater than 32 not supported");
 
   if (DivTyBitWidth == 32)
-    return expandDivision(Div, OnErased);
+    return expandDivision(Div);
 
   // If bitwidth smaller than 32 extend inputs, extend output and proceed
   // with 32 bit division.
@@ -639,9 +634,10 @@ bool llvm::expandDivisionUpTo32Bits(BinaryOperator *Div,
   Trunc = Builder.CreateTrunc(ExtDiv, DivTy);
 
   Div->replaceAllUsesWith(Trunc);
-  eraseInstruction(Div, OnErased);
+  Div->dropAllReferences();
+  Div->eraseFromParent();
 
-  return expandDivision(cast<BinaryOperator>(ExtDiv), OnErased);
+  return expandDivision(cast<BinaryOperator>(ExtDiv));
 }
 
 /// Generate code to divide two integers of bitwidth up to 64 bits. Uses the
@@ -649,8 +645,7 @@ bool llvm::expandDivisionUpTo32Bits(BinaryOperator *Div,
 /// in 64 bits.
 ///
 /// Replace Div with emulation code.
-bool llvm::expandDivisionUpTo64Bits(BinaryOperator *Div,
-                                    AboutToDeleteCallback OnErased) {
+bool llvm::expandDivisionUpTo64Bits(BinaryOperator *Div) {
   assert((Div->getOpcode() == Instruction::SDiv ||
           Div->getOpcode() == Instruction::UDiv) &&
           "Trying to expand division from a non-division function");
@@ -661,7 +656,7 @@ bool llvm::expandDivisionUpTo64Bits(BinaryOperator *Div,
   unsigned DivTyBitWidth = DivTy->getIntegerBitWidth();
 
   if (DivTyBitWidth >= 64)
-    return expandDivision(Div, OnErased);
+    return expandDivision(Div);
 
   // If bitwidth smaller than 64 extend inputs, extend output and proceed
   // with 64 bit division.
@@ -685,7 +680,8 @@ bool llvm::expandDivisionUpTo64Bits(BinaryOperator *Div,
   Trunc = Builder.CreateTrunc(ExtDiv, DivTy);
 
   Div->replaceAllUsesWith(Trunc);
-  eraseInstruction(Div, OnErased);
+  Div->dropAllReferences();
+  Div->eraseFromParent();
 
-  return expandDivision(cast<BinaryOperator>(ExtDiv), OnErased);
+  return expandDivision(cast<BinaryOperator>(ExtDiv));
 }
