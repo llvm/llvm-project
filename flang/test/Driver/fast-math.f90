@@ -70,6 +70,54 @@
 ! CHECK-CONTRACT: -fc1
 ! CHECK-CONTRACT-SAME: -ffp-contract=off
 
+! Explicit -ffp-contract options participate in normal command-line ordering.
+! RUN: %flang -ffast-math -ffp-contract=off -fsyntax-only -### %s -o %t 2>&1 \
+! RUN:     | FileCheck --check-prefix=CHECK-FAST-THEN-CONTRACT-OFF \
+! RUN:                 --implicit-check-not=-ffast-math %s
+! CHECK-FAST-THEN-CONTRACT-OFF: -fc1
+! CHECK-FAST-THEN-CONTRACT-OFF-SAME: -ffp-contract=off
+! CHECK-FAST-THEN-CONTRACT-OFF-SAME: -menable-no-infs
+! CHECK-FAST-THEN-CONTRACT-OFF-SAME: -menable-no-nans
+! CHECK-FAST-THEN-CONTRACT-OFF-SAME: -fapprox-func
+! CHECK-FAST-THEN-CONTRACT-OFF-SAME: -fno-signed-zeros
+! CHECK-FAST-THEN-CONTRACT-OFF-SAME: -mreassociate
+! CHECK-FAST-THEN-CONTRACT-OFF-SAME: -freciprocal-math
+
+! RUN: %flang -ffp-contract=off -ffast-math -fsyntax-only -### %s -o %t 2>&1 \
+! RUN:     | FileCheck --check-prefix=CHECK-CONTRACT-OFF-THEN-FAST \
+! RUN:                 --implicit-check-not=-ffp-contract=off %s
+! CHECK-CONTRACT-OFF-THEN-FAST: -fc1
+! CHECK-CONTRACT-OFF-THEN-FAST-SAME: -ffast-math
+
+! -Ofast has the same contraction ordering as -ffast-math.
+! RUN: %flang -Ofast -ffp-contract=off -fsyntax-only -### %s -o %t 2>&1 \
+! RUN:     | FileCheck --check-prefix=CHECK-OFAST-THEN-CONTRACT-OFF %s
+! CHECK-OFAST-THEN-CONTRACT-OFF: -fc1
+! CHECK-OFAST-THEN-CONTRACT-OFF-SAME: -ffp-contract=off
+! CHECK-OFAST-THEN-CONTRACT-OFF-SAME: -menable-no-infs
+! CHECK-OFAST-THEN-CONTRACT-OFF-SAME: -menable-no-nans
+! CHECK-OFAST-THEN-CONTRACT-OFF-SAME: -fapprox-func
+! CHECK-OFAST-THEN-CONTRACT-OFF-SAME: -fno-signed-zeros
+! CHECK-OFAST-THEN-CONTRACT-OFF-SAME: -mreassociate
+! CHECK-OFAST-THEN-CONTRACT-OFF-SAME: -freciprocal-math
+! CHECK-OFAST-THEN-CONTRACT-OFF-SAME: -fstack-arrays
+! CHECK-OFAST-THEN-CONTRACT-OFF-SAME: -O3
+
+! Disabling fast math restores the last explicit contraction setting.
+! RUN: %flang -ffp-contract=off -ffast-math -fno-fast-math \
+! RUN:     -fsyntax-only -### %s -o %t 2>&1 \
+! RUN:     | FileCheck --check-prefix=CHECK-RESTORE-CONTRACT-OFF \
+! RUN:                 --implicit-check-not=-ffast-math %s
+! CHECK-RESTORE-CONTRACT-OFF: -fc1
+! CHECK-RESTORE-CONTRACT-OFF-SAME: -ffp-contract=off
+
+! RUN: %flang -ffp-contract=fast -ffast-math -fno-fast-math \
+! RUN:     -fsyntax-only -### %s -o %t 2>&1 \
+! RUN:     | FileCheck --check-prefix=CHECK-RESTORE-CONTRACT-FAST \
+! RUN:                 --implicit-check-not=-ffast-math %s
+! CHECK-RESTORE-CONTRACT-FAST: -fc1
+! CHECK-RESTORE-CONTRACT-FAST-SAME: -ffp-contract=fast
+
 ! Check that -ffast-math causes us to link to crtfastmath.o
 ! UNSUPPORTED: system-windows
 ! UNSUPPORTED: target=powerpc{{.*}}

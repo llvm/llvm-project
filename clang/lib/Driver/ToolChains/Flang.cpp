@@ -894,6 +894,7 @@ void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
 static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
                                     ArgStringList &CmdArgs) {
   StringRef FPContract;
+  StringRef LastSeenFfpContractOption;
   bool HonorINFs = true;
   bool HonorNaNs = true;
   bool ApproxFunc = false;
@@ -903,23 +904,6 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
 
   StringRef LastComplexRangeOption;
   LangOptions::ComplexRangeKind Range = LangOptions::ComplexRangeKind::CX_None;
-
-  if (const Arg *A = Args.getLastArg(options::OPT_ffp_contract)) {
-    const StringRef Val = A->getValue();
-    if (Val == "fast" || Val == "off") {
-      FPContract = Val;
-    } else if (Val == "on") {
-      // Warn instead of error because users might have makefiles written for
-      // gfortran (which accepts -ffp-contract=on)
-      D.Diag(diag::warn_drv_unsupported_option_for_flang)
-          << Val << A->getOption().getName() << "off";
-      FPContract = "off";
-    } else
-      // Clang's "fast-honor-pragmas" option is not supported because it is
-      // non-standard
-      D.Diag(diag::err_drv_unsupported_option_argument)
-          << A->getSpelling() << Val;
-  }
 
   for (const Arg *A : Args) {
     auto optId = A->getOption().getID();
@@ -983,6 +967,27 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
     case options::OPT_fno_reciprocal_math:
       ReciprocalMath = false;
       break;
+    case options::OPT_ffp_contract: {
+      const StringRef Val = A->getValue();
+      if (Val == "fast" || Val == "off") {
+        FPContract = Val;
+      } else if (Val == "on") {
+        // Warn instead of error because users might have makefiles written for
+        // gfortran (which accepts -ffp-contract=on).
+        D.Diag(diag::warn_drv_unsupported_option_for_flang)
+            << Val << A->getOption().getName() << "off";
+        FPContract = "off";
+      } else {
+        // Clang's "fast-honor-pragmas" option is not supported because it is
+        // non-standard.
+        D.Diag(diag::err_drv_unsupported_option_argument)
+            << A->getSpelling() << Val;
+        break;
+      }
+
+      LastSeenFfpContractOption = FPContract;
+      break;
+    }
     case options::OPT_Ofast:
       [[fallthrough]];
     case options::OPT_ffast_math:
@@ -1005,10 +1010,9 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
       ApproxFunc = false;
       SignedZeros = true;
       // -fno-fast-math should undo -ffast-math so I return FPContract to the
-      // default. It is important to check it is "fast" (the default) so that
-      // --ffp-contract=off -fno-fast-math --> -ffp-contract=off
-      if (FPContract == "fast")
-        FPContract = "";
+      // last explicit -ffp-contract value, or to the default if there was no
+      // explicit value.
+      FPContract = LastSeenFfpContractOption;
       setComplexRange(D, A->getSpelling(),
                       LangOptions::ComplexRangeKind::CX_None,
                       LastComplexRangeOption, Range);
