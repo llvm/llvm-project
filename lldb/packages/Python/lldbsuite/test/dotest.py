@@ -449,6 +449,8 @@ def parseOptionsAndInitTestdirs():
         configuration.lldb_platform_available_ports = args.lldb_platform_available_ports
     if platform_system == "Darwin" and args.apple_sdk:
         configuration.apple_sdk = args.apple_sdk
+    if args.timeout:
+        configuration.timeout = args.timeout
     if args.test_build_dir:
         configuration.test_build_dir = args.test_build_dir
     if args.lldb_module_cache_dir:
@@ -503,6 +505,17 @@ def registerFaulthandler():
     # faulthandler.register is not available on Windows.
     if getattr(faulthandler, "register", None):
         faulthandler.register(signal.SIGTERM, chain=True)
+
+    if sys.platform != "win32":
+        return
+
+    # Dump every thread's stack shortly before lit's own per-test timeout would
+    # kill the process.
+    if configuration.timeout <= 0:
+        return
+
+    secs = max(1.0, configuration.timeout * 0.9)
+    faulthandler.dump_traceback_later(secs, exit=False)
 
 
 def setupSysPath():
