@@ -349,6 +349,7 @@ bool AsanHsaTranslateIpcCreate(void* ptr, size_t len, void** out_ptr,
 bool AsanHsaIsVmemFreeValid(void* ptr, uptr size);
 bool AsanHsaGetLiveMappingInfo(const void* ptr, void** map_base,
                                uptr* used_size, uptr* offset);
+bool AsanHsaIsFreedChunk(const void* ptr);
 #endif  // SANITIZER_AMDHSA
 
 }  // namespace __asan
