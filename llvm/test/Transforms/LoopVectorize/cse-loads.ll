@@ -514,10 +514,11 @@ exit:
   ret void
 }
 
-; A store proven not to alias the loaded address (via scoped-noalias metadata)
-; does not prevent CSE of the second load.
-define void @cse_across_noalias_store(ptr %a, ptr %b) {
-; CHECK-LABEL: define void @cse_across_noalias_store(
+; A store between two loads prevents CSE of the second load.
+; TODO: The store is proven not to alias the loaded address via scoped-noalias
+; metadata, so the second load could be CSE'd here.
+define void @no_cse_across_noalias_store(ptr %a, ptr %b) {
+; CHECK-LABEL: define void @no_cse_across_noalias_store(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
@@ -529,7 +530,8 @@ define void @cse_across_noalias_store(ptr %a, ptr %b) {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4, !alias.scope [[META13:![0-9]+]], !noalias [[META16:![0-9]+]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <4 x i32> [[WIDE_LOAD]], ptr [[TMP1]], align 4, !alias.scope [[META16]], !noalias [[META13]]
-; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[WIDE_LOAD]], [[WIDE_LOAD]]
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4, !alias.scope [[META13]], !noalias [[META16]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[WIDE_LOAD]], [[WIDE_LOAD1]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[TMP1]], align 4, !alias.scope [[META16]], !noalias [[META13]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024

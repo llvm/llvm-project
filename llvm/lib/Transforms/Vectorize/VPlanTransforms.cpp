@@ -280,28 +280,6 @@ canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
   return true;
 }
 
-/// Return true if no memory-writing recipe between \p From and \p To may alias
-/// \p MemLoc. Unlike canHoistOrSinkWithNoAliasCheck, this only scans the
-/// recipes strictly between \p From and \p To (which must be in the same
-/// block), as needed when common-subexpression-eliminating two loads: writes
-/// before \p From or after \p To cannot affect the reused value.
-static bool canCSEWithNoAliasCheck(const MemoryLocation &MemLoc,
-                                   VPRecipeBase *From, VPRecipeBase *To) {
-  if (From->getParent() != To->getParent())
-    return false;
-
-  for (VPRecipeBase &R :
-       make_range(std::next(From->getIterator()), To->getIterator())) {
-    if (!R.mayWriteToMemory())
-      continue;
-    auto Loc = vputils::getMemoryLocation(R);
-    if (!Loc ||
-        ScopedNoAliasAAResult::alias(*Loc, MemLoc) != AliasResult::NoAlias)
-      return false;
-  }
-  return true;
-}
-
 /// Get the value type of the replicate load or store. \p IsLoad indicates
 /// whether it is a load.
 static Type *getLoadStoreValueType(VPReplicateRecipe *R, bool IsLoad) {
@@ -2232,8 +2210,8 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
                              C->second == Instruction::ExtractValue)))
       return false;
 
-    // Widened loads are handled, as cse() guards their reuse with an aliasing
-    // check. Any other memory access is rejected.
+    // Widened loads are handled, as cse() guards their reuse with a memory
+    // epoch check. Any other memory access is rejected.
     if (Def->mayWriteToMemory())
       return false;
     return !Def->mayReadFromMemory() || isa<VPWidenLoadRecipe>(Def);
@@ -2308,32 +2286,40 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
 /// Plan.
 void VPlanTransforms::cse(VPlan &Plan) {
   VPDominatorTree VPDT(Plan);
-  DenseMap<VPSingleDefRecipe *, VPSingleDefRecipe *, VPCSEDenseMapInfo> CSEMap;
+  // Maps a recipe to the equivalent recipe recorded earlier, together with the
+  // memory epoch it was recorded at.
+  DenseMap<VPSingleDefRecipe *, std::pair<VPSingleDefRecipe *, unsigned>,
+           VPCSEDenseMapInfo>
+      CSEMap;
+  // Incremented for every recipe that may write to memory.
+  unsigned MemEpoch = 0;
 
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getEntry());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
     for (VPRecipeBase &R : *VPBB) {
+      if (R.mayWriteToMemory())
+        ++MemEpoch;
       auto *Def = dyn_cast<VPSingleDefRecipe>(&R);
       if (!Def || !VPCSEDenseMapInfo::canHandle(Def))
         continue;
-      if (VPSingleDefRecipe *V = CSEMap.lookup(Def)) {
+      auto It = CSEMap.find(Def);
+      if (It != CSEMap.end()) {
+        auto [V, Epoch] = It->second;
         // V must dominate Def for a valid replacement.
         if (!VPDT.dominates(V->getParent(), VPBB))
           continue;
         if (auto *EarlierLoad = dyn_cast<VPWidenLoadRecipe>(V)) {
           auto *Load = cast<VPWidenLoadRecipe>(Def);
-          // Reuse EarlierLoad only if it is at least as aligned as Load and no
-          // aliasing write lies between the two loads.
-          bool CanReuse = EarlierLoad->getAlign() >= Load->getAlign();
-          if (CanReuse) {
-            auto Loc = vputils::getMemoryLocation(*EarlierLoad);
-            CanReuse = canCSEWithNoAliasCheck(*Loc, EarlierLoad, Def);
-          }
+          // Reuse EarlierLoad only if it is at least as aligned as Load and in
+          // the same block, with an unchanged epoch meaning no write lies
+          // between the two loads.
+          bool CanReuse = EarlierLoad->getAlign() >= Load->getAlign() &&
+                          EarlierLoad->getParent() == VPBB && Epoch == MemEpoch;
           if (!CanReuse) {
             // Record Load as the candidate for subsequent loads, as it may be
             // reusable where EarlierLoad is not.
-            CSEMap[Def] = Def;
+            CSEMap[Def] = {Def, MemEpoch};
             continue;
           }
           // Keep only metadata common to both loads on the survivor.
@@ -2345,7 +2331,7 @@ void VPlanTransforms::cse(VPlan &Plan) {
         Def->replaceAllUsesWith(V);
         continue;
       }
-      CSEMap[Def] = Def;
+      CSEMap[Def] = {Def, MemEpoch};
     }
   }
 }
