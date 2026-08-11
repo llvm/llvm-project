@@ -21,7 +21,7 @@ Pair g = makePair();
 // CIR-NEXT:    cir.store %[[RET]], %[[COERCE]] : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
 
 // LLVM-LABEL: define internal void @__cxx_global_var_init()
-// LLVM-NEXT:    %[[COERCE:.+]] = alloca { i64, i64 }, i64 1, align 8
+// LLVM-NEXT:    %[[COERCE:.+]] = alloca { i64, i64 }, align 8
 // LLVM-NEXT:    %[[RET:.+]] = call { i64, i64 } @_Z8makePairv()
 // LLVM-NEXT:    store { i64, i64 } %[[RET]], ptr %[[COERCE]], align 8
 
