@@ -1441,9 +1441,9 @@ llvm.func @rocdl.make.buffer.rsrc(%ptr : !llvm.ptr,
                                   %numRecords : i64,
                                   %flags : i32) -> !llvm.ptr<8> {
   // CHECK-LABEL: rocdl.make.buffer.rsrc
-  // CHECK: %[[rsrc:.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0(ptr %{{.*}}, i16 %{{.*}}, i64 %{{.*}}, i32 %{{.*}})
+  // CHECK: %[[rsrc:.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr %{{.*}}, i16 %{{.*}}, i64 %{{.*}}, i32 %{{.*}})
   // CHECK: ret ptr addrspace(8) %[[rsrc]]
-  %rsrc = rocdl.make.buffer.rsrc %ptr, %stride, %numRecords, %flags : !llvm.ptr to !llvm.ptr<8>
+  %rsrc = rocdl.make.buffer.rsrc %ptr, %stride, %numRecords, %flags : !llvm.ptr, i64 to !llvm.ptr<8>
   llvm.return %rsrc : !llvm.ptr<8>
 }
 
@@ -1452,9 +1452,9 @@ llvm.func @rocdl.make.buffer.rsrc.p7.p1(%ptr : !llvm.ptr<1>,
                                   %numRecords : i64,
                                   %flags : i32) -> !llvm.ptr<7> {
   // CHECK-LABEL: rocdl.make.buffer.rsrc.p7.p1
-  // CHECK: %[[rsrc:.*]] = call ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1(ptr addrspace(1) %{{.*}}, i16 %{{.*}}, i64 %{{.*}}, i32 %{{.*}})
+  // CHECK: %[[rsrc:.*]] = call ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1.i64(ptr addrspace(1) %{{.*}}, i16 %{{.*}}, i64 %{{.*}}, i32 %{{.*}})
   // CHECK: ret ptr addrspace(7) %[[rsrc]]
-  %rsrc = rocdl.make.buffer.rsrc %ptr, %stride, %numRecords, %flags : <1> to <7>
+  %rsrc = rocdl.make.buffer.rsrc %ptr, %stride, %numRecords, %flags : <1>, i64 to <7>
   llvm.return %rsrc : !llvm.ptr<7>
 }
 
