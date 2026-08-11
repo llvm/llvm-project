@@ -2246,7 +2246,8 @@ def ContinuousTileSizesOp : Op<Transform_Dialect, "structured.continuous_tile_si
 //===----------------------------------------------------------------------===//
 
 def TileUsingForOp : Op<Transform_Dialect, "structured.tile_using_for",
-       [DeclareOpInterfaceMethods<TransformOpInterface>,
+       [AttrSizedOperandSegments,
+        DeclareOpInterfaceMethods<TransformOpInterface>,
         DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
         ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
@@ -2269,6 +2270,14 @@ def TileUsingForOp : Op<Transform_Dialect, "structured.tile_using_for",
     This op returns handles to the tiled op (in the generated loop nest) and the
     generated loops. The number of loops is the number of tile sizes that are
     statically known to be non-zero.
+
+    Additionally, tile sizes can also be provided as a single handle containing
+    variadic number of values. In that case, all created loops are assigned to
+    a single return handle. For each target, corresponding loops are appended
+    to the return handle in the same order as target operations.
+
+    Loop interchange permutation can be provided as either static attributes,
+    dynamic values or a single handle containing variadic number of values.
 
     #### Return modes
 
@@ -2295,8 +2304,11 @@ def TileUsingForOp : Op<Transform_Dialect, "structured.tile_using_for",
 
   let arguments = (ins TransformHandleTypeInterface:$target,
                    Variadic<TransformAnyParamTypeOrAnyHandle>:$dynamic_sizes,
+                   Variadic<TransformAnyParamTypeOrAnyHandle>:$interchange,
+                   Optional<TransformAnyParamTypeOrAnyHandle>:$packed_tile_sizes,
+                   Optional<TransformAnyParamTypeOrAnyHandle>:$packed_interchange,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_sizes,
-                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$interchange,
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_interchange,
                    DefaultValuedOptionalAttr<DenseBoolArrayAttr, "{}">:$scalable_sizes,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$inner_tile_alignments);
   let results = (outs TransformHandleTypeInterface:$tiled_linalg_op,
@@ -2314,6 +2326,12 @@ def TileUsingForOp : Op<Transform_Dialect, "structured.tile_using_for",
                    CArg<"ArrayRef<int64_t>", "{}">:$interchange,
                    CArg<"std::optional<ArrayRef<bool>>", "std::nullopt">:
                       $scalableSizes)>,
+    OpBuilder<(ins "TypeRange":$loopTypes,
+                   "Value":$target,
+                   "ArrayRef<OpFoldResult>":$mixedTileSizes,
+                   "ArrayRef<OpFoldResult>":$mixedInterchange,
+                   CArg<"std::optional<ArrayRef<bool>>", "std::nullopt">:
+                      $scalableSizes)>,
     OpBuilder<(ins "Value":$target,
                    "ArrayRef<int64_t>":$staticTileSizes,
                    CArg<"ArrayRef<int64_t>", "{}">:$interchange,
@@ -2324,15 +2342,24 @@ def TileUsingForOp : Op<Transform_Dialect, "structured.tile_using_for",
                    CArg<"ArrayRef<int64_t>", "{}">:$interchange,
                    CArg<"std::optional<ArrayRef<bool>>", "std::nullopt">:
                       $scalableSizes)>,
+    OpBuilder<(ins "Value":$target,
+                   "ArrayRef<OpFoldResult>":$mixedTileSizes,
+                   "ArrayRef<OpFoldResult>":$mixedInterchange,
+                   CArg<"std::optional<ArrayRef<bool>>", "std::nullopt">:
+                      $scalableSizes)>,
   ];
 
   let assemblyFormat = [{
     $target
-      `tile_sizes` custom<DynamicIndexList>(
+      `tile_sizes` custom<PackedOrDynamicIndexList>(
+        $packed_tile_sizes,
         $dynamic_sizes,
         $static_sizes,
         $scalable_sizes)
-      (`interchange` `=` $interchange^)?
+      (`interchange` `=` custom<PackedOrDynamicIndexList>(
+        $packed_interchange,
+        $interchange,
+        $static_interchange)^)?
       (`inner_tile_alignments` `=`
           custom<InnerTileAlignmentArray>($inner_tile_alignments)^)?
     attr-dict
@@ -2345,6 +2372,10 @@ def TileUsingForOp : Op<Transform_Dialect, "structured.tile_using_for",
     /// Returns the list of tile sizes, which may be static (Attribute) or
     /// dynamic (Value).
     SmallVector<OpFoldResult> getMixedSizes();
+
+    /// Returns the interchange, which may be static (Attribute) or
+    /// dynamic (Value).
+    SmallVector<OpFoldResult> getMixedInterchange();
   }];
 }
 
