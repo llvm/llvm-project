@@ -4570,8 +4570,7 @@ static bool foldCondStoreToSelectImpl(CondBrInst *BI, DomTreeUpdater *DTU,
     if (!I)
       return false;
     BasicBlock *DefBB = I->getParent();
-    return DefBB == ThenBB || DefBB == ElseBB || DefBB == ElseThenBB ||
-           DefBB == ElseElseBB;
+    return is_contained({ThenBB, ElseBB, ElseThenBB, ElseElseBB}, DefBB);
   };
   auto HoistIfNeeded = [&](Value *V) {
     if (IsInRemovedBlock(V))
