@@ -104,9 +104,7 @@ def _match_decorator_property(expected, actual):
     if isinstance(expected, no_match):
         return not _match_decorator_property(expected.item, actual)
 
-    # Python 3.6 doesn't declare a `re.Pattern` type, get the dynamic type.
-    pattern_type = type(re.compile(""))
-    if isinstance(expected, (pattern_type, str)):
+    if isinstance(expected, (re.Pattern, str)):
         return re.search(expected, actual) is not None
 
     if hasattr(expected, "__iter__"):
@@ -261,6 +259,20 @@ def _xfailForVariant(variant_name, expected_fn, bugnumber=None):
         return expectedFailure_impl(bugnumber)
     else:
         return expectedFailure_impl
+
+
+def FreshTestFunction(src):
+    """Return a private copy of *src* for one generated test class to own.
+
+    Several decorators record their state on the function object they are
+    handed instead of on a wrapper.
+    """
+
+    @wraps(src)
+    def copy(self):
+        return src(self)
+
+    return copy
 
 
 def _skipForVariant(variant_name, expected_fn, bugnumber=None):
@@ -1215,6 +1227,11 @@ def requirePOSIX(func):
 def requireSignals(func):
     """Mark the item as requiring POSIX signal support on the target."""
     return requireNotPlatform(["windows", "wasip1", "wasi"])(func)
+
+
+def requireExpressionEvaluation(func):
+    """Mark the item as requiring expression evaluation."""
+    return requireNotWasm(func)
 
 
 def requireNotWasm(func):

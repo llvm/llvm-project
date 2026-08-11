@@ -17,6 +17,7 @@
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/IR/Function.h" // To access function attributes.
 #include "llvm/IR/GlobalValue.h"
@@ -29,6 +30,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
+using namespace llvm::SDPatternMatch;
 
 #define DEBUG_TYPE "aarch64-isel"
 #define PASS_NAME "AArch64 Instruction Selection"
@@ -8298,6 +8300,24 @@ void AArch64DAGToDAGISel::PreprocessISelDAG() {
           ScalarTy == N.getOperand(0).getValueType())
         Result = addBitcastHints(*CurDAG, N);
 
+      break;
+    }
+    case AArch64ISD::VSHL: {
+      // Undo mul(shl(A,C),B) -> shl(mul(A,B),C) canonicalisation when A is an
+      // extend that can be folded into the shift.
+      EVT VT = N.getValueType(0);
+      SDValue A, B, C = N.getOperand(1);
+      if (sd_match(N.getOperand(0),
+                   m_OneUse(m_Mul(m_Value(A, m_AnyOf(m_ZExt(m_Value()),
+                                                     m_SExt(m_Value()))),
+                                  m_Value(B))))) {
+        // If both mul operands are extended, preserve the smull/umull idiom.
+        if (B.getOpcode() == A.getOpcode())
+          break;
+        SDLoc DL(&N);
+        SDValue SHL = CurDAG->getNode(AArch64ISD::VSHL, DL, VT, A, C);
+        Result = CurDAG->getNode(ISD::MUL, DL, VT, SHL, B);
+      }
       break;
     }
     default:
