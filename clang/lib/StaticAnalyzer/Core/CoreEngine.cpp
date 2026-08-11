@@ -329,9 +329,8 @@ void CoreEngine::HandleBlockEdge(const BlockEdge &L, ExplodedNode *Pred) {
 
   ExplodedNodeSet CheckerNodes;
 
-  if (Processed && !Processed->isSink()) {
+  if (Processed)
     ExprEng.runCheckersForBlockEntrance(BE, Processed, CheckerNodes);
-  }
 
   // Enqueue nodes onto the worklist.
   enqueue(CheckerNodes);
