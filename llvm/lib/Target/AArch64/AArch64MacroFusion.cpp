@@ -223,13 +223,6 @@ static bool isAdrpAddPair(const MachineInstr *FirstMI,
   return false;
 }
 
-/// Literal generation.
-static bool isLiteralsPair(const AArch64Subtarget &ST,
-                           const MachineInstr *FirstMI,
-                           const MachineInstr &SecondMI) {
-  return ST.fusesMOVImmPair(FirstMI, SecondMI);
-}
-
 /// Fuse address generation and loads or stores.
 static bool isAddressLdStPair(const MachineInstr *FirstMI,
                               const MachineInstr &SecondMI) {
@@ -694,7 +687,7 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
     ++NumFusedAdrpAdd;
     return true;
   }
-  if (ST.hasFuseLiterals() && isLiteralsPair(ST, FirstMI, SecondMI)) {
+  if (ST.hasFuseLiterals() && ST.fusesMOVImmPair(FirstMI, SecondMI)) {
     ++NumFusedLiterals;
     return true;
   }
