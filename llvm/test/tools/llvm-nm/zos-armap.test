@@ -6,13 +6,13 @@
 ##   bit 2 (0x4): 64-bit  (AMODE == ESD_AMODE_64)
 ##   bit 1 (0x2): XPLink  (LinkageType == ESD_LT_XPLink)
 ##   bit 0 (0x1): WSA     (parent ED namespace == ESD_NS_Parts)
-##   bits above 0x7: unknown, printed as '?'
+##   bits above 0x7:      unknown, printed as '?'
 ##
 ## symunk uses the highest bit (0x80000000) — the least likely to ever become
 ## a known value — so that if new low bits are defined in the future, this
 ## test still covers a genuinely unknown bit.
 ## symall uses 0xffffffff so that adding any new known value will cause this
-## CHECK line to fail, prompting the developer to update the decoder.
+## CHECK line to fail.
 ##
 ## The archive is generated directly using generate_zos_archive.py.
 
