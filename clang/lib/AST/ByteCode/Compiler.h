@@ -14,6 +14,7 @@
 #define LLVM_CLANG_AST_INTERP_BYTECODEEXPRGEN_H
 
 #include "ByteCodeEmitter.h"
+#include "DeclOrExpr.h"
 #include "EvalEmitter.h"
 #include "Pointer.h"
 #include "PrimType.h"
@@ -48,12 +49,13 @@ public:
   enum {
     K_This = 0,
     K_Field = 1,
-    K_Temp = 2,
-    K_Decl = 3,
-    K_Elem = 5,
-    K_RVO = 6,
-    K_InitList = 7,
-    K_DIE = 8,
+    K_Base = 2,
+    K_Temp = 3,
+    K_Decl = 4,
+    K_Elem = 6,
+    K_RVO = 7,
+    K_InitList = 8,
+    K_DIE = 9,
   };
 
   static InitLink This() { return InitLink{K_This}; }
@@ -62,6 +64,11 @@ public:
   static InitLink DIE() { return InitLink{K_DIE}; }
   static InitLink Field(unsigned Offset) {
     InitLink IL{K_Field};
+    IL.Offset = Offset;
+    return IL;
+  }
+  static InitLink Base(unsigned Offset) {
+    InitLink IL{K_Base};
     IL.Offset = Offset;
     return IL;
   }
@@ -339,12 +346,12 @@ protected:
                      bool Activate, bool IsOperatorCall);
 
   /// Creates a local primitive value.
-  unsigned allocateLocalPrimitive(DeclTy &&Decl, PrimType Ty, bool IsConst,
+  unsigned allocateLocalPrimitive(DeclOrExpr &&Decl, PrimType Ty, bool IsConst,
                                   bool IsVolatile = false,
                                   ScopeKind SC = ScopeKind::Block);
 
   /// Allocates a space storing a local given its type.
-  UnsignedOrNone allocateLocal(DeclTy &&Decl, QualType Ty = QualType(),
+  UnsignedOrNone allocateLocal(DeclOrExpr &&Decl, QualType Ty = QualType(),
                                ScopeKind = ScopeKind::Block);
   UnsignedOrNone allocateTemporary(const Expr *E);
 
@@ -427,7 +434,7 @@ private:
                              const BinaryOperator *E);
   bool emitRecordDestructionPop(const Record *R, SourceInfo Loc);
   bool emitDestructionPop(const Descriptor *Desc, SourceInfo Loc);
-  bool emitDummyPtr(const DeclTy &D, const Expr *E, bool CU = false);
+  bool emitDummyPtr(DeclOrExpr D, const Expr *E, bool CU = false);
   bool emitFloat(const APFloat &F, SourceInfo Info);
   unsigned collectBaseOffset(const QualType BaseType,
                              const QualType DerivedType);

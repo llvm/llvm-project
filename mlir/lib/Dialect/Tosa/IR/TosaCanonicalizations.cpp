@@ -1263,7 +1263,8 @@ struct CancellingBlockScaledCastsOptimization
           castOp, "inner input type must match outer output type");
 
     const Type innerOutputElemType = innerOutputTy.getElementType();
-    const bool isLosslessCast = isa<Float32Type>(innerOutputElemType);
+    const bool isLosslessCast =
+        isa<Float32Type, BFloat16Type>(innerOutputElemType);
     if (!isLosslessCast)
       return rewriter.notifyMatchFailure(
           castOp, "avoid cancelling casts that should be lossy");
@@ -2116,13 +2117,18 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
   if (!inputTy.getElementType().isIntOrIndexOrFloat())
     return {};
 
+  // Constants must have static shape.
+  if (!outputTy.hasStaticShape())
+    return {};
+
+  // Reshaping a resource-backed constant only requires updating its type.
+  if (auto operand = llvm::dyn_cast_if_present<DenseResourceElementsAttr>(
+          adaptor.getInput1()))
+    return DenseResourceElementsAttr::get(outputTy, operand.getRawHandle());
+
   // reshape(const(x)) -> const(reshape-attr(x))
   if (auto operand =
           llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getInput1())) {
-    // Constants must have static shape.
-    if (!outputTy.hasStaticShape())
-      return {};
-
     // Okay to duplicate splat constants.
     if (operand.isSplat())
       return SplatElementsAttr::get(outputTy,
