@@ -1760,8 +1760,8 @@ bool GCNTTIImpl::isProfitableToSinkOperands(Instruction *I,
 
     if (auto *Shuffle = dyn_cast<ShuffleVectorInst>(Op.get())) {
 
-      unsigned EltSize = static_cast<unsigned>(DL.getTypeSizeInBits(
-          cast<VectorType>(Shuffle->getType())->getElementType()));
+      TypeSize EltSize = DL.getTypeSizeInBits(
+          cast<VectorType>(Shuffle->getType())->getElementType());
 
       // For i32 (or greater) shufflevectors, these will be lowered into a
       // series of insert / extract elements, which will be coalesced away.
