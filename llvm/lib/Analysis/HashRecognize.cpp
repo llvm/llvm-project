@@ -306,8 +306,8 @@ bool RecurrenceInfo::matchConditionalRecurrence(
   Value *FoundStart = Phi->getIncomingValue(!LatchIdx);
 
   Instruction *TV, *FV;
-  if (!match(FoundStep, m_Select(m_CombineOr(m_Cmp(), m_Trunc(m_Value())),
-                                 m_Instruction(TV), m_Instruction(FV))))
+  if (!match(FoundStep, m_Select(m_Isa<CmpInst, TruncInst>(), m_Instruction(TV),
+                                 m_Instruction(FV))))
     return false;
 
   // For a conditional recurrence, both the true and false values of the
