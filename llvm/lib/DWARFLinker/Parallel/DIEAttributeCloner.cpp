@@ -553,7 +553,10 @@ size_t DIEAttributeCloner::cloneBlockAttr(
     const DWARFFormValue &Val,
     const DWARFAbbreviationDeclaration::AttributeSpec &AttrSpec) {
 
-  if (OutUnit.isTypeUnit())
+  // In a type unit, drop a block-form attribute that holds a variable's
+  // relocated address (HasLocationExpressionAddress): such an address is
+  // meaningless in a type unit shared between compile units.
+  if (OutUnit.isTypeUnit() && HasLocationExpressionAddress)
     return 0;
 
   size_t NumberOfPatchesAtStart = PatchesOffsets.size();
