@@ -20,7 +20,9 @@
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/MemoryAccess.h"
-#include "llvm/ExecutionEngine/Orc/RTBridge/SPS/ProxySpecs.h"
+#include "llvm/ExecutionEngine/Orc/RTBridge/MemoryAccessProxies.h"
+#include "llvm/ExecutionEngine/Orc/RTBridge/Proxy.h"
+#include "llvm/ExecutionEngine/Orc/RTBridge/SPS/MemoryAccessProxySpecs.h"
 
 namespace llvm {
 namespace orc {

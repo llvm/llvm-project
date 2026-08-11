@@ -10,7 +10,7 @@
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
-#include "llvm/ExecutionEngine/Orc/RTBridge/SPS/ProxySpecs.h"
+#include "llvm/ExecutionEngine/Orc/RTBridge/SPS/ProxySpec.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
 
