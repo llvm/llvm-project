@@ -95,8 +95,7 @@ define void @iv_expand(ptr %p, i64 %n) {
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer i64, ir<%q>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%x> = load vp<[[VP5]]>
 ; CHECK-NEXT:      WIDEN ir<%y> = add ir<%x>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer i64, ir<%q>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP6]]>, ir<%y>
+; CHECK-NEXT:      WIDEN store vp<[[VP5]]>, ir<%y>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
