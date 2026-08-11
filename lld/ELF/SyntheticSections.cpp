@@ -515,7 +515,7 @@ void GotSection::addAuthEntry(const Symbol &sym) {
   authEntries.push_back(
       {/*offset=*/(numEntries - 1) * ctx.target->gotEntrySize,
        /*isSymbolFunc=*/sym.isFunc(),
-       /*isUndefWeakNonPreemptible=*/sym.isUndefWeak() && !sym.isPreemptible});
+       /*isUndefinedNonPreemptible=*/sym.isUndefined() && !sym.isPreemptible});
 }
 
 bool GotSection::addTlsDescEntry(const Symbol &sym) {
@@ -528,7 +528,7 @@ bool GotSection::addTlsDescEntry(const Symbol &sym) {
 void GotSection::addTlsDescAuthEntry(const Symbol &sym) {
   authEntries.push_back({/*offset=*/(numEntries - 2) * ctx.target->gotEntrySize,
                          /*isSymbolFunc=*/true,
-                         /*isUndefWeakNonPreemptible=*/false});
+                         /*isUndefinedNonPreemptible=*/false});
   assert(!sym.isFunc());
   addAuthEntry(sym);
 }
@@ -591,7 +591,7 @@ void GotSection::writeTo(uint8_t *buf) {
   for (const AuthEntryInfo &authEntry : authEntries) {
     uint8_t *dest = buf + authEntry.offset;
 
-    if (authEntry.isUndefWeakNonPreemptible) {
+    if (authEntry.isUndefinedNonPreemptible) {
       write64(ctx, dest, 0);
       continue;
     }
