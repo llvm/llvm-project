@@ -775,9 +775,11 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::OMPScanDirectiveClass:
     K = CXCursor_OMPScanDirective;
     break;
-  case Stmt::OMPOrderedDirectiveClass:
-    // FIXME: Pick the right one once the class is split into two.
+  case Stmt::OMPOrderedStandaloneDirectiveClass:
     K = CXCursor_OMPOrderedStandaloneDirective;
+    break;
+  case Stmt::OMPOrderedBlockAssocDirectiveClass:
+    K = CXCursor_OMPOrderedBlockAssocDirective;
     break;
   case Stmt::OMPAtomicDirectiveClass:
     K = CXCursor_OMPAtomicDirective;
