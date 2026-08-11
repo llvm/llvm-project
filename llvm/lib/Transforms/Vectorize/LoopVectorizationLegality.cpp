@@ -657,6 +657,24 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
     }
   }
 
+  // Each nested loop must exit via its latch only, as a region with the latch
+  // as its only exiting block is created for it. Note that the branch check
+  // above rejects divergent exits, but exits with an outer-loop invariant
+  // condition are allowed through.
+  SmallVector<Loop *, 4> LoopNest = TheLoop->getLoopsInPreorder();
+  for (Loop *Lp : drop_begin(LoopNest)) {
+    if (Lp->getExitingBlock() != Lp->getLoopLatch()) {
+      reportVectorizationFailure(
+          "Nested loop does not exit via its latch",
+          "loop control flow is not understood by vectorizer",
+          "CFGNotUnderstood", ORE, TheLoop);
+      if (DoExtraAnalysis)
+        Result = false;
+      else
+        return false;
+    }
+  }
+
   // Check whether inner loops are uniform. At this point, we only support
   // simple outer loops scenarios with uniform nested loops.
   if (!isUniformLoopNest(TheLoop /*loop nest*/,
