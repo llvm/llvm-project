@@ -440,8 +440,10 @@ static std::optional<FunctionClassification> classifyX86_64Signature(
                 << t;
   };
 
-  // An Ignore the ABI does not mean, where rewriting the signature would pass
-  // nothing in the value's place.
+  // Ignore is the ABI's answer for a void type or an aggregate holding no
+  // data, but the classifier also reaches it for a value that still carries
+  // data.  Acting on that answer would leave the rewritten signature with
+  // nothing in the value's place, so report it as NYI instead.
   auto nyiDrop = [&](const ArgClassification &ac, mlir::Type t,
                      llvm::StringRef what) {
     if (ac.kind != ArgKind::Ignore || !ignoreLosesData(t))
