@@ -52,9 +52,7 @@ define dso_local void @tbaa(ptr %0) {
 
 ; // -----
 
-; CHECK:      import-failure.ll
-; CHECK-SAME: warning: expected an access group node to be empty and distinct
-; CHECK:      error: unsupported access group node: !0 = !{}
+; CHECK: Access scope must be 'distinct'
 define void @access_group(ptr %arg1) {
   %1 = load i32, ptr %arg1, !llvm.access.group !0
   ret void
