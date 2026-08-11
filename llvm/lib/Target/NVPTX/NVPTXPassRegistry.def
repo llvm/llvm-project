@@ -51,5 +51,6 @@ FUNCTION_PASS("nvptx-lower-alloca", NVPTXLowerAllocaPass())
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
 MACHINE_FUNCTION_PASS("nvptx-isel", NVPTXISelDAGToDAGPass(*this, getOptLevel()))
+MACHINE_FUNCTION_PASS("nvptx-address-folder", NVPTXAddressFolderPass())
 MACHINE_FUNCTION_PASS("nvptx-forward-params", NVPTXForwardParamsPass())
 #undef MACHINE_FUNCTION_PASS
