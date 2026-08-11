@@ -231,3 +231,18 @@ entry:
   %zext = zext nneg i32 %and to i64
   ret i64 %zext
 }
+
+; FIXME: The and isn't needed here, as the trunc nsw means we know the high bits
+; are all equal to the sign bit, and zext nneg means we know the sign bit is
+; zero.
+define i32 @zext_of_trunc(i64 %arg) {
+; CHECK-LABEL: define i32 @zext_of_trunc(
+; CHECK-SAME: i64 [[ARG:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[ARG]] to i32
+; CHECK-NEXT:    [[ZEXT:%.*]] = and i32 [[TMP1]], 65535
+; CHECK-NEXT:    ret i32 [[ZEXT]]
+;
+  %trunc = trunc nsw i64 %arg to i16
+  %zext = zext nneg i16 %trunc to i32
+  ret i32 %zext
+}
