@@ -2961,7 +2961,7 @@ void ASTDeclMerger::mergeLambda(CXXRecordDecl *D, RedeclarableResult &Redecl,
   // one we already loaded.
   auto *&Slot = Reader.getContext().getLambdaDeclarationsForMerging()[{
       Context.getCanonicalDecl(), IndexInContext}];
-  if (TagDecl* PrevDecl = Slot)
+  if (TagDecl *PrevDecl = Slot)
     mergeRedeclarable(D, PrevDecl, Redecl);
   else
     Slot = D;
