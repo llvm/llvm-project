@@ -2591,11 +2591,11 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          AND_ZPmZ_S                 and	z31.s, p7/m, z31.s, z31.s
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          AND_ZI                     and	z5.b, z5.b, #0x6
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          AND_ZI                     and	z5.b, z5.b, #0xf9
-# CHECK-NEXT:  2      2     2.00                         2     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          ANDS_PPzPP                 ands	p0.b, p0/z, p0.b, p1.b
-# CHECK-NEXT:  4      12    2.00                         12    V1UnitV[4],V1UnitV01[4]                    ANDV_VPZ_B                 andv	b0, p7, z31.b
-# CHECK-NEXT:  4      12    2.00                         12    V1UnitV[4],V1UnitV01[4]                    ANDV_VPZ_D                 andv	d0, p7, z31.d
-# CHECK-NEXT:  4      12    2.00                         12    V1UnitV[4],V1UnitV01[4]                    ANDV_VPZ_H                 andv	h0, p7, z31.h
-# CHECK-NEXT:  4      12    2.00                         12    V1UnitV[4],V1UnitV01[4]                    ANDV_VPZ_S                 andv	s0, p7, z31.s
+# CHECK-NEXT:  1      2     2.00                         2     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          ANDS_PPzPP                 ands	p0.b, p0/z, p0.b, p1.b
+# CHECK-NEXT:  1      12    2.00                         12    V1UnitV[4],V1UnitV01[4]                    ANDV_VPZ_B                 andv	b0, p7, z31.b
+# CHECK-NEXT:  1      12    2.00                         12    V1UnitV[4],V1UnitV01[4]                    ANDV_VPZ_D                 andv	d0, p7, z31.d
+# CHECK-NEXT:  1      12    2.00                         12    V1UnitV[4],V1UnitV01[4]                    ANDV_VPZ_H                 andv	h0, p7, z31.h
+# CHECK-NEXT:  1      12    2.00                         12    V1UnitV[4],V1UnitV01[4]                    ANDV_VPZ_S                 andv	s0, p7, z31.s
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitV,V1UnitV1,V1UnitV01,V1UnitV13       ASR_ZPmI_B                 asr	z0.b, p0/m, z0.b, #1
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitV,V1UnitV1,V1UnitV01,V1UnitV13       ASR_ZPmZ_B                 asr	z0.b, p0/m, z0.b, z0.b
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitV,V1UnitV1,V1UnitV01,V1UnitV13       ASR_WIDE_ZPmZ_B            asr	z0.b, p0/m, z0.b, z1.d
@@ -2658,26 +2658,26 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          BIC_ZPmZ_D                 bic	z31.d, p7/m, z31.d, z31.d
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          BIC_ZPmZ_H                 bic	z31.h, p7/m, z31.h, z31.h
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          BIC_ZPmZ_S                 bic	z31.s, p7/m, z31.s, z31.s
-# CHECK-NEXT:  2      2     2.00                         2     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          BICS_PPzPP                 bics	p0.b, p0/z, p0.b, p0.b
-# CHECK-NEXT:  2      2     2.00                         2     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          BICS_PPzPP                 bics	p15.b, p15/z, p15.b, p15.b
+# CHECK-NEXT:  1      2     2.00                         2     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          BICS_PPzPP                 bics	p0.b, p0/z, p0.b, p0.b
+# CHECK-NEXT:  1      2     2.00                         2     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          BICS_PPzPP                 bics	p15.b, p15/z, p15.b, p15.b
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   BRKA_PPmP                  brka	p0.b, p15/m, p15.b
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   BRKA_PPzP                  brka	p0.b, p15/z, p15.b
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          BRKAS_PPzP                 brkas	p0.b, p15/z, p15.b
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          BRKAS_PPzP                 brkas	p0.b, p15/z, p15.b
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   BRKB_PPmP                  brkb	p0.b, p15/m, p15.b
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   BRKB_PPzP                  brkb	p0.b, p15/z, p15.b
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          BRKBS_PPzP                 brkbs	p0.b, p15/z, p15.b
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          BRKBS_PPzP                 brkbs	p0.b, p15/z, p15.b
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   BRKN_PPzP                  brkn	p0.b, p15/z, p1.b, p0.b
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   BRKN_PPzP                  brkn	p15.b, p15/z, p15.b, p15.b
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          BRKNS_PPzP                 brkns	p0.b, p15/z, p1.b, p0.b
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          BRKNS_PPzP                 brkns	p15.b, p15/z, p15.b, p15.b
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          BRKNS_PPzP                 brkns	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          BRKNS_PPzP                 brkns	p15.b, p15/z, p15.b, p15.b
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   BRKPA_PPzPP                brkpa	p0.b, p15/z, p1.b, p2.b
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   BRKPA_PPzPP                brkpa	p15.b, p15/z, p15.b, p15.b
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          BRKPAS_PPzPP               brkpas	p0.b, p15/z, p1.b, p2.b
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          BRKPAS_PPzPP               brkpas	p15.b, p15/z, p15.b, p15.b
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          BRKPAS_PPzPP               brkpas	p0.b, p15/z, p1.b, p2.b
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          BRKPAS_PPzPP               brkpas	p15.b, p15/z, p15.b, p15.b
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   BRKPB_PPzPP                brkpb	p0.b, p15/z, p1.b, p2.b
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   BRKPB_PPzPP                brkpb	p15.b, p15/z, p15.b, p15.b
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          BRKPBS_PPzPP               brkpbs	p0.b, p15/z, p1.b, p2.b
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          BRKPBS_PPzPP               brkpbs	p15.b, p15/z, p15.b, p15.b
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          BRKPBS_PPzPP               brkpbs	p0.b, p15/z, p1.b, p2.b
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          BRKPBS_PPzPP               brkpbs	p15.b, p15/z, p15.b, p15.b
 # CHECK-NEXT:  1      3     1.00                         3     V1UnitV,V1UnitV1,V1UnitV01,V1UnitV13       CLASTA_VPZ_B               clasta	b0, p7, b0, z31.b
 # CHECK-NEXT:  1      3     1.00                         3     V1UnitV,V1UnitV1,V1UnitV01,V1UnitV13       CLASTA_VPZ_D               clasta	d0, p7, d0, z31.d
 # CHECK-NEXT:  1      3     1.00                         3     V1UnitV,V1UnitV1,V1UnitV01,V1UnitV13       CLASTA_VPZ_H               clasta	h0, p7, h0, z31.h
@@ -2926,10 +2926,10 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   DECP_XP_H                  decp	xzr, p15.h
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   DECP_XP_S                  decp	xzr, p15.s
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       DECD_ZPiI                  decd	z19.d
-# CHECK-NEXT:  3      7     2.00                         7     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV,V1UnitV01 DECP_ZP_D         decp	z31.d, p15.d
+# CHECK-NEXT:  2      7     2.00                         7     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV,V1UnitV01 DECP_ZP_D         decp	z31.d, p15.d
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       DECH_ZPiI                  dech	z23.h
-# CHECK-NEXT:  3      7     2.00                         7     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV,V1UnitV01 DECP_ZP_H         decp	z31.h, p15.h
-# CHECK-NEXT:  3      7     2.00                         7     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV,V1UnitV01 DECP_ZP_S         decp	z31.s, p15.s
+# CHECK-NEXT:  2      7     2.00                         7     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV,V1UnitV01 DECP_ZP_H         decp	z31.h, p15.h
+# CHECK-NEXT:  2      7     2.00                         7     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV,V1UnitV01 DECP_ZP_S         decp	z31.s, p15.s
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       DECW_ZPiI                  decw	z8.s
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   DECW_XPiI                  decw	x0
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   DECW_XPiI                  decw	x0, #14
@@ -2963,11 +2963,11 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          EOR_ZPmZ_S                 eor	z31.s, p7/m, z31.s, z31.s
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          EOR_ZI                     eor	z5.b, z5.b, #0x6
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          EOR_ZI                     eor	z5.b, z5.b, #0xf9
-# CHECK-NEXT:  2      2     2.00                         2     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          EORS_PPzPP                 eors	p0.b, p0/z, p0.b, p1.b
-# CHECK-NEXT:  4      12    2.00                         12    V1UnitV[4],V1UnitV01[4]                    EORV_VPZ_B                 eorv	b0, p7, z31.b
-# CHECK-NEXT:  4      12    2.00                         12    V1UnitV[4],V1UnitV01[4]                    EORV_VPZ_D                 eorv	d0, p7, z31.d
-# CHECK-NEXT:  4      12    2.00                         12    V1UnitV[4],V1UnitV01[4]                    EORV_VPZ_H                 eorv	h0, p7, z31.h
-# CHECK-NEXT:  4      12    2.00                         12    V1UnitV[4],V1UnitV01[4]                    EORV_VPZ_S                 eorv	s0, p7, z31.s
+# CHECK-NEXT:  1      2     2.00                         2     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          EORS_PPzPP                 eors	p0.b, p0/z, p0.b, p1.b
+# CHECK-NEXT:  1      12    2.00                         12    V1UnitV[4],V1UnitV01[4]                    EORV_VPZ_B                 eorv	b0, p7, z31.b
+# CHECK-NEXT:  1      12    2.00                         12    V1UnitV[4],V1UnitV01[4]                    EORV_VPZ_D                 eorv	d0, p7, z31.d
+# CHECK-NEXT:  1      12    2.00                         12    V1UnitV[4],V1UnitV01[4]                    EORV_VPZ_H                 eorv	h0, p7, z31.h
+# CHECK-NEXT:  1      12    2.00                         12    V1UnitV[4],V1UnitV01[4]                    EORV_VPZ_S                 eorv	s0, p7, z31.s
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          EXT_ZZI                    ext	z31.b, z31.b, z0.b, #0
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          EXT_ZZI                    ext	z31.b, z31.b, z0.b, #255
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          FABD_ZPmZ_D                fabd	z0.d, p7/m, z0.d, z31.d
@@ -3000,12 +3000,12 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          FADD_ZPmI_D                fadd	z31.d, p7/m, z31.d, #1.0
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          FADD_ZPmI_H                fadd	z31.h, p7/m, z31.h, #1.0
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          FADD_ZPmI_S                fadd	z31.s, p7/m, z31.s, #1.0
-# CHECK-NEXT:  3      8     1.50                         8     V1UnitV[3],V1UnitV01[3]                    FADDA_VPZ_D                fadda	d0, p7, d0, z31.d
-# CHECK-NEXT:  18     19    18.00                        19    V1UnitV[18],V1UnitV0[18],V1UnitV01[18],V1UnitV02[18] FADDA_VPZ_H      fadda	h0, p7, h0, z31.h
-# CHECK-NEXT:  10     11    10.00                        11    V1UnitV[10],V1UnitV0[10],V1UnitV01[10],V1UnitV02[10] FADDA_VPZ_S      fadda	s0, p7, s0, z31.s
-# CHECK-NEXT:  5      9     2.00                         9     V1UnitV[5],V1UnitV01[4]                    FADDV_VPZ_D                faddv	d0, p7, z31.d
-# CHECK-NEXT:  6      13    3.00                         13    V1UnitV[6],V1UnitV01[6]                    FADDV_VPZ_H                faddv	h0, p7, z31.h
-# CHECK-NEXT:  6      11    2.50                         11    V1UnitV[6],V1UnitV01[5]                    FADDV_VPZ_S                faddv	s0, p7, z31.s
+# CHECK-NEXT:  1      8     1.50                         8     V1UnitV[3],V1UnitV01[3]                    FADDA_VPZ_D                fadda	d0, p7, d0, z31.d
+# CHECK-NEXT:  1      19    18.00                        19    V1UnitV[18],V1UnitV0[18],V1UnitV01[18],V1UnitV02[18] FADDA_VPZ_H      fadda	h0, p7, h0, z31.h
+# CHECK-NEXT:  1      11    10.00                        11    V1UnitV[10],V1UnitV0[10],V1UnitV01[10],V1UnitV02[10] FADDA_VPZ_S      fadda	s0, p7, s0, z31.s
+# CHECK-NEXT:  2      9     2.00                         9     V1UnitV[5],V1UnitV01[4]                    FADDV_VPZ_D                faddv	d0, p7, z31.d
+# CHECK-NEXT:  1      13    3.00                         13    V1UnitV[6],V1UnitV01[6]                    FADDV_VPZ_H                faddv	h0, p7, z31.h
+# CHECK-NEXT:  2      11    2.50                         11    V1UnitV[6],V1UnitV01[5]                    FADDV_VPZ_S                faddv	s0, p7, z31.s
 # CHECK-NEXT:  1      3     0.50                         3     V1UnitV,V1UnitV01                          FCADD_ZPmZ_D               fcadd	z0.d, p0/m, z0.d, z0.d, #90
 # CHECK-NEXT:  1      3     0.50                         3     V1UnitV,V1UnitV01                          FCADD_ZPmZ_H               fcadd	z0.h, p0/m, z0.h, z0.h, #90
 # CHECK-NEXT:  1      3     0.50                         3     V1UnitV,V1UnitV01                          FCADD_ZPmZ_S               fcadd	z0.s, p0/m, z0.s, z0.s, #90
@@ -3070,23 +3070,23 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      3     1.00                         3     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       FCVT_ZPmZ_HtoD             fcvt	z0.d, p0/m, z0.h
 # CHECK-NEXT:  1      3     1.00                         3     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       FCVT_ZPmZ_StoD             fcvt	z0.d, p0/m, z0.s
 # CHECK-NEXT:  1      3     1.00                         3     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       FCVT_ZPmZ_DtoH             fcvt	z0.h, p0/m, z0.d
-# CHECK-NEXT:  2      4     2.00                         4     V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] FCVT_ZPmZ_StoH       fcvt	z0.h, p0/m, z0.s
+# CHECK-NEXT:  1      4     2.00                         4     V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] FCVT_ZPmZ_StoH       fcvt	z0.h, p0/m, z0.s
 # CHECK-NEXT:  1      3     1.00                         3     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       FCVT_ZPmZ_DtoS             fcvt	z0.s, p0/m, z0.d
-# CHECK-NEXT:  2      4     2.00                         4     V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] FCVT_ZPmZ_HtoS       fcvt	z0.s, p0/m, z0.h
+# CHECK-NEXT:  1      4     2.00                         4     V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] FCVT_ZPmZ_HtoS       fcvt	z0.s, p0/m, z0.h
 # CHECK-NEXT:  1      3     1.00                         3     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       FCVTZS_ZPmZ_DtoD           fcvtzs	z0.d, p0/m, z0.d
 # CHECK-NEXT:  1      3     1.00                         3     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       FCVTZS_ZPmZ_HtoD           fcvtzs	z0.d, p0/m, z0.h
 # CHECK-NEXT:  1      3     1.00                         3     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       FCVTZS_ZPmZ_StoD           fcvtzs	z0.d, p0/m, z0.s
-# CHECK-NEXT:  4      6     4.00                         6     V1UnitV[4],V1UnitV0[4],V1UnitV01[4],V1UnitV02[4] FCVTZS_ZPmZ_HtoH     fcvtzs	z0.h, p0/m, z0.h
+# CHECK-NEXT:  1      6     4.00                         6     V1UnitV[4],V1UnitV0[4],V1UnitV01[4],V1UnitV02[4] FCVTZS_ZPmZ_HtoH     fcvtzs	z0.h, p0/m, z0.h
 # CHECK-NEXT:  1      3     1.00                         3     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       FCVTZS_ZPmZ_DtoS           fcvtzs	z0.s, p0/m, z0.d
-# CHECK-NEXT:  2      4     2.00                         4     V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] FCVTZS_ZPmZ_HtoS     fcvtzs	z0.s, p0/m, z0.h
-# CHECK-NEXT:  2      4     2.00                         4     V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] FCVTZS_ZPmZ_StoS     fcvtzs	z0.s, p0/m, z0.s
+# CHECK-NEXT:  1      4     2.00                         4     V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] FCVTZS_ZPmZ_HtoS     fcvtzs	z0.s, p0/m, z0.h
+# CHECK-NEXT:  1      4     2.00                         4     V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] FCVTZS_ZPmZ_StoS     fcvtzs	z0.s, p0/m, z0.s
 # CHECK-NEXT:  1      3     1.00                         3     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       FCVTZU_ZPmZ_DtoD           fcvtzu	z0.d, p0/m, z0.d
 # CHECK-NEXT:  1      3     1.00                         3     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       FCVTZU_ZPmZ_HtoD           fcvtzu	z0.d, p0/m, z0.h
 # CHECK-NEXT:  1      3     1.00                         3     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       FCVTZU_ZPmZ_StoD           fcvtzu	z0.d, p0/m, z0.s
-# CHECK-NEXT:  4      6     4.00                         6     V1UnitV[4],V1UnitV0[4],V1UnitV01[4],V1UnitV02[4] FCVTZU_ZPmZ_HtoH     fcvtzu	z0.h, p0/m, z0.h
+# CHECK-NEXT:  1      6     4.00                         6     V1UnitV[4],V1UnitV0[4],V1UnitV01[4],V1UnitV02[4] FCVTZU_ZPmZ_HtoH     fcvtzu	z0.h, p0/m, z0.h
 # CHECK-NEXT:  1      3     1.00                         3     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       FCVTZU_ZPmZ_DtoS           fcvtzu	z0.s, p0/m, z0.d
-# CHECK-NEXT:  2      4     2.00                         4     V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] FCVTZU_ZPmZ_HtoS     fcvtzu	z0.s, p0/m, z0.h
-# CHECK-NEXT:  2      4     2.00                         4     V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] FCVTZU_ZPmZ_StoS     fcvtzu	z0.s, p0/m, z0.s
+# CHECK-NEXT:  1      4     2.00                         4     V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] FCVTZU_ZPmZ_HtoS     fcvtzu	z0.s, p0/m, z0.h
+# CHECK-NEXT:  1      4     2.00                         4     V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] FCVTZU_ZPmZ_StoS     fcvtzu	z0.s, p0/m, z0.s
 # CHECK-NEXT:  1      15    7.00                         15    V1UnitV[7],V1UnitV0[7],V1UnitV01[7],V1UnitV02[7] FDIV_ZPmZ_D          fdiv	z0.d, p7/m, z0.d, z31.d
 # CHECK-NEXT:  1      13    10.00                        13    V1UnitV[10],V1UnitV0[10],V1UnitV01[10],V1UnitV02[10] FDIV_ZPmZ_H      fdiv	z0.h, p7/m, z0.h, z31.h
 # CHECK-NEXT:  1      10    7.00                         10    V1UnitV[7],V1UnitV0[7],V1UnitV01[7],V1UnitV02[7] FDIV_ZPmZ_S          fdiv	z0.s, p7/m, z0.s, z31.s
@@ -3117,12 +3117,12 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          FMAXNM_ZPmI_D              fmaxnm	z31.d, p7/m, z31.d, #1.0
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          FMAXNM_ZPmI_H              fmaxnm	z31.h, p7/m, z31.h, #1.0
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          FMAXNM_ZPmI_S              fmaxnm	z31.s, p7/m, z31.s, #1.0
-# CHECK-NEXT:  5      9     2.00                         9     V1UnitV[5],V1UnitV01[4]                    FMAXNMV_VPZ_D              fmaxnmv	d0, p7, z31.d
-# CHECK-NEXT:  6      13    3.00                         13    V1UnitV[6],V1UnitV01[6]                    FMAXNMV_VPZ_H              fmaxnmv	h0, p7, z31.h
-# CHECK-NEXT:  6      11    2.50                         11    V1UnitV[6],V1UnitV01[5]                    FMAXNMV_VPZ_S              fmaxnmv	s0, p7, z31.s
-# CHECK-NEXT:  5      9     2.00                         9     V1UnitV[5],V1UnitV01[4]                    FMAXV_VPZ_D                fmaxv	d0, p7, z31.d
-# CHECK-NEXT:  6      13    3.00                         13    V1UnitV[6],V1UnitV01[6]                    FMAXV_VPZ_H                fmaxv	h0, p7, z31.h
-# CHECK-NEXT:  6      11    2.50                         11    V1UnitV[6],V1UnitV01[5]                    FMAXV_VPZ_S                fmaxv	s0, p7, z31.s
+# CHECK-NEXT:  2      9     2.00                         9     V1UnitV[5],V1UnitV01[4]                    FMAXNMV_VPZ_D              fmaxnmv	d0, p7, z31.d
+# CHECK-NEXT:  1      13    3.00                         13    V1UnitV[6],V1UnitV01[6]                    FMAXNMV_VPZ_H              fmaxnmv	h0, p7, z31.h
+# CHECK-NEXT:  2      11    2.50                         11    V1UnitV[6],V1UnitV01[5]                    FMAXNMV_VPZ_S              fmaxnmv	s0, p7, z31.s
+# CHECK-NEXT:  2      9     2.00                         9     V1UnitV[5],V1UnitV01[4]                    FMAXV_VPZ_D                fmaxv	d0, p7, z31.d
+# CHECK-NEXT:  1      13    3.00                         13    V1UnitV[6],V1UnitV01[6]                    FMAXV_VPZ_H                fmaxv	h0, p7, z31.h
+# CHECK-NEXT:  2      11    2.50                         11    V1UnitV[6],V1UnitV01[5]                    FMAXV_VPZ_S                fmaxv	s0, p7, z31.s
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          FMIN_ZPmI_D                fmin	z0.d, p0/m, z0.d, #0.0
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          FMIN_ZPmZ_D                fmin	z0.d, p7/m, z0.d, z31.d
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          FMIN_ZPmI_H                fmin	z0.h, p0/m, z0.h, #0.0
@@ -3141,12 +3141,12 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          FMINNM_ZPmI_D              fminnm	z31.d, p7/m, z31.d, #1.0
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          FMINNM_ZPmI_H              fminnm	z31.h, p7/m, z31.h, #1.0
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          FMINNM_ZPmI_S              fminnm	z31.s, p7/m, z31.s, #1.0
-# CHECK-NEXT:  5      9     2.00                         9     V1UnitV[5],V1UnitV01[4]                    FMINNMV_VPZ_D              fminnmv	d0, p7, z31.d
-# CHECK-NEXT:  6      13    3.00                         13    V1UnitV[6],V1UnitV01[6]                    FMINNMV_VPZ_H              fminnmv	h0, p7, z31.h
-# CHECK-NEXT:  6      11    2.50                         11    V1UnitV[6],V1UnitV01[5]                    FMINNMV_VPZ_S              fminnmv	s0, p7, z31.s
-# CHECK-NEXT:  5      9     2.00                         9     V1UnitV[5],V1UnitV01[4]                    FMINV_VPZ_D                fminv	d0, p7, z31.d
-# CHECK-NEXT:  6      13    3.00                         13    V1UnitV[6],V1UnitV01[6]                    FMINV_VPZ_H                fminv	h0, p7, z31.h
-# CHECK-NEXT:  6      11    2.50                         11    V1UnitV[6],V1UnitV01[5]                    FMINV_VPZ_S                fminv	s0, p7, z31.s
+# CHECK-NEXT:  2      9     2.00                         9     V1UnitV[5],V1UnitV01[4]                    FMINNMV_VPZ_D              fminnmv	d0, p7, z31.d
+# CHECK-NEXT:  1      13    3.00                         13    V1UnitV[6],V1UnitV01[6]                    FMINNMV_VPZ_H              fminnmv	h0, p7, z31.h
+# CHECK-NEXT:  2      11    2.50                         11    V1UnitV[6],V1UnitV01[5]                    FMINNMV_VPZ_S              fminnmv	s0, p7, z31.s
+# CHECK-NEXT:  2      9     2.00                         9     V1UnitV[5],V1UnitV01[4]                    FMINV_VPZ_D                fminv	d0, p7, z31.d
+# CHECK-NEXT:  1      13    3.00                         13    V1UnitV[6],V1UnitV01[6]                    FMINV_VPZ_H                fminv	h0, p7, z31.h
+# CHECK-NEXT:  2      11    2.50                         11    V1UnitV[6],V1UnitV01[5]                    FMINV_VPZ_S                fminv	s0, p7, z31.s
 # CHECK-NEXT:  1      4     0.50                         2     V1UnitV,V1UnitV01                          FMLA_ZPmZZ_D               fmla	z0.d, p7/m, z1.d, z31.d
 # CHECK-NEXT:  1      4     0.50                         2     V1UnitV,V1UnitV01                          FMLA_ZZZI_D                fmla	z0.d, z1.d, z7.d[1]
 # CHECK-NEXT:  1      4     0.50                         2     V1UnitV,V1UnitV01                          FMLA_ZPmZZ_H               fmla	z0.h, p7/m, z1.h, z31.h
@@ -3207,8 +3207,8 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      4     0.50                         2     V1UnitV,V1UnitV01                          FNMSB_ZPmZZ_H              fnmsb	z0.h, p7/m, z1.h, z31.h
 # CHECK-NEXT:  1      4     0.50                         2     V1UnitV,V1UnitV01                          FNMSB_ZPmZZ_S              fnmsb	z0.s, p7/m, z1.s, z31.s
 # CHECK-NEXT:  1      3     1.00                         3     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       FRECPE_ZZ_D                frecpe	z0.d, z31.d
-# CHECK-NEXT:  4      6     4.00                         6     V1UnitV[4],V1UnitV0[4],V1UnitV01[4],V1UnitV02[4] FRECPE_ZZ_H          frecpe	z0.h, z31.h
-# CHECK-NEXT:  2      4     2.00                         4     V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] FRECPE_ZZ_S          frecpe	z0.s, z31.s
+# CHECK-NEXT:  1      6     4.00                         6     V1UnitV[4],V1UnitV0[4],V1UnitV01[4],V1UnitV02[4] FRECPE_ZZ_H          frecpe	z0.h, z31.h
+# CHECK-NEXT:  1      4     2.00                         4     V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] FRECPE_ZZ_S          frecpe	z0.s, z31.s
 # CHECK-NEXT:  1      4     0.50                         4     V1UnitV,V1UnitV01                          FRECPS_ZZZ_D               frecps	z0.d, z1.d, z31.d
 # CHECK-NEXT:  1      4     0.50                         4     V1UnitV,V1UnitV01                          FRECPS_ZZZ_H               frecps	z0.h, z1.h, z31.h
 # CHECK-NEXT:  1      4     0.50                         4     V1UnitV,V1UnitV01                          FRECPS_ZZZ_S               frecps	z0.s, z1.s, z31.s
@@ -3237,8 +3237,8 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      6     1.00                         6     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       FRINTZ_ZPmZ_H              frintz	z31.h, p7/m, z31.h
 # CHECK-NEXT:  1      4     1.00                         4     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       FRINTZ_ZPmZ_S              frintz	z31.s, p7/m, z31.s
 # CHECK-NEXT:  1      3     1.00                         3     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       FRSQRTE_ZZ_D               frsqrte	z0.d, z31.d
-# CHECK-NEXT:  4      6     4.00                         6     V1UnitV[4],V1UnitV0[4],V1UnitV01[4],V1UnitV02[4] FRSQRTE_ZZ_H         frsqrte	z0.h, z31.h
-# CHECK-NEXT:  2      4     2.00                         4     V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] FRSQRTE_ZZ_S         frsqrte	z0.s, z31.s
+# CHECK-NEXT:  1      6     4.00                         6     V1UnitV[4],V1UnitV0[4],V1UnitV01[4],V1UnitV02[4] FRSQRTE_ZZ_H         frsqrte	z0.h, z31.h
+# CHECK-NEXT:  1      4     2.00                         4     V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] FRSQRTE_ZZ_S         frsqrte	z0.s, z31.s
 # CHECK-NEXT:  1      4     0.50                         4     V1UnitV,V1UnitV01                          FRSQRTS_ZZZ_D              frsqrts	z0.d, z1.d, z31.d
 # CHECK-NEXT:  1      4     0.50                         4     V1UnitV,V1UnitV01                          FRSQRTS_ZZZ_H              frsqrts	z0.h, z1.h, z31.h
 # CHECK-NEXT:  1      4     0.50                         4     V1UnitV,V1UnitV01                          FRSQRTS_ZZZ_S              frsqrts	z0.s, z1.s, z31.s
@@ -3305,9 +3305,9 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   INCP_XP_D                  incp	xzr, p15.d
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   INCP_XP_H                  incp	xzr, p15.h
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   INCP_XP_S                  incp	xzr, p15.s
-# CHECK-NEXT:  3      7     2.00                         7     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV,V1UnitV01 INCP_ZP_D         incp	z31.d, p15.d
-# CHECK-NEXT:  3      7     2.00                         7     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV,V1UnitV01 INCP_ZP_H         incp	z31.h, p15.h
-# CHECK-NEXT:  3      7     2.00                         7     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV,V1UnitV01 INCP_ZP_S         incp	z31.s, p15.s
+# CHECK-NEXT:  2      7     2.00                         7     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV,V1UnitV01 INCP_ZP_D         incp	z31.d, p15.d
+# CHECK-NEXT:  2      7     2.00                         7     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV,V1UnitV01 INCP_ZP_H         incp	z31.h, p15.h
+# CHECK-NEXT:  2      7     2.00                         7     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV,V1UnitV01 INCP_ZP_S         incp	z31.s, p15.s
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   INCW_XPiI                  incw	x0
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   INCW_XPiI                  incw	x0, #14
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   INCW_XPiI                  incw	x0, all, mul #16
@@ -3316,17 +3316,17 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       INCW_ZPiI                  incw	z0.s
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       INCW_ZPiI                  incw	z0.s, all, mul #16
 # CHECK-NEXT:  1      4     1.00                         4     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       INDEX_II_B                 index	z0.b, #0, #0
-# CHECK-NEXT:  2      5     2.00                         5     V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] INDEX_II_D           index	z0.d, #0, #0
+# CHECK-NEXT:  1      5     2.00                         5     V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] INDEX_II_D           index	z0.d, #0, #0
 # CHECK-NEXT:  1      4     1.00                         4     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       INDEX_II_H                 index	z0.h, #0, #0
 # CHECK-NEXT:  2      7     1.00                         7     V1UnitI,V1UnitM,V1UnitM0,V1UnitV,V1UnitV1,V1UnitV01,V1UnitV13 INDEX_RR_H index	z0.h, w0, w0
 # CHECK-NEXT:  1      4     1.00                         4     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       INDEX_II_S                 index	z0.s, #0, #0
 # CHECK-NEXT:  2      7     1.00                         7     V1UnitI,V1UnitM,V1UnitM0,V1UnitV,V1UnitV1,V1UnitV01,V1UnitV13 INDEX_RR_B index	z21.b, w10, w21
-# CHECK-NEXT:  4      8     2.00                         8     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] INDEX_RR_D index	z21.d, x10, x21
+# CHECK-NEXT:  2      8     2.00                         8     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] INDEX_RR_D index	z21.d, x10, x21
 # CHECK-NEXT:  2      7     1.00                         7     V1UnitI,V1UnitM,V1UnitM0,V1UnitV,V1UnitV1,V1UnitV01,V1UnitV13 INDEX_RR_S index	z21.s, w10, w21
 # CHECK-NEXT:  2      7     1.00                         7     V1UnitI,V1UnitM,V1UnitM0,V1UnitV,V1UnitV1,V1UnitV01,V1UnitV13 INDEX_IR_B index	z23.b, #13, w8
 # CHECK-NEXT:  2      7     1.00                         7     V1UnitI,V1UnitM,V1UnitM0,V1UnitV,V1UnitV1,V1UnitV01,V1UnitV13 INDEX_RI_B index	z23.b, w13, #8
-# CHECK-NEXT:  4      8     2.00                         8     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] INDEX_IR_D index	z23.d, #13, x8
-# CHECK-NEXT:  4      8     2.00                         8     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] INDEX_RI_D index	z23.d, x13, #8
+# CHECK-NEXT:  2      8     2.00                         8     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] INDEX_IR_D index	z23.d, #13, x8
+# CHECK-NEXT:  2      8     2.00                         8     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] INDEX_RI_D index	z23.d, x13, #8
 # CHECK-NEXT:  2      7     1.00                         7     V1UnitI,V1UnitM,V1UnitM0,V1UnitV,V1UnitV1,V1UnitV01,V1UnitV13 INDEX_IR_H index	z23.h, #13, w8
 # CHECK-NEXT:  2      7     1.00                         7     V1UnitI,V1UnitM,V1UnitM0,V1UnitV,V1UnitV1,V1UnitV01,V1UnitV13 INDEX_RI_H index	z23.h, w13, #8
 # CHECK-NEXT:  2      7     1.00                         7     V1UnitI,V1UnitM,V1UnitM0,V1UnitV,V1UnitV1,V1UnitV01,V1UnitV13 INDEX_IR_S index	z23.s, #13, w8
@@ -3335,10 +3335,10 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  2      7     1.00                         7     V1UnitI,V1UnitM,V1UnitM0,V1UnitV,V1UnitV1,V1UnitV01,V1UnitV13 INDEX_IR_B index	z31.b, #-1, wzr
 # CHECK-NEXT:  2      7     1.00                         7     V1UnitI,V1UnitM,V1UnitM0,V1UnitV,V1UnitV1,V1UnitV01,V1UnitV13 INDEX_RI_B index	z31.b, wzr, #-1
 # CHECK-NEXT:  2      7     1.00                         7     V1UnitI,V1UnitM,V1UnitM0,V1UnitV,V1UnitV1,V1UnitV01,V1UnitV13 INDEX_RR_B index	z31.b, wzr, wzr
-# CHECK-NEXT:  2      5     2.00                         5     V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] INDEX_II_D           index	z31.d, #-1, #-1
-# CHECK-NEXT:  4      8     2.00                         8     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] INDEX_IR_D index	z31.d, #-1, xzr
-# CHECK-NEXT:  4      8     2.00                         8     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] INDEX_RI_D index	z31.d, xzr, #-1
-# CHECK-NEXT:  4      8     2.00                         8     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] INDEX_RR_D index	z31.d, xzr, xzr
+# CHECK-NEXT:  1      5     2.00                         5     V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] INDEX_II_D           index	z31.d, #-1, #-1
+# CHECK-NEXT:  2      8     2.00                         8     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] INDEX_IR_D index	z31.d, #-1, xzr
+# CHECK-NEXT:  2      8     2.00                         8     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] INDEX_RI_D index	z31.d, xzr, #-1
+# CHECK-NEXT:  2      8     2.00                         8     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] INDEX_RR_D index	z31.d, xzr, xzr
 # CHECK-NEXT:  1      4     1.00                         4     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       INDEX_II_H                 index	z31.h, #-1, #-1
 # CHECK-NEXT:  2      7     1.00                         7     V1UnitI,V1UnitM,V1UnitM0,V1UnitV,V1UnitV1,V1UnitV01,V1UnitV13 INDEX_IR_H index	z31.h, #-1, wzr
 # CHECK-NEXT:  2      7     1.00                         7     V1UnitI,V1UnitM,V1UnitM0,V1UnitV,V1UnitV1,V1UnitV01,V1UnitV13 INDEX_RI_H index	z31.h, wzr, #-1
@@ -3379,7 +3379,7 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1B                       ld1b	{ z0.b }, p0/z, [x0, x0]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1B_IMM                   ld1b	{ z0.b }, p0/z, [x0]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1B_D_IMM                 ld1b	{ z0.d }, p0/z, [x0]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1B_D_IMM                ld1b	{ z0.d }, p0/z, [z0.d]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1B_D_IMM                ld1b	{ z0.d }, p0/z, [z0.d]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1B_H_IMM                 ld1b	{ z0.h }, p0/z, [x0]
 # CHECK-NEXT:  2      9     0.33    *                    9     V1UnitL,V1UnitV                            GLD1B_S_SXTW               ld1b	{ z0.s }, p0/z, [x0, z0.s, sxtw]
 # CHECK-NEXT:  2      9     0.33    *                    9     V1UnitL,V1UnitV                            GLD1B_S_UXTW               ld1b	{ z0.s }, p0/z, [x0, z0.s, uxtw]
@@ -3387,57 +3387,57 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  2      11    0.33    *                    11    V1UnitL,V1UnitV                            GLD1B_S_IMM                ld1b	{ z0.s }, p0/z, [z0.s]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1B_IMM                   ld1b	{ z21.b }, p5/z, [x10, #5, mul vl]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1B_D_IMM                 ld1b	{ z21.d }, p5/z, [x10, #5, mul vl]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1B_D_SXTW               ld1b	{ z21.d }, p5/z, [x10, z21.d, sxtw]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1B_D_UXTW               ld1b	{ z21.d }, p5/z, [x10, z21.d, uxtw]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1B_D_SXTW               ld1b	{ z21.d }, p5/z, [x10, z21.d, sxtw]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1B_D_UXTW               ld1b	{ z21.d }, p5/z, [x10, z21.d, uxtw]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1B_H_IMM                 ld1b	{ z21.h }, p5/z, [x10, #5, mul vl]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1B_S_IMM                 ld1b	{ z21.s }, p5/z, [x10, #5, mul vl]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1B_S                     ld1b	{ z21.s }, p5/z, [x10, x21]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1B_D                     ld1b	{ z23.d }, p3/z, [x13, x8]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1B_IMM                   ld1b	{ z31.b }, p7/z, [sp, #-1, mul vl]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1B_D_IMM                 ld1b	{ z31.d }, p7/z, [sp, #-1, mul vl]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1B_D                    ld1b	{ z31.d }, p7/z, [sp, z31.d]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1B_D_IMM                ld1b	{ z31.d }, p7/z, [z31.d, #31]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1B_D                    ld1b	{ z31.d }, p7/z, [sp, z31.d]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1B_D_IMM                ld1b	{ z31.d }, p7/z, [z31.d, #31]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1B_H_IMM                 ld1b	{ z31.h }, p7/z, [sp, #-1, mul vl]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1B_S_IMM                 ld1b	{ z31.s }, p7/z, [sp, #-1, mul vl]
 # CHECK-NEXT:  2      11    0.33    *                    11    V1UnitL,V1UnitV                            GLD1B_S_IMM                ld1b	{ z31.s }, p7/z, [z31.s, #31]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1B_H                     ld1b	{ z5.h }, p3/z, [x17, x16]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1D_SXTW_SCALED          ld1d	{ z0.d }, p0/z, [x0, z0.d, sxtw #3]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1D_UXTW_SCALED          ld1d	{ z0.d }, p0/z, [x0, z0.d, uxtw #3]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1D_SXTW_SCALED          ld1d	{ z0.d }, p0/z, [x0, z0.d, sxtw #3]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1D_UXTW_SCALED          ld1d	{ z0.d }, p0/z, [x0, z0.d, uxtw #3]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1D_IMM                   ld1d	{ z0.d }, p0/z, [x0]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1D_IMM                  ld1d	{ z0.d }, p0/z, [z0.d]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1D_IMM                  ld1d	{ z0.d }, p0/z, [z0.d]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1D_IMM                   ld1d	{ z21.d }, p5/z, [x10, #5, mul vl]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1D_SXTW                 ld1d	{ z21.d }, p5/z, [x10, z21.d, sxtw]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1D_UXTW                 ld1d	{ z21.d }, p5/z, [x10, z21.d, uxtw]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1D_SXTW                 ld1d	{ z21.d }, p5/z, [x10, z21.d, sxtw]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1D_UXTW                 ld1d	{ z21.d }, p5/z, [x10, z21.d, uxtw]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1D                       ld1d	{ z23.d }, p3/z, [sp, x8, lsl #3]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1D                       ld1d	{ z23.d }, p3/z, [x13, x8, lsl #3]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1D_SCALED               ld1d	{ z23.d }, p3/z, [x13, z8.d, lsl #3]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1D_SCALED               ld1d	{ z23.d }, p3/z, [x13, z8.d, lsl #3]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1D_IMM                   ld1d	{ z31.d }, p7/z, [sp, #-1, mul vl]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1D                      ld1d	{ z31.d }, p7/z, [sp, z31.d]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1D_IMM                  ld1d	{ z31.d }, p7/z, [z31.d, #248]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1H_D_SXTW_SCALED        ld1h	{ z0.d }, p0/z, [x0, z0.d, sxtw #1]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1H_D_UXTW_SCALED        ld1h	{ z0.d }, p0/z, [x0, z0.d, uxtw #1]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1D                      ld1d	{ z31.d }, p7/z, [sp, z31.d]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1D_IMM                  ld1d	{ z31.d }, p7/z, [z31.d, #248]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1H_D_SXTW_SCALED        ld1h	{ z0.d }, p0/z, [x0, z0.d, sxtw #1]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1H_D_UXTW_SCALED        ld1h	{ z0.d }, p0/z, [x0, z0.d, uxtw #1]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1H_D_IMM                 ld1h	{ z0.d }, p0/z, [x0]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1H_D_IMM                ld1h	{ z0.d }, p0/z, [z0.d]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1H_D_IMM                ld1h	{ z0.d }, p0/z, [z0.d]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1H_IMM                   ld1h	{ z0.h }, p0/z, [x0]
 # CHECK-NEXT:  2      9     0.33    *                    9     V1UnitL,V1UnitV                            GLD1H_S_SXTW               ld1h	{ z0.s }, p0/z, [x0, z0.s, sxtw]
 # CHECK-NEXT:  2      9     0.33    *                    9     V1UnitL,V1UnitV                            GLD1H_S_UXTW               ld1h	{ z0.s }, p0/z, [x0, z0.s, uxtw]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1H_S_IMM                 ld1h	{ z0.s }, p0/z, [x0]
 # CHECK-NEXT:  2      11    0.33    *                    11    V1UnitL,V1UnitV                            GLD1H_S_IMM                ld1h	{ z0.s }, p0/z, [z0.s]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1H_D_IMM                 ld1h	{ z21.d }, p5/z, [x10, #5, mul vl]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1H_D_SXTW               ld1h	{ z21.d }, p5/z, [x10, z21.d, sxtw]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1H_D_UXTW               ld1h	{ z21.d }, p5/z, [x10, z21.d, uxtw]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1H_D_SXTW               ld1h	{ z21.d }, p5/z, [x10, z21.d, sxtw]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1H_D_UXTW               ld1h	{ z21.d }, p5/z, [x10, z21.d, uxtw]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1H_IMM                   ld1h	{ z21.h }, p5/z, [x10, #5, mul vl]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1H_S_IMM                 ld1h	{ z21.s }, p5/z, [x10, #5, mul vl]
 # CHECK-NEXT:  2      7     0.50    *                    7     V1UnitI,V1UnitL,V1UnitL01,V1UnitS          LD1H_S                     ld1h	{ z21.s }, p5/z, [x10, x21, lsl #1]
 # CHECK-NEXT:  2      7     0.50    *                    7     V1UnitI,V1UnitL,V1UnitL01,V1UnitS          LD1H_D                     ld1h	{ z23.d }, p3/z, [x13, x8, lsl #1]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1H_D_SCALED             ld1h	{ z23.d }, p3/z, [x13, z8.d, lsl #1]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1H_D_SCALED             ld1h	{ z23.d }, p3/z, [x13, z8.d, lsl #1]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1H_D_IMM                 ld1h	{ z31.d }, p7/z, [sp, #-1, mul vl]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1H_D                    ld1h	{ z31.d }, p7/z, [sp, z31.d]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1H_D_IMM                ld1h	{ z31.d }, p7/z, [z31.d, #62]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1H_D                    ld1h	{ z31.d }, p7/z, [sp, z31.d]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1H_D_IMM                ld1h	{ z31.d }, p7/z, [z31.d, #62]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1H_IMM                   ld1h	{ z31.h }, p7/z, [sp, #-1, mul vl]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1H_S_IMM                 ld1h	{ z31.s }, p7/z, [sp, #-1, mul vl]
-# CHECK-NEXT:  4      11    0.67    *                    11    V1UnitL[2],V1UnitV[2]                      GLD1H_S_SXTW_SCALED        ld1h	{ z31.s }, p7/z, [sp, z31.s, sxtw #1]
-# CHECK-NEXT:  4      11    0.67    *                    11    V1UnitL[2],V1UnitV[2]                      GLD1H_S_UXTW_SCALED        ld1h	{ z31.s }, p7/z, [sp, z31.s, uxtw #1]
+# CHECK-NEXT:  2      11    0.67    *                    11    V1UnitL[2],V1UnitV[2]                      GLD1H_S_SXTW_SCALED        ld1h	{ z31.s }, p7/z, [sp, z31.s, sxtw #1]
+# CHECK-NEXT:  2      11    0.67    *                    11    V1UnitL[2],V1UnitV[2]                      GLD1H_S_UXTW_SCALED        ld1h	{ z31.s }, p7/z, [sp, z31.s, uxtw #1]
 # CHECK-NEXT:  2      11    0.33    *                    11    V1UnitL,V1UnitV                            GLD1H_S_IMM                ld1h	{ z31.s }, p7/z, [z31.s, #62]
 # CHECK-NEXT:  2      7     0.50    *                    7     V1UnitI,V1UnitL,V1UnitL01,V1UnitS          LD1H                       ld1h	{ z5.h }, p3/z, [sp, x16, lsl #1]
 # CHECK-NEXT:  2      7     0.50    *                    7     V1UnitI,V1UnitL,V1UnitL01,V1UnitS          LD1H                       ld1h	{ z5.h }, p3/z, [x17, x16, lsl #1]
@@ -3494,7 +3494,7 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1RW_D_IMM                ld1rw	{ z31.d }, p7/z, [sp, #252]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1RW_IMM                  ld1rw	{ z31.s }, p7/z, [sp, #252]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1SB_D_IMM                ld1sb	{ z0.d }, p0/z, [x0]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SB_D_IMM               ld1sb	{ z0.d }, p0/z, [z0.d]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SB_D_IMM               ld1sb	{ z0.d }, p0/z, [z0.d]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1SB_H                    ld1sb	{ z0.h }, p0/z, [sp, x0]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1SB_H                    ld1sb	{ z0.h }, p0/z, [x0, x0]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1SB_H_IMM                ld1sb	{ z0.h }, p0/z, [x0]
@@ -3502,243 +3502,243 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1SB_S_IMM                ld1sb	{ z0.s }, p0/z, [x0]
 # CHECK-NEXT:  2      11    0.33    *                    11    V1UnitL,V1UnitV                            GLD1SB_S_IMM               ld1sb	{ z0.s }, p0/z, [z0.s]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1SB_D_IMM                ld1sb	{ z21.d }, p5/z, [x10, #5, mul vl]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SB_D_SXTW              ld1sb	{ z21.d }, p5/z, [x10, z21.d, sxtw]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SB_D_UXTW              ld1sb	{ z21.d }, p5/z, [x10, z21.d, uxtw]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SB_D_SXTW              ld1sb	{ z21.d }, p5/z, [x10, z21.d, sxtw]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SB_D_UXTW              ld1sb	{ z21.d }, p5/z, [x10, z21.d, uxtw]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1SB_H_IMM                ld1sb	{ z21.h }, p5/z, [x10, #5, mul vl]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1SB_S_IMM                ld1sb	{ z21.s }, p5/z, [x10, #5, mul vl]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1SB_S                    ld1sb	{ z21.s }, p5/z, [x10, x21]
 # CHECK-NEXT:  2      9     0.33    *                    9     V1UnitL,V1UnitV                            GLD1SB_S_UXTW              ld1sb	{ z23.s }, p5/z, [x17, z10.s, uxtw]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1SB_D                    ld1sb	{ z23.d }, p3/z, [x13, x8]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1SB_D_IMM                ld1sb	{ z31.d }, p7/z, [sp, #-1, mul vl]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SB_D                   ld1sb	{ z31.d }, p7/z, [sp, z31.d]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SB_D_IMM               ld1sb	{ z31.d }, p7/z, [z31.d, #31]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SB_D                   ld1sb	{ z31.d }, p7/z, [sp, z31.d]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SB_D_IMM               ld1sb	{ z31.d }, p7/z, [z31.d, #31]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1SB_H_IMM                ld1sb	{ z31.h }, p7/z, [sp, #-1, mul vl]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1SB_S_IMM                ld1sb	{ z31.s }, p7/z, [sp, #-1, mul vl]
 # CHECK-NEXT:  2      11    0.33    *                    11    V1UnitL,V1UnitV                            GLD1SB_S_IMM               ld1sb	{ z31.s }, p7/z, [z31.s, #31]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SH_D_SXTW_SCALED       ld1sh	{ z0.d }, p0/z, [x0, z0.d, sxtw #1]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SH_D_UXTW_SCALED       ld1sh	{ z0.d }, p0/z, [x0, z0.d, uxtw #1]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SH_D_SXTW_SCALED       ld1sh	{ z0.d }, p0/z, [x0, z0.d, sxtw #1]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SH_D_UXTW_SCALED       ld1sh	{ z0.d }, p0/z, [x0, z0.d, uxtw #1]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1SH_D_IMM                ld1sh	{ z0.d }, p0/z, [x0]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SH_D_IMM               ld1sh	{ z0.d }, p0/z, [z0.d]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SH_D_IMM               ld1sh	{ z0.d }, p0/z, [z0.d]
 # CHECK-NEXT:  2      9     0.33    *                    9     V1UnitL,V1UnitV                            GLD1SH_S_SXTW              ld1sh	{ z0.s }, p0/z, [x0, z0.s, sxtw]
 # CHECK-NEXT:  2      9     0.33    *                    9     V1UnitL,V1UnitV                            GLD1SH_S_UXTW              ld1sh	{ z0.s }, p0/z, [x0, z0.s, uxtw]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1SH_S_IMM                ld1sh	{ z0.s }, p0/z, [x0]
 # CHECK-NEXT:  2      11    0.33    *                    11    V1UnitL,V1UnitV                            GLD1SH_S_IMM               ld1sh	{ z0.s }, p0/z, [z0.s]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1SH_D_IMM                ld1sh	{ z21.d }, p5/z, [x10, #5, mul vl]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SH_D_SXTW              ld1sh	{ z21.d }, p5/z, [x10, z21.d, sxtw]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SH_D_UXTW              ld1sh	{ z21.d }, p5/z, [x10, z21.d, uxtw]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SH_D_SXTW              ld1sh	{ z21.d }, p5/z, [x10, z21.d, sxtw]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SH_D_UXTW              ld1sh	{ z21.d }, p5/z, [x10, z21.d, uxtw]
 # CHECK-NEXT:  2      7     0.50    *                    7     V1UnitI,V1UnitL,V1UnitL01,V1UnitS          LD1SH_S                    ld1sh	{ z21.s }, p5/z, [sp, x21, lsl #1]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1SH_S_IMM                ld1sh	{ z21.s }, p5/z, [x10, #5, mul vl]
 # CHECK-NEXT:  2      7     0.50    *                    7     V1UnitI,V1UnitL,V1UnitL01,V1UnitS          LD1SH_S                    ld1sh	{ z21.s }, p5/z, [x10, x21, lsl #1]
 # CHECK-NEXT:  2      7     0.50    *                    7     V1UnitI,V1UnitL,V1UnitL01,V1UnitS          LD1SH_D                    ld1sh	{ z23.d }, p3/z, [x13, x8, lsl #1]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SH_D_SCALED            ld1sh	{ z23.d }, p3/z, [x13, z8.d, lsl #1]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SH_D_SCALED            ld1sh	{ z23.d }, p3/z, [x13, z8.d, lsl #1]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1SH_D_IMM                ld1sh	{ z31.d }, p7/z, [sp, #-1, mul vl]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SH_D                   ld1sh	{ z31.d }, p7/z, [sp, z31.d]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SH_D_IMM               ld1sh	{ z31.d }, p7/z, [z31.d, #62]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SH_D                   ld1sh	{ z31.d }, p7/z, [sp, z31.d]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SH_D_IMM               ld1sh	{ z31.d }, p7/z, [z31.d, #62]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1SH_S_IMM                ld1sh	{ z31.s }, p7/z, [sp, #-1, mul vl]
-# CHECK-NEXT:  4      11    0.67    *                    11    V1UnitL[2],V1UnitV[2]                      GLD1SH_S_SXTW_SCALED       ld1sh	{ z31.s }, p7/z, [sp, z31.s, sxtw #1]
-# CHECK-NEXT:  4      11    0.67    *                    11    V1UnitL[2],V1UnitV[2]                      GLD1SH_S_UXTW_SCALED       ld1sh	{ z31.s }, p7/z, [sp, z31.s, uxtw #1]
+# CHECK-NEXT:  2      11    0.67    *                    11    V1UnitL[2],V1UnitV[2]                      GLD1SH_S_SXTW_SCALED       ld1sh	{ z31.s }, p7/z, [sp, z31.s, sxtw #1]
+# CHECK-NEXT:  2      11    0.67    *                    11    V1UnitL[2],V1UnitV[2]                      GLD1SH_S_UXTW_SCALED       ld1sh	{ z31.s }, p7/z, [sp, z31.s, uxtw #1]
 # CHECK-NEXT:  2      11    0.33    *                    11    V1UnitL,V1UnitV                            GLD1SH_S_IMM               ld1sh	{ z31.s }, p7/z, [z31.s, #62]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SW_D_SXTW_SCALED       ld1sw	{ z0.d }, p0/z, [x0, z0.d, sxtw #2]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SW_D_UXTW_SCALED       ld1sw	{ z0.d }, p0/z, [x0, z0.d, uxtw #2]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SW_D_SXTW_SCALED       ld1sw	{ z0.d }, p0/z, [x0, z0.d, sxtw #2]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SW_D_UXTW_SCALED       ld1sw	{ z0.d }, p0/z, [x0, z0.d, uxtw #2]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1SW_D_IMM                ld1sw	{ z0.d }, p0/z, [x0]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SW_D_IMM               ld1sw	{ z0.d }, p0/z, [z0.d]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SW_D_IMM               ld1sw	{ z0.d }, p0/z, [z0.d]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1SW_D_IMM                ld1sw	{ z21.d }, p5/z, [x10, #5, mul vl]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SW_D_SXTW              ld1sw	{ z21.d }, p5/z, [x10, z21.d, sxtw]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SW_D_UXTW              ld1sw	{ z21.d }, p5/z, [x10, z21.d, uxtw]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SW_D_SXTW              ld1sw	{ z21.d }, p5/z, [x10, z21.d, sxtw]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SW_D_UXTW              ld1sw	{ z21.d }, p5/z, [x10, z21.d, uxtw]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1SW_D                    ld1sw	{ z23.d }, p3/z, [sp, x8, lsl #2]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1SW_D                    ld1sw	{ z23.d }, p3/z, [x13, x8, lsl #2]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SW_D_SCALED            ld1sw	{ z23.d }, p3/z, [x13, z8.d, lsl #2]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SW_D_SCALED            ld1sw	{ z23.d }, p3/z, [x13, z8.d, lsl #2]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1SW_D_IMM                ld1sw	{ z31.d }, p7/z, [sp, #-1, mul vl]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SW_D                   ld1sw	{ z31.d }, p7/z, [sp, z31.d]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SW_D_IMM               ld1sw	{ z31.d }, p7/z, [z31.d, #124]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1W_D_SXTW_SCALED        ld1w	{ z0.d }, p0/z, [x0, z0.d, sxtw #2]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1W_D_UXTW_SCALED        ld1w	{ z0.d }, p0/z, [x0, z0.d, uxtw #2]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SW_D                   ld1sw	{ z31.d }, p7/z, [sp, z31.d]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1SW_D_IMM               ld1sw	{ z31.d }, p7/z, [z31.d, #124]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1W_D_SXTW_SCALED        ld1w	{ z0.d }, p0/z, [x0, z0.d, sxtw #2]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1W_D_UXTW_SCALED        ld1w	{ z0.d }, p0/z, [x0, z0.d, uxtw #2]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1W_D_IMM                 ld1w	{ z0.d }, p0/z, [x0]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1W_D_IMM                ld1w	{ z0.d }, p0/z, [z0.d]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1W_D_IMM                ld1w	{ z0.d }, p0/z, [z0.d]
 # CHECK-NEXT:  2      9     0.33    *                    9     V1UnitL,V1UnitV                            GLD1W_SXTW                 ld1w	{ z0.s }, p0/z, [x0, z0.s, sxtw]
 # CHECK-NEXT:  2      9     0.33    *                    9     V1UnitL,V1UnitV                            GLD1W_UXTW                 ld1w	{ z0.s }, p0/z, [x0, z0.s, uxtw]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1W_IMM                   ld1w	{ z0.s }, p0/z, [x0]
 # CHECK-NEXT:  2      11    0.33    *                    11    V1UnitL,V1UnitV                            GLD1W_IMM                  ld1w	{ z0.s }, p0/z, [z0.s]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1W_D_IMM                 ld1w	{ z21.d }, p5/z, [x10, #5, mul vl]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1W_D_SXTW               ld1w	{ z21.d }, p5/z, [x10, z21.d, sxtw]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1W_D_UXTW               ld1w	{ z21.d }, p5/z, [x10, z21.d, uxtw]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1W_D_SXTW               ld1w	{ z21.d }, p5/z, [x10, z21.d, sxtw]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1W_D_UXTW               ld1w	{ z21.d }, p5/z, [x10, z21.d, uxtw]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1W                       ld1w	{ z21.s }, p5/z, [sp, x21, lsl #2]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1W_IMM                   ld1w	{ z21.s }, p5/z, [x10, #5, mul vl]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1W                       ld1w	{ z21.s }, p5/z, [x10, x21, lsl #2]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1W_D                     ld1w	{ z23.d }, p3/z, [x13, x8, lsl #2]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1W_D_SCALED             ld1w	{ z23.d }, p3/z, [x13, z8.d, lsl #2]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1W_D_SCALED             ld1w	{ z23.d }, p3/z, [x13, z8.d, lsl #2]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1W_D_IMM                 ld1w	{ z31.d }, p7/z, [sp, #-1, mul vl]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1W_D                    ld1w	{ z31.d }, p7/z, [sp, z31.d]
-# CHECK-NEXT:  4      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1W_D_IMM                ld1w	{ z31.d }, p7/z, [z31.d, #124]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1W_D                    ld1w	{ z31.d }, p7/z, [sp, z31.d]
+# CHECK-NEXT:  2      9     0.67    *                    9     V1UnitL[2],V1UnitV[2]                      GLD1W_D_IMM                ld1w	{ z31.d }, p7/z, [z31.d, #124]
 # CHECK-NEXT:  1      6     0.50    *                    6     V1UnitL,V1UnitL01                          LD1W_IMM                   ld1w	{ z31.s }, p7/z, [sp, #-1, mul vl]
-# CHECK-NEXT:  4      11    0.67    *                    11    V1UnitL[2],V1UnitV[2]                      GLD1W_SXTW_SCALED          ld1w	{ z31.s }, p7/z, [sp, z31.s, sxtw #2]
-# CHECK-NEXT:  4      11    0.67    *                    11    V1UnitL[2],V1UnitV[2]                      GLD1W_UXTW_SCALED          ld1w	{ z31.s }, p7/z, [sp, z31.s, uxtw #2]
+# CHECK-NEXT:  2      11    0.67    *                    11    V1UnitL[2],V1UnitV[2]                      GLD1W_SXTW_SCALED          ld1w	{ z31.s }, p7/z, [sp, z31.s, sxtw #2]
+# CHECK-NEXT:  2      11    0.67    *                    11    V1UnitL[2],V1UnitV[2]                      GLD1W_UXTW_SCALED          ld1w	{ z31.s }, p7/z, [sp, z31.s, uxtw #2]
 # CHECK-NEXT:  2      11    0.33    *                    11    V1UnitL,V1UnitV                            GLD1W_IMM                  ld1w	{ z31.s }, p7/z, [z31.s, #124]
-# CHECK-NEXT:  4      9     1.00    *                    9     V1UnitL[2],V1UnitL01[2],V1UnitV[2],V1UnitV01[2] LD2B                  ld2b	{ z0.b, z1.b }, p0/z, [x0, x0]
-# CHECK-NEXT:  4      8     1.00    *                    8     V1UnitL[2],V1UnitL01[2],V1UnitV[2],V1UnitV01[2] LD2B_IMM              ld2b	{ z0.b, z1.b }, p0/z, [x0]
-# CHECK-NEXT:  4      8     1.00    *                    8     V1UnitL[2],V1UnitL01[2],V1UnitV[2],V1UnitV01[2] LD2B_IMM              ld2b	{ z21.b, z22.b }, p5/z, [x10, #10, mul vl]
-# CHECK-NEXT:  4      8     1.00    *                    8     V1UnitL[2],V1UnitL01[2],V1UnitV[2],V1UnitV01[2] LD2B_IMM              ld2b	{ z23.b, z24.b }, p3/z, [x13, #-16, mul vl]
-# CHECK-NEXT:  4      9     1.00    *                    9     V1UnitL[2],V1UnitL01[2],V1UnitV[2],V1UnitV01[2] LD2B                  ld2b	{ z5.b, z6.b }, p3/z, [x17, x16]
-# CHECK-NEXT:  4      9     1.00    *                    9     V1UnitL[2],V1UnitL01[2],V1UnitV[2],V1UnitV01[2] LD2D                  ld2d	{ z0.d, z1.d }, p0/z, [x0, x0, lsl #3]
-# CHECK-NEXT:  4      8     1.00    *                    8     V1UnitL[2],V1UnitL01[2],V1UnitV[2],V1UnitV01[2] LD2D_IMM              ld2d	{ z0.d, z1.d }, p0/z, [x0]
-# CHECK-NEXT:  4      8     1.00    *                    8     V1UnitL[2],V1UnitL01[2],V1UnitV[2],V1UnitV01[2] LD2D_IMM              ld2d	{ z21.d, z22.d }, p5/z, [x10, #10, mul vl]
-# CHECK-NEXT:  4      8     1.00    *                    8     V1UnitL[2],V1UnitL01[2],V1UnitV[2],V1UnitV01[2] LD2D_IMM              ld2d	{ z23.d, z24.d }, p3/z, [x13, #-16, mul vl]
-# CHECK-NEXT:  4      9     1.00    *                    9     V1UnitL[2],V1UnitL01[2],V1UnitV[2],V1UnitV01[2] LD2D                  ld2d	{ z5.d, z6.d }, p3/z, [x17, x16, lsl #3]
-# CHECK-NEXT:  4      10    1.00    *                    10    V1UnitL[2],V1UnitL01[2],V1UnitV[2],V1UnitV01[2] LD2H                  ld2h	{ z0.h, z1.h }, p0/z, [x0, x0, lsl #1]
-# CHECK-NEXT:  4      8     1.00    *                    8     V1UnitL[2],V1UnitL01[2],V1UnitV[2],V1UnitV01[2] LD2H_IMM              ld2h	{ z0.h, z1.h }, p0/z, [x0]
-# CHECK-NEXT:  4      8     1.00    *                    8     V1UnitL[2],V1UnitL01[2],V1UnitV[2],V1UnitV01[2] LD2H_IMM              ld2h	{ z21.h, z22.h }, p5/z, [x10, #10, mul vl]
-# CHECK-NEXT:  4      8     1.00    *                    8     V1UnitL[2],V1UnitL01[2],V1UnitV[2],V1UnitV01[2] LD2H_IMM              ld2h	{ z23.h, z24.h }, p3/z, [x13, #-16, mul vl]
-# CHECK-NEXT:  4      10    1.00    *                    10    V1UnitL[2],V1UnitL01[2],V1UnitV[2],V1UnitV01[2] LD2H                  ld2h	{ z5.h, z6.h }, p3/z, [x17, x16, lsl #1]
-# CHECK-NEXT:  4      9     1.00    *                    9     V1UnitL[2],V1UnitL01[2],V1UnitV[2],V1UnitV01[2] LD2W                  ld2w	{ z0.s, z1.s }, p0/z, [x0, x0, lsl #2]
-# CHECK-NEXT:  4      8     1.00    *                    8     V1UnitL[2],V1UnitL01[2],V1UnitV[2],V1UnitV01[2] LD2W_IMM              ld2w	{ z0.s, z1.s }, p0/z, [x0]
-# CHECK-NEXT:  4      8     1.00    *                    8     V1UnitL[2],V1UnitL01[2],V1UnitV[2],V1UnitV01[2] LD2W_IMM              ld2w	{ z21.s, z22.s }, p5/z, [x10, #10, mul vl]
-# CHECK-NEXT:  4      8     1.00    *                    8     V1UnitL[2],V1UnitL01[2],V1UnitV[2],V1UnitV01[2] LD2W_IMM              ld2w	{ z23.s, z24.s }, p3/z, [x13, #-16, mul vl]
-# CHECK-NEXT:  4      9     1.00    *                    9     V1UnitL[2],V1UnitL01[2],V1UnitV[2],V1UnitV01[2] LD2W                  ld2w	{ z5.s, z6.s }, p3/z, [x17, x16, lsl #2]
-# CHECK-NEXT:  7      8     1.50    *                    8     V1UnitI,V1UnitL[3],V1UnitL01[3],V1UnitS,V1UnitV[3],V1UnitV01[3] LD3B  ld3b	{ z0.b - z2.b }, p0/z, [x0, x0]
-# CHECK-NEXT:  6      11    1.50    *                    11    V1UnitL[3],V1UnitL01[3],V1UnitV[3],V1UnitV01[3] LD3B_IMM              ld3b	{ z0.b - z2.b }, p0/z, [x0]
-# CHECK-NEXT:  6      11    1.50    *                    11    V1UnitL[3],V1UnitL01[3],V1UnitV[3],V1UnitV01[3] LD3B_IMM              ld3b	{ z21.b - z23.b }, p5/z, [x10, #15, mul vl]
-# CHECK-NEXT:  6      11    1.50    *                    11    V1UnitL[3],V1UnitL01[3],V1UnitV[3],V1UnitV01[3] LD3B_IMM              ld3b	{ z23.b - z25.b }, p3/z, [x13, #-24, mul vl]
-# CHECK-NEXT:  7      8     1.50    *                    8     V1UnitI,V1UnitL[3],V1UnitL01[3],V1UnitS,V1UnitV[3],V1UnitV01[3] LD3B  ld3b	{ z5.b - z7.b }, p3/z, [x17, x16]
-# CHECK-NEXT:  7      8     1.50    *                    8     V1UnitI,V1UnitL[3],V1UnitL01[3],V1UnitS,V1UnitV[3],V1UnitV01[3] LD3D  ld3d	{ z0.d - z2.d }, p0/z, [x0, x0, lsl #3]
-# CHECK-NEXT:  6      11    1.50    *                    11    V1UnitL[3],V1UnitL01[3],V1UnitV[3],V1UnitV01[3] LD3D_IMM              ld3d	{ z0.d - z2.d }, p0/z, [x0]
-# CHECK-NEXT:  6      11    1.50    *                    11    V1UnitL[3],V1UnitL01[3],V1UnitV[3],V1UnitV01[3] LD3D_IMM              ld3d	{ z21.d - z23.d }, p5/z, [x10, #15, mul vl]
-# CHECK-NEXT:  6      11    1.50    *                    11    V1UnitL[3],V1UnitL01[3],V1UnitV[3],V1UnitV01[3] LD3D_IMM              ld3d	{ z23.d - z25.d }, p3/z, [x13, #-24, mul vl]
-# CHECK-NEXT:  7      8     1.50    *                    8     V1UnitI,V1UnitL[3],V1UnitL01[3],V1UnitS,V1UnitV[3],V1UnitV01[3] LD3D  ld3d	{ z5.d - z7.d }, p3/z, [x17, x16, lsl #3]
-# CHECK-NEXT:  7      8     1.50    *                    8     V1UnitI,V1UnitL[3],V1UnitL01[3],V1UnitS,V1UnitV[3],V1UnitV01[3] LD3H  ld3h	{ z0.h - z2.h }, p0/z, [x0, x0, lsl #1]
-# CHECK-NEXT:  6      11    1.50    *                    11    V1UnitL[3],V1UnitL01[3],V1UnitV[3],V1UnitV01[3] LD3H_IMM              ld3h	{ z0.h - z2.h }, p0/z, [x0]
-# CHECK-NEXT:  6      11    1.50    *                    11    V1UnitL[3],V1UnitL01[3],V1UnitV[3],V1UnitV01[3] LD3H_IMM              ld3h	{ z21.h - z23.h }, p5/z, [x10, #15, mul vl]
-# CHECK-NEXT:  6      11    1.50    *                    11    V1UnitL[3],V1UnitL01[3],V1UnitV[3],V1UnitV01[3] LD3H_IMM              ld3h	{ z23.h - z25.h }, p3/z, [x13, #-24, mul vl]
-# CHECK-NEXT:  7      8     1.50    *                    8     V1UnitI,V1UnitL[3],V1UnitL01[3],V1UnitS,V1UnitV[3],V1UnitV01[3] LD3H  ld3h	{ z5.h - z7.h }, p3/z, [x17, x16, lsl #1]
-# CHECK-NEXT:  7      8     1.50    *                    8     V1UnitI,V1UnitL[3],V1UnitL01[3],V1UnitS,V1UnitV[3],V1UnitV01[3] LD3W  ld3w	{ z0.s - z2.s }, p0/z, [x0, x0, lsl #2]
-# CHECK-NEXT:  6      11    1.50    *                    11    V1UnitL[3],V1UnitL01[3],V1UnitV[3],V1UnitV01[3] LD3W_IMM              ld3w	{ z0.s - z2.s }, p0/z, [x0]
-# CHECK-NEXT:  6      11    1.50    *                    11    V1UnitL[3],V1UnitL01[3],V1UnitV[3],V1UnitV01[3] LD3W_IMM              ld3w	{ z21.s - z23.s }, p5/z, [x10, #15, mul vl]
-# CHECK-NEXT:  6      11    1.50    *                    11    V1UnitL[3],V1UnitL01[3],V1UnitV[3],V1UnitV01[3] LD3W_IMM              ld3w	{ z23.s - z25.s }, p3/z, [x13, #-24, mul vl]
-# CHECK-NEXT:  7      8     1.50    *                    8     V1UnitI,V1UnitL[3],V1UnitL01[3],V1UnitS,V1UnitV[3],V1UnitV01[3] LD3W  ld3w	{ z5.s - z7.s }, p3/z, [x17, x16, lsl #2]
-# CHECK-NEXT:  10     13    2.00    *                    13    V1UnitI[2],V1UnitL[4],V1UnitL01[4],V1UnitS[2],V1UnitV[4],V1UnitV01[4] LD4B ld4b	{ z0.b - z3.b }, p0/z, [x0, x0]
-# CHECK-NEXT:  8      12    2.00    *                    12    V1UnitL[4],V1UnitL01[4],V1UnitV[4],V1UnitV01[4] LD4B_IMM              ld4b	{ z0.b - z3.b }, p0/z, [x0]
-# CHECK-NEXT:  8      12    2.00    *                    12    V1UnitL[4],V1UnitL01[4],V1UnitV[4],V1UnitV01[4] LD4B_IMM              ld4b	{ z21.b - z24.b }, p5/z, [x10, #20, mul vl]
-# CHECK-NEXT:  8      12    2.00    *                    12    V1UnitL[4],V1UnitL01[4],V1UnitV[4],V1UnitV01[4] LD4B_IMM              ld4b	{ z23.b - z26.b }, p3/z, [x13, #-32, mul vl]
-# CHECK-NEXT:  10     13    2.00    *                    13    V1UnitI[2],V1UnitL[4],V1UnitL01[4],V1UnitS[2],V1UnitV[4],V1UnitV01[4] LD4B ld4b	{ z5.b - z8.b }, p3/z, [x17, x16]
-# CHECK-NEXT:  10     13    2.00    *                    13    V1UnitI[2],V1UnitL[4],V1UnitL01[4],V1UnitS[2],V1UnitV[4],V1UnitV01[4] LD4D ld4d	{ z0.d - z3.d }, p0/z, [x0, x0, lsl #3]
-# CHECK-NEXT:  8      12    2.00    *                    12    V1UnitL[4],V1UnitL01[4],V1UnitV[4],V1UnitV01[4] LD4D_IMM              ld4d	{ z0.d - z3.d }, p0/z, [x0]
-# CHECK-NEXT:  8      12    2.00    *                    12    V1UnitL[4],V1UnitL01[4],V1UnitV[4],V1UnitV01[4] LD4D_IMM              ld4d	{ z21.d - z24.d }, p5/z, [x10, #20, mul vl]
-# CHECK-NEXT:  8      12    2.00    *                    12    V1UnitL[4],V1UnitL01[4],V1UnitV[4],V1UnitV01[4] LD4D_IMM              ld4d	{ z23.d - z26.d }, p3/z, [x13, #-32, mul vl]
-# CHECK-NEXT:  10     13    2.00    *                    13    V1UnitI[2],V1UnitL[4],V1UnitL01[4],V1UnitS[2],V1UnitV[4],V1UnitV01[4] LD4D ld4d	{ z5.d - z8.d }, p3/z, [x17, x16, lsl #3]
-# CHECK-NEXT:  10     13    2.00    *                    13    V1UnitI[2],V1UnitL[4],V1UnitL01[4],V1UnitS[2],V1UnitV[4],V1UnitV01[4] LD4H ld4h	{ z0.h - z3.h }, p0/z, [x0, x0, lsl #1]
-# CHECK-NEXT:  8      12    2.00    *                    12    V1UnitL[4],V1UnitL01[4],V1UnitV[4],V1UnitV01[4] LD4H_IMM              ld4h	{ z0.h - z3.h }, p0/z, [x0]
-# CHECK-NEXT:  8      12    2.00    *                    12    V1UnitL[4],V1UnitL01[4],V1UnitV[4],V1UnitV01[4] LD4H_IMM              ld4h	{ z21.h - z24.h }, p5/z, [x10, #20, mul vl]
-# CHECK-NEXT:  8      12    2.00    *                    12    V1UnitL[4],V1UnitL01[4],V1UnitV[4],V1UnitV01[4] LD4H_IMM              ld4h	{ z23.h - z26.h }, p3/z, [x13, #-32, mul vl]
-# CHECK-NEXT:  10     13    2.00    *                    13    V1UnitI[2],V1UnitL[4],V1UnitL01[4],V1UnitS[2],V1UnitV[4],V1UnitV01[4] LD4H ld4h	{ z5.h - z8.h }, p3/z, [x17, x16, lsl #1]
-# CHECK-NEXT:  10     13    2.00    *                    13    V1UnitI[2],V1UnitL[4],V1UnitL01[4],V1UnitS[2],V1UnitV[4],V1UnitV01[4] LD4W ld4w	{ z0.s - z3.s }, p0/z, [x0, x0, lsl #2]
-# CHECK-NEXT:  8      12    2.00    *                    12    V1UnitL[4],V1UnitL01[4],V1UnitV[4],V1UnitV01[4] LD4W_IMM              ld4w	{ z0.s - z3.s }, p0/z, [x0]
-# CHECK-NEXT:  8      12    2.00    *                    12    V1UnitL[4],V1UnitL01[4],V1UnitV[4],V1UnitV01[4] LD4W_IMM              ld4w	{ z21.s - z24.s }, p5/z, [x10, #20, mul vl]
-# CHECK-NEXT:  8      12    2.00    *                    12    V1UnitL[4],V1UnitL01[4],V1UnitV[4],V1UnitV01[4] LD4W_IMM              ld4w	{ z23.s - z26.s }, p3/z, [x13, #-32, mul vl]
-# CHECK-NEXT:  10     13    2.00    *                    13    V1UnitI[2],V1UnitL[4],V1UnitL01[4],V1UnitS[2],V1UnitV[4],V1UnitV01[4] LD4W ld4w	{ z5.s - z8.s }, p3/z, [x17, x16, lsl #2]
+# CHECK-NEXT:  2      9     1.00    *                    9     V1UnitL[2],V1UnitL01[2],V1UnitV[2],V1UnitV01[2] LD2B                  ld2b	{ z0.b, z1.b }, p0/z, [x0, x0]
+# CHECK-NEXT:  2      8     1.00    *                    8     V1UnitL[2],V1UnitL01[2],V1UnitV[2],V1UnitV01[2] LD2B_IMM              ld2b	{ z0.b, z1.b }, p0/z, [x0]
+# CHECK-NEXT:  2      8     1.00    *                    8     V1UnitL[2],V1UnitL01[2],V1UnitV[2],V1UnitV01[2] LD2B_IMM              ld2b	{ z21.b, z22.b }, p5/z, [x10, #10, mul vl]
+# CHECK-NEXT:  2      8     1.00    *                    8     V1UnitL[2],V1UnitL01[2],V1UnitV[2],V1UnitV01[2] LD2B_IMM              ld2b	{ z23.b, z24.b }, p3/z, [x13, #-16, mul vl]
+# CHECK-NEXT:  2      9     1.00    *                    9     V1UnitL[2],V1UnitL01[2],V1UnitV[2],V1UnitV01[2] LD2B                  ld2b	{ z5.b, z6.b }, p3/z, [x17, x16]
+# CHECK-NEXT:  2      9     1.00    *                    9     V1UnitL[2],V1UnitL01[2],V1UnitV[2],V1UnitV01[2] LD2D                  ld2d	{ z0.d, z1.d }, p0/z, [x0, x0, lsl #3]
+# CHECK-NEXT:  2      8     1.00    *                    8     V1UnitL[2],V1UnitL01[2],V1UnitV[2],V1UnitV01[2] LD2D_IMM              ld2d	{ z0.d, z1.d }, p0/z, [x0]
+# CHECK-NEXT:  2      8     1.00    *                    8     V1UnitL[2],V1UnitL01[2],V1UnitV[2],V1UnitV01[2] LD2D_IMM              ld2d	{ z21.d, z22.d }, p5/z, [x10, #10, mul vl]
+# CHECK-NEXT:  2      8     1.00    *                    8     V1UnitL[2],V1UnitL01[2],V1UnitV[2],V1UnitV01[2] LD2D_IMM              ld2d	{ z23.d, z24.d }, p3/z, [x13, #-16, mul vl]
+# CHECK-NEXT:  2      9     1.00    *                    9     V1UnitL[2],V1UnitL01[2],V1UnitV[2],V1UnitV01[2] LD2D                  ld2d	{ z5.d, z6.d }, p3/z, [x17, x16, lsl #3]
+# CHECK-NEXT:  2      10    1.00    *                    10    V1UnitL[2],V1UnitL01[2],V1UnitV[2],V1UnitV01[2] LD2H                  ld2h	{ z0.h, z1.h }, p0/z, [x0, x0, lsl #1]
+# CHECK-NEXT:  2      8     1.00    *                    8     V1UnitL[2],V1UnitL01[2],V1UnitV[2],V1UnitV01[2] LD2H_IMM              ld2h	{ z0.h, z1.h }, p0/z, [x0]
+# CHECK-NEXT:  2      8     1.00    *                    8     V1UnitL[2],V1UnitL01[2],V1UnitV[2],V1UnitV01[2] LD2H_IMM              ld2h	{ z21.h, z22.h }, p5/z, [x10, #10, mul vl]
+# CHECK-NEXT:  2      8     1.00    *                    8     V1UnitL[2],V1UnitL01[2],V1UnitV[2],V1UnitV01[2] LD2H_IMM              ld2h	{ z23.h, z24.h }, p3/z, [x13, #-16, mul vl]
+# CHECK-NEXT:  2      10    1.00    *                    10    V1UnitL[2],V1UnitL01[2],V1UnitV[2],V1UnitV01[2] LD2H                  ld2h	{ z5.h, z6.h }, p3/z, [x17, x16, lsl #1]
+# CHECK-NEXT:  2      9     1.00    *                    9     V1UnitL[2],V1UnitL01[2],V1UnitV[2],V1UnitV01[2] LD2W                  ld2w	{ z0.s, z1.s }, p0/z, [x0, x0, lsl #2]
+# CHECK-NEXT:  2      8     1.00    *                    8     V1UnitL[2],V1UnitL01[2],V1UnitV[2],V1UnitV01[2] LD2W_IMM              ld2w	{ z0.s, z1.s }, p0/z, [x0]
+# CHECK-NEXT:  2      8     1.00    *                    8     V1UnitL[2],V1UnitL01[2],V1UnitV[2],V1UnitV01[2] LD2W_IMM              ld2w	{ z21.s, z22.s }, p5/z, [x10, #10, mul vl]
+# CHECK-NEXT:  2      8     1.00    *                    8     V1UnitL[2],V1UnitL01[2],V1UnitV[2],V1UnitV01[2] LD2W_IMM              ld2w	{ z23.s, z24.s }, p3/z, [x13, #-16, mul vl]
+# CHECK-NEXT:  2      9     1.00    *                    9     V1UnitL[2],V1UnitL01[2],V1UnitV[2],V1UnitV01[2] LD2W                  ld2w	{ z5.s, z6.s }, p3/z, [x17, x16, lsl #2]
+# CHECK-NEXT:  3      8     1.50    *                    8     V1UnitI,V1UnitL[3],V1UnitL01[3],V1UnitS,V1UnitV[3],V1UnitV01[3] LD3B  ld3b	{ z0.b - z2.b }, p0/z, [x0, x0]
+# CHECK-NEXT:  2      11    1.50    *                    11    V1UnitL[3],V1UnitL01[3],V1UnitV[3],V1UnitV01[3] LD3B_IMM              ld3b	{ z0.b - z2.b }, p0/z, [x0]
+# CHECK-NEXT:  2      11    1.50    *                    11    V1UnitL[3],V1UnitL01[3],V1UnitV[3],V1UnitV01[3] LD3B_IMM              ld3b	{ z21.b - z23.b }, p5/z, [x10, #15, mul vl]
+# CHECK-NEXT:  2      11    1.50    *                    11    V1UnitL[3],V1UnitL01[3],V1UnitV[3],V1UnitV01[3] LD3B_IMM              ld3b	{ z23.b - z25.b }, p3/z, [x13, #-24, mul vl]
+# CHECK-NEXT:  3      8     1.50    *                    8     V1UnitI,V1UnitL[3],V1UnitL01[3],V1UnitS,V1UnitV[3],V1UnitV01[3] LD3B  ld3b	{ z5.b - z7.b }, p3/z, [x17, x16]
+# CHECK-NEXT:  3      8     1.50    *                    8     V1UnitI,V1UnitL[3],V1UnitL01[3],V1UnitS,V1UnitV[3],V1UnitV01[3] LD3D  ld3d	{ z0.d - z2.d }, p0/z, [x0, x0, lsl #3]
+# CHECK-NEXT:  2      11    1.50    *                    11    V1UnitL[3],V1UnitL01[3],V1UnitV[3],V1UnitV01[3] LD3D_IMM              ld3d	{ z0.d - z2.d }, p0/z, [x0]
+# CHECK-NEXT:  2      11    1.50    *                    11    V1UnitL[3],V1UnitL01[3],V1UnitV[3],V1UnitV01[3] LD3D_IMM              ld3d	{ z21.d - z23.d }, p5/z, [x10, #15, mul vl]
+# CHECK-NEXT:  2      11    1.50    *                    11    V1UnitL[3],V1UnitL01[3],V1UnitV[3],V1UnitV01[3] LD3D_IMM              ld3d	{ z23.d - z25.d }, p3/z, [x13, #-24, mul vl]
+# CHECK-NEXT:  3      8     1.50    *                    8     V1UnitI,V1UnitL[3],V1UnitL01[3],V1UnitS,V1UnitV[3],V1UnitV01[3] LD3D  ld3d	{ z5.d - z7.d }, p3/z, [x17, x16, lsl #3]
+# CHECK-NEXT:  3      8     1.50    *                    8     V1UnitI,V1UnitL[3],V1UnitL01[3],V1UnitS,V1UnitV[3],V1UnitV01[3] LD3H  ld3h	{ z0.h - z2.h }, p0/z, [x0, x0, lsl #1]
+# CHECK-NEXT:  2      11    1.50    *                    11    V1UnitL[3],V1UnitL01[3],V1UnitV[3],V1UnitV01[3] LD3H_IMM              ld3h	{ z0.h - z2.h }, p0/z, [x0]
+# CHECK-NEXT:  2      11    1.50    *                    11    V1UnitL[3],V1UnitL01[3],V1UnitV[3],V1UnitV01[3] LD3H_IMM              ld3h	{ z21.h - z23.h }, p5/z, [x10, #15, mul vl]
+# CHECK-NEXT:  2      11    1.50    *                    11    V1UnitL[3],V1UnitL01[3],V1UnitV[3],V1UnitV01[3] LD3H_IMM              ld3h	{ z23.h - z25.h }, p3/z, [x13, #-24, mul vl]
+# CHECK-NEXT:  3      8     1.50    *                    8     V1UnitI,V1UnitL[3],V1UnitL01[3],V1UnitS,V1UnitV[3],V1UnitV01[3] LD3H  ld3h	{ z5.h - z7.h }, p3/z, [x17, x16, lsl #1]
+# CHECK-NEXT:  3      8     1.50    *                    8     V1UnitI,V1UnitL[3],V1UnitL01[3],V1UnitS,V1UnitV[3],V1UnitV01[3] LD3W  ld3w	{ z0.s - z2.s }, p0/z, [x0, x0, lsl #2]
+# CHECK-NEXT:  2      11    1.50    *                    11    V1UnitL[3],V1UnitL01[3],V1UnitV[3],V1UnitV01[3] LD3W_IMM              ld3w	{ z0.s - z2.s }, p0/z, [x0]
+# CHECK-NEXT:  2      11    1.50    *                    11    V1UnitL[3],V1UnitL01[3],V1UnitV[3],V1UnitV01[3] LD3W_IMM              ld3w	{ z21.s - z23.s }, p5/z, [x10, #15, mul vl]
+# CHECK-NEXT:  2      11    1.50    *                    11    V1UnitL[3],V1UnitL01[3],V1UnitV[3],V1UnitV01[3] LD3W_IMM              ld3w	{ z23.s - z25.s }, p3/z, [x13, #-24, mul vl]
+# CHECK-NEXT:  3      8     1.50    *                    8     V1UnitI,V1UnitL[3],V1UnitL01[3],V1UnitS,V1UnitV[3],V1UnitV01[3] LD3W  ld3w	{ z5.s - z7.s }, p3/z, [x17, x16, lsl #2]
+# CHECK-NEXT:  3      13    2.00    *                    13    V1UnitI[2],V1UnitL[4],V1UnitL01[4],V1UnitS[2],V1UnitV[4],V1UnitV01[4] LD4B ld4b	{ z0.b - z3.b }, p0/z, [x0, x0]
+# CHECK-NEXT:  2      12    2.00    *                    12    V1UnitL[4],V1UnitL01[4],V1UnitV[4],V1UnitV01[4] LD4B_IMM              ld4b	{ z0.b - z3.b }, p0/z, [x0]
+# CHECK-NEXT:  2      12    2.00    *                    12    V1UnitL[4],V1UnitL01[4],V1UnitV[4],V1UnitV01[4] LD4B_IMM              ld4b	{ z21.b - z24.b }, p5/z, [x10, #20, mul vl]
+# CHECK-NEXT:  2      12    2.00    *                    12    V1UnitL[4],V1UnitL01[4],V1UnitV[4],V1UnitV01[4] LD4B_IMM              ld4b	{ z23.b - z26.b }, p3/z, [x13, #-32, mul vl]
+# CHECK-NEXT:  3      13    2.00    *                    13    V1UnitI[2],V1UnitL[4],V1UnitL01[4],V1UnitS[2],V1UnitV[4],V1UnitV01[4] LD4B ld4b	{ z5.b - z8.b }, p3/z, [x17, x16]
+# CHECK-NEXT:  3      13    2.00    *                    13    V1UnitI[2],V1UnitL[4],V1UnitL01[4],V1UnitS[2],V1UnitV[4],V1UnitV01[4] LD4D ld4d	{ z0.d - z3.d }, p0/z, [x0, x0, lsl #3]
+# CHECK-NEXT:  2      12    2.00    *                    12    V1UnitL[4],V1UnitL01[4],V1UnitV[4],V1UnitV01[4] LD4D_IMM              ld4d	{ z0.d - z3.d }, p0/z, [x0]
+# CHECK-NEXT:  2      12    2.00    *                    12    V1UnitL[4],V1UnitL01[4],V1UnitV[4],V1UnitV01[4] LD4D_IMM              ld4d	{ z21.d - z24.d }, p5/z, [x10, #20, mul vl]
+# CHECK-NEXT:  2      12    2.00    *                    12    V1UnitL[4],V1UnitL01[4],V1UnitV[4],V1UnitV01[4] LD4D_IMM              ld4d	{ z23.d - z26.d }, p3/z, [x13, #-32, mul vl]
+# CHECK-NEXT:  3      13    2.00    *                    13    V1UnitI[2],V1UnitL[4],V1UnitL01[4],V1UnitS[2],V1UnitV[4],V1UnitV01[4] LD4D ld4d	{ z5.d - z8.d }, p3/z, [x17, x16, lsl #3]
+# CHECK-NEXT:  3      13    2.00    *                    13    V1UnitI[2],V1UnitL[4],V1UnitL01[4],V1UnitS[2],V1UnitV[4],V1UnitV01[4] LD4H ld4h	{ z0.h - z3.h }, p0/z, [x0, x0, lsl #1]
+# CHECK-NEXT:  2      12    2.00    *                    12    V1UnitL[4],V1UnitL01[4],V1UnitV[4],V1UnitV01[4] LD4H_IMM              ld4h	{ z0.h - z3.h }, p0/z, [x0]
+# CHECK-NEXT:  2      12    2.00    *                    12    V1UnitL[4],V1UnitL01[4],V1UnitV[4],V1UnitV01[4] LD4H_IMM              ld4h	{ z21.h - z24.h }, p5/z, [x10, #20, mul vl]
+# CHECK-NEXT:  2      12    2.00    *                    12    V1UnitL[4],V1UnitL01[4],V1UnitV[4],V1UnitV01[4] LD4H_IMM              ld4h	{ z23.h - z26.h }, p3/z, [x13, #-32, mul vl]
+# CHECK-NEXT:  3      13    2.00    *                    13    V1UnitI[2],V1UnitL[4],V1UnitL01[4],V1UnitS[2],V1UnitV[4],V1UnitV01[4] LD4H ld4h	{ z5.h - z8.h }, p3/z, [x17, x16, lsl #1]
+# CHECK-NEXT:  3      13    2.00    *                    13    V1UnitI[2],V1UnitL[4],V1UnitL01[4],V1UnitS[2],V1UnitV[4],V1UnitV01[4] LD4W ld4w	{ z0.s - z3.s }, p0/z, [x0, x0, lsl #2]
+# CHECK-NEXT:  2      12    2.00    *                    12    V1UnitL[4],V1UnitL01[4],V1UnitV[4],V1UnitV01[4] LD4W_IMM              ld4w	{ z0.s - z3.s }, p0/z, [x0]
+# CHECK-NEXT:  2      12    2.00    *                    12    V1UnitL[4],V1UnitL01[4],V1UnitV[4],V1UnitV01[4] LD4W_IMM              ld4w	{ z21.s - z24.s }, p5/z, [x10, #20, mul vl]
+# CHECK-NEXT:  2      12    2.00    *                    12    V1UnitL[4],V1UnitL01[4],V1UnitV[4],V1UnitV01[4] LD4W_IMM              ld4w	{ z23.s - z26.s }, p3/z, [x13, #-32, mul vl]
+# CHECK-NEXT:  3      13    2.00    *                    13    V1UnitI[2],V1UnitL[4],V1UnitL01[4],V1UnitS[2],V1UnitV[4],V1UnitV01[4] LD4W ld4w	{ z5.s - z8.s }, p3/z, [x17, x16, lsl #2]
 # CHECK-NEXT:  2      6     0.50    *             U      6     V1UnitI,V1UnitL,V1UnitL01,V1UnitS          LDFF1B_D                   ldff1b	{ z0.d }, p0/z, [x0, x0]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1B_D_IMM              ldff1b	{ z0.d }, p0/z, [z0.d]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1B_D_IMM              ldff1b	{ z0.d }, p0/z, [z0.d]
 # CHECK-NEXT:  2      6     0.50    *             U      6     V1UnitI,V1UnitL,V1UnitL01,V1UnitS          LDFF1B_H                   ldff1b	{ z0.h }, p0/z, [x0, x0]
 # CHECK-NEXT:  2      6     0.50    *             U      6     V1UnitI,V1UnitL,V1UnitL01,V1UnitS          LDFF1B_S                   ldff1b	{ z0.s }, p0/z, [x0, x0]
 # CHECK-NEXT:  2      9     0.33    *             U      9     V1UnitL,V1UnitV                            GLDFF1B_S_SXTW             ldff1b	{ z0.s }, p0/z, [x0, z0.s, sxtw]
 # CHECK-NEXT:  2      9     0.33    *             U      9     V1UnitL,V1UnitV                            GLDFF1B_S_UXTW             ldff1b	{ z0.s }, p0/z, [x0, z0.s, uxtw]
 # CHECK-NEXT:  2      11    0.33    *             U      11    V1UnitL,V1UnitV                            GLDFF1B_S_IMM              ldff1b	{ z0.s }, p0/z, [z0.s]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1B_D_SXTW             ldff1b	{ z21.d }, p5/z, [x10, z21.d, sxtw]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1B_D_UXTW             ldff1b	{ z21.d }, p5/z, [x10, z21.d, uxtw]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1B_D_SXTW             ldff1b	{ z21.d }, p5/z, [x10, z21.d, sxtw]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1B_D_UXTW             ldff1b	{ z21.d }, p5/z, [x10, z21.d, uxtw]
 # CHECK-NEXT:  2      6     0.50    *             U      6     V1UnitI,V1UnitL,V1UnitL01,V1UnitS          LDFF1B                     ldff1b	{ z31.b }, p7/z, [sp]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1B_D                  ldff1b	{ z31.d }, p7/z, [sp, z31.d]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1B_D                  ldff1b	{ z31.d }, p7/z, [sp, z31.d]
 # CHECK-NEXT:  2      6     0.50    *             U      6     V1UnitI,V1UnitL,V1UnitL01,V1UnitS          LDFF1B_D                   ldff1b	{ z31.d }, p7/z, [sp]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1B_D_IMM              ldff1b	{ z31.d }, p7/z, [z31.d, #31]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1B_D_IMM              ldff1b	{ z31.d }, p7/z, [z31.d, #31]
 # CHECK-NEXT:  2      6     0.50    *             U      6     V1UnitI,V1UnitL,V1UnitL01,V1UnitS          LDFF1B_H                   ldff1b	{ z31.h }, p7/z, [sp]
 # CHECK-NEXT:  2      6     0.50    *             U      6     V1UnitI,V1UnitL,V1UnitL01,V1UnitS          LDFF1B_S                   ldff1b	{ z31.s }, p7/z, [sp]
 # CHECK-NEXT:  2      11    0.33    *             U      11    V1UnitL,V1UnitV                            GLDFF1B_S_IMM              ldff1b	{ z31.s }, p7/z, [z31.s, #31]
 # CHECK-NEXT:  2      6     0.50    *             U      6     V1UnitI,V1UnitL,V1UnitL01,V1UnitS          LDFF1D                     ldff1d	{ z0.d }, p0/z, [x0, x0, lsl #3]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1D_SXTW_SCALED        ldff1d	{ z0.d }, p0/z, [x0, z0.d, sxtw #3]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1D_UXTW_SCALED        ldff1d	{ z0.d }, p0/z, [x0, z0.d, uxtw #3]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1D_IMM                ldff1d	{ z0.d }, p0/z, [z0.d]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1D_SXTW               ldff1d	{ z21.d }, p5/z, [x10, z21.d, sxtw]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1D_UXTW               ldff1d	{ z21.d }, p5/z, [x10, z21.d, uxtw]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1D_SCALED             ldff1d	{ z23.d }, p3/z, [x13, z8.d, lsl #3]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1D                    ldff1d	{ z31.d }, p7/z, [sp, z31.d]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1D_SXTW_SCALED        ldff1d	{ z0.d }, p0/z, [x0, z0.d, sxtw #3]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1D_UXTW_SCALED        ldff1d	{ z0.d }, p0/z, [x0, z0.d, uxtw #3]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1D_IMM                ldff1d	{ z0.d }, p0/z, [z0.d]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1D_SXTW               ldff1d	{ z21.d }, p5/z, [x10, z21.d, sxtw]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1D_UXTW               ldff1d	{ z21.d }, p5/z, [x10, z21.d, uxtw]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1D_SCALED             ldff1d	{ z23.d }, p3/z, [x13, z8.d, lsl #3]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1D                    ldff1d	{ z31.d }, p7/z, [sp, z31.d]
 # CHECK-NEXT:  2      6     0.50    *             U      6     V1UnitI,V1UnitL,V1UnitL01,V1UnitS          LDFF1D                     ldff1d	{ z31.d }, p7/z, [sp]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1D_IMM                ldff1d	{ z31.d }, p7/z, [z31.d, #248]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1D_IMM                ldff1d	{ z31.d }, p7/z, [z31.d, #248]
 # CHECK-NEXT:  2      7     0.50    *             U      7     V1UnitI,V1UnitL,V1UnitL01,V1UnitS          LDFF1H_D                   ldff1h	{ z0.d }, p0/z, [x0, x0, lsl #1]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1H_D_SXTW_SCALED      ldff1h	{ z0.d }, p0/z, [x0, z0.d, sxtw #1]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1H_D_UXTW_SCALED      ldff1h	{ z0.d }, p0/z, [x0, z0.d, uxtw #1]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1H_D_IMM              ldff1h	{ z0.d }, p0/z, [z0.d]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1H_D_SXTW_SCALED      ldff1h	{ z0.d }, p0/z, [x0, z0.d, sxtw #1]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1H_D_UXTW_SCALED      ldff1h	{ z0.d }, p0/z, [x0, z0.d, uxtw #1]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1H_D_IMM              ldff1h	{ z0.d }, p0/z, [z0.d]
 # CHECK-NEXT:  2      7     0.50    *             U      7     V1UnitI,V1UnitL,V1UnitL01,V1UnitS          LDFF1H                     ldff1h	{ z0.h }, p0/z, [x0, x0, lsl #1]
 # CHECK-NEXT:  2      7     0.50    *             U      7     V1UnitI,V1UnitL,V1UnitL01,V1UnitS          LDFF1H_S                   ldff1h	{ z0.s }, p0/z, [x0, x0, lsl #1]
 # CHECK-NEXT:  2      9     0.33    *             U      9     V1UnitL,V1UnitV                            GLDFF1H_S_SXTW             ldff1h	{ z0.s }, p0/z, [x0, z0.s, sxtw]
 # CHECK-NEXT:  2      9     0.33    *             U      9     V1UnitL,V1UnitV                            GLDFF1H_S_UXTW             ldff1h	{ z0.s }, p0/z, [x0, z0.s, uxtw]
 # CHECK-NEXT:  2      11    0.33    *             U      11    V1UnitL,V1UnitV                            GLDFF1H_S_IMM              ldff1h	{ z0.s }, p0/z, [z0.s]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1H_D_SXTW             ldff1h	{ z21.d }, p5/z, [x10, z21.d, sxtw]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1H_D_UXTW             ldff1h	{ z21.d }, p5/z, [x10, z21.d, uxtw]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1H_D_SCALED           ldff1h	{ z23.d }, p3/z, [x13, z8.d, lsl #1]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1H_D                  ldff1h	{ z31.d }, p7/z, [sp, z31.d]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1H_D_SXTW             ldff1h	{ z21.d }, p5/z, [x10, z21.d, sxtw]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1H_D_UXTW             ldff1h	{ z21.d }, p5/z, [x10, z21.d, uxtw]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1H_D_SCALED           ldff1h	{ z23.d }, p3/z, [x13, z8.d, lsl #1]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1H_D                  ldff1h	{ z31.d }, p7/z, [sp, z31.d]
 # CHECK-NEXT:  2      7     0.50    *             U      7     V1UnitI,V1UnitL,V1UnitL01,V1UnitS          LDFF1H_D                   ldff1h	{ z31.d }, p7/z, [sp]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1H_D_IMM              ldff1h	{ z31.d }, p7/z, [z31.d, #62]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1H_D_IMM              ldff1h	{ z31.d }, p7/z, [z31.d, #62]
 # CHECK-NEXT:  2      7     0.50    *             U      7     V1UnitI,V1UnitL,V1UnitL01,V1UnitS          LDFF1H                     ldff1h	{ z31.h }, p7/z, [sp]
-# CHECK-NEXT:  4      11    0.67    *             U      11    V1UnitL[2],V1UnitV[2]                      GLDFF1H_S_SXTW_SCALED      ldff1h	{ z31.s }, p7/z, [sp, z31.s, sxtw #1]
-# CHECK-NEXT:  4      11    0.67    *             U      11    V1UnitL[2],V1UnitV[2]                      GLDFF1H_S_UXTW_SCALED      ldff1h	{ z31.s }, p7/z, [sp, z31.s, uxtw #1]
+# CHECK-NEXT:  2      11    0.67    *             U      11    V1UnitL[2],V1UnitV[2]                      GLDFF1H_S_SXTW_SCALED      ldff1h	{ z31.s }, p7/z, [sp, z31.s, sxtw #1]
+# CHECK-NEXT:  2      11    0.67    *             U      11    V1UnitL[2],V1UnitV[2]                      GLDFF1H_S_UXTW_SCALED      ldff1h	{ z31.s }, p7/z, [sp, z31.s, uxtw #1]
 # CHECK-NEXT:  2      7     0.50    *             U      7     V1UnitI,V1UnitL,V1UnitL01,V1UnitS          LDFF1H_S                   ldff1h	{ z31.s }, p7/z, [sp]
 # CHECK-NEXT:  2      11    0.33    *             U      11    V1UnitL,V1UnitV                            GLDFF1H_S_IMM              ldff1h	{ z31.s }, p7/z, [z31.s, #62]
 # CHECK-NEXT:  2      6     0.50    *             U      6     V1UnitI,V1UnitL,V1UnitL01,V1UnitS          LDFF1SB_D                  ldff1sb	{ z0.d }, p0/z, [x0, x0]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SB_D_IMM             ldff1sb	{ z0.d }, p0/z, [z0.d]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SB_D_IMM             ldff1sb	{ z0.d }, p0/z, [z0.d]
 # CHECK-NEXT:  2      6     0.50    *             U      6     V1UnitI,V1UnitL,V1UnitL01,V1UnitS          LDFF1SB_H                  ldff1sb	{ z0.h }, p0/z, [x0, x0]
 # CHECK-NEXT:  2      6     0.50    *             U      6     V1UnitI,V1UnitL,V1UnitL01,V1UnitS          LDFF1SB_S                  ldff1sb	{ z0.s }, p0/z, [x0, x0]
 # CHECK-NEXT:  2      9     0.33    *             U      9     V1UnitL,V1UnitV                            GLDFF1SB_S_SXTW            ldff1sb	{ z0.s }, p0/z, [x0, z0.s, sxtw]
 # CHECK-NEXT:  2      9     0.33    *             U      9     V1UnitL,V1UnitV                            GLDFF1SB_S_UXTW            ldff1sb	{ z0.s }, p0/z, [x0, z0.s, uxtw]
 # CHECK-NEXT:  2      11    0.33    *             U      11    V1UnitL,V1UnitV                            GLDFF1SB_S_IMM             ldff1sb	{ z0.s }, p0/z, [z0.s]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SB_D_SXTW            ldff1sb	{ z21.d }, p5/z, [x10, z21.d, sxtw]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SB_D_UXTW            ldff1sb	{ z21.d }, p5/z, [x10, z21.d, uxtw]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SB_D                 ldff1sb	{ z31.d }, p7/z, [sp, z31.d]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SB_D_SXTW            ldff1sb	{ z21.d }, p5/z, [x10, z21.d, sxtw]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SB_D_UXTW            ldff1sb	{ z21.d }, p5/z, [x10, z21.d, uxtw]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SB_D                 ldff1sb	{ z31.d }, p7/z, [sp, z31.d]
 # CHECK-NEXT:  2      6     0.50    *             U      6     V1UnitI,V1UnitL,V1UnitL01,V1UnitS          LDFF1SB_D                  ldff1sb	{ z31.d }, p7/z, [sp]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SB_D_IMM             ldff1sb	{ z31.d }, p7/z, [z31.d, #31]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SB_D_IMM             ldff1sb	{ z31.d }, p7/z, [z31.d, #31]
 # CHECK-NEXT:  2      6     0.50    *             U      6     V1UnitI,V1UnitL,V1UnitL01,V1UnitS          LDFF1SB_H                  ldff1sb	{ z31.h }, p7/z, [sp]
 # CHECK-NEXT:  2      6     0.50    *             U      6     V1UnitI,V1UnitL,V1UnitL01,V1UnitS          LDFF1SB_S                  ldff1sb	{ z31.s }, p7/z, [sp]
 # CHECK-NEXT:  2      11    0.33    *             U      11    V1UnitL,V1UnitV                            GLDFF1SB_S_IMM             ldff1sb	{ z31.s }, p7/z, [z31.s, #31]
 # CHECK-NEXT:  2      7     0.50    *             U      7     V1UnitI,V1UnitL,V1UnitL01,V1UnitS          LDFF1SH_D                  ldff1sh	{ z0.d }, p0/z, [x0, x0, lsl #1]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SH_D_SXTW_SCALED     ldff1sh	{ z0.d }, p0/z, [x0, z0.d, sxtw #1]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SH_D_UXTW_SCALED     ldff1sh	{ z0.d }, p0/z, [x0, z0.d, uxtw #1]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SH_D_IMM             ldff1sh	{ z0.d }, p0/z, [z0.d]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SH_D_SXTW_SCALED     ldff1sh	{ z0.d }, p0/z, [x0, z0.d, sxtw #1]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SH_D_UXTW_SCALED     ldff1sh	{ z0.d }, p0/z, [x0, z0.d, uxtw #1]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SH_D_IMM             ldff1sh	{ z0.d }, p0/z, [z0.d]
 # CHECK-NEXT:  2      7     0.50    *             U      7     V1UnitI,V1UnitL,V1UnitL01,V1UnitS          LDFF1SH_S                  ldff1sh	{ z0.s }, p0/z, [x0, x0, lsl #1]
 # CHECK-NEXT:  2      9     0.33    *             U      9     V1UnitL,V1UnitV                            GLDFF1SH_S_SXTW            ldff1sh	{ z0.s }, p0/z, [x0, z0.s, sxtw]
 # CHECK-NEXT:  2      9     0.33    *             U      9     V1UnitL,V1UnitV                            GLDFF1SH_S_UXTW            ldff1sh	{ z0.s }, p0/z, [x0, z0.s, uxtw]
 # CHECK-NEXT:  2      11    0.33    *             U      11    V1UnitL,V1UnitV                            GLDFF1SH_S_IMM             ldff1sh	{ z0.s }, p0/z, [z0.s]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SH_D_SXTW            ldff1sh	{ z21.d }, p5/z, [x10, z21.d, sxtw]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SH_D_UXTW            ldff1sh	{ z21.d }, p5/z, [x10, z21.d, uxtw]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SH_D_SCALED          ldff1sh	{ z23.d }, p3/z, [x13, z8.d, lsl #1]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SH_D                 ldff1sh	{ z31.d }, p7/z, [sp, z31.d]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SH_D_SXTW            ldff1sh	{ z21.d }, p5/z, [x10, z21.d, sxtw]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SH_D_UXTW            ldff1sh	{ z21.d }, p5/z, [x10, z21.d, uxtw]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SH_D_SCALED          ldff1sh	{ z23.d }, p3/z, [x13, z8.d, lsl #1]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SH_D                 ldff1sh	{ z31.d }, p7/z, [sp, z31.d]
 # CHECK-NEXT:  2      7     0.50    *             U      7     V1UnitI,V1UnitL,V1UnitL01,V1UnitS          LDFF1SH_D                  ldff1sh	{ z31.d }, p7/z, [sp]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SH_D_IMM             ldff1sh	{ z31.d }, p7/z, [z31.d, #62]
-# CHECK-NEXT:  4      11    0.67    *             U      11    V1UnitL[2],V1UnitV[2]                      GLDFF1SH_S_SXTW_SCALED     ldff1sh	{ z31.s }, p7/z, [sp, z31.s, sxtw #1]
-# CHECK-NEXT:  4      11    0.67    *             U      11    V1UnitL[2],V1UnitV[2]                      GLDFF1SH_S_UXTW_SCALED     ldff1sh	{ z31.s }, p7/z, [sp, z31.s, uxtw #1]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SH_D_IMM             ldff1sh	{ z31.d }, p7/z, [z31.d, #62]
+# CHECK-NEXT:  2      11    0.67    *             U      11    V1UnitL[2],V1UnitV[2]                      GLDFF1SH_S_SXTW_SCALED     ldff1sh	{ z31.s }, p7/z, [sp, z31.s, sxtw #1]
+# CHECK-NEXT:  2      11    0.67    *             U      11    V1UnitL[2],V1UnitV[2]                      GLDFF1SH_S_UXTW_SCALED     ldff1sh	{ z31.s }, p7/z, [sp, z31.s, uxtw #1]
 # CHECK-NEXT:  2      7     0.50    *             U      7     V1UnitI,V1UnitL,V1UnitL01,V1UnitS          LDFF1SH_S                  ldff1sh	{ z31.s }, p7/z, [sp]
 # CHECK-NEXT:  2      11    0.33    *             U      11    V1UnitL,V1UnitV                            GLDFF1SH_S_IMM             ldff1sh	{ z31.s }, p7/z, [z31.s, #62]
 # CHECK-NEXT:  2      6     0.50    *             U      6     V1UnitI,V1UnitL,V1UnitL01,V1UnitS          LDFF1SW_D                  ldff1sw	{ z0.d }, p0/z, [x0, x0, lsl #2]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SW_D_SXTW_SCALED     ldff1sw	{ z0.d }, p0/z, [x0, z0.d, sxtw #2]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SW_D_UXTW_SCALED     ldff1sw	{ z0.d }, p0/z, [x0, z0.d, uxtw #2]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SW_D_IMM             ldff1sw	{ z0.d }, p0/z, [z0.d]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SW_D_SXTW            ldff1sw	{ z21.d }, p5/z, [x10, z21.d, sxtw]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SW_D_UXTW            ldff1sw	{ z21.d }, p5/z, [x10, z21.d, uxtw]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SW_D_SCALED          ldff1sw	{ z23.d }, p3/z, [x13, z8.d, lsl #2]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SW_D                 ldff1sw	{ z31.d }, p7/z, [sp, z31.d]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SW_D_SXTW_SCALED     ldff1sw	{ z0.d }, p0/z, [x0, z0.d, sxtw #2]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SW_D_UXTW_SCALED     ldff1sw	{ z0.d }, p0/z, [x0, z0.d, uxtw #2]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SW_D_IMM             ldff1sw	{ z0.d }, p0/z, [z0.d]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SW_D_SXTW            ldff1sw	{ z21.d }, p5/z, [x10, z21.d, sxtw]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SW_D_UXTW            ldff1sw	{ z21.d }, p5/z, [x10, z21.d, uxtw]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SW_D_SCALED          ldff1sw	{ z23.d }, p3/z, [x13, z8.d, lsl #2]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SW_D                 ldff1sw	{ z31.d }, p7/z, [sp, z31.d]
 # CHECK-NEXT:  2      6     0.50    *             U      6     V1UnitI,V1UnitL,V1UnitL01,V1UnitS          LDFF1SW_D                  ldff1sw	{ z31.d }, p7/z, [sp]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SW_D_IMM             ldff1sw	{ z31.d }, p7/z, [z31.d, #124]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1SW_D_IMM             ldff1sw	{ z31.d }, p7/z, [z31.d, #124]
 # CHECK-NEXT:  2      6     0.50    *             U      6     V1UnitI,V1UnitL,V1UnitL01,V1UnitS          LDFF1W_D                   ldff1w	{ z0.d }, p0/z, [x0, x0, lsl #2]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1W_D_SXTW_SCALED      ldff1w	{ z0.d }, p0/z, [x0, z0.d, sxtw #2]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1W_D_UXTW_SCALED      ldff1w	{ z0.d }, p0/z, [x0, z0.d, uxtw #2]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1W_D_IMM              ldff1w	{ z0.d }, p0/z, [z0.d]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1W_D_SXTW_SCALED      ldff1w	{ z0.d }, p0/z, [x0, z0.d, sxtw #2]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1W_D_UXTW_SCALED      ldff1w	{ z0.d }, p0/z, [x0, z0.d, uxtw #2]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1W_D_IMM              ldff1w	{ z0.d }, p0/z, [z0.d]
 # CHECK-NEXT:  2      6     0.50    *             U      6     V1UnitI,V1UnitL,V1UnitL01,V1UnitS          LDFF1W                     ldff1w	{ z0.s }, p0/z, [x0, x0, lsl #2]
 # CHECK-NEXT:  2      9     0.33    *             U      9     V1UnitL,V1UnitV                            GLDFF1W_SXTW               ldff1w	{ z0.s }, p0/z, [x0, z0.s, sxtw]
 # CHECK-NEXT:  2      9     0.33    *             U      9     V1UnitL,V1UnitV                            GLDFF1W_UXTW               ldff1w	{ z0.s }, p0/z, [x0, z0.s, uxtw]
 # CHECK-NEXT:  2      11    0.33    *             U      11    V1UnitL,V1UnitV                            GLDFF1W_IMM                ldff1w	{ z0.s }, p0/z, [z0.s]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1W_D_SXTW             ldff1w	{ z21.d }, p5/z, [x10, z21.d, sxtw]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1W_D_UXTW             ldff1w	{ z21.d }, p5/z, [x10, z21.d, uxtw]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1W_D_SCALED           ldff1w	{ z23.d }, p3/z, [x13, z8.d, lsl #2]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1W_D                  ldff1w	{ z31.d }, p7/z, [sp, z31.d]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1W_D_SXTW             ldff1w	{ z21.d }, p5/z, [x10, z21.d, sxtw]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1W_D_UXTW             ldff1w	{ z21.d }, p5/z, [x10, z21.d, uxtw]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1W_D_SCALED           ldff1w	{ z23.d }, p3/z, [x13, z8.d, lsl #2]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1W_D                  ldff1w	{ z31.d }, p7/z, [sp, z31.d]
 # CHECK-NEXT:  2      6     0.50    *             U      6     V1UnitI,V1UnitL,V1UnitL01,V1UnitS          LDFF1W_D                   ldff1w	{ z31.d }, p7/z, [sp]
-# CHECK-NEXT:  4      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1W_D_IMM              ldff1w	{ z31.d }, p7/z, [z31.d, #124]
-# CHECK-NEXT:  4      11    0.67    *             U      11    V1UnitL[2],V1UnitV[2]                      GLDFF1W_SXTW_SCALED        ldff1w	{ z31.s }, p7/z, [sp, z31.s, sxtw #2]
-# CHECK-NEXT:  4      11    0.67    *             U      11    V1UnitL[2],V1UnitV[2]                      GLDFF1W_UXTW_SCALED        ldff1w	{ z31.s }, p7/z, [sp, z31.s, uxtw #2]
+# CHECK-NEXT:  2      9     0.67    *             U      9     V1UnitL[2],V1UnitV[2]                      GLDFF1W_D_IMM              ldff1w	{ z31.d }, p7/z, [z31.d, #124]
+# CHECK-NEXT:  2      11    0.67    *             U      11    V1UnitL[2],V1UnitV[2]                      GLDFF1W_SXTW_SCALED        ldff1w	{ z31.s }, p7/z, [sp, z31.s, sxtw #2]
+# CHECK-NEXT:  2      11    0.67    *             U      11    V1UnitL[2],V1UnitV[2]                      GLDFF1W_UXTW_SCALED        ldff1w	{ z31.s }, p7/z, [sp, z31.s, uxtw #2]
 # CHECK-NEXT:  2      6     0.50    *             U      6     V1UnitI,V1UnitL,V1UnitL01,V1UnitS          LDFF1W                     ldff1w	{ z31.s }, p7/z, [sp]
 # CHECK-NEXT:  2      11    0.33    *             U      11    V1UnitL,V1UnitV                            GLDFF1W_IMM                ldff1w	{ z31.s }, p7/z, [z31.s, #124]
 # CHECK-NEXT:  1      6     0.50    *             U      6     V1UnitL,V1UnitL01                          LDNF1B_IMM                 ldnf1b	{ z0.b }, p0/z, [x0]
@@ -3987,10 +3987,10 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          DUP_ZI_H                   mov	z5.h, #-6
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          DUP_ZZI_Q                  mov	z5.q, z17.q[3]
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          DUP_ZI_S                   mov	z5.s, #-6
-# CHECK-NEXT:  2      2     2.00                         2     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          ORRS_PPzPP                 movs	p0.b, p0.b
-# CHECK-NEXT:  2      2     2.00                         2     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          ANDS_PPzPP                 movs	p0.b, p0/z, p0.b
-# CHECK-NEXT:  2      2     2.00                         2     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          ORRS_PPzPP                 movs	p15.b, p15.b
-# CHECK-NEXT:  2      2     2.00                         2     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          ANDS_PPzPP                 movs	p15.b, p15/z, p15.b
+# CHECK-NEXT:  1      2     2.00                         2     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          ORRS_PPzPP                 movs	p0.b, p0.b
+# CHECK-NEXT:  1      2     2.00                         2     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          ANDS_PPzPP                 movs	p0.b, p0/z, p0.b
+# CHECK-NEXT:  1      2     2.00                         2     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          ORRS_PPzPP                 movs	p15.b, p15.b
+# CHECK-NEXT:  1      2     2.00                         2     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          ANDS_PPzPP                 movs	p15.b, p15/z, p15.b
 # CHECK-NEXT:  1      1     0.13                  U      1                                                MRS                        mrs	x3, ID_AA64ZFR0_EL1
 # CHECK-NEXT:  1      1     0.13                  U      1                                                MRS                        mrs	x3, ZCR_EL1
 # CHECK-NEXT:  1      1     0.13                  U      1                                                MRS                        mrs	x3, ZCR_EL12
@@ -4005,21 +4005,21 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      1     0.13                  U      1                                                MSR                        msr	ZCR_EL2, x3
 # CHECK-NEXT:  1      1     0.13                  U      1                                                MSR                        msr	ZCR_EL3, x3
 # CHECK-NEXT:  1      4     1.00                         4     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       MUL_ZPmZ_B                 mul	z0.b, p7/m, z0.b, z31.b
-# CHECK-NEXT:  2      5     2.00                         5     V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] MUL_ZPmZ_D           mul	z0.d, p7/m, z0.d, z31.d
+# CHECK-NEXT:  1      5     2.00                         5     V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] MUL_ZPmZ_D           mul	z0.d, p7/m, z0.d, z31.d
 # CHECK-NEXT:  1      4     1.00                         4     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       MUL_ZPmZ_H                 mul	z0.h, p7/m, z0.h, z31.h
 # CHECK-NEXT:  1      4     1.00                         4     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       MUL_ZPmZ_S                 mul	z0.s, p7/m, z0.s, z31.s
 # CHECK-NEXT:  1      4     1.00                         4     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       MUL_ZI_B                   mul	z31.b, z31.b, #-128
 # CHECK-NEXT:  1      4     1.00                         4     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       MUL_ZI_B                   mul	z31.b, z31.b, #127
-# CHECK-NEXT:  2      5     2.00                         5     V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] MUL_ZI_D             mul	z31.d, z31.d, #-128
-# CHECK-NEXT:  2      5     2.00                         5     V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] MUL_ZI_D             mul	z31.d, z31.d, #127
+# CHECK-NEXT:  1      5     2.00                         5     V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] MUL_ZI_D             mul	z31.d, z31.d, #-128
+# CHECK-NEXT:  1      5     2.00                         5     V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] MUL_ZI_D             mul	z31.d, z31.d, #127
 # CHECK-NEXT:  1      4     1.00                         4     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       MUL_ZI_H                   mul	z31.h, z31.h, #-128
 # CHECK-NEXT:  1      4     1.00                         4     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       MUL_ZI_H                   mul	z31.h, z31.h, #127
 # CHECK-NEXT:  1      4     1.00                         4     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       MUL_ZI_S                   mul	z31.s, z31.s, #-128
 # CHECK-NEXT:  1      4     1.00                         4     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       MUL_ZI_S                   mul	z31.s, z31.s, #127
 # CHECK-NEXT:  1      1     1.00                         1     V1UnitI,V1UnitM,V1UnitM0                   NAND_PPzPP                 nand	p0.b, p0/z, p0.b, p0.b
 # CHECK-NEXT:  1      1     1.00                         1     V1UnitI,V1UnitM,V1UnitM0                   NAND_PPzPP                 nand	p15.b, p15/z, p15.b, p15.b
-# CHECK-NEXT:  2      2     2.00                         2     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          NANDS_PPzPP                nands	p0.b, p0/z, p0.b, p0.b
-# CHECK-NEXT:  2      2     2.00                         2     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          NANDS_PPzPP                nands	p15.b, p15/z, p15.b, p15.b
+# CHECK-NEXT:  1      2     2.00                         2     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          NANDS_PPzPP                nands	p0.b, p0/z, p0.b, p0.b
+# CHECK-NEXT:  1      2     2.00                         2     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          NANDS_PPzPP                nands	p15.b, p15/z, p15.b, p15.b
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          NEG_ZPmZ_B                 neg	z0.b, p0/m, z0.b
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          NEG_ZPmZ_D                 neg	z0.d, p0/m, z0.d
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          NEG_ZPmZ_H                 neg	z0.h, p0/m, z0.h
@@ -4030,20 +4030,20 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          NEG_ZPmZ_S                 neg	z31.s, p7/m, z31.s
 # CHECK-NEXT:  1      1     1.00                         1     V1UnitI,V1UnitM,V1UnitM0                   NOR_PPzPP                  nor	p0.b, p0/z, p0.b, p0.b
 # CHECK-NEXT:  1      1     1.00                         1     V1UnitI,V1UnitM,V1UnitM0                   NOR_PPzPP                  nor	p15.b, p15/z, p15.b, p15.b
-# CHECK-NEXT:  2      2     2.00                         2     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          NORS_PPzPP                 nors	p0.b, p0/z, p0.b, p0.b
-# CHECK-NEXT:  2      2     2.00                         2     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          NORS_PPzPP                 nors	p15.b, p15/z, p15.b, p15.b
+# CHECK-NEXT:  1      2     2.00                         2     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          NORS_PPzPP                 nors	p0.b, p0/z, p0.b, p0.b
+# CHECK-NEXT:  1      2     2.00                         2     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          NORS_PPzPP                 nors	p15.b, p15/z, p15.b, p15.b
 # CHECK-NEXT:  1      1     1.00                         1     V1UnitI,V1UnitM,V1UnitM0                   EOR_PPzPP                  not	p0.b, p0/z, p0.b
 # CHECK-NEXT:  1      1     1.00                         1     V1UnitI,V1UnitM,V1UnitM0                   EOR_PPzPP                  not	p15.b, p15/z, p15.b
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          NOT_ZPmZ_B                 not	z31.b, p7/m, z31.b
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          NOT_ZPmZ_D                 not	z31.d, p7/m, z31.d
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          NOT_ZPmZ_H                 not	z31.h, p7/m, z31.h
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          NOT_ZPmZ_S                 not	z31.s, p7/m, z31.s
-# CHECK-NEXT:  2      2     2.00                         2     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          EORS_PPzPP                 nots	p0.b, p0/z, p0.b
-# CHECK-NEXT:  2      2     2.00                         2     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          EORS_PPzPP                 nots	p15.b, p15/z, p15.b
+# CHECK-NEXT:  1      2     2.00                         2     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          EORS_PPzPP                 nots	p0.b, p0/z, p0.b
+# CHECK-NEXT:  1      2     2.00                         2     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          EORS_PPzPP                 nots	p15.b, p15/z, p15.b
 # CHECK-NEXT:  1      1     1.00                         1     V1UnitI,V1UnitM,V1UnitM0                   ORN_PPzPP                  orn	p0.b, p0/z, p0.b, p0.b
 # CHECK-NEXT:  1      1     1.00                         1     V1UnitI,V1UnitM,V1UnitM0                   ORN_PPzPP                  orn	p15.b, p15/z, p15.b, p15.b
-# CHECK-NEXT:  2      2     2.00                         2     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          ORNS_PPzPP                 orns	p0.b, p0/z, p0.b, p0.b
-# CHECK-NEXT:  2      2     2.00                         2     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          ORNS_PPzPP                 orns	p15.b, p15/z, p15.b, p15.b
+# CHECK-NEXT:  1      2     2.00                         2     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          ORNS_PPzPP                 orns	p0.b, p0/z, p0.b, p0.b
+# CHECK-NEXT:  1      2     2.00                         2     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          ORNS_PPzPP                 orns	p15.b, p15/z, p15.b, p15.b
 # CHECK-NEXT:  1      1     1.00                         1     V1UnitI,V1UnitM,V1UnitM0                   ORR_PPzPP                  orr	p0.b, p0/z, p0.b, p1.b
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          ORR_ZI                     orr	z0.d, z0.d, #0x6
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          ORR_ZI                     orr	z0.d, z0.d, #0xfffffffffffffff9
@@ -4058,11 +4058,11 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          ORR_ZPmZ_S                 orr	z31.s, p7/m, z31.s, z31.s
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          ORR_ZI                     orr	z5.b, z5.b, #0x6
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          ORR_ZI                     orr	z5.b, z5.b, #0xf9
-# CHECK-NEXT:  2      2     2.00                         2     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          ORRS_PPzPP                 orrs	p0.b, p0/z, p0.b, p1.b
-# CHECK-NEXT:  4      12    2.00                         12    V1UnitV[4],V1UnitV01[4]                    ORV_VPZ_B                  orv	b0, p7, z31.b
-# CHECK-NEXT:  4      12    2.00                         12    V1UnitV[4],V1UnitV01[4]                    ORV_VPZ_D                  orv	d0, p7, z31.d
-# CHECK-NEXT:  4      12    2.00                         12    V1UnitV[4],V1UnitV01[4]                    ORV_VPZ_H                  orv	h0, p7, z31.h
-# CHECK-NEXT:  4      12    2.00                         12    V1UnitV[4],V1UnitV01[4]                    ORV_VPZ_S                  orv	s0, p7, z31.s
+# CHECK-NEXT:  1      2     2.00                         2     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          ORRS_PPzPP                 orrs	p0.b, p0/z, p0.b, p1.b
+# CHECK-NEXT:  1      12    2.00                         12    V1UnitV[4],V1UnitV01[4]                    ORV_VPZ_B                  orv	b0, p7, z31.b
+# CHECK-NEXT:  1      12    2.00                         12    V1UnitV[4],V1UnitV01[4]                    ORV_VPZ_D                  orv	d0, p7, z31.d
+# CHECK-NEXT:  1      12    2.00                         12    V1UnitV[4],V1UnitV01[4]                    ORV_VPZ_H                  orv	h0, p7, z31.h
+# CHECK-NEXT:  1      12    2.00                         12    V1UnitV[4],V1UnitV01[4]                    ORV_VPZ_S                  orv	s0, p7, z31.s
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   PFALSE                     pfalse	p15.b
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   PFIRST_B                   pfirst	p0.b, p15, p0.b
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   PFIRST_B                   pfirst	p15.b, p15, p15.b
@@ -4142,45 +4142,45 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   PTRUE_S                    ptrue	p7.s, vl64
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   PTRUE_S                    ptrue	p7.s, vl7
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   PTRUE_S                    ptrue	p7.s, vl8
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_B                   ptrues	p0.b, pow2
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_D                   ptrues	p0.d, pow2
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_H                   ptrues	p0.h, pow2
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p0.s, pow2
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_B                   ptrues	p15.b
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_D                   ptrues	p15.d
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_H                   ptrues	p15.h
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p15.s
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, #14
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, #15
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, #16
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, #17
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, #18
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, #19
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, #20
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, #21
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, #22
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, #23
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, #24
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, #25
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, #26
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, #27
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, #28
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, mul3
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, mul4
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, vl1
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, vl128
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, vl16
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, vl2
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, vl256
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, vl3
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, vl32
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, vl4
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, vl5
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, vl6
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, vl64
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, vl7
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, vl8
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_B                   ptrues	p0.b, pow2
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_D                   ptrues	p0.d, pow2
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_H                   ptrues	p0.h, pow2
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p0.s, pow2
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_B                   ptrues	p15.b
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_D                   ptrues	p15.d
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_H                   ptrues	p15.h
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p15.s
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, #14
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, #15
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, #16
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, #17
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, #18
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, #19
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, #20
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, #21
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, #22
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, #23
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, #24
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, #25
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, #26
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, #27
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, #28
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, mul3
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, mul4
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, vl1
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, vl128
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, vl16
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, vl2
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, vl256
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, vl3
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, vl32
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, vl4
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, vl5
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, vl6
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, vl64
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, vl7
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          PTRUES_S                   ptrues	p7.s, vl8
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   PUNPKHI_PP                 punpkhi	p0.h, p0.b
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   PUNPKHI_PP                 punpkhi	p15.h, p15.b
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   PUNPKLO_PP                 punpklo	p0.h, p0.b
@@ -4190,9 +4190,9 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          RBIT_ZPmZ_H                rbit	z0.h, p7/m, z31.h
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          RBIT_ZPmZ_S                rbit	z0.s, p7/m, z31.s
 # CHECK-NEXT:  1      2     1.00    *             U      2     V1UnitI,V1UnitM,V1UnitM0                   RDFFR_P                    rdffr	p0.b
-# CHECK-NEXT:  2      3     2.00    *             U      3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          RDFFR_PPz                  rdffr	p0.b, p0/z
+# CHECK-NEXT:  1      3     2.00    *             U      3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          RDFFR_PPz                  rdffr	p0.b, p0/z
 # CHECK-NEXT:  1      2     1.00    *             U      2     V1UnitI,V1UnitM,V1UnitM0                   RDFFR_P                    rdffr	p15.b
-# CHECK-NEXT:  2      3     2.00    *             U      3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          RDFFR_PPz                  rdffr	p15.b, p15/z
+# CHECK-NEXT:  1      3     2.00    *             U      3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          RDFFR_PPz                  rdffr	p15.b, p15/z
 # CHECK-NEXT:  1      4     0.50                  U      4     V1UnitI,V1UnitM                            RDFFRS_PPz                 rdffrs	p0.b, p0/z
 # CHECK-NEXT:  1      4     0.50                  U      4     V1UnitI,V1UnitM                            RDFFRS_PPz                 rdffrs	p15.b, p15/z
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   RDVLI_XI                   rdvl	x0, #0
@@ -4214,16 +4214,16 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          SABD_ZPmZ_D                sabd	z31.d, p7/m, z31.d, z31.d
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          SABD_ZPmZ_H                sabd	z31.h, p7/m, z31.h, z31.h
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          SABD_ZPmZ_S                sabd	z31.s, p7/m, z31.s, z31.s
-# CHECK-NEXT:  5      14    2.00                         14    V1UnitV[5],V1UnitV0,V1UnitV1[2],V1UnitV01[3],V1UnitV02,V1UnitV13[3] SADDV_VPZ_B saddv	d0, p7, z31.b
-# CHECK-NEXT:  4      12    2.00                         12    V1UnitV[4],V1UnitV1[2],V1UnitV01[3],V1UnitV13[2] SADDV_VPZ_H          saddv	d0, p7, z31.h
-# CHECK-NEXT:  4      10    2.00                         10    V1UnitV[4],V1UnitV1[2],V1UnitV01[3],V1UnitV13[2] SADDV_VPZ_S          saddv	d0, p7, z31.s
+# CHECK-NEXT:  4      14    2.00                         14    V1UnitV[5],V1UnitV0,V1UnitV1[2],V1UnitV01[3],V1UnitV02,V1UnitV13[3] SADDV_VPZ_B saddv	d0, p7, z31.b
+# CHECK-NEXT:  3      12    2.00                         12    V1UnitV[4],V1UnitV1[2],V1UnitV01[3],V1UnitV13[2] SADDV_VPZ_H          saddv	d0, p7, z31.h
+# CHECK-NEXT:  3      10    2.00                         10    V1UnitV[4],V1UnitV1[2],V1UnitV01[3],V1UnitV13[2] SADDV_VPZ_S          saddv	d0, p7, z31.s
 # CHECK-NEXT:  1      3     1.00                         3     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       SCVTF_ZPmZ_DtoD            scvtf	z0.d, p0/m, z0.d
 # CHECK-NEXT:  1      3     1.00                         3     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       SCVTF_ZPmZ_StoD            scvtf	z18.d, p3/m, z16.s
-# CHECK-NEXT:  4      6     4.00                         6     V1UnitV[4],V1UnitV0[4],V1UnitV01[4],V1UnitV02[4] SCVTF_ZPmZ_HtoH      scvtf	z0.h, p0/m, z0.h
-# CHECK-NEXT:  2      4     2.00                         4     V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] SCVTF_ZPmZ_StoH      scvtf	z0.h, p0/m, z0.s
+# CHECK-NEXT:  1      6     4.00                         6     V1UnitV[4],V1UnitV0[4],V1UnitV01[4],V1UnitV02[4] SCVTF_ZPmZ_HtoH      scvtf	z0.h, p0/m, z0.h
+# CHECK-NEXT:  1      4     2.00                         4     V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] SCVTF_ZPmZ_StoH      scvtf	z0.h, p0/m, z0.s
 # CHECK-NEXT:  1      3     1.00                         3     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       SCVTF_ZPmZ_DtoH            scvtf	z18.h, p1/m, z14.d
 # CHECK-NEXT:  1      3     1.00                         3     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       SCVTF_ZPmZ_DtoS            scvtf	z0.s, p0/m, z0.d
-# CHECK-NEXT:  2      4     2.00                         4     V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] SCVTF_ZPmZ_StoS      scvtf	z0.s, p0/m, z0.s
+# CHECK-NEXT:  1      4     2.00                         4     V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] SCVTF_ZPmZ_StoS      scvtf	z0.s, p0/m, z0.s
 # CHECK-NEXT:  1      20    7.00                         20    V1UnitV[7],V1UnitV0[7],V1UnitV01[7],V1UnitV02[7] SDIV_ZPmZ_D          sdiv	z0.d, p7/m, z0.d, z31.d
 # CHECK-NEXT:  1      12    7.00                         12    V1UnitV[7],V1UnitV0[7],V1UnitV01[7],V1UnitV02[7] SDIV_ZPmZ_S          sdiv	z0.s, p7/m, z0.s, z31.s
 # CHECK-NEXT:  1      20    7.00                         20    V1UnitV[7],V1UnitV0[7],V1UnitV01[7],V1UnitV02[7] SDIVR_ZPmZ_D         sdivr	z0.d, p7/m, z0.d, z31.d
@@ -4249,9 +4249,9 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          SMAX_ZI_H                  smax	z31.h, z31.h, #127
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          SMAX_ZPmZ_S                smax	z31.s, p7/m, z31.s, z31.s
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          SMAX_ZI_S                  smax	z31.s, z31.s, #127
-# CHECK-NEXT:  5      14    2.00                         14    V1UnitV[5],V1UnitV0,V1UnitV1[2],V1UnitV01[3],V1UnitV02,V1UnitV13[3] SMAXV_VPZ_B smaxv	b0, p7, z31.b
-# CHECK-NEXT:  4      12    2.00                         12    V1UnitV[4],V1UnitV1[2],V1UnitV01[3],V1UnitV13[2] SMAXV_VPZ_H          smaxv	h0, p7, z31.h
-# CHECK-NEXT:  4      10    2.00                         10    V1UnitV[4],V1UnitV1[2],V1UnitV01[3],V1UnitV13[2] SMAXV_VPZ_S          smaxv	s0, p7, z31.s
+# CHECK-NEXT:  4      14    2.00                         14    V1UnitV[5],V1UnitV0,V1UnitV1[2],V1UnitV01[3],V1UnitV02,V1UnitV13[3] SMAXV_VPZ_B smaxv	b0, p7, z31.b
+# CHECK-NEXT:  3      12    2.00                         12    V1UnitV[4],V1UnitV1[2],V1UnitV01[3],V1UnitV13[2] SMAXV_VPZ_H          smaxv	h0, p7, z31.h
+# CHECK-NEXT:  3      10    2.00                         10    V1UnitV[4],V1UnitV1[2],V1UnitV01[3],V1UnitV13[2] SMAXV_VPZ_S          smaxv	s0, p7, z31.s
 # CHECK-NEXT:  2      8     0.50                         8     V1UnitV[2],V1UnitV01                       SMAXV_VPZ_D                smaxv	d24, p5, z24.d
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          SMIN_ZI_B                  smin	z0.b, z0.b, #-128
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          SMIN_ZI_D                  smin	z0.d, z0.d, #-128
@@ -4265,13 +4265,13 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          SMIN_ZI_H                  smin	z31.h, z31.h, #127
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          SMIN_ZPmZ_S                smin	z31.s, p7/m, z31.s, z31.s
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          SMIN_ZI_S                  smin	z31.s, z31.s, #127
-# CHECK-NEXT:  5      14    2.00                         14    V1UnitV[5],V1UnitV0,V1UnitV1[2],V1UnitV01[3],V1UnitV02,V1UnitV13[3] SMINV_VPZ_B sminv	b0, p7, z31.b
-# CHECK-NEXT:  4      12    2.00                         12    V1UnitV[4],V1UnitV1[2],V1UnitV01[3],V1UnitV13[2] SMINV_VPZ_H          sminv	h0, p7, z31.h
-# CHECK-NEXT:  4      10    2.00                         10    V1UnitV[4],V1UnitV1[2],V1UnitV01[3],V1UnitV13[2] SMINV_VPZ_S          sminv	s0, p7, z31.s
+# CHECK-NEXT:  4      14    2.00                         14    V1UnitV[5],V1UnitV0,V1UnitV1[2],V1UnitV01[3],V1UnitV02,V1UnitV13[3] SMINV_VPZ_B sminv	b0, p7, z31.b
+# CHECK-NEXT:  3      12    2.00                         12    V1UnitV[4],V1UnitV1[2],V1UnitV01[3],V1UnitV13[2] SMINV_VPZ_H          sminv	h0, p7, z31.h
+# CHECK-NEXT:  3      10    2.00                         10    V1UnitV[4],V1UnitV1[2],V1UnitV01[3],V1UnitV13[2] SMINV_VPZ_S          sminv	s0, p7, z31.s
 # CHECK-NEXT:  2      8     0.50                         8     V1UnitV[2],V1UnitV01                       SMINV_VPZ_D                sminv	d17, p2, z18.d
 # CHECK-NEXT:  1      3     0.50                         1     V1UnitV,V1UnitV01                          SMMLA_ZZZ                  smmla	z0.s, z1.b, z2.b
 # CHECK-NEXT:  1      4     1.00                         4     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       SMULH_ZPmZ_B               smulh	z0.b, p7/m, z0.b, z31.b
-# CHECK-NEXT:  2      5     2.00                         5     V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] SMULH_ZPmZ_D         smulh	z0.d, p7/m, z0.d, z31.d
+# CHECK-NEXT:  1      5     2.00                         5     V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] SMULH_ZPmZ_D         smulh	z0.d, p7/m, z0.d, z31.d
 # CHECK-NEXT:  1      4     1.00                         4     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       SMULH_ZPmZ_H               smulh	z0.h, p7/m, z0.h, z31.h
 # CHECK-NEXT:  1      4     1.00                         4     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       SMULH_ZPmZ_S               smulh	z0.s, p7/m, z0.s, z31.s
 # CHECK-NEXT:  1      3     1.00                         3     V1UnitV,V1UnitV1,V1UnitV01,V1UnitV13       SPLICE_ZPZ_B               splice	z31.b, p7, z31.b, z31.b
@@ -4336,9 +4336,9 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   SQDECP_XPWd_D              sqdecp	xzr, p15.d, wzr
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   SQDECP_XPWd_H              sqdecp	xzr, p15.h, wzr
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   SQDECP_XPWd_S              sqdecp	xzr, p15.s, wzr
-# CHECK-NEXT:  3      7     2.00                         7     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV,V1UnitV01 SQDECP_ZP_D       sqdecp	z0.d, p0.d
-# CHECK-NEXT:  3      7     2.00                         7     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV,V1UnitV01 SQDECP_ZP_H       sqdecp	z0.h, p0.h
-# CHECK-NEXT:  3      7     2.00                         7     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV,V1UnitV01 SQDECP_ZP_S       sqdecp	z0.s, p0.s
+# CHECK-NEXT:  2      7     2.00                         7     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV,V1UnitV01 SQDECP_ZP_D       sqdecp	z0.d, p0.d
+# CHECK-NEXT:  2      7     2.00                         7     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV,V1UnitV01 SQDECP_ZP_H       sqdecp	z0.h, p0.h
+# CHECK-NEXT:  2      7     2.00                         7     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV,V1UnitV01 SQDECP_ZP_S       sqdecp	z0.s, p0.s
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   SQDECW_XPiI                sqdecw	x0
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   SQDECW_XPiI                sqdecw	x0, #14
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   SQDECW_XPiI                sqdecw	x0, all, mul #16
@@ -4395,9 +4395,9 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   SQINCP_XPWd_D              sqincp	xzr, p15.d, wzr
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   SQINCP_XPWd_H              sqincp	xzr, p15.h, wzr
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   SQINCP_XPWd_S              sqincp	xzr, p15.s, wzr
-# CHECK-NEXT:  3      7     2.00                         7     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV,V1UnitV01 SQINCP_ZP_D       sqincp	z0.d, p0.d
-# CHECK-NEXT:  3      7     2.00                         7     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV,V1UnitV01 SQINCP_ZP_H       sqincp	z0.h, p0.h
-# CHECK-NEXT:  3      7     2.00                         7     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV,V1UnitV01 SQINCP_ZP_S       sqincp	z0.s, p0.s
+# CHECK-NEXT:  2      7     2.00                         7     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV,V1UnitV01 SQINCP_ZP_D       sqincp	z0.d, p0.d
+# CHECK-NEXT:  2      7     2.00                         7     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV,V1UnitV01 SQINCP_ZP_H       sqincp	z0.h, p0.h
+# CHECK-NEXT:  2      7     2.00                         7     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV,V1UnitV01 SQINCP_ZP_S       sqincp	z0.s, p0.s
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   SQINCW_XPiI                sqincw	x0
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   SQINCW_XPiI                sqincw	x0, #14
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   SQINCW_XPiI                sqincw	x0, all, mul #16
@@ -4437,10 +4437,10 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  2      2     0.50           *             2     V1UnitL,V1UnitL01,V1UnitV                  ST1B_H                     st1b	{ z0.h }, p0, [x0, x0]
 # CHECK-NEXT:  2      2     0.50           *             2     V1UnitL,V1UnitL01,V1UnitV                  ST1B_H_IMM                 st1b	{ z0.h }, p0, [x0]
 # CHECK-NEXT:  2      2     0.50           *             2     V1UnitL,V1UnitL01,V1UnitV                  ST1B_S                     st1b	{ z0.s }, p0, [x0, x0]
-# CHECK-NEXT:  4      10    1.00           *             10    V1UnitL[2],V1UnitL01[2],V1UnitV[2]         SST1B_S_SXTW               st1b	{ z0.s }, p0, [x0, z0.s, sxtw]
-# CHECK-NEXT:  4      10    1.00           *             10    V1UnitL[2],V1UnitL01[2],V1UnitV[2]         SST1B_S_UXTW               st1b	{ z0.s }, p0, [x0, z0.s, uxtw]
+# CHECK-NEXT:  2      10    1.00           *             10    V1UnitL[2],V1UnitL01[2],V1UnitV[2]         SST1B_S_SXTW               st1b	{ z0.s }, p0, [x0, z0.s, sxtw]
+# CHECK-NEXT:  2      10    1.00           *             10    V1UnitL[2],V1UnitL01[2],V1UnitV[2]         SST1B_S_UXTW               st1b	{ z0.s }, p0, [x0, z0.s, uxtw]
 # CHECK-NEXT:  2      2     0.50           *             2     V1UnitL,V1UnitL01,V1UnitV                  ST1B_S_IMM                 st1b	{ z0.s }, p0, [x0]
-# CHECK-NEXT:  4      10    1.00           *             10    V1UnitL[2],V1UnitL01[2],V1UnitV[2]         SST1B_S_IMM                st1b	{ z0.s }, p7, [z0.s]
+# CHECK-NEXT:  2      10    1.00           *             10    V1UnitL[2],V1UnitL01[2],V1UnitV[2]         SST1B_S_IMM                st1b	{ z0.s }, p7, [z0.s]
 # CHECK-NEXT:  2      2     0.50           *             2     V1UnitL,V1UnitL01,V1UnitV                  ST1B_IMM                   st1b	{ z21.b }, p5, [x10, #5, mul vl]
 # CHECK-NEXT:  2      2     0.50           *             2     V1UnitL,V1UnitL01,V1UnitV                  ST1B_D_IMM                 st1b	{ z21.d }, p5, [x10, #5, mul vl]
 # CHECK-NEXT:  2      2     0.50           *             2     V1UnitL,V1UnitL01,V1UnitV                  ST1B_H_IMM                 st1b	{ z21.h }, p5, [x10, #5, mul vl]
@@ -4450,7 +4450,7 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  2      6     0.50           *             6     V1UnitL,V1UnitL01,V1UnitV                  SST1B_D_IMM                st1b	{ z31.d }, p7, [z31.d, #31]
 # CHECK-NEXT:  2      2     0.50           *             2     V1UnitL,V1UnitL01,V1UnitV                  ST1B_H_IMM                 st1b	{ z31.h }, p7, [sp, #-1, mul vl]
 # CHECK-NEXT:  2      2     0.50           *             2     V1UnitL,V1UnitL01,V1UnitV                  ST1B_S_IMM                 st1b	{ z31.s }, p7, [sp, #-1, mul vl]
-# CHECK-NEXT:  4      10    1.00           *             10    V1UnitL[2],V1UnitL01[2],V1UnitV[2]         SST1B_S_IMM                st1b	{ z31.s }, p7, [z31.s, #31]
+# CHECK-NEXT:  2      10    1.00           *             10    V1UnitL[2],V1UnitL01[2],V1UnitV[2]         SST1B_S_IMM                st1b	{ z31.s }, p7, [z31.s, #31]
 # CHECK-NEXT:  2      2     0.50           *             2     V1UnitL,V1UnitL01,V1UnitV                  ST1D                       st1d	{ z0.d }, p0, [x0, x0, lsl #3]
 # CHECK-NEXT:  2      6     0.50           *             6     V1UnitL,V1UnitL01,V1UnitV                  SST1D_SCALED               st1d	{ z0.d }, p0, [x0, z0.d, lsl #3]
 # CHECK-NEXT:  2      6     0.50           *             6     V1UnitL,V1UnitL01,V1UnitV                  SST1D_SXTW_SCALED          st1d	{ z0.d }, p0, [x0, z0.d, sxtw #3]
@@ -4475,12 +4475,12 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  3      2     0.50           *             2     V1UnitI,V1UnitL,V1UnitL01,V1UnitS,V1UnitV  ST1H                       st1h	{ z0.h }, p0, [x0, x0, lsl #1]
 # CHECK-NEXT:  2      2     0.50           *             2     V1UnitL,V1UnitL01,V1UnitV                  ST1H_IMM                   st1h	{ z0.h }, p0, [x0]
 # CHECK-NEXT:  3      2     0.50           *             2     V1UnitI,V1UnitL,V1UnitL01,V1UnitS,V1UnitV  ST1H_S                     st1h	{ z0.s }, p0, [x0, x0, lsl #1]
-# CHECK-NEXT:  4      10    1.00           *             10    V1UnitL[2],V1UnitL01[2],V1UnitV[2]         SST1H_S_SXTW_SCALED        st1h	{ z0.s }, p0, [x0, z0.s, sxtw #1]
-# CHECK-NEXT:  4      10    1.00           *             10    V1UnitL[2],V1UnitL01[2],V1UnitV[2]         SST1H_S_SXTW               st1h	{ z0.s }, p0, [x0, z0.s, sxtw]
-# CHECK-NEXT:  4      10    1.00           *             10    V1UnitL[2],V1UnitL01[2],V1UnitV[2]         SST1H_S_UXTW_SCALED        st1h	{ z0.s }, p0, [x0, z0.s, uxtw #1]
-# CHECK-NEXT:  4      10    1.00           *             10    V1UnitL[2],V1UnitL01[2],V1UnitV[2]         SST1H_S_UXTW               st1h	{ z0.s }, p0, [x0, z0.s, uxtw]
+# CHECK-NEXT:  2      10    1.00           *             10    V1UnitL[2],V1UnitL01[2],V1UnitV[2]         SST1H_S_SXTW_SCALED        st1h	{ z0.s }, p0, [x0, z0.s, sxtw #1]
+# CHECK-NEXT:  2      10    1.00           *             10    V1UnitL[2],V1UnitL01[2],V1UnitV[2]         SST1H_S_SXTW               st1h	{ z0.s }, p0, [x0, z0.s, sxtw]
+# CHECK-NEXT:  2      10    1.00           *             10    V1UnitL[2],V1UnitL01[2],V1UnitV[2]         SST1H_S_UXTW_SCALED        st1h	{ z0.s }, p0, [x0, z0.s, uxtw #1]
+# CHECK-NEXT:  2      10    1.00           *             10    V1UnitL[2],V1UnitL01[2],V1UnitV[2]         SST1H_S_UXTW               st1h	{ z0.s }, p0, [x0, z0.s, uxtw]
 # CHECK-NEXT:  2      2     0.50           *             2     V1UnitL,V1UnitL01,V1UnitV                  ST1H_S_IMM                 st1h	{ z0.s }, p0, [x0]
-# CHECK-NEXT:  4      10    1.00           *             10    V1UnitL[2],V1UnitL01[2],V1UnitV[2]         SST1H_S_IMM                st1h	{ z0.s }, p7, [z0.s]
+# CHECK-NEXT:  2      10    1.00           *             10    V1UnitL[2],V1UnitL01[2],V1UnitV[2]         SST1H_S_IMM                st1h	{ z0.s }, p7, [z0.s]
 # CHECK-NEXT:  2      2     0.50           *             2     V1UnitL,V1UnitL01,V1UnitV                  ST1H_D_IMM                 st1h	{ z21.d }, p5, [x10, #5, mul vl]
 # CHECK-NEXT:  2      2     0.50           *             2     V1UnitL,V1UnitL01,V1UnitV                  ST1H_IMM                   st1h	{ z21.h }, p5, [x10, #5, mul vl]
 # CHECK-NEXT:  2      2     0.50           *             2     V1UnitL,V1UnitL01,V1UnitV                  ST1H_S_IMM                 st1h	{ z21.s }, p5, [x10, #5, mul vl]
@@ -4488,7 +4488,7 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  2      6     0.50           *             6     V1UnitL,V1UnitL01,V1UnitV                  SST1H_D_IMM                st1h	{ z31.d }, p7, [z31.d, #62]
 # CHECK-NEXT:  2      2     0.50           *             2     V1UnitL,V1UnitL01,V1UnitV                  ST1H_IMM                   st1h	{ z31.h }, p7, [sp, #-1, mul vl]
 # CHECK-NEXT:  2      2     0.50           *             2     V1UnitL,V1UnitL01,V1UnitV                  ST1H_S_IMM                 st1h	{ z31.s }, p7, [sp, #-1, mul vl]
-# CHECK-NEXT:  4      10    1.00           *             10    V1UnitL[2],V1UnitL01[2],V1UnitV[2]         SST1H_S_IMM                st1h	{ z31.s }, p7, [z31.s, #62]
+# CHECK-NEXT:  2      10    1.00           *             10    V1UnitL[2],V1UnitL01[2],V1UnitV[2]         SST1H_S_IMM                st1h	{ z31.s }, p7, [z31.s, #62]
 # CHECK-NEXT:  2      2     0.50           *             2     V1UnitL,V1UnitL01,V1UnitV                  ST1W_D                     st1w	{ z0.d }, p0, [x0, x0, lsl #2]
 # CHECK-NEXT:  2      6     0.50           *             6     V1UnitL,V1UnitL01,V1UnitV                  SST1W_D_SCALED             st1w	{ z0.d }, p0, [x0, z0.d, lsl #2]
 # CHECK-NEXT:  2      6     0.50           *             6     V1UnitL,V1UnitL01,V1UnitV                  SST1W_D_SXTW_SCALED        st1w	{ z0.d }, p0, [x0, z0.d, sxtw #2]
@@ -4499,18 +4499,18 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  2      2     0.50           *             2     V1UnitL,V1UnitL01,V1UnitV                  ST1W_D_IMM                 st1w	{ z0.d }, p0, [x0]
 # CHECK-NEXT:  2      6     0.50           *             6     V1UnitL,V1UnitL01,V1UnitV                  SST1W_D_IMM                st1w	{ z0.d }, p7, [z0.d]
 # CHECK-NEXT:  2      2     0.50           *             2     V1UnitL,V1UnitL01,V1UnitV                  ST1W                       st1w	{ z0.s }, p0, [x0, x0, lsl #2]
-# CHECK-NEXT:  4      10    1.00           *             10    V1UnitL[2],V1UnitL01[2],V1UnitV[2]         SST1W_SXTW_SCALED          st1w	{ z0.s }, p0, [x0, z0.s, sxtw #2]
-# CHECK-NEXT:  4      10    1.00           *             10    V1UnitL[2],V1UnitL01[2],V1UnitV[2]         SST1W_SXTW                 st1w	{ z0.s }, p0, [x0, z0.s, sxtw]
-# CHECK-NEXT:  4      10    1.00           *             10    V1UnitL[2],V1UnitL01[2],V1UnitV[2]         SST1W_UXTW_SCALED          st1w	{ z0.s }, p0, [x0, z0.s, uxtw #2]
-# CHECK-NEXT:  4      10    1.00           *             10    V1UnitL[2],V1UnitL01[2],V1UnitV[2]         SST1W_UXTW                 st1w	{ z0.s }, p0, [x0, z0.s, uxtw]
+# CHECK-NEXT:  2      10    1.00           *             10    V1UnitL[2],V1UnitL01[2],V1UnitV[2]         SST1W_SXTW_SCALED          st1w	{ z0.s }, p0, [x0, z0.s, sxtw #2]
+# CHECK-NEXT:  2      10    1.00           *             10    V1UnitL[2],V1UnitL01[2],V1UnitV[2]         SST1W_SXTW                 st1w	{ z0.s }, p0, [x0, z0.s, sxtw]
+# CHECK-NEXT:  2      10    1.00           *             10    V1UnitL[2],V1UnitL01[2],V1UnitV[2]         SST1W_UXTW_SCALED          st1w	{ z0.s }, p0, [x0, z0.s, uxtw #2]
+# CHECK-NEXT:  2      10    1.00           *             10    V1UnitL[2],V1UnitL01[2],V1UnitV[2]         SST1W_UXTW                 st1w	{ z0.s }, p0, [x0, z0.s, uxtw]
 # CHECK-NEXT:  2      2     0.50           *             2     V1UnitL,V1UnitL01,V1UnitV                  ST1W_IMM                   st1w	{ z0.s }, p0, [x0]
-# CHECK-NEXT:  4      10    1.00           *             10    V1UnitL[2],V1UnitL01[2],V1UnitV[2]         SST1W_IMM                  st1w	{ z0.s }, p7, [z0.s]
+# CHECK-NEXT:  2      10    1.00           *             10    V1UnitL[2],V1UnitL01[2],V1UnitV[2]         SST1W_IMM                  st1w	{ z0.s }, p7, [z0.s]
 # CHECK-NEXT:  2      2     0.50           *             2     V1UnitL,V1UnitL01,V1UnitV                  ST1W_D_IMM                 st1w	{ z21.d }, p5, [x10, #5, mul vl]
 # CHECK-NEXT:  2      2     0.50           *             2     V1UnitL,V1UnitL01,V1UnitV                  ST1W_IMM                   st1w	{ z21.s }, p5, [x10, #5, mul vl]
 # CHECK-NEXT:  2      2     0.50           *             2     V1UnitL,V1UnitL01,V1UnitV                  ST1W_D_IMM                 st1w	{ z31.d }, p7, [sp, #-1, mul vl]
 # CHECK-NEXT:  2      6     0.50           *             6     V1UnitL,V1UnitL01,V1UnitV                  SST1W_D_IMM                st1w	{ z31.d }, p7, [z31.d, #124]
 # CHECK-NEXT:  2      2     0.50           *             2     V1UnitL,V1UnitL01,V1UnitV                  ST1W_IMM                   st1w	{ z31.s }, p7, [sp, #-1, mul vl]
-# CHECK-NEXT:  4      10    1.00           *             10    V1UnitL[2],V1UnitL01[2],V1UnitV[2]         SST1W_IMM                  st1w	{ z31.s }, p7, [z31.s, #124]
+# CHECK-NEXT:  2      10    1.00           *             10    V1UnitL[2],V1UnitL01[2],V1UnitV[2]         SST1W_IMM                  st1w	{ z31.s }, p7, [z31.s, #124]
 # CHECK-NEXT:  2      4     0.50           *             4     V1UnitL,V1UnitL01,V1UnitV                  ST2B                       st2b	{ z0.b, z1.b }, p0, [x0, x0]
 # CHECK-NEXT:  2      4     0.50           *             4     V1UnitL,V1UnitL01,V1UnitV                  ST2B_IMM                   st2b	{ z0.b, z1.b }, p0, [x0]
 # CHECK-NEXT:  2      4     0.50           *             4     V1UnitL,V1UnitL01,V1UnitV                  ST2B_IMM                   st2b	{ z21.b, z22.b }, p5, [x10, #10, mul vl]
@@ -4531,46 +4531,46 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  2      4     0.50           *             4     V1UnitL,V1UnitL01,V1UnitV                  ST2W_IMM                   st2w	{ z21.s, z22.s }, p5, [x10, #10, mul vl]
 # CHECK-NEXT:  2      4     0.50           *             4     V1UnitL,V1UnitL01,V1UnitV                  ST2W_IMM                   st2w	{ z23.s, z24.s }, p3, [x13, #-16, mul vl]
 # CHECK-NEXT:  2      4     0.50           *             4     V1UnitL,V1UnitL01,V1UnitV                  ST2W                       st2w	{ z5.s, z6.s }, p3, [x17, x16, lsl #2]
-# CHECK-NEXT:  15     7     2.50           *             7     V1UnitI[5],V1UnitL[5],V1UnitL01[5],V1UnitS[5],V1UnitV[5] ST3B         st3b	{ z0.b - z2.b }, p0, [x0, x0]
-# CHECK-NEXT:  10     7     2.50           *             7     V1UnitL[5],V1UnitL01[5],V1UnitV[5]         ST3B_IMM                   st3b	{ z0.b - z2.b }, p0, [x0]
-# CHECK-NEXT:  10     7     2.50           *             7     V1UnitL[5],V1UnitL01[5],V1UnitV[5]         ST3B_IMM                   st3b	{ z21.b - z23.b }, p5, [x10, #15, mul vl]
-# CHECK-NEXT:  10     7     2.50           *             7     V1UnitL[5],V1UnitL01[5],V1UnitV[5]         ST3B_IMM                   st3b	{ z23.b - z25.b }, p3, [x13, #-24, mul vl]
-# CHECK-NEXT:  15     7     2.50           *             7     V1UnitI[5],V1UnitL[5],V1UnitL01[5],V1UnitS[5],V1UnitV[5] ST3B         st3b	{ z5.b - z7.b }, p3, [x17, x16]
-# CHECK-NEXT:  15     7     2.50           *             7     V1UnitI[5],V1UnitL[5],V1UnitL01[5],V1UnitS[5],V1UnitV[5] ST3D         st3d	{ z0.d - z2.d }, p0, [x0, x0, lsl #3]
-# CHECK-NEXT:  10     7     2.50           *             7     V1UnitL[5],V1UnitL01[5],V1UnitV[5]         ST3D_IMM                   st3d	{ z0.d - z2.d }, p0, [x0]
-# CHECK-NEXT:  10     7     2.50           *             7     V1UnitL[5],V1UnitL01[5],V1UnitV[5]         ST3D_IMM                   st3d	{ z21.d - z23.d }, p5, [x10, #15, mul vl]
-# CHECK-NEXT:  10     7     2.50           *             7     V1UnitL[5],V1UnitL01[5],V1UnitV[5]         ST3D_IMM                   st3d	{ z23.d - z25.d }, p3, [x13, #-24, mul vl]
-# CHECK-NEXT:  15     7     2.50           *             7     V1UnitI[5],V1UnitL[5],V1UnitL01[5],V1UnitS[5],V1UnitV[5] ST3D         st3d	{ z5.d - z7.d }, p3, [x17, x16, lsl #3]
-# CHECK-NEXT:  15     7     2.50           *             7     V1UnitI[5],V1UnitL[5],V1UnitL01[5],V1UnitS[5],V1UnitV[5] ST3H         st3h	{ z0.h - z2.h }, p0, [x0, x0, lsl #1]
-# CHECK-NEXT:  10     7     2.50           *             7     V1UnitL[5],V1UnitL01[5],V1UnitV[5]         ST3H_IMM                   st3h	{ z0.h - z2.h }, p0, [x0]
-# CHECK-NEXT:  10     7     2.50           *             7     V1UnitL[5],V1UnitL01[5],V1UnitV[5]         ST3H_IMM                   st3h	{ z21.h - z23.h }, p5, [x10, #15, mul vl]
-# CHECK-NEXT:  10     7     2.50           *             7     V1UnitL[5],V1UnitL01[5],V1UnitV[5]         ST3H_IMM                   st3h	{ z23.h - z25.h }, p3, [x13, #-24, mul vl]
-# CHECK-NEXT:  15     7     2.50           *             7     V1UnitI[5],V1UnitL[5],V1UnitL01[5],V1UnitS[5],V1UnitV[5] ST3H         st3h	{ z5.h - z7.h }, p3, [x17, x16, lsl #1]
-# CHECK-NEXT:  15     7     2.50           *             7     V1UnitI[5],V1UnitL[5],V1UnitL01[5],V1UnitS[5],V1UnitV[5] ST3W         st3w	{ z0.s - z2.s }, p0, [x0, x0, lsl #2]
-# CHECK-NEXT:  10     7     2.50           *             7     V1UnitL[5],V1UnitL01[5],V1UnitV[5]         ST3W_IMM                   st3w	{ z0.s - z2.s }, p0, [x0]
-# CHECK-NEXT:  10     7     2.50           *             7     V1UnitL[5],V1UnitL01[5],V1UnitV[5]         ST3W_IMM                   st3w	{ z21.s - z23.s }, p5, [x10, #15, mul vl]
-# CHECK-NEXT:  10     7     2.50           *             7     V1UnitL[5],V1UnitL01[5],V1UnitV[5]         ST3W_IMM                   st3w	{ z23.s - z25.s }, p3, [x13, #-24, mul vl]
-# CHECK-NEXT:  15     7     2.50           *             7     V1UnitI[5],V1UnitL[5],V1UnitL01[5],V1UnitS[5],V1UnitV[5] ST3W         st3w	{ z5.s - z7.s }, p3, [x17, x16, lsl #2]
-# CHECK-NEXT:  27     11    4.50           *             11    V1UnitI[9],V1UnitL[9],V1UnitL01[9],V1UnitS[9],V1UnitV[9] ST4B         st4b	{ z0.b - z3.b }, p0, [x0, x0]
-# CHECK-NEXT:  18     19    4.50           *             19    V1UnitL[9],V1UnitL01[9],V1UnitV[9]         ST4B_IMM                   st4b	{ z0.b - z3.b }, p0, [x0]
-# CHECK-NEXT:  18     19    4.50           *             19    V1UnitL[9],V1UnitL01[9],V1UnitV[9]         ST4B_IMM                   st4b	{ z21.b - z24.b }, p5, [x10, #20, mul vl]
-# CHECK-NEXT:  18     19    4.50           *             19    V1UnitL[9],V1UnitL01[9],V1UnitV[9]         ST4B_IMM                   st4b	{ z23.b - z26.b }, p3, [x13, #-32, mul vl]
-# CHECK-NEXT:  27     11    4.50           *             11    V1UnitI[9],V1UnitL[9],V1UnitL01[9],V1UnitS[9],V1UnitV[9] ST4B         st4b	{ z5.b - z8.b }, p3, [x17, x16]
-# CHECK-NEXT:  27     11    4.50           *             11    V1UnitI[9],V1UnitL[9],V1UnitL01[9],V1UnitS[9],V1UnitV[9] ST4D         st4d	{ z0.d - z3.d }, p0, [x0, x0, lsl #3]
-# CHECK-NEXT:  18     19    4.50           *             19    V1UnitL[9],V1UnitL01[9],V1UnitV[9]         ST4D_IMM                   st4d	{ z0.d - z3.d }, p0, [x0]
-# CHECK-NEXT:  18     19    4.50           *             19    V1UnitL[9],V1UnitL01[9],V1UnitV[9]         ST4D_IMM                   st4d	{ z21.d - z24.d }, p5, [x10, #20, mul vl]
-# CHECK-NEXT:  18     19    4.50           *             19    V1UnitL[9],V1UnitL01[9],V1UnitV[9]         ST4D_IMM                   st4d	{ z23.d - z26.d }, p3, [x13, #-32, mul vl]
-# CHECK-NEXT:  27     11    4.50           *             11    V1UnitI[9],V1UnitL[9],V1UnitL01[9],V1UnitS[9],V1UnitV[9] ST4D         st4d	{ z5.d - z8.d }, p3, [x17, x16, lsl #3]
-# CHECK-NEXT:  27     11    4.50           *             11    V1UnitI[9],V1UnitL[9],V1UnitL01[9],V1UnitS[9],V1UnitV[9] ST4H         st4h	{ z0.h - z3.h }, p0, [x0, x0, lsl #1]
-# CHECK-NEXT:  18     19    4.50           *             19    V1UnitL[9],V1UnitL01[9],V1UnitV[9]         ST4H_IMM                   st4h	{ z0.h - z3.h }, p0, [x0]
-# CHECK-NEXT:  18     19    4.50           *             19    V1UnitL[9],V1UnitL01[9],V1UnitV[9]         ST4H_IMM                   st4h	{ z21.h - z24.h }, p5, [x10, #20, mul vl]
-# CHECK-NEXT:  18     19    4.50           *             19    V1UnitL[9],V1UnitL01[9],V1UnitV[9]         ST4H_IMM                   st4h	{ z23.h - z26.h }, p3, [x13, #-32, mul vl]
-# CHECK-NEXT:  27     11    4.50           *             11    V1UnitI[9],V1UnitL[9],V1UnitL01[9],V1UnitS[9],V1UnitV[9] ST4H         st4h	{ z5.h - z8.h }, p3, [x17, x16, lsl #1]
-# CHECK-NEXT:  27     11    4.50           *             11    V1UnitI[9],V1UnitL[9],V1UnitL01[9],V1UnitS[9],V1UnitV[9] ST4W         st4w	{ z0.s - z3.s }, p0, [x0, x0, lsl #2]
-# CHECK-NEXT:  18     19    4.50           *             19    V1UnitL[9],V1UnitL01[9],V1UnitV[9]         ST4W_IMM                   st4w	{ z0.s - z3.s }, p0, [x0]
-# CHECK-NEXT:  18     19    4.50           *             19    V1UnitL[9],V1UnitL01[9],V1UnitV[9]         ST4W_IMM                   st4w	{ z21.s - z24.s }, p5, [x10, #20, mul vl]
-# CHECK-NEXT:  18     19    4.50           *             19    V1UnitL[9],V1UnitL01[9],V1UnitV[9]         ST4W_IMM                   st4w	{ z23.s - z26.s }, p3, [x13, #-32, mul vl]
-# CHECK-NEXT:  27     11    4.50           *             11    V1UnitI[9],V1UnitL[9],V1UnitL01[9],V1UnitS[9],V1UnitV[9] ST4W         st4w	{ z5.s - z8.s }, p3, [x17, x16, lsl #2]
+# CHECK-NEXT:  3      7     2.50           *             7     V1UnitI[5],V1UnitL[5],V1UnitL01[5],V1UnitS[5],V1UnitV[5] ST3B         st3b	{ z0.b - z2.b }, p0, [x0, x0]
+# CHECK-NEXT:  2      7     2.50           *             7     V1UnitL[5],V1UnitL01[5],V1UnitV[5]         ST3B_IMM                   st3b	{ z0.b - z2.b }, p0, [x0]
+# CHECK-NEXT:  2      7     2.50           *             7     V1UnitL[5],V1UnitL01[5],V1UnitV[5]         ST3B_IMM                   st3b	{ z21.b - z23.b }, p5, [x10, #15, mul vl]
+# CHECK-NEXT:  2      7     2.50           *             7     V1UnitL[5],V1UnitL01[5],V1UnitV[5]         ST3B_IMM                   st3b	{ z23.b - z25.b }, p3, [x13, #-24, mul vl]
+# CHECK-NEXT:  3      7     2.50           *             7     V1UnitI[5],V1UnitL[5],V1UnitL01[5],V1UnitS[5],V1UnitV[5] ST3B         st3b	{ z5.b - z7.b }, p3, [x17, x16]
+# CHECK-NEXT:  3      7     2.50           *             7     V1UnitI[5],V1UnitL[5],V1UnitL01[5],V1UnitS[5],V1UnitV[5] ST3D         st3d	{ z0.d - z2.d }, p0, [x0, x0, lsl #3]
+# CHECK-NEXT:  2      7     2.50           *             7     V1UnitL[5],V1UnitL01[5],V1UnitV[5]         ST3D_IMM                   st3d	{ z0.d - z2.d }, p0, [x0]
+# CHECK-NEXT:  2      7     2.50           *             7     V1UnitL[5],V1UnitL01[5],V1UnitV[5]         ST3D_IMM                   st3d	{ z21.d - z23.d }, p5, [x10, #15, mul vl]
+# CHECK-NEXT:  2      7     2.50           *             7     V1UnitL[5],V1UnitL01[5],V1UnitV[5]         ST3D_IMM                   st3d	{ z23.d - z25.d }, p3, [x13, #-24, mul vl]
+# CHECK-NEXT:  3      7     2.50           *             7     V1UnitI[5],V1UnitL[5],V1UnitL01[5],V1UnitS[5],V1UnitV[5] ST3D         st3d	{ z5.d - z7.d }, p3, [x17, x16, lsl #3]
+# CHECK-NEXT:  3      7     2.50           *             7     V1UnitI[5],V1UnitL[5],V1UnitL01[5],V1UnitS[5],V1UnitV[5] ST3H         st3h	{ z0.h - z2.h }, p0, [x0, x0, lsl #1]
+# CHECK-NEXT:  2      7     2.50           *             7     V1UnitL[5],V1UnitL01[5],V1UnitV[5]         ST3H_IMM                   st3h	{ z0.h - z2.h }, p0, [x0]
+# CHECK-NEXT:  2      7     2.50           *             7     V1UnitL[5],V1UnitL01[5],V1UnitV[5]         ST3H_IMM                   st3h	{ z21.h - z23.h }, p5, [x10, #15, mul vl]
+# CHECK-NEXT:  2      7     2.50           *             7     V1UnitL[5],V1UnitL01[5],V1UnitV[5]         ST3H_IMM                   st3h	{ z23.h - z25.h }, p3, [x13, #-24, mul vl]
+# CHECK-NEXT:  3      7     2.50           *             7     V1UnitI[5],V1UnitL[5],V1UnitL01[5],V1UnitS[5],V1UnitV[5] ST3H         st3h	{ z5.h - z7.h }, p3, [x17, x16, lsl #1]
+# CHECK-NEXT:  3      7     2.50           *             7     V1UnitI[5],V1UnitL[5],V1UnitL01[5],V1UnitS[5],V1UnitV[5] ST3W         st3w	{ z0.s - z2.s }, p0, [x0, x0, lsl #2]
+# CHECK-NEXT:  2      7     2.50           *             7     V1UnitL[5],V1UnitL01[5],V1UnitV[5]         ST3W_IMM                   st3w	{ z0.s - z2.s }, p0, [x0]
+# CHECK-NEXT:  2      7     2.50           *             7     V1UnitL[5],V1UnitL01[5],V1UnitV[5]         ST3W_IMM                   st3w	{ z21.s - z23.s }, p5, [x10, #15, mul vl]
+# CHECK-NEXT:  2      7     2.50           *             7     V1UnitL[5],V1UnitL01[5],V1UnitV[5]         ST3W_IMM                   st3w	{ z23.s - z25.s }, p3, [x13, #-24, mul vl]
+# CHECK-NEXT:  3      7     2.50           *             7     V1UnitI[5],V1UnitL[5],V1UnitL01[5],V1UnitS[5],V1UnitV[5] ST3W         st3w	{ z5.s - z7.s }, p3, [x17, x16, lsl #2]
+# CHECK-NEXT:  3      11    4.50           *             11    V1UnitI[9],V1UnitL[9],V1UnitL01[9],V1UnitS[9],V1UnitV[9] ST4B         st4b	{ z0.b - z3.b }, p0, [x0, x0]
+# CHECK-NEXT:  2      19    4.50           *             19    V1UnitL[9],V1UnitL01[9],V1UnitV[9]         ST4B_IMM                   st4b	{ z0.b - z3.b }, p0, [x0]
+# CHECK-NEXT:  2      19    4.50           *             19    V1UnitL[9],V1UnitL01[9],V1UnitV[9]         ST4B_IMM                   st4b	{ z21.b - z24.b }, p5, [x10, #20, mul vl]
+# CHECK-NEXT:  2      19    4.50           *             19    V1UnitL[9],V1UnitL01[9],V1UnitV[9]         ST4B_IMM                   st4b	{ z23.b - z26.b }, p3, [x13, #-32, mul vl]
+# CHECK-NEXT:  3      11    4.50           *             11    V1UnitI[9],V1UnitL[9],V1UnitL01[9],V1UnitS[9],V1UnitV[9] ST4B         st4b	{ z5.b - z8.b }, p3, [x17, x16]
+# CHECK-NEXT:  3      11    4.50           *             11    V1UnitI[9],V1UnitL[9],V1UnitL01[9],V1UnitS[9],V1UnitV[9] ST4D         st4d	{ z0.d - z3.d }, p0, [x0, x0, lsl #3]
+# CHECK-NEXT:  2      19    4.50           *             19    V1UnitL[9],V1UnitL01[9],V1UnitV[9]         ST4D_IMM                   st4d	{ z0.d - z3.d }, p0, [x0]
+# CHECK-NEXT:  2      19    4.50           *             19    V1UnitL[9],V1UnitL01[9],V1UnitV[9]         ST4D_IMM                   st4d	{ z21.d - z24.d }, p5, [x10, #20, mul vl]
+# CHECK-NEXT:  2      19    4.50           *             19    V1UnitL[9],V1UnitL01[9],V1UnitV[9]         ST4D_IMM                   st4d	{ z23.d - z26.d }, p3, [x13, #-32, mul vl]
+# CHECK-NEXT:  3      11    4.50           *             11    V1UnitI[9],V1UnitL[9],V1UnitL01[9],V1UnitS[9],V1UnitV[9] ST4D         st4d	{ z5.d - z8.d }, p3, [x17, x16, lsl #3]
+# CHECK-NEXT:  3      11    4.50           *             11    V1UnitI[9],V1UnitL[9],V1UnitL01[9],V1UnitS[9],V1UnitV[9] ST4H         st4h	{ z0.h - z3.h }, p0, [x0, x0, lsl #1]
+# CHECK-NEXT:  2      19    4.50           *             19    V1UnitL[9],V1UnitL01[9],V1UnitV[9]         ST4H_IMM                   st4h	{ z0.h - z3.h }, p0, [x0]
+# CHECK-NEXT:  2      19    4.50           *             19    V1UnitL[9],V1UnitL01[9],V1UnitV[9]         ST4H_IMM                   st4h	{ z21.h - z24.h }, p5, [x10, #20, mul vl]
+# CHECK-NEXT:  2      19    4.50           *             19    V1UnitL[9],V1UnitL01[9],V1UnitV[9]         ST4H_IMM                   st4h	{ z23.h - z26.h }, p3, [x13, #-32, mul vl]
+# CHECK-NEXT:  3      11    4.50           *             11    V1UnitI[9],V1UnitL[9],V1UnitL01[9],V1UnitS[9],V1UnitV[9] ST4H         st4h	{ z5.h - z8.h }, p3, [x17, x16, lsl #1]
+# CHECK-NEXT:  3      11    4.50           *             11    V1UnitI[9],V1UnitL[9],V1UnitL01[9],V1UnitS[9],V1UnitV[9] ST4W         st4w	{ z0.s - z3.s }, p0, [x0, x0, lsl #2]
+# CHECK-NEXT:  2      19    4.50           *             19    V1UnitL[9],V1UnitL01[9],V1UnitV[9]         ST4W_IMM                   st4w	{ z0.s - z3.s }, p0, [x0]
+# CHECK-NEXT:  2      19    4.50           *             19    V1UnitL[9],V1UnitL01[9],V1UnitV[9]         ST4W_IMM                   st4w	{ z21.s - z24.s }, p5, [x10, #20, mul vl]
+# CHECK-NEXT:  2      19    4.50           *             19    V1UnitL[9],V1UnitL01[9],V1UnitV[9]         ST4W_IMM                   st4w	{ z23.s - z26.s }, p3, [x13, #-32, mul vl]
+# CHECK-NEXT:  3      11    4.50           *             11    V1UnitI[9],V1UnitL[9],V1UnitL01[9],V1UnitS[9],V1UnitV[9] ST4W         st4w	{ z5.s - z8.s }, p3, [x17, x16, lsl #2]
 # CHECK-NEXT:  2      2     0.50           *             2     V1UnitL,V1UnitL01,V1UnitV                  STNT1B_ZRR                 stnt1b	{ z0.b }, p0, [x0, x0]
 # CHECK-NEXT:  2      2     0.50           *             2     V1UnitL,V1UnitL01,V1UnitV                  STNT1B_ZRI                 stnt1b	{ z0.b }, p0, [x0]
 # CHECK-NEXT:  2      2     0.50           *             2     V1UnitL,V1UnitL01,V1UnitV                  STNT1B_ZRI                 stnt1b	{ z21.b }, p5, [x10, #7, mul vl]
@@ -4694,16 +4694,16 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          UABD_ZPmZ_D                uabd	z31.d, p7/m, z31.d, z31.d
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          UABD_ZPmZ_H                uabd	z31.h, p7/m, z31.h, z31.h
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          UABD_ZPmZ_S                uabd	z31.s, p7/m, z31.s, z31.s
-# CHECK-NEXT:  5      14    2.00                         14    V1UnitV[5],V1UnitV0,V1UnitV1[2],V1UnitV01[3],V1UnitV02,V1UnitV13[3] UADDV_VPZ_B uaddv	d0, p7, z31.b
-# CHECK-NEXT:  4      12    2.00                         12    V1UnitV[4],V1UnitV1[2],V1UnitV01[3],V1UnitV13[2] UADDV_VPZ_H          uaddv	d0, p7, z31.h
-# CHECK-NEXT:  4      10    2.00                         10    V1UnitV[4],V1UnitV1[2],V1UnitV01[3],V1UnitV13[2] UADDV_VPZ_S          uaddv	d0, p7, z31.s
+# CHECK-NEXT:  4      14    2.00                         14    V1UnitV[5],V1UnitV0,V1UnitV1[2],V1UnitV01[3],V1UnitV02,V1UnitV13[3] UADDV_VPZ_B uaddv	d0, p7, z31.b
+# CHECK-NEXT:  3      12    2.00                         12    V1UnitV[4],V1UnitV1[2],V1UnitV01[3],V1UnitV13[2] UADDV_VPZ_H          uaddv	d0, p7, z31.h
+# CHECK-NEXT:  3      10    2.00                         10    V1UnitV[4],V1UnitV1[2],V1UnitV01[3],V1UnitV13[2] UADDV_VPZ_S          uaddv	d0, p7, z31.s
 # CHECK-NEXT:  2      8     0.50                         8     V1UnitV[2],V1UnitV01                       UADDV_VPZ_D                uaddv	d28, p6, z6.d
 # CHECK-NEXT:  1      3     1.00                         3     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       UCVTF_ZPmZ_DtoD            ucvtf	z0.d, p0/m, z0.d
-# CHECK-NEXT:  4      6     4.00                         6     V1UnitV[4],V1UnitV0[4],V1UnitV01[4],V1UnitV02[4] UCVTF_ZPmZ_HtoH      ucvtf	z0.h, p0/m, z0.h
-# CHECK-NEXT:  2      4     2.00                         4     V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] UCVTF_ZPmZ_StoH      ucvtf	z0.h, p0/m, z0.s
+# CHECK-NEXT:  1      6     4.00                         6     V1UnitV[4],V1UnitV0[4],V1UnitV01[4],V1UnitV02[4] UCVTF_ZPmZ_HtoH      ucvtf	z0.h, p0/m, z0.h
+# CHECK-NEXT:  1      4     2.00                         4     V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] UCVTF_ZPmZ_StoH      ucvtf	z0.h, p0/m, z0.s
 # CHECK-NEXT:  1      3     1.00                         3     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       UCVTF_ZPmZ_DtoH            ucvtf	z30.h, p2/m, z24.d
 # CHECK-NEXT:  1      3     1.00                         3     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       UCVTF_ZPmZ_DtoS            ucvtf	z0.s, p0/m, z0.d
-# CHECK-NEXT:  2      4     2.00                         4     V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] UCVTF_ZPmZ_StoS      ucvtf	z0.s, p0/m, z0.s
+# CHECK-NEXT:  1      4     2.00                         4     V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] UCVTF_ZPmZ_StoS      ucvtf	z0.s, p0/m, z0.s
 # CHECK-NEXT:  1      20    7.00                         20    V1UnitV[7],V1UnitV0[7],V1UnitV01[7],V1UnitV02[7] UDIV_ZPmZ_D          udiv	z0.d, p7/m, z0.d, z31.d
 # CHECK-NEXT:  1      12    7.00                         12    V1UnitV[7],V1UnitV0[7],V1UnitV01[7],V1UnitV02[7] UDIV_ZPmZ_S          udiv	z0.s, p7/m, z0.s, z31.s
 # CHECK-NEXT:  1      20    7.00                         20    V1UnitV[7],V1UnitV0[7],V1UnitV01[7],V1UnitV02[7] UDIVR_ZPmZ_D         udivr	z0.d, p7/m, z0.d, z31.d
@@ -4719,9 +4719,9 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          UMAX_ZPmZ_D                umax	z31.d, p7/m, z31.d, z31.d
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          UMAX_ZPmZ_H                umax	z31.h, p7/m, z31.h, z31.h
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          UMAX_ZPmZ_S                umax	z31.s, p7/m, z31.s, z31.s
-# CHECK-NEXT:  5      14    2.00                         14    V1UnitV[5],V1UnitV0,V1UnitV1[2],V1UnitV01[3],V1UnitV02,V1UnitV13[3] UMAXV_VPZ_B umaxv	b0, p7, z31.b
-# CHECK-NEXT:  4      12    2.00                         12    V1UnitV[4],V1UnitV1[2],V1UnitV01[3],V1UnitV13[2] UMAXV_VPZ_H          umaxv	h0, p7, z31.h
-# CHECK-NEXT:  4      10    2.00                         10    V1UnitV[4],V1UnitV1[2],V1UnitV01[3],V1UnitV13[2] UMAXV_VPZ_S          umaxv	s0, p7, z31.s
+# CHECK-NEXT:  4      14    2.00                         14    V1UnitV[5],V1UnitV0,V1UnitV1[2],V1UnitV01[3],V1UnitV02,V1UnitV13[3] UMAXV_VPZ_B umaxv	b0, p7, z31.b
+# CHECK-NEXT:  3      12    2.00                         12    V1UnitV[4],V1UnitV1[2],V1UnitV01[3],V1UnitV13[2] UMAXV_VPZ_H          umaxv	h0, p7, z31.h
+# CHECK-NEXT:  3      10    2.00                         10    V1UnitV[4],V1UnitV1[2],V1UnitV01[3],V1UnitV13[2] UMAXV_VPZ_S          umaxv	s0, p7, z31.s
 # CHECK-NEXT:  2      8     0.50                         8     V1UnitV[2],V1UnitV01                       UMAXV_VPZ_D                umaxv	d11, p4, z11.d
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          UMIN_ZI_B                  umin	z0.b, z0.b, #0
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          UMIN_ZPmZ_B                umin	z31.b, p7/m, z31.b, z31.b
@@ -4730,13 +4730,13 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          UMIN_ZPmZ_H                umin	z31.h, p7/m, z31.h, z31.h
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          UMIN_ZPmZ_S                umin	z31.s, p7/m, z31.s, z31.s
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          UMIN_ZI_S                  umin	z21.s, z21.s, #139
-# CHECK-NEXT:  5      14    2.00                         14    V1UnitV[5],V1UnitV0,V1UnitV1[2],V1UnitV01[3],V1UnitV02,V1UnitV13[3] UMINV_VPZ_B uminv	b0, p7, z31.b
-# CHECK-NEXT:  4      12    2.00                         12    V1UnitV[4],V1UnitV1[2],V1UnitV01[3],V1UnitV13[2] UMINV_VPZ_H          uminv	h0, p7, z31.h
-# CHECK-NEXT:  4      10    2.00                         10    V1UnitV[4],V1UnitV1[2],V1UnitV01[3],V1UnitV13[2] UMINV_VPZ_S          uminv	s0, p7, z31.s
+# CHECK-NEXT:  4      14    2.00                         14    V1UnitV[5],V1UnitV0,V1UnitV1[2],V1UnitV01[3],V1UnitV02,V1UnitV13[3] UMINV_VPZ_B uminv	b0, p7, z31.b
+# CHECK-NEXT:  3      12    2.00                         12    V1UnitV[4],V1UnitV1[2],V1UnitV01[3],V1UnitV13[2] UMINV_VPZ_H          uminv	h0, p7, z31.h
+# CHECK-NEXT:  3      10    2.00                         10    V1UnitV[4],V1UnitV1[2],V1UnitV01[3],V1UnitV13[2] UMINV_VPZ_S          uminv	s0, p7, z31.s
 # CHECK-NEXT:  2      8     0.50                         8     V1UnitV[2],V1UnitV01                       UMINV_VPZ_D                uminv	d24, p5, z29.d
 # CHECK-NEXT:  1      3     0.50                         1     V1UnitV,V1UnitV01                          UMMLA_ZZZ                  ummla	z0.s, z1.b, z2.b
 # CHECK-NEXT:  1      4     1.00                         4     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       UMULH_ZPmZ_B               umulh	z0.b, p7/m, z0.b, z31.b
-# CHECK-NEXT:  2      5     2.00                         5     V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] UMULH_ZPmZ_D         umulh	z0.d, p7/m, z0.d, z31.d
+# CHECK-NEXT:  1      5     2.00                         5     V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] UMULH_ZPmZ_D         umulh	z0.d, p7/m, z0.d, z31.d
 # CHECK-NEXT:  1      4     1.00                         4     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       UMULH_ZPmZ_H               umulh	z0.h, p7/m, z0.h, z31.h
 # CHECK-NEXT:  1      4     1.00                         4     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       UMULH_ZPmZ_S               umulh	z0.s, p7/m, z0.s, z31.s
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          UQADD_ZI_B                 uqadd	z0.b, z0.b, #0
@@ -4797,9 +4797,9 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   UQDECP_XP_D                uqdecp	x0, p0.d
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   UQDECP_XP_H                uqdecp	x0, p0.h
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   UQDECP_XP_S                uqdecp	x0, p0.s
-# CHECK-NEXT:  3      7     2.00                         7     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV,V1UnitV01 UQDECP_ZP_D       uqdecp	z0.d, p0.d
-# CHECK-NEXT:  3      7     2.00                         7     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV,V1UnitV01 UQDECP_ZP_H       uqdecp	z0.h, p0.h
-# CHECK-NEXT:  3      7     2.00                         7     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV,V1UnitV01 UQDECP_ZP_S       uqdecp	z0.s, p0.s
+# CHECK-NEXT:  2      7     2.00                         7     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV,V1UnitV01 UQDECP_ZP_D       uqdecp	z0.d, p0.d
+# CHECK-NEXT:  2      7     2.00                         7     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV,V1UnitV01 UQDECP_ZP_H       uqdecp	z0.h, p0.h
+# CHECK-NEXT:  2      7     2.00                         7     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV,V1UnitV01 UQDECP_ZP_S       uqdecp	z0.s, p0.s
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   UQDECW_WPiI                uqdecw	w0
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   UQDECW_WPiI                uqdecw	w0, all, mul #16
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   UQDECW_WPiI                uqdecw	w0, pow2
@@ -4856,9 +4856,9 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   UQINCP_XP_D                uqincp	x0, p0.d
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   UQINCP_XP_H                uqincp	x0, p0.h
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   UQINCP_XP_S                uqincp	x0, p0.s
-# CHECK-NEXT:  3      7     2.00                         7     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV,V1UnitV01 UQINCP_ZP_D       uqincp	z0.d, p0.d
-# CHECK-NEXT:  3      7     2.00                         7     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV,V1UnitV01 UQINCP_ZP_H       uqincp	z0.h, p0.h
-# CHECK-NEXT:  3      7     2.00                         7     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV,V1UnitV01 UQINCP_ZP_S       uqincp	z0.s, p0.s
+# CHECK-NEXT:  2      7     2.00                         7     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV,V1UnitV01 UQINCP_ZP_D       uqincp	z0.d, p0.d
+# CHECK-NEXT:  2      7     2.00                         7     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV,V1UnitV01 UQINCP_ZP_H       uqincp	z0.h, p0.h
+# CHECK-NEXT:  2      7     2.00                         7     V1UnitI[2],V1UnitM[2],V1UnitM0[2],V1UnitV,V1UnitV01 UQINCP_ZP_S       uqincp	z0.s, p0.s
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   UQINCW_WPiI                uqincw	w0
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   UQINCW_WPiI                uqincw	w0, all, mul #16
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   UQINCW_WPiI                uqincw	w0, pow2
@@ -4924,13 +4924,13 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          UZP2_ZZZ_D                 uzp2	z31.d, z31.d, z31.d
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          UZP2_ZZZ_H                 uzp2	z31.h, z31.h, z31.h
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          UZP2_ZZZ_S                 uzp2	z31.s, z31.s, z31.s
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          WHILELE_PWW_B              whilele	p0.b, w30, wzr
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          WHILELE_PXX_H              whilele	p6.h, x28, x30
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          WHILELO_PXX_D              whilelo	p15.d, xzr, x30
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          WHILELO_PXX_B              whilelo	p3.b, x9, x7
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          WHILELS_PWW_B              whilels	p4.b, w4, w20
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          WHILELS_PWW_H              whilels	p0.h, w30, wzr
-# CHECK-NEXT:  2      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          WHILELT_PXX_S              whilelt	p15.s, xzr, x30
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          WHILELE_PWW_B              whilele	p0.b, w30, wzr
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          WHILELE_PXX_H              whilele	p6.h, x28, x30
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          WHILELO_PXX_D              whilelo	p15.d, xzr, x30
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          WHILELO_PXX_B              whilelo	p3.b, x9, x7
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          WHILELS_PWW_B              whilels	p4.b, w4, w20
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          WHILELS_PWW_H              whilels	p0.h, w30, wzr
+# CHECK-NEXT:  1      3     2.00                         3     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          WHILELT_PXX_S              whilelt	p15.s, xzr, x30
 # CHECK-NEXT:  1      2     1.00           *      U      2     V1UnitI,V1UnitM,V1UnitM0                   WRFFR                      wrffr	p0.b
 # CHECK-NEXT:  1      2     1.00           *      U      2     V1UnitI,V1UnitM,V1UnitM0                   WRFFR                      wrffr	p15.b
 # CHECK-NEXT:  1      2     1.00                         2     V1UnitI,V1UnitM,V1UnitM0                   ZIP1_PPP_B                 zip1	p0.b, p0.b, p0.b
