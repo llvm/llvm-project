@@ -111,20 +111,38 @@ static RValue emitBuiltinBitOpWithFallback(CIRGenFunction &cgf,
   return RValue::get(builder.createSelect(loc, isZero, fallbackValue, result));
 }
 
-static RValue emitStdcBitWidth(CIRGenFunction &cfg, const CallExpr *e) {
-  CIRGenBuilderTy &builder = cfg.getBuilder();
-  mlir::Location loc = cfg.getLoc(e->getSourceRange());
+// stdc_{leading,trailing}_zeros and stdc_count_ones: counts bits using clz,
+// ctz, or popcount. InvertArg flips the input to count the opposite bit value.
+template <typename Op, typename... Args>
+static RValue emitStdcCountOp(CIRGenFunction &cgf, const CallExpr *e,
+                              bool invertArg, Args... args) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Location loc = cgf.getLoc(e->getSourceRange());
+  mlir::Value arg = cgf.emitScalarExpr(e->getArg(0));
+  mlir::Value actualArg = invertArg ? builder.createNot(loc, arg) : arg;
+  mlir::Value result = Op::create(builder, loc, actualArg, args...).getResult();
 
-  mlir::Value arg = cfg.emitScalarExpr(e->getArg(0));
+  mlir::Type resultTy = cgf.convertType(e->getType());
+  if (result.getType() != resultTy)
+    result = builder.createIntCast(result, resultTy);
+  return RValue::get(result);
+}
+
+// stdc_count_zeros (BitWidth - popcount) and stdc_bit_width (BitWidth - clz).
+// The subtract is performed in the argument type and cast once at the end.
+template <typename Op, typename... Args>
+static RValue emitStdcBitWidthMinus(CIRGenFunction &cgf, const CallExpr *e,
+                                    Args... args) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Location loc = cgf.getLoc(e->getSourceRange());
+  mlir::Value arg = cgf.emitScalarExpr(e->getArg(0));
   auto argTy = mlir::cast<cir::IntType>(arg.getType());
 
-  mlir::Value lz =
-      createBuiltinBitOp<cir::BitClzOp>(cfg, e, arg, /*poisonZero=*/false);
-
+  mlir::Value cnt = Op::create(builder, loc, arg, args...).getResult();
   mlir::Value width = builder.getConstInt(loc, argTy, argTy.getWidth());
-  mlir::Value result = builder.createSub(loc, width, lz);
+  mlir::Value result = builder.createSub(loc, width, cnt);
 
-  mlir::Type resultTy = cfg.convertType(e->getType());
+  mlir::Type resultTy = cgf.convertType(e->getType());
   if (result.getType() != resultTy)
     result = builder.createIntCast(result, resultTy);
 
@@ -1273,7 +1291,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BIstdc_trailing_zeros_ul:
   case Builtin::BIstdc_trailing_zeros_ull:
   case Builtin::BI__builtin_stdc_trailing_zeros:
-    return emitBuiltinBitOp<cir::BitCtzOp>(*this, e, /*poisonZero=*/false);
+    return emitStdcCountOp<cir::BitCtzOp>(*this, e, /*invertArg=*/false,
+                                          /*poisonZero=*/false);
 
   case Builtin::BIstdc_leading_zeros_uc:
   case Builtin::BIstdc_leading_zeros_us:
@@ -1281,7 +1300,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BIstdc_leading_zeros_ul:
   case Builtin::BIstdc_leading_zeros_ull:
   case Builtin::BI__builtin_stdc_leading_zeros:
-    return emitBuiltinBitOp<cir::BitClzOp>(*this, e, /*poisonZero=*/false);
+    return emitStdcCountOp<cir::BitClzOp>(*this, e, /*invertArg=*/false,
+                                          /*poisonZero=*/false);
 
   case Builtin::BIstdc_bit_width_uc:
   case Builtin::BIstdc_bit_width_us:
@@ -1289,7 +1309,16 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BIstdc_bit_width_ul:
   case Builtin::BIstdc_bit_width_ull:
   case Builtin::BI__builtin_stdc_bit_width:
-    return emitStdcBitWidth(*this, e);
+    return emitStdcBitWidthMinus<cir::BitClzOp>(*this, e,
+                                                /*poisonZero=*/false);
+
+  case Builtin::BIstdc_count_zeros_uc:
+  case Builtin::BIstdc_count_zeros_us:
+  case Builtin::BIstdc_count_zeros_ui:
+  case Builtin::BIstdc_count_zeros_ul:
+  case Builtin::BIstdc_count_zeros_ull:
+  case Builtin::BI__builtin_stdc_count_zeros:
+    return emitStdcBitWidthMinus<cir::BitPopcountOp>(*this, e);
 
   case Builtin::BIstdc_count_ones_uc:
   case Builtin::BIstdc_count_ones_us:
@@ -1297,7 +1326,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BIstdc_count_ones_ul:
   case Builtin::BIstdc_count_ones_ull:
   case Builtin::BI__builtin_stdc_count_ones:
-    return emitBuiltinBitOp<cir::BitPopcountOp>(*this, e);
+    return emitStdcCountOp<cir::BitPopcountOp>(*this, e,
+                                               /*invertArg=*/false);
 
   case Builtin::BI__builtin_clzs:
   case Builtin::BI__builtin_clz:
