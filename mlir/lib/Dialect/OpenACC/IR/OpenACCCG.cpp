@@ -1047,3 +1047,32 @@ void GPUParallelDimsAttr::print(AsmPrinter &printer) const {
                         });
   printer << "]";
 }
+
+//===----------------------------------------------------------------------===//
+// ActiveParDimsAttr
+//===----------------------------------------------------------------------===//
+
+Attribute ActiveParDimsAttr::parse(AsmParser &parser, Type type) {
+  auto delimiter = AsmParser::Delimiter::Square;
+  SmallVector<GPUParallelDimAttr> parDims;
+  auto parseParDim = [&]() -> ParseResult {
+    GPUParallelDimAttr dim;
+    if (parseProcessorValue(parser, dim))
+      return failure();
+    parDims.push_back(dim);
+    return success();
+  };
+  if (parser.parseCommaSeparatedList(delimiter, parseParDim,
+                                     "list of OpenACC GPU parallel dimensions"))
+    return {};
+  return ActiveParDimsAttr::get(parser.getContext(), parDims);
+}
+
+void ActiveParDimsAttr::print(AsmPrinter &printer) const {
+  printer << "[";
+  llvm::interleaveComma(getArray(), printer,
+                        [&printer](const GPUParallelDimAttr &p) {
+                          printProcessorValue(printer, p);
+                        });
+  printer << "]";
+}
