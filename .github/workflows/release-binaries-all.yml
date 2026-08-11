@@ -68,6 +68,13 @@ jobs:
       release-version: ${{ steps.vars.outputs.release-version }}
       upload: ${{ steps.vars.outputs.upload }}
     steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            .github/workflows/validate-release-version
+          sparse-checkout-cone-mode: false
+
       - name: Validate Input
         if: inputs.release-version != ''
         uses: ./.github/workflows/validate-release-version

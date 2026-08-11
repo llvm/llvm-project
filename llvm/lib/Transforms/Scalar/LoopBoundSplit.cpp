@@ -367,7 +367,7 @@ static bool splitLoopBound(Loop &L, DominatorTree &DT, LoopInfo &LI,
   // Update dominator tree.
   DT.changeImmediateDominator(PostLoopPreHeader, L.getExitingBlock());
 #ifndef NDEBUG
-  LI.verify(DT);
+  LI.verify();
 #endif
   // Update phi nodes in header of post-loop.
   bool isExitingLatch = L.getExitingBlock() == L.getLoopLatch();
@@ -492,7 +492,7 @@ PreservedAnalyses LoopBoundSplitPass::run(Loop &L, LoopAnalysisManager &AM,
     return PreservedAnalyses::all();
 
   assert(AR.DT.verify(DominatorTree::VerificationLevel::Fast));
-  AR.LI.verify(AR.DT);
+  AR.LI.verify();
 
   return getLoopPassPreservedAnalyses();
 }

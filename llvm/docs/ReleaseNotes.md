@@ -6,15 +6,13 @@ ReleaseNotes.md and ReleaseNotesTemplate.txt. -->
 
 # LLVM {{env.config.release}} Release Notes
 
-```{contents}
-```
 
-````{only} PreRelease
-```{warning} These are in-progress notes for the upcoming LLVM {{env.config.release}}
+::::{only} PreRelease
+:::{warning} These are in-progress notes for the upcoming LLVM {{env.config.release}}
              release. Release notes for previous releases can be found on
              [the Download Page](https://releases.llvm.org/download.html).
-```
-````
+:::
+::::
 
 ## Introduction
 
@@ -66,14 +64,21 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to Interprocedural Optimizations
 
+- The IR Outliner has been removed, due to lack of a maintainer and the presence
+  of correctness issues.
+
 ### Changes to Vectorizers
 
 ### Changes to the AArch64 Backend
 
-* On AArch64 Windows targets, return address signing now uses the B-key by
-  default because Windows unwind information only supports B-key signing.
-
 ### Changes to the AMDGPU Backend
+
+* Replaced `xnack` and `sramecc` target features with `amdgpu.xnack`
+  and `amdgpu.sramecc` module flags.
+* `llvm.amdgcn.make.buffer.rsrc` now accepts any integer width for its
+  `numRecords` argument to account for targets that use 32-bit and 45-bit
+  `numRecords` widths more accurately. If an integer of the incorrect width
+  is used, it will be zero-extended or truncated as needed.
 
 ### Changes to the ARM Backend
 
@@ -90,6 +95,18 @@ Makes programs 10x faster by doing Special New Thing.
 ### Changes to the PowerPC Backend
 
 ### Changes to the RISC-V Backend
+
+* Added experimental MC support for the `Smcsps` and `Sscsps`
+  conditional stack pointer swap extensions.
+
+* Adds experimental assembler/CodeGen support for the `Zilx` (Indexed Integer
+  Load) extension.
+
+* Added experimental MC support for the `Smijt` and `Ssijt` interrupt jump
+  table extensions and the `Smehv` and `Ssehv` synchronous exception hardware
+  vectoring extensions.
+
+* Bump Svukte extension to 1.0.
 
 ### Changes to the WebAssembly Backend
 
@@ -111,22 +128,15 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the LLVM tools
 
+* llvm-mca no longer defaults -mcpu to "native"
+
 ### Changes to LLDB
 
 #### Windows
 
-* Python 3.11 or later is now recommended for building LLDB 23 on Windows. From LLDB 24, Python 3.11 or later will be required.
-* Messages from `OutputDebugString[A|W]` are now shown inline when using LLDB
-  from the command-line and in the output window when using lldb-dap.
-* LLDB now uses `lldb-server.exe` to launch and manage the program being debugged,
-  instead of running it within LLDB's own process. To revert to the previous behavior, set the environment variable `LLDB_USE_LLDB_SERVER=0`.
-* Support for PDB symbol servers has been added. By default, no symbol servers are used.
-  You can control this either through the [`_NT_SYMBOL_PATH`](https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/symbol-path)
-  environment variable or by setting `plugin.symbol-locator.symstore.urls`
-  (see [`plugin.symbol-locator.symstore`](https://lldb.llvm.org/use/settings.html#symstore) for more info).
-* LLDB no longer depends on the Python private API on Windows. Users are now free to
-  use any Python version they want, as long as it is 3.8 or later and LLDB can find it
-  (i.e. it is on their `PATH`).
+* Python 3.11 or later is now required for building LLDB 24 on Windows.
+* For better performance, LLDB now turns off the Windows debug heap by default when debugging.
+  If you need the debug heap enabled, set `platform.plugin.windows.disable-debug-heap` to `false`.
 
 ### Changes to BOLT
 

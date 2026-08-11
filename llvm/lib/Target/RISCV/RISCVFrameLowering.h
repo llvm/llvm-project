@@ -71,6 +71,11 @@ public:
 
   bool enableShrinkWrapping(const MachineFunction &MF) const override;
 
+  Register
+  findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB,
+                                   Register PreferredReg,
+                                   Register DontUseReg = Register()) const;
+
   bool isSupportedStackID(TargetStackID::Value ID) const override;
   TargetStackID::Value getStackIDForScalableVectors() const override;
 
@@ -119,8 +124,8 @@ private:
                                    bool DynAllocation) const;
 
   /// Emit target zero call-used regs.
-  void emitZeroCallUsedRegs(BitVector RegsToZero,
-                            MachineBasicBlock &MBB) const override;
+  void emitZeroCallUsedRegs(BitVector RegsToZero, MachineBasicBlock &MBB,
+                            RegScavenger *RS) const override;
 };
 } // namespace llvm
 #endif

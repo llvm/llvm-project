@@ -554,30 +554,6 @@ def hlsl_countbits : HLSLBuiltin<"countbits"> {
   let VaryingVecSizes = [2, 3, 4];
 }
 
-// Returns the cross product of two floating-point, 3D vectors.
-def hlsl_cross_float : HLSLBuiltin<"cross", "__builtin_hlsl_crossf32"> {
-  let Args = [VectorType<FloatTy, 3>, VectorType<FloatTy, 3>];
-  let ReturnType = VectorType<FloatTy, 3>;
-}
-
-def hlsl_cross_half : HLSLBuiltin<"cross", "__builtin_hlsl_crossf16"> {
-  let Doc = [{
-\fn T cross(T x, T y)
-\brief Returns the cross product of two floating-point, 3D vectors.
-\param x [in] The first floating-point, 3D vector.
-\param y [in] The second floating-point, 3D vector.
-
-Result is the cross product of x and y, i.e., the resulting
-components are, in order :
-x[1] * y[2] - y[1] * x[2]
-x[2] * y[0] - y[2] * x[0]
-x[0] * y[1] - y[0] * x[1]
-}];
-  let Args = [VectorType<HalfTy, 3>, VectorType<HalfTy, 3>];
-  let ReturnType = VectorType<HalfTy, 3>;
-  let Availability = SM6_2;
-}
-
 // Converts a floating-point, 4D vector set by a D3DCOLOR to a UBYTE4.
 def hlsl_d3d_color_to_ubyte4 : HLSLBuiltin<"D3DCOLORtoUBYTE4"> {
   let Doc = [{
@@ -707,6 +683,27 @@ def hlsl_degrees : HLSLOneArgBuiltin<"degrees", "__builtin_hlsl_elementwise_degr
 }];
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingMatDims = [];
+}
+// Returns the cross product of two floating-point, 3D vectors.
+def hlsl_cross : HLSLTwoArgDetail<"cross", "cross_impl"> {
+  let Doc = [{
+\fn T cross(T x, T y)
+\brief Returns the cross product of two floating-point, 3D vectors.
+\param x [in] The first floating-point, 3D vector.
+\param y [in] The second floating-point, 3D vector.
+
+Result is the cross product of x and y, i.e., the resulting
+components are, in order :
+x[1] * y[2] - y[1] * x[2]
+x[2] * y[0] - y[2] * x[0]
+x[0] * y[1] - y[0] * x[1]
+}];
+  let ParamNames = ["x", "y"];
+  let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingScalar = 0;
+  let VaryingVecSizes = [3];
+  let VaryingMatDims = [];
+  let IsConstexpr = 1;
 }
 
 // Returns a distance scalar between X and Y.
@@ -1319,7 +1316,6 @@ def hlsl_pow : HLSLTwoArgBuiltin<"pow", "__builtin_elementwise_pow"> {
 \param Pow The specified power.
 }];
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
 }
 
 // Reads the value from the lane across the X axis of the quad.
@@ -1566,7 +1562,7 @@ def hlsl_sqrt : HLSLOneArgBuiltin<"sqrt", "__builtin_elementwise_sqrt"> {
 
 // Returns 1 if the x parameter is greater than or equal to the y parameter;
 // otherwise, 0.
-def hlsl_step : HLSLTwoArgBuiltin<"step", "__builtin_hlsl_step"> {
+def hlsl_step : HLSLTwoArgDetail<"step", "step_impl"> {
   let Doc = [{
 \fn T step(T y, T x)
 \brief Returns 1 if the x parameter is greater than or equal to the y
@@ -1576,6 +1572,7 @@ parameter; otherwise, 0.
 
 Step is based on the following formula: (x >= y) ? 1 : 0
 }];
+  let ParamNames = ["y", "x"];
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingMatDims = [];
 }
