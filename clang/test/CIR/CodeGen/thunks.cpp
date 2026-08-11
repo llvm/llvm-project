@@ -250,19 +250,16 @@ void C::f(int x, ...) {}
 
 // CIR: cir.func {{.*}} @_ZN5Test51C1hEv
 
-// CIR: cir.func {{.*}} @_ZThn8_N5Test51C1hEv(%arg0: !cir.ptr<
+// CIR: cir.func {{.*}} @_ZThn8_N5Test51C1hEv(%arg0: !cir.ptr<!rec_Test53A3ANonTrivial> {{.*}}llvm.sret = !rec_Test53A3ANonTrivial{{.*}}, %arg1: !cir.ptr<
 // CIR:   %[[T5_THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init
-// CIR:   %[[T5_RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_Test53A3ANonTrivial>
-// CIR:   cir.store %arg0, %[[T5_THIS_ADDR]]
+// CIR:   cir.store %arg1, %[[T5_THIS_ADDR]]
 // CIR:   %[[T5_THIS:.*]] = cir.load %[[T5_THIS_ADDR]]
 // CIR:   %[[T5_CAST:.*]] = cir.cast bitcast %[[T5_THIS]] : !cir.ptr<{{.*}}> -> !cir.ptr<!u8i>
 // CIR:   %[[T5_OFFSET:.*]] = cir.const #cir.int<-8> : !s64i
 // CIR:   %[[T5_ADJUSTED:.*]] = cir.ptr_stride %[[T5_CAST]], %[[T5_OFFSET]]
 // CIR:   %[[T5_RESULT:.*]] = cir.cast bitcast %[[T5_ADJUSTED]] : !cir.ptr<!u8i> -> !cir.ptr<
-// CIR:   %[[T5_CALL:.*]] = cir.call @_ZN5Test51C1hEv(%[[T5_RESULT]]){{.*}} -> !rec_Test5{{.*}}NonTrivial
-// CIR:   cir.store {{.*}} %[[T5_CALL]], %[[T5_RETVAL]]
-// CIR:   %[[T5_RET_VAL:.*]] = cir.load %[[T5_RETVAL]]
-// CIR:   cir.return %[[T5_RET_VAL]]
+// CIR:   cir.call @_ZN5Test51C1hEv(%arg0, %[[T5_RESULT]])
+// CIR:   cir.return
 // CIR-NOT: cir.trap
 // CIR-NOT: cir.unreachable
 
@@ -336,13 +333,11 @@ void C::f(int x, ...) {}
 // LLVM:   %[[L4_ARG:.*]] = load i32, ptr
 // LLVM:   call void @_ZN5Test41C1gEi(ptr{{.*}} %[[L4_ADJ]], i32{{.*}} %[[L4_ARG]])
 
-// LLVM: define {{.*}} %"struct.Test5::NonTrivial" @_ZThn8_N5Test51C1hEv(ptr{{.*}})
+// LLVM: define {{.*}} void @_ZThn8_N5Test51C1hEv(ptr dead_on_unwind noalias writable sret(%"struct.Test5::NonTrivial") align 4 %[[L5_AGG:[^,)]+]], ptr{{[^,)]*}})
 // LLVM:   %[[L5_THIS:.*]] = load ptr, ptr
 // LLVM:   %[[L5_ADJ:.*]] = getelementptr i8, ptr %[[L5_THIS]], i64 -8
-// LLVM:   %[[L5_RET:.*]] = call{{.*}} %"struct.Test5::NonTrivial" @_ZN5Test51C1hEv(ptr{{.*}} %[[L5_ADJ]])
-// LLVM:   store %"struct.Test5::NonTrivial" %[[L5_RET]], ptr
-// LLVM:   load %"struct.Test5::NonTrivial", ptr
-// LLVM:   ret %"struct.Test5::NonTrivial"
+// LLVM:   call void @_ZN5Test51C1hEv(ptr dead_on_unwind writable sret(%"struct.Test5::NonTrivial") align 4 %[[L5_AGG]], ptr{{.*}} %[[L5_ADJ]])
+// LLVM:   ret void
 
 // LLVM-LABEL: define {{.*}} @_ZTch0_v0_n32_N15CovariantReturn1C1fEv
 // LLVM:       call {{.*}} @_ZN15CovariantReturn1C1fEv

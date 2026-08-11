@@ -3744,8 +3744,8 @@ typedef struct S {
 
 void store_atomic_different_size(S a) {
   // CIR-LABEL: @store_atomic_different_size
-  // LLVM-LABEL: @store_atomic_different_size
-  // OGCG-LABEL: @store_atomic_different_size
+  // LLVM-LABEL: define dso_local void @store_atomic_different_size(i24 %{{[^,)]+}})
+  // OGCG-LABEL: define dso_local void @store_atomic_different_size(i24 %{{[^,)]+}})
 
   _Atomic(S) b;
   __c11_atomic_store(&b, a, __ATOMIC_SEQ_CST);
@@ -3768,14 +3768,15 @@ void store_atomic_different_size(S a) {
  // CIR: %[[DATA:.*]] = cir.load {{.*}} %[[ATOMIC_TMP_U32]] : !cir.ptr<!u32i>, !u32i
  // CIR: cir.store {{.*}} syncscope(system) atomic(seq_cst) %[[DATA]], %[[B_VOID_PTR]] : !u32i, !cir.ptr<!u32i>
 
- // FIXME(cir): The difference below is due to ABI lowering not being fully implemented for CIR.
-
+ // LLVM: %[[COERCE:.*]] = alloca i24, i64 1, align 4
+ // LLVM: store i24 %{{.+}}, ptr %[[COERCE]], align 4
+ // LLVM: %[[A:.*]] = load %struct.S, ptr %[[COERCE]], align 1
  // LLVM: %[[A_ADDR:.*]] = alloca %struct.S, i64 1, align 1
  // LLVM: %[[B_ADDR:.*]] = alloca { %struct.S, [1 x i8] }, i64 1, align 4
  // LLVM: %[[A_ATOMIC_TMP_ADDR:.*]] = alloca %struct.S, i64 1, align 1
  // LLVM: %[[ATOMIC_TMP_ADDR:.*]] = alloca { %struct.S, [1 x i8] }, i64 1, align 4
- // LLVM: store %struct.S %[[A:.*]], ptr %[[A_ADDR]], align 1
- // LLVM: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %4, ptr align 1 %[[A_ADDR]], i64 3, i1 false)
+ // LLVM: store %struct.S %[[A]], ptr %[[A_ADDR]], align 1
+ // LLVM: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[A_ATOMIC_TMP_ADDR]], ptr align 1 %[[A_ADDR]], i64 3, i1 false)
  // LLVM: call void @llvm.memset.p0.i64(ptr align 1 %[[A_ATOMIC_TMP_ADDR]], i8 0, i64 4, i1 false)
  // LLVM: call void @llvm.memcpy.p0.p0.i64(ptr %[[ATOMIC_TMP_ADDR]], ptr %[[A_ATOMIC_TMP_ADDR]], i64 3, i1 false)
  // LLVM: %[[ATOMIC_TMP:.*]] = load i32, ptr %[[ATOMIC_TMP_ADDR]], align 4

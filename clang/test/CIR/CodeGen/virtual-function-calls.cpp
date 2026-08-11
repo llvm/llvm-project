@@ -107,7 +107,7 @@ void call_virtual_fn_in_cleanup_scope() {
 // LLVM:   call void @_ZN1BC2Ev(ptr {{.*}} %[[B]])
 // LLVM:   br label %[[CLEANUP_SCOPE:.*]]
 // LLVM: [[CLEANUP_SCOPE]]:
-// LLVM:    call void @_ZN1B1fEc(ptr {{.*}} %[[B]], i8 noundef 99)
+// LLVM:    call void @_ZN1B1fEc(ptr {{.*}} %[[B]], i8 noundef signext 99)
 // LLVM:    br label %[[NORMAL_CLEANUP:.*]]
 // LLVM: [[NORMAL_CLEANUP]]:
 // LLVM:    call void @_ZN1BD1Ev(ptr {{.*}} %[[B]])

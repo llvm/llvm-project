@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -default-function-attr "key=value" -default-function-attr "just_key" -fcxx-exceptions -fexceptions -fclangir -emit-cir %s -o %t.cir
+// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
+// supports the builtin i32 in the Itanium EH personality signature.
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -default-function-attr "key=value" -default-function-attr "just_key" -fcxx-exceptions -fexceptions -fclangir -fno-clangir-call-conv-lowering -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -default-function-attr "key=value" -default-function-attr "just_key" -fcxx-exceptions -fexceptions -fclangir -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -default-function-attr "key=value" -default-function-attr "just_key" -fcxx-exceptions -fexceptions -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -default-function-attr "key=value" -default-function-attr "just_key" -fcxx-exceptions -fexceptions -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM

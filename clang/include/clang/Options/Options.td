@@ -3467,10 +3467,13 @@ def clangir_enable_idiom_recognizer : Flag<["-"], "clangir-enable-idiom-recogniz
   HelpText<"ClangIR: Enable Idiom Recognizer pass">,
   MarshallingInfoFlag<FrontendOpts<"ClangIREnableIdiomRecognizer">>;
 
-def clangir_enable_call_conv_lowering : Flag<["-"], "clangir-enable-call-conv-lowering">,
-  Visibility<[ClangOption, CC1Option]>,
-  HelpText<"ClangIR: Enable calling-convention lowering pass (x86_64 only)">,
-  MarshallingInfoFlag<FrontendOpts<"ClangIREnableCallConvLowering">>;
+defm clangir_call_conv_lowering : BoolFOption<"clangir-call-conv-lowering",
+  FrontendOpts<"ClangIRCallConvLowering">, DefaultTrue,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Run the ClangIR calling-convention lowering pass">,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option],
+          "Do not run the ClangIR calling-convention lowering pass">,
+  BothFlags<[], [ClangOption, CC1Option], " (x86_64 only)">>;
 
 def clangir_lib_opt_EQ : Joined<["-"], "clangir-lib-opt=">,
   Visibility<[ClangOption, CC1Option]>, Group<f_Group>, Values<"all">,

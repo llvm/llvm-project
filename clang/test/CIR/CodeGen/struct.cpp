@@ -340,6 +340,7 @@ void calling_function_with_default_values() {
   function_arg_with_default_value();
 }
 
+// CIR: %[[COERCE:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!rec_CompleteS>
 // CIR: %[[AGG_ADDR:.*]] = cir.alloca "agg.tmp0" {{.*}} : !cir.ptr<!rec_CompleteS>
 // CIR: %[[ELEM_0_PTR:.*]] = cir.get_member %[[AGG_ADDR]][0] {name = "a"} : !cir.ptr<!rec_CompleteS> -> !cir.ptr<!s32i>
 // CIR: %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
@@ -348,17 +349,21 @@ void calling_function_with_default_values() {
 // CIR: %[[CONST_2:.*]] = cir.const #cir.int<2> : !s8i
 // CIR: cir.store{{.*}} %[[CONST_2]], %[[ELEM_1_PTR]] : !s8i, !cir.ptr<!s8i>
 // CIR: %[[TMP_AGG:.*]] = cir.load{{.*}} %[[AGG_ADDR]] : !cir.ptr<!rec_CompleteS>, !rec_CompleteS
-// CIR: cir.call @_Z31function_arg_with_default_value9CompleteS(%[[TMP_AGG]]) : (!rec_CompleteS) -> ()
+// CIR: cir.store %[[TMP_AGG]], %[[COERCE]] : !rec_CompleteS, !cir.ptr<!rec_CompleteS>
+// CIR: %[[COERCE_PTR:.*]] = cir.cast bitcast %[[COERCE]] : !cir.ptr<!rec_CompleteS> -> !cir.ptr<!u64i>
+// CIR: %[[ARG:.*]] = cir.load %[[COERCE_PTR]] : !cir.ptr<!u64i>, !u64i
+// CIR: cir.call @_Z31function_arg_with_default_value9CompleteS(%[[ARG]]) : (!u64i) -> ()
 
-// TODO(CIR): the difference between the CIR LLVM and OGCG is because the lack of calling convention lowering,
-
+// LLVM: %[[COERCE:.*]] = alloca %struct.CompleteS, i64 1, align 8
 // LLVM: %[[AGG_ADDR:.*]] = alloca %struct.CompleteS, i64 1, align 4
 // LLVM: %[[ELEM_0_PTR:.*]] = getelementptr inbounds nuw %struct.CompleteS, ptr %[[AGG_ADDR]], i32 0, i32 0
 // LLVM: store i32 1, ptr %[[ELEM_0_PTR]], align 4
 // LLVM: %[[ELEM_1_PTR:.*]] = getelementptr inbounds nuw %struct.CompleteS, ptr %[[AGG_ADDR]], i32 0, i32 1
 // LLVM: store i8 2, ptr %[[ELEM_1_PTR]], align 4
 // LLVM: %[[TMP_AGG:.*]] = load %struct.CompleteS, ptr %[[AGG_ADDR]], align 4
-// LLVM: call void @_Z31function_arg_with_default_value9CompleteS(%struct.CompleteS %[[TMP_AGG]])
+// LLVM: store %struct.CompleteS %[[TMP_AGG]], ptr %[[COERCE]], align 4
+// LLVM: %[[ARG:.*]] = load i64, ptr %[[COERCE]], align 8
+// LLVM: call void @_Z31function_arg_with_default_value9CompleteS(i64 %[[ARG]])
 
 // OGCG: %[[AGG_ADDR:.*]] = alloca %struct.CompleteS, align 4
 // OGCG: %[[ELEM_0_PTR:.*]] = getelementptr inbounds nuw %struct.CompleteS, ptr %[[AGG_ADDR]], i32 0, i32 0
