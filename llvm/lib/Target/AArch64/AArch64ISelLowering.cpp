@@ -34870,10 +34870,10 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
   // Two-way fixed-length integer add reductions.
   if ((Op.getOpcode() == ISD::PARTIAL_REDUCE_UMLA ||
        Op.getOpcode() == ISD::PARTIAL_REDUCE_SMLA) &&
-      Subtarget->isNeonAvailable() && ResultVT.isFixedLengthVector() &&
+      Subtarget->isNeonAvailable() &&
+      (OpVT.is64BitVector() || OpVT.is128BitVector()) &&
       ResultVT.getScalarSizeInBits() == OpVT.getScalarSizeInBits() * 2 &&
-      ResultVT.getVectorNumElements() * 2 == OpVT.getVectorNumElements() &&
-      (OpVT.getSizeInBits() == 64 || OpVT.getSizeInBits() == 128)) {
+      ResultVT.getVectorNumElements() * 2 == OpVT.getVectorNumElements()) {
     // A pure partial reduction can lower to a [SU]ADALP.
     if (isOneVector(RHS)) {
       bool IsUnsigned = Op.getOpcode() == ISD::PARTIAL_REDUCE_UMLA;
