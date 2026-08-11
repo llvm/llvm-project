@@ -107,7 +107,7 @@ bool RegBankLegalizeHelper::executeInWaterfallLoop(MachineIRBuilder &B,
   const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(ST);
 
 #ifndef NDEBUG
-  const int OrigRangeSize = static_cast<int>(std::distance(BeginIt, EndIt));
+  const auto OrigRangeSize = std::distance(BeginIt, EndIt);
 #endif
 
   MachineRegisterInfo &MRI = *B.getMRI();
@@ -440,8 +440,7 @@ bool RegBankLegalizeHelper::widenLoad(MachineInstr &MI, LLT WideTy,
     auto Unmerge = B.buildUnmerge({DstRB, MergeTy}, WideLoad);
 
     LLT DstTy = MRI.getType(Dst);
-    unsigned NumElts =
-        static_cast<unsigned>(DstTy.getSizeInBits() / MergeTy.getSizeInBits());
+    uint64_t NumElts = DstTy.getSizeInBits() / MergeTy.getSizeInBits();
     for (unsigned i = 0; i < NumElts; ++i) {
       MergeTyParts.push_back(Unmerge.getReg(i));
     }
@@ -660,8 +659,7 @@ bool RegBankLegalizeHelper::lowerSBufToBuf(MachineInstr &MI,
   int64_t ImmOffset = 0;
   unsigned MMOOffset = setBufferOffsets(B, MI.getOperand(2).getReg(), VOffset,
                                         SOffset, ImmOffset, Alignment);
-  const unsigned MemSize = static_cast<unsigned>(
-      divideCeil(OrigMMO->getSize().getValue(), NumLoads));
+  const uint64_t MemSize = divideCeil(OrigMMO->getSize().getValue(), NumLoads);
   MachineMemOperand *BaseMMO = MF.getMachineMemOperand(OrigMMO, 0, MemSize);
   if (MMOOffset != 0)
     BaseMMO = MF.getMachineMemOperand(BaseMMO, MMOOffset, MemSize);
@@ -669,7 +667,7 @@ bool RegBankLegalizeHelper::lowerSBufToBuf(MachineInstr &MI,
   // instead. We can assume that the buffer is unswizzled.
   Register RSrc = MI.getOperand(1).getReg();
   Register VIndex = B.buildConstant(VgprRB_I32, 0).getReg(0);
-  unsigned CachePolicy = static_cast<unsigned>(MI.getOperand(3).getImm());
+  int64_t CachePolicy = MI.getOperand(3).getImm();
   unsigned Opc = AMDGPU::G_AMDGPU_BUFFER_LOAD;
   switch (MI.getOpcode()) {
   case AMDGPU::G_AMDGPU_S_BUFFER_LOAD_SBYTE:
@@ -967,7 +965,7 @@ bool RegBankLegalizeHelper::lowerSplitTo32Select(MachineInstr &MI) {
 
 bool RegBankLegalizeHelper::lowerSplitTo32SExtInReg(MachineInstr &MI) {
   auto Op1 = B.buildUnmerge(VgprRB_I32, MI.getOperand(1).getReg());
-  int Amt = static_cast<int>(MI.getOperand(2).getImm());
+  int64_t Amt = MI.getOperand(2).getImm();
   Register Lo, Hi;
   // Hi|Lo: s sign bit, ?/x bits changed/not changed by sign-extend
   if (Amt <= 32) {
@@ -1565,7 +1563,7 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     return lowerSBufToBuf(MI, WFI);
   case SplitLoad: {
     LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
-    unsigned Size = static_cast<unsigned>(DstTy.getSizeInBits());
+    uint64_t Size = DstTy.getSizeInBits();
     // Even split to 128-bit loads
     if (Size > 128) {
       LLT B128;

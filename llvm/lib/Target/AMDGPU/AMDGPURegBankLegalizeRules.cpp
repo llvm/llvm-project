@@ -1073,8 +1073,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   Predicate is8Or16BitMMO([](const MachineInstr &MI) -> bool {
     const MachineMemOperand *MMO = *MI.memoperands_begin();
-    const unsigned MemSize =
-        static_cast<unsigned>(8 * MMO->getSize().getValue());
+    const uint64_t MemSize = 8 * MMO->getSize().getValue();
     return MemSize == 16 || MemSize == 8;
   });
 
