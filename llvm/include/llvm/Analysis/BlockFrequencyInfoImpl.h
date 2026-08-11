@@ -942,18 +942,17 @@ template <class BT> class BlockFrequencyInfoImpl : BlockFrequencyInfoImplBase {
 
   /// Run iterative inference for a probability matrix and initial frequencies.
   void iterativeInference(const ProbMatrixType &ProbMatrix,
+                          const BitVector &Blocks,
                           std::vector<Scaled64> &Freq) const;
 
   /// Find all blocks to apply inference on, that is, reachable from the entry
-  /// and backward reachable from exists along edges with positive probability.
-  void findReachableBlocks(std::vector<const BlockT *> &Blocks) const;
+  /// and backward reachable from exits along edges with positive probability.
+  void findReachableBlocks(BitVector &Blocks) const;
 
   /// Build a matrix of probabilities with transitions (edges) between the
   /// blocks: ProbMatrix[I] holds pairs (J, P), where Pr[J -> I | J] = P
-  void initTransitionProbabilities(
-      const std::vector<const BlockT *> &Blocks,
-      const DenseMap<const BlockT *, size_t> &BlockIndex,
-      ProbMatrixType &ProbMatrix) const;
+  void initTransitionProbabilities(const BitVector &Blocks,
+                                   ProbMatrixType &ProbMatrix) const;
 
 #ifndef NDEBUG
   /// Compute the discrepancy between current block frequencies and the
@@ -1312,27 +1311,25 @@ template <class BT> void BlockFrequencyInfoImpl<BT>::applyIterativeInference() {
   // can be reached from the entry by edges with a positive probability.
   // Non-processed blocks are assigned with the zero frequency and are ignored
   // in the computation
-  std::vector<const BlockT *> ReachableBlocks;
+  BitVector ReachableBlocks;
   findReachableBlocks(ReachableBlocks);
-  if (ReachableBlocks.empty())
+  if (ReachableBlocks.none())
     return;
 
-  // The map is used to index successors/predecessors of reachable blocks in
-  // the ReachableBlocks vector
-  DenseMap<const BlockT *, size_t> BlockIndex;
   // Extract initial frequencies for the reachable blocks
   auto Freq = std::vector<Scaled64>(ReachableBlocks.size());
   Scaled64 SumFreq;
-  for (size_t I = 0; I < ReachableBlocks.size(); I++) {
-    const BlockT *BB = ReachableBlocks[I];
-    BlockIndex[BB] = I;
-    Freq[I] = getFloatingBlockFreq(BB);
-    SumFreq += Freq[I];
+  for (const BlockT &BB : *F) {
+    unsigned Number = GraphTraits<const BlockT *>::getNumber(&BB);
+    if (!ReachableBlocks[Number])
+      continue;
+    Freq[Number] = getFloatingBlockFreq(&BB);
+    SumFreq += Freq[Number];
   }
   assert(!SumFreq.isZero() && "empty initial block frequencies");
 
   LLVM_DEBUG(dbgs() << "Applying iterative inference for " << F->getName()
-                    << " with " << ReachableBlocks.size() << " blocks\n");
+                    << " with " << ReachableBlocks.count() << " blocks\n");
 
   // Normalizing frequencies so they sum up to 1.0
   for (auto &Value : Freq) {
@@ -1342,32 +1339,33 @@ template <class BT> void BlockFrequencyInfoImpl<BT>::applyIterativeInference() {
   // Setting up edge probabilities using sparse matrix representation:
   // ProbMatrix[I] holds a vector of pairs (J, P) where Pr[J -> I | J] = P
   ProbMatrixType ProbMatrix;
-  initTransitionProbabilities(ReachableBlocks, BlockIndex, ProbMatrix);
+  initTransitionProbabilities(ReachableBlocks, ProbMatrix);
 
   // Run the propagation
-  iterativeInference(ProbMatrix, Freq);
+  iterativeInference(ProbMatrix, ReachableBlocks, Freq);
 
   // Assign computed frequency values
   for (const BlockT &BB : *F) {
     auto Node = getNode(&BB);
     if (!Node.isValid())
       continue;
-    if (auto It = BlockIndex.find(&BB); It != BlockIndex.end())
-      Freqs[Node.Index].Scaled = Freq[It->second];
-    else
-      Freqs[Node.Index].Scaled = Scaled64::getZero();
+    unsigned Number = GraphTraits<const BlockT *>::getNumber(&BB);
+    Freqs[Node.Index].Scaled =
+        ReachableBlocks[Number] ? Freq[Number] : Scaled64::getZero();
   }
 }
 
 template <class BT>
 void BlockFrequencyInfoImpl<BT>::iterativeInference(
-    const ProbMatrixType &ProbMatrix, std::vector<Scaled64> &Freq) const {
+    const ProbMatrixType &ProbMatrix, const BitVector &Blocks,
+    std::vector<Scaled64> &Freq) const {
   assert(0.0 < IterativeBFIPrecision && IterativeBFIPrecision < 1.0 &&
          "incorrectly specified precision");
   // Convert double precision to Scaled64
   const auto Precision =
       Scaled64::getInverse(static_cast<uint64_t>(1.0 / IterativeBFIPrecision));
-  const size_t MaxIterations = IterativeBFIMaxIterationsPerBlock * Freq.size();
+  const size_t MaxIterations =
+      IterativeBFIMaxIterationsPerBlock * Blocks.count();
 
 #ifndef NDEBUG
   LLVM_DEBUG(dbgs() << "  Initial discrepancy = "
@@ -1388,7 +1386,7 @@ void BlockFrequencyInfoImpl<BT>::iterativeInference(
   // with a positive frequency are active
   auto IsActive = BitVector(Freq.size(), false);
   std::queue<size_t> ActiveSet;
-  for (size_t I = 0; I < Freq.size(); I++) {
+  for (unsigned I : Blocks.set_bits()) {
     if (Freq[I] > 0) {
       ActiveSet.push(I);
       IsActive[I] = true;
@@ -1445,15 +1443,19 @@ void BlockFrequencyInfoImpl<BT>::iterativeInference(
 }
 
 template <class BT>
-void BlockFrequencyInfoImpl<BT>::findReachableBlocks(
-    std::vector<const BlockT *> &Blocks) const {
+void BlockFrequencyInfoImpl<BT>::findReachableBlocks(BitVector &Blocks) const {
+  unsigned MaxNumber = GraphTraits<const FunctionT *>::getMaxNumber(F);
+  auto number = [](const BlockT *BB) {
+    return GraphTraits<const BlockT *>::getNumber(BB);
+  };
+
   // Find all blocks to apply inference on, that is, reachable from the entry
   // along edges with non-zero probablities
   std::queue<const BlockT *> Queue;
-  SmallPtrSet<const BlockT *, 8> Reachable;
+  BitVector Reachable(MaxNumber);
   const BlockT *Entry = &F->front();
   Queue.push(Entry);
-  Reachable.insert(Entry);
+  Reachable.set(number(Entry));
   while (!Queue.empty()) {
     const BlockT *SrcBB = Queue.front();
     Queue.pop();
@@ -1461,20 +1463,23 @@ void BlockFrequencyInfoImpl<BT>::findReachableBlocks(
       auto EP = BPI->getEdgeProbability(SrcBB, It.index());
       if (EP.isZero())
         continue;
-      if (Reachable.insert(It.value()).second)
+      unsigned Number = number(It.value());
+      if (!Reachable.test(Number)) {
+        Reachable.set(Number);
         Queue.push(It.value());
+      }
     }
   }
 
   // Find all blocks to apply inference on, that is, backward reachable from
   // the entry along (backward) edges with non-zero probablities
-  SmallPtrSet<const BlockT *, 8> InverseReachable;
+  BitVector InverseReachable(MaxNumber);
   for (const BlockT &BB : *F) {
     // An exit block is a block without any successors
     bool HasSucc = !llvm::children<const BlockT *>(&BB).empty();
-    if (!HasSucc && Reachable.count(&BB)) {
+    if (!HasSucc && Reachable.test(number(&BB))) {
       Queue.push(&BB);
-      InverseReachable.insert(&BB);
+      InverseReachable.set(number(&BB));
     }
   }
   while (!Queue.empty()) {
@@ -1484,50 +1489,48 @@ void BlockFrequencyInfoImpl<BT>::findReachableBlocks(
       auto EP = BPI->getEdgeProbability(DstBB, SrcBB);
       if (EP.isZero())
         continue;
-      if (InverseReachable.insert(DstBB).second)
+      unsigned Number = number(DstBB);
+      if (!InverseReachable.test(Number)) {
+        InverseReachable.set(Number);
         Queue.push(DstBB);
+      }
     }
   }
 
   // Collect the result
-  Blocks.reserve(F->size());
-  for (const BlockT &BB : *F) {
-    if (Reachable.count(&BB) && InverseReachable.count(&BB)) {
-      Blocks.push_back(&BB);
-    }
-  }
+  Reachable &= InverseReachable;
+  Blocks = std::move(Reachable);
 }
 
 template <class BT>
 void BlockFrequencyInfoImpl<BT>::initTransitionProbabilities(
-    const std::vector<const BlockT *> &Blocks,
-    const DenseMap<const BlockT *, size_t> &BlockIndex,
-    ProbMatrixType &ProbMatrix) const {
+    const BitVector &Blocks, ProbMatrixType &ProbMatrix) const {
   const size_t NumBlocks = Blocks.size();
   auto Succs = std::vector<std::vector<std::pair<size_t, Scaled64>>>(NumBlocks);
   auto SumProb = std::vector<Scaled64>(NumBlocks);
 
   // Find unique successors and corresponding probabilities for every block
-  for (size_t Src = 0; Src < NumBlocks; Src++) {
-    const BlockT *BB = Blocks[Src];
+  for (const BlockT &BB : *F) {
+    size_t Src = GraphTraits<const BlockT *>::getNumber(&BB);
+    if (!Blocks[Src])
+      continue;
     SmallPtrSet<const BlockT *, 2> UniqueSuccs;
-    for (auto It : enumerate(children<const BlockT *>(BB))) {
+    for (auto It : enumerate(children<const BlockT *>(&BB))) {
       const BlockT *SI = It.value();
+      size_t Dst = GraphTraits<const BlockT *>::getNumber(SI);
       // Ignore cold blocks
-      auto BlockIndexIt = BlockIndex.find(SI);
-      if (BlockIndexIt == BlockIndex.end())
+      if (!Blocks[Dst])
         continue;
       // Ignore parallel edges between BB and SI blocks
       if (!UniqueSuccs.insert(SI).second)
         continue;
       // Ignore jumps with zero probability
-      auto EP = BPI->getEdgeProbability(BB, It.index());
+      auto EP = BPI->getEdgeProbability(&BB, It.index());
       if (EP.isZero())
         continue;
 
       auto EdgeProb =
           Scaled64::getFraction(EP.getNumerator(), EP.getDenominator());
-      size_t Dst = BlockIndexIt->second;
       Succs[Src].push_back(std::make_pair(Dst, EdgeProb));
       SumProb[Src] += EdgeProb;
     }
@@ -1549,9 +1552,9 @@ void BlockFrequencyInfoImpl<BT>::initTransitionProbabilities(
   }
 
   // Add transitions from sinks to the source
-  size_t EntryIdx = BlockIndex.find(&F->front())->second;
+  size_t EntryIdx = GraphTraits<const BlockT *>::getNumber(&F->front());
   for (size_t Src = 0; Src < NumBlocks; Src++) {
-    if (Succs[Src].empty()) {
+    if (Blocks[Src] && Succs[Src].empty()) {
       ProbMatrix[EntryIdx].push_back(std::make_pair(Src, Scaled64::getOne()));
     }
   }
@@ -1561,7 +1564,9 @@ void BlockFrequencyInfoImpl<BT>::initTransitionProbabilities(
 template <class BT>
 BlockFrequencyInfoImplBase::Scaled64 BlockFrequencyInfoImpl<BT>::discrepancy(
     const ProbMatrixType &ProbMatrix, const std::vector<Scaled64> &Freq) const {
-  assert(Freq[0] > 0 && "Incorrectly computed frequency of the entry block");
+  size_t EntryIdx = GraphTraits<const BlockT *>::getNumber(&F->front());
+  assert(Freq[EntryIdx] > 0 &&
+         "Incorrectly computed frequency of the entry block");
   Scaled64 Discrepancy;
   for (size_t I = 0; I < ProbMatrix.size(); I++) {
     Scaled64 Sum;
@@ -1571,7 +1576,7 @@ BlockFrequencyInfoImplBase::Scaled64 BlockFrequencyInfoImpl<BT>::discrepancy(
     Discrepancy += Freq[I] >= Sum ? Freq[I] - Sum : Sum - Freq[I];
   }
   // Normalizing by the frequency of the entry block
-  return Discrepancy / Freq[0];
+  return Discrepancy / Freq[EntryIdx];
 }
 #endif
 
