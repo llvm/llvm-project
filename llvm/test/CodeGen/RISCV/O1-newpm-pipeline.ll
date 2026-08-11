@@ -14,6 +14,7 @@
 ; CHECK-NEXT: function
 ; CHECK-NEXT:   expand-ir-insts<O1>
 ; CHECK-NEXT:   atomic-expand
+; CHECK-NEXT:   riscv-zacas-abi-fix
 ; CHECK-NEXT:   loop-data-prefetch
 ; CHECK-NEXT:   interleaved-access
 ; CHECK-NEXT:   riscv-codegenprepare

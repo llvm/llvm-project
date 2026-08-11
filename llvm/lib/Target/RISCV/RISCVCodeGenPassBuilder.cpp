@@ -65,7 +65,7 @@ public:
 
 void RISCVCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
   addFunctionPass(AtomicExpandPass(TM), PMW);
-  // TODO: RISCVZacasABIFixPass
+  addFunctionPass(RISCVZacasABIFixPass(&TM), PMW);
 
   if (getOptLevel() != CodeGenOptLevel::None) {
     addFunctionPass(LoopDataPrefetchPass(), PMW);
