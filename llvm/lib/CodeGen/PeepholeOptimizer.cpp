@@ -1026,28 +1026,18 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
   SmallVector<RegSubRegPair, 4> SrcToLook = {CurSrcPair};
 
   unsigned PHICount = 0;
-  // Remember the last suitable source so we can keep tracing past it (through
-  // REG_SEQUENCE, etc.) and still fall back if the deeper trace dead-ends.
+
+  // Remember the last suitable source in case the search meets an invalid
+  // source.
   bool FoundSuitable = false;
   RegSubRegPair SuitablePair = RegSubReg;
-  // Fall back to the last suitable (sub)register source we remembered while
-  // trying to reach a deeper one. Drop the speculative map edge leaving it so
-  // getNewSource() terminates exactly at the fallback, and stop exploring any
-  // remaining (PHI) work items.
-  auto FallBackToSuitable = [&]() {
-    CurSrcPair = SuitablePair;
-    RewriteMap.erase(SuitablePair);
-    SrcToLook.clear();
-  };
+  bool Aborted = false;
   do {
     CurSrcPair = SrcToLook.pop_back_val();
     // As explained above, do not handle physical registers
     if (CurSrcPair.Reg.isPhysical()) {
-      if (FoundSuitable) {
-        FallBackToSuitable();
-        break;
-      }
-      return false;
+      Aborted = true;
+      break;
     }
 
     ValueTracker ValTracker(CurSrcPair.Reg, CurSrcPair.SubReg, *MRI, TII);
@@ -1058,13 +1048,8 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
       ValueTrackerResult Res = ValTracker.getNextSource();
       // Abort at the end of a chain (without finding a suitable source).
       if (!Res.isValid()) {
-        // If we already passed a suitable source while trying to reach a deeper
-        // one, fall back to it instead of aborting.
-        if (FoundSuitable) {
-          FallBackToSuitable();
-          break;
-        }
-        return false;
+        Aborted = true;
+        break;
       }
 
       // Insert the Def -> Use entry for the recently found source.
@@ -1079,11 +1064,7 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
         if (CurSrcRes.getNumSources() > 1) {
           LLVM_DEBUG(dbgs()
                      << "findNextSource: found PHI cycle, aborting...\n");
-          if (FoundSuitable) {
-            FallBackToSuitable();
-            break;
-          }
-          return false;
+          Aborted = true;
         }
         break;
       }
@@ -1095,11 +1076,8 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
         PHICount++;
         if (PHICount >= RewritePHILimit) {
           LLVM_DEBUG(dbgs() << "findNextSource: PHI limit reached\n");
-          if (FoundSuitable) {
-            FallBackToSuitable();
-            break;
-          }
-          return false;
+          Aborted = true;
+          break;
         }
 
         for (unsigned i = 0; i < NumSrcs; ++i)
@@ -1113,11 +1091,8 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
       // the live-range of a physical register, unlike SSA virtual register,
       // we will have to check that they aren't redefine before the related use.
       if (CurSrcPair.Reg.isPhysical()) {
-        if (FoundSuitable) {
-          FallBackToSuitable();
-          break;
-        }
-        return false;
+        Aborted = true;
+        break;
       }
 
       // Keep following the chain if the value isn't any better yet.
@@ -1132,8 +1107,7 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
         continue;
 
       // Don't stop at the first suitable source if it is still a subregister;
-      // keep tracing to try to reach a deeper source. Remember it as a
-      // fallback.
+      // keep tracing to try to reach a deeper source. Remember it.
       if (CurSrcPair.SubReg != 0) {
         SuitablePair = CurSrcPair;
         FoundSuitable = true;
@@ -1143,7 +1117,20 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
       // We found a suitable source, and are done with this chain.
       break;
     }
+
+    // A dead-ended chain ends all exploration
+    if (Aborted)
+      break;
   } while (!SrcToLook.empty());
+
+  if (Aborted) {
+    // If aborted with an invalid source, restore the suitable so far, if any.
+    if (!FoundSuitable)
+      return false;
+
+    CurSrcPair = SuitablePair;
+    RewriteMap.erase(SuitablePair);
+  }
 
   // If we did not find a more suitable source, there is nothing to optimize.
   return CurSrcPair.Reg != Reg;
