@@ -105,3 +105,18 @@ int main() {
   [t set_ivars];
   return 0;
 }
+
+// LLDB resolves `_NSPrintForDebugger` by symbol in any loaded module and
+// calls it to implement `po`. In a full GNUstep environment gnustep-base
+// provides it; this hermetic stand-in exercises the same machinery.
+const char *_NSPrintForDebugger(id object) {
+  if (!object)
+    return 0;
+  return object_getClassName(object);
+}
+
+// RUN: %lldb -b -o "b objc-gnustep-print.m:106" -o "run" -o "po t" \
+// RUN:     -- %t | FileCheck %s --check-prefix=PO
+//
+// PO: (lldb) po t
+// PO: TestObj

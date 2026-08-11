@@ -116,7 +116,16 @@ protected:
   // Call CreateInstance instead.
   GNUstepObjCRuntime(Process *process);
 
+  /// Address of gnustep-base's `const char *_NSPrintForDebugger(id)`, the
+  /// same debugger hook AppleObjCRuntime uses. Resolved lazily; nullptr when
+  /// gnustep-base is not loaded in the inferior.
+  Address *GetPrintForDebuggerAddr();
+
   lldb::ModuleSP m_objc_module_sp;
+
+  std::unique_ptr<Address> m_print_for_debugger_addr_up;
+
+  std::unique_ptr<FunctionCaller> m_print_object_caller_up;
 
   std::unique_ptr<GNUstepTaggedPointerVendor> m_tagged_pointer_vendor_up;
 

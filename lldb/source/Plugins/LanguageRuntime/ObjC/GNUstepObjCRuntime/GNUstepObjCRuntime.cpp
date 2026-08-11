@@ -11,9 +11,13 @@
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
+#include "lldb/Core/Address.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Value.h"
+#include "lldb/Expression/DiagnosticManager.h"
+#include "lldb/Expression/FunctionCaller.h"
 #include "lldb/Expression/UtilityFunction.h"
 #include "lldb/Symbol/DeclVendor.h"
 #include "lldb/Symbol/Symbol.h"
@@ -21,6 +25,7 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Target/Thread.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -115,17 +120,149 @@ GNUstepObjCRuntime::GNUstepObjCRuntime(Process *process)
   ReadObjCLibraryIfNeeded(process->GetTarget().GetImages());
 }
 
+Address *GNUstepObjCRuntime::GetPrintForDebuggerAddr() {
+  if (!m_print_for_debugger_addr_up) {
+    SymbolContextList sc_list;
+    GetTargetRef().GetImages().FindSymbolsWithNameAndType(
+        ConstString("_NSPrintForDebugger"), eSymbolTypeCode, sc_list);
+    for (const SymbolContext &sc : sc_list) {
+      if (!sc.symbol)
+        continue;
+      m_print_for_debugger_addr_up =
+          std::make_unique<Address>(sc.symbol->GetAddress());
+      break;
+    }
+  }
+  return m_print_for_debugger_addr_up.get();
+}
+
 llvm::Error GNUstepObjCRuntime::GetObjectDescription(Stream &str,
                                                      ValueObject &valobj) {
-  return llvm::createStringError(
-      "LLDB's GNUStep runtime does not support object description");
+  CompilerType compiler_type(valobj.GetCompilerType());
+  bool is_signed;
+  // ObjC objects can only be pointers (or numbers that actually represent
+  // pointers but haven't been typecast).
+  if (!compiler_type.IsIntegerType(is_signed) && !compiler_type.IsPointerType())
+    return llvm::createStringError("not a pointer type");
+
+  Value val;
+  if (!valobj.ResolveValue(val.GetScalar()))
+    return llvm::createStringError("pointer value could not be resolved");
+
+  // Value objects may not have a process in their ExecutionContextRef. But
+  // we need one in the context we pass down to eventually call description.
+  ExecutionContext exe_ctx;
+  if (valobj.GetProcessSP()) {
+    exe_ctx = ExecutionContext(valobj.GetExecutionContextRef());
+  } else {
+    exe_ctx.SetContext(valobj.GetTargetSP(), true);
+    if (!exe_ctx.HasProcessScope())
+      return llvm::createStringError("no process");
+  }
+  return GetObjectDescription(str, val, exe_ctx.GetBestExecutionContextScope());
 }
 
 llvm::Error
 GNUstepObjCRuntime::GetObjectDescription(Stream &strm, Value &value,
                                          ExecutionContextScope *exe_scope) {
-  return llvm::createStringError(
-      "LLDB's GNUStep runtime does not support object description");
+  // The libobjc2 runtime alone cannot describe objects; the hook lives in
+  // gnustep-base (Foundation), just like on Darwin.
+  Address *function_address = GetPrintForDebuggerAddr();
+  if (!function_address)
+    return llvm::createStringError(
+        "gnustep-base is not loaded: _NSPrintForDebugger not found");
+
+  ExecutionContext exe_ctx;
+  exe_scope->CalculateExecutionContext(exe_ctx);
+  Process *process = exe_ctx.GetProcessPtr();
+  if (!process)
+    return llvm::createStringError("no process");
+
+  Target *target = exe_ctx.GetTargetPtr();
+  TypeSystemClangSP scratch_ts_sp =
+      ScratchTypeSystemClang::GetForTarget(*target);
+  if (!scratch_ts_sp)
+    return llvm::createStringError("no scratch type system");
+
+  // The call thunk is compiled as plain C (no ObjC machinery needed in the
+  // expression parser), so pass the object as `void *` and read back a
+  // `const char *`.
+  CompilerType void_ptr_type =
+      scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
+  value.SetCompilerType(void_ptr_type);
+
+  ValueList arg_value_list;
+  arg_value_list.PushValue(value);
+
+  CompilerType return_compiler_type = scratch_ts_sp->GetCStringType(true);
+  Value ret;
+  ret.SetCompilerType(return_compiler_type);
+
+  if (!exe_ctx.GetFramePtr()) {
+    Thread *thread = exe_ctx.GetThreadPtr();
+    if (thread == nullptr) {
+      exe_ctx.SetThreadSP(process->GetThreadList().GetSelectedThread());
+      thread = exe_ctx.GetThreadPtr();
+    }
+    if (thread)
+      exe_ctx.SetFrameSP(thread->GetSelectedFrame(DoNoSelectMostRelevantFrame));
+  }
+
+  DiagnosticManager diagnostics;
+  lldb::addr_t wrapper_struct_addr = LLDB_INVALID_ADDRESS;
+
+  if (!m_print_object_caller_up) {
+    Status error;
+    m_print_object_caller_up.reset(
+        exe_scope->CalculateTarget()->GetFunctionCallerForLanguage(
+            eLanguageTypeC, return_compiler_type, *function_address,
+            arg_value_list, "gnustep-object-description", error));
+    if (error.Fail()) {
+      m_print_object_caller_up.reset();
+      return llvm::createStringError(
+          llvm::Twine("could not get function runner to call "
+                      "_NSPrintForDebugger: ") +
+          error.AsCString());
+    }
+    m_print_object_caller_up->InsertFunction(exe_ctx, wrapper_struct_addr,
+                                             diagnostics);
+  } else {
+    m_print_object_caller_up->WriteFunctionArguments(
+        exe_ctx, wrapper_struct_addr, arg_value_list, diagnostics);
+  }
+
+  EvaluateExpressionOptions options;
+  options.SetUnwindOnError(true);
+  options.SetTryAllThreads(true);
+  options.SetStopOthers(true);
+  options.SetIgnoreBreakpoints(true);
+  options.SetTimeout(process->GetUtilityExpressionTimeout());
+  options.SetIsForUtilityExpr(true);
+
+  ExpressionResults results = m_print_object_caller_up->ExecuteFunction(
+      exe_ctx, &wrapper_struct_addr, options, diagnostics, ret);
+  if (results != eExpressionCompleted)
+    return llvm::createStringError(
+        "could not evaluate _NSPrintForDebugger in the inferior");
+
+  addr_t result_ptr = ret.GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
+  if (result_ptr == 0 || result_ptr == LLDB_INVALID_ADDRESS)
+    return llvm::createStringError("object returned no description");
+
+  char buf[512];
+  size_t cstr_len = 0;
+  size_t full_buffer_len = sizeof(buf) - 1;
+  size_t curr_len = full_buffer_len;
+  while (curr_len == full_buffer_len) {
+    Status error;
+    curr_len = process->ReadCStringFromMemory(result_ptr + cstr_len, buf,
+                                              sizeof(buf), error);
+    strm.Write(buf, curr_len);
+    cstr_len += curr_len;
+  }
+  if (cstr_len > 0)
+    return llvm::Error::success();
+  return llvm::createStringError("empty object description");
 }
 
 bool GNUstepObjCRuntime::CouldHaveDynamicValue(ValueObject &in_value) {
