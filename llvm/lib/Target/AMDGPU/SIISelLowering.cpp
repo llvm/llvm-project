@@ -5007,12 +5007,14 @@ SDValue SITargetLowering::lowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
 
   EVT DstVT = Op.getValueType();
   SDValue Result = DAG.getNode(ISD::BF16_TO_FP, SL, DstVT, BitCast);
-  // bf16 -> f32/f64 extension is exact and cannot raise an FP exception, so
-  // the strict chain can pass through unchanged.
-  if (IsStrict)
-    return DAG.getMergeValues({Result, Op.getOperand(0)}, SL);
+  if (!IsStrict)
+    return Result;
 
-  return Result;
+  // Route through a strict add of -0.0, exact for every input including
+  // sign of zero, so a real FP instruction quiets/traps on a signaling NaN.
+  SDValue NegZero = DAG.getConstantFP(-0.0, SL, DstVT);
+  return DAG.getNode(ISD::STRICT_FADD, SL, DAG.getVTList(DstVT, MVT::Other),
+                     {Op.getOperand(0), Result, NegZero});
 }
 
 SDValue SITargetLowering::lowerGET_FPENV(SDValue Op, SelectionDAG &DAG) const {
