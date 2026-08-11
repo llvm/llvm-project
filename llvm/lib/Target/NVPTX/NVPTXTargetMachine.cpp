@@ -15,7 +15,6 @@
 #include "NVPTXAliasAnalysis.h"
 #include "NVPTXAllocaHoisting.h"
 #include "NVPTXAsmPrinter.h"
-#include "NVPTXAtomicLower.h"
 #include "NVPTXCtorDtorLowering.h"
 #include "NVPTXLowerAggrCopies.h"
 #include "NVPTXMachineFunctionInfo.h"
