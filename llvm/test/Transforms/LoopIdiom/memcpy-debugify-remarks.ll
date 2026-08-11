@@ -31,7 +31,7 @@ define void @test6_dest_align(ptr noalias align 1 %Base, ptr noalias align 4 %De
 ; CHECK-LABEL: @test6_dest_align(
 ; CHECK-NEXT:  bb.nph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[SIZE:%.*]], 2, !dbg [[DBG18:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[DEST:%.*]], ptr align 1 [[BASE:%.*]], i64 [[TMP0]], i1 false), !dbg [[DBG19:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[DEST:%.*]], ptr align 1 [[BASE:%.*]], i64 [[TMP0]], i1 false){{$}}
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]], !dbg [[DBG18]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, [[BB_NPH:%.*]] ], [ [[INDVAR_NEXT:%.*]], [[FOR_BODY]] ], !dbg [[DBG20:![0-9]+]]
