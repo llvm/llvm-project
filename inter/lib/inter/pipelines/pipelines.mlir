@@ -49,6 +49,10 @@ module attributes {transform.with_named_sequence} {
       %root: !transform.any_op {transform.consumed}) -> !transform.any_op {
     %r0 = transform.include @inter_lower_to_machine failures(propagate) (%root)
         : (!transform.any_op) -> !transform.any_op
+    %funcs0 = transform.collect_matching @match_func in %r0
+        : (!transform.any_op) -> !transform.any_op
+    %funcs1 = transform.apply_registered_pass "inter-machine-schedule" to %funcs0
+        : (!transform.any_op) -> !transform.any_op
     %r1 = transform.include @inter_regalloc failures(propagate) (%r0)
         : (!transform.any_op) -> !transform.any_op
     transform.yield %r1 : !transform.any_op

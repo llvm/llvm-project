@@ -37,6 +37,11 @@ def InsertSync : Pass<"inter-insert-sync", "::mlir::func::FuncOp"> {
   let dependentDialects = ["inter::xemachine::XeMachineDialect"];
 }
 
+def MachineSchedule : Pass<"inter-machine-schedule", "::mlir::func::FuncOp"> {
+  let summary = "schedule XeMachine instructions with greedy gap filling";
+  let dependentDialects = ["inter::xemachine::XeMachineDialect"];
+}
+
 def ResourceInfo : Pass<"inter-resource-info", "::mlir::func::FuncOp"> {
   let summary = "derive and validate XeMachine kernel resource metadata";
   let dependentDialects = ["inter::xemachine::XeMachineDialect"];

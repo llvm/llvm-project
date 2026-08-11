@@ -4,7 +4,10 @@ add_mlir_library(InterTransforms
   InterConvertCalls.cpp
   InterConvertMemory.cpp
   InterInsertSync.cpp
+  InterMachineSchedule.cpp
   InterResourceInfo.cpp
+  MachineScheduler.cpp
+  Xe2ScheduleModel.cpp
 
   DEPENDS
   InterPassesIncGen

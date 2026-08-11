@@ -237,10 +237,44 @@ static LogicalResult assignComponentOffsets(func::FuncOp function,
   return success();
 }
 
+static int64_t getFirstMachineUsePosition(Value value,
+                                          const AllocationState &state,
+                                          SmallPtrSetImpl<Value> &visited) {
+  if (!visited.insert(value).second)
+    return state.positions.size();
+  int64_t first = state.positions.size();
+  for (OpOperand &use : value.getUses()) {
+    Operation *owner = use.getOwner();
+    if (!owner->hasTrait<OpTrait::xemachine::NoMachineInst>()) {
+      first = std::min(first, state.positions.lookup(owner));
+      continue;
+    }
+    bool forwarded = false;
+    for (Value result : owner->getResults()) {
+      if (!isRegister(result))
+        continue;
+      first =
+          std::min(first, getFirstMachineUsePosition(result, state, visited));
+      forwarded = true;
+    }
+    if (!forwarded)
+      first = std::min(first, state.positions.lookup(owner));
+  }
+  visited.erase(value);
+  return first;
+}
+
 static int64_t getDefinitionPosition(Value value,
                                      const AllocationState &state) {
-  if (Operation *definition = value.getDefiningOp())
-    return state.positions.lookup(definition);
+  if (Operation *definition = value.getDefiningOp()) {
+    if (!definition->hasTrait<OpTrait::xemachine::NoMachineInst>())
+      return state.positions.lookup(definition);
+    SmallPtrSet<Value, 16> visited;
+    int64_t first = getFirstMachineUsePosition(value, state, visited);
+    return first == static_cast<int64_t>(state.positions.size())
+               ? state.positions.lookup(definition)
+               : first;
+  }
   Block *block = cast<BlockArgument>(value).getOwner();
   Operation *parent = block->getParentOp();
   return parent ? state.positions.lookup(parent) : 0;

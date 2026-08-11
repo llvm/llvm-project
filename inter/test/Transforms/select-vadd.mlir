@@ -8,7 +8,7 @@ module {
   // CHECK: func.func @vadd
   // CHECK-SAME: xemachine.barrier_count = 0 : i32
   // CHECK-SAME: xemachine.grf_count = 128 : i32
-  // CHECK-SAME: xemachine.grf_used = 29 : i32
+  // CHECK-SAME: xemachine.grf_used = 28 : i32
   // CHECK-SAME: xemachine.has_global_atomics = false
   // CHECK-SAME: xemachine.has_no_stateless_write = false
   // CHECK-SAME: xemachine.inline_data_payload_size = 32 : i32
@@ -36,15 +36,17 @@ module {
 }
 
 // Prologue: blob base and the two payload loads.
+// Ready immediates are pulled ahead of real instructions by the scheduler.
+// CHECK: [[PAYLOAD_STRIDE:%.*]] = xemachine.imm 192
 // CHECK: xemachine.and
 // CHECK: [[SLOT:%.*]] = xemachine.and {{.*}}src0Sub = 4
-// CHECK: [[PAYLOAD_STRIDE:%.*]] = xemachine.imm 192
 // CHECK: [[THREAD_OFFSET_ACC:%.*]] = xemachine.mul [[SLOT]], [[PAYLOAD_STRIDE]]
+// CHECK: xemachine.load_block_a32
 // CHECK: [[THREAD_OFFSET:%.*]] = xemachine.mov [[THREAD_OFFSET_ACC]]
 // CHECK: xemachine.add {{.*}}, [[THREAD_OFFSET]]
-// CHECK-COUNT-2: xemachine.load_block_a32
-// gid: mul into acc, then add the hardware- or software-provided local ID.
+// gid work can fill the gap between the two payload loads.
 // CHECK: xemachine.mul
+// CHECK: xemachine.load_block_a32
 // CHECK: xemachine.add3
 // Two A64 loads and one store, each with an explicit four-GRF address tuple.
 // CHECK: [[ADDR0:%.*]] = xemachine.tuple_from_elements
@@ -61,7 +63,7 @@ module {
 // EOT via the gateway.
 // CHECK-NEXT: xemachine.eot {{.*}} dep [[FINAL]]
 
-// GED: pc=192 opcode=sync {{.*}}function=allwr
+// GED: pc=112 opcode=sync {{.*}}function=allwr
 // GED: opcode=mul
 // GED: opcode=add3
 // GED: opcode=shl

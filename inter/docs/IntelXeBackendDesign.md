@@ -31,8 +31,8 @@ MLIR. No pass keeps hidden C++ state across an IR rewrite.
   sections 4 and 12.
 - Multiple Intel platforms. Everything is Xe2; arch gating exists but only
   `xe2` is populated.
-- Performance. The scheduler starts as a legal-order passthrough. Its static
-  Xe2 timing model is adapted from the pinned IGC scheduler.
+- Performance tuning beyond deterministic greedy gap filling. The static Xe2
+  timing model is adapted from the pinned IGC scheduler.
 
 ## 3. Ground truths
 
@@ -366,6 +366,23 @@ Transform-loop linear scan, transplanted from wave-mlir
   ready frontier. All target policy — latencies, pipes, issue rules, filler
   compatibility — lives behind a provider-function interface in the cost
   model.
+- `MachineScheduler.*` contains only region collection, dependence mechanics,
+  deterministic ready-frontier selection, and IR movement. `Xe2ScheduleModel`
+  adapts the Xe2 timing oracle and owns pipes, occupancy, ARF resources, and
+  filler compatibility.
+- Region collection completes before mutation, splitting at nested structured
+  operations and scheduling their blocks recursively. One immutable Xe2 model
+  serves the function; each collected region gets fresh issue and pressure
+  state.
+- The Xe2 model builds function-wide register-alias metadata once. Candidate
+  pressure uses the allocator's whole alias components, including fixed GRFs,
+  cross-region live ranges, and send payload lifetime through token completion;
+  a filler cannot raise the original schedule's peak pressure.
+- Ready zero-byte operations are drained to closure before each greedy choice.
+  They forward value/token readiness without consuming an issue slot.
+- The scheduler never queries memory effects or alias information. Memory
+  ordering edges are exactly the explicit token SSA edges synthesized before
+  machine selection; unrelated sends remain reorderable.
 - One timing oracle shared by scheduler preview and any simulation. No
   second oracle (documented failure mode in wave-mlir).
 - Completion latency, issue occupancy, send-source read time, and dependency
