@@ -6577,13 +6577,12 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::applyWorkshareLoopTarget(
   }
   Value *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize, Flag);
 
-  // Allocate p.lastiter and set it to 1 (true). The target workshare loop
-  // executes synchronously on the device and completely finishes before
-  // returning, so the thread executing after it is effectively the one that
-  // executed the last iteration, and needs to do the linear variable updates.
+  // Allocate p.lastiter and initialize it to 0.
+  // The actual value will be set inside the loop body if the current iteration
+  // is the last one.
   Builder.restoreIP(AllocaIP);
   Value *PLastIter = Builder.CreateAlloca(Builder.getInt32Ty(), nullptr, "p.lastiter");
-  Builder.CreateStore(Builder.getInt32(1), PLastIter);
+  Builder.CreateStore(Builder.getInt32(0), PLastIter);
   CLI->setLastIter(PLastIter);
 
   auto OI = std::make_unique<OutlineInfo>();
@@ -6613,6 +6612,15 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::applyWorkshareLoopTarget(
   // ready for deletion.
   ToBeDeleted.push_back(NewLoopCntLoad);
   ToBeDeleted.push_back(NewLoopCnt);
+
+  // Set p.lastiter to 1 if the current iteration is the last one.
+  Builder.restoreIP(CLI->getBody(), CLI->getBody()->getFirstInsertionPt());
+  Value *IsLast = Builder.CreateICmpEQ(
+      NewLoopCntLoad,
+      Builder.CreateSub(CLI->getTripCount(),
+                        ConstantInt::get(CLI->getTripCount()->getType(), 1)));
+  Value *IsLastExt = Builder.CreateZExt(IsLast, Builder.getInt32Ty());
+  Builder.CreateStore(IsLastExt, PLastIter);
 
   // Analyse loop body region. Find all input variables which are used inside
   // loop body region.
