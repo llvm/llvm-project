@@ -108,7 +108,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeNVPTXLowerArgsLegacyPassPass(PR);
   initializeNVPTXPromoteParamAlignLegacyPassPass(PR);
   initializeNVPTXMarkKernelPtrsGlobalLegacyPassPass(PR);
-  initializeNVPTXLowerAllocaPass(PR);
+  initializeNVPTXLowerAllocaLegacyPassPass(PR);
   initializeNVPTXLowerUnreachablePass(PR);
   initializeNVPTXCtorDtorLoweringLegacyPass(PR);
   initializeNVPTXLowerAggrCopiesPass(PR);
@@ -282,7 +282,7 @@ void NVPTXPassConfig::addAddressSpaceInferencePasses() {
   // be eliminated by SROA.
   addPass(createSROAPass(/*PreserveCFG=*/true,
                          /*AggregateToVector=*/true));
-  addPass(createNVPTXLowerAllocaPass());
+  addPass(createNVPTXLowerAllocaLegacyPass());
   // TODO: Consider running InferAddressSpaces during opt, earlier in the
   // compilation flow.
   addPass(createInferAddressSpacesPass());
@@ -353,7 +353,7 @@ void NVPTXPassConfig::addIRPasses() {
     addStraightLineScalarOptimizationPasses();
   } else {
     // Required for correct stack lowering
-    addPass(createNVPTXLowerAllocaPass());
+    addPass(createNVPTXLowerAllocaLegacyPass());
   }
 
   addPass(createAtomicExpandLegacyPass());

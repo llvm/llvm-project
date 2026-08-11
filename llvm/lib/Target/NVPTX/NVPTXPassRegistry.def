@@ -44,6 +44,7 @@ FUNCTION_PASS("nvptx-copy-byval-args", NVPTXCopyByValArgsPass())
 FUNCTION_PASS("nvptx-mark-kernel-ptrs-global", NVPTXMarkKernelPtrsGlobalPass())
 FUNCTION_PASS("nvptx-tag-invariant-loads", NVPTXTagInvariantLoadsPass())
 FUNCTION_PASS("nvptx-ir-peephole", NVPTXIRPeepholePass())
+FUNCTION_PASS("nvptx-lower-alloca", NVPTXLowerAllocaPass())
 #undef FUNCTION_PASS
 
 #ifndef MACHINE_FUNCTION_PASS
