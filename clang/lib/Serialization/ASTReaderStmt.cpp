@@ -3877,11 +3877,17 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
           Context, Record[ASTStmtReader::NumStmtFields], Empty);
       break;
 
-    case STMT_OMP_ORDERED_DIRECTIVE: {
+    case STMT_OMP_ORDERED_STANDALONE_DIRECTIVE: {
       unsigned NumClauses = Record[ASTStmtReader::NumStmtFields];
-      bool HasAssociatedStmt = Record[ASTStmtReader::NumStmtFields + 2];
       S = OMPOrderedDirective::CreateEmpty(Context, NumClauses,
-                                           !HasAssociatedStmt, Empty);
+                                           /*IsStandalone=*/true, Empty);
+      break;
+    }
+
+    case STMT_OMP_ORDERED_BLOCK_ASSOC_DIRECTIVE: {
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields];
+      S = OMPOrderedDirective::CreateEmpty(Context, NumClauses,
+                                           /*IsStandalone=*/false, Empty);
       break;
     }
 

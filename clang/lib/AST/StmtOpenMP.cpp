@@ -1062,17 +1062,22 @@ OMPOrderedDirective *OMPOrderedDirective::Create(const ASTContext &C,
                                                  SourceLocation EndLoc,
                                                  ArrayRef<OMPClause *> Clauses,
                                                  Stmt *AssociatedStmt) {
+  OpenMPDirectiveKind DKind =
+      AssociatedStmt ? OMPD_ordered_blockassoc : OMPD_ordered_standalone;
   return createDirective<OMPOrderedDirective>(
       C, Clauses, cast_or_null<CapturedStmt>(AssociatedStmt),
-      /*NumChildren=*/0, StartLoc, EndLoc);
+      /*NumChildren=*/0, StartLoc, EndLoc, DKind);
 }
 
 OMPOrderedDirective *OMPOrderedDirective::CreateEmpty(const ASTContext &C,
                                                       unsigned NumClauses,
                                                       bool IsStandalone,
                                                       EmptyShell) {
-  return createEmptyDirective<OMPOrderedDirective>(C, NumClauses,
-                                                   !IsStandalone);
+  OpenMPDirectiveKind DKind =
+      !IsStandalone ? OMPD_ordered_blockassoc : OMPD_ordered_standalone;
+
+  return createEmptyDirective<OMPOrderedDirective>(C, NumClauses, !IsStandalone,
+                                                   /*NumChildren=*/0, DKind);
 }
 
 OMPAtomicDirective *

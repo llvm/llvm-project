@@ -2796,7 +2796,9 @@ void ASTStmtWriter::VisitOMPScanDirective(OMPScanDirective *D) {
 void ASTStmtWriter::VisitOMPOrderedDirective(OMPOrderedDirective *D) {
   VisitStmt(D);
   VisitOMPExecutableDirective(D);
-  Code = serialization::STMT_OMP_ORDERED_DIRECTIVE;
+  Code = D->getDirectiveKind() == llvm::omp::OMPD_ordered_standalone
+             ? serialization::STMT_OMP_ORDERED_STANDALONE_DIRECTIVE
+             : serialization::STMT_OMP_ORDERED_BLOCK_ASSOC_DIRECTIVE;
 }
 
 void ASTStmtWriter::VisitOMPTeamsDirective(OMPTeamsDirective *D) {
