@@ -424,6 +424,13 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
                                              /*IsInclusionDirective=*/false);
     const_cast<LangOptions &>(getLangOpts()).CurrentModule = ModuleName;
 
+    // A Clang module or a header unit cannot serve as the primary module
+    // interface while recovering from an implementation unit declaration.
+    if (Interface && !Interface->isNamedModule()) {
+      Diag(ModuleLoc, diag::err_module_not_defined) << ModuleName;
+      return nullptr;
+    }
+
     if (!Interface) {
       Diag(ModuleLoc, diag::err_module_not_defined) << ModuleName;
       // Create an empty module interface unit for error recovery.

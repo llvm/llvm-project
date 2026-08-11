@@ -14,13 +14,6 @@ namespace llvm {
 namespace orc {
 namespace rt {
 
-const char *SimpleExecutorDylibManagerInstanceName =
-    "__llvm_orc_SimpleExecutorDylibManager_Instance";
-const char *SimpleExecutorDylibManagerOpenWrapperName =
-    "__llvm_orc_SimpleExecutorDylibManager_open_wrapper";
-const char *SimpleExecutorDylibManagerResolveWrapperName =
-    "__llvm_orc_SimpleExecutorDylibManager_resolve_wrapper";
-
 const char *SimpleExecutorMemoryManagerInstanceName =
     "__llvm_orc_SimpleExecutorMemoryManager_Instance";
 const char *SimpleExecutorMemoryManagerReserveWrapperName =
@@ -61,13 +54,6 @@ const SimpleExecutorMemoryManagerSymbolNames
         "orc_rt_ci_sps_SimpleNativeMemoryMap_initialize",
         "orc_rt_ci_sps_SimpleNativeMemoryMap_deinitializeMultiple",
         "orc_rt_ci_sps_SimpleNativeMemoryMap_releaseMultiple",
-};
-
-const SimpleExecutorDylibManagerSymbolNames
-    orc_rt_NativeDylibManagerSPSSymbols = {
-        "orc_rt_ci_NativeDylibManager_Instance",
-        "orc_rt_ci_sps_NativeDylibManager_load",
-        "orc_rt_ci_sps_NativeDylibManager_lookup",
 };
 
 const MachOUnwindInfoRegistrarSymbolNames

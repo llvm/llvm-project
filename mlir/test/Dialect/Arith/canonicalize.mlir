@@ -1120,6 +1120,25 @@ func.func @extFPVectorConstant() -> vector<2xf128> {
   return %0 : vector<2xf128>
 }
 
+// A f8E8M0FNU NaN has no payload bits; folding must not turn it into an Inf.
+// CHECK-LABEL: @extFPConstantE8M0NaN
+//       CHECK:   %[[cres:.+]] = arith.constant 0x7FC00000 : f32
+//       CHECK:   return %[[cres]]
+func.func @extFPConstantE8M0NaN() -> f32 {
+  %cst = arith.constant 0xFF : f8E8M0FNU
+  %0 = arith.extf %cst : f8E8M0FNU to f32
+  return %0 : f32
+}
+
+// CHECK-LABEL: @extFPVectorConstantE8M0NaN
+//       CHECK:   %[[cres:.+]] = arith.constant dense<[1.000000e+00, 0x7FC00000]> : vector<2xf32>
+//       CHECK:   return %[[cres]]
+func.func @extFPVectorConstantE8M0NaN() -> vector<2xf32> {
+  %cst = arith.constant dense<[1.000000e+00, 0xFF]> : vector<2xf8E8M0FNU>
+  %0 = arith.extf %cst : vector<2xf8E8M0FNU> to vector<2xf32>
+  return %0 : vector<2xf32>
+}
+
 // CHECK-LABEL: @truncExtf
 //       CHECK-NOT:  truncf
 //       CHECK:   return  %arg0

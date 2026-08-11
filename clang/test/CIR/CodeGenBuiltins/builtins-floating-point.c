@@ -1,8 +1,10 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
+// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
+// supports the !cir.long_double wrapper and the f16 and f128 types.
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fno-clangir-call-conv-lowering -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
-// RUN: %clang_cc1 -triple aarch64-apple-darwin-macho -fclangir -emit-cir %s -o %t-aarch64.cir
+// RUN: %clang_cc1 -triple aarch64-apple-darwin-macho -fclangir -fno-clangir-call-conv-lowering -emit-cir %s -o %t-aarch64.cir
 // RUN: FileCheck --input-file=%t-aarch64.cir %s --check-prefix=AARCH64
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm -o %t.ll %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fno-clangir-call-conv-lowering -emit-llvm -o %t.ll %s
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -o %t-ogcg.ll %s
 // RUN: FileCheck --input-file=%t-ogcg.ll %s --check-prefix=OGCG

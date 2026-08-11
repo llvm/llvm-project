@@ -1,0 +1,138 @@
+# This file defines a workflow that periodically requests benchmark runs for the commits
+# that should have historical performance data but don't yet.
+#
+# The workflow keeps no state: on every invocation, the commits that should be benchmarked
+# are recomputed from Git and the ones that have been benchmarked are recomputed from LNT
+# and from the Github Actions API. It then dispatches libcxx-benchmark-commit.yml for the
+# difference, within a budget. This makes the system converge towards having data for all
+# the desired commits, without necessarily ever reaching that state (as new commits land).
+#
+# The actual configuration driving this job is in libcxx/utils/ci/lnt/machines.json.
+
+name: "[libc++] Request historical benchmark data"
+
+permissions:
+  contents: read
+
+on:
+  schedule:
+    # Trigger every hour, off the hour boundary to avoid popular times.
+    - cron: '37 * * * *'
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 'Report what would be requested, but request nothing'
+        required: false
+        type: boolean
+        default: true # TODO: Make this not a dry-run by default after validating a few dry-run crons
+      allow-missing-machine:
+        description: 'Plan for machines that have no data in LNT yet. Needed to seed a new machine.'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  # Turn the machine definitions stored in libcxx/utils/ci/lnt/machines.json into actual
+  # dispatch jobs.
+  select-machines:
+    if: github.repository_owner == 'llvm'
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.select.outputs.matrix }}
+    steps:
+      - name: Checkout the machine definitions
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+          # Disabling cone mode allows checking out exactly the single file we need.
+          sparse-checkout: libcxx/utils/ci/lnt/machines.json
+          sparse-checkout-cone-mode: false
+
+      - name: Select the machines to request runs for
+        id: select
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const config = JSON.parse(require('fs').readFileSync('libcxx/utils/ci/lnt/machines.json', 'utf8'));
+            core.setOutput('matrix', JSON.stringify(config.map(cfg => ({
+              machine: cfg['lnt-machine'],
+              ...cfg.coverage,
+            }))));
+
+  request-runs:
+    permissions:
+      contents: read
+      actions: write # to dispatch libcxx-benchmark-commit.yml
+    needs:
+      - select-machines
+    strategy:
+      matrix:
+        include: ${{ fromJSON(needs.select-machines.outputs.matrix) }}
+      fail-fast: false
+    name: "Request ${{ matrix.machine }}"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      MACHINE: ${{ matrix.machine }}
+      SINCE: ${{ matrix.since }}
+      EVERY: ${{ matrix.every }}
+      SAMPLES: ${{ matrix.samples }}
+      MAX_IN_FLIGHT: ${{ matrix.max-in-flight }}
+      BENCHMARK_SUITE_VERSION: ${{ matrix.benchmark-suite-version }}
+      LNT_URL: ${{ matrix.lnt-url }}
+
+      ALLOW_MISSING_MACHINE: ${{ inputs.allow-missing-machine || 'false' }}
+      DRY_RUN: ${{ inputs.dry-run || 'false' }}
+    steps:
+      - name: Checkout the LLVM monorepo
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+          # Selecting anchor commits requires full Git history, but not the blob content.
+          fetch-depth: 0
+          filter: blob:none
+
+      - name: Install Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: '3.14'
+          cache: pip
+          cache-dependency-path: libcxx/utils/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r libcxx/utils/requirements.txt
+
+      - name: Determine which commits should have benchmark data
+        run: |
+          libcxx/utils/ci/lnt/select-anchor-commits --since "${SINCE}" --every "${EVERY}" --output anchors.txt
+          # Anchor commits go from oldest to newest. Reverse them to prioritize newer commits first.
+          tac anchors.txt > tmp.txt
+          mv tmp.txt anchors.txt
+
+      - name: Determine which of them are missing from LNT
+        run: |
+          allow_missing=()
+          if [ "${ALLOW_MISSING_MACHINE}" = "true" ]; then
+            allow_missing=(--allow-missing-machine)
+          fi
+
+          libcxx/utils/ci/lnt/plan-benchmarks --commit-list anchors.txt --lnt-url "${LNT_URL}" --test-suite libcxx  \
+                                              --machine "${MACHINE}" --samples "${SAMPLES}" "${allow_missing[@]}"   \
+                                              --output plan.jsonl
+
+      - name: Request the missing runs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          dry_run=()
+          if [ "${DRY_RUN}" = "true" ]; then
+            dry_run=(--dry-run)
+          fi
+
+          libcxx/utils/ci/lnt/dispatch-benchmarks --work-items plan.jsonl --test-suite-commit "${BENCHMARK_SUITE_VERSION}"  \
+                                                  --max-in-flight "${MAX_IN_FLIGHT}" --lnt-url "${LNT_URL}"                 \
+                                                  --output dispatched.jsonl "${dry_run[@]}"
