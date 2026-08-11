@@ -1965,9 +1965,9 @@ static mlir::Value buildFMulAdd(mlir::Location loc, cir::FMulOp mulOp,
 
   // Carry the mul's fenv attribute so a constrained fmul yields a constrained
   // fmuladd; the builder is under the add's FP options, not the mul's.
-  mlir::Value fmuladd = cir::FMulAddOp::create(
-      builder, loc, addend.getType(), mulOp0, mulOp1, addend,
-      mulOp.getFenvAttr());
+  mlir::Value fmuladd =
+      cir::FMulAddOp::create(builder, loc, addend.getType(), mulOp0, mulOp1,
+                             addend, mulOp.getFenvAttr());
   mulOp.erase();
   return fmuladd;
 }
@@ -1979,7 +1979,8 @@ static mlir::Value buildFMulAdd(mlir::Location loc, cir::FMulOp mulOp,
 // Does NOT check the type of the operation - it's assumed that this function
 // will be called from contexts where it's known that the type is contractable.
 static mlir::Value tryEmitFMulAdd(mlir::Location loc, const BinOpInfo &op,
-                                  CIRGenBuilderTy &builder, bool isSub = false) {
+                                  CIRGenBuilderTy &builder,
+                                  bool isSub = false) {
   assert((op.opcode == BO_Add || op.opcode == BO_AddAssign ||
           op.opcode == BO_Sub || op.opcode == BO_SubAssign) &&
          "Only fadd/fsub can be the root of an fmuladd.");
@@ -2186,7 +2187,8 @@ mlir::Value ScalarExprEmitter::emitSub(const BinOpInfo &ops) {
     if (cir::isFPOrVectorOfFPType(ops.lhs.getType())) {
       CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, ops.fpFeatures);
       // Try to form an fmuladd.
-      if (mlir::Value fmuladd = tryEmitFMulAdd(loc, ops, builder, /*isSub=*/true))
+      if (mlir::Value fmuladd =
+              tryEmitFMulAdd(loc, ops, builder, /*isSub=*/true))
         return fmuladd;
       return builder.createFSub(loc, ops.lhs, ops.rhs);
     }
