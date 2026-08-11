@@ -16,7 +16,7 @@
 namespace llvm {
 class FunctionPass;
 
-extern FunctionPass *createNVPTXAtomicLowerPass();
+extern FunctionPass *createNVPTXAtomicLowerLegacyPass();
 } // end namespace llvm
 
 #endif
