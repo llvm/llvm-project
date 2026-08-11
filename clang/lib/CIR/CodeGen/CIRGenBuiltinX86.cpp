@@ -2559,7 +2559,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
       break;
     }
 
-    auto resVector = cir::VectorType::get(builder.getUIntNTy(1), numElts);
+    auto resVector = cir::VectorType::get(builder.getSIntNTy(1), numElts);
 
     cir::StructType resRecord =
         cir::StructType::get(&getMLIRContext(), {resVector, resVector},
