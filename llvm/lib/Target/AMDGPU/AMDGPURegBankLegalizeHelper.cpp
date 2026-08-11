@@ -1563,7 +1563,7 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     return lowerSBufToBuf(MI, WFI);
   case SplitLoad: {
     LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
-    uint64_t Size = DstTy.getSizeInBits();
+    TypeSize Size = DstTy.getSizeInBits();
     // Even split to 128-bit loads
     if (Size > 128) {
       LLT B128;
