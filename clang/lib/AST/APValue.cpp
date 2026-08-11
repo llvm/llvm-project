@@ -184,20 +184,6 @@ APValue::LValueBase::operator bool () const {
   return static_cast<bool>(Ptr);
 }
 
-clang::APValue::LValueBase
-llvm::DenseMapInfo<clang::APValue::LValueBase>::getEmptyKey() {
-  clang::APValue::LValueBase B;
-  B.Ptr = DenseMapInfo<const ValueDecl*>::getEmptyKey();
-  return B;
-}
-
-clang::APValue::LValueBase
-llvm::DenseMapInfo<clang::APValue::LValueBase>::getTombstoneKey() {
-  clang::APValue::LValueBase B;
-  B.Ptr = DenseMapInfo<const ValueDecl*>::getTombstoneKey();
-  return B;
-}
-
 namespace clang {
 llvm::hash_code hash_value(const APValue::LValueBase &Base) {
   if (Base.is<TypeInfoLValue>() || Base.is<DynamicAllocLValue>())
@@ -296,9 +282,12 @@ APValue::Arr::Arr(unsigned NumElts, unsigned Size) :
   NumElts(NumElts), ArrSize(Size) {}
 APValue::Arr::~Arr() { delete [] Elts; }
 
-APValue::StructData::StructData(unsigned NumBases, unsigned NumFields) :
-  Elts(new APValue[NumBases+NumFields]),
-  NumBases(NumBases), NumFields(NumFields) {}
+APValue::StructData::StructData(unsigned NumBases, unsigned NumFields,
+                                unsigned NumVirtualBases)
+    : Elts(new APValue[NumBases + NumFields + NumVirtualBases]),
+      NumBases(NumBases), NumFields(NumFields),
+      NumVirtualBases(NumVirtualBases) {}
+
 APValue::StructData::~StructData() {
   delete [] Elts;
 }
@@ -333,6 +322,11 @@ APValue::APValue(const APValue &RHS)
     setVector(((const Vec *)(const char *)&RHS.Data)->Elts,
               RHS.getVectorLength());
     break;
+  case Matrix:
+    MakeMatrix();
+    setMatrix(((const Mat *)(const char *)&RHS.Data)->Elts,
+              RHS.getMatrixNumRows(), RHS.getMatrixNumColumns());
+    break;
   case ComplexInt:
     MakeComplexInt();
     setComplexInt(RHS.getComplexIntReal(), RHS.getComplexIntImag());
@@ -358,11 +352,14 @@ APValue::APValue(const APValue &RHS)
       getArrayFiller() = RHS.getArrayFiller();
     break;
   case Struct:
-    MakeStruct(RHS.getStructNumBases(), RHS.getStructNumFields());
+    MakeStruct(RHS.getStructNumBases(), RHS.getStructNumFields(),
+               RHS.getStructNumVirtualBases());
     for (unsigned I = 0, N = RHS.getStructNumBases(); I != N; ++I)
       getStructBase(I) = RHS.getStructBase(I);
     for (unsigned I = 0, N = RHS.getStructNumFields(); I != N; ++I)
       getStructField(I) = RHS.getStructField(I);
+    for (unsigned I = 0, N = RHS.getStructNumVirtualBases(); I != N; ++I)
+      getStructVirtualBase(I) = RHS.getStructVirtualBase(I);
     break;
   case Union:
     MakeUnion();
@@ -414,6 +411,8 @@ void APValue::DestroyDataAndMakeUninit() {
     ((APFixedPoint *)(char *)&Data)->~APFixedPoint();
   else if (Kind == Vector)
     ((Vec *)(char *)&Data)->~Vec();
+  else if (Kind == Matrix)
+    ((Mat *)(char *)&Data)->~Mat();
   else if (Kind == ComplexInt)
     ((ComplexAPSInt *)(char *)&Data)->~ComplexAPSInt();
   else if (Kind == ComplexFloat)
@@ -444,6 +443,7 @@ bool APValue::needsCleanup() const {
   case Union:
   case Array:
   case Vector:
+  case Matrix:
     return true;
   case Int:
     return getInt().needsCleanup();
@@ -509,6 +509,8 @@ void APValue::Profile(llvm::FoldingSetNodeID &ID) const {
       getStructBase(I).Profile(ID);
     for (unsigned I = 0, N = getStructNumFields(); I != N; ++I)
       getStructField(I).Profile(ID);
+    for (unsigned I = 0, N = getStructNumVirtualBases(); I != N; ++I)
+      getStructVirtualBase(I).Profile(ID);
     return;
 
   case Union:
@@ -578,6 +580,12 @@ void APValue::Profile(llvm::FoldingSetNodeID &ID) const {
   case Vector:
     for (unsigned I = 0, N = getVectorLength(); I != N; ++I)
       getVectorElt(I).Profile(ID);
+    return;
+
+  case Matrix:
+    for (unsigned R = 0, N = getMatrixNumRows(); R != N; ++R)
+      for (unsigned C = 0, M = getMatrixNumColumns(); C != M; ++C)
+        getMatrixElt(R, C).Profile(ID);
     return;
 
   case Int:
@@ -743,6 +751,24 @@ void APValue::printPretty(raw_ostream &Out, const PrintingPolicy &Policy,
     for (unsigned i = 1; i != getVectorLength(); ++i) {
       Out << ", ";
       getVectorElt(i).printPretty(Out, Policy, ElemTy, Ctx);
+    }
+    Out << '}';
+    return;
+  }
+  case APValue::Matrix: {
+    const auto *MT = Ty->castAs<ConstantMatrixType>();
+    QualType ElemTy = MT->getElementType();
+    Out << '{';
+    for (unsigned R = 0; R < getMatrixNumRows(); ++R) {
+      if (R != 0)
+        Out << ", ";
+      Out << '{';
+      for (unsigned C = 0; C < getMatrixNumColumns(); ++C) {
+        if (C != 0)
+          Out << ", ";
+        getMatrixElt(R, C).printPretty(Out, Policy, ElemTy, Ctx);
+      }
+      Out << '}';
     }
     Out << '}';
     return;
@@ -923,6 +949,17 @@ void APValue::printPretty(raw_ostream &Out, const PrintingPolicy &Policy,
       getStructField(FI->getFieldIndex()).
         printPretty(Out, Policy, FI->getType(), Ctx);
       First = false;
+    }
+    if (unsigned N = getStructNumVirtualBases()) {
+      const CXXRecordDecl *CD = cast<CXXRecordDecl>(RD);
+      CXXRecordDecl::base_class_const_iterator BI = CD->vbases_begin();
+      for (unsigned I = 0; I != N; ++I, ++BI) {
+        assert(BI != CD->vbases_end());
+        if (!First)
+          Out << ", ";
+        getStructVirtualBase(I).printPretty(Out, Policy, BI->getType(), Ctx);
+        First = false;
+      }
     }
     Out << '}';
     return;
@@ -1139,6 +1176,7 @@ LinkageInfo LinkageComputer::getLVForValue(const APValue &V,
   case APValue::ComplexInt:
   case APValue::ComplexFloat:
   case APValue::Vector:
+  case APValue::Matrix:
     break;
 
   case APValue::AddrLabelDiff:
@@ -1152,6 +1190,9 @@ LinkageInfo LinkageComputer::getLVForValue(const APValue &V,
         break;
     for (unsigned I = 0, N = V.getStructNumFields(); I != N; ++I)
       if (Merge(V.getStructField(I)))
+        break;
+    for (unsigned I = 0, N = V.getStructNumVirtualBases(); I != N; ++I)
+      if (Merge(V.getStructVirtualBase(I)))
         break;
     break;
   }

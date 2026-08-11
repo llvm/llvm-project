@@ -9,6 +9,7 @@
 #ifndef LLDB_VALUEOBJECT_DILAST_H
 #define LLDB_VALUEOBJECT_DILAST_H
 
+#include "lldb/ValueObject/DILLexer.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
@@ -19,6 +20,7 @@ namespace lldb_private::dil {
 /// The various types DIL AST nodes (used by the DIL parser).
 enum class NodeKind {
   eArraySubscriptNode,
+  eBinaryOpNode,
   eBitExtractionNode,
   eBooleanLiteralNode,
   eCastNode,
@@ -27,23 +29,45 @@ enum class NodeKind {
   eIdentifierNode,
   eIntegerLiteralNode,
   eMemberOfNode,
+  eSizeOfNode,
   eUnaryOpNode,
 };
 
 /// The Unary operators recognized by DIL.
 enum class UnaryOpKind {
-  AddrOf, // "&"
-  Deref,  // "*"
-  Minus,  // "-"
-  Plus,   // "+"
+  AddrOf, ///< "&"
+  Deref,  ///< "*"
+  Minus,  ///< "-"
+  Plus,   ///< "+"
+  Not,    ///< "~"
 };
+
+/// The binary operators recognized by DIL.
+enum class BinaryOpKind {
+  Add,       ///< "+"
+  AddAssign, ///< "+="
+  Assign,    ///< "="
+  Div,       ///< "/"
+  Mul,       ///< "*"
+  Rem,       ///< "%"
+  And,       ///< "&"
+  Xor,       ///< "^"
+  Or,        ///< "|"
+  Shl,       ///< "<<"
+  Shr,       ///< ">>"
+  Sub,       ///< "-"
+  SubAssign, ///< "-="
+};
+
+/// Translates DIL tokens to BinaryOpKind.
+BinaryOpKind GetBinaryOpKindFromToken(Token::Kind token_kind);
 
 /// The type casts allowed by DIL.
 enum class CastKind {
+  eArithmetic,  ///< Casting to a scalar.
   eEnumeration, ///< Casting from a scalar to an enumeration type
-  eNullptr,     ///< Casting to a nullptr type
-  eReference,   ///< Casting to a reference type
-  eNone,        ///< Type promotion casting
+  ePointer,     ///< Casting to a pointer type.
+  eNone,        ///< Invalid promotion type (results in error).
 };
 
 /// Forward declaration, for use in DIL AST nodes. Definition is at the very
@@ -146,6 +170,29 @@ public:
 private:
   UnaryOpKind m_kind;
   ASTNodeUP m_operand;
+};
+
+class BinaryOpNode : public ASTNode {
+public:
+  BinaryOpNode(uint32_t location, BinaryOpKind kind, ASTNodeUP lhs,
+               ASTNodeUP rhs)
+      : ASTNode(location, NodeKind::eBinaryOpNode), m_kind(kind),
+        m_lhs(std::move(lhs)), m_rhs(std::move(rhs)) {}
+
+  llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
+
+  BinaryOpKind GetKind() const { return m_kind; }
+  ASTNode &GetLHS() const { return *m_lhs; }
+  ASTNode &GetRHS() const { return *m_rhs; }
+
+  static bool classof(const ASTNode *node) {
+    return node->GetKind() == NodeKind::eBinaryOpNode;
+  }
+
+private:
+  BinaryOpKind m_kind;
+  ASTNodeUP m_lhs;
+  ASTNodeUP m_rhs;
 };
 
 class ArraySubscriptNode : public ASTNode {
@@ -278,6 +325,29 @@ private:
   CastKind m_cast_kind;
 };
 
+class SizeOfNode : public ASTNode {
+public:
+  SizeOfNode(uint32_t location, ASTNodeUP node)
+      : ASTNode(location, NodeKind::eSizeOfNode), m_node_arg(std::move(node)) {}
+
+  SizeOfNode(uint32_t location, CompilerType type)
+      : ASTNode(location, NodeKind::eSizeOfNode), m_type_arg(type) {}
+
+  llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
+
+  ASTNode &GetNodeArg() const { return *m_node_arg; }
+  CompilerType GetTypeArg() const { return m_type_arg; }
+
+  static bool classof(const ASTNode &node) {
+    return node.GetKind() == NodeKind::eSizeOfNode;
+  }
+
+private:
+  std::string m_name;
+  ASTNodeUP m_node_arg;
+  CompilerType m_type_arg;
+};
+
 /// This class contains one Visit method for each specialized type of
 /// DIL AST node. The Visit methods are used to dispatch a DIL AST node to
 /// the correct function in the DIL expression evaluator for evaluating that
@@ -292,6 +362,8 @@ public:
   virtual llvm::Expected<lldb::ValueObjectSP>
   Visit(const UnaryOpNode &node) = 0;
   virtual llvm::Expected<lldb::ValueObjectSP>
+  Visit(const BinaryOpNode &node) = 0;
+  virtual llvm::Expected<lldb::ValueObjectSP>
   Visit(const ArraySubscriptNode &node) = 0;
   virtual llvm::Expected<lldb::ValueObjectSP>
   Visit(const BitFieldExtractionNode &node) = 0;
@@ -302,6 +374,7 @@ public:
   virtual llvm::Expected<lldb::ValueObjectSP>
   Visit(const BooleanLiteralNode &node) = 0;
   virtual llvm::Expected<lldb::ValueObjectSP> Visit(const CastNode &node) = 0;
+  virtual llvm::Expected<lldb::ValueObjectSP> Visit(const SizeOfNode &node) = 0;
 };
 
 } // namespace lldb_private::dil

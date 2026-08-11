@@ -193,7 +193,7 @@ static RT_API_ATTRS bool AbsoluteTabbing(CONTEXT &context, int n) {
 
 template <typename CONTEXT>
 static RT_API_ATTRS void HandleControl(
-    CONTEXT &context, char ch, char next, int n) {
+    CONTEXT &context, char ch, char next, char next2, int n) {
   MutableModes &modes{context.mutableModes()};
   switch (ch) {
   case 'B':
@@ -248,6 +248,16 @@ static RT_API_ATTRS void HandleControl(
     break;
   case 'X':
     if (!next && RelativeTabbing(context, n)) {
+      return;
+    }
+    break;
+  case 'L':
+    if (next == 'Z') {
+      if (next2 == 'S') {
+        modes.editingFlags |= leadingZeroSuppress; // LZS
+      } else {
+        modes.editingFlags &= ~leadingZeroSuppress; // LZ or LZP
+      }
       return;
     }
     break;
@@ -455,15 +465,24 @@ RT_API_ATTRS int FormatControl<CONTEXT>::CueUpNextDataEdit(
     } else if (ch >= 'A' && ch <= 'Z') {
       int start{offset_ - 1};
       CharType next{'\0'};
+      CharType next2{'\0'};
       if (ch != 'P') { // 1PE5.2 - comma not required (C1302)
         CharType peek{Capitalize(PeekNext())};
         if (peek >= 'A' && peek <= 'Z') {
-          if ((ch == 'A' && peek == 'T' /* anticipate F'202X AT editing */) ||
-              ch == 'B' || ch == 'D' || ch == 'E' || ch == 'R' || ch == 'S' ||
-              ch == 'T') {
+          if ((ch == 'A' && peek == 'T') || ch == 'B' || ch == 'D' ||
+              ch == 'E' || ch == 'R' || ch == 'S' || ch == 'T') {
             // Assume a two-letter edit descriptor
             next = peek;
             ++offset_;
+          } else if (ch == 'L' && peek == 'Z') {
+            // LZ, LZS, or LZP control edit descriptor
+            next = peek;
+            ++offset_;
+            CharType peek2{Capitalize(PeekNext())};
+            if (peek2 == 'S' || peek2 == 'P') {
+              next2 = peek2;
+              ++offset_;
+            }
           } else {
             // extension: assume a comma between 'ch' and 'peek'
           }
@@ -473,6 +492,7 @@ RT_API_ATTRS int FormatControl<CONTEXT>::CueUpNextDataEdit(
               (ch == 'A' || ch == 'I' || ch == 'B' || ch == 'E' || ch == 'D' ||
                   ch == 'O' || ch == 'Z' || ch == 'F' || ch == 'G' ||
                   ch == 'L')) ||
+          (ch == 'A' && next == 'T') ||
           (ch == 'E' && (next == 'N' || next == 'S' || next == 'X')) ||
           (ch == 'D' && next == 'T')) {
         // Data edit descriptor found
@@ -484,7 +504,7 @@ RT_API_ATTRS int FormatControl<CONTEXT>::CueUpNextDataEdit(
           repeat = GetIntField(context);
         }
         HandleControl(context, static_cast<char>(ch), static_cast<char>(next),
-            repeat ? *repeat : 1);
+            static_cast<char>(next2), repeat ? *repeat : 1);
       }
     } else if (ch == '/') {
       context.AdvanceRecord(repeat && *repeat > 0 ? *repeat : 1);
@@ -584,13 +604,20 @@ RT_API_ATTRS common::optional<DataEdit> FormatControl<CONTEXT>::GetNextDataEdit(
         edit.variation = next;
         ++offset_;
       }
+    } else if (edit.descriptor == 'A') {
+      if (static_cast<char>(Capitalize(PeekNext())) == 'T') {
+        edit.variation = 'T';
+        ++offset_;
+      }
     }
     // Width is optional for A[w] in the standard and optional
     // for Lw in most compilers.
+    // AT does not accept a width.
     // Intel & (presumably, from bug report) Fujitsu allow
     // a missing 'w' & 'd'/'m' for other edit descriptors -- but not
     // 'd'/'m' with a missing 'w' -- and so interpret "(E)" as "(E0)".
-    if (CharType ch{PeekNext()}; (ch >= '0' && ch <= '9') || ch == '.') {
+    if (CharType ch{PeekNext()};
+        edit.variation != 'T' && ((ch >= '0' && ch <= '9') || ch == '.')) {
       edit.width = GetIntField(context);
       if constexpr (std::is_base_of_v<InputStatementState, CONTEXT>) {
         if (edit.width.value_or(-1) == 0) {

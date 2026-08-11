@@ -59,6 +59,8 @@ MCOPT(bool, Crel)
 MCOPT(bool, ImplicitMapSyms)
 MCOPT(bool, X86RelaxRelocations)
 MCOPT(bool, X86Sse2Avx)
+MCOPT(RelocSectionSymType, RelocSectionSym)
+MCOPT(bool, LargeEHEncoding)
 MCSTROPT(ABIName)
 MCSTROPT(AsSecureLogFile)
 
@@ -101,6 +103,8 @@ llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
                             "no-compact-unwind",
                             "Only emit EH frame entries when compact unwind is "
                             "not available"),
+                 clEnumValN(EmitDwarfUnwindType::DwarfOnly, "dwarf-only",
+                            "Force compact unwind to reference DWARF"),
                  clEnumValN(EmitDwarfUnwindType::Default, "default",
                             "Use target platform default")));
   MCBINDOPT(EmitDwarfUnwind);
@@ -168,6 +172,27 @@ llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
                               "instructions with VEX prefix"));
   MCBINDOPT(X86Sse2Avx);
 
+  static cl::opt<RelocSectionSymType> RelocSectionSym(
+      "reloc-section-sym",
+      cl::desc("Control section symbol conversion for relocations"),
+      cl::init(RelocSectionSymType::All),
+      cl::values(
+          clEnumValN(RelocSectionSymType::All, "all",
+                     "Use section symbols for all eligible local symbols"),
+          clEnumValN(RelocSectionSymType::Internal, "internal",
+                     "Only use section symbols for internal local symbols"),
+          clEnumValN(RelocSectionSymType::None, "none",
+                     "Never use section symbols")));
+  MCBINDOPT(RelocSectionSym);
+
+  static cl::opt<bool> LargeEHEncoding(
+      "large-eh-encoding",
+      cl::desc("Force 8-byte (sdata8) pointer encodings for ELF "
+               "exception-handling sections to avoid relocation overflows in "
+               "large binaries (x86_64: FDE/personality/LSDA/TType; "
+               "AArch64/PPC64: FDE only, the rest are already sdata8)"));
+  MCBINDOPT(LargeEHEncoding);
+
   static cl::opt<std::string> ABIName(
       "target-abi",
       cl::desc("The name of the ABI to be targeted from the backend."),
@@ -199,6 +224,8 @@ MCTargetOptions llvm::mc::InitMCTargetOptionsFromFlags() {
   Options.ImplicitMapSyms = getImplicitMapSyms();
   Options.X86RelaxRelocations = getX86RelaxRelocations();
   Options.X86Sse2Avx = getX86Sse2Avx();
+  Options.RelocSectionSym = getRelocSectionSym();
+  Options.LargeEHEncoding = getLargeEHEncoding();
   Options.EmitDwarfUnwind = getEmitDwarfUnwind();
   Options.EmitCompactUnwindNonCanonical = getEmitCompactUnwindNonCanonical();
   Options.EmitSFrameUnwind = getEmitSFrameUnwind();

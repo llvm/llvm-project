@@ -15,6 +15,9 @@
 #if defined(__aarch64__) || defined(__arm64ec__)
 // AArch64 GCC overrides libgcc_cmp_return to use int instead of long.
 typedef int CMP_RESULT;
+#elif defined(__wasm__)
+// Both wasm32 and wasm64 use i32
+typedef int CMP_RESULT;
 #elif __SIZEOF_POINTER__ == 8 && __SIZEOF_LONG__ == 4
 // LLP64 ABIs use long long instead of long.
 typedef long long CMP_RESULT;

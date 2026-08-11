@@ -36,103 +36,71 @@
 define spir_func void @test_load_store_global() {
 entry:
 ; CHECK-DAG: %[[#PTR0:]] = OpAccessChain %[[#ptr_int:]] %[[#G16:]] %[[#C0]]
-; CHECK-DAG: %[[#VAL0:]] = OpLoad %[[#int]] %[[#PTR0]] Aligned 4
+; CHECK-DAG: %[[#VAL0:]] = OpLoad %[[#int]] %[[#PTR0]]
 ; CHECK-DAG: %[[#PTR1:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C1]]
-; CHECK-DAG: %[[#VAL1:]] = OpLoad %[[#int]] %[[#PTR1]] Aligned 4
+; CHECK-DAG: %[[#VAL1:]] = OpLoad %[[#int]] %[[#PTR1]]
 ; CHECK-DAG: %[[#PTR2:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C2]]
-; CHECK-DAG: %[[#VAL2:]] = OpLoad %[[#int]] %[[#PTR2]] Aligned 4
+; CHECK-DAG: %[[#VAL2:]] = OpLoad %[[#int]] %[[#PTR2]]
 ; CHECK-DAG: %[[#PTR3:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C3]]
-; CHECK-DAG: %[[#VAL3:]] = OpLoad %[[#int]] %[[#PTR3]] Aligned 4
+; CHECK-DAG: %[[#VAL3:]] = OpLoad %[[#int]] %[[#PTR3]]
 ; CHECK-DAG: %[[#PTR4:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C4]]
-; CHECK-DAG: %[[#VAL4:]] = OpLoad %[[#int]] %[[#PTR4]] Aligned 4
+; CHECK-DAG: %[[#VAL4:]] = OpLoad %[[#int]] %[[#PTR4]]
 ; CHECK-DAG: %[[#PTR5:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C5]]
-; CHECK-DAG: %[[#VAL5:]] = OpLoad %[[#int]] %[[#PTR5]] Aligned 4
+; CHECK-DAG: %[[#VAL5:]] = OpLoad %[[#int]] %[[#PTR5]]
 ; CHECK-DAG: %[[#PTR6:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C6]]
-; CHECK-DAG: %[[#VAL6:]] = OpLoad %[[#int]] %[[#PTR6]] Aligned 4
+; CHECK-DAG: %[[#VAL6:]] = OpLoad %[[#int]] %[[#PTR6]]
 ; CHECK-DAG: %[[#PTR7:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C7]]
-; CHECK-DAG: %[[#VAL7:]] = OpLoad %[[#int]] %[[#PTR7]] Aligned 4
+; CHECK-DAG: %[[#VAL7:]] = OpLoad %[[#int]] %[[#PTR7]]
 ; CHECK-DAG: %[[#PTR8:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C8]]
-; CHECK-DAG: %[[#VAL8:]] = OpLoad %[[#int]] %[[#PTR8]] Aligned 4
+; CHECK-DAG: %[[#VAL8:]] = OpLoad %[[#int]] %[[#PTR8]]
 ; CHECK-DAG: %[[#PTR9:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C9]]
-; CHECK-DAG: %[[#VAL9:]] = OpLoad %[[#int]] %[[#PTR9]] Aligned 4
+; CHECK-DAG: %[[#VAL9:]] = OpLoad %[[#int]] %[[#PTR9]]
 ; CHECK-DAG: %[[#PTR10:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C10]]
-; CHECK-DAG: %[[#VAL10:]] = OpLoad %[[#int]] %[[#PTR10]] Aligned 4
+; CHECK-DAG: %[[#VAL10:]] = OpLoad %[[#int]] %[[#PTR10]]
 ; CHECK-DAG: %[[#PTR11:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C11]]
-; CHECK-DAG: %[[#VAL11:]] = OpLoad %[[#int]] %[[#PTR11]] Aligned 4
+; CHECK-DAG: %[[#VAL11:]] = OpLoad %[[#int]] %[[#PTR11]]
 ; CHECK-DAG: %[[#PTR12:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C12]]
-; CHECK-DAG: %[[#VAL12:]] = OpLoad %[[#int]] %[[#PTR12]] Aligned 4
+; CHECK-DAG: %[[#VAL12:]] = OpLoad %[[#int]] %[[#PTR12]]
 ; CHECK-DAG: %[[#PTR13:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C13]]
-; CHECK-DAG: %[[#VAL13:]] = OpLoad %[[#int]] %[[#PTR13]] Aligned 4
+; CHECK-DAG: %[[#VAL13:]] = OpLoad %[[#int]] %[[#PTR13]]
 ; CHECK-DAG: %[[#PTR14:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C14]]
-; CHECK-DAG: %[[#VAL14:]] = OpLoad %[[#int]] %[[#PTR14]] Aligned 4
+; CHECK-DAG: %[[#VAL14:]] = OpLoad %[[#int]] %[[#PTR14]]
 ; CHECK-DAG: %[[#PTR15:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C15]]
-; CHECK-DAG: %[[#VAL15:]] = OpLoad %[[#int]] %[[#PTR15]] Aligned 4
-; CHECK-DAG: %[[#INS0:]] = OpCompositeInsert %[[#v4i32]] %[[#VAL0]] %[[#UNDEF:]] 0
-; CHECK-DAG: %[[#INS1:]] = OpCompositeInsert %[[#v4i32]] %[[#VAL1]] %[[#INS0]] 1
-; CHECK-DAG: %[[#INS2:]] = OpCompositeInsert %[[#v4i32]] %[[#VAL2]] %[[#INS1]] 2
-; CHECK-DAG: %[[#INS3:]] = OpCompositeInsert %[[#v4i32]] %[[#VAL3]] %[[#INS2]] 3
-; CHECK-DAG: %[[#INS4:]] = OpCompositeInsert %[[#v4i32]] %[[#VAL4]] %[[#UNDEF]] 0
-; CHECK-DAG: %[[#INS5:]] = OpCompositeInsert %[[#v4i32]] %[[#VAL5]] %[[#INS4]] 1
-; CHECK-DAG: %[[#INS6:]] = OpCompositeInsert %[[#v4i32]] %[[#VAL6]] %[[#INS5]] 2
-; CHECK-DAG: %[[#INS7:]] = OpCompositeInsert %[[#v4i32]] %[[#VAL7]] %[[#INS6]] 3
-; CHECK-DAG: %[[#INS8:]] = OpCompositeInsert %[[#v4i32]] %[[#VAL8]] %[[#UNDEF]] 0
-; CHECK-DAG: %[[#INS9:]] = OpCompositeInsert %[[#v4i32]] %[[#VAL9]] %[[#INS8]] 1
-; CHECK-DAG: %[[#INS10:]] = OpCompositeInsert %[[#v4i32]] %[[#VAL10]] %[[#INS9]] 2
-; CHECK-DAG: %[[#INS11:]] = OpCompositeInsert %[[#v4i32]] %[[#VAL11]] %[[#INS10]] 3
-; CHECK-DAG: %[[#INS12:]] = OpCompositeInsert %[[#v4i32]] %[[#VAL12]] %[[#UNDEF]] 0
-; CHECK-DAG: %[[#INS13:]] = OpCompositeInsert %[[#v4i32]] %[[#VAL13]] %[[#INS12]] 1
-; CHECK-DAG: %[[#INS14:]] = OpCompositeInsert %[[#v4i32]] %[[#VAL14]] %[[#INS13]] 2
-; CHECK-DAG: %[[#INS15:]] = OpCompositeInsert %[[#v4i32]] %[[#VAL15]] %[[#INS14]] 3
+; CHECK-DAG: %[[#VAL15:]] = OpLoad %[[#int]] %[[#PTR15]]
   %0 = load <16 x i32>, ptr addrspace(10) @G_16, align 64
  
-; CHECK-DAG: %[[#PTR0_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C0]]
-; CHECK-DAG: %[[#VAL0_S:]] = OpCompositeExtract %[[#int]] %[[#INS3]] 0
-; CHECK-DAG: OpStore %[[#PTR0_S]] %[[#VAL0_S]] Aligned 64
-; CHECK-DAG: %[[#PTR1_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C1]]
-; CHECK-DAG: %[[#VAL1_S:]] = OpCompositeExtract %[[#int]] %[[#INS3]] 1
-; CHECK-DAG: OpStore %[[#PTR1_S]] %[[#VAL1_S]] Aligned 4
-; CHECK-DAG: %[[#PTR2_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C2]]
-; CHECK-DAG: %[[#VAL2_S:]] = OpCompositeExtract %[[#int]] %[[#INS3]] 2
-; CHECK-DAG: OpStore %[[#PTR2_S]] %[[#VAL2_S]] Aligned 8
-; CHECK-DAG: %[[#PTR3_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C3]]
-; CHECK-DAG: %[[#VAL3_S:]] = OpCompositeExtract %[[#int]] %[[#INS3]] 3
-; CHECK-DAG: OpStore %[[#PTR3_S]] %[[#VAL3_S]] Aligned 4
-; CHECK-DAG: %[[#PTR4_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C4]]
-; CHECK-DAG: %[[#VAL4_S:]] = OpCompositeExtract %[[#int]] %[[#INS7]] 0
-; CHECK-DAG: OpStore %[[#PTR4_S]] %[[#VAL4_S]] Aligned 16
-; CHECK-DAG: %[[#PTR5_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C5]]
-; CHECK-DAG: %[[#VAL5_S:]] = OpCompositeExtract %[[#int]] %[[#INS7]] 1
-; CHECK-DAG: OpStore %[[#PTR5_S]] %[[#VAL5_S]] Aligned 4
-; CHECK-DAG: %[[#PTR6_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C6]]
-; CHECK-DAG: %[[#VAL6_S:]] = OpCompositeExtract %[[#int]] %[[#INS7]] 2
-; CHECK-DAG: OpStore %[[#PTR6_S]] %[[#VAL6_S]] Aligned 8
-; CHECK-DAG: %[[#PTR7_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C7]]
-; CHECK-DAG: %[[#VAL7_S:]] = OpCompositeExtract %[[#int]] %[[#INS7]] 3
-; CHECK-DAG: OpStore %[[#PTR7_S]] %[[#VAL7_S]] Aligned 4
-; CHECK-DAG: %[[#PTR8_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C8]]
-; CHECK-DAG: %[[#VAL8_S:]] = OpCompositeExtract %[[#int]] %[[#INS11]] 0
-; CHECK-DAG: OpStore %[[#PTR8_S]] %[[#VAL8_S]] Aligned 32
-; CHECK-DAG: %[[#PTR9_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C9]]
-; CHECK-DAG: %[[#VAL9_S:]] = OpCompositeExtract %[[#int]] %[[#INS11]] 1
-; CHECK-DAG: OpStore %[[#PTR9_S]] %[[#VAL9_S]] Aligned 4
-; CHECK-DAG: %[[#PTR10_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C10]]
-; CHECK-DAG: %[[#VAL10_S:]] = OpCompositeExtract %[[#int]] %[[#INS11]] 2
-; CHECK-DAG: OpStore %[[#PTR10_S]] %[[#VAL10_S]] Aligned 8
-; CHECK-DAG: %[[#PTR11_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C11]]
-; CHECK-DAG: %[[#VAL11_S:]] = OpCompositeExtract %[[#int]] %[[#INS11]] 3
-; CHECK-DAG: OpStore %[[#PTR11_S]] %[[#VAL11_S]] Aligned 4
-; CHECK-DAG: %[[#PTR12_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C12]]
-; CHECK-DAG: %[[#VAL12_S:]] = OpCompositeExtract %[[#int]] %[[#INS15]] 0
-; CHECK-DAG: OpStore %[[#PTR12_S]] %[[#VAL12_S]] Aligned 16
-; CHECK-DAG: %[[#PTR13_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C13]]
-; CHECK-DAG: %[[#VAL13_S:]] = OpCompositeExtract %[[#int]] %[[#INS15]] 1
-; CHECK-DAG: OpStore %[[#PTR13_S]] %[[#VAL13_S]] Aligned 4
-; CHECK-DAG: %[[#PTR14_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C14]]
-; CHECK-DAG: %[[#VAL14_S:]] = OpCompositeExtract %[[#int]] %[[#INS15]] 2
-; CHECK-DAG: OpStore %[[#PTR14_S]] %[[#VAL14_S]] Aligned 8
-; CHECK-DAG: %[[#PTR15_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C15]]
-; CHECK-DAG: %[[#VAL15_S:]] = OpCompositeExtract %[[#int]] %[[#INS15]] 3
-; CHECK-DAG: OpStore %[[#PTR15_S]] %[[#VAL15_S]] Aligned 4
+; CHECK: %[[#PTR0_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C0]]
+; CHECK: OpStore %[[#PTR0_S]] %[[#VAL0]]
+; CHECK: %[[#PTR1_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C1]]
+; CHECK: OpStore %[[#PTR1_S]] %[[#VAL1]]
+; CHECK: %[[#PTR2_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C2]]
+; CHECK: OpStore %[[#PTR2_S]] %[[#VAL2]]
+; CHECK: %[[#PTR3_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C3]]
+; CHECK: OpStore %[[#PTR3_S]] %[[#VAL3]]
+; CHECK: %[[#PTR4_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C4]]
+; CHECK: OpStore %[[#PTR4_S]] %[[#VAL4]]
+; CHECK: %[[#PTR5_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C5]]
+; CHECK: OpStore %[[#PTR5_S]] %[[#VAL5]]
+; CHECK: %[[#PTR6_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C6]]
+; CHECK: OpStore %[[#PTR6_S]] %[[#VAL6]]
+; CHECK: %[[#PTR7_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C7]]
+; CHECK: OpStore %[[#PTR7_S]] %[[#VAL7]]
+; CHECK: %[[#PTR8_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C8]]
+; CHECK: OpStore %[[#PTR8_S]] %[[#VAL8]]
+; CHECK: %[[#PTR9_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C9]]
+; CHECK: OpStore %[[#PTR9_S]] %[[#VAL9]]
+; CHECK: %[[#PTR10_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C10]]
+; CHECK: OpStore %[[#PTR10_S]] %[[#VAL10]]
+; CHECK: %[[#PTR11_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C11]]
+; CHECK: OpStore %[[#PTR11_S]] %[[#VAL11]]
+; CHECK: %[[#PTR12_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C12]]
+; CHECK: OpStore %[[#PTR12_S]] %[[#VAL12]]
+; CHECK: %[[#PTR13_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C13]]
+; CHECK: OpStore %[[#PTR13_S]] %[[#VAL13]]
+; CHECK: %[[#PTR14_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C14]]
+; CHECK: OpStore %[[#PTR14_S]] %[[#VAL14]]
+; CHECK: %[[#PTR15_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C15]]
+; CHECK: OpStore %[[#PTR15_S]] %[[#VAL15]]
   store <16 x i32> %0, ptr addrspace(10) @G_16, align 64
   ret void
 }
@@ -180,7 +148,7 @@ entry:
   ; CHECK: %[[#BITCAST5:]] = OpBitcast %[[#double]] %[[#CONSTRUCT5]]
   ; CHECK: %[[#BITCAST6:]] = OpBitcast %[[#double]] %[[#CONSTRUCT6]]
   ; CHECK: %[[#CONSTRUCT7:]] = OpCompositeConstruct %[[#v4f64]] %[[#BITCAST3]] %[[#BITCAST4]] %[[#BITCAST5]] %[[#BITCAST6]]
-  ; CHECK: OpStore %[[#global_double]] %[[#CONSTRUCT7]] Aligned 32
+  ; CHECK: OpStore %[[#global_double]] %[[#CONSTRUCT7]]
   store <8 x i32> %3, ptr addrspace(10) @G_4_double
   ret void
 }
@@ -189,7 +157,7 @@ entry:
 define spir_func void @test_double_to_int_implicit_conversion() {
 entry:
 
-; CHECK: %[[#LOAD_V4F64:]] = OpLoad %[[#V4F64_TYPE:]] %[[#GLOBAL_DOUBLE_VAR:]] Aligned 32
+; CHECK: %[[#LOAD_V4F64:]] = OpLoad %[[#V4F64_TYPE:]] %[[#GLOBAL_DOUBLE_VAR:]]
 ; CHECK: %[[#VEC_SHUF_01:]] = OpVectorShuffle %[[#V2F64_TYPE:]] %[[#LOAD_V4F64]] %[[#UNDEF_V2F64:]] 0 1
 ; CHECK: %[[#VEC_SHUF_23:]] = OpVectorShuffle %[[#V2F64_TYPE:]] %[[#LOAD_V4F64]] %[[#UNDEF_V2F64]] 2 3
 ; CHECK: %[[#BITCAST_V4I32_01:]] = OpBitcast %[[#V4I32_TYPE:]] %[[#VEC_SHUF_01]]
@@ -205,7 +173,7 @@ entry:
 ; CHECK: %[[#BITCAST_DOUBLE_1_0:]] = OpBitcast %[[#DOUBLE_TYPE]] %[[#VEC_SHUF_1_0]]
 ; CHECK: %[[#BITCAST_DOUBLE_1_1:]] = OpBitcast %[[#DOUBLE_TYPE]] %[[#VEC_SHUF_1_1]]
 ; CHECK: %[[#COMPOSITE_CONSTRUCT:]] = OpCompositeConstruct %[[#V4F64_TYPE]] %[[#BITCAST_DOUBLE_0_0]] %[[#BITCAST_DOUBLE_0_1]] %[[#BITCAST_DOUBLE_1_0]] %[[#BITCAST_DOUBLE_1_1]]
-; CHECK: OpStore %[[#GLOBAL_DOUBLE_VAR]] %[[#COMPOSITE_CONSTRUCT]] Aligned 64
+; CHECK: OpStore %[[#GLOBAL_DOUBLE_VAR]] %[[#COMPOSITE_CONSTRUCT]]
   store <8 x i32> %0, ptr addrspace(10) @G_4_double, align 64
   ret void
 }

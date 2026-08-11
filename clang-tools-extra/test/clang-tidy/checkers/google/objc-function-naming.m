@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s google-objc-function-naming %t -- -- -isystem %clang_tidy_headers
+// RUN: %check_clang_tidy %s google-objc-function-naming %t
 
 #include <stdio.h>
 

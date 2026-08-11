@@ -14,4 +14,9 @@ interface designed for LLVM Flang to target implementations of
 Fortran's multi-image parallel features.
 
 The current revision of the PRIF specification is here:
-<https://doi.org/10.25344/S46S3W>
+<https://doi.org/10.25344/S4Z88F>
+
+Library implementations of PRIF include:
+
+* [Caffeine](https://go.lbl.gov/caffeine) - portable open-source implementation targeting shared- and distributed-memory systems running Linux or macOS
+

@@ -49,16 +49,15 @@ bool NonZeroEnumToBoolConversionCheck::isLanguageVersionSupported(
 void NonZeroEnumToBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
   // Excluding bitwise operators (binary and overload) to avoid false-positives
   // in code like this 'if (e & SUCCESS) {'.
-  auto ExcludedOperators = binaryOperation(hasAnyOperatorName(
+  const auto ExcludedOperators = binaryOperation(hasAnyOperatorName(
       "|", "&", "^", "<<", ">>", "~", "|=", "&=", "^=", "<<=", ">>="));
 
   Finder->addMatcher(
-      castExpr(hasCastKind(CK_IntegralToBoolean),
-               unless(isExpansionInSystemHeader()), hasType(booleanType()),
+      castExpr(hasCastKind(CK_IntegralToBoolean), hasType(booleanType()),
                hasSourceExpression(
                    expr(hasType(qualType(hasCanonicalType(hasDeclaration(
                             enumDecl(isCompleteAndHasNoZeroValue(),
-                                     unless(matchers::matchesAnyListedName(
+                                     unless(matchers::matchesAnyListedRegexName(
                                          EnumIgnoreList)))
                                 .bind("enum"))))),
                         unless(declRefExpr(to(enumConstantDecl()))),

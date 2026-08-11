@@ -11,17 +11,17 @@ body:             |
     ; CHECK: [[DEF:%[0-9]+]]:vrm4 = IMPLICIT_DEF
     ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 8
     ; CHECK-NEXT: %pt:vr = IMPLICIT_DEF
-    ; CHECK-NEXT: [[PseudoVLE32_V_M1_:%[0-9]+]]:vr = PseudoVLE32_V_M1 %pt, killed [[ADDI]], 0, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: [[PseudoVLE32_V_M1_:%[0-9]+]]:vr = PseudoVLE32_V_M1 %pt, killed [[ADDI]], 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vrm4 = INSERT_SUBREG [[DEF]], [[PseudoVLE32_V_M1_]], %subreg.sub_vrm1_0
     ; CHECK-NEXT: dead $x0 = PseudoVSETIVLI 0, 210 /* e32, m4, ta, ma */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: %pt2:vrm4 = IMPLICIT_DEF
     ; CHECK-NEXT: [[INIT_UNDEF:%[0-9]+]]:vrm2nov0 = INIT_UNDEF
     ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:vrm4 = INSERT_SUBREG [[INSERT_SUBREG]], [[INIT_UNDEF]], %subreg.sub_vrm2_1
-    ; CHECK-NEXT: [[INIT_UNDEF1:%[0-9]+]]:vrnov0 = INIT_UNDEF
+    ; CHECK-NEXT: [[INIT_UNDEF1:%[0-9]+]]:zzz_vrmf8nov0 = INIT_UNDEF
     ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:vrm4 = INSERT_SUBREG [[INSERT_SUBREG1]], [[INIT_UNDEF1]], %subreg.sub_vrm1_1
-    ; CHECK-NEXT: early-clobber %6:vrm4 = PseudoVRGATHER_VI_M4 %pt2, killed [[INSERT_SUBREG2]], 0, 0, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: early-clobber %6:vrm4 = PseudoVRGATHER_VI_M4 %pt2, killed [[INSERT_SUBREG2]], 0, 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[ADDI1:%[0-9]+]]:gpr = ADDI $x0, 0
-    ; CHECK-NEXT: PseudoVSE32_V_M4 killed %6, killed [[ADDI1]], 0, 5 /* e32 */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: PseudoVSE32_V_M4 killed %6, killed [[ADDI1]], 0 /* vl */, 5 /* e32 */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: $x10 = COPY [[COPY]]
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -49,17 +49,17 @@ body:             |
     ; CHECK: [[DEF:%[0-9]+]]:vrm4 = IMPLICIT_DEF
     ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 8
     ; CHECK-NEXT: %pt:vr = IMPLICIT_DEF
-    ; CHECK-NEXT: [[PseudoVLE32_V_M1_:%[0-9]+]]:vr = PseudoVLE32_V_M1 %pt, killed [[ADDI]], 0, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: [[PseudoVLE32_V_M1_:%[0-9]+]]:vr = PseudoVLE32_V_M1 %pt, killed [[ADDI]], 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vrm4 = INSERT_SUBREG [[DEF]], [[PseudoVLE32_V_M1_]], %subreg.sub_vrm1_1
     ; CHECK-NEXT: dead $x0 = PseudoVSETIVLI 0, 210 /* e32, m4, ta, ma */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: %pt2:vrm4 = IMPLICIT_DEF
     ; CHECK-NEXT: [[INIT_UNDEF:%[0-9]+]]:vrm2nov0 = INIT_UNDEF
     ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:vrm4 = INSERT_SUBREG [[INSERT_SUBREG]], [[INIT_UNDEF]], %subreg.sub_vrm2_1
-    ; CHECK-NEXT: [[INIT_UNDEF1:%[0-9]+]]:vrmf8 = INIT_UNDEF
+    ; CHECK-NEXT: [[INIT_UNDEF1:%[0-9]+]]:zzz_vrmf8 = INIT_UNDEF
     ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:vrm4 = INSERT_SUBREG [[INSERT_SUBREG1]], [[INIT_UNDEF1]], %subreg.sub_vrm1_0
-    ; CHECK-NEXT: early-clobber %6:vrm4 = PseudoVRGATHER_VI_M4 %pt2, killed [[INSERT_SUBREG2]], 0, 0, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: early-clobber %6:vrm4 = PseudoVRGATHER_VI_M4 %pt2, killed [[INSERT_SUBREG2]], 0, 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[ADDI1:%[0-9]+]]:gpr = ADDI $x0, 0
-    ; CHECK-NEXT: PseudoVSE32_V_M4 killed %6, killed [[ADDI1]], 0, 5 /* e32 */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: PseudoVSE32_V_M4 killed %6, killed [[ADDI1]], 0 /* vl */, 5 /* e32 */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: $x10 = COPY [[COPY]]
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -87,17 +87,17 @@ body:             |
     ; CHECK: [[DEF:%[0-9]+]]:vrm4 = IMPLICIT_DEF
     ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 8
     ; CHECK-NEXT: %pt:vr = IMPLICIT_DEF
-    ; CHECK-NEXT: [[PseudoVLE32_V_M1_:%[0-9]+]]:vr = PseudoVLE32_V_M1 %pt, killed [[ADDI]], 0, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: [[PseudoVLE32_V_M1_:%[0-9]+]]:vr = PseudoVLE32_V_M1 %pt, killed [[ADDI]], 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vrm4 = INSERT_SUBREG [[DEF]], [[PseudoVLE32_V_M1_]], %subreg.sub_vrm1_2
     ; CHECK-NEXT: dead $x0 = PseudoVSETIVLI 0, 210 /* e32, m4, ta, ma */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: %pt2:vrm4 = IMPLICIT_DEF
     ; CHECK-NEXT: [[INIT_UNDEF:%[0-9]+]]:vrm2 = INIT_UNDEF
     ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:vrm4 = INSERT_SUBREG [[INSERT_SUBREG]], [[INIT_UNDEF]], %subreg.sub_vrm2_0
-    ; CHECK-NEXT: [[INIT_UNDEF1:%[0-9]+]]:vrnov0 = INIT_UNDEF
+    ; CHECK-NEXT: [[INIT_UNDEF1:%[0-9]+]]:zzz_vrmf8nov0 = INIT_UNDEF
     ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:vrm4 = INSERT_SUBREG [[INSERT_SUBREG1]], [[INIT_UNDEF1]], %subreg.sub_vrm1_3
-    ; CHECK-NEXT: early-clobber %6:vrm4 = PseudoVRGATHER_VI_M4 %pt2, killed [[INSERT_SUBREG2]], 0, 0, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: early-clobber %6:vrm4 = PseudoVRGATHER_VI_M4 %pt2, killed [[INSERT_SUBREG2]], 0, 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[ADDI1:%[0-9]+]]:gpr = ADDI $x0, 0
-    ; CHECK-NEXT: PseudoVSE32_V_M4 killed %6, killed [[ADDI1]], 0, 5 /* e32 */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: PseudoVSE32_V_M4 killed %6, killed [[ADDI1]], 0 /* vl */, 5 /* e32 */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: $x10 = COPY [[COPY]]
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -125,17 +125,17 @@ body:             |
     ; CHECK: [[DEF:%[0-9]+]]:vrm4 = IMPLICIT_DEF
     ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 8
     ; CHECK-NEXT: %pt:vr = IMPLICIT_DEF
-    ; CHECK-NEXT: [[PseudoVLE32_V_M1_:%[0-9]+]]:vr = PseudoVLE32_V_M1 %pt, killed [[ADDI]], 0, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: [[PseudoVLE32_V_M1_:%[0-9]+]]:vr = PseudoVLE32_V_M1 %pt, killed [[ADDI]], 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vrm4 = INSERT_SUBREG [[DEF]], [[PseudoVLE32_V_M1_]], %subreg.sub_vrm1_3
     ; CHECK-NEXT: dead $x0 = PseudoVSETIVLI 0, 210 /* e32, m4, ta, ma */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: %pt2:vrm4 = IMPLICIT_DEF
     ; CHECK-NEXT: [[INIT_UNDEF:%[0-9]+]]:vrm2 = INIT_UNDEF
     ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:vrm4 = INSERT_SUBREG [[INSERT_SUBREG]], [[INIT_UNDEF]], %subreg.sub_vrm2_0
-    ; CHECK-NEXT: [[INIT_UNDEF1:%[0-9]+]]:vrnov0 = INIT_UNDEF
+    ; CHECK-NEXT: [[INIT_UNDEF1:%[0-9]+]]:zzz_vrmf8nov0 = INIT_UNDEF
     ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:vrm4 = INSERT_SUBREG [[INSERT_SUBREG1]], [[INIT_UNDEF1]], %subreg.sub_vrm1_2
-    ; CHECK-NEXT: early-clobber %6:vrm4 = PseudoVRGATHER_VI_M4 %pt2, killed [[INSERT_SUBREG2]], 0, 0, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: early-clobber %6:vrm4 = PseudoVRGATHER_VI_M4 %pt2, killed [[INSERT_SUBREG2]], 0, 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[ADDI1:%[0-9]+]]:gpr = ADDI $x0, 0
-    ; CHECK-NEXT: PseudoVSE32_V_M4 killed %6, killed [[ADDI1]], 0, 5 /* e32 */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: PseudoVSE32_V_M4 killed %6, killed [[ADDI1]], 0 /* vl */, 5 /* e32 */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: $x10 = COPY [[COPY]]
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -163,15 +163,15 @@ body:             |
     ; CHECK: [[DEF:%[0-9]+]]:vrm4 = IMPLICIT_DEF
     ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 8
     ; CHECK-NEXT: %pt:vrm2 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[PseudoVLE32_V_M2_:%[0-9]+]]:vrm2 = PseudoVLE32_V_M2 %pt, killed [[ADDI]], 0, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: [[PseudoVLE32_V_M2_:%[0-9]+]]:vrm2 = PseudoVLE32_V_M2 %pt, killed [[ADDI]], 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vrm4 = INSERT_SUBREG [[DEF]], [[PseudoVLE32_V_M2_]], %subreg.sub_vrm2_0
     ; CHECK-NEXT: dead $x0 = PseudoVSETIVLI 0, 210 /* e32, m4, ta, ma */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: %pt2:vrm4 = IMPLICIT_DEF
     ; CHECK-NEXT: [[INIT_UNDEF:%[0-9]+]]:vrm2nov0 = INIT_UNDEF
     ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:vrm4 = INSERT_SUBREG [[INSERT_SUBREG]], [[INIT_UNDEF]], %subreg.sub_vrm2_1
-    ; CHECK-NEXT: early-clobber %6:vrm4 = PseudoVRGATHER_VI_M4 %pt2, killed [[INSERT_SUBREG1]], 0, 0, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: early-clobber %6:vrm4 = PseudoVRGATHER_VI_M4 %pt2, killed [[INSERT_SUBREG1]], 0, 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[ADDI1:%[0-9]+]]:gpr = ADDI $x0, 0
-    ; CHECK-NEXT: PseudoVSE32_V_M4 killed %6, killed [[ADDI1]], 0, 5 /* e32 */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: PseudoVSE32_V_M4 killed %6, killed [[ADDI1]], 0 /* vl */, 5 /* e32 */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: $x10 = COPY [[COPY]]
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -199,15 +199,15 @@ body:             |
     ; CHECK: [[DEF:%[0-9]+]]:vrm4 = IMPLICIT_DEF
     ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 8
     ; CHECK-NEXT: %pt:vrm2 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[PseudoVLE32_V_M2_:%[0-9]+]]:vrm2 = PseudoVLE32_V_M2 %pt, killed [[ADDI]], 0, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: [[PseudoVLE32_V_M2_:%[0-9]+]]:vrm2 = PseudoVLE32_V_M2 %pt, killed [[ADDI]], 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vrm4 = INSERT_SUBREG [[DEF]], [[PseudoVLE32_V_M2_]], %subreg.sub_vrm2_1
     ; CHECK-NEXT: dead $x0 = PseudoVSETIVLI 0, 210 /* e32, m4, ta, ma */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: %pt2:vrm4 = IMPLICIT_DEF
     ; CHECK-NEXT: [[INIT_UNDEF:%[0-9]+]]:vrm2 = INIT_UNDEF
     ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:vrm4 = INSERT_SUBREG [[INSERT_SUBREG]], [[INIT_UNDEF]], %subreg.sub_vrm2_0
-    ; CHECK-NEXT: early-clobber %6:vrm4 = PseudoVRGATHER_VI_M4 %pt2, killed [[INSERT_SUBREG1]], 0, 0, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: early-clobber %6:vrm4 = PseudoVRGATHER_VI_M4 %pt2, killed [[INSERT_SUBREG1]], 0, 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[ADDI1:%[0-9]+]]:gpr = ADDI $x0, 0
-    ; CHECK-NEXT: PseudoVSE32_V_M4 killed %6, killed [[ADDI1]], 0, 5 /* e32 */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: PseudoVSE32_V_M4 killed %6, killed [[ADDI1]], 0 /* vl */, 5 /* e32 */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: $x10 = COPY [[COPY]]
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -236,7 +236,7 @@ body:             |
     ; CHECK: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
     ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 8
     ; CHECK-NEXT: %pt:vr = IMPLICIT_DEF
-    ; CHECK-NEXT: [[PseudoVLE32_V_M1_:%[0-9]+]]:vr = PseudoVLE32_V_M1 %pt, killed [[ADDI]], 0, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: [[PseudoVLE32_V_M1_:%[0-9]+]]:vr = PseudoVLE32_V_M1 %pt, killed [[ADDI]], 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vrm8 = INSERT_SUBREG [[DEF]], [[PseudoVLE32_V_M1_]], %subreg.sub_vrm1_0
     ; CHECK-NEXT: dead $x0 = PseudoVSETIVLI 0, 210 /* e32, m4, ta, ma */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: %pt2:vrm8 = IMPLICIT_DEF
@@ -244,11 +244,11 @@ body:             |
     ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:vrm8 = INSERT_SUBREG [[INSERT_SUBREG]], [[INIT_UNDEF]], %subreg.sub_vrm4_1
     ; CHECK-NEXT: [[INIT_UNDEF1:%[0-9]+]]:vrm2nov0 = INIT_UNDEF
     ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:vrm8 = INSERT_SUBREG [[INSERT_SUBREG1]], [[INIT_UNDEF1]], %subreg.sub_vrm2_1
-    ; CHECK-NEXT: [[INIT_UNDEF2:%[0-9]+]]:vrnov0 = INIT_UNDEF
+    ; CHECK-NEXT: [[INIT_UNDEF2:%[0-9]+]]:zzz_vrmf8nov0 = INIT_UNDEF
     ; CHECK-NEXT: [[INSERT_SUBREG3:%[0-9]+]]:vrm8 = INSERT_SUBREG [[INSERT_SUBREG2]], [[INIT_UNDEF2]], %subreg.sub_vrm1_1
-    ; CHECK-NEXT: early-clobber %6:vrm8 = PseudoVRGATHER_VI_M8 %pt2, killed [[INSERT_SUBREG3]], 0, 0, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: early-clobber %6:vrm8 = PseudoVRGATHER_VI_M8 %pt2, killed [[INSERT_SUBREG3]], 0, 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[ADDI1:%[0-9]+]]:gpr = ADDI $x0, 0
-    ; CHECK-NEXT: PseudoVSE32_V_M8 killed %6, killed [[ADDI1]], 0, 5 /* e32 */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: PseudoVSE32_V_M8 killed %6, killed [[ADDI1]], 0 /* vl */, 5 /* e32 */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: $x10 = COPY [[COPY]]
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -276,7 +276,7 @@ body:             |
     ; CHECK: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
     ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 8
     ; CHECK-NEXT: %pt:vr = IMPLICIT_DEF
-    ; CHECK-NEXT: [[PseudoVLE32_V_M1_:%[0-9]+]]:vr = PseudoVLE32_V_M1 %pt, killed [[ADDI]], 0, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: [[PseudoVLE32_V_M1_:%[0-9]+]]:vr = PseudoVLE32_V_M1 %pt, killed [[ADDI]], 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vrm8 = INSERT_SUBREG [[DEF]], [[PseudoVLE32_V_M1_]], %subreg.sub_vrm1_1
     ; CHECK-NEXT: dead $x0 = PseudoVSETIVLI 0, 210 /* e32, m4, ta, ma */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: %pt2:vrm8 = IMPLICIT_DEF
@@ -284,11 +284,11 @@ body:             |
     ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:vrm8 = INSERT_SUBREG [[INSERT_SUBREG]], [[INIT_UNDEF]], %subreg.sub_vrm4_1
     ; CHECK-NEXT: [[INIT_UNDEF1:%[0-9]+]]:vrm2nov0 = INIT_UNDEF
     ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:vrm8 = INSERT_SUBREG [[INSERT_SUBREG1]], [[INIT_UNDEF1]], %subreg.sub_vrm2_1
-    ; CHECK-NEXT: [[INIT_UNDEF2:%[0-9]+]]:vrmf8 = INIT_UNDEF
+    ; CHECK-NEXT: [[INIT_UNDEF2:%[0-9]+]]:zzz_vrmf8 = INIT_UNDEF
     ; CHECK-NEXT: [[INSERT_SUBREG3:%[0-9]+]]:vrm8 = INSERT_SUBREG [[INSERT_SUBREG2]], [[INIT_UNDEF2]], %subreg.sub_vrm1_0
-    ; CHECK-NEXT: early-clobber %6:vrm8 = PseudoVRGATHER_VI_M8 %pt2, killed [[INSERT_SUBREG3]], 0, 0, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: early-clobber %6:vrm8 = PseudoVRGATHER_VI_M8 %pt2, killed [[INSERT_SUBREG3]], 0, 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[ADDI1:%[0-9]+]]:gpr = ADDI $x0, 0
-    ; CHECK-NEXT: PseudoVSE32_V_M8 killed %6, killed [[ADDI1]], 0, 5 /* e32 */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: PseudoVSE32_V_M8 killed %6, killed [[ADDI1]], 0 /* vl */, 5 /* e32 */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: $x10 = COPY [[COPY]]
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -316,7 +316,7 @@ body:             |
     ; CHECK: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
     ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 8
     ; CHECK-NEXT: %pt:vr = IMPLICIT_DEF
-    ; CHECK-NEXT: [[PseudoVLE32_V_M1_:%[0-9]+]]:vr = PseudoVLE32_V_M1 %pt, killed [[ADDI]], 0, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: [[PseudoVLE32_V_M1_:%[0-9]+]]:vr = PseudoVLE32_V_M1 %pt, killed [[ADDI]], 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vrm8 = INSERT_SUBREG [[DEF]], [[PseudoVLE32_V_M1_]], %subreg.sub_vrm1_2
     ; CHECK-NEXT: dead $x0 = PseudoVSETIVLI 0, 210 /* e32, m4, ta, ma */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: %pt2:vrm8 = IMPLICIT_DEF
@@ -324,11 +324,11 @@ body:             |
     ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:vrm8 = INSERT_SUBREG [[INSERT_SUBREG]], [[INIT_UNDEF]], %subreg.sub_vrm4_1
     ; CHECK-NEXT: [[INIT_UNDEF1:%[0-9]+]]:vrm2 = INIT_UNDEF
     ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:vrm8 = INSERT_SUBREG [[INSERT_SUBREG1]], [[INIT_UNDEF1]], %subreg.sub_vrm2_0
-    ; CHECK-NEXT: [[INIT_UNDEF2:%[0-9]+]]:vrnov0 = INIT_UNDEF
+    ; CHECK-NEXT: [[INIT_UNDEF2:%[0-9]+]]:zzz_vrmf8nov0 = INIT_UNDEF
     ; CHECK-NEXT: [[INSERT_SUBREG3:%[0-9]+]]:vrm8 = INSERT_SUBREG [[INSERT_SUBREG2]], [[INIT_UNDEF2]], %subreg.sub_vrm1_3
-    ; CHECK-NEXT: early-clobber %6:vrm8 = PseudoVRGATHER_VI_M8 %pt2, killed [[INSERT_SUBREG3]], 0, 0, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: early-clobber %6:vrm8 = PseudoVRGATHER_VI_M8 %pt2, killed [[INSERT_SUBREG3]], 0, 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[ADDI1:%[0-9]+]]:gpr = ADDI $x0, 0
-    ; CHECK-NEXT: PseudoVSE32_V_M8 killed %6, killed [[ADDI1]], 0, 5 /* e32 */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: PseudoVSE32_V_M8 killed %6, killed [[ADDI1]], 0 /* vl */, 5 /* e32 */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: $x10 = COPY [[COPY]]
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -356,7 +356,7 @@ body:             |
     ; CHECK: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
     ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 8
     ; CHECK-NEXT: %pt:vr = IMPLICIT_DEF
-    ; CHECK-NEXT: [[PseudoVLE32_V_M1_:%[0-9]+]]:vr = PseudoVLE32_V_M1 %pt, killed [[ADDI]], 0, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: [[PseudoVLE32_V_M1_:%[0-9]+]]:vr = PseudoVLE32_V_M1 %pt, killed [[ADDI]], 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vrm8 = INSERT_SUBREG [[DEF]], [[PseudoVLE32_V_M1_]], %subreg.sub_vrm1_3
     ; CHECK-NEXT: dead $x0 = PseudoVSETIVLI 0, 210 /* e32, m4, ta, ma */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: %pt2:vrm8 = IMPLICIT_DEF
@@ -364,11 +364,11 @@ body:             |
     ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:vrm8 = INSERT_SUBREG [[INSERT_SUBREG]], [[INIT_UNDEF]], %subreg.sub_vrm4_1
     ; CHECK-NEXT: [[INIT_UNDEF1:%[0-9]+]]:vrm2 = INIT_UNDEF
     ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:vrm8 = INSERT_SUBREG [[INSERT_SUBREG1]], [[INIT_UNDEF1]], %subreg.sub_vrm2_0
-    ; CHECK-NEXT: [[INIT_UNDEF2:%[0-9]+]]:vrnov0 = INIT_UNDEF
+    ; CHECK-NEXT: [[INIT_UNDEF2:%[0-9]+]]:zzz_vrmf8nov0 = INIT_UNDEF
     ; CHECK-NEXT: [[INSERT_SUBREG3:%[0-9]+]]:vrm8 = INSERT_SUBREG [[INSERT_SUBREG2]], [[INIT_UNDEF2]], %subreg.sub_vrm1_2
-    ; CHECK-NEXT: early-clobber %6:vrm8 = PseudoVRGATHER_VI_M8 %pt2, killed [[INSERT_SUBREG3]], 0, 0, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: early-clobber %6:vrm8 = PseudoVRGATHER_VI_M8 %pt2, killed [[INSERT_SUBREG3]], 0, 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[ADDI1:%[0-9]+]]:gpr = ADDI $x0, 0
-    ; CHECK-NEXT: PseudoVSE32_V_M8 killed %6, killed [[ADDI1]], 0, 5 /* e32 */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: PseudoVSE32_V_M8 killed %6, killed [[ADDI1]], 0 /* vl */, 5 /* e32 */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: $x10 = COPY [[COPY]]
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -396,7 +396,7 @@ body:             |
     ; CHECK: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
     ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 8
     ; CHECK-NEXT: %pt:vr = IMPLICIT_DEF
-    ; CHECK-NEXT: [[PseudoVLE32_V_M1_:%[0-9]+]]:vr = PseudoVLE32_V_M1 %pt, killed [[ADDI]], 0, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: [[PseudoVLE32_V_M1_:%[0-9]+]]:vr = PseudoVLE32_V_M1 %pt, killed [[ADDI]], 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vrm8 = INSERT_SUBREG [[DEF]], [[PseudoVLE32_V_M1_]], %subreg.sub_vrm1_4
     ; CHECK-NEXT: dead $x0 = PseudoVSETIVLI 0, 210 /* e32, m4, ta, ma */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: %pt2:vrm8 = IMPLICIT_DEF
@@ -404,11 +404,11 @@ body:             |
     ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:vrm8 = INSERT_SUBREG [[INSERT_SUBREG]], [[INIT_UNDEF]], %subreg.sub_vrm4_0
     ; CHECK-NEXT: [[INIT_UNDEF1:%[0-9]+]]:vrm2nov0 = INIT_UNDEF
     ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:vrm8 = INSERT_SUBREG [[INSERT_SUBREG1]], [[INIT_UNDEF1]], %subreg.sub_vrm2_3
-    ; CHECK-NEXT: [[INIT_UNDEF2:%[0-9]+]]:vrnov0 = INIT_UNDEF
+    ; CHECK-NEXT: [[INIT_UNDEF2:%[0-9]+]]:zzz_vrmf8nov0 = INIT_UNDEF
     ; CHECK-NEXT: [[INSERT_SUBREG3:%[0-9]+]]:vrm8 = INSERT_SUBREG [[INSERT_SUBREG2]], [[INIT_UNDEF2]], %subreg.sub_vrm1_5
-    ; CHECK-NEXT: early-clobber %6:vrm8 = PseudoVRGATHER_VI_M8 %pt2, killed [[INSERT_SUBREG3]], 0, 0, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: early-clobber %6:vrm8 = PseudoVRGATHER_VI_M8 %pt2, killed [[INSERT_SUBREG3]], 0, 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[ADDI1:%[0-9]+]]:gpr = ADDI $x0, 0
-    ; CHECK-NEXT: PseudoVSE32_V_M8 killed %6, killed [[ADDI1]], 0, 5 /* e32 */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: PseudoVSE32_V_M8 killed %6, killed [[ADDI1]], 0 /* vl */, 5 /* e32 */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: $x10 = COPY [[COPY]]
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -436,7 +436,7 @@ body:             |
     ; CHECK: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
     ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 8
     ; CHECK-NEXT: %pt:vr = IMPLICIT_DEF
-    ; CHECK-NEXT: [[PseudoVLE32_V_M1_:%[0-9]+]]:vr = PseudoVLE32_V_M1 %pt, killed [[ADDI]], 0, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: [[PseudoVLE32_V_M1_:%[0-9]+]]:vr = PseudoVLE32_V_M1 %pt, killed [[ADDI]], 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vrm8 = INSERT_SUBREG [[DEF]], [[PseudoVLE32_V_M1_]], %subreg.sub_vrm1_5
     ; CHECK-NEXT: dead $x0 = PseudoVSETIVLI 0, 210 /* e32, m4, ta, ma */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: %pt2:vrm8 = IMPLICIT_DEF
@@ -444,11 +444,11 @@ body:             |
     ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:vrm8 = INSERT_SUBREG [[INSERT_SUBREG]], [[INIT_UNDEF]], %subreg.sub_vrm4_0
     ; CHECK-NEXT: [[INIT_UNDEF1:%[0-9]+]]:vrm2nov0 = INIT_UNDEF
     ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:vrm8 = INSERT_SUBREG [[INSERT_SUBREG1]], [[INIT_UNDEF1]], %subreg.sub_vrm2_3
-    ; CHECK-NEXT: [[INIT_UNDEF2:%[0-9]+]]:vrnov0 = INIT_UNDEF
+    ; CHECK-NEXT: [[INIT_UNDEF2:%[0-9]+]]:zzz_vrmf8nov0 = INIT_UNDEF
     ; CHECK-NEXT: [[INSERT_SUBREG3:%[0-9]+]]:vrm8 = INSERT_SUBREG [[INSERT_SUBREG2]], [[INIT_UNDEF2]], %subreg.sub_vrm1_4
-    ; CHECK-NEXT: early-clobber %6:vrm8 = PseudoVRGATHER_VI_M8 %pt2, killed [[INSERT_SUBREG3]], 0, 0, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: early-clobber %6:vrm8 = PseudoVRGATHER_VI_M8 %pt2, killed [[INSERT_SUBREG3]], 0, 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[ADDI1:%[0-9]+]]:gpr = ADDI $x0, 0
-    ; CHECK-NEXT: PseudoVSE32_V_M8 killed %6, killed [[ADDI1]], 0, 5 /* e32 */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: PseudoVSE32_V_M8 killed %6, killed [[ADDI1]], 0 /* vl */, 5 /* e32 */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: $x10 = COPY [[COPY]]
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -476,7 +476,7 @@ body:             |
     ; CHECK: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
     ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 8
     ; CHECK-NEXT: %pt:vr = IMPLICIT_DEF
-    ; CHECK-NEXT: [[PseudoVLE32_V_M1_:%[0-9]+]]:vr = PseudoVLE32_V_M1 %pt, killed [[ADDI]], 0, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: [[PseudoVLE32_V_M1_:%[0-9]+]]:vr = PseudoVLE32_V_M1 %pt, killed [[ADDI]], 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vrm8 = INSERT_SUBREG [[DEF]], [[PseudoVLE32_V_M1_]], %subreg.sub_vrm1_6
     ; CHECK-NEXT: dead $x0 = PseudoVSETIVLI 0, 210 /* e32, m4, ta, ma */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: %pt2:vrm8 = IMPLICIT_DEF
@@ -484,11 +484,11 @@ body:             |
     ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:vrm8 = INSERT_SUBREG [[INSERT_SUBREG]], [[INIT_UNDEF]], %subreg.sub_vrm4_0
     ; CHECK-NEXT: [[INIT_UNDEF1:%[0-9]+]]:vrm2nov0 = INIT_UNDEF
     ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:vrm8 = INSERT_SUBREG [[INSERT_SUBREG1]], [[INIT_UNDEF1]], %subreg.sub_vrm2_2
-    ; CHECK-NEXT: [[INIT_UNDEF2:%[0-9]+]]:vrnov0 = INIT_UNDEF
+    ; CHECK-NEXT: [[INIT_UNDEF2:%[0-9]+]]:zzz_vrmf8nov0 = INIT_UNDEF
     ; CHECK-NEXT: [[INSERT_SUBREG3:%[0-9]+]]:vrm8 = INSERT_SUBREG [[INSERT_SUBREG2]], [[INIT_UNDEF2]], %subreg.sub_vrm1_7
-    ; CHECK-NEXT: early-clobber %6:vrm8 = PseudoVRGATHER_VI_M8 %pt2, killed [[INSERT_SUBREG3]], 0, 0, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: early-clobber %6:vrm8 = PseudoVRGATHER_VI_M8 %pt2, killed [[INSERT_SUBREG3]], 0, 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[ADDI1:%[0-9]+]]:gpr = ADDI $x0, 0
-    ; CHECK-NEXT: PseudoVSE32_V_M8 killed %6, killed [[ADDI1]], 0, 5 /* e32 */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: PseudoVSE32_V_M8 killed %6, killed [[ADDI1]], 0 /* vl */, 5 /* e32 */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: $x10 = COPY [[COPY]]
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -516,7 +516,7 @@ body:             |
     ; CHECK: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
     ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 8
     ; CHECK-NEXT: %pt:vr = IMPLICIT_DEF
-    ; CHECK-NEXT: [[PseudoVLE32_V_M1_:%[0-9]+]]:vr = PseudoVLE32_V_M1 %pt, killed [[ADDI]], 0, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: [[PseudoVLE32_V_M1_:%[0-9]+]]:vr = PseudoVLE32_V_M1 %pt, killed [[ADDI]], 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vrm8 = INSERT_SUBREG [[DEF]], [[PseudoVLE32_V_M1_]], %subreg.sub_vrm1_7
     ; CHECK-NEXT: dead $x0 = PseudoVSETIVLI 0, 210 /* e32, m4, ta, ma */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: %pt2:vrm8 = IMPLICIT_DEF
@@ -524,11 +524,11 @@ body:             |
     ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:vrm8 = INSERT_SUBREG [[INSERT_SUBREG]], [[INIT_UNDEF]], %subreg.sub_vrm4_0
     ; CHECK-NEXT: [[INIT_UNDEF1:%[0-9]+]]:vrm2nov0 = INIT_UNDEF
     ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:vrm8 = INSERT_SUBREG [[INSERT_SUBREG1]], [[INIT_UNDEF1]], %subreg.sub_vrm2_2
-    ; CHECK-NEXT: [[INIT_UNDEF2:%[0-9]+]]:vrnov0 = INIT_UNDEF
+    ; CHECK-NEXT: [[INIT_UNDEF2:%[0-9]+]]:zzz_vrmf8nov0 = INIT_UNDEF
     ; CHECK-NEXT: [[INSERT_SUBREG3:%[0-9]+]]:vrm8 = INSERT_SUBREG [[INSERT_SUBREG2]], [[INIT_UNDEF2]], %subreg.sub_vrm1_6
-    ; CHECK-NEXT: early-clobber %6:vrm8 = PseudoVRGATHER_VI_M8 %pt2, killed [[INSERT_SUBREG3]], 0, 0, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: early-clobber %6:vrm8 = PseudoVRGATHER_VI_M8 %pt2, killed [[INSERT_SUBREG3]], 0, 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[ADDI1:%[0-9]+]]:gpr = ADDI $x0, 0
-    ; CHECK-NEXT: PseudoVSE32_V_M8 killed %6, killed [[ADDI1]], 0, 5 /* e32 */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: PseudoVSE32_V_M8 killed %6, killed [[ADDI1]], 0 /* vl */, 5 /* e32 */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: $x10 = COPY [[COPY]]
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -556,7 +556,7 @@ body:             |
     ; CHECK: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
     ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 8
     ; CHECK-NEXT: %pt:vrm2 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[PseudoVLE32_V_M2_:%[0-9]+]]:vrm2 = PseudoVLE32_V_M2 %pt, killed [[ADDI]], 0, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: [[PseudoVLE32_V_M2_:%[0-9]+]]:vrm2 = PseudoVLE32_V_M2 %pt, killed [[ADDI]], 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vrm8 = INSERT_SUBREG [[DEF]], [[PseudoVLE32_V_M2_]], %subreg.sub_vrm2_0
     ; CHECK-NEXT: dead $x0 = PseudoVSETIVLI 0, 210 /* e32, m4, ta, ma */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: %pt2:vrm8 = IMPLICIT_DEF
@@ -564,9 +564,9 @@ body:             |
     ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:vrm8 = INSERT_SUBREG [[INSERT_SUBREG]], [[INIT_UNDEF]], %subreg.sub_vrm4_1
     ; CHECK-NEXT: [[INIT_UNDEF1:%[0-9]+]]:vrm2nov0 = INIT_UNDEF
     ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:vrm8 = INSERT_SUBREG [[INSERT_SUBREG1]], [[INIT_UNDEF1]], %subreg.sub_vrm2_1
-    ; CHECK-NEXT: early-clobber %6:vrm8 = PseudoVRGATHER_VI_M8 %pt2, killed [[INSERT_SUBREG2]], 0, 0, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: early-clobber %6:vrm8 = PseudoVRGATHER_VI_M8 %pt2, killed [[INSERT_SUBREG2]], 0, 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[ADDI1:%[0-9]+]]:gpr = ADDI $x0, 0
-    ; CHECK-NEXT: PseudoVSE32_V_M8 killed %6, killed [[ADDI1]], 0, 5 /* e32 */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: PseudoVSE32_V_M8 killed %6, killed [[ADDI1]], 0 /* vl */, 5 /* e32 */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: $x10 = COPY [[COPY]]
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -594,7 +594,7 @@ body:             |
     ; CHECK: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
     ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 8
     ; CHECK-NEXT: %pt:vrm2 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[PseudoVLE32_V_M2_:%[0-9]+]]:vrm2 = PseudoVLE32_V_M2 %pt, killed [[ADDI]], 0, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: [[PseudoVLE32_V_M2_:%[0-9]+]]:vrm2 = PseudoVLE32_V_M2 %pt, killed [[ADDI]], 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vrm8 = INSERT_SUBREG [[DEF]], [[PseudoVLE32_V_M2_]], %subreg.sub_vrm2_1
     ; CHECK-NEXT: dead $x0 = PseudoVSETIVLI 0, 210 /* e32, m4, ta, ma */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: %pt2:vrm8 = IMPLICIT_DEF
@@ -602,9 +602,9 @@ body:             |
     ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:vrm8 = INSERT_SUBREG [[INSERT_SUBREG]], [[INIT_UNDEF]], %subreg.sub_vrm4_1
     ; CHECK-NEXT: [[INIT_UNDEF1:%[0-9]+]]:vrm2 = INIT_UNDEF
     ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:vrm8 = INSERT_SUBREG [[INSERT_SUBREG1]], [[INIT_UNDEF1]], %subreg.sub_vrm2_0
-    ; CHECK-NEXT: early-clobber %6:vrm8 = PseudoVRGATHER_VI_M8 %pt2, killed [[INSERT_SUBREG2]], 0, 0, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: early-clobber %6:vrm8 = PseudoVRGATHER_VI_M8 %pt2, killed [[INSERT_SUBREG2]], 0, 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[ADDI1:%[0-9]+]]:gpr = ADDI $x0, 0
-    ; CHECK-NEXT: PseudoVSE32_V_M8 killed %6, killed [[ADDI1]], 0, 5 /* e32 */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: PseudoVSE32_V_M8 killed %6, killed [[ADDI1]], 0 /* vl */, 5 /* e32 */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: $x10 = COPY [[COPY]]
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -632,7 +632,7 @@ body:             |
     ; CHECK: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
     ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 8
     ; CHECK-NEXT: %pt:vrm2 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[PseudoVLE32_V_M2_:%[0-9]+]]:vrm2 = PseudoVLE32_V_M2 %pt, killed [[ADDI]], 0, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: [[PseudoVLE32_V_M2_:%[0-9]+]]:vrm2 = PseudoVLE32_V_M2 %pt, killed [[ADDI]], 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vrm8 = INSERT_SUBREG [[DEF]], [[PseudoVLE32_V_M2_]], %subreg.sub_vrm2_2
     ; CHECK-NEXT: dead $x0 = PseudoVSETIVLI 0, 210 /* e32, m4, ta, ma */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: %pt2:vrm8 = IMPLICIT_DEF
@@ -640,9 +640,9 @@ body:             |
     ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:vrm8 = INSERT_SUBREG [[INSERT_SUBREG]], [[INIT_UNDEF]], %subreg.sub_vrm4_0
     ; CHECK-NEXT: [[INIT_UNDEF1:%[0-9]+]]:vrm2nov0 = INIT_UNDEF
     ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:vrm8 = INSERT_SUBREG [[INSERT_SUBREG1]], [[INIT_UNDEF1]], %subreg.sub_vrm2_3
-    ; CHECK-NEXT: early-clobber %6:vrm8 = PseudoVRGATHER_VI_M8 %pt2, killed [[INSERT_SUBREG2]], 0, 0, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: early-clobber %6:vrm8 = PseudoVRGATHER_VI_M8 %pt2, killed [[INSERT_SUBREG2]], 0, 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[ADDI1:%[0-9]+]]:gpr = ADDI $x0, 0
-    ; CHECK-NEXT: PseudoVSE32_V_M8 killed %6, killed [[ADDI1]], 0, 5 /* e32 */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: PseudoVSE32_V_M8 killed %6, killed [[ADDI1]], 0 /* vl */, 5 /* e32 */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: $x10 = COPY [[COPY]]
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -670,7 +670,7 @@ body:             |
     ; CHECK: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
     ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 8
     ; CHECK-NEXT: %pt:vrm2 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[PseudoVLE32_V_M2_:%[0-9]+]]:vrm2 = PseudoVLE32_V_M2 %pt, killed [[ADDI]], 0, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: [[PseudoVLE32_V_M2_:%[0-9]+]]:vrm2 = PseudoVLE32_V_M2 %pt, killed [[ADDI]], 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vrm8 = INSERT_SUBREG [[DEF]], [[PseudoVLE32_V_M2_]], %subreg.sub_vrm2_3
     ; CHECK-NEXT: dead $x0 = PseudoVSETIVLI 0, 210 /* e32, m4, ta, ma */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: %pt2:vrm8 = IMPLICIT_DEF
@@ -678,9 +678,9 @@ body:             |
     ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:vrm8 = INSERT_SUBREG [[INSERT_SUBREG]], [[INIT_UNDEF]], %subreg.sub_vrm4_0
     ; CHECK-NEXT: [[INIT_UNDEF1:%[0-9]+]]:vrm2nov0 = INIT_UNDEF
     ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:vrm8 = INSERT_SUBREG [[INSERT_SUBREG1]], [[INIT_UNDEF1]], %subreg.sub_vrm2_2
-    ; CHECK-NEXT: early-clobber %6:vrm8 = PseudoVRGATHER_VI_M8 %pt2, killed [[INSERT_SUBREG2]], 0, 0, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: early-clobber %6:vrm8 = PseudoVRGATHER_VI_M8 %pt2, killed [[INSERT_SUBREG2]], 0, 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[ADDI1:%[0-9]+]]:gpr = ADDI $x0, 0
-    ; CHECK-NEXT: PseudoVSE32_V_M8 killed %6, killed [[ADDI1]], 0, 5 /* e32 */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: PseudoVSE32_V_M8 killed %6, killed [[ADDI1]], 0 /* vl */, 5 /* e32 */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: $x10 = COPY [[COPY]]
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -708,15 +708,15 @@ body:             |
     ; CHECK: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
     ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 8
     ; CHECK-NEXT: %pt:vrm4 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[PseudoVLE32_V_M4_:%[0-9]+]]:vrm4 = PseudoVLE32_V_M4 %pt, killed [[ADDI]], 0, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: [[PseudoVLE32_V_M4_:%[0-9]+]]:vrm4 = PseudoVLE32_V_M4 %pt, killed [[ADDI]], 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vrm8 = INSERT_SUBREG [[DEF]], [[PseudoVLE32_V_M4_]], %subreg.sub_vrm4_0
     ; CHECK-NEXT: dead $x0 = PseudoVSETIVLI 0, 210 /* e32, m4, ta, ma */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: %pt2:vrm8 = IMPLICIT_DEF
     ; CHECK-NEXT: [[INIT_UNDEF:%[0-9]+]]:vrm4nov0 = INIT_UNDEF
     ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:vrm8 = INSERT_SUBREG [[INSERT_SUBREG]], [[INIT_UNDEF]], %subreg.sub_vrm4_1
-    ; CHECK-NEXT: early-clobber %6:vrm8 = PseudoVRGATHER_VI_M8 %pt2, killed [[INSERT_SUBREG1]], 0, 0, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: early-clobber %6:vrm8 = PseudoVRGATHER_VI_M8 %pt2, killed [[INSERT_SUBREG1]], 0, 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[ADDI1:%[0-9]+]]:gpr = ADDI $x0, 0
-    ; CHECK-NEXT: PseudoVSE32_V_M8 killed %6, killed [[ADDI1]], 0, 5 /* e32 */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: PseudoVSE32_V_M8 killed %6, killed [[ADDI1]], 0 /* vl */, 5 /* e32 */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: $x10 = COPY [[COPY]]
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -744,15 +744,15 @@ body:             |
     ; CHECK: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
     ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 8
     ; CHECK-NEXT: %pt:vrm4 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[PseudoVLE32_V_M4_:%[0-9]+]]:vrm4 = PseudoVLE32_V_M4 %pt, killed [[ADDI]], 0, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: [[PseudoVLE32_V_M4_:%[0-9]+]]:vrm4 = PseudoVLE32_V_M4 %pt, killed [[ADDI]], 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vrm8 = INSERT_SUBREG [[DEF]], [[PseudoVLE32_V_M4_]], %subreg.sub_vrm4_1
     ; CHECK-NEXT: dead $x0 = PseudoVSETIVLI 0, 210 /* e32, m4, ta, ma */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: %pt2:vrm8 = IMPLICIT_DEF
     ; CHECK-NEXT: [[INIT_UNDEF:%[0-9]+]]:vrm4 = INIT_UNDEF
     ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:vrm8 = INSERT_SUBREG [[INSERT_SUBREG]], [[INIT_UNDEF]], %subreg.sub_vrm4_0
-    ; CHECK-NEXT: early-clobber %6:vrm8 = PseudoVRGATHER_VI_M8 %pt2, killed [[INSERT_SUBREG1]], 0, 0, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: early-clobber %6:vrm8 = PseudoVRGATHER_VI_M8 %pt2, killed [[INSERT_SUBREG1]], 0, 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[ADDI1:%[0-9]+]]:gpr = ADDI $x0, 0
-    ; CHECK-NEXT: PseudoVSE32_V_M8 killed %6, killed [[ADDI1]], 0, 5 /* e32 */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: PseudoVSE32_V_M8 killed %6, killed [[ADDI1]], 0 /* vl */, 5 /* e32 */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: $x10 = COPY [[COPY]]
     ; CHECK-NEXT: PseudoRET implicit $x10

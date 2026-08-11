@@ -7,7 +7,6 @@ from lldbsuite.test import lldbutil
 class NavigateHiddenFrameTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @add_test_categories(["libc++"])
     def test(self):
         """Test going up/down a backtrace but we started in a hidden frame."""
         self.build()

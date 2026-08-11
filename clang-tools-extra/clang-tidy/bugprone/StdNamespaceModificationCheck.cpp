@@ -19,9 +19,9 @@ AST_POLYMORPHIC_MATCHER_P(
     hasAnyTemplateArgumentIncludingPack,
     AST_POLYMORPHIC_SUPPORTED_TYPES(ClassTemplateSpecializationDecl,
                                     TemplateSpecializationType, FunctionDecl),
-    clang::ast_matchers::internal::Matcher<TemplateArgument>, InnerMatcher) {
+    ast_matchers::internal::Matcher<TemplateArgument>, InnerMatcher) {
   const ArrayRef<TemplateArgument> Args =
-      clang::ast_matchers::internal::getTemplateSpecializationArgs(Node);
+      ast_matchers::internal::getTemplateSpecializationArgs(Node);
   for (const auto &Arg : Args) {
     if (Arg.getKind() != TemplateArgument::Pack)
       continue;
@@ -34,22 +34,39 @@ AST_POLYMORPHIC_MATCHER_P(
                              Builder) != Args.end();
 }
 
+AST_MATCHER(Decl, isInStdOrPosixNamespace) {
+  for (const auto *DC = dyn_cast<DeclContext>(&Node); DC;
+       DC = DC->getParent()) {
+    if (DC->isStdNamespace())
+      return true;
+
+    if (const auto *NS = dyn_cast<NamespaceDecl>(DC);
+        NS && NS->getName() == "posix" && NS->getParent()->isTranslationUnit())
+      return true;
+  }
+  return false;
+}
+
 } // namespace
 
 namespace clang::tidy::bugprone {
 
 void StdNamespaceModificationCheck::registerMatchers(MatchFinder *Finder) {
-  auto HasStdParent =
+  const auto HasStdParent =
       hasDeclContext(namespaceDecl(hasAnyName("std", "posix"),
                                    unless(hasParent(namespaceDecl())))
                          .bind("nmspc"));
-  auto UserDefinedType = qualType(
-      hasUnqualifiedDesugaredType(tagType(unless(hasDeclaration(tagDecl(
-          hasAncestor(namespaceDecl(hasAnyName("std", "posix"),
-                                    unless(hasParent(namespaceDecl()))))))))));
-  auto HasNoProgramDefinedTemplateArgument = unless(
+  // FIXME: Investigate why lambda closure declarations can be absent from the
+  // AST parent map.
+  const auto UserDefinedDecl =
+      namedDecl(anyOf(classTemplateDecl(), tagDecl()),
+                hasDeclContext(isInStdOrPosixNamespace()));
+  const auto UserDefinedType = qualType(hasUnqualifiedDesugaredType(anyOf(
+      tagType(unless(hasDeclaration(UserDefinedDecl))),
+      templateSpecializationType(unless(hasDeclaration(UserDefinedDecl))))));
+  const auto HasNoProgramDefinedTemplateArgument = unless(
       hasAnyTemplateArgumentIncludingPack(refersToType(UserDefinedType)));
-  auto InsideStdClassOrClassTemplateSpecialization = hasDeclContext(
+  const auto InsideStdClassOrClassTemplateSpecialization = hasDeclContext(
       anyOf(cxxRecordDecl(HasStdParent),
             classTemplateSpecializationDecl(
                 HasStdParent, HasNoProgramDefinedTemplateArgument)));
@@ -91,8 +108,7 @@ void StdNamespaceModificationCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(decl(anyOf(BadNonTemplateSpecializationDecl,
                                 BadClassTemplateSpec, BadInnerClassTemplateSpec,
-                                BadFunctionTemplateSpec, BadMemberFunctionSpec),
-                          unless(isExpansionInSystemHeader()))
+                                BadFunctionTemplateSpec, BadMemberFunctionSpec))
                          .bind("decl"),
                      this);
 }
@@ -113,6 +129,10 @@ void clang::tidy::bugprone::StdNamespaceModificationCheck::check(
   const auto *D = Result.Nodes.getNodeAs<Decl>("decl");
   const auto *NS = Result.Nodes.getNodeAs<NamespaceDecl>("nmspc");
   if (!D || !NS)
+    return;
+
+  // Skip compiler-generated implicit declarations (e.g. std::align_val_t).
+  if (D->isImplicit())
     return;
 
   diag(D->getLocation(),

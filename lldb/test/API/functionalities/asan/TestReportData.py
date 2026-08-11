@@ -11,6 +11,8 @@ from lldbsuite.test_event.build_exception import BuildError
 
 
 class AsanTestReportDataCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     @skipIfFreeBSD  # llvm.org/pr21136 runtimes not yet available by default
     @expectedFailureNetBSD
     @skipUnlessAddressSanitizer
@@ -19,7 +21,7 @@ class AsanTestReportDataCase(TestBase):
         self.build(make_targets=["compiler_rt-asan"])
         self.asan_tests()
 
-    @skipUnlessDarwin
+    @requireDarwin
     @skipIf(bugnumber="rdar://109913184&143590169")
     def test_libsanitizers_asan(self):
         try:

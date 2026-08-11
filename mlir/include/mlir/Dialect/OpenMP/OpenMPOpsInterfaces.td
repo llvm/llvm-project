@@ -182,6 +182,11 @@ def OutlineableOpenMPOpInterface : OpInterface<"OutlineableOpenMPOpInterface"> {
   let methods = [
     InterfaceMethod<"Get alloca block", "::mlir::Block*", "getAllocaBlock",
       (ins), [{
+      // For taskloop: put the allocas inside of the wrapped loop. Loop wrappers
+      // are expected to contain only the wrapped loop (or another loop wrapper)
+      if (LoopWrapperInterface loopWrapper =
+              mlir::dyn_cast<LoopWrapperInterface>($_op.getOperation()))
+        return &loopWrapper.getWrappedLoop()->getRegion(0).front();
       return &$_op.getRegion().front();
       }]>,
   ];
@@ -276,8 +281,9 @@ def LoopWrapperInterface : OpInterface<"LoopWrapperInterface"> {
 
 def ComposableOpInterface : OpInterface<"ComposableOpInterface"> {
   let description = [{
-    OpenMP operations that can represent a single leaf of a composite OpenMP
-    construct.
+    OpenMP operations that can represent a single leaf of a compound OpenMP
+    construct, or one leaf of a combined construct or equivalent immediate
+    nesting of constructs.
   }];
 
   let cppNamespace = "::mlir::omp";
@@ -306,8 +312,48 @@ def ComposableOpInterface : OpInterface<"ComposableOpInterface"> {
         else
           $_op->removeDiscardableAttr("omp.composite");
       }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
+        Check whether the operation is representing a non-innermost child leaf
+        of a combined OpenMP construct or an equivalent immediate nesting of
+        constructs.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isCombined",
+      (ins ), [{}], [{
+        return $_op->hasAttr("omp.combined");
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
+        Mark the operation as a non-innermost child leaf of an OpenMP combined
+        construct or an equivalent immediate nesting of constructs.
+      }],
+      /*retTy=*/"void",
+      /*methodName=*/"setCombined",
+      (ins "bool":$val), [{}], [{
+        if (val)
+          $_op->setDiscardableAttr("omp.combined", mlir::UnitAttr::get($_op->getContext()));
+        else
+          $_op->removeDiscardableAttr("omp.combined");
+      }]
     >
   ];
+
+  let extraClassDeclaration = [{
+    /// Follows the combined-composite chain of nested operations and returns
+    /// the deepest-nested one.
+    Operation *findCapturedOp();
+
+    /// Interface verifier implementation.
+    llvm::LogicalResult verifyImpl();
+  }];
+
+  let verify = [{
+    return ::llvm::cast<::mlir::omp::ComposableOpInterface>($_op).verifyImpl();
+  }];
+  let verifyWithRegions = 1;
 }
 
 def DeclareTargetInterface : OpInterface<"DeclareTargetInterface"> {

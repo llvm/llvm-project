@@ -115,6 +115,11 @@ void SystemZHLASMAsmStreamer::emitAlignmentDS(uint64_t ByteAlignment,
   EmitEOL();
 }
 
+void SystemZHLASMAsmStreamer::emitRawComment(const Twine &T, bool TabPrefix) {
+  OS << MAI->getCommentString() << T;
+  EmitEOL();
+}
+
 void SystemZHLASMAsmStreamer::AddComment(const Twine &T, bool EOL) {
   if (!IsVerboseAsm)
     return;
@@ -154,7 +159,7 @@ void SystemZHLASMAsmStreamer::emitValueToAlignment(Align Alignment,
 }
 
 void SystemZHLASMAsmStreamer::emitCodeAlignment(Align Alignment,
-                                                const MCSubtargetInfo *STI,
+                                                const MCSubtargetInfo &STI,
                                                 unsigned MaxBytesToEmit) {
   // Emit with a text fill value.
   if (MAI->getTextAlignFillValue())
@@ -186,24 +191,134 @@ void SystemZHLASMAsmStreamer::emitBytes(StringRef Data) {
   EmitEOL();
 }
 
+void SystemZHLASMAsmStreamer::addEncodingComment(const MCInst &Inst,
+                                                 const MCSubtargetInfo &STI) {
+  raw_ostream &OS = getCommentOS();
+  SmallString<256> Code;
+  SmallVector<MCFixup, 4> Fixups;
+
+  // If we have no code emitter, don't emit code.
+  if (!getAssembler().getEmitterPtr())
+    return;
+
+  getAssembler().getEmitter().encodeInstruction(Inst, Code, Fixups, STI);
+
+  // If we are showing fixups, create symbolic markers in the encoded
+  // representation. We do this by making a per-bit map to the fixup item index,
+  // then trying to display it as nicely as possible.
+  SmallVector<uint8_t, 64> FixupMap;
+  FixupMap.resize(Code.size() * 8);
+  for (unsigned I = 0, E = Code.size() * 8; I != E; ++I)
+    FixupMap[I] = 0;
+
+  for (unsigned I = 0, E = Fixups.size(); I != E; ++I) {
+    MCFixup &F = Fixups[I];
+    MCFixupKindInfo Info =
+        getAssembler().getBackend().getFixupKindInfo(F.getKind());
+    for (unsigned J = 0; J != Info.TargetSize; ++J) {
+      unsigned Index = F.getOffset() * 8 + Info.TargetOffset + J;
+      assert(Index < Code.size() * 8 && "Invalid offset in fixup!");
+      FixupMap[Index] = 1 + I;
+    }
+  }
+
+  OS << "encoding: [";
+  for (unsigned I = 0, E = Code.size(); I != E; ++I) {
+    if (I)
+      OS << ',';
+
+    // See if all bits are the same map entry.
+    uint8_t MapEntry = FixupMap[I * 8 + 0];
+    for (unsigned J = 1; J != 8; ++J) {
+      if (FixupMap[I * 8 + J] == MapEntry)
+        continue;
+
+      MapEntry = uint8_t(~0U);
+      break;
+    }
+
+    if (MapEntry != uint8_t(~0U)) {
+      if (MapEntry == 0) {
+        OS << format("0x%02x", uint8_t(Code[I]));
+      } else {
+        if (Code[I]) {
+          // FIXME: Some of the 8 bits require fix up.
+          OS << format("0x%02x", uint8_t(Code[I])) << '\''
+             << char('A' + MapEntry - 1) << '\'';
+        } else
+          OS << char('A' + MapEntry - 1);
+      }
+    } else {
+      // Otherwise, write out in binary.
+      OS << "0b";
+      for (unsigned J = 8; J--;) {
+        unsigned Bit = (Code[I] >> J) & 1;
+        unsigned FixupBit = I * 8 + (7 - J);
+        if (uint8_t MapEntry = FixupMap[FixupBit]) {
+          assert(Bit == 0 && "Encoder wrote into fixed up bit!");
+          OS << char('A' + MapEntry - 1);
+        } else
+          OS << Bit;
+      }
+    }
+  }
+  OS << "]\n";
+
+  for (unsigned I = 0, E = Fixups.size(); I != E; ++I) {
+    MCFixup &F = Fixups[I];
+    OS << "  fixup " << char('A' + I) << " - "
+       << "offset: " << F.getOffset() << ", value: ";
+    MAI->printExpr(OS, *F.getValue());
+    auto Kind = F.getKind();
+    if (mc::isRelocation(Kind))
+      OS << ", relocation type: " << Kind;
+    else {
+      OS << ", kind: ";
+      auto Info = getAssembler().getBackend().getFixupKindInfo(Kind);
+      if (F.isPCRel() && StringRef(Info.Name).starts_with("FK_Data_"))
+        OS << "FK_PCRel_" << (Info.TargetSize / 8);
+      else
+        OS << Info.Name;
+    }
+    OS << "\n";
+  }
+}
+
 void SystemZHLASMAsmStreamer::emitInstruction(const MCInst &Inst,
                                               const MCSubtargetInfo &STI) {
+  // Show the encoding in a comment if we have a code emitter.
+  addEncodingComment(Inst, STI);
+  EmitEOL();
 
   InstPrinter->printInst(&Inst, 0, "", STI, OS);
   EmitEOL();
 }
 
-static void emitXATTR(raw_ostream &OS, StringRef Name,
-                      GOFF::ESDLinkageType Linkage,
+static void emitXATTR(raw_ostream &OS, StringRef Name, MCSectionGOFF *ADA,
+                      bool IsIndirectReference, GOFF::ESDLinkageType Linkage,
                       GOFF::ESDExecutable Executable,
                       GOFF::ESDBindingScope BindingScope) {
   llvm::ListSeparator Sep(",");
   OS << Name << " XATTR ";
   OS << Sep << "LINKAGE(" << (Linkage == GOFF::ESD_LT_OS ? "OS" : "XPLINK")
      << ")";
-  if (Executable != GOFF::ESD_EXE_Unspecified)
-    OS << Sep << "REFERENCE("
-       << (Executable == GOFF::ESD_EXE_CODE ? "CODE" : "DATA") << ")";
+
+  const bool NotUnspecified = (Executable != GOFF::ESD_EXE_Unspecified);
+  if (NotUnspecified || IsIndirectReference) {
+    OS << Sep << "REFERENCE(";
+    llvm::ListSeparator SepRef(",");
+
+    if (NotUnspecified)
+      OS << SepRef << (Executable == GOFF::ESD_EXE_CODE ? "CODE" : "DATA");
+
+    if (IsIndirectReference)
+      OS << SepRef << "INDIRECT";
+
+    OS << ")";
+  }
+  // Emit PSECT only for code symbols.
+  if (ADA && Executable != GOFF::ESD_EXE_DATA)
+    OS << Sep << "PSECT(" << ADA->getName() << ")";
   if (BindingScope != GOFF::ESD_BSC_Unspecified) {
     OS << Sep << "SCOPE(";
     switch (BindingScope) {
@@ -224,7 +339,6 @@ static void emitXATTR(raw_ostream &OS, StringRef Name,
     }
     OS << ')';
   }
-  OS << '\n';
 }
 
 void SystemZHLASMAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
@@ -232,28 +346,28 @@ void SystemZHLASMAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
 
   MCStreamer::emitLabel(Sym, Loc);
 
-  // Emit ENTRY statement only if not implied by CSECT.
-  bool EmitEntry = true;
+  // Emit label and ENTRY statement only if not implied by CSECT. Do not emit a
+  // label if the symbol is on a PR section.
+  bool EmitLabelAndEntry =
+      !static_cast<MCSectionGOFF *>(getCurrentSectionOnly())->isPR();
   if (!Sym->isTemporary() && Sym->isInEDSection()) {
-    EmitEntry =
+    EmitLabelAndEntry =
         Sym->getName() !=
         static_cast<MCSectionGOFF &>(Sym->getSection()).getParent()->getName();
-    if (EmitEntry) {
+    if (EmitLabelAndEntry) {
       OS << " ENTRY " << Sym->getName();
       EmitEOL();
     }
 
-    emitXATTR(OS, Sym->getName(), Sym->getLinkage(), Sym->getCodeData(),
-              Sym->getBindingScope());
+    emitXATTR(OS, Sym->getName(), Sym->getADA(), Sym->isIndirect(),
+              Sym->getLinkage(), Sym->getCodeData(), Sym->getBindingScope());
     EmitEOL();
+    if (Sym->hasExternalName())
+      OS << Sym->getName() << " ALIAS C'" << Sym->getExternalName() << "'\n";
   }
 
-  // TODO Need to adjust this based on Label type
-  if (EmitEntry) {
+  if (EmitLabelAndEntry) {
     OS << Sym->getName() << " DS 0H";
-    // TODO Update LabelSuffix in SystemZMCAsmInfoGOFF once tests have been
-    // moved to HLASM syntax.
-    // OS << MAI->getLabelSuffix();
     EmitEOL();
   }
 }
@@ -355,11 +469,19 @@ void SystemZHLASMAsmStreamer::finishImpl() {
     if (Symbol.isTemporary() || !Symbol.isRegistered() || Symbol.isDefined())
       continue;
     auto &Sym = static_cast<MCSymbolGOFF &>(const_cast<MCSymbol &>(Symbol));
-    OS << " " << (Sym.isWeak() ? "WXTRN" : "EXTRN") << " " << Sym.getName();
+    if (Sym.getCodeData() == GOFF::ESD_EXE_DATA) {
+      OS << Sym.getADA()->getParent()->getExternalName() << " CATTR PART("
+         << Sym.getName() << ")";
+      EmitEOL();
+    } else {
+      OS << " " << (Sym.isWeak() ? "WXTRN" : "EXTRN") << " " << Sym.getName();
+      EmitEOL();
+    }
+    emitXATTR(OS, Sym.getName(), Sym.getADA(), Sym.isIndirect(),
+              Sym.getLinkage(), Sym.getCodeData(), Sym.getBindingScope());
     EmitEOL();
-    emitXATTR(OS, Sym.getName(), Sym.getLinkage(), Sym.getCodeData(),
-              Sym.getBindingScope());
-    EmitEOL();
+    if (Sym.hasExternalName())
+      OS << Sym.getName() << " ALIAS C'" << Sym.getExternalName() << "'\n";
   }
 
   // Finish the assembly output.

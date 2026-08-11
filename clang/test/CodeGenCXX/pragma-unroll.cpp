@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -std=c++11 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -std=c++11 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,OTHER %s
 
 // Check that passing -fno-unroll-loops does not impact the decision made using pragmas.
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -std=c++11 -emit-llvm -o - -O1 -disable-llvm-optzns -fno-unroll-loops %s | FileCheck %s
@@ -144,18 +144,51 @@ void test_value_dependent(int n) {
   value_dependent<true>(n);
 }
 
-// CHECK: ![[LOOP_1]] = distinct !{![[LOOP_1]], [[MP:![0-9]+]], ![[UNROLL_ENABLE:.*]]}
-// CHECK: ![[UNROLL_ENABLE]] = !{!"llvm.loop.unroll.enable"}
-// CHECK: ![[LOOP_2]] = distinct !{![[LOOP_2:.*]], ![[UNROLL_DISABLE:.*]]}
-// CHECK: ![[UNROLL_DISABLE]] = !{!"llvm.loop.unroll.disable"}
-// CHECK: ![[LOOP_3]] = distinct !{![[LOOP_3]], [[MP]], ![[UNROLL_8:.*]]}
-// CHECK: ![[UNROLL_8]] = !{!"llvm.loop.unroll.count", i32 8}
-// CHECK: ![[LOOP_4]] = distinct !{![[LOOP_4]], ![[UNROLL_4:.*]]}
-// CHECK: ![[UNROLL_4]] = !{!"llvm.loop.unroll.count", i32 4}
-// CHECK: ![[LOOP_5]] = distinct !{![[LOOP_5]], ![[UNROLL_8:.*]]}
-// CHECK: ![[LOOP_6]] = distinct !{![[LOOP_6]], ![[UNROLL_8:.*]]}
-// CHECK: ![[LOOP_7]] = distinct !{![[LOOP_7]], ![[UNROLL_8:.*]]}
-// CHECK: ![[LOOP_14]] = distinct !{![[LOOP_14]], [[MP]], ![[UNROLL_DISABLE:.*]]}
-// CHECK: ![[LOOP_15]] = distinct !{![[LOOP_15]], [[MP]], ![[UNROLL_DISABLE:.*]]}
-// CHECK: ![[LOOP_16]] = distinct !{![[LOOP_16]], [[MP]], ![[UNROLL_DISABLE:.*]]}
-// CHECK: ![[LOOP_17]] = distinct !{![[LOOP_17]], [[MP]], ![[UNROLL_DISABLE:.*]]}
+// Verify that the special treatment of #pragma unroll 0|1 does not affect
+// other loop pragmas with an integer argument, such as vectorize_width or
+// interleave_count.
+
+void for_vectorize_one_test(int *List, int Length) {
+  // OTHER: define {{.*}} @_Z22for_vectorize_one_testPii
+  #pragma clang loop vectorize_width(1)
+  for (int i = 0; i < Length; i++) {
+    // OTHER: br label {{.*}}, !llvm.loop ![[LOOP_18:.*]]
+    List[i] = i * 2;
+  }
+}
+
+template <int V>
+void for_vectorize_value_dependent(int *List, int Length) {
+  // OTHER: define {{.*}} @_Z29for_vectorize_value_dependentILi1EEvPii
+  #pragma clang loop vectorize_width(V)
+  for (int i = 0; i < Length; i++) {
+    // OTHER: br label {{.*}}, !llvm.loop ![[LOOP_19:.*]]
+    List[i] = i * 2;
+  }
+}
+
+template void for_vectorize_value_dependent<1>(int *List, int Length);
+
+// CHECK-DAG: ![[MP:[0-9]+]] = !{!"llvm.loop.mustprogress"}
+//
+// CHECK-DAG: ![[UNROLL_ENABLE:[0-9]+]] = !{!"llvm.loop.unroll.enable"}
+// CHECK-DAG: ![[UNROLL_DISABLE:[0-9]+]] = !{!"llvm.loop.unroll.disable"}
+// CHECK-DAG: ![[UNROLL_4:[0-9]+]] = !{!"llvm.loop.unroll.count", i32 4}
+// CHECK-DAG: ![[UNROLL_8:[0-9]+]] = !{!"llvm.loop.unroll.count", i32 8}
+//
+// OTHER-DAG: ![[VEC_1:[0-9]+]] = !{!"llvm.loop.vectorize.width", i32 1}
+// OTHER-DAG: ![[VEC_FIXED:[0-9]+]] = !{!"llvm.loop.vectorize.scalable.enable", i1 false}
+//
+// CHECK-DAG: ![[LOOP_1]] = distinct !{![[LOOP_1]], ![[MP]], ![[UNROLL_ENABLE]]}
+// CHECK-DAG: ![[LOOP_2]] = distinct !{![[LOOP_2]], ![[MP]], ![[UNROLL_DISABLE]]}
+// CHECK-DAG: ![[LOOP_3]] = distinct !{![[LOOP_3]], ![[MP]], ![[UNROLL_8]]}
+// CHECK-DAG: ![[LOOP_4]] = distinct !{![[LOOP_4]], ![[UNROLL_4]]}
+// CHECK-DAG: ![[LOOP_5]] = distinct !{![[LOOP_5]], ![[MP]], ![[UNROLL_8]]}
+// CHECK-DAG: ![[LOOP_6]] = distinct !{![[LOOP_6]], ![[MP]], ![[UNROLL_8]]}
+// CHECK-DAG: ![[LOOP_7]] = distinct !{![[LOOP_7]], ![[MP]], ![[UNROLL_8]]}
+// CHECK-DAG: ![[LOOP_14]] = distinct !{![[LOOP_14]], ![[MP]], ![[UNROLL_DISABLE]]}
+// CHECK-DAG: ![[LOOP_15]] = distinct !{![[LOOP_15]], ![[MP]], ![[UNROLL_DISABLE]]}
+// CHECK-DAG: ![[LOOP_16]] = distinct !{![[LOOP_16]], ![[MP]], ![[UNROLL_DISABLE]]}
+// CHECK-DAG: ![[LOOP_17]] = distinct !{![[LOOP_17]], ![[MP]], ![[UNROLL_DISABLE]]}
+// OTHER-DAG: ![[LOOP_18]] = distinct !{![[LOOP_18]], ![[MP]], ![[VEC_1]], ![[VEC_FIXED]]}
+// OTHER-DAG: ![[LOOP_19]] = distinct !{![[LOOP_19]], ![[MP]], ![[VEC_1]], ![[VEC_FIXED]]}

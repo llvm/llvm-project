@@ -23,7 +23,6 @@
 #include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #define GET_SUBTARGETINFO_HEADER
@@ -124,6 +123,12 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
   // CPU supports cnMIPSP (Cavium Networks Octeon+ CPU).
   bool HasCnMipsP;
 
+  // IsR5900 - CPU is R5900 (PlayStation 2 Emotion Engine).
+  bool IsR5900;
+
+  // FixR5900 - Enable R5900 short loop erratum fix.
+  bool FixR5900;
+
   // isLinux - Target system is Linux. Is false we consider ELFOS for now.
   bool IsLinux;
 
@@ -221,8 +226,6 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
   /// The overridden stack alignment.
   MaybeAlign StackAlignOverride;
 
-  InstrItineraryData InstrItins;
-
   // We can override the determination of whether we are in mips16 mode
   // as from the command line
   enum {NoOverride, Mips16Override, NoMips16Override} OverrideMode;
@@ -297,6 +300,8 @@ public:
 
   bool hasCnMips() const { return HasCnMips; }
   bool hasCnMipsP() const { return HasCnMipsP; }
+  bool isR5900() const { return IsR5900; }
+  bool fixR5900() const { return FixR5900; }
 
   bool isLittle() const { return IsLittle; }
   bool isABICalls() const { return !NoABICalls; }
@@ -415,10 +420,6 @@ public:
   const MipsTargetLowering *getTargetLowering() const override {
     return TLInfo.get();
   }
-  const InstrItineraryData *getInstrItineraryData() const override {
-    return &InstrItins;
-  }
-
   void initLibcallLoweringInfo(LibcallLoweringInfo &Info) const override;
 
 protected:

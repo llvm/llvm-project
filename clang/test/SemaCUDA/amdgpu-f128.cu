@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-linux-gnu -fcuda-is-device -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -aux-triple x86_64-unknown-linux-gnu -fcuda-is-device -fsyntax-only -verify %s
 // RUN: %clang_cc1 -triple spirv64-amd-amdhsa -aux-triple x86_64-unknown-linux-gnu -fcuda-is-device -fsyntax-only -verify %s
 
 // expected-no-diagnostics

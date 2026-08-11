@@ -51,6 +51,7 @@ public:
   llvm::endianness ValueProfDataEndianness = llvm::endianness::little;
   InstrProfSummaryBuilder *SummaryBuilder;
   InstrProfSummaryBuilder *CSSummaryBuilder;
+  bool WritePrevVersion = false;
 
   InstrProfRecordWriterTrait() = default;
 
@@ -58,7 +59,7 @@ public:
     return IndexedInstrProf::ComputeHash(K);
   }
 
-  static std::pair<offset_type, offset_type>
+  std::pair<offset_type, offset_type>
   EmitKeyDataLength(raw_ostream &Out, key_type_ref K, data_type_ref V) {
     using namespace support;
 
@@ -74,7 +75,16 @@ public:
       M += sizeof(uint64_t); // The size of the Counts vector
       M += ProfRecord.Counts.size() * sizeof(uint64_t);
       M += sizeof(uint64_t); // The size of the Bitmap vector
-      M += ProfRecord.BitmapBytes.size() * sizeof(uint64_t);
+      if (WritePrevVersion) {
+        // Compatibility mode: each bitmap byte is stored as a uint64_t.
+        M += ProfRecord.BitmapBytes.size() * sizeof(uint64_t);
+      } else {
+        // Version 14+: bitmap bytes as uint8_t with padding, plus
+        // uniformity bits.
+        M += alignTo(ProfRecord.BitmapBytes.size(), sizeof(uint64_t));
+        M += sizeof(uint64_t); // The size of the UniformityBits vector
+        M += alignTo(ProfRecord.UniformityBits.size(), sizeof(uint64_t));
+      }
 
       // Value data
       M += ValueProfData::getSize(ProfileData.second);
@@ -88,7 +98,8 @@ public:
     Out.write(K.data(), N);
   }
 
-  void EmitData(raw_ostream &Out, key_type_ref, data_type_ref V, offset_type) {
+  void EmitData(raw_ostream &Out, key_type_ref K, data_type_ref V,
+                offset_type) {
     using namespace support;
 
     endian::Writer LE(Out, llvm::endianness::little);
@@ -105,8 +116,27 @@ public:
         LE.write<uint64_t>(I);
 
       LE.write<uint64_t>(ProfRecord.BitmapBytes.size());
-      for (uint64_t I : ProfRecord.BitmapBytes)
-        LE.write<uint64_t>(I);
+      if (WritePrevVersion) {
+        // Compatibility mode: each bitmap byte is stored as a uint64_t.
+        for (uint8_t I : ProfRecord.BitmapBytes)
+          LE.write<uint64_t>(I);
+      } else {
+        // Version 14+: bitmap bytes as uint8_t with padding.
+        for (uint8_t I : ProfRecord.BitmapBytes)
+          LE.write<uint8_t>(I);
+        for (size_t I = ProfRecord.BitmapBytes.size();
+             I < alignTo(ProfRecord.BitmapBytes.size(), sizeof(uint64_t)); ++I)
+          LE.write<uint8_t>(0);
+
+        // Write uniformity bits (AMDGPU offload profiling).
+        LE.write<uint64_t>(ProfRecord.UniformityBits.size());
+        for (uint8_t I : ProfRecord.UniformityBits)
+          LE.write<uint8_t>(I);
+        for (size_t I = ProfRecord.UniformityBits.size();
+             I < alignTo(ProfRecord.UniformityBits.size(), sizeof(uint64_t));
+             ++I)
+          LE.write<uint8_t>(0);
+      }
 
       // Write value data
       std::unique_ptr<ValueProfData> VDataPtr =
@@ -193,6 +223,8 @@ void InstrProfWriter::overlapRecord(NamedInstrProfRecord &&Other,
 void InstrProfWriter::addRecord(StringRef Name, uint64_t Hash,
                                 InstrProfRecord &&I, uint64_t Weight,
                                 function_ref<void(Error)> Warn) {
+  I.computeBlockUniformity();
+
   auto &ProfileDataMap = FunctionData[Name];
 
   auto [Where, NewFunc] = ProfileDataMap.try_emplace(Hash);
@@ -524,6 +556,7 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   InfoObj->SummaryBuilder = &ISB;
   InstrProfSummaryBuilder CSISB(ProfileSummaryBuilder::DefaultCutoffs);
   InfoObj->CSSummaryBuilder = &CSISB;
+  InfoObj->WritePrevVersion = WritePrevVersion;
 
   // Populate the hash table generator.
   SmallVector<std::pair<StringRef, const ProfilingData *>> OrderedData;
@@ -542,7 +575,7 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   // The WritePrevVersion handling will either need to be removed or updated
   // if the version is advanced beyond 12.
   static_assert(IndexedInstrProf::ProfVersion::CurrentVersion ==
-                IndexedInstrProf::ProfVersion::Version13);
+                IndexedInstrProf::ProfVersion::Version14);
   if (static_cast<bool>(ProfileKind & InstrProfKind::IRInstrumentation))
     Header.Version |= VARIANT_MASK_IR_PROF;
   if (static_cast<bool>(ProfileKind & InstrProfKind::ContextSensitive))

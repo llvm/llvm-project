@@ -223,6 +223,13 @@ public:
   // in bytes, else it will return zero.
   uint32_t GetPrologueByteSize();
 
+  void SetPrologueByteSize(uint32_t prologue_byte_size) {
+    assert(m_type == lldb::eSymbolTypeCode ||
+           m_type == lldb::eSymbolTypeResolver);
+    m_type_data = prologue_byte_size;
+    m_type_data_resolved = true;
+  }
+
   bool GetDemangledNameIsSynthesized() const {
     return m_demangled_is_synthesized;
   }
@@ -269,11 +276,11 @@ public:
   ///
   /// \param offset_ptr
   ///   A pointer that contains the offset from which the data will be decoded
-  ///   from that gets updated as data gets decoded.
+  ///   from.  The offset_ptr offset value will be updated as data is read.
   ///
   /// \param section_list
   ///   A section list that allows lldb_private::Address objects to be filled
-  ///   in. The address information for symbols are serilized as file addresses
+  ///   in. The address information for symbols are serialized as file addresses
   ///   and must be converted into Address objects with the right section and
   ///   offset.
   ///
@@ -318,8 +325,8 @@ protected:
 
   void SynthesizeNameIfNeeded() const;
 
-  uint32_t m_uid =
-      UINT32_MAX;           // User ID (usually the original symbol table index)
+  uint32_t m_uid = LLDB_INVALID_SYMBOL_ID; // User ID (usually the original
+                                           // symbol table index)
   uint16_t m_type_data = 0; // data specific to m_type
   uint16_t m_type_data_resolved : 1, // True if the data in m_type_data has
                                      // already been calculated
@@ -352,6 +359,12 @@ protected:
 };
 
 } // namespace lldb_private
+
+#if __SIZEOF_POINTER__ == 8
+static_assert(
+    sizeof(lldb_private::Symbol) == 80,
+    "Symbol is a high volume data type, size must be increased with care");
+#endif
 
 namespace llvm {
 namespace json {

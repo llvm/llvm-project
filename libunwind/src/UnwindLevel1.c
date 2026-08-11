@@ -14,7 +14,7 @@
 // ARM EHABI does not specify _Unwind_{Get,Set}{GR,IP}().  Thus, we are
 // defining inline functions to delegate the function calls to
 // _Unwind_VRS_{Get,Set}().  However, some applications might declare the
-// function protetype directly (instead of including <unwind.h>), thus we need
+// function prototype directly (instead of including <unwind.h>), thus we need
 // to export these functions from libunwind.so as well.
 #define _LIBUNWIND_UNWIND_LEVEL1_EXTERNAL_LINKAGE 1
 

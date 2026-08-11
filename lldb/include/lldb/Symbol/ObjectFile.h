@@ -174,17 +174,15 @@ public:
                                        lldb::addr_t header_addr,
                                        lldb::WritableDataBufferSP file_data_sp);
 
-  static size_t
+  static ModuleSpecList
   GetModuleSpecifications(const FileSpec &file, lldb::offset_t file_offset,
-                          lldb::offset_t file_size, ModuleSpecList &specs,
-                          lldb::DataBufferSP data_sp = lldb::DataBufferSP());
+                          lldb::offset_t file_size,
+                          lldb::DataExtractorSP = lldb::DataExtractorSP());
 
-  static size_t GetModuleSpecifications(const lldb_private::FileSpec &file,
-                                        lldb::DataBufferSP &data_sp,
-                                        lldb::offset_t data_offset,
-                                        lldb::offset_t file_offset,
-                                        lldb::offset_t file_size,
-                                        lldb_private::ModuleSpecList &specs);
+  static ModuleSpecList
+  GetModuleSpecifications(const lldb_private::FileSpec &file,
+                          lldb::DataExtractorSP &extractor_sp,
+                          lldb::offset_t file_offset, lldb::offset_t file_size);
   static bool IsObjectFile(lldb_private::FileSpec file_spec);
   /// Split a path into a file path with object name.
   ///
@@ -338,29 +336,6 @@ public:
   /// Perform relocations on the section if necessary.
   ///
   virtual void RelocateSection(lldb_private::Section *section);
-
-  /// Appends a Symbol for the specified so_addr to the symbol table.
-  ///
-  /// If verify_unique is false, the symbol table is not searched to determine
-  /// if a Symbol found at this address has already been added to the symbol
-  /// table.  When verify_unique is true, this method resolves the Symbol as
-  /// the first match in the SymbolTable and appends a Symbol only if
-  /// required/found.
-  ///
-  /// \return
-  ///     The resolved symbol or nullptr.  Returns nullptr if a
-  ///     a Symbol could not be found for the specified so_addr.
-  virtual Symbol *ResolveSymbolForAddress(const Address &so_addr,
-                                          bool verify_unique) {
-    // Typically overridden to lazily add stripped symbols recoverable from the
-    // exception handling unwind information (i.e. without parsing the entire
-    // eh_frame section.
-    //
-    // The availability of LC_FUNCTION_STARTS allows ObjectFileMachO to
-    // efficiently add stripped symbols when the symbol table is first
-    // constructed.  Poorer cousins are PECoff and ELF.
-    return nullptr;
-  }
 
   /// Detect if this object file has been stripped of local symbols.
   /// Detect if this object file has been stripped of local symbols.
@@ -682,7 +657,7 @@ public:
   // This function returns raw file contents. Do not use it if you want
   // transparent decompression of section contents.
   size_t GetData(lldb::offset_t offset, size_t length,
-                 DataExtractor &data) const;
+                 lldb::DataExtractorSP &data_sp) const;
 
   // This function returns raw file contents. Do not use it if you want
   // transparent decompression of section contents.
@@ -765,12 +740,16 @@ public:
     return false;
   }
 
-  /// Get a hash that can be used for caching object file releated information.
+  /// Get a hash that can be used for caching object file related information.
   ///
   /// Data for object files can be cached between runs of debug sessions and
-  /// a module can end up using a main file and a symbol file, both of which
-  /// can be object files. So we need a unique hash that identifies an object
-  /// file when storing cached data.
+  /// a Module can end up using a ObjectFile and a SymbolFile, both of which
+  /// can be ObjectFiles in reality. We need a unique hash that identifies
+  /// an ObjectFile when storing cached data.
+  ///
+  /// The hash value returned does not change when the same binary is
+  /// rebuilt with changes; it does not incorporate a mod date or UUID
+  /// like DataFileCache's CacheSignature does.
   uint32_t GetCacheHash();
 
   static lldb::DataBufferSP MapFileData(const FileSpec &file, uint64_t Size,
@@ -796,7 +775,10 @@ protected:
   lldb::ProcessWP m_process_wp;
   /// Set if the object file only exists in memory.
   const lldb::addr_t m_memory_addr;
+
   std::unique_ptr<lldb_private::SectionList> m_sections_up;
+  std::recursive_mutex m_sections_mutex;
+
   std::unique_ptr<lldb_private::Symtab> m_symtab_up;
   /// We need a llvm::once_flag that we can use to avoid locking the module
   /// lock and deadlocking LLDB. See comments in ObjectFile::GetSymtab() for

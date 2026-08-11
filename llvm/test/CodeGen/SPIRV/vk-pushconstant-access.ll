@@ -1,6 +1,9 @@
 ; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv-vulkan-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-vulkan-unknown %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
 
 %struct.S = type <{ float }>
+
+; CHECK-NOT: OpCapability Linkage
 
 ; CHECK-DAG: %[[#F32:]] = OpTypeFloat 32
 ; CHECK-DAG: %[[#UINT:]] = OpTypeInt 32 0

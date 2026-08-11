@@ -71,7 +71,6 @@ func.func @_QPlocalizer_with_dealloc_region(%arg0: !fir.ref<i32> {fir.bindc_name
 // CHECK:           %[[VAL_2:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_3:.*]] = arith.constant 42 : i32
 // CHECK:           %[[VAL_4:.*]] = fir.alloca i32 {bindc_name = "i"}
-// CHECK:           %[[VAL_5:.*]] = fir.declare %[[VAL_4]] {uniq_name = "_QFlocalizer_with_dealloc_regionEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[VAL_6:.*]] = fir.alloca !fir.box<!fir.array<?xi32>>
 // CHECK:           %[[VAL_7:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:           %[[VAL_8:.*]] = fir.declare %[[ARG0]] dummy_scope %[[VAL_7]] {uniq_name = "_QFlocalizer_with_dealloc_regionEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
@@ -84,6 +83,7 @@ func.func @_QPlocalizer_with_dealloc_region(%arg0: !fir.ref<i32> {fir.bindc_name
 // CHECK:           %[[VAL_15:.*]] = fir.declare %[[VAL_13]](%[[VAL_14]]) {uniq_name = "_QFlocalizer_with_dealloc_regionEa"} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<?xi32>>
 // CHECK:           %[[VAL_16:.*]] = fir.embox %[[VAL_15]](%[[VAL_14]]) : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
 // CHECK:           fir.store %[[VAL_16]] to %[[VAL_6]] : !fir.ref<!fir.box<!fir.array<?xi32>>>
+// CHECK:           %[[VAL_5:.*]] = fir.declare %[[VAL_4]] {uniq_name = "_QFlocalizer_with_dealloc_regionEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           fir.do_loop %[[VAL_17:.*]] = %[[VAL_2]] to %[[VAL_10]] step %[[VAL_2]] unordered {
 
 // Local allocation

@@ -10,6 +10,7 @@
 #define OPENACC_OPS_INTERFACES
 
 include "mlir/IR/OpBase.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def ComputeRegionOpInterface : OpInterface<"ComputeRegionOpInterface"> {
   let cppNamespace = "::mlir::acc";
@@ -72,8 +73,16 @@ def GlobalVariableOpInterface : OpInterface<"GlobalVariableOpInterface"> {
       "isConstant", (ins), [{
         return false;
       }]>,
+    InterfaceMethod<"Check if the global variable has an initializer", "bool",
+      "hasInitializer", (ins), [{
+        return false;
+      }]>,
     InterfaceMethod<"Get the initialization region (returns nullptr if none)",
       "::mlir::Region*", "getInitRegion", (ins)>,
+    InterfaceMethod<"Check if the global variable is device data",
+      "bool", "isDeviceData", (ins), [{
+        return false;
+      }]>,
   ];
 }
 
@@ -97,6 +106,83 @@ def IndirectGlobalAccessOpInterface : OpInterface<"IndirectGlobalAccessOpInterfa
       "getReferencedSymbols",
       (ins "::llvm::SmallVectorImpl<::mlir::SymbolRefAttr>&":$symbols,
            "::mlir::SymbolTable *":$symbolTable)>,
+  ];
+}
+
+def OutlineRematerializationOpInterface : OpInterface<"OutlineRematerializationOpInterface"> {
+  let cppNamespace = "::mlir::acc";
+
+  let description = [{
+    An interface for operations that are candidates for rematerialization
+    during outlining. These operations produce synthetic types or values
+    that cannot be passed as arguments to outlined regions and must be
+    rematerialized inside the region instead.
+
+    Operations implementing this interface are expected to be memory effect
+    free. Their results are typically used for type construction or providing
+    metadata (such as shape information for arrays).
+
+    `isRematerializationCandidate` refines whether a particular operation
+    instance participates in rematerialization; `isa<OutlineRematerializationOpInterface>`
+    requires both a registered model and this predicate.
+  }];
+
+  let methods = [
+    InterfaceMethod<"Returns whether this operation instance should be treated "
+                      "as an outline rematerialization candidate.",
+                      "bool", "isRematerializationCandidate", (ins),
+                      /*methodBody=*/"return true;">,
+  ];
+
+  let extraClassOf = [{
+    return $_op.isRematerializationCandidate();
+  }];
+
+  let verify = [{
+    if (!::mlir::isMemoryEffectFree($_op))
+      return $_op->emitOpError("must be memory effect free");
+    return ::mlir::success();
+  }];
+}
+
+def OutlineIdentityOperandOpInterface
+    : OpInterface<"OutlineIdentityOperandOpInterface"> {
+  let cppNamespace = "::mlir::acc";
+
+  let description = [{
+    An interface for operations with an "identity" operand (e.g. FIR's
+    dummy scope handle) that must never be duplicated, unlike operands
+    handled by `OutlineRematerializationOpInterface`. When such an
+    operation is sunk/cloned into an offload region and the operand would
+    otherwise reference a value outside it, drop the operand instead of
+    cloning it; implementations must preserve correctness some other way
+    (e.g. FIR's dominance-based scope lookup fallback).
+  }];
+
+  let methods = [
+    InterfaceMethod<"Drop any identity operands from this operation "
+                      "instance that reference values defined outside its "
+                      "containing region.",
+                      "void", "dropOutlinedIdentityOperands", (ins), [{}]>,
+  ];
+}
+
+def OffloadRegionOpInterface : OpInterface<"OffloadRegionOpInterface"> {
+  let cppNamespace = "::mlir::acc";
+
+  let description = [{
+    An interface for operations whose regions are targets for offloading
+    and outlining. Operations implementing this interface indicate that
+    their regions will be extracted and compiled separately (e.g., as
+    device kernels or outlined functions).
+  }];
+
+  let methods = [
+    InterfaceMethod<"Get the offload region", "::mlir::Region&",
+      "getOffloadRegion",
+      (ins), [{
+        return $_op.getRegion();
+      }]>,
   ];
 }
 

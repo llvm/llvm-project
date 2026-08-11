@@ -37,7 +37,7 @@ struct WarpMatrixInfo {
 };
 
 /// If `op` is a `vector.transfer_write`, return the `WarpMatrixInfo` for the
-/// vector operand. If op is a `vector.transfer_read`, `vector.contraction`, or
+/// vector operand. If op is a `vector.transfer_read`, `vector.contract`, or
 /// `arith.constant`, return the `WarpMatrixInfo` corresponding to the result.
 /// Otherwise, return failure.
 FailureOr<WarpMatrixInfo> getWarpMatrixInfo(Operation *op);

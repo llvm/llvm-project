@@ -893,14 +893,13 @@ void X86MCCodeEmitter::emitMemModRMByte(
 PrefixKind X86MCCodeEmitter::emitPrefixImpl(unsigned &CurOp, const MCInst &MI,
                                             const MCSubtargetInfo &STI,
                                             SmallVectorImpl<char> &CB) const {
-  uint64_t TSFlags = MCII.get(MI.getOpcode()).TSFlags;
+  const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
+  uint64_t TSFlags = Desc.TSFlags;
   // Determine where the memory operand starts, if present.
-  int MemoryOperand = X86II::getMemoryOperandNo(TSFlags);
+  int MemoryOperand = X86II::getMemoryOperandIdx(Desc);
   // Emit segment override opcode prefix as needed.
-  if (MemoryOperand != -1) {
-    MemoryOperand += CurOp;
+  if (MemoryOperand != -1)
     emitSegmentOverridePrefix(MemoryOperand + X86::AddrSegmentReg, MI, CB);
-  }
 
   // Emit the repeat opcode prefix as needed.
   unsigned Flags = MI.getFlags();
@@ -1999,6 +1998,14 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
 
     // Skip two trainling conditional operands encoded in EVEX prefix
     unsigned RemainingOps = NumOps - CurOp - 2 * HasTwoConditionalOps;
+    // Verify that hasImm(TSFlags) matches the presence of remaining operands.
+    // Exclude forms that emit immediates in the switch above (RawFrm and
+    // AddCCFrm may consume a PC-relative operand; RawFrmImm8/16 and
+    // RawFrmMemOffs always consume their immediates there).
+    assert((!X86II::hasImm(TSFlags) || RemainingOps || Form == X86II::RawFrm ||
+            Form == X86II::AddCCFrm || Form == X86II::RawFrmImm8 ||
+            Form == X86II::RawFrmImm16 || Form == X86II::RawFrmMemOffs) &&
+           "TSFlags indicates immediate but no operand provides it");
     while (RemainingOps) {
       emitImmediate(MI.getOperand(CurOp++), MI.getLoc(),
                     getImmFixupKind(Desc.TSFlags),

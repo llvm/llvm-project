@@ -82,27 +82,29 @@ define dso_local void @sspFunc() #0 {
 ; CHECK-SD-NEXT:  // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #32
 ; CHECK-SD-NEXT:    .seh_stackalloc 32
-; CHECK-SD-NEXT:    str x30, [sp, #16] // 8-byte Spill
-; CHECK-SD-NEXT:    .seh_save_reg x30, 16
+; CHECK-SD-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    .seh_save_fplr 16
+; CHECK-SD-NEXT:    add x29, sp, #16
+; CHECK-SD-NEXT:    .seh_add_fp 16
 ; CHECK-SD-NEXT:    .seh_endprologue
 ; CHECK-SD-NEXT:    adrp x8, .refptr.__stack_chk_guard
 ; CHECK-SD-NEXT:    add x0, sp, #7
 ; CHECK-SD-NEXT:    ldr x8, [x8, :lo12:.refptr.__stack_chk_guard]
 ; CHECK-SD-NEXT:    ldr x8, [x8]
-; CHECK-SD-NEXT:    sub x8, sp, x8
+; CHECK-SD-NEXT:    sub x8, x29, x8
 ; CHECK-SD-NEXT:    str x8, [sp, #8]
 ; CHECK-SD-NEXT:    bl ptrUser
 ; CHECK-SD-NEXT:    adrp x8, .refptr.__stack_chk_guard
 ; CHECK-SD-NEXT:    ldr x8, [x8, :lo12:.refptr.__stack_chk_guard]
 ; CHECK-SD-NEXT:    ldr x9, [sp, #8]
 ; CHECK-SD-NEXT:    ldr x8, [x8]
-; CHECK-SD-NEXT:    sub x8, sp, x8
+; CHECK-SD-NEXT:    sub x9, x29, x9
 ; CHECK-SD-NEXT:    cmp x8, x9
 ; CHECK-SD-NEXT:    b.ne .LBB6_2
 ; CHECK-SD-NEXT:  // %bb.1: // %entry
 ; CHECK-SD-NEXT:    .seh_startepilogue
-; CHECK-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
-; CHECK-SD-NEXT:    .seh_save_reg x30, 16
+; CHECK-SD-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    .seh_save_fplr 16
 ; CHECK-SD-NEXT:    add sp, sp, #32
 ; CHECK-SD-NEXT:    .seh_stackalloc 32
 ; CHECK-SD-NEXT:    .seh_endepilogue
@@ -118,25 +120,29 @@ define dso_local void @sspFunc() #0 {
 ; CHECK-GI-NEXT:  // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sub sp, sp, #32
 ; CHECK-GI-NEXT:    .seh_stackalloc 32
-; CHECK-GI-NEXT:    str x30, [sp, #16] // 8-byte Spill
-; CHECK-GI-NEXT:    .seh_save_reg x30, 16
+; CHECK-GI-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    .seh_save_fplr 16
+; CHECK-GI-NEXT:    add x29, sp, #16
+; CHECK-GI-NEXT:    .seh_add_fp 16
 ; CHECK-GI-NEXT:    .seh_endprologue
 ; CHECK-GI-NEXT:    adrp x8, .refptr.__stack_chk_guard
 ; CHECK-GI-NEXT:    add x0, sp, #7
 ; CHECK-GI-NEXT:    ldr x8, [x8, :lo12:.refptr.__stack_chk_guard]
 ; CHECK-GI-NEXT:    ldr x8, [x8]
+; CHECK-GI-NEXT:    sub x8, x29, x8
 ; CHECK-GI-NEXT:    str x8, [sp, #8]
 ; CHECK-GI-NEXT:    bl ptrUser
 ; CHECK-GI-NEXT:    adrp x8, .refptr.__stack_chk_guard
 ; CHECK-GI-NEXT:    ldr x8, [x8, :lo12:.refptr.__stack_chk_guard]
 ; CHECK-GI-NEXT:    ldr x9, [sp, #8]
 ; CHECK-GI-NEXT:    ldr x8, [x8]
+; CHECK-GI-NEXT:    sub x8, x29, x8
 ; CHECK-GI-NEXT:    cmp x8, x9
 ; CHECK-GI-NEXT:    b.ne .LBB6_2
 ; CHECK-GI-NEXT:  // %bb.1: // %entry
 ; CHECK-GI-NEXT:    .seh_startepilogue
-; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
-; CHECK-GI-NEXT:    .seh_save_reg x30, 16
+; CHECK-GI-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    .seh_save_fplr 16
 ; CHECK-GI-NEXT:    add sp, sp, #32
 ; CHECK-GI-NEXT:    .seh_stackalloc 32
 ; CHECK-GI-NEXT:    .seh_endepilogue

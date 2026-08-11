@@ -206,7 +206,7 @@ module Opcode : sig
   | Invalid (** Not an instruction *)
 
   | Ret (** Terminator Instructions *)
-  | Br
+  | Invalid3
   | Switch
   | IndirectBr
   | Invoke
@@ -278,6 +278,9 @@ module Opcode : sig
   | FNeg
   | CallBr
   | Freeze
+  | PtrToAddr
+  | UncondBr
+  | CondBr
 end
 
 (** The type of a clause of a [landingpad] instruction.
@@ -464,9 +467,6 @@ val create_context : unit -> llcontext
     [llvm::LLVMContext::~LLVMContext]. *)
 val dispose_context : llcontext -> unit
 
-(** See the function [LLVMGetGlobalContext]. *)
-val global_context : unit -> llcontext
-
 (** [mdkind_id context name] returns the MDKind ID that corresponds to the
     name [name] in the context [context].  See the function
     [llvm::LLVMContext::getMDKindID]. *)
@@ -560,7 +560,7 @@ val get_module_identifier : llmodule -> string
 
 (** [set_module_identifier m id] sets the module identifier of [m]
     to [id]. See the method [llvm::Module::setModuleIdentifier] *)
-val set_module_identifer : llmodule -> string -> unit
+val set_module_identifier : llmodule -> string -> unit
 
 (** [get_module_flag m k] Return the corresponding value if key [k] appears in
     the module flags of [m], otherwise return None
@@ -1850,16 +1850,15 @@ val fold_successors : (llbasicblock -> 'a -> 'a) -> llvalue -> 'a -> 'a
 
 (** {7 Operations on branches} *)
 
-(** [is_conditional v] returns true if the branch instruction [v] is conditional.
-    See the method [llvm::BranchInst::isConditional]. *)
+(** [is_conditional v] returns true if the branch instruction [v] is conditional. *)
 val is_conditional : llvalue -> bool
 
 (** [condition v] return the condition of the branch instruction [v].
-    See the method [llvm::BranchInst::getCondition]. *)
+    See the method [llvm::CondBrInst::getCondition]. *)
 val condition : llvalue -> llvalue
 
 (** [set_condition v c] sets the condition of the branch instruction [v] to the value [c].
-    See the method [llvm::BranchInst::setCondition]. *)
+    See the method [llvm::CondBrInst::setCondition]. *)
 val set_condition : llvalue -> llvalue -> unit
 
 (** [get_branch c] returns a description of the branch instruction [c]. *)

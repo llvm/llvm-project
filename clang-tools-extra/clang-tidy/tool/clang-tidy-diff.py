@@ -68,8 +68,9 @@ def run_tidy(task_queue, lock, timeout, failed_files):
                 failed_files.append(command)
 
             with lock:
-                sys.stdout.write(stdout.decode("utf-8") + "\n")
-                sys.stdout.flush()
+                if stdout:
+                    sys.stdout.write(stdout.decode("utf-8") + "\n")
+                    sys.stdout.flush()
                 if stderr:
                     sys.stderr.write(stderr.decode("utf-8") + "\n")
                     sys.stderr.flush()
@@ -427,7 +428,7 @@ def main():
             print(f"Writing fixes to {args.export_fixes} ...")
         try:
             merge_replacement_files(export_fixes_dir, args.export_fixes)
-        except:
+        except Exception:
             sys.stderr.write("Error exporting fixes.\n")
             traceback.print_exc()
             return_code = 1

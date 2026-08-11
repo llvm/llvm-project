@@ -25,21 +25,33 @@ include "llvm/Target/Target.td"
 def FeatureAtomics : SubtargetFeature<"atomics", "HasAtomics", "true",
                                       "Enable Atomics">;
 
-def FeatureBulkMemory :
-      SubtargetFeature<"bulk-memory", "HasBulkMemory", "true",
-                       "Enable bulk memory operations">;
-
 def FeatureBulkMemoryOpt :
       SubtargetFeature<"bulk-memory-opt", "HasBulkMemoryOpt", "true",
                        "Enable bulk memory optimization operations">;
+
+def FeatureBulkMemory :
+      SubtargetFeature<"bulk-memory", "HasBulkMemory", "true",
+                       "Enable bulk memory operations",
+                       [FeatureBulkMemoryOpt]>;
 
 def FeatureCallIndirectOverlong :
       SubtargetFeature<"call-indirect-overlong", "HasCallIndirectOverlong", "true",
                        "Enable overlong encoding for call_indirect immediates">;
 
+def FeatureMultivalue :
+      SubtargetFeature<"multivalue",
+                       "HasMultivalue", "true",
+                       "Enable multivalue blocks, instructions, and functions">;
+
+def FeatureReferenceTypes :
+      SubtargetFeature<"reference-types", "HasReferenceTypes", "true",
+                       "Enable reference types",
+                       [FeatureCallIndirectOverlong]>;
+
 def FeatureExceptionHandling :
       SubtargetFeature<"exception-handling", "HasExceptionHandling", "true",
-                       "Enable Wasm exception handling">;
+                       "Enable Wasm exception handling",
+                       [FeatureMultivalue, FeatureReferenceTypes]>;
 
 def FeatureExtendedConst :
       SubtargetFeature<"extended-const", "HasExtendedConst", "true",
@@ -49,16 +61,12 @@ def FeatureFP16 :
       SubtargetFeature<"fp16", "HasFP16", "true",
                        "Enable FP16 instructions">;
 
-def FeatureGC : SubtargetFeature<"gc", "HasGC", "true", "Enable wasm gc">;
+def FeatureGC : SubtargetFeature<"gc", "HasGC", "true", "Enable wasm gc",
+                                 [FeatureReferenceTypes]>;
 
 def FeatureMultiMemory :
       SubtargetFeature<"multimemory", "HasMultiMemory", "true",
                        "Enable multiple memories">;
-
-def FeatureMultivalue :
-      SubtargetFeature<"multivalue",
-                       "HasMultivalue", "true",
-                       "Enable multivalue blocks, instructions, and functions">;
 
 def FeatureMutableGlobals :
       SubtargetFeature<"mutable-globals", "HasMutableGlobals", "true",
@@ -69,9 +77,9 @@ def FeatureNontrappingFPToInt :
                        "HasNontrappingFPToInt", "true",
                        "Enable non-trapping float-to-int conversion operators">;
 
-def FeatureReferenceTypes :
-      SubtargetFeature<"reference-types", "HasReferenceTypes", "true",
-                       "Enable reference types">;
+def FeatureRelaxedAtomics :
+      SubtargetFeature<"relaxed-atomics", "HasRelaxedAtomics", "true",
+                       "Enable relaxed-atomics proposal">;
 
 def FeatureRelaxedSIMD :
       SubtargetFeature<"relaxed-simd", "SIMDLevel", "RelaxedSIMD",
@@ -101,6 +109,7 @@ def FeatureWideArithmetic :
 //===----------------------------------------------------------------------===//
 
 include "WebAssemblyRegisterInfo.td"
+include "WebAssemblyRegisterBanks.td"
 
 //===----------------------------------------------------------------------===//
 // Instruction Descriptions
@@ -165,7 +174,7 @@ def WebAssemblyAsmParser : AsmParser {
 
 def WebAssemblyAsmWriter : AsmWriter {
   string AsmWriterClassName  = "InstPrinter";
-  int PassSubtarget = 0;
+  int PassSubtarget = 1;
   int Variant = 0;
   bit isMCAsmWriter = 1;
 }

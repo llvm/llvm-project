@@ -25,6 +25,9 @@ void registerAttrsExtensions(mlir::DialectRegistry &registry);
 void registerTransformationalAttrsDependentDialects(
     mlir::DialectRegistry &registry);
 
+/// Register external models for FIR operation interfaces related to OpenMP.
+void registerOpInterfacesExtensions(mlir::DialectRegistry &registry);
+
 } // namespace fir::omp
 
 #endif // FLANG_OPTIMIZER_OPENMP_SUPPORT_REGISTEROPENMPEXTENSIONS_H_

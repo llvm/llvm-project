@@ -18,7 +18,7 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::abseil {
 
 void DurationConversionCastCheck::registerMatchers(MatchFinder *Finder) {
-  auto CallMatcher = ignoringImpCasts(callExpr(
+  const auto CallMatcher = ignoringImpCasts(callExpr(
       callee(functionDecl(durationConversionFunction()).bind("func_decl")),
       hasArgument(0, expr().bind("arg"))));
 
@@ -51,8 +51,7 @@ void DurationConversionCastCheck::check(
   // Casting a double to an integer.
   if (MatchedCast->getTypeAsWritten()->isIntegerType() &&
       ConversionFuncName.contains("Double")) {
-    const llvm::StringRef NewFuncName =
-        getDurationInverseForScale(*Scale).second;
+    const StringRef NewFuncName = getDurationInverseForScale(*Scale).second;
 
     diag(MatchedCast->getBeginLoc(),
          "duration should be converted directly to an integer rather than "
@@ -67,8 +66,7 @@ void DurationConversionCastCheck::check(
   // Casting an integer to a double.
   if (MatchedCast->getTypeAsWritten()->isRealFloatingType() &&
       ConversionFuncName.contains("Int64")) {
-    const llvm::StringRef NewFuncName =
-        getDurationInverseForScale(*Scale).first;
+    const StringRef NewFuncName = getDurationInverseForScale(*Scale).first;
 
     diag(MatchedCast->getBeginLoc(), "duration should be converted directly to "
                                      "a floating-point number rather than "

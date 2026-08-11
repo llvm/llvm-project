@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/RegisterBank.h"
 #include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/IR/IntrinsicsRISCV.h"
 
 #define GET_TARGET_REGBANK_IMPL
 #include "RISCVGenRegisterBank.inc"
@@ -167,6 +168,8 @@ bool RISCVRegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
   case RISCV::G_FCLASS:
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI:
+  case TargetOpcode::G_LROUND:
+  case TargetOpcode::G_LLROUND:
   case TargetOpcode::G_FCMP:
     return true;
   default:
@@ -229,11 +232,10 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
   const MachineFunction &MF = *MI.getParent()->getParent();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  const TargetSubtargetInfo &STI = MF.getSubtarget();
-  const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
+  const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
+  const TargetRegisterInfo &TRI = *Subtarget.getRegisterInfo();
 
-  unsigned GPRSize = getMaximumSize(RISCV::GPRBRegBankID);
-  assert((GPRSize == 32 || GPRSize == 64) && "Unexpected GPR size");
+  unsigned GPRSize = Subtarget.getXLen();
 
   unsigned NumOperands = MI.getNumOperands();
   const ValueMapping *GPRValueMapping =
@@ -462,6 +464,8 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case RISCV::G_FCVT_WU_RV64:
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI:
+  case TargetOpcode::G_LROUND:
+  case TargetOpcode::G_LLROUND:
   case RISCV::G_FCLASS: {
     LLT Ty = MRI.getType(MI.getOperand(1).getReg());
     OpdsMapping[0] = GPRValueMapping;
@@ -544,6 +548,16 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
         } else {
           OpdsMapping[Idx] = GPRValueMapping;
         }
+      }
+    }
+
+    if (IntrinsicID == Intrinsic::riscv_vsetvli ||
+        IntrinsicID == Intrinsic::riscv_vsetvlimax) {
+      for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
+        const MachineOperand &MO = MI.getOperand(Idx);
+        if (!MO.isReg())
+          continue;
+        OpdsMapping[Idx] = GPRValueMapping;
       }
     }
     break;

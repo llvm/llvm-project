@@ -15,18 +15,18 @@ entry:
   %cmp = icmp sgt i64 %n, 0
   br i1 %cmp, label %for.body.outer.preheader, label %for.end.outer
 
-for.body.outer.preheader:                         ; preds = %entry
+for.body.outer.preheader:
   br label %for.body.outer
 
-for.body.outer:                                   ; preds = %for.body.outer.preheader, %for.end.inner
+for.body.outer:
   %indvars.outer = phi i64 [ %indvars.outer.next, %for.end.inner ], [ 0, %for.body.outer.preheader ]
   %cmp2 = icmp sgt i64 %m, 0
   br i1 %cmp2, label %for.body.inner.preheader, label %for.end.inner
 
-for.body.inner.preheader:                         ; preds = %for.body.outer
+for.body.inner.preheader:
   br label %for.body.inner
 
-for.body.inner:                                   ; preds = %for.body.inner.preheader, %for.body.inner
+for.body.inner:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body.inner ], [ 0, %for.body.inner.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
   %v = load i32, ptr %arrayidx, align 4
@@ -36,19 +36,19 @@ for.body.inner:                                   ; preds = %for.body.inner.preh
   %exitcond = icmp eq i64 %indvars.iv, %n
   br i1 %exitcond, label %for.end.inner.loopexit, label %for.body.inner
 
-for.end.inner.loopexit:                           ; preds = %for.body.inner
+for.end.inner.loopexit:
   store i64 %indvars.iv, ptr %O1, align 4
   br label %for.end.inner
 
-for.end.inner:                                    ; preds = %for.end.inner.loopexit, %for.body.outer
+for.end.inner:
   %indvars.outer.next = add i64 %indvars.outer, 1
   %exitcond.outer = icmp eq i64 %indvars.outer, %m
   br i1 %exitcond.outer, label %for.end.outer.loopexit, label %for.body.outer
 
-for.end.outer.loopexit:                           ; preds = %for.end.inner
+for.end.outer.loopexit:
   store i64 %indvars.outer, ptr %O2, align 4
   br label %for.end.outer
 
-for.end.outer:                                    ; preds = %for.end.outer.loopexit, %entry
+for.end.outer:
   ret void
 }

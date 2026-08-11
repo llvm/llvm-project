@@ -12,7 +12,7 @@
 // note: Unlike OpenCL __clc_smoothstep is only defined for three matching
 // argument types.
 
-#define __CLC_BODY <clc/common/clc_smoothstep.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc/common/clc_smoothstep_decl.inc"
+#include "clc/math/gentype.inc"
 
 #endif // __CLC_COMMON_CLC_SMOOTHSTEP_H__

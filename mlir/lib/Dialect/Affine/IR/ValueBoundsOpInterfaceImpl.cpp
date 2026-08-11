@@ -10,6 +10,7 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 using namespace mlir;
 using namespace mlir::affine;
@@ -49,6 +50,64 @@ struct AffineApplyOpInterface
   }
 };
 
+/// Express `expr`, a result of `map`, in terms of the constraint set by
+/// replacing the dims and symbols of `map` with the expressions for the
+/// corresponding `operands`.
+static AffineExpr alignBoundExpr(AffineExpr expr, AffineMap map,
+                                 ValueRange operands,
+                                 ValueBoundsConstraintSet &cstr) {
+  SmallVector<AffineExpr> dimReplacements =
+      llvm::map_to_vector(operands.take_front(map.getNumDims()),
+                          [&](Value v) { return cstr.getExpr(v); });
+  SmallVector<AffineExpr> symReplacements =
+      llvm::map_to_vector(operands.drop_front(map.getNumDims()),
+                          [&](Value v) { return cstr.getExpr(v); });
+  return expr.replaceDimsAndSymbols(dimReplacements, symReplacements);
+}
+
+struct AffineForOpInterface
+    : public ValueBoundsOpInterface::ExternalModel<AffineForOpInterface,
+                                                   AffineForOp> {
+  void populateBoundsForIndexValue(Operation *op, Value value,
+                                   ValueBoundsConstraintSet &cstr) const {
+    auto forOp = cast<AffineForOp>(op);
+
+    // Only the induction variable is handled. Bounds for iter_args are not
+    // inferred.
+    if (value != forOp.getInductionVar())
+      return;
+
+    AffineMap lbMap = forOp.getLowerBoundMap();
+    AffineMap ubMap = forOp.getUpperBoundMap();
+    ValueRange lbOperands = forOp.getLowerBoundOperands();
+    ValueRange ubOperands = forOp.getUpperBoundOperands();
+
+    // The lower bound is the maximum over the results of `lbMap` and the upper
+    // bound is the minimum over the results of `ubMap`, so the induction
+    // variable is bounded by every individual result.
+    for (AffineExpr expr : lbMap.getResults())
+      cstr.bound(value) >= alignBoundExpr(expr, lbMap, lbOperands, cstr);
+    for (AffineExpr expr : ubMap.getResults())
+      cstr.bound(value) < alignBoundExpr(expr, ubMap, ubOperands, cstr);
+
+    // With a single lower and a single upper bound the step can be taken into
+    // account as well: the induction variable is always a multiple of `step`
+    // away from the lower bound, so it never exceeds
+    // `lb + (tripCount - 1) * step`. That is tighter than `ub - 1` whenever the
+    // trip count is not a multiple of the step, e.g. `affine.for %i = 0 to 300
+    // step 128` only ever yields {0, 128, 256}. This does not replace the
+    // `iv < ub` bound above, since multiplying two constraint set dimensions is
+    // not supported.
+    int64_t step = forOp.getStepAsInt();
+    if (step == 1 || lbMap.getNumResults() != 1 || ubMap.getNumResults() != 1)
+      return;
+    AffineExpr lb = alignBoundExpr(lbMap.getResult(0), lbMap, lbOperands, cstr);
+    AffineExpr ub = alignBoundExpr(ubMap.getResult(0), ubMap, ubOperands, cstr);
+    AffineExpr tripCount = (ub - lb).ceilDiv(step);
+    cstr.bound(value) <= lb + (tripCount - 1) * step;
+  }
+};
+
 struct AffineMinOpInterface
     : public ValueBoundsOpInterface::ExternalModel<AffineMinOpInterface,
                                                    AffineMinOp> {
@@ -59,10 +118,10 @@ struct AffineMinOpInterface
 
     // Align affine map results with dims/symbols in the constraint set.
     for (AffineExpr expr : minOp.getAffineMap().getResults()) {
-      SmallVector<AffineExpr> dimReplacements = llvm::to_vector(llvm::map_range(
-          minOp.getDimOperands(), [&](Value v) { return cstr.getExpr(v); }));
-      SmallVector<AffineExpr> symReplacements = llvm::to_vector(llvm::map_range(
-          minOp.getSymbolOperands(), [&](Value v) { return cstr.getExpr(v); }));
+      SmallVector<AffineExpr> dimReplacements = llvm::map_to_vector(
+          minOp.getDimOperands(), [&](Value v) { return cstr.getExpr(v); });
+      SmallVector<AffineExpr> symReplacements = llvm::map_to_vector(
+          minOp.getSymbolOperands(), [&](Value v) { return cstr.getExpr(v); });
       AffineExpr bound =
           expr.replaceDimsAndSymbols(dimReplacements, symReplacements);
       cstr.bound(value) <= bound;
@@ -80,10 +139,10 @@ struct AffineMaxOpInterface
 
     // Align affine map results with dims/symbols in the constraint set.
     for (AffineExpr expr : maxOp.getAffineMap().getResults()) {
-      SmallVector<AffineExpr> dimReplacements = llvm::to_vector(llvm::map_range(
-          maxOp.getDimOperands(), [&](Value v) { return cstr.getExpr(v); }));
-      SmallVector<AffineExpr> symReplacements = llvm::to_vector(llvm::map_range(
-          maxOp.getSymbolOperands(), [&](Value v) { return cstr.getExpr(v); }));
+      SmallVector<AffineExpr> dimReplacements = llvm::map_to_vector(
+          maxOp.getDimOperands(), [&](Value v) { return cstr.getExpr(v); });
+      SmallVector<AffineExpr> symReplacements = llvm::map_to_vector(
+          maxOp.getSymbolOperands(), [&](Value v) { return cstr.getExpr(v); });
       AffineExpr bound =
           expr.replaceDimsAndSymbols(dimReplacements, symReplacements);
       cstr.bound(value) >= bound;
@@ -156,6 +215,7 @@ void mlir::affine::registerValueBoundsOpInterfaceExternalModels(
     DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, AffineDialect *dialect) {
     AffineApplyOp::attachInterface<AffineApplyOpInterface>(*ctx);
+    AffineForOp::attachInterface<AffineForOpInterface>(*ctx);
     AffineMaxOp::attachInterface<AffineMaxOpInterface>(*ctx);
     AffineMinOp::attachInterface<AffineMinOpInterface>(*ctx);
     AffineDelinearizeIndexOp::attachInterface<

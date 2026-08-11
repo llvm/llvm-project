@@ -74,4 +74,7 @@ bool less<void>::operator()<short &&, short &&>(short &&, short &&) const {
 
 template <>
 struct less<void>::X<short> {};
+
+template <typename T>
+class vector;
 } // namespace std

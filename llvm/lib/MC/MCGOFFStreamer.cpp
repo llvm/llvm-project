@@ -55,9 +55,51 @@ void MCGOFFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   }
 }
 
+void MCGOFFStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
+  MCSectionGOFF *Section =
+      static_cast<MCSectionGOFF *>(getCurrentSectionOnly());
+  if (Section->isPR()) {
+    if (Section->getBeginSymbol() == nullptr)
+      Section->setBeginSymbol(Symbol);
+    else
+      getContext().reportError(
+          Loc, "only one symbol can be defined in a PR section.");
+  }
+  MCObjectStreamer::emitLabel(Symbol, Loc);
+}
+
 bool MCGOFFStreamer::emitSymbolAttribute(MCSymbol *Sym,
                                          MCSymbolAttr Attribute) {
   return static_cast<MCSymbolGOFF *>(Sym)->setSymbolAttribute(Attribute);
+}
+
+void MCGOFFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
+                                      Align ByteAlignment) {
+  auto *Symbol = static_cast<MCSymbolGOFF *>(S);
+
+  MCSectionGOFF *SD = getContext().getGOFFSection(
+      SectionKind::getMetadata(), Symbol->getName(),
+      GOFF::SDAttr{GOFF::ESD_TA_Unspecified, GOFF::ESD_BSC_Unspecified});
+
+  MCSectionGOFF *ED = getContext().getGOFFSection(
+      SectionKind::getMetadata(), GOFF::CLASS_WSA,
+      GOFF::EDAttr{false, GOFF::ESD_RMODE_64, GOFF::ESD_NS_Parts,
+                   GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Merge,
+                   GOFF::ESD_LB_Deferred, GOFF::ESD_RQ_0, 0},
+      SD);
+  ED->setAlignment(ByteAlignment);
+
+  MCSectionGOFF *Section = getContext().getGOFFSection(
+      SectionKind::getBSS(), Symbol->getName(),
+      GOFF::PRAttr{false, GOFF::ESD_EXE_DATA, GOFF::ESD_LT_XPLink,
+                   Symbol->getBindingScope(), 0},
+      ED);
+
+  pushSection();
+  switchSection(Section);
+  emitLabel(Symbol);
+  emitZeros(Size);
+  popSection();
 }
 
 MCStreamer *llvm::createGOFFStreamer(MCContext &Context,

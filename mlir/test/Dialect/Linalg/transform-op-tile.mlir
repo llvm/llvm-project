@@ -83,17 +83,165 @@ func.func @tile_linalg_matmul_dynamic(
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %c8 = transform.param.constant 8 : i64 -> !transform.any_param
+    %c16 = transform.param.constant 16 : i64 -> !transform.any_param
+    %tiles = transform.merge_handles %c8, %c16 : !transform.any_param
+    %1, %loops = transform.structured.tile_using_for %0 tile_sizes *(%tiles)
+      : (!transform.any_op, !transform.any_param) -> (!transform.any_op, !transform.any_op)
+    // Verify that correct number of loops is present in packed result.
+    %loop:2 = transform.split_handle %loops : (!transform.any_op)
+      -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// CHECK-LABEL: func @tile_linalg_matmul_packed_tile_sizes(
+// CHECK: %[[SZ0:.*]] = arith.constant 8 : index
+// CHECK: %[[SZ1:.*]] = arith.constant 16 : index
+// CHECK: %[[TD0:.*]] = scf.for {{.*}} step %[[SZ0]] iter_args
+// CHECK:   %[[TD1:.*]] = scf.for {{.*}} step %[[SZ1]] iter_args
+// CHECK-NOT:     scf.for
+// CHECK: return %[[TD0]] : tensor<128x128xf32>
+func.func @tile_linalg_matmul_packed_tile_sizes(
+  %arg0: tensor<128x128xf32>, %arg1: tensor<128x128xf32>, %arg2: tensor<128x128xf32>)
+    -> tensor<128x128xf32> {
+  %0 = linalg.matmul  ins(%arg0, %arg1: tensor<128x128xf32>, tensor<128x128xf32>)
+                     outs(%arg2: tensor<128x128xf32>)
+    -> tensor<128x128xf32>
+
+  return %0 : tensor<128x128xf32>
+}
+
+// -----
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %c8 = transform.param.constant 8 : i64 -> !transform.any_param
+    %c16 = transform.param.constant 16 : i64 -> !transform.any_param
+    %tiles = transform.merge_handles %c8, %c16 : !transform.any_param
+    // expected-error @below {{op expected number of loops to tile (1) to match number of `loops` results (2)}}
+    %1, %loops:2 = transform.structured.tile_using_for %0 tile_sizes *(%tiles)
+      : (!transform.any_op, !transform.any_param) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+func.func @negative_tile_linalg_matmul_packed_tile_sizes_loop_result_arity_mismatch(
+  %arg0: tensor<128x128xf32>, %arg1: tensor<128x128xf32>, %arg2: tensor<128x128xf32>)
+    -> tensor<128x128xf32> {
+  %0 = linalg.matmul  ins(%arg0, %arg1: tensor<128x128xf32>, tensor<128x128xf32>)
+                     outs(%arg2: tensor<128x128xf32>)
+    -> tensor<128x128xf32>
+  return %0 : tensor<128x128xf32>
+}
+
+// -----
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %c8 = transform.param.constant 8 : i64 -> !transform.any_param
+    %c16 = transform.param.constant 16 : i64 -> !transform.any_param
+    %tiles = transform.merge_handles %c8, %c16 : !transform.any_param
+    %1, %loops = transform.structured.tile_using_for %0 tile_sizes *(%tiles)
+      : (!transform.any_op, !transform.any_param) -> (!transform.any_op, !transform.any_op)
+    // Verify that correct number of loops is present in packed result.
+    %loop:4 = transform.split_handle %loops : (!transform.any_op)
+      -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+func.func @tile_linalg_matmul_packed_tile_sizes_multiple_targets(
+  %arg0: tensor<128x128xf32>, %arg1: tensor<128x128xf32>, %arg2: tensor<128x128xf32>)
+    -> (tensor<128x128xf32>, tensor<128x128xf32>) {
+  %0 = linalg.matmul  ins(%arg0, %arg1: tensor<128x128xf32>, tensor<128x128xf32>)
+                     outs(%arg2: tensor<128x128xf32>)
+    -> tensor<128x128xf32>
+  %1 = linalg.matmul  ins(%0, %arg1: tensor<128x128xf32>, tensor<128x128xf32>)
+                     outs(%arg2: tensor<128x128xf32>)
+    -> tensor<128x128xf32>
+  return %0, %1 : tensor<128x128xf32>, tensor<128x128xf32>
+}
+
+// -----
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %c1 = transform.param.constant 1 : i64 -> !transform.any_param
+    %c0 = transform.param.constant 0 : i64 -> !transform.any_param
+    %c2 = transform.param.constant 2 : i64 -> !transform.any_param
+    %interchange = transform.merge_handles %c1, %c0, %c2 : !transform.any_param
+    %1, %loops:3 = transform.structured.tile_using_for %0 tile_sizes [2, 4, 8] interchange = *(%interchange)
+      : (!transform.any_op, !transform.any_param) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// CHECK-LABEL: func @tile_linalg_matmul_packed_interchange(
+// CHECK-DAG: %[[C2:.*]] = arith.constant 2 : index
+// CHECK-DAG: %[[C4:.*]] = arith.constant 4 : index
+// CHECK-DAG: %[[C8:.*]] = arith.constant 8 : index
+// CHECK: %[[L0:.*]] = scf.for {{.*}} step %[[C4]] iter_args
+// CHECK:   %[[L1:.*]] = scf.for {{.*}} step %[[C2]] iter_args
+// CHECK:     %[[L2:.*]] = scf.for {{.*}} step %[[C8]] iter_args
+func.func @tile_linalg_matmul_packed_interchange(
+  %arg0: tensor<128x128xf32>, %arg1: tensor<128x128xf32>, %arg2: tensor<128x128xf32>)
+    -> tensor<128x128xf32> {
+  %0 = linalg.matmul  ins(%arg0, %arg1: tensor<128x128xf32>, tensor<128x128xf32>)
+                     outs(%arg2: tensor<128x128xf32>)
+    -> tensor<128x128xf32>
+  return %0 : tensor<128x128xf32>
+}
+
+// -----
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %c8 = transform.param.constant 8 : i64 -> !transform.any_param
+    %c16 = transform.param.constant 16 : i64 -> !transform.any_param
+    %tiles = transform.merge_handles %c8, %c16 : !transform.any_param
+    %c1 = transform.param.constant 1 : i64 -> !transform.any_param
+    %c0 = transform.param.constant 0 : i64 -> !transform.any_param
+    %interchange = transform.merge_handles %c1, %c0 : !transform.any_param
+    %1, %loops = transform.structured.tile_using_for %0 tile_sizes *(%tiles) interchange = *(%interchange)
+      : (!transform.any_op, !transform.any_param, !transform.any_param) -> (!transform.any_op, !transform.any_op)
+    // Verify that correct number of loops is present in packed result.
+    %loop:2 = transform.split_handle %loops : (!transform.any_op)
+      -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+func.func @tile_linalg_matmul_packed_tile_sizes_and_packed_interchange(
+  %arg0: tensor<128x128xf32>, %arg1: tensor<128x128xf32>, %arg2: tensor<128x128xf32>)
+    -> tensor<128x128xf32> {
+  %0 = linalg.matmul  ins(%arg0, %arg1: tensor<128x128xf32>, tensor<128x128xf32>)
+                     outs(%arg2: tensor<128x128xf32>)
+    -> tensor<128x128xf32>
+  return %0 : tensor<128x128xf32>
+}
+
+// -----
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     // expected-note @below {{for this parameter}}
-    %1 = transform.test_produce_param (0 : i64) : !transform.param<i64>
+    %c0 = transform.test_produce_param (0 : i64) : !transform.param<i64>
+    %c0_as_any = transform.test_produce_param (0 : i64) : !transform.any_param
     // expected-error @below {{expected as many parameter values (0) as target ops (2)}}
-    transform.structured.tile_using_for %0 tile_sizes [%1, %1, %1]
-      : (!transform.any_op, !transform.param<i64>, !transform.param<i64>, !transform.param<i64>)
+    transform.structured.tile_using_for %0 tile_sizes [%c0, %c0, %c0_as_any]
+      : (!transform.any_op, !transform.param<i64>, !transform.param<i64>, !transform.any_param)
       -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
       transform.yield
   }
 }
 
-func.func @tile_linalg_matmul(
+func.func @negative_tile_linalg_matmul_param_value_count_mismatch(
   %arg0: tensor<128x128xf32>, %arg1: tensor<128x128xf32>, %arg2: tensor<128x128xf32>)
     -> (tensor<128x128xf32>, tensor<128x128xf32>) {
   %0 = linalg.matmul  ins(%arg0, %arg1: tensor<128x128xf32>, tensor<128x128xf32>)
@@ -120,7 +268,7 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-func.func @tile_linalg_matmul(
+func.func @negative_tile_linalg_matmul_size_producer_count_mismatch(
   %arg0: tensor<128x128xf32>, %arg1: tensor<128x128xf32>, %arg2: tensor<128x128xf32>)
     -> (tensor<128x128xf32>, tensor<128x128xf32>) {
   %0 = linalg.matmul  ins(%arg0, %arg1: tensor<128x128xf32>, tensor<128x128xf32>)
@@ -230,7 +378,7 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-func.func @too_many_tiles(%arg0: tensor<128x128xf32>, %arg1: tensor<128x128xf32>,
+func.func @negative_too_many_tiles(%arg0: tensor<128x128xf32>, %arg1: tensor<128x128xf32>,
                           %arg2: tensor<128x128xf32>) ->  tensor<128x128xf32> {
   // expected-note @below {{target op}}
   %0 = linalg.matmul ins(%arg0, %arg1: tensor<128x128xf32>, tensor<128x128xf32>)
@@ -258,7 +406,159 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-func.func @tile_linalg_matmul(
+func.func @negative_tile_linalg_matmul_loop_result_arity_mismatch(
+  %arg0: tensor<128x128xf32>, %arg1: tensor<128x128xf32>, %arg2: tensor<128x128xf32>)
+    -> tensor<128x128xf32> {
+  %0 = linalg.matmul  ins(%arg0, %arg1: tensor<128x128xf32>, tensor<128x128xf32>)
+                     outs(%arg2: tensor<128x128xf32>)
+    -> tensor<128x128xf32>
+  return %0 : tensor<128x128xf32>
+}
+
+// -----
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{interchange length exceeds iteration space dimensions}}
+    %1, %loops:2 = transform.structured.tile_using_for %0 tile_sizes [8, 16] interchange = [0, 1, 2]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+func.func @negative_tile_linalg_matmul_interchange_length_exceeds_rank(
+  %arg0: tensor<128x128xf32>, %arg1: tensor<128x128xf32>, %arg2: tensor<128x128xf32>)
+    -> tensor<128x128xf32> {
+  %0 = linalg.matmul  ins(%arg0, %arg1: tensor<128x128xf32>, tensor<128x128xf32>)
+                     outs(%arg2: tensor<128x128xf32>)
+    -> tensor<128x128xf32>
+  return %0 : tensor<128x128xf32>
+}
+
+// -----
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{expects interchange values to be in range [0, 3), found: 3}}
+    %1, %loops:3 = transform.structured.tile_using_for %0 tile_sizes [8, 16, 4] interchange = [0, 3, 1]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+func.func @negative_tile_linalg_matmul_interchange_out_of_range(
+  %arg0: tensor<128x128xf32>, %arg1: tensor<128x128xf32>, %arg2: tensor<128x128xf32>)
+    -> tensor<128x128xf32> {
+  %0 = linalg.matmul  ins(%arg0, %arg1: tensor<128x128xf32>, tensor<128x128xf32>)
+                     outs(%arg2: tensor<128x128xf32>)
+    -> tensor<128x128xf32>
+  return %0 : tensor<128x128xf32>
+}
+
+// -----
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{found duplicate interchange value: 1}}
+    %1, %loops:3 = transform.structured.tile_using_for %0 tile_sizes [8, 16, 4] interchange = [0, 1, 1]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+func.func @negative_tile_linalg_matmul_interchange_duplicate_value(
+  %arg0: tensor<128x128xf32>, %arg1: tensor<128x128xf32>, %arg2: tensor<128x128xf32>)
+    -> tensor<128x128xf32> {
+  %0 = linalg.matmul  ins(%arg0, %arg1: tensor<128x128xf32>, tensor<128x128xf32>)
+                     outs(%arg2: tensor<128x128xf32>)
+    -> tensor<128x128xf32>
+  return %0 : tensor<128x128xf32>
+}
+
+// -----
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %c3 = transform.param.constant 3 : i64 -> !transform.any_param
+    // expected-error @below {{expects interchange values to be in range [0, 3), found: 3}}
+    %1, %loops:3 = transform.structured.tile_using_for %0 tile_sizes [8, 16, 4] interchange = [0, %c3, 1]
+      : (!transform.any_op, !transform.any_param) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+func.func @negative_tile_linalg_matmul_dynamic_valued_interchange_out_of_range(
+  %arg0: tensor<128x128xf32>, %arg1: tensor<128x128xf32>, %arg2: tensor<128x128xf32>)
+    -> tensor<128x128xf32> {
+  %0 = linalg.matmul  ins(%arg0, %arg1: tensor<128x128xf32>, tensor<128x128xf32>)
+                     outs(%arg2: tensor<128x128xf32>)
+    -> tensor<128x128xf32>
+  return %0 : tensor<128x128xf32>
+}
+
+// -----
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %c0 = transform.param.constant 0 : i64 -> !transform.any_param
+    // expected-error @below {{found duplicate interchange value: 0}}
+    %1, %loops:3 = transform.structured.tile_using_for %0 tile_sizes [8, 16, 4] interchange = [0, %c0, 1]
+      : (!transform.any_op, !transform.any_param) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+func.func @negative_tile_linalg_matmul_dynamic_valued_interchange_duplicate_value(
+  %arg0: tensor<128x128xf32>, %arg1: tensor<128x128xf32>, %arg2: tensor<128x128xf32>)
+    -> tensor<128x128xf32> {
+  %0 = linalg.matmul  ins(%arg0, %arg1: tensor<128x128xf32>, tensor<128x128xf32>)
+                     outs(%arg2: tensor<128x128xf32>)
+    -> tensor<128x128xf32>
+  return %0 : tensor<128x128xf32>
+}
+
+// -----
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %c0a = transform.param.constant 0 : i64 -> !transform.any_param
+    %c0b = transform.param.constant 0 : i64 -> !transform.any_param
+    // expected-error @below {{found duplicate interchange value: 0}}
+    %1, %loops:3 = transform.structured.tile_using_for %0 tile_sizes [8, 16, 4] interchange = [%c0a, %c0b, 1]
+      : (!transform.any_op, !transform.any_param, !transform.any_param) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+func.func @negative_tile_linalg_matmul_dynamic_valued_interchange_duplicate_value_from_two_constant_params(
+  %arg0: tensor<128x128xf32>, %arg1: tensor<128x128xf32>, %arg2: tensor<128x128xf32>)
+    -> tensor<128x128xf32> {
+  %0 = linalg.matmul  ins(%arg0, %arg1: tensor<128x128xf32>, tensor<128x128xf32>)
+                     outs(%arg2: tensor<128x128xf32>)
+    -> tensor<128x128xf32>
+  return %0 : tensor<128x128xf32>
+}
+
+// -----
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %packed = transform.test_produce_param (0.0 : f64) : !transform.any_param
+    // expected-error @below {{expected the parameter to be associated with an integer attribute}}
+    %1, %loops:3 = transform.structured.tile_using_for %0 tile_sizes [8, 16, 4] interchange = *(%packed)
+      : (!transform.any_op, !transform.any_param) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+func.func @negative_tile_linalg_matmul_packed_interchange_non_integer_param(
   %arg0: tensor<128x128xf32>, %arg1: tensor<128x128xf32>, %arg2: tensor<128x128xf32>)
     -> tensor<128x128xf32> {
   %0 = linalg.matmul  ins(%arg0, %arg1: tensor<128x128xf32>, tensor<128x128xf32>)
@@ -278,7 +578,7 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-func.func @tile_linalg_matmul(
+func.func @negative_tile_linalg_matmul_zero_tiles_loop_result_arity_mismatch(
   %arg0: tensor<128x128xf32>, %arg1: tensor<128x128xf32>, %arg2: tensor<128x128xf32>)
     -> tensor<128x128xf32> {
   %0 = linalg.matmul  ins(%arg0, %arg1: tensor<128x128xf32>, tensor<128x128xf32>)

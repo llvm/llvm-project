@@ -15,17 +15,17 @@ body:             |
     ; CHECK-LABEL: name: select_f32
     ; CHECK: liveins: $s0, $s1, $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr(s32) = COPY $w0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr(s32) = COPY $s0
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr(s32) = COPY $s1
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:fpr(s32) = G_SELECT [[COPY]](s32), [[COPY1]], [[COPY2]]
-    ; CHECK-NEXT: $s0 = COPY [[SELECT]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr(i32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr(i32) = COPY $s0
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr(i32) = COPY $s1
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:fpr(i32) = G_SELECT [[COPY]](i32), [[COPY1]], [[COPY2]]
+    ; CHECK-NEXT: $s0 = COPY [[SELECT]](i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $s0
-    %3:_(s32) = COPY $w0
-    %1:_(s32) = COPY $s0
-    %2:_(s32) = COPY $s1
-    %4:_(s32) = G_SELECT %3, %1, %2
-    $s0 = COPY %4(s32)
+    %3:_(i32) = COPY $w0
+    %1:_(i32) = COPY $s0
+    %2:_(i32) = COPY $s1
+    %4:_(i32) = G_SELECT %3, %1, %2
+    $s0 = COPY %4(i32)
     RET_ReallyLR implicit $s0
 
 ...
@@ -42,17 +42,17 @@ body:             |
     ; CHECK-LABEL: name: select_f64
     ; CHECK: liveins: $d0, $d1, $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr(s32) = COPY $w0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr(s64) = COPY $d0
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr(s64) = COPY $d1
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:fpr(s64) = G_SELECT [[COPY]](s32), [[COPY1]], [[COPY2]]
-    ; CHECK-NEXT: $d0 = COPY [[SELECT]](s64)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr(i32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr(i64) = COPY $d0
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr(i64) = COPY $d1
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:fpr(i64) = G_SELECT [[COPY]](i32), [[COPY1]], [[COPY2]]
+    ; CHECK-NEXT: $d0 = COPY [[SELECT]](i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %3:_(s32) = COPY $w0
-    %1:_(s64) = COPY $d0
-    %2:_(s64) = COPY $d1
-    %4:_(s64) = G_SELECT %3, %1, %2
-    $d0 = COPY %4(s64)
+    %3:_(i32) = COPY $w0
+    %1:_(i64) = COPY $d0
+    %2:_(i64) = COPY $d1
+    %4:_(i64) = G_SELECT %3, %1, %2
+    $d0 = COPY %4(i64)
     RET_ReallyLR implicit $d0
 
 ...
@@ -75,17 +75,17 @@ body:             |
     ; CHECK-LABEL: name: two_fpr_inputs_gpr_output
     ; CHECK: liveins: $d0, $d1, $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr(s32) = COPY $w0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr(s64) = COPY $d0
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr(s64) = COPY $d1
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:fpr(s64) = G_SELECT [[COPY]](s32), [[COPY1]], [[COPY2]]
-    ; CHECK-NEXT: $x0 = COPY [[SELECT]](s64)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr(i32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr(i64) = COPY $d0
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr(i64) = COPY $d1
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:fpr(i64) = G_SELECT [[COPY]](i32), [[COPY1]], [[COPY2]]
+    ; CHECK-NEXT: $x0 = COPY [[SELECT]](i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %3:_(s32) = COPY $w0
-    %1:_(s64) = COPY $d0
-    %2:_(s64) = COPY $d1
-    %4:_(s64) = G_SELECT %3, %1, %2
-    $x0 = COPY %4(s64)
+    %3:_(i32) = COPY $w0
+    %1:_(i64) = COPY $d0
+    %2:_(i64) = COPY $d1
+    %4:_(i64) = G_SELECT %3, %1, %2
+    $x0 = COPY %4(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -105,18 +105,18 @@ body:             |
     ; CHECK-LABEL: name: one_fpr_input_fpr_output
     ; CHECK: liveins: $d0, $x1, $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr(s32) = COPY $w0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr(s64) = COPY $d0
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr(s64) = COPY $x1
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:fpr(s64) = COPY [[COPY2]](s64)
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:fpr(s64) = G_SELECT [[COPY]](s32), [[COPY1]], [[COPY3]]
-    ; CHECK-NEXT: $d0 = COPY [[SELECT]](s64)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr(i32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr(i64) = COPY $d0
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr(i64) = COPY $x1
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:fpr(i64) = COPY [[COPY2]](i64)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:fpr(i64) = G_SELECT [[COPY]](i32), [[COPY1]], [[COPY3]]
+    ; CHECK-NEXT: $d0 = COPY [[SELECT]](i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %3:_(s32) = COPY $w0
-    %1:_(s64) = COPY $d0
-    %2:_(s64) = COPY $x1
-    %4:_(s64) = G_SELECT %3, %1, %2
-    $d0 = COPY %4(s64)
+    %3:_(i32) = COPY $w0
+    %1:_(i64) = COPY $d0
+    %2:_(i64) = COPY $x1
+    %4:_(i64) = G_SELECT %3, %1, %2
+    $d0 = COPY %4(i64)
     RET_ReallyLR implicit $d0
 
 ...
@@ -136,18 +136,18 @@ body:             |
     ; CHECK-LABEL: name: one_fpr_input_gpr_output
     ; CHECK: liveins: $d0, $x1, $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr(s32) = COPY $w0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr(s64) = COPY $d0
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr(s64) = COPY $x1
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr(s64) = COPY [[COPY1]](s64)
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:gpr(s64) = G_SELECT [[COPY]](s32), [[COPY3]], [[COPY2]]
-    ; CHECK-NEXT: $x0 = COPY [[SELECT]](s64)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr(i32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr(i64) = COPY $d0
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr(i64) = COPY $x1
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr(i64) = COPY [[COPY1]](i64)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:gpr(i64) = G_SELECT [[COPY]](i32), [[COPY3]], [[COPY2]]
+    ; CHECK-NEXT: $x0 = COPY [[SELECT]](i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %3:_(s32) = COPY $w0
-    %1:_(s64) = COPY $d0
-    %2:_(s64) = COPY $x1
-    %4:_(s64) = G_SELECT %3, %1, %2
-    $x0 = COPY %4(s64)
+    %3:_(i32) = COPY $w0
+    %1:_(i64) = COPY $d0
+    %2:_(i64) = COPY $x1
+    %4:_(i64) = G_SELECT %3, %1, %2
+    $x0 = COPY %4(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -166,15 +166,15 @@ body:             |
     ; CHECK-LABEL: name: two_gpr_input_fpr_output
     ; CHECK: liveins: $x0, $x1, $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr(s32) = COPY $w0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr(s64) = COPY $x0
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr(s64) = COPY $x1
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:gpr(s64) = G_SELECT [[COPY]](s32), [[COPY1]], [[COPY2]]
-    ; CHECK-NEXT: $d0 = COPY [[SELECT]](s64)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr(i32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr(i64) = COPY $x0
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr(i64) = COPY $x1
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:gpr(i64) = G_SELECT [[COPY]](i32), [[COPY1]], [[COPY2]]
+    ; CHECK-NEXT: $d0 = COPY [[SELECT]](i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %3:_(s32) = COPY $w0
-    %1:_(s64) = COPY $x0
-    %2:_(s64) = COPY $x1
-    %4:_(s64) = G_SELECT %3, %1, %2
-    $d0 = COPY %4(s64)
+    %3:_(i32) = COPY $w0
+    %1:_(i64) = COPY $x0
+    %2:_(i64) = COPY $x1
+    %4:_(i64) = G_SELECT %3, %1, %2
+    $d0 = COPY %4(i64)
     RET_ReallyLR implicit $d0

@@ -67,12 +67,11 @@ void ComparisonInTempFailureRetryCheck::check(
     const SourceLocation Invocation = SM.getImmediateMacroCallerLoc(LocStart);
     Token Tok;
     if (!Lexer::getRawToken(SM.getSpellingLoc(Invocation), Tok, SM, Opts,
-                            /*IgnoreWhiteSpace=*/true)) {
-      if (Tok.getKind() == tok::raw_identifier &&
-          llvm::is_contained(RetryMacros, Tok.getRawIdentifier())) {
-        RetryMacroName = Tok.getRawIdentifier();
-        break;
-      }
+                            /*IgnoreWhiteSpace=*/true) &&
+        Tok.getKind() == tok::raw_identifier &&
+        llvm::is_contained(RetryMacros, Tok.getRawIdentifier())) {
+      RetryMacroName = Tok.getRawIdentifier();
+      break;
     }
 
     LocStart = Invocation;
@@ -83,7 +82,7 @@ void ComparisonInTempFailureRetryCheck::check(
   const auto &Inner = *Result.Nodes.getNodeAs<BinaryOperator>("inner");
   diag(Inner.getOperatorLoc(), "top-level comparison in %0") << RetryMacroName;
 
-  // FIXME: FixIts would be nice, but potentially nontrivial when nested macros
+  // FIXME: Fix-its would be nice, but potentially nontrivial when nested macros
   // happen, e.g. `TEMP_FAILURE_RETRY(IS_ZERO(foo()))`
 }
 

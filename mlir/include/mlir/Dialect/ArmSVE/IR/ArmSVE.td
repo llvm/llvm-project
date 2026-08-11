@@ -81,10 +81,11 @@ class ArmSVE_IntrOp<string mnemonic,
                     list<int> overloadedResults = [],
                     int numResults = 1,
                     list<int> immArgPositions = [],
-                    list<string> immArgAttrNames = []> :
+                    list<string> immArgAttrNames = [],
+                    string enumName = "aarch64_sve_" # !subst(".", "_", mnemonic) > :
   LLVM_IntrOpBase</*Dialect dialect=*/ArmSVE_Dialect,
                   /*string opName=*/"intr." # mnemonic,
-                  /*string enumName=*/"aarch64_sve_" # !subst(".", "_", mnemonic),
+                  /*string enumName=*/enumName,
                   /*list<int> overloadedResults=*/overloadedResults,
                   /*list<int> overloadedOperands=*/overloadedOperands,
                   /*list<Trait> traits=*/traits,
@@ -297,10 +298,16 @@ def UsmmlaOp : ArmSVE_Op<"usmmla", [Pure,
 def BfmmlaOp : ArmSVE_IntrOp<"bfmmla", [Pure,
                                         AllTypesMatch<["src1", "src2"]>,
                                         AllTypesMatch<["acc", "res"]>,
-                                        ]> {
+                                        ],
+                                        /*overloadedOperands=*/[1],
+                                        /*overloadedResults=*/[0],
+                                        /*numResults=*/1,
+                                        /*immArgPositions=*/[],
+                                        /*immArgAttrNames=*/[],
+                                        /*enumName=*/"aarch64_sve_fmmla"> {
   let summary = "BFloat16 matrix multiply-accumulate";
   let description = [{
-    BFMMLA: BFloat16 matrix multiply-accumulate into 2×2 matrices";
+    BFMMLA: BFloat16 matrix multiply-accumulate into 2×2 matrices.
 
     This operation multiplies the 2x4 BFloat16 matrix held in each 128-bit
     segment of the first source vector by the 4x2 BFloat16 matrix in the
@@ -590,7 +597,7 @@ def DupQLaneOp : ArmSVE_Op<"dupq_lane", [Pure, AllTypesMatch<["src", "dst"]>]> {
     // %V = [A B C D E F H A B C D E F H]
     ```
 
-    Note: The semantics of the operation match those of the `svdupq_lane` instrinsics.
+    Note: The semantics of the operation match those of the `svdupq_lane` intrinsics.
     [Source](https://developer.arm.com/architectures/instruction-sets/intrinsics/#q=svdupq_lane)
   }];
 

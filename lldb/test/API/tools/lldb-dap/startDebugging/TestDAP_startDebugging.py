@@ -53,13 +53,14 @@ class TestDAP_startDebugging(lldbdap_testcase.DAPTestCaseBase):
 
         # Use mock IDs to test the infrastructure
         # In a real scenario, these would come from the parent session
-        test_debugger_id = 1
-        test_target_id = 100
+        debugger_id = 1
+        target_id = 100
 
         # Send a startDebugging request with debuggerId and targetId
         # This simulates creating a child DAP session that reuses the debugger
+        session = {"session": {"debuggerId": debugger_id, "targetId": target_id}}
         self.dap_server.request_evaluate(
-            f'`lldb-dap start-debugging attach \'{{"debuggerId":{test_debugger_id},"targetId":{test_target_id}}}\'',
+            f"`lldb-dap start-debugging attach '{json.dumps(session)}'",
             context="repl",
         )
 
@@ -76,14 +77,14 @@ class TestDAP_startDebugging(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(request["command"], "startDebugging")
         self.assertEqual(request["arguments"]["request"], "attach")
 
-        config = request["arguments"]["configuration"]
+        session = request["arguments"]["configuration"]["session"]
         self.assertEqual(
-            config["debuggerId"],
-            test_debugger_id,
+            session["debuggerId"],
+            debugger_id,
             "Reverse request should include debugger ID",
         )
         self.assertEqual(
-            config["targetId"],
-            test_target_id,
+            session["targetId"],
+            target_id,
             "Reverse request should include target ID",
         )

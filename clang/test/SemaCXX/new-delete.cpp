@@ -15,7 +15,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify=expected,since-cxx26,cxx17,cxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++2c -fexperimental-new-constant-interpreter -DNEW_INTERP
 
 // FIXME Location is (frontend)
-// cxx17-note@*:* {{candidate function not viable: requires 2 arguments, but 3 were provided}}
+// cxx17-note@*:* {{candidate function not viable: requires 2 arguments, but 4 were provided}}
 
 #include <stddef.h>
 
@@ -724,4 +724,20 @@ int (*const_fold)[12] = new int[3][&const_fold + 12 - &const_fold];
 #elif __cplusplus < 201103L
 // expected-error@-5 {{cannot allocate object of variably modified type}}
 // expected-warning@-6 {{variable length arrays in C++ are a Clang extension}}
+#endif
+
+#if __cplusplus >= 201103L
+namespace PR81157 {
+  struct C { // #implicit-ctor
+    C(int); // #ctor
+  };
+  int f(int n) {
+    C *ptr1{new C[]{1L}};
+    C *ptr2{new C[n]{1L}};
+    // expected-error@-1 {{no matching constructor}}
+    // expected-note@#ctor {{candidate constructor}}
+    // expected-note@#implicit-ctor 2 {{candidate constructor}}
+    // expected-note@-4 {{in implicit initialization of trailing array elements in runtime-sized array new}}
+  }
+}
 #endif

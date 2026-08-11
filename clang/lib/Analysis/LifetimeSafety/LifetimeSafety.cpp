@@ -35,7 +35,8 @@ namespace internal {
 
 #ifndef NDEBUG
 static void DebugOnlyFunction(AnalysisDeclContext &AC, const CFG &Cfg,
-                              FactManager &FactMgr) {
+                              FactManager &FactMgr,
+                              const LoanPropagationAnalysis *LPA) {
   std::string Name;
   if (const Decl *D = AC.getDecl()) {
     if (const auto *ND = dyn_cast<NamedDecl>(D))
@@ -44,32 +45,35 @@ static void DebugOnlyFunction(AnalysisDeclContext &AC, const CFG &Cfg,
   DEBUG_WITH_TYPE(Name.c_str(), AC.getDecl()->dumpColor());
   DEBUG_WITH_TYPE(Name.c_str(), Cfg.dump(AC.getASTContext().getLangOpts(),
                                          /*ShowColors=*/true));
-  DEBUG_WITH_TYPE(Name.c_str(), FactMgr.dump(Cfg, AC));
+  DEBUG_WITH_TYPE(Name.c_str(), FactMgr.dump(Cfg, AC, LPA));
 }
 #endif
 
-LifetimeSafetyAnalysis::LifetimeSafetyAnalysis(AnalysisDeclContext &AC,
-                                               LifetimeSafetyReporter *Reporter)
-    : AC(AC), Reporter(Reporter) {}
+LifetimeSafetyAnalysis::LifetimeSafetyAnalysis(
+    AnalysisDeclContext &AC, LifetimeSafetySemaHelper *SemaHelper,
+    const LifetimeSafetyOpts &LSOpts)
+    : AC(AC), SemaHelper(SemaHelper), LSOpts(LSOpts) {}
 
 void LifetimeSafetyAnalysis::run() {
   llvm::TimeTraceScope TimeProfile("LifetimeSafetyAnalysis");
 
   const CFG &Cfg = *AC.getCFG();
-  DEBUG_WITH_TYPE("PrintCFG", Cfg.dump(AC.getASTContext().getLangOpts(),
-                                       /*ShowColors=*/true));
+  if (LSOpts.MaxCFGBlocks > 0 && Cfg.getNumBlockIDs() > LSOpts.MaxCFGBlocks) {
+    DEBUG_WITH_TYPE(
+        "LifetimeSafety", std::string FuncName = "<unknown>";
+        if (const Decl *D = AC.getDecl()) if (const auto *ND =
+                                                  dyn_cast<NamedDecl>(D))
+            FuncName = ND->getQualifiedNameAsString();
+        llvm::dbgs() << "LifetimeSafety: Skipping function " << FuncName
+                     << "due to large CFG: " << Cfg.getNumBlockIDs()
+                     << " blocks (threshold: " << LSOpts.MaxCFGBlocks << ")\n");
+    return;
+  }
 
   FactMgr = std::make_unique<FactManager>(AC, Cfg);
 
   FactsGenerator FactGen(*FactMgr, AC);
   FactGen.run();
-
-  DEBUG_WITH_TYPE("LifetimeFacts", FactMgr->dump(Cfg, AC));
-
-  // Debug print facts for a specific function using
-  // -debug-only=EnableFilterByFunctionName,YourFunctionNameFoo
-  DEBUG_WITH_TYPE("EnableFilterByFunctionName",
-                  DebugOnlyFunction(AC, Cfg, *FactMgr));
 
   /// TODO(opt): Consider optimizing individual blocks before running the
   /// dataflow analysis.
@@ -87,10 +91,26 @@ void LifetimeSafetyAnalysis::run() {
 
   LiveOrigins = std::make_unique<LiveOriginsAnalysis>(
       Cfg, AC, *FactMgr, Factory.LivenessMapFactory);
+
+  MovedLoans = std::make_unique<MovedLoansAnalysis>(
+      Cfg, AC, *FactMgr, *LoanPropagation, *LiveOrigins, FactMgr->getLoanMgr(),
+      Factory.MovedLoansMapFactory);
+
+  runLifetimeChecker(*LoanPropagation, *MovedLoans, *LiveOrigins, *FactMgr, AC,
+                     SemaHelper, LSOpts);
+
+  DEBUG_WITH_TYPE("PrintCFG", Cfg.dump(AC.getASTContext().getLangOpts(),
+                                       /*ShowColors=*/true));
+
+  DEBUG_WITH_TYPE("LifetimeFacts",
+                  FactMgr->dump(Cfg, AC, LoanPropagation.get()));
+
+  // Debug print facts for a specific function using
+  // -debug-only=EnableFilterByFunctionName,YourFunctionNameFoo
+  DEBUG_WITH_TYPE("EnableFilterByFunctionName",
+                  DebugOnlyFunction(AC, Cfg, *FactMgr, LoanPropagation.get()));
   DEBUG_WITH_TYPE("LiveOrigins",
                   LiveOrigins->dump(llvm::dbgs(), FactMgr->getTestPoints()));
-
-  runLifetimeChecker(*LoanPropagation, *LiveOrigins, *FactMgr, AC, Reporter);
 }
 
 void collectLifetimeStats(AnalysisDeclContext &AC, OriginManager &OM,
@@ -103,9 +123,10 @@ void collectLifetimeStats(AnalysisDeclContext &AC, OriginManager &OM,
 } // namespace internal
 
 void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
-                               LifetimeSafetyReporter *Reporter,
+                               LifetimeSafetySemaHelper *SemaHelper,
+                               const LifetimeSafetyOpts &LSOpts,
                                LifetimeSafetyStats &Stats, bool CollectStats) {
-  internal::LifetimeSafetyAnalysis Analysis(AC, Reporter);
+  internal::LifetimeSafetyAnalysis Analysis(AC, SemaHelper, LSOpts);
   Analysis.run();
   if (CollectStats)
     collectLifetimeStats(AC, Analysis.getFactManager().getOriginMgr(), Stats);

@@ -109,7 +109,7 @@ exit:
 
 ; Can't simplify because %iv isn't guaranteed <= max lanes.
 define i32 @count_le_max_lanes_scalable_unknown() {
-; CHECK-LABEL: define range(i32 0, -1) i32 @count_le_max_lanes_scalable_unknown() {
+; CHECK-LABEL: define i32 @count_le_max_lanes_scalable_unknown() {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
@@ -144,4 +144,43 @@ define i1 @result_le_overflow() {
   %x = call i32 @llvm.experimental.get.vector.length(i64 u0x100000000, i32 4, i1 false)
   %res = icmp ule i32 %x, 3
   ret i1 %res
+}
+
+; This test case was manually reduced from a downstream failure where the
+; intrinsic call was constant folded to 4. Reproducing this exactly requires
+; very specific visitation order. The reduction here was only able to show an
+; incorrect result range of [4, 13) being calculated. The correct result range
+; must contain [4, 4097).
+define i32 @incorrect_result_range(i32 %x) vscale_range(16, 1024) {
+; CHECK-LABEL: define range(i32 0, 4097) i32 @incorrect_result_range(
+; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[OFFSET:%.*]] = phi i32 [ 1, %[[ENTRY]] ], [ [[OFFSET_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[OFFSET]], 3
+; CHECK-NEXT:    [[LEN:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[ADD]], i32 4, i1 true)
+; CHECK-NEXT:    [[OFFSET_NEXT]] = add nuw nsw i32 [[OFFSET]], 4
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 4
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], [[X]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i32 [[LEN]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %loop]
+  %offset = phi i32 [1, %entry], [%offset.next, %loop]
+  %add = add nuw nsw i32 %offset, 3
+  %len = call i32 @llvm.experimental.get.vector.length(i32 %add, i32 4, i1 true)
+  %offset.next = add nuw nsw i32 %offset, 4
+  %iv.next = add nuw nsw i32 %iv, 4
+  %ec = icmp eq i32 %iv.next, %x
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i32 %len
 }

@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/Inclusions/HeaderIncludes.h"
-#include "../Tooling/ReplacementTest.h"
-#include "../Tooling/RewriterTestContext.h"
 #include "clang/Format/Format.h"
 #include "clang/Tooling/Core/Replacement.h"
+#include "llvm/ADT/StringRef.h"
 
 #include "gtest/gtest.h"
+#include <cassert>
 
 namespace clang {
 namespace tooling {
@@ -65,7 +65,7 @@ TEST_F(HeaderIncludesTest, RepeatedIncludes) {
 
 TEST_F(HeaderIncludesTest, InsertImportWithSameInclude) {
   std::string Code = "#include \"a.h\"\n";
-  std::string Expected = Code + "#import \"a.h\"\n";
+  std::string Expected = "#import \"a.h\"\n";
   EXPECT_EQ(Expected, insert(Code, "\"a.h\"", IncludeDirective::Import));
 }
 
@@ -80,6 +80,65 @@ TEST_F(HeaderIncludesTest, DeleteImportAndSameInclude) {
 #import <abc.h>
 int x;)cpp";
   EXPECT_EQ("\nint x;", remove(Code, "<abc.h>"));
+}
+
+TEST_F(HeaderIncludesTest, DeleteMixedImportAndIncludeQuoted) {
+  std::string Code = R"cpp(
+#include "a.h"
+#import "a.h"
+int x;)cpp";
+  EXPECT_EQ("\nint x;", remove(Code, "\"a.h\""));
+}
+
+TEST_F(HeaderIncludesTest, ImportWithSpacesAndTabs) {
+  std::string Code = "int x;\n";
+  // The parser should detect these as existing imports if we had them,
+  // but here we are testing insertion/detection integration.
+  // Let's verify that a file with weird spacing is parsed correctly.
+  std::string CodeWithSpaces =
+      "#  import   \"a.h\"\n#\tinclude\t\"b.h\"\nint x;\n";
+
+  // Try inserting "a.h" again as import - should be blocked by the existing one
+  // if the regex captures it correctly.
+  EXPECT_EQ(CodeWithSpaces,
+            insert(CodeWithSpaces, "\"a.h\"", IncludeDirective::Import));
+
+  // Try inserting "b.h" again as include - should be blocked.
+  EXPECT_EQ(CodeWithSpaces,
+            insert(CodeWithSpaces, "\"b.h\"", IncludeDirective::Include));
+
+  // Try inserting "b.h" again as import - should replace.
+  std::string ExpectedAfterBImport =
+      "#  import   \"a.h\"\n#import \"b.h\"\nint x;\n";
+  EXPECT_EQ(ExpectedAfterBImport,
+            insert(CodeWithSpaces, "\"b.h\"", IncludeDirective::Import));
+}
+
+TEST_F(HeaderIncludesTest, InsertIncludeWhenImportExists) {
+  std::string Code = "#import \"a.h\"\n";
+  EXPECT_EQ(Code, insert(Code, "\"a.h\"", IncludeDirective::Include));
+}
+
+TEST_F(HeaderIncludesTest, InsertImportWhenIncludeExistsAngled) {
+  std::string Code = "#include <a.h>\n";
+  std::string Expected = "#import <a.h>\n";
+  // Replaces #include with #import.
+  EXPECT_EQ(Expected, insert(Code, "<a.h>", IncludeDirective::Import));
+}
+
+TEST_F(HeaderIncludesTest, InsertImportAngledWhenIncludeQuotedExists) {
+  std::string Code = "#include \"a.h\"\n";
+  std::string Expected = Code + "#import <a.h>\n";
+  // Different quotation, so it should insert alongside, not replace.
+  EXPECT_EQ(Expected, insert(Code, "<a.h>", IncludeDirective::Import));
+}
+
+TEST_F(HeaderIncludesTest, InsertImportQuotedWhenIncludeAngledExists) {
+  std::string Code = "#include <a.h>\n";
+  std::string Expected = "#import \"a.h\"\n#include <a.h>\n";
+  // Different quotation, so it should insert alongside, not replace.
+  // " comes before < in ASCII, so it is inserted before.
+  EXPECT_EQ(Expected, insert(Code, "\"a.h\"", IncludeDirective::Import));
 }
 
 TEST_F(HeaderIncludesTest, NoExistingIncludeWithDefine) {
@@ -142,6 +201,20 @@ TEST_F(HeaderIncludesTest, InsertAfterMainHeader) {
 
   FileName = "bar.cpp";
   EXPECT_NE(Expected, insert(Code, "<a>")) << "Not main header";
+}
+
+TEST_F(HeaderIncludesTest, InsertAfterMainHeaderWithSpecialChars) {
+  std::string Code = "#include \"fix+bar.h\"\n"
+                     "\n"
+                     "int main() {}";
+  std::string Expected = "#include \"fix+bar.h\"\n"
+                         "#include <a>\n"
+                         "\n"
+                         "int main() {}";
+  Style = format::getGoogleStyle(format::FormatStyle::LanguageKind::LK_Cpp)
+              .IncludeStyle;
+  FileName = "fix+bar.cpp";
+  EXPECT_EQ(Expected, insert(Code, "<a>"));
 }
 
 TEST_F(HeaderIncludesTest, InsertMainHeader) {
@@ -594,6 +667,66 @@ TEST_F(HeaderIncludesTest, CanDeleteAfterCode) {
   EXPECT_EQ(Expected, remove(Code, "\"b.h\""));
 }
 
+TEST_F(HeaderIncludesTest, InsertGlobalModuleFragmentDeclInterfaceUnit) {
+  // Ensure the header insertion comes with a global module fragment decl (i.e.
+  // a 'module;' line) when:
+  //     - the input file is an module interface unit, and
+  //     - no tokens excluding comments and whitespaces exist before the module
+  //       declaration.
+  std::string Code = R"cpp(// comments
+
+// more comments
+
+export module foo;
+
+void test() {
+    std::vector<int> ints {};
+})cpp";
+  std::string Expected = R"cpp(// comments
+
+// more comments
+
+module;
+#include <vector>
+export module foo;
+
+void test() {
+    std::vector<int> ints {};
+})cpp";
+
+  EXPECT_EQ(Expected, insert(Code, "<vector>"));
+}
+
+TEST_F(HeaderIncludesTest, InsertGlobalModuleFragmentDeclImplUnit) {
+  // Ensure the header insertion comes with a global module fragment decl (i.e.
+  // a 'module;' line) when:
+  //     - the input file is an module implementation unit, and
+  //     - no tokens excluding comments and whitespaces exist before the module
+  //       declaration.
+  std::string Code = R"cpp(// comments
+
+// more comments
+
+module foo;
+
+void test() {
+    std::vector<int> ints {};
+})cpp";
+  std::string Expected = R"cpp(// comments
+
+// more comments
+
+module;
+#include <vector>
+module foo;
+
+void test() {
+    std::vector<int> ints {};
+})cpp";
+
+  EXPECT_EQ(Expected, insert(Code, "<vector>"));
+}
+
 TEST_F(HeaderIncludesTest, InsertInGlobalModuleFragment) {
   // Ensure header insertions go only in the global module fragment
   std::string Code = R"cpp(// comments
@@ -618,7 +751,6 @@ int main() {
     std::vector<int> ints {};
 })cpp";
 
-  auto InsertedCode = insert(Code, "<vector>");
   EXPECT_EQ(Expected, insert(Code, "<vector>"));
 }
 

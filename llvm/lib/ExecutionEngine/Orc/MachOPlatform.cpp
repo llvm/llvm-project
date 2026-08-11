@@ -16,6 +16,7 @@
 #include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/MachOBuilder.h"
+#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 
@@ -279,6 +280,7 @@ MachOPlatform::HeaderOptions::BuildVersionOpts::fromTriple(const Triple &TT,
 Expected<std::unique_ptr<MachOPlatform>>
 MachOPlatform::Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
                       std::unique_ptr<DefinitionGenerator> OrcRuntime,
+                      HeaderOptionsBuilder BuildHeaderOpts,
                       HeaderOptions PlatformJDOpts,
                       MachOHeaderMUBuilder BuildMachOHeaderMU,
                       std::optional<SymbolAliasMap> RuntimeAliases) {
@@ -291,8 +293,6 @@ MachOPlatform::Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
                                        ES.getTargetTriple().str(),
                                    inconvertibleErrorCode());
 
-  auto &EPC = ES.getExecutorProcessControl();
-
   // Create default aliases if the caller didn't supply any.
   if (!RuntimeAliases)
     RuntimeAliases = standardPlatformAliases(ES);
@@ -301,31 +301,34 @@ MachOPlatform::Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
   if (auto Err = PlatformJD.define(symbolAliases(std::move(*RuntimeAliases))))
     return std::move(Err);
 
-  // Add JIT-dispatch function support symbols.
-  if (auto Err = PlatformJD.define(
-          absoluteSymbols({{ES.intern("___orc_rt_jit_dispatch"),
-                            {EPC.getJITDispatchInfo().JITDispatchFunction,
-                             JITSymbolFlags::Exported}},
-                           {ES.intern("___orc_rt_jit_dispatch_ctx"),
-                            {EPC.getJITDispatchInfo().JITDispatchContext,
-                             JITSymbolFlags::Exported}}})))
-    return std::move(Err);
+  {
+    // Add JIT dispatch reexports from bootstrap JITDylib.
+    if (auto Err = PlatformJD.define(reexports(
+            ES.getBootstrapJITDylib(),
+            {{ES.intern("___orc_rt_jit_dispatch"),
+              {ES.intern(rt::DispatchName),
+               JITSymbolFlags::Exported | JITSymbolFlags::Callable}},
+             {ES.intern("___orc_rt_jit_dispatch_ctx"),
+              {ES.intern(rt::DispatchCtxName), JITSymbolFlags::Exported}}})))
+      return Err;
+  }
 
   // Create the instance.
   Error Err = Error::success();
-  auto P = std::unique_ptr<MachOPlatform>(new MachOPlatform(
-      ObjLinkingLayer, PlatformJD, std::move(OrcRuntime),
-      std::move(PlatformJDOpts), std::move(BuildMachOHeaderMU), Err));
+  auto P = std::unique_ptr<MachOPlatform>(
+      new MachOPlatform(ObjLinkingLayer, PlatformJD, std::move(OrcRuntime),
+                        std::move(BuildHeaderOpts), std::move(PlatformJDOpts),
+                        std::move(BuildMachOHeaderMU), Err));
   if (Err)
     return std::move(Err);
   return std::move(P);
 }
 
-Expected<std::unique_ptr<MachOPlatform>>
-MachOPlatform::Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
-                      const char *OrcRuntimePath, HeaderOptions PlatformJDOpts,
-                      MachOHeaderMUBuilder BuildMachOHeaderMU,
-                      std::optional<SymbolAliasMap> RuntimeAliases) {
+Expected<std::unique_ptr<MachOPlatform>> MachOPlatform::Create(
+    ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
+    const char *OrcRuntimePath, HeaderOptionsBuilder BuildHeaderOpts,
+    HeaderOptions PlatformJDOpts, MachOHeaderMUBuilder BuildMachOHeaderMU,
+    std::optional<SymbolAliasMap> RuntimeAliases) {
 
   // Create a generator for the ORC runtime archive.
   auto OrcRuntimeArchiveGenerator =
@@ -335,12 +338,12 @@ MachOPlatform::Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
 
   return Create(ObjLinkingLayer, PlatformJD,
                 std::move(*OrcRuntimeArchiveGenerator),
-                std::move(PlatformJDOpts), std::move(BuildMachOHeaderMU),
-                std::move(RuntimeAliases));
+                std::move(BuildHeaderOpts), std::move(PlatformJDOpts),
+                std::move(BuildMachOHeaderMU), std::move(RuntimeAliases));
 }
 
 Error MachOPlatform::setupJITDylib(JITDylib &JD) {
-  return setupJITDylib(JD, /*Opts=*/{});
+  return setupJITDylib(JD, BuildHeaderOpts(JD));
 }
 
 Error MachOPlatform::setupJITDylib(JITDylib &JD, HeaderOptions Opts) {
@@ -436,6 +439,10 @@ MachOPlatform::standardLazyCompilationAliases() {
       StandardLazyCompilationAliases);
 }
 
+MachOPlatform::HeaderOptions MachOPlatform::defaultHeaderOpts(JITDylib &JD) {
+  return {};
+}
+
 bool MachOPlatform::supportedTarget(const Triple &TT) {
   switch (TT.getArch()) {
   case Triple::aarch64:
@@ -472,10 +479,11 @@ MachOPlatform::flagsForSymbol(jitlink::Symbol &Sym) {
 MachOPlatform::MachOPlatform(
     ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
     std::unique_ptr<DefinitionGenerator> OrcRuntimeGenerator,
-    HeaderOptions PlatformJDOpts, MachOHeaderMUBuilder BuildMachOHeaderMU,
-    Error &Err)
+    HeaderOptionsBuilder BuildHeaderOpts, HeaderOptions PlatformJDOpts,
+    MachOHeaderMUBuilder BuildMachOHeaderMU, Error &Err)
     : ES(ObjLinkingLayer.getExecutionSession()), PlatformJD(PlatformJD),
       ObjLinkingLayer(ObjLinkingLayer),
+      BuildHeaderOpts(std::move(BuildHeaderOpts)),
       BuildMachOHeaderMU(std::move(BuildMachOHeaderMU)) {
   ErrorAsOutParameter _(Err);
   ObjLinkingLayer.addPlugin(std::make_unique<MachOPlatformPlugin>(*this));
@@ -1117,8 +1125,8 @@ Error MachOPlatform::MachOPlatformPlugin::processObjCImageInfo(
         return E;
 
     // __objc_imageinfo is valid. Delete the block.
-    for (auto *S : ObjCImageInfo->symbols())
-      G.removeDefinedSymbol(*S);
+    while (ObjCImageInfo->symbols_size() != 0)
+      G.removeDefinedSymbol(**ObjCImageInfo->symbols().begin());
     G.removeBlock(ObjCImageInfoBlock);
   } else {
     LLVM_DEBUG({
@@ -1758,9 +1766,15 @@ jitlink::Block &createHeaderBlock(MachOPlatform &MOP,
   else
     B.template addLoadCommand<MachO::LC_ID_DYLIB>(JD.getName(), 0, 0, 0);
 
+  if (Opts.UUID)
+    B.template addLoadCommand<MachO::LC_UUID>(*Opts.UUID);
+
   for (auto &BV : Opts.BuildVersions)
     B.template addLoadCommand<MachO::LC_BUILD_VERSION>(
         BV.Platform, BV.MinOS, BV.SDK, static_cast<uint32_t>(0));
+
+  if (Opts.TargetTriple)
+    B.template addLoadCommand<MachO::LC_TARGET_TRIPLE>(*Opts.TargetTriple);
 
   using LoadKind = MachOPlatform::HeaderOptions::LoadDylibCmd::LoadKind;
   for (auto &LD : Opts.LoadDylibs) {

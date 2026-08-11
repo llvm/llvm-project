@@ -20,6 +20,7 @@
 #include "clang/Basic/ABI.h"
 #include "clang/Basic/Thunk.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include <memory>
 #include <utility>
 
@@ -253,10 +254,10 @@ private:
   // in the virtual table group.
   VTableIndicesTy VTableIndices;
 
-  OwningArrayRef<VTableComponent> VTableComponents;
+  llvm::SmallVector<VTableComponent, 0> VTableComponents;
 
   /// Contains thunks needed by vtables, sorted by indices.
-  OwningArrayRef<VTableThunkTy> VTableThunks;
+  llvm::SmallVector<VTableThunkTy, 0> VTableThunks;
 
   /// Address points for all vtables.
   AddressPointsMapTy AddressPoints;
@@ -383,17 +384,7 @@ private:
   void computeVTableRelatedInformation(const CXXRecordDecl *RD) override;
 
 public:
-  enum VTableComponentLayout {
-    /// Components in the vtable are pointers to other structs/functions.
-    Pointer,
-
-    /// Components in the vtable are relative offsets between the vtable and the
-    /// other structs/functions.
-    Relative,
-  };
-
-  ItaniumVTableContext(ASTContext &Context,
-                       VTableComponentLayout ComponentLayout = Pointer);
+  ItaniumVTableContext(ASTContext &Context);
   ~ItaniumVTableContext() override;
 
   const VTableLayout &getVTableLayout(const CXXRecordDecl *RD) {
@@ -445,16 +436,6 @@ public:
   static bool classof(const VTableContextBase *VT) {
     return !VT->isMicrosoft();
   }
-
-  VTableComponentLayout getVTableComponentLayout() const {
-    return ComponentLayout;
-  }
-
-  bool isPointerLayout() const { return ComponentLayout == Pointer; }
-  bool isRelativeLayout() const { return ComponentLayout == Relative; }
-
-private:
-  VTableComponentLayout ComponentLayout;
 };
 
 /// Holds information about the inheritance path to a virtual base or function

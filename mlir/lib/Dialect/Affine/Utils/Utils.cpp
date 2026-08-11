@@ -26,6 +26,7 @@
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include <optional>
 
 #define DEBUG_TYPE "affine-utils"
@@ -228,13 +229,13 @@ std::optional<SmallVector<Value, 8>>
 mlir::affine::expandAffineMap(OpBuilder &builder, Location loc,
                               AffineMap affineMap, ValueRange operands) {
   auto numDims = affineMap.getNumDims();
-  auto expanded = llvm::to_vector<8>(
-      llvm::map_range(affineMap.getResults(),
-                      [numDims, &builder, loc, operands](AffineExpr expr) {
-                        return expandAffineExpr(builder, loc, expr,
-                                                operands.take_front(numDims),
-                                                operands.drop_front(numDims));
-                      }));
+  auto expanded = llvm::map_to_vector<8>(
+      affineMap.getResults(),
+      [numDims, &builder, loc, operands](AffineExpr expr) {
+        return expandAffineExpr(builder, loc, expr,
+                                operands.take_front(numDims),
+                                operands.drop_front(numDims));
+      });
   if (llvm::all_of(expanded, [](Value v) { return v; }))
     return expanded;
   return std::nullopt;
@@ -365,10 +366,10 @@ mlir::affine::affineParallelize(AffineForOp forOp,
   ValueRange upperBoundOperands = forOp.getUpperBoundOperands();
 
   // Creating empty 1-D affine.parallel op.
-  auto reducedValues = llvm::to_vector<4>(llvm::map_range(
-      parallelReductions, [](const LoopReduction &red) { return red.value; }));
-  auto reductionKinds = llvm::to_vector<4>(llvm::map_range(
-      parallelReductions, [](const LoopReduction &red) { return red.kind; }));
+  auto reducedValues = llvm::map_to_vector<4>(
+      parallelReductions, [](const LoopReduction &red) { return red.value; });
+  auto reductionKinds = llvm::map_to_vector<4>(
+      parallelReductions, [](const LoopReduction &red) { return red.kind; });
   AffineParallelOp newPloop = AffineParallelOp::create(
       outsideBuilder, loc, ValueRange(reducedValues).getTypes(), reductionKinds,
       llvm::ArrayRef(lowerBoundMap), lowerBoundOperands,
@@ -907,8 +908,9 @@ mlir::affine::hasNoInterveningEffect<mlir::MemoryEffects::Read,
 // This attempts to find stores which have no impact on the final result.
 // A writing op writeA will be eliminated if there exists an op writeB if
 // 1) writeA and writeB have mathematically equivalent affine access functions.
-// 2) writeB postdominates writeA.
-// 3) There is no potential read between writeA and writeB.
+// 2) writeB writes the same type as writeA (so it fully covers writeA's bytes).
+// 3) writeB postdominates writeA.
+// 4) There is no potential read between writeA and writeB.
 static void findUnusedStore(AffineWriteOpInterface writeA,
                             SmallVectorImpl<Operation *> &opsToErase,
                             PostDominanceInfo &postDominanceInfo,
@@ -933,6 +935,16 @@ static void findUnusedStore(AffineWriteOpInterface writeA,
     MemRefAccess destAccess(writeA);
 
     if (srcAccess != destAccess)
+      continue;
+
+    // Check that the store types match. If types differ, writeB may not cover
+    // all bytes written by writeA (e.g. a narrower vector type), so
+    // conservatively assume writeA is not dead.
+    // One could be tempted whether writeA type is smaller than writeB, however
+    // it can become tricky with cases like vector<4xi6> vs vector<3xi8> due to
+    // padding that can be datalayout dependent.
+    if (writeA.getValueToStore().getType() !=
+        writeB.getValueToStore().getType())
       continue;
 
     // writeB must postdominate writeA.
@@ -1373,7 +1385,7 @@ LogicalResult mlir::affine::replaceAllMemRefUsesWith(
     if (failed(replaceAllMemRefUsesWith(
             oldMemRef, newMemRef, user, extraIndices, indexRemap, extraOperands,
             symbolOperands, allowNonDereferencingOps)))
-      llvm_unreachable("memref replacement guaranteed to succeed here");
+      return failure();
   }
 
   return success();
@@ -1820,10 +1832,9 @@ mlir::affine::normalizeMemRef(memref::ReinterpretCastOp reinterpretCastOp) {
                        oldLayoutMap.getResult(i)),
         mapOperands));
   }
-  for (unsigned i = 0, e = newSizes.size(); i < e; i++) {
-    newSizes[i] =
-        arith::AddIOp::create(b, loc, newSizes[i].getType(), newSizes[i],
-                              arith::ConstantIndexOp::create(b, loc, 1));
+  for (auto &newSize : newSizes) {
+    newSize = arith::AddIOp::create(b, loc, newSize.getType(), newSize,
+                                    arith::ConstantIndexOp::create(b, loc, 1));
   }
   // Create the new reinterpret_cast op.
   auto newReinterpretCast = memref::ReinterpretCastOp::create(

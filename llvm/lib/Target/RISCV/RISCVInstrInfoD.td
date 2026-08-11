@@ -38,6 +38,7 @@ def GPRPairAsFPR : AsmOperandClass {
   let ParserMethod = "parseGPRPairAsFPR64";
   let PredicateMethod = "isGPRPairAsFPR64";
   let RenderMethod = "addRegOperands";
+  let DiagnosticString = "register must be an even-numbered GPR when used as an FP operand";
 }
 
 def GPRF64AsFPR : AsmOperandClass {
@@ -45,6 +46,7 @@ def GPRF64AsFPR : AsmOperandClass {
   let PredicateMethod = "isGPRAsFPR";
   let ParserMethod = "parseGPRAsFPR64";
   let RenderMethod = "addRegOperands";
+  let DiagnosticString = "register must be a GPR when used as an FP operand";
 }
 
 def FPR64INX : RegisterOperand<GPR> {
@@ -185,9 +187,6 @@ def FMV_D_X : FPUnaryOp_r<0b1111001, 0b00000, 0b000, FPR64, GPR, "fmv.d.x">,
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtD] in {
-def : InstAlias<"fld $rd, (${rs1})",  (FLD FPR64:$rd,  GPR:$rs1, 0), 0>;
-def : InstAlias<"fsd $rs2, (${rs1})", (FSD FPR64:$rs2, GPR:$rs1, 0), 0>;
-
 def : InstAlias<"fmv.d $rd, $rs",  (FSGNJ_D  FPR64:$rd, FPR64:$rs, FPR64:$rs)>;
 def : InstAlias<"fabs.d $rd, $rs", (FSGNJX_D FPR64:$rd, FPR64:$rs, FPR64:$rs)>;
 def : InstAlias<"fneg.d $rd, $rs", (FSGNJN_D FPR64:$rd, FPR64:$rs, FPR64:$rs)>;
@@ -409,8 +408,10 @@ foreach Ext = DExts in {
   defm : PatFprFpr_m<fmaximumnum, FMAX_D, Ext>;
   defm : PatFprFpr_m<riscv_fmin, FMIN_D, Ext>;
   defm : PatFprFpr_m<riscv_fmax, FMAX_D, Ext>;
-  let Predicates = Ext.Predicates in
-  def : Pat<(f64 (fcanonicalize FPR64:$rs1)), (FMIN_D $rs1, $rs1)>;
+  let Predicates = Ext.Predicates in {
+    def : Pat<(f64 (fcanonicalize Ext.PrimaryTy:$rs1)),
+              (!cast<Instruction>("FMIN_D"#Ext.Suffix) $rs1, $rs1)>;
+  }
 }
 
 /// Setcc
@@ -664,3 +665,6 @@ def : Pat<(i64 (any_llround FPR64INX:$rs1)), (FCVT_L_D_INX $rs1, FRM_RMM)>;
 def : Pat<(any_sint_to_fp (i64 GPR:$rs1)), (FCVT_D_L_INX GPR:$rs1, FRM_DYN)>;
 def : Pat<(any_uint_to_fp (i64 GPR:$rs1)), (FCVT_D_LU_INX GPR:$rs1, FRM_DYN)>;
 } // Predicates = [HasStdExtZdinx, IsRV64]
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+def PseudoClearFPR64 : Pseudo<(outs FPR64:$rd), (ins), []>;

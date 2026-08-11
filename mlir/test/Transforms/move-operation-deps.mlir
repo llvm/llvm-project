@@ -1,14 +1,14 @@
 // RUN: mlir-opt --allow-unregistered-dialect --transform-interpreter --split-input-file --verify-diagnostics %s | FileCheck %s
 
 // Check simple move of dependent operation before insertion.
-func.func @simple_move() -> f32 {
+func.func @simple_move(%arg0 : f32) -> f32 {
   %0 = "before"() : () -> (f32)
-  %1 = "moved_op"() : () -> (f32)
+  %1 = arith.addf %arg0, %arg0 {moved_op} : f32
   %2 = "foo"(%1) : (f32) -> (f32)
   return %2 : f32
 }
-// CHECK-LABEL: func @simple_move()
-//       CHECK:   %[[MOVED:.+]] = "moved_op"
+// CHECK-LABEL: func @simple_move(
+//       CHECK:   %[[MOVED:.+]] = arith.addf {{.*}} {moved_op}
 //       CHECK:   %[[BEFORE:.+]] = "before"
 //       CHECK:   %[[FOO:.+]] = "foo"(%[[MOVED]])
 //       CHECK:   return %[[FOO]]
@@ -28,17 +28,17 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 // Move operands that are implicitly captured by the op
-func.func @move_region_dependencies() -> f32 {
+func.func @move_region_dependencies(%arg0 : f32) -> f32 {
   %0 = "before"() : () -> (f32)
-  %1 = "moved_op"() : () -> (f32)
+  %1 = arith.addf %arg0, %arg0 {moved_op} : f32
   %2 = "foo"() ({
-    %3 = "inner_op"(%1) : (f32) -> (f32)
+    %3 = arith.mulf %1, %1 : f32
     "yield"(%3) : (f32) -> ()
   }) : () -> (f32)
   return %2 : f32
 }
-// CHECK-LABEL: func @move_region_dependencies()
-//       CHECK:   %[[MOVED:.+]] = "moved_op"
+// CHECK-LABEL: func @move_region_dependencies(
+//       CHECK:   %[[MOVED:.+]] = arith.addf {{.*}} {moved_op}
 //       CHECK:   %[[BEFORE:.+]] = "before"
 //       CHECK:   %[[FOO:.+]] = "foo"
 //       CHECK:   return %[[FOO]]
@@ -58,22 +58,22 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 // Move operations in toplogical sort order
-func.func @move_in_topological_sort_order() -> f32 {
+func.func @move_in_topological_sort_order(%arg0 : f32, %arg1 : f32) -> f32 {
   %0 = "before"() : () -> (f32)
-  %1 = "moved_op_1"() : () -> (f32)
-  %2 = "moved_op_2"() : () -> (f32)
-  %3 = "moved_op_3"(%1) : (f32) -> (f32)
-  %4 = "moved_op_4"(%1, %3) : (f32, f32) -> (f32)
-  %5 = "moved_op_5"(%2) : (f32) -> (f32)
+  %1 = arith.addf %arg0, %arg0 {moved_op_1} : f32
+  %2 = arith.addf %arg1, %arg1 {moved_op_2} : f32
+  %3 = arith.mulf %1, %1 {moved_op_3} : f32
+  %4 = arith.mulf %1, %3 {moved_op_4} : f32
+  %5 = arith.mulf %2, %2 {moved_op_5} : f32
   %6 = "foo"(%4, %5) : (f32, f32) -> (f32)
   return %6 : f32
 }
-// CHECK-LABEL: func @move_in_topological_sort_order()
-//       CHECK:   %[[MOVED_1:.+]] = "moved_op_1"
-//   CHECK-DAG:   %[[MOVED_2:.+]] = "moved_op_3"(%[[MOVED_1]])
-//   CHECK-DAG:   %[[MOVED_3:.+]] = "moved_op_4"(%[[MOVED_1]], %[[MOVED_2]])
-//   CHECK-DAG:   %[[MOVED_4:.+]] = "moved_op_2"
-//   CHECK-DAG:   %[[MOVED_5:.+]] = "moved_op_5"(%[[MOVED_4]])
+// CHECK-LABEL: func @move_in_topological_sort_order(
+//       CHECK:   %[[MOVED_1:.+]] = arith.addf {{.*}} {moved_op_1}
+//   CHECK-DAG:   %[[MOVED_2:.+]] = arith.mulf %[[MOVED_1]], %[[MOVED_1]] {moved_op_3}
+//   CHECK-DAG:   %[[MOVED_3:.+]] = arith.mulf %[[MOVED_1]], %[[MOVED_2]] {moved_op_4}
+//   CHECK-DAG:   %[[MOVED_4:.+]] = arith.addf {{.*}} {moved_op_2}
+//   CHECK-DAG:   %[[MOVED_5:.+]] = arith.mulf %[[MOVED_4]], %[[MOVED_4]] {moved_op_5}
 //       CHECK:   %[[BEFORE:.+]] = "before"
 //       CHECK:   %[[FOO:.+]] = "foo"(%[[MOVED_3]], %[[MOVED_5]])
 //       CHECK:   return %[[FOO]]
@@ -92,17 +92,28 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-func.func @move_region_dependencies() -> f32 {
+func.func @move_region_dependencies(%arg0 : f32) -> f32 {
+  %cond = arith.constant true
   %0 = "before"() : () -> (f32)
-  %1 = "moved_op_1"() : () -> (f32)
-  %2 = "moved_op_2"() ({
-    "yield"(%1) : (f32) -> ()
-  }) : () -> (f32)
+  %1 = arith.addf %arg0, %arg0 {moved_op_1} : f32
+  %2 = scf.if %cond -> f32 {
+    %inner = arith.mulf %1, %1 : f32
+    scf.yield %inner : f32
+  } else {
+    scf.yield %1 : f32
+  }
   %3 = "foo"() ({
     "yield"(%2) : (f32) -> ()
   }) : () -> (f32)
   return %3 : f32
 }
+// CHECK-LABEL: func @move_region_dependencies(
+//       CHECK:   arith.constant true
+//       CHECK:   %[[MOVED1:.+]] = arith.addf {{.*}} {moved_op_1}
+//       CHECK:   %[[MOVED2:.+]] = scf.if
+//       CHECK:   "before"
+//       CHECK:   %[[FOO:.+]] = "foo"
+//       CHECK:   return %[[FOO]]
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0 : !transform.any_op {transform.readonly}) {
@@ -115,13 +126,6 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
-// CHECK-LABEL: func @move_region_dependencies()
-//       CHECK:   %[[MOVED_1:.+]] = "moved_op_1"
-//       CHECK:   %[[MOVED_2:.+]] = "moved_op_2"
-//       CHECK:     "yield"(%[[MOVED_1]])
-//       CHECK:   "before"
-//       CHECK:   %[[FOO:.+]] = "foo"
-//       CHECK:   return %[[FOO]]
 
 // -----
 
@@ -132,15 +136,25 @@ func.func @ignore_basic_block_arguments() -> f32 {
   %8 = "test"() : () -> (f32)
   return %8: f32
 ^bb1(%bbArg : f32):
+  %cond = arith.constant true
   %0 = "before"() : () -> (f32)
-  %1 = "moved_op"() ({
-    "yield"(%bbArg) : (f32) -> ()
-  }) : () -> (f32)
+  %1 = scf.if %cond -> f32 {
+    %inner = arith.addf %bbArg, %bbArg : f32
+    scf.yield %inner : f32
+  } else {
+    scf.yield %bbArg : f32
+  }
   %2 = "foo"() ({
     "yield"(%1) : (f32) -> ()
   }) : () -> (f32)
   return %2 : f32
 }
+// CHECK-LABEL: func @ignore_basic_block_arguments()
+//       CHECK:   arith.constant true
+//       CHECK:   %[[MOVED:.+]] = scf.if
+//       CHECK:   "before"
+//       CHECK:   %[[FOO:.+]] = "foo"
+//       CHECK:   return %[[FOO]]
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0 : !transform.any_op {transform.readonly}) {
@@ -153,18 +167,13 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
-// CHECK-LABEL: func @ignore_basic_block_arguments()
-//       CHECK:   %[[MOVED_1:.+]] = "moved_op"
-//       CHECK:   "before"
-//       CHECK:   %[[FOO:.+]] = "foo"
-//       CHECK:   return %[[FOO]]
 
 // -----
 
 // Fail when the "before" operation is part of the operation slice.
 func.func @do_not_move_slice() -> f32 {
-  %0 = "before"() : () -> (f32)
-  %1 = "moved_op"(%0) : (f32) -> (f32)
+  %0 = arith.constant {before} 1.0 : f32
+  %1 = arith.addf %0, %0 {moved_op} : f32
   %2 = "foo"(%1) : (f32) -> (f32)
   return %2 : f32
 }
@@ -173,7 +182,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0 : !transform.any_op {transform.readonly}) {
     %op1 = transform.structured.match ops{["foo"]} in %arg0
         : (!transform.any_op) -> !transform.any_op
-    %op2 = transform.structured.match ops{["before"]} in %arg0
+    %op2 = transform.structured.match attributes{before} in %arg0
         : (!transform.any_op) -> !transform.any_op
     // expected-remark@+1{{cannot move dependencies before operation in backward slice of op}}
     transform.test.move_operand_deps %op1 before %op2
@@ -186,11 +195,15 @@ module attributes {transform.with_named_sequence} {
 
 // Fail when the "before" operation is part of the operation slice (computed
 // when looking through implicitly captured values).
-func.func @do_not_move_slice() -> f32 {
-  %0 = "before"() : () -> (f32)
-  %1 = "moved_op"() ({
-    "yield"(%0) : (f32) -> ()
-  }) : () -> (f32)
+func.func @do_not_move_slice_region() -> f32 {
+  %cond = arith.constant true
+  %0 = arith.constant {before} 1.0 : f32
+  %1 = scf.if %cond -> f32 {
+    %inner = arith.addf %0, %0 : f32
+    scf.yield %inner : f32
+  } else {
+    scf.yield %0 : f32
+  }
   %2 = "foo"() ({
     "yield"(%1) : (f32) -> ()
   }) : () -> (f32)
@@ -201,7 +214,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0 : !transform.any_op {transform.readonly}) {
     %op1 = transform.structured.match ops{["foo"]} in %arg0
         : (!transform.any_op) -> !transform.any_op
-    %op2 = transform.structured.match ops{["before"]} in %arg0
+    %op2 = transform.structured.match attributes{before} in %arg0
         : (!transform.any_op) -> !transform.any_op
     // expected-remark@+1{{cannot move dependencies before operation in backward slice of op}}
     transform.test.move_operand_deps %op1 before %op2
@@ -213,8 +226,8 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 // Dont move ops when insertion point does not dominate the op
-func.func @do_not_move() -> f32 {
-  %1 = "moved_op"() : () -> (f32)
+func.func @do_not_move(%arg0 : f32) -> f32 {
+  %1 = arith.addf %arg0, %arg0 {moved_op} : f32
   %2 = "foo"() ({
     "yield"(%1) : (f32) -> ()
   }) : () -> (f32)
@@ -441,24 +454,28 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// Do not move across basic blocks
-func.func @no_move_across_basic_blocks() -> (index, index) {
-  %0 = "unmoved_op"() : () -> (index)
-  %1 = "before"() : () -> (index)
-  cf.br ^bb0(%0 : index)
- ^bb0(%arg0 : index) :
-  %2 = arith.addi %arg0, %arg0 {moved_op} : index
-  return %1, %2 : index, index
+// Successfully move operation between blocks in the same region.
+// The function argument %arg0 dominates all blocks, so the move is valid.
+func.func @move_between_blocks_same_region(%arg0 : index, %cond : i1) -> index {
+  %0 = "before"() : () -> (index)
+  cf.cond_br %cond, ^bb1, ^bb2(%arg0 : index)
+^bb1:
+  %1 = arith.addi %arg0, %arg0 {to_move} : index
+  cf.br ^bb2(%1 : index)
+^bb2(%result : index):
+  return %result : index
 }
+// CHECK-LABEL: func @move_between_blocks_same_region
+// CHECK:         %[[MOVED:.+]] = arith.addi {{.*}} {to_move}
+// CHECK:         "before"
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0 : !transform.any_op {transform.readonly}) {
     %op1 = transform.structured.match ops{["before"]} in %arg0
         : (!transform.any_op) -> !transform.any_op
-    %op2 = transform.structured.match ops{["arith.addi"]} in %arg0
+    %op2 = transform.structured.match attributes{to_move} in %arg0
         : (!transform.any_op) -> !transform.any_op
     %v1 = transform.get_result %op2[0] : (!transform.any_op) -> !transform.any_value
-    // expected-remark@+1{{unsupported case of moving definition of value before an insertion point in a different basic block}}
     transform.test.move_value_defns %v1 before %op1
         : (!transform.any_value), !transform.any_op
     transform.yield
@@ -467,24 +484,287 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-func.func @move_isolated_from_above(%arg0 : index) -> () {
-  %1 = "before"() : () -> (index)
-  %2 = arith.addi %arg0, %arg0 {moved0} : index
-  %3 = arith.muli %2, %2 {moved1} : index
-  return
+
+//===----------------------------------------------------------------------===//
+// Cross-region move tests
+//===----------------------------------------------------------------------===//
+
+// Move multiple values with dependencies out of nested region
+func.func @move_chain_out_of_region(%arg0 : index, %cond : i1) -> index {
+  %0 = "before"() : () -> (index)
+  %1 = scf.if %cond -> index {
+    %2 = arith.addi %arg0, %arg0 {dep1} : index
+    %3 = arith.muli %2, %2 {dep2} : index
+    %4 = arith.subi %3, %arg0 {to_move} : index
+    scf.yield %4 : index
+  } else {
+    scf.yield %arg0 : index
+  }
+  return %1 : index
 }
-// CHECK-LABEL: func @move_isolated_from_above(
-//       CHECK:   %[[MOVED0:.+]] = arith.addi {{.*}} {moved0}
-//       CHECK:   %[[MOVED1:.+]] = arith.muli %[[MOVED0]], %[[MOVED0]] {moved1}
-//       CHECK:   %[[BEFORE:.+]] = "before"
+// CHECK-LABEL: func @move_chain_out_of_region(
+//       CHECK:   arith.addi {{.*}} {dep1}
+//       CHECK:   arith.muli {{.*}} {dep2}
+//       CHECK:   arith.subi {{.*}} {to_move}
+//       CHECK:   "before"
+//       CHECK:   scf.if
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0 : !transform.any_op {transform.readonly}) {
     %op1 = transform.structured.match ops{["before"]} in %arg0
         : (!transform.any_op) -> !transform.any_op
-    %op2 = transform.structured.match ops{["arith.muli"]} in %arg0
+    %op2 = transform.structured.match attributes{to_move} in %arg0
         : (!transform.any_op) -> !transform.any_op
     %v1 = transform.get_result %op2[0] : (!transform.any_op) -> !transform.any_value
+    transform.test.move_value_defns %v1 before %op1
+        : (!transform.any_value), !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// moveValueDefinitions: cannot move when slice has side-effecting ops
+func.func @move_value_defs_side_effecting(%arg0 : memref<index>) -> index {
+  %0 = "before"() : () -> (index)
+  %1 = memref.load %arg0[] : memref<index>
+  %2 = arith.muli %1, %1 {moved_op} : index
+  return %2 : index
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0 : !transform.any_op {transform.readonly}) {
+    %op1 = transform.structured.match ops{["before"]} in %arg0
+        : (!transform.any_op) -> !transform.any_op
+    %op2 = transform.structured.match attributes{moved_op} in %arg0
+        : (!transform.any_op) -> !transform.any_op
+    %v1 = transform.get_result %op2[0] : (!transform.any_op) -> !transform.any_value
+    // expected-remark@+1{{cannot move value definitions with side-effecting operations in the slice}}
+    transform.test.move_value_defns %v1 before %op1
+        : (!transform.any_value), !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// moveOperationDependencies: cannot move when slice has side-effecting ops
+func.func @move_op_deps_side_effecting(%arg0 : memref<index>) -> index {
+  %0 = "before"() : () -> (index)
+  %1 = memref.load %arg0[] : memref<index>
+  %2 = arith.muli %1, %1 {moved_op} : index
+  %3 = "foo"(%2) : (index) -> (index)
+  return %3 : index
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0 : !transform.any_op {transform.readonly}) {
+    %op1 = transform.structured.match ops{["foo"]} in %arg0
+        : (!transform.any_op) -> !transform.any_op
+    %op2 = transform.structured.match ops{["before"]} in %arg0
+        : (!transform.any_op) -> !transform.any_op
+    // expected-remark@+1{{cannot move operation with side-effecting dependencies}}
+    transform.test.move_operand_deps %op1 before %op2
+        : !transform.any_op, !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Can move op using outer loop's IV when staying within outer loop
+func.func @move_op_using_outer_loop_iv(%lb : index, %ub : index, %step : index) -> index {
+  %result = scf.for %outer_iv = %lb to %ub step %step iter_args(%acc = %lb) -> index {
+    %before = "before"() : () -> (index)
+    scf.for %inner_iv = %lb to %ub step %step {
+      // Uses outer_iv which dominates within the outer loop body
+      %x = arith.addi %outer_iv, %outer_iv {to_move} : index
+      "use"(%x) : (index) -> ()
+    }
+    scf.yield %acc : index
+  }
+  return %result : index
+}
+// CHECK-LABEL: func @move_op_using_outer_loop_iv(
+//       CHECK:   scf.for %[[OUTER_IV:[a-zA-Z0-9_]+]] =
+//       CHECK:     arith.addi %[[OUTER_IV]], %[[OUTER_IV]] {to_move}
+//       CHECK:     "before"
+//       CHECK:     scf.for
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0 : !transform.any_op {transform.readonly}) {
+    %op1 = transform.structured.match ops{["before"]} in %arg0
+        : (!transform.any_op) -> !transform.any_op
+    %op2 = transform.structured.match attributes{to_move} in %arg0
+        : (!transform.any_op) -> !transform.any_op
+    %v1 = transform.get_result %op2[0] : (!transform.any_op) -> !transform.any_value
+    transform.test.move_value_defns %v1 before %op1
+        : (!transform.any_value), !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Move out of doubly nested non-isolated region
+func.func @move_out_of_doubly_nested_region(%arg0 : index, %cond1 : i1, %cond2 : i1) -> index {
+  %0 = "before"() : () -> (index)
+  %1 = scf.if %cond1 -> index {
+    %2 = scf.if %cond2 -> index {
+      %3 = arith.addi %arg0, %arg0 {to_move} : index
+      scf.yield %3 : index
+    } else {
+      scf.yield %arg0 : index
+    }
+    scf.yield %2 : index
+  } else {
+    scf.yield %arg0 : index
+  }
+  return %1 : index
+}
+// CHECK-LABEL: func @move_out_of_doubly_nested_region(
+//       CHECK:   %[[MOVED:.+]] = arith.addi {{.*}} {to_move}
+//       CHECK:   %[[BEFORE:.+]] = "before"
+//       CHECK:   scf.if
+//       CHECK:     scf.if
+//       CHECK:       scf.yield %[[MOVED]]
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0 : !transform.any_op {transform.readonly}) {
+    %op1 = transform.structured.match ops{["before"]} in %arg0
+        : (!transform.any_op) -> !transform.any_op
+    %op2 = transform.structured.match attributes{to_move} in %arg0
+        : (!transform.any_op) -> !transform.any_op
+    %v1 = transform.get_result %op2[0] : (!transform.any_op) -> !transform.any_value
+    transform.test.move_value_defns %v1 before %op1
+        : (!transform.any_value), !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Move operand deps out of nested region
+func.func @move_operand_deps_out_of_region(%arg0 : index, %cond : i1) -> index {
+  %0 = "before"() : () -> (index)
+  %1 = scf.if %cond -> index {
+    %2 = arith.addi %arg0, %arg0 {dep} : index
+    %3 = "foo"(%2) {target} : (index) -> (index)
+    scf.yield %3 : index
+  } else {
+    scf.yield %arg0 : index
+  }
+  return %1 : index
+}
+// CHECK-LABEL: func @move_operand_deps_out_of_region(
+//       CHECK:   %[[DEP:.+]] = arith.addi {{.*}} {dep}
+//       CHECK:   %[[BEFORE:.+]] = "before"
+//       CHECK:   scf.if
+//       CHECK:     "foo"(%[[DEP]]) {target}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0 : !transform.any_op {transform.readonly}) {
+    %op1 = transform.structured.match ops{["foo"]} in %arg0
+        : (!transform.any_op) -> !transform.any_op
+    %op2 = transform.structured.match ops{["before"]} in %arg0
+        : (!transform.any_op) -> !transform.any_op
+    transform.test.move_operand_deps %op1 before %op2
+        : !transform.any_op, !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Cannot move op that depends on loop induction variable (block argument)
+func.func @cannot_move_op_using_loop_iv(%arg0 : index, %lb : index, %ub : index, %step : index) -> index {
+  %0 = "before"() : () -> (index)
+  %1 = scf.for %iv = %lb to %ub step %step iter_args(%acc = %arg0) -> index {
+    %2 = arith.addi %iv, %iv {to_move} : index
+    %3 = arith.addi %acc, %2 : index
+    scf.yield %3 : index
+  }
+  return %1 : index
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0 : !transform.any_op {transform.readonly}) {
+    %op1 = transform.structured.match ops{["before"]} in %arg0
+        : (!transform.any_op) -> !transform.any_op
+    %op2 = transform.structured.match attributes{to_move} in %arg0
+        : (!transform.any_op) -> !transform.any_op
+    %v1 = transform.get_result %op2[0] : (!transform.any_op) -> !transform.any_value
+    // expected-remark@+1{{moving op would break dominance for block argument operand}}
+    transform.test.move_value_defns %v1 before %op1
+        : (!transform.any_value), !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Cannot move out of an isolated-from-above region, even when op is in a
+// non-isolated region nested inside the isolated region
+func.func @cannot_move_out_of_isolated_region(%arg0 : index, %cond : i1) -> index {
+  %0 = "before"() : () -> (index)
+  %1 = "test.isolated_one_region_op"(%arg0, %cond) ({
+    ^bb0(%inner_arg: index, %inner_cond: i1):
+      // scf.if is NOT isolated, but it's inside an isolated region
+      %2 = scf.if %inner_cond -> index {
+        %3 = arith.addi %inner_arg, %inner_arg {to_move} : index
+        scf.yield %3 : index
+      } else {
+        scf.yield %inner_arg : index
+      }
+      "test.region_yield"(%2) : (index) -> ()
+  }) : (index, i1) -> (index)
+  return %1 : index
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0 : !transform.any_op {transform.readonly}) {
+    %op1 = transform.structured.match ops{["before"]} in %arg0
+        : (!transform.any_op) -> !transform.any_op
+    %op2 = transform.structured.match attributes{to_move} in %arg0
+        : (!transform.any_op) -> !transform.any_op
+    %v1 = transform.get_result %op2[0] : (!transform.any_op) -> !transform.any_value
+    // expected-remark@+1{{cannot move value definition across isolated-from-above region}}
+    transform.test.move_value_defns %v1 before %op1
+        : (!transform.any_value), !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Fail when trying to move an operation whose region captures a block argument
+// that wouldn't dominate at the insertion point.
+func.func @captured_block_arg_does_not_dominate(%arg0 : f32, %cond : i1) -> f32 {
+  %0 = arith.addf %arg0, %arg0 {before} : f32
+  cf.br ^bb1(%0 : f32)
+^bb1(%bbArg : f32):
+  // scf.if will be part of the slice that needs to move.
+  // It has a region that captures %bbArg from bb1.
+  // Moving it before the {before} op in the entry block would be invalid
+  // because %bbArg (a block argument of bb1) doesn't dominate the entry block.
+  %1 = scf.if %cond -> f32 {
+    %inner = arith.addf %bbArg, %bbArg : f32
+    scf.yield %inner : f32
+  } else {
+    scf.yield %bbArg : f32
+  }
+  %2 = arith.mulf %1, %1 {target} : f32
+  return %2 : f32
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0 : !transform.any_op {transform.readonly}) {
+    %op1 = transform.structured.match attributes{before} in %arg0
+        : (!transform.any_op) -> !transform.any_op
+    %op2 = transform.structured.match attributes{target} in %arg0
+        : (!transform.any_op) -> !transform.any_op
+    %v1 = transform.get_result %op2[0] : (!transform.any_op) -> !transform.any_value
+    // expected-remark@+1{{moving op would break dominance for block argument operand}}
     transform.test.move_value_defns %v1 before %op1
         : (!transform.any_value), !transform.any_op
     transform.yield

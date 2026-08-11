@@ -9,8 +9,8 @@
 #include "src/stdlib/strfroml.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/macros/config.h"
-#include "src/stdio/printf_core/core_structs.h"
-#include "src/stdio/printf_core/error_mapper.h"
+#include "src/__support/printf_core/core_structs.h"
+#include "src/__support/printf_core/error_mapper.h"
 #include "src/stdlib/str_from_util.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -24,7 +24,7 @@ LLVM_LIBC_FUNCTION(int, strfroml,
       internal::parse_format_string(format, fp);
 
   // To ensure that the conversion function actually uses long double,
-  // the length modifier has to be set to LenghtModifier::L
+  // the length modifier has to be set to LengthModifier::L
   section.length_modifier = printf_core::LengthModifier::L;
 
   printf_core::DropOverflowBuffer wb(s, (n > 0 ? n - 1 : 0));

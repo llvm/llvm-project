@@ -37,6 +37,42 @@ func.func @test_parallel_if(%arg0: memref<10xi32>, %cond: i1) {
 
 // -----
 
+// Test acc.parallel if lowering when host fallback region has multiple blocks.
+// CHECK-LABEL: func.func @test_parallel_if_multiblock
+func.func @test_parallel_if_multiblock(%cond: i1, %n: i32) {
+  %c0_i32 = arith.constant 0 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %counter = memref.alloca() : memref<i32>
+  memref.store %n, %counter[] : memref<i32>
+
+  // CHECK-NOT: acc.parallel if
+  // CHECK: scf.if %{{.*}} {
+  // CHECK:   acc.parallel {
+  // CHECK: } else {
+  // CHECK:   scf.execute_region {
+  // CHECK:   ^bb
+  // CHECK:   cf.cond_br
+  // CHECK:   scf.yield
+  // CHECK:   }
+  // CHECK: }
+  acc.parallel if(%cond) {
+    cf.br ^bb1
+  ^bb1:
+    %v = memref.load %counter[] : memref<i32>
+    %pred = arith.cmpi sgt, %v, %c0_i32 : i32
+    cf.cond_br %pred, ^bb2, ^bb3
+  ^bb2:
+    %next = arith.subi %v, %c1_i32 : i32
+    memref.store %next, %counter[] : memref<i32>
+    cf.br ^bb1
+  ^bb3:
+    acc.yield
+  }
+  return
+}
+
+// -----
+
 // Test acc.kernels with if condition
 // CHECK-LABEL: func.func @test_kernels_if
 func.func @test_kernels_if(%arg0: memref<5xi32>, %cond: i1) {
@@ -222,3 +258,250 @@ func.func @test_acc_var_replacement(%arg0: memref<10xi32>, %cond: i1) {
   return
 }
 
+// -----
+
+// Test that acc variable uses in host path are replaced with host variables;
+// and the firstprivate operands are cloned
+// CHECK-LABEL: func.func @test_acc_firstprivate
+
+acc.firstprivate.recipe @memref_i32 : memref<i32> init {
+^bb0(%arg0: memref<i32>):
+  %0 = memref.alloca() : memref<i32>
+  acc.yield %0 : memref<i32>
+} copy {
+^bb0(%arg0: memref<i32>, %arg1: memref<i32>):
+  %0 = memref.load %arg0[] : memref<i32>
+  memref.store %0, %arg1[] : memref<i32>
+  acc.terminator
+}
+
+func.func @test_acc_firstprivate(%arg0: memref<10xi32>, %arg1: memref<i32>, %cond: i1) {
+  %c0_i32 = arith.constant 0 : i32
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+
+  %copyin = acc.copyin varPtr(%arg0 : memref<10xi32>) -> memref<10xi32>
+  %firstprivate = acc.firstprivate varPtr(%arg1 : memref<i32>) recipe(@memref_i32) -> memref<i32>
+
+  // In the else branch, uses of %firstprivate should be replaced with %arg0
+  // CHECK: scf.if
+  // CHECK: [[FIRSTPRIVATE:%.*]] = acc.firstprivate varPtr(%arg1 : memref<i32>) recipe(@memref_i32) -> memref<i32>
+  // CHECK: acc.parallel {{.*}} firstprivate([[FIRSTPRIVATE]] : memref<i32>) {
+  // CHECK: } else {
+  // CHECK: [[LOAD:%.*]] = memref.load %arg1[] : memref<i32>
+  // CHECK: }
+
+  acc.parallel dataOperands(%copyin : memref<10xi32>) firstprivate(%firstprivate : memref<i32>) if(%cond) {
+    %load = memref.load %firstprivate[] : memref<i32>
+    %ub = arith.index_cast %load : i32 to index
+    scf.for %i = %c1 to %ub step %c1 {
+      // Use the acc ptr inside the region
+      memref.store %c0_i32, %copyin[%i] : memref<10xi32>
+    }
+    acc.yield
+  }
+
+  acc.copyout accPtr(%copyin : memref<10xi32>) to varPtr(%arg0 : memref<10xi32>)
+  return
+}
+
+// -----
+
+// Test that acc variable uses in host path are replaced with host variables;
+// and the reduction operands are cloned
+// CHECK-LABEL: func.func @test_acc_reduction
+
+acc.reduction.recipe @reduction_add_memref_i32 : memref<i32> reduction_operator <add> init {
+^bb0(%arg0: memref<i32>):
+  %c0_i32 = arith.constant 0 : i32
+  %0 = memref.alloca() : memref<i32>
+  memref.store %c0_i32, %0[] : memref<i32>
+  acc.yield %0 : memref<i32>
+} combiner {
+^bb0(%arg0: memref<i32>, %arg1: memref<i32>):
+  %0 = memref.load %arg1[] : memref<i32>
+  %1 = memref.load %arg0[] : memref<i32>
+  %2 = arith.addi %1, %0 : i32
+  memref.store %2, %arg0[] : memref<i32>
+  acc.yield %arg0 : memref<i32>
+}
+
+func.func @test_acc_reduction(%arg0: memref<i32>, %cond: i1) {
+
+  %c0_i32 = arith.constant 0 : i32
+  %reduction = acc.reduction varPtr(%arg0 : memref<i32>) recipe(@reduction_add_memref_i32) -> memref<i32>
+
+  // In the else branch, uses of %reduction should be replaced with %arg0
+  // CHECK: scf.if
+  // CHECK: [[REDUCTION:%.*]] = acc.reduction varPtr(%arg0 : memref<i32>) recipe(@reduction_add_memref_i32) -> memref<i32>
+  // CHECK: acc.parallel reduction([[REDUCTION]] : memref<i32>) {
+  // CHECK: } else {
+  // CHECK: [[LOAD:%.*]] = memref.load %arg0[] : memref<i32>
+  // CHECK: memref.store {{.*}}, %arg0[] : memref<i32>
+  // CHECK: }
+
+  acc.parallel reduction(%reduction : memref<i32>) if(%cond) {
+    %load = memref.load %reduction[] : memref<i32>
+    %add = arith.addi %load, %c0_i32 : i32
+    memref.store %add, %reduction[] : memref<i32>
+    acc.yield
+  }
+  return
+}
+
+acc.private.recipe @privatization_memref_i32 : memref<i32> init {
+^bb0(%arg0: memref<i32>):
+  %0 = memref.alloca() : memref<i32>
+  acc.yield %0 : memref<i32>
+}
+
+func.func @test_acc_private(%arg0: memref<i32>, %cond: i1) {
+
+  %c0_i32 = arith.constant 0 : i32
+  %private = acc.private varPtr(%arg0 : memref<i32>) recipe(@privatization_memref_i32) -> memref<i32>
+
+  // In the else branch, uses of %private should be replaced with %arg0
+  // CHECK: scf.if
+  // CHECK: [[PRIVATE:%.*]] = acc.private varPtr(%arg0 : memref<i32>) recipe(@privatization_memref_i32) -> memref<i32>
+  // CHECK: acc.parallel private([[PRIVATE]] : memref<i32>) {
+  // CHECK: } else {
+  // CHECK: memref.store {{.*}}, %arg0[] : memref<i32>
+  // CHECK: }
+
+  acc.parallel private(%private : memref<i32>) if(%cond) {
+    memref.store %c0_i32, %private[] : memref<i32>
+    acc.yield
+  }
+  return
+}
+
+// -----
+
+// Test that an acc.parallel with an if clause whose body holds an
+// acc.atomic.capture lowers cleanly: the device path keeps the capture and the
+// host fallback inlines it.
+// CHECK-LABEL: func.func @test_parallel_if_atomic_capture
+func.func @test_parallel_if_atomic_capture(%x: memref<i32>, %v: memref<i32>, %cond: i1) {
+  %c1_i32 = arith.constant 1 : i32
+  // CHECK-NOT: acc.parallel if
+  // CHECK: scf.if %{{.*}} {
+  // CHECK:   acc.parallel {
+  // CHECK:     acc.atomic.capture {
+  // CHECK:   } else {
+  // CHECK-NOT: acc.atomic.capture
+  // CHECK:     memref.load
+  // CHECK:     arith.addi
+  // CHECK:     memref.store
+  // CHECK:   }
+  acc.parallel if(%cond) {
+    acc.atomic.capture {
+      acc.atomic.update %x : memref<i32> {
+      ^bb0(%arg: i32):
+        %r = arith.addi %arg, %c1_i32 : i32
+        acc.yield %r : i32
+      }
+      acc.atomic.read %v = %x : memref<i32>, memref<i32>, i32
+    }
+    acc.yield
+  }
+  return
+}
+
+// -----
+
+// A data entry op (acc.present) shared by an enclosing acc.data and a nested
+// acc.kernels that has an if clause. Lowering the kernels' if clause must not
+// erase or rewrite the present op that acc.data still uses (otherwise acc.data
+// ends up with a non data-entry op as its data operand and fails to verify).
+// CHECK-LABEL: func.func @test_kernels_if_shared_present
+func.func @test_kernels_if_shared_present(%arg0: memref<10xi32>, %cond: i1) {
+  %c0_i32 = arith.constant 0 : i32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  // CHECK: %[[PRESENT:.*]] = acc.present varPtr(%arg0 : memref<10xi32>) -> memref<10xi32>
+  %present = acc.present varPtr(%arg0 : memref<10xi32>) -> memref<10xi32>
+  // The enclosing acc.data must keep referencing the original present op.
+  // CHECK: acc.data dataOperands(%[[PRESENT]] : memref<10xi32>) {
+  acc.data dataOperands(%present : memref<10xi32>) {
+    // CHECK: scf.if %{{.*}} {
+    // The externally owned present op is referenced directly, not cloned/erased.
+    // CHECK-NOT: acc.present
+    // CHECK:   acc.kernels dataOperands(%[[PRESENT]] : memref<10xi32>)
+    // CHECK: } else {
+    // Host path uses the original variable, not the present result.
+    // CHECK:   memref.store %{{.*}}, %arg0[%{{.*}}] : memref<10xi32>
+    // CHECK: }
+    acc.kernels dataOperands(%present : memref<10xi32>) if(%cond) {
+      scf.for %i = %c0 to %c10 step %c1 {
+        memref.store %c0_i32, %present[%i] : memref<10xi32>
+      }
+      acc.terminator
+    }
+    acc.terminator
+  }
+  return
+}
+
+// -----
+
+// A data entry and exit shared by sibling compute constructs belong to their
+// surrounding scope. Neither conditional lowering may clone or erase them.
+// CHECK-LABEL: func.func @test_sibling_compute_shared_data
+func.func @test_sibling_compute_shared_data(%arg0: memref<10xi32>, %cond0: i1, %cond1: i1) {
+  %c0_i32 = arith.constant 0 : i32
+  %c0 = arith.constant 0 : index
+  // CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%arg0 : memref<10xi32>) -> memref<10xi32>
+  %copyin = acc.copyin varPtr(%arg0 : memref<10xi32>) -> memref<10xi32>
+  // CHECK: scf.if %{{.*}} {
+  // CHECK:   acc.parallel dataOperands(%[[COPYIN]] : memref<10xi32>)
+  // CHECK-NOT: acc.copyout
+  // CHECK: } else {
+  // CHECK:   memref.store %{{.*}}, %arg0[%{{.*}}] : memref<10xi32>
+  // CHECK: }
+  acc.parallel dataOperands(%copyin : memref<10xi32>) if(%cond0) {
+    memref.store %c0_i32, %copyin[%c0] : memref<10xi32>
+    acc.yield
+  }
+  // CHECK: scf.if %{{.*}} {
+  // CHECK:   acc.serial dataOperands(%[[COPYIN]] : memref<10xi32>)
+  // CHECK-NOT: acc.copyout
+  // CHECK: } else {
+  // CHECK:   memref.store %{{.*}}, %arg0[%{{.*}}] : memref<10xi32>
+  // CHECK: }
+  acc.serial dataOperands(%copyin : memref<10xi32>) if(%cond1) {
+    memref.store %c0_i32, %copyin[%c0] : memref<10xi32>
+    acc.yield
+  }
+  // CHECK: acc.copyout accPtr(%[[COPYIN]] : memref<10xi32>) to varPtr(%arg0 : memref<10xi32>)
+  acc.copyout accPtr(%copyin : memref<10xi32>) to varPtr(%arg0 : memref<10xi32>)
+  return
+}
+
+// -----
+
+// Duplicate data operands must preserve their multiplicity without cloning or
+// erasing the same entry/exit operation more than once.
+// CHECK-LABEL: func.func @test_duplicate_data_operand
+func.func @test_duplicate_data_operand(%arg0: memref<10xi32>, %cond: i1) {
+  %c0_i32 = arith.constant 0 : i32
+  %c0 = arith.constant 0 : index
+  %copyin = acc.copyin varPtr(%arg0 : memref<10xi32>) -> memref<10xi32>
+  // CHECK-NOT: acc.copyin
+  // CHECK: scf.if %{{.*}} {
+  // CHECK:   %[[COPYIN:.*]] = acc.copyin varPtr(%arg0 : memref<10xi32>) -> memref<10xi32>
+  // CHECK:   acc.parallel dataOperands(%[[COPYIN]], %[[COPYIN]] : memref<10xi32>, memref<10xi32>)
+  // CHECK:   acc.copyout accPtr(%[[COPYIN]] : memref<10xi32>) to varPtr(%arg0 : memref<10xi32>)
+  // CHECK-NOT: acc.copyout
+  // CHECK: } else {
+  // CHECK:   memref.store %{{.*}}, %arg0[%{{.*}}] : memref<10xi32>
+  // CHECK: }
+  // CHECK-NOT: acc.copyout
+  // CHECK: return
+  acc.parallel dataOperands(%copyin, %copyin : memref<10xi32>, memref<10xi32>) if(%cond) {
+    memref.store %c0_i32, %copyin[%c0] : memref<10xi32>
+    acc.yield
+  }
+  acc.copyout accPtr(%copyin : memref<10xi32>) to varPtr(%arg0 : memref<10xi32>)
+  return
+}

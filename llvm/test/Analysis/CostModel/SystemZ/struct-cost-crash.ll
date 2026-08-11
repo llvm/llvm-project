@@ -11,10 +11,10 @@ declare { i64, i32 } @bar()
 
 define i8 @foo() {
 ; CHECK-LABEL: 'foo'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br label %1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = call { i64, i32 } @bar()
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store { i64, i32 } %2, ptr inttoptr (i64 16 to ptr), align 16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: br label %1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %1
 ;
   br label %1
 

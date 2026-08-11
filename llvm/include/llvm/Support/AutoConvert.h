@@ -32,6 +32,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 int enablezOSAutoConversion(int FD);
+int enablezOSAutoConversionCcsid(int FD, int ccsid);
 int disablezOSAutoConversion(int FD);
 int restorezOSStdHandleAutoConversion(int FD);
 
@@ -45,7 +46,7 @@ namespace llvm {
 #ifdef __MVS__
 
 /** \brief Set the tag information for a file descriptor. */
-std::error_code setzOSFileTag(int FD, int CCSID, bool Text);
+std::error_code setzOSFileTag(int FD, int CCSID, bool IsText);
 
 /** \brief Get the the tag ccsid for a file name or a file descriptor. */
 ErrorOr<__ccsid_t> getzOSFileTag(const Twine &FileName, const int FD = -1);
@@ -54,6 +55,16 @@ ErrorOr<__ccsid_t> getzOSFileTag(const Twine &FileName, const int FD = -1);
  *  codepage.
  */
 ErrorOr<bool> needzOSConversion(const Twine &FileName, const int FD = -1);
+
+/** Copy the tag attributes from \a source to \a destination.
+ *
+ * @param Source The name of the source file.
+ * @param Destination The file descriptor of the destination file.
+ * @returns errc::success if the tag attributes were copied successfully,
+ *          otherwise returns a specific error_code.
+ */
+std::error_code copyFileTagAttributes(const std::string &Source,
+                                      const int DestinationFD);
 
 #endif /* __MVS__*/
 
@@ -73,6 +84,14 @@ inline std::error_code enableAutoConversion(int FD) {
   return std::error_code();
 }
 
+inline std::error_code enableAutoConversion(int FD, int ccsid) {
+#ifdef __MVS__
+  if (::enablezOSAutoConversionCcsid(FD, ccsid) == -1)
+    return errnoAsErrorCode();
+#endif
+  return std::error_code();
+}
+
 inline std::error_code restoreStdHandleAutoConversion(int FD) {
 #ifdef __MVS__
   if (::restorezOSStdHandleAutoConversion(FD) == -1)
@@ -81,9 +100,9 @@ inline std::error_code restoreStdHandleAutoConversion(int FD) {
   return std::error_code();
 }
 
-inline std::error_code setFileTag(int FD, int CCSID, bool Text) {
+inline std::error_code setFileTag(int FD, int CCSID, bool IsText) {
 #ifdef __MVS__
-  return setzOSFileTag(FD, CCSID, Text);
+  return setzOSFileTag(FD, CCSID, IsText);
 #endif
   return std::error_code();
 }

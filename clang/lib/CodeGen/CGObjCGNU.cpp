@@ -563,7 +563,20 @@ public:
   CGObjCGNU(CodeGenModule &cgm, unsigned runtimeABIVersion,
       unsigned protocolClassVersion, unsigned classABI=1);
 
-  ConstantAddress GenerateConstantString(const StringLiteral *) override;
+  ConstantAddress GenerateConstantString(const StringLiteral *SL) override;
+
+  ConstantAddress GenerateConstantNumber(const bool Value,
+                                         const QualType &Ty) override;
+  ConstantAddress GenerateConstantNumber(const llvm::APSInt &Value,
+                                         const QualType &Ty) override;
+  ConstantAddress GenerateConstantNumber(const llvm::APFloat &Value,
+                                         const QualType &Ty) override;
+  ConstantAddress
+  GenerateConstantArray(const ArrayRef<llvm::Constant *> &Objects) override;
+  ConstantAddress GenerateConstantDictionary(
+      const ObjCDictionaryLiteral *E,
+      ArrayRef<std::pair<llvm::Constant *, llvm::Constant *>> KeysAndObjects)
+      override;
 
   RValue
   GenerateMessageSend(CodeGenFunction &CGF, ReturnValueSlot Return,
@@ -600,6 +613,9 @@ public:
   // Map to unify direct method definitions.
   llvm::DenseMap<const ObjCMethodDecl *, llvm::Function *>
       DirectMethodDefinitions;
+  void GenerateDirectMethodsPreconditionCheck(
+      CodeGenFunction &CGF, llvm::Function *Fn, const ObjCMethodDecl *OMD,
+      const ObjCContainerDecl *CD) override;
   void GenerateDirectMethodPrologue(CodeGenFunction &CGF, llvm::Function *Fn,
                                     const ObjCMethodDecl *OMD,
                                     const ObjCContainerDecl *CD) override;
@@ -833,8 +849,8 @@ class CGObjCGNUstep : public CGObjCGNU {
         EnterCatchFn.init(&CGM, "__cxa_begin_catch", PtrTy, PtrTy);
         // void __cxa_end_catch(void)
         ExitCatchFn.init(&CGM, "__cxa_end_catch", VoidTy);
-        // void objc_exception_rethrow(void*)
-        ExceptionReThrowFn.init(&CGM, "__cxa_rethrow", PtrTy);
+        // void __cxa_rethrow(void)
+        ExceptionReThrowFn.init(&CGM, "__cxa_rethrow", VoidTy);
       } else if (usesSEHExceptions) {
         // void objc_exception_rethrow(void)
         ExceptionReThrowFn.init(&CGM, "objc_exception_rethrow", VoidTy);
@@ -2726,6 +2742,37 @@ ConstantAddress CGObjCGNU::GenerateConstantString(const StringLiteral *SL) {
   return ConstantAddress(ObjCStr, Int8Ty, Align);
 }
 
+ConstantAddress CGObjCGNU::GenerateConstantNumber(const bool Value,
+                                                  const QualType &Ty) {
+  llvm_unreachable("Method should not be called, no GNU runtimes provide these "
+                   "or support ObjC number literal constant initializers");
+}
+
+ConstantAddress CGObjCGNU::GenerateConstantNumber(const llvm::APSInt &Value,
+                                                  const QualType &Ty) {
+  llvm_unreachable("Method should not be called, no GNU runtimes provide these "
+                   "or support ObjC number literal constant initializers");
+}
+
+ConstantAddress CGObjCGNU::GenerateConstantNumber(const llvm::APFloat &Value,
+                                                  const QualType &Ty) {
+  llvm_unreachable("Method should not be called, no GNU runtimes provide these "
+                   "or support ObjC number literal constant initializers");
+}
+
+ConstantAddress
+CGObjCGNU::GenerateConstantArray(const ArrayRef<llvm::Constant *> &Objects) {
+  llvm_unreachable("Method should not be called, no GNU runtimes provide these "
+                   "or support ObjC array literal constant initializers");
+}
+
+ConstantAddress CGObjCGNU::GenerateConstantDictionary(
+    const ObjCDictionaryLiteral *E,
+    ArrayRef<std::pair<llvm::Constant *, llvm::Constant *>> KeysAndObjects) {
+  llvm_unreachable("Method should not be called, no GNU runtimes provide these "
+                   "or support ObjC dictionary literal constant initializers");
+}
+
 ///Generates a message send where the super is the receiver.  This is a message
 ///send to self with special delivery semantics indicating which class's method
 ///should be called.
@@ -4198,11 +4245,19 @@ llvm::Function *CGObjCGNU::GenerateMethod(const ObjCMethodDecl *OMD,
   return Fn;
 }
 
+void CGObjCGNU::GenerateDirectMethodsPreconditionCheck(
+    CodeGenFunction &CGF, llvm::Function *Fn, const ObjCMethodDecl *OMD,
+    const ObjCContainerDecl *CD) {
+  llvm_unreachable(
+      "Direct method precondition checks not supported in GNU runtime yet");
+}
+
 void CGObjCGNU::GenerateDirectMethodPrologue(CodeGenFunction &CGF,
                                              llvm::Function *Fn,
                                              const ObjCMethodDecl *OMD,
                                              const ObjCContainerDecl *CD) {
-  // GNU runtime doesn't support direct calls at this time
+  llvm_unreachable(
+      "Direct method precondition checks not supported in GNU runtime yet");
 }
 
 llvm::FunctionCallee CGObjCGNU::GetPropertyGetFunction() {

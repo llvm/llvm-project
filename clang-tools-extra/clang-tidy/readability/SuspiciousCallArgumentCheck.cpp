@@ -188,8 +188,9 @@ static bool applySubstringHeuristic(StringRef Arg, StringRef Param,
           Current[J] = 1 + Previous[J - 1];
 
         MaxLength = std::max(MaxLength, Current[J]);
-      } else
+      } else {
         Current[J] = 0;
+      }
     }
 
     Current.swap(Previous);
@@ -203,7 +204,7 @@ static bool applyLevenshteinHeuristic(StringRef Arg, StringRef Param,
                                       int8_t Threshold) {
   const std::size_t LongerLength = std::max(Arg.size(), Param.size());
   double Dist = Arg.edit_distance(Param);
-  Dist = (1.0 - Dist / LongerLength) * 100.0;
+  Dist = (1.0 - (Dist / LongerLength)) * 100.0;
   return Dist > Threshold;
 }
 
@@ -500,13 +501,13 @@ SuspiciousCallArgumentCheck::SuspiciousCallArgumentCheck(
     : ClangTidyCheck(Name, Context),
       MinimumIdentifierNameLength(Options.get(
           "MinimumIdentifierNameLength", DefaultMinimumIdentifierNameLength)) {
-  auto GetToggleOpt = [this](Heuristic H) -> bool {
-    auto Idx = static_cast<std::size_t>(H);
+  const auto GetToggleOpt = [this](Heuristic H) -> bool {
+    const auto Idx = static_cast<std::size_t>(H);
     assert(Idx < HeuristicCount);
     return Options.get(HeuristicToString[Idx], Defaults[Idx].Enabled);
   };
-  auto GetBoundOpt = [this](Heuristic H, BoundKind BK) -> int8_t {
-    auto Idx = static_cast<std::size_t>(H);
+  const auto GetBoundOpt = [this](Heuristic H, BoundKind BK) -> int8_t {
+    const auto Idx = static_cast<std::size_t>(H);
     assert(Idx < HeuristicCount);
 
     SmallString<32> Key = HeuristicToString[Idx];
@@ -518,7 +519,7 @@ SuspiciousCallArgumentCheck::SuspiciousCallArgumentCheck(
     return Options.get(Key, Default);
   };
   for (std::size_t Idx = 0; Idx < HeuristicCount; ++Idx) {
-    auto H = static_cast<Heuristic>(Idx);
+    const auto H = static_cast<Heuristic>(Idx);
     if (GetToggleOpt(H))
       AppliedHeuristics.emplace_back(H);
     ConfiguredBounds.emplace_back(GetBoundOpt(H, BoundKind::DissimilarBelow),
@@ -528,7 +529,11 @@ SuspiciousCallArgumentCheck::SuspiciousCallArgumentCheck(
   for (const StringRef Abbreviation : optutils::parseStringList(
            Options.get("Abbreviations", DefaultAbbreviations))) {
     const auto [Key, Value] = Abbreviation.split("=");
-    assert(!Key.empty() && !Value.empty());
+    if (Key.empty() || Value.empty()) {
+      configurationDiag("Invalid abbreviation configuration '%0', ignoring.")
+          << Abbreviation;
+      continue;
+    }
     AbbreviationDictionary.try_emplace(Key, Value.str());
   }
 }
@@ -538,11 +543,11 @@ void SuspiciousCallArgumentCheck::storeOptions(
   Options.store(Opts, "MinimumIdentifierNameLength",
                 MinimumIdentifierNameLength);
   const auto &SetToggleOpt = [this, &Opts](Heuristic H) -> void {
-    auto Idx = static_cast<std::size_t>(H);
+    const auto Idx = static_cast<std::size_t>(H);
     Options.store(Opts, HeuristicToString[Idx], isHeuristicEnabled(H));
   };
   const auto &SetBoundOpt = [this, &Opts](Heuristic H, BoundKind BK) -> void {
-    auto Idx = static_cast<std::size_t>(H);
+    const auto Idx = static_cast<std::size_t>(H);
     assert(Idx < HeuristicCount);
     if (!Defaults[Idx].hasBounds())
       return;
@@ -554,7 +559,7 @@ void SuspiciousCallArgumentCheck::storeOptions(
   };
 
   for (std::size_t Idx = 0; Idx < HeuristicCount; ++Idx) {
-    auto H = static_cast<Heuristic>(Idx);
+    const auto H = static_cast<Heuristic>(Idx);
     SetToggleOpt(H);
     SetBoundOpt(H, BoundKind::DissimilarBelow);
     SetBoundOpt(H, BoundKind::SimilarAbove);
@@ -581,7 +586,7 @@ bool SuspiciousCallArgumentCheck::isHeuristicEnabled(Heuristic H) const {
 
 std::optional<int8_t>
 SuspiciousCallArgumentCheck::getBound(Heuristic H, BoundKind BK) const {
-  auto Idx = static_cast<std::size_t>(H);
+  const auto Idx = static_cast<std::size_t>(H);
   assert(Idx < HeuristicCount);
 
   if (!Defaults[Idx].hasBounds())
@@ -721,12 +726,11 @@ void SuspiciousCallArgumentCheck::setArgNamesAndTypes(
         ArgNames.push_back(Var->getName());
         continue;
       }
-      if (const auto *FCall = dyn_cast<FunctionDecl>(ArgExpr->getDecl())) {
-        if (FCall->getNameInfo().getName().isIdentifier()) {
-          ArgTypes.push_back(FCall->getType());
-          ArgNames.push_back(FCall->getName());
-          continue;
-        }
+      if (const auto *FCall = dyn_cast<FunctionDecl>(ArgExpr->getDecl());
+          FCall && FCall->getNameInfo().getName().isIdentifier()) {
+        ArgTypes.push_back(FCall->getType());
+        ArgNames.push_back(FCall->getName());
+        continue;
       }
     }
 

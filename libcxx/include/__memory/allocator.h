@@ -60,7 +60,7 @@ struct __non_trivially_default_constructible_if<true, _Unique> {
 
 template <class _Tp>
 class allocator
-// TODO(LLVM 24): Remove the opt-out
+// TODO(LLVM 25): Remove the opt-out
 #ifdef _LIBCPP_DEPRECATED_ABI_NON_TRIVIAL_ALLOCATOR
     : __non_trivially_default_constructible_if<!is_void<_Tp>::value, allocator<_Tp> >
 #endif
@@ -120,10 +120,11 @@ public:
     typedef allocator<_Up> other;
   };
 
-  _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI pointer address(reference __x) const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI pointer address(reference __x) const _NOEXCEPT {
     return std::addressof(__x);
   }
-  _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI const_pointer address(const_reference __x) const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI const_pointer
+  address(const_reference __x) const _NOEXCEPT {
     return std::addressof(__x);
   }
 
@@ -131,7 +132,7 @@ public:
     return allocate(__n);
   }
 
-  _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI size_type max_size() const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI size_type max_size() const _NOEXCEPT {
     return size_type(~0) / sizeof(_Tp);
   }
 

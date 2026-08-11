@@ -101,7 +101,7 @@ class ASTUnit {
   IntrusiveRefCntPtr<DiagnosticsEngine>   Diagnostics;
   IntrusiveRefCntPtr<FileManager>         FileMgr;
   IntrusiveRefCntPtr<SourceManager>       SourceMgr;
-  IntrusiveRefCntPtr<ModuleCache> ModCache;
+  std::shared_ptr<ModuleCache> ModCache;
   std::unique_ptr<HeaderSearch>           HeaderInfo;
   IntrusiveRefCntPtr<TargetInfo>          Target;
   std::shared_ptr<Preprocessor>           PP;
@@ -399,6 +399,8 @@ private:
   public:
     ConcurrencyState();
     ~ConcurrencyState();
+    ConcurrencyState(const ConcurrencyState &) = delete;
+    ConcurrencyState &operator=(const ConcurrencyState &) = delete;
 
     void start();
     void finish();
@@ -677,7 +679,7 @@ public:
   bool visitLocalTopLevelDecls(void *context, DeclVisitorFn Fn);
 
   /// Get the PCH file if one was included.
-  OptionalFileEntryRef getPCHFile();
+  std::optional<StringRef> getPCHFile();
 
   /// Returns true if the ASTUnit was constructed from a serialized
   /// module file.
@@ -950,6 +952,9 @@ public:
       SmallVectorImpl<StandaloneDiagnostic> *StandaloneDiags);
 
   ~CaptureDroppedDiagnostics();
+  CaptureDroppedDiagnostics(const CaptureDroppedDiagnostics &) = delete;
+  CaptureDroppedDiagnostics &
+  operator=(const CaptureDroppedDiagnostics &) = delete;
 };
 
 } // namespace clang

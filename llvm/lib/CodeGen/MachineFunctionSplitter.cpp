@@ -72,9 +72,7 @@ namespace {
 class MachineFunctionSplitter : public MachineFunctionPass {
 public:
   static char ID;
-  MachineFunctionSplitter() : MachineFunctionPass(ID) {
-    initializeMachineFunctionSplitterPass(*PassRegistry::getPassRegistry());
-  }
+  MachineFunctionSplitter() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
     return "Machine Function Splitter Transformation";

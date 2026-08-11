@@ -2,9 +2,13 @@
 ; RUN: llc < %s -o - -mcpu=sm_100a -march=nvptx64 -mattr=+ptx86 | FileCheck %s
 ; RUN: llc < %s -o - -mcpu=sm_101a -march=nvptx64 -mattr=+ptx86 | FileCheck %s
 ; RUN: llc < %s -o - -mcpu=sm_110a -march=nvptx64 -mattr=+ptx90 | FileCheck %s
+; RUN: llc < %s -o - -mcpu=sm_100f -march=nvptx64 -mattr=+ptx88 | FileCheck %s
+; RUN: llc < %s -o - -mcpu=sm_110f -march=nvptx64 -mattr=+ptx90 | FileCheck %s
 ; RUN: %if ptxas-sm_100a && ptxas-isa-8.6 %{ llc < %s -march=nvptx64 -mattr=+ptx86 -mcpu=sm_100a | %ptxas-verify -arch=sm_100a %}
 ; RUN: %if ptxas-sm_101a && ptxas-isa-8.6 %{ llc < %s -march=nvptx64 -mattr=+ptx86 -mcpu=sm_101a | %ptxas-verify -arch=sm_101a %}
 ; RUN: %if ptxas-sm_110a && ptxas-isa-9.0 %{ llc < %s -march=nvptx64 -mattr=+ptx90 -mcpu=sm_110a | %ptxas-verify -arch=sm_110a %}
+; RUN: %if ptxas-sm_100f && ptxas-isa-8.8 %{ llc < %s -march=nvptx64 -mattr=+ptx88 -mcpu=sm_100f | %ptxas-verify -arch=sm_100f %}
+; RUN: %if ptxas-sm_110f && ptxas-isa-9.0 %{ llc < %s -march=nvptx64 -mattr=+ptx90 -mcpu=sm_110f | %ptxas-verify -arch=sm_110f %}
 
 define void @tcgen05_mma_ws_fp16(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d) {
 ; CHECK-LABEL: tcgen05_mma_ws_fp16(
@@ -487,85 +491,5 @@ define void @tcgen05_mma_ws_f8f6f4(ptr addrspace(6) %dtmem, ptr addrspace(6) %at
   call void @llvm.nvvm.tcgen05.mma.ws.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 2, i32 0, i32 3)
 
   call void @llvm.nvvm.tcgen05.mma.ws.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 2, i32 0, i32 3)
-  ret void
-}
-
-define void @tcgen05_mma_ws_i8(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d) {
-; CHECK-LABEL: tcgen05_mma_ws_i8(
-; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<2>;
-; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .b32 %r<4>;
-; CHECK-NEXT:    .reg .b64 %rd<3>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [tcgen05_mma_ws_i8_param_5];
-; CHECK-NEXT:    and.b16 %rs2, %rs1, 1;
-; CHECK-NEXT:    setp.ne.b16 %p1, %rs2, 0;
-; CHECK-NEXT:    ld.param.b32 %r1, [tcgen05_mma_ws_i8_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [tcgen05_mma_ws_i8_param_2];
-; CHECK-NEXT:    ld.param.b64 %rd2, [tcgen05_mma_ws_i8_param_3];
-; CHECK-NEXT:    ld.param.b32 %r2, [tcgen05_mma_ws_i8_param_4];
-; CHECK-NEXT:    tcgen05.mma.ws.cta_group::1.kind::i8.collector::b0::discard [%r1], %rd1, %rd2, %r2, %p1;
-; CHECK-NEXT:    ld.param.b32 %r3, [tcgen05_mma_ws_i8_param_1];
-; CHECK-NEXT:    tcgen05.mma.ws.cta_group::1.kind::i8.collector::b0::discard [%r1], %rd1, %rd2, %r2, %p1;
-; CHECK-NEXT:    tcgen05.mma.ws.cta_group::1.kind::i8.collector::b0::discard [%r1], [%r3], %rd2, %r2, %p1;
-; CHECK-NEXT:    tcgen05.mma.ws.cta_group::1.kind::i8.collector::b0::discard [%r1], [%r3], %rd2, %r2, %p1;
-; CHECK-NEXT:    tcgen05.mma.ws.cta_group::1.kind::i8.collector::b0::discard [%r1], [%r3], %rd2, %r2, %p1;
-; CHECK-NEXT:    tcgen05.mma.ws.cta_group::1.kind::i8.collector::b0::lastuse [%r1], %rd1, %rd2, %r2, %p1;
-; CHECK-NEXT:    tcgen05.mma.ws.cta_group::1.kind::i8.collector::b0::discard [%r1], [%r3], %rd2, %r2, %p1;
-; CHECK-NEXT:    tcgen05.mma.ws.cta_group::1.kind::i8.collector::b0::lastuse [%r1], %rd1, %rd2, %r2, %p1;
-; CHECK-NEXT:    tcgen05.mma.ws.cta_group::1.kind::i8.collector::b0::lastuse [%r1], [%r3], %rd2, %r2, %p1;
-; CHECK-NEXT:    tcgen05.mma.ws.cta_group::1.kind::i8.collector::b0::fill [%r1], [%r3], %rd2, %r2, %p1;
-; CHECK-NEXT:    tcgen05.mma.ws.cta_group::1.kind::i8.collector::b0::fill [%r1], %rd1, %rd2, %r2, %p1;
-; CHECK-NEXT:    tcgen05.mma.ws.cta_group::1.kind::i8.collector::b0::fill [%r1], %rd1, %rd2, %r2, %p1;
-; CHECK-NEXT:    tcgen05.mma.ws.cta_group::1.kind::i8.collector::b0::fill [%r1], [%r3], %rd2, %r2, %p1;
-; CHECK-NEXT:    tcgen05.mma.ws.cta_group::1.kind::i8.collector::b0::fill [%r1], [%r3], %rd2, %r2, %p1;
-; CHECK-NEXT:    tcgen05.mma.ws.cta_group::1.kind::i8.collector::b0::use [%r1], %rd1, %rd2, %r2, %p1;
-; CHECK-NEXT:    tcgen05.mma.ws.cta_group::1.kind::i8.collector::b0::use [%r1], %rd1, %rd2, %r2, %p1;
-; CHECK-NEXT:    tcgen05.mma.ws.cta_group::1.kind::i8.collector::b0::use [%r1], [%r3], %rd2, %r2, %p1;
-; CHECK-NEXT:    tcgen05.mma.ws.cta_group::1.kind::i8.collector::b0::use [%r1], [%r3], %rd2, %r2, %p1;
-; CHECK-NEXT:    tcgen05.mma.ws.cta_group::1.kind::i8.collector::b0::use [%r1], [%r3], %rd2, %r2, %p1;
-; CHECK-NEXT:    tcgen05.mma.ws.cta_group::1.kind::i8.collector::b0::use [%r1], [%r3], %rd2, %r2, %p1;
-; CHECK-NEXT:    ret;
-  call void @llvm.nvvm.tcgen05.mma.ws.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 3, i32 0, i32 0)
-
-  call void @llvm.nvvm.tcgen05.mma.ws.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 3, i32 0, i32 0)
-
-  call void @llvm.nvvm.tcgen05.mma.ws.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 3, i32 0, i32 0)
-
-  call void @llvm.nvvm.tcgen05.mma.ws.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 3, i32 0, i32 0)
-
-  call void @llvm.nvvm.tcgen05.mma.ws.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 3, i32 0, i32 0)
-
-  call void @llvm.nvvm.tcgen05.mma.ws.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 3, i32 0, i32 1)
-
-  call void @llvm.nvvm.tcgen05.mma.ws.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 3, i32 0, i32 0)
-
-  call void @llvm.nvvm.tcgen05.mma.ws.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 3, i32 0, i32 1)
-
-  call void @llvm.nvvm.tcgen05.mma.ws.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 3, i32 0, i32 1)
-
-  call void @llvm.nvvm.tcgen05.mma.ws.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 3, i32 0, i32 2)
-
-  call void @llvm.nvvm.tcgen05.mma.ws.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 3, i32 0, i32 2)
-
-  call void @llvm.nvvm.tcgen05.mma.ws.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 3, i32 0, i32 2)
-
-  call void @llvm.nvvm.tcgen05.mma.ws.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 3, i32 0, i32 2)
-
-  call void @llvm.nvvm.tcgen05.mma.ws.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 3, i32 0, i32 2)
-
-  call void @llvm.nvvm.tcgen05.mma.ws.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 3, i32 0, i32 3)
-
-  call void @llvm.nvvm.tcgen05.mma.ws.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 3, i32 0, i32 3)
-
-  call void @llvm.nvvm.tcgen05.mma.ws.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 3, i32 0, i32 3)
-
-  call void @llvm.nvvm.tcgen05.mma.ws.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 3, i32 0, i32 3)
-
-  call void @llvm.nvvm.tcgen05.mma.ws.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 3, i32 0, i32 3)
-
-  call void @llvm.nvvm.tcgen05.mma.ws.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 3, i32 0, i32 3)
   ret void
 }

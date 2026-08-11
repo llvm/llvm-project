@@ -1,14 +1,11 @@
 // RUN: %clang %cflags -march=armv8.3-a+pauth-lr -Wl,--no-relax %s -o %t.exe
-// RUN: llvm-bolt-binary-analysis --scanners=pacret                        %t.exe 2>&1 | FileCheck -check-prefix=PACRET %s
-// RUN: llvm-bolt-binary-analysis --scanners=pauth                         %t.exe 2>&1 | FileCheck -check-prefixes=CHECK,NOFPAC %s
-// RUN: llvm-bolt-binary-analysis --scanners=pauth --auth-traps-on-failure %t.exe 2>&1 | FileCheck -check-prefixes=CHECK,FPAC %s
+// RUN: llvm-bolt-binary-analysis --scanners=ptrauth-sign-oracles                         %t.exe 2>&1 | FileCheck -check-prefixes=CHECK,NOFPAC %s
+// RUN: llvm-bolt-binary-analysis --scanners=ptrauth-sign-oracles --auth-traps-on-failure %t.exe 2>&1 | FileCheck -check-prefixes=CHECK,FPAC %s
 
 // The detection of compiler-generated explicit pointer checks is tested in
 // gs-pauth-address-checks.s, for that reason only test here "dummy-load" and
 // "high-bits-notbi" checkers, as the shortest examples of checkers that are
 // detected per-instruction and per-BB.
-
-// PACRET-NOT: signing oracle found in function
 
         .text
 
