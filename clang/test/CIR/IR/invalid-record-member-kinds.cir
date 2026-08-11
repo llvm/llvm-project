@@ -8,16 +8,18 @@ module {}
 
 // -----
 
+// A data member is spelled without a mark, so 'data' is not a mark keyword.
 !u8i = !cir.int<u, 8>
-// expected-error @below {{a data member is spelled without a mark}}
+// expected-error @below {{expected non-function type}}
 !rec_S = !cir.struct<"S" {data !u8i}>
 
 module {}
 
 // -----
 
+// Only one mark is consumed, so a second one is left to the type parser.
 !u8i = !cir.int<u, 8>
-// expected-error @below {{a record member takes at most one kind mark}}
+// expected-error @below {{expected non-function type}}
 !rec_S = !cir.struct<"S" {pad empty !u8i}>
 
 module {}

@@ -175,30 +175,14 @@ verifyRecordMemberKinds(function_ref<mlir::InFlightDiagnostic()> emitError,
 
 /// Parse the optional mark that precedes a member type.  Only a mark keyword is
 /// consumed, so a member spelled as a bare builtin type still reaches the type
-/// parser.  A data member is spelled without a mark, and accepting 'data' would
-/// give a record two spellings that print the same way, so it is named here
-/// only to reject it.
-static mlir::ParseResult parseMemberKind(mlir::AsmParser &parser,
-                                         RecordMemberKind &kind) {
-  static const llvm::StringRef marks[] = {"pad", "empty", "data"};
+/// parser, and anything else that is not a mark fails there.  A data member is
+/// spelled without a mark.
+static void parseMemberKind(mlir::AsmParser &parser, RecordMemberKind &kind) {
+  static const llvm::StringRef marks[] = {"pad", "empty"};
   kind = RecordMemberKind::Data;
   llvm::StringRef keyword;
-  const llvm::SMLoc loc = parser.getCurrentLocation();
-  if (parser.parseOptionalKeyword(&keyword, marks).failed())
-    return mlir::success();
-
-  if (keyword == "data") {
-    parser.emitError(loc, "a data member is spelled without a mark");
-    return mlir::failure();
-  }
-  kind = *symbolizeRecordMemberKind(keyword);
-
-  const llvm::SMLoc secondLoc = parser.getCurrentLocation();
-  if (parser.parseOptionalKeyword(&keyword, marks).succeeded()) {
-    parser.emitError(secondLoc, "a record member takes at most one kind mark");
-    return mlir::failure();
-  }
-  return mlir::success();
+  if (parser.parseOptionalKeyword(&keyword, marks).succeeded())
+    kind = *symbolizeRecordMemberKind(keyword);
 }
 
 /// Parse "incomplete" or "{[mark] type, [mark] type, ...}", writing results
@@ -216,8 +200,7 @@ parseRecordBody(mlir::AsmParser &parser, bool &incomplete,
       AsmParser::Delimiter::Braces,
       [&parser, &members, &memberKinds]() -> mlir::ParseResult {
         RecordMemberKind kind;
-        if (parseMemberKind(parser, kind).failed())
-          return mlir::failure();
+        parseMemberKind(parser, kind);
         memberKinds.push_back(kind);
         return parser.parseType(members.emplace_back());
       });
@@ -479,7 +462,7 @@ Type UnionType::parse(mlir::AsmParser &parser) {
       return {};
     const llvm::SMLoc paddingLoc = parser.getCurrentLocation();
     llvm::StringRef paddingKeyword;
-    static const llvm::StringRef marks[] = {"pad", "empty", "data"};
+    static const llvm::StringRef marks[] = {"pad", "empty"};
     if (parser.parseOptionalKeyword(&paddingKeyword, marks).succeeded()) {
       parser.emitError(paddingLoc, "a union's tail padding takes no kind mark");
       return {};
