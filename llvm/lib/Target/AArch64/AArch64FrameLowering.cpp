@@ -2531,8 +2531,8 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
   const AArch64RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
-  unsigned UnspilledCSGPR = AArch64::NoRegister;
-  unsigned UnspilledCSGPRPaired = AArch64::NoRegister;
+  Register UnspilledCSGPR;
+  Register UnspilledCSGPRPaired;
 
   MachineFrameInfo &MFI = MF.getFrameInfo();
   const MCPhysReg *CSRegs = MF.getRegInfo().getCalleeSavedRegs();
@@ -2540,7 +2540,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   MCRegister BasePointerReg =
       RegInfo->hasBasePointer(MF) ? RegInfo->getBaseRegister() : MCRegister();
 
-  unsigned ExtraCSSpill = 0;
+  Register ExtraCSSpill;
   bool HasUnpairedGPR64 = false;
   bool HasPairZReg = false;
   BitVector UserReservedRegs = RegInfo->getUserReservedRegs(MF);
@@ -2739,7 +2739,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   // above to keep the number of spills even, we don't need to do anything else
   // here.
   if (BigStack) {
-    if (!ExtraCSSpill && UnspilledCSGPR != AArch64::NoRegister) {
+    if (!ExtraCSSpill.isValid() && UnspilledCSGPR.isValid()) {
       LLVM_DEBUG(dbgs() << "Spilling " << printReg(UnspilledCSGPR, RegInfo)
                         << " to get a scratch register.\n");
       SavedRegs.set(UnspilledCSGPR);
@@ -2749,7 +2749,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
       // pairs, so if we need to spill one extra for BigStack, then we need to
       // store the pair.
       if (producePairRegisters(MF)) {
-        if (UnspilledCSGPRPaired == AArch64::NoRegister) {
+        if (!UnspilledCSGPRPaired.isValid()) {
           // Failed to make a pair for compact unwind format, revert spilling.
           if (produceCompactUnwindFrame(*this, MF)) {
             SavedRegs.reset(UnspilledCSGPR);
@@ -2762,7 +2762,8 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
 
     // If we didn't find an extra callee-saved register to spill, create
     // an emergency spill slot.
-    if (!ExtraCSSpill || MF.getRegInfo().isPhysRegUsed(ExtraCSSpill)) {
+    if (!ExtraCSSpill.isValid() ||
+        MF.getRegInfo().isPhysRegUsed(ExtraCSSpill)) {
       const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
       const TargetRegisterClass &RC = AArch64::GPR64RegClass;
       unsigned Size = TRI->getSpillSize(RC);
