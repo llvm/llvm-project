@@ -1995,18 +1995,14 @@ static bool canConstantFoldIntrinsic(Intrinsic::ID ID, bool IsStrictFP) {
     return !IsStrictFP;
 
   // NVVM add intrinsics with explicit rounding modes
-  case Intrinsic::nvvm_add_rm_d:
-  case Intrinsic::nvvm_add_rn_d:
-  case Intrinsic::nvvm_add_rp_d:
-  case Intrinsic::nvvm_add_rz_d:
-  case Intrinsic::nvvm_add_rm_f:
-  case Intrinsic::nvvm_add_rn_f:
-  case Intrinsic::nvvm_add_rp_f:
-  case Intrinsic::nvvm_add_rz_f:
-  case Intrinsic::nvvm_add_rm_ftz_f:
-  case Intrinsic::nvvm_add_rn_ftz_f:
-  case Intrinsic::nvvm_add_rp_ftz_f:
-  case Intrinsic::nvvm_add_rz_ftz_f:
+  case Intrinsic::nvvm_fadd_rm:
+  case Intrinsic::nvvm_fadd_rn:
+  case Intrinsic::nvvm_fadd_rp:
+  case Intrinsic::nvvm_fadd_rz:
+  case Intrinsic::nvvm_fadd_rm_ftz:
+  case Intrinsic::nvvm_fadd_rn_ftz:
+  case Intrinsic::nvvm_fadd_rp_ftz:
+  case Intrinsic::nvvm_fadd_rz_ftz:
 
   // NVVM div intrinsics with explicit rounding modes
   case Intrinsic::nvvm_div_rm_d:
@@ -3618,18 +3614,14 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
         return ConstantFP::get(Ty, Res);
       }
 
-      case Intrinsic::nvvm_add_rm_f:
-      case Intrinsic::nvvm_add_rn_f:
-      case Intrinsic::nvvm_add_rp_f:
-      case Intrinsic::nvvm_add_rz_f:
-      case Intrinsic::nvvm_add_rm_d:
-      case Intrinsic::nvvm_add_rn_d:
-      case Intrinsic::nvvm_add_rp_d:
-      case Intrinsic::nvvm_add_rz_d:
-      case Intrinsic::nvvm_add_rm_ftz_f:
-      case Intrinsic::nvvm_add_rn_ftz_f:
-      case Intrinsic::nvvm_add_rp_ftz_f:
-      case Intrinsic::nvvm_add_rz_ftz_f: {
+      case Intrinsic::nvvm_fadd_rm:
+      case Intrinsic::nvvm_fadd_rn:
+      case Intrinsic::nvvm_fadd_rp:
+      case Intrinsic::nvvm_fadd_rz:
+      case Intrinsic::nvvm_fadd_rm_ftz:
+      case Intrinsic::nvvm_fadd_rn_ftz:
+      case Intrinsic::nvvm_fadd_rp_ftz:
+      case Intrinsic::nvvm_fadd_rz_ftz: {
 
         bool IsFTZ = nvvm::FAddShouldFTZ(IntrinsicID);
         APFloat A = IsFTZ ? FTZPreserveSign(Op1V) : Op1V;
