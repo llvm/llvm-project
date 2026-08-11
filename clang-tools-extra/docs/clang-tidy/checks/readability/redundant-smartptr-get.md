@@ -1,23 +1,23 @@
-.. title:: clang-tidy - readability-redundant-smartptr-get
+```{title} clang-tidy - readability-redundant-smartptr-get
+```
 
-readability-redundant-smartptr-get
-==================================
+# readability-redundant-smartptr-get
 
-Find and remove redundant calls to smart pointer's ``.get()`` method.
+Find and remove redundant calls to smart pointer's `.get()` method.
 
 Examples:
 
-.. code-block:: c++
+```cpp
+ptr.get()->Foo()  ==>  ptr->Foo()
+*ptr.get()  ==>  *ptr
+*ptr->get()  ==>  **ptr
+if (ptr.get() == nullptr) ... => if (ptr == nullptr) ...
+```
 
-  ptr.get()->Foo()  ==>  ptr->Foo()
-  *ptr.get()  ==>  *ptr
-  *ptr->get()  ==>  **ptr
-  if (ptr.get() == nullptr) ... => if (ptr == nullptr) ...
+## Options
 
-Options
--------
+```{option} IgnoreMacros
 
-.. option:: IgnoreMacros
-
-   If this option is set to `true` (default is `true`), the check will not warn
-   about calls inside macros.
+If this option is set to `true` (default is `true`), the check will not warn
+about calls inside macros.
+```

@@ -47,14 +47,19 @@ static bool isDanglingStackSource(const MemRegion *Source,
     // the warning should be suppressed. When a lifetimebound method
     // is called from a destructor then its return value is not expected
     // to outlive the object being destroyed.
-    for (const StackFrame *DtorSF = CurrentSF; DtorSF;
-         DtorSF = DtorSF->getParent()) {
-      if (isa<CXXDestructorDecl>(DtorSF->getDecl()))
-        return false;
+    if (llvm::any_of(C.stackframes(), [&](const StackFrame &Frame) {
+          return isa<CXXDestructorDecl>(Frame.getDecl());
+        })) {
+      return false;
     }
-
-    if (SF == CurrentSF || !SF->isParentOf(CurrentSF))
-      return true;
+    // Only a source whose frame is still live on the current stack can
+    // dangle. If that frame is not on the stack then the source outlives
+    // the returned value. The source is still alive when the returned value
+    // is used, so it does not dangle.
+    if (is_contained(make_pointer_range(C.stackframes()), SF)) {
+      if (SF == CurrentSF || !SF->isParentOf(CurrentSF))
+        return true;
+    }
   }
   return false;
 }
@@ -71,9 +76,14 @@ std::vector<const MemRegion *> lifetime_modeling::getDanglingRegionsAfterReturn(
   return Regions;
 }
 
+bool lifetime_modeling::isBoundToLifetimeSource(ProgramStateRef State,
+                                                SVal Val) {
+  return State->get<LifetimeBoundMap>(Val) != nullptr;
+}
+
 bool lifetime_modeling::isDeallocated(ProgramStateRef State,
                                       const MemRegion *Region) {
-  return State->contains<DeallocatedSourceSet>(Region);
+  return State->contains<DeallocatedSourceSet>(Region->getBaseRegion());
 }
 
 static ProgramStateRef bindSource(ProgramStateRef State, SVal RetVal,
@@ -85,6 +95,14 @@ static ProgramStateRef bindSource(ProgramStateRef State, SVal RetVal,
   Set = F.add(Set, Source);
   State = State->set<LifetimeBoundMap>(RetVal, Set);
   return State;
+}
+
+std::string lifetime_modeling::getRegionName(const MemRegion *Reg) {
+  // FIXME: Once the checker supports heap allocation, more region kinds
+  // should be handled to produce the correct descriptive name.
+  if (const std::string RegName = Reg->getDescriptiveName(); !RegName.empty())
+    return RegName;
+  return "the region";
 }
 
 void LifetimeModeling::checkPostCall(const CallEvent &Call,
@@ -242,8 +260,9 @@ void DebugLifetimeModeling::analyzerDumpLifetimeOriginsOf(
 
     llvm::SmallString<128> Str;
     llvm::raw_svector_ostream OS(Str);
-    OS << " Origin " << ArgSVal << " bound to ";
-    llvm::interleaveComma(RegionNames, OS);
+    OS << " Origin '" << ArgSVal << "' bound to ";
+    llvm::interleaveComma(RegionNames, OS,
+                          [&](StringRef Name) { OS << "'" << Name << "'"; });
     C.emitReport(std::make_unique<PathSensitiveBugReport>(BugMsg, OS.str(), N));
   }
 }

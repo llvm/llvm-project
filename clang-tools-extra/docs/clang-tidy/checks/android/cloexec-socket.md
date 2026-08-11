@@ -1,18 +1,18 @@
-.. title:: clang-tidy - android-cloexec-socket
+```{title} clang-tidy - android-cloexec-socket
+```
 
-android-cloexec-socket
-======================
+# android-cloexec-socket
 
-``socket()`` should include ``SOCK_CLOEXEC`` in its type argument to avoid the
+`socket()` should include `SOCK_CLOEXEC` in its type argument to avoid the
 file descriptor leakage. Without this flag, an opened sensitive file would
 remain open across a fork+exec to a lower-privileged SELinux domain.
 
 Examples:
 
-.. code-block:: c++
+```cpp
+socket(domain, type, SOCK_STREAM);
 
-  socket(domain, type, SOCK_STREAM);
+// becomes
 
-  // becomes
-
-  socket(domain, type, SOCK_STREAM | SOCK_CLOEXEC);
+socket(domain, type, SOCK_STREAM | SOCK_CLOEXEC);
+```

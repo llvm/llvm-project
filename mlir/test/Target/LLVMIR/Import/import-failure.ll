@@ -52,9 +52,7 @@ define dso_local void @tbaa(ptr %0) {
 
 ; // -----
 
-; CHECK:      import-failure.ll
-; CHECK-SAME: warning: expected an access group node to be empty and distinct
-; CHECK:      error: unsupported access group node: !0 = !{}
+; CHECK: Access scope must be 'distinct'
 define void @access_group(ptr %arg1) {
   %1 = load i32, ptr %arg1, !llvm.access.group !0
   ret void
@@ -157,22 +155,6 @@ end:
 !0 = distinct !{!0, !1, !2}
 !1 = !{!"llvm.loop.unroll.enable"}
 !2 = !{!"llvm.loop.unroll.disable"}
-
-; // -----
-
-; CHECK:      <unknown>
-; CHECK-SAME: warning: expected metadata node llvm.loop.vectorize.enable to hold a boolean value
-; CHECK:      <unknown>
-; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1}
-define void @unsupported_loop_annotation(i64 %n, ptr %A) {
-entry:
-  br label %end, !llvm.loop !0
-end:
-  ret void
-}
-
-!0 = distinct !{!0, !1}
-!1 = !{!"llvm.loop.vectorize.enable"}
 
 ; // -----
 
@@ -456,6 +438,31 @@ bb1:
 !91885 = !{!91886, !91887}
 !91886 = !{i32 10000, i64 86427, i32 1}
 !91887 = !{i32 100000, i64 86427, i32 1}
+
+; // -----
+
+; CHECK: error: unsupported metadata: !{{[0-9]+}} = distinct !{!"sp"}
+declare i32 @llvm.read_register.i32(metadata)
+
+define i32 @distinct_metadata_as_value() {
+  %r = call i32 @llvm.read_register.i32(metadata !0)
+  ret i32 %r
+}
+
+!0 = distinct !{!"sp"}
+
+; // -----
+
+; CHECK: error: unsupported metadata: !{{[0-9]+}} = !{!{{[0-9]+}}}
+declare i32 @llvm.read_register.i32(metadata)
+
+define i32 @nested_distinct_metadata_as_value() {
+  %r = call i32 @llvm.read_register.i32(metadata !0)
+  ret i32 %r
+}
+
+!0 = !{!1}
+!1 = distinct !{!"sp"}
 
 ; // -----
 

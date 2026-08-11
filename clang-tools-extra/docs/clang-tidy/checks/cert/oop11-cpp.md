@@ -1,10 +1,10 @@
-.. title:: clang-tidy - cert-oop11-cpp
+```{title} clang-tidy - cert-oop11-cpp
+```
 
-cert-oop11-cpp
-==============
+# cert-oop11-cpp
 
-The `cert-oop11-cpp check` is an alias, please see
-:doc:`performance-move-constructor-init <../performance/move-constructor-init>`
+The `cert-oop11-cpp` check is an alias, please see
+{doc}`performance-move-constructor-init <../performance/move-constructor-init>`
 for more information.
 
 This check corresponds to the CERT C++ Coding Standard recommendation
