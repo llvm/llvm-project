@@ -13,7 +13,9 @@
 #ifndef LLVM_TOOLS_LLI_FORWARDINGMEMORYMANAGER_H
 #define LLVM_TOOLS_LLI_FORWARDINGMEMORYMANAGER_H
 
+#include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/EPCGenericDylibManager.h"
+#include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
 #include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
 
 namespace llvm {
@@ -90,22 +92,26 @@ private:
 class RemoteResolver : public LegacyJITSymbolResolver {
 public:
   static Expected<std::unique_ptr<RemoteResolver>>
-  Create(orc::ExecutorProcessControl &EPC) {
+  Create(orc::ExecutionSession &ES) {
     auto DylibMgr =
-        orc::EPCGenericDylibManager::CreateWithDefaultBootstrapSymbols(EPC);
+        orc::EPCGenericDylibManager::CreateWithDefaultBootstrapSymbols(
+            ES.getExecutorProcessControl());
     if (!DylibMgr)
       return DylibMgr.takeError();
     auto H = DylibMgr->open("", 0);
     if (!H)
       return H.takeError();
-    return std::make_unique<RemoteResolver>(std::move(*DylibMgr),
-                                            std::move(*H));
+    return std::make_unique<RemoteResolver>(
+        std::move(*DylibMgr), std::move(*H),
+        std::make_shared<orc::SymbolStringPool>());
   }
 
   JITSymbol findSymbol(const std::string &Name) override {
-    orc::RemoteSymbolLookupSet R;
-    R.push_back({std::move(Name), false});
-    if (auto Syms = DylibMgr.lookup(H, R)) {
+    // This legacy resolver has no ExecutionSession string pool of its own, so
+    // it interns lookup names into a standalone pool to form the lookup set.
+    orc::SymbolLookupSet LS(SSP->intern(Name),
+                            orc::SymbolLookupFlags::WeaklyReferencedSymbol);
+    if (auto Syms = DylibMgr.lookup(H, LS)) {
       if (Syms->size() != 1)
         return make_error<StringError>("Unexpected remote lookup result",
                                        inconvertibleErrorCode());
@@ -123,11 +129,13 @@ public:
 
 public:
   RemoteResolver(orc::EPCGenericDylibManager DylibMgr,
-                 orc::tpctypes::DylibHandle H)
-      : DylibMgr(std::move(DylibMgr)), H(std::move(H)) {}
+                 orc::tpctypes::DylibHandle H,
+                 std::shared_ptr<orc::SymbolStringPool> SSP)
+      : DylibMgr(std::move(DylibMgr)), H(std::move(H)), SSP(std::move(SSP)) {}
 
   orc::EPCGenericDylibManager DylibMgr;
   orc::tpctypes::DylibHandle H;
+  std::shared_ptr<orc::SymbolStringPool> SSP;
 };
 } // namespace llvm
 

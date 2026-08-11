@@ -75,18 +75,17 @@ void SimpleExecutorDylibManager::addBootstrapSymbols(
   M[rt::SimpleExecutorDylibManagerResolveWrapperName] =
       ExecutorAddr::fromPtr(&resolveWrapper);
 
-  {
-    // Also provide NativeDylibManager symbols for compatibility with
-    // controllers configured to use the ORC runtime's NativeDylibManager
-    // interface.
-    // FIXME: We should codify a "simple" dylib manager interface and make
-    // SimpleExecutorDylibManager its LLVM-based implementation, and
-    // NativeDylibManager its ORC-runtime implementation.
-    const auto &SNs = rt::orc_rt_NativeDylibManagerSPSSymbols;
-    M[SNs.InstanceName] = ExecutorAddr::fromPtr(this);
-    M[SNs.OpenName] = ExecutorAddr::fromPtr(&openWrapper);
-    M[SNs.ResolveName] = ExecutorAddr::fromPtr(&resolveWrapper);
-  }
+  // Also provide NativeDylibManager symbols for compatibility with
+  // controllers configured to use the ORC runtime's NativeDylibManager
+  // interface.
+  // FIXME: We should codify a "simple" dylib manager interface and make
+  // SimpleExecutorDylibManager its LLVM-based implementation, and
+  // NativeDylibManager its ORC-runtime implementation.
+  M[rt::NativeDylibManagerInstanceName] = ExecutorAddr::fromPtr(this);
+  M[rt::NativeDylibManagerLoadWrapperName] =
+      ExecutorAddr::fromPtr(&openWrapper);
+  M[rt::NativeDylibManagerLookupWrapperName] =
+      ExecutorAddr::fromPtr(&resolveWrapper);
 }
 
 llvm::orc::shared::CWrapperFunctionBuffer

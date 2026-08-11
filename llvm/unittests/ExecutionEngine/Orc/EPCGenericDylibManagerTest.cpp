@@ -32,21 +32,19 @@ TEST(EPCGenericDylibManagerTest, CreateFromExecutionSession) {
     }
   };
 
-  auto &SNs = rt::orc_rt_NativeDylibManagerSPSSymbols;
-
   ExecutorAddr InstanceAddr(1), OpenAddr(2), ResolveAddr(3);
 
   StringMap<ExecutorAddr> BootstrapSyms;
-  BootstrapSyms[SNs.InstanceName] = InstanceAddr;
-  BootstrapSyms[SNs.OpenName] = OpenAddr;
-  BootstrapSyms[SNs.ResolveName] = ResolveAddr;
+  BootstrapSyms[rt::NativeDylibManagerInstanceName] = InstanceAddr;
+  BootstrapSyms[rt::NativeDylibManagerLoadWrapperName] = OpenAddr;
+  BootstrapSyms[rt::NativeDylibManagerLookupWrapperName] = ResolveAddr;
 
   auto SSP = std::make_shared<SymbolStringPool>();
   auto EPC =
       std::make_unique<EPCWithBootstrapSymbols>(SSP, std::move(BootstrapSyms));
   ExecutionSession ES(std::move(EPC));
 
-  auto Result = EPCGenericDylibManager::Create(ES, SNs);
+  auto Result = EPCGenericDylibManager::Create(ES);
   EXPECT_THAT_EXPECTED(Result, Succeeded());
 
   cantFail(ES.endSession());
