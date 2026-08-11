@@ -17,7 +17,7 @@ Normalize Clang-Tidy documentation with deterministic sorting for linting/tests.
 
 Behavior:
 - Sort entries in docs/clang-tidy/checks/list.md Markdown tables.
-- Sort key sections in docs/ReleaseNotes.rst.
+- Sort key sections in docs/ReleaseNotes.md.
 - Detect duplicated entries in 'Changes in existing checks'.
 
 Flags:
@@ -42,10 +42,10 @@ from typing import (
     Tuple,
 )
 
-# Matches a :doc:`label <path>` or :doc:`label` reference anywhere in text and
+# Matches a {doc}`label <path>` or {doc}`label` reference anywhere in text and
 # captures the label. Used to sort bullet items alphabetically in ReleaseNotes
 # items by their label.
-DOC_LABEL_RN_RE: Final = re.compile(r":doc:`(?P<label>[^`<]+)\s*(?:<[^>]+>)?`")
+DOC_LABEL_RN_RE: Final = re.compile(r"\{doc\}`(?P<label>[^`<]+)\s*(?:<[^>]+>)?`")
 
 # Matches a single Markdown table row line in list.md that begins with a
 # {doc} reference, capturing the label. Used to extract the sort key per row.
@@ -57,7 +57,7 @@ DOCS_DIR: Final = os.path.join(EXTRA_DIR, "docs")
 CLANG_TIDY_DOCS_DIR: Final = os.path.join(DOCS_DIR, "clang-tidy")
 CHECKS_DOCS_DIR: Final = os.path.join(CLANG_TIDY_DOCS_DIR, "checks")
 LIST_DOC: Final = os.path.join(CHECKS_DOCS_DIR, "list.md")
-RELEASE_NOTES_DOC: Final = os.path.join(DOCS_DIR, "ReleaseNotes.rst")
+RELEASE_NOTES_DOC: Final = os.path.join(DOCS_DIR, "ReleaseNotes.md")
 
 
 # Label extracted from :doc:`...`.
@@ -114,11 +114,7 @@ def _scan_bullet_blocks(lines: Sequence[str], start: int, end: int) -> ScannedBl
         bstart = i
         i += 1
         while i < n and not _is_bullet_start(lines[i]):
-            if (
-                i + 1 < n
-                and set(lines[i + 1].rstrip("\n")) == {"^"}
-                and lines[i].strip()
-            ):
+            if lines[i].startswith("#"):
                 break
             i += 1
         block: BulletBlock = list(lines[bstart:i])
@@ -183,22 +179,17 @@ def normalize_list_md(data: str) -> str:
 
 
 def find_heading(lines: Sequence[str], title: str) -> Optional[int]:
-    """Find heading start index for a section underlined with ^ characters.
+    """Find heading start index for a Markdown #### section heading.
 
-    The function looks for a line equal to `title` followed by a line that
-    consists solely of ^, which matches the ReleaseNotes style for subsection
-    headings used here.
+    The function looks for a line equal to `#### {title}`, matching the
+    ReleaseNotes.md style for subsection headings.
 
     Returns index of the title line, or None if not found.
     """
-    for i in range(len(lines) - 1):
-        if lines[i].rstrip("\n") == title:
-            if (
-                (underline := lines[i + 1].rstrip("\n"))
-                and set(underline) == {"^"}
-                and len(underline) == len(title)
-            ):
-                return i
+    target = f"#### {title}"
+    for i in range(len(lines)):
+        if lines[i].rstrip("\n") == target:
+            return i
     return None
 
 
@@ -283,37 +274,29 @@ def _find_section_bounds(
     """Return (h_start, sec_start, sec_end) for section `title`.
 
     - h_start: index of the section title line
-    - sec_start: index of the first content line after underline
+    - sec_start: index of the first content line after the heading
     - sec_end: index of the first line of the next section title (or end)
     """
     if (h_start := find_heading(lines, title)) is None:
         return None
 
-    sec_start = h_start + 2
+    sec_start = h_start + 1
 
     # Determine end of section either from next_title or by scanning.
     if next_title is not None:
         if (h_end := find_heading(lines, next_title)) is None:
-            # Scan forward to the next heading-like underline.
+            # Scan forward to the next Markdown heading of any level.
             h_end = sec_start
             while h_end < len(lines):
-                if (
-                    h_end + 1 < len(lines)
-                    and lines[h_end].strip()
-                    and set(lines[h_end + 1].rstrip("\n")) == {"^"}
-                ):
+                if lines[h_end].startswith("#"):
                     break
                 h_end += 1
         sec_end = h_end
     else:
-        # Scan to end or until a heading underline is found.
+        # Scan to end or until a Markdown heading is found.
         h_end = sec_start
         while h_end < len(lines):
-            if (
-                h_end + 1 < len(lines)
-                and lines[h_end].strip()
-                and set(lines[h_end + 1].rstrip("\n")) == {"^"}
-            ):
+            if lines[h_end].startswith("#"):
                 break
             h_end += 1
         sec_end = h_end
@@ -383,7 +366,7 @@ def process_release_notes(out_path: str, rn_doc: str) -> int:
     # Prefer reporting ordering issues first; let diff fail the test.
     if text != normalized:
         sys.stderr.write(
-            "\nEntries in 'clang-tools-extra/docs/ReleaseNotes.rst' are not alphabetically sorted.\n"
+            "\nEntries in 'clang-tools-extra/docs/ReleaseNotes.md' are not alphabetically sorted.\n"
             "Fix the ordering by applying diff printed below.\n\n"
         )
         return 0
