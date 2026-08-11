@@ -4,7 +4,7 @@
 # bugprone-unhandled-self-assignment
 
 `cert-oop54-cpp` redirects here as an alias for this check. For
-the CERT alias, the {option}`WarnOnlyIfThisHasSuspiciousField` option
+the CERT alias, the {option}`WarnOnlyIfThisHasSuspiciousField`
 is set to `false`.
 
 Finds user-defined copy assignment operators which do not protect the code
