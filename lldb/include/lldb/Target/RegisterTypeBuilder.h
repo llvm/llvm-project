@@ -18,9 +18,7 @@ class RegisterTypeBuilder : public PluginInterface {
 public:
   ~RegisterTypeBuilder() override = default;
 
-  virtual CompilerType
-  GetRegisterType(const lldb_private::RegisterType &type_info,
-                  uint32_t register_byte_size) = 0;
+  virtual CompilerType GetRegisterType(const RegisterInfo &reg_info) = 0;
 
 protected:
   RegisterTypeBuilder() = default;

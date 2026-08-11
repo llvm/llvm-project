@@ -132,18 +132,23 @@ CompilerType RegisterTypeBuilderClang::BuildFlagsType(
   return flags_type;
 }
 
-CompilerType RegisterTypeBuilderClang::GetRegisterType(
-    const lldb_private::RegisterType &type_info, uint32_t register_byte_size) {
+CompilerType
+RegisterTypeBuilderClang::GetRegisterType(const RegisterInfo &reg_info) {
   lldb::TypeSystemClangSP type_system =
       ScratchTypeSystemClang::GetForTarget(m_target);
   assert(type_system);
 
-  switch (type_info.getKind()) {
+  if (!reg_info.register_type)
+    return CompilerType();
+
+  switch (reg_info.register_type->getKind()) {
   case RegisterType::eRegisterTypeKindFlags:
-    return BuildFlagsType(*llvm::dyn_cast<RegisterTypeFlags>(&type_info),
-                          register_byte_size, type_system);
+    return BuildFlagsType(
+        *llvm::dyn_cast<RegisterTypeFlags>(reg_info.register_type),
+        reg_info.byte_size, type_system);
   case RegisterType::eRegisterTypeKindEnum:
-    return BuildEnumType(*llvm::dyn_cast<RegisterTypeEnum>(&type_info),
-                         register_byte_size, type_system);
+    return BuildEnumType(
+        *llvm::dyn_cast<RegisterTypeEnum>(reg_info.register_type),
+        reg_info.byte_size, type_system);
   }
 }

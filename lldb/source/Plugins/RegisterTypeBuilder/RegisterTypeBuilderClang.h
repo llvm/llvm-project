@@ -30,8 +30,7 @@ public:
   }
   static lldb::RegisterTypeBuilderSP CreateInstance(Target &target);
 
-  CompilerType GetRegisterType(const lldb_private::RegisterType &type_info,
-                               uint32_t register_byte_size) override;
+  CompilerType GetRegisterType(const RegisterInfo &reg_info) override;
 
 private:
   CompilerType BuildEnumType(const RegisterTypeEnum &enum_type_info,

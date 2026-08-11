@@ -1564,8 +1564,7 @@ public:
   ///     if none can be found.
   llvm::Expected<lldb_private::Address> GetEntryPointAddress();
 
-  CompilerType GetRegisterType(const lldb_private::RegisterType &type_info,
-                               uint32_t register_byte_size);
+  CompilerType GetRegisterType(const RegisterInfo &reg_info);
 
   /// Sends a breakpoint notification event.
   void NotifyBreakpointChanged(Breakpoint &bp,
