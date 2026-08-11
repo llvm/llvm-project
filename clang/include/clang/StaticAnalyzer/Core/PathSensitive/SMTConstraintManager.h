@@ -232,7 +232,7 @@ public:
     llvm::DenseMap<SymbolRef, SmallVector<size_t>> ConstraintsBySym;
     llvm::DenseSet<SymbolRef> TraversedSymbols;
     llvm::SmallVector<SymbolRef> WorkList;
-    llvm::BitVector RelevantConstraints(Constraints.size());
+    llvm::BitVector RetainedConstraints(Constraints.size());
 
     for (size_t Idx = 0; Idx < Constraints.size(); ++Idx) {
       for (auto Symbol : Constraints[Idx].first->symbols()) {
@@ -246,10 +246,10 @@ public:
       SymbolRef Item = WorkList.pop_back_val();
       auto &SymConstraints = ConstraintsBySym[Item];
       for (auto Idx : SymConstraints) {
-        if (RelevantConstraints.test(Idx))
+        if (RetainedConstraints.test(Idx))
           continue;
 
-        RelevantConstraints.set(Idx);
+        RetainedConstraints.set(Idx);
 
         for (auto Symbol : Constraints[Idx].first->symbols()) {
           if (TraversedSymbols.insert(Symbol).second)
@@ -259,7 +259,7 @@ public:
     }
 
     for (size_t Idx = 0; Idx < Constraints.size(); ++Idx) {
-      if (!RelevantConstraints.test(Idx))
+      if (!RetainedConstraints.test(Idx))
         CZ = CZFactory.remove(CZ, Constraints[Idx]);
     }
 
