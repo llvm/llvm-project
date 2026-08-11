@@ -20,6 +20,7 @@
 #include "SPIRVIRMapping.h"
 #include "SPIRVInstrInfo.h"
 #include "SPIRVTypeInst.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/TypedPointerType.h"
@@ -59,6 +60,10 @@ class SPIRVGlobalRegistry : public SPIRVIRMapping {
 
   SmallPtrSet<const Type *, 4> TypesInProcessing;
   DenseMap<const Type *, SPIRVTypeInst> ForwardPointerTypes;
+
+  // Struct types decorated with Block, recorded at the point the decoration
+  // is emitted.
+  DenseSet<SPIRVTypeInst> BlockDecoratedTypes;
 
   // Stores for each function the last inserted SPIR-V Type.
   // See: SPIRVGlobalRegistry::createOpType.
@@ -535,7 +540,6 @@ private:
                                   MachineIRBuilder &MIRBuilder);
   void addArrayStrideDecorations(Register Reg, Type *ElementType,
                                  MachineIRBuilder &MIRBuilder);
-  bool hasBlockDecoration(SPIRVTypeInst Type) const;
 
   void constrainSelectedInstRegOperands(MachineInstrBuilder &MIB) const;
 
