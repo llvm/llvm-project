@@ -79,10 +79,8 @@ define i1 @test4() nounwind {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movsbl g_3(%rip), %edx
-; CHECK-NEXT:    movzbl %dl, %ecx
-; CHECK-NEXT:    shrl $7, %ecx
-; CHECK-NEXT:    xorb $1, %cl
-; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-NEXT:    testl %edx, %edx
+; CHECK-NEXT:    setns %cl
 ; CHECK-NEXT:    sarl %cl, %edx
 ; CHECK-NEXT:    movzbl g_96(%rip), %eax
 ; CHECK-NEXT:    testb %al, %al

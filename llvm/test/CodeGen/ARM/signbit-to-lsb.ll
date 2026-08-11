@@ -65,29 +65,50 @@ entry:
   ret i32 %shr
 }
 
-define i32 @test_i32(i32 %a) {
-; ARM-LABEL: test_i32:
+define i32 @test_sext_i16_to_i32_multipleBits(i16 %a) {
+; ARM-LABEL: test_sext_i16_to_i32_multipleBits:
 ; ARM:       @ %bb.0: @ %entry
-; ARM-NEXT:    lsr r0, r0, #31
+; ARM-NEXT:    sxth r0, r0
+; ARM-NEXT:    lsr r0, r0, #29
 ; ARM-NEXT:    bx lr
 ;
-; THUMB-LABEL: test_i32:
+; THUMB-LABEL: test_sext_i16_to_i32_multipleBits:
 ; THUMB:       @ %bb.0: @ %entry
-; THUMB-NEXT:    lsrs r0, r0, #31
+; THUMB-NEXT:    sxth r0, r0
+; THUMB-NEXT:    lsrs r0, r0, #29
 ; THUMB-NEXT:    bx lr
 entry:
-  %and = and i32 %a, 2147483648
-  %shr = lshr i32 %a, 31
+  %sext = sext i16 %a to i32
+  %and = and i32 %sext, 7340032 ; 0000 0000 0111 0000 0000 0000 0000 0000
+  %shr = lshr i32 %and, 20
   ret i32 %shr
 }
 
-define i32 @neg_test_i32(i32 %a) {
-; ARM-LABEL: neg_test_i32:
+define i32 @test_sext_i16_to_i32_multipleBits_demandOne(i16 %a) {
+; ARM-LABEL: test_sext_i16_to_i32_multipleBits_demandOne:
+; ARM:       @ %bb.0: @ %entry
+; ARM-NEXT:    ubfx r0, r0, #15, #1
+; ARM-NEXT:    bx lr
+;
+; THUMB-LABEL: test_sext_i16_to_i32_multipleBits_demandOne:
+; THUMB:       @ %bb.0: @ %entry
+; THUMB-NEXT:    lsls r0, r0, #16
+; THUMB-NEXT:    lsrs r0, r0, #31
+; THUMB-NEXT:    bx lr
+entry:
+  %sext = sext i16 %a to i32
+  %and = and i32 %sext, 7340032 ; 0000 0000 0111 0000 0000 0000 0000 0000
+  %shr = lshr i32 %and, 22
+  ret i32 %shr
+}
+
+define i32 @test_trailingZeroMoreThanSignBit(i30 signext %a) {
+; ARM-LABEL: test_trailingZeroMoreThanSignBit:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ubfx r0, r0, #20, #1
 ; ARM-NEXT:    bx lr
 ;
-; THUMB-LABEL: neg_test_i32:
+; THUMB-LABEL: test_trailingZeroMoreThanSignBit:
 ; THUMB:       @ %bb.0: @ %entry
 ; THUMB-NEXT:    movs r1, #1
 ; THUMB-NEXT:    lsls r1, r1, #20
@@ -95,7 +116,31 @@ define i32 @neg_test_i32(i32 %a) {
 ; THUMB-NEXT:    lsrs r0, r1, #20
 ; THUMB-NEXT:    bx lr
 entry:
-  %and = and i32 %a, 1048576 ; 0000 0000 0001 0000 0000 0000 0000 0000
+  %sext = sext i30 %a to i32
+  %and = and i32 %sext, 1048576 ; 0000 0000 0001 0000 0000 0000 0000 0000
+  %shr = lshr i32 %and, 20
+  ret i32 %shr
+}
+
+define i32 @test_sext_i16_to_i32_cannotSimplifyOp(i16 %a, i32 %x) {
+; ARM-LABEL: test_sext_i16_to_i32_cannotSimplifyOp:
+; ARM:       @ %bb.0: @ %entry
+; ARM-NEXT:    sxth r0, r0
+; ARM-NEXT:    and r0, r0, #5242880
+; ARM-NEXT:    lsr r0, r0, #20
+; ARM-NEXT:    bx lr
+;
+; THUMB-LABEL: test_sext_i16_to_i32_cannotSimplifyOp:
+; THUMB:       @ %bb.0: @ %entry
+; THUMB-NEXT:    movs r1, #5
+; THUMB-NEXT:    lsls r1, r1, #20
+; THUMB-NEXT:    sxth r0, r0
+; THUMB-NEXT:    ands r0, r1
+; THUMB-NEXT:    lsrs r0, r0, #20
+; THUMB-NEXT:    bx lr
+entry:
+  %sext = sext i16 %a to i32
+  %and = and i32 %sext, 5242880 ; 0000 0000 0101 0000 0000 0000 0000 0000
   %shr = lshr i32 %and, 20
   ret i32 %shr
 }
