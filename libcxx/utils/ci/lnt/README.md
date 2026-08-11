@@ -58,6 +58,16 @@ Note that since `dispatch-benchmarks` both reads and creates workflow runs, it r
 GitHub token with write access to the repository. That token can either be passed as an
 argument or picked up from the `GITHUB_TOKEN` environment variable.
 
+In production, this pipeline is run by the `libcxx-benchmark-cron.yml` workflow, which runs
+it for each machine defined in `machines.json` on a schedule.
+
+## Configuring the benchmark machines
+
+`machines.json` describes the machines we benchmark on. It is the single source of truth
+for both the workflow that runs the benchmarks (`libcxx-benchmark-commit.yml`) and the cron
+that requests those runs (`libcxx-benchmark-cron.yml`). Each entry contains variables used
+by the various workflows and the LNT machine name that the results will be reported under.
+
 ## Running benchmarks locally
 
 On GitHub, the `libcxx-benchmark-commit.yml` workflow is used to run benchmarks and report

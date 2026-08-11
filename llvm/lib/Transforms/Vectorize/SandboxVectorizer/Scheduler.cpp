@@ -405,10 +405,16 @@ bool Scheduler::trySchedule(ArrayRef<Instruction *> Instrs) {
     // Extend the DAG to include Instrs.
     Interval<Instruction> Extension = DAG.extend(Instrs);
     // Add nodes from the new interval to ready list if they are ready.
-    for (auto &I : Extension) {
+    Interval<Instruction> InstrsInterval(Instrs);
+    Interval<Instruction> ScanForReady =
+        InstrsInterval.getUnionInterval(Extension);
+    for (auto &I : ScanForReady) {
       auto *N = DAG.getNode(&I);
-      if (Dir == SchedDirection::BottomUp ? N->readyBottomUp()
-                                          : N->readyTopDown())
+      if (N->scheduled())
+        continue;
+      bool IsReady = Dir == SchedDirection::BottomUp ? N->readyBottomUp()
+                                                     : N->readyTopDown();
+      if (IsReady && !ReadyList.contains(N))
         ReadyList.insert(N);
     }
     // Try schedule all nodes until we can schedule Instrs back-to-back.
