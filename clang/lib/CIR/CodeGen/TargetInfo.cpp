@@ -120,7 +120,6 @@ public:
   X8664TargetCIRGenInfo(CIRGenTypes &cgt)
       : TargetCIRGenInfo(std::make_unique<X8664ABIInfo>(cgt)) {}
 };
-
 } // namespace
 
 std::unique_ptr<TargetCIRGenInfo>

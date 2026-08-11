@@ -10,10 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../ABIInfo.h"
-#include "../CIRGenFunction.h"
-#include "../CIRGenModule.h"
-#include "../TargetInfo.h"
+#include "ABIInfo.h"
+#include "CIRGenFunction.h"
+#include "CIRGenModule.h"
+#include "TargetInfo.h"
 #include "clang/AST/Decl.h"
 #include "clang/CIR/MissingFeatures.h"
 
