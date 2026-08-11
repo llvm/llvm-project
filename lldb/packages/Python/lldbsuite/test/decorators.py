@@ -1176,9 +1176,13 @@ def requireNotPlatform(oslist: list, reason: Optional[str] = None):
         reason, (str, type(None))
     ), f"expects 'str' or 'None' got {type(reason).__name__!r}"
 
-    skip_reason = reason or UnsupportedReason(f"unsupported on {', '.join(oslist)}")
+    skip_reason = f"unsupported on {', '.join(oslist)}"
+    if reason:
+        skip_reason += f": {reason}"
 
-    return unittest.skipIf(lldbplatformutil.getPlatform() in oslist, skip_reason)
+    return unittest.skipIf(
+        lldbplatformutil.getPlatform() in oslist, UnsupportedReason(skip_reason)
+    )
 
 
 def requireDarwin(func):
