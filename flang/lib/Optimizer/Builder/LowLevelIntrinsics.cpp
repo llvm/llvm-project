@@ -46,8 +46,7 @@ mlir::func::FuncOp fir::factory::getLlvmPpcReadflm(fir::FirOpBuilder &builder) {
 
 mlir::func::FuncOp fir::factory::getLlvmPpcSetflm(fir::FirOpBuilder &builder) {
   auto f64Ty = builder.getF64Type();
-  auto funcTy =
-      mlir::FunctionType::get(builder.getContext(), {f64Ty}, {f64Ty});
+  auto funcTy = mlir::FunctionType::get(builder.getContext(), {f64Ty}, {f64Ty});
   return builder.createFunction(builder.getUnknownLoc(), "llvm.ppc.setflm",
                                 funcTy);
 }
