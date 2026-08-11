@@ -83,7 +83,6 @@ define amdgpu_kernel void @already_allocated(ptr addrspace(1) %out) {
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) {
 ; CHECK-NEXT:    [[OBJ:%.*]] = alloca i32, align 4, addrspace(13), !amdgpu.allocated.vgprs [[META5:![0-9]+]]
 ; CHECK-NEXT:    call void @llvm.amdgcn.vgpr.lifetime.start.p13(ptr addrspace(13) [[OBJ]])
-; CHECK-NEXT:    call void @llvm.amdgcn.vgpr.lifetime.start.p13(ptr addrspace(13) [[OBJ]])
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr addrspace(13) [[OBJ]], align 4
 ; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void

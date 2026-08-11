@@ -19,6 +19,8 @@
 declare void @extern_func()
 declare void @llvm.lifetime.start.p13(ptr addrspace(13) nocapture)
 declare void @llvm.lifetime.end.p13(ptr addrspace(13) nocapture)
+declare void @llvm.amdgcn.vgpr.lifetime.start.p13(ptr addrspace(13) nocapture)
+declare void @llvm.amdgcn.vgpr.lifetime.end.p13(ptr addrspace(13) nocapture)
 
 ; CHECK: error: {{.*}}in function across_call{{.*}}object in the VGPR 'as memory' address space (13) is live across a call
 define void @across_call(ptr addrspace(1) %out, i32 %i) {
@@ -41,6 +43,25 @@ define void @dies_before_call(ptr addrspace(1) %out, i32 %i) {
   %v = load volatile i32, ptr addrspace(13) %p
   call void @llvm.lifetime.end.p13(ptr addrspace(13) %obj)
   call void @extern_func()
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+; The markers reaching the backend are the address-space specific ones, so an
+; object can arrive with its live range already marked out - that is how one
+; written in the address space to begin with gets here. Such a marker starts the
+; live range like any other: treating it as absent would start the range at the
+; alloca instead and make this call, which runs before the object is live, an
+; error.
+; CHECK-NOT: in function starts_after_call
+define void @starts_after_call(ptr addrspace(1) %out, i32 %i) {
+  %obj = alloca [4 x i32], addrspace(13)
+  call void @extern_func()
+  call void @llvm.amdgcn.vgpr.lifetime.start.p13(ptr addrspace(13) %obj)
+  %p = getelementptr [4 x i32], ptr addrspace(13) %obj, i32 0, i32 %i
+  store i32 7, ptr addrspace(13) %p
+  %v = load volatile i32, ptr addrspace(13) %p
+  call void @llvm.amdgcn.vgpr.lifetime.end.p13(ptr addrspace(13) %obj)
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
