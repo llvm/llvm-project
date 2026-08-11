@@ -1558,6 +1558,12 @@ bool AsanHsaGetLiveMappingInfo(const void* ptr, void** map_base,
   return true;
 }
 
+bool AsanHsaIsFreedChunk(const void* ptr) {
+  AsanChunk* m = instance.GetAsanChunkByAddr(reinterpret_cast<uptr>(ptr));
+  return m &&
+         atomic_load(&m->chunk_state, memory_order_acquire) != CHUNK_ALLOCATED;
+}
+
 }  // namespace __asan
 
 #endif  // SANITIZER_AMDHSA

@@ -257,6 +257,17 @@ hsa_status_t asan_hsa_amd_vmem_address_free(void* ptr, size_t size,
   return REAL(hsa_amd_vmem_address_free)(ptr, size);
 }
 
+// ROCr reports an unowned address as an all-zero struct with only size and
+// type valid. Zero all reported bytes, including fields not declared here.
+static void SetPointerInfoUnknown(hsa_amd_pointer_info_t* info) {
+  const uint32_t reported_size = info->size;
+  if (reported_size < sizeof(info->size) + sizeof(info->type))
+    return;
+  internal_memset(info, 0, reported_size);
+  info->size = reported_size;
+  info->type = HSA_EXT_POINTER_TYPE_UNKNOWN;
+}
+
 hsa_status_t asan_hsa_amd_pointer_info(const void* ptr,
                                        hsa_amd_pointer_info_t* info,
                                        void* (*alloc)(size_t),
@@ -267,9 +278,16 @@ hsa_status_t asan_hsa_amd_pointer_info(const void* ptr,
   void* hsa_map_base;
   uptr used_size;
   uptr offset;
-  if (!AsanHsaGetLiveMappingInfo(ptr, &hsa_map_base, &used_size, &offset))
-    return REAL(hsa_amd_pointer_info)(ptr, info, alloc, num_agents_accessible,
-                                      accessible);
+  if (!AsanHsaGetLiveMappingInfo(ptr, &hsa_map_base, &used_size, &offset)) {
+    hsa_status_t status = REAL(hsa_amd_pointer_info)(
+        ptr, info, alloc, num_agents_accessible, accessible);
+    // A quarantined block is still mapped, so ROCr reports the freed user
+    // allocation as live HSA memory. Report it as unowned instead, which keeps
+    // a freed pointer distinguishable from a live one.
+    if (status == HSA_STATUS_SUCCESS && info && AsanHsaIsFreedChunk(ptr))
+      SetPointerInfoUnknown(info);
+    return status;
+  }
 
   hsa_status_t status = REAL(hsa_amd_pointer_info)(
       hsa_map_base, info, alloc, num_agents_accessible, accessible);
