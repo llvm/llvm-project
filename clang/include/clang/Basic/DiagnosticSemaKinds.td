@@ -6590,7 +6590,11 @@ def err_inline_decl_follows_def : Error<
 def err_inline_declaration_block_scope : Error<
   "inline declaration of %0 not allowed in block scope">;
 def err_static_non_static : Error<
-  "static declaration of %0 follows non-static declaration">;
+  "static declaration of %0 follows non-static declaration"
+  "%select{|; behavior is undefined}1">;
+def err_internal_extern_mismatch : Error<
+  "variable %0%select{| cannot be}1 declared with external linkage following "
+  "a declaration with internal linkage%select{; behavior is undefined|}1">;
 def err_different_language_linkage : Error<
   "declaration of %0 has a different language linkage">;
 def ext_retained_language_linkage : Extension<

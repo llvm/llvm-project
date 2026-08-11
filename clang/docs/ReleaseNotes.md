@@ -164,6 +164,12 @@ features cannot lower the translation-unit ABI level;
   }
 ```
 
+- Clang now diagnoses the use of the same identifier with both internal and
+  external linkage within a translation unit, as made ill-formed by
+  [N3410](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3410.pdf).
+  This is also diagnosed in older C language modes as the behavior was
+  undefined prior to C2y. (#GH54215)
+
 #### C23 Feature Support
 
 ### Objective-C Language Changes
