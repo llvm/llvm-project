@@ -3577,9 +3577,8 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
       if (IsWinCall) {
         // std::float128_t is passed like __int128: in two integer registers.
         if (IsReturnType)
-          return ABIArgInfo::getDirect(
-              llvm::FixedVectorType::get(
-                  llvm::Type::getInt64Ty(getVMContext()), 2));
+          return ABIArgInfo::getDirect(llvm::FixedVectorType::get(
+              llvm::Type::getInt64Ty(getVMContext()), 2));
         return ABIArgInfo::getExpand();
       }
 

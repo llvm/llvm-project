@@ -378,7 +378,8 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // with their own -Wl,/section-alignment: flag.
   if (TC.getTriple().isX86_64APX()) {
     bool HasExplicitSectionAlignment = false;
-    for (Arg *A : Args.filtered(options::OPT_Wl_COMMA, options::OPT__SLASH_link))
+    for (Arg *A :
+         Args.filtered(options::OPT_Wl_COMMA, options::OPT__SLASH_link))
       if (StringRef(A->getValue()).contains_insensitive("section-alignment"))
         HasExplicitSectionAlignment = true;
     if (!HasExplicitSectionAlignment) {

@@ -1019,9 +1019,7 @@ public:
 
   /// Tests whether the target is the Windows x86_64apx target, which defaults
   /// to the wincall calling convention.
-  bool isWindowsAPX() const {
-    return isX86_64APX() && isOSWindows();
-  }
+  bool isWindowsAPX() const { return isX86_64APX() && isOSWindows(); }
 
   /// Tests whether the target supports the EHABI exception
   /// handling standard.

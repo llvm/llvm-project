@@ -161,8 +161,8 @@ bool X86TargetInfo::initFeatureMap(
   // APX as the individual egpr/push2pop2/ppx/ndd/ccmp/nf/zu/jmpabs features
   // (there is no single "apxf" feature), so enable each of them.
   if (getTriple().isX86_64APX()) {
-    for (const char *Sub : {"egpr", "push2pop2", "ppx", "ndd", "ccmp", "nf",
-                            "zu", "jmpabs"})
+    for (const char *Sub :
+         {"egpr", "push2pop2", "ppx", "ndd", "ccmp", "nf", "zu", "jmpabs"})
       setFeatureEnabled(Features, Sub, true);
   }
 

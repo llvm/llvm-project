@@ -937,7 +937,8 @@ Parser::TPResult Parser::TryParseDeclarator(bool mayBeAbstract,
       // '(' abstract-declarator ')'
       if (Tok.isOneOf(tok::kw___attribute, tok::kw___declspec, tok::kw___cdecl,
                       tok::kw___stdcall, tok::kw___fastcall, tok::kw___thiscall,
-                      tok::kw___regcall, tok::kw___vectorcall, tok::kw___wincall))
+                      tok::kw___regcall, tok::kw___vectorcall,
+                      tok::kw___wincall))
         return TPResult::True; // attributes indicate declaration
       TPResult TPR = TryParseDeclarator(mayBeAbstract, mayHaveIdentifier);
       if (TPR != TPResult::Ambiguous)
