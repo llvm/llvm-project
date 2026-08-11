@@ -1302,23 +1302,22 @@ getSignatureSemanticKind(StringRef SemanticName) {
 static llvm::hlsl::SemanticSignatureElement createSemanticSignatureElement(
     CodeGenModule &CGM, uint32_t SigId, HLSLAppliedSemanticAttr *Semantic,
     std::optional<unsigned> Index, const SemanticShape &Shape) {
-  llvm::hlsl::SemanticSignatureElement Element{};
-  Element.SigId = SigId;
-  Element.SemanticName = Semantic->getAttrName()->getName();
-  Element.CompType = getSignatureComponentType(CGM, Shape.RowType);
-  Element.SemanticKind = getSignatureSemanticKind(Element.SemanticName);
-  Element.Rows = Shape.getNumRows();
-  Element.Cols = static_cast<uint8_t>(Shape.Cols);
-  // All members with a default value will be filled at a later stage, either
-  // during packing or analysis of usage
+  StringRef Name = Semantic->getAttrName()->getName();
+
+  // One semantic index per row, starting from the declared index.
+  SmallVector<uint32_t> SemanticIndices;
+  uint32_t FirstSemanticIndex = Index.value_or(0);
+  for (uint32_t I = 0, E = Shape.getNumRows(); I < E; ++I)
+    SemanticIndices.push_back(FirstSemanticIndex + I);
+
+  // The remaining members keep their default value and will be filled at a
+  // later stage, either during packing or analysis of usage
   //
   // FIXME #189762: Element.InterpMode is to be set
-
-  uint32_t FirstSemanticIndex = Index.value_or(0);
-  for (uint32_t I = 0; I < Element.Rows; ++I)
-    Element.SemanticIndices.push_back(FirstSemanticIndex + I);
-
-  return Element;
+  return llvm::hlsl::SemanticSignatureElement(
+      SigId, Name, getSignatureComponentType(CGM, Shape.RowType),
+      getSignatureSemanticKind(Name), SemanticIndices,
+      static_cast<uint8_t>(Shape.Cols));
 }
 
 llvm::Value *CGHLSLRuntime::emitDXILUserSemanticLoad(
