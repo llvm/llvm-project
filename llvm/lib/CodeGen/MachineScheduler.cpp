@@ -1895,7 +1895,7 @@ void ScheduleDAGMILive::scheduleMI(SUnit *SU, bool IsTopNode) {
         RegOpers.adjustLaneLiveness(*LIS, MRI, *MI);
       } else {
         // Adjust for missing dead-def flags.
-        RegOpers.detectDeadDefs(*MI, *LIS);
+        RegOpers.detectDeadDefs(*MI, *LIS, MRI);
       }
 
       TopRPTracker.advance(RegOpers);
@@ -1929,7 +1929,7 @@ void ScheduleDAGMILive::scheduleMI(SUnit *SU, bool IsTopNode) {
         RegOpers.adjustLaneLiveness(*LIS, MRI, *MI);
       } else {
         // Adjust for missing dead-def flags.
-        RegOpers.detectDeadDefs(*MI, *LIS);
+        RegOpers.detectDeadDefs(*MI, *LIS, MRI);
       }
 
       if (BotRPTracker.getPos() != CurrentBottom)
