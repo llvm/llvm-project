@@ -98,7 +98,8 @@ static bool RedirectIO(std::optional<StringRef> Path, int FD, std::string *ErrMs
     File = std::string(*Path);
 
   // Open the file
-  int InFD = open(File.c_str(), FD == 0 ? O_RDONLY : O_WRONLY | O_CREAT, 0666);
+  int InFD = open(File.c_str(),
+                  FD == 0 ? O_RDONLY : O_WRONLY | O_CREAT | O_TRUNC, 0666);
   if (InFD == -1) {
     MakeErrMsg(ErrMsg, "Cannot open file '" + File + "' for " +
                            (FD == 0 ? "input" : "output"));
@@ -128,7 +129,8 @@ static bool RedirectIO_PS(const std::string *Path, int FD, std::string *ErrMsg,
     File = Path->c_str();
 
   if (int Err = posix_spawn_file_actions_addopen(
-          FileActions, FD, File, FD == 0 ? O_RDONLY : O_WRONLY | O_CREAT, 0666))
+          FileActions, FD, File,
+          FD == 0 ? O_RDONLY : O_WRONLY | O_CREAT | O_TRUNC, 0666))
     return MakeErrMsg(ErrMsg, "Cannot posix_spawn_file_actions_addopen", Err);
   return false;
 }
