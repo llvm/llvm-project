@@ -496,6 +496,19 @@ define i32 @cyclic_metadata_as_value() {
 
 ; // -----
 
+; Local values cannot be represented by symbol-backed metadata attributes.
+; CHECK: error: unsupported metadata: i32 %{{.*}}
+declare i32 @llvm.read_register.i32(metadata)
+
+define i32 @local_value_metadata(i32 %arg) {
+  %r = call i32 @llvm.read_register.i32(metadata i32 %arg)
+  ret i32 %r
+}
+
+; // -----
+
+; Intrinsics with dedicated import conversions have no imported symbol for a
+; metadata symbol reference to target.
 ; CHECK: error: unsupported metadata: ptr @llvm.memcpy.p0.p0.i64
 declare i32 @llvm.read_register.i32(metadata)
 declare void @llvm.memcpy.p0.p0.i64(ptr noalias writeonly, ptr noalias readonly, i64, i1 immarg)

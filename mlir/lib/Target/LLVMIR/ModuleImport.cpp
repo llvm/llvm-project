@@ -150,19 +150,19 @@ static LogicalResult convertInstructionImpl(OpBuilder &odsBuilder,
   return failure();
 }
 
-static FlatSymbolRefAttr getMetadataGlobalValueSymbolRef(
-    MLIRContext *ctx, LLVMImportInterface &iface, llvm::GlobalValue *global,
-    llvm::function_ref<FlatSymbolRefAttr(llvm::GlobalVariable *)>
-        getNamelessGlobalSymbol) {
+FlatSymbolRefAttr
+ModuleImport::getMetadataGlobalValueSymbolRef(llvm::GlobalValue *global) {
   if (auto *globalVar = dyn_cast<llvm::GlobalVariable>(global)) {
     StringRef name = globalVar->getName();
     if (name.empty())
-      return getNamelessGlobalSymbol(globalVar);
+      return getOrCreateNamelessSymbolName(globalVar);
     if (name == getGlobalCtorsVarName() || name == getGlobalDtorsVarName())
       return {};
   }
 
   if (auto *func = dyn_cast<llvm::Function>(global)) {
+    // Intrinsics with a dedicated import conversion do not have an imported
+    // function declaration that a metadata symbol reference could resolve to.
     if (func->isIntrinsic() &&
         iface.isConvertibleIntrinsic(func->getIntrinsicID()))
       return {};
@@ -170,7 +170,7 @@ static FlatSymbolRefAttr getMetadataGlobalValueSymbolRef(
 
   if (global->getName().empty())
     return {};
-  return FlatSymbolRefAttr::get(ctx, global->getName());
+  return FlatSymbolRefAttr::get(context, global->getName());
 }
 
 /// Depth-first conversion of the metadata node `md` to the matching LLVM
@@ -182,34 +182,26 @@ static FlatSymbolRefAttr getMetadataGlobalValueSymbolRef(
 /// set lets the traversal recognize such a back-edge and bail out. `attrMap`
 /// caches the attributes of fully converted nodes so that shared subgraphs
 /// are visited only once.
-static Attribute convertMetadataToAttrImpl(
-    MLIRContext *ctx, const llvm::Metadata *md,
-    SmallPtrSetImpl<const llvm::Metadata *> &path,
-    DenseMap<const llvm::Metadata *, Attribute> &attrMap,
-    LLVMImportInterface &iface,
-    llvm::function_ref<FlatSymbolRefAttr(llvm::GlobalVariable *)>
-        getNamelessGlobalSymbol) {
+Attribute ModuleImport::convertMetadataToAttrImpl(
+    const llvm::Metadata *md, SmallPtrSetImpl<const llvm::Metadata *> &path,
+    DenseMap<const llvm::Metadata *, Attribute> &attrMap) {
   if (!md)
     return {};
   if (auto *mdStr = dyn_cast<llvm::MDString>(md))
-    return MDStringAttr::get(ctx, StringAttr::get(ctx, mdStr->getString()));
+    return MDStringAttr::get(context,
+                             StringAttr::get(context, mdStr->getString()));
   if (auto *cam = dyn_cast<llvm::ConstantAsMetadata>(md)) {
     llvm::Constant *constant = cam->getValue();
     if (auto *global = dyn_cast<llvm::GlobalValue>(constant)) {
-      if (FlatSymbolRefAttr symbolRef = getMetadataGlobalValueSymbolRef(
-              ctx, iface, global, getNamelessGlobalSymbol))
-        return MDGlobalValueAttr::get(ctx, symbolRef);
+      if (FlatSymbolRefAttr symbolRef = getMetadataGlobalValueSymbolRef(global))
+        return MDGlobalValueAttr::get(context, symbolRef);
     }
     auto *ci = dyn_cast<llvm::ConstantInt>(constant);
     if (!ci)
       return {};
-    auto intType = IntegerType::get(ctx, ci->getBitWidth());
-    return MDConstantAttr::get(ctx, IntegerAttr::get(intType, ci->getValue()));
-  }
-  if (auto *vam = dyn_cast<llvm::ValueAsMetadata>(md)) {
-    if (isa<llvm::GlobalValue>(vam->getValue()))
-      llvm_unreachable("global values should be ConstantAsMetadata");
-    return {};
+    auto intType = IntegerType::get(context, ci->getBitWidth());
+    return MDConstantAttr::get(context,
+                               IntegerAttr::get(intType, ci->getValue()));
   }
   if (auto *node = dyn_cast<llvm::MDNode>(md)) {
     // Metadata attributes cannot preserve distinctness, so bail out.
@@ -224,14 +216,13 @@ static Attribute convertMetadataToAttrImpl(
     SmallVector<Attribute> operands;
     operands.reserve(node->getNumOperands());
     for (const llvm::MDOperand &op : node->operands()) {
-      Attribute opAttr = convertMetadataToAttrImpl(
-          ctx, op.get(), path, attrMap, iface, getNamelessGlobalSymbol);
+      Attribute opAttr = convertMetadataToAttrImpl(op.get(), path, attrMap);
       if (!opAttr)
         return {};
       operands.push_back(opAttr);
     }
     path.erase(node);
-    Attribute nodeAttr = MDNodeAttr::get(ctx, operands);
+    Attribute nodeAttr = MDNodeAttr::get(context, operands);
     attrMap.try_emplace(node, nodeAttr);
     return nodeAttr;
   }
@@ -243,14 +234,10 @@ static Attribute convertMetadataToAttrImpl(
 /// metadata-attribute hierarchy does not currently model, including distinct
 /// nodes and cyclic metadata graphs that the immutable metadata attributes
 /// cannot express.
-static Attribute convertMetadataToAttr(
-    MLIRContext *ctx, const llvm::Metadata *md, LLVMImportInterface &iface,
-    llvm::function_ref<FlatSymbolRefAttr(llvm::GlobalVariable *)>
-        getNamelessGlobalSymbol) {
+Attribute ModuleImport::convertMetadataToAttr(const llvm::Metadata *md) {
   SmallPtrSet<const llvm::Metadata *, 8> path;
   DenseMap<const llvm::Metadata *, Attribute> attrMap;
-  return convertMetadataToAttrImpl(ctx, md, path, attrMap, iface,
-                                   getNamelessGlobalSymbol);
+  return convertMetadataToAttrImpl(md, path, attrMap);
 }
 
 /// Get a topologically sorted list of blocks for the given basic blocks.
@@ -2023,12 +2010,7 @@ FailureOr<Value> ModuleImport::convertValue(llvm::Value *value) {
   // attribute.
   if (auto *mdAsVal = dyn_cast<llvm::MetadataAsValue>(value)) {
     llvm::Metadata *md = mdAsVal->getMetadata();
-    auto getNamelessGlobalSymbol =
-        [this](llvm::GlobalVariable *globalVar) -> FlatSymbolRefAttr {
-      return getOrCreateNamelessSymbolName(globalVar);
-    };
-    Attribute mdAttr =
-        convertMetadataToAttr(context, md, iface, getNamelessGlobalSymbol);
+    Attribute mdAttr = convertMetadataToAttr(md);
     if (!mdAttr)
       return emitError(mlirModule.getLoc())
              << "unsupported metadata: " << diagMD(md, llvmModule.get());

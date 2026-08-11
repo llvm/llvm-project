@@ -116,12 +116,29 @@ define i32 @read_named_register() {
 ; // -----
 
 declare i32 @llvm.read_register.i32(metadata)
+declare void @callee()
+
+; CHECK: llvm.func @[[$CALLEE:callee]]()
+; CHECK-LABEL: llvm.func @read_function_metadata
+define i32 @read_function_metadata() {
+  ; CHECK: %[[MD:.*]] = llvm.mlir.metadata_as_value #llvm.md_global_value<@[[$CALLEE]]>
+  ; CHECK: llvm.call_intrinsic "llvm.read_register.i32"(%[[MD]]) : (!llvm.metadata) -> i32
+  %r = call i32 @llvm.read_register.i32(metadata !0)
+  ret i32 %r
+}
+
+!0 = !{ptr @callee}
+
+; // -----
+
+declare i32 @llvm.read_register.i32(metadata)
 
 @global = global i32 0
 
+; CHECK: llvm.mlir.global external @[[$GLOBAL:global]]
 ; CHECK-LABEL: llvm.func @read_global_metadata
 define i32 @read_global_metadata() {
-  ; CHECK: %[[MD:.*]] = llvm.mlir.metadata_as_value #llvm.md_global_value<@global>
+  ; CHECK: %[[MD:.*]] = llvm.mlir.metadata_as_value #llvm.md_global_value<@[[$GLOBAL]]>
   ; CHECK: llvm.call_intrinsic "llvm.read_register.i32"(%[[MD]]) : (!llvm.metadata) -> i32
   %r = call i32 @llvm.read_register.i32(metadata !0)
   ret i32 %r
@@ -138,9 +155,10 @@ define void @alias_target() {
 }
 @alias = alias void (), ptr @alias_target
 
+; CHECK: llvm.mlir.alias external @[[$ALIAS:alias]]
 ; CHECK-LABEL: llvm.func @read_alias_metadata
 define i32 @read_alias_metadata() {
-  ; CHECK: %[[MD:.*]] = llvm.mlir.metadata_as_value #llvm.md_global_value<@alias>
+  ; CHECK: %[[MD:.*]] = llvm.mlir.metadata_as_value #llvm.md_global_value<@[[$ALIAS]]>
   ; CHECK: llvm.call_intrinsic "llvm.read_register.i32"(%[[MD]]) : (!llvm.metadata) -> i32
   %r = call i32 @llvm.read_register.i32(metadata !0)
   ret i32 %r
@@ -160,9 +178,10 @@ define void @ifunc_target() {
   ret void
 }
 
+; CHECK: llvm.mlir.ifunc external @[[$IFUNC:ifunc]]
 ; CHECK-LABEL: llvm.func @read_ifunc_metadata
 define i32 @read_ifunc_metadata() {
-  ; CHECK: %[[MD:.*]] = llvm.mlir.metadata_as_value #llvm.md_global_value<@ifunc>
+  ; CHECK: %[[MD:.*]] = llvm.mlir.metadata_as_value #llvm.md_global_value<@[[$IFUNC]]>
   ; CHECK: llvm.call_intrinsic "llvm.read_register.i32"(%[[MD]]) : (!llvm.metadata) -> i32
   %r = call i32 @llvm.read_register.i32(metadata !0)
   ret i32 %r
@@ -176,9 +195,10 @@ declare i32 @llvm.read_register.i32(metadata)
 
 @0 = global i32 0
 
+; CHECK: llvm.mlir.global external @[[$NAMELESS_GLOBAL:mlir\.llvm\.nameless_global_[0-9]+]]
 ; CHECK-LABEL: llvm.func @read_nameless_global_metadata
 define i32 @read_nameless_global_metadata() {
-  ; CHECK: %[[MD:.*]] = llvm.mlir.metadata_as_value #llvm.md_global_value<@{{mlir\.llvm\.nameless_global_[0-9]+}}>
+  ; CHECK: %[[MD:.*]] = llvm.mlir.metadata_as_value #llvm.md_global_value<@[[$NAMELESS_GLOBAL]]>
   ; CHECK: llvm.call_intrinsic "llvm.read_register.i32"(%[[MD]]) : (!llvm.metadata) -> i32
   %r = call i32 @llvm.read_register.i32(metadata !0)
   ret i32 %r
