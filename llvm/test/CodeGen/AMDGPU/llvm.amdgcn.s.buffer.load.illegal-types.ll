@@ -499,6 +499,125 @@ main_body:
   ret void
 }
 
+; A divergent offset takes the MUBUF lowering instead of SMEM.
+define amdgpu_ps void @s_buffer_load_i1_divergent(<4 x i32> inreg %desc, i32 %index, ptr addrspace(1) %out) {
+; GFX67-LABEL: s_buffer_load_i1_divergent:
+; GFX67:       ; %bb.0: ; %main_body
+; GFX67-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
+; GFX67-NEXT:    s_mov_b32 s2, 0
+; GFX67-NEXT:    s_mov_b32 s3, 0xf000
+; GFX67-NEXT:    s_mov_b32 s0, s2
+; GFX67-NEXT:    s_mov_b32 s1, s2
+; GFX67-NEXT:    s_waitcnt vmcnt(0)
+; GFX67-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX67-NEXT:    buffer_store_byte v0, v[1:2], s[0:3], 0 addr64
+; GFX67-NEXT:    s_endpgm
+;
+; GFX8-LABEL: s_buffer_load_i1_divergent:
+; GFX8:       ; %bb.0: ; %main_body
+; GFX8-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX8-NEXT:    flat_store_byte v[1:2], v0
+; GFX8-NEXT:    s_endpgm
+;
+; GFX910-LABEL: s_buffer_load_i1_divergent:
+; GFX910:       ; %bb.0: ; %main_body
+; GFX910-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
+; GFX910-NEXT:    s_waitcnt vmcnt(0)
+; GFX910-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX910-NEXT:    global_store_byte v[1:2], v0, off
+; GFX910-NEXT:    s_endpgm
+;
+; GFX11-LABEL: s_buffer_load_i1_divergent:
+; GFX11:       ; %bb.0: ; %main_body
+; GFX11-NEXT:    buffer_load_b32 v0, v0, s[0:3], 0 offen
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX11-NEXT:    global_store_b8 v[1:2], v0, off
+; GFX11-NEXT:    s_endpgm
+;
+; GFX1200-LABEL: s_buffer_load_i1_divergent:
+; GFX1200:       ; %bb.0: ; %main_body
+; GFX1200-NEXT:    buffer_load_b32 v0, v0, s[0:3], null offen
+; GFX1200-NEXT:    s_wait_loadcnt 0x0
+; GFX1200-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX1200-NEXT:    global_store_b8 v[1:2], v0, off
+; GFX1200-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: s_buffer_load_i1_divergent:
+; GFX1250:       ; %bb.0: ; %main_body
+; GFX1250-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    buffer_load_b32 v0, v0, s[0:3], null offen nv
+; GFX1250-NEXT:    v_mov_b32_e32 v3, v2
+; GFX1250-NEXT:    v_mov_b32_e32 v2, v1
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX1250-NEXT:    global_store_b8 v[2:3], v0, off
+; GFX1250-NEXT:    s_endpgm
+main_body:
+  %load = call i1 @llvm.amdgcn.s.buffer.load.i1(<4 x i32> %desc, i32 %index, i32 0)
+  store i1 %load, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @s_buffer_load_i128_divergent(<4 x i32> inreg %desc, i32 %index, ptr addrspace(1) %out) {
+; GFX67-LABEL: s_buffer_load_i128_divergent:
+; GFX67:       ; %bb.0: ; %main_body
+; GFX67-NEXT:    buffer_load_dwordx4 v[3:6], v0, s[0:3], 0 offen
+; GFX67-NEXT:    s_mov_b32 s2, 0
+; GFX67-NEXT:    s_mov_b32 s3, 0xf000
+; GFX67-NEXT:    s_mov_b32 s0, s2
+; GFX67-NEXT:    s_mov_b32 s1, s2
+; GFX67-NEXT:    s_waitcnt vmcnt(0)
+; GFX67-NEXT:    buffer_store_dwordx4 v[3:6], v[1:2], s[0:3], 0 addr64
+; GFX67-NEXT:    s_endpgm
+;
+; GFX8-LABEL: s_buffer_load_i128_divergent:
+; GFX8:       ; %bb.0: ; %main_body
+; GFX8-NEXT:    buffer_load_dwordx4 v[3:6], v0, s[0:3], 0 offen
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    flat_store_dwordx4 v[1:2], v[3:6]
+; GFX8-NEXT:    s_endpgm
+;
+; GFX910-LABEL: s_buffer_load_i128_divergent:
+; GFX910:       ; %bb.0: ; %main_body
+; GFX910-NEXT:    buffer_load_dwordx4 v[3:6], v0, s[0:3], 0 offen
+; GFX910-NEXT:    s_waitcnt vmcnt(0)
+; GFX910-NEXT:    global_store_dwordx4 v[1:2], v[3:6], off
+; GFX910-NEXT:    s_endpgm
+;
+; GFX11-LABEL: s_buffer_load_i128_divergent:
+; GFX11:       ; %bb.0: ; %main_body
+; GFX11-NEXT:    buffer_load_b128 v[3:6], v0, s[0:3], 0 offen
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b128 v[1:2], v[3:6], off
+; GFX11-NEXT:    s_endpgm
+;
+; GFX1200-LABEL: s_buffer_load_i128_divergent:
+; GFX1200:       ; %bb.0: ; %main_body
+; GFX1200-NEXT:    buffer_load_b128 v[3:6], v0, s[0:3], null offen
+; GFX1200-NEXT:    s_wait_loadcnt 0x0
+; GFX1200-NEXT:    global_store_b128 v[1:2], v[3:6], off
+; GFX1200-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: s_buffer_load_i128_divergent:
+; GFX1250:       ; %bb.0: ; %main_body
+; GFX1250-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    v_mov_b32_e32 v5, v2
+; GFX1250-NEXT:    v_mov_b32_e32 v4, v1
+; GFX1250-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], null offen nv
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    global_store_b128 v[4:5], v[0:3], off
+; GFX1250-NEXT:    s_endpgm
+main_body:
+  %load = call i128 @llvm.amdgcn.s.buffer.load.i128(<4 x i32> %desc, i32 %index, i32 0)
+  store i128 %load, ptr addrspace(1) %out
+  ret void
+}
+
 declare i1 @llvm.amdgcn.s.buffer.load.i1(<4 x i32>, i32, i32)
 declare i4 @llvm.amdgcn.s.buffer.load.i4(<4 x i32>, i32, i32)
 declare <2 x i1> @llvm.amdgcn.s.buffer.load.v2i1(<4 x i32>, i32, i32)

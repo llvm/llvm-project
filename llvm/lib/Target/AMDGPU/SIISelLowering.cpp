@@ -1023,9 +1023,11 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::INTRINSIC_W_CHAIN,
                      {MVT::v2f16, MVT::v2i16, MVT::v2bf16, MVT::v3f16,
-                      MVT::v3i16, MVT::v4f16, MVT::v4i16, MVT::v4bf16,
-                      MVT::v8i16, MVT::v8f16, MVT::v8bf16, MVT::Other, MVT::f16,
-                      MVT::i16, MVT::bf16, MVT::i8, MVT::i128},
+                      MVT::v3i16, MVT::v4f16, MVT::v4i16,  MVT::v4bf16,
+                      MVT::v8i16, MVT::v8f16, MVT::v8bf16, MVT::Other,
+                      MVT::f16,   MVT::i16,   MVT::bf16,   MVT::i8,
+                      MVT::i128,  MVT::i1,    MVT::i4,     MVT::v2i1,
+                      MVT::v6i8},
                      Custom);
 
   setOperationAction(ISD::INTRINSIC_VOID,
@@ -10824,6 +10826,39 @@ SDValue SITargetLowering::lowerSBuffer(EVT VT, EVT MemVT, SDLoc DL,
                                   MemVT.getStoreSize(), Alignment);
   }
 
+  // No SBUFFER_LOAD pattern exists for these widths; a broader
+  // "!isTypeLegal(VT)" check would also swallow i8/i16 and 32-bit-element
+  // vec3 types, which have their own faster lowerings below.
+  auto NeedsCarrierLoad = [](EVT VT) {
+    return VT == MVT::i1 || VT == MVT::i4 || VT == MVT::v2i1 ||
+           VT == MVT::v3i16 || VT == MVT::v6i8 || VT == MVT::i128;
+  };
+  if (NeedsCarrierLoad(VT) && MemVT == VT) {
+    unsigned Bits = VT.getSizeInBits();
+    EVT CarrierVT = Bits <= 32 ? EVT(MVT::i32)
+                               : EVT::getVectorVT(*DAG.getContext(), MVT::i32,
+                                                  divideCeil(Bits, 32));
+    Align CarrierAlign = DAG.getDataLayout().getABITypeAlign(
+        CarrierVT.getTypeForEVT(*DAG.getContext()));
+    MachineMemOperand *CarrierMMO =
+        MF.getMachineMemOperand(MMO->getPointerInfo(), MMO->getFlags(),
+                                CarrierVT.getStoreSize(), CarrierAlign);
+    SDValue CarrierLoad = lowerSBuffer(CarrierVT, CarrierVT, DL, Chain, Rsrc,
+                                       Offset, CachePolicy, DAG, CarrierMMO);
+    EVT CarrierIntVT =
+        EVT::getIntegerVT(*DAG.getContext(), CarrierVT.getSizeInBits());
+    SDValue AsInt = DAG.getNode(ISD::BITCAST, DL, CarrierIntVT, CarrierLoad);
+    EVT NarrowIntVT = EVT::getIntegerVT(*DAG.getContext(), Bits);
+    SDValue Narrow = NarrowIntVT == CarrierIntVT
+                         ? AsInt
+                         : DAG.getNode(ISD::TRUNCATE, DL, NarrowIntVT, AsInt);
+    SDValue Result =
+        VT == NarrowIntVT ? Narrow : DAG.getNode(ISD::BITCAST, DL, VT, Narrow);
+    if (HasChainResult)
+      return DAG.getMergeValues({Result, CarrierLoad.getValue(1)}, DL);
+    return Result;
+  }
+
   if (!Offset->isDivergent()) {
     SDValue Ops[] = {Chain, Rsrc, Offset, CachePolicy};
 
@@ -10862,32 +10897,6 @@ SDValue SITargetLowering::lowerSBuffer(EVT VT, EVT MemVT, SDLoc DL,
       if (HasChainResult)
         return DAG.getMergeValues({Subvector, WidenedOp.getValue(1)}, DL);
       return Subvector;
-    }
-
-    // No SBUFFER_LOAD pattern for this width (i1 is a legal type but still
-    // has none). Load a legal i32/vNi32 carrier and narrow/bitcast down.
-    if ((!isTypeLegal(VT) || VT == MVT::i1) && MemVT == VT) {
-      unsigned Bits = VT.getSizeInBits();
-      EVT CarrierVT = Bits <= 32 ? EVT(MVT::i32)
-                                 : EVT::getVectorVT(*DAG.getContext(), MVT::i32,
-                                                    divideCeil(Bits, 32));
-      SDValue CarrierLoad = DAG.getMemIntrinsicNode(
-          AMDGPUISD::SBUFFER_LOAD, DL, DAG.getVTList(CarrierVT, MVT::Other),
-          Ops, CarrierVT,
-          MF.getMachineMemOperand(MMO, 0, CarrierVT.getStoreSize()));
-      EVT CarrierIntVT =
-          EVT::getIntegerVT(*DAG.getContext(), CarrierVT.getSizeInBits());
-      SDValue AsInt = DAG.getNode(ISD::BITCAST, DL, CarrierIntVT, CarrierLoad);
-      EVT NarrowIntVT = EVT::getIntegerVT(*DAG.getContext(), Bits);
-      SDValue Narrow = NarrowIntVT == CarrierIntVT
-                           ? AsInt
-                           : DAG.getNode(ISD::TRUNCATE, DL, NarrowIntVT, AsInt);
-      SDValue Result = VT == NarrowIntVT
-                           ? Narrow
-                           : DAG.getNode(ISD::BITCAST, DL, VT, Narrow);
-      if (HasChainResult)
-        return DAG.getMergeValues({Result, CarrierLoad.getValue(1)}, DL);
-      return Result;
     }
 
     return DAG.getMemIntrinsicNode(AMDGPUISD::SBUFFER_LOAD, DL,
