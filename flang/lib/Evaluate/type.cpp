@@ -142,10 +142,11 @@ bool DynamicType::operator==(const DynamicType &that) const {
 std::optional<Expr<SubscriptInteger>> DynamicType::GetCharLength() const {
   if (category_ == TypeCategory::Character) {
     if (knownLength()) {
-      return AsExpr(Constant<SubscriptInteger>(*knownLength()));
+      return MakeSubscriptIntExpr(*knownLength());
     } else if (charLengthParamValue_) {
       if (auto length{charLengthParamValue_->GetExplicit()}) {
-        return ConvertToType<SubscriptInteger>(std::move(*length));
+        return ConvertToType<SubscriptInteger>(
+            SubscriptIntegerKind, std::move(*length));
       }
     }
   }
@@ -194,15 +195,14 @@ std::optional<Expr<SubscriptInteger>> DynamicType::MeasureSizeInBytes(
   case TypeCategory::Real:
   case TypeCategory::Complex:
   case TypeCategory::Logical:
-    return Expr<SubscriptInteger>{
-        context.targetCharacteristics().GetByteSize(category_, kind())};
+    return MakeSubscriptIntExpr(
+        context.targetCharacteristics().GetByteSize(category_, kind()));
   case TypeCategory::Character:
-    if (auto len{charLength ? Expr<SubscriptInteger>{Constant<SubscriptInteger>{
-                                  *charLength}}
-                            : GetCharLength()}) {
+    if (auto len{
+            charLength ? MakeSubscriptIntExpr(*charLength) : GetCharLength()}) {
       return Fold(context,
-          Expr<SubscriptInteger>{
-              context.targetCharacteristics().GetByteSize(category_, kind())} *
+          MakeSubscriptIntExpr(
+              context.targetCharacteristics().GetByteSize(category_, kind())) *
               std::move(*len));
     }
     break;
@@ -218,16 +218,14 @@ std::optional<Expr<SubscriptInteger>> DynamicType::MeasureSizeInBytes(
       auto size{derived_->GetScope()->size()};
       auto align{aligned ? derived_->GetScope()->alignment().value_or(0) : 0};
       auto alignedSize{align > 0 ? ((size + align - 1) / align) * align : size};
-      return Expr<SubscriptInteger>{
-          static_cast<ConstantSubscript>(alignedSize)};
+      return MakeSubscriptIntExpr(alignedSize);
     }
     // Regular derived type path.
     if (!IsPolymorphic() && derived_ && derived_->scope()) {
       auto size{derived_->scope()->size()};
       auto align{aligned ? derived_->scope()->alignment().value_or(0) : 0};
       auto alignedSize{align > 0 ? ((size + align - 1) / align) * align : size};
-      return Expr<SubscriptInteger>{
-          static_cast<ConstantSubscript>(alignedSize)};
+      return MakeSubscriptIntExpr(alignedSize);
     }
     break;
   }
@@ -890,7 +888,7 @@ std::optional<DynamicType> ComparisonType(
   case TypeCategory::Logical:
     switch (t2.category()) {
     case TypeCategory::Logical:
-      return DynamicType{TypeCategory::Logical, LogicalResult::kind};
+      return DynamicType{TypeCategory::Logical, LogicalResultKind};
     default:
       return std::nullopt;
     }

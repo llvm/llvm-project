@@ -20,6 +20,25 @@
 
 namespace Fortran::evaluate {
 
+template <typename SCALAR>
+inline void StoreSerialValues(int kind, char *dst,
+    llvm::ArrayRef<SCALAR> values, size_t elementSize,
+    bool *changed = nullptr) {
+  for (auto [i, v] : llvm::enumerate(values)) {
+    CHECK(v.kind() == kind);
+    v.StoreRawBytes(dst + i * elementSize, elementSize, changed);
+  }
+}
+
+template <typename SCALAR>
+inline void LoadSerialValues(int kind, const char *src,
+    llvm::MutableArrayRef<SCALAR> values, size_t stride) {
+  for (auto it : llvm::enumerate(values)) {
+    it.value() = SCALAR::FromRawBytes(
+        kind, src + stride * it.index(), SCALAR::bytesStored(kind));
+  }
+}
+
 class InitialImage {
 public:
   enum Result {
@@ -44,6 +63,7 @@ public:
   template <typename T>
   Result Add(ConstantSubscript offset, std::size_t bytes, const Constant<T> &x,
       FoldingContext &context) {
+    const int kind{x.kind()};
     if (offset < 0 || offset + bytes > data_.size()) {
       return OutOfRange;
     } else {
@@ -56,21 +76,16 @@ public:
         return OkNoChange;
       } else {
         // TODO endianness
-        auto *to{&data_.at(offset)};
-        const auto *from{&x.values().at(0)};
-        if (std::memcmp(to, from, bytes) == 0) {
-          return OkNoChange;
-        } else {
-          std::memcpy(to, from, bytes);
-          return Ok;
-        }
+        bool changed{false};
+        StoreSerialValues(kind, &data_.at(offset),
+            llvm::ArrayRef<Scalar<T>>(x.values()), *elementBytes, &changed);
+        return changed ? Ok : OkNoChange;
       }
     }
   }
-  template <int KIND>
   Result Add(ConstantSubscript offset, std::size_t bytes,
-      const Constant<Type<TypeCategory::Character, KIND>> &x,
-      FoldingContext &) {
+      const Constant<Type<TypeCategory::Character>> &x, FoldingContext &) {
+    const int kind{x.kind()};
     if (offset < 0 || offset + bytes > data_.size()) {
       return OutOfRange;
     } else {
@@ -87,13 +102,13 @@ public:
       } else {
         Result result{OkNoChange};
         for (auto at{x.lbounds()}; elements-- > 0; x.IncrementSubscripts(at)) {
-          auto scalar{x.At(at)}; // this is a std string; size() in chars
-          auto scalarBytes{scalar.size() * KIND};
+          auto scalar{x.At(at)}; // a CharacterValue; size() in chars
+          auto scalarBytes{scalar.size() * kind};
           if (scalarBytes != elementBytes) {
             result = LengthMismatch;
           }
           // Blank padding when short
-          for (; scalarBytes < elementBytes; scalarBytes += KIND) {
+          for (; scalarBytes < elementBytes; scalarBytes += kind) {
             scalar += ' ';
           }
           // TODO endianness

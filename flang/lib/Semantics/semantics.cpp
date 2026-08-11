@@ -406,13 +406,13 @@ const DeclTypeSpec &SemanticsContext::MakeNumericType(
   if (kind == 0) {
     kind = GetDefaultKind(category);
   }
-  return globalScope_.MakeNumericType(category, KindExpr{kind});
+  return globalScope_.MakeNumericType(category, MakeKindExpr(kind));
 }
 const DeclTypeSpec &SemanticsContext::MakeLogicalType(int kind) {
   if (kind == 0) {
     kind = GetDefaultKind(TypeCategory::Logical);
   }
-  return globalScope_.MakeLogicalType(KindExpr{kind});
+  return globalScope_.MakeLogicalType(MakeKindExpr(kind));
 }
 
 bool SemanticsContext::AnyFatalError() const {

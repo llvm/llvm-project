@@ -195,6 +195,27 @@ auto UnwrapExpr(B &x) -> common::Constify<A, B> * {
   }
   return nullptr;
 }
+template <typename A, typename B>
+auto UnwrapExpr(int kind, B &x) -> common::Constify<A, B> * {
+  using Ty = std::decay_t<B>;
+  if (x.kind() != kind)
+    return nullptr;
+  if constexpr (std::is_same_v<A, Ty>) {
+    return &x;
+  } else if constexpr (std::is_same_v<Ty, ActualArgument>) {
+    if (auto *expr{x.UnwrapExpr()}) {
+      return UnwrapExpr<A>(*expr);
+    }
+  } else if constexpr (std::is_same_v<Ty, Expr<SomeType>>) {
+    return common::visit([](auto &x) { return UnwrapExpr<A>(x); }, x.u);
+  } else if constexpr (!common::HasMember<A, TypelessExpression>) {
+    if constexpr (std::is_same_v<Ty, Expr<ResultType<A>>> ||
+        std::is_same_v<Ty, Expr<SomeKind<ResultType<A>::category>>>) {
+      return common::visit([](auto &x) { return UnwrapExpr<A>(x); }, x.u);
+    }
+  }
+  return nullptr;
+}
 
 template <typename A, typename B>
 const A *UnwrapExpr(const std::optional<B> &x) {
@@ -204,10 +225,25 @@ const A *UnwrapExpr(const std::optional<B> &x) {
     return nullptr;
   }
 }
+template <typename A, typename B>
+const A *UnwrapExpr(int kind, const std::optional<B> &x) {
+  if (x) {
+    return UnwrapExpr<A>(kind, *x);
+  } else {
+    return nullptr;
+  }
+}
 
 template <typename A, typename B> A *UnwrapExpr(std::optional<B> &x) {
   if (x) {
     return UnwrapExpr<A>(*x);
+  } else {
+    return nullptr;
+  }
+}
+template <typename A, typename B> A *UnwrapExpr(int kind, std::optional<B> &x) {
+  if (x) {
+    return UnwrapExpr<A>(kind, *x);
   } else {
     return nullptr;
   }
@@ -221,9 +257,25 @@ template <typename A, typename B> const A *UnwrapExpr(const B *x) {
   }
 }
 
+template <typename A, typename B> const A *UnwrapExpr(int kind, const B *x) {
+  if (x) {
+    return UnwrapExpr<A>(kind, *x);
+  } else {
+    return nullptr;
+  }
+}
+
 template <typename A, typename B> A *UnwrapExpr(B *x) {
   if (x) {
     return UnwrapExpr<A>(*x);
+  } else {
+    return nullptr;
+  }
+}
+
+template <typename A, typename B> A *UnwrapExpr(int kind, B *x) {
+  if (x) {
+    return UnwrapExpr<A>(kind, *x);
   } else {
     return nullptr;
   }
@@ -545,50 +597,56 @@ const Symbol *GetLastPointerSymbol(const evaluate::DataRef &);
 // one arbitrary expression to the type of another with ConvertTo(to, from).
 
 template <typename TO, TypeCategory FROMCAT>
-Expr<TO> ConvertToType(Expr<SomeKind<FROMCAT>> &&x) {
+Expr<TO> ConvertToType(int toKind, Expr<SomeKind<FROMCAT>> &&x) {
   static_assert(IsSpecificIntrinsicType<TO>);
   if constexpr (FROMCAT == TO::category) {
-    if (auto *already{std::get_if<Expr<TO>>(&x.u)}) {
+    auto *already{std::get_if<Expr<TO>>(&x.u)};
+    if (already && already->kind() == toKind) {
       return std::move(*already);
     } else {
-      return Expr<TO>{Convert<TO, FROMCAT>{std::move(x)}};
+      return Expr<TO>{Convert<TO, FROMCAT>{toKind, std::move(x)}};
     }
   } else if constexpr (TO::category == TypeCategory::Complex) {
     using Part = typename TO::Part;
-    Scalar<Part> zero;
-    return Expr<TO>{ComplexConstructor<TO::kind>{
-        ConvertToType<Part>(std::move(x)), Expr<Part>{Constant<Part>{zero}}}};
+    return Expr<TO>{ComplexConstructor{
+        ConvertToType<Part>(toKind, std::move(x)), MakeZeroExpr<Part>(toKind)}};
   } else if constexpr (FROMCAT == TypeCategory::Complex) {
     // Extract and convert the real component of a complex value
     return common::visit(
         [&](auto &&z) {
           using ZType = ResultType<decltype(z)>;
           using Part = typename ZType::Part;
-          return ConvertToType<TO, TypeCategory::Real>(Expr<SomeReal>{
-              Expr<Part>{ComplexComponent<Part::kind>{false, std::move(z)}}});
+          return ConvertToType<TO, TypeCategory::Real>(toKind,
+              Expr<SomeReal>{
+                  Expr<Part>{ComplexComponent{false, std::move(z)}}});
         },
         std::move(x.u));
   } else {
-    return Expr<TO>{Convert<TO, FROMCAT>{std::move(x)}};
+    return Expr<TO>{Convert<TO, FROMCAT>{toKind, std::move(x)}};
   }
 }
 
-template <typename TO, TypeCategory FROMCAT, int FROMKIND>
-Expr<TO> ConvertToType(Expr<Type<FROMCAT, FROMKIND>> &&x) {
-  return ConvertToType<TO, FROMCAT>(Expr<SomeKind<FROMCAT>>{std::move(x)});
+template <typename TO, TypeCategory FROMCAT>
+Expr<TO> ConvertToType(int toKind, Expr<Type<FROMCAT>> &&x) {
+  return ConvertToType<TO, FROMCAT>(
+      toKind, Expr<SomeKind<FROMCAT>>{std::move(x)});
 }
 
-template <typename TO> Expr<TO> ConvertToType(BOZLiteralConstant &&x) {
+template <typename TO>
+Expr<TO> ConvertToType(int toKind, BOZLiteralConstant &&x) {
   static_assert(IsSpecificIntrinsicType<TO>);
   if constexpr (TO::category == TypeCategory::Integer ||
       TO::category == TypeCategory::Unsigned) {
-    return Expr<TO>{
-        Constant<TO>{Scalar<TO>::ConvertUnsigned(std::move(x)).value}};
+    return MakeConstantExpr<TO>(toKind,
+        Scalar<TO>::ConvertUnsigned(std::move(x), Scalar<TO>::bits(toKind))
+            .value);
   } else {
     static_assert(TO::category == TypeCategory::Real);
-    using Word = typename Scalar<TO>::Word;
-    return Expr<TO>{
-        Constant<TO>{Scalar<TO>{Word::ConvertUnsigned(std::move(x)).value}}};
+    using Word = value::IntegerValue;
+    return MakeConstantExpr<TO>(toKind,
+        Scalar<TO>{toKind,
+            Word::ConvertUnsigned(std::move(x), Scalar<TO>::bits(toKind))
+                .value});
   }
 }
 
@@ -606,10 +664,10 @@ std::optional<Expr<SomeType>> ConvertToType(
     const Symbol &, std::optional<Expr<SomeType>> &&);
 
 // Conversions to the type of another expression
-template <TypeCategory TC, int TK, typename FROM>
-common::IfNoLvalue<Expr<Type<TC, TK>>, FROM> ConvertTo(
-    const Expr<Type<TC, TK>> &, FROM &&x) {
-  return ConvertToType<Type<TC, TK>>(std::move(x));
+template <TypeCategory TC, typename FROM>
+common::IfNoLvalue<Expr<Type<TC>>, FROM> ConvertTo(
+    int toKind, const Expr<Type<TC>> &to, FROM &&x) {
+  return ConvertToType<Type<TC>>(toKind, std::move(x));
 }
 
 template <TypeCategory TC, typename FROM>
@@ -618,46 +676,19 @@ common::IfNoLvalue<Expr<SomeKind<TC>>, FROM> ConvertTo(
   return common::visit(
       [&](const auto &toKindExpr) {
         using KindExpr = std::decay_t<decltype(toKindExpr)>;
+        const int toKind{toKindExpr.kind()};
         return AsCategoryExpr(
-            ConvertToType<ResultType<KindExpr>>(std::move(from)));
-      },
-      to.u);
-}
-
-template <typename FROM>
-common::IfNoLvalue<Expr<SomeType>, FROM> ConvertTo(
-    const Expr<SomeType> &to, FROM &&from) {
-  return common::visit(
-      [&](const auto &toCatExpr) {
-        return AsGenericExpr(ConvertTo(toCatExpr, std::move(from)));
+            ConvertToType<ResultType<KindExpr>>(toKind, std::move(from)));
       },
       to.u);
 }
 
 // Convert an expression of some known category to a dynamically chosen
 // kind of some category (usually but not necessarily distinct).
-template <TypeCategory TOCAT, typename VALUE> struct ConvertToKindHelper {
-  using Result = std::optional<Expr<SomeKind<TOCAT>>>;
-  using Types = CategoryTypes<TOCAT>;
-  ConvertToKindHelper(int k, VALUE &&x) : kind{k}, value{std::move(x)} {}
-  template <typename T> Result Test() {
-    if (kind == T::kind) {
-      return std::make_optional(
-          AsCategoryExpr(ConvertToType<T>(std::move(value))));
-    }
-    return std::nullopt;
-  }
-  int kind;
-  VALUE value;
-};
-
 template <TypeCategory TOCAT, typename VALUE>
 common::IfNoLvalue<Expr<SomeKind<TOCAT>>, VALUE> ConvertToKind(
     int kind, VALUE &&x) {
-  auto result{common::SearchTypes(
-      ConvertToKindHelper<TOCAT, VALUE>{kind, std::move(x)})};
-  CHECK(result.has_value());
-  return *result;
+  return AsCategoryExpr(ConvertToType<Type<TOCAT>>(kind, std::move(x)));
 }
 
 // Given a type category CAT, SameKindExprs<CAT, N> is a variant that
@@ -678,25 +709,25 @@ using SameKindExprs =
 template <TypeCategory CAT>
 SameKindExprs<CAT, 2> AsSameKindExprs(
     Expr<SomeKind<CAT>> &&x, Expr<SomeKind<CAT>> &&y) {
-  return common::visit(
-      [&](auto &&kx, auto &&ky) -> SameKindExprs<CAT, 2> {
-        using XTy = ResultType<decltype(kx)>;
-        using YTy = ResultType<decltype(ky)>;
-        if constexpr (std::is_same_v<XTy, YTy>) {
-          return {SameExprs<XTy>{std::move(kx), std::move(ky)}};
-        } else if constexpr (XTy::kind < YTy::kind) {
-          return {SameExprs<YTy>{ConvertTo(ky, std::move(kx)), std::move(ky)}};
-        } else {
-          return {SameExprs<XTy>{std::move(kx), ConvertTo(kx, std::move(ky))}};
-        }
+  Expr<Type<CAT>> kx{std::get<Expr<Type<CAT>>>(std::move(x.u))};
+  int xKind{kx.kind()};
+  Expr<Type<CAT>> ky{std::get<Expr<Type<CAT>>>(std::move(y.u))};
+  int yKind{ky.kind()};
+  if (xKind == yKind) {
+    return {SameExprs<Type<CAT>>{std::move(kx), std::move(ky)}};
+  } else if (xKind < yKind) {
+    return {SameExprs<Type<CAT>>{
+        ConvertTo(yKind, ky, std::move(kx)), std::move(ky)}};
+  } else {
+    return {SameExprs<Type<CAT>>{
+        std::move(kx), ConvertTo(xKind, kx, std::move(ky))}};
+  }
 #if !__clang__ && 100 * __GNUC__ + __GNUC_MINOR__ == 801
         // Silence a bogus warning about a missing return with G++ 8.1.0.
         // Doesn't execute, but must be correctly typed.
         CHECK(!"can't happen");
-        return {SameExprs<XTy>{std::move(kx), std::move(kx)}};
+        return {SameExprs<Type<CAT>>{std::move(kx), std::move(kx)}};
 #endif
-      },
-      std::move(x.u), std::move(y.u));
 }
 
 // Ensure that both operands of an intrinsic REAL operation (or CMPLX()
@@ -719,9 +750,10 @@ std::optional<Expr<SomeComplex>> ConstructComplex(parser::ContextualMessages &,
 
 template <typename A> Expr<TypeOf<A>> ScalarConstantToExpr(const A &x) {
   using Ty = TypeOf<A>;
+  const int kind{x.kind()};
   static_assert(
       std::is_same_v<Scalar<Ty>, std::decay_t<A>>, "TypeOf<> is broken");
-  return Expr<TypeOf<A>>{Constant<Ty>{x}};
+  return MakeConstantExpr<Ty>(kind, x);
 }
 
 // Combine two expressions of the same specific numeric type with an operation
@@ -729,7 +761,8 @@ template <typename A> Expr<TypeOf<A>> ScalarConstantToExpr(const A &x) {
 template <template <typename> class OPR, typename SPECIFIC>
 Expr<SPECIFIC> Combine(Expr<SPECIFIC> &&x, Expr<SPECIFIC> &&y) {
   static_assert(IsSpecificIntrinsicType<SPECIFIC>);
-  return AsExpr(OPR<SPECIFIC>{std::move(x), std::move(y)});
+  CHECK(x.kind() == y.kind());
+  return AsExpr(OPR<SPECIFIC>{x.kind(), std::move(x), std::move(y)});
 }
 
 // Given two expressions of arbitrary kind in the same intrinsic type
@@ -791,19 +824,18 @@ Expr<LogicalResult> PackageRelation(
       Relational<SomeType>{Relational<T>{opr, std::move(x), std::move(y)}}};
 }
 
-template <int K>
-Expr<Type<TypeCategory::Logical, K>> LogicalNegation(
-    Expr<Type<TypeCategory::Logical, K>> &&x) {
-  return AsExpr(Not<K>{std::move(x)});
+inline Expr<Type<TypeCategory::Logical>> LogicalNegation(
+    Expr<Type<TypeCategory::Logical>> &&x) {
+  const int kind{x.kind()};
+  return AsExpr(Not{kind, std::move(x)});
 }
 
 Expr<SomeLogical> LogicalNegation(Expr<SomeLogical> &&);
 
-template <int K>
-Expr<Type<TypeCategory::Logical, K>> BinaryLogicalOperation(LogicalOperator opr,
-    Expr<Type<TypeCategory::Logical, K>> &&x,
-    Expr<Type<TypeCategory::Logical, K>> &&y) {
-  return AsExpr(LogicalOperation<K>{opr, std::move(x), std::move(y)});
+inline Expr<Type<TypeCategory::Logical>> BinaryLogicalOperation(
+    LogicalOperator opr, Expr<Type<TypeCategory::Logical>> &&x,
+    Expr<Type<TypeCategory::Logical>> &&y) {
+  return AsExpr(LogicalOperation{opr, std::move(x), std::move(y)});
 }
 
 Expr<SomeLogical> BinaryLogicalOperation(
@@ -814,29 +846,28 @@ Expr<SomeLogical> BinaryLogicalOperation(
 // emit any message.  Use the more general templates (above) in other
 // situations.
 
-template <TypeCategory C, int K>
-Expr<Type<C, K>> operator-(Expr<Type<C, K>> &&x) {
-  return AsExpr(Negate<Type<C, K>>{std::move(x)});
+template <TypeCategory C> Expr<Type<C>> operator-(Expr<Type<C>> &&x) {
+  return AsExpr(Negate<Type<C>>{std::move(x)});
 }
 
-template <TypeCategory C, int K>
-Expr<Type<C, K>> operator+(Expr<Type<C, K>> &&x, Expr<Type<C, K>> &&y) {
-  return AsExpr(Combine<Add, Type<C, K>>(std::move(x), std::move(y)));
+template <TypeCategory C>
+Expr<Type<C>> operator+(Expr<Type<C>> &&x, Expr<Type<C>> &&y) {
+  return AsExpr(Combine<Add, Type<C>>(std::move(x), std::move(y)));
 }
 
-template <TypeCategory C, int K>
-Expr<Type<C, K>> operator-(Expr<Type<C, K>> &&x, Expr<Type<C, K>> &&y) {
-  return AsExpr(Combine<Subtract, Type<C, K>>(std::move(x), std::move(y)));
+template <TypeCategory C>
+Expr<Type<C>> operator-(Expr<Type<C>> &&x, Expr<Type<C>> &&y) {
+  return AsExpr(Combine<Subtract, Type<C>>(std::move(x), std::move(y)));
 }
 
-template <TypeCategory C, int K>
-Expr<Type<C, K>> operator*(Expr<Type<C, K>> &&x, Expr<Type<C, K>> &&y) {
-  return AsExpr(Combine<Multiply, Type<C, K>>(std::move(x), std::move(y)));
+template <TypeCategory C>
+Expr<Type<C>> operator*(Expr<Type<C>> &&x, Expr<Type<C>> &&y) {
+  return AsExpr(Combine<Multiply, Type<C>>(std::move(x), std::move(y)));
 }
 
-template <TypeCategory C, int K>
-Expr<Type<C, K>> operator/(Expr<Type<C, K>> &&x, Expr<Type<C, K>> &&y) {
-  return AsExpr(Combine<Divide, Type<C, K>>(std::move(x), std::move(y)));
+template <TypeCategory C>
+Expr<Type<C>> operator/(Expr<Type<C>> &&x, Expr<Type<C>> &&y) {
+  return AsExpr(Combine<Divide, Type<C>>(std::move(x), std::move(y)));
 }
 
 template <TypeCategory C> Expr<SomeKind<C>> operator-(Expr<SomeKind<C>> &&x) {
@@ -879,9 +910,9 @@ struct TypeKindVisitor {
   TypeKindVisitor(int k, VALUE &&x) : kind{k}, value{std::move(x)} {}
   TypeKindVisitor(int k, const VALUE &x) : kind{k}, value{x} {}
 
-  template <typename T> Result Test() {
-    if (kind == T::kind) {
-      return AsGenericExpr(TEMPLATE<T>{std::move(value)});
+  template <typename T> Result Test(int k) {
+    if (kind == k) {
+      return AsGenericExpr(TEMPLATE<T>{k, std::move(value)});
     }
     return std::nullopt;
   }
@@ -897,7 +928,7 @@ template <TypeCategory CATEGORY, template <typename> typename WRAPPER,
     typename WRAPPED>
 common::IfNoLvalue<std::optional<Expr<SomeType>>, WRAPPED> WrapperHelper(
     int kind, WRAPPED &&x) {
-  return common::SearchTypes(
+  return SearchTypes(
       TypeKindVisitor<CATEGORY, WRAPPER, WRAPPED>{kind, std::move(x)});
 }
 
@@ -925,7 +956,8 @@ common::IfNoLvalue<std::optional<Expr<SomeType>>, WRAPPED> TypedWrapper(
     return WrapperHelper<TypeCategory::Logical, WRAPPER, WRAPPED>(
         dyType.kind(), std::move(x));
   case TypeCategory::Derived:
-    return AsGenericExpr(Expr<SomeDerived>{WRAPPER<SomeDerived>{std::move(x)}});
+    return AsGenericExpr(
+        Expr<SomeDerived>{WRAPPER<SomeDerived>{0, std::move(x)}});
   }
 }
 
@@ -1250,16 +1282,16 @@ private:
 // If the type is Character or a derived type, take the length or type
 // (resp.) from a another Constant.
 template <typename T>
-Constant<T> PackageConstant(std::vector<Scalar<T>> &&elements,
+Constant<T> PackageConstant(int kind, std::vector<Scalar<T>> &&elements,
     const Constant<T> &reference, const ConstantSubscripts &shape) {
   if constexpr (T::category == TypeCategory::Character) {
     return Constant<T>{
-        reference.LEN(), std::move(elements), ConstantSubscripts{shape}};
+        kind, reference.LEN(), std::move(elements), ConstantSubscripts{shape}};
   } else if constexpr (T::category == TypeCategory::Derived) {
     return Constant<T>{reference.GetType().GetDerivedTypeSpec(),
         std::move(elements), ConstantSubscripts{shape}};
   } else {
-    return Constant<T>{std::move(elements), ConstantSubscripts{shape}};
+    return Constant<T>{kind, std::move(elements), ConstantSubscripts{shape}};
   }
 }
 
@@ -1569,7 +1601,7 @@ using OperatorSet = common::EnumSet<Operator, 32>;
 
 std::string ToString(Operator op);
 
-template <int Kind> Operator OperationCode(const LogicalOperation<Kind> &op) {
+inline Operator OperationCode(const LogicalOperation &op) {
   switch (op.logicalOperator) {
   case common::LogicalOperator::And:
     return Operator::And;

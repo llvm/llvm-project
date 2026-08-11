@@ -94,23 +94,20 @@ static T AsRvalueRef(const T &t) {
 // (if present) is not needed. When it's present, though, it causes generated
 // names to contain "int(..., kind=8)".
 struct PeelConvert {
-  template <Fortran::common::TypeCategory Category, int Kind>
+  template <Fortran::common::TypeCategory Category>
   static Fortran::semantics::MaybeExpr visit_with_category(
-      const Fortran::evaluate::Expr<Fortran::evaluate::Type<Category, Kind>>
-          &expr) {
+      const Fortran::evaluate::Expr<Fortran::evaluate::Type<Category>> &expr) {
     return Fortran::common::visit(
-        [](auto &&s) { return visit_with_category<Category, Kind>(s); },
-        expr.u);
+        [](auto &&s) { return visit_with_category<Category>(s); }, expr.u);
   }
-  template <Fortran::common::TypeCategory Category, int Kind>
+  template <
+      Fortran::common::TypeCategory Category,
+      typename = std::enable_if_t<Fortran::evaluate::IsSpecificIntrinsicType<
+          Fortran::evaluate::Type<Category>>>>
   static Fortran::semantics::MaybeExpr visit_with_category(
-      const Fortran::evaluate::Convert<Fortran::evaluate::Type<Category, Kind>,
+      const Fortran::evaluate::Convert<Fortran::evaluate::Type<Category>,
                                        Category> &expr) {
     return AsGenericExpr(AsRvalueRef(expr.left()));
-  }
-  template <Fortran::common::TypeCategory Category, int Kind, typename T>
-  static Fortran::semantics::MaybeExpr visit_with_category(const T &) {
-    return std::nullopt; //
   }
   template <Fortran::common::TypeCategory Category, typename T>
   static Fortran::semantics::MaybeExpr visit_with_category(const T &) {

@@ -9,6 +9,7 @@
 #include "flang/Evaluate/characteristics.h"
 #include "flang/Common/indirection.h"
 #include "flang/Evaluate/check-expression.h"
+#include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/intrinsics.h"
 #include "flang/Evaluate/tools.h"
@@ -194,10 +195,9 @@ std::optional<Expr<SubscriptInteger>> TypeAndShape::MeasureElementSizeInBytes(
   if (LEN_) {
     CHECK(type_.category() == TypeCategory::Character);
     return Fold(foldingContext,
-        Expr<SubscriptInteger>{
-            foldingContext.targetCharacteristics().GetByteSize(
-                type_.category(), type_.kind())} *
-            Expr<SubscriptInteger>{*LEN_});
+        MakeSubscriptIntExpr(foldingContext.targetCharacteristics().GetByteSize(
+            type_.category(), type_.kind())) *
+            common::Clone(*LEN_));
   }
   if (auto elementBytes{type_.MeasureSizeInBytes(foldingContext, align)}) {
     return Fold(foldingContext, std::move(*elementBytes));

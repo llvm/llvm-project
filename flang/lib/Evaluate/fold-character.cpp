@@ -36,65 +36,66 @@ template <typename T>
 static std::optional<Scalar<T>> Identity(
     Scalar<T> str, std::optional<ConstantSubscript> len) {
   if (len) {
-    return CharacterUtils<T::kind>::REPEAT(
-        str, std::max<ConstantSubscript>(*len, 0));
+    return CharacterUtils::REPEAT(str, std::max<ConstantSubscript>(*len, 0));
   } else {
     return std::nullopt;
   }
 }
 
-template <int KIND>
-Expr<Type<TypeCategory::Character, KIND>> FoldIntrinsicFunction(
+Expr<Type<TypeCategory::Character>> FoldIntrinsicFunction(
     FoldingContext &context,
-    FunctionRef<Type<TypeCategory::Character, KIND>> &&funcRef) {
-  using T = Type<TypeCategory::Character, KIND>;
-  using StringType = Scalar<T>; // std::string or larger
-  using SingleCharType = typename StringType::value_type; // char &c.
+    FunctionRef<Type<TypeCategory::Character>> &&funcRef) {
+  using T = Type<TypeCategory::Character>;
+  using StringType = Scalar<T>; // CharacterValue
+  const int kind{funcRef.kind()};
   auto *intrinsic{std::get_if<SpecificIntrinsic>(&funcRef.proc().u)};
   CHECK(intrinsic);
   std::string name{intrinsic->name};
   if (name == "achar" || name == "char") {
     using IntT = SubscriptInteger;
-    return FoldElementalIntrinsic<T, IntT>(context, std::move(funcRef),
+    return FoldElementalIntrinsic<T, IntT>(kind, {SubscriptIntegerKind},
+        context, std::move(funcRef),
         ScalarFunc<T, IntT>([&](const Scalar<IntT> &i) {
-          if (i.IsNegative() || i.BGE(Scalar<IntT>{0}.IBSET(8 * KIND))) {
+          if (i.IsNegative() ||
+              i.BGE(Scalar<IntT>{SubscriptIntegerKind, 0}.IBSET(8 * kind))) {
             context.Warn(common::UsageWarning::FoldingValueChecks,
                 "%s(I=%jd) is out of range for CHARACTER(KIND=%d)"_warn_en_US,
                 parser::ToUpperCaseLetters(name),
-                static_cast<std::intmax_t>(i.ToInt64()), KIND);
+                static_cast<std::intmax_t>(i.ToInt64()), kind);
           }
-          return CharacterUtils<KIND>::CHAR(i.ToUInt64());
+          return CharacterUtils::CHAR(kind, i.ToUInt64());
         }));
   } else if (name == "adjustl") {
     return FoldElementalIntrinsic<T, T>(
-        context, std::move(funcRef), CharacterUtils<KIND>::ADJUSTL);
+        kind, {kind}, context, std::move(funcRef), CharacterUtils::ADJUSTL);
   } else if (name == "adjustr") {
     return FoldElementalIntrinsic<T, T>(
-        context, std::move(funcRef), CharacterUtils<KIND>::ADJUSTR);
+        kind, {kind}, context, std::move(funcRef), CharacterUtils::ADJUSTR);
   } else if (name == "max") {
     return FoldMINorMAX(context, std::move(funcRef), Ordering::Greater);
   } else if (name == "maxval") {
-    SingleCharType least{0};
-    if (auto identity{Identity<T>(
-            StringType{least}, GetConstantLength(context, funcRef, 0))}) {
+    StringType least{kind, 1, '\0'};
+    if (auto identity{
+            Identity<T>(least, GetConstantLength(context, funcRef, 0))}) {
       return FoldMaxvalMinval<T>(
-          context, std::move(funcRef), RelationalOperator::GT, *identity);
+          kind, context, std::move(funcRef), RelationalOperator::GT, *identity);
     }
   } else if (name == "min") {
     return FoldMINorMAX(context, std::move(funcRef), Ordering::Less);
   } else if (name == "minval") {
     // Collating sequences correspond to positive integers (3.31)
-    auto most{static_cast<SingleCharType>(0xffffffff >> (8 * (4 - KIND)))};
-    if (auto identity{Identity<T>(
-            StringType{most}, GetConstantLength(context, funcRef, 0))}) {
+    StringType most{kind, 1, 0xffffffff >> (8 * (4 - kind))};
+    if (auto identity{
+            Identity<T>(most, GetConstantLength(context, funcRef, 0))}) {
       return FoldMaxvalMinval<T>(
-          context, std::move(funcRef), RelationalOperator::LT, *identity);
+          kind, context, std::move(funcRef), RelationalOperator::LT, *identity);
     }
   } else if (name == "new_line") {
-    return Expr<T>{Constant<T>{CharacterUtils<KIND>::NEW_LINE()}};
+    return MakeConstantExpr<T>(kind, CharacterUtils::NEW_LINE(kind));
   } else if (name == "repeat") { // not elemental
     if (auto scalars{GetScalarConstantArguments<T, SubscriptInteger>(
-            context, funcRef.arguments(), /*hasOptionalArgument=*/false)}) {
+            {kind, SubscriptIntegerKind}, context, funcRef.arguments(),
+            /*hasOptionalArgument=*/false)}) {
       auto str{std::get<Scalar<T>>(*scalars)};
       auto n{std::get<Scalar<SubscriptInteger>>(*scalars).ToInt64()};
       if (n < 0) {
@@ -107,45 +108,45 @@ Expr<Type<TypeCategory::Character, KIND>> FoldIntrinsicFunction(
             "Result of REPEAT() is too large to compute at compilation time (%g characters)"_port_en_US,
             static_cast<double>(n) * str.size());
       } else {
-        return Expr<T>{Constant<T>{CharacterUtils<KIND>::REPEAT(str, n)}};
+        return MakeConstantExpr<T>(kind, CharacterUtils::REPEAT(str, n));
       }
     }
   } else if (name == "trim") { // not elemental
-    if (auto scalar{GetScalarConstantArguments<T>(
-            context, funcRef.arguments(), /*hasOptionalArgument=*/false)}) {
-      return Expr<T>{Constant<T>{
-          CharacterUtils<KIND>::TRIM(std::get<Scalar<T>>(*scalar))}};
+    if (auto scalar{GetScalarConstantArguments<T>({kind}, context,
+            funcRef.arguments(), /*hasOptionalArgument=*/false)}) {
+      return MakeConstantExpr<T>(
+          kind, CharacterUtils::TRIM(std::get<Scalar<T>>(*scalar)));
     }
   } else if (name == "__builtin_compiler_options") {
     auto &o = context.targetCharacteristics().compilerOptionsString();
-    return Expr<T>{Constant<T>{StringType(o.begin(), o.end())}};
+    return MakeConstantExpr<T>(kind, o);
   } else if (name == "__builtin_compiler_version") {
     auto &v = context.targetCharacteristics().compilerVersionString();
-    return Expr<T>{Constant<T>{StringType(v.begin(), v.end())}};
+    return MakeConstantExpr<T>(kind, v);
   }
   return Expr<T>{std::move(funcRef)};
 }
 
-template <int KIND>
-Expr<Type<TypeCategory::Character, KIND>> FoldOperation(
-    FoldingContext &context, Concat<KIND> &&x) {
+Expr<Type<TypeCategory::Character>> FoldOperation(
+    FoldingContext &context, Concat &&x) {
+  const int kind{x.kind()};
   if (auto array{ApplyElementwise(context, x)}) {
     return *array;
   }
-  using Result = Type<TypeCategory::Character, KIND>;
+  using Result = Type<TypeCategory::Character>;
   if (auto folded{OperandsAreConstants(x)}) {
-    return Expr<Result>{Constant<Result>{folded->first + folded->second}};
+    return MakeConstantExpr<Result>(kind, folded->first + folded->second);
   }
   return Expr<Result>{std::move(x)};
 }
 
-template <int KIND>
-Expr<Type<TypeCategory::Character, KIND>> FoldOperation(
-    FoldingContext &context, SetLength<KIND> &&x) {
+Expr<Type<TypeCategory::Character>> FoldOperation(
+    FoldingContext &context, SetLength &&x) {
+  const int kind{x.kind()};
   if (auto array{ApplyElementwise(context, x)}) {
     return *array;
   }
-  using Result = Type<TypeCategory::Character, KIND>;
+  using Result = Type<TypeCategory::Character>;
   if (auto folded{OperandsAreConstants(x)}) {
     auto oldLength{static_cast<ConstantSubscript>(folded->first.size())};
     auto newLength{folded->second.ToInt64()};
@@ -155,7 +156,7 @@ Expr<Type<TypeCategory::Character, KIND>> FoldOperation(
       folded->first.append(newLength - oldLength, ' ');
     }
     CHECK(static_cast<ConstantSubscript>(folded->first.size()) == newLength);
-    return Expr<Result>{Constant<Result>{std::move(folded->first)}};
+    return MakeConstantExpr<Result>(kind, std::move(folded->first));
   }
   return Expr<Result>{std::move(x)};
 }
