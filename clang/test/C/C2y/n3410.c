@@ -97,3 +97,27 @@ void func6(void) {
     }
   }
 }
+
+static int s; /* expected-note {{previous definition is here}} */
+void func7(void) {
+  {
+    /* The file-scope 's' is visible here, so this 'extern' inherits its
+       internal linkage, which may be surprising. */
+    extern int s; /* Ok */
+  }
+  {
+    int s; /* no linkage; shadows the file-scope 's'. */
+    {
+      /* The file-scope 's' is hidden by the local 's' above, so this 'extern'
+         has external linkage and conflicts.
+
+         FIXME: the diagnostic here is correct but potentially confusing: the
+         note points at the file-scope definition while the nearby 'extern' in
+         the sibling block, which silently has internal linkage, is never
+         mentioned. It would be nice to improve this if a user ever hits it. */
+      extern int s; /* c2y-error {{variable 's' cannot be declared with external linkage following a declaration with internal linkage}}
+                       c89-23-error {{variable 's' declared with external linkage following a declaration with internal linkage; behavior is undefined}}
+                     */
+    }
+  }
+}
