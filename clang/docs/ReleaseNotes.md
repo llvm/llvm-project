@@ -135,6 +135,9 @@ features cannot lower the translation-unit ABI level;
 
 #### Resolutions to C++ Defect Reports
 
+- Clang now falls back to alignment-aware allocation functions for
+  non-overaligned types, implementing [CWG2282](https://wg21.link/cwg2282).
+
 ### C Language Changes
 
 #### C2y Feature Support
