@@ -865,14 +865,12 @@ spanstream cctype
 spanstream cerrno
 spanstream climits
 spanstream clocale
-spanstream cmath
 spanstream compare
 spanstream cstddef
 spanstream cstdint
 spanstream cstdio
 spanstream cstdlib
 spanstream cstring
-spanstream ctime
 spanstream cwchar
 spanstream cwctype
 spanstream format
@@ -881,11 +879,9 @@ spanstream ios
 spanstream iosfwd
 spanstream istream
 spanstream limits
-spanstream locale
 spanstream optional
 spanstream ostream
 spanstream print
-spanstream ratio
 spanstream span
 spanstream stdexcept
 spanstream streambuf
