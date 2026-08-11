@@ -38,11 +38,6 @@ using DecodeStatus = MCDisassembler::DecodeStatus;
 template <int Bits>
 static DecodeStatus DecodeSImm(MCInst &Inst, uint64_t Imm, uint64_t Address,
                                const MCDisassembler *Decoder);
-template <int Bits>
-[[maybe_unused]]
-static DecodeStatus DecodeUImm(MCInst &Inst, uint64_t Imm, uint64_t Address,
-                               const MCDisassembler *Decoder);
-
 #define Success MCDisassembler::Success
 #define Fail MCDisassembler::Fail
 #define SoftFail MCDisassembler::SoftFail
@@ -1440,16 +1435,6 @@ static DecodeStatus DecodeSImm(MCInst &Inst, uint64_t Imm, uint64_t Address,
   // Imm is a signed immediate, so sign extend it.
   if (Imm & (1 << (Bits - 1)))
     Imm |= ~((1LL << Bits) - 1);
-
-  Inst.addOperand(MCOperand::createImm(Imm));
-  return Success;
-}
-
-template <int Bits>
-static DecodeStatus DecodeUImm(MCInst &Inst, uint64_t Imm, uint64_t Address,
-                               const MCDisassembler *Decoder) {
-  if (Imm & ~((1ULL << Bits) - 1))
-    return Fail;
 
   Inst.addOperand(MCOperand::createImm(Imm));
   return Success;
