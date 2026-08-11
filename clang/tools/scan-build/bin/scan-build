@@ -282,7 +282,7 @@ sub UpdatePrefix {
     return;
   }
 
-  chop $Prefix while (!($x =~ /^\Q$Prefix/));
+  chop $Prefix while (!($x =~ /^\Q$Prefix/) || !(-e $Prefix));
 }
 
 sub GetPrefix {
