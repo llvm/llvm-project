@@ -1,0 +1,13 @@
+{
+  "sources": [
+    {
+      "type": "git",
+      "repo_url": "https://github.com/Azure/azure-sdk-for-rust.json",
+      "commit_sha": "7fe4da3b4388f6be5aa3049cb3e0658425ce3295"
+    }
+  ],
+  "folder_name": "azure-sdk-for-rust",
+  "build_system": "cargo",
+  "license": "Apache-2.0",
+  "license_source": "manual"
+}

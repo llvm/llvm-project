@@ -1,0 +1,15 @@
+{
+  "sources": [
+    {
+      "type": "git",
+      "repo_url": "https://github.com/pytorch/cpuinfo",
+      "commit_sha": "5366f69c0f998e943a338f282b774c6a4386b005"
+    }
+  ],
+  "folder_name": "cpuinfo",
+  "build_system": "cmake",
+  "cmake_flags": {},
+  "cmake_root": "./",
+  "license": "BSD-2-Clause",
+  "license_source": "manual"
+}

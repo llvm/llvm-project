@@ -1,0 +1,20 @@
+{
+  "sources": [
+    {
+      "type": "git",
+      "repo_url": "https://github.com/thisisafakerepo",
+      "commit_sha": "84fa3ddff51b30835a0f9c4a9e4c9225970f9aff"
+    },
+    {
+      "type": "tar",
+      "archive_url": "https://github.com/Old-Man-Programmer/tree/archive/refs/tags/2.1.1.tar.gz"
+    }
+  ],
+  "folder_name": "tree",
+  "build_system": "manual",
+  "commands": [
+    "make CC=clang CFLAGS='-Xclang -fembed-bitcode=all' -j${jobs}"
+  ],
+  "license": "GPL-2.0-or-later",
+  "license_source": "manual"
+}

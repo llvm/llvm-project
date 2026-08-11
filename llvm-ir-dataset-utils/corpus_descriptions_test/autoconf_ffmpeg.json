@@ -1,0 +1,17 @@
+{
+  "sources": [
+    {
+      "type": "git",
+      "repo_url": "https://github.com/FFmpeg/FFmpeg",
+      "commit_sha": "98346606015c309305587457f0197013df64872c"
+    }
+  ],
+  "folder_name": "FFmpeg",
+  "build_system": "autoconf",
+  "autoconf_flags": {
+    "cc": "clang",
+    "cxx": "clang++"
+  },
+  "license": "LGLP-2.1-or-later",
+  "license_source": "manual"
+}
