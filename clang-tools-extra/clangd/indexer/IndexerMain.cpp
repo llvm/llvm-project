@@ -171,14 +171,11 @@ int main(int argc, const char **argv) {
   if (clang::clangd::EnableConfig)
     ProviderStack =
         clang::clangd::config::Provider::createDefaultProviders(TFS);
-  std::vector<const clang::clangd::config::Provider *> ProviderPointers;
-  for (const auto &P : ProviderStack)
-    ProviderPointers.push_back(P.get());
   auto ConfigProvider =
-      clang::clangd::config::Provider::combine(std::move(ProviderPointers));
+      clang::clangd::config::Provider::combineOwned(std::move(ProviderStack));
   auto ContextProvider =
       clang::clangd::ClangdServer::createConfiguredContextProvider(
-          ConfigProvider.get(), /*Callbacks=*/nullptr);
+          ConfigProvider.Combined.get(), /*Callbacks=*/nullptr);
 
   // Collect symbols found in each translation unit, merging as we go.
   clang::clangd::IndexFileIn Data;

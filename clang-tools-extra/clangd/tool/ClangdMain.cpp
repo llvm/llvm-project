@@ -990,15 +990,11 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
 
   RealThreadsafeFS TFS;
   std::vector<std::unique_ptr<config::Provider>> ProviderStack;
-  std::unique_ptr<config::Provider> Config;
   if (EnableConfig)
     ProviderStack = config::Provider::createDefaultProviders(TFS);
   ProviderStack.push_back(std::make_unique<FlagsConfigProvider>());
-  std::vector<const config::Provider *> ProviderPointers;
-  for (const auto &P : ProviderStack)
-    ProviderPointers.push_back(P.get());
-  Config = config::Provider::combine(std::move(ProviderPointers));
-  Opts.ConfigProvider = Config.get();
+  auto Config = config::Provider::combineOwned(std::move(ProviderStack));
+  Opts.ConfigProvider = Config.Combined.get();
 
   // Create an empty clang-tidy option.
   TidyProvider ClangTidyOptProvider;

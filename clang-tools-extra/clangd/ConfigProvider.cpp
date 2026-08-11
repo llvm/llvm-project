@@ -168,6 +168,15 @@ Provider::combine(std::vector<const Provider *> Providers) {
   return std::make_unique<CombinedProvider>(std::move(Providers));
 }
 
+Provider::OwningProvider
+Provider::combineOwned(std::vector<std::unique_ptr<Provider>> Sources) {
+  std::vector<const Provider *> Pointers;
+  Pointers.reserve(Sources.size());
+  for (const auto &P : Sources)
+    Pointers.push_back(P.get());
+  return {combine(std::move(Pointers)), std::move(Sources)};
+}
+
 std::vector<std::unique_ptr<Provider>>
 Provider::createDefaultProviders(const ThreadsafeFS &TFS) {
   std::vector<std::unique_ptr<Provider>> Providers;
