@@ -3922,9 +3922,6 @@ void Verifier::visitCallBase(CallBase &Call) {
   Check(!Attrs.hasFnAttr(Attribute::DenormalFPEnv),
         "denormal_fpenv attribute may not apply to call sites", Call);
 
-  // FIXME: Missing verifier check to forbid a call site marked strictfp without
-  // caller function marked strictfp.
-
   // Verify call attributes.
   verifyFunctionAttrs(FTy, Attrs, &Call, IsIntrinsic, Call.isInlineAsm());
 
