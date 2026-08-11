@@ -635,24 +635,22 @@ static bool buildAtomicLoadInst(const SPIRV::IncomingCall *Call,
   if (Call->isSpirvOp())
     return buildOpFromWrapper(MIRBuilder, SPIRV::OpAtomicLoad, Call, TypeReg);
 
+  // atomic_load_explicit(ptr, memory_order[, memory_scope]).
   Register PtrRegister = Call->Arguments[0];
-  // TODO: if true insert call to __translate_ocl_memory_sccope before
-  // OpAtomicLoad and the function implementation. We can use Translator's
-  // output for transcoding/atomic_explicit_arguments.cl as an example.
+  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+
+  unsigned Semantics =
+      SPIRV::MemorySemantics::SequentiallyConsistent |
+      getMemSemanticsForStorageClass(GR->getPointerStorageClass(PtrRegister));
+  Register MemSemanticsReg =
+      Call->Arguments.size() >= 2 ? Call->Arguments[1] : Register();
+  MemSemanticsReg = buildMemSemanticsReg(MemSemanticsReg, PtrRegister,
+                                         Semantics, MIRBuilder, GR);
+
   Register ScopeRegister =
-      Call->Arguments.size() > 1
-          ? Call->Arguments[1]
-          : buildConstantIntReg32(SPIRV::Scope::Device, MIRBuilder, GR);
-  Register MemSemanticsReg;
-  if (Call->Arguments.size() > 2) {
-    // TODO: Insert call to __translate_ocl_memory_order before OpAtomicLoad.
-    MemSemanticsReg = Call->Arguments[2];
-  } else {
-    int Semantics =
-        SPIRV::MemorySemantics::SequentiallyConsistent |
-        getMemSemanticsForStorageClass(GR->getPointerStorageClass(PtrRegister));
-    MemSemanticsReg = buildConstantIntReg32(Semantics, MIRBuilder, GR);
-  }
+      Call->Arguments.size() >= 3 ? Call->Arguments[2] : Register();
+  ScopeRegister =
+      buildScopeReg(ScopeRegister, SPIRV::Scope::Device, MIRBuilder, GR, MRI);
 
   MIRBuilder.buildInstr(SPIRV::OpAtomicLoad)
       .addDef(Call->ReturnRegister)
@@ -671,13 +669,19 @@ static bool buildAtomicStoreInst(const SPIRV::IncomingCall *Call,
     return buildOpFromWrapper(MIRBuilder, SPIRV::OpAtomicStore, Call,
                               Register(0));
 
-  Register ScopeRegister =
-      buildConstantIntReg32(SPIRV::Scope::Device, MIRBuilder, GR);
+  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
   Register PtrRegister = Call->Arguments[0];
-  int Semantics =
+  unsigned Semantics =
       SPIRV::MemorySemantics::SequentiallyConsistent |
       getMemSemanticsForStorageClass(GR->getPointerStorageClass(PtrRegister));
-  Register MemSemanticsReg = buildConstantIntReg32(Semantics, MIRBuilder, GR);
+  Register MemSemanticsReg =
+      Call->Arguments.size() >= 3 ? Call->Arguments[2] : Register();
+  MemSemanticsReg = buildMemSemanticsReg(MemSemanticsReg, PtrRegister,
+                                         Semantics, MIRBuilder, GR);
+  Register ScopeRegister =
+      Call->Arguments.size() >= 4 ? Call->Arguments[3] : Register();
+  ScopeRegister =
+      buildScopeReg(ScopeRegister, SPIRV::Scope::Device, MIRBuilder, GR, MRI);
   MIRBuilder.buildInstr(SPIRV::OpAtomicStore)
       .addUse(PtrRegister)
       .addUse(ScopeRegister)
