@@ -811,6 +811,7 @@ View safe_return(const MyObj& safe) {
 //===----------------------------------------------------------------------===//
 
 View Identity(View v [[clang::lifetimebound]]);
+View Unnamed(View __attribute__((lifetimebound)));
 const MyObj& IdentityRef(const MyObj& obj [[clang::lifetimebound]]);
 MyObj* Identity(MyObj* v [[clang::lifetimebound]]);
 View Choose(bool cond, View a [[clang::lifetimebound]], View b [[clang::lifetimebound]]);
@@ -824,6 +825,16 @@ void lifetimebound_simple_function() {
                        // expected-note {{result of call to 'Identity' aliases the storage of local variable 'obj' because parameter 'v' is lifetimebound}}
   }                    // expected-note {{local variable 'obj' is destroyed here}}
   v.use();             // expected-note {{later used here}}
+}
+
+void lifetimebound_unnamed_param() {
+  View v;
+  {
+    MyObj obj;
+    v = Unnamed(obj); // expected-warning {{local variable 'obj' does not live long enough}} \
+                      // expected-note {{result of call to 'Unnamed' aliases the storage of local variable 'obj' because parameter '<unnamed>' is lifetimebound}}
+  }                   // expected-note {{local variable 'obj' is destroyed here}}
+  v.use();            // expected-note {{later used here}}
 }
 
 void lifetimebound_multiple_args_definite() {

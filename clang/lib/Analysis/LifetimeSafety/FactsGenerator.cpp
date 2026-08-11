@@ -232,8 +232,8 @@ void FactsGenerator::VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
       return;
     }
   }
-  FunctionCallInfo Info = getFunctionCallInfo(CCE);
-  handleFunctionCall(CCE, Info.FD, Info.Args,
+  auto [FD, Args] = getFunctionCallInfo(CCE);
+  handleFunctionCall(CCE, FD, Args,
                      /*IsGslConstruction=*/false);
 }
 
@@ -255,13 +255,13 @@ void FactsGenerator::VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) {
   if (isGslPointerType(MCE->getType()) &&
       isa_and_present<CXXConversionDecl>(MCE->getCalleeDecl()) &&
       isGslOwnerType(MCE->getImplicitObjectArgument()->getType())) {
-    FunctionCallInfo Info = getFunctionCallInfo(MCE);
-    handleFunctionCall(MCE, Info.FD, Info.Args,
+    auto [FD, Args] = getFunctionCallInfo(MCE);
+    handleFunctionCall(MCE, FD, Args,
                        /*IsGslConstruction=*/true);
     return;
   }
-  FunctionCallInfo Info = getFunctionCallInfo(MCE);
-  handleFunctionCall(MCE, Info.FD, Info.Args, /*IsGslConstruction=*/false);
+  auto [FD, Args] = getFunctionCallInfo(MCE);
+  handleFunctionCall(MCE, FD, Args, /*IsGslConstruction=*/false);
 }
 
 void FactsGenerator::VisitMemberExpr(const MemberExpr *ME) {
@@ -281,8 +281,8 @@ void FactsGenerator::VisitMemberExpr(const MemberExpr *ME) {
 }
 
 void FactsGenerator::VisitCallExpr(const CallExpr *CE) {
-  FunctionCallInfo Info = getFunctionCallInfo(CE);
-  handleFunctionCall(CE, Info.FD, Info.Args);
+  auto [FD, Args] = getFunctionCallInfo(CE);
+  handleFunctionCall(CE, FD, Args);
 }
 
 void FactsGenerator::VisitCXXNullPtrLiteralExpr(
@@ -629,8 +629,8 @@ void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
     }
   }
 
-  FunctionCallInfo Info = getFunctionCallInfo(OCE);
-  handleFunctionCall(OCE, Info.FD, Info.Args);
+  auto [FD, Args] = getFunctionCallInfo(OCE);
+  handleFunctionCall(OCE, FD, Args);
 }
 
 void FactsGenerator::VisitCXXFunctionalCastExpr(
@@ -889,8 +889,8 @@ void FactsGenerator::handleGSLPointerConstruction(const CXXConstructExpr *CCE) {
   } else {
     // This could be a new borrow.
     // TODO: Add code example here.
-    FunctionCallInfo Info = getFunctionCallInfo(CCE);
-    handleFunctionCall(CCE, Info.FD, Info.Args,
+    auto [FD, Args] = getFunctionCallInfo(CCE);
+    handleFunctionCall(CCE, FD, Args,
                        /*IsGslConstruction=*/true);
   }
 }
