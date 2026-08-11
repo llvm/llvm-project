@@ -14637,8 +14637,10 @@ static QualType getCommonNonSugarTypeNode(const ASTContext &Ctx, const Type *X,
                *MY = cast<ConstantMatrixType>(Y);
     assert(MX->getNumRows() == MY->getNumRows());
     assert(MX->getNumColumns() == MY->getNumColumns());
+    assert(MX->getLayout() == MY->getLayout());
     return Ctx.getConstantMatrixType(getCommonElementType(Ctx, MX, MY),
-                                     MX->getNumRows(), MX->getNumColumns());
+                                     MX->getNumRows(), MX->getNumColumns(),
+                                     MX->getLayout());
   }
   case Type::DependentSizedMatrix: {
     const auto *MX = cast<DependentSizedMatrixType>(X),

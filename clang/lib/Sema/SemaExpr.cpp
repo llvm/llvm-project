@@ -13779,6 +13779,21 @@ QualType Sema::CheckMatrixElementwiseOperands(ExprResult &LHS, ExprResult &RHS,
   if (Context.hasSameType(LHSType, RHSType))
     return Context.getCommonSugaredType(LHSType, RHSType);
 
+  if (const auto *LHSConstantMat = dyn_cast_or_null<ConstantMatrixType>(
+          LHSMatType)) {
+    const auto *RHSConstantMat =
+        dyn_cast_or_null<ConstantMatrixType>(RHSMatType);
+    if (RHSConstantMat &&
+        LHSConstantMat->getNumRows() == RHSConstantMat->getNumRows() &&
+        LHSConstantMat->getNumColumns() == RHSConstantMat->getNumColumns() &&
+        Context.hasSameUnqualifiedType(LHSConstantMat->getElementType(),
+                                       RHSConstantMat->getElementType())) {
+      RHS = tryConvertExprToType(RHS.get(), LHSType);
+      if (!RHS.isInvalid())
+        return LHSType;
+    }
+  }
+
   // Type conversion may change LHS/RHS. Keep copies to the original results, in
   // case we have to return InvalidOperands.
   ExprResult OriginalLHS = LHS;
