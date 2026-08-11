@@ -436,7 +436,7 @@ VocabStorage Vocabulary::createDummyVocabForTest(unsigned Dim) {
   // Create sections for opcodes, types, operands, and predicates
   // Order must match Vocabulary::Section enum
   std::vector<std::vector<Embedding>> Sections;
-  Sections.reserve(4);
+  Sections.reserve(static_cast<unsigned>(Section::MaxSections));
 
   // Opcodes section
   std::vector<Embedding> OpcodeSec;
@@ -589,7 +589,8 @@ VocabStorage Vocabulary::buildVocabStorage(const VocabMap &OpcVocab,
 
   // Create section-based storage instead of flat vocabulary
   // Order must match Vocabulary::Section enum
-  std::vector<std::vector<Embedding>> Sections(4);
+  std::vector<std::vector<Embedding>> Sections(
+      static_cast<unsigned>(Section::MaxSections));
   Sections[static_cast<unsigned>(Section::Opcodes)] =
       std::move(NumericOpcodeEmbeddings); // Section::Opcodes
   Sections[static_cast<unsigned>(Section::CanonicalTypes)] =
