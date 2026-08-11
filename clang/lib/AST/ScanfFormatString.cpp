@@ -13,8 +13,6 @@
 
 #include "FormatStringParsing.h"
 #include "clang/AST/FormatString.h"
-#include "clang/Basic/TargetInfo.h"
-#include "llvm/Support/TextEncoding.h"
 
 using clang::UpdateOnReturn;
 using clang::analyze_format_string::ArgType;
@@ -72,10 +70,11 @@ static bool ParseScanList(FormatStringHandler &H, ScanfConversionSpecifier &CS,
 
 // FIXME: Much of this is copy-paste from ParsePrintfSpecifier.
 // We can possibly refactor.
-static ScanfSpecifierResult ParseScanfSpecifier(
-    FormatStringHandler &H, const char *&Beg, const char *E, unsigned &argIndex,
-    const LangOptions &LO, const TargetInfo &Target,
-    const llvm::TextEncodingConverter &FormatStrConverter) {
+static ScanfSpecifierResult
+ParseScanfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
+                    unsigned &argIndex, const LangOptions &LO,
+                    const TargetInfo &Target,
+                    const llvm::TextEncodingConverter &FormatStrConverter) {
   using namespace clang::analyze_format_string;
   using namespace clang::analyze_scanf;
   const char *I = Beg;
@@ -126,8 +125,8 @@ static ScanfSpecifierResult ParseScanfSpecifier(
 
   // Look for the field width (if any).  Unlike printf, this is either
   // a fixed integer or isn't present.
-  const OptionalAmount &Amt = clang::analyze_format_string::ParseAmount(
-      I, E, FormatStrConverter);
+  const OptionalAmount &Amt =
+      clang::analyze_format_string::ParseAmount(I, E, FormatStrConverter);
   if (Amt.getHowSpecified() != OptionalAmount::NotSpecified) {
     assert(Amt.getHowSpecified() == OptionalAmount::Constant);
     FS.setFieldWidth(Amt);
@@ -264,8 +263,8 @@ static ScanfSpecifierResult ParseScanfSpecifier(
       FS.setConversionSpecifier(CS);
     }
     // Assume the conversion takes one argument.
-    return !H.HandleInvalidScanfConversionSpecifier(
-        FS, Beg, Len, FormatStrConverter);
+    return !H.HandleInvalidScanfConversionSpecifier(FS, Beg, Len,
+                                                    FormatStrConverter);
   }
   return ScanfSpecifierResult(Start, FS);
 }
@@ -613,21 +612,12 @@ void ScanfSpecifier::toString(raw_ostream &os) const {
 }
 
 bool clang::analyze_format_string::ParseScanfString(FormatStringHandler &H,
-                                                    const char *I,
-                                                    const char *E,
-                                                    const LangOptions &LO,
-                                                    const TargetInfo &Target) {
-
+                                                     const char *I,
+                                                     const char *E,
+                                                     const LangOptions &LO,
+                                                     const TargetInfo &Target) {
   unsigned argIndex = 0;
-  // On z/OS, format strings are IBM-1047 encoded. Create the converter once
-  // here and pass it through to avoid recreating it for every specifier.
-  auto MaybeConverter =
-      Target.getTriple().isOSzOS()
-          ? llvm::TextEncodingConverter::create(llvm::TextEncoding::IBM1047,
-                                                llvm::TextEncoding::UTF8)
-          : llvm::TextEncodingConverter::createNoopConverter();
-  assert(MaybeConverter && "Failed to create format string converter");
-  llvm::TextEncodingConverter Conv = std::move(*MaybeConverter);
+  llvm::TextEncodingConverter Conv = makeFormatStrConverter(Target);
 
   // Keep looking for a format specifier until we have exhausted the string.
   while (I != E) {
