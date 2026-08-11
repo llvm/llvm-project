@@ -108,7 +108,7 @@ public:
 
   bool SupportsModules() override { return true; }
 
-  ConstString GetFullNameForDylib(ConstString basename) override;
+  std::string GetFullNameForDylib(llvm::StringRef basename) override;
 
   FileSpec LocateExecutable(const char *basename) override;
 
