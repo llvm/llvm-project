@@ -80,19 +80,19 @@ define signext i32 @test_intrin_arg_attr(i32 signext %a) nounwind {
 
 ; // -----
 
-; Constrained FP intrinsics with no dedicated MLIR op should fall back to
+; Rounding FP intrinsics with no dedicated MLIR op should fall back to
 ; `llvm.call_intrinsic`, and their `metadata !"..."` operands should be
 ; imported as `llvm.mlir.metadata_as_value` ops wrapping the corresponding
-; `#llvm.md_string` attribute.
+; `#llvm.md_string` attribute. `llvm.fptrunc.round` is used here because it
+; takes an MDString rounding-mode operand and has no specialized MLIR op.
 
-declare float @llvm.experimental.constrained.sqrt.f32(float, metadata, metadata)
+declare float @llvm.fptrunc.round.f32.f64(double, metadata)
 
-; CHECK-LABEL: llvm.func @constrained_sqrt
-define float @constrained_sqrt(float %a) {
+; CHECK-LABEL: llvm.func @fptrunc_round
+define float @fptrunc_round(double %a) {
   ; CHECK: %[[RM:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"round.tonearest">
-  ; CHECK: %[[EB:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.strict">
-  ; CHECK: %{{.*}} = llvm.call_intrinsic "llvm.experimental.constrained.sqrt.f32"(%{{.*}}, %[[RM]], %[[EB]]) : (f32, !llvm.metadata, !llvm.metadata) -> f32
-  %r = call float @llvm.experimental.constrained.sqrt.f32(float %a, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  ; CHECK: %{{.*}} = llvm.call_intrinsic "llvm.fptrunc.round.f32.f64"(%{{.*}}, %[[RM]]) : (f64, !llvm.metadata) -> f32
+  %r = call float @llvm.fptrunc.round.f32.f64(double %a, metadata !"round.tonearest")
   ret float %r
 }
 

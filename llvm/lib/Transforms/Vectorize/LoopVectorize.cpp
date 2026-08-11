@@ -1417,7 +1417,7 @@ private:
 
   /// Holds the instructions (address computations) that are forced to be
   /// scalarized.
-  DenseMap<ElementCount, SmallPtrSet<Instruction *, 4>> ForcedScalars;
+  DenseMap<ElementCount, SmallSetVector<Instruction *, 4>> ForcedScalars;
 
   /// Returns the expected difference in cost from scalarizing the expression
   /// feeding a predicated instruction \p PredInst. The instructions to
@@ -5550,18 +5550,18 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
       // Collect the instructions (and their associated costs) that will be more
       // profitable to scalarize.
       CM.collectNonVectorizedAndSetWideningDecisions(UserVF);
+      buildVPlans(*VPlan1, UserVF, UserVF);
       ElementCount EpilogueUserVF = EpilogueVectorizationForceVF;
       if (EpilogueUserVF.isVector() &&
           ElementCount::isKnownLT(EpilogueUserVF, UserVF)) {
         CM.collectNonVectorizedAndSetWideningDecisions(EpilogueUserVF);
         buildVPlans(*VPlan1, EpilogueUserVF, EpilogueUserVF);
       }
-      buildVPlans(*VPlan1, UserVF, UserVF);
-      if (!VPlans.empty() && VPlans.back()->getSingleVF() == UserVF) {
+      if (!VPlans.empty() && VPlans.front()->getSingleVF() == UserVF) {
         // For scalar VF, skip VPlan cost check as VPlan cost is designed for
         // vector VFs only.
         if (UserVF.isScalar() ||
-            cost(*VPlans.back(), UserVF, /*RU=*/nullptr).isValid()) {
+            cost(*VPlans.front(), UserVF, /*RU=*/nullptr).isValid()) {
           LLVM_DEBUG(dbgs() << "LV: Using user VF " << UserVF << ".\n");
           LLVM_DEBUG(printPlans(dbgs()));
           return;
@@ -5655,6 +5655,9 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
   // and skip all recipes that represent induction phis and increments (the
   // former case) later on, if they exist, to avoid counting them twice.
   // Similarly we pre-compute the cost of any optimized truncates.
+  // Inductions that are represented by a VPWidenIntOrFpInductionRecipe are an
+  // exception: their cost is computed by the recipe's computeCost (see below),
+  // so they are not precomputed here.
   // TODO: Switch to more accurate costing based on VPlan.
 
   // If the vector loop gets executed exactly once with the given VF, ignore the
@@ -5663,28 +5666,24 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
   // TODO: Remove this code after stepping away from the legacy cost model and
   // adding code to simplify VPlans before calculating their costs.
   auto TC = getSmallConstantTripCount(PSE.getSE(), OrigLoop);
-  bool IsFullyUnrolled = TC == VF && !Plan.hasTailFolded();
   SmallPtrSet<const Value *, 4> WidenedIVs;
-  bool HasTruncatedIV = false;
-  if (IsFullyUnrolled) {
+  if (TC == VF && !Plan.hasTailFolded()) {
     addFullyUnrolledInstructionsToIgnore(OrigLoop, Legal->getInductionVars(),
                                          CostCtx.SkipCostComputation);
   } else {
     // Inductions represented by a VPWidenIntOrFpInductionRecipe have their cost
     // computed by the recipe, so collect their phis to skip the legacy
-    // increment cost below. If any induction is truncated the VPlan-based cost
-    // will diverge. Still fall back to the legacy cost model for now.
+    // increment cost below.
     VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
     for (VPRecipeBase &R : *LoopRegion->getEntryBasicBlock())
       if (auto *WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R)) {
-        HasTruncatedIV |= WideIV->getTruncInst() != nullptr;
         if (PHINode *IVPhi = WideIV->getPHINode())
           WidenedIVs.insert(IVPhi);
       }
   }
 
   for (const auto &[IV, IndDesc] : Legal->getInductionVars()) {
-    if (!HasTruncatedIV && WidenedIVs.contains(IV))
+    if (WidenedIVs.contains(IV))
       continue;
     Instruction *IVInc = cast<Instruction>(
         IV->getIncomingValueForBlock(OrigLoop->getLoopLatch()));
@@ -5842,11 +5841,11 @@ LoopVectorizationPlanner::computeBestVF() {
 
   if (hasPlanWithVF(UserVF) && hasForcedEpilogueVF()) {
     assert(VPlans.size() == 2 && "Must have exactly 2 VPlans built");
-    assert(VPlans[0]->getSingleVF() == EpilogueVectorizationForceVF &&
-           "expected first plan to be for the forced epilogue VF");
-    assert(VPlans[1]->getSingleVF() == UserVF &&
+    assert(VPlans[0]->getSingleVF() == UserVF &&
            "expected second plan to be for the forced UserVF");
-    return {VectorizationFactor(UserVF, 0, 0), VPlans[1].get()};
+    assert(VPlans[1]->getSingleVF() == EpilogueVectorizationForceVF &&
+           "expected first plan to be for the forced epilogue VF");
+    return {VectorizationFactor(UserVF, 0, 0), VPlans[0].get()};
   }
 
   LLVM_DEBUG(dbgs() << "LV: Computing best VF using cost kind: "
@@ -7751,6 +7750,8 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
     auto *ExpandR = dyn_cast<VPExpandSCEVRecipe>(&R);
     if (!ExpandR)
       continue;
+    assert(ExpandedSCEVs.contains(ExpandR->getSCEV()) &&
+           "Epilogue plan needs a SCEV not expanded for the main loop");
     VPValue *ExpandedVal =
         Plan.getOrAddLiveIn(ExpandedSCEVs.lookup(ExpandR->getSCEV()));
     ExpandR->replaceAllUsesWith(ExpandedVal);
