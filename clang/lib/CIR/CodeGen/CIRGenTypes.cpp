@@ -791,7 +791,8 @@ CIRGenTypes::arrangeDeviceKernelCallerDeclaration(QualType resultType,
   for (const VarDecl *arg : args)
     argTypes.push_back(astContext.getCanonicalParamType(arg->getType()));
 
-  assert(!cir::MissingFeatures::opCallFnInfoOpts());
+  // Classic CodeGen passes FnInfoOpts::None here; that is the no-op case, so
+  // nothing is needed even once CIR models FnInfoOpts.
   return arrangeCIRFunctionInfo(
       resultType->getCanonicalTypeUnqualified(), /*isInstanceMethod=*/false,
       argTypes, FunctionType::ExtInfo(CC_DeviceKernel), RequiredArgs::All);

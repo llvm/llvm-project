@@ -119,7 +119,12 @@ void CIRGenModule::emitSYCLKernelCaller(const FunctionDecl *kernelEntryPointFn,
   // from CC_DeviceKernel via SetLLVMFunctionAttributes; CIR does not yet route
   // opFuncCallingConv onto the FuncOp, so set it from the target hook.
   funcOp.setCallingConv(getTargetCIRGenInfo().getDeviceKernelCallingConv());
-  setDSOLocal(static_cast<mlir::Operation *>(funcOp));
+
+  // Route through the shared attribute path so generic function attributes
+  // (e.g. convergent) are applied, matching classic CodeGen's
+  // SetLLVMFunctionAttributes. There is no FunctionDecl, so pass an empty
+  // GlobalDecl.
+  setCIRFunctionAttributes(GlobalDecl(), fnInfo, funcOp, /*isThunk=*/false);
 
   // TODO: attributes applied by classic CodeGen not yet handled in CIR:
   // SetSYCLKernelAttributes (norecurse, mustprogress), addSYCLModuleIdAttr.
@@ -132,6 +137,8 @@ void CIRGenModule::emitSYCLKernelCaller(const FunctionDecl *kernelEntryPointFn,
     mlir::OpBuilder::InsertionGuard guard(builder);
     cgf.emitSYCLKernelCaller(outlinedFnDecl, funcOp, funcType, args);
   }
+
+  setDSOLocal(static_cast<mlir::Operation *>(funcOp));
 
   setNonAliasAttributes(GlobalDecl(), funcOp);
   // CIR's setter takes a FunctionDecl; nullptr skips OutlinedFunctionDecl-
