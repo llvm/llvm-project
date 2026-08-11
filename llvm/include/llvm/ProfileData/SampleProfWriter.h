@@ -417,8 +417,8 @@ protected:
   std::error_code writeNameTableSection(const SampleProfileMap &ProfileMap);
   std::error_code
   writeEytzingerNameTableSection(const SampleProfileMap &ProfileMap);
-  std::error_code writeFuncOffsetTable(bool IsCS);
-  std::error_code writeEytzingerFuncOffsetTable(bool IsCS);
+  std::error_code writeFuncOffsetTable(bool IsNested);
+  std::error_code writeEytzingerFuncOffsetTable(bool IsNested);
   std::error_code writeLegacyFuncOffsetTable();
   std::error_code writeProfileSymbolListSection();
   std::error_code writeStringBasedProfileSymbolListSection();
@@ -468,7 +468,7 @@ private:
   MapVector<SampleContext, uint64_t> FuncOffsetTable;
   // Whether to use MD5 to represent string.
   bool UseMD5 = false;
-  size_t NumCS = 0;
+  size_t NumNested = 0;
   size_t NumFlat = 0;
 
   /// CSNameTable maps function context to its offset in SecCSNameTable section.

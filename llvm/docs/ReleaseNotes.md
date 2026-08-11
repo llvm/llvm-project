@@ -54,12 +54,6 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to LLVM infrastructure
 
-* `cas::ObjectStore::getMemoryBuffer()` was documented as returning a buffer
-  whose lifetime is independent of the CAS, but the buffer it returns may alias
-  storage the CAS owns and so cannot outlive it. The documentation now matches
-  the behavior, and the new `getStandaloneMemoryBuffer()` provides a buffer that
-  does stay valid after the `ObjectStore` is destroyed.
-
 ### Changes to building LLVM
 
 ### Changes to TableGen
@@ -81,6 +75,10 @@ Makes programs 10x faster by doing Special New Thing.
 
 * Replaced `xnack` and `sramecc` target features with `amdgpu.xnack`
   and `amdgpu.sramecc` module flags.
+* `llvm.amdgcn.make.buffer.rsrc` now accepts any integer width for its
+  `numRecords` argument to account for targets that use 32-bit and 45-bit
+  `numRecords` widths more accurately. If an integer of the incorrect width
+  is used, it will be zero-extended or truncated as needed.
 
 ### Changes to the ARM Backend
 
@@ -145,6 +143,12 @@ Makes programs 10x faster by doing Special New Thing.
 ### Changes to Sanitizers
 
 ### Other Changes
+
+* `cas::ObjectStore::getMemoryBuffer()` was documented as returning a buffer
+  whose lifetime is independent of the CAS, but the buffer it returns may alias
+  storage the CAS owns and so cannot outlive it. The documentation now matches
+  the behavior, and the new `getStandaloneMemoryBuffer()` provides a buffer that
+  does stay valid after the `ObjectStore` is destroyed.
 
 ## External Open Source Projects Using LLVM {{env.config.release}}
 

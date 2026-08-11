@@ -2140,7 +2140,7 @@ bool clang::CreateHLSLAttributedResourceType(
       HasResourceDimension = true;
       break;
     }
-    case attr::HLSLROV:
+    case attr::HLSLIsROV:
       if (ResAttrs.IsROV) {
         S.Diag(A->getLocation(), diag::warn_duplicate_attribute_exact) << A;
         return false;
@@ -2272,8 +2272,8 @@ bool SemaHLSL::handleResourceTypeAttr(QualType T, const ParsedAttr &AL) {
     break;
   }
 
-  case ParsedAttr::AT_HLSLROV:
-    A = HLSLROVAttr::Create(getASTContext(), ACI);
+  case ParsedAttr::AT_HLSLIsROV:
+    A = HLSLIsROVAttr::Create(getASTContext(), ACI);
     break;
 
   case ParsedAttr::AT_HLSLRawBuffer:
@@ -4579,19 +4579,6 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
                                    CheckFloatingOrIntRepresentation))
       return true;
     SetElementTypeAsReturnType(&SemaRef, TheCall, getASTContext().IntTy);
-    break;
-  }
-  case Builtin::BI__builtin_hlsl_step: {
-    if (SemaRef.checkArgCount(TheCall, 2))
-      return true;
-    if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall,
-                                   CheckFloatOrHalfRepresentation))
-      return true;
-
-    ExprResult A = TheCall->getArg(0);
-    QualType ArgTyA = A.get()->getType();
-    // return type is the same as the input type
-    TheCall->setType(ArgTyA);
     break;
   }
   case Builtin::BI__builtin_hlsl_wave_active_all_equal: {
