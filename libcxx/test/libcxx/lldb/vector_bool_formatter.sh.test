@@ -10,6 +10,7 @@
 # REQUIRES: has-filecheck
 # REQUIRES: has-splitfile
 # REQUIRES: optimization=none
+# UNSUPPORTED: c++03
 
 # RUN: split-file %s %{temp}
 # RUN: %{cxx} %{flags} %{temp}/main.cpp -o %t.out %{compile_flags} -g %{link_flags}
@@ -32,6 +33,7 @@
 
 int main(int, char**) {
   std::vector<bool> vb = {true, false, false};
+  (void)vb;
 
   return 0;
 }

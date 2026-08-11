@@ -10,6 +10,7 @@
 # REQUIRES: has-filecheck
 # REQUIRES: has-splitfile
 # REQUIRES: optimization=none
+# UNSUPPORTED: c++03
 
 # RUN: split-file %s %{temp}
 # RUN: %{cxx} %{flags} %{temp}/main.cpp -o %t.out %{compile_flags} -g %{link_flags}
@@ -105,6 +106,7 @@ void break_here() {}
 int main() {
   std::vector<float> empty;
   std::vector<int> vi = {1, 2};
+  (void)empty;
 
   break_here();
 
@@ -121,6 +123,7 @@ int main() {
   vi.push_back(10);
   vi.push_back(11);
   std::vector<std::vector<int>> vec_of_vec{vi};
+  (void)vec_of_vec;
 
   break_here();
 
@@ -128,11 +131,14 @@ int main() {
     "Foo",
     "Bar"
   };
+  (void)vs;
 
   break_here();
 
-  [[maybe_unused]] const auto &vec_ref = vi;
-  [[maybe_unused]] const auto *vec_ptr = &vi;
+  const auto &vec_ref = vi;
+  const auto *vec_ptr = &vi;
+  (void)vec_ref;
+  (void)vec_ptr;
 
   break_here();
 }
