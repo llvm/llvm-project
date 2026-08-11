@@ -3185,6 +3185,7 @@ def RISCVSystemLibrary
     : SystemRuntimeLibrary<isRISCV,
       (add DefaultRuntimeLibcallImpls,
            exp10f, exp10, exp10l_f128,
+           LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
            __riscv_flush_icache,
            LibcallImpls<(add Int128RTLibcalls), isRISCV64>,
            DefaultStackProtector,
