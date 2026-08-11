@@ -1791,8 +1791,7 @@ define <2 x i64> @partial_reduce_sext_cmp_i32tov2i64(<2 x i64> %acc, <4 x i32> %
 ; CHECK-COMMON-LABEL: partial_reduce_sext_cmp_i32tov2i64:
 ; CHECK-COMMON:       // %bb.0:
 ; CHECK-COMMON-NEXT:    cmeq v1.4s, v1.4s, v2.4s
-; CHECK-COMMON-NEXT:    saddw v0.2d, v0.2d, v1.2s
-; CHECK-COMMON-NEXT:    saddw2 v0.2d, v0.2d, v1.4s
+; CHECK-COMMON-NEXT:    sadalp v0.2d, v1.4s
 ; CHECK-COMMON-NEXT:    ret
   %cmp = icmp eq <4 x i32> %a, %b
   %ext = sext <4 x i1> %cmp to <4 x i64>
