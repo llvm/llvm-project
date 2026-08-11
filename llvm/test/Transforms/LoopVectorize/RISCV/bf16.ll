@@ -124,17 +124,17 @@ define void @vfwmaccbf16.vv(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 
 ; ZVFBFMIN:       [[VECTOR_BODY]]:
 ; ZVFBFMIN-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; ZVFBFMIN-NEXT:    [[AVL:%.*]] = phi i64 [ [[N]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; ZVFBFMIN-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
+; ZVFBFMIN-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 8, i1 true)
 ; ZVFBFMIN-NEXT:    [[TMP1:%.*]] = getelementptr bfloat, ptr [[A]], i64 [[INDEX]]
 ; ZVFBFMIN-NEXT:    [[TMP2:%.*]] = getelementptr bfloat, ptr [[B]], i64 [[INDEX]]
 ; ZVFBFMIN-NEXT:    [[TMP3:%.*]] = getelementptr float, ptr [[C]], i64 [[INDEX]]
-; ZVFBFMIN-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x bfloat> @llvm.vp.load.nxv4bf16.p0(ptr align 2 [[TMP1]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP0]])
-; ZVFBFMIN-NEXT:    [[VP_OP_LOAD1:%.*]] = call <vscale x 4 x bfloat> @llvm.vp.load.nxv4bf16.p0(ptr align 2 [[TMP2]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP0]])
-; ZVFBFMIN-NEXT:    [[VP_OP_LOAD2:%.*]] = call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr align 4 [[TMP3]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP0]])
-; ZVFBFMIN-NEXT:    [[TMP4:%.*]] = fpext <vscale x 4 x bfloat> [[VP_OP_LOAD]] to <vscale x 4 x float>
-; ZVFBFMIN-NEXT:    [[TMP5:%.*]] = fpext <vscale x 4 x bfloat> [[VP_OP_LOAD1]] to <vscale x 4 x float>
-; ZVFBFMIN-NEXT:    [[TMP6:%.*]] = call <vscale x 4 x float> @llvm.fmuladd.nxv4f32(<vscale x 4 x float> [[TMP4]], <vscale x 4 x float> [[TMP5]], <vscale x 4 x float> [[VP_OP_LOAD2]])
-; ZVFBFMIN-NEXT:    call void @llvm.vp.store.nxv4f32.p0(<vscale x 4 x float> [[TMP6]], ptr align 4 [[TMP3]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP0]])
+; ZVFBFMIN-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 8 x bfloat> @llvm.vp.load.nxv8bf16.p0(ptr align 2 [[TMP1]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP0]])
+; ZVFBFMIN-NEXT:    [[VP_OP_LOAD1:%.*]] = call <vscale x 8 x bfloat> @llvm.vp.load.nxv8bf16.p0(ptr align 2 [[TMP2]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP0]])
+; ZVFBFMIN-NEXT:    [[VP_OP_LOAD2:%.*]] = call <vscale x 8 x float> @llvm.vp.load.nxv8f32.p0(ptr align 4 [[TMP3]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP0]])
+; ZVFBFMIN-NEXT:    [[TMP4:%.*]] = fpext <vscale x 8 x bfloat> [[VP_OP_LOAD]] to <vscale x 8 x float>
+; ZVFBFMIN-NEXT:    [[TMP5:%.*]] = fpext <vscale x 8 x bfloat> [[VP_OP_LOAD1]] to <vscale x 8 x float>
+; ZVFBFMIN-NEXT:    [[TMP6:%.*]] = call <vscale x 8 x float> @llvm.fmuladd.nxv8f32(<vscale x 8 x float> [[TMP4]], <vscale x 8 x float> [[TMP5]], <vscale x 8 x float> [[VP_OP_LOAD2]])
+; ZVFBFMIN-NEXT:    call void @llvm.vp.store.nxv8f32.p0(<vscale x 8 x float> [[TMP6]], ptr align 4 [[TMP3]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP0]])
 ; ZVFBFMIN-NEXT:    [[TMP7:%.*]] = zext i32 [[TMP0]] to i64
 ; ZVFBFMIN-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP7]], [[INDEX]]
 ; ZVFBFMIN-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP7]]

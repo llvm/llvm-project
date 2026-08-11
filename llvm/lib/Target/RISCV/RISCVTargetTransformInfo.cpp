@@ -479,6 +479,15 @@ RISCVTTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   llvm_unreachable("Unsupported register kind");
 }
 
+bool RISCVTTIImpl::shouldMaximizeVectorBandwidth(
+    TargetTransformInfo::RegisterKind K) const {
+  // Size vector factors by the smallest type in the loop rather than the
+  // widest, so loops mixing narrow and wide types can use the full vector
+  // register bandwidth. Overly wide factors are pruned separately by register
+  // pressure estimation (shouldConsiderVectorizationRegPressure).
+  return K != TargetTransformInfo::RGK_Scalar && ST->hasVInstructions();
+}
+
 InstructionCost RISCVTTIImpl::getStaticDataAddrGenerationCost(
     const TTI::TargetCostKind CostKind) const {
   switch (CostKind) {

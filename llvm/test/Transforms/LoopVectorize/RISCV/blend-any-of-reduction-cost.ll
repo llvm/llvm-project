@@ -64,26 +64,26 @@ define i32 @any_of_reduction_used_in_blend_with_multiple_phis(ptr %src, i64 %N, 
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[ANY_OF_RED:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[ANY_OF_RED_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH]] ]
-; CHECK-NEXT:    br i1 [[C_0]], label %[[X_1:.*]], label %[[ELSE_1:.*]]
-; CHECK:       [[ELSE_1]]:
-; CHECK-NEXT:    br i1 [[C_1]], label %[[X_1]], label %[[ELSE_2:.*]]
-; CHECK:       [[ELSE_2]]:
+; CHECK-NEXT:    [[ANY_OF_RED:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[ANY_OF_RED_NEXT:%.*]], %[[EXIT:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[EXIT]] ]
+; CHECK-NEXT:    br i1 [[C_0]], label %[[X_1:.*]], label %[[LOOP_LATCH:.*]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    br i1 [[C_1]], label %[[X_1]], label %[[MIDDLE_BLOCK:.*]]
+; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[L:%.*]] = load ptr, ptr [[SRC]], align 8
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp eq ptr [[L]], null
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C_2]], i32 0, i32 [[ANY_OF_RED]]
-; CHECK-NEXT:    br label %[[LOOP_LATCH]]
+; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[X_1]]:
-; CHECK-NEXT:    [[P:%.*]] = phi i32 [ [[ANY_OF_RED]], %[[LOOP_HEADER]] ], [ [[ANY_OF_RED]], %[[ELSE_1]] ]
-; CHECK-NEXT:    br label %[[LOOP_LATCH]]
-; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[ANY_OF_RED_NEXT]] = phi i32 [ [[P]], %[[X_1]] ], [ [[SEL]], %[[ELSE_2]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ [[ANY_OF_RED]], %[[LOOP_HEADER]] ], [ [[ANY_OF_RED]], %[[LOOP_LATCH]] ]
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[ANY_OF_RED_NEXT]] = phi i32 [ [[P]], %[[X_1]] ], [ [[SEL]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP_HEADER]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[ANY_OF_RED_NEXT]], %[[LOOP_LATCH]] ]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT1:.*]], label %[[LOOP_HEADER]]
+; CHECK:       [[EXIT1]]:
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[ANY_OF_RED_NEXT]], %[[EXIT]] ]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:
