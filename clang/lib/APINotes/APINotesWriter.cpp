@@ -158,6 +158,32 @@ class APINotesWriter::Implementation {
     return *Key;
   }
 
+  FunctionTableKey getFunctionKey(uint32_t ParentContextID, StringRef Name,
+                                  const FunctionSelector &Selector) {
+    std::optional<FunctionTableKey> Key;
+    auto GetIdentifier = [this](StringRef S) -> std::optional<IdentifierID> {
+      return getIdentifier(S);
+    };
+    if (Selector.Parameters) {
+      if (Selector.Object)
+        Key = getFunctionKeyImpl(
+            ParentContextID, Name,
+            llvm::ArrayRef<std::string>(*Selector.Parameters), *Selector.Object,
+            GetIdentifier);
+      else
+        Key = getFunctionKeyImpl(
+            ParentContextID, Name,
+            llvm::ArrayRef<std::string>(*Selector.Parameters), GetIdentifier);
+    } else if (Selector.Object) {
+      Key = getFunctionKeyImpl(ParentContextID, Name, *Selector.Object,
+                               GetIdentifier);
+    } else {
+      Key = getFunctionKeyImpl(ParentContextID, Name, GetIdentifier);
+    }
+    assert(Key && "Writer identifier lookup should not fail");
+    return *Key;
+  }
+
   FunctionTableKey getFunctionKey(std::optional<Context> ParentContext,
                                   StringRef Name) {
     uint32_t ParentContextID =
@@ -171,6 +197,14 @@ class APINotesWriter::Implementation {
     uint32_t ParentContextID =
         ParentContext ? ParentContext->id.Value : static_cast<uint32_t>(-1);
     return getFunctionKey(ParentContextID, Name, Parameters);
+  }
+
+  FunctionTableKey getFunctionKey(std::optional<Context> ParentContext,
+                                  StringRef Name,
+                                  const FunctionSelector &Selector) {
+    uint32_t ParentContextID =
+        ParentContext ? ParentContext->id.Value : static_cast<uint32_t>(-1);
+    return getFunctionKey(ParentContextID, Name, Selector);
   }
 
   /// Retrieve the ID for the given selector.
@@ -507,12 +541,42 @@ static unsigned getFunctionTableKeyLength(const FunctionTableKey &Key) {
                                : 0);
 }
 
+static uint8_t getFunctionTableKeyFlags(const FunctionTableKey &Key) {
+  uint8_t Flags = Key.parameterTypeIDs ? FunctionKeyHasParameterSelector : 0;
+  if (!Key.objectSelector)
+    return Flags;
+
+  if (Key.objectSelector->Const) {
+    Flags |= FunctionKeyObjectConstPresent;
+    if (*Key.objectSelector->Const)
+      Flags |= FunctionKeyObjectConstValue;
+  }
+  if (Key.objectSelector->Volatile) {
+    Flags |= FunctionKeyObjectVolatilePresent;
+    if (*Key.objectSelector->Volatile)
+      Flags |= FunctionKeyObjectVolatileValue;
+  }
+  if (Key.objectSelector->Ref) {
+    Flags |= FunctionKeyObjectRefPresent;
+    switch (*Key.objectSelector->Ref) {
+    case FunctionObjectRefQualifier::None:
+      break;
+    case FunctionObjectRefQualifier::LValue:
+      Flags |= FunctionKeyObjectRefLValue;
+      break;
+    case FunctionObjectRefQualifier::RValue:
+      Flags |= FunctionKeyObjectRefRValue;
+      break;
+    }
+  }
+  return Flags;
+}
+
 static void emitFunctionTableKey(raw_ostream &OS, const FunctionTableKey &Key) {
   llvm::support::endian::Writer writer(OS, llvm::endianness::little);
   writer.write<uint32_t>(Key.parentContextID);
   writer.write<uint32_t>(Key.nameID);
-  writer.write<uint8_t>(Key.parameterTypeIDs ? FunctionKeyHasParameterSelector
-                                             : 0);
+  writer.write<uint8_t>(getFunctionTableKeyFlags(Key));
   writer.write<uint16_t>(Key.parameterTypeIDs ? Key.parameterTypeIDs->size()
                                               : 0);
   if (Key.parameterTypeIDs)
@@ -1628,6 +1692,15 @@ void APINotesWriter::addCXXMethod(ContextID CtxID, llvm::StringRef Name,
                                   VersionTuple SwiftVersion) {
   FunctionTableKey Key =
       Implementation->getFunctionKey(CtxID.Value, Name, Parameters);
+  Implementation->CXXMethods[Key].push_back({SwiftVersion, Info});
+}
+
+void APINotesWriter::addCXXMethod(ContextID CtxID, llvm::StringRef Name,
+                                  const FunctionSelector &Selector,
+                                  const CXXMethodInfo &Info,
+                                  VersionTuple SwiftVersion) {
+  FunctionTableKey Key =
+      Implementation->getFunctionKey(CtxID.Value, Name, Selector);
   Implementation->CXXMethods[Key].push_back({SwiftVersion, Info});
 }
 

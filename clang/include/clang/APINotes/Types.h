@@ -1008,19 +1008,132 @@ struct Context {
 
 using IdentifierID = llvm::PointerEmbeddedInt<unsigned, 31>;
 
+/// Describes the C++ implicit-object ref-qualifier portion of a method
+/// selector.
+enum class FunctionObjectRefQualifier : uint8_t {
+  None,
+  LValue,
+  RValue,
+};
+
+/// Describes optional constraints on a C++ method's implicit object parameter.
+struct FunctionObjectSelector {
+  std::optional<bool> Const;
+  std::optional<bool> Volatile;
+  std::optional<FunctionObjectRefQualifier> Ref;
+};
+
+inline bool operator==(const FunctionObjectSelector &LHS,
+                       const FunctionObjectSelector &RHS) {
+  return LHS.Const == RHS.Const && LHS.Volatile == RHS.Volatile &&
+         LHS.Ref == RHS.Ref;
+}
+
+inline bool operator!=(const FunctionObjectSelector &LHS,
+                       const FunctionObjectSelector &RHS) {
+  return !(LHS == RHS);
+}
+
+inline std::string formatAPINotesObjectSelector(FunctionObjectSelector Object) {
+  std::string Result;
+  llvm::raw_string_ostream OS(Result);
+  llvm::SmallVector<std::string, 3> Parts;
+
+  if (Object.Const)
+    Parts.push_back(std::string("Const: ") +
+                    (*Object.Const ? "true" : "false"));
+  if (Object.Volatile)
+    Parts.push_back(std::string("Volatile: ") +
+                    (*Object.Volatile ? "true" : "false"));
+  if (Object.Ref) {
+    std::string Ref = "Ref: ";
+    switch (*Object.Ref) {
+    case FunctionObjectRefQualifier::None:
+      Ref += "none";
+      break;
+    case FunctionObjectRefQualifier::LValue:
+      Ref += "lvalue";
+      break;
+    case FunctionObjectRefQualifier::RValue:
+      Ref += "rvalue";
+      break;
+    }
+    Parts.push_back(Ref);
+  }
+
+  OS << "Object{";
+  llvm::interleaveComma(Parts, OS);
+  OS << "}";
+  return Result;
+}
+
+/// Describes a C++ function selector composed from optional exact explicit
+/// parameters plus optional implicit object constraints.
+struct FunctionSelector {
+  std::optional<llvm::SmallVector<std::string, 4>> Parameters;
+  std::optional<FunctionObjectSelector> Object;
+};
+
+inline bool operator==(const FunctionSelector &LHS,
+                       const FunctionSelector &RHS) {
+  return LHS.Parameters == RHS.Parameters && LHS.Object == RHS.Object;
+}
+
+inline bool operator!=(const FunctionSelector &LHS,
+                       const FunctionSelector &RHS) {
+  return !(LHS == RHS);
+}
+
+inline std::string formatAPINotesFunctionSelector(
+    std::optional<llvm::ArrayRef<std::string>> Parameters,
+    std::optional<FunctionObjectSelector> Object) {
+  std::string Result;
+  if (Parameters)
+    Result = (llvm::Twine("Where.Parameters ") +
+              formatAPINotesParameterSelector(*Parameters))
+                 .str();
+
+  if (Object) {
+    if (!Result.empty())
+      Result += " ";
+    else
+      Result = "Where.Object ";
+    Result += formatAPINotesObjectSelector(*Object);
+  }
+
+  return Result;
+}
+
+inline std::string
+formatAPINotesFunctionSelector(const FunctionSelector &Selector) {
+  std::optional<llvm::ArrayRef<std::string>> Parameters;
+  if (Selector.Parameters)
+    Parameters = llvm::ArrayRef<std::string>(*Selector.Parameters);
+  return formatAPINotesFunctionSelector(Parameters, Selector.Object);
+}
+
+struct FunctionTableSelectorKey {
+  std::optional<llvm::SmallVector<IdentifierID, 2>> Parameters;
+  std::optional<FunctionObjectSelector> Object;
+};
+
 /// A key for a stored global-function or C++-method API notes entry.
 ///
 /// The key is represented by the ID of its parent context, the declaration
-/// name, and optional exact parameter types.
+/// name, and optional exact parameter/object selector data.
 struct FunctionTableKey {
   uint32_t parentContextID;
   uint32_t nameID;
   std::optional<llvm::SmallVector<IdentifierID, 2>> parameterTypeIDs;
+  std::optional<FunctionObjectSelector> objectSelector;
 
   FunctionTableKey() : parentContextID(-1), nameID(-1) {}
 
-  FunctionTableKey(uint32_t ParentContextID, uint32_t NameID)
-      : parentContextID(ParentContextID), nameID(NameID) {}
+  FunctionTableKey(uint32_t ParentContextID, uint32_t NameID,
+                   FunctionTableSelectorKey Selector = {})
+      : parentContextID(ParentContextID), nameID(NameID),
+        parameterTypeIDs(std::move(Selector.Parameters)),
+        objectSelector(Selector.Object) {}
 
   FunctionTableKey(uint32_t ParentContextID, uint32_t NameID,
                    const llvm::SmallVectorImpl<IdentifierID> &ParameterTypeIDs)
@@ -1028,27 +1141,37 @@ struct FunctionTableKey {
     parameterTypeIDs.emplace(ParameterTypeIDs.begin(), ParameterTypeIDs.end());
   }
 
-  FunctionTableKey(std::optional<Context> ParentCtx, IdentifierID NameID)
-      : parentContextID(ParentCtx ? ParentCtx->id.Value
-                                  : static_cast<uint32_t>(-1)),
-        nameID(NameID) {}
+  FunctionTableKey(std::optional<Context> ParentCtx, IdentifierID NameID,
+                   FunctionTableSelectorKey Selector = {})
+      : FunctionTableKey(ParentCtx ? ParentCtx->id.Value
+                                   : static_cast<uint32_t>(-1),
+                         NameID, std::move(Selector)) {}
 
   FunctionTableKey(std::optional<Context> ParentCtx, IdentifierID NameID,
                    const llvm::SmallVectorImpl<IdentifierID> &ParameterTypeIDs)
-      : parentContextID(ParentCtx ? ParentCtx->id.Value
-                                  : static_cast<uint32_t>(-1)),
-        nameID(NameID) {
+      : FunctionTableKey(ParentCtx ? ParentCtx->id.Value
+                                   : static_cast<uint32_t>(-1),
+                         NameID) {
     parameterTypeIDs.emplace(ParameterTypeIDs.begin(), ParameterTypeIDs.end());
   }
 
   llvm::hash_code hashValue() const {
     auto Hash = llvm::hash_combine(parentContextID, nameID,
-                                   static_cast<bool>(parameterTypeIDs));
+                                   static_cast<bool>(parameterTypeIDs),
+                                   static_cast<bool>(objectSelector));
     if (parameterTypeIDs) {
       Hash = llvm::hash_combine(Hash, parameterTypeIDs->size());
       for (IdentifierID TypeID : *parameterTypeIDs)
         Hash = llvm::hash_combine(Hash, static_cast<unsigned>(TypeID));
     }
+    if (objectSelector)
+      Hash = llvm::hash_combine(
+          Hash, objectSelector->Const.value_or(false),
+          static_cast<bool>(objectSelector->Const),
+          objectSelector->Volatile.value_or(false),
+          static_cast<bool>(objectSelector->Volatile),
+          objectSelector->Ref ? static_cast<unsigned>(*objectSelector->Ref) + 1
+                              : 0);
     return Hash;
   }
 };
@@ -1057,7 +1180,8 @@ inline bool operator==(const FunctionTableKey &LHS,
                        const FunctionTableKey &RHS) {
   return LHS.parentContextID == RHS.parentContextID &&
          LHS.nameID == RHS.nameID &&
-         LHS.parameterTypeIDs == RHS.parameterTypeIDs;
+         LHS.parameterTypeIDs == RHS.parameterTypeIDs &&
+         LHS.objectSelector == RHS.objectSelector;
 }
 
 /// Stable reader-facing identity for an API notes function selector entry.
@@ -1069,7 +1193,7 @@ struct APINotesFunctionSelectorKey {
   FunctionTableKey Key;
   bool IsCXXMethod = false;
 
-  APINotesFunctionSelectorKey getWithoutParameterSelector() const {
+  APINotesFunctionSelectorKey getNameOnlyKey() const {
     return {FunctionTableKey(Key.parentContextID, Key.nameID), IsCXXMethod};
   }
 
