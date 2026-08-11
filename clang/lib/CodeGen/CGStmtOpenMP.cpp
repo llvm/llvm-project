@@ -1703,7 +1703,8 @@ void CodeGenFunction::EmitOMPReductionClauseInit(
     case OMPD_flush:
     case OMPD_depobj:
     case OMPD_scan:
-    case OMPD_ordered:
+    case OMPD_ordered_standalone:
+    case OMPD_ordered_blockassoc:
     case OMPD_atomic:
     case OMPD_teams:
     case OMPD_target:

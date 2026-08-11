@@ -2945,16 +2945,16 @@ class OMPOrderedDirective : public OMPExecutableDirective {
   /// \param StartLoc Starting location of the directive kind.
   /// \param EndLoc Ending location of the directive.
   ///
-  OMPOrderedDirective(SourceLocation StartLoc, SourceLocation EndLoc)
-      : OMPExecutableDirective(OMPOrderedDirectiveClass,
-                               llvm::omp::OMPD_ordered, StartLoc, EndLoc) {}
+  OMPOrderedDirective(SourceLocation StartLoc, SourceLocation EndLoc,
+                      OpenMPDirectiveKind OrderedKind)
+      : OMPExecutableDirective(OMPOrderedDirectiveClass, OrderedKind, StartLoc,
+                               EndLoc) {}
 
   /// Build an empty directive.
   ///
-  explicit OMPOrderedDirective()
-      : OMPExecutableDirective(OMPOrderedDirectiveClass,
-                               llvm::omp::OMPD_ordered, SourceLocation(),
-                               SourceLocation()) {}
+  explicit OMPOrderedDirective(OpenMPDirectiveKind OrderedKind)
+      : OMPExecutableDirective(OMPOrderedDirectiveClass, OrderedKind,
+                               SourceLocation(), SourceLocation()) {}
 
 public:
   /// Creates directive.
