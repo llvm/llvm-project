@@ -3656,22 +3656,33 @@ llvm::GlobalVariable *ItaniumRTTIBuilder::GetAddrOfTypeName(
   llvm::raw_svector_ostream Out(Name);
   CGM.getCXXABI().getMangleContext().mangleCXXRTTIName(Ty, Out);
 
-  // We know that the mangled name of the type starts at index 4 of the
-  // mangled name of the typename, so we can just index into it in order to
-  // get the mangled name of the type.
+  // RTTI type-name symbol has form "_ZTS<mangled-string>". The string stored in
+  // type_info object excludes the "_ZTS" prefix. So we skip past the first 4
+  // characters. For types that do not have externally visible Clang/C++
+  // linkage, '*' is prepended to the type-name string so that within libstdc++
+  // RTTI names compare correctly via strcmp across translation units. LLVM
+  // internal linkage marks incomplete types as internal linkage, resulting in
+  // '*' being prepended incorrectly, thus Clang/C++ linkage is used, through
+  // isExternal
+  SmallString<256> TypeName;
+  if (!isExternallyVisible(Ty->getLinkage()))
+    TypeName += '*';
+  TypeName += StringRef(Name).substr(4);
   llvm::Constant *Init;
   if (CGM.getTriple().isOSzOS()) {
     // On z/OS, typename is stored as 2 encodings: EBCDIC followed by ASCII.
     SmallString<256> DualEncodedName;
-    llvm::ConverterEBCDIC::convertToEBCDIC(Name.substr(4), DualEncodedName);
+    llvm::ConverterEBCDIC::convertToEBCDIC(TypeName, DualEncodedName);
     DualEncodedName += '\0';
-    DualEncodedName += Name.substr(4);
+    DualEncodedName += TypeName;
     Init = llvm::ConstantDataArray::getString(VMContext, DualEncodedName);
   } else
-    Init = llvm::ConstantDataArray::getString(VMContext, Name.substr(4));
+    Init = llvm::ConstantDataArray::getString(VMContext, TypeName);
 
   auto Align = CGM.getContext().getTypeAlignInChars(CGM.getContext().CharTy);
 
+  // RTTI type-name object is still emitted with prefix "_ZTS" in the symbol
+  // name, so that it can be found by the linker.
   llvm::GlobalVariable *GV = CGM.CreateOrReplaceCXXRuntimeVariable(
       Name, Init->getType(), Linkage, Align.getAsAlign());
 
