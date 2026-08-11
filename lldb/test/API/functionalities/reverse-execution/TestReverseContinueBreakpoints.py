@@ -8,7 +8,7 @@ from lldbsuite.test.lldbreverse import ReverseTestBase
 from lldbsuite.test import lldbutil
 
 
-@skipIfWasm  # no reverse execution
+@requireNotWasm  # no reverse execution
 class TestReverseContinueBreakpoints(ReverseTestBase):
     @skipIfRemote
     def test_reverse_continue(self):

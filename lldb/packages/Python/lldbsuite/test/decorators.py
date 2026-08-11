@@ -1215,6 +1215,11 @@ def requireSignals(func):
     return requireNotPlatform(["windows", "wasip1", "wasi"])(func)
 
 
+def requireExpressionEvaluation(func):
+    """Mark the item as requiring expression evaluation."""
+    return requireNotWasm(func)
+
+
 def requireNotWasm(func):
     """Mark the item as inherently inapplicable to WebAssembly targets.
 

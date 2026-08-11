@@ -9,7 +9,7 @@ import os
 import time
 
 
-@skipIfWasm  # modules carry no build ID to cache on
+@requireNotWasm  # modules carry no build ID to cache on
 class ModuleCacheTestcaseSimple(TestBase):
     SHARED_BUILD_TESTCASE = False
 
