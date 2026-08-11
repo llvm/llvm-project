@@ -1321,7 +1321,8 @@ static LogicalResult reduceMatchAndRewriteHelper(OpTy op, uint64_t axis,
     ins.push_back(linalgOp->getResult(0));
     outs.push_back(finalEmptyTensor);
     auto linalgSelect =
-        linalg::SelectOp::create(rewriter, op->getLoc(), ins, outs);
+        linalg::ElementwiseOp::create(rewriter, op->getLoc(), ins, outs,
+                                      mlir::linalg::ElementwiseKind::select);
     linalgOp = linalgSelect;
   }
 
