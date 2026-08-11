@@ -6430,7 +6430,7 @@ static fir::RecordType buildConditionalLpType(
   // invariant here to catch any semantic regression in assertions builds.
   for (const auto *sym : condLpSyms) {
     const semantics::Symbol &ultimate = sym->GetUltimate();
-    const semantics::DeclTypeSpec *type = ultimate.GetType();
+    [[maybe_unused]] const semantics::DeclTypeSpec *type = ultimate.GetType();
     assert(ultimate.Rank() == 0 && type &&
            (type->category() == semantics::DeclTypeSpec::Category::Numeric ||
             type->category() == semantics::DeclTypeSpec::Category::Logical) &&
