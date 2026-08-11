@@ -28679,13 +28679,15 @@ SLPVectorizerPass::vectorizeStoreChainImpl(ArrayRef<Value *> Chain, BoUpSLP &R,
     // only merges the stores, while the scalars remain live for the other users
     // and all the lanes are gathered back. A single outside use may still be a
     // part of the larger vectorizable graph, same for the values, fed by the
-    // loads, where the vector loads may pay off the gathering.
+    // loads, where the vector loads may pay off the gathering. Likewise two
+    // outside uses (e.g. carry compare and next-limb add) may still be part of
+    // the same tree; require 3+ outside users before early-rejecting here.
     if (S && S.getOpcode() != Instruction::Load &&
         all_of(ValOps.getArrayRef(), [&](Value *V) {
           return none_of(cast<Instruction>(V)->operand_values(),
                          IsaPred<LoadInst>) &&
                  count_if(V->users(),
-                          [&](User *U) { return !Stores.contains(U); }) > 1;
+                          [&](User *U) { return !Stores.contains(U); }) > 2;
         })) {
       Size = 1;
       return false;
