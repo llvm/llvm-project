@@ -11,8 +11,8 @@ Its purpose is to exploit the 16 additional general-purpose registers
 four integer arguments can be passed in registers; WinCall doubles that to
 eight by using R16-R19 as argument registers. It also relaxes the aggregate
 passing and return rules of the Microsoft x64 ABI so that C++ types such as
-``std::span``, ``std::string`` and ``std::vector`` (a ``{pointer, size}``
-pair or a four-word object) can travel in registers.
+``std::span`` (a ``{pointer, size}`` pair) and other small aggregates can
+travel in registers.
 
 WinCall does **not** replace any existing ABI. Existing Windows APIs keep
 their ``stdcall``, ``cdecl`` and ``fastcall`` conventions; the convention is
@@ -120,8 +120,7 @@ convention):
 
 - A record that fits in **1, 2, 4, 8, 16 or 32 bytes** is passed **directly
   in registers** (not by pointer/sret like the MS x64 ABI). A 4-``size_t``
-  struct — such as ``std::string`` or ``std::vector`` — therefore travels in
-  RCX, RDX, R8, R9.
+  struct therefore travels in RCX, RDX, R8, R9.
 - A record of up to 64 bits is coerced to an integer of its size and uses
   **one** GPR; a larger record (up to 32 bytes) is **expanded** into its
   8-byte parts.
@@ -129,6 +128,10 @@ convention):
   ``classify`` returns ``ABIArgInfo::getIgnore()`` for them.
 - Records larger than 32 bytes, records with a flexible array member, and
   non-trivial C++ records (per ``getRecordArgABI``) are passed by reference.
+  Note that this means C++ classes with user-declared or user-provided
+  destructors or copy/move constructors (e.g. ``std::string``,
+  ``std::vector``, ``std::unique_ptr``) are **not** passed in registers —
+  they are passed by pointer regardless of size.
 - ``f80`` (long double) is passed by pointer.
 - ``__int128`` is split into two GPRs.
 - Complex types and member pointers are handled as in the MS x64 ABI.
@@ -285,11 +288,13 @@ __attribute__((wincall)) struct span g(void);
 Under the MS x64 ABI this same ``std::span`` argument would be passed by
 pointer; WinCall makes it a zero-cost, purely-register argument.
 
-### Four-word aggregates (``std::string`` / ``std::vector``)
+### Four-word aggregates
 
-A four-word object such as ``std::string`` or ``std::vector`` (32 bytes) is
-passed in **four** GPRs (RCX, RDX, R8, R9) and returned in RAX, RDX, RCX,
-R8. See the FAQ below for the exact code.
+A plain 4-``size_t`` struct (32 bytes) is passed in **four** GPRs (RCX,
+RDX, R8, R9) and returned in RAX, RDX, RCX, R8. See the FAQ below for the
+exact code. (C++ classes such as ``std::string`` or ``std::vector`` that
+have a non-trivial destructor or copy/move constructor are *not* passed in
+registers — they are passed by pointer; see the Aggregates section above.)
 
 ## FAQ
 
@@ -342,9 +347,11 @@ the stack frame between the two calls, but the argument registers are still
 RCX, RDX, R8, R9.)
 
 An integer argument following the struct is placed in the next free GPR
-(R16). This is what makes ``std::string`` and ``std::vector`` (four-word
-objects) travel entirely in registers under WinCall, unlike the MS x64 ABI
-which would pass them by pointer.
+(R16). This is how a four-word aggregate such as a 4-``size_t`` struct
+travels entirely in registers under WinCall, unlike the MS x64 ABI which
+would pass it by pointer. (C++ classes with non-trivial destructors or
+copy/move constructors are exempt from this register passing; see the
+Aggregates section above.)
 
 ## Implementation notes
 
