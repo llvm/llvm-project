@@ -50,7 +50,9 @@ static uint32_t g_initialize_count = 0;
 
 // Upper bound on the timeout used when running a utility expression with
 // only one thread allowed to run.
-static constexpr std::chrono::seconds g_max_one_thread_timeout(5);
+static std::chrono::microseconds GetLoaderOneThreadTimeout(Process *process) {
+  return std::chrono::microseconds(process->GetUtilityExpressionTimeout()) / 2;
+}
 
 namespace {
 
@@ -429,8 +431,7 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
   // handle currently.
   options.SetTrapExceptions(false);
   options.SetTimeout(process->GetUtilityExpressionTimeout());
-  options.SetOneThreadTimeout(std::min<std::chrono::microseconds>(
-      g_max_one_thread_timeout, process->GetUtilityExpressionTimeout() / 2));
+  options.SetOneThreadTimeout(GetLoaderOneThreadTimeout(process));
   options.SetIsForUtilityExpr(true);
 
   ExpressionResults result =
@@ -686,13 +687,11 @@ void PlatformWindows::GetStatus(Stream &strm) {
 
 bool PlatformWindows::CanDebugProcess() { return true; }
 
-ConstString PlatformWindows::GetFullNameForDylib(ConstString basename) {
-  if (basename.IsEmpty())
-    return basename;
+std::string PlatformWindows::GetFullNameForDylib(llvm::StringRef basename) {
+  if (basename.empty())
+    return basename.str();
 
-  StreamString stream;
-  stream.Printf("%s.dll", basename.GetCString());
-  return ConstString(stream.GetString());
+  return llvm::formatv("{0}.dll", basename).str();
 }
 
 size_t
@@ -944,8 +943,7 @@ extern "C" {
   // handle currently.
   options.SetTrapExceptions(false);
   options.SetTimeout(process->GetUtilityExpressionTimeout());
-  options.SetOneThreadTimeout(std::min<std::chrono::microseconds>(
-      g_max_one_thread_timeout, process->GetUtilityExpressionTimeout() / 2));
+  options.SetOneThreadTimeout(GetLoaderOneThreadTimeout(process));
 
   ExpressionResults result = UserExpression::Evaluate(
       context, options, expression, kLoaderDecls, value);

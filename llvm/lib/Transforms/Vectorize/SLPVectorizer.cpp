@@ -8860,6 +8860,54 @@ void BoUpSLP::buildExternalUses(
       }
     }
   }
+
+  // The expansion of the runtime stride may reuse an in-tree instruction with
+  // the matching SCEV, which gets erased upon vectorization. Register an
+  // external use for it to replace the stride operand with the extract.
+  SmallVector<std::pair<const SCEV *, BasicBlock *>> Strides;
+  for (const auto &[StridedTE, SPtrInfo] : TreeEntryToStridedPtrInfoMap)
+    if (SPtrInfo.StrideSCEV && !SPtrInfo.StrideVal &&
+        !DeletedNodes.contains(StridedTE) &&
+        !TransformedToGatherNodes.contains(StridedTE))
+      Strides.emplace_back(SPtrInfo.StrideSCEV,
+                           StridedTE->getMainOp()->getParent());
+  if (Strides.empty())
+    return;
+  for (const std::unique_ptr<TreeEntry> &TEPtr : VectorizableTree) {
+    TreeEntry *Entry = TEPtr.get();
+    if (Entry->isGather() || Entry->State == TreeEntry::SplitVectorize ||
+        DeletedNodes.contains(Entry) ||
+        TransformedToGatherNodes.contains(Entry))
+      continue;
+    for (Value *Scalar : Entry->Scalars) {
+      auto *I = dyn_cast<Instruction>(Scalar);
+      if (!I || Entry->isCopyableElement(I) || !SE->isSCEVable(I->getType()))
+        continue;
+      const SCEV *ScalarSCEV = SE->getSCEV(I);
+      if (isa<SCEVConstant>(ScalarSCEV) ||
+          none_of(Strides, [&](const auto &Stride) {
+            return DT->dominates(I, Stride.second->getTerminator()) &&
+                   SCEVExprContains(Stride.first, [ScalarSCEV](const SCEV *S) {
+                     return S == ScalarSCEV;
+                   });
+          }))
+        continue;
+      auto It = ScalarToExtUses.find(Scalar);
+      if (It != ScalarToExtUses.end()) {
+        // Replace all uses: the stride operand is emitted later, during the
+        // codegen.
+        ExternalUses[It->second].User = nullptr;
+        continue;
+      }
+      unsigned FoundLane = Entry->findLaneForValue(Scalar);
+      LLVM_DEBUG(dbgs() << "SLP: Need to extract: strided load stride from "
+                           "lane "
+                        << FoundLane << " from " << *Scalar << ".\n");
+      ScalarToExtUses.try_emplace(Scalar, ExternalUses.size());
+      ExternalUses.emplace_back(Scalar, nullptr, *Entry, FoundLane);
+      ExternalUsesWithNonUsers.insert(Scalar);
+    }
+  }
 }
 
 SmallVector<SmallVector<StoreInst *>>
@@ -12347,11 +12395,13 @@ static void scanAssociativeOperands(
 /// family of their first operand where available, so e.g. shifts fed by the
 /// same load family land in one column instead of pairing by encounter order.
 /// Values move between columns only within the same sign: a subtracted leaf
-/// never lands in an added column.
-static SmallVector<BoUpSLP::ValueList>
-alignReassociatedOperandsByKey(ArrayRef<BoUpSLP::ValueList> Operands,
-                               const SmallBitVector &NegatedColumns,
-                               const TargetLibraryInfo &TLI) {
+/// never lands in an added column. The sign is queried per lane and column
+/// with \p IsNegated: alternate add/sub nodes negate only the non-leading
+/// columns of their subtract lanes.
+static SmallVector<BoUpSLP::ValueList> alignReassociatedOperandsByKey(
+    ArrayRef<BoUpSLP::ValueList> Operands,
+    function_ref<bool(unsigned Lane, unsigned Col)> IsNegated,
+    const TargetLibraryInfo &TLI) {
   const unsigned NumCols = Operands.size();
   const unsigned NumLanes = Operands.front().size();
   auto LoadsSubkey = [](size_t /*Key*/, LoadInst *LI) {
@@ -12384,7 +12434,7 @@ alignReassociatedOperandsByKey(ArrayRef<BoUpSLP::ValueList> Operands,
   for (unsigned Lane : seq<unsigned>(1, NumLanes)) {
     // Buckets are keyed by the value key and the column sign.
     using Key = std::pair<std::pair<size_t, size_t>, unsigned>;
-    auto Sign = [&](unsigned Col) { return NegatedColumns[Col] ? 1U : 0U; };
+    auto Sign = [&](unsigned Col) { return IsNegated(Lane, Col) ? 1U : 0U; };
     SmallDenseMap<Key, SmallVector<unsigned, 2>, 8> Buckets;
     for (unsigned Col : seq<unsigned>(NumCols))
       Buckets[{GetKey(Operands[Col][Lane]), Sign(Col)}].push_back(Col);
@@ -12420,7 +12470,7 @@ alignReassociatedOperandsByKey(ArrayRef<BoUpSLP::ValueList> Operands,
       if (SlotSrcCol[Slot] != NumCols)
         continue;
       for (unsigned Col : seq<unsigned>(NumCols)) {
-        if (!ColClaimed[Col] && NegatedColumns[Col] == NegatedColumns[Slot]) {
+        if (!ColClaimed[Col] && IsNegated(Lane, Col) == IsNegated(Lane, Slot)) {
           SlotSrcCol[Slot] = Col;
           ColClaimed[Col] = true;
           break;
@@ -12719,8 +12769,9 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
   SmallVector<ValueList> Operands = Analysis.buildOperands(S, VL);
   // Flatten associative binary chains into operand columns. Only the peeled
   // chain links are required to be single-use (they are erased); the root
-  // being flattened may have other uses. Skip alt-shuffle nodes and lanes
-  // that are neither chain links nor copyable identity leaves. Restricted to
+  // being flattened may have other uses. Skip lanes that are neither chain
+  // links nor copyable identity leaves. Alternate nodes flatten too, but
+  // each lane keeps its own opcode on every combine level. Restricted to
   // BinaryOperator: isAssociative() is also true for associative intrinsics
   // (e.g. smax/smin/umax/umin), which are CallInst, not BinaryOperator, and
   // are not supported by the copyable-identity machinery used below
@@ -12729,27 +12780,51 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
   SmallVector<Value *> ReassocScalars;
   // Sign of each flattened operand column (a subtracted leaf is negated).
   SmallBitVector NegatedColumns;
+  // Per-lane subtract markers for flattened alternate nodes.
+  SmallBitVector SubLanes;
   // Cached below (when the peel is kept) so the reorder step further down
   // does not need to redo the aligning/scoring work.
   SmallVector<ValueList> ReassocAlignedOperands;
   // Snapshot of the pre-flatten operand columns, used by both revert points.
   SmallVector<ValueList> NaturalTwoColumns;
   std::tuple<unsigned, unsigned, unsigned, int> ReassocPeeledQuality;
-  if (VectorizeReassociatedOps && !S.isAltShuffle() && Operands.size() == 2 &&
+  if (VectorizeReassociatedOps && Operands.size() == 2 &&
       all_of(VL, [&](Value *V) {
+        if (!S.isAltShuffle() && S.isCopyableElement(V))
+          return true;
         auto *I = dyn_cast<BinaryOperator>(V);
-        return S.isCopyableElement(V) || (I && isReassocChainLink(I));
+        return I && isReassocChainLink(I);
       })) {
     NaturalTwoColumns = Operands;
-    scanAssociativeOperands(S, *DT, *DL, *TTI, *TLI, *this, Operands,
-                            NegatedColumns, ReassocScalars);
+    if (S.isAltShuffle()) {
+      if (SmallVector<SmallVector<Value *>> Flattened =
+              scanAltAssociativeOperands(S, *TLI, VL, Operands[0], Operands[1],
+                                         ReassocScalars, SubLanes);
+          !Flattened.empty()) {
+        Operands.clear();
+        for (auto &Col : Flattened)
+          Operands.emplace_back(std::move(Col));
+      }
+    } else {
+      scanAssociativeOperands(S, *DT, *DL, *TTI, *TLI, *this, Operands,
+                              NegatedColumns, ReassocScalars);
+    }
     // Drop flattening unless realigning improves load or broadcast column
     // structure; an unimproved peel ties and reverts to natural columns.
     if (!ReassocScalars.empty()) {
+      auto IsNegated = [&](unsigned Lane, unsigned Col) {
+        return S.isAltShuffle() ? Col > 0 && SubLanes.test(Lane)
+                                : NegatedColumns.test(Col);
+      };
       ReassocAlignedOperands =
-          alignReassociatedOperandsByKey(Operands, NegatedColumns, *TLI);
-      ReassocPeeledQuality =
-          getReassocColumnsQuality(Operands, *this, S.getOpcode());
+          alignReassociatedOperandsByKey(Operands, IsNegated, *TLI);
+      // Alternate nodes compare against the natural two-column form rather
+      // than the raw peel: the natural form pays one lane-select shuffle per
+      // level, so the flatten is worth keeping whenever the realigned
+      // columns improve on the natural ones.
+      ReassocPeeledQuality = getReassocColumnsQuality(
+          S.isAltShuffle() ? NaturalTwoColumns : Operands, *this,
+          S.getOpcode());
       // The unique-value count (4th field) is only a tie-break for the
       // later reorder-or-not decision, not for this one.
       auto DropUniqueCount = [](const auto &Quality) {
@@ -12764,6 +12839,28 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
       }
     }
   }
+  // Registers peeled chain links on the node so they are erased with it and
+  // their scheduling deps are released as reassociated operands.
+  auto RegisterReassocScalars = [&](TreeEntry *TE) {
+    for (Value *V : ReassocScalars) {
+      TE->addReassocScalar(V);
+      SmallVectorImpl<const TreeEntry *> &Owners =
+          ReassocScalarToTreeEntries.try_emplace(V).first->second;
+      if (!is_contained(Owners, TE))
+        Owners.push_back(TE);
+    }
+  };
+  // A value routed into several columns is consumed by several combines;
+  // that distorts both the cost and the vector structure (duplicated loads,
+  // partial masked columns), so prefer the natural two-column shape.
+  auto HasDupColumnValues = [&]() {
+    SmallPtrSet<const Value *, 16> ColumnValues;
+    return any_of(Operands, [&](const ValueList &Col) {
+      return any_of(Col, [&](const Value *V) {
+        return !isa<Constant>(V) && !ColumnValues.insert(V).second;
+      });
+    });
+  };
   ScheduleBundle Empty;
   ScheduleBundle &Bundle = BundlePtr.value() ? *BundlePtr.value() : Empty;
   LLVM_DEBUG(dbgs() << "SLP: We are able to schedule this bundle.\n");
@@ -13109,29 +13206,14 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
         } else {
           Operands = std::move(ReassocAlignedOperands);
         }
-        // A value routed into several columns is consumed by several
-        // combines; that distorts both the cost and the vector structure
-        // (duplicated loads, partial masked columns), so prefer the natural
-        // two-column shape.
-        SmallPtrSet<const Value *, 16> ColumnValues;
-        if (any_of(Operands, [&](const ValueList &Col) {
-              return any_of(Col, [&](const Value *V) {
-                return !isa<Constant>(V) && !ColumnValues.insert(V).second;
-              });
-            })) {
+        if (HasDupColumnValues()) {
           Operands = std::move(NaturalTwoColumns);
           ReassocScalars.clear();
         }
       }
-      if (!ReassocScalars.empty()) {
-        for (Value *V : ReassocScalars) {
-          TE->addReassocScalar(V);
-          SmallVectorImpl<const TreeEntry *> &Owners =
-              ReassocScalarToTreeEntries.try_emplace(V).first->second;
-          if (!is_contained(Owners, TE))
-            Owners.push_back(TE);
-        }
-      } else if (isa<BinaryOperator>(VL0) && isCommutative(VL0)) {
+      if (!ReassocScalars.empty())
+        RegisterReassocScalars(TE);
+      else if (isa<BinaryOperator>(VL0) && isCommutative(VL0)) {
         VLOperands Ops(VL, Operands, S, *this);
         Ops.reorder();
         Operands[0] = Ops.getVL(0);
@@ -13264,14 +13346,25 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
         return;
       }
 
-      if (isa<BinaryOperator>(VL0) || CI) {
+      if (!ReassocScalars.empty()) {
+        // Peeled alternate chains take the realigned columns; the operand
+        // reorder below does not preserve the per-lane sign constraints.
+        Operands = std::move(ReassocAlignedOperands);
+        if (HasDupColumnValues()) {
+          Operands = std::move(NaturalTwoColumns);
+          ReassocScalars.clear();
+        }
+      }
+      if (ReassocScalars.empty() && (isa<BinaryOperator>(VL0) || CI)) {
         VLOperands Ops(VL, Operands, S, *this);
         Ops.reorder();
         Operands[0] = Ops.getVL(0);
         Operands[1] = Ops.getVL(1);
       }
+      if (!ReassocScalars.empty())
+        RegisterReassocScalars(TE);
       TE->setOperands(Operands);
-      for (unsigned I : seq<unsigned>(VL0->getNumOperands()))
+      for (unsigned I : seq<unsigned>(TE->getNumOperands()))
         buildTreeRec(TE->getOperand(I), Depth + 1, {TE, I});
       return;
     }
@@ -16760,6 +16853,39 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                                  ScalarCost, "Calculated costs for Tree"));
         return VecCost - ScalarCost;
       };
+  // Price peeled intermediate instructions on the scalar side: they are
+  // erased when the node vectorizes. The peeled cost is folded into the
+  // first scalar-cost query so the cost dump reports the full scalar cost.
+  // Peeled chain links are always 2-operand associative binops, priced per
+  // instruction so the operand properties (constants, uniformity) apply.
+  auto GetCostDiffWithPeeled =
+      [&](function_ref<InstructionCost(unsigned)> ScalarEltCost,
+          function_ref<InstructionCost(InstructionCost)> VectorCost) {
+        InstructionCost PeeledScalarCost = 0;
+        for (Value *V : E->getReassocScalars()) {
+          auto *I = cast<Instruction>(V);
+          TTI::OperandValueInfo Op1Info = TTI::getOperandInfo(I->getOperand(0));
+          TTI::OperandValueInfo Op2Info = TTI::getOperandInfo(I->getOperand(1));
+          PeeledScalarCost += TTI->getArithmeticInstrCost(
+              I->getOpcode(), OrigScalarTy, CostKind, Op1Info, Op2Info);
+        }
+        bool PeeledCostAdded = false;
+        InstructionCost CostDiff = GetCostDiff(
+            [&](unsigned Idx) {
+              InstructionCost Cost = ScalarEltCost(Idx);
+              if (!PeeledCostAdded) {
+                PeeledCostAdded = true;
+                Cost += PeeledScalarCost;
+              }
+              return Cost;
+            },
+            VectorCost);
+        // Every scalar may be marked as used elsewhere, leaving the
+        // scalar-cost query uncalled and the peeled cost unapplied.
+        if (!PeeledCostAdded)
+          CostDiff -= PeeledScalarCost;
+        return CostDiff;
+      };
   // Calculate cost difference from vectorizing set of GEPs.
   // Negative value means vectorizing is profitable.
   auto GetGEPCostDiff = [=](ArrayRef<Value *> Ptrs, Value *BasePtr) {
@@ -17474,35 +17600,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       }
       return Cost + CommonCost;
     };
-    // Price peeled intermediate instructions on the scalar side: they are
-    // erased when the node vectorizes. Folded into the first scalar-cost
-    // query so the cost dump reports the full scalar cost. These are always
-    // 2-operand chain links (adds, subtracts, or other associative binops),
-    // so operand 1 is always the second operand.
-    InstructionCost PeeledScalarCost = 0;
-    for (Value *V : E->getReassocScalars()) {
-      auto *I = cast<Instruction>(V);
-      TTI::OperandValueInfo Op1Info = TTI::getOperandInfo(I->getOperand(0));
-      TTI::OperandValueInfo Op2Info = TTI::getOperandInfo(I->getOperand(1));
-      PeeledScalarCost += TTI->getArithmeticInstrCost(
-          I->getOpcode(), OrigScalarTy, CostKind, Op1Info, Op2Info);
-    }
-    bool PeeledCostAdded = false;
-    InstructionCost CostDiff = GetCostDiff(
-        [&](unsigned Idx) {
-          InstructionCost Cost = GetScalarCost(Idx);
-          if (!PeeledCostAdded) {
-            PeeledCostAdded = true;
-            Cost += PeeledScalarCost;
-          }
-          return Cost;
-        },
-        GetVectorCost);
-    // Every scalar may be marked as used elsewhere, leaving the scalar-cost
-    // query uncalled and the peeled cost unapplied.
-    if (!PeeledCostAdded)
-      CostDiff -= PeeledScalarCost;
-    return CostDiff;
+    return GetCostDiffWithPeeled(GetScalarCost, GetVectorCost);
   }
   case Instruction::GetElementPtr: {
     return CommonCost + GetGEPCostDiff(VL, VL0);
@@ -17780,10 +17878,36 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         // No need to add new vector costs here since we're going to reuse
         // same main/alternate vector ops, just do different shuffling.
       } else if (Instruction::isBinaryOp(E->getOpcode())) {
-        VecCost =
-            TTIRef.getArithmeticInstrCost(E->getOpcode(), VecTy, CostKind);
-        VecCost +=
-            TTIRef.getArithmeticInstrCost(E->getAltOpcode(), VecTy, CostKind);
+        // Peeled alternate chains fold the operand columns into one pure
+        // main-opcode chain and one pure alt-opcode chain, followed by a
+        // single lane-select shuffle; a plain alternate node is a single
+        // combine. Each combine is priced with the properties of the column
+        // it folds in; the other operand is the running fold, which stays
+        // constant while every folded column is constant (such combines
+        // constant-fold away in codegen) and stays uniform while every
+        // folded column is uniform.
+        auto ChainCost = [&](unsigned Opcode) {
+          InstructionCost Cost = 0;
+          TTI::OperandValueInfo RunningInfo = getOperandInfo(E->getOperand(0));
+          for (unsigned Idx : seq<unsigned>(1, E->getNumOperands())) {
+            TTI::OperandValueInfo ColInfo = getOperandInfo(E->getOperand(Idx));
+            if (!RunningInfo.isConstant() || !ColInfo.isConstant())
+              Cost += TTIRef.getArithmeticInstrCost(Opcode, VecTy, CostKind,
+                                                    RunningInfo, ColInfo, {},
+                                                    nullptr, TLI);
+            TTI::OperandValueKind Kind = TTI::OK_AnyValue;
+            if (RunningInfo.isConstant() && ColInfo.isConstant())
+              Kind = RunningInfo.Kind == TTI::OK_UniformConstantValue &&
+                             ColInfo.Kind == TTI::OK_UniformConstantValue
+                         ? TTI::OK_UniformConstantValue
+                         : TTI::OK_NonUniformConstantValue;
+            else if (RunningInfo.isUniform() && ColInfo.isUniform())
+              Kind = TTI::OK_UniformValue;
+            RunningInfo = {Kind, TTI::OP_None};
+          }
+          return Cost;
+        };
+        VecCost = ChainCost(E->getOpcode()) + ChainCost(E->getAltOpcode());
       } else if (auto *CI0 = dyn_cast<CmpInst>(VL0)) {
         auto *MaskTy = getWidenedType(Builder.getInt1Ty(), VL.size());
         VecCost = TTIRef.getCmpSelInstrCost(
@@ -17841,7 +17965,9 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       // Patterns like [fadd,fsub] can be combined into a single instruction
       // in x86. Reordering them into [fsub,fadd] blocks this pattern. So we
       // need to take into account their order when looking for the most used
-      // order.
+      // order. Linearized chains emit no alternate-ops pattern.
+      if (E->hasReassocScalars())
+        return VecCost;
       unsigned Opcode0 = E->getOpcode();
       unsigned Opcode1 = E->getAltOpcode();
       SmallBitVector OpcodeMask(
@@ -17893,7 +18019,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
             }
             return TTI::TCC_Free;
           });
-    return GetCostDiff(GetScalarCost, GetVectorCost);
+    return GetCostDiffWithPeeled(GetScalarCost, GetVectorCost);
   }
   case Instruction::Freeze:
     return CommonCost;
@@ -24341,6 +24467,75 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
                 (isa<CmpInst>(VL0) && isa<CmpInst>(E->getAltOp()))) &&
                "Invalid Shuffle Vector Operand");
 
+        // Gather up main and alt scalar ops to propagate IR flags to each
+        // vector operation and build the lane-select mask.
+        ValueList OpScalars, AltScalars;
+        SmallVector<int> Mask;
+        E->buildAltOpShuffleMask(
+            [E, this](Instruction *I) {
+              assert(E->getMatchingMainOpOrAltOp(I) &&
+                     "Unexpected main/alternate opcode");
+              return isAlternateInstruction(I, E->getMainOp(), E->getAltOp(),
+                                            *TLI);
+            },
+            Mask, &OpScalars, &AltScalars);
+        if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy)) {
+          assert(SLPReVec && "FixedVectorType is not expected.");
+          transformScalarShuffleIndiciesToVector(VecTy->getNumElements(), Mask);
+        }
+
+        if (E->hasReassocScalars() && Instruction::isBinaryOp(E->getOpcode())) {
+          // Peeled alternate chains are linearized completely: the operand
+          // columns fold into one pure main-opcode chain and one pure
+          // alt-opcode chain, followed by a single lane-select shuffle. Every
+          // lane keeps one opcode on all levels, so its value is exact in one
+          // of the chains.
+          setInsertPointAfterBundle(E);
+          for (Value *V : E->getReassocScalars()) {
+            auto *I = cast<Instruction>(V);
+            (isAlternateInstruction(I, E->getMainOp(), E->getAltOp(), *TLI)
+                 ? AltScalars
+                 : OpScalars)
+                .push_back(I);
+          }
+          auto FoldColumns = [&](unsigned Opcode,
+                                 const ValueList &FlagScalars) {
+            Value *R = nullptr;
+            for (unsigned Idx : seq<unsigned>(E->getNumOperands())) {
+              Value *Column = vectorizeOperand(E, Idx);
+              if (Column->getType() != VecTy)
+                Column = Builder.CreateIntCast(Column, VecTy,
+                                               GetOperandSignedness(Idx));
+              if (!R) {
+                R = Column;
+                continue;
+              }
+              R = Builder.CreateBinOp(
+                  static_cast<Instruction::BinaryOps>(Opcode), R, Column);
+              PropagateIRFlags(R, Opcode, FlagScalars);
+              auto *I = dyn_cast<Instruction>(R);
+              if (!I)
+                continue;
+              // Regrouping can invalidate flags even when each original
+              // step was safe.
+              I->dropPoisonGeneratingFlags();
+              GatherShuffleExtractSeq.insert(I);
+              CSEBlocks.insert(I->getParent());
+            }
+            return R;
+          };
+          Value *V0 = FoldColumns(E->getOpcode(), OpScalars);
+          Value *V1 = FoldColumns(E->getAltOpcode(), AltScalars);
+          V = Builder.CreateShuffleVector(V0, V1, Mask);
+          if (auto *I = dyn_cast<Instruction>(V)) {
+            GatherShuffleExtractSeq.insert(I);
+            CSEBlocks.insert(I->getParent());
+          }
+          E->VectorizedValue = V;
+          ++NumVectorInstructions;
+          return V;
+        }
+
         Value *LHS = nullptr, *RHS = nullptr;
         if (Instruction::isBinaryOp(E->getOpcode()) || isa<CmpInst>(VL0)) {
           setInsertPointAfterBundle(E);
@@ -24419,27 +24614,10 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           }
         }
 
-        // Create shuffle to take alternate operations from the vector.
-        // Also, gather up main and alt scalar ops to propagate IR flags to
-        // each vector operation.
-        ValueList OpScalars, AltScalars;
-        SmallVector<int> Mask;
-        E->buildAltOpShuffleMask(
-            [E, this](Instruction *I) {
-              assert(E->getMatchingMainOpOrAltOp(I) &&
-                     "Unexpected main/alternate opcode");
-              return isAlternateInstruction(I, E->getMainOp(), E->getAltOp(),
-                                            *TLI);
-            },
-            Mask, &OpScalars, &AltScalars);
-
         PropagateIRFlags(V0, E->getOpcode(), OpScalars);
         PropagateIRFlags(V1, E->getAltOpcode(), AltScalars);
 
-        if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy)) {
-          assert(SLPReVec && "FixedVectorType is not expected.");
-          transformScalarShuffleIndiciesToVector(VecTy->getNumElements(), Mask);
-        }
+        // Create shuffle to take alternate operations from the vector.
         V = Builder.CreateShuffleVector(V0, V1, Mask);
         if (auto *I = dyn_cast<Instruction>(V)) {
           GatherShuffleExtractSeq.insert(I);

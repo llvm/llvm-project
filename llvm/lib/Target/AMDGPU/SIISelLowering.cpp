@@ -1060,6 +1060,11 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::CONVERT_FROM_ARBITRARY_FP, {MVT::f32, MVT::v2f32},
                        Custom);
     setOperationAction(ISD::CONVERT_FROM_ARBITRARY_FP, MVT::v2i8, Custom);
+
+    // i8 result promotes to i16, wider vectors split down to v2i8, and v2i8 is
+    // handled in ReplaceNodeResults before the legalizer splits it per lane.
+    setOperationAction(ISD::CONVERT_TO_ARBITRARY_FP, {MVT::i16, MVT::v2i8},
+                       Custom);
   }
 
   if (Subtarget->hasFP8F16ConversionInsts()) {
@@ -7681,6 +7686,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerINTRINSIC_WO_CHAIN(Op, DAG);
   case ISD::CONVERT_FROM_ARBITRARY_FP:
     return LowerCONVERT_FROM_ARBITRARY_FP(Op, DAG);
+  case ISD::CONVERT_TO_ARBITRARY_FP:
+    return LowerCONVERT_TO_ARBITRARY_FP(Op, DAG);
   case ISD::INTRINSIC_W_CHAIN:
     return LowerINTRINSIC_W_CHAIN(Op, DAG);
   case ISD::INTRINSIC_VOID:
@@ -8334,6 +8341,11 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
   }
   case ISD::EXTRACT_VECTOR_ELT: {
     if (SDValue Res = lowerEXTRACT_VECTOR_ELT(SDValue(N, 0), DAG))
+      Results.push_back(Res);
+    return;
+  }
+  case ISD::CONVERT_TO_ARBITRARY_FP: {
+    if (SDValue Res = LowerCONVERT_TO_ARBITRARY_FP(SDValue(N, 0), DAG))
       Results.push_back(Res);
     return;
   }
@@ -11079,6 +11091,76 @@ SITargetLowering::LowerCONVERT_FROM_ARBITRARY_FP(SDValue Op,
   return SDValue();
 }
 
+SDValue SITargetLowering::lowerToFP8(SDValue Op, bool IsBF8,
+                                     SelectionDAG &DAG) const {
+  SDLoc SL(Op);
+  SDValue Src = Op.getOperand(0);
+  EVT ResVT = Op.getValueType();
+  bool IsF16 = Src.getValueType().getScalarType() == MVT::f16;
+  assert((!IsF16 || Subtarget->hasF16FP8ConversionInsts()) &&
+         "f16 -> fp8/bf8 conversion requires F16FP8ConversionInsts");
+  assert((!ResVT.isVector() || ResVT == MVT::v2i8) &&
+         "only the v2i8 vector result is custom lowered");
+
+  if (IsF16) {
+    unsigned Opc =
+        IsBF8 ? AMDGPUISD::CVT_PK_BF8_F16 : AMDGPUISD::CVT_PK_FP8_F16;
+    SDValue Bytes = DAG.getNode(Opc, SL, MVT::i16, Src);
+    return DAG.getNode(ISD::BITCAST, SL, ResVT, Bytes);
+  }
+
+  unsigned Opc = IsBF8 ? AMDGPUISD::CVT_PK_BF8_F32 : AMDGPUISD::CVT_PK_FP8_F32;
+  SDValue PoisonI32 = DAG.getPOISON(MVT::i32);
+  SDValue WordSel = DAG.getTargetConstant(0, SL, MVT::i1);
+
+  if (!ResVT.isVector()) {
+    // Convert one lane, the second is unused. Feed it the same source so the
+    // instruction does not read an undefined register.
+    SDValue Packed =
+        DAG.getNode(Opc, SL, MVT::i32, Src, Src, PoisonI32, WordSel);
+    return DAG.getAnyExtOrTrunc(Packed, SL, ResVT);
+  }
+
+  SDValue A = DAG.getExtractVectorElt(SL, MVT::f32, Src, 0);
+  SDValue B = DAG.getExtractVectorElt(SL, MVT::f32, Src, 1);
+  SDValue Packed = DAG.getNode(Opc, SL, MVT::i32, A, B, PoisonI32, WordSel);
+  SDValue Bytes = DAG.getNode(ISD::TRUNCATE, SL, MVT::i16, Packed);
+  return DAG.getNode(ISD::BITCAST, SL, ResVT, Bytes);
+}
+
+SDValue
+SITargetLowering::LowerCONVERT_TO_ARBITRARY_FP(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  // Only the OCP fp8 formats E4M3FN and E5M2 map to HW conversions, everything
+  // else uses the generic expansion.
+  APFloatBase::Semantics Sem =
+      static_cast<APFloatBase::Semantics>(Op.getConstantOperandVal(1));
+  if (Sem != APFloatBase::S_Float8E4M3FN && Sem != APFloatBase::S_Float8E5M2)
+    return SDValue();
+  bool IsBF8 = Sem == APFloatBase::S_Float8E5M2;
+
+  // The packed HW conversions round to nearest-even and never saturate.
+  if (static_cast<RoundingMode>(Op.getConstantOperandVal(2)) !=
+      RoundingMode::NearestTiesToEven)
+    return SDValue();
+  if (Op.getConstantOperandVal(3) != 0)
+    return SDValue();
+
+  EVT SrcEltVT = Op.getOperand(0).getValueType().getScalarType();
+  // The f32 form is built here rather than by a tablegen pattern because the
+  // HW result is i32 while the node result is i16 after the i8 promotion.
+  if (SrcEltVT == MVT::f32)
+    return lowerToFP8(Op, IsBF8, DAG);
+  if (SrcEltVT == MVT::f16 && Subtarget->hasF16FP8ConversionInsts()) {
+    // A scalar conversion is selected from the generic node by tablegen, only
+    // the illegal v2i8 result type needs lowering here.
+    if (!Op.getValueType().isVector())
+      return Op;
+    return lowerToFP8(Op, IsBF8, DAG);
+  }
+  return SDValue();
+}
+
 SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                                   SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
@@ -13206,6 +13288,9 @@ SDValue SITargetLowering::lowerPointerAsRsrcIntrin(SDNode *Op,
   SDValue Rsrc;
 
   if (Subtarget->has45BitNumRecordsBufferResource()) {
+    NumRecords = DAG.getZExtOrTrunc(NumRecords, Loc, MVT::i64);
+    NumRecords = DAG.getNode(ISD::AND, Loc, MVT::i64, NumRecords,
+                             DAG.getConstant((1ULL << 45) - 1, Loc, MVT::i64));
     SDValue Zero = DAG.getConstant(0, Loc, MVT::i32);
     // Build the lower 64-bit value, which has a 57-bit base and the lower 7-bit
     // num_records.
@@ -13242,7 +13327,7 @@ SDValue SITargetLowering::lowerPointerAsRsrcIntrin(SDNode *Op,
 
     Rsrc = DAG.getNode(ISD::BUILD_VECTOR, Loc, MVT::v2i64, LowHalf, HighHalf);
   } else {
-    NumRecords = DAG.getAnyExtOrTrunc(NumRecords, Loc, MVT::i32);
+    NumRecords = DAG.getZExtOrTrunc(NumRecords, Loc, MVT::i32);
     auto [LowHalf, HighHalf] =
         DAG.SplitScalar(Pointer, Loc, MVT::i32, MVT::i32);
     SDValue Mask = DAG.getConstant(0x0000ffff, Loc, MVT::i32);
@@ -16368,19 +16453,10 @@ SDValue SITargetLowering::getCanonicalConstantFP(SelectionDAG &DAG,
   }
 
   if (C.isNaN()) {
-    APFloat CanonicalQNaN = APFloat::getQNaN(C.getSemantics());
     if (C.isSignaling()) {
       // Quiet a signaling NaN.
-      // FIXME: Is this supposed to preserve payload bits?
-      return DAG.getConstantFP(CanonicalQNaN, SL, VT);
+      return DAG.getConstantFP(C.makeQuiet(), SL, VT);
     }
-
-    // Make sure it is the canonical NaN bitpattern.
-    //
-    // TODO: Can we use -1 as the canonical NaN value since it's an inline
-    // immediate?
-    if (C.bitcastToAPInt() != CanonicalQNaN.bitcastToAPInt())
-      return DAG.getConstantFP(CanonicalQNaN, SL, VT);
   }
 
   // Already canonical.
