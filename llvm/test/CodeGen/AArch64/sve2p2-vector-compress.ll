@@ -2,6 +2,7 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve2p2 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-SVE2p2
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve,+sme2p2 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-SVE2p2
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sme2p2 -force-streaming < %s | FileCheck %s --check-prefixes=CHECK,CHECK-SME2p2-STREAMING
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sme2p2,+sve2p2 -force-streaming-compatible < %s | FileCheck %s --check-prefixes=CHECK,CHECK-STREAMING-COMPAT
 
 define <vscale x 16 x i8> @compress_nv16i8(<vscale x 16 x i8> %vec, <vscale x 16 x i1> %mask) {
 ; CHECK-LABEL: compress_nv16i8:
@@ -62,6 +63,18 @@ define <16 x i8> @compress_v16i8(<16 x i8> %vec, <16 x i1> %mask) {
 ; CHECK-SME2p2-STREAMING-NEXT:    cmpne p1.b, p0/z, z1.b, #0
 ; CHECK-SME2p2-STREAMING-NEXT:    compact z0.b, p1, z0.b
 ; CHECK-SME2p2-STREAMING-NEXT:    ret
+;
+; CHECK-STREAMING-COMPAT-LABEL: compress_v16i8:
+; CHECK-STREAMING-COMPAT:       // %bb.0:
+; CHECK-STREAMING-COMPAT-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-STREAMING-COMPAT-NEXT:    ptrue p0.b, vl16
+; CHECK-STREAMING-COMPAT-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-STREAMING-COMPAT-NEXT:    lsl z1.b, z1.b, #7
+; CHECK-STREAMING-COMPAT-NEXT:    asr z1.b, z1.b, #7
+; CHECK-STREAMING-COMPAT-NEXT:    cmpne p1.b, p0/z, z1.b, #0
+; CHECK-STREAMING-COMPAT-NEXT:    compact z0.b, p1, z0.b
+; CHECK-STREAMING-COMPAT-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-STREAMING-COMPAT-NEXT:    ret
   %out = call <16 x i8> @llvm.experimental.vector.compress(
     <16 x i8> %vec, <16 x i1> %mask, <16 x i8> poison)
   ret <16 x i8> %out
@@ -88,6 +101,19 @@ define <8 x i16> @compress_v8i16(<8 x i16> %vec, <8 x i1> %mask) {
 ; CHECK-SME2p2-STREAMING-NEXT:    cmpne p1.h, p0/z, z1.h, #0
 ; CHECK-SME2p2-STREAMING-NEXT:    compact z0.h, p1, z0.h
 ; CHECK-SME2p2-STREAMING-NEXT:    ret
+;
+; CHECK-STREAMING-COMPAT-LABEL: compress_v8i16:
+; CHECK-STREAMING-COMPAT:       // %bb.0:
+; CHECK-STREAMING-COMPAT-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-STREAMING-COMPAT-NEXT:    ptrue p0.h, vl8
+; CHECK-STREAMING-COMPAT-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-STREAMING-COMPAT-NEXT:    uunpklo z1.h, z1.b
+; CHECK-STREAMING-COMPAT-NEXT:    lsl z1.h, z1.h, #15
+; CHECK-STREAMING-COMPAT-NEXT:    asr z1.h, z1.h, #15
+; CHECK-STREAMING-COMPAT-NEXT:    cmpne p1.h, p0/z, z1.h, #0
+; CHECK-STREAMING-COMPAT-NEXT:    compact z0.h, p1, z0.h
+; CHECK-STREAMING-COMPAT-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-STREAMING-COMPAT-NEXT:    ret
   %out = call <8 x i16> @llvm.experimental.vector.compress(
     <8 x i16> %vec, <8 x i1> %mask, <8 x i16> poison)
   ret <8 x i16> %out
@@ -114,6 +140,19 @@ define <8 x half> @compress_v8f16(<8 x half> %vec, <8 x i1> %mask) {
 ; CHECK-SME2p2-STREAMING-NEXT:    cmpne p1.h, p0/z, z1.h, #0
 ; CHECK-SME2p2-STREAMING-NEXT:    compact z0.h, p1, z0.h
 ; CHECK-SME2p2-STREAMING-NEXT:    ret
+;
+; CHECK-STREAMING-COMPAT-LABEL: compress_v8f16:
+; CHECK-STREAMING-COMPAT:       // %bb.0:
+; CHECK-STREAMING-COMPAT-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-STREAMING-COMPAT-NEXT:    ptrue p0.h, vl8
+; CHECK-STREAMING-COMPAT-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-STREAMING-COMPAT-NEXT:    uunpklo z1.h, z1.b
+; CHECK-STREAMING-COMPAT-NEXT:    lsl z1.h, z1.h, #15
+; CHECK-STREAMING-COMPAT-NEXT:    asr z1.h, z1.h, #15
+; CHECK-STREAMING-COMPAT-NEXT:    cmpne p1.h, p0/z, z1.h, #0
+; CHECK-STREAMING-COMPAT-NEXT:    compact z0.h, p1, z0.h
+; CHECK-STREAMING-COMPAT-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-STREAMING-COMPAT-NEXT:    ret
   %out = call <8 x half> @llvm.experimental.vector.compress(
     <8 x half> %vec, <8 x i1> %mask, <8 x half> poison)
   ret <8 x half> %out
@@ -148,6 +187,26 @@ define <8 x bfloat> @compress_v8bf16(<8 x bfloat> %vec, <8 x i1> %mask) {
 ; CHECK-SME2p2-STREAMING-NEXT:    addvl sp, sp, #1
 ; CHECK-SME2p2-STREAMING-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SME2p2-STREAMING-NEXT:    ret
+;
+; CHECK-STREAMING-COMPAT-LABEL: compress_v8bf16:
+; CHECK-STREAMING-COMPAT:       // %bb.0:
+; CHECK-STREAMING-COMPAT-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-STREAMING-COMPAT-NEXT:    addvl sp, sp, #-1
+; CHECK-STREAMING-COMPAT-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-STREAMING-COMPAT-NEXT:    .cfi_offset w29, -16
+; CHECK-STREAMING-COMPAT-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-STREAMING-COMPAT-NEXT:    ptrue p0.h, vl8
+; CHECK-STREAMING-COMPAT-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-STREAMING-COMPAT-NEXT:    uunpklo z1.h, z1.b
+; CHECK-STREAMING-COMPAT-NEXT:    lsl z1.h, z1.h, #15
+; CHECK-STREAMING-COMPAT-NEXT:    asr z1.h, z1.h, #15
+; CHECK-STREAMING-COMPAT-NEXT:    cmpne p1.h, p0/z, z1.h, #0
+; CHECK-STREAMING-COMPAT-NEXT:    compact z0.h, p1, z0.h
+; CHECK-STREAMING-COMPAT-NEXT:    str z0, [sp]
+; CHECK-STREAMING-COMPAT-NEXT:    ldr q0, [sp]
+; CHECK-STREAMING-COMPAT-NEXT:    addvl sp, sp, #1
+; CHECK-STREAMING-COMPAT-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-STREAMING-COMPAT-NEXT:    ret
   %out = call <8 x bfloat> @llvm.experimental.vector.compress(
     <8 x bfloat> %vec, <8 x i1> %mask, <8 x bfloat> poison)
   ret <8 x bfloat> %out
