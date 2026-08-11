@@ -212,6 +212,71 @@ and ``MinGW.cpp``, not by the assembler. If the user passes their own
 section-alignment ``-Wl`` flag, the driver's default is suppressed in favour
 of the user's value.
 
+## Building a DLL that works with both WinCall and the classic ABI
+
+A function's ABI is decided at the *call boundary*, not inside the function.
+A single DLL binary can therefore serve both WinCall callers and classic
+(``stdcall`` / MS x64 / plain MinGW) callers, but only by exposing **two entry
+points per function** — one per ABI — rather than one function with a
+compromise ABI. The three things that differ between the two worlds each need
+their own solution:
+
+| Aspect        | WinCall                        | Classic ABI                |
+|---------------|--------------------------------|----------------------------|
+| Symbol        | ``foo@win``                    | ``foo``                    |
+| Calling conv. | 8 GPRs, XMM0-7, aggregates in registers | 4 GPRs, XMM0-3, sret/byval |
+| ``long double`` | f64, 8 bytes                 | f80, 16 bytes              |
+
+### Symbol names
+
+Export **both** names for the same body: ``foo`` and ``foo@win``. On COFF this
+is two export entries pointing at the same RVA (or a one-line asm alias). The
+``@win`` name serves WinCall callers; the plain name serves classic callers.
+
+### Calling convention: forwarding thunks
+
+WinCall and the classic convention genuinely disagree on registers and stack.
+The standard technique is a thin **forwarding thunk** per ABI that converts
+the argument placement and jumps to a single implementation compiled with
+WinCall:
+
+```asm
+foo@win:            ; WinCall ABI: args in RCX,RDX,R8,R9,R16-R19, XMM0-7
+        jmp foo_impl
+
+foo:                ; classic ABI: args in RCX,RDX,R8,R9, XMM0-3
+        ...         ; convert the small subset that differs
+        jmp foo_impl
+```
+
+This is the same machinery as C++ ABI thunks or
+``-fdefault-calling-conv`` plus a per-function calling-convention attribute.
+In practice the thunk is written in assembly, or the exported function is
+marked with the classic attribute (e.g. ``__attribute__((stdcall))``) and the
+compiler emits the conversion.
+
+### ``long double``
+
+This is the one genuine limitation: a single binary stores one
+representation. The options are:
+
+1. **Keep ``long double`` out of the exported interface** (recommended). Most
+   Windows DLL APIs use ``double``/``int``/pointers/structs, so WinCall's f64
+   ``long double`` is invisible to classic callers and the dual-ABI DLL works
+   with both worlds.
+2. **Keep the classic 16-byte f80 ``long double`` in exported functions** that
+   must cross the boundary, while WinCall-internal code uses f64. This needs a
+   per-function (or per-TU) ``long double`` layout switch, so the exported
+   surface matches classic callers.
+3. **Pick f64 everywhere** and accept that only WinCall callers may use
+   ``long double`` in the API. Simple, but classic callers passing f80 will
+   misbehave on those functions.
+
+The ``long double`` size change therefore does **not** by itself break
+dual-ABI DLLs — the calling-convention and symbol differences already require
+the dual-entry-thunk design, and ``long double`` only matters if it is part of
+the exported interface.
+
 ## Relation to "herbceptions" (deterministic exceptions)
 
 WinCall is designed so that Herb Sutter's proposed zero-overhead
