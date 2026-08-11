@@ -6865,17 +6865,19 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
 
   RUN_VPLAN_PASS(VPlanTransforms::removeBranchOnConst, *Plan, false);
 
-  // Create partial reduction recipes for scaled reductions and transform
-  // recipes to abstract recipes if it is legal and beneficial and clamp the
-  // range for better cost estimation.
-  // TODO: Enable following transform when the EVL-version of extended-reduction
-  // and mulacc-reduction are implemented.
-  if (!CM.foldTailWithEVL()) {
-    RUN_VPLAN_PASS(VPlanTransforms::createPartialReductions, *Plan, CostCtx,
-                   Range);
+  // Create partial reduction recipes for scaled reductions if it is legal and
+  // beneficial and clamp the range for better cost estimation. This is also
+  // valid when tail-folding with EVL, as the reduction update is masked to
+  // zero the inactive lanes before the (full-width) partial reduction.
+  RUN_VPLAN_PASS(VPlanTransforms::createPartialReductions, *Plan, CostCtx,
+                 Range);
+  // Transform recipes to abstract recipes if it is legal and beneficial and
+  // clamp the range for better cost estimation.
+  // TODO: Enable with EVL tail folding when the EVL-version of
+  // extended-reduction and mulacc-reduction are implemented.
+  if (!CM.foldTailWithEVL())
     RUN_VPLAN_PASS(VPlanTransforms::convertToAbstractRecipes, *Plan, CostCtx,
                    Range);
-  }
 
   // Interleave memory: for each Interleave Group we marked earlier as relevant
   // for this VPlan, replace the Recipes widening its memory instructions with a
