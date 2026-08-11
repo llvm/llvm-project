@@ -43,6 +43,7 @@ template <class T, size_t N> class PODSmallVector {
                 "T is required to be a trivially copyable type");
   static_assert(std::is_trivially_default_constructible<T>::value,
                 "T is required to be trivially default constructible");
+  static_assert(N > 0, "PODSmallVector requires a non-zero inline capacity");
   T *First = nullptr;
   T *Last = nullptr;
   T *Cap = nullptr;
@@ -123,7 +124,7 @@ public:
   // NOLINTNEXTLINE(readability-identifier-naming)
   void push_back(const T &Elem) {
     if (Last == Cap)
-      reserve(N == 0 && size() == 0 ? 1 : size() * 2);
+      reserve(size() * 2);
     *Last++ = Elem;
   }
 
