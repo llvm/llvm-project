@@ -130,6 +130,7 @@ private:
   bool scalarizeVPIntrinsic(Instruction &I);
   bool foldExtractedCmps(Instruction &I);
   bool foldSelectsFromBitcast(Instruction &I);
+  bool foldBinopOfConcats(Instruction &I);
   bool foldBinopOfReductions(Instruction &I);
   bool foldSingleElementStore(Instruction &I);
   bool scalarizeLoad(Instruction &I);
@@ -1763,6 +1764,65 @@ static void analyzeCostOfVecReduction(const IntrinsicInst &II,
   }
   CostAfterReduction = TTI.getArithmeticReductionCost(ReductionOpc, VecRedTy,
                                                       std::nullopt, CostKind);
+}
+
+/// Try to fold "binop(concat(L0,L1), concat(R0,R1))" into
+/// "concat(binop(L0,R0), binop(L1,R1))", the inverse of foldShuffleOfBinops.
+bool VectorCombine::foldBinopOfConcats(Instruction &I) {
+  auto *BinOp = dyn_cast<BinaryOperator>(&I);
+  if (!BinOp)
+    return false;
+
+  Value *L0, *L1, *R0, *R1;
+  ArrayRef<int> Mask;
+  if (!match(BinOp->getOperand(0),
+             m_OneUse(m_Shuffle(m_Value(L0), m_Value(L1), m_Mask(Mask)))) ||
+      !match(BinOp->getOperand(1), m_OneUse(m_Shuffle(m_Value(R0), m_Value(R1),
+                                                      m_SpecificMask(Mask)))))
+    return false;
+
+  if (!cast<ShuffleVectorInst>(BinOp->getOperand(0))->isConcat() ||
+      !cast<ShuffleVectorInst>(BinOp->getOperand(1))->isConcat())
+    return false;
+
+  // Don't introduce poison into div/rem.
+  if (BinOp->isIntDivRem() && llvm::is_contained(Mask, PoisonMaskElem))
+    return false;
+
+  // isConcat() guarantees fixed-vector operands of matching type.
+  auto *NarrowTy = cast<FixedVectorType>(L0->getType());
+  auto *WideTy = cast<FixedVectorType>(BinOp->getType());
+
+  Instruction::BinaryOps Opcode = BinOp->getOpcode();
+  InstructionCost ConcatCost =
+      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, WideTy,
+                         NarrowTy, Mask, CostKind, 0, nullptr, {L0, L1}, &I);
+  InstructionCost OldCost =
+      TTI.getArithmeticInstrCost(Opcode, WideTy, CostKind) + 2 * ConcatCost;
+  InstructionCost NewCost =
+      2 * TTI.getArithmeticInstrCost(Opcode, NarrowTy, CostKind) + ConcatCost;
+
+  LLVM_DEBUG(dbgs() << "Found a binop feeding two concat shuffles: " << I
+                    << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
+                    << "\n");
+
+  // Strict comparison: a tie must not fold, or this could flip-flop forever
+  // with foldShuffleOfBinops, which treats some ties as profitable to merge.
+  if (NewCost >= OldCost)
+    return false;
+
+  Value *NewBO0 = Builder.CreateBinOp(Opcode, L0, R0);
+  if (auto *NewInst0 = dyn_cast<Instruction>(NewBO0))
+    NewInst0->copyIRFlags(BinOp);
+  Value *NewBO1 = Builder.CreateBinOp(Opcode, L1, R1);
+  if (auto *NewInst1 = dyn_cast<Instruction>(NewBO1))
+    NewInst1->copyIRFlags(BinOp);
+
+  Worklist.pushValue(NewBO0);
+  Worklist.pushValue(NewBO1);
+  Value *NewShuf = Builder.CreateShuffleVector(NewBO0, NewBO1, Mask);
+  replaceValue(I, *NewShuf);
+  return true;
 }
 
 bool VectorCombine::foldBinopOfReductions(Instruction &I) {
@@ -6580,6 +6640,8 @@ bool VectorCombine::run() {
     // The type checking is for run-time efficiency. We can avoid wasting time
     // dispatching to folding functions if there's no chance of matching.
     if (IsFixedVectorType) {
+      if (Instruction::isBinaryOp(Opcode) && foldBinopOfConcats(I))
+        return true;
       switch (Opcode) {
       case Instruction::InsertElement:
         if (foldInsExtFNeg(I))
