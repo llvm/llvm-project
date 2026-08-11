@@ -600,7 +600,7 @@ bool AMDGPUCallLowering::lowerFormalArgumentsKernel(
 
     const bool IsByRef = Arg.hasByRefAttr();
     Type *ArgTy = IsByRef ? Arg.getParamByRefType() : Arg.getType();
-    unsigned AllocSize = static_cast<unsigned>(DL.getTypeAllocSize(ArgTy));
+    uint64_t AllocSize = DL.getTypeAllocSize(ArgTy);
     if (AllocSize == 0)
       continue;
 
