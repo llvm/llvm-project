@@ -1615,13 +1615,54 @@ bool AArch64LegalizerInfo::legalizeBitcast(MachineInstr &MI,
                                            LegalizerHelper &Helper) const {
   assert(MI.getOpcode() == TargetOpcode::G_BITCAST && "Unexpected opcode");
   auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
+  MachineIRBuilder &MIB = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *MIB.getMRI();
+
   // We're trying to handle casts from i1 vectors to scalars but reloading from
   // stack.
   if (!DstTy.isScalar() || !SrcTy.isVector() ||
       SrcTy.getElementType() != LLT::scalar(1))
     return false;
 
-  Helper.createStackStoreLoad(DstReg, SrcReg);
+  MachineInstr *SrcMI = MRI.getVRegDef(SrcReg);
+
+  // Fold a cast of an i1 vector G_LOAD into a scalar load of the same
+  // memory, instead of expanding the vector value bit by bit.
+  if (SrcMI && SrcMI->getOpcode() == TargetOpcode::G_LOAD &&
+      MRI.hasOneNonDBGUse(SrcReg)) {
+    auto *Load = cast<GLoad>(SrcMI);
+    MachineFunction &MF = MIB.getMF();
+    MachineMemOperand *NewMMO =
+        MF.getMachineMemOperand(&Load->getMMO(), /*Offset=*/0, DstTy);
+    MIB.setInstrAndDebugLoc(MI);
+    MIB.buildLoad(DstReg, Load->getPointerReg(), *NewMMO);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  // Pack the mask in vector registers, as SelectionDAG does: sign-extend
+  // each lane to all-ones or all-zeros, mask lane i down to the value
+  // 1 << i, and sum the lanes. The lane count always equals the destination
+  // bit width here, so the weights fit the widened element type. Only do
+  // this for lane counts with an efficient reduction; other sizes keep the
+  // stack round-trip below.
+  unsigned NumElts = SrcTy.getNumElements();
+  if (NumElts != 8 && NumElts != 16) {
+    Helper.createStackStoreLoad(DstReg, SrcReg);
+    MI.eraseFromParent();
+    return true;
+  }
+  MIB.setInstrAndDebugLoc(MI);
+  LLT WideVecTy = LLT::fixed_vector(NumElts, DstTy);
+  auto Sext = MIB.buildSExt(WideVecTy, SrcReg);
+  SmallVector<Register> Weights;
+  for (unsigned I = 0; I != NumElts; ++I)
+    Weights.push_back(
+        MIB.buildConstant(DstTy, APInt::getOneBitSet(DstTy.getSizeInBits(), I))
+            .getReg(0));
+  auto Mask = MIB.buildBuildVector(WideVecTy, Weights);
+  auto Masked = MIB.buildAnd(WideVecTy, Sext, Mask);
+  MIB.buildInstr(TargetOpcode::G_VECREDUCE_ADD, {DstReg}, {Masked});
   MI.eraseFromParent();
   return true;
 }
