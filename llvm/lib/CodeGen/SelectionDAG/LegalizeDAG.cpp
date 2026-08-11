@@ -5871,6 +5871,17 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::FMAXIMUMNUM:
   case ISD::FPOW:
   case ISD::FATAN2:
+    // Promote scalar operations to vector using SCALAR_TO_VECTOR
+    if (!OVT.isVector() && NVT.isVector() &&
+        NVT.getVectorElementType() == OVT) {
+      Tmp1 = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, NVT, Node->getOperand(0));
+      Tmp2 = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, NVT, Node->getOperand(1));
+      Tmp3 =
+          DAG.getNode(Node->getOpcode(), dl, NVT, Tmp1, Tmp2, Node->getFlags());
+      Results.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, OVT, Tmp3,
+                                    DAG.getConstant(0, dl, MVT::i32)));
+      break;
+    }
     Tmp1 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(0));
     Tmp2 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(1));
     Tmp3 = DAG.getNode(Node->getOpcode(), dl, NVT, Tmp1, Tmp2);
@@ -6036,6 +6047,15 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::FEXP2:
   case ISD::FEXP10:
   case ISD::FCANONICALIZE:
+    // Promote scalar operations to vector using SCALAR_TO_VECTOR
+    if (!OVT.isVector() && NVT.isVector() &&
+        NVT.getVectorElementType() == OVT) {
+      Tmp1 = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, NVT, Node->getOperand(0));
+      Tmp2 = DAG.getNode(Node->getOpcode(), dl, NVT, Tmp1, Node->getFlags());
+      Results.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, OVT, Tmp2,
+                                    DAG.getConstant(0, dl, MVT::i32)));
+      break;
+    }
     Tmp1 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(0));
     Tmp2 = DAG.getNode(Node->getOpcode(), dl, NVT, Tmp1);
     Results.push_back(
