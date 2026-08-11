@@ -56,6 +56,8 @@ FUNCTION_PASS("nvptx-lower-alloca", NVPTXLowerAllocaPass())
 #ifndef MACHINE_FUNCTION_PASS
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
+MACHINE_FUNCTION_PASS("nvptx-replace-image-handles",
+                      NVPTXReplaceImageHandlesPass())
 MACHINE_FUNCTION_PASS("nvptx-isel", NVPTXISelDAGToDAGPass(*this, getOptLevel()))
 MACHINE_FUNCTION_PASS("nvptx-forward-params", NVPTXForwardParamsPass())
 MACHINE_FUNCTION_PASS("nvptx-peephole", NVPTXPeepholePass())
