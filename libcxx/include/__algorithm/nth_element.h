@@ -28,6 +28,43 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+// Handles ranges of at most 5 elements by sorting them entirely, which trivially satisfies the
+// nth_element postconditions. Sorting networks are the most efficient way to handle such small
+// ranges, and this function boils down to one of them when the size of the range is known at
+// compile time. Returns false if the range was too large to be handled.
+template <class _AlgPolicy, class _Compare, class _RandomAccessIterator>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool
+__nth_element_small(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp) {
+  using _Ops = _IterOps<_AlgPolicy>;
+  typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
+  switch (__last - __first) {
+  case 0:
+  case 1:
+    return true;
+  case 2:
+    if (__comp(*--__last, *__first))
+      _Ops::iter_swap(__first, __last);
+    return true;
+  case 3:
+    std::__sort3<_AlgPolicy, _Compare>(__first, __first + difference_type(1), --__last, __comp);
+    return true;
+  case 4:
+    std::__sort4<_AlgPolicy, _Compare>(
+        __first, __first + difference_type(1), __first + difference_type(2), --__last, __comp);
+    return true;
+  case 5:
+    std::__sort5<_AlgPolicy, _Compare>(
+        __first,
+        __first + difference_type(1),
+        __first + difference_type(2),
+        __first + difference_type(3),
+        --__last,
+        __comp);
+    return true;
+  }
+  return false;
+}
+
 template <class _Compare, class _RandomAccessIterator>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool __nth_element_find_guard(
     _RandomAccessIterator& __i, _RandomAccessIterator& __j, _RandomAccessIterator __m, _Compare __comp) {
@@ -55,21 +92,9 @@ __nth_element(
   while (true) {
     if (__nth == __last)
       return;
+    if (std::__nth_element_small<_AlgPolicy, _Compare>(__first, __last, __comp))
+      return;
     difference_type __len = __last - __first;
-    switch (__len) {
-    case 0:
-    case 1:
-      return;
-    case 2:
-      if (__comp(*--__last, *__first))
-        _Ops::iter_swap(__first, __last);
-      return;
-    case 3: {
-      _RandomAccessIterator __m = __first;
-      std::__sort3<_AlgPolicy, _Compare>(__first, ++__m, --__last, __comp);
-      return;
-    }
-    }
     if (__len <= __limit) {
       std::__selection_sort<_AlgPolicy, _Compare>(__first, __last, __comp);
       return;
@@ -234,7 +259,16 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __nth_element_im
 
   std::__debug_randomize_range<_AlgPolicy>(__first, __last);
 
-  std::__nth_element<_AlgPolicy, __comp_ref_type<_Compare> >(__first, __nth, __last, __comp);
+  // When the size of the range is known at compile time (e.g. in a median-of-5 filter), this
+  // dispatch constant-folds to the appropriate sorting network. Otherwise, the check disappears
+  // entirely and we fall through to the general algorithm, which handles small ranges itself.
+  // Note that __builtin_constant_p is only resolved after inlining, so this catches callers that
+  // pass a constant size even though it is not a constant expression here.
+  bool __small_constant_size =
+      __builtin_constant_p(__last - __first) &&
+      std::__nth_element_small<_AlgPolicy, __comp_ref_type<_Compare> >(__first, __last, __comp);
+  if (!__small_constant_size)
+    std::__nth_element<_AlgPolicy, __comp_ref_type<_Compare> >(__first, __nth, __last, __comp);
 
   std::__debug_randomize_range<_AlgPolicy>(__first, __nth);
   if (__nth != __last) {
