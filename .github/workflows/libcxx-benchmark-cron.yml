@@ -24,7 +24,7 @@ on:
         description: 'Report what would be requested, but request nothing'
         required: false
         type: boolean
-        default: true # TODO: Make this not a dry-run by default after validating a few dry-run crons
+        default: false
       allow-missing-machine:
         description: 'Plan for machines that have no data in LNT yet. Needed to seed a new machine.'
         required: false
