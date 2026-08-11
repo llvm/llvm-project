@@ -740,18 +740,18 @@ module attributes {
     cir.return
   }
 
-  // CHECK-LABEL: cir.func{{.*}} @take_w(%arg0: !s128i)
-  // CHECK-NEXT:    %[[SLOT:[0-9]+]] = cir.alloca "coerce" align(16) : !cir.ptr<!s128i>
-  // CHECK-NEXT:    cir.store %arg0, %[[SLOT]] : !s128i, !cir.ptr<!s128i>
+  // CHECK-LABEL: cir.func{{.*}} @take_w(%arg0: !s128i_bitint)
+  // CHECK-NEXT:    %[[SLOT:[0-9]+]] = cir.alloca "coerce" align(8) : !cir.ptr<!s128i_bitint>
+  // CHECK-NEXT:    cir.store %arg0, %[[SLOT]] : !s128i_bitint, !cir.ptr<!s128i_bitint>
   // CHECK-NEXT:    %[[VIEW:[0-9]+]] = cir.cast bitcast %[[SLOT]]
-  // CHECK-SAME:      : !cir.ptr<!s128i> -> !cir.ptr<!rec_W>
+  // CHECK-SAME:      : !cir.ptr<!s128i_bitint> -> !cir.ptr<!rec_W>
   // CHECK-NEXT:    %{{[0-9]+}} = cir.load %[[VIEW]] : !cir.ptr<!rec_W>, !rec_W
   // CHECK-NEXT:    cir.return
 
   // LLVM-LABEL: define void @take_w(
   // LLVM-SAME:    i128 %[[ARG:[0-9]+]])
-  // LLVM-NEXT:    %[[SLOT:[0-9]+]] = alloca i128, i64 1, align 16
-  // LLVM-NEXT:    store i128 %[[ARG]], ptr %[[SLOT]], align 16
+  // LLVM-NEXT:    %[[SLOT:[0-9]+]] = alloca i128, i64 1, align 8
+  // LLVM-NEXT:    store i128 %[[ARG]], ptr %[[SLOT]], align 8
   // LLVM-NEXT:    %{{[0-9]+}} = load %struct.W, ptr %[[SLOT]]
   // LLVM-NEXT:    ret void
 
