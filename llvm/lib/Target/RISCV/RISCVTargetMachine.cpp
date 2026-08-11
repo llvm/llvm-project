@@ -13,6 +13,7 @@
 #include "RISCVTargetMachine.h"
 #include "MCTargetDesc/RISCVBaseInfo.h"
 #include "RISCV.h"
+#include "RISCVCodeGenPrepare.h"
 #include "RISCVFoldMemOffset.h"
 #include "RISCVGatherScatterLowering.h"
 #include "RISCVMachineFunctionInfo.h"

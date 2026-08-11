@@ -13,7 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RISCV.h"
+#include "RISCVCodeGenPrepare.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ValueTracking.h"

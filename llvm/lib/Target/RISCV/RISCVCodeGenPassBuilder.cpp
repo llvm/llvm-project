@@ -11,6 +11,7 @@
 
 #include "RISCV.h"
 #include "RISCVAsmPrinter.h"
+#include "RISCVCodeGenPrepare.h"
 #include "RISCVFoldMemOffset.h"
 #include "RISCVGatherScatterLowering.h"
 #include "RISCVOptWInstrs.h"
