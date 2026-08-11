@@ -13,7 +13,6 @@
 #include "NVPTXTargetMachine.h"
 #include "NVPTX.h"
 #include "NVPTXAliasAnalysis.h"
-#include "NVPTXAllocaHoisting.h"
 #include "NVPTXAsmPrinter.h"
 #include "NVPTXAtomicLower.h"
 #include "NVPTXCtorDtorLowering.h"

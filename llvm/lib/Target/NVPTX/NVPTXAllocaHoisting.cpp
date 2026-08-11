@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "NVPTXAllocaHoisting.h"
 #include "NVPTX.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/IR/Constants.h"
@@ -45,6 +44,7 @@ public:
   NVPTXAllocaHoistingLegacyPass() : FunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
     AU.addPreserved<StackProtector>();
   }
 
@@ -73,5 +73,8 @@ PreservedAnalyses NVPTXAllocaHoistingPass::run(Function &F,
                                                FunctionAnalysisManager &FAM) {
   if (!hoistAllocas(F))
     return PreservedAnalyses::all();
-  return PreservedAnalyses::none().preserveSet<CFGAnalyses>();
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  PA.preserve<SSPLayoutAnalysis>();
+  return PA;
 }
