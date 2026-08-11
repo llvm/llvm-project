@@ -7386,9 +7386,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                       options::OPT_fno_hip_kernel_arg_name);
   }
 
+  if ((IsCuda || IsHIP || IsSYCLDevice) && IsRDCMode)
+    CmdArgs.push_back("-fgpu-rdc");
+
   if (IsCuda || IsHIP) {
-    if (IsRDCMode)
-      CmdArgs.push_back("-fgpu-rdc");
     Args.addOptInFlag(CmdArgs, options::OPT_fgpu_defer_diag,
                       options::OPT_fno_gpu_defer_diag);
     if (Args.hasFlag(options::OPT_fgpu_exclude_wrong_side_overloads,
@@ -7398,9 +7399,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-fgpu-defer-diag");
     }
   }
-
-  if (IsSYCLDevice && IsRDCMode)
-    CmdArgs.push_back("-fgpu-rdc");
 
   // Forward --no-offloadlib to -cc1.
   if (!Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib, true))
