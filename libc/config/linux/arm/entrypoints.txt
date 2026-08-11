@@ -192,6 +192,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.free
     libc.src.stdlib.malloc
 
+    # stdio.h entrypoints
+    libc.src.stdio.tmpfile
+
     # sys/ioctl.h entrypoints
     libc.src.sys.ioctl.ioctl
 
