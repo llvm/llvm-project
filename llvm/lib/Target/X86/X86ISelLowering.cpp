@@ -8190,7 +8190,7 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
           // The shifted load leaves each element in its lane's high bits.
           if (ShiftLast)
             Ld = DAG.getNode(ISD::SRL, DL, WideVT, Ld,
-                             DAG.getConstant(TailBits, DL, WideVT));
+                             DAG.getShiftAmountConstant(TailBits, WideVT, DL));
           Pieces.push_back(DAG.getNode(ISD::TRUNCATE, DL, PieceVT, Ld));
         }
         SDValue Result = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, Pieces);
