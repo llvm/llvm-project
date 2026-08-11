@@ -289,17 +289,17 @@ static void getAArch64MultilibFlags(const Driver &D,
                                        UnifiedFeatures.end());
   std::vector<std::string> MArch;
   for (const auto &Ext : AArch64::Extensions)
-    if (!Ext.UserVisibleName.empty())
-      if (FeatureSet.contains(Ext.PosTargetFeature))
-        MArch.push_back(Ext.UserVisibleName.str());
+    if (Ext.UserVisibleName.value())
+      if (FeatureSet.contains(AArch64::StrTab[Ext.PosTargetFeature]))
+        MArch.push_back(AArch64::StrTab[Ext.UserVisibleName].str());
   for (const auto &Ext : AArch64::Extensions)
-    if (!Ext.UserVisibleName.empty())
-      if (FeatureSet.contains(Ext.NegTargetFeature))
-        MArch.push_back(("no" + Ext.UserVisibleName).str());
+    if (Ext.UserVisibleName.value())
+      if (FeatureSet.contains(AArch64::StrTab[Ext.NegTargetFeature]))
+        MArch.push_back(("no" + AArch64::StrTab[Ext.UserVisibleName]).str());
   StringRef ArchName;
   for (const auto &ArchInfo : AArch64::ArchInfos)
-    if (FeatureSet.contains(ArchInfo->ArchFeature))
-      ArchName = ArchInfo->Name;
+    if (FeatureSet.contains(AArch64::StrTab[ArchInfo.ArchFeature]))
+      ArchName = AArch64::StrTab[ArchInfo.Name];
   if (!ArchName.empty()) {
     MArch.insert(MArch.begin(), ("-march=" + ArchName).str());
     Result.push_back(llvm::join(MArch, "+"));
@@ -445,6 +445,18 @@ static void getRISCVMultilibFlags(const Driver &D, const llvm::Triple &Triple,
     Result.push_back("-fsanitize=shadow-call-stack");
   else
     Result.push_back("-fno-sanitize=shadow-call-stack");
+
+  const Arg *CFProtectionArg =
+      Args.getLastArgNoClaim(options::OPT_fcf_protection_EQ);
+  StringRef CFProtectionVal =
+      CFProtectionArg ? CFProtectionArg->getValue() : "none";
+  Result.push_back(("-fcf-protection=" + CFProtectionVal).str());
+
+  if (CFProtectionVal == "branch" || CFProtectionVal == "full") {
+    if (const Arg *SchemeArg =
+            Args.getLastArgNoClaim(options::OPT_mcf_branch_label_scheme_EQ))
+      Result.push_back(SchemeArg->getAsString(Args));
+  }
 }
 
 Multilib::flags_list
@@ -491,6 +503,10 @@ ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
   }
 
   processMultilibCustomFlags(Result, Args);
+
+  if (Arg *CStdLibArg = Args.getLastArg(options::OPT_cstdlib_EQ))
+    Result.push_back(std::string(CStdLibArg->getOption().getPrefixedName()) +
+                     CStdLibArg->getValue());
 
   // Include fno-exceptions and fno-rtti
   // to improve multilib selection
@@ -836,6 +852,8 @@ static StringRef getArchNameForCompilerRTLib(const ToolChain &TC,
 StringRef ToolChain::getOSLibName() const {
   if (Triple.isOSDarwin())
     return "darwin";
+  if (Triple.isWindowsCygwinEnvironment())
+    return "cygwin";
 
   switch (Triple.getOS()) {
   case llvm::Triple::FreeBSD:
@@ -1106,6 +1124,14 @@ ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
   if (auto Path = getPathForTriple(T))
     return *Path;
 
+  // Handle the legacy AMDGPU triple case as well.
+  if (T.getArchName() == "amdgcn") {
+    llvm::Triple Canon(T);
+    Canon.setArchName("amdgpu");
+    if (auto Path = getPathForTriple(Canon))
+      return *Path;
+  }
+
   if (T.isOSAIX()) {
     llvm::Triple AIXTriple;
     if (T.getEnvironment() == Triple::UnknownEnvironment) {
@@ -1199,6 +1225,14 @@ ToolChain::path_list ToolChain::getArchSpecificLibPaths() const {
   };
 
   AddPath({getTriple().str()});
+
+  // Handle the legacy AMDGPU triple case as well.
+  if (getTriple().getArchName() == "amdgcn") {
+    llvm::Triple Canon(getTriple());
+    Canon.setArchName("amdgpu");
+    AddPath({Canon.str()});
+  }
+
   AddPath({getOSLibName(), llvm::Triple::getArchTypeName(getArch())});
   return Paths;
 }
@@ -1466,7 +1500,7 @@ std::string ToolChain::ComputeLLVMTriple(const ArgList &Args, BoundArch BA,
   }
   case llvm::Triple::aarch64_32:
     return getTripleString().str();
-  case llvm::Triple::amdgcn: {
+  case llvm::Triple::amdgpu: {
     llvm::Triple Triple = getTriple();
     tools::AMDGPU::setArchNameInTriple(getDriver(), Args, InputType, Triple);
     return Triple.getTriple();
@@ -1601,6 +1635,16 @@ ToolChain::CXXStdlibType ToolChain::GetCXXStdlibType(const ArgList &Args) const{
   }
 
   return *cxxStdlibType;
+}
+
+StringRef ToolChain::GetCXXStdlibName(const ArgList &Args) const {
+  switch (GetCXXStdlibType(Args)) {
+  case ToolChain::CST_Libcxx:
+    return "libc++";
+  case ToolChain::CST_Libstdcxx:
+    return "libstdc++";
+  }
+  llvm_unreachable("unknown C++ standard library type");
 }
 
 ToolChain::CStdlibType ToolChain::GetCStdlibType(const ArgList &Args) const {

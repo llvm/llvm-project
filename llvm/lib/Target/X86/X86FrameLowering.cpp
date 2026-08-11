@@ -12,6 +12,7 @@
 
 #include "X86FrameLowering.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
+#include "X86.h"
 #include "X86InstrBuilder.h"
 #include "X86InstrInfo.h"
 #include "X86MachineFunctionInfo.h"
@@ -45,6 +46,23 @@ STATISTIC(NumFrameExtraProbe,
 STATISTIC(NumFunctionUsingPush2Pop2, "Number of functions using push2/pop2");
 
 using namespace llvm;
+
+bool llvm::requireWinX64UnwindV3(const MachineFunction &MF) {
+  const Function &Fn = MF.getFunction();
+
+  // Whole module is in V3 mode.
+  if (Fn.getParent()->getWinX64EHUnwindMode() == WinX64EHUnwindMode::V3)
+    return true;
+
+  // Otherwise promote a function that may use EGPR (R16-R31), which V1/V2
+  // unwind codes cannot encode. The per-function "+egpr" feature is the signal,
+  // so an auto-dispatch APX clone gets V3 while the baseline clone stays on the
+  // module default. We conservatively promote any egpr function rather than
+  // checking for an actual EGPR save, keeping this a cheap query. (PUSH2/POP2
+  // does not need V3: V1/V2 describe a PUSH2 as two SEH_PushReg codes.)
+  return Fn.needsUnwindTableEntry() &&
+         MF.getSubtarget<X86Subtarget>().hasEGPR();
+}
 
 static const TargetRegisterClass *
 getCalleeSavedSpillRC(MCRegister Reg, const X86Subtarget &STI,
@@ -372,14 +390,30 @@ MachineInstrBuilder X86FrameLowering::BuildStackAdjustment(
   }
 
   MachineInstrBuilder MI;
-  if (UseLEA) {
+  // Use an NF (no-flags) variant as a smaller replacement for LEA when EFLAGS
+  // must be preserved (i.e. only when we would otherwise emit LEA). If EFLAGS
+  // is dead we prefer the plain SUB/ADD, which is shorter than the EVEX-encoded
+  // NF form. The NF stack-adjust opcodes below are 64-bit (SUB64ri32_NF/
+  // ADD64ri32_NF), so don't use them for the x32 ABI where the stack pointer is
+  // 32-bit. NF cannot reach a Win64 epilogue (which never uses LEA for the SP
+  // adjustment unless it has a frame pointer, and that path doesn't go through
+  // here), so the Windows epilogue unwinder never sees an undisassemblable NF
+  // add/sub.
+  bool UseNF = UseLEA && STI.hasNF() && Uses64BitFramePtr;
+  bool IsSub = Offset < 0;
+  uint64_t AbsOffset = IsSub ? -Offset : Offset;
+  if (UseNF) {
+    const unsigned Opc = IsSub ? X86::SUB64ri32_NF : X86::ADD64ri32_NF;
+    MI = BuildMI(MBB, MBBI, DL, TII.get(Opc), StackPtr)
+             .addReg(StackPtr)
+             .addImm(AbsOffset);
+    // NF instructions define no EFLAGS, so there is nothing to mark dead.
+  } else if (UseLEA) {
     MI = addRegOffset(BuildMI(MBB, MBBI, DL,
                               TII.get(getLEArOpcode(Uses64BitFramePtr)),
                               StackPtr),
                       StackPtr, false, Offset);
   } else {
-    bool IsSub = Offset < 0;
-    uint64_t AbsOffset = IsSub ? -Offset : Offset;
     const unsigned Opc = IsSub ? getSUBriOpcode(Uses64BitFramePtr)
                                : getADDriOpcode(Uses64BitFramePtr);
     MI = BuildMI(MBB, MBBI, DL, TII.get(Opc), StackPtr)
@@ -421,7 +455,8 @@ int64_t X86FrameLowering::mergeSPUpdates(MachineBasicBlock &MBB,
   for (;;) {
     unsigned Opc = PI->getOpcode();
 
-    if ((Opc == X86::ADD64ri32 || Opc == X86::ADD32ri) &&
+    if ((Opc == X86::ADD64ri32 || Opc == X86::ADD32ri ||
+         Opc == X86::ADD64ri32_NF) &&
         PI->getOperand(0).getReg() == StackPtr) {
       assert(PI->getOperand(1).getReg() == StackPtr);
       Offset = PI->getOperand(2).getImm();
@@ -433,7 +468,8 @@ int64_t X86FrameLowering::mergeSPUpdates(MachineBasicBlock &MBB,
                PI->getOperand(5).getReg() == X86::NoRegister) {
       // For LEAs we have: def = lea SP, FI, noreg, Offset, noreg.
       Offset = PI->getOperand(4).getImm();
-    } else if ((Opc == X86::SUB64ri32 || Opc == X86::SUB32ri) &&
+    } else if ((Opc == X86::SUB64ri32 || Opc == X86::SUB32ri ||
+                Opc == X86::SUB64ri32_NF) &&
                PI->getOperand(0).getReg() == StackPtr) {
       assert(PI->getOperand(1).getReg() == StackPtr);
       Offset = -PI->getOperand(2).getImm();
@@ -588,7 +624,8 @@ void X86FrameLowering::emitCalleeSavedFrameMoves(
 }
 
 void X86FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
-                                            MachineBasicBlock &MBB) const {
+                                            MachineBasicBlock &MBB,
+                                            RegScavenger *) const {
   const MachineFunction &MF = *MBB.getParent();
 
   // Insertion point.
@@ -601,12 +638,18 @@ void X86FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
 
   // Zero out FP stack if referenced. Do this outside of the loop below so that
   // it's done only once.
-  const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
   for (MCRegister Reg : RegsToZero.set_bits()) {
     if (!X86::RFP80RegClass.contains(Reg))
       continue;
 
-    unsigned NumFPRegs = ST.is64Bit() ? 8 : 7;
+    // Do not push zeros over x87 return values. X86FloatingPoint records
+    // returned values as implicit ST0/ST1 uses on the return instruction.
+    unsigned NumFPRegs = 8;
+    if (MBBI->hasRegisterImplicitUseOperand(X86::ST0))
+      --NumFPRegs;
+    if (MBBI->hasRegisterImplicitUseOperand(X86::ST1))
+      --NumFPRegs;
+
     for (unsigned i = 0; i != NumFPRegs; ++i)
       BuildMI(MBB, MBBI, DL, TII.get(X86::LD_F0));
 
@@ -1606,9 +1649,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
                      MF.getFunction().getParent()->getCodeViewFlag();
   bool NeedsWinCFI = NeedsWin64CFI || NeedsWinFPO;
   bool NeedsDwarfCFI = needsDwarfCFI(MF);
-  bool IsWin64UnwindV3 =
-      NeedsWin64CFI &&
-      Fn.getParent()->getWinX64EHUnwindMode() == WinX64EHUnwindMode::V3;
+  bool IsWin64UnwindV3 = NeedsWin64CFI && requireWinX64UnwindV3(MF);
   Register FramePtr = TRI->getFrameRegister(MF);
   const Register MachineFramePtr =
       STI.isTarget64BitILP32() ? Register(getX86SubSuperRegister(FramePtr, 64))
@@ -1877,6 +1918,15 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
               .addImm(0)
               .setMIFlag(MachineInstr::FrameSetup);
         }
+
+        // Update CFA offset for the async-context push.
+        if (NeedsDwarfCFI && !ArgBaseReg.isValid()) {
+          BuildCFI(
+              MBB, MBBI, DL,
+              MCCFIInstruction::createAdjustCfaOffset(nullptr, -stackGrowth),
+              MachineInstr::FrameSetup);
+        }
+
         EmitSEHAfter(EmitSEHPushR14);
 
         BuildMI(MBB, MBBI, DL, TII.get(X86::LEA64r), FramePtr)
@@ -1886,6 +1936,17 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
             .addImm(8)
             .addUse(X86::NoRegister)
             .setMIFlag(MachineInstr::FrameSetup);
+
+        // Switch to an FP-relative CFA before adjusting RSP below.
+        if (NeedsDwarfCFI && !ArgBaseReg.isValid()) {
+          unsigned DwarfFramePtr = TRI->getDwarfRegNum(MachineFramePtr, true);
+          BuildCFI(MBB, MBBI, DL,
+                   MCCFIInstruction::cfiDefCfa(nullptr, DwarfFramePtr,
+                                               -2 * stackGrowth +
+                                                   (int)TailCallArgReserveSize),
+                   MachineInstr::FrameSetup);
+        }
+
         BuildMI(MBB, MBBI, DL, TII.get(X86::SUB64ri32), X86::RSP)
             .addUse(X86::RSP)
             .addImm(8)
@@ -1915,7 +1976,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
             BuildCFI(MBB, MBBI, DL,
                      MCCFIInstruction::createEscape(nullptr, CfaExpr.str()),
                      MachineInstr::FrameSetup);
-          } else {
+          } else if (!X86FI->hasSwiftAsyncContext()) {
             // Mark effective beginning of when frame pointer becomes valid.
             // Define the current CFA to use the EBP/RBP register.
             unsigned DwarfFramePtr = TRI->getDwarfRegNum(MachineFramePtr, true);
@@ -2490,9 +2551,7 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   // For V3 unwind, epilog SEH pseudos are emitted inline before each
   // unwind-effecting instruction.
   bool IsWin64UnwindV3 =
-      NeedsWin64CFI && MF.hasWinCFI() &&
-      MF.getFunction().getParent()->getWinX64EHUnwindMode() ==
-          WinX64EHUnwindMode::V3;
+      NeedsWin64CFI && MF.hasWinCFI() && requireWinX64UnwindV3(MF);
   bool IsFunclet = MBBI == MBB.end() ? false : isFuncletReturnInstr(*MBBI);
 
   // Get the number of bytes to allocate from the FrameInfo.
@@ -2615,7 +2674,8 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
           (Opc != X86::POP32r && Opc != X86::POP64r && Opc != X86::BTR64ri8 &&
            Opc != X86::ADD64ri32 && Opc != X86::POPP64r && Opc != X86::POP2 &&
            Opc != X86::POP2P && Opc != X86::LEA64r && Opc != X86::SEH_PushReg &&
-           Opc != X86::SEH_Push2Regs && Opc != X86::SEH_StackAlloc))
+           Opc != X86::SEH_Push2Regs && Opc != X86::SEH_StackAlloc &&
+           Opc != X86::ADD64ri32_NF))
         break;
       FirstCSPop = PI;
     }
@@ -3019,6 +3079,7 @@ bool X86FrameLowering::assignCalleeSavedSpillSlots(
     }
   }
 
+  bool IsFPRemovedFromCSI = false;
   if (hasFP(MF)) {
     // emitPrologue always spills frame register the first thing.
     SpillSlotOffset -= SlotSize;
@@ -3039,6 +3100,7 @@ bool X86FrameLowering::assignCalleeSavedSpillSlots(
     for (unsigned i = 0; i < CSI.size(); ++i) {
       if (TRI->regsOverlap(CSI[i].getReg(), FPReg)) {
         CSI.erase(CSI.begin() + i);
+        IsFPRemovedFromCSI = true;
         break;
       }
     }
@@ -3059,14 +3121,11 @@ bool X86FrameLowering::assignCalleeSavedSpillSlots(
     unsigned NumCSGPR = llvm::count_if(CSI, [](const CalleeSavedInfo &I) {
       return X86::GR64RegClass.contains(I.getReg());
     });
-    bool NeedPadding = (SpillSlotOffset % 16 != 0) && (NumCSGPR % 2 == 0);
-    bool UsePush2Pop2 = NeedPadding ? NumCSGPR > 2 : NumCSGPR > 1;
-    X86FI->setPadForPush2Pop2(NeedPadding && UsePush2Pop2);
-    NumRegsForPush2 = UsePush2Pop2 ? alignDown(NumCSGPR, 2) : 0;
-    if (X86FI->padForPush2Pop2()) {
-      SpillSlotOffset -= SlotSize;
-      MFI.CreateFixedSpillStackObject(SlotSize, SpillSlotOffset);
-    }
+    bool UsePush2Pop2 = !IsFPRemovedFromCSI ? NumCSGPR > 2 : NumCSGPR > 1;
+    NumRegsForPush2 =
+        UsePush2Pop2
+            ? alignDown(IsFPRemovedFromCSI ? NumCSGPR : NumCSGPR - 1, 2)
+            : 0;
   }
 
   // Assign slots for GPRs. It increases frame size.
@@ -3149,12 +3208,6 @@ bool X86FrameLowering::spillCalleeSavedRegisters(
   // Push GPRs. It increases frame size.
   const MachineFunction &MF = *MBB.getParent();
   const X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
-  if (X86FI->padForPush2Pop2()) {
-    assert(SlotSize == 8 && "Unexpected slot size for padding!");
-    BuildMI(MBB, MI, DL, TII.get(X86::PUSH64r))
-        .addReg(X86::RAX, RegState::Undef)
-        .setMIFlag(MachineInstr::FrameSetup);
-  }
 
   // Update LiveIn of the basic block and decide whether we can add a kill flag
   // to the use.
@@ -3280,9 +3333,7 @@ bool X86FrameLowering::restoreCalleeSavedRegisters(
 
   bool NeedsWin64CFI =
       isWin64Prologue(MF) && MF.getFunction().needsUnwindTableEntry();
-  bool IsWin64UnwindV3 =
-      NeedsWin64CFI && MF.getFunction().getParent()->getWinX64EHUnwindMode() ==
-                           WinX64EHUnwindMode::V3;
+  bool IsWin64UnwindV3 = NeedsWin64CFI && requireWinX64UnwindV3(MF);
 
   // Reload XMMs from stack frame.
   for (const CalleeSavedInfo &I : CSI) {
@@ -3332,13 +3383,6 @@ bool X86FrameLowering::restoreCalleeSavedRegisters(
       BuildMI(MBB, MI, DL, TII.get(getPOPOpcode(STI)), Reg)
           .setMIFlag(MachineInstr::FrameDestroy);
     }
-  }
-  if (X86FI->padForPush2Pop2()) {
-    if (IsWin64UnwindV3)
-      BuildMI(MBB, MI, DL, TII.get(X86::SEH_StackAlloc))
-          .addImm(SlotSize)
-          .setMIFlag(MachineInstr::FrameDestroy);
-    emitSPUpdate(MBB, MI, DL, SlotSize, /*InEpilogue=*/true);
   }
 
   return true;

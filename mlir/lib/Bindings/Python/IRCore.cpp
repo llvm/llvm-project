@@ -1272,17 +1272,17 @@ nb::object PyOperation::create(std::string_view name,
         auto &attribute = nb::cast<PyAttribute &>(it.second);
         // TODO: Verify attribute originates from the same context.
         mlirAttributes.emplace_back(std::move(key), attribute);
-      } catch (nb::cast_error &err) {
+      } catch (std::exception &err) {
+        if (it.second.is_none()) {
+          std::string msg = join(
+              "Found an invalid (`None`?) attribute value for the key \"", key,
+              "\" when attempting to create the operation \"", name, "\"");
+          throw std::runtime_error(msg);
+        }
         std::string msg = join("Invalid attribute value for the key \"", key,
                                "\" when attempting to create the operation \"",
                                name, "\" (", err.what(), ")");
         throw nb::type_error(msg.c_str());
-      } catch (std::runtime_error &) {
-        // This exception seems thrown when the value is "None".
-        std::string msg = join(
-            "Found an invalid (`None`?) attribute value for the key \"", key,
-            "\" when attempting to create the operation \"", name, "\"");
-        throw std::runtime_error(msg);
       }
     }
   }
@@ -2663,6 +2663,28 @@ void PyDynamicOpTraits::NoTerminator::bind(nb::module_ &m) {
       nb::arg("op_name"), nb::arg("context").none() = nb::none());
 }
 
+bool PyDynamicOpTraits::IsIsolatedFromAbove::attach(const nb::object &opName,
+                                                    PyMlirContext &context) {
+  MlirDynamicOpTrait trait = mlirDynamicOpTraitIsIsolatedFromAboveCreate();
+  return attachOpTrait(opName, trait, context);
+}
+
+void PyDynamicOpTraits::IsIsolatedFromAbove::bind(nb::module_ &m) {
+  nb::class_<PyDynamicOpTraits::IsIsolatedFromAbove, PyDynamicOpTrait> cls(
+      m, "IsIsolatedFromAboveTrait");
+  cls.attr(typeIDAttr) =
+      PyTypeID(mlirDynamicOpTraitIsIsolatedFromAboveGetTypeID());
+  cls.attr("attach") = classmethod(
+      [](const nb::object &cls, const nb::object &opName,
+         DefaultingPyMlirContext context) {
+        return PyDynamicOpTraits::IsIsolatedFromAbove::attach(opName,
+                                                              *context.get());
+      },
+      "Attach IsIsolatedFromAbove trait to the given operation name.",
+      nb::arg("cls"), nb::arg("op_name"),
+      nb::arg("context").none() = nb::none());
+}
+
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN
 } // namespace python
 } // namespace mlir
@@ -3397,7 +3419,7 @@ void populateIRCore(nb::module_ &m) {
           "Alias for `dialects`.")
       .def(
           "get_dialect_descriptor",
-          [=](PyMlirContext &self, std::string &name) {
+          [](PyMlirContext &self, std::string &name) {
             MlirDialect dialect = mlirContextGetOrLoadDialect(
                 self.get(), {name.data(), name.size()});
             if (mlirDialectIsNull(dialect)) {
@@ -3408,6 +3430,14 @@ void populateIRCore(nb::module_ &m) {
           },
           "dialect_name"_a,
           "Gets or loads a dialect by name, returning its descriptor object.")
+      .def(
+          "is_dialect_loaded",
+          [](PyMlirContext &self, std::string &name) {
+            MlirDialect dialect = mlirContextGetLoadedDialect(
+                self.get(), {name.data(), name.size()});
+            return !mlirDialectIsNull(dialect);
+          },
+          "dialect_name"_a, "Checks if a dialect is loaded in the context.")
       .def_prop_rw(
           "allow_unregistered_dialects",
           [](PyMlirContext &self) -> bool {
@@ -3537,7 +3567,7 @@ void populateIRCore(nb::module_ &m) {
   nb::class_<PyDialects>(m, "Dialects")
       .def(
           "__getitem__",
-          [=](PyDialects &self, std::string keyName) {
+          [](PyDialects &self, std::string keyName) {
             MlirDialect dialect =
                 self.getDialectForKey(keyName, /*attrError=*/false);
             nb::object descriptor =
@@ -3547,7 +3577,7 @@ void populateIRCore(nb::module_ &m) {
           "Gets a dialect by name using subscript notation.")
       .def(
           "__getattr__",
-          [=](PyDialects &self, std::string attrName) {
+          [](PyDialects &self, std::string attrName) {
             MlirDialect dialect =
                 self.getDialectForKey(attrName, /*attrError=*/true);
             nb::object descriptor =
@@ -5289,6 +5319,7 @@ void populateIRCore(nb::module_ &m) {
   PyDynamicOpTrait::bind(m);
   PyDynamicOpTraits::IsTerminator::bind(m);
   PyDynamicOpTraits::NoTerminator::bind(m);
+  PyDynamicOpTraits::IsIsolatedFromAbove::bind(m);
 
   // MLIRError exception.
   MLIRError::bind(m);

@@ -152,7 +152,7 @@ define i32 @diff_exit_block_needs_scev_check(i32 %end) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[UMAX1]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[UMAX1]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[UMAX1]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = trunc i64 [[N_VEC]] to i8
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -289,9 +289,9 @@ for.end:
   ret i32 0
 }
 
-define void @inner_loop_trip_count_depends_on_outer_iv(ptr align 8 dereferenceable(1792) %this, ptr %dst) {
+define void @inner_loop_trip_count_depends_on_outer_iv(ptr align 8 dereferenceable(1792) %this, ptr %dst) nofree {
 ; CHECK-LABEL: define void @inner_loop_trip_count_depends_on_outer_iv(
-; CHECK-SAME: ptr align 8 dereferenceable(1792) [[THIS:%.*]], ptr [[DST:%.*]]) {
+; CHECK-SAME: ptr align 8 dereferenceable(1792) [[THIS:%.*]], ptr [[DST:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr i8, ptr [[THIS]], i64 1000
 ; CHECK-NEXT:    br label [[OUTER_HEADER:%.*]]
@@ -303,7 +303,7 @@ define void @inner_loop_trip_count_depends_on_outer_iv(ptr align 8 dereferenceab
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[OUTER_IV]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[OUTER_IV]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[OUTER_IV]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[OUTER_IV]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -399,7 +399,7 @@ define i64 @loop_guard_needed_to_prove_dereferenceable(i32 %x, i1 %cmp2) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -545,7 +545,7 @@ define i64 @loop_guards_needed_to_prove_deref_multiple(i32 %x, i1 %c, ptr derefe
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP2]], 3
 ; CHECK-NEXT:    [[IV_NEXT:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:

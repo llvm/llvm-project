@@ -1238,6 +1238,13 @@ class LinuxCoreTestCase(TestBase):
         cstr = var.GetSummary()
         self.assertEqual(cstr, '"_start"')
 
+        # Reading through the target falls back to the application binary too,
+        # and must not report the failed process read.
+        error = lldb.SBError()
+        addr = target.ResolveLoadAddress(var.GetValueAsUnsigned())
+        self.assertEqual(target.ReadMemory(addr, 7, error), b"_start\0")
+        self.assertSuccess(error)
+
     @skipIfLLVMTargetMissing("X86")
     @skipIfWindows
     def test_linux_no_exe(self):
@@ -1439,6 +1446,75 @@ class LinuxCoreTestCase(TestBase):
 
     @skipIfLLVMTargetMissing("X86")
     @skipIfWindows
+    def test_memory_region_name_from_nt_file(self):
+        yaml_path = self.getSourcePath("elf-NT_FILE-memory-region.yaml")
+        core_path = self.getBuildArtifact("elf-NT_FILE-memory-region.core")
+        self.yaml2obj(yaml_path, core_path)
+        target = self.dbg.CreateTarget(None)
+        process = target.LoadCore(core_path)
+        self.assertTrue(process.IsValid())
+
+        region = lldb.SBMemoryRegionInfo()
+        self.assertSuccess(process.GetMemoryRegionInfo(0x400000, region))
+        self.assertEqual(region.GetRegionBase(), 0x400000)
+        self.assertEqual(region.GetRegionEnd(), 0x401000)
+        self.assertTrue(region.IsMapped())
+        self.assertTrue(region.IsReadable())
+        self.assertFalse(region.IsWritable())
+        self.assertTrue(region.IsExecutable())
+        self.assertEqual(region.GetName(), "/tmp/kernel.hsaco")
+
+        interior_region = lldb.SBMemoryRegionInfo()
+        self.assertSuccess(process.GetMemoryRegionInfo(0x401000, interior_region))
+        self.assertEqual(interior_region.GetRegionBase(), 0x401000)
+        self.assertEqual(interior_region.GetRegionEnd(), 0x402000)
+        self.assertTrue(interior_region.IsMapped())
+        self.assertTrue(interior_region.IsReadable())
+        self.assertFalse(interior_region.IsWritable())
+        self.assertFalse(interior_region.IsExecutable())
+        self.assertIsNone(interior_region.GetName())
+
+        nt_file_region = lldb.SBMemoryRegionInfo()
+        self.assertSuccess(process.GetMemoryRegionInfo(0x402000, nt_file_region))
+        self.assertEqual(nt_file_region.GetRegionBase(), 0x402000)
+        self.assertEqual(nt_file_region.GetRegionEnd(), 0x403000)
+        self.assertTrue(nt_file_region.IsMapped())
+        # SB's boolean permission accessors report unknown as false.
+        self.assertFalse(nt_file_region.IsReadable())
+        self.assertFalse(nt_file_region.IsWritable())
+        self.assertFalse(nt_file_region.IsExecutable())
+        self.assertEqual(nt_file_region.GetName(), "/tmp/kernel.hsaco")
+
+        self.expect(
+            "memory region 0x402000",
+            substrs=["???", "/tmp/kernel.hsaco"],
+        )
+
+        regions = process.GetMemoryRegions()
+        self.assertEqual(regions.GetSize(), 3)
+        listed_region = lldb.SBMemoryRegionInfo()
+        self.assertTrue(
+            regions.GetMemoryRegionContainingAddress(0x400000, listed_region)
+        )
+        self.assertEqual(listed_region, region)
+        self.assertTrue(
+            regions.GetMemoryRegionContainingAddress(0x401000, listed_region)
+        )
+        self.assertEqual(listed_region, interior_region)
+        self.assertTrue(regions.GetMemoryRegionAtIndex(2, listed_region))
+        self.assertEqual(listed_region, nt_file_region)
+
+        following_region = lldb.SBMemoryRegionInfo()
+        self.assertSuccess(process.GetMemoryRegionInfo(0x403000, following_region))
+        self.assertEqual(following_region.GetRegionBase(), 0x403000)
+        self.assertEqual(following_region.GetRegionEnd(), lldb.LLDB_INVALID_ADDRESS)
+        self.assertFalse(following_region.IsMapped())
+        self.assertIsNone(following_region.GetName())
+
+        self.dbg.DeleteTarget(target)
+
+    @skipIfLLVMTargetMissing("X86")
+    @skipIfWindows
     def test_exe_name_extraction_nt_file(self):
         # This core file has:
         # - NT_FILE entry for the executable with path '/path/nt_file_foo
@@ -1453,7 +1529,17 @@ class LinuxCoreTestCase(TestBase):
         target = self.dbg.CreateTarget(None)
         process = target.LoadCore(core_path)
         exe_module = target.modules[0]
-        self.assertEqual(exe_module.GetFileSpec().fullpath, "/path/nt_file_foo")
+        exe_path = "/path/nt_file_foo"
+        symlink_path = "/path/prpsinfo_foo"
+        self.assertEqual(exe_module.GetFileSpec().fullpath, exe_path)
+
+        # Verify that the process info is correct.
+        process_info = target.process.GetProcessInfo()
+        self.assertEqual(process_info.GetName(), "nt_file_foo")
+        self.assertEqual(process_info.GetArg0(), symlink_path)
+        self.assertEqual(process_info.GetExecutableFile().fullpath, exe_path)
+        self.assertEqual(process_info.GetNumArguments(), 1)
+        self.assertEqual(process_info.GetArgumentAtIndex(0), "--verbose")
         self.dbg.DeleteTarget(target)
 
     @skipIfLLVMTargetMissing("X86")
@@ -1472,7 +1558,18 @@ class LinuxCoreTestCase(TestBase):
         target = self.dbg.CreateTarget(None)
         process = target.LoadCore(core_path)
         exe_module = target.modules[0]
-        self.assertEqual(exe_module.GetFileSpec().fullpath, "/path/execfn_foo")
+        exe_path = "/path/execfn_foo"
+        symlink_path = "/path/prpsinfo_foo"
+        self.assertEqual(exe_module.GetFileSpec().fullpath, exe_path)
+
+        # Verify that the process info is correct.
+        process_info = target.process.GetProcessInfo()
+        self.assertEqual(process_info.GetName(), "execfn_foo")
+        self.assertEqual(process_info.GetArg0(), symlink_path)
+        self.assertEqual(process_info.GetExecutableFile().fullpath, exe_path)
+        self.assertEqual(process_info.GetNumArguments(), 1)
+        self.assertEqual(process_info.GetArgumentAtIndex(0), "--verbose")
+
         self.dbg.DeleteTarget(target)
 
     @skipIfLLVMTargetMissing("X86")
@@ -1488,9 +1585,98 @@ class LinuxCoreTestCase(TestBase):
         target = self.dbg.CreateTarget(None)
         process = target.LoadCore(core_path)
         exe_module = target.modules[0]
-        self.assertEqual(exe_module.GetFileSpec().fullpath, "prpsinfo_foo")
+        exe_path = "prpsinfo_foo"
+        symlink_path = "/path/prpsinfo_foo"
+        self.assertEqual(exe_module.GetFileSpec().fullpath, exe_path)
+
+        process_info = target.process.GetProcessInfo()
+        self.assertEqual(process_info.GetName(), exe_path)
+        self.assertEqual(process_info.GetArg0(), symlink_path)
+        self.assertEqual(process_info.GetExecutableFile().fullpath, exe_path)
+        self.assertEqual(process_info.GetNumArguments(), 1)
+        self.assertEqual(process_info.GetArgumentAtIndex(0), "--verbose")
+
+
         self.dbg.DeleteTarget(target)
 
+
+    @skipIfLLVMTargetMissing("X86")
+    @skipIfWindows
+    def test_uuid_info_from_nt_file_and_gnu_build_id(self):
+        # This test loads a core file that has everything it needs in core
+        # memory to read the r_debug structure to get the shared library list
+        # and also the NT_FILE note where we are able to find the UUID for
+        # any library. Prior to this patch, the UUID for any library could
+        # be found in ProcessElfCore::FindModuleUUID(...) only for an
+        # executable if the resolved path found in NT_FILE matched the path
+        # that the dynamic loader used, which can often be different due to
+        # symlinks.
+        #
+        # This test verifies that ProcessElfCore::FindModuleUUID() is able to
+        # find the UUID for a library even if the resolved path (NT_FILE)
+        # does not match the path that the dynamic loader used.
+        #
+        # The libraries in this core file have the following paths:
+        # R_DEBUG                      NT_FILE
+        # ============================ ======================================
+        # /lib64/libstdc++.so.6        /usr/lib64/libstdc++.so.6.0.29
+        # /lib64/libm.so.6             /usr/lib64/libm.so.6
+        # /lib64/libgcc_s.so.1         /usr/lib64/libgcc_s-11-20240719.so.1
+        # /lib64/libc.so.6             /usr/lib64/libc.so.6
+        # /lib64/ld-linux-x86-64.so.2  /usr/lib64/ld-linux-x86-64.so.2
+        #
+        # The UUID map in ProcessELFCore is keyed off of the path from the
+        # NT_FILE info, so we verify that the new code that was added to
+        # ProcessELFCore::FindModuleUUID(...) can locate the module using the
+        # load address in the ModuleSpec that is now being passed to
+        # Process::FindModuleUUID(...).
+        yaml_path = self.getSourcePath("elf-dyld-nt-file-mismatch.yaml")
+        core_path = self.getBuildArtifact("elf-dyld-nt-file-mismatch.core")
+        log_path = self.getBuildArtifact("elf-dyld-nt-file-mismatch.log")
+        self.yaml2obj(yaml_path, core_path)
+        target = self.dbg.CreateTarget(None)
+        self.runCmd(f"log enable lldb process -f '{log_path}'")
+        # Disable parallel module loading as it can deadlock as there are
+        # issues with this feature that are not resolved.
+        self.runCmd(f"settings set target.parallel-module-load false")
+
+        def cleanup():
+            self.runCmd("log disable lldb process")
+            self.runCmd("settings set target.parallel-module-load true")
+
+        # Execute the cleanup function during test case tear down.
+        self.addTearDownHook(cleanup)
+
+        process = target.LoadCore(core_path)
+        prefix = "ProcessElfCore::FindModuleUUID() found UUID for "
+        with open(log_path, "r") as f:
+            log_text = f.read()
+            self.assertIn(
+                prefix
+                + "/lib64/libm.so.6: 25C2A650-E3E6-C2F3-25C8-AD803DBB58B3-13899C93",
+                log_text,
+            )
+            self.assertIn(
+                prefix
+                + "/lib64/libgcc_s.so.1: A29B0CF0-634D-ECD5-76D6-36CF5B9B6412-AFEB4FAC",
+                log_text,
+            )
+            self.assertIn(
+                prefix
+                + "/lib64/libstdc++.so.6: 0C8999CC-A62E-9B9F-0075-566ECB23D564-443ED68F",
+                log_text,
+            )
+            self.assertIn(
+                prefix
+                + "/lib64/libc.so.6: CFCCBA85-5FC7-2F10-BC9D-E0ABC5AD605E-D8B1AA72",
+                log_text,
+            )
+            self.assertIn(
+                prefix
+                + "/lib64/ld-linux-x86-64.so.2: ECBDF3F8-784D-7A13-EFF2-FDD4352ABBEE-93CCE02C",
+                log_text,
+            )
+        self.dbg.DeleteTarget(target)
 
 
 def replace_path(binary, replace_from, replace_to):

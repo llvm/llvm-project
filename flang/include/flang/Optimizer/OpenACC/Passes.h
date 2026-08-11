@@ -33,6 +33,9 @@ std::unique_ptr<mlir::Pass> createACCOptimizeFirstprivateMapPass();
 std::unique_ptr<mlir::Pass> createACCRecipeBufferizationPass();
 std::unique_ptr<mlir::Pass> createACCUseDeviceCanonicalizerPass();
 
+/// Populate the OpenACC pass pipeline that runs at HLFIR level.
+void populateHLFIROpenACCPassPipeline(mlir::PassManager &pm);
+
 } // namespace acc
 } // namespace fir
 

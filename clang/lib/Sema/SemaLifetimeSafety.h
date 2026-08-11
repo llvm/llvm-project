@@ -67,6 +67,8 @@ inline bool IsLifetimeSafetyEnabled(Sema &S, const Decl *D) {
       diag::warn_lifetime_safety_invalidated_global,
       diag::warn_lifetime_safety_cross_tu_param_suggestion,
       diag::warn_lifetime_safety_intra_tu_param_suggestion,
+      diag::warn_lifetime_safety_cross_tu_ctor_param_suggestion,
+      diag::warn_lifetime_safety_intra_tu_ctor_param_suggestion,
       diag::warn_lifetime_safety_cross_tu_this_suggestion,
       diag::warn_lifetime_safety_intra_tu_this_suggestion,
       diag::warn_lifetime_safety_inapplicable_lifetimebound};
@@ -74,6 +76,28 @@ inline bool IsLifetimeSafetyEnabled(Sema &S, const Decl *D) {
     if (!Diags.isIgnored(DiagID, D->getBeginLoc()))
       return true;
   return false;
+}
+
+inline bool ShouldSuggestLifetimeAnnotations(Sema &S, const Decl *D) {
+  DiagnosticsEngine &Diags = S.getDiagnostics();
+  constexpr unsigned DiagIDs[] = {
+      diag::warn_lifetime_safety_intra_tu_param_suggestion,
+      diag::warn_lifetime_safety_cross_tu_param_suggestion,
+      diag::warn_lifetime_safety_intra_tu_ctor_param_suggestion,
+      diag::warn_lifetime_safety_cross_tu_ctor_param_suggestion,
+      diag::warn_lifetime_safety_intra_tu_this_suggestion,
+      diag::warn_lifetime_safety_cross_tu_this_suggestion};
+  for (unsigned DiagID : DiagIDs)
+    if (!Diags.isIgnored(DiagID, D->getBeginLoc()))
+      return true;
+  return false;
+}
+
+inline LifetimeSafetyOpts GetLifetimeSafetyOpts(Sema &S, const Decl *D) {
+  LifetimeSafetyOpts LSOpts;
+  LSOpts.MaxCFGBlocks = S.getLangOpts().LifetimeSafetyMaxCFGBlocks;
+  LSOpts.SuggestAnnotations = ShouldSuggestLifetimeAnnotations(S, D);
+  return LSOpts;
 }
 
 class LifetimeSafetySemaHelperImpl : public LifetimeSafetySemaHelper {
@@ -121,11 +145,13 @@ public:
 
   void reportDanglingField(const Expr *IssueExpr,
                            const FieldDecl *DanglingField,
-                           const Expr *MovedExpr,
+                           const Expr *MovedExpr, bool IsCapturedByLambda,
                            SourceLocation ExpiryLoc) override {
-    unsigned DiagID = MovedExpr
-                          ? diag::warn_lifetime_safety_dangling_field_moved
-                          : diag::warn_lifetime_safety_dangling_field;
+    unsigned DiagID =
+        IsCapturedByLambda
+            ? diag::warn_lifetime_safety_dangling_field_lambda_capture
+            : (MovedExpr ? diag::warn_lifetime_safety_dangling_field_moved
+                         : diag::warn_lifetime_safety_dangling_field);
 
     S.Diag(IssueExpr->getExprLoc(), DiagID)
         << getDiagSubjectDescription(IssueExpr)
@@ -164,8 +190,10 @@ public:
           << DanglingGlobal->getEndLoc();
   }
 
-  void reportUseAfterInvalidation(const Expr *IssueExpr, const Expr *UseExpr,
-                                  const Expr *InvalidationExpr) override {
+  void
+  reportUseAfterInvalidation(const Expr *IssueExpr, const Expr *UseExpr,
+                             const Expr *InvalidationExpr,
+                             llvm::ArrayRef<const Expr *> ExprChain) override {
     auto WarnDiag = isa<CXXDeleteExpr>(InvalidationExpr)
                         ? diag::warn_lifetime_safety_use_after_free
                         : diag::warn_lifetime_safety_invalidation;
@@ -173,11 +201,14 @@ public:
     S.Diag(IssueExpr->getExprLoc(), WarnDiag)
         << InvalidatedSubject << IssueExpr->getSourceRange();
     reportInvalidationSite(InvalidationExpr, InvalidatedSubject);
+    reportAliasingChain(ExprChain);
     S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
         << UseExpr->getSourceRange();
   }
-  void reportUseAfterInvalidation(const ParmVarDecl *PVD, const Expr *UseExpr,
-                                  const Expr *InvalidationExpr) override {
+  void
+  reportUseAfterInvalidation(const ParmVarDecl *PVD, const Expr *UseExpr,
+                             const Expr *InvalidationExpr,
+                             llvm::ArrayRef<const Expr *> ExprChain) override {
 
     auto WarnDiag = isa<CXXDeleteExpr>(InvalidationExpr)
                         ? diag::warn_lifetime_safety_use_after_free
@@ -187,6 +218,7 @@ public:
     S.Diag(PVD->getSourceRange().getBegin(), WarnDiag)
         << InvalidatedSubject << PVD->getSourceRange();
     reportInvalidationSite(InvalidationExpr, InvalidatedSubject);
+    reportAliasingChain(ExprChain);
     S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
         << UseExpr->getSourceRange();
   }
@@ -260,14 +292,19 @@ public:
   void suggestLifetimeboundToParmVar(WarningScope Scope,
                                      const ParmVarDecl *ParmToAnnotate,
                                      EscapingTarget Target) override {
-    unsigned DiagID =
-        (Scope == WarningScope::CrossTU)
-            ? diag::warn_lifetime_safety_cross_tu_param_suggestion
-            : diag::warn_lifetime_safety_intra_tu_param_suggestion;
+    unsigned DiagID;
+    if (isa<CXXConstructorDecl>(ParmToAnnotate->getDeclContext()))
+      DiagID = (Scope == WarningScope::CrossTU)
+                   ? diag::warn_lifetime_safety_cross_tu_ctor_param_suggestion
+                   : diag::warn_lifetime_safety_intra_tu_ctor_param_suggestion;
+    else
+      DiagID = (Scope == WarningScope::CrossTU)
+                   ? diag::warn_lifetime_safety_cross_tu_param_suggestion
+                   : diag::warn_lifetime_safety_intra_tu_param_suggestion;
 
     auto [InsertionPoint, FixItText] = getLifetimeBoundFixIt(ParmToAnnotate);
 
-    S.Diag(ParmToAnnotate->getBeginLoc(), DiagID)
+    S.Diag(InsertionPoint, DiagID)
         << ParmToAnnotate->getSourceRange()
         << FixItHint::CreateInsertion(InsertionPoint, FixItText);
 
@@ -347,7 +384,7 @@ public:
     if (IsMacro || InsertionPoint.isInvalid())
       S.Diag(PVDDecl->getBeginLoc(), DiagID) << PVDDecl->getSourceRange();
     else
-      S.Diag(PVDDecl->getBeginLoc(), DiagID)
+      S.Diag(InsertionPoint, DiagID)
           << PVDDecl->getSourceRange()
           << FixItHint::CreateInsertion(InsertionPoint, FixItText);
 
@@ -424,6 +461,76 @@ public:
   }
 
 private:
+  struct LifetimeBoundMacroCache {
+    bool IsBuilt = false;
+    SmallVector<const IdentifierInfo *> Candidates;
+  };
+
+  void buildLifetimeBoundMacroCache(LifetimeBoundMacroCache &Cache,
+                                    ArrayRef<TokenValue> Tokens) {
+    if (Cache.IsBuilt)
+      return;
+
+    const Preprocessor &PP = S.getPreprocessor();
+    // Collect macro names that were ever defined as a lifetimebound attribute.
+    for (const auto &M : PP.macros()) {
+      const IdentifierInfo *II = M.first;
+      const MacroDirective *MD = PP.getLocalMacroDirectiveHistory(II);
+      if (!MD)
+        continue;
+
+      // Include earlier matching definitions to handle redefinitions.
+      for (MacroDirective::DefInfo Def = MD->getDefinition(); Def;
+           Def = Def.getPreviousDefinition()) {
+        const MacroInfo *MI = Def.getMacroInfo();
+        if (MI->isObjectLike() && Tokens.size() == MI->getNumTokens() &&
+            std::equal(Tokens.begin(), Tokens.end(), MI->tokens_begin())) {
+          Cache.Candidates.push_back(II);
+          break;
+        }
+      }
+    }
+    Cache.IsBuilt = true;
+  }
+
+  StringRef getLastCachedMacroWithSpelling(SourceLocation Loc,
+                                           llvm::ArrayRef<TokenValue> Tokens,
+                                           LifetimeBoundMacroCache &Cache) {
+    if (Loc.isInvalid())
+      return {};
+
+    buildLifetimeBoundMacroCache(Cache, Tokens);
+
+    const Preprocessor &PP = S.getPreprocessor();
+    const SourceManager &SM = S.getSourceManager();
+    SourceLocation BestLocation;
+    StringRef BestSpelling;
+    for (const IdentifierInfo *II : Cache.Candidates) {
+      const MacroDirective *MD = PP.getLocalMacroDirectiveHistory(II);
+      const MacroDirective::DefInfo Def = MD->findDirectiveAtLoc(Loc, SM);
+      if (!Def || !Def.getMacroInfo())
+        continue;
+
+      // Ensure the macro definition active at Loc still has this spelling.
+      const MacroInfo *MI = Def.getMacroInfo();
+      if (!MI->isObjectLike() || Tokens.size() != MI->getNumTokens() ||
+          !std::equal(Tokens.begin(), Tokens.end(), MI->tokens_begin()))
+        continue;
+
+      // Choose the matching macro defined latest before Loc.
+      SourceLocation Location = Def.getLocation();
+      assert(Location.isInvalid() ||
+             SM.isBeforeInTranslationUnit(Location, Loc));
+      if (BestLocation.isInvalid() ||
+          (Location.isValid() &&
+           SM.isBeforeInTranslationUnit(BestLocation, Location))) {
+        BestLocation = Location;
+        BestSpelling = II->getName();
+      }
+    }
+    return BestSpelling;
+  }
+
   void reportInvalidationSite(const Expr *InvalidationExpr,
                               StringRef InvalidatedSubject) {
     auto Diag = isa<CXXDeleteExpr>(InvalidationExpr)
@@ -435,22 +542,30 @@ private:
 
   std::string getLifetimeBoundFixItText(SourceLocation Loc, bool LeadingSpace,
                                         bool AllowGNUAttrMacro = true) {
+    const bool UseCXX11AttrSpelling =
+        S.getLangOpts().CPlusPlus || S.getLangOpts().C23;
+    const StringRef Fallback = UseCXX11AttrSpelling
+                                   ? "[[clang::lifetimebound]]"
+                                   : "__attribute__((lifetimebound))";
     StringRef Spelling = S.getLangOpts().LifetimeSafetyLifetimeBoundMacro;
     if (Spelling.empty() && Loc.isValid()) {
       const Preprocessor &PP = S.getPreprocessor();
-      Spelling = PP.getLastMacroWithSpelling(
-          Loc, {tok::l_square, tok::l_square, PP.getIdentifierInfo("clang"),
-                tok::coloncolon, PP.getIdentifierInfo("lifetimebound"),
-                tok::r_square, tok::r_square});
+      if (UseCXX11AttrSpelling)
+        Spelling = getLastCachedMacroWithSpelling(
+            Loc,
+            {tok::l_square, tok::l_square, PP.getIdentifierInfo("clang"),
+             tok::coloncolon, PP.getIdentifierInfo("lifetimebound"),
+             tok::r_square, tok::r_square},
+            ClangLifetimeBoundMacroCache);
 
       if (Spelling.empty() && AllowGNUAttrMacro)
-        Spelling = PP.getLastMacroWithSpelling(
-            Loc, {tok::kw___attribute, tok::l_paren, tok::l_paren,
-                  PP.getIdentifierInfo("lifetimebound"), tok::r_paren,
-                  tok::r_paren});
+        Spelling = getLastCachedMacroWithSpelling(
+            Loc,
+            {tok::kw___attribute, tok::l_paren, tok::l_paren,
+             PP.getIdentifierInfo("lifetimebound"), tok::r_paren, tok::r_paren},
+            GNULifetimeBoundMacroCache);
     }
-    const std::string Text =
-        Spelling.empty() ? "[[clang::lifetimebound]]" : Spelling.str();
+    const std::string Text = Spelling.empty() ? Fallback.str() : Spelling.str();
     return LeadingSpace ? " " + Text : Text + " ";
   }
 
@@ -567,19 +682,41 @@ private:
       return;
 
     const Expr *LastExpr = OriginExprChain.back();
-    std::string IssueStr = getDiagSubjectDescription(LastExpr);
+    const Expr *VisibleLastExpr = LastExpr;
+    std::string IssueStr = getDiagSubjectDescription(VisibleLastExpr);
 
     for (const Expr *CurrExpr : reverse(OriginExprChain.drop_back())) {
-      if (!shouldShowInAliasChain(CurrExpr, LastExpr))
+      if (!shouldShowInAliasChain(CurrExpr, VisibleLastExpr)) {
+        LastExpr = CurrExpr;
         continue;
-      S.Diag(CurrExpr->getBeginLoc(),
-             diag::note_lifetime_safety_aliases_storage)
-          << CurrExpr->getSourceRange() << getDiagSubjectDescription(CurrExpr)
-          << IssueStr;
+      }
+      std::optional<LifetimeBoundParamInfo> ParamInfo =
+          getTrackingInfoForCallArg(CurrExpr, LastExpr);
       LastExpr = CurrExpr;
+      if (ParamInfo) {
+        bool IsImplicitObject = isa<const CXXMethodDecl *>(*ParamInfo);
+        std::string ParamName;
+        if (!IsImplicitObject) {
+          const auto *Param = cast<const ParmVarDecl *>(*ParamInfo);
+          ParamName = Param->getIdentifier()
+                          ? "'" + Param->getNameAsString() + "'"
+                          : "'<unnamed>'";
+        }
+        S.Diag(CurrExpr->getBeginLoc(),
+               diag::note_lifetime_safety_aliases_storage_lifetimebound)
+            << CurrExpr->getSourceRange() << getDiagSubjectDescription(CurrExpr)
+            << IssueStr << IsImplicitObject << ParamName;
+      } else
+        S.Diag(CurrExpr->getBeginLoc(),
+               diag::note_lifetime_safety_aliases_storage)
+            << CurrExpr->getSourceRange() << getDiagSubjectDescription(CurrExpr)
+            << IssueStr;
+      VisibleLastExpr = CurrExpr;
     }
   }
 
+  LifetimeBoundMacroCache ClangLifetimeBoundMacroCache;
+  LifetimeBoundMacroCache GNULifetimeBoundMacroCache;
   Sema &S;
 };
 

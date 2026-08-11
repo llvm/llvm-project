@@ -432,13 +432,12 @@ def VRSHRN_N   : IInst<"vrshrn_n", "<QI", "silUsUiUl",
 def VQRSHRN_N  : SInst<"vqrshrn_n", "<QI", "silUsUiUl",
                       [ImmCheck<1, ImmCheckShiftRight>]>;
 
-// Widening left-shifts should have a range of 0..(sizeinbits(arg)-1).
-// This polymorphic builtin is supplied the wider return type as it's overloaded
-// base type, so the range here is actually 0..(sizeinbits(arg)*2).
-// This cannot be rectified currently due to a use of vshll_n_s16 with an
-// out-of-bounds immediate in the defintiion of vcvt_f32_bf16.
+// Widening left-shifts should have an immediate range of 0..sizeinbits(arg).
+// However, as the overloaded type code that is supplied to a polymorphic builtin
+// is that of the return type (twice as wide as the argument in this case).
+// ImmCheckShiftLeftLong produces the correct behavior here.
 def VSHLL_N    : SInst<"vshll_n", "(>Q).I", "csiUcUsUi",
-                      [ImmCheck<1, ImmCheckShiftLeft>]>;
+                      [ImmCheck<1, ImmCheckShiftLeftLong>]>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // E.3.13 Shifts with insert
@@ -1938,7 +1937,7 @@ let ArchGuard = "defined(__aarch64__)", TargetGuard = "f8f32mm,neon" in {
 }
 
 let ArchGuard = "defined(__aarch64__)", TargetGuard = "f16mm,neon" in {
-  def VMMLA_F16_F16 : SInst<"vmmla_f16", "....", "Qh">;
+  def VMMLA_F16_F16 : SInst<"vmmla", "....", "Qh">;
 }
 
 let ArchGuard = "defined(__aarch64__)", TargetGuard = "f16f32mm,neon" in {
