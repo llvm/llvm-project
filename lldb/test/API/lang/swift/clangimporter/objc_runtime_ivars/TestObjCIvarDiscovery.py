@@ -22,6 +22,8 @@ import re
 import shutil
 
 class TestObjCIVarDiscovery(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     @requireNotEmbeddedSwift
     @skipUnlessDarwin
     @skipIf(debug_info=no_match("dsym"))

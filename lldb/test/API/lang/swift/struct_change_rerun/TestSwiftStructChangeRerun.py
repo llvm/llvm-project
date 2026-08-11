@@ -21,6 +21,8 @@ import shutil
 
 
 class TestSwiftStructChangeRerun(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     @expectedFailureWindows  # https://github.com/swiftlang/llvm-project/issues/13444
     @swiftTest
     @skipIf(
