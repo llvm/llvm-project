@@ -120,3 +120,13 @@ const char *_NSPrintForDebugger(id object) {
 //
 // PO: (lldb) po t
 // PO: TestObj
+
+// Stepping at a message send goes through the objc_msgSend trampoline into
+// the method implementation.
+//
+// RUN: %lldb -b -o "b objc-gnustep-print.m:104" -o "run" -o "step" \
+// RUN:     -- %t | FileCheck %s --check-prefix=STEP
+//
+// STEP: (lldb) step
+// STEP: stop reason = step in
+// STEP: check_ivars_zeroed

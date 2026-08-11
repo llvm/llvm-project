@@ -121,11 +121,22 @@ protected:
   /// gnustep-base is not loaded in the inferior.
   Address *GetPrintForDebuggerAddr();
 
+public:
+  /// Lazily-built FunctionCaller for libobjc2's
+  /// `IMP objc_msg_lookup(id receiver, SEL selector)`, used by the
+  /// step-through-trampoline plan. Returns nullptr if the symbol cannot be
+  /// resolved.
+  FunctionCaller *GetMsgLookupFunctionCaller();
+
+protected:
+
   lldb::ModuleSP m_objc_module_sp;
 
   std::unique_ptr<Address> m_print_for_debugger_addr_up;
 
   std::unique_ptr<FunctionCaller> m_print_object_caller_up;
+
+  std::unique_ptr<FunctionCaller> m_msg_lookup_caller_up;
 
   std::unique_ptr<GNUstepTaggedPointerVendor> m_tagged_pointer_vendor_up;
 

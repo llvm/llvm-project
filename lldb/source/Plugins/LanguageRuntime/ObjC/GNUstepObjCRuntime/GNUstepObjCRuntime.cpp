@@ -8,6 +8,7 @@
 
 #include "GNUstepObjCRuntime.h"
 #include "GNUstepObjCClassDescriptor.h"
+#include "GNUstepThreadPlanStepThroughObjCTrampoline.h"
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
@@ -22,10 +23,13 @@
 #include "lldb/Symbol/DeclVendor.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Target/ThreadPlanRunToAddress.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -383,8 +387,151 @@ GNUstepObjCRuntime::CreateObjectChecker(std::string name,
 ThreadPlanSP
 GNUstepObjCRuntime::GetStepThroughTrampolinePlan(Thread &thread,
                                                  bool stop_others) {
-  // TODO: Implement this properly to avoid stepping into things like PLT stubs
-  return nullptr;
+  // Only act when stopped at the first instruction of a known libobjc2
+  // dispatch entry point (where the argument registers still hold the
+  // receiver and selector).
+  Process *process = thread.GetProcess().get();
+  if (!process)
+    return {};
+  const addr_t pc = thread.GetRegisterContext()->GetPC();
+  Target &target = GetTargetRef();
+  Address pc_addr;
+  if (!target.ResolveLoadAddress(pc, pc_addr))
+    return {};
+  Symbol *symbol = pc_addr.CalculateSymbolContextSymbol();
+  if (!symbol || symbol->GetAddress().GetLoadAddress(&target) != pc)
+    return {};
+
+  // Dispatch entry points exported by libobjc2 (objc_msgSend.S, sendmsg2.c).
+  // The `_super` variants are omitted: super sends compile to a lookup plus
+  // a direct call, and the direct call steps normally.
+  llvm::StringRef name = symbol->GetName().GetStringRef();
+  bool is_stret = false, is_sender = false;
+  if (name == "objc_msgSend" || name == "objc_msgSend_fpret" ||
+      name == "objc_msg_lookup") {
+  } else if (name == "objc_msgSend_stret") {
+    is_stret = true;
+  } else if (name == "objc_msg_lookup_sender") {
+    is_sender = true;
+  } else {
+    return {};
+  }
+
+  ABISP abi_sp = process->GetABI();
+  if (!abi_sp)
+    return {};
+  TypeSystemClangSP scratch_ts_sp =
+      ScratchTypeSystemClang::GetForTarget(target);
+  if (!scratch_ts_sp)
+    return {};
+  CompilerType void_ptr_type =
+      scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
+  Value void_ptr_value;
+  void_ptr_value.SetValueType(Value::ValueType::Scalar);
+  void_ptr_value.SetCompilerType(void_ptr_type);
+
+  ValueList argument_values;
+  argument_values.PushValue(void_ptr_value);
+  argument_values.PushValue(void_ptr_value);
+  argument_values.PushValue(void_ptr_value);
+  if (!abi_sp->GetArgumentValues(thread, argument_values))
+    return {};
+
+  // With struct return the sret pointer occupies the first argument slot.
+  const uint32_t receiver_idx = is_stret ? 1 : 0;
+  const uint32_t sel_idx = is_stret ? 2 : 1;
+  addr_t receiver =
+      argument_values.GetValueAtIndex(receiver_idx)->GetScalar().ULongLong();
+  const addr_t selector =
+      argument_values.GetValueAtIndex(sel_idx)->GetScalar().ULongLong();
+
+  if (is_sender) {
+    // objc_msg_lookup_sender takes `id *receiver`.
+    Status error;
+    receiver = process->ReadPointerFromMemory(receiver, error);
+    if (error.Fail())
+      return {};
+  }
+
+  // A message to nil does not dispatch anywhere.
+  if (receiver == 0 || receiver == LLDB_INVALID_ADDRESS)
+    return {};
+
+  // Consult the method cache before running anything in the inferior.
+  // Tagged pointers skip the cache: their ISA is not the object's first word.
+  addr_t isa = LLDB_INVALID_ADDRESS;
+  if (!(m_tagged_pointer_vendor_up &&
+        m_tagged_pointer_vendor_up->IsPossibleTaggedPointer(receiver))) {
+    Status error;
+    const addr_t isa_candidate = process->ReadPointerFromMemory(receiver, error);
+    if (error.Success())
+      isa = isa_candidate;
+  }
+  if (isa != LLDB_INVALID_ADDRESS) {
+    const addr_t cached_imp = LookupInMethodCache(isa, selector);
+    if (cached_imp != LLDB_INVALID_ADDRESS) {
+      Address imp_addr;
+      imp_addr.SetOpcodeLoadAddress(cached_imp, &target);
+      return std::make_shared<ThreadPlanRunToAddress>(thread, imp_addr,
+                                                      stop_others);
+    }
+  }
+
+  if (!GetMsgLookupFunctionCaller())
+    return {};
+
+  ValueList lookup_args;
+  Value receiver_value = void_ptr_value;
+  receiver_value.GetScalar() = receiver;
+  lookup_args.PushValue(receiver_value);
+  Value selector_value = void_ptr_value;
+  selector_value.GetScalar() = selector;
+  lookup_args.PushValue(selector_value);
+
+  return std::make_shared<GNUstepThreadPlanStepThroughObjCTrampoline>(
+      thread, *this, lookup_args, isa, selector);
+}
+
+FunctionCaller *GNUstepObjCRuntime::GetMsgLookupFunctionCaller() {
+  if (m_msg_lookup_caller_up)
+    return m_msg_lookup_caller_up.get();
+
+  Target &target = GetTargetRef();
+  SymbolContextList sc_list;
+  target.GetImages().FindSymbolsWithNameAndType(ConstString("objc_msg_lookup"),
+                                                eSymbolTypeCode, sc_list);
+  Address lookup_addr;
+  for (const SymbolContext &sc : sc_list) {
+    if (sc.symbol) {
+      lookup_addr = sc.symbol->GetAddress();
+      break;
+    }
+  }
+  if (!lookup_addr.IsValid())
+    return nullptr;
+
+  TypeSystemClangSP scratch_ts_sp =
+      ScratchTypeSystemClang::GetForTarget(target);
+  if (!scratch_ts_sp)
+    return nullptr;
+  CompilerType void_ptr_type =
+      scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
+  Value void_ptr_value;
+  void_ptr_value.SetValueType(Value::ValueType::Scalar);
+  void_ptr_value.SetCompilerType(void_ptr_type);
+  ValueList args;
+  args.PushValue(void_ptr_value);
+  args.PushValue(void_ptr_value);
+
+  Status error;
+  m_msg_lookup_caller_up.reset(target.GetFunctionCallerForLanguage(
+      eLanguageTypeC, void_ptr_type, lookup_addr, args, "gnustep-msg-lookup",
+      error));
+  if (error.Fail()) {
+    m_msg_lookup_caller_up.reset();
+    return nullptr;
+  }
+  return m_msg_lookup_caller_up.get();
 }
 
 void GNUstepObjCRuntime::UpdateISAToDescriptorMapIfNeeded() {
