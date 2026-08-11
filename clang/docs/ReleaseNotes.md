@@ -131,6 +131,11 @@ features cannot lower the translation-unit ABI level;
   accesses to these fields. `__attribute__((packed))` on the field or the
   enclosing record still reduces the alignment. (#GH208256)
 
+- Fixed RTTI name for internal-linkage types lacking '*', fixed breaking 
+  type_info::operator== and dynamic_cast with libstdc++. Fixed libc++ NonUnique
+  implementation incorrectly comparing internal-linakge types equal via strcmp. 
+  (#GH34255)
+
 ### AST Dumping Potentially Breaking Changes
 
 ### Clang Frontend Potentially Breaking Changes
@@ -752,7 +757,6 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion failure on use of an uninitialized token in dependency directives lexing in clang-scan-deps.
 - Fixed auto type inference being rejected when the initializer is a bit-field. (#GH226280)
 - Fixed failed assertion when creating a compound literal with erroneous initializer at file scope. (#GH229888)
-
 #### Bug Fixes to Compiler Builtins
 
 - Fixed a crash when classifying a call to a builtin with dependent arguments,
