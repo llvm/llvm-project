@@ -172,6 +172,17 @@ protected:
   storeFromOpenFileImpl(sys::fs::file_t FD,
                         std::optional<sys::fs::file_status> Status);
 
+  /// Customization point for \a getStandaloneMemoryBuffer(). The default
+  /// implementation copies the data, which always satisfies the lifetime
+  /// requirement; implementations that can hand out storage outliving
+  /// themselves, e.g. a mapping of a file they do not keep open, should
+  /// override this to avoid the copy. Must not return \c nullptr: fall back
+  /// to \c ObjectStore::getStandaloneMemoryBufferImpl() where the cheaper
+  /// path does not apply.
+  virtual std::unique_ptr<MemoryBuffer>
+  getStandaloneMemoryBufferImpl(ObjectHandle Node, StringRef Name,
+                                bool RequiresNullTerminator);
+
   /// Get a lifetime-extended StringRef pointing at \p Data.
   ///
   /// Depending on the CAS implementation, this may involve in-memory storage
@@ -300,17 +311,6 @@ protected:
   ObjectStore(const CASContext &Context) : Context(Context) {}
 
 private:
-  /// Customization point for \a getStandaloneMemoryBuffer(). The default
-  /// implementation copies the data, which always satisfies the lifetime
-  /// requirement; implementations that can hand out storage outliving
-  /// themselves, e.g. a mapping of a file they do not keep open, should
-  /// override this to avoid the copy. Must not return \c nullptr: fall back
-  /// to \c ObjectStore::getStandaloneMemoryBufferImpl() where the cheaper
-  /// path does not apply.
-  virtual std::unique_ptr<MemoryBuffer>
-  getStandaloneMemoryBufferImpl(ObjectHandle Node, StringRef Name,
-                                bool RequiresNullTerminator);
-
   const CASContext &Context;
 };
 
