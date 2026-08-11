@@ -1,11 +1,13 @@
-// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512dq -fclangir -emit-cir -o %t.cir -Wall -Werror
+// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
+// supports vector types.
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512dq -fclangir -fno-clangir-call-conv-lowering -emit-cir -o %t.cir -Wall -Werror
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512dq -fclangir -emit-llvm -o %t.ll -Wall -Werror
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512dq -fclangir -fno-clangir-call-conv-lowering -emit-llvm -o %t.ll -Wall -Werror
 // RUN: FileCheck --check-prefixes=LLVM --input-file=%t.ll %s
 
-// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512dq -fno-signed-char -fclangir -emit-cir -o %t.cir -Wall -Werror
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512dq -fno-signed-char -fclangir -fno-clangir-call-conv-lowering -emit-cir -o %t.cir -Wall -Werror
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512dq -fno-signed-char -fclangir -emit-llvm -o %t.ll -Wall -Werror
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512dq -fno-signed-char -fclangir -fno-clangir-call-conv-lowering -emit-llvm -o %t.ll -Wall -Werror
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
 // RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512dq -emit-llvm -o - -Wall -Werror | FileCheck %s -check-prefix=OGCG
@@ -96,7 +98,7 @@ __mmask8 test_kandn_mask8(__mmask8 A, __mmask8 B) {
  // CIR-LABEL: _kandn_mask8
  // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
  // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
- // CIR: cir.unary(not, {{.*}}) : !cir.vector<8 x !cir.int<s, 1>>
+ // CIR: cir.not {{.*}} : !cir.vector<8 x !cir.int<s, 1>>
  // CIR: cir.and {{.*}}, {{.*}} : !cir.vector<8 x !cir.int<s, 1>>
  // CIR: cir.cast bitcast {{.*}} : !cir.vector<8 x !cir.int<s, 1>> -> !u8i
 
@@ -163,7 +165,7 @@ __mmask8 test_kxnor_mask8(__mmask8 A, __mmask8 B) {
  // CIR-LABEL: _kxnor_mask8
  // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
  // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
- // CIR: cir.unary(not, {{.*}}) : !cir.vector<8 x !cir.int<s, 1>>
+ // CIR: cir.not {{.*}} : !cir.vector<8 x !cir.int<s, 1>>
  // CIR: cir.xor {{.*}}, {{.*}} : !cir.vector<8 x !cir.int<s, 1>>
  // CIR: cir.cast bitcast {{.*}} : !cir.vector<8 x !cir.int<s, 1>> -> !u8i
 
@@ -187,7 +189,7 @@ __mmask8 test_kxnor_mask8(__mmask8 A, __mmask8 B) {
 __mmask8 test_knot_mask8(__mmask8 A) {
  // CIR-LABEL: _knot_mask8
  // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
- // CIR: cir.unary(not, {{.*}}) : !cir.vector<8 x !cir.int<s, 1>>
+ // CIR: cir.not {{.*}} : !cir.vector<8 x !cir.int<s, 1>>
  // CIR: cir.cast bitcast {{.*}} : !cir.vector<8 x !cir.int<s, 1>> -> !u8i
 
  // LLVM-LABEL: _knot_mask8
@@ -231,7 +233,7 @@ unsigned char test_kortestc_mask8_u8(__mmask8 __A, __mmask8 __B) {
   // CIR: %[[RHS:.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
   // CIR: %[[OR:.*]] = cir.or %[[LHS]], %[[RHS]] : !cir.vector<8 x !cir.int<s, 1>>
   // CIR: %[[OR_INT:.*]] = cir.cast bitcast %[[OR]] : !cir.vector<8 x !cir.int<s, 1>> -> !u8i
-  // CIR: %[[CMP:.*]] = cir.cmp(eq, %[[OR_INT]], %[[ALL_ONES]]) : !u8i, !cir.bool
+  // CIR: %[[CMP:.*]] = cir.cmp eq %[[OR_INT]], %[[ALL_ONES]] : !u8i
   // CIR: cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
   // CIR: cir.cast integral {{.*}} : !s32i -> !u8i
 

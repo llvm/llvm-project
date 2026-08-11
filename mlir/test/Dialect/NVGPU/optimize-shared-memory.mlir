@@ -259,3 +259,26 @@ func.func @test_dynamic_and_zero_dim(%arg0 : index) {
   %alloc_1 = memref.alloc(%arg0) : memref<?xf32, 3>
   return
 }
+
+// -----
+
+// Ensure memrefs with vector element types do not crash (issue #177823).
+
+// CHECK-LABEL: func @test_vector_element_type
+// CHECK: memref.alloc() : memref<16x1xvector<16xf16>, 3>
+func.func @test_vector_element_type() {
+  %alloc = memref.alloc() : memref<16x1xvector<16xf16>, 3>
+  return
+}
+
+
+// -----
+
+
+// CHECK-LABEL: func @test_int_conversion
+module {
+  func.func @test_int_conversion() {
+    %alloc = memref.alloc() {alignment = 64 : i64} : memref<10xf32, 1 : ui64>
+    return
+  }
+}

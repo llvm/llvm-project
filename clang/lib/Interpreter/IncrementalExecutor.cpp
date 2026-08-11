@@ -87,10 +87,10 @@ createDefaultJITBuilder(llvm::orc::JITTargetMachineBuilder JTMB) {
 }
 
 Expected<std::unique_ptr<llvm::jitlink::JITLinkMemoryManager>>
-createSharedMemoryManager(llvm::orc::SimpleRemoteEPC &SREPC,
+createSharedMemoryManager(llvm::orc::ExecutorProcessControl &EPC,
                           unsigned SlabAllocateSize) {
   llvm::orc::SharedMemoryMapper::SymbolAddrs SAs;
-  if (auto Err = SREPC.getBootstrapSymbols(
+  if (auto Err = EPC.getBootstrapSymbols(
           {{SAs.Instance,
             llvm::orc::rt::ExecutorSharedMemoryMapperServiceInstanceName},
            {SAs.Reserve,
@@ -116,13 +116,13 @@ createSharedMemoryManager(llvm::orc::SimpleRemoteEPC &SREPC,
     SlabSize = SlabAllocateSize;
 
   return llvm::orc::MapperJITLinkMemoryManager::CreateWithMapper<
-      llvm::orc::SharedMemoryMapper>(SlabSize, SREPC, SAs);
+      llvm::orc::SharedMemoryMapper>(SlabSize, EPC, SAs);
 }
 
 static llvm::Expected<
     std::pair<std::unique_ptr<llvm::orc::SimpleRemoteEPC>, uint32_t>>
-launchExecutor(llvm::StringRef ExecutablePath, bool UseSharedMemory,
-               unsigned SlabAllocateSize, std::function<void()> CustomizeFork) {
+launchExecutor(llvm::StringRef ExecutablePath,
+               std::function<void()> CustomizeFork) {
 #ifndef LLVM_ON_UNIX
   // FIXME: Add support for Windows.
   return llvm::make_error<llvm::StringError>(
@@ -196,18 +196,11 @@ launchExecutor(llvm::StringRef ExecutablePath, bool UseSharedMemory,
   close(ToExecutor[ReadEnd]);
   close(FromExecutor[WriteEnd]);
 
-  llvm::orc::SimpleRemoteEPC::Setup S = llvm::orc::SimpleRemoteEPC::Setup();
-  if (UseSharedMemory)
-    S.CreateMemoryManager =
-        [SlabAllocateSize](llvm::orc::SimpleRemoteEPC &EPC) {
-          return createSharedMemoryManager(EPC, SlabAllocateSize);
-        };
-
   auto EPCOrErr =
       llvm::orc::SimpleRemoteEPC::Create<llvm::orc::FDSimpleRemoteEPCTransport>(
           std::make_unique<llvm::orc::DynamicThreadPoolTaskDispatcher>(
               std::nullopt),
-          std::move(S), FromExecutor[ReadEnd], ToExecutor[WriteEnd]);
+          FromExecutor[ReadEnd], ToExecutor[WriteEnd]);
   if (!EPCOrErr)
     return EPCOrErr.takeError();
   return std::make_pair(std::move(*EPCOrErr), ChildPID);
@@ -256,8 +249,7 @@ static Expected<int> connectTCPSocketImpl(std::string Host,
 }
 
 static llvm::Expected<std::unique_ptr<llvm::orc::SimpleRemoteEPC>>
-connectTCPSocket(llvm::StringRef NetworkAddress, bool UseSharedMemory,
-                 unsigned SlabAllocateSize) {
+connectTCPSocket(llvm::StringRef NetworkAddress) {
 #ifndef LLVM_ON_UNIX
   // FIXME: Add TCP support for Windows.
   return llvm::make_error<llvm::StringError>(
@@ -293,18 +285,11 @@ connectTCPSocket(llvm::StringRef NetworkAddress, bool UseSharedMemory,
   if (!SockFD)
     return SockFD.takeError();
 
-  llvm::orc::SimpleRemoteEPC::Setup S = llvm::orc::SimpleRemoteEPC::Setup();
-  if (UseSharedMemory)
-    S.CreateMemoryManager =
-        [SlabAllocateSize](llvm::orc::SimpleRemoteEPC &EPC) {
-          return createSharedMemoryManager(EPC, SlabAllocateSize);
-        };
-
   return llvm::orc::SimpleRemoteEPC::Create<
       llvm::orc::FDSimpleRemoteEPCTransport>(
       std::make_unique<llvm::orc::DynamicThreadPoolTaskDispatcher>(
           std::nullopt),
-      std::move(S), *SockFD, *SockFD);
+      *SockFD, *SockFD);
 #endif
 }
 #endif // _WIN32
@@ -334,8 +319,6 @@ outOfProcessJITBuilder(const IncrementalExecutorBuilder &IncrExecutorBuilder) {
   if (!IncrExecutorBuilder.OOPExecutor.empty()) {
     // Launch an out-of-process executor locally in a child process.
     auto ResultOrErr = launchExecutor(IncrExecutorBuilder.OOPExecutor,
-                                      IncrExecutorBuilder.UseSharedMemory,
-                                      IncrExecutorBuilder.SlabAllocateSize,
                                       IncrExecutorBuilder.CustomizeFork);
     if (!ResultOrErr)
       return ResultOrErr.takeError();
@@ -344,9 +327,7 @@ outOfProcessJITBuilder(const IncrementalExecutorBuilder &IncrExecutorBuilder) {
     EPC = std::move(EPCOrErr);
   } else if (IncrExecutorBuilder.OOPExecutorConnect != "") {
 #if LLVM_ON_UNIX && LLVM_ENABLE_THREADS
-    auto EPCOrErr = connectTCPSocket(IncrExecutorBuilder.OOPExecutorConnect,
-                                     IncrExecutorBuilder.UseSharedMemory,
-                                     IncrExecutorBuilder.SlabAllocateSize);
+    auto EPCOrErr = connectTCPSocket(IncrExecutorBuilder.OOPExecutorConnect);
     if (!EPCOrErr)
       return EPCOrErr.takeError();
     EPC = std::move(*EPCOrErr);
@@ -364,6 +345,14 @@ outOfProcessJITBuilder(const IncrementalExecutorBuilder &IncrExecutorBuilder) {
     if (!JBOrErr)
       return JBOrErr.takeError();
     JB = std::move(*JBOrErr);
+
+    if (IncrExecutorBuilder.UseSharedMemory)
+      JB->setMemoryManagerCreator(
+          [SlabAllocateSize = IncrExecutorBuilder.SlabAllocateSize](
+              llvm::orc::ExecutionSession &ES) {
+            return createSharedMemoryManager(ES.getExecutorProcessControl(),
+                                             SlabAllocateSize);
+          });
   }
 
   return std::make_pair(std::move(JB), childPid);

@@ -199,6 +199,30 @@ const MappingDesc kMemoryLayout[] = {
 #define MEM_TO_SHADOW(mem) (LINEARIZE_MEM((mem)) + 0x100000000000ULL)
 #define SHADOW_TO_ORIGIN(shadow) (((uptr)(shadow)) + 0x280000000000)
 
+#elif SANITIZER_LINUX && defined(__hexagon__)
+// Hexagon 32-bit layout (fits within 3GB for QEMU user-mode):
+//   APP-1:      0x00000000-0x10000000 (256MB, program text/data/heap)
+//   ALLOCATOR:  0x10000000-0x20000000 (256MB)
+//   SHADOW-1:   0x20000000-0x40000000 (512MB, covers APP-1 + ALLOCATOR)
+//   APP-2:      0x40000000-0x50000000 (256MB, shared libs + stack)
+//   SHADOW-2:   0x60000000-0x70000000 (256MB, covers APP-2)
+//   ORIGIN-1:   0x70000000-0x90000000 (512MB, = SHADOW-1 + 0x50000000)
+//   ORIGIN-2:   0xB0000000-0xC0000000 (256MB, = SHADOW-2 + 0x50000000)
+// Shadow = addr ^ 0x20000000, origin = shadow + 0x50000000.
+const MappingDesc kMemoryLayout[] = {
+    {0x00000000, 0x10000000, MappingDesc::APP, "app-1"},
+    {0x10000000, 0x20000000, MappingDesc::ALLOCATOR, "allocator"},
+    {0x20000000, 0x40000000, MappingDesc::SHADOW, "shadow-1"},
+    {0x40000000, 0x50000000, MappingDesc::APP, "app-2"},
+    {0x50000000, 0x60000000, MappingDesc::INVALID, "invalid"},
+    {0x60000000, 0x70000000, MappingDesc::SHADOW, "shadow-2"},
+    {0x70000000, 0x90000000, MappingDesc::ORIGIN, "origin-1"},
+    {0x90000000, 0xB0000000, MappingDesc::INVALID, "invalid"},
+    {0xB0000000, 0xC0000000, MappingDesc::ORIGIN, "origin-2"},
+};
+#  define MEM_TO_SHADOW(mem) (((uptr)(mem)) ^ 0x20000000)
+#  define SHADOW_TO_ORIGIN(shadow) (((uptr)(shadow)) + 0x50000000)
+
 #elif SANITIZER_NETBSD || (SANITIZER_LINUX && SANITIZER_WORDSIZE == 64)
 
 // All of the following configurations are supported.

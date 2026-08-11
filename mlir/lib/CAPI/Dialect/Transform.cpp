@@ -299,6 +299,89 @@ void mlirTransformOpInterfaceAttachFallbackModel(
 }
 
 //===---------------------------------------------------------------------===//
+// PatternDescriptorOpInterface
+//===---------------------------------------------------------------------===//
+
+MlirTypeID mlirPatternDescriptorOpInterfaceTypeID(void) {
+  return wrap(transform::PatternDescriptorOpInterface::getInterfaceID());
+}
+
+/// Fallback model for the PatternDescriptorOpInterface that uses C API
+/// callbacks.
+class PatternDescriptorOpInterfaceFallbackModel
+    : public mlir::transform::PatternDescriptorOpInterface::FallbackModel<
+          PatternDescriptorOpInterfaceFallbackModel> {
+public:
+  /// Sets the callbacks that this FallbackModel will use.
+  /// NB: the callbacks can only be set through this method as the
+  /// RegisteredOperationName::attachInterface mechanism default-constructs
+  /// the FallbackModel without being able to provide arguments.
+  void setCallbacks(MlirPatternDescriptorOpInterfaceCallbacks callbacks) {
+    this->callbacks = callbacks;
+  }
+
+  ~PatternDescriptorOpInterfaceFallbackModel() {
+    if (callbacks.destruct)
+      callbacks.destruct(callbacks.userData);
+  }
+
+  static TypeID getInterfaceID() {
+    return transform::PatternDescriptorOpInterface::getInterfaceID();
+  }
+
+  static bool
+  classof(const mlir::transform::detail::
+              PatternDescriptorOpInterfaceInterfaceTraits::Concept *op) {
+    // Enable casting back to the FallbackModel from the Interface. This is
+    // necessary as attachInterface(...) default-constructs the FallbackModel
+    // without being able to pass in the callbacks and returns just the Concept.
+    return true;
+  }
+
+  void populatePatterns(Operation *op, RewritePatternSet &patterns) const {
+    assert(callbacks.populatePatterns && "populatePatterns callback not set");
+    callbacks.populatePatterns(wrap(op), wrap(&patterns), callbacks.userData);
+  }
+
+  void populatePatternsWithState(Operation *op, RewritePatternSet &patterns,
+                                 transform::TransformState &state) const {
+    if (callbacks.populatePatternsWithState) {
+      callbacks.populatePatternsWithState(wrap(op), wrap(&patterns),
+                                          wrap(&state), callbacks.userData);
+    } else {
+      // Default implementation: call populatePatterns without state.
+      populatePatterns(op, patterns);
+    }
+  }
+
+private:
+  MlirPatternDescriptorOpInterfaceCallbacks callbacks;
+};
+
+/// Attach a PatternDescriptorOpInterface FallbackModel to the given named
+/// operation. The FallbackModel uses the provided callbacks to implement the
+/// interface.
+void mlirPatternDescriptorOpInterfaceAttachFallbackModel(
+    MlirContext ctx, MlirStringRef opName,
+    MlirPatternDescriptorOpInterfaceCallbacks callbacks) {
+  // Look up the operation definition in the context.
+  std::optional<RegisteredOperationName> opInfo =
+      RegisteredOperationName::lookup(unwrap(opName), unwrap(ctx));
+
+  assert(opInfo.has_value() && "operation not found in context");
+
+  // NB: the following default-constructs the FallbackModel _without_ being able
+  // to provide arguments.
+  opInfo->attachInterface<PatternDescriptorOpInterfaceFallbackModel>();
+  // Cast to get the underlying FallbackModel and set the callbacks.
+  auto *model = cast<PatternDescriptorOpInterfaceFallbackModel>(
+      opInfo->getInterface<PatternDescriptorOpInterfaceFallbackModel>());
+
+  assert(model && "Failed to get PatternDescriptorOpInterfaceFallbackModel");
+  model->setCallbacks(callbacks);
+}
+
+//===---------------------------------------------------------------------===//
 // MemoryEffectsOpInterface helpers
 //===---------------------------------------------------------------------===//
 

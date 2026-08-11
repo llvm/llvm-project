@@ -38,19 +38,14 @@ REPL::~REPL() = default;
 lldb::REPLSP REPL::Create(Status &err, lldb::LanguageType language,
                           Debugger *debugger, Target *target,
                           const char *repl_options) {
-  uint32_t idx = 0;
   lldb::REPLSP ret;
 
-  while (REPLCreateInstance create_instance =
-             PluginManager::GetREPLCreateCallbackAtIndex(idx)) {
-    LanguageSet supported_languages =
-        PluginManager::GetREPLSupportedLanguagesAtIndex(idx++);
-    if (!supported_languages[language])
+  for (auto &cbs : PluginManager::GetREPLCallbacks()) {
+    if (!cbs.supported_languages[language])
       continue;
-    ret = (*create_instance)(err, language, debugger, target, repl_options);
-    if (ret) {
+    ret = (*cbs.create_callback)(err, language, debugger, target, repl_options);
+    if (ret)
       break;
-    }
   }
 
   return ret;
@@ -104,7 +99,7 @@ void REPL::IOHandlerActivated(IOHandler &io_handler, bool interactive) {
   if (process_sp && process_sp->IsAlive())
     return;
   LockedStreamFile locked_stream = io_handler.GetErrorStreamFileSP()->Lock();
-  locked_stream.Printf("REPL requires a running target process.\n");
+  locked_stream.PutCString("REPL requires a running target process.\n");
   io_handler.SetIsDone(true);
 }
 
@@ -402,7 +397,7 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
               locked_error_stream.Printf(ANSI_ESCAPE1(ANSI_FG_COLOR_RED));
               locked_error_stream.Printf(ANSI_ESCAPE1(ANSI_CTRL_BOLD));
             }
-            locked_error_stream.Printf("Execution interrupted. ");
+            locked_error_stream.PutCString("Execution interrupted. ");
             if (useColors)
               locked_error_stream.Printf(ANSI_ESCAPE1(ANSI_CTRL_NORMAL));
             locked_error_stream.Printf(
@@ -434,7 +429,7 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
             break;
 
           case lldb::eExpressionTimedOut:
-            locked_error_stream.Printf("error: timeout\n");
+            locked_error_stream.PutCString("error: timeout\n");
             if (error.AsCString())
               locked_error_stream.Printf("error: %s\n", error.AsCString());
             break;

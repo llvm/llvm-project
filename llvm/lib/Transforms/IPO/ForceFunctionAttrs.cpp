@@ -45,10 +45,46 @@ static cl::opt<std::string> CSVFilePath(
         "add to them in the form of `f1,attr1` or `f2,attr2=str`."));
 
 static bool hasConflictingFnAttr(Attribute::AttrKind Kind, Function &F) {
-  if (Kind == Attribute::AlwaysInline)
-    return F.hasFnAttribute(Attribute::NoInline);
-  if (Kind == Attribute::NoInline)
+  switch (Kind) {
+  case Attribute::AlwaysInline:
+    return F.hasFnAttribute(Attribute::NoInline) ||
+           F.hasFnAttribute(Attribute::OptimizeNone);
+
+  case Attribute::NoInline:
     return F.hasFnAttribute(Attribute::AlwaysInline);
+
+  case Attribute::OptimizeNone:
+    return F.hasFnAttribute(Attribute::AlwaysInline) ||
+           F.hasFnAttribute(Attribute::MinSize) ||
+           F.hasFnAttribute(Attribute::OptimizeForSize) ||
+           F.hasFnAttribute(Attribute::OptimizeForDebugging);
+
+  case Attribute::MinSize:
+    return F.hasFnAttribute(Attribute::OptimizeNone) ||
+           F.hasFnAttribute(Attribute::OptimizeForDebugging);
+
+  case Attribute::OptimizeForSize:
+    return F.hasFnAttribute(Attribute::OptimizeNone) ||
+           F.hasFnAttribute(Attribute::OptimizeForDebugging);
+
+  case Attribute::OptimizeForDebugging:
+    return F.hasFnAttribute(Attribute::OptimizeNone) ||
+           F.hasFnAttribute(Attribute::MinSize) ||
+           F.hasFnAttribute(Attribute::OptimizeForSize);
+
+  default:
+    return false;
+  }
+}
+
+static void addRequiredFnAttrs(Attribute::AttrKind Kind, Function &F) {
+  if (Kind == Attribute::OptimizeNone && !F.hasFnAttribute(Attribute::NoInline))
+    F.addFnAttr(Attribute::NoInline);
+}
+
+static bool wouldRemoveRequiredFnAttr(Attribute::AttrKind Kind, Function &F) {
+  if (Kind == Attribute::NoInline && F.hasFnAttribute(Attribute::OptimizeNone))
+    return true;
   return false;
 }
 
@@ -80,12 +116,14 @@ static void forceAttributes(Function &F) {
     if (Kind == Attribute::None || F.hasFnAttribute(Kind) ||
         hasConflictingFnAttr(Kind, F))
       continue;
+    addRequiredFnAttrs(Kind, F);
     F.addFnAttr(Kind);
   }
 
   for (const auto &S : ForceRemoveAttributes) {
     auto Kind = ParseFunctionAndAttr(S);
-    if (Kind == Attribute::None || !F.hasFnAttribute(Kind))
+    if (Kind == Attribute::None || !F.hasFnAttribute(Kind) ||
+        wouldRemoveRequiredFnAttr(Kind, F))
       continue;
     F.removeFnAttr(Kind);
   }
@@ -128,6 +166,7 @@ PreservedAnalyses ForceFunctionAttrsPass::run(Module &M,
               !hasConflictingFnAttr(AttrKind, *Func)) {
             // TODO: There could be string attributes without a value, we should
             // support those, too.
+            addRequiredFnAttrs(AttrKind, *Func);
             Func->addFnAttr(AttrKind);
             Changed = true;
           } else

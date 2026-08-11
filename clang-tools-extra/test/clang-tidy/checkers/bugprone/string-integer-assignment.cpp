@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-string-integer-assignment %t -- -- -isystem %clang_tidy_headers -fno-delayed-template-parsing
+// RUN: %check_clang_tidy %s bugprone-string-integer-assignment %t -- -- -fno-delayed-template-parsing
 #include <string>
 
 namespace std {

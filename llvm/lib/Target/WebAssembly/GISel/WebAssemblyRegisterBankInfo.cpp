@@ -13,6 +13,9 @@
 
 #include "WebAssemblyRegisterBankInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "WebAssemblyRegisterInfo.h"
+#include "WebAssemblySubtarget.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 
 #define GET_TARGET_REGBANK_IMPL
@@ -20,7 +23,22 @@
 #include "WebAssemblyGenRegisterBank.inc"
 
 namespace llvm {
-namespace WebAssembly {} // namespace WebAssembly
+namespace WebAssembly {
+enum PartialMappingIdx {
+  PMI_None = -1,
+  PMI_I32 = 1,
+  PMI_I64,
+  PMI_F32,
+  PMI_F64,
+  PMI_Min = PMI_I32,
+};
+
+const RegisterBankInfo::PartialMapping PartMappings[]{{0, 32, I32RegBank},
+                                                      {0, 64, I64RegBank},
+                                                      {0, 32, F32RegBank},
+                                                      {0, 64, F64RegBank}};
+
+} // namespace WebAssembly
 } // namespace llvm
 
 using namespace llvm;
@@ -30,5 +48,72 @@ WebAssemblyRegisterBankInfo::WebAssemblyRegisterBankInfo(
 
 const RegisterBankInfo::InstructionMapping &
 WebAssemblyRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
-  return getInvalidInstructionMapping();
+  unsigned Opc = MI.getOpcode();
+  const MachineFunction &MF = *MI.getParent()->getParent();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  if ((Opc != TargetOpcode::COPY && !isPreISelGenericOpcode(Opc)) ||
+      Opc == TargetOpcode::G_PHI) {
+    const RegisterBankInfo::InstructionMapping &Mapping =
+        getInstrMappingImpl(MI);
+    if (Mapping.isValid())
+      return Mapping;
+  }
+
+  const unsigned NumOperands = MI.isCopyLike() ? 1 : MI.getNumOperands();
+  unsigned MappingID = DefaultMappingID;
+
+  // Track the size and bank of each register.  We don't do partial mappings.
+  SmallVector<unsigned, 8> OpSize(NumOperands);
+  SmallVector<WebAssembly::PartialMappingIdx, 8> OpRegBankIdx(NumOperands);
+  for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
+    auto &MO = MI.getOperand(Idx);
+    if (!MO.isReg() || !MO.getReg())
+      continue;
+
+    LLT Ty = MRI.getType(MO.getReg());
+    if (!Ty.isValid())
+      continue;
+
+    OpSize[Idx] = Ty.getSizeInBits().getKnownMinValue();
+
+    if (Ty.isInteger()) {
+      if (OpSize[Idx] == 32) {
+        OpRegBankIdx[Idx] = WebAssembly::PMI_I32;
+      } else if (OpSize[Idx] == 64) {
+        OpRegBankIdx[Idx] = WebAssembly::PMI_I64;
+      }
+    } else if (Ty.isFloatIEEE()) {
+      if (OpSize[Idx] == 32) {
+        OpRegBankIdx[Idx] = WebAssembly::PMI_F32;
+      } else if (OpSize[Idx] == 64) {
+        OpRegBankIdx[Idx] = WebAssembly::PMI_F64;
+      }
+    }
+  }
+
+  SmallVector<const ValueMapping *, 8> OpdsMapping(NumOperands);
+  for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
+    if (MI.getOperand(Idx).isReg() && MI.getOperand(Idx).getReg()) {
+      LLT Ty = MRI.getType(MI.getOperand(Idx).getReg());
+      if (!Ty.isValid())
+        continue;
+
+      if (OpRegBankIdx[Idx] <= 0) {
+        return getInvalidInstructionMapping();
+      }
+
+      const auto &Mapping = getValueMapping(
+          &WebAssembly::PartMappings[OpRegBankIdx[Idx] - WebAssembly::PMI_Min],
+          1);
+
+      if (!Mapping.isValid())
+        return getInvalidInstructionMapping();
+
+      OpdsMapping[Idx] = &Mapping;
+    }
+  }
+
+  return getInstructionMapping(MappingID, /*Cost=*/1,
+                               getOperandsMapping(OpdsMapping), NumOperands);
 }

@@ -19,6 +19,7 @@
 #include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 
 #include <memory>
@@ -49,10 +50,24 @@ public:
   /// Returns ABI info helper for the target.
   const ABIInfo &getABIInfo() const { return *info; }
 
+  /// Returns true if the target supports math library calls.
+  virtual bool supportsLibCall() const { return true; }
+
+  /// Get target favored AST address space of a global variable for languages
+  /// other than OpenCL and CUDA.
+  /// If \p d is nullptr, returns the default target favored address space
+  /// for global variable.
+  virtual clang::LangAS getGlobalVarAddressSpace(CIRGenModule &cgm,
+                                                 const clang::VarDecl *d) const;
+
   /// Get the address space for alloca.
   virtual mlir::ptr::MemorySpaceAttrInterface getCIRAllocaAddressSpace() const {
     return cir::LangAddressSpaceAttr::get(&info->cgt.getMLIRContext(),
                                           cir::LangAddressSpace::Default);
+  }
+
+  virtual mlir::Type getCUDADeviceBuiltinSurfaceDeviceType() const {
+    return nullptr;
   }
 
   /// Determine whether a call to an unprototyped functions under
@@ -99,6 +114,33 @@ public:
   /// right thing when calling a function with no know signature.
   virtual bool isNoProtoCallVariadic(const FunctionNoProtoType *fnType) const;
 
+  /// Returns true if inlining the function call would produce incorrect code
+  /// for the current target and should be ignored (even with the always_inline
+  /// or flatten attributes).
+  ///
+  /// Note: This probably should be handled in LLVM. However, the LLVM
+  /// `alwaysinline` attribute currently means the inliner will ignore
+  /// mismatched attributes (which sometimes can generate invalid code). So,
+  /// this hook allows targets to avoid adding the LLVM `alwaysinline` attribute
+  /// based on C/C++ attributes or other target-specific reasons.
+  ///
+  /// See previous discussion here:
+  /// https://discourse.llvm.org/t/rfc-avoid-inlining-alwaysinline-functions-when-they-cannot-be-inlined/79528
+  virtual bool
+  wouldInliningViolateFunctionCallABI(const FunctionDecl *Caller,
+                                      const FunctionDecl *Callee) const {
+    return false;
+  }
+
+  /// Provides a convenient hook to handle extra target-specific attributes
+  /// for the given global.
+  /// In OG, the function receives an llvm::GlobalValue. However, functions
+  /// and global variables are separate types in Clang IR, so we use a general
+  /// mlir::Operation*.
+  virtual void setTargetAttributes(const clang::Decl *decl,
+                                   mlir::Operation *global,
+                                   CIRGenModule &module) const {}
+
   virtual bool isScalarizableAsmOperand(CIRGenFunction &cgf,
                                         mlir::Type ty) const {
     return false;
@@ -116,9 +158,22 @@ public:
   }
 };
 
+std::unique_ptr<TargetCIRGenInfo>
+createAMDGPUTargetCIRGenInfo(CIRGenTypes &cgt);
+
+/// Check if AMDGPU protected visibility is required.
+bool requiresAMDGPUProtectedVisibility(const clang::Decl *d,
+                                       cir::VisibilityKind visibility);
+
+/// Set AMDGPU-specific function attributes for HIP kernels.
+void setAMDGPUTargetFunctionAttributes(const clang::Decl *decl,
+                                       cir::FuncOp func, CIRGenModule &cgm);
+
 std::unique_ptr<TargetCIRGenInfo> createX8664TargetCIRGenInfo(CIRGenTypes &cgt);
 
 std::unique_ptr<TargetCIRGenInfo> createNVPTXTargetCIRGenInfo(CIRGenTypes &cgt);
+
+std::unique_ptr<TargetCIRGenInfo> createSPIRVTargetCIRGenInfo(CIRGenTypes &cgt);
 
 } // namespace clang::CIRGen
 

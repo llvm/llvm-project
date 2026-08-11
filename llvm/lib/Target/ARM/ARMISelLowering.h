@@ -307,6 +307,8 @@ class VectorType;
       return V.getValueType().isScalarInteger();
     }
 
+    bool hasAndNot(SDValue Y) const override;
+
     bool
     isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const override;
     bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
@@ -326,10 +328,10 @@ class VectorType;
     bool shouldConvertConstantLoadToIntImm(const APInt &Imm,
                                            Type *Ty) const override;
 
-    /// Return true if EXTRACT_SUBVECTOR is cheap for this result type
-    /// with this index.
-    bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
-                                 unsigned Index) const override;
+    /// Return the cost of EXTRACT_SUBVECTOR for this result type with this
+    /// index.
+    ExtractSubvectorCost getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
+                                                 unsigned Index) const override;
 
     bool shouldFormOverflowOp(unsigned Opcode, EVT VT,
                               bool MathUsed) const override {
@@ -400,9 +402,12 @@ class VectorType;
     bool canCombineStoreAndExtract(Type *VectorTy, Value *Idx,
                                    unsigned &Cost) const override;
 
-    bool canCreateUndefOrPoisonForTargetNode(
-        SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
-        bool PoisonOnly, bool ConsiderFlags, unsigned Depth) const override;
+    bool canCreateUndefOrPoisonForTargetNode(SDValue Op,
+                                             const APInt &DemandedElts,
+                                             const SelectionDAG &DAG,
+                                             UndefPoisonKind Kind,
+                                             bool ConsiderFlags,
+                                             unsigned Depth) const override;
 
     bool canMergeStoresTo(unsigned AddressSpace, EVT MemVT,
                           const MachineFunction &MF) const override {

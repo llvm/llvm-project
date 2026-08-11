@@ -813,7 +813,8 @@ private:
   void addScopeChangesHandling(LocalScope::const_iterator SrcPos,
                                LocalScope::const_iterator DstPos,
                                Stmt *S);
-  void addFullExprCleanupMarker(TempDtorContext &Context);
+  void addFullExprCleanupMarker(TempDtorContext &Context,
+                                const ExprWithCleanups *CleanupExpr);
   CFGBlock *createScopeChangesHandlingBlock(LocalScope::const_iterator SrcPos,
                                             CFGBlock *SrcBlk,
                                             LocalScope::const_iterator DstPost,
@@ -1830,16 +1831,22 @@ CFGBlock *CFGBuilder::addInitializer(CXXCtorInitializer *I) {
   // after initialization finishes.
   Expr *Init = I->getInit();
   if (Init) {
-    HasTemporaries = isa<ExprWithCleanups>(Init);
+    Expr *ActualInit = Init;
+    if (BuildOpts.AddCXXDefaultInitExprInCtors)
+      if (auto *DIE = dyn_cast<CXXDefaultInitExpr>(Init))
+        ActualInit = DIE->getExpr();
+
+    HasTemporaries = isa<ExprWithCleanups>(ActualInit);
 
     if (HasTemporaries &&
         (BuildOpts.AddTemporaryDtors || BuildOpts.AddLifetime)) {
       // Generate destructors for temporaries in initialization expression.
       TempDtorContext Context;
-      VisitForTemporaries(cast<ExprWithCleanups>(Init)->getSubExpr(),
+      auto *FullExprWithCleanups = cast<ExprWithCleanups>(ActualInit);
+      VisitForTemporaries(FullExprWithCleanups->getSubExpr(),
                           /*ExternallyDestructed=*/false, Context);
 
-      addFullExprCleanupMarker(Context);
+      addFullExprCleanupMarker(Context, FullExprWithCleanups);
     }
   }
 
@@ -1856,11 +1863,6 @@ CFGBlock *CFGBuilder::addInitializer(CXXCtorInitializer *I) {
         ConstructionContextLayer::create(cfg->getBumpVectorContext(), I),
         AILEInit ? AILEInit : Init);
 
-    if (HasTemporaries) {
-      // For expression with temporaries go directly to subexpression to omit
-      // generating destructors for the second time.
-      return Visit(cast<ExprWithCleanups>(Init)->getSubExpr());
-    }
     if (BuildOpts.AddCXXDefaultInitExprInCtors) {
       if (CXXDefaultInitExpr *Default = dyn_cast<CXXDefaultInitExpr>(Init)) {
         // In general, appending the expression wrapped by a CXXDefaultInitExpr
@@ -1868,11 +1870,20 @@ CFGBlock *CFGBuilder::addInitializer(CXXCtorInitializer *I) {
         // here is safe because there's only one initializer per field.
         autoCreateBlock();
         appendStmt(Block, Default);
-        if (Stmt *Child = Default->getExpr())
+        if (Stmt *Child = Default->getExpr()) {
+          if (HasTemporaries)
+            Child = cast<ExprWithCleanups>(Child)->getSubExpr();
           if (CFGBlock *R = Visit(Child))
             Block = R;
+        }
         return Block;
       }
+    }
+
+    if (HasTemporaries) {
+      // For expression with temporaries go directly to subexpression to omit
+      // generating destructors for the second time.
+      return Visit(cast<ExprWithCleanups>(Init)->getSubExpr());
     }
     return Visit(Init);
   }
@@ -2087,7 +2098,8 @@ void CFGBuilder::addScopeChangesHandling(LocalScope::const_iterator SrcPos,
   addAutomaticObjHandling(SrcPos, BasePos, S);
 }
 
-void CFGBuilder::addFullExprCleanupMarker(TempDtorContext &Context) {
+void CFGBuilder::addFullExprCleanupMarker(TempDtorContext &Context,
+                                          const ExprWithCleanups *CleanupExpr) {
   CFGFullExprCleanup::MTEVecTy *ExpiringMTEs = nullptr;
   BumpVectorContext &BVC = cfg->getBumpVectorContext();
 
@@ -2098,7 +2110,7 @@ void CFGBuilder::addFullExprCleanupMarker(TempDtorContext &Context) {
         CFGFullExprCleanup::MTEVecTy(BVC, NumCollected);
     for (const MaterializeTemporaryExpr *MTE : Context.CollectedMTEs)
       ExpiringMTEs->push_back(MTE, BVC);
-    Block->appendFullExprCleanup(ExpiringMTEs, BVC);
+    Block->appendFullExprCleanup(ExpiringMTEs, CleanupExpr, BVC);
   }
 }
 
@@ -2355,6 +2367,7 @@ CFGBlock *CFGBuilder::Visit(Stmt * S, AddStmtChoice asc,
       return VisitConditionalOperator(cast<BinaryConditionalOperator>(S), asc);
 
     case Stmt::BinaryOperatorClass:
+    case Stmt::CompoundAssignOperatorClass:
       return VisitBinaryOperator(cast<BinaryOperator>(S), asc);
 
     case Stmt::BlockExprClass:
@@ -3164,10 +3177,11 @@ CFGBlock *CFGBuilder::VisitDeclSubExpr(DeclStmt *DS) {
         (BuildOpts.AddTemporaryDtors || BuildOpts.AddLifetime)) {
       // Generate destructors for temporaries in initialization expression.
       TempDtorContext Context;
-      VisitForTemporaries(cast<ExprWithCleanups>(Init)->getSubExpr(),
+      auto *FullExprWithCleanups = cast<ExprWithCleanups>(Init);
+      VisitForTemporaries(FullExprWithCleanups->getSubExpr(),
                           /*ExternallyDestructed=*/true, Context);
 
-      addFullExprCleanupMarker(Context);
+      addFullExprCleanupMarker(Context, FullExprWithCleanups);
     }
   }
 
@@ -3604,11 +3618,12 @@ CFGBlock *CFGBuilder::VisitBlockExpr(BlockExpr *E, AddStmtChoice asc) {
 CFGBlock *CFGBuilder::VisitLambdaExpr(LambdaExpr *E, AddStmtChoice asc) {
   CFGBlock *LastBlock = VisitNoRecurse(E, asc);
 
-  unsigned Idx = 0;
-  for (LambdaExpr::capture_init_iterator it = E->capture_init_begin(),
-                                         et = E->capture_init_end();
-       it != et; ++it, ++Idx) {
-    if (Expr *Init = *it) {
+  // Visit the capture initializers in reverse order so they appear in
+  // left-to-right (natural) order in the CFG.
+  unsigned Idx = E->capture_size();
+  for (Expr *Init : reverse(E->capture_inits())) {
+    --Idx;
+    if (Init) {
       // If the initializer is an ArrayInitLoopExpr, we want to extract the
       // initializer, that's used for each element.
       auto *AILEInit = extractElementInitializerFromNestedAILE(
@@ -4179,9 +4194,7 @@ CFGBlock *CFGBuilder::VisitArrayInitLoopExpr(ArrayInitLoopExpr *A,
   if (CFGBlock *R = Visit(A->getSubExpr()))
     B = R;
 
-  auto *OVE = dyn_cast<OpaqueValueExpr>(A->getCommonExpr());
-  assert(OVE && "ArrayInitLoopExpr->getCommonExpr() should be wrapped in an "
-                "OpaqueValueExpr!");
+  OpaqueValueExpr *OVE = A->getCommonExpr();
   if (CFGBlock *R = Visit(OVE->getSourceExpr()))
     B = R;
 
@@ -4983,9 +4996,10 @@ CFGBlock *CFGBuilder::VisitExprWithCleanups(ExprWithCleanups *E,
     // If adding implicit destructors visit the full expression for adding
     // destructors of temporaries.
     TempDtorContext Context;
-    VisitForTemporaries(E->getSubExpr(), ExternallyDestructed, Context);
+    Expr *FullExpr = E->getSubExpr();
+    VisitForTemporaries(FullExpr, ExternallyDestructed, Context);
 
-    addFullExprCleanupMarker(Context);
+    addFullExprCleanupMarker(Context, E);
 
     // Full expression has to be added as CFGStmt so it will be sequenced
     // before destructors of it's temporaries.
@@ -5138,6 +5152,7 @@ tryAgain:
       return VisitChildrenForTemporaries(E, ExternallyDestructed, Context);
 
     case Stmt::BinaryOperatorClass:
+    case Stmt::CompoundAssignOperatorClass:
       return VisitBinaryOperatorForTemporaries(cast<BinaryOperator>(E),
                                                ExternallyDestructed, Context);
 
@@ -6458,7 +6473,7 @@ bool CFGBlock::isInevitablySinking() const {
     // If at least one path reaches the CFG exit, it means that control is
     // returned to the caller. For now, say that we are not sure what
     // happens next. If necessary, this can be improved to analyze
-    // the parent StackFrameContext's call site in a similar manner.
+    // the parent StackFrame's call site in a similar manner.
     if (Blk == &Cfg.getExit())
       return false;
 

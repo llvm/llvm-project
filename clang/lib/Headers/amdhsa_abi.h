@@ -19,7 +19,8 @@ typedef struct __attribute__((aligned(8))) amdhsa_implicit_kernarg_v5 {
   char reserved0[16];
   uint64_t global_offset[3];
   uint16_t grid_dims;
-  char reserved1[14];
+  char reserved1[6];
+  __attribute__((opencl_global)) void *printf_buffer;
   __attribute__((opencl_global)) void *hostcall_buffer;
   __attribute__((opencl_global)) void *multigrid_sync_arg;
   __attribute__((opencl_global)) void *heap_v1;
@@ -59,6 +60,8 @@ _Static_assert(offsetof(amdhsa_implicit_kernarg_v5, global_offset[1]) == 48,
 _Static_assert(offsetof(amdhsa_implicit_kernarg_v5, global_offset[2]) == 56,
                "wrong offset");
 _Static_assert(offsetof(amdhsa_implicit_kernarg_v5, grid_dims) == 64,
+               "wrong offset");
+_Static_assert(offsetof(amdhsa_implicit_kernarg_v5, printf_buffer) == 72,
                "wrong offset");
 _Static_assert(offsetof(amdhsa_implicit_kernarg_v5, hostcall_buffer) == 80,
                "wrong offset");

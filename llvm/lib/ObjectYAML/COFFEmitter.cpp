@@ -14,6 +14,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/DebugInfo/CodeView/StringsAndChecksums.h"
+#include "llvm/ObjectYAML/ContiguousBlobAccumulator.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/BinaryStreamWriter.h"
@@ -25,8 +26,11 @@
 #include <vector>
 
 using namespace llvm;
+using llvm::yaml::ContiguousBlobAccumulator;
 
 namespace {
+
+constexpr auto LittleEndian = llvm::endianness::little;
 
 /// This parses a yaml stream that represents a COFF object file.
 /// See docs/yaml2obj for the yaml scheema.
@@ -293,44 +297,10 @@ static bool layoutCOFF(COFFParser &CP) {
   else
     CP.Obj.Header.PointerToSymbolTable = 0;
 
-  *reinterpret_cast<support::ulittle32_t *>(&CP.StringTable[0]) =
+  *reinterpret_cast<support::ulittle32_t *>(CP.StringTable.data()) =
       CP.StringTable.size();
 
   return true;
-}
-
-template <typename value_type> struct binary_le_impl {
-  value_type Value;
-  binary_le_impl(value_type V) : Value(V) {}
-};
-
-template <typename value_type>
-raw_ostream &operator<<(raw_ostream &OS,
-                        const binary_le_impl<value_type> &BLE) {
-  char Buffer[sizeof(BLE.Value)];
-  support::endian::write<value_type, llvm::endianness::little>(Buffer,
-                                                               BLE.Value);
-  OS.write(Buffer, sizeof(BLE.Value));
-  return OS;
-}
-
-template <typename value_type>
-binary_le_impl<value_type> binary_le(value_type V) {
-  return binary_le_impl<value_type>(V);
-}
-
-template <size_t NumBytes> struct zeros_impl {};
-
-template <size_t NumBytes>
-raw_ostream &operator<<(raw_ostream &OS, const zeros_impl<NumBytes> &) {
-  char Buffer[NumBytes];
-  memset(Buffer, 0, sizeof(Buffer));
-  OS.write(Buffer, sizeof(Buffer));
-  return OS;
-}
-
-template <typename T> zeros_impl<sizeof(T)> zeros(const T &) {
-  return zeros_impl<sizeof(T)>();
 }
 
 template <typename T>
@@ -388,7 +358,7 @@ static uint32_t initializeOptionalHeader(COFFParser &CP, uint16_t Magic,
   return BaseOfData;
 }
 
-static bool writeCOFF(COFFParser &CP, raw_ostream &OS) {
+static bool writeCOFF(COFFParser &CP, ContiguousBlobAccumulator &CBA) {
   if (CP.isPE()) {
     // PE files start with a DOS stub.
     object::dos_header DH;
@@ -405,45 +375,47 @@ static bool writeCOFF(COFFParser &CP, raw_ostream &OS) {
     DH.AddressOfNewExeHeader = DOSStubSize;
 
     // Write out our DOS stub.
-    OS.write(reinterpret_cast<char *>(&DH), sizeof(DH));
+    CBA.write(reinterpret_cast<const char *>(&DH), sizeof(DH));
     // Write padding until we reach the position of where our PE signature
     // should live.
-    OS.write_zeros(DOSStubSize - sizeof(DH));
+    CBA.writeZeros(DOSStubSize - sizeof(DH));
     // Write out the PE signature.
-    OS.write(COFF::PEMagic, sizeof(COFF::PEMagic));
+    CBA.write(COFF::PEMagic, sizeof(COFF::PEMagic));
   }
   if (CP.useBigObj()) {
-    OS << binary_le(static_cast<uint16_t>(COFF::IMAGE_FILE_MACHINE_UNKNOWN))
-       << binary_le(static_cast<uint16_t>(0xffff))
-       << binary_le(
-              static_cast<uint16_t>(COFF::BigObjHeader::MinBigObjectVersion))
-       << binary_le(CP.Obj.Header.Machine)
-       << binary_le(CP.Obj.Header.TimeDateStamp);
-    OS.write(COFF::BigObjMagic, sizeof(COFF::BigObjMagic));
-    OS << zeros(uint32_t(0)) << zeros(uint32_t(0)) << zeros(uint32_t(0))
-       << zeros(uint32_t(0)) << binary_le(CP.Obj.Header.NumberOfSections)
-       << binary_le(CP.Obj.Header.PointerToSymbolTable)
-       << binary_le(CP.Obj.Header.NumberOfSymbols);
+    CBA.write(static_cast<uint16_t>(COFF::IMAGE_FILE_MACHINE_UNKNOWN),
+              LittleEndian);
+    CBA.write(static_cast<uint16_t>(0xffff), LittleEndian);
+    CBA.write(static_cast<uint16_t>(COFF::BigObjHeader::MinBigObjectVersion),
+              LittleEndian);
+    CBA.write(CP.Obj.Header.Machine, LittleEndian);
+    CBA.write(CP.Obj.Header.TimeDateStamp, LittleEndian);
+    CBA.write(COFF::BigObjMagic, sizeof(COFF::BigObjMagic));
+    CBA.writeZeros(4 * sizeof(uint32_t));
+    CBA.write(CP.Obj.Header.NumberOfSections, LittleEndian);
+    CBA.write(CP.Obj.Header.PointerToSymbolTable, LittleEndian);
+    CBA.write(CP.Obj.Header.NumberOfSymbols, LittleEndian);
   } else {
-    OS << binary_le(CP.Obj.Header.Machine)
-       << binary_le(static_cast<int16_t>(CP.Obj.Header.NumberOfSections))
-       << binary_le(CP.Obj.Header.TimeDateStamp)
-       << binary_le(CP.Obj.Header.PointerToSymbolTable)
-       << binary_le(CP.Obj.Header.NumberOfSymbols)
-       << binary_le(CP.Obj.Header.SizeOfOptionalHeader)
-       << binary_le(CP.Obj.Header.Characteristics);
+    CBA.write(CP.Obj.Header.Machine, LittleEndian);
+    CBA.write(static_cast<int16_t>(CP.Obj.Header.NumberOfSections),
+              LittleEndian);
+    CBA.write(CP.Obj.Header.TimeDateStamp, LittleEndian);
+    CBA.write(CP.Obj.Header.PointerToSymbolTable, LittleEndian);
+    CBA.write(CP.Obj.Header.NumberOfSymbols, LittleEndian);
+    CBA.write(CP.Obj.Header.SizeOfOptionalHeader, LittleEndian);
+    CBA.write(CP.Obj.Header.Characteristics, LittleEndian);
   }
   if (CP.isPE()) {
     if (CP.is64Bit()) {
       object::pe32plus_header PEH;
       initializeOptionalHeader(CP, COFF::PE32Header::PE32_PLUS, &PEH);
-      OS.write(reinterpret_cast<char *>(&PEH), sizeof(PEH));
+      CBA.write(reinterpret_cast<const char *>(&PEH), sizeof(PEH));
     } else {
       object::pe32_header PEH;
       uint32_t BaseOfData =
           initializeOptionalHeader(CP, COFF::PE32Header::PE32, &PEH);
       PEH.BaseOfData = BaseOfData;
-      OS.write(reinterpret_cast<char *>(&PEH), sizeof(PEH));
+      CBA.write(reinterpret_cast<const char *>(&PEH), sizeof(PEH));
     }
     for (uint32_t I = 0; I < CP.Obj.OptionalHeader->Header.NumberOfRvaAndSize;
          ++I) {
@@ -451,30 +423,29 @@ static bool writeCOFF(COFFParser &CP, raw_ostream &OS) {
           CP.Obj.OptionalHeader->DataDirectories;
       uint32_t NumDataDir = std::size(CP.Obj.OptionalHeader->DataDirectories);
       if (I >= NumDataDir || !DataDirectories[I]) {
-        OS << zeros(uint32_t(0));
-        OS << zeros(uint32_t(0));
+        CBA.writeZeros(2 * sizeof(uint32_t));
       } else {
-        OS << binary_le(DataDirectories[I]->RelativeVirtualAddress);
-        OS << binary_le(DataDirectories[I]->Size);
+        CBA.write(DataDirectories[I]->RelativeVirtualAddress, LittleEndian);
+        CBA.write(DataDirectories[I]->Size, LittleEndian);
       }
     }
   }
 
-  assert(OS.tell() == CP.SectionTableStart);
+  assert(CBA.getOffset() == CP.SectionTableStart);
   // Output section table.
   for (const COFFYAML::Section &S : CP.Obj.Sections) {
-    OS.write(S.Header.Name, COFF::NameSize);
-    OS << binary_le(S.Header.VirtualSize)
-       << binary_le(S.Header.VirtualAddress)
-       << binary_le(S.Header.SizeOfRawData)
-       << binary_le(S.Header.PointerToRawData)
-       << binary_le(S.Header.PointerToRelocations)
-       << binary_le(S.Header.PointerToLineNumbers)
-       << binary_le(S.Header.NumberOfRelocations)
-       << binary_le(S.Header.NumberOfLineNumbers)
-       << binary_le(S.Header.Characteristics);
+    CBA.write(S.Header.Name, COFF::NameSize);
+    CBA.write(S.Header.VirtualSize, LittleEndian);
+    CBA.write(S.Header.VirtualAddress, LittleEndian);
+    CBA.write(S.Header.SizeOfRawData, LittleEndian);
+    CBA.write(S.Header.PointerToRawData, LittleEndian);
+    CBA.write(S.Header.PointerToRelocations, LittleEndian);
+    CBA.write(S.Header.PointerToLineNumbers, LittleEndian);
+    CBA.write(S.Header.NumberOfRelocations, LittleEndian);
+    CBA.write(S.Header.NumberOfLineNumbers, LittleEndian);
+    CBA.write(S.Header.Characteristics, LittleEndian);
   }
-  assert(OS.tell() == CP.SectionTableStart + CP.SectionTableSize);
+  assert(CBA.getOffset() == CP.SectionTableStart + CP.SectionTableSize);
 
   unsigned CurSymbol = 0;
   StringMap<unsigned> SymbolTableIndexMap;
@@ -487,18 +458,21 @@ static bool writeCOFF(COFFParser &CP, raw_ostream &OS) {
   for (const COFFYAML::Section &S : CP.Obj.Sections) {
     if (S.Header.SizeOfRawData == 0 || S.Header.PointerToRawData == 0)
       continue;
-    assert(S.Header.PointerToRawData >= OS.tell());
-    OS.write_zeros(S.Header.PointerToRawData - OS.tell());
+    assert(S.Header.PointerToRawData >= CBA.getOffset());
+    CBA.writeZeros(S.Header.PointerToRawData - CBA.getOffset());
     for (auto E : S.StructuredData)
-      E.writeAsBinary(OS);
-    S.SectionData.writeAsBinary(OS);
-    assert(S.Header.SizeOfRawData >= S.SectionData.binary_size());
-    OS.write_zeros(S.Header.PointerToRawData + S.Header.SizeOfRawData -
-                   OS.tell());
-    if (S.Header.Characteristics & COFF::IMAGE_SCN_LNK_NRELOC_OVFL)
-      OS << binary_le<uint32_t>(/*VirtualAddress=*/ S.Relocations.size() + 1)
-         << binary_le<uint32_t>(/*SymbolTableIndex=*/ 0)
-         << binary_le<uint16_t>(/*Type=*/ 0);
+      E.writeAsBinary(CBA);
+    CBA.writeAsBinary(S.SectionData);
+    assert(S.Header.PointerToRawData + S.Header.SizeOfRawData >=
+           CBA.getOffset());
+    CBA.writeZeros(S.Header.PointerToRawData + S.Header.SizeOfRawData -
+                   CBA.getOffset());
+    if (S.Header.Characteristics & COFF::IMAGE_SCN_LNK_NRELOC_OVFL) {
+      CBA.write<uint32_t>(/*VirtualAddress=*/S.Relocations.size() + 1,
+                          LittleEndian);
+      CBA.write<uint32_t>(/*SymbolTableIndex=*/0, LittleEndian);
+      CBA.write<uint16_t>(/*Type=*/0, LittleEndian);
+    }
     for (const COFFYAML::Relocation &R : S.Relocations) {
       uint32_t SymbolTableIndex;
       if (R.SymbolTableIndex) {
@@ -509,46 +483,47 @@ static bool writeCOFF(COFFParser &CP, raw_ostream &OS) {
       } else {
         SymbolTableIndex = SymbolTableIndexMap[R.SymbolName];
       }
-      OS << binary_le(R.VirtualAddress) << binary_le(SymbolTableIndex)
-         << binary_le(R.Type);
+      CBA.write(R.VirtualAddress, LittleEndian);
+      CBA.write(SymbolTableIndex, LittleEndian);
+      CBA.write(R.Type, LittleEndian);
     }
   }
 
   // Output symbol table.
-
   for (std::vector<COFFYAML::Symbol>::const_iterator i = CP.Obj.Symbols.begin(),
                                                      e = CP.Obj.Symbols.end();
        i != e; ++i) {
-    OS.write(i->Header.Name, COFF::NameSize);
-    OS << binary_le(i->Header.Value);
+    CBA.write(i->Header.Name, COFF::NameSize);
+    CBA.write(i->Header.Value, LittleEndian);
     if (CP.useBigObj())
-      OS << binary_le(i->Header.SectionNumber);
+      CBA.write(i->Header.SectionNumber, LittleEndian);
     else
-      OS << binary_le(static_cast<int16_t>(i->Header.SectionNumber));
-    OS << binary_le(i->Header.Type) << binary_le(i->Header.StorageClass)
-       << binary_le(i->Header.NumberOfAuxSymbols);
+      CBA.write(static_cast<int16_t>(i->Header.SectionNumber), LittleEndian);
+    CBA.write(i->Header.Type, LittleEndian);
+    CBA.write(i->Header.StorageClass, LittleEndian);
+    CBA.write(i->Header.NumberOfAuxSymbols, LittleEndian);
 
     if (i->FunctionDefinition) {
-      OS << binary_le(i->FunctionDefinition->TagIndex)
-         << binary_le(i->FunctionDefinition->TotalSize)
-         << binary_le(i->FunctionDefinition->PointerToLinenumber)
-         << binary_le(i->FunctionDefinition->PointerToNextFunction)
-         << zeros(i->FunctionDefinition->unused);
-      OS.write_zeros(CP.getSymbolSize() - COFF::Symbol16Size);
+      CBA.write(i->FunctionDefinition->TagIndex, LittleEndian);
+      CBA.write(i->FunctionDefinition->TotalSize, LittleEndian);
+      CBA.write(i->FunctionDefinition->PointerToLinenumber, LittleEndian);
+      CBA.write(i->FunctionDefinition->PointerToNextFunction, LittleEndian);
+      CBA.writeZeros(sizeof(i->FunctionDefinition->unused));
+      CBA.writeZeros(CP.getSymbolSize() - COFF::Symbol16Size);
     }
     if (i->bfAndefSymbol) {
-      OS << zeros(i->bfAndefSymbol->unused1)
-         << binary_le(i->bfAndefSymbol->Linenumber)
-         << zeros(i->bfAndefSymbol->unused2)
-         << binary_le(i->bfAndefSymbol->PointerToNextFunction)
-         << zeros(i->bfAndefSymbol->unused3);
-      OS.write_zeros(CP.getSymbolSize() - COFF::Symbol16Size);
+      CBA.writeZeros(sizeof(i->bfAndefSymbol->unused1));
+      CBA.write(i->bfAndefSymbol->Linenumber, LittleEndian);
+      CBA.writeZeros(sizeof(i->bfAndefSymbol->unused2));
+      CBA.write(i->bfAndefSymbol->PointerToNextFunction, LittleEndian);
+      CBA.writeZeros(sizeof(i->bfAndefSymbol->unused3));
+      CBA.writeZeros(CP.getSymbolSize() - COFF::Symbol16Size);
     }
     if (i->WeakExternal) {
-      OS << binary_le(i->WeakExternal->TagIndex)
-         << binary_le(i->WeakExternal->Characteristics)
-         << zeros(i->WeakExternal->unused);
-      OS.write_zeros(CP.getSymbolSize() - COFF::Symbol16Size);
+      CBA.write(i->WeakExternal->TagIndex, LittleEndian);
+      CBA.write(i->WeakExternal->Characteristics, LittleEndian);
+      CBA.writeZeros(sizeof(i->WeakExternal->unused));
+      CBA.writeZeros(CP.getSymbolSize() - COFF::Symbol16Size);
     }
     if (!i->File.empty()) {
       unsigned SymbolSize = CP.getSymbolSize();
@@ -556,31 +531,34 @@ static bool writeCOFF(COFFParser &CP, raw_ostream &OS) {
           (i->File.size() + SymbolSize - 1) / SymbolSize;
       uint32_t NumberOfAuxBytes = NumberOfAuxRecords * SymbolSize;
       uint32_t NumZeros = NumberOfAuxBytes - i->File.size();
-      OS.write(i->File.data(), i->File.size());
-      OS.write_zeros(NumZeros);
+      CBA.write(i->File.data(), i->File.size());
+      CBA.writeZeros(NumZeros);
     }
     if (i->SectionDefinition) {
-      OS << binary_le(i->SectionDefinition->Length)
-         << binary_le(i->SectionDefinition->NumberOfRelocations)
-         << binary_le(i->SectionDefinition->NumberOfLinenumbers)
-         << binary_le(i->SectionDefinition->CheckSum)
-         << binary_le(static_cast<int16_t>(i->SectionDefinition->Number))
-         << binary_le(i->SectionDefinition->Selection)
-         << zeros(i->SectionDefinition->unused)
-         << binary_le(static_cast<int16_t>(i->SectionDefinition->Number >> 16));
-      OS.write_zeros(CP.getSymbolSize() - COFF::Symbol16Size);
+      CBA.write(i->SectionDefinition->Length, LittleEndian);
+      CBA.write(i->SectionDefinition->NumberOfRelocations, LittleEndian);
+      CBA.write(i->SectionDefinition->NumberOfLinenumbers, LittleEndian);
+      CBA.write(i->SectionDefinition->CheckSum, LittleEndian);
+      CBA.write(static_cast<int16_t>(i->SectionDefinition->Number),
+                LittleEndian);
+      CBA.write(i->SectionDefinition->Selection, LittleEndian);
+      CBA.writeZeros(sizeof(i->SectionDefinition->unused));
+      CBA.write(static_cast<int16_t>(i->SectionDefinition->Number >> 16),
+                LittleEndian);
+      CBA.writeZeros(CP.getSymbolSize() - COFF::Symbol16Size);
     }
     if (i->CLRToken) {
-      OS << binary_le(i->CLRToken->AuxType) << zeros(i->CLRToken->unused1)
-         << binary_le(i->CLRToken->SymbolTableIndex)
-         << zeros(i->CLRToken->unused2);
-      OS.write_zeros(CP.getSymbolSize() - COFF::Symbol16Size);
+      CBA.write(i->CLRToken->AuxType, LittleEndian);
+      CBA.writeZeros(sizeof(i->CLRToken->unused1));
+      CBA.write(i->CLRToken->SymbolTableIndex, LittleEndian);
+      CBA.writeZeros(sizeof(i->CLRToken->unused2));
+      CBA.writeZeros(CP.getSymbolSize() - COFF::Symbol16Size);
     }
   }
 
   // Output string table.
   if (CP.Obj.Header.PointerToSymbolTable)
-    OS.write(&CP.StringTable[0], CP.StringTable.size());
+    CBA.write(CP.StringTable.data(), CP.StringTable.size());
   return true;
 }
 
@@ -595,28 +573,30 @@ size_t COFFYAML::SectionDataEntry::size() const {
   return Size;
 }
 
-template <typename T> static void writeLoadConfig(T &S, raw_ostream &OS) {
-  OS.write(reinterpret_cast<const char *>(&S),
-           std::min(sizeof(S), static_cast<size_t>(S.Size)));
+template <typename T>
+static void writeLoadConfig(T &S, ContiguousBlobAccumulator &CBA) {
+  CBA.write(reinterpret_cast<const char *>(&S),
+            std::min(sizeof(S), static_cast<size_t>(S.Size)));
   if (sizeof(S) < S.Size)
-    OS.write_zeros(S.Size - sizeof(S));
+    CBA.writeZeros(S.Size - sizeof(S));
 }
 
-void COFFYAML::SectionDataEntry::writeAsBinary(raw_ostream &OS) const {
+void COFFYAML::SectionDataEntry::writeAsBinary(
+    ContiguousBlobAccumulator &CBA) const {
   if (UInt32)
-    OS << binary_le(*UInt32);
-  Binary.writeAsBinary(OS);
+    CBA.write(*UInt32, LittleEndian);
+  CBA.writeAsBinary(Binary);
   if (LoadConfig32)
-    writeLoadConfig(*LoadConfig32, OS);
+    writeLoadConfig(*LoadConfig32, CBA);
   if (LoadConfig64)
-    writeLoadConfig(*LoadConfig64, OS);
+    writeLoadConfig(*LoadConfig64, CBA);
 }
 
 namespace llvm {
 namespace yaml {
 
 bool yaml2coff(llvm::COFFYAML::Object &Doc, raw_ostream &Out,
-               ErrorHandler ErrHandler) {
+               ErrorHandler ErrHandler, uint64_t MaxSize) {
   COFFParser CP(Doc, ErrHandler);
   if (!CP.parse()) {
     ErrHandler("failed to parse YAML file");
@@ -632,10 +612,22 @@ bool yaml2coff(llvm::COFFYAML::Object &Doc, raw_ostream &Out,
     ErrHandler("failed to layout COFF file");
     return false;
   }
-  if (!writeCOFF(CP, Out)) {
+
+  // Limit the output size to guard against a runaway YAML description.
+  ContiguousBlobAccumulator CBA(/*BaseOffset=*/0, MaxSize);
+  if (!writeCOFF(CP, CBA)) {
     ErrHandler("failed to write COFF file");
     return false;
   }
+  if (Error E = CBA.takeLimitError()) {
+    // Match ELF by reporting a custom error message instead below.
+    consumeError(std::move(E));
+    ErrHandler("the desired output size is greater than permitted. Use the "
+               "--max-size option to change the limit");
+    return false;
+  }
+
+  CBA.writeBlobToStream(Out);
   return true;
 }
 

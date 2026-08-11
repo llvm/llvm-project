@@ -3,7 +3,7 @@
 
 // CHECK-NOT: fatal error: cannot open file
 
-// CHECK: call void @__omp_offloading_{{.+}}()
+// CHECK: call void @__omp_offloading_{{.+}}(ptr null)
 # 1 "unknown.xxxxxxxx"
 void a() {
 #pragma omp target

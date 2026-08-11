@@ -60,17 +60,17 @@ define i64 @hamming_i256(i256 %a, i256 %b) nounwind {
 ; NEON-NEXT:    eor x8, x0, x4
 ; NEON-NEXT:    eor x10, x2, x6
 ; NEON-NEXT:    eor x9, x1, x5
-; NEON-NEXT:    fmov d0, x10
-; NEON-NEXT:    fmov d1, x8
-; NEON-NEXT:    eor x11, x3, x7
-; NEON-NEXT:    mov v0.d[1], x11
-; NEON-NEXT:    mov v1.d[1], x9
-; NEON-NEXT:    cnt v0.16b, v0.16b
+; NEON-NEXT:    fmov d0, x8
+; NEON-NEXT:    fmov d1, x10
+; NEON-NEXT:    eor x8, x3, x7
+; NEON-NEXT:    mov v1.d[1], x8
+; NEON-NEXT:    mov v0.d[1], x9
 ; NEON-NEXT:    cnt v1.16b, v1.16b
-; NEON-NEXT:    addv b0, v0.16b
+; NEON-NEXT:    cnt v0.16b, v0.16b
 ; NEON-NEXT:    addv b1, v1.16b
-; NEON-NEXT:    fmov x8, d0
-; NEON-NEXT:    fmov x9, d1
+; NEON-NEXT:    addv b0, v0.16b
+; NEON-NEXT:    fmov x8, d1
+; NEON-NEXT:    fmov x9, d0
 ; NEON-NEXT:    add x0, x9, x8
 ; NEON-NEXT:    ret
 ;
@@ -79,15 +79,15 @@ define i64 @hamming_i256(i256 %a, i256 %b) nounwind {
 ; SVE-NEXT:    eor x8, x0, x4
 ; SVE-NEXT:    eor x10, x2, x6
 ; SVE-NEXT:    eor x9, x1, x5
-; SVE-NEXT:    fmov d0, x10
-; SVE-NEXT:    fmov d1, x8
-; SVE-NEXT:    eor x11, x3, x7
+; SVE-NEXT:    fmov d0, x8
+; SVE-NEXT:    fmov d1, x10
+; SVE-NEXT:    eor x8, x3, x7
 ; SVE-NEXT:    ptrue p0.d
-; SVE-NEXT:    mov v0.d[1], x11
-; SVE-NEXT:    mov v1.d[1], x9
-; SVE-NEXT:    cnt z0.d, p0/m, z0.d
+; SVE-NEXT:    mov v1.d[1], x8
+; SVE-NEXT:    mov v0.d[1], x9
 ; SVE-NEXT:    cnt z1.d, p0/m, z1.d
-; SVE-NEXT:    add v0.2d, v1.2d, v0.2d
+; SVE-NEXT:    cnt z0.d, p0/m, z0.d
+; SVE-NEXT:    add v0.2d, v0.2d, v1.2d
 ; SVE-NEXT:    addp d0, v0.2d
 ; SVE-NEXT:    fmov x0, d0
 ; SVE-NEXT:    ret

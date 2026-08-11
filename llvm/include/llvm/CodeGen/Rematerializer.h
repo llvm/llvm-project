@@ -14,14 +14,13 @@
 #ifndef LLVM_CODEGEN_REMATERIALIZER_H
 #define LLVM_CODEGEN_REMATERIALIZER_H
 
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/LiveRangeEdit.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
-#include <iterator>
 
 namespace llvm {
 
@@ -30,11 +29,18 @@ namespace llvm {
 ///
 /// At the moment this supports rematerializing registers that meet all of the
 /// following constraints.
-/// 1. The register is virtual and has a single defining instruction.
-/// 2. The single defining instruction is deemed rematerializable by the TII and
-///    doesn't have any physical register use that is both non-constant and
+/// 1. The register is virtual.
+/// 2. The register is defined within a single region---potentially over
+///    multiple MIs---and isn't used by a MI that is not defining part of the
+///    register before its last defining MI. This restriction essentially means
+///    that, if the rematerializer only ever rematerializes all the defs of a
+///    register together, it can treat all virtual registers as having a "single
+///    value" (the one after the last def). Relaxing this restriction would
+///    require it to track VNInfos individually rather that virtual registers.
+/// 3. All defining instructions are deemed rematerializable by the TII and
+///    don't have any physical register use that is both non-constant and
 ///    non-ignorable.
-/// 3. The register has at least one non-debug use that is inside or at a region
+/// 4. The register has at least one non-debug use that is inside or at a region
 ///    boundary (see below for what we consider to be a region).
 ///
 /// Rematerializable registers (represented by \ref Rematerializer::Reg) form a
@@ -76,86 +82,71 @@ namespace llvm {
 /// The rematerializer supports rematerializing arbitrary complex DAGs of
 /// registers to regions where these registers are used, with the option of
 /// re-using non-root registers or their previous rematerializations instead of
-/// rematerializing them again. It also optionally supports rolling back
-/// previous rematerializations (set during analysis phase, see \ref
-/// Rematerializer::analyze) to restore the MIR state to what it was
-/// pre-rematerialization. When enabled, machine instructions defining
-/// rematerializable registers that no longer have any uses following previous
-/// rematerializations will not be deleted from the MIR; their opcode will
-/// instead be set to a DEBUG_VALUE and their read register operands set to the
-/// null register. This maintains their position in the MIR and keeps the
-/// original register alive for potential rollback while allowing other
-/// passes/analyzes (e.g., machine scheduler, live-interval analysis) to ignore
-/// them. \ref Rematerializer::commitRematerializations actually deletes those
-/// instructions when rollback is deemed unnecessary.
+/// rematerializing them again.
 ///
 /// Throughout its lifetime, the rematerializer tracks new registers it creates
 /// (which are rematerializable by construction) and their relations to other
-/// registers. It performs DAG updates immediately on rematerialization but
-/// defers/batches all necessary live interval updates to reduce the number of
-/// expensive LIS queries when successively rematerializing many registers. \ref
-/// Rematerializer::updateLiveIntervals performs all currently batched live
-/// interval updates.
+/// registers. It performs DAG and live interval updates immediately on
+/// rematerialization and/or user transfer. Importantly, missing dead flags on
+/// partial definitions of unrematerializable registers can yield dead
+/// definitions when rematerializing their users. They are deleted to preserve
+/// live interval validity. These deletions can cascade to other
+/// (un)rematerializable registers that also become dead as a result.
 ///
 /// In its nomenclature, the rematerializer differentiates between "original
 /// registers" (registers that were present when it analyzed the function) and
 /// rematerializations of these original registers. Rematerializations have an
-/// "origin" which is the index of the original regiser they were rematerialized
-/// from (transitivity applies; a rematerialization and all of its own
-/// rematerializations have the same origin). Semantically, only original
-/// registers have rematerializations.
+/// "origin" which is the index of the original register they were
+/// rematerialized from (transitivity applies; a rematerialization and all of
+/// its own rematerializations have the same origin). Semantically, only
+/// original registers have rematerializations.
+///
+/// Dealing with sub-registers is complicated, we have to handle dead-defs,
+/// undef flags, and connected components
 class Rematerializer {
 public:
   /// Index type for rematerializable registers.
   using RegisterIdx = unsigned;
 
-  /// A rematerializable register defined by a single machine instruction.
+  /// A rematerializable register, potentially defined by multiple instructions.
   ///
   /// A rematerializable register has a set of dependencies, which correspond
-  /// to the unique read register operands of its defining instruction.
-  /// They are identified by their machine operand index, and can themselves be
-  /// rematerializable. Operand indices corresponding to unrematerializable
-  /// dependencies are managed by and queried from the rematerializer.
+  /// to the unique read register operands of its defining instruction(s) and
+  /// which can themselves be rematerializable. Operands of defining
+  /// instructions corresponding to unrematerializable dependencies are managed
+  /// by and queried from the rematerializer, whereas rematerializable ones are
+  /// part of this struct and identified through their register index.
   ///
   /// A rematerializable register also has an arbitrary number of users in an
   /// arbitrary number of regions, potentially including its own defining
   /// region. When rematerializations lead to operand changes in users, a
   /// register may find itself without any user left, at which point the
-  /// rematerializer marks it for deletion. Its defining instruction either
-  /// becomes nullptr (without rollback support) or its opcode is set to
-  /// TargetOpcode::DBG_VALUE (with rollback support) until \ref
-  /// Rematerializer::commitRematerializations is called.
+  /// rematerializer deletes it (emptying \ref Reg::Defs).
   struct Reg {
-    /// Single MI defining the rematerializable register.
-    MachineInstr *DefMI;
-    /// Defining region of \p DefMI.
+    /// All instructions that define the register, in program order.
+    SmallVector<MachineInstr *, 1> Defs;
+    /// Defining region of the register.
     unsigned DefRegion;
     /// The rematerializable register's lane bitmask.
     LaneBitmask Mask;
 
     using RegionUsers = SmallDenseSet<MachineInstr *, 4>;
-    /// Uses of the register, mapped by region.
+    /// Uses of the register, mapped by region. Users that also define a part of
+    /// the register are considered defs and not accounted for here.
     SmallDenseMap<unsigned, RegionUsers, 2> Uses;
 
-    /// A read register operand of \p DefMI that is rematerializable (according
-    /// to the rematerializer).
-    struct Dependency {
-      /// The register's machine operand index in \p DefMI.
-      unsigned MOIdx;
-      /// The corresponding register's index in the rematerializer.
-      RegisterIdx RegIdx;
-
-      Dependency(unsigned MOIdx, RegisterIdx RegIdx)
-          : MOIdx(MOIdx), RegIdx(RegIdx) {}
-    };
     /// This register's rematerializable dependencies, one per unique
-    /// rematerializable register operand.
-    SmallVector<Dependency, 2> Dependencies;
+    /// rematerializable register operand over all definitions.
+    SmallVector<RegisterIdx, 2> Dependencies;
 
-    /// Returns the rematerializable register from its defining instruction.
-    inline Register getDefReg() const {
-      assert(DefMI && "defining instruction was deleted");
-      assert(DefMI->getOperand(0).isDef() && "not a register def");
+    MachineInstr *getFirstDef() const { return Defs.front(); }
+    MachineInstr *getLastDef() const { return Defs.back(); }
+
+    /// Returns the rematerializable register from one of its defining
+    /// instructions.
+    Register getDefReg() const {
+      const MachineInstr *DefMI = getFirstDef();
+      assert(DefMI && DefMI->getOperand(0).isDef() && "not a register def");
       return DefMI->getOperand(0).getReg();
     }
 
@@ -169,21 +160,62 @@ public:
       return Uses.size() > 1 || Uses.begin()->first != DefRegion;
     }
 
+    /// Returns the index of \p DefMI in the register's definitions order.
+    /// Returns the number of definitions if \p DefMI is not a definition of the
+    /// register.
+    unsigned getDefIdx(MachineInstr *DefMI) const {
+      return std::distance(Defs.begin(), find(Defs, DefMI));
+    }
+
     /// Returns the first and last user of the register in region \p UseRegion.
     /// If the register has no user in the region, returns a pair of nullptr's.
-    std::pair<MachineInstr *, MachineInstr *>
+    LLVM_ABI std::pair<MachineInstr *, MachineInstr *>
     getRegionUseBounds(unsigned UseRegion, const LiveIntervals &LIS) const;
 
-    bool isAlive() const {
-      return DefMI && DefMI->getOpcode() != TargetOpcode::DBG_VALUE;
-    }
+    bool isAlive() const { return !Defs.empty(); }
 
   private:
     void addUser(MachineInstr *MI, unsigned Region);
     void addUsers(const RegionUsers &NewUsers, unsigned Region);
     void eraseUser(MachineInstr *MI, unsigned Region);
 
+    /// Erases user \p MI from region \p Region if it exists. Returns whether \p
+    /// MI was actually deleted.
+    bool tryEraseUser(MachineInstr *MI, unsigned Region);
+
     friend Rematerializer;
+  };
+
+  /// Rematerializer listener. Defines overridable hooks that allow to catch
+  /// specific events inside the rematerializer. All hooks do nothing by
+  /// default. Listeners can be added or removed at any time during the
+  /// rematerializer's lifetime.
+  class LLVM_ABI Listener {
+  public:
+    using RegisterIdx = Rematerializer::RegisterIdx;
+
+    /// Called just after register \p NewRegIdx is created (following a
+    /// rematerialization). At this point the rematerialization exists in the \p
+    /// Remater state and the MIR but does not yet have any user.
+    virtual void rematerializerNoteRegCreated(const Rematerializer &Remater,
+                                              RegisterIdx NewRegIdx) {}
+
+    /// Called just before register \p RegIdx is deleted from the MIR. At this
+    /// point the register still exists in the MIR but no longer has any user.
+    virtual void
+    rematerializerNoteRegWillBeDeleted(const Rematerializer &Remater,
+                                       RegisterIdx RegIdx) {}
+
+    /// Called just before unrematerializable instruction \p MI is deleted from
+    /// the MIR because it has become a dead definition.
+    virtual void
+    rematerializerNoteMIWillBeDeleted(const Rematerializer &Remater,
+                                      MachineInstr &MI) {}
+
+    virtual ~Listener() = default;
+
+  private:
+    virtual void anchor();
   };
 
   /// Error value for register indices.
@@ -194,55 +226,89 @@ public:
   using RegionBoundaries =
       std::pair<MachineBasicBlock::iterator, MachineBasicBlock::iterator>;
 
+  using RematsOf = SmallDenseSet<RegisterIdx, 4>;
+
   /// Simply initializes some internal state, does not identify
   /// rematerialization candidates.
-  Rematerializer(MachineFunction &MF,
-                 SmallVectorImpl<RegionBoundaries> &Regions,
-                 LiveIntervals &LIS);
+  LLVM_ABI Rematerializer(MachineFunction &MF,
+                          SmallVectorImpl<RegionBoundaries> &Regions,
+                          LiveIntervals &LIS);
 
   /// Goes through the whole MF and identifies all rematerializable registers.
-  /// When \p SupportRollback is set, rematerializations of original registers
-  /// can be rolled back and original registers are maintained in the IR even
-  /// when they longer have any users. Returns whether there is any
-  /// rematerializable register in regions.
-  bool analyze(bool SupportRollback);
+  /// Returns whether there is any rematerializable register in regions.
+  LLVM_ABI bool analyze();
 
-  inline const Reg &getReg(RegisterIdx RegIdx) const {
+  /// Adds a new listener to the rematerializer.
+  void addListener(Listener *Listen) {
+    assert(Listen && "null listener");
+    if (!Listeners.insert(Listen).second)
+      llvm_unreachable("duplicate listener");
+  }
+
+  /// Removes a listener from the rematerializer.
+  void removeListener(Listener *Listen) {
+    if (!Listeners.erase(Listen))
+      llvm_unreachable("unknown listener");
+  }
+
+  /// Removes all listeners from the rematerializer.
+  void clearListeners() { Listeners.clear(); }
+
+  const Reg &getReg(RegisterIdx RegIdx) const {
     assert(RegIdx < Regs.size() && "out of bounds");
     return Regs[RegIdx];
   };
-  inline ArrayRef<Reg> getRegs() const { return Regs; };
-  inline unsigned getNumRegs() const { return Regs.size(); };
+  ArrayRef<Reg> getRegs() const { return Regs; };
+  unsigned getNumRegs() const { return Regs.size(); };
 
-  inline const RegionBoundaries &getRegion(RegisterIdx RegionIdx) {
+  /// Determines whether register \p RegIdx fully disappeared from the MIR. This
+  /// may happen when it was only used by instructions which became dead during
+  /// the rematerializer's lifetime.
+  bool isPermanentlyDead(RegisterIdx RegIdx) const {
+    RegisterIdx OrigIdx = getOriginOrSelf(RegIdx);
+    return !getReg(OrigIdx).isAlive() && !Rematerializations.contains(OrigIdx);
+  }
+
+  const RegionBoundaries &getRegion(RegisterIdx RegionIdx) const {
     assert(RegionIdx < Regions.size() && "out of bounds");
     return Regions[RegionIdx];
   }
-  inline unsigned getNumRegions() const { return Regions.size(); }
+  unsigned getNumRegions() const { return Regions.size(); }
 
+  /// Whether register \p RegIdx is an original register.
+  bool isOriginalRegister(RegisterIdx RegIdx) const {
+    return !isRematerializedRegister(RegIdx);
+  }
   /// Whether register \p RegIdx is a rematerialization of some original
   /// register.
-  inline bool isRematerializedRegister(RegisterIdx RegIdx) const {
+  bool isRematerializedRegister(RegisterIdx RegIdx) const {
     assert(RegIdx < Regs.size() && "out of bounds");
-    return RegIdx >= UnrematableOprds.size();
+    return RegIdx >= UnrematableDeps.size();
   }
   /// Returns the origin index of rematerializable register \p RegIdx.
-  inline RegisterIdx getOriginOf(RegisterIdx RematRegIdx) const {
+  RegisterIdx getOriginOf(RegisterIdx RematRegIdx) const {
     assert(isRematerializedRegister(RematRegIdx) && "not a rematerialization");
-    return Origins[RematRegIdx - UnrematableOprds.size()];
+    return Origins[RematRegIdx - UnrematableDeps.size()];
   }
   /// If \p RegIdx is a rematerialization, returns its origin's index. If it is
   /// an original register's index, returns the same index.
-  inline RegisterIdx getOriginOrSelf(RegisterIdx RegIdx) const {
+  RegisterIdx getOriginOrSelf(RegisterIdx RegIdx) const {
     if (isRematerializedRegister(RegIdx))
       return getOriginOf(RegIdx);
     return RegIdx;
   }
-  /// Returns operand indices corresponding to unrematerializable operands for
-  /// any register \p RegIdx.
-  inline ArrayRef<unsigned> getUnrematableOprds(unsigned RegIdx) const {
-    return UnrematableOprds[getOriginOrSelf(RegIdx)];
+  /// Returns unreamaterializable read lanes of register operands for
+  /// register \p RegIdx.
+  ArrayRef<std::pair<Register, LaneBitmask>>
+  getUnrematableDeps(RegisterIdx RegIdx) const {
+    return UnrematableDeps[getOriginOrSelf(RegIdx)];
   }
+
+  /// If \p MI's first operand defines a register and that register is a
+  /// rematerializable register tracked by the rematerializer, returns its
+  /// index in the \ref Regs vector. Otherwise returns \ref
+  /// Rematerializer::NoReg.
+  LLVM_ABI RegisterIdx getDefRegIdx(const MachineInstr &MI) const;
 
   /// When rematerializating a register (called the "root" register in this
   /// context) to a given position, we must decide what to do with all its
@@ -296,113 +362,149 @@ public:
   };
 
   /// Rematerializes register \p RootIdx just before its first user inside
-  /// region \p UseRegion, transfers all its users in the region to the new
-  /// register, and returns the latter's index. The root's dependency DAG is
-  /// rematerialized or re-used according to \p DRI.
+  /// region \p UseRegion (or at the end of the region if it has no user),
+  /// transfers all its users in the region to the new register, and returns the
+  /// latter's index. The root's dependency DAG is rematerialized or re-used
+  /// according to \p DRI.
   ///
   /// When the method returns, \p DRI contains additional entries for non-root
   /// registers of the root's dependency DAG that needed to be rematerialized
   /// along the root. References to \ref Rematerializer::Reg should be
   /// considered invalidated by calls to this method.
-  RegisterIdx rematerializeToRegion(RegisterIdx RootIdx, unsigned UseRegion,
-                                    DependencyReuseInfo &DRI);
+  LLVM_ABI RegisterIdx rematerializeToRegion(RegisterIdx RootIdx,
+                                             unsigned UseRegion,
+                                             DependencyReuseInfo &DRI);
 
-  /// Rematerializes register \p RootIdx before position \p InsertPos and
-  /// returns the new register's index. The root's dependency DAG is
-  /// rematerialized or re-used according to \p DRI.
+  /// Rematerializes register \p RootIdx before position \p InsertPos in \p
+  /// UseRegion and returns the new register's index. The root's dependency DAG
+  /// is rematerialized or re-used according to \p DRI.
   ///
   /// When the method returns, \p DRI contains additional entries for non-root
   /// registers of the root's dependency DAG that needed to be rematerialized
   /// along the root. References to \ref Rematerializer::Reg should be
   /// considered invalidated by calls to this method.
-  RegisterIdx rematerializeToPos(RegisterIdx RootIdx,
-                                 MachineBasicBlock::iterator InsertPos,
-                                 DependencyReuseInfo &DRI);
+  LLVM_ABI RegisterIdx rematerializeToPos(RegisterIdx RootIdx,
+                                          unsigned UseRegion,
+                                          MachineBasicBlock::iterator InsertPos,
+                                          DependencyReuseInfo &DRI);
 
-  /// Rolls back all rematerializations of original register \p RootIdx,
-  /// transfering all their users back to it and permanently deleting them from
-  /// the MIR. The root register is revived if it was fully rematerialized (this
-  /// requires that rollback support was set at that time). Transitive
-  /// dependencies of the root register that were fully rematerialized are
-  /// re-vived at their original positions; this requires that rollback support
-  /// was set when they were rematerialized.
-  void rollbackRematsOf(RegisterIdx RootIdx);
+  /// Rematerializes register \p RegIdx before \p InsertPos in \p UseRegion,
+  /// adding the new rematerializable register to the backing vector \ref Regs
+  /// and returning its index inside the vector. Sets the new register's
+  /// rematerializable dependencies to \p Dependencies (these are assumed to
+  /// already exist in the MIR) and its unrematerializable dependencies to the
+  /// same as \p RegIdx. The new register initially has no user. Since the
+  /// method appends to \ref Regs, references to elements within it should be
+  /// considered invalidated across calls to this method unless the vector can
+  /// be guaranteed to have enough space for an extra element.
+  LLVM_ABI RegisterIdx
+  rematerializeReg(RegisterIdx RegIdx, unsigned UseRegion,
+                   MachineBasicBlock::iterator InsertPos,
+                   SmallVectorImpl<RegisterIdx> &&Dependencies);
 
-  /// Rolls back register \p RematIdx (which must be a rematerialization)
-  /// transfering all its users back to its origin. The latter is revived if it
-  /// was fully rematerialized (this requires that rollback support was set at
-  /// that time).
-  void rollback(RegisterIdx RematIdx);
-
-  /// Revives original register \p RootIdx at its original position in the MIR
-  /// if it was fully rematerialized with rollback support set. Transitive
-  /// dependencies of the root register that were fully rematerialized are
-  /// revived at their original positions; this requires that rollback support
-  /// was set when they were themselves rematerialized.
-  void reviveRegIfDead(RegisterIdx RootIdx);
+  /// Re-creates each defining instruction of a previously deleted register \p
+  /// RegIdx before each position in \p Positions (one position per defining
+  /// instruction, in the same order). Positions must be in the same region as
+  /// the deleted register, and earlier than all uses of the register in the
+  /// region. \p DefReg must be the original virtual register that \p RegIdx
+  /// used to define. Rematerializable dependencies are assumed to already exist
+  /// in the MIR.
+  LLVM_ABI void recreateReg(RegisterIdx RegIdx,
+                            ArrayRef<MachineBasicBlock::iterator> Positions,
+                            Register DefReg);
 
   /// Transfers all users of register \p FromRegIdx in region \p UseRegion to \p
   /// ToRegIdx, the latter of which must be a rematerialization of the former or
   /// have the same origin register. Users in \p UseRegion must be reachable
   /// from \p ToRegIdx.
-  void transferRegionUsers(RegisterIdx FromRegIdx, RegisterIdx ToRegIdx,
-                           unsigned UseRegion);
+  LLVM_ABI void transferRegionUsers(RegisterIdx FromRegIdx,
+                                    RegisterIdx ToRegIdx, unsigned UseRegion);
 
-  /// Transfers user \p UserMI from register \p FromRegIdx to \p ToRegIdx,
-  /// the latter of which must be a rematerialization of the former or have the
-  /// same origin register. \p UserMI must be a direct user of \p FromRegIdx. \p
-  /// UserMI must be reachable from \p ToRegIdx.
-  void transferUser(RegisterIdx FromRegIdx, RegisterIdx ToRegIdx,
-                    MachineInstr &UserMI);
+  /// Transfers user \p UserMI in region \p UserRegion from register \p
+  /// FromRegIdx to \p ToRegIdx, the latter of which must be a rematerialization
+  /// of the former or have the same origin register. \p UserMI must be a direct
+  /// user of \p FromRegIdx. \p UserMI must be reachable from \p ToRegIdx.
+  LLVM_ABI void transferUser(RegisterIdx FromRegIdx, RegisterIdx ToRegIdx,
+                             unsigned UserRegion, MachineInstr &UserMI);
 
-  /// Recomputes all live intervals that have changed as a result of previous
-  /// rematerializations/rollbacks.
-  void updateLiveIntervals();
-
-  /// Deletes unused rematerialized registers that were left in the MIR to
-  /// support rollback.
-  void commitRematerializations();
+  /// Transfers all users of register \p FromRegIdx to register \p ToRegIdx, the
+  /// latter of which must be a rematerialization of the former or have the same
+  /// origin register. Users of \p FromRegIdx must be reachable from \p
+  /// ToRegIdx.
+  LLVM_ABI void transferAllUsers(RegisterIdx FromRegIdx, RegisterIdx ToRegIdx);
 
   /// Determines whether (sub-)register operand \p MO has the same value at
   /// all \p Uses as at \p MO. This implies that it is also available at all \p
   /// Uses according to its current live interval.
-  bool isMOIdenticalAtUses(MachineOperand &MO, ArrayRef<SlotIndex> Uses) const;
+  LLVM_ABI bool isMOIdenticalAtUses(MachineOperand &MO,
+                                    ArrayRef<SlotIndex> Uses) const;
+
+  /// Determines whether lanes \p Mask of register \p Reg habe the same value at
+  /// all \p Uses as at \p RefSlot. This implies that it is also available at
+  /// all \p Uses according to its current live interval.
+  LLVM_ABI bool isRegIdenticalAtUses(Register Reg, LaneBitmask Mask,
+                                     SlotIndex RefSlot,
+                                     ArrayRef<SlotIndex> Uses) const;
 
   /// Finds the closest rematerialization of register \p RegIdx in region \p
   /// Region that exists before slot \p Before. If no such rematerialization
   /// exists, returns \ref Rematerializer::NoReg.
-  RegisterIdx findRematInRegion(RegisterIdx RegIdx, unsigned Region,
-                                SlotIndex Before) const;
+  LLVM_ABI RegisterIdx findRematInRegion(RegisterIdx RegIdx, unsigned Region,
+                                         SlotIndex Before) const;
 
-  Printable printDependencyDAG(RegisterIdx RootIdx) const;
-  Printable printID(RegisterIdx RegIdx) const;
-  Printable printRematReg(RegisterIdx RegIdx, bool SkipRegions = false) const;
-  Printable printRegUsers(RegisterIdx RegIdx) const;
-  Printable printUser(const MachineInstr *MI) const;
+  LLVM_ABI Printable printDependencyDAG(RegisterIdx RootIdx) const;
+  LLVM_ABI Printable printID(RegisterIdx RegIdx) const;
+  LLVM_ABI Printable printRematReg(RegisterIdx RegIdx, bool SkipRegions = false,
+                                   unsigned DefIdx = 0) const;
+  LLVM_ABI Printable printRegUsers(RegisterIdx RegIdx) const;
+  LLVM_ABI Printable
+  printUser(const MachineInstr *MI,
+            std::optional<unsigned> UseRegion = std::nullopt) const;
 
 private:
+  struct DeadDefDelegate : LiveRangeEdit::Delegate {
+    Rematerializer &Remater;
+    DeadDefDelegate(Rematerializer &Remater) : Remater(Remater) {}
+    void LRE_WillEraseInstruction(MachineInstr *MI) override;
+  };
+
   SmallVectorImpl<RegionBoundaries> &Regions;
   MachineRegisterInfo &MRI;
   LiveIntervals &LIS;
   const TargetInstrInfo &TII;
   const TargetRegisterInfo &TRI;
+  SmallPtrSet<Listener *, 1> Listeners;
+
+  void noteRegCreated(RegisterIdx RegIdx) const {
+    for (Listener *Listen : Listeners)
+      Listen->rematerializerNoteRegCreated(*this, RegIdx);
+  }
+
+  void noteRegWillBeDeleted(RegisterIdx RegIdx) const {
+    for (Listener *Listen : Listeners)
+      Listen->rematerializerNoteRegWillBeDeleted(*this, RegIdx);
+  }
+
+  void noteMIWillBeDeleted(MachineInstr &MI) const {
+    for (Listener *Listen : Listeners)
+      Listen->rematerializerNoteMIWillBeDeleted(*this, MI);
+  }
 
   /// Rematerializable registers identified since the rematerializer's creation,
   /// both dead and alive, originals and rematerializations. No register is ever
   /// deleted. Indices inside this vector serve as handles for rematerializable
   /// registers.
   SmallVector<Reg> Regs;
-  /// For each original register, stores indices of its read register operands
-  /// which are unrematerializable. This doesn't change after the initial
-  /// collection period, so the size of the vector indicates the number of
-  /// original registers.
-  SmallVector<SmallVector<unsigned, 2>> UnrematableOprds;
+  /// For each original register, stores unrematerializable read lanes of
+  /// register operands. This doesn't change after the initial collection
+  /// period, so the size of the vector indicates the number of original
+  /// registers.
+  SmallVector<SmallVector<std::pair<Register, LaneBitmask>, 2>> UnrematableDeps;
   /// Indicates the original register index of each rematerialization, in the
   /// order in which they are created. The size of the vector indicates the
   /// total number of rematerializations ever created, including those that were
-  /// deleted or rolled back.
+  /// deleted.
   SmallVector<RegisterIdx> Origins;
-  using RematsOf = SmallDenseSet<RegisterIdx, 4>;
   /// Maps original register indices to their currently alive
   /// rematerializations. In practice most registers don't have
   /// rematerializations so this is represented as a map to lower memory cost.
@@ -412,62 +514,141 @@ private:
   /// data in the \ref Regs vector. This includes registers that no longer exist
   /// in the MIR.
   DenseMap<Register, RegisterIdx> RegToIdx;
-  /// Maps all MIs to their parent region. Region terminators are considered
-  /// part of the region they terminate.
-  DenseMap<MachineInstr *, unsigned> MIRegion;
-  /// Set of registers whose live-range may have changed during past
-  /// rematerializations/rollbacks.
-  DenseSet<RegisterIdx> LISUpdates;
-  /// Keys are fully rematerialized registers whose rematerializations are
-  /// currently rollback-able. Values map register machine operand indices to
-  /// their original register.
-  DenseMap<RegisterIdx, DenseMap<unsigned, Register>> Revivable;
-  /// Whether all rematerializations of registers identified during the last
-  /// analysis phase will be rollback-able.
-  bool SupportRollback = false;
+  /// Parent block of each region, in order.
+  SmallVector<MachineBasicBlock *> RegionMBB;
+
+  /// Common post-processing step after creating a new register \p RematRegIdx
+  /// based on register \p ModelRegIdx.
+  void postRematerialization(RegisterIdx ModelRegIdx, RegisterIdx RematRegIdx);
+
+  /// Common pre-processing step before deleting a register \p DeleteRegIdx. The
+  /// register must still have alive definitions.
+  void preDeletion(RegisterIdx DeleteRegIdx);
+
+  /// Extends \p LI over \p Mask to be live at \p UdeIdx.
+  void extendInterval(LiveInterval &LI, LaneBitmask Mask,
+                      SlotIndex UseIdx) const;
+
+  /// Extends the live interval of rematerializable register \p RegIdx to be
+  /// live at the register slot of all MIs in \p NewUsers. Creates and/or
+  /// refines the interval's sub-ranges as needed. Updates the register's
+  /// defining instruction's dead flag as needed.
+  void extendToNewUsers(RegisterIdx RegIdx,
+                        ArrayRef<MachineInstr *> NewUsers) const;
+
+  /// Shrinks the live interval of rematerializable register \p RegIdx to its
+  /// current uses. If the register has no users, deletes it along with
+  /// registers in its dependency DAG that no longer have users as a result.
+  void shrinkToUses(RegisterIdx RegIdx);
+
+  /// Shrinks the live interval of unrematerializable register \p Reg to its
+  /// current uses. The interval is split if necessary, creating new
+  /// unrematerializable registers and updating register dependencies as needed.
+  void shrinkToUsesUnremat(Register Reg);
 
   /// During the analysis phase, creates a \ref Rematerializer::Reg object for
-  /// virtual register \p VirtRegIdx if it
-  void addRegIfRematerializable(unsigned VirtRegIdx, BitVector &SeenRegs);
+  /// virtual register \p VirtRegIdx if it is rematerializable. \p MIRegion maps
+  /// all MIs to their parent region. Set bits in \p SeenRegs indicate virtual
+  /// register indices that have already been visited.
+  void
+  addRegIfRematerializable(unsigned VirtRegIdx,
+                           const DenseMap<MachineInstr *, unsigned> &MIRegion,
+                           BitVector &SeenRegs);
 
   /// Determines whether \p MI is considered rematerializable. This further
   /// restricts constraints imposed by the TII on rematerializable instructions,
-  /// requiring for example that the defined register is virtual and only
-  /// defined once.
+  /// requiring for example that the defined register is virtual.
   bool isMIRematerializable(const MachineInstr &MI) const;
-
-  /// Rematerializes register \p RegIdx at \p InsertPos, adding the new
-  /// rematerializable register to the backing vector \ref Regs and returning
-  /// its index inside the vector. Sets the new registers' rematerializable
-  /// dependencies to \p Dependencies (these are assumed to already exist in the
-  /// MIR) and its unrematerializable dependencies to the same as \p RegIdx. The
-  /// new register initially has no user. Since the method appends to \ref Regs,
-  /// references to elements within it should be considered invalidated across
-  /// calls to this method unless the vector can be guaranteed to have enough
-  /// space for an extra element.
-  RegisterIdx rematerializeReg(RegisterIdx RegIdx,
-                               MachineBasicBlock::iterator InsertPos,
-                               SmallVectorImpl<Reg::Dependency> &&Dependencies);
 
   /// Implementation of \ref Rematerializer::transferUser that doesn't update
   /// register users.
   void transferUserImpl(RegisterIdx FromRegIdx, RegisterIdx ToRegIdx,
                         MachineInstr &UserMI);
 
-  /// Deletes register \p RootIdx if it no longer has any user. If the register
-  /// is deleted, recursively deletes any of its transitive rematerializable
-  /// dependencies that no longer have users as a result.
-  void deleteRegIfUnused(RegisterIdx RootIdx);
+  /// Deletes register \p RootIdx, which must not have any users left. If the
+  /// register is deleted, recursively deletes any of its transitive
+  /// rematerializable dependencies that no longer have users as a result. In
+  /// case of recursive deletion, all of a register's users are always deleted
+  /// before the register itself.
+  void deleteReg(RegisterIdx RootIdx);
+};
 
-  /// Deletes rematerializable register \p RegIdx from the DAG and relevant
-  /// internal state.
-  void deleteReg(RegisterIdx RegIdx);
+/// Rematerializer listener with the ability to re-create deleted registers and
+/// rollback rematerializations. Starts recording register deletions and
+/// rematerializations as soon as it is attached to the rematerializer.
+class LLVM_ABI Rollbacker : public Rematerializer::Listener {
+public:
+  Rollbacker() = default;
 
-  /// If \p MI's first operand defines a register and that register is a
-  /// rematerializable register tracked by the rematerializer, returns its
-  /// index in the \ref Regs vector. Otherwise returns \ref
-  /// Rematerializer::NoReg.
-  RegisterIdx getDefRegIdx(const MachineInstr &MI) const;
+  /// Re-creates all deleted registers and rolls back all rematerializations
+  /// that were recorded.
+  void rollback(Rematerializer &Remater);
+
+  void rematerializerNoteRegCreated(const Rematerializer &Remater,
+                                    RegisterIdx RegIdx) override;
+
+  void rematerializerNoteRegWillBeDeleted(const Rematerializer &Remater,
+                                          RegisterIdx RegIdx) override;
+
+  void rematerializerNoteMIWillBeDeleted(const Rematerializer &Remater,
+                                         MachineInstr &MI) override;
+
+private:
+  struct DeadReg {
+    /// Register index.
+    RegisterIdx Idx;
+    /// Original register.
+    Register DefReg;
+    /// Original definitions of the register. The underlying MIs no longer exist
+    /// at rollback time, but may be referenced as re-creation positions for
+    /// previously deleted registers.
+    SmallVector<MachineInstr *, 1> Defs;
+
+    LLVM_ABI DeadReg(RegisterIdx Idx, const Rematerializer &Remater)
+        : Idx(Idx), DefReg(Remater.getReg(Idx).getDefReg()),
+          Defs(Remater.getReg(Idx).Defs) {}
+  };
+
+  /// An insertion position in the MIR, either a MachineInstr* to insert before
+  /// or a MachineBasicBlock* to insert at the end of.
+  using InsertBeforePos = PointerUnion<MachineInstr *, MachineBasicBlock *>;
+
+  /// Original registers that have been deleted, in order of deletion.
+  SmallVector<DeadReg> DeadRegs;
+  /// Re-creation positions for all original registers that have been deleted,
+  /// one per defining instruction, in program order for any given register and
+  /// in register deletion order overall. A position is either a MachineInstr*
+  /// that existed in the MIR at the time the rollbacker was attached to the
+  /// rematerializer, or a MachineBasicBlock*.
+  SmallVector<InsertBeforePos> Positions;
+  /// Maps all re-creation positions that exist in \ref Positions to the indices
+  /// of elements holding that position in the vector.
+  DenseMap<InsertBeforePos, SmallDenseSet<unsigned, 1>> PosToIdx;
+  /// Registers which have been rematerialized (from original index to
+  /// rematerialized index).
+  DenseMap<RegisterIdx, Rematerializer::RematsOf> Rematerializations;
+  /// Used to block further recording of events whenver we are actively rolling
+  /// back.
+  bool RollingBack = false;
+
+  InsertBeforePos makePos(MachineBasicBlock::iterator It,
+                          MachineBasicBlock *MBB) const {
+    if (It == MBB->end())
+      return InsertBeforePos(MBB);
+    return InsertBeforePos(&*It);
+  }
+
+  /// Whether \p MI would be deleted if we were to rollback later. These are MIs
+  /// defining rematerializable registers whose creation has been recorded by
+  /// the rollbacker.
+  bool isRollbackableMI(const MachineInstr &MI,
+                        const Rematerializer &Remater) const;
+
+  /// Switches all positions that point to \p MI to \p It in the \ref Positions
+  /// vector, and updates \ref PosToIdx accordingly. This is used when it
+  /// becomes known that \p MI is about to be permanently deleted from the MIR
+  /// and thus becomes an invalid re-creation position.
+  void invalidatePosition(MachineInstr *MI, MachineBasicBlock::iterator It);
 };
 
 } // namespace llvm

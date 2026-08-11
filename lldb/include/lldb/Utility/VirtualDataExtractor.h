@@ -46,6 +46,10 @@ public:
   VirtualDataExtractor(const lldb::DataBufferSP &data_sp,
                        LookupTable lookup_table);
 
+  lldb::DataExtractorSP Clone() const override {
+    return std::make_shared<VirtualDataExtractor>(*this);
+  }
+
   const void *GetData(lldb::offset_t *offset_ptr,
                       lldb::offset_t length) const override;
 

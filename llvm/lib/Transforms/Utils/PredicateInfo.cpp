@@ -17,6 +17,7 @@
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/IR/AssemblyAnnotationWriter.h"
+#include "llvm/IR/BundleAttributes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -220,7 +221,7 @@ class PredicateInfoBuilder {
 
   void processAssume(AssumeInst *, BasicBlock *,
                      SmallVectorImpl<Value *> &OpsToRename);
-  void processBranch(BranchInst *, BasicBlock *,
+  void processBranch(CondBrInst *, BasicBlock *,
                      SmallVectorImpl<Value *> &OpsToRename);
   void processSwitch(SwitchInst *, BasicBlock *,
                      SmallVectorImpl<Value *> &OpsToRename);
@@ -363,12 +364,12 @@ void PredicateInfoBuilder::processAssume(
     AssumeInst *II, BasicBlock *AssumeBB,
     SmallVectorImpl<Value *> &OpsToRename) {
   if (II->hasOperandBundles()) {
-    for (auto BOI : II->bundle_op_infos()) {
-      if (RetainedKnowledge RK = getKnowledgeFromBundle(*II, BOI)) {
-        if (RK.AttrKind == Attribute::NonNull && shouldRename(RK.WasOn))
-          addInfoFor(OpsToRename, RK.WasOn,
-                     new (Allocator) PredicateBundleAssume(RK.WasOn, II,
-                                                           Attribute::NonNull));
+    for (auto OBU : II->operand_bundles()) {
+      if (getBundleAttrFromOBU(OBU) == BundleAttr::NonNull) {
+        if (auto [Ptr] = getAssumeNonNullInfo(OBU); shouldRename(Ptr))
+          addInfoFor(OpsToRename, Ptr,
+                     new (Allocator)
+                         PredicateBundleAssume(Ptr, II, BundleAttr::NonNull));
       }
     }
     return;
@@ -409,7 +410,7 @@ void PredicateInfoBuilder::processAssume(
 // Process a block terminating branch, and place relevant operations to be
 // renamed into OpsToRename.
 void PredicateInfoBuilder::processBranch(
-    BranchInst *BI, BasicBlock *BranchBB,
+    CondBrInst *BI, BasicBlock *BranchBB,
     SmallVectorImpl<Value *> &OpsToRename) {
   BasicBlock *FirstBB = BI->getSuccessor(0);
   BasicBlock *SecondBB = BI->getSuccessor(1);
@@ -490,9 +491,7 @@ void PredicateInfoBuilder::buildPredicateInfo() {
     if (!DT.isReachableFromEntry(&BB))
       continue;
 
-    if (auto *BI = dyn_cast<BranchInst>(BB.getTerminator())) {
-      if (!BI->isConditional())
-        continue;
+    if (auto *BI = dyn_cast<CondBrInst>(BB.getTerminator())) {
       // Can't insert conditional information if they all go to the same place.
       if (BI->getSuccessor(0) == BI->getSuccessor(1))
         continue;
@@ -726,7 +725,7 @@ PredicateInfo::PredicateInfo(Function &F, DominatorTree &DT,
 std::optional<PredicateConstraint> PredicateBase::getConstraint() const {
   switch (Type) {
   case PT_BundleAssume: {
-    assert(cast<PredicateBundleAssume>(this)->AttrKind == Attribute::NonNull &&
+    assert(cast<PredicateBundleAssume>(this)->AttrKind == BundleAttr::NonNull &&
            "Cannot handle anything other than NonNull");
     return {{CmpInst::ICMP_NE, ConstantPointerNull::get(
                                    cast<PointerType>(OriginalOp->getType()))}};
@@ -846,7 +845,7 @@ public:
       } else if (const auto *PA = dyn_cast<PredicateAssume>(PI)) {
         OS << "; assume predicate info {";
         if (auto *PBA = dyn_cast<PredicateBundleAssume>(PA)) {
-          OS << " Attribute: " << Attribute::getNameFromAttrKind(PBA->AttrKind);
+          OS << " Attribute: " << getNameFromBundleAttr(PBA->AttrKind);
         } else {
           assert(isa<PredicateConditionAssume>(PA));
           OS << " Comparison:" << *PA->Condition;

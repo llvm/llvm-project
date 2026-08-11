@@ -1,11 +1,13 @@
-// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512f -fclangir -emit-cir -o %t.cir -Wall -Werror -Wsign-conversion
+// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
+// supports vector types.
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512f -fclangir -fno-clangir-call-conv-lowering -emit-cir -o %t.cir -Wall -Werror -Wsign-conversion
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512f -fclangir -emit-llvm -o %t.ll -Wall -Werror -Wsign-conversion
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512f -fclangir -fno-clangir-call-conv-lowering -emit-llvm -o %t.ll -Wall -Werror -Wsign-conversion
 // RUN: FileCheck --check-prefixes=LLVM --input-file=%t.ll %s
 
-// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512f -fclangir -emit-cir -o %t.cir -Wall -Werror -Wsign-conversion
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512f -fclangir -fno-clangir-call-conv-lowering -emit-cir -o %t.cir -Wall -Werror -Wsign-conversion
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512f -fclangir -emit-llvm -o %t.ll -Wall -Werror -Wsign-conversion
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512f -fclangir -fno-clangir-call-conv-lowering -emit-llvm -o %t.ll -Wall -Werror -Wsign-conversion
 // RUN: FileCheck --check-prefixes=LLVM --input-file=%t.ll %s
 
 // RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512f -emit-llvm -o - -Wall -Werror -Wsign-conversion | FileCheck %s --check-prefixes=OGCG
@@ -199,7 +201,7 @@ __mmask16 test_mm512_kandn(__mmask16 A, __mmask16 B) {
   // CIR-LABEL: _mm512_kandn
   // CIR: cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<s, 1>>
-  // CIR: cir.unary(not, {{.*}}) : !cir.vector<16 x !cir.int<s, 1>>
+  // CIR: cir.not {{.*}} : !cir.vector<16 x !cir.int<s, 1>>
   // CIR: cir.and {{.*}}, {{.*}} : !cir.vector<16 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<16 x !cir.int<s, 1>> -> !u16i
 
@@ -244,7 +246,7 @@ __mmask16 test_mm512_kxnor(__mmask16 A, __mmask16 B) {
   // CIR-LABEL: _mm512_kxnor
   // CIR: cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<s, 1>>
-  // CIR: cir.unary(not, {{.*}}) : !cir.vector<16 x !cir.int<s, 1>>
+  // CIR: cir.not {{.*}} : !cir.vector<16 x !cir.int<s, 1>>
   // CIR: cir.xor {{.*}}, {{.*}} : !cir.vector<16 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<16 x !cir.int<s, 1>> -> !u16i
 
@@ -288,7 +290,7 @@ __mmask16 test_mm512_kxor(__mmask16 A, __mmask16 B) {
 __mmask16 test_mm512_knot(__mmask16 A) {
   // CIR-LABEL: _mm512_knot
   // CIR: cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<s, 1>>
-  // CIR: cir.unary(not, {{.*}}) : !cir.vector<16 x !cir.int<s, 1>>
+  // CIR: cir.not {{.*}} : !cir.vector<16 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<16 x !cir.int<s, 1>> -> !u16i
 
   // LLVM-LABEL: _mm512_knot
@@ -998,7 +1000,7 @@ int test_mm512_kortestc(__mmask16 __A, __mmask16 __B) {
   // CIR: %[[RHS:.*]] = cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<s, 1>>
   // CIR: %[[OR:.*]] = cir.or %[[LHS]], %[[RHS]] : !cir.vector<16 x !cir.int<s, 1>>
   // CIR: %[[OR_INT:.*]] = cir.cast bitcast %[[OR]] : !cir.vector<16 x !cir.int<s, 1>> -> !u16i
-  // CIR: %[[CMP:.*]] = cir.cmp(eq, %[[OR_INT]], %[[ALL_ONES]]) : !u16i, !cir.bool
+  // CIR: %[[CMP:.*]] = cir.cmp eq %[[OR_INT]], %[[ALL_ONES]] : !u16i
   // CIR: cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
 
   // LLVM-LABEL: _mm512_kortestc
@@ -1027,7 +1029,7 @@ int test_mm512_kortestz(__mmask16 __A, __mmask16 __B) {
   // CIR: %[[RHS:.*]] = cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<s, 1>>
   // CIR: %[[OR:.*]] = cir.or %[[LHS]], %[[RHS]] : !cir.vector<16 x !cir.int<s, 1>>
   // CIR: %[[OR_INT:.*]] = cir.cast bitcast %[[OR]] : !cir.vector<16 x !cir.int<s, 1>> -> !u16i
-  // CIR: %[[CMP:.*]] = cir.cmp(eq, %[[OR_INT]], %[[ZERO]]) : !u16i, !cir.bool
+  // CIR: %[[CMP:.*]] = cir.cmp eq %[[OR_INT]], %[[ZERO]] : !u16i
   // CIR: cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
 
   // LLVM-LABEL: _mm512_kortestz

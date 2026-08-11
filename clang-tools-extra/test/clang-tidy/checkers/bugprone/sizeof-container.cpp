@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-sizeof-container %t -- -- -isystem %clang_tidy_headers -target x86_64-unknown-unknown
+// RUN: %check_clang_tidy %s bugprone-sizeof-container %t -- -- -target x86_64-unknown-unknown
 #include <string>
 #include <vector>
 

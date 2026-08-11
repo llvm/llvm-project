@@ -586,8 +586,16 @@ RTLIB::Libcall RTLIB::getSINCOS(EVT RetVT) {
     switch (RetVT.getSimpleVT().SimpleTy) {
     case MVT::v4f32:
       return RTLIB::SINCOS_V4F32;
+    case MVT::v8f32:
+      return RTLIB::SINCOS_V8F32;
+    case MVT::v16f32:
+      return RTLIB::SINCOS_V16F32;
     case MVT::v2f64:
       return RTLIB::SINCOS_V2F64;
+    case MVT::v4f64:
+      return RTLIB::SINCOS_V4F64;
+    case MVT::v8f64:
+      return RTLIB::SINCOS_V8F64;
     case MVT::nxv4f32:
       return RTLIB::SINCOS_NXV4F32;
     case MVT::nxv2f64:
@@ -931,81 +939,6 @@ RTLIB::Libcall RTLIB::getMEMSET_ELEMENT_UNORDERED_ATOMIC(uint64_t ElementSize) {
   }
 }
 
-ISD::CondCode TargetLoweringBase::getSoftFloatCmpLibcallPredicate(
-    RTLIB::LibcallImpl Impl) const {
-  switch (Impl) {
-  case RTLIB::impl___aeabi_dcmpeq__une:
-  case RTLIB::impl___aeabi_fcmpeq__une:
-    // Usage in the eq case, so we have to invert the comparison.
-    return ISD::SETEQ;
-  case RTLIB::impl___aeabi_dcmpeq__oeq:
-  case RTLIB::impl___aeabi_fcmpeq__oeq:
-    // Normal comparison to boolean value.
-    return ISD::SETNE;
-  case RTLIB::impl___aeabi_dcmplt:
-  case RTLIB::impl___aeabi_dcmple:
-  case RTLIB::impl___aeabi_dcmpge:
-  case RTLIB::impl___aeabi_dcmpgt:
-  case RTLIB::impl___aeabi_dcmpun:
-  case RTLIB::impl___aeabi_fcmplt:
-  case RTLIB::impl___aeabi_fcmple:
-  case RTLIB::impl___aeabi_fcmpge:
-  case RTLIB::impl___aeabi_fcmpgt:
-    /// The AEABI versions return a typical boolean value, so we can compare
-    /// against the integer result as simply != 0.
-    return ISD::SETNE;
-  default:
-    break;
-  }
-
-  // Assume libgcc/compiler-rt behavior. Most of the cases are really aliases of
-  // each other, and return a 3-way comparison style result of -1, 0, or 1
-  // depending on lt/eq/gt.
-  //
-  // FIXME: It would be cleaner to directly express this as a 3-way comparison
-  // soft FP libcall instead of individual compares.
-  RTLIB::Libcall LC = RTLIB::RuntimeLibcallsInfo::getLibcallFromImpl(Impl);
-  switch (LC) {
-  case RTLIB::OEQ_F32:
-  case RTLIB::OEQ_F64:
-  case RTLIB::OEQ_F128:
-  case RTLIB::OEQ_PPCF128:
-    return ISD::SETEQ;
-  case RTLIB::UNE_F32:
-  case RTLIB::UNE_F64:
-  case RTLIB::UNE_F128:
-  case RTLIB::UNE_PPCF128:
-    return ISD::SETNE;
-  case RTLIB::OGE_F32:
-  case RTLIB::OGE_F64:
-  case RTLIB::OGE_F128:
-  case RTLIB::OGE_PPCF128:
-    return ISD::SETGE;
-  case RTLIB::OLT_F32:
-  case RTLIB::OLT_F64:
-  case RTLIB::OLT_F128:
-  case RTLIB::OLT_PPCF128:
-    return ISD::SETLT;
-  case RTLIB::OLE_F32:
-  case RTLIB::OLE_F64:
-  case RTLIB::OLE_F128:
-  case RTLIB::OLE_PPCF128:
-    return ISD::SETLE;
-  case RTLIB::OGT_F32:
-  case RTLIB::OGT_F64:
-  case RTLIB::OGT_F128:
-  case RTLIB::OGT_PPCF128:
-    return ISD::SETGT;
-  case RTLIB::UO_F32:
-  case RTLIB::UO_F64:
-  case RTLIB::UO_F128:
-  case RTLIB::UO_PPCF128:
-    return ISD::SETNE;
-  default:
-    llvm_unreachable("not a compare libcall");
-  }
-}
-
 /// NOTE: The TargetMachine owns TLOF.
 TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm,
                                        const TargetSubtargetInfo &STI)
@@ -1120,6 +1053,7 @@ void TargetLoweringBase::initActions() {
     // Most backends expect to see the node which just returns the value loaded.
     setOperationAction(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, VT, Expand);
 
+    // clang-format off
     // These operations default to expand.
     setOperationAction({ISD::FGETSIGN,       ISD::CONCAT_VECTORS,
                         ISD::FMINNUM,        ISD::FMAXNUM,
@@ -1149,8 +1083,11 @@ void TargetLoweringBase::initActions() {
                         ISD::FASIN,          ISD::FATAN,
                         ISD::FCOSH,          ISD::FSINH,
                         ISD::FTANH,          ISD::FATAN2,
-                        ISD::FMULADD},
+                        ISD::FMULADD,        ISD::CONVERT_FROM_ARBITRARY_FP,
+                        ISD::CONVERT_TO_ARBITRARY_FP,
+                        ISD::PSEUDO_FMIN,    ISD::PSEUDO_FMAX},
                        VT, Expand);
+    // clang-format on
 
     // Overflow operations default to expand
     setOperationAction({ISD::SADDO, ISD::SSUBO, ISD::UADDO, ISD::USUBO,
@@ -1180,14 +1117,20 @@ void TargetLoweringBase::initActions() {
     // Carry-less multiply
     setOperationAction({ISD::CLMUL, ISD::CLMULR, ISD::CLMULH}, VT, Expand);
 
+    // Bit extract/deposit (compress/expand)
+    setOperationAction({ISD::PEXT, ISD::PDEP}, VT, Expand);
+
     // Saturated trunc
     setOperationAction(ISD::TRUNCATE_SSAT_S, VT, Expand);
     setOperationAction(ISD::TRUNCATE_SSAT_U, VT, Expand);
     setOperationAction(ISD::TRUNCATE_USAT_U, VT, Expand);
 
     // These default to Expand so they will be expanded to CTLZ/CTTZ by default.
-    setOperationAction({ISD::CTLZ_ZERO_UNDEF, ISD::CTTZ_ZERO_UNDEF}, VT,
+    setOperationAction({ISD::CTLZ_ZERO_POISON, ISD::CTTZ_ZERO_POISON}, VT,
                        Expand);
+
+    // This defaults to Expand so it will be expanded to ABS by default.
+    setOperationAction(ISD::ABS_MIN_POISON, VT, Expand);
     setOperationAction(ISD::CTLS, VT, Expand);
 
     setOperationAction({ISD::BITREVERSE, ISD::PARITY}, VT, Expand);
@@ -1210,6 +1153,8 @@ void TargetLoweringBase::initActions() {
 #define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
     setOperationAction(ISD::STRICT_##DAGN, VT, Expand);
 #include "llvm/IR/ConstrainedOps.def"
+    setOperationAction(ISD::STRICT_PSEUDO_FMIN, VT, Expand);
+    setOperationAction(ISD::STRICT_PSEUDO_FMAX, VT, Expand);
 
     // For most targets @llvm.get.dynamic.area.offset just returns 0.
     setOperationAction(ISD::GET_DYNAMIC_AREA_OFFSET, VT, Expand);
@@ -1228,8 +1173,12 @@ void TargetLoweringBase::initActions() {
     setOperationAction({ISD::VECTOR_SPLICE_LEFT, ISD::VECTOR_SPLICE_RIGHT}, VT,
                        Expand);
 
-    // Only some target support this vector operation. Most need to expand it.
-    setOperationAction(ISD::VECTOR_COMPRESS, VT, Expand);
+    // Only some target support these vector operations. Default them to Expand.
+    setOperationAction({ISD::VECTOR_COMPRESS, ISD::VECTOR_MATCH}, VT, Expand);
+
+    // cttz.elts defaults to expand.
+    setOperationAction({ISD::CTTZ_ELTS, ISD::CTTZ_ELTS_ZERO_POISON}, VT,
+                       Expand);
 
     // VP operations default to expand.
 #define BEGIN_REGISTER_VP_SDNODE(SDOPC, ...)                                   \
@@ -1248,6 +1197,11 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::RESET_FPENV, VT, Expand);
 
     setOperationAction(ISD::MSTORE, VT, Expand);
+
+    setOperationAction(ISD::MASKED_UDIV, VT, Expand);
+    setOperationAction(ISD::MASKED_SDIV, VT, Expand);
+    setOperationAction(ISD::MASKED_UREM, VT, Expand);
+    setOperationAction(ISD::MASKED_SREM, VT, Expand);
   }
 
   // Most targets ignore the @llvm.prefetch intrinsic.
@@ -1343,7 +1297,7 @@ bool TargetLoweringBase::isFreeAddrSpaceCast(unsigned SrcAS,
 }
 
 unsigned TargetLoweringBase::getBitWidthForCttzElements(
-    Type *RetTy, ElementCount EC, bool ZeroIsPoison,
+    EVT RetVT, ElementCount EC, bool ZeroIsPoison,
     const ConstantRange *VScaleRange) const {
   // Find the smallest "sensible" element type to use for the expansion.
   ConstantRange CR(APInt(64, EC.getKnownMinValue()));
@@ -1353,7 +1307,7 @@ unsigned TargetLoweringBase::getBitWidthForCttzElements(
   if (ZeroIsPoison)
     CR = CR.subtract(APInt(64, 1));
 
-  unsigned EltWidth = RetTy->getScalarSizeInBits();
+  unsigned EltWidth = RetVT.getScalarSizeInBits();
   EltWidth = std::min(EltWidth, CR.getActiveBits());
   EltWidth = std::max(llvm::bit_ceil(EltWidth), (unsigned)8);
 
@@ -1935,16 +1889,19 @@ void TargetLoweringBase::computeRegisterProperties(
     RepRegClassForVT[i] = RRC;
     RepRegClassCostForVT[i] = Cost;
   }
+
+  // Compute minimum known-legal store size.
+  MaximumLegalStoreInBits = 0;
+  for (MVT VT : MVT::all_valuetypes())
+    if (VT != MVT::Other && isTypeLegal(VT) &&
+        VT.getSizeInBits().getKnownMinValue() >= MaximumLegalStoreInBits)
+      MaximumLegalStoreInBits = VT.getSizeInBits().getKnownMinValue();
 }
 
 EVT TargetLoweringBase::getSetCCResultType(const DataLayout &DL, LLVMContext &,
                                            EVT VT) const {
   assert(!VT.isVector() && "No default SetCC type for vectors!");
   return getPointerTy(DL).SimpleTy;
-}
-
-MVT::SimpleValueType TargetLoweringBase::getCmpLibcallReturnType() const {
-  return MVT::i32; // return the default value
 }
 
 /// getVectorTypeBreakdown - Vector types are broken down into some number of
@@ -2208,7 +2165,8 @@ int TargetLoweringBase::InstructionOpcodeToISD(unsigned Opcode) const {
   };
   switch (static_cast<InstructionOpcodes>(Opcode)) {
   case Ret:            return 0;
-  case Br:             return 0;
+  case UncondBr:       return 0;
+  case CondBr:         return 0;
   case Switch:         return 0;
   case IndirectBr:     return 0;
   case Invoke:         return 0;
@@ -2282,12 +2240,36 @@ int TargetLoweringBase::InstructionOpcodeToISD(unsigned Opcode) const {
 
 int TargetLoweringBase::IntrinsicIDToISD(Intrinsic::ID ID) const {
   switch (ID) {
+  case Intrinsic::acos:
+    return ISD::FACOS;
+  case Intrinsic::asin:
+    return ISD::FASIN;
+  case Intrinsic::atan:
+    return ISD::FATAN;
+  case Intrinsic::cos:
+    return ISD::FCOS;
+  case Intrinsic::cosh:
+    return ISD::FCOSH;
   case Intrinsic::exp:
     return ISD::FEXP;
   case Intrinsic::exp2:
     return ISD::FEXP2;
+  case Intrinsic::exp10:
+    return ISD::FEXP10;
   case Intrinsic::log:
     return ISD::FLOG;
+  case Intrinsic::log2:
+    return ISD::FLOG2;
+  case Intrinsic::log10:
+    return ISD::FLOG10;
+  case Intrinsic::sin:
+    return ISD::FSIN;
+  case Intrinsic::sinh:
+    return ISD::FSINH;
+  case Intrinsic::tan:
+    return ISD::FTAN;
+  case Intrinsic::tanh:
+    return ISD::FTANH;
   default:
     return ISD::DELETED_NODE;
   }
@@ -2737,7 +2719,7 @@ void TargetLoweringBase::finalizeLowering(MachineFunction &MF) const {
 
 MachineMemOperand::Flags TargetLoweringBase::getLoadMemOperandFlags(
     const LoadInst &LI, const DataLayout &DL, AssumptionCache *AC,
-    const TargetLibraryInfo *LibInfo) const {
+    const TargetLibraryInfo *LibInfo, CodeGenOptLevel OptLevel) const {
   MachineMemOperand::Flags Flags = MachineMemOperand::MOLoad;
   if (LI.isVolatile())
     Flags |= MachineMemOperand::MOVolatile;
@@ -2748,10 +2730,15 @@ MachineMemOperand::Flags TargetLoweringBase::getLoadMemOperandFlags(
   if (LI.hasMetadata(LLVMContext::MD_invariant_load))
     Flags |= MachineMemOperand::MOInvariant;
 
-  if (isDereferenceableAndAlignedPointer(LI.getPointerOperand(), LI.getType(),
-                                         LI.getAlign(), DL, &LI, AC,
-                                         /*DT=*/nullptr, LibInfo))
+  // Dereferenceability analysis is expensive, skip at O0.
+  if (OptLevel != CodeGenOptLevel::None &&
+      isDereferenceableAndAlignedPointer(
+          LI.getPointerOperand(), LI.getType(), LI.getAlign(),
+          SimplifyQuery(DL, LibInfo, /*DT=*/nullptr, AC, &LI))) {
     Flags |= MachineMemOperand::MODereferenceable;
+  } else if (LI.hasMetadata(LLVMContext::MD_dereferenceable)) {
+    Flags |= MachineMemOperand::MODereferenceable;
+  }
 
   Flags |= getTargetMMOFlags(LI);
   return Flags;

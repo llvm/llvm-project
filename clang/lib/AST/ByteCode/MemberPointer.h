@@ -19,7 +19,6 @@ class CXXRecordDecl;
 namespace interp {
 
 class Context;
-class FunctionPointer;
 
 class MemberPointer final {
 private:
@@ -45,7 +44,7 @@ public:
   MemberPointer() = default;
   MemberPointer(Pointer Base, const ValueDecl *Dcl)
       : Base(Base), DeclAndIsDerivedMember(Dcl) {}
-  MemberPointer(uint32_t Address, const Descriptor *D) {
+  MemberPointer(uint32_t Address, const Type *) {
     // We only reach this for Address == 0, when creating a null member pointer.
     assert(Address == 0);
   }
@@ -100,7 +99,6 @@ public:
   ComparisonCategoryResult compare(const MemberPointer &RHS) const;
 
   std::optional<Pointer> toPointer(const Context &Ctx) const;
-  FunctionPointer toFunctionPointer(const Context &Ctx) const;
 
   bool isBaseCastPossible() const {
     if (PtrOffset < 0)
@@ -149,7 +147,14 @@ public:
   MemberPointer takeInstance(Pointer Instance) const {
     assert(this->Base.isZero());
     return MemberPointer(Instance, DeclAndIsDerivedMember.getPointer(),
-                         this->PtrOffset);
+                         this->PtrOffset, PathLength, Path,
+                         DeclAndIsDerivedMember.getInt());
+  }
+
+  MemberPointer withPath(uint8_t PathLength, const CXXRecordDecl **Path,
+                         bool IsDerived) const {
+    return MemberPointer(this->Base, DeclAndIsDerivedMember.getPointer(),
+                         PtrOffset, PathLength, Path, IsDerived);
   }
 
   APValue toAPValue(const ASTContext &) const;

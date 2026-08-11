@@ -262,3 +262,15 @@ func.func @legal_params_for_loop(%arg0: i32, %arg1: i32, %arg2: i32) -> i32 {
   }
   return %result : i32
 }
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/148369
+// Functions with dynamically-shaped tensor arguments should not crash.
+// The pattern should bail out and leave such functions unchanged.
+
+// CHECK-LABEL: @dynamic_tensor_arg
+// CHECK-SAME: (%[[ARG0:.+]]: tensor<?x2xi8>)
+func.func @dynamic_tensor_arg(%arg0: tensor<?x2xi8>) {
+  return
+}

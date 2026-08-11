@@ -148,7 +148,7 @@ performBlockTailMerging(Function &F, ArrayRef<BasicBlock *> BBs,
 
     // And turn BB into a block that just unconditionally branches
     // to the canonical block.
-    Instruction *BI = BranchInst::Create(CanonicalBB, BB);
+    Instruction *BI = UncondBrInst::Create(CanonicalBB, BB);
     BI->setDebugLoc(Term->getDebugLoc());
     Term->eraseFromParent();
 
@@ -287,12 +287,16 @@ static bool simplifyFunctionCFGImpl(Function &F, const TargetTransformInfo &TTI,
   // iterate between the two optimizations.  We structure the code like this to
   // avoid rerunning iterativelySimplifyCFG if the second pass of
   // removeUnreachableBlocks doesn't do anything.
-  if (!removeUnreachableBlocks(F, DT ? &DTU : nullptr))
+  // Avoid scanning instructions to reduce compile-time.
+  if (!removeUnreachableBlocks(F, DT ? &DTU : nullptr, /*MSSAU=*/nullptr,
+                               /*FoldInstsToUnreachable=*/false))
     return true;
 
   do {
     EverChanged = iterativelySimplifyCFG(F, TTI, DT ? &DTU : nullptr, Options);
-    EverChanged |= removeUnreachableBlocks(F, DT ? &DTU : nullptr);
+    EverChanged |=
+        removeUnreachableBlocks(F, DT ? &DTU : nullptr, /*MSSAU=*/nullptr,
+                                /*FoldInstsToUnreachable=*/false);
   } while (EverChanged);
 
   return true;
@@ -380,9 +384,13 @@ PreservedAnalyses SimplifyCFGPass::run(Function &F,
     DT = &AM.getResult<DominatorTreeAnalysis>(F);
   if (!simplifyFunctionCFG(F, TTI, DT, Options))
     return PreservedAnalyses::all();
+  // If we removed some blocks, update block numbers to keep dense numbering.
+  F.renumberBlocks();
   PreservedAnalyses PA;
-  if (RequireAndPreserveDomTree)
+  if (RequireAndPreserveDomTree) {
+    DT->updateBlockNumbers();
     PA.preserve<DominatorTreeAnalysis>();
+  }
   return PA;
 }
 

@@ -10,9 +10,9 @@
 #include "DirectX.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/DXILResource.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/Frontend/HLSL/HLSLResource.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
@@ -23,8 +23,10 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/User.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/DXILABI.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
+#include <optional>
 
 #define DEBUG_TYPE "dxil-resource-access"
 
@@ -56,7 +58,8 @@ static Value *traverseGEPOffsets(const DataLayout &DL, IRBuilder<> &Builder,
 
   while (Ptr) {
     if (auto *II = dyn_cast<IntrinsicInst>(Ptr)) {
-      assert(II->getIntrinsicID() == Intrinsic::dx_resource_getpointer &&
+      assert((II->getIntrinsicID() == Intrinsic::dx_resource_getpointer ||
+              II->getIntrinsicID() == Intrinsic::dx_resource_getbasepointer) &&
              "Resource access through unexpected intrinsic");
       return Offset ? Offset : ConstantInt::get(Builder.getInt32Ty(), 0);
     }
@@ -142,8 +145,24 @@ static void createTypedBufferStore(IntrinsicInst *II, StoreInst *SI,
   SI->replaceAllUsesWith(Inst);
 }
 
-static void createRawStore(IntrinsicInst *II, StoreInst *SI,
-                           dxil::ResourceTypeInfo &RTI) {
+static void emitRawStore(IRBuilder<> &Builder, Value *Buffer, Value *Index,
+                         Value *Offset, Value *V, dxil::ResourceTypeInfo &RTI) {
+  // For raw buffer (ie, HLSL's ByteAddressBuffer), we need to fold the access
+  // entirely into the index.
+  if (!RTI.isStruct()) {
+    auto *ConstantOffset = dyn_cast<ConstantInt>(Offset);
+    if (!ConstantOffset || !ConstantOffset->isZero())
+      Index = Builder.CreateAdd(Index, Offset);
+    Offset = llvm::PoisonValue::get(Builder.getInt32Ty());
+  }
+
+  Builder.CreateIntrinsic(Builder.getVoidTy(),
+                          Intrinsic::dx_resource_store_rawbuffer,
+                          {Buffer, Index, Offset, V});
+}
+
+static void createRawStores(IntrinsicInst *II, StoreInst *SI,
+                            dxil::ResourceTypeInfo &RTI) {
   const DataLayout &DL = SI->getDataLayout();
   IRBuilder<> Builder(SI);
 
@@ -157,19 +176,27 @@ static void createRawStore(IntrinsicInst *II, StoreInst *SI,
   Value *Offset =
       traverseGEPOffsets(DL, Builder, SI->getPointerOperand(), AccessSize);
 
-  // For raw buffer (ie, HLSL's ByteAddressBuffer), we need to fold the access
-  // entirely into the index.
-  if (!RTI.isStruct()) {
-    auto *ConstantOffset = dyn_cast<ConstantInt>(Offset);
-    if (!ConstantOffset || !ConstantOffset->isZero())
-      Index = Builder.CreateAdd(Index, Offset);
-    Offset = llvm::PoisonValue::get(Builder.getInt32Ty());
-  }
+  auto *VT = dyn_cast<FixedVectorType>(V->getType());
+  if (VT && VT->getNumElements() > 4) {
+    // Split into stores of at most 4 elements.
+    Type *EltTy = VT->getElementType();
+    Value *Stride = ConstantInt::get(Builder.getInt32Ty(),
+                                     4 * (DL.getTypeSizeInBits(EltTy) / 8));
 
-  auto *Inst = Builder.CreateIntrinsic(Builder.getVoidTy(),
-                                       Intrinsic::dx_resource_store_rawbuffer,
-                                       {II->getOperand(0), Index, Offset, V});
-  SI->replaceAllUsesWith(Inst);
+    SmallVector<int, 4> Indices;
+    for (unsigned int I = 0, N = VT->getNumElements(); I < N; I += 4) {
+      if (I > 0)
+        Offset = Builder.CreateAdd(Offset, Stride);
+
+      for (unsigned int J = I, E = std::min(N, J + 4); J < E; ++J)
+        Indices.push_back(J);
+      Value *Part = Builder.CreateShuffleVector(V, Indices);
+      emitRawStore(Builder, II->getOperand(0), Index, Offset, Part, RTI);
+
+      Indices.clear();
+    }
+  } else
+    emitRawStore(Builder, II->getOperand(0), Index, Offset, V, RTI);
 }
 
 static void createStoreIntrinsic(IntrinsicInst *II, StoreInst *SI,
@@ -179,7 +206,7 @@ static void createStoreIntrinsic(IntrinsicInst *II, StoreInst *SI,
     return createTypedBufferStore(II, SI, RTI);
   case dxil::ResourceKind::RawBuffer:
   case dxil::ResourceKind::StructuredBuffer:
-    return createRawStore(II, SI, RTI);
+    return createRawStores(II, SI, RTI);
   case dxil::ResourceKind::Texture1D:
   case dxil::ResourceKind::Texture2D:
   case dxil::ResourceKind::Texture2DMS:
@@ -191,7 +218,7 @@ static void createStoreIntrinsic(IntrinsicInst *II, StoreInst *SI,
   case dxil::ResourceKind::TextureCubeArray:
   case dxil::ResourceKind::FeedbackTexture2D:
   case dxil::ResourceKind::FeedbackTexture2DArray:
-    reportFatalUsageError("DXIL Load not implemented yet");
+    reportFatalUsageError("DXIL Store not implemented for texture resources");
     return;
   case dxil::ResourceKind::CBuffer:
   case dxil::ResourceKind::Sampler:
@@ -200,6 +227,122 @@ static void createStoreIntrinsic(IntrinsicInst *II, StoreInst *SI,
   case dxil::ResourceKind::Invalid:
   case dxil::ResourceKind::NumEntries:
     llvm_unreachable("Invalid resource kind for store");
+  }
+  llvm_unreachable("Unhandled case in switch");
+}
+
+static std::optional<dxil::AtomicBinOpCode>
+getAtomicBinOpCode(AtomicRMWInst::BinOp BinOp) {
+  switch (BinOp) {
+  case AtomicRMWInst::Add:
+    return dxil::AtomicBinOpCode::Add;
+  case AtomicRMWInst::And:
+    return dxil::AtomicBinOpCode::And;
+  case AtomicRMWInst::Or:
+    return dxil::AtomicBinOpCode::Or;
+  case AtomicRMWInst::Xor:
+    return dxil::AtomicBinOpCode::Xor;
+  case AtomicRMWInst::Min:
+    return dxil::AtomicBinOpCode::IMin;
+  case AtomicRMWInst::Max:
+    return dxil::AtomicBinOpCode::IMax;
+  case AtomicRMWInst::UMin:
+    return dxil::AtomicBinOpCode::UMin;
+  case AtomicRMWInst::UMax:
+    return dxil::AtomicBinOpCode::UMax;
+  case AtomicRMWInst::Xchg:
+    return dxil::AtomicBinOpCode::Exchange;
+  case AtomicRMWInst::Sub:
+  case AtomicRMWInst::Nand:
+  case AtomicRMWInst::FAdd:
+  case AtomicRMWInst::FSub:
+  case AtomicRMWInst::FMax:
+  case AtomicRMWInst::FMin:
+  case AtomicRMWInst::FMaximum:
+  case AtomicRMWInst::FMinimum:
+  case AtomicRMWInst::FMaximumNum:
+  case AtomicRMWInst::FMinimumNum:
+  case AtomicRMWInst::UIncWrap:
+  case AtomicRMWInst::UDecWrap:
+  case AtomicRMWInst::USubCond:
+  case AtomicRMWInst::USubSat:
+  case AtomicRMWInst::BAD_BINOP:
+    return std::nullopt;
+  }
+  llvm_unreachable("Unhandled atomicrmw operation");
+}
+
+static void createAtomicBinOp(IntrinsicInst *II, AtomicRMWInst *AI,
+                              dxil::ResourceTypeInfo &RTI) {
+  std::optional<dxil::AtomicBinOpCode> BinOpCode =
+      getAtomicBinOpCode(AI->getOperation());
+  if (!BinOpCode) {
+    reportFatalUsageError("DXIL resource atomicrmw operation not implemented");
+    return;
+  }
+
+  const DataLayout &DL = AI->getDataLayout();
+  IRBuilder<> Builder(AI);
+  Value *Index = II->getOperand(1);
+
+  // The offset for the rawbuffer load/store/atomic ops is always in bytes.
+  uint64_t AccessSize = 1;
+  Value *Offset =
+      traverseGEPOffsets(DL, Builder, AI->getPointerOperand(), AccessSize);
+
+  // For non-struct buffers (RawBuffer or TypedBuffer), fold the byte offset
+  // into the index and mark the coord1 arg as poison — only StructuredBuffer
+  // atomics use both a struct index and a byte offset.
+  if (!RTI.isStruct()) {
+    auto *ConstantOffset = dyn_cast<ConstantInt>(Offset);
+    if (!ConstantOffset || !ConstantOffset->isZero())
+      Index = Builder.CreateAdd(Index, Offset);
+    Offset = llvm::PoisonValue::get(Builder.getInt32Ty());
+  }
+
+  Value *BinOp = Builder.getInt32(static_cast<uint32_t>(*BinOpCode));
+
+  // Emit the target-independent intrinsic; DXILOpLowering lowers it to the
+  // DXIL `AtomicBinOp` op and handles the target-ext-typed handle cast via
+  // its `createTmpHandleCast` bookkeeping.
+  Value *Result = Builder.CreateIntrinsic(
+      AI->getType(), Intrinsic::dx_resource_atomic_binop,
+      {II->getOperand(0), BinOp, Index, Offset, AI->getValOperand()});
+
+  AI->replaceAllUsesWith(Result);
+}
+
+static void createAtomicBinOpIntrinsic(IntrinsicInst *II, AtomicRMWInst *AI,
+                                       dxil::ResourceTypeInfo &RTI) {
+  switch (RTI.getResourceKind()) {
+  case dxil::ResourceKind::TypedBuffer:
+  case dxil::ResourceKind::RawBuffer:
+  case dxil::ResourceKind::StructuredBuffer:
+    return createAtomicBinOp(II, AI, RTI);
+  case dxil::ResourceKind::Texture1D:
+  case dxil::ResourceKind::Texture2D:
+  case dxil::ResourceKind::Texture2DMS:
+  case dxil::ResourceKind::Texture3D:
+  case dxil::ResourceKind::TextureCube:
+  case dxil::ResourceKind::Texture1DArray:
+  case dxil::ResourceKind::Texture2DArray:
+  case dxil::ResourceKind::Texture2DMSArray:
+  case dxil::ResourceKind::TextureCubeArray:
+  case dxil::ResourceKind::FeedbackTexture2D:
+  case dxil::ResourceKind::FeedbackTexture2DArray:
+    reportFatalUsageError(
+        "DXIL atomicrmw not implemented for texture resources");
+    return;
+  case dxil::ResourceKind::CBuffer:
+  case dxil::ResourceKind::Sampler:
+  case dxil::ResourceKind::TBuffer:
+    reportFatalUsageError(
+        "DXIL atomicrmw not implemented for this resource type");
+    return;
+  case dxil::ResourceKind::RTAccelerationStructure:
+  case dxil::ResourceKind::Invalid:
+  case dxil::ResourceKind::NumEntries:
+    llvm_unreachable("Invalid resource kind for atomicrmw");
   }
   llvm_unreachable("Unhandled case in switch");
 }
@@ -234,21 +377,53 @@ static void createTypedBufferLoad(IntrinsicInst *II, LoadInst *LI,
   LI->replaceAllUsesWith(V);
 }
 
-static void createRawLoad(IntrinsicInst *II, LoadInst *LI,
-                          dxil::ResourceTypeInfo &RTI) {
+static void createTextureLoad(IntrinsicInst *II, LoadInst *LI,
+                              dxil::ResourceTypeInfo &RTI) {
   const DataLayout &DL = LI->getDataLayout();
   IRBuilder<> Builder(LI);
+  Type *ContainedType = RTI.getHandleTy()->getTypeParameter(0);
 
-  Type *LoadType = StructType::get(LI->getType(), Builder.getInt1Ty());
-  assert(!LI->getType()->isAggregateType() &&
-         "Resource load should be scalar or vector type");
+  Value *Handle = II->getOperand(0);
+  Value *Coords = II->getOperand(1);
 
-  Value *Index = II->getOperand(1);
-  // The offset for the rawbuffer load and store ops is always in bytes.
-  uint64_t AccessSize = 1;
+  // For operator[], mip level is 0.
+  Value *MipLevel = Builder.getInt32(0);
+
+  // For operator[], offsets are zero.
+  Type *CoordTy = Coords->getType();
+  Type *OffsetTy;
+  if (auto *VecTy = dyn_cast<FixedVectorType>(CoordTy))
+    OffsetTy =
+        FixedVectorType::get(Builder.getInt32Ty(), VecTy->getNumElements());
+  else
+    OffsetTy = Builder.getInt32Ty();
+  Value *Offsets = Constant::getNullValue(OffsetTy);
+
+  Value *V =
+      Builder.CreateIntrinsic(ContainedType, Intrinsic::dx_resource_load_level,
+                              {Handle, Coords, MipLevel, Offsets});
+
+  Type *ScalarType = ContainedType->getScalarType();
+  uint64_t AccessSize = DL.getTypeSizeInBits(ScalarType) / 8;
   Value *Offset =
       traverseGEPOffsets(DL, Builder, LI->getPointerOperand(), AccessSize);
+  auto *ConstantOffset = dyn_cast<ConstantInt>(Offset);
+  if (!ConstantOffset || !ConstantOffset->isZero())
+    V = Builder.CreateExtractElement(V, Offset);
 
+  // If we loaded a <1 x ...> instead of a scalar (presumably to feed a
+  // shufflevector), then make sure we're maintaining the resulting type.
+  if (auto *VT = dyn_cast<FixedVectorType>(LI->getType()))
+    if (VT->getNumElements() == 1 && !isa<FixedVectorType>(V->getType()))
+      V = Builder.CreateInsertElement(PoisonValue::get(VT), V,
+                                      Builder.getInt32(0));
+
+  LI->replaceAllUsesWith(V);
+}
+
+static Value *emitRawLoad(IRBuilder<> &Builder, Type *Ty, Value *Buffer,
+                          Value *Index, Value *Offset,
+                          dxil::ResourceTypeInfo &RTI) {
   // For raw buffer (ie, HLSL's ByteAddressBuffer), we need to fold the access
   // entirely into the index.
   if (!RTI.isStruct()) {
@@ -258,10 +433,52 @@ static void createRawLoad(IntrinsicInst *II, LoadInst *LI,
     Offset = llvm::PoisonValue::get(Builder.getInt32Ty());
   }
 
-  Value *V =
-      Builder.CreateIntrinsic(LoadType, Intrinsic::dx_resource_load_rawbuffer,
-                              {II->getOperand(0), Index, Offset});
-  V = Builder.CreateExtractValue(V, {0});
+  // The load intrinsic includes the bit for CheckAccessFullyMapped, so we need
+  // to add that to the return type.
+  Type *TypeWithCheck = StructType::get(Ty, Builder.getInt1Ty());
+  Value *V = Builder.CreateIntrinsic(TypeWithCheck,
+                                     Intrinsic::dx_resource_load_rawbuffer,
+                                     {Buffer, Index, Offset});
+  return Builder.CreateExtractValue(V, {0});
+}
+
+static void createRawLoads(IntrinsicInst *II, LoadInst *LI,
+                           dxil::ResourceTypeInfo &RTI) {
+  const DataLayout &DL = LI->getDataLayout();
+  IRBuilder<> Builder(LI);
+
+  Value *Index = II->getOperand(1);
+  // The offset for the rawbuffer load and store ops is always in bytes.
+  uint64_t AccessSize = 1;
+  Value *Offset =
+      traverseGEPOffsets(DL, Builder, LI->getPointerOperand(), AccessSize);
+
+  // TODO: We could make this handle aggregates by walking the structure and
+  // handling each field individually, but we don't ever generate code that
+  // would hit that so it seems superfluous.
+  assert(!LI->getType()->isAggregateType() &&
+         "Resource load should be scalar or vector type");
+
+  Value *V;
+  if (auto *VT = dyn_cast<FixedVectorType>(LI->getType())) {
+    // Split into loads of at most 4 elements.
+    Type *EltTy = VT->getElementType();
+    Value *Stride = ConstantInt::get(Builder.getInt32Ty(),
+                                     4 * (DL.getTypeSizeInBits(EltTy) / 8));
+
+    SmallVector<Value *> Parts;
+    for (unsigned int I = 0, N = VT->getNumElements(); I < N; I += 4) {
+      Type *Ty = FixedVectorType::get(EltTy, N - I < 4 ? N - I : 4);
+      if (I > 0)
+        Offset = Builder.CreateAdd(Offset, Stride);
+      Parts.push_back(
+          emitRawLoad(Builder, Ty, II->getOperand(0), Index, Offset, RTI));
+    }
+
+    V = Parts.size() > 1 ? concatenateVectors(Builder, Parts) : Parts[0];
+  } else
+    V = emitRawLoad(Builder, LI->getType(), II->getOperand(0), Index, Offset,
+                    RTI);
 
   LI->replaceAllUsesWith(V);
 }
@@ -316,7 +533,10 @@ static void createCBufferLoad(IntrinsicInst *II, LoadInst *LI,
 
   IRBuilder<> Builder(LI);
 
-  ConstantInt *GlobalOffset = dyn_cast<ConstantInt>(II->getOperand(1));
+  ConstantInt *GlobalOffset =
+      II->getIntrinsicID() == Intrinsic::dx_resource_getbasepointer
+          ? ConstantInt::get(Builder.getInt32Ty(), 0)
+          : dyn_cast<ConstantInt>(II->getOperand(1));
   assert(GlobalOffset && "CBuffer getpointer index must be constant");
 
   uint64_t GlobalOffsetVal = GlobalOffset->getZExtValue();
@@ -415,7 +635,7 @@ static void createLoadIntrinsic(IntrinsicInst *II, LoadInst *LI,
     return createTypedBufferLoad(II, LI, RTI);
   case dxil::ResourceKind::RawBuffer:
   case dxil::ResourceKind::StructuredBuffer:
-    return createRawLoad(II, LI, RTI);
+    return createRawLoads(II, LI, RTI);
   case dxil::ResourceKind::CBuffer:
     return createCBufferLoad(II, LI, RTI);
   case dxil::ResourceKind::Texture1D:
@@ -427,6 +647,7 @@ static void createLoadIntrinsic(IntrinsicInst *II, LoadInst *LI,
   case dxil::ResourceKind::Texture2DArray:
   case dxil::ResourceKind::Texture2DMSArray:
   case dxil::ResourceKind::TextureCubeArray:
+    return createTextureLoad(II, LI, RTI);
   case dxil::ResourceKind::FeedbackTexture2D:
   case dxil::ResourceKind::FeedbackTexture2DArray:
   case dxil::ResourceKind::TBuffer:
@@ -446,6 +667,8 @@ static Instruction *getStoreLoadPointerOperand(Instruction *AI) {
     return dyn_cast<Instruction>(LI->getPointerOperand());
   if (auto *SI = dyn_cast<StoreInst>(AI))
     return dyn_cast<Instruction>(SI->getPointerOperand());
+  if (auto *RMWI = dyn_cast<AtomicRMWInst>(AI))
+    return dyn_cast<Instruction>(RMWI->getPointerOperand());
 
   return nullptr;
 }
@@ -600,6 +823,8 @@ replaceHandleWithIndices(Instruction *Ptr, IntrinsicInst *OldHandle,
          "Couldn't retrieve indices. This is guaranteed by getAccessIndices");
 
   IRBuilder<> Builder(Ptr);
+  if (isa<PHINode>(Ptr))
+    Builder.SetInsertPoint(Ptr->getParent()->getFirstNonPHIIt());
   IntrinsicInst *Handle = cast<IntrinsicInst>(OldHandle->clone());
   Handle->setArgOperand(/*Index=*/3, AccessIdx.HandleIdx);
   Builder.Insert(Handle);
@@ -682,6 +907,9 @@ static void replaceAccess(IntrinsicInst *II, dxil::ResourceTypeInfo &RTI) {
     } else if (auto *LI = dyn_cast<LoadInst>(U)) {
       createLoadIntrinsic(II, LI, RTI);
       DeadInsts.push_back(LI);
+    } else if (auto *AI = dyn_cast<AtomicRMWInst>(U)) {
+      createAtomicBinOpIntrinsic(II, AI, RTI);
+      DeadInsts.push_back(AI);
     } else
       llvm_unreachable("Unhandled instruction - pointer escaped?");
   }
@@ -697,8 +925,13 @@ static bool transformResourcePointers(Function &F, DXILResourceTypeMap &DRTM) {
   for (BasicBlock &BB : make_early_inc_range(F))
     for (Instruction &I : BB)
       if (auto *II = dyn_cast<IntrinsicInst>(&I))
-        if (II->getIntrinsicID() == Intrinsic::dx_resource_getpointer) {
+        if (II->getIntrinsicID() == Intrinsic::dx_resource_getpointer ||
+            II->getIntrinsicID() == Intrinsic::dx_resource_getbasepointer) {
           auto *HandleTy = cast<TargetExtType>(II->getArgOperand(0)->getType());
+          assert(
+              (DRTM[HandleTy].isCBuffer() ||
+               II->getIntrinsicID() != Intrinsic::dx_resource_getbasepointer) &&
+              "dx_resource_getbasepointer should only be used by cbuffers");
           Resources.emplace_back(II, DRTM[HandleTy]);
         }
 

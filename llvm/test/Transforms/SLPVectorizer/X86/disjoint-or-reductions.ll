@@ -260,9 +260,8 @@ define i64 @bswap_i32(ptr noalias %p, ptr noalias %p1) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i8>, ptr [[P1:%.*]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i8> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i8> [[TMP3]] to <4 x i32>
-; CHECK-NEXT:    [[TMP5:%.*]] = shl <4 x i32> [[TMP4]], <i32 24, i32 16, i32 8, i32 0>
-; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP5]])
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i8> [[TMP3]] to i32
+; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP4]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[TMP6]] to i64
 ; CHECK-NEXT:    ret i64 [[TMP7]]
 ;
@@ -310,9 +309,8 @@ define i64 @reorder_i32(ptr noalias %p, ptr noalias %p1) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i8>, ptr [[P1:%.*]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i8> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i8> [[TMP3]] to <4 x i32>
-; CHECK-NEXT:    [[TMP5:%.*]] = shl <4 x i32> [[TMP4]], <i32 16, i32 24, i32 0, i32 8>
-; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP5]])
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i8> [[TMP3]], <4 x i8> poison, <4 x i32> <i32 2, i32 3, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i8> [[TMP4]] to i32
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[TMP6]] to i64
 ; CHECK-NEXT:    ret i64 [[TMP7]]
 ;
@@ -357,10 +355,8 @@ define i64 @reorder_i32(ptr noalias %p, ptr noalias %p1) {
 
 define i64 @bswap_loads_i32(ptr noalias %p) {
 ; CHECK-LABEL: @bswap_loads_i32(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[P:%.*]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i8> [[TMP1]] to <4 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = shl <4 x i32> [[TMP2]], <i32 24, i32 16, i32 8, i32 0>
-; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP3]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP1]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP4]] to i64
 ; CHECK-NEXT:    ret i64 [[TMP5]]
 ;
@@ -391,10 +387,7 @@ define i64 @bswap_loads_i32(ptr noalias %p) {
 
 define i64 @bitcast_loads_i32(ptr noalias %p, ptr noalias %p1) {
 ; CHECK-LABEL: @bitcast_loads_i32(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[P:%.*]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i8> [[TMP1]] to <4 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = shl <4 x i32> [[TMP2]], <i32 0, i32 8, i32 16, i32 24>
-; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP3]])
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP4]] to i64
 ; CHECK-NEXT:    ret i64 [[TMP5]]
 ;

@@ -338,3 +338,95 @@ TEST(IVDescriptorsTest, UnsupportedFindLastPhi) {
                          EXPECT_FALSE(IsRdxPhi);
                        });
 }
+
+// This tests that a min/max recurrence with a vector-typed phi is recognized.
+TEST(IVDescriptorsTest, VectorSMaxRednIdentity) {
+  // Parse the module.
+  LLVMContext Context;
+
+  std::unique_ptr<Module> M =
+      parseIR(Context,
+              R"(define <4 x i32> @foo(ptr %A, i64 %ub) {
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
+  %smax = phi <4 x i32> [ zeroinitializer, %entry ], [ %smax.next, %for.body ]
+  %arrayidx = getelementptr inbounds <4 x i32>, ptr %A, i64 %i
+  %ld = load <4 x i32>, ptr %arrayidx
+  %smax.next = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %smax, <4 x i32> %ld)
+  %i.next = add nsw i64 %i, 1
+  %cmp = icmp slt i64 %i.next, %ub
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:
+  %smax.lcssa = phi <4 x i32> [ %smax.next, %for.body ]
+  ret <4 x i32> %smax.lcssa
+})");
+
+  runWithLoopInfoAndSE(
+      *M, "foo", [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+        Function::iterator FI = F.begin();
+        // First basic block is entry - skip it.
+        BasicBlock *Header = &*(++FI);
+        assert(Header->getName() == "for.body");
+        Loop *L = LI.getLoopFor(Header);
+        EXPECT_NE(L, nullptr);
+        BasicBlock::iterator BBI = Header->begin();
+        assert((&*BBI)->getName() == "i");
+        ++BBI;
+        PHINode *Phi = dyn_cast<PHINode>(&*BBI);
+        assert(Phi->getName() == "smax");
+        RecurrenceDescriptor Rdx;
+        bool IsRdxPhi = RecurrenceDescriptor::isReductionPHI(Phi, L, Rdx);
+        EXPECT_TRUE(IsRdxPhi);
+        RecurKind Kind = Rdx.getRecurrenceKind();
+        EXPECT_EQ(Kind, RecurKind::SMax);
+      });
+}
+
+// Make sure isReductionPHI doesn't crash when SE is not passed to it.
+TEST(IVDescriptorsTest, InvariantStoreNoSCEV) {
+  // Parse the module.
+  LLVMContext Context;
+
+  std::unique_ptr<Module> M = parseIR(Context, R"(
+    define void @smax_with_invariant_store_user(ptr noalias %src, ptr %dst, i64 %n) {
+    entry:
+      br label %loop
+
+    loop:
+      %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+      %max = phi i32 [ 0, %entry ], [ %max.next, %loop ]
+      %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv
+      %l = load i32, ptr %gep.src, align 4
+      %max.next = tail call i32 @llvm.smax.i32(i32 %max, i32 %l)
+      store i32 %max.next, ptr %dst, align 4
+      %iv.next = add i64 %iv, 1
+      %ec = icmp eq i64 %iv, %n
+      br i1 %ec, label %exit, label %loop
+
+    exit:
+      ret void
+    })");
+
+  runWithLoopInfoAndSE(*M, "smax_with_invariant_store_user",
+                       [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+                         Function::iterator FI = F.begin();
+                         // First basic block is entry - skip it.
+                         BasicBlock *Header = &*(++FI);
+                         assert(Header->getName() == "loop");
+                         Loop *L = LI.getLoopFor(Header);
+                         EXPECT_NE(L, nullptr);
+                         BasicBlock::iterator BBI = Header->begin();
+                         ++BBI;
+                         PHINode *Phi = dyn_cast<PHINode>(&*BBI);
+                         EXPECT_NE(Phi, nullptr);
+                         EXPECT_EQ(Phi->getName(), "max");
+                         RecurrenceDescriptor Rdx;
+                         bool IsRdxPhi =
+                             RecurrenceDescriptor::isReductionPHI(Phi, L, Rdx);
+                         EXPECT_FALSE(IsRdxPhi);
+                       });
+}

@@ -27,7 +27,7 @@ defvar Andes45VLSU_MEM_DW = Andes45BIU_DATA_WIDTH;
 defvar Andes45VLEN_VLSU_MEM_DW_RATIO = !div(Andes45VLEN, Andes45VLSU_MEM_DW);
 
 // There are various latency depending on its memory type and status.
-defvar VLSU_MEM_LATENCY = 13;
+defvar Andes45VLSU_MEM_LATENCY = 13;
 
 // The worst case LMUL is the largest LMUL.
 class Andes45IsWorstCaseMX<string mx, list<string> MxList> {
@@ -582,7 +582,7 @@ foreach mx = SchedMxList in {
   defvar Cycles = Andes45GetCyclesLoadStore<mx>.c;
   defvar IsWorstCase = Andes45IsWorstCaseMX<mx, SchedMxList>.c;
 
-  let Latency = !add(4, VLSU_MEM_LATENCY), ReleaseAtCycles = [Cycles] in {
+  let Latency = !add(4, Andes45VLSU_MEM_LATENCY), ReleaseAtCycles = [Cycles] in {
     defm "" : LMULWriteResMX<"WriteVLDE", [Andes45VLSU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVLDFF", [Andes45VLSU], mx, IsWorstCase>;
   }
@@ -590,7 +590,7 @@ foreach mx = SchedMxList in {
   defm "" : LMULWriteResMX<"WriteVSTE", [Andes45VLSU], mx, IsWorstCase>;
 
   // Mask loads and stores
-  let Latency = !add(4, VLSU_MEM_LATENCY), ReleaseAtCycles = [Cycles] in
+  let Latency = !add(4, Andes45VLSU_MEM_LATENCY), ReleaseAtCycles = [Cycles] in
   defm "" : LMULWriteResMX<"WriteVLDM", [Andes45VLSU], mx, IsWorstCase=!eq(mx, "M1")>;
   let ReleaseAtCycles = [Cycles] in
   defm "" : LMULWriteResMX<"WriteVSTM", [Andes45VLSU], mx, IsWorstCase=!eq(mx, "M1")>;
@@ -608,7 +608,7 @@ foreach mx = SchedMxList in {
   foreach eew = [8, 16, 32, 64] in {
     defvar Cycles = Andes45GetCyclesOnePerElement<mx, eew>.c;
 
-    let Latency = !add(4, !add(VLSU_MEM_LATENCY, !div(Andes45DLEN, eew))),
+    let Latency = !add(4, !add(Andes45VLSU_MEM_LATENCY, !div(Andes45DLEN, eew))),
         ReleaseAtCycles = [Cycles] in
       defm "" : LMULWriteResMX<"WriteVLDS"  # eew, [Andes45VLSU], mx, IsWorstCase>;
 
@@ -629,7 +629,7 @@ foreach mx = SchedMxList in {
   foreach eew = [8, 16, 32, 64] in {
     defvar Cycles = Andes45GetCyclesOnePerElement<mx, eew>.c;
 
-    let Latency = !add(5, !add(VLSU_MEM_LATENCY, !div(Andes45DLEN, eew))),
+    let Latency = !add(5, !add(Andes45VLSU_MEM_LATENCY, !div(Andes45DLEN, eew))),
         ReleaseAtCycles = [!add(Cycles, !sub(Andes45GetLMULValue<mx>.c, 1))] in {
       defm "" : LMULWriteResMX<"WriteVLDUX" # eew, [Andes45VLSU], mx, IsWorstCase>;
       defm "" : LMULWriteResMX<"WriteVLDOX" # eew, [Andes45VLSU], mx, IsWorstCase>;
@@ -653,7 +653,7 @@ foreach mx = SchedMxList in {
       defvar IsWorstCase = Andes45IsWorstCaseMX<mx, SchedMxList>.c;
       defvar Size = !mul(Andes45GetLMULValue<mx>.c, nf);
 
-      let Latency = !add(4, !add(VLSU_MEM_LATENCY, !add(Size, 2))),
+      let Latency = !add(4, !add(Andes45VLSU_MEM_LATENCY, !add(Size, 2))),
           ReleaseAtCycles = [!mul(Cycles, nf)] in {
         defm "" : LMULWriteResMX<"WriteVLSEG" # nf # "e" # eew,
                                  [Andes45VLSU], mx, IsWorstCase>;
@@ -677,7 +677,7 @@ foreach mx = SchedMxList in {
       defvar Cycles = Andes45GetCyclesOnePerElement<mx, eew>.c;
       defvar IsWorstCase = Andes45IsWorstCaseMX<mx, SchedMxList>.c;
 
-      let Latency = !add(5, !add(VLSU_MEM_LATENCY, !mul(!div(Andes45DLEN, eew), nf))),
+      let Latency = !add(5, !add(Andes45VLSU_MEM_LATENCY, !mul(!div(Andes45DLEN, eew), nf))),
           ReleaseAtCycles = [!mul(Cycles, nf)] in
         defm "" : LMULWriteResMX<"WriteVLSSEG" # nf # "e" # eew,
                                  [Andes45VLSU], mx, IsWorstCase>;
@@ -698,7 +698,7 @@ foreach mx = SchedMxList in {
       defvar Cycles = Andes45GetCyclesOnePerElement<mx, eew>.c;
       defvar IsWorstCase = Andes45IsWorstCaseMX<mx, SchedMxList>.c;
 
-      let Latency = !add(6, !add(VLSU_MEM_LATENCY, !mul(!div(Andes45DLEN, eew), nf))),
+      let Latency = !add(6, !add(Andes45VLSU_MEM_LATENCY, !mul(!div(Andes45DLEN, eew), nf))),
           ReleaseAtCycles = [!add(!mul(Cycles, nf),
                                   !sub(Andes45GetLMULValue<mx>.c, 1))] in {
         defm "" : LMULWriteResMX<"WriteVLUXSEG" # nf # "e" # eew,
@@ -1103,49 +1103,84 @@ foreach mx = SchedMxListFWRed in {
 foreach mx = SchedMxList in {
   defvar IsWorstCase = Andes45IsWorstCaseMX<mx, SchedMxList>.c;
 
-  defm "" : LMULWriteResMX<"WriteVMALUV", [Andes45VMASK], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVMPopV", [Andes45VMASK], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVMFFSV", [Andes45VMASK], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVMSFSV", [Andes45VMASK], mx, IsWorstCase>;
+  let Latency = 3, ReleaseAtCycles = [Andes45VLEN_DLEN_RATIO] in {
+    defm "" : LMULWriteResMX<"WriteVMALUV", [Andes45VMASK], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVMSFSV", [Andes45VMASK], mx, IsWorstCase>;
+  }
 
-  defm "" : LMULWriteResMX<"WriteVIotaV", [Andes45VMASK], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVIdxV", [Andes45VMASK], mx, IsWorstCase>;
+  let Latency = !add(3, !ne(Andes45VLEN, Andes45DLEN)),
+      ReleaseAtCycles = [Andes45VLEN_DLEN_RATIO] in {
+    defm "" : LMULWriteResMX<"WriteVMPopV", [Andes45VMASK], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVMFFSV", [Andes45VMASK], mx, IsWorstCase>;
+  }
+
 }
-
-// 16. Vector Permutation Instructions
+// TODO: viota and vid have different latency and throughput if VLEN/DLEN=2.
 foreach mx = SchedMxList in {
+  defvar Cycles = Andes45GetCyclesDefault<mx>.c;
   defvar IsWorstCase = Andes45IsWorstCaseMX<mx, SchedMxList>.c;
-
-  defm "" : LMULWriteResMX<"WriteVSlideI", [Andes45VPERMUT], mx, IsWorstCase>;
-
-  defm "" : LMULWriteResMX<"WriteVISlide1X", [Andes45VPERMUT], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVFSlide1F", [Andes45VPERMUT], mx, IsWorstCase>;
-
-  defm "" : LMULWriteResMX<"WriteVSlideUpX", [Andes45VPERMUT], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVSlideDownX", [Andes45VPERMUT], mx, IsWorstCase>;
-}
-
-def : WriteRes<WriteVMovXS, [Andes45VPERMUT]>;
-def : WriteRes<WriteVMovSX, [Andes45VPERMUT]>;
-
-def : WriteRes<WriteVMovFS, [Andes45VPERMUT]>;
-def : WriteRes<WriteVMovSF, [Andes45VPERMUT]>;
-
-// Gather and Compress
-foreach mx = SchedMxList in {
-  foreach sew = SchedSEWSet<mx>.val in {
-    defvar IsWorstCase = Andes45IsWorstCaseMXSEW<mx, sew, SchedMxList>.c;
-    defm "" : LMULSEWWriteResMXSEW<"WriteVRGatherVV", [Andes45VPERMUT], mx, sew, IsWorstCase>;
-    defm "" : LMULSEWWriteResMXSEW<"WriteVRGatherEI16VV", [Andes45VPERMUT], mx, sew, IsWorstCase>;
-    defm "" : LMULSEWWriteResMXSEW<"WriteVCompressV", [Andes45VPERMUT], mx, sew, IsWorstCase>;
+  let Latency = 4, ReleaseAtCycles = [Cycles] in {
+    defm "" : LMULWriteResMX<"WriteVIotaV", [Andes45VMASK], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVIdxV", [Andes45VMASK], mx, IsWorstCase>;
   }
 }
 
+// 16. Vector Permutation Instructions
+// TODO: Use Andes45GetCyclesDefault to get cycles since we are unable to model
+// the Latency and ReleaseAtCycles accurately now.
 foreach mx = SchedMxList in {
+  defvar Cycles = Andes45GetCyclesDefault<mx>.c;
   defvar IsWorstCase = Andes45IsWorstCaseMX<mx, SchedMxList>.c;
 
-  defm "" : LMULWriteResMX<"WriteVRGatherVX", [Andes45VPERMUT], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVRGatherVI", [Andes45VPERMUT], mx, IsWorstCase>;
+  let Latency = Cycles, ReleaseAtCycles = [Cycles] in {
+    defm "" : LMULWriteResMX<"WriteVSlideUpI", [Andes45VPERMUT], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSlideDownI", [Andes45VPERMUT], mx, IsWorstCase>;
+
+    defm "" : LMULWriteResMX<"WriteVISlide1Up", [Andes45VPERMUT], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVISlide1Down", [Andes45VPERMUT], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVFSlide1Up", [Andes45VPERMUT], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVFSlide1Down", [Andes45VPERMUT], mx, IsWorstCase>;
+
+    defm "" : LMULWriteResMX<"WriteVSlideUpX", [Andes45VPERMUT], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSlideDownX", [Andes45VPERMUT], mx, IsWorstCase>;
+  }
+}
+
+let Latency = 2, ReleaseAtCycles = [Andes45VLEN_DLEN_RATIO] in {
+  def : WriteRes<WriteVMovSX, [Andes45VPERMUT]>;
+  def : WriteRes<WriteVMovSF, [Andes45VPERMUT]>;
+}
+
+let Latency = 3, ReleaseAtCycles = [Andes45VLEN_DLEN_RATIO] in {
+  def : WriteRes<WriteVMovXS, [Andes45VPERMUT]>;
+  def : WriteRes<WriteVMovFS, [Andes45VPERMUT]>;
+}
+
+// Gather and Compress
+// TODO: Use Andes45GetCyclesDefault to get cycles since we are unable to model
+// the Latency and ReleaseAtCycles accurately now.
+foreach mx = SchedMxList in {
+  foreach sew = SchedSEWSet<mx>.val in {
+    defvar Cycles = Andes45GetCyclesDefault<mx>.c;
+    defvar IsWorstCase = Andes45IsWorstCaseMXSEW<mx, sew, SchedMxList>.c;
+    let Latency = Cycles, ReleaseAtCycles = [Cycles] in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVRGatherVV", [Andes45VPERMUT], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVRGatherEI16VV", [Andes45VPERMUT], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVCompressV", [Andes45VPERMUT], mx, sew, IsWorstCase>;
+    }
+  }
+}
+
+// TODO: Use Andes45GetCyclesDefault to get cycles since we are unable to model
+// the Latency and ReleaseAtCycles accurately now.
+foreach mx = SchedMxList in {
+  defvar Cycles = Andes45GetCyclesDefault<mx>.c;
+  defvar IsWorstCase = Andes45IsWorstCaseMX<mx, SchedMxList>.c;
+
+  let Latency = Cycles, ReleaseAtCycles = [Cycles] in {
+    defm "" : LMULWriteResMX<"WriteVRGatherVX", [Andes45VPERMUT], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVRGatherVI", [Andes45VPERMUT], mx, IsWorstCase>;
+  }
 }
 
 // Others

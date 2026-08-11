@@ -69,10 +69,10 @@ llvm_canonicalize_cmake_booleans(
   LLVM_BUILD_EXAMPLES
   LLVM_HAS_NVPTX_TARGET
   LLVM_INCLUDE_SPIRV_TOOLS_TESTS
+  LLVM_HAS_AMDGPU_TARGET
   MLIR_ENABLE_BINDINGS_PYTHON
   MLIR_ENABLE_PYTHON_STABLE_ABI
   MLIR_ENABLE_CUDA_RUNNER
-  MLIR_ENABLE_ROCM_CONVERSIONS
   MLIR_ENABLE_ROCM_RUNNER
   MLIR_ENABLE_SPIRV_CPU_RUNNER
   MLIR_ENABLE_VULKAN_RUNNER
@@ -93,16 +93,31 @@ configure_lit_site_cfg(
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py
   MAIN_CONFIG
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py
+  PATHS
+  "LLVM_SOURCE_DIR"
+  "LLVM_BINARY_DIR"
+  "LLVM_TOOLS_DIR"
+  "LLVM_LIBS_DIR"
+  "SHLIBDIR"
+  "LLVM_LIT_TOOLS_DIR"
+  "MLIR_BINARY_DIR"
+  "MLIR_CMAKE_DIR"
+  "MLIR_LIB_DIR"
+  "MLIR_SOURCE_DIR"
+  "MLIR_TOOLS_DIR"
   )
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
   ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg.py
   MAIN_CONFIG
   ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.cfg.py
+  PATHS
+  "LLVM_TOOLS_DIR"
+  "MLIR_BINARY_DIR"
+  "MLIR_SOURCE_DIR"
   )
 
 set(MLIR_TEST_DEPENDS
-  llvm-strings
   mlir-capi-ir-test
   mlir-capi-irdl-test
   mlir-capi-llvm-test
@@ -126,7 +141,14 @@ set(MLIR_TEST_DEPENDS
   tblgen-to-irdl
   )
 if(NOT MLIR_STANDALONE_BUILD)
-  list(APPEND MLIR_TEST_DEPENDS FileCheck count not split-file yaml2obj)
+  list(APPEND MLIR_TEST_DEPENDS
+    FileCheck
+    count
+    llvm-strings
+    not
+    split-file
+    yaml2obj
+    )
 endif()
 # Examples/standalone/test.toy (vis-a-vis the standalone example) depends on these.
 if(LLVM_INCLUDE_EXAMPLES)

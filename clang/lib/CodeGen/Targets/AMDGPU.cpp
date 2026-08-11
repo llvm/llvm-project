@@ -8,7 +8,9 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
+#include "clang/AST/DeclCXX.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 
 using namespace clang;
@@ -304,10 +306,8 @@ public:
   llvm::Constant *getNullPointer(const CodeGen::CodeGenModule &CGM,
       llvm::PointerType *T, QualType QT) const override;
 
-  LangAS getASTAllocaAddressSpace() const override {
-    return getLangASFromTargetAS(
-        getABIInfo().getDataLayout().getAllocaAddrSpace());
-  }
+  LangAS getSRetAddrSpace(const CXXRecordDecl *RD) const override;
+
   LangAS getGlobalVarAddressSpace(CodeGenModule &CGM,
                                   const VarDecl *D) const override;
   StringRef getLLVMSyncScopeStr(const LangOptions &LangOpts, SyncScope Scope,
@@ -468,6 +468,16 @@ llvm::Constant *AMDGPUTargetCodeGenInfo::getNullPointer(
 }
 
 LangAS
+AMDGPUTargetCodeGenInfo::getSRetAddrSpace(const CXXRecordDecl *RD) const {
+  // Types with no viable copy/move must be constructed in-place , use the
+  // default AS so the sret pointer matches the "this" convention.
+  if (RD && !RD->canPassInRegisters())
+    return LangAS::Default;
+  return getLangASFromTargetAS(
+      getABIInfo().getDataLayout().getAllocaAddrSpace());
+}
+
+LangAS
 AMDGPUTargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
                                                   const VarDecl *D) const {
   assert(!CGM.getLangOpts().OpenCL &&
@@ -501,31 +511,11 @@ StringRef AMDGPUTargetCodeGenInfo::getLLVMSyncScopeStr(
                   Scope <= SyncScope::OpenCLSubGroup &&
                   Ordering != llvm::AtomicOrdering::SequentiallyConsistent);
 
-  switch (Scope) {
-  case SyncScope::HIPSingleThread:
-  case SyncScope::SingleScope:
-    return IsOneAs ? "singlethread-one-as" : "singlethread";
-  case SyncScope::HIPWavefront:
-  case SyncScope::OpenCLSubGroup:
-  case SyncScope::WavefrontScope:
-    return IsOneAs ? "wavefront-one-as" : "wavefront";
-  case SyncScope::HIPCluster:
-  case SyncScope::ClusterScope:
-    return IsOneAs ? "cluster-one-as" : "cluster";
-  case SyncScope::HIPWorkgroup:
-  case SyncScope::OpenCLWorkGroup:
-  case SyncScope::WorkgroupScope:
-    return IsOneAs ? "workgroup-one-as" : "workgroup";
-  case SyncScope::HIPAgent:
-  case SyncScope::OpenCLDevice:
-  case SyncScope::DeviceScope:
-    return IsOneAs ? "agent-one-as" : "agent";
-  case SyncScope::SystemScope:
-  case SyncScope::HIPSystem:
-  case SyncScope::OpenCLAllSVMDevices:
-    return IsOneAs ? "one-as" : "";
-  }
-  llvm_unreachable("Unknown SyncScope enum");
+  llvm::AtomicScope AS = getAtomicScope(Scope);
+  assert((AS != llvm::AtomicScope::Cluster || !IsOneAs) &&
+         "OpenCL does not have cluster scope");
+  return *llvm::getAtomicScopeIRString(getABIInfo().getTarget().getTriple(), AS,
+                                       IsOneAs);
 }
 
 void AMDGPUTargetCodeGenInfo::setTargetAtomicMetadata(
@@ -549,6 +539,8 @@ void AMDGPUTargetCodeGenInfo::setTargetAtomicMetadata(
         llvm::APInt(32, llvm::AMDGPUAS::PRIVATE_ADDRESS + 1));
     AtomicInst.setMetadata(llvm::LLVMContext::MD_noalias_addrspace, ASRange);
   }
+
+  CGF.AddAMDGPUAvailableVisibleMMRA(&AtomicInst);
 
   if (!RMW)
     return;
@@ -721,15 +713,15 @@ void CodeGenModule::handleAMDGPUFlatWorkGroupSizeAttr(
   auto Eval = [&](Expr *E) {
     return E->EvaluateKnownConstInt(getContext()).getExtValue();
   };
-  if (FlatWGS) {
+  if (ReqdWGS) {
+    Min = Max = Eval(ReqdWGS->getXDim()) * Eval(ReqdWGS->getYDim()) *
+                Eval(ReqdWGS->getZDim());
+  } else if (FlatWGS) {
     Min = Eval(FlatWGS->getMin());
     Max = Eval(FlatWGS->getMax());
   }
-  if (ReqdWGS && Min == 0 && Max == 0)
-    Min = Max = Eval(ReqdWGS->getXDim()) * Eval(ReqdWGS->getYDim()) *
-                Eval(ReqdWGS->getZDim());
 
-  if (Min != 0) {
+  if (Min != 0 || ReqdWGS) {
     assert(Min <= Max && "Min must be less than or equal Max");
 
     if (MinThreadsVal)

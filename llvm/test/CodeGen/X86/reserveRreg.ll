@@ -1,7 +1,7 @@
 ;; Check if manually reserved registers are always excluded from being saved by
 ;; the function prolog/epilog, even for callee-saved ones, as per GCC behavior.
 
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs | FileCheck %s
 
 define preserve_mostcc void @t8() "target-features"="+reserve-r8" {
 ; CHECK-LABEL: t8:

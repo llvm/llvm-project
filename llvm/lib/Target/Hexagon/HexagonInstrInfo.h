@@ -52,6 +52,9 @@ public:
 
   const HexagonRegisterInfo &getRegisterInfo() const { return RegInfo; }
 
+  bool isMIBefore(const MachineInstr *A, const MachineInstr *B) const;
+  bool hasQFPInstrs(const MachineFunction &MF) const;
+
   /// TargetInstrInfo overrides.
 
   /// If the specified machine instruction is a direct
@@ -540,6 +543,17 @@ public:
 
   MCInst getNop() const override;
   bool isQFPMul(const MachineInstr *MF) const;
+
+  // Check if the instruction uses a qf32/qf16 operand.
+  // 'Index' specifies the input operand number (1..3). If 0, check any.
+  bool usesQF32Operand(MachineInstr *MI, unsigned Index = 0) const;
+  bool usesQF16Operand(MachineInstr *MI, unsigned Index = 0) const;
+  bool usesQFOperand(MachineInstr *MI, unsigned Index = 0) const;
+
+  // Check if the instruction has a qf32/qf16 output.
+  bool isQFP32Instr(MachineInstr *MI) const;
+  bool isQFP16Instr(MachineInstr *MI) const;
+  bool isQFPInstr(MachineInstr *MI) const;
 };
 
 /// \brief Create RegSubRegPair from a register MachineOperand

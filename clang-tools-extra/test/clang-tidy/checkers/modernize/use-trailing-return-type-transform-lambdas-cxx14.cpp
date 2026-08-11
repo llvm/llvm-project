@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++14-or-later %s modernize-use-trailing-return-type %t -- -- -fno-delayed-template-parsing -isystem %clang_tidy_headers
+// RUN: %check_clang_tidy -std=c++14-or-later %s modernize-use-trailing-return-type %t -- -- -fno-delayed-template-parsing
 #include <string>
 #include <vector>
 

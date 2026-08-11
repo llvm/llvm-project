@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-function-cognitive-complexity %t -- -config='{CheckOptions: {readability-function-cognitive-complexity.Threshold: 0}}' -- -std=c++11 -fblocks -fexceptions -w
+// RUN: %check_clang_tidy -std=c++11-or-later %s readability-function-cognitive-complexity %t -- -config='{CheckOptions: {readability-function-cognitive-complexity.Threshold: 0}}' -- -fblocks -fexceptions -w
 
 // any function should be checked.
 

@@ -1155,6 +1155,16 @@ inline int getMemoryOperandNo(uint64_t TSFlags) {
   }
 }
 
+/// \returns the operand index for the first field of the memory operand,
+/// adjusted with getOperandBias(), or -1 if the instruction has no memory
+/// operands.
+inline int getMemoryOperandIdx(const MCInstrDesc &Desc) {
+  int MemRefIdx = getMemoryOperandNo(Desc.TSFlags);
+  if (MemRefIdx < 0)
+    return -1;
+  return MemRefIdx + getOperandBias(Desc);
+}
+
 /// \returns true if the register is a XMM.
 inline bool isXMMReg(MCRegister Reg) {
   static_assert(X86::XMM15 - X86::XMM0 == 15,
@@ -1265,14 +1275,35 @@ inline bool canUseApxExtendedReg(const MCInstrDesc &Desc) {
     return true;
 
   unsigned Opcode = Desc.Opcode;
-  // MOV32r0 is always expanded to XOR32rr
-  if (Opcode == X86::MOV32r0)
-    return true;
-  // To be conservative, egpr is not used for all pseudo instructions
-  // because we are not sure what instruction it will become.
-  // FIXME: Could we improve it in X86ExpandPseudo?
-  if (isPseudo(TSFlags))
-    return false;
+  if (isPseudo(TSFlags)) {
+    switch (Opcode) {
+    default:
+      // To be conservative, egpr is not used for all pseudo instructions
+      // because we are not sure what instruction it will become.
+      // FIXME: Could we improve it in X86ExpandPseudo?
+      return false;
+    case X86::MOV32r0:
+    case X86::MOV32r1:
+    case X86::MOV32r_1:
+      // They are always expanded to XOR32rr.
+      return true;
+    case X86::MOV32ri64:
+      // MOV32ri64 is always expanded to MOV32ri.
+      return true;
+    case X86::ADD8rr_DB:
+    case X86::ADD16rr_DB:
+    case X86::ADD32rr_DB:
+    case X86::ADD64rr_DB:
+      // They are always expanded to ORNrr.
+      return true;
+    case X86::ADD8ri_DB:
+    case X86::ADD16ri_DB:
+    case X86::ADD32ri_DB:
+    case X86::ADD64ri32_DB:
+      // They are always expanded to ORNri.
+      return true;
+    }
+  }
 
   // MAP OB/TB in legacy encoding space can always use egpr except
   // XSAVE*/XRSTOR*.

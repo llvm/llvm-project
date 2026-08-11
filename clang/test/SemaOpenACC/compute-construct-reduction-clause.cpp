@@ -311,3 +311,33 @@ void inst() {
   // expected-note@+1{{in instantiation of function template specialization}}
   TemplUses(5, CoS, ChC);
 }
+
+struct Incomplete;
+
+void incomplete_use(Incomplete &i) {
+  // expected-error@+2{{incomplete type 'Incomplete' where a complete type is required}}
+  // expected-note@-4{{forward declaration}}
+#pragma acc parallel reduction(+:i)
+  while (1);
+}
+
+namespace GH210877 {
+struct S {
+  decltype(nullptr) x;
+  S &operator*=(S &s);
+};
+
+void foo() {
+  S t;
+#pragma acc parallel reduction(* : t)
+  ;
+}
+
+template <typename T> void fooTempl() {
+  T t;
+#pragma acc parallel reduction(* : t)
+  ;
+}
+
+void bar() { fooTempl<S>(); }
+}

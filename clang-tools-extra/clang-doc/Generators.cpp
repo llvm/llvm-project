@@ -66,7 +66,7 @@ Error MustacheGenerator::setupTemplate(
 }
 
 Error MustacheGenerator::generateDocumentation(
-    StringRef RootDir, StringMap<std::unique_ptr<doc::Info>> Infos,
+    StringRef RootDir, StringMap<doc::Info *> Infos,
     const clang::doc::ClangDocContext &CDCtx, std::string DirName) {
   {
     llvm::TimeTraceScope TS("Setup Templates");
@@ -164,9 +164,11 @@ Error MustacheGenerator::generateDocumentation(
 
 Expected<std::string> MustacheGenerator::getInfoTypeStr(Object *Info,
                                                         StringRef Filename) {
-  // Checking for a USR ensures that only the special top-level index file is
-  // caught here, since it is not an Info.
-  if (Filename == "index" && !Info->get("USR"))
+  if (Filename == "all_files")
+    return "all_files";
+  // Checking for an InfoType ensures that only the special top-level index file
+  // is caught here, since it is not an Info.
+  if (Filename == "index" && !Info->get("InfoType"))
     return "index";
   auto StrValue = (*Info)["InfoType"];
   if (StrValue.kind() != json::Value::Kind::String)
@@ -246,7 +248,6 @@ void Generator::addInfoToIndex(Index &Idx, const doc::Info *Info) {
 
 // This anchor is used to force the linker to link in the generated object file
 // and thus register the generators.
-[[maybe_unused]] static int YAMLGeneratorAnchorDest = YAMLGeneratorAnchorSource;
 [[maybe_unused]] static int MDGeneratorAnchorDest = MDGeneratorAnchorSource;
 [[maybe_unused]] static int HTMLGeneratorAnchorDest = HTMLGeneratorAnchorSource;
 [[maybe_unused]] static int JSONGeneratorAnchorDest = JSONGeneratorAnchorSource;

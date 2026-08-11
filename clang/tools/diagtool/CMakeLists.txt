@@ -15,6 +15,5 @@ add_clang_tool(diagtool
 clang_target_link_libraries(diagtool
   PRIVATE
   clangBasic
-  clangDriver
   clangFrontend
   )

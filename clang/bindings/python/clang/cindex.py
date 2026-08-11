@@ -104,9 +104,14 @@ from typing import (
 
 if TYPE_CHECKING:
     from ctypes import _Pointer
+    from io import TextIOWrapper
     from typing_extensions import Protocol, TypeAlias
 
     StrPath: TypeAlias = TUnion[str, os.PathLike[str]]
+    # The type that is compatible with os.fspath:
+    # str, bytes, or os.PathLikes that return either of these two
+    StrBytesPath: TypeAlias = TUnion[StrPath, bytes, os.PathLike[bytes]]
+    InMemoryFile: TypeAlias = "tuple[StrBytesPath, TUnion[str, bytes, TextIOWrapper]]"
     LibFunc: TypeAlias = TUnion[
         "tuple[str, Optional[list[Any]]]",
         "tuple[str, Optional[list[Any]], Any]",
@@ -1256,8 +1261,8 @@ class CursorKind(BaseEnumeration):
     # Windows Structured Exception Handling's leave statement.
     SEH_LEAVE_STMT = 247
 
-    # OpenMP ordered directive.
-    OMP_ORDERED_DIRECTIVE = 248
+    # OpenMP ordered-standalone directive.
+    OMP_ORDERED_STANDALONE_DIRECTIVE = 248
 
     # OpenMP atomic directive.
     OMP_ATOMIC_DIRECTIVE = 249
@@ -1447,6 +1452,12 @@ class CursorKind(BaseEnumeration):
 
     # OpenMP fuse directive.
     OMP_FUSE_DIRECTIVE = 311
+
+    # OpenMP split directive.
+    OMP_SPLIT_DIRECTIVE = 312
+
+    # OpenMP ordered-blockassoc directive.
+    OMP_ORDERED_BLOCK_ASSOC_DIRECTIVE = 313
 
     # OpenACC Compute Construct.
     OPEN_ACC_COMPUTE_DIRECTIVE = 320
@@ -2645,6 +2656,7 @@ class TypeKind(BaseEnumeration):
     HLSLRESOURCE = 179
     HLSLATTRIBUTEDRESOURCE = 180
     HLSLINLINESPIRV = 181
+    PREDEFINEDSUGAR = 182
 
 class RefQualifierKind(BaseEnumeration):
     """Describes a specific ref-qualifier of a type."""
@@ -2914,7 +2926,7 @@ class Type(Structure):
         """
         return conf.lib.clang_Type_getSizeOf(self)  # type: ignore [no-any-return]
 
-    def get_offset(self, fieldname: str) -> int:
+    def get_offset(self, fieldname: TUnion[str, bytes]) -> int:
         """
         Retrieve the offset of a field in the record.
         """
@@ -3023,26 +3035,6 @@ class CompletionChunkKind(BaseEnumeration):
     Describes a single piece of text within a code-completion string.
     """
 
-    def __str__(self) -> str:
-        """
-        Converts enum value to string in the old camelCase format.
-        This is a temporary measure that will be changed in the future release
-        to return string in ALL_CAPS format, like for other enums.
-        """
-
-        warnings.warn(
-            "String representation of 'CompletionChunkKind' will be "
-            "changed in a future release from 'camelCase' to 'ALL_CAPS' to "
-            "match other enums. 'CompletionChunkKind's can be "
-            "compared to one another without conversion to string.",
-            DeprecationWarning,
-        )
-        # Remove underscores
-        components = self.name.split("_")
-        # Upper-camel case each split component
-        components = [component.lower().capitalize() for component in components]
-        return "".join(components)
-
     OPTIONAL = 0
     TYPED_TEXT = 1
     TEXT = 2
@@ -3066,39 +3058,32 @@ class CompletionChunkKind(BaseEnumeration):
     VERTICAL_SPACE = 20
 
 
-class _CXUnsavedFile(Structure):
+class UnsavedFile(Structure):
     """Helper for passing unsaved file arguments."""
 
     _fields_ = [("name", c_char_p), ("contents", c_char_p), ("length", c_ulong)]
 
 
-class CompletionChunk:
-    class SpellingCacheAlias:
-        """
-        A temporary utility that acts as an alias to CompletionChunk.SPELLING_CACHE.
-        This will be removed without deprecation warning in a future release.
-        Please do not use it directly!
-        """
+class _CXUnsavedFile(UnsavedFile):
+    """
+    _CXUnsavedFile acts as an alias to UnsavedFile.
+    This will be removed  in a future release.
+    All existing usage should be replaced directly with UnsavedFile.
+    No other changes are required.
+    """
 
-        deprecation_message = (
-            "'SPELLING_CACHE' has been moved into the scope of 'CompletionChunk' "
-            "and adapted to use 'CompletionChunkKind's as keys instead of their "
-            "enum values. Please adapt all uses of 'SPELLING_CACHE' to use "
-            "'CompletionChunk.SPELLING_CACHE' instead. The old 'SPELLING_CACHE' "
-            "will be removed in a future release."
+    def __getattribute__(self, attr):
+        warnings.warn(
+            "'_CXUnsavedFile' will be renamed to 'UnsavedFile' for consistency. "
+            "'UnsavedFile' is already available to use and existing uses should "
+            "be adapted to refer to it instead. '_CXUnsavedFile' will be "
+            "removed in a future release.",
+            DeprecationWarning,
         )
+        return super().__getattribute__(attr)
 
-        def __getattr__(self, _: Any) -> NoReturn:
-            raise AttributeError(self.deprecation_message)
 
-        def __getitem__(self, value: int) -> str:
-            warnings.warn(self.deprecation_message, DeprecationWarning)
-            return CompletionChunk.SPELLING_CACHE[CompletionChunkKind.from_id(value)]
-
-        def __contains__(self, value: int) -> bool:
-            warnings.warn(self.deprecation_message, DeprecationWarning)
-            return CompletionChunkKind.from_id(value) in CompletionChunk.SPELLING_CACHE
-
+class CompletionChunk:
     # Functions calls through the python interface are rather slow. Fortunately,
     # for most symbols, we do not need to perform a function call. Their spelling
     # never changes and is consequently provided by this spelling cache.
@@ -3156,108 +3141,8 @@ class CompletionChunk:
             return None
         return CompletionString(res)
 
-    __deprecation_message = (
-        "'CompletionChunk.{}' will be removed in a future release. "
-        "All uses of 'CompletionChunk.{}' should be replaced by checking "
-        "if 'CompletionChunk.kind` is equal to 'CompletionChunkKind.{}'."
-    )
-
-    def isKindOptional(self) -> bool:
-        deprecation_message = self.__deprecation_message.format(
-            "isKindOptional",
-            "isKindOptional",
-            "OPTIONAL",
-        )
-        warnings.warn(deprecation_message, DeprecationWarning)
-        return self.kind == CompletionChunkKind.OPTIONAL
-
-    def isKindTypedText(self) -> bool:
-        deprecation_message = self.__deprecation_message.format(
-            "isKindTypedText",
-            "isKindTypedText",
-            "TYPED_TEXT",
-        )
-        warnings.warn(deprecation_message, DeprecationWarning)
-        return self.kind == CompletionChunkKind.TYPED_TEXT
-
-    def isKindPlaceHolder(self) -> bool:
-        deprecation_message = self.__deprecation_message.format(
-            "isKindPlaceHolder",
-            "isKindPlaceHolder",
-            "PLACEHOLDER",
-        )
-        warnings.warn(deprecation_message, DeprecationWarning)
-        return self.kind == CompletionChunkKind.PLACEHOLDER
-
-    def isKindInformative(self) -> bool:
-        deprecation_message = self.__deprecation_message.format(
-            "isKindInformative",
-            "isKindInformative",
-            "INFORMATIVE",
-        )
-        warnings.warn(deprecation_message, DeprecationWarning)
-        return self.kind == CompletionChunkKind.INFORMATIVE
-
-    def isKindResultType(self) -> bool:
-        deprecation_message = self.__deprecation_message.format(
-            "isKindResultType",
-            "isKindResultType",
-            "RESULT_TYPE",
-        )
-        warnings.warn(deprecation_message, DeprecationWarning)
-        return self.kind == CompletionChunkKind.RESULT_TYPE
-
-
-SPELLING_CACHE = CompletionChunk.SpellingCacheAlias()
-
 
 class CompletionString(ClangObject):
-    # AvailabilityKindCompat is an exact copy of AvailabilityKind, except for __str__.
-    # This is a temporary measure to keep the string representation the same
-    # until we change CompletionString.availability to return AvailabilityKind,
-    # like Cursor.availability does.
-    # Note that deriving from AvailabilityKind directly is not possible.
-    class AvailabilityKindCompat(BaseEnumeration):
-        """
-        Describes the availability of an entity.
-        It is deprecated in favor of AvailabilityKind.
-        """
-
-        # Ensure AvailabilityKindCompat is comparable with AvailabilityKind
-        def __eq__(self, other: object) -> bool:
-            if isinstance(
-                other, (AvailabilityKind, CompletionString.AvailabilityKindCompat)
-            ):
-                return self.value == other.value
-            else:
-                return NotImplemented
-
-        def __str__(self) -> str:
-            """
-            Converts enum value to string in the old camelCase format.
-            This is a temporary measure that will be changed in the future release
-            to return string in ALL_CAPS format, like for other enums.
-            """
-
-            warnings.warn(
-                "String representation of 'CompletionString.availability' will be "
-                "changed in a future release from 'camelCase' to 'ALL_CAPS' to "
-                "match other enums. 'CompletionString.availability' can be "
-                "compared to 'AvailabilityKind' directly, "
-                "without conversion to string.",
-                DeprecationWarning,
-            )
-            # Remove underscores
-            components = self.name.split("_")
-            # Upper-camel case each split component
-            components = [component.lower().capitalize() for component in components]
-            return "".join(components)
-
-        AVAILABLE = 0
-        DEPRECATED = 1
-        NOT_AVAILABLE = 2
-        NOT_ACCESSIBLE = 3
-
     def __len__(self) -> int:
         return self.num_chunks
 
@@ -3282,9 +3167,9 @@ class CompletionString(ClangObject):
         return conf.lib.clang_getCompletionPriority(self.obj)  # type: ignore [no-any-return]
 
     @property
-    def availability(self) -> AvailabilityKindCompat:
+    def availability(self) -> AvailabilityKind:
         res = conf.lib.clang_getCompletionAvailability(self.obj)
-        return CompletionString.AvailabilityKindCompat.from_id(res)
+        return AvailabilityKind.from_id(res)
 
     @property
     def briefComment(self) -> str:
@@ -3457,10 +3342,12 @@ class TranslationUnit(ClangObject):
     PARSE_INCLUDE_BRIEF_COMMENTS_IN_CODE_COMPLETION = 128
 
     @staticmethod
-    def process_unsaved_files(unsaved_files) -> Array[_CXUnsavedFile] | None:
+    def process_unsaved_files(
+        unsaved_files: list[InMemoryFile],
+    ) -> Array[UnsavedFile] | None:
         unsaved_array = None
         if len(unsaved_files):
-            unsaved_array = (_CXUnsavedFile * len(unsaved_files))()
+            unsaved_array = (UnsavedFile * len(unsaved_files))()
             for i, (name, contents) in enumerate(unsaved_files):
                 if hasattr(contents, "read"):
                     contents = contents.read()
@@ -3472,8 +3359,13 @@ class TranslationUnit(ClangObject):
 
     @classmethod
     def from_source(
-        cls, filename, args=None, unsaved_files=None, options=0, index=None
-    ):
+        cls,
+        filename: StrBytesPath | None,
+        args: list[TUnion[str, bytes]] | None = None,
+        unsaved_files: list[InMemoryFile] | None = None,
+        options: int = 0,
+        index: Index | None = None,
+    ) -> TranslationUnit:
         """Create a TranslationUnit by parsing source.
 
         This is capable of processing source code both from files on the
@@ -3484,11 +3376,12 @@ class TranslationUnit(ClangObject):
         etc. e.g. ["-Wall", "-I/path/to/include"].
 
         In-memory file content can be provided via unsaved_files. This is a
-        list of 2-tuples. The first element is the filename (str or
+        list of 2-tuples. The first element is the filename (str, bytes or
         PathLike). The second element defines the content. Content can be
-        provided as str source code or as file objects (anything with a read()
-        method). If a file object is being used, content will be read until EOF
-        and the read cursor will not be reset to its original position.
+        provided as str or bytes source code, or as file objects (anything with
+        a read() method). If a file object is being used, content will be read
+        until EOF and the read cursor will not be reset to its original
+        position.
 
         options is a bitwise or of TranslationUnit.PARSE_XXX flags which will
         control parsing behavior.
@@ -3544,7 +3437,9 @@ class TranslationUnit(ClangObject):
         return cls(ptr, index=index)
 
     @classmethod
-    def from_ast_file(cls, filename, index=None):
+    def from_ast_file(
+        cls, filename: StrBytesPath, index: Index | None = None
+    ) -> TranslationUnit:
         """Create a TranslationUnit instance from a saved AST file.
 
         A previously-saved AST file (provided with -emit-ast or
@@ -3567,7 +3462,7 @@ class TranslationUnit(ClangObject):
 
         return cls(ptr=ptr, index=index)
 
-    def __init__(self, ptr, index):
+    def __init__(self, ptr: CObjP, index: Index) -> None:
         """Create a TranslationUnit instance.
 
         TranslationUnits should be created using one of the from_* @classmethod
@@ -3577,20 +3472,20 @@ class TranslationUnit(ClangObject):
         self.index = index
         ClangObject.__init__(self, ptr)
 
-    def __del__(self):
+    def __del__(self) -> None:
         conf.lib.clang_disposeTranslationUnit(self)
 
     @property
-    def cursor(self):
+    def cursor(self) -> Cursor | None:
         """Retrieve the cursor that represents the given translation unit."""
         return Cursor.from_result(conf.lib.clang_getTranslationUnitCursor(self), self)
 
     @property
-    def spelling(self):
+    def spelling(self) -> str:
         """Get the original translation unit source file name."""
         return _CXString.from_result(conf.lib.clang_getTranslationUnitSpelling(self))
 
-    def get_includes(self):
+    def get_includes(self) -> Iterator[FileInclusion]:
         """
         Return an iterable sequence of FileInclusion objects that describe the
         sequence of inclusions in a translation unit. The first object in
@@ -3599,25 +3494,32 @@ class TranslationUnit(ClangObject):
         headers.
         """
 
-        def visitor(fobj, lptr, depth, includes):
+        def visitor(
+            fobj: CObjP,
+            lptr: _Pointer[SourceLocation],
+            depth: int,
+            includes: list[FileInclusion],
+        ) -> None:
             if depth > 0:
                 loc = lptr.contents
                 includes.append(FileInclusion(loc.file, File(fobj), loc, depth))
 
         # Automatically adapt CIndex/ctype pointers to python objects
-        includes = []
+        includes: list[FileInclusion] = []
         conf.lib.clang_getInclusions(
             self, translation_unit_includes_callback(visitor), includes
         )
 
         return iter(includes)
 
-    def get_file(self, filename):
+    def get_file(self, filename: StrBytesPath) -> File:
         """Obtain a File from this translation unit."""
 
         return File.from_name(self, filename)
 
-    def get_location(self, filename, position):
+    def get_location(
+        self, filename: StrBytesPath, position: int | tuple[int, int]
+    ) -> SourceLocation:
         """Obtain a SourceLocation for a file in this translation unit.
 
         The position can be specified by passing:
@@ -3633,7 +3535,11 @@ class TranslationUnit(ClangObject):
 
         return SourceLocation.from_position(self, f, position[0], position[1])
 
-    def get_extent(self, filename, locations):
+    def get_extent(
+        self,
+        filename: StrBytesPath,
+        locations: Sequence[SourceLocation] | Sequence[int] | Sequence[Sequence[int]],
+    ) -> SourceRange:
         """Obtain a SourceRange from this translation unit.
 
         The bounds of the SourceRange must ultimately be defined by a start and
@@ -3697,7 +3603,9 @@ class TranslationUnit(ClangObject):
 
         return DiagIterator(self)
 
-    def reparse(self, unsaved_files=None, options=0):
+    def reparse(
+        self, unsaved_files: list[InMemoryFile] | None = None, options: int = 0
+    ) -> None:
         """
         Reparse an already parsed translation unit.
 
@@ -3719,7 +3627,7 @@ class TranslationUnit(ClangObject):
             msg = "Error reparsing translation unit. Error code: {}".format(result)
             raise TranslationUnitLoadError(msg)
 
-    def save(self, filename):
+    def save(self, filename: StrBytesPath) -> None:
         """Saves the TranslationUnit to a file.
 
         This is equivalent to passing -emit-ast to the clang frontend. The
@@ -3747,14 +3655,14 @@ class TranslationUnit(ClangObject):
 
     def codeComplete(
         self,
-        path,
-        line,
-        column,
-        unsaved_files=None,
-        include_macros=False,
-        include_code_patterns=False,
-        include_brief_comments=False,
-    ):
+        path: StrBytesPath,
+        line: int,
+        column: int,
+        unsaved_files: list[InMemoryFile] | None = None,
+        include_macros: bool = False,
+        include_code_patterns: bool = False,
+        include_brief_comments: bool = False,
+    ) -> CodeCompletionResults | None:
         """
         Code complete in this translation unit.
 
@@ -3791,7 +3699,11 @@ class TranslationUnit(ClangObject):
             return CodeCompletionResults(ptr)
         return None
 
-    def get_tokens(self, locations=None, extent=None):
+    def get_tokens(
+        self,
+        locations: tuple[SourceLocation, SourceLocation] | None = None,
+        extent: SourceRange | None = None,
+    ) -> Iterator[Token]:
         """Obtain tokens in this translation unit.
 
         This is a generator for Token instances. The caller specifies a range
@@ -3799,10 +3711,14 @@ class TranslationUnit(ClangObject):
         2-tuple of SourceLocation or as a SourceRange. If both are defined,
         behavior is undefined.
         """
-        if locations is None and extent is None:
-            raise TypeError("get_tokens() requires at least one argument")
+        if locations is not None and extent is not None:
+            raise TypeError("get_tokens() requires exactly one argument (two provided)")
         if locations is not None:
             extent = SourceRange(start=locations[0], end=locations[1])
+        if extent is None:
+            raise TypeError(
+                "get_tokens() requires exactly one argument (none provided)"
+            )
 
         return TokenGroup.get_tokens(self, extent)
 
@@ -4284,6 +4200,7 @@ FUNCTION_LIST: list[LibFunc] = [
     ("clang_getCanonicalCursor", [Cursor], Cursor),
     ("clang_getCanonicalType", [Type], Type),
     ("clang_getChildDiagnostics", [Diagnostic], c_object_p),
+    ("clang_getClangVersion", [], _CXString),
     ("clang_getCompletionAvailability", [c_void_p], c_int),
     ("clang_getCompletionBriefComment", [c_void_p], _CXString),
     ("clang_getCompletionChunkCompletionString", [c_void_p, c_int], c_object_p),
@@ -4594,6 +4511,11 @@ class Config:
 
         return library
 
+    def get_clang_version(self) -> str:
+        """
+        Returns the libclang version string used by the bindings
+        """
+        return _CXString.from_result(self.lib.clang_getClangVersion())
 
 conf = Config()
 

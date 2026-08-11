@@ -40,7 +40,7 @@ program do_concurrent_basic
     ! CHECK-NEXT: }
 
     ! CHECK-NEXT: omp.terminator
-    ! CHECK-NEXT: }
+    ! CHECK-NEXT: } {omp.combined}
     do concurrent (i=1:10)
         a(i) = i
     end do

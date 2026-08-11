@@ -3,7 +3,7 @@
 // RUN: %libomptarget-run-generic | %fcheck-generic
 
 // REQUIRES: unified_shared_memory
-// XFAIL: intelgpu
+// UNSUPPORTED: intelgpu
 
 #include <omp.h>
 #include <stdio.h>

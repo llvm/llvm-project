@@ -83,14 +83,14 @@ public:
   // already invalidated IRUnit is unsafe. There are ways to handle invalidated
   // IRUnits in a safe way, and we might pursue that as soon as there is a
   // useful instrumentation that needs it.
-  using BeforePassFunc = bool(StringRef, Any);
-  using BeforeSkippedPassFunc = void(StringRef, Any);
-  using BeforeNonSkippedPassFunc = void(StringRef, Any);
-  using AfterPassFunc = void(StringRef, Any, const PreservedAnalyses &);
+  using BeforePassFunc = bool(StringRef, const Any &);
+  using BeforeSkippedPassFunc = void(StringRef, const Any &);
+  using BeforeNonSkippedPassFunc = void(StringRef, const Any &);
+  using AfterPassFunc = void(StringRef, const Any &, const PreservedAnalyses &);
   using AfterPassInvalidatedFunc = void(StringRef, const PreservedAnalyses &);
-  using BeforeAnalysisFunc = void(StringRef, Any);
-  using AfterAnalysisFunc = void(StringRef, Any);
-  using AnalysisInvalidatedFunc = void(StringRef, Any);
+  using BeforeAnalysisFunc = void(StringRef, const Any &);
+  using AfterAnalysisFunc = void(StringRef, const Any &);
+  using AnalysisInvalidatedFunc = void(StringRef, const Any &);
   using AnalysesClearedFunc = void(StringRef);
 
 public:
@@ -212,13 +212,8 @@ class PassInstrumentation {
   // created from (1). Here we want to make case (1) skippable unconditionally
   // since they are regular passes. We call PassConcept::isRequired to decide
   // for case (2).
-  template <typename PassT>
-  using has_required_t = decltype(std::declval<PassT &>().isRequired());
-
   template <typename PassT> static bool isRequired(const PassT &Pass) {
-    if constexpr (is_detected<has_required_t, PassT>::value)
-      return Pass.isRequired();
-    return false;
+    return Pass.isRequired();
   }
 
 public:

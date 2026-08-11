@@ -20,7 +20,7 @@
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/new.h"
-#include "src/__support/GPU/fixedstack.h"
+#include "src/__support/GPU/fixedbuffer.h"
 #include "src/__support/GPU/utils.h"
 #include "src/__support/RPC/rpc_client.h"
 #include "src/__support/threads/sleep.h"
@@ -194,18 +194,14 @@ struct Slab {
   // Initialize the slab with its chunk size and index in the global table for
   // use when freeing.
   Slab(uint32_t chunk_size, uint32_t global_index) {
-    Header *header = reinterpret_cast<Header *>(memory);
-    header->cached_chunk_size = cpp::numeric_limits<uint32_t>::max();
-    header->chunk_size = chunk_size;
-    header->global_index = global_index;
+    new (memory)
+        Header{chunk_size, global_index, cpp::numeric_limits<uint32_t>::max()};
   }
 
   // Reset the memory with a new index and chunk size, not thread safe.
   Slab *reset(uint32_t chunk_size, uint32_t global_index) {
-    Header *header = reinterpret_cast<Header *>(memory);
-    header->cached_chunk_size = header->chunk_size;
-    header->chunk_size = chunk_size;
-    header->global_index = global_index;
+    uint32_t cached_chunk_size = header()->chunk_size;
+    new (memory) Header{chunk_size, global_index, cached_chunk_size};
     return this;
   }
 
@@ -248,20 +244,20 @@ struct Slab {
     return available_bytes(chunk_size) / chunk_size;
   }
 
-  // Get the location in the memory where we will store the chunk size.
-  uint32_t get_chunk_size() const {
-    return reinterpret_cast<const Header *>(memory)->chunk_size;
+  // Get a pointer to the header object living in the front of the slab memory.
+  Header *header() { return cpp::launder(reinterpret_cast<Header *>(memory)); }
+  const Header *header() const {
+    return cpp::launder(reinterpret_cast<const Header *>(memory));
   }
+
+  // Get the location in the memory where we will store the chunk size.
+  uint32_t get_chunk_size() const { return header()->chunk_size; }
 
   // Get the chunk size that was previously used.
-  uint32_t get_cached_chunk_size() const {
-    return reinterpret_cast<const Header *>(memory)->cached_chunk_size;
-  }
+  uint32_t get_cached_chunk_size() const { return header()->cached_chunk_size; }
 
   // Get the location in the memory where we will store the global index.
-  uint32_t get_global_index() const {
-    return reinterpret_cast<const Header *>(memory)->global_index;
-  }
+  uint32_t get_global_index() const { return header()->global_index; }
 
   // Get a pointer to where the bitfield is located in the memory.
   uint32_t *get_bitfield() {
@@ -327,15 +323,16 @@ struct Slab {
 
         uint32_t after = before | bitmask;
         uint64_t waiting = gpu::ballot(lane_mask, !result);
-        if (!result)
+        if (!result) {
           start =
               gpu::shuffle(waiting, cpp::countr_zero(waiting),
                            ~after ? __builtin_align_down(index, BITS_IN_WORD) +
                                         cpp::countr_zero(~after)
                                   : __builtin_align_down(
                                         impl::xorshift32(state), BITS_IN_WORD));
-        if (!result)
-          sleep_briefly();
+          if (!gpu::shuffle(waiting, cpp::countr_zero(waiting), ~after))
+            sleep_briefly();
+        }
       }
     }
     return result;
@@ -359,7 +356,7 @@ struct Slab {
 };
 
 // A global cache of previously allocated slabs for efficient reuse.
-static FixedStack<Slab *, CACHED_SLABS> slab_cache;
+static FixedBuffer<Slab *, CACHED_SLABS> slab_cache;
 
 /// A wait-free guard around a pointer resource to be created dynamically if
 /// space is available and freed once there are no more users.
@@ -548,34 +545,34 @@ static Slab *find_slab(uint32_t chunk_size, uint64_t lane_mask,
   // We start at the index of the last successful allocation for this kind.
   uint32_t chunk_id = impl::get_chunk_id(chunk_size);
   uint32_t start = indices[chunk_id].load(cpp::MemoryOrder::RELAXED);
+  uint32_t usable = Slab::usable_bits(chunk_size);
+  uint32_t base = impl::get_start_index(chunk_size);
+  uint64_t id = impl::id_in_mask();
 
   Slab *result = nullptr;
   for (uint32_t offset = 0;
        gpu::ballot(lane_mask, !result) && offset <= ARRAY_SIZE; ++offset) {
-    uint32_t index =
-        !offset ? start
-                : (impl::get_start_index(chunk_size) + offset - 1) % ARRAY_SIZE;
+    uint32_t index = !offset ? start : (base + offset - 1) % ARRAY_SIZE;
 
-    bool available =
-        !offset || slots[index].use_count() < Slab::usable_bits(chunk_size);
+    bool available = !offset || slots[index].use_count() < usable;
     uint64_t slab_mask = gpu::ballot(lane_mask, !result && available);
-    if (slab_mask & impl::id_in_mask()) {
+    if (slab_mask & id) {
       Slab *slab = slots[index].try_lock(slab_mask, uniform & slab_mask,
                                          reserved, chunk_size, index);
 
       // If we find a slab with a matching chunk size then we store the result.
       // Otherwise, we need to free the claimed lock and continue. In the case
       // of out-of-memory we receive a sentinel value and return a failure.
-      uint64_t locked_mask = gpu::ballot(
-          slab_mask, slab && reserved < Slab::usable_bits(chunk_size) &&
-                         slab->get_chunk_size() == chunk_size);
+      uint64_t locked_mask =
+          gpu::ballot(slab_mask, slab && reserved < usable &&
+                                     slab->get_chunk_size() == chunk_size);
       uint64_t failed_mask = gpu::ballot(slab_mask, slab) & ~locked_mask;
-      if (locked_mask & impl::id_in_mask()) {
+      if (locked_mask & id) {
         if (index != start)
           indices[chunk_id].store(index, cpp::MemoryOrder::RELAXED);
         uniform = uniform & locked_mask;
         result = slab;
-      } else if (failed_mask & impl::id_in_mask()) {
+      } else if (failed_mask & id) {
         slots[index].unlock(failed_mask & uniform);
       } else if (!slab && impl::is_sentinel(reserved)) {
         result =
@@ -642,7 +639,16 @@ void *reallocate(void *ptr, uint64_t size) {
   // The original slab pointer is the 2MiB boundary using the given pointer.
   Slab *slab = cpp::launder(reinterpret_cast<Slab *>(
       (reinterpret_cast<uintptr_t>(ptr) & ~SLAB_ALIGNMENT)));
-  if (slab->get_chunk_size() >= size)
+
+  // A pointer from an aligned allocation sits at an offset inside its chunk, so
+  // the usable capacity is measured from the pointer to the end of the chunk.
+  uint32_t chunk_size = slab->get_chunk_size();
+  uint32_t index = slab->index_from_ptr(ptr, chunk_size);
+  uint32_t offset = static_cast<uint32_t>(
+      reinterpret_cast<uint8_t *>(ptr) -
+      reinterpret_cast<uint8_t *>(slab->ptr_from_index(index, chunk_size)));
+  uint32_t usable = chunk_size - offset;
+  if (usable >= size)
     return ptr;
 
   // If we need a new chunk we reallocate and copy it over.
@@ -650,7 +656,7 @@ void *reallocate(void *ptr, uint64_t size) {
   if (!new_ptr)
     return nullptr;
 
-  inline_memcpy(new_ptr, ptr, slab->get_chunk_size());
+  inline_memcpy(new_ptr, ptr, usable);
   gpu::deallocate(ptr);
   return new_ptr;
 }
@@ -669,10 +675,14 @@ void *aligned_allocate(uint32_t alignment, uint64_t size) {
   if (alignment > SLAB_ALIGNMENT + 1)
     return nullptr;
 
+  // Reject sizes that would overflow once padded for the requested alignment.
+  if (size > cpp::numeric_limits<uint64_t>::max() - alignment)
+    return nullptr;
+
   // Trying to handle allocation internally would break the assumption that each
   // chunk is identical to eachother. Allocate enough memory with worst-case
   // alignment and then round up. The index logic will round down properly.
-  uint64_t rounded = size + alignment - MIN_ALIGNMENT;
+  uint64_t rounded = size + alignment - MIN_SIZE;
   void *ptr = gpu::allocate(rounded);
   return ptr ? __builtin_align_up(ptr, alignment) : ptr;
 }

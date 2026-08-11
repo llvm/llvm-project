@@ -1,6 +1,5 @@
-// RUN: mlir-opt %s --xevm-attach-target='module=xevm_* O=3 chip=pvc' -convert-vector-to-xegpu -split-input-file | FileCheck %s --check-prefix=STORE-ND
-// RUN: mlir-opt %s -convert-vector-to-xegpu -split-input-file | FileCheck %s --check-prefix=STORE-SCATTER
-
+// RUN: mlir-opt %s --xevm-attach-target='module=xevm_* O=3 chip=pvc' -convert-vector-to-xegpu -split-input-file | FileCheck %s --check-prefixes=STORE-ND,CHECK
+// RUN: mlir-opt %s -convert-vector-to-xegpu -split-input-file | FileCheck %s --check-prefixes=STORE-SCATTER,CHECK
 
 gpu.module @xevm_module {
 gpu.func @store_1D_vector(%vec: vector<8xf32>,
@@ -11,36 +10,18 @@ gpu.func @store_1D_vector(%vec: vector<8xf32>,
   gpu.return
 }
 
-// STORE-ND-LABEL: @store_1D_vector(
-// STORE-ND-SAME:  %[[VEC:.+]]: vector<8xf32>,
-// STORE-ND-SAME:  %[[SRC:.+]]: memref<8x16x32xf32>,
-// STORE-ND-SAME:  %[[OFFSET:.+]]: index
-// STORE-ND:       %[[ELEM_BYTES:.+]] = arith.constant 4 : index
-// STORE-ND:       %[[COLLAPSED:.+]] = memref.subview %[[SRC]][%[[OFFSET]], %[[OFFSET]], 0]
-// STORE-ND:       %[[BASE_BUFFER:.+]], %[[OFFSET1:.+]], %[[SIZES:.+]], %[[STRIDES:.+]] = memref.extract_strided_metadata %[[COLLAPSED]]
-// STORE-ND-SAME:    : memref<32xf32, strided<[1], offset: ?>> -> memref<f32>, index, index, index
-// STORE-ND:       %[[INTPTR:.+]] = memref.extract_aligned_pointer_as_index %[[BASE_BUFFER]]
-// STORE-ND-SAME:    : memref<f32> -> index
-// STORE-ND:       %[[MUL:.+]] = arith.muli %[[OFFSET1]], %[[ELEM_BYTES]] : index
-// STORE-ND:       %[[ADD:.+]] = arith.addi %[[INTPTR]], %[[MUL]] : index
-// STORE-ND:       %[[I64PTR:.+]] = arith.index_cast %[[ADD]] : index to i64
-// STORE-ND:       %[[DESC:.+]] = xegpu.create_nd_tdesc %[[I64PTR]], shape : [32],
-// STORE-ND-SAME:                   strides : [1] : i64  -> !xegpu.tensor_desc<8xf32,
-// STORE-ND-SAME:    boundary_check = false
-// STORE-ND:       xegpu.store_nd %[[VEC]], %[[DESC]][%[[OFFSET]]] : vector<8xf32>
-
-// STORE-SCATTER-LABEL:  @store_1D_vector(
-// STORE-SCATTER-SAME:   %[[VEC:.+]]: vector<8xf32>,
-// STORE-SCATTER-SAME:   %[[SRC:.+]]: memref<8x16x32xf32>,
-// STORE-SCATTER-DAG:        %[[CST:.+]] = arith.constant dense<true> : vector<8xi1>
-// STORE-SCATTER-DAG:        %[[STEP:.+]] = vector.step
-// STORE-SCATTER-COUNT2: arith.muli {{.*}} : index
-// STORE-SCATTER-COUNT2: arith.addi {{.*}} : index
-// STORE-SCATTER-DAG:    %[[BCAST:.+]] = vector.broadcast {{.*}} : index to vector<8xindex>
-// STORE-SCATTER-DAG:    %[[IDX:.+]] = arith.addi %[[BCAST]], %{{.*}} : vector<8xindex>
-// STORE-SCATTER-DAG:    %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<8x16x32xf32> -> index
-// STORE-SCATTER-DAG:    %[[COLLAPSE_I:.+]] = arith.index_cast %[[COLLAPSE]] : index to i64
-// STORE-SCATTER:       xegpu.store %[[VEC]], %[[COLLAPSE_I]]{{\[}}%[[IDX]]{{\]}}, %[[CST]] : vector<8xf32>, i64, vector<8xindex>, vector<8xi1>
+// CHECK-LABEL:  @store_1D_vector(
+// CHECK-SAME:   %[[VEC:.+]]: vector<8xf32>,
+// CHECK-SAME:   %[[SRC:.+]]: memref<8x16x32xf32>,
+// CHECK-DAG:    %[[CST:.+]] = arith.constant dense<true> : vector<8xi1>
+// CHECK-DAG:    %[[STEP:.+]] = vector.step
+// CHECK    :    arith.muli {{.*}} : index
+// CHECK    :    arith.addi {{.*}} : index
+// CHECK-DAG:    %[[BCAST:.+]] = vector.broadcast {{.*}} : index to vector<8xindex>
+// CHECK-DAG:    %[[IDX:.+]] = arith.addi %[[BCAST]], %{{.*}} : vector<8xindex>
+// CHECK-DAG:    %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<8x16x32xf32> -> index
+// CHECK-DAG:    %[[COLLAPSE_I:.+]] = arith.index_cast %[[COLLAPSE]] : index to i64
+// CHECK:       xegpu.store %[[VEC]], %[[COLLAPSE_I]]{{\[}}%[[IDX]]{{\]}}, %[[CST]] : vector<8xf32>, i64, vector<8xindex>, vector<8xi1>
 }
 
 // -----
@@ -150,7 +131,7 @@ gpu.func @store_out_of_bounds(%vec: vector<8x16xf32>,
 
 // -----
 gpu.module @xevm_module {
-gpu.func @no_store_transposed(%vec: vector<8x16xf32>,
+gpu.func @store_transposed(%vec: vector<8x16xf32>,
     %source: memref<32x64xf32>, %offset: index) {
   vector.transfer_write %vec, %source[%offset, %offset]
     {permutation_map = affine_map<(d0, d1) -> (d1, d0)>,
@@ -159,22 +140,38 @@ gpu.func @no_store_transposed(%vec: vector<8x16xf32>,
   gpu.return
 }
 
-// STORE-ND-LABEL: @no_store_transposed(
-// STORE-ND:       vector.transfer_write
+// An nd block store cannot transpose, so a transposed write lowers through the
+// scattered path identically on both the target and non-target runs.
+// CHECK-LABEL:  @store_transposed(
+// CHECK-SAME:   %[[VEC:.+]]: vector<8x16xf32>,
+// CHECK-SAME:   %[[SRC:.+]]: memref<32x64xf32>,
+// CHECK-SAME:   %[[OFFSET:.+]]: index
+// CHECK:        %[[CST:.+]] = arith.constant dense<true> : vector<8x16xi1>
+// CHECK     :   %[[STEP:.+]] = vector.step
+// CHECK     :   vector.shape_cast {{.*}}
+// CHECK     :   vector.broadcast {{.*}} : vector<8x16xindex>
+// CHECK-DAG:    %[[BCAST2:.+]] = vector.broadcast {{.*}} : index to vector<8x16xindex>
+// CHECK-DAG:    %[[IDX:.+]] = arith.addi %[[BCAST2]], {{.*}} : vector<8x16xindex>
+// CHECK-DAG:    %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<32x64xf32> -> index
+// CHECK-DAG:    %[[COLLAPSE_I:.+]] = arith.index_cast %[[COLLAPSE]] : index to i64
+// CHECK:        xegpu.store %[[VEC]], %[[COLLAPSE_I]]{{\[}}%[[IDX]]{{\]}}, %[[CST]] : vector<8x16xf32>, i64, vector<8x16xindex>, vector<8x16xi1>
+}
 
-// STORE-SCATTER-LABEL:  @no_store_transposed(
-// STORE-SCATTER-SAME:   %[[VEC:.+]]: vector<8x16xf32>,
-// STORE-SCATTER-SAME:   %[[SRC:.+]]: memref<32x64xf32>,
-// STORE-SCATTER-SAME:   %[[OFFSET:.+]]: index
-// STORE-SCATTER:        %[[CST:.+]] = arith.constant dense<true> : vector<8x16xi1>
-// STORE-SCATTER-COUNT2: %[[STEP:.+]] = vector.step
-// STORE-SCATTER-COUNT2: vector.shape_cast {{.*}}
-// STORE-SCATTER-COUNT2: vector.broadcast {{.*}} : vector<8x16xindex>
-// STORE-SCATTER-DAG:    %[[BCAST2:.+]] = vector.broadcast {{.*}} : index to vector<8x16xindex>
-// STORE-SCATTER-DAG:    %[[IDX:.+]] = arith.addi %[[BCAST2]], {{.*}} : vector<8x16xindex>
-// STORE-SCATTER-DAG:    %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<32x64xf32> -> index
-// STORE-SCATTER-DAG:    %[[COLLAPSE_I:.+]] = arith.index_cast %[[COLLAPSE]] : index to i64
-// STORE-SCATTER:        xegpu.store %[[VEC]], %[[COLLAPSE_I]]{{\[}}%[[IDX]]{{\]}}, %[[CST]] : vector<8x16xf32>, i64, vector<8x16xindex>, vector<8x16xi1>
+// -----
+// A high-dim transposed write cannot use an nd block store (no transpose
+// support), so it lowers through the scattered path on both runs.
+gpu.module @xevm_module {
+gpu.func @store_high_dim_transposed(%vec: vector<8x16x4xf32>,
+    %source: memref<16x32x64xf32>, %offset: index) {
+  vector.transfer_write %vec, %source[%offset, %offset, %offset]
+    {permutation_map = affine_map<(d0, d1, d2) -> (d0, d2, d1)>,
+    in_bounds = [true, true, true]}
+    : vector<8x16x4xf32>, memref<16x32x64xf32>
+  gpu.return
+}
+
+// CHECK-LABEL:  @store_high_dim_transposed(
+// CHECK:        xegpu.store {{.*}} : vector<8x16x4xf32>, i64, vector<8x16x4xindex>, vector<8x16x4xi1>
 }
 
 // -----
@@ -187,8 +184,13 @@ gpu.func @store_high_dim_vector(%vec: vector<8x16x32xf32>,
   gpu.return
 }
 
-// STORE-ND-LABEL: @store_high_dim_vector(
-// STORE-ND:       vector.transfer_write
+// STORE-ND-LABEL:  @store_high_dim_vector(
+// STORE-ND-SAME:   %[[VEC:.+]]: vector<8x16x32xf32>,
+// STORE-ND-SAME:   %[[SRC:.+]]: memref<16x32x64xf32>
+// STORE-ND:        %[[DESC:.+]] = xegpu.create_nd_tdesc %[[SRC]] : memref<16x32x64xf32>
+// STORE-ND-SAME:     -> !xegpu.tensor_desc<8x16x32xf32, #xegpu.block_tdesc_attr<boundary_check = false>>
+// STORE-ND:        xegpu.store_nd %[[VEC]], %[[DESC]]
+// STORE-ND-SAME:     : vector<8x16x32xf32>, !xegpu.tensor_desc<8x16x32xf32
 
 // STORE-SCATTER-LABEL:  @store_high_dim_vector(
 // STORE-SCATTER-SAME:   %[[VEC:.+]]: vector<8x16x32xf32>,
@@ -211,6 +213,39 @@ gpu.func @store_high_dim_vector(%vec: vector<8x16x32xf32>,
 
 // -----
 gpu.module @xevm_module {
+gpu.func @store_8D_vector(%vec: vector<2x2x2x2x2x2x2x2xf32>,
+    %source: memref<2x2x2x2x2x2x2x2xf32>, %offset: index) {
+  vector.transfer_write %vec, %source[%offset, %offset, %offset, %offset, %offset, %offset, %offset, %offset]
+    {in_bounds = [true, true, true, true, true, true, true, true]}
+    : vector<2x2x2x2x2x2x2x2xf32>, memref<2x2x2x2x2x2x2x2xf32>
+  gpu.return
+}
+
+// STORE-ND-LABEL:  @store_8D_vector(
+// STORE-ND-SAME:   %[[VEC:.+]]: vector<2x2x2x2x2x2x2x2xf32>,
+// STORE-ND-SAME:   %[[SRC:.+]]: memref<2x2x2x2x2x2x2x2xf32>
+// STORE-ND:        %[[DESC:.+]] = xegpu.create_nd_tdesc %[[SRC]] : memref<2x2x2x2x2x2x2x2xf32>
+// STORE-ND-SAME:     -> !xegpu.tensor_desc<2x2x2x2x2x2x2x2xf32, #xegpu.block_tdesc_attr<boundary_check = false>>
+// STORE-ND:        xegpu.store_nd %[[VEC]], %[[DESC]]
+// STORE-ND-SAME:     : vector<2x2x2x2x2x2x2x2xf32>, !xegpu.tensor_desc<2x2x2x2x2x2x2x2xf32
+
+// STORE-SCATTER-LABEL:  @store_8D_vector(
+// STORE-SCATTER-SAME:   %[[VEC:.+]]: vector<2x2x2x2x2x2x2x2xf32>,
+// STORE-SCATTER-SAME:   %[[SRC:.+]]: memref<2x2x2x2x2x2x2x2xf32>
+// STORE-SCATTER:        %[[CST:.+]] = arith.constant dense<true> : vector<2x2x2x2x2x2x2x2xi1>
+// STORE-SCATTER-COUNT8: vector.step
+// STORE-SCATTER-COUNT7: vector.shape_cast
+// STORE-SCATTER-COUNT8: vector.broadcast {{.*}} : vector<2x2x2x2x2x2x2x2xindex>
+// STORE-SCATTER-COUNT7: arith.addi {{.*}} : vector<2x2x2x2x2x2x2x2xindex>
+// STORE-SCATTER:        %[[SPLAT:.+]] = vector.broadcast {{.*}} : index to vector<2x2x2x2x2x2x2x2xindex>
+// STORE-SCATTER:        %[[IDX:.+]] = arith.addi %[[SPLAT]], {{.*}} : vector<2x2x2x2x2x2x2x2xindex>
+// STORE-SCATTER:        %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<2x2x2x2x2x2x2x2xf32> -> index
+// STORE-SCATTER:        %[[COLLAPSE_I:.+]] = arith.index_cast %[[COLLAPSE]] : index to i64
+// STORE-SCATTER:        xegpu.store %[[VEC]], %[[COLLAPSE_I]][%[[IDX]]], %[[CST]] : vector<2x2x2x2x2x2x2x2xf32>, i64, vector<2x2x2x2x2x2x2x2xindex>, vector<2x2x2x2x2x2x2x2xi1>
+}
+
+// -----
+gpu.module @xevm_module {
 gpu.func @no_store_masked(%vec: vector<4xf32>,
     %source: memref<4xf32>, %offset: index) {
   %mask = arith.constant dense<[0, 1, 0, 1]> : vector<4xi1>
@@ -220,11 +255,8 @@ gpu.func @no_store_masked(%vec: vector<4xf32>,
   gpu.return
 }
 
-// STORE-ND-LABEL: @no_store_masked(
-// STORE-ND:       vector.transfer_write
-
-// STORE-SCATTER-LABEL:  @no_store_masked(
-// STORE-SCATTER:        vector.transfer_write
+// CHECK-LABEL:  @no_store_masked(
+// CHECK:        vector.transfer_write
 }
 
 // -----
@@ -237,11 +269,8 @@ gpu.func @no_store_tensor(%vec: vector<8x16xf32>,
   gpu.return %0 : tensor<32x64xf32>
 }
 
-// STORE-ND-LABEL: @no_store_tensor(
-// STORE-ND:       vector.transfer_write
-
-// STORE-SCATTER-LABEL:  @no_store_tensor(
-// STORE-SCATTER:        vector.transfer_write
+// CHECK-LABEL:  @no_store_tensor(
+// CHECK:        vector.transfer_write
 }
 
 // -----
@@ -254,11 +283,8 @@ gpu.func @no_store_non_unit_inner_stride(%vec: vector<8xf32>,
   gpu.return
 }
 
-// STORE-ND-LABEL: @no_store_non_unit_inner_stride(
-// STORE-ND:       vector.transfer_write
-
-// STORE-SCATTER-LABEL:  @no_store_non_unit_inner_stride(
-// STORE-SCATTER:        vector.transfer_write
+// CHECK-LABEL:  @no_store_non_unit_inner_stride(
+// CHECK:        vector.transfer_write
 }
 
 // -----
@@ -272,11 +298,8 @@ gpu.func @no_store_unsupported_map(%vec: vector<8x16xf32>,
   gpu.return
 }
 
-// STORE-ND-LABEL: @no_store_unsupported_map(
-// STORE-ND:       vector.transfer_write
-
-// STORE-SCATTER-LABEL:  @no_store_unsupported_map(
-// STORE-SCATTER:        vector.transfer_write
+// CHECK-LABEL:  @no_store_unsupported_map(
+// CHECK:        vector.transfer_write
 }
 
 // -----
@@ -289,11 +312,8 @@ gpu.func @no_store_out_of_bounds_1D_vector(%vec: vector<8xf32>,
   gpu.return
 }
 
-// STORE-ND-LABEL: @no_store_out_of_bounds_1D_vector(
-// STORE-ND:       vector.transfer_write
-
-// STORE-SCATTER-LABEL:  @no_store_out_of_bounds_1D_vector(
-// STORE-SCATTER:        vector.transfer_write
+// CHECK-LABEL:  @no_store_out_of_bounds_1D_vector(
+// CHECK:        vector.transfer_write
 }
 
 // -----
@@ -308,39 +328,75 @@ gpu.func @store_to_subview(%vec: vector<8xf16>,
       : vector<8xf16>, memref<256x256xf16, strided<[4096, 1], offset: ?>>
   gpu.return
 }
-// STORE-ND-LABEL:  @store_to_subview(
-// STORE-ND-SAME:   %[[VEC:.+]]: vector<8xf16>,
-// STORE-ND-SAME:   %[[SRC:.+]]: memref<4096x4096xf16>,
-// STORE-ND-SAME:   %[[OFF1:.+]]: index, %[[OFF2:.+]]: index
-// STORE-ND:        %[[ELEM_BYTES:.+]] = arith.constant 2 : index
-// STORE-ND:        %[[SUBVIEW:.+]] = memref.subview %[[SRC]][%[[OFF1]], %[[OFF2]]] [256, 256] [1, 1] : memref<4096x4096xf16> to memref<256x256xf16, strided<[4096, 1], offset: ?>>
-// STORE-ND:        %[[COLLAPSED:.+]] = memref.subview %[[SUBVIEW]][%[[OFF2]], 0]
-// STORE-ND:        %[[BASE_BUFFER:.*]], %[[OFFSET:.*]], %[[SIZES:.*]], %[[STRIDES:.*]] = memref.extract_strided_metadata %[[COLLAPSED]]
-// STORE-ND:        %[[INTPTR:.*]] = memref.extract_aligned_pointer_as_index %[[BASE_BUFFER]]
-// STORE-ND:        %[[MUL:.+]] = arith.muli %[[OFFSET]], %[[ELEM_BYTES]] : index
-// STORE-ND:        %[[ADD:.+]] = arith.addi %[[INTPTR]], %[[MUL]] : index
-// STORE-ND:        %[[I64PTR:.*]] = arith.index_cast %[[ADD]] : index to i64
-// STORE-ND:        %[[DESC:.*]] = xegpu.create_nd_tdesc %[[I64PTR]], shape : [256], strides : [1] : i64 ->
-// STORE-ND-SAME:                    !xegpu.tensor_desc<8xf16, #xegpu.block_tdesc_attr<boundary_check = false>>
-// STORE-ND:        xegpu.store_nd %[[VEC]], %[[DESC]][%[[OFF2]]] : vector<8xf16>
 
-// STORE-SCATTER-LABEL:  @store_to_subview(
-// STORE-SCATTER-SAME:   %[[VEC:.+]]: vector<8xf16>,
-// STORE-SCATTER-SAME:   %[[SRC:.+]]: memref<4096x4096xf16>,
-// STORE-SCATTER-SAME:   %[[OFF1:.+]]: index, %[[OFF2:.+]]: index
-// STORE-SCATTER:        %[[CST:.+]] = arith.constant dense<true> : vector<8xi1>
-// STORE-SCATTER:        %[[SUBVIEW:.+]] = memref.subview %[[SRC]][%[[OFF1]], %[[OFF2]]] [256, 256] [1, 1]
-// STORE-SCATTER-SAME:     : memref<4096x4096xf16> to memref<256x256xf16, strided<[4096, 1], offset: ?>>
-// STORE-SCATTER:        %[[BB:.+]], %[[OFFSET:.+]], {{.*}}, {{.*}} = memref.extract_strided_metadata %[[SUBVIEW]]
-// STORE-SCATTER-SAME:     : memref<256x256xf16, strided<[4096, 1], offset: ?>> -> memref<f16>, index, index, index, index, index
-// STORE-SCATTER:        %[[STEP:.+]] = vector.step : vector<8xindex>
-// STORE-SCATTER:        arith.muli {{.*}} : index
-// STORE-SCATTER:        arith.addi %[[OFFSET]]{{.*}} : index
-// STORE-SCATTER:        arith.addi {{.*}} : index
-// STORE-SCATTER:        %[[SPLAT:.+]] = vector.broadcast {{.*}} : index to vector<8xindex>
-// STORE-SCATTER:        %[[IDX:.+]] = arith.addi %[[SPLAT]], %[[STEP]] : vector<8xindex>
-// STORE-SCATTER:        %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %[[SUBVIEW]]
-// STORE-SCATTER-SAME:     : memref<256x256xf16, strided<[4096, 1], offset: ?>> -> index
-// STORE-SCATTER:        %[[COLLAPSE_I:.+]] = arith.index_cast %[[COLLAPSE]] : index to i64
-// STORE-SCATTER:        xegpu.store %[[VEC]], %[[COLLAPSE_I]]{{\[}}%[[IDX]]{{\]}}, %[[CST]] : vector<8xf16>, i64, vector<8xindex>, vector<8xi1>
+// CHECK-LABEL:  @store_to_subview(
+// CHECK-SAME:   %[[VEC:.+]]: vector<8xf16>,
+// CHECK-SAME:   %[[SRC:.+]]: memref<4096x4096xf16>,
+// CHECK-SAME:   %[[OFF1:.+]]: index, %[[OFF2:.+]]: index
+// CHECK:        %[[CST:.+]] = arith.constant dense<true> : vector<8xi1>
+// CHECK:        %[[SUBVIEW:.+]] = memref.subview %[[SRC]][%[[OFF1]], %[[OFF2]]] [256, 256] [1, 1]
+// CHECK-SAME:     : memref<4096x4096xf16> to memref<256x256xf16, strided<[4096, 1], offset: ?>>
+// CHECK:        %[[BB:.+]], %[[OFFSET:.+]], {{.*}}, {{.*}} = memref.extract_strided_metadata %[[SUBVIEW]]
+// CHECK-SAME:     : memref<256x256xf16, strided<[4096, 1], offset: ?>> -> memref<f16>, index, index, index, index, index
+// CHECK:        %[[STEP:.+]] = vector.step : vector<8xindex>
+// CHECK:        arith.muli {{.*}} : index
+// CHECK:        arith.addi %[[OFFSET]]{{.*}} : index
+// CHECK:        arith.addi {{.*}} : index
+// CHECK:        %[[SPLAT:.+]] = vector.broadcast {{.*}} : index to vector<8xindex>
+// CHECK:        %[[IDX:.+]] = arith.addi %[[SPLAT]], %[[STEP]] : vector<8xindex>
+// CHECK:        %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %[[SUBVIEW]]
+// CHECK-SAME:     : memref<256x256xf16, strided<[4096, 1], offset: ?>> -> index
+// CHECK:        %[[COLLAPSE_I:.+]] = arith.index_cast %[[COLLAPSE]] : index to i64
+// CHECK:        xegpu.store %[[VEC]], %[[COLLAPSE_I]]{{\[}}%[[IDX]]{{\]}}, %[[CST]] : vector<8xf16>, i64, vector<8xindex>, vector<8xi1>
+}
+
+// -----
+gpu.module @xevm_module {
+gpu.func @store_2D_vector_addrspace3(%vec: vector<8x16xf32>,
+    %source: memref<16x32xf32, 3>, %offset: index) {
+  vector.transfer_write %vec, %source[%offset, %offset]
+    {in_bounds = [true, true]}
+    : vector<8x16xf32>, memref<16x32xf32, 3>
+  gpu.return
+}
+
+// CHECK-LABEL: @store_2D_vector_addrspace3
+// CHECK-SAME: %[[VEC:.+]]: vector<8x16xf32>
+// CHECK-SAME: %[[SOURCE:.+]]: memref<16x32xf32, 3>
+// CHECK-SAME: %[[OFFSET:.+]]: index
+// CHECK: %[[MEM_DESC:.+]] = xegpu.create_mem_desc %[[SOURCE]] : memref<16x32xf32, 3> -> !xegpu.mem_desc<16x32xf32>
+// CHECK: xegpu.store_matrix %[[VEC]], %[[MEM_DESC]][%[[OFFSET]], %[[OFFSET]]] : vector<8x16xf32>, !xegpu.mem_desc<16x32xf32>, index, index
+// CHECK: gpu.return
+}
+
+// -----
+gpu.module @xevm_module {
+gpu.func @store_1D_vector_addrspace3(%vec: vector<8xf32>,
+    %source: memref<32xf32, 3>, %offset: index) {
+  vector.transfer_write %vec, %source[%offset]
+    {in_bounds = [true]}
+    : vector<8xf32>, memref<32xf32, 3>
+  gpu.return
+}
+
+// CHECK-LABEL: @store_1D_vector_addrspace3
+// CHECK-SAME: %[[VEC:.+]]: vector<8xf32>
+// CHECK-SAME: %[[SOURCE:.+]]: memref<32xf32, 3>
+// CHECK-SAME: %[[OFFSET:.+]]: index
+// CHECK: %[[MEM_DESC:.+]] = xegpu.create_mem_desc %[[SOURCE]] : memref<32xf32, 3> -> !xegpu.mem_desc<32xf32>
+// CHECK: xegpu.store_matrix %[[VEC]], %[[MEM_DESC]][%[[OFFSET]]] : vector<8xf32>, !xegpu.mem_desc<32xf32>, index
+// CHECK: gpu.return
+}
+
+// -----
+gpu.module @xevm_module {
+gpu.func @store_0D_vector_unsupported(%vec: vector<f32>,
+    %source: memref<3xf32>, %offset: index) {
+  vector.transfer_write %vec, %source[%offset]
+    : vector<f32>, memref<3xf32>
+  gpu.return
+}
+
+// CHECK-LABEL: @store_0D_vector_unsupported
+// CHECK: vector.transfer_write
 }

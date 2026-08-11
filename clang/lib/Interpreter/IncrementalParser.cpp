@@ -131,8 +131,17 @@ IncrementalParser::Parse(llvm::StringRef input) {
   SourceLocation NewLoc = SM.getLocForStartOfFile(SM.getMainFileID());
 
   // Create FileID for the current buffer.
-  FileID FID = SM.createFileID(std::move(MB), SrcMgr::C_User, /*LoadedID=*/0,
-                               /*LoadedOffset=*/0, NewLoc);
+  FileID FID;
+  // Create FileEntry and FileID for the current buffer.
+  FileEntryRef FE = SM.getFileManager().getVirtualFileRef(
+      SourceName.str(), InputSize, 0 /* mod time*/);
+  SM.overrideFileContents(FE, std::move(MB));
+
+  // Ensure HeaderFileInfo exists before lookup to prevent assertion
+  HeaderSearch &HS = PP.getHeaderSearchInfo();
+  HS.getFileInfo(FE);
+
+  FID = SM.createFileID(FE, NewLoc, SrcMgr::C_User);
 
   // NewLoc only used for diags.
   if (PP.EnterSourceFile(FID, /*DirLookup=*/nullptr, NewLoc))
@@ -165,6 +174,9 @@ IncrementalParser::Parse(llvm::StringRef input) {
 
 void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
   if (StoredDeclsMap *Map = MostRecentTU->getPrimaryContext()->getLookupPtr()) {
+    // Collect the keys to erase: erasing during iteration invalidates the map
+    // iterator under backward-shift deletion.
+    llvm::SmallVector<DeclarationName, 16> KeysToErase;
     for (auto &&[Key, List] : *Map) {
       DeclContextLookupResult R = List.getLookupResult();
       std::vector<NamedDecl *> NamedDeclsToRemove;
@@ -176,12 +188,14 @@ void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
           RemoveAll = false;
       }
       if (LLVM_LIKELY(RemoveAll)) {
-        Map->erase(Key);
+        KeysToErase.push_back(Key);
       } else {
         for (NamedDecl *D : NamedDeclsToRemove)
           List.remove(D);
       }
     }
+    for (DeclarationName Key : KeysToErase)
+      Map->erase(Key);
   }
 
   ExternCContextDecl *ECCD = S.getASTContext().getExternCContextDecl();

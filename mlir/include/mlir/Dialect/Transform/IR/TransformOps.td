@@ -1138,6 +1138,23 @@ def ParamConstantOp : Op<Transform_Dialect, "param.constant", [
   let assemblyFormat = "$value attr-dict `->` type($param)";
 }
 
+def PayloadOp : Op<Transform_Dialect, "payload",
+                   [NoTerminator, NoRegionArguments,
+                    DeclareOpInterfaceMethods<NormalFormCheckedOpInterface>]> {
+  let summary = "Optional container for transform payloads";
+  let description = [{
+    Contains payload operations on which transforms operate and serves as a
+    storage location for information between multiple transform invocations.
+
+    The operations contained in this payload must satisfy the normal forms specified by the `normal_forms` attribute.
+  }];
+  let regions = (region AnyRegion:$body);
+  let arguments =
+      (ins TypedArrayAttrBase<NormalFormAttrInterface,
+                              "normal form attributes">:$normal_forms);
+  let assemblyFormat = "attr-dict-with-keyword regions";
+}
+
 def PrintOp : TransformDialectOp<"print",
     [DeclareOpInterfaceMethods<TransformOpInterface>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,

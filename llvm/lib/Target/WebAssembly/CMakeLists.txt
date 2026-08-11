@@ -15,7 +15,7 @@ tablegen(LLVM WebAssemblyGenSDNodeInfo.inc -gen-sd-node-info)
 tablegen(LLVM WebAssemblyGenSubtargetInfo.inc -gen-subtarget)
 
 set(LLVM_TARGET_DEFINITIONS WebAssemblyGISel.td)
-tablegen(LLVM WebAssemblyGenGlobalISel.inc -gen-global-isel)
+tablegen(LLVM WebAssemblyGenGlobalISel.inc -gen-global-isel -gisel-extended-llt)
 tablegen(LLVM WebAssemblyGenPreLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="WebAssemblyPreLegalizerCombiner")
 tablegen(LLVM WebAssemblyGenPostLegalizeGICombiner.inc -gen-global-isel-combiner
@@ -36,6 +36,8 @@ add_llvm_target(WebAssemblyCodeGen
   WebAssemblyCFGStackify.cpp
   WebAssemblyCleanCodeAfterTrap.cpp
   WebAssemblyCFGSort.cpp
+  WebAssemblyCoalesceFeaturesAndStripAtomics.cpp
+  WebAssemblyCodeGenPassBuilder.cpp
   WebAssemblyDebugFixup.cpp
   WebAssemblyDebugValueManager.cpp
   WebAssemblyLateEHPrepare.cpp
@@ -51,7 +53,6 @@ add_llvm_target(WebAssemblyCodeGen
   WebAssemblyInstrInfo.cpp
   WebAssemblyLowerBrUnless.cpp
   WebAssemblyLowerEmscriptenEHSjLj.cpp
-  WebAssemblyLowerRefTypesIntPtrConv.cpp
   WebAssemblyMachineFunctionInfo.cpp
   WebAssemblyMCInstLower.cpp
   WebAssemblyMCLowerPrePass.cpp
@@ -59,6 +60,7 @@ add_llvm_target(WebAssemblyCodeGen
   WebAssemblyOptimizeLiveIntervals.cpp
   WebAssemblyOptimizeReturned.cpp
   WebAssemblyPeephole.cpp
+  WebAssemblyReduceToAnyAllTrue.cpp
   WebAssemblyRefTypeMem2Local.cpp
   WebAssemblyRegisterInfo.cpp
   WebAssemblyRegColoring.cpp
@@ -86,8 +88,10 @@ add_llvm_target(WebAssemblyCodeGen
   CodeGen
   CodeGenTypes
   Core
+  IRPrinter
   GlobalISel
   MC
+  ObjCARC
   Scalar
   SelectionDAG
   Support

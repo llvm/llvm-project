@@ -226,7 +226,7 @@ func.func @bounded_recursion() {
 builtin.module {
 
   func.func @fail_to_convert_illegal_op() -> i32 {
-    // expected-error@+1 {{failed to legalize operation 'test.illegal_op_f'}}
+    // expected-error@+1 {{failed to legalize operation 'test.illegal_op_f' that was explicitly marked illegal: %0 = "test.illegal_op_f"() : () -> i32}}
     %result = "test.illegal_op_f"() : () -> (i32)
     return %result : i32
   }
@@ -299,6 +299,12 @@ func.func @caller() {
   "test.return"() : () -> ()
 }
 }
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/201521
+// CHECK-LABEL: func.func private @callee_multi_result(f64) -> (f64, i32, i32, f16, f16)
+func.func private @callee_multi_result(i64) -> (i64, i32, i32, f32)
 
 // -----
 
@@ -434,7 +440,7 @@ func.func @test_lookup_without_converter() {
 // expected-remark@-1 {{applyPartialConversion failed}}
 
 func.func @test_skip_1to1_pattern(%arg0: f32) {
-  // expected-error@+1 {{failed to legalize operation 'test.type_consumer'}}
+  // expected-error@+1 {{failed to legalize operation 'test.type_consumer' that was explicitly marked illegal}}
   "test.type_consumer"(%arg0) : (f32) -> ()
   return
 }

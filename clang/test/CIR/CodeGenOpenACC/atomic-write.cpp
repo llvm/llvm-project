@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 -fopenacc -triple x86_64-linux-gnu -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir -triple x86_64-linux-pc %s -o - | FileCheck %s
+// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
+// supports parameters of an empty or tag class.
+// RUN: %clang_cc1 -fopenacc -triple x86_64-linux-gnu -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir -fno-clangir-call-conv-lowering -triple x86_64-linux-pc %s -o - | FileCheck %s
 
 extern "C" bool condition(int x, unsigned int y, float f);
 extern "C" double do_thing(float f);
@@ -8,11 +10,11 @@ struct ConvertsToScalar {
 };
 
 void use(int x, unsigned int y, float f, ConvertsToScalar cts) {
-  // CHECK: cir.func{{.*}}(%[[X_ARG:.*]]: !s32i{{.*}}, %[[Y_ARG:.*]]: !u32i{{.*}}, %[[F_ARG:.*]]: !cir.float{{.*}}){{.*}}, %[[CTS_ARG:.*]]: !rec_ConvertsToScalar{{.*}}) {
-  // CHECK-NEXT: %[[X_ALLOC:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init]
-  // CHECK-NEXT: %[[Y_ALLOC:.*]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["y", init]
-  // CHECK-NEXT: %[[F_ALLOC:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["f", init]
-  // CHECK-NEXT: %[[CTS_ALLOC:.*]] = cir.alloca !rec_ConvertsToScalar, !cir.ptr<!rec_ConvertsToScalar>, ["cts", init]
+  // CHECK: cir.func{{.*}}(%[[X_ARG:.*]]: !s32i{{.*}}, %[[Y_ARG:.*]]: !u32i{{.*}}, %[[F_ARG:.*]]: !cir.float{{.*}}){{.*}}, %[[CTS_ARG:.*]]: !rec_ConvertsToScalar{{.*}}) {{.*}}{
+  // CHECK-NEXT: %[[X_ALLOC:.*]] = cir.alloca "x" {{.*}} init : !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[Y_ALLOC:.*]] = cir.alloca "y" {{.*}} init : !cir.ptr<!u32i>
+  // CHECK-NEXT: %[[F_ALLOC:.*]] = cir.alloca "f" {{.*}} init : !cir.ptr<!cir.float>
+  // CHECK-NEXT: %[[CTS_ALLOC:.*]] = cir.alloca "cts" {{.*}} init : !cir.ptr<!rec_ConvertsToScalar>
   //
   // CHECK-NEXT: cir.store %[[X_ARG]], %[[X_ALLOC]] : !s32i, !cir.ptr<!s32i>
   // CHECK-NEXT: cir.store %[[Y_ARG]], %[[Y_ALLOC]] : !u32i, !cir.ptr<!u32i>
@@ -22,7 +24,7 @@ void use(int x, unsigned int y, float f, ConvertsToScalar cts) {
   // CHECK-NEXT: %[[Y_LOAD:.*]] = cir.load {{.*}}%[[Y_ALLOC]] : !cir.ptr<!u32i>, !u32i
   // CHECK-NEXT: %[[Y_TO_FLOAT:.*]] = cir.cast int_to_float %[[Y_LOAD]] : !u32i -> !cir.float
   // CHECK-NEXT: %[[F_LOAD:.*]] = cir.load {{.*}}%[[F_ALLOC]] : !cir.ptr<!cir.float>, !cir.float
-  // CHECK-NEXT: %[[MUL:.*]] = cir.mul %[[Y_TO_FLOAT]], %[[F_LOAD]] : !cir.float
+  // CHECK-NEXT: %[[MUL:.*]] = cir.fmul %[[Y_TO_FLOAT]], %[[F_LOAD]] : !cir.float
   // CHECK-NEXT: %[[RHS_CAST:.*]] = cir.cast float_to_int %[[MUL]] : !cir.float -> !s32i
   // CHECK-NEXT: acc.atomic.write %[[X_ALLOC]] = %[[RHS_CAST]] : !cir.ptr<!s32i>, !s32i
 #pragma acc atomic write
