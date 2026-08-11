@@ -29,11 +29,11 @@ using namespace llvm;
 #define PASS_NAME "RISC-V Zacas ABI fix"
 
 namespace {
-class RISCVZacasABIFix : public InstVisitor<RISCVZacasABIFix, bool> {
+class RISCVZacasABIFixImpl : public InstVisitor<RISCVZacasABIFixImpl, bool> {
   const RISCVSubtarget *ST;
 
 public:
-  RISCVZacasABIFix(const RISCVSubtarget *ST) : ST(ST) {}
+  RISCVZacasABIFixImpl(const RISCVSubtarget *ST) : ST(ST) {}
   bool run(Function &F);
   bool visitInstruction(Instruction &I) { return false; }
   bool visitAtomicCmpXchgInst(AtomicCmpXchgInst &I);
@@ -61,7 +61,7 @@ public:
 // Insert a leading fence (needed for broadest atomics ABI compatibility)
 // only if the Zacas extension is enabled and the AtomicCmpXchgInst has a
 // SequentiallyConsistent failure ordering.
-bool RISCVZacasABIFix::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
+bool RISCVZacasABIFixImpl::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
   assert(ST->hasStdExtZacas() && "only necessary to run in presence of zacas");
   IRBuilder<> Builder(&I);
   if (I.getFailureOrdering() != AtomicOrdering::SequentiallyConsistent)
@@ -71,7 +71,7 @@ bool RISCVZacasABIFix::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
   return true;
 }
 
-bool RISCVZacasABIFix::run(Function &F) {
+bool RISCVZacasABIFixImpl::run(Function &F) {
   bool MadeChange = false;
   for (auto &BB : F)
     for (Instruction &I : llvm::make_early_inc_range(BB))
@@ -88,7 +88,7 @@ bool RISCVZacasABIFixLegacy::runOnFunction(Function &F) {
   if (skipFunction(F) || !ST->hasStdExtZacas())
     return false;
 
-  return RISCVZacasABIFix(ST).run(F);
+  return RISCVZacasABIFixImpl(ST).run(F);
 }
 
 INITIALIZE_PASS_BEGIN(RISCVZacasABIFixLegacy, DEBUG_TYPE, PASS_NAME, false,
@@ -108,11 +108,9 @@ PreservedAnalyses RISCVZacasABIFixPass::run(Function &F,
   if (!ST->hasStdExtZacas())
     return PreservedAnalyses::all();
 
-  bool Changed = RISCVZacasABIFix(ST).run(F);
+  bool Changed = RISCVZacasABIFixImpl(ST).run(F);
   if (!Changed)
     return PreservedAnalyses::all();
 
-  PreservedAnalyses PA = PreservedAnalyses::none();
-  PA.preserveSet<CFGAnalyses>();
-  return PA;
+  return PreservedAnalyses::allInSet<CFGAnalyses>();
 }
