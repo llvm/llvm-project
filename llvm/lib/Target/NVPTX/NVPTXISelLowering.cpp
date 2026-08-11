@@ -560,11 +560,13 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     case ISD::FMINIMUM:
     case ISD::FMAXIMUMNUM:
     case ISD::FMINIMUMNUM:
-      IsOpSupported &= STI.hasFeature(NVPTX::SM80) && STI.hasFeature(NVPTX::PTX70);
+      IsOpSupported &=
+          STI.hasFeature(NVPTX::SM80) && STI.hasFeature(NVPTX::PTX70);
       break;
     case ISD::FEXP2:
     case ISD::FTANH:
-      IsOpSupported &= STI.hasFeature(NVPTX::SM75) && STI.hasFeature(NVPTX::PTX70);
+      IsOpSupported &=
+          STI.hasFeature(NVPTX::SM75) && STI.hasFeature(NVPTX::PTX70);
       break;
     }
     setOperationAction(Op, VT, IsOpSupported ? Action : NoF16Action);
@@ -587,7 +589,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     case ISD::SMIN:
     case ISD::UMIN:
     case ISD::UMAX:
-      IsOpSupported = STI.hasFeature(NVPTX::SM90) && STI.hasFeature(NVPTX::PTX80);
+      IsOpSupported =
+          STI.hasFeature(NVPTX::SM90) && STI.hasFeature(NVPTX::PTX80);
       break;
     }
     setOperationAction(Op, VT, IsOpSupported ? Action : NoI16x2Action);

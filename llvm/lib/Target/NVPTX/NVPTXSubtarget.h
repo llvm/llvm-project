@@ -100,7 +100,9 @@ public:
   }
   bool hasLDG() const { return hasFeature(NVPTX::SM32); }
   bool hasHWROT32() const { return hasFeature(NVPTX::SM32); }
-  bool hasBrx() const { return hasFeature(NVPTX::SM30) && hasFeature(NVPTX::PTX60); }
+  bool hasBrx() const {
+    return hasFeature(NVPTX::SM30) && hasFeature(NVPTX::PTX60);
+  }
   bool hasFP16Math() const { return hasFeature(NVPTX::SM53); }
   bool hasBF16Math() const { return hasFeature(NVPTX::SM80); }
   bool allowFP16Math() const;
@@ -183,7 +185,8 @@ public:
   }
 
   bool hasTcgen05LdRedSupport() const {
-    return hasFeature(NVPTX::PTX88) && hasAnyFeature({NVPTX::SM103f, NVPTX::SM110f});
+    return hasFeature(NVPTX::PTX88) &&
+           hasAnyFeature({NVPTX::SM103f, NVPTX::SM110f});
   }
 
   bool hasReduxSyncF32() const { return hasAnyFeature({NVPTX::SM100f}); }
@@ -199,7 +202,8 @@ public:
   }
 
   bool hasMMASparseWithMXF4NVF4Scale4xE8M0() const {
-    return hasFeature(NVPTX::PTX91) && hasAnyFeature({NVPTX::SM120a, NVPTX::SM121a});
+    return hasFeature(NVPTX::PTX91) &&
+           hasAnyFeature({NVPTX::SM120a, NVPTX::SM121a});
   }
 
   // f32x2 instructions in Blackwell family
@@ -316,7 +320,8 @@ public:
     return hasFeature(NVPTX::SM70) && hasFeature(NVPTX::PTX77);
   }
   bool hasConvertWithStochasticRounding() const {
-    return hasFeature(NVPTX::PTX87) && hasAnyFeature({NVPTX::SM100a, NVPTX::SM103a});
+    return hasFeature(NVPTX::PTX87) &&
+           hasAnyFeature({NVPTX::SM100a, NVPTX::SM103a});
   }
   // The compute capability as a number, for __CUDA_ARCH__. This is the one
   // place an architecture needs to be a number, and it is not an identity:
