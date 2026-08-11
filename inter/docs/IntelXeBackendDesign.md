@@ -267,6 +267,44 @@ const  <  uniform  <  affine-strided(k, base-uniform)  <  varying
   annotation or the explicit type. Failure to prove uniformity selects the
   varying fallback rather than rejecting a legal program.
 
+### Typed lane distributions (future work)
+
+The production semantic Inter layer should preserve proved lane distribution
+in types, following the useful precedent established by wave-mlir. This is not
+merely a cached uniformity result: it is a representation contract checked
+across operation results, block arguments, loop-carried values, region yields,
+and function boundaries. Broadcast, expansion, and redistribution must be
+explicit when producer and consumer distributions differ.
+
+The type system should eventually distinguish at least:
+
+```
+uniform<T>                              // one stored value
+lane_bundle<W, T, clustered<K>>         // W/K stored values
+lane_bundle<W, T, identity>             // W stored values
+```
+
+`clustered<K>` means each aligned group of K logical lanes shares one value.
+For example, `lane_bundle<32, i32, clustered<2>>` has 32-lane semantics but may
+use 16 stored dwords. Xe selection can produce it with SIMD16 and consume it in
+SIMD32 through a source region such as `<1;2,0>`. A SIMD32 destination must not
+write multiple active lanes to the same compact element; compact values are
+produced at their storage width and broadcast only on reads. Sends and other
+operations requiring one physical payload element per lane must explicitly
+expand the value.
+
+Clustered representations are legal across divergent control flow only when
+the active mask is compatible with the same lane partition. If two lanes in a
+cluster can have different activity, selection must expand to a finer
+distribution before the divergent region or use the fully varying fallback.
+Uniformity and affine-stride analysis prove candidate distributions; typed
+conversion makes the chosen representation durable through later rewrites.
+
+This does not justify types for machine decomposition details. In particular,
+an i64 remains i64 when Xe lowers its SIMD32 execution into two SIMD16
+instructions. Lane distribution describes frontend value semantics and
+storage cardinality; instruction splitting does not.
+
 Exemplars to mine for lattice plumbing: `WaitLattice`/`HazardLattice` in
 wave-mlir (`lib/Dialect/Wave/Transforms/WaveAMDMachineWaitcnt.cpp`,
 `WaveAMDHazardWaits.cpp`) — dense dataflow over region-bearing control flow,
@@ -844,7 +882,7 @@ at the pinned commit from section 3.
 | Token synthesis (AA) | — | new; wave-mlir refuses this by policy |
 | Symbolic engine | `third_party/ixsimpl`, `WaveSymbols.*`, `WaveGenerateIndexExprs.cpp` | direct; submodule |
 | Address planner shape | `WaveAMDMachineIndexExpr.cpp`, `WaveAMDMachineSelector.h` | shape direct; slot rules are Intel message trivia |
-| Uniformity analysis | — (declared in types there) | new; `WaitLattice`/`HazardLattice` as dataflow exemplars |
+| Uniformity and lane distribution | types declared in wave-mlir | typed distribution is direct; affine proofs are new, with `WaitLattice`/`HazardLattice` as dataflow exemplars |
 | Structured machine CF | `uniform_loop`/`uniform_if`/`exec_if`, `WaveAMDMachineScfFor.cpp`, `WaveAMDExecIfUtils.cpp` | direct concept match to EU CF + mask stack |
 | Regalloc transform loop | `lib/Dialect/Wave/Transforms/RegAlloc/` | direct in shape; drop AGPR provider; region aliasing is new |
 | Scheduler + cost model split | `WaveAMDMachineGreedySchedule.cpp`, `WaveAMDMachineScheduleModel.*`, `CostModel/` | greedy scheduler architecture direct; timing policy adapted from IGC |
