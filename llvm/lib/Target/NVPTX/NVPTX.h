@@ -50,7 +50,7 @@ FunctionPass *createNVPTXAtomicLowerLegacyPass();
 FunctionPass *createNVVMIntrRangePass();
 ModulePass *createNVVMReflectPass(unsigned int SmVersion);
 MachineFunctionPass *createNVPTXPrologEpilogPass();
-MachineFunctionPass *createNVPTXReplaceImageHandlesPass();
+MachineFunctionPass *createNVPTXReplaceImageHandlesLegacyPass();
 FunctionPass *createNVPTXImageOptimizerLegacyPass();
 ModulePass *createNVPTXLowerArgsPass();
 ModulePass *createNVPTXPromoteParamAlignPass();
@@ -149,6 +149,13 @@ public:
       : TrapUnreachable(TrapUnreachable),
         NoTrapAfterNoreturn(NoTrapAfterNoreturn) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+};
+
+class NVPTXReplaceImageHandlesPass
+    : public RequiredPassInfoMixin<NVPTXReplaceImageHandlesPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
 };
 
 struct NVPTXLowerArgsPass : OptionalPassInfoMixin<NVPTXLowerArgsPass> {

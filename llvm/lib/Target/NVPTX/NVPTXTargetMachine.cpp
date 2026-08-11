@@ -395,7 +395,7 @@ bool NVPTXPassConfig::addInstSelector() {
   addPass(createLowerAggrCopies());
   addPass(createNVPTXAllocaHoistingLegacyPass());
   addPass(createNVPTXISelDag(getNVPTXTargetMachine(), getOptLevel()));
-  addPass(createNVPTXReplaceImageHandlesPass());
+  addPass(createNVPTXReplaceImageHandlesLegacyPass());
 
   return false;
 }
