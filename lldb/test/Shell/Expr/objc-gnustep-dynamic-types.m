@@ -36,9 +36,9 @@ __attribute__((objc_root_class))
 
 // The static type of `object` is Base, but the dynamic type is Derived. The
 // GNUstep runtime resolves the dynamic type by reading the class structure
-// from the inferior's memory (no code is run in the inferior).
+// from the inferior's memory and attaching the matching type from debug info.
 //
-// RUN: %lldb -b -o "b objc-gnustep-dynamic-types.m:48" -o "run" \
+// RUN: %lldb -b -o "b objc-gnustep-dynamic-types.m:47" -o "run" \
 // RUN:          -o "frame variable -d run-target object" \
 // RUN:          -o "frame variable -d no-dynamic-values object" -- %t | FileCheck %s
 //
