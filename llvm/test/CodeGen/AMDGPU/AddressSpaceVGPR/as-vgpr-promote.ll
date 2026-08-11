@@ -250,6 +250,151 @@ define amdgpu_kernel void @not_promoted_memcpy(ptr addrspace(1) %out, i32 %i) {
   ret void
 }
 
+; An intrinsic overloaded on the pointer type has the address space in its
+; mangled name, so moving the object has to rebuild the call, or the name no
+; longer describes the argument.
+define amdgpu_kernel void @memset_object(ptr addrspace(1) %out, i32 %i) {
+; CHECK-LABEL: define amdgpu_kernel void @memset_object(
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[I:%.*]]) {
+; CHECK-NEXT:    [[OBJ:%.*]] = alloca [8 x i32], align 4, addrspace(13), !amdgpu.allocated.vgprs [[META0]]
+; CHECK-NEXT:    call void @llvm.amdgcn.vgpr.lifetime.start.p13(ptr addrspace(13) [[OBJ]])
+; CHECK-NEXT:    call void @llvm.memset.p13.i32(ptr addrspace(13) [[OBJ]], i8 0, i32 32, i1 false)
+; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, ptr addrspace(13) [[OBJ]], i32 [[I]]
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr addrspace(13) [[P]], align 4
+; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    ret void
+;
+; OFF-LABEL: define amdgpu_kernel void @memset_object(
+; OFF-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[I:%.*]]) {
+; OFF-NEXT:    [[OBJ:%.*]] = alloca [8 x i32], align 4, addrspace(5)
+; OFF-NEXT:    call void @llvm.memset.p5.i32(ptr addrspace(5) [[OBJ]], i8 0, i32 32, i1 false)
+; OFF-NEXT:    [[P:%.*]] = getelementptr i8, ptr addrspace(5) [[OBJ]], i32 [[I]]
+; OFF-NEXT:    [[V:%.*]] = load i32, ptr addrspace(5) [[P]], align 4
+; OFF-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT]], align 4
+; OFF-NEXT:    ret void
+;
+  %obj = alloca [8 x i32], align 4, addrspace(5)
+  call void @llvm.memset.p5.i32(ptr addrspace(5) %obj, i8 0, i32 32, i1 false)
+  %p = getelementptr i8, ptr addrspace(5) %obj, i32 %i
+  %v = load i32, ptr addrspace(5) %p, align 4
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @objectsize_object(ptr addrspace(1) %out, i32 %i) {
+; CHECK-LABEL: define amdgpu_kernel void @objectsize_object(
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[I:%.*]]) {
+; CHECK-NEXT:    [[OBJ:%.*]] = alloca [8 x i32], align 4, addrspace(13), !amdgpu.allocated.vgprs [[META0]]
+; CHECK-NEXT:    call void @llvm.amdgcn.vgpr.lifetime.start.p13(ptr addrspace(13) [[OBJ]])
+; CHECK-NEXT:    [[S:%.*]] = call i64 @llvm.objectsize.i64.p13(ptr addrspace(13) [[OBJ]], i1 false, i1 false, i1 false)
+; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, ptr addrspace(13) [[OBJ]], i32 [[I]]
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr addrspace(13) [[P]], align 4
+; CHECK-NEXT:    [[T:%.*]] = trunc i64 [[S]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[V]], [[T]]
+; CHECK-NEXT:    store i32 [[R]], ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    ret void
+;
+; OFF-LABEL: define amdgpu_kernel void @objectsize_object(
+; OFF-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[I:%.*]]) {
+; OFF-NEXT:    [[OBJ:%.*]] = alloca [8 x i32], align 4, addrspace(5)
+; OFF-NEXT:    [[S:%.*]] = call i64 @llvm.objectsize.i64.p5(ptr addrspace(5) [[OBJ]], i1 false, i1 false, i1 false)
+; OFF-NEXT:    [[P:%.*]] = getelementptr i8, ptr addrspace(5) [[OBJ]], i32 [[I]]
+; OFF-NEXT:    [[V:%.*]] = load i32, ptr addrspace(5) [[P]], align 4
+; OFF-NEXT:    [[T:%.*]] = trunc i64 [[S]] to i32
+; OFF-NEXT:    [[R:%.*]] = add i32 [[V]], [[T]]
+; OFF-NEXT:    store i32 [[R]], ptr addrspace(1) [[OUT]], align 4
+; OFF-NEXT:    ret void
+;
+  %obj = alloca [8 x i32], align 4, addrspace(5)
+  %s = call i64 @llvm.objectsize.i64.p5(ptr addrspace(5) %obj, i1 false, i1 false, i1 false)
+  %p = getelementptr i8, ptr addrspace(5) %obj, i32 %i
+  %v = load i32, ptr addrspace(5) %p, align 4
+  %t = trunc i64 %s to i32
+  %r = add i32 %v, %t
+  store i32 %r, ptr addrspace(1) %out
+  ret void
+}
+
+; A select or phi is allowed to pick between a pointer into the object and a
+; null one. Moving the result to another address space has to take the constant
+; with it, or the operands no longer agree and the IR is invalid.
+define amdgpu_kernel void @select_null(ptr addrspace(1) %out, i32 %i, i1 %c) {
+; CHECK-LABEL: define amdgpu_kernel void @select_null(
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[I:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:    [[OBJ:%.*]] = alloca [8 x i32], align 4, addrspace(13), !amdgpu.allocated.vgprs [[META0]]
+; CHECK-NEXT:    call void @llvm.amdgcn.vgpr.lifetime.start.p13(ptr addrspace(13) [[OBJ]])
+; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, ptr addrspace(13) [[OBJ]], i32 [[I]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], ptr addrspace(13) [[P]], ptr addrspace(13) null
+; CHECK-NEXT:    store i32 7, ptr addrspace(13) [[SEL]], align 4
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr addrspace(13) [[SEL]], align 4
+; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    ret void
+;
+; OFF-LABEL: define amdgpu_kernel void @select_null(
+; OFF-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[I:%.*]], i1 [[C:%.*]]) {
+; OFF-NEXT:    [[OBJ:%.*]] = alloca [8 x i32], align 4, addrspace(5)
+; OFF-NEXT:    [[P:%.*]] = getelementptr i8, ptr addrspace(5) [[OBJ]], i32 [[I]]
+; OFF-NEXT:    [[SEL:%.*]] = select i1 [[C]], ptr addrspace(5) [[P]], ptr addrspace(5) null
+; OFF-NEXT:    store i32 7, ptr addrspace(5) [[SEL]], align 4
+; OFF-NEXT:    [[V:%.*]] = load i32, ptr addrspace(5) [[SEL]], align 4
+; OFF-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT]], align 4
+; OFF-NEXT:    ret void
+;
+  %obj = alloca [8 x i32], align 4, addrspace(5)
+  %p = getelementptr i8, ptr addrspace(5) %obj, i32 %i
+  %sel = select i1 %c, ptr addrspace(5) %p, ptr addrspace(5) null
+  store i32 7, ptr addrspace(5) %sel, align 4
+  %v = load i32, ptr addrspace(5) %sel, align 4
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @phi_null(ptr addrspace(1) %out, i32 %i, i1 %c) {
+; CHECK-LABEL: define amdgpu_kernel void @phi_null(
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[I:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[OBJ:%.*]] = alloca [8 x i32], align 4, addrspace(13), !amdgpu.allocated.vgprs [[META0]]
+; CHECK-NEXT:    call void @llvm.amdgcn.vgpr.lifetime.start.p13(ptr addrspace(13) [[OBJ]])
+; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, ptr addrspace(13) [[OBJ]], i32 [[I]]
+; CHECK-NEXT:    br i1 [[C]], label %[[USE:.*]], label %[[OTHER:.*]]
+; CHECK:       [[OTHER]]:
+; CHECK-NEXT:    br label %[[USE]]
+; CHECK:       [[USE]]:
+; CHECK-NEXT:    [[PH:%.*]] = phi ptr addrspace(13) [ [[P]], %[[ENTRY]] ], [ null, %[[OTHER]] ]
+; CHECK-NEXT:    store i32 7, ptr addrspace(13) [[PH]], align 4
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr addrspace(13) [[PH]], align 4
+; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    ret void
+;
+; OFF-LABEL: define amdgpu_kernel void @phi_null(
+; OFF-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[I:%.*]], i1 [[C:%.*]]) {
+; OFF-NEXT:  [[ENTRY:.*]]:
+; OFF-NEXT:    [[OBJ:%.*]] = alloca [8 x i32], align 4, addrspace(5)
+; OFF-NEXT:    [[P:%.*]] = getelementptr i8, ptr addrspace(5) [[OBJ]], i32 [[I]]
+; OFF-NEXT:    br i1 [[C]], label %[[USE:.*]], label %[[OTHER:.*]]
+; OFF:       [[OTHER]]:
+; OFF-NEXT:    br label %[[USE]]
+; OFF:       [[USE]]:
+; OFF-NEXT:    [[PH:%.*]] = phi ptr addrspace(5) [ [[P]], %[[ENTRY]] ], [ null, %[[OTHER]] ]
+; OFF-NEXT:    store i32 7, ptr addrspace(5) [[PH]], align 4
+; OFF-NEXT:    [[V:%.*]] = load i32, ptr addrspace(5) [[PH]], align 4
+; OFF-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT]], align 4
+; OFF-NEXT:    ret void
+;
+entry:
+  %obj = alloca [8 x i32], align 4, addrspace(5)
+  %p = getelementptr i8, ptr addrspace(5) %obj, i32 %i
+  br i1 %c, label %use, label %other
+other:
+  br label %use
+use:
+  %ph = phi ptr addrspace(5) [ %p, %entry ], [ null, %other ]
+  store i32 7, ptr addrspace(5) %ph, align 4
+  %v = load i32, ptr addrspace(5) %ph, align 4
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
 ; Where an alloca qualifies for both, vectorization wins: the two spend the same
 ; registers, and a vector needs no indexed access to read an element.
 define amdgpu_kernel void @vector_preferred(ptr addrspace(1) %out, i32 %i) {
