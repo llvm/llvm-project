@@ -44,7 +44,7 @@ foreach(arch ${CFI_TEST_ARCH})
   get_test_cc_for_arch(${arch} CFI_TEST_TARGET_CC CFI_TEST_TARGET_CFLAGS)
   if (APPLE)
     # FIXME: enable ThinLTO tests after fixing http://llvm.org/pr32741
-    add_cfi_test_suites(False False False)
+    add_cfi_test_suites(False False)
   elseif(WIN32)
     add_cfi_test_suites(True False False)
     add_cfi_test_suites(True True False)
