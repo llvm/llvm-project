@@ -82,7 +82,6 @@ jobs:
       EVERY: ${{ matrix.every }}
       SAMPLES: ${{ matrix.samples }}
       MAX_IN_FLIGHT: ${{ matrix.max-in-flight }}
-      BENCHMARK_SUITE_VERSION: ${{ matrix.benchmark-suite-version }}
       LNT_URL: ${{ matrix.lnt-url }}
 
       ALLOW_MISSING_MACHINE: ${{ inputs.allow-missing-machine || 'false' }}
@@ -133,6 +132,6 @@ jobs:
             dry_run=(--dry-run)
           fi
 
-          libcxx/utils/ci/lnt/dispatch-benchmarks --work-items plan.jsonl --test-suite-commit "${BENCHMARK_SUITE_VERSION}"  \
-                                                  --max-in-flight "${MAX_IN_FLIGHT}" --lnt-url "${LNT_URL}"                 \
+          libcxx/utils/ci/lnt/dispatch-benchmarks --work-items plan.jsonl --lnt-url "${LNT_URL}"  \
+                                                  --max-in-flight "${MAX_IN_FLIGHT}"              \
                                                   --output dispatched.jsonl "${dry_run[@]}"

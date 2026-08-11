@@ -242,7 +242,6 @@ def workflow_inputs(args: argparse.Namespace, item: common.WorkItem) -> Dict[str
     """Return the inputs to dispatch the workflow with for a work item."""
     inputs = {'commit': item.commit,
               'lnt-machine': item.machine,
-              'benchmark-suite-version': args.test_suite_commit,
               # Submission is not optional: a run whose results are not recorded
               # anywhere would be requested again on every future invocation.
               # During a dry run nothing runs, so nothing is submitted either.
@@ -312,9 +311,6 @@ def main(argv: List[str]) -> int:
     parser.add_argument('--work-items', type=argparse.FileType('r'), default=sys.stdin,
         help='A file containing the plan, one JSON object per line. By default, this is read from '
              'standard input.')
-    parser.add_argument('--test-suite-commit', type=common.sha, required=True,
-        help='The version of the benchmark suite to use, as a monorepo SHA. Pinning this is what '
-             'makes results comparable across commits.')
     parser.add_argument('--max-in-flight', type=common.at_least(1), default=4,
         help='The largest number of workflow runs allowed to exist at once for a single LNT machine. '
              'This counts runs that are queued but not yet started.')
