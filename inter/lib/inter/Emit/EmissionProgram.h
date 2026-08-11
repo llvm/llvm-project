@@ -35,6 +35,11 @@ struct ArfReference {
   int32_t sub = 0;
 };
 
+struct ExtendedDescriptorReference {
+  ArfReference base;
+  uint32_t immediate = 0;
+};
+
 using RegisterReference = std::variant<GrfReference, ArfReference>;
 
 struct Immediate {
@@ -92,7 +97,7 @@ struct SendInstruction {
   std::optional<GrfReference> destination;
   GrfReference address;
   std::optional<GrfReference> data;
-  std::variant<uint32_t, ArfReference> exdesc = uint32_t{0};
+  std::variant<uint32_t, ExtendedDescriptorReference> exdesc = uint32_t{0};
   uint32_t desc = 0;
   bool eot = false;
   SwsbInfo swsb;

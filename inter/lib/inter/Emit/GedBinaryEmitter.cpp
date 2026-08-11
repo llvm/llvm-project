@@ -699,14 +699,17 @@ private:
       RETURN_IF_GED_ERROR(GED_SetExDescRegFile(&instruction, GED_REG_FILE_IMM));
       RETURN_IF_GED_ERROR(GED_SetExMsgDescImm(&instruction, *immediate));
     } else {
-      const ArfReference &exdesc = std::get<ArfReference>(value.exdesc);
-      if (exdesc.file != ARFFile::a0 || exdesc.number != 0 || exdesc.sub != 2) {
+      const ExtendedDescriptorReference &exdesc =
+          std::get<ExtendedDescriptorReference>(value.exdesc);
+      if (exdesc.base.file != ARFFile::a0 || exdesc.base.number != 0 ||
+          exdesc.base.sub != 2) {
         moduleOp.emitError("Xe2 register exdesc must use a0.2");
         return failure();
       }
       RETURN_IF_GED_ERROR(GED_SetExDescRegFile(&instruction, GED_REG_FILE_ARF));
+      RETURN_IF_GED_ERROR(GED_SetExMsgDescImm(&instruction, exdesc.immediate));
       RETURN_IF_GED_ERROR(
-          GED_SetExDescAddrSubRegNum(&instruction, 2 * exdesc.sub));
+          GED_SetExDescAddrSubRegNum(&instruction, 2 * exdesc.base.sub));
     }
     RETURN_IF_GED_ERROR(GED_SetSrc1Length(&instruction, sourceLength));
     RETURN_IF_GED_ERROR(GED_SetDescRegFile(&instruction, GED_REG_FILE_IMM));

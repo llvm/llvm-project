@@ -2,6 +2,9 @@
 
 #include "mlir/IR/OpImplementation.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/MathExtras.h"
+
+#include <algorithm>
 
 using namespace mlir;
 using namespace inter::xemachine;
@@ -11,6 +14,50 @@ using namespace inter::xemachine;
 
 #define GET_OP_INTERFACE_CLASSES
 #include "inter/Dialect/XeMachine/IR/XeMachineInterfaces.cpp.inc"
+
+FailureOr<KernelResourceUsage>
+inter::xemachine::analyzeKernelResources(func::FuncOp function,
+                                         int64_t grfCount) {
+  KernelResourceUsage usage{};
+  auto observeType = [&](Type type, Location location) -> LogicalResult {
+    RegType reg = dyn_cast<RegType>(type);
+    if (!reg || reg.getWidthDwords() == 0)
+      return success();
+    if (reg.getBaseGRF() < 0)
+      return emitError(location)
+             << "resource info requires physical XeMachine registers";
+    uint64_t end = static_cast<uint64_t>(reg.getBaseGRF()) +
+                   llvm::divideCeil(reg.getWidthDwords(), 16u);
+    if (end > static_cast<uint64_t>(grfCount))
+      return emitError(location)
+             << "physical register range ends at r" << end
+             << " but the selected GRF mode has " << grfCount << " registers";
+    usage.grfUsed = std::max(usage.grfUsed, end);
+    return success();
+  };
+
+  WalkResult walk = function.walk([&](Operation *operation) {
+    for (Value result : operation->getResults())
+      if (failed(observeType(result.getType(), result.getLoc())))
+        return WalkResult::interrupt();
+    for (Region &region : operation->getRegions())
+      for (Block &block : region)
+        for (BlockArgument argument : block.getArguments())
+          if (failed(observeType(argument.getType(), argument.getLoc())))
+            return WalkResult::interrupt();
+    usage.hasGlobalAtomics |= isa<AtomicIAddA64Op>(operation);
+    usage.hasStatelessWrite |= isa<StoreA64Op, AtomicIAddA64Op>(operation);
+    if (auto send = dyn_cast<SendOp>(operation))
+      usage.hasStatelessWrite |=
+          !send->hasAttr(kScratchAccessAttrName) && send.getDataPayload() &&
+          (send.getFn() == SendFn::ugm || send.getFn() == SendFn::tgm);
+    usage.barrierCount |= isa<BarrierSignalOp>(operation);
+    return WalkResult::advance();
+  });
+  if (walk.wasInterrupted())
+    return failure();
+  return usage;
+}
 
 static void
 getTupleElementStorageAliases(Value tuple, ValueRange elements,

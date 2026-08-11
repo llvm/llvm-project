@@ -4,6 +4,7 @@ add_mlir_library(InterTransforms
   InterConvertCalls.cpp
   InterConvertMemory.cpp
   InterInsertSync.cpp
+  InterResourceInfo.cpp
 
   DEPENDS
   InterPassesIncGen

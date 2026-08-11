@@ -411,12 +411,14 @@ no LLVM MC target for Xe; the MC-equivalent layer is owned here.
   instruction / label / alignment / directive) so fixups apply before
   finalize: branch targets (JIP/UIP), SWSB finalization if layout moved,
   optional compaction later.
-- Selection currently preserves the kernel ABI and fixed target resources as
-  function attrs (`kernel_type`, `grf_count`, `reserved_grf_count`,
-  `simd_size`, payload sizes, `scratch_size`, and `slm_size`). The emitter
-  validates those attrs and derives operation-local
-  facts such as barrier, atomic, and stateless-write use. M4 moves all of this
-  into the dedicated resource-info pass.
+- Selection records the kernel ABI and fixed target-resource inputs as function
+  attrs (`kernel_type`, `grf_count`, `reserved_grf_count`, `simd_size`, payload
+  sizes, and `slm_size`); regalloc records `scratch_size`. After synchronization,
+  `inter-resource-info` validates physical allocation and publishes
+  `grf_used`, `barrier_count`, `has_global_atomics`, and
+  `has_no_stateless_write`. The emitter requires this final resource contract,
+  cross-checks it through the shared XeMachine resource analyzer, and
+  serializes it without owning a second metadata policy.
 - ELF + `.ze_info` + `.note.intelgt.compat` writer; ground truth is NEO's decoder
   (`shared/source/device_binary_format/zebin/`). The emitter is wrong when
   NEO rejects it, by definition.

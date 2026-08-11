@@ -62,6 +62,8 @@ module attributes {transform.with_named_sequence} {
         : (!transform.any_op) -> !transform.any_op
     %funcs1 = transform.apply_registered_pass "inter-insert-sync" to %funcs0
         : (!transform.any_op) -> !transform.any_op
+    %funcs2 = transform.apply_registered_pass "inter-resource-info" to %funcs1
+        : (!transform.any_op) -> !transform.any_op
     transform.yield %r0 : !transform.any_op
   }
 

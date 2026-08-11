@@ -6,7 +6,11 @@
 
 module {
   // CHECK: func.func @vadd
+  // CHECK-SAME: xemachine.barrier_count = 0 : i32
   // CHECK-SAME: xemachine.grf_count = 128 : i32
+  // CHECK-SAME: xemachine.grf_used = 29 : i32
+  // CHECK-SAME: xemachine.has_global_atomics = false
+  // CHECK-SAME: xemachine.has_no_stateless_write = false
   // CHECK-SAME: xemachine.inline_data_payload_size = 32 : i32
   // CHECK-SAME: xemachine.kernel_type = (!llvm.ptr<1>, !llvm.ptr<1>, !llvm.ptr<1>) -> ()
   // CHECK-SAME: xemachine.payload_entry_offset = 192 : i32

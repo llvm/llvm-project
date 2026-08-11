@@ -382,12 +382,12 @@ private:
     if (Value exdesc = send.getExdescReg()) {
       ARFType type = cast<ARFType>(exdesc.getType());
       Operation *definition = exdesc.getDefiningOp();
-      if (send.getExdesc() != 0 || type.getFile() != ARFFile::a0 ||
-          type.getIndex() != 0 || !definition ||
-          getSub(definition, "dstSub") != 2)
-        return send.emitError(
-            "register exdesc requires a zero immediate and a value in a0.2");
-      instruction.exdesc = getArfReference(type, /*sub=*/2);
+      if (type.getFile() != ARFFile::a0 || type.getIndex() != 0 ||
+          !definition || getSub(definition, "dstSub") != 2)
+        return send.emitError("register exdesc requires a value in a0.2");
+      instruction.exdesc =
+          ExtendedDescriptorReference{getArfReference(type, /*sub=*/2),
+                                      static_cast<uint32_t>(send.getExdesc())};
     } else
       instruction.exdesc = static_cast<uint32_t>(send.getExdesc());
     instruction.desc = send.getDesc();
@@ -504,6 +504,18 @@ private:
       instruction.sources.push_back(std::move(source));
     }
     instruction.swsb = getInOrderSwsb(operation, operation->getOperands());
+    ARFType destinationArf = dyn_cast<ARFType>(destination.getType());
+    if (destinationArf && destinationArf.getFile() == ARFFile::a0 &&
+        !hasWrittenAddressRegister) {
+      // Xe2 requires a floating-pipe distance on the first direct a0 write.
+      if (instruction.swsb.pipe != DistancePipe::none &&
+          instruction.swsb.pipe != DistancePipe::floating)
+        return operation->emitError(
+            "first Xe2 a0 write has an unresolved in-order dependency");
+      instruction.swsb.pipe = DistancePipe::floating;
+      instruction.swsb.distance = 1;
+      hasWrittenAddressRegister = true;
+    }
     program.items.push_back(std::move(instruction));
     return success();
   }
@@ -516,6 +528,7 @@ private:
   int32_t nextToken = 0;
   uint32_t divergentDepth = 0;
   uint32_t nextLabel = 1;
+  bool hasWrittenAddressRegister = false;
 };
 
 } // namespace

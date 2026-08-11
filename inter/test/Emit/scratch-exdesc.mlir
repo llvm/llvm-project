@@ -1,6 +1,7 @@
-// RUN: inter-translate %s --xemachine-to-ged -o %t
+// RUN: inter-opt %s --inter-resource-info -o %t.mlir
+// RUN: inter-translate %t.mlir --xemachine-to-ged -o %t
 // RUN: inter-ged-dump %t | FileCheck %s
-// RUN: inter-translate %s --xemachine-to-zebin -o %t.zebin
+// RUN: inter-translate %t.mlir --xemachine-to-zebin -o %t.zebin
 // RUN: llvm-readobj --string-dump=.ze_info %t.zebin | FileCheck %s --check-prefix=ZEINFO
 
 module {
@@ -27,16 +28,16 @@ module {
   }
 }
 
-// CHECK: opcode=and exec=1
-// CHECK: opcode=shr exec=1
+// CHECK: opcode=and exec=1 swsb=0x11
+// CHECK: opcode=shr exec=1 swsb=0x19
 // CHECK: opcode=send exec=1
 // CHECK-SAME: sfid=ugm
 // CHECK-SAME: exdescRegFile=arf
 // CHECK-SAME: exdescAddrSubRegNum=2
 // CHECK-SAME: exdescAddrSubRegRaw=4
+// ZEINFO: has_no_stateless_write: true
 // ZEINFO: spill_size: 128
 // ZEINFO: per_thread_memory_buffers:
 // ZEINFO: type: scratch
-// ZEINFO: usage: spill_fill_space
+// ZEINFO: usage: single_space
 // ZEINFO: size: 128
-// ZEINFO: slot: 0

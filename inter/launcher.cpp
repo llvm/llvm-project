@@ -7,6 +7,7 @@
 //   arg-spec (in kernel arg order):
 //     out        device buffer, printed as hex after the run
 //     in:<mul>   device buffer filled with i*mul before the run
+//     inout:<mul> input buffer also printed after the run.
 //     u32:<v>    scalar 32-bit argument with value v
 //
 // Output lines: "out<k>[<i>] = 0x........" for each out buffer.
@@ -167,7 +168,7 @@ int main(int argc, char **argv) {
     fprintf(stderr,
             "usage: %s [--compact] [--sort-output] "
             "<zebin.bin> <kernel> <n> <spec>...\n"
-            "  spec: out | in:<mul> | u32:<value>\n",
+            "  spec: out | in:<mul> | inout:<mul> | u32:<value>\n",
             argv[0]);
     return 1;
   }
@@ -210,19 +211,23 @@ int main(int argc, char **argv) {
 
   for (int i = 0; i < numArgs; ++i) {
     std::string spec = specs[i];
-    if (spec == "out" || spec.rfind("in:", 0) == 0) {
+    bool isInput = spec.rfind("in:", 0) == 0;
+    bool isInputOutput = spec.rfind("inout:", 0) == 0;
+    if (spec == "out" || isInput || isInputOutput) {
       void *buf = nullptr;
       CHECK(olMemAlloc(dev, OL_ALLOC_TYPE_MANAGED, n * sizeof(uint32_t), &buf));
       auto *w = static_cast<uint32_t *>(buf);
       if (spec == "out") {
         for (size_t j = 0; j < n; ++j)
           w[j] = 0xA5A5A5A5u;
-        outIndex[i] = numOuts++;
       } else {
-        uint32_t mul = strtoul(spec.c_str() + 3, nullptr, 0);
+        size_t prefixLength = isInputOutput ? 6 : 3;
+        uint32_t mul = strtoul(spec.c_str() + prefixLength, nullptr, 0);
         for (size_t j = 0; j < n; ++j)
           w[j] = uint32_t(j) * mul;
       }
+      if (spec == "out" || isInputOutput)
+        outIndex[i] = numOuts++;
       argPtrsStorage[i] = buf;
       argPtrs[i] = &argPtrsStorage[i];
       argSizes[i] = sizeof(void *);

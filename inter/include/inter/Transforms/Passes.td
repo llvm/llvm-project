@@ -37,4 +37,9 @@ def InsertSync : Pass<"inter-insert-sync", "::mlir::func::FuncOp"> {
   let dependentDialects = ["inter::xemachine::XeMachineDialect"];
 }
 
+def ResourceInfo : Pass<"inter-resource-info", "::mlir::func::FuncOp"> {
+  let summary = "derive and validate XeMachine kernel resource metadata";
+  let dependentDialects = ["inter::xemachine::XeMachineDialect"];
+}
+
 #endif // INTER_TRANSFORMS_PASSES_TD

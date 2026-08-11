@@ -7,9 +7,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/ELF.h"
-#include "llvm/Support/MathExtras.h"
 
-#include <algorithm>
 #include <cstdint>
 #include <string>
 
@@ -116,12 +114,33 @@ FailureOr<std::string> buildZeInfo(func::FuncOp kernel) {
            failure();
 
   auto grfCount = kernel->getAttrOfType<IntegerAttr>(kGrfCountAttrName);
+  auto grfUsed = kernel->getAttrOfType<IntegerAttr>(kGrfUsedAttrName);
   auto simdSize = kernel->getAttrOfType<IntegerAttr>(kSimdSizeAttrName);
-  if (!grfCount || !simdSize)
+  auto barrierCount = kernel->getAttrOfType<IntegerAttr>(kBarrierCountAttrName);
+  auto hasGlobalAtomics =
+      kernel->getAttrOfType<BoolAttr>(kHasGlobalAtomicsAttrName);
+  auto hasNoStatelessWrite =
+      kernel->getAttrOfType<BoolAttr>(kHasNoStatelessWriteAttrName);
+  if (!grfCount || !grfUsed || !simdSize || !barrierCount ||
+      !hasGlobalAtomics || !hasNoStatelessWrite)
     return kernel.emitOpError("missing machine resource attributes"), failure();
   if (grfCount.getInt() != 128 || simdSize.getInt() != 32)
     return kernel.emitOpError("only 128-GRF SIMD32 kernels are supported"),
            failure();
+  if (grfUsed.getInt() < 0 || grfUsed.getInt() > grfCount.getInt())
+    return kernel.emitOpError("invalid physical GRF usage attribute"),
+           failure();
+  if (barrierCount.getInt() < 0 || barrierCount.getInt() > 1)
+    return kernel.emitOpError("unsupported barrier count"), failure();
+  FailureOr<KernelResourceUsage> usage =
+      analyzeKernelResources(kernel, grfCount.getInt());
+  if (failed(usage))
+    return failure();
+  if (grfUsed.getInt() != static_cast<int64_t>(usage->grfUsed) ||
+      barrierCount.getInt() != usage->barrierCount ||
+      hasGlobalAtomics.getValue() != usage->hasGlobalAtomics ||
+      hasNoStatelessWrite.getValue() == usage->hasStatelessWrite)
+    return kernel.emitOpError("stale machine resource attributes"), failure();
 
   bool hasBufferArguments = false;
   for (Type argument : kernelType.getInputs()) {
@@ -139,15 +158,6 @@ FailureOr<std::string> buildZeInfo(func::FuncOp kernel) {
                  "only global pointers and i32 arguments are supported"),
              failure();
   }
-
-  bool hasStatelessWrite = false;
-  bool hasGlobalAtomics = false;
-  bool hasBarrier = false;
-  kernel.walk([&](Operation *operation) {
-    hasStatelessWrite |= isa<StoreA64Op, AtomicIAddA64Op, SendOp>(operation);
-    hasGlobalAtomics |= isa<AtomicIAddA64Op>(operation);
-    hasBarrier |= isa<BarrierSignalOp>(operation);
-  });
 
   bool usesThreadIds = kernel->hasAttr(kUsesThreadIdsAttrName);
   if (!usesThreadIds && kernelType.getNumInputs() != 0)
@@ -168,29 +178,6 @@ FailureOr<std::string> buildZeInfo(func::FuncOp kernel) {
        entryOffset.getInt() != 192))
     return kernel.emitOpError("unsupported thread payload layout"), failure();
 
-  unsigned grfHighWaterMark = 0;
-  bool hasVirtualRegister = false;
-  kernel.walk([&](Operation *operation) {
-    for (Type type : operation->getResultTypes()) {
-      auto reg = dyn_cast<RegType>(type);
-      if (!reg)
-        continue;
-      if (reg.getBaseGRF() < 0) {
-        hasVirtualRegister = true;
-        continue;
-      }
-      grfHighWaterMark = std::max(
-          grfHighWaterMark, unsigned(reg.getBaseGRF()) +
-                                llvm::divideCeil(reg.getWidthDwords(), 16u));
-    }
-  });
-  if (hasVirtualRegister)
-    return kernel.emitOpError("zebin emission requires physical registers"),
-           failure();
-  if (grfHighWaterMark > unsigned(grfCount.getInt()))
-    return kernel.emitOpError("physical registers exceed the GRF mode"),
-           failure();
-
   std::string yaml;
   llvm::raw_string_ostream output(yaml);
   output << "---\n"
@@ -202,18 +189,18 @@ FailureOr<std::string> buildZeInfo(func::FuncOp kernel) {
          << "      grf_count: " << grfCount.getInt() << "\n";
   if (hasBufferArguments)
     output << "      has_4gb_buffers: true\n";
-  if (hasGlobalAtomics)
+  if (hasGlobalAtomics.getValue())
     output << "      has_global_atomics: true\n";
   output << "      has_no_stateless_write: "
-         << (hasStatelessWrite ? "false" : "true") << "\n";
+         << (hasNoStatelessWrite.getValue() ? "true" : "false") << "\n";
   if (usesThreadIds) {
     output << "      inline_data_payload_size: " << inlineSize.getInt() << "\n"
            << "      offset_to_skip_per_thread_data_load: "
            << entryOffset.getInt() << "\n";
   }
   output << "      simd_size: " << simdSize.getInt() << "\n";
-  if (hasBarrier)
-    output << "      barrier_count: 1\n";
+  if (barrierCount.getInt() != 0)
+    output << "      barrier_count: " << barrierCount.getInt() << "\n";
   if (auto slmSize = kernel->getAttrOfType<IntegerAttr>(kSlmSizeAttrName))
     output << "      slm_size: " << slmSize.getInt() << "\n";
   if (auto scratchSize =
@@ -257,10 +244,8 @@ FailureOr<std::string> buildZeInfo(func::FuncOp kernel) {
           kernel->getAttrOfType<IntegerAttr>(kScratchSizeAttrName))
     output << "    per_thread_memory_buffers:\n"
            << "      - type: scratch\n"
-           << "        usage: spill_fill_space\n"
-           << "        size: " << scratchSize.getInt() << "\n"
-           << "        slot: 0\n"
-           << "        is_simt_thread: true\n";
+           << "        usage: single_space\n"
+           << "        size: " << scratchSize.getInt() << "\n";
   output << "...\n";
   return yaml;
 }

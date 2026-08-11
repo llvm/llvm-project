@@ -3,6 +3,7 @@
 
 #include "inter/Dialect/XeMachine/IR/XeMachineTraits.h"
 
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
@@ -18,6 +19,7 @@ inline constexpr llvm::StringLiteral kTargetAttrName = "xemachine.target";
 inline constexpr llvm::StringLiteral kKernelTypeAttrName =
     "xemachine.kernel_type";
 inline constexpr llvm::StringLiteral kGrfCountAttrName = "xemachine.grf_count";
+inline constexpr llvm::StringLiteral kGrfUsedAttrName = "xemachine.grf_used";
 inline constexpr llvm::StringLiteral kReservedGrfCountAttrName =
     "xemachine.reserved_grf_count";
 inline constexpr llvm::StringLiteral kSimdSizeAttrName = "xemachine.simd_size";
@@ -32,8 +34,26 @@ inline constexpr llvm::StringLiteral kPayloadEntryOffsetAttrName =
 inline constexpr llvm::StringLiteral kSlmSizeAttrName = "xemachine.slm_size";
 inline constexpr llvm::StringLiteral kScratchSizeAttrName =
     "xemachine.scratch_size";
+inline constexpr llvm::StringLiteral kBarrierCountAttrName =
+    "xemachine.barrier_count";
+inline constexpr llvm::StringLiteral kHasGlobalAtomicsAttrName =
+    "xemachine.has_global_atomics";
+inline constexpr llvm::StringLiteral kHasNoStatelessWriteAttrName =
+    "xemachine.has_no_stateless_write";
+inline constexpr llvm::StringLiteral kScratchAccessAttrName =
+    "xemachine.scratch_access";
 inline constexpr llvm::StringLiteral kAllowFixedOverlapAttrName =
     "xemachine.allow_fixed_overlap";
+
+struct KernelResourceUsage {
+  uint64_t grfUsed;
+  int64_t barrierCount;
+  bool hasGlobalAtomics;
+  bool hasStatelessWrite;
+};
+
+mlir::FailureOr<KernelResourceUsage>
+analyzeKernelResources(mlir::func::FuncOp function, int64_t grfCount);
 
 /// Relative register-storage constraint, in dwords.
 struct RegisterStorageAlias {

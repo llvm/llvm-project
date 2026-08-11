@@ -38,6 +38,9 @@ constexpr StringLiteral kStageAttr = "stage";
 constexpr StringLiteral kBuildStage = "alias-state";
 constexpr StringLiteral kSuccessStage = "linear-scan-success";
 constexpr StringLiteral kFailureStage = "linear-scan-failure";
+constexpr unsigned kMaxSwsbDistance = 7;
+constexpr int64_t kScratchAddressBias = 0x10000;
+constexpr uint32_t kScratchExdescBias = 0x80000000u;
 
 struct AliasEdge {
   unsigned target;
@@ -581,7 +584,9 @@ static bool rematerialize(AllocationState &state,
   return true;
 }
 
-static Value getScratchSurfaceOffset(func::FuncOp function) {
+static Value getScratchSurfaceOffset(func::FuncOp function, OpBuilder &builder,
+                                     Location location,
+                                     Operation *spillDefinition) {
   Value surfaceOffset;
   function.walk([&](ShrOp shift) {
     if (shift->hasAttr(kScratchSetupAttr))
@@ -591,32 +596,49 @@ static Value getScratchSurfaceOffset(func::FuncOp function) {
     return surfaceOffset;
 
   MLIRContext *context = function.getContext();
-  Block &entry = function.getBody().front();
-  OpBuilder builder = OpBuilder::atBlockBegin(&entry);
-  Location location = function.getLoc();
-  Type i32 = builder.getI32Type();
+  // Separate the mask producer from the first a0 write so Xe2 can use F@1.
+  Operation *maskInsertion = spillDefinition;
+  unsigned machineInstructions = 0;
+  for (Operation *previous = spillDefinition->getPrevNode(); previous;
+       previous = previous->getPrevNode()) {
+    maskInsertion = previous;
+    if (!previous->hasTrait<OpTrait::xemachine::NoAsmEmission>() &&
+        ++machineInstructions == kMaxSwsbDistance + 1)
+      break;
+  }
+  OpBuilder maskBuilder(maskInsertion);
+  Type i32 = maskBuilder.getI32Type();
   RegionAttr uniform = RegionAttr::get(context, 0, 1, 0);
   DstRegionAttr canonical = DstRegionAttr::get(context, 1);
-  Value r0 = ArchRegOp::create(builder, location, RegType::get(context, 16, 0),
-                               builder.getI32IntegerAttr(0))
-                 .getResult();
+  bool canDelayAddressWrite = machineInstructions > kMaxSwsbDistance;
+  Value r0 =
+      ArchRegOp::create(maskBuilder, location, RegType::get(context, 16, 0),
+                        maskBuilder.getI32IntegerAttr(0))
+          .getResult();
+  Value mask = ImmOp::create(maskBuilder, location, ImmType::get(context),
+                             0xFFFFFC00, i32)
+                   .getResult();
+  Type maskType = canDelayAddressWrite
+                      ? Type(RegType::get(context, 16, -1))
+                      : Type(ARFType::get(context, ARFFile::a0, 16, 0));
+  IntegerAttr maskDestinationSub =
+      canDelayAddressWrite ? IntegerAttr() : maskBuilder.getI32IntegerAttr(2);
+  AndOp maskSetup =
+      AndOp::create(maskBuilder, location, maskType, i32, /*execSize=*/1,
+                    canonical, uniform, RegionAttr(), maskDestinationSub,
+                    maskBuilder.getI32IntegerAttr(5), IntegerAttr(), TypeAttr(),
+                    TypeAttr(), /*noMask=*/true, /*maskOffset=*/0, r0, mask);
+  maskSetup->setAttr(kScratchSetupAttr, builder.getUnitAttr());
   Value four = ImmOp::create(builder, location, ImmType::get(context), 4, i32)
                    .getResult();
-  Value mask =
-      ImmOp::create(builder, location, ImmType::get(context), 0xFFFFFC00, i32)
-          .getResult();
-  AndOp maskSetup = AndOp::create(
-      builder, location, ARFType::get(context, ARFFile::a0, 16, 0), i32,
-      /*execSize=*/1, canonical, uniform, RegionAttr(),
-      builder.getI32IntegerAttr(2), builder.getI32IntegerAttr(5), IntegerAttr(),
-      TypeAttr(), TypeAttr(), /*noMask=*/true, /*maskOffset=*/0, r0, mask);
-  maskSetup->setAttr(kScratchSetupAttr, builder.getUnitAttr());
+  IntegerAttr maskSourceSub =
+      canDelayAddressWrite ? IntegerAttr() : builder.getI32IntegerAttr(2);
   ShrOp setup = ShrOp::create(
       builder, location, ARFType::get(context, ARFFile::a0, 16, 0), i32,
       /*execSize=*/1, canonical, uniform, RegionAttr(),
-      builder.getI32IntegerAttr(2), builder.getI32IntegerAttr(2), IntegerAttr(),
-      TypeAttr(), TypeAttr(), /*noMask=*/true, /*maskOffset=*/0,
-      maskSetup.getResult(), four);
+      builder.getI32IntegerAttr(2), maskSourceSub, IntegerAttr(), TypeAttr(),
+      TypeAttr(), /*noMask=*/true, /*maskOffset=*/0, maskSetup.getResult(),
+      four);
   setup->setAttr(kScratchSetupAttr, builder.getUnitAttr());
   return setup.getDst();
 }
@@ -625,9 +647,9 @@ static Value createScratchAddress(OpBuilder &builder, Location location,
                                   int64_t offset) {
   MLIRContext *context = builder.getContext();
   Type i32 = builder.getI32Type();
-  Value immediate =
-      ImmOp::create(builder, location, ImmType::get(context), offset, i32)
-          .getResult();
+  Value immediate = ImmOp::create(builder, location, ImmType::get(context),
+                                  offset + kScratchAddressBias, i32)
+                        .getResult();
   return MovOp::create(builder, location, RegType::get(context, 16, -1), i32,
                        /*execSize=*/1, DstRegionAttr::get(context, 1),
                        RegionAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(),
@@ -651,11 +673,14 @@ static SendOp createScratchSend(OpBuilder &builder, Location location,
                                 Value surfaceOffset, Value dependency,
                                 uint32_t descriptor) {
   MLIRContext *context = builder.getContext();
-  return SendOp::create(builder, location, destinationType,
-                        MemTokenType::get(context), SendFn::ugm, /*sfid=*/0,
-                        descriptor, /*exdesc=*/0, /*execSize=*/1,
-                        /*noMask=*/true, /*eot=*/false, address, data,
-                        surfaceOffset, dependency, IntegerAttr());
+  SendOp send = SendOp::create(
+      builder, location, destinationType, MemTokenType::get(context),
+      SendFn::ugm, /*sfid=*/0, descriptor,
+      /*exdesc=*/static_cast<int32_t>(kScratchExdescBias), /*execSize=*/1,
+      /*noMask=*/true, /*eot=*/false, address, data, surfaceOffset, dependency,
+      IntegerAttr());
+  send->setAttr(kScratchAccessAttrName, UnitAttr::get(context));
+  return send;
 }
 
 static bool spillToScratch(func::FuncOp function, AllocationState &state,
@@ -682,7 +707,7 @@ static bool spillToScratch(func::FuncOp function, AllocationState &state,
     Operation *definition = value.getDefiningOp();
     RegType type = cast<RegType>(value.getType());
     if (!definition || definition->hasAttr(kSpilledAttr) ||
-        isa<SendOp>(definition) ||
+        definition->hasAttr(kScratchSetupAttr) || isa<SendOp>(definition) ||
         (type.getWidthDwords() != 16 && type.getWidthDwords() != 32))
       continue;
     if (!candidate || candidate->end < component.end)
@@ -704,10 +729,10 @@ static bool spillToScratch(func::FuncOp function, AllocationState &state,
 
   int64_t slot = llvm::alignTo(nextScratchOffset, int64_t{64});
   nextScratchOffset = slot + type.getWidthDwords() * 4;
-  Value surfaceOffset = getScratchSurfaceOffset(function);
-
   OpBuilder storeBuilder(definition);
   storeBuilder.setInsertionPointAfter(definition);
+  Value surfaceOffset = getScratchSurfaceOffset(
+      function, storeBuilder, definition->getLoc(), definition);
   Value storeAddress =
       createScratchAddress(storeBuilder, definition->getLoc(), slot);
   SendOp store = createScratchSend(

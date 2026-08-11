@@ -49,8 +49,8 @@ module {
 // SCRATCH-SAME: xemachine.regalloc_iterations = 2
 // SCRATCH-SAME: xemachine.scratch_size = 256
 // SCRATCH: xemachine.shr {{.*}}xemachine.scratch_setup
-// SCRATCH: xemachine.load_slm
 // SCRATCH: xemachine.send ugm {{.*}} data {{.*}} exdesc
+// SCRATCH: xemachine.load_slm
 // SCRATCH: xemachine.send ugm {{.*}} exdesc {{.*}} dep
 // SCRATCH-NOT: !xemachine.reg<{{.*}}, -1>
 
