@@ -1542,11 +1542,8 @@ bool PreRARematStage::initGCNSchedStage() {
   SmallVector<unsigned> CandidateOrder;
   for (unsigned RegIdx = 0, E = Remater.getNumRegs(); RegIdx < E; ++RegIdx) {
     const Rematerializer::Reg &CandReg = Remater.getReg(RegIdx);
-
-    // All users must be in a single region.
-    if (CandReg.Uses.size() != 1)
+    if (!CandReg.hasUsersOutsideDefRegion())
       continue;
-    const auto [UseRegion, Users] = *CandReg.Uses.begin();
 
     // Rematerialization moves the defining instruction into the region of its
     // use, which may sit under different control dependencies (e.g., across a
@@ -1557,40 +1554,57 @@ bool PreRARematStage::initGCNSchedStage() {
                [](const MachineInstr *DefMI) { return DefMI->isConvergent(); }))
       continue;
 
-    // We further filter the registers that we can rematerialize based on our
-    // current tracking capabilities in the stage. Users cannot themselves be
-    // marked rematerializable, and no register operand of the defining MI can
-    // be marked rematerializable. We also do not rematerialize an instruction
-    // if it uses registers that aren't available at its use. This ensures that
-    // we are not extending any live range while rematerializing.
-    if (llvm::any_of(Users, [&MarkedRegs](const MachineInstr *UserMI) {
-          assert(UserMI->getNumOperands() > 0 &&
-                 "user must have at least one operand");
-          const MachineOperand &UseMO = UserMI->getOperand(0);
-          return UseMO.isReg() && MarkedRegs.contains(UseMO.getReg());
-        }))
-      continue;
-    MachineInstr *FirstUseMI =
-        CandReg.getRegionUseBounds(UseRegion, *DAG.LIS).first;
-    assert(FirstUseMI && "there must be a user in the region");
-    SlotIndex FirstUseIdx =
-        DAG.LIS->getInstructionIndex(*FirstUseMI).getRegSlot(true);
     SlotIndex RefIdx =
         DAG.LIS->getInstructionIndex(*CandReg.getLastDef()).getRegSlot(true);
+
+    // We further filter the registers that we can rematerialize based on our
+    // current tracking capabilities in the stage. This ensures that we are not
+    // extending any live range while rematerializing, and that rematerializing
+    // any register candidate will not affect other candidates.
+
+    // All register dependencies should not already be considered
+    // rematerializable.
     if (llvm::any_of(CandReg.Dependencies, [&](RegisterIdx DepRegIdx) {
-          const Rematerializer::Reg &DepReg = Remater.getReg(DepRegIdx);
-          Register DepDefReg = DepReg.getDefReg();
-          return MarkedRegs.contains(DepDefReg) ||
-                 !Remater.isRegIdenticalAtUses(DepDefReg, DepReg.Mask, RefIdx,
-                                               {FirstUseIdx});
+          return MarkedRegs.contains(Remater.getReg(DepRegIdx).getDefReg());
         }))
       continue;
-    if (llvm::any_of(Remater.getUnrematableDeps(RegIdx),
-                     [&](const std::pair<Register, LaneBitmask> &RegAndMask) {
-                       const auto &[Reg, Mask] = RegAndMask;
-                       return !Remater.isRegIdenticalAtUses(Reg, Mask, RefIdx,
-                                                            {FirstUseIdx});
-                     }))
+
+    auto IsInvalidUsingRegion =
+        [&](const std::pair<unsigned, Rematerializer::Reg::RegionUsers>
+                &RegionUsers) -> bool {
+      const auto &[UseRegion, Users] = RegionUsers;
+      // Users cannot be rematerializable.
+      if (llvm::any_of(Users, [&MarkedRegs](const MachineInstr *UserMI) {
+            assert(UserMI->getNumOperands() > 0 &&
+                   "user must have at least one operand");
+            const MachineOperand &UseMO = UserMI->getOperand(0);
+            return UseMO.isReg() && MarkedRegs.contains(UseMO.getReg());
+          }))
+        return true;
+
+      MachineInstr *FirstUseMI =
+          CandReg.getRegionUseBounds(UseRegion, *DAG.LIS).first;
+      assert(FirstUseMI && "there must be a user in the region");
+      SlotIndex FirstUseIdx =
+          DAG.LIS->getInstructionIndex(*FirstUseMI).getRegSlot(true);
+
+      // All dependencies must be available at the first use in the region.
+      if (llvm::any_of(CandReg.Dependencies, [&](RegisterIdx DepRegIdx) {
+            const Rematerializer::Reg &DepReg = Remater.getReg(DepRegIdx);
+            Register DepDefReg = DepReg.getDefReg();
+            return !Remater.isRegIdenticalAtUses(DepDefReg, DepReg.Mask, RefIdx,
+                                                 {FirstUseIdx});
+          }))
+        return true;
+      return llvm::any_of(
+          Remater.getUnrematableDeps(RegIdx),
+          [&](const std::pair<Register, LaneBitmask> &RegAndMask) {
+            const auto &[Reg, Mask] = RegAndMask;
+            return !Remater.isRegIdenticalAtUses(Reg, Mask, RefIdx,
+                                                 {FirstUseIdx});
+          });
+    };
+    if (any_of(CandReg.Uses, IsInvalidUsingRegion))
       continue;
 
     MarkedRegs.insert(CandReg.getDefReg());
@@ -1655,8 +1669,8 @@ bool PreRARematStage::initGCNSchedStage() {
       CandidateOrder.pop_back();
 
 #ifdef EXPENSIVE_CHECKS
-      // All uses are known to be available / live at the remat point. Thus,
-      // the uses should already be live in to the using region.
+      // All uses are known to be available / live at the remat points. Thus,
+      // the uses should already be live in to the using regions.
       for (const MachineInstr *DefMI : Reg.Defs) {
         for (const MachineOperand &MO : DefMI->operands()) {
           // Exclude the defined register. We are rematerializing all
@@ -1674,16 +1688,17 @@ bool PreRARematStage::initGCNSchedStage() {
           if (LI.hasSubRanges() && MO.getSubReg())
             LM = DAG.TRI->getSubRegIndexLaneMask(MO.getSubReg());
 
-          const unsigned UseRegion = Reg.Uses.begin()->first;
-          LaneBitmask LiveInMask = DAG.LiveIns[UseRegion].at(UseReg);
-          LaneBitmask UncoveredLanes = LM & ~(LiveInMask & LM);
-          // If this register has lanes not covered by the LiveIns, be sure they
-          // do not map to any subrange. ref:
-          // machine-scheduler-sink-trivial-remats.mir::omitted_subrange
-          if (UncoveredLanes.any()) {
-            assert(LI.hasSubRanges());
-            for (LiveInterval::SubRange &SR : LI.subranges())
-              assert((SR.LaneMask & UncoveredLanes).none());
+          for (const auto &[UseRegion, _] : Reg.Uses) {
+            LaneBitmask LiveInMask = DAG.LiveIns[UseRegion].at(UseReg);
+            LaneBitmask UncoveredLanes = LM & ~(LiveInMask & LM);
+            // If this register has lanes not covered by the LiveIns, be sure
+            // they do not map to any subrange. ref:
+            // machine-scheduler-sink-trivial-remats.mir::omitted_subrange
+            if (UncoveredLanes.any()) {
+              assert(LI.hasSubRanges());
+              for (LiveInterval::SubRange &SR : LI.subranges())
+                assert((SR.LaneMask & UncoveredLanes).none());
+            }
           }
         }
       }
@@ -3066,32 +3081,46 @@ void PreRARematStage::ScoredRemat::init(RegisterIdx RegIdx,
 
   const Rematerializer::Reg &Reg = Remater.getReg(RegIdx);
   Register DefReg = Reg.getDefReg();
-  assert(Reg.Uses.size() == 1 && "expected users in single region");
-  const unsigned UseRegion = Reg.Uses.begin()->first;
 
   // Mark regions in which the rematerializable register is live.
   for (unsigned I = 0, E = NumRegions; I != E; ++I) {
-    if (DAG.LiveIns[I].contains(DefReg))
+    bool LiveInRegion = false;
+    if (DAG.LiveIns[I].contains(DefReg)) {
       LiveIn.set(I);
-    if (DAG.RegionLiveOuts.getLiveRegsForRegionIdx(I).contains(DefReg))
+      LiveInRegion = true;
+    }
+    if (DAG.RegionLiveOuts.getLiveRegsForRegionIdx(I).contains(DefReg)) {
       LiveOut.set(I);
+      LiveInRegion = true;
+    }
+
+    if (!LiveInRegion)
+      continue;
+    Live.set(I);
 
     // If the register is both unused and live-through in the region, the
     // latter's RP is guaranteed to decrease.
-    if (!LiveIn[I] || !LiveOut[I] || I == UseRegion)
+    if (!LiveIn[I] || !LiveOut[I] || Reg.Uses.contains(I))
       UnpredictableRPSave.set(I);
   }
-  Live |= LiveIn;
-  Live |= LiveOut;
   RPSave.inc(DefReg, LaneBitmask::getNone(), Reg.Mask, DAG.MRI);
 
-  // Get frequencies of defining and using regions. A rematerialization from the
-  // least frequent region to the most frequent region will yield the greatest
-  // in order to penalize rematerializations from or into regions whose
-  int64_t DefOrMin = std::max(Freq.Regions[Reg.DefRegion], Freq.MinFreq);
-  int64_t UseOrMax = Freq.Regions[UseRegion];
-  if (!UseOrMax)
-    UseOrMax = Freq.MaxFreq;
+  // Estimate the difference in instruction execution frequency that will
+  // induced by the rematerialization. A rematerialization from the least
+  // frequent region to the most frequent region should yield the greatest
+  // frequency penalty (most negative frequency difference). When the register
+  // has users in its defining region the original instruction(s) won't be
+  // deleted so there is no frequency gain in the defining region.
+  int64_t DefOrMin = Reg.hasUsersInDefRegion()
+                         ? 0
+                         : std::max(Freq.Regions[Reg.DefRegion], Freq.MinFreq);
+  int64_t UseOrMax = 0;
+  for (const auto &[UseRegion, _] : Reg.Uses) {
+    if (Reg.DefRegion == UseRegion)
+      continue;
+    uint64_t RegionFreq = Freq.Regions[UseRegion];
+    UseOrMax += RegionFreq != 0 ? RegionFreq : Freq.MaxFreq;
+  }
   FreqDiff = DefOrMin - UseOrMax;
 }
 
@@ -3131,11 +3160,23 @@ void PreRARematStage::ScoredRemat::update(const BitVector &TargetRegions,
 void PreRARematStage::ScoredRemat::rematerialize(
     Rematerializer &Remater) const {
   const Rematerializer::Reg &Reg = Remater.getReg(RegIdx);
+
+  // All rematerializable dependencies are re-used for all rematerializations.
   Rematerializer::DependencyReuseInfo DRI;
   for (RegisterIdx DepRegIdx : Reg.Dependencies)
     DRI.reuse(DepRegIdx);
-  unsigned UseRegion = Reg.Uses.begin()->first;
-  Remater.rematerializeToRegion(RegIdx, UseRegion, DRI);
+
+  // Rematerialize once per using region, except in the defining region.
+  SmallVector<unsigned, 8> RematRegions;
+  RematRegions.reserve(Reg.Uses.size());
+  for (const auto &[UseRegion, _] : Reg.Uses) {
+    if (Reg.DefRegion != UseRegion)
+      RematRegions.push_back(UseRegion);
+  }
+  for (const unsigned UseRegion : RematRegions) {
+    Rematerializer::DependencyReuseInfo RegionDRI(DRI);
+    Remater.rematerializeToRegion(RegIdx, UseRegion, RegionDRI);
+  }
 }
 
 void PreRARematStage::updateRPTargets(const BitVector &Regions,

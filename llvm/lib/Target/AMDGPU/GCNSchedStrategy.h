@@ -551,9 +551,7 @@ public:
 ///    non-ignorable physical register use.
 /// 3  The register has no virtual register use whose live range would be
 ///    extended by the rematerialization.
-/// 4. The register has a single non-debug user in a different region from its
-///    defining region.
-/// 5. The register is not used by or using another register that is going to be
+/// 4. The register is not used by or using another register that is going to be
 ///    rematerialized.
 class PreRARematStage : public GCNSchedStage {
 private:
