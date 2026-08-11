@@ -169,10 +169,10 @@ declare void @noundef(ptr noundef)
 
 ; Currently this fails decomposition. No reproducer should be generated.
 define i1 @test_inbounds_precondition(ptr %src, i32 %n, i32 %idx) {
-; CHECK-LABEL: define i1 @"{{.*}}test_inbounds_preconditionrepro"(i64 %ub, ptr %src) {
+; CHECK-LABEL: define i1 @"{{.*}}test_inbounds_preconditionrepro"(i64 %0, ptr %src) {
 ; CHECK-NEXT: entry:
-; CHECK-NEXT:   %0 = icmp uge i64 %ub, 20
-; CHECK-NEXT:   call void @llvm.assume(i1 %0)
+; CHECK-NEXT:   %1 = icmp uge i64 %0, 20
+; CHECK-NEXT:   call void @llvm.assume(i1 %1)
 ; CHECK-NEXT:   %upper = getelementptr inbounds i32, ptr %src, i64 5
 ; CHECK-NEXT:   %src.idx.4 = getelementptr i32, ptr %src, i64 4
 ; CHECK-NEXT:   %cmp.upper.4 = icmp ule ptr %src.idx.4, %upper
