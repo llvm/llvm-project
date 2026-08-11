@@ -49,7 +49,6 @@
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] simplifyBlends
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] legalizeAndOptimizeInductions
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] narrowToSingleScalarRecipes
-; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] removeRedundantExpandSCEVRecipes
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] reassociateHeaderMask
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] simplifyRecipes
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] removeBranchOnConst
@@ -58,6 +57,8 @@
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] createAndOptimizeReplicateRegions
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] mergeBlocksIntoPredecessors
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] licm
+; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] cse
+; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] removeDeadRecipes
 ; CHECK-AFTER: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::optimize
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::narrowInterleaveGroups
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::materializeHeaderMask
