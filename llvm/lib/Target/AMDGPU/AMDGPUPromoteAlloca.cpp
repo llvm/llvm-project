@@ -527,18 +527,32 @@ void AMDGPUPromoteAllocaImpl::allocateVgprs(AllocaAnalysis &AA) {
   // The generic lifetime intrinsics do not survive into the backend, so use
   // the address-space specific ones instead. An object with no lifetime start
   // is live from its definition.
+  //
+  // A marker that is already the address-space specific one counts as a start:
+  // this runs over IR it has converted before, since an object written in the
+  // address space to begin with reaches the backend that way, as does one an
+  // earlier run promoted. Adding a second start would move the start of the
+  // live range back to the alloca and keep the object live from there.
   bool HaveLifetimeStart = false;
   for (Use &U : AA.Alloca->uses()) {
     auto *II = dyn_cast<IntrinsicInst>(U.getUser());
     if (!II)
       continue;
-    if (II->getIntrinsicID() == Intrinsic::lifetime_start) {
-      HaveLifetimeStart = true;
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::lifetime_start:
       II->setCalledFunction(Intrinsic::getOrInsertDeclaration(
           &Mod, Intrinsic::amdgcn_vgpr_lifetime_start, AA.Alloca->getType()));
-    } else if (II->getIntrinsicID() == Intrinsic::lifetime_end) {
+      HaveLifetimeStart = true;
+      break;
+    case Intrinsic::lifetime_end:
       II->setCalledFunction(Intrinsic::getOrInsertDeclaration(
           &Mod, Intrinsic::amdgcn_vgpr_lifetime_end, AA.Alloca->getType()));
+      break;
+    case Intrinsic::amdgcn_vgpr_lifetime_start:
+      HaveLifetimeStart = true;
+      break;
+    default:
+      break;
     }
   }
 
