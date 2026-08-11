@@ -4027,4 +4027,31 @@ TEST(DataLayoutTest, CheriRISCV32) {
               testing::HasSubstr("A200-P200-G200"));
 }
 
+TEST(TripleTest, X86_64APX) {
+  {
+    Triple T = Triple("x86_64apx-pc-windows-msvc");
+    EXPECT_EQ(Triple::x86_64, T.getArch());
+    EXPECT_EQ(Triple::X86_64SubArch_apx, T.getSubArch());
+    EXPECT_TRUE(T.isX86_64APX());
+    EXPECT_TRUE(T.isWindowsAPX());
+  }
+  {
+    Triple T = Triple("x86_64apx-pc-linux-gnu");
+    EXPECT_EQ(Triple::x86_64, T.getArch());
+    EXPECT_EQ(Triple::X86_64SubArch_apx, T.getSubArch());
+    EXPECT_TRUE(T.isX86_64APX());
+    EXPECT_FALSE(T.isWindowsAPX());
+  }
+  {
+    Triple T;
+    T.setArch(Triple::x86_64, Triple::X86_64SubArch_apx);
+    EXPECT_EQ("x86_64apx", T.getArchName());
+  }
+  {
+    Triple T = Triple("x86_64-pc-windows-msvc");
+    EXPECT_FALSE(T.isX86_64APX());
+    EXPECT_FALSE(T.isWindowsAPX());
+  }
+}
+
 } // end anonymous namespace

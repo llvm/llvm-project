@@ -769,6 +769,9 @@ public:
   }
 
   CallingConv getDefaultCallingConv() const override {
+    // x86_64apx targets default to the wincall calling convention.
+    if (getTriple().isWindowsAPX())
+      return CC_WinCall;
     return CC_C;
   }
 

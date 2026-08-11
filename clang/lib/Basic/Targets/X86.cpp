@@ -157,6 +157,15 @@ bool X86TargetInfo::initFeatureMap(
   if (getTriple().getArch() == llvm::Triple::x86_64)
     setFeatureEnabled(Features, "sse2", true);
 
+  // x86_64apx enables the APX features by default. LLVM's X86 backend models
+  // APX as the individual egpr/push2pop2/ppx/ndd/ccmp/nf/zu/jmpabs features
+  // (there is no single "apxf" feature), so enable each of them.
+  if (getTriple().isX86_64APX()) {
+    for (const char *Sub : {"egpr", "push2pop2", "ppx", "ndd", "ccmp", "nf",
+                            "zu", "jmpabs"})
+      setFeatureEnabled(Features, Sub, true);
+  }
+
   using namespace llvm::X86;
 
   SmallVector<StringRef, 16> CPUFeatures;

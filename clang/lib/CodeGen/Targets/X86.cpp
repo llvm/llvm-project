@@ -3480,6 +3480,9 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
     // instead of by pointer/sret like the MS x64 ABI.
     if (IsWinCall && Width <= 256 && !Ty->isAnyComplexType() &&
         !Ty->isMemberPointerType()) {
+      // Empty C++ objects take no register slots.
+      if (isEmptyRecord(getContext(), Ty, /*AllowArrays=*/true))
+        return ABIArgInfo::getIgnore();
       if (IsReturnType)
         return ABIArgInfo::getDirect();
       // Pass as an integer of the aggregate size when it fits in one register,
