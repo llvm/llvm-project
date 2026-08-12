@@ -270,7 +270,18 @@ void CIRGenModule::emitCXXSpecialVarDeclInit(const VarDecl *varDecl,
   // expects "this" in the "generic" address space.
   assert(!cir::MissingFeatures::addressSpace());
 
-  addr.setAstAttr(cir::ASTVarDeclAttr::get(&getMLIRContext(), varDecl));
+  // LoweringPrepare reads VarDecl facts back through ASTVarDeclInterface, but
+  // only for static-local guarded globals. For those, emit the materialized
+  // StaticLocalInfoAttr so the facts survive without a live ASTContext (e.g.
+  // serialized CIR in split-compilation flows). Other globals keep the
+  // AST-backed attribute; their $ast is never queried after CIRGen.
+  if (addr.getStaticLocalGuard().has_value())
+    addr.setAstAttr(cir::StaticLocalInfoAttr::get(
+        &getMLIRContext(), varDecl->isLocalVarDecl(),
+        static_cast<uint32_t>(varDecl->getTLSKind()), varDecl->isInline(),
+        static_cast<uint32_t>(varDecl->getTemplateSpecializationKind())));
+  else
+    addr.setAstAttr(cir::ASTVarDeclAttr::get(&getMLIRContext(), varDecl));
 
   if (!ty->isReferenceType()) {
     assert(!cir::MissingFeatures::openMP());

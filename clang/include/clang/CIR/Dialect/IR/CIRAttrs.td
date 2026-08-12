@@ -2012,6 +2012,52 @@ def CIR_ASTVarDeclAttr : CIR_AST<"VarDecl", "var.decl", [
 ]>;
 
 //===----------------------------------------------------------------------===//
+// StaticLocalInfoAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_StaticLocalInfoAttr
+    : CIR_Attr<"StaticLocalInfo", "static_local_info",
+               [ASTVarDeclInterface]> {
+  let summary = "AST-free cache of static-local VarDecl facts.";
+  let description = [{
+    Materialized form of the facts `cir::ASTVarDeclInterface` exposes, so
+    that post-CIRGen passes (notably LoweringPrepare) can query them without
+    a live `clang::ASTContext`. Emitted by CIRGen for static-local guarded
+    globals in place of the AST-backed `ASTVarDeclAttr`.
+
+    The TLS and template-specialization kinds are encoded as plain integers
+    matching the underlying `clang::VarDecl::TLSKind` and
+    `clang::TemplateSpecializationKind` enumerators.
+  }];
+
+  let parameters = (ins
+    "bool":$is_local_var_decl,
+    "uint32_t":$tls,
+    "bool":$is_inline,
+    "uint32_t":$tsk
+  );
+
+  let assemblyFormat = [{
+    `<` struct($is_local_var_decl, $tls, $is_inline, $tsk) `>`
+  }];
+
+  let extraClassDeclaration = [{
+    // Satisfy ASTVarDeclInterface by reading cached fields instead of an
+    // AST-backed VarDecl pointer.
+    bool isLocalVarDecl() const { return getIsLocalVarDecl(); }
+    clang::VarDecl::TLSKind getTLSKind() const {
+      return static_cast<clang::VarDecl::TLSKind>(getTls());
+    }
+    bool isInline() const { return getIsInline(); }
+    clang::TemplateSpecializationKind getTemplateSpecializationKind() const {
+      return static_cast<clang::TemplateSpecializationKind>(getTsk());
+    }
+  }];
+
+  let canHaveIllegalCXXABIType = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // AnnotationAttr
 //===----------------------------------------------------------------------===//
 

@@ -1,0 +1,35 @@
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir \
+// RUN:   -emit-cir %s -o - | FileCheck %s
+
+// CIRGen attaches the VarDecl facts LoweringPrepare needs (isLocalVarDecl,
+// TLSKind, isInline, TemplateSpecializationKind) to static-local guarded
+// globals as a materialized #cir.static_local_info attribute, so the facts
+// survive without a live ASTContext. The attribute is emitted directly at
+// CIRGen time; there is no separate materialization pass and no AST-backed
+// #cir.var.decl placeholder is left on these globals.
+
+struct HasCtor {
+  HasCtor();
+  int x;
+};
+
+int regular() {
+  static HasCtor s;
+  return s.x;
+}
+
+int tls() {
+  static thread_local HasCtor s;
+  return s.x;
+}
+
+// A static local is always a local var decl; the guarded global therefore
+// carries is_local_var_decl = true and never the AST-backed placeholder.
+// CHECK-NOT: #cir.var.decl
+
+// The thread_local static local materializes a non-default TLS kind.
+// CHECK: @_ZZ3tlsvE1s
+// CHECK-SAME: ast = #cir.static_local_info<is_local_var_decl = true, tls = 2, is_inline = false, tsk = 0>
+
+// CHECK: @_ZZ7regularvE1s
+// CHECK-SAME: ast = #cir.static_local_info<is_local_var_decl = true, tls = 0, is_inline = false, tsk = 0>
