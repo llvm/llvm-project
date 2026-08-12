@@ -32,16 +32,24 @@ void test_stdc_trailing_zeros(unsigned char uc, unsigned short us,
 // CIR: cir.ctz %{{.+}} : !u64i
 // LLVM-LABEL: @test_stdc_trailing_zeros(
 // LLVM: call i8 @llvm.cttz.i8(i8 %{{.*}}, i1 false)
+// LLVM: zext i8 %{{.*}} to i32
 // LLVM: call i16 @llvm.cttz.i16(i16 %{{.*}}, i1 false)
+// LLVM: zext i16 %{{.*}} to i32
 // LLVM: call i32 @llvm.cttz.i32(i32 %{{.*}}, i1 false)
 // LLVM: call i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
+// LLVM: trunc i64 %{{.*}} to i32
 // LLVM: call i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
+// LLVM: trunc i64 %{{.*}} to i32
 // OGCG-LABEL: @test_stdc_trailing_zeros(
 // OGCG: call i8 @llvm.cttz.i8(i8 %{{.*}}, i1 false)
+// OGCG: zext i8 %{{.*}} to i32
 // OGCG: call i16 @llvm.cttz.i16(i16 %{{.*}}, i1 false)
+// OGCG: zext i16 %{{.*}} to i32
 // OGCG: call i32 @llvm.cttz.i32(i32 %{{.*}}, i1 false)
 // OGCG: call i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
+// OGCG: trunc i64 %{{.*}} to i32
 // OGCG: call i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
+// OGCG: trunc i64 %{{.*}} to i32
 
 void test_stdc_trailing_ones(unsigned char uc, unsigned short us,
                              unsigned int ui, unsigned long ul,
@@ -68,25 +76,33 @@ void test_stdc_trailing_ones(unsigned char uc, unsigned short us,
 // LLVM-LABEL: @test_stdc_trailing_ones(
 // LLVM: xor i8 %{{.*}}, -1
 // LLVM: call i8 @llvm.cttz.i8(i8 %{{.*}}, i1 false)
+// LLVM: zext i8 %{{.*}} to i32
 // LLVM: xor i16 %{{.*}}, -1
 // LLVM: call i16 @llvm.cttz.i16(i16 %{{.*}}, i1 false)
+// LLVM: zext i16 %{{.*}} to i32
 // LLVM: xor i32 %{{.*}}, -1
 // LLVM: call i32 @llvm.cttz.i32(i32 %{{.*}}, i1 false)
 // LLVM: xor i64 %{{.*}}, -1
 // LLVM: call i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
+// LLVM: trunc i64 %{{.*}} to i32
 // LLVM: xor i64 %{{.*}}, -1
 // LLVM: call i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
+// LLVM: trunc i64 %{{.*}} to i32
 // OGCG-LABEL: @test_stdc_trailing_ones(
 // OGCG: xor i8 %{{.*}}, -1
 // OGCG: call i8 @llvm.cttz.i8(i8 %{{.*}}, i1 false)
+// OGCG: zext i8 %{{.*}} to i32
 // OGCG: xor i16 %{{.*}}, -1
 // OGCG: call i16 @llvm.cttz.i16(i16 %{{.*}}, i1 false)
+// OGCG: zext i16 %{{.*}} to i32
 // OGCG: xor i32 %{{.*}}, -1
 // OGCG: call i32 @llvm.cttz.i32(i32 %{{.*}}, i1 false)
 // OGCG: xor i64 %{{.*}}, -1
 // OGCG: call i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
+// OGCG: trunc i64 %{{.*}} to i32
 // OGCG: xor i64 %{{.*}}, -1
 // OGCG: call i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
+// OGCG: trunc i64 %{{.*}} to i32
 
 unsigned int test_stdc_leading_zeros(unsigned char uc, unsigned short us,
                                      unsigned int ui, unsigned long ul,
@@ -108,16 +124,24 @@ unsigned int test_stdc_leading_zeros(unsigned char uc, unsigned short us,
 // CIR: cir.clz %{{.+}} : !u64i
 // LLVM-LABEL: @test_stdc_leading_zeros(
 // LLVM: call i8 @llvm.ctlz.i8(i8 %{{.*}}, i1 false)
+// LLVM: zext i8 %{{.*}} to i32
 // LLVM: call i16 @llvm.ctlz.i16(i16 %{{.*}}, i1 false)
+// LLVM: zext i16 %{{.*}} to i32
 // LLVM: call i32 @llvm.ctlz.i32(i32 %{{.*}}, i1 false)
 // LLVM: call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 false)
+// LLVM: trunc i64 %{{.*}} to i32
 // LLVM: call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 false)
+// LLVM: trunc i64 %{{.*}} to i32
 // OGCG-LABEL: @test_stdc_leading_zeros(
 // OGCG: call i8 @llvm.ctlz.i8(i8 %{{.*}}, i1 false)
+// OGCG: zext i8 %{{.*}} to i32
 // OGCG: call i16 @llvm.ctlz.i16(i16 %{{.*}}, i1 false)
+// OGCG: zext i16 %{{.*}} to i32
 // OGCG: call i32 @llvm.ctlz.i32(i32 %{{.*}}, i1 false)
 // OGCG: call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 false)
+// OGCG: trunc i64 %{{.*}} to i32
 // OGCG: call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 false)
+// OGCG: trunc i64 %{{.*}} to i32
 
 unsigned int test_stdc_leading_ones(unsigned char uc, unsigned short us,
                                     unsigned int ui, unsigned long ul,
@@ -145,25 +169,33 @@ unsigned int test_stdc_leading_ones(unsigned char uc, unsigned short us,
 // LLVM-LABEL: @test_stdc_leading_ones(
 // LLVM: xor i8 %{{.*}}, -1
 // LLVM: call i8 @llvm.ctlz.i8(i8 %{{.*}}, i1 false)
+// LLVM: zext i8 %{{.*}} to i32
 // LLVM: xor i16 %{{.*}}, -1
 // LLVM: call i16 @llvm.ctlz.i16(i16 %{{.*}}, i1 false)
+// LLVM: zext i16 %{{.*}} to i32
 // LLVM: xor i32 %{{.*}}, -1
 // LLVM: call i32 @llvm.ctlz.i32(i32 %{{.*}}, i1 false)
 // LLVM: xor i64 %{{.*}}, -1
 // LLVM: call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 false)
+// LLVM: trunc i64 %{{.*}} to i32
 // LLVM: xor i64 %{{.*}}, -1
 // LLVM: call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 false)
+// LLVM: trunc i64 %{{.*}} to i32
 // OGCG-LABEL: @test_stdc_leading_ones(
 // OGCG: xor i8 %{{.*}}, -1
 // OGCG: call i8 @llvm.ctlz.i8(i8 %{{.*}}, i1 false)
+// OGCG: zext i8 %{{.*}} to i32
 // OGCG: xor i16 %{{.*}}, -1
 // OGCG: call i16 @llvm.ctlz.i16(i16 %{{.*}}, i1 false)
+// OGCG: zext i16 %{{.*}} to i32
 // OGCG: xor i32 %{{.*}}, -1
 // OGCG: call i32 @llvm.ctlz.i32(i32 %{{.*}}, i1 false)
 // OGCG: xor i64 %{{.*}}, -1
 // OGCG: call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 false)
+// OGCG: trunc i64 %{{.*}} to i32
 // OGCG: xor i64 %{{.*}}, -1
 // OGCG: call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 false)
+// OGCG: trunc i64 %{{.*}} to i32
 
 unsigned int test_stdc_count_ones(unsigned char uc, unsigned short us,
                                   unsigned int ui, unsigned long ul,
@@ -281,25 +313,33 @@ unsigned int test_stdc_count_zeros(unsigned char uc, unsigned short us,
 // LLVM-LABEL: @test_stdc_count_zeros(
 // LLVM: call i8 @llvm.ctpop.i8(i8 %{{.*}})
 // LLVM: sub i8 8, %{{.*}}
+// LLVM: zext i8 %{{.*}} to i32
 // LLVM: call i16 @llvm.ctpop.i16(i16 %{{.*}})
 // LLVM: sub i16 16, %{{.*}}
+// LLVM: zext i16 %{{.*}} to i32
 // LLVM: call i32 @llvm.ctpop.i32(i32 %{{.*}})
 // LLVM: sub i32 32, %{{.*}}
 // LLVM: call i64 @llvm.ctpop.i64(i64 %{{.*}})
 // LLVM: sub i64 64, %{{.*}}
+// LLVM: trunc i64 %{{.*}} to i32
 // LLVM: call i64 @llvm.ctpop.i64(i64 %{{.*}})
 // LLVM: sub i64 64, %{{.*}}
+// LLVM: trunc i64 %{{.*}} to i32
 // OGCG-LABEL: @test_stdc_count_zeros(
 // OGCG: call i8 @llvm.ctpop.i8(i8 %{{.*}})
 // OGCG: sub i8 8, %{{.*}}
+// OGCG: zext i8 %{{.*}} to i32
 // OGCG: call i16 @llvm.ctpop.i16(i16 %{{.*}})
 // OGCG: sub i16 16, %{{.*}}
+// OGCG: zext i16 %{{.*}} to i32
 // OGCG: call i32 @llvm.ctpop.i32(i32 %{{.*}})
 // OGCG: sub i32 32, %{{.*}}
 // OGCG: call i64 @llvm.ctpop.i64(i64 %{{.*}})
 // OGCG: sub i64 64, %{{.*}}
+// OGCG: trunc i64 %{{.*}} to i32
 // OGCG: call i64 @llvm.ctpop.i64(i64 %{{.*}})
 // OGCG: sub i64 64, %{{.*}}
+// OGCG: trunc i64 %{{.*}} to i32
 
 unsigned int test_stdc_bit_width(unsigned char uc, unsigned short us,
                                  unsigned int ui, unsigned long ul,
@@ -433,6 +473,63 @@ void test_stdc_bit_floor(unsigned char uc, unsigned short us, unsigned int ui,
 // OGCG: shl i64 1, %{{.*}}
 // OGCG: select i1 %{{.*}}, i64 0, i64 %{{.*}}
 #else
+
+unsigned int test_stdc_trailing_zeros_lib(unsigned char uc, unsigned short us,
+                                          unsigned int ui, unsigned long ul,
+                                          unsigned long long ull) {
+  volatile unsigned int r;
+  r = stdc_trailing_zeros_uc(uc);
+  r = stdc_trailing_zeros_us(us);
+  r = stdc_trailing_zeros_ui(ui);
+  r = stdc_trailing_zeros_ul(ul);
+  r = stdc_trailing_zeros_ull(ull);
+  return r;
+}
+
+// LIB-CIR-LABEL: @test_stdc_trailing_zeros_lib(
+// LIB-CIR: cir.ctz %{{.+}} : !u8i
+// LIB-CIR: cir.ctz %{{.+}} : !u16i
+// LIB-CIR: cir.ctz %{{.+}} : !u32i
+// LIB-CIR: cir.ctz %{{.+}} : !u64i
+// LIB-CIR: cir.ctz %{{.+}} : !u64i
+
+unsigned int test_stdc_leading_zeros_lib(unsigned char uc, unsigned short us,
+                                         unsigned int ui, unsigned long ul,
+                                         unsigned long long ull) {
+  volatile unsigned int r;
+  r = stdc_leading_zeros_uc(uc);
+  r = stdc_leading_zeros_us(us);
+  r = stdc_leading_zeros_ui(ui);
+  r = stdc_leading_zeros_ul(ul);
+  r = stdc_leading_zeros_ull(ull);
+  return r;
+}
+
+// LIB-CIR-LABEL: @test_stdc_leading_zeros_lib(
+// LIB-CIR: cir.clz %{{.+}} : !u8i
+// LIB-CIR: cir.clz %{{.+}} : !u16i
+// LIB-CIR: cir.clz %{{.+}} : !u32i
+// LIB-CIR: cir.clz %{{.+}} : !u64i
+// LIB-CIR: cir.clz %{{.+}} : !u64i
+
+unsigned int test_stdc_count_ones_lib(unsigned char uc, unsigned short us,
+                                      unsigned int ui, unsigned long ul,
+                                      unsigned long long ull) {
+  volatile unsigned int r;
+  r = stdc_count_ones_uc(uc);
+  r = stdc_count_ones_us(us);
+  r = stdc_count_ones_ui(ui);
+  r = stdc_count_ones_ul(ul);
+  r = stdc_count_ones_ull(ull);
+  return r;
+}
+
+// LIB-CIR-LABEL: @test_stdc_count_ones_lib(
+// LIB-CIR: cir.popcount %{{.+}} : !u8i
+// LIB-CIR: cir.popcount %{{.+}} : !u16i
+// LIB-CIR: cir.popcount %{{.+}} : !u32i
+// LIB-CIR: cir.popcount %{{.+}} : !u64i
+// LIB-CIR: cir.popcount %{{.+}} : !u64i
 
 unsigned int test_stdc_trailing_ones_lib(unsigned char uc, unsigned short us,
                                          unsigned int ui, unsigned long ul,
