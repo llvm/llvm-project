@@ -1034,11 +1034,11 @@ public:
   /// every iteration of the loop header.
   inline uint64_t
   getPredBlockCostDivisor(TargetTransformInfo::TargetCostKind CostKind,
-                          const BasicBlock *BB);
+                          const BasicBlock *BB) const;
 
   /// Returns true if an artificially high cost for emulated masked memrefs
   /// should be used.
-  bool useEmulatedMaskMemRefHack(Instruction *I, ElementCount VF);
+  bool useEmulatedMaskMemRefHack(Instruction *I, ElementCount VF) const;
 
   /// Return the costs for our two available strategies for lowering a
   /// div/rem operation which requires speculating at least one lane.
@@ -1062,6 +1062,10 @@ public:
   /// for \p I's data type and alignment. The caller must ensure the access is
   /// consecutive or part of an interleave group.
   bool isLegalMaskedLoadOrStore(Instruction *I, ElementCount VF) const;
+
+  /// Returns true if the target machine supports gather or scatter for \p I's
+  /// data type and alignment.
+  bool isLegalGatherOrScatter(Instruction *I, ElementCount VF) const;
 
   /// Check if \p Instr belongs to any interleaved access group.
   bool isAccessInterleaved(Instruction *Instr) const {
@@ -1348,17 +1352,47 @@ private:
                                         : std::nullopt);
   }
 
+  /// Pick between interleave and gather-scatter based on cost. Returns a pair
+  /// of widening decision along with corresponding cost.
+  std::pair<InstWidening, InstructionCost>
+  costInterleaveGatherScatter(Instruction *I, ElementCount VF) const {
+    InstructionCost InterleaveCost = InstructionCost::getInvalid();
+    unsigned NumAccesses = 1;
+    if (isAccessInterleaved(I)) {
+      const auto *Group = getInterleavedAccessGroup(I);
+      assert(Group && "Fail to get an interleaved access group.");
+
+      if (interleavedAccessCanBeWidened(I, VF)) {
+        NumAccesses = Group->getNumMembers();
+        InterleaveCost = getInterleaveGroupCost(I, VF);
+      }
+    }
+    InstructionCost GatherScatterCost =
+        isLegalGatherOrScatter(I, VF)
+            ? getGatherScatterCost(I, VF) * NumAccesses
+            : InstructionCost::getInvalid();
+    InstructionCost ScalarizationCost =
+        getMemInstScalarizationCost(I, VF) * NumAccesses;
+    if (InterleaveCost <= GatherScatterCost &&
+        InterleaveCost < ScalarizationCost)
+      return {CM_Interleave, InterleaveCost};
+    if (GatherScatterCost < ScalarizationCost)
+      return {CM_GatherScatter, GatherScatterCost};
+    return {CM_Scalarize, ScalarizationCost};
+  }
+
   /// Calculate vectorization cost of memory instruction \p I.
   InstructionCost getMemoryInstructionCost(Instruction *I, ElementCount VF);
 
   /// The cost computation for scalarized memory instruction.
-  InstructionCost getMemInstScalarizationCost(Instruction *I, ElementCount VF);
+  InstructionCost getMemInstScalarizationCost(Instruction *I,
+                                              ElementCount VF) const;
 
   /// The cost computation for interleaving group of memory instructions.
-  InstructionCost getInterleaveGroupCost(Instruction *I, ElementCount VF);
+  InstructionCost getInterleaveGroupCost(Instruction *I, ElementCount VF) const;
 
   /// The cost computation for Gather/Scatter instruction.
-  InstructionCost getGatherScatterCost(Instruction *I, ElementCount VF);
+  InstructionCost getGatherScatterCost(Instruction *I, ElementCount VF) const;
 
   /// The cost computation for widening instruction \p I with consecutive
   /// memory access.
@@ -1517,15 +1551,6 @@ public:
   /// unless necessary, e.g. when the loop isn't legal to vectorize or when
   /// there is no predication.
   std::function<BlockFrequencyInfo &()> GetBFI;
-  /// The BlockFrequencyInfo returned from GetBFI.
-  BlockFrequencyInfo *BFI = nullptr;
-  /// Returns the BlockFrequencyInfo for the function if cached, otherwise
-  /// fetches it via GetBFI. Avoids an indirect call to the std::function.
-  BlockFrequencyInfo &getBFI() {
-    if (!BFI)
-      BFI = &GetBFI();
-    return *BFI;
-  }
 
   const Function *TheFunction;
 
@@ -2400,6 +2425,13 @@ bool LoopVectorizationCostModel::isLegalMaskedLoadOrStore(
                                          getLoadStoreAddressSpace(I));
 }
 
+bool LoopVectorizationCostModel::isLegalGatherOrScatter(Instruction *I,
+                                                        ElementCount VF) const {
+  assert((isa<LoadInst, StoreInst>(I)));
+  return Config.isLegalGatherOrScatter(isa<LoadInst>(I), getLoadStoreType(I),
+                                       getLoadStoreAlignment(I));
+}
+
 bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
                                                          ElementCount VF) {
   if (!isPredicatedInst(I))
@@ -2423,7 +2455,7 @@ bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
     bool IsConsecutive = Legal->isConsecutivePtr(getLoadStoreType(I),
                                                  getLoadStorePointerOperand(I));
     return !(IsConsecutive && isLegalMaskedLoadOrStore(I, VF)) &&
-           !Config.isLegalGatherOrScatter(I, VF);
+           !isLegalGatherOrScatter(I, VF);
   }
   case Instruction::UDiv:
   case Instruction::SDiv:
@@ -2500,7 +2532,7 @@ bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I) const {
 }
 
 uint64_t LoopVectorizationCostModel::getPredBlockCostDivisor(
-    TargetTransformInfo::TargetCostKind CostKind, const BasicBlock *BB) {
+    TargetTransformInfo::TargetCostKind CostKind, const BasicBlock *BB) const {
   if (CostKind == TTI::TCK_CodeSize)
     return 1;
   // If the block wasn't originally predicated then return early to avoid
@@ -2509,8 +2541,8 @@ uint64_t LoopVectorizationCostModel::getPredBlockCostDivisor(
     return 1;
 
   uint64_t HeaderFreq =
-      getBFI().getBlockFreq(TheLoop->getHeader()).getFrequency();
-  uint64_t BBFreq = getBFI().getBlockFreq(BB).getFrequency();
+      GetBFI().getBlockFreq(TheLoop->getHeader()).getFrequency();
+  uint64_t BBFreq = GetBFI().getBlockFreq(BB).getFrequency();
   assert(HeaderFreq >= BBFreq &&
          "Header has smaller block freq than dominated BB?");
   return std::round((double)HeaderFreq / BBFreq);
@@ -2583,8 +2615,6 @@ LoopVectorizationCostModel::getDivRemSpeculationCost(Instruction *I,
 bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
     Instruction *I, ElementCount VF) const {
   assert(isAccessInterleaved(I) && "Expecting interleaved access.");
-  assert(getWideningDecision(I, VF) == CM_Unknown &&
-         "Decision should not be set yet.");
   auto *Group = getInterleavedAccessGroup(I);
   assert(Group && "Must have a group.");
   unsigned InterleaveFactor = Group->getFactor();
@@ -3989,8 +4019,8 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
   return 1;
 }
 
-bool LoopVectorizationCostModel::useEmulatedMaskMemRefHack(Instruction *I,
-                                                           ElementCount VF) {
+bool LoopVectorizationCostModel::useEmulatedMaskMemRefHack(
+    Instruction *I, ElementCount VF) const {
   // TODO: Cost model for emulated masked load/store is completely
   // broken. This hack guides the cost model to use an artificially
   // high enough value to practically disable vectorization with such
@@ -4226,7 +4256,7 @@ static const SCEV *getAddressAccessSCEV(
 
 InstructionCost
 LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
-                                                        ElementCount VF) {
+                                                        ElementCount VF) const {
   assert(VF.isVector() &&
          "Scalarization cost of instruction implies vectorization.");
   if (VF.isScalable())
@@ -4351,7 +4381,7 @@ LoopVectorizationCostModel::getUniformMemOpCost(Instruction *I,
 
 InstructionCost
 LoopVectorizationCostModel::getGatherScatterCost(Instruction *I,
-                                                 ElementCount VF) {
+                                                 ElementCount VF) const {
   Type *ValTy = getLoadStoreType(I);
   auto *VectorTy = cast<VectorType>(toVectorTy(ValTy, VF));
   const Align Alignment = getLoadStoreAlignment(I);
@@ -4374,7 +4404,7 @@ LoopVectorizationCostModel::getGatherScatterCost(Instruction *I,
 
 InstructionCost
 LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
-                                                   ElementCount VF) {
+                                                   ElementCount VF) const {
   const auto *Group = getInterleavedAccessGroup(I);
   assert(Group && "Fail to get an interleaved access group.");
 
@@ -4721,9 +4751,8 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
         };
 
         const InstructionCost GatherScatterCost =
-            Config.isLegalGatherOrScatter(&I, VF)
-                ? getGatherScatterCost(&I, VF)
-                : InstructionCost::getInvalid();
+            isLegalGatherOrScatter(&I, VF) ? getGatherScatterCost(&I, VF)
+                                           : InstructionCost::getInvalid();
 
         // Load: Scalar load + broadcast
         // Store: Scalar store + isLoopInvariantStoreValue ? 0 : extract
@@ -4751,45 +4780,13 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
         continue;
       }
 
+      // Make one decision for the whole interleave group.
+      if (isAccessInterleaved(&I) && getWideningDecision(&I, VF) != CM_Unknown)
+        continue;
+
       // Choose between Interleaving, Gather/Scatter or Scalarization.
-      InstructionCost InterleaveCost = InstructionCost::getInvalid();
-      unsigned NumAccesses = 1;
-      if (isAccessInterleaved(&I)) {
-        const auto *Group = getInterleavedAccessGroup(&I);
-        assert(Group && "Fail to get an interleaved access group.");
+      auto [Decision, Cost] = costInterleaveGatherScatter(&I, VF);
 
-        // Make one decision for the whole group.
-        if (getWideningDecision(&I, VF) != CM_Unknown)
-          continue;
-
-        NumAccesses = Group->getNumMembers();
-        if (interleavedAccessCanBeWidened(&I, VF))
-          InterleaveCost = getInterleaveGroupCost(&I, VF);
-      }
-
-      InstructionCost GatherScatterCost =
-          Config.isLegalGatherOrScatter(&I, VF)
-              ? getGatherScatterCost(&I, VF) * NumAccesses
-              : InstructionCost::getInvalid();
-
-      InstructionCost ScalarizationCost =
-          getMemInstScalarizationCost(&I, VF) * NumAccesses;
-
-      // Choose better solution for the current VF,
-      // write down this decision and use it during vectorization.
-      InstructionCost Cost;
-      InstWidening Decision;
-      if (InterleaveCost <= GatherScatterCost &&
-          InterleaveCost < ScalarizationCost) {
-        Decision = CM_Interleave;
-        Cost = InterleaveCost;
-      } else if (GatherScatterCost < ScalarizationCost) {
-        Decision = CM_GatherScatter;
-        Cost = GatherScatterCost;
-      } else {
-        Decision = CM_Scalarize;
-        Cost = ScalarizationCost;
-      }
       // If the instructions belongs to an interleave group, the whole group
       // receives the same decision. The whole group receives the cost, but
       // the cost will actually be assigned to one instruction.

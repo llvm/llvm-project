@@ -146,19 +146,11 @@ bool VFSelectionContext::isLegalMaskedLoadOrStore(bool IsLoad, Type *ScalarTy,
                  : TTI.isLegalMaskedStore(ScalarTy, Alignment, AddressSpace));
 }
 
-bool VFSelectionContext::isLegalGatherOrScatter(Value *V,
-                                                ElementCount VF) const {
-  bool LI = isa<LoadInst>(V);
-  bool SI = isa<StoreInst>(V);
-  if (!LI && !SI)
-    return false;
-  auto *Ty = getLoadStoreType(V);
-  Align Align = getLoadStoreAlignment(V);
-  if (VF.isVector())
-    Ty = VectorType::get(Ty, VF);
+bool VFSelectionContext::isLegalGatherOrScatter(bool IsLoad, Type *ScalarTy,
+                                                Align Alignment) const {
   return ForceTargetSupportsGatherScatterOps ||
-         (LI && TTI.isLegalMaskedGather(Ty, Align)) ||
-         (SI && TTI.isLegalMaskedScatter(Ty, Align));
+         (IsLoad ? TTI.isLegalMaskedGather(ScalarTy, Alignment)
+                 : TTI.isLegalMaskedScatter(ScalarTy, Alignment));
 }
 
 bool VFSelectionContext::supportsScalableVectors() const {
