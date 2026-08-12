@@ -8017,7 +8017,17 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       LLVM_DEBUG(dbgs() << "\n");
       // For loops with very small trip counts, require that no scalar epilogue
       // is needed. Tail-folded loops are still allowed as they avoid epilogues.
-      if (SEL != CM_EpilogueNotNeededFoldTail)
+      // TODO: Remove the check for CM_EpilogueNotAllowedOptSize here. The
+      // EpilogueLowering enum currently conflates several pieces of
+      // information:
+      //   * Whether a scalar epilogue is permitted
+      //   * Whether tail folding is preferred or required
+      //   * Whether optimizing for code size
+      // Overwriting it here can drop OptForSize, breaking the
+      // runtimeChecksRequired() bail-out in computeMaxVF. Split
+      // EpilogueLowering into separate fields instead.
+      if (SEL != CM_EpilogueNotNeededFoldTail &&
+          SEL != CM_EpilogueNotAllowedOptSize)
         SEL = CM_EpilogueNotAllowedLowTripLoop;
     }
   }
