@@ -1,7 +1,5 @@
 # Clang-Change-Namespace
 
-```{contents}
-```
 
 ```{toctree}
 :maxdepth: 1

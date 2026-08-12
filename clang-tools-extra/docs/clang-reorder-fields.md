@@ -1,7 +1,5 @@
 # Clang-Reorder-Fields
 
-```{contents}
-```
 
 ```{toctree}
 :maxdepth: 1
