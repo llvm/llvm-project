@@ -759,6 +759,7 @@ void TextNodeDumper::Visit(const APValue &Value, QualType Ty) {
     }
     OS << ", Null=" << Value.isNullPointer()
        << ", Offset=" << Value.getLValueOffset().getQuantity()
+       << ", OnePastTheEnd=" << Value.isLValueOnePastTheEnd()
        << ", HasPath=" << Value.hasLValuePath();
     if (Value.hasLValuePath()) {
       OS << ", PathLength=" << Value.getLValuePath().size();
@@ -2247,7 +2248,7 @@ void TextNodeDumper::VisitUnaryTransformType(const UnaryTransformType *T) {
   case UnaryTransformType::Enum:                                               \
     OS << " " #Trait;                                                          \
     break;
-#include "clang/Basic/Traits.inc"
+#include "clang/Basic/BuiltinTraits.inc"
   }
 }
 
