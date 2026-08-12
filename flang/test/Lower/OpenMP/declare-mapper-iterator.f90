@@ -206,10 +206,35 @@ end
 ! CHECK-LABEL: omp.declare_mapper @_QQFdeclare_mapper_nondefault_lbm
 ! CHECK: ^bb0(%[[ARG:.*]]: !fir.ref<!fir.type<_QFdeclare_mapper_nondefault_lbTt{{.*}}>):
 ! CHECK:   %[[DECL:.*]]:2 = hlfir.declare %[[ARG]] {uniq_name = "_QFdeclare_mapper_nondefault_lbEv"}
-! CHECK:   %[[IT:.*]] = omp.iterator(%{{.*}}: index) = ({{.*}}) {
-! CHECK:     %[[BOX:.*]] = hlfir.designate %[[DECL]]#0{"a"}{{.*}} -> !fir.box<!fir.array<10xi32>>
-! CHECK:     %[[DIMS:.*]]:3 = fir.box_dims %[[BOX]], %{{.*}} : (!fir.box<!fir.array<10xi32>>, index) -> (index, index, index)
-! CHECK:     %[[BOUNDS:.*]] = omp.map.bounds lower_bound(%{{.*}} : index) upper_bound(%{{.*}} : index) extent(%[[DIMS]]#1 : index) stride(%[[DIMS]]#2 : index) start_idx(%{{.*}} : index) {stride_in_bytes = true}
+! CHECK:   %[[LB_I32:.*]] = arith.constant -2 : i32
+! CHECK:   %[[UB_I32:.*]] = arith.constant 6 : i32
+! CHECK:   %[[LB:.*]] = fir.convert %[[LB_I32]] : (i32) -> index
+! CHECK:   %[[UB:.*]] = fir.convert %[[UB_I32]] : (i32) -> index
+! CHECK:   %[[STEP:.*]] = arith.constant 1 : index
+! CHECK:   %[[IT:.*]] = omp.iterator(%[[IV:.*]]: index) =
+! CHECK-SAME: (%[[LB]] to %[[UB]] step %[[STEP]]) {
+! CHECK:     %[[IV_I32:.*]] = fir.convert %[[IV]] : (index) -> i32
+! CHECK:     fir.store %[[IV_I32]] to %[[IV_MEM:.*]] : !fir.ref<i32>
+! CHECK:     %[[IV_DECL:.*]]:2 = hlfir.declare %[[IV_MEM]]
+! CHECK:     %[[EXTENT:.*]] = arith.constant 10 : index
+! CHECK:     %[[START:.*]] = arith.constant -2 : index
+! CHECK:     %[[SHAPE:.*]] = fir.shape_shift %[[START]], %[[EXTENT]]
+! CHECK:     %[[BOX:.*]] = hlfir.designate %[[DECL]]#0{"a"}
+! CHECK-SAME: shape %[[SHAPE]]
+! CHECK-SAME: -> !fir.box<!fir.array<10xi32>>
+! CHECK:     %[[DIM:.*]] = arith.constant 0 : index
+! CHECK:     %[[DIMS:.*]]:3 = fir.box_dims %[[BOX]], %[[DIM]]
+! CHECK:     %[[IV_LD:.*]] = fir.load %[[IV_DECL]]#0 : !fir.ref<i32>
+! CHECK:     %[[IV_I64:.*]] = fir.convert %[[IV_LD]] : (i32) -> i64
+! CHECK:     %[[IV_IDX:.*]] = fir.convert %[[IV_I64]] : (i64) -> index
+! CHECK:     %[[OFFSET:.*]] = arith.subi %[[IV_IDX]], %[[START]] : index
+! CHECK:     %[[BOUNDS:.*]] = omp.map.bounds
+! CHECK-SAME: lower_bound(%[[OFFSET]] : index)
+! CHECK-SAME: upper_bound(%[[OFFSET]] : index)
+! CHECK-SAME: extent(%[[DIMS]]#1 : index)
+! CHECK-SAME: stride(%[[DIMS]]#2 : index)
+! CHECK-SAME: start_idx(%[[START]] : index)
+! CHECK-SAME: {stride_in_bytes = true}
 ! CHECK:     %[[BASE:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.array<10xi32>>) -> !fir.ref<!fir.array<10xi32>>
 ! CHECK:     %[[MAP:.*]] = omp.map.info var_ptr(%[[BASE]] : !fir.ref<!fir.array<10xi32>>, !fir.array<10xi32>) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !llvm.ptr {name = ""}
 ! CHECK:   } -> !omp.iterated<!llvm.ptr>
