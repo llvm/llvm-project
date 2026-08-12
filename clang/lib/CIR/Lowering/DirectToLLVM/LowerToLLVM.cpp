@@ -1965,7 +1965,7 @@ mlir::LogicalResult CIRToLLVMAllocaOpLowering::matchAndRewrite(
           ? adaptor.getDynAllocSize()
           : mlir::LLVM::ConstantOp::create(
                 rewriter, op.getLoc(),
-                typeConverter->convertType(rewriter.getIndexType()), 1);
+                typeConverter->convertType(rewriter.getI32Type()), 1);
   mlir::Type elementTy =
       convertTypeForMemory(*getTypeConverter(), dataLayout, op.getAllocaType());
   if (!elementTy)
@@ -5412,6 +5412,12 @@ mlir::LogicalResult CIRToLLVMIndirectBrOpLowering::matchAndRewrite(
   rewriter.replaceOpWithNewOp<mlir::LLVM::IndirectBrOp>(
       op, targetAddr, adaptor.getSuccOperands(), op.getSuccessors());
   return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMTokenNoneOpLowering::matchAndRewrite(
+    cir::TokenNoneOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  return mlir::failure();
 }
 
 mlir::LogicalResult CIRToLLVMCoroFreeOpLowering::matchAndRewrite(

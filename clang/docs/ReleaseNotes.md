@@ -135,6 +135,9 @@ features cannot lower the translation-unit ABI level;
 
 #### Resolutions to C++ Defect Reports
 
+- Clang now falls back to alignment-aware allocation functions for
+  non-overaligned types, implementing [CWG2282](https://wg21.link/cwg2282).
+
 ### C Language Changes
 
 #### C2y Feature Support
@@ -164,11 +167,20 @@ features cannot lower the translation-unit ABI level;
   }
 ```
 
+- Clang now diagnoses the use of the same identifier with both internal and
+  external linkage within a translation unit, as made ill-formed by
+  [N3410](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3410.pdf).
+  This is also diagnosed in older C language modes as the behavior was
+  undefined prior to C2y. (#GH54215)
+
 #### C23 Feature Support
 
 ### Objective-C Language Changes
 
 ### Non-comprehensive list of changes in this release
+
+- Clang now allows GNU computed `goto` extension in `constexpr` functions, matching the relaxed
+  `constexpr` function body rules introduced in C++23.
 
 ### New Compiler Flags
 
@@ -178,6 +190,11 @@ features cannot lower the translation-unit ABI level;
 - Added `--print-cxx-stdlib` and `--print-cxx-stdlib-include-dirs` to print
   the C++ standard library selected by the driver and the include directories
   added for it.
+
+- Added `-mscs-reg=<reg>` on Hexagon to select which callee-saved register
+  (`r16`-`r27`, default `r18`) holds the shadow call stack pointer under
+  `-fsanitize=shadow-call-stack`. The selected register must also be reserved
+  with the matching `-ffixed-<reg>`.
 
 ### Deprecated Compiler Flags
 
@@ -363,6 +380,8 @@ features cannot lower the translation-unit ABI level;
 - Clang now attempts to print enumerator names rather than C-style cast expressions
   in more diagnostics.
 
+- `-Wunsafe-buffer-usage` now warns about unsafe two-parameter constructors of
+  `std::string_view` (pointer and size), consistent with the existing warning for `std::span`.
 
 ### Improvements to Clang's time-trace
 
@@ -445,6 +464,14 @@ features cannot lower the translation-unit ABI level;
   affect C++26 constexpr structured bindings and expansion statements, but
   also affects some uses of plain structured bindings. (#GH211930)
 
+- Fixed friend declarations sometimes making non-visible default arguments
+  incorrectly visible to default argument redefinition checks across modules.
+
+- Fixed handling of SFINAE failures for expressions which depend on in-class
+  member initializers of templates which are not yet parsed. An example is
+  using ``__is_constructible`` on a nested class template inside the definition
+  of the containing class. (#GH215166)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
@@ -485,6 +512,10 @@ features cannot lower the translation-unit ABI level;
 #### X86 Support
 
 #### Arm and AArch64 Support
+
+- Added support for pointer authentication discrimination of C++ virtual table
+  pointers stored in VTTs via the `-fptrauth-vtt-vtable-pointer-discrimination`
+  option.
 
 #### Android Support
 
