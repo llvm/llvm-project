@@ -205,7 +205,7 @@ int main(int argc, char** argv) {
     }
   });
 
-#if TEST_STD_VER >= 23
+#if defined(__cpp_lib_string_resize_and_overwrite) && __cpp_lib_string_resize_and_overwrite >= 202110L
   bench("std::basic_string::resize_and_overwrite()",
         []<class CharT>(std::type_identity<CharT>, benchmark::State& state) {
           std::basic_string<CharT> str;
