@@ -7362,7 +7362,7 @@ Instruction *InstCombinerImpl::foldICmpUsingBoolRange(ICmpInst &I) {
 /// it into the appropriate icmp lt or icmp gt instruction. This transform
 /// allows them to be folded in visitICmpInst.
 static ICmpInst *canonicalizeCmpWithConstant(ICmpInst &I) {
-  ICmpInst::Predicate Pred = I.getPredicate();
+  CmpPredicate Pred = I.getCmpPredicate();
   if (ICmpInst::isEquality(Pred) || !ICmpInst::isIntPredicate(Pred) ||
       InstCombiner::isCanonicalPredicate(Pred))
     return nullptr;
@@ -7377,7 +7377,10 @@ static ICmpInst *canonicalizeCmpWithConstant(ICmpInst &I) {
   if (!FlippedStrictness)
     return nullptr;
 
-  return new ICmpInst(FlippedStrictness->first, Op0, FlippedStrictness->second);
+  auto *NewCmp =
+      new ICmpInst(FlippedStrictness->first, Op0, FlippedStrictness->second);
+  NewCmp->setSameSign(FlippedStrictness->first.hasSameSign());
+  return NewCmp;
 }
 
 /// If we have a comparison with a non-canonical predicate, if we can update
