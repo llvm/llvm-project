@@ -68,5 +68,62 @@ module {
     cir.return
   }
 
+  // CHECK-LABEL: cir.func @load_in_scope
+  cir.func @load_in_scope(%cond: !cir.bool) {
+    // CHECK-NOT: cir.alloca
+    // CHECK: %[[CONST:.*]] = cir.const #cir.int<3>
+    // CHECK: cir.scope
+    // CHECK-NOT: cir.load
+    // CHECK: cir.call @use(%[[CONST]])
+    %0 = cir.alloca "a" align(4) : !cir.ptr<!s32i>
+    %1 = cir.const #cir.int<3> : !s32i
+    cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
+    cir.scope {
+      %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+      cir.call @use(%2) : (!s32i) -> ()
+    }
+    cir.return
+  }
+
+  // A cir.scope between the slot and a nested cir.if is threaded through.
+  // CHECK-LABEL: cir.func @load_in_if_inside_scope
+  cir.func @load_in_if_inside_scope(%cond: !cir.bool) {
+    // CHECK-NOT: cir.alloca
+    // CHECK: %[[CONST:.*]] = cir.const #cir.int<5>
+    // CHECK: cir.scope
+    // CHECK: cir.if
+    // CHECK-NOT: cir.load
+    // CHECK: cir.call @use(%[[CONST]])
+    %0 = cir.alloca "a" align(4) : !cir.ptr<!s32i>
+    %1 = cir.const #cir.int<5> : !s32i
+    cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
+    cir.scope {
+      cir.if %cond {
+        %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+        cir.call @use(%2) : (!s32i) -> ()
+        cir.yield
+      }
+    }
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @store_in_scope
+  cir.func @store_in_scope(%cond: !cir.bool) {
+    // CHECK: cir.alloca
+    // CHECK: cir.scope
+    // CHECK: cir.store
+    // CHECK: cir.load
+    %0 = cir.alloca "a" align(4) : !cir.ptr<!s32i>
+    %1 = cir.const #cir.int<1> : !s32i
+    cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
+    cir.scope {
+      %2 = cir.const #cir.int<2> : !s32i
+      cir.store %2, %0 : !s32i, !cir.ptr<!s32i>
+    }
+    %3 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    cir.call @use(%3) : (!s32i) -> ()
+    cir.return
+  }
+
   cir.func private @use(!s32i)
 }

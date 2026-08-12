@@ -215,3 +215,27 @@ Value cir::IfOp::finalizePromotion(
   assert(!hasValueStores && "cir.if cannot yield a new definition");
   return reachingDef;
 }
+
+//===----------------------------------------------------------------------===//
+// Interfaces for ScopeOp
+//===----------------------------------------------------------------------===//
+
+bool cir::ScopeOp::isRegionPromotable(const MemorySlot &slot, Region *region,
+                                      bool hasValueStores) {
+  // cir.scope yields at most one value, which it may already be using.
+  return !hasValueStores;
+}
+
+void cir::ScopeOp::setupPromotion(
+    const MemorySlot &slot, Value reachingDef, bool hasValueStores,
+    llvm::SmallMapVector<Region *, Value, 2> &regionsToProcess) {
+  regionsToProcess.insert({&getScopeRegion(), reachingDef});
+}
+
+Value cir::ScopeOp::finalizePromotion(
+    const MemorySlot &slot, Value reachingDef, bool hasValueStores,
+    const llvm::DenseMap<Block *, Value> &reachingAtBlockEnd,
+    OpBuilder &builder) {
+  assert(!hasValueStores && "cir.scope cannot yield a new definition");
+  return reachingDef;
+}
