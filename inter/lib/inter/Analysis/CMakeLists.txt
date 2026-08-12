@@ -1,9 +1,9 @@
 add_mlir_library(InterAnalysis
-  UniformityAnalysis.cpp
+  DistributionAnalysis.cpp
+  MemoryFrontierAnalysis.cpp
 
   LINK_LIBS PUBLIC
-  InterXeMachine
-  MLIRLLVMDialect
+  InterXW
   MLIRArithDialect
   MLIRFuncDialect
   MLIRAnalysis

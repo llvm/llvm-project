@@ -2,13 +2,13 @@
 // RUN: inter-opt %s | inter-opt | FileCheck %s
 
 // CHECK-LABEL: func.func @kernel
-// CHECK-SAME: xemachine.kernel_args = [#xemachine.kernel_arg<kind = by_pointer, offset = 24, size = 8>, #xemachine.kernel_arg<kind = by_value, offset = 32, size = 4>]
+// CHECK-SAME: xemachine.kernel_args = [#xemachine.kernel_arg<kind = by_pointer, address_space = "global", access = "read_write", size = 8, alignment = 8, offset = 24>, #xemachine.kernel_arg<kind = by_value, address_space = "none", access = "none", size = 4, alignment = 4, offset = 32>]
 // CHECK-SAME: #xemachine.target<chip = "bmg">
 func.func @kernel(%arg0: !xemachine.reg<32, -1>, %flag: !xemachine.arf<f, 2, -1>)
     attributes {
       xemachine.kernel_args = [
-        #xemachine.kernel_arg<kind = by_pointer, offset = 24, size = 8>,
-        #xemachine.kernel_arg<kind = by_value, offset = 32, size = 4>
+        #xemachine.kernel_arg<kind = by_pointer, address_space = "global", access = "read_write", size = 8, alignment = 8, offset = 24>,
+        #xemachine.kernel_arg<kind = by_value, address_space = "none", access = "none", size = 4, alignment = 4, offset = 32>
       ],
       xemachine.target = #xemachine.target<chip = "bmg">
     } {

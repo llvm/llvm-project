@@ -244,11 +244,11 @@ LogicalResult UpdateTupleOp::verify() {
 static LogicalResult verifyA64AddressPayload(Operation *operation,
                                              Value address,
                                              int64_t executionSize) {
-  if (executionSize != 32)
-    return operation->emitOpError("requires SIMD32 execution");
-  if (cast<RegType>(address.getType()).getWidthDwords() != 64)
+  if (executionSize != 8 && executionSize != 16 && executionSize != 32)
+    return operation->emitOpError("requires SIMD8, SIMD16, or SIMD32 execution");
+  if (cast<RegType>(address.getType()).getWidthDwords() != executionSize * 2)
     return operation->emitOpError(
-        "requires a 64-dword address payload for SIMD32 A64");
+        "requires two address dwords per execution lane");
   return success();
 }
 

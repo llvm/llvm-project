@@ -58,11 +58,16 @@ def XeMachine_KernelArgKind : I32EnumAttr<"KernelArgKind",
 
 def XeMachine_KernelArgAttr : AttrDef<XeMachineDialect, "KernelArg"> {
   let mnemonic = "kernel_arg";
-  let summary = "explicit kernel argument payload location";
-  let parameters = (ins "KernelArgKind":$kind, "uint64_t":$offset,
-                         "uint64_t":$size);
+  let summary = "self-contained kernel argument ABI descriptor";
+  let parameters = (ins "KernelArgKind":$kind,
+                          "mlir::StringAttr":$addressSpace,
+                          "mlir::StringAttr":$access,
+                          "uint64_t":$size, "uint64_t":$alignment,
+                          "uint64_t":$offset);
   let assemblyFormat =
-      "`<` `kind` `=` $kind `,` `offset` `=` $offset `,` `size` `=` $size `>`";
+      "`<` `kind` `=` $kind `,` `address_space` `=` $addressSpace `,`"
+      "`access` `=` $access `,` `size` `=` $size `,` `alignment` `=`"
+      "$alignment `,` `offset` `=` $offset `>`";
 }
 
 // Register region: <vstride;width,hstride> on sources. Destination regions

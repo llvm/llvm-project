@@ -3,44 +3,42 @@
 
 include "mlir/Pass/PassBase.td"
 
+def ImportLLVM : Pass<"inter-import-llvm", "::mlir::ModuleOp"> {
+  let summary = "import LLVM kernel ABI facts and normalize functions to func/cf";
+  let dependentDialects = ["mlir::func::FuncDialect",
+                           "mlir::cf::ControlFlowDialect"];
+}
+
+def VerifyStructured : Pass<"inter-verify-structured", "::mlir::ModuleOp"> {
+  let summary = "reject unstructured control flow before semantic conversion";
+}
+
+def ConvertLLVMToXW : Pass<"inter-convert-llvm-to-xw", "::mlir::ModuleOp"> {
+  let summary = "perform the hard LLVM to XW semantic conversion boundary";
+  let dependentDialects = ["xw::XWDialect", "mlir::func::FuncDialect",
+                           "mlir::scf::SCFDialect", "mlir::arith::ArithDialect"];
+}
+
+def RefineDistribution : Pass<"inter-refine-distribution", "::mlir::ModuleOp"> {
+  let summary = "infer compact XW lane distributions and record refinements";
+  let dependentDialects = ["xw::XWDialect", "mlir::func::FuncDialect",
+                           "mlir::scf::SCFDialect"];
+  let options = [Option<"simdWidth", "simd-width", "unsigned", "16",
+                        "kernel SIMD width">];
+}
+
+def InferMemoryTokens : Pass<"inter-infer-memory-tokens", "::mlir::ModuleOp"> {
+  let summary = "materialize XW memory dependencies from alias analysis";
+  let dependentDialects = ["xw::XWDialect", "mlir::func::FuncDialect",
+                           "mlir::scf::SCFDialect"];
+}
+
 def SelectToMachine : Pass<"inter-select-to-machine", "::mlir::ModuleOp"> {
-  let summary = "select llvm-dialect kernel to xemachine ops (M1: straight-line)";
+  let summary = "select closed XW kernels to XeMachine operations";
   let dependentDialects = [
     "inter::xemachine::XeMachineDialect",
     "mlir::func::FuncDialect",
   ];
-}
-
-// Rooted on the module: rewrites the symbol table (llvm.func -> func.func).
-def NormalizeCf : Pass<"inter-normalize-cf", "::mlir::ModuleOp"> {
-  let summary = "import SPIR kernels and normalize LLVM branches to cf";
-  let dependentDialects = [
-    "mlir::func::FuncDialect",
-    "mlir::cf::ControlFlowDialect",
-    "inter::xemachine::XeMachineDialect",
-  ];
-}
-
-def ConvertCalls : Pass<"inter-convert-calls", "::mlir::func::FuncOp"> {
-  let summary = "llvm.call builtins -> xw special ops";
-  let dependentDialects = ["xw::XWDialect",
-                           "inter::xemachine::XeMachineDialect"];
-}
-
-def ConvertMemory : Pass<"inter-convert-memory", "::mlir::func::FuncOp"> {
-  let summary = "llvm load/store -> xw token-carrying ops with AA edges";
-  let dependentDialects = ["xw::XWDialect",
-                           "inter::xemachine::XeMachineDialect"];
-}
-
-def NormalizePointers : Pass<"inter-normalize-pointers", "::mlir::func::FuncOp"> {
-  let summary = "normalize LLVM GEPs to bytewise xw.ptradd operations";
-  let dependentDialects = ["xw::XWDialect", "mlir::LLVM::LLVMDialect"];
-}
-
-def DecomposeWide : Pass<"inter-decompose-wide", "::mlir::func::FuncOp"> {
-  let summary = "decompose global pointer offsets into xw wide operations";
-  let dependentDialects = ["xw::XWDialect", "mlir::LLVM::LLVMDialect"];
 }
 
 def InsertSync : Pass<"inter-insert-sync", "::mlir::func::FuncOp"> {

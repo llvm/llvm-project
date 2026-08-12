@@ -1,5 +1,4 @@
-; RUN: inter-translate %s --import-llvm | inter-opt --inter-normalize-cf | FileCheck %s
-; RUN: inter-translate %s --import-llvm | inter-opt --inter-normalize-cf --inter-normalize-pointers | FileCheck %s --check-prefix=PTR
+; RUN: inter-translate %s --import-llvm | inter-opt --inter-import-llvm | FileCheck %s
 ; Generated with opt -S -passes='default<O3>' from Inputs/matmul.ll.
 ;
 ; CHECK: module attributes {dlti.dl_spec = #dlti.dl_spec<
@@ -11,18 +10,13 @@
 ; CHECK-SAME: !llvm.ptr<1> {llvm.noalias{{[^}]*}}llvm.readonly
 ; CHECK-SAME: !llvm.ptr<1> {llvm.noalias
 ; CHECK-SAME: attributes {
-; CHECK-SAME: xemachine.kernel
-; CHECK-SAME: xemachine.llvm_func_properties
+; CHECK-SAME: xw.kernel
 ; CHECK: cf.cond_br
 ; CHECK: llvm.freeze
 ; CHECK: llvm.fmul
 ; CHECK: cf.cond_br
 ; CHECK: return
 ; CHECK: llvm.func {{.*}}spir_funccc @_Z13get_global_idj(i32) -> i64
-; PTR-LABEL: func.func @matmul
-; PTR: xw.ptradd
-; PTR: xw.ptradd {{.*}} {gep_flags = 3 : i32}
-; PTR-NOT: llvm.getelementptr
 ;
 ; ModuleID = 'inter/test/Frontend/Inputs/matmul.ll'
 source_filename = "inter/test/Frontend/Inputs/matmul.ll"

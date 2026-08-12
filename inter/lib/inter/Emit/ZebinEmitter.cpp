@@ -3,7 +3,6 @@
 #include "inter/Dialect/XeMachine/IR/XeMachine.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -106,18 +105,8 @@ FailureOr<std::string> buildZeInfo(func::FuncOp kernel) {
     return kernel.emitOpError("zebin emission requires a BMG target"),
            failure();
 
-  auto kernelTypeAttr = kernel->getAttrOfType<TypeAttr>(kKernelTypeAttrName);
-  auto kernelType = kernelTypeAttr
-                        ? dyn_cast<FunctionType>(kernelTypeAttr.getValue())
-                        : FunctionType();
-  if (!kernelType || kernelType.getNumResults() != 0)
-    return kernel.emitOpError("missing supported xemachine.kernel_type"),
-           failure();
   ArrayAttr kernelArgs = kernel->getAttrOfType<ArrayAttr>(kKernelArgsAttrName);
-  if (!kernelArgs && kernelType.getNumInputs() == 0)
-    kernelArgs = ArrayAttr::get(kernel.getContext(), {});
-  if (failed(
-          verifyKernelArgLayout(kernelType, kernelArgs, kernel.getOperation())))
+  if (failed(verifyKernelArgLayout(kernelArgs, kernel.getOperation())))
     return failure();
 
   auto grfCount = kernel->getAttrOfType<IntegerAttr>(kGrfCountAttrName);
@@ -131,9 +120,10 @@ FailureOr<std::string> buildZeInfo(func::FuncOp kernel) {
   if (!grfCount || !grfUsed || !simdSize || !barrierCount ||
       !hasGlobalAtomics || !hasNoStatelessWrite)
     return kernel.emitOpError("missing machine resource attributes"), failure();
-  if (grfCount.getInt() != 128 || simdSize.getInt() != 32)
-    return kernel.emitOpError("only 128-GRF SIMD32 kernels are supported"),
-           failure();
+  if (grfCount.getInt() != 128 ||
+      (simdSize.getInt() != 8 && simdSize.getInt() != 16 &&
+       simdSize.getInt() != 32))
+    return kernel.emitOpError("unsupported GRF count or SIMD size"), failure();
   if (grfUsed.getInt() < 0 || grfUsed.getInt() > grfCount.getInt())
     return kernel.emitOpError("invalid physical GRF usage attribute"),
            failure();
@@ -150,14 +140,13 @@ FailureOr<std::string> buildZeInfo(func::FuncOp kernel) {
     return kernel.emitOpError("stale machine resource attributes"), failure();
 
   bool hasBufferArguments = false;
-  for (Type argument : kernelType.getInputs()) {
-    if (isa<LLVM::LLVMPointerType>(argument)) {
+  for (Attribute argument : kernelArgs) {
+    if (cast<KernelArgAttr>(argument).getKind() == KernelArgKind::by_pointer)
       hasBufferArguments = true;
-    }
   }
 
   bool usesThreadIds = kernel->hasAttr(kUsesThreadIdsAttrName);
-  bool usesPayload = usesThreadIds || kernelType.getNumInputs() != 0;
+  bool usesPayload = usesThreadIds || !kernelArgs.empty();
   auto inlineSize =
       kernel->getAttrOfType<IntegerAttr>(kInlineDataPayloadSizeAttrName);
   auto perThreadSize =
@@ -202,7 +191,7 @@ FailureOr<std::string> buildZeInfo(func::FuncOp kernel) {
           kernel->getAttrOfType<IntegerAttr>(kScratchSizeAttrName))
     output << "      spill_size: " << scratchSize.getInt() << "\n";
 
-  if (usesThreadIds || kernelType.getNumInputs() != 0) {
+  if (usesThreadIds || !kernelArgs.empty()) {
     output << "    payload_arguments:\n";
     if (usesThreadIds) {
       output << "      - arg_type: global_id_offset\n"
@@ -220,8 +209,16 @@ FailureOr<std::string> buildZeInfo(func::FuncOp kernel) {
                << "        size: " << descriptor.getSize() << "\n"
                << "        arg_index: " << index << "\n"
                << "        addrmode: stateless\n"
-               << "        addrspace: global\n"
-               << "        access_type: readwrite\n";
+                << "        addrspace: "
+                << descriptor.getAddressSpace().getValue() << "\n"
+                << "        access_type: ";
+        llvm::StringRef access = descriptor.getAccess().getValue();
+        if (access == "read_only")
+          output << "readonly\n";
+        else if (access == "write_only")
+          output << "writeonly\n";
+        else
+          output << "readwrite\n";
       } else {
         output << "      - arg_type: arg_byvalue\n"
                << "        offset: " << descriptor.getOffset() << "\n"

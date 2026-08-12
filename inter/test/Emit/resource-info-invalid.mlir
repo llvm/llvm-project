@@ -7,7 +7,7 @@ module {
       xemachine.grf_used = 1 : i32,
       xemachine.has_global_atomics = false,
       xemachine.has_no_stateless_write = true,
-      xemachine.kernel_type = () -> (),
+      xemachine.kernel_args = [],
       xemachine.simd_size = 32 : i32,
       xemachine.target = #xemachine.target<chip = "bmg">
     } {

@@ -1,20 +1,23 @@
 // RUN: inter-opt %s --inter-select-to-machine | FileCheck %s
 
 module {
-  // CHECK-LABEL: func.func @argument_only
-  // CHECK-SAME: xemachine.inline_data_payload_size = 32 : i32
-  // CHECK-SAME: xemachine.kernel_args = [#xemachine.kernel_arg<kind = by_pointer, offset = 24, size = 8>]
-  // CHECK-NOT: xemachine.uses_thread_ids
-  func.func @argument_only(%base: !llvm.ptr<1>) attributes {
+  func.func @argument_only(%base: !xw.ptr<#xw.global>) attributes {
       xemachine.kernel,
       xemachine.kernel_args = [
-        #xemachine.kernel_arg<kind = by_pointer, offset = 24, size = 8>
-      ]} {
-    %root = xw.token
-    %value, %loaded = xw.load %base dep %root : !llvm.ptr<1> -> i32
+        #xemachine.kernel_arg<kind = by_pointer, address_space = "global", access = "read_only", size = 8, alignment = 8, offset = 24>
+      ],
+      xw.simd_width = 8 : i32} {
+    %root = xw.token : !xw.mem.token
+    %value, %loaded = xw.load %base after %root : (!xw.ptr<#xw.global>, !xw.mem.token) -> (!xw.simd<i32, 8>, !xw.mem.token)
     return
   }
-
-  // CHECK: xemachine.load_block_a32
-  // CHECK: xemachine.load_a64
 }
+
+// CHECK-NOT: llvm
+// CHECK-LABEL: func.func @argument_only
+// CHECK-SAME: xemachine.simd_size = 8 : i32
+// CHECK-NOT: xemachine.uses_thread_ids
+// CHECK: xemachine.load_block_a32
+// CHECK: xemachine.mov {{.*}}execSize = 8
+// CHECK-SAME: src0Region = #xemachine.region<0, 1, 0>
+// CHECK: xemachine.load_a64

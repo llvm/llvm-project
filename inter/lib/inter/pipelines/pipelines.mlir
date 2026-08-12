@@ -9,27 +9,25 @@ module attributes {transform.with_named_sequence} {
 
   transform.named_sequence @inter_lower_to_machine(
       %root: !transform.any_op {transform.consumed}) -> !transform.any_op {
-    %r0 = transform.apply_registered_pass "inter-normalize-cf" to %root
+    %r0 = transform.apply_registered_pass "inter-import-llvm" to %root
         : (!transform.any_op) -> !transform.any_op
     %r1 = transform.apply_registered_pass "lift-cf-to-scf" to %r0
         : (!transform.any_op) -> !transform.any_op
-    %funcs0 = transform.collect_matching @match_func in %r1
+    %r2 = transform.apply_registered_pass "inter-verify-structured" to %r1
         : (!transform.any_op) -> !transform.any_op
-    %funcs1 = transform.apply_registered_pass "inter-convert-calls" to %funcs0
+    %r3 = transform.apply_registered_pass "inter-convert-llvm-to-xw" to %r2
         : (!transform.any_op) -> !transform.any_op
-    %funcs2 = transform.apply_registered_pass "inter-convert-memory" to %funcs1
+    %r4 = transform.apply_registered_pass "inter-refine-distribution" to %r3
         : (!transform.any_op) -> !transform.any_op
-    %funcs3 = transform.apply_registered_pass "inter-normalize-pointers" to %funcs2
+    %r5 = transform.apply_registered_pass "canonicalize" to %r4
         : (!transform.any_op) -> !transform.any_op
-    %funcs4 = transform.apply_registered_pass "inter-decompose-wide" to %funcs3
+    %r6 = transform.apply_registered_pass "cse" to %r5
         : (!transform.any_op) -> !transform.any_op
-    %funcs5 = transform.apply_registered_pass "canonicalize" to %funcs4
+    %r7 = transform.apply_registered_pass "inter-infer-memory-tokens" to %r6
         : (!transform.any_op) -> !transform.any_op
-    %funcs6 = transform.apply_registered_pass "cse" to %funcs5
+    %r8 = transform.apply_registered_pass "inter-select-to-machine" to %r7
         : (!transform.any_op) -> !transform.any_op
-    %r2 = transform.apply_registered_pass "inter-select-to-machine" to %r1
-        : (!transform.any_op) -> !transform.any_op
-    transform.yield %r2 : !transform.any_op
+    transform.yield %r8 : !transform.any_op
   }
 
   transform.named_sequence private @inter_prepare_regalloc(

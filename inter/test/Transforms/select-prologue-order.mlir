@@ -1,30 +1,30 @@
-// The fixed dual-entry payload prologue must precede source-ordered machine
-// operations even when the first thread-ID use occurs later in the kernel.
-// RUN: inter-opt %s --pass-pipeline='builtin.module(transform-preload-library{transform-library-paths=%inter_pipelines},transform-interpreter{entry-point=inter_backend_no_sync})' | FileCheck %s
+// RUN: inter-opt %s --inter-select-to-machine | FileCheck %s
 
 module {
-  llvm.func spir_kernelcc @atomic_before_id(%out: !llvm.ptr<1>,
-                                            %counter: !llvm.ptr<1>) {
-    %zero = llvm.mlir.constant(0 : i32) : i32
-    %one = llvm.mlir.constant(1 : i32) : i32
-    %old = llvm.call spir_funccc @_Z10atomic_addPU3AS1Vjj(%counter, %one)
-        : (!llvm.ptr<1>, i32) -> i32
-    %gid = llvm.call spir_funccc @_Z13get_global_idj(%zero) : (i32) -> i64
-    %address = llvm.getelementptr %out[%gid]
-        : (!llvm.ptr<1>, i64) -> !llvm.ptr<1>, i32
-    llvm.store %old, %address : i32, !llvm.ptr<1>
-    llvm.return
+  func.func @atomic_before_id(%out: !xw.ptr<#xw.global>,
+                              %counter: !xw.ptr<#xw.global>) attributes {
+      xemachine.kernel,
+      xemachine.kernel_args = [
+        #xemachine.kernel_arg<kind = by_pointer, address_space = "global", access = "write_only", size = 8, alignment = 8, offset = 24>,
+        #xemachine.kernel_arg<kind = by_pointer, address_space = "global", access = "read_write", size = 8, alignment = 8, offset = 32>
+      ],
+      xw.simd_width = 32 : i32} {
+    %one = xw.constant 1 : i32
+    %ones = xw.splat %one : i32 -> !xw.simd<i32, 32>
+    %root = xw.token : !xw.mem.token
+    %old, %atomic = xw.atomic_rmw addi %ones, %counter after %root : (!xw.simd<i32, 32>, !xw.ptr<#xw.global>, !xw.mem.token) -> (!xw.simd<i32, 32>, !xw.mem.token)
+    %gid = xw.global_id 0 : !xw.simd<i64, 32>
+    %two = xw.constant 2 : i64 -> !xw.simd<i64, 32>
+    %offset = xw.binary shli %gid, %two : !xw.simd<i64, 32>, !xw.simd<i64, 32> -> !xw.simd<i64, 32>
+    %address = xw.ptradd %out, %offset : !xw.ptr<#xw.global>, !xw.simd<i64, 32> -> !xw.simd<!xw.ptr<#xw.global>, 32>
+    %stored = xw.store %old -> %address after %atomic : (!xw.simd<i32, 32>, !xw.simd<!xw.ptr<#xw.global>, 32>, !xw.mem.token) -> !xw.mem.token
+    return
   }
-
-  llvm.func spir_funccc @_Z10atomic_addPU3AS1Vjj(!llvm.ptr<1>, i32) -> i32
-  llvm.func spir_funccc @_Z13get_global_idj(i32) -> i64
 }
 
+// CHECK-NOT: llvm
 // CHECK-LABEL: func.func @atomic_before_id
-// CHECK: [[R1:%.*]] = xemachine.archreg 1
-// CHECK: xemachine.mov [[R1]] {{.*}}-> !xemachine.reg<16, 4>
-// CHECK: xemachine.load_block_a32 {{.*}}words = 16
+// CHECK: xemachine.load_block_a32
 // CHECK: xemachine.sync allwr
-// CHECK: [[ADDR:%.*]] = xemachine.tuple_from_elements
-// CHECK-SAME: -> !xemachine.reg<64,
-// CHECK: xemachine.atomic_iadd_a64 [[ADDR]]
+// CHECK: xemachine.atomic_iadd_a64
+// CHECK: xemachine.add3

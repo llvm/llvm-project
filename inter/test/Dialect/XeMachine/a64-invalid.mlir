@@ -1,6 +1,6 @@
 // RUN: not inter-opt %s 2>&1 | FileCheck %s
 
-// CHECK: error: 'xemachine.load_a64' op requires a 64-dword address payload for SIMD32 A64
+// CHECK: error: 'xemachine.load_a64' op requires two address dwords per execution lane
 func.func @short_address_payload() {
   %root = xemachine.token
   %address = xemachine.archreg 4 : !xemachine.reg<32, 4>

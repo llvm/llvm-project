@@ -1,8 +1,8 @@
 #include "inter/Dialect/XeMachine/IR/XeMachine.h"
 
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/MathExtras.h"
 
 using namespace inter::xemachine;
 
@@ -34,47 +34,39 @@ void XeMachineDialect::initialize() {
 }
 
 mlir::LogicalResult
-inter::xemachine::verifyKernelArgLayout(mlir::FunctionType functionType,
-                                        mlir::ArrayAttr arguments,
+inter::xemachine::verifyKernelArgLayout(mlir::ArrayAttr arguments,
                                         mlir::Operation *owner) {
   constexpr uint64_t firstExplicitArgument = 24;
   constexpr uint64_t loadedPayloadBytes = 64;
-  if (!arguments || arguments.size() != functionType.getNumInputs())
+  if (!arguments)
     return owner->emitOpError("missing or invalid kernel argument layout");
 
   llvm::SmallVector<std::pair<uint64_t, uint64_t>> ranges;
-  for (auto [index, type] : llvm::enumerate(functionType.getInputs())) {
-    auto descriptor = mlir::dyn_cast<KernelArgAttr>(arguments[index]);
+  for (mlir::Attribute argument : arguments) {
+    auto descriptor = mlir::dyn_cast<KernelArgAttr>(argument);
     if (!descriptor)
       return owner->emitOpError("invalid kernel argument descriptor");
 
-    KernelArgKind expectedKind;
-    uint64_t expectedSize;
-    if (auto pointer = mlir::dyn_cast<mlir::LLVM::LLVMPointerType>(type)) {
-      if (pointer.getAddressSpace() != 1)
-        return owner->emitOpError(
-            "only global pointer kernel arguments are supported");
-      expectedKind = KernelArgKind::by_pointer;
-      expectedSize = 8;
-    } else if (auto integer = mlir::dyn_cast<mlir::IntegerType>(type)) {
-      if (integer.getWidth() == 0 || integer.getWidth() > 64)
-        return owner->emitOpError("unsupported kernel integer argument");
-      expectedKind = KernelArgKind::by_value;
-      expectedSize = llvm::divideCeil(integer.getWidth(), 8u);
-    } else {
-      return owner->emitOpError("unsupported kernel argument type");
-    }
-    if (descriptor.getKind() != expectedKind ||
-        descriptor.getSize() != expectedSize)
-      return owner->emitOpError(
-          "kernel argument descriptor does not match type");
-
     uint64_t offset = descriptor.getOffset();
     uint64_t size = descriptor.getSize();
+    uint64_t alignment = descriptor.getAlignment();
+    llvm::StringRef addressSpace = descriptor.getAddressSpace().getValue();
+    llvm::StringRef access = descriptor.getAccess().getValue();
+    if (size == 0 || alignment == 0 || !llvm::isPowerOf2_64(alignment))
+      return owner->emitOpError("invalid kernel argument size or alignment");
+    if (descriptor.getKind() == KernelArgKind::by_pointer) {
+      if (size != 8 || addressSpace == "none")
+        return owner->emitOpError("invalid pointer kernel argument descriptor");
+      if (access != "read_only" && access != "write_only" &&
+          access != "read_write")
+        return owner->emitOpError("invalid pointer kernel argument access");
+    } else if (addressSpace != "none" || access != "none") {
+      return owner->emitOpError("by-value argument has pointer ABI properties");
+    }
     if (offset < firstExplicitArgument)
       return owner->emitOpError(
           "kernel argument overlaps the implicit payload");
-    if (offset % size != 0)
+    if (offset % alignment != 0)
       return owner->emitOpError("kernel argument payload is misaligned");
     if (offset > loadedPayloadBytes || size > loadedPayloadBytes - offset)
       return owner->emitOpError(

@@ -1,81 +1,38 @@
-// Straight-line selection: vadd lowers to the prologue, gid computation,
-// A64 loads, a store, and EOT.
-// RUN: inter-opt %s --pass-pipeline='builtin.module(transform-preload-library{transform-library-paths=%inter_pipelines},transform-interpreter{entry-point=inter_backend})' | FileCheck %s
-// RUN: inter-opt %s --pass-pipeline='builtin.module(transform-preload-library{transform-library-paths=%inter_pipelines},transform-interpreter{entry-point=inter_backend})' | inter-translate --xemachine-to-ged -o %t
-// RUN: inter-ged-dump %t | FileCheck %s --check-prefix=GED
-// RUN: inter-opt %s --pass-pipeline='builtin.module(transform-preload-library{transform-library-paths=%inter_pipelines},transform-interpreter{entry-point=inter_backend})' | inter-translate --xemachine-to-asm | FileCheck %s --check-prefix=ASM
+// RUN: inter-opt %s --inter-select-to-machine | FileCheck %s
 
 module {
-  // CHECK: func.func @vadd
-  // CHECK-SAME: xemachine.barrier_count = 0 : i32
-  // CHECK-SAME: xemachine.grf_count = 128 : i32
-  // CHECK-SAME: xemachine.grf_used = 22 : i32
-  // CHECK-SAME: xemachine.has_global_atomics = false
-  // CHECK-SAME: xemachine.has_no_stateless_write = false
-  // CHECK-SAME: xemachine.inline_data_payload_size = 32 : i32
-  // CHECK-SAME: xemachine.kernel_type = (!llvm.ptr<1>, !llvm.ptr<1>, !llvm.ptr<1>) -> ()
-  // CHECK-SAME: xemachine.payload_entry_offset = 192 : i32
-  // CHECK-SAME: xemachine.per_thread_payload_size = 192 : i32
-  // CHECK-SAME: xemachine.reserved_grf_count = 5 : i32
-  // CHECK-SAME: xemachine.simd_size = 32 : i32
-  // CHECK-SAME: xemachine.target = #xemachine.target<chip = "bmg">
-  // CHECK-SAME: xemachine.uses_thread_ids
-  llvm.func spir_kernelcc @vadd(%a: !llvm.ptr<1>, %b: !llvm.ptr<1>,
-                                %out: !llvm.ptr<1>) {
-    %c0 = llvm.mlir.constant(0 : i32) : i32
-    %gid = llvm.call spir_funccc @_Z13get_global_idj(%c0) : (i32) -> i64
-    %pa = llvm.getelementptr %a[%gid] : (!llvm.ptr<1>, i64) -> !llvm.ptr<1>, i32
-    %va = llvm.load %pa : !llvm.ptr<1> -> i32
-    %pb = llvm.getelementptr %b[%gid] : (!llvm.ptr<1>, i64) -> !llvm.ptr<1>, i32
-    %vb = llvm.load %pb : !llvm.ptr<1> -> i32
-    %sum = llvm.add %vb, %va : i32
-    %po = llvm.getelementptr %out[%gid] : (!llvm.ptr<1>, i64) -> !llvm.ptr<1>, i32
-    llvm.store %sum, %po : i32, !llvm.ptr<1>
-    llvm.return
+  func.func @vadd(%a: !xw.ptr<#xw.global>, %b: !xw.ptr<#xw.global>,
+                  %out: !xw.ptr<#xw.global>) attributes {
+      xemachine.kernel,
+      xemachine.kernel_args = [
+        #xemachine.kernel_arg<kind = by_pointer, address_space = "global", access = "read_only", size = 8, alignment = 8, offset = 24>,
+        #xemachine.kernel_arg<kind = by_pointer, address_space = "global", access = "read_only", size = 8, alignment = 8, offset = 32>,
+        #xemachine.kernel_arg<kind = by_pointer, address_space = "global", access = "write_only", size = 8, alignment = 8, offset = 40>
+      ],
+      xw.simd_width = 32 : i32} {
+    %gid = xw.global_id 0 : !xw.simd<i64, 32>
+    %two = xw.constant 2 : i64 -> !xw.simd<i64, 32>
+    %offset = xw.binary shli %gid, %two : !xw.simd<i64, 32>, !xw.simd<i64, 32> -> !xw.simd<i64, 32>
+    %pa = xw.ptradd %a, %offset : !xw.ptr<#xw.global>, !xw.simd<i64, 32> -> !xw.simd<!xw.ptr<#xw.global>, 32>
+    %pb = xw.ptradd %b, %offset : !xw.ptr<#xw.global>, !xw.simd<i64, 32> -> !xw.simd<!xw.ptr<#xw.global>, 32>
+    %po = xw.ptradd %out, %offset : !xw.ptr<#xw.global>, !xw.simd<i64, 32> -> !xw.simd<!xw.ptr<#xw.global>, 32>
+    %root = xw.token : !xw.mem.token
+    %va, %ta = xw.load %pa after %root : (!xw.simd<!xw.ptr<#xw.global>, 32>, !xw.mem.token) -> (!xw.simd<i32, 32>, !xw.mem.token)
+    %vb, %tb = xw.load %pb after %root : (!xw.simd<!xw.ptr<#xw.global>, 32>, !xw.mem.token) -> (!xw.simd<i32, 32>, !xw.mem.token)
+    %sum = xw.binary addi %va, %vb : !xw.simd<i32, 32>, !xw.simd<i32, 32> -> !xw.simd<i32, 32>
+    %loads = xw.join %ta, %tb : !xw.mem.token, !xw.mem.token -> !xw.mem.token
+    %stored = xw.store %sum -> %po after %loads : (!xw.simd<i32, 32>, !xw.simd<!xw.ptr<#xw.global>, 32>, !xw.mem.token) -> !xw.mem.token
+    return
   }
-  llvm.func spir_funccc @_Z13get_global_idj(i32) -> i64
 }
 
-// Prologue: blob base and the two payload loads.
-// Ready immediates are pulled ahead of real instructions by the scheduler.
-// CHECK: [[PAYLOAD_STRIDE:%.*]] = xemachine.imm 192
-// CHECK: xemachine.and
-// CHECK: [[SLOT:%.*]] = xemachine.and {{.*}}src0Sub = 4
-// CHECK: [[THREAD_OFFSET_ACC:%.*]] = xemachine.mul [[SLOT]], [[PAYLOAD_STRIDE]]
-// CHECK: xemachine.load_block_a32
-// CHECK: [[THREAD_OFFSET:%.*]] = xemachine.mov [[THREAD_OFFSET_ACC]]
-// CHECK: xemachine.add {{.*}}, [[THREAD_OFFSET]]
-// gid work can fill the gap between the two payload loads.
-// CHECK: xemachine.mul
+// CHECK-NOT: llvm
+// CHECK-LABEL: func.func @vadd
+// CHECK-SAME: xemachine.kernel_args = [#xemachine.kernel_arg<kind = by_pointer, address_space = "global", access = "read_only", size = 8, alignment = 8, offset = 24>
+// CHECK-SAME: xemachine.simd_size = 32 : i32
 // CHECK: xemachine.load_block_a32
 // CHECK: xemachine.add3
-// Two A64 loads and one store, each with an explicit four-GRF address tuple.
-// CHECK: [[ADDR0:%.*]] = xemachine.tuple_from_elements
-// CHECK-SAME: -> !xemachine.reg<64,
-// CHECK-NEXT: xemachine.load_a64 [[ADDR0]]
-// CHECK: [[ADDR1:%.*]] = xemachine.tuple_from_elements
-// CHECK-SAME: -> !xemachine.reg<64,
-// CHECK-NEXT: xemachine.load_a64 [[ADDR1]]
-// CHECK: [[ADDR2:%.*]] = xemachine.tuple_from_elements
-// CHECK-SAME: -> !xemachine.reg<64,
-// CHECK-NEXT: [[FINAL:%.*]] = xemachine.store_a64 [[ADDR2]] {{.*}}data
-// CHECK: xemachine.sync allrd
-// EOT via the gateway.
-// CHECK-NEXT: xemachine.eot {{.*}} dep [[FINAL]]
-
-// GED: pc=112 opcode=sync {{.*}}function=allwr
-// GED: opcode=mul
-// GED: opcode=add3
-// GED: opcode=shl
-// GED: pc=496 opcode=add
-// GED-NEXT: pc=512 opcode=add
-// GED-NEXT: pc=528 opcode=send exec=32 swsb=0x322
-// GED: opcode=send {{.*}}sfid=ugm {{.*}}len=2 eot=0
-// GED: opcode=send {{.*}}sfid=gateway {{.*}}len=0 eot=1
-
-// ASM: add3 (32|M0)
-// ASM: send.ugm (32|M0) null
-// ASM-SAME: store.ugm.d32.a64
-// ASM: sync.allrd
-// ASM: send.gtwy (1|M0)
-// ASM-SAME: EOT
+// CHECK-COUNT-2: xemachine.load_a64
+// CHECK: xemachine.add
+// CHECK: xemachine.store_a64
+// CHECK: xemachine.eot

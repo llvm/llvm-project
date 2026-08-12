@@ -1,10 +1,9 @@
 add_mlir_library(InterTransforms
   InterSelect.cpp
-  InterNormalizeCf.cpp
-  InterConvertCalls.cpp
-  InterConvertMemory.cpp
-  InterNormalizePointers.cpp
-  InterDecomposeWide.cpp
+  InterImportLLVM.cpp
+  InterConvertLLVMToXW.cpp
+  InterRefineDistribution.cpp
+  InterInferMemoryTokens.cpp
   InterInsertSync.cpp
   InterPrepareRegAlloc.cpp
   InterMachineSchedule.cpp
@@ -27,6 +26,9 @@ add_mlir_library(InterTransforms
   MLIRSCFDialect
   MLIRFuncDialect
   MLIRDataLayoutInterfaces
+  MLIRDialectUtils
+  MLIRSCFTransforms
+  MLIRTransformUtils
   MLIRIR
   MLIRPass
 )

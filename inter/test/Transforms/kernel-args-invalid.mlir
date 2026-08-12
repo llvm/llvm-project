@@ -1,12 +1,12 @@
 // RUN: inter-opt --split-input-file --inter-select-to-machine -verify-diagnostics %s
 
 module {
-  // expected-error@+1 {{kernel argument descriptor does not match type}}
-  func.func @wrong_kind(%arg: !llvm.ptr<1>) attributes {
+  // expected-error@+1 {{by-value argument has pointer ABI properties}}
+  func.func @wrong_kind(%arg: !xw.ptr<#xw.global>) attributes {
       xemachine.kernel,
       xemachine.kernel_args = [
-        #xemachine.kernel_arg<kind = by_value, offset = 24, size = 8>
-      ]} {
+        #xemachine.kernel_arg<kind = by_value, address_space = "global", access = "read_write", size = 8, alignment = 8, offset = 24>
+       ], xw.simd_width = 8 : i32} {
     return
   }
 }
@@ -15,11 +15,11 @@ module {
 
 module {
   // expected-error@+1 {{kernel argument overlaps the implicit payload}}
-  func.func @reserved(%arg: !llvm.ptr<1>) attributes {
+  func.func @reserved(%arg: !xw.ptr<#xw.global>) attributes {
       xemachine.kernel,
       xemachine.kernel_args = [
-        #xemachine.kernel_arg<kind = by_pointer, offset = 16, size = 8>
-      ]} {
+        #xemachine.kernel_arg<kind = by_pointer, address_space = "global", access = "read_write", size = 8, alignment = 8, offset = 16>
+       ], xw.simd_width = 8 : i32} {
     return
   }
 }
@@ -28,11 +28,11 @@ module {
 
 module {
   // expected-error@+1 {{kernel argument payload is misaligned}}
-  func.func @misaligned(%arg: !llvm.ptr<1>) attributes {
+  func.func @misaligned(%arg: !xw.ptr<#xw.global>) attributes {
       xemachine.kernel,
       xemachine.kernel_args = [
-        #xemachine.kernel_arg<kind = by_pointer, offset = 28, size = 8>
-      ]} {
+        #xemachine.kernel_arg<kind = by_pointer, address_space = "global", access = "read_write", size = 8, alignment = 8, offset = 28>
+       ], xw.simd_width = 8 : i32} {
     return
   }
 }
@@ -41,11 +41,11 @@ module {
 
 module {
   // expected-error@+1 {{kernel argument is outside the loaded payload}}
-  func.func @out_of_bounds(%arg: !llvm.ptr<1>) attributes {
+  func.func @out_of_bounds(%arg: !xw.ptr<#xw.global>) attributes {
       xemachine.kernel,
       xemachine.kernel_args = [
-        #xemachine.kernel_arg<kind = by_pointer, offset = 64, size = 8>
-      ]} {
+        #xemachine.kernel_arg<kind = by_pointer, address_space = "global", access = "read_write", size = 8, alignment = 8, offset = 64>
+       ], xw.simd_width = 8 : i32} {
     return
   }
 }
@@ -54,12 +54,12 @@ module {
 
 module {
   // expected-error@+1 {{kernel argument payloads overlap}}
-  func.func @overlap(%pointer: !llvm.ptr<1>, %value: i32) attributes {
+  func.func @overlap(%pointer: !xw.ptr<#xw.global>, %value: i32) attributes {
       xemachine.kernel,
       xemachine.kernel_args = [
-        #xemachine.kernel_arg<kind = by_pointer, offset = 24, size = 8>,
-        #xemachine.kernel_arg<kind = by_value, offset = 28, size = 4>
-      ]} {
+        #xemachine.kernel_arg<kind = by_pointer, address_space = "global", access = "read_write", size = 8, alignment = 8, offset = 24>,
+        #xemachine.kernel_arg<kind = by_value, address_space = "none", access = "none", size = 4, alignment = 4, offset = 28>
+       ], xw.simd_width = 8 : i32} {
     return
   }
 }

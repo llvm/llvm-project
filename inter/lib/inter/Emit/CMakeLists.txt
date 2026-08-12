@@ -9,7 +9,6 @@ add_mlir_library(InterEmit
   InterXeMachine
   MLIRFuncDialect
   MLIRIR
-  MLIRLLVMDialect
 )
 
 target_sources(InterEmit PRIVATE $<TARGET_OBJECTS:GEDLibrary>)

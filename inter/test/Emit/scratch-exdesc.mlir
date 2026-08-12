@@ -7,7 +7,7 @@
 module {
   func.func @scratch_exdesc() attributes {
       xemachine.grf_count = 128 : i32,
-      xemachine.kernel_type = () -> (),
+      xemachine.kernel_args = [],
       xemachine.reserved_grf_count = 5 : i32,
       xemachine.scratch_size = 128 : i64,
       xemachine.simd_size = 32 : i32,

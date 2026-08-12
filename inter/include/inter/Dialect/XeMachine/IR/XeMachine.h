@@ -17,8 +17,6 @@
 namespace inter::xemachine {
 
 inline constexpr llvm::StringLiteral kTargetAttrName = "xemachine.target";
-inline constexpr llvm::StringLiteral kKernelTypeAttrName =
-    "xemachine.kernel_type";
 inline constexpr llvm::StringLiteral kKernelArgsAttrName =
     "xemachine.kernel_args";
 inline constexpr llvm::StringLiteral kGrfCountAttrName = "xemachine.grf_count";
@@ -58,8 +56,7 @@ struct KernelResourceUsage {
 mlir::FailureOr<KernelResourceUsage>
 analyzeKernelResources(mlir::func::FuncOp function, int64_t grfCount);
 
-mlir::LogicalResult verifyKernelArgLayout(mlir::FunctionType functionType,
-                                          mlir::ArrayAttr arguments,
+mlir::LogicalResult verifyKernelArgLayout(mlir::ArrayAttr arguments,
                                           mlir::Operation *owner);
 
 /// Relative register-storage constraint, in dwords.

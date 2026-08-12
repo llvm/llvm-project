@@ -6,9 +6,11 @@ add_mlir_dialect_library(InterXW
   InterXWIRIncGen
 
   LINK_LIBS PUBLIC
-  InterXeMachine
+  MLIRArithDialect
+  MLIRControlFlowInterfaces
+  MLIRFunctionInterfaces
   MLIRIR
-  MLIRLLVMDialect
+  MLIRSideEffectInterfaces
   MLIRSupport
   MLIRViewLikeInterface
 )
