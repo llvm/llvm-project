@@ -138,6 +138,15 @@ infrastructure are described first, followed by tool-specific sections.
   `std::initializer_list` constructor, as the braced form could select a
   different constructor.
 
+- Improved {doc}`readability-identifier-naming
+  <clang-tidy/checks/readability/identifier-naming>` check:
+
+  - Fixed a crash when checking forward-declared classes with
+    {option}`DefaultHungarianPrefix` enabled.
+
+  - Fixed {option}`DefaultHungarianPrefix` being incorrectly diagnosed as an
+    invalid option.
+
 - Improved {doc}`readability-named-parameter
   <clang-tidy/checks/readability/named-parameter>` check by ignoring
   standard tag types (e.g. `std::in_place_t`, `std::allocator_arg_t`,
