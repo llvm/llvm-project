@@ -5,6 +5,9 @@
 ; RUN:   --canonicalize --cse --inter-infer-memory-tokens \
 ; RUN:   --inter-select-to-machine --verify-each | \
 ; RUN:   FileCheck %s --check-prefix=SELECT
+; RUN: inter-translate %s --import-llvm | inter-opt --verify-each \
+; RUN:   --pass-pipeline='builtin.module(transform-preload-library{transform-library-paths=%inter_pipelines},transform-interpreter{entry-point=inter_backend})' | \
+; RUN:   FileCheck %s --check-prefix=BACKEND
 ; Generated with opt -S -passes='default<O2>' from Inputs/matmul.ll.
 ;
 ; CHECK: module attributes {dlti.dl_spec = #dlti.dl_spec<
@@ -30,6 +33,13 @@
 ; SELECT: xemachine.uniform_loop
 ; SELECT: xemachine.eot
 ; SELECT-NOT: xw.
+; BACKEND-LABEL: func.func @matmul
+; BACKEND-SAME: xemachine.grf_used =
+; BACKEND-SAME: xemachine.regalloc_iterations =
+; BACKEND: !xemachine.arf<f, 2, {{[01]}}>
+; BACKEND: xemachine.eot
+; BACKEND-NOT: !xemachine.arf<f, 2, -1>
+; BACKEND-NOT: !xemachine.reg<{{[0-9]+}}, -1>
 ;
 ; ModuleID = 'inter/test/Frontend/Inputs/matmul.ll'
 source_filename = "inter/test/Frontend/Inputs/matmul.ll"

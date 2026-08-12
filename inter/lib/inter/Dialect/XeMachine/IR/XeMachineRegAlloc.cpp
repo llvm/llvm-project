@@ -37,6 +37,7 @@ constexpr StringLiteral kScratchSetupAttr = "xemachine.scratch_setup";
 constexpr StringLiteral kLoopIterationAttr =
     "xemachine.regalloc_loop_iteration";
 constexpr StringLiteral kStageAttr = "stage";
+constexpr StringLiteral kArfBuildStage = "arf-live-ranges";
 constexpr StringLiteral kBuildStage = "alias-state";
 constexpr StringLiteral kSuccessStage = "linear-scan-success";
 constexpr StringLiteral kFailureStage = "linear-scan-failure";
@@ -708,6 +709,173 @@ struct RegAllocConfig {
   int64_t scratchSize;
 };
 
+struct ArfLiveRange {
+  Value value;
+  ARFType type;
+  int64_t start;
+  int64_t end;
+  int32_t assignment;
+  bool reference;
+};
+
+static FailureOr<SmallVector<ArfLiveRange>>
+buildArfState(func::FuncOp function) {
+  DenseMap<Operation *, int64_t> positions;
+  int64_t nextPosition = 0;
+  function.walk(
+      [&](Operation *operation) { positions[operation] = nextPosition++; });
+
+  SmallVector<ArfLiveRange> ranges;
+  auto addRange = [&](Value value) -> LogicalResult {
+    ARFType type = dyn_cast<ARFType>(value.getType());
+    if (!type)
+      return success();
+    if (type.getIndex() < 0 && type.getFile() != ARFFile::f)
+      return emitError(value.getLoc())
+                 << "virtual " << stringifyARFFile(type.getFile())
+                 << " ARF allocation is unsupported",
+             failure();
+    if (type.getFile() == ARFFile::f && type.getWidthDwords() != 2)
+      return emitError(value.getLoc())
+                 << "flag allocation requires a 2-dword ARF footprint",
+             failure();
+    if (type.getFile() == ARFFile::f && type.getIndex() >= 2)
+      return emitError(value.getLoc())
+                 << "flag register index exceeds the f0/f1 register file",
+             failure();
+
+    int64_t start = 0;
+    if (Operation *definition = value.getDefiningOp())
+      start = positions.lookup(definition);
+    else if (BlockArgument argument = dyn_cast<BlockArgument>(value)) {
+      Operation *parent = argument.getOwner()->getParentOp();
+      start = parent ? positions.lookup(parent) : 0;
+    }
+    int64_t end = start;
+    for (OpOperand &use : value.getUses())
+      end = std::max(end, positions.lookup(use.getOwner()));
+    ranges.push_back({value, type, start, end, type.getIndex(),
+                      isa_and_nonnull<ArfRegOp>(value.getDefiningOp())});
+    return success();
+  };
+
+  WalkResult walkResult = function.walk([&](Operation *operation) {
+    for (Value result : operation->getResults())
+      if (failed(addRange(result)))
+        return WalkResult::interrupt();
+    for (Region &region : operation->getRegions())
+      for (Block &block : region)
+        for (BlockArgument argument : block.getArguments())
+          if (failed(addRange(argument)))
+            return WalkResult::interrupt();
+    return WalkResult::advance();
+  });
+  if (walkResult.wasInterrupted())
+    return failure();
+
+  function.walk([&](UniformLoopOp loop) {
+    int64_t loopEnd = positions.lookup(loop);
+    loop.getBody().walk([&](Operation *operation) {
+      loopEnd = std::max(loopEnd, positions.lookup(operation));
+    });
+    for (ArfLiveRange &range : ranges) {
+      bool captured = llvm::any_of(range.value.getUses(), [&](OpOperand &use) {
+        Operation *owner = use.getOwner();
+        if (!loop->isProperAncestor(owner))
+          return false;
+        Operation *definition = range.value.getDefiningOp();
+        if (definition)
+          return !loop->isProperAncestor(definition);
+        BlockArgument argument = cast<BlockArgument>(range.value);
+        Operation *parent = argument.getOwner()->getParentOp();
+        return !parent || !loop->isProperAncestor(parent);
+      });
+      if (captured)
+        range.end = std::max(range.end, loopEnd);
+    }
+  });
+
+  llvm::stable_sort(ranges, [](const ArfLiveRange &lhs,
+                               const ArfLiveRange &rhs) {
+    if (lhs.start != rhs.start)
+      return lhs.start < rhs.start;
+    return lhs.assignment >= 0 && rhs.assignment < 0;
+  });
+  for (auto [index, range] : llvm::enumerate(ranges)) {
+    if (range.type.getFile() != ARFFile::f || range.assignment < 0)
+      continue;
+    for (const ArfLiveRange &other : ArrayRef(ranges).take_front(index)) {
+      if (range.type.getFile() != other.type.getFile() ||
+          range.assignment != other.assignment)
+        continue;
+      if (range.reference && other.reference)
+        continue;
+      if (range.start <= other.end && other.start <= range.end)
+        return emitError(range.value.getLoc())
+                   << "fixed " << stringifyARFFile(range.type.getFile())
+                   << range.assignment << " live ranges overlap",
+               failure();
+    }
+  }
+  return ranges;
+}
+
+static LogicalResult tryAllocateArfs(MutableArrayRef<ArfLiveRange> ranges) {
+  for (ArfLiveRange &range : ranges) {
+    if (range.type.getFile() != ARFFile::f || range.assignment >= 0)
+      continue;
+    for (int32_t candidate : llvm::seq<int32_t>(0, 2)) {
+      bool available = true;
+      for (const ArfLiveRange &other : ranges) {
+        if (other.type.getFile() != ARFFile::f || other.assignment != candidate)
+          continue;
+        if (range.start <= other.end && other.start <= range.end) {
+          available = false;
+          break;
+        }
+      }
+      if (!available)
+        continue;
+      range.assignment = candidate;
+      break;
+    }
+    if (range.assignment < 0)
+      return emitError(range.value.getLoc())
+                 << "flag allocation exhausted f0/f1 for overlapping live "
+                    "ranges",
+             failure();
+  }
+  return success();
+}
+
+static void commitArfAllocation(ArrayRef<ArfLiveRange> ranges) {
+  for (const ArfLiveRange &range : ranges) {
+    if (range.type.getIndex() >= 0)
+      continue;
+    Value value = range.value;
+    value.setType(ARFType::get(
+        range.value.getContext(), range.type.getFile(),
+        range.type.getWidthDwords(), range.assignment));
+  }
+}
+
+static DictionaryAttr packArfState(Builder &builder,
+                                   ArrayRef<ArfLiveRange> ranges) {
+  SmallVector<int64_t> intervals;
+  for (const ArfLiveRange &range : ranges) {
+    intervals.push_back(range.start);
+    intervals.push_back(range.end);
+    intervals.push_back(static_cast<int64_t>(range.type.getFile()));
+    intervals.push_back(range.assignment);
+  }
+  return builder.getDictionaryAttr({
+      builder.getNamedAttr(kStageAttr, builder.getStringAttr(kArfBuildStage)),
+      builder.getNamedAttr(
+          "arf_intervals",
+          DenseI64ArrayAttr::get(builder.getContext(), intervals)),
+  });
+}
+
 static FailureOr<RegAllocConfig>
 validateRegAllocFunction(func::FuncOp function) {
   FunctionType functionType = function.getFunctionType();
@@ -773,6 +941,37 @@ static void collectFunctions(Operation *target,
 static unsigned getLoopIteration(func::FuncOp function) {
   IntegerAttr attr = function->getAttrOfType<IntegerAttr>(kLoopIterationAttr);
   return attr ? static_cast<unsigned>(attr.getInt()) : 1;
+}
+
+static LogicalResult buildTransformArfState(Operation *target) {
+  SmallVector<func::FuncOp> functions;
+  collectFunctions(target, functions);
+  for (func::FuncOp function : functions) {
+    FailureOr<SmallVector<ArfLiveRange>> ranges = buildArfState(function);
+    if (failed(ranges))
+      return failure();
+    Builder builder(function.getContext());
+    function->setAttr(kStateAttr, packArfState(builder, *ranges));
+  }
+  return success();
+}
+
+static LogicalResult runTransformArfLinearScan(Operation *target) {
+  SmallVector<func::FuncOp> functions;
+  collectFunctions(target, functions);
+  for (func::FuncOp function : functions) {
+    DictionaryAttr packed = function->getAttrOfType<DictionaryAttr>(kStateAttr);
+    StringAttr stage = packed ? packed.getAs<StringAttr>(kStageAttr) : nullptr;
+    if (!stage || stage.getValue() != kArfBuildStage)
+      return function.emitError("ARF linear scan requires ARF live-range input"),
+             failure();
+    FailureOr<SmallVector<ArfLiveRange>> ranges = buildArfState(function);
+    if (failed(ranges) || failed(tryAllocateArfs(*ranges)))
+      return failure();
+    commitArfAllocation(*ranges);
+    function->removeAttr(kStateAttr);
+  }
+  return success();
 }
 
 static LogicalResult buildTransformState(Operation *target) {
@@ -1092,6 +1291,28 @@ TransformRegAllocBuildStateOp::apply(transform::TransformRewriter &,
 }
 
 void TransformRegAllocBuildStateOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  getStageEffects(*this, effects);
+}
+
+DiagnosedSilenceableFailure TransformRegAllocArfBuildStateOp::apply(
+    transform::TransformRewriter &, transform::TransformResults &results,
+    transform::TransformState &state) {
+  return applyStage(*this, results, state, buildTransformArfState);
+}
+
+void TransformRegAllocArfBuildStateOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  getStageEffects(*this, effects);
+}
+
+DiagnosedSilenceableFailure TransformRegAllocArfLinearScanOp::apply(
+    transform::TransformRewriter &, transform::TransformResults &results,
+    transform::TransformState &state) {
+  return applyStage(*this, results, state, runTransformArfLinearScan);
+}
+
+void TransformRegAllocArfLinearScanOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   getStageEffects(*this, effects);
 }

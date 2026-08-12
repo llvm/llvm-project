@@ -42,6 +42,12 @@ class XeMachine_RegAllocTransformStage<string mnemonic, string summaryText>
 def XeMachine_TransformRegAllocBuildStateOp
     : XeMachine_RegAllocTransformStage<"transform.regalloc_build_state",
                                        "build XeMachine regalloc state">;
+def XeMachine_TransformRegAllocArfBuildStateOp
+    : XeMachine_RegAllocTransformStage<"transform.regalloc_arf_build_state",
+                                       "build XeMachine ARF regalloc state">;
+def XeMachine_TransformRegAllocArfLinearScanOp
+    : XeMachine_RegAllocTransformStage<"transform.regalloc_arf_linear_scan",
+                                       "run XeMachine ARF linear scan">;
 def XeMachine_TransformRegAllocLinearScanOp
     : XeMachine_RegAllocTransformStage<"transform.regalloc_linear_scan",
                                        "run XeMachine regalloc linear scan">;

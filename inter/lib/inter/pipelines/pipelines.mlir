@@ -41,10 +41,14 @@ module attributes {transform.with_named_sequence} {
 
   transform.named_sequence private @inter_allocate_registers(
       %root: !transform.any_op {transform.consumed}) -> !transform.any_op {
-    %r0 = xemachine.transform.regalloc_loop from %root
+    %r0 = xemachine.transform.regalloc_arf_build_state from %root
+        : (!transform.any_op) -> !transform.any_op
+    %r1 = xemachine.transform.regalloc_arf_linear_scan from %r0
+        : (!transform.any_op) -> !transform.any_op
+    %r2 = xemachine.transform.regalloc_loop from %r1
         body = @inter_regalloc_iteration
         : (!transform.any_op) -> !transform.any_op
-    transform.yield %r0 : !transform.any_op
+    transform.yield %r2 : !transform.any_op
   }
 
   transform.named_sequence @inter_regalloc(

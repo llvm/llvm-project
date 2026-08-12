@@ -77,3 +77,81 @@ module {
 // LOOP: xemachine.uniform_loop
 // LOOP: xemachine.add [[OUTSIDE]], {{.*}}-> !xemachine.reg<16, 1>
 // LOOP: xemachine.mov {{.*}}-> !xemachine.reg<16, 1>
+
+// -----
+
+module {
+  func.func @allocate_flags() attributes {xemachine.grf_count = 4 : i32, xemachine.reserved_grf_count = 1 : i32} {
+    %r0 = xemachine.archreg 0 : !xemachine.reg<16, 0>
+    %zero = xemachine.imm 0 : i32
+    %first = xemachine.cmp eq %r0, %zero {execSize = 1 : i32, noMask} : (!xemachine.reg<16, 0>, !xemachine.imm, i32) -> !xemachine.arf<f, 2, -1>
+    %second = xemachine.cmp ne %r0, %zero {execSize = 1 : i32, noMask} : (!xemachine.reg<16, 0>, !xemachine.imm, i32) -> !xemachine.arf<f, 2, -1>
+    xemachine.uniform_if %first : !xemachine.arf<f, 2, -1> {
+      xemachine.yield
+    }
+    xemachine.uniform_if %second : !xemachine.arf<f, 2, -1> {
+      xemachine.yield
+    }
+    %reused = xemachine.cmp gt %r0, %zero {execSize = 1 : i32, noMask} : (!xemachine.reg<16, 0>, !xemachine.imm, i32) -> !xemachine.arf<f, 2, -1>
+    xemachine.uniform_if %reused : !xemachine.arf<f, 2, -1> {
+      xemachine.yield
+    }
+    return
+  }
+}
+
+// LOOP-LABEL: func.func @allocate_flags
+// LOOP: %[[FIRST:.*]] = xemachine.cmp {{.*}} -> !xemachine.arf<f, 2, 0>
+// LOOP: %[[SECOND:.*]] = xemachine.cmp {{.*}} -> !xemachine.arf<f, 2, 1>
+// LOOP: xemachine.uniform_if %[[FIRST]] : !xemachine.arf<f, 2, 0>
+// LOOP: xemachine.uniform_if %[[SECOND]] : !xemachine.arf<f, 2, 1>
+// LOOP: xemachine.cmp {{.*}} -> !xemachine.arf<f, 2, 0>
+// LOOP-NOT: !xemachine.arf<f, 2, -1>
+
+// -----
+
+module {
+  func.func @reserve_fixed_flag() attributes {xemachine.grf_count = 4 : i32, xemachine.reserved_grf_count = 1 : i32} {
+    %r0 = xemachine.archreg 0 : !xemachine.reg<16, 0>
+    %zero = xemachine.imm 0 : i32
+    %fixed = xemachine.cmp eq %r0, %zero {execSize = 1 : i32, noMask} : (!xemachine.reg<16, 0>, !xemachine.imm, i32) -> !xemachine.arf<f, 2, 0>
+    %allocated = xemachine.cmp ne %r0, %zero {execSize = 1 : i32, noMask} : (!xemachine.reg<16, 0>, !xemachine.imm, i32) -> !xemachine.arf<f, 2, -1>
+    xemachine.uniform_if %fixed : !xemachine.arf<f, 2, 0> {
+      xemachine.yield
+    }
+    xemachine.uniform_if %allocated : !xemachine.arf<f, 2, -1> {
+      xemachine.yield
+    }
+    return
+  }
+}
+
+// LOOP-LABEL: func.func @reserve_fixed_flag
+// LOOP: xemachine.cmp {{.*}} -> !xemachine.arf<f, 2, 0>
+// LOOP: xemachine.cmp {{.*}} -> !xemachine.arf<f, 2, 1>
+// LOOP-NOT: !xemachine.arf<f, 2, -1>
+
+// -----
+
+module {
+  func.func @loop_flag_liveness() attributes {xemachine.grf_count = 4 : i32, xemachine.reserved_grf_count = 1 : i32} {
+    %r0 = xemachine.archreg 0 : !xemachine.reg<16, 0>
+    %zero = xemachine.imm 0 : i32
+    %captured = xemachine.cmp eq %r0, %zero {execSize = 1 : i32, noMask} : (!xemachine.reg<16, 0>, !xemachine.imm, i32) -> !xemachine.arf<f, 2, -1>
+    xemachine.uniform_loop () {
+      xemachine.uniform_if %captured : !xemachine.arf<f, 2, -1> {
+        xemachine.yield
+      }
+      %inside = xemachine.cmp ne %r0, %zero {execSize = 1 : i32, noMask} : (!xemachine.reg<16, 0>, !xemachine.imm, i32) -> !xemachine.arf<f, 2, -1>
+      xemachine.continue_if %inside : !xemachine.arf<f, 2, -1>
+    } : () -> ()
+    return
+  }
+}
+
+// LOOP-LABEL: func.func @loop_flag_liveness
+// LOOP: %[[CAPTURED:.*]] = xemachine.cmp {{.*}} -> !xemachine.arf<f, 2, 0>
+// LOOP: xemachine.uniform_loop
+// LOOP: xemachine.uniform_if %[[CAPTURED]] : !xemachine.arf<f, 2, 0>
+// LOOP: xemachine.cmp {{.*}} -> !xemachine.arf<f, 2, 1>
+// LOOP-NOT: !xemachine.arf<f, 2, -1>
