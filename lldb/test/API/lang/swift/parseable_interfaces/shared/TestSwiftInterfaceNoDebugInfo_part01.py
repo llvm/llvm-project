@@ -26,6 +26,8 @@ import os.path
 
 
 class TestSwiftInterfaceNoDebugInfo(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def get_toolchain(self):
         sdkroot = self.get_sdkroot()
         # The SDK root is expected to be wihin the Xcode.app/Contents

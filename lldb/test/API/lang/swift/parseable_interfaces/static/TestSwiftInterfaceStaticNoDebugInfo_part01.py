@@ -26,6 +26,8 @@ import os.path
 
 
 class TestSwiftInterfaceStaticNoDebugInfo(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def do_test(self):
         # The custom swift module cache location
         swift_mod_cache = self.getBuildArtifact("MCP")

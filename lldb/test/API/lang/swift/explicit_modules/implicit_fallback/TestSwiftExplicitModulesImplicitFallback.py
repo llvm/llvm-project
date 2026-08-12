@@ -7,6 +7,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 @skipIfWindows
 class TestCase(lldbtest.TestBase):
+    SHARED_BUILD_TESTCASE = False
     NO_DEBUG_INFO_TESTCASE = True
     @requireNotEmbeddedSwift
     @swiftTest
