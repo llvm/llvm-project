@@ -88,7 +88,7 @@ public:
   const Decl *asDecl() const {
     return dyn_cast_if_present<const Decl *>(Source);
   }
-  const Expr *asExpr() const;
+  const Expr *asExpr() const { return dyn_cast_if_present<Expr>(asStmt()); }
 
   operator bool() const { return !Source.isNull(); }
 
@@ -105,13 +105,13 @@ public:
   virtual ~SourceMapper() {}
 
   /// Returns source information for a given PC in a function.
-  virtual SourceInfo getSource(const Function *F, CodePtr PC) const = 0;
+  virtual SourceInfo getSource(CodePtr PC) const = 0;
 
   /// Returns the expression if an opcode belongs to one, null otherwise.
-  const Expr *getExpr(const Function *F, CodePtr PC) const;
+  const Expr *getExpr(CodePtr PC) const;
   /// Returns the location from which an opcode originates.
-  SourceLocation getLocation(const Function *F, CodePtr PC) const;
-  SourceRange getRange(const Function *F, CodePtr PC) const;
+  SourceLocation getLocation(CodePtr PC) const;
+  SourceRange getRange(CodePtr PC) const;
 };
 
 } // namespace interp
