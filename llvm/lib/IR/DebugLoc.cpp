@@ -114,17 +114,22 @@ DebugLoc DebugLoc::replaceInlinedAtSubprogram(
     DILocation *LocToUpdate = LocChain.pop_back_val();
     DIScope *NewScope = DILocalScope::cloneScopeForSubprogram(
         *LocToUpdate->getScope(), NewSP, Ctx, Cache);
-    UpdatedLoc = DILocation::get(Ctx, LocToUpdate->getLine(),
-                                 LocToUpdate->getColumn(), NewScope);
+    UpdatedLoc = DILocation::get(
+        Ctx, LocToUpdate->getLine(), LocToUpdate->getColumn(), NewScope,
+        /*InlinedAt=*/nullptr, /*ImplicitCode=*/false, /*AtomGroup=*/0,
+        /*AtomRank=*/0, LocToUpdate->getRawIRLayers());
     Cache[LocToUpdate] = UpdatedLoc;
   }
 
   // Recreate the location chain, bottom-up, starting at the new scope (or a
-  // cached result).
+  // cached result). Each frame keeps its own irlayers, as appendInlinedAt does:
+  // the intermediate-IR snapshot can live on any frame, so outlining must not
+  // drop it.
   for (const DILocation *LocToUpdate : reverse(LocChain)) {
-    UpdatedLoc =
-        DILocation::get(Ctx, LocToUpdate->getLine(), LocToUpdate->getColumn(),
-                        LocToUpdate->getScope(), UpdatedLoc);
+    UpdatedLoc = DILocation::get(
+        Ctx, LocToUpdate->getLine(), LocToUpdate->getColumn(),
+        LocToUpdate->getScope(), UpdatedLoc, /*ImplicitCode=*/false,
+        /*AtomGroup=*/0, /*AtomRank=*/0, LocToUpdate->getRawIRLayers());
     Cache[LocToUpdate] = UpdatedLoc;
   }
 
