@@ -168,7 +168,7 @@ define amdgpu_kernel void @rcp_bf16_constant_4(ptr addrspace(1) %out) #1 {
 ; GI-TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GI-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GI-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
-; GI-TRUE16-NEXT:    v_rcp_bf16_e32 v0.l, 4.0
+; GI-TRUE16-NEXT:    v_rcp_bf16_e64 v0.l, 4.0 op_sel:[1,0]
 ; GI-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
 ; GI-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GI-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
@@ -181,7 +181,7 @@ define amdgpu_kernel void @rcp_bf16_constant_4(ptr addrspace(1) %out) #1 {
 ; GI-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GI-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GI-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
-; GI-FAKE16-NEXT:    v_rcp_bf16_e32 v0, 4.0
+; GI-FAKE16-NEXT:    v_rcp_bf16_e64 v0, 4.0 op_sel:[1,0]
 ; GI-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
 ; GI-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GI-FAKE16-NEXT:    global_store_b16 v1, v0, s[0:1]

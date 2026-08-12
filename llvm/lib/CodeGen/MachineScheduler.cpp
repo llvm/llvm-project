@@ -861,7 +861,7 @@ void MachineSchedulerBase::scheduleRegions(ScheduleDAGInstrs &Scheduler,
         continue;
       }
       auto DumpRegionHeader = [&] {
-        dbgs() << "********** MI Scheduling **********\n";
+        dbgs() << "Current Schedule Region\n";
         dbgs() << MF->getName() << ":" << printMBBReference(*MBB) << " "
                << MBB->getName() << "\n  From: " << *I << "    To: ";
         if (RegionEnd != MBB->end())

@@ -342,8 +342,8 @@ void lvalue_to_rvalue_bitcast() {
 
 // CIR-AFTER: %{{.*}} = cir.cast bitcast %{{.*}} : !cir.ptr<!rec_CX> -> !cir.ptr<!cir.complex<!cir.double>>
 
-// LLVM: %[[PTR_ADDR:.*]] = alloca %struct.CX, i64 1, align 8
-// LLVM: %[[COMPLEX_ADDR:.*]] = alloca { double, double }, i64 1, align 8
+// LLVM: %[[PTR_ADDR:.*]] = alloca %struct.CX, align 8
+// LLVM: %[[COMPLEX_ADDR:.*]] = alloca { double, double }, align 8
 // LLVM: %[[PTR_TO_COMPLEX:.*]] = load { double, double }, ptr %[[PTR_ADDR]], align 8
 // LLVM: store { double, double } %[[PTR_TO_COMPLEX]], ptr %[[COMPLEX_ADDR]], align 8
 
@@ -367,7 +367,7 @@ void lvalue_bitcast() {
 
 // CIR-AFTER: %{{.*}} = cir.cast bitcast %{{.*}} : !cir.ptr<!rec_CX> -> !cir.ptr<!cir.complex<!cir.double>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca %struct.CX, i64 1, align 8
+// LLVM: %[[A_ADDR:.*]] = alloca %struct.CX, align 8
 // LLVM: store { double, double } zeroinitializer, ptr %[[A_ADDR]], align 8
 
 // OGCG: %[[A_ADDR]] = alloca %struct.CX, align 8
