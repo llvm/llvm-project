@@ -28,3 +28,30 @@ func.func @caller(%arg0: !fir.ref<!big>) {
   fir.call @callee(%0) : (!big) -> ()
   return
 }
+
+/// The same rewrite for a record whose natural alignment is not 1. The pointer
+/// argument carries the alignment of the aggregate it points at, so this one is
+/// 8 rather than the 1 above.
+
+!bigreal = !fir.type<bigreal{i:!fir.array<32xf64>}>
+
+// CHECK-LABEL: func.func @callee_real(
+// CHECK-SAME:      %[[ARG:.*]]: !fir.ref<!fir.type<bigreal{i:!fir.array<32xf64>}>> {llvm.align = 8 : i32}) {
+// CHECK-NOT:     llvm.byval
+// CHECK:         %[[REF:.*]] = fir.convert %[[ARG]]
+// CHECK:         fir.load %[[REF]]
+func.func @callee_real(%arg0: !bigreal) {
+  return
+}
+
+// CHECK-LABEL: func.func @caller_real(
+// CHECK-NOT:     llvm.byval
+// CHECK:         %[[VAL:.*]] = fir.load
+// CHECK:         %[[TMP:.*]] = fir.alloca !fir.type<bigreal{i:!fir.array<32xf64>}>
+// CHECK:         fir.store %[[VAL]] to %[[TMP]]
+// CHECK:         fir.call @callee_real(%[[TMP]]) : (!fir.ref<!fir.type<bigreal{i:!fir.array<32xf64>}>> {llvm.align = 8 : i32}) -> ()
+func.func @caller_real(%arg0: !fir.ref<!bigreal>) {
+  %0 = fir.load %arg0 : !fir.ref<!bigreal>
+  fir.call @callee_real(%0) : (!bigreal) -> ()
+  return
+}
