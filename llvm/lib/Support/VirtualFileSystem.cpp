@@ -2996,3 +2996,16 @@ const char OverlayFileSystem::ID = 0;
 const char ProxyFileSystem::ID = 0;
 const char InMemoryFileSystem::ID = 0;
 const char RedirectingFileSystem::ID = 0;
+
+unsigned ::llvm::IntrusiveRefCntPtrInfo<FileSystem>::useCount(
+    const FileSystem *FS) {
+  return FS->UseCount();
+}
+
+void ::llvm::IntrusiveRefCntPtrInfo<FileSystem>::retain(FileSystem *FS) {
+  FS->Retain();
+}
+
+void ::llvm::IntrusiveRefCntPtrInfo<FileSystem>::release(FileSystem *FS) {
+  FS->Release();
+}
