@@ -3744,10 +3744,10 @@ LegalizerHelper::lowerBitcast(MachineInstr &MI) {
 
     if (DstTy.isVector()) {
       LLT DstEltTy = DstTy.getElementType();
-      int NumDstElt = DstTy.getNumElements();
-      int NumSrcElt = SrcTy.getNumElements();
+      ElementCount DstEC = DstTy.getElementCount();
+      ElementCount SrcEC = SrcTy.getElementCount();
 
-      if (NumSrcElt % NumDstElt != 0 && NumDstElt % NumSrcElt != 0) {
+      if (!SrcEC.isKnownMultipleOf(DstEC) && !DstEC.isKnownMultipleOf(SrcEC)) {
         // Split non-integer element ratio bitcast
         //
         // %1:_(<3 x s16>) = G_BITCAST %0:_(<2 x s24>)
@@ -3756,11 +3756,12 @@ LegalizerHelper::lowerBitcast(MachineInstr &MI) {
         //
         // %2:_(<6 x s8>) = G_BITCAST %0:_(<2 x s24>)
         // %1:_(<3 x s16>) = G_BITCAST %2:_(<6 x s8>)
-        int SrcEltSize = SrcEltTy.getSizeInBits();
-        int DstEltSize = DstEltTy.getSizeInBits();
-        int PieceSize = std::gcd(SrcEltSize, DstEltSize);
+        unsigned SrcEltSize = SrcEltTy.getScalarSizeInBits();
+        unsigned PieceSize =
+            std::gcd(SrcEltSize, DstEltTy.getScalarSizeInBits());
+        LLT PieceTy = LLT::integer(PieceSize);
 
-        if (PieceSize % 8 != 0) {
+        if (!PieceTy.isByteSized()) {
           // Split bitcast whose pieces are not whole bytes through a scalar
           //
           // %1:_(<3 x s8>) = G_BITCAST %0:_(<2 x s12>)
@@ -3775,15 +3776,18 @@ LegalizerHelper::lowerBitcast(MachineInstr &MI) {
           MI.eraseFromParent();
           return Legalized;
         }
-        LLT PieceTy = LLT::integer(PieceSize);
-        int NumPieces = SrcTy.getSizeInBits() / PieceSize;
-        LLT PiecesVecTy = LLT::fixed_vector(NumPieces, PieceTy);
+
+        LLT PiecesVecTy = LLT::vector(
+            SrcEC.multiplyCoefficientBy(SrcEltSize / PieceSize), PieceTy);
         Register PiecesReg =
             MIRBuilder.buildBitcast(PiecesVecTy, Src).getReg(0);
         MIRBuilder.buildBitcast(Dst, PiecesReg);
         MI.eraseFromParent();
         return Legalized;
       }
+
+      unsigned NumDstElt = DstEC.getKnownMinValue();
+      unsigned NumSrcElt = SrcEC.getKnownMinValue();
 
       LLT DstCastTy = DstEltTy; // Intermediate bitcast result type
       LLT SrcPartTy = SrcEltTy; // Original unmerge result type.
