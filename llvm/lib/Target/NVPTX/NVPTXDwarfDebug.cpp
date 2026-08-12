@@ -23,7 +23,9 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/MD5.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
@@ -188,11 +190,103 @@ void NVPTXDwarfDebug::recordTargetSourceLine(const DebugLoc &DL,
     if (EnhancedLineinfo)
       EmittedInlinedAtLocs.insert(Current);
   }
+
+  recordIntermediateLoc(DL, Flags);
+}
+
+void NVPTXDwarfDebug::recordTargetSameSourceLine(const DebugLoc &DL,
+                                                 unsigned Flags) {
+  recordIntermediateLoc(DL, Flags, /*SkipIfUnchanged=*/true);
+}
+
+void NVPTXDwarfDebug::recordIntermediateLoc(const DebugLoc &DL, unsigned Flags,
+                                            bool SkipIfUnchanged) {
+  // Intermediate-IR layers live on the frame that was outermost when the tile
+  // snapshot was taken; after later inlining that frame can sit anywhere in the
+  // inlined-at chain. Walk outward from the head and use the first (innermost)
+  // frame that carries layers: it is the most specific intermediate origin for
+  // this PC -- the instruction actually being executed -- and for layer-less
+  // inlined code it is the nearest enclosing frame (continuous coverage).
+  const DILocation *Loc = DL.get();
+  while (Loc && !Loc->getRawIRLayers())
+    Loc = Loc->getInlinedAt();
+  if (!Loc) {
+    // Nothing is current any more, so the next layered instruction re-emits
+    // even if it repeats an earlier list.
+    PrevIRLayers = nullptr;
+    return;
+  }
+  DILayerLocList *Layers = Loc->getIRLayers();
+  // The comparison has to use the resolved list rather than DL's own operand:
+  // the walk above may have taken the layers from an enclosing frame, and two
+  // instructions with different head locations can share one list.
+  if (SkipIfUnchanged && Layers == PrevIRLayers)
+    return;
+  PrevIRLayers = Layers;
+  // Emit a secondary .loc_intermediate DWARF directive for each intermediate-IR
+  // layer. Each DILayerLoc carries its file/line/column directly (no scope and
+  // no discriminator).
+  const unsigned CUID = Asm->OutStreamer->getContext().getDwarfCompileUnitID();
+  for (unsigned I = 0, E = Layers->getNumLayers(); I != E; ++I) {
+    // The verifier guarantees each entry is a non-null DILayerLoc whose file is
+    // a non-null DIFile, so no null checks are needed here.
+    const DILayerLoc *L = Layers->getLayer(I);
+    const unsigned Line = L->getLine();
+    const DIFile *OrigFile = L->getFile();
+    // Skip the DWARF "no line" sentinel (line 0 is valid IR, not a verifier
+    // invariant).
+    if (!Line)
+      continue;
+    // A .loc_intermediate is only meaningful alongside the intermediate source
+    // it points into: the consumer rejects a reference to a file that has no
+    // .code_block. So a layer whose file carries no source text is dropped here
+    // rather than emitting a dangling .loc_intermediate and .file entry.
+    std::optional<StringRef> Source = OrigFile->getSource();
+    if (!Source)
+      continue;
+    auto [CacheIt, Inserted] = IntermediateFileNums.try_emplace(OrigFile);
+    if (Inserted) {
+      // Secondary .file name. ptxas keys the .source text it stores in the
+      // cubin by this name, so it must be a unique hash rather than a readable
+      // path: the file's checksum digest if it has one, else a path hash.
+      SmallString<32> HashedName;
+      StringRef SecondaryFilename;
+      if (const auto Checksum = OrigFile->getChecksum()) {
+        SecondaryFilename = Checksum->Value;
+      } else {
+        MD5 Hash;
+        Hash.update(OrigFile->getDirectory());
+        Hash.update(OrigFile->getFilename());
+        MD5::MD5Result Result;
+        Hash.final(Result);
+        HashedName = Result.digest();
+        SecondaryFilename = HashedName;
+      }
+      DIFile *SecondaryFile = DIFile::get(Loc->getContext(), SecondaryFilename,
+                                          OrigFile->getDirectory());
+      CacheIt->second = static_cast<DwarfCompileUnit &>(*getUnits()[CUID])
+                            .getOrCreateSourceID(SecondaryFile);
+    }
+    const unsigned FileNo = CacheIt->second;
+    const unsigned Col = L->getColumn();
+    Asm->OutStreamer->emitDwarfLocDirective(
+        FileNo, Line, Col, Flags, 0, /*Discriminator=*/0,
+        OrigFile->getFilename(), "", ".loc_intermediate");
+    // First encounter wins. DIFiles that collapse onto one number share content
+    // by checksum, so their source agrees; a differing kind spelling (possible
+    // across LTO-merged producers, not a verifier error) just takes the first.
+    IntermediateFiles.insert({FileNo, {*Source, L->getKind()}});
+  }
+}
+
+NVPTXDwarfDebug::IntermediateFileVec NVPTXDwarfDebug::takeIntermediateFiles() {
+  return IntermediateFiles.takeVector();
 }
 
 /// NVPTX-specific debug info initialization.
 void NVPTXDwarfDebug::initializeTargetDebugInfo(const MachineFunction &MF) {
   EmittedInlinedAtLocs.clear();
+  PrevIRLayers = nullptr;
 }
 
 // PTX does not support subtracting labels from the code section in the

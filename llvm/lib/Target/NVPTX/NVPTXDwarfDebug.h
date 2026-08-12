@@ -17,9 +17,14 @@
 #define LLVM_LIB_TARGET_NVPTX_NVPTXDWARFDEBUG_H
 
 #include "../../CodeGen/AsmPrinter/DwarfCompileUnit.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallVector.h"
+#include <utility>
 
 namespace llvm {
+class DIFile;
 
 /// NVPTX-specific DwarfDebug implementation.
 ///
@@ -58,8 +63,44 @@ protected:
                                   DwarfCompileUnit &NewCU) override;
   void initializeTargetDebugInfo(const MachineFunction &MF) override;
   void recordTargetSourceLine(const DebugLoc &DL, unsigned Flags) override;
+  void recordTargetSameSourceLine(const DebugLoc &DL, unsigned Flags) override;
   bool shouldAttachCompileUnitRanges() const override;
   bool shouldEmitDwarfPubSections() const override { return false; }
+
+public:
+  /// Source code and IR kind, per intermediate .file number, for emission into
+  /// .code_block. Both strings are borrowed from metadata, which the
+  /// LLVMContext owns, so they stay valid after this DwarfDebug is destroyed.
+  struct IntermediateFileInfo {
+    StringRef Source;
+    StringRef Kind;
+  };
+
+  /// Hand off the intermediate files collected during line emission. The
+  /// caller emits them after the .file directives have been flushed, which is
+  /// past the point where AsmPrinter::doFinalization destroys this object --
+  /// hence the handoff rather than emitting from here.
+  using IntermediateFileVec =
+      SmallVector<std::pair<unsigned, IntermediateFileInfo>, 0>;
+  [[nodiscard]] IntermediateFileVec takeIntermediateFiles();
+
+private:
+  /// Emit secondary .loc_intermediate directives for the intermediate-IR
+  /// layers carried on a DebugLoc's irlayers operand. On the deduplicated path
+  /// the primary .loc was not re-emitted, so SkipIfUnchanged suppresses
+  /// directives for a layer list that is already current.
+  void recordIntermediateLoc(const DebugLoc &DL, unsigned Flags,
+                             bool SkipIfUnchanged = false);
+
+  /// Layer list of the last emitted .loc_intermediate run.
+  const DILayerLocList *PrevIRLayers = nullptr;
+
+  MapVector<unsigned, IntermediateFileInfo> IntermediateFiles;
+
+  /// Secondary .file number for each intermediate DIFile already seen, so a
+  /// repeated layer skips rebuilding the derived DIFile and re-querying the
+  /// DWARF file table.
+  DenseMap<const DIFile *, unsigned> IntermediateFileNums;
 };
 
 } // end namespace llvm
