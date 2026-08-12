@@ -6701,9 +6701,23 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
     return Invalid;
 
   if ((Opcode != Instruction::Add && Opcode != Instruction::Sub &&
-       Opcode != Instruction::FAdd && Opcode != Instruction::FSub) ||
-      OpAExtend == TTI::PR_None)
+       Opcode != Instruction::FAdd && Opcode != Instruction::FSub))
     return Invalid;
+
+  // If none of the operands are extended and there's no extra BinOp, just
+  // cost this as the equivalent arithmetic instruction.
+  // TODO: Depending on VF and element type, we may be able to improve on this.
+  if (OpAExtend == TTI::PR_None) {
+    if (OpBExtend != TTI::PR_None || BinOp)
+      return Invalid;
+
+    assert(InputTypeA == InputTypeB && InputTypeA == AccumType &&
+           "Type mismatch with no extensions.");
+
+    VectorType *VTy = VectorType::get(AccumType, VF);
+
+    return getArithmeticInstrCost(Opcode, VTy, CostKind);
+  }
 
   // Floating-point partial reductions are invalid if `reassoc` and `contract`
   // are not allowed.

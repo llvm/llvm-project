@@ -3323,7 +3323,9 @@ public:
   /// Return true if the in-loop reduction is conditional.
   bool isConditional() const { return IsConditional; };
   /// Returns true if the reduction outputs a vector with a scaled down VF.
-  bool isPartialReduction() const { return getVFScaleFactor() > 1; }
+  bool isPartialReduction() const {
+    return std::holds_alternative<RdxUnordered>(Style);
+  }
   /// Returns true if the reduction is in-loop.
   bool isInLoop() const {
     return std::holds_alternative<RdxInLoop>(Style) ||

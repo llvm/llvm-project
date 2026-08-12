@@ -36,12 +36,20 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 
 using namespace llvm;
 using namespace VPlanPatternMatch;
 using namespace SCEVPatternMatch;
+
+
+static cl::opt<bool>
+    UsePartialReduceByDefault("use-partial-reduce-by-default", cl::init(false),
+                              cl::Hidden,
+                              cl::desc("Use partial reduction intrinsics for "
+                                       "all supported unordered reductions."));
 
 /// If the pointer operand \p Addr of a memory access is an affine AddRec
 /// w.r.t. \p L with a constant stride, return the stride in units of
@@ -3463,8 +3471,9 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
   Type *RedTy = Red->getScalarType();
   VPValue *VecOp = Red->getVecOp();
 
-  assert(!Red->isPartialReduction() &&
-         "This path does not support partial reductions");
+  // We don't handle partial reductions here.
+  if (Red->isPartialReduction())
+    return nullptr;
 
   // Clamp the range if using extended-reduction is profitable.
   auto IsExtendedRedValidAndClampRange =
@@ -3517,8 +3526,10 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
       Opcode != Instruction::FAdd)
     return nullptr;
 
-  assert(!Red->isPartialReduction() &&
-         "This path does not support partial reductions");
+  // We don't handle partial reductions here.
+  if (Red->isPartialReduction())
+    return nullptr;
+
   Type *RedTy = Red->getScalarType();
 
   // Clamp the range if using multiply-accumulate-reduction is profitable.
@@ -3682,8 +3693,8 @@ static void tryToCreateAbstractReductionRecipe(VPReductionRecipe *Red,
                                                VFRange &Range) {
   // Creation of VPExpressions for partial reductions is entirely handled in
   // transformToPartialReduction.
-  assert(!Red->isPartialReduction() &&
-         "This path does not support partial reductions");
+  if (Red->isPartialReduction())
+    return;
 
   VPExpressionRecipe *AbstractR = nullptr;
   auto IP = std::next(Red->getIterator());
@@ -5239,6 +5250,7 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
   MapVector<VPReductionPHIRecipe *, SmallVector<VPPartialReductionChain>>
       ChainsByPhi;
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+  SmallVector<VPReductionPHIRecipe *, 4> UnorderedReductions;
   for (VPRecipeBase &R : HeaderVPBB->phis()) {
     auto *RedPhiR = dyn_cast<VPReductionPHIRecipe>(&R);
     if (!RedPhiR)
@@ -5246,6 +5258,48 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
 
     if (auto Chains = getScaledReductions(RedPhiR))
       ChainsByPhi.try_emplace(RedPhiR, std::move(*Chains));
+    else if (UsePartialReduceByDefault &&
+             (RedPhiR->getRecurrenceKind() == RecurKind::Add ||
+              (RedPhiR->getRecurrenceKind() == RecurKind::FAdd &&
+               !RedPhiR->isOrdered() && !RedPhiR->isInLoop())))
+      UnorderedReductions.push_back(RedPhiR);
+  }
+
+  // For general unordered reductions which aren't part of a candidate
+  // chain for a scaled partial reduction, we can potentially still use
+  // the intrinsic to allow for more optimization later on.
+  for (auto *Rdx : UnorderedReductions) {
+    auto *Backedge = dyn_cast<VPWidenRecipe>(Rdx->getBackedgeValue());
+    VPValue *OtherOp;
+    if (!Backedge ||
+        !match(Backedge,
+               m_CombineOr(m_c_FAdd(m_Specific(Rdx), m_VPValue(OtherOp)),
+                           m_c_Add(m_Specific(Rdx), m_VPValue(OtherOp)))))
+      continue;
+
+    // If the target indicates that the intrinsic is as cheap as (or cheaper
+    // than) the add, then prefer the intrinsic.
+    if (!LoopVectorizationPlanner::getDecisionAndClampRange(
+            [&CostCtx, Rdx, Backedge](ElementCount VF) {
+              InstructionCost CurrentCost = Backedge->computeCost(VF, CostCtx);
+              Type *ScalarTy = Backedge->getScalarType();
+              InstructionCost PRCost = CostCtx.TTI.getPartialReductionCost(
+                  Backedge->getOpcode(), ScalarTy, ScalarTy, ScalarTy, VF,
+                  TTI::PR_None, TTI::PR_None, std::nullopt, CostCtx.CostKind,
+                  Rdx->getFastMathFlagsOrNone());
+              return PRCost <= CurrentCost;
+            },
+            Range))
+      continue;
+
+    auto *Partial = new VPReductionRecipe(
+        Rdx->getRecurrenceKind(), Rdx->getFastMathFlagsOrNone(),
+        Backedge->getUnderlyingInstr(), Rdx, OtherOp, nullptr,
+        getReductionStyle(/*InLoop=*/false, /*Ordered=*/false,
+                          /*ScaleFactor=*/1));
+    Partial->insertBefore(Backedge);
+    Backedge->replaceAllUsesWith(Partial);
+    Backedge->eraseFromParent();
   }
 
   if (ChainsByPhi.empty())
