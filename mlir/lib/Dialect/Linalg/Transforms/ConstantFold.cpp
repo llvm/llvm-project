@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/IR/Matchers.h"
@@ -28,6 +29,7 @@ namespace {
 /// `ConcreteType` should provide methods with signatures
 ///
 /// ```c++
+///   bool checkElementTypes(LinalgOp linalgOp) const;
 ///   bool matchIndexingMaps(LinalgOp linalgOp) const;
 ///   RegionComputationFn getRegionComputeFn(LinalgOp) const;
 /// ```
@@ -75,17 +77,17 @@ public:
         }))
       return failure();
 
-    // Make sure all element types are the same.
-    auto getOperandElementType = [](Value value) {
-      return cast<ShapedType>(value.getType()).getElementType();
-    };
-    if (!llvm::all_equal(
-            llvm::map_range(linalgOp->getOperands(), getOperandElementType)))
-      return failure();
-
     // We can only handle the case where we have int/float elements.
     auto elementType = outputType.getElementType();
     if (!elementType.isIntOrFloat())
+      return failure();
+    for (Value input : linalgOp.getDpsInputs()) {
+      Type elemTy = cast<ShapedType>(input.getType()).getElementType();
+      if (!elemTy.isIntOrFloat())
+        return failure();
+    }
+
+    if (!static_cast<const ConcreteType *>(this)->checkElementTypes(linalgOp))
       return failure();
 
     // Require all indexing maps to be permutations for now. This is common and
@@ -267,6 +269,14 @@ struct FoldConstantTranspose : public FoldConstantBase<FoldConstantTranspose> {
 
   using FoldConstantBase::FoldConstantBase;
 
+  // Transpose requires all operand element types to match.
+  bool checkElementTypes(LinalgOp linalgOp) const {
+    auto getElem = [](Value v) {
+      return cast<ShapedType>(v.getType()).getElementType();
+    };
+    return llvm::all_equal(llvm::map_range(linalgOp->getOperands(), getElem));
+  }
+
   bool matchIndexingMaps(LinalgOp linalgOp) const {
     // We should have one input and one output.
     return linalgOp.getIndexingMapsArray().size() == 2;
@@ -300,10 +310,49 @@ struct FoldConstantTranspose : public FoldConstantBase<FoldConstantTranspose> {
 
   ControlFusionFn controlFn;
 };
+
+// Folds a linalg.generic whose body is a single arith cast op on the input
+// block arg, when the input is a constant. Only `arith.extsi` is supported for
+// now. In the future arith ops like extui, trunci, sitofp, uitofp, extf,
+// truncf, fptosi, fptoui could be added as well.
+struct FoldConstantCast : public FoldConstantBase<FoldConstantCast> {
+  using FoldConstantBase::FoldConstantBase;
+
+  // Allow differing input/output element types.
+  bool checkElementTypes(LinalgOp) const { return true; }
+
+  bool matchIndexingMaps(LinalgOp linalgOp) const {
+    return linalgOp.getNumDpsInputs() == 1;
+  }
+
+  RegionComputationFn getRegionComputeFn(LinalgOp linalgOp) const {
+    Block &body = linalgOp->getRegion(0).front();
+    // Expect exactly two ops: the cast, then `linalg.yield`.
+    if (body.getOperations().size() != 2)
+      return nullptr;
+    auto yieldOp = dyn_cast<linalg::YieldOp>(body.getTerminator());
+    if (!yieldOp || yieldOp.getValues().size() != 1)
+      return nullptr;
+
+    auto castOp = yieldOp.getValues().front().getDefiningOp<arith::ExtSIOp>();
+    if (!castOp || castOp->getBlock() != &body)
+      return nullptr;
+
+    // The cast must consume `bb0` arg 0.
+    auto inArg = dyn_cast<BlockArgument>(castOp.getIn());
+    if (!inArg || inArg.getOwner() != &body || inArg.getArgNumber() != 0)
+      return nullptr;
+
+    unsigned outBW = castOp.getResult().getType().getIntOrFloatBitWidth();
+    return [outBW](const APIntOrFloatArray &inputs) {
+      return APIntOrFloat{inputs.apInts.front().sext(outBW), std::nullopt};
+    };
+  }
+};
 } // namespace
 
 void mlir::linalg::populateConstantFoldLinalgOperations(
     RewritePatternSet &patterns, const ControlFusionFn &controlFn) {
   MLIRContext *context = patterns.getContext();
-  patterns.insert<FoldConstantTranspose>(context, controlFn);
+  patterns.insert<FoldConstantTranspose, FoldConstantCast>(context, controlFn);
 }

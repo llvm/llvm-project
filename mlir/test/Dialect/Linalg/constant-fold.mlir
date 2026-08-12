@@ -145,4 +145,72 @@ func.func @named_transpose_fold_2d_fp32(%init: tensor<3x2xf32>) -> tensor<3x2xf3
 
 // -----
 
+// CHECK-LABEL: @cast_fold_extsi_i32_to_i64
+func.func @cast_fold_extsi_i32_to_i64(%init: tensor<4xi64>) -> tensor<4xi64> {
+  %input = arith.constant dense<[1, 2, 3, 4]> : tensor<4xi32>
+  // CHECK: %[[CST:.+]] = arith.constant dense<[1, 2, 3, 4]> : tensor<4xi64>
+  %1 = linalg.generic {
+    indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> (d0)>],
+    iterator_types = ["parallel"]
+  } ins(%input : tensor<4xi32>) outs(%init : tensor<4xi64>) {
+  ^bb0(%arg1: i32, %arg2: i64):
+    %2 = arith.extsi %arg1 : i32 to i64
+    linalg.yield %2 : i64
+  } -> tensor<4xi64>
+  // CHECK: return %[[CST]]
+  return %1 : tensor<4xi64>
+}
+
+// -----
+
+// CHECK-LABEL: @cast_fold_extsi_negative
+func.func @cast_fold_extsi_negative(%init: tensor<2xi64>) -> tensor<2xi64> {
+  %input = arith.constant dense<[-1, -2]> : tensor<2xi32>
+  // CHECK: %[[CST:.+]] = arith.constant dense<[-1, -2]> : tensor<2xi64>
+  %1 = linalg.generic {
+    indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> (d0)>],
+    iterator_types = ["parallel"]
+  } ins(%input : tensor<2xi32>) outs(%init : tensor<2xi64>) {
+  ^bb0(%arg1: i32, %arg2: i64):
+    %2 = arith.extsi %arg1 : i32 to i64
+    linalg.yield %2 : i64
+  } -> tensor<2xi64>
+  // CHECK: return %[[CST]]
+  return %1 : tensor<2xi64>
+}
+
+// -----
+
+// CHECK-LABEL: @cast_nofold_non_cst_input
+func.func @cast_nofold_non_cst_input(%input: tensor<4xi32>, %init: tensor<4xi64>) -> tensor<4xi64> {
+  // CHECK: linalg.generic
+  %1 = linalg.generic {
+    indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> (d0)>],
+    iterator_types = ["parallel"]
+  } ins(%input : tensor<4xi32>) outs(%init : tensor<4xi64>) {
+  ^bb0(%arg1: i32, %arg2: i64):
+    %2 = arith.extsi %arg1 : i32 to i64
+    linalg.yield %2 : i64
+  } -> tensor<4xi64>
+  return %1 : tensor<4xi64>
+}
+
+// -----
+
+// CHECK-LABEL: @cast_nofold_multi_ops_in_region
+func.func @cast_nofold_multi_ops_in_region(%init: tensor<4xi64>) -> tensor<4xi64> {
+  %input = arith.constant dense<[1, 2, 3, 4]> : tensor<4xi32>
+  %two = arith.constant 2 : i64
+  // CHECK: linalg.generic
+  %1 = linalg.generic {
+    indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> (d0)>],
+    iterator_types = ["parallel"]
+  } ins(%input : tensor<4xi32>) outs(%init : tensor<4xi64>) {
+  ^bb0(%arg1: i32, %arg2: i64):
+    %2 = arith.extsi %arg1 : i32 to i64
+    %3 = arith.muli %2, %two : i64
+    linalg.yield %3 : i64
+  } -> tensor<4xi64>
+  return %1 : tensor<4xi64>
+}
 
