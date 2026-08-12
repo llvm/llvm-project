@@ -275,20 +275,22 @@ endif
 
 # The Swift object files are named .swift.o so they don't conflict
 # with the wrapped Swift module $(MODULENAME).o
-$(SWIFT_OBJECTS): $(SWIFT_SOURCES) $(DYLIB_SWIFT_SOURCES)
+$(SWIFT_OBJECTS): $(SWIFT_SOURCES) $(DYLIB_SWIFT_SOURCES) \
+                  $(call tool_prereq,$(SWIFTC)) \
+                  $(call tool_prereq,$(SWIFT))
 ifneq "$(SWIFT_WMO)" "1"
 	@echo "### Generating output file map"
-	$(PYTHON) $(THIS_FILE_DIR)/gen-output-map.py $^ $(patsubst %,$(BUILDDIR)/%,$(SWIFT_OBJECTS)) >$(BUILDDIR)/$(MODULENAME)-output-file-map.json
+	$(PYTHON) $(THIS_FILE_DIR)/gen-output-map.py $(filter %.swift,$^) $(patsubst %,$(BUILDDIR)/%,$(SWIFT_OBJECTS)) >$(BUILDDIR)/$(MODULENAME)-output-file-map.json
 endif
-	@echo "### Compiling" $^
+	@echo "### Compiling" $(filter %.swift,$^)
 	@echo "### Swift driver expanded incovation will be:"
-	$(SWIFTC) -emit-object $^ $(SWIFTC_OUTPUT) \
+	$(SWIFTC) -emit-object $(filter %.swift,$^) $(SWIFTC_OUTPUT) \
 	  $(SWIFTFLAGS) $(SWIFT_HFLAGS) $(PARSE_AS_LIBRARY) \
 	  -module-name $(MODULENAME) \
           -emit-module-path $(BUILDDIR)/$(MODULENAME).swiftmodule \
 	  $(SWIFT_INTERFACE_FLAGS) -###
 	@echo "### Swift driver invocation:"
-	$(SWIFTC) -emit-object $^ $(SWIFTC_OUTPUT) \
+	$(SWIFTC) -emit-object $(filter %.swift,$^) $(SWIFTC_OUTPUT) \
 	  $(SWIFTFLAGS) $(SWIFT_HFLAGS) $(PARSE_AS_LIBRARY) \
 	  -module-name $(MODULENAME) \
           -emit-module-path $(BUILDDIR)/$(MODULENAME).swiftmodule \
@@ -307,7 +309,7 @@ else
 SWIFTMODULE =
 LD_SWIFTFLAGS =
 endif
-$(EXE): $(OBJECTS)
+$(EXE): $(OBJECTS) $(call tool_prereq,$(SWIFTC))
 	@echo "### Linking" $(EXE)
 	$(SWIFTC) $(LD_EXTRAS) $(LD_SWIFTFLAGS) $(OBJECTS) $(SWIFT_LINK_FLAGS) -o "$(EXE)"
 ifneq "$(CODESIGN)" ""
@@ -321,9 +323,9 @@ ifeq "$(HIDE_SWIFTMODULE)" ""
 WRAPPED_SWIFTMODULE = $(MODULENAME).o
 endif
 
-$(EXE): $(OBJECTS)
+$(EXE): $(OBJECTS) $(call tool_prereq,$(SWIFTC))
 	@echo "### Linking" $(EXE)
-	$(SWIFTC) $(LD_EXTRAS) $(LD_SWIFTFLAGS) $(WRAPPED_SWIFTMODULE) $^ $(SWIFT_LINK_FLAGS) -o "$(EXE)"
+	$(SWIFTC) $(LD_EXTRAS) $(LD_SWIFTFLAGS) $(WRAPPED_SWIFTMODULE) $(OBJECTS) $(SWIFT_LINK_FLAGS) -o "$(EXE)"
 ifneq "$(HIDE_SWIFTMODULE)" ""
 	rm -f $(MODULENAME).swiftmodule
 endif
@@ -347,7 +349,9 @@ DYLIB_OBJECTS += $(BUILDDIR)/$(MODULENAME).o
 endif
 endif # Darwin
 
-$(DYLIB_FILENAME) : $(DYLIB_OBJECTS) $(MODULE_INTERFACE)
+$(DYLIB_FILENAME) : $(DYLIB_OBJECTS) $(MODULE_INTERFACE) \
+                    $(call tool_prereq,$(SWIFTC)) \
+                    $(call tool_prereq,$(DS))
 	@echo "### Linking dynamic library $(DYLIB_NAME)"
 ifneq "$(FRAMEWORK)" ""
 	$(call MKDIR_P,$(FRAMEWORK).framework/Versions/A/Headers)
