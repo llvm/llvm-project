@@ -1,27 +1,16 @@
 # A collection of helper CMake functions to detect hardware capabilities. At
 # the moment these are used when configuring MLIR integration tests.
 
-# Checks whether the specified hardware capability is supported by the host
-# Darwin (macOS) system. This is implemented via `sysctl`, which is the
-# Darwin equivalent of Linux's auxiliary vector feature bits. Only the
-# mappings actually needed by callers in this file are provided; unmapped
-# hwcap_spec values conservatively report unsupported.
+# Checks whether SME is supported by the host Darwin (macOS) system. This is
+# implemented via `sysctl`, since Darwin has no equivalent of Linux's
+# auxiliary vector feature bits (hwcap).
 #
-# check_hwcap_darwin(
-#   hwcap_spec
+# check_sme_support_on_darwin(
 #   output_var
 # )
-function(check_hwcap_darwin hwcap_spec output)
-    if(hwcap_spec STREQUAL "HWCAP2_SME")
-      set(sysctl_name "hw.optional.arm.FEAT_SME")
-    else()
-      message(STATUS "Checking whether ${hwcap_spec} is supported by the host system: FALSE (no Darwin mapping)")
-      set(${output} FALSE PARENT_SCOPE)
-      return()
-    endif()
-
+function(check_sme_support_on_darwin output)
     execute_process(
-        COMMAND sysctl -n ${sysctl_name}
+        COMMAND sysctl -n hw.optional.arm.FEAT_SME
         OUTPUT_VARIABLE sysctl_output
         OUTPUT_STRIP_TRAILING_WHITESPACE
         ERROR_QUIET
@@ -33,15 +22,13 @@ function(check_hwcap_darwin hwcap_spec output)
     else()
       set(local_result FALSE)
     endif()
-    message(STATUS "Checking whether ${hwcap_spec} is supported by the host system (via sysctl ${sysctl_name}): ${local_result}")
+    message(STATUS "Checking whether SME is supported by the host system (via sysctl hw.optional.arm.FEAT_SME): ${local_result}")
     set(${output} ${local_result} PARENT_SCOPE)
-endfunction(check_hwcap_darwin)
+endfunction(check_sme_support_on_darwin)
 
 # Checks whether the specified hardware capability is supported by the host
-# system. On Linux this is implemented by checking auxiliary vector feature
-# provided by the Linux kernel. On Darwin (macOS) this is implemented via
-# `sysctl` (see check_hwcap_darwin). On other platforms this conservatively
-# reports unsupported.
+# Linux system. This is implemented by checking auxiliary vector feature
+# provided by the Linux kernel.
 #
 # check_hwcap(
 #   hwcap_spec
@@ -59,12 +46,6 @@ endfunction(check_hwcap_darwin)
 # check_hwcap("HWCAP2_SME" SME_EMULATOR_REQUIRED)
 #
 function(check_hwcap hwcap_spec output)
-    if(APPLE)
-      check_hwcap_darwin(${hwcap_spec} local_output)
-      set(${output} ${local_output} PARENT_SCOPE)
-      return()
-    endif()
-
     set(hwcap_test_src
       [====[
       #include <asm/hwcap.h>
@@ -132,7 +113,16 @@ function(check_emulator mlir_e2e_tests hwcap_spec emulator_exec)
     return()
   endif()
 
-  check_hwcap(${hwcap_spec} emulator_not_required)
+  if(APPLE AND hwcap_spec STREQUAL "HWCAP2_SME")
+    check_sme_support_on_darwin(emulator_not_required)
+  elseif(APPLE)
+    # No Darwin mapping for anything other than SME (yet); conservatively
+    # assume an emulator is required.
+    set(emulator_not_required FALSE)
+  else()
+    check_hwcap(${hwcap_spec} emulator_not_required)
+  endif()
+
   if (${emulator_not_required})
     return()
   endif()
