@@ -33,6 +33,11 @@ page](https://llvm.org/releases/).
 
 ## Non-comprehensive list of changes in this release
 
+- Change source path in -Rpass remarks (e.g., -Rpass=loop-vectorize) from a
+  (mostly) full path to clang's behavior which is to use the source filename
+  as specified on the command line (except that ./foo.f90 removes the ./
+  prefix).
+
 ## New Compiler Flags
 
 ## Windows Support
