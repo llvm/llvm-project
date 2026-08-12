@@ -1319,6 +1319,10 @@ public:
     return FS != ForcedScalars.end() && FS->second.contains(I);
   }
 
+  bool isGatherScatterProfitable(Instruction *I, ElementCount VF) const {
+    return costInterleaveGatherScatter(I, VF).first == CM_GatherScatter;
+  }
+
 private:
   unsigned NumPredStores = 0;
 
@@ -5623,6 +5627,10 @@ bool VPCostContext::willBeScalarized(Instruction *I, ElementCount VF) const {
   return CM.isScalarWithPredication(I, VF) ||
          CM.isUniformAfterVectorization(I, VF) || CM.isForcedScalar(I, VF) ||
          (VF.isVector() && CM.isProfitableToScalarize(I, VF));
+}
+
+bool VPCostContext::willGatherScatter(Instruction *I, ElementCount VF) const {
+  return !willBeScalarized(I, VF) && CM.isGatherScatterProfitable(I, VF);
 }
 
 bool VPCostContext::isMaskRequired(Instruction *I) const {
