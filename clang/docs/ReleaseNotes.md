@@ -135,6 +135,9 @@ features cannot lower the translation-unit ABI level;
 
 #### Resolutions to C++ Defect Reports
 
+- Clang now falls back to alignment-aware allocation functions for
+  non-overaligned types, implementing [CWG2282](https://wg21.link/cwg2282).
+
 ### C Language Changes
 
 #### C2y Feature Support
@@ -163,6 +166,12 @@ features cannot lower the translation-unit ABI level;
     // ...
   }
 ```
+
+- Clang now diagnoses the use of the same identifier with both internal and
+  external linkage within a translation unit, as made ill-formed by
+  [N3410](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3410.pdf).
+  This is also diagnosed in older C language modes as the behavior was
+  undefined prior to C2y. (#GH54215)
 
 #### C23 Feature Support
 
@@ -454,6 +463,14 @@ features cannot lower the translation-unit ABI level;
 - Compute value dependence correctly for structured bindings. This mostly
   affect C++26 constexpr structured bindings and expansion statements, but
   also affects some uses of plain structured bindings. (#GH211930)
+
+- Fixed friend declarations sometimes making non-visible default arguments
+  incorrectly visible to default argument redefinition checks across modules.
+
+- Fixed handling of SFINAE failures for expressions which depend on in-class
+  member initializers of templates which are not yet parsed. An example is
+  using ``__is_constructible`` on a nested class template inside the definition
+  of the containing class. (#GH215166)
 
 #### Bug Fixes to AST Handling
 

@@ -13,10 +13,8 @@
 #include "NVPTXTargetMachine.h"
 #include "NVPTX.h"
 #include "NVPTXAliasAnalysis.h"
-#include "NVPTXAllocaHoisting.h"
 #include "NVPTXAsmPrinter.h"
 #include "NVPTXCtorDtorLowering.h"
-#include "NVPTXLowerAggrCopies.h"
 #include "NVPTXMachineFunctionInfo.h"
 #include "NVPTXTargetObjectFile.h"
 #include "NVPTXTargetTransformInfo.h"
@@ -100,7 +98,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeNVVMReflectLegacyPassPass(PR);
   initializeNVVMIntrRangePass(PR);
   initializeGenericToNVVMLegacyPassPass(PR);
-  initializeNVPTXAllocaHoistingPass(PR);
+  initializeNVPTXAllocaHoistingLegacyPassPass(PR);
   initializeNVPTXAsmPrinterPass(PR);
   initializeNVPTXAssignValidGlobalNamesLegacyPassPass(PR);
   initializeNVPTXAtomicLowerLegacyPassPass(PR);
@@ -110,14 +108,14 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeNVPTXLowerAllocaLegacyPassPass(PR);
   initializeNVPTXLowerUnreachableLegacyPassPass(PR);
   initializeNVPTXCtorDtorLoweringLegacyPass(PR);
-  initializeNVPTXLowerAggrCopiesPass(PR);
-  initializeNVPTXProxyRegErasurePass(PR);
+  initializeNVPTXLowerAggrCopiesLegacyPassPass(PR);
+  initializeNVPTXProxyRegErasureLegacyPassPass(PR);
   initializeNVPTXForwardParamsLegacyPassPass(PR);
-  initializeNVPTXAddressFolderPassPass(PR);
+  initializeNVPTXAddressFolderLegacyPassPass(PR);
   initializeNVPTXDAGToDAGISelLegacyPass(PR);
   initializeNVPTXAAWrapperPassPass(PR);
   initializeNVPTXExternalAAWrapperPass(PR);
-  initializeNVPTXPeepholePass(PR);
+  initializeNVPTXPeepholeLegacyPassPass(PR);
   initializeNVPTXTagInvariantLoadLegacyPassPass(PR);
   initializeNVPTXIRPeepholePass(PR);
   initializeNVPTXPrologEpilogPassPass(PR);
@@ -393,10 +391,10 @@ void NVPTXPassConfig::addIRPasses() {
 }
 
 bool NVPTXPassConfig::addInstSelector() {
-  addPass(createLowerAggrCopies());
-  addPass(createAllocaHoisting());
+  addPass(createNVPTXLowerAggrCopiesLegacyPass());
+  addPass(createNVPTXAllocaHoistingLegacyPass());
   addPass(createNVPTXISelDag(getNVPTXTargetMachine(), getOptLevel()));
-  addPass(createNVPTXReplaceImageHandlesPass());
+  addPass(createNVPTXReplaceImageHandlesLegacyPass());
 
   return false;
 }
@@ -404,9 +402,9 @@ bool NVPTXPassConfig::addInstSelector() {
 void NVPTXPassConfig::addPreRegAlloc() {
   addPass(createNVPTXForwardParamsLegacyPass());
   if (getOptLevel() != CodeGenOptLevel::None)
-    addPass(createNVPTXAddressFolderPass());
+    addPass(createNVPTXAddressFolderLegacyPass());
   // Remove Proxy Register pseudo instructions used to keep `callseq_end` alive.
-  addPass(createNVPTXProxyRegErasurePass());
+  addPass(createNVPTXProxyRegErasureLegacyPass());
 }
 
 void NVPTXPassConfig::addPostRegAlloc() {
@@ -415,7 +413,7 @@ void NVPTXPassConfig::addPostRegAlloc() {
     // NVPTXPrologEpilogPass calculates frame object offset and replace frame
     // index with VRFrame register. NVPTXPeephole need to be run after that and
     // will replace VRFrame with VRFrameLocal when possible.
-    addPass(createNVPTXPeephole());
+    addPass(createNVPTXPeepholeLegacyPass());
   }
 }
 
