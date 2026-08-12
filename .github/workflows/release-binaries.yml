@@ -90,6 +90,7 @@ jobs:
       id: vars
       env:
         LLVM_VERSION_FROM_SOURCE: ${{ steps.version-from-source.outputs.full-no-suffix }}
+        LLVM_VERSION_MAJOR: ${{ steps.version-from-source.outputs.major }}
         INPUTS_RUNS_ON: ${{ inputs.runs-on }}
       shell: bash
       # In order for the test-release.sh script to run correctly, the LLVM
@@ -113,6 +114,14 @@ jobs:
           fi
           ref="$GITHUB_SHA"
         fi
+
+        if [ "$RUNNER_OS" = "Windows" ] && grep -q 'rc' <<< "$release_version"; then
+          # The Wix installer generator does not support strings in the version number,
+          # so we need to fixup the version number for release candidates.
+          # For Example: 23.1.0-rc2 will become 23.0.0.2
+          release_version="$LLVM_VERSION_MAJOR.0.0.$(cut -d c -f2 <<< $release_version)"
+        fi
+
         if [ -n "${{ inputs.upload }}" ]; then
           upload="${{ inputs.upload }}"
         else
@@ -375,7 +384,9 @@ jobs:
       - name: Upload Artifacts
         uses: $/.github/workflows/upload-release-artifact
         with:
-          release-version: ${{ needs.prepare.outputs.release-version }}
+          # We need to use the inputs.release-version here, because on Windows we
+          # need to fixup the rc version that's stored in needs.prepare.outputs.release-version
+          release-version: ${{ inputs.release-version || needs.prepare.outputs.release-version }}
           artifact-id: ${{ needs.build-release-package.outputs.artifact-id }}
           attestation-name: ${{ needs.prepare.outputs.attestation-name }}
           digest: ${{ needs.build-release-package.outputs.digest }}
