@@ -71,6 +71,10 @@ void test_nullptr_ok() {
   std::unique_ptr<A[]> b(nullptr);
 }
 
+void test_zero_ok() {
+  std::unique_ptr<A[]> b(0);
+}
+
 void test_copy_move_constructor_ok(std::unique_ptr<A[]> up) {
   auto up3 = std::move(up);
 }
@@ -110,6 +114,11 @@ void test_custom_deleter_reset_ok() {
 void test_nullptr_reset_ok() {
   std::unique_ptr<A[]> b;
   b.reset(nullptr);
+}
+
+void test_zero_reset_ok() {
+  std::unique_ptr<A[]> b;
+  b.reset(0);
 }
 
 // 

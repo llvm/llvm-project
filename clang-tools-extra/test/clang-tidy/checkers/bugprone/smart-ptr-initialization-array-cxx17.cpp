@@ -65,6 +65,10 @@ void test_nullptr_ok() {
   std::shared_ptr<A[]> a(nullptr);
 }
 
+void test_zero_ok() {
+  std::shared_ptr<A[]> a(0);
+}
+
 void test_copy_move_constructor_ok(std::shared_ptr<A[]> sp) {
   auto sp2 = sp;
   auto sp3 = std::move(sp);
