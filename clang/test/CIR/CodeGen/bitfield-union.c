@@ -53,7 +53,7 @@ void f() {
 // CIR:    cir.return
 
 // LLVM: define dso_local void @f
-// LLVM:   [[ALLOC:%.*]] = alloca %union.demo, i64 1, align 4
+// LLVM:   [[ALLOC:%.*]] = alloca %union.demo, align 4
 // LLVM:   store i32 1, ptr [[ALLOC]], align 4
 // LLVM:   [[BFLOAD:%.*]] = load i8, ptr [[ALLOC]], align 4
 // LLVM:   [[CLEAR:%.*]] = and i8 [[BFLOAD]], -16

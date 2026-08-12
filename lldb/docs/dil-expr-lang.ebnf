@@ -45,7 +45,9 @@ postfix_expression = primary_expression
 primary_expression = numeric_literal
                    | boolean_literal
                    | id_expression
-                   | "(" expression ")" ;
+                   | "(" expression ")"
+                   | "sizeof" "(" expression ")"
+                   | "sizeof" "(" type_id ")" ;
 
 id_expression = unqualified_id
               | qualified_id

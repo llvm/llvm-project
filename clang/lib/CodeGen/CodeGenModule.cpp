@@ -51,6 +51,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ABI/IRTypeMapper.h"
 #include "llvm/ABI/TargetInfo.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -1393,6 +1394,25 @@ void CodeGenModule::Release() {
         llvm::Module::Error, "float-abi",
         llvm::MDString::get(getLLVMContext(),
                             llvm::FloatABI::getABITypeName(FloatABI)));
+  }
+
+  if (getTypes().isLongDoubleReferenced()) {
+    const llvm::fltSemantics *flt = &getTarget().getLongDoubleFormat();
+
+    std::optional<llvm::LongDoubleFormat> Format;
+    if (flt == &llvm::APFloat::IEEEquad())
+      Format = llvm::LongDoubleFormat::IEEEquad;
+    else if (flt == &llvm::APFloat::IEEEdouble())
+      Format = llvm::LongDoubleFormat::IEEEdouble;
+    else if (flt == &llvm::APFloat::PPCDoubleDouble())
+      Format = llvm::LongDoubleFormat::PPCDoubleDouble;
+    else if (flt == &llvm::APFloat::x87DoubleExtended())
+      Format = llvm::LongDoubleFormat::X87DoubleExtended;
+    else if (flt == &llvm::APFloat::IEEEsingle())
+      Format = llvm::LongDoubleFormat::IEEEsingle;
+
+    if (Format)
+      getModule().setLongDoubleFormat(*Format);
   }
 
   if (getTriple().isOSzOS()) {

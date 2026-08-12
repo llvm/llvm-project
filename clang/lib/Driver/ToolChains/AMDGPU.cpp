@@ -368,7 +368,7 @@ RocmInstallationDetector::RocmInstallationDetector(
   }
 
   if (DetectHIPRuntime)
-    detectHIPRuntime();
+    detectHIPRuntime(HostTriple);
 }
 
 void RocmInstallationDetector::detectDeviceLibrary() {
@@ -434,7 +434,8 @@ void RocmInstallationDetector::detectDeviceLibrary() {
   }
 }
 
-void RocmInstallationDetector::detectHIPRuntime() {
+void RocmInstallationDetector::detectHIPRuntime(
+    const llvm::Triple &HostTriple) {
   SmallVector<Candidate, 4> HIPSearchDirs;
   if (!HIPPathArg.empty())
     HIPSearchDirs.emplace_back(HIPPathArg.str());
@@ -456,8 +457,25 @@ void RocmInstallationDetector::detectHIPRuntime() {
     llvm::sys::path::append(BinPath, "bin");
     IncludePath = InstallPath;
     llvm::sys::path::append(IncludePath, "include");
-    LibPath = InstallPath;
-    llvm::sys::path::append(LibPath, "lib");
+
+    // ROCm's lib path is the place where the amdhsa64 library is located.
+    // Probe for it and fallback to /rocm/lib if we cannot find it.
+    StringRef LibAmdHip64 =
+        HostTriple.isOSMSVCRT() ? "amdhip64.lib" : "libamdhip64.so";
+    LibPath.clear();
+    for (StringRef LibPathSuffix : {"lib", "lib64"}) {
+      SmallString<0> LibAmdHip64Location;
+      llvm::sys::path::append(LibAmdHip64Location, InstallPath, LibPathSuffix,
+                              LibAmdHip64);
+      if (FS.exists(LibAmdHip64Location)) {
+        llvm::sys::path::append(LibPath, InstallPath, LibPathSuffix);
+        break;
+      }
+    }
+
+    if (LibPath.empty())
+      llvm::sys::path::append(LibPath, InstallPath, "lib");
+
     SharePath = InstallPath;
     llvm::sys::path::append(SharePath, "share");
 
@@ -1281,8 +1299,12 @@ void AMDGPUToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
     if (DriverArgs.hasFlag(options::OPT_offload_inc,
                            options::OPT_no_offload_inc, true) &&
         !DriverArgs.hasArg(options::OPT_nohipwrapperinc) &&
-        !DriverArgs.hasArg(options::OPT_nobuiltininc))
-      CC1Args.append({"-include", "__clang_gpu_device_functions.h"});
+        !DriverArgs.hasArg(options::OPT_nobuiltininc)) {
+      SmallString<128> P(getDriver().ResourceDir);
+      llvm::sys::path::append(P, "include", "hip_wrappers");
+      CC1Args.push_back("-internal-isystem");
+      CC1Args.push_back(DriverArgs.MakeArgString(P));
+    }
     return;
   }
 

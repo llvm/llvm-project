@@ -5,7 +5,7 @@ from lldbsuite.test import lldbutil
 
 
 class TestGdbRemoteAbort(gdbremote_testcase.GdbRemoteTestCaseBase):
-    @requireNotWindows  # No signal is sent on Windows.
+    @requireSignals
     # std::abort() on <= API 16 raises SIGSEGV - b.android.com/179836
     @expectedFailureAndroid(api_levels=list(range(16 + 1)))
     def test_inferior_abort_received_llgs(self):
