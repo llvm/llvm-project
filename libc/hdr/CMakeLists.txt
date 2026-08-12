@@ -118,7 +118,6 @@ add_proxy_header_library(
     semaphore_macros.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-macros.semaphore_macros
-    libc.include.semaphore
 )
 
 add_proxy_header_library(
