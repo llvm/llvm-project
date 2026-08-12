@@ -18,8 +18,8 @@ __device__ Result<__addrspaceof((value<T>))> query(T) {
   return {};
 }
 
-template __device__ Result<__CLANG_ADDRESS_SPACE_CUDA_DEVICE> query<int>(int);
-template __device__ Result<__CLANG_ADDRESS_SPACE_DEFAULT> query<int>(int);
+template __device__ Result<__ADDRSPACE_GLOBAL> query<int>(int);
+template __device__ Result<__ADDRSPACE_DEFAULT> query<int>(int);
 
 // Lb1E records the entity form; Lb0E records the expression form.
 // CHECK-DAG: define {{.*}}@_Z5queryIiE6ResultIXu13__addrspaceofLb1EX5valueIT_EEEEES1_(

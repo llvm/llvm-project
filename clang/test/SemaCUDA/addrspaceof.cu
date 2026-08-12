@@ -15,21 +15,21 @@ __constant__ int constant_var;
 __device__ const int const_device_var = 1;
 
 static_assert(__addrspaceof(device_var) ==
-              __CLANG_ADDRESS_SPACE_HIP_DEVICE);
+              __ADDRSPACE_GLOBAL);
 static_assert(__addrspaceof(device_array) ==
-              __CLANG_ADDRESS_SPACE_HIP_DEVICE);
+              __ADDRSPACE_GLOBAL);
 static_assert(__addrspaceof(*&device_array) ==
-              __CLANG_ADDRESS_SPACE_DEFAULT);
+              __ADDRSPACE_DEFAULT);
 static_assert(__addrspaceof(*(device_array + 1)) ==
-              __CLANG_ADDRESS_SPACE_DEFAULT);
+              __ADDRSPACE_DEFAULT);
 static_assert(__addrspaceof(constant_var) ==
-              __CLANG_ADDRESS_SPACE_HIP_CONSTANT);
+              __ADDRSPACE_CONSTANT);
 static_assert(__addrspaceof(const_device_var) ==
-              __CLANG_ADDRESS_SPACE_HIP_CONSTANT);
+              __ADDRSPACE_CONSTANT);
 static_assert(__addrspaceof(*(int *)&constant_var) ==
-              __CLANG_ADDRESS_SPACE_DEFAULT);
+              __ADDRSPACE_DEFAULT);
 static_assert(__addrspaceof(*device_ptr) ==
-              __CLANG_ADDRESS_SPACE_DEFAULT);
+              __ADDRSPACE_DEFAULT);
 
 void host_queries() {
   (void)__addrspaceof(device_var);
