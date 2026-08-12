@@ -180,7 +180,7 @@ static StringRef getSamplerFeedbackTypeName(SamplerFeedbackType SFT) {
   llvm_unreachable("Unhandled SamplerFeedbackType");
 }
 
-dxil::ElementType dxil::toDXILElementType(Type *Ty, bool IsSigned) {
+static dxil::ElementType toDXILElementType(Type *Ty, bool IsSigned) {
   // TODO: Handle unorm, snorm, and packed.
   Ty = Ty->getScalarType();
 
