@@ -91,3 +91,57 @@ entry:
   ret void
 }
 
+; Extracting channel 1 of a <4 x half> that lives in a single 64-bit register,
+; as produced by a D16 image sample, is legalized to trunc(srl(i64, 16)).
+; V_FMA_MIX_F32 reads hi16 from a 32-bit source via op_sel, so isExtractHiElt
+; must not fold the 64-bit shift into it: doing so builds a COPY from a 64-bit
+; virtual register to a 32-bit operand. optnone keeps the DAG combiner from
+; splitting the i64 into two i32s before isel, which is what hides this at the
+; other optimization levels.
+
+define float @fma_mix_f32_hi16_from_64bit_src(ptr addrspace(4) inreg %p) noinline optnone {
+  ; GFX11-REAL16-LABEL: name: fma_mix_f32_hi16_from_64bit_src
+  ; GFX11-REAL16: bb.0.entry:
+  ; GFX11-REAL16-NEXT:   liveins: $sgpr0, $sgpr1
+  ; GFX11-REAL16-NEXT: {{  $}}
+  ; GFX11-REAL16-NEXT:   [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr1
+  ; GFX11-REAL16-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+  ; GFX11-REAL16-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY]], %subreg.sub1
+  ; GFX11-REAL16-NEXT:   [[COPY2:%[0-9]+]]:sreg_64 = COPY [[REG_SEQUENCE]]
+  ; GFX11-REAL16-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[REG_SEQUENCE]], 0, 0 :: (load (s64) from %ir.p, addrspace 4)
+  ; GFX11-REAL16-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub0
+  ; GFX11-REAL16-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 killed [[COPY3]]
+  ; GFX11-REAL16-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 16
+  ; GFX11-REAL16-NEXT:   [[S_LSHR_B64_:%[0-9]+]]:sreg_64 = S_LSHR_B64 [[S_LOAD_DWORDX2_IMM]], killed [[S_MOV_B32_1]], implicit-def dead $scc
+  ; GFX11-REAL16-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[S_LSHR_B64_]].sub0
+  ; GFX11-REAL16-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sgpr_32 = S_MOV_B32 killed [[COPY4]]
+  ; GFX11-REAL16-NEXT:   [[V_FMA_MIX_F32_:%[0-9]+]]:vgpr_32 = nofpexcept V_FMA_MIX_F32 8, killed [[S_MOV_B32_2]], 8, [[S_MOV_B32_]], 8, [[S_MOV_B32_]], 0, 0, 0, implicit $mode, implicit $exec
+  ; GFX11-REAL16-NEXT:   $vgpr0 = COPY [[V_FMA_MIX_F32_]]
+  ; GFX11-REAL16-NEXT:   SI_RETURN implicit $vgpr0
+  ;
+  ; GFX11-FAKE16-LABEL: name: fma_mix_f32_hi16_from_64bit_src
+  ; GFX11-FAKE16: bb.0.entry:
+  ; GFX11-FAKE16-NEXT:   liveins: $sgpr0, $sgpr1
+  ; GFX11-FAKE16-NEXT: {{  $}}
+  ; GFX11-FAKE16-NEXT:   [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr1
+  ; GFX11-FAKE16-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+  ; GFX11-FAKE16-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY]], %subreg.sub1
+  ; GFX11-FAKE16-NEXT:   [[COPY2:%[0-9]+]]:sreg_64 = COPY [[REG_SEQUENCE]]
+  ; GFX11-FAKE16-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[REG_SEQUENCE]], 0, 0 :: (load (s64) from %ir.p, addrspace 4)
+  ; GFX11-FAKE16-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub0
+  ; GFX11-FAKE16-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 16
+  ; GFX11-FAKE16-NEXT:   [[S_LSHR_B64_:%[0-9]+]]:sreg_64 = S_LSHR_B64 [[S_LOAD_DWORDX2_IMM]], killed [[S_MOV_B32_]], implicit-def dead $scc
+  ; GFX11-FAKE16-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[S_LSHR_B64_]].sub0
+  ; GFX11-FAKE16-NEXT:   [[V_FMA_MIX_F32_:%[0-9]+]]:vgpr_32 = nofpexcept V_FMA_MIX_F32 8, killed [[COPY4]], 8, [[COPY3]], 8, [[COPY3]], 0, 0, 0, implicit $mode, implicit $exec
+  ; GFX11-FAKE16-NEXT:   $vgpr0 = COPY [[V_FMA_MIX_F32_]]
+  ; GFX11-FAKE16-NEXT:   SI_RETURN implicit $vgpr0
+entry:
+  %vec = load <4 x half>, ptr addrspace(4) %p
+  %ch0 = extractelement <4 x half> %vec, i64 0
+  %ch1 = extractelement <4 x half> %vec, i64 1
+  %ch0.ext = fpext half %ch0 to float
+  %ch1.ext = fpext half %ch1 to float
+  %result = call float @llvm.fmuladd.f32(float %ch1.ext, float %ch0.ext, float %ch0.ext)
+  ret float %result
+}
+
