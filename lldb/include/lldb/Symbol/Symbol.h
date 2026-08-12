@@ -54,7 +54,7 @@ public:
   ~Symbol() {
     if (m_type != lldb::eSymbolTypeReExported &&
         m_type != lldb::eSymbolTypeInvalid)
-      m_addr_or_reexport.GetAddressRange(*this).Clear();
+      m_addr_range.Clear();
   }
 
   const Symbol &operator=(const Symbol &rhs);
@@ -77,13 +77,9 @@ public:
   // an Address object that contains an constant integer value in
   // m_addr_range.m_base_addr.m_offset which could be incorrectly used to
   // represent an absolute address since it has no section.
-  Address &GetAddressRef() {
-    return m_addr_or_reexport.GetAddressRange(*this).GetBaseAddress();
-  }
+  Address &GetAddressRef() { return m_addr_range.GetBaseAddress(); }
 
-  const Address &GetAddressRef() const {
-    return m_addr_or_reexport.GetAddressRange(*this).GetBaseAddress();
-  }
+  const Address &GetAddressRef() const { return m_addr_range.GetBaseAddress(); }
 
   // Makes sure the symbol's value is an address and returns the file address.
   // Returns LLDB_INVALID_ADDRESS if the symbol's value isn't an address.
@@ -107,7 +103,7 @@ public:
     // GetAddress() accessor, we need to hand out an invalid address if the
     // symbol's value isn't an address.
     if (ValueIsAddress())
-      return m_addr_or_reexport.GetAddressRange(*this).GetBaseAddress();
+      return m_addr_range.GetBaseAddress();
     else
       return Address();
   }
@@ -119,9 +115,7 @@ public:
   /// no section, then getting the file address will return the correct value
   /// as it will return the offset in the base address which is the value.
   uint64_t GetRawValue() const {
-    return m_addr_or_reexport.GetAddressRange(*this)
-        .GetBaseAddress()
-        .GetFileAddress();
+    return m_addr_range.GetBaseAddress().GetFileAddress();
   }
 
   // When a symbol's value isn't an address, we need to access the raw value.
@@ -135,9 +129,7 @@ public:
       return fail_value;
     } else {
       // The value is stored in the base address' offset
-      return m_addr_or_reexport.GetAddressRange(*this)
-          .GetBaseAddress()
-          .GetOffset();
+      return m_addr_range.GetBaseAddress().GetOffset();
     }
   }
 
@@ -227,7 +219,7 @@ public:
 
   void SetByteSize(lldb::addr_t size) {
     m_size_is_valid = size > 0;
-    m_addr_or_reexport.GetAddressRange(*this).SetByteSize(size);
+    m_addr_range.SetByteSize(size);
   }
 
   bool GetSizeIsSibling() const { return m_size_is_sibling; }
@@ -348,7 +340,6 @@ protected:
     ConstString name;
     FileSpec library;
     ReExportInfo() : name(), library() {}
-    void Clear() { library.Clear(); }
   };
 
   uint32_t m_uid = LLDB_INVALID_SYMBOL_ID; // User ID (usually the original
@@ -377,39 +368,16 @@ protected:
       m_is_weak : 1,
       m_type : 6;            // Values from the lldb::SymbolType enum.
   mutable Mangled m_mangled; // uniqued symbol name/mangled name pair
+  union {
+    // Contains the value, or the section offset address when the value is an
+    // address in a section, and the size (if known).  For non-re-export
+    // symbols.
+    AddressRange m_addr_range;
 
-  // A wrapper around a `union {AddressRange, ReExportInfo}` to
-  // enforce the types being get/set match the Symbol's m_type,
-  // assert if there is a type mismatch.
-  struct AddrRangeOrReExport {
-    AddressRange &GetAddressRange(Symbol &sym);
-    const AddressRange &GetAddressRange(const Symbol &sym) const;
-    ReExportInfo &GetReExportInfo(Symbol &sym);
-    const ReExportInfo &GetReExportInfo(const Symbol &sym) const;
-    void SetAddressRange(Symbol &sym, const AddressRange addr_range);
-    void SetRexportInfo(Symbol &sym, const ReExportInfo reexport_info);
-
-    AddrRangeOrReExport(const Symbol &sym) : m_addr_range() {
-      if (sym.GetType() == lldb::eSymbolTypeReExported)
-        m_reexport_info = ReExportInfo();
-    }
-    // Proper destruction is handled by Symbol's dtor; supply a no-op
-    // impl to let the compiler know it's handled.
-    ~AddrRangeOrReExport() {}
-
-  private:
-    union {
-      // Contains the value, or the section offset address when the value is an
-      // address in a section, and the size (if known).  For non-re-export
-      // symbols.
-      AddressRange m_addr_range;
-
-      // Stores re-export information if this symbol is of type
-      // eSymbolTypeReExported; no address information for these symbols.
-      ReExportInfo m_reexport_info;
-    };
-  } m_addr_or_reexport;
-
+    // Stores re-export information if this symbol is of type
+    // eSymbolTypeReExported; no address information for these symbols.
+    ReExportInfo m_reexport_info;
+  };
   uint32_t m_flags = 0; // A copy of the flags from the original symbol table,
                         // the ObjectFile plug-in can interpret these
 };
