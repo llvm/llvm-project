@@ -139,10 +139,12 @@ module {
 // -----
 
 module {
-  func.func @unsupported_remainder() attributes {xemachine.kernel, xemachine.kernel_args = [], xw.simd_width = 8 : i32} {
-    %one = xw.constant 1 : i32 -> !xw.simd<i32, 8>
-    // expected-error@+1 {{integer operation has no XeMachine instruction selection}}
-    %result = xw.binary remui %one, %one : !xw.simd<i32, 8>, !xw.simd<i32, 8> -> !xw.simd<i32, 8>
+  func.func @wide_division() attributes {
+      xemachine.kernel, xemachine.kernel_args = [],
+      xw.simd_width = 32 : i32} {
+    %one = xw.constant 1 : i64 -> !xw.simd<i64, 32>
+    // expected-error@+1 {{SIMD32 i64 division/remainder has no exact two-half flag selection}}
+    %result = xw.binary divui %one, %one : !xw.simd<i64, 32>, !xw.simd<i64, 32> -> !xw.simd<i64, 32>
     return
   }
 }

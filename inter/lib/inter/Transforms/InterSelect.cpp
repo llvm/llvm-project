@@ -4,6 +4,7 @@
 #include "inter/Dialect/XeMachine/IR/XeMachine.h"
 #include "inter/Transforms/Passes.h"
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/UB/IR/UBOps.h"
@@ -74,6 +75,7 @@ private:
   bool prologueEmitted = false;
 
   Type i8() const { return IntegerType::get(context, 8); }
+  Type i1() const { return IntegerType::get(context, 1); }
   Type i16() const { return IntegerType::get(context, 16); }
   Type i32() const { return IntegerType::get(context, 32); }
   Type i64() const { return IntegerType::get(context, 64); }
@@ -564,8 +566,7 @@ private:
     return result;
   }
 
-  FailureOr<int64_t> getConstantBits(xw::ConstantOp constant) const {
-    Attribute value = constant.getValue();
+  FailureOr<int64_t> getConstantBits(Attribute value, Operation *owner) const {
     if (IntegerAttr integer = dyn_cast<IntegerAttr>(value))
       return integer.getValue().getSExtValue();
     if (FloatAttr floating = dyn_cast<FloatAttr>(value))
@@ -573,7 +574,7 @@ private:
           floating.getValue().bitcastToAPInt().getZExtValue());
     if (DenseElementsAttr dense = dyn_cast<DenseElementsAttr>(value)) {
       if (!dense.isSplat())
-        return constant.emitOpError(
+        return owner->emitOpError(
                    "non-splat SIMD constants have no machine immediate form"),
                failure();
       if (dense.getElementType().isIntOrIndex())
@@ -582,7 +583,24 @@ private:
         return static_cast<int64_t>(
             dense.getSplatValue<APFloat>().bitcastToAPInt().getZExtValue());
     }
-    return constant.emitOpError("unsupported XW constant attribute"), failure();
+    return owner->emitOpError("unsupported constant attribute"), failure();
+  }
+
+  FailureOr<int64_t> getConstantBits(xw::ConstantOp constant) const {
+    return getConstantBits(constant.getValue(), constant);
+  }
+
+  LogicalResult lowerConstant(Value result, Attribute value, Operation *owner) {
+    FailureOr<ValueShape> shape = getShape(result.getType(), owner);
+    FailureOr<int64_t> bits = getConstantBits(value, owner);
+    if (failed(shape) || failed(bits))
+      return failure();
+    Value selected = immediate(*bits, shape->elementType);
+    if (isWideSimd(result.getType()))
+      wideValues[result] = {selected, selected};
+    else
+      values[result] = selected;
+    return success();
   }
 
   FailureOr<Value> getValue(Value source, Operation *owner) {
@@ -591,16 +609,17 @@ private:
     if (BlockArgument argument = dyn_cast<BlockArgument>(source))
       return lowerBareArgument(argument, owner);
     if (xw::ConstantOp constant = source.getDefiningOp<xw::ConstantOp>()) {
-      FailureOr<ValueShape> shape = getShape(source.getType(), owner);
-      FailureOr<int64_t> bits = getConstantBits(constant);
-      if (failed(shape) || failed(bits))
+      if (failed(lowerConstant(source, constant.getValue(), constant)))
         return failure();
-      Value result = immediate(*bits, shape->elementType);
-      if (isWideSimd(source.getType()))
-        wideValues[source] = {result, result};
-      else
-        values[source] = result;
-      return result;
+      return isWideSimd(source.getType()) ? wideValues.lookup(source).low
+                                          : values.lookup(source);
+    }
+    if (arith::ConstantOp constant =
+            source.getDefiningOp<arith::ConstantOp>()) {
+      if (failed(lowerConstant(source, constant.getValue(), constant)))
+        return failure();
+      return isWideSimd(source.getType()) ? wideValues.lookup(source).low
+                                          : values.lookup(source);
     }
     return owner->emitOpError("operand was not selected"), failure();
   }
@@ -724,6 +743,11 @@ private:
       return failure();
     if (isWideSimd(operation.getType()))
       return lowerWideBinary(operation);
+    if (operation.getKind() == xw::BinaryKind::DivUI ||
+        operation.getKind() == xw::BinaryKind::RemUI ||
+        operation.getKind() == xw::BinaryKind::DivSI ||
+        operation.getKind() == xw::BinaryKind::RemSI)
+      return lowerDivision(operation, *shape);
     FailureOr<Value> lhs = getValue(operation.getLhs(), operation);
     FailureOr<Value> rhs = getValue(operation.getRhs(), operation);
     FailureOr<int64_t> footprint = getFootprint(operation.getType(), operation);
@@ -841,7 +865,214 @@ private:
     return success();
   }
 
+  Value emitIntegerSub(Value lhs, Value rhs, Type resultType, Type elementType,
+                       int64_t executionSize, RegionAttr lhsRegion,
+                       RegionAttr rhsRegion) {
+    return SubOp::create(*builder, *location, resultType, elementType,
+                         executionSize, canonicalDestination(), rhsRegion,
+                         lhsRegion, IntegerAttr(), IntegerAttr(), IntegerAttr(),
+                         TypeAttr(), TypeAttr(), executionSize == 1, 0, rhs,
+                         lhs)
+        .getResult();
+  }
+
+  Value emitMerge(Value condition, Value trueValue, Value falseValue,
+                  Type resultType, Type elementType, int64_t executionSize) {
+    ExecIfOp merge =
+        ExecIfOp::create(*builder, *location, TypeRange{resultType}, condition);
+    std::array<Value, 2> alternatives = {trueValue, falseValue};
+    for (unsigned index = 0; index < alternatives.size(); ++index) {
+      Region &region =
+          index == 0 ? merge.getThenRegion() : merge.getElseRegion();
+      builder->setInsertionPointToStart(&region.emplaceBlock());
+      Value selected =
+          emitMove(resultType, elementType, executionSize, alternatives[index],
+                   canonicalRegion(), executionSize == 1);
+      YieldOp::create(*builder, *location, ValueRange{selected});
+    }
+    builder->setInsertionPointAfter(merge);
+    return merge.getResult(0);
+  }
+
+  Value emitSignedNegative(Value value, Type resultType, Type elementType,
+                           int64_t executionSize) {
+    CmpOp negative = CmpOp::create(
+        *builder, *location, ARFType::get(context, ARFFile::f, 2, -1),
+        CondModifierAttr::get(context, CondModifier::lt), typeAttr(elementType),
+        builder->getI32IntegerAttr(executionSize), canonicalRegion(),
+        RegionAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(), TypeAttr(),
+        value, immediate(0, elementType));
+    negative->setAttr("signed", builder->getUnitAttr());
+    return negative.getFlag();
+  }
+
+  std::pair<Value, Value> emitUnsignedDivRem(Value dividend, Value divisor,
+                                             Type resultType, Type elementType,
+                                             int64_t executionSize) {
+    Value quotient =
+        emitMove(resultType, elementType, executionSize,
+                 immediate(0, elementType), RegionAttr(), executionSize == 1);
+    Value remainder =
+        emitMove(resultType, elementType, executionSize,
+                 immediate(0, elementType), RegionAttr(), executionSize == 1);
+    unsigned width = cast<IntegerType>(elementType).getWidth();
+    for (unsigned step = 0; step < width; ++step) {
+      unsigned bit = width - step - 1;
+      Value shiftedDividend =
+          ShrOp::create(
+              *builder, *location, resultType, elementType, executionSize,
+              canonicalDestination(), canonicalRegion(), RegionAttr(),
+              IntegerAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(),
+              elementType.isInteger(64) ? typeAttr(i16()) : TypeAttr(),
+              executionSize == 1, 0, dividend, immediate(bit, i16()))
+              .getResult();
+      Value incoming =
+          AndOp::create(*builder, *location, resultType, elementType,
+                        executionSize, canonicalDestination(),
+                        canonicalRegion(), RegionAttr(), IntegerAttr(),
+                        IntegerAttr(), IntegerAttr(), TypeAttr(), TypeAttr(),
+                        executionSize == 1, 0, shiftedDividend,
+                        immediate(1, elementType))
+              .getResult();
+      Value shiftedRemainder =
+          ShlOp::create(
+              *builder, *location, resultType, elementType, executionSize,
+              canonicalDestination(), canonicalRegion(), RegionAttr(),
+              IntegerAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(),
+              elementType.isInteger(64) ? typeAttr(i16()) : TypeAttr(),
+              executionSize == 1, 0, remainder, immediate(1, i16()))
+              .getResult();
+      Value extendedRemainder =
+          OrOp::create(*builder, *location, resultType, elementType,
+                       executionSize, canonicalDestination(), canonicalRegion(),
+                       canonicalRegion(), IntegerAttr(), IntegerAttr(),
+                       IntegerAttr(), TypeAttr(), TypeAttr(),
+                       executionSize == 1, 0, shiftedRemainder, incoming)
+              .getResult();
+      Value reduced =
+          emitIntegerSub(extendedRemainder, divisor, resultType, elementType,
+                         executionSize, canonicalRegion(), canonicalRegion());
+      CmpOp ge = CmpOp::create(
+          *builder, *location, ARFType::get(context, ARFFile::f, 2, -1),
+          CondModifierAttr::get(context, CondModifier::ge),
+          typeAttr(elementType), builder->getI32IntegerAttr(executionSize),
+          canonicalRegion(), canonicalRegion(), IntegerAttr(), IntegerAttr(),
+          TypeAttr(), TypeAttr(), extendedRemainder, divisor);
+      Value quotientBit =
+          OrOp::create(*builder, *location, resultType, elementType,
+                       executionSize, canonicalDestination(), canonicalRegion(),
+                       RegionAttr(), IntegerAttr(), IntegerAttr(),
+                       IntegerAttr(), TypeAttr(), TypeAttr(),
+                       executionSize == 1, 0, quotient,
+                       immediate(uint64_t{1} << bit, elementType))
+              .getResult();
+      remainder = emitMerge(ge.getFlag(), reduced, extendedRemainder,
+                            resultType, elementType, executionSize);
+      quotient = emitMerge(ge.getFlag(), quotientBit, quotient, resultType,
+                           elementType, executionSize);
+    }
+    return {quotient, remainder};
+  }
+
+  LogicalResult lowerDivision(xw::BinaryOp operation, const ValueShape &shape) {
+    IntegerType elementType = dyn_cast<IntegerType>(shape.elementType);
+    if (!elementType || elementType.getWidth() > 64)
+      return operation.emitOpError(
+          "integer division supports element widths up to 64 bits");
+    FailureOr<Value> lhs = getValue(operation.getLhs(), operation);
+    FailureOr<Value> rhs = getValue(operation.getRhs(), operation);
+    FailureOr<int64_t> footprint = getFootprint(operation.getType(), operation);
+    if (failed(lhs) || failed(rhs) || failed(footprint))
+      return failure();
+    Type resultType = reg(*footprint);
+    Value dividend = *lhs;
+    Value divisor = *rhs;
+    if (lhs->getDefiningOp<ImmOp>())
+      dividend = emitMove(resultType, elementType, shape.cardinality, *lhs,
+                          RegionAttr(), shape.cardinality == 1);
+    else if (sourceRegion(operation.getLhs(), shape.cardinality, operation) !=
+             canonicalRegion())
+      dividend = emitMove(
+          resultType, elementType, shape.cardinality, *lhs,
+          sourceRegion(operation.getLhs(), shape.cardinality, operation),
+          shape.cardinality == 1);
+    if (rhs->getDefiningOp<ImmOp>() ||
+        sourceRegion(operation.getRhs(), shape.cardinality, operation) !=
+            canonicalRegion())
+      divisor = emitMove(
+          resultType, elementType, shape.cardinality, *rhs,
+          sourceRegion(operation.getRhs(), shape.cardinality, operation),
+          shape.cardinality == 1);
+
+    bool isSigned = operation.getKind() == xw::BinaryKind::DivSI ||
+                    operation.getKind() == xw::BinaryKind::RemSI;
+    Value dividendNegative;
+    Value quotientNegative;
+    if (isSigned) {
+      dividendNegative = emitSignedNegative(dividend, resultType, elementType,
+                                            shape.cardinality);
+      Value divisorNegative = emitSignedNegative(
+          divisor, resultType, elementType, shape.cardinality);
+      Value negatedDividend = emitIntegerSub(
+          immediate(0, elementType), dividend, resultType, elementType,
+          shape.cardinality, RegionAttr(), canonicalRegion());
+      Value negatedDivisor = emitIntegerSub(
+          immediate(0, elementType), divisor, resultType, elementType,
+          shape.cardinality, RegionAttr(), canonicalRegion());
+      dividend = emitMerge(dividendNegative, negatedDividend, dividend,
+                           resultType, elementType, shape.cardinality);
+      divisor = emitMerge(divisorNegative, negatedDivisor, divisor, resultType,
+                          elementType, shape.cardinality);
+      Type flagType = ARFType::get(context, ARFFile::f, 2, -1);
+      Value joined =
+          OrOp::create(*builder, *location, reg(1), i32(), 1,
+                       canonicalDestination(), uniformRegion(), uniformRegion(),
+                       IntegerAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(),
+                       TypeAttr(), true, 0, dividendNegative, divisorNegative)
+              .getResult();
+      Value overlap =
+          AndOp::create(*builder, *location, reg(1), i32(), 1,
+                        canonicalDestination(), uniformRegion(),
+                        uniformRegion(), IntegerAttr(), IntegerAttr(),
+                        IntegerAttr(), TypeAttr(), TypeAttr(), true, 0,
+                        dividendNegative, divisorNegative)
+              .getResult();
+      quotientNegative = SubOp::create(*builder, *location, flagType, i32(), 1,
+                                       canonicalDestination(), uniformRegion(),
+                                       uniformRegion(), IntegerAttr(),
+                                       IntegerAttr(), IntegerAttr(), TypeAttr(),
+                                       TypeAttr(), true, 0, overlap, joined)
+                             .getResult();
+    }
+
+    std::pair<Value, Value> result = emitUnsignedDivRem(
+        dividend, divisor, resultType, elementType, shape.cardinality);
+    Value selected = operation.getKind() == xw::BinaryKind::DivUI ||
+                             operation.getKind() == xw::BinaryKind::DivSI
+                         ? result.first
+                         : result.second;
+    if (isSigned) {
+      Value sign = operation.getKind() == xw::BinaryKind::DivSI
+                       ? quotientNegative
+                       : dividendNegative;
+      Value negated = emitIntegerSub(immediate(0, elementType), selected,
+                                     resultType, elementType, shape.cardinality,
+                                     RegionAttr(), canonicalRegion());
+      selected = emitMerge(sign, negated, selected, resultType, elementType,
+                           shape.cardinality);
+    }
+    values[operation.getResult()] = selected;
+    return success();
+  }
+
   LogicalResult lowerWideBinary(xw::BinaryOp operation) {
+    if (operation.getKind() == xw::BinaryKind::DivUI ||
+        operation.getKind() == xw::BinaryKind::RemUI ||
+        operation.getKind() == xw::BinaryKind::DivSI ||
+        operation.getKind() == xw::BinaryKind::RemSI)
+      return operation.emitOpError(
+          "SIMD32 i64 division/remainder has no exact two-half flag "
+          "selection");
     if (operation.getKind() != xw::BinaryKind::AddI &&
         operation.getKind() != xw::BinaryKind::SubI &&
         operation.getKind() != xw::BinaryKind::ShLI &&
@@ -995,6 +1226,48 @@ private:
                    .getResult();
     }
     values[operation->getResult(0)] = result;
+    return success();
+  }
+
+  LogicalResult lowerArithXor(arith::XOrIOp operation) {
+    if (!operation.getType().isInteger(1))
+      return operation.emitOpError("selector supports arith.xori only for i1");
+    FailureOr<Value> lhs = getValue(operation.getLhs(), operation);
+    FailureOr<Value> rhs = getValue(operation.getRhs(), operation);
+    if (failed(lhs) || failed(rhs))
+      return failure();
+    RegionAttr lhsRegion =
+        lhs->getDefiningOp<ImmOp>() ? RegionAttr() : uniformRegion();
+    RegionAttr rhsRegion =
+        rhs->getDefiningOp<ImmOp>() ? RegionAttr() : uniformRegion();
+    Value joined = OrOp::create(*builder, *location, reg(1), i1(), 1,
+                                canonicalDestination(), lhsRegion, rhsRegion,
+                                IntegerAttr(), IntegerAttr(), IntegerAttr(),
+                                TypeAttr(), TypeAttr(), true, 0, *lhs, *rhs)
+                       .getResult();
+    Value overlap = AndOp::create(*builder, *location, reg(1), i1(), 1,
+                                  canonicalDestination(), lhsRegion, rhsRegion,
+                                  IntegerAttr(), IntegerAttr(), IntegerAttr(),
+                                  TypeAttr(), TypeAttr(), true, 0, *lhs, *rhs)
+                        .getResult();
+    values[operation.getResult()] = emitIntegerSub(
+        joined, overlap, reg(1), i1(), 1, uniformRegion(), uniformRegion());
+    return success();
+  }
+
+  LogicalResult lowerArithExtUI(arith::ExtUIOp operation) {
+    FailureOr<Value> source = getValue(operation.getIn(), operation);
+    FailureOr<int64_t> footprint = getFootprint(operation.getType(), operation);
+    if (failed(source) || failed(footprint))
+      return failure();
+    values[operation.getResult()] =
+        MovOp::create(*builder, *location, reg(*footprint), operation.getType(),
+                      1, canonicalDestination(),
+                      source->getDefiningOp<ImmOp>() ? RegionAttr()
+                                                     : uniformRegion(),
+                      IntegerAttr(), IntegerAttr(),
+                      typeAttr(operation.getIn().getType()), true, 0, *source)
+            .getResult();
     return success();
   }
 
@@ -1407,7 +1680,6 @@ private:
 
   LogicalResult lowerWhile(scf::WhileOp operation) {
     SmallVector<Value> initial;
-    SmallVector<Type> resultTypes;
     for (Value operand : operation.getInits()) {
       if (isa<xw::MemTokenType>(operand.getType())) {
         Value selected = values.lookup(operand);
@@ -1415,25 +1687,77 @@ private:
           return operation.emitOpError(
               "while token initializer was not selected");
         initial.push_back(selected);
-        resultTypes.push_back(MemTokenType::get(context));
       } else {
         FailureOr<Value> selected = getValue(operand, operation);
         if (failed(selected))
           return failure();
         initial.push_back(*selected);
-        resultTypes.push_back(selected->getType());
       }
     }
+    SmallVector<Type> resultTypes;
+    for (Value result : operation.getResults()) {
+      if (isa<xw::MemTokenType>(result.getType())) {
+        resultTypes.push_back(MemTokenType::get(context));
+        continue;
+      }
+      FailureOr<int64_t> footprint = getFootprint(result.getType(), operation);
+      if (failed(footprint))
+        return failure();
+      resultTypes.push_back(reg(*footprint));
+    }
+    Block &after = operation.getAfter().front();
+    scf::YieldOp sourceYield = cast<scf::YieldOp>(after.getTerminator());
+    SmallVector<Value> stateInitial(resultTypes.size());
+    SmallVector<unsigned> beforeStateIndices;
+    beforeStateIndices.reserve(sourceYield.getNumOperands());
+    if (initial.size() == resultTypes.size()) {
+      stateInitial.assign(initial.begin(), initial.end());
+      for (unsigned index = 0; index < initial.size(); ++index)
+        beforeStateIndices.push_back(index);
+    } else {
+      for (auto [index, operand] : llvm::enumerate(sourceYield.getOperands())) {
+        BlockArgument argument = dyn_cast<BlockArgument>(operand);
+        if (!argument || argument.getOwner() != &after)
+          return sourceYield.emitOpError(
+              "asymmetric machine while backedge must directly forward body "
+              "arguments");
+        unsigned stateIndex = argument.getArgNumber();
+        if (stateIndex >= stateInitial.size())
+          return sourceYield.emitOpError(
+              "machine while state index is invalid");
+        stateInitial[stateIndex] = initial[index];
+        beforeStateIndices.push_back(stateIndex);
+      }
+    }
+    for (unsigned index = 0; index < stateInitial.size(); ++index) {
+      Type semanticType = operation.getResult(index).getType();
+      if (stateInitial[index] &&
+          stateInitial[index].getType() == resultTypes[index])
+        continue;
+      if (isa<xw::MemTokenType>(semanticType))
+        return operation.emitOpError(
+            "machine while cannot synthesize an initial memory token");
+      FailureOr<ValueShape> shape = getShape(semanticType, operation);
+      if (failed(shape))
+        return failure();
+      Value source = stateInitial[index] ? stateInitial[index]
+                                         : immediate(0, shape->elementType);
+      stateInitial[index] = emitMove(
+          resultTypes[index], shape->elementType, shape->cardinality, source,
+          source.getDefiningOp<ImmOp>() ? RegionAttr() : uniformRegion(),
+          shape->cardinality == 1);
+    }
     UniformLoopOp loop =
-        UniformLoopOp::create(*builder, *location, resultTypes, initial);
+        UniformLoopOp::create(*builder, *location, resultTypes, stateInitial);
     Block &body = loop.getBody().emplaceBlock();
     for (Type type : resultTypes)
       body.addArgument(type, operation.getLoc());
     Block &before = operation.getBefore().front();
     for (unsigned index = 0; index < before.getNumArguments(); ++index) {
-      values[before.getArgument(index)] = body.getArgument(index);
+      unsigned stateIndex = beforeStateIndices[index];
+      values[before.getArgument(index)] = body.getArgument(stateIndex);
       if (isa<xw::MemTokenType>(before.getArgument(index).getType()))
-        memoryToken = body.getArgument(index);
+        memoryToken = body.getArgument(stateIndex);
     }
     builder->setInsertionPointToStart(&body);
     if (failed(lowerBlock(before)))
@@ -1444,7 +1768,6 @@ private:
     if (failed(selectedCondition))
       return failure();
 
-    Block &after = operation.getAfter().front();
     if (after.getNumArguments() != condition.getArgs().size())
       return operation.emitOpError("while region argument count mismatch");
     SmallVector<Value> conditionArguments;
@@ -1476,19 +1799,19 @@ private:
     }
     if (failed(lowerBlock(after)))
       return failure();
-    scf::YieldOp sourceYield = cast<scf::YieldOp>(after.getTerminator());
     SmallVector<Value> thenValues;
-    for (Value operand : sourceYield.getOperands()) {
+    thenValues.append(conditionArguments.begin(), conditionArguments.end());
+    for (auto [index, operand] : llvm::enumerate(sourceYield.getOperands())) {
       if (isa<xw::MemTokenType>(operand.getType())) {
         Value selected = values.lookup(operand);
         if (!selected)
           return sourceYield.emitOpError("while token yield was not selected");
-        thenValues.push_back(selected);
+        thenValues[beforeStateIndices[index]] = selected;
       } else {
         FailureOr<Value> selected = getValue(operand, sourceYield);
         if (failed(selected))
           return failure();
-        thenValues.push_back(*selected);
+        thenValues[beforeStateIndices[index]] = *selected;
       }
     }
     YieldOp::create(*builder, *location, thenValues);
@@ -2239,15 +2562,22 @@ private:
           return failure();
       } else if (xw::ConstantOp constant =
                      dyn_cast<xw::ConstantOp>(operation)) {
-        if (isWideSimd(constant.getResult().getType())) {
-          FailureOr<int64_t> bits = getConstantBits(constant);
-          if (failed(bits))
-            return failure();
-          Value result = immediate(*bits, i64());
-          wideValues[constant.getResult()] = {result, result};
-        } else if (failed(getValue(constant.getResult(), constant))) {
+        if (failed(lowerConstant(constant.getResult(), constant.getValue(),
+                                 constant)))
           return failure();
-        }
+      } else if (arith::ConstantOp constant =
+                     dyn_cast<arith::ConstantOp>(operation)) {
+        if (failed(lowerConstant(constant.getResult(), constant.getValue(),
+                                 constant)))
+          return failure();
+      } else if (arith::XOrIOp xorOperation =
+                     dyn_cast<arith::XOrIOp>(operation)) {
+        if (failed(lowerArithXor(xorOperation)))
+          return failure();
+      } else if (arith::ExtUIOp extension =
+                     dyn_cast<arith::ExtUIOp>(operation)) {
+        if (failed(lowerArithExtUI(extension)))
+          return failure();
       } else if (xw::SplatOp splat = dyn_cast<xw::SplatOp>(operation)) {
         if (failed(lowerView(splat, splat.getSource())))
           return failure();
@@ -2449,7 +2779,8 @@ private:
             "selector accepts only fully poisoned ub.poison operations");
       } else {
         return operation.emitOpError(
-            "selector accepts only func, scf, and XW operations");
+            "selector accepts only func, scf, selected arith, and XW "
+            "operations");
       }
     }
     return success();

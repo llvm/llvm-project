@@ -1,10 +1,10 @@
 ; RUN: inter-translate %s --import-llvm | inter-opt --inter-import-llvm | FileCheck %s
-; RUN: not sh -c 'inter-translate %s --import-llvm | inter-opt \
+; RUN: inter-translate %s --import-llvm | inter-opt \
 ; RUN:   --inter-import-llvm --lift-cf-to-scf --inter-verify-structured \
 ; RUN:   --inter-convert-llvm-to-xw --inter-refine-distribution \
 ; RUN:   --canonicalize --cse --inter-infer-memory-tokens \
-; RUN:   --inter-select-to-machine --verify-each' 2>&1 | \
-; RUN:   FileCheck %s --check-prefix=BOUNDARY
+; RUN:   --inter-select-to-machine --verify-each | \
+; RUN:   FileCheck %s --check-prefix=SELECT
 ; Generated with opt -S -passes='default<O2>' from Inputs/matmul.ll.
 ;
 ; CHECK: module attributes {dlti.dl_spec = #dlti.dl_spec<
@@ -23,7 +23,13 @@
 ; CHECK: cf.cond_br
 ; CHECK: return
 ; CHECK: llvm.func {{.*}}spir_funccc @_Z13get_global_idj(i32) -> i64
-; BOUNDARY: 'arith.constant' op selector accepts only func, scf, and XW operations
+; SELECT-LABEL: func.func @matmul
+; SELECT: xemachine.shr
+; SELECT: xemachine.cmp
+; SELECT: xemachine.exec_if
+; SELECT: xemachine.uniform_loop
+; SELECT: xemachine.eot
+; SELECT-NOT: xw.
 ;
 ; ModuleID = 'inter/test/Frontend/Inputs/matmul.ll'
 source_filename = "inter/test/Frontend/Inputs/matmul.ll"
