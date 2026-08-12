@@ -308,6 +308,12 @@ const TargetCIRGenInfo &CIRGenModule::getTargetCIRGenInfo() {
       return *theTargetCIRGenInfo;
     }
   }
+  case llvm::Triple::aarch64:
+  case llvm::Triple::aarch64_32:
+  case llvm::Triple::aarch64_be: {
+    theTargetCIRGenInfo = createAArch64TargetCIRGenInfo(genTypes);
+    return *theTargetCIRGenInfo;
+  }
   case llvm::Triple::nvptx:
   case llvm::Triple::nvptx64:
     theTargetCIRGenInfo = createNVPTXTargetCIRGenInfo(genTypes);
