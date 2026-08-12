@@ -908,6 +908,16 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
     if (match(I->getOperand(1), m_APInt(SA))) {
       uint32_t ShiftAmt = SA->getLimitedValue(BitWidth-1);
 
+      // If the shifted value has enough known sign bits to cover every demanded
+      // bit, canonicalize the shift amount to BitWidth - 1.
+      if (ShiftAmt > 0 && ShiftAmt != BitWidth - 1 &&
+          SignBits + ShiftAmt >= NumHiDemandedBits) {
+        Instruction *NewVal = BinaryOperator::CreateAShr(
+            I->getOperand(0), ConstantInt::get(I->getType(), BitWidth - 1));
+        NewVal->takeName(I);
+        return InsertNewInstWith(NewVal, I->getIterator());
+      }
+
       // Signed shift right.
       APInt DemandedMaskIn(DemandedMask.shl(ShiftAmt));
       // If any of the bits being shifted in are demanded, then we should set
