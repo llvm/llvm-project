@@ -2551,6 +2551,8 @@ fn -> other_fn -> other_fn ; fn is norecurse
 `optnone`
 :   This function attribute indicates that most optimization passes will skip
     this function, with the exception of interprocedural optimization passes.
+    Interprocedural passes may still analyze this function, transform its body,
+    and refine its attributes, but they will not rewrite its signature.
     Code generation defaults to the "fast" instruction selector.
     This attribute cannot be used together with the `alwaysinline`
     attribute; this attribute is also incompatible
