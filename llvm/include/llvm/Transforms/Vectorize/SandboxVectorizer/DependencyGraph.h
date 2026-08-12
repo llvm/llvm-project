@@ -36,6 +36,14 @@ class DependencyGraph;
 class MemDGNode;
 class SchedBundle;
 
+enum class SchedDirection {
+  BottomUp,
+  TopDown,
+};
+#ifndef NDEBUG
+StringLiteral schedDirectionToStr(SchedDirection Dir);
+#endif
+
 /// SubclassIDs for isa/dyn_cast etc.
 enum class DGNodeID {
   DGNode,
@@ -144,6 +152,7 @@ protected:
   /// The number of unscheduled successors. Optional represents whether the
   /// value is meaningless, e.g., after a node gets scheduled.
   std::optional<unsigned> UnscheduledSuccs = 0;
+  std::optional<unsigned> UnscheduledPreds = 0;
   /// This is true if this node has been scheduled.
   bool Scheduled = false;
   /// The scheduler bundle that this node belongs to.
@@ -168,9 +177,16 @@ public:
     assert((bool)UnscheduledSuccs && "Invalid UnscheduledSuccs!");
     return *UnscheduledSuccs;
   }
+  /// \Returns the number of unscheduled predecessors.
+  unsigned getNumUnscheduledPreds() const {
+    assert((bool)UnscheduledPreds && "Invalid UnscheduledPreds!");
+    return *UnscheduledPreds;
+  }
 #ifndef NDEBUG
   /// \returns true unscheduled successors contains valid data (for testing).
   bool validUnscheduledSuccs() const { return (bool)UnscheduledSuccs; }
+  /// \returns true unscheduled predecessors contains valid data (for testing).
+  bool validUnscheduledPreds() const { return (bool)UnscheduledPreds; }
 #endif
   // TODO: Make this private?
   void decrUnscheduledSuccs() {
@@ -178,18 +194,28 @@ public:
     --*UnscheduledSuccs;
   }
   void incrUnscheduledSuccs() { ++*UnscheduledSuccs; }
+  void decrUnscheduledPreds() {
+    assert(*UnscheduledPreds > 0 && "Counting error!");
+    --*UnscheduledPreds;
+  }
+  void incrUnscheduledPreds() { ++*UnscheduledPreds; }
+
   void resetScheduleState() {
     UnscheduledSuccs = 0;
+    UnscheduledPreds = 0;
     Scheduled = false;
   }
-  /// \Returns true if all dependent successors have been scheduled.
-  bool ready() const { return UnscheduledSuccs == 0; }
+  /// \Returns true if all dependent successors (or predecessors during top-down
+  /// scheduling) have been scheduled.
+  bool readyBottomUp() const { return UnscheduledSuccs == 0; }
+  bool readyTopDown() const { return UnscheduledPreds == 0; }
   /// \Returns true if this node has been scheduled.
   bool scheduled() const { return Scheduled; }
   void setScheduled() {
     Scheduled = true;
     // UnscheduledSuccs is meaningless from this point on, so prohibit its use.
     UnscheduledSuccs = std::nullopt;
+    UnscheduledPreds = std::nullopt;
   }
   /// \Returns the scheduling bundle that this node belongs to, or nullptr.
   SchedBundle *getSchedBundle() const { return SB; }
@@ -367,8 +393,10 @@ public:
     assert(PredN != this && "Trying to add a dependency to self!");
     PredN->MemSuccs.insert(this);
     if (!Scheduled) {
-      if (!PredN->Scheduled)
+      if (!PredN->Scheduled) {
         PredN->incrUnscheduledSuccs();
+        incrUnscheduledPreds();
+      }
     }
   }
   /// Removes the memory dependency PredN->this. This also updates the
@@ -377,8 +405,10 @@ public:
     MemPreds.erase(PredN);
     PredN->MemSuccs.erase(this);
     if (!Scheduled) {
-      if (!PredN->Scheduled)
+      if (!PredN->Scheduled) {
         PredN->decrUnscheduledSuccs();
+        decrUnscheduledPreds();
+      }
     }
   }
   /// \Returns true if there is a memory dependency N->this.
@@ -424,6 +454,8 @@ private:
   DenseMap<Instruction *, std::unique_ptr<DGNode>> InstrToNodeMap;
   /// The DAG spans across all instructions in this interval.
   Interval<Instruction> DAGInterval;
+
+  SchedDirection Dir;
 
   Context *Ctx = nullptr;
   std::optional<Context::CallbackID> CreateInstrCB;
@@ -490,8 +522,8 @@ private:
 
 public:
   /// This constructor also registers callbacks.
-  DependencyGraph(AAResults &AA, Context &Ctx)
-      : Ctx(&Ctx), BatchAA(std::make_unique<BatchAAResults>(AA)) {
+  DependencyGraph(SchedDirection Dir, AAResults &AA, Context &Ctx)
+      : Dir(Dir), Ctx(&Ctx), BatchAA(std::make_unique<BatchAAResults>(AA)) {
     CreateInstrCB = Ctx.registerCreateInstrCallback(
         [this](Instruction *I) { notifyCreateInstr(I); });
     EraseInstrCB = Ctx.registerEraseInstrCallback(

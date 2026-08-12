@@ -89,12 +89,12 @@ namespace {
     }
 
     const APFloat &getFpVal() const {
-      assert(IsFp && BufHasFpVal && "Incorret state");
+      assert(IsFp && BufHasFpVal && "Incorrect state");
       return *getFpValPtr();
     }
 
     APFloat &getFpVal() {
-      assert(IsFp && BufHasFpVal && "Incorret state");
+      assert(IsFp && BufHasFpVal && "Incorrect state");
       return *getFpValPtr();
     }
 
@@ -1003,7 +1003,17 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
     return replaceInstUsesWith(
         Add, Builder.CreateBinaryIntrinsic(
                  Intrinsic::usub_sat, X, ConstantInt::get(Add.getType(), -*C)));
-
+  // uadd.sat(X, C) + -C --> umin(X, ~C)
+  // The saturating add gives X + C or UMAX, so subtracting C leaves X or
+  // UMAX - C. Note UMAX - C == ~C.
+  {
+    APInt SatC = -*C;
+    if (match(Op0, m_OneUse(m_Intrinsic<Intrinsic::uadd_sat>(
+                       m_Value(X), m_SpecificInt(SatC)))))
+      return replaceInstUsesWith(
+          Add, Builder.CreateBinaryIntrinsic(Intrinsic::umin, X,
+                                             ConstantInt::get(Ty, ~SatC)));
+  }
   // Fold (add (zext (add X, -C)), C) -> (zext X) if X u>= C.
   // Truncate C to the narrow type to avoid mismatched width comparisons.
   {
@@ -1192,34 +1202,38 @@ Value *InstCombinerImpl::SimplifyAddWithRemainder(BinaryOperator &I) {
     }
   }
 
-  // Match I = (X / C0) * C1 + (X % C0) * C2
-  Value *Div, *Rem;
-  APInt C1, C2;
-  if (!LHS->hasOneUse() || !MatchMul(LHS, Div, C1))
-    Div = LHS, C1 = APInt(I.getType()->getScalarSizeInBits(), 1);
-  if (!RHS->hasOneUse() || !MatchMul(RHS, Rem, C2))
-    Rem = RHS, C2 = APInt(I.getType()->getScalarSizeInBits(), 1);
-  if (match(Div, m_IRem(m_Value(), m_Value()))) {
-    std::swap(Div, Rem);
-    std::swap(C1, C2);
-  }
-  Value *DivOpV;
-  APInt DivOpC;
-  if (MatchRem(Rem, X, C0, IsSigned) &&
-      MatchDiv(Div, DivOpV, DivOpC, IsSigned) && X == DivOpV && C0 == DivOpC &&
-      // Avoid unprofitable replacement of and with mul.
-      !(C1.isOne() && !IsSigned && DivOpC.isPowerOf2() && DivOpC != 2)) {
-    APInt NewC = C1 - C2 * C0;
-    if (!NewC.isZero() && !Rem->hasOneUse())
-      return nullptr;
-    if (!isGuaranteedNotToBeUndef(X, &AC, &I, &DT))
-      return nullptr;
-    Value *MulXC2 = Builder.CreateMul(X, ConstantInt::get(X->getType(), C2));
-    if (NewC.isZero())
-      return MulXC2;
-    return Builder.CreateAdd(
-        Builder.CreateMul(Div, ConstantInt::get(X->getType(), NewC)), MulXC2);
-  }
+  // Match I = (X / C0) * C1 + (X % C0) * C2.
+  auto FoldDivRem = [&](Value *DivSide, Value *RemSide) -> Value * {
+    Value *Div, *Rem;
+    APInt C1, C2;
+    if (!DivSide->hasOneUse() || !MatchMul(DivSide, Div, C1))
+      Div = DivSide, C1 = APInt(I.getType()->getScalarSizeInBits(), 1);
+    if (!RemSide->hasOneUse() || !MatchMul(RemSide, Rem, C2))
+      Rem = RemSide, C2 = APInt(I.getType()->getScalarSizeInBits(), 1);
+    Value *DivOpV;
+    APInt DivOpC;
+    if (MatchRem(Rem, X, C0, IsSigned) &&
+        MatchDiv(Div, DivOpV, DivOpC, IsSigned) && X == DivOpV &&
+        C0 == DivOpC &&
+        // Avoid unprofitable replacement of and with mul.
+        !(C1.isOne() && !IsSigned && DivOpC.isPowerOf2() && DivOpC != 2)) {
+      APInt NewC = C1 - C2 * C0;
+      if (!NewC.isZero() && !Rem->hasOneUse())
+        return nullptr;
+      if (!isGuaranteedNotToBeUndef(X, &AC, &I, &DT))
+        return nullptr;
+      Value *MulXC2 = Builder.CreateMul(X, ConstantInt::get(X->getType(), C2));
+      if (NewC.isZero())
+        return MulXC2;
+      return Builder.CreateAdd(
+          Builder.CreateMul(Div, ConstantInt::get(X->getType(), NewC)), MulXC2);
+    }
+    return nullptr;
+  };
+  if (Value *V = FoldDivRem(LHS, RHS))
+    return V;
+  if (Value *V = FoldDivRem(RHS, LHS))
+    return V;
 
   return nullptr;
 }
@@ -1766,8 +1780,15 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
 
   // A+B --> A|B iff A and B have no bits set in common.
   WithCache<const Value *> LHSCache(LHS), RHSCache(RHS);
-  if (haveNoCommonBitsSet(LHSCache, RHSCache, SQ.getWithInstruction(&I)))
+  switch (
+      getNoCommonBitsSetResult(LHSCache, RHSCache, SQ.getWithInstruction(&I))) {
+  case NoCommonBitsSetResult::Known:
     return BinaryOperator::CreateDisjointOr(LHS, RHS);
+  case NoCommonBitsSetResult::OnlyIfUndefIgnored:
+    return BinaryOperator::CreateOr(LHS, RHS);
+  case NoCommonBitsSetResult::Unknown:
+    break;
+  }
 
   if (Instruction *Ext = narrowMathIfNoOverflow(I))
     return Ext;
@@ -1798,6 +1819,19 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
         Builder.CreateAdd(A, Constant::getAllOnesValue(A->getType()), "",
                           I.hasNoUnsignedWrap(), I.hasNoSignedWrap());
     return BinaryOperator::CreateAnd(Add, A);
+  }
+
+  // Align-up idiom:
+  // X + ((-X) & (C - 1)) --> (X + C - 1) & -C, for a power-of-two C.
+  // Note -C == ~(C - 1), so the mask is simply the inverted low-bit mask.
+  {
+    const APInt *LowMask;
+    if (match(&I,
+              m_c_Add(m_OneUse(m_And(m_Neg(m_Value(A)), m_LowBitMask(LowMask))),
+                      m_Deferred(A)))) {
+      Value *NewAdd = Builder.CreateAdd(A, ConstantInt::get(Ty, *LowMask));
+      return BinaryOperator::CreateAnd(NewAdd, ConstantInt::get(Ty, ~*LowMask));
+    }
   }
 
   // Canonicalize ((A & -A) - 1) --> ((A - 1) & ~A)

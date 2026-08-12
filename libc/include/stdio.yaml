@@ -396,6 +396,12 @@ functions:
       - type: const char *__restrict
       - type: const char *__restrict
       - type: '...'
+  - name: tmpfile
+    standards:
+      - stdc
+    return_type: FILE *
+    arguments:
+      - type: void
   - name: ungetc
     standards:
       - stdc

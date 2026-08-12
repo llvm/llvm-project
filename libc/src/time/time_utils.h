@@ -51,8 +51,8 @@ constexpr int TIME_OVERFLOW = ERANGE;
 ///
 /// \param total_seconds The number of seconds since January 1st, 1970.
 /// \param tm Pointer to the tm structure to update.
-/// \return 0 on success, or error code on failure.
-ErrorOr<int> update_from_seconds(time_t total_seconds, tm *tm);
+/// \return void on success, or error code on failure.
+ErrorOr<void> update_from_seconds(time_t total_seconds, tm *tm);
 
 LIBC_INLINE ErrorOr<char *> asctime(const tm *timeptr, char *buffer,
                                     size_t bufferLength) {
@@ -122,14 +122,17 @@ LIBC_INLINE ErrorOr<tm *> localtime(const time_t *t_ptr) {
   return time_utils::localtime_internal(t_ptr, &result);
 }
 
-// Returns number of years from (1, year).
-LIBC_INLINE constexpr int64_t get_num_of_leap_years_before(int64_t year) {
-  return (year / 4) - (year / 100) + (year / 400);
-}
-
 // Returns True if year is a leap year.
+// Uses the Drepper-Neri-Schneider algorithm (version 3).
+// https://www.benjoffe.com/fast-leap-year#drepper-neri-schneider
+//
+// % 25 is faster than % 100 on modern compilers. False positives (years
+// divisible by 25 but not 100) are harmless: the & 15 check only differs
+// from & 3 when the year truly is a century year, and non-century years
+// that happen to be divisible by 25 always pass both checks identically.
 LIBC_INLINE constexpr bool is_leap_year(const int64_t year) {
-  return (((year) % 4) == 0 && (((year) % 100) != 0 || ((year) % 400) == 0));
+  const bool is_mul_25 = (year % 25 == 0);
+  return (year & (is_mul_25 ? 15 : 3)) == 0;
 }
 
 LIBC_INLINE constexpr int get_days_in_year(const int year) {

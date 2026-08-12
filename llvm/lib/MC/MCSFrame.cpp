@@ -339,6 +339,7 @@ class SFrameEmitterImpl {
       case dwarf::DW_CFA_MIPS_advance_loc8:
       case dwarf::DW_CFA_AARCH64_negate_ra_state_with_pc:
       case dwarf::DW_CFA_AARCH64_negate_ra_state:
+      case dwarf::DW_CFA_AARCH64_set_ra_state:
       case dwarf::DW_CFA_LLVM_def_aspace_cfa:
       case dwarf::DW_CFA_LLVM_def_aspace_cfa_sf:
         Streamer.getContext().reportWarning(

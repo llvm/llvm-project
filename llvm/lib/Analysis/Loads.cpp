@@ -37,30 +37,29 @@ static bool isDereferenceableAndAlignedPointerViaAssumption(
     function_ref<bool(const RetainedKnowledge &RK)> CheckSize) {
   if (!SQ.CxtI)
     return false;
-  /// Look through assumes to see if both dereferencability and alignment can
-  /// be proven by an assume if needed.
-  RetainedKnowledge AlignRK;
-  RetainedKnowledge DerefRK;
+  // Look through assumes to see if both dereferenceability and alignment can
+  // be proven by an assume if needed.
   bool PtrCanBeFreed = Ptr->canBeFreed() && !IgnoreFree;
   bool IsAligned = Ptr->getPointerAlignment(SQ.DL) >= Alignment;
+  bool IsDerefable = false;
   return getKnowledgeForValue(
       Ptr, {Attribute::Dereferenceable, Attribute::Alignment}, *SQ.AC,
       [&](RetainedKnowledge RK, Instruction *Assume, auto) {
         if (!isValidAssumeForContext(Assume, SQ.CxtI, SQ.DT))
           return false;
-        if (RK.AttrKind == Attribute::Alignment)
-          AlignRK = std::max(AlignRK, RK);
-
-        // Dereferenceable information from assumptions is only valid if the
-        // value cannot be freed between the assumption and use.
-        if ((!PtrCanBeFreed || willNotFreeBetween(Assume, SQ.CxtI)) &&
-            RK.AttrKind == Attribute::Dereferenceable)
-          DerefRK = std::max(DerefRK, RK);
-        IsAligned |= AlignRK && AlignRK.ArgValue >= Alignment.value();
-        if (IsAligned && DerefRK && CheckSize(DerefRK))
-          return true; // We have found what we needed so we stop looking
-        return false;  // Other assumes may have better information. so
-                       // keep looking
+        if (RK.AttrKind == Attribute::Alignment) {
+          IsAligned |= RK.ArgValue >= Alignment.value();
+        } else {
+          assert(RK.AttrKind == Attribute::Dereferenceable);
+          // Dereferenceable information from assumptions is only valid if the
+          // value cannot be freed between the assumption and use.
+          if (!IsDerefable &&
+              (!PtrCanBeFreed || willNotFreeBetween(Assume, SQ.CxtI)) &&
+              CheckSize(RK))
+            IsDerefable = true;
+        }
+        // Stop looking if we have proven both necessary facts.
+        return IsAligned && IsDerefable;
       });
 }
 
@@ -818,7 +817,7 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA,
 
 // Returns true if a use is either in an ICmp/PtrToInt or a Phi/Select that only
 // feeds into them.
-static bool isPointerUseReplacable(const Use &U, bool HasNonAddressBits) {
+static bool isPointerUseReplaceable(const Use &U, bool HasNonAddressBits) {
   unsigned Limit = 40;
   SmallVector<const User *> Worklist({U.getUser()});
   SmallPtrSet<const User *, 8> Visited;
@@ -877,7 +876,7 @@ bool llvm::canReplacePointersInUseIfEqual(const Use &U, const Value *To,
 
   bool HasNonAddressBits =
       DL.getAddressSizeInBits(Ty) != DL.getPointerTypeSizeInBits(Ty);
-  return isPointerUseReplacable(U, HasNonAddressBits);
+  return isPointerUseReplaceable(U, HasNonAddressBits);
 }
 
 bool llvm::canReplacePointersIfEqual(const Value *From, const Value *To,

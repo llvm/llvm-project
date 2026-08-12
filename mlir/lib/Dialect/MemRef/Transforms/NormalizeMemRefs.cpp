@@ -458,7 +458,7 @@ void NormalizeMemRefs::normalizeFuncOpMemRefs(func::FuncOp funcOp,
                                               /*replaceInDeallocOp=*/true))) {
             newOp->erase();
             replacingMemRefUsesFailed = true;
-            continue;
+            break;
           }
         }
         if (!replacingMemRefUsesFailed) {

@@ -1237,6 +1237,12 @@ SmallVector<utils::IteratorType> TilingNoDpsOp::getLoopIteratorTypes() {
   return {};
 }
 
+FailureOr<TilingResult> TilingNoDpsOp::getTiledImplementation(
+    OpBuilder &builder, ArrayRef<OpFoldResult> offsets,
+    ArrayRef<OpFoldResult> sizes, ArrayRef<InnerTileAlignment>) {
+  return getTiledImplementation(builder, offsets, sizes);
+}
+
 FailureOr<TilingResult>
 TilingNoDpsOp::getTiledImplementation(OpBuilder &builder,
                                       ArrayRef<OpFoldResult> offsets,
@@ -2045,6 +2051,93 @@ test::TestCreateTensorOp::getBufferType(
   return options.unknownTypeConverterFn(
       cast<mlir::bufferization::TensorLikeType>(value.getType()), nullptr,
       options);
+}
+
+::mlir::LogicalResult test::TestTensorWithFutureLayoutOp::bufferize(
+    ::mlir::RewriterBase &rewriter,
+    const ::mlir::bufferization::BufferizationOptions &options,
+    ::mlir::bufferization::BufferizationState &state) {
+  const auto bufferizedOutType =
+      mlir::bufferization::getBufferType(getOutput(), options, state);
+  if (mlir::failed(bufferizedOutType))
+    return failure();
+
+  auto createMemrefOp =
+      test::TestCreateMemrefOp::create(rewriter, getLoc(), *bufferizedOutType);
+  mlir::bufferization::replaceOpWithBufferizedValues(
+      rewriter, getOperation(), createMemrefOp.getResult());
+  return mlir::success();
+}
+
+mlir::FailureOr<mlir::bufferization::BufferLikeType>
+test::TestTensorWithFutureLayoutOp::getBufferType(
+    mlir::Value value, const mlir::bufferization::BufferizationOptions &,
+    const mlir::bufferization::BufferizationState &,
+    llvm::SmallVector<::mlir::Value> &) {
+  return llvm::TypeSwitch<mlir::Type,
+                          mlir::FailureOr<mlir::bufferization::BufferLikeType>>(
+             value.getType())
+      .Case([&](RankedTensorType tensorType) {
+        // Set the memref layout to the op's 'layout' attribute, ignoring
+        // any pre-existing tensor encoding. This is what lets two
+        // `test.tensor_with_layout` ops produce *bufferized* memrefs with
+        // different layouts while keeping their *tensor* result types identical
+        // -- which is required to construct SCF iter_arg/branch mismatches that
+        // the verifier still accepts.
+        auto layout = cast<MemRefLayoutAttrInterface>(getLayout());
+        return cast<bufferization::BufferLikeType>(MemRefType::get(
+            tensorType.getShape(), tensorType.getElementType(), layout));
+      })
+      .Case([&](TestTensorType tensorType) {
+        auto layout = cast<MemRefLayoutAttrInterface>(getLayout());
+        return cast<bufferization::BufferLikeType>(
+            TestMemrefType::get(tensorType.getContext(), tensorType.getShape(),
+                                tensorType.getElementType(), layout));
+      })
+      .Default([&](Type) { return emitError("unknown type"); });
+}
+
+LogicalResult test::TestForceNewLayoutOp::bufferize(
+    RewriterBase &rewriter, const bufferization::BufferizationOptions &options,
+    bufferization::BufferizationState &state) {
+  auto buffer = bufferization::getBuffer(rewriter, getInput(), options, state);
+  if (failed(buffer))
+    return failure();
+
+  const auto bufferizedOutType =
+      bufferization::getBufferType(getOutput(), options, state);
+  if (failed(bufferizedOutType))
+    return failure();
+
+  auto dummyMemrefOp = test::TestDummyMemrefOp::create(
+      rewriter, getLoc(), *bufferizedOutType, *buffer);
+  bufferization::replaceOpWithBufferizedValues(rewriter, getOperation(),
+                                               dummyMemrefOp.getResult());
+  return success();
+}
+
+FailureOr<bufferization::BufferLikeType>
+test::TestForceNewLayoutOp::getBufferType(
+    mlir::Value value, const bufferization::BufferizationOptions &options,
+    const bufferization::BufferizationState &,
+    llvm::SmallVector<::mlir::Value> &) {
+  return llvm::TypeSwitch<mlir::Type,
+                          mlir::FailureOr<mlir::bufferization::BufferLikeType>>(
+             value.getType())
+      .Case([&](RankedTensorType tensorType) {
+        // Set the memref layout to the op's 'layout' attribute, ignoring any
+        // pre-existing tensor encoding.
+        auto layout = cast<MemRefLayoutAttrInterface>(getLayout());
+        return cast<bufferization::BufferLikeType>(MemRefType::get(
+            tensorType.getShape(), tensorType.getElementType(), layout));
+      })
+      .Case([&](TestTensorType tensorType) {
+        auto layout = cast<MemRefLayoutAttrInterface>(getLayout());
+        return cast<bufferization::BufferLikeType>(
+            TestMemrefType::get(tensorType.getContext(), tensorType.getShape(),
+                                tensorType.getElementType(), layout));
+      })
+      .Default([&](Type) { return emitError("unknown type"); });
 }
 
 // Define a custom builder for ManyRegionsOp declared in TestOps.td.
