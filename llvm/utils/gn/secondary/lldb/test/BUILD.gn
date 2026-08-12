@@ -88,6 +88,7 @@ write_lit_cfg("lit_api_site_cfg") {
             "$target_gen_dir/lldb-test-build.noindex/module-cache-lldb"),
     "LLDB_TEST_PLATFORM_URL=",
     "LLDB_TEST_PLATFORM_WORKING_DIR=",
+    "LLDB_TEST_RESOURCE_DIR=",
     "LLDB_TEST_SYSROOT=",
     "LLDB_TEST_USE_LLDB_SERVER=0",
     "LLVM_BUILD_MODE=.",

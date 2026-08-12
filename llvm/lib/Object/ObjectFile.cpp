@@ -204,6 +204,8 @@ ObjectFile::createObjectFile(MemoryBufferRef Object, file_magic Type,
     return createWasmObjectFile(Object);
   case file_magic::dxcontainer_object:
     return createDXContainerObjectFile(Object);
+  case file_magic::goff_object:
+    return createGOFFObjectFile(Object);
   }
   llvm_unreachable("Unexpected Object File Type");
 }

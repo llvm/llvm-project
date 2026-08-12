@@ -32,7 +32,6 @@
 #include <iterator>
 #include <queue>
 #include <set>
-#include <unordered_map>
 #include <vector>
 
 namespace llvm {
@@ -292,7 +291,7 @@ class scc_member_iterator {
     return true;
   }
 
-  std::unordered_map<NodeType *, NodeInfo> NodeInfoMap;
+  DenseMap<NodeType *, NodeInfo> NodeInfoMap;
   NodesType Nodes;
 
 public:
@@ -311,6 +310,7 @@ scc_member_iterator<GraphT, GT>::scc_member_iterator(
 
   // Initialize auxilary node information.
   NodeInfoMap.clear();
+  NodeInfoMap.reserve(InputNodes.size());
   for (auto *Node : InputNodes) {
     // Construct a `NodeInfo` object in place.  `insert()` would involve a copy
     // construction, invalidating the initial value of the `Group` field, which
@@ -365,7 +365,12 @@ scc_member_iterator<GraphT, GT>::scc_member_iterator(
     Queue.pop();
     Nodes.push_back(Node);
     for (auto &Edge : Node->Edges) {
-      NodeInfo &Info = NodeInfoMap[Edge.Target];
+      // Edges to nodes outside the SCC carry no MST state; skip them instead
+      // of inserting a fresh entry (the map must not grow at this point).
+      auto It = NodeInfoMap.find(Edge.Target);
+      if (It == NodeInfoMap.end())
+        continue;
+      NodeInfo &Info = It->second;
       Info.IncomingMSTEdges.erase(&Edge);
       if (MSTEdges.count(&Edge) && Info.IncomingMSTEdges.empty()) {
         Queue.push(Edge.Target);

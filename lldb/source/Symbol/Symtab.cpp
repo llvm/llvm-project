@@ -364,13 +364,13 @@ void Symtab::InitNameIndexes() {
       for (Language *lang : languages) {
         for (auto variant : lang->GetMethodNameVariants(name)) {
           if (variant.GetType() & lldb::eFunctionNameTypeSelector)
-            selector_to_index.Append(variant.GetName(), value);
+            selector_to_index.Append(ConstString(variant.GetName()), value);
           else if (variant.GetType() & lldb::eFunctionNameTypeFull)
-            name_to_index.Append(variant.GetName(), value);
+            name_to_index.Append(ConstString(variant.GetName()), value);
           else if (variant.GetType() & lldb::eFunctionNameTypeMethod)
-            method_to_index.Append(variant.GetName(), value);
+            method_to_index.Append(ConstString(variant.GetName()), value);
           else if (variant.GetType() & lldb::eFunctionNameTypeBase)
-            basename_to_index.Append(variant.GetName(), value);
+            basename_to_index.Append(ConstString(variant.GetName()), value);
         }
       }
     }

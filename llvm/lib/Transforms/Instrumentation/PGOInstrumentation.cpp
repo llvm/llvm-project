@@ -72,8 +72,8 @@
 #include "llvm/IR/Comdat.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/IR/Dominators.h"
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
@@ -128,7 +128,6 @@
 #include <vector>
 
 using namespace llvm;
-using ProfileCount = Function::ProfileCount;
 using VPCandidateInfo = ValueProfileCollector::CandidateInfo;
 
 #define DEBUG_TYPE "pgo-instrumentation"
@@ -379,9 +378,15 @@ class FunctionInstrumenter final {
   // values. Supporting other values is relatively straight-forward - just
   // another counter range within the context.
   bool isValueProfilingDisabled() const {
+    // Value profiling is disabled for GPU targets because the device-side
+    // profiling runtime does not yet implement
+    // __llvm_profile_instrument_target. The existing compiler-rt implementation
+    // uses a linked-list with locks and eviction policy that is not efficient
+    // for massively parallel GPU execution. A GPU-optimized implementation is
+    // left as future work.
     return DisableValueProfiling ||
            InstrumentationType == PGOInstrumentationType::CTXPROF ||
-           M.getTargetTriple().isGPU();
+           isGPUProfTarget(M);
   }
 
   bool shouldInstrumentEntryBB() const {
@@ -1199,6 +1204,9 @@ public:
   // Annotate the irreducible loop header weights.
   void annotateIrrLoopHeaderWeights();
 
+  // Annotate per-block uniformity info for offload profiling.
+  void setBlockUniformityAttribute();
+
   // The hotness of the function from the profile count.
   enum FuncFreqAttr { FFA_Normal, FFA_Cold, FFA_Hot };
 
@@ -1305,11 +1313,25 @@ bool PGOUseFunc::setInstrumentedCounts(
 
   setupBBInfoEdges(FuncInfo);
 
-  unsigned NumCounters =
-      InstrumentBBs.size() + FuncInfo.SIVisitor.getNumOfSelectInsts();
+  unsigned NumInstrumentedBBs = InstrumentBBs.size();
+  unsigned NumSelects = FuncInfo.SIVisitor.getNumOfSelectInsts();
+  unsigned NumCounters = NumInstrumentedBBs + NumSelects;
   // The number of counters here should match the number of counters
   // in profile. Return if they mismatch.
   if (NumCounters != CountFromProfile.size()) {
+    LLVM_DEBUG({
+      dbgs() << "PGO COUNTER MISMATCH for function " << F.getName() << ":\n";
+      dbgs() << "  Expected counters: " << NumCounters << "\n";
+      dbgs() << "    - From instrumented edges: " << NumInstrumentedBBs << "\n";
+      for (size_t i = 0; i < InstrumentBBs.size(); ++i) {
+        dbgs() << "      " << i << ": ";
+        InstrumentBBs[i]->printAsOperand(dbgs(), false);
+        dbgs() << "\n";
+      }
+      dbgs() << "    - From select instructions: " << NumSelects << "\n";
+      dbgs() << "  Actual counters from profile: " << CountFromProfile.size()
+             << "\n";
+    });
     return false;
   }
   auto *FuncEntry = &*F.begin();
@@ -1559,10 +1581,10 @@ void PGOUseFunc::populateCoverage() {
   }
 
   unsigned NumCorruptCoverage = 0;
-  DominatorTree DT(F);
-  LoopInfo LI(DT);
-  BranchProbabilityInfo BPI(F, LI);
-  BlockFrequencyInfo BFI(F, BPI, LI);
+  CycleInfo CI;
+  CI.compute(F);
+  BranchProbabilityInfo BPI(F, CI);
+  BlockFrequencyInfo BFI(F, BPI, CI);
   auto IsBlockDead = [&](const BasicBlock &BB) -> std::optional<bool> {
     if (auto C = BFI.getBlockProfileCount(&BB))
       return C == 0;
@@ -1675,7 +1697,7 @@ void PGOUseFunc::populateCounters() {
   // Fix the obviously inconsistent entry count.
   if (FuncMaxCount > 0 && FuncEntryCount == 0)
     FuncEntryCount = 1;
-  F.setEntryCount(ProfileCount(FuncEntryCount, Function::PCT_Real));
+  F.setEntryCount(FuncEntryCount);
   markFunctionAttributes(FuncEntryCount, FuncMaxCount);
 
   LLVM_DEBUG(FuncInfo.dumpInfo("after reading profile."));
@@ -1760,6 +1782,42 @@ void PGOUseFunc::annotateIrrLoopHeaderWeights() {
       setIrrLoopHeaderMetadata(M, TI, *BBCountInfo.Count);
     }
   }
+}
+
+void PGOUseFunc::setBlockUniformityAttribute() {
+  if (ProfileRecord.UniformityBits.empty())
+    return;
+
+  // Annotate uniformity on each instrumented IR basic block so later codegen
+  // passes (MachineFunction) can consume it without relying on fragile block
+  // numbering heuristics.
+  //
+  // Metadata kind: LLVMContext::MD_block_uniformity_profile
+  // Payload: i1 (true = uniform, false = divergent)
+
+  std::vector<BasicBlock *> InstrumentBBs;
+  FuncInfo.getInstrumentBBs(InstrumentBBs);
+
+  LLVMContext &Ctx = F.getContext();
+  Type *Int1Ty = Type::getInt1Ty(Ctx);
+
+  for (size_t I = 0, E = InstrumentBBs.size(); I < E; ++I) {
+    BasicBlock *BB = InstrumentBBs[I];
+    if (!BB || !BB->getTerminator())
+      continue;
+    bool IsUniform = ProfileRecord.isBlockUniform(I);
+    auto *MD = MDNode::get(
+        Ctx, ConstantAsMetadata::get(ConstantInt::get(Int1Ty, IsUniform)));
+    BB->getTerminator()->setMetadata(LLVMContext::MD_block_uniformity_profile,
+                                     MD);
+  }
+
+  LLVM_DEBUG({
+    dbgs() << "PGO: Set block uniformity profile for " << F.getName() << ": ";
+    for (size_t I = 0, E = InstrumentBBs.size(); I < E; ++I)
+      dbgs() << (ProfileRecord.isBlockUniform(I) ? 'U' : 'D');
+    dbgs() << "\n";
+  });
 }
 
 void SelectInstVisitor::instrumentOneSelectInst(SelectInst &SI) {
@@ -1943,7 +2001,7 @@ static bool skipPGOGen(const Function &F) {
     return true;
   if (PGOInstrumentColdFunctionOnly) {
     if (auto EntryCount = F.getEntryCount())
-      return EntryCount->getCount() > PGOColdInstrumentEntryThreshold;
+      return *EntryCount > PGOColdInstrumentEntryThreshold;
     return !PGOTreatUnknownAsCold;
   }
   return false;
@@ -2025,14 +2083,13 @@ PreservedAnalyses PGOInstrumentationGen::run(Module &M,
 
 // Using the ratio b/w sums of profile count values and BFI count values to
 // adjust the func entry count.
-static void fixFuncEntryCount(PGOUseFunc &Func, LoopInfo &LI,
+static void fixFuncEntryCount(PGOUseFunc &Func, CycleInfo &CI,
                               BranchProbabilityInfo &NBPI) {
   Function &F = Func.getFunc();
-  BlockFrequencyInfo NBFI(F, NBPI, LI);
+  BlockFrequencyInfo NBFI(F, NBPI, CI);
 #ifndef NDEBUG
   auto BFIEntryCount = F.getEntryCount();
-  assert(BFIEntryCount && (BFIEntryCount->getCount() > 0) &&
-         "Invalid BFI Entrycount");
+  assert(BFIEntryCount && (*BFIEntryCount > 0) && "Invalid BFI Entrycount");
 #endif
   auto SumCount = APFloat::getZero(APFloat::IEEEdouble());
   auto SumBFICount = APFloat::getZero(APFloat::IEEEdouble());
@@ -2063,7 +2120,7 @@ static void fixFuncEntryCount(PGOUseFunc &Func, LoopInfo &LI,
   if (NewEntryCount == 0)
     NewEntryCount = 1;
   if (NewEntryCount != FuncEntryCount) {
-    F.setEntryCount(ProfileCount(NewEntryCount, Function::PCT_Real));
+    F.setEntryCount(NewEntryCount);
     LLVM_DEBUG(dbgs() << "FixFuncEntryCount: in " << F.getName()
                       << ", entry_count " << FuncEntryCount << " --> "
                       << NewEntryCount << "\n");
@@ -2072,12 +2129,12 @@ static void fixFuncEntryCount(PGOUseFunc &Func, LoopInfo &LI,
 
 // Compare the profile count values with BFI count values, and print out
 // the non-matching ones.
-static void verifyFuncBFI(PGOUseFunc &Func, LoopInfo &LI,
+static void verifyFuncBFI(PGOUseFunc &Func, CycleInfo &CI,
                           BranchProbabilityInfo &NBPI,
                           uint64_t HotCountThreshold,
                           uint64_t ColdCountThreshold) {
   Function &F = Func.getFunc();
-  BlockFrequencyInfo NBFI(F, NBPI, LI);
+  BlockFrequencyInfo NBFI(F, NBPI, CI);
   //  bool PrintFunc = false;
   bool HotBBOnly = PGOVerifyHotBFI;
   StringRef Msg;
@@ -2255,7 +2312,7 @@ static bool annotateAllFunctions(
     if (!Func.readCounters(AllZeros, PseudoKind))
       continue;
     if (AllZeros) {
-      F.setEntryCount(ProfileCount(0, Function::PCT_Real));
+      F.setEntryCount(0);
       if (Func.getProgramMaxCount() != 0)
         ColdFunctions.push_back(&F);
       continue;
@@ -2273,6 +2330,7 @@ static bool annotateAllFunctions(
     Func.setBranchWeights();
     Func.annotateValueSites();
     Func.annotateIrrLoopHeaderWeights();
+    Func.setBlockUniformityAttribute();
     PGOUseFunc::FuncFreqAttr FreqAttr = Func.getFuncFreqAttr();
     if (FreqAttr == PGOUseFunc::FFA_Cold)
       ColdFunctions.push_back(&F);
@@ -2281,11 +2339,12 @@ static bool annotateAllFunctions(
     if (PGOViewCounts != PGOVCT_None &&
         (ViewBlockFreqFuncName.empty() ||
          F.getName() == ViewBlockFreqFuncName)) {
-      LoopInfo LI{DominatorTree(F)};
+      CycleInfo CI;
+      CI.compute(F);
       std::unique_ptr<BranchProbabilityInfo> NewBPI =
-          std::make_unique<BranchProbabilityInfo>(F, LI);
+          std::make_unique<BranchProbabilityInfo>(F, CI);
       std::unique_ptr<BlockFrequencyInfo> NewBFI =
-          std::make_unique<BlockFrequencyInfo>(F, *NewBPI, LI);
+          std::make_unique<BlockFrequencyInfo>(F, *NewBPI, CI);
       if (PGOViewCounts == PGOVCT_Graph)
         NewBFI->view();
       else if (PGOViewCounts == PGOVCT_Text) {
@@ -2308,12 +2367,13 @@ static bool annotateAllFunctions(
     }
 
     if (PGOVerifyBFI || PGOVerifyHotBFI || PGOFixEntryCount) {
-      LoopInfo LI{DominatorTree(F)};
-      BranchProbabilityInfo NBPI(F, LI);
+      CycleInfo CI;
+      CI.compute(F);
+      BranchProbabilityInfo NBPI(F, CI);
 
       // Fix func entry count.
       if (PGOFixEntryCount)
-        fixFuncEntryCount(Func, LI, NBPI);
+        fixFuncEntryCount(Func, CI, NBPI);
 
       // Verify BlockFrequency information.
       uint64_t HotCountThreshold = 0, ColdCountThreshold = 0;
@@ -2321,7 +2381,7 @@ static bool annotateAllFunctions(
         HotCountThreshold = PSI->getOrCompHotCountThreshold();
         ColdCountThreshold = PSI->getOrCompColdCountThreshold();
       }
-      verifyFuncBFI(Func, LI, NBPI, HotCountThreshold, ColdCountThreshold);
+      verifyFuncBFI(Func, CI, NBPI, HotCountThreshold, ColdCountThreshold);
     }
   }
 
@@ -2407,14 +2467,14 @@ void llvm::setProfMetadata(Instruction *TI, ArrayRef<uint64_t> EdgeCounts,
                            uint64_t MaxCount) {
   auto Weights = downscaleWeights(EdgeCounts, MaxCount);
 
-  LLVM_DEBUG(dbgs() << "Weight is: "; for (const auto &W
-                                           : Weights) {
+  LLVM_DEBUG(dbgs() << "Weight is: "; for (const auto &W : Weights) {
     dbgs() << W << " ";
-  } dbgs() << "\n";);
+  } dbgs() << "\n");
 
   misexpect::checkExpectAnnotations(*TI, Weights, /*IsFrontend=*/false);
 
   setBranchWeights(*TI, Weights, /*IsExpected=*/false);
+
   if (EmitBranchProbability) {
     std::string BrCondStr = getBranchCondString(TI);
     if (BrCondStr.empty())

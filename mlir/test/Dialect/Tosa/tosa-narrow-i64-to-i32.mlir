@@ -75,6 +75,27 @@ func.func @test_regions(%arg0: tensor<1x2xi32>, %arg1: tensor<1xi32>, %arg2: ten
 
 // -----
 
+// CHECK-LABEL: test_cond_if_i64_yield_with_call
+module {
+  func.func @m0() -> () {
+    return
+  }
+  func.func @test_cond_if_i64_yield_with_call(%arg0: tensor<1xi1>, %arg1: tensor<4xi64>, %arg2: tensor<4xi64>) -> () {
+    %0 = tosa.cond_if %arg0 (%arg3 = %arg1) : tensor<1xi1> (tensor<4xi64>) -> tensor<4xi64> {
+    ^bb0(%arg3: tensor<4xi64>):
+      tosa.yield %arg3 : tensor<4xi64>
+    } else {
+    ^bb0(%arg3: tensor<4xi64>):
+      tosa.yield %arg3 : tensor<4xi64>
+    }
+    // expected-error @+1 {{failed to legalize operation 'func.call'}}
+    call @m0() : () -> ()
+    return
+  }
+}
+
+// -----
+
 // CHECK-LABEL: test_concat
 func.func @test_concat(%arg0: tensor<13x21x3xi64>, %arg1: tensor<13x21x3xi64>) -> tensor<26x21x3xi64> {
   // COMMON: tosa.concat %{{.*}}, %{{.*}} {axis = 0 : i32} : (tensor<13x21x3xi32>, tensor<13x21x3xi32>) -> tensor<26x21x3xi32>

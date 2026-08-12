@@ -333,6 +333,11 @@ GOFFObjectFile::GOFFObjectFile(MemoryBufferRef Object, Error &Err)
     case GOFF::RT_HDR:
       LLVM_DEBUG(dbgs() << "  --  HDR (GOFF record type) unhandled\n");
       break;
+    default:
+      Err = createStringError(object_error::parse_failed,
+                              "record %zu has unknown record type 0x%02" PRIX8,
+                              RecordNum, RecordType);
+      return;
     }
   }
 }
@@ -432,7 +437,13 @@ Expected<uint32_t> GOFFObjectFile::getSymbolFlags(DataRefImpl Symb) const {
   GOFF::ESDBindingScope BindingScope;
   ESDRecord::getBindingScope(Record, BindingScope);
 
-  if (BindingScope != GOFF::ESD_BSC_Section) {
+  GOFF::ESDSymbolType Type;
+  ESDRecord::getSymbolType(Record, Type);
+
+  if (Type != GOFF::ESD_ST_SectionDefinition &&
+      Type != GOFF::ESD_ST_ElementDefinition &&
+      BindingScope != GOFF::ESD_BSC_Section &&
+      BindingScope != GOFF::ESD_BSC_Module) {
     Expected<StringRef> Name = getSymbolName(Symb);
     if (Name && *Name != " ") { // Blank name is local.
       Flags |= SymbolRef::SF_Global;

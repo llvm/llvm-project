@@ -160,9 +160,18 @@ arm64e_debugserver = False
 # Whether to print the lldb version banner during test setup.
 print_lldb_version = False
 
+# Path to the directory containing the 'lldb' Python module (i.e. the directory
+# that contains 'lldb/__init__.py'). When set, dotest skips the `lldb -P`
+# subprocess used to discover this path.
+lldb_python_dir = None
+
 # the build type of lldb
 # Typical values include Debug, Release, RelWithDebInfo and MinSizeRel
 cmake_build_type = None
+
+# The timeout (in seconds) lit is using to run this test, if any. 0 means no
+# timeout was configured.
+timeout = 0
 
 
 def shouldSkipBecauseOfCategories(test_categories):

@@ -233,11 +233,46 @@ void OMPDeclareVariantAttr::printPrettyPragma(
     OS << ")";
   }
 
-  auto PrintInteropInfo = [&OS](OMPInteropInfo *Begin, OMPInteropInfo *End) {
+  auto PrintInteropInfo = [&OS, &Policy](OMPInteropInfo *Begin,
+                                         OMPInteropInfo *End) {
     for (OMPInteropInfo *I = Begin; I != End; ++I) {
       if (I != Begin)
         OS << ", ";
       OS << "interop(";
+      if (!I->Prefs.empty()) {
+        OS << "prefer_type(";
+        if (I->HasPreferAttrs) {
+          StringRef Sep = "";
+          for (const auto &P : I->Prefs) {
+            OS << Sep << "{";
+            if (P.Fr) {
+              OS << "fr(";
+              P.Fr->printPretty(OS, nullptr, Policy);
+              OS << ")";
+            }
+            bool NeedSep = P.Fr != nullptr;
+            for (Expr *A : P.Attrs) {
+              if (NeedSep)
+                OS << ",";
+              OS << "attr(";
+              A->printPretty(OS, nullptr, Policy);
+              OS << ")";
+              NeedSep = true;
+            }
+            OS << "}";
+            Sep = ",";
+          }
+        } else {
+          StringRef Sep = "";
+          for (const auto &P : I->Prefs) {
+            OS << Sep;
+            if (P.Fr)
+              P.Fr->printPretty(OS, nullptr, Policy);
+            Sep = ",";
+          }
+        }
+        OS << "),";
+      }
       OS << getInteropTypeString(I);
       OS << ")";
     }
@@ -391,7 +426,9 @@ namespace {
 
 template <class T>
 typename std::enable_if_t<!USE_DEFAULT_PROFILE>
-profileAttrArg(llvm::FoldingSetNodeID &, const ASTContext &, T) {}
+profileAttrArg(llvm::FoldingSetNodeID &, const ASTContext &, T) {
+  llvm_unreachable("profile not implemented for this type");
+}
 
 template <class T>
 typename std::enable_if_t<USE_DEFAULT_PROFILE>

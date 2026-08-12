@@ -2317,7 +2317,7 @@ public:
   void ReadExtVectorDecls(SmallVectorImpl<TypedefNameDecl *> &Decls) override;
 
   void ReadUnusedLocalTypedefNameCandidates(
-      llvm::SmallSetVector<const TypedefNameDecl *, 4> &Decls) override;
+      llvm::SmallPtrSetImpl<const TypedefNameDecl *> &Decls) override;
 
   void ReadDeclsToCheckForDeferredDiags(
       llvm::SmallSetVector<Decl *, 4> &Decls) override;
