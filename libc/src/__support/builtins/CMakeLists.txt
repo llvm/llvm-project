@@ -818,3 +818,38 @@ add_header_library(
     libc.src.__support.macros.config
     libc.src.__support.macros.properties.types
 )
+
+add_header_library(
+  extendhfxf2
+  HDRS
+    extendhfxf2.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.FPUtil.FPBits
+    libc.src.__support.builtins.fpconvert_helper
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+)
+
+add_header_library(
+  truncxfhf2
+  HDRS
+    truncxfhf2.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.FPUtil.FPBits
+    libc.src.__support.builtins.fpconvert_helper
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+)
+
+add_header_library(
+  truncxfbf2
+  HDRS
+    truncxfbf2.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+)
