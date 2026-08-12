@@ -219,7 +219,6 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_degrees:
   case Intrinsic::dx_isinf:
   case Intrinsic::dx_isnan:
-  case Intrinsic::dx_lerp:
   case Intrinsic::dx_normalize:
   case Intrinsic::dx_fdot:
   case Intrinsic::dx_sdot:
@@ -603,16 +602,6 @@ static Value *expandAnyOrAllIntrinsic(CallInst *Orig,
     }
   }
   return Result;
-}
-
-static Value *expandLerpIntrinsic(CallInst *Orig) {
-  Value *X = Orig->getOperand(0);
-  Value *Y = Orig->getOperand(1);
-  Value *S = Orig->getOperand(2);
-  IRBuilder<> Builder(Orig);
-  auto *V = Builder.CreateFSub(Y, X);
-  V = Builder.CreateFMul(S, V);
-  return Builder.CreateFAdd(X, V, "dx.lerp");
 }
 
 static Value *expandLogIntrinsic(CallInst *Orig,
@@ -1308,9 +1297,6 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     break;
   case Intrinsic::dx_isnan:
     Result = expand16BitIsNaN(Orig);
-    break;
-  case Intrinsic::dx_lerp:
-    Result = expandLerpIntrinsic(Orig);
     break;
   case Intrinsic::dx_normalize:
     Result = expandNormalizeIntrinsic(Orig);

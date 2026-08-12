@@ -1143,7 +1143,7 @@ Length is based on the following formula: sqrt(x[0]^2 + x[1]^2 + ...).
 }
 
 // Returns the linear interpolation of x to y by s.
-def hlsl_lerp : HLSLThreeArgBuiltin<"lerp", "__builtin_hlsl_lerp"> {
+def hlsl_lerp : HLSLThreeArgDetail<"lerp", "lerp_impl"> {
   let Doc = [{
 \fn T lerp(T x, T y, T s)
 \brief Returns the linear interpolation of x to y by s.
@@ -1155,6 +1155,7 @@ the y parameter.
 Linear interpolation is based on the following formula: x*(1-s) + y*s which
 can equivalently be written as x + s(y-x).
 }];
+  let ParamNames = ["x", "y", "s"];
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingMatDims = [];
 }
