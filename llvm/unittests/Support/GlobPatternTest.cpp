@@ -39,6 +39,63 @@ TEST_F(GlobPatternTest, Wildcard) {
   EXPECT_FALSE(Pat1->match(""));
 }
 
+TEST_F(GlobPatternTest, AsLiteral) {
+  SmallVector<char, 64> Storage;
+
+  // Plain literals, including characters that are only special in context.
+  // These need no unescaping, so the result aliases the pattern.
+  for (StringRef P : {"abc", "", "a]c", "a}c", "a,c"}) {
+    Expected<GlobPattern> Pat = GlobPattern::create(P);
+    ASSERT_TRUE((bool)Pat) << P;
+    std::optional<StringRef> Lit = Pat->asLiteral(Storage);
+    ASSERT_TRUE(Lit.has_value()) << P;
+    EXPECT_EQ(*Lit, P);
+    EXPECT_EQ(Lit->data(), P.data()) << P;
+  }
+
+  // Real metacharacters are not literals.
+  for (StringRef P : {"a*c", "a?c", "a[bc]d"}) {
+    Expected<GlobPattern> Pat = GlobPattern::create(P);
+    ASSERT_TRUE((bool)Pat) << P;
+    EXPECT_FALSE(Pat->asLiteral(Storage).has_value()) << P;
+  }
+
+  // Escaped metacharacters denote a single string, with escapes resolved.
+  Expected<GlobPattern> Star = GlobPattern::create("a\\*c");
+  ASSERT_TRUE((bool)Star);
+  ASSERT_TRUE(Star->asLiteral(Storage).has_value());
+  EXPECT_EQ(*Star->asLiteral(Storage), "a*c");
+  EXPECT_TRUE(Star->match("a*c"));
+  EXPECT_FALSE(Star->match("abc"));
+
+  // The motivating case: an Objective-C direct method symbol.
+  Expected<GlobPattern> Method = GlobPattern::create("-\\[C m\\]D");
+  ASSERT_TRUE((bool)Method);
+  ASSERT_TRUE(Method->asLiteral(Storage).has_value());
+  EXPECT_EQ(*Method->asLiteral(Storage), "-[C m]D");
+  EXPECT_TRUE(Method->match("-[C m]D"));
+
+  // An unescaped bracket expression is a character class, not this symbol.
+  Expected<GlobPattern> Class = GlobPattern::create("-[C m]D");
+  ASSERT_TRUE((bool)Class);
+  EXPECT_FALSE(Class->asLiteral(Storage).has_value());
+  EXPECT_FALSE(Class->match("-[C m]D"));
+
+  // '{' is a metacharacter only when brace expansion is enabled.
+  Expected<GlobPattern> NoBraces = GlobPattern::create("a{b,c}d");
+  ASSERT_TRUE((bool)NoBraces);
+  EXPECT_TRUE(NoBraces->asLiteral(Storage).has_value());
+  Expected<GlobPattern> Braces = GlobPattern::create("a{b,c}d", /*Max=*/1024);
+  ASSERT_TRUE((bool)Braces);
+  EXPECT_FALSE(Braces->asLiteral(Storage).has_value());
+
+  // An escaped backslash is a literal backslash.
+  Expected<GlobPattern> Backslash = GlobPattern::create("a\\\\c");
+  ASSERT_TRUE((bool)Backslash);
+  ASSERT_TRUE(Backslash->asLiteral(Storage).has_value());
+  EXPECT_EQ(*Backslash->asLiteral(Storage), "a\\c");
+}
+
 TEST_F(GlobPatternTest, Escape) {
   Expected<GlobPattern> Pat1 = GlobPattern::create("\\*");
   EXPECT_TRUE((bool)Pat1);

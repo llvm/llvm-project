@@ -182,6 +182,17 @@ static StringRef maxPlainSubstring(StringRef S, bool SlashAgnostic) {
   return Best;
 }
 
+// Writes S into Storage with its escaping backslashes removed.
+static void unescapePattern(StringRef S, SmallVectorImpl<char> &Storage) {
+  Storage.clear();
+  Storage.reserve(S.size());
+  for (size_t I = 0, E = S.size(); I != E; ++I) {
+    if (S[I] == '\\' && I + 1 != E)
+      ++I;
+    Storage.push_back(S[I]);
+  }
+}
+
 Expected<GlobPattern> GlobPattern::create(StringRef S,
                                           std::optional<size_t> MaxSubPatterns,
                                           bool SlashAgnostic) {
@@ -225,6 +236,23 @@ Expected<GlobPattern> GlobPattern::create(StringRef S,
   return Pat;
 }
 
+std::optional<StringRef>
+GlobPattern::asLiteral(SmallVectorImpl<char> &Storage) const {
+  // The prefix and suffix are metacharacter-free by construction, so whether
+  // this pattern denotes a single string is decided by the sub-patterns, which
+  // recorded it while parsing. No sub-pattern at all means there was no
+  // metacharacter; more than one means brace expansion produced a choice.
+  if (!SubGlobs.empty() &&
+      !(SubGlobs.size() == 1 && SubGlobs[0].isLiteral()))
+    return std::nullopt;
+
+  if (!Pattern.contains('\\'))
+    return Pattern;
+
+  unescapePattern(Pattern, Storage);
+  return StringRef(Storage.data(), Storage.size());
+}
+
 Expected<GlobPattern::SubGlobPattern>
 GlobPattern::SubGlobPattern::create(StringRef S, bool SlashAgnostic) {
   SubGlobPattern Pat;
@@ -260,6 +288,8 @@ GlobPattern::SubGlobPattern::create(StringRef S, bool SlashAgnostic) {
       if (++I == E)
         return make_error<StringError>("invalid glob pattern, stray '\\'",
                                        errc::invalid_argument);
+    } else if (S[I] == '*' || S[I] == '?') {
+      Pat.HasWildcard = true;
     }
   }
   return Pat;

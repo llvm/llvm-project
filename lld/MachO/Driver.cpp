@@ -1360,12 +1360,21 @@ void SymbolPatterns::clear() {
 }
 
 void SymbolPatterns::insert(StringRef symbolName) {
-  if (symbolName.find_first_of("*?[]") == StringRef::npos)
-    literals.insert(CachedHashStringRef(symbolName));
-  else if (Expected<GlobPattern> pattern = GlobPattern::create(symbolName))
-    globs.emplace_back(*pattern);
-  else
+  Expected<GlobPattern> pattern = GlobPattern::create(symbolName);
+  if (!pattern) {
+    llvm::consumeError(pattern.takeError());
     error("invalid symbol-name pattern: " + symbolName);
+    return;
+  }
+  // A pattern that denotes a single string is kept as a literal: literals are
+  // matched by hash lookup, and only literals seed the force-load of lazy
+  // archive members below.
+  SmallVector<char, 128> storage;
+  if (std::optional<StringRef> literal = pattern->asLiteral(storage)) {
+    literals.insert(CachedHashStringRef(saver().save(*literal)));
+    return;
+  }
+  globs.emplace_back(std::move(*pattern));
 }
 
 bool SymbolPatterns::matchLiteral(StringRef symbolName) const {
