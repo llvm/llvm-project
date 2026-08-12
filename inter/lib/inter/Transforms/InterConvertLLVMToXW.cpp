@@ -454,6 +454,9 @@ static LogicalResult reconcileMaterializedShapes(ModuleOp module) {
 
   SmallVector<UnrealizedConversionCastOp> casts;
   module.walk([&](UnrealizedConversionCastOp cast) { casts.push_back(cast); });
+  SmallVector<UnrealizedConversionCastOp> remainingCasts;
+  reconcileUnrealizedCasts(casts, &remainingCasts);
+  casts = std::move(remainingCasts);
   for (UnrealizedConversionCastOp cast : casts) {
     if (cast->getNumOperands() != 1 || cast->getNumResults() != 1 ||
         getPayloadType(cast.getOperand(0).getType()) !=
@@ -1839,6 +1842,15 @@ struct ConvertLLVMToXW final
       return (!value || isa<ub::PoisonAttr>(value)) &&
              converter.isLegal(poison.getType());
     });
+    target.addDynamicallyLegalOp<UnrealizedConversionCastOp>(
+        [&](UnrealizedConversionCastOp cast) {
+          if (cast->getNumOperands() != 1 || cast->getNumResults() != 1)
+            return false;
+          Type converted = converter.convertType(cast.getOperand(0).getType());
+          return converted &&
+                 getPayloadType(converted) ==
+                     getPayloadType(cast.getResult(0).getType());
+        });
     target.markUnknownOpDynamicallyLegal([](Operation *op) {
       auto legalType = [](Type type) { return !containsLLVMType(type); };
       bool legalBuiltin = op->getName().getDialectNamespace() == "builtin";

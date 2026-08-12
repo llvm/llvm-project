@@ -17,6 +17,12 @@ def DiscoverCacheControls
   let dependentDialects = ["xw::XWDialect", "mlir::LLVM::LLVMDialect"];
 }
 
+def CanonicalizeBlock2DABI
+    : Pass<"inter-canonicalize-block2d-abi", "::mlir::ModuleOp"> {
+  let summary = "fold Intel block2D private-pointer ABI shims into XW operations";
+  let dependentDialects = ["xw::XWDialect", "mlir::LLVM::LLVMDialect"];
+}
+
 def VerifyStructured : Pass<"inter-verify-structured", "::mlir::ModuleOp"> {
   let summary = "reject unstructured control flow before semantic conversion";
 }
