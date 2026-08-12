@@ -28,7 +28,9 @@ llvm::ThreadPoolStrategy parallel::strategy;
 
 #if LLVM_ENABLE_THREADS
 
-static thread_local unsigned threadIndex = UINT_MAX;
+namespace llvm::parallel {
+static thread_local unsigned ThreadIndex = UINT_MAX;
+} // namespace llvm::parallel
 
 namespace {
 
@@ -132,7 +134,7 @@ private:
   }
 
   void work(ThreadPoolStrategy S, unsigned ThreadID) {
-    threadIndex = ThreadID;
+    ThreadIndex = ThreadID;
     S.apply_thread_strategy(ThreadID);
     // Note on jobserver deadlock avoidance:
     // GNU Make grants each invoked process one implicit job slot. Our
@@ -234,7 +236,7 @@ TaskGroup::TaskGroup()
 TaskGroup::~TaskGroup() {
 #if LLVM_ENABLE_THREADS
   // In a nested TaskGroup (threadIndex != -1u), actively help drain the queue.
-  bool IsNested = threadIndex != UINT_MAX;
+  bool IsNested = ThreadIndex != UINT_MAX;
   if (Parallel && IsNested)
     getDefaultExecutor()->helpSync(L);
 #endif
