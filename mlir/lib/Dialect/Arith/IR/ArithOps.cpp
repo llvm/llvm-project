@@ -1376,11 +1376,12 @@ namespace {
 // For floating point conversion, we can't allow conversion between
 // -0 and +0. More importantly, we can't allow a conversion from
 // sNaN to qNaN. That changes semantics.
+// When `ignoreNaNs` is set, differences between NaN representations
+// may be ignored, but source non-finite values must not become
+// finite.
 static bool isLosslesslyConvertibleTo(const llvm::fltSemantics &from,
-                                      const llvm::fltSemantics &to) {
-  if (&from == &to)
-    return true;
-
+                                      const llvm::fltSemantics &to,
+                                      bool ignoreNaNs = false) {
   if (!llvm::APFloatBase::isRepresentableBy(from, to))
     return false;
 
@@ -1411,6 +1412,11 @@ static bool isLosslesslyConvertibleTo(const llvm::fltSemantics &from,
   if (from.nonFiniteBehavior == llvm::fltNonfiniteBehavior::FiniteOnly)
     return true;
 
+  // If we're ignoring NaNs, we can return early if the nonFiniteBehavior
+  // matches.
+  if (ignoreNaNs)
+    return to.nonFiniteBehavior != llvm::fltNonfiniteBehavior::FiniteOnly;
+
   if (from.nonFiniteBehavior == llvm::fltNonfiniteBehavior::IEEE754) {
     // Converting an IEEE signaling NaN to another semantics quiets it, so the
     // original value cannot be recovered by converting it back.
@@ -1426,24 +1432,14 @@ static bool isLosslesslyConvertibleTo(const llvm::fltSemantics &from,
          from.nanEncoding == to.nanEncoding;
 }
 
-static bool
-isLosslesslyConvertibleToIgnoringNaNs(const llvm::fltSemantics &from,
-                                      const llvm::fltSemantics &to) {
-  llvm::fltSemantics finiteFrom = from;
-  llvm::fltSemantics finiteTo = to;
-  finiteFrom.nonFiniteBehavior = llvm::fltNonfiniteBehavior::FiniteOnly;
-  finiteTo.nonFiniteBehavior = llvm::fltNonfiniteBehavior::FiniteOnly;
-  return isLosslesslyConvertibleTo(finiteFrom, finiteTo);
-}
-
 /// Narrow an extremum whose operands were extended from the result type:
 ///
 ///   trunc(extremum(ext(lhs), ext(rhs))) -> extremum(lhs, rhs)
 ///
 /// The concrete extension is part of the pattern so each extremum is only
 /// registered with extensions that preserve its ordering.
-/// For floating-point types, also require the extension to represent every
-/// source value exactly.
+/// For floating-point types, also require the extension to preserve every
+/// source value relevant under the extremum's fast-math flags.
 template <typename TruncOp, typename ExtOp, typename ExtremumOp>
 struct NarrowExtremum final : OpRewritePattern<TruncOp> {
   using OpRewritePattern<TruncOp>::OpRewritePattern;
@@ -1469,9 +1465,8 @@ struct NarrowExtremum final : OpRewritePattern<TruncOp> {
     // floating-point semantics, even when the destination has a larger bit
     // width. In particular, it may lose the sign of zero or quiet a signaling
     // NaN, either of which can change an extremum's result. `nnan` lets us
-    // disregard the latter, but all other source values must round-trip.
-    //
-    // See the discussion in https://github.com/llvm/llvm-project/pull/214658.
+    // disregard NaN representation differences, but all other relevant source
+    // values must be preserved.
     if (auto narrowFloatType =
             dyn_cast<FloatType>(getElementTypeOrSelf(narrowType))) {
       auto wideFloatType =
@@ -1483,20 +1478,13 @@ struct NarrowExtremum final : OpRewritePattern<TruncOp> {
           narrowFloatType.getFloatSemantics();
       const llvm::fltSemantics &wideSemantics =
           wideFloatType.getFloatSemantics();
-      if (!isLosslesslyConvertibleTo(narrowSemantics, wideSemantics)) {
-        if constexpr (std::is_same_v<TruncOp, TruncFOp>) {
-          // TODO: We can tolerant qNaN here. But we don't have a mode
-          // to exclude sNaN. If we're able to do that, we can be more
-          // tolerant here.
-          if (!bitEnumContainsAll(extremumOp.getFastmath(),
-                                  FastMathFlags::nnan) ||
-              !isLosslesslyConvertibleToIgnoringNaNs(narrowSemantics,
-                                                     wideSemantics))
-            return failure();
-        } else {
-          return failure();
-        }
-      }
+      bool ignoreNaNs = false;
+      if constexpr (std::is_same_v<TruncOp, TruncFOp>)
+        ignoreNaNs =
+            bitEnumContainsAll(extremumOp.getFastmath(), FastMathFlags::nnan);
+      if (!isLosslesslyConvertibleTo(narrowSemantics, wideSemantics,
+                                     ignoreNaNs))
+        return failure();
     }
 
     rewriter.replaceOpWithNewOp<ExtremumOp>(truncOp, TypeRange{narrowType},
