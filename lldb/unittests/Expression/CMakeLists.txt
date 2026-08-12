@@ -6,6 +6,7 @@ endif()
 add_lldb_unittest(ExpressionTests
   ClangParserTest.cpp
   ClangExpressionDeclMapTest.cpp
+  ClangUserExpressionTest.cpp
   DiagnosticManagerTest.cpp
   DWARFExpressionTest.cpp
   CppModuleConfigurationTest.cpp
