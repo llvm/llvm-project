@@ -182,17 +182,6 @@ static StringRef maxPlainSubstring(StringRef S, bool SlashAgnostic) {
   return Best;
 }
 
-// Writes S into Storage with its escaping backslashes removed.
-static void unescapePattern(StringRef S, SmallVectorImpl<char> &Storage) {
-  Storage.clear();
-  Storage.reserve(S.size());
-  for (size_t I = 0, E = S.size(); I != E; ++I) {
-    if (S[I] == '\\' && I + 1 != E)
-      ++I;
-    Storage.push_back(S[I]);
-  }
-}
-
 Expected<GlobPattern> GlobPattern::create(StringRef S,
                                           std::optional<size_t> MaxSubPatterns,
                                           bool SlashAgnostic) {
@@ -245,11 +234,25 @@ GlobPattern::asLiteral(SmallVectorImpl<char> &Storage) const {
   if (!SubGlobs.empty() && !(SubGlobs.size() == 1 && SubGlobs[0].isLiteral()))
     return std::nullopt;
 
-  if (!Pattern.contains('\\'))
-    return Pattern;
+  StringRef Literal = Pattern;
+  if (Pattern.contains('\\')) {
+    Storage.clear();
+    Storage.reserve(Pattern.size());
+    for (size_t I = 0, E = Pattern.size(); I != E; ++I) {
+      if (Pattern[I] == '\\' && I + 1 != E)
+        ++I;
+      Storage.push_back(Pattern[I]);
+    }
+    Literal = StringRef(Storage.data(), Storage.size());
+  }
 
-  unescapePattern(Pattern, Storage);
-  return StringRef(Storage.data(), Storage.size());
+  // In slash-agnostic mode '/' and '\\' match each other, so a pattern holding
+  // either matches more than one string. A pattern with no sub-pattern cannot
+  // reach here holding one, as both are prefix metacharacters in that mode.
+  if (SlashAgnostic && Literal.find_first_of("/\\") != StringRef::npos)
+    return std::nullopt;
+
+  return Literal;
 }
 
 Expected<GlobPattern::SubGlobPattern>

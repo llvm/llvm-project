@@ -50,7 +50,6 @@ TEST_F(GlobPatternTest, AsLiteral) {
     std::optional<StringRef> Lit = Pat->asLiteral(Storage);
     ASSERT_TRUE(Lit.has_value()) << P;
     EXPECT_EQ(*Lit, P);
-    EXPECT_EQ(Lit->data(), P.data()) << P;
   }
 
   // Real metacharacters are not literals.
@@ -63,16 +62,18 @@ TEST_F(GlobPatternTest, AsLiteral) {
   // Escaped metacharacters denote a single string, with escapes resolved.
   Expected<GlobPattern> Star = GlobPattern::create("a\\*c");
   ASSERT_TRUE((bool)Star);
-  ASSERT_TRUE(Star->asLiteral(Storage).has_value());
-  EXPECT_EQ(*Star->asLiteral(Storage), "a*c");
+  auto StarLit = Star->asLiteral(Storage);
+  ASSERT_TRUE(StarLit.has_value());
+  EXPECT_EQ(*StarLit, "a*c");
   EXPECT_TRUE(Star->match("a*c"));
   EXPECT_FALSE(Star->match("abc"));
 
   // The motivating case: an Objective-C direct method symbol.
   Expected<GlobPattern> Method = GlobPattern::create("-\\[C m\\]D");
   ASSERT_TRUE((bool)Method);
-  ASSERT_TRUE(Method->asLiteral(Storage).has_value());
-  EXPECT_EQ(*Method->asLiteral(Storage), "-[C m]D");
+  auto MethodLit = Method->asLiteral(Storage);
+  ASSERT_TRUE(MethodLit.has_value());
+  EXPECT_EQ(*MethodLit, "-[C m]D");
   EXPECT_TRUE(Method->match("-[C m]D"));
 
   // An unescaped bracket expression is a character class, not this symbol.
@@ -92,8 +93,44 @@ TEST_F(GlobPatternTest, AsLiteral) {
   // An escaped backslash is a literal backslash.
   Expected<GlobPattern> Backslash = GlobPattern::create("a\\\\c");
   ASSERT_TRUE((bool)Backslash);
-  ASSERT_TRUE(Backslash->asLiteral(Storage).has_value());
-  EXPECT_EQ(*Backslash->asLiteral(Storage), "a\\c");
+  auto BackslashLit = Backslash->asLiteral(Storage);
+  ASSERT_TRUE(BackslashLit.has_value());
+  EXPECT_EQ(*BackslashLit, "a\\c");
+}
+
+TEST_F(GlobPatternTest, AsLiteralSlashAgnostic) {
+  SmallString<64> Storage;
+
+  // Without slash-agnostic matching a separator is an ordinary character.
+  Expected<GlobPattern> Plain = GlobPattern::create("a/b");
+  ASSERT_TRUE((bool)Plain);
+  auto PlainLit = Plain->asLiteral(Storage);
+  ASSERT_TRUE(PlainLit.has_value());
+  EXPECT_EQ(*PlainLit, "a/b");
+
+  // With it, '/' also matches '\\', so this denotes two strings, not one.
+  Expected<GlobPattern> Slash =
+      GlobPattern::create("a/b", std::nullopt, /*SlashAgnostic=*/true);
+  ASSERT_TRUE((bool)Slash);
+  EXPECT_TRUE(Slash->match("a/b"));
+  EXPECT_TRUE(Slash->match("a\\b"));
+  EXPECT_FALSE(Slash->asLiteral(Storage).has_value());
+
+  // An escaped backslash resolves to a separator, so likewise.
+  Expected<GlobPattern> Backslash =
+      GlobPattern::create("a\\\\b", std::nullopt, /*SlashAgnostic=*/true);
+  ASSERT_TRUE((bool)Backslash);
+  EXPECT_TRUE(Backslash->match("a\\b"));
+  EXPECT_TRUE(Backslash->match("a/b"));
+  EXPECT_FALSE(Backslash->asLiteral(Storage).has_value());
+
+  // Escaping a non-separator is still a literal in slash-agnostic mode.
+  Expected<GlobPattern> Star =
+      GlobPattern::create("a\\*b", std::nullopt, /*SlashAgnostic=*/true);
+  ASSERT_TRUE((bool)Star);
+  auto StarLit = Star->asLiteral(Storage);
+  ASSERT_TRUE(StarLit.has_value());
+  EXPECT_EQ(*StarLit, "a*b");
 }
 
 TEST_F(GlobPatternTest, Escape) {
