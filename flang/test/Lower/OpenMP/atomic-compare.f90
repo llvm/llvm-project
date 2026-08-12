@@ -248,10 +248,12 @@ end
 ! Min/max fail-only compare-capture: v is captured in the else branch (when the
 ! comparison, and hence the update, does not happen).
 ! CHECK-LABEL: func.func @_QPatomic_compare_capture_min_failonly(
+! CHECK:         %[[E_DECL:.*]]:2 = hlfir.declare %arg1 {{.*}}Ee"
+! CHECK:         %[[E_VAL:.*]] = fir.load %[[E_DECL]]#0 : !fir.ref<i32>
 ! CHECK:         omp.atomic.capture memory_order(relaxed) {
 ! CHECK:           omp.atomic.compare %[[X_DECL:.*]]#0 : !fir.ref<i32> {
 ! CHECK:           ^bb0(%[[XVAL:.*]]: i32):
-! CHECK:             %[[CMP:.*]] = arith.cmpi sgt, %[[XVAL]], %{{.*}} : i32
+! CHECK:             %[[CMP:.*]] = arith.cmpi sgt, %[[XVAL]], %[[E_VAL]] : i32
 ! CHECK:             %[[SEL:.*]] = arith.select %[[CMP]], %{{.*}}, %[[XVAL]] : i32
 ! CHECK:             omp.yield(%[[SEL]] : i32)
 ! CHECK:           }
@@ -296,10 +298,11 @@ end
 ! CHECK-LABEL: func.func @_QPatomic_compare_capture_real_max(
 ! CHECK:         %[[E_DECL:.*]]:2 = hlfir.declare %{{.*}}Ee"
 ! CHECK:         %[[X_DECL:.*]]:2 = hlfir.declare %{{.*}}Ex"
+! CHECK:         %[[E_VAL:.*]] = fir.load %[[E_DECL]]#0 : !fir.ref<f32>
 ! CHECK:         omp.atomic.capture memory_order(relaxed) {
 ! CHECK:           omp.atomic.compare %[[X_DECL]]#0 : !fir.ref<f32> {
 ! CHECK:           ^bb0(%[[XVAL:.*]]: f32):
-! CHECK:             %[[CMP:.*]] = arith.cmpf olt, %[[XVAL]], %{{.*}} fastmath<contract> : f32
+! CHECK:             %[[CMP:.*]] = arith.cmpf olt, %[[XVAL]], %[[E_VAL]] fastmath<contract> : f32
 ! CHECK:             %[[SEL:.*]] = arith.select %[[CMP]], %{{.*}}, %[[XVAL]] : f32
 ! CHECK:             omp.yield(%[[SEL]] : f32)
 ! CHECK:           }
@@ -423,11 +426,13 @@ end
 
 ! Compare-capture with an explicit seq_cst memory order (prefix read form).
 ! CHECK-LABEL: func.func @_QPatomic_compare_capture_seq_cst(
+! CHECK:         %[[E_DECL:.*]]:2 = hlfir.declare %arg1 {{.*}}Ee"
+! CHECK:         %[[E_VAL:.*]] = fir.load %[[E_DECL]]#0 : !fir.ref<i32>
 ! CHECK:         omp.atomic.capture memory_order(seq_cst) {
 ! CHECK:           omp.atomic.read %[[V_DECL:.*]]#0 = %[[X_DECL:.*]]#0 : !fir.ref<i32>, !fir.ref<i32>, i32
 ! CHECK:           omp.atomic.compare %[[X_DECL]]#0 : !fir.ref<i32> {
 ! CHECK:           ^bb0(%[[XVAL:.*]]: i32):
-! CHECK:             %[[CMP:.*]] = arith.cmpi eq, %[[XVAL]], %{{.*}} : i32
+! CHECK:             %[[CMP:.*]] = arith.cmpi eq, %[[XVAL]], %[[E_VAL]] : i32
 ! CHECK:             %[[SEL:.*]] = arith.select %[[CMP]], %{{.*}}, %[[XVAL]] : i32
 ! CHECK:             omp.yield(%[[SEL]] : i32)
 ! CHECK:           }
@@ -442,10 +447,12 @@ end
 
 ! Compare-capture with an explicit acquire memory order (postfix read form).
 ! CHECK-LABEL: func.func @_QPatomic_compare_capture_acquire(
+! CHECK:         %[[E_DECL:.*]]:2 = hlfir.declare %arg1 {{.*}}Ee"
+! CHECK:         %[[E_VAL:.*]] = fir.load %[[E_DECL]]#0 : !fir.ref<i32>
 ! CHECK:         omp.atomic.capture memory_order(acquire) {
 ! CHECK:           omp.atomic.compare %[[X_DECL:.*]]#0 : !fir.ref<i32> {
 ! CHECK:           ^bb0(%[[XVAL:.*]]: i32):
-! CHECK:             %[[CMP:.*]] = arith.cmpi eq, %[[XVAL]], %{{.*}} : i32
+! CHECK:             %[[CMP:.*]] = arith.cmpi eq, %[[XVAL]], %[[E_VAL]] : i32
 ! CHECK:             %[[SEL:.*]] = arith.select %[[CMP]], %{{.*}}, %[[XVAL]] : i32
 ! CHECK:             omp.yield(%[[SEL]] : i32)
 ! CHECK:           }
@@ -461,11 +468,13 @@ end
 
 ! Compare-capture with an explicit release memory order (prefix read form).
 ! CHECK-LABEL: func.func @_QPatomic_compare_capture_release(
+! CHECK:         %[[E_DECL:.*]]:2 = hlfir.declare %arg1 {{.*}}Ee"
+! CHECK:         %[[E_VAL:.*]] = fir.load %[[E_DECL]]#0 : !fir.ref<i32>
 ! CHECK:         omp.atomic.capture memory_order(release) {
 ! CHECK:           omp.atomic.read %[[V_DECL:.*]]#0 = %[[X_DECL:.*]]#0 : !fir.ref<i32>, !fir.ref<i32>, i32
 ! CHECK:           omp.atomic.compare %[[X_DECL]]#0 : !fir.ref<i32> {
 ! CHECK:           ^bb0(%[[XVAL:.*]]: i32):
-! CHECK:             %[[CMP:.*]] = arith.cmpi eq, %[[XVAL]], %{{.*}} : i32
+! CHECK:             %[[CMP:.*]] = arith.cmpi eq, %[[XVAL]], %[[E_VAL]] : i32
 ! CHECK:             %[[SEL:.*]] = arith.select %[[CMP]], %{{.*}}, %[[XVAL]] : i32
 ! CHECK:             omp.yield(%[[SEL]] : i32)
 ! CHECK:           }
@@ -480,10 +489,12 @@ end
 
 ! Compare-capture with an explicit acq_rel memory order (postfix read form).
 ! CHECK-LABEL: func.func @_QPatomic_compare_capture_acq_rel(
+! CHECK:         %[[E_DECL:.*]]:2 = hlfir.declare %arg1 {{.*}}Ee"
+! CHECK:         %[[E_VAL:.*]] = fir.load %[[E_DECL]]#0 : !fir.ref<i32>
 ! CHECK:         omp.atomic.capture memory_order(acq_rel) {
 ! CHECK:           omp.atomic.compare %[[X_DECL:.*]]#0 : !fir.ref<i32> {
 ! CHECK:           ^bb0(%[[XVAL:.*]]: i32):
-! CHECK:             %[[CMP:.*]] = arith.cmpi eq, %[[XVAL]], %{{.*}} : i32
+! CHECK:             %[[CMP:.*]] = arith.cmpi eq, %[[XVAL]], %[[E_VAL]] : i32
 ! CHECK:             %[[SEL:.*]] = arith.select %[[CMP]], %{{.*}}, %[[XVAL]] : i32
 ! CHECK:             omp.yield(%[[SEL]] : i32)
 ! CHECK:           }

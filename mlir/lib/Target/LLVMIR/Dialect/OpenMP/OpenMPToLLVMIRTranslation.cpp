@@ -5610,6 +5610,18 @@ convertAtomicOrdering(std::optional<omp::ClauseMemoryOrderKind> ao) {
   llvm_unreachable("Unknown ClauseMemoryOrderKind kind");
 }
 
+/// Compute the cmpxchg failure ordering for an atomic compare op: use the
+/// `fail` clause ordering when present (the verifier guarantees it is a valid
+/// cmpxchg failure ordering), otherwise the strongest failure ordering derived
+/// from the success ordering (which matches the OpenMPIRBuilder default).
+static llvm::AtomicOrdering
+getAtomicCompareFailureOrdering(omp::AtomicCompareOp atomicCompareOp,
+                                llvm::AtomicOrdering atomicOrdering) {
+  if (atomicCompareOp.getFailMemoryOrder())
+    return convertAtomicOrdering(atomicCompareOp.getFailMemoryOrder());
+  return llvm::AtomicCmpXchgInst::getStrongestFailureOrdering(atomicOrdering);
+}
+
 /// Convert omp.atomic.read operation to LLVM IR.
 static LogicalResult
 convertOmpAtomicRead(Operation &opInst, llvm::IRBuilderBase &builder,
@@ -6191,14 +6203,8 @@ convertOmpAtomicCapture(omp::AtomicCaptureOp atomicCaptureOp,
     if (llvmXElementType->isStructTy()) {
       llvm::Value *oldComplex = nullptr;
       llvm::Value *cmpOk = nullptr;
-      // Honor the `fail` clause ordering when present (the verifier guarantees
-      // it is a valid cmpxchg failure ordering); otherwise derive it from the
-      // success ordering.
       llvm::AtomicOrdering failOrdering =
-          atomicCompareOp.getFailMemoryOrder()
-              ? convertAtomicOrdering(atomicCompareOp.getFailMemoryOrder())
-              : llvm::AtomicCmpXchgInst::getStrongestFailureOrdering(
-                    atomicOrdering);
+          getAtomicCompareFailureOrdering(atomicCompareOp, atomicOrdering);
       emitComplexAtomicCmpXchg(builder, llvmX, llvmXElementType, eVal, dVal,
                                atomicOrdering, failOrdering,
                                atomicCompareOp.getWeak(), oldComplex, cmpOk);
@@ -6272,11 +6278,13 @@ convertOmpAtomicCapture(omp::AtomicCaptureOp atomicCaptureOp,
 
     bool isWeak = atomicCompareOp.getWeak();
     bool savedHandleFPNegZero = ompBuilder->setHandleFPNegZero(true);
+    llvm::AtomicOrdering failureOrdering =
+        getAtomicCompareFailureOrdering(atomicCompareOp, atomicOrdering);
     llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
         ompBuilder->createAtomicCompare(
             ompLoc, llvmAtomicX, llvmAtomicVForCall, llvmAtomicR, eVal, dVal,
             atomicOrdering, compareOp, isXBinopExpr, isPostfixUpdate,
-            builderFailOnly, isWeak);
+            builderFailOnly, failureOrdering, isWeak);
     ompBuilder->setHandleFPNegZero(savedHandleFPNegZero);
 
     if (failed(handleError(afterIP, *atomicCaptureOp)))
@@ -6659,14 +6667,8 @@ convertOmpAtomicCompare(omp::AtomicCompareOp atomicCompareOp,
 
     llvm::Value *oldComplex = nullptr;
     llvm::Value *cmpOk = nullptr;
-    // Honor the `fail` clause ordering when present (the verifier guarantees
-    // it is a valid cmpxchg failure ordering); otherwise derive it from the
-    // success ordering.
     llvm::AtomicOrdering failOrdering =
-        atomicCompareOp.getFailMemoryOrder()
-            ? convertAtomicOrdering(atomicCompareOp.getFailMemoryOrder())
-            : llvm::AtomicCmpXchgInst::getStrongestFailureOrdering(
-                  atomicOrdering);
+        getAtomicCompareFailureOrdering(atomicCompareOp, atomicOrdering);
     emitComplexAtomicCmpXchg(builder, llvmX, llvmXElementType, eVal, dVal,
                              atomicOrdering, failOrdering,
                              atomicCompareOp.getWeak(), oldComplex, cmpOk);
@@ -6717,19 +6719,13 @@ convertOmpAtomicCompare(omp::AtomicCompareOp atomicCompareOp,
   bool isWeak = atomicCompareOp.getWeak();
 
   bool savedHandleFPNegZero = ompBuilder->setHandleFPNegZero(true);
-  llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP = [&]() {
-    if (auto failOrder = atomicCompareOp.getFailMemoryOrder()) {
-      llvm::AtomicOrdering failureOrdering = convertAtomicOrdering(*failOrder);
-      return ompBuilder->createAtomicCompare(
+  llvm::AtomicOrdering failureOrdering =
+      getAtomicCompareFailureOrdering(atomicCompareOp, atomicOrdering);
+  llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
+      ompBuilder->createAtomicCompare(
           ompLoc, llvmAtomicX, vOpVal, rOpVal, eVal, dVal, atomicOrdering,
           compareOp, isXBinopExpr, /*IsPostfixUpdate=*/false,
           /*IsFailOnly=*/false, failureOrdering, isWeak);
-    }
-    return ompBuilder->createAtomicCompare(
-        ompLoc, llvmAtomicX, vOpVal, rOpVal, eVal, dVal, atomicOrdering,
-        compareOp, isXBinopExpr, /*IsPostfixUpdate=*/false,
-        /*IsFailOnly=*/false, isWeak);
-  }();
   ompBuilder->setHandleFPNegZero(savedHandleFPNegZero);
 
   if (failed(handleError(afterIP, *atomicCompareOp)))

@@ -2248,6 +2248,30 @@ func.func @omp_atomic_compare_capture_fail_only(%v: memref<i32>, %x: memref<i32>
   return
 }
 
+// CHECK-LABEL: omp_atomic_compare_capture_fail_only_fail
+// CHECK-SAME: (%[[V:.*]]: memref<i32>, %[[X:.*]]: memref<i32>, %[[E:.*]]: i32, %[[D:.*]]: i32)
+func.func @omp_atomic_compare_capture_fail_only_fail(%v: memref<i32>, %x: memref<i32>, %e: i32, %d: i32) {
+  // CHECK: omp.atomic.capture memory_order(seq_cst) {
+  // CHECK-NEXT: omp.atomic.compare %[[X]] : memref<i32> {
+  // CHECK-NEXT: ^bb0(%[[XVAL:.*]]: i32):
+  // CHECK-NEXT:   %[[CMP:.*]] = arith.cmpi eq, %[[XVAL]], %[[E]] : i32
+  // CHECK-NEXT:   %[[SEL:.*]] = arith.select %[[CMP]], %[[D]], %[[XVAL]] : i32
+  // CHECK-NEXT:   omp.yield(%[[SEL]] : i32)
+  // CHECK-NEXT: } {fail_memory_order = #omp<memoryorderkind acquire>}
+  // CHECK-NEXT: omp.atomic.read %[[V]] = %[[X]] : memref<i32>, memref<i32>, i32
+  // CHECK-NEXT: } {fail_only}
+  omp.atomic.capture memory_order(seq_cst) {
+    omp.atomic.compare %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %cmp = arith.cmpi eq, %xval, %e : i32
+      %sel = arith.select %cmp, %d, %xval : i32
+      omp.yield(%sel : i32)
+    } {fail_memory_order = #omp<memoryorderkind acquire>}
+    omp.atomic.read %v = %x : memref<i32>, memref<i32>, i32
+  } {fail_only}
+  return
+}
+
 // CHECK-LABEL: omp_atomic_compare_capture_real
 // CHECK-SAME: (%[[V:.*]]: memref<f32>, %[[X:.*]]: memref<f32>, %[[E:.*]]: f32, %[[D:.*]]: f32)
 func.func @omp_atomic_compare_capture_real(%v: memref<f32>, %x: memref<f32>, %e: f32, %d: f32) {

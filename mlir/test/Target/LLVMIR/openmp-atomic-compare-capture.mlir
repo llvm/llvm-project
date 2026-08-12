@@ -76,6 +76,36 @@ llvm.func @compare_capture_failonly(%x : !llvm.ptr, %e : !llvm.ptr, %d : !llvm.p
   llvm.return
 }
 
+// Fail-only compare+capture with an explicit `fail` clause: V is captured on
+// the failure path, and the fail clause sets that path's ordering. Success
+// order seq_cst, fail order acquire => `cmpxchg ... seq_cst acquire`.
+// CHECK-LABEL: define void @compare_capture_failonly_fail(
+// CHECK-SAME:    ptr %[[X:.*]], ptr %[[E:.*]], ptr %[[D:.*]], ptr %[[V:.*]])
+// CHECK:         %[[EVAL:.*]] = load i32, ptr %[[E]], align 4
+// CHECK:         %[[DVAL:.*]] = load i32, ptr %[[D]], align 4
+// CHECK:         %[[RESULT:.*]] = cmpxchg ptr %[[X]], i32 %[[EVAL]], i32 %[[DVAL]] seq_cst acquire
+// CHECK:         %[[OLD:.*]] = extractvalue { i32, i1 } %[[RESULT]], 0
+// CHECK:         %[[SUCCESS:.*]] = extractvalue { i32, i1 } %[[RESULT]], 1
+// CHECK:         br i1 %[[SUCCESS]], label %{{.*}}.atomic.exit, label %{{.*}}.atomic.cont
+// CHECK:       {{.*}}.atomic.cont:
+// CHECK:         store i32 %[[OLD]], ptr %[[V]]
+// CHECK:         br label %{{.*}}.atomic.exit
+// CHECK:       {{.*}}.atomic.exit:
+llvm.func @compare_capture_failonly_fail(%x : !llvm.ptr, %e : !llvm.ptr, %d : !llvm.ptr, %v : !llvm.ptr) {
+  %eval = llvm.load %e : !llvm.ptr -> i32
+  %dval = llvm.load %d : !llvm.ptr -> i32
+  omp.atomic.capture memory_order(seq_cst) {
+    omp.atomic.compare %x : !llvm.ptr {
+    ^bb0(%xval: i32):
+      %cmp = llvm.icmp "eq" %xval, %eval : i32
+      %sel = llvm.select %cmp, %dval, %xval : i1, i32
+      omp.yield(%sel : i32)
+    } {fail_memory_order = #omp<memoryorderkind acquire>}
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
+  } {fail_only}
+  llvm.return
+}
+
 // Weak compare+capture: {read, compare} with weak
 // CHECK-LABEL: define void @compare_capture_weak(
 // CHECK-SAME:    ptr %[[X:.*]], ptr %[[E:.*]], ptr %[[D:.*]], ptr %[[V:.*]])

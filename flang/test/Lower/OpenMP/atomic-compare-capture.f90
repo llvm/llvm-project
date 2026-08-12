@@ -35,11 +35,13 @@ end subroutine
 ! ---------------------------------------------------------------------------
 ! integer == prefix: { v=x; if (x==e) x=d }
 ! CHECK-LABEL: func.func @_QPcc_int_prefix(
+! CHECK:         %[[E_DECL:.*]]:2 = hlfir.declare %arg1 {{.*}}Ee"
+! CHECK:         %[[E_VAL:.*]] = fir.load %[[E_DECL]]#0 : !fir.ref<i32>
 ! CHECK:         omp.atomic.capture memory_order(relaxed) {
 ! CHECK:           omp.atomic.read %{{.*}}#0 = %[[X:.*]]#0 : !fir.ref<i32>, !fir.ref<i32>, i32
 ! CHECK:           omp.atomic.compare %[[X]]#0 : !fir.ref<i32> {
 ! CHECK:           ^bb0(%[[XVAL:.*]]: i32):
-! CHECK:             arith.cmpi eq, %[[XVAL]], %{{.*}} : i32
+! CHECK:             arith.cmpi eq, %[[XVAL]], %[[E_VAL]] : i32
 ! CHECK:             omp.yield
 ! CHECK:           }
 ! CHECK:         }
@@ -54,10 +56,12 @@ end subroutine
 ! ---------------------------------------------------------------------------
 ! integer == fail-only: { if (x==e) x=d; else v=x }
 ! CHECK-LABEL: func.func @_QPcc_int_failonly(
+! CHECK:         %[[E_DECL:.*]]:2 = hlfir.declare %arg1 {{.*}}Ee"
+! CHECK:         %[[E_VAL:.*]] = fir.load %[[E_DECL]]#0 : !fir.ref<i32>
 ! CHECK:         omp.atomic.capture memory_order(relaxed) {
 ! CHECK:           omp.atomic.compare %{{.*}}#0 : !fir.ref<i32> {
 ! CHECK:           ^bb0(%[[XVAL:.*]]: i32):
-! CHECK:             arith.cmpi eq, %[[XVAL]], %{{.*}} : i32
+! CHECK:             arith.cmpi eq, %[[XVAL]], %[[E_VAL]] : i32
 ! CHECK:             omp.yield
 ! CHECK:           }
 ! CHECK:           omp.atomic.read %{{.*}}#0 = %{{.*}}#0 : !fir.ref<i32>, !fir.ref<i32>, i32
@@ -65,6 +69,32 @@ end subroutine
 subroutine cc_int_failonly(x, e, d, v)
   integer :: x, e, d, v
   !$omp atomic compare capture
+  if (x == e) then
+    x = d
+  else
+    v = x
+  end if
+  !$omp end atomic
+end subroutine
+
+! ---------------------------------------------------------------------------
+! integer == fail-only with `fail` clause: v is captured on the failure path,
+! and the fail clause sets that path's ordering independently of the success
+! ordering (seq_cst success, acquire failure).
+! CHECK-LABEL: func.func @_QPcc_int_failonly_fail(
+! CHECK:         %[[E_DECL:.*]]:2 = hlfir.declare %arg1 {{.*}}Ee"
+! CHECK:         %[[E_VAL:.*]] = fir.load %[[E_DECL]]#0 : !fir.ref<i32>
+! CHECK:         omp.atomic.capture memory_order(seq_cst) {
+! CHECK:           omp.atomic.compare %{{.*}}#0 : !fir.ref<i32> {
+! CHECK:           ^bb0(%[[XVAL:.*]]: i32):
+! CHECK:             arith.cmpi eq, %[[XVAL]], %[[E_VAL]] : i32
+! CHECK:             omp.yield
+! CHECK:           } {fail_memory_order = #omp<memoryorderkind acquire>}
+! CHECK:           omp.atomic.read %{{.*}}#0 = %{{.*}}#0 : !fir.ref<i32>, !fir.ref<i32>, i32
+! CHECK:         } {fail_only}
+subroutine cc_int_failonly_fail(x, e, d, v)
+  integer :: x, e, d, v
+  !$omp atomic compare capture seq_cst fail(acquire)
   if (x == e) then
     x = d
   else
