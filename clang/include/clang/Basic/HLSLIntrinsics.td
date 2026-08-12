@@ -675,12 +675,13 @@ prevision partial derivative of the input value.
 }
 
 // Converts the specified value from radians to degrees.
-def hlsl_degrees : HLSLOneArgBuiltin<"degrees", "__builtin_hlsl_elementwise_degrees"> {
+def hlsl_degrees : HLSLOneArgDetail<"degrees", "degrees_impl"> {
   let Doc = [{
 \fn T degrees(T x)
 \brief Converts the specified value from radians to degrees.
 \param x The specified input value.
 }];
+  let ParamNames = ["x"];
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingMatDims = [];
 }
