@@ -1060,6 +1060,10 @@ public:
   /// consecutive or part of an interleave group.
   bool isLegalMaskedLoadOrStore(Instruction *I, ElementCount VF) const;
 
+  /// Returns true if the target machine supports gather or scatter for \p I's
+  /// data type and alignment.
+  bool isLegalGatherOrScatter(Instruction *I, ElementCount VF) const;
+
   /// Check if \p Instr belongs to any interleaved access group.
   bool isAccessInterleaved(Instruction *Instr) const {
     return InterleaveInfo.isInterleaved(Instr);
@@ -1326,6 +1330,66 @@ private:
                                             AliasMaskingStatus::Disabled
                                         ? std::optional(VF)
                                         : std::nullopt);
+  }
+
+  bool isLegalToScalarize(Instruction *I, ElementCount VF) const {
+    if (!VF.isScalable())
+      // Scalarization of fixed length vectors "just works".
+      return true;
+
+    // We have dedicated lowering for unpredicated uniform loads and
+    // stores.  Note that even with tail folding we know that at least
+    // one lane is active (i.e. generalized predication is not possible
+    // here), and the logic below depends on this fact.
+    if (!foldTailByMasking())
+      return true;
+
+    // For scalable vectors, a uniform memop load is always
+    // uniform-by-parts  and we know how to scalarize that.
+    if (isa<LoadInst>(I))
+      return true;
+
+    // A uniform store isn't neccessarily uniform-by-part
+    // and we can't assume scalarization.
+    auto *SI = cast<StoreInst>(I);
+    return TheLoop->isLoopInvariant(SI->getValueOperand());
+  };
+
+  /// Pick between interleave and gather-scatter based on cost. Returns a pair
+  /// of widening decision along with corresponding cost.
+  std::pair<InstWidening, InstructionCost>
+  costInterleaveGatherScatter(Instruction *I, ElementCount VF) {
+    bool IsUniform = isUniformMemOp(*I, VF);
+    InstructionCost InterleaveCost = InstructionCost::getInvalid();
+    unsigned NumAccesses = 1;
+    if (!IsUniform && isAccessInterleaved(I)) {
+      const auto *Group = getInterleavedAccessGroup(I);
+      assert(Group && "Fail to get an interleaved access group.");
+
+      if (interleavedAccessCanBeWidened(I, VF)) {
+        NumAccesses = Group->getNumMembers();
+        InterleaveCost = getInterleaveGroupCost(I, VF);
+      }
+    }
+
+    InstructionCost GatherScatterCost =
+        isLegalGatherOrScatter(I, VF)
+            ? getGatherScatterCost(I, VF) * NumAccesses
+            : InstructionCost::getInvalid();
+
+    // FIXME: This cost is a significant under-estimate for tail folded
+    // memory ops.
+    InstructionCost ScalarizationCost =
+        IsUniform ? (isLegalToScalarize(I, VF) ? getUniformMemOpCost(I, VF)
+                                               : InstructionCost::getInvalid())
+                  : getMemInstScalarizationCost(I, VF) * NumAccesses;
+
+    if (!IsUniform && InterleaveCost <= GatherScatterCost &&
+        InterleaveCost < ScalarizationCost)
+      return {CM_Interleave, InterleaveCost};
+    if (GatherScatterCost < ScalarizationCost)
+      return {CM_GatherScatter, GatherScatterCost};
+    return {CM_Scalarize, ScalarizationCost};
   }
 
   /// Calculate vectorization cost of memory instruction \p I.
@@ -2380,6 +2444,13 @@ bool LoopVectorizationCostModel::isLegalMaskedLoadOrStore(
                                          getLoadStoreAddressSpace(I));
 }
 
+bool LoopVectorizationCostModel::isLegalGatherOrScatter(Instruction *I,
+                                                        ElementCount VF) const {
+  assert((isa<LoadInst, StoreInst>(I)));
+  return Config.isLegalGatherOrScatter(isa<LoadInst>(I), getLoadStoreType(I),
+                                       getLoadStoreAlignment(I), VF);
+}
+
 bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
                                                          ElementCount VF) {
   if (!isPredicatedInst(I))
@@ -2403,7 +2474,7 @@ bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
     bool IsConsecutive = Legal->isConsecutivePtr(getLoadStoreType(I),
                                                  getLoadStorePointerOperand(I));
     return !(IsConsecutive && isLegalMaskedLoadOrStore(I, VF)) &&
-           !Config.isLegalGatherOrScatter(I, VF);
+           !isLegalGatherOrScatter(I, VF);
   }
   case Instruction::UDiv:
   case Instruction::SDiv:
@@ -2563,8 +2634,6 @@ LoopVectorizationCostModel::getDivRemSpeculationCost(Instruction *I,
 bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
     Instruction *I, ElementCount VF) const {
   assert(isAccessInterleaved(I) && "Expecting interleaved access.");
-  assert(getWideningDecision(I, VF) == CM_Unknown &&
-         "Decision should not be set yet.");
   auto *Group = getInterleavedAccessGroup(I);
   assert(Group && "Must have a group.");
   unsigned InterleaveFactor = Group->getFactor();
@@ -4614,50 +4683,13 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
       if (!Ptr)
         continue;
 
+      // Choose between Interleaving, Gather/Scatter or Scalarization.
+      auto [Decision, Cost] = costInterleaveGatherScatter(&I, VF);
       if (isUniformMemOp(I, VF)) {
-        auto IsLegalToScalarize = [&]() {
-          if (!VF.isScalable())
-            // Scalarization of fixed length vectors "just works".
-            return true;
-
-          // We have dedicated lowering for unpredicated uniform loads and
-          // stores.  Note that even with tail folding we know that at least
-          // one lane is active (i.e. generalized predication is not possible
-          // here), and the logic below depends on this fact.
-          if (!foldTailByMasking())
-            return true;
-
-          // For scalable vectors, a uniform memop load is always
-          // uniform-by-parts  and we know how to scalarize that.
-          if (isa<LoadInst>(I))
-            return true;
-
-          // A uniform store isn't neccessarily uniform-by-part
-          // and we can't assume scalarization.
-          auto &SI = cast<StoreInst>(I);
-          return TheLoop->isLoopInvariant(SI.getValueOperand());
-        };
-
-        const InstructionCost GatherScatterCost =
-            Config.isLegalGatherOrScatter(&I, VF)
-                ? getGatherScatterCost(&I, VF)
-                : InstructionCost::getInvalid();
-
-        // Load: Scalar load + broadcast
-        // Store: Scalar store + isLoopInvariantStoreValue ? 0 : extract
-        // FIXME: This cost is a significant under-estimate for tail folded
-        // memory ops.
-        const InstructionCost ScalarizationCost =
-            IsLegalToScalarize() ? getUniformMemOpCost(&I, VF)
-                                 : InstructionCost::getInvalid();
-
         // Choose better solution for the current VF,  Note that Invalid
         // costs compare as maximumal large.  If both are invalid, we get
         // scalable invalid which signals a failure and a vectorization abort.
-        if (GatherScatterCost < ScalarizationCost)
-          setWideningDecision(&I, VF, CM_GatherScatter, GatherScatterCost);
-        else
-          setWideningDecision(&I, VF, CM_Scalarize, ScalarizationCost);
+        setWideningDecision(&I, VF, Decision, Cost);
         continue;
       }
 
@@ -4669,45 +4701,10 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
         continue;
       }
 
-      // Choose between Interleaving, Gather/Scatter or Scalarization.
-      InstructionCost InterleaveCost = InstructionCost::getInvalid();
-      unsigned NumAccesses = 1;
-      if (isAccessInterleaved(&I)) {
-        const auto *Group = getInterleavedAccessGroup(&I);
-        assert(Group && "Fail to get an interleaved access group.");
+      // Make one decision for the whole interleave group.
+      if (isAccessInterleaved(&I) && getWideningDecision(&I, VF) != CM_Unknown)
+        continue;
 
-        // Make one decision for the whole group.
-        if (getWideningDecision(&I, VF) != CM_Unknown)
-          continue;
-
-        NumAccesses = Group->getNumMembers();
-        if (interleavedAccessCanBeWidened(&I, VF))
-          InterleaveCost = getInterleaveGroupCost(&I, VF);
-      }
-
-      InstructionCost GatherScatterCost =
-          Config.isLegalGatherOrScatter(&I, VF)
-              ? getGatherScatterCost(&I, VF) * NumAccesses
-              : InstructionCost::getInvalid();
-
-      InstructionCost ScalarizationCost =
-          getMemInstScalarizationCost(&I, VF) * NumAccesses;
-
-      // Choose better solution for the current VF,
-      // write down this decision and use it during vectorization.
-      InstructionCost Cost;
-      InstWidening Decision;
-      if (InterleaveCost <= GatherScatterCost &&
-          InterleaveCost < ScalarizationCost) {
-        Decision = CM_Interleave;
-        Cost = InterleaveCost;
-      } else if (GatherScatterCost < ScalarizationCost) {
-        Decision = CM_GatherScatter;
-        Cost = GatherScatterCost;
-      } else {
-        Decision = CM_Scalarize;
-        Cost = ScalarizationCost;
-      }
       // If the instructions belongs to an interleave group, the whole group
       // receives the same decision. The whole group receives the cost, but
       // the cost will actually be assigned to one instruction.
