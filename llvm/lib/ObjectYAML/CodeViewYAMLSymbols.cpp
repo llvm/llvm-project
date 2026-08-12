@@ -62,6 +62,7 @@ LLVM_YAML_DECLARE_ENUM_TRAITS(RegisterId)
 LLVM_YAML_DECLARE_ENUM_TRAITS(TrampolineType)
 LLVM_YAML_DECLARE_ENUM_TRAITS(ThunkOrdinal)
 LLVM_YAML_DECLARE_ENUM_TRAITS(JumpTableEntrySize)
+LLVM_YAML_DECLARE_ENUM_TRAITS(SourceLanguage)
 
 LLVM_YAML_STRONG_TYPEDEF(StringRef, TypeName)
 
@@ -203,6 +204,14 @@ void ScalarEnumerationTraits<JumpTableEntrySize>::enumeration(
   auto ThunkNames = getJumpTableEntrySizeNames();
   for (const auto &E : ThunkNames) {
     io.enumCase(FC, E.name(), static_cast<JumpTableEntrySize>(E.value()));
+  }
+}
+
+void ScalarEnumerationTraits<SourceLanguage>::enumeration(IO &IO,
+                                                          SourceLanguage &L) {
+  auto Names = getSourceLanguageNames();
+  for (const auto &E : Names) {
+    IO.enumCase(L, E.name(), static_cast<SourceLanguage>(E.value()));
   }
 }
 
@@ -485,7 +494,14 @@ template <> void SymbolRecordImpl<Compile2Sym>::map(IO &IO) {
 }
 
 template <> void SymbolRecordImpl<Compile3Sym>::map(IO &IO) {
-  IO.mapRequired("Flags", Symbol.Flags);
+  CompileSym3Flags Flags = Symbol.getFlags();
+  SourceLanguage Lang = Symbol.getLanguage();
+  IO.mapRequired("Flags", Flags);
+  IO.mapOptional("Language", Lang, SourceLanguage::C);
+  if (!IO.outputting()) {
+    Symbol.Flags = Flags;
+    Symbol.setLanguage(Lang);
+  }
   IO.mapRequired("Machine", Symbol.Machine);
   IO.mapRequired("FrontendMajor", Symbol.VersionFrontendMajor);
   IO.mapRequired("FrontendMinor", Symbol.VersionFrontendMinor);
