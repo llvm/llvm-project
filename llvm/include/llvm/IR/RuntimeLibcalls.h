@@ -47,6 +47,11 @@ template <> struct enum_iteration_traits<RTLIB::LibcallImpl> {
 };
 
 class LibcallLoweringInfo;
+class Type;
+
+namespace Intrinsic {
+typedef unsigned ID;
+}
 
 namespace RTLIB {
 
@@ -116,6 +121,13 @@ public:
   static RTLIB::Libcall getLibcallFromImpl(RTLIB::LibcallImpl Impl) {
     return ImplToLibcall[Impl];
   }
+
+  /// Return the runtime libcall that the floating-point math intrinsic \p ID
+  /// may be lowered to, or RTLIB::UNKNOWN_LIBCALL if there is no such mapping.
+  ///
+  /// \p FTy must be the intrinsic's call signature.
+  LLVM_ABI static RTLIB::Libcall getLibcallForIntrinsic(Intrinsic::ID ID,
+                                                        FunctionType *FTy);
 
   unsigned getNumAvailableLibcallImpls() const {
     return AvailableLibcallImpls.count();
