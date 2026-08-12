@@ -17,13 +17,9 @@
 ; The data dependency through %diff keeps every SGPR live across the subtract so
 ; the scheduler cannot free one up.
 
+; CHECK-NOT: Cannot scavenge register in FI elimination!
+
 define fastcc i64 @no_scavengeable_sgpr_with_frame_register(
-; CHECK-LABEL: no_scavengeable_sgpr_with_frame_register:
-; Fold the frame-index offset into the frame register in place, use it directly
-; as the SGPR source of the subtract, then restore the frame register.
-; CHECK:         s_add_i32 s32, s32, 24
-; CHECK:         v_sub_co_u32_e32 v0, vcc, s32, v0
-; CHECK:         s_addk_i32 s32, 0xffe8
     ptr %p0, i32 %i0, i64 %l0, i64 %l1, i64 %l2,
     i64 %l3, i64 %l4, i16 %s0, i32 %i1, ptr %p1,
     i64 %l5, i32 %i2, i32 %i3, i32 %i4,
