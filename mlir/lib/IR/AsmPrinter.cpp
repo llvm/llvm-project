@@ -2174,6 +2174,12 @@ void AsmPrinter::Impl::printLocationInternal(LocationAttr loc, bool pretty,
       .Case([&](OpaqueLoc loc) {
         printLocationInternal(loc.getFallbackLocation(), pretty);
       })
+      .Case([&](ArtificialLoc loc) {
+        if (pretty)
+          os << "[artificial]";
+        else
+          os << "artificial";
+      })
       .Case([&](UnknownLoc loc) {
         if (pretty)
           os << "[unknown]";
