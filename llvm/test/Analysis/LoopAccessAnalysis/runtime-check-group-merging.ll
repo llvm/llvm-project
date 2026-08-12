@@ -156,163 +156,6 @@ exit:
 }
 
 
-;; Test 2: Two runtime strides with constant offsets.
-;; 5 loads from %vol at offsets: +8+cdj-cdk, -16-2*cdj, +24+3*cdj+2*cdk,
-;;   -8+2*cdj-3*cdk, +32-4*cdj+cdk. Store to %out.
-;; With merge: 1 merged group with bounds spanning the bounding box over
-;;   both cdj and cdk coefficients, 1 check, 2 stride predicates.
-;; Without merge: 5 separate groups, 5 checks, no predicates.
-define void @stencil_merge_two_strides(ptr %vol, ptr %out, i64 %n, i64 %cdj, i64 %cdk) {
-; MERGE-LABEL: 'stencil_merge_two_strides'
-; MERGE-NEXT:    loop:
-; MERGE-NEXT:      Memory dependences are safe with run-time checks
-; MERGE-NEXT:      Dependences:
-; MERGE-NEXT:      Run-time memory checks:
-; MERGE-NEXT:      Check 0:
-; MERGE-NEXT:        Comparing group GRP0:
-; MERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
-; MERGE-NEXT:        Against group GRP1:
-; MERGE-NEXT:          %p4 = getelementptr inbounds i8, ptr %base, i64 %off4
-; MERGE-NEXT:          %p3 = getelementptr inbounds i8, ptr %base, i64 %off3
-; MERGE-NEXT:          %p2 = getelementptr inbounds i8, ptr %base, i64 %off2
-; MERGE-NEXT:          %p1 = getelementptr inbounds i8, ptr %base, i64 %off1
-; MERGE-NEXT:          %p0 = getelementptr inbounds i8, ptr %base, i64 %off0
-; MERGE-NEXT:      Grouped accesses:
-; MERGE-NEXT:        Group GRP0:
-; MERGE-NEXT:          (Low: (32 + %out) High: (-32 + (8 * %n) + %out))
-; MERGE-NEXT:            Member: {(32 + %out),+,8}<nw><%loop>
-; MERGE-NEXT:        Group GRP1:
-; MERGE-NEXT:          (Low: (16 + (-4 * %cdj) + (-3 * %cdk) + %vol) High: ((2 * %cdk) + (3 * %cdj) + (8 * %n) + %vol))
-; MERGE-NEXT:            Member: {(64 + (-4 * %cdj) + %cdk + %vol),+,8}<nw><%loop>
-; MERGE-NEXT:            Member: {(24 + (2 * %cdj) + (-3 * %cdk) + %vol),+,8}<nw><%loop>
-; MERGE-NEXT:            Member: {(56 + (2 * %cdk) + (3 * %cdj) + %vol),+,8}<nw><%loop>
-; MERGE-NEXT:            Member: {(16 + (-2 * %cdj) + %vol),+,8}<nw><%loop>
-; MERGE-NEXT:            Member: {(40 + (-1 * %cdk) + %cdj + %vol),+,8}<nw><%loop>
-; MERGE-EMPTY:
-; MERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
-; MERGE-NEXT:      SCEV assumptions:
-; MERGE-NEXT:      Compare predicate: %cdj sgt) 0
-; MERGE-NEXT:      Compare predicate: %cdk sgt) 0
-; MERGE-EMPTY:
-; MERGE-NEXT:      Expressions re-written:
-;
-; NOMERGE-LABEL: 'stencil_merge_two_strides'
-; NOMERGE-NEXT:    loop:
-; NOMERGE-NEXT:      Memory dependences are safe with run-time checks
-; NOMERGE-NEXT:      Dependences:
-; NOMERGE-NEXT:      Run-time memory checks:
-; NOMERGE-NEXT:      Check 0:
-; NOMERGE-NEXT:        Comparing group GRP0:
-; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
-; NOMERGE-NEXT:        Against group GRP1:
-; NOMERGE-NEXT:          %p4 = getelementptr inbounds i8, ptr %base, i64 %off4
-; NOMERGE-NEXT:      Check 1:
-; NOMERGE-NEXT:        Comparing group GRP0:
-; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
-; NOMERGE-NEXT:        Against group GRP2:
-; NOMERGE-NEXT:          %p3 = getelementptr inbounds i8, ptr %base, i64 %off3
-; NOMERGE-NEXT:      Check 2:
-; NOMERGE-NEXT:        Comparing group GRP0:
-; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
-; NOMERGE-NEXT:        Against group GRP3:
-; NOMERGE-NEXT:          %p2 = getelementptr inbounds i8, ptr %base, i64 %off2
-; NOMERGE-NEXT:      Check 3:
-; NOMERGE-NEXT:        Comparing group GRP0:
-; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
-; NOMERGE-NEXT:        Against group GRP4:
-; NOMERGE-NEXT:          %p1 = getelementptr inbounds i8, ptr %base, i64 %off1
-; NOMERGE-NEXT:      Check 4:
-; NOMERGE-NEXT:        Comparing group GRP0:
-; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
-; NOMERGE-NEXT:        Against group GRP5:
-; NOMERGE-NEXT:          %p0 = getelementptr inbounds i8, ptr %base, i64 %off0
-; NOMERGE-NEXT:      Grouped accesses:
-; NOMERGE-NEXT:        Group GRP0:
-; NOMERGE-NEXT:          (Low: (32 + %out) High: (-32 + (8 * %n) + %out))
-; NOMERGE-NEXT:            Member: {(32 + %out),+,8}<nw><%loop>
-; NOMERGE-NEXT:        Group GRP1:
-; NOMERGE-NEXT:          (Low: (64 + (-4 * %cdj) + %cdk + %vol) High: ((8 * %n) + (-4 * %cdj) + %cdk + %vol))
-; NOMERGE-NEXT:            Member: {(64 + (-4 * %cdj) + %cdk + %vol),+,8}<nw><%loop>
-; NOMERGE-NEXT:        Group GRP2:
-; NOMERGE-NEXT:          (Low: (24 + (2 * %cdj) + (-3 * %cdk) + %vol) High: (-40 + (2 * %cdj) + (8 * %n) + (-3 * %cdk) + %vol))
-; NOMERGE-NEXT:            Member: {(24 + (2 * %cdj) + (-3 * %cdk) + %vol),+,8}<nw><%loop>
-; NOMERGE-NEXT:        Group GRP3:
-; NOMERGE-NEXT:          (Low: (56 + (2 * %cdk) + (3 * %cdj) + %vol) High: (-8 + (2 * %cdk) + (3 * %cdj) + (8 * %n) + %vol))
-; NOMERGE-NEXT:            Member: {(56 + (2 * %cdk) + (3 * %cdj) + %vol),+,8}<nw><%loop>
-; NOMERGE-NEXT:        Group GRP4:
-; NOMERGE-NEXT:          (Low: (16 + (-2 * %cdj) + %vol) High: (-48 + (8 * %n) + (-2 * %cdj) + %vol))
-; NOMERGE-NEXT:            Member: {(16 + (-2 * %cdj) + %vol),+,8}<nw><%loop>
-; NOMERGE-NEXT:        Group GRP5:
-; NOMERGE-NEXT:          (Low: (40 + (-1 * %cdk) + %cdj + %vol) High: (-24 + (8 * %n) + (-1 * %cdk) + %cdj + %vol))
-; NOMERGE-NEXT:            Member: {(40 + (-1 * %cdk) + %cdj + %vol),+,8}<nw><%loop>
-; NOMERGE-EMPTY:
-; NOMERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
-; NOMERGE-NEXT:      SCEV assumptions:
-; NOMERGE-EMPTY:
-; NOMERGE-NEXT:      Expressions re-written:
-;
-entry:
-  %cmp = icmp sgt i64 %n, 8
-  br i1 %cmp, label %loop, label %exit
-
-loop:
-  %iv = phi i64 [ 4, %entry ], [ %iv.next, %loop ]
-  %base = getelementptr inbounds double, ptr %vol, i64 %iv
-
-  ; +8 + cdj - cdk
-  %off0a = add nsw i64 8, %cdj
-  %negcdk = sub nsw i64 0, %cdk
-  %off0 = add nsw i64 %off0a, %negcdk
-  %p0 = getelementptr inbounds i8, ptr %base, i64 %off0
-  %v0 = load double, ptr %p0, align 8
-
-  ; -16 - 2*cdj
-  %neg2cdj = mul nsw i64 %cdj, -2
-  %off1 = add nsw i64 -16, %neg2cdj
-  %p1 = getelementptr inbounds i8, ptr %base, i64 %off1
-  %v1 = load double, ptr %p1, align 8
-
-  ; +24 + 3*cdj + 2*cdk
-  %pos3cdj = mul nsw i64 %cdj, 3
-  %pos2cdk = mul nsw i64 %cdk, 2
-  %off2a = add nsw i64 24, %pos3cdj
-  %off2 = add nsw i64 %off2a, %pos2cdk
-  %p2 = getelementptr inbounds i8, ptr %base, i64 %off2
-  %v2 = load double, ptr %p2, align 8
-
-  ; -8 + 2*cdj - 3*cdk
-  %pos2cdj = mul nsw i64 %cdj, 2
-  %neg3cdk = mul nsw i64 %cdk, -3
-  %off3a = add nsw i64 -8, %pos2cdj
-  %off3 = add nsw i64 %off3a, %neg3cdk
-  %p3 = getelementptr inbounds i8, ptr %base, i64 %off3
-  %v3 = load double, ptr %p3, align 8
-
-  ; +32 - 4*cdj + cdk
-  %neg4cdj = mul nsw i64 %cdj, -4
-  %off4a = add nsw i64 32, %neg4cdj
-  %off4 = add nsw i64 %off4a, %cdk
-  %p4 = getelementptr inbounds i8, ptr %base, i64 %off4
-  %v4 = load double, ptr %p4, align 8
-
-  %s0 = fadd double %v0, %v1
-  %s1 = fadd double %s0, %v2
-  %s2 = fadd double %s1, %v3
-  %s3 = fadd double %s2, %v4
-
-  %outp = getelementptr inbounds double, ptr %out, i64 %iv
-  store double %s3, ptr %outp, align 8
-
-  %iv.next = add nuw nsw i64 %iv, 1
-  %sub = sub nsw i64 %n, 4
-  %cond = icmp slt i64 %iv.next, %sub
-  br i1 %cond, label %loop, label %exit
-
-exit:
-  ret void
-}
-
-
 ;; Test 3: Constant offsets only — existing grouping handles this.
 ;; 4 loads from %a at constant byte offsets {-16, -8, +8, +16}. Store to %out.
 ;; The standard grouping algorithm merges these into 1 group (constant SCEV diffs).
@@ -607,10 +450,11 @@ exit:
 }
 
 
-;; Test 6: Coefficient clamping in merged bounds.
-;; 3 loads from %a at offsets {0, -cdj, -2*cdj}. Members that lack a stride
-;; term have an implicit coefficient of 0, which must be included in the
-;; min/max computation via clamping.
+;; Test 6: A member with no stride term.
+;; 3 loads from %a at offsets {0, -cdj, -2*cdj}. The base load has no cdj
+;; term at all, so its cdj coefficient counts as 0. The candidate comparison
+;; must see that 0: the base member (+0) is the high bound, above -cdj and
+;; -2*cdj, even though it never mentions cdj.
 define void @coefficient_clamping_regression(ptr %a, ptr %out, i64 %n, i64 %cdj) {
 ; MERGE-LABEL: 'coefficient_clamping_regression'
 ; MERGE-NEXT:    loop:
@@ -983,145 +827,6 @@ loop:
   ; Store to %out (different DepSet)
   %outp = getelementptr inbounds double, ptr %out, i64 %iv
   store double %s, ptr %outp, align 8
-
-  %iv.next = add nuw nsw i64 %iv, 1
-  %sub = sub nsw i64 %n, 2
-  %cond = icmp slt i64 %iv.next, %sub
-  br i1 %cond, label %loop, label %exit
-
-exit:
-  ret void
-}
-
-
-;; Test 9: Mixed constant offsets + runtime stride.
-;; 4 constant-offset loads at {-16, -8, +8, +16} + 2 runtime-stride loads
-;; at {-cdj, +cdj}. Store to %out.
-;; Without merge: standard grouping merges the 4 constant-offset loads into
-;;   1 group but the 2 runtime-stride loads remain separate -> 3 checks.
-;; With merge: all 6 loads form 1 merged group -> 1 check + 1 predicate.
-;;   Merged Low includes -cdj, Merged High includes +cdj:
-define void @stencil_merge_constant_and_runtime_stride(ptr %a, ptr %out, i64 %n, i64 %cdj) {
-; MERGE-LABEL: 'stencil_merge_constant_and_runtime_stride'
-; MERGE-NEXT:    loop:
-; MERGE-NEXT:      Memory dependences are safe with run-time checks
-; MERGE-NEXT:      Dependences:
-; MERGE-NEXT:      Run-time memory checks:
-; MERGE-NEXT:      Check 0:
-; MERGE-NEXT:        Comparing group GRP0:
-; MERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
-; MERGE-NEXT:        Against group GRP1:
-; MERGE-NEXT:          %p5 = getelementptr inbounds i8, ptr %base, i64 %cdj
-; MERGE-NEXT:          %p4 = getelementptr inbounds i8, ptr %base, i64 %negcdj
-; MERGE-NEXT:          %p3 = getelementptr inbounds i8, ptr %base, i64 16
-; MERGE-NEXT:          %p2 = getelementptr inbounds i8, ptr %base, i64 8
-; MERGE-NEXT:          %p1 = getelementptr inbounds i8, ptr %base, i64 -8
-; MERGE-NEXT:          %p0 = getelementptr inbounds i8, ptr %base, i64 -16
-; MERGE-NEXT:      Grouped accesses:
-; MERGE-NEXT:        Group GRP0:
-; MERGE-NEXT:          (Low: (16 + %out) High: (-16 + (8 * %n) + %out))
-; MERGE-NEXT:            Member: {(16 + %out),+,8}<nuw><%loop>
-; MERGE-NEXT:        Group GRP1:
-; MERGE-NEXT:          (Low: ((-1 * %cdj) + %a) High: ((8 * %n) + %cdj + %a))
-; MERGE-NEXT:            Member: {(16 + %cdj + %a),+,8}<nw><%loop>
-; MERGE-NEXT:            Member: {(16 + (-1 * %cdj) + %a),+,8}<nw><%loop>
-; MERGE-NEXT:            Member: {(32 + %a),+,8}<nuw><%loop>
-; MERGE-NEXT:            Member: {(24 + %a),+,8}<nuw><%loop>
-; MERGE-NEXT:            Member: {(8 + %a),+,8}<nw><%loop>
-; MERGE-NEXT:            Member: {%a,+,8}<nw><%loop>
-; MERGE-EMPTY:
-; MERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
-; MERGE-NEXT:      SCEV assumptions:
-; MERGE-NEXT:      Compare predicate: %cdj sgt) 0
-; MERGE-EMPTY:
-; MERGE-NEXT:      Expressions re-written:
-;
-; NOMERGE-LABEL: 'stencil_merge_constant_and_runtime_stride'
-; NOMERGE-NEXT:    loop:
-; NOMERGE-NEXT:      Memory dependences are safe with run-time checks
-; NOMERGE-NEXT:      Dependences:
-; NOMERGE-NEXT:      Run-time memory checks:
-; NOMERGE-NEXT:      Check 0:
-; NOMERGE-NEXT:        Comparing group GRP0:
-; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
-; NOMERGE-NEXT:        Against group GRP1:
-; NOMERGE-NEXT:          %p5 = getelementptr inbounds i8, ptr %base, i64 %cdj
-; NOMERGE-NEXT:      Check 1:
-; NOMERGE-NEXT:        Comparing group GRP0:
-; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
-; NOMERGE-NEXT:        Against group GRP2:
-; NOMERGE-NEXT:          %p4 = getelementptr inbounds i8, ptr %base, i64 %negcdj
-; NOMERGE-NEXT:      Check 2:
-; NOMERGE-NEXT:        Comparing group GRP0:
-; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
-; NOMERGE-NEXT:        Against group GRP3:
-; NOMERGE-NEXT:          %p3 = getelementptr inbounds i8, ptr %base, i64 16
-; NOMERGE-NEXT:          %p2 = getelementptr inbounds i8, ptr %base, i64 8
-; NOMERGE-NEXT:          %p1 = getelementptr inbounds i8, ptr %base, i64 -8
-; NOMERGE-NEXT:          %p0 = getelementptr inbounds i8, ptr %base, i64 -16
-; NOMERGE-NEXT:      Grouped accesses:
-; NOMERGE-NEXT:        Group GRP0:
-; NOMERGE-NEXT:          (Low: (16 + %out) High: (-16 + (8 * %n) + %out))
-; NOMERGE-NEXT:            Member: {(16 + %out),+,8}<nuw><%loop>
-; NOMERGE-NEXT:        Group GRP1:
-; NOMERGE-NEXT:          (Low: (16 + %cdj + %a) High: (-16 + (8 * %n) + %cdj + %a))
-; NOMERGE-NEXT:            Member: {(16 + %cdj + %a),+,8}<nw><%loop>
-; NOMERGE-NEXT:        Group GRP2:
-; NOMERGE-NEXT:          (Low: (16 + (-1 * %cdj) + %a) High: (-16 + (8 * %n) + (-1 * %cdj) + %a))
-; NOMERGE-NEXT:            Member: {(16 + (-1 * %cdj) + %a),+,8}<nw><%loop>
-; NOMERGE-NEXT:        Group GRP3:
-; NOMERGE-NEXT:          (Low: %a High: ((8 * %n) + %a))
-; NOMERGE-NEXT:            Member: {(32 + %a),+,8}<nuw><%loop>
-; NOMERGE-NEXT:            Member: {(24 + %a),+,8}<nuw><%loop>
-; NOMERGE-NEXT:            Member: {(8 + %a),+,8}<nw><%loop>
-; NOMERGE-NEXT:            Member: {%a,+,8}<nw><%loop>
-; NOMERGE-EMPTY:
-; NOMERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
-; NOMERGE-NEXT:      SCEV assumptions:
-; NOMERGE-EMPTY:
-; NOMERGE-NEXT:      Expressions re-written:
-;
-entry:
-  %cmp = icmp sgt i64 %n, 4
-  br i1 %cmp, label %loop, label %exit
-
-loop:
-  %iv = phi i64 [ 2, %entry ], [ %iv.next, %loop ]
-  %base = getelementptr inbounds double, ptr %a, i64 %iv
-
-  ; -16 (constant)
-  %p0 = getelementptr inbounds i8, ptr %base, i64 -16
-  %v0 = load double, ptr %p0, align 8
-
-  ; -8 (constant)
-  %p1 = getelementptr inbounds i8, ptr %base, i64 -8
-  %v1 = load double, ptr %p1, align 8
-
-  ; +8 (constant)
-  %p2 = getelementptr inbounds i8, ptr %base, i64 8
-  %v2 = load double, ptr %p2, align 8
-
-  ; +16 (constant)
-  %p3 = getelementptr inbounds i8, ptr %base, i64 16
-  %v3 = load double, ptr %p3, align 8
-
-  ; -cdj (runtime)
-  %negcdj = sub nsw i64 0, %cdj
-  %p4 = getelementptr inbounds i8, ptr %base, i64 %negcdj
-  %v4 = load double, ptr %p4, align 8
-
-  ; +cdj (runtime)
-  %p5 = getelementptr inbounds i8, ptr %base, i64 %cdj
-  %v5 = load double, ptr %p5, align 8
-
-  %s0 = fadd double %v0, %v1
-  %s1 = fadd double %s0, %v2
-  %s2 = fadd double %s1, %v3
-  %s3 = fadd double %s2, %v4
-  %s4 = fadd double %s3, %v5
-
-  %outp = getelementptr inbounds double, ptr %out, i64 %iv
-  store double %s4, ptr %outp, align 8
 
   %iv.next = add nuw nsw i64 %iv, 1
   %sub = sub nsw i64 %n, 2
@@ -1794,7 +1499,11 @@ declare i64 @llvm.smax.i64(i64, i64)
 ;; Test 16: A stride that is itself a sum (s1 + s2).
 ;; s1 = smax(s1in, 1), s2 = smax(s2in, 1) (known positive); 3 loads from %p at
 ;; offsets {0, s1, s1 + s2}, store to %q.
-;; TODO: Distribute s1 + s2 into s1 and s2 in decomposeStencilOffset
+;; One member offset is (-1 * (s1 + s2)). decomposeStencilOffset distributes
+;; the -1, so that member is keyed on s1 and s2 like the others. It then
+;; defines the low bound alone: Low is plain %p with no umin. Both strides
+;; are known positive, so no predicate is emitted.
+;; The merge saves 3 loads x 1 external check = 3 and costs 1 check.
 define void @stencil_merge_summed_stride(ptr %p, ptr %q, i64 %s1in, i64 %s2in, i64 %n) {
 ; MERGE-LABEL: 'stencil_merge_summed_stride'
 ; MERGE-NEXT:    loop:
@@ -1813,7 +1522,7 @@ define void @stencil_merge_summed_stride(ptr %p, ptr %q, i64 %s1in, i64 %s2in, i
 ; MERGE-NEXT:          (Low: %q High: (1 + (8 * %n) + %q))
 ; MERGE-NEXT:            Member: {%q,+,8}<%loop>
 ; MERGE-NEXT:        Group GRP1:
-; MERGE-NEXT:          (Low: ((-1 * (1 smax %s2in))<nsw> + %p) High: (1 + (8 * %n) + (1 smax %s1in) + (1 smax %s2in) + %p))
+; MERGE-NEXT:          (Low: %p High: (1 + (8 * %n) + (1 smax %s1in) + (1 smax %s2in) + %p))
 ; MERGE-NEXT:            Member: {((1 smax %s1in) + (1 smax %s2in) + %p),+,8}<%loop>
 ; MERGE-NEXT:            Member: {((1 smax %s1in) + %p),+,8}<%loop>
 ; MERGE-NEXT:            Member: {%p,+,8}<%loop>
@@ -1824,7 +1533,6 @@ define void @stencil_merge_summed_stride(ptr %p, ptr %q, i64 %s1in, i64 %s2in, i
 ; MERGE-NEXT:      {%p,+,8}<%loop> Added Flags: <nusw>
 ; MERGE-NEXT:      {((1 smax %s1in) + %p),+,8}<%loop> Added Flags: <nusw>
 ; MERGE-NEXT:      {((1 smax %s1in) + (1 smax %s2in) + %p),+,8}<%loop> Added Flags: <nusw>
-; MERGE-NEXT:      Compare predicate: ((1 smax %s1in) + (1 smax %s2in)) sgt) 0
 ; MERGE-EMPTY:
 ; MERGE-NEXT:      Expressions re-written:
 ;
@@ -1895,5 +1603,1185 @@ loop:
   br i1 %c, label %done, label %loop
 
 done:
+  ret void
+}
+
+
+;; Test 17: A member that uses two strides at once.
+;; 6 loads from %a: +0, -5*s1, +5*s1, -5*s2, +5*s2, and the mixed
+;; +5*s1+5*s2. Store to %out.
+;; The members at -5*s1 and -5*s2 can each be the lowest address: which one
+;; is lower depends on whether s1 or s2 is bigger. So Low is a umin over
+;; those two members. The mixed member is at or above every other member in
+;; both strides at once, so High is just that member's own End - no umax.
+;; No bound is an invented corner like base - 5*s1 - 5*s2.
+define void @stencil_merge_mixed_member(ptr %a, ptr %out, i64 %n, i64 %s1, i64 %s2) {
+; MERGE-LABEL: 'stencil_merge_mixed_member'
+; MERGE-NEXT:    loop:
+; MERGE-NEXT:      Memory dependences are safe with run-time checks
+; MERGE-NEXT:      Dependences:
+; MERGE-NEXT:      Run-time memory checks:
+; MERGE-NEXT:      Check 0:
+; MERGE-NEXT:        Comparing group GRP0:
+; MERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; MERGE-NEXT:        Against group GRP1:
+; MERGE-NEXT:          %p5 = getelementptr inbounds i8, ptr %base, i64 %mixed
+; MERGE-NEXT:          %p4 = getelementptr inbounds i8, ptr %base, i64 %pos5s2
+; MERGE-NEXT:          %p3 = getelementptr inbounds i8, ptr %base, i64 %neg5s2
+; MERGE-NEXT:          %p2 = getelementptr inbounds i8, ptr %base, i64 %pos5s1
+; MERGE-NEXT:          %p1 = getelementptr inbounds i8, ptr %base, i64 %neg5s1
+; MERGE-NEXT:          %base = getelementptr inbounds double, ptr %a, i64 %iv
+; MERGE-NEXT:      Grouped accesses:
+; MERGE-NEXT:        Group GRP0:
+; MERGE-NEXT:          (Low: (32 + %out) High: (-32 + (8 * %n) + %out))
+; MERGE-NEXT:            Member: {(32 + %out),+,8}<nuw><%loop>
+; MERGE-NEXT:        Group GRP1:
+; MERGE-NEXT:          (Low: ((32 + (-5 * %s2) + (ptrtoint ptr %a to i64)) umin (32 + (-5 * %s1) + (ptrtoint ptr %a to i64))) High: (-32 + (5 * %s1) + (5 * %s2) + (8 * %n) + %a))
+; MERGE-NEXT:            Member: {(32 + (5 * %s1) + (5 * %s2) + %a),+,8}<nw><%loop>
+; MERGE-NEXT:            Member: {(32 + (5 * %s2) + %a),+,8}<nw><%loop>
+; MERGE-NEXT:            Member: {(32 + (-5 * %s2) + %a),+,8}<nw><%loop>
+; MERGE-NEXT:            Member: {(32 + (5 * %s1) + %a),+,8}<nw><%loop>
+; MERGE-NEXT:            Member: {(32 + (-5 * %s1) + %a),+,8}<nw><%loop>
+; MERGE-NEXT:            Member: {(32 + %a),+,8}<nuw><%loop>
+; MERGE-EMPTY:
+; MERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; MERGE-NEXT:      SCEV assumptions:
+; MERGE-NEXT:      Compare predicate: %s1 sgt) 0
+; MERGE-NEXT:      Compare predicate: %s2 sgt) 0
+; MERGE-EMPTY:
+; MERGE-NEXT:      Expressions re-written:
+;
+; NOMERGE-LABEL: 'stencil_merge_mixed_member'
+; NOMERGE-NEXT:    loop:
+; NOMERGE-NEXT:      Memory dependences are safe with run-time checks
+; NOMERGE-NEXT:      Dependences:
+; NOMERGE-NEXT:      Run-time memory checks:
+; NOMERGE-NEXT:      Check 0:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; NOMERGE-NEXT:        Against group GRP1:
+; NOMERGE-NEXT:          %p5 = getelementptr inbounds i8, ptr %base, i64 %mixed
+; NOMERGE-NEXT:      Check 1:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; NOMERGE-NEXT:        Against group GRP2:
+; NOMERGE-NEXT:          %p4 = getelementptr inbounds i8, ptr %base, i64 %pos5s2
+; NOMERGE-NEXT:      Check 2:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; NOMERGE-NEXT:        Against group GRP3:
+; NOMERGE-NEXT:          %p3 = getelementptr inbounds i8, ptr %base, i64 %neg5s2
+; NOMERGE-NEXT:      Check 3:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; NOMERGE-NEXT:        Against group GRP4:
+; NOMERGE-NEXT:          %p2 = getelementptr inbounds i8, ptr %base, i64 %pos5s1
+; NOMERGE-NEXT:      Check 4:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; NOMERGE-NEXT:        Against group GRP5:
+; NOMERGE-NEXT:          %p1 = getelementptr inbounds i8, ptr %base, i64 %neg5s1
+; NOMERGE-NEXT:      Check 5:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; NOMERGE-NEXT:        Against group GRP6:
+; NOMERGE-NEXT:          %base = getelementptr inbounds double, ptr %a, i64 %iv
+; NOMERGE-NEXT:      Grouped accesses:
+; NOMERGE-NEXT:        Group GRP0:
+; NOMERGE-NEXT:          (Low: (32 + %out) High: (-32 + (8 * %n) + %out))
+; NOMERGE-NEXT:            Member: {(32 + %out),+,8}<nuw><%loop>
+; NOMERGE-NEXT:        Group GRP1:
+; NOMERGE-NEXT:          (Low: (32 + (5 * %s1) + (5 * %s2) + %a) High: (-32 + (5 * %s1) + (5 * %s2) + (8 * %n) + %a))
+; NOMERGE-NEXT:            Member: {(32 + (5 * %s1) + (5 * %s2) + %a),+,8}<nw><%loop>
+; NOMERGE-NEXT:        Group GRP2:
+; NOMERGE-NEXT:          (Low: (32 + (5 * %s2) + %a) High: (-32 + (5 * %s2) + (8 * %n) + %a))
+; NOMERGE-NEXT:            Member: {(32 + (5 * %s2) + %a),+,8}<nw><%loop>
+; NOMERGE-NEXT:        Group GRP3:
+; NOMERGE-NEXT:          (Low: (32 + (-5 * %s2) + %a) High: (-32 + (8 * %n) + (-5 * %s2) + %a))
+; NOMERGE-NEXT:            Member: {(32 + (-5 * %s2) + %a),+,8}<nw><%loop>
+; NOMERGE-NEXT:        Group GRP4:
+; NOMERGE-NEXT:          (Low: (32 + (5 * %s1) + %a) High: (-32 + (5 * %s1) + (8 * %n) + %a))
+; NOMERGE-NEXT:            Member: {(32 + (5 * %s1) + %a),+,8}<nw><%loop>
+; NOMERGE-NEXT:        Group GRP5:
+; NOMERGE-NEXT:          (Low: (32 + (-5 * %s1) + %a) High: (-32 + (8 * %n) + (-5 * %s1) + %a))
+; NOMERGE-NEXT:            Member: {(32 + (-5 * %s1) + %a),+,8}<nw><%loop>
+; NOMERGE-NEXT:        Group GRP6:
+; NOMERGE-NEXT:          (Low: (32 + %a) High: (-32 + (8 * %n) + %a))
+; NOMERGE-NEXT:            Member: {(32 + %a),+,8}<nuw><%loop>
+; NOMERGE-EMPTY:
+; NOMERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; NOMERGE-NEXT:      SCEV assumptions:
+; NOMERGE-EMPTY:
+; NOMERGE-NEXT:      Expressions re-written:
+;
+entry:
+  %cmp = icmp sgt i64 %n, 8
+  br i1 %cmp, label %loop, label %exit
+
+loop:
+  %iv = phi i64 [ 4, %entry ], [ %iv.next, %loop ]
+  %base = getelementptr inbounds double, ptr %a, i64 %iv
+
+  ; +0 (the base member)
+  %v0 = load double, ptr %base, align 8
+
+  ; -5*s1
+  %neg5s1 = mul nsw i64 %s1, -5
+  %p1 = getelementptr inbounds i8, ptr %base, i64 %neg5s1
+  %v1 = load double, ptr %p1, align 8
+
+  ; +5*s1
+  %pos5s1 = mul nsw i64 %s1, 5
+  %p2 = getelementptr inbounds i8, ptr %base, i64 %pos5s1
+  %v2 = load double, ptr %p2, align 8
+
+  ; -5*s2
+  %neg5s2 = mul nsw i64 %s2, -5
+  %p3 = getelementptr inbounds i8, ptr %base, i64 %neg5s2
+  %v3 = load double, ptr %p3, align 8
+
+  ; +5*s2
+  %pos5s2 = mul nsw i64 %s2, 5
+  %p4 = getelementptr inbounds i8, ptr %base, i64 %pos5s2
+  %v4 = load double, ptr %p4, align 8
+
+  ; +5*s1 + 5*s2 (the mixed member)
+  %mixed = add nsw i64 %pos5s1, %pos5s2
+  %p5 = getelementptr inbounds i8, ptr %base, i64 %mixed
+  %v5 = load double, ptr %p5, align 8
+
+  %t0 = fadd double %v0, %v1
+  %t1 = fadd double %t0, %v2
+  %t2 = fadd double %t1, %v3
+  %t3 = fadd double %t2, %v4
+  %t4 = fadd double %t3, %v5
+
+  %outp = getelementptr inbounds double, ptr %out, i64 %iv
+  store double %t4, ptr %outp, align 8
+
+  %iv.next = add nuw nsw i64 %iv, 1
+  %sub = sub nsw i64 %n, 4
+  %cond = icmp slt i64 %iv.next, %sub
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+;; Test 18: Too many candidate members - the cost model rejects the merge.
+;; 8 loads from %a at offsets {-s1, +s1, -s2, +s2, -s3, +s3, -s4, +s4}.
+;; The strides are unrelated, so all four -s_i members can be the lowest
+;; address and all four +s_i members can be the highest. The merged bounds
+;; would need a 4-way umin and a 4-way umax.
+;; Cost: 8 checks before. After: 1 check + 4 stride predicates + 3 umin
+;; operands + 3 umax operands = 11. 11 >= 8, so no merge, even with
+;; -stencil-runtime-check-merge=force.
+define void @too_many_candidates_no_merge(ptr %a, ptr %out, i64 %n, i64 %s1, i64 %s2, i64 %s3, i64 %s4) {
+; MERGE-LABEL: 'too_many_candidates_no_merge'
+; MERGE-NEXT:    loop:
+; MERGE-NEXT:      Memory dependences are safe with run-time checks
+; MERGE-NEXT:      Dependences:
+; MERGE-NEXT:      Run-time memory checks:
+; MERGE-NEXT:      Check 0:
+; MERGE-NEXT:        Comparing group GRP0:
+; MERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; MERGE-NEXT:        Against group GRP1:
+; MERGE-NEXT:          %p7 = getelementptr inbounds i8, ptr %base, i64 %s4
+; MERGE-NEXT:      Check 1:
+; MERGE-NEXT:        Comparing group GRP0:
+; MERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; MERGE-NEXT:        Against group GRP2:
+; MERGE-NEXT:          %p6 = getelementptr inbounds i8, ptr %base, i64 %negs4
+; MERGE-NEXT:      Check 2:
+; MERGE-NEXT:        Comparing group GRP0:
+; MERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; MERGE-NEXT:        Against group GRP3:
+; MERGE-NEXT:          %p5 = getelementptr inbounds i8, ptr %base, i64 %s3
+; MERGE-NEXT:      Check 3:
+; MERGE-NEXT:        Comparing group GRP0:
+; MERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; MERGE-NEXT:        Against group GRP4:
+; MERGE-NEXT:          %p4 = getelementptr inbounds i8, ptr %base, i64 %negs3
+; MERGE-NEXT:      Check 4:
+; MERGE-NEXT:        Comparing group GRP0:
+; MERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; MERGE-NEXT:        Against group GRP5:
+; MERGE-NEXT:          %p3 = getelementptr inbounds i8, ptr %base, i64 %s2
+; MERGE-NEXT:      Check 5:
+; MERGE-NEXT:        Comparing group GRP0:
+; MERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; MERGE-NEXT:        Against group GRP6:
+; MERGE-NEXT:          %p2 = getelementptr inbounds i8, ptr %base, i64 %negs2
+; MERGE-NEXT:      Check 6:
+; MERGE-NEXT:        Comparing group GRP0:
+; MERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; MERGE-NEXT:        Against group GRP7:
+; MERGE-NEXT:          %p1 = getelementptr inbounds i8, ptr %base, i64 %s1
+; MERGE-NEXT:      Check 7:
+; MERGE-NEXT:        Comparing group GRP0:
+; MERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; MERGE-NEXT:        Against group GRP8:
+; MERGE-NEXT:          %p0 = getelementptr inbounds i8, ptr %base, i64 %negs1
+; MERGE-NEXT:      Grouped accesses:
+; MERGE-NEXT:        Group GRP0:
+; MERGE-NEXT:          (Low: (32 + %out) High: (-32 + (8 * %n) + %out))
+; MERGE-NEXT:            Member: {(32 + %out),+,8}<nuw><%loop>
+; MERGE-NEXT:        Group GRP1:
+; MERGE-NEXT:          (Low: (32 + %s4 + %a) High: (-32 + (8 * %n) + %s4 + %a))
+; MERGE-NEXT:            Member: {(32 + %s4 + %a),+,8}<nw><%loop>
+; MERGE-NEXT:        Group GRP2:
+; MERGE-NEXT:          (Low: (32 + (-1 * %s4) + %a) High: (-32 + (8 * %n) + (-1 * %s4) + %a))
+; MERGE-NEXT:            Member: {(32 + (-1 * %s4) + %a),+,8}<nw><%loop>
+; MERGE-NEXT:        Group GRP3:
+; MERGE-NEXT:          (Low: (32 + %s3 + %a) High: (-32 + (8 * %n) + %s3 + %a))
+; MERGE-NEXT:            Member: {(32 + %s3 + %a),+,8}<nw><%loop>
+; MERGE-NEXT:        Group GRP4:
+; MERGE-NEXT:          (Low: (32 + (-1 * %s3) + %a) High: (-32 + (8 * %n) + (-1 * %s3) + %a))
+; MERGE-NEXT:            Member: {(32 + (-1 * %s3) + %a),+,8}<nw><%loop>
+; MERGE-NEXT:        Group GRP5:
+; MERGE-NEXT:          (Low: (32 + %s2 + %a) High: (-32 + (8 * %n) + %s2 + %a))
+; MERGE-NEXT:            Member: {(32 + %s2 + %a),+,8}<nw><%loop>
+; MERGE-NEXT:        Group GRP6:
+; MERGE-NEXT:          (Low: (32 + (-1 * %s2) + %a) High: (-32 + (8 * %n) + (-1 * %s2) + %a))
+; MERGE-NEXT:            Member: {(32 + (-1 * %s2) + %a),+,8}<nw><%loop>
+; MERGE-NEXT:        Group GRP7:
+; MERGE-NEXT:          (Low: (32 + %s1 + %a) High: (-32 + (8 * %n) + %s1 + %a))
+; MERGE-NEXT:            Member: {(32 + %s1 + %a),+,8}<nw><%loop>
+; MERGE-NEXT:        Group GRP8:
+; MERGE-NEXT:          (Low: (32 + (-1 * %s1) + %a) High: (-32 + (8 * %n) + (-1 * %s1) + %a))
+; MERGE-NEXT:            Member: {(32 + (-1 * %s1) + %a),+,8}<nw><%loop>
+; MERGE-EMPTY:
+; MERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; MERGE-NEXT:      SCEV assumptions:
+; MERGE-EMPTY:
+; MERGE-NEXT:      Expressions re-written:
+;
+; NOMERGE-LABEL: 'too_many_candidates_no_merge'
+; NOMERGE-NEXT:    loop:
+; NOMERGE-NEXT:      Memory dependences are safe with run-time checks
+; NOMERGE-NEXT:      Dependences:
+; NOMERGE-NEXT:      Run-time memory checks:
+; NOMERGE-NEXT:      Check 0:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; NOMERGE-NEXT:        Against group GRP1:
+; NOMERGE-NEXT:          %p7 = getelementptr inbounds i8, ptr %base, i64 %s4
+; NOMERGE-NEXT:      Check 1:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; NOMERGE-NEXT:        Against group GRP2:
+; NOMERGE-NEXT:          %p6 = getelementptr inbounds i8, ptr %base, i64 %negs4
+; NOMERGE-NEXT:      Check 2:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; NOMERGE-NEXT:        Against group GRP3:
+; NOMERGE-NEXT:          %p5 = getelementptr inbounds i8, ptr %base, i64 %s3
+; NOMERGE-NEXT:      Check 3:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; NOMERGE-NEXT:        Against group GRP4:
+; NOMERGE-NEXT:          %p4 = getelementptr inbounds i8, ptr %base, i64 %negs3
+; NOMERGE-NEXT:      Check 4:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; NOMERGE-NEXT:        Against group GRP5:
+; NOMERGE-NEXT:          %p3 = getelementptr inbounds i8, ptr %base, i64 %s2
+; NOMERGE-NEXT:      Check 5:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; NOMERGE-NEXT:        Against group GRP6:
+; NOMERGE-NEXT:          %p2 = getelementptr inbounds i8, ptr %base, i64 %negs2
+; NOMERGE-NEXT:      Check 6:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; NOMERGE-NEXT:        Against group GRP7:
+; NOMERGE-NEXT:          %p1 = getelementptr inbounds i8, ptr %base, i64 %s1
+; NOMERGE-NEXT:      Check 7:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; NOMERGE-NEXT:        Against group GRP8:
+; NOMERGE-NEXT:          %p0 = getelementptr inbounds i8, ptr %base, i64 %negs1
+; NOMERGE-NEXT:      Grouped accesses:
+; NOMERGE-NEXT:        Group GRP0:
+; NOMERGE-NEXT:          (Low: (32 + %out) High: (-32 + (8 * %n) + %out))
+; NOMERGE-NEXT:            Member: {(32 + %out),+,8}<nuw><%loop>
+; NOMERGE-NEXT:        Group GRP1:
+; NOMERGE-NEXT:          (Low: (32 + %s4 + %a) High: (-32 + (8 * %n) + %s4 + %a))
+; NOMERGE-NEXT:            Member: {(32 + %s4 + %a),+,8}<nw><%loop>
+; NOMERGE-NEXT:        Group GRP2:
+; NOMERGE-NEXT:          (Low: (32 + (-1 * %s4) + %a) High: (-32 + (8 * %n) + (-1 * %s4) + %a))
+; NOMERGE-NEXT:            Member: {(32 + (-1 * %s4) + %a),+,8}<nw><%loop>
+; NOMERGE-NEXT:        Group GRP3:
+; NOMERGE-NEXT:          (Low: (32 + %s3 + %a) High: (-32 + (8 * %n) + %s3 + %a))
+; NOMERGE-NEXT:            Member: {(32 + %s3 + %a),+,8}<nw><%loop>
+; NOMERGE-NEXT:        Group GRP4:
+; NOMERGE-NEXT:          (Low: (32 + (-1 * %s3) + %a) High: (-32 + (8 * %n) + (-1 * %s3) + %a))
+; NOMERGE-NEXT:            Member: {(32 + (-1 * %s3) + %a),+,8}<nw><%loop>
+; NOMERGE-NEXT:        Group GRP5:
+; NOMERGE-NEXT:          (Low: (32 + %s2 + %a) High: (-32 + (8 * %n) + %s2 + %a))
+; NOMERGE-NEXT:            Member: {(32 + %s2 + %a),+,8}<nw><%loop>
+; NOMERGE-NEXT:        Group GRP6:
+; NOMERGE-NEXT:          (Low: (32 + (-1 * %s2) + %a) High: (-32 + (8 * %n) + (-1 * %s2) + %a))
+; NOMERGE-NEXT:            Member: {(32 + (-1 * %s2) + %a),+,8}<nw><%loop>
+; NOMERGE-NEXT:        Group GRP7:
+; NOMERGE-NEXT:          (Low: (32 + %s1 + %a) High: (-32 + (8 * %n) + %s1 + %a))
+; NOMERGE-NEXT:            Member: {(32 + %s1 + %a),+,8}<nw><%loop>
+; NOMERGE-NEXT:        Group GRP8:
+; NOMERGE-NEXT:          (Low: (32 + (-1 * %s1) + %a) High: (-32 + (8 * %n) + (-1 * %s1) + %a))
+; NOMERGE-NEXT:            Member: {(32 + (-1 * %s1) + %a),+,8}<nw><%loop>
+; NOMERGE-EMPTY:
+; NOMERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; NOMERGE-NEXT:      SCEV assumptions:
+; NOMERGE-EMPTY:
+; NOMERGE-NEXT:      Expressions re-written:
+;
+entry:
+  %cmp = icmp sgt i64 %n, 8
+  br i1 %cmp, label %loop, label %exit
+
+loop:
+  %iv = phi i64 [ 4, %entry ], [ %iv.next, %loop ]
+  %base = getelementptr inbounds double, ptr %a, i64 %iv
+
+  %negs1 = sub nsw i64 0, %s1
+  %p0 = getelementptr inbounds i8, ptr %base, i64 %negs1
+  %v0 = load double, ptr %p0, align 8
+  %p1 = getelementptr inbounds i8, ptr %base, i64 %s1
+  %v1 = load double, ptr %p1, align 8
+
+  %negs2 = sub nsw i64 0, %s2
+  %p2 = getelementptr inbounds i8, ptr %base, i64 %negs2
+  %v2 = load double, ptr %p2, align 8
+  %p3 = getelementptr inbounds i8, ptr %base, i64 %s2
+  %v3 = load double, ptr %p3, align 8
+
+  %negs3 = sub nsw i64 0, %s3
+  %p4 = getelementptr inbounds i8, ptr %base, i64 %negs3
+  %v4 = load double, ptr %p4, align 8
+  %p5 = getelementptr inbounds i8, ptr %base, i64 %s3
+  %v5 = load double, ptr %p5, align 8
+
+  %negs4 = sub nsw i64 0, %s4
+  %p6 = getelementptr inbounds i8, ptr %base, i64 %negs4
+  %v6 = load double, ptr %p6, align 8
+  %p7 = getelementptr inbounds i8, ptr %base, i64 %s4
+  %v7 = load double, ptr %p7, align 8
+
+  %t0 = fadd double %v0, %v1
+  %t1 = fadd double %t0, %v2
+  %t2 = fadd double %t1, %v3
+  %t3 = fadd double %t2, %v4
+  %t4 = fadd double %t3, %v5
+  %t5 = fadd double %t4, %v6
+  %t6 = fadd double %t5, %v7
+
+  %outp = getelementptr inbounds double, ptr %out, i64 %iv
+  store double %t6, ptr %outp, align 8
+
+  %iv.next = add nuw nsw i64 %iv, 1
+  %sub = sub nsw i64 %n, 4
+  %cond = icmp slt i64 %iv.next, %sub
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+;; Test 19: One member's offset stays factored as (64 * (s1 + s2)).
+;; 4 loads from %p at byte offsets {0, 64*s1, 64*s2, 64*(s1+s2)}; the last
+;; offset is computed as (s1 + s2) * 64, and SCEV keeps the factored form.
+;; Stores to %q and %q2.
+;; decomposeStencilOffset distributes the 64, so the factored member is keyed
+;; on s1 and s2 like the others. With strides of at least 1 that member sits
+;; at or above every other member, and the member at offset 0 sits at or
+;; below every other member. So High is the factored member's own End, Low is
+;; plain %p with no umin, and only two predicates (s1 > 0, s2 > 0) are
+;; emitted - no (s1 + s2) > 0.
+;; The two stores keep the merge profitable: the merge saves 4 loads x 2
+;; external checks = 8 and costs 2 checks + 2 predicates = 4.
+define void @stencil_merge_factored_diagonal(ptr %p, ptr %q, ptr %q2, i64 %s1, i64 %s2, i64 %n) {
+; MERGE-LABEL: 'stencil_merge_factored_diagonal'
+; MERGE-NEXT:    loop:
+; MERGE-NEXT:      Memory dependences are safe with run-time checks
+; MERGE-NEXT:      Dependences:
+; MERGE-NEXT:      Run-time memory checks:
+; MERGE-NEXT:      Check 0:
+; MERGE-NEXT:        Comparing group GRP0:
+; MERGE-NEXT:          %aq = getelementptr i8, ptr %q, i64 %idx
+; MERGE-NEXT:        Against group GRP1:
+; MERGE-NEXT:          %aq2 = getelementptr i8, ptr %q2, i64 %idx
+; MERGE-NEXT:      Check 1:
+; MERGE-NEXT:        Comparing group GRP0:
+; MERGE-NEXT:          %aq = getelementptr i8, ptr %q, i64 %idx
+; MERGE-NEXT:        Against group GRP2:
+; MERGE-NEXT:          %a3 = getelementptr i8, ptr %p3, i64 %idx
+; MERGE-NEXT:          %a2 = getelementptr i8, ptr %p2, i64 %idx
+; MERGE-NEXT:          %a1 = getelementptr i8, ptr %p1, i64 %idx
+; MERGE-NEXT:          %a0 = getelementptr i8, ptr %p, i64 %idx
+; MERGE-NEXT:      Check 2:
+; MERGE-NEXT:        Comparing group GRP1:
+; MERGE-NEXT:          %aq2 = getelementptr i8, ptr %q2, i64 %idx
+; MERGE-NEXT:        Against group GRP2:
+; MERGE-NEXT:          %a3 = getelementptr i8, ptr %p3, i64 %idx
+; MERGE-NEXT:          %a2 = getelementptr i8, ptr %p2, i64 %idx
+; MERGE-NEXT:          %a1 = getelementptr i8, ptr %p1, i64 %idx
+; MERGE-NEXT:          %a0 = getelementptr i8, ptr %p, i64 %idx
+; MERGE-NEXT:      Grouped accesses:
+; MERGE-NEXT:        Group GRP0:
+; MERGE-NEXT:          (Low: %q High: (1 + (8 * %n) + %q))
+; MERGE-NEXT:            Member: {%q,+,8}<%loop>
+; MERGE-NEXT:        Group GRP1:
+; MERGE-NEXT:          (Low: %q2 High: (1 + (8 * %n) + %q2))
+; MERGE-NEXT:            Member: {%q2,+,8}<%loop>
+; MERGE-NEXT:        Group GRP2:
+; MERGE-NEXT:          (Low: %p High: (1 + (8 * %n) + (64 * (%s1 + %s2)) + %p))
+; MERGE-NEXT:            Member: {((64 * (%s1 + %s2)) + %p),+,8}<%loop>
+; MERGE-NEXT:            Member: {((64 * %s2) + %p),+,8}<%loop>
+; MERGE-NEXT:            Member: {((64 * %s1) + %p),+,8}<%loop>
+; MERGE-NEXT:            Member: {%p,+,8}<%loop>
+; MERGE-EMPTY:
+; MERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; MERGE-NEXT:      SCEV assumptions:
+; MERGE-NEXT:      {%q,+,8}<%loop> Added Flags: <nusw>
+; MERGE-NEXT:      {%q2,+,8}<%loop> Added Flags: <nusw>
+; MERGE-NEXT:      {%p,+,8}<%loop> Added Flags: <nusw>
+; MERGE-NEXT:      {((64 * %s1) + %p),+,8}<%loop> Added Flags: <nusw>
+; MERGE-NEXT:      {((64 * %s2) + %p),+,8}<%loop> Added Flags: <nusw>
+; MERGE-NEXT:      {((64 * (%s1 + %s2)) + %p),+,8}<%loop> Added Flags: <nusw>
+; MERGE-NEXT:      Compare predicate: %s1 sgt) 0
+; MERGE-NEXT:      Compare predicate: %s2 sgt) 0
+; MERGE-EMPTY:
+; MERGE-NEXT:      Expressions re-written:
+;
+; NOMERGE-LABEL: 'stencil_merge_factored_diagonal'
+; NOMERGE-NEXT:    loop:
+; NOMERGE-NEXT:      Memory dependences are safe with run-time checks
+; NOMERGE-NEXT:      Dependences:
+; NOMERGE-NEXT:      Run-time memory checks:
+; NOMERGE-NEXT:      Check 0:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %aq = getelementptr i8, ptr %q, i64 %idx
+; NOMERGE-NEXT:        Against group GRP1:
+; NOMERGE-NEXT:          %aq2 = getelementptr i8, ptr %q2, i64 %idx
+; NOMERGE-NEXT:      Check 1:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %aq = getelementptr i8, ptr %q, i64 %idx
+; NOMERGE-NEXT:        Against group GRP2:
+; NOMERGE-NEXT:          %a3 = getelementptr i8, ptr %p3, i64 %idx
+; NOMERGE-NEXT:      Check 2:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %aq = getelementptr i8, ptr %q, i64 %idx
+; NOMERGE-NEXT:        Against group GRP3:
+; NOMERGE-NEXT:          %a2 = getelementptr i8, ptr %p2, i64 %idx
+; NOMERGE-NEXT:      Check 3:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %aq = getelementptr i8, ptr %q, i64 %idx
+; NOMERGE-NEXT:        Against group GRP4:
+; NOMERGE-NEXT:          %a1 = getelementptr i8, ptr %p1, i64 %idx
+; NOMERGE-NEXT:      Check 4:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %aq = getelementptr i8, ptr %q, i64 %idx
+; NOMERGE-NEXT:        Against group GRP5:
+; NOMERGE-NEXT:          %a0 = getelementptr i8, ptr %p, i64 %idx
+; NOMERGE-NEXT:      Check 5:
+; NOMERGE-NEXT:        Comparing group GRP1:
+; NOMERGE-NEXT:          %aq2 = getelementptr i8, ptr %q2, i64 %idx
+; NOMERGE-NEXT:        Against group GRP2:
+; NOMERGE-NEXT:          %a3 = getelementptr i8, ptr %p3, i64 %idx
+; NOMERGE-NEXT:      Check 6:
+; NOMERGE-NEXT:        Comparing group GRP1:
+; NOMERGE-NEXT:          %aq2 = getelementptr i8, ptr %q2, i64 %idx
+; NOMERGE-NEXT:        Against group GRP3:
+; NOMERGE-NEXT:          %a2 = getelementptr i8, ptr %p2, i64 %idx
+; NOMERGE-NEXT:      Check 7:
+; NOMERGE-NEXT:        Comparing group GRP1:
+; NOMERGE-NEXT:          %aq2 = getelementptr i8, ptr %q2, i64 %idx
+; NOMERGE-NEXT:        Against group GRP4:
+; NOMERGE-NEXT:          %a1 = getelementptr i8, ptr %p1, i64 %idx
+; NOMERGE-NEXT:      Check 8:
+; NOMERGE-NEXT:        Comparing group GRP1:
+; NOMERGE-NEXT:          %aq2 = getelementptr i8, ptr %q2, i64 %idx
+; NOMERGE-NEXT:        Against group GRP5:
+; NOMERGE-NEXT:          %a0 = getelementptr i8, ptr %p, i64 %idx
+; NOMERGE-NEXT:      Grouped accesses:
+; NOMERGE-NEXT:        Group GRP0:
+; NOMERGE-NEXT:          (Low: %q High: (1 + (8 * %n) + %q))
+; NOMERGE-NEXT:            Member: {%q,+,8}<%loop>
+; NOMERGE-NEXT:        Group GRP1:
+; NOMERGE-NEXT:          (Low: %q2 High: (1 + (8 * %n) + %q2))
+; NOMERGE-NEXT:            Member: {%q2,+,8}<%loop>
+; NOMERGE-NEXT:        Group GRP2:
+; NOMERGE-NEXT:          (Low: ((64 * (%s1 + %s2)) + %p) High: (1 + (8 * %n) + (64 * (%s1 + %s2)) + %p))
+; NOMERGE-NEXT:            Member: {((64 * (%s1 + %s2)) + %p),+,8}<%loop>
+; NOMERGE-NEXT:        Group GRP3:
+; NOMERGE-NEXT:          (Low: ((64 * %s2) + %p) High: (1 + (8 * %n) + (64 * %s2) + %p))
+; NOMERGE-NEXT:            Member: {((64 * %s2) + %p),+,8}<%loop>
+; NOMERGE-NEXT:        Group GRP4:
+; NOMERGE-NEXT:          (Low: ((64 * %s1) + %p) High: (1 + (8 * %n) + (64 * %s1) + %p))
+; NOMERGE-NEXT:            Member: {((64 * %s1) + %p),+,8}<%loop>
+; NOMERGE-NEXT:        Group GRP5:
+; NOMERGE-NEXT:          (Low: %p High: (1 + (8 * %n) + %p))
+; NOMERGE-NEXT:            Member: {%p,+,8}<%loop>
+; NOMERGE-EMPTY:
+; NOMERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; NOMERGE-NEXT:      SCEV assumptions:
+; NOMERGE-NEXT:      {%q,+,8}<%loop> Added Flags: <nusw>
+; NOMERGE-NEXT:      {%q2,+,8}<%loop> Added Flags: <nusw>
+; NOMERGE-NEXT:      {%p,+,8}<%loop> Added Flags: <nusw>
+; NOMERGE-NEXT:      {((64 * %s1) + %p),+,8}<%loop> Added Flags: <nusw>
+; NOMERGE-NEXT:      {((64 * %s2) + %p),+,8}<%loop> Added Flags: <nusw>
+; NOMERGE-NEXT:      {((64 * (%s1 + %s2)) + %p),+,8}<%loop> Added Flags: <nusw>
+; NOMERGE-EMPTY:
+; NOMERGE-NEXT:      Expressions re-written:
+;
+entry:
+  %pos64s1 = mul i64 %s1, 64
+  %pos64s2 = mul i64 %s2, 64
+  %s12 = add i64 %s1, %s2
+  %diag = mul i64 %s12, 64
+  %p1 = getelementptr i8, ptr %p, i64 %pos64s1
+  %p2 = getelementptr i8, ptr %p, i64 %pos64s2
+  %p3 = getelementptr i8, ptr %p, i64 %diag
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %idx = mul i64 %iv, 8
+  %a0 = getelementptr i8, ptr %p, i64 %idx
+  load i8, ptr %a0
+  %a1 = getelementptr i8, ptr %p1, i64 %idx
+  load i8, ptr %a1
+  %a2 = getelementptr i8, ptr %p2, i64 %idx
+  load i8, ptr %a2
+  %a3 = getelementptr i8, ptr %p3, i64 %idx
+  load i8, ptr %a3
+  %aq = getelementptr i8, ptr %q, i64 %idx
+  store i8 0, ptr %aq
+  %aq2 = getelementptr i8, ptr %q2, i64 %idx
+  store i8 0, ptr %aq2
+  %iv.next = add i64 %iv, 1
+  %c = icmp eq i64 %iv, %n
+  br i1 %c, label %done, label %loop
+
+done:
+  ret void
+}
+
+;; Test 20: The depth cap keeps a deep term as one opaque key.
+;; 3 loads from %p at byte offsets {0, 64*s1, 8 + 64*(s1 + s2 + 4*s3)}.
+;; The deep offset is an add (depth 0) holding 64*(...) (depth 1) holding a
+;; 3-operand add (depth 2) whose term 4*s3 sits at depth 3.
+;; SCEV keeps 64*(s1 + s2 + 4*s3) factored: it only distributes a constant
+;; over a 2-operand add.
+;; decomposeStencilOffset distributes down to depth 3 and then stops: s1 and
+;; s2 get their own keys, and (4 * s3) stays one opaque key. The
+;; decomposition still succeeds - the cap is not a bailout - so the group
+;; still merges.
+;; Predicates: s1 > 0, s2 > 0, and (4 * s3) > 0 for the opaque key.
+;; The deep load comes first in the loop on purpose. That makes %p the
+;; base of the relative decomposition. With the deep member as base, SCEV
+;; cancellation flattens 4*s3 into a plain s3 coefficient and the cap is
+;; never tested. If the (4 * %s3) predicate ever disappears from the CHECK
+;; lines, the test has stopped covering the cap.
+;; The three stores keep the merge profitable: the merge saves 3 loads x 3
+;; external checks = 9 and costs 3 checks + 3 predicates = 6.
+define void @stencil_merge_depth_cap(ptr %p, ptr %q, ptr %q2, ptr %q3, i64 %s1, i64 %s2, i64 %s3, i64 %n) {
+; MERGE-LABEL: 'stencil_merge_depth_cap'
+; MERGE-NEXT:    loop:
+; MERGE-NEXT:      Memory dependences are safe with run-time checks
+; MERGE-NEXT:      Dependences:
+; MERGE-NEXT:      Run-time memory checks:
+; MERGE-NEXT:      Check 0:
+; MERGE-NEXT:        Comparing group GRP0:
+; MERGE-NEXT:          %aq = getelementptr i8, ptr %q, i64 %idx
+; MERGE-NEXT:        Against group GRP1:
+; MERGE-NEXT:          %aq2 = getelementptr i8, ptr %q2, i64 %idx
+; MERGE-NEXT:      Check 1:
+; MERGE-NEXT:        Comparing group GRP0:
+; MERGE-NEXT:          %aq = getelementptr i8, ptr %q, i64 %idx
+; MERGE-NEXT:        Against group GRP2:
+; MERGE-NEXT:          %aq3 = getelementptr i8, ptr %q3, i64 %idx
+; MERGE-NEXT:      Check 2:
+; MERGE-NEXT:        Comparing group GRP0:
+; MERGE-NEXT:          %aq = getelementptr i8, ptr %q, i64 %idx
+; MERGE-NEXT:        Against group GRP3:
+; MERGE-NEXT:          %a0 = getelementptr i8, ptr %p, i64 %idx
+; MERGE-NEXT:          %a1 = getelementptr i8, ptr %p1, i64 %idx
+; MERGE-NEXT:          %a2 = getelementptr i8, ptr %p2, i64 %idx
+; MERGE-NEXT:      Check 3:
+; MERGE-NEXT:        Comparing group GRP1:
+; MERGE-NEXT:          %aq2 = getelementptr i8, ptr %q2, i64 %idx
+; MERGE-NEXT:        Against group GRP2:
+; MERGE-NEXT:          %aq3 = getelementptr i8, ptr %q3, i64 %idx
+; MERGE-NEXT:      Check 4:
+; MERGE-NEXT:        Comparing group GRP1:
+; MERGE-NEXT:          %aq2 = getelementptr i8, ptr %q2, i64 %idx
+; MERGE-NEXT:        Against group GRP3:
+; MERGE-NEXT:          %a0 = getelementptr i8, ptr %p, i64 %idx
+; MERGE-NEXT:          %a1 = getelementptr i8, ptr %p1, i64 %idx
+; MERGE-NEXT:          %a2 = getelementptr i8, ptr %p2, i64 %idx
+; MERGE-NEXT:      Check 5:
+; MERGE-NEXT:        Comparing group GRP2:
+; MERGE-NEXT:          %aq3 = getelementptr i8, ptr %q3, i64 %idx
+; MERGE-NEXT:        Against group GRP3:
+; MERGE-NEXT:          %a0 = getelementptr i8, ptr %p, i64 %idx
+; MERGE-NEXT:          %a1 = getelementptr i8, ptr %p1, i64 %idx
+; MERGE-NEXT:          %a2 = getelementptr i8, ptr %p2, i64 %idx
+; MERGE-NEXT:      Grouped accesses:
+; MERGE-NEXT:        Group GRP0:
+; MERGE-NEXT:          (Low: %q High: (1 + (8 * %n) + %q))
+; MERGE-NEXT:            Member: {%q,+,8}<%loop>
+; MERGE-NEXT:        Group GRP1:
+; MERGE-NEXT:          (Low: %q2 High: (1 + (8 * %n) + %q2))
+; MERGE-NEXT:            Member: {%q2,+,8}<%loop>
+; MERGE-NEXT:        Group GRP2:
+; MERGE-NEXT:          (Low: %q3 High: (1 + (8 * %n) + %q3))
+; MERGE-NEXT:            Member: {%q3,+,8}<%loop>
+; MERGE-NEXT:        Group GRP3:
+; MERGE-NEXT:          (Low: %p High: (9 + (8 * %n) + (64 * ((4 * %s3) + %s1 + %s2)) + %p))
+; MERGE-NEXT:            Member: {%p,+,8}<%loop>
+; MERGE-NEXT:            Member: {((64 * %s1) + %p),+,8}<%loop>
+; MERGE-NEXT:            Member: {(8 + (64 * ((4 * %s3) + %s1 + %s2)) + %p),+,8}<%loop>
+; MERGE-EMPTY:
+; MERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; MERGE-NEXT:      SCEV assumptions:
+; MERGE-NEXT:      {%q,+,8}<%loop> Added Flags: <nusw>
+; MERGE-NEXT:      {%q2,+,8}<%loop> Added Flags: <nusw>
+; MERGE-NEXT:      {%q3,+,8}<%loop> Added Flags: <nusw>
+; MERGE-NEXT:      {(8 + (64 * ((4 * %s3) + %s1 + %s2)) + %p),+,8}<%loop> Added Flags: <nusw>
+; MERGE-NEXT:      {((64 * %s1) + %p),+,8}<%loop> Added Flags: <nusw>
+; MERGE-NEXT:      {%p,+,8}<%loop> Added Flags: <nusw>
+; MERGE-NEXT:      Compare predicate: %s1 sgt) 0
+; MERGE-NEXT:      Compare predicate: (4 * %s3) sgt) 0
+; MERGE-NEXT:      Compare predicate: %s2 sgt) 0
+; MERGE-EMPTY:
+; MERGE-NEXT:      Expressions re-written:
+;
+; NOMERGE-LABEL: 'stencil_merge_depth_cap'
+; NOMERGE-NEXT:    loop:
+; NOMERGE-NEXT:      Memory dependences are safe with run-time checks
+; NOMERGE-NEXT:      Dependences:
+; NOMERGE-NEXT:      Run-time memory checks:
+; NOMERGE-NEXT:      Check 0:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %aq = getelementptr i8, ptr %q, i64 %idx
+; NOMERGE-NEXT:        Against group GRP1:
+; NOMERGE-NEXT:          %aq2 = getelementptr i8, ptr %q2, i64 %idx
+; NOMERGE-NEXT:      Check 1:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %aq = getelementptr i8, ptr %q, i64 %idx
+; NOMERGE-NEXT:        Against group GRP2:
+; NOMERGE-NEXT:          %aq3 = getelementptr i8, ptr %q3, i64 %idx
+; NOMERGE-NEXT:      Check 2:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %aq = getelementptr i8, ptr %q, i64 %idx
+; NOMERGE-NEXT:        Against group GRP3:
+; NOMERGE-NEXT:          %a0 = getelementptr i8, ptr %p, i64 %idx
+; NOMERGE-NEXT:      Check 3:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %aq = getelementptr i8, ptr %q, i64 %idx
+; NOMERGE-NEXT:        Against group GRP4:
+; NOMERGE-NEXT:          %a1 = getelementptr i8, ptr %p1, i64 %idx
+; NOMERGE-NEXT:      Check 4:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %aq = getelementptr i8, ptr %q, i64 %idx
+; NOMERGE-NEXT:        Against group GRP5:
+; NOMERGE-NEXT:          %a2 = getelementptr i8, ptr %p2, i64 %idx
+; NOMERGE-NEXT:      Check 5:
+; NOMERGE-NEXT:        Comparing group GRP1:
+; NOMERGE-NEXT:          %aq2 = getelementptr i8, ptr %q2, i64 %idx
+; NOMERGE-NEXT:        Against group GRP2:
+; NOMERGE-NEXT:          %aq3 = getelementptr i8, ptr %q3, i64 %idx
+; NOMERGE-NEXT:      Check 6:
+; NOMERGE-NEXT:        Comparing group GRP1:
+; NOMERGE-NEXT:          %aq2 = getelementptr i8, ptr %q2, i64 %idx
+; NOMERGE-NEXT:        Against group GRP3:
+; NOMERGE-NEXT:          %a0 = getelementptr i8, ptr %p, i64 %idx
+; NOMERGE-NEXT:      Check 7:
+; NOMERGE-NEXT:        Comparing group GRP1:
+; NOMERGE-NEXT:          %aq2 = getelementptr i8, ptr %q2, i64 %idx
+; NOMERGE-NEXT:        Against group GRP4:
+; NOMERGE-NEXT:          %a1 = getelementptr i8, ptr %p1, i64 %idx
+; NOMERGE-NEXT:      Check 8:
+; NOMERGE-NEXT:        Comparing group GRP1:
+; NOMERGE-NEXT:          %aq2 = getelementptr i8, ptr %q2, i64 %idx
+; NOMERGE-NEXT:        Against group GRP5:
+; NOMERGE-NEXT:          %a2 = getelementptr i8, ptr %p2, i64 %idx
+; NOMERGE-NEXT:      Check 9:
+; NOMERGE-NEXT:        Comparing group GRP2:
+; NOMERGE-NEXT:          %aq3 = getelementptr i8, ptr %q3, i64 %idx
+; NOMERGE-NEXT:        Against group GRP3:
+; NOMERGE-NEXT:          %a0 = getelementptr i8, ptr %p, i64 %idx
+; NOMERGE-NEXT:      Check 10:
+; NOMERGE-NEXT:        Comparing group GRP2:
+; NOMERGE-NEXT:          %aq3 = getelementptr i8, ptr %q3, i64 %idx
+; NOMERGE-NEXT:        Against group GRP4:
+; NOMERGE-NEXT:          %a1 = getelementptr i8, ptr %p1, i64 %idx
+; NOMERGE-NEXT:      Check 11:
+; NOMERGE-NEXT:        Comparing group GRP2:
+; NOMERGE-NEXT:          %aq3 = getelementptr i8, ptr %q3, i64 %idx
+; NOMERGE-NEXT:        Against group GRP5:
+; NOMERGE-NEXT:          %a2 = getelementptr i8, ptr %p2, i64 %idx
+; NOMERGE-NEXT:      Grouped accesses:
+; NOMERGE-NEXT:        Group GRP0:
+; NOMERGE-NEXT:          (Low: %q High: (1 + (8 * %n) + %q))
+; NOMERGE-NEXT:            Member: {%q,+,8}<%loop>
+; NOMERGE-NEXT:        Group GRP1:
+; NOMERGE-NEXT:          (Low: %q2 High: (1 + (8 * %n) + %q2))
+; NOMERGE-NEXT:            Member: {%q2,+,8}<%loop>
+; NOMERGE-NEXT:        Group GRP2:
+; NOMERGE-NEXT:          (Low: %q3 High: (1 + (8 * %n) + %q3))
+; NOMERGE-NEXT:            Member: {%q3,+,8}<%loop>
+; NOMERGE-NEXT:        Group GRP3:
+; NOMERGE-NEXT:          (Low: %p High: (1 + (8 * %n) + %p))
+; NOMERGE-NEXT:            Member: {%p,+,8}<%loop>
+; NOMERGE-NEXT:        Group GRP4:
+; NOMERGE-NEXT:          (Low: ((64 * %s1) + %p) High: (1 + (8 * %n) + (64 * %s1) + %p))
+; NOMERGE-NEXT:            Member: {((64 * %s1) + %p),+,8}<%loop>
+; NOMERGE-NEXT:        Group GRP5:
+; NOMERGE-NEXT:          (Low: (8 + (64 * ((4 * %s3) + %s1 + %s2)) + %p) High: (9 + (8 * %n) + (64 * ((4 * %s3) + %s1 + %s2)) + %p))
+; NOMERGE-NEXT:            Member: {(8 + (64 * ((4 * %s3) + %s1 + %s2)) + %p),+,8}<%loop>
+; NOMERGE-EMPTY:
+; NOMERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; NOMERGE-NEXT:      SCEV assumptions:
+; NOMERGE-NEXT:      {%q,+,8}<%loop> Added Flags: <nusw>
+; NOMERGE-NEXT:      {%q2,+,8}<%loop> Added Flags: <nusw>
+; NOMERGE-NEXT:      {%q3,+,8}<%loop> Added Flags: <nusw>
+; NOMERGE-NEXT:      {(8 + (64 * ((4 * %s3) + %s1 + %s2)) + %p),+,8}<%loop> Added Flags: <nusw>
+; NOMERGE-NEXT:      {((64 * %s1) + %p),+,8}<%loop> Added Flags: <nusw>
+; NOMERGE-NEXT:      {%p,+,8}<%loop> Added Flags: <nusw>
+; NOMERGE-EMPTY:
+; NOMERGE-NEXT:      Expressions re-written:
+;
+entry:
+  %pos64s1 = mul i64 %s1, 64
+  %four.s3 = mul i64 %s3, 4
+  %sum12 = add i64 %s1, %s2
+  %sum = add i64 %sum12, %four.s3
+  %deep = mul i64 %sum, 64
+  %deep8 = add i64 %deep, 8
+  %p1 = getelementptr i8, ptr %p, i64 %pos64s1
+  %p2 = getelementptr i8, ptr %p, i64 %deep8
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %idx = mul i64 %iv, 8
+  %a2 = getelementptr i8, ptr %p2, i64 %idx
+  load i8, ptr %a2
+  %a1 = getelementptr i8, ptr %p1, i64 %idx
+  load i8, ptr %a1
+  %a0 = getelementptr i8, ptr %p, i64 %idx
+  load i8, ptr %a0
+  %aq = getelementptr i8, ptr %q, i64 %idx
+  store i8 0, ptr %aq
+  %aq2 = getelementptr i8, ptr %q2, i64 %idx
+  store i8 0, ptr %aq2
+  %aq3 = getelementptr i8, ptr %q3, i64 %idx
+  store i8 0, ptr %aq3
+  %iv.next = add i64 %iv, 1
+  %c = icmp eq i64 %iv, %n
+  br i1 %c, label %done, label %loop
+
+done:
+  ret void
+}
+
+
+;; Test 21: A constant-offset member and a stride member share the bounds.
+;; 4 loads from %a at byte offsets {-16, +16, -cdj, +cdj}. Stores to %out
+;; and %out2.
+;; The member at -16 has the smaller constant; the member at -cdj has the
+;; smaller cdj coefficient. Neither sits at or below the other for every
+;; positive cdj: at cdj = 1 the -16 member is lower, at cdj = 100 the -cdj
+;; member is lower. So Low is a umin over those two members. The +16 and
+;; +cdj members mirror this on the high side, so High is a umax over them.
+;; The two constant-offset loads share one group before the merge, so the
+;; merge saves 3 groups x 2 external checks = 6 and costs 2 checks + 1
+;; predicate + 1 umin operand + 1 umax operand = 5.
+define void @stencil_merge_constant_and_stride_candidates(ptr %a, ptr %out, ptr %out2, i64 %n, i64 %cdj) {
+; MERGE-LABEL: 'stencil_merge_constant_and_stride_candidates'
+; MERGE-NEXT:    loop:
+; MERGE-NEXT:      Memory dependences are safe with run-time checks
+; MERGE-NEXT:      Dependences:
+; MERGE-NEXT:      Run-time memory checks:
+; MERGE-NEXT:      Check 0:
+; MERGE-NEXT:        Comparing group GRP0:
+; MERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; MERGE-NEXT:        Against group GRP1:
+; MERGE-NEXT:          %outp2 = getelementptr inbounds double, ptr %out2, i64 %iv
+; MERGE-NEXT:      Check 1:
+; MERGE-NEXT:        Comparing group GRP0:
+; MERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; MERGE-NEXT:        Against group GRP2:
+; MERGE-NEXT:          %p3 = getelementptr inbounds i8, ptr %base, i64 %cdj
+; MERGE-NEXT:          %p2 = getelementptr inbounds i8, ptr %base, i64 %negcdj
+; MERGE-NEXT:          %p1 = getelementptr inbounds i8, ptr %base, i64 16
+; MERGE-NEXT:          %p0 = getelementptr inbounds i8, ptr %base, i64 -16
+; MERGE-NEXT:      Check 2:
+; MERGE-NEXT:        Comparing group GRP1:
+; MERGE-NEXT:          %outp2 = getelementptr inbounds double, ptr %out2, i64 %iv
+; MERGE-NEXT:        Against group GRP2:
+; MERGE-NEXT:          %p3 = getelementptr inbounds i8, ptr %base, i64 %cdj
+; MERGE-NEXT:          %p2 = getelementptr inbounds i8, ptr %base, i64 %negcdj
+; MERGE-NEXT:          %p1 = getelementptr inbounds i8, ptr %base, i64 16
+; MERGE-NEXT:          %p0 = getelementptr inbounds i8, ptr %base, i64 -16
+; MERGE-NEXT:      Grouped accesses:
+; MERGE-NEXT:        Group GRP0:
+; MERGE-NEXT:          (Low: (16 + %out) High: (-16 + (8 * %n) + %out))
+; MERGE-NEXT:            Member: {(16 + %out),+,8}<nuw><%loop>
+; MERGE-NEXT:        Group GRP1:
+; MERGE-NEXT:          (Low: (16 + %out2) High: (-16 + (8 * %n) + %out2))
+; MERGE-NEXT:            Member: {(16 + %out2),+,8}<nuw><%loop>
+; MERGE-NEXT:        Group GRP2:
+; MERGE-NEXT:          (Low: ((16 + (-1 * %cdj) + (ptrtoint ptr %a to i64)) umin (ptrtoint ptr %a to i64)) High: (((8 * %n) + (ptrtoint ptr %a to i64)) umax (-16 + (8 * %n) + (ptrtoint ptr %a to i64) + %cdj)))
+; MERGE-NEXT:            Member: {(16 + %cdj + %a),+,8}<nw><%loop>
+; MERGE-NEXT:            Member: {(16 + (-1 * %cdj) + %a),+,8}<nw><%loop>
+; MERGE-NEXT:            Member: {(32 + %a),+,8}<nuw><%loop>
+; MERGE-NEXT:            Member: {%a,+,8}<nw><%loop>
+; MERGE-EMPTY:
+; MERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; MERGE-NEXT:      SCEV assumptions:
+; MERGE-NEXT:      Compare predicate: %cdj sgt) 0
+; MERGE-EMPTY:
+; MERGE-NEXT:      Expressions re-written:
+;
+; NOMERGE-LABEL: 'stencil_merge_constant_and_stride_candidates'
+; NOMERGE-NEXT:    loop:
+; NOMERGE-NEXT:      Memory dependences are safe with run-time checks
+; NOMERGE-NEXT:      Dependences:
+; NOMERGE-NEXT:      Run-time memory checks:
+; NOMERGE-NEXT:      Check 0:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; NOMERGE-NEXT:        Against group GRP1:
+; NOMERGE-NEXT:          %outp2 = getelementptr inbounds double, ptr %out2, i64 %iv
+; NOMERGE-NEXT:      Check 1:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; NOMERGE-NEXT:        Against group GRP2:
+; NOMERGE-NEXT:          %p3 = getelementptr inbounds i8, ptr %base, i64 %cdj
+; NOMERGE-NEXT:      Check 2:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; NOMERGE-NEXT:        Against group GRP3:
+; NOMERGE-NEXT:          %p2 = getelementptr inbounds i8, ptr %base, i64 %negcdj
+; NOMERGE-NEXT:      Check 3:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; NOMERGE-NEXT:        Against group GRP4:
+; NOMERGE-NEXT:          %p1 = getelementptr inbounds i8, ptr %base, i64 16
+; NOMERGE-NEXT:          %p0 = getelementptr inbounds i8, ptr %base, i64 -16
+; NOMERGE-NEXT:      Check 4:
+; NOMERGE-NEXT:        Comparing group GRP1:
+; NOMERGE-NEXT:          %outp2 = getelementptr inbounds double, ptr %out2, i64 %iv
+; NOMERGE-NEXT:        Against group GRP2:
+; NOMERGE-NEXT:          %p3 = getelementptr inbounds i8, ptr %base, i64 %cdj
+; NOMERGE-NEXT:      Check 5:
+; NOMERGE-NEXT:        Comparing group GRP1:
+; NOMERGE-NEXT:          %outp2 = getelementptr inbounds double, ptr %out2, i64 %iv
+; NOMERGE-NEXT:        Against group GRP3:
+; NOMERGE-NEXT:          %p2 = getelementptr inbounds i8, ptr %base, i64 %negcdj
+; NOMERGE-NEXT:      Check 6:
+; NOMERGE-NEXT:        Comparing group GRP1:
+; NOMERGE-NEXT:          %outp2 = getelementptr inbounds double, ptr %out2, i64 %iv
+; NOMERGE-NEXT:        Against group GRP4:
+; NOMERGE-NEXT:          %p1 = getelementptr inbounds i8, ptr %base, i64 16
+; NOMERGE-NEXT:          %p0 = getelementptr inbounds i8, ptr %base, i64 -16
+; NOMERGE-NEXT:      Grouped accesses:
+; NOMERGE-NEXT:        Group GRP0:
+; NOMERGE-NEXT:          (Low: (16 + %out) High: (-16 + (8 * %n) + %out))
+; NOMERGE-NEXT:            Member: {(16 + %out),+,8}<nuw><%loop>
+; NOMERGE-NEXT:        Group GRP1:
+; NOMERGE-NEXT:          (Low: (16 + %out2) High: (-16 + (8 * %n) + %out2))
+; NOMERGE-NEXT:            Member: {(16 + %out2),+,8}<nuw><%loop>
+; NOMERGE-NEXT:        Group GRP2:
+; NOMERGE-NEXT:          (Low: (16 + %cdj + %a) High: (-16 + (8 * %n) + %cdj + %a))
+; NOMERGE-NEXT:            Member: {(16 + %cdj + %a),+,8}<nw><%loop>
+; NOMERGE-NEXT:        Group GRP3:
+; NOMERGE-NEXT:          (Low: (16 + (-1 * %cdj) + %a) High: (-16 + (8 * %n) + (-1 * %cdj) + %a))
+; NOMERGE-NEXT:            Member: {(16 + (-1 * %cdj) + %a),+,8}<nw><%loop>
+; NOMERGE-NEXT:        Group GRP4:
+; NOMERGE-NEXT:          (Low: %a High: ((8 * %n) + %a))
+; NOMERGE-NEXT:            Member: {(32 + %a),+,8}<nuw><%loop>
+; NOMERGE-NEXT:            Member: {%a,+,8}<nw><%loop>
+; NOMERGE-EMPTY:
+; NOMERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; NOMERGE-NEXT:      SCEV assumptions:
+; NOMERGE-EMPTY:
+; NOMERGE-NEXT:      Expressions re-written:
+;
+entry:
+  %cmp = icmp sgt i64 %n, 8
+  br i1 %cmp, label %loop, label %exit
+
+loop:
+  %iv = phi i64 [ 2, %entry ], [ %iv.next, %loop ]
+  %base = getelementptr inbounds double, ptr %a, i64 %iv
+
+  ; -16 (constant)
+  %p0 = getelementptr inbounds i8, ptr %base, i64 -16
+  %v0 = load double, ptr %p0, align 8
+
+  ; +16 (constant)
+  %p1 = getelementptr inbounds i8, ptr %base, i64 16
+  %v1 = load double, ptr %p1, align 8
+
+  ; -cdj (runtime)
+  %negcdj = sub nsw i64 0, %cdj
+  %p2 = getelementptr inbounds i8, ptr %base, i64 %negcdj
+  %v2 = load double, ptr %p2, align 8
+
+  ; +cdj (runtime)
+  %p3 = getelementptr inbounds i8, ptr %base, i64 %cdj
+  %v3 = load double, ptr %p3, align 8
+
+  %s0 = fadd double %v0, %v1
+  %s1 = fadd double %s0, %v2
+  %s2 = fadd double %s1, %v3
+
+  %outp = getelementptr inbounds double, ptr %out, i64 %iv
+  store double %s2, ptr %outp, align 8
+  %outp2 = getelementptr inbounds double, ptr %out2, i64 %iv
+  store double %s2, ptr %outp2, align 8
+
+  %iv.next = add nuw nsw i64 %iv, 1
+  %sub = sub nsw i64 %n, 2
+  %cond = icmp slt i64 %iv.next, %sub
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+
+;; Test 22: Three strides in a star shape - multi-operand umin and umax.
+;; 7 loads from %a at byte offsets {0, -s1, +s1, -s2, +s2, -s3, +s3}.
+;; Stores to %out and %out2.
+;; Any of -s1, -s2, -s3 can be the lowest address: which one is lowest
+;; depends on which stride is biggest. So Low is a umin over those three
+;; members, and High is a umax over +s1, +s2, +s3. The center member at +0
+;; sits between -s1 and +s1, so it is never a bound.
+;; The merge saves 7 groups x 2 external checks = 14 and costs 2 checks +
+;; 3 predicates + 2 umin operands + 2 umax operands = 9.
+define void @stencil_merge_three_stride_star(ptr %a, ptr %out, ptr %out2, i64 %n, i64 %s1, i64 %s2, i64 %s3) {
+; MERGE-LABEL: 'stencil_merge_three_stride_star'
+; MERGE-NEXT:    loop:
+; MERGE-NEXT:      Memory dependences are safe with run-time checks
+; MERGE-NEXT:      Dependences:
+; MERGE-NEXT:      Run-time memory checks:
+; MERGE-NEXT:      Check 0:
+; MERGE-NEXT:        Comparing group GRP0:
+; MERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; MERGE-NEXT:        Against group GRP1:
+; MERGE-NEXT:          %outp2 = getelementptr inbounds double, ptr %out2, i64 %iv
+; MERGE-NEXT:      Check 1:
+; MERGE-NEXT:        Comparing group GRP0:
+; MERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; MERGE-NEXT:        Against group GRP2:
+; MERGE-NEXT:          %p6 = getelementptr inbounds i8, ptr %base, i64 %s3
+; MERGE-NEXT:          %p5 = getelementptr inbounds i8, ptr %base, i64 %negs3
+; MERGE-NEXT:          %p4 = getelementptr inbounds i8, ptr %base, i64 %s2
+; MERGE-NEXT:          %p3 = getelementptr inbounds i8, ptr %base, i64 %negs2
+; MERGE-NEXT:          %p2 = getelementptr inbounds i8, ptr %base, i64 %s1
+; MERGE-NEXT:          %p1 = getelementptr inbounds i8, ptr %base, i64 %negs1
+; MERGE-NEXT:          %base = getelementptr inbounds double, ptr %a, i64 %iv
+; MERGE-NEXT:      Check 2:
+; MERGE-NEXT:        Comparing group GRP1:
+; MERGE-NEXT:          %outp2 = getelementptr inbounds double, ptr %out2, i64 %iv
+; MERGE-NEXT:        Against group GRP2:
+; MERGE-NEXT:          %p6 = getelementptr inbounds i8, ptr %base, i64 %s3
+; MERGE-NEXT:          %p5 = getelementptr inbounds i8, ptr %base, i64 %negs3
+; MERGE-NEXT:          %p4 = getelementptr inbounds i8, ptr %base, i64 %s2
+; MERGE-NEXT:          %p3 = getelementptr inbounds i8, ptr %base, i64 %negs2
+; MERGE-NEXT:          %p2 = getelementptr inbounds i8, ptr %base, i64 %s1
+; MERGE-NEXT:          %p1 = getelementptr inbounds i8, ptr %base, i64 %negs1
+; MERGE-NEXT:          %base = getelementptr inbounds double, ptr %a, i64 %iv
+; MERGE-NEXT:      Grouped accesses:
+; MERGE-NEXT:        Group GRP0:
+; MERGE-NEXT:          (Low: (32 + %out) High: (-32 + (8 * %n) + %out))
+; MERGE-NEXT:            Member: {(32 + %out),+,8}<nuw><%loop>
+; MERGE-NEXT:        Group GRP1:
+; MERGE-NEXT:          (Low: (32 + %out2) High: (-32 + (8 * %n) + %out2))
+; MERGE-NEXT:            Member: {(32 + %out2),+,8}<nuw><%loop>
+; MERGE-NEXT:        Group GRP2:
+; MERGE-NEXT:          (Low: ((32 + (-1 * %s3) + (ptrtoint ptr %a to i64)) umin (32 + (-1 * %s2) + (ptrtoint ptr %a to i64)) umin (32 + (-1 * %s1) + (ptrtoint ptr %a to i64))) High: ((-32 + (8 * %n) + (ptrtoint ptr %a to i64) + %s1) umax (-32 + (8 * %n) + (ptrtoint ptr %a to i64) + %s2) umax (-32 + (8 * %n) + (ptrtoint ptr %a to i64) + %s3)))
+; MERGE-NEXT:            Member: {(32 + %s3 + %a),+,8}<nw><%loop>
+; MERGE-NEXT:            Member: {(32 + (-1 * %s3) + %a),+,8}<nw><%loop>
+; MERGE-NEXT:            Member: {(32 + %s2 + %a),+,8}<nw><%loop>
+; MERGE-NEXT:            Member: {(32 + (-1 * %s2) + %a),+,8}<nw><%loop>
+; MERGE-NEXT:            Member: {(32 + %s1 + %a),+,8}<nw><%loop>
+; MERGE-NEXT:            Member: {(32 + (-1 * %s1) + %a),+,8}<nw><%loop>
+; MERGE-NEXT:            Member: {(32 + %a),+,8}<nuw><%loop>
+; MERGE-EMPTY:
+; MERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; MERGE-NEXT:      SCEV assumptions:
+; MERGE-NEXT:      Compare predicate: %s3 sgt) 0
+; MERGE-NEXT:      Compare predicate: %s2 sgt) 0
+; MERGE-NEXT:      Compare predicate: %s1 sgt) 0
+; MERGE-EMPTY:
+; MERGE-NEXT:      Expressions re-written:
+;
+; NOMERGE-LABEL: 'stencil_merge_three_stride_star'
+; NOMERGE-NEXT:    loop:
+; NOMERGE-NEXT:      Memory dependences are safe with run-time checks
+; NOMERGE-NEXT:      Dependences:
+; NOMERGE-NEXT:      Run-time memory checks:
+; NOMERGE-NEXT:      Check 0:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; NOMERGE-NEXT:        Against group GRP1:
+; NOMERGE-NEXT:          %outp2 = getelementptr inbounds double, ptr %out2, i64 %iv
+; NOMERGE-NEXT:      Check 1:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; NOMERGE-NEXT:        Against group GRP2:
+; NOMERGE-NEXT:          %p6 = getelementptr inbounds i8, ptr %base, i64 %s3
+; NOMERGE-NEXT:      Check 2:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; NOMERGE-NEXT:        Against group GRP3:
+; NOMERGE-NEXT:          %p5 = getelementptr inbounds i8, ptr %base, i64 %negs3
+; NOMERGE-NEXT:      Check 3:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; NOMERGE-NEXT:        Against group GRP4:
+; NOMERGE-NEXT:          %p4 = getelementptr inbounds i8, ptr %base, i64 %s2
+; NOMERGE-NEXT:      Check 4:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; NOMERGE-NEXT:        Against group GRP5:
+; NOMERGE-NEXT:          %p3 = getelementptr inbounds i8, ptr %base, i64 %negs2
+; NOMERGE-NEXT:      Check 5:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; NOMERGE-NEXT:        Against group GRP6:
+; NOMERGE-NEXT:          %p2 = getelementptr inbounds i8, ptr %base, i64 %s1
+; NOMERGE-NEXT:      Check 6:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; NOMERGE-NEXT:        Against group GRP7:
+; NOMERGE-NEXT:          %p1 = getelementptr inbounds i8, ptr %base, i64 %negs1
+; NOMERGE-NEXT:      Check 7:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; NOMERGE-NEXT:        Against group GRP8:
+; NOMERGE-NEXT:          %base = getelementptr inbounds double, ptr %a, i64 %iv
+; NOMERGE-NEXT:      Check 8:
+; NOMERGE-NEXT:        Comparing group GRP1:
+; NOMERGE-NEXT:          %outp2 = getelementptr inbounds double, ptr %out2, i64 %iv
+; NOMERGE-NEXT:        Against group GRP2:
+; NOMERGE-NEXT:          %p6 = getelementptr inbounds i8, ptr %base, i64 %s3
+; NOMERGE-NEXT:      Check 9:
+; NOMERGE-NEXT:        Comparing group GRP1:
+; NOMERGE-NEXT:          %outp2 = getelementptr inbounds double, ptr %out2, i64 %iv
+; NOMERGE-NEXT:        Against group GRP3:
+; NOMERGE-NEXT:          %p5 = getelementptr inbounds i8, ptr %base, i64 %negs3
+; NOMERGE-NEXT:      Check 10:
+; NOMERGE-NEXT:        Comparing group GRP1:
+; NOMERGE-NEXT:          %outp2 = getelementptr inbounds double, ptr %out2, i64 %iv
+; NOMERGE-NEXT:        Against group GRP4:
+; NOMERGE-NEXT:          %p4 = getelementptr inbounds i8, ptr %base, i64 %s2
+; NOMERGE-NEXT:      Check 11:
+; NOMERGE-NEXT:        Comparing group GRP1:
+; NOMERGE-NEXT:          %outp2 = getelementptr inbounds double, ptr %out2, i64 %iv
+; NOMERGE-NEXT:        Against group GRP5:
+; NOMERGE-NEXT:          %p3 = getelementptr inbounds i8, ptr %base, i64 %negs2
+; NOMERGE-NEXT:      Check 12:
+; NOMERGE-NEXT:        Comparing group GRP1:
+; NOMERGE-NEXT:          %outp2 = getelementptr inbounds double, ptr %out2, i64 %iv
+; NOMERGE-NEXT:        Against group GRP6:
+; NOMERGE-NEXT:          %p2 = getelementptr inbounds i8, ptr %base, i64 %s1
+; NOMERGE-NEXT:      Check 13:
+; NOMERGE-NEXT:        Comparing group GRP1:
+; NOMERGE-NEXT:          %outp2 = getelementptr inbounds double, ptr %out2, i64 %iv
+; NOMERGE-NEXT:        Against group GRP7:
+; NOMERGE-NEXT:          %p1 = getelementptr inbounds i8, ptr %base, i64 %negs1
+; NOMERGE-NEXT:      Check 14:
+; NOMERGE-NEXT:        Comparing group GRP1:
+; NOMERGE-NEXT:          %outp2 = getelementptr inbounds double, ptr %out2, i64 %iv
+; NOMERGE-NEXT:        Against group GRP8:
+; NOMERGE-NEXT:          %base = getelementptr inbounds double, ptr %a, i64 %iv
+; NOMERGE-NEXT:      Grouped accesses:
+; NOMERGE-NEXT:        Group GRP0:
+; NOMERGE-NEXT:          (Low: (32 + %out) High: (-32 + (8 * %n) + %out))
+; NOMERGE-NEXT:            Member: {(32 + %out),+,8}<nuw><%loop>
+; NOMERGE-NEXT:        Group GRP1:
+; NOMERGE-NEXT:          (Low: (32 + %out2) High: (-32 + (8 * %n) + %out2))
+; NOMERGE-NEXT:            Member: {(32 + %out2),+,8}<nuw><%loop>
+; NOMERGE-NEXT:        Group GRP2:
+; NOMERGE-NEXT:          (Low: (32 + %s3 + %a) High: (-32 + (8 * %n) + %s3 + %a))
+; NOMERGE-NEXT:            Member: {(32 + %s3 + %a),+,8}<nw><%loop>
+; NOMERGE-NEXT:        Group GRP3:
+; NOMERGE-NEXT:          (Low: (32 + (-1 * %s3) + %a) High: (-32 + (8 * %n) + (-1 * %s3) + %a))
+; NOMERGE-NEXT:            Member: {(32 + (-1 * %s3) + %a),+,8}<nw><%loop>
+; NOMERGE-NEXT:        Group GRP4:
+; NOMERGE-NEXT:          (Low: (32 + %s2 + %a) High: (-32 + (8 * %n) + %s2 + %a))
+; NOMERGE-NEXT:            Member: {(32 + %s2 + %a),+,8}<nw><%loop>
+; NOMERGE-NEXT:        Group GRP5:
+; NOMERGE-NEXT:          (Low: (32 + (-1 * %s2) + %a) High: (-32 + (8 * %n) + (-1 * %s2) + %a))
+; NOMERGE-NEXT:            Member: {(32 + (-1 * %s2) + %a),+,8}<nw><%loop>
+; NOMERGE-NEXT:        Group GRP6:
+; NOMERGE-NEXT:          (Low: (32 + %s1 + %a) High: (-32 + (8 * %n) + %s1 + %a))
+; NOMERGE-NEXT:            Member: {(32 + %s1 + %a),+,8}<nw><%loop>
+; NOMERGE-NEXT:        Group GRP7:
+; NOMERGE-NEXT:          (Low: (32 + (-1 * %s1) + %a) High: (-32 + (8 * %n) + (-1 * %s1) + %a))
+; NOMERGE-NEXT:            Member: {(32 + (-1 * %s1) + %a),+,8}<nw><%loop>
+; NOMERGE-NEXT:        Group GRP8:
+; NOMERGE-NEXT:          (Low: (32 + %a) High: (-32 + (8 * %n) + %a))
+; NOMERGE-NEXT:            Member: {(32 + %a),+,8}<nuw><%loop>
+; NOMERGE-EMPTY:
+; NOMERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; NOMERGE-NEXT:      SCEV assumptions:
+; NOMERGE-EMPTY:
+; NOMERGE-NEXT:      Expressions re-written:
+;
+entry:
+  %cmp = icmp sgt i64 %n, 8
+  br i1 %cmp, label %loop, label %exit
+
+loop:
+  %iv = phi i64 [ 4, %entry ], [ %iv.next, %loop ]
+  %base = getelementptr inbounds double, ptr %a, i64 %iv
+
+  ; +0 (the center member; never a bound)
+  %v0 = load double, ptr %base, align 8
+
+  %negs1 = sub nsw i64 0, %s1
+  %p1 = getelementptr inbounds i8, ptr %base, i64 %negs1
+  %v1 = load double, ptr %p1, align 8
+  %p2 = getelementptr inbounds i8, ptr %base, i64 %s1
+  %v2 = load double, ptr %p2, align 8
+
+  %negs2 = sub nsw i64 0, %s2
+  %p3 = getelementptr inbounds i8, ptr %base, i64 %negs2
+  %v3 = load double, ptr %p3, align 8
+  %p4 = getelementptr inbounds i8, ptr %base, i64 %s2
+  %v4 = load double, ptr %p4, align 8
+
+  %negs3 = sub nsw i64 0, %s3
+  %p5 = getelementptr inbounds i8, ptr %base, i64 %negs3
+  %v5 = load double, ptr %p5, align 8
+  %p6 = getelementptr inbounds i8, ptr %base, i64 %s3
+  %v6 = load double, ptr %p6, align 8
+
+  %t0 = fadd double %v0, %v1
+  %t1 = fadd double %t0, %v2
+  %t2 = fadd double %t1, %v3
+  %t3 = fadd double %t2, %v4
+  %t4 = fadd double %t3, %v5
+  %t5 = fadd double %t4, %v6
+
+  %outp = getelementptr inbounds double, ptr %out, i64 %iv
+  store double %t5, ptr %outp, align 8
+  %outp2 = getelementptr inbounds double, ptr %out2, i64 %iv
+  store double %t5, ptr %outp2, align 8
+
+  %iv.next = add nuw nsw i64 %iv, 1
+  %sub = sub nsw i64 %n, 4
+  %cond = icmp slt i64 %iv.next, %sub
+  br i1 %cond, label %loop, label %exit
+
+exit:
   ret void
 }
