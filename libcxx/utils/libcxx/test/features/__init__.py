@@ -6,16 +6,16 @@
 #
 # ===----------------------------------------------------------------------===##
 
-from . import (
-    availability,
-    compiler,
-    debugger,
-    hardening,
-    libcxx_macros,
-    localization,
-    misc,
-    platform,
-)
+from . import availability
+from . import carveouts
+from . import compiler
+from . import debugger
+from . import gdb
+from . import hardening
+from . import libcxx_macros
+from . import localization
+from . import misc
+from . import platform
 
 # Lit features are evaluated in order. Some features depend on other features, so
 # we are careful to define them in the correct order. For example, several features
@@ -23,6 +23,7 @@ from . import (
 DEFAULT_FEATURES = []
 DEFAULT_FEATURES += compiler.features
 DEFAULT_FEATURES += libcxx_macros.features
+DEFAULT_FEATURES += carveouts.features
 DEFAULT_FEATURES += platform.features
 DEFAULT_FEATURES += localization.features
 DEFAULT_FEATURES += debugger.features

@@ -26,6 +26,8 @@
 // LLVM: define {{.*}}@f_avx10_1{{.*}} [[f_avx10_1:#[0-9]+]]
 // LLVM: define {{.*}}@f_prefer_256_bit({{.*}} [[f_prefer_256_bit:#[0-9]+]]
 // LLVM: define {{.*}}@f_no_prefer_256_bit({{.*}} [[f_no_prefer_256_bit:#[0-9]+]]
+// LLVM: declare {{.*}}@f_decl_only() [[f_decl_only:#[0-9]+]]
+// LLVM: declare {{.*}}@f_decl_default() [[f_decl_default:#[0-9]+]]
 
 // CIR:      cir.func{{.*}} @f_default()
 // CIR-SAME: "cir.target-cpu" = "i686"
@@ -124,6 +126,11 @@ void usage(void){
 
 // f_use_before_def: same attributes as f_lakemont_mmx (checked above) - the
 // definition's attribute should be propagated to the earlier declaration.
+// The dictionary closes after the features, so the tune-cpu the declaration
+// recorded before the definition was seen does not survive.
+// CIR:      cir.func{{.*}} @f_use_before_def()
+// CIR-SAME: "cir.target-cpu" = "lakemont"
+// CIR-SAME: "cir.target-features" = "+cx8,+mmx", nothrow}
 __attribute__((target("arch=lakemont,mmx")))
 void f_use_before_def(void) {}
 
@@ -184,3 +191,25 @@ void f_prefer_256_bit(void) {}
 // LLVM: [[f_no_prefer_256_bit]] = {{.*}}"target-features"="{{.*}}-prefer-256-bit
 __attribute__((target("no-prefer-256-bit")))
 void f_no_prefer_256_bit(void) {}
+
+// A declaration gets the attributes too.  target(arch=) suppresses tune-cpu,
+// so the dictionary closes after the features.
+// CIR:      cir.func private @f_decl_only()
+// CIR-SAME: "cir.target-cpu" = "lakemont"
+// CIR-SAME: "cir.target-features" = "+cx8,+mmx"}
+
+// LLVM: [[f_decl_only]] = {{.*}}"target-cpu"="lakemont" "target-features"="+cx8,+mmx" }
+__attribute__((target("arch=lakemont,mmx")))
+void f_decl_only(void);
+void use_decl_only(void) { f_decl_only(); }
+
+// A declaration with no target attribute takes all three from the command
+// line, tune-cpu included.
+// CIR:      cir.func private @f_decl_default()
+// CIR-SAME: "cir.target-cpu" = "i686"
+// CIR-SAME: "cir.target-features" = "+cmov,+cx8,+x87"
+// CIR-SAME: "cir.tune-cpu" = "i686"
+
+// LLVM: [[f_decl_default]] = {{.*}}"target-cpu"="i686" "target-features"="+cmov,+cx8,+x87" "tune-cpu"="i686"
+void f_decl_default(void);
+void use_decl_default(void) { f_decl_default(); }
