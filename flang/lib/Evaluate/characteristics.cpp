@@ -1230,15 +1230,12 @@ bool FunctionResult::IsCompatibleWith(
             if (IsAssumedLengthCharacter() ||
                 actual.IsAssumedLengthCharacter()) {
               return true;
-            } else {
+            }
+            if (ifaceTypeShape->type().IsTkLenCompatibleWith(
+                    actualTypeShape->type())) {
               auto len{ToInt64(ifaceTypeShape->LEN())};
               auto actualLen{ToInt64(actualTypeShape->LEN())};
-              if (len.has_value() != actualLen.has_value()) {
-                if (whyNot) {
-                  *whyNot = "constant-length vs non-constant-length character "
-                            "results";
-                }
-              } else if (len && *len != *actualLen) {
+              if (len && actualLen && *len != *actualLen) {
                 if (whyNot) {
                   *whyNot = "character results with distinct lengths";
                 }
