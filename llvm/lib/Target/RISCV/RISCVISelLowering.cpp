@@ -12302,6 +12302,77 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(Opc, DL, Op.getValueType(), Op.getOperand(1),
                        Op.getOperand(2));
   }
+  case Intrinsic::riscv_pnclipp:
+  case Intrinsic::riscv_pnclipup: {
+    EVT VT = Op.getValueType();
+    SDValue Rs1 = Op.getOperand(1);
+    SDValue Rs2 = Op.getOperand(2);
+    unsigned Opc = IntNo == Intrinsic::riscv_pnclipp ? RISCVISD::PNCLIPP
+                                                     : RISCVISD::PNCLIPUP;
+
+    if (Subtarget.is64Bit()) {
+      if (VT == MVT::v2i32 && !Rs1.getValueType().isVector()) {
+        unsigned WOpc = IntNo == Intrinsic::riscv_pnclipp
+                            ? RISCVISD::PNCLIPP_W
+                            : RISCVISD::PNCLIPUP_W;
+        return DAG.getNode(WOpc, DL, VT, Rs1, Rs2);
+      }
+      return DAG.getNode(Opc, DL, VT, Rs1, Rs2);
+    }
+
+    auto BuildPair = [&](SDValue Lo, SDValue Hi, MVT PairVT) {
+      return DAG.getNode(RISCVISD::BuildPairGPRVec, DL, PairVT, Lo, Hi);
+    };
+
+    MVT XLenVT = Subtarget.getXLenVT();
+    if (VT == MVT::v4i8) {
+      SDValue Pair = BuildPair(Rs1, Rs2, MVT::v4i16);
+      SDVTList VTs = DAG.getVTList(MVT::v4i8);
+      unsigned ClipOpc = IntNo == Intrinsic::riscv_pnclipp ? RISCV::PNCLIPI_B
+                                                           : RISCV::PNCLIPIU_B;
+      SDValue Ops[] = {Pair, DAG.getTargetConstant(0, DL, MVT::i32)};
+      return SDValue(DAG.getMachineNode(ClipOpc, DL, VTs, Ops), 0);
+    }
+    if (VT == MVT::v2i16) {
+      unsigned HOpc = IntNo == Intrinsic::riscv_pnclipp ? RISCV::PNCLIPI_H
+                                                        : RISCV::PNCLIPIU_H;
+      SDVTList VTs = DAG.getVTList(MVT::v2i16);
+      SDValue Pair = BuildPair(Rs1, Rs2, MVT::v2i32);
+      SDValue Ops[] = {Pair, DAG.getTargetConstant(0, DL, MVT::i32)};
+      return SDValue(DAG.getMachineNode(HOpc, DL, VTs, Ops), 0);
+    }
+    if (VT == MVT::v2i32) {
+      unsigned NOpc =
+          IntNo == Intrinsic::riscv_pnclipp ? RISCV::NCLIPI : RISCV::NCLIPIU;
+      SDVTList VTs = DAG.getVTList(XLenVT);
+      SDValue Zero = DAG.getTargetConstant(0, DL, MVT::i32);
+      auto BuildPairFromI64 = [&](SDValue I64) {
+        SDValue Vec = DAG.getNode(ISD::BITCAST, DL, MVT::v2i32, I64);
+        SDValue Lo = DAG.getExtractVectorElt(DL, XLenVT, Vec, 0);
+        SDValue Hi = DAG.getExtractVectorElt(DL, XLenVT, Vec, 1);
+        return DAG.getNode(RISCVISD::BuildGPRPair, DL, MVT::Untyped, Lo, Hi);
+      };
+      SDValue Pair1 = BuildPairFromI64(Rs1);
+      SDValue Pair2 = BuildPairFromI64(Rs2);
+      SDValue Lo = SDValue(DAG.getMachineNode(NOpc, DL, VTs, {Pair1, Zero}), 0);
+      SDValue Hi = SDValue(DAG.getMachineNode(NOpc, DL, VTs, {Pair2, Zero}), 0);
+      return DAG.getNode(ISD::BUILD_VECTOR, DL, VT, Lo, Hi);
+    }
+    if (VT == MVT::v8i8 || VT == MVT::v4i16) {
+      unsigned HOpc =
+          IntNo == Intrinsic::riscv_pnclipp
+              ? (VT == MVT::v8i8 ? RISCV::PNCLIPI_B : RISCV::PNCLIPI_H)
+              : (VT == MVT::v8i8 ? RISCV::PNCLIPIU_B : RISCV::PNCLIPIU_H);
+      MVT HalfVT = VT == MVT::v8i8 ? MVT::v4i8 : MVT::v2i16;
+      SDVTList VTs = DAG.getVTList(HalfVT);
+      SDValue Zero = DAG.getTargetConstant(0, DL, MVT::i32);
+      SDValue Lo = SDValue(DAG.getMachineNode(HOpc, DL, VTs, {Rs1, Zero}), 0);
+      SDValue Hi = SDValue(DAG.getMachineNode(HOpc, DL, VTs, {Rs2, Zero}), 0);
+      return DAG.getNode(RISCVISD::BuildPairGPRVec, DL, VT, Lo, Hi);
+    }
+
+    return DAG.getNode(Opc, DL, VT, Rs1, Rs2);
+  }
   case Intrinsic::riscv_pmulq:
   case Intrinsic::riscv_pmulqr: {
     unsigned Opc;
@@ -16593,6 +16664,32 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
         Res = DAG.getNode(Opc, DL, WideVT, ArrayRef(Ops).slice(1));
       Results.push_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Res,
                                     DAG.getVectorIdxConstant(0, DL)));
+      return;
+    }
+    case Intrinsic::riscv_pnclipp:
+    case Intrinsic::riscv_pnclipup: {
+      EVT VT = N->getValueType(0);
+      if (!Subtarget.is64Bit() || (VT != MVT::v4i8 && VT != MVT::v2i16))
+        return;
+      unsigned Opc = IntNo == Intrinsic::riscv_pnclipp ? RISCVISD::PNCLIPP
+                                                       : RISCVISD::PNCLIPUP;
+      SDValue Src1 = N->getOperand(1);
+      SDValue Src2 = N->getOperand(2);
+      if (VT == MVT::v4i8) {
+        MVT WideSrcVT = MVT::v4i16;
+        SDValue Packed =
+            DAG.getNode(ISD::CONCAT_VECTORS, DL, WideSrcVT, {Src1, Src2});
+        SDValue Res = DAG.getNode(Opc, DL, MVT::v8i8, {Packed, Packed});
+        Results.push_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Res,
+                                      DAG.getVectorIdxConstant(0, DL)));
+      } else {
+        MVT WideSrcVT = MVT::v2i32;
+        SDValue Packed =
+            DAG.getNode(ISD::BUILD_VECTOR, DL, WideSrcVT, {Src1, Src2});
+        SDValue Res = DAG.getNode(Opc, DL, MVT::v4i16, {Packed, Packed});
+        Results.push_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Res,
+                                      DAG.getVectorIdxConstant(0, DL)));
+      }
       return;
     }
     case Intrinsic::riscv_pssha:

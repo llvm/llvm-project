@@ -2134,6 +2134,14 @@ class RVPBinaryIntrinsic
                               [LLVMMatchType<0>],
                               [IntrNoMem, IntrSpeculatable]>;
   def int_riscv_psabs : RVPUnaryIntrinsic;
+
+  // Packed Narrowing Clip Pair
+  class RVPNarrowingClipIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [llvm_any_ty, LLVMMatchType<1>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pnclipp  : RVPNarrowingClipIntrinsic;
+  def int_riscv_pnclipup : RVPNarrowingClipIntrinsic;
 } // TargetPrefix = "riscv"
 
 //===----------------------------------------------------------------------===//

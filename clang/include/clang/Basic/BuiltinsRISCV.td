@@ -309,6 +309,20 @@ def pzext_b_u16x4 : RISCVBuiltin<"_Vector<4, unsigned short>(_Vector<4, unsigned
 def pzext_h_u32x2 : RISCVBuiltin<"_Vector<2, unsigned int>(_Vector<2, unsigned int>)">;
 
 
+// Packed Narrowing Clip Pair (32-bit)
+def pnclipp_i8x4   : RISCVBuiltin<"_Vector<4, signed char>(_Vector<2, short>, _Vector<2, short>)">;
+def pnclipup_u8x4  : RISCVBuiltin<"_Vector<4, unsigned char>(_Vector<2, unsigned short>, _Vector<2, unsigned short>)">;
+def pnclipp_i16x2  : RISCVBuiltin<"_Vector<2, short>(int, int)">;
+def pnclipup_u16x2 : RISCVBuiltin<"_Vector<2, unsigned short>(unsigned int, unsigned int)">;
+
+// Packed Narrowing Clip Pair (64-bit)
+def pnclipp_i8x8   : RISCVBuiltin<"_Vector<8, signed char>(_Vector<4, short>, _Vector<4, short>)">;
+def pnclipup_u8x8  : RISCVBuiltin<"_Vector<8, unsigned char>(_Vector<4, unsigned short>, _Vector<4, unsigned short>)">;
+def pnclipp_i16x4  : RISCVBuiltin<"_Vector<4, short>(_Vector<2, int>, _Vector<2, int>)">;
+def pnclipup_u16x4 : RISCVBuiltin<"_Vector<4, unsigned short>(_Vector<2, unsigned int>, _Vector<2, unsigned int>)">;
+def pnclipp_i32x2  : RISCVBuiltin<"_Vector<2, int>(int64_t, int64_t)">;
+def pnclipup_u32x2 : RISCVBuiltin<"_Vector<2, unsigned int>(uint64_t, uint64_t)">;
+
 } // Features = "experimental-p"
 
 //===----------------------------------------------------------------------===//

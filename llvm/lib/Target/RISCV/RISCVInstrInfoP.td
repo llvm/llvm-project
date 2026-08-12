@@ -1908,6 +1908,20 @@ def SDT_RISCVPackedNarrowingShift
                            SDTCisVT<2, XLenVT>]>;
 def riscv_pnsrl : RVSDNode<"PNSRL", SDT_RISCVPackedNarrowingShift>;
 
+// Packed narrowing clip pair.
+def SDT_RISCVPackedNarrowingClip
+    : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>,
+                           SDTCisSameAs<1, 2>]>;
+def riscv_pnclipp  : RVSDNode<"PNCLIPP", SDT_RISCVPackedNarrowingClip>;
+def riscv_pnclipup : RVSDNode<"PNCLIPUP", SDT_RISCVPackedNarrowingClip>;
+
+def SDT_RISCVPackedNarrowingClipW
+    : SDTypeProfile<1, 2, [SDTCisVT<0, v2i32>,
+                           SDTCisVT<1, XLenVT>,
+                           SDTCisSameAs<1, 2>]>;
+def riscv_pnclipp_w  : RVSDNode<"PNCLIPP_W", SDT_RISCVPackedNarrowingClipW>;
+def riscv_pnclipup_w : RVSDNode<"PNCLIPUP_W", SDT_RISCVPackedNarrowingClipW>;
+
 // The immediate for these is the number of trailing ones in the max value.
 def riscv_sati : RVSDNode<"SATI", SDTIntBinOp>;
 def riscv_usati : RVSDNode<"USATI", SDTIntBinOp>;
@@ -2638,6 +2652,20 @@ let append Predicates = [IsRV64] in {
   def : PatGpr<riscv_clsw, CLSW>;
 
   def : PatGpr<bitreverse, REV_RV64>;
+
+  // Packed narrowing clip pair.
+  def : Pat<(v8i8 (riscv_pnclipp  (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
+            (PNCLIPP_B  GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v4i16 (riscv_pnclipp (v2i32 GPR:$rs1), (v2i32 GPR:$rs2))),
+            (PNCLIPP_H  GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v8i8 (riscv_pnclipup (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
+            (PNCLIPUP_B GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v4i16 (riscv_pnclipup (v2i32 GPR:$rs1), (v2i32 GPR:$rs2))),
+            (PNCLIPUP_H GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pnclipp_w  GPR:$rs1, GPR:$rs2)),
+            (PNCLIPP_W  GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pnclipup_w GPR:$rs1, GPR:$rs2)),
+            (PNCLIPUP_W GPR:$rs1, GPR:$rs2)>;
 
   def : Pat<(XLenVT (riscv_sati GPR:$rs1, timm:$imm)),
             (SATI_RV64 GPR:$rs1, (IncImm timm:$imm))>;
