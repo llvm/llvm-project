@@ -56,6 +56,10 @@ infrastructure are described first, followed by tool-specific sections.
 
 ### Potentially Breaking Changes
 
+- The deprecated `zircon` clang-tidy module has been removed. Users of
+  `zircon-temporary-objects` should migrate to {doc}`fuchsia-temporary-objects
+  <clang-tidy/checks/fuchsia/temporary-objects>`.
+
 - In 22nd release, The `clang-tidy/ClangTidyModuleRegistry.h` header was deprecated.
   All of the symbols it used to define were moved into `clang-tidy/ClangTidyModule.h`.
   The deprecated header has been removed in this release.
@@ -106,6 +110,10 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### Changes in existing checks
 
+- Fixed a crash in {doc}`bugprone-misplaced-operator-in-strlen-in-alloc
+  <clang-tidy/checks/bugprone/misplaced-operator-in-strlen-in-alloc>` when
+  checking an array new expression without a size expression.
+
 - Fixed a crash in {doc}`bugprone-std-namespace-modification
   <clang-tidy/checks/bugprone/std-namespace-modification>` when checking
   lambda closure types used as template arguments.
@@ -137,6 +145,9 @@ infrastructure are described first, followed by tool-specific sections.
   trailing semicolons and lost comments when the `if` body has no braces.
 
 #### Removed checks
+
+- Removed the deprecated `zircon-temporary-objects` check. Users should migrate to
+  {doc}`fuchsia-temporary-objects <clang-tidy/checks/fuchsia/temporary-objects>`.
 
 #### Miscellaneous
 
