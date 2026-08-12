@@ -45,6 +45,8 @@ void CIRGenerator::Initialize(ASTContext &astContext) {
   this->astContext = &astContext;
 
   mlirContext = std::make_unique<mlir::MLIRContext>();
+  // MLIR multithreading stays enabled; the CIRDiagnosticHandler is only ever
+  // invoked from a single thread.
   cir::registerAllDialects(*mlirContext);
   mlirContext->loadDialect<mlir::DLTIDialect, cir::CIRDialect>();
   mlirContext->getOrLoadDialect<mlir::acc::OpenACCDialect>();

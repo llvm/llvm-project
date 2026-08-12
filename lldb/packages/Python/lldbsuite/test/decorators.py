@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from functools import wraps
+from typing import Optional
 from packaging import version
 import contextlib
 import ctypes
@@ -104,9 +105,7 @@ def _match_decorator_property(expected, actual):
     if isinstance(expected, no_match):
         return not _match_decorator_property(expected.item, actual)
 
-    # Python 3.6 doesn't declare a `re.Pattern` type, get the dynamic type.
-    pattern_type = type(re.compile(""))
-    if isinstance(expected, (pattern_type, str)):
+    if isinstance(expected, (re.Pattern, str)):
         return re.search(expected, actual) is not None
 
     if hasattr(expected, "__iter__"):
@@ -261,6 +260,20 @@ def _xfailForVariant(variant_name, expected_fn, bugnumber=None):
         return expectedFailure_impl(bugnumber)
     else:
         return expectedFailure_impl
+
+
+def FreshTestFunction(src):
+    """Return a private copy of *src* for one generated test class to own.
+
+    Several decorators record their state on the function object they are
+    handed instead of on a wrapper.
+    """
+
+    @wraps(src)
+    def copy(self):
+        return src(self)
+
+    return copy
 
 
 def _skipForVariant(variant_name, expected_fn, bugnumber=None):
@@ -1153,15 +1166,22 @@ def requirePlatform(oslist):
     )
 
 
-def requireNotPlatform(oslist):
+def requireNotPlatform(oslist: list, reason: Optional[str] = None):
     """Mark the item as inherently inapplicable to the listed target platforms.
 
     Unlike `skipIfPlatform`, the listed platforms are reported as UNSUPPORTED
     rather than SKIPPED.
     """
+    assert isinstance(
+        reason, (str, type(None))
+    ), f"expects 'str' or 'None' got {type(reason).__name__!r}"
+
+    skip_reason = f"unsupported on {', '.join(oslist)}"
+    if reason:
+        skip_reason += f": {reason}"
+
     return unittest.skipIf(
-        lldbplatformutil.getPlatform() in oslist,
-        UnsupportedReason("unsupported on %s" % (", ".join(oslist))),
+        lldbplatformutil.getPlatform() in oslist, UnsupportedReason(skip_reason)
     )
 
 
@@ -1171,9 +1191,11 @@ def requireDarwin(func):
     return requirePlatform(lldbplatform.translate(lldbplatform.darwin_all))(func)
 
 
-def requireNotDarwin(func):
+def requireNotDarwin(reason: str):
     """Mark the item as inherently inapplicable to Darwin targets."""
-    return requireNotPlatform(lldbplatform.translate(lldbplatform.darwin_all))(func)
+    return requireNotPlatform(
+        lldbplatform.translate(lldbplatform.darwin_all), reason=reason
+    )
 
 
 def requireLinux(func):
@@ -1182,9 +1204,9 @@ def requireLinux(func):
     return requirePlatform(["linux"])(func)
 
 
-def requireNotLinux(func):
+def requireNotLinux(reason: str):
     """Mark the item as inherently inapplicable to Linux targets."""
-    return requireNotPlatform(["linux"])(func)
+    return requireNotPlatform(["linux"], reason=reason)
 
 
 def requireWindows(func):
@@ -1193,13 +1215,13 @@ def requireWindows(func):
     return requirePlatform(["windows"])(func)
 
 
-def requireNotWindows(func):
+def requireNotWindows(reason: str):
     """Mark the item as inherently inapplicable to Windows targets.
 
     Use this for tests built on POSIX-only concepts: fork/exec semantics,
     POSIX signals, ptrace, ELF/Mach-O specifics, shell pipelines, and so on.
     """
-    return requireNotPlatform(["windows"])(func)
+    return requireNotPlatform(["windows"], reason=reason)
 
 
 def requirePOSIX(func):
@@ -1209,7 +1231,7 @@ def requirePOSIX(func):
     dependency is POSIX semantics generally rather than anything about
     Windows specifically.
     """
-    return requireNotPlatform(["windows"])(func)
+    return requireNotPlatform(["windows"], reason="uses the posix API.")(func)
 
 
 def requireSignals(func):
@@ -1217,14 +1239,19 @@ def requireSignals(func):
     return requireNotPlatform(["windows", "wasip1", "wasi"])(func)
 
 
-def requireNotWasm(func):
+def requireExpressionEvaluation(func):
+    """Mark the item as requiring expression evaluation."""
+    return requireNotWasm(reason="needs expression evaluation support")(func)
+
+
+def requireNotWasm(reason: str):
     """Mark the item as inherently inapplicable to WebAssembly targets.
 
     WebAssembly has no processes, no signals, no shared libraries and no
     ptrace-style debugging, so a large amount of the test suite can never
     apply to it.
     """
-    return requireNotPlatform(["wasip1", "wasi"])(func)
+    return requireNotPlatform(["wasip1", "wasi"], reason=reason)
 
 
 def requireHostPlatform(oslist):
