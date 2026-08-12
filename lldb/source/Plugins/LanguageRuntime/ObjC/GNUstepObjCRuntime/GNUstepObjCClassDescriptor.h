@@ -25,16 +25,23 @@ namespace lldb_private {
 /// The layout parsed here is libobjc2's `struct objc_class` (class.h), whose
 /// leading fields have been stable across the gnustep-2.x ABI:
 ///
-///   Class isa;              // metaclass          [index 0]
-///   Class super_class;      //                    [index 1]
-///   const char *name;       //                    [index 2]
-///   long version;           //                    [index 3]
-///   unsigned long info;     // flag bits          [index 4]
-///   long instance_size;     //                    [index 5]
+///   Class isa;              // metaclass
+///   Class super_class;
+///   const char *name;
+///   long version;
+///   unsigned long info;     // enum objc_class_flags
+///   long instance_size;
 ///
-/// Note: with the non-fragile ABI the compiler emits a negative
-/// instance_size; the runtime replaces it with the real size when the class
-/// is registered, so debug-time reads of loaded classes see the real value.
+/// Note that the last three fields are `long`, which is 32 bits on Windows
+/// (LLP64) and pointer-sized on the LP64 and ILP32 targets libobjc2 supports,
+/// so field offsets are computed from the target's data model rather than from
+/// the pointer size alone.
+///
+/// Classes emitted by the compiler are only fully formed once the runtime has
+/// resolved them (`objc_class_flag_resolved`): before that, `super_class` may
+/// still hold the superclass *name* rather than a Class, and `instance_size`
+/// holds the negated size of just this class's own ivars. Both are therefore
+/// only reported for resolved classes.
 class GNUstepObjCClassDescriptor : public ObjCLanguageRuntime::ClassDescriptor {
 public:
   GNUstepObjCClassDescriptor(lldb::ProcessSP process_sp,
@@ -68,8 +75,9 @@ public:
   ObjCLanguageRuntime::ObjCISA GetISA() override { return m_isa; }
 
 protected:
-  /// Parse `struct objc_class` at m_isa. Called from the constructor;
-  /// sets m_valid on success.
+  /// Parse `struct objc_class` at m_isa. Called from the constructor; sets
+  /// m_valid only if the structure passes the consistency checks that keep a
+  /// stray pointer into readable memory from being reported as a class.
   void Read();
 
   lldb::ProcessWP m_process_wp;
@@ -91,10 +99,11 @@ public:
   GNUstepObjCTaggedPointerClassDescriptor(lldb::ProcessSP process_sp,
                                           ObjCLanguageRuntime::ObjCISA isa,
                                           lldb::addr_t pointer_value,
-                                          uint64_t tag, uint32_t payload_shift)
+                                          uint64_t tag, uint32_t payload_shift,
+                                          uint32_t pointer_size)
       : GNUstepObjCClassDescriptor(std::move(process_sp), isa),
         m_pointer_value(pointer_value), m_tag(tag),
-        m_payload_shift(payload_shift) {}
+        m_payload_shift(payload_shift), m_pointer_size(pointer_size) {}
 
   bool GetTaggedPointerInfo(uint64_t *info_bits = nullptr,
                             uint64_t *value_bits = nullptr,
@@ -108,6 +117,7 @@ private:
   lldb::addr_t m_pointer_value;
   uint64_t m_tag;
   uint32_t m_payload_shift;
+  uint32_t m_pointer_size;
 };
 
 /// Resolves tagged pointers by mirroring libobjc2's `classForObject()`
@@ -129,6 +139,11 @@ public:
 
   std::unique_ptr<ObjCLanguageRuntime::ClassDescriptor>
   GetClassDescriptor(lldb::addr_t ptr) override;
+
+  /// Forget where (or whether) the small object class table was found, so a
+  /// newly loaded runtime is picked up and a negative result is not cached
+  /// for the lifetime of the process.
+  void ModulesDidLoad() { m_table_addr.reset(); }
 
 private:
   /// Load address of libobjc2's `SmallObjectClasses` table, resolved lazily

@@ -42,6 +42,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Regex.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -71,11 +72,18 @@ public:
   }
 
   bool runOnModule(llvm::Module &module) override {
+    // Section names differ by object format: "__objc_selectors" everywhere
+    // except COFF, which sorts the runtime metadata into ".objcrt$SEL"
+    // subsections (CGObjCGNU.cpp).
     llvm::SmallVector<llvm::GlobalVariable *, 8> sel_globals;
-    for (llvm::GlobalVariable &gv : module.globals())
-      if (gv.hasSection() &&
-          llvm::StringRef(gv.getSection()).starts_with("__objc_selectors"))
+    for (llvm::GlobalVariable &gv : module.globals()) {
+      if (!gv.hasSection())
+        continue;
+      llvm::StringRef section(gv.getSection());
+      if (section.starts_with("__objc_selectors") ||
+          section.starts_with(".objcrt$SEL"))
         sel_globals.push_back(&gv);
+    }
     if (sel_globals.empty())
       return false;
 
@@ -104,8 +112,14 @@ public:
         uses.push_back(&use);
       for (llvm::Use *use : uses) {
         auto *inst = llvm::dyn_cast<llvm::Instruction>(use->getUser());
-        if (!inst)
+        if (!inst) {
+          // A constant expression has no instruction to anchor the call to;
+          // such a selector stays unregistered.
+          LLDB_LOG(GetLog(LLDBLog::Expressions),
+                   "not registering selector used by a constant expression: {0}",
+                   gv->getName());
           continue;
+        }
         llvm::Function *func = inst->getFunction();
         llvm::Value *&reg_call = call_per_fn[func];
         if (!reg_call) {
@@ -152,31 +166,40 @@ void GNUstepObjCRuntime::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-static bool CanModuleBeGNUstepObjCLibrary(const ModuleSP &module_sp,
-                                          const llvm::Triple &TT) {
+/// Returns true if \p module_sp defines (rather than merely references) a
+/// function named \p name.
+static bool ModuleDefinesFunction(const ModuleSP &module_sp,
+                                  llvm::StringRef name) {
   if (!module_sp)
     return false;
-  const FileSpec &module_file_spec = module_sp->GetFileSpec();
-  if (!module_file_spec)
-    return false;
-  llvm::StringRef filename = module_file_spec.GetFilename();
-  if (TT.isOSBinFormatELF())
-    return filename.starts_with("libobjc.so");
-  if (TT.isOSWindows())
-    return filename == "objc.dll";
-  return false;
-}
-
-static bool ScanForGNUstepObjCLibraryCandidate(const ModuleList &modules,
-                                               const llvm::Triple &TT) {
-  std::lock_guard<std::recursive_mutex> guard(modules.GetMutex());
-  size_t num_modules = modules.GetSize();
-  for (size_t i = 0; i < num_modules; i++) {
-    auto mod = modules.GetModuleAtIndex(i);
-    if (CanModuleBeGNUstepObjCLibrary(mod, TT))
+  SymbolContextList sc_list;
+  module_sp->FindSymbolsWithNameAndType(ConstString(name), eSymbolTypeCode,
+                                        sc_list);
+  for (const SymbolContext &sc : sc_list) {
+    // Every module compiled against libobjc2 carries an undefined reference
+    // to __objc_load from its .objc_init constructor, so only a definition
+    // identifies the runtime itself.
+    if (sc.symbol && sc.symbol->GetAddress().IsValid())
       return true;
   }
   return false;
+}
+
+/// Finds the module implementing the libobjc2 runtime, identified by its
+/// loader entry point. __objc_load is exported by every libobjc2 build on
+/// every platform and does not exist in GCC's Objective-C runtime, so this
+/// both avoids activating for an unrelated runtime and recognizes builds the
+/// file name does not identify: a renamed library (LIBOBJC_NAME) or a static
+/// libobjc2, whose symbols land in the executable itself.
+static ModuleSP FindGNUstepObjCRuntimeModule(const ModuleList &modules) {
+  std::lock_guard<std::recursive_mutex> guard(modules.GetMutex());
+  const size_t num_modules = modules.GetSize();
+  for (size_t i = 0; i < num_modules; i++) {
+    ModuleSP module_sp = modules.GetModuleAtIndex(i);
+    if (ModuleDefinesFunction(module_sp, "__objc_load"))
+      return module_sp;
+  }
+  return ModuleSP();
 }
 
 LanguageRuntime *GNUstepObjCRuntime::CreateInstance(Process *process,
@@ -191,23 +214,8 @@ LanguageRuntime *GNUstepObjCRuntime::CreateInstance(Process *process,
   if (TT.getVendor() == llvm::Triple::VendorType::Apple)
     return nullptr;
 
-  const ModuleList &images = target.GetImages();
-  if (!ScanForGNUstepObjCLibraryCandidate(images, TT))
+  if (!FindGNUstepObjCRuntimeModule(target.GetImages()))
     return nullptr;
-
-  if (TT.isOSBinFormatELF()) {
-    SymbolContextList eh_pers;
-    RegularExpression regex("__gnustep_objc[x]*_personality_v[0-9]+");
-    images.FindSymbolsMatchingRegExAndType(regex, eSymbolTypeCode, eh_pers);
-    if (eh_pers.GetSize() == 0)
-      return nullptr;
-  } else if (TT.isOSWindows()) {
-    SymbolContextList objc_mandatory;
-    images.FindSymbolsWithNameAndType(ConstString("__objc_load"),
-                                      eSymbolTypeCode, objc_mandatory);
-    if (objc_mandatory.GetSize() == 0)
-      return nullptr;
-  }
 
   return new GNUstepObjCRuntime(process);
 }
@@ -416,6 +424,12 @@ bool GNUstepObjCRuntime::GetDynamicTypeAndAddress(
 
 lldb::TypeSP
 GNUstepObjCRuntime::LookupClassTypeInDebugInfo(ConstString class_name) {
+  // Searching every module's debug info is expensive and happens for each
+  // value on each stop, so remember the classes that have no debug info. The
+  // cache is dropped whenever new modules arrive.
+  if (m_negative_type_cache.count(class_name))
+    return TypeSP();
+
   TypeQuery query(class_name.GetStringRef(), TypeQueryOptions::e_exact_match);
   TypeResults results;
   GetTargetRef().GetImages().FindTypes(nullptr, query, results);
@@ -424,7 +438,28 @@ GNUstepObjCRuntime::LookupClassTypeInDebugInfo(ConstString class_name) {
                        type_sp->GetForwardCompilerType()))
       return type_sp;
   }
+  m_negative_type_cache.insert(class_name);
   return TypeSP();
+}
+
+bool GNUstepObjCRuntime::CalculateHasNewLiteralsAndIndexing() {
+  // The literal and subscripting syntax lowers to calls on Foundation
+  // classes, which live in gnustep-base rather than in the runtime itself.
+  // Claiming support without them makes such expressions compile and then
+  // fail inside the inferior, so require the classes to be present.
+  static constexpr llvm::StringLiteral g_required_classes[] = {
+      "NSArray", "NSDictionary", "NSNumber", "NSString"};
+
+  const llvm::StringRef prefix = GetClassSymbolPrefix();
+  const ModuleList &images = GetTargetRef().GetImages();
+  for (llvm::StringRef class_name : g_required_classes) {
+    SymbolContextList sc_list;
+    images.FindSymbolsWithNameAndType(ConstString(prefix.str() + class_name.str()),
+                                      eSymbolTypeAny, sc_list);
+    if (sc_list.GetSize() == 0)
+      return false;
+  }
+  return true;
 }
 
 TypeAndOrName
@@ -509,7 +544,7 @@ GNUstepObjCRuntime::GetStepThroughTrampolinePlan(Thread &thread,
   const addr_t pc = thread.GetRegisterContext()->GetPC();
   Target &target = GetTargetRef();
 
-  const DispatchEntryPoint *entry = FindDispatchEntryPoint(pc);
+  std::optional<DispatchEntryPoint> entry = FindDispatchEntryPoint(pc);
   if (!entry)
     return {};
   const bool is_stret = entry->is_stret;
@@ -575,7 +610,10 @@ GNUstepObjCRuntime::GetStepThroughTrampolinePlan(Thread &thread,
     }
   }
 
-  if (!GetMsgLookupFunctionCaller(thread))
+  // Only claim the step if the runtime actually exports the lookup function.
+  // Building the call wrapper is deliberately left to the plan's pre-resume
+  // action, which is where running code in the inferior is safe.
+  if (!ModuleDefinesFunction(m_objc_module_sp, "objc_msg_lookup"))
     return {};
 
   ValueList lookup_args;
@@ -590,7 +628,7 @@ GNUstepObjCRuntime::GetStepThroughTrampolinePlan(Thread &thread,
       thread, *this, lookup_args, isa, selector);
 }
 
-const GNUstepObjCRuntime::DispatchEntryPoint *
+std::optional<GNUstepObjCRuntime::DispatchEntryPoint>
 GNUstepObjCRuntime::FindDispatchEntryPoint(lldb::addr_t pc) {
   if (!m_dispatch_entry_points_resolved) {
     m_dispatch_entry_points_resolved = true;
@@ -601,41 +639,43 @@ GNUstepObjCRuntime::FindDispatchEntryPoint(lldb::addr_t pc) {
       const char *name;
       bool is_stret;
       bool is_sender;
-    } kEntryPoints[] = {
+    } g_entry_points[] = {
         {"objc_msgSend", false, false},
         {"objc_msgSend_fpret", false, false},
         {"objc_msgSend_stret", true, false},
+        // Windows on ARM64 dispatches struct returns through this variant.
+        {"objc_msgSend_stret2", true, false},
         {"objc_msg_lookup", false, false},
         {"objc_msg_lookup_sender", false, true},
     };
     Target &target = GetTargetRef();
-    for (const auto &ep : kEntryPoints) {
+    for (const auto &ep : g_entry_points) {
       SymbolContextList sc_list;
       target.GetImages().FindSymbolsWithNameAndType(ConstString(ep.name),
                                                     eSymbolTypeCode, sc_list);
       for (const SymbolContext &sc : sc_list) {
         if (!sc.symbol)
           continue;
-        const addr_t addr = sc.symbol->GetLoadAddress(&target);
-        if (addr != LLDB_INVALID_ADDRESS) {
+        // Use the opcode address so the comparison against the PC is correct
+        // on targets where the symbol address carries an ISA bit (Thumb).
+        const addr_t addr =
+            sc.symbol->GetAddress().GetOpcodeLoadAddress(&target);
+        if (addr != LLDB_INVALID_ADDRESS)
           m_dispatch_entry_points.push_back({addr, ep.is_stret, ep.is_sender});
-          break;
-        }
       }
     }
   }
 
   for (const DispatchEntryPoint &ep : m_dispatch_entry_points)
     if (ep.address == pc)
-      return &ep;
-  return nullptr;
+      return ep;
+  return std::nullopt;
 }
 
 FunctionCaller *GNUstepObjCRuntime::GetMsgLookupFunctionCaller(Thread &thread) {
   // Build (once) a utility function that resolves a method implementation by
   // calling libobjc2's objc_msg_lookup, and a FunctionCaller to invoke it.
-  // This mirrors AppleObjCTrampolineHandler's dispatch-lookup utility and is
-  // the JIT path that works from inside a step's PreResume action.
+  // This mirrors AppleObjCTrampolineHandler's dispatch-lookup utility.
   static const char *g_lookup_name = "$__lldb_gnustep_objc_msg_lookup";
   static const char *g_lookup_code =
       "void *objc_msg_lookup(void *receiver, void *selector);\n"
@@ -643,8 +683,13 @@ FunctionCaller *GNUstepObjCRuntime::GetMsgLookupFunctionCaller(Thread &thread) {
       "  return objc_msg_lookup(receiver, selector);\n"
       "}\n";
 
+  std::lock_guard<std::mutex> guard(m_msg_lookup_mutex);
   if (m_msg_lookup_caller)
     return m_msg_lookup_caller;
+  // Don't pay for compiling the wrapper again on every step once it is known
+  // not to work in this process.
+  if (m_msg_lookup_failed)
+    return nullptr;
 
   ThreadSP thread_sp(thread.shared_from_this());
   ExecutionContext exe_ctx(thread_sp);
@@ -654,15 +699,18 @@ FunctionCaller *GNUstepObjCRuntime::GetMsgLookupFunctionCaller(Thread &thread) {
       g_lookup_code, g_lookup_name, eLanguageTypeC, exe_ctx);
   if (!utility_fn_or_error) {
     LLDB_LOG_ERROR(log, utility_fn_or_error.takeError(),
-                   "[GNUstep] failed to build objc_msg_lookup utility: {0}");
+                   "failed to build objc_msg_lookup utility: {0}");
+    m_msg_lookup_failed = true;
     return nullptr;
   }
   m_msg_lookup_utility_up = std::move(*utility_fn_or_error);
 
   TypeSystemClangSP scratch_ts_sp =
       ScratchTypeSystemClang::GetForTarget(GetTargetRef());
-  if (!scratch_ts_sp)
+  if (!scratch_ts_sp) {
+    m_msg_lookup_failed = true;
     return nullptr;
+  }
   CompilerType void_ptr_type =
       scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
 
@@ -678,9 +726,10 @@ FunctionCaller *GNUstepObjCRuntime::GetMsgLookupFunctionCaller(Thread &thread) {
       m_msg_lookup_utility_up->MakeFunctionCaller(void_ptr_type, args,
                                                   thread_sp, error);
   if (error.Fail()) {
-    LLDB_LOG(log, "[GNUstep] failed to make objc_msg_lookup caller: {0}",
+    LLDB_LOG(log, "failed to make objc_msg_lookup caller: {0}",
              error.AsCString());
     m_msg_lookup_caller = nullptr;
+    m_msg_lookup_failed = true;
     return nullptr;
   }
   return m_msg_lookup_caller;
@@ -695,19 +744,66 @@ void GNUstepObjCRuntime::UpdateISAToDescriptorMapIfNeeded() {
     return;
   }
 
-  // The gnustep-2.x ABI emits every compiled class as a `._OBJC_CLASS_<name>`
+  // The first update has to look at everything already loaded; afterwards only
+  // the modules that arrived since need scanning, so a dlopen does not re-walk
+  // every symbol table in the process.
+  if (m_swept_all_modules) {
+    for (const ModuleSP &module_sp : m_pending_modules)
+      AddClassesFromModule(module_sp);
+  } else {
+    const ModuleList &images = GetTargetRef().GetImages();
+    std::lock_guard<std::recursive_mutex> guard(images.GetMutex());
+    const size_t num_modules = images.GetSize();
+    for (size_t i = 0; i < num_modules; i++)
+      AddClassesFromModule(images.GetModuleAtIndex(i));
+    m_swept_all_modules = true;
+  }
+
+  m_pending_modules.clear();
+  m_isa_map_dirty = false;
+  m_isa_to_descriptor_stop_id = stop_id;
+}
+
+bool GNUstepObjCRuntime::IsRuntimeInternalAddress(lldb::addr_t addr) {
+  if (!m_objc_module_sp || addr == 0 || addr == LLDB_INVALID_ADDRESS)
+    return false;
+  // Statically linked, the runtime's module *is* the executable, so module
+  // identity says nothing about whether an address is the runtime's own code
+  // or the user's. Answering "internal" there would report every method in
+  // the program as unsteppable and strand `step` at the dispatch entry point,
+  // so decline to guess: stepping into the runtime's forwarding machinery is
+  // a much smaller problem than never stepping into a method at all.
+  if (m_objc_module_sp == GetTargetRef().GetExecutableModule())
+    return false;
+  Address resolved;
+  if (!GetTargetRef().ResolveLoadAddress(addr, resolved))
+    return false;
+  return resolved.GetModule() == m_objc_module_sp;
+}
+
+llvm::StringRef GNUstepObjCRuntime::GetClassSymbolPrefix() {
+  // clang mangles the public runtime symbols with a leading "._" on every
+  // object format except COFF, which uses "$_" (CGObjCGNU.cpp).
+  return GetTargetRef().GetArchitecture().GetTriple().isOSBinFormatCOFF()
+             ? "$_OBJC_CLASS_"
+             : "._OBJC_CLASS_";
+}
+
+void GNUstepObjCRuntime::AddClassesFromModule(const ModuleSP &module_sp) {
+  if (!module_sp || !m_process)
+    return;
+
+  // The gnustep-2.x ABI emits every compiled class as a `<prefix>OBJC_CLASS_`
   // data symbol whose address is the class object itself (the ISA of its
   // instances), so the map can be seeded from symbol tables alone - without
   // running any code in the inferior. Classes created dynamically at runtime
   // are handled by the create-on-miss path in GetClassDescriptorFromISA.
-  Target &target = GetTargetRef();
-  const ModuleList &images = target.GetImages();
-
+  const llvm::StringRef prefix = GetClassSymbolPrefix();
+  RegularExpression regex("^" + llvm::Regex::escape(prefix));
   SymbolContextList sc_list;
-  RegularExpression regex(llvm::StringRef("^\\._OBJC_CLASS_"));
-  images.FindSymbolsMatchingRegExAndType(regex, eSymbolTypeAny, sc_list);
+  module_sp->FindSymbolsMatchingRegExAndType(regex, eSymbolTypeAny, sc_list);
 
-  static constexpr llvm::StringLiteral g_class_prefix("._OBJC_CLASS_");
+  Target &target = GetTargetRef();
   for (const SymbolContext &sc : sc_list) {
     if (!sc.symbol)
       continue;
@@ -715,15 +811,12 @@ void GNUstepObjCRuntime::UpdateISAToDescriptorMapIfNeeded() {
     if (isa == 0 || isa == LLDB_INVALID_ADDRESS || ISAIsCached(isa))
       continue;
     llvm::StringRef name = sc.symbol->GetName().GetStringRef();
-    name.consume_front(g_class_prefix);
+    name.consume_front(prefix);
     auto descriptor_sp = std::make_shared<GNUstepObjCClassDescriptor>(
         m_process->shared_from_this(), isa);
     if (descriptor_sp->IsValid())
       AddClass(isa, descriptor_sp, name.str().c_str());
   }
-
-  m_isa_map_dirty = false;
-  m_isa_to_descriptor_stop_id = stop_id;
 }
 
 bool GNUstepObjCRuntime::GetIRPasses(
@@ -767,8 +860,7 @@ GNUstepObjCRuntime::GetClassDescriptorFromISA(ObjCISA isa) {
 }
 
 bool GNUstepObjCRuntime::IsModuleObjCLibrary(const ModuleSP &module_sp) {
-  const llvm::Triple &TT = GetTargetRef().GetArchitecture().GetTriple();
-  return CanModuleBeGNUstepObjCLibrary(module_sp, TT);
+  return ModuleDefinesFunction(module_sp, "__objc_load");
 }
 
 bool GNUstepObjCRuntime::ReadObjCLibrary(const ModuleSP &module_sp) {
@@ -790,5 +882,20 @@ GNUstepObjCRuntime::GetLanguageSpecificData(SymbolContext sc) {
 
 void GNUstepObjCRuntime::ModulesDidLoad(const ModuleList &module_list) {
   ReadObjCLibraryIfNeeded(module_list);
+
+  // Everything cached from a symbol lookup can be invalidated by new modules:
+  // classes to add to the map, dispatch entry points that may only now exist,
+  // and negative results that may now resolve.
+  {
+    std::lock_guard<std::recursive_mutex> guard(module_list.GetMutex());
+    const size_t num_modules = module_list.GetSize();
+    for (size_t i = 0; i < num_modules; i++)
+      m_pending_modules.push_back(module_list.GetModuleAtIndex(i));
+  }
   m_isa_map_dirty = true;
+  m_dispatch_entry_points.clear();
+  m_dispatch_entry_points_resolved = false;
+  m_negative_type_cache.clear();
+  if (m_tagged_pointer_vendor_up)
+    m_tagged_pointer_vendor_up->ModulesDidLoad();
 }

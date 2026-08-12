@@ -52,6 +52,8 @@ public:
 
   void DidPush() override;
 
+  void DidPop() override;
+
   bool WillStop() override { return true; }
 
 protected:

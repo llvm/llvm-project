@@ -47,6 +47,13 @@ void GNUstepThreadPlanStepThroughObjCTrampoline::DidPush() {
                                (void *)this);
 }
 
+void GNUstepThreadPlanStepThroughObjCTrampoline::DidPop() {
+  // The action holds a bare pointer to this plan, so it must not outlive it -
+  // the plan can be discarded before the process ever resumes.
+  m_process.ClearPreResumeAction(PreResumeInitializeFunctionCaller,
+                                 (void *)this);
+}
+
 bool GNUstepThreadPlanStepThroughObjCTrampoline::
     PreResumeInitializeFunctionCaller(void *void_myself) {
   auto *myself =
@@ -115,6 +122,14 @@ bool GNUstepThreadPlanStepThroughObjCTrampoline::ShouldStop(Event *event_ptr) {
 
   Log *log = GetLog(LLDBLog::Step);
 
+  // Setting up the call can fail after the plan is already on the stack, in
+  // which case there is nothing to collect a result from.
+  if (!m_lookup_function || m_args_addr == LLDB_INVALID_ADDRESS) {
+    LLDB_LOG(log, "objc_msg_lookup call was never set up, stopping.");
+    SetPlanComplete(false);
+    return true;
+  }
+
   // Second stage: fetch the IMP the lookup returned and run to it.
   if (!m_run_to_sp) {
     Value target_addr_value;
@@ -130,6 +145,17 @@ bool GNUstepThreadPlanStepThroughObjCTrampoline::ShouldStop(Event *event_ptr) {
 
     if (target_addr == 0 || target_addr == LLDB_INVALID_ADDRESS) {
       LLDB_LOG(log, "objc_msg_lookup returned {0:x}, stopping.", target_addr);
+      SetPlanComplete();
+      return true;
+    }
+
+    // A selector the class does not implement resolves to the runtime's
+    // forwarding machinery, which lives inside libobjc itself - as do the
+    // runtime's own internal method implementations. There is no user code to
+    // step into in either case, so stop here instead.
+    if (m_runtime.IsRuntimeInternalAddress(target_addr)) {
+      LLDB_LOG(log, "objc_msg_lookup resolved into the runtime itself "
+                    "(forwarding or an internal method), stopping.");
       SetPlanComplete();
       return true;
     }
