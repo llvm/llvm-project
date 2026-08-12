@@ -4465,18 +4465,6 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     SetElementTypeAsReturnType(&SemaRef, TheCall, getASTContext().BoolTy);
     break;
   }
-  case Builtin::BI__builtin_hlsl_lerp: {
-    if (SemaRef.checkArgCount(TheCall, 3))
-      return true;
-    if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall,
-                                   CheckFloatOrHalfRepresentation))
-      return true;
-    if (CheckAllArgsHaveSameType(&SemaRef, TheCall))
-      return true;
-    if (SemaRef.BuiltinElementwiseTernaryMath(TheCall))
-      return true;
-    break;
-  }
   case Builtin::BI__builtin_hlsl_mad: {
     if (SemaRef.BuiltinElementwiseTernaryMath(
             TheCall, /*ArgTyRestr=*/
