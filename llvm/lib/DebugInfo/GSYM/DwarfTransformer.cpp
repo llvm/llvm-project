@@ -440,7 +440,6 @@ static void convertFunctionLineTable(OutputAggregator &Out, CUInfo &CUI,
       // so break out after printing a warning.
       auto FirstLE = FI.OptLineTable->first();
       if (FirstLE && *FirstLE == LE)
-        // if (Log && !Gsym.isQuiet()) { TODO <-- This looks weird
         Out.Report("Duplicate line table detected", Severity::Warning,
                    [&](raw_ostream &OS) {
                      OS << "warning: duplicate line table detected for DIE:\n";

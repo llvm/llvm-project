@@ -481,10 +481,10 @@ static llvm::Error handleObjectFile(ObjectFile &Obj, ObjectFile *SymtabObj,
   std::unique_ptr<GsymCreator> GsymPtr;
   switch (OutputVersion) {
   case Header::getVersion():
-    GsymPtr = std::make_unique<GsymCreatorV1>(Quiet);
+    GsymPtr = std::make_unique<GsymCreatorV1>();
     break;
   case HeaderV2::getVersion():
-    GsymPtr = std::make_unique<GsymCreatorV2>(Quiet);
+    GsymPtr = std::make_unique<GsymCreatorV2>();
     break;
   default:
     return createStringError(std::errc::invalid_argument,

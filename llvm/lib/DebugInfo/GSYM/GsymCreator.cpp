@@ -50,8 +50,7 @@ static bool shouldReplaceWithMangledName(StringRef AlternateName,
   return AlternateName.contains(StringRef(LengthAndName));
 }
 
-GsymCreator::GsymCreator(QuietLevel Quiet)
-    : StrTab(StringTableBuilder::ELF), Quiet(Quiet) {
+GsymCreator::GsymCreator() : StrTab(StringTableBuilder::ELF) {
   insertFile(StringRef());
 }
 
@@ -555,7 +554,7 @@ GsymCreator::createSegment(uint64_t SegmentSize, size_t &FuncIdx) const {
   if (FuncIdx >= Funcs.size())
     return std::unique_ptr<GsymCreator>();
 
-  std::unique_ptr<GsymCreator> GC = createNew(QuietLevel::Quiet);
+  std::unique_ptr<GsymCreator> GC = createNew();
 
   // Tell the creator that this is a segment.
   GC->setIsSegment();
