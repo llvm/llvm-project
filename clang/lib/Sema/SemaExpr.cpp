@@ -2122,11 +2122,10 @@ static Decl *getPredefinedExprDecl(Sema &S, DeclContext *DC) {
   auto tryAdjustLambdaContext = [&S, &LSI](DeclContext *&DC) {
     if (isLambdaCallOperator(DC)) {
       auto E = S.FunctionScopes.rend();
-      while (LSI != E && isa<CapturingScopeInfo>(*LSI) &&
-             !isa<LambdaScopeInfo>(*LSI))
+      while (LSI != E && !isa<LambdaScopeInfo>(*LSI))
         ++LSI;
       assert(LSI != E && "Should be in a lambda scope info");
-      if (dyn_cast<LambdaScopeInfo>(*LSI)->BeforeCompoundStatement)
+      if (cast<LambdaScopeInfo>(*LSI)->BeforeCompoundStatement)
         DC = DC->getParent();
       ++LSI;
     }
