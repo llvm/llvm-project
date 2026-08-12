@@ -20,6 +20,8 @@
 #include "lldb/lldb-private.h"
 #include "llvm/Support/JSON.h"
 
+#include <optional>
+
 namespace lldb_private {
 
 struct JSONSymbol {
@@ -346,9 +348,29 @@ protected:
   // until later, when we have other binaries loaded in the Target.
   struct ReExportInfo {
     ConstString name;
-    FileSpec library;
-    ReExportInfo() : name(), library() {}
-    void Clear() { library.Clear(); }
+    std::unique_ptr<FileSpec> library_up;
+    ReExportInfo() : name(), library_up() {}
+    ReExportInfo(const ReExportInfo &rhs) {
+      name = rhs.name;
+      if (rhs.library_up)
+        library_up = std::make_unique<FileSpec>(*rhs.library_up);
+      else
+        library_up.reset();
+    }
+    const ReExportInfo &operator=(const ReExportInfo &rhs) {
+      if (this != &rhs) {
+        name = rhs.name;
+        if (rhs.library_up)
+          library_up = std::make_unique<FileSpec>(*rhs.library_up);
+        else
+          library_up.reset();
+      }
+      return *this;
+    }
+    void Clear() {
+      name.Clear();
+      library_up.reset();
+    }
   };
 
   uint32_t m_uid = LLDB_INVALID_SYMBOL_ID; // User ID (usually the original
@@ -387,11 +409,11 @@ protected:
     ReExportInfo &GetReExportInfo(Symbol &sym);
     const ReExportInfo &GetReExportInfo(const Symbol &sym) const;
     void SetAddressRange(Symbol &sym, const AddressRange addr_range);
-    void SetRexportInfo(Symbol &sym, const ReExportInfo reexport_info);
+    void SetReExportInfo(Symbol &sym, const ReExportInfo reexport_info);
 
     AddrRangeOrReExport(const Symbol &sym) : m_addr_range() {
       if (sym.GetType() == lldb::eSymbolTypeReExported)
-        m_reexport_info = ReExportInfo();
+        m_reexport_info.Clear();
     }
     // Proper destruction is handled by Symbol's dtor; supply a no-op
     // impl to let the compiler know it's handled.

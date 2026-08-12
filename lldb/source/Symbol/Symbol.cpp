@@ -49,7 +49,7 @@ Symbol::Symbol(uint32_t symID, llvm::StringRef name, SymbolType type,
       m_is_weak(false), m_type(type), m_mangled(name),
       m_addr_or_reexport(*this), m_flags(flags) {
   if (m_type == eSymbolTypeReExported)
-    m_addr_or_reexport.SetRexportInfo(*this, ReExportInfo());
+    m_addr_or_reexport.GetReExportInfo(*this).Clear();
   else
     m_addr_or_reexport.SetAddressRange(*this,
                                        AddressRange(section_sp, offset, size));
@@ -70,7 +70,7 @@ Symbol::Symbol(uint32_t symID, const Mangled &mangled, SymbolType type,
       m_is_weak(false), m_type(type), m_mangled(mangled),
       m_addr_or_reexport(*this), m_flags(flags) {
   if (m_type == eSymbolTypeReExported)
-    m_addr_or_reexport.SetRexportInfo(*this, ReExportInfo());
+    m_addr_or_reexport.SetReExportInfo(*this, ReExportInfo());
   else
     m_addr_or_reexport.SetAddressRange(*this, range);
 }
@@ -87,7 +87,7 @@ Symbol::Symbol(const Symbol &rhs)
       m_is_weak(rhs.m_is_weak), m_type(rhs.m_type), m_mangled(rhs.m_mangled),
       m_addr_or_reexport(*this), m_flags(rhs.m_flags) {
   if (rhs.m_type == eSymbolTypeReExported)
-    m_addr_or_reexport.SetRexportInfo(
+    m_addr_or_reexport.SetReExportInfo(
         *this, rhs.m_addr_or_reexport.GetReExportInfo(*this));
   else
     m_addr_or_reexport.SetAddressRange(
@@ -114,7 +114,7 @@ const Symbol &Symbol::operator=(const Symbol &rhs) {
       m_addr_or_reexport.GetAddressRange(*this).Clear();
     m_type = rhs.m_type;
     if (rhs.m_type == eSymbolTypeReExported)
-      m_addr_or_reexport.SetRexportInfo(
+      m_addr_or_reexport.SetReExportInfo(
           *this, rhs.m_addr_or_reexport.GetReExportInfo(*this));
     else
       m_addr_or_reexport.SetAddressRange(
@@ -210,15 +210,19 @@ ConstString Symbol::GetReExportedSymbolName() const {
 FileSpec Symbol::GetReExportedSymbolSharedLibrary() const {
   if (m_type != eSymbolTypeReExported)
     return FileSpec();
-
-  return m_addr_or_reexport.GetReExportInfo(*this).library;
+  const Symbol::ReExportInfo &reexport =
+      m_addr_or_reexport.GetReExportInfo(*this);
+  if (reexport.library_up)
+    return *reexport.library_up;
+  else
+    return FileSpec();
 }
 
 void Symbol::SetReExportedSymbolName(ConstString name) {
   if (m_type != eSymbolTypeReExported && m_type != eSymbolTypeInvalid)
     m_addr_or_reexport.GetAddressRange(*this).Clear();
   if (m_type != eSymbolTypeReExported)
-    m_addr_or_reexport.SetRexportInfo(*this, ReExportInfo());
+    m_addr_or_reexport.SetReExportInfo(*this, ReExportInfo());
   m_type = eSymbolTypeReExported;
   m_addr_or_reexport.GetReExportInfo(*this).name = name;
 }
@@ -229,7 +233,8 @@ bool Symbol::SetReExportedSymbolSharedLibrary(const FileSpec &fspec) {
   if (m_type != eSymbolTypeReExported && m_type != eSymbolTypeInvalid)
     m_addr_or_reexport.GetAddressRange(*this).Clear();
   m_type = eSymbolTypeReExported;
-  m_addr_or_reexport.GetReExportInfo(*this).library = fspec;
+  m_addr_or_reexport.GetReExportInfo(*this).library_up =
+      std::make_unique<FileSpec>(fspec);
   return true;
 }
 
@@ -696,7 +701,7 @@ bool Symbol::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
     // binaries loaded in the target, lazily.  It is not
     // saved in the serialized Symbol format as it could vary
     // depending on the Target libraries.
-    m_addr_or_reexport.GetReExportInfo(*this).library = FileSpec();
+    m_addr_or_reexport.GetReExportInfo(*this).library_up.reset();
   }
   m_flags = data.GetU32(offset_ptr);
   return true;
@@ -770,7 +775,7 @@ void Symbol::Encode(DataEncoder &file, ConstStringTable &strtab) const {
     file.AppendU64(m_addr_or_reexport.GetAddressRange(*this).GetByteSize());
   } else {
     file.AppendU32(strtab.Add(m_addr_or_reexport.GetReExportInfo(*this).name));
-    // m_reexport_info.library is calculated based on the
+    // m_reexport_info.library_up is calculated based on the
     // binaries loaded in the target, lazily.  It is not
     // saved in the serialized Symbol format as it could vary
     // depending on the Target libraries.
@@ -923,7 +928,7 @@ void Symbol::AddrRangeOrReExport::SetAddressRange(
   m_addr_range = addr_range;
 }
 
-void Symbol::AddrRangeOrReExport::SetRexportInfo(
+void Symbol::AddrRangeOrReExport::SetReExportInfo(
     Symbol &sym, const Symbol::ReExportInfo reexport_info) {
   if (sym.GetType() != eSymbolTypeReExported) {
     m_addr_range.Clear();
