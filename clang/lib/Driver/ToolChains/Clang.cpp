@@ -5176,8 +5176,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     options::OPT_no_offload_new_driver,
                     C.getActiveOffloadKinds() != Action::OFK_None));
 
-  bool IsRDCMode =
-      Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false);
+  // SYCL defaults to RDC; CUDA/HIP default to non-RDC.
+  bool IsRDCMode = Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
+                                /*Default=*/IsSYCL);
 
   auto LTOMode = TC.getLTOMode(Args, JA.getOffloadingDeviceKind());
   bool IsUsingLTO = LTOMode != LTOK_None;
@@ -7390,9 +7391,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                       options::OPT_fno_hip_kernel_arg_name);
   }
 
+  if ((IsCuda || IsHIP || IsSYCL) && IsRDCMode)
+    CmdArgs.push_back("-fgpu-rdc");
+
   if (IsCuda || IsHIP) {
-    if (IsRDCMode)
-      CmdArgs.push_back("-fgpu-rdc");
     Args.addOptInFlag(CmdArgs, options::OPT_fgpu_defer_diag,
                       options::OPT_fno_gpu_defer_diag);
     if (Args.hasFlag(options::OPT_fgpu_exclude_wrong_side_overloads,
