@@ -50,6 +50,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
+#include <array>
 #include <cstdint>
 #include <optional>
 
@@ -1186,21 +1187,76 @@ void CGHLSLRuntime::emitSPIRVUserSemanticStore(
                            VariableName.str());
 }
 
-llvm::Value *
-CGHLSLRuntime::emitDXILUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
-                                        HLSLAppliedSemanticAttr *Semantic,
-                                        std::optional<unsigned> Index) {
-  Twine BaseName = Twine(Semantic->getAttrName()->getName());
-  Twine VariableName = BaseName.concat(Twine(Index.value_or(0)));
+namespace {
+// Describes how a semantic leaf lowers to signature rows
+struct SemanticShape {
+  SmallVector<unsigned> Dimensions; // Empty dims denotes a scalar
+  unsigned Cols;
+  QualType RowType;
 
-  // DXIL packing rules etc shall be handled here.
-  // FIXME: generate proper sigpoint, index, col, row values.
-  // FIXME: also DXIL loads vectors element by element.
-  SmallVector<Value *> Args{B.getInt32(4), B.getInt32(0), B.getInt32(0),
-                            B.getInt8(0),
-                            llvm::PoisonValue::get(B.getInt32Ty())};
+  unsigned getNumRows() const {
+    unsigned Rows = 1;
+    for (unsigned Dimension : Dimensions)
+      Rows *= Dimension;
+    return Rows;
+  }
 
-  llvm::Intrinsic::ID IntrinsicID = llvm::Intrinsic::dx_load_input;
+  SmallVector<unsigned> getArrayIndicesForRow(unsigned Row) const {
+    assert(Row < getNumRows() && "row exceeds semantic shape");
+
+    SmallVector<unsigned> Indices(Dimensions.size());
+    for (auto [Index, Dimension] :
+         llvm::zip_equal(llvm::reverse(Indices), llvm::reverse(Dimensions))) {
+      Index = Row % Dimension;
+      Row /= Dimension;
+    }
+    return Indices;
+  }
+};
+} // namespace
+
+// Returns the QualType of a semantic leaf declarator. For a function the
+// declared return type is used, otherwise the declared type.
+static QualType getSemanticLeafType(const clang::DeclaratorDecl *Decl) {
+  if (const auto *FD = dyn_cast<clang::FunctionDecl>(Decl))
+    return FD->getDeclaredReturnType();
+  return Decl->getType();
+}
+
+// Walks through the surrounding constant array types of \p Ty, collecting their
+// dimensions until reaching a scalar, vector, or matrix leaf.
+static SemanticShape getSemanticShape(ASTContext &Ctx, QualType Ty) {
+  SemanticShape Shape{{}, 1, Ty};
+  while (const ConstantArrayType *CAT =
+             Ctx.getAsConstantArrayType(Shape.RowType)) {
+    Shape.Dimensions.push_back(CAT->getSize().getZExtValue());
+    Shape.RowType = CAT->getElementType();
+  }
+
+  if (const auto *VT = Shape.RowType->getAs<clang::VectorType>()) {
+    Shape.Cols = VT->getNumElements();
+  } else if (const auto *MT =
+                 Shape.RowType->getAs<clang::ConstantMatrixType>()) {
+    // FIXME: a matrix leaf lowers to one row per matrix row but if column_major
+    // is specified we transpose the num rows and num cols, this depends on
+    // #211977 to resolve
+    Shape.Cols = MT->getNumColumns();
+  }
+
+  return Shape;
+}
+
+llvm::Value *CGHLSLRuntime::emitDXILUserSemanticLoad(
+    llvm::IRBuilder<> &B, llvm::Type *Type, const clang::DeclaratorDecl *Decl,
+    HLSLAppliedSemanticAttr *Semantic, std::optional<unsigned> Index) {
+  StringRef Name = Semantic->getAttrName()->getName();
+  SemanticShape Shape =
+      getSemanticShape(CGM.getContext(), getSemanticLeafType(Decl));
+
+  llvm::Type *RowTy = CGM.getTypes().ConvertTypeForMem(Shape.RowType);
+
+  llvm::Function *IntrFn = llvm::Intrinsic::getOrInsertDeclaration(
+      B.GetInsertBlock()->getModule(), llvm::Intrinsic::dx_load_input, {RowTy});
 
   SmallVector<OperandBundleDef, 1> OB;
   if (auto *Token = getConvergenceToken(*B.GetInsertBlock())) {
@@ -1208,22 +1264,49 @@ CGHLSLRuntime::emitDXILUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
     OB.emplace_back("convergencectrl", bundleArgs);
   }
 
-  llvm::Function *IntrFn = llvm::Intrinsic::getOrInsertDeclaration(
-      B.GetInsertBlock()->getModule(), IntrinsicID, {Type});
-  llvm::Value *Value = B.CreateCall(IntrFn, Args, OB, VariableName);
-  return Value;
+  unsigned SigId = DXILInputSemanticIndex++;
+
+  llvm::Type *LeafTy = CGM.getTypes().ConvertType(Shape.RowType);
+  llvm::Value *Result = llvm::PoisonValue::get(Type);
+
+  const unsigned NumRows = Shape.getNumRows();
+
+  for (unsigned Row = 0; Row < NumRows; ++Row) {
+    SmallVector<unsigned> Indices = Shape.getArrayIndicesForRow(Row);
+    std::array<Value *, 4> Args{
+        /*SigElementId=*/B.getInt32(SigId),
+        /*RowIndex=*/B.getInt32(Row),
+        /*ColIndex=*/B.getInt8(0),
+        /*GsVertexOrPrimIndex=*/llvm::PoisonValue::get(B.getInt32Ty())};
+    llvm::Value *Value =
+        B.CreateCall(IntrFn, Args, OB, Twine(Name).concat(Twine(Row)));
+    // Booleans use their memory representation in DXIL signatures, but
+    // function parameters use their value representation.
+    if (Value->getType() != LeafTy) {
+      assert(Shape.RowType->hasBooleanRepresentation() &&
+             "unexpected semantic load type mismatch");
+      Value = B.CreateICmpNE(
+          Value, llvm::Constant::getNullValue(Value->getType()), "loadedv");
+    }
+
+    Result =
+        Indices.empty() ? Value : B.CreateInsertValue(Result, Value, Indices);
+  }
+  return Result;
 }
 
 void CGHLSLRuntime::emitDXILUserSemanticStore(llvm::IRBuilder<> &B,
                                               llvm::Value *Source,
+                                              const clang::DeclaratorDecl *Decl,
                                               HLSLAppliedSemanticAttr *Semantic,
                                               std::optional<unsigned> Index) {
-  // DXIL packing rules etc shall be handled here.
-  // FIXME: generate proper sigpoint, index, col, row values.
-  SmallVector<Value *> Args{B.getInt32(4), B.getInt32(0), B.getInt32(0),
-                            B.getInt8(0), Source};
+  SemanticShape Shape =
+      getSemanticShape(CGM.getContext(), getSemanticLeafType(Decl));
+  llvm::Type *RowTy = CGM.getTypes().ConvertTypeForMem(Shape.RowType);
 
-  llvm::Intrinsic::ID IntrinsicID = llvm::Intrinsic::dx_store_output;
+  llvm::Function *IntrFn = llvm::Intrinsic::getOrInsertDeclaration(
+      B.GetInsertBlock()->getModule(), llvm::Intrinsic::dx_store_output,
+      {RowTy});
 
   SmallVector<OperandBundleDef, 1> OB;
   if (auto *Token = getConvergenceToken(*B.GetInsertBlock())) {
@@ -1231,9 +1314,27 @@ void CGHLSLRuntime::emitDXILUserSemanticStore(llvm::IRBuilder<> &B,
     OB.emplace_back("convergencectrl", bundleArgs);
   }
 
-  llvm::Function *IntrFn = llvm::Intrinsic::getOrInsertDeclaration(
-      B.GetInsertBlock()->getModule(), IntrinsicID, {Source->getType()});
-  B.CreateCall(IntrFn, Args, OB);
+  unsigned SigId = DXILOutputSemanticIndex++;
+
+  const unsigned NumRows = Shape.getNumRows();
+  for (unsigned Row = 0; Row < NumRows; ++Row) {
+    SmallVector<unsigned> Indices = Shape.getArrayIndicesForRow(Row);
+    llvm::Value *Val =
+        Indices.empty() ? Source : B.CreateExtractValue(Source, Indices);
+
+    // Booleans use their memory representation in DXIL signatures, but direct
+    // function results use their value representation.
+    if (Val->getType() != RowTy) {
+      assert(Shape.RowType->hasBooleanRepresentation() &&
+             "unexpected semantic store type mismatch");
+      Val = B.CreateZExt(Val, RowTy, "storedv");
+    }
+
+    std::array<Value *, 4> Args{/*SigElementId=*/B.getInt32(SigId),
+                                /*RowIndex=*/B.getInt32(Row),
+                                /*ColIndex=*/B.getInt8(0), /*Value=*/Val};
+    B.CreateCall(IntrFn, Args, OB);
+  }
 }
 
 llvm::Value *CGHLSLRuntime::emitUserSemanticLoad(
@@ -1244,7 +1345,7 @@ llvm::Value *CGHLSLRuntime::emitUserSemanticLoad(
     return emitSPIRVUserSemanticLoad(B, FD, Type, Decl, Semantic, Index);
 
   if (CGM.getTarget().getTriple().isDXIL())
-    return emitDXILUserSemanticLoad(B, Type, Semantic, Index);
+    return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index);
 
   llvm_unreachable("Unsupported target for user-semantic load.");
 }
@@ -1257,7 +1358,7 @@ void CGHLSLRuntime::emitUserSemanticStore(IRBuilder<> &B, llvm::Value *Source,
     return emitSPIRVUserSemanticStore(B, Source, Decl, Semantic, Index);
 
   if (CGM.getTarget().getTriple().isDXIL())
-    return emitDXILUserSemanticStore(B, Source, Semantic, Index);
+    return emitDXILUserSemanticStore(B, Source, Decl, Semantic, Index);
 
   llvm_unreachable("Unsupported target for user-semantic load.");
 }
@@ -1312,7 +1413,7 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
                                       Semantic->getAttrName()->getName(),
                                       /* BuiltIn::FragCoord */ 15);
       if (CGM.getTarget().getTriple().isDXIL())
-        return emitDXILUserSemanticLoad(B, Type, Semantic, Index);
+        return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index);
     }
 
     if (ST == Triple::EnvironmentType::Vertex) {
@@ -1327,7 +1428,7 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
                                       Semantic->getAttrName()->getName(),
                                       /* BuiltIn::VertexIndex */ 42);
       else
-        return emitDXILUserSemanticLoad(B, Type, Semantic, Index);
+        return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index);
     }
   }
 
@@ -1357,7 +1458,7 @@ void CGHLSLRuntime::emitSystemSemanticStore(IRBuilder<> &B, llvm::Value *Source,
   std::string SemanticName = Semantic->getAttrName()->getName().upper();
   if (SemanticName == "SV_POSITION") {
     if (CGM.getTarget().getTriple().isDXIL()) {
-      emitDXILUserSemanticStore(B, Source, Semantic, Index);
+      emitDXILUserSemanticStore(B, Source, Decl, Semantic, Index);
       return;
     }
 
@@ -1485,6 +1586,9 @@ CGHLSLRuntime::handleSemanticStore(
 
 void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
                                       llvm::Function *Fn) {
+  DXILInputSemanticIndex = 0;
+  DXILOutputSemanticIndex = 0;
+
   llvm::Module &M = CGM.getModule();
   llvm::LLVMContext &Ctx = M.getContext();
   auto *EntryTy = llvm::FunctionType::get(llvm::Type::getVoidTy(Ctx), false);

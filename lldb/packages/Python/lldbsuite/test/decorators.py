@@ -261,6 +261,20 @@ def _xfailForVariant(variant_name, expected_fn, bugnumber=None):
         return expectedFailure_impl
 
 
+def FreshTestFunction(src):
+    """Return a private copy of *src* for one generated test class to own.
+
+    Several decorators record their state on the function object they are
+    handed instead of on a wrapper.
+    """
+
+    @wraps(src)
+    def copy(self):
+        return src(self)
+
+    return copy
+
+
 def _skipForVariant(variant_name, expected_fn, bugnumber=None):
     """Mark a test method as skipped for a specific variant dimension.
 
@@ -1213,6 +1227,11 @@ def requirePOSIX(func):
 def requireSignals(func):
     """Mark the item as requiring POSIX signal support on the target."""
     return requireNotPlatform(["windows", "wasip1", "wasi"])(func)
+
+
+def requireExpressionEvaluation(func):
+    """Mark the item as requiring expression evaluation."""
+    return requireNotWasm(func)
 
 
 def requireNotWasm(func):

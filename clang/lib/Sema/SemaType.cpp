@@ -9353,7 +9353,7 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     }
     case ParsedAttr::AT_HLSLResourceClass:
     case ParsedAttr::AT_HLSLResourceDimension:
-    case ParsedAttr::AT_HLSLROV:
+    case ParsedAttr::AT_HLSLIsROV:
     case ParsedAttr::AT_HLSLRawBuffer:
     case ParsedAttr::AT_HLSLIsArray:
     case ParsedAttr::AT_HLSLIsMultiSampled:

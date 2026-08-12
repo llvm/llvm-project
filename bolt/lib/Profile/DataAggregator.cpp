@@ -84,12 +84,11 @@ static cl::opt<bool> ParseMemProfile(
              "on by default unless `--itrace` is set."),
     cl::init(true), cl::cat(AggregatorCategory));
 
-static cl::opt<unsigned long long>
-FilterPID("pid",
-  cl::desc("only use samples from process with specified PID"),
-  cl::init(0),
-  cl::Optional,
-  cl::cat(AggregatorCategory));
+static cl::list<unsigned long long>
+    FilterPID("pid",
+              cl::desc("only use samples from process with specified PID(s) "
+                       "(comma-separated)"),
+              cl::CommaSeparated, cl::ZeroOrMore, cl::cat(AggregatorCategory));
 
 static cl::opt<bool> ImputeTraceFallthrough(
     "impute-trace-fall-through",
@@ -622,18 +621,27 @@ Error DataAggregator::generatePerfScriptData() {
 }
 
 Error DataAggregator::filterBinaryMMapInfo() {
-  if (opts::FilterPID) {
-    auto MMapInfoIter = BinaryMMapInfo.find(opts::FilterPID);
-    if (MMapInfoIter != BinaryMMapInfo.end()) {
-      MMapInfo MMap = MMapInfoIter->second;
-      BinaryMMapInfo.clear();
-      BinaryMMapInfo.insert(std::make_pair(MMap.PID, MMap));
-    } else {
+  if (!opts::FilterPID.empty()) {
+    std::unordered_map<uint64_t, MMapInfo> FilteredMMapInfo;
+    for (unsigned long long PID : opts::FilterPID) {
+      auto MMapInfoIter = BinaryMMapInfo.find(PID);
+      if (MMapInfoIter != BinaryMMapInfo.end())
+        FilteredMMapInfo.insert(*MMapInfoIter);
+    }
+    if (FilteredMMapInfo.empty()) {
       if (errs().has_colors())
         errs().changeColor(raw_ostream::RED);
-      errs() << "PERF2BOLT-ERROR: could not find a profile matching PID \""
-             << opts::FilterPID << "\""
-             << " for binary \"" << BC->getFilename() << "\".";
+      errs() << "PERF2BOLT-ERROR: could not find a profile matching ";
+      if (opts::FilterPID.size() == 1) {
+        errs() << "PID \"" << opts::FilterPID[0] << "\"";
+      } else {
+        errs() << "any requested PID(s) \"";
+        for (size_t I = 0; I < opts::FilterPID.size(); ++I)
+          errs() << opts::FilterPID[I]
+                 << (I == opts::FilterPID.size() - 1 ? "" : ",");
+        errs() << "\"";
+      }
+      errs() << " for binary \"" << BC->getFilename() << "\".";
       assert(!BinaryMMapInfo.empty() && "No memory map for matching binary");
       errs() << " Profile for the following process is available:\n";
       for (std::pair<const uint64_t, MMapInfo> &MMI : BinaryMMapInfo)
@@ -646,6 +654,7 @@ Error DataAggregator::filterBinaryMMapInfo() {
       return createStringError(std::errc::not_supported,
                                "could not find a profile matching PID");
     }
+    BinaryMMapInfo = std::move(FilteredMMapInfo);
   }
   return Error::success();
 }
