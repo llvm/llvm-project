@@ -14,6 +14,7 @@
 #include "MCTargetDesc/RISCVBaseInfo.h"
 #include "MCTargetDesc/RISCVMatInt.h"
 #include "RISCV.h"
+#include "RISCVStateAttributes.h"
 #include "RISCVMachineFunctionInfo.h"
 #include "RISCVSubtarget.h"
 #include "llvm/ADT/STLExtras.h"
@@ -3623,6 +3624,9 @@ bool RISCVInstrInfo::isFunctionSafeToOutlineFrom(
   // Don't outline from functions with section markings; the program could
   // expect that all the code is in the named section.
   if (F.hasSection())
+    return false;
+
+  if (RISCVState::hasAttribute(F))
     return false;
 
   // It's safe to outline from MF.
