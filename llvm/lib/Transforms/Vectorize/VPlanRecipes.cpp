@@ -91,6 +91,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPReductionPHISC:
   case VPScalarIVStepsSC:
   case VPPredInstPHISC:
+  case VPExpandSCEVSC:
     return false;
   case VPBlendSC:
   case VPReductionEVLSC:
@@ -145,6 +146,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPScalarIVStepsSC:
   case VPWidenStoreEVLSC:
   case VPWidenStoreSC:
+  case VPExpandSCEVSC:
     return false;
   case VPBlendSC:
   case VPReductionEVLSC:
@@ -181,6 +183,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPReductionPHISC:
   case VPPredInstPHISC:
   case VPVectorEndPointerSC:
+  case VPExpandSCEVSC:
     return false;
   case VPInstructionSC: {
     auto *VPI = cast<VPInstruction>(this);
@@ -2971,9 +2974,6 @@ VPWidenIntOrFpInductionRecipe::computeCost(ElementCount VF,
                                            VPCostContext &Ctx) const {
   // A widened induction generates a vector phi and increments it by the
   // splatted step each iteration.
-  // TODO: Also handle truncated inductions.
-  assert(!getTruncInst() &&
-         "truncated inductions should be costed by the legacy model");
   const InductionDescriptor &ID = getInductionDescriptor();
   InstructionCost Cost = Ctx.TTI.getCFInstrCost(Instruction::PHI, Ctx.CostKind);
   Type *StepTy = getScalarType();

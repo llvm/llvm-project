@@ -150,6 +150,15 @@ declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.add.im2col.3d(ptr addrspace(
 declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.add.im2col.4d(ptr addrspace(3), ptr, i32, i32, i32, i32, i64, i1)
 declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.add.im2col.5d(ptr addrspace(3), ptr, i32, i32, i32, i32, i32, i64, i1)
 
+declare void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6), i64, i64, i32, i1, i32, i32, i32)
+declare void @llvm.nvvm.tcgen05.mma.sp.shared(ptr addrspace(6), i64, i64, i32, i1, ptr addrspace(6), i32, i32, i32)
+declare void @llvm.nvvm.tcgen05.mma.sp.tensor.ashift(ptr addrspace(6), ptr addrspace(6), i64, i32, i1, ptr addrspace(6), i32, i32, i32)
+declare void @llvm.nvvm.tcgen05.mma.shared.disable_output_lane.cg1(ptr addrspace(6), i64, i64, i32, i1, <4 x i32>, i32, i32)
+declare void @llvm.nvvm.tcgen05.mma.sp.tensor.disable_output_lane.cg2.ashift(ptr addrspace(6), ptr addrspace(6), i64, i32, i1, ptr addrspace(6), <8 x i32>, i32, i32)
+declare void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale(ptr addrspace(6), i64, i64, i32, i1, ptr addrspace(6), ptr addrspace(6), i32, i32)
+declare void @llvm.nvvm.tcgen05.mma.sp.shared.mxf4.block_scale.block32(ptr addrspace(6), i64, i64, i32, i1, ptr addrspace(6), ptr addrspace(6), ptr addrspace(6), i32, i32)
+declare void @llvm.nvvm.tcgen05.mma.sp.tensor.mxf4nvf4.block_scale.block16(ptr addrspace(6), ptr addrspace(6), i64, i32, i1, ptr addrspace(6), ptr addrspace(6), ptr addrspace(6), i32, i32)
+
 declare void @llvm.nvvm.barrier0()
 declare void @llvm.nvvm.barrier.n(i32)
 declare void @llvm.nvvm.bar.sync(i32)
@@ -570,6 +579,65 @@ define void @nvvm_cp_async_bulk_tensor_reduce_shapes(ptr addrspace(3) %src, ptr 
   call void @llvm.nvvm.cp.async.bulk.tensor.reduce.add.im2col.4d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i64 %ch, i1 true)
 ; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.5d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i64 %ch, /* red_op=add */ i32 0, i1 false)
   call void @llvm.nvvm.cp.async.bulk.tensor.reduce.add.im2col.5d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i64 %ch, i1 false)
+  ret void
+}
+
+; CHECK-LABEL: @nvvm_tcgen05_mma_default_collector_b
+define void @nvvm_tcgen05_mma_default_collector_b(
+    ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor,
+    i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d,
+    ptr addrspace(6) %spmetadata, ptr addrspace(6) %scale_a,
+    ptr addrspace(6) %scale_b, <4 x i32> %disable_output_lanev4,
+    <8 x i32> %disable_output_lanev8) {
+; CHECK: call void @llvm.nvvm.tcgen05.mma.shared({{.*}}/* kind=f16 */ i32 0, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  call void @llvm.nvvm.tcgen05.mma.shared(
+    ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc,
+    i1 %enable_inp_d, i32 0, i32 1, i32 0)
+
+; CHECK: call void @llvm.nvvm.tcgen05.mma.sp.shared({{.*}}/* kind=tf32 */ i32 1, /* cta_group= */ i32 2, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  call void @llvm.nvvm.tcgen05.mma.sp.shared(
+    ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc,
+    i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i32 1, i32 2,
+    i32 1)
+
+; CHECK: call void @llvm.nvvm.tcgen05.mma.sp.tensor.ashift({{.*}}/* kind=f8f6f4 */ i32 2, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  call void @llvm.nvvm.tcgen05.mma.sp.tensor.ashift(
+    ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b,
+    i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata,
+    i32 2, i32 1, i32 0)
+
+; CHECK: call void @llvm.nvvm.tcgen05.mma.shared.disable_output_lane.cg1({{.*}}/* kind=f16 */ i32 0, /* collector_a=use */ i32 3, /* collector_b=discard */ i32 0)
+  call void @llvm.nvvm.tcgen05.mma.shared.disable_output_lane.cg1(
+    ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc,
+    i1 %enable_inp_d, <4 x i32> %disable_output_lanev4, i32 0,
+    i32 3)
+
+; CHECK: call void @llvm.nvvm.tcgen05.mma.sp.tensor.disable_output_lane.cg2.ashift({{.*}}/* kind=tf32 */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  call void @llvm.nvvm.tcgen05.mma.sp.tensor.disable_output_lane.cg2.ashift(
+    ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b,
+    i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata,
+    <8 x i32> %disable_output_lanev8, i32 1, i32 0)
+
+; CHECK: call void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale({{.*}}/* cta_group= */ i32 2, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  call void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale(
+    ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc,
+    i1 %enable_inp_d, ptr addrspace(6) %scale_a,
+    ptr addrspace(6) %scale_b, i32 2, i32 1)
+
+; CHECK: call void @llvm.nvvm.tcgen05.mma.sp.shared.mxf4.block_scale.block32({{.*}}/* cta_group= */ i32 1, /* collector_a=fill */ i32 2, /* collector_b=discard */ i32 0)
+  call void @llvm.nvvm.tcgen05.mma.sp.shared.mxf4.block_scale.block32(
+    ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc,
+    i1 %enable_inp_d, ptr addrspace(6) %spmetadata,
+    ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1,
+    i32 2)
+
+; CHECK: call void @llvm.nvvm.tcgen05.mma.sp.tensor.mxf4nvf4.block_scale.block16({{.*}}/* cta_group= */ i32 1, /* collector_a=use */ i32 3, /* collector_b=discard */ i32 0)
+  call void @llvm.nvvm.tcgen05.mma.sp.tensor.mxf4nvf4.block_scale.block16(
+    ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b,
+    i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata,
+    ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1,
+    i32 3)
+
   ret void
 }
 
