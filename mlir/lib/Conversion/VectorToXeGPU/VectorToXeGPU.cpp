@@ -136,10 +136,7 @@ static xegpu::CreateNdDescOp createNdDescriptor(PatternRewriter &rewriter,
   // Keep the memref itself as the source (static or dynamic) rather than
   // collapsing it to an i64 base address. The memref value carries the base
   // pointer *and* the (possibly dynamic) offset/shape/strides, which the XeGPU
-  // -> XeVM lowering recovers via memref metadata. In particular, for a >2D
-  // descriptor the leading (batch) offsets stay on the load/store and are
-  // folded into the base pointer at lowering time, so a dynamic-shape source
-  // never needs a per-batch subview (which could not guarantee a valid base).
+  // -> XeVM lowering recovers via memref metadata.
   return xegpu::CreateNdDescOp::create(rewriter, loc, descType, src);
 }
 

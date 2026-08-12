@@ -278,33 +278,34 @@ gpu.func @load_dynamic_source3(%source: memref<?x?x?x?x?xf32>,
 // -----
 // A dynamic high-D read whose vector rank equals the memref rank keeps the
 // *whole* memref as the create_nd source on the nd path: no rank-collapsing
-// memref.subview is emitted and the leading (batch) offsets stay on the
-// load_nd (they are folded into the base pointer later, at XeVM lowering).
+// memref.subview is emitted and the leading (batch) offsets (here the non-unit
+// 2x4 dims) stay on the load_nd. They are folded into the base pointer later,
+// at XeVM lowering, once blocking has unrolled them to unit tiles.
 gpu.module @xevm_module {
 gpu.func @load_high_dim_dyn(%source: memref<?x?x8x16xf16>,
-    %i: index, %j: index, %k: index, %l: index) -> vector<1x1x8x16xf16> {
+    %i: index, %j: index, %k: index, %l: index) -> vector<2x4x8x16xf16> {
   %pad = arith.constant 0.0 : f16
   %0 = vector.transfer_read %source[%i, %j, %k, %l], %pad
     {in_bounds = [true, true, true, true]}
-    : memref<?x?x8x16xf16>, vector<1x1x8x16xf16>
-  gpu.return %0 : vector<1x1x8x16xf16>
+    : memref<?x?x8x16xf16>, vector<2x4x8x16xf16>
+  gpu.return %0 : vector<2x4x8x16xf16>
 }
 
 // LOAD-ND-LABEL:  @load_high_dim_dyn(
 // LOAD-ND-SAME:   %[[SRC:.+]]: memref<?x?x8x16xf16>,
 // LOAD-ND-SAME:   %[[OFF0:.+]]: index, %[[OFF1:.+]]: index, %[[OFF2:.+]]: index, %[[OFF3:.+]]: index
 // LOAD-ND-NOT:    memref.subview
-// LOAD-ND:        %[[DESC:.+]] = xegpu.create_nd_tdesc %[[SRC]] : memref<?x?x8x16xf16> -> !xegpu.tensor_desc<1x1x8x16xf16, #xegpu.block_tdesc_attr<boundary_check = false>>
-// LOAD-ND:        %[[VEC:.+]] = xegpu.load_nd %[[DESC]][%[[OFF0]], %[[OFF1]], %[[OFF2]], %[[OFF3]]]{{.*}}-> vector<1x1x8x16xf16>
+// LOAD-ND:        %[[DESC:.+]] = xegpu.create_nd_tdesc %[[SRC]] : memref<?x?x8x16xf16> -> !xegpu.tensor_desc<2x4x8x16xf16, #xegpu.block_tdesc_attr<boundary_check = false>>
+// LOAD-ND:        %[[VEC:.+]] = xegpu.load_nd %[[DESC]][%[[OFF0]], %[[OFF1]], %[[OFF2]], %[[OFF3]]]{{.*}}-> vector<2x4x8x16xf16>
 // LOAD-ND:        return %[[VEC]]
 
 // LOAD-GATHER-LABEL:  @load_high_dim_dyn(
 // LOAD-GATHER-SAME:   %[[SRC:.+]]: memref<?x?x8x16xf16>
-// LOAD-GATHER:        %[[CST:.+]] = arith.constant dense<true> : vector<1x1x8x16xi1>
+// LOAD-GATHER:        %[[CST:.+]] = arith.constant dense<true> : vector<2x4x8x16xi1>
 // LOAD-GATHER:        memref.extract_strided_metadata %[[SRC]]
 // LOAD-GATHER:        %[[PTR:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<?x?x8x16xf16> -> index
 // LOAD-GATHER:        %[[PTR_I:.+]] = arith.index_cast %[[PTR]] : index to i64
-// LOAD-GATHER:        %[[VEC:.+]] = xegpu.load %[[PTR_I]]{{\[}}%{{.+}}{{\]}}, %[[CST]] : i64, vector<1x1x8x16xindex>, vector<1x1x8x16xi1> -> vector<1x1x8x16xf16>
+// LOAD-GATHER:        %[[VEC:.+]] = xegpu.load %[[PTR_I]]{{\[}}%{{.+}}{{\]}}, %[[CST]] : i64, vector<2x4x8x16xindex>, vector<2x4x8x16xi1> -> vector<2x4x8x16xf16>
 // LOAD-GATHER:        return %[[VEC]]
 }
 
