@@ -312,10 +312,9 @@ void sequence_container_benchmarks(std::string container) {
   /////////////////////////
   // Appending elements
   /////////////////////////
-  static constexpr bool has_push_back    = requires(Container c, ValueType v) { c.push_back(v); };
-  static constexpr bool has_capacity     = requires(Container c) { c.capacity(); };
-  static constexpr bool has_reserve      = requires(Container c) { c.reserve(0); };
-  static constexpr bool has_append_range = requires(Container c, std::vector<ValueType> v) { c.append_range(v); };
+  static constexpr bool has_push_back = requires(Container c, ValueType v) { c.push_back(v); };
+  static constexpr bool has_capacity  = requires(Container c) { c.capacity(); };
+  static constexpr bool has_reserve   = requires(Container c) { c.reserve(0); };
   if constexpr (has_push_back) {
     if constexpr (has_capacity) {
       // For containers where we can observe capacity(), push_back a single element
@@ -399,26 +398,26 @@ void sequence_container_benchmarks(std::string container) {
         }
       });
 
-    if constexpr (has_append_range) {
-      for (auto gen : generators)
-        bench("append_range() (into empty container)" + tostr(gen), [gen](auto& state) {
-          auto const size = state.range(0);
-          std::vector<ValueType> in;
-          std::generate_n(std::back_inserter(in), size, gen);
-          DoNotOptimizeData(in);
+#if defined(__cpp_lib_containers_ranges) && __cpp_lib_containers_ranges >= 202202L
+    for (auto gen : generators)
+      bench("append_range() (into empty container)" + tostr(gen), [gen](auto& state) {
+        auto const size = state.range(0);
+        std::vector<ValueType> in;
+        std::generate_n(std::back_inserter(in), size, gen);
+        DoNotOptimizeData(in);
 
-          Container c;
+        Container c;
+        DoNotOptimizeData(c);
+        for (auto _ : state) {
+          c.append_range(in);
           DoNotOptimizeData(c);
-          for (auto _ : state) {
-            c.append_range(in);
-            DoNotOptimizeData(c);
 
-            state.PauseTiming();
-            c.clear();
-            state.ResumeTiming();
-          }
-        });
-    }
+          state.PauseTiming();
+          c.clear();
+          state.ResumeTiming();
+        }
+      });
+#endif
   }
 
   /////////////////////////
