@@ -307,7 +307,10 @@ def hasAnyLocale(config, locales):
     program = (
         """
     #include <stddef.h>
-    #if defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_LOCALIZATION
+
+    #include "test_macros.h"
+
+    #ifdef TEST_HAS_NO_LOCALIZATION
       int main(int, char**) { return 1; }
     #else
       #include <locale.h>
@@ -330,32 +333,22 @@ def hasAnyLocale(config, locales):
     return programSucceeds(config, program)
 
 
-@_memoizeExpensiveOperation(lambda c, flags="": (c.substitutions, c.environment, flags))
-def compilerMacros(config, flags=""):
+def _macrosFromSource(config, source, flags=""):
     """
-    Return a dictionary of predefined compiler macros.
+    Preprocess the given source and return a dictionary of the macros it defines.
 
     The keys are strings representing macros, and the values are strings
     representing what each macro is defined to.
-
-    If the optional `flags` argument (a string) is provided, these flags will
-    be added to the compiler invocation when generating the macros.
     """
     with _makeConfigTest(config) as test:
         with open(test.getSourcePath(), "w") as sourceFile:
-            sourceFile.write(
-                """
-      #if __has_include(<__config>)
-      #  include <__config>
-      #endif
-      """
-            )
+            sourceFile.write(source)
         unparsedOutput, err, exitCode, _, cmd, _ = _executeWithFakeConfig(
             test, ["%{{cxx}} %s -dM -E %{{flags}} %{{compile_flags}} {}".format(flags)]
         )
         if exitCode != 0:
             raise ConfigurationCompilationError(
-                "Failed to retrieve compiler macros, compiler invocation is:\n{}\nstderr is:\n{}".format(
+                "Failed to retrieve macros, compiler invocation is:\n{}\nstderr is:\n{}".format(
                     cmd, err
                 )
             )
@@ -368,6 +361,39 @@ def compilerMacros(config, flags=""):
             macro, _, value = line.partition(" ")
             parsedMacros[macro] = value
         return parsedMacros
+
+
+@_memoizeExpensiveOperation(lambda c, flags="": (c.substitutions, c.environment, flags))
+def compilerMacros(config, flags=""):
+    """
+    Return a dictionary of predefined compiler macros.
+
+    The keys are strings representing macros, and the values are strings
+    representing what each macro is defined to.
+
+    If the optional `flags` argument (a string) is provided, these flags will
+    be added to the compiler invocation when generating the macros.
+    """
+    source = """
+    #if __has_include(<__config>)
+    #  include <__config>
+    #endif
+    """
+    return _macrosFromSource(config, source, flags)
+
+
+@_memoizeExpensiveOperation(lambda c, flags="": (c.substitutions, c.environment, flags))
+def testMacros(config, flags=""):
+    """
+    Return a dictionary of the macros defined by the test suite's <test_macros.h>.
+
+    The keys are strings representing macros, and the values are strings
+    representing what each macro is defined to.
+
+    If the optional `flags` argument (a string) is provided, these flags will
+    be added to the compiler invocation when generating the macros.
+    """
+    return _macrosFromSource(config, "#include <test_macros.h>\n", flags)
 
 
 def featureTestMacros(config, flags=""):

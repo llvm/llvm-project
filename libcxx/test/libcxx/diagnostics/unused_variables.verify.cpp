@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // Make sure that we warn on unused variables of libc++ classes which behave like value types.
+// ADDITIONAL_COMPILE_FLAGS: -Wunused-variable
 
 #include <deque>
 #include <forward_list>

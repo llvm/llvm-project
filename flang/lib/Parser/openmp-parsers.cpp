@@ -209,7 +209,13 @@ struct OmpDirectiveNameParser {
     for (const NameWithId &nid : directives_starting_with(next)) {
       if (attempt(Token(nid.first.data())).Parse(state)) {
         OmpDirectiveName n;
-        n.v = nid.second;
+        // We can't tell which one "ordered" corresponds to here,
+        // so normalize it to OMPD_ordered_standalone.
+        if (nid.second == llvm::omp::Directive::OMPD_ordered_blockassoc) {
+          n.v = llvm::omp::Directive::OMPD_ordered_standalone;
+        } else {
+          n.v = nid.second;
+        }
         n.source = parser::CharBlock(begin, state.GetLocation());
         return n;
       }
@@ -989,6 +995,9 @@ struct OmpMapTypeModifierParser {
 
 TYPE_PARSER(OmpMapTypeModifierParser{})
 
+TYPE_PARSER(construct<OmpMemSpace>( //
+    "MEMSPACE" >> parenthesized(scalarIntExpr)))
+
 TYPE_PARSER(construct<OmpOrderModifier>(
     "REPRODUCIBLE" >> pure(OmpOrderModifier::Value::Reproducible) ||
     "UNCONSTRAINED" >> pure(OmpOrderModifier::Value::Unconstrained)))
@@ -1043,6 +1052,9 @@ TYPE_PARSER(construct<OmpTaskDependenceType>(
     "INOUTSET"_id >> pure(OmpTaskDependenceType::Value::Inoutset) ||
     "MUTEXINOUTSET" >> pure(OmpTaskDependenceType::Value::Mutexinoutset) ||
     "OUT" >> pure(OmpTaskDependenceType::Value::Out)))
+
+TYPE_PARSER(construct<OmpTraitsArray>( //
+    "TRAITS" >> parenthesized(indirect(expr))))
 
 TYPE_PARSER(construct<OmpVariableCategory>(
     "AGGREGATE" >> pure(OmpVariableCategory::Value::Aggregate) ||
@@ -1192,6 +1204,12 @@ TYPE_PARSER(sourced(construct<OmpTaskReductionClause::Modifier>(
 
 TYPE_PARSER(sourced(
     construct<OmpThreadLimitClause::Modifier>(Parser<OmpDimsModifier>{})))
+
+TYPE_PARSER(sourced(construct<OmpUsesAllocatorsClause::AllocatorSpec::Modifier>(
+    sourced(construct<OmpUsesAllocatorsClause::AllocatorSpec::Modifier>(
+                Parser<OmpMemSpace>{}) ||
+        construct<OmpUsesAllocatorsClause::AllocatorSpec::Modifier>(
+            Parser<OmpTraitsArray>{})))))
 
 TYPE_PARSER(sourced(construct<OmpWhenClause::Modifier>( //
     Parser<OmpContextSelector>{})))
@@ -1554,6 +1572,55 @@ TYPE_PARSER(construct<OmpSeverityClause>(
 TYPE_PARSER(construct<OmpMessageClause>(expr))
 
 TYPE_PARSER(construct<OmpHoldsClause>(indirect(expr)))
+
+// The deprecated "allocator[(traits-array)]" form is normalized into the 5.2
+// representation so that both surface syntaxes share one parse tree shape.
+static OmpUsesAllocatorsClause::AllocatorSpec makeLegacyAllocatorSpec(
+    Name &&name, common::Indirection<Expr> &&traits) {
+  using AllocatorSpec = OmpUsesAllocatorsClause::AllocatorSpec;
+  CharBlock traitsSource{traits.value().source};
+  AllocatorSpec::Modifier mod{OmpTraitsArray{std::move(traits)}};
+  mod.source = traitsSource;
+  std::list<AllocatorSpec::Modifier> mods;
+  mods.emplace_back(std::move(mod));
+
+  CharBlock allocatorSource{name.source};
+  Expr allocator{Designator{DataRef{std::move(name)}}};
+  allocator.source = allocatorSource;
+  return AllocatorSpec{std::move(mods),
+      ScalarIntExpr{IntExpr{common::Indirection<Expr>{std::move(allocator)}}},
+      /*IsLegacySyntax=*/true};
+}
+
+static OmpUsesAllocatorsClause::AllocatorSpec makeCanonicalAllocatorSpec(
+    std::list<OmpUsesAllocatorsClause::AllocatorSpec::Modifier> &&mods,
+    ScalarIntExpr &&allocator) {
+  return OmpUsesAllocatorsClause::AllocatorSpec{
+      std::move(mods), std::move(allocator), /*IsLegacySyntax=*/false};
+}
+
+// Parse "modifier...: allocator" first: a modifier list is followed by a
+// colon, which neither of the other two forms can contain.
+TYPE_PARSER(sourced( //
+    applyFunction<OmpUsesAllocatorsClause::AllocatorSpec>(
+        makeCanonicalAllocatorSpec,
+        nonemptyList(
+            Parser<OmpUsesAllocatorsClause::AllocatorSpec::Modifier>{}) /
+            ":",
+        scalarIntExpr) ||
+    // Parse the deprecated "allocator(traits-array)" before a bare allocator,
+    // because it is also syntactically an array element reference.
+    applyFunction<OmpUsesAllocatorsClause::AllocatorSpec>(
+        makeLegacyAllocatorSpec, Parser<Name>{},
+        parenthesized(indirect(expr))) ||
+    construct<OmpUsesAllocatorsClause::AllocatorSpec>(
+        pure<std::optional<
+            std::list<OmpUsesAllocatorsClause::AllocatorSpec::Modifier>>>(),
+        scalarIntExpr, pure(false))))
+
+TYPE_PARSER(construct<OmpUsesAllocatorsClause>(
+    nonemptyList(Parser<OmpUsesAllocatorsClause::AllocatorSpec>{})))
+
 TYPE_PARSER(construct<OmpAbsentClause>(many(maybe(","_tok) >>
     construct<llvm::omp::Directive>(unwrap(OmpDirectiveNameParser{})))))
 TYPE_PARSER(construct<OmpContainsClause>(many(maybe(","_tok) >>
@@ -1777,6 +1844,9 @@ TYPE_PARSER( //
     "USE_DEVICE_ADDR" >>
         construct<OmpClause>(construct<OmpClause::UseDeviceAddr>(
             parenthesized(Parser<OmpObjectList>{}))) ||
+    "USES_ALLOCATORS" >>
+        construct<OmpClause>(construct<OmpClause::UsesAllocators>(
+            parenthesized(Parser<OmpUsesAllocatorsClause>{}))) ||
     "UNIFIED_ADDRESS" >>
         construct<OmpClause>(construct<OmpClause::UnifiedAddress>(
             maybe(parenthesized(scalarLogicalConstantExpr)))) ||
@@ -1903,8 +1973,10 @@ auto OmpDirectiveSpecificationParser::Parse(ParseState &state) const
 }
 
 static bool IsStandaloneOrdered(const OmpDirectiveSpecification &spec) {
-  // An ORDERED construct is standalone if it has DOACROSS or DEPEND clause.
-  return spec.DirId() == llvm::omp::Directive::OMPD_ordered &&
+  // An ORDERED directive is standalone if it has DOACROSS or DEPEND clause.
+  // The directive name parser will always use OMPD_ordered_standalone
+  // for "ORDERED".
+  return spec.DirId() == llvm::omp::Directive::OMPD_ordered_standalone &&
       llvm::any_of(spec.Clauses().v, [](const OmpClause &clause) {
         llvm::omp::Clause id{clause.Id()};
         return id == llvm::omp::Clause::OMPC_depend ||
@@ -2184,6 +2256,7 @@ struct OmpBlockConstructParser {
       if (auto &&body{attempt(StrictlyStructuredBlockParser{}).Parse(state)}) {
         // Try strictly-structured block with an optional end-directive
         auto end{maybe(OmpEndDirectiveParser{dir_}).Parse(state)};
+        SwitchToBlockOrdered(*begin, *end);
         return OmpBlockConstruct{OmpBeginDirective(std::move(*begin)),
             std::move(*body),
             llvm::transformOptional(std::move(*end),
@@ -2194,6 +2267,7 @@ struct OmpBlockConstructParser {
         auto end{maybe(OmpEndDirectiveParser{dir_}).Parse(state)};
         // Delay the error for a missing end-directive until semantics so that
         // we have better control over the output.
+        SwitchToBlockOrdered(*begin, *end);
         return OmpBlockConstruct{OmpBeginDirective(std::move(*begin)),
             std::move(*body),
             llvm::transformOptional(std::move(*end),
@@ -2204,6 +2278,22 @@ struct OmpBlockConstructParser {
   }
 
 private:
+  // There are two directive ids corresponding to "ORDERED", and the
+  // directive name parser will always use OMPD_ordered_standalone.
+  // Change it to OMPD_ordered_blockassoc once we've confirmed that
+  // this is the block-associated variant.
+  void SwitchToBlockOrdered(const OmpDirectiveSpecification &begin,
+      const std::optional<OmpDirectiveSpecification> &end) const {
+    if (begin.DirId() == llvm::omp::Directive::OMPD_ordered_standalone) {
+      const_cast<OmpDirectiveName &>(begin.DirName()).v =
+          llvm::omp::Directive::OMPD_ordered_blockassoc;
+      if (end) {
+        const_cast<OmpDirectiveName &>(end->DirName()).v =
+            llvm::omp::Directive::OMPD_ordered_blockassoc;
+      }
+    }
+  }
+
   llvm::omp::Directive dir_;
   bool implicit_;
 };
@@ -2614,7 +2704,7 @@ TYPE_PARSER(sourced(construct<OmpAssumeDirective>(
 TYPE_PARSER( //
     MakeBlockConstruct(llvm::omp::Directive::OMPD_masked) ||
     MakeBlockConstruct(llvm::omp::Directive::OMPD_master) ||
-    MakeBlockConstruct(llvm::omp::Directive::OMPD_ordered) ||
+    MakeBlockConstruct(llvm::omp::Directive::OMPD_ordered_standalone) ||
     MakeBlockConstruct(llvm::omp::Directive::OMPD_parallel_masked) ||
     MakeBlockConstruct(llvm::omp::Directive::OMPD_parallel_master) ||
     MakeBlockConstruct(llvm::omp::Directive::OMPD_parallel_workshare) ||

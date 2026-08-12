@@ -885,11 +885,11 @@ bool CIRGenModule::getCPUAndFeaturesAttributes(
   }
 
   if (!targetCPU.empty()) {
-    attrs["cir.target-cpu"] = targetCPU.str();
+    attrs[cir::CIRDialect::getTargetCPUAttrName()] = targetCPU.str();
     addedAttr = true;
   }
   if (!tuneCPU.empty()) {
-    attrs["cir.tune-cpu"] = tuneCPU.str();
+    attrs[cir::CIRDialect::getTuneCPUAttrName()] = tuneCPU.str();
     addedAttr = true;
   }
   if (!features.empty() && setTargetFeatures) {
@@ -899,7 +899,8 @@ bool CIRGenModule::getCPUAndFeaturesAttributes(
       return getTarget().isReadOnlyFeature(f.substr(1));
     });
     llvm::sort(features);
-    attrs["cir.target-features"] = llvm::join(features, ",");
+    attrs[cir::CIRDialect::getTargetFeaturesAttrName()] =
+        llvm::join(features, ",");
     addedAttr = true;
   }
   // TODO(cir): add metadata for AArch64 Function Multi Versioning.
@@ -921,9 +922,17 @@ void CIRGenModule::setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op) {
       if (auto func = dyn_cast<cir::FuncOp>(op)) {
         llvm::StringMap<std::string> attrs;
         if (getCPUAndFeaturesAttributes(gd, attrs)) {
-          // TODO(cir): Classic codegen removes the existing target-cpu,
-          // target-features, tune-cpu and fmv-features attributes here
-          // before adding the new ones.
+          // TODO(cir): Classic codegen also removes fmv-features here, which
+          // CIR does not emit yet.
+          //
+          // getCPUAndFeaturesAttributes reads the most recent declaration, so
+          // its result supersedes anything an earlier one wrote.  Clear first:
+          // setAttr alone would leave a name this call no longer produces.
+          for (llvm::StringRef name :
+               {cir::CIRDialect::getTargetCPUAttrName(),
+                cir::CIRDialect::getTuneCPUAttrName(),
+                cir::CIRDialect::getTargetFeaturesAttrName()})
+            func->removeAttr(name);
           for (const auto &[key, val] : attrs)
             func->setAttr(key, builder.getStringAttr(val));
         }
@@ -2780,6 +2789,16 @@ StringRef CIRGenModule::getMangledName(GlobalDecl gd) {
     }
   }
 
+  // In CUDA/HIP device compilation with -fgpu-rdc, the mangled name of a
+  // static device variable depends on whether the variable is referenced by
+  // a host or device host function. Therefore the mangled name cannot be
+  // cached.
+  if (!langOpts.CUDAIsDevice || !astContext.mayExternalize(gd.getDecl())) {
+    auto foundName = mangledDeclNames.find(canonicalGd);
+    if (foundName != mangledDeclNames.end())
+      return foundName->second;
+  }
+
   // Keep the first result in the case of a mangling collision.
   const auto *nd = cast<NamedDecl>(gd.getDecl());
   std::string mangledName = getMangledNameImpl(*this, gd, nd);
@@ -3070,6 +3089,14 @@ bool CIRGenModule::lookupRepresentativeDecl(StringRef mangledName,
   return true;
 }
 
+static cir::TLS_Model getCIRTLSModel(StringRef S) {
+  return llvm::StringSwitch<cir::TLS_Model>(S)
+      .Case("global-dynamic", cir::TLS_Model::GeneralDynamic)
+      .Case("local-dynamic", cir::TLS_Model::LocalDynamic)
+      .Case("initial-exec", cir::TLS_Model::InitialExec)
+      .Case("local-exec", cir::TLS_Model::LocalExec);
+}
+
 cir::TLS_Model CIRGenModule::getDefaultCIRTLSModel() const {
   switch (getCodeGenOpts().getDefaultTLSModel()) {
   case CodeGenOptions::GeneralDynamicTLSModel:
@@ -3091,8 +3118,8 @@ void CIRGenModule::setTLSMode(mlir::Operation *op, const VarDecl &d,
   cir::TLS_Model tlm = getDefaultCIRTLSModel();
 
   // Override the TLS model if it is explicitly specified.
-  if (d.getAttr<TLSModelAttr>())
-    errorNYI(d.getSourceRange(), "TLS model attribute");
+  if (const auto *attr = d.getAttr<TLSModelAttr>())
+    tlm = getCIRTLSModel(attr->getModel());
 
   auto global = cast<cir::GlobalOp>(op);
   global.setTlsModel(tlm);

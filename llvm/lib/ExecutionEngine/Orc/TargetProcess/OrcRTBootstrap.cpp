@@ -8,7 +8,8 @@
 
 #include "OrcRTBootstrap.h"
 
-#include "llvm/ExecutionEngine/Orc/RTBridge/SPS/Calls.h"
+#include "llvm/ExecutionEngine/Orc/RTBridge/SPS/CallProxySpecs.h"
+#include "llvm/ExecutionEngine/Orc/RTBridge/SPS/MemoryAccessProxySpecs.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
@@ -157,36 +158,34 @@ runAsInt32Int32FunctionWrapper(const char *ArgData, size_t ArgSize) {
 }
 
 void addTo(StringMap<ExecutorAddr> &M) {
-  M[rt::MemoryWriteUInt8sWrapperName] = ExecutorAddr::fromPtr(
+  M[rt::sps::MemWriteUInt8sCIName] = ExecutorAddr::fromPtr(
       &writeUIntsWrapper<tpctypes::UInt8Write,
                          shared::SPSMemoryAccessUInt8Write>);
-  M[rt::MemoryWriteUInt16sWrapperName] = ExecutorAddr::fromPtr(
+  M[rt::sps::MemWriteUInt16sCIName] = ExecutorAddr::fromPtr(
       &writeUIntsWrapper<tpctypes::UInt16Write,
                          shared::SPSMemoryAccessUInt16Write>);
-  M[rt::MemoryWriteUInt32sWrapperName] = ExecutorAddr::fromPtr(
+  M[rt::sps::MemWriteUInt32sCIName] = ExecutorAddr::fromPtr(
       &writeUIntsWrapper<tpctypes::UInt32Write,
                          shared::SPSMemoryAccessUInt32Write>);
-  M[rt::MemoryWriteUInt64sWrapperName] = ExecutorAddr::fromPtr(
+  M[rt::sps::MemWriteUInt64sCIName] = ExecutorAddr::fromPtr(
       &writeUIntsWrapper<tpctypes::UInt64Write,
                          shared::SPSMemoryAccessUInt64Write>);
-  M[rt::MemoryWritePointersWrapperName] =
+  M[rt::sps::MemWritePointersCIName] =
       ExecutorAddr::fromPtr(&writePointersWrapper);
-  M[rt::MemoryWriteBuffersWrapperName] =
+  M[rt::sps::MemWriteBuffersCIName] =
       ExecutorAddr::fromPtr(&writeBuffersWrapper);
-  M[rt::MemoryReadUInt8sWrapperName] =
+  M[rt::sps::MemReadUInt8sCIName] =
       ExecutorAddr::fromPtr(&readUIntsWrapper<uint8_t>);
-  M[rt::MemoryReadUInt16sWrapperName] =
+  M[rt::sps::MemReadUInt16sCIName] =
       ExecutorAddr::fromPtr(&readUIntsWrapper<uint16_t>);
-  M[rt::MemoryReadUInt32sWrapperName] =
+  M[rt::sps::MemReadUInt32sCIName] =
       ExecutorAddr::fromPtr(&readUIntsWrapper<uint32_t>);
-  M[rt::MemoryReadUInt64sWrapperName] =
+  M[rt::sps::MemReadUInt64sCIName] =
       ExecutorAddr::fromPtr(&readUIntsWrapper<uint64_t>);
-  M[rt::MemoryReadPointersWrapperName] =
+  M[rt::sps::MemReadPointersCIName] =
       ExecutorAddr::fromPtr(&readPointersWrapper);
-  M[rt::MemoryReadBuffersWrapperName] =
-      ExecutorAddr::fromPtr(&readBuffersWrapper);
-  M[rt::MemoryReadStringsWrapperName] =
-      ExecutorAddr::fromPtr(&readStringsWrapper);
+  M[rt::sps::MemReadBuffersCIName] = ExecutorAddr::fromPtr(&readBuffersWrapper);
+  M[rt::sps::MemReadStringsCIName] = ExecutorAddr::fromPtr(&readStringsWrapper);
   M[rt::sps::CallMainCIName] = ExecutorAddr::fromPtr(&runAsMainWrapper);
   M[rt::sps::CallInt32VoidCIName] =
       ExecutorAddr::fromPtr(&runAsInt32VoidFunctionWrapper);
