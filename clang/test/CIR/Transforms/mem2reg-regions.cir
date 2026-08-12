@@ -1,0 +1,72 @@
+// RUN: cir-opt %s -mem2reg -o - | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+module {
+  // A slot whose only nested use is a load can be promoted without flattening
+  // the CFG first.
+  // CHECK-LABEL: cir.func @load_in_if
+  cir.func @load_in_if(%cond: !cir.bool) {
+    // CHECK-NOT: cir.alloca
+    // CHECK: %[[CONST:.*]] = cir.const #cir.int<42>
+    // CHECK: cir.if
+    // CHECK-NOT: cir.load
+    // CHECK: cir.call @use(%[[CONST]])
+    %0 = cir.alloca "a" align(4) : !cir.ptr<!s32i>
+    %1 = cir.const #cir.int<42> : !s32i
+    cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
+    cir.if %cond {
+      %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+      cir.call @use(%2) : (!s32i) -> ()
+      cir.yield
+    }
+    cir.return
+  }
+
+  // Both regions are entered with the same reaching definition.
+  // CHECK-LABEL: cir.func @load_in_both_regions
+  cir.func @load_in_both_regions(%cond: !cir.bool) {
+    // CHECK-NOT: cir.alloca
+    // CHECK: %[[CONST:.*]] = cir.const #cir.int<7>
+    // CHECK: cir.if
+    // CHECK: cir.call @use(%[[CONST]])
+    // CHECK: cir.call @use(%[[CONST]])
+    // CHECK-NOT: cir.load
+    %0 = cir.alloca "a" align(4) : !cir.ptr<!s32i>
+    %1 = cir.const #cir.int<7> : !s32i
+    cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
+    cir.if %cond {
+      %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+      cir.call @use(%2) : (!s32i) -> ()
+      cir.yield
+    } else {
+      %3 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+      cir.call @use(%3) : (!s32i) -> ()
+      cir.yield
+    }
+    cir.return
+  }
+
+  // A store inside a region would have to leave the operation through a result,
+  // which cir.if does not have, so the slot is left alone.
+  // CHECK-LABEL: cir.func @store_in_if
+  cir.func @store_in_if(%cond: !cir.bool) {
+    // CHECK: cir.alloca
+    // CHECK: cir.if
+    // CHECK: cir.store
+    // CHECK: cir.load
+    %0 = cir.alloca "a" align(4) : !cir.ptr<!s32i>
+    %1 = cir.const #cir.int<1> : !s32i
+    cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
+    cir.if %cond {
+      %2 = cir.const #cir.int<2> : !s32i
+      cir.store %2, %0 : !s32i, !cir.ptr<!s32i>
+      cir.yield
+    }
+    %3 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    cir.call @use(%3) : (!s32i) -> ()
+    cir.return
+  }
+
+  cir.func private @use(!s32i)
+}

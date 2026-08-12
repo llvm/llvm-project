@@ -187,3 +187,31 @@ DeletionKind cir::CastOp::removeBlockingUses(
     const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
   return DeletionKind::Delete;
 }
+
+//===----------------------------------------------------------------------===//
+// Interfaces for IfOp
+//===----------------------------------------------------------------------===//
+
+bool cir::IfOp::isRegionPromotable(const MemorySlot &slot, Region *region,
+                                   bool hasValueStores) {
+  // A definition produced inside a region has to leave the operation through
+  // one of its results, and cir.if has no result to receive it.
+  return !hasValueStores;
+}
+
+void cir::IfOp::setupPromotion(
+    const MemorySlot &slot, Value reachingDef, bool hasValueStores,
+    llvm::SmallMapVector<Region *, Value, 2> &regionsToProcess) {
+  // Exactly one region executes, exactly once, entered from before the op, so
+  // both see the same reaching definition.
+  regionsToProcess.insert({&getThenRegion(), reachingDef});
+  regionsToProcess.insert({&getElseRegion(), reachingDef});
+}
+
+Value cir::IfOp::finalizePromotion(
+    const MemorySlot &slot, Value reachingDef, bool hasValueStores,
+    const llvm::DenseMap<Block *, Value> &reachingAtBlockEnd,
+    OpBuilder &builder) {
+  assert(!hasValueStores && "cir.if cannot yield a new definition");
+  return reachingDef;
+}
