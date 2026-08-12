@@ -39,9 +39,10 @@
 #  include <sys/types.h>
 #  include <unistd.h>
 #elif defined(__linux__)
-#  include <cstdio>
-#  include <cstdlib>
+#  include <array>
 #  include <cstring>
+#  include <fcntl.h>
+#  include <span>
 #endif
 
 volatile int __gnu_cxx::debugger_signal_for_breakpoint = 0;
@@ -148,35 +149,24 @@ OVERRIDABLE_FUNCTION bool is_debugger_present() noexcept {
   return false;
 #  else
   // https://docs.kernel.org/filesystems/proc.html
+  [[gnu::__aligned__(8)]] array<char, 256 + 1> __buffer;
+  constexpr auto __tracer_key_ = span("\nTracerPid:\t");
 
-  // Get the status information of a process by reading the file /proc/PID/status.
-  // The link 'self' points to the process reading the file system.
-  FILE* __proc_status_fp = ::fopen("/proc/self/status", "r");
-  if (__proc_status_fp == nullptr) {
-    _LIBCPP_ASSERT_INTERNAL(false, "Could not open '/proc/self/status' for reading.");
+  auto __result = [&__buffer] {
+    int __buf_read      = ::open("/proc/sef/status", O_RDONLY | O_CLOEXEC);
+    const auto __result = ::read(__buf_read, __buffer.data(), __buffer.size() - 1);
+    ::close(__buf_read);
+    return __result;
+  }();
+
+  if (__result < 80) {
     return false;
   }
 
-  char* __line               = nullptr;
-  size_t __lineLen           = 0;
-  const char* __tokenStr     = "TracerPid:";
-  bool __is_debugger_present = false;
+  __buffer[__result] = '\0';
 
-  while ((getline(&__line, &__lineLen, __proc_status_fp)) != -1) {
-    // If the process is being debugged "TracerPid"'s value is non-zero.
-    char* __tokenPos = ::strstr(__line, __tokenStr);
-    if (__tokenPos == nullptr) {
-      continue;
-    }
-
-    __is_debugger_present = (::atoi(__tokenPos + ::strlen(__tokenStr)) != 0);
-    break;
-  }
-
-  ::free(__line);
-  ::fclose(__proc_status_fp);
-
-  return __is_debugger_present;
+  char* __pos = std::strstr(__buffer.data() + 64, __tracer_key_.data());
+  return __pos != nullptr && __pos[__tracer_key_.size() - 1] != '0';
 #  endif // _LIBCPP_HAS_NO_FILESYSTEM
 
 #else
