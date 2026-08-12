@@ -48,10 +48,12 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Object/Decompressor.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
@@ -61,6 +63,7 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <cstring>
 #include <fstream>
 #include <memory>
 #include <optional>
@@ -392,6 +395,38 @@ MCPlusBuilder *createMCPlusBuilder(const Triple::ArchType Arch,
 
 namespace {
 
+static Error reportDecompressionError(StringRef SectionName, Error E) {
+  return createStringError("failed to decompress section '" + SectionName +
+                           "': " + toString(std::move(E)));
+}
+
+static Error validateCompressedDebugSections(const ELFObjectFileBase &File) {
+  for (const SectionRef &Section : File.sections()) {
+    Expected<StringRef> NameOrErr = Section.getName();
+    if (!NameOrErr)
+      return NameOrErr.takeError();
+
+    if (!RewriteInstance::isDebugSection(*NameOrErr) || !Section.isCompressed())
+      continue;
+
+    Expected<StringRef> SectionContentsOrErr = Section.getContents();
+    if (!SectionContentsOrErr)
+      return SectionContentsOrErr.takeError();
+
+    Expected<Decompressor> DecompressorOrErr =
+        Decompressor::create(*NameOrErr, *SectionContentsOrErr,
+                             File.isLittleEndian(), File.is64Bit());
+    if (!DecompressorOrErr)
+      return reportDecompressionError(*NameOrErr,
+                                      DecompressorOrErr.takeError());
+
+    SmallVector<uint8_t, 0> DecompressedContents;
+    if (Error E = DecompressorOrErr->resizeAndDecompress(DecompressedContents))
+      return reportDecompressionError(*NameOrErr, std::move(E));
+  }
+  return Error::success();
+}
+
 bool refersToReorderedSection(ErrorOr<BinarySection &> Section) {
   return llvm::any_of(opts::ReorderData, [&](const std::string &SectionName) {
     return Section && Section->getName() == SectionName;
@@ -449,6 +484,13 @@ RewriteInstance::RewriteInstance(ELFObjectFileBase *File, const int Argc,
       return;
     } else {
       Features.reset(new SubtargetFeatures(*FeaturesOrErr));
+    }
+  }
+
+  if (opts::UpdateDebugSections) {
+    if (Error E = validateCompressedDebugSections(*File)) {
+      Err = std::move(E);
+      return;
     }
   }
 
@@ -2455,17 +2497,9 @@ Error RewriteInstance::readSpecialSections() {
     check_error(SectionNameOrErr.takeError(), "cannot get section name");
     StringRef SectionName = *SectionNameOrErr;
 
-    // Detect a debug section and check if it's compressed.
-    // Compressed debug sections currently aren't supported.
+    // Detect a debug section.
     if (isDebugSection(SectionName)) {
       HasDebugInfo = true;
-      if (opts::UpdateDebugSections && isCompressedDebugSection(Section)) {
-        return createStringError(errc::not_supported,
-                                 Twine("compressed debug section '") +
-                                     SectionName +
-                                     "' detected. --update-debug-sections "
-                                     "requires uncompressed debug info");
-      }
     }
 
     if (Error E = Section.getContents().takeError())
@@ -5168,6 +5202,66 @@ uint64_t appendPadding(raw_pwrite_stream &OS, uint64_t Offset,
 }
 
 template <typename ELFT>
+static Expected<uint64_t>
+writeCompressedDebugSection(StringRef SectionName,
+                            ArrayRef<uint8_t> CompressedSection,
+                            raw_ostream &OS, StringRef UncompressedSection) {
+  using ChdrTy = typename ELFT::Chdr;
+
+  if (CompressedSection.size() < sizeof(ChdrTy)) {
+    return createStringError(
+        errc::invalid_argument,
+        "Compressed debug section '" + SectionName +
+            "' is too small to contain a valid compression header.");
+  }
+
+  // Copy the InputHeader from the compressed section to the new recompressed
+  // section as they remain unchanged.
+  ChdrTy InputHeader{};
+  std::memcpy(&InputHeader, CompressedSection.data(), sizeof(ChdrTy));
+
+  DebugCompressionType CompressionMethod;
+  switch (InputHeader.ch_type) {
+  case ELF::ELFCOMPRESS_ZLIB:
+    CompressionMethod = DebugCompressionType::Zlib;
+    break;
+  case ELF::ELFCOMPRESS_ZSTD:
+    CompressionMethod = DebugCompressionType::Zstd;
+    break;
+  default:
+    return createStringError(
+        errc::not_supported,
+        "Unsupported compression method for debug section '" + SectionName +
+            "'");
+  }
+
+  // Ensure the compression method is supported by the current build.
+  if (const char *Reason = compression::getReasonIfUnsupported(
+          compression::formatFor(CompressionMethod))) {
+    return createStringError(errc::not_supported,
+                             "Compression method for debug section '" +
+                                 SectionName + "' is not supported: " + Reason);
+  }
+
+  SmallVector<uint8_t, 0> CompressedData;
+  compression::compress(compression::Params(CompressionMethod),
+                        arrayRefFromStringRef(UncompressedSection),
+                        CompressedData);
+
+  ChdrTy OutputHeader{};
+  OutputHeader.ch_type = InputHeader.ch_type;
+  OutputHeader.ch_addralign = InputHeader.ch_addralign;
+  OutputHeader.ch_size = UncompressedSection.size();
+
+  OS.write(reinterpret_cast<const char *>(&OutputHeader), sizeof(ChdrTy));
+  OS.write(reinterpret_cast<const char *>(CompressedData.data()),
+           CompressedData.size());
+
+  // Return the total size of the compressed section.
+  return sizeof(ChdrTy) + CompressedData.size();
+}
+
+template <typename ELFT>
 void RewriteInstance::rewriteNoteSections(ELFObjectFile<ELFT> *File) {
   using ShdrTy = typename ELFT::Shdr;
 
@@ -5222,7 +5316,9 @@ void RewriteInstance::rewriteNoteSections(ELFObjectFile<ELFT> *File) {
         DataWritten = true;
 
         // Add padding as the section extension might rely on the alignment.
-        Size = appendPadding(OS, Size, Section.sh_addralign);
+        if (!(Section.sh_flags & ELF::SHF_COMPRESSED)) {
+          Size = appendPadding(OS, Size, Section.sh_addralign);
+        }
       }
     }
 
@@ -5233,7 +5329,34 @@ void RewriteInstance::rewriteNoteSections(ELFObjectFile<ELFT> *File) {
     if (BSec->getAllocAddress()) {
       assert(!DataWritten && "Writing section twice.");
       (void)DataWritten;
-      Size += BSec->write(OS);
+
+      // If this is a debug-section and it is has been de-compressed.
+      if (isDebugSection(SectionName) &&
+          (Section.sh_flags & ELF::SHF_COMPRESSED)) {
+        // Get the uncompressed section data from the BinarySection.
+        Expected<ArrayRef<uint8_t>> UncompressedDataOrErr =
+            Obj.getSectionContents(Section);
+        if (!UncompressedDataOrErr) {
+          consumeError(UncompressedDataOrErr.takeError());
+          report_fatal_error("Failed to get uncompressed data for section '" +
+                             SectionName + "'");
+        }
+
+        // Write the re-compressed section to the output stream.
+        Expected<uint64_t> CompressedSizeOrErr =
+            writeCompressedDebugSection<ELFT>(SectionName,
+                                              *UncompressedDataOrErr, OS,
+                                              BSec->getOutputContents());
+        if (!CompressedSizeOrErr) {
+          consumeError(CompressedSizeOrErr.takeError());
+          report_fatal_error("Failed to write re-compressed debug section '" +
+                             SectionName + "'");
+        }
+
+        Size += *CompressedSizeOrErr;
+      } else {
+        Size += BSec->write(OS);
+      }
     }
 
     BSec->setOutputFileOffset(NextAvailableOffset);
