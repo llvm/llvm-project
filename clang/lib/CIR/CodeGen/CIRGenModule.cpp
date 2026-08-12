@@ -3903,9 +3903,8 @@ void CIRGenModule::release() {
       llvm::raw_svector_ostream out(fnName);
       cast<clang::ItaniumMangleContext>(getCXXABI().getMangleContext())
           .mangleModuleInitializer(primary, out);
-      theModule->setAttr(
-          cir::CIRDialect::getCXXModuleInitFnNameAttrName(),
-          builder.getStringAttr(fnName));
+      theModule->setAttr(cir::CIRDialect::getCXXModuleInitFnNameAttrName(),
+                         builder.getStringAttr(fnName));
     }
   }
 
