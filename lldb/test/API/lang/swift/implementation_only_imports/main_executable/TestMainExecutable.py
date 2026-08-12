@@ -22,6 +22,10 @@ import time
 
 @skipIfDarwin # rdar://problem/54322424 Sometimes failing, sometimes truncated output.
 class TestMainExecutable(TestBase):
+    # The test functions build the library with and without library evolution,
+    # which a shared build directory would not rebuild.
+    SHARED_BUILD_TESTCASE = False
+
     def launch_info(self):
         info = lldb.SBLaunchInfo([])
 
