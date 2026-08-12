@@ -41,10 +41,3 @@ body: |
     %0:_(s32) = G_CONSTANT i32 2147483647
     %1:_(s32) = G_SITOFP %0
 ...
----
-name: Cst_FPTOUI_SAT_One
-body: |
-  bb.0:
-    %0:_(s32) = G_FCONSTANT float 1.000000e+00
-    %1:_(s32) = G_FPTOUI_SAT %0(s32)
-...

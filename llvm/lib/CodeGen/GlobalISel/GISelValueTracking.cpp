@@ -28,7 +28,6 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Register.h"
-#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/ConstantRange.h"
@@ -828,20 +827,14 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     break;
   }
   case TargetOpcode::G_SITOFP: {
-    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known2, DemandedElts, Depth + 1);
-    if(Known2.isNonNegative())
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known2, DemandedElts,
+                         Depth + 1);
+    if (Known2.isNonNegative())
       Known.makeNonNegative();
-    else if(Known2.isNegative())
+    else if (Known2.isNegative())
       Known.makeNegative();
     break;
   }
-  case TargetOpcode::G_FPTOUI_SAT: {
-    // get  scalarsizein bits of the destination type and set all bits to zero
-    Register Reg = MI.getOperand(2).getReg();
-    unsigned DestSize = MRI.getType(Reg).getScalarSizeInBits();
-    Known.Zero |= APInt::getBitsSetFrom(BitWidth, DestSize);
-    break;
-  } 
   case TargetOpcode::G_MERGE_VALUES: {
     unsigned NumOps = MI.getNumOperands();
     unsigned OpSize = MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
