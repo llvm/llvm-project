@@ -8,6 +8,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
+#include <string>
 #include <unordered_map>
 #include <utility>
 
@@ -26,7 +27,7 @@ static void BM_map_find_string_literal(benchmark::State& state) {
   }
 }
 
-BENCHMARK(BM_map_find_string_literal);
+BENCHMARK(BM_map_find_string_literal)->Name("std::unordered_map<std::string, int>::find(const char*)");
 
 template <class K, class V>
 struct support::adapt_operations<std::unordered_map<K, V>> {

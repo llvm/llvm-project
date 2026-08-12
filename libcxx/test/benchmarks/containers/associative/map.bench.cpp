@@ -27,7 +27,7 @@ static void BM_map_find_string_literal(benchmark::State& state) {
   }
 }
 
-BENCHMARK(BM_map_find_string_literal);
+BENCHMARK(BM_map_find_string_literal)->Name("std::map<std::string, int>::find(const char*)");
 
 template <class K, class V>
 struct support::adapt_operations<std::map<K, V>> {
