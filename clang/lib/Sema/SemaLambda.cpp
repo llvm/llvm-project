@@ -554,12 +554,11 @@ void Sema::handleLambdaNumbering(
     return;
   }
 
-  auto LambdaInfo =
-      std::make_pair(ContextDecl->getCanonicalDecl(), Numbering.IndexInContext);
   // This lambda might redeclare a previous lambda if this is not the first
   // definition of the context declaration. We might have a definition from
   // another translation unit.
-  auto *&Slot = Context.getLambdaDeclarationsForMerging()[LambdaInfo];
+  auto *&Slot = Context.getLambdaDeclarationSlotForMerging(
+      ContextDecl, Numbering.IndexInContext);
   if (auto *Previous = Slot) {
     Class->setPreviousDecl(Previous);
     makeMergedDefinitionVisible(Previous);

@@ -2959,8 +2959,8 @@ void ASTDeclMerger::mergeLambda(CXXRecordDecl *D, RedeclarableResult &Redecl,
 
   // Look up this lambda to see if we've seen it before. If so, merge with the
   // one we already loaded.
-  auto *&Slot = Reader.getContext().getLambdaDeclarationsForMerging()[{
-      Context.getCanonicalDecl(), IndexInContext}];
+  auto *&Slot = Reader.getContext().getLambdaDeclarationSlotForMerging(
+      &Context, IndexInContext);
   if (TagDecl *PrevDecl = Slot)
     mergeRedeclarable(D, PrevDecl, Redecl);
   else
