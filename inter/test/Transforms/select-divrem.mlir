@@ -84,4 +84,5 @@ module {
 // CHECK: xemachine.and %[[TRUE]], %[[TRUE]]
 // CHECK: %[[FALSE:.*]] = xemachine.sub
 // CHECK: xemachine.mov %[[FALSE]] {{.*}}src0Type = i1
-// CHECK: xemachine.uniform_if %[[FALSE]]
+// CHECK: %[[BRANCH:.*]] = xemachine.cmp ne %[[FALSE]]
+// CHECK: xemachine.uniform_if %[[BRANCH]]

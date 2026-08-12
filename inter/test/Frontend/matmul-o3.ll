@@ -8,6 +8,10 @@
 ; RUN: inter-translate %s --import-llvm | inter-opt --verify-each \
 ; RUN:   --pass-pipeline='builtin.module(transform-preload-library{transform-library-paths=%inter_pipelines},transform-interpreter{entry-point=inter_backend})' | \
 ; RUN:   FileCheck %s --check-prefix=BACKEND
+; RUN: inter-translate %s --import-llvm | inter-opt --verify-each \
+; RUN:   --pass-pipeline='builtin.module(transform-preload-library{transform-library-paths=%inter_pipelines},transform-interpreter{entry-point=inter_backend})' -o %t.xemachine.mlir
+; RUN: inter-translate --xemachine-to-asm %t.xemachine.mlir -o %t.asm
+; RUN: inter-translate --xemachine-to-zebin %t.xemachine.mlir -o %t.zebin
 ; Generated with opt -S -passes='default<O3>' from Inputs/matmul.ll.
 ;
 ; CHECK: module attributes {dlti.dl_spec = #dlti.dl_spec<

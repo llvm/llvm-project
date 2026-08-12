@@ -624,6 +624,26 @@ private:
     return owner->emitOpError("operand was not selected"), failure();
   }
 
+  FailureOr<Value> getUniformCondition(Value source, Operation *owner) {
+    FailureOr<Value> selected = getValue(source, owner);
+    if (failed(selected))
+      return failure();
+    if (ARFType type = dyn_cast<ARFType>(selected->getType())) {
+      if (type.getFile() == ARFFile::f)
+        return *selected;
+      return owner->emitOpError("uniform condition uses a non-flag ARF"),
+             failure();
+    }
+    return CmpOp::create(
+               *builder, *location,
+               ARFType::get(context, ARFFile::f, 2, -1),
+               CondModifierAttr::get(context, CondModifier::ne), typeAttr(i32()),
+               builder->getI32IntegerAttr(1), uniformRegion(), RegionAttr(),
+               IntegerAttr(), IntegerAttr(), TypeAttr(), TypeAttr(), *selected,
+               immediate(0, i32()))
+        .getFlag();
+  }
+
   FailureOr<WideValue> getWideValue(Value source, Operation *owner) {
     auto found = wideValues.find(source);
     if (found != wideValues.end())
@@ -1462,7 +1482,10 @@ private:
     if (isWideSimd(operation.getType()))
       return operation.emitOpError(
           "SIMD32 i64 or A64 pointer select has no exact two-half selection");
-    FailureOr<Value> condition = getValue(operation.getCondition(), operation);
+    FailureOr<Value> condition =
+        isa<xw::MaskType>(operation.getCondition().getType())
+            ? getValue(operation.getCondition(), operation)
+            : getUniformCondition(operation.getCondition(), operation);
     FailureOr<Value> trueValue = getValue(operation.getTrueValue(), operation);
     FailureOr<Value> falseValue =
         getValue(operation.getFalseValue(), operation);
@@ -1523,7 +1546,8 @@ private:
   }
 
   LogicalResult lowerScfIf(scf::IfOp operation) {
-    FailureOr<Value> condition = getValue(operation.getCondition(), operation);
+    FailureOr<Value> condition =
+        getUniformCondition(operation.getCondition(), operation);
     if (failed(condition))
       return failure();
     SmallVector<Type> resultTypes;
@@ -1764,7 +1788,7 @@ private:
       return failure();
     scf::ConditionOp condition = cast<scf::ConditionOp>(before.getTerminator());
     FailureOr<Value> selectedCondition =
-        getValue(condition.getCondition(), condition);
+        getUniformCondition(condition.getCondition(), condition);
     if (failed(selectedCondition))
       return failure();
 

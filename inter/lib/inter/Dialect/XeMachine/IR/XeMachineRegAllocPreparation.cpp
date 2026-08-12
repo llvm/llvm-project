@@ -11,6 +11,7 @@
 #include "llvm/Support/MathExtras.h"
 
 #include <algorithm>
+#include <array>
 #include <cstdint>
 #include <optional>
 
@@ -20,9 +21,43 @@ using namespace inter::xemachine;
 namespace {
 
 constexpr StringLiteral kRegisterCopyAttr = "xemachine.regalloc_copy";
+constexpr StringLiteral kImmediateLegalizationAttr =
+    "xemachine.immediate_legalization";
 
 static bool isMarkedCopy(Operation *operation) {
   return operation && operation->hasAttr(kRegisterCopyAttr);
+}
+
+static void legalizeWideImmediates(func::FuncOp function) {
+  SmallVector<OpOperand *> operands;
+  function.walk([&](Operation *operation) {
+    TypeAttr elementType = operation->getAttrOfType<TypeAttr>("elemType");
+    if (!elementType || !elementType.getValue().isInteger(64) ||
+        isa<MovOp>(operation))
+      return;
+    for (OpOperand &operand : operation->getOpOperands())
+      if (operand.get().getDefiningOp<ImmOp>())
+        operands.push_back(&operand);
+  });
+  for (OpOperand *operand : operands) {
+    Operation *owner = operand->getOwner();
+    OpBuilder builder(owner);
+    MovOp move = MovOp::create(
+        builder, owner->getLoc(), RegType::get(function.getContext(), 2, -1),
+        builder.getI64Type(), /*execSize=*/1, DstRegionAttr::get(
+            function.getContext(), 1),
+        RegionAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(), /*noMask=*/true,
+        /*maskOffset=*/0, operand->get());
+    move->setAttr(kImmediateLegalizationAttr, builder.getUnitAttr());
+    operand->set(move.getDst());
+    constexpr std::array<StringLiteral, 3> regionNames = {
+        "src0Region", "src1Region", "src2Region"};
+    unsigned operandNumber = operand->getOperandNumber();
+    if (operandNumber < regionNames.size() &&
+        !owner->getAttr(regionNames[operandNumber]))
+      owner->setAttr(regionNames[operandNumber],
+                     RegionAttr::get(function.getContext(), 0, 1, 0));
+  }
 }
 
 static bool isMarkedCopy(Value value, StringRef kind) {
@@ -869,6 +904,7 @@ inter::xemachine::prepareRegisterAllocation(func::FuncOp function) {
   if (!function)
     return failure();
 
+  legalizeWideImmediates(function);
   if (failed(repairTupleSlots(function)))
     return failure();
   if (failed(repairUpdateTuples(function)))

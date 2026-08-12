@@ -40,12 +40,14 @@ private:
       return DataType::q;
     if (type.isF32())
       return DataType::f;
-    assert(type.isInteger(32) && "unsupported machine data type");
+    assert((type.isInteger(1) || type.isInteger(32)) &&
+           "unsupported machine data type");
     return DataType::ud;
   }
 
   LogicalResult validateDataType(Operation *operation, Type type) const {
-    if (type.isInteger(8) || type.isInteger(16) || type.isInteger(32) ||
+    if (type.isInteger(1) || type.isInteger(8) || type.isInteger(16) ||
+        type.isInteger(32) ||
         type.isInteger(64) || type.isF32())
       return success();
     return operation->emitError("unsupported machine data type ") << type;
@@ -209,6 +211,16 @@ private:
           return failure();
         continue;
       }
+      if (UniformLoopOp loop = dyn_cast<UniformLoopOp>(&operation)) {
+        if (failed(lowerLoop(loop)))
+          return failure();
+        continue;
+      }
+      if (ContinueIfOp continueIf = dyn_cast<ContinueIfOp>(&operation)) {
+        if (failed(lowerContinue(continueIf)))
+          return failure();
+        continue;
+      }
       if (isa<func::ReturnOp>(&operation))
         continue;
       if (failed(lowerAlu(&operation)))
@@ -232,6 +244,55 @@ private:
     program.items.emplace_back(Label{label});
     program.items.emplace_back(JoinInstruction{uip});
     ++nextInstruction;
+  }
+
+  static bool hasSamePhysicalStorage(Type lhs, Type rhs) {
+    if (isa<MemTokenType>(lhs) || isa<MemTokenType>(rhs))
+      return isa<MemTokenType>(lhs) && isa<MemTokenType>(rhs);
+    return lhs == rhs;
+  }
+
+  LogicalResult lowerLoop(UniformLoopOp loop) {
+    if (loop.getBody().empty())
+      return loop.emitError("emission requires a non-empty loop body");
+    Block &body = loop.getBody().front();
+    ContinueIfOp terminator = dyn_cast<ContinueIfOp>(body.getTerminator());
+    if (!terminator)
+      return loop.emitError("emission requires a continue_if terminator");
+    if (loop.getInits().size() != body.getNumArguments() ||
+        loop.getNumResults() != body.getNumArguments() ||
+        terminator.getCarried().size() != body.getNumArguments())
+      return loop.emitError("loop-carried value count mismatch at emission");
+    for (auto [init, argument, carried, result] :
+         llvm::zip_equal(loop.getInits(), body.getArguments(),
+                         terminator.getCarried(), loop.getResults())) {
+      if (!hasSamePhysicalStorage(init.getType(), argument.getType()) ||
+          !hasSamePhysicalStorage(init.getType(), carried.getType()) ||
+          !hasSamePhysicalStorage(init.getType(), result.getType()))
+        return loop.emitError(
+            "loop-carried values require identical physical storage");
+    }
+
+    uint32_t headerLabel = nextLabel++;
+    program.items.emplace_back(Label{headerLabel});
+    loopHeaders.push_back({loop, headerLabel});
+    LogicalResult result = lowerBlock(body);
+    loopHeaders.pop_back();
+    return result;
+  }
+
+  LogicalResult lowerContinue(ContinueIfOp continueIf) {
+    if (loopHeaders.empty() ||
+        continueIf->getParentOp() != loopHeaders.back().loop.getOperation())
+      return continueIf.emitError("continue_if is outside its emission loop");
+    ARFType conditionType = dyn_cast<ARFType>(continueIf.getCond().getType());
+    if (!conditionType || conditionType.getFile() != ARFFile::f ||
+        conditionType.getIndex() < 0)
+      return continueIf.emitError(
+          "emission requires a physical flag loop condition");
+    Predicate predicate{getArfReference(conditionType, 0), false};
+    lowerJmpi(predicate, loopHeaders.back().headerLabel);
+    return success();
   }
 
   LogicalResult lowerIf(Operation *operation) {
@@ -503,6 +564,10 @@ private:
       SourceOperand source = getSourceOperand(
           operand, getSub(operation, subNames[index]), sourceType,
           getSourceRegion(operation, regionNames[index]));
+      if (operand.getDefiningOp<ImmOp>())
+        source.type = index == 1 && isa<ShlOp, ShrOp>(operation)
+                          ? DataType::ud
+                          : instruction.destinationType;
       source.negate = negateFirstSource && index == 0;
       source.isSigned = index == 0 && operation->hasAttr("signedSource");
       instruction.sources.push_back(std::move(source));
@@ -528,6 +593,11 @@ private:
   EmissionProgram &program;
   DenseMap<Value, Operation *> definingOperations;
   DenseMap<Operation *, int32_t> instructionIndices;
+  struct LoopHeader {
+    UniformLoopOp loop;
+    uint32_t headerLabel;
+  };
+  SmallVector<LoopHeader> loopHeaders;
   int32_t nextInstruction = 0;
   int32_t nextToken = 0;
   uint32_t divergentDepth = 0;

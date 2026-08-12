@@ -382,6 +382,9 @@ private:
       uint64_t value = source.negate
                            ? negateImmediate(immediate->value, immediate->type)
                            : immediate->value;
+      unsigned bits = getTypeBytes(source.type) * 8;
+      if (bits < 64)
+        value &= (uint64_t{1} << bits) - 1;
       RETURN_IF_GED_ERROR(GED_SetImm(&instruction, value));
       return success();
     }
