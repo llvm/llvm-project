@@ -8,15 +8,6 @@ module {}
 
 // -----
 
-// A data member is spelled without a mark, so 'data' is not a mark keyword.
-!u8i = !cir.int<u, 8>
-// expected-error @below {{expected non-function type}}
-!rec_S = !cir.struct<"S" {data !u8i}>
-
-module {}
-
-// -----
-
 // Only one mark is consumed, so a second one is left to the type parser.
 !u8i = !cir.int<u, 8>
 // expected-error @below {{expected non-function type}}
@@ -30,6 +21,24 @@ module {}
 !s32i = !cir.int<s, 32>
 // expected-error @below {{a union's tail padding takes no kind mark}}
 !rec_U = !cir.union<"U" {!s32i}, padding = {pad !cir.array<!u8i x 4>}>
+
+module {}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!s32i = !cir.int<s, 32>
+// expected-error @below {{a union's tail padding takes no kind mark}}
+!rec_U = !cir.union<"U" {!s32i}, padding = {data !cir.array<!u8i x 4>}>
+
+module {}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!s32i = !cir.int<s, 32>
+// expected-error @below {{a union's tail padding takes no kind mark}}
+!rec_U = !cir.union<"U" {!s32i}, padding = {empty !cir.array<!u8i x 4>}>
 
 module {}
 

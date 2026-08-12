@@ -58,8 +58,8 @@ struct StructTypeStorage : public mlir::TypeStorage {
       : members(members), name(name), incomplete(incomplete), packed(packed),
         padded(padded), member_kinds(member_kinds), is_class(is_class) {
     assert((name || !incomplete) && "Incomplete records must have a name");
-    assert((member_kinds.empty() || member_kinds.size() == members.size()) &&
-           "member kind list must cover every member");
+    assert(member_kinds.size() == members.size() &&
+           "every member must say what it holds");
   }
 
   KeyTy getAsKey() const {
@@ -99,7 +99,7 @@ struct StructTypeStorage : public mlir::TypeStorage {
       return llvm::failure();
 
     // A second completion must agree with the first in every parameter,
-    // including the marks: otherwise it silently keeps the marks it was given
+    // including the kinds: otherwise it silently keeps the kinds it was given
     // the first time.
     if (!incomplete)
       return mlir::success(
@@ -108,7 +108,7 @@ struct StructTypeStorage : public mlir::TypeStorage {
 
     // mutate is the one entrance verify() never sees, so check the length here
     // rather than leave it to an assert.
-    if (!memberKinds.empty() && memberKinds.size() != members.size())
+    if (memberKinds.size() != members.size())
       return llvm::failure();
 
     this->members = allocator.copyInto(members);
@@ -154,8 +154,8 @@ struct UnionTypeStorage : public mlir::TypeStorage {
       : members(members), name(name), incomplete(incomplete), packed(packed),
         padding(padding), member_kinds(member_kinds) {
     assert((name || !incomplete) && "Incomplete records must have a name");
-    assert((member_kinds.empty() || member_kinds.size() == members.size()) &&
-           "member kind list must cover every member");
+    assert(member_kinds.size() == members.size() &&
+           "every member must say what it holds");
   }
 
   KeyTy getAsKey() const {
@@ -193,7 +193,7 @@ struct UnionTypeStorage : public mlir::TypeStorage {
       return llvm::failure();
 
     // A second completion must agree with the first in every parameter,
-    // including the marks: otherwise it silently keeps the marks it was given
+    // including the kinds: otherwise it silently keeps the kinds it was given
     // the first time.
     if (!incomplete)
       return mlir::success(
@@ -202,7 +202,7 @@ struct UnionTypeStorage : public mlir::TypeStorage {
 
     // mutate is the one entrance verify() never sees, so check the length here
     // rather than leave it to an assert.
-    if (!memberKinds.empty() && memberKinds.size() != members.size())
+    if (memberKinds.size() != members.size())
       return llvm::failure();
 
     this->members = allocator.copyInto(members);

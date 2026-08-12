@@ -23,6 +23,7 @@
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Interfaces/CIRTypeInterfaces.h"
+#include "llvm/ADT/SmallVector.h"
 
 namespace llvm {
 struct fltSemantics;
@@ -134,8 +135,8 @@ public:
   std::string getPrefixedName() const;
 
   void complete(llvm::ArrayRef<mlir::Type> members, bool packed, bool padded,
-                mlir::Type padding = {},
-                llvm::ArrayRef<RecordMemberKind> memberKinds = {});
+                mlir::Type padding,
+                llvm::ArrayRef<RecordMemberKind> memberKinds);
   uint64_t getElementOffset(const mlir::DataLayout &dataLayout,
                             unsigned idx) const;
   bool isLayoutIdentical(const RecordType &other);
@@ -145,12 +146,10 @@ public:
   void removeABIConversionNamePrefix();
 };
 
-/// Drop a member-kind list that marks nothing, so that a record whose members
-/// all hold data has exactly one spelling.  Two storage keys that print
-/// identically would otherwise give two unequal types no reader could tell
-/// apart.
-llvm::ArrayRef<RecordMemberKind>
-normalizeRecordMemberKinds(llvm::ArrayRef<RecordMemberKind> memberKinds);
+/// One `Data` kind per member.  Takes the members rather than a count so that
+/// the two cannot drift apart.
+llvm::SmallVector<RecordMemberKind>
+getAllDataKinds(llvm::ArrayRef<mlir::Type> members);
 
 /// Whether no member of \p recTy holds data, which makes the record empty for
 /// the ABI.  Vacuously true for a complete record with no members, and false

@@ -30,7 +30,7 @@ struct Outer {
 // Middle's tail padding.
 
 // CIR: !rec_Middle2Ebase = !cir.struct<"Middle.base" packed {!rec_Base, !s8i}>
-// CIR: !rec_Outer = !cir.struct<"Outer" padded {!rec_Middle2Ebase, !s8i,
+// CIR: !rec_Outer = !cir.struct<"Outer" padded {!rec_Middle2Ebase, !s8i, pad !cir.array<!u8i x 2>}>
 
 // CIR-LABEL: cir.func {{.*}} @_ZN5OuterC2ERK6Middlec(
 // CIR:         %[[THIS:.*]] = cir.load %{{.+}} : !cir.ptr<!cir.ptr<!rec_Outer>>, !cir.ptr<!rec_Outer>
@@ -50,6 +50,9 @@ struct Outer {
 // LLVM-DAG: %struct.UnionWithPadding.base = type { i8 }
 // LLVM-DAG: %struct.OuterFinalUnionPad = type { %struct.FinalUnionWithPadding.base, i8 }
 // LLVM-DAG: %struct.FinalUnionWithPadding.base = type { i8 }
+// LLVM-DAG: %struct.OuterUnionPadAfterStorage = type { %struct.UnionPadAfterStorage.base, i8 }
+// LLVM-DAG: %struct.UnionPadAfterStorage.base = type <{ i32, [3 x i8] }>
+// LLVM-DAG: @oupas = {{(dso_local )?}}global %struct.OuterUnionPadAfterStorage zeroinitializer, align 4
 // LLVM-DAG: @ou = {{(dso_local )?}}global %struct.OuterUnion zeroinitializer, align 8
 // LLVM-DAG: @of = {{(dso_local )?}}global %struct.OuterFinal zeroinitializer, align 4
 // LLVM-DAG: @oup = {{(dso_local )?}}global %struct.OuterUnionPad zeroinitializer, align 2
@@ -67,6 +70,9 @@ struct Outer {
 // OGCG-DAG: %union.UnionWithPadding.base = type { i8 }
 // OGCG-DAG: %struct.OuterFinalUnionPad = type { %union.FinalUnionWithPadding.base, i8 }
 // OGCG-DAG: %union.FinalUnionWithPadding.base = type { i8 }
+// OGCG-DAG: %struct.OuterUnionPadAfterStorage = type { %union.UnionPadAfterStorage.base, i8 }
+// OGCG-DAG: %union.UnionPadAfterStorage.base = type <{ i32, [3 x i8] }>
+// OGCG-DAG: @oupas = {{(dso_local )?}}global %struct.OuterUnionPadAfterStorage zeroinitializer, align 4
 // OGCG-DAG: @ou = {{(dso_local )?}}global %struct.OuterUnion zeroinitializer, align 8
 // OGCG-DAG: @of = {{(dso_local )?}}global %struct.OuterFinal zeroinitializer, align 4
 // OGCG-DAG: @oup = {{(dso_local )?}}global %struct.OuterUnionPad zeroinitializer, align 2
@@ -155,6 +161,29 @@ struct OuterFinalUnionPad {
 
 OuterFinalUnionPad ofup;
 
+// A union whose data size outgrows its highest-aligned variant, so the base
+// subobject needs padding of its own after the storage type.
+struct TailBig {
+  TailBig();
+
+private:
+  short s;
+  char c[5];
+};
+
+union UnionPadAfterStorage {
+  UnionPadAfterStorage();
+  int i;
+  [[no_unique_address]] TailBig t;
+};
+
+struct OuterUnionPadAfterStorage {
+  [[no_unique_address]] UnionPadAfterStorage u;
+  bool tail;
+};
+
+OuterUnionPadAfterStorage oupas;
+
 // CIR-NUA-DAG: !rec_FinalForNUA = !cir.struct<"FinalForNUA" {!s32i, !s8i}>
 // CIR-NUA-DAG: !rec_UnionForNUA = !cir.union<"UnionForNUA" {!s32i, !s64i}>
 // CIR-NUA-DAG: !rec_OuterFinal = !cir.struct<"OuterFinal" {!rec_FinalForNUA, !s8i}>
@@ -163,10 +192,14 @@ OuterFinalUnionPad ofup;
 // CIR-NUA-DAG: !rec_OuterUnionPad = !cir.struct<"OuterUnionPad" {!rec_UnionWithPadding2Ebase, !cir.bool}>
 // CIR-NUA-DAG: !rec_FinalUnionWithPadding2Ebase = !cir.struct<"FinalUnionWithPadding.base" {!u8i}>
 // CIR-NUA-DAG: !rec_OuterFinalUnionPad = !cir.struct<"OuterFinalUnionPad" {!rec_FinalUnionWithPadding2Ebase, !cir.bool}>
+// CIR-NUA-DAG: !rec_TailBig = !cir.struct<"TailBig" packed padded {!s16i, !cir.array<!s8i x 5>, pad !u8i}>
+// CIR-NUA-DAG: !rec_UnionPadAfterStorage2Ebase = !cir.struct<"UnionPadAfterStorage.base" packed padded {!s32i, pad !cir.array<!u8i x 3>}>
+// CIR-NUA-DAG: !rec_OuterUnionPadAfterStorage = !cir.struct<"OuterUnionPadAfterStorage" {!rec_UnionPadAfterStorage2Ebase, !cir.bool}>
 // CIR-NUA-DAG: cir.global external @ou = #cir.zero : !rec_OuterUnion
 // CIR-NUA-DAG: cir.global external @of = #cir.zero : !rec_OuterFinal
 // CIR-NUA-DAG: cir.global external @oup = #cir.zero : !rec_OuterUnionPad
 // CIR-NUA-DAG: cir.global external @ofup = #cir.zero : !rec_OuterFinalUnionPad
+// CIR-NUA-DAG: cir.global external @oupas = #cir.zero : !rec_OuterUnionPadAfterStorage
 
 struct EmptyForNUA {};
 
