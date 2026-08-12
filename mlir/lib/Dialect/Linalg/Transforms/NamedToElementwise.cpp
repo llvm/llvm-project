@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements rewriting those linalg named ops that are essentially
-// elementwise e.g. `linalg.exp`, to `linalg.elementwise`. This allows further
+// elementwise e.g. `linalg.add`, to `linalg.elementwise`. This allows further
 // optimization on `linalg.elementwise` such as folding transpose, broadcast.
 //
 //===----------------------------------------------------------------------===//
@@ -35,19 +35,6 @@ ElementwiseKind getKind(Operation *op) {
       .Case([](DivOp) { return ElementwiseKind::div; })
       .Case([](DivUnsignedOp) { return ElementwiseKind::div_unsigned; })
       .Case([](PowFOp) { return ElementwiseKind::powf; })
-      .Case([](ExpOp) { return ElementwiseKind::exp; })
-      .Case([](LogOp) { return ElementwiseKind::log; })
-      .Case([](AbsOp) { return ElementwiseKind::abs; })
-      .Case([](CeilOp) { return ElementwiseKind::ceil; })
-      .Case([](FloorOp) { return ElementwiseKind::floor; })
-      .Case([](NegFOp) { return ElementwiseKind::negf; })
-      .Case([](ReciprocalOp) { return ElementwiseKind::reciprocal; })
-      .Case([](RoundOp) { return ElementwiseKind::round; })
-      .Case([](SqrtOp) { return ElementwiseKind::sqrt; })
-      .Case([](RsqrtOp) { return ElementwiseKind::rsqrt; })
-      .Case([](SquareOp) { return ElementwiseKind::square; })
-      .Case([](TanhOp) { return ElementwiseKind::tanh; })
-      .Case([](ErfOp) { return ElementwiseKind::erf; })
       .DefaultUnreachable("unhandled case in named to elementwise");
 }
 
@@ -79,17 +66,4 @@ void mlir::linalg::populateLinalgNamedToElementwisePatterns(
   patterns.add<NamedToElementwisePattern<DivOp>>(patterns.getContext());
   patterns.add<NamedToElementwisePattern<DivUnsignedOp>>(patterns.getContext());
   patterns.add<NamedToElementwisePattern<PowFOp>>(patterns.getContext());
-  patterns.add<NamedToElementwisePattern<ExpOp>>(patterns.getContext());
-  patterns.add<NamedToElementwisePattern<LogOp>>(patterns.getContext());
-  patterns.add<NamedToElementwisePattern<AbsOp>>(patterns.getContext());
-  patterns.add<NamedToElementwisePattern<CeilOp>>(patterns.getContext());
-  patterns.add<NamedToElementwisePattern<FloorOp>>(patterns.getContext());
-  patterns.add<NamedToElementwisePattern<NegFOp>>(patterns.getContext());
-  patterns.add<NamedToElementwisePattern<ReciprocalOp>>(patterns.getContext());
-  patterns.add<NamedToElementwisePattern<RoundOp>>(patterns.getContext());
-  patterns.add<NamedToElementwisePattern<SqrtOp>>(patterns.getContext());
-  patterns.add<NamedToElementwisePattern<RsqrtOp>>(patterns.getContext());
-  patterns.add<NamedToElementwisePattern<SquareOp>>(patterns.getContext());
-  patterns.add<NamedToElementwisePattern<TanhOp>>(patterns.getContext());
-  patterns.add<NamedToElementwisePattern<ErfOp>>(patterns.getContext());
 }
