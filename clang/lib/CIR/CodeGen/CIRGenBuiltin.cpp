@@ -196,6 +196,28 @@ static RValue emitStdcHasSingleBit(CIRGenFunction &cgf, const CallExpr *e) {
   return RValue::get(result);
 }
 
+static RValue emitStdcBitFloor(CIRGenFunction &cgf, const CallExpr *e) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Location loc = cgf.getLoc(e->getSourceRange());
+  mlir::Value arg = cgf.emitScalarExpr(e->getArg(0));
+  auto argTy = mlir::cast<cir::IntType>(arg.getType());
+  if (!isStdcBitOpWidthSupported(argTy))
+    return errorStdcBitOpWidthNYI(cgf, e);
+
+  mlir::Value widthMinusOne =
+      builder.getConstInt(loc, argTy, argTy.getWidth() - 1);
+  mlir::Value one = builder.getConstInt(loc, argTy, 1);
+  mlir::Value lz =
+      cir::BitClzOp::create(builder, loc, arg, /*poisonZero=*/true).getResult();
+  mlir::Value shiftAmt = builder.createSub(loc, widthMinusOne, lz);
+  mlir::Value zero = builder.getNullValue(argTy, loc);
+  mlir::Value isZero =
+      builder.createCompare(loc, cir::CmpOpKind::eq, arg, zero);
+  mlir::Value floor = builder.createShiftLeft(loc, one, shiftAmt);
+  mlir::Value result = builder.createSelect(loc, isZero, zero, floor);
+  return RValue::get(result);
+}
+
 /// Emit the conversions required to turn the given value into an
 /// integer of the given size.
 static mlir::Value emitToInt(CIRGenFunction &cgf, mlir::Value v, QualType t,
@@ -1442,7 +1464,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BIstdc_bit_floor_ul:
   case Builtin::BIstdc_bit_floor_ull:
   case Builtin::BI__builtin_stdc_bit_floor:
-    return errorBuiltinCallNYI(*this, e, builtinID);
+    return emitStdcBitFloor(*this, e);
 
   case Builtin::BI__builtin_clzs:
   case Builtin::BI__builtin_clz:
