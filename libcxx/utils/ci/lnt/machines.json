@@ -7,7 +7,7 @@
     "xcode-version": "26.5",
     "benchmark-suite-version": "TODO",
     "coverage": {
-      "since": "2024-01-01",
+      "since": "2023-01-01",
       "every": "week",
       "samples": 3,
       "max-in-flight": 4,
@@ -21,7 +21,7 @@
     "running-on": "linux",
     "benchmark-suite-version": "TODO",
     "coverage": {
-      "since": "2024-01-01",
+      "since": "2023-01-01",
       "every": "week",
       "samples": 3,
       "max-in-flight": 8,
