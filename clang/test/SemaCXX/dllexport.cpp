@@ -753,6 +753,13 @@ struct ClassWithNestedMultipleDefaultCtors {
   };
 };
 
+struct ClassWithNestedObviousMultipleDefaultCtors {
+  struct Nested {
+    __declspec(dllexport) Nested() {}    // ms-error{{'__declspec(dllexport)' cannot be applied to more than one default constructor}}
+    __declspec(dllexport) Nested(...) {} // ms-note{{declared here}}
+  };
+};
+
 template <typename T> struct HasDefaults {
   HasDefaults(int x = sizeof(T)) {} // ms-error {{invalid application of 'sizeof'}}
 };
