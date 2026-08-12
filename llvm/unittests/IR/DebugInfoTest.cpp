@@ -1633,13 +1633,11 @@ TEST(DebugLocTest, IntermediateLocEquality) {
   ASSERT_NE(DL1.get(), DL2.get());
   // isSameSourceLocation compares the primary position only, so all three of
   // these are the same source location: identical layers, differing layers, and
-  // layers versus none. See IntermediateLocEqualityWithLayers for the
-  // layer-aware comparison.
+  // layers versus none.
   EXPECT_TRUE(DL1.isSameSourceLocation(DL2));
   EXPECT_TRUE(DL1.isSameSourceLocation(DL3));
   EXPECT_TRUE(DL1.isSameSourceLocation(DL4));
 }
-
 
 TEST(DebugLocTest, MergedLocationWithIntermediate) {
   LLVMContext Ctx;
