@@ -165,7 +165,7 @@ class IterClusterBindingsConsumer : public StoreTestConsumer {
   public:
     std::vector<Binding> Bindings;
 
-    bool HandleBinding(StoreManager &, Store, const MemRegion *,
+    bool handleBinding(StoreManager &, Store, const MemRegion *,
                        std::optional<uint64_t> BitOffset,
                        StoreManager::BindingKind Kind, SVal Val) override {
       Bindings.push_back({BitOffset, Kind, Val});

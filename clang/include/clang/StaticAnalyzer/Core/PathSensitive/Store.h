@@ -301,7 +301,7 @@ public:
     /// \param BitOffset the offset of the binding within \p Region, or
     ///        std::nullopt if the offset is symbolic.
     /// \return whether the iteration should continue.
-    virtual bool HandleBinding(StoreManager &SMgr, Store store,
+    virtual bool handleBinding(StoreManager &SMgr, Store S,
                                const MemRegion *Region,
                                std::optional<uint64_t> BitOffset,
                                BindingKind Kind, SVal Val) = 0;
@@ -310,8 +310,8 @@ public:
   /// Iterate over the bindings of the memory cluster \p BaseRegion belongs to.
   /// Unlike iterBindings(), here we preserve the offset of each binding,
   /// including default bindings.
-  virtual void iterClusterBindings(Store store, const MemRegion *BaseRegion,
-                                   ClusterBindingsHandler &f) = 0;
+  virtual void iterClusterBindings(Store S, const MemRegion *BaseRegion,
+                                   ClusterBindingsHandler &Handler) = 0;
 
 protected:
   const ElementRegion *MakeElementRegion(const SubRegion *baseRegion,

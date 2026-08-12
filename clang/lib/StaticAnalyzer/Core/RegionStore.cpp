@@ -843,11 +843,11 @@ public: // Part of public interface to class.
     }
   }
 
-  void iterClusterBindings(Store store, const MemRegion *BaseRegion,
-                           ClusterBindingsHandler &f) override {
+  void iterClusterBindings(Store S, const MemRegion *BaseRegion,
+                           ClusterBindingsHandler &Handler) override {
     assert(BaseRegion == BaseRegion->getBaseRegion() &&
            "Should only be called for base regions");
-    RegionBindingsRef B = getRegionBindings(store);
+    RegionBindingsRef B = getRegionBindings(S);
     const ClusterBindings *Cluster = B.lookup(BaseRegion);
     if (!Cluster)
       return;
@@ -856,8 +856,8 @@ public: // Part of public interface to class.
       std::optional<uint64_t> BitOffset;
       if (!Key.hasSymbolicOffset())
         BitOffset = Key.getOffset();
-      if (!f.HandleBinding(*this, store, Key.getRegion(), BitOffset,
-                           Key.getBindingKind(), Value))
+      if (!Handler.handleBinding(*this, S, Key.getRegion(), BitOffset,
+                                 Key.getBindingKind(), Value))
         return;
     }
   }

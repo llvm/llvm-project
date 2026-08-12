@@ -72,7 +72,7 @@ bool mayBeZero(ProgramStateRef State, SValBuilder &SVB, QualType Ty, SVal Val) {
   if (IsZero.isConstrainedTrue())
     return true;
 
-  // For an atomic symbol, the solver won't do any better than the preceeding
+  // For an atomic symbol, the solver won't do any better than the preceding
   // check, so we cannot prove anything further (hence it may be zero).
   SymbolRef Sym = DV->getAsSymbol(/*IncludeBaseRegion=*/true);
   if (Sym && isa<SymbolData>(Sym))
@@ -135,7 +135,7 @@ public:
   /// Check a binding to see if we can reason about elements in the array.
   /// Return true if we should keep checking/iterating over the rest of the
   /// bindings in the cluster.
-  bool HandleBinding(StoreManager &, Store, const MemRegion *Region,
+  bool handleBinding(StoreManager &, Store, const MemRegion *Region,
                      std::optional<uint64_t> BitOffset,
                      StoreManager::BindingKind Kind, SVal Val) override {
     // Skip default bindings: we can't tell which elements this applies to,
