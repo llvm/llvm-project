@@ -58,11 +58,12 @@ FunctionPass *createNVPTXAllocaHoistingLegacyPass();
 FunctionPass *createNVPTXLowerAllocaLegacyPass();
 FunctionPass *createNVPTXLowerUnreachableLegacyPass(bool TrapUnreachable,
                                                     bool NoTrapAfterNoreturn);
+FunctionPass *createNVPTXLowerAggrCopiesLegacyPass();
 FunctionPass *createNVPTXMarkKernelPtrsGlobalPass();
 FunctionPass *createNVPTXTagInvariantLoadsPass();
 FunctionPass *createNVPTXIRPeepholePass();
 MachineFunctionPass *createNVPTXPeepholeLegacyPass();
-MachineFunctionPass *createNVPTXProxyRegErasurePass();
+MachineFunctionPass *createNVPTXProxyRegErasureLegacyPass();
 MachineFunctionPass *createNVPTXForwardParamsLegacyPass();
 MachineFunctionPass *createNVPTXAddressFolderLegacyPass();
 
@@ -73,12 +74,12 @@ void initializeNVPTXAsmPrinterPass(PassRegistry &);
 void initializeNVPTXAssignValidGlobalNamesLegacyPassPass(PassRegistry &);
 void initializeNVPTXAtomicLowerLegacyPassPass(PassRegistry &);
 void initializeNVPTXCtorDtorLoweringLegacyPass(PassRegistry &);
-void initializeNVPTXLowerAggrCopiesPass(PassRegistry &);
+void initializeNVPTXLowerAggrCopiesLegacyPassPass(PassRegistry &);
 void initializeNVPTXLowerAllocaLegacyPassPass(PassRegistry &);
 void initializeNVPTXLowerUnreachableLegacyPassPass(PassRegistry &);
 void initializeNVPTXLowerArgsLegacyPassPass(PassRegistry &);
 void initializeNVPTXPromoteParamAlignLegacyPassPass(PassRegistry &);
-void initializeNVPTXProxyRegErasurePass(PassRegistry &);
+void initializeNVPTXProxyRegErasureLegacyPassPass(PassRegistry &);
 void initializeNVPTXForwardParamsLegacyPassPass(PassRegistry &);
 void initializeNVPTXAddressFolderLegacyPassPass(PassRegistry &);
 void initializeNVVMIntrRangePass(PassRegistry &);
@@ -132,6 +133,12 @@ public:
 
 struct NVPTXCopyByValArgsPass : OptionalPassInfoMixin<NVPTXCopyByValArgsPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
+class NVPTXLowerAggrCopiesPass
+    : public RequiredPassInfoMixin<NVPTXLowerAggrCopiesPass> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 struct NVPTXPromoteParamAlignPass
@@ -194,6 +201,13 @@ public:
 class NVPTXISelDAGToDAGPass : public SelectionDAGISelPass {
 public:
   NVPTXISelDAGToDAGPass(NVPTXTargetMachine &TM, CodeGenOptLevel OptLevel);
+};
+
+class NVPTXProxyRegErasurePass
+    : public RequiredPassInfoMixin<NVPTXProxyRegErasurePass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
 };
 
 class NVPTXForwardParamsPass

@@ -25,7 +25,7 @@ void f2(void) {
 // CIR-NEXT:    cir.call @f1(%[[ARG]]) : (!u64i) -> ()
 
 // LLVM-LABEL: define{{.*}} void @f2(){{.*}}
-// LLVM:         %[[COERCE:.+]] = alloca %struct.S, i64 1, align 8
+// LLVM:         %[[COERCE:.+]] = alloca %struct.S, align 8
 // LLVM:         %[[S:.+]] = load %struct.S, ptr %{{.+}}, align 4
 // LLVM-NEXT:    store %struct.S %[[S]], ptr %[[COERCE]], align 4
 // LLVM-NEXT:    %[[ARG:.+]] = load i64, ptr %[[COERCE]], align 8
@@ -49,7 +49,7 @@ void f4(void) {
 // CIR-NEXT:    cir.store align(4) %[[S]], %{{.+}} : !rec_S, !cir.ptr<!rec_S>
 
 // LLVM-LABEL: define{{.*}} void @f4(){{.*}} {
-// LLVM:         %[[COERCE:.+]] = alloca i64, i64 1, align 8
+// LLVM:         %[[COERCE:.+]] = alloca i64, align 8
 // LLVM:         %[[RET:.+]] = call i64 @f3()
 // LLVM-NEXT:    store i64 %[[RET]], ptr %[[COERCE]], align 8
 // LLVM-NEXT:    %[[S:.+]] = load %struct.S, ptr %[[COERCE]], align 4
@@ -79,7 +79,7 @@ void f7(void) {
 
 // LLVM-LABEL: define{{.*}} void @f7(){{.*}} {
 // LLVM:         %[[B:.+]] = load %struct.Big, ptr %{{.+}}, align 4
-// LLVM-NEXT:    %[[SLOT:.+]] = alloca %struct.Big, i64 1, align 8
+// LLVM-NEXT:    %[[SLOT:.+]] = alloca %struct.Big, align 8
 // LLVM-NEXT:    store %struct.Big %[[B]], ptr %[[SLOT]], align 4
 // TODO(cir): CIR adds noalias to a byval argument where classic does not.
 // LLVM-NEXT:    call void @f5(ptr noalias noundef byval(%struct.Big) align 8 %[[SLOT]])
@@ -97,7 +97,7 @@ void f8(void) {
 // CIR-NEXT:    cir.call @f6(%[[B]]) : (!cir.ptr<!rec_Big> {llvm.align = 4 : i64, llvm.dead_on_unwind, llvm.sret = !rec_Big, llvm.writable}) -> ()
 
 // LLVM-LABEL: define{{.*}} void @f8(){{.*}} {
-// LLVM:        %[[B:.+]] = alloca %struct.Big, i64 1, align 4
+// LLVM:        %[[B:.+]] = alloca %struct.Big, align 4
 // LLVM-NEXT:   call void @f6(ptr dead_on_unwind writable sret(%struct.Big) align 4 %[[B]])
 
 // OGCG-LABEL: define{{.*}} void @f8() #0 {
@@ -124,9 +124,9 @@ void f9(void) {
 // CIR-NEXT:    cir.call @f1(%[[ARGVAL]]) : (!u64i) -> ()
 
 // LLVM-LABEL: define{{.*}} void @f9(){{.*}} {
-// LLVM:         %[[RETSLOT:.+]] = alloca i64, i64 1, align 8
-// LLVM-NEXT:    %[[ARGSLOT:.+]] = alloca %struct.S, i64 1, align 8
-// LLVM-NEXT:    %[[SLOT:.+]] = alloca %struct.S, i64 1, align 4
+// LLVM:         %[[RETSLOT:.+]] = alloca i64, align 8
+// LLVM-NEXT:    %[[ARGSLOT:.+]] = alloca %struct.S, align 8
+// LLVM-NEXT:    %[[SLOT:.+]] = alloca %struct.S, align 4
 // LLVM-NEXT:    %[[RET:.+]] = call i64 @f3()
 // LLVM-NEXT:    store i64 %[[RET]], ptr %[[RETSLOT]], align 8
 // LLVM-NEXT:    %[[RETVAL:.+]] = load %struct.S, ptr %[[RETSLOT]], align 4

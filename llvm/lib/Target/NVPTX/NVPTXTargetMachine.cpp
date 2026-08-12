@@ -15,7 +15,6 @@
 #include "NVPTXAliasAnalysis.h"
 #include "NVPTXAsmPrinter.h"
 #include "NVPTXCtorDtorLowering.h"
-#include "NVPTXLowerAggrCopies.h"
 #include "NVPTXMachineFunctionInfo.h"
 #include "NVPTXTargetObjectFile.h"
 #include "NVPTXTargetTransformInfo.h"
@@ -109,8 +108,8 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeNVPTXLowerAllocaLegacyPassPass(PR);
   initializeNVPTXLowerUnreachableLegacyPassPass(PR);
   initializeNVPTXCtorDtorLoweringLegacyPass(PR);
-  initializeNVPTXLowerAggrCopiesPass(PR);
-  initializeNVPTXProxyRegErasurePass(PR);
+  initializeNVPTXLowerAggrCopiesLegacyPassPass(PR);
+  initializeNVPTXProxyRegErasureLegacyPassPass(PR);
   initializeNVPTXForwardParamsLegacyPassPass(PR);
   initializeNVPTXAddressFolderLegacyPassPass(PR);
   initializeNVPTXDAGToDAGISelLegacyPass(PR);
@@ -392,7 +391,7 @@ void NVPTXPassConfig::addIRPasses() {
 }
 
 bool NVPTXPassConfig::addInstSelector() {
-  addPass(createLowerAggrCopies());
+  addPass(createNVPTXLowerAggrCopiesLegacyPass());
   addPass(createNVPTXAllocaHoistingLegacyPass());
   addPass(createNVPTXISelDag(getNVPTXTargetMachine(), getOptLevel()));
   addPass(createNVPTXReplaceImageHandlesLegacyPass());
@@ -405,7 +404,7 @@ void NVPTXPassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createNVPTXAddressFolderLegacyPass());
   // Remove Proxy Register pseudo instructions used to keep `callseq_end` alive.
-  addPass(createNVPTXProxyRegErasurePass());
+  addPass(createNVPTXProxyRegErasureLegacyPass());
 }
 
 void NVPTXPassConfig::addPostRegAlloc() {

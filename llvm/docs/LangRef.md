@@ -2551,6 +2551,8 @@ fn -> other_fn -> other_fn ; fn is norecurse
 `optnone`
 :   This function attribute indicates that most optimization passes will skip
     this function, with the exception of interprocedural optimization passes.
+    Interprocedural passes may still analyze this function, transform its body,
+    and refine its attributes, but they will not rewrite its signature.
     Code generation defaults to the "fast" instruction selector.
     This attribute cannot be used together with the `alwaysinline`
     attribute; this attribute is also incompatible
@@ -8088,18 +8090,15 @@ main loop. Each node has a single operand containing the name string:
 
 Additionally, enabling predication implicitly enables vectorization.
 
-#### '`llvm.loop.vectorize.scalable.enable`' Metadata
+#### '`llvm.loop.vectorize.scalable.enable`' and '`llvm.loop.vectorize.scalable.disable`' Metadata
 
 This metadata selectively enables or disables scalable vectorization for the
 loop, and only has any effect if vectorization for the loop is already enabled.
-The first operand is the string `llvm.loop.vectorize.scalable.enable`
-and the second operand is a bit. If the bit operand value is 1 scalable
-vectorization is enabled, whereas a value of 0 reverts to the default fixed
-width vectorization:
+Each node has a single operand containing the name string:
 
 ```llvm
-!0 = !{!"llvm.loop.vectorize.scalable.enable", i1 0}
-!1 = !{!"llvm.loop.vectorize.scalable.enable", i1 1}
+!0 = !{!"llvm.loop.vectorize.scalable.enable"}
+!1 = !{!"llvm.loop.vectorize.scalable.disable"}
 ```
 
 #### '`llvm.loop.vectorize.width`' Metadata
