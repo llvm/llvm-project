@@ -1115,6 +1115,7 @@ static bool justRunCheckersAsPreVisit(const Stmt *S) {
   case Stmt::ObjCBridgedCastExprClass:
   case Stmt::CXXAddrspaceCastExprClass:
   case Stmt::CXXBindTemporaryExprClass:
+  case Stmt::CXXNewExprClass:
   case Stmt::MaterializeTemporaryExprClass:
   case Stmt::OffsetOfExprClass:
   case Stmt::UnaryOperatorClass:
@@ -1137,6 +1138,7 @@ static bool justRunCheckersAsPostVisit(const Stmt *S) {
   case Stmt::ObjCBridgedCastExprClass:
   case Stmt::CXXAddrspaceCastExprClass:
   case Stmt::CXXBindTemporaryExprClass:
+  case Stmt::CXXNewExprClass:
   case Stmt::MaterializeTemporaryExprClass:
   case Stmt::OffsetOfExprClass:
   case Stmt::UnaryOperatorClass:
@@ -2172,18 +2174,9 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
                                     Dst);
       break;
 
-    case Stmt::CXXNewExprClass: {
-
-      ExplodedNodeSet PreVisit;
-      getCheckerManager().runCheckersForPreStmt(PreVisit, Pred, S, *this);
-
-      ExplodedNodeSet PostVisit;
-      for (const auto i : PreVisit)
-        VisitCXXNewExpr(cast<CXXNewExpr>(S), i, PostVisit);
-
-      getCheckerManager().runCheckersForPostStmt(Dst, PostVisit, S, *this);
+    case Stmt::CXXNewExprClass:
+      VisitCXXNewExpr(cast<CXXNewExpr>(S), Pred, Dst);
       break;
-    }
 
     case Stmt::CXXDeleteExprClass: {
       ExplodedNodeSet PreVisit;
