@@ -326,9 +326,8 @@ bool AtomicInfo::emitMemSetZeroIfNecessary() const {
 /// floating point operands.  TODO: Allow compare-and-exchange and FP - see
 /// comment in CIRGenAtomicExpandPass.cpp.
 static bool shouldCastToInt(mlir::Type valueTy, bool cmpxchg) {
-  // The atomic operations act on a vector directly, which is required for the
-  // elementwise arithmetic operations. cmpxchg has no vector form, so it is
-  // still handled as an integer of the same size.
+  // The atomic operations act on a vector directly, but cmpxchg has no vector
+  // form, so it is still handled as an integer.
   if (isa<cir::VectorType>(valueTy))
     return cmpxchg;
   if (cir::isAnyFloatingPointType(valueTy))

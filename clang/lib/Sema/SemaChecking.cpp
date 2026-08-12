@@ -5335,10 +5335,8 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
     // trivial type errors.
     auto IsAllowedValueType = [&](QualType ValType,
                                   unsigned AllowedType) -> bool {
-      // Atomic operations on a vector are performed elementwise, so it is the
-      // element type which decides whether the operation is well-formed. A
-      // vector of _Bool is rejected outright, as its elements are not
-      // individually addressable.
+      // A vector is operated on elementwise, so its element type decides. The
+      // elements of a vector of _Bool are not individually addressable.
       if (const auto *VecTy = ValType->getAs<VectorType>()) {
         if (VecTy->getElementType()->isBooleanType())
           return false;
@@ -5376,14 +5374,11 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
           << IsC11 << Ptr->getType() << Ptr->getSourceRange();
       return ExprError();
     }
-    // An arithmetic operation on a vector is always emitted as a single
-    // atomicrmw instruction; unlike the other forms there is no libcall to fall
-    // back on for a size which cannot be handled inline. The size of the vector
-    // itself is checked here, as the type holding it is padded out when the
-    // element count is not a power of two.
+    // An arithmetic operation always becomes an atomicrmw, with no libcall to
+    // fall back on. The size is computed from the elements, as the type
+    // holding them is padded when their count is not a power of two.
     if (Form == Arithmetic) {
       if (const auto *VecTy = ValType->getAs<VectorType>()) {
-        // The largest size EmitAtomicExpr() emits without a libcall.
         constexpr unsigned MaxVectorSizeInBytes = 16;
         uint64_t VecSizeInBits = Context.getTypeSize(VecTy->getElementType()) *
                                  VecTy->getNumElements();

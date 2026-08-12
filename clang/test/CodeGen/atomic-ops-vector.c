@@ -4,9 +4,6 @@
 // RUN: %clang_cc1 %s -emit-llvm -o - -triple=amdgcn-amd-amdhsa \
 // RUN:   -Wno-atomic-alignment | FileCheck --check-prefixes=CHECK,AMDGCN %s
 
-// Atomic operations on a vector are performed elementwise by a single atomic
-// instruction, rather than being bitcast to an integer of the same size.
-
 typedef _Float16 half2 __attribute__((ext_vector_type(2)));
 typedef __bf16 bfloat2 __attribute__((ext_vector_type(2)));
 typedef float float2 __attribute__((ext_vector_type(2)));
@@ -86,8 +83,7 @@ half2 test_scoped_fetch_add(half2 *p, half2 v) {
                                    __MEMORY_SCOPE_DEVICE);
 }
 
-// A vector whose size is not a power of two is not a valid atomic operand, so
-// it is still accessed as an integer of the size of the type holding it.
+// A vector whose size is not a power of two is still accessed as an integer.
 // CHECK-LABEL: @test_load_float3(
 float3 test_load_float3(float3 *p) {
   // CHECK: load atomic i128, ptr {{.*}} monotonic

@@ -568,9 +568,8 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
   bool PostOpMinMax = false;
   unsigned PostOp = 0;
 
-  // Atomic operations on a vector are performed elementwise, so it is the
-  // element type which selects between the integer and the floating point
-  // form of an operation.
+  // A vector is operated on elementwise, so its element type selects between
+  // the integer and the floating point form of an operation.
   QualType ElemTy = E->getValueType();
   if (const auto *VecTy = ElemTy->getAs<VectorType>())
     ElemTy = VecTy->getElementType();
@@ -873,10 +872,9 @@ EmitValToTemp(CodeGenFunction &CGF, Expr *E) {
 /// floating point operands.  TODO: Allow compare-and-exchange and FP - see
 /// comment in AtomicExpandPass.cpp.
 static bool shouldCastToInt(llvm::Type *ValTy, bool CmpXchg) {
-  // The atomic instructions operate on a vector directly, which is required for
-  // the elementwise arithmetic operations. cmpxchg has no vector form, and a
-  // vector whose size is not a power of two is not a valid atomic operand, so
-  // both are still handled as an integer of the enclosing atomic type's size.
+  // The atomic instructions operate on a vector directly. cmpxchg has no vector
+  // form, and a vector whose size is not a power of two is not a valid atomic
+  // operand, so both are still handled as an integer.
   if (auto *VecTy = dyn_cast<llvm::FixedVectorType>(ValTy))
     return CmpXchg || !llvm::isPowerOf2_64(
                           VecTy->getPrimitiveSizeInBits().getFixedValue());
