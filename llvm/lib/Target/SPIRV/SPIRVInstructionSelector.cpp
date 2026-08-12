@@ -253,8 +253,7 @@ private:
                            MachineInstr &I, unsigned Opcode) const;
   bool selectDebugTrap(Register ResVReg, SPIRVTypeInst ResType,
                        MachineInstr &I) const;
-  bool selectPrefetch(Register ResVReg, SPIRVTypeInst ResType,
-                      MachineInstr &I) const;
+  bool selectPrefetch(MachineInstr &I) const;
 
   bool selectIntegerDot(Register ResVReg, SPIRVTypeInst ResType,
                         MachineInstr &I, bool Signed) const;
@@ -1454,7 +1453,7 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   case TargetOpcode::G_DEBUGTRAP:
     return selectDebugTrap(ResVReg, ResType, I);
   case TargetOpcode::G_PREFETCH:
-    return selectPrefetch(ResVReg, ResType, I);
+    return selectPrefetch(I);
 
   default:
     return false;
@@ -1471,9 +1470,7 @@ bool SPIRVInstructionSelector::selectDebugTrap(Register ResVReg,
   return true;
 }
 
-bool SPIRVInstructionSelector::selectPrefetch(Register ResVReg,
-                                              SPIRVTypeInst ResType,
-                                              MachineInstr &I) const {
+bool SPIRVInstructionSelector::selectPrefetch(MachineInstr &I) const {
   // llvm.prefetch is missing info about how many bytes to prefetch that
   // OpUntypedPrefetchKHR instruction requires, so just drop the instruction
   // in case untyped pointers are enabled since OCL prefetch cannot take
