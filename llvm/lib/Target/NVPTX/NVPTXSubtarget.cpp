@@ -160,7 +160,7 @@ bool NVPTXSubtarget::allowFP16Math() const {
 }
 
 bool NVPTXSubtarget::hasF32x2Instructions() const {
-  return hasFeature(NVPTX::SM100) && hasFeature(NVPTX::PTX86) && !NoF32x2;
+  return hasFeature(NVPTX::SM100) && !NoF32x2;
 }
 
 bool NVPTXSubtarget::hasNativeBF16Support(unsigned Opcode) const {
@@ -183,7 +183,7 @@ bool NVPTXSubtarget::hasNativeBF16Support(unsigned Opcode) const {
   case ISD::FRINT:
   case ISD::FROUNDEVEN:
   case ISD::FTRUNC:
-    return hasFeature(NVPTX::SM90) && hasFeature(NVPTX::PTX78);
+    return hasFeature(NVPTX::SM90);
   // Several BF16 instructions are available on sm_80 only.
   case ISD::FMINNUM:
   case ISD::FMAXNUM:
@@ -191,7 +191,7 @@ bool NVPTXSubtarget::hasNativeBF16Support(unsigned Opcode) const {
   case ISD::FMINNUM_IEEE:
   case ISD::FMAXIMUM:
   case ISD::FMINIMUM:
-    return hasFeature(NVPTX::SM80) && hasFeature(NVPTX::PTX70);
+    return hasFeature(NVPTX::SM80);
   }
   return true;
 }
