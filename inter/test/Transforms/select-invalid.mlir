@@ -1,4 +1,5 @@
 // RUN: inter-opt --split-input-file --inter-select-to-machine -verify-diagnostics %s
+// CHECK-NOT: llvm
 
 module {
   func.func @unsupported_xw() attributes {
@@ -7,7 +8,7 @@ module {
     %one = xw.constant 1 : i32
     %lanes = xw.splat %one : i32 -> !xw.simd<i32, 8>
     // expected-error@+1 {{integer operation has no XeMachine instruction selection}}
-    %xor = xw.binary xori %lanes, %lanes : !xw.simd<i32, 8>, !xw.simd<i32, 8> -> !xw.simd<i32, 8>
+    %division = xw.binary divui %lanes, %lanes : !xw.simd<i32, 8>, !xw.simd<i32, 8> -> !xw.simd<i32, 8>
     return
   }
 }

@@ -1,15 +1,14 @@
 #include "inter/Analysis/MemoryFrontierAnalysis.h"
 #include "inter/Dialect/Inter/IR/XW.h"
 
+#include "inter/Transforms/Passes.h"
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/Dominance.h"
-#include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "inter/Transforms/Passes.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 
 namespace inter {
 #define GEN_PASS_DEF_INFERMEMORYTOKENS
@@ -22,45 +21,291 @@ namespace {
 
 static bool isXWMemoryOperation(Operation *op) {
   StringRef name = op->getName().getStringRef();
-  return name == "xw.load" || name == "xw.store" ||
-         name == "xw.atomic_rmw" || name == "xw.barrier";
+  return name == "xw.load" || name == "xw.store" || name == "xw.atomic_rmw" ||
+         name == "xw.barrier" || name == "xw.alloc_release";
+}
+
+static bool isStructuredOperation(Operation *operation) {
+  return isa<scf::IfOp, xw::WhereOp, scf::ForOp, scf::WhileOp>(operation);
+}
+
+static bool isToken(Value value) {
+  return isa<xw::MemTokenType>(value.getType());
 }
 
 static SmallVector<MemoryEffects::EffectInstance> getEffects(Operation *op) {
   SmallVector<MemoryEffects::EffectInstance> effects;
-  if (auto memory = dyn_cast<MemoryEffectOpInterface>(op))
+  if (MemoryEffectOpInterface memory = dyn_cast<MemoryEffectOpInterface>(op))
     memory.getEffects(effects);
   return effects;
 }
 
-static Value getLocation(Operation *op) {
-  for (const MemoryEffects::EffectInstance &effect : getEffects(op))
-    if (Value value = effect.getValue())
-      return value;
-  return op->getNumOperands() ? op->getOperand(0) : Value();
+static bool isBarrier(Operation *op) { return isa<xw::BarrierOp>(op); }
+
+static bool hasWrite(Operation *op) {
+  return llvm::any_of(getEffects(op), [](MemoryEffects::EffectInstance effect) {
+    return isa<MemoryEffects::Write, MemoryEffects::Free>(effect.getEffect());
+  });
 }
 
-static bool isWrite(Operation *op) {
-  return llvm::any_of(getEffects(op), [](const auto &effect) {
-    return isa<MemoryEffects::Write>(effect.getEffect());
-  });
+static SmallVector<Value> getLocations(Operation *op) {
+  SmallVector<Value> locations;
+  for (MemoryEffects::EffectInstance effect : getEffects(op))
+    if (isa<MemoryEffects::Read, MemoryEffects::Write, MemoryEffects::Free>(
+            effect.getEffect()))
+      if (Value value = effect.getValue())
+        locations.push_back(value);
+  return locations;
 }
 
 static bool hasHazard(Operation *prior, Operation *current,
                       AliasAnalysis &aliasAnalysis) {
-  if (!isWrite(prior) && !isWrite(current))
-    return false;
-  Value lhs = getLocation(prior);
-  Value rhs = getLocation(current);
-  if (!lhs || !rhs)
+  if (isBarrier(prior) || isBarrier(current))
     return true;
-  return !aliasAnalysis.alias(lhs, rhs).isNo();
+  if (!hasWrite(prior) && !hasWrite(current))
+    return false;
+  SmallVector<Value> priorLocations = getLocations(prior);
+  SmallVector<Value> currentLocations = getLocations(current);
+  if (priorLocations.empty() || currentLocations.empty())
+    return true;
+  return llvm::any_of(priorLocations, [&](Value lhs) {
+    return llvm::any_of(currentLocations, [&](Value rhs) {
+      return !aliasAnalysis.alias(lhs, rhs).isNo();
+    });
+  });
 }
+
+static void appendUnique(SmallVectorImpl<Value> &values, Value value) {
+  if (value && !llvm::is_contained(values, value))
+    values.push_back(value);
+}
+
+static Value createInitialToken(OpBuilder &builder, Operation *before) {
+  builder.setInsertionPoint(before);
+  OperationState state(before->getLoc(), "xw.token");
+  state.addTypes(xw::MemTokenType::get(builder.getContext()));
+  return builder.create(state)->getResult(0);
+}
+
+class TokenRewriter {
+public:
+  TokenRewriter(MLIRContext *context,
+                const DenseMap<Operation *, unsigned> &identifiers,
+                const DenseMap<unsigned, SmallVector<unsigned>> &plans,
+                const DenseSet<Operation *> &structured)
+      : builder(context), identifiers(identifiers), plans(plans),
+        structured(structured) {}
+
+  void rewriteFunction(func::FuncOp function) {
+    if (function.getBody().empty())
+      return;
+    rewriteBlock(function.getBody().front(), {});
+  }
+
+private:
+  Value joinValues(Operation *before, ArrayRef<Value> values) {
+    SmallVector<Value> unique;
+    for (Value value : values)
+      appendUnique(unique, value);
+    if (unique.empty())
+      return Value();
+    if (unique.size() == 1)
+      return unique.front();
+    builder.setInsertionPoint(before);
+    OperationState state(before->getLoc(), "xw.join");
+    state.addOperands(unique);
+    state.addTypes(xw::MemTokenType::get(builder.getContext()));
+    return builder.create(state)->getResult(0);
+  }
+
+  SmallVector<Value> rewriteBlock(Block &block, SmallVector<Value> frontier) {
+    Value regionIncoming;
+    if (!isa<func::FuncOp>(block.getParentOp()) && frontier.size() == 1) {
+      regionIncoming = frontier.front();
+      frontier.clear();
+    }
+    SmallVector<Operation *> operations;
+    for (Operation &operation : block.without_terminator())
+      operations.push_back(&operation);
+    for (Operation *operation : operations) {
+      if (isXWMemoryOperation(operation)) {
+        bool barrier = isBarrier(operation);
+        SmallVector<Value> incoming;
+        appendUnique(incoming, regionIncoming);
+        for (Value value : frontier)
+          if (barrier || structuredTokens.contains(value))
+            appendUnique(incoming, value);
+        Value token = rewriteMemory(operation, incoming);
+        if (barrier)
+          frontier.clear();
+        frontier.push_back(token);
+        continue;
+      }
+      if (!structured.contains(operation))
+        continue;
+      if (operation->hasAttr("xw.tokens_inferred")) {
+        for (Region &region : operation->getRegions())
+          if (!region.empty())
+            rewriteBlock(region.front(), {});
+        Value outgoing = operation->getResult(operation->getNumResults() - 1);
+        tokens[identifiers.lookup(operation)] = outgoing;
+        frontier.clear();
+        frontier.push_back(outgoing);
+        continue;
+      }
+      SmallVector<Value> boundaryFrontier = frontier;
+      appendUnique(boundaryFrontier, regionIncoming);
+      Value incoming = joinValues(operation, boundaryFrontier);
+      if (!incoming)
+        incoming = createInitialToken(builder, operation);
+      Value outgoing = rewriteStructured(operation, incoming);
+      tokens[identifiers.lookup(operation)] = outgoing;
+      structuredTokens.insert(outgoing);
+      frontier.clear();
+      frontier.push_back(outgoing);
+    }
+    return frontier;
+  }
+
+  Value joinDependencies(Operation *operation, ArrayRef<Value> incoming) {
+    SmallVector<Value> dependencies;
+    for (Value operand : operation->getOperands())
+      if (isToken(operand))
+        appendUnique(dependencies, operand);
+    unsigned identifier = identifiers.lookup(operation);
+    for (unsigned predecessor : plans.lookup(identifier))
+      appendUnique(dependencies, tokens.lookup(predecessor));
+    for (Value value : incoming)
+      appendUnique(dependencies, value);
+    return joinValues(operation, dependencies);
+  }
+
+  Value rewriteMemory(Operation *operation, ArrayRef<Value> incoming) {
+    unsigned identifier = identifiers.lookup(operation);
+    Value dependency = joinDependencies(operation, incoming);
+    if (!dependency && isa<xw::AllocReleaseOp>(operation))
+      dependency = createInitialToken(builder, operation);
+    builder.setInsertionPoint(operation);
+    OperationState state(operation->getLoc(), operation->getName());
+    for (Value operand : operation->getOperands())
+      if (!isToken(operand))
+        state.addOperands(operand);
+    if (dependency)
+      state.addOperands(dependency);
+    state.addTypes(operation->getResultTypes());
+    state.addAttributes(operation->getAttrs());
+    state.propertiesAttr = operation->getPropertiesAsAttribute();
+    state.addAttribute("xw.tokens_inferred", builder.getUnitAttr());
+    Operation *replacement = builder.create(state);
+    operation->replaceAllUsesWith(replacement);
+    operation->erase();
+    Value token = replacement->getResult(replacement->getNumResults() - 1);
+    tokens[identifier] = token;
+    return token;
+  }
+
+  Operation *replaceStructured(Operation *operation, Value incoming,
+                               bool addInit) {
+    SmallVector<Type> resultTypes(operation->getResultTypes());
+    builder.setInsertionPoint(operation);
+    OperationState state(operation->getLoc(), operation->getName());
+    state.addOperands(operation->getOperands());
+    if (addInit)
+      state.addOperands(incoming);
+    state.addTypes(resultTypes);
+    state.addTypes(xw::MemTokenType::get(builder.getContext()));
+    state.addAttributes(operation->getAttrs());
+    state.propertiesAttr = operation->getPropertiesAsAttribute();
+    state.addAttribute("xw.tokens_inferred", builder.getUnitAttr());
+    unsigned regionCount = operation->getNumRegions();
+    for (unsigned index = 0; index < regionCount; ++index)
+      state.addRegion()->takeBody(operation->getRegion(index));
+    Operation *replacement = builder.create(state);
+    for (auto [oldResult, newResult] : llvm::zip(
+             operation->getResults(), replacement->getResults().drop_back()))
+      oldResult.replaceAllUsesWith(newResult);
+    operation->erase();
+    return replacement;
+  }
+
+  void appendYield(Block &block, Value token) {
+    Operation *terminator = block.getTerminator();
+    terminator->insertOperands(terminator->getNumOperands(), token);
+  }
+
+  Value rewriteIfLike(Operation *operation, Value incoming) {
+    Operation *replacement = replaceStructured(operation, incoming, false);
+    for (Region &region : replacement->getRegions()) {
+      if (region.empty()) {
+        Block *block = builder.createBlock(&region);
+        builder.setInsertionPointToEnd(block);
+        OperationState yieldState(replacement->getLoc(),
+                                  isa<scf::IfOp>(replacement) ? "scf.yield"
+                                                              : "xw.yield");
+        yieldState.addOperands(incoming);
+        builder.create(yieldState);
+        continue;
+      }
+      SmallVector<Value> outgoing = rewriteBlock(region.front(), {incoming});
+      Value token = joinValues(region.front().getTerminator(), outgoing);
+      appendYield(region.front(), token ? token : incoming);
+    }
+    return replacement->getResult(replacement->getNumResults() - 1);
+  }
+
+  Value rewriteFor(Operation *operation, Value incoming) {
+    Operation *replacement = replaceStructured(operation, incoming, true);
+    Block &body = replacement->getRegion(0).front();
+    Value argument =
+        body.addArgument(incoming.getType(), replacement->getLoc());
+    SmallVector<Value> outgoing = rewriteBlock(body, {argument});
+    Value token = joinValues(body.getTerminator(), outgoing);
+    appendYield(body, token ? token : argument);
+    return replacement->getResult(replacement->getNumResults() - 1);
+  }
+
+  Value rewriteWhile(Operation *operation, Value incoming) {
+    Operation *replacement = replaceStructured(operation, incoming, true);
+    Block &before = replacement->getRegion(0).front();
+    Block &after = replacement->getRegion(1).front();
+    Value beforeArgument =
+        before.addArgument(incoming.getType(), replacement->getLoc());
+    Value afterArgument =
+        after.addArgument(incoming.getType(), replacement->getLoc());
+    SmallVector<Value> beforeOutgoing = rewriteBlock(before, {beforeArgument});
+    Value beforeToken = joinValues(before.getTerminator(), beforeOutgoing);
+    appendYield(before, beforeToken ? beforeToken : beforeArgument);
+    SmallVector<Value> afterOutgoing = rewriteBlock(after, {afterArgument});
+    Value afterToken = joinValues(after.getTerminator(), afterOutgoing);
+    appendYield(after, afterToken ? afterToken : afterArgument);
+    return replacement->getResult(replacement->getNumResults() - 1);
+  }
+
+  Value rewriteStructured(Operation *operation, Value incoming) {
+    if (isa<scf::IfOp, xw::WhereOp>(operation))
+      return rewriteIfLike(operation, incoming);
+    if (isa<scf::ForOp>(operation))
+      return rewriteFor(operation, incoming);
+    return rewriteWhile(operation, incoming);
+  }
+
+  OpBuilder builder;
+  const DenseMap<Operation *, unsigned> &identifiers;
+  const DenseMap<unsigned, SmallVector<unsigned>> &plans;
+  const DenseSet<Operation *> &structured;
+  DenseMap<unsigned, Value> tokens;
+  DenseSet<Value> structuredTokens;
+};
 
 struct InferMemoryTokens final
     : inter::impl::InferMemoryTokensBase<InferMemoryTokens> {
   void runOnOperation() override {
     for (func::FuncOp function : getOperation().getOps<func::FuncOp>()) {
+      if (!function.getBody().hasOneBlock()) {
+        function.emitOpError(
+            "memory token inference requires a single-block function body");
+        return signalPassFailure();
+      }
       AliasAnalysis aliasAnalysis(function);
       DataFlowConfig config;
       config.setInterprocedural(false);
@@ -72,84 +317,73 @@ struct InferMemoryTokens final
         return signalPassFailure();
       }
 
-      SmallVector<std::pair<Operation *, SmallVector<Value>>> plans;
-      DominanceInfo dominance(function);
-      WalkResult collected = function.walk([&](Operation *op) {
-        if (!isXWMemoryOperation(op) || op->hasAttr("xw.tokens_inferred"))
+      DenseMap<Operation *, unsigned> identifiers;
+      DenseSet<Operation *> structured;
+      unsigned nextIdentifier = 1;
+      WalkResult collected = function.walk([&](Operation *operation) {
+        if (!isXWMemoryOperation(operation))
           return WalkResult::advance();
-        const inter::MemoryFrontier *frontier =
-            solver.lookupState<inter::MemoryFrontier>(
-                solver.getProgramPointBefore(op));
-        if (!frontier)
-          return WalkResult::advance();
-        llvm::SmallPtrSet<Value, 8> seen;
-        for (Operation *prior : frontier->getAccesses()) {
-          if (prior == op || !isXWMemoryOperation(prior) ||
-              !hasHazard(prior, op, aliasAnalysis) || !prior->getNumResults())
-            continue;
-          Value token = prior->getResult(prior->getNumResults() - 1);
-          if (!dominance.dominates(token, op)) {
-            if (auto loop = op->getParentOfType<LoopLikeOpInterface>()) {
-              (void)loop.getLoopRegions();
-              (void)loop.getLoopResults();
-            }
-            op->emitOpError(
-                "requires a memory token from a sibling structured path; "
-                "the enclosing RegionBranchOpInterface must expose an "
-                "additional yielded token");
+        identifiers.try_emplace(operation, nextIdentifier++);
+        for (Operation *parent = operation->getParentOp(); parent != function;
+             parent = parent->getParentOp()) {
+          if (!isStructuredOperation(parent)) {
+            operation->emitOpError(
+                "is nested in an unsupported region holder '")
+                << parent->getName() << "'";
             return WalkResult::interrupt();
           }
-          if (seen.insert(token).second)
-            if (plans.empty() || plans.back().first != op)
-              plans.emplace_back(op, SmallVector<Value>());
-            plans.back().second.push_back(token);
+          if (!llvm::all_of(parent->getRegions(), [](Region &region) {
+                return region.empty() || region.hasOneBlock();
+              })) {
+            parent->emitOpError(
+                "memory token inference requires single-block regions");
+            return WalkResult::interrupt();
+          }
+          structured.insert(parent);
+          identifiers.try_emplace(parent, nextIdentifier++);
         }
         return WalkResult::advance();
       });
       if (collected.wasInterrupted())
         return signalPassFailure();
 
-      DenseMap<Value, Value> replacements;
-      for (auto &[operation, inferred] : plans) {
-        OpBuilder builder(operation);
-        SmallVector<Value> allDependencies;
-        for (Value operand : operation->getOperands())
-          if (isa<xw::MemTokenType>(operand.getType()))
-            allDependencies.push_back(operand);
-        for (Value token : inferred) {
-          Value replacement = replacements.lookup(token);
-          allDependencies.push_back(replacement ? replacement : token);
+      auto projectToBlock = [&](Operation *predecessor,
+                                Block *block) -> Operation * {
+        Operation *projected = predecessor;
+        while (projected->getBlock() != block) {
+          Operation *parent = projected->getParentOp();
+          if (!parent || parent == function || !structured.contains(parent))
+            return nullptr;
+          projected = parent;
         }
+        return projected;
+      };
 
-        Value dependency = allDependencies.front();
-        if (allDependencies.size() > 1) {
-          OperationState joinState(operation->getLoc(), "xw.join");
-          joinState.addOperands(allDependencies);
-          joinState.addTypes(dependency.getType());
-          dependency = builder.create(joinState)->getResult(0);
+      DenseMap<unsigned, SmallVector<unsigned>> plans;
+      for (auto [operation, identifier] : identifiers) {
+        if (!isXWMemoryOperation(operation))
+          continue;
+        const inter::MemoryFrontier *frontier =
+            solver.lookupState<inter::MemoryFrontier>(
+                solver.getProgramPointBefore(operation));
+        if (!frontier)
+          continue;
+        for (Operation *prior : frontier->getAccesses()) {
+          if (prior == operation || !isXWMemoryOperation(prior) ||
+              !hasHazard(prior, operation, aliasAnalysis))
+            continue;
+          Operation *projected = projectToBlock(prior, operation->getBlock());
+          if (!projected)
+            continue;
+          unsigned predecessor = identifiers.lookup(projected);
+          if (predecessor &&
+              !llvm::is_contained(plans[identifier], predecessor))
+            plans[identifier].push_back(predecessor);
         }
-
-        OperationState state(operation->getLoc(), operation->getName());
-        for (Value operand : operation->getOperands())
-          if (!isa<xw::MemTokenType>(operand.getType()))
-            state.addOperands(operand);
-        state.addOperands(dependency);
-        state.addTypes(operation->getResultTypes());
-        state.addAttributes(operation->getAttrs());
-        state.addAttribute("xw.tokens_inferred", builder.getUnitAttr());
-        state.addSuccessors(operation->getSuccessors());
-        for (unsigned i = 0; i < operation->getNumRegions(); ++i)
-          state.addRegion();
-        Operation *replacement = builder.create(state);
-        for (auto [oldRegion, newRegion] :
-             llvm::zip(operation->getRegions(), replacement->getRegions()))
-          newRegion.takeBody(oldRegion);
-        for (auto [oldResult, newResult] :
-             llvm::zip(operation->getResults(), replacement->getResults()))
-          replacements[oldResult] = newResult;
-        operation->replaceAllUsesWith(replacement);
-        operation->erase();
       }
+
+      TokenRewriter(function.getContext(), identifiers, plans, structured)
+          .rewriteFunction(function);
     }
   }
 };

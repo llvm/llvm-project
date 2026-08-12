@@ -81,9 +81,7 @@ private:
   RegionAttr canonicalRegion() const {
     return RegionAttr::get(context, 1, 1, 0);
   }
-  RegionAttr uniformRegion() const {
-    return RegionAttr::get(context, 0, 1, 0);
-  }
+  RegionAttr uniformRegion() const { return RegionAttr::get(context, 0, 1, 0); }
   DstRegionAttr canonicalDestination() const {
     return DstRegionAttr::get(context, 1);
   }
@@ -121,8 +119,9 @@ private:
       return floating.getWidth();
     if (isa<IndexType>(type))
       return 64;
-    if (isa<xw::PtrType>(type))
-      return 64;
+    if (xw::PtrType pointer = dyn_cast<xw::PtrType>(type))
+      return isa<xw::LocalAddressSpaceAttr>(pointer.getAddressSpace()) ? 32
+                                                                       : 64;
     if (VectorType vector = dyn_cast<VectorType>(type)) {
       FailureOr<int64_t> elementBits =
           getElementBits(vector.getElementType(), owner);
@@ -154,7 +153,9 @@ private:
       return integer.getWidth() == 64;
     if (FloatType floating = dyn_cast<FloatType>(elementType))
       return floating.getWidth() == 64;
-    return isa<IndexType, xw::PtrType>(elementType);
+    if (xw::PtrType pointer = dyn_cast<xw::PtrType>(elementType))
+      return !isa<xw::LocalAddressSpaceAttr>(pointer.getAddressSpace());
+    return isa<IndexType>(elementType);
   }
 
   RegionAttr sourceRegion(Value source, int64_t executionSize,
@@ -168,8 +169,7 @@ private:
       return canonicalRegion();
     assert(executionSize % shape->cardinality == 0 &&
            "XW verifier must enforce compatible cardinalities");
-    return RegionAttr::get(context, 1,
-                           executionSize / shape->cardinality, 0);
+    return RegionAttr::get(context, 1, executionSize / shape->cardinality, 0);
   }
 
   Value emitMove(Type destination, Type elementType, int64_t executionSize,
@@ -183,14 +183,14 @@ private:
   }
 
   void emitSync(SyncKind kind) {
-    SyncOp operation = SyncOp::create(
-        *builder, *location, MemTokenType::get(context),
-        SyncKindAttr::get(context, kind), memoryToken);
+    SyncOp operation =
+        SyncOp::create(*builder, *location, MemTokenType::get(context),
+                       SyncKindAttr::get(context, kind), memoryToken);
     memoryToken = operation.getToken();
   }
 
   FailureOr<KernelArgAttr> getKernelArgument(BlockArgument argument,
-                                              Operation *owner) const {
+                                             Operation *owner) const {
     unsigned index = argument.getArgNumber();
     if (index >= kernelArguments.size())
       return owner->emitOpError("kernel argument index is out of range"),
@@ -217,7 +217,8 @@ private:
       StringAttr kind = descriptor.getAs<StringAttr>("kind");
       IntegerAttr size = descriptor.getAs<IntegerAttr>("size");
       IntegerAttr offset = descriptor.getAs<IntegerAttr>("offset");
-      if (!kind || !size || !offset)
+      IntegerAttr alignment = descriptor.getAs<IntegerAttr>("alignment");
+      if (!kind || !size || !offset || !alignment)
         return kernel.emitOpError("incomplete XW kernel argument descriptor"),
                failure();
       bool pointer = kind.getValue() == "pointer";
@@ -230,13 +231,17 @@ private:
                            ? names[value]
                            : "unknown";
       }
-      uint64_t alignment = pointer ? 8 : std::min<uint64_t>(size.getInt(), 8);
+      StringAttr access = descriptor.getAs<StringAttr>("access");
+      if (pointer && !access)
+        return kernel.emitOpError(
+                   "pointer XW kernel argument is missing access metadata"),
+               failure();
       machineDescriptors.push_back(KernelArgAttr::get(
-          kernel.getContext(), pointer ? KernelArgKind::by_pointer
-                                       : KernelArgKind::by_value,
+          kernel.getContext(),
+          pointer ? KernelArgKind::by_pointer : KernelArgKind::by_value,
           attrBuilder.getStringAttr(addressSpace),
-          attrBuilder.getStringAttr(pointer ? "read_write" : "none"),
-          size.getInt(), alignment, offset.getInt()));
+          pointer ? access : attrBuilder.getStringAttr("none"), size.getInt(),
+          alignment.getInt(), offset.getInt()));
     }
     return attrBuilder.getArrayAttr(machineDescriptors);
   }
@@ -258,8 +263,7 @@ private:
   }
 
   LogicalResult validateKernelArguments(func::FuncOp kernel) {
-    if (!kernelArguments ||
-        kernelArguments.size() != kernel.getNumArguments())
+    if (!kernelArguments || kernelArguments.size() != kernel.getNumArguments())
       return kernel.emitOpError("kernel argument descriptor count mismatch");
     if (failed(verifyKernelArgLayout(kernelArguments, kernel.getOperation())))
       return failure();
@@ -275,9 +279,11 @@ private:
         if (descriptor->getKind() != KernelArgKind::by_pointer ||
             descriptor->getSize() != 8)
           return kernel.emitOpError("pointer argument descriptor mismatch");
-        StringRef expectedSpace = getAddressSpaceName(pointer.getAddressSpace());
+        StringRef expectedSpace =
+            getAddressSpaceName(pointer.getAddressSpace());
         if (descriptor->getAddressSpace().getValue() != expectedSpace)
-          return kernel.emitOpError("pointer address-space descriptor mismatch");
+          return kernel.emitOpError(
+              "pointer address-space descriptor mismatch");
       } else {
         FailureOr<int64_t> bits = getElementBits(type, kernel.getOperation());
         if (failed(bits))
@@ -311,7 +317,8 @@ private:
       uint64_t offset = allocation.getOffset().value_or(0);
       uint64_t alignment = allocation.getAlign();
       if (alignment == 0 || (alignment & (alignment - 1)) != 0) {
-        allocation.emitOpError("SLM allocation alignment must be a power of two");
+        allocation.emitOpError(
+            "SLM allocation alignment must be a power of two");
         return WalkResult::interrupt();
       }
       uint64_t aligned = (offset + alignment - 1) & ~(alignment - 1);
@@ -434,8 +441,7 @@ private:
   void emitArgumentEntry() {
     MovOp::create(*builder, *location, RegType::get(context, 16, 4), i32(), 8,
                   canonicalDestination(), canonicalRegion(), IntegerAttr(),
-                  IntegerAttr(), TypeAttr(), true, 0,
-                  architecturalRegister(1));
+                  IntegerAttr(), TypeAttr(), true, 0, architecturalRegister(1));
     for (unsigned index = 0; index < 11; ++index)
       emitSync(SyncKind::nop);
   }
@@ -523,12 +529,11 @@ private:
         AndOp::create(*builder, *location, reg(16), i32(), 1,
                       canonicalDestination(), uniformRegion(), RegionAttr(),
                       IntegerAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(),
-                      TypeAttr(), true, 0, r0,
-                      immediate(0xFFFFFFC0, i32()))
+                      TypeAttr(), true, 0, r0, immediate(0xFFFFFFC0, i32()))
             .getResult();
-    LoadBlockA32Op tail = LoadBlockA32Op::create(
-        *builder, *location, reg(16), MemTokenType::get(context), base,
-        Value(), 8);
+    LoadBlockA32Op tail =
+        LoadBlockA32Op::create(*builder, *location, reg(16),
+                               MemTokenType::get(context), base, Value(), 8);
     memoryToken = tail.getToken();
     payloadTail = tail.getDst();
     for (unsigned axis = 0; axis < 3; ++axis)
@@ -537,8 +542,7 @@ private:
     return success();
   }
 
-  FailureOr<Value> lowerBareArgument(BlockArgument argument,
-                                     Operation *owner) {
+  FailureOr<Value> lowerBareArgument(BlockArgument argument, Operation *owner) {
     if (Value found = values.lookup(argument))
       return found;
     FailureOr<KernelArgAttr> descriptor = getKernelArgument(argument, owner);
@@ -546,8 +550,9 @@ private:
         getPayloadLocation(argument, owner);
     if (failed(descriptor) || failed(payload))
       return failure();
-    Type elementType = isa<xw::PtrType>(argument.getType()) ? i64()
-                                                            : argument.getType();
+    Type elementType = argument.getType();
+    if (isa<xw::PtrType>(elementType))
+      elementType = isLocalPointer(elementType) ? i32() : i64();
     FailureOr<int64_t> bits = getElementBits(elementType, owner);
     if (failed(bits))
       return failure();
@@ -608,9 +613,11 @@ private:
       return failure();
     if (scalar->getDefiningOp<ImmOp>())
       return WideValue{*scalar, *scalar};
-    if (source.getType().isIntOrIndexOrFloat() || isa<xw::PtrType>(source.getType()))
+    if (source.getType().isIntOrIndexOrFloat() ||
+        isa<xw::PtrType>(source.getType()))
       return WideValue{*scalar, *scalar};
-    return owner->emitOpError("SIMD32 i64 operand was not decomposed"), failure();
+    return owner->emitOpError("SIMD32 i64 operand was not decomposed"),
+           failure();
   }
 
   FailureOr<Value> materialize(Value source, Operation *owner) {
@@ -637,22 +644,20 @@ private:
       return failure();
     if (isWideSimd(operation->getResult(0).getType())) {
       auto moveHalf = [&](int64_t maskOffset) {
-        RegionAttr region = sourceShape->cardinality == 1
-                                ? uniformRegion()
-                                : RegionAttr::get(
-                                      context, 1,
-                                      16 / sourceShape->cardinality, 0);
+        RegionAttr region =
+            sourceShape->cardinality == 1
+                ? uniformRegion()
+                : RegionAttr::get(context, 1, 16 / sourceShape->cardinality, 0);
         return emitMove(reg(32), resultShape->elementType, 16, *input, region,
                         false, maskOffset);
       };
       wideValues[operation->getResult(0)] = {moveHalf(0), moveHalf(16)};
       return success();
     }
-    RegionAttr region = resultShape->cardinality == 1 &&
-                                sourceShape->cardinality > 1
-                            ? uniformRegion()
-                            : sourceRegion(source, resultShape->cardinality,
-                                           operation);
+    RegionAttr region =
+        resultShape->cardinality == 1 && sourceShape->cardinality > 1
+            ? uniformRegion()
+            : sourceRegion(source, resultShape->cardinality, operation);
     Value result = emitMove(reg(*footprint), resultShape->elementType,
                             resultShape->cardinality, *input, region,
                             resultShape->cardinality == 1);
@@ -678,65 +683,89 @@ private:
     Value result;
     switch (operation.getKind()) {
     case xw::BinaryKind::AddI:
-      result = AddOp::create(
-                   *builder, *location, reg(*footprint), shape->elementType,
-                   shape->cardinality, canonicalDestination(), lhsRegion,
-                   rhsRegion, IntegerAttr(), IntegerAttr(), IntegerAttr(),
-                   TypeAttr(), TypeAttr(), shape->cardinality == 1, 0, *lhs,
-                   *rhs)
-                   .getResult();
+      result =
+          AddOp::create(*builder, *location, reg(*footprint),
+                        shape->elementType, shape->cardinality,
+                        canonicalDestination(), lhsRegion, rhsRegion,
+                        IntegerAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(),
+                        TypeAttr(), shape->cardinality == 1, 0, *lhs, *rhs)
+              .getResult();
       break;
     case xw::BinaryKind::SubI:
-      result = SubOp::create(
-                   *builder, *location, reg(*footprint), shape->elementType,
-                   shape->cardinality, canonicalDestination(), rhsRegion,
-                   lhsRegion, IntegerAttr(), IntegerAttr(), IntegerAttr(),
-                   TypeAttr(), TypeAttr(), shape->cardinality == 1, 0, *rhs,
-                   *lhs)
-                   .getResult();
+      result =
+          SubOp::create(*builder, *location, reg(*footprint),
+                        shape->elementType, shape->cardinality,
+                        canonicalDestination(), rhsRegion, lhsRegion,
+                        IntegerAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(),
+                        TypeAttr(), shape->cardinality == 1, 0, *rhs, *lhs)
+              .getResult();
       break;
     case xw::BinaryKind::ShLI:
     case xw::BinaryKind::ShRUI:
       if (operation.getKind() == xw::BinaryKind::ShLI)
-        result = ShlOp::create(
-                      *builder, *location, reg(*footprint), shape->elementType,
-                      shape->cardinality, canonicalDestination(), lhsRegion,
-                      rhsRegion, IntegerAttr(), IntegerAttr(), IntegerAttr(),
-                      TypeAttr(), shape->elementType.isInteger(64)
-                                      ? typeAttr(i16())
-                                      : TypeAttr(),
-                      shape->cardinality == 1, 0, *lhs, *rhs)
-                      .getResult();
+        result =
+            ShlOp::create(
+                *builder, *location, reg(*footprint), shape->elementType,
+                shape->cardinality, canonicalDestination(), lhsRegion,
+                rhsRegion, IntegerAttr(), IntegerAttr(), IntegerAttr(),
+                TypeAttr(),
+                shape->elementType.isInteger(64) ? typeAttr(i16()) : TypeAttr(),
+                shape->cardinality == 1, 0, *lhs, *rhs)
+                .getResult();
       else
-        result = ShrOp::create(
-                      *builder, *location, reg(*footprint), shape->elementType,
-                      shape->cardinality, canonicalDestination(), lhsRegion,
-                      rhsRegion, IntegerAttr(), IntegerAttr(), IntegerAttr(),
-                      TypeAttr(), shape->elementType.isInteger(64)
-                                      ? typeAttr(i16())
-                                      : TypeAttr(),
-                      shape->cardinality == 1, 0, *lhs, *rhs)
-                      .getResult();
+        result =
+            ShrOp::create(
+                *builder, *location, reg(*footprint), shape->elementType,
+                shape->cardinality, canonicalDestination(), lhsRegion,
+                rhsRegion, IntegerAttr(), IntegerAttr(), IntegerAttr(),
+                TypeAttr(),
+                shape->elementType.isInteger(64) ? typeAttr(i16()) : TypeAttr(),
+                shape->cardinality == 1, 0, *lhs, *rhs)
+                .getResult();
       break;
     case xw::BinaryKind::AndI:
     case xw::BinaryKind::OrI:
       if (operation.getKind() == xw::BinaryKind::AndI)
-        result = AndOp::create(
-                     *builder, *location, reg(*footprint), shape->elementType,
-                     shape->cardinality, canonicalDestination(), lhsRegion,
-                     rhsRegion, IntegerAttr(), IntegerAttr(), IntegerAttr(),
-                     TypeAttr(), TypeAttr(), shape->cardinality == 1, 0, *lhs,
-                     *rhs)
+        result = AndOp::create(*builder, *location, reg(*footprint),
+                               shape->elementType, shape->cardinality,
+                               canonicalDestination(), lhsRegion, rhsRegion,
+                               IntegerAttr(), IntegerAttr(), IntegerAttr(),
+                               TypeAttr(), TypeAttr(), shape->cardinality == 1,
+                               0, *lhs, *rhs)
                      .getResult();
       else
-        result = OrOp::create(
-                     *builder, *location, reg(*footprint), shape->elementType,
-                     shape->cardinality, canonicalDestination(), lhsRegion,
-                     rhsRegion, IntegerAttr(), IntegerAttr(), IntegerAttr(),
-                     TypeAttr(), TypeAttr(), shape->cardinality == 1, 0, *lhs,
-                     *rhs)
+        result = OrOp::create(*builder, *location, reg(*footprint),
+                              shape->elementType, shape->cardinality,
+                              canonicalDestination(), lhsRegion, rhsRegion,
+                              IntegerAttr(), IntegerAttr(), IntegerAttr(),
+                              TypeAttr(), TypeAttr(), shape->cardinality == 1,
+                              0, *lhs, *rhs)
                      .getResult();
       break;
+    case xw::BinaryKind::XOrI: {
+      Value joined =
+          OrOp::create(*builder, *location, reg(*footprint), shape->elementType,
+                       shape->cardinality, canonicalDestination(), lhsRegion,
+                       rhsRegion, IntegerAttr(), IntegerAttr(), IntegerAttr(),
+                       TypeAttr(), TypeAttr(), shape->cardinality == 1, 0, *lhs,
+                       *rhs)
+              .getResult();
+      Value overlap =
+          AndOp::create(*builder, *location, reg(*footprint),
+                        shape->elementType, shape->cardinality,
+                        canonicalDestination(), lhsRegion, rhsRegion,
+                        IntegerAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(),
+                        TypeAttr(), shape->cardinality == 1, 0, *lhs, *rhs)
+              .getResult();
+      result = SubOp::create(*builder, *location, reg(*footprint),
+                             shape->elementType, shape->cardinality,
+                             canonicalDestination(), canonicalRegion(),
+                             canonicalRegion(), IntegerAttr(), IntegerAttr(),
+                             IntegerAttr(), TypeAttr(), TypeAttr(),
+                             shape->cardinality == 1, 0, overlap, joined)
+                   .getResult();
+      break;
+    }
     case xw::BinaryKind::MulI: {
       Value accumulator =
           MulOp::create(*builder, *location,
@@ -746,9 +775,9 @@ private:
                         IntegerAttr(), IntegerAttr(), IntegerAttr(),
                         shape->cardinality == 1, 0, *lhs, *rhs)
               .getResult();
-      result = emitMove(reg(*footprint), shape->elementType,
-                        shape->cardinality, accumulator, canonicalRegion(),
-                        shape->cardinality == 1);
+      result =
+          emitMove(reg(*footprint), shape->elementType, shape->cardinality,
+                   accumulator, canonicalRegion(), shape->cardinality == 1);
       break;
     }
     default:
@@ -771,36 +800,36 @@ private:
     if (failed(lhs) || failed(rhs))
       return failure();
     auto emitHalf = [&](Value left, Value right, int64_t maskOffset) {
-      RegionAttr leftRegion = left.getDefiningOp<ImmOp>() ? RegionAttr()
-                                                          : canonicalRegion();
-      RegionAttr rightRegion = right.getDefiningOp<ImmOp>() ? RegionAttr()
-                                                             : canonicalRegion();
+      RegionAttr leftRegion =
+          left.getDefiningOp<ImmOp>() ? RegionAttr() : canonicalRegion();
+      RegionAttr rightRegion =
+          right.getDefiningOp<ImmOp>() ? RegionAttr() : canonicalRegion();
       if (operation.getKind() == xw::BinaryKind::AddI)
-        return AddOp::create(
-                   *builder, *location, reg(32), i64(), 16,
-                   canonicalDestination(), leftRegion, rightRegion,
-                   IntegerAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(),
-                   TypeAttr(), false, maskOffset, left, right)
+        return AddOp::create(*builder, *location, reg(32), i64(), 16,
+                             canonicalDestination(), leftRegion, rightRegion,
+                             IntegerAttr(), IntegerAttr(), IntegerAttr(),
+                             TypeAttr(), TypeAttr(), false, maskOffset, left,
+                             right)
             .getResult();
       if (operation.getKind() == xw::BinaryKind::SubI)
-        return SubOp::create(
-                   *builder, *location, reg(32), i64(), 16,
-                   canonicalDestination(), rightRegion, leftRegion,
-                   IntegerAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(),
-                   TypeAttr(), false, maskOffset, right, left)
+        return SubOp::create(*builder, *location, reg(32), i64(), 16,
+                             canonicalDestination(), rightRegion, leftRegion,
+                             IntegerAttr(), IntegerAttr(), IntegerAttr(),
+                             TypeAttr(), TypeAttr(), false, maskOffset, right,
+                             left)
             .getResult();
       if (operation.getKind() == xw::BinaryKind::ShLI)
-        return ShlOp::create(
-                   *builder, *location, reg(32), i64(), 16,
-                   canonicalDestination(), leftRegion, rightRegion,
-                   IntegerAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(),
-                   typeAttr(i16()), false, maskOffset, left, right)
+        return ShlOp::create(*builder, *location, reg(32), i64(), 16,
+                             canonicalDestination(), leftRegion, rightRegion,
+                             IntegerAttr(), IntegerAttr(), IntegerAttr(),
+                             TypeAttr(), typeAttr(i16()), false, maskOffset,
+                             left, right)
             .getResult();
-      return ShrOp::create(
-                 *builder, *location, reg(32), i64(), 16,
-                 canonicalDestination(), leftRegion, rightRegion,
-                 IntegerAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(),
-                 typeAttr(i16()), false, maskOffset, left, right)
+      return ShrOp::create(*builder, *location, reg(32), i64(), 16,
+                           canonicalDestination(), leftRegion, rightRegion,
+                           IntegerAttr(), IntegerAttr(), IntegerAttr(),
+                           TypeAttr(), typeAttr(i16()), false, maskOffset, left,
+                           right)
           .getResult();
     };
     WideValue result{emitHalf(lhs->low, rhs->low, 0),
@@ -824,18 +853,18 @@ private:
         sourceRegion(operation->getOperand(1), shape->cardinality, operation);
     Value result;
     if (subtract)
-      result = SubOp::create(
-                   *builder, *location, reg(*footprint), shape->elementType,
-                   shape->cardinality, canonicalDestination(), rhsRegion,
-                   lhsRegion, IntegerAttr(), IntegerAttr(), IntegerAttr(),
-                   TypeAttr(), TypeAttr(), false, 0, *rhs, *lhs)
+      result = SubOp::create(*builder, *location, reg(*footprint),
+                             shape->elementType, shape->cardinality,
+                             canonicalDestination(), rhsRegion, lhsRegion,
+                             IntegerAttr(), IntegerAttr(), IntegerAttr(),
+                             TypeAttr(), TypeAttr(), false, 0, *rhs, *lhs)
                    .getResult();
     else
-      result = AddOp::create(
-                   *builder, *location, reg(*footprint), shape->elementType,
-                   shape->cardinality, canonicalDestination(), lhsRegion,
-                   rhsRegion, IntegerAttr(), IntegerAttr(), IntegerAttr(),
-                   TypeAttr(), TypeAttr(), false, 0, *lhs, *rhs)
+      result = AddOp::create(*builder, *location, reg(*footprint),
+                             shape->elementType, shape->cardinality,
+                             canonicalDestination(), lhsRegion, rhsRegion,
+                             IntegerAttr(), IntegerAttr(), IntegerAttr(),
+                             TypeAttr(), TypeAttr(), false, 0, *lhs, *rhs)
                    .getResult();
     values[operation->getResult(0)] = result;
     return success();
@@ -863,6 +892,87 @@ private:
     return success();
   }
 
+  LogicalResult lowerUnsupportedFloat(Operation *operation,
+                                      StringRef primitive) {
+    return operation->emitOpError()
+           << primitive << " has no exact XeMachine primitive";
+  }
+
+  LogicalResult lowerMaskBinary(Operation *operation) {
+    FailureOr<Value> lhs = getValue(operation->getOperand(0), operation);
+    FailureOr<Value> rhs = getValue(operation->getOperand(1), operation);
+    FailureOr<ValueShape> shape =
+        getShape(operation->getResult(0).getType(), operation);
+    if (failed(lhs) || failed(rhs) || failed(shape))
+      return failure();
+    Type flagType = ARFType::get(context, ARFFile::f, 2, -1);
+    Value result;
+    if (isa<xw::MaskAndOp>(operation))
+      result = AndOp::create(*builder, *location, flagType, i32(), 1,
+                             canonicalDestination(), uniformRegion(),
+                             uniformRegion(), IntegerAttr(), IntegerAttr(),
+                             IntegerAttr(), TypeAttr(), TypeAttr(), true, 0,
+                             *lhs, *rhs)
+                   .getResult();
+    else if (isa<xw::MaskOrOp>(operation))
+      result =
+          OrOp::create(*builder, *location, flagType, i32(), 1,
+                       canonicalDestination(), uniformRegion(), uniformRegion(),
+                       IntegerAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(),
+                       TypeAttr(), true, 0, *lhs, *rhs)
+              .getResult();
+    else {
+      Value joined =
+          OrOp::create(*builder, *location, reg(1), i32(), 1,
+                       canonicalDestination(), uniformRegion(), uniformRegion(),
+                       IntegerAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(),
+                       TypeAttr(), true, 0, *lhs, *rhs)
+              .getResult();
+      Value overlap = AndOp::create(*builder, *location, reg(1), i32(), 1,
+                                    canonicalDestination(), uniformRegion(),
+                                    uniformRegion(), IntegerAttr(),
+                                    IntegerAttr(), IntegerAttr(), TypeAttr(),
+                                    TypeAttr(), true, 0, *lhs, *rhs)
+                          .getResult();
+      result = SubOp::create(*builder, *location, flagType, i32(), 1,
+                             canonicalDestination(), uniformRegion(),
+                             uniformRegion(), IntegerAttr(), IntegerAttr(),
+                             IntegerAttr(), TypeAttr(), TypeAttr(), true, 0,
+                             overlap, joined)
+                   .getResult();
+    }
+    values[operation->getResult(0)] = result;
+    return success();
+  }
+
+  LogicalResult lowerMaskNot(xw::MaskNotOp operation) {
+    FailureOr<Value> input = getValue(operation.getInput(), operation);
+    FailureOr<ValueShape> shape = getShape(operation.getType(), operation);
+    if (failed(input) || failed(shape))
+      return failure();
+    uint64_t activeBits = shape->cardinality == 32
+                              ? 0xffffffffULL
+                              : (1ULL << shape->cardinality) - 1;
+    values[operation.getResult()] =
+        SubOp::create(*builder, *location,
+                      ARFType::get(context, ARFFile::f, 2, -1), i32(), 1,
+                      canonicalDestination(), uniformRegion(), RegionAttr(),
+                      IntegerAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(),
+                      TypeAttr(), true, 0, *input, immediate(activeBits, i32()))
+            .getResult();
+    return success();
+  }
+
+  LogicalResult lowerBallot(xw::BallotOp operation) {
+    FailureOr<Value> mask = getValue(operation.getMask(), operation);
+    if (failed(mask))
+      return failure();
+    Type resultType = operation.getType();
+    values[operation.getResult()] =
+        emitMove(reg(1), resultType, 1, *mask, uniformRegion(), true);
+    return success();
+  }
+
   LogicalResult lowerCast(xw::CastOp operation) {
     if (isWideSimd(operation.getType())) {
       FailureOr<Value> source = getValue(operation.getSource(), operation);
@@ -872,16 +982,17 @@ private:
         return failure();
       auto half = [&](int64_t offset) {
         MovOp move = MovOp::create(
-            *builder, *location, reg(32), i64(), 16,
-            canonicalDestination(), canonicalRegion(), IntegerAttr(),
+            *builder, *location, reg(32), i64(), 16, canonicalDestination(),
+            canonicalRegion(), IntegerAttr(),
             builder->getI32IntegerAttr(offset),
             typeAttr(sourceShape->elementType), false, offset, *source);
         if (operation.getKind() == xw::CastKind::IntConvert &&
             operation.getPolicy()) {
           DictionaryAttr policy = *operation.getPolicy();
-          auto signedness = dyn_cast_or_null<xw::CastSignednessPolicyAttr>(
-              policy.get("signedness"));
-          if (signedness && signedness.getValue() == xw::CastSignedness::Signed)
+          auto extension = dyn_cast_or_null<xw::CastExtensionPolicyAttr>(
+              policy.get("extension"));
+          if (operation.getKind() == xw::CastKind::IntConvert && extension &&
+              extension.getValue() == xw::CastExtension::Sign)
             move->setAttr("signedSource", builder->getUnitAttr());
         }
         return move.getResult();
@@ -891,7 +1002,8 @@ private:
     }
     FailureOr<ValueShape> sourceShape =
         getShape(operation.getSource().getType(), operation);
-    FailureOr<ValueShape> resultShape = getShape(operation.getType(), operation);
+    FailureOr<ValueShape> resultShape =
+        getShape(operation.getType(), operation);
     FailureOr<Value> source = getValue(operation.getSource(), operation);
     FailureOr<int64_t> footprint = getFootprint(operation.getType(), operation);
     if (failed(sourceShape) || failed(resultShape) || failed(source) ||
@@ -900,14 +1012,16 @@ private:
     MovOp move = MovOp::create(
         *builder, *location, reg(*footprint), resultShape->elementType,
         resultShape->cardinality, canonicalDestination(),
-        sourceRegion(operation.getSource(), resultShape->cardinality, operation),
+        sourceRegion(operation.getSource(), resultShape->cardinality,
+                     operation),
         IntegerAttr(), IntegerAttr(), typeAttr(sourceShape->elementType),
         resultShape->cardinality == 1, 0, *source);
     if (operation.getPolicy()) {
       DictionaryAttr policy = *operation.getPolicy();
-      auto signedness = dyn_cast_or_null<xw::CastSignednessPolicyAttr>(
-          policy.get("signedness"));
-      if (signedness && signedness.getValue() == xw::CastSignedness::Signed)
+      auto extension = dyn_cast_or_null<xw::CastExtensionPolicyAttr>(
+          policy.get("extension"));
+      if (operation.getKind() == xw::CastKind::IntConvert && extension &&
+          extension.getValue() == xw::CastExtension::Sign)
         move->setAttr("signedSource", builder->getUnitAttr());
     }
     values[operation.getResult()] = move.getResult();
@@ -940,7 +1054,7 @@ private:
     switch (predicate) {
     case arith::CmpFPredicate::OEQ:
       return CondModifier::eq;
-    case arith::CmpFPredicate::ONE:
+    case arith::CmpFPredicate::UNE:
       return CondModifier::ne;
     case arith::CmpFPredicate::OLT:
       return CondModifier::lt;
@@ -956,15 +1070,20 @@ private:
   }
 
   LogicalResult lowerCompare(xw::CmpIOp operation) {
+    if (isWideSimd(operation.getLhs().getType()))
+      return operation.emitOpError(
+          "SIMD32 i64 comparison has no exact two-half flag selection");
     FailureOr<ValueShape> resultShape =
         getShape(operation.getResult().getType(), operation);
     FailureOr<ValueShape> operandShape =
         getShape(operation.getLhs().getType(), operation);
     FailureOr<Value> lhs = getValue(operation.getLhs(), operation);
     FailureOr<Value> rhs = getValue(operation.getRhs(), operation);
-    if (failed(resultShape) || failed(operandShape) || failed(lhs) || failed(rhs))
+    if (failed(resultShape) || failed(operandShape) || failed(lhs) ||
+        failed(rhs))
       return failure();
-    std::optional<CondModifier> condition = mapPredicate(operation.getPredicate());
+    std::optional<CondModifier> condition =
+        mapPredicate(operation.getPredicate());
     if (!condition)
       return operation.emitOpError("unsupported integer comparison predicate");
     int64_t executionSize = resultShape->cardinality;
@@ -993,9 +1112,11 @@ private:
         getShape(operation.getLhs().getType(), operation);
     FailureOr<Value> lhs = getValue(operation.getLhs(), operation);
     FailureOr<Value> rhs = getValue(operation.getRhs(), operation);
-    if (failed(resultShape) || failed(operandShape) || failed(lhs) || failed(rhs))
+    if (failed(resultShape) || failed(operandShape) || failed(lhs) ||
+        failed(rhs))
       return failure();
-    std::optional<CondModifier> condition = mapPredicate(operation.getPredicate());
+    std::optional<CondModifier> condition =
+        mapPredicate(operation.getPredicate());
     if (!condition)
       return operation.emitOpError(
           "floating comparison predicate has no exact XeMachine selection");
@@ -1012,9 +1133,13 @@ private:
   }
 
   LogicalResult lowerSelect(xw::SelectOp operation) {
+    if (isWideSimd(operation.getType()))
+      return operation.emitOpError(
+          "SIMD32 i64 or A64 pointer select has no exact two-half selection");
     FailureOr<Value> condition = getValue(operation.getCondition(), operation);
     FailureOr<Value> trueValue = getValue(operation.getTrueValue(), operation);
-    FailureOr<Value> falseValue = getValue(operation.getFalseValue(), operation);
+    FailureOr<Value> falseValue =
+        getValue(operation.getFalseValue(), operation);
     FailureOr<ValueShape> shape = getShape(operation.getType(), operation);
     FailureOr<int64_t> footprint = getFootprint(operation.getType(), operation);
     if (failed(condition) || failed(trueValue) || failed(falseValue) ||
@@ -1030,8 +1155,8 @@ private:
                                       TypeRange{resultType}, *condition);
     std::array<Value, 2> arms = {*trueValue, *falseValue};
     for (unsigned index = 0; index < 2; ++index) {
-      Region &region = index == 0 ? machineIf->getRegion(0)
-                                  : machineIf->getRegion(1);
+      Region &region =
+          index == 0 ? machineIf->getRegion(0) : machineIf->getRegion(1);
       builder->setInsertionPointToStart(&region.emplaceBlock());
       Value selected = emitMove(
           resultType, shape->elementType, shape->cardinality, arms[index],
@@ -1054,14 +1179,15 @@ private:
       if (isa<xw::MemTokenType>(result.getType()))
         resultTypes.push_back(MemTokenType::get(context));
       else {
-        FailureOr<int64_t> footprint = getFootprint(result.getType(), operation);
+        FailureOr<int64_t> footprint =
+            getFootprint(result.getType(), operation);
         if (failed(footprint))
           return failure();
         resultTypes.push_back(reg(*footprint));
       }
     }
-    ExecIfOp machineIf = ExecIfOp::create(*builder, *location, resultTypes,
-                                          *condition);
+    ExecIfOp machineIf =
+        ExecIfOp::create(*builder, *location, resultTypes, *condition);
     for (unsigned index = 0; index < operation.getNumResults(); ++index)
       values[operation.getResult(index)] = machineIf.getResult(index);
     if (failed(lowerBranchRegions(operation.getOperation(), machineIf,
@@ -1079,14 +1205,15 @@ private:
       if (isa<xw::MemTokenType>(result.getType()))
         resultTypes.push_back(MemTokenType::get(context));
       else {
-        FailureOr<int64_t> footprint = getFootprint(result.getType(), operation);
+        FailureOr<int64_t> footprint =
+            getFootprint(result.getType(), operation);
         if (failed(footprint))
           return failure();
         resultTypes.push_back(reg(*footprint));
       }
     }
-    UniformIfOp machineIf = UniformIfOp::create(
-        *builder, *location, resultTypes, *condition);
+    UniformIfOp machineIf =
+        UniformIfOp::create(*builder, *location, resultTypes, *condition);
     for (unsigned index = 0; index < operation.getNumResults(); ++index)
       values[operation.getResult(index)] = machineIf.getResult(index);
     return lowerBranchRegions(operation.getOperation(), machineIf,
@@ -1122,10 +1249,10 @@ private:
         FailureOr<ValueShape> shape = getShape(source.getType(), sourceYield);
         if (failed(value) || failed(shape))
           return failure();
-        yielded.push_back(emitMove(
-            machineIf->getResult(index).getType(), shape->elementType,
-            shape->cardinality, *value,
-            sourceRegion(source, shape->cardinality, sourceYield)));
+        yielded.push_back(
+            emitMove(machineIf->getResult(index).getType(), shape->elementType,
+                     shape->cardinality, *value,
+                     sourceRegion(source, shape->cardinality, sourceYield)));
       }
       YieldOp::create(*builder, *location, yielded);
     }
@@ -1139,10 +1266,11 @@ private:
   }
 
   LogicalResult lowerFor(scf::ForOp operation) {
-    if (operation.getLowerBound().getType() != operation.getUpperBound().getType() ||
+    if (operation.getLowerBound().getType() !=
+            operation.getUpperBound().getType() ||
         operation.getLowerBound().getType() != operation.getStep().getType())
       return operation.emitOpError("loop bounds and step must have one type");
-    FailureOr<Value> lower = getValue(operation.getLowerBound(), operation);
+    FailureOr<Value> lower = materialize(operation.getLowerBound(), operation);
     FailureOr<Value> upper = getValue(operation.getUpperBound(), operation);
     FailureOr<Value> step = getValue(operation.getStep(), operation);
     if (failed(lower) || failed(upper) || failed(step))
@@ -1150,20 +1278,33 @@ private:
     SmallVector<Value> initial{*lower};
     SmallVector<Type> resultTypes{lower->getType()};
     for (Value init : operation.getInitArgs()) {
-      FailureOr<Value> selected = getValue(init, operation);
-      if (failed(selected))
-        return failure();
-      initial.push_back(*selected);
-      resultTypes.push_back(selected->getType());
+      if (isa<xw::MemTokenType>(init.getType())) {
+        Value selected = values.lookup(init);
+        if (!selected)
+          return operation.emitOpError(
+              "loop token initializer was not selected");
+        initial.push_back(selected);
+        resultTypes.push_back(MemTokenType::get(context));
+      } else {
+        FailureOr<Value> selected = getValue(init, operation);
+        if (failed(selected))
+          return failure();
+        initial.push_back(*selected);
+        resultTypes.push_back(selected->getType());
+      }
     }
-    UniformLoopOp loop = UniformLoopOp::create(*builder, *location, resultTypes,
-                                               initial);
+    UniformLoopOp loop =
+        UniformLoopOp::create(*builder, *location, resultTypes, initial);
     Block &body = loop.getBody().emplaceBlock();
     for (Type type : resultTypes)
       body.addArgument(type, operation.getLoc());
     values[operation.getInductionVar()] = body.getArgument(0);
-    for (unsigned index = 0; index < operation.getNumRegionIterArgs(); ++index)
+    for (unsigned index = 0; index < operation.getNumRegionIterArgs();
+         ++index) {
       values[operation.getRegionIterArg(index)] = body.getArgument(index + 1);
+      if (isa<xw::MemTokenType>(operation.getRegionIterArg(index).getType()))
+        memoryToken = body.getArgument(index + 1);
+    }
     builder->setInsertionPointToStart(&body);
     if (failed(lowerBlock(operation.getRegion().front())))
       return failure();
@@ -1176,28 +1317,38 @@ private:
         AddOp::create(*builder, *location, lower->getType(), inductionType, 1,
                       canonicalDestination(), canonicalRegion(),
                       step->getDefiningOp<ImmOp>() ? RegionAttr()
-                                                  : uniformRegion(),
+                                                   : uniformRegion(),
                       IntegerAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(),
                       TypeAttr(), true, 0, body.getArgument(0), *step)
             .getResult();
     CmpOp condition = CmpOp::create(
         *builder, *location, ARFType::get(context, ARFFile::f, 2, -1),
         CondModifierAttr::get(context, CondModifier::lt),
-        typeAttr(inductionType),
-        builder->getI32IntegerAttr(1), canonicalRegion(), uniformRegion(),
-        IntegerAttr(), IntegerAttr(), TypeAttr(), TypeAttr(), next, *upper);
+        typeAttr(inductionType), builder->getI32IntegerAttr(1),
+        canonicalRegion(), uniformRegion(), IntegerAttr(), IntegerAttr(),
+        TypeAttr(), TypeAttr(), next, *upper);
     condition->setAttr("signed", builder->getUnitAttr());
     SmallVector<Value> carried{next};
     for (Value source : sourceYield.getOperands()) {
-      FailureOr<Value> selected = getValue(source, sourceYield);
-      if (failed(selected))
-        return failure();
-      carried.push_back(*selected);
+      if (isa<xw::MemTokenType>(source.getType())) {
+        Value selected = values.lookup(source);
+        if (!selected)
+          return sourceYield.emitOpError("loop token yield was not selected");
+        carried.push_back(selected);
+      } else {
+        FailureOr<Value> selected = getValue(source, sourceYield);
+        if (failed(selected))
+          return failure();
+        carried.push_back(*selected);
+      }
     }
     ContinueIfOp::create(*builder, *location, condition.getFlag(), carried);
     builder->setInsertionPointAfter(loop);
-    for (unsigned index = 0; index < operation.getNumResults(); ++index)
+    for (unsigned index = 0; index < operation.getNumResults(); ++index) {
       values[operation.getResult(index)] = loop.getResult(index + 1);
+      if (isa<xw::MemTokenType>(operation.getResult(index).getType()))
+        memoryToken = loop.getResult(index + 1);
+    }
     return success();
   }
 
@@ -1205,25 +1356,36 @@ private:
     SmallVector<Value> initial;
     SmallVector<Type> resultTypes;
     for (Value operand : operation.getInits()) {
-      FailureOr<Value> selected = getValue(operand, operation);
-      if (failed(selected))
-        return failure();
-      initial.push_back(*selected);
-      resultTypes.push_back(selected->getType());
+      if (isa<xw::MemTokenType>(operand.getType())) {
+        Value selected = values.lookup(operand);
+        if (!selected)
+          return operation.emitOpError(
+              "while token initializer was not selected");
+        initial.push_back(selected);
+        resultTypes.push_back(MemTokenType::get(context));
+      } else {
+        FailureOr<Value> selected = getValue(operand, operation);
+        if (failed(selected))
+          return failure();
+        initial.push_back(*selected);
+        resultTypes.push_back(selected->getType());
+      }
     }
-    UniformLoopOp loop = UniformLoopOp::create(*builder, *location, resultTypes,
-                                               initial);
+    UniformLoopOp loop =
+        UniformLoopOp::create(*builder, *location, resultTypes, initial);
     Block &body = loop.getBody().emplaceBlock();
     for (Type type : resultTypes)
       body.addArgument(type, operation.getLoc());
     Block &before = operation.getBefore().front();
-    for (unsigned index = 0; index < before.getNumArguments(); ++index)
+    for (unsigned index = 0; index < before.getNumArguments(); ++index) {
       values[before.getArgument(index)] = body.getArgument(index);
+      if (isa<xw::MemTokenType>(before.getArgument(index).getType()))
+        memoryToken = body.getArgument(index);
+    }
     builder->setInsertionPointToStart(&body);
     if (failed(lowerBlock(before)))
       return failure();
-    scf::ConditionOp condition =
-        cast<scf::ConditionOp>(before.getTerminator());
+    scf::ConditionOp condition = cast<scf::ConditionOp>(before.getTerminator());
     FailureOr<Value> selectedCondition =
         getValue(condition.getCondition(), condition);
     if (failed(selectedCondition))
@@ -1235,27 +1397,46 @@ private:
     SmallVector<Value> conditionArguments;
     SmallVector<Type> conditionTypes;
     for (Value argument : condition.getArgs()) {
-      FailureOr<Value> selected = getValue(argument, condition);
-      if (failed(selected))
-        return failure();
-      conditionArguments.push_back(*selected);
-      conditionTypes.push_back(selected->getType());
+      if (isa<xw::MemTokenType>(argument.getType())) {
+        Value selected = values.lookup(argument);
+        if (!selected)
+          return condition.emitOpError(
+              "while condition token was not selected");
+        conditionArguments.push_back(selected);
+        conditionTypes.push_back(MemTokenType::get(context));
+      } else {
+        FailureOr<Value> selected = getValue(argument, condition);
+        if (failed(selected))
+          return failure();
+        conditionArguments.push_back(*selected);
+        conditionTypes.push_back(selected->getType());
+      }
     }
     UniformIfOp executeBody = UniformIfOp::create(
         *builder, *location, conditionTypes, *selectedCondition);
     builder->setInsertionPointToStart(
         &executeBody.getThenRegion().emplaceBlock());
-    for (unsigned index = 0; index < after.getNumArguments(); ++index)
+    for (unsigned index = 0; index < after.getNumArguments(); ++index) {
       values[after.getArgument(index)] = conditionArguments[index];
+      if (isa<xw::MemTokenType>(after.getArgument(index).getType()))
+        memoryToken = conditionArguments[index];
+    }
     if (failed(lowerBlock(after)))
       return failure();
     scf::YieldOp sourceYield = cast<scf::YieldOp>(after.getTerminator());
     SmallVector<Value> thenValues;
     for (Value operand : sourceYield.getOperands()) {
-      FailureOr<Value> selected = getValue(operand, sourceYield);
-      if (failed(selected))
-        return failure();
-      thenValues.push_back(*selected);
+      if (isa<xw::MemTokenType>(operand.getType())) {
+        Value selected = values.lookup(operand);
+        if (!selected)
+          return sourceYield.emitOpError("while token yield was not selected");
+        thenValues.push_back(selected);
+      } else {
+        FailureOr<Value> selected = getValue(operand, sourceYield);
+        if (failed(selected))
+          return failure();
+        thenValues.push_back(*selected);
+      }
     }
     YieldOp::create(*builder, *location, thenValues);
     builder->setInsertionPointToStart(
@@ -1265,8 +1446,11 @@ private:
     ContinueIfOp::create(*builder, *location, *selectedCondition,
                          executeBody.getResults());
     builder->setInsertionPointAfter(loop);
-    for (unsigned index = 0; index < operation.getNumResults(); ++index)
+    for (unsigned index = 0; index < operation.getNumResults(); ++index) {
       values[operation.getResult(index)] = loop.getResult(index);
+      if (isa<xw::MemTokenType>(operation.getResult(index).getType()))
+        memoryToken = loop.getResult(index);
+    }
     return success();
   }
 
@@ -1303,15 +1487,16 @@ private:
     }
     VectorType vector = dyn_cast<VectorType>(packetType);
     if (!vector || vector.getRank() != 1)
-      return operation.emitOpError("machine extract requires a rank-one vector");
+      return operation.emitOpError(
+          "machine extract requires a rank-one vector");
     FailureOr<int64_t> elementBits =
         getElementBits(vector.getElementType(), operation);
     if (failed(elementBits))
       return failure();
     int64_t elementDwords = (*elementBits * cardinality + 31) / 32;
     SmallVector<Type> parts(vector.getNumElements(), reg(elementDwords));
-    TupleToElementsOp split = TupleToElementsOp::create(
-        *builder, *location, parts, *source);
+    TupleToElementsOp split =
+        TupleToElementsOp::create(*builder, *location, parts, *source);
     values[operation.getResult()] = split.getResult(operation.getIndex());
     return success();
   }
@@ -1329,15 +1514,15 @@ private:
       if (failed(base) || failed(offset))
         return failure();
       auto add = [&](Value lhs, Value rhs, int64_t maskOffset) {
-        return AddOp::create(
-                   *builder, *location, reg(32), i64(), 16,
-                   canonicalDestination(),
-                   lhs.getDefiningOp<ImmOp>() ? RegionAttr()
-                                               : canonicalRegion(),
-                   rhs.getDefiningOp<ImmOp>() ? RegionAttr()
-                                               : canonicalRegion(),
-                   IntegerAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(),
-                   TypeAttr(), false, maskOffset, lhs, rhs)
+        return AddOp::create(*builder, *location, reg(32), i64(), 16,
+                             canonicalDestination(),
+                             lhs.getDefiningOp<ImmOp>() ? RegionAttr()
+                                                        : canonicalRegion(),
+                             rhs.getDefiningOp<ImmOp>() ? RegionAttr()
+                                                        : canonicalRegion(),
+                             IntegerAttr(), IntegerAttr(), IntegerAttr(),
+                             TypeAttr(), TypeAttr(), false, maskOffset, lhs,
+                             rhs)
             .getResult();
       };
       WideValue result{add(base->low, offset->low, 0),
@@ -1352,8 +1537,7 @@ private:
       return failure();
     Type addressType = local ? i32() : i64();
     int64_t addressBits = local ? 32 : 64;
-    int64_t footprint =
-        (shape->cardinality * addressBits + 31) / 32;
+    int64_t footprint = (shape->cardinality * addressBits + 31) / 32;
     Value lhs = *base;
     Value rhs = *offset;
     Value lhsSource = operation.getBase();
@@ -1363,14 +1547,12 @@ private:
       std::swap(lhsSource, rhsSource);
     }
     Value result =
-        AddOp::create(
-            *builder, *location, reg(footprint), addressType,
-            shape->cardinality,
-            canonicalDestination(),
-            sourceRegion(lhsSource, shape->cardinality, operation),
-            sourceRegion(rhsSource, shape->cardinality, operation),
-            IntegerAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(), TypeAttr(),
-            shape->cardinality == 1, 0, lhs, rhs)
+        AddOp::create(*builder, *location, reg(footprint), addressType,
+                      shape->cardinality, canonicalDestination(),
+                      sourceRegion(lhsSource, shape->cardinality, operation),
+                      sourceRegion(rhsSource, shape->cardinality, operation),
+                      IntegerAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(),
+                      TypeAttr(), shape->cardinality == 1, 0, lhs, rhs)
             .getResult();
     values[operation.getResult()] = result;
     return success();
@@ -1435,6 +1617,230 @@ private:
                xw::GenericAddressSpaceAttr>(pointer.getAddressSpace());
   }
 
+  FailureOr<int64_t> getPointerBits(Type type, Operation *owner) const {
+    if (isLocalPointer(type))
+      return 32;
+    if (isA64Pointer(type))
+      return 64;
+    return owner->emitOpError("pointer address space has no Xe representation"),
+           failure();
+  }
+
+  FailureOr<int64_t> getIntegerBits(Type type, Operation *owner) const {
+    Type payload = type;
+    if (xw::SimdType simd = dyn_cast<xw::SimdType>(type))
+      payload = simd.getElementType();
+    IntegerType integer = dyn_cast<IntegerType>(payload);
+    if (!integer)
+      return owner->emitOpError("pointer cast requires an integer payload"),
+             failure();
+    return integer.getWidth();
+  }
+
+  LogicalResult lowerAddrspaceCast(xw::AddrspaceCastOp operation) {
+    bool sourceLocal = isLocalPointer(operation.getSource().getType());
+    bool resultLocal = isLocalPointer(operation.getType());
+    xw::PtrType sourcePointer =
+        getPointerElementType(operation.getSource().getType());
+    xw::PtrType resultPointer = getPointerElementType(operation.getType());
+    bool sourceGeneric = sourcePointer && isa<xw::GenericAddressSpaceAttr>(
+                                              sourcePointer.getAddressSpace());
+    bool resultGeneric = resultPointer && isa<xw::GenericAddressSpaceAttr>(
+                                              resultPointer.getAddressSpace());
+    if ((sourceLocal && resultGeneric) || (sourceGeneric && resultLocal))
+      return operation.emitOpError("local and generic address-space casts lack "
+                                   "provenance-preserving machine selection");
+    FailureOr<int64_t> sourceBits =
+        getPointerBits(operation.getSource().getType(), operation);
+    FailureOr<int64_t> resultBits =
+        getPointerBits(operation.getType(), operation);
+    if (failed(sourceBits) || failed(resultBits))
+      return failure();
+    if (*sourceBits > *resultBits)
+      return operation.emitOpError(
+          "A64 to local address-space cast would lose pointer bits");
+    if (*sourceBits == *resultBits) {
+      if (isWideSimd(operation.getType())) {
+        FailureOr<WideValue> source =
+            getWideValue(operation.getSource(), operation);
+        if (failed(source))
+          return failure();
+        wideValues[operation.getResult()] = *source;
+        widePointers[operation.getResult()] = *source;
+      } else {
+        FailureOr<Value> source = getValue(operation.getSource(), operation);
+        if (failed(source))
+          return failure();
+        values[operation.getResult()] = *source;
+      }
+      return success();
+    }
+    FailureOr<ValueShape> shape = getShape(operation.getType(), operation);
+    FailureOr<Value> source = getValue(operation.getSource(), operation);
+    if (failed(shape) || failed(source))
+      return failure();
+    if (shape->cardinality == 32) {
+      auto extend = [&](int64_t offset) {
+        return MovOp::create(*builder, *location, reg(32), i64(), 16,
+                             canonicalDestination(), canonicalRegion(),
+                             IntegerAttr(), builder->getI32IntegerAttr(offset),
+                             typeAttr(i32()), false, offset, *source)
+            .getResult();
+      };
+      WideValue result{extend(0), extend(16)};
+      wideValues[operation.getResult()] = result;
+      widePointers[operation.getResult()] = result;
+      return success();
+    }
+    values[operation.getResult()] =
+        MovOp::create(
+            *builder, *location, reg(shape->cardinality * 2), i64(),
+            shape->cardinality, canonicalDestination(),
+            sourceRegion(operation.getSource(), shape->cardinality, operation),
+            IntegerAttr(), IntegerAttr(), typeAttr(i32()),
+            shape->cardinality == 1, 0, *source)
+            .getResult();
+    return success();
+  }
+
+  LogicalResult lowerPtrToInt(xw::PtrToIntOp operation) {
+    FailureOr<int64_t> pointerBits =
+        getPointerBits(operation.getSource().getType(), operation);
+    FailureOr<int64_t> integerBits =
+        getIntegerBits(operation.getType(), operation);
+    if (failed(pointerBits) || failed(integerBits))
+      return failure();
+    if (*integerBits < *pointerBits)
+      return operation.emitOpError("pointer-to-integer cast would lose bits");
+    if (*integerBits > 64)
+      return operation.emitOpError(
+          "pointer-to-integer result wider than 64 bits has no machine move");
+    if (*integerBits == *pointerBits) {
+      if (isWideSimd(operation.getSource().getType())) {
+        FailureOr<WideValue> source =
+            getWideValue(operation.getSource(), operation);
+        if (failed(source))
+          return failure();
+        wideValues[operation.getResult()] = *source;
+      } else {
+        FailureOr<Value> source = getValue(operation.getSource(), operation);
+        if (failed(source))
+          return failure();
+        values[operation.getResult()] = *source;
+      }
+      return success();
+    }
+    FailureOr<ValueShape> shape = getShape(operation.getType(), operation);
+    FailureOr<Value> source = getValue(operation.getSource(), operation);
+    if (failed(shape) || failed(source))
+      return failure();
+    if (shape->cardinality == 32) {
+      auto extend = [&](int64_t offset) {
+        return MovOp::create(*builder, *location, reg(32), i64(), 16,
+                             canonicalDestination(), canonicalRegion(),
+                             IntegerAttr(), builder->getI32IntegerAttr(offset),
+                             typeAttr(i32()), false, offset, *source)
+            .getResult();
+      };
+      wideValues[operation.getResult()] = {extend(0), extend(16)};
+      return success();
+    }
+    values[operation.getResult()] =
+        MovOp::create(
+            *builder, *location, reg(shape->cardinality * 2), i64(),
+            shape->cardinality, canonicalDestination(),
+            sourceRegion(operation.getSource(), shape->cardinality, operation),
+            IntegerAttr(), IntegerAttr(), typeAttr(i32()),
+            shape->cardinality == 1, 0, *source)
+            .getResult();
+    return success();
+  }
+
+  LogicalResult lowerIntToPtr(xw::IntToPtrOp operation) {
+    FailureOr<int64_t> integerBits =
+        getIntegerBits(operation.getSource().getType(), operation);
+    FailureOr<int64_t> pointerBits =
+        getPointerBits(operation.getType(), operation);
+    if (failed(integerBits) || failed(pointerBits))
+      return failure();
+    if (*integerBits > *pointerBits)
+      return operation.emitOpError("integer-to-pointer cast would lose bits");
+    if (*integerBits == *pointerBits && isWideSimd(operation.getType())) {
+      FailureOr<WideValue> source =
+          getWideValue(operation.getSource(), operation);
+      if (failed(source))
+        return failure();
+      wideValues[operation.getResult()] = *source;
+      widePointers[operation.getResult()] = *source;
+    } else if (*integerBits == *pointerBits) {
+      FailureOr<Value> source = getValue(operation.getSource(), operation);
+      if (failed(source))
+        return failure();
+      values[operation.getResult()] = *source;
+    } else {
+      FailureOr<ValueShape> shape = getShape(operation.getType(), operation);
+      FailureOr<Value> source = getValue(operation.getSource(), operation);
+      if (failed(shape) || failed(source))
+        return failure();
+      Type destinationType = *pointerBits == 32 ? i32() : i64();
+      if (*pointerBits == 64 && shape->cardinality == 32) {
+        auto extend = [&](int64_t offset) {
+          return MovOp::create(
+                     *builder, *location, reg(32), i64(), 16,
+                     canonicalDestination(), canonicalRegion(), IntegerAttr(),
+                     builder->getI32IntegerAttr(offset),
+                     typeAttr(IntegerType::get(context, *integerBits)), false,
+                     offset, *source)
+              .getResult();
+        };
+        WideValue result{extend(0), extend(16)};
+        wideValues[operation.getResult()] = result;
+        widePointers[operation.getResult()] = result;
+        return success();
+      }
+      int64_t footprint = (shape->cardinality * *pointerBits + 31) / 32;
+      values[operation.getResult()] =
+          MovOp::create(*builder, *location, reg(footprint), destinationType,
+                        shape->cardinality, canonicalDestination(),
+                        sourceRegion(operation.getSource(), shape->cardinality,
+                                     operation),
+                        IntegerAttr(), IntegerAttr(),
+                        typeAttr(IntegerType::get(context, *integerBits)),
+                        shape->cardinality == 1, 0, *source)
+              .getResult();
+    }
+    return success();
+  }
+
+  LogicalResult lowerPointerCompare(xw::PtrCmpOp operation) {
+    FailureOr<ValueShape> shape =
+        getShape(operation.getLhs().getType(), operation);
+    FailureOr<int64_t> bits =
+        getPointerBits(operation.getLhs().getType(), operation);
+    if (failed(shape) || failed(bits))
+      return failure();
+    if (*bits == 64 && shape->cardinality == 32)
+      return operation.emitOpError(
+          "SIMD32 A64 pointer comparison has no decomposed flag selection");
+    FailureOr<Value> lhs = getValue(operation.getLhs(), operation);
+    FailureOr<Value> rhs = getValue(operation.getRhs(), operation);
+    if (failed(lhs) || failed(rhs))
+      return failure();
+    CmpOp compare = CmpOp::create(
+        *builder, *location, ARFType::get(context, ARFFile::f, 2, -1),
+        CondModifierAttr::get(context, operation.getPredicate() ==
+                                               arith::CmpIPredicate::eq
+                                           ? CondModifier::eq
+                                           : CondModifier::ne),
+        typeAttr(*bits == 32 ? i32() : i64()),
+        builder->getI32IntegerAttr(shape->cardinality),
+        sourceRegion(operation.getLhs(), shape->cardinality, operation),
+        sourceRegion(operation.getRhs(), shape->cardinality, operation),
+        IntegerAttr(), IntegerAttr(), TypeAttr(), TypeAttr(), *lhs, *rhs);
+    values[operation.getResult()] = compare.getFlag();
+    return success();
+  }
+
   FailureOr<Value> getA64Payload(Value pointer, int64_t cardinality,
                                  Operation *owner) {
     if (cardinality == 32) {
@@ -1457,7 +1863,7 @@ private:
       return *address;
     return emitMove(reg(footprint), i64(), cardinality, *address,
                     pointerShape->cardinality == 1 ? uniformRegion()
-                                                    : canonicalRegion());
+                                                   : canonicalRegion());
   }
 
   FailureOr<Value> getLocalPayload(Value pointer, int64_t cardinality,
@@ -1471,7 +1877,7 @@ private:
       return *address;
     return emitMove(reg(cardinality), i32(), cardinality, *address,
                     pointerShape->cardinality == 1 ? uniformRegion()
-                                                    : canonicalRegion());
+                                                   : canonicalRegion());
   }
 
   FailureOr<Value> mapDependency(Operation *operation, Value dependency) {
@@ -1485,7 +1891,8 @@ private:
   }
 
   LogicalResult lowerLoad(xw::LoadOp operation) {
-    FailureOr<ValueShape> shape = getShape(operation.getValue().getType(), operation);
+    FailureOr<ValueShape> shape =
+        getShape(operation.getValue().getType(), operation);
     if (failed(shape))
       return failure();
     FailureOr<int64_t> bits = getElementBits(shape->elementType, operation);
@@ -1500,10 +1907,10 @@ private:
           getLocalPayload(operation.getPtr(), shape->cardinality, operation);
       if (failed(address))
         return failure();
-      LoadSLMOp load = LoadSLMOp::create(
-          *builder, *location, reg(shape->cardinality),
-          MemTokenType::get(context), *address, *dependency,
-          shape->cardinality);
+      LoadSLMOp load =
+          LoadSLMOp::create(*builder, *location, reg(shape->cardinality),
+                            MemTokenType::get(context), *address, *dependency,
+                            shape->cardinality);
       values[operation.getValue()] = load.getDst();
       values[operation.getToken()] = load.getToken();
       memoryToken = load.getToken();
@@ -1516,8 +1923,8 @@ private:
     if (failed(address))
       return failure();
     LoadA64Op load = LoadA64Op::create(
-        *builder, *location, reg(shape->cardinality), MemTokenType::get(context),
-        *address, *dependency, shape->cardinality);
+        *builder, *location, reg(shape->cardinality),
+        MemTokenType::get(context), *address, *dependency, shape->cardinality);
     values[operation.getValue()] = load.getDst();
     values[operation.getToken()] = load.getToken();
     memoryToken = load.getToken();
@@ -1525,7 +1932,8 @@ private:
   }
 
   LogicalResult lowerStore(xw::StoreOp operation) {
-    FailureOr<ValueShape> shape = getShape(operation.getValue().getType(), operation);
+    FailureOr<ValueShape> shape =
+        getShape(operation.getValue().getType(), operation);
     if (failed(shape))
       return failure();
     FailureOr<int64_t> bits = getElementBits(shape->elementType, operation);
@@ -1541,9 +1949,9 @@ private:
           getLocalPayload(operation.getPtr(), shape->cardinality, operation);
       if (failed(address))
         return failure();
-      StoreSLMOp store = StoreSLMOp::create(
-          *builder, *location, MemTokenType::get(context), *address, *data,
-          *dependency, shape->cardinality);
+      StoreSLMOp store =
+          StoreSLMOp::create(*builder, *location, MemTokenType::get(context),
+                             *address, *data, *dependency, shape->cardinality);
       values[operation.getToken()] = store.getToken();
       memoryToken = store.getToken();
       return success();
@@ -1554,9 +1962,9 @@ private:
         getA64Payload(operation.getPtr(), shape->cardinality, operation);
     if (failed(address))
       return failure();
-    StoreA64Op store = StoreA64Op::create(
-        *builder, *location, MemTokenType::get(context), *address, *data,
-        *dependency, shape->cardinality);
+    StoreA64Op store =
+        StoreA64Op::create(*builder, *location, MemTokenType::get(context),
+                           *address, *data, *dependency, shape->cardinality);
     values[operation.getToken()] = store.getToken();
     memoryToken = store.getToken();
     return success();
@@ -1565,7 +1973,8 @@ private:
   LogicalResult lowerAtomic(xw::AtomicRMWOp operation) {
     if (operation.getKind() != arith::AtomicRMWKind::addi)
       return operation.emitOpError("only atomic add has XeMachine support");
-    FailureOr<ValueShape> shape = getShape(operation.getOld().getType(), operation);
+    FailureOr<ValueShape> shape =
+        getShape(operation.getOld().getType(), operation);
     FailureOr<Value> data = materialize(operation.getValue(), operation);
     FailureOr<Value> dependency =
         mapDependency(operation, operation.getDependency());
@@ -1579,10 +1988,10 @@ private:
         getA64Payload(operation.getPtr(), shape->cardinality, operation);
     if (failed(address))
       return failure();
-    AtomicIAddA64Op atomic = AtomicIAddA64Op::create(
-        *builder, *location, reg(shape->cardinality),
-        MemTokenType::get(context), *address, *data, *dependency,
-        shape->cardinality);
+    AtomicIAddA64Op atomic =
+        AtomicIAddA64Op::create(*builder, *location, reg(shape->cardinality),
+                                MemTokenType::get(context), *address, *data,
+                                *dependency, shape->cardinality);
     values[operation.getOld()] = atomic.getDst();
     values[operation.getToken()] = atomic.getToken();
     memoryToken = atomic.getToken();
@@ -1590,38 +1999,36 @@ private:
   }
 
   void emitBarrier(Value dependency) {
-    FenceSLMOp fence = FenceSLMOp::create(
-        *builder, *location, reg(16), MemTokenType::get(context),
-        architecturalRegister(0), dependency);
-    FenceAwaitOp await = FenceAwaitOp::create(
-        *builder, *location, MemTokenType::get(context), fence.getReadback(),
-        fence.getToken());
-    Value payload = emitMove(reg(16), i32(), 16, immediate(0, i32()),
-                             RegionAttr(), true);
-    Value control =
-        MovOp::create(*builder, *location, reg(16), i32(), 1,
-                      canonicalDestination(), RegionAttr(),
-                      builder->getI32IntegerAttr(2), IntegerAttr(), TypeAttr(),
-                      true, 0, immediate(0x100, i32()))
-            .getResult();
+    FenceSLMOp fence = FenceSLMOp::create(*builder, *location, reg(16),
+                                          MemTokenType::get(context),
+                                          architecturalRegister(0), dependency);
+    FenceAwaitOp await =
+        FenceAwaitOp::create(*builder, *location, MemTokenType::get(context),
+                             fence.getReadback(), fence.getToken());
+    Value payload =
+        emitMove(reg(16), i32(), 16, immediate(0, i32()), RegionAttr(), true);
+    Value control = MovOp::create(*builder, *location, reg(16), i32(), 1,
+                                  canonicalDestination(), RegionAttr(),
+                                  builder->getI32IntegerAttr(2), IntegerAttr(),
+                                  TypeAttr(), true, 0, immediate(0x100, i32()))
+                        .getResult();
     payload = UpdateTupleOp::create(
                   *builder, *location, reg(16), payload, ValueRange{control},
                   builder->getArrayAttr({builder->getI64IntegerAttr(0)}))
                   .getResult();
-    Value header = MovOp::create(
-                       *builder, *location, reg(16), i8(), 2,
-                       canonicalDestination(), uniformRegion(),
-                       builder->getI32IntegerAttr(10),
-                       builder->getI32IntegerAttr(11), TypeAttr(), true, 0,
-                       architecturalRegister(0))
+    Value header = MovOp::create(*builder, *location, reg(16), i8(), 2,
+                                 canonicalDestination(), uniformRegion(),
+                                 builder->getI32IntegerAttr(10),
+                                 builder->getI32IntegerAttr(11), TypeAttr(),
+                                 true, 0, architecturalRegister(0))
                        .getResult();
     payload = UpdateTupleOp::create(
                   *builder, *location, reg(16), payload, ValueRange{header},
                   builder->getArrayAttr({builder->getI64IntegerAttr(0)}))
                   .getResult();
-    BarrierSignalOp signal = BarrierSignalOp::create(
-        *builder, *location, MemTokenType::get(context), payload,
-        await.getToken());
+    BarrierSignalOp signal =
+        BarrierSignalOp::create(*builder, *location, MemTokenType::get(context),
+                                payload, await.getToken());
     memoryToken = signal.getToken();
     emitSync(SyncKind::bar);
   }
@@ -1642,21 +2049,24 @@ private:
     Value local = localIds[dim];
     Value result;
     if (!global) {
-      result = emitMove(reg(simdWidth), i32(), simdWidth, local,
-                        canonicalRegion(), false, 0, IntegerAttr());
+      result = MovOp::create(*builder, *location, reg(simdWidth), i32(),
+                             simdWidth, canonicalDestination(),
+                             canonicalRegion(), IntegerAttr(), IntegerAttr(),
+                             typeAttr(i16()), false, 0, local)
+                   .getResult();
     } else {
       Value r0 = architecturalRegister(0);
       Value inlineData = architecturalRegister(4);
       Value accumulator =
           MulOp::create(
-              *builder, *location,
-              ARFType::get(context, ARFFile::acc, 16, 0), i32(), 1,
-              canonicalDestination(), uniformRegion(), uniformRegion(),
-              IntegerAttr(), builder->getI32IntegerAttr(1 + dim),
+              *builder, *location, ARFType::get(context, ARFFile::acc, 16, 0),
+              i32(), 1, canonicalDestination(), uniformRegion(),
+              uniformRegion(), IntegerAttr(),
+              builder->getI32IntegerAttr(1 + dim),
               builder->getI32IntegerAttr(3 + dim), true, 0, r0, inlineData)
               .getResult();
-      Value base = emitMove(reg(16), i32(), 1, accumulator, uniformRegion(),
-                            true);
+      Value base =
+          emitMove(reg(16), i32(), 1, accumulator, uniformRegion(), true);
       result = Add3Op::create(
                    *builder, *location, reg(simdWidth), i32(), simdWidth,
                    canonicalDestination(), uniformRegion(), canonicalRegion(),
@@ -1681,11 +2091,10 @@ private:
       return success();
     }
     auto widen = [&](int64_t offset) {
-      return MovOp::create(
-                 *builder, *location, reg(32), i64(), 16,
-                 canonicalDestination(), canonicalRegion(), IntegerAttr(),
-                 builder->getI32IntegerAttr(offset), typeAttr(i32()), false,
-                 offset, result)
+      return MovOp::create(*builder, *location, reg(32), i64(), 16,
+                           canonicalDestination(), canonicalRegion(),
+                           IntegerAttr(), builder->getI32IntegerAttr(offset),
+                           typeAttr(i32()), false, offset, result)
           .getResult();
     };
     wideValues[operation->getResult(0)] = {widen(0), widen(16)};
@@ -1704,8 +2113,8 @@ private:
         getFootprint(operation->getResult(0).getType(), operation);
     if (failed(shape) || failed(footprint) || shape->cardinality != 1)
       return operation->emitOpError("uniform query must return a bare value");
-    Value source = sourceSub < 3 ? architecturalRegister(0)
-                                 : architecturalRegister(4);
+    Value source =
+        sourceSub < 3 ? architecturalRegister(0) : architecturalRegister(4);
     int sub = sourceSub < 3 ? sourceSub : sourceSub - 3;
     values[operation->getResult(0)] =
         MovOp::create(*builder, *location, reg(*footprint), shape->elementType,
@@ -1713,6 +2122,54 @@ private:
                       builder->getI32IntegerAttr(sub), typeAttr(i32()), true, 0,
                       source)
             .getResult();
+    return success();
+  }
+
+  LogicalResult lowerLaneId(xw::LaneIdOp operation) {
+    return operation.emitOpError(
+        "lane ID has no XeMachine channel-index primitive");
+  }
+
+  LogicalResult lowerShuffle(xw::ShuffleOp operation) {
+    xw::ConstantOp lane =
+        operation.getSourceLane().getDefiningOp<xw::ConstantOp>();
+    if (!lane)
+      return operation.emitOpError(
+          "dynamic shuffle has no XeMachine indirect-region primitive");
+    FailureOr<int64_t> sourceLane = getConstantBits(lane);
+    FailureOr<ValueShape> shape = getShape(operation.getType(), operation);
+    FailureOr<int64_t> bits = getElementBits(
+        cast<xw::SimdType>(operation.getType()).getElementType(), operation);
+    FailureOr<Value> source = getValue(operation.getSource(), operation);
+    FailureOr<int64_t> footprint = getFootprint(operation.getType(), operation);
+    if (failed(sourceLane) || failed(shape) || failed(bits) || failed(source) ||
+        failed(footprint))
+      return failure();
+    if (*sourceLane < 0 || *sourceLane >= shape->cardinality)
+      return operation.emitOpError("constant shuffle lane is out of range");
+    if (*bits > 32)
+      return operation.emitOpError(
+          "shuffle payload wider than 32 bits has no direct region selection");
+    values[operation.getResult()] = emitMove(
+        reg(*footprint), shape->elementType, shape->cardinality, *source,
+        uniformRegion(), false, 0, builder->getI32IntegerAttr(*sourceLane));
+    return success();
+  }
+
+  LogicalResult lowerUnavailableQuery(Operation *operation) {
+    return operation->emitOpError(
+        "query is absent from the Xe payload contract");
+  }
+
+  LogicalResult lowerAllocRelease(xw::AllocReleaseOp operation) {
+    if (!isLocalPointer(operation.getAllocation().getType()))
+      return operation.emitOpError(
+          "allocation release requires a local pointer");
+    Value dependency = values.lookup(operation.getDependency());
+    if (!dependency)
+      return operation.emitOpError("allocation release token was not selected");
+    values[operation.getToken()] = dependency;
+    memoryToken = dependency;
     return success();
   }
 
@@ -1758,6 +2215,18 @@ private:
       } else if (xw::FMulOp multiply = dyn_cast<xw::FMulOp>(operation)) {
         if (failed(lowerFloatMultiply(multiply)))
           return failure();
+      } else if (isa<xw::FMaxOp>(operation)) {
+        if (failed(lowerUnsupportedFloat(&operation, "floating maximum")))
+          return failure();
+      } else if (isa<xw::FmaOp>(operation)) {
+        if (failed(lowerUnsupportedFloat(&operation, "fused multiply-add")))
+          return failure();
+      } else if (isa<xw::FExp2Op>(operation)) {
+        if (failed(lowerUnsupportedFloat(&operation, "base-two exponential")))
+          return failure();
+      } else if (isa<xw::FRcpOp>(operation)) {
+        if (failed(lowerUnsupportedFloat(&operation, "reciprocal")))
+          return failure();
       } else if (xw::CmpIOp compare = dyn_cast<xw::CmpIOp>(operation)) {
         if (failed(lowerCompare(compare)))
           return failure();
@@ -1766,6 +2235,15 @@ private:
           return failure();
       } else if (xw::SelectOp select = dyn_cast<xw::SelectOp>(operation)) {
         if (failed(lowerSelect(select)))
+          return failure();
+      } else if (isa<xw::MaskAndOp, xw::MaskOrOp, xw::MaskXorOp>(operation)) {
+        if (failed(lowerMaskBinary(&operation)))
+          return failure();
+      } else if (xw::MaskNotOp maskNot = dyn_cast<xw::MaskNotOp>(operation)) {
+        if (failed(lowerMaskNot(maskNot)))
+          return failure();
+      } else if (xw::BallotOp ballot = dyn_cast<xw::BallotOp>(operation)) {
+        if (failed(lowerBallot(ballot)))
           return failure();
       } else if (xw::WhereOp where = dyn_cast<xw::WhereOp>(operation)) {
         if (failed(lowerWhere(where)))
@@ -1791,14 +2269,34 @@ private:
       } else if (xw::PtrAddOp pointer = dyn_cast<xw::PtrAddOp>(operation)) {
         if (failed(lowerPointerAdd(pointer)))
           return failure();
+      } else if (xw::AddrspaceCastOp pointer =
+                     dyn_cast<xw::AddrspaceCastOp>(operation)) {
+        if (failed(lowerAddrspaceCast(pointer)))
+          return failure();
+      } else if (xw::PtrToIntOp pointer = dyn_cast<xw::PtrToIntOp>(operation)) {
+        if (failed(lowerPtrToInt(pointer)))
+          return failure();
+      } else if (xw::IntToPtrOp pointer = dyn_cast<xw::IntToPtrOp>(operation)) {
+        if (failed(lowerIntToPtr(pointer)))
+          return failure();
+      } else if (xw::PtrCmpOp compare = dyn_cast<xw::PtrCmpOp>(operation)) {
+        if (failed(lowerPointerCompare(compare)))
+          return failure();
       } else if (xw::NullOp null = dyn_cast<xw::NullOp>(operation)) {
-        values[null.getResult()] = immediate(0, i64());
+        FailureOr<int64_t> bits = getPointerBits(null.getType(), null);
+        if (failed(bits))
+          return failure();
+        values[null.getResult()] = immediate(0, *bits == 32 ? i32() : i64());
       } else if (xw::LocalMemoryBaseOp local =
                      dyn_cast<xw::LocalMemoryBaseOp>(operation)) {
         values[local.getResult()] = immediate(local.getOffset(), i32());
       } else if (xw::AllocOp allocation = dyn_cast<xw::AllocOp>(operation)) {
         values[allocation.getResult()] =
             immediate(allocation.getOffset().value_or(0), i32());
+      } else if (xw::AllocReleaseOp release =
+                     dyn_cast<xw::AllocReleaseOp>(operation)) {
+        if (failed(lowerAllocRelease(release)))
+          return failure();
       } else if (xw::TokenOp token = dyn_cast<xw::TokenOp>(operation)) {
         memoryToken =
             TokenOp::create(*builder, *location, MemTokenType::get(context))
@@ -1813,14 +2311,15 @@ private:
           dependencies.push_back(*selected);
         }
         if (isa<xw::IssueTokenOp, xw::AfterOp>(operation))
-          memoryToken = AfterOp::create(*builder, *location,
-                                        MemTokenType::get(context), dependencies)
-                            .getToken();
+          memoryToken =
+              AfterOp::create(*builder, *location, MemTokenType::get(context),
+                              dependencies)
+                  .getToken();
         else
-          memoryToken = TokenJoinOp::create(
-                            *builder, *location, MemTokenType::get(context),
-                            dependencies)
-                            .getToken();
+          memoryToken =
+              TokenJoinOp::create(*builder, *location,
+                                  MemTokenType::get(context), dependencies)
+                  .getToken();
         values[operation.getResult(0)] = memoryToken;
       } else if (xw::LoadOp load = dyn_cast<xw::LoadOp>(operation)) {
         if (failed(lowerLoad(load)))
@@ -1840,18 +2339,18 @@ private:
             return failure();
           dependencies.push_back(*selected);
         }
-    Value dependency;
+        Value dependency;
         if (dependencies.size() == 1)
           dependency = dependencies.front();
         else if (!dependencies.empty())
-          dependency = TokenJoinOp::create(
-                           *builder, *location, MemTokenType::get(context),
-                           dependencies)
-                           .getToken();
+          dependency =
+              TokenJoinOp::create(*builder, *location,
+                                  MemTokenType::get(context), dependencies)
+                  .getToken();
         if (!dependency)
-          dependency = TokenOp::create(*builder, *location,
-                                       MemTokenType::get(context))
-                           .getToken();
+          dependency =
+              TokenOp::create(*builder, *location, MemTokenType::get(context))
+                  .getToken();
         emitBarrier(dependency);
         values[barrier.getToken()] = memoryToken;
       } else if (xw::GlobalIdOp id = dyn_cast<xw::GlobalIdOp>(operation)) {
@@ -1865,6 +2364,20 @@ private:
           return failure();
       } else if (xw::LocalSizeOp size = dyn_cast<xw::LocalSizeOp>(operation)) {
         if (failed(lowerUniformQuery(size, size.getDim(), 3 + size.getDim())))
+          return failure();
+      } else if (xw::LaunchBlockSizeOp size =
+                     dyn_cast<xw::LaunchBlockSizeOp>(operation)) {
+        if (failed(lowerUniformQuery(size, size.getDim(), 3 + size.getDim())))
+          return failure();
+      } else if (isa<xw::GlobalSizeOp, xw::NumGroupsOp, xw::LaunchGridSizeOp>(
+                     operation)) {
+        if (failed(lowerUnavailableQuery(&operation)))
+          return failure();
+      } else if (xw::LaneIdOp lane = dyn_cast<xw::LaneIdOp>(operation)) {
+        if (failed(lowerLaneId(lane)))
+          return failure();
+      } else if (xw::ShuffleOp shuffle = dyn_cast<xw::ShuffleOp>(operation)) {
+        if (failed(lowerShuffle(shuffle)))
           return failure();
       } else if (isa<func::ReturnOp>(operation)) {
         emitEot();

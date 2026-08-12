@@ -38,7 +38,8 @@ LogicalResult MemoryFrontierAnalysis::visitOperation(
 
   bool relevant = false;
   for (const MemoryEffects::EffectInstance &effect : effects) {
-    if (isa<MemoryEffects::Read, MemoryEffects::Write>(effect.getEffect())) {
+    if (isa<MemoryEffects::Read, MemoryEffects::Write, MemoryEffects::Free>(
+            effect.getEffect())) {
       relevant = true;
       if (Value location = effect.getValue())
         (void)aliasAnalysis.getModRef(op, location);

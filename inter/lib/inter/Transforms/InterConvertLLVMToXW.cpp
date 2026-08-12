@@ -1,5 +1,6 @@
 #include "inter/Dialect/Inter/IR/XW.h"
 
+#include "inter/Transforms/Passes.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -8,7 +9,6 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
-#include "inter/Transforms/Passes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -24,7 +24,8 @@ using namespace mlir;
 namespace {
 
 static bool containsLLVMType(Type type) {
-  if (type.getDialect().getNamespace() == LLVM::LLVMDialect::getDialectNamespace())
+  if (type.getDialect().getNamespace() ==
+      LLVM::LLVMDialect::getDialectNamespace())
     return true;
   if (auto function = dyn_cast<FunctionType>(type))
     return llvm::any_of(function.getInputs(), containsLLVMType) ||
@@ -35,12 +36,14 @@ static bool containsLLVMType(Type type) {
 }
 
 static bool containsLLVMType(Attribute attribute) {
+  if (attribute.getDialect().getNamespace() ==
+      LLVM::LLVMDialect::getDialectNamespace())
+    return true;
   if (auto type = dyn_cast<TypeAttr>(attribute))
     return containsLLVMType(type.getValue());
   if (auto array = dyn_cast<ArrayAttr>(attribute))
-    return llvm::any_of(array, [](Attribute nested) {
-      return containsLLVMType(nested);
-    });
+    return llvm::any_of(
+        array, [](Attribute nested) { return containsLLVMType(nested); });
   if (auto dictionary = dyn_cast<DictionaryAttr>(attribute))
     return llvm::any_of(dictionary, [](NamedAttribute attr) {
       return containsLLVMType(attr.getValue());
@@ -48,11 +51,11 @@ static bool containsLLVMType(Attribute attribute) {
   return false;
 }
 
-static DictionaryAttr getImportedAttributes(Operation *op,
-                                             Builder &builder) {
+static DictionaryAttr getImportedAttributes(Operation *op, Builder &builder) {
   NamedAttrList imported;
   for (NamedAttribute attr : op->getAttrs())
-    if (!containsLLVMType(attr.getValue()) &&
+    if (!attr.getName().strref().starts_with("llvm.") &&
+        !containsLLVMType(attr.getValue()) &&
         attr.getValue().getDialect().getNamespace() !=
             LLVM::LLVMDialect::getDialectNamespace())
       imported.set(attr.getName(), attr.getValue());
@@ -63,6 +66,18 @@ static Type getPayloadType(Type type) {
   if (auto simd = dyn_cast<xw::SimdType>(type))
     return simd.getElementType();
   return type;
+}
+
+static FailureOr<int64_t> getFunctionSimdWidth(Operation *op) {
+  FunctionOpInterface function = op->getParentOfType<FunctionOpInterface>();
+  if (!function)
+    return op->emitOpError("requires an enclosing function"), failure();
+  IntegerAttr width = function->getAttrOfType<IntegerAttr>(
+      xw::XWDialect::getSimdWidthAttrName());
+  if (!width)
+    return op->emitOpError("enclosing function is missing xw.simd_width"),
+           failure();
+  return width.getInt();
 }
 
 static std::optional<int64_t> getCardinality(Type type) {
@@ -93,9 +108,8 @@ static LogicalResult reconcileMaterializedShapes(ModuleOp module) {
       std::optional<int64_t> cardinality;
       for (Type type : op->getOperandTypes())
         if (std::optional<int64_t> candidate = getCardinality(type))
-          cardinality = cardinality
-                            ? std::max(*cardinality, *candidate)
-                            : candidate;
+          cardinality =
+              cardinality ? std::max(*cardinality, *candidate) : candidate;
       if (!cardinality || op->getNumResults() == 0)
         return;
 
@@ -105,12 +119,11 @@ static LogicalResult reconcileMaterializedShapes(ModuleOp module) {
         replacement = xw::MaskType::get(op->getContext(), *cardinality);
       else if (auto ptradd = dyn_cast<xw::PtrAddOp>(op)) {
         Type pointer = getPayloadType(ptradd.getBase().getType());
-        replacement = xw::SimdType::get(op->getContext(), pointer,
-                                        *cardinality);
+        replacement =
+            xw::SimdType::get(op->getContext(), pointer, *cardinality);
       } else if (op->hasTrait<OpTrait::Elementwise>()) {
-        replacement = xw::SimdType::get(op->getContext(),
-                                        getPayloadType(resultType),
-                                        *cardinality);
+        replacement = xw::SimdType::get(
+            op->getContext(), getPayloadType(resultType), *cardinality);
       }
       if (replacement && replacement != resultType) {
         op->getResult(0).setType(replacement);
@@ -118,6 +131,16 @@ static LogicalResult reconcileMaterializedShapes(ModuleOp module) {
       }
     });
   } while (changed);
+
+  SmallVector<xw::SplatOp> redundantSplats;
+  module.walk([&](xw::SplatOp splat) {
+    if (splat.getSource().getType() == splat.getResult().getType())
+      redundantSplats.push_back(splat);
+  });
+  for (xw::SplatOp splat : redundantSplats) {
+    splat.getResult().replaceAllUsesWith(splat.getSource());
+    splat.erase();
+  }
 
   SmallVector<StringAttr> consumedModuleAttrs;
   for (NamedAttribute attr : module->getAttrs()) {
@@ -191,7 +214,8 @@ public:
     addConversion([&](LLVM::LLVMFunctionType function) -> Type {
       SmallVector<Type> inputs;
       SmallVector<Type> results;
-      if (function.isVarArg() || failed(convertTypes(function.getParams(), inputs)) ||
+      if (function.isVarArg() ||
+          failed(convertTypes(function.getParams(), inputs)) ||
           failed(convertTypes(function.getReturnTypes(), results)))
         return {};
       return FunctionType::get(context, inputs, results);
@@ -229,15 +253,15 @@ static StringRef classifyLLVMOperation(Operation *op) {
   return StringSwitch<StringRef>(name)
       .Cases({"llvm.add", "llvm.sub", "llvm.mul", "llvm.udiv", "llvm.sdiv",
               "llvm.urem", "llvm.srem", "llvm.shl", "llvm.lshr", "llvm.ashr",
-              "llvm.and", "llvm.or", "llvm.xor"}, "xw.binary")
-      .Case("llvm.fadd", "arith.addf")
-      .Case("llvm.fsub", "arith.subf")
-      .Case("llvm.fmul", "arith.mulf")
-      .Case("llvm.fdiv", "arith.divf")
-      .Case("llvm.frem", "arith.remf")
+              "llvm.and", "llvm.or", "llvm.xor"},
+             "xw.binary")
+      .Case("llvm.fadd", "xw.fadd")
+      .Case("llvm.fsub", "xw.fsub")
+      .Case("llvm.fmul", "xw.fmul")
       .Cases({"llvm.sext", "llvm.zext", "llvm.trunc", "llvm.fpext",
               "llvm.fptrunc", "llvm.sitofp", "llvm.uitofp", "llvm.fptosi",
-              "llvm.fptoui", "llvm.bitcast"}, "xw.cast")
+              "llvm.fptoui", "llvm.bitcast"},
+             "xw.cast")
       .Case("llvm.icmp", "xw.cmpi")
       .Case("llvm.fcmp", "xw.cmpf")
       .Case("llvm.select", "xw.select")
@@ -249,21 +273,35 @@ static StringRef classifyLLVMOperation(Operation *op) {
       .Case("llvm.load", "xw.load")
       .Case("llvm.store", "xw.store")
       .Case("llvm.atomicrmw", "xw.atomic_rmw")
-      .Case("llvm.fence", "xw.barrier")
       .Default("");
 }
 
 static StringRef classifyBuiltin(StringRef symbol) {
   return StringSwitch<StringRef>(symbol)
-      .Cases({"_Z13get_global_idj", "get_global_id"}, "xw.global_id")
-      .Cases({"_Z12get_local_idj", "get_local_id"}, "xw.local_id")
-      .Cases({"_Z12get_group_idj", "get_group_id"}, "xw.group_id")
-      .Cases({"_Z15get_global_sizej", "get_global_size"}, "xw.global_size")
-      .Cases({"_Z14get_local_sizej", "get_local_size"}, "xw.local_size")
+      .Cases({"_Z22get_sub_group_local_idv", "_Z22get_sub_group_local_id",
+              "get_sub_group_local_id"},
+             "xw.lane_id")
+      .Cases({"_Z13get_global_idj", "_Z13get_global_idm", "get_global_id"},
+             "xw.global_id")
+      .Cases({"_Z12get_local_idj", "_Z12get_local_idm", "get_local_id"},
+             "xw.local_id")
+      .Cases({"_Z12get_group_idj", "_Z12get_group_idm", "get_group_id"},
+             "xw.group_id")
+      .Cases(
+          {"_Z15get_global_sizej", "_Z15get_global_sizem", "get_global_size"},
+          "xw.global_size")
+      .Cases({"_Z14get_local_sizej", "_Z14get_local_sizem", "get_local_size"},
+             "xw.local_size")
+      .Cases({"_Z14get_num_groupsj", "_Z14get_num_groupsm", "get_num_groups"},
+             "xw.num_groups")
+      .Cases({"__builtin_IB_get_global_size", "__spirv_BuiltInGlobalSize"},
+             "xw.launch_grid_size")
+      .Cases({"__builtin_IB_get_local_size", "__spirv_BuiltInWorkgroupSize"},
+             "xw.launch_block_size")
       .Cases({"_Z7barrierj", "barrier"}, "xw.barrier")
-      .Cases({"_Z12atomic_addPVU3AS1ii", "_Z10atomic_addPU3AS1Vjj",
-              "atomic_add"},
-             "xw.atomic_rmw")
+      .Cases(
+          {"_Z12atomic_addPVU3AS1ii", "_Z10atomic_addPU3AS1Vjj", "atomic_add"},
+          "xw.atomic_rmw")
       .Default("");
 }
 
@@ -272,9 +310,9 @@ public:
   ConvertLLVMOperation(TypeConverter &converter, MLIRContext *context)
       : ConversionPattern(converter, MatchAnyOpTypeTag(), 1, context) {}
 
-  LogicalResult matchAndRewrite(
-      Operation *op, ArrayRef<Value> operands,
-      ConversionPatternRewriter &rewriter) const override {
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
     if (op->getName().getDialectNamespace() !=
         LLVM::LLVMDialect::getDialectNamespace())
       return failure();
@@ -282,10 +320,22 @@ public:
     if (auto gep = dyn_cast<LLVM::GEPOp>(op))
       return convertGEP(gep, operands, rewriter);
 
+    if (isa<LLVM::UndefOp, LLVM::PoisonOp>(op))
+      return op->emitOpError(
+          "undef and poison have no sound XW representation");
+
+    if (isa<LLVM::FreezeOp>(op))
+      return op->emitOpError(
+          "freeze is unsupported without proof that its operand is non-poison");
+
+    if (isa<LLVM::FenceOp>(op))
+      return op->emitOpError(
+          "LLVM fence ordering and scope have no exact XW representation");
+
     if (auto global = dyn_cast<LLVM::GlobalOp>(op)) {
       if (global.getAddrSpace() != 3)
-        return rewriter.notifyMatchFailure(
-            op, "only local-address-space LLVM globals are semantic allocations");
+        return global.emitOpError(
+            "only local-address-space LLVM globals are semantic allocations");
       rewriter.eraseOp(global);
       return success();
     }
@@ -298,9 +348,14 @@ public:
       Type resultType = getTypeConverter()->convertType(address.getType());
       OperationState state(address.getLoc(), "xw.local_memory_base");
       state.addTypes(resultType);
-      state.addAttribute("offset", rewriter.getI64IntegerAttr(0));
+      IntegerAttr offset = address->getAttrOfType<IntegerAttr>("xw.offset");
+      if (!offset)
+        return address.emitOpError(
+            "referenced local global is missing an assigned SLM offset");
+      state.addAttribute("offset", offset);
       state.addAttribute("xw.global", address.getGlobalNameAttr());
-      if (IntegerAttr bytes = address->getAttrOfType<IntegerAttr>("xw.bytesize"))
+      if (IntegerAttr bytes =
+              address->getAttrOfType<IntegerAttr>("xw.bytesize"))
         state.addAttribute("xw.bytesize", bytes);
       if (IntegerAttr alignment =
               address->getAttrOfType<IntegerAttr>("xw.alignment"))
@@ -312,7 +367,8 @@ public:
     }
 
     if (isa<LLVM::BitcastOp>(op) && operands.size() == 1) {
-      Type resultType = getTypeConverter()->convertType(op->getResult(0).getType());
+      Type resultType =
+          getTypeConverter()->convertType(op->getResult(0).getType());
       if (resultType == operands.front().getType()) {
         rewriter.replaceOp(op, operands.front());
         return success();
@@ -321,7 +377,8 @@ public:
 
     if (auto function = dyn_cast<LLVM::LLVMFuncOp>(op)) {
       if (!function.isExternal())
-        return rewriter.notifyMatchFailure(op, "defined LLVM function survived import");
+        return rewriter.notifyMatchFailure(
+            op, "defined LLVM function survived import");
       if (!classifyBuiltin(function.getName()).empty()) {
         rewriter.eraseOp(op);
         return success();
@@ -333,11 +390,30 @@ public:
     if (auto call = dyn_cast<LLVM::CallOp>(op)) {
       auto callee = call.getCallee();
       if (!callee)
-        return rewriter.notifyMatchFailure(op, "indirect calls are unsupported");
+        return rewriter.notifyMatchFailure(op,
+                                           "indirect calls are unsupported");
       replacement = classifyBuiltin(*callee);
     }
     if (replacement.empty())
-      return rewriter.notifyMatchFailure(op, "unsupported LLVM operation");
+      return isa<LLVM::FDivOp, LLVM::FRemOp>(op)
+                 ? op->emitOpError("floating division and remainder have no "
+                                   "exact XW operation")
+                 : rewriter.notifyMatchFailure(op,
+                                               "unsupported LLVM operation");
+
+    if (auto cast = dyn_cast<LLVM::AddrSpaceCastOp>(op)) {
+      LLVM::LLVMPointerType source =
+          mlir::cast<LLVM::LLVMPointerType>(cast.getArg().getType());
+      LLVM::LLVMPointerType result =
+          mlir::cast<LLVM::LLVMPointerType>(cast.getType());
+      bool sourceLocal = source.getAddressSpace() == 3;
+      bool resultLocal = result.getAddressSpace() == 3;
+      bool sourceGeneric = source.getAddressSpace() == 4;
+      bool resultGeneric = result.getAddressSpace() == 4;
+      if ((sourceLocal && resultGeneric) || (sourceGeneric && resultLocal))
+        return cast.emitOpError("local and generic address-space casts require "
+                                "provenance-preserving selection");
+    }
 
     SmallVector<Value> rewrittenOperands;
     rewrittenOperands.reserve(operands.size());
@@ -348,18 +424,15 @@ public:
         operand = cast->getOperand(0);
       rewrittenOperands.push_back(operand);
     }
-    if (llvm::any_of(rewrittenOperands, [](Value value) {
-          return isa<xw::SimdType>(value.getType());
-        })) {
-      replacement = StringSwitch<StringRef>(replacement)
-                        .Case("arith.addf", "xw.fadd")
-                        .Case("arith.subf", "xw.fsub")
-                        .Case("arith.mulf", "xw.fmul")
-                        .Default(replacement);
-    }
+
+    FailureOr<int64_t> width = getFunctionSimdWidth(op);
+    if (failed(width))
+      return failure();
     SmallVector<Type> resultTypes;
-    if (failed(getTypeConverter()->convertTypes(op->getResultTypes(), resultTypes)))
-      return rewriter.notifyMatchFailure(op, "result type has no XW conversion");
+    if (failed(getTypeConverter()->convertTypes(op->getResultTypes(),
+                                                resultTypes)))
+      return rewriter.notifyMatchFailure(op,
+                                         "result type has no XW conversion");
 
     auto distributedType = [&](Type elementType) -> Type {
       for (Value operand : rewrittenOperands)
@@ -368,10 +441,25 @@ public:
                                    simd.getCardinality());
       return elementType;
     };
+    auto splatOperand = [&](unsigned index) {
+      Value value = rewrittenOperands[index];
+      if (isa<xw::SimdType>(value.getType()))
+        return;
+      OperationState splatState(op->getLoc(), "xw.splat");
+      splatState.addOperands(value);
+      splatState.addTypes(
+          xw::SimdType::get(op->getContext(), value.getType(), *width));
+      rewrittenOperands[index] = rewriter.create(splatState)->getResult(0);
+    };
+    if (replacement == "xw.fadd" || replacement == "xw.fsub" ||
+        replacement == "xw.fmul") {
+      splatOperand(0);
+      splatOperand(1);
+      resultTypes.front() = rewrittenOperands.front().getType();
+    }
     if (!resultTypes.empty() &&
         (replacement == "xw.binary" || replacement == "xw.cast" ||
-         replacement == "xw.select" || replacement == "xw.fadd" ||
-         replacement == "xw.fsub" || replacement == "xw.fmul"))
+         replacement == "xw.select"))
       resultTypes.front() = distributedType(resultTypes.front());
     if (!resultTypes.empty() &&
         (replacement == "xw.cmpi" || replacement == "xw.cmpf")) {
@@ -381,10 +469,10 @@ public:
             xw::MaskType::get(op->getContext(), simd.getCardinality());
     }
     if (!resultTypes.empty() &&
-        (replacement == "xw.global_id" || replacement == "xw.local_id" ||
-         replacement == "xw.load" || replacement == "xw.atomic_rmw"))
+        (replacement == "xw.lane_id" || replacement == "xw.global_id" ||
+         replacement == "xw.local_id" || replacement == "xw.load"))
       resultTypes.front() =
-          xw::SimdType::get(op->getContext(), resultTypes.front(), 16);
+          xw::SimdType::get(op->getContext(), resultTypes.front(), *width);
 
     NamedAttrList attrs;
     attrs.set("xw.imported", getImportedAttributes(op, rewriter));
@@ -413,7 +501,7 @@ public:
       int32_t kind = name == "llvm.fpext" || name == "llvm.fptrunc"   ? 0
                      : name == "llvm.sitofp" || name == "llvm.uitofp" ? 2
                      : name == "llvm.fptosi" || name == "llvm.fptoui" ? 3
-                                                                        : 1;
+                                                                      : 1;
       attrs.set("kind", rewriter.getI32IntegerAttr(kind));
       NamedAttrList policy;
       if (name == "llvm.sext")
@@ -423,20 +511,46 @@ public:
         policy.set("extension", xw::CastExtensionPolicyAttr::get(
                                     op->getContext(), xw::CastExtension::Zero));
       if (name == "llvm.sitofp" || name == "llvm.fptosi")
-        policy.set("signedness", xw::CastSignednessPolicyAttr::get(
-                                     op->getContext(),
-                                     xw::CastSignedness::Signed));
+        policy.set("signedness",
+                   xw::CastSignednessPolicyAttr::get(
+                       op->getContext(), xw::CastSignedness::Signed));
       else if (name == "llvm.uitofp" || name == "llvm.fptoui")
-        policy.set("signedness", xw::CastSignednessPolicyAttr::get(
-                                     op->getContext(),
-                                     xw::CastSignedness::Unsigned));
+        policy.set("signedness",
+                   xw::CastSignednessPolicyAttr::get(
+                       op->getContext(), xw::CastSignedness::Unsigned));
       if (!policy.empty())
         attrs.set("policy", rewriter.getDictionaryAttr(policy));
     } else if (replacement == "xw.cmpi" || replacement == "xw.cmpf") {
-      Attribute predicate = op->getAttr("predicate");
-      if (!predicate)
-        return rewriter.notifyMatchFailure(op, "comparison predicate is missing");
-      attrs.set("predicate", predicate);
+      if (auto compare = dyn_cast<LLVM::ICmpOp>(op)) {
+        Type operandType = compare.getLhs().getType();
+        bool pointer = isa<LLVM::LLVMPointerType>(operandType) ||
+                       (isa<VectorType>(operandType) &&
+                        isa<LLVM::LLVMPointerType>(
+                            cast<VectorType>(operandType).getElementType()));
+        if (pointer) {
+          arith::CmpIPredicate converted = static_cast<arith::CmpIPredicate>(
+              static_cast<uint64_t>(compare.getPredicate()));
+          if (converted != arith::CmpIPredicate::eq &&
+              converted != arith::CmpIPredicate::ne)
+            return op->emitOpError(
+                "pointer comparison predicate must be eq or ne");
+          replacement = "xw.ptr_cmp";
+        }
+        attrs.set("predicate",
+                  arith::CmpIPredicateAttr::get(
+                      op->getContext(),
+                      static_cast<arith::CmpIPredicate>(
+                          static_cast<uint64_t>(compare.getPredicate()))));
+      } else if (auto compare = dyn_cast<LLVM::FCmpOp>(op)) {
+        attrs.set("predicate",
+                  arith::CmpFPredicateAttr::get(
+                      op->getContext(),
+                      static_cast<arith::CmpFPredicate>(
+                          static_cast<uint64_t>(compare.getPredicate()))));
+      } else {
+        return rewriter.notifyMatchFailure(op,
+                                           "comparison predicate is missing");
+      }
     } else if (auto constant = dyn_cast<LLVM::ConstantOp>(op)) {
       attrs.set("value", constant.getValue());
     }
@@ -444,10 +558,14 @@ public:
     if (auto call = dyn_cast<LLVM::CallOp>(op)) {
       if (replacement == "xw.global_id" || replacement == "xw.local_id" ||
           replacement == "xw.group_id" || replacement == "xw.global_size" ||
-          replacement == "xw.local_size") {
+          replacement == "xw.local_size" || replacement == "xw.num_groups" ||
+          replacement == "xw.launch_grid_size" ||
+          replacement == "xw.launch_block_size") {
         if (operands.size() != 1)
-          return rewriter.notifyMatchFailure(op, "dimension query requires one axis");
-        std::optional<int64_t> dimension = getConstantIntValue(operands.front());
+          return rewriter.notifyMatchFailure(
+              op, "dimension query requires one axis");
+        std::optional<int64_t> dimension =
+            getConstantIntValue(operands.front());
         if (!dimension || *dimension < 0 || *dimension > 2)
           return rewriter.notifyMatchFailure(
               op, "dimension query axis must be a constant in [0, 2]");
@@ -459,69 +577,45 @@ public:
     }
 
     if (auto atomic = dyn_cast<LLVM::AtomicRMWOp>(op)) {
+      if (atomic.getOrdering() != LLVM::AtomicOrdering::monotonic)
+        return atomic.emitOpError(
+            "only monotonic LLVM atomic RMW ordering is supported");
+      if (atomic.getSyncscope())
+        return atomic.emitOpError(
+            "LLVM atomic RMW syncscope has no exact XW representation");
+      if (atomic.getVolatile_())
+        return atomic.emitOpError(
+            "volatile LLVM atomic RMW has no exact XW representation");
       arith::AtomicRMWKind kind;
       switch (atomic.getBinOp()) {
-      case LLVM::AtomicBinOp::xchg:
-        kind = arith::AtomicRMWKind::assign;
-        break;
       case LLVM::AtomicBinOp::add:
         kind = arith::AtomicRMWKind::addi;
         break;
-      case LLVM::AtomicBinOp::_and:
-        kind = arith::AtomicRMWKind::andi;
-        break;
-      case LLVM::AtomicBinOp::_or:
-        kind = arith::AtomicRMWKind::ori;
-        break;
-      case LLVM::AtomicBinOp::_xor:
-        kind = arith::AtomicRMWKind::xori;
-        break;
-      case LLVM::AtomicBinOp::max:
-        kind = arith::AtomicRMWKind::maxs;
-        break;
-      case LLVM::AtomicBinOp::min:
-        kind = arith::AtomicRMWKind::mins;
-        break;
-      case LLVM::AtomicBinOp::umax:
-        kind = arith::AtomicRMWKind::maxu;
-        break;
-      case LLVM::AtomicBinOp::umin:
-        kind = arith::AtomicRMWKind::minu;
-        break;
-      case LLVM::AtomicBinOp::fadd:
-        kind = arith::AtomicRMWKind::addf;
-        break;
       default:
-        return rewriter.notifyMatchFailure(op, "unsupported atomic RMW kind");
+        return atomic.emitOpError(
+            "only integer add LLVM atomic RMW is supported");
       }
+      attrs.set("xw.imported", rewriter.getDictionaryAttr({}));
       attrs.set("kind", arith::AtomicRMWKindAttr::get(op->getContext(), kind));
-      rewrittenOperands = {operands[1], operands[0]};
+      rewrittenOperands = {rewrittenOperands[1], rewrittenOperands[0]};
     } else if (isa<LLVM::CallOp>(op) && replacement == "xw.atomic_rmw") {
       attrs.set("kind", arith::AtomicRMWKindAttr::get(
                             op->getContext(), arith::AtomicRMWKind::addi));
       if (operands.size() != 2)
         return rewriter.notifyMatchFailure(
             op, "atomic add builtin requires pointer and value operands");
-      rewrittenOperands = {operands[1], operands[0]};
-      Type valueType = rewrittenOperands.front().getType();
-      resultTypes.front() = xw::SimdType::get(
-          op->getContext(), getPayloadType(valueType), 16);
-      if (!isa<xw::SimdType>(valueType)) {
-        OperationState splatState(op->getLoc(), "xw.splat");
-        splatState.addOperands(rewrittenOperands.front());
-        splatState.addTypes(resultTypes.front());
-        rewrittenOperands.front() = rewriter.create(splatState)->getResult(0);
-      }
+      rewrittenOperands = {rewrittenOperands[1], rewrittenOperands[0]};
+    }
+    if (replacement == "xw.atomic_rmw") {
+      splatOperand(0);
+      resultTypes.front() = rewrittenOperands.front().getType();
     }
     if (replacement == "xw.load" || replacement == "xw.atomic_rmw") {
       Type token = xw::MemTokenType::get(op->getContext());
       resultTypes.push_back(token);
-      attrs.set("xw.provisional_cardinality", rewriter.getI32IntegerAttr(16));
     } else if (replacement == "xw.store" || replacement == "xw.barrier") {
       Type token = xw::MemTokenType::get(op->getContext());
       resultTypes.push_back(token);
-    } else if (replacement == "xw.global_id" || replacement == "xw.local_id") {
-      attrs.set("xw.provisional_cardinality", rewriter.getI32IntegerAttr(16));
     }
 
     OperationState state(op->getLoc(), replacement);
@@ -535,9 +629,8 @@ public:
   }
 
 private:
-  static FailureOr<uint64_t> getTypeStride(LLVM::GEPOp gep,
-                                           const DataLayout &layout,
-                                           Type type) {
+  static FailureOr<uint64_t>
+  getTypeStride(LLVM::GEPOp gep, const DataLayout &layout, Type type) {
     llvm::TypeSize size = layout.getTypeSize(type);
     if (size.isScalable())
       return gep.emitOpError("cannot index a scalable type"), failure();
@@ -558,9 +651,9 @@ private:
                             StringRef kind, Value lhs, Value rhs) {
     OperationState state(loc, "xw.binary");
     state.addOperands({lhs, rhs});
-    Type resultType = isa<xw::SimdType>(lhs.getType()) ? lhs.getType()
+    Type resultType = isa<xw::SimdType>(lhs.getType())   ? lhs.getType()
                       : isa<xw::SimdType>(rhs.getType()) ? rhs.getType()
-                                                        : lhs.getType();
+                                                         : lhs.getType();
     state.addTypes(resultType);
     int32_t value = StringSwitch<int32_t>(kind)
                         .Case("add", 0)
@@ -610,8 +703,8 @@ private:
           return rewriter.notifyMatchFailure(
               gep, "struct GEP requires an in-range constant field");
         IntegerAttr constant = cast<IntegerAttr>(index);
-        if (constant.getInt() < 0 ||
-            static_cast<uint64_t>(constant.getInt()) >= structure.getBody().size())
+        if (constant.getInt() < 0 || static_cast<uint64_t>(constant.getInt()) >=
+                                         structure.getBody().size())
           return rewriter.notifyMatchFailure(
               gep, "struct GEP requires an in-range constant field");
         uint64_t field = constant.getInt();
@@ -619,8 +712,8 @@ private:
         for (unsigned i : llvm::seq<unsigned>(field)) {
           Type element = structure.getBody()[i];
           if (!structure.isPacked())
-            byteOffset = llvm::alignTo(byteOffset,
-                                       layout.getTypeABIAlignment(element));
+            byteOffset =
+                llvm::alignTo(byteOffset, layout.getTypeABIAlignment(element));
           llvm::TypeSize size = layout.getTypeSize(element);
           if (size.isScalable())
             return rewriter.notifyMatchFailure(gep, "scalable struct field");
@@ -657,11 +750,20 @@ private:
         if (termElementType != indexType) {
           OperationState castState(gep.getLoc(), "xw.cast");
           castState.addOperands(term);
-          castState.addTypes(cardinality ? Type(xw::SimdType::get(
-                                                   gep.getContext(), indexType,
+          castState.addTypes(
+              cardinality ? Type(xw::SimdType::get(gep.getContext(), indexType,
                                                    cardinality))
-                                         : Type(indexType));
+                          : Type(indexType));
           castState.addAttribute("kind", rewriter.getI32IntegerAttr(1));
+          IntegerType sourceType = cast<IntegerType>(termElementType);
+          if (sourceType.getWidth() < indexType.getWidth()) {
+            NamedAttrList policy;
+            policy.set("extension",
+                       xw::CastExtensionPolicyAttr::get(
+                           gep.getContext(), xw::CastExtension::Sign));
+            castState.addAttribute("policy",
+                                   rewriter.getDictionaryAttr(policy));
+          }
           term = rewriter.create(castState)->getResult(0);
         }
       }
@@ -711,12 +813,48 @@ public:
   }
 };
 
+class ConvertArithConstant final
+    : public OpConversionPattern<arith::ConstantOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::ConstantOp op, OpAdaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    OperationState state(op.getLoc(), "xw.constant");
+    state.addTypes(op.getType());
+    state.addAttribute("value", op.getValue());
+    rewriter.replaceOp(op, rewriter.create(state)->getResults());
+    return success();
+  }
+};
+
 struct ConvertLLVMToXW final
     : inter::impl::ConvertLLVMToXWBase<ConvertLLVMToXW> {
   void runOnOperation() override {
     MLIRContext *context = &getContext();
+    for (func::FuncOp function : getOperation().getOps<func::FuncOp>()) {
+      for (Type type : function.getArgumentTypes()) {
+        auto pointer = dyn_cast<LLVM::LLVMPointerType>(type);
+        if (pointer && pointer.getAddressSpace() > 4) {
+          function.emitOpError()
+              << "pointer address space " << pointer.getAddressSpace()
+              << " has no XW mapping";
+          return signalPassFailure();
+        }
+      }
+    }
+    DenseSet<FlatSymbolRefAttr> referencedLocalGlobals;
+    getOperation().walk([&](LLVM::AddressOfOp address) {
+      referencedLocalGlobals.insert(address.getGlobalNameAttr());
+    });
+    uint64_t slmOffset = 0;
     for (LLVM::GlobalOp global : getOperation().getOps<LLVM::GlobalOp>()) {
       if (global.getAddrSpace() != 3)
+        continue;
+      FlatSymbolRefAttr symbol =
+          FlatSymbolRefAttr::get(context, global.getSymName());
+      if (!referencedLocalGlobals.contains(symbol))
         continue;
       DataLayout layout = DataLayout::closest(global);
       llvm::TypeSize size = layout.getTypeSize(global.getGlobalType());
@@ -724,35 +862,42 @@ struct ConvertLLVMToXW final
         global.emitOpError("local global has scalable size");
         return signalPassFailure();
       }
-      uint64_t alignment = layout.getTypeABIAlignment(global.getGlobalType());
+      uint64_t alignment =
+          std::max<uint64_t>(layout.getTypeABIAlignment(global.getGlobalType()),
+                             global.getAlignment().value_or(1));
+      slmOffset = llvm::alignTo(slmOffset, alignment);
       getOperation().walk([&](LLVM::AddressOfOp address) {
         if (address.getGlobalName() != global.getSymName())
           return;
         address->setAttr("xw.bytesize",
                          IntegerAttr::get(IntegerType::get(context, 64),
                                           size.getFixedValue()));
-        address->setAttr("xw.alignment",
-                         IntegerAttr::get(IntegerType::get(context, 64),
-                                          alignment));
+        address->setAttr(
+            "xw.alignment",
+            IntegerAttr::get(IntegerType::get(context, 64), alignment));
+        address->setAttr(
+            "xw.offset",
+            IntegerAttr::get(IntegerType::get(context, 64), slmOffset));
       });
+      slmOffset += size.getFixedValue();
     }
     LLVMToXWTypeConverter converter(context);
     RewritePatternSet patterns(context);
-    patterns.add<ConvertLLVMOperation, ConvertFuncReturn>(converter, context);
+    patterns.add<ConvertLLVMOperation, ConvertFuncReturn, ConvertArithConstant>(
+        converter, context);
     populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(patterns,
                                                                    converter);
     scf::populateSCFStructuralTypeConversions(converter, patterns);
 
     ConversionTarget target(*context);
-    target.addLegalDialect<xw::XWDialect, arith::ArithDialect,
-                           func::FuncDialect, scf::SCFDialect>();
+    target.addLegalDialect<xw::XWDialect, func::FuncDialect, scf::SCFDialect>();
     target.addLegalOp<ModuleOp>();
     target.addIllegalDialect<LLVM::LLVMDialect, cf::ControlFlowDialect>();
     target.markUnknownOpDynamicallyLegal([](Operation *op) {
       auto legalType = [](Type type) { return !containsLLVMType(type); };
       bool legalBuiltin = op->getName().getDialectNamespace() == "builtin";
-      bool legalTerminator = isa<func::ReturnOp, scf::YieldOp,
-                                 scf::ConditionOp>(op);
+      bool legalTerminator =
+          isa<func::ReturnOp, scf::YieldOp, scf::ConditionOp>(op);
       return (legalBuiltin || legalTerminator) &&
              llvm::all_of(op->getOperandTypes(), legalType) &&
              llvm::all_of(op->getResultTypes(), legalType);
@@ -763,7 +908,8 @@ struct ConvertLLVMToXW final
     });
     scf::populateSCFStructuralTypeConversionTarget(converter, target);
 
-    if (failed(applyFullConversion(getOperation(), target, std::move(patterns))) ||
+    if (failed(
+            applyFullConversion(getOperation(), target, std::move(patterns))) ||
         failed(reconcileMaterializedShapes(getOperation())))
       signalPassFailure();
   }

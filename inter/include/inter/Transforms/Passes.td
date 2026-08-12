@@ -7,6 +7,8 @@ def ImportLLVM : Pass<"inter-import-llvm", "::mlir::ModuleOp"> {
   let summary = "import LLVM kernel ABI facts and normalize functions to func/cf";
   let dependentDialects = ["mlir::func::FuncDialect",
                            "mlir::cf::ControlFlowDialect"];
+  let options = [Option<"simdWidth", "simd-width", "unsigned", "16",
+                        "kernel SIMD width (8, 16, or 32)">];
 }
 
 def VerifyStructured : Pass<"inter-verify-structured", "::mlir::ModuleOp"> {

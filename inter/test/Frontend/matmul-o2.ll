@@ -6,11 +6,11 @@
 ; CHECK-SAME: "dlti.global_memory_space" = 1 : ui64
 ; CHECK-SAME: llvm.target_triple = "spir64-unknown-unknown"
 ; CHECK: func.func @matmul(
-; CHECK-SAME: !llvm.ptr<1> {llvm.noalias{{[^}]*}}llvm.readonly
-; CHECK-SAME: !llvm.ptr<1> {llvm.noalias{{[^}]*}}llvm.readonly
-; CHECK-SAME: !llvm.ptr<1> {llvm.noalias
 ; CHECK-SAME: attributes {
 ; CHECK-SAME: xw.kernel
+; CHECK-SAME: xw.kernel_args = [{access = "read_only", address_space = 1 : i32, alignment = 8 : i64, kind = "pointer", offset = 24 : i64, size = 8 : i64}
+; CHECK-SAME: {access = "read_only", address_space = 1 : i32, alignment = 8 : i64, kind = "pointer", offset = 32 : i64, size = 8 : i64}
+; CHECK-SAME: {access = "write_only", address_space = 1 : i32, alignment = 8 : i64, kind = "pointer", offset = 40 : i64, size = 8 : i64}
 ; CHECK: cf.cond_br
 ; CHECK: llvm.freeze
 ; CHECK: llvm.fmul

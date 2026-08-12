@@ -15,8 +15,28 @@ module {
   }
 }
 
+// -----
+
+module {
+  func.func @wide_casts() attributes {
+      xemachine.kernel, xemachine.kernel_args = [],
+      xw.simd_width = 32 : i32} {
+    %minus_one = xw.constant -1 : i32 -> !xw.simd<i32, 32>
+    %signed = xw.cast intconvert %minus_one
+        policy {extension = #xw.cast_extension<sign>}
+        : !xw.simd<i32, 32> -> !xw.simd<i64, 32>
+    %unsigned = xw.cast intconvert %minus_one
+        policy {extension = #xw.cast_extension<zero>}
+        : !xw.simd<i32, 32> -> !xw.simd<i64, 32>
+    return
+  }
+}
+
 // CHECK-NOT: llvm
 // CHECK-LABEL: func.func @wide_address
 // SIMD32 i64 is decomposed into two SIMD16 machine operations.
 // CHECK-COUNT-4: xemachine.add
 // CHECK-NOT: xw.wide
+// CHECK-LABEL: func.func @wide_casts
+// CHECK-COUNT-2: xemachine.mov {{.*}}signedSource
+// CHECK-COUNT-2: xemachine.mov

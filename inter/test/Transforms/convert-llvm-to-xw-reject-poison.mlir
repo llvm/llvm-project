@@ -2,7 +2,7 @@
 
 module {
   llvm.func spir_kernelcc @bad() {
-    %value = llvm.mlir.undef : i32
+    %value = llvm.mlir.poison : i32
     llvm.return
   }
 }
