@@ -14,10 +14,10 @@
 // stops at the device so the tests below can exercise olCreateContext.
 struct olCreateContextTest
     : OffloadTest,
-      ::testing::WithParamInterface<TestEnvironment::Device> {
+      ::testing::WithParamInterface<OffloadParam<int>> {
   void SetUp() override {
     RETURN_ON_FATAL_FAILURE(OffloadTest::SetUp());
-    auto DeviceParam = GetParam();
+    auto &DeviceParam = std::get<0>(GetParam());
     Device = DeviceParam.Handle;
     if (Device == nullptr)
       GTEST_SKIP() << "No available devices.";
