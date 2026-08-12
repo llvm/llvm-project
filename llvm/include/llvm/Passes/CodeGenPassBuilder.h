@@ -622,8 +622,12 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::buildPipeline(
   if (!Opt.DisableVerify && TM.Options.EnableDefaultMachineVerifier)
     addMachineFunctionPass(MachineVerifierPass(), PMW);
 
+  // We add AsmPrinter regardless if we are emitting MIR or Assembly as the
+  // final output so that -stop-before=<target>-asm-printer works. When printing
+  // MIR as the final output, we never end up running AsmPrinter.
+  derived().addAsmPrinter(PMW);
+
   if (PrintAsm) {
-    derived().addAsmPrinter(PMW);
     flushFPMsToMPM(PMW, /*FreeMachineFunctions=*/true);
     derived().addAsmPrinterEnd(PMW);
   } else {
