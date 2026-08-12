@@ -450,3 +450,31 @@ int test_correct_param_highlight() {
   // CHECK: return multi_params_annotated(&global_var, &local_n);
   // CHECK-NEXT:{{\|                                              \^~~~~~~~$}}
 }
+
+int test_multi_local_bound_to_param_highlight() {
+  int j = 4, k = 5;
+  // expected-note@-1 {{'j' initialized here}}
+  // expected-note@-2 {{'k' initialized here}}
+  return multi_params_annotated(&j, &k);
+  // expected-warning@-1 {{address of stack memory associated with local variable 'j' returned}}
+  // expected-warning@-2 {{address of stack memory associated with local variable 'k' returned}}
+  // expected-warning@-3 {{Returning value bound to 'j' that will go out of scope}}
+  // expected-note@-4    {{Value's lifetime bound to the lifetime of 'j' here}}
+  // expected-note@-5    {{Lifetime of 'j' ended here}}
+  // expected-warning@-6 {{Returning value bound to 'k' that will go out of scope}}
+  // expected-note@-7    {{Value's lifetime bound to the lifetime of 'k' here}}
+  // expected-note@-8    {{Lifetime of 'k' ended here}}
+  
+  // CHECK: note: Value's lifetime bound to the lifetime of 'j' here
+  // CHECK-NEXT: int j = 4, k = 5;
+  // CHECK-NEXT:     ~
+  // CHECK: note: Lifetime of 'j' ended here
+  // CHECK-NEXT: int j = 4, k = 5;
+  // CHECK-NEXT:     ~
+  // CHECK: note: Value's lifetime bound to the lifetime of 'k' here
+  // CHECK-NEXT: int j = 4, k = 5;
+  // CHECK-NEXT:            ~
+  // CHECK: note: Lifetime of 'k' ended here
+  // CHECK-NEXT: int j = 4, k = 5;
+  // CHECK-NEXT:            ~
+}
