@@ -151,57 +151,6 @@ public:
     return hasAnyFeature({NVPTX::SM100f, NVPTX::SM110f});
   }
 
-  // Checks Rubin family extensions support.
-  //  - TMA S2G im2col_w mode support
-  //  - tcgen05.commit shared mem A variants.
-  bool hasRubinFamilySupport() const { return hasAnyFeature({NVPTX::SM107f}); }
-
-  // Checks tcgen05.shift instruction support.
-  bool hasTcgen05ShiftSupport() const {
-    return hasAnyFeature({NVPTX::SM100a, NVPTX::SM103a, NVPTX::SM110a});
-  }
-
-  bool hasTcgen05MMAScaleInputDImm() const {
-    return hasAnyFeature({NVPTX::SM100f});
-  }
-
-  bool hasTcgen05MMAI8Kind() const {
-    return hasAnyFeature({NVPTX::SM100a, NVPTX::SM110a});
-  }
-
-  bool hasTcgen05MMASparseMxf4nvf4() const {
-    return hasFeature(NVPTX::PTX87) &&
-           hasAnyFeature(
-               {NVPTX::SM100a, NVPTX::SM103a, NVPTX::SM110a, NVPTX::SM107a});
-  }
-
-  bool hasTcgen05MMASparseMxf4() const {
-    return hasAnyFeature(
-        {NVPTX::SM100a, NVPTX::SM103a, NVPTX::SM110a, NVPTX::SM107a});
-  }
-
-  bool hasTcgen05LdRedSupport() const {
-    return hasFeature(NVPTX::PTX88) &&
-           hasAnyFeature({NVPTX::SM103f, NVPTX::SM110f});
-  }
-
-  bool hasReduxSyncF32() const { return hasAnyFeature({NVPTX::SM100f}); }
-
-  bool hasMMABlockScale() const { return hasAnyFeature({NVPTX::SM120f}); }
-
-  bool hasMMASparseBlockScaleF4() const {
-    return hasAnyFeature({NVPTX::SM120a, NVPTX::SM121a});
-  }
-
-  bool hasMMAWithMXF4NVF4Scale4xE8M0() const {
-    return hasFeature(NVPTX::PTX91) && hasAnyFeature({NVPTX::SM120f});
-  }
-
-  bool hasMMASparseWithMXF4NVF4Scale4xE8M0() const {
-    return hasFeature(NVPTX::PTX91) &&
-           hasAnyFeature({NVPTX::SM120a, NVPTX::SM121a});
-  }
-
   // f32x2 instructions in Blackwell family
   bool hasF32x2Instructions() const;
 
