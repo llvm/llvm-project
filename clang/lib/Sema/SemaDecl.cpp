@@ -2681,9 +2681,9 @@ void Sema::MergeTypedefNameDecl(Scope *S, TypedefNameDecl *New,
         if (auto *NewEnum = dyn_cast<EnumDecl>(NewTag)) {
           if (auto *OldEnum = dyn_cast<EnumDecl>(OldTag)) {
             NewEnum->setPreviousDecl(OldEnum);
-            QualType OldEnumType = Context.getCanonicalTagType(OldEnum);
+            QualType EnumType = Context.getCanonicalTagType(OldEnum);
             for (auto *ECD : NewEnum->enumerators())
-              ECD->setType(OldEnumType);
+              ECD->setType(EnumType);
           }
         }
       }
