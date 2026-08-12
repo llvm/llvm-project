@@ -784,15 +784,6 @@ stack limits
 stack stdexcept
 stack tuple
 stack version
-stdexcept cstddef
-stdexcept cstdint
-stdexcept cstdlib
-stdexcept exception
-stdexcept iosfwd
-stdexcept new
-stdexcept type_traits
-stdexcept typeinfo
-stdexcept version
 stop_token cstddef
 stop_token iosfwd
 stop_token version
