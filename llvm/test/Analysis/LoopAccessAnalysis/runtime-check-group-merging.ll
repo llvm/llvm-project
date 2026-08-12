@@ -2572,3 +2572,82 @@ latch:
 exit:
   ret void
 }
+
+;; Test 23: A forked pointer - the last member's offset is a select between
+;; 2*cdj and 8. LAA makes two runtime-check entries for that load, one per
+;; select arm. Each entry is an ordinary member with its own Start and End,
+;; so a merge would cover both arms and stay sound. Here it is simply not
+;; profitable: 3 groups x 1 external check before; 1 check + 1 predicate
+;; + 1 umax operand after (the 8 arm and the 2*cdj arm are incomparable,
+;; so both stay max candidates). 3 -> 3 is no win, the merge is rejected.
+define void @forked_pointer_no_merge(ptr %a, ptr %out, i64 %n, i64 %cdj, i32 %c) {
+; CHECK-LABEL: 'forked_pointer_no_merge'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %p2 = getelementptr i8, ptr %base, i64 %off
+; CHECK-NEXT:      Check 1:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP2:
+; CHECK-NEXT:          %p2 = getelementptr i8, ptr %base, i64 %off
+; CHECK-NEXT:          %base = getelementptr inbounds double, ptr %a, i64 %iv
+; CHECK-NEXT:      Check 2:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP3:
+; CHECK-NEXT:          %p1 = getelementptr inbounds i8, ptr %base, i64 %cdj
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %out High: ((8 * (1 smax %n)) + %out))
+; CHECK-NEXT:            Member: {%out,+,8}<nuw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: ((2 * %cdj) + %a) High: ((2 * %cdj) + (8 * (1 smax %n)) + %a))
+; CHECK-NEXT:            Member: {((2 * %cdj) + %a),+,8}<nw><%loop>
+; CHECK-NEXT:        Group GRP2:
+; CHECK-NEXT:          (Low: %a High: (8 + (8 * (1 smax %n)) + %a))
+; CHECK-NEXT:            Member: {(8 + %a),+,8}<nw><%loop>
+; CHECK-NEXT:            Member: {%a,+,8}<nuw><%loop>
+; CHECK-NEXT:        Group GRP3:
+; CHECK-NEXT:          (Low: (%cdj + %a) High: ((8 * (1 smax %n)) + %cdj + %a))
+; CHECK-NEXT:            Member: {(%cdj + %a),+,8}<nw><%loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %base = getelementptr inbounds double, ptr %a, i64 %iv
+  %v0 = load double, ptr %base, align 8
+
+  %p1 = getelementptr inbounds i8, ptr %base, i64 %cdj
+  %v1 = load double, ptr %p1, align 8
+
+  %cmp = icmp eq i32 %c, 0
+  %pos2cdj = mul nsw i64 %cdj, 2
+  %off = select i1 %cmp, i64 %pos2cdj, i64 8
+  %p2 = getelementptr i8, ptr %base, i64 %off
+  %v2 = load double, ptr %p2, align 8
+
+  %s0 = fadd double %v0, %v1
+  %s1 = fadd double %s0, %v2
+  %outp = getelementptr inbounds double, ptr %out, i64 %iv
+  store double %s1, ptr %outp, align 8
+
+  %iv.next = add nuw nsw i64 %iv, 1
+  %cond = icmp slt i64 %iv.next, %n
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret void
+}
