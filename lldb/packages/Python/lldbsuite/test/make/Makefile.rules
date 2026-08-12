@@ -559,6 +559,12 @@ ifneq "$(strip $(OBJC_GNUSTEP_DIR))" ""
 		ifeq "$(OS)" "Linux"
 			LDFLAGS +=-Wl,-rpath,$(OBJC_GNUSTEP_DIR)/lib
 		endif
+		ifeq "$(OS)" "Windows_NT"
+			# Keep the DWARF sections and emit a COFF symbol table; the
+			# default CodeView route cannot represent Objective-C types.
+			LDFLAGS +=-Wl,/debug:dwarf
+			GNUSTEP_NEEDS_DLL_COPY := 1
+		endif
 	endif
 endif
 
@@ -744,6 +750,18 @@ print-%:
 	@echo '  origin = $(origin $*)'
 	@echo '  flavor = $(flavor $*)'
 	@echo '   value = $(value  $*)'
+
+# The test harness launches inferiors with the shared-library search path
+# scrubbed (lldbtest clears PATH on Windows), so the runtime DLL must sit
+# next to the test binary. This lives at the end of the file because make
+# would otherwise fold the tab-indented lines of the next conditional block
+# into this rule's recipe.
+ifeq "$(GNUSTEP_NEEDS_DLL_COPY)" "1"
+all: objc.dll
+
+objc.dll: $(OBJC_GNUSTEP_DIR)/lib/objc.dll
+	cp $< $@
+endif
 
 ### Local Variables: ###
 ### mode:makefile ###

@@ -1,5 +1,4 @@
 // REQUIRES: objc-gnustep
-// XFAIL: system-windows
 //
 // RUN: %build %s --compiler=clang --objc-gnustep --output=%t
 
@@ -52,9 +51,9 @@ __attribute__((objc_root_class))
 }
 @end
 
-// RUN: %lldb -b -o "b objc-gnustep-print.m:43" -o "run" -o "p self" -o "p *self" -- %t | FileCheck %s --check-prefix=SELF
+// RUN: %lldb -b -o "b objc-gnustep-print.m:42" -o "run" -o "p self" -o "p *self" -- %t | FileCheck %s --check-prefix=SELF
 //
-// SELF: (lldb) b objc-gnustep-print.m:43
+// SELF: (lldb) b objc-gnustep-print.m:42
 // SELF: Breakpoint {{.*}} at objc-gnustep-print.m
 //
 // SELF: (lldb) run
@@ -78,7 +77,7 @@ __attribute__((objc_root_class))
 // SELF:   _id_objc = nil
 // SELF: }
 
-// RUN: %lldb -b -o "b objc-gnustep-print.m:106" -o "run" -o "p t->_int" -o "p t->_float" -o "p t->_char" \
+// RUN: %lldb -b -o "b objc-gnustep-print.m:105" -o "run" -o "p t->_int" -o "p t->_float" -o "p t->_char" \
 // RUN:          -o "p t->_ptr_void" -o "p t->_ptr_nsobject" -o "p t->_id_objc" -- %t | FileCheck %s --check-prefix=IVARS_SET
 //
 // IVARS_SET: (lldb) p t->_int
@@ -115,7 +114,7 @@ const char *_NSPrintForDebugger(id object) {
   return object_getClassName(object);
 }
 
-// RUN: %lldb -b -o "b objc-gnustep-print.m:106" -o "run" -o "po t" \
+// RUN: %lldb -b -o "b objc-gnustep-print.m:105" -o "run" -o "po t" \
 // RUN:     -- %t | FileCheck %s --check-prefix=PO
 //
 // PO: (lldb) po t
@@ -124,7 +123,7 @@ const char *_NSPrintForDebugger(id object) {
 // Stepping at a message send goes through the objc_msgSend trampoline into
 // the method implementation.
 //
-// RUN: %lldb -b -o "b objc-gnustep-print.m:104" -o "run" -o "step" \
+// RUN: %lldb -b -o "b objc-gnustep-print.m:103" -o "run" -o "step" \
 // RUN:     -- %t | FileCheck %s --check-prefix=STEP
 //
 // STEP: (lldb) step

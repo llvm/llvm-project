@@ -1,5 +1,4 @@
 // REQUIRES: objc-gnustep
-// XFAIL: system-windows
 //
 // RUN: %build %s --compiler=clang --objc-gnustep --output=%t
 
@@ -37,7 +36,7 @@ __attribute__((objc_root_class))
 // registered with the runtime (the GNUstep plugin's IR pass does this);
 // without it the dispatch reaches the runtime with an unregistered selector.
 //
-// RUN: %lldb -b -o "b objc-gnustep-expr.m:47" -o "run" \
+// RUN: %lldb -b -o "b objc-gnustep-expr.m:46" -o "run" \
 // RUN:          -o "expr [c addFortyTwoTo:100]" \
 // RUN:          -o "expr (int)[[Calc new] addFortyTwoTo:1]" -- %t | FileCheck %s
 //

@@ -1,5 +1,4 @@
 // REQUIRES: objc-gnustep
-// XFAIL: system-windows
 //
 // RUN: %build %s --compiler=clang --objc-gnustep --output=%t
 
@@ -37,7 +36,7 @@ __attribute__((objc_root_class))
 @implementation Ordinary
 @end
 
-// RUN: %lldb -b -o "b objc-gnustep-tagged-pointers.m:50" -o "run" \
+// RUN: %lldb -b -o "b objc-gnustep-tagged-pointers.m:49" -o "run" \
 // RUN:          -o "frame variable -d run-target tagged" \
 // RUN:          -o "frame variable -d run-target ordinary" -- %t | FileCheck %s
 //

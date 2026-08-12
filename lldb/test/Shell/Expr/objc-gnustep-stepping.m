@@ -1,5 +1,4 @@
 // REQUIRES: objc-gnustep
-// XFAIL: system-windows
 //
 // RUN: %build %s --compiler=clang --objc-gnustep --output=%t
 
@@ -36,13 +35,13 @@ __attribute__((objc_root_class))
 // Stepping at a message send has to run through the runtime's dispatch
 // function and land in the method implementation.
 //
-// RUN: %lldb -b -o "b objc-gnustep-stepping.m:50" -o "run" -o "step" \
+// RUN: %lldb -b -o "b objc-gnustep-stepping.m:49" -o "run" -o "step" \
 // RUN:     -- %t | FileCheck %s --check-prefix=STEP_IN
 //
 // A message to nil dispatches nowhere, so the step must simply move on
 // instead of trying to run to an implementation.
 //
-// RUN: %lldb -b -o "b objc-gnustep-stepping.m:52" -o "run" -o "step" \
+// RUN: %lldb -b -o "b objc-gnustep-stepping.m:51" -o "run" -o "step" \
 // RUN:     -- %t | FileCheck %s --check-prefix=STEP_OVER_NIL
 //
 int main() {
@@ -59,4 +58,4 @@ int main() {
 //
 // STEP_OVER_NIL: (lldb) step
 // STEP_OVER_NIL: stop reason = step in
-// STEP_OVER_NIL: main at objc-gnustep-stepping.m:53
+// STEP_OVER_NIL: main at objc-gnustep-stepping.m:52
