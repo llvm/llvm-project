@@ -187,6 +187,55 @@ define i8 @positive_and_misaligned_c(i32 %y) {
   ret i8 %v17
 }
 
+; Splat vectors are matched by m_APInt, so the fold applies to them too.
+define <4 x i32> @positive_vector_splat(<4 x i32> %x) {
+; CHECK-LABEL: define <4 x i32> @positive_vector_splat(
+; CHECK-SAME: <4 x i32> [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <4 x i32> [[X]], splat (i32 4)
+; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[TMP1]], splat (i32 136)
+; CHECK-NEXT:    [[R:%.*]] = and <4 x i32> [[TMP2]], splat (i32 248)
+; CHECK-NEXT:    ret <4 x i32> [[R]]
+;
+  %v2 = shl <4 x i32> %x, splat (i32 12)
+  %v3 = add <4 x i32> %v2, splat (i32 34816)
+  %v16 = lshr <4 x i32> %v3, splat (i32 8)
+  %r = and <4 x i32> %v16, splat (i32 255)
+  ret <4 x i32> %r
+}
+
+; Non-splat shift amounts are not matched by m_APInt, so this must not fold.
+define <4 x i32> @negative_vector_nonsplat(<4 x i32> %x) {
+; CHECK-LABEL: define <4 x i32> @negative_vector_nonsplat(
+; CHECK-SAME: <4 x i32> [[X:%.*]]) {
+; CHECK-NEXT:    [[V2:%.*]] = shl <4 x i32> [[X]], <i32 12, i32 12, i32 16, i32 12>
+; CHECK-NEXT:    [[V3:%.*]] = add <4 x i32> [[V2]], splat (i32 34816)
+; CHECK-NEXT:    [[V16:%.*]] = lshr <4 x i32> [[V3]], splat (i32 8)
+; CHECK-NEXT:    [[R:%.*]] = and <4 x i32> [[V16]], splat (i32 255)
+; CHECK-NEXT:    ret <4 x i32> [[R]]
+;
+  %v2 = shl <4 x i32> %x, <i32 12, i32 12, i32 16, i32 12>
+  %v3 = add <4 x i32> %v2, splat (i32 34816)
+  %v16 = lshr <4 x i32> %v3, splat (i32 8)
+  %r = and <4 x i32> %v16, splat (i32 255)
+  ret <4 x i32> %r
+}
+
+; Wider type and shift amounts that aren't multiples of the dest width.
+define i16 @positive_i64_odd_shifts(i64 %x) {
+; CHECK-LABEL: define i16 @positive_i64_odd_shifts(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[X_TR:%.*]] = trunc i64 [[X]] to i16
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i16 [[X_TR]], 8
+; CHECK-NEXT:    [[V17:%.*]] = add i16 [[TMP1]], 1024
+; CHECK-NEXT:    ret i16 [[V17]]
+;
+  %v2 = shl i64 %x, 21
+  %v3 = add i64 %v2, 8388608
+  %v16 = lshr i64 %v3, 13
+  %v17 = trunc i64 %v16 to i16
+  ret i16 %v17
+}
+
 ; Regression test: an "and" mask (not just trunc) used to crash the fold
 ; with a dominance violation.
 define i32 @regression_and_mask_dominance(i32 %x) {
@@ -201,6 +250,40 @@ define i32 @regression_and_mask_dominance(i32 %x) {
   %v3 = add i32 %v2, 34816
   %v16 = lshr i32 %v3, 8
   %r = and i32 %v16, 255
+  ret i32 %r
+}
+
+; Partial demanded-bits mask (0xF0) rather than a full byte: the fold still
+; fires, and the narrower demand turns the add into an equivalent and+xor.
+define i32 @positive_and_mask_partial_demanded_bits(i32 %x) {
+; CHECK-LABEL: define i32 @positive_and_mask_partial_demanded_bits(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 240
+; CHECK-NEXT:    [[R:%.*]] = xor i32 [[TMP2]], 128
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %v2 = shl i32 %x, 12
+  %v3 = add i32 %v2, 34816
+  %v16 = lshr i32 %v3, 8
+  %r = and i32 %v16, 240
+  ret i32 %r
+}
+
+; Same partial mask (0xF0) with 'or' instead of 'add', covering the bitwise
+; path with a partial demanded mask.
+define i32 @positive_or_mask_partial_demanded_bits(i32 %x) {
+; CHECK-LABEL: define i32 @positive_or_mask_partial_demanded_bits(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X]], 4
+; CHECK-NEXT:    [[V16:%.*]] = and i32 [[TMP1]], 112
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i32 [[V16]], 128
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %v2 = shl i32 %x, 12
+  %v3 = or i32 %v2, 34816
+  %v16 = lshr i32 %v3, 8
+  %r = and i32 %v16, 240
   ret i32 %r
 }
 
@@ -290,4 +373,44 @@ define i8 @negative_lshr_multi_use(i32 %y, ptr %p) {
   store i32 %v16, ptr %p
   %v17 = trunc i32 %v16 to i8
   ret i8 %v17
+}
+
+; Negative test: the binop has another use, so m_OneUse rejects the fold even
+; though the constant is aligned.
+define i8 @negative_binop_multi_use(i32 %y) {
+; CHECK-LABEL: define i8 @negative_binop_multi_use(
+; CHECK-SAME: i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[X:%.*]] = call i32 @opaque(i32 [[Y]])
+; CHECK-NEXT:    [[V2:%.*]] = shl i32 [[X]], 12
+; CHECK-NEXT:    [[V3:%.*]] = add i32 [[V2]], 34816
+; CHECK-NEXT:    call void @use32(i32 [[V3]])
+; CHECK-NEXT:    [[V16:%.*]] = lshr exact i32 [[V3]], 8
+; CHECK-NEXT:    [[V17:%.*]] = trunc i32 [[V16]] to i8
+; CHECK-NEXT:    ret i8 [[V17]]
+;
+  %x = call i32 @opaque(i32 %y)
+  %v2 = shl i32 %x, 12
+  %v3 = add i32 %v2, 34816
+  call void @use32(i32 %v3)
+  %v16 = lshr i32 %v3, 8
+  %v17 = trunc i32 %v16 to i8
+  ret i8 %v17
+}
+
+; Negative test: with no trunc or mask every bit is demanded, so the high
+; ShrAmt bits where the two forms differ are observable and it must not fold.
+define i32 @negative_all_bits_demanded(i32 %y) {
+; CHECK-LABEL: define i32 @negative_all_bits_demanded(
+; CHECK-SAME: i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[X:%.*]] = call i32 @opaque(i32 [[Y]])
+; CHECK-NEXT:    [[V2:%.*]] = shl i32 [[X]], 12
+; CHECK-NEXT:    [[V3:%.*]] = add i32 [[V2]], 34816
+; CHECK-NEXT:    [[V16:%.*]] = lshr exact i32 [[V3]], 8
+; CHECK-NEXT:    ret i32 [[V16]]
+;
+  %x = call i32 @opaque(i32 %y)
+  %v2 = shl i32 %x, 12
+  %v3 = add i32 %v2, 34816
+  %v16 = lshr i32 %v3, 8
+  ret i32 %v16
 }
