@@ -52,10 +52,8 @@ contains
   end subroutine
 end module
 
-! CHECK-DAG: omp.declare_mapper @{{.*}}pdtK4_omp_default_mapper
-! CHECK-DAG: omp.declare_mapper @{{.*}}pdtK8_omp_default_mapper
-! CHECK-DAG: mapper(@{{.*}}pdtK4_omp_default_mapper)
-! CHECK-DAG: mapper(@{{.*}}pdtK8_omp_default_mapper)
+! CHECK-DAG: omp.declare_mapper @{{.*}}kinds_casepdtK4_omp_default_mapper : !fir.type<{{.*}}TpdtK4
+! CHECK-DAG: omp.declare_mapper @{{.*}}kinds_casepdtK8_omp_default_mapper : !fir.type<{{.*}}TpdtK8
 
 module reuse_case
   type :: pdt(k)
@@ -83,4 +81,23 @@ end module
 
 ! CHECK-DAG: omp.declare_mapper @{{.*}}pdt_omp_default_mapper : !fir.type<{{.*}}TpdtK4
 ! CHECK-DAG: mapper(@{{.*}}pdt_omp_default_mapper)
-! CHECK-DAG: mapper(@{{.*}}pdtK8_omp_default_mapper)
+! CHECK-DAG: mapper(@{{.*}}reuse_casepdtK8_omp_default_mapper)
+
+module direct_pdt_case
+  type :: direct_pdt(k)
+    integer, kind :: k
+    real(k), allocatable :: a(:)
+  end type
+contains
+  subroutine trigger
+    type(direct_pdt(4)) :: h4
+    type(direct_pdt(8)) :: h8
+    !$omp target data map(h4, h8)
+    !$omp end target data
+  end subroutine
+end module
+
+! CHECK-DAG: omp.declare_mapper @{{.*}}direct_pdtK4_omp_default_mapper : !fir.type<{{.*}}Tdirect_pdtK4
+! CHECK-DAG: omp.declare_mapper @{{.*}}direct_pdtK8_omp_default_mapper : !fir.type<{{.*}}Tdirect_pdtK8
+! CHECK-DAG: mapper(@{{.*}}direct_pdtK4_omp_default_mapper)
+! CHECK-DAG: mapper(@{{.*}}direct_pdtK8_omp_default_mapper)

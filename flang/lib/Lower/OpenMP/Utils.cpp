@@ -1094,8 +1094,15 @@ getDefaultMapperID(Fortran::lower::AbstractConverter &converter,
       !typeSpec)
     return {};
 
-  std::string mapperIdName =
-      typeSpec->name().ToString() + llvm::omp::OmpDefaultMapperName;
+  std::string mapperIdName;
+  if (auto recordType = mlir::dyn_cast_or_null<fir::RecordType>(
+          converter.genType(*typeSpec))) {
+    mapperIdName = Fortran::utils::openmp::getCanonicalDefaultDeclareMapperName(
+        recordType);
+  } else {
+    mapperIdName =
+        typeSpec->name().ToString() + llvm::omp::OmpDefaultMapperName;
+  }
   if (auto *sym = converter.getCurrentScope().FindSymbol(mapperIdName)) {
     mapperIdName =
         converter.mangleName(mapperIdName, sym->GetUltimate().owner());
