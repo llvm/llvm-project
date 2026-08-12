@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/SandboxIR/Pass.h"
+#include "llvm/Support/InstructionCost.h"
 
 namespace llvm {
 
@@ -30,6 +31,19 @@ class Type;
 
 class LLVM_ABI LoadStoreVec final : public RegionPass {
   const DataLayout *DL = nullptr;
+  /// The region saved by saveIR(), used by acceptOrRevert().
+  Region *SavedRgn = nullptr;
+  /// The region's cost at the time of saveIR().
+  InstructionCost CostBefore = 0;
+
+  /// Saves the IR along with the current cost of \p Rgn, so that
+  /// acceptOrRevert() can tell whether vectorizing was profitable.
+  void saveIR(Region &Rgn);
+
+  /// Accepts the transaction saved by saveIR() if vectorizing was profitable,
+  /// reverts it otherwise. \Returns true if the transaction was accepted.
+  bool acceptOrRevert();
+
   /// Checks legality of vectorization and \returns the vector type on success,
   /// nullopt otherwise.
   std::optional<Type *> canVectorize(ArrayRef<Instruction *> Bndl,
@@ -37,6 +51,11 @@ class LLVM_ABI LoadStoreVec final : public RegionPass {
 
   void tryEraseDeadInstrs(ArrayRef<Instruction *> Stores,
                           ArrayRef<Value *> Operands);
+
+  /// Tries to vectorize the load/store/constant ops chain \p Bndl
+  /// into a single vector store. \Returns whether it succeeded.
+  bool vectorizeStores(ArrayRef<Instruction *> Bndl, Region &Rgn,
+                       Scheduler &Sched, const Analyses &A);
 
 public:
   LoadStoreVec(StringRef AuxArg) : RegionPass("load-store-vec") {
