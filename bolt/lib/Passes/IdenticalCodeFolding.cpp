@@ -86,7 +86,7 @@ static bool equalJumpTables(const JumpTable &JumpTableA,
                             const JumpTable &JumpTableB,
                             const BinaryFunction &FunctionA,
                             const BinaryFunction &FunctionB) {
-  if (JumpTableA.EntrySize != JumpTableB.EntrySize)
+  if (JumpTableA.getEntrySize() != JumpTableB.getEntrySize())
     return false;
 
   if (JumpTableA.Type != JumpTableB.Type)

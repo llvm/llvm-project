@@ -173,7 +173,7 @@ void BinaryFunction::postProcessProfile() {
     if (JT->Counts.empty())
       JT->Counts.resize(JT->Entries.size());
     auto EI = JT->Entries.begin();
-    uint64_t Delta = (JTAddress - JT->getAddress()) / JT->EntrySize;
+    uint64_t Delta = (JTAddress - JT->getAddress()) / JT->getEntrySize();
     EI += Delta;
     while (EI != JT->Entries.end()) {
       const BinaryBasicBlock *TargetBB = getBasicBlockForLabel(*EI);
@@ -187,7 +187,7 @@ void BinaryFunction::postProcessProfile() {
       ++Delta;
       ++EI;
       // A label marks the start of another jump table.
-      if (JT->Labels.count(Delta * JT->EntrySize))
+      if (JT->Labels.count(Delta * JT->getEntrySize()))
         break;
     }
   }
