@@ -247,7 +247,7 @@ add_fp_unittest(
 add_fp_unittest(
   fabsbf16_test
   SUITE
-  libc-math-smoke-tests
+    libc-math-smoke-tests
   SRCS
     fabsbf16_test.cpp
   HDRS
@@ -851,7 +851,7 @@ add_fp_unittest(
   SRCS
     roundeven_test.cpp
   HDRS
-  RoundEvenTest.h
+    RoundEvenTest.h
   DEPENDS
     libc.src.math.roundeven
     libc.src.__support.FPUtil.fp_bits
@@ -864,7 +864,7 @@ add_fp_unittest(
   SRCS
     roundevenf_test.cpp
   HDRS
-  RoundEvenTest.h
+    RoundEvenTest.h
   DEPENDS
     libc.src.math.roundevenf
     libc.src.__support.FPUtil.fp_bits
@@ -877,7 +877,7 @@ add_fp_unittest(
   SRCS
     roundevenl_test.cpp
   HDRS
-  RoundEvenTest.h
+    RoundEvenTest.h
   DEPENDS
     libc.src.math.roundevenl
     libc.src.__support.FPUtil.fp_bits
@@ -902,7 +902,7 @@ add_fp_unittest(
   SRCS
     roundevenf128_test.cpp
   HDRS
-  RoundEvenTest.h
+    RoundEvenTest.h
   DEPENDS
     libc.src.math.roundevenf128
     libc.src.__support.FPUtil.fp_bits
@@ -3571,9 +3571,9 @@ add_fp_unittest(
   SRCS
     rsqrtf_test.cpp
   DEPENDS
-    libc.hdr.errno_macros  
-    libc.hdr.fenv_macros  
-    libc.src.math.rsqrtf 
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.math.rsqrtf
 )
 
 add_fp_unittest(
@@ -3583,8 +3583,8 @@ add_fp_unittest(
   SRCS
     rsqrtf16_test.cpp
   DEPENDS
-    libc.hdr.errno_macros  
-    libc.hdr.fenv_macros 
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
     libc.src.math.rsqrtf16
 )
 
@@ -3831,7 +3831,6 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fp_bits
   # FIXME: The nan tests currently have death tests, which aren't supported for
   # hermetic tests.
-  UNIT_TEST_ONLY
 )
 
 add_fp_unittest(
@@ -3846,7 +3845,6 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fp_bits
   # FIXME: The nan tests currently have death tests, which aren't supported for
   # hermetic tests.
-  UNIT_TEST_ONLY
 )
 
 add_fp_unittest(
@@ -3861,7 +3859,6 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fp_bits
   # FIXME: The nan tests currently have death tests, which aren't supported for
   # hermetic tests.
-  UNIT_TEST_ONLY
 )
 
 add_fp_unittest(
@@ -3876,7 +3873,6 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fp_bits
   # FIXME: The nan tests currently have death tests, which aren't supported for
   # hermetic tests.
-  UNIT_TEST_ONLY
 )
 
 add_fp_unittest(
@@ -3891,7 +3887,6 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fp_bits
   # FIXME: The nan tests currently have death tests, which aren't supported for
   # hermetic tests.
-  UNIT_TEST_ONLY
 )
 
 add_fp_unittest(
@@ -3907,7 +3902,6 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fp_bits
   # FIXME: The nan tests currently have death tests, which aren't supported for
   # hermetic tests.
-  UNIT_TEST_ONLY
 )
 
 add_fp_unittest(
@@ -4596,7 +4590,6 @@ add_fp_unittest(
     libc.src.math.fmodf
     libc.src.__support.FPUtil.fenv_impl
   # FIXME: Currently fails on the GPU build.
-  UNIT_TEST_ONLY
 )
 
 add_fp_unittest(
@@ -4613,7 +4606,6 @@ add_fp_unittest(
     libc.src.math.fmod
     libc.src.__support.FPUtil.fenv_impl
   # FIXME: Currently fails on the GPU build.
-  UNIT_TEST_ONLY
 )
 
 add_fp_unittest(
@@ -4630,7 +4622,6 @@ add_fp_unittest(
     libc.src.math.fmodl
     libc.src.__support.FPUtil.fenv_impl
   # FIXME: Currently fails on the GPU build.
-  UNIT_TEST_ONLY
 )
 
 add_fp_unittest(
@@ -4647,7 +4638,6 @@ add_fp_unittest(
     libc.src.math.fmodf16
     libc.src.__support.FPUtil.fenv_impl
   # FIXME: Currently fails on the GPU build.
-  UNIT_TEST_ONLY
 )
 
 add_fp_unittest(
@@ -4664,7 +4654,6 @@ add_fp_unittest(
     libc.src.math.fmodf128
     libc.src.__support.FPUtil.fenv_impl
   # FIXME: Currently fails on the GPU build.
-  UNIT_TEST_ONLY
 )
 
 add_fp_unittest(
@@ -4681,7 +4670,6 @@ add_fp_unittest(
     libc.src.math.fmodbf16
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.fenv_impl
-  UNIT_TEST_ONLY
 )
 
 add_fp_unittest(

@@ -356,10 +356,9 @@ static RValue emitUnaryMaybeConstrainedFPBuiltin(CIRGenFunction &cgf,
   mlir::Value arg = cgf.emitScalarExpr(e.getArg(0));
 
   CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, &e);
-  assert(!cir::MissingFeatures::fpConstraints());
 
-  auto call =
-      Operation::create(cgf.getBuilder(), arg.getLoc(), arg.getType(), arg);
+  auto call = Operation::create(cgf.getBuilder(), arg.getLoc(), arg.getType(),
+                                arg, cgf.getBuilder().getConstrainedFPAttr());
   return RValue::get(call->getResult(0));
 }
 
@@ -377,9 +376,10 @@ static RValue emitUnaryMaybeConstrainedFPToIntBuiltin(CIRGenFunction &cgf,
   mlir::Type resultType = cgf.convertType(e.getType());
   mlir::Value src = cgf.emitScalarExpr(e.getArg(0));
 
-  assert(!cir::MissingFeatures::fpConstraints());
+  CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, &e);
 
-  auto call = Op::create(cgf.getBuilder(), src.getLoc(), resultType, src);
+  auto call = Op::create(cgf.getBuilder(), src.getLoc(), resultType, src,
+                         cgf.getBuilder().getConstrainedFPAttr());
   return RValue::get(call->getResult(0));
 }
 
@@ -398,6 +398,8 @@ static RValue emitBinaryFPBuiltin(CIRGenFunction &cgf, const CallExpr &e) {
 template <typename Op>
 static RValue emitTernaryMaybeConstrainedFPBuiltin(CIRGenFunction &cgf,
                                                    const CallExpr &e) {
+  CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, &e);
+
   mlir::Value arg0 = cgf.emitScalarExpr(e.getArg(0));
   mlir::Value arg1 = cgf.emitScalarExpr(e.getArg(1));
   mlir::Value arg2 = cgf.emitScalarExpr(e.getArg(2));
@@ -405,9 +407,8 @@ static RValue emitTernaryMaybeConstrainedFPBuiltin(CIRGenFunction &cgf,
   mlir::Location loc = cgf.getLoc(e.getExprLoc());
   mlir::Type ty = cgf.convertType(e.getType());
 
-  assert(!cir::MissingFeatures::fpConstraints());
-
-  auto call = Op::create(cgf.getBuilder(), loc, ty, arg0, arg1, arg2);
+  auto call = Op::create(cgf.getBuilder(), loc, ty, arg0, arg1, arg2,
+                         cgf.getBuilder().getConstrainedFPAttr());
   return RValue::get(call->getResult(0));
 }
 
@@ -417,12 +418,13 @@ static mlir::Value emitBinaryMaybeConstrainedFPBuiltin(CIRGenFunction &cgf,
   mlir::Value arg0 = cgf.emitScalarExpr(e.getArg(0));
   mlir::Value arg1 = cgf.emitScalarExpr(e.getArg(1));
 
+  CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, &e);
+
   mlir::Location loc = cgf.getLoc(e.getExprLoc());
   mlir::Type ty = cgf.convertType(e.getType());
 
-  assert(!cir::MissingFeatures::fpConstraints());
-
-  auto call = Op::create(cgf.getBuilder(), loc, ty, arg0, arg1);
+  auto call = Op::create(cgf.getBuilder(), loc, ty, arg0, arg1,
+                         cgf.getBuilder().getConstrainedFPAttr());
   return call->getResult(0);
 }
 
@@ -1375,34 +1377,52 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return emitRotate(e, /*isRotateLeft=*/false);
 
   case Builtin::BI__builtin_coro_id:
-  case Builtin::BI__builtin_coro_promise:
-  case Builtin::BI__builtin_coro_resume:
-  case Builtin::BI__builtin_coro_noop:
-  case Builtin::BI__builtin_coro_destroy:
-  case Builtin::BI__builtin_coro_done:
-  case Builtin::BI__builtin_coro_alloc:
-  case Builtin::BI__builtin_coro_begin:
+    return RValue::get(emitCoroIDBuiltinCall(e).getResult());
+  case Builtin::BI__builtin_coro_alloc: {
+    cir::CoroAllocOp coroAlloc = emitCoroAllocBuiltinCall(e);
+    return coroAlloc ? RValue::get(coroAlloc.getResult())
+                     : getUndefRValue(e->getType());
+  }
+  case Builtin::BI__builtin_coro_begin: {
+    cir::CoroBeginOp coroBeg = emitCoroBeginBuiltinCall(e);
+    return coroBeg ? RValue::get(coroBeg.getResult())
+                   : getUndefRValue(e->getType());
+  }
   case Builtin::BI__builtin_coro_end:
+    return RValue::get(emitCoroEndBuiltinCall(e).getResult());
+  case Builtin::BI__builtin_coro_promise:
+    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_promise NYI");
+    return getUndefRValue(e->getType());
+  case Builtin::BI__builtin_coro_resume:
+    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_resume NYI");
+    return getUndefRValue(e->getType());
+  case Builtin::BI__builtin_coro_noop:
+    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_noop NYI");
+    return getUndefRValue(e->getType());
+  case Builtin::BI__builtin_coro_destroy:
+    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_destroy NYI");
+    return getUndefRValue(e->getType());
+  case Builtin::BI__builtin_coro_done:
+    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_done NYI");
+    return getUndefRValue(e->getType());
   case Builtin::BI__builtin_coro_suspend:
+    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_suspend NYI");
+    return getUndefRValue(e->getType());
   case Builtin::BI__builtin_coro_align:
-    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_id like NYI");
+    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_align NYI");
     return getUndefRValue(e->getType());
 
   case Builtin::BI__builtin_coro_frame: {
     return emitCoroutineFrame();
   }
-  case Builtin::BI__builtin_coro_free:
-    return RValue::get(emitCoroFreeBuiltin(e).getResult());
+  case Builtin::BI__builtin_coro_free: {
+    cir::CoroFreeOp coroFree = emitCoroFreeBuiltin(e);
+    return coroFree ? RValue::get(coroFree.getResult())
+                    : getUndefRValue(e->getType());
+  }
+
   case Builtin::BI__builtin_coro_size: {
-    GlobalDecl gd{fd};
-    mlir::Type ty = cgm.getTypes().getFunctionType(
-        cgm.getTypes().arrangeGlobalDeclaration(gd));
-    const auto *nd = cast<NamedDecl>(gd.getDecl());
-    cir::FuncOp fnOp =
-        cgm.getOrCreateCIRFunction(nd->getName(), ty, gd, /*ForVTable=*/false);
-    fnOp.setBuiltin(true);
-    return emitCall(e->getCallee()->getType(), CIRGenCallee::forDirect(fnOp), e,
-                    returnValue);
+    return RValue::get(emitCoroSizeBuiltinCall(e).getResult());
   }
 
   case Builtin::BI__builtin_constant_p: {
@@ -1587,7 +1607,6 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_isnan: {
     CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, e);
     mlir::Value v = emitScalarExpr(e->getArg(0));
-    assert(!cir::MissingFeatures::fpConstraints());
     mlir::Location loc = getLoc(e->getBeginLoc());
     return RValue::get(builder.createBoolToInt(
         builder.createIsFPClass(loc, v, cir::FPClassTest::Nan),
@@ -1606,7 +1625,6 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_isinf: {
     CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, e);
     mlir::Value v = emitScalarExpr(e->getArg(0));
-    assert(!cir::MissingFeatures::fpConstraints());
     mlir::Location loc = getLoc(e->getBeginLoc());
     return RValue::get(builder.createBoolToInt(
         builder.createIsFPClass(loc, v, cir::FPClassTest::Infinity),
@@ -1619,9 +1637,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BIfinitel:
   case Builtin::BI__finitel:
   case Builtin::BI__builtin_isfinite: {
-    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, e);
     mlir::Value v = emitScalarExpr(e->getArg(0));
-    assert(!cir::MissingFeatures::fpConstraints());
     mlir::Location loc = getLoc(e->getBeginLoc());
     return RValue::get(builder.createBoolToInt(
         builder.createIsFPClass(loc, v, cir::FPClassTest::Finite),
@@ -1629,7 +1645,6 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   }
 
   case Builtin::BI__builtin_isnormal: {
-    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, e);
     mlir::Value v = emitScalarExpr(e->getArg(0));
     mlir::Location loc = getLoc(e->getBeginLoc());
     return RValue::get(builder.createBoolToInt(
@@ -1638,7 +1653,6 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   }
 
   case Builtin::BI__builtin_issubnormal: {
-    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, e);
     mlir::Value v = emitScalarExpr(e->getArg(0));
     mlir::Location loc = getLoc(e->getBeginLoc());
     return RValue::get(builder.createBoolToInt(
@@ -1647,7 +1661,6 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   }
 
   case Builtin::BI__builtin_iszero: {
-    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, e);
     mlir::Value v = emitScalarExpr(e->getArg(0));
     mlir::Location loc = getLoc(e->getBeginLoc());
     return RValue::get(builder.createBoolToInt(
@@ -1663,7 +1676,6 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     mlir::Value v = emitScalarExpr(e->getArg(0));
     uint64_t test = result.Val.getInt().getLimitedValue();
     mlir::Location loc = getLoc(e->getBeginLoc());
-    //
     return RValue::get(builder.createBoolToInt(
         builder.createIsFPClass(loc, v, cir::FPClassTest(test)),
         convertType(e->getType())));

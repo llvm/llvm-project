@@ -1120,6 +1120,25 @@ func.func @extFPVectorConstant() -> vector<2xf128> {
   return %0 : vector<2xf128>
 }
 
+// A f8E8M0FNU NaN has no payload bits; folding must not turn it into an Inf.
+// CHECK-LABEL: @extFPConstantE8M0NaN
+//       CHECK:   %[[cres:.+]] = arith.constant 0x7FC00000 : f32
+//       CHECK:   return %[[cres]]
+func.func @extFPConstantE8M0NaN() -> f32 {
+  %cst = arith.constant 0xFF : f8E8M0FNU
+  %0 = arith.extf %cst : f8E8M0FNU to f32
+  return %0 : f32
+}
+
+// CHECK-LABEL: @extFPVectorConstantE8M0NaN
+//       CHECK:   %[[cres:.+]] = arith.constant dense<[1.000000e+00, 0x7FC00000]> : vector<2xf32>
+//       CHECK:   return %[[cres]]
+func.func @extFPVectorConstantE8M0NaN() -> vector<2xf32> {
+  %cst = arith.constant dense<[1.000000e+00, 0xFF]> : vector<2xf8E8M0FNU>
+  %0 = arith.extf %cst : vector<2xf8E8M0FNU> to vector<2xf32>
+  return %0 : vector<2xf32>
+}
+
 // CHECK-LABEL: @truncExtf
 //       CHECK-NOT:  truncf
 //       CHECK:   return  %arg0
@@ -2647,6 +2666,18 @@ func.func @bitcastChain(%arg: i16) -> f16 {
   %0 = arith.bitcast %arg : i16 to bf16
   %1 = arith.bitcast %0 : bf16 to f16
   return %1 : f16
+}
+
+// -----
+
+// CHECK-LABEL: func @bitcastForeignConstantAttr
+func.func @bitcastForeignConstantAttr() -> f64 {
+  // CHECK: %[[UNDEF:.*]] = llvm.mlir.undef : i64
+  // CHECK: %[[CAST:.*]] = arith.bitcast %[[UNDEF]] : i64 to f64
+  // CHECK: return %[[CAST]] : f64
+  %0 = llvm.mlir.undef : i64
+  %1 = arith.bitcast %0 : i64 to f64
+  return %1 : f64
 }
 
 // -----
