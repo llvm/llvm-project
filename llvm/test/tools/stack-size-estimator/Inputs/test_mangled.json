@@ -1,0 +1,53 @@
+[
+  {
+    "CallGraph": [
+      {
+        "Function": {
+          "Names": [
+            "_Z3foov"
+          ],
+          "Address": 100,
+          "TypeID": 4524972987496481828,
+          "DirectCallees": []
+        }
+      },
+      {
+        "Function": {
+          "Names": [
+            "main"
+          ],
+          "Address": 200,
+          "DirectCallees": [
+            {
+              "Names": [
+                "_Z3foov"
+              ],
+              "Address": 100
+            }
+          ],
+          "IndirectTypeIDs": [
+            4524972987496481828
+          ]
+        }
+      }
+    ],
+    "StackSizes": [
+      {
+        "Entry": {
+          "Functions": [
+            "_Z3foov"
+          ],
+          "Size": 10
+        }
+      },
+      {
+        "Entry": {
+          "Functions": [
+            "main"
+          ],
+          "Size": 5
+        }
+      }
+    ]
+  }
+]
