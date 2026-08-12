@@ -1,5 +1,7 @@
 llvm_canonicalize_cmake_booleans(
   BOLT_ENABLE_RUNTIME
+  LLVM_ENABLE_ZLIB
+  LLVM_ENABLE_ZSTD
   )
 
 configure_lit_site_cfg(
