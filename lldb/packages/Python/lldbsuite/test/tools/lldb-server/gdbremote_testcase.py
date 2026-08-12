@@ -57,7 +57,7 @@ class GdbRemoteTestCaseFactory(type):
 
 
 @skipIfWasm  # wasm uses runtime's GDB stub, not lldb-server
-@requireSocketPermission  # the tests talk to the debug monitor over a socket
+@requireSocketPermission("the tests talk to the debug monitor over a socket")
 class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
     # Default time out in seconds. The timeout is increased tenfold under Asan.
     DEFAULT_TIMEOUT = 60 * (10 if ("ASAN_OPTIONS" in os.environ) else 1)

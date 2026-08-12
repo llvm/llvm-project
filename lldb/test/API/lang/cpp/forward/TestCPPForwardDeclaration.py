@@ -56,7 +56,7 @@ class ForwardDeclarationTestCase(TestBase):
         self.do_test(dict(CFLAGS_EXTRAS="-gdwarf-5 -gpubnames"))
 
     @no_debug_info_test
-    @requireClang
+    @requireClang()
     def test_simple_template_names(self):
         """Test that we are able to find complete types when using DWARF v5
         accelerator tables"""

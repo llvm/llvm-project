@@ -8,7 +8,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@requireExpressionEvaluation
+@requireExpressionEvaluation()
 class RvalueReferencesTestCase(TestBase):
     # rdar://problem/11479676
     @expectedFailureAll(

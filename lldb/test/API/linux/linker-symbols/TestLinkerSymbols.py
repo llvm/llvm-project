@@ -39,7 +39,7 @@ class TestLinkerSymbols(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
     SHARED_BUILD_TESTCASE = False
 
-    @requireLinux
+    @requireLinux()
     @skipTestIfFn(_linker_is_gold)
     def test_linker_symbols(self):
         build_dict = dict(LD_EXTRAS="-Wl,-T," + self.getSourcePath("linker.script"))

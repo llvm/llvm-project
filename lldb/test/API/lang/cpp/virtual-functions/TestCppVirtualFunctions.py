@@ -4,7 +4,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@requireExpressionEvaluation
+@requireExpressionEvaluation()
 class TestCase(TestBase):
     def common_setup(self):
         self.build()

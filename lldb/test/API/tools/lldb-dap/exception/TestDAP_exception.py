@@ -7,7 +7,7 @@ from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
 
 
-@requireSignals
+@requireSignals()
 class TestDAP_exception(DAPTestCaseBase):
     def test_stopped_description(self):
         """

@@ -14,7 +14,7 @@ class TestDAP_launch_termination(DAPTestCaseBase):
 
     USE_DEFAULT_DEBUG_ADAPTER = False
 
-    @requireSocketPermission
+    @requireSocketPermission()
     def test_termination_socket(self):
         adapter = self.create_server_debug_adapter(
             connection="listen://localhost:0",
