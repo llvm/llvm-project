@@ -23,6 +23,7 @@
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -776,12 +777,23 @@ void codegen::setFunctionAttributes(Function &F, StringRef CPU,
 
 void codegen::setFunctionAttributes(Module &M, StringRef CPU,
                                     StringRef Features, StringRef TuneCPU) {
-  // Synthesize the "float-abi" module flag from the -float-abi option,
+  // Synthesize the "float-abi" module flag from the -float-abi option.
   FloatABI::ABIType ABI = getFloatABIForCalls();
-  if (ABI != FloatABI::Default && !M.getModuleFlag("float-abi")) {
-    M.addModuleFlag(
-        Module::Error, "float-abi",
-        MDString::get(M.getContext(), FloatABI::getABITypeName(ABI)));
+  if (ABI != FloatABI::Default) {
+    if (auto *Existing =
+            dyn_cast_or_null<MDString>(M.getModuleFlag("float-abi"))) {
+      // The module already records a float ABI; -float-abi must not contradict
+      // it.
+      if (Existing->getString() != FloatABI::getABITypeName(ABI))
+        reportFatalUsageError(
+            "-float-abi=" + FloatABI::getABITypeName(ABI) +
+            " conflicts with the \"float-abi\" module flag \"" +
+            Existing->getString() + "\"");
+    } else {
+      M.addModuleFlag(
+          Module::Error, "float-abi",
+          MDString::get(M.getContext(), FloatABI::getABITypeName(ABI)));
+    }
   }
 
   for (Function &F : M)

@@ -13,8 +13,11 @@
 ; Without -float-abi, no flag is synthesized.
 ; RUN: llc -mtriple=armv7-none-eabi -stop-after=finalize-isel %t/none.ll -o - | FileCheck %s --check-prefix=NONE
 
-; An explicit in-IR flag is not overridden by -float-abi.
-; RUN: llc -mtriple=armv7-none-eabi -float-abi=soft -stop-after=finalize-isel %t/hard.ll -o - | FileCheck %s --check-prefix=HARD
+; -float-abi matching an existing in-IR flag is accepted.
+; RUN: llc -mtriple=armv7-none-eabi -float-abi=hard -stop-after=finalize-isel %t/hard.ll -o - | FileCheck %s --check-prefix=HARD
+
+; -float-abi conflicting with an existing in-IR flag is an error.
+; RUN: not llc -mtriple=armv7-none-eabi -float-abi=soft -stop-after=finalize-isel %t/hard.ll -filetype=null 2>&1 | FileCheck %s --check-prefix=CONFLICT
 
 ;--- none.ll
 define void @f() {
@@ -30,3 +33,4 @@ define void @f() {
 }
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"float-abi", !"hard"}
+; CONFLICT: -float-abi=soft conflicts with the "float-abi" module flag "hard"
