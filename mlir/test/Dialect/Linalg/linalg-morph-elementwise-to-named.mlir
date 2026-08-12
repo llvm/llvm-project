@@ -7,10 +7,8 @@
 // RUN:     FileCheck %s
 
 func.func @unary_ops(%A : tensor<16x8xf32>, %B : tensor<16x8xf32>) -> tensor<16x8xf32> {
-  %exp = linalg.elementwise kind=#linalg.elementwise_kind<exp>
-    ins(%A : tensor<16x8xf32>) outs(%B : tensor<16x8xf32>) -> tensor<16x8xf32>
   %log = linalg.elementwise kind=#linalg.elementwise_kind<log>
-    ins(%exp : tensor<16x8xf32>) outs(%B : tensor<16x8xf32>) -> tensor<16x8xf32>
+    ins(%A : tensor<16x8xf32>) outs(%B : tensor<16x8xf32>) -> tensor<16x8xf32>
   %abs = linalg.elementwise kind=#linalg.elementwise_kind<abs>
     ins(%log : tensor<16x8xf32>) outs(%B : tensor<16x8xf32>) -> tensor<16x8xf32>
   %ceil = linalg.elementwise kind=#linalg.elementwise_kind<ceil>
@@ -38,12 +36,8 @@ func.func @unary_ops(%A : tensor<16x8xf32>, %B : tensor<16x8xf32>) -> tensor<16x
 
 // CHECK-LABEL: unary_ops
 // CHECK-SAME: %[[A:.+]]: tensor<16x8xf32>, %[[B:.+]]: tensor<16x8xf32>)
-// CHECK-NOT: linalg.elementwise
-// CHECK: %[[EXP:.+]] = linalg.exp
-// CHECK-SAME: ins(%[[A]] : tensor<16x8xf32>)
-// CHECK-SAME: outs(%[[B]] : tensor<16x8xf32>) -> tensor<16x8xf32>
 // CHECK: %[[LOG:.+]] = linalg.log
-// CHECK-SAME: ins(%[[EXP]] : tensor<16x8xf32>)
+// CHECK-SAME: ins(%[[A]] : tensor<16x8xf32>)
 // CHECK-SAME: outs(%[[B]] : tensor<16x8xf32>) -> tensor<16x8xf32>
 // CHECK: %[[ABS:.+]] = linalg.abs
 // CHECK-SAME: ins(%[[LOG]] : tensor<16x8xf32>)
@@ -210,7 +204,7 @@ func.func @ternary_select(%A: tensor<?x?xi1>, %B: tensor<?x?xf32>,
 // Non-identity indexing maps: should NOT be converted to named op.
 func.func @non_identity_maps(%A: tensor<?xf32>, %Out: tensor<?x?xf32>) -> tensor<?x?xf32> {
   %0 = linalg.elementwise
-    kind=#linalg.elementwise_kind<exp>
+    kind=#linalg.elementwise_kind<abs>
     indexing_maps = [affine_map<(d0, d1) -> (d1)>, affine_map<(d0, d1) -> (d0, d1)>]
     ins(%A : tensor<?xf32>) outs(%Out : tensor<?x?xf32>) -> tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
@@ -218,10 +212,10 @@ func.func @non_identity_maps(%A: tensor<?xf32>, %Out: tensor<?x?xf32>) -> tensor
 
 // CHECK-LABEL: non_identity_maps
 // CHECK-SAME: %[[A:.+]]: tensor<?xf32>, %[[OUT:.+]]: tensor<?x?xf32>)
-// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<exp>
+// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<abs>
 // CHECK-SAME: ins(%[[A]] : tensor<?xf32>)
 // CHECK-SAME: outs(%[[OUT]] : tensor<?x?xf32>) -> tensor<?x?xf32>
-// CHECK-NOT: linalg.exp
+// CHECK-NOT: linalg.abs
 
 // -----
 

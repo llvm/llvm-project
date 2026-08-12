@@ -6,7 +6,6 @@
 // RUN: | FileCheck %s
 
 func.func @unary_ops(%A: memref<7x14x21xf32>, %Out: memref<7x14x21xf32>) {
-  linalg.exp ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
   linalg.log ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
   linalg.abs ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
   linalg.ceil ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
@@ -25,9 +24,6 @@ func.func @unary_ops(%A: memref<7x14x21xf32>, %Out: memref<7x14x21xf32>) {
 // CHECK-LABEL: unary_ops
 // CHECK-SAME: %[[A:.+]]: memref<7x14x21xf32>, %[[OUT:.+]]: memref<7x14x21xf32>)
 // CHECK-NOT: linalg.generic
-// CHECK: linalg.exp
-// CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
-// CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
 // CHECK: linalg.log
 // CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
 // CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)

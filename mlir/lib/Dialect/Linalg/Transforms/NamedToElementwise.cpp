@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements rewriting those linalg named ops that are essentially
-// elementwise e.g. `linalg.exp`, to `linalg.elementwise`. This allows further
+// elementwise e.g. `linalg.abs`, to `linalg.elementwise`. This allows further
 // optimization on `linalg.elementwise` such as folding transpose, broadcast.
 //
 //===----------------------------------------------------------------------===//
@@ -35,7 +35,6 @@ ElementwiseKind getKind(Operation *op) {
       .Case([](DivOp) { return ElementwiseKind::div; })
       .Case([](DivUnsignedOp) { return ElementwiseKind::div_unsigned; })
       .Case([](PowFOp) { return ElementwiseKind::powf; })
-      .Case([](ExpOp) { return ElementwiseKind::exp; })
       .Case([](LogOp) { return ElementwiseKind::log; })
       .Case([](AbsOp) { return ElementwiseKind::abs; })
       .Case([](CeilOp) { return ElementwiseKind::ceil; })
@@ -79,7 +78,6 @@ void mlir::linalg::populateLinalgNamedToElementwisePatterns(
   patterns.add<NamedToElementwisePattern<DivOp>>(patterns.getContext());
   patterns.add<NamedToElementwisePattern<DivUnsignedOp>>(patterns.getContext());
   patterns.add<NamedToElementwisePattern<PowFOp>>(patterns.getContext());
-  patterns.add<NamedToElementwisePattern<ExpOp>>(patterns.getContext());
   patterns.add<NamedToElementwisePattern<LogOp>>(patterns.getContext());
   patterns.add<NamedToElementwisePattern<AbsOp>>(patterns.getContext());
   patterns.add<NamedToElementwisePattern<CeilOp>>(patterns.getContext());

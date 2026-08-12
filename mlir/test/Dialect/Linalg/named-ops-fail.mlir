@@ -80,22 +80,6 @@ func.func @divu_broadcast(%arg0: memref<8x16xi32>, %arg1: memref<4x8x16xi32>, %a
 
 // -----
 
-func.func @exp_type_cast(%arg: memref<4x8x16xf16>, %out: memref<4x8x16xf32>) {
-  // CHECK: operand 1 ('f16') doesn't match the element type of the enclosing linalg.generic op ('f32')
-  linalg.exp ins(%arg : memref<4x8x16xf16>) outs(%out: memref<4x8x16xf32>)
-  return
-}
-
-// -----
-
-func.func @exp_broadcast(%arg: memref<8x16xf32>, %out: memref<4x8x16xf32>) {
-  // CHECK: op expected operand #0 rank (2) to match the result rank of indexing_map (3)
-  linalg.exp ins(%arg : memref<8x16xf32>) outs(%out: memref<4x8x16xf32>)
-  return
-}
-
-// -----
-
 func.func @log_type_cast(%arg: memref<4x8x16xf16>, %out: memref<4x8x16xf32>) {
   // CHECK: operand 1 ('f16') doesn't match the element type of the enclosing linalg.generic op ('f32')
   linalg.log ins(%arg : memref<4x8x16xf16>) outs(%out: memref<4x8x16xf32>)

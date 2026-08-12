@@ -2170,37 +2170,6 @@ func.func @div_unsigned_tensor(%arg0: tensor<4x8x16xi32>, %arg1: tensor<4x8x16xi
 
 // -----
 
-// CHECK-LABEL: func @exp_dynamic
-func.func @exp_dynamic(%arg0: memref<?x?x?xf32>, %arg1: memref<?x?x?xf32>) {
-  // CHECK: linalg.exp
-  // CHECK-SAME: ins(%{{.+}} : memref<?x?x?xf32>) outs(%{{.+}} : memref<?x?x?xf32>)
-  linalg.exp ins(%arg0 : memref<?x?x?xf32>) outs(%arg1: memref<?x?x?xf32>)
-  return
-}
-
-// -----
-
-// CHECK-LABEL: func @exp_static
-func.func @exp_static(%arg0: memref<4x8x16xf32>, %arg1: memref<4x8x16xf32>) {
-  // CHECK: linalg.exp
-  // CHECK-SAME: ins(%{{.+}} : memref<4x8x16xf32>) outs(%{{.+}} : memref<4x8x16xf32>)
-  linalg.exp ins(%arg0 : memref<4x8x16xf32>) outs(%arg1: memref<4x8x16xf32>)
-  return
-}
-
-// -----
-
-// CHECK-LABEL: func @exp_tensor
-func.func @exp_tensor(%arg0: tensor<4x8x16xf32>) -> tensor<4x8x16xf32> {
-  %0 = tensor.empty() : tensor<4x8x16xf32>
-  // CHECK: linalg.exp
-  // CHECK-SAME: ins(%{{.+}} : tensor<4x8x16xf32>) outs(%{{.+}} : tensor<4x8x16xf32>)
-  %1 = linalg.exp ins(%arg0 : tensor<4x8x16xf32>) outs(%0: tensor<4x8x16xf32>) -> tensor<4x8x16xf32>
-  return %1 : tensor<4x8x16xf32>
-}
-
-// -----
-
 // CHECK-LABEL: func @log_dynamic
 func.func @log_dynamic(%arg0: memref<?x?x?xf32>, %arg1: memref<?x?x?xf32>) {
   // CHECK: linalg.log

@@ -4,12 +4,12 @@
 // RUN: mlir-opt %s -linalg-morph-ops=named-to-category |  \
 // RUN:   mlir-opt -linalg-morph-ops=category-to-generic | FileCheck %s  --check-prefix=CATEGORY_TO_GENERIC
 
-func.func @exp(%A : tensor<16x8xf32>, %B : tensor<16x8xf32>) ->  tensor<16x8xf32> {
-  %exp = linalg.exp ins(%A : tensor<16x8xf32>) outs(%B :  tensor<16x8xf32>) -> tensor<16x8xf32>
-  return %exp :  tensor<16x8xf32>
+func.func @abs(%A : tensor<16x8xf32>, %B : tensor<16x8xf32>) ->  tensor<16x8xf32> {
+  %abs = linalg.abs ins(%A : tensor<16x8xf32>) outs(%B :  tensor<16x8xf32>) -> tensor<16x8xf32>
+  return %abs :  tensor<16x8xf32>
 }
 // NAMED_TO_CATEGORY: linalg.elementwise
-// NAMED_TO_CATEGORY-NOT: linalg.exp
+// NAMED_TO_CATEGORY-NOT: linalg.abs
 
 // CATEGORY_TO_GENERIC: linalg.generic
 // CATEGORY_TO_GENERIC-NOT: linalg.elementwise

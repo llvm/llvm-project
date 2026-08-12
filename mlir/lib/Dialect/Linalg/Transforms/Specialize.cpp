@@ -105,9 +105,9 @@ static bool findIndexOfScalarOperand(GenericOp genericOp, int &index) {
 //     } -> tensor<?x?xf32>
 //
 // is specialized to either
-//   linalg.exp ins(...) outs(...) -> ...
+//   linalg.abs ins(...) outs(...) -> ...
 // or
-//   linalg.elementwise kind=#linalg.elementwise_kind<exp> ...
+//   linalg.elementwise kind=#linalg.elementwise_kind<abs> ...
 //
 // Only the category op can carry non-identity indexing maps; these are
 // transferred verbatim from the `genericOp`.
@@ -191,8 +191,6 @@ static FailureOr<LinalgOp> specializeLinalgElementwise(RewriterBase &rewriter,
   };
 
   if (isUnary) {
-    if (isa<math::ExpOp>(op))
-      return replaceOp(ExpOp{}, ElementwiseKind::exp);
     if (isa<math::LogOp>(op))
       return replaceOp(LogOp{}, ElementwiseKind::log);
     if (isa<math::AbsFOp>(op))
@@ -227,6 +225,8 @@ static FailureOr<LinalgOp> specializeLinalgElementwise(RewriterBase &rewriter,
     // The following ops only have the category (elementwise) form, but no
     // linalg.* named op equivalent.
     if (emitCategoryOp) {
+      if (isa<math::ExpOp>(op))
+        return replaceOp(nullptr, ElementwiseKind::exp);
       if (isa<math::SinOp>(op))
         return replaceOp(nullptr, ElementwiseKind::sin);
       if (isa<math::CosOp>(op))
