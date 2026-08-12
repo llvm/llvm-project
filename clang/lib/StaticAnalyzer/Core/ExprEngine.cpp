@@ -1115,6 +1115,7 @@ static bool justRunCheckersAsPreVisit(const Stmt *S) {
   case Stmt::ObjCBridgedCastExprClass:
   case Stmt::CXXAddrspaceCastExprClass:
   case Stmt::CXXBindTemporaryExprClass:
+  case Stmt::GCCAsmStmtClass:
   case Stmt::CXXNewExprClass:
   case Stmt::MaterializeTemporaryExprClass:
   case Stmt::OffsetOfExprClass:
@@ -1138,6 +1139,7 @@ static bool justRunCheckersAsPostVisit(const Stmt *S) {
   case Stmt::ObjCBridgedCastExprClass:
   case Stmt::CXXAddrspaceCastExprClass:
   case Stmt::CXXBindTemporaryExprClass:
+  case Stmt::GCCAsmStmtClass:
   case Stmt::CXXNewExprClass:
   case Stmt::MaterializeTemporaryExprClass:
   case Stmt::OffsetOfExprClass:
@@ -2101,15 +2103,9 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       llvm_unreachable("Support for MatrixSubscriptExpr is not implemented.");
       break;
 
-    case Stmt::GCCAsmStmtClass: {
-      ExplodedNodeSet PreVisit;
-      getCheckerManager().runCheckersForPreStmt(PreVisit, Pred, S, *this);
-      ExplodedNodeSet PostVisit;
-      for (ExplodedNode *const N : PreVisit)
-        VisitGCCAsmStmt(cast<GCCAsmStmt>(S), N, PostVisit);
-      getCheckerManager().runCheckersForPostStmt(Dst, PostVisit, S, *this);
+    case Stmt::GCCAsmStmtClass:
+      VisitGCCAsmStmt(cast<GCCAsmStmt>(S), Pred, Dst);
       break;
-    }
 
     case Stmt::MSAsmStmtClass:
       VisitMSAsmStmt(cast<MSAsmStmt>(S), Pred, Dst);
