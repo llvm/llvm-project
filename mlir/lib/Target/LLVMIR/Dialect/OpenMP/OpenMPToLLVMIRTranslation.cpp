@@ -5480,6 +5480,25 @@ applyUnrollHeuristic(omp::UnrollHeuristicOp op, llvm::IRBuilderBase &builder,
   return success();
 }
 
+/// Apply a `#pragma omp unroll full` / `!$omp unroll full` transformation
+/// using the OpenMPIRBuilder.
+static LogicalResult
+applyUnrollFull(omp::UnrollFullOp op, llvm::IRBuilderBase &builder,
+                LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+
+  Value applyee = op.getApplyee();
+  assert(applyee && "Loop to apply unrolling on required");
+
+  llvm::CanonicalLoopInfo *consBuilderCLI =
+      moduleTranslation.lookupOMPLoop(applyee);
+  llvm::OpenMPIRBuilder::LocationDescription loc(builder);
+  ompBuilder->unrollLoopFull(loc.DL, consBuilderCLI);
+
+  moduleTranslation.invalidateOmpLoop(applyee);
+  return success();
+}
+
 /// Apply a `#pragma omp unroll partial` / `!$omp unroll partial`
 /// transformation using the OpenMPIRBuilder.
 static LogicalResult
@@ -6122,8 +6141,14 @@ convertOmpAtomicCompare(omp::AtomicCompareOp atomicCompareOp,
     llvm::Value *dInt =
         builder.CreateAlignedLoad(intTy, dAlloca, maxAlign, "cmplx.d.int");
 
+    // Honor the `fail` clause ordering when present (the verifier guarantees
+    // it is a valid cmpxchg failure ordering); otherwise derive it from the
+    // success ordering.
     llvm::AtomicOrdering failOrdering =
-        llvm::AtomicCmpXchgInst::getStrongestFailureOrdering(atomicOrdering);
+        atomicCompareOp.getFailMemoryOrder()
+            ? convertAtomicOrdering(atomicCompareOp.getFailMemoryOrder())
+            : llvm::AtomicCmpXchgInst::getStrongestFailureOrdering(
+                  atomicOrdering);
     auto *cmpXchg = builder.CreateAtomicCmpXchg(llvmX, eInt, dInt, maxAlign,
                                                 atomicOrdering, failOrdering);
     cmpXchg->setWeak(atomicCompareOp.getWeak());
@@ -6211,10 +6236,19 @@ convertOmpAtomicCompare(omp::AtomicCompareOp atomicCompareOp,
   bool isWeak = atomicCompareOp.getWeak();
 
   bool savedHandleFPNegZero = ompBuilder->setHandleFPNegZero(true);
-  llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
-      ompBuilder->createAtomicCompare(ompLoc, llvmAtomicX, vOpVal, rOpVal, eVal,
-                                      dVal, atomicOrdering, compareOp,
-                                      isXBinopExpr, false, false, isWeak);
+  llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP = [&]() {
+    if (auto failOrder = atomicCompareOp.getFailMemoryOrder()) {
+      llvm::AtomicOrdering failureOrdering = convertAtomicOrdering(*failOrder);
+      return ompBuilder->createAtomicCompare(
+          ompLoc, llvmAtomicX, vOpVal, rOpVal, eVal, dVal, atomicOrdering,
+          compareOp, isXBinopExpr, /*IsPostfixUpdate=*/false,
+          /*IsFailOnly=*/false, failureOrdering, isWeak);
+    }
+    return ompBuilder->createAtomicCompare(
+        ompLoc, llvmAtomicX, vOpVal, rOpVal, eVal, dVal, atomicOrdering,
+        compareOp, isXBinopExpr, /*IsPostfixUpdate=*/false,
+        /*IsFailOnly=*/false, isWeak);
+  }();
   ompBuilder->setHandleFPNegZero(savedHandleFPNegZero);
 
   if (failed(handleError(afterIP, *atomicCompareOp)))
@@ -9512,6 +9546,16 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::amendOperation(
               }
               return failure();
             })
+      .Case("omp.integer_wrap_around",
+            [&](Attribute attr) {
+              if (auto wrapAttr = dyn_cast<omp::IntegerWrapAroundAttr>(attr)) {
+                llvm::OpenMPIRBuilderConfig &config =
+                    moduleTranslation.getOpenMPBuilder()->Config;
+                config.setNoSignedWrap(!wrapAttr.getIntegerWrapAround());
+                return success();
+              }
+              return failure();
+            })
       .Default([](Attribute) {
         // Fall through for omp attributes that do not require lowering.
         return success();
@@ -10089,6 +10133,9 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
             // contained region including their transformations must occur at
             // the omp.canonical_loop.
             return applyUnrollHeuristic(op, builder, moduleTranslation);
+          })
+          .Case([&](omp::UnrollFullOp op) {
+            return applyUnrollFull(op, builder, moduleTranslation);
           })
           .Case([&](omp::UnrollPartialOp op) {
             return applyUnrollPartial(op, builder, moduleTranslation);

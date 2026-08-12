@@ -259,7 +259,7 @@ define void @widen_intrinsics_with_mixed_return_types(ptr noalias %src, ptr noal
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 8
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 7
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
@@ -323,5 +323,5 @@ exit:
 
 !0 = distinct !{!0, !1, !2, !3}
 !1 = !{!"llvm.loop.vectorize.width", i32 2}
-!2 = !{!"llvm.loop.vectorize.scalable.enable", i1 false}
+!2 = !{!"llvm.loop.vectorize.scalable.disable"}
 !3 = !{!"llvm.loop.vectorize.enable"}
