@@ -115,6 +115,18 @@ def XW_FmaOp : XW_Op<"fma", [Pure, Elementwise]> {
 def XW_FExp2Op : XW_FloatUnary<"fexp2">;
 def XW_FRcpOp : XW_FloatUnary<"frcp">;
 
+def XW_DpasOp : XW_Op<"dpas", [Pure]> {
+  let summary = "Xe DPAS matrix multiply-accumulate";
+  let arguments = (ins XW_Simd:$a, XW_Simd:$b, XW_Simd:$acc,
+                       XW_DpasPrecisionEnum:$a_precision,
+                       XW_DpasPrecisionEnum:$b_precision,
+                       I64Attr:$k,
+                       I64Attr:$systolic_depth, I64Attr:$repeat_count);
+  let results = (outs XW_Simd:$result);
+  let assemblyFormat = "$a `,` $b `,` $acc attr-dict `:` type($a) `,` type($b) `,` type($acc) `->` type($result)";
+  let hasVerifier = 1;
+}
+
 def XW_CmpIOp : XW_Op<"cmpi", [Pure, Elementwise]> {
   let arguments = (ins Arith_CmpIPredicateAttr:$predicate, AnyType:$lhs,
                        AnyType:$rhs);

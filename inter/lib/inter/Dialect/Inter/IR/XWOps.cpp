@@ -706,6 +706,36 @@ LogicalResult BallotOp::verify() {
   return verifyCardinalities(getOperation());
 }
 
+LogicalResult DpasOp::verify() {
+  auto verifyPacket = [&](Type type, const Twine &name) -> LogicalResult {
+    SimdType simd = dyn_cast<SimdType>(type);
+    VectorType packet = simd ? dyn_cast<VectorType>(simd.getElementType())
+                             : VectorType();
+    if (!simd || !packet || packet.getRank() != 1 || packet.isScalable())
+      return emitOpError() << name
+                           << " must be a SIMD value with a fixed 1-D packet";
+    return success();
+  };
+  if (failed(verifyPacket(getA().getType(), "A")) ||
+      failed(verifyPacket(getB().getType(), "B")) ||
+      failed(verifyPacket(getAcc().getType(), "accumulator")) ||
+      failed(verifyPacket(getResult().getType(), "result")))
+    return failure();
+  if (getAcc().getType() != getResult().getType())
+    return emitOpError("accumulator and result types must match");
+  int64_t operandsPerDword = 2;
+  if (getK() != getSystolicDepth() * operandsPerDword)
+    return emitOpError("K must match systolic depth and source precision");
+  VectorType resultPacket =
+      cast<VectorType>(cast<SimdType>(getResult().getType()).getElementType());
+  if (getRepeatCount() !=
+      static_cast<uint64_t>(resultPacket.getNumElements()))
+    return emitOpError("repeat count must match the result packet length");
+  if (getSystolicDepth() <= 0 || getRepeatCount() <= 0)
+    return emitOpError("systolic depth and repeat count must be positive");
+  return verifyCardinalities(getOperation());
+}
+
 OpFoldResult BallotOp::fold(FoldAdaptor adaptor) {
   IntegerAttr mask = dyn_cast_or_null<IntegerAttr>(adaptor.getMask());
   if (!mask)

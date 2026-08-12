@@ -46,6 +46,7 @@ inter::xemachine::analyzeKernelResources(func::FuncOp function,
           if (failed(observeType(argument.getType(), argument.getLoc())))
             return WalkResult::interrupt();
     usage.hasGlobalAtomics |= isa<AtomicIAddA64Op>(operation);
+    usage.hasDpas |= isa<DpasOp>(operation);
     usage.hasStatelessWrite |= isa<StoreA64Op, AtomicIAddA64Op>(operation);
     if (auto send = dyn_cast<SendOp>(operation))
       usage.hasStatelessWrite |=
@@ -85,6 +86,29 @@ void UpdateTupleOp::getRegisterStorageAliases(
   for (auto [value, offset] : llvm::zip_equal(getUpdates(), getOffsets()))
     aliases.push_back({getResult(), value, cast<IntegerAttr>(offset).getInt(),
                        /*destructive=*/true});
+}
+
+void DpasOp::getRegisterStorageAliases(
+    SmallVectorImpl<RegisterStorageAlias> &aliases) {
+  aliases.push_back({getDst(), getAcc(), 0, /*destructive=*/true});
+}
+
+LogicalResult DpasOp::verify() {
+  RegType a = cast<RegType>(getA().getType());
+  RegType b = cast<RegType>(getB().getType());
+  RegType acc = cast<RegType>(getAcc().getType());
+  RegType dst = cast<RegType>(getDst().getType());
+  if (a.getWidthDwords() == 0 || b.getWidthDwords() == 0 ||
+      acc.getWidthDwords() == 0 || dst.getWidthDwords() != acc.getWidthDwords())
+    return emitOpError("requires non-empty A/B packets and matching C/D widths");
+  if (!getElemType().isF32())
+    return emitOpError("requires an f32 accumulator and result");
+  if (getSystolicDepth() <= 0 || getRepeatCount() <= 0)
+    return emitOpError("requires positive systolic depth and repeat count");
+  if (acc.getBaseGRF() >= 0 && dst.getBaseGRF() >= 0 &&
+      acc.getBaseGRF() != dst.getBaseGRF())
+    return emitOpError("physical destination must alias the accumulator");
+  return success();
 }
 
 static int64_t sumElementWidths(ValueRange elements) {

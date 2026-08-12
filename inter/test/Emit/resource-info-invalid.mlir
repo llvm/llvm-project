@@ -5,6 +5,7 @@ module {
       xemachine.barrier_count = 0 : i32,
       xemachine.grf_count = 128 : i32,
       xemachine.grf_used = 1 : i32,
+      xemachine.has_dpas = false,
       xemachine.has_global_atomics = false,
       xemachine.has_no_stateless_write = true,
       xemachine.kernel_args = [],

@@ -23,6 +23,12 @@ def CanonicalizeBlock2DABI
   let dependentDialects = ["xw::XWDialect", "mlir::LLVM::LLVMDialect"];
 }
 
+def CanonicalizeDpasBuiltin
+    : Pass<"inter-canonicalize-dpas-builtin", "::mlir::ModuleOp"> {
+  let summary = "fold Intel matrix-mad builtins into XW DPAS operations";
+  let dependentDialects = ["xw::XWDialect", "mlir::LLVM::LLVMDialect"];
+}
+
 def VerifyStructured : Pass<"inter-verify-structured", "::mlir::ModuleOp"> {
   let summary = "reject unstructured control flow before semantic conversion";
 }

@@ -118,4 +118,12 @@ def XeMachine_SyncKind : I32EnumAttr<"SyncKind", "sync function", [
   let cppNamespace = "::inter::xemachine";
 }
 
+def XeMachine_DpasPrecisionF16 : I32EnumAttrCase<"F16", 0, "f16">;
+def XeMachine_DpasPrecisionBF16 : I32EnumAttrCase<"BF16", 1, "bf16">;
+def XeMachine_DpasPrecision : I32EnumAttr<"DpasPrecision",
+    "DPAS source precision",
+    [XeMachine_DpasPrecisionF16, XeMachine_DpasPrecisionBF16]> {
+  let cppNamespace = "::inter::xemachine";
+}
+
 #endif // INTER_DIALECT_XEMACHINE_IR_XEMACHINEBASE_TD

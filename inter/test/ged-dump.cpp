@@ -27,6 +27,8 @@ static const char *getOpcodeName(GED_OPCODE opcode) {
     return "add3";
   case GED_OPCODE_mul:
     return "mul";
+  case GED_OPCODE_dpas:
+    return "dpas";
   case GED_OPCODE_cmp:
     return "cmp";
   case GED_OPCODE_send:
@@ -101,6 +103,17 @@ static const char *getDataTypeName(GED_DATA_TYPE type) {
     return "q";
   case GED_DATA_TYPE_f:
     return "f";
+  default:
+    return "unknown";
+  }
+}
+
+static const char *getPrecisionName(GED_PRECISION precision) {
+  switch (precision) {
+  case GED_PRECISION_f16:
+    return "f16";
+  case GED_PRECISION_bf16:
+    return "bf16";
   default:
     return "unknown";
   }
@@ -307,6 +320,18 @@ int main(int argc, char **argv) {
     } else if (opcode == GED_OPCODE_join) {
       int32_t jip = getField<int32_t>(GED_GetJIP, instruction, "JIP");
       std::cout << std::dec << " jip=" << jip;
+    } else if (opcode == GED_OPCODE_dpas) {
+      uint32_t depth = getField<uint32_t>(GED_GetSystolicDepth, instruction,
+                                          "SystolicDepth");
+      uint32_t repeat =
+          getField<uint32_t>(GED_GetRepeatCount, instruction, "RepeatCount");
+      GED_PRECISION b = getField<GED_PRECISION>(
+          GED_GetSrc1Precision, instruction, "Src1Precision");
+      GED_PRECISION a = getField<GED_PRECISION>(
+          GED_GetSrc2Precision, instruction, "Src2Precision");
+      std::cout << std::dec << " depth=" << depth << " repeat=" << repeat
+                << " bPrecision=" << getPrecisionName(b)
+                << " aPrecision=" << getPrecisionName(a);
     }
     std::cout << std::dec;
     GED_MASK_CTRL mask =
@@ -356,9 +381,20 @@ int main(int argc, char **argv) {
           getField<uint32_t>(GED_GetSrc1Length, instruction, "Src1Length");
       GED_EOT eot = getField<GED_EOT>(GED_GetEOT, instruction, "EOT");
       std::cout << " dst=" << getRegFileName(destinationFile) << destination
-                << " src0=grf" << source0
-                << " src1=" << getRegFileName(source1File) << source1
-                << " len=" << sourceLength << " eot=" << (eot == GED_EOT_EOT);
+                 << " src0=grf" << source0
+                 << " src1=" << getRegFileName(source1File) << source1
+                 << " len=" << sourceLength << " eot=" << (eot == GED_EOT_EOT);
+    } else if (opcode == GED_OPCODE_dpas) {
+      uint32_t destination =
+          getField<uint32_t>(GED_GetDstRegNum, instruction, "DstRegNum");
+      uint32_t acc =
+          getField<uint32_t>(GED_GetSrc0RegNum, instruction, "Src0RegNum");
+      uint32_t b =
+          getField<uint32_t>(GED_GetSrc1RegNum, instruction, "Src1RegNum");
+      uint32_t a =
+          getField<uint32_t>(GED_GetSrc2RegNum, instruction, "Src2RegNum");
+      std::cout << " dst=grf" << destination << " acc=grf" << acc
+                << " b=grf" << b << " a=grf" << a;
     } else if (opcode == GED_OPCODE_mov || opcode == GED_OPCODE_add ||
                opcode == GED_OPCODE_shl || opcode == GED_OPCODE_shr ||
                opcode == GED_OPCODE_and || opcode == GED_OPCODE_or ||

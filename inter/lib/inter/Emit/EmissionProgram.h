@@ -93,6 +93,19 @@ struct CompareInstruction {
   SwsbInfo swsb;
 };
 
+struct DpasInstruction {
+  ExecutionInfo execution;
+  GrfReference destination;
+  GrfReference accumulator;
+  GrfReference sourceB;
+  GrfReference sourceA;
+  xemachine::DpasPrecision aPrecision = xemachine::DpasPrecision::F16;
+  xemachine::DpasPrecision bPrecision = xemachine::DpasPrecision::F16;
+  uint32_t systolicDepth = 8;
+  uint32_t repeatCount = 8;
+  SwsbInfo swsb;
+};
+
 struct SendInstruction {
   ExecutionInfo execution;
   xemachine::SendFn function = xemachine::SendFn::ugm;
@@ -135,9 +148,9 @@ struct Label {
 };
 
 using EmissionItem =
-    std::variant<Label, AluInstruction, CompareInstruction, SendInstruction,
-                 SyncInstruction, GotoInstruction, JmpiInstruction,
-                 JoinInstruction>;
+    std::variant<Label, AluInstruction, CompareInstruction, DpasInstruction,
+                 SendInstruction, SyncInstruction, GotoInstruction,
+                 JmpiInstruction, JoinInstruction>;
 
 struct EmissionProgram {
   llvm::SmallVector<EmissionItem> items;

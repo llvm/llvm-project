@@ -80,4 +80,11 @@ def XW_CachePolicyEnum : I32EnumAttr<"CachePolicyKind", "XW cache policy", [
   let cppNamespace = "::xw";
 }
 
+def XW_DpasPrecisionF16 : I32EnumAttrCase<"F16", 0, "f16">;
+def XW_DpasPrecisionBF16 : I32EnumAttrCase<"BF16", 1, "bf16">;
+def XW_DpasPrecisionEnum : I32EnumAttr<"DpasPrecision",
+    "DPAS source precision", [XW_DpasPrecisionF16, XW_DpasPrecisionBF16]> {
+  let cppNamespace = "::xw";
+}
+
 #endif // INTER_DIALECT_INTER_IR_XWENUMS_TD

@@ -360,6 +360,22 @@ def XeMachine_MulOp :
       "$src0 `,` $src1 attr-dict `:` `(` qualified(type($src0)) `,` qualified(type($src1)) `,` $elemType `)` `->` qualified(type($dst))";
 }
 
+def XeMachine_DpasOp : XeMachine_Op<"dpas", [NoMemoryEffect,
+    DeclareOpInterfaceMethods<XeMachine_RegisterStorageAliasOpInterface>],
+    "systolic"> {
+  let summary = "SIMD16 DPAS matrix multiply-accumulate";
+  let arguments = (ins XeMachine_RegType:$a, XeMachine_RegType:$b,
+                       XeMachine_RegType:$acc,
+                       XeMachine_DpasPrecision:$aPrecision,
+                       XeMachine_DpasPrecision:$bPrecision,
+                       DefaultValuedAttr<I32Attr, "8">:$systolicDepth,
+                       DefaultValuedAttr<I32Attr, "8">:$repeatCount,
+                       TypeAttr:$elemType);
+  let results = (outs XeMachine_RegType:$dst);
+  let assemblyFormat = "$a `,` $b `,` $acc attr-dict `:` `(` qualified(type($a)) `,` qualified(type($b)) `,` qualified(type($acc)) `)` `->` qualified(type($dst))";
+  let hasVerifier = 1;
+}
+
 // Compare: writes a flag register, no GRF destination.
 // cmp (exec|M0) (gt)f0.0 null<1>:ud src0 src1
 def XeMachine_CmpOp : XeMachine_Op<"cmp", [NoMemoryEffect], "arfWrite"> {

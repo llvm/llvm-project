@@ -1196,6 +1196,30 @@ private:
     return success();
   }
 
+  LogicalResult lowerDpas(xw::DpasOp operation) {
+    FailureOr<Value> a = materialize(operation.getA(), operation);
+    FailureOr<Value> b = materialize(operation.getB(), operation);
+    FailureOr<Value> acc = materialize(operation.getAcc(), operation);
+    if (failed(a) || failed(b) || failed(acc))
+      return failure();
+    FailureOr<int64_t> footprint = getFootprint(operation.getType(), operation);
+    if (failed(footprint))
+      return failure();
+    auto precision = [](xw::DpasPrecision value) {
+      return value == xw::DpasPrecision::F16 ? DpasPrecision::F16
+                                             : DpasPrecision::BF16;
+    };
+    DpasOp dpas = DpasOp::create(
+        *builder, *location, reg(*footprint), *a, *b, *acc,
+        DpasPrecisionAttr::get(context, precision(operation.getAPrecision())),
+        DpasPrecisionAttr::get(context, precision(operation.getBPrecision())),
+        builder->getI32IntegerAttr(operation.getSystolicDepth()),
+        builder->getI32IntegerAttr(operation.getRepeatCount()),
+        typeAttr(Float32Type::get(context)));
+    values[operation.getResult()] = dpas.getDst();
+    return success();
+  }
+
   LogicalResult lowerUnsupportedFloat(Operation *operation,
                                       StringRef primitive) {
     return operation->emitOpError()
@@ -2729,6 +2753,9 @@ private:
           return failure();
       } else if (xw::FMulOp multiply = dyn_cast<xw::FMulOp>(operation)) {
         if (failed(lowerFloatMultiply(multiply)))
+          return failure();
+      } else if (xw::DpasOp dpas = dyn_cast<xw::DpasOp>(operation)) {
+        if (failed(lowerDpas(dpas)))
           return failure();
       } else if (isa<xw::FMaxOp>(operation)) {
         if (failed(lowerUnsupportedFloat(&operation, "floating maximum")))

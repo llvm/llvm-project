@@ -15,7 +15,9 @@ module attributes {transform.with_named_sequence} {
         : (!transform.any_op) -> !transform.any_op
     %r0b = transform.apply_registered_pass "inter-canonicalize-block2d-abi" to %r0a
         : (!transform.any_op) -> !transform.any_op
-    %r1 = transform.apply_registered_pass "lift-cf-to-scf" to %r0b
+    %r0c = transform.apply_registered_pass "inter-canonicalize-dpas-builtin" to %r0b
+        : (!transform.any_op) -> !transform.any_op
+    %r1 = transform.apply_registered_pass "lift-cf-to-scf" to %r0c
         : (!transform.any_op) -> !transform.any_op
     %r2 = transform.apply_registered_pass "inter-verify-structured" to %r1
         : (!transform.any_op) -> !transform.any_op

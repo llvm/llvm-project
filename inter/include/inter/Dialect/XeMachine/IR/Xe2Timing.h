@@ -24,9 +24,10 @@ enum class InstructionIssueClass : uint8_t {
   arfWrite,
   send,
   sync,
+  systolic,
 };
 
-enum class Xe2IssuePipe : uint8_t { none, integer, floating, send };
+enum class Xe2IssuePipe : uint8_t { none, integer, floating, send, systolic };
 
 enum class Xe2DependencyKind : uint8_t { raw, war, waw, order };
 

@@ -644,6 +644,56 @@ private:
     return setOptions(instruction, value.swsb, false);
   }
 
+  LogicalResult encodeItem(const DpasInstruction &value,
+                           ged_ins_t &instruction) {
+    auto precision = [](DpasPrecision value) {
+      return value == DpasPrecision::F16 ? GED_PRECISION_f16
+                                         : GED_PRECISION_bf16;
+    };
+    auto verifyRegister = [&](GrfReference reference, StringRef name) {
+      if (reference.number < 0 || reference.sub != 0) {
+        moduleOp.emitError() << "DPAS " << name
+                             << " must be a physical GRF-aligned register";
+        return failure();
+      }
+      return success();
+    };
+    if (failed(verifyRegister(value.destination, "destination")) ||
+        failed(verifyRegister(value.accumulator, "accumulator")) ||
+        failed(verifyRegister(value.sourceB, "B source")) ||
+        failed(verifyRegister(value.sourceA, "A source")))
+      return failure();
+    if (failed(initialize(instruction, GED_OPCODE_dpas, value.execution)))
+      return failure();
+    RETURN_IF_GED_ERROR(GED_SetExecutionDataType(
+        &instruction, GED_EXECUTION_DATA_TYPE_Float));
+    RETURN_IF_GED_ERROR(GED_SetSystolicDepth(&instruction,
+                                              value.systolicDepth));
+    RETURN_IF_GED_ERROR(GED_SetRepeatCount(&instruction, value.repeatCount));
+    RETURN_IF_GED_ERROR(GED_SetSrc0DataType(&instruction, GED_DATA_TYPE_f));
+    RETURN_IF_GED_ERROR(
+        GED_SetSrc1Precision(&instruction, precision(value.bPrecision)));
+    RETURN_IF_GED_ERROR(
+        GED_SetSrc2Precision(&instruction, precision(value.aPrecision)));
+    RETURN_IF_GED_ERROR(GED_SetDstDataType(&instruction, GED_DATA_TYPE_f));
+    RETURN_IF_GED_ERROR(GED_SetDstRegFile(&instruction, GED_REG_FILE_GRF));
+    RETURN_IF_GED_ERROR(
+        GED_SetDstRegNum(&instruction, value.destination.number));
+    RETURN_IF_GED_ERROR(GED_SetDstSubRegNum(&instruction, 0));
+    RETURN_IF_GED_ERROR(GED_SetDstHorzStride(&instruction, 1));
+    RETURN_IF_GED_ERROR(GED_SetSrc0RegFile(&instruction, GED_REG_FILE_GRF));
+    RETURN_IF_GED_ERROR(
+        GED_SetSrc0RegNum(&instruction, value.accumulator.number));
+    RETURN_IF_GED_ERROR(GED_SetSrc0SubRegNum(&instruction, 0));
+    RETURN_IF_GED_ERROR(GED_SetSrc1RegFile(&instruction, GED_REG_FILE_GRF));
+    RETURN_IF_GED_ERROR(GED_SetSrc1RegNum(&instruction, value.sourceB.number));
+    RETURN_IF_GED_ERROR(GED_SetSrc1SubRegNum(&instruction, 0));
+    RETURN_IF_GED_ERROR(GED_SetSrc2RegFile(&instruction, GED_REG_FILE_GRF));
+    RETURN_IF_GED_ERROR(GED_SetSrc2RegNum(&instruction, value.sourceA.number));
+    RETURN_IF_GED_ERROR(GED_SetSrc2SubRegNum(&instruction, 0));
+    return setOptions(instruction, value.swsb, false);
+  }
+
   static GED_SFID getSfid(SendFn function) {
     switch (function) {
     case SendFn::ugm:

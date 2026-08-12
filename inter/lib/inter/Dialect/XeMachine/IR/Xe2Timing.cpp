@@ -30,6 +30,7 @@ constexpr uint16_t kTypedFenceLatency = 60;
 constexpr uint16_t kBarrierLatency = 30;
 constexpr uint16_t kOtherSendLatency = 50;
 constexpr uint16_t kSendArbitration = 8;
+constexpr uint16_t kDpasRepeat8Latency = 33;
 
 static uint16_t getWidthScale(unsigned executionSize) {
   if (executionSize <= 8)
@@ -190,6 +191,8 @@ inter::xemachine::getXe2InstructionTiming(Operation *operation) {
   Type elementType = getElementType(operation);
   if (timing.issueClass == InstructionIssueClass::send)
     timing.pipe = Xe2IssuePipe::send;
+  else if (timing.issueClass == InstructionIssueClass::systolic)
+    timing.pipe = Xe2IssuePipe::systolic;
   else if (timing.issueClass != InstructionIssueClass::sync)
     timing.pipe = elementType && isa<FloatType>(elementType)
                       ? Xe2IssuePipe::floating
@@ -217,6 +220,10 @@ inter::xemachine::getXe2InstructionTiming(Operation *operation) {
     break;
   case InstructionIssueClass::sync:
     timing.completionLatency = kFpuLatency;
+    break;
+  case InstructionIssueClass::systolic:
+    timing.completionLatency = kDpasRepeat8Latency;
+    timing.occupancy = 8;
     break;
   }
   return timing;
@@ -257,6 +264,8 @@ inter::xemachine::stringifyInstructionIssueClass(InstructionIssueClass value) {
     return "send";
   case InstructionIssueClass::sync:
     return "sync";
+  case InstructionIssueClass::systolic:
+    return "systolic";
   }
   llvm_unreachable("unknown instruction issue class");
 }
@@ -271,6 +280,8 @@ StringRef inter::xemachine::stringifyXe2IssuePipe(Xe2IssuePipe value) {
     return "floating";
   case Xe2IssuePipe::send:
     return "send";
+  case Xe2IssuePipe::systolic:
+    return "systolic";
   }
   llvm_unreachable("unknown issue pipe");
 }

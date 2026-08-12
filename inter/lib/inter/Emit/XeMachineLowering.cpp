@@ -201,6 +201,10 @@ private:
           return failure();
         continue;
       }
+      if (DpasOp dpas = dyn_cast<DpasOp>(&operation)) {
+        lowerDpas(dpas);
+        continue;
+      }
       if (ExecIfOp ifOp = dyn_cast<ExecIfOp>(&operation)) {
         if (failed(lowerIf(ifOp.getOperation())))
           return failure();
@@ -425,6 +429,26 @@ private:
         getSourceOperand(await.getReadback(), 0, i32, SourceRegion{1, 1, 0}));
     instruction.swsb = getInOrderSwsb(await, await.getOperands());
     program.items.push_back(std::move(instruction));
+  }
+
+  void lowerDpas(DpasOp dpas) {
+    Type i32 = IntegerType::get(context, 32);
+    DpasInstruction instruction;
+    instruction.execution = {16, 0, false};
+    instruction.destination =
+        getGrfReference(cast<RegType>(dpas.getDst().getType()), 0, i32);
+    instruction.accumulator =
+        getGrfReference(cast<RegType>(dpas.getAcc().getType()), 0, i32);
+    instruction.sourceB =
+        getGrfReference(cast<RegType>(dpas.getB().getType()), 0, i32);
+    instruction.sourceA =
+        getGrfReference(cast<RegType>(dpas.getA().getType()), 0, i32);
+    instruction.aPrecision = dpas.getAPrecision();
+    instruction.bPrecision = dpas.getBPrecision();
+    instruction.systolicDepth = dpas.getSystolicDepth();
+    instruction.repeatCount = dpas.getRepeatCount();
+    instruction.swsb = getInOrderSwsb(dpas, dpas.getOperands());
+    program.items.push_back(instruction);
   }
 
   LogicalResult lowerSend(SendOp send) {

@@ -117,8 +117,9 @@ FailureOr<std::string> buildZeInfo(func::FuncOp kernel) {
       kernel->getAttrOfType<BoolAttr>(kHasGlobalAtomicsAttrName);
   auto hasNoStatelessWrite =
       kernel->getAttrOfType<BoolAttr>(kHasNoStatelessWriteAttrName);
+  auto hasDpas = kernel->getAttrOfType<BoolAttr>(kHasDpasAttrName);
   if (!grfCount || !grfUsed || !simdSize || !barrierCount ||
-      !hasGlobalAtomics || !hasNoStatelessWrite)
+      !hasGlobalAtomics || !hasNoStatelessWrite || !hasDpas)
     return kernel.emitOpError("missing machine resource attributes"), failure();
   if (grfCount.getInt() != 128 ||
       (simdSize.getInt() != 8 && simdSize.getInt() != 16 &&
@@ -136,7 +137,8 @@ FailureOr<std::string> buildZeInfo(func::FuncOp kernel) {
   if (grfUsed.getInt() != static_cast<int64_t>(usage->grfUsed) ||
       barrierCount.getInt() != usage->barrierCount ||
       hasGlobalAtomics.getValue() != usage->hasGlobalAtomics ||
-      hasNoStatelessWrite.getValue() == usage->hasStatelessWrite)
+      hasNoStatelessWrite.getValue() == usage->hasStatelessWrite ||
+      hasDpas.getValue() != usage->hasDpas)
     return kernel.emitOpError("stale machine resource attributes"), failure();
 
   bool hasBufferArguments = false;
@@ -175,6 +177,8 @@ FailureOr<std::string> buildZeInfo(func::FuncOp kernel) {
     output << "      has_4gb_buffers: true\n";
   if (hasGlobalAtomics.getValue())
     output << "      has_global_atomics: true\n";
+  if (hasDpas.getValue())
+    output << "      has_dpas: true\n";
   output << "      has_no_stateless_write: "
          << (hasNoStatelessWrite.getValue() ? "true" : "false") << "\n";
   if (usesPayload) {

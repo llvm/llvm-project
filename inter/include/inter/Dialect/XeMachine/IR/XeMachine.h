@@ -41,6 +41,7 @@ inline constexpr llvm::StringLiteral kHasGlobalAtomicsAttrName =
     "xemachine.has_global_atomics";
 inline constexpr llvm::StringLiteral kHasNoStatelessWriteAttrName =
     "xemachine.has_no_stateless_write";
+inline constexpr llvm::StringLiteral kHasDpasAttrName = "xemachine.has_dpas";
 inline constexpr llvm::StringLiteral kScratchAccessAttrName =
     "xemachine.scratch_access";
 inline constexpr llvm::StringLiteral kAllowFixedOverlapAttrName =
@@ -51,6 +52,7 @@ struct KernelResourceUsage {
   int64_t barrierCount;
   bool hasGlobalAtomics;
   bool hasStatelessWrite;
+  bool hasDpas;
 };
 
 mlir::FailureOr<KernelResourceUsage>

@@ -9,6 +9,7 @@
 
 namespace inter {
 #define GEN_PASS_DEF_CANONICALIZEBLOCK2DABI
+#define GEN_PASS_DEF_CANONICALIZEDPASBUILTIN
 #include "inter/Transforms/Passes.h.inc"
 } // namespace inter
 
@@ -193,6 +194,154 @@ struct CanonicalizeBlock2DABI final
     for (LLVM::LLVMFuncOp declaration :
          llvm::make_early_inc_range(getOperation().getOps<LLVM::LLVMFuncOp>()))
       if (declaration.isExternal() && classifyBuiltin(declaration.getName()) &&
+          SymbolTable::symbolKnownUseEmpty(declaration, getOperation()))
+        declaration.erase();
+  }
+};
+
+struct DpasBuiltin {
+  xw::DpasPrecision aPrecision;
+  xw::DpasPrecision bPrecision;
+  int64_t k;
+};
+
+static std::optional<DpasBuiltin> classifyDpasBuiltin(StringRef symbol) {
+  StringRef mangled = symbol;
+  if (!mangled.consume_front("_Z"))
+    return std::nullopt;
+  size_t lengthDigits = mangled.find_if_not(llvm::isDigit);
+  size_t nameLength;
+  if (lengthDigits == 0 ||
+      mangled.take_front(lengthDigits).getAsInteger(10, nameLength))
+    return std::nullopt;
+  mangled = mangled.drop_front(lengthDigits);
+  if (nameLength > mangled.size())
+    return std::nullopt;
+  StringRef name = mangled.take_front(nameLength);
+  StringRef prefix = "intel_sub_group_";
+  StringRef matrix = "_matrix_mad_k";
+  if (!name.consume_front(prefix))
+    return std::nullopt;
+  size_t matrixPosition = name.find(matrix);
+  if (matrixPosition == StringRef::npos)
+    return std::nullopt;
+  StringRef precisions = name.take_front(matrixPosition);
+  auto [aName, bName] = precisions.split('_');
+  auto parsePrecision = [](StringRef name) -> std::optional<xw::DpasPrecision> {
+    return StringSwitch<std::optional<xw::DpasPrecision>>(name)
+        .Case("f16", xw::DpasPrecision::F16)
+        .Case("bf16", xw::DpasPrecision::BF16)
+        .Default(std::nullopt);
+  };
+  std::optional<xw::DpasPrecision> a = parsePrecision(aName);
+  std::optional<xw::DpasPrecision> b = parsePrecision(bName);
+  StringRef kText = name.drop_front(matrixPosition + matrix.size());
+  int64_t k;
+  if (!a || !b || kText.empty() || kText.getAsInteger(10, k) || k <= 0)
+    return std::nullopt;
+  return DpasBuiltin{*a, *b, k};
+}
+
+static Value stripStorageBitcasts(Value value) {
+  while (true) {
+    if (LLVM::BitcastOp bitcast = value.getDefiningOp<LLVM::BitcastOp>()) {
+      value = bitcast.getArg();
+      continue;
+    }
+    if (UnrealizedConversionCastOp cast =
+            value.getDefiningOp<UnrealizedConversionCastOp>()) {
+      if (cast->getNumOperands() == 1 && cast->getNumResults() == 1) {
+        value = cast.getOperand(0);
+        continue;
+      }
+    }
+    return value;
+  }
+}
+
+static void eraseDeadBitcasts(Value value) {
+  while (Operation *operation = value.getDefiningOp()) {
+    if (!isa<LLVM::BitcastOp, UnrealizedConversionCastOp>(operation) ||
+        !operation->use_empty())
+      return;
+    Value source = operation->getOperand(0);
+    operation->erase();
+    value = source;
+  }
+}
+
+struct CanonicalizeDpasBuiltin final
+    : inter::impl::CanonicalizeDpasBuiltinBase<CanonicalizeDpasBuiltin> {
+  void runOnOperation() override {
+    SmallVector<LLVM::CallOp> calls;
+    getOperation().walk([&](LLVM::CallOp call) {
+      if (call.getCallee() && classifyDpasBuiltin(*call.getCallee()))
+        calls.push_back(call);
+    });
+    for (LLVM::CallOp call : calls) {
+      if (call.getArgOperands().size() != 3 || call->getNumResults() != 1) {
+        call.emitOpError("has an unexpected DPAS builtin signature");
+        return signalPassFailure();
+      }
+      DpasBuiltin builtin = *classifyDpasBuiltin(*call.getCallee());
+      FunctionOpInterface function = call->getParentOfType<FunctionOpInterface>();
+      IntegerAttr width = function ? function->getAttrOfType<IntegerAttr>(
+                                         xw::XWDialect::getSimdWidthAttrName())
+                                   : IntegerAttr();
+      if (!width) {
+        call.emitOpError("requires xw.simd_width");
+        return signalPassFailure();
+      }
+      OpBuilder builder(call);
+      std::array<Value, 3> original = {call.getArgOperands()[0],
+                                       call.getArgOperands()[1],
+                                       call.getArgOperands()[2]};
+      Value a = stripStorageBitcasts(original[0]);
+      Value b = stripStorageBitcasts(original[1]);
+      Value acc = stripStorageBitcasts(original[2]);
+      auto packetType = [&](Value value) -> Type {
+        if (isa<xw::SimdType>(value.getType()))
+          return value.getType();
+        return xw::SimdType::get(call.getContext(), value.getType(),
+                                 width.getInt());
+      };
+      Type aType = packetType(a);
+      Type bType = packetType(b);
+      Type accType = packetType(acc);
+      Type resultType = xw::SimdType::get(call.getContext(), call.getType(0),
+                                          width.getInt());
+      a = castValue(builder, call.getLoc(), aType, a);
+      b = castValue(builder, call.getLoc(), bType, b);
+      acc = castValue(builder, call.getLoc(), accType, acc);
+      VectorType resultPacket = dyn_cast<VectorType>(call.getType(0));
+      if (!resultPacket || resultPacket.getRank() != 1 ||
+          resultPacket.isScalable()) {
+        call.emitOpError("result must be a fixed 1-D vector packet");
+        return signalPassFailure();
+      }
+      int64_t operandsPerDword = 2;
+      if (builtin.k % operandsPerDword != 0) {
+        call.emitOpError("K is incompatible with the source precision");
+        return signalPassFailure();
+      }
+      xw::DpasOp dpas = xw::DpasOp::create(
+          builder, call.getLoc(), resultType, a, b, acc,
+          xw::DpasPrecisionAttr::get(call.getContext(), builtin.aPrecision),
+          xw::DpasPrecisionAttr::get(call.getContext(), builtin.bPrecision),
+          builder.getI64IntegerAttr(builtin.k),
+          builder.getI64IntegerAttr(builtin.k / operandsPerDword),
+          builder.getI64IntegerAttr(resultPacket.getNumElements()));
+      Value replacement = castValue(builder, call.getLoc(), call.getType(0),
+                                    dpas.getResult());
+      call.getResult().replaceAllUsesWith(replacement);
+      call.erase();
+      for (Value value : original)
+        eraseDeadBitcasts(value);
+    }
+    for (LLVM::LLVMFuncOp declaration :
+         llvm::make_early_inc_range(getOperation().getOps<LLVM::LLVMFuncOp>()))
+      if (declaration.isExternal() &&
+          classifyDpasBuiltin(declaration.getName()) &&
           SymbolTable::symbolKnownUseEmpty(declaration, getOperation()))
         declaration.erase();
   }
