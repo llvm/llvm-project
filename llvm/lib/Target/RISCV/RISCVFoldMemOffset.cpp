@@ -305,5 +305,6 @@ RISCVFoldMemOffsetPass::run(MachineFunction &MF,
 
   PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
+  PA.preserve<MachineRegisterClassAnalysis>();
   return PA;
 }
