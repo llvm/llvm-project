@@ -43,6 +43,7 @@
 #  include <cstring>
 #  include <fcntl.h>
 #  include <span>
+#  include <unistd.h>
 #endif
 
 volatile int __gnu_cxx::debugger_signal_for_breakpoint = 0;
