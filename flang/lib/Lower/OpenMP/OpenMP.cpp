@@ -156,9 +156,9 @@ makeObjects(llvm::ArrayRef<const semantics::Symbol *> syms) {
   return objects;
 }
 
-static bool hasPrivatizedArrayElementReduction(
+static bool hasPrivatizedArrayReductionObject(
     llvm::ArrayRef<Object> reductionObjects,
-    const llvm::SetVector<const semantics::Symbol *> &privatizedSymbols) {
+    llvm::ArrayRef<const semantics::Symbol *> privatizedSymbols) {
   for (const Object &object : reductionObjects) {
     if (!object.sym() || !object.ref())
       continue;
@@ -167,10 +167,7 @@ static bool hasPrivatizedArrayElementReduction(
     if (!dataRef)
       continue;
     const auto *arrayRef = std::get_if<evaluate::ArrayRef>(&dataRef->u);
-    if (!arrayRef ||
-        llvm::any_of(arrayRef->subscript(), [](const auto &subscript) {
-          return std::holds_alternative<evaluate::Triplet>(subscript.u);
-        }))
+    if (!arrayRef)
       continue;
 
     const semantics::Symbol &ultimate = object.sym()->GetUltimate();
@@ -4350,10 +4347,10 @@ genTaskOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                            /*useDelayedPrivatization=*/true, symTable);
   dsp.processStep1(&clauseOps);
 
-  if (hasPrivatizedArrayElementReduction(inReductionObjects,
-                                         dsp.getAllSymbolsToPrivatize()))
-    TODO(loc, "TASK construct with IN_REDUCTION of an array element whose "
-              "base array is privatized");
+  if (hasPrivatizedArrayReductionObject(inReductionObjects,
+                                        dsp.getDelayedPrivSymbols()))
+    TODO(loc, "TASK construct with IN_REDUCTION of an array element or section "
+              "whose base array is privatized");
 
   ObjectEntryBlockArgs taskArgs;
   taskArgs.priv.objects = makeObjects(dsp.getDelayedPrivSymbols());
@@ -4973,14 +4970,16 @@ static mlir::omp::TaskloopContextOp genStandaloneTaskloop(
                            enableDelayedPrivatization, symTable);
   dsp.processStep1(&taskloopClauseOps);
 
-  if (hasPrivatizedArrayElementReduction(inReductionObjects,
-                                         dsp.getAllSymbolsToPrivatize()))
-    TODO(loc, "TASKLOOP construct with IN_REDUCTION of an array element whose "
-              "base array is privatized");
-  if (hasPrivatizedArrayElementReduction(reductionObjects,
-                                         dsp.getAllSymbolsToPrivatize()))
-    TODO(loc, "TASKLOOP construct with REDUCTION of an array element whose "
-              "base array is privatized");
+  if (hasPrivatizedArrayReductionObject(inReductionObjects,
+                                        dsp.getDelayedPrivSymbols()))
+    TODO(loc,
+         "TASKLOOP construct with IN_REDUCTION of an array element or section "
+         "whose base array is privatized");
+  if (hasPrivatizedArrayReductionObject(reductionObjects,
+                                        dsp.getDelayedPrivSymbols()))
+    TODO(loc,
+         "TASKLOOP construct with REDUCTION of an array element or section "
+         "whose base array is privatized");
 
   mlir::omp::LoopNestOperands loopNestClauseOps;
   llvm::SmallVector<const semantics::Symbol *> iv;
