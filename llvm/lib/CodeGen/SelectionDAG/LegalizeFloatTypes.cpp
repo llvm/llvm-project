@@ -189,6 +189,16 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
   }
 }
 
+// No libcall is available to soften this operation. Emit a diagnostic and
+// produce a poison result of the softened type \p NVT.
+SDValue DAGTypeLegalizer::SoftenFloatRes_NoLibcall(SDNode *N, EVT NVT) {
+  DAG.getContext()->emitError(Twine("no libcall available for ") +
+                              N->getOperationName(&DAG));
+  if (N->isStrictFPOpcode())
+    ReplaceValueWith(SDValue(N, 1), N->getOperand(0));
+  return DAG.getPOISON(NVT);
+}
+
 SDValue DAGTypeLegalizer::SoftenFloatRes_Unary(SDNode *N, RTLIB::Libcall LC) {
   bool IsStrict = N->isStrictFPOpcode();
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
@@ -197,12 +207,14 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_Unary(SDNode *N, RTLIB::Libcall LC) {
          "Unexpected number of operands!");
   SDValue Op = GetSoftenedFloat(N->getOperand(0 + Offset));
   SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
+  RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
+  if (LCImpl == RTLIB::Unsupported)
+    return SoftenFloatRes_NoLibcall(N, NVT);
   TargetLowering::MakeLibCallOptions CallOptions;
   EVT OpVT = N->getOperand(0 + Offset).getValueType();
   CallOptions.setTypeListBeforeSoften(OpVT, N->getValueType(0));
-  std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(DAG, LC, NVT, Op,
-                                                    CallOptions, SDLoc(N),
-                                                    Chain);
+  std::pair<SDValue, SDValue> Tmp =
+      TLI.makeLibCall(DAG, LCImpl, NVT, Op, CallOptions, SDLoc(N), Chain);
   if (IsStrict)
     ReplaceValueWith(SDValue(N, 1), Tmp.second);
   return Tmp.first;
@@ -217,13 +229,15 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_Binary(SDNode *N, RTLIB::Libcall LC) {
   SDValue Ops[2] = { GetSoftenedFloat(N->getOperand(0 + Offset)),
                      GetSoftenedFloat(N->getOperand(1 + Offset)) };
   SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
+  RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
+  if (LCImpl == RTLIB::Unsupported)
+    return SoftenFloatRes_NoLibcall(N, NVT);
   TargetLowering::MakeLibCallOptions CallOptions;
   EVT OpsVT[2] = { N->getOperand(0 + Offset).getValueType(),
                    N->getOperand(1 + Offset).getValueType() };
   CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0));
-  std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(DAG, LC, NVT, Ops,
-                                                    CallOptions, SDLoc(N),
-                                                    Chain);
+  std::pair<SDValue, SDValue> Tmp =
+      TLI.makeLibCall(DAG, LCImpl, NVT, Ops, CallOptions, SDLoc(N), Chain);
   if (IsStrict)
     ReplaceValueWith(SDValue(N, 1), Tmp.second);
   return Tmp.first;
@@ -777,8 +791,17 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FFREXP(SDNode *N) {
   EVT VT0 = N->getValueType(0);
   EVT VT1 = N->getValueType(1);
   RTLIB::Libcall LC = RTLIB::getFREXP(VT0);
+  RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
   EVT NVT0 = TLI.getTypeToTransformTo(*DAG.getContext(), VT0);
   SDLoc DL(N);
+
+  if (LCImpl == RTLIB::Unsupported) {
+    DAG.getContext()->emitError(Twine("no libcall available for ") +
+                                N->getOperationName(&DAG));
+    SDValue PoisonExp = DAG.getPOISON(VT1);
+    ReplaceValueWith(SDValue(N, 1), PoisonExp);
+    return DAG.getMergeValues({DAG.getPOISON(NVT0), PoisonExp}, DL);
+  }
 
   if (DAG.getLibInfo().getIntSize() != VT1.getSizeInBits()) {
     // If the exponent does not match with sizeof(int) a libcall would use the
@@ -803,8 +826,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FFREXP(SDNode *N) {
   CallOptions.setTypeListBeforeSoften({OpsVT}, VT0)
       .setOpsTypeOverrides(CallOpsTypeOverrides);
 
-  auto [ReturnVal, Chain] = TLI.makeLibCall(DAG, LC, NVT0, Ops, CallOptions, DL,
-                                            /*Chain=*/SDValue());
+  auto [ReturnVal, Chain] = TLI.makeLibCall(DAG, LCImpl, NVT0, Ops, CallOptions,
+                                            DL, /*Chain=*/SDValue());
   int FrameIdx = cast<FrameIndexSDNode>(StackSlot)->getIndex();
   auto PtrInfo =
       MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FrameIdx);
@@ -1481,12 +1504,23 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_Unary(SDNode *N, RTLIB::Libcall LC) {
   unsigned Offset = IsStrict ? 1 : 0;
   SDValue Op = GetSoftenedFloat(N->getOperand(0 + Offset));
   SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
+  RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
+  if (LCImpl == RTLIB::Unsupported) {
+    DAG.getContext()->emitError(Twine("no libcall available for ") +
+                                N->getOperationName(&DAG));
+    SDValue Poison = DAG.getPOISON(N->getValueType(0));
+    if (IsStrict) {
+      ReplaceValueWith(SDValue(N, 1), Chain);
+      ReplaceValueWith(SDValue(N, 0), Poison);
+      return SDValue();
+    }
+    return Poison;
+  }
   TargetLowering::MakeLibCallOptions CallOptions;
   EVT OpVT = N->getOperand(0 + Offset).getValueType();
   CallOptions.setTypeListBeforeSoften(OpVT, N->getValueType(0));
-  std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(DAG, LC, NVT, Op,
-                                                    CallOptions, SDLoc(N),
-                                                    Chain);
+  std::pair<SDValue, SDValue> Tmp =
+      TLI.makeLibCall(DAG, LCImpl, NVT, Op, CallOptions, SDLoc(N), Chain);
   if (IsStrict) {
     ReplaceValueWith(SDValue(N, 1), Tmp.second);
     ReplaceValueWith(SDValue(N, 0), Tmp.first);
