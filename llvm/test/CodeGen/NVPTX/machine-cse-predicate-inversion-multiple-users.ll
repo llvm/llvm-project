@@ -2,14 +2,12 @@
 ; RUN: llc -mcpu=sm_100 < %s | FileCheck %s
 ; RUN: %if ptxas-sm_100 %{ llc < %s -mcpu=sm_100 | %ptxas-verify -arch=sm_100 %}
 
-; NOTE: Currently SETP inversions require all users to be CBranch. However other users like selects
-;       can also be processed.
 target triple = "nvptx64-nvidia-cuda"
 
 define i32 @test_multiple_users(i32 %a, i32 %b, i32 %x, i32 %y) {
 ; CHECK-LABEL: test_multiple_users(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<3>;
+; CHECK-NEXT:    .reg .pred %p<2>;
 ; CHECK-NEXT:    .reg .b32 %r<14>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
@@ -23,12 +21,11 @@ define i32 @test_multiple_users(i32 %a, i32 %b, i32 %x, i32 %y) {
 ; CHECK-NEXT:  // %bb.1: // %then
 ; CHECK-NEXT:    mov.b32 %r13, 1;
 ; CHECK-NEXT:  $L__BB0_2: // %merge1
-; CHECK-NEXT:    setp.ne.b32 %p2, %r5, %r6;
-; CHECK-NEXT:    selp.b32 %r1, 1, 0, %p2;
-; CHECK-NEXT:    selp.b32 %r2, %r7, %r8, %p2;
-; CHECK-NEXT:    selp.b32 %r3, %r7, 7, %p2;
-; CHECK-NEXT:    selp.b32 %r4, 9, %r8, %p2;
-; CHECK-NEXT:    @%p2 bra $L__BB0_4;
+; CHECK-NEXT:    selp.b32 %r1, 0, 1, %p1;
+; CHECK-NEXT:    selp.b32 %r2, %r8, %r7, %p1;
+; CHECK-NEXT:    selp.b32 %r3, 7, %r7, %p1;
+; CHECK-NEXT:    selp.b32 %r4, %r8, 9, %p1;
+; CHECK-NEXT:    @!%p1 bra $L__BB0_4;
 ; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r13, 0;
 ; CHECK-NEXT:  $L__BB0_4: // %merge2
