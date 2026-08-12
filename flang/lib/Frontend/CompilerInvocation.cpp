@@ -1235,28 +1235,13 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     //    been set as the Fortran standard to follow, that is `-std=f2018` is
     //    the last `std` flag, then the warnings are disabled.
     //  - Otherwise, the warnings are enabled.
-    auto last = args.getLastArg(clang::options::OPT_fsystem_clock_strict,
-                                clang::options::OPT_fno_system_clock_strict);
-
-    // If the last of the system_clock_strict arguments is
-    // `-fno-system-clock-strict`, disable the warnings.
-    const bool last_is_no_strict =
-        last &&
-        last->getOption().matches(
-            clang::options::OPT_fno_system_clock_strict);
-
-    // If there are no system_clock_strict arguments present and the Fortran
-    // standard is set to `f2018`, disable the warnings.
-    const bool no_arg_and_f2018 =
-        !last &&
-	res.getLangOpts().getFortranStandard() ==
-            Fortran::common::LangOptions::Fortran2018;
-
-    // If either condition is met, disable the warnings.
-    if (last_is_no_strict || no_arg_and_f2018) {
-      res.getFrontendOpts().features.EnableWarning(
-          Fortran::common::LanguageFeature::SystemClockStrict, false);
-    }
+    const bool enable_warning =
+        args.hasFlag(clang::options::OPT_fsystem_clock_strict,
+                     clang::options::OPT_fno_system_clock_strict,
+                     res.getLangOpts().getFortranStandard() !=
+                         Fortran::common::LangOptions::Fortran2018);
+    res.getFrontendOpts().features.EnableWarning(
+        Fortran::common::LanguageFeature::SystemClockStrict, enable_warning);
   }
 
   // -fcoarray
