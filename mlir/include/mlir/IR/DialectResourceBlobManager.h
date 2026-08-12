@@ -106,6 +106,12 @@ private:
   /// allocations, so we can freely take references to the data without fear of
   /// invalidation during additional insertion/deletion.
   llvm::StringMap<BlobEntry> blobMap;
+
+  /// Cache of the next counter to try for a given base name.
+  /// When a requested name collides, insert() appends "_N".
+  /// Subsequent collisions on the same base name can resume the search
+  /// from the cached counter instead of restarting at 1.
+  llvm::StringMap<size_t> nameCounters;
 };
 
 //===----------------------------------------------------------------------===//

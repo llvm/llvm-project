@@ -71,4 +71,29 @@ TEST(DialectResourceBlobManagerTest, GetBlobMap) {
   ASSERT_TRUE(blobsArePresent);
 }
 
+TEST(DialectResourceBlobManagerTest, InsertDisambiguatesNames) {
+  DialectResourceBlobManager manager;
+
+  // Repeated insertion of the same base name appends an increasing counter.
+  EXPECT_EQ(manager.insert("blob").getKey(), "blob");
+  EXPECT_EQ(manager.insert("blob").getKey(), "blob_1");
+  EXPECT_EQ(manager.insert("blob").getKey(), "blob_2");
+  EXPECT_EQ(manager.insert("blob").getKey(), "blob_3");
+
+  // A different base name is numbered independently.
+  EXPECT_EQ(manager.insert("other").getKey(), "other");
+  EXPECT_EQ(manager.insert("other").getKey(), "other_1");
+}
+
+TEST(DialectResourceBlobManagerTest, InsertSkipsNamesTakenDirectly) {
+  DialectResourceBlobManager manager;
+
+  EXPECT_EQ(manager.insert("blob").getKey(), "blob");
+  // Directly claim the name the next collision would otherwise produce.
+  EXPECT_EQ(manager.insert("blob_1").getKey(), "blob_1");
+  // The disambiguation search must skip the taken slot rather than reuse it,
+  // even though the resumed counter points at it first.
+  EXPECT_EQ(manager.insert("blob").getKey(), "blob_2");
+}
+
 } // end anonymous namespace
