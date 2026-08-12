@@ -3809,8 +3809,7 @@ void CGObjCGNU::GenerateClass(const ObjCImplementationDecl *OID) {
       if (CGM.getLangOpts().ObjCRuntime.isNonFragile()) {
         Offset = static_cast<int64_t>(BaseOffset) - superInstanceSize;
       }
-      llvm::Constant *OffsetValue =
-          llvm::ConstantInt::getSigned(IntTy, Offset);
+      llvm::Constant *OffsetValue = llvm::ConstantInt::getSigned(IntTy, Offset);
       // Create the direct offset value
       std::string OffsetName = "__objc_ivar_offset_value_" + ClassName +"." +
           IVD->getNameAsString();
