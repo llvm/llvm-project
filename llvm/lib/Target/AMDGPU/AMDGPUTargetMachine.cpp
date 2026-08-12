@@ -715,7 +715,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPULowerKernelAttributesPass(*PR);
   initializeAMDGPUExportKernelRuntimeHandlesLegacyPass(*PR);
   initializeAMDGPUPostLegalizerCombinerPass(*PR);
-  initializeAMDGPUPreLegalizerCombinerPass(*PR);
+  initializeAMDGPUPreLegalizerCombinerLegacyPass(*PR);
   initializeAMDGPURegBankCombinerPass(*PR);
   initializeAMDGPUPromoteAllocaPass(*PR);
   initializeAMDGPUCodeGenPreparePass(*PR);
