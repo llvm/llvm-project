@@ -2672,9 +2672,11 @@ private:
     return CGF.getContext().getTypeSize(Ty);
   }
 
-  // Compute the occupied bit intervals for a BitInt. In the case of little
-  // endian, the occupied bits are always contiguous so a single interval
-  // is sufficient. However in big endian, the intervals can be disjoint.
+  /// Compute the occupied bit intervals for a BitInt.
+  ///
+  /// In the case of little endian, the occupied bits are always contiguous so a
+  /// single interval is sufficient. However in big endian, the intervals can be
+  /// disjoint.
   SmallVector<BitInterval> computeBitIntOccupiedIntervals(const Data &D) const {
     uint64_t BitIntervalStart = D.StartBitOffset;
     assert(BitIntervalStart % CharWidth == 0 &&
