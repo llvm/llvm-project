@@ -24,8 +24,14 @@ public:
   ~Character() = default;
   Character(const Character &v) : word_(v) {}
   Character(Character &&v) : word_(std::move(v)) {}
-  Character &operator=(const Character &v) { word_ = v.word_; }
-  Character &operator=(Character &&v) { word_ = std::move(v.word_); }
+  Character &operator=(const Character &v) {
+    word_ = v.word_;
+    return &this;
+  }
+  Character &operator=(Character &&v) {
+    word_ = std::move(v.word_);
+    return *this;
+  }
 
   // ctors
   Character() = default;
@@ -49,11 +55,11 @@ public:
   }
 
   /// Writes a string of characters to \p dst. \o is the the number of bytes to
-  /// be written; must be a multiple of the size of a single character.  If \p s
-  /// is smaller that \p size, the rest of the memory is set to spaces. If \p s
-  /// is shorter than size, only the first characters are written.
-  /// If \p changes points to bool, it will be set to true if any bytes at \p
-  /// dst have changed.
+  /// be written; must be a multiple of the size of a single character.  If the
+  /// string is smaller that \p size, the rest of the memory padded with spaces.
+  /// If the string is shorter than size, only the first characters are written.
+  /// If \p changes points to bool, it will be set to true if any bytes at
+  /// \p dst have changed.
   void StoreRawBytes(void *dst, std::size_t size, bool *changed = nullptr) {
     CHECK(size % sizeof(CharT) == 0);
     if (size > 0) {
