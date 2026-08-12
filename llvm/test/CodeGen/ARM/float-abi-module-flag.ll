@@ -11,7 +11,7 @@
 ; RUN: llc -mtriple=armv7-none-eabi -mattr=+vfp3 -float-abi=hard < %t/none.ll | FileCheck %s --check-prefix=HARD
 ; RUN: llc -mtriple=armv7-none-eabi -mattr=+vfp3 -float-abi=soft < %t/none.ll | FileCheck %s --check-prefix=SOFT
 
-; The module flag overrides the target-default soft ABI even without -float-abi.
+; The triple default applies with no module flag.
 ; RUN: llc -mtriple=armv7-none-eabi -mattr=+vfp3 < %t/none.ll | FileCheck %s --check-prefix=SOFT
 
 ; An explicit module flag takes precedence over a conflicting -float-abi option.
