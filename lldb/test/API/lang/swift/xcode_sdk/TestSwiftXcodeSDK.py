@@ -7,6 +7,10 @@ import os
 
 class TestSwiftXcodeSDK(lldbtest.TestBase):
 
+    # The test functions build for different target triples, which a shared
+    # build directory would not rebuild.
+    SHARED_BUILD_TESTCASE = False
+
     mydir = lldbtest.TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 

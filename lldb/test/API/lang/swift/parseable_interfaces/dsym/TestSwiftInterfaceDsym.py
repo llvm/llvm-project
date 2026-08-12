@@ -18,6 +18,10 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class TestSwiftInterfaceDSYM(TestBase):
+    # The test functions build with different dSYM configurations and delete
+    # artifacts out of the build directory, so each one needs its own.
+    SHARED_BUILD_TESTCASE = False
+
     @swiftTest
     @requireNotEmbeddedSwift # library evolution cannot be enabled with embedded Swift
     @skipIf(archs=no_match("x86_64"))
