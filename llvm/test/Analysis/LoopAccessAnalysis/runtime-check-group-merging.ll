@@ -1163,10 +1163,11 @@ entry:
 loop:
   %off = phi i64 [ 0, %entry ], [ %off.next, %loop ]
   %i = phi i1 [ false, %entry ], [ true, %loop ]
-  load i8, ptr %p
+  %v0 = load i8, ptr %p
   %gep = getelementptr i8, ptr %p, i64 %off
-  load i8, ptr %gep
-  store i8 0, ptr %q
+  %v1 = load i8, ptr %gep
+  %s = add i8 %v0, %v1
+  store i8 %s, ptr %q
   %off.next = add i64 %off, %step
   br i1 %i, label %done, label %loop
 
@@ -1271,13 +1272,15 @@ loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %idx = mul i64 %iv, 8
   %a0 = getelementptr i8, ptr %p, i64 %idx
-  load i8, ptr %a0
+  %v0 = load i8, ptr %a0
   %a1 = getelementptr i8, ptr %p1, i64 %idx
-  load i8, ptr %a1
+  %v1 = load i8, ptr %a1
   %a2 = getelementptr i8, ptr %p2, i64 %idx
-  load i8, ptr %a2
+  %v2 = load i8, ptr %a2
+  %s01 = add i8 %v0, %v1
+  %s = add i8 %s01, %v2
   %aq = getelementptr i8, ptr %q, i64 %idx
-  store i8 0, ptr %aq
+  store i8 %s, ptr %aq
   %iv.next = add i64 %iv, 1
   %c = icmp eq i64 %iv, %n
   br i1 %c, label %done, label %loop
@@ -1749,17 +1752,20 @@ loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %idx = mul i64 %iv, 8
   %a0 = getelementptr i8, ptr %p, i64 %idx
-  load i8, ptr %a0
+  %v0 = load i8, ptr %a0
   %a1 = getelementptr i8, ptr %p1, i64 %idx
-  load i8, ptr %a1
+  %v1 = load i8, ptr %a1
   %a2 = getelementptr i8, ptr %p2, i64 %idx
-  load i8, ptr %a2
+  %v2 = load i8, ptr %a2
   %a3 = getelementptr i8, ptr %p3, i64 %idx
-  load i8, ptr %a3
+  %v3 = load i8, ptr %a3
+  %s01 = add i8 %v0, %v1
+  %s23 = add i8 %v2, %v3
+  %s = add i8 %s01, %s23
   %aq = getelementptr i8, ptr %q, i64 %idx
-  store i8 0, ptr %aq
+  store i8 %s, ptr %aq
   %aq2 = getelementptr i8, ptr %q2, i64 %idx
-  store i8 0, ptr %aq2
+  store i8 %s, ptr %aq2
   %iv.next = add i64 %iv, 1
   %c = icmp eq i64 %iv, %n
   br i1 %c, label %done, label %loop
@@ -1969,17 +1975,19 @@ loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %idx = mul i64 %iv, 8
   %a2 = getelementptr i8, ptr %p2, i64 %idx
-  load i8, ptr %a2
+  %v2 = load i8, ptr %a2
   %a1 = getelementptr i8, ptr %p1, i64 %idx
-  load i8, ptr %a1
+  %v1 = load i8, ptr %a1
   %a0 = getelementptr i8, ptr %p, i64 %idx
-  load i8, ptr %a0
+  %v0 = load i8, ptr %a0
+  %s01 = add i8 %v0, %v1
+  %s = add i8 %s01, %v2
   %aq = getelementptr i8, ptr %q, i64 %idx
-  store i8 0, ptr %aq
+  store i8 %s, ptr %aq
   %aq2 = getelementptr i8, ptr %q2, i64 %idx
-  store i8 0, ptr %aq2
+  store i8 %s, ptr %aq2
   %aq3 = getelementptr i8, ptr %q3, i64 %idx
-  store i8 0, ptr %aq3
+  store i8 %s, ptr %aq3
   %iv.next = add i64 %iv, 1
   %c = icmp eq i64 %iv, %n
   br i1 %c, label %done, label %loop
