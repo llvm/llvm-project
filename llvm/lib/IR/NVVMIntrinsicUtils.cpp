@@ -16,6 +16,16 @@
 using namespace llvm;
 using namespace nvvm;
 
+void nvvm::printTMAReductionOp(raw_ostream &OS, const Constant *ImmArgVal) {
+  const auto *CI = dyn_cast<ConstantInt>(ImmArgVal);
+  if (!CI || CI->getZExtValue() > static_cast<uint64_t>(TMAReductionOp::XOR))
+    llvm_unreachable(
+        "printTMAReductionOp called with invalid value for immediate argument");
+
+  OS << getTMATensorReductionOpName(
+      static_cast<TMAReductionOp>(CI->getZExtValue()));
+}
+
 void nvvm::printTcgen05MMAKind(raw_ostream &OS, const Constant *ImmArgVal) {
   if (const auto *CI = dyn_cast<ConstantInt>(ImmArgVal)) {
     uint64_t Val = CI->getZExtValue();
@@ -34,8 +44,6 @@ void nvvm::printTcgen05MMAKind(raw_ostream &OS, const Constant *ImmArgVal) {
       return;
     }
   }
-  llvm_unreachable(
-      "printTcgen05MMAKind called with invalid value for immediate argument");
 }
 
 void nvvm::printTcgen05CollectorUsageOp(raw_ostream &OS,
@@ -57,8 +65,6 @@ void nvvm::printTcgen05CollectorUsageOp(raw_ostream &OS,
       return;
     }
   }
-  llvm_unreachable("printTcgen05CollectorUsageOp called with invalid value for "
-                   "immediate argument");
 }
 
 void nvvm::printTensormapElemType(raw_ostream &OS, const Constant *ImmArgVal) {

@@ -316,8 +316,8 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                    clang::options::OPT_fno_safe_trampoline, false))
     opts.EnableSafeTrampoline = 1;
 
-  if (args.hasFlag(clang::options::OPT_freal_sum_reassociation,
-                   clang::options::OPT_fno_real_sum_reassociation, false))
+  if (args.hasFlag(clang::options::OPT_ffp_sum_reassociation,
+                   clang::options::OPT_fno_fp_sum_reassociation, false))
     opts.SplitSumExpressionTree = 1;
 
   if (args.getLastArg(clang::options::OPT_floop_interchange))
@@ -780,6 +780,9 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
   }
 
   opts.outputFile = args.getLastArgValue(clang::options::OPT_o);
+  opts.dependencyOutputFile =
+      args.getLastArgValue(clang::options::OPT_dependency_file);
+  opts.dependencyTargets = args.getAllArgValues(clang::options::OPT_MT);
   opts.showHelp = args.hasArg(clang::options::OPT_help);
   opts.showVersion = args.hasArg(clang::options::OPT_version);
   opts.printSupportedCPUs =
@@ -1428,6 +1431,54 @@ static bool parseIntegerOverflowArgs(CompilerInvocation &invoc,
   return true;
 }
 
+/// Set the IEEE Floating point rounding modes, underflow mode and halting mode.
+///
+/// Initial halting mode:
+/// -ffpe-trap= sets the initial floating-point exception halting mode for the
+/// main program. Only the last -ffpe-trap= on the command line is effective.
+/// The value is a comma-separated set of exception mnemonics: "invalid",
+/// "zero", "overflow", "underflow", and "inexact" correspond to the Fortran
+/// 2023 IEEE_FLAG_TYPE values (F2023 17.2), and "denormal" is a non-standard,
+/// gfortran-compatible extension. "none", as well as an empty list, requests no
+/// halting and resets any earlier request.
+///
+/// TODO:
+/// Rounding modes
+/// Underflow mode
+///
+/// The value and the target-support warnings are validated in the driver (see
+/// addIEEEFPModesOptions() in clang/lib/Driver/ToolChains/Flang.cpp);
+/// here we only translate the already-validated list, so an unrecognized
+/// mnemonic maps to 0 and is ignored rather than re-diagnosed.
+static void setIEEEFPModesArgs(Fortran::common::LangOptions &opts,
+                               llvm::opt::ArgList &args) {
+  const llvm::opt::Arg *a = args.getLastArg(clang::options::OPT_ffpe_trap_EQ);
+  if (!a)
+    return;
+
+  using LangOptions = Fortran::common::LangOptions;
+  unsigned traps = 0;
+  llvm::SmallVector<llvm::StringRef> trapList;
+  llvm::StringRef(a->getValue())
+      .split(trapList, ',', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+  for (llvm::StringRef trap : trapList) {
+    if (trap == "none") {
+      // Reset to no halting; a later mnemonic can re-enable.
+      traps = 0;
+      continue;
+    }
+    traps |= llvm::StringSwitch<unsigned>(trap)
+                 .Case("invalid", LangOptions::FPE_Invalid)
+                 .Case("denormal", LangOptions::FPE_Denormal)
+                 .Case("zero", LangOptions::FPE_DivByZero)
+                 .Case("overflow", LangOptions::FPE_Overflow)
+                 .Case("underflow", LangOptions::FPE_Underflow)
+                 .Case("inexact", LangOptions::FPE_Inexact)
+                 .Default(0);
+  }
+  opts.FPExceptionTraps = traps;
+}
+
 /// Parses all floating point related arguments and populates the
 /// CompilerInvocation accordingly.
 /// Returns false if new errors are generated.
@@ -1501,6 +1552,9 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
     if (arg->getOption().matches(clang::options::OPT_fno_fast_real_mod))
       opts.FastRealMod = false;
   }
+
+  // Set the initial IEEE floating point modes
+  setIEEEFPModesArgs(opts, args);
 
   return true;
 }
@@ -2043,4 +2097,6 @@ void CompilerInvocation::setLoweringOptions() {
       codegenOpts.getComplexRange() ==
           CodeGenOptions::ComplexRangeKind::CX_Basic)
     loweringOpts.setComplexDivisionToRuntime(false);
+
+  loweringOpts.setFPExceptionTraps(langOptions.FPExceptionTraps);
 }

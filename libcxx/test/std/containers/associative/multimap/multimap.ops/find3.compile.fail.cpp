@@ -31,4 +31,6 @@ int main(int, char**) {
 
     TEST_IGNORE_NODISCARD M().find(C2Int{5});
   }
+
+  return 0;
 }

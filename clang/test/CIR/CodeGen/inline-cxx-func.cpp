@@ -29,8 +29,8 @@ struct S {
 // CIR:   cir.return %[[RET_VAL]] : !s32i
 
 // LLVM: define{{.*}} i32 @_ZN1S10InlineFuncEv(ptr{{.*}} %[[ARG0:.*]])
-// LLVM:   %[[THIS_ADDR:.*]] = alloca ptr, i64 1, align 8
-// LLVM:   %[[RET_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:   %[[THIS_ADDR:.*]] = alloca ptr, align 8
+// LLVM:   %[[RET_ADDR:.*]] = alloca i32, align 4
 // LLVM:   store ptr %[[ARG0]], ptr %[[THIS_ADDR]], align 8
 // LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]], align 8
 // LLVM:   %[[MEMBER_ADDR:.*]] = getelementptr inbounds nuw %struct.S, ptr %[[THIS]], i32 0, i32 0

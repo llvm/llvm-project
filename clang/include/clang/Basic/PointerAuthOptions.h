@@ -54,6 +54,10 @@ constexpr unsigned PointerAuthKeyNone = -1;
 /// the vtable type discriminator for classes derived from std::type_info.
 constexpr uint16_t StdTypeInfoVTablePointerConstantDiscrimination = 0xB1EA;
 
+// Type discriminator suffix to be added to a mangled v-table identifier to
+// ensure that VTT vtable pointer entries get distinct type discriminators.
+constexpr llvm::StringLiteral VTTVTablePointerDiscriminatorSuffix = "_VTT";
+
 class PointerAuthSchema {
 public:
   enum class Kind : unsigned {
