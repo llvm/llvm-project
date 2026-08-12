@@ -1044,7 +1044,7 @@ static mlir::Value packArgsIntoNVPTXFormatBuffer(CIRGenFunction &cgf,
   // accept aggregates.
   mlir::Type allocaTy =
       builder.getAnonRecordTy(argTypes, /*packed=*/false, /*padded=*/false,
-                              cir::getAllDataKinds(argTypes));
+                              cir::RecordType::getAllDataKinds(argTypes));
   auto allocaAlign = clang::CharUnits::fromQuantity(
       dataLayout.getABITypeAlign(allocaTy).value());
   Address allocaAddr =

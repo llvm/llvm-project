@@ -35,7 +35,7 @@ TEST_F(UnionTypeSizeTest, SizeInBitsNotBytes) {
   auto ty = UnionType::get(&context, getName("U"));
   mlir::Type members[] = {i32};
   ty.complete(members, /*packed=*/false, /*padding=*/mlir::Type{},
-              getAllDataKinds(members));
+              RecordType::getAllDataKinds(members));
 
   OpBuilder builder(&context);
   auto loc = builder.getUnknownLoc();
@@ -54,7 +54,7 @@ TEST_F(UnionTypeSizeTest, MultiMemberUnion) {
   auto ty = UnionType::get(&context, getName("U2"));
   mlir::Type members[] = {i32, i64};
   ty.complete(members, /*packed=*/false, /*padding=*/mlir::Type{},
-              getAllDataKinds(members));
+              RecordType::getAllDataKinds(members));
 
   OpBuilder builder(&context);
   auto loc = builder.getUnknownLoc();
@@ -88,10 +88,10 @@ TEST_F(UnionTypeSizeTest, IsLayoutIdenticalNoPadding) {
   mlir::Type members[] = {i32};
   auto ty1 = UnionType::get(&context, getName("Ua"));
   ty1.complete(members, /*packed=*/false, /*padding=*/mlir::Type{},
-               getAllDataKinds(members));
+               RecordType::getAllDataKinds(members));
   auto ty2 = UnionType::get(&context, getName("Ub"));
   ty2.complete(members, /*packed=*/false, /*padding=*/mlir::Type{},
-               getAllDataKinds(members));
+               RecordType::getAllDataKinds(members));
   EXPECT_TRUE(ty1.isLayoutIdentical(ty2));
 }
 
@@ -102,10 +102,10 @@ TEST_F(UnionTypeSizeTest, IsLayoutIdenticalDifferentPadding) {
   mlir::Type members[] = {i32};
   auto ty1 = UnionType::get(&context, getName("Upad1"));
   ty1.complete(members, /*packed=*/false, /*padding=*/i8,
-               getAllDataKinds(members));
+               RecordType::getAllDataKinds(members));
   auto ty2 = UnionType::get(&context, getName("Upad2"));
   ty2.complete(members, /*packed=*/false, /*padding=*/i16,
-               getAllDataKinds(members));
+               RecordType::getAllDataKinds(members));
   EXPECT_FALSE(ty1.isLayoutIdentical(ty2));
 }
 
@@ -115,9 +115,9 @@ TEST_F(UnionTypeSizeTest, IsLayoutIdenticalSamePadding) {
   mlir::Type members[] = {i32};
   auto ty1 = UnionType::get(&context, getName("Upad3"));
   ty1.complete(members, /*packed=*/false, /*padding=*/i8,
-               getAllDataKinds(members));
+               RecordType::getAllDataKinds(members));
   auto ty2 = UnionType::get(&context, getName("Upad4"));
   ty2.complete(members, /*packed=*/false, /*padding=*/i8,
-               getAllDataKinds(members));
+               RecordType::getAllDataKinds(members));
   EXPECT_TRUE(ty1.isLayoutIdentical(ty2));
 }

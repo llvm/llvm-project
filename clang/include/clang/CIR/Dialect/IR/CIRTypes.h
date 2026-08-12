@@ -129,6 +129,16 @@ public:
   bool isStruct() const;
   bool isUnion() const { return mlir::isa<UnionType>(*this); }
 
+  /// Whether no member holds data.  Vacuously true for a complete record with
+  /// no members, and false for an incomplete one, whose members are not known
+  /// yet.  A union's tail-padding slot is not a member and does not count.
+  bool isEmptyForABI() const;
+
+  /// One `Data` kind per member.  Takes the member list rather than a count so
+  /// the length cannot drift from the record it describes.
+  static llvm::SmallVector<RecordMemberKind>
+  getAllDataKinds(llvm::ArrayRef<mlir::Type> members);
+
   size_t getNumElements() const { return getMembers().size(); }
   mlir::Type getElementType(size_t idx) const { return getMembers()[idx]; }
   std::string getKindAsStr() const;
@@ -145,17 +155,6 @@ public:
   mlir::StringAttr getABIConvertedName() const;
   void removeABIConversionNamePrefix();
 };
-
-/// One `Data` kind per member.  Takes the members rather than a count so that
-/// the two cannot drift apart.
-llvm::SmallVector<RecordMemberKind>
-getAllDataKinds(llvm::ArrayRef<mlir::Type> members);
-
-/// Whether no member of \p recTy holds data, which makes the record empty for
-/// the ABI.  Vacuously true for a complete record with no members, and false
-/// for an incomplete one, whose members are not known yet.  A union's
-/// tail-padding slot is not a member and does not count.
-bool allMembersNonData(RecordType recTy);
 
 } // namespace cir
 

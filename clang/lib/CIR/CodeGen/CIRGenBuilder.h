@@ -95,7 +95,7 @@ public:
 
     if (!ty)
       ty = getAnonRecordTy(members, packed, padded,
-                           cir::getAllDataKinds(members));
+                           cir::RecordType::getAllDataKinds(members));
 
     auto sTy = mlir::cast<cir::RecordType>(ty);
     return cir::ConstRecordAttr::get(sTy, arrayAttr);

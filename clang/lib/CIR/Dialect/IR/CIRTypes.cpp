@@ -153,7 +153,7 @@ void CIRDialect::printType(Type type, DialectAsmPrinter &os) const {
 // Shared helpers for StructType and UnionType parse/print.
 
 llvm::SmallVector<RecordMemberKind>
-cir::getAllDataKinds(llvm::ArrayRef<mlir::Type> members) {
+RecordType::getAllDataKinds(llvm::ArrayRef<mlir::Type> members) {
   return llvm::SmallVector<RecordMemberKind>(members.size(),
                                              RecordMemberKind::Data);
 }
@@ -684,12 +684,12 @@ void RecordType::removeABIConversionNamePrefix() {
   return mlir::cast<UnionType>(*this).removeABIConversionNamePrefix();
 }
 
-bool cir::allMembersNonData(RecordType recTy) {
+bool RecordType::isEmptyForABI() const {
   // An incomplete record has no members yet, which must not read as vacuously
   // holding no data.
-  if (recTy.isIncomplete())
+  if (isIncomplete())
     return false;
-  return llvm::none_of(recTy.getMemberKinds(), [](RecordMemberKind kind) {
+  return llvm::none_of(getMemberKinds(), [](RecordMemberKind kind) {
     return kind == RecordMemberKind::Data;
   });
 }
@@ -1260,7 +1260,7 @@ static mlir::Type getMethodLayoutType(mlir::MLIRContext *ctx) {
   mlir::Type fields[2]{voidPtrTy, voidPtrTy};
   return cir::StructType::get(ctx, fields, /*packed=*/false,
                               /*padded=*/false, /*is_class=*/false,
-                              cir::getAllDataKinds(fields));
+                              cir::RecordType::getAllDataKinds(fields));
 }
 
 llvm::TypeSize

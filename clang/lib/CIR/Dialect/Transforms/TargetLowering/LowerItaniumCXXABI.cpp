@@ -193,7 +193,7 @@ mlir::Type LowerItaniumCXXABI::lowerMethodType(
   mlir::Type members[] = {ptrdiffCIRTy, ptrdiffCIRTy};
   return cir::StructType::get(type.getContext(), members, /*packed=*/false,
                               /*padded=*/false, /*is_class=*/false,
-                              cir::getAllDataKinds(members));
+                              cir::RecordType::getAllDataKinds(members));
 }
 
 mlir::TypedAttr LowerItaniumCXXABI::lowerDataMemberConstant(

@@ -49,7 +49,7 @@ protected:
 
   IntType getU8() { return IntType::get(&context, 8, false); }
 
-  StructType makeStruct(llvm::StringRef name,
+  RecordType makeStruct(llvm::StringRef name,
                         llvm::ArrayRef<mlir::Type> members,
                         llvm::ArrayRef<RecordMemberKind> kinds) {
     auto ty = StructType::get(&context, getName(name), /*is_class=*/false);
@@ -61,17 +61,18 @@ protected:
 TEST_F(RecordMemberKindTest, EmptyForTheABIWhenNoMemberHoldsData) {
   IntType u8 = getU8();
   // A record with no members is vacuously empty.
-  EXPECT_TRUE(allMembersNonData(makeStruct("none", {}, {})));
+  EXPECT_TRUE(makeStruct("none", {}, {}).isEmptyForABI());
+  EXPECT_TRUE(makeStruct("p1", {u8}, {RecordMemberKind::Pad}).isEmptyForABI());
   EXPECT_TRUE(
-      allMembersNonData(makeStruct("p1", {u8}, {RecordMemberKind::Pad})));
-  EXPECT_TRUE(
-      allMembersNonData(makeStruct("e1", {u8}, {RecordMemberKind::Empty})));
-  EXPECT_TRUE(allMembersNonData(makeStruct(
-      "pe", {u8, u8}, {RecordMemberKind::Pad, RecordMemberKind::Empty})));
+      makeStruct("e1", {u8}, {RecordMemberKind::Empty}).isEmptyForABI());
+  EXPECT_TRUE(makeStruct("pe", {u8, u8},
+                         {RecordMemberKind::Pad, RecordMemberKind::Empty})
+                  .isEmptyForABI());
   EXPECT_FALSE(
-      allMembersNonData(makeStruct("d1", {u8}, {RecordMemberKind::Data})));
-  EXPECT_FALSE(allMembersNonData(makeStruct(
-      "dp", {u8, u8}, {RecordMemberKind::Data, RecordMemberKind::Pad})));
+      makeStruct("d1", {u8}, {RecordMemberKind::Data}).isEmptyForABI());
+  EXPECT_FALSE(makeStruct("dp", {u8, u8},
+                          {RecordMemberKind::Data, RecordMemberKind::Pad})
+                   .isEmptyForABI());
 }
 
 TEST_F(RecordMemberKindTest, RejectsAKindListThatDoesNotNameEveryMember) {
@@ -123,8 +124,8 @@ TEST_F(RecordMemberKindTest, RejectsPadOnAUnionMember) {
 }
 
 TEST_F(RecordMemberKindTest, AnIncompleteRecordIsNotEmptyForTheABI) {
-  auto ty = StructType::get(&context, getName("I"), /*is_class=*/false);
-  EXPECT_FALSE(allMembersNonData(ty));
+  RecordType ty = StructType::get(&context, getName("I"), /*is_class=*/false);
+  EXPECT_FALSE(ty.isEmptyForABI());
 }
 
 TEST_F(RecordMemberKindTest, AUnionsTailPaddingSlotIsNotAMember) {
@@ -133,14 +134,14 @@ TEST_F(RecordMemberKindTest, AUnionsTailPaddingSlotIsNotAMember) {
   llvm::SmallVector<RecordMemberKind> empty{RecordMemberKind::Empty};
   llvm::ArrayRef<mlir::Type> membersRef(members);
 
-  auto allEmpty =
+  RecordType allEmpty =
       UnionType::get(&context, membersRef, getName("ue"), /*packed=*/false,
                      /*padding=*/u8, llvm::ArrayRef<RecordMemberKind>(empty));
-  EXPECT_TRUE(allMembersNonData(allEmpty));
-  auto holdsData =
+  EXPECT_TRUE(allEmpty.isEmptyForABI());
+  RecordType holdsData =
       UnionType::get(&context, membersRef, getName("ud"), /*packed=*/false,
-                     /*padding=*/u8, getAllDataKinds(membersRef));
-  EXPECT_FALSE(allMembersNonData(holdsData));
+                     /*padding=*/u8, RecordType::getAllDataKinds(membersRef));
+  EXPECT_FALSE(holdsData.isEmptyForABI());
 }
 
 TEST_F(RecordMemberKindTest, KindsTakePartInAnonymousTypeIdentity) {
@@ -165,7 +166,7 @@ TEST_F(RecordMemberKindTest, KindsTakePartInAnonymousTypeIdentity) {
       llvm::ArrayRef<RecordMemberKind>(unionEmpty));
   auto unionAllData = UnionType::get(
       &context, unionMembersRef, /*packed=*/false,
-      /*padding=*/mlir::Type{}, getAllDataKinds(unionMembersRef));
+      /*padding=*/mlir::Type{}, RecordType::getAllDataKinds(unionMembersRef));
   EXPECT_NE(unionMarked, unionAllData);
   EXPECT_TRUE(unionMarked.isLayoutIdentical(unionAllData));
 }

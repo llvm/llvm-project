@@ -171,7 +171,8 @@ protected:
                                       /*is_class=*/false);
     mlir::Type members[] = {ty1, ty2};
     structTy.complete(members, /*packed=*/false, /*padded=*/false,
-                      /*padding=*/{}, cir::getAllDataKinds(members));
+                      /*padding=*/{},
+                      cir::RecordType::getAllDataKinds(members));
     mlir::Type ptrTy = cir::PointerType::get(structTy);
 
     // Verify that the pointer points to the structure type.
@@ -255,7 +256,8 @@ protected:
                              /*is_class=*/false);
     mlir::Type members[] = {ptrTy, ptrTy};
     structTy.complete(members, /*packed=*/false, /*padded=*/false,
-                      /*padding=*/{}, cir::getAllDataKinds(members));
+                      /*padding=*/{},
+                      cir::RecordType::getAllDataKinds(members));
     mlir::Type structPptrTy = cir::PointerType::get(structTy);
 
     // Create an alloca for the struct.
@@ -367,6 +369,6 @@ TEST_F(CIROpenACCPointerLikeTest, testPointerToStructMember) {
                            /*is_class=*/false);
   mlir::Type members[] = {i32Ty, i32Ty};
   structTy.complete(members, /*packed=*/false, /*padded=*/false,
-                    /*padding=*/{}, cir::getAllDataKinds(members));
+                    /*padding=*/{}, cir::RecordType::getAllDataKinds(members));
   testPointerToMemberType(structTy, mlir::acc::VariableTypeCategory::composite);
 }
