@@ -287,6 +287,23 @@ When both of these options are enabled, LLDB can use, and be used from, a
 different version of Python (3.8 or later) than it was built against. Note that
 on Windows, `LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS` is not required.
 
+#### Testing Objective-C without a system runtime
+
+Linux and Windows have no Objective-C runtime of their own, so the tests for
+Objective-C language support are only run when LLDB is pointed at a build of
+the GNUstep [libobjc2](https://github.com/gnustep/libobjc2) runtime:
+
+```
+-DLLDB_TEST_OBJC_GNUSTEP=On
+-DLLDB_TEST_OBJC_GNUSTEP_DIR=/path/to/libobjc2/install
+```
+
+The directory is the install prefix of libobjc2, containing `lib` and
+`include`. With these set, the Shell tests that require the `objc-gnustep`
+feature and the API tests in the `objc-gnustep` category are enabled; without
+them those tests are skipped. Foundation is not required: the tests run
+against libobjc2 alone.
+
 #### Windows
 
 On Windows the LLDB test suite requires lld. Either add `lld` to
