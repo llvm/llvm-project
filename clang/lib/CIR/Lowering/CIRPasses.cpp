@@ -29,8 +29,8 @@ static CallConvTarget getCallConvTarget(const llvm::Triple &triple) {
   return CallConvTarget::None;
 }
 
-/// The AVX level the classifier uses to size a native vector.  Read from the
-/// target ABI name, as CodeGenModule does.
+/// The AVX level the classifier uses to size a native vector, read from the
+/// target ABI name.
 static llvm::abi::X86AVXABILevel getX86AVXABILevel(llvm::StringRef abi) {
   if (abi == "avx512")
     return llvm::abi::X86AVXABILevel::AVX512;
@@ -40,9 +40,8 @@ static llvm::abi::X86AVXABILevel getX86AVXABILevel(llvm::StringRef abi) {
 }
 
 /// Whether `__attribute__((target(...)))` on a function may raise its AVX ABI
-/// level above the command line's.  Mirrors getEffectiveX86AVXABILevel in
-/// clang/lib/CodeGen/Targets/X86.cpp, which keeps a target that opts out, and
-/// any ABI older than the rule, at the module level.
+/// level above the command line's.  A target that opts out, and any ABI older
+/// than the rule, stay at the module level.
 static bool allowsX86TargetAttrAvx(const clang::ASTContext &astContext) {
   return !astContext.getTargetInfo().getTriple().isPS() &&
          astContext.getLangOpts().getClangABICompat() >
@@ -53,10 +52,7 @@ static bool allowsX86TargetAttrAvx(const clang::ASTContext &astContext) {
 /// requested compatibility version.  Every flag defaults to true in the ABI
 /// library, which is not what any target computes: Clang11Compat is false for a
 /// modern Linux target, so leaving it at the default classifies a union larger
-/// than an eightbyte as though every member spanned its size.  Mirrors the
-/// predicates in clang/lib/CodeGen/Targets/X86.cpp and the derivation in
-/// CodeGenModule::getLLVMABITargetInfo, which computes the same five flags for
-/// the classic path.
+/// than an eightbyte as though every member spanned its size.
 static llvm::abi::ABICompatInfo
 getX86ABICompatInfo(const clang::ASTContext &astContext) {
   const llvm::Triple &triple = astContext.getTargetInfo().getTriple();

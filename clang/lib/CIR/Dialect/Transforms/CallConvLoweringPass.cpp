@@ -44,6 +44,7 @@
 #include "mlir/Pass/Pass.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
+#include "clang/CIR/MissingFeatures.h"
 #include "llvm/ABI/FunctionInfo.h"
 #include "llvm/ABI/TargetInfo.h"
 #include "llvm/ABI/Types.h"
@@ -507,32 +508,29 @@ static std::optional<FunctionClassification> classifyX86_64Signature(
   return fc;
 }
 
-/// The AVX level in force at \p func, following getEffectiveX86AVXABILevel in
-/// clang/lib/CodeGen/Targets/X86.cpp.  Classic reads the target attribute
-/// itself, where this reads the feature list CIRGen recorded from it.  Two
-/// consequences: a declaration gets \p base, CIRGen recording features only on
-/// definitions, and target_clones and cpu_specific will need excluding once
-/// multiversioning is implemented, classic leaving those at the module level.
+/// The AVX level to classify \p func at: \p base, raised if the function's own
+/// recorded feature list enables a wider vector.
 static llvm::abi::X86AVXABILevel funcAvxLevel(cir::FuncOp func,
                                               llvm::abi::X86AVXABILevel base) {
+  // Only a `target` attribute may raise the level.  A multiversioned function
+  // carries a raised feature list too, and must stay at the module's level.
+  assert(!cir::MissingFeatures::opFuncMultiVersioning());
+
   auto features = func->getAttrOfType<mlir::StringAttr>("cir.target-features");
   if (!features)
     return base;
   // A '-' entry disables the feature, so match a whole '+' entry rather than
-  // searching for the name.
-  auto enabled = [&](llvm::StringRef name) {
-    for (llvm::StringRef feature : llvm::split(features.getValue(), ','))
-      if (feature.consume_front("+") && feature == name)
-        return true;
-    return false;
-  };
-  // avx512f implies avx, so both entries are present.  Test the wider name
-  // first or the AVX512 branch is unreachable.
-  if (enabled("avx512f"))
-    return std::max(base, llvm::abi::X86AVXABILevel::AVX512);
-  if (enabled("avx"))
-    return std::max(base, llvm::abi::X86AVXABILevel::AVX);
-  return base;
+  // searching for the name.  avx512f implies avx, so both entries are present:
+  // return on the wider name so one pass suffices.
+  bool avx = false;
+  for (llvm::StringRef feature : llvm::split(features.getValue(), ',')) {
+    if (!feature.consume_front("+"))
+      continue;
+    if (feature == "avx512f")
+      return std::max(base, llvm::abi::X86AVXABILevel::AVX512);
+    avx |= feature == "avx";
+  }
+  return avx ? std::max(base, llvm::abi::X86AVXABILevel::AVX) : base;
 }
 
 /// Classify a cir.func for x86_64 SysV using the LLVM ABI library.  Returns
@@ -727,7 +725,7 @@ void CallConvLoweringPass::runOnOperation() {
   };
   llvm::abi::X86AVXABILevel baseAvxLevel = x86AvxAbiLevel.getValue();
   auto avxLevelFor = [&](cir::FuncOp func) -> llvm::abi::X86AVXABILevel {
-    if (!x86TargetAttrAvx || !func)
+    if (!allowsX86TargetAttrAvx || !func)
       return baseAvxLevel;
     return funcAvxLevel(func, baseAvxLevel);
   };
@@ -957,10 +955,10 @@ std::unique_ptr<Pass> mlir::createCallConvLoweringPass() {
 
 std::unique_ptr<Pass> mlir::createCallConvLoweringPass(
     cir::CallConvTarget target, llvm::abi::X86AVXABILevel x86AvxAbiLevel,
-    bool x86TargetAttrAvx, const llvm::abi::ABICompatInfo &x86AbiCompat) {
+    bool allowsX86TargetAttrAvx, const llvm::abi::ABICompatInfo &x86AbiCompat) {
   CallConvLoweringOptions options;
   options.target = target;
   options.x86AvxAbiLevel = x86AvxAbiLevel;
-  options.x86TargetAttrAvx = x86TargetAttrAvx;
+  options.allowsX86TargetAttrAvx = allowsX86TargetAttrAvx;
   return std::make_unique<CallConvLoweringPass>(options, x86AbiCompat);
 }
