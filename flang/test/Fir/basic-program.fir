@@ -93,7 +93,6 @@ func.func @_QQmain() {
 // PASSES-NEXT: 'fir.global' Pipeline
 // PASSES-NEXT:   CharacterConversion
 // PASSES-NEXT: 'func.func' Pipeline
-// PASSES-NEXT:   ArrayValueCopy
 // PASSES-NEXT:   CharacterConversion
 // PASSES-NEXT: 'omp.declare_mapper' Pipeline
 // PASSES-NEXT:   CharacterConversion
@@ -120,6 +119,8 @@ func.func @_QQmain() {
 // PASSES-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
 // PASSES-NEXT: PolymorphicOpConversion
+// PASSES-NEXT: 'func.func' Pipeline
+// PASSES-NEXT: SelectOpsConversion
 // PASSES-NEXT: AssumedRankOpConversion
 // PASSES-NEXT: 'func.func' Pipeline
 // PASSES-NEXT:   OptimizeArrayRepacking
@@ -185,6 +186,7 @@ func.func @_QQmain() {
 // PASSES-NEXT: FIRToLLVMLowering
 // PASSES-NEXT: ReconcileUnrealizedCasts
 // PASSES-NEXT: EmitMIFGlobalCtors
+// PASSES-NEXT: MarkDeclareTargetPass
 // PASSES-NEXT:  HostOpFilteringPass
 // PASSES-NEXT: 'llvm.func' Pipeline
 // PASSES-NEXT:  StackToSharedPass

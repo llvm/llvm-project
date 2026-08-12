@@ -44,6 +44,7 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getReturnsTwiceAttrName() { return "returns_twice"; }
     static llvm::StringRef getColdAttrName() { return "cold"; }
     static llvm::StringRef getHotAttrName() { return "hot"; }
+    static llvm::StringRef getStrictFPAttrName() { return "strictfp"; }
     static llvm::StringRef getNoDuplicatesAttrName() { return "noduplicate"; }
     static llvm::StringRef getConvergentAttrName() { return "convergent"; }
     static llvm::StringRef getNoUnwindAttrName() { return "nounwind"; }
@@ -76,6 +77,9 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getResAttrsAttrName() { return "res_attrs"; }
     static llvm::StringRef getArgAttrsAttrName() { return "arg_attrs"; }
     static llvm::StringRef getRecordLayoutsAttrName() { return "cir.record_layouts"; }
+    static llvm::StringRef getTargetCPUAttrName() { return "cir.target-cpu"; }
+    static llvm::StringRef getTuneCPUAttrName() { return "cir.tune-cpu"; }
+    static llvm::StringRef getTargetFeaturesAttrName() { return "cir.target-features"; }
     static llvm::StringRef getCUDABinaryHandleAttrName() { return "cir.cu.binary_handle"; }
     static llvm::StringRef getMustTailAttrName() { return "musttail"; }
     static llvm::StringRef getCatchCopyThunkAttrName() { return "cir.eh.catch_copy_thunk"; }
