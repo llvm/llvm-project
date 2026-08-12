@@ -1,11 +1,12 @@
 // ClangIR port of clang/test/CodeGen/fp-contract-on-pragma.cpp.
+// The CIR-lowered and classic CodeGen LLVM IR match here, so both feed LLVM.
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++11 -Wno-unused-value -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++11 -Wno-unused-value -fclangir -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++11 -Wno-unused-value -emit-llvm %s -o %t-ogcg.ll
-// RUN: FileCheck --input-file=%t-ogcg.ll %s -check-prefix=OGCG
+// RUN: FileCheck --input-file=%t-ogcg.ll %s -check-prefix=LLVM
 
 // Is FP_CONTRACT honored in a simple case?
 float fp_contract_1(float a, float b, float c) {
@@ -17,8 +18,6 @@ float fp_contract_1(float a, float b, float c) {
 // CIR-NOT: cir.fmul
 // LLVM-LABEL: @_Z13fp_contract_1fff
 // LLVM: call float @llvm.fmuladd.f32
-// OGCG-LABEL: @_Z13fp_contract_1fff
-// OGCG: call float @llvm.fmuladd.f32
 
 // Is FP_CONTRACT state cleared on exiting compound statements?
 float fp_contract_2(float a, float b, float c) {
@@ -34,9 +33,6 @@ float fp_contract_2(float a, float b, float c) {
 // LLVM-LABEL: @_Z13fp_contract_2fff
 // LLVM: %[[M:.*]] = fmul float
 // LLVM: fadd float %[[M]],
-// OGCG-LABEL: @_Z13fp_contract_2fff
-// OGCG: %[[M:.*]] = fmul float
-// OGCG: fadd float %[[M]],
 
 // Does FP_CONTRACT survive template instantiation?
 class Foo {};
@@ -50,9 +46,7 @@ T template_muladd(T a, T b, T c) {
 // CIR-LABEL: cir.func {{.*}}@_Z15template_muladdIfET_S0_S0_S0_
 // CIR: cir.fmuladd %{{.*}}, %{{.*}}, %{{.*}} : !cir.float
 // LLVM-LABEL: @_Z15template_muladdIfET_S0_S0_S0_
-// LLVM: call float @llvm.fmuladd.f32
-// OGCG-LABEL: @_Z15template_muladdIfET_S0_S0_S0_
-// OGCG: call {{.*}}float @llvm.fmuladd.f32
+// LLVM: call {{.*}}float @llvm.fmuladd.f32
 
 // fp_contract_3 is just a caller; the fused op lives in the instantiated
 // template_muladd checked above. It is emitted in a different order under the
@@ -73,8 +67,6 @@ template class fp_contract_4<int>;
 // CIR: cir.fmuladd %{{.*}}, %{{.*}}, %{{.*}} : !cir.float
 // LLVM-LABEL: @_ZN13fp_contract_4IiE6methodEfff
 // LLVM: call float @llvm.fmuladd.f32
-// OGCG-LABEL: @_ZN13fp_contract_4IiE6methodEfff
-// OGCG: call float @llvm.fmuladd.f32
 
 // Check file-scoped FP_CONTRACT
 #pragma clang fp contract(on)
@@ -85,8 +77,6 @@ float fp_contract_5(float a, float b, float c) {
 // CIR: cir.fmuladd %{{.*}}, %{{.*}}, %{{.*}} : !cir.float
 // LLVM-LABEL: @_Z13fp_contract_5fff
 // LLVM: call float @llvm.fmuladd.f32
-// OGCG-LABEL: @_Z13fp_contract_5fff
-// OGCG: call float @llvm.fmuladd.f32
 
 #pragma clang fp contract(off)
 float fp_contract_6(float a, float b, float c) {
@@ -99,9 +89,6 @@ float fp_contract_6(float a, float b, float c) {
 // LLVM-LABEL: @_Z13fp_contract_6fff
 // LLVM: %[[M:.*]] = fmul float
 // LLVM: fadd float %[[M]],
-// OGCG-LABEL: @_Z13fp_contract_6fff
-// OGCG: %[[M:.*]] = fmul float
-// OGCG: fadd float %[[M]],
 
 // If the multiply has multiple uses, don't produce fmuladd.
 // This used to assert (PR25719):
@@ -117,6 +104,19 @@ float fp_contract_7(float a, float b, float c) {
 // LLVM-LABEL: @_Z13fp_contract_7fff
 // LLVM: %[[M:.*]] = fmul float
 // LLVM: fsub float %[[M]],
-// OGCG-LABEL: @_Z13fp_contract_7fff
-// OGCG: %[[M:.*]] = fmul float
-// OGCG: fsub float %[[M]],
+
+// contract(on) only fuses within a statement: a mul and add in separate
+// statements are not contracted.
+float fp_contract_8(float a, float b, float c) {
+#pragma clang fp contract(on)
+  float t = a * b;
+  return t + c;
+}
+// CIR-LABEL: cir.func {{.*}}@_Z13fp_contract_8fff
+// CIR: cir.fmul %{{.*}}, %{{.*}} : !cir.float
+// CIR: cir.fadd %{{.*}}, %{{.*}} : !cir.float
+// CIR-NOT: cir.fmuladd
+// LLVM-LABEL: @_Z13fp_contract_8fff
+// LLVM: fmul float
+// LLVM: fadd float
+// LLVM-NOT: call float @llvm.fmuladd.f32

@@ -1,5 +1,6 @@
 // Test that -ffp-contract=on fuses a*b+c / a*b-c into cir.fmuladd and that
-// -ffp-contract=off does not.
+// -ffp-contract=off does not. The CIR-lowered and classic CodeGen LLVM IR
+// match here, so both feed the LLVM-* prefixes.
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -ffp-contract=on -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR-ON
@@ -12,9 +13,9 @@
 // RUN: FileCheck --input-file=%t-off.ll %s -check-prefix=LLVM-OFF
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -ffp-contract=on -emit-llvm %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG-ON
+// RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM-ON
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -ffp-contract=off -emit-llvm %s -o %t-off.ll
-// RUN: FileCheck --input-file=%t-off.ll %s -check-prefix=OGCG-OFF
+// RUN: FileCheck --input-file=%t-off.ll %s -check-prefix=LLVM-OFF
 
 // Under strict FP the fused op carries an fenv attribute and lowers to the
 // constrained fmuladd intrinsic.
@@ -23,7 +24,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -ffp-contract=on -fexperimental-strict-floating-point -ffp-exception-behavior=strict -emit-llvm %s -o %t-strict.ll
 // RUN: FileCheck --input-file=%t-strict.ll %s -check-prefix=LLVM-STRICT
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -ffp-contract=on -fexperimental-strict-floating-point -ffp-exception-behavior=strict -emit-llvm %s -o %t-strict-ogcg.ll
-// RUN: FileCheck --input-file=%t-strict-ogcg.ll %s -check-prefix=OGCG-STRICT
+// RUN: FileCheck --input-file=%t-strict-ogcg.ll %s -check-prefix=LLVM-STRICT
 
 // a * b + c  =>  fmuladd(a, b, c)
 float fmuladd_add(float a, float b, float c) {
@@ -44,11 +45,6 @@ float fmuladd_add(float a, float b, float c) {
 // LLVM-OFF: fmul float
 // LLVM-OFF: fadd float
 
-// OGCG-ON-LABEL: @fmuladd_add
-// OGCG-ON: call float @llvm.fmuladd.f32
-// OGCG-OFF-LABEL: @fmuladd_add
-// OGCG-OFF: fmul float
-// OGCG-OFF: fadd float
 
 // c + a * b  =>  fmuladd(a, b, c)  (mul on the RHS)
 float fmuladd_add_rhs(float a, float b, float c) {
@@ -59,8 +55,6 @@ float fmuladd_add_rhs(float a, float b, float c) {
 
 // LLVM-ON-LABEL: @fmuladd_add_rhs
 // LLVM-ON: call float @llvm.fmuladd.f32
-// OGCG-ON-LABEL: @fmuladd_add_rhs
-// OGCG-ON: call float @llvm.fmuladd.f32
 
 // a * b - c  =>  fmuladd(a, b, -c)
 float fmuladd_sub(float a, float b, float c) {
@@ -89,10 +83,6 @@ float no_fmuladd_reused_mul(float a, float b, float c, float *p) {
 // LLVM-ON: fmul float
 // LLVM-ON: fadd float
 // LLVM-ON-NOT: call float @llvm.fmuladd.f32
-// OGCG-ON-LABEL: @no_fmuladd_reused_mul
-// OGCG-ON: fmul float
-// OGCG-ON: fadd float
-// OGCG-ON-NOT: call float @llvm.fmuladd.f32
 
 // Vector: a * b + c  =>  fmuladd on the vector type.
 typedef float float4 __attribute__((ext_vector_type(4)));
@@ -104,8 +94,6 @@ float4 fmuladd_vec(float4 a, float4 b, float4 c) {
 
 // LLVM-ON-LABEL: @fmuladd_vec
 // LLVM-ON: call <4 x float> @llvm.fmuladd.v4f32
-// OGCG-ON-LABEL: @fmuladd_vec
-// OGCG-ON: call <4 x float> @llvm.fmuladd.v4f32
 
 // Strict FP: fused op carries an fenv attr, lowering to the constrained
 // fmuladd intrinsic.
@@ -116,5 +104,3 @@ float fmuladd_strict(float a, float b, float c) {
 // CIR-STRICT: cir.fmuladd %{{.*}}, %{{.*}}, %{{.*}} : !cir.float {fenv = #cir.fenv<{{.*}}strict_except = true>}
 // LLVM-STRICT-LABEL: @fmuladd_strict
 // LLVM-STRICT: call float @llvm.experimental.constrained.fmuladd.f32
-// OGCG-STRICT-LABEL: @fmuladd_strict
-// OGCG-STRICT: call float @llvm.experimental.constrained.fmuladd.f32
