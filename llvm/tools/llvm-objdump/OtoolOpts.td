@@ -45,12 +45,13 @@ def dyld_info : Flag<["-"], "dyld_info">,
 
 def m : Flag<["-"], "m">,
   HelpText<"don't use archive(member) syntax">;
+def function_offsets : Flag<["-"], "function_offsets">,
+  HelpText<"print decimal offset from last label when disassembling">;
 
 // Not (yet?) implemented:
 // -c print argument strings of a core file
 // -dyld_opcodes
 // -addr_slide=arg
-// -function_offsets
 
 // Obsolete and unsupported:
 def grp_obsolete : OptionGroup<"kind">,

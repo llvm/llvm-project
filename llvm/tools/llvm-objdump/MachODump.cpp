@@ -83,6 +83,7 @@ std::string objdump::DisSymName;
 bool objdump::IsOtool;
 bool objdump::UseMemberSyntax;
 bool objdump::SymbolicOperands;
+bool objdump::FunctionOffsets;
 std::vector<std::string> objdump::ArchFlags;
 
 static bool ArchAll = false;
@@ -7709,14 +7710,17 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
         outs() << SymName << ":\n";
 
       DILineInfo lastLine;
+      uint64_t LabelOffset = Start;
       for (uint64_t Index = Start; Index < End; Index += Size) {
         MCInst Inst;
 
         // If this is the first symbol in the section and it was not at the
         // start of the section, see if we are at its Index now and if so print
         // the symbol name.
-        if (FirstSymbol && !FirstSymbolAtSectionStart && Index == SymbolStart)
+        if (FirstSymbol && !FirstSymbolAtSectionStart && Index == SymbolStart) {
           outs() << SymName << ":\n";
+          LabelOffset = SymbolStart;
+        }
 
         uint64_t PC = SectAddress + Index;
 
@@ -7724,6 +7728,9 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
           formatted_raw_ostream FOS(outs());
           SP->printSourceLine(FOS, {PC, SectIdx}, Filename, *LEP);
         }
+
+        if (FunctionOffsets)
+          outs() << format("%+6" PRId64 " ", (int64_t)(Index - LabelOffset));
 
         if (LeadingAddr) {
           if (FullLeadingAddr) {
@@ -7828,6 +7835,8 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
         raw_svector_ostream Annotations(AnnotationsBytes);
         if (DisAsm->getInstruction(Inst, InstSize, Bytes.slice(Index), PC,
                                    Annotations)) {
+          if (FunctionOffsets)
+            outs() << format("%+6" PRId64 " ", (int64_t)Index);
           if (LeadingAddr) {
             if (FullLeadingAddr) {
               if (MachOOF->is64Bit())

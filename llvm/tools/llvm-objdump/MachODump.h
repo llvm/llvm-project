@@ -48,6 +48,7 @@ extern bool DylibsUsed;
 extern bool ExportsTrie;
 extern bool FirstPrivateHeader;
 extern bool FullLeadingAddr;
+extern bool FunctionOffsets;
 extern FunctionStartsMode FunctionStartsType;
 extern bool IndirectSymbols;
 extern bool InfoPlist;

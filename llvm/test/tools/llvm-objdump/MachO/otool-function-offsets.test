@@ -1,0 +1,10 @@
+# Test that -function_offsets prints decimal offsets from last label.
+
+RUN: llvm-otool -function_offsets -v -t %p/Inputs/bind.macho-x86_64 \
+RUN: | FileCheck %s
+
+CHECK:      _myfunc:
+CHECK-NEXT:     +0 {{[0-9a-f]+}}	pushq	%rbp
+CHECK-NEXT:     +1 {{[0-9a-f]+}}	movq	%rsp, %rbp
+CHECK-NEXT:     +4 {{[0-9a-f]+}}	popq	%rbp
+CHECK-NEXT:     +5 {{[0-9a-f]+}}	retq
