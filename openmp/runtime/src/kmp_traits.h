@@ -330,10 +330,9 @@ public:
     const kmp_trait_expr_group &other_group =
         static_cast<const kmp_trait_expr_group &>(other);
     return type == other_group.type &&
-           exprs.is_set_equal(other_group.exprs, [](kmp_trait_expr *const &a,
-                                                    kmp_trait_expr *const &b) {
-             return *a == *b;
-           });
+           exprs.is_set_equal(other_group.exprs,
+                              [](const kmp_trait_expr *a,
+                                 const kmp_trait_expr *b) { return *a == *b; });
   }
 };
 
