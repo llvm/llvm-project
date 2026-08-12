@@ -292,7 +292,6 @@ def int_dx_imul : DefaultAttrsIntrinsic<[llvm_anyint_ty, LLVMMatchType<0>],
     [LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem, IntrTriviallyScalarizable]>;
 def int_dx_umul : DefaultAttrsIntrinsic<[llvm_anyint_ty, LLVMMatchType<0>],
     [LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem, IntrTriviallyScalarizable]>;
-def int_dx_radians : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]>;
 def int_dx_discard : DefaultAttrsIntrinsic<[], [llvm_i1_ty], []>;
 def int_dx_ddx_coarse : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem, IntrTriviallyScalarizable]>;
 def int_dx_ddy_coarse : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem, IntrTriviallyScalarizable]>;
@@ -323,16 +322,14 @@ def int_dx_group_memory_barrier_with_group_sync
 def int_dx_load_input
     : DefaultAttrsIntrinsic<
           [llvm_any_ty],
-          [llvm_i32_ty /*sigpointId*/, llvm_i32_ty /*sigElementId*/,
-           llvm_i32_ty /*rowIndex*/, llvm_i8_ty /*colIndex*/,
-           llvm_i32_ty /*gsVertexOrPrimIndex*/],
+          [llvm_i32_ty /*SigElementId*/, llvm_i32_ty /*RowIndex*/,
+           llvm_i8_ty /*ColIndex*/, llvm_i32_ty /*GsVertexOrPrimIndex*/],
           [IntrConvergent]>;
 
 def int_dx_store_output
     : DefaultAttrsIntrinsic<
           [],
-          [llvm_i32_ty /*sigpointId*/, llvm_i32_ty /*sigElementId*/,
-           llvm_i32_ty /*rowIndex*/, llvm_i8_ty /*colIndex*/,
-           llvm_any_ty /*value*/],
+          [llvm_i32_ty /*SigElementId*/, llvm_i32_ty /*RowIndex*/,
+           llvm_i8_ty /*ColIndex*/, llvm_any_ty /*Value*/],
           [IntrConvergent]>;
 }

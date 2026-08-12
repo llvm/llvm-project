@@ -180,6 +180,10 @@ template <typename T> constexpr T degrees_impl(T Val) {
   return Val * (T)(180.L / Pi);
 }
 
+template <typename T> constexpr T radians_impl(T Val) {
+  return Val * (T)(Pi / 180.L);
+}
+
 } // namespace __detail
 } // namespace hlsl
 

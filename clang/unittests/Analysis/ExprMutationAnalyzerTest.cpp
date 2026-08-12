@@ -2155,6 +2155,91 @@ TEST(ExprMutationAnalyzerTest, PointeeMutatedByPointerArithmeticSubElement) {
   EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
 }
 
+TEST(ExprMutationAnalyzerTest, PointeeMutatedByPointerArithmeticIncDec) {
+  for (const std::string Deref : {"*x++", "*++x", "*x--", "*--x", "(x++)[0]"}) {
+    const std::string Code = "void f() { int* x; " + Deref + " = 0; }";
+    auto AST = buildASTFromCodeWithArgs(Code, {"-Wno-everything"});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_TRUE(isPointeeMutated(Results, AST.get())) << Code;
+  }
+  for (const std::string Deref : {"*x++", "*++x", "*x--", "*--x", "(x++)[0]"}) {
+    const std::string Code = "void f() { int* x; int y = " + Deref + "; }";
+    auto AST = buildASTFromCodeWithArgs(Code, {"-Wno-everything"});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_FALSE(isPointeeMutated(Results, AST.get())) << Code;
+  }
+  {
+    // The adjusted pointer escapes into a non-const pointer, which can be used
+    // to mutate the pointee.
+    const std::string Code = R"(
+      void f() {
+        int* x;
+        int* y = x++;
+      })";
+    auto AST = buildASTFromCodeWithArgs(Code, {"-Wno-everything"});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
+  }
+  {
+    // Adjusting the pointer itself does not mutate the pointee.
+    const std::string Code = R"(
+      void f() {
+        int* x;
+        x++;
+      })";
+    auto AST = buildASTFromCodeWithArgs(Code, {"-Wno-everything"});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_FALSE(isPointeeMutated(Results, AST.get()));
+  }
+}
+
+TEST(ExprMutationAnalyzerTest,
+     PointeeMutatedByPointerArithmeticCompoundAssign) {
+  for (const std::string Deref : {"*(x += 1)", "*(x -= 1)", "(x += 1)[0]"}) {
+    const std::string Code = "void f() { int* x; " + Deref + " = 0; }";
+    auto AST = buildASTFromCodeWithArgs(Code, {"-Wno-everything"});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_TRUE(isPointeeMutated(Results, AST.get())) << Code;
+  }
+  for (const std::string Deref : {"*(x += 1)", "*(x -= 1)", "(x += 1)[0]"}) {
+    const std::string Code = "void f() { int* x; int y = " + Deref + "; }";
+    auto AST = buildASTFromCodeWithArgs(Code, {"-Wno-everything"});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_FALSE(isPointeeMutated(Results, AST.get())) << Code;
+  }
+  {
+    // The adjusted pointer escapes into a non-const pointer, which can be used
+    // to mutate the pointee.
+    const std::string Code = R"(
+      void f() {
+        int* x;
+        int* y = (x += 1);
+      })";
+    auto AST = buildASTFromCodeWithArgs(Code, {"-Wno-everything"});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
+  }
+  {
+    // Adjusting the pointer itself does not mutate the pointee.
+    const std::string Code = R"(
+      void f() {
+        int* x;
+        x += 1;
+      })";
+    auto AST = buildASTFromCodeWithArgs(Code, {"-Wno-everything"});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_FALSE(isPointeeMutated(Results, AST.get()));
+  }
+}
+
 TEST(ExprMutationAnalyzerTest, PointeeMutatedByConditionOperator) {
   const std::string Code = R"(
       void f() {

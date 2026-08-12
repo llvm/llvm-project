@@ -3457,11 +3457,6 @@ inline bool ArrayElemPtr(InterpState &S, CodePtr OpPC) {
   const T &Offset = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.peek<Pointer>();
 
-  if (!Ptr.isZero() && !Offset.isZero()) {
-    if (!CheckArray(S, OpPC, Ptr))
-      return false;
-  }
-
   if (Offset.isZero()) {
     if (const Descriptor *Desc = Ptr.getFieldDesc();
         Desc && Desc->isArray() && Ptr.getIndex() == 0) {
@@ -3487,11 +3482,6 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 inline bool ArrayElemPtrPop(InterpState &S, CodePtr OpPC) {
   const T &Offset = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-
-  if (!Ptr.isZero() && !Offset.isZero()) {
-    if (!CheckArray(S, OpPC, Ptr))
-      return false;
-  }
 
   if (Offset.isZero()) {
     if (const Descriptor *Desc = Ptr.getFieldDesc();

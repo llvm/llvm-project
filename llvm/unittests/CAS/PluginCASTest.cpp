@@ -40,14 +40,11 @@ static std::string TestStringArg1("castest-string-arg1");
 static std::string getCASPluginPath() {
   std::string Executable =
       sys::fs::getMainExecutable(TestMainArgv0, &TestStringArg1);
-  llvm::SmallString<256> PathBuf(sys::path::parent_path(
-      sys::path::parent_path(sys::path::parent_path(Executable))));
-#ifndef _WIN32
-  std::string LibName = "libCASPluginTest";
-  sys::path::append(PathBuf, "lib", LibName + LLVM_PLUGIN_EXT);
+  llvm::SmallString<256> PathBuf(sys::path::parent_path(Executable));
+#if !defined(_WIN32) || defined(__MINGW32__)
+  sys::path::append(PathBuf, "libCASPluginTest" LLVM_PLUGIN_EXT);
 #else
-  std::string LibName = "CASPluginTest";
-  sys::path::append(PathBuf, "bin", LibName + LLVM_PLUGIN_EXT);
+  sys::path::append(PathBuf, "CASPluginTest" LLVM_PLUGIN_EXT);
 #endif
   return std::string(PathBuf);
 }
