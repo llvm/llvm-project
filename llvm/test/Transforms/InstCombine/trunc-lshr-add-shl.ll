@@ -255,8 +255,8 @@ define i32 @regression_and_mask_dominance(i32 %x) {
 
 ; Partial demanded-bits mask (0xF0) rather than a full byte: the fold still
 ; fires, and the narrower demand turns the add into an equivalent and+xor.
-define i32 @positive_and_mask_partial_demanded_bits(i32 %x) {
-; CHECK-LABEL: define i32 @positive_and_mask_partial_demanded_bits(
+define i32 @positive_add_partial_mask(i32 %x) {
+; CHECK-LABEL: define i32 @positive_add_partial_mask(
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X]], 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 240
@@ -270,10 +270,9 @@ define i32 @positive_and_mask_partial_demanded_bits(i32 %x) {
   ret i32 %r
 }
 
-; Same partial mask (0xF0) with 'or' instead of 'add', covering the bitwise
-; path with a partial demanded mask.
-define i32 @positive_or_mask_partial_demanded_bits(i32 %x) {
-; CHECK-LABEL: define i32 @positive_or_mask_partial_demanded_bits(
+; Same partial mask (0xF0) with each bitwise op in place of 'add'.
+define i32 @positive_or_partial_mask(i32 %x) {
+; CHECK-LABEL: define i32 @positive_or_partial_mask(
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X]], 4
 ; CHECK-NEXT:    [[V16:%.*]] = and i32 [[TMP1]], 112
@@ -282,6 +281,36 @@ define i32 @positive_or_mask_partial_demanded_bits(i32 %x) {
 ;
   %v2 = shl i32 %x, 12
   %v3 = or i32 %v2, 34816
+  %v16 = lshr i32 %v3, 8
+  %r = and i32 %v16, 240
+  ret i32 %r
+}
+
+define i32 @positive_xor_partial_mask(i32 %x) {
+; CHECK-LABEL: define i32 @positive_xor_partial_mask(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X]], 4
+; CHECK-NEXT:    [[V16:%.*]] = and i32 [[TMP1]], 240
+; CHECK-NEXT:    [[R:%.*]] = xor i32 [[V16]], 128
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %v2 = shl i32 %x, 12
+  %v3 = xor i32 %v2, 34816
+  %v16 = lshr i32 %v3, 8
+  %r = and i32 %v16, 240
+  ret i32 %r
+}
+
+; Here the demanded mask merges into the folded 'and', leaving just shl+and.
+define i32 @positive_and_partial_mask(i32 %x) {
+; CHECK-LABEL: define i32 @positive_and_partial_mask(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X]], 4
+; CHECK-NEXT:    [[V16:%.*]] = and i32 [[TMP1]], 128
+; CHECK-NEXT:    ret i32 [[V16]]
+;
+  %v2 = shl i32 %x, 12
+  %v3 = and i32 %v2, 34816
   %v16 = lshr i32 %v3, 8
   %r = and i32 %v16, 240
   ret i32 %r
