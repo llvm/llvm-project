@@ -1,6 +1,9 @@
 C_SOURCES := main.c
 
-CFLAGS_EXTRAS := -target $(ARCH)-apple-ios13.1-macabi
+# The test passes the macCatalyst triple in via TRIPLE. Override ARCH_CFLAGS so
+# it wins over the -mtargetos= the builder derives from the host triple, which
+# clang rejects in combination with the -target below.
+override ARCH_CFLAGS := -target $(TRIPLE)
 
 USE_SYSTEM_STDLIB := 1
 
