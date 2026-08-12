@@ -638,6 +638,27 @@ getNumberOfParts(const TargetTransformInfo &TTI, Type *VecTy, Type *ScalarTy,
   return NumParts;
 }
 
+namespace {
+/// A vectorized part of a split reduction, combined into the final reduction
+/// result by the horizontal reduction emitter.
+struct ReductionVectorPart {
+  /// The vectorized value, tracked in case it is replaced while other parts
+  /// are vectorized.
+  WeakTrackingVH Vec;
+  /// The number of times each lane is repeated in the reduction (emitted as a
+  /// multiplication by the scale for add/fadd reductions).
+  unsigned Scale = 1;
+  /// Signedness of \p Vec for reductions, operating on truncated types.
+  bool IsSigned = false;
+  /// True if the value was already reduced in-tree.
+  bool ReducedInTree = false;
+  /// True if the part contribution is subtracted from (rather than added to)
+  /// the final reduction result. Used for reassociated fadd reductions,
+  /// flattened through fsub/fneg operations.
+  bool Negated = false;
+};
+} // namespace
+
 /// Bottom Up SLP Vectorizer.
 class slpvectorizer::BoUpSLP {
   class TreeEntry;
@@ -715,8 +736,7 @@ public:
   Value *
   vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
                 Instruction *ReductionRoot = nullptr,
-                ArrayRef<std::tuple<WeakTrackingVH, unsigned, bool, bool>>
-                    VectorValuesAndScales = {});
+                ArrayRef<ReductionVectorPart> VectorValuesAndScales = {});
 
   /// \returns the cost incurred by unwanted spills and fills, caused by
   /// holding live values over call sites.
@@ -2470,8 +2490,7 @@ public:
   template <typename T>
   void removeInstructionsAndOperands(
       ArrayRef<T *> DeadVals,
-      ArrayRef<std::tuple<WeakTrackingVH, unsigned, bool, bool>>
-          VectorValuesAndScales) {
+      ArrayRef<ReductionVectorPart> VectorValuesAndScales) {
     SmallVector<WeakTrackingVH> DeadInsts;
     for (T *V : DeadVals) {
       auto *I = cast<Instruction>(V);
@@ -2538,10 +2557,10 @@ public:
         if (auto *OpI = dyn_cast<Instruction>(OpV))
           if (!DeletedInstructions.contains(OpI) &&
               (!OpI->getType()->isVectorTy() ||
-               none_of(
-                   VectorValuesAndScales,
-                   [&](const std::tuple<WeakTrackingVH, unsigned, bool, bool>
-                           &V) { return std::get<0>(V) == OpI; })) &&
+               none_of(VectorValuesAndScales,
+                       [&](const ReductionVectorPart &V) {
+                         return V.Vec == OpI;
+                       })) &&
               isInstructionTriviallyDead(OpI, TLI))
             DeadInsts.push_back(OpI);
       }
@@ -25196,11 +25215,10 @@ Value *BoUpSLP::vectorizeTree() {
   return vectorizeTree(ExternallyUsedValues);
 }
 
-Value *BoUpSLP::vectorizeTree(
-    const ExtraValueToDebugLocsMap &ExternallyUsedValues,
-    Instruction *ReductionRoot,
-    ArrayRef<std::tuple<WeakTrackingVH, unsigned, bool, bool>>
-        VectorValuesAndScales) {
+Value *
+BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
+                       Instruction *ReductionRoot,
+                       ArrayRef<ReductionVectorPart> VectorValuesAndScales) {
   // Clean Entry-to-LastInstruction table. It can be affected after scheduling,
   // need to rebuild it.
   EntryToLastInstruction.clear();
@@ -29830,6 +29848,9 @@ class HorizontalReduction {
   ReductionOpsListType ReductionOps;
   /// List of possibly reduced values.
   SmallVector<SmallVector<Value *>> ReducedVals;
+  /// Reduced values that enter the reduction with a flipped sign (from an
+  /// fsub/fneg chain link), subtracted in the final combine.
+  SmallPtrSet<Value *, 8> NegatedReducedVals;
   /// Maps reduced value to the corresponding reduction operation.
   SmallDenseMap<Value *, SmallVector<Instruction *>, 16> ReducedValsToOps;
   WeakTrackingVH ReductionRoot;
@@ -29840,10 +29861,9 @@ class HorizontalReduction {
   bool IsSupportedHorRdxIdentityOp = false;
   /// The minimum number of the reduced values.
   const unsigned ReductionLimit = VectorizeNonPowerOf2 ? 3 : 4;
-  /// Contains vector values for reduction including their scale factor and
-  /// signedness. The last bool is true, if the value was reduced in-tree.
-  SmallVector<std::tuple<WeakTrackingVH, unsigned, bool, bool>>
-      VectorValuesAndScales;
+  /// Contains vector values for reduction including their scale factor,
+  /// signedness and sign of their contribution to the reduction result.
+  SmallVector<ReductionVectorPart> VectorValuesAndScales;
 
   static bool isCmpSelMinMax(Instruction *I) {
     return match(I, m_Select(m_Cmp(), m_Value(), m_Value())) &&
@@ -30102,7 +30122,7 @@ public:
 private:
   /// Total number of operands in the reduction operation.
   static unsigned getNumberOfOperands(Instruction *I) {
-    return isCmpSelMinMax(I) ? 3 : 2;
+    return isCmpSelMinMax(I) ? 3 : (I->isUnaryOp() ? 1 : 2);
   }
 
   /// Checks if the instruction is in basic block \p BB.
@@ -30254,6 +30274,7 @@ public:
     ReducedVals.clear();
     ReducedValsToOps.clear();
     ReductionOps.clear();
+    NegatedReducedVals.clear();
     RdxKind = getRdxKind(Root);
     // Currently, only ordered fadd reductions are supported.
     if (RdxKind != RecurKind::FAdd)
@@ -30358,65 +30379,6 @@ public:
     // gather all the reduced values, sorting them by their value id.
     BasicBlock *BB = Root->getParent();
     bool IsCmpSelMinMax = isCmpSelMinMax(Root);
-    SmallVector<std::pair<Instruction *, unsigned>> Worklist(
-        1, std::make_pair(Root, 0));
-    SmallPtrSet<Value *, 8> Operands;
-    SmallVector<std::pair<Instruction *, unsigned>> PossibleOrderedReductionOps;
-    // Checks if the operands of the \p TreeN instruction are also reduction
-    // operations or should be treated as reduced values or an extra argument,
-    // which is not part of the reduction.
-    auto CheckOperands = [&](Instruction *TreeN,
-                             SmallVectorImpl<Value *> &PossibleReducedVals,
-                             SmallVectorImpl<Instruction *> &ReductionOps,
-                             unsigned Level) {
-      for (int I : reverse(seq<int>(getFirstOperandIndex(TreeN),
-                                    getNumberOfOperands(TreeN)))) {
-        Value *EdgeVal = getRdxOperand(TreeN, I);
-        ReducedValsToOps[EdgeVal].push_back(TreeN);
-        auto *EdgeInst = dyn_cast<Instruction>(EdgeVal);
-        // If the edge is not an instruction, or it is different from the main
-        // reduction opcode or has too many uses - possible reduced value.
-        // Also, do not try to reduce const values, if the operation is not
-        // foldable.
-        bool IsReducedVal = !EdgeInst || Level > RecursionMaxDepth ||
-                            getRdxKind(EdgeInst) != RdxKind ||
-                            IsCmpSelMinMax != isCmpSelMinMax(EdgeInst);
-        ReductionOrdering CurrentRK = IsReducedVal
-                                          ? ReductionOrdering::None
-                                          : isVectorizable(RdxKind, EdgeInst);
-        if (!IsReducedVal && CurrentRK == ReductionOrdering::Unordered &&
-            RK == ReductionOrdering::Unordered &&
-            !hasRequiredNumberOfUses(IsCmpSelMinMax, EdgeInst)) {
-          IsReducedVal = true;
-          CurrentRK = ReductionOrdering::None;
-          if (PossibleReducedVals.size() < ReductionLimit &&
-              !Operands.contains(EdgeInst))
-            PossibleOrderedReductionOps.emplace_back(EdgeInst, Level);
-        }
-        if (CurrentRK == ReductionOrdering::None ||
-            Operands.contains(EdgeInst) ||
-            (R.isAnalyzedReductionRoot(EdgeInst) &&
-             all_of(EdgeInst->operands(), IsaPred<Constant>))) {
-          PossibleReducedVals.push_back(EdgeVal);
-          if (EdgeInst && !isCmpSelMinMax(EdgeInst))
-            Operands.insert_range(EdgeInst->operands());
-          continue;
-        }
-        if (CurrentRK == ReductionOrdering::Ordered)
-          RK = ReductionOrdering::Ordered;
-        ReductionOps.push_back(EdgeInst);
-      }
-    };
-    // Try to regroup reduced values so that it gets more profitable to try to
-    // reduce them. Values are grouped by their value ids, instructions - by
-    // instruction op id and/or alternate op id, plus do extra analysis for
-    // loads (grouping them by the distance between pointers) and cmp
-    // instructions (grouping them by the predicate).
-    SmallMapVector<
-        size_t, SmallMapVector<size_t, SmallMapVector<Value *, unsigned, 2>, 2>,
-        8>
-        PossibleReducedVals;
-    initReductionOps(Root);
     DenseMap<std::pair<size_t, Value *>, SmallVector<LoadInst *>> LoadsMap;
     SmallSet<size_t, 2> LoadKeyUsed;
 
@@ -30454,95 +30416,247 @@ public:
 
     SmallVector<Value *> ReducedValsCandidates;
     bool AdjustedToOrdered = false;
-    SmallPtrSet<Instruction *, 16> Visited;
-    while (!Worklist.empty()) {
-      auto [TreeN, Level] = Worklist.pop_back_val();
-      if (!Visited.insert(TreeN).second)
-        continue;
-      SmallVector<Value *> PossibleRedVals;
-      SmallVector<Instruction *> PossibleReductionOps;
-      CheckOperands(TreeN, PossibleRedVals, PossibleReductionOps, Level);
-      addReductionOps(TreeN);
-      ReducedValsCandidates.append(PossibleRedVals.begin(),
-                                   PossibleRedVals.end());
-      for (Instruction *I : reverse(PossibleReductionOps))
-        Worklist.emplace_back(I, I->getParent() == BB ? 0 : Level + 1);
-      // If not enough elements for unordered vectorization, check if there are
-      // potential candidates for the ordered vectorization and try to add them
-      // to the worklist.
-      if (Worklist.empty() && ReducedValsCandidates.size() < ReductionLimit &&
-          !PossibleOrderedReductionOps.empty() &&
-          RK == ReductionOrdering::Unordered) {
-        RK = ReductionOrdering::Ordered;
-        AdjustedToOrdered = true;
-        SmallPtrSet<const Instruction *, 4> Ops;
-        for (const auto &P : PossibleOrderedReductionOps)
-          Ops.insert(P.first);
-        erase_if(ReducedValsCandidates, [&](Value *V) {
-          auto *I = dyn_cast<Instruction>(V);
-          return I && Ops.contains(I);
-        });
-        Worklist.append(PossibleOrderedReductionOps.begin(),
-                        PossibleOrderedReductionOps.end());
-        PossibleOrderedReductionOps.clear();
-      }
-    }
-    // Too many integer reduced values candidates for the ordered reductions
-    // after adjustements - try to switch to unordered reductions instead.
-    constexpr unsigned ReducedValsLimit = 1024;
-    if (ReducedValsCandidates.size() > ReducedValsLimit && AdjustedToOrdered &&
-        ReducedValsCandidates.front()->getType()->isIntOrIntVectorTy())
-      return false;
-    // Add reduction values. The values are sorted for better vectorization
-    // results.
-    for (Value *V : ReducedValsCandidates) {
-      if (RK == ReductionOrdering::Ordered && !isa<Instruction>(V))
-        continue;
-      size_t Key, Idx;
-      std::tie(Key, Idx) = generateKeySubkey(V, &TLI, GenerateLoadsSubkey,
-                                             /*AllowAlternate=*/false);
-      ++PossibleReducedVals[Key][Idx].try_emplace(V, 0).first->second;
-    }
-    auto PossibleReducedValsVect = PossibleReducedVals.takeVector();
-    // Sort values by the total number of values kinds to start the reduction
-    // from the longest possible reduced values sequences.
-    for (auto &PossibleReducedVals : PossibleReducedValsVect) {
-      auto PossibleRedVals = PossibleReducedVals.second.takeVector();
-      SmallVector<SmallVector<Value *>> PossibleRedValsVect;
-      for (auto &Slice : PossibleRedVals) {
-        PossibleRedValsVect.emplace_back();
-        auto RedValsVect = Slice.second.takeVector();
-        stable_sort(RedValsVect, llvm::less_second());
-        for (const std::pair<Value *, unsigned> &Data : RedValsVect)
-          PossibleRedValsVect.back().append(Data.second, Data.first);
-      }
-      stable_sort(PossibleRedValsVect, [](const auto &P1, const auto &P2) {
-        return P1.size() > P2.size();
-      });
-      bool First = true;
-      for (ArrayRef<Value *> Data : PossibleRedValsVect) {
-        if (First) {
-          First = false;
-          ReducedVals.emplace_back();
-        } else if (!isGoodForReduction(Data)) {
-          auto *LI = dyn_cast<LoadInst>(Data.front());
-          auto *LastLI = dyn_cast<LoadInst>(ReducedVals.back().front());
-          if (!LI || !LastLI ||
-              getUnderlyingObject(LI->getPointerOperand()) !=
-                  getUnderlyingObject(LastLI->getPointerOperand()))
-            ReducedVals.emplace_back();
+    const ReductionOrdering InitialRK = RK;
+    // For unordered fadd reductions, reassociable fsub/fneg chain links are
+    // flattened with a flipped sign on the subtracted operand: the leaves,
+    // reduced through such links, are subtracted in the final combine.
+    // Ordered reductions keep their accumulation order and are excluded.
+    bool TrackSign = RdxKind == RecurKind::FAdd && !IsCmpSelMinMax &&
+                     RK == ReductionOrdering::Unordered;
+    // The leaf signs are modeled per value. If they cannot be modeled this way
+    // (the same value occurs both added and subtracted, or the reduction
+    // switches to ordered after some fsub/fneg links have been flattened
+    // already), the analysis restarts without the fsub/fneg flattening.
+    bool Restart;
+    do {
+      Restart = false;
+      // Try to regroup reduced values so that it gets more profitable to try
+      // to reduce them. Values are grouped by their value ids, instructions -
+      // by instruction op id and/or alternate op id, plus do extra analysis
+      // for loads (grouping them by the distance between pointers) and cmp
+      // instructions (grouping them by the predicate).
+      SmallMapVector<
+          size_t,
+          SmallMapVector<size_t, SmallMapVector<Value *, unsigned, 2>, 2>, 8>
+          PossibleReducedVals;
+      RK = InitialRK;
+      ReducedVals.clear();
+      ReducedValsToOps.clear();
+      NegatedReducedVals.clear();
+      ReducedValsCandidates.clear();
+      LoadsMap.clear();
+      LoadKeyUsed.clear();
+      AdjustedToOrdered = false;
+      initReductionOps(Root);
+      SmallVector<std::tuple<Instruction *, unsigned, bool>> Worklist(
+          1, std::make_tuple(Root, 0, false));
+      SmallPtrSet<Value *, 8> Operands;
+      SmallVector<std::tuple<Instruction *, unsigned, bool>>
+          PossibleOrderedReductionOps;
+      // Leaves that (also) occur with a non-flipped sign.
+      SmallPtrSet<Value *, 8> PositiveReducedVals;
+      // Checks if the instruction continues the reduction chain. An fsub/fneg
+      // chain link in an fadd reduction is recursed into like an fadd, but its
+      // subtracted operand enters with a flipped sign. Only reassociable links
+      // qualify.
+      auto IsChainLink = [&](Instruction *I) {
+        if (getRdxKind(I) == RdxKind)
+          return true;
+        // nsz is required: subtracted leaves are regrouped and negated as a
+        // whole, and -a + -b == -(a + b) may flip the sign of a zero result.
+        return TrackSign &&
+               (I->getOpcode() == Instruction::FSub ||
+                I->getOpcode() == Instruction::FNeg) &&
+               I->hasAllowReassoc() && I->hasNoSignedZeros();
+      };
+      // Checks if the operands of the \p TreeN instruction are also reduction
+      // operations or should be treated as reduced values or an extra
+      // argument, which is not part of the reduction.
+      auto CheckOperands =
+          [&](Instruction *TreeN, SmallVectorImpl<Value *> &PossibleReducedVals,
+              SmallVectorImpl<std::pair<Instruction *, bool>> &ReductionOps,
+              unsigned Level, bool Negated) {
+            for (int I : reverse(seq<int>(getFirstOperandIndex(TreeN),
+                                          getNumberOfOperands(TreeN)))) {
+              Value *EdgeVal = getRdxOperand(TreeN, I);
+              ReducedValsToOps[EdgeVal].push_back(TreeN);
+              auto *EdgeInst = dyn_cast<Instruction>(EdgeVal);
+              // fsub flips its second operand's sign, fneg its only operand's.
+              bool EdgeNegated =
+                  Negated !=
+                  ((TreeN->getOpcode() == Instruction::FSub && I == 1) ||
+                   TreeN->getOpcode() == Instruction::FNeg);
+              // If the edge is not an instruction, or it is different from the
+              // main reduction opcode or has too many uses - possible reduced
+              // value. Also, do not try to reduce const values, if the
+              // operation is not foldable.
+              bool IsReducedVal = !EdgeInst || Level > RecursionMaxDepth ||
+                                  !IsChainLink(EdgeInst) ||
+                                  IsCmpSelMinMax != isCmpSelMinMax(EdgeInst);
+              ReductionOrdering CurrentRK =
+                  IsReducedVal ? ReductionOrdering::None
+                               : isVectorizable(RdxKind, EdgeInst);
+              if (!IsReducedVal && CurrentRK == ReductionOrdering::Unordered &&
+                  RK == ReductionOrdering::Unordered &&
+                  !hasRequiredNumberOfUses(IsCmpSelMinMax, EdgeInst)) {
+                IsReducedVal = true;
+                CurrentRK = ReductionOrdering::None;
+                if (PossibleReducedVals.size() < ReductionLimit &&
+                    !Operands.contains(EdgeInst))
+                  PossibleOrderedReductionOps.emplace_back(EdgeInst, Level,
+                                                           false);
+              }
+              if (CurrentRK == ReductionOrdering::None ||
+                  Operands.contains(EdgeInst) ||
+                  (R.isAnalyzedReductionRoot(EdgeInst) &&
+                   all_of(EdgeInst->operands(), IsaPred<Constant>))) {
+                // Keep the sign of the leaf. A leaf, occurring with both signs,
+                // cannot be modeled with a per-value sign - restart without
+                // sign tracking.
+                if (TrackSign) {
+                  auto &Same =
+                      EdgeNegated ? NegatedReducedVals : PositiveReducedVals;
+                  auto &Other =
+                      EdgeNegated ? PositiveReducedVals : NegatedReducedVals;
+                  Same.insert(EdgeVal);
+                  Restart |= Other.contains(EdgeVal);
+                }
+                PossibleReducedVals.push_back(EdgeVal);
+                if (EdgeInst && !isCmpSelMinMax(EdgeInst))
+                  Operands.insert_range(EdgeInst->operands());
+                continue;
+              }
+              if (CurrentRK == ReductionOrdering::Ordered)
+                RK = ReductionOrdering::Ordered;
+              ReductionOps.emplace_back(EdgeInst, EdgeNegated);
+            }
+          };
+      SmallPtrSet<Instruction *, 16> Visited;
+      while (!Worklist.empty() && !Restart) {
+        auto [TreeN, Level, Negated] = Worklist.pop_back_val();
+        if (!Visited.insert(TreeN).second)
+          continue;
+        SmallVector<Value *> PossibleRedVals;
+        SmallVector<std::pair<Instruction *, bool>> PossibleReductionOps;
+        CheckOperands(TreeN, PossibleRedVals, PossibleReductionOps, Level,
+                      Negated);
+        addReductionOps(TreeN);
+        ReducedValsCandidates.append(PossibleRedVals.begin(),
+                                     PossibleRedVals.end());
+        for (auto [I, OpNegated] : reverse(PossibleReductionOps))
+          Worklist.emplace_back(I, I->getParent() == BB ? 0 : Level + 1,
+                                OpNegated);
+        // If not enough elements for unordered vectorization, check if there
+        // are potential candidates for the ordered vectorization and try to
+        // add them to the worklist.
+        if (Worklist.empty() && ReducedValsCandidates.size() < ReductionLimit &&
+            !PossibleOrderedReductionOps.empty() &&
+            RK == ReductionOrdering::Unordered) {
+          RK = ReductionOrdering::Ordered;
+          AdjustedToOrdered = true;
+          SmallPtrSet<const Instruction *, 4> Ops;
+          for (const auto &P : PossibleOrderedReductionOps)
+            Ops.insert(std::get<0>(P));
+          erase_if(ReducedValsCandidates, [&](Value *V) {
+            auto *I = dyn_cast<Instruction>(V);
+            return I && Ops.contains(I);
+          });
+          Worklist.append(PossibleOrderedReductionOps);
+          PossibleOrderedReductionOps.clear();
         }
-        ReducedVals.back().append(Data.rbegin(), Data.rend());
       }
-    }
-    // Post optimize reduced values to get better reduction sequences and sort
-    // them by size.
-    optimizeReducedVals(R, DT, DL, TTI, TLI);
-    // Sort the reduced values by number of same/alternate opcode and/or pointer
-    // operand.
-    stable_sort(ReducedVals, [](ArrayRef<Value *> P1, ArrayRef<Value *> P2) {
-      return P1.size() > P2.size();
-    });
+      // The signs of the flattened leaves are meaningless for the ordered
+      // reduction - restart without the fsub/fneg flattening, if any occurred.
+      if (RK == ReductionOrdering::Ordered)
+        Restart |= !NegatedReducedVals.empty();
+      // Negating the regrouped subtracted leaves as a whole is not
+      // sign-of-zero-safe, so the whole flattened chain must be nsz.
+      if (!NegatedReducedVals.empty() &&
+          any_of(ReductionOps.front(), [](Value *Op) {
+            return !cast<Instruction>(Op)->hasNoSignedZeros();
+          }))
+        Restart = true;
+      if (!Restart) {
+        // Too many integer reduced values candidates for the ordered
+        // reductions after adjustements - try to switch to unordered
+        // reductions instead.
+        constexpr unsigned ReducedValsLimit = 1024;
+        if (ReducedValsCandidates.size() > ReducedValsLimit &&
+            AdjustedToOrdered &&
+            ReducedValsCandidates.front()->getType()->isIntOrIntVectorTy())
+          return false;
+        // Add reduction values. The values are sorted for better vectorization
+        // results.
+        for (Value *V : ReducedValsCandidates) {
+          if (RK == ReductionOrdering::Ordered && !isa<Instruction>(V))
+            continue;
+          size_t Key, Idx;
+          std::tie(Key, Idx) = generateKeySubkey(V, &TLI, GenerateLoadsSubkey,
+                                                 /*AllowAlternate=*/false);
+          // The sign of the contribution is a part of the grouping key: a
+          // mixed-sign group cannot be negated as a whole.
+          Key = hash_combine(Key, NegatedReducedVals.contains(V));
+          ++PossibleReducedVals[Key][Idx].try_emplace(V, 0).first->second;
+        }
+        auto PossibleReducedValsVect = PossibleReducedVals.takeVector();
+        // Sort values by the total number of values kinds to start the
+        // reduction from the longest possible reduced values sequences.
+        for (auto &PossibleReducedVals : PossibleReducedValsVect) {
+          auto PossibleRedVals = PossibleReducedVals.second.takeVector();
+          SmallVector<SmallVector<Value *>> PossibleRedValsVect;
+          for (auto &Slice : PossibleRedVals) {
+            PossibleRedValsVect.emplace_back();
+            auto RedValsVect = Slice.second.takeVector();
+            stable_sort(RedValsVect, llvm::less_second());
+            for (const std::pair<Value *, unsigned> &Data : RedValsVect)
+              PossibleRedValsVect.back().append(Data.second, Data.first);
+          }
+          stable_sort(PossibleRedValsVect, [](const auto &P1, const auto &P2) {
+            return P1.size() > P2.size();
+          });
+          bool First = true;
+          for (ArrayRef<Value *> Data : PossibleRedValsVect) {
+            if (First) {
+              First = false;
+              ReducedVals.emplace_back();
+            } else if (!isGoodForReduction(Data)) {
+              auto *LI = dyn_cast<LoadInst>(Data.front());
+              auto *LastLI = dyn_cast<LoadInst>(ReducedVals.back().front());
+              if (!LI || !LastLI ||
+                  getUnderlyingObject(LI->getPointerOperand()) !=
+                      getUnderlyingObject(LastLI->getPointerOperand()))
+                ReducedVals.emplace_back();
+            }
+            ReducedVals.back().append(Data.rbegin(), Data.rend());
+          }
+        }
+        // Post optimize reduced values to get better reduction sequences and
+        // sort them by size.
+        optimizeReducedVals(R, DT, DL, TTI, TLI);
+        // Sort the reduced values by number of same/alternate opcode and/or
+        // pointer operand.
+        stable_sort(ReducedVals,
+                    [](ArrayRef<Value *> P1, ArrayRef<Value *> P2) {
+                      return P1.size() > P2.size();
+                    });
+        // The flattening must not make the reduction unviable: the leaves,
+        // hidden behind the flattened fsub/fneg operations, may split into
+        // too small sign-uniform groups, while the unflattened form may
+        // still be vectorizable (e.g. with alternate fadd/fsub opcodes).
+        if (!NegatedReducedVals.empty() &&
+            accumulate(ReducedVals, 0u,
+                       [](unsigned Num, ArrayRef<Value *> Vals) -> unsigned {
+                         if (!isGoodForReduction(Vals))
+                           return Num;
+                         return Num + Vals.size();
+                       }) < ReductionLimit)
+          Restart = true;
+      }
+      if (Restart) {
+        assert(TrackSign && "Expected a sign-tracking analysis to restart");
+        TrackSign = false;
+      }
+    } while (Restart);
     return true;
   }
 
@@ -30657,6 +30771,14 @@ public:
     for (Value *U : IgnoreList)
       if (auto *FPMO = dyn_cast<FPMathOperator>(U))
         RdxFMF &= FPMO->getFastMathFlags();
+    // Returns true if the original reduced value \p V is subtracted from the
+    // reduction result.
+    auto IsNegated = [&](Value *V) { return NegatedReducedVals.contains(V); };
+    // Scalar values, subtracted from the reduction result. They are combined
+    // pairwise like the positive ones and the combined value is subtracted
+    // from the positive part of the reduction in the final combine, so no
+    // extra negation operations are emitted.
+    SmallVector<std::pair<Instruction *, Value *>> NegExtraReductions;
     // For ordered reductions here we need to generate extractelement
     // instructions, so clear IgnoreList.
     if (RK == ReductionOrdering::Ordered)
@@ -30681,6 +30803,16 @@ public:
     // nodes and thus requiring extract if fully vectorized in other trees.
     SmallPtrSet<Value *, 4> RequiredExtract;
     WeakTrackingVH VectorizedTree = nullptr;
+    // Routes the emitted value for a group of reduced values by the sign of
+    // the group: negated parts are combined separately and subtracted in the
+    // final combine.
+    auto AddReducedPart = [&](Instruction *RedOp, Value *Res, bool Negated) {
+      if (Negated) {
+        NegExtraReductions.emplace_back(RedOp, Res);
+        return;
+      }
+      VectorizedTree = GetNewVectorizedTree(VectorizedTree, Res);
+    };
     bool CheckForReusedReductionOps = false;
     // Try to vectorize elements based on their type.
     SmallVector<InstructionsState> States;
@@ -30693,6 +30825,11 @@ public:
         ReducedVals.front().size() == ReducedVals.back().size() &&
         ReducedVals.front().size() < ReductionLimit;
     for (ArrayRef<Value *> RV : ReducedVals) {
+      // Groups with different signs of their contribution cannot be merged:
+      // the mixed group cannot be added/subtracted as a whole.
+      const bool SameSign =
+          LocalReducedVals.empty() ||
+          IsNegated(LocalReducedVals.back().front()) == IsNegated(RV.front());
       // Loads are not very compatible with undefs.
       if (isa<UndefValue>(RV.front()) &&
           (States.empty() || !States.back() ||
@@ -30710,7 +30847,7 @@ public:
       }
       // Do some copyables analysis only if more than 2 groups exist or they
       // are large enough.
-      if (!TwoGroupsOfSameSmallSize) {
+      if (SameSign && !TwoGroupsOfSameSmallSize) {
         SmallVector<Value *> Ops;
         if (!LocalReducedVals.empty())
           Ops = LocalReducedVals.back();
@@ -30787,10 +30924,20 @@ public:
         Candidates.push_back(RdxVal);
         TrackedToOrig.push_back(ReducedVal);
       }
+      // The sign of the whole group: the groups are sign-uniform (guaranteed
+      // by the matching), so the sign of the first original value applies to
+      // all of them.
+      const bool GroupNegated =
+          !TrackedToOrig.empty() && IsNegated(TrackedToOrig.front());
+      assert(all_of(TrackedToOrig,
+                    [&](Value *V) { return IsNegated(V) == GroupNegated; }) &&
+             "Expected sign-uniform group of reduced values");
       bool ShuffledExtracts = false;
       // Try to handle shuffled extractelements.
       if (S && S.getOpcode() == Instruction::ExtractElement &&
-          !S.isAltShuffle() && I + 1 < E) {
+          !S.isAltShuffle() && I + 1 < E &&
+          (NegatedReducedVals.empty() ||
+           GroupNegated == IsNegated(ReducedVals[I + 1].front()))) {
         SmallVector<Value *> CommonCandidates(Candidates);
         for (Value *RV : ReducedVals[I + 1]) {
           Value *RdxVal = TrackedVals.at(RV);
@@ -30826,13 +30973,18 @@ public:
           if (auto *ResI = dyn_cast<Instruction>(Res))
             V.analyzedReductionRoot(ResI);
         }
-        VectorizedTree = GetNewVectorizedTree(VectorizedTree, Res);
+        AddReducedPart(ReducedValsToOps.at(TrackedToOrig.front()).front(), Res,
+                       GroupNegated);
         continue;
       }
 
       unsigned NumReducedVals = Candidates.size();
+      // Sign-aware reductions pair small positive/negative groups; do not
+      // skip them just for being small, but still require at least 2
+      // elements.
       if (NumReducedVals < ReductionLimit &&
-          (NumReducedVals < 2 || !isSplat(Candidates)))
+          (NumReducedVals < 2 ||
+           (!isSplat(Candidates) && NegatedReducedVals.empty())))
         continue;
 
       // Check if we support repeated scalar values processing (optimization of
@@ -30885,7 +31037,8 @@ public:
           unsigned Cnt = At(SameValuesCounter, OrigV);
           Value *RedVal =
               emitScaleForReusedOps(Candidates.front(), Builder, Cnt);
-          VectorizedTree = GetNewVectorizedTree(VectorizedTree, RedVal);
+          AddReducedPart(ReducedValsToOps.at(OrigV).front(), RedVal,
+                         GroupNegated);
           VectorizedVals.try_emplace(OrigV, Cnt);
           ExternallyUsedValues.insert(OrigV);
           continue;
@@ -30950,8 +31103,12 @@ public:
       };
       bool AnyVectorized = false;
       SmallDenseSet<std::pair<unsigned, unsigned>, 8> IgnoredCandidates;
+      // Sign-aware reductions pair small positive/negative groups; allow
+      // down to 2 lanes for them.
+      const unsigned MinReduxWidth =
+          NegatedReducedVals.empty() ? ReductionLimit : 2;
       while (Pos < NumReducedVals - ReduxWidth + 1 &&
-             ReduxWidth >= ReductionLimit) {
+             ReduxWidth >= MinReduxWidth) {
         // Dependency in tree of the reduction ops - drop this attempt, try
         // later.
         if (CheckForReusedReductionOpsLocal && PrevReduxWidth != ReduxWidth &&
@@ -31171,15 +31328,18 @@ public:
         Type *ScalarTy = VL.front()->getType();
         Type *VecTy = VectorizedRoot->getType();
         Type *RedScalarTy = VecTy->getScalarType();
-        VectorValuesAndScales.emplace_back(
-            VectorizedRoot,
-            OptReusedScalars && SameScaleFactor
-                ? SameValuesCounter.front().second
-                : 1,
-            RedScalarTy != ScalarTy->getScalarType()
-                ? V.isSignedMinBitwidthRootNode()
-                : true,
-            V.isReducedBitcastRoot() || V.isReducedCmpBitcastRoot());
+        // A group of negated reduced values (from an fsub/fneg in the chain)
+        // is subtracted in the final combine.
+        VectorValuesAndScales.push_back(
+            {VectorizedRoot,
+             OptReusedScalars && SameScaleFactor
+                 ? SameValuesCounter.front().second
+                 : 1,
+             RedScalarTy != ScalarTy->getScalarType()
+                 ? V.isSignedMinBitwidthRootNode()
+                 : true,
+             V.isReducedBitcastRoot() || V.isReducedCmpBitcastRoot(),
+             GroupNegated});
 
         // Count vectorized reduced values to exclude them from final reduction.
         for (const auto [Idx, RdxVal] : enumerate(VL)) {
@@ -31203,7 +31363,8 @@ public:
         for (const std::pair<Value *, unsigned> &P : SameValuesCounter) {
           Value *RdxVal = TrackedVals.at(P.first);
           Value *RedVal = emitScaleForReusedOps(RdxVal, Builder, P.second);
-          VectorizedTree = GetNewVectorizedTree(VectorizedTree, RedVal);
+          AddReducedPart(ReducedValsToOps.at(P.first).front(), RedVal,
+                         GroupNegated);
           VectorizedVals.try_emplace(P.first, P.second);
         }
         continue;
@@ -31211,15 +31372,22 @@ public:
     }
     // Early exit for the ordered reductions.
     // No need to do anything else here, so we can just exit.
-    if (RK == ReductionOrdering::Ordered)
+    if (RK == ReductionOrdering::Ordered) {
+      assert(NegatedReducedVals.empty() &&
+             "Unexpected negated reduced values in the ordered reduction");
       return VectorizedTree;
+    }
 
-    if (!VectorValuesAndScales.empty())
-      VectorizedTree = GetNewVectorizedTree(
-          VectorizedTree,
-          emitReduction(Builder, *TTI, ReductionRoot->getType()));
+    if (!VectorValuesAndScales.empty()) {
+      bool ResNegated = false;
+      Value *Res =
+          emitReduction(Builder, *TTI, ReductionRoot->getType(), ResNegated);
+      // The reduction result of the all-negated parts is subtracted in the
+      // final combine.
+      AddReducedPart(cast<Instruction>(ReductionRoot), Res, ResNegated);
+    }
 
-    if (!VectorizedTree) {
+    if (!VectorizedTree && NegExtraReductions.empty()) {
       if (!CheckForReusedReductionOps) {
         for (ReductionOpsType &RdxOps : ReductionOps)
           for (Value *RdxOp : RdxOps)
@@ -31312,8 +31480,9 @@ public:
       return ExtraReds;
     };
     SmallVector<std::pair<Instruction *, Value *>> ExtraReductions;
-    ExtraReductions.emplace_back(cast<Instruction>(ReductionRoot),
-                                 VectorizedTree);
+    if (VectorizedTree)
+      ExtraReductions.emplace_back(cast<Instruction>(ReductionRoot),
+                                   VectorizedTree);
     SmallPtrSet<Value *, 8> Visited;
     for (ArrayRef<Value *> Candidates : ReducedVals) {
       for (Value *RdxVal : Candidates) {
@@ -31322,18 +31491,44 @@ public:
         unsigned NumOps = VectorizedVals.lookup(RdxVal);
         for (Instruction *RedOp :
              ArrayRef(ReducedValsToOps.at(RdxVal)).drop_back(NumOps))
-          ExtraReductions.emplace_back(RedOp, RdxVal);
+          (IsNegated(RdxVal) ? NegExtraReductions : ExtraReductions)
+              .emplace_back(RedOp, RdxVal);
       }
     }
-    // Iterate through all not-vectorized reduction values/extra arguments.
-    bool InitStep = true;
-    while (ExtraReductions.size() > 1) {
-      SmallVector<std::pair<Instruction *, Value *>> NewReds =
-          FinalGen(ExtraReductions, InitStep);
-      ExtraReductions.swap(NewReds);
-      InitStep = false;
+    // Iterate through all not-vectorized reduction values/extra arguments,
+    // combining them pairwise.
+    auto CombineReds =
+        [&](SmallVectorImpl<std::pair<Instruction *, Value *>> &Reds) {
+          bool InitStep = true;
+          while (Reds.size() > 1) {
+            SmallVector<std::pair<Instruction *, Value *>> NewReds =
+                FinalGen(Reds, InitStep);
+            Reds.swap(NewReds);
+            InitStep = false;
+          }
+          Value *RdxVal = Reds.front().second;
+          auto It = TrackedVals.find(RdxVal);
+          if (It != TrackedVals.end())
+            RdxVal = It->second;
+          return RdxVal;
+        };
+    VectorizedTree = nullptr;
+    if (!ExtraReductions.empty())
+      VectorizedTree = CombineReds(ExtraReductions);
+    // Combine the subtracted values pairwise as well and subtract the combined
+    // value from the positive part of the reduction (or just negate it, if
+    // there is no positive part).
+    if (!NegExtraReductions.empty()) {
+      Value *NegTree = CombineReds(NegExtraReductions);
+      Builder.SetCurrentDebugLocation(
+          cast<Instruction>(ReductionOps.front().front())->getDebugLoc());
+      Value *Op = VectorizedTree
+                      ? Builder.CreateFSub(VectorizedTree, NegTree, "op.rdx")
+                      : Builder.CreateFNeg(NegTree, "op.rdx");
+      propagateIRFlags(Op, ReductionOps.front(), nullptr,
+                       /*IncludeWrapFlags=*/false);
+      VectorizedTree = Op;
     }
-    VectorizedTree = ExtraReductions.front().second;
 
     ReductionRoot->replaceAllUsesWith(VectorizedTree);
 
@@ -31380,6 +31575,8 @@ public:
     assert(RK == ReductionOrdering::Ordered && "Expected ordered reduction");
     assert(ReducedVals.size() == 1 &&
            "Expected single group from matchOrderedReduction");
+    assert(NegatedReducedVals.empty() &&
+           "Unexpected negated reduced values in the ordered reduction");
 
     IRBuilder<TargetFolder> Builder(ReductionRoot->getContext(),
                                     TargetFolder(DL));
@@ -31694,7 +31891,10 @@ private:
       if (It != ReducedValsToOps.end())
         return It->second.front();
       for (User *U : RdxVal->users())
-        if (getRdxKind(U) == RdxKind)
+        if (getRdxKind(U) == RdxKind ||
+            (RdxKind == RecurKind::FAdd &&
+             (match(U, m_FSub(m_Value(), m_Value())) ||
+              match(U, m_FNeg(m_Value())))))
           return cast<Instruction>(U);
       return cast<Instruction>(RdxVal);
     };
@@ -31723,9 +31923,14 @@ private:
             for (User *U : RdxVal->users()) {
               auto *RdxOp = cast<Instruction>(U);
               if (hasRequiredNumberOfUses(IsCmpSelMinMax, RdxOp)) {
-                if (RdxKind == RecurKind::FAdd) {
-                  InstructionCost FMACost = canConvertToFMA(
-                      RdxOp, getSameOpcode(RdxOp, TLI), DT, DL, *TTI, TLI);
+                // A flattened chain may leave an fneg here, which is not
+                // add/sub-like.
+                InstructionsState RdxOpS = RdxKind == RecurKind::FAdd
+                                               ? getSameOpcode(RdxOp, TLI)
+                                               : InstructionsState::invalid();
+                if (RdxOpS && RdxOpS.isAddSubLikeOp()) {
+                  InstructionCost FMACost =
+                      canConvertToFMA(RdxOp, RdxOpS, DT, DL, *TTI, TLI);
                   if (FMACost.isValid()) {
                     LLVM_DEBUG(dbgs() << "FMA cost: " << FMACost << "\n");
                     if (auto *I = dyn_cast<Instruction>(RdxVal)) {
@@ -31824,8 +32029,11 @@ private:
               Ops.push_back(RdxVal->user_back());
             }
             if (!Ops.empty()) {
-              FMACost = canConvertToFMA(Ops, getSameOpcode(Ops, TLI), DT, DL,
-                                        *TTI, TLI);
+              // A flattened chain may leave an fneg here, which is not
+              // add/sub-like.
+              InstructionsState S = getSameOpcode(Ops, TLI);
+              if (S && S.isAddSubLikeOp())
+                FMACost = canConvertToFMA(Ops, S, DT, DL, *TTI, TLI);
               if (FMACost.isValid()) {
                 // Calculate actual FMAD cost.
                 IntrinsicCostAttributes ICA(Intrinsic::fmuladd, RVecTy,
@@ -31857,10 +32065,19 @@ private:
         }
       }
       ScalarCost = EvaluateScalarCost([&](Instruction *RdxOp) {
+        // A flattened fneg chain link is unary (and usually cheaper) - cost
+        // it with its own opcode. Also, RdxOp may be the reduced value
+        // itself, if the actual reduction operation was not found - guard the
+        // second operand access.
+        unsigned RdxOpc = RdxOp->getOpcode() == Instruction::FNeg
+                              ? Instruction::FNeg
+                              : RdxOpcode;
+        TargetTransformInfo::OperandValueInfo Op1Info;
+        if (RdxOp->getNumOperands() > 1)
+          Op1Info = TTI::getOperandInfo(RdxOp->getOperand(1));
         return TTI->getArithmeticInstrCost(
-            RdxOpcode, ScalarTy, CostKind,
-            TTI::getOperandInfo(RdxOp->getOperand(0)),
-            TTI::getOperandInfo(RdxOp->getOperand(1)), {}, RdxOp);
+            RdxOpc, ScalarTy, CostKind,
+            TTI::getOperandInfo(RdxOp->getOperand(0)), Op1Info, {}, RdxOp);
       });
       break;
     }
@@ -31914,34 +32131,59 @@ private:
   /// Splits the values, stored in VectorValuesAndScales, into registers/free
   /// sub-registers, combines them with the given reduction operation as a
   /// vector operation and then performs single (small enough) reduction.
+  /// The parts, marked as negated, are combined with the vector fsub operation
+  /// (which may form per-lane fma with the multiplications in the reduced
+  /// values). \p ResNegated is set, if the result itself represents a negated
+  /// value (all the combined parts are negated) and thus must be subtracted
+  /// from (rather than added to) the final reduction result.
   Value *emitReduction(IRBuilderBase &Builder, const TargetTransformInfo &TTI,
-                       Type *DestTy) {
+                       Type *DestTy, bool &ResNegated) {
     Value *ReducedSubTree = nullptr;
-    // Creates reduction and combines with the previous reduction.
+    ResNegated = false;
+    // Creates a subtraction of two parts of the reduction with the flags of
+    // the whole chain.
+    auto CreateSubOp = [&](Value *LHS, Value *RHS, const Twine &Name) {
+      Value *Op = Builder.CreateFSub(LHS, RHS, Name);
+      propagateIRFlags(Op, ReductionOps.front(), nullptr,
+                       /*IncludeWrapFlags=*/false);
+      return Op;
+    };
+    // Creates reduction and combines with the previous reduction, respecting
+    // the signs of the operands.
     auto CreateSingleOp = [&](Value *Vec, unsigned Scale, bool IsSigned,
-                              bool ReducedInTree) {
+                              bool ReducedInTree, bool Negated) {
       Value *Rdx = createSingleOp(Builder, TTI, Vec, Scale, IsSigned, DestTy,
                                   ReducedInTree);
-      if (ReducedSubTree)
+      if (!ReducedSubTree) {
+        ReducedSubTree = Rdx;
+        ResNegated = Negated;
+        return;
+      }
+      if (Negated == ResNegated) {
         ReducedSubTree = createOp(Builder, RdxKind, ReducedSubTree, Rdx,
                                   "op.rdx", ReductionOps);
-      else
-        ReducedSubTree = Rdx;
+        return;
+      }
+      // Adding a value with the flipped sign - subtract the negated one
+      // from the positive one.
+      ReducedSubTree = Negated ? CreateSubOp(ReducedSubTree, Rdx, "op.rdx")
+                               : CreateSubOp(Rdx, ReducedSubTree, "op.rdx");
+      ResNegated = false;
     };
     if (VectorValuesAndScales.size() == 1) {
-      const auto &[Vec, Scale, IsSigned, ReducedInTree] =
-          VectorValuesAndScales.front();
-      CreateSingleOp(Vec, Scale, IsSigned, ReducedInTree);
+      const ReductionVectorPart &P = VectorValuesAndScales.front();
+      CreateSingleOp(P.Vec, P.Scale, P.IsSigned, P.ReducedInTree, P.Negated);
       return ReducedSubTree;
     }
     // Scales Vec using given Cnt scale factor and then performs vector combine
     // with previous value of VecOp.
     Value *VecRes = nullptr;
     bool VecResSignedness = false;
+    bool VecResNegated = false;
     auto CreateVecOp = [&](Value *Vec, unsigned Cnt, bool IsSigned,
-                           bool ReducedInTree) {
+                           bool ReducedInTree, bool Negated) {
       if (ReducedInTree) {
-        CreateSingleOp(Vec, Cnt, IsSigned, ReducedInTree);
+        CreateSingleOp(Vec, Cnt, IsSigned, ReducedInTree, Negated);
         return;
       }
       Type *ScalarTy = Vec->getType()->getScalarType();
@@ -32027,6 +32269,7 @@ private:
       if (!VecRes) {
         VecRes = Vec;
         VecResSignedness = IsSigned;
+        VecResNegated = Negated;
       } else {
         ++NumVectorInstructions;
         if (ScalarTy == Builder.getInt1Ty() && ScalarTy != DestTy &&
@@ -32072,21 +32315,38 @@ private:
         if (VecResVF < VecVF) {
           std::swap(VecRes, Vec);
           std::swap(VecResVF, VecVF);
+          std::swap(VecResNegated, Negated);
         }
         // extract + op + insert
         Value *Op = VecRes;
         if (VecResVF != VecVF)
           Op = createExtractVector(Builder, VecRes, VecVF, /*Index=*/0);
-        Op = createOp(Builder, RdxKind, Op, Vec, "rdx.op", ReductionOps);
+        if (Negated != VecResNegated) {
+          // Combining values with different signs: subtract the negated one.
+          // The combined value keeps the sign of VecRes: with the positive
+          // VecRes it is VecRes - Vec, with the negated VecRes it is
+          // -(VecRes - Vec) = Vec - VecRes.
+          Op = CreateSubOp(Op, Vec, "rdx.op");
+        } else {
+          Op = createOp(Builder, RdxKind, Op, Vec, "rdx.op", ReductionOps);
+        }
         if (VecResVF != VecVF)
           Op = createInsertVector(Builder, VecRes, Op, /*Index=*/0);
         VecRes = Op;
       }
     };
-    for (auto [Vec, Scale, IsSigned, ReducedInTree] : VectorValuesAndScales)
-      CreateVecOp(Vec, Scale, IsSigned, ReducedInTree);
+    // Emit the parts with the positive sign first, so the combined vector
+    // value stays positive when there is at least one positive part and the
+    // negated parts are combined in via fsub (which may form per-lane fma
+    // with the multiplications in the reduced values).
+    for (const ReductionVectorPart &P : VectorValuesAndScales)
+      if (!P.Negated)
+        CreateVecOp(P.Vec, P.Scale, P.IsSigned, P.ReducedInTree, P.Negated);
+    for (const ReductionVectorPart &P : VectorValuesAndScales)
+      if (P.Negated)
+        CreateVecOp(P.Vec, P.Scale, P.IsSigned, P.ReducedInTree, P.Negated);
     CreateSingleOp(VecRes, /*Scale=*/1, /*IsSigned=*/false,
-                   /*ReducedInTree=*/false);
+                   /*ReducedInTree=*/false, VecResNegated);
 
     return ReducedSubTree;
   }
@@ -32149,7 +32409,12 @@ private:
       Value *Scale = ConstantFP::get(VectorizedValue->getType(), Cnt);
       LLVM_DEBUG(dbgs() << "SLP: FAdd (to-fmul) " << Cnt << "of "
                         << VectorizedValue << ". (HorRdx)\n");
-      return Builder.CreateFMul(VectorizedValue, Scale);
+      Value *Op = Builder.CreateFMul(VectorizedValue, Scale);
+      // The mul stands in for a run of the chain operations and joins the
+      // same combines, so it carries the flags of the whole chain.
+      propagateIRFlags(Op, ReductionOps.front(), nullptr,
+                       /*IncludeWrapFlags=*/false);
+      return Op;
     }
     case RecurKind::And:
     case RecurKind::Or:

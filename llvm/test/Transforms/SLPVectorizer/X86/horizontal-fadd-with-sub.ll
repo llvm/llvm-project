@@ -9,17 +9,12 @@ define double @fsub_fmul_2(ptr %x, ptr %y, ptr %z) {
 ; CHECK-LABEL: define double @fsub_fmul_2(
 ; CHECK-SAME: ptr [[X:%.*]], ptr [[Y:%.*]], ptr [[Z:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[Z8:%.*]] = getelementptr inbounds nuw i8, ptr [[Z]], i64 8
-; CHECK-NEXT:    [[Z0:%.*]] = load double, ptr [[Z]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[X]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[Y]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul reassoc nsz contract <2 x double> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[Z1:%.*]] = load double, ptr [[Z8]], align 8
-; CHECK-NEXT:    [[ZSUM:%.*]] = fadd reassoc nsz contract double [[Z0]], [[Z1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP3]], i64 0
-; CHECK-NEXT:    [[SUB:%.*]] = fsub reassoc nsz contract double [[TMP5]], [[ZSUM]]
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP3]], i64 1
-; CHECK-NEXT:    [[TMP6:%.*]] = fadd reassoc nsz contract double [[SUB]], [[TMP4]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x double>, ptr [[Z]], align 8
+; CHECK-NEXT:    [[RDX_OP:%.*]] = fsub reassoc nsz contract <2 x double> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call reassoc nsz contract double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[RDX_OP]])
 ; CHECK-NEXT:    ret double [[TMP6]]
 ;
 entry:
@@ -44,27 +39,12 @@ define double @fsub_fmul_4(ptr %x, ptr %y, ptr %z) {
 ; CHECK-LABEL: define double @fsub_fmul_4(
 ; CHECK-SAME: ptr [[X:%.*]], ptr [[Y:%.*]], ptr [[Z:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[X8:%.*]] = getelementptr inbounds nuw i8, ptr [[X]], i64 8
-; CHECK-NEXT:    [[Y8:%.*]] = getelementptr inbounds nuw i8, ptr [[Y]], i64 8
-; CHECK-NEXT:    [[X24:%.*]] = getelementptr inbounds nuw i8, ptr [[X]], i64 24
-; CHECK-NEXT:    [[Y24:%.*]] = getelementptr inbounds nuw i8, ptr [[Y]], i64 24
-; CHECK-NEXT:    [[X0:%.*]] = load double, ptr [[X]], align 8
-; CHECK-NEXT:    [[Y0:%.*]] = load double, ptr [[Y]], align 8
-; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc nsz contract double [[Y0]], [[X0]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[X8]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[Y8]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nsz contract <2 x double> [[TMP1]], [[TMP0]]
-; CHECK-NEXT:    [[X3:%.*]] = load double, ptr [[X24]], align 8
-; CHECK-NEXT:    [[Y3:%.*]] = load double, ptr [[Y24]], align 8
-; CHECK-NEXT:    [[MUL16:%.*]] = fmul reassoc nsz contract double [[Y3]], [[X3]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[X]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x double>, ptr [[Y]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nsz contract <4 x double> [[TMP1]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x double>, ptr [[Z]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP2]], i64 0
-; CHECK-NEXT:    [[T1:%.*]] = fadd reassoc nsz contract double [[MUL]], [[TMP4]]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP2]], i64 1
-; CHECK-NEXT:    [[T3:%.*]] = fadd reassoc nsz contract double [[T1]], [[TMP7]]
-; CHECK-NEXT:    [[TMP6:%.*]] = call reassoc nsz contract double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP3]])
-; CHECK-NEXT:    [[ADD13:%.*]] = fsub reassoc nsz contract double [[T3]], [[TMP6]]
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd reassoc nsz contract double [[ADD13]], [[MUL16]]
+; CHECK-NEXT:    [[RDX_OP:%.*]] = fsub reassoc nsz contract <4 x double> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call reassoc nsz contract double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[RDX_OP]])
 ; CHECK-NEXT:    ret double [[TMP5]]
 ;
 entry:
@@ -108,21 +88,12 @@ define double @fneg_chain_2(ptr %x, ptr %y, ptr %z) {
 ; CHECK-LABEL: define double @fneg_chain_2(
 ; CHECK-SAME: ptr [[X:%.*]], ptr [[Y:%.*]], ptr [[Z:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[X8:%.*]] = getelementptr inbounds nuw i8, ptr [[X]], i64 8
-; CHECK-NEXT:    [[Y8:%.*]] = getelementptr inbounds nuw i8, ptr [[Y]], i64 8
-; CHECK-NEXT:    [[X0:%.*]] = load double, ptr [[X]], align 8
-; CHECK-NEXT:    [[Y0:%.*]] = load double, ptr [[Y]], align 8
-; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc nsz contract double [[Y0]], [[X0]]
-; CHECK-NEXT:    [[X1:%.*]] = load double, ptr [[X8]], align 8
-; CHECK-NEXT:    [[Y1:%.*]] = load double, ptr [[Y8]], align 8
-; CHECK-NEXT:    [[MUL5:%.*]] = fmul reassoc nsz contract double [[Y1]], [[X1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[X]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[Y]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nsz contract <2 x double> [[TMP1]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[Z]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = fneg reassoc nsz contract <2 x double> [[TMP3]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[TMP1]], i64 0
-; CHECK-NEXT:    [[T:%.*]] = fadd reassoc nsz contract double [[MUL]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP1]], i64 1
-; CHECK-NEXT:    [[T2:%.*]] = fadd reassoc nsz contract double [[T]], [[TMP4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd reassoc nsz contract double [[T2]], [[MUL5]]
+; CHECK-NEXT:    [[RDX_OP:%.*]] = fsub reassoc nsz contract <2 x double> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call reassoc nsz contract double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[RDX_OP]])
 ; CHECK-NEXT:    ret double [[TMP5]]
 ;
 entry:
@@ -150,18 +121,13 @@ define double @negated_reused(ptr %x, ptr %y, ptr %z) {
 ; CHECK-LABEL: define double @negated_reused(
 ; CHECK-SAME: ptr [[X:%.*]], ptr [[Y:%.*]], ptr [[Z:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[X8:%.*]] = getelementptr inbounds nuw i8, ptr [[X]], i64 8
-; CHECK-NEXT:    [[Y8:%.*]] = getelementptr inbounds nuw i8, ptr [[Y]], i64 8
-; CHECK-NEXT:    [[X0:%.*]] = load double, ptr [[X]], align 8
-; CHECK-NEXT:    [[Y0:%.*]] = load double, ptr [[Y]], align 8
-; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc nsz contract double [[Y0]], [[X0]]
 ; CHECK-NEXT:    [[Z0:%.*]] = load double, ptr [[Z]], align 8
-; CHECK-NEXT:    [[X1:%.*]] = load double, ptr [[X8]], align 8
-; CHECK-NEXT:    [[Y1:%.*]] = load double, ptr [[Y8]], align 8
-; CHECK-NEXT:    [[MUL5:%.*]] = fmul reassoc nsz contract double [[Y1]], [[X1]]
-; CHECK-NEXT:    [[SUB:%.*]] = fsub reassoc nsz contract double [[MUL]], [[Z0]]
-; CHECK-NEXT:    [[SUB7:%.*]] = fsub reassoc nsz contract double [[MUL5]], [[Z0]]
-; CHECK-NEXT:    [[OP_RDX:%.*]] = fadd reassoc nsz contract double [[SUB]], [[SUB7]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[X]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[Y]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nsz contract <2 x double> [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul reassoc nsz contract double [[Z0]], 2.000000e+00
+; CHECK-NEXT:    [[TMP4:%.*]] = call reassoc nsz contract double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[TMP2]])
+; CHECK-NEXT:    [[OP_RDX:%.*]] = fsub reassoc nsz contract double [[TMP4]], [[TMP3]]
 ; CHECK-NEXT:    ret double [[OP_RDX]]
 ;
 entry:
@@ -186,8 +152,8 @@ define double @all_negated(ptr %a) {
 ; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[A]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = fneg reassoc nsz contract <4 x double> [[TMP0]]
-; CHECK-NEXT:    [[OP_RDX:%.*]] = call reassoc nsz contract double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc nsz contract double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP0]])
+; CHECK-NEXT:    [[OP_RDX:%.*]] = fneg reassoc nsz contract double [[TMP1]]
 ; CHECK-NEXT:    ret double [[OP_RDX]]
 ;
 entry:
@@ -214,18 +180,9 @@ define double @negated_constants(ptr %a) {
 ; CHECK-LABEL: define double @negated_constants(
 ; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 8
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 16
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 24
-; CHECK-NEXT:    [[A0:%.*]] = load double, ptr [[A]], align 8
-; CHECK-NEXT:    [[A1:%.*]] = load double, ptr [[P1]], align 8
-; CHECK-NEXT:    [[A2:%.*]] = load double, ptr [[P2]], align 8
-; CHECK-NEXT:    [[A3:%.*]] = load double, ptr [[P3]], align 8
-; CHECK-NEXT:    [[T0:%.*]] = fadd reassoc nsz contract double [[A0]], [[A1]]
-; CHECK-NEXT:    [[T1:%.*]] = fsub reassoc nsz contract double [[T0]], 2.000000e+00
-; CHECK-NEXT:    [[T2:%.*]] = fadd reassoc nsz contract double [[T1]], [[A2]]
-; CHECK-NEXT:    [[T3:%.*]] = fsub reassoc nsz contract double [[T2]], 3.000000e+00
-; CHECK-NEXT:    [[OP_RDX:%.*]] = fadd reassoc nsz contract double [[T3]], [[A3]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[A]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc nsz contract double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP0]])
+; CHECK-NEXT:    [[OP_RDX:%.*]] = fsub reassoc nsz contract double [[TMP1]], 5.000000e+00
 ; CHECK-NEXT:    ret double [[OP_RDX]]
 ;
 entry:
