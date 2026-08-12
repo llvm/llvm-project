@@ -146,14 +146,13 @@ def windows_release_version(release):
     # Windows installers use Wix which does not support version strings with
     # characters. To work around this, "X.1.0-rcZ" is changed to "X.0.0.Z".
     # Equivalent to what is done in .github/workflows/release-binaries.yml.
-    windows_release = release
-    if "-rc" in windows_release:
-        version, rc = windows_release.split("-")
+    if "-rc" in release:
+        version, rc = release.split("-")
         major_version = version.split(".")[0]
         rc_number = rc.replace("rc", "")
-        windows_release = f"{major_version}.0.0.{rc_number}"
+        release = f"{major_version}.0.0.{rc_number}"
 
-    return windows_release
+    return release
 
 
 def generate_download_links(release):
