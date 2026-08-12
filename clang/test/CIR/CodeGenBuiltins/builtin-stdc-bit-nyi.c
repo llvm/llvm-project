@@ -12,9 +12,9 @@ void test_unimplemented_builtin_stdc_bit(unsigned int ui,
   volatile unsigned int r;
   r = __builtin_stdc_bit_ceil(ui);  // expected-error {{ClangIR code gen Not Yet Implemented: unimplemented builtin call: __builtin_stdc_bit_ceil}}
   r = __builtin_stdc_bit_floor(ui); // expected-error {{ClangIR code gen Not Yet Implemented: unimplemented builtin call: __builtin_stdc_bit_floor}}
-  (void)__builtin_stdc_leading_zeros(bi); // expected-error {{ClangIR code gen Not Yet Implemented: stdc bit builtin on unsupported integer width}}
-  (void)__builtin_stdc_count_zeros(bi);   // expected-error {{ClangIR code gen Not Yet Implemented: stdc bit builtin on unsupported integer width}}
-  (void)__builtin_stdc_has_single_bit(bi); // expected-error {{ClangIR code gen Not Yet Implemented: stdc bit builtin on unsupported integer width}}
+  (void)__builtin_stdc_leading_zeros(bi); // expected-error {{ClangIR code gen Not Yet Implemented: stdc bit builtin with unsupported argument integer width}}
+  (void)__builtin_stdc_count_zeros(bi);   // expected-error {{ClangIR code gen Not Yet Implemented: stdc bit builtin with unsupported argument integer width}}
+  (void)__builtin_stdc_has_single_bit(bi); // expected-error {{ClangIR code gen Not Yet Implemented: stdc bit builtin with unsupported argument integer width}}
 }
 
 #else
