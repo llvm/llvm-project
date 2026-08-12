@@ -1008,19 +1008,6 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   TargetLowering::LegalizeAction Action = TargetLowering::Legal;
   bool SimpleFinishLegalizing = true;
   switch (Node->getOpcode()) {
-  case ISD::POISON: {
-    // TODO: Currently, POISON is being lowered to UNDEF here. However, there is
-    // an open concern that this transformation may not be ideal, as targets
-    // should ideally handle POISON directly. Changing this behavior would
-    // require adding support for POISON in TableGen, which is a large change.
-    // Additionally, many existing test cases rely on the current behavior
-    // (e.g., llvm/test/CodeGen/PowerPC/vec_shuffle.ll). A broader discussion
-    // and incremental changes might be needed to properly support POISON
-    // without breaking existing targets and tests.
-    SDValue UndefNode = DAG.getUNDEF(Node->getValueType(0));
-    ReplaceNode(Node, UndefNode.getNode());
-    return;
-  }
   case ISD::INTRINSIC_W_CHAIN:
   case ISD::INTRINSIC_WO_CHAIN:
   case ISD::INTRINSIC_VOID:
@@ -1717,6 +1704,9 @@ SDValue SelectionDAGLegalize::ExpandFCOPYSIGN(SDNode *Node) const {
   SDValue Mag = Node->getOperand(0);
   SDValue Sign = Node->getOperand(1);
 
+  if (Sign.getValueType().isVector())
+    return DAG.UnrollVectorOp(Node);
+
   // Get sign bit into an integer value.
   FloatSignAsInt SignAsInt;
   getSignAsIntValue(SignAsInt, DL, Sign);
@@ -1776,6 +1766,9 @@ SDValue SelectionDAGLegalize::ExpandFCOPYSIGN(SDNode *Node) const {
 SDValue SelectionDAGLegalize::ExpandFNEG(SDNode *Node) const {
   // Get the sign bit as an integer.
   SDLoc DL(Node);
+  if (Node->getValueType(0).isVector())
+    return DAG.UnrollVectorOp(Node);
+
   FloatSignAsInt SignAsInt;
   getSignAsIntValue(SignAsInt, DL, Node->getOperand(0));
   EVT IntVT = SignAsInt.IntValue.getValueType();
@@ -1799,6 +1792,9 @@ SDValue SelectionDAGLegalize::ExpandFABS(SDNode *Node) const {
     SDValue Zero = DAG.getConstantFP(0.0, DL, FloatVT);
     return DAG.getNode(ISD::FCOPYSIGN, DL, FloatVT, Value, Zero);
   }
+
+  if (FloatVT.isVector())
+    return DAG.UnrollVectorOp(Node);
 
   // Transform value to integer, clear the sign bit and transform back.
   FloatSignAsInt ValueAsInt;
@@ -2174,7 +2170,10 @@ SelectionDAGLegalize::ExpandLibCall(RTLIB::Libcall LC, SDNode *Node,
   const Function &F = DAG.getMachineFunction().getFunction();
   bool isTailCall =
       TLI.isInTailCallPosition(DAG, Node, TCChain) &&
-      (RetTy == F.getReturnType() || F.getReturnType()->isVoidTy());
+      (RetTy == F.getReturnType() || F.getReturnType()->isVoidTy()) &&
+      // Lowering doesn't support tail calling inside a function with
+      // a swifterror argument yet.
+      !DAG.hasSwiftErrorArg();
   if (isTailCall)
     InChain = TCChain;
 
@@ -2569,6 +2568,12 @@ SDValue SelectionDAGLegalize::expandLdexp(SDNode *Node) const {
   if (AsIntVT == EVT()) // TODO: How to handle f80?
     return SDValue();
 
+  // The expansion works through the integer-equivalent type; if that is not
+  // legal, bail out and let the caller use a libcall (or diagnose a missing
+  // one).
+  if (!TLI.isTypeLegal(AsIntVT))
+    return SDValue();
+
   if (Node->getOpcode() == ISD::STRICT_FLDEXP) // TODO
     return SDValue();
 
@@ -2678,6 +2683,12 @@ SDValue SelectionDAGLegalize::expandFrexp(SDNode *Node) const {
   EVT ExpVT = Node->getValueType(1);
   EVT AsIntVT = VT.changeTypeToInteger();
   if (AsIntVT == EVT()) // TODO: How to handle f80?
+    return SDValue();
+
+  // The expansion works through the integer-equivalent type; if that is not
+  // legal, bail out and let the caller use a libcall (or diagnose a missing
+  // one).
+  if (!TLI.isTypeLegal(AsIntVT))
     return SDValue();
 
   const fltSemantics &FltSem = VT.getFltSemantics();
@@ -5061,8 +5072,12 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
                                                         : RTLIB::getFREXP(VT);
     bool Expanded = TLI.expandMultipleResultFPLibCall(DAG, LC, Node, Results,
                                                       /*CallRetResNo=*/0);
-    if (!Expanded)
-      llvm_unreachable("Expected scalar FFREXP/FMODF to expand to libcall!");
+    if (!Expanded) {
+      DAG.getContext()->emitError(Twine("no libcall available for ") +
+                                  Node->getOperationName(&DAG));
+      for (unsigned I = 0, E = Node->getNumValues(); I != E; ++I)
+        Results.push_back(DAG.getPOISON(Node->getValueType(I)));
+    }
     break;
   }
   case ISD::FPOWI:
@@ -5872,6 +5887,17 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::FMAXIMUMNUM:
   case ISD::FPOW:
   case ISD::FATAN2:
+    // Promote scalar operations to vector using SCALAR_TO_VECTOR
+    if (!OVT.isVector() && NVT.isVector() &&
+        NVT.getVectorElementType() == OVT) {
+      Tmp1 = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, NVT, Node->getOperand(0));
+      Tmp2 = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, NVT, Node->getOperand(1));
+      Tmp3 =
+          DAG.getNode(Node->getOpcode(), dl, NVT, Tmp1, Tmp2, Node->getFlags());
+      Results.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, OVT, Tmp3,
+                                    DAG.getConstant(0, dl, MVT::i32)));
+      break;
+    }
     Tmp1 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(0));
     Tmp2 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(1));
     Tmp3 = DAG.getNode(Node->getOpcode(), dl, NVT, Tmp1, Tmp2);
@@ -6037,6 +6063,15 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::FEXP2:
   case ISD::FEXP10:
   case ISD::FCANONICALIZE:
+    // Promote scalar operations to vector using SCALAR_TO_VECTOR
+    if (!OVT.isVector() && NVT.isVector() &&
+        NVT.getVectorElementType() == OVT) {
+      Tmp1 = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, NVT, Node->getOperand(0));
+      Tmp2 = DAG.getNode(Node->getOpcode(), dl, NVT, Tmp1, Node->getFlags());
+      Results.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, OVT, Tmp2,
+                                    DAG.getConstant(0, dl, MVT::i32)));
+      break;
+    }
     Tmp1 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(0));
     Tmp2 = DAG.getNode(Node->getOpcode(), dl, NVT, Tmp1);
     Results.push_back(

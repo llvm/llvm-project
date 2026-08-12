@@ -52,12 +52,15 @@ llvm.func @distribute_order(%lb : i32, %ub : i32, %step : i32) {
 
 // -----
 
-llvm.func @parallel_allocate(%x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause allocate in omp.parallel operation}}
+omp.private {type = private} @parallel_bad_allocator_private : i32
+
+llvm.func @parallel_bad_allocator(%allocator : f32, %x : !llvm.ptr) {
+  // expected-error@below {{OpenMP allocator operand must have integer or pointer type}}
   // expected-error@below {{LLVM Translation failed for operation: omp.parallel}}
-  omp.parallel allocate(%x : !llvm.ptr -> %x : !llvm.ptr) {
+  omp.parallel allocate(%allocator : f32 -> %x : !llvm.ptr)
+      private(@parallel_bad_allocator_private %x -> %private : !llvm.ptr) {
     omp.terminator
-  }
+  } {allocate_private_indices = array<i64: 0>}
   llvm.return
 }
 
@@ -619,17 +622,6 @@ llvm.func @taskloop_reduction_two_arg_init(%lb : i32, %ub : i32, %step : i32, %x
     }
     omp.terminator
   } {omp.combined}
-  llvm.return
-}
-
-// -----
-
-llvm.func @taskwait_depend(%x: !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause depend in omp.taskwait operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.taskwait}}
-  omp.taskwait depend(taskdependin -> %x : !llvm.ptr) {
-    omp.terminator
-  }
   llvm.return
 }
 

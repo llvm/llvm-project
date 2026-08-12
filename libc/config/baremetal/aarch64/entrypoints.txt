@@ -254,6 +254,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.llabs
     libc.src.stdlib.lldiv
     libc.src.stdlib.malloc
+    libc.src.stdlib.malloc_usable_size
     libc.src.stdlib.memalignment
     libc.src.stdlib.qsort
     libc.src.stdlib.qsort_r
@@ -661,6 +662,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.isnanf16
     libc.src.math.issignalingf16
     libc.src.math.ldexpf16
+    libc.src.math.lgammaf16
     libc.src.math.llogbf16
     libc.src.math.llrintf16
     libc.src.math.llroundf16
@@ -702,7 +704,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.ufromfpxf16
   )
 
-  if(LIBC_TYPES_HAS_FLOAT128)
+  if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
     list(APPEND TARGET_LIBM_ENTRYPOINTS
       # math.h C23 mixed _Float16 and _Float128 entrypoints
       libc.src.math.f16addf128
@@ -725,7 +727,7 @@ if(LIBC_TYPES_HAS_CFLOAT128)
   )
 endif()
 
-if(LIBC_TYPES_HAS_FLOAT128)
+if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float128 entrypoints
     libc.src.math.atan2f128
@@ -876,7 +878,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.ufromfpxbf16
 )
 
-if(LIBC_TYPES_HAS_FLOAT128)
+if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C++23 mixed bfloat16 and _Float128 entrypoints
     libc.src.math.bf16addf128

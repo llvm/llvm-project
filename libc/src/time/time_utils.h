@@ -51,8 +51,8 @@ constexpr int TIME_OVERFLOW = ERANGE;
 ///
 /// \param total_seconds The number of seconds since January 1st, 1970.
 /// \param tm Pointer to the tm structure to update.
-/// \return 0 on success, or error code on failure.
-ErrorOr<int> update_from_seconds(time_t total_seconds, tm *tm);
+/// \return void on success, or error code on failure.
+ErrorOr<void> update_from_seconds(time_t total_seconds, tm *tm);
 
 LIBC_INLINE ErrorOr<char *> asctime(const tm *timeptr, char *buffer,
                                     size_t bufferLength) {

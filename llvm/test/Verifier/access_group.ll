@@ -5,6 +5,8 @@ define void @test(ptr %p) {
   load i8, ptr %p, !llvm.access.group !1
 ; CHECK: Access scope list must consist of MDNodes
   load i8, ptr %p, !llvm.access.group !2
+; CHECK: Access scope must be 'distinct'
+  load i8, ptr %p, !llvm.access.group !0
 ; CHECK-NOT: Access scope
   load i8, ptr %p, !llvm.access.group !3
   load i8, ptr %p, !llvm.access.group !4

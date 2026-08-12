@@ -88,24 +88,53 @@ entry:
 define void @f_alias(ptr nocapture %dst, ptr nocapture readonly %src, ptr nocapture readonly %w) {
 ; CHECK-LABEL: @f_alias(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[DST2:%.*]] = ptrtoaddr ptr [[DST:%.*]] to i64
+; CHECK-NEXT:    [[SRC1:%.*]] = ptrtoaddr ptr [[SRC:%.*]] to i64
+; CHECK-NEXT:    [[TMP19:%.*]] = add i64 [[SRC1]], 4
+; CHECK-NEXT:    [[TMP20:%.*]] = add i64 [[DST2]], 4
+; CHECK-NEXT:    [[RT_BOUND0:%.*]] = icmp ult i64 [[DST2]], [[TMP19]]
+; CHECK-NEXT:    [[RT_BOUND1:%.*]] = icmp ult i64 [[SRC1]], [[TMP20]]
+; CHECK-NEXT:    [[RT_CONFLICT:%.*]] = and i1 [[RT_BOUND0]], [[RT_BOUND1]]
+; CHECK-NEXT:    [[RT_GUARD:%.*]] = freeze i1 [[RT_CONFLICT]]
+; CHECK-NEXT:    br i1 [[RT_GUARD]], label [[ENTRY_RTSCALAR:%.*]], label [[ENTRY_RTVEC:%.*]]
+; CHECK:       entry.rtvec:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[W:%.*]], align 16
 ; CHECK-NEXT:    [[OFFSET:%.*]] = getelementptr inbounds [[STRUCT_WEIGHT_T:%.*]], ptr [[W]], i64 0, i32 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[OFFSET]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[SRC:%.*]], align 1
+; CHECK-NEXT:    [[TMP21:%.*]] = load <4 x i8>, ptr [[SRC]], align 1
+; CHECK-NEXT:    [[TMP22:%.*]] = zext <4 x i8> [[TMP21]] to <4 x i32>
+; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <4 x i32> [[TMP23]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP25:%.*]] = mul nsw <4 x i32> [[TMP24]], [[TMP22]]
+; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <4 x i32> poison, i32 [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i32> [[TMP26]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP11:%.*]] = add nsw <4 x i32> [[TMP25]], [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp ult <4 x i32> [[TMP11]], splat (i32 256)
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp sgt <4 x i32> [[TMP11]], zeroinitializer
+; CHECK-NEXT:    [[TMP14:%.*]] = sext <4 x i1> [[TMP13]] to <4 x i32>
+; CHECK-NEXT:    [[TMP15:%.*]] = select <4 x i1> [[TMP12]], <4 x i32> [[TMP11]], <4 x i32> [[TMP14]]
+; CHECK-NEXT:    [[TMP16:%.*]] = trunc <4 x i32> [[TMP15]] to <4 x i8>
+; CHECK-NEXT:    store <4 x i8> [[TMP16]], ptr [[DST]], align 1
+; CHECK-NEXT:    br label [[ENTRY_RTCONT:%.*]]
+; CHECK:       entry.rtscalar:
+; CHECK-NEXT:    [[TMP17:%.*]] = load i32, ptr [[W]], align 16
+; CHECK-NEXT:    [[OFFSET_SCALAR:%.*]] = getelementptr inbounds [[STRUCT_WEIGHT_T]], ptr [[W]], i64 0, i32 1
+; CHECK-NEXT:    [[TMP18:%.*]] = load i32, ptr [[OFFSET_SCALAR]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[SRC]], align 1
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP2]] to i32
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP0]], [[CONV]]
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[MUL]], [[TMP1]]
+; CHECK-NEXT:    [[MUL_SCALAR:%.*]] = mul nsw i32 [[TMP17]], [[CONV]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[MUL_SCALAR]], [[TMP18]]
 ; CHECK-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp ult i32 [[ADD]], 256
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[ADD]], 0
 ; CHECK-NEXT:    [[SHR_I:%.*]] = sext i1 [[TMP3]] to i32
 ; CHECK-NEXT:    [[COND_I:%.*]] = select i1 [[TOBOOL_NOT_I]], i32 [[ADD]], i32 [[SHR_I]]
 ; CHECK-NEXT:    [[CONV_I:%.*]] = trunc i32 [[COND_I]] to i8
-; CHECK-NEXT:    store i8 [[CONV_I]], ptr [[DST:%.*]], align 1
+; CHECK-NEXT:    store i8 [[CONV_I]], ptr [[DST]], align 1
 ; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[ARRAYIDX_1]], align 1
 ; CHECK-NEXT:    [[CONV_1:%.*]] = zext i8 [[TMP4]] to i32
-; CHECK-NEXT:    [[MUL_1:%.*]] = mul nsw i32 [[TMP0]], [[CONV_1]]
-; CHECK-NEXT:    [[ADD_1:%.*]] = add nsw i32 [[MUL_1]], [[TMP1]]
+; CHECK-NEXT:    [[MUL_1_SCALAR:%.*]] = mul nsw i32 [[TMP17]], [[CONV_1]]
+; CHECK-NEXT:    [[ADD_1:%.*]] = add nsw i32 [[MUL_1_SCALAR]], [[TMP18]]
 ; CHECK-NEXT:    [[TOBOOL_NOT_I_1:%.*]] = icmp ult i32 [[ADD_1]], 256
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sgt i32 [[ADD_1]], 0
 ; CHECK-NEXT:    [[SHR_I_1:%.*]] = sext i1 [[TMP5]] to i32
@@ -116,8 +145,8 @@ define void @f_alias(ptr nocapture %dst, ptr nocapture readonly %src, ptr nocapt
 ; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr [[ARRAYIDX_2]], align 1
 ; CHECK-NEXT:    [[CONV_2:%.*]] = zext i8 [[TMP6]] to i32
-; CHECK-NEXT:    [[MUL_2:%.*]] = mul nsw i32 [[TMP0]], [[CONV_2]]
-; CHECK-NEXT:    [[ADD_2:%.*]] = add nsw i32 [[MUL_2]], [[TMP1]]
+; CHECK-NEXT:    [[MUL_2_SCALAR:%.*]] = mul nsw i32 [[TMP17]], [[CONV_2]]
+; CHECK-NEXT:    [[ADD_2:%.*]] = add nsw i32 [[MUL_2_SCALAR]], [[TMP18]]
 ; CHECK-NEXT:    [[TOBOOL_NOT_I_2:%.*]] = icmp ult i32 [[ADD_2]], 256
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp sgt i32 [[ADD_2]], 0
 ; CHECK-NEXT:    [[SHR_I_2:%.*]] = sext i1 [[TMP7]] to i32
@@ -128,8 +157,8 @@ define void @f_alias(ptr nocapture %dst, ptr nocapture readonly %src, ptr nocapt
 ; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 3
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i8, ptr [[ARRAYIDX_3]], align 1
 ; CHECK-NEXT:    [[CONV_3:%.*]] = zext i8 [[TMP8]] to i32
-; CHECK-NEXT:    [[MUL_3:%.*]] = mul nsw i32 [[TMP0]], [[CONV_3]]
-; CHECK-NEXT:    [[ADD_3:%.*]] = add nsw i32 [[MUL_3]], [[TMP1]]
+; CHECK-NEXT:    [[MUL_3_SCALAR:%.*]] = mul nsw i32 [[TMP17]], [[CONV_3]]
+; CHECK-NEXT:    [[ADD_3:%.*]] = add nsw i32 [[MUL_3_SCALAR]], [[TMP18]]
 ; CHECK-NEXT:    [[TOBOOL_NOT_I_3:%.*]] = icmp ult i32 [[ADD_3]], 256
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp sgt i32 [[ADD_3]], 0
 ; CHECK-NEXT:    [[SHR_I_3:%.*]] = sext i1 [[TMP9]] to i32
@@ -137,6 +166,8 @@ define void @f_alias(ptr nocapture %dst, ptr nocapture readonly %src, ptr nocapt
 ; CHECK-NEXT:    [[CONV_I_3:%.*]] = trunc i32 [[COND_I_3]] to i8
 ; CHECK-NEXT:    [[ARRAYIDX2_3:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 3
 ; CHECK-NEXT:    store i8 [[CONV_I_3]], ptr [[ARRAYIDX2_3]], align 1
+; CHECK-NEXT:    br label [[ENTRY_RTCONT]]
+; CHECK:       entry.rtcont:
 ; CHECK-NEXT:    ret void
 ;
 entry:

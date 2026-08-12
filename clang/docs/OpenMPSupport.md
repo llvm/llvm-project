@@ -134,7 +134,7 @@ implementation.
 | device            | support close modifier on map clause                         | {good}`done`            | [D55719][D55719],[D55892][D55892]                                                                     |
 | device            | teams construct on the host device                           | {good}`done`            | r371553                                                                                               |
 | device            | support non-contiguous array sections for target update      | {good}`done`            | [PR144635][PR144635]                                                                                  |
-| device            | pointer attachment                                           | {part}`being repaired`  | @abhinavgaba ([PR153683][PR153683])                                                                   |
+| device            | pointer attachment                                           | {part}`being repaired`  | @abhinavgaba ([PR153683][PR153683], [PR210213][PR210213])                                             |
 | atomic            | hints for the atomic construct                               | {good}`done`            | [D51233][D51233]                                                                                      |
 | base language     | C11 support                                                  | {good}`done`            |                                                                                                       |
 | base language     | C++11/14/17 support                                          | {good}`done`            |                                                                                                       |
@@ -386,10 +386,10 @@ implementation.
 | dyn_groupprivate clause                                               | {part}`partial`     | {part}`In Progress` | C/C++: Host device support missing                                                                       |
 | loop flatten transformation                                           | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                          |
 | loop grid/tile modifiers for sizes clause                             | {none}`unclaimed`   | {none}`unclaimed`   |                                                                                                          |
-| attach map-type modifier                                              | {part}`In Progress` | {none}`unclaimed`   | C/C++: @abhinavgaba; RT: @abhinavgaba ([PR149036][PR149036], [PR158370][PR158370])                       |
+| attach map-type modifier                                              | {part}`In Progress` | {none}`unclaimed`   | C/C++: @abhinavgaba; RT: @abhinavgaba ([PR149036][PR149036], [PR158370][PR158370], [PR210213][PR210213]) |
 | need_device_ptr modifier for adjust_args clause                       | {part}`partial`     | {none}`unclaimed`   | Clang Parsing/Sema: [PR168905][PR168905] [PR169558][PR169558]                                            |
 | fallback modifier for use_device_ptr clause                           | {good}`done`        | {none}`unclaimed`   | Clang: @abhinavgaba ([PR170578][PR170578], [PR173931][PR173931]) RT: @abhinavgaba ([PR169603][PR169603]) |
-| dims clause with strict behavior (multidimensional teams and leagues) | {part}`In Progress` | {part}`In Progress` | C/C++: kevinsala Fortran: skc7, kparzysz, mjklemm                                                        |
+| dims modifier for num_teams, thread_limit, and num_threads clauses    | {part}`partial`     | {part}`In Progress` | C/C++: @kevinsala ([PR206412]); Fortran: @skc7, @kparzysz, @mjklemm                                      |
 
 ## OpenMP Extensions
 
@@ -562,5 +562,6 @@ considered for standardization. Please post on the
 [PR194168]: https://github.com/llvm/llvm-project/pull/194168
 [PR195829]: https://github.com/llvm/llvm-project/pull/195829
 [PR196431]: https://github.com/llvm/llvm-project/pull/196431
+[PR210213]: https://github.com/llvm/llvm-project/pull/210213
 
 [discourse forums (runtimes - openmp category)]: https://discourse.llvm.org/c/runtimes/openmp/35

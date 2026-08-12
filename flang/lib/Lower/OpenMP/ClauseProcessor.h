@@ -97,7 +97,8 @@ public:
   bool processInitializer(
       lower::SymMap &symMap,
       ReductionProcessor::GenInitValueCBTy &genInitValueCB,
-      const parser::OmpStylizedInstance *parserInitInstance = nullptr) const;
+      const parser::OmpStylizedInstance *parserInitInstance = nullptr,
+      unsigned instanceIdx = 0) const;
   bool processMergeable(mlir::omp::MergeableClauseOps &result) const;
   bool processNogroup(mlir::omp::NogroupClauseOps &result) const;
   bool processNotinbranch(mlir::omp::NotinbranchClauseOps &result) const;
@@ -128,7 +129,8 @@ public:
   // 'Repeatable' clauses: They can appear multiple times in the clause list.
   bool processAffinity(mlir::omp::AffinityClauseOps &result) const;
   bool processAligned(mlir::omp::AlignedClauseOps &result) const;
-  bool processAllocate(mlir::omp::AllocateClauseOps &result) const;
+  bool processAllocate(mlir::omp::AllocateClauseOps &result,
+                       bool supportAlignment = false) const;
   bool processCopyin() const;
   bool processCopyprivate(mlir::Location currentLocation,
                           mlir::omp::CopyprivateClauseOps &result) const;

@@ -118,12 +118,14 @@ end subroutine
 ! CHECK: %[[LOAD_B:.*]] = fir.load %[[BOX_B_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK: fir.call @_FortranAAllocatableSetBounds
 ! CHECK: %{{.*}} = cuf.allocate %[[BOX_A_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> source(%[[LOAD_B]] : !fir.box<!fir.heap<!fir.array<?xf32>>>) {data_attr = #cuf.cuda<device>} -> i32
+! CHECK: fir.call @_FortranACUFDeviceIsActive()
 ! CHECK: fir.if
-! CHECK: fir.freemem
 ! CHECK: fir.if %{{.*}} {
 ! CHECK:   %{{.*}} = cuf.deallocate %[[BOX_A_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>} -> i32
 ! CHECK: }
 ! CHECK: cuf.free %[[BOX_A_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>}
+! CHECK: fir.if
+! CHECK: fir.freemem
 
 subroutine sub6()
   real, allocatable, device :: a(:)
