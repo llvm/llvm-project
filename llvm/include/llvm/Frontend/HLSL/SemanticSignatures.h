@@ -14,6 +14,7 @@
 #ifndef LLVM_FRONTEND_HLSL_SEMANTICSIGNATURES_H
 #define LLVM_FRONTEND_HLSL_SEMANTICSIGNATURES_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/DXContainer.h"
@@ -52,6 +53,15 @@ struct SemanticSignatureElement {
   uint8_t UsageMask = 0;
   uint8_t DynIndexMask = 0;
   uint32_t GSStream = 0;
+
+  SemanticSignatureElement() = default;
+  SemanticSignatureElement(uint32_t SigId, StringRef SemanticName,
+                           dxil::ElementType CompType,
+                           dxbc::PSV::SemanticKind SemanticKind,
+                           ArrayRef<uint32_t> SemanticIndices, uint8_t Cols)
+      : SigId(SigId), SemanticName(SemanticName), CompType(CompType),
+        SemanticKind(SemanticKind), SemanticIndices(SemanticIndices),
+        Rows(static_cast<uint32_t>(SemanticIndices.size())), Cols(Cols) {}
 
   bool isAllocated() const {
     return StartRow != UnallocatedRow && StartCol != UnallocatedCol;

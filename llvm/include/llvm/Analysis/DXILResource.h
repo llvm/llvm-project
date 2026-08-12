@@ -37,6 +37,11 @@ namespace dxil {
 // dx_resource_handlefromimplicitbinding call
 LLVM_ABI StringRef getResourceNameFromBindingCall(CallInst *CI);
 
+/// Converts a scalar or vector LLVM type to its DXIL element type. Integer
+/// signedness must be supplied separately because LLVM integer types are
+/// signless.
+LLVM_ABI ElementType toDXILElementType(Type *Ty, bool IsSigned);
+
 /// The dx.RawBuffer target extension type
 ///
 /// `target("dx.RawBuffer", Type, IsWriteable, IsROV)`
