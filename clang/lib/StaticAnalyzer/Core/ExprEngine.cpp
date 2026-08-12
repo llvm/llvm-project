@@ -1119,6 +1119,7 @@ static bool justRunCheckersAsPreVisit(const Stmt *S) {
   case Stmt::GCCAsmStmtClass:
   case Stmt::CXXNewExprClass:
   case Stmt::MaterializeTemporaryExprClass:
+  case Stmt::MemberExprClass:
   case Stmt::ReturnStmtClass:
   case Stmt::OffsetOfExprClass:
   case Stmt::UnaryExprOrTypeTraitExprClass:
@@ -1146,6 +1147,7 @@ static bool justRunCheckersAsPostVisit(const Stmt *S) {
   case Stmt::GCCAsmStmtClass:
   case Stmt::CXXNewExprClass:
   case Stmt::MaterializeTemporaryExprClass:
+  case Stmt::MemberExprClass:
   case Stmt::OffsetOfExprClass:
   case Stmt::UnaryExprOrTypeTraitExprClass:
   case Stmt::UnaryOperatorClass:
@@ -3315,85 +3317,75 @@ a vector and not a forbidden lvalue type");
 /// VisitMemberExpr - Transfer function for member expressions.
 void ExprEngine::VisitMemberExpr(const MemberExpr *M, ExplodedNode *Pred,
                                  ExplodedNodeSet &Dst) {
-  // FIXME: Prechecks eventually go in ::Visit().
-  ExplodedNodeSet CheckedSet;
-  getCheckerManager().runCheckersForPreStmt(CheckedSet, Pred, M, *this);
-
-  ExplodedNodeSet EvalSet;
   ValueDecl *Member = M->getMemberDecl();
 
   // Handle static member variables and enum constants accessed via
   // member syntax.
   if (isa<VarDecl, EnumConstantDecl>(Member)) {
-    for (const auto I : CheckedSet)
-      VisitCommonDeclRefExpr(M, Member, I, EvalSet);
+    VisitCommonDeclRefExpr(M, Member, Pred, Dst);
   } else {
 
-    for (const auto I : CheckedSet) {
-      ProgramStateRef state = I->getState();
-      const StackFrame *SF = I->getStackFrame();
-      Expr *BaseExpr = M->getBase();
+    ProgramStateRef state = Pred->getState();
+    const StackFrame *SF = Pred->getStackFrame();
+    Expr *BaseExpr = M->getBase();
 
-      // Handle C++ method calls.
-      if (const auto *MD = dyn_cast<CXXMethodDecl>(Member)) {
-        if (MD->isImplicitObjectMemberFunction())
-          state = createTemporaryRegionIfNeeded(state, SF, BaseExpr);
+    // Handle C++ method calls.
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(Member)) {
+      if (MD->isImplicitObjectMemberFunction())
+        state = createTemporaryRegionIfNeeded(state, SF, BaseExpr);
 
-        SVal MDVal = svalBuilder.getFunctionPointer(MD);
+      SVal MDVal = svalBuilder.getFunctionPointer(MD);
 
-        EvalSet.insert(Engine.makeNodeWithBinding(I, M, MDVal, state));
-        continue;
-      }
+      Dst.insert(Engine.makeNodeWithBinding(Pred, M, MDVal, state));
+      return;
+    }
 
-      // Handle regular struct fields / member variables.
-      const SubRegion *MR = nullptr;
-      state = createTemporaryRegionIfNeeded(state, SF, BaseExpr,
-                                            /*Result=*/nullptr,
-                                            /*OutRegionWithAdjustments=*/&MR);
-      SVal baseExprVal =
-          MR ? loc::MemRegionVal(MR) : state->getSVal(BaseExpr, SF);
+    // Handle regular struct fields / member variables.
+    const SubRegion *MR = nullptr;
+    state = createTemporaryRegionIfNeeded(state, SF, BaseExpr,
+                                          /*Result=*/nullptr,
+                                          /*OutRegionWithAdjustments=*/&MR);
+    SVal baseExprVal =
+        MR ? loc::MemRegionVal(MR) : state->getSVal(BaseExpr, SF);
 
-      // FIXME: Copied from RegionStoreManager::bind()
-      if (const auto *SR =
-              dyn_cast_or_null<SymbolicRegion>(baseExprVal.getAsRegion())) {
-        QualType T = SR->getPointeeStaticType();
-        baseExprVal =
-            loc::MemRegionVal(getStoreManager().GetElementZeroRegion(SR, T));
-      }
+    // FIXME: Copied from RegionStoreManager::bind()
+    if (const auto *SR =
+            dyn_cast_or_null<SymbolicRegion>(baseExprVal.getAsRegion())) {
+      QualType T = SR->getPointeeStaticType();
+      baseExprVal =
+          loc::MemRegionVal(getStoreManager().GetElementZeroRegion(SR, T));
+    }
 
-      const auto *field = cast<FieldDecl>(Member);
-      SVal L = state->getLValue(field, baseExprVal);
+    const auto *field = cast<FieldDecl>(Member);
+    SVal L = state->getLValue(field, baseExprVal);
 
-      if (M->isGLValue() || M->getType()->isArrayType()) {
-        // We special-case rvalues of array type because the analyzer cannot
-        // reason about them, since we expect all regions to be wrapped in Locs.
-        // We instead treat these as lvalues and assume that they will decay to
-        // pointers as soon as they are used.
-        if (!M->isGLValue()) {
-          assert(M->getType()->isArrayType());
-          const auto *PE =
-            dyn_cast<ImplicitCastExpr>(I->getParentMap().getParentIgnoreParens(M));
-          if (!PE || PE->getCastKind() != CK_ArrayToPointerDecay) {
-            llvm_unreachable("should always be wrapped in ArrayToPointerDecay");
-          }
+    if (M->isGLValue() || M->getType()->isArrayType()) {
+      // We special-case rvalues of array type because the analyzer cannot
+      // reason about them, since we expect all regions to be wrapped in Locs.
+      // We instead treat these as lvalues and assume that they will decay to
+      // pointers as soon as they are used.
+      if (!M->isGLValue()) {
+        assert(M->getType()->isArrayType());
+        const auto *PE =
+          dyn_cast<ImplicitCastExpr>(Pred->getParentMap().getParentIgnoreParens(M));
+        if (!PE || PE->getCastKind() != CK_ArrayToPointerDecay) {
+          llvm_unreachable("should always be wrapped in ArrayToPointerDecay");
         }
-
-        if (field->getType()->isReferenceType()) {
-          if (const MemRegion *R = L.getAsRegion())
-            L = state->getSVal(R);
-          else
-            L = UnknownVal();
-        }
-
-        EvalSet.insert(Engine.makeNodeWithBinding(
-            I, M, L, state, ProgramPoint::PostLValueKind));
-      } else {
-        evalLoad(EvalSet, M, M, I, state, L);
       }
+
+      if (field->getType()->isReferenceType()) {
+        if (const MemRegion *R = L.getAsRegion())
+          L = state->getSVal(R);
+        else
+          L = UnknownVal();
+      }
+
+      Dst.insert(Engine.makeNodeWithBinding(
+          Pred, M, L, state, ProgramPoint::PostLValueKind));
+    } else {
+      evalLoad(Dst, M, M, Pred, state, L);
     }
   }
-
-  getCheckerManager().runCheckersForPostStmt(Dst, EvalSet, M, *this);
 }
 
 void ExprEngine::VisitAtomicExpr(const AtomicExpr *AE, ExplodedNode *Pred,
