@@ -188,8 +188,8 @@ private:
   };
 
   struct AccDirContext {
-    AccDirContext(const parser::CharBlock &source, llvm::acc::Directive d,
-        Scope &s)
+    AccDirContext(
+        const parser::CharBlock &source, llvm::acc::Directive d, Scope &s)
         : directiveSource{source}, directive{d}, scope{s} {}
     parser::CharBlock directiveSource;
     llvm::acc::Directive directive;
@@ -1825,8 +1825,7 @@ void AccAttributeVisitor::CheckAssociatedLoop(
           if (level <= 0)
             return;
           if (ivName && lower && upper) {
-            if (auto *symbol{
-                    DeclareOrMarkOtherAccessEntity(*ivName, flag)}) {
+            if (auto *symbol{DeclareOrMarkOtherAccessEntity(*ivName, flag)}) {
               if (auto lowerExpr{semantics::AnalyzeExpr(context_, *lower)}) {
                 semantics::UnorderedSymbolSet lowerSyms =
                     evaluate::CollectSymbols(*lowerExpr);
@@ -1990,6 +1989,9 @@ void AccAttributeVisitor::AdjustAccSymbolReference(const parser::Name &name) {
   }
   if (Symbol *found{currScope().FindSymbol(name.source)};
       found && &symbol != found) {
+    if (DoesScopeContain(&currScope(), symbol)) {
+      return;
+    }
     // Adjust the symbol within the region.
     // TODO: why didn't name resolution set the right name originally?
     name.symbol = found;
@@ -2058,8 +2060,8 @@ void AccAttributeVisitor::CheckAccDefaultNoneReferenceIn(const A &x) {
     std::optional<DesignatorPath> designatorPath{
         GetDesignatorPath(context_, designator->value())};
     if (designatorPath) {
-      CheckAccDefaultNoneReference(
-          parser::GetFirstName(designator->value()), std::move(*designatorPath));
+      CheckAccDefaultNoneReference(parser::GetFirstName(designator->value()),
+          std::move(*designatorPath));
     }
   } else if (const auto *functionReference{
                  std::get_if<common::Indirection<parser::FunctionReference>>(
@@ -2243,7 +2245,8 @@ void AccAttributeVisitor::ResolveAccObject(
               }
               if (isDataSharing && canCheckMultipleAppearances) {
                 CheckMultipleAppearances(baseName, accFlag,
-                    std::move(designatorPath), &accObject, true, designatorName);
+                    std::move(designatorPath), &accObject, true,
+                    designatorName);
               } else if (!designatorPath.empty()) {
                 AddAccObjectWithDSA(std::move(designatorPath), accFlag);
               }
@@ -2345,8 +2348,7 @@ void AccAttributeVisitor::CheckMultipleAppearances(const parser::Name &name,
       llvm_unreachable("disjoint relation handled above");
     }
   }
-  objectsWithDSA.push_back(
-      std::move(designator), {accFlag, occurrence});
+  objectsWithDSA.push_back(std::move(designator), {accFlag, occurrence});
 }
 
 #ifndef NDEBUG
