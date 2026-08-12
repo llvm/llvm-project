@@ -23062,7 +23062,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
       for (const auto &TE : VectorizableTree) {
         if (DeletedNodes.contains(TE.get()))
           continue;
-        if (!(TE->isGather() && E->isSame(TE->Scalars)))
+        if (!TE->isGather() || !E->isSame(TE->Scalars))
           continue;
         HasMatches = true;
         auto *UserTE = TE->UserTreeIndex.UserTE;
