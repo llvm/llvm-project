@@ -22,9 +22,9 @@ define void @conditional_incr_sext(ptr noundef writeonly %out, i32 noundef %max_
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_07]], [[MAX_OUT:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[CLEANUP]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[I_07]], 1
-; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I_07]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i8], ptr [[OUT:%.*]], i64 [[IDXPROM]]
+; CHECK-NEXT:    [[INC:%.*]] = add nuw nsw i32 [[I_07]], 1
+; CHECK-NEXT:    [[IDXPROM:%.*]] = zext nneg i32 [[I_07]] to i64
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[OUT:%.*]], i64 [[IDXPROM]]
 ; CHECK-NEXT:    store ptr [[TMP1]], ptr [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    br label [[CLEANUP]]
 ; CHECK:       cleanup:
