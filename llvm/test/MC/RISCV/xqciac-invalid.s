@@ -20,7 +20,7 @@ qc.c.muliadd x10, x15, 20
 
 
 # CHECK-PLUS: :[[@LINE+2]]:12: error: register must be a GPR excluding zero (x0)
-# CHECK-MINUS: :[[@LINE+1]]:12: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqciac' (Qualcomm uC Load-Store Address Calculation Extension)
 qc.muliadd x0, x10, 1048577
 
 # CHECK-PLUS: :[[@LINE+2]]:15: error: too few operands for instruction
@@ -35,7 +35,7 @@ qc.muliadd x10, x15, 577
 
 
 # CHECK-PLUS: :[[@LINE+2]]:11: error: register must be a GPR excluding zero (x0)
-# CHECK-MINUS: :[[@LINE+1]]:11: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqciac' (Qualcomm uC Load-Store Address Calculation Extension)
 qc.shladd 0, x10, 1048577
 
 # CHECK-PLUS: :[[@LINE+2]]:14: error: too few operands for instruction

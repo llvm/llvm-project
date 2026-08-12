@@ -32,7 +32,9 @@ fnmsub.h f18, f19, f20, f21, 0b111 # CHECK: :[[@LINE]]:30: error: operand must b
 # Integer registers where FP regs are expected
 fadd.h a2, a1, a0 # CHECK: :[[@LINE]]:1: error: invalid instruction, any one of the following would fix this:
 # CHECK: :[[@LINE-1]]:8: note: register must be a FPR
-# CHECK: :[[@LINE-2]]:8: note: register must be a GPR when used as an FP operand
+# CHECK: :[[@LINE-2]]:1: note: instruction requires the following: 'Zhinx' (Half Float in Integer)
 
 # FP registers where integer regs are expected
-fcvt.wu.h ft2, a1 # CHECK: :[[@LINE]]:11: error: register must be a GPR
+fcvt.wu.h ft2, a1 # CHECK: :[[@LINE]]:1: error: invalid instruction, any one of the following would fix this:
+# CHECK: :[[@LINE-1]]:11: note: register must be a GPR
+# CHECK: :[[@LINE-2]]:1: note: instruction requires the following: 'Zhinx' (Half Float in Integer)
