@@ -5,7 +5,7 @@ Test lldb-dap dataBreakpointInfo and setDataBreakpoints requests
 from lldbsuite.test.decorators import skipIfWasm, skipIfWindows
 from lldbsuite.test.lldbtest import line_number
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
-from lldbsuite.test.tools.lldb_dap.types import DataBreakpoint, LaunchArgs
+from lldbsuite.test.tools.lldb_dap.types import DataBreakpoint, LaunchArgs, StoppedReason
 
 
 @skipIfWasm  # data breakpoints map to watchpoints.
@@ -219,6 +219,10 @@ class TestDAP_setDataBreakpoints(DAPTestCaseBase):
         session.set_data_breakpoints([])
         resp_body = session.evaluate("`watchpoint list", context="repl")
         session.verify_evaluate(resp_body, matches=r".*Watchpoint 1:.*")
+
+        # Verify watchpoint from console.
+        stop_event = session.continue_to_next_stop(exp_reason=StoppedReason.DATA_BREAKPOINT)
+        self.assertEqual(session.top_frame_from(stop_event).locals["x"].value, "2")
 
         session.evaluate("`watchpoint delete 1", context="repl")
         session.continue_to_exit()
