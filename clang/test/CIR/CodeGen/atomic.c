@@ -3354,6 +3354,66 @@ int atomic_load_and_store_dynamic_order(int *ptr, int order) {
   // OGCG-NEXT:   %{{.+}} = load i32, ptr %[[RES_SLOT]], align 4
 }
 
+_Bool atomic_compare_exchange_n(int *ptr, int *expected, int desired,
+                                int success, int failure) {
+  // CIR-LABEL: @atomic_compare_exchange_n
+  // LLVM-LABEL: @atomic_compare_exchange_n
+  // OGCG-LABEL: @atomic_compare_exchange_n
+
+  // CIR: %[[SUCCESS_ADDR:.+]] = cir.alloca "success"
+  // CIR: %[[FAILURE_ADDR:.+]] = cir.alloca "failure"
+  // CIR: %[[SUCCESS:.+]] = cir.load align(4) %[[SUCCESS_ADDR]]
+  // CIR: cir.switch(%[[SUCCESS]] : !s32i)
+  // CIR-NEXT: cir.case(default, [])
+  // CIR-NEXT: %[[FAILURE:.+]] = cir.load align(4) %[[FAILURE_ADDR]]
+  // CIR-NEXT: cir.switch(%[[FAILURE]] : !s32i)
+  // CIR-NEXT: cir.case(default, [])
+  // CIR: cir.atomic.cmpxchg success(relaxed) failure(relaxed)
+  // CIR: cir.case(anyof, [#cir.int<1> : !s32i, #cir.int<2> : !s32i])
+  // CIR: cir.atomic.cmpxchg success(relaxed) failure(acquire)
+  // CIR: cir.case(anyof, [#cir.int<5> : !s32i])
+  // CIR: cir.atomic.cmpxchg success(relaxed) failure(seq_cst)
+  // CIR: cir.case(anyof, [#cir.int<1> : !s32i, #cir.int<2> : !s32i])
+  // CIR-NEXT: %[[FAILURE:.+]] = cir.load align(4) %[[FAILURE_ADDR]]
+  // CIR-NEXT: cir.switch(%[[FAILURE]] : !s32i)
+  // CIR-NEXT: cir.case(default, [])
+  // CIR: cir.atomic.cmpxchg success(acquire) failure(relaxed)
+  // CIR: cir.case(anyof, [#cir.int<1> : !s32i, #cir.int<2> : !s32i])
+  // CIR: cir.atomic.cmpxchg success(acquire) failure(acquire)
+  // CIR: cir.case(anyof, [#cir.int<5> : !s32i])
+  // CIR: cir.atomic.cmpxchg success(acquire) failure(seq_cst)
+  // CIR: cir.case(anyof, [#cir.int<3> : !s32i])
+  // CIR-NEXT: %[[FAILURE:.+]] = cir.load align(4) %[[FAILURE_ADDR]]
+  // CIR-NEXT: cir.switch(%[[FAILURE]] : !s32i)
+  // CIR-NEXT: cir.case(default, [])
+  // CIR: cir.atomic.cmpxchg success(release) failure(relaxed)
+  // CIR: cir.case(anyof, [#cir.int<1> : !s32i, #cir.int<2> : !s32i])
+  // CIR: cir.atomic.cmpxchg success(release) failure(acquire)
+  // CIR: cir.case(anyof, [#cir.int<5> : !s32i])
+  // CIR: cir.atomic.cmpxchg success(release) failure(seq_cst)
+  // CIR: cir.case(anyof, [#cir.int<4> : !s32i])
+  // CIR-NEXT: %[[FAILURE:.+]] = cir.load align(4) %[[FAILURE_ADDR]]
+  // CIR-NEXT: cir.switch(%[[FAILURE]] : !s32i)
+  // CIR-NEXT: cir.case(default, [])
+  // CIR: cir.atomic.cmpxchg success(acq_rel) failure(relaxed)
+  // CIR: cir.case(anyof, [#cir.int<1> : !s32i, #cir.int<2> : !s32i])
+  // CIR: cir.atomic.cmpxchg success(acq_rel) failure(acquire)
+  // CIR: cir.case(anyof, [#cir.int<5> : !s32i])
+  // CIR: cir.atomic.cmpxchg success(acq_rel) failure(seq_cst)
+  // CIR: cir.case(anyof, [#cir.int<5> : !s32i])
+  // CIR-NEXT: %[[FAILURE:.+]] = cir.load align(4) %[[FAILURE_ADDR]]
+  // CIR-NEXT: cir.switch(%[[FAILURE]] : !s32i)
+  // CIR-NEXT: cir.case(default, [])
+  // CIR: cir.atomic.cmpxchg success(seq_cst) failure(relaxed)
+  // CIR: cir.case(anyof, [#cir.int<1> : !s32i, #cir.int<2> : !s32i])
+  // CIR: cir.atomic.cmpxchg success(seq_cst) failure(acquire)
+  // CIR: cir.case(anyof, [#cir.int<5> : !s32i])
+  // CIR: cir.atomic.cmpxchg success(seq_cst) failure(seq_cst)
+
+  return __atomic_compare_exchange_n(ptr, expected, desired, 0, success,
+                                     failure);
+}
+
 int atomic_fetch_uinc(int *ptr, int value) {
   // CIR-LABEL: @atomic_fetch_uinc
   // LLVM-LABEL: @atomic_fetch_uinc
