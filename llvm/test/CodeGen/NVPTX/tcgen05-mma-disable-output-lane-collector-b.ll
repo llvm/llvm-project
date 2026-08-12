@@ -16,16 +16,16 @@ define void @tcgen05_mma_disable_output_lane_collector_b_f16_cta1(ptr addrspace(
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [tcgen05_mma_disable_output_lane_collector_b_f16_cta1_param_5];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [tcgen05_mma_disable_output_lane_collector_b_f16_cta1_param_5];
 ; CHECK-NEXT:    and.b16 %rs2, %rs1, 1;
 ; CHECK-NEXT:    setp.ne.b16 %p1, %rs2, 0;
-; CHECK-NEXT:    ld.param.b32 %r1, [tcgen05_mma_disable_output_lane_collector_b_f16_cta1_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [tcgen05_mma_disable_output_lane_collector_b_f16_cta1_param_2];
-; CHECK-NEXT:    ld.param.b64 %rd2, [tcgen05_mma_disable_output_lane_collector_b_f16_cta1_param_3];
-; CHECK-NEXT:    ld.param.b32 %r2, [tcgen05_mma_disable_output_lane_collector_b_f16_cta1_param_4];
-; CHECK-NEXT:    ld.param.v4.b32 {%r3, %r4, %r5, %r6}, [tcgen05_mma_disable_output_lane_collector_b_f16_cta1_param_6];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [tcgen05_mma_disable_output_lane_collector_b_f16_cta1_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [tcgen05_mma_disable_output_lane_collector_b_f16_cta1_param_2];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [tcgen05_mma_disable_output_lane_collector_b_f16_cta1_param_3];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [tcgen05_mma_disable_output_lane_collector_b_f16_cta1_param_4];
+; CHECK-NEXT:    ld.param::func.v4.b32 {%r3, %r4, %r5, %r6}, [tcgen05_mma_disable_output_lane_collector_b_f16_cta1_param_6];
 ; CHECK-NEXT:    tcgen05.mma.cta_group::1.kind::f16.collector::a::discard.collector::b::lastuse [%r1], %rd1, %rd2, %r2, {%r3, %r4, %r5, %r6}, %p1;
-; CHECK-NEXT:    ld.param.b32 %r7, [tcgen05_mma_disable_output_lane_collector_b_f16_cta1_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r7, [tcgen05_mma_disable_output_lane_collector_b_f16_cta1_param_1];
 ; CHECK-NEXT:    tcgen05.mma.cta_group::1.kind::f16.collector::a::discard.collector::b::fill [%r1], %rd1, %rd2, %r2, {%r3, %r4, %r5, %r6}, %p1;
 ; CHECK-NEXT:    tcgen05.mma.cta_group::1.kind::f16.collector::a::discard.collector::b::use [%r1], %rd1, %rd2, %r2, {%r3, %r4, %r5, %r6}, %p1;
 ; CHECK-NEXT:    tcgen05.mma.cta_group::1.kind::f16.collector::a::discard.collector::b::lastuse [%r1], [%r7], %rd2, %r2, {%r3, %r4, %r5, %r6}, %p1;
@@ -78,17 +78,17 @@ define void @tcgen05_mma_disable_output_lane_collector_b_f16_cta2(ptr addrspace(
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [tcgen05_mma_disable_output_lane_collector_b_f16_cta2_param_5];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [tcgen05_mma_disable_output_lane_collector_b_f16_cta2_param_5];
 ; CHECK-NEXT:    and.b16 %rs2, %rs1, 1;
 ; CHECK-NEXT:    setp.ne.b16 %p1, %rs2, 0;
-; CHECK-NEXT:    ld.param.b32 %r1, [tcgen05_mma_disable_output_lane_collector_b_f16_cta2_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [tcgen05_mma_disable_output_lane_collector_b_f16_cta2_param_2];
-; CHECK-NEXT:    ld.param.b64 %rd2, [tcgen05_mma_disable_output_lane_collector_b_f16_cta2_param_3];
-; CHECK-NEXT:    ld.param.b32 %r2, [tcgen05_mma_disable_output_lane_collector_b_f16_cta2_param_4];
-; CHECK-NEXT:    ld.param.v4.b32 {%r3, %r4, %r5, %r6}, [tcgen05_mma_disable_output_lane_collector_b_f16_cta2_param_6+16];
-; CHECK-NEXT:    ld.param.v4.b32 {%r7, %r8, %r9, %r10}, [tcgen05_mma_disable_output_lane_collector_b_f16_cta2_param_6];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [tcgen05_mma_disable_output_lane_collector_b_f16_cta2_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [tcgen05_mma_disable_output_lane_collector_b_f16_cta2_param_2];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [tcgen05_mma_disable_output_lane_collector_b_f16_cta2_param_3];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [tcgen05_mma_disable_output_lane_collector_b_f16_cta2_param_4];
+; CHECK-NEXT:    ld.param::func.v4.b32 {%r3, %r4, %r5, %r6}, [tcgen05_mma_disable_output_lane_collector_b_f16_cta2_param_6+16];
+; CHECK-NEXT:    ld.param::func.v4.b32 {%r7, %r8, %r9, %r10}, [tcgen05_mma_disable_output_lane_collector_b_f16_cta2_param_6];
 ; CHECK-NEXT:    tcgen05.mma.cta_group::2.kind::f16.collector::a::discard.collector::b::lastuse [%r1], %rd1, %rd2, %r2, {%r7, %r8, %r9, %r10, %r3, %r4, %r5, %r6}, %p1;
-; CHECK-NEXT:    ld.param.b32 %r11, [tcgen05_mma_disable_output_lane_collector_b_f16_cta2_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r11, [tcgen05_mma_disable_output_lane_collector_b_f16_cta2_param_1];
 ; CHECK-NEXT:    tcgen05.mma.cta_group::2.kind::f16.collector::a::discard.collector::b::fill [%r1], %rd1, %rd2, %r2, {%r7, %r8, %r9, %r10, %r3, %r4, %r5, %r6}, %p1;
 ; CHECK-NEXT:    tcgen05.mma.cta_group::2.kind::f16.collector::a::discard.collector::b::lastuse [%r1], [%r11], %rd2, %r2, {%r7, %r8, %r9, %r10, %r3, %r4, %r5, %r6}, %p1;
 ; CHECK-NEXT:    tcgen05.mma.cta_group::2.kind::f16.ashift.collector::a::discard.collector::b::use [%r1], [%r11], %rd2, %r2, {%r7, %r8, %r9, %r10, %r3, %r4, %r5, %r6}, %p1;
@@ -126,16 +126,16 @@ define void @tcgen05_mma_disable_output_lane_collector_b_tf32_cta1(ptr addrspace
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [tcgen05_mma_disable_output_lane_collector_b_tf32_cta1_param_5];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [tcgen05_mma_disable_output_lane_collector_b_tf32_cta1_param_5];
 ; CHECK-NEXT:    and.b16 %rs2, %rs1, 1;
 ; CHECK-NEXT:    setp.ne.b16 %p1, %rs2, 0;
-; CHECK-NEXT:    ld.param.b32 %r1, [tcgen05_mma_disable_output_lane_collector_b_tf32_cta1_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [tcgen05_mma_disable_output_lane_collector_b_tf32_cta1_param_2];
-; CHECK-NEXT:    ld.param.b64 %rd2, [tcgen05_mma_disable_output_lane_collector_b_tf32_cta1_param_3];
-; CHECK-NEXT:    ld.param.b32 %r2, [tcgen05_mma_disable_output_lane_collector_b_tf32_cta1_param_4];
-; CHECK-NEXT:    ld.param.v4.b32 {%r3, %r4, %r5, %r6}, [tcgen05_mma_disable_output_lane_collector_b_tf32_cta1_param_6];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [tcgen05_mma_disable_output_lane_collector_b_tf32_cta1_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [tcgen05_mma_disable_output_lane_collector_b_tf32_cta1_param_2];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [tcgen05_mma_disable_output_lane_collector_b_tf32_cta1_param_3];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [tcgen05_mma_disable_output_lane_collector_b_tf32_cta1_param_4];
+; CHECK-NEXT:    ld.param::func.v4.b32 {%r3, %r4, %r5, %r6}, [tcgen05_mma_disable_output_lane_collector_b_tf32_cta1_param_6];
 ; CHECK-NEXT:    tcgen05.mma.cta_group::1.kind::tf32.collector::a::discard.collector::b::lastuse [%r1], %rd1, %rd2, %r2, {%r3, %r4, %r5, %r6}, %p1;
-; CHECK-NEXT:    ld.param.b32 %r7, [tcgen05_mma_disable_output_lane_collector_b_tf32_cta1_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r7, [tcgen05_mma_disable_output_lane_collector_b_tf32_cta1_param_1];
 ; CHECK-NEXT:    tcgen05.mma.cta_group::1.kind::tf32.collector::a::discard.collector::b::fill [%r1], [%r7], %rd2, %r2, {%r3, %r4, %r5, %r6}, %p1;
 ; CHECK-NEXT:    tcgen05.mma.cta_group::1.kind::tf32.ashift.collector::a::discard.collector::b::use [%r1], [%r7], %rd2, %r2, {%r3, %r4, %r5, %r6}, %p1;
 ; CHECK-NEXT:    tcgen05.mma.cta_group::1.kind::tf32.collector::a::lastuse.collector::b::lastuse [%r1], %rd1, %rd2, %r2, {%r3, %r4, %r5, %r6}, %p1;
@@ -173,17 +173,17 @@ define void @tcgen05_mma_disable_output_lane_collector_b_tf32_cta2(ptr addrspace
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [tcgen05_mma_disable_output_lane_collector_b_tf32_cta2_param_5];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [tcgen05_mma_disable_output_lane_collector_b_tf32_cta2_param_5];
 ; CHECK-NEXT:    and.b16 %rs2, %rs1, 1;
 ; CHECK-NEXT:    setp.ne.b16 %p1, %rs2, 0;
-; CHECK-NEXT:    ld.param.b32 %r1, [tcgen05_mma_disable_output_lane_collector_b_tf32_cta2_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [tcgen05_mma_disable_output_lane_collector_b_tf32_cta2_param_2];
-; CHECK-NEXT:    ld.param.b64 %rd2, [tcgen05_mma_disable_output_lane_collector_b_tf32_cta2_param_3];
-; CHECK-NEXT:    ld.param.b32 %r2, [tcgen05_mma_disable_output_lane_collector_b_tf32_cta2_param_4];
-; CHECK-NEXT:    ld.param.v4.b32 {%r3, %r4, %r5, %r6}, [tcgen05_mma_disable_output_lane_collector_b_tf32_cta2_param_6+16];
-; CHECK-NEXT:    ld.param.v4.b32 {%r7, %r8, %r9, %r10}, [tcgen05_mma_disable_output_lane_collector_b_tf32_cta2_param_6];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [tcgen05_mma_disable_output_lane_collector_b_tf32_cta2_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [tcgen05_mma_disable_output_lane_collector_b_tf32_cta2_param_2];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [tcgen05_mma_disable_output_lane_collector_b_tf32_cta2_param_3];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [tcgen05_mma_disable_output_lane_collector_b_tf32_cta2_param_4];
+; CHECK-NEXT:    ld.param::func.v4.b32 {%r3, %r4, %r5, %r6}, [tcgen05_mma_disable_output_lane_collector_b_tf32_cta2_param_6+16];
+; CHECK-NEXT:    ld.param::func.v4.b32 {%r7, %r8, %r9, %r10}, [tcgen05_mma_disable_output_lane_collector_b_tf32_cta2_param_6];
 ; CHECK-NEXT:    tcgen05.mma.cta_group::2.kind::tf32.collector::a::discard.collector::b::fill [%r1], %rd1, %rd2, %r2, {%r7, %r8, %r9, %r10, %r3, %r4, %r5, %r6}, %p1;
-; CHECK-NEXT:    ld.param.b32 %r11, [tcgen05_mma_disable_output_lane_collector_b_tf32_cta2_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r11, [tcgen05_mma_disable_output_lane_collector_b_tf32_cta2_param_1];
 ; CHECK-NEXT:    tcgen05.mma.cta_group::2.kind::tf32.collector::a::discard.collector::b::use [%r1], [%r11], %rd2, %r2, {%r7, %r8, %r9, %r10, %r3, %r4, %r5, %r6}, %p1;
 ; CHECK-NEXT:    tcgen05.mma.cta_group::2.kind::tf32.ashift.collector::a::lastuse.collector::b::lastuse [%r1], [%r11], %rd2, %r2, {%r7, %r8, %r9, %r10, %r3, %r4, %r5, %r6}, %p1;
 ; CHECK-NEXT:    tcgen05.mma.cta_group::2.kind::tf32.ashift.collector::a::lastuse [%r1], [%r11], %rd2, %r2, {%r7, %r8, %r9, %r10, %r3, %r4, %r5, %r6}, %p1;
@@ -215,16 +215,16 @@ define void @tcgen05_mma_disable_output_lane_collector_b_f8f6f4_cta1(ptr addrspa
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [tcgen05_mma_disable_output_lane_collector_b_f8f6f4_cta1_param_5];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [tcgen05_mma_disable_output_lane_collector_b_f8f6f4_cta1_param_5];
 ; CHECK-NEXT:    and.b16 %rs2, %rs1, 1;
 ; CHECK-NEXT:    setp.ne.b16 %p1, %rs2, 0;
-; CHECK-NEXT:    ld.param.b32 %r1, [tcgen05_mma_disable_output_lane_collector_b_f8f6f4_cta1_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [tcgen05_mma_disable_output_lane_collector_b_f8f6f4_cta1_param_2];
-; CHECK-NEXT:    ld.param.b64 %rd2, [tcgen05_mma_disable_output_lane_collector_b_f8f6f4_cta1_param_3];
-; CHECK-NEXT:    ld.param.b32 %r2, [tcgen05_mma_disable_output_lane_collector_b_f8f6f4_cta1_param_4];
-; CHECK-NEXT:    ld.param.v4.b32 {%r3, %r4, %r5, %r6}, [tcgen05_mma_disable_output_lane_collector_b_f8f6f4_cta1_param_6];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [tcgen05_mma_disable_output_lane_collector_b_f8f6f4_cta1_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [tcgen05_mma_disable_output_lane_collector_b_f8f6f4_cta1_param_2];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [tcgen05_mma_disable_output_lane_collector_b_f8f6f4_cta1_param_3];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [tcgen05_mma_disable_output_lane_collector_b_f8f6f4_cta1_param_4];
+; CHECK-NEXT:    ld.param::func.v4.b32 {%r3, %r4, %r5, %r6}, [tcgen05_mma_disable_output_lane_collector_b_f8f6f4_cta1_param_6];
 ; CHECK-NEXT:    tcgen05.mma.cta_group::1.kind::f8f6f4.collector::a::discard.collector::b::lastuse [%r1], %rd1, %rd2, %r2, {%r3, %r4, %r5, %r6}, %p1;
-; CHECK-NEXT:    ld.param.b32 %r7, [tcgen05_mma_disable_output_lane_collector_b_f8f6f4_cta1_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r7, [tcgen05_mma_disable_output_lane_collector_b_f8f6f4_cta1_param_1];
 ; CHECK-NEXT:    tcgen05.mma.cta_group::1.kind::f8f6f4.collector::a::discard.collector::b::fill [%r1], [%r7], %rd2, %r2, {%r3, %r4, %r5, %r6}, %p1;
 ; CHECK-NEXT:    tcgen05.mma.cta_group::1.kind::f8f6f4.ashift.collector::a::discard.collector::b::use [%r1], [%r7], %rd2, %r2, {%r3, %r4, %r5, %r6}, %p1;
 ; CHECK-NEXT:    tcgen05.mma.cta_group::1.kind::f8f6f4.collector::a::fill.collector::b::lastuse [%r1], %rd1, %rd2, %r2, {%r3, %r4, %r5, %r6}, %p1;
@@ -259,17 +259,17 @@ define void @tcgen05_mma_disable_output_lane_collector_b_f8f6f4_cta2(ptr addrspa
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [tcgen05_mma_disable_output_lane_collector_b_f8f6f4_cta2_param_5];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [tcgen05_mma_disable_output_lane_collector_b_f8f6f4_cta2_param_5];
 ; CHECK-NEXT:    and.b16 %rs2, %rs1, 1;
 ; CHECK-NEXT:    setp.ne.b16 %p1, %rs2, 0;
-; CHECK-NEXT:    ld.param.b32 %r1, [tcgen05_mma_disable_output_lane_collector_b_f8f6f4_cta2_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [tcgen05_mma_disable_output_lane_collector_b_f8f6f4_cta2_param_2];
-; CHECK-NEXT:    ld.param.b64 %rd2, [tcgen05_mma_disable_output_lane_collector_b_f8f6f4_cta2_param_3];
-; CHECK-NEXT:    ld.param.b32 %r2, [tcgen05_mma_disable_output_lane_collector_b_f8f6f4_cta2_param_4];
-; CHECK-NEXT:    ld.param.v4.b32 {%r3, %r4, %r5, %r6}, [tcgen05_mma_disable_output_lane_collector_b_f8f6f4_cta2_param_6+16];
-; CHECK-NEXT:    ld.param.v4.b32 {%r7, %r8, %r9, %r10}, [tcgen05_mma_disable_output_lane_collector_b_f8f6f4_cta2_param_6];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [tcgen05_mma_disable_output_lane_collector_b_f8f6f4_cta2_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [tcgen05_mma_disable_output_lane_collector_b_f8f6f4_cta2_param_2];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [tcgen05_mma_disable_output_lane_collector_b_f8f6f4_cta2_param_3];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [tcgen05_mma_disable_output_lane_collector_b_f8f6f4_cta2_param_4];
+; CHECK-NEXT:    ld.param::func.v4.b32 {%r3, %r4, %r5, %r6}, [tcgen05_mma_disable_output_lane_collector_b_f8f6f4_cta2_param_6+16];
+; CHECK-NEXT:    ld.param::func.v4.b32 {%r7, %r8, %r9, %r10}, [tcgen05_mma_disable_output_lane_collector_b_f8f6f4_cta2_param_6];
 ; CHECK-NEXT:    tcgen05.mma.cta_group::2.kind::f8f6f4.collector::a::discard.collector::b::lastuse [%r1], %rd1, %rd2, %r2, {%r7, %r8, %r9, %r10, %r3, %r4, %r5, %r6}, %p1;
-; CHECK-NEXT:    ld.param.b32 %r11, [tcgen05_mma_disable_output_lane_collector_b_f8f6f4_cta2_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r11, [tcgen05_mma_disable_output_lane_collector_b_f8f6f4_cta2_param_1];
 ; CHECK-NEXT:    tcgen05.mma.cta_group::2.kind::f8f6f4.collector::a::discard.collector::b::use [%r1], [%r11], %rd2, %r2, {%r7, %r8, %r9, %r10, %r3, %r4, %r5, %r6}, %p1;
 ; CHECK-NEXT:    tcgen05.mma.cta_group::2.kind::f8f6f4.ashift.collector::a::lastuse.collector::b::fill [%r1], [%r11], %rd2, %r2, {%r7, %r8, %r9, %r10, %r3, %r4, %r5, %r6}, %p1;
 ; CHECK-NEXT:    tcgen05.mma.cta_group::2.kind::f8f6f4.ashift.collector::a::lastuse [%r1], [%r11], %rd2, %r2, {%r7, %r8, %r9, %r10, %r3, %r4, %r5, %r6}, %p1;
@@ -301,16 +301,16 @@ define void @tcgen05_mma_disable_output_lane_collector_b_f16_scale_d_cta1(ptr ad
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [tcgen05_mma_disable_output_lane_collector_b_f16_scale_d_cta1_param_5];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [tcgen05_mma_disable_output_lane_collector_b_f16_scale_d_cta1_param_5];
 ; CHECK-NEXT:    and.b16 %rs2, %rs1, 1;
 ; CHECK-NEXT:    setp.ne.b16 %p1, %rs2, 0;
-; CHECK-NEXT:    ld.param.b32 %r1, [tcgen05_mma_disable_output_lane_collector_b_f16_scale_d_cta1_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [tcgen05_mma_disable_output_lane_collector_b_f16_scale_d_cta1_param_2];
-; CHECK-NEXT:    ld.param.b64 %rd2, [tcgen05_mma_disable_output_lane_collector_b_f16_scale_d_cta1_param_3];
-; CHECK-NEXT:    ld.param.b32 %r2, [tcgen05_mma_disable_output_lane_collector_b_f16_scale_d_cta1_param_4];
-; CHECK-NEXT:    ld.param.v4.b32 {%r3, %r4, %r5, %r6}, [tcgen05_mma_disable_output_lane_collector_b_f16_scale_d_cta1_param_6];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [tcgen05_mma_disable_output_lane_collector_b_f16_scale_d_cta1_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [tcgen05_mma_disable_output_lane_collector_b_f16_scale_d_cta1_param_2];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [tcgen05_mma_disable_output_lane_collector_b_f16_scale_d_cta1_param_3];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [tcgen05_mma_disable_output_lane_collector_b_f16_scale_d_cta1_param_4];
+; CHECK-NEXT:    ld.param::func.v4.b32 {%r3, %r4, %r5, %r6}, [tcgen05_mma_disable_output_lane_collector_b_f16_scale_d_cta1_param_6];
 ; CHECK-NEXT:    tcgen05.mma.cta_group::1.kind::f16.collector::a::discard.collector::b::lastuse [%r1], %rd1, %rd2, %r2, {%r3, %r4, %r5, %r6}, %p1, 5;
-; CHECK-NEXT:    ld.param.b32 %r7, [tcgen05_mma_disable_output_lane_collector_b_f16_scale_d_cta1_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r7, [tcgen05_mma_disable_output_lane_collector_b_f16_scale_d_cta1_param_1];
 ; CHECK-NEXT:    tcgen05.mma.cta_group::1.kind::f16.collector::a::discard.collector::b::fill [%r1], [%r7], %rd2, %r2, {%r3, %r4, %r5, %r6}, %p1, 3;
 ; CHECK-NEXT:    tcgen05.mma.cta_group::1.kind::f16.ashift.collector::a::discard.collector::b::use [%r1], [%r7], %rd2, %r2, {%r3, %r4, %r5, %r6}, %p1, 7;
 ; CHECK-NEXT:    tcgen05.mma.cta_group::1.kind::f16.collector::a::lastuse.collector::b::lastuse [%r1], %rd1, %rd2, %r2, {%r3, %r4, %r5, %r6}, %p1, 2;
@@ -345,16 +345,16 @@ define void @tcgen05_mma_disable_output_lane_collector_b_tf32_scale_d_cta1(ptr a
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [tcgen05_mma_disable_output_lane_collector_b_tf32_scale_d_cta1_param_5];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [tcgen05_mma_disable_output_lane_collector_b_tf32_scale_d_cta1_param_5];
 ; CHECK-NEXT:    and.b16 %rs2, %rs1, 1;
 ; CHECK-NEXT:    setp.ne.b16 %p1, %rs2, 0;
-; CHECK-NEXT:    ld.param.b32 %r1, [tcgen05_mma_disable_output_lane_collector_b_tf32_scale_d_cta1_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [tcgen05_mma_disable_output_lane_collector_b_tf32_scale_d_cta1_param_2];
-; CHECK-NEXT:    ld.param.b64 %rd2, [tcgen05_mma_disable_output_lane_collector_b_tf32_scale_d_cta1_param_3];
-; CHECK-NEXT:    ld.param.b32 %r2, [tcgen05_mma_disable_output_lane_collector_b_tf32_scale_d_cta1_param_4];
-; CHECK-NEXT:    ld.param.v4.b32 {%r3, %r4, %r5, %r6}, [tcgen05_mma_disable_output_lane_collector_b_tf32_scale_d_cta1_param_6];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [tcgen05_mma_disable_output_lane_collector_b_tf32_scale_d_cta1_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [tcgen05_mma_disable_output_lane_collector_b_tf32_scale_d_cta1_param_2];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [tcgen05_mma_disable_output_lane_collector_b_tf32_scale_d_cta1_param_3];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [tcgen05_mma_disable_output_lane_collector_b_tf32_scale_d_cta1_param_4];
+; CHECK-NEXT:    ld.param::func.v4.b32 {%r3, %r4, %r5, %r6}, [tcgen05_mma_disable_output_lane_collector_b_tf32_scale_d_cta1_param_6];
 ; CHECK-NEXT:    tcgen05.mma.cta_group::1.kind::tf32.collector::a::discard.collector::b::fill [%r1], %rd1, %rd2, %r2, {%r3, %r4, %r5, %r6}, %p1, 4;
-; CHECK-NEXT:    ld.param.b32 %r7, [tcgen05_mma_disable_output_lane_collector_b_tf32_scale_d_cta1_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r7, [tcgen05_mma_disable_output_lane_collector_b_tf32_scale_d_cta1_param_1];
 ; CHECK-NEXT:    tcgen05.mma.cta_group::1.kind::tf32.collector::a::discard.collector::b::use [%r1], [%r7], %rd2, %r2, {%r3, %r4, %r5, %r6}, %p1, 6;
 ; CHECK-NEXT:    tcgen05.mma.cta_group::1.kind::tf32.ashift.collector::a::lastuse.collector::b::lastuse [%r1], [%r7], %rd2, %r2, {%r3, %r4, %r5, %r6}, %p1, 1;
 ; CHECK-NEXT:    tcgen05.mma.cta_group::1.kind::tf32.ashift.collector::a::lastuse [%r1], [%r7], %rd2, %r2, {%r3, %r4, %r5, %r6}, %p1, 1;
@@ -386,17 +386,17 @@ define void @tcgen05_mma_disable_output_lane_collector_b_f16_scale_d_cta2(ptr ad
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [tcgen05_mma_disable_output_lane_collector_b_f16_scale_d_cta2_param_5];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [tcgen05_mma_disable_output_lane_collector_b_f16_scale_d_cta2_param_5];
 ; CHECK-NEXT:    and.b16 %rs2, %rs1, 1;
 ; CHECK-NEXT:    setp.ne.b16 %p1, %rs2, 0;
-; CHECK-NEXT:    ld.param.b32 %r1, [tcgen05_mma_disable_output_lane_collector_b_f16_scale_d_cta2_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [tcgen05_mma_disable_output_lane_collector_b_f16_scale_d_cta2_param_2];
-; CHECK-NEXT:    ld.param.b64 %rd2, [tcgen05_mma_disable_output_lane_collector_b_f16_scale_d_cta2_param_3];
-; CHECK-NEXT:    ld.param.b32 %r2, [tcgen05_mma_disable_output_lane_collector_b_f16_scale_d_cta2_param_4];
-; CHECK-NEXT:    ld.param.v4.b32 {%r3, %r4, %r5, %r6}, [tcgen05_mma_disable_output_lane_collector_b_f16_scale_d_cta2_param_6+16];
-; CHECK-NEXT:    ld.param.v4.b32 {%r7, %r8, %r9, %r10}, [tcgen05_mma_disable_output_lane_collector_b_f16_scale_d_cta2_param_6];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [tcgen05_mma_disable_output_lane_collector_b_f16_scale_d_cta2_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [tcgen05_mma_disable_output_lane_collector_b_f16_scale_d_cta2_param_2];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [tcgen05_mma_disable_output_lane_collector_b_f16_scale_d_cta2_param_3];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [tcgen05_mma_disable_output_lane_collector_b_f16_scale_d_cta2_param_4];
+; CHECK-NEXT:    ld.param::func.v4.b32 {%r3, %r4, %r5, %r6}, [tcgen05_mma_disable_output_lane_collector_b_f16_scale_d_cta2_param_6+16];
+; CHECK-NEXT:    ld.param::func.v4.b32 {%r7, %r8, %r9, %r10}, [tcgen05_mma_disable_output_lane_collector_b_f16_scale_d_cta2_param_6];
 ; CHECK-NEXT:    tcgen05.mma.cta_group::2.kind::f16.collector::a::discard.collector::b::lastuse [%r1], %rd1, %rd2, %r2, {%r7, %r8, %r9, %r10, %r3, %r4, %r5, %r6}, %p1, 5;
-; CHECK-NEXT:    ld.param.b32 %r11, [tcgen05_mma_disable_output_lane_collector_b_f16_scale_d_cta2_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r11, [tcgen05_mma_disable_output_lane_collector_b_f16_scale_d_cta2_param_1];
 ; CHECK-NEXT:    tcgen05.mma.cta_group::2.kind::f16.collector::a::discard.collector::b::fill [%r1], [%r11], %rd2, %r2, {%r7, %r8, %r9, %r10, %r3, %r4, %r5, %r6}, %p1, 3;
 ; CHECK-NEXT:    tcgen05.mma.cta_group::2.kind::f16.ashift.collector::a::lastuse.collector::b::use [%r1], [%r11], %rd2, %r2, {%r7, %r8, %r9, %r10, %r3, %r4, %r5, %r6}, %p1, 7;
 ; CHECK-NEXT:    tcgen05.mma.cta_group::2.kind::f16.ashift.collector::a::lastuse [%r1], [%r11], %rd2, %r2, {%r7, %r8, %r9, %r10, %r3, %r4, %r5, %r6}, %p1, 7;
@@ -428,17 +428,17 @@ define void @tcgen05_mma_disable_output_lane_collector_b_tf32_scale_d_cta2(ptr a
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [tcgen05_mma_disable_output_lane_collector_b_tf32_scale_d_cta2_param_5];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [tcgen05_mma_disable_output_lane_collector_b_tf32_scale_d_cta2_param_5];
 ; CHECK-NEXT:    and.b16 %rs2, %rs1, 1;
 ; CHECK-NEXT:    setp.ne.b16 %p1, %rs2, 0;
-; CHECK-NEXT:    ld.param.b32 %r1, [tcgen05_mma_disable_output_lane_collector_b_tf32_scale_d_cta2_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [tcgen05_mma_disable_output_lane_collector_b_tf32_scale_d_cta2_param_2];
-; CHECK-NEXT:    ld.param.b64 %rd2, [tcgen05_mma_disable_output_lane_collector_b_tf32_scale_d_cta2_param_3];
-; CHECK-NEXT:    ld.param.b32 %r2, [tcgen05_mma_disable_output_lane_collector_b_tf32_scale_d_cta2_param_4];
-; CHECK-NEXT:    ld.param.v4.b32 {%r3, %r4, %r5, %r6}, [tcgen05_mma_disable_output_lane_collector_b_tf32_scale_d_cta2_param_6+16];
-; CHECK-NEXT:    ld.param.v4.b32 {%r7, %r8, %r9, %r10}, [tcgen05_mma_disable_output_lane_collector_b_tf32_scale_d_cta2_param_6];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [tcgen05_mma_disable_output_lane_collector_b_tf32_scale_d_cta2_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [tcgen05_mma_disable_output_lane_collector_b_tf32_scale_d_cta2_param_2];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [tcgen05_mma_disable_output_lane_collector_b_tf32_scale_d_cta2_param_3];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [tcgen05_mma_disable_output_lane_collector_b_tf32_scale_d_cta2_param_4];
+; CHECK-NEXT:    ld.param::func.v4.b32 {%r3, %r4, %r5, %r6}, [tcgen05_mma_disable_output_lane_collector_b_tf32_scale_d_cta2_param_6+16];
+; CHECK-NEXT:    ld.param::func.v4.b32 {%r7, %r8, %r9, %r10}, [tcgen05_mma_disable_output_lane_collector_b_tf32_scale_d_cta2_param_6];
 ; CHECK-NEXT:    tcgen05.mma.cta_group::2.kind::tf32.collector::a::discard.collector::b::fill [%r1], %rd1, %rd2, %r2, {%r7, %r8, %r9, %r10, %r3, %r4, %r5, %r6}, %p1, 4;
-; CHECK-NEXT:    ld.param.b32 %r11, [tcgen05_mma_disable_output_lane_collector_b_tf32_scale_d_cta2_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r11, [tcgen05_mma_disable_output_lane_collector_b_tf32_scale_d_cta2_param_1];
 ; CHECK-NEXT:    tcgen05.mma.cta_group::2.kind::tf32.collector::a::discard.collector::b::use [%r1], [%r11], %rd2, %r2, {%r7, %r8, %r9, %r10, %r3, %r4, %r5, %r6}, %p1, 6;
 ; CHECK-NEXT:    tcgen05.mma.cta_group::2.kind::tf32.ashift.collector::a::lastuse.collector::b::lastuse [%r1], [%r11], %rd2, %r2, {%r7, %r8, %r9, %r10, %r3, %r4, %r5, %r6}, %p1, 1;
 ; CHECK-NEXT:    tcgen05.mma.cta_group::2.kind::tf32.ashift.collector::a::lastuse [%r1], [%r11], %rd2, %r2, {%r7, %r8, %r9, %r10, %r3, %r4, %r5, %r6}, %p1, 1;
