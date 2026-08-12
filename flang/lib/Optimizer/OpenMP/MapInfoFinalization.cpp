@@ -189,6 +189,8 @@ class MapInfoFinalizationPass
     if (!memberIndices)
       return false;
 
+    // Match a mapped member whose index path is a prefix of the requested
+    // path, then continue the lookup through that member with the suffix.
     for (auto [memberIdx, memberIndexAttr] : llvm::enumerate(memberIndices)) {
       auto memberIndexPath = mlir::cast<mlir::ArrayAttr>(memberIndexAttr);
       if (memberIndexPath.size() >= indexPath.size())
