@@ -1104,6 +1104,7 @@ static bool justRunCheckersAsPreVisit(const Stmt *S) {
   switch (S->getStmtClass()) {
   default:
     return false;
+  case Stmt::AtomicExprClass:
   case Stmt::ImplicitCastExprClass:
   case Stmt::CStyleCastExprClass:
   case Stmt::CXXStaticCastExprClass:
@@ -1130,6 +1131,7 @@ static bool justRunCheckersAsPostVisit(const Stmt *S) {
   switch (S->getStmtClass()) {
   default:
     return false;
+  case Stmt::AtomicExprClass:
   case Stmt::ImplicitCastExprClass:
   case Stmt::CStyleCastExprClass:
   case Stmt::CXXStaticCastExprClass:
@@ -3396,34 +3398,24 @@ void ExprEngine::VisitMemberExpr(const MemberExpr *M, ExplodedNode *Pred,
 
 void ExprEngine::VisitAtomicExpr(const AtomicExpr *AE, ExplodedNode *Pred,
                                  ExplodedNodeSet &Dst) {
-  ExplodedNodeSet AfterPreSet;
-  getCheckerManager().runCheckersForPreStmt(AfterPreSet, Pred, AE, *this);
-
   // For now, treat all the arguments to C11 atomics as escaping.
   // FIXME: Ideally we should model the behavior of the atomics precisely here.
 
-  ExplodedNodeSet AfterInvalidateSet;
+  ProgramStateRef State = Pred->getState();
+  const StackFrame *SF = Pred->getStackFrame();
 
-  for (const auto I : AfterPreSet) {
-    ProgramStateRef State = I->getState();
-    const StackFrame *SF = I->getStackFrame();
-
-    SmallVector<SVal, 8> ValuesToInvalidate;
-    for (const Stmt *SubExpr : AE->children()) {
-      SVal SubExprVal = State->getSVal(cast<Expr>(SubExpr), SF);
-      ValuesToInvalidate.push_back(SubExprVal);
-    }
-
-    State = State->invalidateRegions(ValuesToInvalidate, getCFGElementRef(),
-                                     getNumVisitedCurrent(), SF,
-                                     /*CausedByPointerEscape*/ true,
-                                     /*Symbols=*/nullptr);
-
-    AfterInvalidateSet.insert(
-        Engine.makeNodeWithBinding(I, AE, UnknownVal(), State));
+  SmallVector<SVal, 8> ValuesToInvalidate;
+  for (const Stmt *SubExpr : AE->children()) {
+    SVal SubExprVal = State->getSVal(cast<Expr>(SubExpr), SF);
+    ValuesToInvalidate.push_back(SubExprVal);
   }
 
-  getCheckerManager().runCheckersForPostStmt(Dst, AfterInvalidateSet, AE, *this);
+  State = State->invalidateRegions(ValuesToInvalidate, getCFGElementRef(),
+                                   getNumVisitedCurrent(), SF,
+                                   /*CausedByPointerEscape*/ true,
+                                   /*Symbols=*/nullptr);
+
+  Dst.insert(Engine.makeNodeWithBinding(Pred, AE, UnknownVal(), State));
 }
 
 // A value escapes in four possible cases:
