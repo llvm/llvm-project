@@ -134,7 +134,11 @@ getArgAccessQual(const Function &F, unsigned ArgIdx) {
 static std::vector<SPIRV::Decoration::Decoration>
 getKernelArgTypeQual(const Function &F, unsigned ArgIdx) {
   MDString *ArgAttribute = getOCLKernelArgTypeQual(F, ArgIdx);
-  if (ArgAttribute && ArgAttribute->getString() == "volatile")
+  if (!ArgAttribute)
+    return {};
+  SmallVector<StringRef, 3> Tokens;
+  ArgAttribute->getString().split(Tokens, ' ', -1, /*KeepEmpty=*/false);
+  if (llvm::is_contained(Tokens, "volatile"))
     return {SPIRV::Decoration::Volatile};
   return {};
 }
