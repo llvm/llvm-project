@@ -8,6 +8,10 @@
 
 // UNSUPPORTED: no-exceptions
 
+// <vector>
+
+// void shrink_to_fit();
+
 // This test file validates that std::vector<T>::shrink_to_fit provides the strong exception guarantee when
 // T is Cpp17MoveInsertable and its move constructor does not throw exceptions during the shrink_to_fit
 // call. Additionally, it checks that for move-only types where T's move constructor is not noexcept, only
