@@ -642,19 +642,25 @@ class TMA_DIMS_UTIL<int dim, string mode = ""> {
 }
 
 class TMA_IM2COL_UTIL<int dim, string mode> {
-  // For im2col_w/w_128 modes, number of offsets is always 2.
-  // For im2col mode, offsets is (dim - 2).
-  // For non-im2col modes (i.e. tile) there are no offsets.
-  int offsets = !cond(
-                  !eq(mode, "im2col") : !sub(dim, 2),
-                  !eq(mode, "im2col_w") : 2,
-                  !eq(mode, "im2col_w_128") : 2,
-                  true : 0); // for all other modes
+  int offsets = TMA_IM2COL_OFFSETS_UTIL<dim, mode>.num;
 
   dag ins_dag = !if(!gt(offsets, 0),
     !dag(ins, !listsplat(B16, offsets), !foreach(i, !range(offsets), "im2col" # i)),
     (ins));
   string base_str = !interleave(!foreach(i, !range(offsets), "$im2col" # i), ", ");
+}
+
+// Maps a TMA tensor copy "mode" to equivalent assembly mnemonic.
+//   tile          -> tile
+//   im2col        -> im2col_no_offs
+//   im2col_w      -> im2col_no_offs::w
+//   tile_scatter4 -> tile::scatter4
+class TMA_MODE_ASM_UTIL<string mode> {
+  string ret = !cond(
+    !eq(mode, "im2col")        : "im2col_no_offs",
+    !eq(mode, "im2col_w")      : "im2col_no_offs::w",
+    !eq(mode, "tile_scatter4") : "tile::scatter4",
+    true                       : mode);
 }
 
 def CTAGroupFlags : Operand<i32> {
@@ -822,11 +828,7 @@ multiclass TMA_TENSOR_S2G_INTR<int dim, string mode,
                                  (intr B64:$ch, -1));
 
   // Fix-up the asm_str when it is im2col/scatter4.
-  defvar mode_asm_str = !cond(
-                          !eq(mode, "im2col") : "im2col_no_offs",
-                          !eq(mode, "im2col_w") : "im2col_no_offs::w",
-                          !eq(mode, "tile_scatter4") : "tile::scatter4",
-                          true : mode);
+  defvar mode_asm_str = TMA_MODE_ASM_UTIL<mode>.ret;
   defvar prefix = "cp.async.bulk.tensor"
                   # "." # dim_val # "d"
                   # ".global.shared::cta"
@@ -860,19 +862,17 @@ defm TMA_S2G_TILE_SCATTER4_2D : TMA_TENSOR_S2G_INTR<5, "tile_scatter4",
 
 // Base class for TMA tensor override intrinsics
 class TMA_TENSOR_OVERRIDE_BASE<int dim, string mode, string override> {
-  // Dimension handling
-  dag dims_dag = !dag(ins, !listsplat(B32, dim), !foreach(i, !range(dim), "d" # i));
-  string dims_str = !interleave(!foreach(i, !range(dim), "$d" # i), ", ");
+  // Dimension handling.
+  defvar dims_util = TMA_DIMS_UTIL<dim>;
+  dag dims_dag = dims_util.ins_dag;
+  string dims_str = dims_util.base_str;
   bit has_multi_dim = !ge(dim, 2);
 
-  // Im2col handling (im2col / im2col_w / im2col_w_128)
-  int num_im2col = !cond(!eq(mode, "im2col"): !add(dim, -2),
-                         !eq(mode, "im2col_w"): 2,
-                         !eq(mode, "im2col_w_128"): 2,
-                         true: 0);
-  dag im2col_dag = !dag(ins, !listsplat(B16, num_im2col),
-                        !foreach(i, !range(num_im2col), "im2col" # i));
-  string im2col_str = !interleave(!foreach(i, !range(num_im2col), "$im2col" # i), ", ");
+  // Im2col handling (im2col / im2col_w / im2col_w_128).
+  defvar im2col_util = TMA_IM2COL_UTIL<dim, mode>;
+  int num_im2col = im2col_util.offsets;
+  dag im2col_dag = im2col_util.ins_dag;
+  string im2col_str = im2col_util.base_str;
   string im2col_component = !if(num_im2col, ", {{" # im2col_str # "}}", "");
 
   // Tensor size handling
@@ -911,11 +911,7 @@ multiclass NVPTX_CP_ASYNC_BULK_TENSOR_S2G_OVERRIDE_INTR<int dim, string mode,
                                                     string override> {
   defvar base = TMA_TENSOR_OVERRIDE_BASE<dim, mode, override>;
   defvar is_scatter4 = !eq(mode, "tile_scatter4");
-  defvar mode_asm_str = !cond(
-                          !eq(mode, "im2col") : "im2col_no_offs",
-                          !eq(mode, "im2col_w") : "im2col_no_offs::w",
-                          !eq(mode, "tile_scatter4") : "tile::scatter4",
-                          true : mode);
+  defvar mode_asm_str = TMA_MODE_ASM_UTIL<mode>.ret;
   defvar inst_name = "cp.async.bulk.tensor." # !if(is_scatter4, 2, dim) #
                      "d.global.shared::cta." # mode_asm_str # ".bulk_group";
   defvar suffix = base.override_suffix;
@@ -968,9 +964,7 @@ def tma_tensor_reduction_imm :
 multiclass NVPTX_CP_ASYNC_BULK_TENSOR_REDUCE_OVERRIDE_INTR<int dim, string mode,
                                                     string override> {
   defvar base = TMA_TENSOR_OVERRIDE_BASE<dim, mode, override>;
-  defvar mode_asm_str = !cond(!eq(mode, "im2col") : "im2col_no_offs",
-                              !eq(mode, "im2col_w") : "im2col_no_offs::w",
-                              true : mode);
+  defvar mode_asm_str = TMA_MODE_ASM_UTIL<mode>.ret;
   defvar inst_name = "cp.reduce.async.bulk.tensor." # dim #
                      "d.global.shared::cta";
   defvar suffix = "." # mode_asm_str # ".bulk_group" # base.override_suffix;
@@ -1046,9 +1040,7 @@ multiclass CP_ASYNC_BULK_TENSOR_REDUCE_INTR<int dim, string mode,
   defvar dims_str = TMA_DIMS_UTIL<dim>.base_str;
   defvar asm_str = " [$tmap, {{" # dims_str # "}}], [$src]";
 
-  defvar mode_asm_str = !cond(!eq(mode, "im2col") : "im2col_no_offs",
-                              !eq(mode, "im2col_w") : "im2col_no_offs::w",
-                              true : mode);
+  defvar mode_asm_str = TMA_MODE_ASM_UTIL<mode>.ret;
   defvar prefix = "cp.reduce.async.bulk.tensor"
                   # "." # dim # "d"
                   # ".global.shared::cta";

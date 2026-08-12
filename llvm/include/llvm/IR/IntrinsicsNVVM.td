@@ -1268,6 +1268,18 @@ class NVVMPureIntrinsic<list<LLVMType> ret_types,
   DefaultAttrsIntrinsic<ret_types, param_types,
                         intr_properties # [IntrNoMem, IntrSpeculatable], name> {}
 
+// For im2col mode the number of offsets is (dim - 2).
+// For im2col_w / im2col_w_128 modes it is always 2 (wHalo and wOffset),
+//   irrespective of dim.
+// For all other modes (e.g. tile) there are no offsets.
+class TMA_IM2COL_OFFSETS_UTIL<int dim, string mode> {
+  int num = !cond(
+    !eq(mode, "im2col")      : !sub(dim, 2),
+    !eq(mode, "im2col_w")    : 2,
+    !eq(mode, "im2col_w_128"): 2,
+    true                     : 0);
+}
+
 // Class to handle TMA Copy Override Support
 class TMAOverrideHandler<int dim, string mode> {
   // TMA Override Support:
@@ -1293,24 +1305,18 @@ class TMAOverrideHandler<int dim, string mode> {
 }
 
 class CP_ASYNC_BULK_TENSOR_OVERRIDE_BASE<int dim, string mode, string override> {
-  list<LLVMType> OverrideTy = [llvm_global_ptr_ty];
+  list<LLVMType> AddrTy = [llvm_global_ptr_ty];
   list<LLVMType> TensorSizeTy = !listsplat(llvm_i16_ty, dim);
   list<LLVMType> LowerStrideTy = !listsplat(llvm_i32_ty, !add(dim, -1));
   list<LLVMType> UpperStrideTy = [llvm_i16_ty];
-  list<LLVMType> OverrideDimTy = !listconcat(OverrideTy, TensorSizeTy);
-  list<LLVMType> OverrideDimStrideTy = !listconcat(OverrideTy, TensorSizeTy, LowerStrideTy, UpperStrideTy);
-  list<LLVMType> OverrideAddrTy = !cond(!eq(override, "override_addr"): OverrideTy,
-                                        !eq(override, "override_addr_dim"): OverrideDimTy,
-                                        !eq(override, "override_addr_dim_stride"): OverrideDimStrideTy);
+  list<LLVMType> AddrDimTy = !listconcat(AddrTy, TensorSizeTy);
+  list<LLVMType> AddrDimStrideTy = !listconcat(AddrTy, TensorSizeTy, LowerStrideTy, UpperStrideTy);
+  list<LLVMType> OverrideTypes = !cond(!eq(override, "override_addr"): AddrTy,
+                                       !eq(override, "override_addr_dim"): AddrDimTy,
+                                       !eq(override, "override_addr_dim_stride"): AddrDimStrideTy);
   list<LLVMType> TensorDimsTy = !listsplat(llvm_i32_ty, dim);
 
-  // For im2col_w/w128 mode, NumIm2ColOffsets is always 2 irrespective of the
-  // dim (wHalo and wOffset)
-  int NumIm2ColOffsets =
-      !cond(!eq(mode, "im2col_w") : 2,
-            !eq(mode, "im2col_w_128") : 2,
-            !eq(mode, "im2col") : !add(dim, -2),
-            true : 0);
+  int NumIm2ColOffsets = TMA_IM2COL_OFFSETS_UTIL<dim, mode>.num;
   list<LLVMType> Im2ColOffsetsTy = !listsplat(llvm_i16_ty, NumIm2ColOffsets);
 
   string Prefix = "int_nvvm_cp_async_bulk_tensor_";
@@ -1324,7 +1330,7 @@ class CP_ASYNC_BULK_TENSOR_S2G_OVERRIDE_INTR<int dim, string mode, string overri
   list<LLVMType> ArgsTy = !listconcat(
                           [llvm_shared_ptr_ty,  // src_smem_ptr
                            llvm_ptr_ty],        // tensormap_ptr
-                           OverrideAddrTy,      // override_addr
+                           OverrideTypes,       // override_addr (dst)
                            TensorDimsTy,        // actual tensor dims
                           [llvm_i64_ty]         // cache_hint
                           );
@@ -2961,7 +2967,8 @@ def int_nvvm_cp_async_bulk_tensor_s2g_tile_scatter4_2d
       [llvm_i1_ty],                           // Flag for cache_hint
       [IntrConvergent, ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>]>;
 
-// TMA Tensor Copy Intrinsics: S2G -> From shared to global memory with override address variants
+// TMA Tensor Copy/Reduction Intrinsics: S2G -> From shared to global memory
+//   with override address variants
 foreach dim = 1...5 in {
   foreach mode = !if(!ge(dim, 3), ["tile", "im2col", "im2col_w"], ["tile"]) in {
     foreach override = TMAOverrideHandler<dim, mode>.applicable_overrides in {
@@ -3005,9 +3012,7 @@ foreach dim = 1...5 in {
     defvar is_im2col = !eq(mode, "im2col");
     defvar is_im2colw = !or(!eq(mode, "im2col_w"), !eq(mode, "im2col_w_128"));
 
-    // For im2col_w/w128 modes, the num_offsets is always 2.
-    // For im2col mode, the num_offsets is (dim - 2).
-    defvar num_im2col_offsets = !if(is_im2colw, 2, !if(is_im2col, !add(dim, -2), 0));
+    defvar num_im2col_offsets = TMA_IM2COL_OFFSETS_UTIL<dim, mode>.num;
     defvar im2col_offsets_args = !listsplat(llvm_i16_ty, num_im2col_offsets);
 
     defvar g2s_params = !listconcat(
