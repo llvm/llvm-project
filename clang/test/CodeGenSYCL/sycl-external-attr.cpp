@@ -54,7 +54,7 @@ class C {
 int ret1() { return 1; }
 [[clang::sycl_external]] int withAttr() { return ret1(); }
 // CHECK: define dso_local spir_func noundef i32 @_Z8withAttrv
-// CHECK: define internal spir_func noundef i32 @_Z4ret1v
+// CHECK: define dso_local spir_func noundef i32 @_Z4ret1v
 
 template <typename T>
 [[clang::sycl_external]] void tFunc1(T arg) {}

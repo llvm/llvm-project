@@ -7386,7 +7386,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                       options::OPT_fno_hip_kernel_arg_name);
   }
 
-  if ((IsCuda || IsHIP || IsSYCLDevice) && IsRDCMode)
+  if ((IsCuda || IsHIP || IsSYCL) && IsRDCMode)
     CmdArgs.push_back("-fgpu-rdc");
 
   if (IsCuda || IsHIP) {

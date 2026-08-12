@@ -394,7 +394,7 @@ int main() {
 // CHECK-AMDGCN-SAME:     (ptr noundef nonnull align 1 dereferenceable(1) %kernelFunc.ascast) #[[AMDGCN_ATTR1:[0-9]+]]
 // CHECK-AMDGCN-NEXT:   ret void
 // CHECK-AMDGCN-NEXT: }
-// CHECK-AMDGCN:      define {{.*}} void @_ZNK21single_purpose_kernelclEv
+// CHECK-AMDGCN:      define linkonce_odr void @_ZNK21single_purpose_kernelclEv
 //
 // CHECK-NVPTX:       Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 // CHECK-NVPTX-NEXT:  define dso_local ptx_kernel void @_ZTS26single_purpose_kernel_name
@@ -404,7 +404,7 @@ int main() {
 // CHECK-NVPTX-SAME:      (ptr noundef nonnull align 1 dereferenceable(1) %kernelFunc) #[[NVPTX_ATTR1:[0-9]+]]
 // CHECK-NVPTX-NEXT:    ret void
 // CHECK-NVPTX-NEXT:  }
-// CHECK-NVPTX:       define {{.*}} void @_ZNK21single_purpose_kernelclEv
+// CHECK-NVPTX:       define linkonce_odr void @_ZNK21single_purpose_kernelclEv
 //
 // CHECK-SPIR:        Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 // CHECK-SPIR-NEXT:   define {{[a-z_ ]*}}spir_kernel void @_ZTS26single_purpose_kernel_name
@@ -415,7 +415,7 @@ int main() {
 // CHECK-SPIR-SAME:       (ptr addrspace(4) noundef align 1 dereferenceable_or_null(1) %kernelFunc.ascast) #[[SPIR_ATTR1:[0-9]+]]
 // CHECK-SPIR-NEXT:     ret void
 // CHECK-SPIR-NEXT:   }
-// CHECK-SPIR:        define {{.*}} spir_func void @_ZNK21single_purpose_kernelclEv
+// CHECK-SPIR:        define linkonce_odr spir_func void @_ZNK21single_purpose_kernelclEv
 
 // IR for the SYCL kernel caller function generated for kernel_single_task with
 // lambda_kernel_name as the SYCL kernel name type.
