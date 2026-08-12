@@ -211,9 +211,9 @@ features += [
             cfg.available_features,
         ),
     ),
-    # Tests that require std::is_debuger_present()
+    # Tests that require std::is_debugger_present()
     Feature(
-        name="availibility-debugging-missing",
+        name="availability-debugging-missing",
         when=lambda cfg: BooleanExpression.evaluate(
             "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && !_target-has-llvm-24)",
             cfg.available_features
