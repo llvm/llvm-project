@@ -547,7 +547,7 @@ void associative_container_benchmarks(std::string container) {
       }
     });
 
-#if TEST_STD_VER >= 23
+#if defined(__cpp_lib_ranges_zip) && __cpp_lib_ranges_zip >= 202110L
     bench_non_empty("insert(iterator, iterator) (product_iterator from zip_view)", [=](auto& st) {
       const std::size_t size = st.range(0);
       std::vector<Key> keys  = generate_unique_keys(size + (size / 10));
