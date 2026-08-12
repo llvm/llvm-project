@@ -73,19 +73,25 @@ public:
   CallDescriptionMap<NoItParamFn> NoIterParamFunctions = {
       {{CDM::CXXMethod, {"clear"}, 0}, &ContainerModeling::handleClear},
       {{CDM::CXXMethod, {"assign"}, 2}, &ContainerModeling::handleAssign},
+      {{CDM::CXXMethod, {"assign_range"}, 1}, &ContainerModeling::handleAssign},
       {{CDM::CXXMethod, {"push_back"}, 1}, &ContainerModeling::handlePushBack},
       {{CDM::CXXMethod, {"emplace_back"}, 1},
+       &ContainerModeling::handlePushBack},
+      {{CDM::CXXMethod, {"append_range"}, 1},
        &ContainerModeling::handlePushBack},
       {{CDM::CXXMethod, {"pop_back"}, 0}, &ContainerModeling::handlePopBack},
       {{CDM::CXXMethod, {"push_front"}, 1},
        &ContainerModeling::handlePushFront},
       {{CDM::CXXMethod, {"emplace_front"}, 1},
        &ContainerModeling::handlePushFront},
+      {{CDM::CXXMethod, {"prepend_range"}, 1},
+       &ContainerModeling::handlePushFront},
       {{CDM::CXXMethod, {"pop_front"}, 0}, &ContainerModeling::handlePopFront},
   };
 
   CallDescriptionMap<OneItParamFn> OneIterParamFunctions = {
       {{CDM::CXXMethod, {"insert"}, 2}, &ContainerModeling::handleInsert},
+      {{CDM::CXXMethod, {"insert_range"}, 2}, &ContainerModeling::handleInsert},
       {{CDM::CXXMethod, {"emplace"}, 2}, &ContainerModeling::handleInsert},
       {{CDM::CXXMethod, {"erase"}, 1}, &ContainerModeling::handleErase},
       {{CDM::CXXMethod, {"erase_after"}, 1},
