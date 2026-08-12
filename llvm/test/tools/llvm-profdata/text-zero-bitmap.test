@@ -7,12 +7,26 @@ RUN: FileCheck %s --input-file=%t/a --check-prefix=GENERATED
 RUN: llvm-profdata merge --instr --text %t/a -o %t/b
 RUN: diff %t/a %t/b
 
+# Numeric-looking function names remain ambiguous in legacy text, so verify
+# that explicit zero-bitmap records preserve them across writer round trips.
+RUN: llvm-profdata merge --instr --text %t/explicit.proftext -o %t/c
+RUN: FileCheck %s --input-file=%t/c --check-prefix=EXPLICIT
+RUN: llvm-profdata merge --instr --text %t/c -o %t/d
+RUN: diff %t/c %t/d
+
 GENERATED-LABEL: !zero_bitmap
 GENERATED: # Num Bitmap Bytes:
 GENERATED-NEXT: $0
 GENERATED: $s4main3fooyyF
 GENERATED: # Num Bitmap Bytes:
 GENERATED-NEXT: $0
+
+EXPLICIT-LABEL: !zero_bitmap
+EXPLICIT: # Num Bitmap Bytes:
+EXPLICIT-NEXT: $0
+EXPLICIT-LABEL: $1next
+EXPLICIT: # Num Bitmap Bytes:
+EXPLICIT-NEXT: $0
 
 ;--- legacy.proftext
 !zero_bitmap
@@ -23,3 +37,15 @@ $s4main3fooyyF
 2
 1
 9
+
+;--- explicit.proftext
+!zero_bitmap
+1
+1
+7
+$0
+$1next
+2
+1
+9
+$0
