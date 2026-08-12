@@ -156,7 +156,7 @@ exit:
 }
 
 
-;; Test 3: Constant offsets only — existing grouping handles this.
+;; Test 2: Constant offsets only — existing grouping handles this.
 ;; 4 loads from %a at constant byte offsets {-16, -8, +8, +16}. Store to %out.
 ;; The standard grouping algorithm merges these into 1 group (constant SCEV diffs).
 ;; Both with and without flag: 1 check, 2 groups, no predicates.
@@ -256,7 +256,7 @@ exit:
 }
 
 
-;; Test 4: Cost model rejection — only 2 loads with runtime stride.
+;; Test 3: Cost model rejection — only 2 loads with runtime stride.
 ;; Merging saves 1 check but costs 1 predicate = net 0 saving -> skip.
 ;; Same result with and without the flag: 2 checks, 3 groups, no predicates.
 define void @cost_model_rejection(ptr %a, ptr %out, i64 %n, i64 %cdj) {
@@ -350,7 +350,7 @@ exit:
 }
 
 
-;; Test 5: Invariant + strided reads from same base -> different access ranges.
+;; Test 4: Invariant + strided reads from same base -> different access ranges.
 ;; A strided read {%a,+,8} and an invariant read from %a have different
 ;; access ranges (8*n vs 8), so merging must NOT combine them.
 ;; Both reads are in the same DepSet (same underlying object, both reads),
@@ -450,7 +450,7 @@ exit:
 }
 
 
-;; Test 6: A member with no stride term.
+;; Test 5: A member with no stride term.
 ;; 3 loads from %a at offsets {0, -cdj, -2*cdj}. The base load has no cdj
 ;; term at all, so its cdj coefficient counts as 0. The candidate comparison
 ;; must see that 0: the base member (+0) is the high bound, above -cdj and
@@ -560,7 +560,7 @@ exit:
 }
 
 
-;; Test 7: Predicated accesses are rejected from stencil merging.
+;; Test 6: Predicated accesses are rejected from stencil merging.
 ;; Models the dilateKernel pattern (llvm-test-suite MicroBenchmarks/ImageProcessing/Dilate):
 ;; 3 loads at {-cdj, 0, +cdj} where the -cdj and +cdj loads are conditional.
 ;; Predicated loads have overapproximated SCEV bounds; merging would widen
@@ -697,7 +697,7 @@ exit:
 }
 
 
-;; Test 8: Write pointer in a group prevents stencil merging.
+;; Test 7: Write pointer in a group prevents stencil merging.
 ;; 2 reads from %a at offsets {0, +cdj} and 1 write to %a at offset {+2*cdj}.
 ;; All three share the same base %a (same DepSet). The write prevents merging.
 ;; Both modes: groups stay separate.
@@ -838,7 +838,7 @@ exit:
 }
 
 
-;; Test 10: Shared stride predicate deduplication across two DepSets.
+;; Test 8: Shared stride predicate deduplication across two DepSets.
 ;; Two arrays %a and %b each read at offsets {-cdj, 0, +cdj}. Store to %out.
 ;; Both DepSets share the same stride %cdj, so only 1 predicate (cdj > 0)
 ;; should be emitted, not 2.
@@ -991,7 +991,7 @@ exit:
 }
 
 
-;; Test 11: Known-positive stride skips predicate emission.
+;; Test 9: Known-positive stride skips predicate emission.
 ;; The stride is smax(%cdj_in, 1), which SCEV can prove is > 0.
 ;; 3 loads from %a at offsets {-stride, 0, +stride}. Store to %out.
 ;; With merge: 1 merged group, 1 check, NO predicates (stride known positive).
@@ -1099,7 +1099,7 @@ exit:
   ret void
 }
 
-;; Test 12: loop-invariant pointer is computed in the preheader.
+;; Test 10: loop-invariant pointer is computed in the preheader.
 ;; %inv.ptr = %a + %cdj is invariant, so its GEP is outside the loop. The
 ;; runtime offset %cdj keeps it in a separate group from the strided {%a,+,1}
 ;; read, so we reach the predicated-access check. We must look at the load,
@@ -1188,7 +1188,7 @@ exit:
 }
 
 
-;; Test 13: predicated access whose address is computed in the header.
+;; Test 11: predicated access whose address is computed in the header.
 ;; The stride GEPs are in the header, which dominates the latch, but the loads
 ;; are in a conditional block guarded by %c. So the accesses are predicated and
 ;; must not be merged. We must look at the load block, which is conditional,
@@ -1320,7 +1320,7 @@ exit:
   ret void
 }
 
-;; Test 14: equal access ranges but different recurrence steps -> no merge.
+;; Test 12: equal access ranges but different recurrence steps -> no merge.
 ;; In a single-iteration loop every access spans just its element size, so the
 ;; ranges are equal even though the steps differ (8 vs 16). The access-range
 ;; check passes here, so the step check is the guard that stops the merge. Both
@@ -1409,7 +1409,7 @@ exit:
   ret void
 }
 
-;; Test 15: %gep Start/End expressions are min/max expressions.
+;; Test 13: %gep Start/End expressions are min/max expressions.
 ;; getMinusSCEV for such expressions can produce SCEVCouldNotCompute.
 define void @stencil_merge_range_could_not_compute(ptr %p, ptr %q, i64 %m) {
 ; MERGE-LABEL: 'stencil_merge_range_could_not_compute'
@@ -1496,7 +1496,7 @@ done:
 
 declare i64 @llvm.smax.i64(i64, i64)
 
-;; Test 16: A stride that is itself a sum (s1 + s2).
+;; Test 14: A stride that is itself a sum (s1 + s2).
 ;; s1 = smax(s1in, 1), s2 = smax(s2in, 1) (known positive); 3 loads from %p at
 ;; offsets {0, s1, s1 + s2}, store to %q.
 ;; One member offset is (-1 * (s1 + s2)). decomposeStencilOffset distributes
@@ -1607,7 +1607,7 @@ done:
 }
 
 
-;; Test 17: A member that uses two strides at once.
+;; Test 15: A member that uses two strides at once.
 ;; 6 loads from %a: +0, -5*s1, +5*s1, -5*s2, +5*s2, and the mixed
 ;; +5*s1+5*s2. Store to %out.
 ;; The members at -5*s1 and -5*s2 can each be the lowest address: which one
@@ -1768,7 +1768,7 @@ exit:
   ret void
 }
 
-;; Test 18: Too many candidate members - the cost model rejects the merge.
+;; Test 16: Too many candidate members - the cost model rejects the merge.
 ;; 8 loads from %a at offsets {-s1, +s1, -s2, +s2, -s3, +s3, -s4, +s4}.
 ;; The strides are unrelated, so all four -s_i members can be the lowest
 ;; address and all four +s_i members can be the highest. The merged bounds
@@ -1987,7 +1987,7 @@ exit:
   ret void
 }
 
-;; Test 19: One member's offset stays factored as (64 * (s1 + s2)).
+;; Test 17: One member's offset stays factored as (64 * (s1 + s2)).
 ;; 4 loads from %p at byte offsets {0, 64*s1, 64*s2, 64*(s1+s2)}; the last
 ;; offset is computed as (s1 + s2) * 64, and SCEV keeps the factored form.
 ;; Stores to %q and %q2.
@@ -2167,7 +2167,7 @@ done:
   ret void
 }
 
-;; Test 20: The depth cap keeps a deep term as one opaque key.
+;; Test 18: The depth cap keeps a deep term as one opaque key.
 ;; 3 loads from %p at byte offsets {0, 64*s1, 8 + 64*(s1 + s2 + 4*s3)}.
 ;; The deep offset is an add (depth 0) holding 64*(...) (depth 1) holding a
 ;; 3-operand add (depth 2) whose term 4*s3 sits at depth 3.
@@ -2388,7 +2388,7 @@ done:
 }
 
 
-;; Test 21: A constant-offset member and a stride member share the bounds.
+;; Test 19: A constant-offset member and a stride member share the bounds.
 ;; 4 loads from %a at byte offsets {-16, +16, -cdj, +cdj}. Stores to %out
 ;; and %out2.
 ;; The member at -16 has the smaller constant; the member at -cdj has the
@@ -2555,7 +2555,7 @@ exit:
 }
 
 
-;; Test 22: Three strides in a star shape - multi-operand umin and umax.
+;; Test 20: Three strides in a star shape - multi-operand umin and umax.
 ;; 7 loads from %a at byte offsets {0, -s1, +s1, -s2, +s2, -s3, +s3}.
 ;; Stores to %out and %out2.
 ;; Any of -s1, -s2, -s3 can be the lowest address: which one is lowest
