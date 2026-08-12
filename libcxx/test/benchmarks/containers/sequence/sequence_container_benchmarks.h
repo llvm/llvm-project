@@ -433,7 +433,6 @@ void sequence_container_benchmarks(std::string container) {
     for (auto gen : generators)
       bench("prepend_range() (into empty container)" + tostr(gen), [gen] BENCHMARK_ATTRS(auto& state) {
         auto const size = state.range(0);
-        BENCHMARK_ATTRS
         std::vector<ValueType> in;
         std::generate_n(std::back_inserter(in), size, gen);
         DoNotOptimizeData(in);
