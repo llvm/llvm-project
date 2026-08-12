@@ -1119,6 +1119,7 @@ static bool justRunCheckersAsPreVisit(const Stmt *S) {
   case Stmt::CXXNewExprClass:
   case Stmt::MaterializeTemporaryExprClass:
   case Stmt::OffsetOfExprClass:
+  case Stmt::UnaryExprOrTypeTraitExprClass:
   case Stmt::UnaryOperatorClass:
     return true;
   }
@@ -1143,6 +1144,7 @@ static bool justRunCheckersAsPostVisit(const Stmt *S) {
   case Stmt::CXXNewExprClass:
   case Stmt::MaterializeTemporaryExprClass:
   case Stmt::OffsetOfExprClass:
+  case Stmt::UnaryExprOrTypeTraitExprClass:
   case Stmt::UnaryOperatorClass:
     return true;
   }

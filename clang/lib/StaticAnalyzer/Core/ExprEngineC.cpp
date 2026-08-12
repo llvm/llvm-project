@@ -807,44 +807,34 @@ void ExprEngine::VisitOffsetOfExpr(const OffsetOfExpr *OOE, ExplodedNode *Pred,
   }
 }
 
-void ExprEngine::
-VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *Ex,
-                              ExplodedNode *Pred,
-                              ExplodedNodeSet &Dst) {
-  // FIXME: Prechecks eventually go in ::Visit().
-  ExplodedNodeSet CheckedSet;
-  getCheckerManager().runCheckersForPreStmt(CheckedSet, Pred, Ex, *this);
-
-  ExplodedNodeSet EvalSet;
+void ExprEngine::VisitUnaryExprOrTypeTraitExpr(
+    const UnaryExprOrTypeTraitExpr *Ex, ExplodedNode *Pred,
+    ExplodedNodeSet &Dst) {
   QualType T = Ex->getTypeOfArgument();
 
-  for (ExplodedNode *N : CheckedSet) {
-    if (Ex->getKind() == UETT_SizeOf || Ex->getKind() == UETT_DataSizeOf ||
-        Ex->getKind() == UETT_CountOf) {
-      if (!T->isIncompleteType() && !T->isConstantSizeType()) {
-        assert(T->isVariableArrayType() && "Unknown non-constant-sized type.");
+  if (Ex->getKind() == UETT_SizeOf || Ex->getKind() == UETT_DataSizeOf ||
+      Ex->getKind() == UETT_CountOf) {
+    if (!T->isIncompleteType() && !T->isConstantSizeType()) {
+      assert(T->isVariableArrayType() && "Unknown non-constant-sized type.");
 
-        // FIXME: Add support for VLA type arguments and VLA expressions.
-        // When that happens, we should probably refactor VLASizeChecker's code.
-        EvalSet.insert(N);
-        continue;
-      } else if (T->getAs<ObjCObjectType>()) {
-        // Some code tries to take the sizeof an ObjCObjectType, relying that
-        // the compiler has laid out its representation.  Just report Unknown
-        // for these.
-        EvalSet.insert(N);
-        continue;
-      }
+      // FIXME: Add support for VLA type arguments and VLA expressions.
+      // When that happens, we should probably refactor VLASizeChecker's code.
+      Dst.insert(Pred);
+      return;
+    } else if (T->getAs<ObjCObjectType>()) {
+      // Some code tries to take the sizeof an ObjCObjectType, relying that
+      // the compiler has laid out its representation.  Just report Unknown
+      // for these.
+      Dst.insert(Pred);
+      return;
     }
-
-    APSInt Value = Ex->EvaluateKnownConstInt(getContext());
-    CharUnits amt = CharUnits::fromQuantity(Value.getZExtValue());
-
-    SVal V = svalBuilder.makeIntVal(amt.getQuantity(), Ex->getType());
-    EvalSet.insert(Engine.makeNodeWithBinding(N, Ex, V));
   }
 
-  getCheckerManager().runCheckersForPostStmt(Dst, EvalSet, Ex, *this);
+  APSInt Value = Ex->EvaluateKnownConstInt(getContext());
+  CharUnits amt = CharUnits::fromQuantity(Value.getZExtValue());
+
+  SVal V = svalBuilder.makeIntVal(amt.getQuantity(), Ex->getType());
+  Dst.insert(Engine.makeNodeWithBinding(Pred, Ex, V));
 }
 
 void ExprEngine::VisitStmtExpr(const StmtExpr *S, ExplodedNode *Pred,
