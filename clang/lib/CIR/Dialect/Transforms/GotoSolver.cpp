@@ -131,7 +131,7 @@ void GotoSolverPass::runOnOperation() {
       // A block-address difference attribute references two labels in the same
       // function; keep both alive.
       namedAttr.getValue().walk([&](cir::BlockAddrDiffAttr diff) {
-        llvm::StringSet<> &labels =
+        llvm::SmallSetVector<StringRef, 4> &labels =
             globalBlockAddrLabels[diff.getFunc().getValue()];
         labels.insert(diff.getLhsLabel().getValue());
         labels.insert(diff.getRhsLabel().getValue());
