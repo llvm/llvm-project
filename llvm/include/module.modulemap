@@ -412,6 +412,9 @@ module LLVM_Utils {
     // Exclude this; it should only be used on Windows.
     exclude header "llvm/Support/Windows/WindowsSupport.h"
 
+    // Exclude this; it should only be used on z/OS.
+    exclude header "llvm/Support/SystemZ/zos_wrappers/string.h"
+
     // Exclude these; they are fundamentally non-modular.
     exclude header "llvm/Support/PluginLoader.h"
     exclude header "llvm/Support/Solaris/sys/regset.h"
