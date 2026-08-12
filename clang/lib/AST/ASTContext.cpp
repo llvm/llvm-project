@@ -15988,7 +15988,7 @@ private:
 };
 } // namespace
 
-llvm::SmallVector<ASTContext::BitInterval>
+llvm::ArrayRef<ASTContext::BitInterval>
 ASTContext::getPaddingIntervals(QualType Ty) const {
   Ty = Ty.getCanonicalType();
   auto cached = PaddingIntervalCache.find(Ty);
@@ -15998,9 +15998,9 @@ ASTContext::getPaddingIntervals(QualType Ty) const {
   PaddingCalculator pc{*this};
   pc.run(Ty);
 
-  auto result = pc.GetPaddingIntervals();
-  auto [itr, res] = PaddingIntervalCache.insert_or_assign(Ty, result);
+  auto [itr, res] =
+      PaddingIntervalCache.insert_or_assign(Ty, pc.GetPaddingIntervals());
   assert(res && "Failed to insert?");
 
-  return result;
+  return itr->second;
 }

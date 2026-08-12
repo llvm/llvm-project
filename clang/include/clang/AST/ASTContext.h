@@ -1888,8 +1888,10 @@ public:
     uint64_t Last;
   };
 
-  // Calculate and get the 'padding intervals' inside of a type.
-  llvm::SmallVector<BitInterval> getPaddingIntervals(QualType Ty) const;
+  // Calculate and get the 'padding intervals' inside of a type. Note: calls to
+  // this potentially invalidate all ArrayRef objects, so effort must be made to
+  // copy the data if necessary.
+  llvm::ArrayRef<BitInterval> getPaddingIntervals(QualType Ty) const;
 
 private:
   mutable llvm::DenseMap<QualType, llvm::SmallVector<BitInterval>>

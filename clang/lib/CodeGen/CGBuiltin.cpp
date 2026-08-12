@@ -5210,7 +5210,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Address Src = EmitPointerWithAlignment(E->getArg(0));
     auto PointeeTy = E->getArg(0)->getType()->getPointeeType();
 
-    llvm::SmallVector<ASTContext::BitInterval> Padding =
+    llvm::ArrayRef<ASTContext::BitInterval> Padding =
         getContext().getPaddingIntervals(PointeeTy);
     for (const auto &Interval : Padding)
       ClearPadding(*this, Src, Interval);
