@@ -154,8 +154,6 @@ bool VFSelectionContext::isLegalGatherOrScatter(Value *V,
     return false;
   auto *Ty = getLoadStoreType(V);
   Align Align = getLoadStoreAlignment(V);
-  if (VF.isVector())
-    Ty = VectorType::get(Ty, VF);
   return ForceTargetSupportsGatherScatterOps ||
          (LI && TTI.isLegalMaskedGather(Ty, Align)) ||
          (SI && TTI.isLegalMaskedScatter(Ty, Align));

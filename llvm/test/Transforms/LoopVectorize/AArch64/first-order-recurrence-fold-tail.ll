@@ -12,51 +12,14 @@ define i32 @test_phi_iterator_invalidation(ptr %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 0, i64 1002)
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_LOAD_CONTINUE6:%.*]] ]
-; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <4 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[PRED_LOAD_CONTINUE6]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_LOAD_CONTINUE6]] ]
-; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i16> [ <i16 poison, i16 poison, i16 poison, i16 0>, [[VECTOR_PH]] ], [ [[TMP24:%.*]], [[PRED_LOAD_CONTINUE6]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <4 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i16> [ <i16 poison, i16 poison, i16 poison, i16 0>, [[VECTOR_PH]] ], [ [[TMP24:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <4 x i64> [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i1> [[ACTIVE_LANE_MASK]], i64 0
-; CHECK-NEXT:    br i1 [[TMP1]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
-; CHECK:       pred.load.if:
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 [[TMP27]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i16, ptr [[TMP3]], align 2
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i16> poison, i16 [[TMP4]], i64 0
-; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE]]
-; CHECK:       pred.load.continue:
-; CHECK-NEXT:    [[TMP6:%.*]] = phi <4 x i16> [ poison, [[VECTOR_BODY]] ], [ [[TMP5]], [[PRED_LOAD_IF]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[ACTIVE_LANE_MASK]], i64 1
-; CHECK-NEXT:    br i1 [[TMP7]], label [[PRED_LOAD_IF1:%.*]], label [[PRED_LOAD_CONTINUE2:%.*]]
-; CHECK:       pred.load.if1:
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i64> [[TMP0]], i64 1
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i32, ptr [[A]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load i16, ptr [[TMP9]], align 2
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i16> [[TMP6]], i16 [[TMP10]], i64 1
-; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE2]]
-; CHECK:       pred.load.continue2:
-; CHECK-NEXT:    [[TMP12:%.*]] = phi <4 x i16> [ [[TMP6]], [[PRED_LOAD_CONTINUE]] ], [ [[TMP11]], [[PRED_LOAD_IF1]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i1> [[ACTIVE_LANE_MASK]], i64 2
-; CHECK-NEXT:    br i1 [[TMP13]], label [[PRED_LOAD_IF3:%.*]], label [[PRED_LOAD_CONTINUE4:%.*]]
-; CHECK:       pred.load.if3:
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i64> [[TMP0]], i64 2
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i32, ptr [[A]], i64 [[TMP14]]
-; CHECK-NEXT:    [[TMP16:%.*]] = load i16, ptr [[TMP15]], align 2
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x i16> [[TMP12]], i16 [[TMP16]], i64 2
-; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE4]]
-; CHECK:       pred.load.continue4:
-; CHECK-NEXT:    [[TMP18:%.*]] = phi <4 x i16> [ [[TMP12]], [[PRED_LOAD_CONTINUE2]] ], [ [[TMP17]], [[PRED_LOAD_IF3]] ]
-; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <4 x i1> [[ACTIVE_LANE_MASK]], i64 3
-; CHECK-NEXT:    br i1 [[TMP19]], label [[PRED_LOAD_IF5:%.*]], label [[PRED_LOAD_CONTINUE6]]
-; CHECK:       pred.load.if5:
-; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <4 x i64> [[TMP0]], i64 3
-; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i32, ptr [[A]], i64 [[TMP20]]
-; CHECK-NEXT:    [[TMP22:%.*]] = load i16, ptr [[TMP21]], align 2
-; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <4 x i16> [[TMP18]], i16 [[TMP22]], i64 3
-; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE6]]
-; CHECK:       pred.load.continue6:
-; CHECK-NEXT:    [[TMP24]] = phi <4 x i16> [ [[TMP18]], [[PRED_LOAD_CONTINUE4]] ], [ [[TMP23]], [[PRED_LOAD_IF5]] ]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr i32, ptr [[A:%.*]], <4 x i64> [[TMP0]]
+; CHECK-NEXT:    [[TMP24]] = call <4 x i16> @llvm.masked.gather.v4i16.v4p0(<4 x ptr> align 2 [[WIDE_GEP]], <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i16> poison)
 ; CHECK-NEXT:    [[TMP25:%.*]] = shufflevector <4 x i16> [[VECTOR_RECUR]], <4 x i16> [[TMP24]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP26:%.*]] = sext <4 x i16> [[TMP25]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr i32, ptr [[B:%.*]], i64 [[TMP27]]

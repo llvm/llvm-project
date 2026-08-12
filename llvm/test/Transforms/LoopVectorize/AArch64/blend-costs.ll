@@ -492,30 +492,15 @@ define void @only_first_lane_used(i1 %c, ptr noalias %p1, ptr noalias %p2, ptr n
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[C]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x ptr> poison, ptr [[Q]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x ptr> [[BROADCAST_SPLATINSERT1]], <4 x ptr> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE6:.*]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], -1
-; CHECK-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
-; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    store i32 0, ptr [[Q]], align 4
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
-; CHECK:       [[PRED_STORE_CONTINUE]]:
-; CHECK-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
-; CHECK:       [[PRED_STORE_IF1]]:
-; CHECK-NEXT:    store i32 0, ptr [[Q]], align 4
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
-; CHECK:       [[PRED_STORE_CONTINUE2]]:
-; CHECK-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
-; CHECK:       [[PRED_STORE_IF3]]:
-; CHECK-NEXT:    store i32 0, ptr [[Q]], align 4
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
-; CHECK:       [[PRED_STORE_CONTINUE4]]:
-; CHECK-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6]]
-; CHECK:       [[PRED_STORE_IF5]]:
-; CHECK-NEXT:    store i32 0, ptr [[Q]], align 4
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
-; CHECK:       [[PRED_STORE_CONTINUE6]]:
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> zeroinitializer, <4 x ptr> align 4 [[BROADCAST_SPLAT2]], <4 x i1> [[BROADCAST_SPLAT]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr double, ptr [[P1]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x double>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = fadd <4 x double> [[WIDE_LOAD]], splat (double 1.000000e+00)
