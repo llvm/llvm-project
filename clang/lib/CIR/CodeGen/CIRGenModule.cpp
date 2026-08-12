@@ -2789,6 +2789,16 @@ StringRef CIRGenModule::getMangledName(GlobalDecl gd) {
     }
   }
 
+  // In CUDA/HIP device compilation with -fgpu-rdc, the mangled name of a
+  // static device variable depends on whether the variable is referenced by
+  // a host or device host function. Therefore the mangled name cannot be
+  // cached.
+  if (!langOpts.CUDAIsDevice || !astContext.mayExternalize(gd.getDecl())) {
+    auto foundName = mangledDeclNames.find(canonicalGd);
+    if (foundName != mangledDeclNames.end())
+      return foundName->second;
+  }
+
   // Keep the first result in the case of a mangling collision.
   const auto *nd = cast<NamedDecl>(gd.getDecl());
   std::string mangledName = getMangledNameImpl(*this, gd, nd);
