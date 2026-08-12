@@ -2125,11 +2125,8 @@ static Decl *getPredefinedExprDecl(Sema &S, DeclContext *DC) {
       while (LSI != E && isa<CapturingScopeInfo>(*LSI) &&
              !isa<LambdaScopeInfo>(*LSI))
         ++LSI;
-      if (LSI == E || !isa<LambdaScopeInfo>(*LSI)) {
-        // The lambda scope may already be popped during delayed parsing.
-        return;
-      }
-      if (cast<LambdaScopeInfo>(*LSI)->BeforeCompoundStatement)
+      assert(LSI != E && "Should be in a lambda scope info");
+      if (dyn_cast<LambdaScopeInfo>(*LSI)->BeforeCompoundStatement)
         DC = DC->getParent();
       ++LSI;
     }
