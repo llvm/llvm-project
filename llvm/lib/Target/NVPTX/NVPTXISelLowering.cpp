@@ -6620,23 +6620,21 @@ static SDValue PerformMULCombine(SDNode *N,
 /// shifted operand. For example:
 ///
 /// Before:
-///   N            = shl (zext (LogicOp X, C)), ShiftAmount
-///   SiblingShift = shl (zext (SiblingLogicOp X, SiblingC)), ShiftAmount
-///   OtherShift   = shl (zext (OtherLogicOp X, OtherC)), ShiftAmount
+///   N          = shl (zext (LogicOp X, C)), ShiftAmount
+///   OtherShift = shl (zext (OtherLogicOp X, OtherC)), ShiftAmount
 ///
 /// After:
-///   ShiftedX     = shl (zext X), ShiftAmount
-///   N            = LogicOp ShiftedX, ShiftedC
-///   SiblingShift = SiblingLogicOp ShiftedX, ShiftedSiblingC
-///   OtherShift   = OtherLogicOp ShiftedX, ShiftedOtherC
+///   ShiftedX   = shl (zext X), ShiftAmount
+///   N          = LogicOp ShiftedX, ShiftedC
+///   OtherShift = OtherLogicOp ShiftedX, ShiftedOtherC
 ///
-/// ShiftedC = (zext C) << ShiftAmount, and likewise ShiftedSiblingC and
-/// ShiftedOtherC, are folded constants. This replaces three variable shifts
-/// with the single shared ShiftedX. Requiring a matching sibling avoids
-/// disrupting isolated address calculations where a shift may be folded into
-/// the addressing mode.
-static SDValue
-PerformShiftOfLogicCSECombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
+/// ShiftedC = (zext C) << ShiftAmount and ShiftedOtherC =
+/// (zext OtherC) << ShiftAmount are folded constants. This replaces two
+/// variable shifts with the single shared ShiftedX. Requiring another matching
+/// shift avoids disrupting isolated address calculations where a shift may be
+/// folded into the addressing mode.
+static SDValue combineShiftOfLogicOp(SDNode *N,
+                                     TargetLowering::DAGCombinerInfo &DCI) {
   using namespace SDPatternMatch;
 
   struct ShiftOfLogicOp {
@@ -6652,7 +6650,6 @@ PerformShiftOfLogicCSECombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
       [&](SDNode *Shift) -> std::optional<ShiftOfLogicOp> {
     if (Shift->getOpcode() != ISD::SHL || !Shift->getOperand(0).hasOneUse())
       return std::nullopt;
-
     ShiftOfLogicOp Match;
     Match.Shift = Shift;
     Match.LogicOp = Shift->getOperand(0);
@@ -6671,7 +6668,7 @@ PerformShiftOfLogicCSECombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   };
 
   // Match N as the root shift-of-logic; bail if it does not fit the pattern.
-  std::optional<ShiftOfLogicOp> Root = matchShiftOfLogicOp(N);
+  const std::optional<ShiftOfLogicOp> Root = matchShiftOfLogicOp(N);
   if (!Root)
     return SDValue();
 
@@ -6699,27 +6696,27 @@ PerformShiftOfLogicCSECombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
     }
   }
 
-  // Verify each candidate against the root's pattern; those that match (same X,
-  // extend, type, and shift amount) become siblings.
-  EVT VT = N->getValueType(0);
-  SDValue ShiftAmount = N->getOperand(1);
-  SmallVector<ShiftOfLogicOp, 4> Siblings;
+  // Verify each candidate against the root's pattern: the same X, extension,
+  // type, and shift amount.
+  const EVT VT = N->getValueType(0);
+  const SDValue ShiftAmount = N->getOperand(1);
+  SmallVector<ShiftOfLogicOp, 4> Matches;
   for (SDNode *CandidateShift : CandidateShifts) {
-    std::optional<ShiftOfLogicOp> Candidate =
+    const std::optional<ShiftOfLogicOp> Candidate =
         matchShiftOfLogicOp(CandidateShift);
     if (Candidate && Candidate->X == Root->X &&
         Candidate->ExtendOpcode == Root->ExtendOpcode &&
         CandidateShift->getValueType(0) == VT &&
         CandidateShift->getOperand(1) == ShiftAmount)
-      Siblings.push_back(*Candidate);
+      Matches.push_back(*Candidate);
   }
-  if (Siblings.empty())
+  if (Matches.empty())
     return SDValue();
 
-  // Build the shared shifted X once, then rewrite the root and every sibling
+  // Build the shared shifted X once, then rewrite the root and every match
   // into a logic op over it so the shift is CSE'd.
   SelectionDAG &DAG = DCI.DAG;
-  SDValue ShiftedX =
+  const SDValue ShiftedX =
       DAG.getNode(ISD::SHL, SDLoc(N), VT,
                   Root->ExtendOpcode
                       ? DAG.getNode(Root->ExtendOpcode, SDLoc(N), VT, Root->X)
@@ -6727,19 +6724,20 @@ PerformShiftOfLogicCSECombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
                   ShiftAmount);
 
   // Rebuild the logic op from shared ShiftedX and a folded constant shift.
-  auto rebuild = [&](SDValue OldLogicOp, SDValue OldC, const SDLoc &NodeDL) {
-    SDValue NewC = OldC;
+  auto buildCommutedLogicOp = [&](const SDValue LogicOp, SDValue C,
+                                  const SDLoc &DL) {
     if (Root->ExtendOpcode)
-      NewC = DAG.getNode(Root->ExtendOpcode, NodeDL, VT, OldC);
-    SDValue ShiftedC = DAG.getNode(ISD::SHL, NodeDL, VT, NewC, ShiftAmount);
-    return DAG.getNode(OldLogicOp.getOpcode(), NodeDL, VT, ShiftedX, ShiftedC,
-                       OldLogicOp->getFlags());
+      C = DAG.getNode(Root->ExtendOpcode, DL, VT, C);
+    const SDValue ShiftedC = DAG.getNode(ISD::SHL, DL, VT, C, ShiftAmount);
+    return DAG.getNode(LogicOp.getOpcode(), DL, VT, ShiftedX, ShiftedC,
+                       LogicOp->getFlags());
   };
 
-  for (const ShiftOfLogicOp &Sibling : Siblings)
-    DCI.CombineTo(Sibling.Shift, rebuild(Sibling.LogicOp, Sibling.Constant,
-                                         SDLoc(Sibling.Shift)));
-  return rebuild(Root->LogicOp, Root->Constant, SDLoc(N));
+  for (const ShiftOfLogicOp &Match : Matches)
+    DCI.CombineTo(Match.Shift,
+                  buildCommutedLogicOp(Match.LogicOp, Match.Constant,
+                                       SDLoc(Match.Shift)));
+  return buildCommutedLogicOp(Root->LogicOp, Root->Constant, SDLoc(N));
 }
 
 /// PerformSHLCombine - Runs PTX-specific DAG combine patterns on SHL nodes.
@@ -6749,7 +6747,7 @@ static SDValue PerformSHLCombine(SDNode *N,
   if (OptLevel > CodeGenOptLevel::None) {
     // Expose a shared shifted operand for CSE before mul.wide folding, which
     // would otherwise consume the shift.
-    if (SDValue Ret = PerformShiftOfLogicCSECombine(N, DCI))
+    if (SDValue Ret = combineShiftOfLogicOp(N, DCI))
       return Ret;
 
     // Try mul.wide combining at OptLevel > 0
