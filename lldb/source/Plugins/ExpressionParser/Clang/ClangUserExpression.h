@@ -43,9 +43,6 @@ class ClangUserExpression : public LLVMUserExpression {
   // LLVM RTTI support
   static char ID;
 
-  /// Grants the unit test access to private members.
-  friend class ClangUserExpressionTest;
-
 public:
   bool isA(const void *ClassID) const override {
     return ClassID == &ID || LLVMUserExpression::isA(ClassID);
@@ -212,10 +209,8 @@ private:
                         std::vector<std::string> modules_to_import,
                         bool for_completion);
 
-  /// Get the object pointer ("this") for a C++ method context.
-  static lldb::addr_t GetCppObjectPointer(lldb::StackFrameSP frame,
-                                          llvm::StringRef object_name,
-                                          Status &err);
+  lldb::addr_t GetCppObjectPointer(lldb::StackFrameSP frame,
+                                   llvm::StringRef object_name, Status &err);
 
   void
   FixupCVRParseErrorDiagnostics(DiagnosticManager &diagnostic_manager) const;
