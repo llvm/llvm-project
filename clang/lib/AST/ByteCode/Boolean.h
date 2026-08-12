@@ -80,7 +80,9 @@ public:
     return Boolean(Val);
   }
 
-  void bitcastToMemory(std::byte *Buff) { std::memcpy(Buff, &V, sizeof(V)); }
+  void bitcastToMemory(std::byte *Buff) const {
+    std::memcpy(Buff, &V, sizeof(V));
+  }
 
   void print(llvm::raw_ostream &OS) const { OS << (V ? "true" : "false"); }
   std::string toDiagnosticString(const ASTContext &Ctx) const {
