@@ -15,17 +15,17 @@
 
 #include <immintrin.h>
 
-// CIR: !rec_anon_struct = !cir.struct<{!cir.vector<8 x !cir.bool>, !cir.vector<8 x !cir.bool>}>
-// CIR: !rec_anon_struct1 = !cir.struct<{!cir.vector<4 x !cir.bool>, !cir.vector<4 x !cir.bool>}>
-// CIR: !rec_anon_struct2 = !cir.struct<{!cir.vector<2 x !cir.bool>, !cir.vector<2 x !cir.bool>}>
+// CIR: !rec_anon_struct = !cir.struct<{!cir.vector<8 x !cir.int<s, 1>>, !cir.vector<8 x !cir.int<s, 1>>}>
+// CIR: !rec_anon_struct1 = !cir.struct<{!cir.vector<4 x !cir.int<s, 1>>, !cir.vector<4 x !cir.int<s, 1>>}>
+// CIR: !rec_anon_struct2 = !cir.struct<{!cir.vector<2 x !cir.int<s, 1>>, !cir.vector<2 x !cir.int<s, 1>>}>
 void test_mm256_2intersect_epi32(__m256i a, __m256i b, __mmask8 *m0, __mmask8 *m1) {
   // CIR-LABEL: mm256_2intersect_epi32
   // CIR: %[[RES:.*]] = cir.call_llvm_intrinsic "x86.avx512.vp2intersect.d.256" %{{.*}}, %{{.*}} : (!cir.vector<8 x !s32i>, !cir.vector<8 x !s32i>) -> !rec_anon_struct
-  // CIR: %[[VAL1:.*]] = cir.extract_member %[[RES]][0] : !rec_anon_struct -> !cir.vector<8 x !cir.bool>
-  // CIR: %[[CAST1:.*]] = cir.cast bitcast %[[VAL1]] : !cir.vector<8 x !cir.bool> -> !u8i
+  // CIR: %[[VAL1:.*]] = cir.extract_member %[[RES]][0] : !rec_anon_struct -> !cir.vector<8 x !cir.int<s, 1>>
+  // CIR: %[[CAST1:.*]] = cir.cast bitcast %[[VAL1]] : !cir.vector<8 x !cir.int<s, 1>> -> !u8i
   // CIR: cir.store align(1) %[[CAST1]], %{{.*}} : !u8i, !cir.ptr<!u8i>
-  // CIR: %[[VAL2:.*]] = cir.extract_member %[[RES]][1] : !rec_anon_struct -> !cir.vector<8 x !cir.bool>
-  // CIR: %[[CAST2:.*]] = cir.cast bitcast %[[VAL2]] : !cir.vector<8 x !cir.bool> -> !u8i
+  // CIR: %[[VAL2:.*]] = cir.extract_member %[[RES]][1] : !rec_anon_struct -> !cir.vector<8 x !cir.int<s, 1>>
+  // CIR: %[[CAST2:.*]] = cir.cast bitcast %[[VAL2]] : !cir.vector<8 x !cir.int<s, 1>> -> !u8i
   // CIR: cir.store align(1) %[[CAST2]], %{{.*}} : !u8i, !cir.ptr<!u8i>
 
   // LLVM-LABEL: test_mm256_2intersect_epi32
@@ -51,15 +51,15 @@ void test_mm256_2intersect_epi32(__m256i a, __m256i b, __mmask8 *m0, __mmask8 *m
 void test_mm256_2intersect_epi64(__m256i a, __m256i b, __mmask8 *m0, __mmask8 *m1) {
   // CIR-LABEL: mm256_2intersect_epi64
   // CIR: %[[RES:.*]] = cir.call_llvm_intrinsic "x86.avx512.vp2intersect.q.256" %{{.*}}, %{{.*}} : (!cir.vector<4 x !s64i>, !cir.vector<4 x !s64i>) -> !rec_anon_struct1
-  // CIR: %[[VAL1:.*]] = cir.extract_member %[[RES]][0] : !rec_anon_struct1 -> !cir.vector<4 x !cir.bool>
-  // CIR: %[[ZERO1:.*]] = cir.const #cir.zero : !cir.vector<4 x !cir.bool>
-  // CIR: %[[SHUF1:.*]] = cir.vec.shuffle(%[[VAL1]], %[[ZERO1]] : !cir.vector<4 x !cir.bool>) [#cir.int<0> : !s64i, #cir.int<1> : !s64i, #cir.int<2> : !s64i, #cir.int<3> : !s64i, #cir.int<4> : !s64i, #cir.int<5> : !s64i, #cir.int<6> : !s64i, #cir.int<7> : !s64i] : !cir.vector<8 x !cir.bool>
-  // CIR: %[[CAST1:.*]] = cir.cast bitcast %[[SHUF1]] : !cir.vector<8 x !cir.bool> -> !u8i
+  // CIR: %[[VAL1:.*]] = cir.extract_member %[[RES]][0] : !rec_anon_struct1 -> !cir.vector<4 x !cir.int<s, 1>>
+  // CIR: %[[ZERO1:.*]] = cir.const #cir.zero : !cir.vector<4 x !cir.int<s, 1>>
+  // CIR: %[[SHUF1:.*]] = cir.vec.shuffle(%[[VAL1]], %[[ZERO1]] : !cir.vector<4 x !cir.int<s, 1>>) [#cir.int<0> : !s64i, #cir.int<1> : !s64i, #cir.int<2> : !s64i, #cir.int<3> : !s64i, #cir.int<4> : !s64i, #cir.int<5> : !s64i, #cir.int<6> : !s64i, #cir.int<7> : !s64i] : !cir.vector<8 x !cir.int<s, 1>>
+  // CIR: %[[CAST1:.*]] = cir.cast bitcast %[[SHUF1]] : !cir.vector<8 x !cir.int<s, 1>> -> !u8i
   // CIR: cir.store align(1) %[[CAST1]], %{{.*}} : !u8i, !cir.ptr<!u8i>
-  // CIR: %[[VAL2:.*]] = cir.extract_member %[[RES]][1] : !rec_anon_struct1 -> !cir.vector<4 x !cir.bool>
-  // CIR: %[[ZERO2:.*]] = cir.const #cir.zero : !cir.vector<4 x !cir.bool>
-  // CIR: %[[SHUF2:.*]] = cir.vec.shuffle(%[[VAL2]], %[[ZERO2]] : !cir.vector<4 x !cir.bool>) [#cir.int<0> : !s64i, #cir.int<1> : !s64i, #cir.int<2> : !s64i, #cir.int<3> : !s64i, #cir.int<4> : !s64i, #cir.int<5> : !s64i, #cir.int<6> : !s64i, #cir.int<7> : !s64i] : !cir.vector<8 x !cir.bool>
-  // CIR: %[[CAST2:.*]] = cir.cast bitcast %[[SHUF2]] : !cir.vector<8 x !cir.bool> -> !u8i
+  // CIR: %[[VAL2:.*]] = cir.extract_member %[[RES]][1] : !rec_anon_struct1 -> !cir.vector<4 x !cir.int<s, 1>>
+  // CIR: %[[ZERO2:.*]] = cir.const #cir.zero : !cir.vector<4 x !cir.int<s, 1>>
+  // CIR: %[[SHUF2:.*]] = cir.vec.shuffle(%[[VAL2]], %[[ZERO2]] : !cir.vector<4 x !cir.int<s, 1>>) [#cir.int<0> : !s64i, #cir.int<1> : !s64i, #cir.int<2> : !s64i, #cir.int<3> : !s64i, #cir.int<4> : !s64i, #cir.int<5> : !s64i, #cir.int<6> : !s64i, #cir.int<7> : !s64i] : !cir.vector<8 x !cir.int<s, 1>>
+  // CIR: %[[CAST2:.*]] = cir.cast bitcast %[[SHUF2]] : !cir.vector<8 x !cir.int<s, 1>> -> !u8i
   // CIR: cir.store align(1) %[[CAST2]], %{{.*}} : !u8i, !cir.ptr<!u8i>
 
   // LLVM-LABEL: test_mm256_2intersect_epi64
@@ -89,15 +89,15 @@ void test_mm256_2intersect_epi64(__m256i a, __m256i b, __mmask8 *m0, __mmask8 *m
 void test_mm_2intersect_epi32(__m128i a, __m128i b, __mmask8 *m0, __mmask8 *m1) {
   // CIR-LABEL: mm_2intersect_epi32
   // CIR: %[[RES:.*]] = cir.call_llvm_intrinsic "x86.avx512.vp2intersect.d.128" %{{.*}}, %{{.*}} : (!cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>) -> !rec_anon_struct1
-  // CIR: %[[VAL1:.*]] = cir.extract_member %[[RES]][0] : !rec_anon_struct1 -> !cir.vector<4 x !cir.bool>
-  // CIR: %[[ZERO1:.*]] = cir.const #cir.zero : !cir.vector<4 x !cir.bool>
-  // CIR: %[[SHUF1:.*]] = cir.vec.shuffle(%[[VAL1]], %[[ZERO1]] : !cir.vector<4 x !cir.bool>) [#cir.int<0> : !s64i, #cir.int<1> : !s64i, #cir.int<2> : !s64i, #cir.int<3> : !s64i, #cir.int<4> : !s64i, #cir.int<5> : !s64i, #cir.int<6> : !s64i, #cir.int<7> : !s64i] : !cir.vector<8 x !cir.bool>
-  // CIR: %[[CAST1:.*]] = cir.cast bitcast %[[SHUF1]] : !cir.vector<8 x !cir.bool> -> !u8i
+  // CIR: %[[VAL1:.*]] = cir.extract_member %[[RES]][0] : !rec_anon_struct1 -> !cir.vector<4 x !cir.int<s, 1>>
+  // CIR: %[[ZERO1:.*]] = cir.const #cir.zero : !cir.vector<4 x !cir.int<s, 1>>
+  // CIR: %[[SHUF1:.*]] = cir.vec.shuffle(%[[VAL1]], %[[ZERO1]] : !cir.vector<4 x !cir.int<s, 1>>) [#cir.int<0> : !s64i, #cir.int<1> : !s64i, #cir.int<2> : !s64i, #cir.int<3> : !s64i, #cir.int<4> : !s64i, #cir.int<5> : !s64i, #cir.int<6> : !s64i, #cir.int<7> : !s64i] : !cir.vector<8 x !cir.int<s, 1>>
+  // CIR: %[[CAST1:.*]] = cir.cast bitcast %[[SHUF1]] : !cir.vector<8 x !cir.int<s, 1>> -> !u8i
   // CIR: cir.store align(1) %[[CAST1]], %{{.*}} : !u8i, !cir.ptr<!u8i>
-  // CIR: %[[VAL2:.*]] = cir.extract_member %[[RES]][1] : !rec_anon_struct1 -> !cir.vector<4 x !cir.bool>
-  // CIR: %[[ZERO2:.*]] = cir.const #cir.zero : !cir.vector<4 x !cir.bool>
-  // CIR: %[[SHUF2:.*]] = cir.vec.shuffle(%[[VAL2]], %[[ZERO2]] : !cir.vector<4 x !cir.bool>) [#cir.int<0> : !s64i, #cir.int<1> : !s64i, #cir.int<2> : !s64i, #cir.int<3> : !s64i, #cir.int<4> : !s64i, #cir.int<5> : !s64i, #cir.int<6> : !s64i, #cir.int<7> : !s64i] : !cir.vector<8 x !cir.bool>
-  // CIR: %[[CAST2:.*]] = cir.cast bitcast %[[SHUF2]] : !cir.vector<8 x !cir.bool> -> !u8i
+  // CIR: %[[VAL2:.*]] = cir.extract_member %[[RES]][1] : !rec_anon_struct1 -> !cir.vector<4 x !cir.int<s, 1>>
+  // CIR: %[[ZERO2:.*]] = cir.const #cir.zero : !cir.vector<4 x !cir.int<s, 1>>
+  // CIR: %[[SHUF2:.*]] = cir.vec.shuffle(%[[VAL2]], %[[ZERO2]] : !cir.vector<4 x !cir.int<s, 1>>) [#cir.int<0> : !s64i, #cir.int<1> : !s64i, #cir.int<2> : !s64i, #cir.int<3> : !s64i, #cir.int<4> : !s64i, #cir.int<5> : !s64i, #cir.int<6> : !s64i, #cir.int<7> : !s64i] : !cir.vector<8 x !cir.int<s, 1>>
+  // CIR: %[[CAST2:.*]] = cir.cast bitcast %[[SHUF2]] : !cir.vector<8 x !cir.int<s, 1>> -> !u8i
   // CIR: cir.store align(1) %[[CAST2]], %{{.*}} : !u8i, !cir.ptr<!u8i>
 
   // LLVM-LABEL: test_mm_2intersect_epi32
@@ -127,15 +127,15 @@ void test_mm_2intersect_epi32(__m128i a, __m128i b, __mmask8 *m0, __mmask8 *m1) 
 void test_mm_2intersect_epi64(__m128i a, __m128i b, __mmask8 *m0, __mmask8 *m1) {
   // CIR-LABEL: mm_2intersect_epi64
   // CIR: %[[RES:.*]] = cir.call_llvm_intrinsic "x86.avx512.vp2intersect.q.128" %{{.*}}, %{{.*}} : (!cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>) -> !rec_anon_struct2
-  // CIR: %[[VAL1:.*]] = cir.extract_member %[[RES]][0] : !rec_anon_struct2 -> !cir.vector<2 x !cir.bool>
-  // CIR: %[[ZERO1:.*]] = cir.const #cir.zero : !cir.vector<2 x !cir.bool>
-  // CIR: %[[SHUF1:.*]] = cir.vec.shuffle(%[[VAL1]], %[[ZERO1]] : !cir.vector<2 x !cir.bool>) [#cir.int<0> : !s64i, #cir.int<1> : !s64i, #cir.int<2> : !s64i, #cir.int<3> : !s64i, #cir.int<2> : !s64i, #cir.int<3> : !s64i, #cir.int<2> : !s64i, #cir.int<3> : !s64i] : !cir.vector<8 x !cir.bool>
-  // CIR: %[[CAST1:.*]] = cir.cast bitcast %[[SHUF1]] : !cir.vector<8 x !cir.bool> -> !u8i
+  // CIR: %[[VAL1:.*]] = cir.extract_member %[[RES]][0] : !rec_anon_struct2 -> !cir.vector<2 x !cir.int<s, 1>>
+  // CIR: %[[ZERO1:.*]] = cir.const #cir.zero : !cir.vector<2 x !cir.int<s, 1>>
+  // CIR: %[[SHUF1:.*]] = cir.vec.shuffle(%[[VAL1]], %[[ZERO1]] : !cir.vector<2 x !cir.int<s, 1>>) [#cir.int<0> : !s64i, #cir.int<1> : !s64i, #cir.int<2> : !s64i, #cir.int<3> : !s64i, #cir.int<2> : !s64i, #cir.int<3> : !s64i, #cir.int<2> : !s64i, #cir.int<3> : !s64i] : !cir.vector<8 x !cir.int<s, 1>>
+  // CIR: %[[CAST1:.*]] = cir.cast bitcast %[[SHUF1]] : !cir.vector<8 x !cir.int<s, 1>> -> !u8i
   // CIR: cir.store align(1) %[[CAST1]], %{{.*}} : !u8i, !cir.ptr<!u8i>
-  // CIR: %[[VAL2:.*]] = cir.extract_member %[[RES]][1] : !rec_anon_struct2 -> !cir.vector<2 x !cir.bool>
-  // CIR: %[[ZERO2:.*]] = cir.const #cir.zero : !cir.vector<2 x !cir.bool>
-  // CIR: %[[SHUF2:.*]] = cir.vec.shuffle(%[[VAL2]], %[[ZERO2]] : !cir.vector<2 x !cir.bool>) [#cir.int<0> : !s64i, #cir.int<1> : !s64i, #cir.int<2> : !s64i, #cir.int<3> : !s64i, #cir.int<2> : !s64i, #cir.int<3> : !s64i, #cir.int<2> : !s64i, #cir.int<3> : !s64i] : !cir.vector<8 x !cir.bool>
-  // CIR: %[[CAST2:.*]] = cir.cast bitcast %[[SHUF2]] : !cir.vector<8 x !cir.bool> -> !u8i
+  // CIR: %[[VAL2:.*]] = cir.extract_member %[[RES]][1] : !rec_anon_struct2 -> !cir.vector<2 x !cir.int<s, 1>>
+  // CIR: %[[ZERO2:.*]] = cir.const #cir.zero : !cir.vector<2 x !cir.int<s, 1>>
+  // CIR: %[[SHUF2:.*]] = cir.vec.shuffle(%[[VAL2]], %[[ZERO2]] : !cir.vector<2 x !cir.int<s, 1>>) [#cir.int<0> : !s64i, #cir.int<1> : !s64i, #cir.int<2> : !s64i, #cir.int<3> : !s64i, #cir.int<2> : !s64i, #cir.int<3> : !s64i, #cir.int<2> : !s64i, #cir.int<3> : !s64i] : !cir.vector<8 x !cir.int<s, 1>>
+  // CIR: %[[CAST2:.*]] = cir.cast bitcast %[[SHUF2]] : !cir.vector<8 x !cir.int<s, 1>> -> !u8i
   // CIR: cir.store align(1) %[[CAST2]], %{{.*}} : !u8i, !cir.ptr<!u8i>
 
   // LLVM-LABEL: test_mm_2intersect_epi64

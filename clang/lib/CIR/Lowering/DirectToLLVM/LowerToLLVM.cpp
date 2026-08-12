@@ -115,6 +115,15 @@ static mlir::Type convertTypeForMemory(const mlir::TypeConverter &converter,
                                   dataLayout.getTypeSizeInBits(type));
   }
 
+  if (auto vecTy = mlir::dyn_cast<cir::VectorType>(type)) {
+    if (mlir::isa<cir::BoolType>(vecTy.getElementType())) {
+      assert(!cir::MissingFeatures::hlsl());
+      // Pad to at least one byte.
+      uint64_t bytePadded = std::max<uint64_t>(vecTy.getSize(), 8);
+      return mlir::IntegerType::get(type.getContext(), bytePadded);
+    }
+  }
+
   // _BitInt(N) keeps its literal width as a value but is stored in a padded
   // integer iM in memory, the same way bool is i1 as a value and i8 in memory.
   // The byte-array storage form for wide split widths is not implemented; a
@@ -194,14 +203,23 @@ lowerCIRVisibilityToLLVMVisibility(cir::VisibilityKind visibilityKind) {
 /// the memory represetnation of a CIR type is not equal to its scalar
 /// representation.
 static mlir::Value emitFromMemory(mlir::ConversionPatternRewriter &rewriter,
+                                  const mlir::TypeConverter &converter,
                                   mlir::DataLayout const &dataLayout,
                                   cir::LoadOp op, mlir::Value value) {
-
   // TODO(cir): Handle other types similarly to clang's codegen EmitFromMemory
   if (auto boolTy = mlir::dyn_cast<cir::BoolType>(op.getType())) {
     // Create a cast value from specified size in datalayout to i1
     assert(value.getType().isInteger(dataLayout.getTypeSizeInBits(boolTy)));
     return createIntCast(rewriter, value, rewriter.getI1Type());
+  }
+
+  // Convert the `iN` back to boolean vectors
+  if (auto vecTy = mlir::dyn_cast<cir::VectorType>(op.getType())) {
+    if (mlir::isa<cir::BoolType>(vecTy.getElementType())) {
+      mlir::Type mlirVecTy = converter.convertType(vecTy);
+      return mlir::LLVM::BitcastOp::create(rewriter, value.getLoc(), mlirVecTy,
+                                           value);
+    }
   }
 
   // Truncate the padded storage integer back to the _BitInt's literal width.
@@ -226,6 +244,16 @@ static mlir::Value emitToMemory(mlir::ConversionPatternRewriter &rewriter,
     mlir::IntegerType memType =
         rewriter.getIntegerType(dataLayout.getTypeSizeInBits(boolTy));
     return createIntCast(rewriter, value, memType);
+  }
+
+  // Boolean vectors use `iN` as storage type
+  if (auto vecTy = mlir::dyn_cast<cir::VectorType>(origType)) {
+    if (mlir::isa<cir::BoolType>(vecTy.getElementType())) {
+      uint64_t bytePadded = std::max<uint64_t>(vecTy.getSize(), 8);
+      auto resultTy = mlir::IntegerType::get(origType.getContext(), bytePadded);
+      return mlir::LLVM::BitcastOp::create(rewriter, value.getLoc(), resultTy,
+                                           value);
+    }
   }
 
   // Sign/zero-extend the _BitInt value to its padded storage integer.
@@ -2251,8 +2279,8 @@ mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
     newLoad->setAttr("cir.riscv_nontemporal_domain", domain);
 
   // Convert adapted result to its original type if needed.
-  mlir::Value result =
-      emitFromMemory(rewriter, dataLayout, op, newLoad.getResult());
+  mlir::Value result = emitFromMemory(rewriter, *getTypeConverter(), dataLayout,
+                                      op, newLoad.getResult());
   rewriter.replaceOp(op, result);
   assert(!cir::MissingFeatures::opLoadStoreTbaa());
   return mlir::LogicalResult::success();
