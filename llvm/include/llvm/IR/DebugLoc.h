@@ -253,6 +253,10 @@ public:
   LLVM_ABI unsigned getCol() const;
   LLVM_ABI MDNode *getScope() const;
   LLVM_ABI DILocation *getInlinedAt() const;
+  /// The raw intermediate-IR layer list (\a DILayerLocList) of the underlying
+  /// location, or null. Out-of-line so this header need not see DILocation's
+  /// definition.
+  LLVM_ABI MDNode *getRawIRLayers() const;
 
   /// Get the fully inlined-at scope for a DebugLoc.
   ///

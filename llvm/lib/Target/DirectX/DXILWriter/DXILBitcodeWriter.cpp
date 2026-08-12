@@ -299,6 +299,14 @@ private:
     //   See https://github.com/llvm/llvm-project/issues/58989
     llvm_unreachable("DXIL cannot contain DIAssignID Nodes");
   }
+  void writeDILayerLoc(const DILayerLoc *N, SmallVectorImpl<uint64_t> &Record,
+                       unsigned Abbrev) {
+    llvm_unreachable("DXIL cannot contain DILayerLoc Nodes");
+  }
+  void writeDILayerLocList(const DILayerLocList *N,
+                           SmallVectorImpl<uint64_t> &Record, unsigned Abbrev) {
+    llvm_unreachable("DXIL cannot contain DILayerLocList Nodes");
+  }
   void writeDIModule(const DIModule *N, SmallVectorImpl<uint64_t> &Record,
                      unsigned Abbrev);
   void writeDITemplateTypeParameter(const DITemplateTypeParameter *N,
