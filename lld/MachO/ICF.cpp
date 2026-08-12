@@ -100,11 +100,7 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
   // We can only fold within the same OutputSection.
   if (ia->parent != ib->parent)
     return false;
-  if (ia->data.size() != ib->data.size())
-    return false;
   if (ia->data != ib->data)
-    return false;
-  if (ia->relocs.size() != ib->relocs.size())
     return false;
   auto f = [](const Relocation &ra, const Relocation &rb) {
     if (ra.type != rb.type)
