@@ -40,6 +40,9 @@ void try_catch_with_empty_catch_all() {
   }
 }
 
+// CIR: cir.func private dso_local @__gxx_personality_v0(...) -> !s32i
+
+// CIR: cir.func {{.*}} @_Z30try_catch_with_empty_catch_allv() personality(@__gxx_personality_v0)
 // CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!s32i>
 // CIR: %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
 // CIR: cir.store{{.*}} %[[CONST_1]], %[[A_ADDR]] : !s32i, !cir.ptr<!s32i
