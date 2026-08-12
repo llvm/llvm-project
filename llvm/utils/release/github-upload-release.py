@@ -272,7 +272,7 @@ def uncomment_download_links(repo, release_version):
                     [
                         f.format(
                             release=release_version,
-                            windows_release=windows_release_version(release),
+                            windows_release=windows_release_version(release_version),
                         )
                         for f in files
                     ]
