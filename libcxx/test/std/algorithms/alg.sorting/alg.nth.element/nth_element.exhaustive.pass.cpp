@@ -34,7 +34,7 @@ void check_postcondition(Iter first, Iter nth, Iter last, Compare comp) {
 
 template <class Iter, class Compare>
 void test_permutations(std::vector<int> values, Compare comp) {
-  std::size_t const size = values.size();
+  std::size_t const size    = values.size();
   std::vector<int> expected = values;
   std::sort(expected.begin(), expected.end(), comp);
 
