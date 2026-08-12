@@ -313,12 +313,12 @@ void mock::MockLiboffload::initDefault() {
       .WillByDefault([this](ol_queue_handle_t Queue, size_t Count,
                             const void **Mems, const size_t *Sizes,
                             ol_mem_migration_flags_t Flags) -> ol_result_t {
-        if (!Queue)
-          return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
-        if (Count > 0 && (Mems == nullptr || Sizes == nullptr))
-          return makeEmptyStrError(OL_ERRC_INVALID_NULL_POINTER);
-        if (Flags != OL_MEM_MIGRATION_FLAG_HOST_TO_DEVICE)
-          return makeEmptyStrError(OL_ERRC_INVALID_ENUMERATION);
+        EXPECT_NE(Queue, nullptr);
+        if (Count > 0) {
+          EXPECT_NE(Mems, nullptr);
+          EXPECT_NE(Sizes, nullptr);
+        }
+        EXPECT_EQ(Flags, OL_MEM_MIGRATION_FLAG_HOST_TO_DEVICE);
         return OL_SUCCESS;
       });
   ON_CALL(*this, olGetMemInfo)
