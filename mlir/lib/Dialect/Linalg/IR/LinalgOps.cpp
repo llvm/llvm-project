@@ -5177,11 +5177,11 @@ struct FoldConsecutiveScalarMulPattern : public OpRewritePattern<MulOpTy> {
       if (scalarValue.getType() != tensorType.getElementType())
         return failure();
       auto splatAttr = DenseElementsAttr::get(tensorType, scalarValue);
-      return arith::ConstantOp::create(loc, tensorType, splatAttr, rewriter)
+      return arith::ConstantOp::create(rewriter, loc, splatAttr)
           .getResult();
     }
     // Reference is a raw scalar: create scalar constant.
-    return arith::ConstantOp::create(loc, scalarValue, rewriter).getResult();
+    return arith::ConstantOp::create(rewriter, loc, scalarValue).getResult();
   }
 
   LogicalResult matchAndRewrite(MulOpTy outerMul,
