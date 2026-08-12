@@ -41,22 +41,12 @@ body: |
     ; LA32-NEXT: $r6 = frame-setup ORI killed $r6, 16
     ; LA32-NEXT: $r3 = frame-setup SUB_W $r3, killed $r6
     ; LA32-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 16400
-    ; LA32-NEXT: $r6 = LU12I_W 4
-    ; LA32-NEXT: $r6 = ORI killed $r6, 12
-    ; LA32-NEXT: $r6 = ADD_W $r3, killed $r6
-    ; LA32-NEXT: ST_W $r4, killed $r6, 0 :: (store (s32))
-    ; LA32-NEXT: $r4 = LU12I_W 4
-    ; LA32-NEXT: $r4 = ORI killed $r4, 8
-    ; LA32-NEXT: $r4 = ADD_W $r3, killed $r4
-    ; LA32-NEXT: ST_W $r5, killed $r4, 0 :: (store (s32))
-    ; LA32-NEXT: $r4 = LU12I_W 4
-    ; LA32-NEXT: $r4 = ORI killed $r4, 12
-    ; LA32-NEXT: $r4 = ADD_W $r3, killed $r4
-    ; LA32-NEXT: $r6 = LD_W killed $r4, 0 :: (load (s32))
-    ; LA32-NEXT: $r4 = LU12I_W 4
-    ; LA32-NEXT: $r4 = ORI killed $r4, 8
-    ; LA32-NEXT: $r4 = ADD_W $r3, killed $r4
-    ; LA32-NEXT: $r7 = LD_W killed $r4, 0 :: (load (s32))
+    ; LA32-NEXT: $r6 = PseudoAddUpperImm $r3, 4
+    ; LA32-NEXT: ST_W $r4, killed $r6, 12 :: (store (s32))
+    ; LA32-NEXT: $r4 = PseudoAddUpperImm $r3, 4
+    ; LA32-NEXT: ST_W $r5, $r4, 8 :: (store (s32))
+    ; LA32-NEXT: $r6 = LD_W $r4, 12 :: (load (s32))
+    ; LA32-NEXT: $r7 = LD_W killed $r4, 8 :: (load (s32))
     ; LA32-NEXT: $r4 = frame-destroy LU12I_W 4
     ; LA32-NEXT: $r4 = frame-destroy ORI killed $r4, 16
     ; LA32-NEXT: $r3 = frame-destroy ADD_W $r3, killed $r4
@@ -70,21 +60,13 @@ body: |
     ; LA32-EXPAND-NEXT: $r3 = frame-setup SUB_W $r3, killed $r6
     ; LA32-EXPAND-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 16400
     ; LA32-EXPAND-NEXT: $r6 = LU12I_W 4
-    ; LA32-EXPAND-NEXT: $r6 = ORI killed $r6, 12
     ; LA32-EXPAND-NEXT: $r6 = ADD_W $r3, killed $r6
-    ; LA32-EXPAND-NEXT: ST_W $r4, killed $r6, 0 :: (store (s32))
+    ; LA32-EXPAND-NEXT: ST_W $r4, killed $r6, 12 :: (store (s32))
     ; LA32-EXPAND-NEXT: $r4 = LU12I_W 4
-    ; LA32-EXPAND-NEXT: $r4 = ORI killed $r4, 8
     ; LA32-EXPAND-NEXT: $r4 = ADD_W $r3, killed $r4
-    ; LA32-EXPAND-NEXT: ST_W $r5, killed $r4, 0 :: (store (s32))
-    ; LA32-EXPAND-NEXT: $r4 = LU12I_W 4
-    ; LA32-EXPAND-NEXT: $r4 = ORI killed $r4, 12
-    ; LA32-EXPAND-NEXT: $r4 = ADD_W $r3, killed $r4
-    ; LA32-EXPAND-NEXT: $r6 = LD_W killed $r4, 0 :: (load (s32))
-    ; LA32-EXPAND-NEXT: $r4 = LU12I_W 4
-    ; LA32-EXPAND-NEXT: $r4 = ORI killed $r4, 8
-    ; LA32-EXPAND-NEXT: $r4 = ADD_W $r3, killed $r4
-    ; LA32-EXPAND-NEXT: $r7 = LD_W killed $r4, 0 :: (load (s32))
+    ; LA32-EXPAND-NEXT: ST_W $r5, $r4, 8 :: (store (s32))
+    ; LA32-EXPAND-NEXT: $r6 = LD_W $r4, 12 :: (load (s32))
+    ; LA32-EXPAND-NEXT: $r7 = LD_W killed $r4, 8 :: (load (s32))
     ; LA32-EXPAND-NEXT: $r4 = frame-destroy LU12I_W 4
     ; LA32-EXPAND-NEXT: $r4 = frame-destroy ORI killed $r4, 16
     ; LA32-EXPAND-NEXT: $r3 = frame-destroy ADD_W $r3, killed $r4

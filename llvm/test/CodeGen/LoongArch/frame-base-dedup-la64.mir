@@ -46,22 +46,12 @@ body: |
     ; LA64-NEXT: $r6 = frame-setup ORI killed $r6, 32
     ; LA64-NEXT: $r3 = frame-setup SUB_D $r3, killed $r6
     ; LA64-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 16416
-    ; LA64-NEXT: $r6 = LU12I_W 4
-    ; LA64-NEXT: $r6 = ORI killed $r6, 24
-    ; LA64-NEXT: $r6 = ADD_D $r3, killed $r6
-    ; LA64-NEXT: ST_B $r4, killed $r6, 0 :: (store (s8))
-    ; LA64-NEXT: $r4 = LU12I_W 4
-    ; LA64-NEXT: $r4 = ORI killed $r4, 16
-    ; LA64-NEXT: $r4 = ADD_D $r3, killed $r4
-    ; LA64-NEXT: ST_B $r5, killed $r4, 0 :: (store (s8))
-    ; LA64-NEXT: $r4 = LU12I_W 4
-    ; LA64-NEXT: $r4 = ORI killed $r4, 24
-    ; LA64-NEXT: $r4 = ADD_D $r3, killed $r4
-    ; LA64-NEXT: $r6 = LD_B killed $r4, 0 :: (load (s8))
-    ; LA64-NEXT: $r4 = LU12I_W 4
-    ; LA64-NEXT: $r4 = ORI killed $r4, 16
-    ; LA64-NEXT: $r4 = ADD_D $r3, killed $r4
-    ; LA64-NEXT: $r7 = LD_B killed $r4, 0 :: (load (s8))
+    ; LA64-NEXT: $r6 = PseudoAddUpperImm $r3, 4
+    ; LA64-NEXT: ST_B $r4, killed $r6, 24 :: (store (s8))
+    ; LA64-NEXT: $r4 = PseudoAddUpperImm $r3, 4
+    ; LA64-NEXT: ST_B $r5, $r4, 16 :: (store (s8))
+    ; LA64-NEXT: $r6 = LD_B $r4, 24 :: (load (s8))
+    ; LA64-NEXT: $r7 = LD_B killed $r4, 16 :: (load (s8))
     ; LA64-NEXT: $r4 = frame-destroy LU12I_W 4
     ; LA64-NEXT: $r4 = frame-destroy ORI killed $r4, 32
     ; LA64-NEXT: $r3 = frame-destroy ADD_D $r3, killed $r4
@@ -75,21 +65,13 @@ body: |
     ; LA64-EXPAND-NEXT: $r3 = frame-setup SUB_D $r3, killed $r6
     ; LA64-EXPAND-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 16416
     ; LA64-EXPAND-NEXT: $r6 = LU12I_W 4
-    ; LA64-EXPAND-NEXT: $r6 = ORI killed $r6, 24
     ; LA64-EXPAND-NEXT: $r6 = ADD_D $r3, killed $r6
-    ; LA64-EXPAND-NEXT: ST_B $r4, killed $r6, 0 :: (store (s8))
+    ; LA64-EXPAND-NEXT: ST_B $r4, killed $r6, 24 :: (store (s8))
     ; LA64-EXPAND-NEXT: $r4 = LU12I_W 4
-    ; LA64-EXPAND-NEXT: $r4 = ORI killed $r4, 16
     ; LA64-EXPAND-NEXT: $r4 = ADD_D $r3, killed $r4
-    ; LA64-EXPAND-NEXT: ST_B $r5, killed $r4, 0 :: (store (s8))
-    ; LA64-EXPAND-NEXT: $r4 = LU12I_W 4
-    ; LA64-EXPAND-NEXT: $r4 = ORI killed $r4, 24
-    ; LA64-EXPAND-NEXT: $r4 = ADD_D $r3, killed $r4
-    ; LA64-EXPAND-NEXT: $r6 = LD_B killed $r4, 0 :: (load (s8))
-    ; LA64-EXPAND-NEXT: $r4 = LU12I_W 4
-    ; LA64-EXPAND-NEXT: $r4 = ORI killed $r4, 16
-    ; LA64-EXPAND-NEXT: $r4 = ADD_D $r3, killed $r4
-    ; LA64-EXPAND-NEXT: $r7 = LD_B killed $r4, 0 :: (load (s8))
+    ; LA64-EXPAND-NEXT: ST_B $r5, $r4, 16 :: (store (s8))
+    ; LA64-EXPAND-NEXT: $r6 = LD_B $r4, 24 :: (load (s8))
+    ; LA64-EXPAND-NEXT: $r7 = LD_B killed $r4, 16 :: (load (s8))
     ; LA64-EXPAND-NEXT: $r4 = frame-destroy LU12I_W 4
     ; LA64-EXPAND-NEXT: $r4 = frame-destroy ORI killed $r4, 32
     ; LA64-EXPAND-NEXT: $r3 = frame-destroy ADD_D $r3, killed $r4
@@ -129,14 +111,10 @@ body: |
     ; LA64-NEXT: $r6 = frame-setup ORI killed $r6, 32
     ; LA64-NEXT: $r3 = frame-setup SUB_D $r3, killed $r6
     ; LA64-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 20512
-    ; LA64-NEXT: $r6 = LU12I_W 5
-    ; LA64-NEXT: $r6 = ORI killed $r6, 24
-    ; LA64-NEXT: $r6 = ADD_D $r3, killed $r6
-    ; LA64-NEXT: ST_B $r4, killed $r6, 0 :: (store (s8))
-    ; LA64-NEXT: $r4 = LU12I_W 4
-    ; LA64-NEXT: $r4 = ORI killed $r4, 16
-    ; LA64-NEXT: $r4 = ADD_D $r3, killed $r4
-    ; LA64-NEXT: ST_B $r5, killed $r4, 0 :: (store (s8))
+    ; LA64-NEXT: $r6 = PseudoAddUpperImm $r3, 5
+    ; LA64-NEXT: ST_B $r4, killed $r6, 24 :: (store (s8))
+    ; LA64-NEXT: $r4 = PseudoAddUpperImm $r3, 4
+    ; LA64-NEXT: ST_B $r5, killed $r4, 16 :: (store (s8))
     ; LA64-NEXT: $r4 = frame-destroy LU12I_W 5
     ; LA64-NEXT: $r4 = frame-destroy ORI killed $r4, 32
     ; LA64-NEXT: $r3 = frame-destroy ADD_D $r3, killed $r4
@@ -150,13 +128,11 @@ body: |
     ; LA64-EXPAND-NEXT: $r3 = frame-setup SUB_D $r3, killed $r6
     ; LA64-EXPAND-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 20512
     ; LA64-EXPAND-NEXT: $r6 = LU12I_W 5
-    ; LA64-EXPAND-NEXT: $r6 = ORI killed $r6, 24
     ; LA64-EXPAND-NEXT: $r6 = ADD_D $r3, killed $r6
-    ; LA64-EXPAND-NEXT: ST_B $r4, killed $r6, 0 :: (store (s8))
+    ; LA64-EXPAND-NEXT: ST_B $r4, killed $r6, 24 :: (store (s8))
     ; LA64-EXPAND-NEXT: $r4 = LU12I_W 4
-    ; LA64-EXPAND-NEXT: $r4 = ORI killed $r4, 16
     ; LA64-EXPAND-NEXT: $r4 = ADD_D $r3, killed $r4
-    ; LA64-EXPAND-NEXT: ST_B $r5, killed $r4, 0 :: (store (s8))
+    ; LA64-EXPAND-NEXT: ST_B $r5, killed $r4, 16 :: (store (s8))
     ; LA64-EXPAND-NEXT: $r4 = frame-destroy LU12I_W 5
     ; LA64-EXPAND-NEXT: $r4 = frame-destroy ORI killed $r4, 32
     ; LA64-EXPAND-NEXT: $r3 = frame-destroy ADD_D $r3, killed $r4
@@ -195,22 +171,12 @@ body: |
     ; LA64-NEXT: $r6 = frame-setup ORI killed $r6, 2080
     ; LA64-NEXT: $r3 = frame-setup SUB_D $r3, killed $r6
     ; LA64-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 18464
-    ; LA64-NEXT: $r6 = LU12I_W 4
-    ; LA64-NEXT: $r6 = ORI killed $r6, 2072
-    ; LA64-NEXT: $r6 = ADD_D $r3, killed $r6
-    ; LA64-NEXT: ST_B $r4, killed $r6, 0 :: (store (s8))
-    ; LA64-NEXT: $r4 = LU12I_W 4
-    ; LA64-NEXT: $r4 = ORI killed $r4, 2064
-    ; LA64-NEXT: $r4 = ADD_D $r3, killed $r4
-    ; LA64-NEXT: ST_B $r5, killed $r4, 0 :: (store (s8))
-    ; LA64-NEXT: $r4 = LU12I_W 4
-    ; LA64-NEXT: $r4 = ORI killed $r4, 2072
-    ; LA64-NEXT: $r4 = ADD_D $r3, killed $r4
-    ; LA64-NEXT: $r6 = LD_B killed $r4, 0 :: (load (s8))
-    ; LA64-NEXT: $r4 = LU12I_W 4
-    ; LA64-NEXT: $r4 = ORI killed $r4, 2064
-    ; LA64-NEXT: $r4 = ADD_D $r3, killed $r4
-    ; LA64-NEXT: $r7 = LD_B killed $r4, 0 :: (load (s8))
+    ; LA64-NEXT: $r6 = PseudoAddUpperImm $r3, 5
+    ; LA64-NEXT: ST_B $r4, killed $r6, -2024 :: (store (s8))
+    ; LA64-NEXT: $r4 = PseudoAddUpperImm $r3, 5
+    ; LA64-NEXT: ST_B $r5, $r4, -2032 :: (store (s8))
+    ; LA64-NEXT: $r6 = LD_B $r4, -2024 :: (load (s8))
+    ; LA64-NEXT: $r7 = LD_B killed $r4, -2032 :: (load (s8))
     ; LA64-NEXT: $r4 = frame-destroy LU12I_W 4
     ; LA64-NEXT: $r4 = frame-destroy ORI killed $r4, 2080
     ; LA64-NEXT: $r3 = frame-destroy ADD_D $r3, killed $r4
@@ -223,22 +189,14 @@ body: |
     ; LA64-EXPAND-NEXT: $r6 = frame-setup ORI killed $r6, 2080
     ; LA64-EXPAND-NEXT: $r3 = frame-setup SUB_D $r3, killed $r6
     ; LA64-EXPAND-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 18464
-    ; LA64-EXPAND-NEXT: $r6 = LU12I_W 4
-    ; LA64-EXPAND-NEXT: $r6 = ORI killed $r6, 2072
+    ; LA64-EXPAND-NEXT: $r6 = LU12I_W 5
     ; LA64-EXPAND-NEXT: $r6 = ADD_D $r3, killed $r6
-    ; LA64-EXPAND-NEXT: ST_B $r4, killed $r6, 0 :: (store (s8))
-    ; LA64-EXPAND-NEXT: $r4 = LU12I_W 4
-    ; LA64-EXPAND-NEXT: $r4 = ORI killed $r4, 2064
+    ; LA64-EXPAND-NEXT: ST_B $r4, killed $r6, -2024 :: (store (s8))
+    ; LA64-EXPAND-NEXT: $r4 = LU12I_W 5
     ; LA64-EXPAND-NEXT: $r4 = ADD_D $r3, killed $r4
-    ; LA64-EXPAND-NEXT: ST_B $r5, killed $r4, 0 :: (store (s8))
-    ; LA64-EXPAND-NEXT: $r4 = LU12I_W 4
-    ; LA64-EXPAND-NEXT: $r4 = ORI killed $r4, 2072
-    ; LA64-EXPAND-NEXT: $r4 = ADD_D $r3, killed $r4
-    ; LA64-EXPAND-NEXT: $r6 = LD_B killed $r4, 0 :: (load (s8))
-    ; LA64-EXPAND-NEXT: $r4 = LU12I_W 4
-    ; LA64-EXPAND-NEXT: $r4 = ORI killed $r4, 2064
-    ; LA64-EXPAND-NEXT: $r4 = ADD_D $r3, killed $r4
-    ; LA64-EXPAND-NEXT: $r7 = LD_B killed $r4, 0 :: (load (s8))
+    ; LA64-EXPAND-NEXT: ST_B $r5, $r4, -2032 :: (store (s8))
+    ; LA64-EXPAND-NEXT: $r6 = LD_B $r4, -2024 :: (load (s8))
+    ; LA64-EXPAND-NEXT: $r7 = LD_B killed $r4, -2032 :: (load (s8))
     ; LA64-EXPAND-NEXT: $r4 = frame-destroy LU12I_W 4
     ; LA64-EXPAND-NEXT: $r4 = frame-destroy ORI killed $r4, 2080
     ; LA64-EXPAND-NEXT: $r3 = frame-destroy ADD_D $r3, killed $r4
