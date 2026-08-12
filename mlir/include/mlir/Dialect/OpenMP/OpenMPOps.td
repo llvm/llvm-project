@@ -558,6 +558,37 @@ def UnrollHeuristicOp : OpenMPTransform_Op<"unroll_heuristic", []> {
 }
 
 //===----------------------------------------------------------------------===//
+// OpenMP unroll_full operation
+//===----------------------------------------------------------------------===//
+
+def UnrollFullOp : OpenMPTransform_Op<"unroll_full", []> {
+  let summary = "OpenMP full unroll operation";
+  let description = [{
+    Represents a `#pragma omp unroll full` construct introduced in OpenMP 5.1.
+
+    The operation has one applyee and no generatees. The applyee is fully
+    unrolled, so it must have a compile-time constant trip count. Because no
+    loop remains afterwards, there is no generatee and no further
+    loop-associated transformation can be chained onto it.
+
+    The lowering is implemented using `OpenMPIRBuilder::unrollLoopFull`.
+
+    Assembly formats:
+      omp.unroll_full(%cli)
+      omp.unroll_full(%cli) -> ()
+  }];
+
+  let arguments = (ins CanonicalLoopInfoType:$applyee);
+
+  let builders = [
+    OpBuilder<(ins "::mlir::Value":$cli)>,
+  ];
+
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // OpenMP unroll_partial operation
 //===----------------------------------------------------------------------===//
 
@@ -2047,13 +2078,20 @@ def AtomicCompareOp : OpenMP_Op<"atomic.compare", traits = [
         omp.yield
       }
     ```
+
+    The optional `fail_memory_order` attribute specifies the memory ordering
+    to use for the comparison when the atomic conditional update fails (i.e.
+    the value of `x` is not updated). It corresponds to the OpenMP `fail`
+    clause and overrides the failure ordering that would otherwise be derived
+    from the construct's memory ordering.
   }] # clausesDescription;
 
   let arguments = !con(
       (ins Arg<OpenMP_PointerLikeType,
                "Address of variable to be compared/updated", [MemRead, MemWrite]>:$x,
            UnitAttr:$weak),
-      clausesArgs);
+      clausesArgs,
+      (ins OptionalAttr<MemoryOrderKindAttr>:$fail_memory_order));
 
   // Override region definition.
   let regions = (region SizedRegion<1>:$region);
