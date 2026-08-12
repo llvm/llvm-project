@@ -22,7 +22,8 @@ struct olLaunchHostFunctionTest : OffloadQueueTest {
           printf(""); // Making sure the function has side effect
         },
         nullptr);
-    if (Result->Code == OL_ERRC_UNSUPPORTED)
+
+    if (Result != nullptr && Result->Code == OL_ERRC_UNSUPPORTED)
       GTEST_SKIP() << "olLaunchHostFunction is not supported on this platform. "
                       "Either the device does not support the feature or "
                       "you need to update its drivers";
