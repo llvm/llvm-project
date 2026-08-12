@@ -1,6 +1,7 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.cplusplus.UseAfterLifetimeEnd,debug.DebugLifetimeModeling \
 // RUN:   -analyzer-config cfg-lifetime=true -analyzer-output=text -verify %s
-
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.cplusplus.UseAfterLifetimeEnd,debug.DebugLifetimeModeling \
+// RUN:   -analyzer-output=text %s 2>&1 | FileCheck %s
 struct A {};
 
 struct Pair {
@@ -409,4 +410,36 @@ void no_dangling_by_value_argument() {
   // The BoundToSelf temporary's frame is not live on the stack when `self()` returns.
   // The returned reference does not dangle.
   takes_by_value(BoundToSelf());
+}
+
+int multi_params_annotated(int *p_one [[clang::lifetimebound]], int *p_two [[clang::lifetimebound]]);
+
+int test_multi_param_highlight() {
+  int local_one = 1, local_two = 2;
+  // expected-note@-1 {{'local_one' initialized here}}
+  // expected-note@-2 {{'local_two' initialized here}}
+  return multi_params_annotated(&local_one, &local_two);
+  // expected-warning@-1 {{address of stack memory associated with local variable 'local_one' returned}}
+  // expected-warning@-2 {{address of stack memory associated with local variable 'local_two' returned}}
+  // expected-warning@-3 {{Returning value bound to 'local_one' that will go out of scope}}
+  // expected-note@-4    {{Value's lifetime bound to the lifetime of 'local_one' here}}
+  // expected-note@-5    {{Lifetime of 'local_one' ended here}}
+  // expected-warning@-6 {{Returning value bound to 'local_two' that will go out of scope}}
+  // expected-note@-7    {{Value's lifetime bound to the lifetime of 'local_two' here}}
+  // expected-note@-8    {{Lifetime of 'local_two' ended here}}
+
+  // CHECK: :[[@LINE-10]]:33: note: Value's lifetime bound to the lifetime of 'local_one' here
+  // CHECK-NEXT: [[@LINE-14]] | int local_one = 1, local_two = 2;
+  // CHECK-NEXT:                ~~~~~~~~~~~~~~~~~
+  // CHECK-NEXT: [[@LINE-15]] | // expected{{-}}note@-1 {{.*}}
+  // CHECK-NEXT: [[@LINE-15]] | // expected{{-}}note@-2 {{.*}}
+  // CHECK-NEXT: [[@LINE-15]] | return multi_params_annotated(&local_one, &local_two);
+  // CHECK-NEXT:                                              ^~~~~~~~~~
+  // CHECK: :[[@LINE-17]]:45: note: Value's lifetime bound to the lifetime of 'local_two' here
+  // CHECK-NEXT: [[@LINE-21]] | int local_one = 1, local_two = 2;
+  // CHECK-NEXT:                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  // CHECK-NEXT: [[@LINE-22]] | // expected{{-}}note@-1 {{.*}}
+  // CHECK-NEXT: [[@LINE-22]] | // expected{{-}}note@-2 {{.*}}
+  // CHECK-NEXT: [[@LINE-22]] | return multi_params_annotated(&local_one, &local_two);
+  // CHECK-NEXT:                                                          ^~~~~~~~~~
 }
