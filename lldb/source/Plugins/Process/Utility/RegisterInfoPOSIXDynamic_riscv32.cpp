@@ -133,7 +133,7 @@ void RegisterInfoPOSIXDynamic_riscv32::BuildCSRegInfos(
     csr.kinds[lldb::eRegisterKindLLDB] = csr_first_riscv + reg;
     csr.value_regs = nullptr;
     csr.invalidate_regs = nullptr;
-    csr.flags_type = nullptr;
+    csr.register_type = nullptr;
 
     cs_reg_infos.push_back(csr);
   }
