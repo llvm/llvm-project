@@ -2423,7 +2423,13 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
   GlobalOp fatbinStr = GlobalOp::create(builder, loc, fatbinStrName, fatbinType,
                                         /*isConstant=*/true, {},
                                         GlobalLinkageKind::PrivateLinkage);
-  fatbinStr.setAlignment(8);
+  if (isHIP) {
+    const unsigned HIPCodeObjectAlign = 4096;
+    fatbinStr.setAlignment(HIPCodeObjectAlign);
+  } else {
+    fatbinStr.setAlignment(8);
+  }
+
   fatbinStr.setInitialValueAttr(cir::ConstArrayAttr::get(
       fatbinType, StringAttr::get(gpuBinary->getBuffer(), fatbinType)));
   fatbinStr.setSection(fatbinConstName);
