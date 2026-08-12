@@ -1,12 +1,14 @@
 ! RUN: not %flang_fc1 -fsyntax-only %s 2>&1 | FileCheck %s
 
-! Verify that a data component definition appearing after CONTAINS in a
-! derived type gives a clear error instead of misleading
-! "expected 'FINAL'/'GENERIC'/'PROCEDURE'" messages.
+! Verify that a statement appearing after CONTAINS in a derived type that is not
+! a type-bound procedure binding gives a clear error instead of misleading
+! "expected 'FINAL'/'GENERIC'/'PROCEDURE'" or intrinsic-type-spec keyword
+! messages.
 
 module m
   implicit none
 
+  ! A data component definition after CONTAINS names the specific problem.
   type, public :: t1
      real :: x
    contains
@@ -17,10 +19,35 @@ module m
 ! CHECK: error: component definition must precede CONTAINS in a derived type
 ! CHECK-NEXT: {{.*}}real, pointer, dimension(:,:,:), public :: gpoint => null()
      real, pointer, dimension(:,:,:), public :: gpoint => null()
+  end type t1
+
+  ! A second CONTAINS is not a component definition.
+  type :: t2
+   contains
+   contains
+! CHECK: error: expected a type-bound procedure binding (PROCEDURE, GENERIC, or FINAL) after CONTAINS
+  end type t2
+
+  ! An IMPORT after CONTAINS is likewise not a binding.
+  type :: t3
+   contains
+     import
+! CHECK: error: expected a type-bound procedure binding (PROCEDURE, GENERIC, or FINAL) after CONTAINS
+  end type t3
+
+  ! A misplaced subprogram after CONTAINS.
+  type :: t4
+   contains
+     subroutine s
+     end subroutine
+! CHECK: error: expected a type-bound procedure binding (PROCEDURE, GENERIC, or FINAL) after CONTAINS
+  end type t4
+
 ! CHECK-NOT: expected 'FINAL'
 ! CHECK-NOT: expected 'GENERIC'
 ! CHECK-NOT: expected 'PROCEDURE'
-  end type t1
+! CHECK-NOT: expected 'COMPLEX'
+! CHECK-NOT: expected 'INTEGER'
 
 contains
   subroutine init(this)
