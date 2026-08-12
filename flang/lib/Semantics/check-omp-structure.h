@@ -241,6 +241,7 @@ public:
   void Enter(const parser::OmpClause::UpdateDependObjects &x);
   void Enter(const parser::OmpClause::UseDeviceAddr &x);
   void Enter(const parser::OmpClause::UseDevicePtr &x);
+  void Enter(const parser::OmpClause::UsesAllocators &x);
   void Enter(const parser::OmpClause::When &x);
 
 private:
@@ -423,6 +424,11 @@ private:
   void CheckIndividualAllocateDirective(
       const parser::OmpAllocateDirective &x, bool isExecutable);
   void CheckExecutableAllocateDirective(const parser::OmpAllocateDirective &x);
+
+  void CheckUsesAllocatorsSpec(
+      const parser::OmpUsesAllocatorsClause::AllocatorSpec &spec);
+  void CheckUsesAllocatorsTraits(
+      const parser::OmpTraitsArray &traits, parser::CharBlock source);
 
   void CheckIteratorRange(const parser::OmpIteratorSpecifier &x);
   void CheckIteratorModifier(const parser::OmpIterator &x);

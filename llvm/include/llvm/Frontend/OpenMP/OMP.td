@@ -641,6 +641,7 @@ def OMPC_UseDevicePtr : Clause<[Spelling<"use_device_ptr">]> {
 }
 def OMPC_UsesAllocators : Clause<[Spelling<"uses_allocators">]> {
   let clangClass = "OMPUsesAllocatorsClause";
+  let flangClass = "OmpUsesAllocatorsClause";
 }
 def OMPC_Weak : Clause<[Spelling<"weak">]> {
   let clangClass = "OMPWeakClause";

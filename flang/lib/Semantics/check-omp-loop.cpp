@@ -473,8 +473,14 @@ void OmpStructureChecker::CheckIterationVariables(
   for (const parser::OmpClause &clause : spec.Clauses().v) {
     llvm::omp::Clause clauseId{clause.Id()};
     if (llvm::omp::isDataSharingAttributeClause(clauseId, version)) {
-      for (const parser::OmpObject &object :
-          parser::omp::GetOmpObjectList(clause)->v) {
+      // Not every data-sharing attribute clause takes an object list, e.g.
+      // USES_ALLOCATORS takes allocator specifications instead.
+      const parser::OmpObjectList *objects{
+          parser::omp::GetOmpObjectList(clause)};
+      if (!objects) {
+        continue;
+      }
+      for (const parser::OmpObject &object : objects->v) {
         if (const Symbol *symbol{GetObjectSymbol(object, /*ultimate=*/true)}) {
           auto maybeSource{parser::omp::GetObjectSource(object)};
           assert(maybeSource && "Expecting object source");
