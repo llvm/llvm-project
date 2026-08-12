@@ -5469,8 +5469,8 @@ mlir::LogicalResult CIRToLLVMCoroIdOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMCoroSizeOpLowering::matchAndRewrite(
     cir::CoroSizeOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<mlir::LLVM::CoroSizeOp>(op,
-                                                      rewriter.getI64Type());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::CoroSizeOp>(
+      op, getTypeConverter()->convertType(op.getType()));
   return mlir::success();
 }
 

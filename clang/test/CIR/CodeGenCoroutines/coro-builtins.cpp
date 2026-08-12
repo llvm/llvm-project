@@ -1,15 +1,14 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fcoroutines -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fcoroutines -fclangir -fclangir -emit-llvm -disable-llvm-passes %s -o  %t-cir.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fcoroutines -fclangir -emit-llvm -disable-llvm-passes %s -o  %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fcoroutines -emit-llvm -disable-llvm-passes %s -o  %t.ll
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
+// RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
 
 void *myAlloc(long long);
 
 // CIR: cir.func {{.*}} @_Z1fi
 // LLVM: void @_Z1fi
-// OGCG: void @_Z1fi
 void f(int n) {
   int promise;
   // CIR: %[[ADDR:.*]] = cir.alloca "n"
@@ -18,9 +17,6 @@ void f(int n) {
   // LLVM: %[[ADDR:.*]] = alloca i32
   // LLVM: %[[PROMISE:.*]] = alloca i32
 
-  // OGCG: %n.addr = alloca i32, align 4
-  // OGCG: %promise = alloca i32, align 4
-
   __builtin_coro_id(32, &promise, 0, 0);
   // CIR: %[[CORO_ID_ALIGN:.*]] = cir.const #cir.int<32>
   // CIR: %[[CAS_PROM:.*]] = cir.cast bitcast %[[PROMISE]]
@@ -28,14 +24,10 @@ void f(int n) {
 
   // LLVM: %[[COROID:.*]] = call token @llvm.coro.id(i32 32, ptr %[[PROMISE]], ptr null, ptr null)
 
-  // OGCG: %[[COROID:.*]] = call token @llvm.coro.id(i32 32, ptr %promise, ptr null, ptr null)
-
   __builtin_coro_alloc();
   // CIR: cir.coro.intrinsic.alloc(%[[COROID]])
 
   // LLVM: call i1 @llvm.coro.alloc(token %[[COROID]])
-
-  // OGCG: call i1 @llvm.coro.alloc(token %[[COROID]])
 
   // TODO
   //__builtin_coro_noop();
@@ -51,10 +43,6 @@ void f(int n) {
   // LLVM: %[[SIZE:.*]] = call i64 @llvm.coro.size.i64()
   // LLVM: %[[MEM:.*]] = call noundef ptr @_Z7myAllocx(i64 noundef %[[SIZE]])
   // LLVM: %[[FRAME:.*]] = call ptr @llvm.coro.begin(token %[[COROID]], ptr %[[MEM]])
-
-  // OGCG: %[[SIZE:.*]] = call i64 @llvm.coro.size.i64()
-  // OGCG: %[[MEM:.*]] = call noundef ptr @_Z7myAllocx(i64 noundef %[[SIZE]])
-  // OGCG: %[[FRAME:.*]] = call ptr @llvm.coro.begin(token %[[COROID]], ptr %[[MEM]])
 
   // TODO(CIR):
   //__builtin_coro_resume(__builtin_coro_frame());
@@ -73,16 +61,12 @@ void f(int n) {
 
   // LLVM: call ptr @llvm.coro.free(token %[[COROID]], ptr %[[FRAME]])
 
-  // OGCG: call ptr @llvm.coro.free(token %[[COROID]], ptr %[[FRAME]])
-
   __builtin_coro_end(__builtin_coro_frame(), false);
   // CIR: %[[FALSE:.*]] = cir.const #false
   // CIR: %[[TK_NONE:.*]] = cir.token.none
   // CIR: cir.coro.intrinsic.end(%[[FRAME]], %[[FALSE]], %[[TK_NONE]]) : (!cir.ptr<!void>, !cir.bool, token)
 
   // LLVM: call void @llvm.coro.end(ptr %[[FRAME]], i1 false, token none)
-
-  // OGCG: call void @llvm.coro.end(ptr %[[FRAME]], i1 false, token none)
 
   // TODO(CIR):
   //__builtin_coro_suspend(1);
