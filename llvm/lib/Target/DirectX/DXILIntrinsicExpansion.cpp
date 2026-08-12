@@ -216,7 +216,6 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_uclamp:
   case Intrinsic::dx_sclamp:
   case Intrinsic::dx_nclamp:
-  case Intrinsic::dx_degrees:
   case Intrinsic::dx_isinf:
   case Intrinsic::dx_isnan:
   case Intrinsic::dx_normalize:
@@ -1030,14 +1029,6 @@ static Value *expandClampIntrinsic(CallInst *Orig,
                                  {MaxCall, Max}, nullptr, "dx.min");
 }
 
-static Value *expandDegreesIntrinsic(CallInst *Orig) {
-  Value *X = Orig->getOperand(0);
-  Type *Ty = X->getType();
-  IRBuilder<> Builder(Orig);
-  Value *DegreesRatio = ConstantFP::get(Ty, 180.0 * llvm::numbers::inv_pi);
-  return Builder.CreateFMul(X, DegreesRatio);
-}
-
 static Value *expandSignIntrinsic(CallInst *Orig) {
   Value *X = Orig->getOperand(0);
   Type *Ty = X->getType();
@@ -1288,9 +1279,6 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
   case Intrinsic::dx_sclamp:
   case Intrinsic::dx_nclamp:
     Result = expandClampIntrinsic(Orig, IntrinsicId);
-    break;
-  case Intrinsic::dx_degrees:
-    Result = expandDegreesIntrinsic(Orig);
     break;
   case Intrinsic::dx_isinf:
     Result = expand16BitIsInf(Orig);
