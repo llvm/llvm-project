@@ -203,8 +203,8 @@ OpFoldResult TupleFromElementsOp::fold(FoldAdaptor) {
 LogicalResult UpdateTupleOp::verify() {
   RegType baseType = cast<RegType>(getBase().getType());
   RegType resultType = cast<RegType>(getResult().getType());
-  if (baseType.getWidthDwords() == 0 || baseType.getWidthDwords() % 16 != 0)
-    return emitOpError("tuple storage must occupy whole 16-dword GRFs");
+  if (baseType.getWidthDwords() == 0)
+    return emitOpError("tuple storage must be non-empty");
   if (baseType.getWidthDwords() != resultType.getWidthDwords())
     return emitOpError("base width must match result width");
   if (baseType.getBaseGRF() >= 0 && resultType.getBaseGRF() >= 0 &&
@@ -230,12 +230,9 @@ LogicalResult UpdateTupleOp::verify() {
     if (end > baseType.getWidthDwords())
       return emitOpError("update exceeds tuple width");
     if (resultType.getBaseGRF() >= 0 && updateType.getBaseGRF() >= 0 &&
-        (offset % 16 != 0 ||
-         updateType.getBaseGRF() != resultType.getBaseGRF() + offset / 16))
+        updateType.getBaseGRF() != resultType.getBaseGRF() + offset / 16)
       return emitOpError(
-          "physical update placement must match its tuple offset");
-    if (offset % 16 != 0 || updateType.getWidthDwords() % 16 != 0)
-      return emitOpError("updates must occupy whole 16-dword GRFs");
+           "physical update placement must match its tuple offset");
     lastEnd = end;
   }
   return success();

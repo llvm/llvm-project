@@ -303,6 +303,43 @@ def XW_StoreOp : XW_Op<"store"> {
   let assemblyFormat = "$value `->` $ptr (`after` $dependency^)? attr-dict `:` functional-type(operands, results)";
   let hasVerifier = 1;
 }
+class XW_Block2DOp<string mnemonic, list<Trait> traits = []>
+    : XW_Op<mnemonic, traits> {
+  let arguments = (ins Arg<XW_Ptr, "", [MemRead]>:$base,
+                       AnySignlessInteger:$surface_width,
+                       AnySignlessInteger:$surface_height,
+                       AnySignlessInteger:$surface_pitch,
+                       AnySignlessInteger:$x, AnySignlessInteger:$y,
+                       I64Attr:$element_bits,
+                       I64Attr:$block_width, I64Attr:$block_height,
+                       I64Attr:$blocks, UnitAttr:$transpose, UnitAttr:$vnni,
+                       Optional<XW_MemToken>:$dependency);
+}
+def XW_Block2DPrefetchOp : XW_Block2DOp<"block2d_prefetch"> {
+  let results = (outs XW_MemToken:$token);
+  let assemblyFormat = "$base `[` $x `,` $y `]` `surface` `(` $surface_width `,` $surface_height `,` $surface_pitch `)` (`after` $dependency^)? attr-dict `:` functional-type(operands, results)";
+  let hasVerifier = 1;
+}
+def XW_Block2DReadOp : XW_Block2DOp<"block2d_read"> {
+  let results = (outs XW_Simd:$value, XW_MemToken:$token);
+  let assemblyFormat = "$base `[` $x `,` $y `]` `surface` `(` $surface_width `,` $surface_height `,` $surface_pitch `)` (`after` $dependency^)? attr-dict `:` functional-type(operands, results)";
+  let hasVerifier = 1;
+}
+def XW_Block2DWriteOp : XW_Op<"block2d_write"> {
+  let arguments = (ins XW_Simd:$value,
+                       Arg<XW_Ptr, "", [MemWrite]>:$base,
+                       AnySignlessInteger:$surface_width,
+                       AnySignlessInteger:$surface_height,
+                       AnySignlessInteger:$surface_pitch,
+                       AnySignlessInteger:$x, AnySignlessInteger:$y,
+                       I64Attr:$element_bits,
+                       I64Attr:$block_width, I64Attr:$block_height,
+                       I64Attr:$blocks, UnitAttr:$transpose, UnitAttr:$vnni,
+                       Optional<XW_MemToken>:$dependency);
+  let results = (outs XW_MemToken:$token);
+  let assemblyFormat = "$value `->` $base `[` $x `,` $y `]` `surface` `(` $surface_width `,` $surface_height `,` $surface_pitch `)` (`after` $dependency^)? attr-dict `:` functional-type(operands, results)";
+  let hasVerifier = 1;
+}
 def XW_AtomicRMWOp : XW_Op<"atomic_rmw"> {
   let arguments = (ins AtomicRMWKindAttr:$kind, AnyType:$value,
                        Arg<AnyType, "", [MemRead, MemWrite]>:$ptr,

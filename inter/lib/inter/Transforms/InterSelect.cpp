@@ -2290,6 +2290,107 @@ private:
     return selected;
   }
 
+  FailureOr<Value> emitBlock2DScalar(Value source, int64_t dwords,
+                                     Operation *operation) {
+    FailureOr<ValueShape> shape = getShape(source.getType(), operation);
+    FailureOr<Value> selected = getValue(source, operation);
+    if (failed(shape) || failed(selected))
+      return failure();
+    if (!selected->getDefiningOp<ImmOp>())
+      return *selected;
+    return emitMove(reg(dwords), shape->elementType, 1, *selected,
+                    RegionAttr(), true);
+  }
+
+  FailureOr<Value> buildBlock2DPayload(Operation *operation, Value base,
+                                       Value surfaceWidth, Value surfaceHeight,
+                                       Value surfacePitch, Value x, Value y,
+                                       int64_t blockWidth,
+                                       int64_t blockHeight, int64_t blocks) {
+    FailureOr<Value> selectedBase = getValue(base, operation);
+    if (failed(selectedBase))
+      return failure();
+    Value address = selectedBase->getDefiningOp<ImmOp>()
+                        ? emitMove(reg(2), i64(), 1, *selectedBase,
+                                   RegionAttr(), true)
+                        : *selectedBase;
+    auto subtractOne = [&](Value source) -> FailureOr<Value> {
+      FailureOr<Value> selected = getValue(source, operation);
+      if (failed(selected))
+        return failure();
+      return SubOp::create(
+                 *builder, *location, reg(1), i32(), 1,
+                 canonicalDestination(), RegionAttr(), uniformRegion(),
+                 IntegerAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(),
+                 TypeAttr(), true, 0, immediate(1, i32()), *selected)
+          .getResult();
+    };
+    Value zero = emitMove(reg(16), i32(), 16, immediate(0, i32()),
+                          RegionAttr(), true);
+    Value shape = emitMove(
+        reg(1), i32(), 1,
+        immediate((blockWidth - 1) | ((blockHeight - 1) << 8) |
+                      ((blocks - 1) << 16),
+                  i32()),
+        RegionAttr(), true);
+    FailureOr<Value> selectedX = emitBlock2DScalar(x, 1, operation);
+    FailureOr<Value> selectedY = emitBlock2DScalar(y, 1, operation);
+    FailureOr<Value> selectedWidth = subtractOne(surfaceWidth);
+    FailureOr<Value> selectedHeight = subtractOne(surfaceHeight);
+    FailureOr<Value> selectedPitch = subtractOne(surfacePitch);
+    if (failed(selectedX) || failed(selectedY) || failed(selectedWidth) ||
+        failed(selectedHeight) || failed(selectedPitch))
+      return failure();
+    std::array<Value, 7> updates = {
+        address, *selectedWidth, *selectedHeight, *selectedPitch, *selectedX,
+        *selectedY, shape};
+    SmallVector<Attribute> offsets;
+    for (int64_t offset : {0, 2, 3, 4, 5, 6, 7})
+      offsets.push_back(builder->getI64IntegerAttr(offset));
+    UpdateTupleOp payload = UpdateTupleOp::create(
+        *builder, *location, reg(16), zero, updates,
+        builder->getArrayAttr(offsets));
+    return payload.getResult();
+  }
+
+  LogicalResult lowerBlock2D(Operation *operation, Value base,
+                             Value surfaceWidth, Value surfaceHeight,
+                             Value surfacePitch, Value x, Value y,
+                             int64_t blockWidth, int64_t blockHeight,
+                             int64_t blocks, Value data, Value dependency,
+                             Value valueResult, Value tokenResult,
+                             uint32_t descriptor) {
+    FailureOr<Value> payload = buildBlock2DPayload(
+        operation, base, surfaceWidth, surfaceHeight, surfacePitch, x, y,
+        blockWidth, blockHeight, blocks);
+    FailureOr<Value> selectedDependency = mapDependency(operation, dependency);
+    if (failed(payload) || failed(selectedDependency))
+      return failure();
+    Value selectedData;
+    if (data) {
+      FailureOr<Value> materialized = materialize(data, operation);
+      if (failed(materialized))
+        return failure();
+      selectedData = *materialized;
+    }
+    int64_t resultDwords = 0;
+    if (valueResult) {
+      FailureOr<int64_t> footprint = getFootprint(valueResult.getType(), operation);
+      if (failed(footprint))
+        return failure();
+      resultDwords = *footprint;
+    }
+    SendOp send = SendOp::create(
+        *builder, *location, reg(resultDwords), MemTokenType::get(context),
+        SendFn::ugm, 0, descriptor, 0, 1, true, false, *payload, selectedData,
+        Value(), *selectedDependency, IntegerAttr());
+    if (valueResult)
+      values[valueResult] = send.getDst();
+    values[tokenResult] = send.getToken();
+    memoryToken = send.getToken();
+    return success();
+  }
+
   LogicalResult lowerLoad(xw::LoadOp operation) {
     FailureOr<ValueShape> shape =
         getShape(operation.getValue().getType(), operation);
@@ -2740,6 +2841,35 @@ private:
           return failure();
       } else if (xw::StoreOp store = dyn_cast<xw::StoreOp>(operation)) {
         if (failed(lowerStore(store)))
+          return failure();
+      } else if (xw::Block2DPrefetchOp prefetch =
+                     dyn_cast<xw::Block2DPrefetchOp>(operation)) {
+        if (failed(lowerBlock2D(
+                prefetch, prefetch.getBase(), prefetch.getSurfaceWidth(),
+                prefetch.getSurfaceHeight(), prefetch.getSurfacePitch(),
+                prefetch.getX(), prefetch.getY(), prefetch.getBlockWidth(),
+                prefetch.getBlockHeight(), prefetch.getBlocks(), Value(),
+                prefetch.getDependency(), Value(), prefetch.getToken(),
+                0x02080203)))
+          return failure();
+      } else if (xw::Block2DReadOp read =
+                     dyn_cast<xw::Block2DReadOp>(operation)) {
+        uint32_t descriptor = read.getVnni() ? 0x02800283 : 0x02400203;
+        if (failed(lowerBlock2D(
+                read, read.getBase(), read.getSurfaceWidth(),
+                read.getSurfaceHeight(), read.getSurfacePitch(), read.getX(),
+                read.getY(), read.getBlockWidth(), read.getBlockHeight(),
+                read.getBlocks(), Value(), read.getDependency(),
+                read.getValue(), read.getToken(), descriptor)))
+          return failure();
+      } else if (xw::Block2DWriteOp write =
+                     dyn_cast<xw::Block2DWriteOp>(operation)) {
+        if (failed(lowerBlock2D(
+                write, write.getBase(), write.getSurfaceWidth(),
+                write.getSurfaceHeight(), write.getSurfacePitch(), write.getX(),
+                write.getY(), write.getBlockWidth(), write.getBlockHeight(),
+                write.getBlocks(), write.getValue(), write.getDependency(),
+                Value(), write.getToken(), 0x02000407)))
           return failure();
       } else if (xw::AtomicRMWOp atomic =
                      dyn_cast<xw::AtomicRMWOp>(operation)) {

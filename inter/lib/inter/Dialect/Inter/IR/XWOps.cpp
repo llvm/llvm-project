@@ -182,6 +182,42 @@ static OpFoldResult foldTokenMerge(ValueRange dependencies) {
     return dependencies.front();
   return {};
 }
+
+static LogicalResult verifyBlock2D(Operation *operation, Value base,
+                                   ValueRange geometry, int64_t blockWidth,
+                                   int64_t blockHeight, int64_t blocks,
+                                   int64_t elementBits, bool transpose,
+                                   bool vnni, Value data, bool write) {
+  PtrType pointer = dyn_cast<PtrType>(base.getType());
+  if (!pointer || !isa<GlobalAddressSpaceAttr, ConstantAddressSpaceAttr>(
+                      pointer.getAddressSpace()))
+    return operation->emitOpError(
+        "requires a uniform global or constant base pointer");
+  for (Value operand : geometry)
+    if (!operand.getType().isSignlessInteger(32))
+      return operation->emitOpError(
+          "surface geometry and coordinates must be uniform i32 values");
+  if (blockWidth <= 0 || blockHeight <= 0 || blocks <= 0)
+    return operation->emitOpError("block dimensions must be positive");
+  if (elementBits != 8 && elementBits != 16 && elementBits != 32 &&
+      elementBits != 64)
+    return operation->emitOpError("element width must be 8, 16, 32, or 64");
+  if (write && (blocks != 1 || transpose || vnni))
+    return operation->emitOpError(
+        "block2D writes require one untransformed block");
+  if (transpose && blocks != 1)
+    return operation->emitOpError(
+        "transformed block2D reads require one block");
+  if (data) {
+    SimdType simd = dyn_cast<SimdType>(data.getType());
+    VectorType vector =
+        simd ? dyn_cast<VectorType>(simd.getElementType()) : VectorType();
+    if (!vector || vector.getRank() != 1 || vector.isScalable())
+      return operation->emitOpError(
+          "data must be a SIMD value with a fixed 1-D vector payload");
+  }
+  return verifyCardinalities(operation);
+}
 } // namespace
 
 #define GET_OP_CLASSES
@@ -748,6 +784,30 @@ OpFoldResult ExtractOp::fold(FoldAdaptor) {
     return {};
   Value input = pack.getInputs()[getIndex()];
   return input.getType() == getType() ? OpFoldResult(input) : OpFoldResult();
+}
+
+LogicalResult Block2DPrefetchOp::verify() {
+  std::array<Value, 5> geometry = {getSurfaceWidth(), getSurfaceHeight(),
+                                   getSurfacePitch(), getX(), getY()};
+  return verifyBlock2D(*this, getBase(), geometry, getBlockWidth(),
+                       getBlockHeight(), getBlocks(), getElementBits(),
+                       getTranspose(), getVnni(), Value(), false);
+}
+
+LogicalResult Block2DReadOp::verify() {
+  std::array<Value, 5> geometry = {getSurfaceWidth(), getSurfaceHeight(),
+                                   getSurfacePitch(), getX(), getY()};
+  return verifyBlock2D(*this, getBase(), geometry, getBlockWidth(),
+                       getBlockHeight(), getBlocks(), getElementBits(),
+                       getTranspose(), getVnni(), getValue(), false);
+}
+
+LogicalResult Block2DWriteOp::verify() {
+  std::array<Value, 5> geometry = {getSurfaceWidth(), getSurfaceHeight(),
+                                   getSurfacePitch(), getX(), getY()};
+  return verifyBlock2D(*this, getBase(), geometry, getBlockWidth(),
+                       getBlockHeight(), getBlocks(), getElementBits(),
+                       getTranspose(), getVnni(), getValue(), true);
 }
 
 Value PtrAddOp::getViewSource() { return getBase(); }

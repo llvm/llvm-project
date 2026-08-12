@@ -20,9 +20,13 @@ using namespace mlir;
 namespace {
 
 static bool isXWMemoryOperation(Operation *op) {
-  StringRef name = op->getName().getStringRef();
-  return name == "xw.load" || name == "xw.store" || name == "xw.atomic_rmw" ||
-         name == "xw.barrier" || name == "xw.alloc_release";
+  if (op->getName().getDialectNamespace() !=
+          xw::XWDialect::getDialectNamespace() ||
+      !isa<MemoryEffectOpInterface>(op))
+    return false;
+  auto isTokenType = [](Type type) { return isa<xw::MemTokenType>(type); };
+  return llvm::any_of(op->getOperandTypes(), isTokenType) ||
+         llvm::any_of(op->getResultTypes(), isTokenType);
 }
 
 static bool isStructuredOperation(Operation *operation) {

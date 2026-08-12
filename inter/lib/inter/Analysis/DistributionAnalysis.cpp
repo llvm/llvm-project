@@ -57,7 +57,8 @@ static bool isUniformSource(Operation *op) {
 
 static bool isTokenOperation(Operation *op) {
   return isa<xw::TokenOp, xw::IssueTokenOp, xw::AfterOp, xw::JoinOp,
-             xw::StoreOp, xw::BarrierOp, xw::AllocReleaseOp>(op);
+              xw::StoreOp, xw::Block2DPrefetchOp, xw::Block2DWriteOp,
+              xw::BarrierOp, xw::AllocReleaseOp>(op);
 }
 
 LogicalResult DistributionAnalysis::visitOperation(
@@ -96,6 +97,12 @@ LogicalResult DistributionAnalysis::visitOperation(
     assert(results.size() == 2 && "memory operation must have two results");
     propagateIfChanged(results[0],
                        results[0]->join(Distribution::full(simdWidth)));
+    propagateIfChanged(results[1], results[1]->join(Distribution::bare()));
+    return success();
+  }
+  if (isa<xw::Block2DReadOp>(op)) {
+    assert(results.size() == 2 && "block2D read must have two results");
+    propagateIfChanged(results[0], results[0]->join(Distribution::bare()));
     propagateIfChanged(results[1], results[1]->join(Distribution::bare()));
     return success();
   }
