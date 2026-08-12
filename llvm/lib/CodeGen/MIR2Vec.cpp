@@ -574,6 +574,9 @@ Embedding MIREmbedder::computeEmbeddings(const MachineBasicBlock &MBB) const {
 Embedding MIREmbedder::computeEmbeddings() const {
   Embedding MFuncVector(Dimension, 0);
 
+  if (MF.empty())
+    return MFuncVector;
+
   // Consider all reachable machine basic blocks in the function
   for (const auto *MBB : depth_first(&MF))
     MFuncVector += computeEmbeddings(*MBB);
