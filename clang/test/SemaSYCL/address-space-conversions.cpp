@@ -100,8 +100,6 @@ void usages() {
   CONST = static_cast<int [[clang::sycl_constant]] *>(PRIV); // expected-error {{static_cast from '[[clang::sycl_private]] int *' to '[[clang::sycl_constant]] int *' is not allowed}}
 }
 
-// When targeting the OpenCL execution environment SYCL and OpenCL address space
-// attributes are aligned. Corresponding address are mutually convertible.
 void opencl_conv() {
   int [[clang::sycl_global]] *SGLOB;
   int [[clang::sycl_local]] *SLOC;
@@ -115,8 +113,8 @@ void opencl_conv() {
   __attribute__((opencl_constant)) int *OCONST;
   __attribute__((opencl_generic)) int *OGEN;
 
-  // Corresponding SYCL/OpenCL address spaces are mutually convertible when
-  // targeting OpenCL. An error is generated when not targeting OpenCL.
+  // Corresponding address are mutually convertible. An error is generated
+  // when not targeting OpenCL.
   OGLOB = SGLOB;   // def-error {{assigning '[[clang::sycl_global]] int *' to '__global int *' changes address space of pointer}}
   SGLOB = OGLOB;   // def-error {{assigning '__global int *' to '[[clang::sycl_global]] int *' changes address space of pointer}}
   OLOC = SLOC;     // def-error {{assigning '[[clang::sycl_local]] int *' to '__local int *' changes address space of pointer}}
@@ -133,4 +131,27 @@ void opencl_conv() {
   OGLOB = SLOC;   // expected-error {{assigning '[[clang::sycl_local]] int *' to '__global int *' changes address space of pointer}}
   SGLOB = OPRIV;  // expected-error {{assigning '__private int *' to '[[clang::sycl_global]] int *' changes address space of pointer}}
   OCONST = SGLOB; // expected-error {{assigning '[[clang::sycl_global]] int *' to '__constant int *' changes address space of pointer}}
+
+  // The generic address space is a superset of the other address spaces, so a
+  // named SYCL or OpenCL pointer is implicitly convertible to either generic
+  // pointer when targeting OpenCL. An error is generated when not targeting OpenCL.
+  OGEN = SGLOB;  // def-error {{assigning '[[clang::sycl_global]] int *' to '__generic int *' changes address space of pointer}}
+  OGEN = SLOC;   // def-error {{assigning '[[clang::sycl_local]] int *' to '__generic int *' changes address space of pointer}}
+  OGEN = SPRIV;  // def-error {{assigning '[[clang::sycl_private]] int *' to '__generic int *' changes address space of pointer}}
+  SGEN = OGLOB;  // def-error {{assigning '__global int *' to '[[clang::sycl_generic]] int *' changes address space of pointer}}
+  SGEN = OLOC;   // def-error {{assigning '__local int *' to '[[clang::sycl_generic]] int *' changes address space of pointer}}
+  SGEN = OPRIV;  // def-error {{assigning '__private int *' to '[[clang::sycl_generic]] int *' changes address space of pointer}}
+
+  // The two generic address spaces are equivalent when targeting OpenCL. An error
+  // is generated when not targeting OpenCL.
+  SGEN = OGEN;   // def-error {{assigning '__generic int *' to '[[clang::sycl_generic]] int *' changes address space of pointer}}
+  OGEN = SGEN;   // def-error {{assigning '[[clang::sycl_generic]] int *' to '__generic int *' changes address space of pointer}}
+
+  // Conversion from a generic pointer to a named pointer is diagnosed regardless of the target.
+  SGLOB = OGEN; // expected-error {{assigning '__generic int *' to '[[clang::sycl_global]] int *' changes address space of pointer}}
+  OGLOB = SGEN; // expected-error {{assigning '[[clang::sycl_generic]] int *' to '__global int *' changes address space of pointer}}
+
+  // The constant address space does not overlap the generic address space.
+  SGEN = OCONST; // expected-error {{assigning '__constant int *' to '[[clang::sycl_generic]] int *' changes address space of pointer}}
+  OGEN = SCONST; // expected-error {{assigning '[[clang::sycl_constant]] int *' to '__generic int *' changes address space of pointer}}
 }

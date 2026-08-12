@@ -111,12 +111,23 @@ static MemoryRegion getMemoryRegion(LangAS AS) {
   }
 }
 
-// When targeting the OpenCL execution environment, corresponding SYCL and
-// OpenCL address spaces designate are mutually convertible.
+// When targeting the OpenCL execution environment, the SYCL and OpenCL address
+// spaces are aligned:
+//  - corresponding address spaces (e.g. sycl_global and opencl_global, or
+//    sycl_generic and opencl_generic) are equivalent, and
+//  - the generic address space is a superset of every other SYCL and OpenCL
+//    address space except constant.
 static bool isConvertibleOpenCLSYCLAddressSpace(LangAS A, LangAS B) {
   MemoryRegion RegionA = getMemoryRegion(A);
-  return RegionA != MemoryRegion::NotOpenCLSYCL &&
-         RegionA == getMemoryRegion(B);
+  MemoryRegion RegionB = getMemoryRegion(B);
+  if (RegionA == MemoryRegion::NotOpenCLSYCL ||
+      RegionB == MemoryRegion::NotOpenCLSYCL)
+    return false;
+
+  if (RegionA == RegionB)
+    return true;
+
+  return RegionA == MemoryRegion::Generic && RegionB != MemoryRegion::Constant;
 }
 
 bool Qualifiers::isTargetAddressSpaceSupersetOf(LangAS A, LangAS B,
@@ -125,9 +136,10 @@ bool Qualifiers::isTargetAddressSpaceSupersetOf(LangAS A, LangAS B,
       Ctx.getTargetInfo().getTriple().getOS() == llvm::Triple::OpenCL;
 
   // In OpenCL C v2.0 s6.5.5: every address space except for __constant can be
-  // used as __generic.
-  if ((Ctx.getLangOpts().OpenCL || IsOpenCLExecEnv) &&
-      A == LangAS::opencl_generic && B != LangAS::opencl_constant)
+  // used as __generic. When targeting the OpenCL execution environment this is
+  // handled by isConvertibleOpenCLSYCLAddressSpace below.
+  if (Ctx.getLangOpts().OpenCL && A == LangAS::opencl_generic &&
+      B != LangAS::opencl_constant)
     return true;
 
   // __global is a superset of the global_device and global_host address
