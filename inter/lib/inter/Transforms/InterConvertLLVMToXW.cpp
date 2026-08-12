@@ -122,6 +122,65 @@ static Value splatToCardinality(Operation *anchor, Value value,
   return createSplat(builder, anchor->getLoc(), value, cardinality);
 }
 
+static Operation *replaceDivergentIf(scf::IfOp op, Value condition) {
+  OperationState state(op.getLoc(), "xw.where");
+  state.addOperands(condition);
+  state.addTypes(op.getResultTypes());
+  state.addAttributes(op->getDiscardableAttrDictionary().getValue());
+  Region *thenRegion = state.addRegion();
+  Region *elseRegion = state.addRegion();
+  thenRegion->takeBody(op.getThenRegion());
+  elseRegion->takeBody(op.getElseRegion());
+  for (Region *region : {thenRegion, elseRegion}) {
+    if (region->empty())
+      continue;
+    scf::YieldOp yield = cast<scf::YieldOp>(region->front().getTerminator());
+    OpBuilder builder(yield);
+    OperationState yieldState(yield.getLoc(), "xw.yield");
+    yieldState.addOperands(yield.getOperands());
+    builder.create(yieldState);
+    yield.erase();
+  }
+  OpBuilder builder(op);
+  Operation *where = builder.create(state);
+  op->replaceAllUsesWith(where->getResults());
+  op.erase();
+  return where;
+}
+
+static FailureOr<Operation *>
+replaceOperationShape(Operation *op, ValueRange operands, Type resultType) {
+  Value oldResult = op->getResult(0);
+  SmallVector<scf::IfOp> divergentIfs;
+  for (OpOperand &use : oldResult.getUses()) {
+    if (auto ifOp = dyn_cast<scf::IfOp>(use.getOwner())) {
+      if (use.getOperandNumber() == 0) {
+        divergentIfs.push_back(ifOp);
+        continue;
+      }
+    }
+    if (isa<scf::ConditionOp>(use.getOwner()) && use.getOperandNumber() == 0)
+      return use.getOwner()->emitOpError(
+                 "lane-varying loop conditions have no XW representation"),
+             failure();
+  }
+
+  SmallVector<Type> resultTypes(op->getResultTypes());
+  resultTypes.front() = resultType;
+  OperationState state(op->getLoc(), op->getName());
+  state.addOperands(operands);
+  state.addTypes(resultTypes);
+  state.addAttributes(op->getAttrs());
+  OpBuilder builder(op);
+  Operation *replacement = builder.create(state);
+
+  for (scf::IfOp ifOp : divergentIfs)
+    replaceDivergentIf(ifOp, replacement->getResult(0));
+  op->replaceAllUsesWith(replacement->getResults());
+  op->erase();
+  return replacement;
+}
+
 static LogicalResult reconcileMaterializedShapes(ModuleOp module) {
   module.walk([](scf::IfOp op) { op->removeAttr("xw.boundary_converted"); });
 
@@ -146,62 +205,71 @@ static LogicalResult reconcileMaterializedShapes(ModuleOp module) {
   }
 
   auto normalizeMixed = [&]() -> LogicalResult {
-    WalkResult normalized = module.walk([&](Operation *op) {
+    SmallVector<Operation *> candidates;
+    module.walk([&](Operation *op) {
+      if (isa<xw::CmpIOp, xw::CmpFOp, xw::PtrCmpOp, xw::SelectOp>(op))
+        candidates.push_back(op);
+    });
+    for (Operation *op : candidates) {
       if (isa<xw::CmpIOp, xw::CmpFOp, xw::PtrCmpOp>(op)) {
         FailureOr<std::optional<int64_t>> cardinality =
             getExactCardinality(op, op->getOperands());
         if (failed(cardinality))
-          return WalkResult::interrupt();
+          return failure();
         if (!*cardinality)
-          return WalkResult::advance();
+          continue;
         OpBuilder builder(op);
+        SmallVector<Value> operands(op->getOperands());
         for (unsigned index : llvm::seq<unsigned>(op->getNumOperands())) {
-          Value operand = op->getOperand(index);
+          Value operand = operands[index];
           if (getCardinality(operand.getType()))
             continue;
-          op->setOperand(index, createSplat(builder, op->getLoc(), operand,
-                                            **cardinality));
+          operands[index] =
+              createSplat(builder, op->getLoc(), operand, **cardinality);
         }
-        op->getResult(0).setType(
-            xw::MaskType::get(op->getContext(), **cardinality));
-        return WalkResult::advance();
+        if (failed(replaceOperationShape(
+                op, operands,
+                xw::MaskType::get(op->getContext(), **cardinality))))
+          return failure();
+        continue;
       }
 
       auto select = dyn_cast<xw::SelectOp>(op);
       if (!select)
-        return WalkResult::advance();
+        continue;
       FailureOr<std::optional<int64_t>> armCardinality = getExactCardinality(
           op, ValueRange{select.getTrueValue(), select.getFalseValue()});
       if (failed(armCardinality))
-        return WalkResult::interrupt();
+        return failure();
       std::optional<int64_t> conditionCardinality =
           getCardinality(select.getCondition().getType());
       if (conditionCardinality && *armCardinality &&
           conditionCardinality != *armCardinality) {
         op->emitOpError("select mask and arm cardinalities must match; use "
                         "xw.expand explicitly");
-        return WalkResult::interrupt();
+        return failure();
       }
       std::optional<int64_t> cardinality =
           conditionCardinality ? conditionCardinality : *armCardinality;
       if (!cardinality)
-        return WalkResult::advance();
+        continue;
       OpBuilder builder(op);
+      SmallVector<Value> operands(op->getOperands());
       for (unsigned index : {1u, 2u}) {
-        Value operand = op->getOperand(index);
+        Value operand = operands[index];
         if (getCardinality(operand.getType()))
           continue;
-        op->setOperand(
-            index, createSplat(builder, op->getLoc(), operand, *cardinality));
+        operands[index] =
+            createSplat(builder, op->getLoc(), operand, *cardinality);
       }
-      if (op->getOperand(1).getType() != op->getOperand(2).getType()) {
+      if (operands[1].getType() != operands[2].getType()) {
         op->emitOpError("select arms must have the same converted type");
-        return WalkResult::interrupt();
+        return failure();
       }
-      op->getResult(0).setType(op->getOperand(1).getType());
-      return WalkResult::advance();
-    });
-    return normalized.wasInterrupted() ? failure() : success();
+      if (failed(replaceOperationShape(op, operands, operands[1].getType())))
+        return failure();
+    }
+    return success();
   };
   if (failed(normalizeMixed()))
     return failure();
@@ -209,14 +277,21 @@ static LogicalResult reconcileMaterializedShapes(ModuleOp module) {
   bool changed;
   do {
     changed = false;
+    SmallVector<Operation *> candidates;
     module.walk([&](Operation *op) {
+      if (op->getNumResults() != 0 &&
+          (isa<xw::CmpIOp, xw::CmpFOp, xw::PtrCmpOp, xw::PtrAddOp>(op) ||
+           op->hasTrait<OpTrait::Elementwise>()))
+        candidates.push_back(op);
+    });
+    for (Operation *op : candidates) {
       std::optional<int64_t> cardinality;
       for (Type type : op->getOperandTypes())
         if (std::optional<int64_t> candidate = getCardinality(type))
           cardinality =
               cardinality ? std::max(*cardinality, *candidate) : candidate;
       if (!cardinality || op->getNumResults() == 0)
-        return;
+        continue;
 
       Type resultType = op->getResult(0).getType();
       Type replacement;
@@ -231,44 +306,15 @@ static LogicalResult reconcileMaterializedShapes(ModuleOp module) {
             op->getContext(), getPayloadType(resultType), *cardinality);
       }
       if (replacement && replacement != resultType) {
-        op->getResult(0).setType(replacement);
+        if (failed(replaceOperationShape(op, op->getOperands(), replacement)))
+          return failure();
         changed = true;
       }
-    });
+    }
   } while (changed);
 
   if (failed(normalizeMixed()))
     return failure();
-
-  SmallVector<scf::IfOp> divergentIfs;
-  module.walk([&](scf::IfOp op) {
-    if (isa<xw::MaskType>(op->getOperand(0).getType()))
-      divergentIfs.push_back(op);
-  });
-  for (scf::IfOp op : divergentIfs) {
-    OperationState state(op.getLoc(), "xw.where");
-    state.addOperands(op->getOperand(0));
-    state.addTypes(op.getResultTypes());
-    state.addAttributes(op->getDiscardableAttrDictionary().getValue());
-    Region *thenRegion = state.addRegion();
-    Region *elseRegion = state.addRegion();
-    thenRegion->takeBody(op.getThenRegion());
-    elseRegion->takeBody(op.getElseRegion());
-    for (Region *region : {thenRegion, elseRegion}) {
-      if (region->empty())
-        continue;
-      scf::YieldOp yield = cast<scf::YieldOp>(region->front().getTerminator());
-      OpBuilder builder(yield);
-      OperationState yieldState(yield.getLoc(), "xw.yield");
-      yieldState.addOperands(yield.getOperands());
-      builder.create(yieldState);
-      yield.erase();
-    }
-    OpBuilder builder(op);
-    Operation *where = builder.create(state);
-    op->replaceAllUsesWith(where->getResults());
-    op.erase();
-  }
 
   SmallVector<xw::SplatOp> redundantSplats;
   module.walk([&](xw::SplatOp splat) {
