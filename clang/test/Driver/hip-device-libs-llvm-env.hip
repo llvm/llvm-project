@@ -16,6 +16,7 @@
 // LLVMENV-NOT: oclc
 // LLVMENV-NOT: ocml
 // LLVMENV-NOT: ockl
+// LLVMENV-NOT: llvm_libc_wrappers
 
 // RUN: %clang -### --target=x86_64-linux-gnu --rocm-path=%S/Inputs/rocm \
 // RUN:   --offload-targets=amdgcn-amd-amdhsa-llvm --offload-arch=gfx90a \
@@ -25,6 +26,7 @@
 
 // INC: "-cc1" "-triple" "amdgcn-amd-amdhsa-llvm"
 // INC-SAME: "-include" "__clang_gpu_device_functions.h"
+// INC-SAME: "-internal-isystem" "{{.*}}llvm_libc_wrappers"
 
 // RUN: %clang -### --target=x86_64-linux-gnu -nogpuinc --rocm-path=%S/Inputs/rocm \
 // RUN:   --offload-targets=amdgcn-amd-amdhsa-llvm --offload-arch=gfx90a \
