@@ -149,9 +149,9 @@ ValueObjectRegisterSet::LookupChildWithName(llvm::StringRef name) {
 lldb::ValueObjectSP
 ValueObjectRegisterSet::GetChildMemberWithName(llvm::StringRef name,
                                                bool can_create) {
-  if (auto maybe_info = LookupChildWithName(name)) {
+  if (auto maybe_child = LookupChildWithName(name)) {
     ValueObject *valobj =
-        new ValueObjectRegister(*this, m_reg_ctx_sp, maybe_info->second);
+        new ValueObjectRegister(*this, m_reg_ctx_sp, maybe_child->second);
     return valobj->GetSP();
   }
 
@@ -160,8 +160,8 @@ ValueObjectRegisterSet::GetChildMemberWithName(llvm::StringRef name,
 
 llvm::Expected<size_t>
 ValueObjectRegisterSet::GetIndexOfChildWithName(llvm::StringRef name) {
-  if (auto maybe_info = LookupChildWithName(name))
-    return maybe_info->first;
+  if (auto maybe_child = LookupChildWithName(name))
+    return maybe_child->first;
 
   return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
