@@ -20,7 +20,6 @@
 
 namespace llvm {
 
-class IRUnitRef;
 class StringRef;
 class PassInstrumentationCallbacks;
 class Function;

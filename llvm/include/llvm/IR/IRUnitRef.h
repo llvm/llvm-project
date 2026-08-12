@@ -7,16 +7,15 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file defines IRUnitRef, a tagged pointer to the IR unit a pass or
-/// analysis is running on, and IRUnitKindTraits, which IR units specialize to
-/// opt into being referred to by one.
+/// This file defines IRUnitRef, a type-erased reference to the IR unit a pass
+/// or analysis is running on, and IRUnitKindTraits, which IR units specialize
+/// to opt into being referred to by one.
 ///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_IR_IRUNITREF_H
 #define LLVM_IR_IRUNITREF_H
 
-#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/Support/Casting.h"
 #include <cstddef>
 #include <type_traits>
@@ -56,61 +55,21 @@ template <> struct IRUnitKindTraits<MachineFunction> {
 // IRUnitKindTraits<LazyCallGraph::SCC> needs to be defined in
 // Analysis/LazyCallGraph.h.
 
-/// The number of bits IRUnitKind needs.
-static constexpr int IRUnitKindBits = 3;
-
-/// Pointer traits for the type-erased IR unit held by IRUnitRef.
-///
-/// IR units are not complete at this point, so only assume minimum pointer
-/// alignment.
-struct IRUnitPtrTraits {
-  static void *getAsVoidPointer(const void *P) { return const_cast<void *>(P); }
-  static const void *getFromVoidPointer(void *P) { return P; }
-
-  static constexpr int NumLowBitsAvailable = ConstantLog2<alignof(void *)>();
-};
-
-/// A tagged pointer to the IR unit a pass or analysis is running on.
+/// A type-erased reference to the IR unit a pass or analysis is running on,
+/// together with the kind of IR unit it refers to.
 class IRUnitRef {
-  /// Whether the kind fits in the spare low bits of an IR unit pointer.
-  static constexpr bool KindInPointer =
-      IRUnitPtrTraits::NumLowBitsAvailable >= IRUnitKindBits;
-
-  /// Unpacked storage for IR unit and kind with interface matching
-  /// PointerIntPair. so that the two are interchangeable here.
-  class UnpackedPointerAndKind {
-    const void *Ptr;
-    IRUnitKind Kind;
-
-  public:
-    UnpackedPointerAndKind(const void *Ptr, IRUnitKind Kind)
-        : Ptr(Ptr), Kind(Kind) {}
-
-    const void *getPointer() const { return Ptr; }
-    IRUnitKind getInt() const { return Kind; }
-  };
-
-  /// Use PointerIntPair when enough bits are available, fall back to
-  /// UnpackedPointerAndKind otherwise.
-  std::conditional_t<
-      KindInPointer,
-      PointerIntPair<const void *, IRUnitKindBits, IRUnitKind, IRUnitPtrTraits>,
-      UnpackedPointerAndKind>
-      Value;
+  const void *Ptr;
+  IRUnitKind Kind;
 
 public:
   template <typename IRUnitT, IRUnitKind K = IRUnitKindTraits<IRUnitT>::Kind>
-  IRUnitRef(const IRUnitT &IR) : Value(&IR, K) {
-    static_assert(!KindInPointer ||
-                      ConstantLog2<alignof(IRUnitT)>() >= IRUnitKindBits,
-                  "IR unit is not aligned enough to hold the kind");
-  }
+  IRUnitRef(const IRUnitT &IR) : Ptr(&IR), Kind(K) {}
 
   /// Which kind of IR unit is wrapped. Prefer isa/cast/dyn_cast.
-  IRUnitKind getKind() const { return Value.getInt(); }
+  IRUnitKind getKind() const { return Kind; }
 
   /// The wrapped IR unit, type-erased. Prefer isa/cast/dyn_cast.
-  const void *getPointer() const { return Value.getPointer(); }
+  const void *getPointer() const { return Ptr; }
 };
 
 static_assert(!std::is_constructible_v<IRUnitRef, std::nullptr_t>,
