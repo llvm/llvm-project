@@ -18,6 +18,10 @@ import os
 import shutil
 
 class TestSwiftRewriteClangPaths(TestBase):
+    # testWithoutRemap deletes the remapping plist out of the .dSYM, which make
+    # does not regenerate, so the test functions cannot share a build directory.
+    SHARED_BUILD_TESTCASE = False
+
     @requireNotEmbeddedSwift
     # Don't run ClangImporter tests if Clangimporter is disabled.
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
