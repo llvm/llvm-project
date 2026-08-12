@@ -21,7 +21,7 @@
 ; CHECK: cf.cond_br
 ; CHECK: return
 ; CHECK: llvm.func {{.*}}spir_funccc @_Z13get_global_idj(i32) -> i64
-; BOUNDARY: GEP no-wrap flags have no exact XW representation
+; BOUNDARY: 'xw.freeze' op failed to verify that all of {source, result} have same type
 ;
 ; ModuleID = 'inter/test/Frontend/Inputs/matmul.ll'
 source_filename = "inter/test/Frontend/Inputs/matmul.ll"

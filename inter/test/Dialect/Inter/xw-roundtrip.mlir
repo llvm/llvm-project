@@ -19,12 +19,14 @@ func.func @surface(%u: i32, %private: !xw.ptr<#xw.private>,
   %first = xw.read_first %s : !xw.simd<i32, 8> -> i32
   %expanded = xw.expand %v : !xw.simd<i32, 8> -> !xw.simd<i32, 16>
   %frozen = xw.freeze %expanded : !xw.simd<i32, 16>
-  %freeze_use = xw.binary addi %frozen, %frozen
+  %freeze_use = xw.binary addi %frozen, %frozen overflow<nsw, nuw>
       : !xw.simd<i32, 16>, !xw.simd<i32, 16> -> !xw.simd<i32, 16>
   %sum = xw.binary addi %s, %u
       : !xw.simd<i32, 8>, i32 -> !xw.simd<i32, 8>
   %wide = xw.cast intconvert %sum policy {extension = #xw.cast_extension<zero>}
       : !xw.simd<i32, 8> -> !xw.simd<i64, 8>
+  %narrow = xw.cast intconvert %wide overflow<nuw>
+      : !xw.simd<i64, 8> -> !xw.simd<i32, 8>
   %cmp = xw.cmpi slt %sum, %c
       : !xw.simd<i32, 8>, !xw.simd<i32, 8> -> !xw.mask<8>
   %selected = xw.select %cmp, %sum, %c

@@ -64,18 +64,22 @@ def XW_FreezeOp : XW_Op<"freeze", [AllTypesMatch<["source", "result"]>]> {
 }
 
 def XW_BinaryOp : XW_Op<"binary", [Pure, Elementwise]> {
-  let arguments = (ins XW_BinaryKindEnum:$kind, AnyType:$lhs, AnyType:$rhs);
+  let arguments = (ins XW_BinaryKindEnum:$kind, AnyType:$lhs, AnyType:$rhs,
+      DefaultValuedAttr<Arith_IntegerOverflowAttr,
+          "::mlir::arith::IntegerOverflowFlags::none">:$overflowFlags);
   let results = (outs AnyType:$result);
-  let assemblyFormat = "$kind $lhs `,` $rhs attr-dict `:` type($lhs) `,` type($rhs) `->` type($result)";
+  let assemblyFormat = "$kind $lhs `,` $rhs (`overflow` `` $overflowFlags^)? attr-dict `:` type($lhs) `,` type($rhs) `->` type($result)";
   let hasFolder = 1;
   let hasVerifier = 1;
 }
 
 def XW_CastOp : XW_Op<"cast", [Pure, Elementwise]> {
   let arguments = (ins XW_CastKindEnum:$kind, AnyType:$source,
-                       OptionalAttr<DictionaryAttr>:$policy);
+      OptionalAttr<DictionaryAttr>:$policy,
+      DefaultValuedAttr<Arith_IntegerOverflowAttr,
+          "::mlir::arith::IntegerOverflowFlags::none">:$overflowFlags);
   let results = (outs AnyType:$result);
-  let assemblyFormat = "$kind $source (`policy` $policy^)? attr-dict `:` type($source) `->` type($result)";
+  let assemblyFormat = "$kind $source (`policy` $policy^)? (`overflow` `` $overflowFlags^)? attr-dict `:` type($source) `->` type($result)";
   let hasFolder = 1;
   let hasVerifier = 1;
 }

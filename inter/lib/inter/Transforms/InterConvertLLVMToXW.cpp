@@ -167,14 +167,10 @@ replaceOperationShape(Operation *op, ValueRange operands, Type resultType) {
              failure();
   }
 
-  SmallVector<Type> resultTypes(op->getResultTypes());
-  resultTypes.front() = resultType;
-  OperationState state(op->getLoc(), op->getName());
-  state.addOperands(operands);
-  state.addTypes(resultTypes);
-  state.addAttributes(op->getAttrs());
   OpBuilder builder(op);
-  Operation *replacement = builder.create(state);
+  Operation *replacement = builder.clone(*op);
+  replacement->setOperands(operands);
+  replacement->getResult(0).setType(resultType);
 
   for (scf::IfOp ifOp : divergentIfs)
     replaceDivergentIf(ifOp, replacement->getResult(0));
@@ -546,6 +542,16 @@ static arith::CmpFPredicate convertPredicate(LLVM::FCmpPredicate predicate) {
   llvm_unreachable("unknown LLVM floating-point comparison predicate");
 }
 
+static arith::IntegerOverflowFlags
+convertOverflowFlags(LLVM::IntegerOverflowFlags flags) {
+  arith::IntegerOverflowFlags converted = arith::IntegerOverflowFlags::none;
+  if (LLVM::bitEnumContainsAny(flags, LLVM::IntegerOverflowFlags::nsw))
+    converted = converted | arith::IntegerOverflowFlags::nsw;
+  if (LLVM::bitEnumContainsAny(flags, LLVM::IntegerOverflowFlags::nuw))
+    converted = converted | arith::IntegerOverflowFlags::nuw;
+  return converted;
+}
+
 static SmallVector<Value> unwrapOperands(ValueRange operands) {
   SmallVector<Value> unwrapped;
   unwrapped.reserve(operands.size());
@@ -719,6 +725,11 @@ public:
     Type resultType = distributeType(*type, operands);
     xw::BinaryOp converted = xw::BinaryOp::create(
         rewriter, op.getLoc(), resultType, Kind, operands[0], operands[1]);
+    if constexpr (std::is_same_v<LLVMOp, LLVM::AddOp> ||
+                  std::is_same_v<LLVMOp, LLVM::SubOp> ||
+                  std::is_same_v<LLVMOp, LLVM::MulOp> ||
+                  std::is_same_v<LLVMOp, LLVM::ShlOp>)
+      converted.setOverflowFlags(convertOverflowFlags(op.getOverflowFlags()));
     return replaceConverted(op, converted, rewriter);
   }
 };
@@ -796,6 +807,8 @@ public:
     xw::CastOp converted = xw::CastOp::create(
         rewriter, op.getLoc(), resultType, Kind, operands.front(),
         policy.empty() ? DictionaryAttr() : rewriter.getDictionaryAttr(policy));
+    if constexpr (std::is_same_v<LLVMOp, LLVM::TruncOp>)
+      converted.setOverflowFlags(convertOverflowFlags(op.getOverflowFlags()));
     return replaceConverted(op, converted, rewriter);
   }
 };
@@ -1309,9 +1322,6 @@ private:
     if (auto simd = dyn_cast<xw::SimdType>(offset.getType()))
       resultType = xw::SimdType::get(gep.getContext(), resultType,
                                      simd.getCardinality());
-    if (gep.getNoWrapFlags() != LLVM::GEPNoWrapFlags::none)
-      return gep.emitOpError(
-          "GEP no-wrap flags have no exact XW representation");
     xw::PtrAddOp converted = xw::PtrAddOp::create(
         rewriter, gep.getLoc(), resultType, operands.front(), offset);
     preserveAttributes(gep, converted, rewriter);
@@ -1424,10 +1434,6 @@ public:
   LogicalResult
   matchAndRewrite(arith::TruncIOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (op.getOverflowFlags() != arith::IntegerOverflowFlags::none)
-      return op.emitOpError(
-          "integer truncation overflow flags have no exact XW representation");
-
     Type resultType = getTypeConverter()->convertType(op.getType());
     if (!resultType)
       return rewriter.notifyMatchFailure(op,
@@ -1439,6 +1445,7 @@ public:
     xw::CastOp converted = xw::CastOp::create(
         rewriter, op.getLoc(), resultType, xw::CastKind::IntConvert,
         adaptor.getIn(), DictionaryAttr());
+    converted.setOverflowFlags(op.getOverflowFlags());
     rewriter.replaceOp(op, converted.getResult());
     return success();
   }

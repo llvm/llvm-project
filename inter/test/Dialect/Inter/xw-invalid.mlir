@@ -83,3 +83,19 @@ func.func @freeze_missing_width(%value: !xw.simd<i32, 8>) {
   %frozen = xw.freeze %value : !xw.simd<i32, 8>
   return
 }
+
+// -----
+
+func.func @overflow_xor(%a: i32, %b: i32) {
+  // expected-error@+1 {{overflow flags require addi, subi, muli, or shli operation}}
+  %value = xw.binary xori %a, %b overflow<nuw> : i32, i32 -> i32
+  return
+}
+
+// -----
+
+func.func @overflow_widen(%value: i32) {
+  // expected-error@+1 {{overflow flags require a narrowing intconvert operation}}
+  %wide = xw.cast intconvert %value overflow<nsw> : i32 -> i64
+  return
+}

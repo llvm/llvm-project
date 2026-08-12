@@ -54,14 +54,3 @@ module {
     llvm.return
   }
 }
-
-// -----
-
-module {
-  llvm.func spir_kernelcc @trunc_overflow(%value: i32) {
-    // expected-error@+2 {{integer truncation overflow flags have no exact XW representation}}
-    // expected-error@+1 {{failed to legalize operation 'arith.trunci'}}
-    %truncated = arith.trunci %value overflow<nuw> : i32 to i1
-    llvm.return
-  }
-}

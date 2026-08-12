@@ -289,6 +289,11 @@ LogicalResult FreezeOp::verify() {
 }
 
 LogicalResult BinaryOp::verify() {
+  if (getOverflowFlags() != arith::IntegerOverflowFlags::none &&
+      getKind() != BinaryKind::AddI && getKind() != BinaryKind::SubI &&
+      getKind() != BinaryKind::MulI && getKind() != BinaryKind::ShLI)
+    return emitOpError(
+        "overflow flags require addi, subi, muli, or shli operation");
   auto emit = [this](const Twine &message) { return emitOpError(message); };
   FailureOr<Shape> lhs = classifyInteger(getLhs().getType(), emit);
   FailureOr<Shape> rhs = classifyInteger(getRhs().getType(), emit);
@@ -428,6 +433,12 @@ LogicalResult CastOp::verify() {
     return failure();
   if (source->cardinality != result->cardinality)
     return emitOpError("source and result must have the same SIMD shape");
+  if (getOverflowFlags() != arith::IntegerOverflowFlags::none &&
+      (getKind() != CastKind::IntConvert ||
+       getNumberBitWidth(result->elementType) >=
+           getNumberBitWidth(source->elementType)))
+    return emitOpError(
+        "overflow flags require a narrowing intconvert operation");
   NumberKind sourceKind = getNumberKind(source->elementType);
   NumberKind resultKind = getNumberKind(result->elementType);
   switch (getKind()) {
