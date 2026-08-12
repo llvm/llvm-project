@@ -2379,7 +2379,7 @@ define void @f() "no-sse" { ... }
 
 `alwaysuniform`
 :   A call to this function is always uniform. In uniformity analysis, a *uniform*
-    value is a value that is the same across all threads in a warp. Setting this
+    value is a value that is the same across all threads in a subgroup. Setting this
     attribute on a function means that a call to it always returns a uniform result.
 
 `noduplicate`
