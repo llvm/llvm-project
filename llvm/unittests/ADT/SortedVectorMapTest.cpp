@@ -35,8 +35,8 @@ TEST(SortedVectorMapTest, BasicOperations) {
 
   // Verify elements are maintained in sorted key order
   EXPECT_THAT(Map, testing::ElementsAre(testing::Pair(2, "two"),
-                                       testing::Pair(5, "five"),
-                                       testing::Pair(8, "eight")));
+                                        testing::Pair(5, "five"),
+                                        testing::Pair(8, "eight")));
 }
 
 TEST(SortedVectorMapTest, FindAndErase) {

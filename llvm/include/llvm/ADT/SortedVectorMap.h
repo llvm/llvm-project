@@ -13,8 +13,8 @@
 ///
 /// SortedVectorMap is intended for:
 /// - Small maps where memory footprint is a primary concern. In particular, it
-///   avoids the initial bucket overhead of DenseMap (e.g. 64 buckets by default)
-///   when only a few elements are stored.
+///   avoids the initial bucket overhead of DenseMap (e.g. 64 buckets by
+///   default) when only a few elements are stored.
 /// - Use cases that require iteration in sorted key order.
 ///
 /// Trade-offs:
