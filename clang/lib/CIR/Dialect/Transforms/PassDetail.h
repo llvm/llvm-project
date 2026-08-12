@@ -18,14 +18,18 @@
 
 namespace cir {
 
-// Reads only the `nobuiltins` list attribute, where an empty list disables
-// every builtin. The `nobuiltin` unit mark is a different attribute, on a
-// function it describes calls to the function itself, not its body.
+// Check the `nobuiltins` list. On a function, this list controls builtin
+// calls in its body; the singular `nobuiltin` mark describes calls to the
+// function and is intentionally not read here.
 inline bool noBuiltinListDisables(mlir::Operation *op, llvm::StringRef name) {
+  // Read the `nobuiltins` list of builtin names disabled on this operation.
   auto noBuiltins = op->getAttrOfType<mlir::ArrayAttr>(
       cir::CIRDialect::getNoBuiltinsAttrName());
+  // No list means the list adds no restriction.
   if (!noBuiltins)
     return false;
+  // An empty list disables every builtin, and a named list disables only
+  // the builtins it contains.
   return noBuiltins.empty() ||
          llvm::any_of(noBuiltins, [name](mlir::Attribute entry) {
            auto builtinName = mlir::dyn_cast<mlir::StringAttr>(entry);
@@ -33,13 +37,15 @@ inline bool noBuiltinListDisables(mlir::Operation *op, llvm::StringRef name) {
          });
 }
 
-// This is the form for calls, where a `builtin` mark wins, a `nobuiltin`
-// mark disables every builtin, and otherwise the `nobuiltins` list decides.
+// Check all no builtin state attached to a call.
 inline bool isNoBuiltin(mlir::Operation *op, llvm::StringRef name) {
+  // `builtin` wins over both `nobuiltin` and `nobuiltins` on this call.
   if (op->hasAttr(cir::CIRDialect::getBuiltinAttrName()))
     return false;
+  // The singular `nobuiltin` mark blocks builtin handling for this call.
   if (op->hasAttr(cir::CIRDialect::getNoBuiltinAttrName()))
     return true;
+  // Otherwise check the `nobuiltins` list for this name.
   return noBuiltinListDisables(op, name);
 }
 

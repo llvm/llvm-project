@@ -137,6 +137,8 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
         cir::SourceLanguageAttr::get(&mlirContext, *sourceLanguage));
   theModule->setAttr(cir::CIRDialect::getTripleAttrName(),
                      builder.getStringAttr(getTriple().str()));
+  theModule->setAttr(cir::CIRDialect::getSizeTypeWidthAttrName(),
+                     builder.getI32IntegerAttr(sizeTypeSize));
 
   if (cgo.OptimizationLevel > 0 || cgo.OptimizeSize > 0)
     theModule->setAttr(cir::CIRDialect::getOptInfoAttrName(),

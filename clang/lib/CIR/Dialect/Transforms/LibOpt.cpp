@@ -77,12 +77,18 @@ static void rewriteStdFindToMemchr(StdFindOp findOp,
   if (!patternPtrTy || patternPtrTy.getPointee() != elemTy)
     return;
 
-  // No builtin state rides on both the raised call and the enclosing function.
+  // LibOpt runs before LoweringPrepare, so a global initializer is still a
+  // cir.global here. Anything else is not a shape CIRGen produces.
   auto enclosing = findOp->getParentOfType<cir::FuncOp>();
-  if (isNoBuiltin(findOp, "memchr") ||
-      (enclosing && noBuiltinListDisables(enclosing, "memchr"))) {
+  auto enclosingGlobal = findOp->getParentOfType<cir::GlobalOp>();
+  if (!enclosing && !enclosingGlobal)
     return;
-  }
+
+  // No builtin state rides on the raised call and on the enclosing function.
+  // A global initializer has no function to carry the list.
+  if (isNoBuiltin(findOp, "memchr") ||
+      (enclosing && noBuiltinListDisables(enclosing, "memchr")))
+    return;
 
   // An enum or atomic element also lowers to a byte wide integer.
   auto callee = symbolTables.lookupNearestSymbolFrom<cir::FuncOp>(
@@ -94,46 +100,76 @@ static void rewriteStdFindToMemchr(StdFindOp findOp,
     return;
   }
 
-  // cir.libc.memchr fixes the value and length widths at 32 and 64 bits.
-  // TODO(cir): gate on the target size type and libcall availability.
   auto moduleOp = findOp->getParentOfType<mlir::ModuleOp>();
-  auto tripleAttr = moduleOp ? moduleOp->getAttrOfType<mlir::StringAttr>(
-                                   cir::CIRDialect::getTripleAttrName())
-                             : nullptr;
+  if (!moduleOp)
+    return;
+
+  auto tripleAttr = moduleOp->getAttrOfType<mlir::StringAttr>(
+      cir::CIRDialect::getTripleAttrName());
   if (!tripleAttr)
     return;
+
   llvm::Triple triple(tripleAttr.getValue().str());
 
-  // size_t is not 64 bits on the 32 bit archs, the ILP32 on 64 ABIs, and
-  // the PS3, so the length argument would have the wrong width there.
-  bool sizeTypeMismatch = !triple.isArch64Bit() || triple.isX32() ||
-                          triple.isABIN32() ||
-                          triple.getEnvironment() == llvm::Triple::GNUILP32 ||
-                          triple.getOS() == llvm::Triple::Lv2;
+  // cir.libc.memchr currently requires a 64 bit length. Use the AST size_t
+  // width recorded by CIRGen instead of inferring it from target properties.
+  auto sizeWidthAttr = moduleOp->getAttrOfType<mlir::IntegerAttr>(
+      cir::CIRDialect::getSizeTypeWidthAttrName());
+  bool sizeTypeMismatch = !sizeWidthAttr ||
+                          !sizeWidthAttr.getType().isSignlessInteger(32) ||
+                          sizeWidthAttr.getInt() != 64;
 
-  // These targets ship no C library that could provide the new call.
-  bool noCLibrary = triple.isGPU() || triple.isBPF();
+  // The current memchr lowering supplies no target ABI extension attributes, so
+  // restrict the rewrite to targets known not to need them.
+  // TODO(cir): use target-aware ABI and libcall availability information.
+  bool abiSafeTarget =
+      triple.getArch() == llvm::Triple::x86_64 || triple.isAArch64();
 
-  if (sizeTypeMismatch || noCLibrary)
+  // AArch64 GNUILP32 AST types disagree with LLVM's data layout.
+  bool unsupportedABI =
+      triple.isAArch64() && triple.getEnvironment() == llvm::Triple::GNUILP32;
+
+  if (sizeTypeMismatch || !abiSafeTarget || unsupportedABI)
+    return;
+
+  // Lowering resolves memchr in the module symbol table. An existing symbol may
+  // collide with the introduced libcall or carry incompatible semantics.
+  if (symbolTables.lookupSymbolIn(
+          moduleOp, mlir::StringAttr::get(findOp.getContext(), "memchr")))
     return;
 
   mlir::Location loc = findOp.getLoc();
   mlir::Value first = findOp.getFirst();
   mlir::Value last = findOp.getLast();
   CIRBaseBuilderTy builder(*findOp.getContext());
-  builder.setInsertionPointAfter(findOp.getOperation());
+  builder.setInsertionPointAfter(findOp);
 
-  // void *memchr(const void *s, int c, size_t n)
-  mlir::Value src = builder.createBitcast(loc, first, builder.getVoidPtrTy());
-  mlir::Value pattern = builder.createIntCast(
-      builder.createLoad(loc, findOp.getPattern()), builder.getSIntNTy(32));
-  mlir::Value len =
-      cir::PtrDiffOp::create(builder, loc, builder.getUIntNTy(64), last, first);
-  mlir::Value res = cir::MemChrOp::create(builder, loc, src, pattern, len);
-  res = builder.createBitcast(loc, res, iterTy);
-
+  // C requires the pointer argument to be valid even when the length is zero,
+  // and an empty range is allowed to be a pair of null pointers.
+  mlir::Value isEmpty =
+      builder.createCompare(loc, cir::CmpOpKind::eq, first, last);
   mlir::Value result =
-      builder.createSelect(loc, builder.createPtrIsNull(res), last, res);
+      cir::TernaryOp::create(
+          builder, loc, isEmpty,
+          [&](mlir::OpBuilder &, mlir::Location) {
+            builder.createYield(loc, last);
+          },
+          [&](mlir::OpBuilder &, mlir::Location) {
+            mlir::Value src =
+                builder.createBitcast(loc, first, builder.getVoidPtrTy());
+            mlir::Value pattern = builder.createIntCast(
+                builder.createLoad(loc, findOp.getPattern()),
+                builder.getSIntNTy(32));
+            mlir::Value len = cir::PtrDiffOp::create(
+                builder, loc, builder.getUIntNTy(64), last, first);
+            mlir::Value res =
+                cir::MemChrOp::create(builder, loc, src, pattern, len);
+            res = builder.createBitcast(loc, res, iterTy);
+            builder.createYield(
+                loc, builder.createSelect(loc, builder.createPtrIsNull(res),
+                                          last, res));
+          })
+          .getResult();
   findOp.getResult().replaceAllUsesWith(result);
   findOp.erase();
 }

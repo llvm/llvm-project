@@ -36,6 +36,11 @@ def CIR_Dialect : Dialect {
   let extraClassDeclaration = [{
     static llvm::StringRef getSourceLanguageAttrName() { return "cir.lang"; }
     static llvm::StringRef getTripleAttrName() { return "cir.triple"; }
+    // Width in bits of the size_t the AST uses for this target. It can
+    // disagree with the module data layout, as it does on AArch64 GNUILP32.
+    static llvm::StringRef getSizeTypeWidthAttrName() {
+      return "cir.size_type_width";
+    }
     static llvm::StringRef getOptInfoAttrName() { return "cir.opt_info"; }
     static llvm::StringRef getCalleeAttrName() { return "callee"; }
     static llvm::StringRef getNoThrowAttrName() { return "nothrow"; }
