@@ -1690,8 +1690,11 @@ public:
     cls.def("__str__", [](PyValue &self) {
       PyPrintAccumulator printAccum;
       printAccum.parts.append(std::string(DerivedTy::pyClassName) + "(");
-      mlirValuePrint(self.get(), printAccum.getCallback(),
-                     printAccum.getUserData());
+      {
+        nanobind::gil_scoped_release gil;
+        mlirValuePrint(self.get(), printAccum.getCallback(),
+                       printAccum.getUserData());
+      }
       printAccum.parts.append(")");
       return printAccum.join();
     });

@@ -496,6 +496,8 @@ public:
     callbacks.getEffects = [](MlirOperation op,
                               MlirMemoryEffectInstancesList effects,
                               void *userData) {
+      // Parent transform op verifiers query effects of nested transform ops.
+      nb::gil_scoped_acquire gil;
       nb::handle pyClass(static_cast<PyObject *>(userData));
 
       // Get the 'get_effects' method from the Python class.

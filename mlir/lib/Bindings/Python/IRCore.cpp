@@ -516,23 +516,21 @@ nb::object PyMlirContext::attachDiagnosticHandler(nb::object callback) {
   // guaranteed to be known to pybind.
   auto handlerCallback =
       +[](MlirDiagnostic diagnostic, void *userData) -> MlirLogicalResult {
+    // Since this can be called from arbitrary C++ contexts, always get the
+    // GIL before creating any Python objects.
+    nb::gil_scoped_acquire gil;
     PyDiagnostic *pyDiagnostic = new PyDiagnostic(diagnostic);
     nb::object pyDiagnosticObject =
         nb::cast(pyDiagnostic, nb::rv_policy::take_ownership);
 
     auto *pyHandler = static_cast<PyDiagnosticHandler *>(userData);
     bool result = false;
-    {
-      // Since this can be called from arbitrary C++ contexts, always get the
-      // gil.
-      nb::gil_scoped_acquire gil;
-      try {
-        result = nb::cast<bool>(pyHandler->callback(pyDiagnostic));
-      } catch (std::exception &e) {
-        fprintf(stderr, "MLIR Python Diagnostic handler raised exception: %s\n",
-                e.what());
-        pyHandler->hadError = true;
-      }
+    try {
+      result = nb::cast<bool>(pyHandler->callback(pyDiagnostic));
+    } catch (std::exception &e) {
+      fprintf(stderr, "MLIR Python Diagnostic handler raised exception: %s\n",
+              e.what());
+      pyHandler->hadError = true;
     }
 
     pyDiagnostic->invalidate();
@@ -564,6 +562,7 @@ MlirLogicalResult PyMlirContext::ErrorCapture::handler(MlirDiagnostic diag,
       MlirDiagnosticSeverity::MlirDiagnosticError)
     return mlirLogicalResultFailure();
 
+  nb::gil_scoped_acquire gil;
   self->errors.emplace_back(PyDiagnostic(diag).getInfo());
   return mlirLogicalResultSuccess();
 }
@@ -1051,8 +1050,12 @@ void PyOperationBase::print(std::optional<int64_t> largeElementsLimit,
     mlirOpPrintingFlagsPrintNameLocAsPrefix(flags);
 
   PyFileAccumulator accum(fileObject, binary);
-  mlirOperationPrintWithFlags(operation, flags, accum.getCallback(),
-                              accum.getUserData());
+  // Printing creates an AsmState that may recursively invoke Python verifiers.
+  {
+    nb::gil_scoped_release gil;
+    mlirOperationPrintWithFlags(operation, flags, accum.getCallback(),
+                                accum.getUserData());
+  }
   mlirOpPrintingFlagsDestroy(flags);
 }
 
@@ -1177,7 +1180,15 @@ bool PyOperationBase::isBeforeInBlock(PyOperationBase &other) {
 bool PyOperationBase::verify() {
   PyOperation &op = getOperation();
   PyMlirContext::ErrorCapture errors(op.getContext());
-  if (!mlirOperationVerify(op.get()))
+  bool verified;
+  {
+    // Recursive verification may invoke Python callbacks on MLIR worker
+    // threads. Release the GIL here; Python callbacks reachable during
+    // verification reacquire it.
+    nb::gil_scoped_release gil;
+    verified = mlirOperationVerify(op.get());
+  }
+  if (!verified)
     throw MLIRError("Verification failed", errors.take());
   return true;
 }
@@ -1758,7 +1769,10 @@ PyAsmState::PyAsmState(MlirValue value, bool useLocalScope) {
   // associate lifetime with the state.
   if (useLocalScope)
     mlirOpPrintingFlagsUseLocalScope(flags);
-  state = mlirAsmStateCreateForValue(value, flags);
+  {
+    nb::gil_scoped_release gil;
+    state = mlirAsmStateCreateForValue(value, flags);
+  }
 }
 
 PyAsmState::PyAsmState(PyOperationBase &operation, bool useLocalScope) {
@@ -1767,7 +1781,11 @@ PyAsmState::PyAsmState(PyOperationBase &operation, bool useLocalScope) {
   // associate lifetime with the state.
   if (useLocalScope)
     mlirOpPrintingFlagsUseLocalScope(flags);
-  state = mlirAsmStateCreateForOperation(operation.getOperation().get(), flags);
+  {
+    nb::gil_scoped_release gil;
+    state =
+        mlirAsmStateCreateForOperation(operation.getOperation().get(), flags);
+  }
 }
 
 //------------------------------------------------------------------------------
@@ -2549,6 +2567,7 @@ void PyOpAdaptor::bind(nb::module_ &m) {
 
 static MlirLogicalResult verifyTraitByMethod(MlirOperation op, void *userData,
                                              const char *methodName) {
+  nb::gil_scoped_acquire gil;
   nb::handle targetObj(static_cast<PyObject *>(userData));
   if (!nb::hasattr(targetObj, methodName))
     return mlirLogicalResultSuccess();
@@ -3890,6 +3909,7 @@ void populateIRCore(nb::module_ &m) {
       .def(
           "dump",
           [](PyModule &self) {
+            nb::gil_scoped_release gil;
             mlirOperationDump(mlirModuleGetOperation(self.get()));
           },
           kDumpDocstring)
@@ -4637,8 +4657,11 @@ void populateIRCore(nb::module_ &m) {
           [](PyBlock &self) {
             self.checkValid();
             PyPrintAccumulator printAccum;
-            mlirBlockPrint(self.get(), printAccum.getCallback(),
-                           printAccum.getUserData());
+            {
+              nb::gil_scoped_release gil;
+              mlirBlockPrint(self.get(), printAccum.getCallback(),
+                             printAccum.getUserData());
+            }
             return printAccum.join();
           },
           "Returns the assembly form of the block.")
@@ -5034,7 +5057,11 @@ void populateIRCore(nb::module_ &m) {
           },
           "Context in which the value lives.")
       .def(
-          "dump", [](PyValue &self) { mlirValueDump(self.get()); },
+          "dump",
+          [](PyValue &self) {
+            nb::gil_scoped_release gil;
+            mlirValueDump(self.get());
+          },
           kDumpDocstring)
       .def_prop_ro(
           "owner",
@@ -5084,8 +5111,11 @@ void populateIRCore(nb::module_ &m) {
           [](PyValue &self) {
             PyPrintAccumulator printAccum;
             printAccum.parts.append("Value(");
-            mlirValuePrint(self.get(), printAccum.getCallback(),
-                           printAccum.getUserData());
+            {
+              nb::gil_scoped_release gil;
+              mlirValuePrint(self.get(), printAccum.getCallback(),
+                             printAccum.getUserData());
+            }
             printAccum.parts.append(")");
             return printAccum.join();
           },
@@ -5105,11 +5135,14 @@ void populateIRCore(nb::module_ &m) {
               mlirOpPrintingFlagsUseLocalScope(flags);
             if (useNameLocAsPrefix)
               mlirOpPrintingFlagsPrintNameLocAsPrefix(flags);
-            MlirAsmState valueState =
-                mlirAsmStateCreateForValue(self.get(), flags);
-            mlirValuePrintAsOperand(self.get(), valueState,
-                                    printAccum.getCallback(),
-                                    printAccum.getUserData());
+            MlirAsmState valueState;
+            {
+              nb::gil_scoped_release gil;
+              valueState = mlirAsmStateCreateForValue(self.get(), flags);
+              mlirValuePrintAsOperand(self.get(), valueState,
+                                      printAccum.getCallback(),
+                                      printAccum.getUserData());
+            }
             mlirOpPrintingFlagsDestroy(flags);
             mlirAsmStateDestroy(valueState);
             return printAccum.join();
