@@ -53856,6 +53856,27 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
     SDValue Op(N, 0);
     if (SDValue Res = combineX86ShufflesRecursively(Op, DAG, Subtarget))
       return Res;
+
+    // If second operand is a constant mask, then only the elements that aren't
+    // allones are actually demanded by the first operand.
+    APInt UndefElts;
+    SmallVector<APInt> EltBits;
+    int NumElts = VT.getVectorNumElements();
+    int EltSizeInBits = VT.getScalarSizeInBits();
+    if (getTargetConstantBitsFromNode(N1, EltSizeInBits, UndefElts, EltBits)) {
+      APInt DemandedElts = APInt::getZero(NumElts);
+      for (int I = 0; I != NumElts; ++I)
+        if (!EltBits[I].isAllOnes())
+          DemandedElts.setBit(I);
+
+      // We must freeze the result to prevent OR(poison,-1) -> poison.
+      if (!DemandedElts.isAllOnes() && N0.getOpcode() != ISD::FREEZE &&
+          TLI.SimplifyDemandedVectorElts(N0, DemandedElts, DCI)) {
+        DAG.UpdateNodeOperands(N, DAG.getFreeze(N->getOperand(0)),
+                               N->getOperand(1));
+        return SDValue(N, 0);
+      }
+    }
   }
 
   if (SDValue R = combineOrXorWithSETCC(N->getOpcode(), dl, VT, N0, N1, DAG))

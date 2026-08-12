@@ -76,13 +76,7 @@ define <4 x i1> @t1_all_odd_eq(<4 x i32> %X) nounwind {
 define <4 x i1> @t1_all_odd_ne(<4 x i32> %X) nounwind {
 ; CHECK-SSE2-LABEL: t1_all_odd_ne:
 ; CHECK-SSE2:       # %bb.0:
-; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [2863311531,2863311531,2863311531,2863311531]
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm0
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm2
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[0,2,2,3]
-; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; CHECK-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [2863311531,2863311531,2863311531,2863311531]
 ; CHECK-SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-SSE2-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-SSE2-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
