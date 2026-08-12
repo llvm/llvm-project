@@ -22,16 +22,10 @@
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-prepare-agpr-alloc"
-
-static cl::opt<bool> BufferLoadPreferAGPR(
-    "amdgpu-buffer-load-prefer-agpr",
-    cl::desc("Prefer AGPRs for eligible buffer load results"), cl::Hidden,
-    cl::init(false));
 
 namespace {
 
@@ -119,13 +113,16 @@ bool AMDGPUPrepareAGPRAllocImpl::run(MachineFunction &MF) {
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
-      if (BufferLoadPreferAGPR && TII.isMUBUF(MI) && MI.mayLoad() &&
-          !MI.mayStore() && MI.getOperand(0).isReg() &&
-          MI.getOperand(0).isDef()) {
-        Register DstReg = MI.getOperand(0).getReg();
-        if (DstReg.isVirtual() && shouldPreferAGPR(DstReg)) {
-          MRI.setRegAllocationHint(DstReg, AMDGPURI::PreferAGPR, Register());
-          Changed = true;
+      if (MI.mayLoadOrStore()) {
+        for (const MachineOperand &MO : MI.operands()) {
+          if (!MO.isReg())
+            continue;
+
+          Register Reg = MO.getReg();
+          if (Reg.isVirtual() && shouldPreferAGPR(Reg)) {
+            MRI.setRegAllocationHint(Reg, AMDGPURI::PreferAGPR, Register());
+            Changed = true;
+          }
         }
       }
 
