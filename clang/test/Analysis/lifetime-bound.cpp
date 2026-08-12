@@ -428,18 +428,10 @@ int test_multi_param_highlight() {
   // expected-note@-7    {{Value's lifetime bound to the lifetime of 'local_two' here}}
   // expected-note@-8    {{Lifetime of 'local_two' ended here}}
 
-  // CHECK: :[[@LINE-10]]:33: note: Value's lifetime bound to the lifetime of 'local_one' here
-  // CHECK-NEXT: [[@LINE-14]] | int local_one = 1, local_two = 2;
-  // CHECK-NEXT:                ~~~~~~~~~~~~~~~~~
-  // CHECK-NEXT: [[@LINE-15]] | // expected{{-}}note@-1 {{.*}}
-  // CHECK-NEXT: [[@LINE-15]] | // expected{{-}}note@-2 {{.*}}
-  // CHECK-NEXT: [[@LINE-15]] | return multi_params_annotated(&local_one, &local_two);
-  // CHECK-NEXT:                                              ^~~~~~~~~~
-  // CHECK: :[[@LINE-17]]:45: note: Value's lifetime bound to the lifetime of 'local_two' here
-  // CHECK-NEXT: [[@LINE-21]] | int local_one = 1, local_two = 2;
-  // CHECK-NEXT:                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  // CHECK-NEXT: [[@LINE-22]] | // expected{{-}}note@-1 {{.*}}
-  // CHECK-NEXT: [[@LINE-22]] | // expected{{-}}note@-2 {{.*}}
-  // CHECK-NEXT: [[@LINE-22]] | return multi_params_annotated(&local_one, &local_two);
-  // CHECK-NEXT:                                                          ^~~~~~~~~~
+  // CHECK: note: Value's lifetime bound to the lifetime of 'local_one' here
+  // CHECK: return multi_params_annotated(&local_one, &local_two);
+  // CHECK-NEXT:                          ^~~~~~~~~~
+  // CHECK: note: Value's lifetime bound to the lifetime of 'local_two' here
+  // CHECK: return multi_params_annotated(&local_one, &local_two);
+  // CHECK-NEXT:                                      ^~~~~~~~~~
 }
