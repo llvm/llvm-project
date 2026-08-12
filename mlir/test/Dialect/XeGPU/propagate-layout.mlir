@@ -960,6 +960,23 @@ func.func @insert_strided_slice_with_slice_layout(%arg0: memref<8x16xf32>) {
 }
 
 // -----
+gpu.module @test {
+// CHECK-LABEL: func.func @insert_strided_slice_lane_broadcast_dim(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<8x1xf32>) {
+// CHECK: %[[CST_SMALL:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} dense<1.000000e+00> : vector<1x1xf32>
+// CHECK: %[[CST_LARGE:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} dense<0.000000e+00> : vector<8x1xf32>
+// CHECK: %[[INSERT:.*]] = vector.insert_strided_slice %[[CST_SMALL]], %[[CST_LARGE]] {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, offsets = [0, 0], strides = [1, 1]} : vector<1x1xf32> into vector<8x1xf32>
+func.func @insert_strided_slice_lane_broadcast_dim(%arg0: memref<8x1xf32>) {
+  %cst_small = arith.constant dense<1.0> : vector<1x1xf32>
+  %cst_large = arith.constant dense<0.0> : vector<8x1xf32>
+  %insert = vector.insert_strided_slice %cst_small, %cst_large {offsets = [0, 0], strides = [1, 1]} : vector<1x1xf32> into vector<8x1xf32>
+  %tdesc = xegpu.create_nd_tdesc %arg0 : memref<8x1xf32> -> !xegpu.tensor_desc<8x1xf32>
+  xegpu.store_nd %insert, %tdesc[0, 0] <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}> : vector<8x1xf32>, !xegpu.tensor_desc<8x1xf32>
+  return
+}
+}
+
+// -----
 gpu.module @test{
   // CHECK-LABEL: load_store_matrix
   // CHECK: xegpu.load_matrix %{{.*}} <{layout = #xegpu.layout<lane_layout = [1, 1], lane_data = [1, 1]>}>

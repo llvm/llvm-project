@@ -96,7 +96,7 @@ private:
 /// generic kernel class.
 struct CUDAKernelTy : public GenericKernelTy {
   /// Create a CUDA kernel with a name and an execution mode.
-  CUDAKernelTy(const char *Name) : GenericKernelTy(Name), Func(nullptr) {}
+  CUDAKernelTy(StringRef Name) : GenericKernelTy(Name), Func(nullptr) {}
 
   /// Initialize the CUDA kernel.
   Error initImpl(GenericDeviceTy &GenericDevice,
@@ -139,7 +139,7 @@ struct CUDAKernelTy : public GenericKernelTy {
   /// Launch the CUDA kernel function.
   Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads[3],
                    uint32_t NumBlocks[3], uint32_t DynBlockMemSize,
-                   KernelArgsTy &KernelArgs, KernelLaunchParamsTy LaunchParams,
+                   KernelLaunchArgsTy &LaunchArgs,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override;
 
   /// Return maximum block size for maximum occupancy
@@ -512,7 +512,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
   }
 
   /// Allocate and construct a CUDA kernel.
-  Expected<GenericKernelTy &> constructKernel(const char *Name) override {
+  Expected<GenericKernelTy &> constructKernel(StringRef Name) override {
     // Allocate and construct the CUDA kernel.
     CUDAKernelTy *CUDAKernel = Plugin.allocate<CUDAKernelTy>();
     if (!CUDAKernel)
@@ -839,6 +839,20 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
     CUresult Res = cuMemcpyDtoHAsync(HstPtr, (CUdeviceptr)TgtPtr, Size, Stream);
     return Plugin::check(Res, "error in cuMemcpyDtoHAsync: %s");
+  }
+
+  Error dataMemcpyImpl(void *DstPtr, const void *SrcPtr, int64_t Size,
+                       AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+    if (auto Err = setContext())
+      return Err;
+
+    CUstream Stream;
+    if (auto Err = getStream(AsyncInfoWrapper, Stream))
+      return Err;
+
+    CUresult Res =
+        cuMemcpyAsync((CUdeviceptr)DstPtr, (CUdeviceptr)SrcPtr, Size, Stream);
+    return Plugin::check(Res, "error in cuMemcpyAsync: %s");
   }
 
   /// Exchange data between two devices directly. We may use peer access if
@@ -1481,11 +1495,11 @@ private:
 
     AsyncInfoWrapperTy AsyncInfoWrapper(*this, nullptr);
 
-    KernelArgsTy KernelArgs = {};
+    KernelLaunchArgsTy LaunchArgs = {};
     uint32_t NumBlocksAndThreads[3] = {1u, 1u, 1u};
-    auto Err = CUDAKernel.launchImpl(*this, NumBlocksAndThreads,
-                                     NumBlocksAndThreads, 0, KernelArgs,
-                                     KernelLaunchParamsTy{}, AsyncInfoWrapper);
+    auto Err =
+        CUDAKernel.launchImpl(*this, NumBlocksAndThreads, NumBlocksAndThreads,
+                              0, LaunchArgs, AsyncInfoWrapper);
 
     AsyncInfoWrapper.finalize(Err);
     if (Err)
@@ -1530,8 +1544,7 @@ private:
 Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                uint32_t NumThreads[3], uint32_t NumBlocks[3],
                                uint32_t DynBlockMemSize,
-                               KernelArgsTy &KernelArgs,
-                               KernelLaunchParamsTy LaunchParams,
+                               KernelLaunchArgsTy &LaunchArgs,
                                AsyncInfoWrapperTy &AsyncInfoWrapper) const {
   CUDADeviceTy &CUDADevice = static_cast<CUDADeviceTy &>(GenericDevice);
 
@@ -1557,7 +1570,7 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
 
   CUlaunchAttribute CoopAttr;
   CoopAttr.id = CU_LAUNCH_ATTRIBUTE_COOPERATIVE;
-  CoopAttr.value.cooperative = KernelArgs.Flags.Cooperative;
+  CoopAttr.value.cooperative = LaunchArgs.Flags.Cooperative;
 
   CUlaunchConfig LaunchConfig = {NumBlocks[0],    NumBlocks[1],
                                  NumBlocks[2],    NumThreads[0],
@@ -1565,7 +1578,7 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                  DynBlockMemSize, Stream,
                                  &CoopAttr,       1};
 
-  CUresult Res = cuLaunchKernelEx(&LaunchConfig, Func, LaunchParams.Args,
+  CUresult Res = cuLaunchKernelEx(&LaunchConfig, Func, LaunchArgs.Args,
                                   /*extra=*/nullptr);
 
   // Register a callback to indicate when the kernel is complete.

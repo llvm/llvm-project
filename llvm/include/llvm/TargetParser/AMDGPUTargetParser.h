@@ -13,6 +13,7 @@
 #ifndef LLVM_TARGETPARSER_AMDGPUTARGETPARSER_H
 #define LLVM_TARGETPARSER_AMDGPUTARGETPARSER_H
 
+#include "llvm/ADT/Bitset.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
@@ -31,7 +32,7 @@ class Triple;
 namespace AMDGPU {
 
 /// GPU kinds supported by the AMDGPU target.
-enum GPUKind : uint32_t {
+enum GPUKind : uint8_t {
   // Not specified processor.
   GK_NONE = 0,
 
@@ -41,6 +42,14 @@ enum GPUKind : uint32_t {
 #define GET_AMDGPU_GPU_ENUM
 #include "llvm/TargetParser/AMDGPUTargetParserDef.inc"
 };
+
+/// One enumerator per frontend-visible feature bit; NUM_FEATURES is the count.
+enum AMDGPUFeature : unsigned {
+#define GET_AMDGPU_FEATURE_ENUM
+#include "llvm/TargetParser/AMDGPUTargetParserDef.inc"
+};
+
+using AMDGPUFeatureBitset = Bitset<NUM_FEATURES>;
 
 /// Instruction set architecture version.
 struct IsaVersion {
@@ -155,6 +164,13 @@ LLVM_ABI GPUKind getGPUKindFromSubArch(Triple::SubArchType SubArch);
 LLVM_ABI unsigned getArchAttrAMDGCN(GPUKind AK);
 LLVM_ABI unsigned getArchAttrAMDGCN(Triple::SubArchType SubArch);
 LLVM_ABI R600FeatureKind getArchAttrR600(GPUKind AK);
+
+/// Returns \p AK's feature bitset, or an empty bitset if unknown.
+LLVM_ABI const AMDGPUFeatureBitset &getFeatureBitset(GPUKind AK);
+
+/// Appends the feature name of each bit set in \p Features to \p Names.
+LLVM_ABI void getFeatureNames(const AMDGPUFeatureBitset &Features,
+                              SmallVectorImpl<StringRef> &Names);
 
 /// Append the valid AMDGCN GPU names to \p Values. If \p SubArch is not
 /// NoSubArch, only GPUs compatible with that subarch (see isCPUValidForSubArch)

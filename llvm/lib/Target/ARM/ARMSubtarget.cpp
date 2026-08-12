@@ -88,15 +88,16 @@ ARMFrameLowering *ARMSubtarget::initializeFrameLowering(StringRef CPU,
 ARMSubtarget::ARMSubtarget(const Triple &TT, const std::string &CPU,
                            const std::string &FS,
                            const ARMBaseTargetMachine &TM, bool IsLittle,
-                           bool MinSize, DenormalMode DM)
+                           FloatABI::ABIType FloatABI, bool MinSize,
+                           DenormalMode DM)
     : ARMGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS),
       UseMulOps(UseFusedMulOps), CPUString(CPU), OptMinSize(MinSize),
       IsLittle(IsLittle), DM(DM), TargetTriple(TT), Options(TM.Options), TM(TM),
-      FrameLowering(initializeFrameLowering(CPU, FS)),
+      FloatABIType(FloatABI), FrameLowering(initializeFrameLowering(CPU, FS)),
       // At this point initializeSubtargetDependencies has been called so
       // we can query directly.
       InstrInfo(isThumb1Only() ? (ARMBaseInstrInfo *)new Thumb1InstrInfo(*this)
-                : !isThumb()   ? (ARMBaseInstrInfo *)new ARMInstrInfo(*this)
+                : !isThumb() ? (ARMBaseInstrInfo *)new ARMInstrInfo(*this)
                              : (ARMBaseInstrInfo *)new Thumb2InstrInfo(*this)),
       TLInfo(TM, *this) {
 
@@ -261,13 +262,18 @@ void ARMSubtarget::initLibcallLoweringInfo(LibcallLoweringInfo &Info) const {
   }
 
   // AEABI provides an ordered-equal compare (__aeabi_{f,d}cmpeq) but no
-  // not-equal compare. Clear the unordered-not-equal libcall so UNE will lower
-  // as !OEQ using the AEABI compare, rather than emitting the now-available
-  // generic __nesf2/__nedf2.
-  if (RTLCI.isAvailable(RTLIB::impl___aeabi_fcmpeq))
+  // not-equal compare. Clear the not-equal libcalls so UNE will lower as !OEQ
+  // using the AEABI compare, rather than emitting the generic not-equal helper
+  // which would otherwise be preferred.
+  if (RTLCI.isAvailable(RTLIB::impl___aeabi_fcmpeq)) {
     Info.setLibcallImpl(RTLIB::UNE_F32, RTLIB::Unsupported);
-  if (RTLCI.isAvailable(RTLIB::impl___aeabi_dcmpeq))
+    Info.setLibcallImpl(RTLIB::FCMP3_PRED_UNE_F32, RTLIB::Unsupported);
+  }
+
+  if (RTLCI.isAvailable(RTLIB::impl___aeabi_dcmpeq)) {
     Info.setLibcallImpl(RTLIB::UNE_F64, RTLIB::Unsupported);
+    Info.setLibcallImpl(RTLIB::FCMP3_PRED_UNE_F64, RTLIB::Unsupported);
+  }
 }
 
 bool ARMSubtarget::isXRaySupported() const {
