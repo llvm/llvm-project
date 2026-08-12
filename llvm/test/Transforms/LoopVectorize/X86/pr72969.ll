@@ -30,8 +30,8 @@ define void @test(ptr %p) {
 ; VEC-NEXT:    [[TMP0:%.*]] = ptrtoaddr ptr [[P]] to i64
 ; VEC-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 16
 ; VEC-NEXT:    [[TMP9:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 add (i64 ptrtoaddr (ptr @h to i64), i64 1))
-; VEC-NEXT:    [[TMP15:%.*]] = sub i64 [[TMP9]], [[TMP0]]
-; VEC-NEXT:    [[TMP2:%.*]] = add i64 [[TMP15]], -9
+; VEC-NEXT:    [[TMP15:%.*]] = add i64 [[TMP9]], -9
+; VEC-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP15]], [[TMP0]]
 ; VEC-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
 ; VEC-NEXT:    [[TMP4:%.*]] = add nuw nsw i64 [[TMP3]], 1
 ; VEC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP4]], 8
