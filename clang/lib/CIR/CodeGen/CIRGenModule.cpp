@@ -885,11 +885,11 @@ bool CIRGenModule::getCPUAndFeaturesAttributes(
   }
 
   if (!targetCPU.empty()) {
-    attrs["cir.target-cpu"] = targetCPU.str();
+    attrs[cir::CIRDialect::getTargetCPUAttrName()] = targetCPU.str();
     addedAttr = true;
   }
   if (!tuneCPU.empty()) {
-    attrs["cir.tune-cpu"] = tuneCPU.str();
+    attrs[cir::CIRDialect::getTuneCPUAttrName()] = tuneCPU.str();
     addedAttr = true;
   }
   if (!features.empty() && setTargetFeatures) {
@@ -899,7 +899,8 @@ bool CIRGenModule::getCPUAndFeaturesAttributes(
       return getTarget().isReadOnlyFeature(f.substr(1));
     });
     llvm::sort(features);
-    attrs["cir.target-features"] = llvm::join(features, ",");
+    attrs[cir::CIRDialect::getTargetFeaturesAttrName()] =
+        llvm::join(features, ",");
     addedAttr = true;
   }
   // TODO(cir): add metadata for AArch64 Function Multi Versioning.
@@ -921,9 +922,17 @@ void CIRGenModule::setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op) {
       if (auto func = dyn_cast<cir::FuncOp>(op)) {
         llvm::StringMap<std::string> attrs;
         if (getCPUAndFeaturesAttributes(gd, attrs)) {
-          // TODO(cir): Classic codegen removes the existing target-cpu,
-          // target-features, tune-cpu and fmv-features attributes here
-          // before adding the new ones.
+          // TODO(cir): Classic codegen also removes fmv-features here, which
+          // CIR does not emit yet.
+          //
+          // getCPUAndFeaturesAttributes reads the most recent declaration, so
+          // its result supersedes anything an earlier one wrote.  Clear first:
+          // setAttr alone would leave a name this call no longer produces.
+          for (llvm::StringRef name :
+               {cir::CIRDialect::getTargetCPUAttrName(),
+                cir::CIRDialect::getTuneCPUAttrName(),
+                cir::CIRDialect::getTargetFeaturesAttrName()})
+            func->removeAttr(name);
           for (const auto &[key, val] : attrs)
             func->setAttr(key, builder.getStringAttr(val));
         }
@@ -2778,6 +2787,16 @@ StringRef CIRGenModule::getMangledName(GlobalDecl gd) {
                "getMangledName: C++ constructor without variants");
       return cast<NamedDecl>(gd.getDecl())->getIdentifier()->getName();
     }
+  }
+
+  // In CUDA/HIP device compilation with -fgpu-rdc, the mangled name of a
+  // static device variable depends on whether the variable is referenced by
+  // a host or device host function. Therefore the mangled name cannot be
+  // cached.
+  if (!langOpts.CUDAIsDevice || !astContext.mayExternalize(gd.getDecl())) {
+    auto foundName = mangledDeclNames.find(canonicalGd);
+    if (foundName != mangledDeclNames.end())
+      return foundName->second;
   }
 
   // Keep the first result in the case of a mangling collision.

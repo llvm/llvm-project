@@ -1944,8 +1944,7 @@ public:
   /// \returns True if the target prefers fixed width vectorization if the
   /// loop vectorizer's cost-model assigns an equal cost to the fixed and
   /// scalable version of the vectorized loop.
-  /// \p IsEpilogue is true if the decision is for the epilogue loop.
-  LLVM_ABI bool preferFixedOverScalableIfEqualCost(bool IsEpilogue) const;
+  LLVM_ABI bool preferFixedOverScalableIfEqualCost() const;
 
   /// \returns True if target prefers SLP vectorizer with altermate opcode
   /// vectorization, false - otherwise.
