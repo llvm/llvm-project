@@ -2842,6 +2842,27 @@ xegpu::DistributeLayoutAttr xegpu::inferSourceLayoutFromResultForNonAnchorOp(
   return nullptr;
 }
 
+// For a yield operand, return the layout of the region iter_arg it forwards
+// into (the authoritative loop-carried layout), or nullptr if it feeds no block
+// argument (e.g. scf.if's yield, which only feeds results).
+static xegpu::DistributeLayoutAttr getLoopCarriedLayoutForYieldOperand(
+    RegionBranchTerminatorOpInterface terminator, OpOperand &operand) {
+  auto branch = dyn_cast<RegionBranchOpInterface>(terminator->getParentOp());
+  if (!branch)
+    return nullptr;
+  RegionBranchSuccessorMapping mapping;
+  branch.getSuccessorOperandInputMapping(mapping,
+                                         RegionBranchPoint(terminator));
+  for (const auto &[successorOperand, successorInputs] : mapping) {
+    if (successorOperand != &operand)
+      continue;
+    for (Value input : successorInputs)
+      if (auto arg = dyn_cast<BlockArgument>(input))
+        return xegpu::getDistributeLayoutAttr(arg);
+  }
+  return nullptr;
+}
+
 /// Returns the layout required on `operand`: anchor ops report their declared
 /// per-operand layout directly; non-anchor ops back-derive it from their result
 /// layout via inferSourceLayoutFromResultForNonAnchorOp.
@@ -2852,6 +2873,14 @@ xegpu::DistributeLayoutAttr xegpu::getConsumerLayoutAt(OpOperand &operand) {
   // ResolveLayoutConflicts compares producer-vs-declared
   if (isa<xegpu::AnchorLayoutInterface>(op))
     return xegpu::getDistributeLayoutAttr(operand);
+  // Composite region ops (scf.for/scf.while/scf.if) carry the required operand
+  // layout as the layout_operand_N pinned by propagateRegionArgsToInits.
+  if (isa<RegionBranchOpInterface>(op))
+    return xegpu::getDistributeLayoutAttr(operand);
+  // Region terminators (scf.yield/scf.condition) inherit the layout of the
+  // region iter_arg their operand feeds.
+  if (auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(op))
+    return getLoopCarriedLayoutForYieldOperand(terminator, operand);
   // For non-anchor ops, derive the operand layout from the op's result
   // layout via op-specific semantics.
   xegpu::DistributeLayoutAttr resLayout;

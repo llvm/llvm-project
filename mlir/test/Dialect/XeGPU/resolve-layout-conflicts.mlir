@@ -78,7 +78,7 @@ func.func @load_nd_with_conflicting_tensor_desc_in_loop(%arg0: memref<64x64xf16>
       -> vector<16x16xf16>
     %3 = arith.addf %acc, %2 {layout_result_0 = #inst_data_8x16} : vector<16x16xf16>
     scf.yield %3, %tdesc : vector<16x16xf16>, !xegpu.tensor_desc<16x16xf16, #inst_data_16x16>
-  } {layout_result_0 = #inst_data_8x16}
+  } {layout_operand_3 = #inst_data_8x16, layout_result_0 = #inst_data_8x16}
   xegpu.prefetch_nd %0 [%c0, %c0] {layout = #inst_data_16x16} : !xegpu.tensor_desc<16x16xf16, #inst_data_16x16>
   return
 }
@@ -220,7 +220,27 @@ func.func @conflict_inside_loop() {
     %1 = "some_op"() {layout_result_0 = #inst_data_16x16} : () -> vector<16x16xf16>
     %2 = arith.addf %acc, %1 {layout_result_0 = #inst_data_8x16} : vector<16x16xf16>
     scf.yield %2 : vector<16x16xf16>
-  } {layout_result_0 = #inst_data_8x16}
+  } {layout_operand_3 = #inst_data_8x16, layout_result_0 = #inst_data_8x16}
+  return
+}
+
+// Conflict on the scf.for init operand: the init value %cst carries [16, 16],
+// but the loop-carried position is pinned to [8, 16] (layout_operand_3). The
+// splat constant is rematerialized with the loop-carried layout and the init
+// is repointed to the clone.
+// CHECK-LABEL: func.func @conflict_init_operand
+// CHECK:         arith.constant {layout_result_0 = #xegpu.layout<inst_data = [16, 16]>} dense<{{.*}}> : vector<16x16xf16>
+// CHECK-NEXT:    %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [8, 16]>} dense<{{.*}}> : vector<16x16xf16>
+// CHECK:         scf.for {{.*}} iter_args(%{{.*}} = %[[CST]]) -> (vector<16x16xf16>)
+// CHECK:         layout_operand_3 = #xegpu.layout<inst_data = [8, 16]>
+func.func @conflict_init_operand() {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %cst = arith.constant {layout_result_0 = #inst_data_16x16} dense<0.0> : vector<16x16xf16>
+  %0 = scf.for %i = %c0 to %c4 step %c1 iter_args(%acc = %cst) -> vector<16x16xf16> {
+    scf.yield %acc : vector<16x16xf16>
+  } {layout_operand_3 = #inst_data_8x16, layout_result_0 = #inst_data_8x16}
   return
 }
 
@@ -248,7 +268,7 @@ func.func @conflict_postop() {
     %1 = "some_op"() {layout_result_0 = #inst_data_16x16} : () -> vector<16x16xf16>
     %2 = arith.addf %acc, %1 {layout_result_0 = #inst_data_16x16} : vector<16x16xf16>
     scf.yield %2 : vector<16x16xf16>
-  } {layout_result_0 = #inst_data_16x16}
+  } {layout_operand_3 = #inst_data_16x16, layout_result_0 = #inst_data_16x16}
   %1 = math.exp %0 {layout_result_0 = #inst_data_8x16} : vector<16x16xf16>
   return
 }
