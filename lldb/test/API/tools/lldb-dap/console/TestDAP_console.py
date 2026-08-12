@@ -6,15 +6,18 @@ import importlib.util
 import os
 import unittest
 
-from lldbsuite.test.decorators import skipIfWasm, skipIfWindows
+from lldbsuite.test.decorators import requireNotWindows, requireNotWasm
 from lldbsuite.test.lldbtest import line_number
 from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase, DAPTestSession
+from lldbsuite.test.skip_reason import UnsupportedReason
 
 
-skipUnlessPsutil = unittest.skipUnless(
+requirePsutil = unittest.skipUnless(
     importlib.util.find_spec("psutil") is not None,
-    "psutil not installed, please install using 'pip install psutil'.",
+    UnsupportedReason(
+        "psutil not installed, please install using 'pip install psutil'."
+    ),
 )
 
 
@@ -113,9 +116,9 @@ class TestDAP_console(DAPTestCaseBase):
     def test_empty_escape_prefix(self):
         self.do_test_with_escape_prefix("")
 
-    @skipIfWindows
-    @skipUnlessPsutil
-    @skipIfWasm  # the test signals the debug server, which for Wasm is the runtime
+    @requireNotWindows
+    @requirePsutil
+    @requireNotWasm  # the test signals the debug server, which for Wasm is the runtime
     def test_exit_status_message_sigterm(self):
         import psutil
 
