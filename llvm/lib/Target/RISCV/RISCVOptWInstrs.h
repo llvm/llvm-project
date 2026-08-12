@@ -27,7 +27,7 @@ public:
                         MachineFunctionAnalysisManager &MFAM);
 };
 
-FunctionPass *createRISCVOptWInstrsPass();
+FunctionPass *createRISCVOptWInstrsLegacyPass();
 void initializeRISCVOptWInstrsLegacyPass(PassRegistry &);
 
 } // namespace llvm

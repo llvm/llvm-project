@@ -31,7 +31,7 @@ public:
   }
 };
 
-FunctionPass *createRISCVVectorPeepholePass();
+FunctionPass *createRISCVVectorPeepholeLegacyPass();
 void initializeRISCVVectorPeepholeLegacyPass(PassRegistry &);
 
 } // namespace llvm

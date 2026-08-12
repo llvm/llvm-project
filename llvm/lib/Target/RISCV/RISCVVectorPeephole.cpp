@@ -846,6 +846,6 @@ RISCVVectorPeepholePass::run(MachineFunction &MF,
   return PA;
 }
 
-FunctionPass *llvm::createRISCVVectorPeepholePass() {
+FunctionPass *llvm::createRISCVVectorPeepholeLegacyPass() {
   return new RISCVVectorPeepholeLegacy();
 }

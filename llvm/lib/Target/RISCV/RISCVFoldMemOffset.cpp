@@ -84,7 +84,7 @@ char RISCVFoldMemOffsetLegacy::ID = 0;
 INITIALIZE_PASS(RISCVFoldMemOffsetLegacy, DEBUG_TYPE,
                 RISCV_FOLD_MEM_OFFSET_NAME, false, false)
 
-FunctionPass *llvm::createRISCVFoldMemOffsetPass() {
+FunctionPass *llvm::createRISCVFoldMemOffsetLegacyPass() {
   return new RISCVFoldMemOffsetLegacy();
 }
 

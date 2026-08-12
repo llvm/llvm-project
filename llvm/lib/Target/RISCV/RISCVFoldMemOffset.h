@@ -28,7 +28,7 @@ public:
                         MachineFunctionAnalysisManager &MFAM);
 };
 
-FunctionPass *createRISCVFoldMemOffsetPass();
+FunctionPass *createRISCVFoldMemOffsetLegacyPass();
 void initializeRISCVFoldMemOffsetLegacyPass(PassRegistry &);
 
 } // namespace llvm

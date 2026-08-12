@@ -32,7 +32,7 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
-FunctionPass *createRISCVGatherScatterLoweringPass();
+FunctionPass *createRISCVGatherScatterLoweringLegacyPass();
 void initializeRISCVGatherScatterLoweringLegacyPass(PassRegistry &);
 
 } // namespace llvm

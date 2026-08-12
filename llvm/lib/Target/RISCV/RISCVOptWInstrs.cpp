@@ -94,7 +94,7 @@ char RISCVOptWInstrsLegacy::ID = 0;
 INITIALIZE_PASS(RISCVOptWInstrsLegacy, DEBUG_TYPE, RISCV_OPT_W_INSTRS_NAME,
                 false, false)
 
-FunctionPass *llvm::createRISCVOptWInstrsPass() {
+FunctionPass *llvm::createRISCVOptWInstrsLegacyPass() {
   return new RISCVOptWInstrsLegacy();
 }
 

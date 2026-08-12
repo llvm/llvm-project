@@ -489,7 +489,7 @@ void RISCVPassConfig::addIRPasses() {
     if (EnableLoopDataPrefetch)
       addPass(createLoopDataPrefetchPass());
 
-    addPass(createRISCVGatherScatterLoweringPass());
+    addPass(createRISCVGatherScatterLoweringLegacyPass());
     addPass(createInterleavedAccessPass());
     addPass(createRISCVCodeGenPrepareLegacyPass());
   }
@@ -637,16 +637,16 @@ void RISCVPassConfig::addMachineSSAOptimization() {
     // vsetvli toggles, and still requires the MachineLoopInfo analysis to be
     // run.
     addPass(&EarlyMachineLICMID);
-    addPass(createRISCVVLOptimizerPass());
+    addPass(createRISCVVLOptimizerLegacyPass());
   }
 
-  addPass(createRISCVVectorPeepholePass());
-  addPass(createRISCVFoldMemOffsetPass());
+  addPass(createRISCVVectorPeepholeLegacyPass());
+  addPass(createRISCVFoldMemOffsetLegacyPass());
 
   TargetPassConfig::addMachineSSAOptimization();
 
   if (TM->getTargetTriple().isRISCV64()) {
-    addPass(createRISCVOptWInstrsPass());
+    addPass(createRISCVOptWInstrsLegacyPass());
   }
 }
 
