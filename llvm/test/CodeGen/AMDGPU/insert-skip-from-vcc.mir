@@ -712,7 +712,7 @@ body:             |
 ---
 # GCN-LABEL: name: and_cmp_vccnz_live_scc
 # GCN: V_CMP_GT_I64_e32 $sgpr0_sgpr1, $vgpr0_vgpr1, implicit-def $vcc, implicit $exec
-# GCN-NOT: S_AND_
+# GCN-NEXT: $vcc = S_AND_B64 $exec, $vcc, implicit-def $scc
 # GCN-NEXT: S_CBRANCH_VCCNZ %bb.1, implicit $vcc
 # GCN: $sgpr0 = S_CSELECT_B32 $sgpr2, $sgpr3, implicit $scc
 name:            and_cmp_vccnz_live_scc
