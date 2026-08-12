@@ -16,6 +16,7 @@
 // LLVMENV-NOT: oclc
 // LLVMENV-NOT: ocml
 // LLVMENV-NOT: ockl
+// LLVMENV-NOT: llvm_libc_wrappers
 
 // RUN: %clang -### --target=x86_64-linux-gnu --rocm-path=%S/Inputs/rocm \
 // RUN:   --offload-targets=amdgcn-amd-amdhsa-llvm --offload-arch=gfx90a \

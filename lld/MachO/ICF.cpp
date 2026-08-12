@@ -100,11 +100,7 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
   // We can only fold within the same OutputSection.
   if (ia->parent != ib->parent)
     return false;
-  if (ia->data.size() != ib->data.size())
-    return false;
   if (ia->data != ib->data)
-    return false;
-  if (ia->relocs.size() != ib->relocs.size())
     return false;
   auto f = [](const Relocation &ra, const Relocation &rb) {
     if (ra.type != rb.type)
@@ -415,13 +411,13 @@ void ICF::run() {
       isec->icfEqClass[(icfPass + 1) % 2] = hash | (1ull << 31);
     });
   }
-
+  const bool useSafeThunks = config->icfLevel == ICFLevel::safe_thunks;
   llvm::stable_sort(
-      icfInputs, [](const ConcatInputSection *a, const ConcatInputSection *b) {
+      icfInputs, [&](const ConcatInputSection *a, const ConcatInputSection *b) {
         // When using safe_thunks, ensure that we first sort by icfEqClass and
         // then by keepUnique (descending). This guarantees that within an
         // equivalence class, the keepUnique inputs are always first.
-        if (config->icfLevel == ICFLevel::safe_thunks)
+        if (useSafeThunks)
           if (a->icfEqClass[0] == b->icfEqClass[0])
             return a->keepUnique > b->keepUnique;
         return a->icfEqClass[0] < b->icfEqClass[0];
@@ -446,7 +442,7 @@ void ICF::run() {
   // When using safe_thunks, we need to create thunks for all keepUnique
   // functions that can be deduplicated. Since we're creating / adding new
   // InputSections, we can't paralellize this.
-  if (config->icfLevel == ICFLevel::safe_thunks)
+  if (useSafeThunks)
     forEachClassRange(0, icfInputs.size(), [&](size_t begin, size_t end) {
       applySafeThunksToRange(begin, end);
     });
@@ -459,11 +455,10 @@ void ICF::run() {
     // thunks. For all other ICF levels, directly merge the functions.
 
     ConcatInputSection *beginIsec = icfInputs[begin];
-    bool useSafeThunks =
-        config->icfLevel == ICFLevel::safe_thunks && isCodeSection(beginIsec);
     for (size_t i = begin + 1; i < end; ++i) {
       // Skip keepUnique inputs when using safe_thunks (already handled above)
-      if (useSafeThunks && icfInputs[i]->keepUnique) {
+      if (useSafeThunks && isCodeSection(beginIsec) &&
+          icfInputs[i]->keepUnique) {
         // Assert keepUnique sections are either small or replaced with thunks.
         assert(!icfInputs[i]->live ||
                icfInputs[i]->data.size() <= target->getICFSafeThunkSize());
