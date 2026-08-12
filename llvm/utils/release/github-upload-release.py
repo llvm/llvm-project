@@ -123,7 +123,7 @@ release_links = (
             "* Windows x86 (32-bit): [installer]({0}) ([signature]({1}))",
             (
                 "LLVM-{windows_release}-win32.msi",
-                "LLVM-{windows_release}-win32.exe.msi",
+                "LLVM-{windows_release}-win32.msi.sig",
             ),
         ),
         (
@@ -142,12 +142,7 @@ release_links = (
 )
 
 
-def generate_download_links(release):
-    base_url = (
-        f"https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/"
-    )
-    markdown_lines = []
-
+def windows_release_version(release):
     # Windows installers use Wix which does not support version strings with
     # characters. To work around this, "X.1.0-rcZ" is changed to "X.0.0.Z".
     # Equivalent to what is done in .github/workflows/release-binaries.yml.
@@ -158,12 +153,24 @@ def generate_download_links(release):
         rc_number = rc.replace("rc", "")
         windows_release = f"{major_version}.0.0.{rc_number}"
 
+    return windows_release
+
+
+def generate_download_links(release):
+    base_url = (
+        f"https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/"
+    )
+    markdown_lines = []
+
     for section in release_links:
         for line in section:
             comment_tag, format_string, files = line
             markdown_line = f"<!-- {comment_tag} "
             files = [
-                base_url + f.format(release=release, windows_release=release)
+                base_url
+                + f.format(
+                    release=release, windows_release=windows_release_version(release)
+                )
                 for f in files
             ]
             markdown_line += format_string.format(*files)
@@ -201,7 +208,7 @@ If you do not find a release package for your platform, you may be able to find 
 
 Each platform has binary release packages. The file name starts with either `LLVM-` or `clang+llvm-` and ends with the platform's name. For example, `LLVM-{release}-Linux-ARM64.tar.xz` contains LLVM binaries for Arm64 Linux. Binary archive packages may be available as `.tar.xz` or `.tar.zst` files. The `.tar.zst` files contain the same package contents, but use zstd compression.
 
-Except for Windows. Where `LLVM-*.exe` is an installer intended for using LLVM as a toolchain and the archive `clang+llvm-` contains the contents of the installer, plus libraries and tools not normally used in a toolchain. You most likely want the `LLVM-` installer, unless you are developing software which itself uses LLVM, in which case choose `clang+llvm-`.
+Except for Windows. Where `LLVM-*.msi` is an installer intended for using LLVM as a toolchain and the archive `clang+llvm-` contains the contents of the installer, plus libraries and tools not normally used in a toolchain. You most likely want the `LLVM-` installer, unless you are developing software which itself uses LLVM, in which case choose `clang+llvm-`.
 
 In addition, source archives are available:
 * To get all the `llvm-project` source code for this release, choose `llvm-project-{release}.src.tar.xz`.
@@ -262,7 +269,15 @@ def uncomment_download_links(repo, release_version):
                     continue
 
                 print(f'Found link line "{comment_tag}":')
-                files = set([f.format(release=release_version) for f in files])
+                files = set(
+                    [
+                        f.format(
+                            release=release_version,
+                            windows_release=windows_release_version(release),
+                        )
+                        for f in files
+                    ]
+                )
                 print("  Files required:", files)
                 if files.issubset(release_assets):
                     print("  All files present, revealing link line.")
