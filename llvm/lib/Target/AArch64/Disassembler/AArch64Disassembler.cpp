@@ -38,6 +38,7 @@ using DecodeStatus = MCDisassembler::DecodeStatus;
 template <int Bits>
 static DecodeStatus DecodeSImm(MCInst &Inst, uint64_t Imm, uint64_t Address,
                                const MCDisassembler *Decoder);
+
 #define Success MCDisassembler::Success
 #define Fail MCDisassembler::Fail
 #define SoftFail MCDisassembler::SoftFail
