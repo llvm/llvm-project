@@ -1328,6 +1328,7 @@ Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
          "LongJmp cannot work with functions split in more than two fragments");
 
   DenseMap<BinaryFunction *, BranchLivenessInfo> BranchLiveness;
+
   if (opts::FixBranchesWithLiveness) {
     SmallVector<BinaryFunction *> Candidates;
     for (auto &It : BC.getBinaryFunctions()) {
@@ -1341,11 +1342,12 @@ Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
         BranchLiveness.try_emplace(BF, computeBranchLiveness(*BF, RA));
     }
   }
+
   auto getBranchLiveness = [&](BinaryFunction &BF) {
     auto It = BranchLiveness.find(&BF);
     return It == BranchLiveness.end() ? nullptr : &It->second;
   };
-  
+
   if (opts::CompactCodeModel || opts::ExperimentalRelaxation) {
     BC.outs()
         << "BOLT-INFO: relaxing branches for compact code model (<128MB)\n";
@@ -1368,10 +1370,10 @@ Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
     // The error has already been reported by relaxLocalBranches().
     if (HasFatal)
       return createFatalBOLTError("branch relaxation failure");
-    
-    if (!opts::ExperimentalRelaxation) {
+
+    if (!opts::ExperimentalRelaxation)
       return Error::success();
-      
+
     BC.outs() << "BOLT-INFO: starting experimental relaxation pass\n";
     relaxCalls(BC);
     return Error::success();
