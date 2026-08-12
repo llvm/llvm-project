@@ -635,7 +635,10 @@ def NVVM_PMEventOp : NVVM_VoidIntrinsicOp<"pmevent">,
 /// mbarrier.init instruction with generic pointer type
 def NVVM_MBarrierInitOp : NVVM_PTXBuilder_Op<"mbarrier.init">,
   Arguments<(ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr,
-                 I32:$count, PtxPredicate:$predicate)> {
+                 I32:$count,
+                 OptionalAttr<ConfinedAttr<I32Attr,
+                   [IntMinValue<0>, IntMaxValue<1>]>>:$layout,
+                 PtxPredicate:$predicate)> {
   let summary = "MBarrier Initialization Op";
   let description = [{
     The `nvvm.mbarrier.init` operation initializes an *mbarrier object* at the specified 
@@ -654,6 +657,10 @@ def NVVM_MBarrierInitOp : NVVM_PTXBuilder_Op<"mbarrier.init">,
       the behavior is undefined.
     - `count`: Integer specifying the number of threads that will participate in barrier
       synchronization. Must be in the range [1, 2²⁰ - 1].
+    - `layout`: Optional in-memory layout to initialize the *mbarrier object*
+      with. Only `0` (`layout::v0`) and `1` (`layout::v1`) are valid values.
+      When it is absent, the default layout is used. The layout of an existing
+      *mbarrier object* can be queried with `nvvm.mbarrier.check_layout`.
     - `predicate`: Optional predicate for conditional execution.
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-init)
@@ -698,6 +705,33 @@ def NVVM_MBarrierInvalOp : NVVM_VoidIntrinsicOp<"mbarrier.inval">,
   let assemblyFormat = "$addr attr-dict `:` type(operands)";
 }
 
+def NVVM_MBarrierCheckLayoutOp :
+    NVVM_SingleResultIntrinsicOp<"mbarrier.check_layout"> {
+  let summary = "MBarrier Check-Layout Operation";
+  let description = [{
+    The `nvvm.mbarrier.check_layout` operation tests whether the *mbarrier
+    object* at `addr` was initialized with the layout named by `layout`.
+
+    - `res`: An `i1` that is `true` when the *mbarrier object* has the queried
+      layout and `false` otherwise.
+
+    The operation takes the following operand and attribute:
+    - `addr`: A pointer to the memory location of the *mbarrier object*. The
+      `addr` must be a pointer to shared::cta memory.
+    - `layout`: The mbarrier layout version to test for. Only `0` and `1` are
+      valid values.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-check-layout)
+  }];
+
+  let results = (outs I1:$res);
+  let arguments = (ins
+    LLVM_PointerShared:$addr,
+    ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<1>]>:$layout);
+
+  let assemblyFormat = "$addr attr-dict `:` type($addr) `->` type($res)";
+}
+
 def NVVM_MBarrierExpectTxOp : NVVM_VoidIntrinsicOp<"mbarrier.expect_tx"> {
   let summary = "MBarrier expect-tx Operation";
   let description = [{
@@ -707,15 +741,23 @@ def NVVM_MBarrierExpectTxOp : NVVM_VoidIntrinsicOp<"mbarrier.expect_tx"> {
     synchronizing effect of the `mbarrier.expect_tx` operation. `CTA`
     and `CLUSTER` are the only allowed values for `scope`.
 
+    - `multicast`: An optional mask selecting the CTAs in the cluster on whose
+      *mbarrier object* the operation is performed. It is only valid when the
+      *mbarrier object* is in the shared_cluster space.
+
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-expect-tx)
   }];
 
   let arguments = (ins
     AnyTypeOf<[LLVM_PointerShared, LLVM_PointerSharedCluster]>:$addr,
     I32:$txcount,
+    Optional<I32>:$multicast,
     DefaultValuedAttr<MemScopeKindAttr, "MemScopeKind::CTA">:$scope);
 
-  let assemblyFormat = "$addr `,` $txcount attr-dict `:` type(operands)";
+  let assemblyFormat = [{
+    $addr `,` $txcount (`multicast` `=` $multicast^)?
+    attr-dict `:` type(operands)
+  }];
 
   let hasVerifier = 1;
 }
@@ -730,21 +772,29 @@ def NVVM_MBarrierCompleteTxOp : NVVM_VoidIntrinsicOp<"mbarrier.complete_tx"> {
     observe the memory synchronizing effect of the `mbarrier.complete_tx`
     operation. `CTA` and `CLUSTER` are the only allowed values for `scope`.
 
+    - `multicast`: An optional mask selecting the CTAs in the cluster on whose
+      *mbarrier object* the operation is performed. It is only valid when the
+      *mbarrier object* is in the shared_cluster space.
+
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-complete-tx)
   }];
 
   let arguments = (ins
     AnyTypeOf<[LLVM_PointerShared, LLVM_PointerSharedCluster]>:$addr,
     I32:$txcount,
+    Optional<I32>:$multicast,
     DefaultValuedAttr<MemScopeKindAttr, "MemScopeKind::CTA">:$scope);
 
-  let assemblyFormat = "$addr `,` $txcount attr-dict `:` type(operands)";
+  let assemblyFormat = [{
+    $addr `,` $txcount (`multicast` `=` $multicast^)?
+    attr-dict `:` type(operands)
+  }];
 
   let hasVerifier = 1;
 }
 
 def NVVM_MBarrierArriveOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive",
-    [InferTypeOpAdaptorWithIsCompatible]> {
+    [InferTypeOpAdaptorWithIsCompatible, AttrSizedOperandSegments]> {
   let summary = "MBarrier Arrive Operation";
   let description = [{
     The `nvvm.mbarrier.arrive` operation performs an arrive-on operation on the 
@@ -776,6 +826,9 @@ def NVVM_MBarrierArriveOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive",
     - `space`: This indicates the memory space where the mbarrier object resides.
     - `relaxed`: When set to true, the `arrive` operation has relaxed memory semantics
       and does not provide any ordering or visibility guarantees.
+    - `multicast`: An optional mask selecting the CTAs in the cluster on whose
+      *mbarrier object* the arrive-on operation is performed. It is only valid
+      when the *mbarrier object* is in the shared_cluster space.
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-arrive)
   }];
@@ -784,16 +837,20 @@ def NVVM_MBarrierArriveOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive",
   let arguments = (ins
     AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared, LLVM_PointerSharedCluster]>:$addr,
     Optional<I32>:$count,
+    Optional<I32>:$multicast,
     DefaultValuedAttr<MemScopeKindAttr, "MemScopeKind::CTA">:$scope,
     DefaultValuedAttr<BoolAttr, "false">:$relaxed);
 
-  let assemblyFormat = "$addr (`,` $count^)? attr-dict `:` type($addr) (`->` type($res)^)?";
+  let assemblyFormat = [{
+    $addr (`,` $count^)? (`multicast` `=` $multicast^)?
+    attr-dict `:` type($addr) (`->` type($res)^)?
+  }];
 
   let hasVerifier = 1;
 }
 
 def NVVM_MBarrierArriveDropOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive_drop",
-    [InferTypeOpAdaptorWithIsCompatible]> {
+    [InferTypeOpAdaptorWithIsCompatible, AttrSizedOperandSegments]> {
   let summary = "MBarrier Arrive-Drop Operation";
   let description = [{
     The `nvvm.mbarrier.arrive_drop` operation decrements the expected arrival
@@ -810,10 +867,14 @@ def NVVM_MBarrierArriveDropOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive_dr
   let arguments = (ins
     AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared, LLVM_PointerSharedCluster]>:$addr,
     Optional<I32>:$count,
+    Optional<I32>:$multicast,
     DefaultValuedAttr<MemScopeKindAttr, "MemScopeKind::CTA">:$scope,
     DefaultValuedAttr<BoolAttr, "false">:$relaxed);
 
-  let assemblyFormat = "$addr (`,` $count^)? attr-dict `:` type($addr) (`->` type($res)^)?";
+  let assemblyFormat = [{
+    $addr (`,` $count^)? (`multicast` `=` $multicast^)?
+    attr-dict `:` type($addr) (`->` type($res)^)?
+  }];
 
   let hasVerifier = 1;
 }
@@ -870,7 +931,7 @@ def NVVM_MBarrierArriveDropNocompleteOp : NVVM_SingleResultIntrinsicOp<"mbarrier
 }
 
 def NVVM_MBarrierArriveExpectTxOp : NVVM_PTXBuilder_Op<"mbarrier.arrive.expect_tx",
-    [InferTypeOpAdaptorWithIsCompatible]> {
+    [InferTypeOpAdaptorWithIsCompatible, AttrSizedOperandSegments]> {
   let summary = "MBarrier Arrive with Expected Transaction Count";
   let description = [{
     The `nvvm.mbarrier.arrive.expect_tx` operation performs an expect-tx operation 
@@ -897,6 +958,9 @@ def NVVM_MBarrierArriveExpectTxOp : NVVM_PTXBuilder_Op<"mbarrier.arrive.expect_t
       synchronizing effect of the `mbarrier.test.wait` operation.
     - `relaxed`: When set to true, the `arrive` operation has relaxed memory semantics
       and does not provide any ordering or visibility guarantees.
+    - `multicast`: An optional mask selecting the CTAs in the cluster on whose
+      *mbarrier object* the operation is performed. It is only valid when the
+      *mbarrier object* is in the shared_cluster space.
     - `predicate`: Optional predicate for conditional execution used only when lowering to
       inline-ptx.
 
@@ -907,11 +971,16 @@ def NVVM_MBarrierArriveExpectTxOp : NVVM_PTXBuilder_Op<"mbarrier.arrive.expect_t
   let arguments = (ins
     AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared, LLVM_PointerSharedCluster]>:$addr,
     I32:$txcount,
+    Optional<I32>:$multicast,
     DefaultValuedAttr<MemScopeKindAttr, "MemScopeKind::CTA">:$scope,
     DefaultValuedAttr<BoolAttr, "false">:$relaxed,
     PtxPredicate:$predicate);
 
-  let assemblyFormat = "$addr `,` $txcount (`,` `predicate` `=` $predicate^)? attr-dict `:` type(operands) (`->` type($res)^)?";
+  let assemblyFormat = [{
+    $addr `,` $txcount (`multicast` `=` $multicast^)?
+    (`,` `predicate` `=` $predicate^)?
+    attr-dict `:` type(operands) (`->` type($res)^)?
+  }];
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
@@ -944,6 +1013,10 @@ def NVVM_MBarrierArriveDropExpectTxOp : NVVM_SingleResultIntrinsicOp<"mbarrier.a
     `nvvm.mbarrier.arrive.expect_tx` operation except that it performs an
     `arrive_drop` operation instead of only an `arrive` operation.
 
+    - `multicast`: An optional mask selecting the CTAs in the cluster on whose
+      *mbarrier object* the operation is performed. It is only valid when the
+      *mbarrier object* is in the shared_cluster space.
+
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-arrive-drop)
   }];
 
@@ -951,10 +1024,14 @@ def NVVM_MBarrierArriveDropExpectTxOp : NVVM_SingleResultIntrinsicOp<"mbarrier.a
   let arguments = (ins
     AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared, LLVM_PointerSharedCluster]>:$addr,
     I32:$txcount,
+    Optional<I32>:$multicast,
     DefaultValuedAttr<MemScopeKindAttr, "MemScopeKind::CTA">:$scope,
     DefaultValuedAttr<BoolAttr, "false">:$relaxed);
 
-  let assemblyFormat = "$addr `,` $txcount attr-dict `:` type(operands) (`->` type($res)^)?";
+  let assemblyFormat = [{
+    $addr `,` $txcount (`multicast` `=` $multicast^)?
+    attr-dict `:` type(operands) (`->` type($res)^)?
+  }];
   let hasVerifier = 1;
 }
 

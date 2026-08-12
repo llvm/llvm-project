@@ -1279,6 +1279,18 @@ shouldUpgradeNVPTXTcgen05CommitSharedIntrinsic(Function *F, StringRef Name) {
   return Intrinsic::not_intrinsic;
 }
 
+// The mbarrier.{arrive,arrive.expect_tx,arrive_drop,arrive_drop.expect_tx,
+// expect_tx,complete_tx}[.relaxed].scope.*.space.cluster intrinsics gained two
+// trailing operands: an i32 multicast mask and an i1 flag selecting the
+// multicast form of the instruction. The intrinsic names are unchanged, so the
+// older version is identified purely by its argument count: it takes just the
+// mbarrier pointer and the count.
+static bool shouldUpgradeNVPTXMBarrierClusterIntrinsic(Function *F,
+                                                       StringRef Name) {
+  return Name.starts_with("mbarrier.") && Name.ends_with(".space.cluster") &&
+         F->arg_size() == 2;
+}
+
 static Intrinsic::ID shouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
   if (Name.consume_front("fma.rn."))
     return StringSwitch<Intrinsic::ID>(Name)
@@ -1824,6 +1836,15 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       if (IID != Intrinsic::not_intrinsic) {
         NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
         return NewFn != F;
+      }
+
+      // Upgrade mbarrier cluster-space Intrinsics, which gained multicast
+      // operands. The name is unchanged, so reuse the existing intrinsic ID.
+      if (shouldUpgradeNVPTXMBarrierClusterIntrinsic(F, Name)) {
+        IID = F->getIntrinsicID();
+        rename(F);
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
+        return true;
       }
 
       // The following nvvm intrinsics correspond exactly to an LLVM idiom, but
@@ -5802,6 +5823,44 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     Args.push_back(Builder.getInt32(0)); // collector_usage_b = discard(0)
     NewCall = Builder.CreateCall(NewFn, Args);
     break;
+  }
+
+  case Intrinsic::nvvm_mbarrier_arrive_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_relaxed_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_relaxed_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_expect_tx_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_expect_tx_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_expect_tx_relaxed_scope_cta_space_cluster:
+  case Intrinsic::
+      nvvm_mbarrier_arrive_expect_tx_relaxed_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_drop_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_drop_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_drop_relaxed_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_drop_relaxed_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_drop_expect_tx_scope_cta_space_cluster:
+  case Intrinsic::
+      nvvm_mbarrier_arrive_drop_expect_tx_scope_cluster_space_cluster:
+  case Intrinsic::
+      nvvm_mbarrier_arrive_drop_expect_tx_relaxed_scope_cta_space_cluster:
+  case Intrinsic::
+      nvvm_mbarrier_arrive_drop_expect_tx_relaxed_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_expect_tx_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_expect_tx_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_complete_tx_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_complete_tx_scope_cluster_space_cluster: {
+    // Pre-multicast IR only passed the mbarrier pointer and the count. Request
+    // the non-multicast form: a zero mask and a false multicast flag.
+    // See shouldUpgradeNVPTXMBarrierClusterIntrinsic().
+    SmallVector<Value *, 4> Args(CI->args());
+    Args.push_back(ConstantInt::get(Builder.getInt32Ty(), 0));
+    Args.push_back(Builder.getFalse());
+
+    NewCall = Builder.CreateCall(NewFn, Args);
+    NewCall->takeName(CI);
+    CI->replaceAllUsesWith(NewCall);
+    CI->eraseFromParent();
+    return;
   }
   case Intrinsic::riscv_sha256sig0:
   case Intrinsic::riscv_sha256sig1:

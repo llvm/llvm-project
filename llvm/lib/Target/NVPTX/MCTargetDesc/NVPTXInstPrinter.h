@@ -77,6 +77,11 @@ public:
   template <unsigned Bits>
   void printHexUImm(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
                     raw_ostream &O);
+
+  template <bool Is32b>
+  void printMulticastOperand(const MCInst *, int OpNum,
+                             const MCSubtargetInfo &STI, raw_ostream &,
+                             StringRef Modifier = {});
 };
 
 } // namespace llvm

@@ -37,6 +37,28 @@ llvm.func @mbarrier_init_shared(%barrier: !llvm.ptr<3>) {
   llvm.return
 }
 
+llvm.func @mbarrier_init_layout_shared(%barrier: !llvm.ptr<3>, %count: i32) {
+  // CHECK-LABEL: define void @mbarrier_init_layout_shared(ptr addrspace(3) %0, i32 %1) {
+  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.init.layout(ptr addrspace(3) %0, i32 %1, i32 0)
+  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.init.layout(ptr addrspace(3) %0, i32 %1, i32 1)
+  // CHECK-NEXT: ret void
+  // CHECK-NEXT: }
+  nvvm.mbarrier.init %barrier, %count {layout = 0 : i32} : !llvm.ptr<3>, i32
+  nvvm.mbarrier.init %barrier, %count {layout = 1 : i32} : !llvm.ptr<3>, i32
+  llvm.return
+}
+
+// mbarrier.init.layout is shared::cta only, so a generic pointer is cast.
+llvm.func @mbarrier_init_layout_generic(%barrier: !llvm.ptr, %count: i32) {
+  // CHECK-LABEL: define void @mbarrier_init_layout_generic(ptr %0, i32 %1) {
+  // CHECK-NEXT: %[[CAST:.+]] = addrspacecast ptr %0 to ptr addrspace(3)
+  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.init.layout(ptr addrspace(3) %[[CAST]], i32 %1, i32 1)
+  // CHECK-NEXT: ret void
+  // CHECK-NEXT: }
+  nvvm.mbarrier.init %barrier, %count {layout = 1 : i32} : !llvm.ptr, i32
+  llvm.return
+}
+
 llvm.func @mbarrier_inval_generic(%barrier: !llvm.ptr) {
   // CHECK-LABEL: define void @mbarrier_inval_generic(ptr %0) {
   // CHECK-NEXT: call void @llvm.nvvm.mbarrier.inval(ptr %0)

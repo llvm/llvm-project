@@ -238,7 +238,6 @@ def hasLdStmatrixBlackwellSupport : PredOr<[SM100f, SM110f, SM120f]>;
 def hasConvertWithStochasticRounding
   : PredAnd<[PTX87, PredOr<[SM100a, SM103a]>]>;
 
-
 //===----------------------------------------------------------------------===//
 // Some Common Instruction Class Templates
 //===----------------------------------------------------------------------===//
@@ -1797,6 +1796,14 @@ def EvictionAndPrefetchHint : Operand<i32> {
 def MmaCode : Operand<i32> {
   let PrintMethod = "printMmaCode";
 }
+
+class MULTICAST<ValueType ty, bit Is32b> : Operand<ty> {
+  let PrintMethod = "printMulticastOperand<"
+                    # !if(Is32b, "true", "false") # ">";
+}
+
+def MULTICAST16 : MULTICAST<i16, 0>; // .multicast::cluster::16b
+def MULTICAST32 : MULTICAST<i32, 1>; // .multicast::cluster::32b
 
 // Get pointer to local stack.
 let hasSideEffects = false in {

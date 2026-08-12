@@ -442,6 +442,7 @@ For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thre
 ```llvm
 declare void @llvm.nvvm.mbarrier.init(ptr %addr, i32 %count)
 declare void @llvm.nvvm.mbarrier.init.shared(ptr addrspace(3) %addr, i32 %count)
+declare void @llvm.nvvm.mbarrier.init.layout(ptr addrspace(3) %addr, i32 %count, i32 immarg %layout)
 ```
 
 ##### Overview:
@@ -454,6 +455,10 @@ the range [1...2^20-1]. During initialization:
 - The tx-count and the current phase of the mbarrier object are set to 0.
 - The expected and pending arrival counts are set to `count`.
 
+The `.layout` variant additionally selects the in-memory layout of the
+mbarrier object. `%layout` is an immediate argument that accepts only
+`0` (`layout::v0`) or `1` (`layout::v1`).
+
 ##### Semantics:
 
 The `.shared` variant explicitly uses shared memory address space for
@@ -462,6 +467,32 @@ shared::cta space, then the behavior of this intrinsic is undefined.
 Performing `mbarrier.init` on a valid mbarrier object is undefined;
 use `mbarrier.inval` before reusing the memory for another mbarrier
 or any other purpose.
+
+An mbarrier object initialized with a particular layout must only be
+used with operations that support that layout; the layout of an existing
+mbarrier object can be queried with `llvm.nvvm.mbarrier.check.layout.*`.
+
+#### '`llvm.nvvm.mbarrier.check.layout`'
+
+##### Syntax:
+
+```llvm
+declare i1 @llvm.nvvm.mbarrier.check.layout(ptr addrspace(3) %addr, i32 immarg %layout)
+```
+
+##### Overview:
+
+The '`@llvm.nvvm.mbarrier.check.layout.*`' intrinsics test whether the
+mbarrier object at `addr` was initialized with the layout named by
+`%layout`. They return `true` when the layout matches and `false`
+otherwise. `%layout` is an immediate argument that accepts only
+`0` (`layout::v0`) or `1` (`layout::v1`).
+
+##### Semantics:
+
+If the `addr` does not fall within the shared::cta space, then the behavior of
+this intrinsic is undefined. It is expected that `addr` was previously
+initialized using `mbarrier.init`; otherwise, the behavior is undefined.
 
 #### '`llvm.nvvm.mbarrier.inval`'
 
@@ -492,8 +523,8 @@ It is expected that `addr` was previously initialized using
 ```llvm
 declare void @llvm.nvvm.mbarrier.expect.tx.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
 declare void @llvm.nvvm.mbarrier.expect.tx.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
-declare void @llvm.nvvm.mbarrier.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
-declare void @llvm.nvvm.mbarrier.expect.tx.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+declare void @llvm.nvvm.mbarrier.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count, i32 %multicast_mask, i1 immarg %multicast)
+declare void @llvm.nvvm.mbarrier.expect.tx.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count, i32 %multicast_mask, i1 immarg %multicast)
 ```
 
 ##### Overview:
@@ -514,6 +545,17 @@ directly observe the effect of the `expect.tx` operation. Similarly,
 when scope is "cluster", all threads executing in the same Cluster
 (as the current thread) can directly observe the effect of the operation.
 
+The `.space.cluster` intrinsics take two additional operands that together
+describe multicast. `%multicast` is an immediate argument selecting the
+multicast form of the operation:
+
+- When `%multicast` is `false`, the operation is performed only on the
+  mbarrier object at `%addr` and `%multicast_mask` is ignored.
+- When `%multicast` is `true`, the operation is instead performed on the
+  mbarrier object at the same offset within the shared memory of every CTA
+  selected by `%multicast_mask`. Each bit position in the 32-bit
+  `%multicast_mask` corresponds to the `%ctaid` of a CTA in the cluster.
+
 If the `addr` does not fall within shared::cta or shared::cluster space,
 then the behavior of this intrinsic is undefined. This intrinsic has
 `relaxed` semantics and hence does not provide any memory ordering
@@ -526,8 +568,8 @@ or visibility guarantees.
 ```llvm
 declare void @llvm.nvvm.mbarrier.complete.tx.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
 declare void @llvm.nvvm.mbarrier.complete.tx.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
-declare void @llvm.nvvm.mbarrier.complete.tx.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
-declare void @llvm.nvvm.mbarrier.complete.tx.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+declare void @llvm.nvvm.mbarrier.complete.tx.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count, i32 %multicast_mask, i1 immarg %multicast)
+declare void @llvm.nvvm.mbarrier.complete.tx.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count, i32 %multicast_mask, i1 immarg %multicast)
 ```
 
 ##### Overview:
@@ -550,13 +592,13 @@ The semantics of these intrinsics are identical to those of the
 ```llvm
 declare i64  @llvm.nvvm.mbarrier.arrive.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %count)
 declare i64  @llvm.nvvm.mbarrier.arrive.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %count)
-declare void @llvm.nvvm.mbarrier.arrive.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %count)
-declare void @llvm.nvvm.mbarrier.arrive.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %count)
+declare void @llvm.nvvm.mbarrier.arrive.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %count, i32 %multicast_mask, i1 immarg %multicast)
+declare void @llvm.nvvm.mbarrier.arrive.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %count, i32 %multicast_mask, i1 immarg %multicast)
 
 declare i64  @llvm.nvvm.mbarrier.arrive.relaxed.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %count)
 declare i64  @llvm.nvvm.mbarrier.arrive.relaxed.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %count)
-declare void @llvm.nvvm.mbarrier.arrive.relaxed.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %count)
-declare void @llvm.nvvm.mbarrier.arrive.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %count)
+declare void @llvm.nvvm.mbarrier.arrive.relaxed.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %count, i32 %multicast_mask, i1 immarg %multicast)
+declare void @llvm.nvvm.mbarrier.arrive.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %count, i32 %multicast_mask, i1 immarg %multicast)
 ```
 
 ##### Overview:
@@ -583,6 +625,12 @@ directly observe the effect of the `arrive` operation. Similarly,
 when scope is "cluster", all threads executing in the same Cluster
 (as the current thread) can directly observe the effect of the operation.
 
+The `.space.cluster` intrinsics take the `%multicast_mask` and `%multicast`
+operands, with the same meaning as described for the
+`llvm.nvvm.mbarrier.expect.tx.*` intrinsics above. When multicast is
+selected, the arrive operation is performed on the mbarrier object of every
+CTA named by the mask.
+
 If the `addr` does not fall within shared::cta or shared::cluster space,
 then the behavior of this intrinsic is undefined.
 
@@ -601,13 +649,13 @@ provide any memory ordering or visibility guarantees.
 ```llvm
 declare i64  @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
 declare i64  @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
-declare void @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
-declare void @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+declare void @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count, i32 %multicast_mask, i1 immarg %multicast)
+declare void @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count, i32 %multicast_mask, i1 immarg %multicast)
 
 declare i64  @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
 declare i64  @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
-declare void @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
-declare void @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+declare void @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count, i32 %multicast_mask, i1 immarg %multicast)
+declare void @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count, i32 %multicast_mask, i1 immarg %multicast)
 ```
 
 ##### Overview:
@@ -630,13 +678,13 @@ The semantics of these intrinsics are identical to those of the
 ```llvm
 declare i64  @llvm.nvvm.mbarrier.arrive.drop.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %count)
 declare i64  @llvm.nvvm.mbarrier.arrive.drop.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %count)
-declare void @llvm.nvvm.mbarrier.arrive.drop.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %count)
-declare void @llvm.nvvm.mbarrier.arrive.drop.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %count)
+declare void @llvm.nvvm.mbarrier.arrive.drop.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %count, i32 %multicast_mask, i1 immarg %multicast)
+declare void @llvm.nvvm.mbarrier.arrive.drop.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %count, i32 %multicast_mask, i1 immarg %multicast)
 
 declare i64  @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %count)
 declare i64  @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %count)
-declare void @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %count)
-declare void @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %count)
+declare void @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %count, i32 %multicast_mask, i1 immarg %multicast)
+declare void @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %count, i32 %multicast_mask, i1 immarg %multicast)
 ```
 
 ##### Overview:
@@ -658,13 +706,13 @@ The semantics of these intrinsics are identical to those of the
 ```llvm
 declare i64  @llvm.nvvm.mbarrier.arrive.drop.expect.tx.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
 declare i64  @llvm.nvvm.mbarrier.arrive.drop.expect.tx.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
-declare void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
-declare void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+declare void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count, i32 %multicast_mask, i1 immarg %multicast)
+declare void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count, i32 %multicast_mask, i1 immarg %multicast)
 
 declare i64  @llvm.nvvm.mbarrier.arrive.drop.expect.tx.relaxed.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
 declare i64  @llvm.nvvm.mbarrier.arrive.drop.expect.tx.relaxed.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
-declare void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.relaxed.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
-declare void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+declare void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.relaxed.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count, i32 %multicast_mask, i1 immarg %multicast)
+declare void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count, i32 %multicast_mask, i1 immarg %multicast)
 ```
 
 ##### Overview:

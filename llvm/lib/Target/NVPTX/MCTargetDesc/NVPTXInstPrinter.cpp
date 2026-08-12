@@ -597,3 +597,17 @@ void NVPTXInstPrinter::printHexUImm(const MCInst *MI, int OpNum,
   Imm &= maskTrailingOnes<uint64_t>(Bits);
   O << formatHex(Imm) << "U";
 }
+
+template <bool Is32b>
+void NVPTXInstPrinter::printMulticastOperand(const MCInst *MI, int OpNum,
+                                             const MCSubtargetInfo &,
+                                             raw_ostream &O,
+                                             StringRef Modifier) {
+  if (Modifier == "multicast") {
+    O << ".multicast::cluster";
+    if (Is32b)
+      O << "::32b";
+    return;
+  }
+  printRegName(O, MI->getOperand(OpNum).getReg());
+}
