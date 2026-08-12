@@ -1881,7 +1881,20 @@ public:
 
   QualType adjustStringLiteralBaseType(QualType StrLTy) const;
 
+  // Represents an inclusive-first/exclusive last bit-offset into a type.
+  struct BitInterval {
+    // [First, Last)
+    uint64_t First;
+    uint64_t Last;
+  };
+
+  // Calculate and get the 'padding intervals' inside of a type.
+  llvm::SmallVector<BitInterval> getPaddingIntervals(QualType Ty) const;
+
 private:
+  mutable llvm::DenseMap<QualType, llvm::SmallVector<BitInterval>>
+      PaddingIntervalCache;
+
   /// Return a normal function type with a typed argument list.
   QualType getFunctionTypeInternal(QualType ResultTy, ArrayRef<QualType> Args,
                                    const FunctionProtoType::ExtProtoInfo &EPI,

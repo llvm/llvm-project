@@ -28,7 +28,6 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/TargetInfo.h"
-#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instruction.h"
@@ -2600,7 +2599,7 @@ RValue CodeGenFunction::emitStdcFirstBit(const CallExpr *E, Intrinsic::ID IntID,
 }
 
 static void ClearPadding(CodeGenFunction &CGF, Address Src,
-                         const CodeGenUtils::BitInterval &PaddingInterval) {
+                         const ASTContext::BitInterval &PaddingInterval) {
   uint64_t CharWidth = CGF.getContext().getCharWidth();
 
   auto *I8Ptr = CGF.Builder.CreateBitCast(Src.getBasePointer(), CGF.Int8PtrTy);
@@ -5211,10 +5210,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Address Src = EmitPointerWithAlignment(E->getArg(0));
     auto PointeeTy = E->getArg(0)->getType()->getPointeeType();
 
-    llvm::SmallVector<CodeGenUtils::BitInterval> Padding =
-        CodeGenUtils::CalculatePaddingIntervals(
-            getContext(), getTarget(), PointeeTy,
-            CGM.getDataLayout().getPointerSizeInBits());
+    llvm::SmallVector<ASTContext::BitInterval> Padding =
+        getContext().getPaddingIntervals(PointeeTy);
     for (const auto &Interval : Padding)
       ClearPadding(*this, Src, Interval);
 
