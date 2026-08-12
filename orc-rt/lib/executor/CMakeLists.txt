@@ -4,6 +4,7 @@ set(ORC_RT_SOURCES
   Environment.cpp
   Error.cpp
   ExecutorProcessInfo.cpp
+  GDBJITRegistrar.cpp
   InProcessControllerAccess.cpp
   Logging.cpp
   NativeDylibManager.cpp
@@ -16,6 +17,7 @@ set(ORC_RT_SOURCES
   ThreadPoolRunner.cpp
   sps-ci/AllSPSCI.cpp
   sps-ci/CallSPSCI.cpp
+  sps-ci/GDBJITRegistrarSPSCI.cpp
   sps-ci/MemoryAccessSPSCI.cpp
   sps-ci/NativeDylibManagerSPSCI.cpp
   sps-ci/SimpleNativeMemoryMapSPSCI.cpp
