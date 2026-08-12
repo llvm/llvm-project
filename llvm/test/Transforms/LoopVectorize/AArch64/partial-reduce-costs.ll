@@ -973,3 +973,31 @@ exit:
 !36 = distinct !{!36, !37, !38}
 !37 = !{!"llvm.loop.interleave.count", i32 1}
 !38 = !{!"llvm.loop.vectorize.width", i32 4}
+
+; zext(i1 mask)->i64 summed which should be costed at the compare's operand width and not at i1.
+define i64 @count_matches_i8_i64(ptr %src, i32 %n) {
+; NEON-LABEL: 'count_matches_i8_i64'
+; SVE-LABEL: 'count_matches_i8_i64'
+; SVE2-LABEL: 'count_matches_i8_i64'
+; SVE2p1-LABEL: 'count_matches_i8_i64'
+; SVE2p3-LABEL: 'count_matches_i8_i64'
+; SME2-LABEL: 'count_matches_i8_i64'
+; I8MM-LABEL: 'count_matches_i8_i64'
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %acc = phi i64 [ 0, %entry ], [ %add, %loop ]
+  %gep = getelementptr i8, ptr %src, i32 %iv
+  %load = load i8, ptr %gep, align 1
+  %cmp = icmp eq i8 %load, 10
+  %ext = zext i1 %cmp to i64
+  %add = add i64 %acc, %ext
+  %iv.next = add i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i64 %add
+}
