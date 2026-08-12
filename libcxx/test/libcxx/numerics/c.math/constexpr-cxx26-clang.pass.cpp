@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Check that Clang supports constexpr <cmath> functions mentioned in the
+// Check that Clang supports constexpr <cmath> and <complex> functions mentioned in the
 // P1383R2 paper that is part of C++26
 // (https://wg21.link/p1383r2)
 //

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Check that GCC supports constexpr <cmath> and <cstdlib> functions
+// Check that GCC supports constexpr <cmath> and <complex> functions
 // mentioned in the P1383R2 paper that is part of C++26
 // (https://wg21.link/p1383r2)
 //
@@ -21,7 +21,7 @@
 
 #include <cassert>
 #include <cmath>
-#include <cstdlib>
+#include <complex>
 
 int main(int, char**) {
   bool ImplementedP1383R2 = true;
@@ -32,165 +32,165 @@ int main(int, char**) {
   assert(Expr);                                                                                                        \
   ImplementedP1383R2 = false
 
-  ASSERT_NOT_CONSTEXPR_CXX26(std::acos(1.0f) == 0.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::acos(1.0) == 0.0);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::acos(1.0L) == 0.0L);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::acosf(1.0f) == 0.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::acosl(1.0L) == 0.0L);
+  ASSERT_CONSTEXPR_CXX26(std::acos(1.0f) == 0.0f);
+  ASSERT_CONSTEXPR_CXX26(std::acos(1.0) == 0.0);
+  ASSERT_CONSTEXPR_CXX26(std::acos(1.0L) == 0.0L);
+  ASSERT_CONSTEXPR_CXX26(std::acosf(1.0f) == 0.0f);
+  ASSERT_CONSTEXPR_CXX26(std::acosl(1.0L) == 0.0L);
 
-  ASSERT_NOT_CONSTEXPR_CXX26(std::asin(0.0f) == 0.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::asin(0.0) == 0.0);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::asin(0.0L) == 0.0L);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::asinf(0.0f) == 0.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::asinl(0.0L) == 0.0L);
+  ASSERT_CONSTEXPR_CXX26(std::asin(0.0f) == 0.0f);
+  ASSERT_CONSTEXPR_CXX26(std::asin(0.0) == 0.0);
+  ASSERT_CONSTEXPR_CXX26(std::asin(0.0L) == 0.0L);
+  ASSERT_CONSTEXPR_CXX26(std::asinf(0.0f) == 0.0f);
+  ASSERT_CONSTEXPR_CXX26(std::asinl(0.0L) == 0.0L);
 
-  ASSERT_NOT_CONSTEXPR_CXX26(std::atan(0.0f) == 0.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::atan(0.0) == 0.0);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::atan(0.0L) == 0.0L);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::atanf(0.0f) == 0.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::atanl(0.0L) == 0.0L);
+  ASSERT_CONSTEXPR_CXX26(std::atan(0.0f) == 0.0f);
+  ASSERT_CONSTEXPR_CXX26(std::atan(0.0) == 0.0);
+  ASSERT_CONSTEXPR_CXX26(std::atan(0.0L) == 0.0L);
+  ASSERT_CONSTEXPR_CXX26(std::atanf(0.0f) == 0.0f);
+  ASSERT_CONSTEXPR_CXX26(std::atanl(0.0L) == 0.0L);
 
-  ASSERT_NOT_CONSTEXPR_CXX26(std::atan2(0.0f, 1.0f) == 0.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::atan2(0.0, 1.0) == 0.0);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::atan2(0.0L, 1.0L) == 0.0L);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::atan2f(0.0f, 1.0f) == 0.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::atan2l(0.0L, 1.0L) == 0.0L);
+  ASSERT_CONSTEXPR_CXX26(std::atan2(0.0f, 1.0f) == 0.0f);
+  ASSERT_CONSTEXPR_CXX26(std::atan2(0.0, 1.0) == 0.0);
+  ASSERT_CONSTEXPR_CXX26(std::atan2(0.0L, 1.0L) == 0.0L);
+  ASSERT_CONSTEXPR_CXX26(std::atan2f(0.0f, 1.0f) == 0.0f);
+  ASSERT_CONSTEXPR_CXX26(std::atan2l(0.0L, 1.0L) == 0.0L);
 
-  ASSERT_NOT_CONSTEXPR_CXX26(std::cos(0.0f) == 1.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::cos(0.0) == 1.0);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::cos(0.0L) == 1.0L);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::cosf(0.0f) == 1.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::cosl(0.0L) == 1.0L);
+  ASSERT_CONSTEXPR_CXX26(std::cos(0.0f) == 1.0f);
+  ASSERT_CONSTEXPR_CXX26(std::cos(0.0) == 1.0);
+  ASSERT_CONSTEXPR_CXX26(std::cos(0.0L) == 1.0L);
+  ASSERT_CONSTEXPR_CXX26(std::cosf(0.0f) == 1.0f);
+  ASSERT_CONSTEXPR_CXX26(std::cosl(0.0L) == 1.0L);
 
-  ASSERT_NOT_CONSTEXPR_CXX26(std::sin(0.0f) == 0.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::sin(0.0) == 0.0);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::sin(0.0L) == 0.0L);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::sinf(0.0f) == 0.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::sinl(0.0L) == 0.0L);
+  ASSERT_CONSTEXPR_CXX26(std::sin(0.0f) == 0.0f);
+  ASSERT_CONSTEXPR_CXX26(std::sin(0.0) == 0.0);
+  ASSERT_CONSTEXPR_CXX26(std::sin(0.0L) == 0.0L);
+  ASSERT_CONSTEXPR_CXX26(std::sinf(0.0f) == 0.0f);
+  ASSERT_CONSTEXPR_CXX26(std::sinl(0.0L) == 0.0L);
 
-  ASSERT_NOT_CONSTEXPR_CXX26(std::tan(0.0f) == 0.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::tan(0.0) == 0.0);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::tan(0.0L) == 0.0L);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::tanf(0.0f) == 0.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::tanl(0.0L) == 0.0L);
+  ASSERT_CONSTEXPR_CXX26(std::tan(0.0f) == 0.0f);
+  ASSERT_CONSTEXPR_CXX26(std::tan(0.0) == 0.0);
+  ASSERT_CONSTEXPR_CXX26(std::tan(0.0L) == 0.0L);
+  ASSERT_CONSTEXPR_CXX26(std::tanf(0.0f) == 0.0f);
+  ASSERT_CONSTEXPR_CXX26(std::tanl(0.0L) == 0.0L);
 
-  ASSERT_NOT_CONSTEXPR_CXX26(std::acosh(1.0f) == 0.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::acosh(1.0) == 0.0);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::acosh(1.0L) == 0.0L);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::acoshf(1.0f) == 0.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::acoshl(1.0L) == 0.0L);
+  ASSERT_CONSTEXPR_CXX26(std::acosh(1.0f) == 0.0f);
+  ASSERT_CONSTEXPR_CXX26(std::acosh(1.0) == 0.0);
+  ASSERT_CONSTEXPR_CXX26(std::acosh(1.0L) == 0.0L);
+  ASSERT_CONSTEXPR_CXX26(std::acoshf(1.0f) == 0.0f);
+  ASSERT_CONSTEXPR_CXX26(std::acoshl(1.0L) == 0.0L);
 
-  ASSERT_NOT_CONSTEXPR_CXX26(std::asinh(0.0f) == 0.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::asinh(0.0) == 0.0);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::asinh(0.0L) == 0.0L);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::asinhf(0.0f) == 0.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::asinhl(0.0L) == 0.0L);
+  ASSERT_CONSTEXPR_CXX26(std::asinh(0.0f) == 0.0f);
+  ASSERT_CONSTEXPR_CXX26(std::asinh(0.0) == 0.0);
+  ASSERT_CONSTEXPR_CXX26(std::asinh(0.0L) == 0.0L);
+  ASSERT_CONSTEXPR_CXX26(std::asinhf(0.0f) == 0.0f);
+  ASSERT_CONSTEXPR_CXX26(std::asinhl(0.0L) == 0.0L);
 
-  ASSERT_NOT_CONSTEXPR_CXX26(std::atanh(0.0f) == 0.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::atanh(0.0) == 0.0);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::atanh(0.0L) == 0.0L);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::atanhf(0.0f) == 0.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::atanhl(0.0L) == 0.0L);
+  ASSERT_CONSTEXPR_CXX26(std::atanh(0.0f) == 0.0f);
+  ASSERT_CONSTEXPR_CXX26(std::atanh(0.0) == 0.0);
+  ASSERT_CONSTEXPR_CXX26(std::atanh(0.0L) == 0.0L);
+  ASSERT_CONSTEXPR_CXX26(std::atanhf(0.0f) == 0.0f);
+  ASSERT_CONSTEXPR_CXX26(std::atanhl(0.0L) == 0.0L);
 
-  ASSERT_NOT_CONSTEXPR_CXX26(std::cosh(0.0f) == 1.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::cosh(0.0) == 1.0);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::cosh(0.0L) == 1.0L);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::coshf(0.0f) == 1.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::coshl(0.0L) == 1.0L);
+  ASSERT_CONSTEXPR_CXX26(std::cosh(0.0f) == 1.0f);
+  ASSERT_CONSTEXPR_CXX26(std::cosh(0.0) == 1.0);
+  ASSERT_CONSTEXPR_CXX26(std::cosh(0.0L) == 1.0L);
+  ASSERT_CONSTEXPR_CXX26(std::coshf(0.0f) == 1.0f);
+  ASSERT_CONSTEXPR_CXX26(std::coshl(0.0L) == 1.0L);
 
-  ASSERT_NOT_CONSTEXPR_CXX26(std::sinh(0.0f) == 0.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::sinh(0.0) == 0.0);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::sinh(0.0L) == 0.0L);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::sinhf(0.0f) == 0.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::sinhl(0.0L) == 0.0L);
+  ASSERT_CONSTEXPR_CXX26(std::sinh(0.0f) == 0.0f);
+  ASSERT_CONSTEXPR_CXX26(std::sinh(0.0) == 0.0);
+  ASSERT_CONSTEXPR_CXX26(std::sinh(0.0L) == 0.0L);
+  ASSERT_CONSTEXPR_CXX26(std::sinhf(0.0f) == 0.0f);
+  ASSERT_CONSTEXPR_CXX26(std::sinhl(0.0L) == 0.0L);
 
-  ASSERT_NOT_CONSTEXPR_CXX26(std::tanh(0.0f) == 0.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::tanh(0.0) == 0.0);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::tanh(0.0L) == 0.0L);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::tanhf(0.0f) == 0.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::tanhl(0.0L) == 0.0L);
+  ASSERT_CONSTEXPR_CXX26(std::tanh(0.0f) == 0.0f);
+  ASSERT_CONSTEXPR_CXX26(std::tanh(0.0) == 0.0);
+  ASSERT_CONSTEXPR_CXX26(std::tanh(0.0L) == 0.0L);
+  ASSERT_CONSTEXPR_CXX26(std::tanhf(0.0f) == 0.0f);
+  ASSERT_CONSTEXPR_CXX26(std::tanhl(0.0L) == 0.0L);
 
-  ASSERT_NOT_CONSTEXPR_CXX26(std::exp(0.0f) == 1.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::exp(0.0) == 1.0);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::exp(0.0L) == 1.0L);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::expf(0.0f) == 1.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::expl(0.0L) == 1.0L);
+  ASSERT_CONSTEXPR_CXX26(std::exp(0.0f) == 1.0f);
+  ASSERT_CONSTEXPR_CXX26(std::exp(0.0) == 1.0);
+  ASSERT_CONSTEXPR_CXX26(std::exp(0.0L) == 1.0L);
+  ASSERT_CONSTEXPR_CXX26(std::expf(0.0f) == 1.0f);
+  ASSERT_CONSTEXPR_CXX26(std::expl(0.0L) == 1.0L);
 
-  ASSERT_NOT_CONSTEXPR_CXX26(std::exp2(3.0f) == 8.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::exp2(3.0) == 8.0);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::exp2(3.0L) == 8.0L);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::exp2f(3.0f) == 8.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::exp2l(3.0L) == 8.0L);
+  ASSERT_CONSTEXPR_CXX26(std::exp2(3.0f) == 8.0f);
+  ASSERT_CONSTEXPR_CXX26(std::exp2(3.0) == 8.0);
+  ASSERT_CONSTEXPR_CXX26(std::exp2(3.0L) == 8.0L);
+  ASSERT_CONSTEXPR_CXX26(std::exp2f(3.0f) == 8.0f);
+  ASSERT_CONSTEXPR_CXX26(std::exp2l(3.0L) == 8.0L);
 
-  ASSERT_NOT_CONSTEXPR_CXX26(std::expm1(0.0f) == 0.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::expm1(0.0) == 0.0);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::expm1(0.0L) == 0.0L);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::expm1f(0.0f) == 0.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::expm1l(0.0L) == 0.0L);
+  ASSERT_CONSTEXPR_CXX26(std::expm1(0.0f) == 0.0f);
+  ASSERT_CONSTEXPR_CXX26(std::expm1(0.0) == 0.0);
+  ASSERT_CONSTEXPR_CXX26(std::expm1(0.0L) == 0.0L);
+  ASSERT_CONSTEXPR_CXX26(std::expm1f(0.0f) == 0.0f);
+  ASSERT_CONSTEXPR_CXX26(std::expm1l(0.0L) == 0.0L);
 
-  ASSERT_NOT_CONSTEXPR_CXX26(std::log(1.0f) == 0.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::log(1.0) == 0.0);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::log(1.0L) == 0.0L);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::logf(1.0f) == 0.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::logl(1.0L) == 0.0L);
+  ASSERT_CONSTEXPR_CXX26(std::log(1.0f) == 0.0f);
+  ASSERT_CONSTEXPR_CXX26(std::log(1.0) == 0.0);
+  ASSERT_CONSTEXPR_CXX26(std::log(1.0L) == 0.0L);
+  ASSERT_CONSTEXPR_CXX26(std::logf(1.0f) == 0.0f);
+  ASSERT_CONSTEXPR_CXX26(std::logl(1.0L) == 0.0L);
 
-  ASSERT_NOT_CONSTEXPR_CXX26(std::log10(1.0f) == 0.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::log10(1.0) == 0.0);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::log10(1.0L) == 0.0L);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::log10f(1.0f) == 0.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::log10l(1.0L) == 0.0L);
+  ASSERT_CONSTEXPR_CXX26(std::log10(1.0f) == 0.0f);
+  ASSERT_CONSTEXPR_CXX26(std::log10(1.0) == 0.0);
+  ASSERT_CONSTEXPR_CXX26(std::log10(1.0L) == 0.0L);
+  ASSERT_CONSTEXPR_CXX26(std::log10f(1.0f) == 0.0f);
+  ASSERT_CONSTEXPR_CXX26(std::log10l(1.0L) == 0.0L);
 
-  ASSERT_NOT_CONSTEXPR_CXX26(std::log1p(0.0f) == 0.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::log1p(0.0) == 0.0);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::log1p(0.0L) == 0.0L);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::log1pf(0.0f) == 0.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::log1pl(0.0L) == 0.0L);
+  ASSERT_CONSTEXPR_CXX26(std::log1p(0.0f) == 0.0f);
+  ASSERT_CONSTEXPR_CXX26(std::log1p(0.0) == 0.0);
+  ASSERT_CONSTEXPR_CXX26(std::log1p(0.0L) == 0.0L);
+  ASSERT_CONSTEXPR_CXX26(std::log1pf(0.0f) == 0.0f);
+  ASSERT_CONSTEXPR_CXX26(std::log1pl(0.0L) == 0.0L);
 
-  ASSERT_NOT_CONSTEXPR_CXX26(std::log2(1.0f) == 0.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::log2(1.0) == 0.0);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::log2(1.0L) == 0.0L);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::log2f(1.0f) == 0.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::log2l(1.0L) == 0.0L);
+  ASSERT_CONSTEXPR_CXX26(std::log2(1.0f) == 0.0f);
+  ASSERT_CONSTEXPR_CXX26(std::log2(1.0) == 0.0);
+  ASSERT_CONSTEXPR_CXX26(std::log2(1.0L) == 0.0L);
+  ASSERT_CONSTEXPR_CXX26(std::log2f(1.0f) == 0.0f);
+  ASSERT_CONSTEXPR_CXX26(std::log2l(1.0L) == 0.0L);
 
-  ASSERT_NOT_CONSTEXPR_CXX26(std::cbrt(8.0f) == 2.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::cbrt(8.0) == 2.0);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::cbrt(8.0L) == 2.0L);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::cbrtf(8.0f) == 2.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::cbrtl(8.0L) == 2.0L);
+  ASSERT_CONSTEXPR_CXX26(std::cbrt(8.0f) == 2.0f);
+  ASSERT_CONSTEXPR_CXX26(std::cbrt(8.0) == 2.0);
+  ASSERT_CONSTEXPR_CXX26(std::cbrt(8.0L) == 2.0L);
+  ASSERT_CONSTEXPR_CXX26(std::cbrtf(8.0f) == 2.0f);
+  ASSERT_CONSTEXPR_CXX26(std::cbrtl(8.0L) == 2.0L);
 
-  ASSERT_NOT_CONSTEXPR_CXX26(std::hypot(3.0f, 4.0f) == 5.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::hypot(3.0, 4.0) == 5.0);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::hypot(3.0L, 4.0L) == 5.0L);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::hypotf(3.0f, 4.0f) == 5.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::hypotl(3.0L, 4.0L) == 5.0L);
+  ASSERT_CONSTEXPR_CXX26(std::hypot(3.0f, 4.0f) == 5.0f);
+  ASSERT_CONSTEXPR_CXX26(std::hypot(3.0, 4.0) == 5.0);
+  ASSERT_CONSTEXPR_CXX26(std::hypot(3.0L, 4.0L) == 5.0L);
+  ASSERT_CONSTEXPR_CXX26(std::hypotf(3.0f, 4.0f) == 5.0f);
+  ASSERT_CONSTEXPR_CXX26(std::hypotl(3.0L, 4.0L) == 5.0L);
 
   ASSERT_NOT_CONSTEXPR_CXX26(std::hypot(0.0f, 3.0f, 4.0f) == 5.0f);
   ASSERT_NOT_CONSTEXPR_CXX26(std::hypot(0.0, 3.0, 4.0) == 5.0);
   ASSERT_NOT_CONSTEXPR_CXX26(std::hypot(0.0L, 3.0L, 4.0L) == 5.0L);
 
-  ASSERT_NOT_CONSTEXPR_CXX26(std::pow(2.0f, 3.0f) == 8.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::pow(2.0, 3.0) == 8.0);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::pow(2.0L, 3.0L) == 8.0L);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::powf(2.0f, 3.0f) == 8.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::powl(2.0L, 3.0L) == 8.0L);
+  ASSERT_CONSTEXPR_CXX26(std::pow(2.0f, 3.0f) == 8.0f);
+  ASSERT_CONSTEXPR_CXX26(std::pow(2.0, 3.0) == 8.0);
+  ASSERT_CONSTEXPR_CXX26(std::pow(2.0L, 3.0L) == 8.0L);
+  ASSERT_CONSTEXPR_CXX26(std::powf(2.0f, 3.0f) == 8.0f);
+  ASSERT_CONSTEXPR_CXX26(std::powl(2.0L, 3.0L) == 8.0L);
 
-  ASSERT_NOT_CONSTEXPR_CXX26(std::sqrt(4.0f) == 2.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::sqrt(4.0) == 2.0);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::sqrt(4.0L) == 2.0L);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::sqrtf(4.0f) == 2.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::sqrtl(4.0L) == 2.0L);
+  ASSERT_CONSTEXPR_CXX26(std::sqrt(4.0f) == 2.0f);
+  ASSERT_CONSTEXPR_CXX26(std::sqrt(4.0) == 2.0);
+  ASSERT_CONSTEXPR_CXX26(std::sqrt(4.0L) == 2.0L);
+  ASSERT_CONSTEXPR_CXX26(std::sqrtf(4.0f) == 2.0f);
+  ASSERT_CONSTEXPR_CXX26(std::sqrtl(4.0L) == 2.0L);
 
-  ASSERT_NOT_CONSTEXPR_CXX26(std::erf(0.0f) == 0.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::erf(0.0) == 0.0);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::erf(0.0L) == 0.0L);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::erff(0.0f) == 0.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::erfl(0.0L) == 0.0L);
+  ASSERT_CONSTEXPR_CXX26(std::erf(0.0f) == 0.0f);
+  ASSERT_CONSTEXPR_CXX26(std::erf(0.0) == 0.0);
+  ASSERT_CONSTEXPR_CXX26(std::erf(0.0L) == 0.0L);
+  ASSERT_CONSTEXPR_CXX26(std::erff(0.0f) == 0.0f);
+  ASSERT_CONSTEXPR_CXX26(std::erfl(0.0L) == 0.0L);
 
-  ASSERT_NOT_CONSTEXPR_CXX26(std::erfc(0.0f) == 1.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::erfc(0.0) == 1.0);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::erfc(0.0L) == 1.0L);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::erfcf(0.0f) == 1.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::erfcl(0.0L) == 1.0L);
+  ASSERT_CONSTEXPR_CXX26(std::erfc(0.0f) == 1.0f);
+  ASSERT_CONSTEXPR_CXX26(std::erfc(0.0) == 1.0);
+  ASSERT_CONSTEXPR_CXX26(std::erfc(0.0L) == 1.0L);
+  ASSERT_CONSTEXPR_CXX26(std::erfcf(0.0f) == 1.0f);
+  ASSERT_CONSTEXPR_CXX26(std::erfcl(0.0L) == 1.0L);
 
   ASSERT_NOT_CONSTEXPR_CXX26(std::lgamma(1.0f) == 0.0f);
   ASSERT_NOT_CONSTEXPR_CXX26(std::lgamma(1.0) == 0.0);
@@ -198,11 +198,11 @@ int main(int, char**) {
   ASSERT_NOT_CONSTEXPR_CXX26(std::lgammaf(1.0f) == 0.0f);
   ASSERT_NOT_CONSTEXPR_CXX26(std::lgammal(1.0L) == 0.0L);
 
-  ASSERT_NOT_CONSTEXPR_CXX26(std::tgamma(1.0f) == 1.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::tgamma(1.0) == 1.0);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::tgamma(1.0L) == 1.0L);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::tgammaf(1.0f) == 1.0f);
-  ASSERT_NOT_CONSTEXPR_CXX26(std::tgammal(1.0L) == 1.0L);
+  ASSERT_CONSTEXPR_CXX26(std::tgamma(1.0f) == 1.0f);
+  ASSERT_CONSTEXPR_CXX26(std::tgamma(1.0) == 1.0);
+  ASSERT_CONSTEXPR_CXX26(std::tgamma(1.0L) == 1.0L);
+  ASSERT_CONSTEXPR_CXX26(std::tgammaf(1.0f) == 1.0f);
+  ASSERT_CONSTEXPR_CXX26(std::tgammal(1.0L) == 1.0L);
 
   ASSERT_NOT_CONSTEXPR_CXX26(std::abs(std::complex<float>(3, 4)) == 5.0f);
   ASSERT_NOT_CONSTEXPR_CXX26(std::abs(std::complex<double>(3, 4)) == 5.0);
