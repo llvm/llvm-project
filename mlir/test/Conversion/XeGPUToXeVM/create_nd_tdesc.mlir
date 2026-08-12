@@ -60,4 +60,30 @@ gpu.module @create_nd_tdesc {
         %dyn_tdesc  = xegpu.create_nd_tdesc %dyn : memref<?x?xf16> -> !xegpu.tensor_desc<16x16xf16>
         gpu.return
     }
+
+    // A >2D (batched) create_nd descriptor keeps the innermost matrix as the
+    // 2D-block surface (base_shape_w/h and pitch come from the innermost two
+    // memref dims) and encodes the leading (batch) dim element strides into the
+    // spare payload slots (5..). For a dynamic source the sizes/strides are
+    // recovered via extract_strided_metadata: base_shape_w = sizes#2,
+    // base_shape_h = sizes#1, base_pitch = strides#1, and leading stride slot 5 =
+    // strides#0. The matching load/store lowering reads those strides to fold the
+    // batch offsets into the base pointer, so the batch position stays out of the
+    // surface.
+    // CHECK-LABEL: gpu.func @create_nd_tdesc_batch_dyn(
+    // CHECK-SAME:  %[[SRC:.+]]: memref<?x?x?xf16>
+    gpu.func @create_nd_tdesc_batch_dyn(%src: memref<?x?x?xf16>) -> vector<8xi32> {
+        // CHECK: %{{.+}}, %{{.+}}, %[[SIZES:.+]]:3, %[[STRIDES:.+]]:3 = memref.extract_strided_metadata %[[SRC]]
+        // CHECK: %[[W:.+]] = arith.index_cast %[[SIZES]]#2 : index to i32
+        // CHECK: %[[H:.+]] = arith.index_cast %[[SIZES]]#1 : index to i32
+        // CHECK: %[[PITCH:.+]] = arith.index_cast %[[STRIDES]]#1 : index to i32
+        // CHECK: %[[P2:.+]] = vector.insert %[[W]], %{{.+}} [2] : i32 into vector<8xi32>
+        // CHECK: %[[P3:.+]] = vector.insert %[[H]], %[[P2]] [3] : i32 into vector<8xi32>
+        // CHECK: %[[P4:.+]] = vector.insert %[[PITCH]], %[[P3]] [4] : i32 into vector<8xi32>
+        // CHECK: %[[LS0:.+]] = arith.index_cast %[[STRIDES]]#0 : index to i32
+        // CHECK: vector.insert %[[LS0]], %[[P4]] [5] : i32 into vector<8xi32>
+        %t = xegpu.create_nd_tdesc %src : memref<?x?x?xf16> -> !xegpu.tensor_desc<1x8x16xf16>
+        %c = builtin.unrealized_conversion_cast %t : !xegpu.tensor_desc<1x8x16xf16> to vector<8xi32>
+        gpu.return %c : vector<8xi32>
+    }
 }

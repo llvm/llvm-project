@@ -92,6 +92,36 @@ gpu.func @store_dynamic_source(%vec: vector<8x16xf32>,
 }
 
 // -----
+// A dynamic high-D write whose vector rank equals the memref rank keeps the
+// *whole* memref as the create_nd source on the nd path: no rank-collapsing
+// memref.subview is emitted and the leading (batch) offsets stay on the
+// store_nd (they are folded into the base pointer later, at XeVM lowering).
+gpu.module @xevm_module {
+gpu.func @store_high_dim_dyn(%vec: vector<1x1x8x16xf16>, %source: memref<?x?x8x16xf16>,
+    %i: index, %j: index, %k: index, %l: index) {
+  vector.transfer_write %vec, %source[%i, %j, %k, %l]
+    {in_bounds = [true, true, true, true]}
+    : vector<1x1x8x16xf16>, memref<?x?x8x16xf16>
+  gpu.return
+}
+
+// STORE-ND-LABEL: @store_high_dim_dyn(
+// STORE-ND-SAME:  %[[VEC:.+]]: vector<1x1x8x16xf16>, %[[SRC:.+]]: memref<?x?x8x16xf16>,
+// STORE-ND-SAME:  %[[OFF0:.+]]: index, %[[OFF1:.+]]: index, %[[OFF2:.+]]: index, %[[OFF3:.+]]: index
+// STORE-ND-NOT:   memref.subview
+// STORE-ND:       %[[DESC:.+]] = xegpu.create_nd_tdesc %[[SRC]] : memref<?x?x8x16xf16> -> !xegpu.tensor_desc<1x1x8x16xf16, #xegpu.block_tdesc_attr<boundary_check = false>>
+// STORE-ND:       xegpu.store_nd %[[VEC]], %[[DESC]][%[[OFF0]], %[[OFF1]], %[[OFF2]], %[[OFF3]]] : vector<1x1x8x16xf16>
+
+// STORE-SCATTER-LABEL: @store_high_dim_dyn(
+// STORE-SCATTER-SAME:  %[[VEC:.+]]: vector<1x1x8x16xf16>, %[[SRC:.+]]: memref<?x?x8x16xf16>
+// STORE-SCATTER:       %[[CST:.+]] = arith.constant dense<true> : vector<1x1x8x16xi1>
+// STORE-SCATTER:       memref.extract_strided_metadata %[[SRC]]
+// STORE-SCATTER:       %[[PTR:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<?x?x8x16xf16> -> index
+// STORE-SCATTER:       %[[PTR_I:.+]] = arith.index_cast %[[PTR]] : index to i64
+// STORE-SCATTER:       xegpu.store %[[VEC]], %[[PTR_I]]{{\[}}%{{.+}}{{\]}}, %[[CST]] : vector<1x1x8x16xf16>, i64, vector<1x1x8x16xindex>, vector<1x1x8x16xi1>
+}
+
+// -----
 gpu.module @xevm_module {
 gpu.func @store_out_of_bounds(%vec: vector<8x16xf32>,
     %source: memref<7x64xf32>, %offset: index) {
