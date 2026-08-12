@@ -28,9 +28,7 @@ namespace builtins {
 
 // float128 <- int32_t conversion, round to nearest.
 // Mirrors compiler-rt's __floatsitf.
-LIBC_INLINE float128 floatsitf(int32_t x) {
-  return floatint<float128>(x);
-}
+LIBC_INLINE float128 floatsitf(int32_t x) { return floatint<float128>(x); }
 
 } // namespace builtins
 } // namespace LIBC_NAMESPACE_DECL
