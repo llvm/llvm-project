@@ -20,6 +20,7 @@
 #include <new>
 #include <stdexcept>
 #include <utility>
+#include <vector>
 
 #include "common.h"
 #include "test_macros.h"
@@ -29,10 +30,12 @@ using C = std::inplace_vector<int, 0>;
 void test_throwing_members() {
   int a[] = {1, 2};
 
+  std::vector<int> b{1, 2, 3};
+
   assert_throws_bad_alloc([] { C c(1); });
   assert_throws_bad_alloc([] { C c(1, 42); });
   assert_throws_bad_alloc([&] { C c(a, a + 2); });
-  assert_throws_bad_alloc([&] { C c(std::from_range, a); });
+  assert_throws_bad_alloc([&] { C c(std::from_range, b); });
   assert_throws_bad_alloc([] { C c{1, 2}; });
 
   C c;

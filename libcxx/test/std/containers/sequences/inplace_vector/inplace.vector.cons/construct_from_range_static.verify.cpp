@@ -23,8 +23,8 @@ void fn() {
 
   std::inplace_vector<int, 5> v1(
       std::from_range,
-      arr); // expected-error-re@inplace_vector:* {{static assertion failed{{.*}}inplace_vector<Tp,N>: Statically sized range must be <= Capacity}}
+      arr); // expected-error-re@inplace_vector:* {{static assertion failed{{.*}}inplace_vector<Tp,N>(from_range_t, Range): Statically sized range must be <= Capacity}}
   std::inplace_vector<int, 0> v2(
       std::from_range,
-      arr2); // expected-error-re@inplace_vector:* {{static assertion failed{{.*}}inplace_vector<Tp,0>: Statically sized range must be 0}}
+      arr2); // expected-error-re@inplace_vector:* {{static assertion failed{{.*}}inplace_vector<Tp,0>(from_range_t, Range): Statically sized range must be 0}}
 }
