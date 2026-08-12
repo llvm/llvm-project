@@ -16,7 +16,7 @@
 #define QUAD_PRECISION
 #include "fp_lib.h"
 
-#if defined(CRT_HAS_TF_MODE)
+#ifdef CRT_HAS_TF_MODE
 #include "fp_compare_impl.inc"
 #include "fp_libc_config.h"
 #include "shared/builtins/getf2.h"
@@ -28,7 +28,8 @@ extern "C" {
 COMPILER_RT_ABI CMP_RESULT __letf2(fp_t a, fp_t b) {
   return LIBC_NAMESPACE::shared::letf2(a, b);
 }
-#if defined(__ELF__)
+
+#ifdef __ELF__
 COMPILER_RT_ALIAS(__letf2, __cmptf2)
 #endif
 COMPILER_RT_ALIAS(__letf2, __eqtf2)
