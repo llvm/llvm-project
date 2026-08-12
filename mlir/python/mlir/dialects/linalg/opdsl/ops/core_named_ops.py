@@ -22,18 +22,6 @@ def copy(
 
 
 @linalg_structured_op
-def exp(
-    I=TensorDef(T1),
-    O=TensorDef(T1, output=True),
-):
-    """Applies exp(x) elementwise.
-
-    No numeric casting is performed on the input operand.
-    """
-    O[None] = UnaryFn.exp(I[None])
-
-
-@linalg_structured_op
 def log(
     I=TensorDef(T1),
     O=TensorDef(T1, output=True),

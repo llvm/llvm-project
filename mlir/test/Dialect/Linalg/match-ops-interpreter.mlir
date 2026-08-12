@@ -846,11 +846,11 @@ module attributes { transform.with_named_sequence } {
     // expected-remark @below {{matched result value}}
     // expected-remark @below {{op result}}
     // expected-note @below {{value handle points to an op result #0}}
-    linalg.exp ins(%3 : tensor<42x42xf32>) outs(%0 : tensor<42x42xf32>) -> tensor<42x42xf32>
+    linalg.abs ins(%3 : tensor<42x42xf32>) outs(%0 : tensor<42x42xf32>) -> tensor<42x42xf32>
     // expected-remark @below {{matched result value}}
     // expected-remark @below {{op result}}
     // expected-note @below {{value handle points to an op result #0}}
-    linalg.exp ins(%3 : tensor<42x42xf32>) outs(%0 : tensor<42x42xf32>) -> tensor<42x42xf32>
+    linalg.abs ins(%3 : tensor<42x42xf32>) outs(%0 : tensor<42x42xf32>) -> tensor<42x42xf32>
     return
   }
 }

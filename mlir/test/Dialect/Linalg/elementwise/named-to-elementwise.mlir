@@ -1,18 +1,5 @@
 // RUN: mlir-opt %s -linalg-morph-ops=named-to-category -split-input-file | FileCheck %s
 
-// CHECK: @exp(%[[A:.+]]: tensor<16x8xf32>, %[[B:.+]]: tensor<16x8xf32>) ->  tensor<16x8xf32> {
-// CHECK: {{.*}} = linalg.elementwise
-// CHECK-SAME:       kind=#linalg.elementwise_kind<exp>
-// CHECK-SAME:       ins(%[[A]] : tensor<16x8xf32>)
-// CHECK-SAME:       outs(%[[B]] : tensor<16x8xf32>) -> tensor<16x8xf32>
-//
-func.func @exp(%A : tensor<16x8xf32>, %B : tensor<16x8xf32>) ->  tensor<16x8xf32> {
-  %exp = linalg.exp ins(%A : tensor<16x8xf32>) outs(%B :  tensor<16x8xf32>) -> tensor<16x8xf32>
-  return %exp :  tensor<16x8xf32>
-}
-
-// ----
-
 // CHECK: @add(%[[A:.+]]: tensor<16x8xf32>, %[[B:.+]]: tensor<16x8xf32>, %[[C:.+]]: tensor<16x8xf32>) ->  tensor<16x8xf32> {
 // CHECK: {{.*}} = linalg.elementwise
 // CHECK-SAME:       kind=#linalg.elementwise_kind<add>
