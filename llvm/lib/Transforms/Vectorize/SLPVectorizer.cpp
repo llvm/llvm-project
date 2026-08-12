@@ -23058,21 +23058,20 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
     SmallVector<int> ReuseMask(GatheredScalars.size(), PoisonMaskElem);
     TryPackScalars(GatheredScalars, ReuseMask, /*IsRootPoison=*/true);
     auto GatherUserOps = [&](SmallVectorImpl<TTI::BuildVectorUseOp> &UserOps) {
-      bool HasMatches = false;
+      UserOps.clear();
       for (const auto &TE : VectorizableTree) {
         if (DeletedNodes.contains(TE.get()))
           continue;
         if (!TE->isGather() || !E->isSame(TE->Scalars))
           continue;
-        HasMatches = true;
         auto *UserTE = TE->UserTreeIndex.UserTE;
         if (!UserTE || !UserTE->hasState() || UserTE->isAltShuffle())
           return false;
         UserOps.push_back(
             {UserTE->getOpcode(), static_cast<int>(TE->UserTreeIndex.EdgeIdx)});
       }
-      assert(HasMatches && "Ought to at least match with current entry");
-      return HasMatches;
+      assert(UserOps.size() && "Ought to at least match with current entry");
+      return true;
     };
     TargetTransformInfo::VectorInstrContext ContextHint =
         TTI->getBuildVectorContextHint(ReuseMask, E->Scalars, GatherUserOps);
