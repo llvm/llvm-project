@@ -1105,6 +1105,7 @@ static bool justRunCheckersAsPreVisit(const Stmt *S) {
   default:
     return false;
   case Stmt::ArraySubscriptExprClass:
+  case Stmt::AttributedStmtClass:
   case Stmt::AtomicExprClass:
   case Stmt::ImplicitCastExprClass:
   case Stmt::CStyleCastExprClass:
@@ -1134,6 +1135,7 @@ static bool justRunCheckersAsPostVisit(const Stmt *S) {
   default:
     return false;
   case Stmt::ArraySubscriptExprClass:
+  case Stmt::AttributedStmtClass:
   case Stmt::AtomicExprClass:
   case Stmt::BlockExprClass:
   case Stmt::ImplicitCastExprClass:
@@ -2017,10 +2019,9 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       break;
     }
 
-    case Stmt::AttributedStmtClass: {
+    case Stmt::AttributedStmtClass:
       VisitAttributedStmt(cast<AttributedStmt>(S), Pred, Dst);
       break;
-    }
 
     case Stmt::CXXDefaultArgExprClass:
     case Stmt::CXXDefaultInitExprClass: {
