@@ -2144,35 +2144,35 @@ TEST_F(ScalarEvolutionsTest, MaxValueMultiExitMustNotWrap) {
 TEST_F(ScalarEvolutionsTest, MaxValueSingleExitAffineFold) {
   LLVMContext C;
   SMDiagnostic Err;
-  std::unique_ptr<Module> M = parseAssemblyString(
-      "define void @pos(ptr %p, i64 %n) {\n"
-      "entry:\n"
-      "  %nz = icmp ugt i64 %n, 0\n"
-      "  br i1 %nz, label %check, label %exit\n"
-      "check:\n"
-      "  %small = icmp ult i64 %n, 1000000000\n"
-      "  br i1 %small, label %loop, label %exit\n"
-      "loop:\n"
-      "  %i = phi i64 [ 0, %check ], [ %inc, %latch ]\n"
-      "  %mul = mul nuw i64 %i, 4\n"
-      "  %end = add nuw i64 %mul, 4\n"
-      "  %limit = mul nuw i64 %n, 4\n"
-      "  %ovf = icmp ugt i64 %end, %limit\n"
-      "  br i1 %ovf, label %pathA, label %pathB\n"
-      "pathA:\n"
-      "  br label %latch\n"
-      "pathB:\n"
-      "  br label %latch\n"
-      "latch:\n"
-      "  %ptr = getelementptr i32, ptr %p, i64 %i\n"
-      "  store i32 0, ptr %ptr\n"
-      "  %inc = add nuw nsw i64 %i, 1\n"
-      "  %c = icmp ult i64 %inc, %n\n"
-      "  br i1 %c, label %loop, label %exit\n"
-      "exit:\n"
-      "  ret void\n"
-      "}\n",
-      Err, C);
+  std::unique_ptr<Module> M =
+      parseAssemblyString("define void @pos(ptr %p, i64 %n) {\n"
+                          "entry:\n"
+                          "  %nz = icmp ugt i64 %n, 0\n"
+                          "  br i1 %nz, label %check, label %exit\n"
+                          "check:\n"
+                          "  %small = icmp ult i64 %n, 1000000000\n"
+                          "  br i1 %small, label %loop, label %exit\n"
+                          "loop:\n"
+                          "  %i = phi i64 [ 0, %check ], [ %inc, %latch ]\n"
+                          "  %mul = mul nuw i64 %i, 4\n"
+                          "  %end = add nuw i64 %mul, 4\n"
+                          "  %limit = mul nuw i64 %n, 4\n"
+                          "  %ovf = icmp ugt i64 %end, %limit\n"
+                          "  br i1 %ovf, label %pathA, label %pathB\n"
+                          "pathA:\n"
+                          "  br label %latch\n"
+                          "pathB:\n"
+                          "  br label %latch\n"
+                          "latch:\n"
+                          "  %ptr = getelementptr i32, ptr %p, i64 %i\n"
+                          "  store i32 0, ptr %ptr\n"
+                          "  %inc = add nuw nsw i64 %i, 1\n"
+                          "  %c = icmp ult i64 %inc, %n\n"
+                          "  br i1 %c, label %loop, label %exit\n"
+                          "exit:\n"
+                          "  ret void\n"
+                          "}\n",
+                          Err, C);
   ASSERT_TRUE(M) << "parse failed";
   runWithSE(*M, "pos", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
     const SCEV *End = SE.getSCEV(getInstructionByName(F, "end"));
