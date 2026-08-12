@@ -34,6 +34,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/NVVMIntrinsicUtils.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -1463,12 +1464,15 @@ static InterleaveIntrinsic InterleaveIntrinsics[] = {
 };
 
 Intrinsic::ID Intrinsic::getInterleaveIntrinsicID(unsigned Factor) {
-  assert(Factor >= 2 && Factor <= 8 && "Unexpected factor");
+  if (Factor < 2 || Factor > 8)
+    report_fatal_error("Unexpected factor for llvm.vector.interleave intrinsic");
   return InterleaveIntrinsics[Factor - 2].Interleave;
 }
 
 Intrinsic::ID Intrinsic::getDeinterleaveIntrinsicID(unsigned Factor) {
-  assert(Factor >= 2 && Factor <= 8 && "Unexpected factor");
+  if (Factor < 2 || Factor > 8)
+    report_fatal_error(
+        "Unexpected factor for llvm.vector.deinterleave intrinsic");
   return InterleaveIntrinsics[Factor - 2].Deinterleave;
 }
 

@@ -379,7 +379,8 @@ define void @test_for_tried_to_force_scalar(ptr noalias %A, ptr noalias %B, ptr 
 ; CHECK-NEXT:    [[TMP28:%.*]] = insertelement <4 x ptr> [[TMP27]], ptr [[TMP24]], i64 3
 ; CHECK-NEXT:    [[TMP29:%.*]] = shufflevector <4 x ptr> [[TMP20]], <4 x ptr> [[TMP28]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <12 x float>, ptr [[TMP21]], align 4
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <12 x float> [[WIDE_VEC]], <12 x float> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = call { <4 x float>, <4 x float>, <4 x float> } @llvm.vector.deinterleave3.v12f32(<12 x float> [[WIDE_VEC]])
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <4 x float>, <4 x float>, <4 x float> } [[STRIDED_VEC1]], 0
 ; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <4 x float> [[STRIDED_VEC]], i64 3
 ; CHECK-NEXT:    store float [[TMP30]], ptr [[C:%.*]], align 4
 ; CHECK-NEXT:    [[TMP37:%.*]] = extractelement <4 x ptr> [[TMP29]], i64 3

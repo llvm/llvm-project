@@ -28,7 +28,8 @@ define void @test(ptr %A) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP8]], align 4
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> [[WIDE_VEC]])
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[STRIDED_VEC1]], 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = add <4 x i32> [[STRIDED_VEC]], splat (i32 2)
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i32> [[TMP13]], i64 0
 ; CHECK-NEXT:    store i32 [[TMP14]], ptr [[TMP8]], align 4

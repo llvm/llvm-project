@@ -21,17 +21,13 @@ define void @test_free_instructions_feeding_geps_for_interleave_groups(ptr noali
 ; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[P_INVAR]], align 4
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x float> poison, float [[TMP3]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x float> [[BROADCAST_SPLATINSERT1]], <2 x float> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x float> [[BROADCAST_SPLAT]], <2 x float> [[BROADCAST_SPLAT2]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x float> [[TMP5]], <8 x float> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 1, i32 3, i32 5, i32 7>
+; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <8 x float> @llvm.vector.interleave4.v8f32(<2 x float> [[BROADCAST_SPLAT]], <2 x float> [[BROADCAST_SPLAT2]], <2 x float> zeroinitializer, <2 x float> zeroinitializer)
 ; CHECK-NEXT:    store <8 x float> [[INTERLEAVED_VEC]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = load float, ptr [[P_INVAR]], align 4
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <2 x float> poison, float [[TMP6]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <2 x float> [[BROADCAST_SPLATINSERT3]], <2 x float> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr float, ptr [[DST_2]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x float> [[BROADCAST_SPLAT4]], <2 x float> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x float> [[TMP8]], <4 x float> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[INTERLEAVED_VEC5:%.*]] = shufflevector <8 x float> [[TMP9]], <8 x float> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 1, i32 3, i32 5, i32 7>
+; CHECK-NEXT:    [[INTERLEAVED_VEC5:%.*]] = call <8 x float> @llvm.vector.interleave4.v8f32(<2 x float> [[BROADCAST_SPLAT4]], <2 x float> zeroinitializer, <2 x float> zeroinitializer, <2 x float> zeroinitializer)
 ; CHECK-NEXT:    store <8 x float> [[INTERLEAVED_VEC5]], ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
@@ -269,16 +265,17 @@ define void @geps_feeding_interleave_groups_with_reuse2(ptr %A, ptr %B, i64 %N) 
 ; CHECK-NEXT:    [[TMP52:%.*]] = lshr exact i64 [[TMP51]], 1
 ; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr nusw i32, ptr [[B]], i64 [[TMP52]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <16 x i32>, ptr [[TMP53]], align 4, !alias.scope [[META3:![0-9]+]], !noalias [[META6:![0-9]+]]
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
-; CHECK-NEXT:    [[STRIDED_VEC41:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> poison, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @llvm.vector.deinterleave4.v16i32(<16 x i32> [[WIDE_VEC]])
+; CHECK-NEXT:    [[TMP64:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } [[STRIDED_VEC]], 0
+; CHECK-NEXT:    [[TMP65:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } [[STRIDED_VEC]], 1
 ; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr i32, ptr [[A]], <4 x i64> [[VEC_IND]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[STRIDED_VEC]], <4 x ptr> align 4 [[WIDE_GEP]], <4 x i1> splat (i1 true)), !alias.scope [[META6]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[TMP64]], <4 x ptr> align 4 [[WIDE_GEP]], <4 x i1> splat (i1 true)), !alias.scope [[META6]]
 ; CHECK-NEXT:    [[TMP54:%.*]] = or disjoint <4 x i64> [[VEC_IND]], splat (i64 1)
 ; CHECK-NEXT:    [[WIDE_GEP42:%.*]] = getelementptr i32, ptr [[A]], <4 x i64> [[TMP54]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> zeroinitializer, <4 x ptr> align 4 [[WIDE_GEP42]], <4 x i1> splat (i1 true)), !alias.scope [[META6]]
 ; CHECK-NEXT:    [[TMP55:%.*]] = or disjoint <4 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[WIDE_GEP43:%.*]] = getelementptr i32, ptr [[A]], <4 x i64> [[TMP55]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[STRIDED_VEC41]], <4 x ptr> align 4 [[WIDE_GEP43]], <4 x i1> splat (i1 true)), !alias.scope [[META6]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[TMP65]], <4 x ptr> align 4 [[WIDE_GEP43]], <4 x i1> splat (i1 true)), !alias.scope [[META6]]
 ; CHECK-NEXT:    [[TMP56:%.*]] = or disjoint <4 x i64> [[VEC_IND]], splat (i64 3)
 ; CHECK-NEXT:    [[WIDE_GEP44:%.*]] = getelementptr i32, ptr [[A]], <4 x i64> [[TMP56]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> zeroinitializer, <4 x ptr> align 4 [[WIDE_GEP44]], <4 x i1> splat (i1 true)), !alias.scope [[META6]]
@@ -397,7 +394,8 @@ define void @interleave_store_double_i64(ptr %dst) {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    store <4 x double> <double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double 4.940660e-324>, ptr [[DST]], align 8
+; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <4 x double> @llvm.vector.interleave2.v4f64(<2 x double> zeroinitializer, <2 x double> <double 0.000000e+00, double 4.940660e-324>)
+; CHECK-NEXT:    store <4 x double> [[INTERLEAVED_VEC]], ptr [[DST]], align 8
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
@@ -498,7 +496,8 @@ define void @interleave_store_i64_double_2(ptr %dst) {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    store <4 x double> <double 0.000000e+00, double 0.000000e+00, double 4.940660e-324, double 0.000000e+00>, ptr [[DST]], align 8
+; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <4 x double> @llvm.vector.interleave2.v4f64(<2 x double> <double 0.000000e+00, double 4.940660e-324>, <2 x double> zeroinitializer)
+; CHECK-NEXT:    store <4 x double> [[INTERLEAVED_VEC]], ptr [[DST]], align 8
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]

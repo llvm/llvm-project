@@ -65,7 +65,8 @@ define hidden void @pointer_phi_v4i32_add2(ptr noalias nocapture readonly %A, pt
 ; CHECK-NEXT:    [[OFFSET_IDX1:%.*]] = shl i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[B]], i32 [[OFFSET_IDX1]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[NEXT_GEP]], align 4
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> [[WIDE_VEC]])
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[STRIDED_VEC1]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[STRIDED_VEC]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[NEXT_GEP2]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
@@ -233,7 +234,8 @@ define hidden void @pointer_phi_v8i16_add2(ptr noalias nocapture readonly %A, pt
 ; CHECK-NEXT:    [[OFFSET_IDX1:%.*]] = shl i32 [[INDEX]], 1
 ; CHECK-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[B]], i32 [[OFFSET_IDX1]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <16 x i16>, ptr [[NEXT_GEP]], align 2
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x i16> [[WIDE_VEC]], <16 x i16> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = call { <8 x i16>, <8 x i16> } @llvm.vector.deinterleave2.v16i16(<16 x i16> [[WIDE_VEC]])
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <8 x i16>, <8 x i16> } [[STRIDED_VEC1]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <8 x i16> [[STRIDED_VEC]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    store <8 x i16> [[TMP3]], ptr [[NEXT_GEP2]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
@@ -396,7 +398,8 @@ define hidden void @pointer_phi_v16i8_add2(ptr noalias nocapture readonly %A, pt
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[A]], i32 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i8, ptr [[B]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <32 x i8>, ptr [[NEXT_GEP]], align 1
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <32 x i8> [[WIDE_VEC]], <32 x i8> poison, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = call { <16 x i8>, <16 x i8> } @llvm.vector.deinterleave2.v32i8(<32 x i8> [[WIDE_VEC]])
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <16 x i8>, <16 x i8> } [[STRIDED_VEC1]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <16 x i8> [[STRIDED_VEC]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    store <16 x i8> [[TMP3]], ptr [[NEXT_GEP1]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 16
@@ -543,7 +546,8 @@ define hidden void @pointer_phi_v4f32_add2(ptr noalias nocapture readonly %A, pt
 ; CHECK-NEXT:    [[OFFSET_IDX1:%.*]] = shl i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[B]], i32 [[OFFSET_IDX1]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x float>, ptr [[NEXT_GEP]], align 4
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x float> [[WIDE_VEC]], <8 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> [[WIDE_VEC]])
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <4 x float>, <4 x float> } [[STRIDED_VEC1]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = fadd fast <4 x float> [[STRIDED_VEC]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    store <4 x float> [[TMP2]], ptr [[NEXT_GEP2]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
@@ -708,7 +712,8 @@ define hidden void @pointer_phi_v4half_add2(ptr noalias nocapture readonly %A, p
 ; CHECK-NEXT:    [[OFFSET_IDX1:%.*]] = shl i32 [[INDEX]], 1
 ; CHECK-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[B]], i32 [[OFFSET_IDX1]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <16 x half>, ptr [[NEXT_GEP]], align 4
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x half> [[WIDE_VEC]], <16 x half> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = call { <8 x half>, <8 x half> } @llvm.vector.deinterleave2.v16f16(<16 x half> [[WIDE_VEC]])
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <8 x half>, <8 x half> } [[STRIDED_VEC1]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = fadd fast <8 x half> [[STRIDED_VEC]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    store <8 x half> [[TMP2]], ptr [[NEXT_GEP2]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
@@ -769,7 +774,8 @@ define hidden void @pointer_phi_v4half_add3(ptr noalias nocapture readonly %A, p
 ; CHECK-NEXT:    [[OFFSET_IDX1:%.*]] = shl i32 [[INDEX]], 1
 ; CHECK-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[B]], i32 [[OFFSET_IDX1]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <24 x half>, ptr [[NEXT_GEP]], align 4
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <24 x half> [[WIDE_VEC]], <24 x half> poison, <8 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 18, i32 21>
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = call { <8 x half>, <8 x half>, <8 x half> } @llvm.vector.deinterleave3.v24f16(<24 x half> [[WIDE_VEC]])
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <8 x half>, <8 x half>, <8 x half> } [[STRIDED_VEC1]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = fadd fast <8 x half> [[STRIDED_VEC]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    store <8 x half> [[TMP2]], ptr [[NEXT_GEP2]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8

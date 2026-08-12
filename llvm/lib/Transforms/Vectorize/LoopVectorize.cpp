@@ -2573,18 +2573,11 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
          "Decision should not be set yet.");
   auto *Group = getInterleavedAccessGroup(I);
   assert(Group && "Must have a group.");
-  unsigned InterleaveFactor = Group->getFactor();
-
   // If the instruction's allocated size doesn't equal its type size, it
   // requires padding and will be scalarized.
   auto &DL = I->getDataLayout();
   auto *ScalarTy = getLoadStoreType(I);
   if (hasIrregularType(ScalarTy, DL))
-    return false;
-
-  // For scalable vectors, the interleave factors must be <= 8 since we require
-  // the (de)interleaveN intrinsics instead of shufflevectors.
-  if (VF.isScalable() && InterleaveFactor > 8)
     return false;
 
   // If the group involves a non-integral pointer, we may not be able to
@@ -6728,10 +6721,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
       bool Result = (VF.isVector() && // Query is illegal for VF == 1
                      CM.getWideningDecision(IG->getInsertPos(), VF) ==
                          LoopVectorizationCostModel::CM_Interleave);
-      // For scalable vectors, the interleave factors must be <= 8 since we
-      // require the (de)interleaveN intrinsics instead of shufflevectors.
-      assert((!Result || !VF.isScalable() || IG->getFactor() <= 8) &&
-             "Unsupported interleave factor for scalable vectors");
       return Result;
     };
     if (!getDecisionAndClampRange(ApplyIG, Range))

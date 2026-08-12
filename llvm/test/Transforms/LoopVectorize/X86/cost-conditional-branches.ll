@@ -411,13 +411,17 @@ define void @cost_duplicate_recipe_for_sinking(ptr %A, i64 %N) #2 {
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr double, ptr [[A]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr double, ptr [[A]], i64 [[TMP10]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <16 x double>, ptr [[TMP11]], align 8
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x double> [[WIDE_VEC]], <16 x double> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = call { <4 x double>, <4 x double>, <4 x double>, <4 x double> } @llvm.vector.deinterleave4.v16f64(<16 x double> [[WIDE_VEC]])
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <4 x double>, <4 x double>, <4 x double>, <4 x double> } [[STRIDED_VEC1]], 0
 ; CHECK-NEXT:    [[WIDE_VEC2:%.*]] = load <16 x double>, ptr [[TMP12]], align 8
-; CHECK-NEXT:    [[STRIDED_VEC3:%.*]] = shufflevector <16 x double> [[WIDE_VEC2]], <16 x double> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
+; CHECK-NEXT:    [[STRIDED_VEC4:%.*]] = call { <4 x double>, <4 x double>, <4 x double>, <4 x double> } @llvm.vector.deinterleave4.v16f64(<16 x double> [[WIDE_VEC2]])
+; CHECK-NEXT:    [[STRIDED_VEC3:%.*]] = extractvalue { <4 x double>, <4 x double>, <4 x double>, <4 x double> } [[STRIDED_VEC4]], 0
 ; CHECK-NEXT:    [[WIDE_VEC4:%.*]] = load <16 x double>, ptr [[TMP13]], align 8
-; CHECK-NEXT:    [[STRIDED_VEC5:%.*]] = shufflevector <16 x double> [[WIDE_VEC4]], <16 x double> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
+; CHECK-NEXT:    [[STRIDED_VEC6:%.*]] = call { <4 x double>, <4 x double>, <4 x double>, <4 x double> } @llvm.vector.deinterleave4.v16f64(<16 x double> [[WIDE_VEC4]])
+; CHECK-NEXT:    [[STRIDED_VEC5:%.*]] = extractvalue { <4 x double>, <4 x double>, <4 x double>, <4 x double> } [[STRIDED_VEC6]], 0
 ; CHECK-NEXT:    [[WIDE_VEC6:%.*]] = load <16 x double>, ptr [[TMP14]], align 8
-; CHECK-NEXT:    [[STRIDED_VEC7:%.*]] = shufflevector <16 x double> [[WIDE_VEC6]], <16 x double> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
+; CHECK-NEXT:    [[STRIDED_VEC8:%.*]] = call { <4 x double>, <4 x double>, <4 x double>, <4 x double> } @llvm.vector.deinterleave4.v16f64(<16 x double> [[WIDE_VEC6]])
+; CHECK-NEXT:    [[STRIDED_VEC7:%.*]] = extractvalue { <4 x double>, <4 x double>, <4 x double>, <4 x double> } [[STRIDED_VEC8]], 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = fcmp oeq <4 x double> [[STRIDED_VEC]], zeroinitializer
 ; CHECK-NEXT:    [[TMP16:%.*]] = fcmp oeq <4 x double> [[STRIDED_VEC3]], zeroinitializer
 ; CHECK-NEXT:    [[TMP17:%.*]] = fcmp oeq <4 x double> [[STRIDED_VEC5]], zeroinitializer
@@ -574,7 +578,8 @@ define void @cost_duplicate_recipe_for_sinking(ptr %A, i64 %N) #2 {
 ; CHECK-NEXT:    [[TMP75:%.*]] = shl nsw i64 [[INDEX39]], 2
 ; CHECK-NEXT:    [[TMP76:%.*]] = getelementptr double, ptr [[A]], i64 [[TMP75]]
 ; CHECK-NEXT:    [[WIDE_VEC40:%.*]] = load <16 x double>, ptr [[TMP76]], align 8
-; CHECK-NEXT:    [[STRIDED_VEC41:%.*]] = shufflevector <16 x double> [[WIDE_VEC40]], <16 x double> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
+; CHECK-NEXT:    [[STRIDED_VEC42:%.*]] = call { <4 x double>, <4 x double>, <4 x double>, <4 x double> } @llvm.vector.deinterleave4.v16f64(<16 x double> [[WIDE_VEC40]])
+; CHECK-NEXT:    [[STRIDED_VEC41:%.*]] = extractvalue { <4 x double>, <4 x double>, <4 x double>, <4 x double> } [[STRIDED_VEC42]], 0
 ; CHECK-NEXT:    [[TMP77:%.*]] = fcmp oeq <4 x double> [[STRIDED_VEC41]], zeroinitializer
 ; CHECK-NEXT:    [[TMP78:%.*]] = extractelement <4 x i1> [[TMP77]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP78]], label [[PRED_STORE_IF42:%.*]], label [[PRED_STORE_CONTINUE43:%.*]]

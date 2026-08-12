@@ -17,8 +17,9 @@ define void @gep_for_first_member_does_not_dominate_insert_point(ptr %str, ptr n
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[STR]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP3]], i32 -1
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i8>, ptr [[TMP4]], align 1
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i8> [[WIDE_VEC]], <8 x i8> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = shufflevector <8 x i8> [[WIDE_VEC]], <8 x i8> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = call { <4 x i8>, <4 x i8> } @llvm.vector.deinterleave2.v8i8(<8 x i8> [[WIDE_VEC]])
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <4 x i8>, <4 x i8> } [[STRIDED_VEC1]], 0
+; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = extractvalue { <4 x i8>, <4 x i8> } [[STRIDED_VEC1]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i8> [[STRIDED_VEC2]], [[STRIDED_VEC]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <4 x i8> [[TMP5]], ptr [[TMP6]], align 1
@@ -71,8 +72,9 @@ define void @test_ig_insert_pos_at_end_of_vpbb(ptr noalias %dst, ptr noalias %sr
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr nusw { i16, i16, i16, i16 }, ptr [[SRC]], i64 [[TMP3]], i32 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr nusw i8, ptr [[TMP4]], i32 -4
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <16 x i16>, ptr [[TMP5]], align 2
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x i16> [[WIDE_VEC]], <16 x i16> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
-; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <16 x i16> [[WIDE_VEC]], <16 x i16> poison, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = call { <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16> } @llvm.vector.deinterleave4.v16i16(<16 x i16> [[WIDE_VEC]])
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16> } [[STRIDED_VEC1]], 0
+; CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16> } [[STRIDED_VEC1]], 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i16> [[STRIDED_VEC]], i64 3
 ; CHECK-NEXT:    store i16 [[TMP6]], ptr [[DST]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP3]], 4
@@ -161,8 +163,9 @@ define i64 @interleave_group_load_pointer_type(ptr %start, ptr %end) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 16
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP7]], i32 -8
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <12 x ptr>, ptr [[TMP8]], align 8
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <12 x ptr> [[WIDE_VEC]], <12 x ptr> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
-; CHECK-NEXT:    [[STRIDED_VEC3:%.*]] = shufflevector <12 x ptr> [[WIDE_VEC]], <12 x ptr> poison, <4 x i32> <i32 1, i32 4, i32 7, i32 10>
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = call { <4 x ptr>, <4 x ptr>, <4 x ptr> } @llvm.vector.deinterleave3.v12p0(<12 x ptr> [[WIDE_VEC]])
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <4 x ptr>, <4 x ptr>, <4 x ptr> } [[STRIDED_VEC1]], 0
+; CHECK-NEXT:    [[STRIDED_VEC3:%.*]] = extractvalue { <4 x ptr>, <4 x ptr>, <4 x ptr> } [[STRIDED_VEC1]], 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint <4 x ptr> [[STRIDED_VEC3]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint <4 x ptr> [[STRIDED_VEC]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP11:%.*]] = or <4 x i64> [[TMP9]], [[TMP10]]

@@ -511,8 +511,9 @@ define void @test(ptr %A, ptr noalias %B) #0 {
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[OFFSET_IDX]], 14
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [1024 x i32], ptr [[A]], i64 0, i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <16 x i32>, ptr [[TMP16]], align 4
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
-; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = call { <8 x i32>, <8 x i32> } @llvm.vector.deinterleave2.v16i32(<16 x i32> [[WIDE_VEC]])
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <8 x i32>, <8 x i32> } [[STRIDED_VEC2]], 0
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = extractvalue { <8 x i32>, <8 x i32> } [[STRIDED_VEC2]], 1
 ; CHECK-NEXT:    [[TMP18:%.*]] = add <8 x i32> [[STRIDED_VEC]], [[STRIDED_VEC1]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = trunc <8 x i32> [[TMP18]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[OFFSET_IDX]]
@@ -589,8 +590,9 @@ define void @test(ptr %A, ptr noalias %B) #0 {
 ; MAX-BW-NEXT:    [[TMP31:%.*]] = add i64 [[OFFSET_IDX]], 62
 ; MAX-BW-NEXT:    [[TMP32:%.*]] = getelementptr inbounds [1024 x i32], ptr [[A]], i64 0, i64 [[OFFSET_IDX]]
 ; MAX-BW-NEXT:    [[WIDE_VEC:%.*]] = load <64 x i32>, ptr [[TMP32]], align 4
-; MAX-BW-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <64 x i32> [[WIDE_VEC]], <64 x i32> poison, <32 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30, i32 32, i32 34, i32 36, i32 38, i32 40, i32 42, i32 44, i32 46, i32 48, i32 50, i32 52, i32 54, i32 56, i32 58, i32 60, i32 62>
-; MAX-BW-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <64 x i32> [[WIDE_VEC]], <64 x i32> poison, <32 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31, i32 33, i32 35, i32 37, i32 39, i32 41, i32 43, i32 45, i32 47, i32 49, i32 51, i32 53, i32 55, i32 57, i32 59, i32 61, i32 63>
+; MAX-BW-NEXT:    [[STRIDED_VEC2:%.*]] = call { <32 x i32>, <32 x i32> } @llvm.vector.deinterleave2.v64i32(<64 x i32> [[WIDE_VEC]])
+; MAX-BW-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <32 x i32>, <32 x i32> } [[STRIDED_VEC2]], 0
+; MAX-BW-NEXT:    [[STRIDED_VEC1:%.*]] = extractvalue { <32 x i32>, <32 x i32> } [[STRIDED_VEC2]], 1
 ; MAX-BW-NEXT:    [[TMP33:%.*]] = add <32 x i32> [[STRIDED_VEC]], [[STRIDED_VEC1]]
 ; MAX-BW-NEXT:    [[TMP34:%.*]] = trunc <32 x i32> [[TMP33]] to <32 x i8>
 ; MAX-BW-NEXT:    [[TMP35:%.*]] = getelementptr inbounds [1024 x i8], ptr [[B]], i64 0, i64 [[OFFSET_IDX]]

@@ -4436,20 +4436,11 @@ static Value *interleaveVectors(IRBuilderBase &Builder, ArrayRef<Value *> Vals,
     assert(Val->getType() == VecTy && "Tried to interleave mismatched types");
 #endif
 
-  // Scalable vectors cannot use arbitrary shufflevectors (only splats), so
-  // must use intrinsics to interleave.
-  if (VecTy->isScalableTy()) {
-    assert(Factor <= 8 && "Unsupported interleave factor for scalable vectors");
-    return Builder.CreateVectorInterleave(Vals, Name);
-  }
-
-  // Fixed length. Start by concatenating all vectors into a wide vector.
-  Value *WideVec = concatenateVectors(Builder, Vals);
-
-  // Interleave the elements into the wide vector.
-  const unsigned NumElts = VecTy->getElementCount().getFixedValue();
-  return Builder.CreateShuffleVector(
-      WideVec, createInterleaveMask(NumElts, Factor), Name);
+  Type *DestTy = VectorType::get(VecTy->getElementType(),
+                                 VecTy->getElementCount() * Factor);
+  return Builder.CreateIntrinsicWithoutFolding(
+      Intrinsic::getInterleaveIntrinsicID(Factor), {DestTy}, Vals,
+      /*FMFSource=*/nullptr, Name);
 }
 
 // Try to vectorize the interleave group that \p Instr belongs to.
@@ -4463,9 +4454,11 @@ static Value *interleaveVectors(IRBuilderBase &Builder, ArrayRef<Value *> Vals,
 //   }
 // To:
 //   %wide.vec = load <12 x i32>                       ; Read 4 tuples of R,G,B
-//   %R.vec = shuffle %wide.vec, poison, <0, 3, 6, 9>   ; R elements
-//   %G.vec = shuffle %wide.vec, poison, <1, 4, 7, 10>  ; G elements
-//   %B.vec = shuffle %wide.vec, poison, <2, 5, 8, 11>  ; B elements
+//   %strided.vec = call { <4 x i32>, <4 x i32>, <4 x i32> }
+//        @llvm.vector.deinterleave3.v12i32(<12 x i32> %wide.vec)
+//   %R.vec = extractvalue %strided.vec, 0              ; R elements
+//   %G.vec = extractvalue %strided.vec, 1              ; G elements
+//   %B.vec = extractvalue %strided.vec, 2              ; B elements
 //
 // Or translate following interleaved store group (factor = 3):
 //   for (i = 0; i < N; i+=3) {
@@ -4475,10 +4468,10 @@ static Value *interleaveVectors(IRBuilderBase &Builder, ArrayRef<Value *> Vals,
 //     Pic[i+2] = B;           // Member of index 2
 //   }
 // To:
-//   %R_G.vec = shuffle %R.vec, %G.vec, <0, 1, 2, ..., 7>
-//   %B_U.vec = shuffle %B.vec, poison, <0, 1, 2, 3, u, u, u, u>
-//   %interleaved.vec = shuffle %R_G.vec, %B_U.vec,
-//        <0, 4, 8, 1, 5, 9, 2, 6, 10, 3, 7, 11>    ; Interleave R,G,B elements
+//   %interleaved.vec = call <12 x i32>
+//        @llvm.vector.interleave3.v12i32(
+//          <4 x i32> %R.vec, <4 x i32> %G.vec, <4 x i32> %B.vec)
+//                                                            ; Interleave R,G,B
 //   store <12 x i32> %interleaved.vec              ; Write 4 tuples of R,G,B
 void VPInterleaveRecipe::execute(VPTransformState &State) {
   assert((!needsMaskForGaps() || !State.VF.isScalable()) &&
@@ -4497,23 +4490,13 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
 
   auto CreateGroupMask = [&BlockInMask, &State,
                           &InterleaveFactor](Value *MaskForGaps) -> Value * {
-    if (State.VF.isScalable()) {
-      assert(!MaskForGaps && "Interleaved groups with gaps are not supported.");
-      assert(InterleaveFactor <= 8 &&
-             "Unsupported deinterleave factor for scalable vectors");
-      auto *ResBlockInMask = State.get(BlockInMask);
-      SmallVector<Value *> Ops(InterleaveFactor, ResBlockInMask);
-      return interleaveVectors(State.Builder, Ops, "interleaved.mask");
-    }
-
     if (!BlockInMask)
       return MaskForGaps;
 
     Value *ResBlockInMask = State.get(BlockInMask);
-    Value *ShuffledMask = State.Builder.CreateShuffleVector(
-        ResBlockInMask,
-        createReplicatedMask(InterleaveFactor, State.VF.getFixedValue()),
-        "interleaved.mask");
+    SmallVector<Value *> Ops(InterleaveFactor, ResBlockInMask);
+    Value *ShuffledMask =
+        interleaveVectors(State.Builder, Ops, "interleaved.mask");
     return MaskForGaps ? State.Builder.CreateBinOp(Instruction::And,
                                                    ShuffledMask, MaskForGaps)
                        : ShuffledMask;
@@ -4544,29 +4527,15 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
     Group->addMetadata(NewLoad);
 
     ArrayRef<VPRecipeValue *> VPDefs = definedValues();
-    if (VecTy->isScalableTy()) {
-      // Scalable vectors cannot use arbitrary shufflevectors (only splats),
-      // so must use intrinsics to deinterleave.
-      assert(InterleaveFactor <= 8 &&
-             "Unsupported deinterleave factor for scalable vectors");
-      NewLoad = State.Builder.CreateIntrinsicWithoutFolding(
-          Intrinsic::getDeinterleaveIntrinsicID(InterleaveFactor),
-          NewLoad->getType(), NewLoad,
-          /*FMFSource=*/nullptr, "strided.vec");
-    }
+    NewLoad = State.Builder.CreateIntrinsicWithoutFolding(
+        Intrinsic::getDeinterleaveIntrinsicID(InterleaveFactor),
+        NewLoad->getType(), NewLoad,
+        /*FMFSource=*/nullptr, "strided.vec");
 
     auto CreateStridedVector = [&InterleaveFactor, &State,
                                 &NewLoad](unsigned Index) -> Value * {
       assert(Index < InterleaveFactor && "Illegal group index");
-      if (State.VF.isScalable())
-        return State.Builder.CreateExtractValue(NewLoad, Index);
-
-      // For fixed length VF, use shuffle to extract the sub-vectors from the
-      // wide load.
-      auto StrideMask =
-          createStrideMask(Index, InterleaveFactor, State.VF.getFixedValue());
-      return State.Builder.CreateShuffleVector(NewLoad, StrideMask,
-                                               "strided.vec");
+      return State.Builder.CreateExtractValue(NewLoad, Index);
     };
 
     for (unsigned I = 0, J = 0; I < InterleaveFactor; ++I) {
@@ -4689,8 +4658,6 @@ void VPInterleaveEVLRecipe::execute(VPTransformState &State) {
   // Prepare for the vector type of the interleaved load/store.
   Type *ScalarTy = getLoadStoreType(Instr);
   unsigned InterleaveFactor = Group->getFactor();
-  assert(InterleaveFactor <= 8 &&
-         "Unsupported deinterleave/interleave factor for scalable vectors");
   ElementCount WideVF = State.VF * InterleaveFactor;
   auto *VecTy = VectorType::get(ScalarTy, WideVF);
 
@@ -4723,8 +4690,7 @@ void VPInterleaveEVLRecipe::execute(VPTransformState &State) {
     // TODO: Also manage existing metadata using VPIRMetadata.
     Group->addMetadata(NewLoad);
 
-    // Scalable vectors cannot use arbitrary shufflevectors (only splats),
-    // so must use intrinsics to deinterleave.
+    // Use a deinterleave intrinsic to split the wide load into strided fields.
     NewLoad = State.Builder.CreateIntrinsicWithoutFolding(
         Intrinsic::getDeinterleaveIntrinsicID(InterleaveFactor),
         NewLoad->getType(), NewLoad,

@@ -191,7 +191,8 @@ define void @test_scalar_cost_single_store_loop_varying_cond(ptr %dst, ptr noali
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <32 x i32>, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <32 x i32> [[WIDE_VEC]], <32 x i32> poison, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = call { <8 x i32>, <8 x i32>, <8 x i32>, <8 x i32> } @llvm.vector.deinterleave4.v32i32(<32 x i32> [[WIDE_VEC]])
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <8 x i32>, <8 x i32>, <8 x i32>, <8 x i32> } [[STRIDED_VEC1]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <8 x i32> [[STRIDED_VEC]], splat (i32 123)
 ; CHECK-NEXT:    call void @llvm.masked.store.v8i32.p0(<8 x i32> zeroinitializer, ptr align 4 [[NEXT_GEP]], <8 x i1> [[TMP3]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8

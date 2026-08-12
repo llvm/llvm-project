@@ -524,10 +524,10 @@ define <4 x float> @mul_triangle_external_use_intrinsic(<4 x float> %a, <4 x flo
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov d2, v0.d[1]
 ; CHECK-NEXT:    mov d3, v1.d[1]
-; CHECK-NEXT:    zip2 v4.2s, v0.2s, v2.2s
-; CHECK-NEXT:    zip1 v5.2s, v1.2s, v3.2s
-; CHECK-NEXT:    zip1 v0.2s, v0.2s, v2.2s
-; CHECK-NEXT:    zip2 v1.2s, v1.2s, v3.2s
+; CHECK-NEXT:    uzp2 v4.2s, v0.2s, v2.2s
+; CHECK-NEXT:    uzp1 v5.2s, v1.2s, v3.2s
+; CHECK-NEXT:    uzp1 v0.2s, v0.2s, v2.2s
+; CHECK-NEXT:    uzp2 v1.2s, v1.2s, v3.2s
 ; CHECK-NEXT:    fmul v2.2s, v4.2s, v5.2s
 ; CHECK-NEXT:    fmul v3.2s, v1.2s, v4.2s
 ; CHECK-NEXT:    fmla v2.2s, v0.2s, v1.2s
@@ -539,9 +539,7 @@ define <4 x float> @mul_triangle_external_use_intrinsic(<4 x float> %a, <4 x flo
 ; CHECK-NEXT:    fneg v3.2s, v3.2s
 ; CHECK-NEXT:    fmla v5.2s, v4.2s, v1.2s
 ; CHECK-NEXT:    fmla v3.2s, v0.2s, v1.2s
-; CHECK-NEXT:    mov v3.d[1], v5.d[0]
-; CHECK-NEXT:    rev64 v0.4s, v3.4s
-; CHECK-NEXT:    uzp1 v0.4s, v3.4s, v0.4s
+; CHECK-NEXT:    zip1 v0.4s, v3.4s, v5.4s
 ; CHECK-NEXT:    ret
 entry:
   %a.deinterleaved = call { <2 x float>, <2 x float> } @llvm.vector.deinterleave2.v4f32(<4 x float> %a)
@@ -569,64 +567,33 @@ entry:
 
 
 define <4 x float> @multiple_muls_shuffle_external_intrinsic(<4 x float> %a, <4 x float> %b, <4 x float> %c, <4 x float> %d, ptr %p1, ptr %p2) {
-; CHECK-IAENABLED-LABEL: multiple_muls_shuffle_external_intrinsic:
-; CHECK-IAENABLED:       // %bb.0: // %entry
-; CHECK-IAENABLED-NEXT:    mov d5, v0.d[1]
-; CHECK-IAENABLED-NEXT:    mov d6, v1.d[1]
-; CHECK-IAENABLED-NEXT:    mov d4, v2.d[1]
-; CHECK-IAENABLED-NEXT:    zip2 v7.2s, v0.2s, v5.2s
-; CHECK-IAENABLED-NEXT:    zip2 v16.2s, v1.2s, v6.2s
-; CHECK-IAENABLED-NEXT:    zip1 v1.2s, v1.2s, v6.2s
-; CHECK-IAENABLED-NEXT:    zip1 v0.2s, v0.2s, v5.2s
-; CHECK-IAENABLED-NEXT:    fmul v5.2s, v1.2s, v7.2s
-; CHECK-IAENABLED-NEXT:    fmul v6.2s, v16.2s, v7.2s
-; CHECK-IAENABLED-NEXT:    zip1 v7.2s, v2.2s, v4.2s
-; CHECK-IAENABLED-NEXT:    zip2 v4.2s, v2.2s, v4.2s
-; CHECK-IAENABLED-NEXT:    fmla v5.2s, v0.2s, v16.2s
-; CHECK-IAENABLED-NEXT:    fneg v6.2s, v6.2s
-; CHECK-IAENABLED-NEXT:    fmla v6.2s, v0.2s, v1.2s
-; CHECK-IAENABLED-NEXT:    fmul v17.2s, v7.2s, v5.2s
-; CHECK-IAENABLED-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-IAENABLED-NEXT:    fmul v1.2s, v4.2s, v5.2s
-; CHECK-IAENABLED-NEXT:    fmla v17.2s, v6.2s, v4.2s
-; CHECK-IAENABLED-NEXT:    fcmla v0.4s, v2.4s, v3.4s, #0
-; CHECK-IAENABLED-NEXT:    str d6, [x0]
-; CHECK-IAENABLED-NEXT:    fneg v16.2s, v1.2s
-; CHECK-IAENABLED-NEXT:    fcmla v0.4s, v2.4s, v3.4s, #90
-; CHECK-IAENABLED-NEXT:    fmla v16.2s, v6.2s, v7.2s
-; CHECK-IAENABLED-NEXT:    st2 { v16.2s, v17.2s }, [x1]
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: multiple_muls_shuffle_external_intrinsic:
-; CHECK-IADISABLED:       // %bb.0: // %entry
-; CHECK-IADISABLED-NEXT:    mov d4, v1.d[1]
-; CHECK-IADISABLED-NEXT:    mov d5, v0.d[1]
-; CHECK-IADISABLED-NEXT:    zip1 v6.2s, v1.2s, v4.2s
-; CHECK-IADISABLED-NEXT:    zip2 v7.2s, v0.2s, v5.2s
-; CHECK-IADISABLED-NEXT:    zip1 v0.2s, v0.2s, v5.2s
-; CHECK-IADISABLED-NEXT:    zip2 v1.2s, v1.2s, v4.2s
-; CHECK-IADISABLED-NEXT:    mov d5, v2.d[1]
-; CHECK-IADISABLED-NEXT:    fmul v4.2s, v6.2s, v7.2s
-; CHECK-IADISABLED-NEXT:    fmla v4.2s, v0.2s, v1.2s
-; CHECK-IADISABLED-NEXT:    fmul v1.2s, v1.2s, v7.2s
-; CHECK-IADISABLED-NEXT:    zip2 v7.2s, v2.2s, v5.2s
-; CHECK-IADISABLED-NEXT:    zip1 v5.2s, v2.2s, v5.2s
-; CHECK-IADISABLED-NEXT:    fneg v1.2s, v1.2s
-; CHECK-IADISABLED-NEXT:    fmul v16.2s, v7.2s, v4.2s
-; CHECK-IADISABLED-NEXT:    fmul v4.2s, v5.2s, v4.2s
-; CHECK-IADISABLED-NEXT:    fmla v1.2s, v0.2s, v6.2s
-; CHECK-IADISABLED-NEXT:    fneg v6.2s, v16.2s
-; CHECK-IADISABLED-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-IADISABLED-NEXT:    fmla v4.2s, v1.2s, v7.2s
-; CHECK-IADISABLED-NEXT:    fmla v6.2s, v1.2s, v5.2s
-; CHECK-IADISABLED-NEXT:    fcmla v0.4s, v2.4s, v3.4s, #0
-; CHECK-IADISABLED-NEXT:    str d1, [x0]
-; CHECK-IADISABLED-NEXT:    mov v6.d[1], v4.d[0]
-; CHECK-IADISABLED-NEXT:    fcmla v0.4s, v2.4s, v3.4s, #90
-; CHECK-IADISABLED-NEXT:    rev64 v4.4s, v6.4s
-; CHECK-IADISABLED-NEXT:    uzp1 v2.4s, v6.4s, v4.4s
-; CHECK-IADISABLED-NEXT:    str q2, [x1]
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: multiple_muls_shuffle_external_intrinsic:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov d5, v0.d[1]
+; CHECK-NEXT:    mov d6, v1.d[1]
+; CHECK-NEXT:    mov d4, v2.d[1]
+; CHECK-NEXT:    uzp2 v7.2s, v0.2s, v5.2s
+; CHECK-NEXT:    uzp2 v16.2s, v1.2s, v6.2s
+; CHECK-NEXT:    uzp1 v1.2s, v1.2s, v6.2s
+; CHECK-NEXT:    uzp1 v0.2s, v0.2s, v5.2s
+; CHECK-NEXT:    fmul v5.2s, v1.2s, v7.2s
+; CHECK-NEXT:    fmul v6.2s, v16.2s, v7.2s
+; CHECK-NEXT:    uzp1 v7.2s, v2.2s, v4.2s
+; CHECK-NEXT:    uzp2 v4.2s, v2.2s, v4.2s
+; CHECK-NEXT:    fmla v5.2s, v0.2s, v16.2s
+; CHECK-NEXT:    fneg v6.2s, v6.2s
+; CHECK-NEXT:    fmla v6.2s, v0.2s, v1.2s
+; CHECK-NEXT:    fmul v17.2s, v7.2s, v5.2s
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    fmul v1.2s, v4.2s, v5.2s
+; CHECK-NEXT:    fmla v17.2s, v6.2s, v4.2s
+; CHECK-NEXT:    fcmla v0.4s, v2.4s, v3.4s, #0
+; CHECK-NEXT:    str d6, [x0]
+; CHECK-NEXT:    fneg v16.2s, v1.2s
+; CHECK-NEXT:    fcmla v0.4s, v2.4s, v3.4s, #90
+; CHECK-NEXT:    fmla v16.2s, v6.2s, v7.2s
+; CHECK-NEXT:    st2 { v16.2s, v17.2s }, [x1]
+; CHECK-NEXT:    ret
 entry:
   %a.deinterleaved = call { <2 x float>, <2 x float> } @llvm.vector.deinterleave2.v4f32(<4 x float> %a)
   %strided.vec = extractvalue { <2 x float>, <2 x float> } %a.deinterleaved, 0
@@ -667,66 +634,30 @@ entry:
 
 
 define <4 x float> @multiple_muls_shuffle_external_with_loads_intrinsic(ptr %ptr_a, ptr %ptr_b, ptr %ptr_c, ptr %ptr_d, ptr %p1, ptr %p2) {
-; CHECK-IAENABLED-LABEL: multiple_muls_shuffle_external_with_loads_intrinsic:
-; CHECK-IAENABLED:       // %bb.0: // %entry
-; CHECK-IAENABLED-NEXT:    ld2 { v0.2s, v1.2s }, [x0]
-; CHECK-IAENABLED-NEXT:    ld2 { v2.2s, v3.2s }, [x1]
-; CHECK-IAENABLED-NEXT:    fmul v4.2s, v3.2s, v1.2s
-; CHECK-IAENABLED-NEXT:    fmul v6.2s, v2.2s, v1.2s
-; CHECK-IAENABLED-NEXT:    fneg v4.2s, v4.2s
-; CHECK-IAENABLED-NEXT:    fmla v6.2s, v0.2s, v3.2s
-; CHECK-IAENABLED-NEXT:    fmla v4.2s, v0.2s, v2.2s
-; CHECK-IAENABLED-NEXT:    str d4, [x4]
-; CHECK-IAENABLED-NEXT:    ldr q5, [x2]
-; CHECK-IAENABLED-NEXT:    mov d7, v5.d[1]
-; CHECK-IAENABLED-NEXT:    zip1 v0.2s, v5.2s, v7.2s
-; CHECK-IAENABLED-NEXT:    zip2 v1.2s, v5.2s, v7.2s
-; CHECK-IAENABLED-NEXT:    fmul v3.2s, v0.2s, v6.2s
-; CHECK-IAENABLED-NEXT:    fmul v6.2s, v1.2s, v6.2s
-; CHECK-IAENABLED-NEXT:    fmla v3.2s, v4.2s, v1.2s
-; CHECK-IAENABLED-NEXT:    fneg v2.2s, v6.2s
-; CHECK-IAENABLED-NEXT:    fmla v2.2s, v4.2s, v0.2s
-; CHECK-IAENABLED-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-IAENABLED-NEXT:    st2 { v2.2s, v3.2s }, [x5]
-; CHECK-IAENABLED-NEXT:    ldr q1, [x3]
-; CHECK-IAENABLED-NEXT:    fcmla v0.4s, v5.4s, v1.4s, #0
-; CHECK-IAENABLED-NEXT:    fcmla v0.4s, v5.4s, v1.4s, #90
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: multiple_muls_shuffle_external_with_loads_intrinsic:
-; CHECK-IADISABLED:       // %bb.0: // %entry
-; CHECK-IADISABLED-NEXT:    ldr q0, [x0]
-; CHECK-IADISABLED-NEXT:    ldr q1, [x1]
-; CHECK-IADISABLED-NEXT:    mov d2, v0.d[1]
-; CHECK-IADISABLED-NEXT:    mov d3, v1.d[1]
-; CHECK-IADISABLED-NEXT:    zip2 v4.2s, v0.2s, v2.2s
-; CHECK-IADISABLED-NEXT:    zip2 v5.2s, v1.2s, v3.2s
-; CHECK-IADISABLED-NEXT:    zip1 v0.2s, v0.2s, v2.2s
-; CHECK-IADISABLED-NEXT:    zip1 v1.2s, v1.2s, v3.2s
-; CHECK-IADISABLED-NEXT:    fmul v6.2s, v5.2s, v4.2s
-; CHECK-IADISABLED-NEXT:    fneg v2.2s, v6.2s
-; CHECK-IADISABLED-NEXT:    fmla v2.2s, v0.2s, v1.2s
-; CHECK-IADISABLED-NEXT:    fmul v1.2s, v1.2s, v4.2s
-; CHECK-IADISABLED-NEXT:    str d2, [x4]
-; CHECK-IADISABLED-NEXT:    fmla v1.2s, v0.2s, v5.2s
-; CHECK-IADISABLED-NEXT:    ldr q3, [x2]
-; CHECK-IADISABLED-NEXT:    mov d4, v3.d[1]
-; CHECK-IADISABLED-NEXT:    zip2 v0.2s, v3.2s, v4.2s
-; CHECK-IADISABLED-NEXT:    zip1 v4.2s, v3.2s, v4.2s
-; CHECK-IADISABLED-NEXT:    fmul v5.2s, v0.2s, v1.2s
-; CHECK-IADISABLED-NEXT:    fmul v1.2s, v4.2s, v1.2s
-; CHECK-IADISABLED-NEXT:    fneg v5.2s, v5.2s
-; CHECK-IADISABLED-NEXT:    fmla v1.2s, v2.2s, v0.2s
-; CHECK-IADISABLED-NEXT:    fmla v5.2s, v2.2s, v4.2s
-; CHECK-IADISABLED-NEXT:    mov v5.d[1], v1.d[0]
-; CHECK-IADISABLED-NEXT:    rev64 v0.4s, v5.4s
-; CHECK-IADISABLED-NEXT:    uzp1 v1.4s, v5.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-IADISABLED-NEXT:    str q1, [x5]
-; CHECK-IADISABLED-NEXT:    ldr q1, [x3]
-; CHECK-IADISABLED-NEXT:    fcmla v0.4s, v3.4s, v1.4s, #0
-; CHECK-IADISABLED-NEXT:    fcmla v0.4s, v3.4s, v1.4s, #90
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: multiple_muls_shuffle_external_with_loads_intrinsic:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ld2 { v0.2s, v1.2s }, [x0]
+; CHECK-NEXT:    ld2 { v2.2s, v3.2s }, [x1]
+; CHECK-NEXT:    fmul v4.2s, v3.2s, v1.2s
+; CHECK-NEXT:    fmul v5.2s, v2.2s, v1.2s
+; CHECK-NEXT:    fneg v4.2s, v4.2s
+; CHECK-NEXT:    fmla v5.2s, v0.2s, v3.2s
+; CHECK-NEXT:    fmla v4.2s, v0.2s, v2.2s
+; CHECK-NEXT:    str d4, [x4]
+; CHECK-NEXT:    ldr q6, [x2]
+; CHECK-NEXT:    uzp1 v0.4s, v6.4s, v0.4s
+; CHECK-NEXT:    uzp2 v1.4s, v6.4s, v0.4s
+; CHECK-NEXT:    fmul v3.2s, v0.2s, v5.2s
+; CHECK-NEXT:    fmul v5.2s, v1.2s, v5.2s
+; CHECK-NEXT:    fmla v3.2s, v4.2s, v1.2s
+; CHECK-NEXT:    fneg v2.2s, v5.2s
+; CHECK-NEXT:    fmla v2.2s, v4.2s, v0.2s
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    st2 { v2.2s, v3.2s }, [x5]
+; CHECK-NEXT:    ldr q1, [x3]
+; CHECK-NEXT:    fcmla v0.4s, v6.4s, v1.4s, #0
+; CHECK-NEXT:    fcmla v0.4s, v6.4s, v1.4s, #90
+; CHECK-NEXT:    ret
 entry:
   %a = load <4 x float>, ptr %ptr_a
   %a.deinterleaved = call { <2 x float>, <2 x float> } @llvm.vector.deinterleave2.v4f32(<4 x float> %a)
@@ -771,80 +702,39 @@ entry:
 
 
 define <4 x float> @multiple_muls_mul_external_intrinsic(<4 x float> %a, <4 x float> %b, <4 x float> %c, <4 x float> %d, ptr %p1, ptr %p2) {
-; CHECK-IAENABLED-LABEL: multiple_muls_mul_external_intrinsic:
-; CHECK-IAENABLED:       // %bb.0: // %entry
-; CHECK-IAENABLED-NEXT:    mov d4, v0.d[1]
-; CHECK-IAENABLED-NEXT:    mov d5, v1.d[1]
-; CHECK-IAENABLED-NEXT:    mov d16, v2.d[1]
-; CHECK-IAENABLED-NEXT:    mov d17, v3.d[1]
-; CHECK-IAENABLED-NEXT:    zip2 v6.2s, v0.2s, v4.2s
-; CHECK-IAENABLED-NEXT:    zip2 v7.2s, v1.2s, v5.2s
-; CHECK-IAENABLED-NEXT:    zip2 v19.2s, v2.2s, v16.2s
-; CHECK-IAENABLED-NEXT:    zip1 v2.2s, v2.2s, v16.2s
-; CHECK-IAENABLED-NEXT:    zip2 v16.2s, v3.2s, v17.2s
-; CHECK-IAENABLED-NEXT:    zip1 v0.2s, v0.2s, v4.2s
-; CHECK-IAENABLED-NEXT:    zip1 v1.2s, v1.2s, v5.2s
-; CHECK-IAENABLED-NEXT:    zip1 v3.2s, v3.2s, v17.2s
-; CHECK-IAENABLED-NEXT:    fmul v18.2s, v6.2s, v7.2s
-; CHECK-IAENABLED-NEXT:    fmul v5.2s, v2.2s, v16.2s
-; CHECK-IAENABLED-NEXT:    fmul v16.2s, v19.2s, v16.2s
-; CHECK-IAENABLED-NEXT:    fmul v7.2s, v0.2s, v7.2s
-; CHECK-IAENABLED-NEXT:    fneg v4.2s, v18.2s
-; CHECK-IAENABLED-NEXT:    fmla v5.2s, v3.2s, v19.2s
-; CHECK-IAENABLED-NEXT:    fmla v7.2s, v1.2s, v6.2s
-; CHECK-IAENABLED-NEXT:    fmla v4.2s, v1.2s, v0.2s
-; CHECK-IAENABLED-NEXT:    fneg v0.2s, v16.2s
-; CHECK-IAENABLED-NEXT:    fmla v0.2s, v3.2s, v2.2s
-; CHECK-IAENABLED-NEXT:    fmul v2.2s, v4.2s, v5.2s
-; CHECK-IAENABLED-NEXT:    fmul v3.2s, v7.2s, v5.2s
-; CHECK-IAENABLED-NEXT:    str d4, [x0]
-; CHECK-IAENABLED-NEXT:    fmla v2.2s, v0.2s, v7.2s
-; CHECK-IAENABLED-NEXT:    fneg v1.2s, v3.2s
-; CHECK-IAENABLED-NEXT:    fmla v1.2s, v0.2s, v4.2s
-; CHECK-IAENABLED-NEXT:    mov v0.d[1], v5.d[0]
-; CHECK-IAENABLED-NEXT:    rev64 v3.4s, v0.4s
-; CHECK-IAENABLED-NEXT:    st2 { v1.2s, v2.2s }, [x1]
-; CHECK-IAENABLED-NEXT:    uzp1 v0.4s, v0.4s, v3.4s
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: multiple_muls_mul_external_intrinsic:
-; CHECK-IADISABLED:       // %bb.0: // %entry
-; CHECK-IADISABLED-NEXT:    mov d4, v0.d[1]
-; CHECK-IADISABLED-NEXT:    mov d5, v1.d[1]
-; CHECK-IADISABLED-NEXT:    mov d6, v2.d[1]
-; CHECK-IADISABLED-NEXT:    mov d7, v3.d[1]
-; CHECK-IADISABLED-NEXT:    zip1 v16.2s, v0.2s, v4.2s
-; CHECK-IADISABLED-NEXT:    zip2 v17.2s, v1.2s, v5.2s
-; CHECK-IADISABLED-NEXT:    zip2 v0.2s, v0.2s, v4.2s
-; CHECK-IADISABLED-NEXT:    zip1 v4.2s, v2.2s, v6.2s
-; CHECK-IADISABLED-NEXT:    zip2 v18.2s, v3.2s, v7.2s
-; CHECK-IADISABLED-NEXT:    zip1 v1.2s, v1.2s, v5.2s
-; CHECK-IADISABLED-NEXT:    zip2 v2.2s, v2.2s, v6.2s
-; CHECK-IADISABLED-NEXT:    zip1 v3.2s, v3.2s, v7.2s
-; CHECK-IADISABLED-NEXT:    fmul v5.2s, v16.2s, v17.2s
-; CHECK-IADISABLED-NEXT:    fmul v6.2s, v0.2s, v17.2s
-; CHECK-IADISABLED-NEXT:    fmul v7.2s, v4.2s, v18.2s
-; CHECK-IADISABLED-NEXT:    fmla v5.2s, v1.2s, v0.2s
-; CHECK-IADISABLED-NEXT:    fmul v0.2s, v2.2s, v18.2s
-; CHECK-IADISABLED-NEXT:    fmla v7.2s, v3.2s, v2.2s
-; CHECK-IADISABLED-NEXT:    fneg v2.2s, v6.2s
-; CHECK-IADISABLED-NEXT:    fneg v0.2s, v0.2s
-; CHECK-IADISABLED-NEXT:    fmla v2.2s, v1.2s, v16.2s
-; CHECK-IADISABLED-NEXT:    fmul v1.2s, v5.2s, v7.2s
-; CHECK-IADISABLED-NEXT:    fmla v0.2s, v3.2s, v4.2s
-; CHECK-IADISABLED-NEXT:    fmul v3.2s, v2.2s, v7.2s
-; CHECK-IADISABLED-NEXT:    fneg v1.2s, v1.2s
-; CHECK-IADISABLED-NEXT:    str d2, [x0]
-; CHECK-IADISABLED-NEXT:    fmla v3.2s, v0.2s, v5.2s
-; CHECK-IADISABLED-NEXT:    fmla v1.2s, v0.2s, v2.2s
-; CHECK-IADISABLED-NEXT:    mov v0.d[1], v7.d[0]
-; CHECK-IADISABLED-NEXT:    mov v1.d[1], v3.d[0]
-; CHECK-IADISABLED-NEXT:    rev64 v3.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    rev64 v4.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    uzp1 v0.4s, v0.4s, v3.4s
-; CHECK-IADISABLED-NEXT:    uzp1 v1.4s, v1.4s, v4.4s
-; CHECK-IADISABLED-NEXT:    str q1, [x1]
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: multiple_muls_mul_external_intrinsic:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov d4, v0.d[1]
+; CHECK-NEXT:    mov d5, v1.d[1]
+; CHECK-NEXT:    mov d16, v2.d[1]
+; CHECK-NEXT:    mov d17, v3.d[1]
+; CHECK-NEXT:    uzp2 v6.2s, v0.2s, v4.2s
+; CHECK-NEXT:    uzp2 v7.2s, v1.2s, v5.2s
+; CHECK-NEXT:    uzp2 v19.2s, v2.2s, v16.2s
+; CHECK-NEXT:    uzp1 v2.2s, v2.2s, v16.2s
+; CHECK-NEXT:    uzp2 v16.2s, v3.2s, v17.2s
+; CHECK-NEXT:    uzp1 v0.2s, v0.2s, v4.2s
+; CHECK-NEXT:    uzp1 v1.2s, v1.2s, v5.2s
+; CHECK-NEXT:    uzp1 v3.2s, v3.2s, v17.2s
+; CHECK-NEXT:    fmul v18.2s, v6.2s, v7.2s
+; CHECK-NEXT:    fmul v5.2s, v2.2s, v16.2s
+; CHECK-NEXT:    fmul v16.2s, v19.2s, v16.2s
+; CHECK-NEXT:    fmul v7.2s, v0.2s, v7.2s
+; CHECK-NEXT:    fneg v4.2s, v18.2s
+; CHECK-NEXT:    fmla v5.2s, v3.2s, v19.2s
+; CHECK-NEXT:    fneg v16.2s, v16.2s
+; CHECK-NEXT:    fmla v7.2s, v1.2s, v6.2s
+; CHECK-NEXT:    fmla v4.2s, v1.2s, v0.2s
+; CHECK-NEXT:    fmla v16.2s, v3.2s, v2.2s
+; CHECK-NEXT:    fmul v0.2s, v7.2s, v5.2s
+; CHECK-NEXT:    fmul v2.2s, v4.2s, v5.2s
+; CHECK-NEXT:    str d4, [x0]
+; CHECK-NEXT:    fmla v2.2s, v16.2s, v7.2s
+; CHECK-NEXT:    fneg v1.2s, v0.2s
+; CHECK-NEXT:    zip1 v0.4s, v16.4s, v5.4s
+; CHECK-NEXT:    fmla v1.2s, v16.2s, v4.2s
+; CHECK-NEXT:    st2 { v1.2s, v2.2s }, [x1]
+; CHECK-NEXT:    ret
 entry:
   %a.deinterleaved = call { <2 x float>, <2 x float> } @llvm.vector.deinterleave2.v4f32(<4 x float> %a)
   %strided.vec = extractvalue { <2 x float>, <2 x float> } %a.deinterleaved, 0

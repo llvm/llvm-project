@@ -137,12 +137,13 @@ define void @replicate_sext(i32 %N, ptr %dst, ptr %src) #0 {
 ; CHECK-NEXT:    [[TMP22:%.*]] = sext i32 [[OFFSET_IDX]] to i64
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr nusw i32, ptr [[SRC]], i64 [[TMP22]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <16 x i32>, ptr [[TMP23]], align 4, !alias.scope [[META4:![0-9]+]]
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
-; CHECK-NEXT:    [[STRIDED_VEC9:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> poison, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @llvm.vector.deinterleave4.v16i32(<16 x i32> [[WIDE_VEC]])
+; CHECK-NEXT:    [[TMP24:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } [[STRIDED_VEC]], 0
+; CHECK-NEXT:    [[TMP28:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } [[STRIDED_VEC]], 1
 ; CHECK-NEXT:    [[TMP25:%.*]] = sext <4 x i32> [[VEC_IND]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr i32, ptr [[DST]], <4 x i64> [[TMP25]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[STRIDED_VEC]], <4 x ptr> align 4 [[TMP27]], <4 x i1> splat (i1 true)), !alias.scope [[META7:![0-9]+]], !noalias [[META4]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[STRIDED_VEC9]], <4 x ptr> align 4 [[TMP27]], <4 x i1> splat (i1 true)), !alias.scope [[META7]], !noalias [[META4]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[TMP24]], <4 x ptr> align 4 [[TMP27]], <4 x i1> splat (i1 true)), !alias.scope [[META7:![0-9]+]], !noalias [[META4]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[TMP28]], <4 x ptr> align 4 [[TMP27]], <4 x i1> splat (i1 true)), !alias.scope [[META7]], !noalias [[META4]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 12)
 ; CHECK-NEXT:    [[TMP26:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
@@ -151,13 +152,13 @@ define void @replicate_sext(i32 %N, ptr %dst, ptr %src) #0 {
 ; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i32 [ [[TMP20]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi i32 [ [[TMP21]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i32 [ [[TMP20]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i32 [ [[TMP21]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV_1:%.*]] = phi i32 [ [[IV_1_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[IV_2:%.*]] = phi i32 [ [[IV_2_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL3]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[IV_3:%.*]] = phi i32 [ [[IV_3_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL4]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[IV_2:%.*]] = phi i32 [ [[IV_2_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL2]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[IV_3:%.*]] = phi i32 [ [[IV_3_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL3]], %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[IV_2_EXT:%.*]] = sext i32 [[IV_2]] to i64
 ; CHECK-NEXT:    [[GEP_SRC_1:%.*]] = getelementptr nusw i32, ptr [[SRC]], i64 [[IV_2_EXT]]
 ; CHECK-NEXT:    [[L_0:%.*]] = load i32, ptr [[GEP_SRC_1]], align 4

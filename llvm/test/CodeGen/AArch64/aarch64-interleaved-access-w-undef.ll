@@ -157,6 +157,12 @@ define void @f_undef_intrinsic(<8 x i64> %a, ptr %dst) {
 ;
 ; CHECK-IADISABLED-LABEL: f_undef_intrinsic:
 ; CHECK-IADISABLED:       // %bb.0: // %BB
+; CHECK-IADISABLED-NEXT:    zip2 v0.2d, v0.2d, v0.2d
+; CHECK-IADISABLED-NEXT:    zip1 v1.2d, v0.2d, v0.2d
+; CHECK-IADISABLED-NEXT:    stp q1, q0, [x0]
+; CHECK-IADISABLED-NEXT:    stp q1, q0, [x0, #32]
+; CHECK-IADISABLED-NEXT:    stp q1, q0, [x0, #64]
+; CHECK-IADISABLED-NEXT:    stp q1, q0, [x0, #96]
 ; CHECK-IADISABLED-NEXT:    ret
 BB:
   %S = call <16 x i64> @llvm.vector.interleave2.v16i64(<8 x i64> poison, <8 x i64> poison)
@@ -179,6 +185,12 @@ define void @f_poison_intrinsic(<8 x i64> %a, ptr %dst) {
 ;
 ; CHECK-IADISABLED-LABEL: f_poison_intrinsic:
 ; CHECK-IADISABLED:       // %bb.0: // %BB
+; CHECK-IADISABLED-NEXT:    zip2 v0.2d, v0.2d, v0.2d
+; CHECK-IADISABLED-NEXT:    zip1 v1.2d, v0.2d, v0.2d
+; CHECK-IADISABLED-NEXT:    stp q1, q0, [x0]
+; CHECK-IADISABLED-NEXT:    stp q1, q0, [x0, #32]
+; CHECK-IADISABLED-NEXT:    stp q1, q0, [x0, #64]
+; CHECK-IADISABLED-NEXT:    stp q1, q0, [x0, #96]
 ; CHECK-IADISABLED-NEXT:    ret
 BB:
   %S = call <16 x i64> @llvm.vector.interleave2.v16i64(<8 x i64> poison, <8 x i64> poison)
@@ -202,8 +214,14 @@ define void @f_undef_15_intrinsic(<8 x i64> %a, ptr %dst) {
 ;
 ; CHECK-IADISABLED-LABEL: f_undef_15_intrinsic:
 ; CHECK-IADISABLED:       // %bb.0: // %BB
-; CHECK-IADISABLED-NEXT:    dup v1.2d, v0.d[1]
-; CHECK-IADISABLED-NEXT:    stp q0, q1, [x0]
+; CHECK-IADISABLED-NEXT:    zip2 v1.2d, v0.2d, v0.2d
+; CHECK-IADISABLED-NEXT:    zip1 v2.2d, v0.2d, v0.2d
+; CHECK-IADISABLED-NEXT:    zip2 v3.2d, v0.2d, v0.2d
+; CHECK-IADISABLED-NEXT:    zip1 v0.2d, v0.2d, v0.2d
+; CHECK-IADISABLED-NEXT:    stp q2, q1, [x0, #32]
+; CHECK-IADISABLED-NEXT:    stp q0, q3, [x0]
+; CHECK-IADISABLED-NEXT:    stp q2, q1, [x0, #64]
+; CHECK-IADISABLED-NEXT:    stp q2, q1, [x0, #96]
 ; CHECK-IADISABLED-NEXT:    ret
 BB:
   %a.0 = extractelement <8 x i64> %a, i64 0
@@ -236,17 +254,17 @@ define void @f_undef_1_intrinsic(<8 x i64> %a, ptr %dst) {
 ;
 ; CHECK-IADISABLED-LABEL: f_undef_1_intrinsic:
 ; CHECK-IADISABLED:       // %bb.0: // %BB
-; CHECK-IADISABLED-NEXT:    dup v4.2d, v3.d[1]
-; CHECK-IADISABLED-NEXT:    dup v3.2d, v3.d[0]
-; CHECK-IADISABLED-NEXT:    dup v5.2d, v2.d[1]
-; CHECK-IADISABLED-NEXT:    dup v2.2d, v2.d[0]
+; CHECK-IADISABLED-NEXT:    zip2 v4.2d, v3.2d, v3.2d
+; CHECK-IADISABLED-NEXT:    zip1 v3.2d, v3.2d, v3.2d
+; CHECK-IADISABLED-NEXT:    zip2 v5.2d, v2.2d, v2.2d
+; CHECK-IADISABLED-NEXT:    zip1 v2.2d, v2.2d, v2.2d
+; CHECK-IADISABLED-NEXT:    zip2 v6.2d, v1.2d, v1.2d
+; CHECK-IADISABLED-NEXT:    zip1 v1.2d, v1.2d, v1.2d
 ; CHECK-IADISABLED-NEXT:    stp q3, q4, [x0, #96]
-; CHECK-IADISABLED-NEXT:    dup v4.2d, v1.d[1]
-; CHECK-IADISABLED-NEXT:    dup v1.2d, v1.d[0]
-; CHECK-IADISABLED-NEXT:    dup v3.2d, v0.d[1]
-; CHECK-IADISABLED-NEXT:    dup v0.2d, v0.d[0]
+; CHECK-IADISABLED-NEXT:    zip2 v3.2d, v0.2d, v0.2d
+; CHECK-IADISABLED-NEXT:    zip1 v0.2d, v0.2d, v0.2d
+; CHECK-IADISABLED-NEXT:    stp q1, q6, [x0, #32]
 ; CHECK-IADISABLED-NEXT:    stp q2, q5, [x0, #64]
-; CHECK-IADISABLED-NEXT:    stp q1, q4, [x0, #32]
 ; CHECK-IADISABLED-NEXT:    stp q0, q3, [x0]
 ; CHECK-IADISABLED-NEXT:    ret
 BB:

@@ -1837,14 +1837,14 @@ define hidden { i32, i32, i32, i32 } @bb41_inner_loop(ptr nocapture %lhs, ptr no
 ; CHECK-NEXT:    v128.load64_zero 0:p2align=0
 ; CHECK-NEXT:    local.tee 15
 ; CHECK-NEXT:    local.get 12
-; CHECK-NEXT:    i8x16.shuffle 1, 3, 5, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i8x16.shuffle 1, 3, 5, 7, 9, 11, 13, 15, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK-NEXT:    i16x8.extend_low_i8x16_s
 ; CHECK-NEXT:    local.tee 16
 ; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    v128.load64_zero 0:p2align=0
 ; CHECK-NEXT:    local.tee 17
 ; CHECK-NEXT:    local.get 12
-; CHECK-NEXT:    i8x16.shuffle 1, 3, 5, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i8x16.shuffle 1, 3, 5, 7, 9, 11, 13, 15, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK-NEXT:    i16x8.extend_low_i8x16_s
 ; CHECK-NEXT:    local.tee 18
 ; CHECK-NEXT:    i32x4.extmul_low_i16x8_s
@@ -1854,7 +1854,7 @@ define hidden { i32, i32, i32, i32 } @bb41_inner_loop(ptr nocapture %lhs, ptr no
 ; CHECK-NEXT:    local.get 16
 ; CHECK-NEXT:    local.get 17
 ; CHECK-NEXT:    local.get 12
-; CHECK-NEXT:    i8x16.shuffle 0, 2, 4, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i8x16.shuffle 0, 2, 4, 6, 8, 10, 12, 14, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK-NEXT:    i16x8.extend_low_i8x16_s
 ; CHECK-NEXT:    local.tee 17
 ; CHECK-NEXT:    i32x4.extmul_low_i16x8_s
@@ -1864,7 +1864,7 @@ define hidden { i32, i32, i32, i32 } @bb41_inner_loop(ptr nocapture %lhs, ptr no
 ; CHECK-NEXT:    local.get 18
 ; CHECK-NEXT:    local.get 15
 ; CHECK-NEXT:    local.get 12
-; CHECK-NEXT:    i8x16.shuffle 0, 2, 4, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i8x16.shuffle 0, 2, 4, 6, 8, 10, 12, 14, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK-NEXT:    i16x8.extend_low_i8x16_s
 ; CHECK-NEXT:    local.tee 15
 ; CHECK-NEXT:    i32x4.extmul_low_i16x8_s

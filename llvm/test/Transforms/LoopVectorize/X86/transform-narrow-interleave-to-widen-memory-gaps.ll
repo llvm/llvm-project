@@ -18,9 +18,10 @@ define void @load_store_interleave_group_with_gaps(ptr noalias %data, i64 nounde
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[DATA]], <4 x i64> [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x ptr> [[TMP1]], i64 0
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <16 x i64>, ptr [[TMP2]], align 8
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x i64> [[WIDE_VEC]], <16 x i64> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
-; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <16 x i64> [[WIDE_VEC]], <16 x i64> poison, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
-; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = shufflevector <16 x i64> [[WIDE_VEC]], <16 x i64> poison, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
+; CHECK-NEXT:    [[STRIDED_VEC3:%.*]] = call { <4 x i64>, <4 x i64>, <4 x i64>, <4 x i64> } @llvm.vector.deinterleave4.v16i64(<16 x i64> [[WIDE_VEC]])
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <4 x i64>, <4 x i64>, <4 x i64>, <4 x i64> } [[STRIDED_VEC3]], 0
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = extractvalue { <4 x i64>, <4 x i64>, <4 x i64>, <4 x i64> } [[STRIDED_VEC3]], 1
+; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = extractvalue { <4 x i64>, <4 x i64>, <4 x i64>, <4 x i64> } [[STRIDED_VEC3]], 3
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4i64.v4p0(<4 x i64> [[STRIDED_VEC]], <4 x ptr> align 8 [[TMP1]], <4 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint <4 x i64> [[TMP0]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[DATA]], <4 x i64> [[TMP3]]

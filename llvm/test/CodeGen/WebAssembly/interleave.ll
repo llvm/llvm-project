@@ -17,11 +17,11 @@ define hidden void @accumulate8x2(ptr dead_on_unwind noalias writable sret(%stru
 ; CHECK-LABEL: accumulate8x2:
 ; CHECK: loop
 ; CHECK: v128.load64_zero
-; CHECK: i8x16.shuffle 1, 3, 5, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle 1, 3, 5, 7, 9, 11, 13, 15, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK: i16x8.extend_low_i8x16_u
 ; CHECK: i32x4.extend_low_i16x8_u
 ; CHECK: i32x4.add
-; CHECK: i8x16.shuffle 0, 2, 4, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle 0, 2, 4, 6, 8, 10, 12, 14, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK: i16x8.extend_low_i8x16_u
 ; CHECK: i32x4.extend_low_i16x8_u
 ; CHECK: i32x4.add
