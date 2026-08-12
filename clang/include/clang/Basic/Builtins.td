@@ -5653,18 +5653,6 @@ def HLSLClamp : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
-def HLSLCrossFloat: LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_crossf32"];
-  let Attributes = [NoThrow, Const];
-  let Prototype = "_ExtVector<3, float>(_ExtVector<3, float>, _ExtVector<3, float>)";
-}
-
-def HLSLCrossHalf: LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_crossf16"];
-  let Attributes = [NoThrow, Const];
-  let Prototype = "_ExtVector<3, __fp16>(_ExtVector<3, __fp16>, _ExtVector<3, __fp16>)";
-}
-
 def HLSLDegrees : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_degrees"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
@@ -5709,13 +5697,13 @@ def HLSLFrac : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLIsinf : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_isinf"];
-  let Attributes = [NoThrow, Const];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
 def HLSLIsnan : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_isnan"];
-  let Attributes = [NoThrow, Const];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
@@ -5775,12 +5763,6 @@ def HLSLSelect : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLSign : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_sign"];
-  let Attributes = [NoThrow, Const];
-  let Prototype = "void(...)";
-}
-
-def HLSLStep: LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_step"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }

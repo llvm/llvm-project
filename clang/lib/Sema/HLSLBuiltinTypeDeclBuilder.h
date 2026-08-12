@@ -168,6 +168,7 @@ private:
                          QualType ElementTy,
                          AccessSpecifier Access = AccessSpecifier::AS_private);
   QualType getGatherReturnType();
+  BuiltinTypeDeclBuilder &addDerivativeAvailability(StringRef MethodName);
   FieldDecl *getResourceHandleField() const;
   FieldDecl *getResourceCounterHandleField() const;
   QualType getFirstTemplateTypeParam();
