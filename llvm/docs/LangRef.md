@@ -840,7 +840,7 @@ and can also be duplicated. Note that a constant with significant address
 *can* be merged with a `unnamed_addr` constant, the result being a
 constant whose address is significant.
 
-```{warning}
+:::{warning}
 Constant duplication currently makes it unsound to compare pointers
 if either may be `unnamed_addr`, because each reference to the
 global in the IR may return a different pointer, and optimization
@@ -850,7 +850,7 @@ will return true if the object is the same, which theoretically can
 make any usage of `unnamed_addr` unsound, but in practice it is
 unlikely that input IR that does not explicitly compare pointers
 will be affected by this issue.
-```
+:::
 
 If the `local_unnamed_addr` attribute is given, the address is known to
 not be significant within the module.
@@ -2609,6 +2609,15 @@ fn -> other_fn -> other_fn ; fn is norecurse
     patchable function entry area when such a section is emitted.  If omitted,
     the default section name is `__patchable_function_entries`.
 
+`"tail-pad-to-size"`
+:   This attribute specifies a minimum size in bytes for functions. Smaller
+    functions will be padded up to this size with fill bytes inserted at the
+    end. See `tail-pad-value` for padding value.
+
+`"tail-pad-value"`
+:   This attribute specifies a byte value to use for `tail-pad-to-size` fill,
+    with default of 0 if this attribute is absent.
+
 `"probe-stack"`
 :   This attribute indicates that the function will trigger a guard region
     in the end of the stack. It ensures that accesses to the stack must be
@@ -2800,8 +2809,7 @@ fn -> other_fn -> other_fn ; fn is norecurse
     optimizations that require assumptions about the floating-point rounding
     mode or that might alter the state of floating-point status flags that
     might otherwise be set or cleared by calling this function. LLVM will
-    not introduce any new floating-point instructions that may trap. All
-    function definitions that contain strictfp calls must be marked strictfp.
+    not introduce any new floating-point instructions that may trap.
 
 (denormal_fpenv)=
 
@@ -4003,7 +4011,7 @@ Likewise, the backend should never split or merge target-legal volatile
 load/store instructions. Similarly, IR-level volatile loads and stores cannot
 change from integer to floating-point or vice versa.
 
-```{admonition} Rationale
+:::{admonition} Rationale
 Platforms may rely on volatile loads and stores of natively supported
 data width to be executed as single instruction. For example, in C
 this holds for an l-value of volatile primitive type with native
@@ -4011,7 +4019,7 @@ hardware support, but not necessarily for aggregate types. The
 frontend upholds these expectations, which are intentionally
 unspecified in the IR. The rules above ensure that IR transformations
 do not violate the frontend's contract with the language.
-```
+:::
 
 (memmodel)=
 
@@ -5254,12 +5262,12 @@ indicates that the user of the value may receive an unspecified
 bit-pattern. Undefined values may be of any type (other than '`label`'
 or '`void`') and be used anywhere a constant is permitted.
 
-```{note}
+:::{note}
 A '`poison`' value (described in the next section) should be used instead of
 '`undef`' whenever possible. Poison values are stronger than undef, and
 enable more optimizations. Just the existence of '`undef`' blocks certain
 optimizations (see the examples below).
-```
+:::
 
 Undefined values are useful because they indicate to the compiler that
 the program is well defined no matter what value is used. This gives the
@@ -6499,10 +6507,10 @@ There are two metadata primitives: strings and nodes. There are
 also specialized nodes which have a distinguished name and a set of named
 arguments.
 
-```{note}
+:::{note}
 One example application of metadata is source-level debug information,
 which is currently the only user of specialized nodes.
-```
+:::
 
 Metadata does not have a type, and is not a value.
 
@@ -6518,7 +6526,7 @@ type:
 - Arguments to certain intrinsic functions, as described in their specification.
 - Arguments to the `catchpad`/`cleanuppad` instructions.
 
-````{note}
+::::{note}
 Metadata can be "wrapped" in a `MetadataAsValue` so it can be referenced
 in a value context: `MetadataAsValue` is-a `Value`.
 
@@ -6556,7 +6564,7 @@ And the first element of this `MDTuple` is a `ValueAsMetadata(Value)`:
 ```llvm
 !{i32 1}
 ```
-````
+::::
 
 (metadata-string)=
 
@@ -6568,9 +6576,9 @@ contain any character by escaping non-printable characters with
 "`\xx`" where "`xx`" is the two digit hex code. For example:
 "`!"test\00"`".
 
-```{note}
+:::{note}
 A metadata string is metadata, but is not a metadata node.
-```
+:::
 
 (metadata-node)=
 
@@ -7188,10 +7196,10 @@ LLVM variable relates to the source language variable.
 
 See {ref}`diexpression` for details.
 
-```{note}
+:::{note}
 `DIExpression`s are always printed and parsed inline; they can never be
 referenced by an ID (e.g., `!1`).
-```
+:::
 
 Some examples of expressions:
 
@@ -7199,7 +7207,7 @@ Some examples of expressions:
 !DIExpression(DW_OP_deref)
 !DIExpression(DW_OP_plus_uconst, 3)
 !DIExpression(DW_OP_constu, 3, DW_OP_plus)
-!DIExpression(DW_OP_bit_piece, 3, 7)
+!DIExpression(DW_OP_LLVM_fragment, 3, 7)
 !DIExpression(DW_OP_deref, DW_OP_constu, 3, DW_OP_plus, DW_OP_LLVM_fragment, 3, 7)
 !DIExpression(DW_OP_constu, 2, DW_OP_swap, DW_OP_xderef)
 !DIExpression(DW_OP_constu, 42, DW_OP_stack_value)
@@ -8067,34 +8075,28 @@ node has a single operand containing the name string:
 !1 = !{!"llvm.loop.vectorize.disable"}
 ```
 
-#### '`llvm.loop.vectorize.predicate.enable`' Metadata
+#### '`llvm.loop.vectorize.predicate.enable`' and '`llvm.loop.vectorize.predicate.disable`' Metadata
 
 This metadata selectively enables or disables creating predicated instructions
 for the loop, which can enable folding of the scalar epilogue loop into the
-main loop. The first operand is the string
-`llvm.loop.vectorize.predicate.enable` and the second operand is a bit. If
-the bit operand value is 1 predication is enabled. A value of 0 disables
-predication:
+main loop. Each node has a single operand containing the name string:
 
 ```llvm
-!0 = !{!"llvm.loop.vectorize.predicate.enable", i1 0}
-!1 = !{!"llvm.loop.vectorize.predicate.enable", i1 1}
+!0 = !{!"llvm.loop.vectorize.predicate.enable"}
+!1 = !{!"llvm.loop.vectorize.predicate.disable"}
 ```
 
 Additionally, enabling predication implicitly enables vectorization.
 
-#### '`llvm.loop.vectorize.scalable.enable`' Metadata
+#### '`llvm.loop.vectorize.scalable.enable`' and '`llvm.loop.vectorize.scalable.disable`' Metadata
 
 This metadata selectively enables or disables scalable vectorization for the
 loop, and only has any effect if vectorization for the loop is already enabled.
-The first operand is the string `llvm.loop.vectorize.scalable.enable`
-and the second operand is a bit. If the bit operand value is 1 scalable
-vectorization is enabled, whereas a value of 0 reverts to the default fixed
-width vectorization:
+Each node has a single operand containing the name string:
 
 ```llvm
-!0 = !{!"llvm.loop.vectorize.scalable.enable", i1 0}
-!1 = !{!"llvm.loop.vectorize.scalable.enable", i1 1}
+!0 = !{!"llvm.loop.vectorize.scalable.enable"}
+!1 = !{!"llvm.loop.vectorize.scalable.disable"}
 ```
 
 #### '`llvm.loop.vectorize.width`' Metadata
@@ -11216,10 +11218,10 @@ result of the division and the remainder.)
 The '`frem`' instruction returns the remainder from the division of
 its two operands.
 
-```{note}
+:::{note}
 The instruction is implemented as a call to libm's '`fmod`'
 for some targets, and using the instruction may thus require linking libm.
-```
+:::
 
 
 ##### Arguments:
@@ -16906,10 +16908,10 @@ This is equivalent to the `llvm.sincos.*` intrinsic where the argument has been
 multiplied by pi, however, it computes the result more accurately especially
 for large input values.
 
-```{note}
+:::{note}
 Currently, the default lowering of this intrinsic relies on the `sincospi[f|l]`
 functions being available in the target's runtime (e.g., libc).
-```
+:::
 
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
@@ -17471,11 +17473,11 @@ which follow {ref}`LLVM's usual signaling NaN behavior <floatnan>` instead.
 The `llvm.minnum` intrinsic can be refined into `llvm.minimumnum`, as the
 latter exhibits a subset of behaviors of the former.
 
-```{warning}
+:::{warning}
 If the intrinsic is used without nsz, not all backends currently respect the
 specified signed zero ordering. Do not rely on it until this warning has
 been removed. See [issue #174730](https://github.com/llvm/llvm-project/issues/174730).
-```
+:::
 
 (i_maxnum)=
 
@@ -17531,11 +17533,11 @@ which follow {ref}`LLVM's usual signaling NaN behavior <floatnan>` instead.
 The `llvm.maxnum` intrinsic can be refined into `llvm.maximumnum`, as the
 latter exhibits a subset of behaviors of the former.
 
-```{warning}
+:::{warning}
 If the intrinsic is used without nsz, not all backends currently respect the
 specified signed zero ordering. Do not rely on it until this warning has
 been removed. See [issue #174730](https://github.com/llvm/llvm-project/issues/174730).
-```
+:::
 
 (i_minimum)=
 
@@ -26740,6 +26742,9 @@ All function *calls* done in a function that uses constrained floating
 point intrinsics must have the `strictfp` attribute either on the
 calling instruction or on the declaration or definition of the function
 being called.
+
+All function *definitions* that use constrained floating point intrinsics
+must have the `strictfp` attribute.
 
 #### '`llvm.experimental.constrained.fadd`' Intrinsic
 

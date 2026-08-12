@@ -36,9 +36,6 @@ SemaAMDGPU::SemaAMDGPU(Sema &S) : SemaBase(S) {}
 
 bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
                                                 CallExpr *TheCall) {
-  // position of memory order and scope arguments in the builtin
-  unsigned OrderIndex, ScopeIndex;
-
   const auto *FD = SemaRef.getCurFunctionDecl(/*AllowLambda=*/true);
   assert(FD && "AMDGPU builtins should not be used outside of a function");
   llvm::StringMap<bool> CallerFeatureMap;
@@ -110,13 +107,53 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_atomic_inc64:
   case AMDGPU::BI__builtin_amdgcn_atomic_dec32:
   case AMDGPU::BI__builtin_amdgcn_atomic_dec64:
-    OrderIndex = 2;
-    ScopeIndex = 3;
-    break;
-  case AMDGPU::BI__builtin_amdgcn_fence:
-    OrderIndex = 0;
-    ScopeIndex = 1;
-    break;
+  case AMDGPU::BI__builtin_amdgcn_fence: {
+    bool IsFence = BuiltinID == AMDGPU::BI__builtin_amdgcn_fence;
+    unsigned OrderIndex = IsFence ? 0 : 2;
+    unsigned ScopeIndex = IsFence ? 1 : 3;
+    Expr *OrderExpr = TheCall->getArg(OrderIndex);
+    Expr *ScopeExpr = TheCall->getArg(ScopeIndex);
+
+    // Checks requiring constant evaluation are deferred until instantiation.
+    if (OrderExpr->isInstantiationDependent() ||
+        ScopeExpr->isInstantiationDependent())
+      return false;
+
+    Expr::EvalResult OrderResult;
+    if (!OrderExpr->EvaluateAsInt(OrderResult, getASTContext()))
+      return Diag(OrderExpr->getExprLoc(), diag::err_typecheck_expect_int)
+             << OrderExpr->getType();
+    uint64_t Ord = OrderResult.Val.getInt().getZExtValue();
+
+    // Check validity of memory ordering as per C11 / C++11's memory model.
+    // Only fence needs check. Atomic dec/inc allow all memory orders.
+    if (!llvm::isValidAtomicOrderingCABI(Ord))
+      return Diag(OrderExpr->getBeginLoc(),
+                  diag::warn_atomic_op_has_invalid_memory_order)
+             << 0 << OrderExpr->getSourceRange();
+    switch (static_cast<llvm::AtomicOrderingCABI>(Ord)) {
+    case llvm::AtomicOrderingCABI::relaxed:
+    case llvm::AtomicOrderingCABI::consume:
+      if (IsFence)
+        return Diag(OrderExpr->getBeginLoc(),
+                    diag::warn_atomic_op_has_invalid_memory_order)
+               << 0 << OrderExpr->getSourceRange();
+      break;
+    case llvm::AtomicOrderingCABI::acquire:
+    case llvm::AtomicOrderingCABI::release:
+    case llvm::AtomicOrderingCABI::acq_rel:
+    case llvm::AtomicOrderingCABI::seq_cst:
+      break;
+    }
+
+    Expr::EvalResult ScopeResult;
+    // Check that sync scope is a constant literal
+    if (!ScopeExpr->EvaluateAsConstantExpr(ScopeResult, getASTContext()))
+      return Diag(ScopeExpr->getExprLoc(), diag::err_expr_not_string_literal)
+             << ScopeExpr->getType();
+
+    return false;
+  }
   case AMDGPU::BI__builtin_amdgcn_s_setreg:
     return SemaRef.BuiltinConstantArgRange(TheCall, /*ArgNum=*/0, /*Low=*/0,
                                            /*High=*/UINT16_MAX);
@@ -267,7 +304,8 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_image_sample_d_2darray_v4f16_f32:
   case AMDGPU::BI__builtin_amdgcn_image_sample_d_3d_v4f32_f32:
   case AMDGPU::BI__builtin_amdgcn_image_sample_d_3d_v4f16_f32:
-  case AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f32_f32: {
+  case AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f16_f32: {
     StringRef FeatureList(
         getASTContext().BuiltinInfo.getRequiredFeatures(BuiltinID));
     if (!Builtin::evaluateRequiredTargetFeatures(FeatureList,
@@ -307,7 +345,10 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
     // For gather, only one bit can be set indicating which exact component to
     // return.
     bool ExtraGatherChecks =
-        BuiltinID == AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f32_f32 &&
+        (BuiltinID ==
+             AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f32_f32 ||
+         BuiltinID ==
+             AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f16_f32) &&
         SemaRef.BuiltinConstantArgPower2(TheCall, 0);
 
     return ExtraGatherChecks ||
@@ -410,46 +451,6 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   default:
     return false;
   }
-
-  ExprResult Arg = TheCall->getArg(OrderIndex);
-  auto ArgExpr = Arg.get();
-  Expr::EvalResult ArgResult;
-
-  if (!ArgExpr->EvaluateAsInt(ArgResult, getASTContext()))
-    return Diag(ArgExpr->getExprLoc(), diag::err_typecheck_expect_int)
-           << ArgExpr->getType();
-  auto Ord = ArgResult.Val.getInt().getZExtValue();
-
-  // Check validity of memory ordering as per C11 / C++11's memory model.
-  // Only fence needs check. Atomic dec/inc allow all memory orders.
-  if (!llvm::isValidAtomicOrderingCABI(Ord))
-    return Diag(ArgExpr->getBeginLoc(),
-                diag::warn_atomic_op_has_invalid_memory_order)
-           << 0 << ArgExpr->getSourceRange();
-  switch (static_cast<llvm::AtomicOrderingCABI>(Ord)) {
-  case llvm::AtomicOrderingCABI::relaxed:
-  case llvm::AtomicOrderingCABI::consume:
-    if (BuiltinID == AMDGPU::BI__builtin_amdgcn_fence)
-      return Diag(ArgExpr->getBeginLoc(),
-                  diag::warn_atomic_op_has_invalid_memory_order)
-             << 0 << ArgExpr->getSourceRange();
-    break;
-  case llvm::AtomicOrderingCABI::acquire:
-  case llvm::AtomicOrderingCABI::release:
-  case llvm::AtomicOrderingCABI::acq_rel:
-  case llvm::AtomicOrderingCABI::seq_cst:
-    break;
-  }
-
-  Arg = TheCall->getArg(ScopeIndex);
-  ArgExpr = Arg.get();
-  Expr::EvalResult ArgResult1;
-  // Check that sync scope is a constant literal
-  if (!ArgExpr->EvaluateAsConstantExpr(ArgResult1, getASTContext()))
-    return Diag(ArgExpr->getExprLoc(), diag::err_expr_not_string_literal)
-           << ArgExpr->getType();
-
-  return false;
 }
 
 bool SemaAMDGPU::checkAtomicOrderingCABIArg(Expr *E, bool MayLoad,

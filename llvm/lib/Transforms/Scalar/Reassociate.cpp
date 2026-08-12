@@ -2061,6 +2061,8 @@ void ReassociatePass::RecursivelyEraseDeadInsts(Instruction *I,
   ValueRankMap.erase(I);
   Insts.remove(I);
   RedoInsts.remove(I);
+  if (UA)
+    UA->forgetValue(I);
   llvm::salvageDebugInfo(*I);
   I->eraseFromParent();
   for (auto *Op : Ops)
@@ -2078,6 +2080,8 @@ void ReassociatePass::EraseInst(Instruction *I) {
   // Erase the dead instruction.
   ValueRankMap.erase(I);
   RedoInsts.remove(I);
+  if (UA)
+    UA->forgetValue(I);
   llvm::salvageDebugInfo(*I);
   I->eraseFromParent();
   // Optimize its operands.

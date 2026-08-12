@@ -20,7 +20,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "nvptx-subtarget"
 
-#define GET_SUBTARGETINFO_ENUM
 #define GET_SUBTARGETINFO_TARGET_DESC
 #define GET_SUBTARGETINFO_CTOR
 #include "NVPTXGenSubtargetInfo.inc"
@@ -35,12 +34,6 @@ static cl::opt<bool> NoF32x2("nvptx-no-f32x2", cl::Hidden,
                                       "f32x2 instructions and registers."),
                              cl::init(false));
 
-// FullSmVersion encoding helpers: SM * 10 + suffix offset
-// (0 = base, 2 = 'f', 3 = 'a').
-static constexpr unsigned SM(unsigned Version) { return Version * 10; }
-static constexpr unsigned SMF(unsigned Version) { return SM(Version) + 2; }
-static constexpr unsigned SMA(unsigned Version) { return SM(Version) + 3; }
-
 // Pin the vtable to this file.
 void NVPTXSubtarget::anchor() {}
 
@@ -52,89 +45,93 @@ void NVPTXSubtarget::anchor() {}
 // Note: LLVM's minimum supported PTX version is 3.2 (see FeaturePTX in
 // NVPTX.td), so older SMs that supported earlier PTX versions instead use 3.2
 // as their effective minimum.
-static unsigned getMinPTXVersionForSM(unsigned FullSmVersion) {
-  switch (FullSmVersion) {
-  case SM(20):
-  case SM(21):
-  case SM(30):
-  case SM(35):
+static unsigned minPTXVersion(NVPTX::GPUKind Arch) {
+  switch (Arch) {
+  case NVPTX::GK_NONE:
+    llvm_unreachable("architecture is resolved before this is reached");
+  case NVPTX::GK_SM_20:
+  case NVPTX::GK_SM_21:
+  case NVPTX::GK_SM_30:
+  case NVPTX::GK_SM_35:
     return 32;
-  case SM(32):
-  case SM(50):
+  case NVPTX::GK_SM_32_:
+  case NVPTX::GK_SM_50:
     return 40;
-  case SM(37):
-  case SM(52):
+  case NVPTX::GK_SM_37:
+  case NVPTX::GK_SM_52:
     return 41;
-  case SM(53):
+  case NVPTX::GK_SM_53:
     return 42;
-  case SM(60):
-  case SM(61):
-  case SM(62):
+  case NVPTX::GK_SM_60:
+  case NVPTX::GK_SM_61:
+  case NVPTX::GK_SM_62:
     return 50;
-  case SM(70):
+  case NVPTX::GK_SM_70:
     return 60;
-  case SM(72):
+  case NVPTX::GK_SM_72:
     return 61;
-  case SM(75):
+  case NVPTX::GK_SM_75:
     return 63;
-  case SM(80):
+  case NVPTX::GK_SM_80:
     return 70;
-  case SM(86):
+  case NVPTX::GK_SM_86:
     return 71;
-  case SM(87):
+  case NVPTX::GK_SM_87:
     return 74;
-  case SM(89):
-  case SM(90):
+  case NVPTX::GK_SM_89:
+  case NVPTX::GK_SM_90:
     return 78;
-  case SMA(90):
+  case NVPTX::GK_SM_90a:
     return 80;
-  case SM(100):
-  case SMA(100):
-  case SM(101):
-  case SMA(101):
+  case NVPTX::GK_SM_100:
+  case NVPTX::GK_SM_100a:
+  case NVPTX::GK_SM_101:
+  case NVPTX::GK_SM_101a:
     return 86;
-  case SM(120):
-  case SMA(120):
+  case NVPTX::GK_SM_120:
+  case NVPTX::GK_SM_120a:
     return 87;
-  case SMF(100):
-  case SMF(101):
-  case SM(103):
-  case SMF(103):
-  case SMA(103):
-  case SMF(120):
-  case SM(121):
-  case SMF(121):
-  case SMA(121):
+  case NVPTX::GK_SM_100f:
+  case NVPTX::GK_SM_101f:
+  case NVPTX::GK_SM_103:
+  case NVPTX::GK_SM_103f:
+  case NVPTX::GK_SM_103a:
+  case NVPTX::GK_SM_120f:
+  case NVPTX::GK_SM_121:
+  case NVPTX::GK_SM_121f:
+  case NVPTX::GK_SM_121a:
     return 88;
-  case SM(88):
-  case SM(110):
-  case SMF(110):
-  case SMA(110):
+  case NVPTX::GK_SM_88:
+  case NVPTX::GK_SM_110:
+  case NVPTX::GK_SM_110f:
+  case NVPTX::GK_SM_110a:
     return 90;
-  case SM(107):
-  case SMF(107):
-  case SMA(107):
+  case NVPTX::GK_SM_107:
+  case NVPTX::GK_SM_107f:
+  case NVPTX::GK_SM_107a:
     return 94;
-  default:
-    llvm_unreachable("Unknown SM version");
   }
+  llvm_unreachable("invalid NVPTX GPUKind");
 }
 
 NVPTXSubtarget &NVPTXSubtarget::initializeSubtargetDependencies(StringRef CPU,
                                                                 StringRef FS) {
-  TargetName = std::string(CPU);
+  // If the user did not provide a target we default to the `sm_75` target.
+  StringRef RequestedCPU = CPU.empty() ? StringRef("sm_75") : CPU;
+  ParseSubtargetFeatures(RequestedCPU, /*TuneCPU=*/RequestedCPU, FS);
 
-  ParseSubtargetFeatures(getTargetName(), /*TuneCPU=*/getTargetName(), FS);
+  Arch = NVPTX::parseArch(RequestedCPU);
 
-  // Re-map SM version numbers, SmVersion carries the regular SMs which do
-  // have relative order, while FullSmVersion allows distinguishing sm_90 from
-  // sm_90a, which would *not* be a subset of sm_91.
-  SmVersion = getSmVersion();
+  // An unrecognized name has already been diagnosed and its features dropped,
+  // leaving the subtarget at the oldest architecture, so name it that.
+  if (Arch == NVPTX::GK_NONE)
+    Arch = NVPTX::GK_SM_20;
 
-  unsigned MinPTX = getMinPTXVersionForSM(FullSmVersion);
+  unsigned MinPTX = minPTXVersion(Arch);
 
   if (PTXVersion == 0) {
     // User didn't request a specific PTX version; use the minimum for this SM.
+    ApplyFeatureFlag(("+ptx" + Twine(MinPTX)).str());
     PTXVersion = MinPTX;
   } else if (PTXVersion < MinPTX) {
     // User explicitly requested an insufficient PTX version.
@@ -143,71 +140,30 @@ NVPTXSubtarget &NVPTXSubtarget::initializeSubtargetDependencies(StringRef CPU,
                 "Minimum required PTX version is {3}.{4}. "
                 "Either remove the PTX version to use the default, "
                 "or increase it to at least {3}.{4}.",
-                PTXVersion / 10, PTXVersion % 10, getTargetName(), MinPTX / 10,
+                PTXVersion / 10, PTXVersion % 10, RequestedCPU, MinPTX / 10,
                 MinPTX % 10));
   }
 
   return *this;
 }
 
-NVPTXSubtarget::NVPTXSubtarget(const Triple &TT, const std::string &CPU,
-                               const std::string &FS,
+NVPTXSubtarget::NVPTXSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
                                const NVPTXTargetMachine &TM)
     : NVPTXGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS), PTXVersion(0),
-      FullSmVersion(200), SmVersion(getSmVersion()),
-      InstrInfo(initializeSubtargetDependencies(CPU, FS)), TLInfo(TM, *this) {
-  TSInfo = std::make_unique<NVPTXSelectionDAGInfo>();
-}
+      InstrInfo(initializeSubtargetDependencies(CPU, FS)), TLInfo(TM, *this),
+      TSInfo(std::make_unique<NVPTXSelectionDAGInfo>()) {}
 
 NVPTXSubtarget::~NVPTXSubtarget() = default;
-
-const SelectionDAGTargetInfo *NVPTXSubtarget::getSelectionDAGInfo() const {
-  return TSInfo.get();
-}
-
-bool NVPTXSubtarget::hasPTXWithFamilySMs(unsigned PTXVersion,
-                                         ArrayRef<unsigned> SMVersions) const {
-  unsigned PTXVer = getPTXVersion();
-  if (!hasFamilySpecificFeatures() || PTXVer < PTXVersion)
-    return false;
-
-  unsigned SMVer = getSmVersion();
-  return llvm::any_of(SMVersions, [&](unsigned SM) {
-    // sm_101 is a different family, never group it with sm_10x.
-    if (SMVer == 101 || SM == 101)
-      return SMVer == SM &&
-             // PTX 9.0 and later renamed sm_101 to sm_110, so sm_101 is not
-             // supported.
-             !(PTXVer >= 90 && SMVer == 101);
-
-    return getSmFamilyVersion() == SM / 10 && SMVer >= SM;
-  });
-}
-
-bool NVPTXSubtarget::hasPTXWithAccelSMs(unsigned PTXVersion,
-                                        ArrayRef<unsigned> SMVersions) const {
-  unsigned PTXVer = getPTXVersion();
-  if (!hasArchAccelFeatures() || PTXVer < PTXVersion)
-    return false;
-
-  unsigned SMVer = getSmVersion();
-  return llvm::any_of(SMVersions, [&](unsigned SM) {
-    return SMVer == SM &&
-           // PTX 9.0 and later renamed sm_101 to sm_110, so sm_101 is not
-           // supported.
-           !(PTXVer >= 90 && SMVer == 101);
-  });
-}
 
 bool NVPTXSubtarget::allowFP16Math() const {
   return hasFP16Math() && NoF16Math == false;
 }
 
 bool NVPTXSubtarget::hasF32x2Instructions() const {
-  return SmVersion >= 100 && PTXVersion >= 86 && !NoF32x2;
+  return hasFeature(NVPTX::SM100) && hasFeature(NVPTX::PTX86) && !NoF32x2;
 }
 
-bool NVPTXSubtarget::hasNativeBF16Support(int Opcode) const {
+bool NVPTXSubtarget::hasNativeBF16Support(unsigned Opcode) const {
   if (!hasBF16Math())
     return false;
 
@@ -227,7 +183,7 @@ bool NVPTXSubtarget::hasNativeBF16Support(int Opcode) const {
   case ISD::FRINT:
   case ISD::FROUNDEVEN:
   case ISD::FTRUNC:
-    return getSmVersion() >= 90 && getPTXVersion() >= 78;
+    return hasFeature(NVPTX::SM90) && hasFeature(NVPTX::PTX78);
   // Several BF16 instructions are available on sm_80 only.
   case ISD::FMINNUM:
   case ISD::FMAXNUM:
@@ -235,18 +191,7 @@ bool NVPTXSubtarget::hasNativeBF16Support(int Opcode) const {
   case ISD::FMINNUM_IEEE:
   case ISD::FMAXIMUM:
   case ISD::FMINIMUM:
-    return getSmVersion() >= 80 && getPTXVersion() >= 70;
+    return hasFeature(NVPTX::SM80) && hasFeature(NVPTX::PTX70);
   }
   return true;
-}
-
-void NVPTXSubtarget::failIfClustersUnsupported(
-    std::string const &FailureMessage) const {
-  if (hasClusters())
-    return;
-
-  report_fatal_error(formatv(
-      "NVPTX SM architecture \"{}\" and PTX version \"{}\" do not support {}. "
-      "Requires SM >= 90 and PTX >= 78.",
-      getFullSmVersion(), PTXVersion, FailureMessage));
 }

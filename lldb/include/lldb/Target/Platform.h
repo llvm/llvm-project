@@ -204,7 +204,7 @@ public:
 
   virtual const char *GetHostname();
 
-  virtual ConstString GetFullNameForDylib(ConstString basename);
+  virtual std::string GetFullNameForDylib(llvm::StringRef basename);
 
   virtual llvm::StringRef GetDescription() = 0;
 
@@ -304,17 +304,15 @@ public:
   /// \param[in] module_spec
   ///     The ModuleSpec of a binary to find.
   ///
-  /// \param[in] process
-  ///     A Process.
+  /// \param[in] target
+  ///     The Target the binary is being located for. Its settings guide the
+  ///     search, and it may not have a Process yet.
   ///
   /// \param[out] module_sp
   ///     A Module that matches the ModuleSpec, if one is found.
   ///
-  /// \param[in] module_search_paths_ptr
-  ///     Locations to possibly look for a binary that matches the ModuleSpec.
-  ///
   /// \param[out] old_modules
-  ///     Existing Modules in the Process' Target image list which match
+  ///     Existing Modules in the Target's image list which match
   ///     the FileSpec.
   ///
   /// \param[out] did_create_ptr
@@ -327,11 +325,9 @@ public:
   /// \return
   ///     The Status object for any errors found while searching for
   ///     the binary.
-  virtual Status
-  GetSharedModule(const ModuleSpec &module_spec, Process *process,
-                  lldb::ModuleSP &module_sp,
-                  llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
-                  bool *did_create_ptr);
+  virtual Status GetSharedModule(
+      const ModuleSpec &module_spec, Target &target, lldb::ModuleSP &module_sp,
+      llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr);
 
   void CallLocateModuleCallbackIfSet(const ModuleSpec &module_spec,
                                      lldb::ModuleSP &module_sp,
@@ -1137,7 +1133,10 @@ protected:
 private:
   typedef std::function<Status(const ModuleSpec &)> ModuleResolver;
 
-  Status GetRemoteSharedModule(const ModuleSpec &module_spec, Process *process,
+  /// \param[in] target
+  ///     The Target the binary is being located for, or nullptr when the
+  ///     lookup is not on behalf of one.
+  Status GetRemoteSharedModule(const ModuleSpec &module_spec, Target *target,
                                lldb::ModuleSP &module_sp,
                                const ModuleResolver &module_resolver,
                                bool *did_create_ptr);
