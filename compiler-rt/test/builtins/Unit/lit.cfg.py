@@ -88,7 +88,7 @@ else:
         if "spirv" in config.target_arch:
             builtins_bitcode_library = os.path.join(
                 config.compiler_rt_libdir,
-                "libclang_rt.builtins%s.bc" % config.target_suffix
+                "libclang_rt.builtins%s.bc" % config.target_suffix,
             )
             librt_flags = (
                 "-Xclang -mlink-builtin-bitcode -Xclang "
@@ -98,7 +98,7 @@ else:
             libc_bitcode_library = os.path.join(
                 config.llvm_shlib_dir, config.target_triple, "libcbitcode.bc"
             )
-            if (os.path.exists(libc_bitcode_library)):
+            if os.path.exists(libc_bitcode_library):
                 librt_flags += (
                     "-Xclang -mlink-builtin-bitcode -Xclang "
                     + libc_bitcode_library
