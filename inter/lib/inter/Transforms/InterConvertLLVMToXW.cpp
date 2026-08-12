@@ -15,6 +15,8 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/Support/MathExtras.h"
 
+#include <array>
+
 namespace inter {
 #define GEN_PASS_DEF_CONVERTLLVMTOXW
 #include "inter/Transforms/Passes.h.inc"
@@ -126,6 +128,24 @@ static Value splatToCardinality(Operation *anchor, Value value,
   return createSplat(builder, anchor->getLoc(), value, cardinality);
 }
 
+static Value unwrapMaterializedShape(Value value) {
+  UnrealizedConversionCastOp cast =
+      value.getDefiningOp<UnrealizedConversionCastOp>();
+  if (cast && cast->getNumOperands() == 1 && cast->getNumResults() == 1 &&
+      getPayloadType(cast.getOperand(0).getType()) ==
+          getPayloadType(cast.getResult(0).getType()))
+    return cast.getOperand(0);
+  return value;
+}
+
+static SmallVector<Value> unwrapMaterializedShapes(ValueRange values) {
+  SmallVector<Value> unwrapped;
+  unwrapped.reserve(values.size());
+  for (Value value : values)
+    unwrapped.push_back(unwrapMaterializedShape(value));
+  return unwrapped;
+}
+
 static Operation *replaceDivergentIf(scf::IfOp op, Value condition) {
   OpBuilder builder(op);
   xw::WhereOp where =
@@ -167,16 +187,253 @@ replaceOperationShape(Operation *op, ValueRange operands, Type resultType) {
              failure();
   }
 
-  OpBuilder builder(op);
-  Operation *replacement = builder.clone(*op);
+  Operation *replacement = op->clone();
   replacement->setOperands(operands);
   replacement->getResult(0).setType(resultType);
+  op->getBlock()->getOperations().insert(op->getIterator(), replacement);
+
+  for (OpOperand &use : llvm::make_early_inc_range(oldResult.getUses())) {
+    Operation *owner = use.getOwner();
+    bool structuredCrossing =
+        isa<scf::YieldOp>(owner) ||
+        (isa<scf::ConditionOp>(owner) && use.getOperandNumber() != 0) ||
+        (isa<scf::ForOp>(owner) && use.getOperandNumber() >= 3) ||
+        isa<scf::WhileOp>(owner);
+    if (!structuredCrossing)
+      continue;
+    OpBuilder builder(owner);
+    Value materialized = UnrealizedConversionCastOp::create(
+                             builder, owner->getLoc(), oldResult.getType(),
+                             replacement->getResult(0))
+                             .getResult(0);
+    use.set(materialized);
+  }
 
   for (scf::IfOp ifOp : divergentIfs)
     replaceDivergentIf(ifOp, replacement->getResult(0));
   op->replaceAllUsesWith(replacement->getResults());
   op->erase();
   return replacement;
+}
+
+static FailureOr<Type> joinStructuredShape(Operation *op, TypeRange types,
+                                           const Twine &name) {
+  if (types.empty())
+    return op->emitOpError() << name << " have no boundary types", failure();
+  Type payload = getPayloadType(types.front());
+  std::optional<int64_t> cardinality = getCardinality(types.front());
+  for (Type type : types.drop_front()) {
+    if (getPayloadType(type) != payload)
+      return op->emitOpError() << name << " have incompatible payload types "
+                               << payload << " and " << getPayloadType(type),
+             failure();
+    std::optional<int64_t> candidate = getCardinality(type);
+    if (cardinality && candidate && cardinality != candidate)
+      return op->emitOpError() << name << " have differing SIMD cardinalities "
+                               << *cardinality << " and " << *candidate,
+             failure();
+    if (candidate)
+      cardinality = candidate;
+  }
+  if (!cardinality)
+    return payload;
+  if (isa<xw::MaskType>(payload)) {
+    if (!llvm::all_of(types, [&](Type type) { return type == types.front(); }))
+      return op->emitOpError() << name << " cannot mix bare and XW mask values",
+             failure();
+    return types.front();
+  }
+  return xw::SimdType::get(op->getContext(), payload, *cardinality);
+}
+
+static Value adaptStructuredValue(OpBuilder &builder, Location loc, Value value,
+                                  Type type) {
+  value = unwrapMaterializedShape(value);
+  if (value.getType() == type)
+    return value;
+  (void)cast<xw::SimdType>(type);
+  return xw::SplatOp::create(builder, loc, type, value);
+}
+
+static LogicalResult reconcileIfShape(scf::IfOp op, bool &changed) {
+  SmallVector<Type> resultTypes(op.getResultTypes());
+  SmallVector<Type> joinedTypes;
+  joinedTypes.reserve(op.getNumResults());
+  scf::YieldOp thenYield = op.thenYield();
+  scf::YieldOp elseYield = op.elseYield();
+  for (unsigned index : llvm::seq<unsigned>(op.getNumResults())) {
+    std::array<Type, 3> types = {
+        resultTypes[index],
+        unwrapMaterializedShape(thenYield.getOperand(index)).getType(),
+        unwrapMaterializedShape(elseYield.getOperand(index)).getType()};
+    FailureOr<Type> joined =
+        joinStructuredShape(op, types, Twine("if result #") + Twine(index));
+    if (failed(joined))
+      return failure();
+    joinedTypes.push_back(*joined);
+  }
+  if (joinedTypes == resultTypes &&
+      llvm::all_of(llvm::seq<unsigned>(op.getNumResults()), [&](unsigned i) {
+        return thenYield.getOperand(i).getType() == joinedTypes[i] &&
+               elseYield.getOperand(i).getType() == joinedTypes[i];
+      }))
+    return success();
+
+  scf::IfOp replacement = cast<scf::IfOp>(op->clone());
+  scf::YieldOp replacementThen = replacement.thenYield();
+  scf::YieldOp replacementElse = replacement.elseYield();
+  for (unsigned index : llvm::seq<unsigned>(op.getNumResults())) {
+    replacement.getResult(index).setType(joinedTypes[index]);
+    for (scf::YieldOp yield : {replacementThen, replacementElse}) {
+      OpBuilder builder(yield);
+      yield->setOperand(index, adaptStructuredValue(builder, yield.getLoc(),
+                                                    yield.getOperand(index),
+                                                    joinedTypes[index]));
+    }
+  }
+  op->getBlock()->getOperations().insert(op->getIterator(), replacement);
+  op->replaceAllUsesWith(replacement->getResults());
+  op.erase();
+  changed = true;
+  return success();
+}
+
+static LogicalResult reconcileForShape(scf::ForOp op, bool &changed) {
+  SmallVector<Type> joinedTypes;
+  joinedTypes.reserve(op.getNumResults());
+  scf::YieldOp yield = cast<scf::YieldOp>(op.getBody()->getTerminator());
+  for (unsigned index : llvm::seq<unsigned>(op.getNumResults())) {
+    std::array<Type, 4> types = {
+        unwrapMaterializedShape(op.getInitArgs()[index]).getType(),
+        op.getRegionIterArgs()[index].getType(),
+        unwrapMaterializedShape(yield.getOperand(index)).getType(),
+        op.getResult(index).getType()};
+    FailureOr<Type> joined = joinStructuredShape(
+        op, types, Twine("for loop-carried value #") + Twine(index));
+    if (failed(joined))
+      return failure();
+    joinedTypes.push_back(*joined);
+  }
+  bool needsRewrite = llvm::any_of(
+      llvm::seq<unsigned>(op.getNumResults()), [&](unsigned index) {
+        return op.getInitArgs()[index].getType() != joinedTypes[index] ||
+               op.getRegionIterArgs()[index].getType() != joinedTypes[index] ||
+               yield.getOperand(index).getType() != joinedTypes[index] ||
+               op.getResult(index).getType() != joinedTypes[index];
+      });
+  if (!needsRewrite)
+    return success();
+
+  scf::ForOp replacement = cast<scf::ForOp>(op->clone());
+  scf::YieldOp replacementYield =
+      cast<scf::YieldOp>(replacement.getBody()->getTerminator());
+  OpBuilder outerBuilder(op);
+  for (unsigned index : llvm::seq<unsigned>(op.getNumResults())) {
+    Value init = adaptStructuredValue(outerBuilder, op.getLoc(),
+                                      replacement.getInitArgs()[index],
+                                      joinedTypes[index]);
+    replacement->setOperand(3 + index, init);
+    replacement.getRegionIterArgs()[index].setType(joinedTypes[index]);
+    replacement.getResult(index).setType(joinedTypes[index]);
+    OpBuilder yieldBuilder(replacementYield);
+    replacementYield->setOperand(
+        index, adaptStructuredValue(yieldBuilder, replacementYield.getLoc(),
+                                    replacementYield.getOperand(index),
+                                    joinedTypes[index]));
+  }
+  op->getBlock()->getOperations().insert(op->getIterator(), replacement);
+  op->replaceAllUsesWith(replacement->getResults());
+  op.erase();
+  changed = true;
+  return success();
+}
+
+static LogicalResult reconcileWhileShape(scf::WhileOp op, bool &changed) {
+  Block &before = op.getBefore().front();
+  Block &after = op.getAfter().front();
+  scf::ConditionOp condition = cast<scf::ConditionOp>(before.getTerminator());
+  scf::YieldOp yield = cast<scf::YieldOp>(after.getTerminator());
+  SmallVector<Type> joinedTypes;
+  joinedTypes.reserve(op.getNumResults());
+  for (unsigned index : llvm::seq<unsigned>(op.getNumResults())) {
+    std::array<Type, 6> types = {
+        unwrapMaterializedShape(op.getInits()[index]).getType(),
+        before.getArgument(index).getType(),
+        unwrapMaterializedShape(condition.getArgs()[index]).getType(),
+        after.getArgument(index).getType(),
+        unwrapMaterializedShape(yield.getOperand(index)).getType(),
+        op.getResult(index).getType()};
+    FailureOr<Type> joined = joinStructuredShape(
+        op, types, Twine("while loop-carried value #") + Twine(index));
+    if (failed(joined))
+      return failure();
+    joinedTypes.push_back(*joined);
+  }
+  bool needsRewrite = llvm::any_of(
+      llvm::seq<unsigned>(op.getNumResults()), [&](unsigned index) {
+        return op.getInits()[index].getType() != joinedTypes[index] ||
+               before.getArgument(index).getType() != joinedTypes[index] ||
+               condition.getArgs()[index].getType() != joinedTypes[index] ||
+               after.getArgument(index).getType() != joinedTypes[index] ||
+               yield.getOperand(index).getType() != joinedTypes[index] ||
+               op.getResult(index).getType() != joinedTypes[index];
+      });
+  if (!needsRewrite)
+    return success();
+
+  scf::WhileOp replacement = cast<scf::WhileOp>(op->clone());
+  Block &replacementBefore = replacement.getBefore().front();
+  Block &replacementAfter = replacement.getAfter().front();
+  scf::ConditionOp replacementCondition =
+      cast<scf::ConditionOp>(replacementBefore.getTerminator());
+  scf::YieldOp replacementYield =
+      cast<scf::YieldOp>(replacementAfter.getTerminator());
+  OpBuilder outerBuilder(op);
+  for (unsigned index : llvm::seq<unsigned>(op.getNumResults())) {
+    Value init =
+        adaptStructuredValue(outerBuilder, op.getLoc(),
+                             replacement.getInits()[index], joinedTypes[index]);
+    replacement->setOperand(index, init);
+    replacementBefore.getArgument(index).setType(joinedTypes[index]);
+    replacementAfter.getArgument(index).setType(joinedTypes[index]);
+    replacement.getResult(index).setType(joinedTypes[index]);
+    OpBuilder conditionBuilder(replacementCondition);
+    replacementCondition.getArgsMutable().slice(index, 1).assign(
+        adaptStructuredValue(conditionBuilder, replacementCondition.getLoc(),
+                             replacementCondition.getArgs()[index],
+                             joinedTypes[index]));
+    OpBuilder yieldBuilder(replacementYield);
+    replacementYield->setOperand(
+        index, adaptStructuredValue(yieldBuilder, replacementYield.getLoc(),
+                                    replacementYield.getOperand(index),
+                                    joinedTypes[index]));
+  }
+  op->getBlock()->getOperations().insert(op->getIterator(), replacement);
+  op->replaceAllUsesWith(replacement->getResults());
+  op.erase();
+  changed = true;
+  return success();
+}
+
+static LogicalResult reconcileStructuredShapes(ModuleOp module, bool &changed) {
+  SmallVector<Operation *> candidates;
+  module.walk<WalkOrder::PostOrder>([&](Operation *op) {
+    if (isa<scf::IfOp, scf::ForOp, scf::WhileOp>(op))
+      candidates.push_back(op);
+  });
+  for (Operation *candidate : candidates) {
+    if (auto ifOp = dyn_cast<scf::IfOp>(candidate)) {
+      if (failed(reconcileIfShape(ifOp, changed)))
+        return failure();
+    } else if (auto forOp = dyn_cast<scf::ForOp>(candidate)) {
+      if (failed(reconcileForShape(forOp, changed)))
+        return failure();
+    } else if (failed(reconcileWhileShape(cast<scf::WhileOp>(candidate),
+                                          changed))) {
+      return failure();
+    }
+  }
+  return success();
 }
 
 static LogicalResult reconcileMaterializedShapes(ModuleOp module) {
@@ -190,34 +447,25 @@ static LogicalResult reconcileMaterializedShapes(ModuleOp module) {
             getPayloadType(cast.getResult(0).getType()))
       return cast.emitOpError(
           "non-shape unrealized conversion survived the LLVM boundary");
-    Value replacement = cast.getOperand(0);
-    if (!getCardinality(replacement.getType()))
-      if (auto resultType =
-              dyn_cast<xw::SimdType>(cast.getResult(0).getType())) {
-        OpBuilder builder(cast);
-        replacement = xw::SplatOp::create(builder, cast.getLoc(), resultType,
-                                          replacement);
-      }
-    cast.getResult(0).replaceAllUsesWith(replacement);
-    cast.erase();
   }
 
   auto normalizeMixed = [&]() -> LogicalResult {
     SmallVector<Operation *> candidates;
-    module.walk([&](Operation *op) {
+    module.walk<WalkOrder::PostOrder>([&](Operation *op) {
       if (isa<xw::CmpIOp, xw::CmpFOp, xw::PtrCmpOp, xw::SelectOp>(op))
         candidates.push_back(op);
     });
     for (Operation *op : candidates) {
       if (isa<xw::CmpIOp, xw::CmpFOp, xw::PtrCmpOp>(op)) {
+        SmallVector<Value> operands =
+            unwrapMaterializedShapes(op->getOperands());
         FailureOr<std::optional<int64_t>> cardinality =
-            getExactCardinality(op, op->getOperands());
+            getExactCardinality(op, operands);
         if (failed(cardinality))
           return failure();
         if (!*cardinality)
           continue;
         OpBuilder builder(op);
-        SmallVector<Value> operands(op->getOperands());
         for (unsigned index : llvm::seq<unsigned>(op->getNumOperands())) {
           Value operand = operands[index];
           if (getCardinality(operand.getType()))
@@ -235,12 +483,13 @@ static LogicalResult reconcileMaterializedShapes(ModuleOp module) {
       auto select = dyn_cast<xw::SelectOp>(op);
       if (!select)
         continue;
-      FailureOr<std::optional<int64_t>> armCardinality = getExactCardinality(
-          op, ValueRange{select.getTrueValue(), select.getFalseValue()});
+      SmallVector<Value> operands = unwrapMaterializedShapes(op->getOperands());
+      FailureOr<std::optional<int64_t>> armCardinality =
+          getExactCardinality(op, ValueRange(operands).drop_front());
       if (failed(armCardinality))
         return failure();
       std::optional<int64_t> conditionCardinality =
-          getCardinality(select.getCondition().getType());
+          getCardinality(operands.front().getType());
       if (conditionCardinality && *armCardinality &&
           conditionCardinality != *armCardinality) {
         op->emitOpError("select mask and arm cardinalities must match; use "
@@ -252,7 +501,6 @@ static LogicalResult reconcileMaterializedShapes(ModuleOp module) {
       if (!cardinality)
         continue;
       OpBuilder builder(op);
-      SmallVector<Value> operands(op->getOperands());
       for (unsigned index : {1u, 2u}) {
         Value operand = operands[index];
         if (getCardinality(operand.getType()))
@@ -276,43 +524,61 @@ static LogicalResult reconcileMaterializedShapes(ModuleOp module) {
   do {
     changed = false;
     SmallVector<Operation *> candidates;
-    module.walk([&](Operation *op) {
-      if (op->getNumResults() != 0 &&
-          (isa<xw::CmpIOp, xw::CmpFOp, xw::PtrCmpOp, xw::PtrAddOp>(op) ||
-           op->hasTrait<OpTrait::Elementwise>()))
+    module.walk<WalkOrder::PostOrder>([&](Operation *op) {
+      if (op->getNumResults() != 0 && (isa<xw::CmpIOp, xw::CmpFOp, xw::PtrCmpOp,
+                                           xw::PtrAddOp, xw::FreezeOp>(op) ||
+                                       op->hasTrait<OpTrait::Elementwise>()))
         candidates.push_back(op);
     });
     for (Operation *op : candidates) {
-      std::optional<int64_t> cardinality;
-      for (Type type : op->getOperandTypes())
-        if (std::optional<int64_t> candidate = getCardinality(type))
-          cardinality =
-              cardinality ? std::max(*cardinality, *candidate) : candidate;
-      if (!cardinality || op->getNumResults() == 0)
+      SmallVector<Value> operands = unwrapMaterializedShapes(op->getOperands());
+      FailureOr<std::optional<int64_t>> cardinality =
+          getExactCardinality(op, operands);
+      if (failed(cardinality))
+        return failure();
+      if (!*cardinality || op->getNumResults() == 0)
         continue;
 
       Type resultType = op->getResult(0).getType();
       Type replacement;
       if (isa<xw::CmpIOp, xw::CmpFOp, xw::PtrCmpOp>(op))
-        replacement = xw::MaskType::get(op->getContext(), *cardinality);
+        replacement = xw::MaskType::get(op->getContext(), **cardinality);
       else if (auto ptradd = dyn_cast<xw::PtrAddOp>(op)) {
         Type pointer = getPayloadType(ptradd.getBase().getType());
         replacement =
-            xw::SimdType::get(op->getContext(), pointer, *cardinality);
-      } else if (op->hasTrait<OpTrait::Elementwise>()) {
+            xw::SimdType::get(op->getContext(), pointer, **cardinality);
+      } else if (isa<xw::FreezeOp>(op) ||
+                 op->hasTrait<OpTrait::Elementwise>()) {
         replacement = xw::SimdType::get(
-            op->getContext(), getPayloadType(resultType), *cardinality);
+            op->getContext(), getPayloadType(resultType), **cardinality);
       }
       if (replacement && replacement != resultType) {
-        if (failed(replaceOperationShape(op, op->getOperands(), replacement)))
+        if (failed(replaceOperationShape(op, operands, replacement)))
           return failure();
         changed = true;
       }
     }
+    if (failed(reconcileStructuredShapes(module, changed)))
+      return failure();
   } while (changed);
 
   if (failed(normalizeMixed()))
     return failure();
+
+  casts.clear();
+  module.walk([&](UnrealizedConversionCastOp cast) { casts.push_back(cast); });
+  for (UnrealizedConversionCastOp cast : casts) {
+    Value replacement = cast.getOperand(0);
+    if (!getCardinality(replacement.getType()))
+      if (auto resultType =
+              dyn_cast<xw::SimdType>(cast.getResult(0).getType())) {
+        OpBuilder builder(cast);
+        replacement = xw::SplatOp::create(builder, cast.getLoc(), resultType,
+                                          replacement);
+      }
+    cast.getResult(0).replaceAllUsesWith(replacement);
+    cast.erase();
+  }
 
   SmallVector<xw::SplatOp> redundantSplats;
   module.walk([&](xw::SplatOp splat) {
