@@ -77,9 +77,13 @@ private:
   /// Maps Fortran module name -> `fir.module_debug_imports`.
   llvm::StringMap<fir::ModuleDebugImportsOp> moduleDebugImportsByName;
 
-  mlir::LLVM::DIModuleAttr getOrCreateModuleAttr(
-      const std::string &name, mlir::LLVM::DIFileAttr fileAttr,
-      mlir::LLVM::DIScopeAttr scope, unsigned line, bool decl);
+  /// Names of the modules whose DIModule this compilation unit defines.
+  llvm::StringSet<> definedModuleNames;
+
+  mlir::LLVM::DIModuleAttr
+  getOrCreateModuleAttr(const std::string &name,
+                        mlir::LLVM::DIFileAttr fileAttr,
+                        mlir::LLVM::DIScopeAttr scope);
   mlir::LLVM::DICommonBlockAttr
   getOrCreateCommonBlockAttr(llvm::StringRef name,
                              mlir::LLVM::DIFileAttr fileAttr,
@@ -109,6 +113,7 @@ private:
       mlir::SymbolTable *symbolTable,
       llvm::SetVector<mlir::LLVM::DIImportedEntityAttr> &importedEntities);
   void buildModuleDebugImportsMap(mlir::ModuleOp module);
+  void buildDefinedModuleNames(mlir::ModuleOp module);
   void expandUseStmtForDebug(
       fir::UseStmtOp useOp, mlir::LLVM::DISubprogramAttr spAttr,
       mlir::LLVM::DIFileAttr fileAttr, mlir::LLVM::DICompileUnitAttr cuAttr,
@@ -445,17 +450,20 @@ mlir::LLVM::DICommonBlockAttr AddDebugInfoPass::getOrCreateCommonBlockAttr(
 // The `module` does not have a first class representation in the `FIR`. We
 // extract information about it from the name of the identifiers and keep a
 // map to avoid duplication.
-mlir::LLVM::DIModuleAttr AddDebugInfoPass::getOrCreateModuleAttr(
-    const std::string &name, mlir::LLVM::DIFileAttr fileAttr,
-    mlir::LLVM::DIScopeAttr scope, unsigned line, bool decl) {
+mlir::LLVM::DIModuleAttr
+AddDebugInfoPass::getOrCreateModuleAttr(const std::string &name,
+                                        mlir::LLVM::DIFileAttr fileAttr,
+                                        mlir::LLVM::DIScopeAttr scope) {
   mlir::MLIRContext *context = &getContext();
   mlir::LLVM::DIModuleAttr modAttr;
   if (auto iter{moduleMap.find(name)}; iter != moduleMap.end()) {
     modAttr = iter->getValue();
   } else {
-    // A module defined in this compilation unit has a fir.module_debug_imports
-    // whose location is that of the MODULE statement. Prefer it over the
-    // caller's guess, which is derived from a member's declaration.
+    unsigned line = 0;
+    bool decl = !definedModuleNames.contains(name);
+
+    // The location of the fir.module_debug_imports is that of the MODULE
+    // statement. A module that has none is not defined here, and gets no line.
     if (auto iter{moduleDebugImportsByName.find(name)};
         iter != moduleDebugImportsByName.end())
       line = fir::getLineFromLoc(iter->second.getLoc());
@@ -495,20 +503,14 @@ AddDebugInfoPass::getModuleAttrFromGlobalOp(fir::GlobalOp globalOp,
   // of a corresponding module body).
   // But in practice, compilers use declaration attribute with a module in cases
   // where module was defined in another source file (only being used in this
-  // one). The isInitialized() seems to provide the right information
-  // but inverted. It is true where module is actually defined but false where
-  // it is used.
-  unsigned line = fir::getLineFromLoc(globalOp.getLoc());
-
+  // one). Whether that is the case here is settled by getOrCreateModuleAttr.
   mlir::LLVM::DISubprogramAttr sp =
       mlir::dyn_cast_if_present<mlir::LLVM::DISubprogramAttr>(scope);
   // Modules are generated at compile unit scope
   if (sp)
     scope = sp.getCompileUnit();
 
-  return getOrCreateModuleAttr(result.second.modules[0], fileAttr, scope,
-                               std::max(line - 1, (unsigned)1),
-                               !globalOp.isInitialized());
+  return getOrCreateModuleAttr(result.second.modules[0], fileAttr, scope);
 }
 
 void AddDebugInfoPass::handleGlobalOp(fir::GlobalOp globalOp,
@@ -706,8 +708,7 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
       }
     }
   } else if (!result.second.modules.empty()) {
-    Scope = getOrCreateModuleAttr(result.second.modules[0], fileAttr, cuAttr,
-                                  line - 1, false);
+    Scope = getOrCreateModuleAttr(result.second.modules[0], fileAttr, cuAttr);
   }
 
   auto addTargetOpDISP = [&](bool lineTableOnly,
@@ -971,6 +972,43 @@ void AddDebugInfoPass::buildModuleDebugImportsMap(mlir::ModuleOp module) {
   });
 }
 
+// Work out which modules this compilation unit defines. It has to be settled
+// before any DIModuleAttr is built, because the attribute is immutable and the
+// first member to mention a module fixes it for all the others.
+//
+// Lowering emits one fir.module_debug_imports for every module and submodule it
+// compiles, which is what says the module is defined here. No individual member
+// can say it: an array named constant from an intrinsic module, for one, is
+// materialized locally as a linkonce_odr definition in every unit that uses it,
+// although the module is defined in no object file at all.
+void AddDebugInfoPass::buildDefinedModuleNames(mlir::ModuleOp module) {
+  definedModuleNames.clear();
+  for (auto &entry : moduleDebugImportsByName)
+    definedModuleNames.insert(entry.getKey());
+
+  // We do not describe submodules yet: a submodule gets no DIModuleAttr of its
+  // own and the entities it defines hang off the DIModuleAttr of its ancestor
+  // module. So the ancestor has to be a definition in a unit that compiles the
+  // submodule. Were it a declaration, it would carry no scope, and those
+  // entities would not be able to reach a compile unit and would be dropped
+  // from the debug information entirely. The mangled name of a module level
+  // global carries its whole module chain, so mark the ancestor as defined
+  // whenever a submodule below it is compiled here. This keeps the current
+  // behavior until submodules are described in their own right.
+  for (auto globalOp : module.getOps<fir::GlobalOp>()) {
+    std::pair result = fir::NameUniquer::deconstruct(globalOp.getSymName());
+    if (!isModuleLevelName(result.second))
+      continue;
+    llvm::ArrayRef<std::string> modules = result.second.modules;
+    for (const std::string &submodule : modules.drop_front()) {
+      if (moduleDebugImportsByName.contains(submodule)) {
+        definedModuleNames.insert(modules.front());
+        break;
+      }
+    }
+  }
+}
+
 void AddDebugInfoPass::expandUseStmtForDebug(
     fir::UseStmtOp useOp, mlir::LLVM::DISubprogramAttr spAttr,
     mlir::LLVM::DIFileAttr fileAttr, mlir::LLVM::DICompileUnitAttr cuAttr,
@@ -983,8 +1021,7 @@ void AddDebugInfoPass::expandUseStmtForDebug(
 
   mlir::MLIRContext *context = &getContext();
   mlir::LLVM::DIModuleAttr modAttr =
-      getOrCreateModuleAttr(modName, fileAttr, cuAttr, /*line=*/1,
-                            /*decl=*/true);
+      getOrCreateModuleAttr(modName, fileAttr, cuAttr);
 
   llvm::SetVector<mlir::LLVM::DIImportedEntityAttr> importedModules;
   if (useOp.hasOnlyClause() || useOp.getHasOnlyWithRenames())
@@ -1020,6 +1057,7 @@ void AddDebugInfoPass::runOnOperation() {
   mlir::MLIRContext *context = &getContext();
   mlir::SymbolTable symbolTable(module);
   buildModuleDebugImportsMap(module);
+  buildDefinedModuleNames(module);
   llvm::StringRef fileName;
   std::string filePath;
   std::optional<mlir::DataLayout> dl =
