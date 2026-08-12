@@ -782,11 +782,11 @@ const wchar_t* basic_filebuf<_CharT, _Traits>::__make_mdwstring(ios_base::openmo
 
 template <class _CharT, class _Traits>
 FILE* basic_filebuf<_CharT, _Traits>::__fopen(const char* __name, const char* __mode) {
-#   if defined(_AIX) && !defined(__64BIT__)
+#    if defined(_AIX) && !defined(__64BIT__)
   return fopen64(__name, __mode);
-#   else
+#    else
   return std::fopen(__name, __mode);
-#   endif
+#    endif
 }
 
 template <class _CharT, class _Traits>
