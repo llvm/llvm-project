@@ -154,6 +154,6 @@ while.end.loopexit:
 }
 
 !0 = distinct !{!0, !1}
-!1 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!1 = !{!"llvm.loop.vectorize.scalable.enable"}
 
 attributes #0 = { "target-features"="+sve" }

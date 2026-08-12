@@ -1639,4 +1639,4 @@ attributes #0 = { vscale_range(1, 16) }
 !5 = !{!"llvm.loop.vectorize.width", i32 2}
 !6 = !{!"llvm.loop.interleave.count", i32 1}
 !7 = !{!"llvm.loop.interleave.count", i32 4}
-!8 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!8 = !{!"llvm.loop.vectorize.scalable.enable"}
