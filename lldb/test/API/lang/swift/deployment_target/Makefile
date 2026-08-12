@@ -16,7 +16,7 @@ dlopen_module: dlopen_module.m libNewerTarget.dylib
 		CXX= \
 		OBJC_SOURCES=dlopen_module.m \
 		EXE=dlopen_module \
-		LD_EXTRAS="-framework Foundation -mmacos-version-min=10.8"
+		LD_EXTRAS="-framework Foundation -mtargetos=macosx10.8"
 
 lib%.dylib: %.swift
 	"$(MAKE)" -f $(MAKEFILE_RULES) \
