@@ -50,7 +50,7 @@ static bool shouldReplaceWithMangledName(StringRef AlternateName,
   return AlternateName.contains(StringRef(LengthAndName));
 }
 
-GsymCreator::GsymCreator(bool Quiet)
+GsymCreator::GsymCreator(QuietLevel Quiet)
     : StrTab(StringTableBuilder::ELF), Quiet(Quiet) {
   insertFile(StringRef());
 }
@@ -229,7 +229,7 @@ llvm::Error GsymCreator::finalize(OutputAggregator &Out) {
               if (PrevRich)
                 Out.Report(
                     "Duplicate address ranges with different debug info.",
-                    [&](raw_ostream &OS) {
+                    Severity::Warning, [&](raw_ostream &OS) {
                       OS << "warning: same address range contains "
                             "different debug "
                          << "info. Removing:\n"
@@ -239,12 +239,13 @@ llvm::Error GsymCreator::finalize(OutputAggregator &Out) {
               std::swap(Prev, Curr);
             }
           } else {
-            Out.Report("Overlapping function ranges", [&](raw_ostream &OS) {
-              // print warnings about overlaps
-              OS << "warning: function ranges overlap:\n"
-                << Prev << "\n"
-                << Curr << "\n";
-            });
+            Out.Report("Overlapping function ranges", Severity::Warning,
+                       [&](raw_ostream &OS) {
+                         // print warnings about overlaps
+                         OS << "warning: function ranges overlap:\n"
+                            << Prev << "\n"
+                            << Curr << "\n";
+                       });
             FinalizedFuncs.emplace_back(std::move(Curr));
           }
         } else {
@@ -554,7 +555,7 @@ GsymCreator::createSegment(uint64_t SegmentSize, size_t &FuncIdx) const {
   if (FuncIdx >= Funcs.size())
     return std::unique_ptr<GsymCreator>();
 
-  std::unique_ptr<GsymCreator> GC = createNew(/*Quiet=*/true);
+  std::unique_ptr<GsymCreator> GC = createNew(QuietLevel::Quiet);
 
   // Tell the creator that this is a segment.
   GC->setIsSegment();

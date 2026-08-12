@@ -21,21 +21,48 @@ class raw_ostream;
 
 namespace gsym {
 
+// How much of the debug information diagnostic output to suppress. Each level
+// suppresses everything the previous one does, so these are ordered and are
+// meant to be compared with >=.
+enum class QuietLevel : uint8_t {
+  None = 0, // Emit warnings and errors.
+  Quiet,    // Emit errors only.
+  Quieter,  // Emit neither warnings nor errors.
+};
+
+// The severity of a diagnostic handed to OutputAggregator::Report().
+enum class Severity : uint8_t { Warning, Error };
+
 class OutputAggregator {
 protected:
   // A std::map is preferable over an llvm::StringMap for presenting results
   // in a predictable order.
   std::map<std::string, unsigned> Aggregation;
   raw_ostream *Out;
+  // Diagnostics silenced by this level are still counted, so the aggregated
+  // totals are the same no matter how quiet we are; only the detail messages
+  // and anything written through operator<< are affected.
+  QuietLevel Quiet;
 
 public:
-  OutputAggregator(raw_ostream *out) : Out(out) {}
+  OutputAggregator(raw_ostream *out, QuietLevel Quiet = QuietLevel::None)
+      : Out(out), Quiet(Quiet) {}
 
   size_t GetNumCategories() const { return Aggregation.size(); }
 
-  void Report(StringRef s, std::function<void(raw_ostream &o)> detailCallback) {
+  QuietLevel GetQuietLevel() const { return Quiet; }
+
+  // Returns true if the detail message for a diagnostic of this severity
+  // should be silenced.
+  bool IsSuppressed(Severity Sev) const {
+    return Sev == Severity::Error ? Quiet >= QuietLevel::Quieter
+                                  : Quiet >= QuietLevel::Quiet;
+  }
+
+  void Report(StringRef s, Severity Sev,
+              std::function<void(raw_ostream &o)> detailCallback) {
     Aggregation[std::string(s)]++;
-    if (GetOS())
+    if (GetOS() && !IsSuppressed(Sev))
       detailCallback(*Out);
   }
 

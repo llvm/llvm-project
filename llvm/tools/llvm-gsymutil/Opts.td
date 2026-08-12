@@ -44,6 +44,7 @@ defm segment_size :
   Eq<"segment-size",
      "Specify the size in bytes of the size the final GSYM file should be segmented into. This allows GSYM files to be split across multiple files">;
 def quiet : FF<"quiet", "Do not output warnings about the debug information">;
+def quieter : FF<"quieter", "Do not output warnings or errors about the debug information, but still print the aggregated counts. Implies --quiet">;
 defm address : Eq<"address", "Lookup an address in a GSYM file">;
 def addresses_from_stdin :
   FF<"addresses-from-stdin",

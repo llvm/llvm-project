@@ -104,7 +104,7 @@ static uint32_t BenchmarkStart;
 static uint32_t BenchmarkStride;
 static unsigned NumThreads;
 static uint64_t SegmentSize;
-static bool Quiet;
+static QuietLevel Quiet = QuietLevel::None;
 static std::vector<uint64_t> LookupAddresses;
 static bool LookupAddressesFromStdin;
 static bool UseMergedFunctions = false;
@@ -216,7 +216,12 @@ static void parseArgs(int argc, char **argv) {
     }
   }
 
-  Quiet = Args.hasArg(OPT_quiet);
+  // --quieter is the next level up from --quiet: it silences the warnings
+  // that --quiet does, and the errors on top of that.
+  if (Args.hasArg(OPT_quieter))
+    Quiet = QuietLevel::Quieter;
+  else if (Args.hasArg(OPT_quiet))
+    Quiet = QuietLevel::Quiet;
 
   for (const llvm::opt::Arg *A : Args.filtered(OPT_address_EQ)) {
     StringRef S{A->getValue()};
@@ -824,7 +829,7 @@ int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
     return EXIT_SUCCESS;
   }
 
-  OutputAggregator Aggregation(&OS);
+  OutputAggregator Aggregation(&OS, Quiet);
   if (!ConvertFilename.empty()) {
     // Convert DWARF to GSYM
     if (!InputFilenames.empty()) {
