@@ -1140,6 +1140,37 @@ public:
   }
 };
 
+class ConvertArithTruncI final : public OpConversionPattern<arith::TruncIOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::TruncIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (op.getOverflowFlags() != arith::IntegerOverflowFlags::none)
+      return op.emitOpError(
+          "integer truncation overflow flags have no exact XW representation");
+
+    Type resultType = getTypeConverter()->convertType(op.getType());
+    if (!resultType)
+      return rewriter.notifyMatchFailure(op,
+                                         "result type has no XW conversion");
+    if (auto sourceType = dyn_cast<xw::SimdType>(adaptor.getIn().getType()))
+      resultType = xw::SimdType::get(op.getContext(), resultType,
+                                     sourceType.getCardinality());
+
+    OperationState state(op.getLoc(), "xw.cast");
+    state.addOperands(adaptor.getIn());
+    state.addTypes(resultType);
+    state.addAttribute(
+        "kind", rewriter.getI32IntegerAttr(
+                    static_cast<int32_t>(xw::CastKind::IntConvert)));
+    state.addAttribute("xw.imported", getImportedAttributes(op, rewriter));
+    rewriter.replaceOp(op, rewriter.create(state)->getResults());
+    return success();
+  }
+};
+
 struct ConvertLLVMToXW final
     : inter::impl::ConvertLLVMToXWBase<ConvertLLVMToXW> {
   void runOnOperation() override {
@@ -1195,7 +1226,8 @@ struct ConvertLLVMToXW final
     LLVMToXWTypeConverter converter(context);
     RewritePatternSet patterns(context);
     patterns.add<ConvertLLVMOperation, ConvertPoison, ConvertSCFIf,
-                 ConvertFuncReturn, ConvertArithConstant>(converter, context);
+                 ConvertFuncReturn, ConvertArithConstant, ConvertArithTruncI>(
+        converter, context);
     populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(patterns,
                                                                    converter);
     scf::populateSCFStructuralTypeConversions(converter, patterns);

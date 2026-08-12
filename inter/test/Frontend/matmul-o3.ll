@@ -1,7 +1,7 @@
 ; RUN: inter-translate %s --import-llvm | inter-opt --inter-import-llvm | FileCheck %s
 ; RUN: not sh -c 'inter-translate %s --import-llvm | inter-opt \
 ; RUN:   --inter-import-llvm --lift-cf-to-scf --inter-verify-structured \
-; RUN:   --inter-convert-llvm-to-xw --verify-each=false' 2>&1 | \
+; RUN:   --inter-convert-llvm-to-xw' 2>&1 | \
 ; RUN:   FileCheck %s --check-prefix=BOUNDARY
 ; Generated with opt -S -passes='default<O3>' from Inputs/matmul.ll.
 ;
@@ -21,7 +21,7 @@
 ; CHECK: cf.cond_br
 ; CHECK: return
 ; CHECK: llvm.func {{.*}}spir_funccc @_Z13get_global_idj(i32) -> i64
-; BOUNDARY: failed to legalize operation 'arith.trunci'
+; BOUNDARY: 'xw.freeze' op failed to verify that all of {source, result} have same type
 ;
 ; ModuleID = 'inter/test/Frontend/Inputs/matmul.ll'
 source_filename = "inter/test/Frontend/Inputs/matmul.ll"

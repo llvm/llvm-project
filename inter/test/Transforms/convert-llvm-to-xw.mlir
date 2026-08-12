@@ -40,6 +40,7 @@ module {
     %one = llvm.mlir.constant(1 : i32) : i32
     %sum = llvm.add %zero, %one : i32
     %wide = llvm.sext %sum : i32 to i64
+    %narrow = arith.trunci %sum : i32 to i1
     %cmp = llvm.icmp "eq" %sum, %one : i32
     %selected = llvm.select %cmp, %sum, %one : i1, i32
     llvm.cond_br %condition, ^then, ^else
@@ -166,6 +167,7 @@ module {
 // CHECK: xw.local_memory_base {{.*}}xw.global = @scratch
 // CHECK: xw.local_memory_base {offset = 16 : i64{{.*}}xw.global = @scratch_wide
 // CHECK: xw.cast intconvert
+// CHECK: xw.cast intconvert {{.*}} : i32 -> i1
 // CHECK: xw.cmpi eq
 // CHECK: xw.select
 // CHECK: scf.if
