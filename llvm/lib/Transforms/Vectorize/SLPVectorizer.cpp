@@ -15931,7 +15931,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
     if (InVectors.size() == 2)
       InVectors.pop_back();
     TTI::VectorInstrContext Ctx =
-        P2.isNull() ? Ctx1 : combineVectorInstrContexts(Ctx1, Ctx2);
+        P2.isNull() ? Ctx1 : TTI::combineVectorInstrContexts(Ctx1, Ctx2);
     return ExtraCost + BaseShuffleAnalysis::createShuffle<InstructionCost>(
                            V1, V2, CommonMask, Builder, ScalarTy, VL, Ctx);
   }
@@ -23057,8 +23057,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
     // Gather unique scalars and all constants.
     SmallVector<int> ReuseMask(GatheredScalars.size(), PoisonMaskElem);
     TryPackScalars(GatheredScalars, ReuseMask, /*IsRootPoison=*/true);
-    auto GatherUserOps = [&](SmallVectorImpl<TTI::BuildVectorUseOp> &UserOps) {
-      UserOps.clear();
+    auto CanSplatAllUsers = [&]() {
       for (const auto &TE : VectorizableTree) {
         if (DeletedNodes.contains(TE.get()))
           continue;
@@ -23067,14 +23066,14 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
         auto *UserTE = TE->UserTreeIndex.UserTE;
         if (!UserTE || !UserTE->hasState() || UserTE->isAltShuffle())
           return false;
-        UserOps.push_back(
-            {UserTE->getOpcode(), static_cast<int>(TE->UserTreeIndex.EdgeIdx)});
+        if (!TTI->canSplatOperand(UserTE->getOpcode(),
+                                  TE->UserTreeIndex.EdgeIdx))
+          return false;
       }
-      assert(UserOps.size() && "Ought to at least match with current entry");
       return true;
     };
     TargetTransformInfo::VectorInstrContext ContextHint =
-        TTI->getBuildVectorContextHint(ReuseMask, E->Scalars, GatherUserOps);
+        TTI->getBuildVectorContextHint(ReuseMask, E->Scalars, CanSplatAllUsers);
     Value *BV = ShuffleBuilder.gather(GatheredScalars, ReuseMask.size(),
                                       /*Root*/ nullptr, ContextHint);
     ShuffleBuilder.add(BV, ReuseMask, /*ForExtract*/ false, ContextHint);

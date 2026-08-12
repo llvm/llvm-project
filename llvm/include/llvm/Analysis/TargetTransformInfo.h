@@ -1076,11 +1076,11 @@ public:
 
   using VectorInstrContext = llvm::VectorInstrContext;
 
-  /// Stores information about the uses of a build vector
-  struct BuildVectorUseOp {
-    unsigned Opcode;
-    int OperandIndex;
-  };
+  /// Combines 2 context hints into a single value. If both are equal, keep the
+  /// shared context, otherwise fall back to no specific context.
+  LLVM_ABI static TargetTransformInfo::VectorInstrContext
+  combineVectorInstrContexts(TargetTransformInfo::VectorInstrContext Ctx1,
+                             TargetTransformInfo::VectorInstrContext Ctx2);
 
   /// Calculates a VectorInstrContext from \p I.
   LLVM_ABI static VectorInstrContext
@@ -1091,10 +1091,9 @@ public:
   /// \p GatherUserOps must collect all users of \p Scalars relevant for
   /// determining whether a splat can be folded as a scalar operand. It returns
   /// false if those users cannot be gathered in the required form.
-  LLVM_ABI VectorInstrContext getBuildVectorContextHint(
-      ArrayRef<int> Mask, ArrayRef<Value *> Scalars,
-      function_ref<bool(SmallVectorImpl<BuildVectorUseOp> &)> GatherUseOps)
-      const;
+  LLVM_ABI static VectorInstrContext
+  getBuildVectorContextHint(ArrayRef<int> Mask, ArrayRef<Value *> Scalars,
+                            function_ref<bool()> CanSplatAllUses);
 
   /// Estimate the overhead of scalarizing an instruction. Insert and Extract
   /// are set if the demanded result elements need to be inserted and/or

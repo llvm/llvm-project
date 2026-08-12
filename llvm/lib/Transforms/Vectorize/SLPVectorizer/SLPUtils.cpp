@@ -754,10 +754,4 @@ bool isOnceUsedSeed(const Instruction *I) {
       I);
 }
 
-TargetTransformInfo::VectorInstrContext
-combineVectorInstrContexts(TargetTransformInfo::VectorInstrContext Ctx1,
-                           TargetTransformInfo::VectorInstrContext Ctx2) {
-  return Ctx1 == Ctx2 ? Ctx1 : TargetTransformInfo::VectorInstrContext::None;
-}
-
 } // namespace llvm::slpvectorizer

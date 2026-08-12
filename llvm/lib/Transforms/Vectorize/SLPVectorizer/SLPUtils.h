@@ -328,12 +328,6 @@ Intrinsic::ID getMaskedDivRemIntrinsic(unsigned Opcode);
 /// dedicated attempt.
 bool isOnceUsedSeed(const Instruction *I);
 
-/// Combines 2 context hints into a single value. If both are equal, keep the
-/// shared context, otherwise fall back to no specific context.
-TargetTransformInfo::VectorInstrContext
-combineVectorInstrContexts(TargetTransformInfo::VectorInstrContext Ctx1,
-                           TargetTransformInfo::VectorInstrContext Ctx2);
-
 } // namespace llvm::slpvectorizer
 
 #endif // LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPUTILS_H

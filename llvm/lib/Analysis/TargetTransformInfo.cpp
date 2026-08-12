@@ -648,6 +648,13 @@ bool TargetTransformInfo::isTargetIntrinsicWithStructReturnOverloadAtField(
 }
 
 TargetTransformInfo::VectorInstrContext
+TargetTransformInfo::combineVectorInstrContexts(
+    TargetTransformInfo::VectorInstrContext Ctx1,
+    TargetTransformInfo::VectorInstrContext Ctx2) {
+  return Ctx1 == Ctx2 ? Ctx1 : TargetTransformInfo::VectorInstrContext::None;
+}
+
+TargetTransformInfo::VectorInstrContext
 TargetTransformInfo::getVectorInstrContextHint(const Instruction *I) {
   if (!I)
     return VectorInstrContext::None;
@@ -669,8 +676,7 @@ TargetTransformInfo::getVectorInstrContextHint(const Instruction *I) {
 TargetTransformInfo::VectorInstrContext
 TargetTransformInfo::getBuildVectorContextHint(
     ArrayRef<int> Mask, ArrayRef<Value *> Scalars,
-    function_ref<bool(SmallVectorImpl<BuildVectorUseOp> &)> GatherUseOps)
-    const {
+    function_ref<bool()> CanSplatAllUses) {
   if (Scalars.empty() ||
       !ShuffleVectorInst::isZeroEltSplatMask(Mask, Mask.size()))
     return VectorInstrContext::None;
@@ -679,13 +685,7 @@ TargetTransformInfo::getBuildVectorContextHint(
   if (isa<VectorType>(SplatVal->getType()) || isa<ExtractElementInst>(SplatVal))
     return VectorInstrContext::None;
 
-  SmallVector<BuildVectorUseOp, 4> UserOps;
-  if (!GatherUseOps(UserOps) || UserOps.empty())
-    return VectorInstrContext::None;
-
-  if (all_of(UserOps, [this](const BuildVectorUseOp &UserOp) {
-        return canSplatOperand(UserOp.Opcode, UserOp.OperandIndex);
-      }))
+  if (CanSplatAllUses())
     return VectorInstrContext::SplatOpFolded;
 
   return VectorInstrContext::None;
