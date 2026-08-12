@@ -170,23 +170,25 @@ verifyRecordMemberKinds(function_ref<mlir::InFlightDiagnostic()> emitError,
   return mlir::success();
 }
 
-/// Consume a member's optional kind mark, returning whether one was there.
-/// Only a mark keyword is consumed, so anything that is not one is left for the
-/// type parser to accept or reject.
-static bool consumeOptionalMemberKindMark(mlir::AsmParser &parser,
-                                          RecordMemberKind &kind) {
-  static const llvm::StringRef marks[] = {"data", "pad", "empty"};
-  kind = RecordMemberKind::Data;
+/// The keywords that spell a member kind.  A union's tail-padding slot probes
+/// for one of these to reject it, since that slot is not a member.
+static const llvm::StringRef memberKindMarks[] = {"data", "pad", "empty"};
+
+static std::optional<RecordMemberKind>
+parseMemberKind(mlir::AsmParser &parser) {
   llvm::StringRef keyword;
-  if (parser.parseOptionalKeyword(&keyword, marks).failed())
-    return false;
-  kind = *symbolizeRecordMemberKind(keyword);
-  return true;
+  const llvm::SMLoc loc = parser.getCurrentLocation();
+  if (parser.parseKeyword(&keyword).failed())
+    return std::nullopt;
+  std::optional<RecordMemberKind> kind = symbolizeRecordMemberKind(keyword);
+  if (!kind)
+    parser.emitError(loc, "expected a record member kind");
+  return kind;
 }
 
-/// Parse "incomplete" or "{[mark] type, [mark] type, ...}", writing results
-/// into \p incomplete, \p members and \p memberKinds.  Returns failure if
-/// member parsing fails.
+/// Parse "incomplete" or "{mark type, mark type, ...}", writing results into
+/// \p incomplete, \p members and \p memberKinds.  Returns failure if member
+/// parsing fails.
 static mlir::ParseResult
 parseRecordBody(mlir::AsmParser &parser, bool &incomplete,
                 llvm::SmallVector<mlir::Type> &members,
@@ -198,9 +200,10 @@ parseRecordBody(mlir::AsmParser &parser, bool &incomplete,
   return parser.parseCommaSeparatedList(
       AsmParser::Delimiter::Braces,
       [&parser, &members, &memberKinds]() -> mlir::ParseResult {
-        RecordMemberKind kind;
-        consumeOptionalMemberKindMark(parser, kind);
-        memberKinds.push_back(kind);
+        std::optional<RecordMemberKind> kind = parseMemberKind(parser);
+        if (!kind)
+          return mlir::failure();
+        memberKinds.push_back(*kind);
         return parser.parseType(members.emplace_back());
       });
 }
@@ -242,8 +245,7 @@ static void printRecordBody(mlir::AsmPrinter &printer, RecordTy self,
     for (auto [idx, member] : llvm::enumerate(members)) {
       if (idx)
         printer << ", ";
-      if (memberKinds[idx] != RecordMemberKind::Data)
-        printer << stringifyRecordMemberKind(memberKinds[idx]) << ' ';
+      printer << stringifyRecordMemberKind(memberKinds[idx]) << ' ';
       printer.printType(member);
     }
     printer << "}";
@@ -458,8 +460,9 @@ Type UnionType::parse(mlir::AsmParser &parser) {
     if (parser.parseLBrace().failed())
       return {};
     const llvm::SMLoc paddingLoc = parser.getCurrentLocation();
-    RecordMemberKind ignoredKind;
-    if (consumeOptionalMemberKindMark(parser, ignoredKind)) {
+    llvm::StringRef paddingKeyword;
+    if (parser.parseOptionalKeyword(&paddingKeyword, memberKindMarks)
+            .succeeded()) {
       parser.emitError(paddingLoc, "a union's tail padding takes no kind mark");
       return {};
     }

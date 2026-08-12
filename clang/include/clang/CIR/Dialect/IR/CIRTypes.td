@@ -688,21 +688,20 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
     preserves the original source spelling.
 
     Every member has a kind, described by `CIR_RecordMemberKind`, saying what
-    it holds.  A `pad` or `empty` member is spelled with its mark.  A `data`
-    member may be spelled with or without one, and prints without.
+    it holds, and every member is spelled with its mark.
 
     Examples:
 
     ```
-        !rec_complete = !cir.struct<"complete" {!u8i}>
-        !rec_class    = !cir.struct<class "MyClass" {!s32i}>
+        !rec_complete = !cir.struct<"complete" {data !u8i}>
+        !rec_class    = !cir.struct<class "MyClass" {data !s32i}>
         !rec_incomplete = !cir.struct<"incomplete" incomplete>
-        !anonymous    = !cir.struct<{!u8i}>
-        !rec_packed   = !cir.struct<"p1" packed {!u8i, !u8i}>
-        !rec_padded   = !cir.struct<"p2" padded {!u8i, !u8i}>
-        !rec_pad      = !cir.struct<"p3" {!u8i, pad !cir.array<!u8i x 3>}>
+        !anonymous    = !cir.struct<{data !u8i}>
+        !rec_packed   = !cir.struct<"p1" packed {data !u8i, data !u8i}>
+        !rec_padded   = !cir.struct<"p2" padded {data !u8i, data !u8i}>
+        !rec_pad      = !cir.struct<"p3" {data !u8i, pad !cir.array<!u8i x 3>}>
         !rec_empty    = !cir.struct<"e" {empty !u8i}>
-        !recursive    = !cir.struct<"Node" {!cir.ptr<!cir.struct<"Node">>}>
+        !recursive    = !cir.struct<"Node" {data !cir.ptr<!cir.struct<"Node">>}>
     ```
   }];
 
@@ -851,10 +850,10 @@ def CIR_UnionType : CIR_Type<"Union", "union", [
     Examples:
 
     ```
-        !u_complete   = !cir.union<"U" {!s32i, !u8i}>
+        !u_complete   = !cir.union<"U" {data !s32i, data !u8i}>
         !u_incomplete = !cir.union<"U" incomplete>
-        !u_anonymous  = !cir.union<{!s32i, !u8i}>
-        !u_padded     = !cir.union<"U" {!s32i, !u8i}, padding = {!u8i}>
+        !u_anonymous  = !cir.union<{data !s32i, data !u8i}>
+        !u_padded     = !cir.union<"U" {data !s32i, data !u8i}, padding = {!u8i}>
         !u_empty      = !cir.union<"U" {empty !u8i}>
     ```
   }];

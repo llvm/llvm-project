@@ -29,8 +29,8 @@ struct Outer {
 // [[no_unique_address]] field, allowing 'extra' to overlap with
 // Middle's tail padding.
 
-// CIR: !rec_Middle2Ebase = !cir.struct<"Middle.base" packed {!rec_Base, !s8i}>
-// CIR: !rec_Outer = !cir.struct<"Outer" padded {!rec_Middle2Ebase, !s8i, pad !cir.array<!u8i x 2>}>
+// CIR: !rec_Middle2Ebase = !cir.struct<"Middle.base" packed {data !rec_Base, data !s8i}>
+// CIR: !rec_Outer = !cir.struct<"Outer" padded {data !rec_Middle2Ebase, data !s8i, pad !cir.array<!u8i x 2>}>
 
 // CIR-LABEL: cir.func {{.*}} @_ZN5OuterC2ERK6Middlec(
 // CIR:         %[[THIS:.*]] = cir.load %{{.+}} : !cir.ptr<!cir.ptr<!rec_Outer>>, !cir.ptr<!rec_Outer>
@@ -184,17 +184,17 @@ struct OuterUnionPadAfterStorage {
 
 OuterUnionPadAfterStorage oupas;
 
-// CIR-NUA-DAG: !rec_FinalForNUA = !cir.struct<"FinalForNUA" {!s32i, !s8i}>
-// CIR-NUA-DAG: !rec_UnionForNUA = !cir.union<"UnionForNUA" {!s32i, !s64i}>
-// CIR-NUA-DAG: !rec_OuterFinal = !cir.struct<"OuterFinal" {!rec_FinalForNUA, !s8i}>
-// CIR-NUA-DAG: !rec_OuterUnion = !cir.struct<"OuterUnion" {!rec_UnionForNUA, !s32i}>
-// CIR-NUA-DAG: !rec_UnionWithPadding2Ebase = !cir.struct<"UnionWithPadding.base" {!u8i}>
-// CIR-NUA-DAG: !rec_OuterUnionPad = !cir.struct<"OuterUnionPad" {!rec_UnionWithPadding2Ebase, !cir.bool}>
-// CIR-NUA-DAG: !rec_FinalUnionWithPadding2Ebase = !cir.struct<"FinalUnionWithPadding.base" {!u8i}>
-// CIR-NUA-DAG: !rec_OuterFinalUnionPad = !cir.struct<"OuterFinalUnionPad" {!rec_FinalUnionWithPadding2Ebase, !cir.bool}>
-// CIR-NUA-DAG: !rec_TailBig = !cir.struct<"TailBig" packed padded {!s16i, !cir.array<!s8i x 5>, pad !u8i}>
-// CIR-NUA-DAG: !rec_UnionPadAfterStorage2Ebase = !cir.struct<"UnionPadAfterStorage.base" packed padded {!s32i, pad !cir.array<!u8i x 3>}>
-// CIR-NUA-DAG: !rec_OuterUnionPadAfterStorage = !cir.struct<"OuterUnionPadAfterStorage" {!rec_UnionPadAfterStorage2Ebase, !cir.bool}>
+// CIR-NUA-DAG: !rec_FinalForNUA = !cir.struct<"FinalForNUA" {data !s32i, data !s8i}>
+// CIR-NUA-DAG: !rec_UnionForNUA = !cir.union<"UnionForNUA" {data !s32i, data !s64i}>
+// CIR-NUA-DAG: !rec_OuterFinal = !cir.struct<"OuterFinal" {data !rec_FinalForNUA, data !s8i}>
+// CIR-NUA-DAG: !rec_OuterUnion = !cir.struct<"OuterUnion" {data !rec_UnionForNUA, data !s32i}>
+// CIR-NUA-DAG: !rec_UnionWithPadding2Ebase = !cir.struct<"UnionWithPadding.base" {data !u8i}>
+// CIR-NUA-DAG: !rec_OuterUnionPad = !cir.struct<"OuterUnionPad" {data !rec_UnionWithPadding2Ebase, data !cir.bool}>
+// CIR-NUA-DAG: !rec_FinalUnionWithPadding2Ebase = !cir.struct<"FinalUnionWithPadding.base" {data !u8i}>
+// CIR-NUA-DAG: !rec_OuterFinalUnionPad = !cir.struct<"OuterFinalUnionPad" {data !rec_FinalUnionWithPadding2Ebase, data !cir.bool}>
+// CIR-NUA-DAG: !rec_TailBig = !cir.struct<"TailBig" packed padded {data !s16i, data !cir.array<!s8i x 5>, pad !u8i}>
+// CIR-NUA-DAG: !rec_UnionPadAfterStorage2Ebase = !cir.struct<"UnionPadAfterStorage.base" packed padded {data !s32i, pad !cir.array<!u8i x 3>}>
+// CIR-NUA-DAG: !rec_OuterUnionPadAfterStorage = !cir.struct<"OuterUnionPadAfterStorage" {data !rec_UnionPadAfterStorage2Ebase, data !cir.bool}>
 // CIR-NUA-DAG: cir.global external @ou = #cir.zero : !rec_OuterUnion
 // CIR-NUA-DAG: cir.global external @of = #cir.zero : !rec_OuterFinal
 // CIR-NUA-DAG: cir.global external @oup = #cir.zero : !rec_OuterUnionPad
@@ -233,9 +233,9 @@ struct OuterAllEmpty {
 
 OuterAllEmpty oae;
 
-// CIR-NUA-DAG: !rec_OuterAllEmpty = !cir.struct<"OuterAllEmpty" {!cir.bool}>
+// CIR-NUA-DAG: !rec_OuterAllEmpty = !cir.struct<"OuterAllEmpty" {data !cir.bool}>
 // CIR-NUA-DAG: cir.global external @oae = #cir.zero : !rec_OuterAllEmpty
 
-// CIR-NUA-DAG: !rec_UnionZeroDataSize = !cir.union<"UnionZeroDataSize" {!rec_EmptyForNUA, !s32i}>
-// CIR-NUA-DAG: !rec_OuterZeroData = !cir.struct<"OuterZeroData" {!rec_UnionZeroDataSize, !cir.bool}>
+// CIR-NUA-DAG: !rec_UnionZeroDataSize = !cir.union<"UnionZeroDataSize" {data !rec_EmptyForNUA, data !s32i}>
+// CIR-NUA-DAG: !rec_OuterZeroData = !cir.struct<"OuterZeroData" {data !rec_UnionZeroDataSize, data !cir.bool}>
 // CIR-NUA-DAG: cir.global external @ozd = #cir.zero : !rec_OuterZeroData

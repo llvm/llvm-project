@@ -3,7 +3,7 @@
 
 !s8i = !cir.int<s, 8>
 !s32i = !cir.int<s, 32>
-!rec_Pair = !cir.struct<"Pair" {!s32i, !s32i}>
+!rec_Pair = !cir.struct<"Pair" {data !s32i, data !s32i}>
 
 module attributes {
   cir.triple = "x86_64-unknown-linux-gnu",
@@ -30,7 +30,7 @@ module attributes {
 !s8i = !cir.int<s, 8>
 !s32i = !cir.int<s, 32>
 !s64i = !cir.int<s, 64>
-!rec_Big = !cir.struct<"Big" {!s64i, !s64i, !s64i}>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i}>
 
 module attributes {
   cir.triple = "x86_64-unknown-linux-gnu",
@@ -56,7 +56,7 @@ module attributes {
 
 !s8i = !cir.int<s, 8>
 !s64i = !cir.int<s, 64>
-!rec_Big = !cir.struct<"Big" {!s64i, !s64i, !s64i}>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i}>
 
 module attributes {
   cir.triple = "x86_64-unknown-linux-gnu",
@@ -82,7 +82,7 @@ module attributes {
 
 !s8i = !cir.int<s, 8>
 !s32i = !cir.int<s, 32>
-!rec_FF = !cir.struct<"FF" {!cir.float, !cir.float}>
+!rec_FF = !cir.struct<"FF" {data !cir.float, data !cir.float}>
 
 module attributes {
   cir.triple = "x86_64-unknown-linux-gnu",
@@ -104,7 +104,7 @@ module attributes {
     cir.return
   }
 
-  // CHECK: error: 'cir.call' op x86_64 calling-convention lowering not yet implemented for the ABI coercion of type '!cir.struct<"FF" {!cir.float, !cir.float}>'
+  // CHECK: error: 'cir.call' op x86_64 calling-convention lowering not yet implemented for the ABI coercion of type '!cir.struct<"FF" {data !cir.float, data !cir.float}>'
 }
 
 // -----
@@ -139,7 +139,7 @@ module attributes {
 !s32i = !cir.int<s, 32>
 !s64i = !cir.int<s, 64>
 !void = !cir.void
-!rec_Big = !cir.struct<"Big" {!s64i, !s64i, !s64i}>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i}>
 
 module attributes {
   cir.triple = "x86_64-unknown-linux-gnu",
@@ -177,7 +177,7 @@ module attributes {
 
 !s32i = !cir.int<s, 32>
 !void = !cir.void
-!rec_Pair = !cir.struct<"Pair" {!s32i, !s32i}>
+!rec_Pair = !cir.struct<"Pair" {data !s32i, data !s32i}>
 
 module attributes {
   cir.triple = "x86_64-unknown-linux-gnu",
@@ -215,7 +215,7 @@ module attributes {
 // -----
 
 !s32i = !cir.int<s, 32>
-!rec_Pair = !cir.struct<"Pair" {!s32i, !s32i}>
+!rec_Pair = !cir.struct<"Pair" {data !s32i, data !s32i}>
 
 module attributes {
   cir.triple = "x86_64-unknown-linux-gnu",
