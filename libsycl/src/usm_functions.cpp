@@ -8,9 +8,9 @@
 
 #include <sycl/__impl/usm_functions.hpp>
 
+#include <detail/common.hpp>
 #include <detail/device_impl.hpp>
 #include <detail/offload/offload_utils.hpp>
-#include <sycl/__impl/detail/common.hpp>
 
 #include <OffloadAPI.h>
 
