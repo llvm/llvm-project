@@ -11,8 +11,9 @@
 #include <algorithm>
 #include <benchmark/benchmark.h>
 #include <vector>
+#include "test_macros.h"
 
-static void bm_ranges_swap_ranges_vb_aligned(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void bm_ranges_swap_ranges_vb_aligned(benchmark::State& state) {
   auto n = state.range();
   std::vector<bool> vec1(n, true);
   std::vector<bool> vec2(n, false);
@@ -23,7 +24,7 @@ static void bm_ranges_swap_ranges_vb_aligned(benchmark::State& state) {
   }
 }
 
-static void bm_ranges_swap_ranges_vb_unaligned(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void bm_ranges_swap_ranges_vb_unaligned(benchmark::State& state) {
   auto n = state.range();
   std::vector<bool> vec1(n, true);
   std::vector<bool> vec2(n + 8, true);
@@ -60,8 +61,10 @@ static void bm_swap_ranges_vb(benchmark::State& state, bool aligned) {
   }
 }
 
-static void bm_swap_ranges_vb_aligned(benchmark::State& state) { bm_swap_ranges_vb(state, true); }
-static void bm_swap_ranges_vb_unaligned(benchmark::State& state) { bm_swap_ranges_vb(state, false); }
+static TEST_ALIGN_BENCHMARK void bm_swap_ranges_vb_aligned(benchmark::State& state) { bm_swap_ranges_vb(state, true); }
+static TEST_ALIGN_BENCHMARK void bm_swap_ranges_vb_unaligned(benchmark::State& state) {
+  bm_swap_ranges_vb(state, false);
+}
 
 BENCHMARK(bm_swap_ranges_vb_aligned)
     ->Name("std::swap_ranges(std::vector<bool>, std::vector<bool>) (aligned)")
