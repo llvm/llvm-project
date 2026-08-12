@@ -349,8 +349,7 @@ mlir::Value genTerminationOperationWrapper(fir::FirOpBuilder &builder,
 // Generates the image index relative to the initial team, regardless of which
 // team is selected. Generates a call to the `prif_initial_team_index` function
 // (analogous to `prif_image_index`) if `cosubcripts` contains at least one
-// value; otherwise, it generates a call to `prif_this_image_no_coarray` without
-// the `team` argument.
+// value; otherwise, it takes `this_image` from the initial team.
 [[maybe_unused]] static mlir::Value
 getInitialTeamIndex(fir::FirOpBuilder &builder, mlir::Location loc,
                     mlir::Value coarrayHandle,
@@ -363,16 +362,15 @@ getInitialTeamIndex(fir::FirOpBuilder &builder, mlir::Location loc,
 
   // If there are no subscripts, the current image index is used.
   if (cosubscripts.size() == 0) {
-    mlir::FunctionType ftype = mlir::FunctionType::get(
-        builder.getContext(),
-        /*inputs*/ {boxTy, builder.getRefType(i32Ty)}, /*results*/ {});
-    mlir::Value teamArg = fir::AbsentOp::create(builder, loc, boxTy);
-    mlir::func::FuncOp funcOp = builder.createFunction(
-        loc, getPRIFProcName("this_image_no_coarray"), ftype);
-    llvm::SmallVector<mlir::Value> args =
-        fir::runtime::createArguments(builder, loc, ftype, teamArg, index);
-    fir::CallOp::create(builder, loc, funcOp, args);
-    return index;
+    mlir::Value res = builder.createTemporary(loc, i32Ty);
+    // In iso_fortran_env.f90, INITIAL_TEAM is -2
+    mlir::Value initialTeam =
+        builder.createIntegerConstant(loc, builder.getI32Type(), -2);
+    mlir::Value team = mif::GetTeamOp::create(
+        builder, loc, builder.getRefType(builder.getNoneType()), initialTeam);
+    mlir::Value thisImage = mif::ThisImageOp::create(builder, loc, team);
+    fir::StoreOp::create(builder, loc, thisImage, res);
+    return res;
   }
 
   mlir::FunctionType ftype = mlir::FunctionType::get(
@@ -393,7 +391,8 @@ getInitialTeamIndex(fir::FirOpBuilder &builder, mlir::Location loc,
   for (unsigned i = 0; i < corank; ++i) {
     mlir::Value cs = builder.createConvert(loc, i64Ty, cosubscripts[i]);
     auto cs_index = builder.createIntegerConstant(loc, indexType, i);
-    auto addr = fir::CoordinateOp::create(builder, loc, addrType, sub, cs_index);
+    auto addr =
+        fir::CoordinateOp::create(builder, loc, addrType, sub, cs_index);
     fir::StoreOp::create(builder, loc, cs, addr);
   }
   sub = builder.createBox(loc, sub);

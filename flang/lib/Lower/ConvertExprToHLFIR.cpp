@@ -497,8 +497,7 @@ private:
       // lowering the designator inside it as if it was addressing an element of
       // the vector subscripts.
       if (sawVectorSubscripts)
-        return createVectorSubscriptElementAddrOp(partInfo, baseType,
-                                                  resultExtents);
+        TODO(loc, "coarray: with vector subscripts.");
 
       mlir::Type resultType = seqType.getEleTy();
       if (!resultTypeShape.empty()) {

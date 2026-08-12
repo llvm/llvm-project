@@ -11,10 +11,13 @@
 
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/MIF/MIFOps.h"
+#include "flang/Optimizer/Support/InternalNames.h"
 
 static constexpr llvm::StringRef coarrayHandleSuffix = "_coarray_handle";
 static constexpr llvm::StringRef mifSaveCoarraysAllocName =
     "__mif_save_coarrays_allocate";
+static constexpr llvm::StringRef thisImageInitialTeamName =
+    "__mif_this_image_initial_team";
 
 namespace mif {
 
