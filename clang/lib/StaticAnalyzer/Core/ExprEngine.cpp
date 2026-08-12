@@ -1104,6 +1104,7 @@ static bool justRunCheckersAsPreVisit(const Stmt *S) {
   switch (S->getStmtClass()) {
   default:
     return false;
+  case Stmt::ArraySubscriptExprClass:
   case Stmt::AtomicExprClass:
   case Stmt::ImplicitCastExprClass:
   case Stmt::CStyleCastExprClass:
@@ -1132,6 +1133,7 @@ static bool justRunCheckersAsPostVisit(const Stmt *S) {
   switch (S->getStmtClass()) {
   default:
     return false;
+  case Stmt::ArraySubscriptExprClass:
   case Stmt::AtomicExprClass:
   case Stmt::BlockExprClass:
   case Stmt::ImplicitCastExprClass:
@@ -3268,15 +3270,10 @@ void ExprEngine::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *Ex,
 
 /// VisitArraySubscriptExpr - Transfer function for array accesses
 void ExprEngine::VisitArraySubscriptExpr(const ArraySubscriptExpr *A,
-                                             ExplodedNode *Pred,
-                                             ExplodedNodeSet &Dst){
+                                         ExplodedNode *Pred,
+                                         ExplodedNodeSet &Dst) {
   const Expr *Base = A->getBase()->IgnoreParens();
   const Expr *Idx  = A->getIdx()->IgnoreParens();
-
-  ExplodedNodeSet CheckerPreStmt;
-  getCheckerManager().runCheckersForPreStmt(CheckerPreStmt, Pred, A, *this);
-
-  ExplodedNodeSet EvalSet;
 
   bool IsVectorType = A->getBase()->getType()->isVectorType();
 
@@ -3286,33 +3283,29 @@ void ExprEngine::VisitArraySubscriptExpr(const ArraySubscriptExpr *A,
   bool IsGLValueLike = A->isGLValue() ||
     (A->getType().isCForbiddenLValueType() && !AMgr.getLangOpts().CPlusPlus);
 
-  for (auto *Node : CheckerPreStmt) {
-    const StackFrame *SF = Node->getStackFrame();
-    ProgramStateRef state = Node->getState();
+  const StackFrame *SF = Pred->getStackFrame();
+  ProgramStateRef state = Pred->getState();
 
-    if (IsGLValueLike) {
-      QualType T = A->getType();
+  if (IsGLValueLike) {
+    QualType T = A->getType();
 
-      // One of the forbidden LValue types! We still need to have sensible
-      // symbolic locations to represent this stuff. Note that arithmetic on
-      // void pointers is a GCC extension.
-      if (T->isVoidType())
-        T = getContext().CharTy;
+    // One of the forbidden LValue types! We still need to have sensible
+    // symbolic locations to represent this stuff. Note that arithmetic on
+    // void pointers is a GCC extension.
+    if (T->isVoidType())
+      T = getContext().CharTy;
 
-      SVal V = state->getLValue(T, state->getSVal(Idx, SF),
-                                state->getSVal(Base, SF));
-      EvalSet.insert(
-          Engine.makeNodeWithBinding(Node, A, V, ProgramPoint::PostLValueKind));
-    } else if (IsVectorType) {
-      // FIXME: non-glvalue vector reads are not modelled.
-      EvalSet.insert(Engine.makePostStmtNode(A, state, Node));
-    } else {
-      llvm_unreachable("Array subscript should be an lValue when not \
-a vector and not a forbidden lvalue type");
-    }
+    SVal V =
+        state->getLValue(T, state->getSVal(Idx, SF), state->getSVal(Base, SF));
+    Dst.insert(
+        Engine.makeNodeWithBinding(Pred, A, V, ProgramPoint::PostLValueKind));
+  } else if (IsVectorType) {
+    // FIXME: non-glvalue vector reads are not modelled.
+    Dst.insert(Engine.makePostStmtNode(A, state, Pred));
+  } else {
+    llvm_unreachable("Array subscript should be an lValue when not \
+a ctor and not a forbidden lvalue type");
   }
-
-  getCheckerManager().runCheckersForPostStmt(Dst, EvalSet, A, *this);
 }
 
 /// VisitMemberExpr - Transfer function for member expressions.
