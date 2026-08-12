@@ -5,6 +5,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
+// CIR: cir.global "private" internal dso_local @g.ar = #cir.block_addr_diff<@g, "l2", "l1"> : !s64i
 // CIR: cir.global "private" internal dso_local @f.s = #cir.const_record<{#cir.block_addr_diff<@f, "A", "B"> : !s32i, #cir.block_addr_diff<@f, "B", "A"> : !s32i}> : !rec_S2
 // CIR: cir.global "private" internal dso_local @e.arr = #cir.const_array<[#cir.block_addr_diff<@e, "l2", "l1"> : !s32i, #cir.block_addr_diff<@e, "l3", "l2"> : !s32i]> : !cir.array<!s32i x 2>
 // CIR: cir.global "private" internal dso_local @d.s = #cir.const_record<{#cir.block_addr_info<@d, "A"> : !cir.ptr<!void>, #cir.block_addr_info<@d, "B"> : !cir.ptr<!void>}> : !rec_S
@@ -18,6 +19,7 @@
 // LLVM-DAG: @c.tbl = internal global [3 x ptr] [ptr blockaddress(@c, %[[C_A:.*]]), ptr blockaddress(@c, %[[C_A]]), ptr blockaddress(@c, %[[C_B:.*]])], align 16
 // LLVM-DAG: @d.s = internal global %struct.S { ptr blockaddress(@d, %[[D_A:.*]]), ptr blockaddress(@d, %[[D_B:.*]]) }, align 8
 // LLVM-DAG: @f.s = internal global %struct.S2 { i32 trunc (i{{..}} sub (i{{..}} ptrtoint (ptr blockaddress(@f, %[[F_A:.*]]) to i{{..}}), i{{..}} ptrtoint (ptr blockaddress(@f, %[[F_B:.*]]) to i{{..}})) to i32), i32 trunc (i{{..}} sub (i{{..}} ptrtoint (ptr blockaddress(@f, %[[F_B]]) to i{{..}}), i{{..}} ptrtoint (ptr blockaddress(@f, %[[F_A]]) to i{{..}})) to i32) }, align 4
+// LLVM-DAG: @g.ar = internal global {{.*}} sub (i{{..}} ptrtoint (ptr blockaddress(@g, %[[LABEL_GL2:.*]]) to i{{..}}), i{{..}} ptrtoint (ptr blockaddress(@g, %[[LABEL_GL1:.*]]) to i{{..}}))
 
 void a(void) {
 A:;
@@ -150,3 +152,23 @@ B:;
 // LLVM:   br label %[[F_B]]
 // LLVM: [[F_B]]:
 // LLVM:   ret void
+
+int g(void) {
+  static long ar = &&l2 - &&l1;
+l1:
+  return 10;
+l2:
+  return 11;
+}
+
+// CIR: cir.func{{.*}} @g
+// CIR:   %[[G_AR:.*]] = cir.get_global @g.ar
+// CIR: [[LABEL_GL1:.*]]:
+// CIR:   cir.label "l1"
+// CIR: [[LABEL_GL2:.*]]:
+// CIR:   cir.label "l2"
+
+// LLVM: define dso_local i32 @g()
+// LLVM:   br label %[[LABEL_GL1]]
+// LLVM: [[LABEL_GL1]]:
+// LLVM: [[LABEL_GL2]]:
