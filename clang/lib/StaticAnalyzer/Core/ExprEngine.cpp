@@ -1133,6 +1133,7 @@ static bool justRunCheckersAsPostVisit(const Stmt *S) {
   default:
     return false;
   case Stmt::AtomicExprClass:
+  case Stmt::BlockExprClass:
   case Stmt::ImplicitCastExprClass:
   case Stmt::CStyleCastExprClass:
   case Stmt::CXXStaticCastExprClass:
