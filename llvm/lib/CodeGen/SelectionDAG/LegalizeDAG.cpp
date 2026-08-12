@@ -2224,14 +2224,20 @@ void SelectionDAGLegalize::ExpandFPLibCall(SDNode* Node,
 
   if (Node->isStrictFPOpcode()) {
     EVT RetVT = Node->getValueType(0);
+    RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
+    if (LCImpl == RTLIB::Unsupported) {
+      DAG.getContext()->emitError(Twine("no libcall available for ") +
+                                  Node->getOperationName(&DAG));
+      Results.push_back(DAG.getPOISON(RetVT));
+      Results.push_back(Node->getOperand(0));
+      return;
+    }
     SmallVector<SDValue, 4> Ops(drop_begin(Node->ops()));
     TargetLowering::MakeLibCallOptions CallOptions;
     CallOptions.IsPostTypeLegalization = true;
     // FIXME: This doesn't support tail calls.
-    std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(DAG, LC, RetVT,
-                                                      Ops, CallOptions,
-                                                      SDLoc(Node),
-                                                      Node->getOperand(0));
+    std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(
+        DAG, LCImpl, RetVT, Ops, CallOptions, SDLoc(Node), Node->getOperand(0));
     Results.push_back(Tmp.first);
     Results.push_back(Tmp.second);
   } else {
