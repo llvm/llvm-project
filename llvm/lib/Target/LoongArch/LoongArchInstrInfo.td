@@ -1891,6 +1891,13 @@ def : InstAlias<"la.local $dst, $tmp, $src",
                 (PseudoLA_ABS_LARGE GPR:$dst, GPR:$tmp, bare_symbol:$src)>;
 } // Predicates = [HasLaLocalWithAbs]
 
+// Materializes "$base + (imm << 12)" as a single pseudo so that
+// MachineLateInstrsCleanup can CSE identical upper-immediate additions.
+// Expanded to LU12I_W + ADD by LoongArchExpandPseudo.
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8 in
+def PseudoAddUpperImm
+    : Pseudo<(outs GPR:$dst), (ins GPR:$base, simm20_lu12iw:$hi), []>;
+
 /// BSTRINS and BSTRPICK
 
 let Predicates = [IsLA32, Has32S] in {
