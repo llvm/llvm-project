@@ -176,14 +176,29 @@ static bool ModuleDefinesFunction(const ModuleSP &module_sp,
   SymbolContextList sc_list;
   module_sp->FindSymbolsWithNameAndType(ConstString(name), eSymbolTypeCode,
                                         sc_list);
+  bool defines_function = false;
   for (const SymbolContext &sc : sc_list) {
     // Every module compiled against libobjc2 carries an undefined reference
     // to __objc_load from its .objc_init constructor, so only a definition
     // identifies the runtime itself.
-    if (sc.symbol && sc.symbol->GetAddress().IsValid())
-      return true;
+    if (sc.symbol && sc.symbol->GetAddress().IsValid()) {
+      defines_function = true;
+      break;
+    }
   }
-  return false;
+  if (!defines_function)
+    return false;
+  // On PE/COFF an importing module contains an import thunk that carries the
+  // imported function's plain name and a valid code address, which the check
+  // above cannot tell apart from a definition. Only the importer also has the
+  // IAT pointer symbol `__imp_<name>`; the implementing module does not.
+  SymbolContextList imp_list;
+  module_sp->FindSymbolsWithNameAndType(ConstString(("__imp_" + name).str()),
+                                        eSymbolTypeAny, imp_list);
+  for (const SymbolContext &sc : imp_list)
+    if (sc.symbol && sc.symbol->GetAddress().IsValid())
+      return false;
+  return true;
 }
 
 /// Finds the module implementing the libobjc2 runtime, identified by its
