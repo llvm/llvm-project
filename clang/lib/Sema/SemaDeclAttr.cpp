@@ -6572,6 +6572,7 @@ public:
     //
     QualType QT(T, 0);
     QualType Desugared = QT.getSingleStepDesugaredType(S.Context);
+
     if (Desugared != QT)
       return Visit(Desugared);
 
@@ -6730,6 +6731,31 @@ public:
     // In non-assert builds avoid the infinite recursion.
     if (Desugared.getTypePtr() == Orig)
       return VisitType(Orig);
+
+    // Reject a bounds attribute on a function type reached through a *name*
+    // (typedef / __typeof__ / C++ using):
+    //
+    //   reject: typedef int *fn_t(int); fn_t f __counted_by(g);
+    //   allow:  int *__counted_by(n) f(int n);      // direct return
+    //   allow:  int *__counted_by(n) (*fp)(int n);  // function pointer
+    //
+    // Reaching this "named alias" handler means the function type was named
+    // through sugar. Directly-written function types (bare, or wrapped in
+    // transparent declarator sugar such as parentheses, a calling-convention
+    // AttributedType, or a MacroQualifiedType) dispatch to their own visitors
+    // and stay valid, so a bounds attribute there still applies to the return
+    // type. `isFunctionType()` desugars, so this also sees a function type
+    // wrapped in an AttributedType / MacroQualifiedType between the name and
+    // the function. Function pointers are at Level > 0 and are unaffected.
+    if (Level == 0 && Desugared->isFunctionType()) {
+      bool Valid = S.ValidateBoundsAttrTypeShape(Desugared, Loc, SourceRange(Loc),
+                                                 Flags, DiagName, AllowRedecl,
+                                                 ArgExpr);
+      assert(!Valid &&
+             "function type reached through sugar should be rejected");
+      (void)Valid;
+      return QualType();
+    }
 
     return Visit(Desugared);
   }
