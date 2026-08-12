@@ -177,7 +177,7 @@ template <typename T> constexpr T fwidth_impl(T input) {
 }
 
 template <typename T> constexpr T degrees_impl(T Val) {
-  return Val * (T)(180 / pi);
+  return Val * (T)(180.L / Pi);
 }
 
 } // namespace __detail
