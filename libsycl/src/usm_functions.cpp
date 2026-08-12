@@ -80,7 +80,8 @@ void *aligned_alloc_host(size_t alignment, size_t numBytes,
 
 void *malloc_host(std::size_t numBytes, const context &syclContext,
                   const property_list &propList) {
-  return aligned_alloc_host(0, numBytes, syclContext, propList);
+  return aligned_alloc_host(alignof(std::max_align_t), numBytes, syclContext,
+                            propList);
 }
 
 void *malloc_host(std::size_t numBytes, const queue &syclQueue,
@@ -138,12 +139,16 @@ void *aligned_alloc(std::size_t alignment, std::size_t numBytes,
                     const device &syclDevice, const context &syclContext,
                     usm::alloc kind, const property_list &propList) {
 
+  if (alignment == 0 || !detail::isPowerOf2(alignment))
+    throw exception(sycl::make_error_code(sycl::errc::invalid),
+                    "Alignment must be a non-zero power of 2");
+
   auto ContextDevices = syclContext.get_devices();
-  assert(!ContextDevices.empty() && "Context can't be created without device");
   if (std::none_of(ContextDevices.begin(), ContextDevices.end(),
                    [&syclDevice](device Dev) { return Dev == syclDevice; }))
     throw exception(make_error_code(errc::invalid),
                     "Specified device is not contained by specified context.");
+
   if (!syclDevice.has(getAspectByAllocationKind(kind)))
     throw sycl::exception(
         sycl::errc::feature_not_supported,
@@ -173,7 +178,8 @@ void *aligned_alloc(std::size_t alignment, std::size_t numBytes,
 void *malloc(std::size_t numBytes, const device &syclDevice,
              const context &syclContext, usm::alloc kind,
              const property_list &propList) {
-  return aligned_alloc(0, numBytes, syclDevice, syclContext, kind, propList);
+  return aligned_alloc(alignof(std::max_align_t), numBytes, syclDevice,
+                       syclContext, kind, propList);
 }
 
 void *malloc(std::size_t numBytes, const queue &syclQueue, usm::alloc kind,

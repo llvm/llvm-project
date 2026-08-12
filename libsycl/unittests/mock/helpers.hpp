@@ -139,6 +139,12 @@ public:
   MOCK_METHOD(ol_result_t, olMemAllocHost,
               (ol_device_handle_t Device, size_t Size, void **AllocationOut));
   MOCK_METHOD(ol_result_t, olMemFree, (void *Address));
+  MOCK_METHOD(ol_result_t, olMemAllocAligned,
+              (ol_device_handle_t Device, ol_alloc_type_t AllocType,
+               size_t Size, size_t Alignment, void **AllocationOut));
+  MOCK_METHOD(ol_result_t, olMemAllocAlignedHost,
+              (ol_device_handle_t Device, size_t Size, size_t Alignment,
+               void **AllocationOut));
 
   ol_result_t makeEmptyStrError(ol_errc_t Code) {
     auto [Iterator, Flag] =
