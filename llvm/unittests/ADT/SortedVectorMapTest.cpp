@@ -8,6 +8,7 @@
 
 #include "llvm/ADT/SortedVectorMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <string>
 
@@ -26,24 +27,16 @@ TEST(SortedVectorMapTest, BasicOperations) {
   Map[8] = "eight";
 
   EXPECT_FALSE(Map.empty());
-  EXPECT_EQ(Map.size(), 3u);
+  ASSERT_EQ(Map.size(), 3u);
 
   EXPECT_EQ(Map[2], "two");
   EXPECT_EQ(Map[5], "five");
   EXPECT_EQ(Map[8], "eight");
 
   // Verify elements are maintained in sorted key order
-  auto It = Map.begin();
-  EXPECT_EQ(It->first, 2);
-  EXPECT_EQ(It->second, "two");
-  ++It;
-  EXPECT_EQ(It->first, 5);
-  EXPECT_EQ(It->second, "five");
-  ++It;
-  EXPECT_EQ(It->first, 8);
-  EXPECT_EQ(It->second, "eight");
-  ++It;
-  EXPECT_EQ(It, Map.end());
+  EXPECT_THAT(Map, testing::ElementsAre(testing::Pair(2, "two"),
+                                       testing::Pair(5, "five"),
+                                       testing::Pair(8, "eight")));
 }
 
 TEST(SortedVectorMapTest, FindAndErase) {
@@ -87,5 +80,4 @@ TEST(SortedVectorMapTest, ReserveAndCapacity) {
   EXPECT_EQ(Map.size(), 1u);
   EXPECT_GE(Map.capacity(), 50u);
 }
-
 } // namespace

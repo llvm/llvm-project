@@ -9,7 +9,22 @@
 /// \file
 /// This file implements a map backed by a sorted SmallVector. It provides a
 /// std::map-like interface with binary search lookup while maintaining
-/// contiguous memory layout and dense L1 cache density.
+/// contiguous memory layout and dense cache locality.
+///
+/// SortedVectorMap is intended for:
+/// - Small maps where memory footprint is a primary concern. In particular, it
+///   avoids the initial bucket overhead of DenseMap (e.g. 64 buckets by default)
+///   when only a few elements are stored.
+/// - Use cases that require iteration in sorted key order.
+///
+/// Trade-offs:
+/// - Lookups take O(log N) time via binary search rather than O(1) in DenseMap.
+/// - Insertions and deletions take O(N) time due to shifting elements in the
+///   underlying vector, making it best suited for small N or mostly-read data.
+/// - Compared to std::map, elements are stored contiguously, eliminating
+///   per-node heap allocations and pointer chasing.
+/// - Compared to MapVector, elements are ordered by key rather than insertion
+///   order, with zero auxiliary hash table overhead.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -118,7 +133,6 @@ public:
     return Vector == Other.Vector;
   }
 };
-
 } // namespace llvm
 
 #endif // LLVM_ADT_SORTEDVECTORMAP_H
