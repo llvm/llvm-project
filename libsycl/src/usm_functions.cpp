@@ -48,21 +48,26 @@ void *malloc_device(std::size_t numBytes, const queue &syclQueue,
 
 // SYCL 2020 4.8.3.3. Host allocation functions.
 
-void *aligned_alloc_host(size_t alignment, size_t numBytes,
-                         const context &syclContext,
-                         const property_list &propList) {
-  // TODO: implementation here with malloc
+static device getHostAllocDevice(const context &syclContext) {
   auto ContextDevices = syclContext.get_devices();
-  assert(!ContextDevices.empty() && "Context can't be created without device");
-  if (std::none_of(ContextDevices.begin(), ContextDevices.end(),
-                   [](const device &Dev) {
-                     return Dev.has(aspect::usm_host_allocations);
-                   })) {
+
+  auto It = std::find_if(
+      ContextDevices.begin(), ContextDevices.end(),
+      [](const device &Dev) { return Dev.has(aspect::usm_host_allocations); });
+
+  if (It == ContextDevices.end()) {
     throw sycl::exception(
         sycl::errc::feature_not_supported,
         "None of the context's devices support host USM allocations.");
   }
-  return aligned_alloc(alignment, numBytes, ContextDevices[0], syclContext,
+  return *It;
+}
+
+void *aligned_alloc_host(size_t alignment, size_t numBytes,
+                         const context &syclContext,
+                         const property_list &propList) {
+  auto device = getHostAllocDevice(syclContext);
+  return aligned_alloc(alignment, numBytes, device, syclContext,
                        usm::alloc::host, propList);
 }
 
@@ -75,18 +80,7 @@ void *aligned_alloc_host(size_t alignment, size_t numBytes,
 
 void *malloc_host(std::size_t numBytes, const context &syclContext,
                   const property_list &propList) {
-  auto ContextDevices = syclContext.get_devices();
-  assert(!ContextDevices.empty() && "Context can't be created without device");
-  if (std::none_of(ContextDevices.begin(), ContextDevices.end(),
-                   [](const device &Dev) {
-                     return Dev.has(aspect::usm_host_allocations);
-                   })) {
-    throw sycl::exception(
-        sycl::errc::feature_not_supported,
-        "None of the context's devices support host USM allocations.");
-  }
-  return malloc(numBytes, ContextDevices[0], syclContext, usm::alloc::host,
-                propList);
+  return aligned_alloc_host(0, numBytes, syclContext, propList);
 }
 
 void *malloc_host(std::size_t numBytes, const queue &syclQueue,
@@ -99,7 +93,6 @@ void *malloc_host(std::size_t numBytes, const queue &syclQueue,
 void *aligned_alloc_shared(size_t alignment, size_t numBytes,
                            const device &syclDevice, const context &syclContext,
                            const property_list &propList) {
-  // TODO: implementation here with malloc
   return aligned_alloc(alignment, numBytes, syclDevice, syclContext,
                        usm::alloc::shared, propList);
 }
@@ -144,9 +137,6 @@ static aspect getAspectByAllocationKind(usm::alloc kind) {
 void *aligned_alloc(std::size_t alignment, std::size_t numBytes,
                     const device &syclDevice, const context &syclContext,
                     usm::alloc kind, const property_list &propList) {
-  if (alignment == 0 || !detail::isPowerOf2(alignment))
-    throw exception(make_error_code(errc::invalid),
-                    "Alignment must be a non-zero power of two");
 
   auto ContextDevices = syclContext.get_devices();
   assert(!ContextDevices.empty() && "Context can't be created without device");
@@ -183,28 +173,7 @@ void *aligned_alloc(std::size_t alignment, std::size_t numBytes,
 void *malloc(std::size_t numBytes, const device &syclDevice,
              const context &syclContext, usm::alloc kind,
              const property_list &propList) {
-  auto ContextDevices = syclContext.get_devices();
-  assert(!ContextDevices.empty() && "Context can't be created without device");
-  if (std::none_of(ContextDevices.begin(), ContextDevices.end(),
-                   [&syclDevice](device Dev) { return Dev == syclDevice; }))
-    throw exception(make_error_code(errc::invalid),
-                    "Specified device is not contained by specified context.");
-  if (!syclDevice.has(getAspectByAllocationKind(kind)))
-    throw sycl::exception(
-        sycl::errc::feature_not_supported,
-        "Device doesn't support requested kind of USM allocation");
-
-  if (!numBytes)
-    return nullptr;
-
-  void *Ptr{};
-  auto OLDevice = detail::getSyclObjImpl(syclDevice)->getOLHandle();
-  auto Result =
-      kind == usm::alloc::host
-          ? detail::callNoCheck(olMemAllocHost, OLDevice, numBytes, &Ptr)
-          : detail::callNoCheck(olMemAlloc, OLDevice,
-                                detail::getOlAllocType(kind), numBytes, &Ptr);
-  return detail::isFailed(Result) ? nullptr : Ptr;
+  return aligned_alloc(0, numBytes, syclDevice, syclContext, kind, propList);
 }
 
 void *malloc(std::size_t numBytes, const queue &syclQueue, usm::alloc kind,

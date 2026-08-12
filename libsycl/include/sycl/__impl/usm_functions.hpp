@@ -20,6 +20,8 @@
 
 #include <sycl/__impl/detail/config.hpp>
 
+#include <algorithm>
+
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 /// \name  SYCL 2020 4.8.3.2. Device allocation functions.
@@ -56,9 +58,10 @@ void *aligned_alloc_device(std::size_t alignment, std::size_t numBytes,
 template <typename T>
 T *aligned_alloc_device(std::size_t alignment, std::size_t count,
                         const device &syclDevice, const context &syclContext,
-                        const property_list &propList) {
-  return static_cast<T *>(aligned_alloc_device(
-      alignment, count * sizeof(T), syclDevice, syclContext, propList));
+                        const property_list &propList = {}) {
+  return static_cast<T *>(aligned_alloc_device(std::max(alignment, alignof(T)),
+                                               count * sizeof(T), syclDevice,
+                                               syclContext, propList));
 }
 
 /// Allocates device USM with specified alignment.
@@ -185,8 +188,9 @@ template <typename T>
 T *aligned_alloc_host(std::size_t alignment, std::size_t count,
                       const context &syclContext,
                       const property_list &propList = {}) {
-  return static_cast<T *>(
-      aligned_alloc_host(alignment, count * sizeof(T), syclContext, propList));
+  return static_cast<T *>(aligned_alloc_host(std::max(alignment, alignof(T)),
+                                             count * sizeof(T), syclContext,
+                                             propList));
 }
 
 /// Allocates host USM with specified alignment.
@@ -241,10 +245,7 @@ void *malloc_host(std::size_t numBytes, const context &syclContext,
 template <typename T>
 T *malloc_host(std::size_t count, const context &syclContext,
                const property_list &propList = {}) {
-  // TODO: to rewrite with aligned_malloc_host once it's supported in
-  // liboffload.
-  return static_cast<T *>(
-      malloc_host(count * sizeof(T), syclContext, propList));
+  return aligned_alloc_host<T>(alignof(T), count, syclContext, propList);
 }
 
 /// Allocates host USM.
@@ -305,8 +306,9 @@ template <typename T>
 T *aligned_alloc_shared(std::size_t alignment, std::size_t count,
                         const device &syclDevice, const context &syclContext,
                         const property_list &propList = {}) {
-  return static_cast<T *>(aligned_alloc_shared(
-      alignment, count * sizeof(T), syclDevice, syclContext, propList));
+  return static_cast<T *>(aligned_alloc_shared(std::max(alignment, alignof(T)),
+                                               count * sizeof(T), syclDevice,
+                                               syclContext, propList));
 }
 
 /// Allocates shared USM with specified alignment.
@@ -365,10 +367,8 @@ template <typename T>
 T *malloc_shared(std::size_t count, const device &syclDevice,
                  const context &syclContext,
                  const property_list &propList = {}) {
-  // TODO: to rewrite with aligned_malloc_shared once it's supported in
-  // liboffload.
-  return static_cast<T *>(
-      malloc_shared(count * sizeof(T), syclDevice, syclContext, propList));
+  return aligned_alloc_shared<T>(alignof(T), count, syclDevice, syclContext,
+                                 propList);
 }
 
 /// Allocates shared USM.
@@ -438,8 +438,9 @@ template <typename T>
 T *aligned_alloc(std::size_t alignment, std::size_t count,
                  const device &syclDevice, const context &syclContext,
                  usm::alloc kind, const property_list &propList = {}) {
-  return static_cast<T *>(aligned_alloc(
-      alignment, count * sizeof(T), syclDevice, syclContext, kind, propList));
+  return static_cast<T *>(aligned_alloc(std::max(alignment, alignof(T)),
+                                        count * sizeof(T), syclDevice,
+                                        syclContext, kind, propList));
 }
 
 /// Allocates USM of type `kind` with specified alignment.
@@ -510,9 +511,8 @@ template <typename T>
 T *malloc(std::size_t count, const device &syclDevice,
           const context &syclContext, usm::alloc kind,
           const property_list &propList = {}) {
-  // TODO: to rewrite with aligned_malloc once it's supported in liboffload.
-  return static_cast<T *>(
-      malloc(count * sizeof(T), syclDevice, syclContext, kind, propList));
+  return aligned_alloc<T>(alignof(T), count, syclDevice, syclContext, kind,
+                          propList);
 }
 
 /// Allocates USM of type `kind`.
