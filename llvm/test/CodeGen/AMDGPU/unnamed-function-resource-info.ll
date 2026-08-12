@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu9.06-amd-amdhsa < %s | FileCheck %s
 
 ; CHECK-LABEL: __unnamed_1:
 ; CHECK: .set .L__unnamed_1.num_vgpr, 0

@@ -701,3 +701,61 @@ Ref<RefCountable> [[clang::annotate_type("webkit.nodelete")]] returnTypedefPrval
 
 } // namespace returned_prvalue_typedef
 
+namespace create_with_default_constructor {
+
+  struct ObjectWithDefaultConstructorWithoutMemberVariables {
+    void ref() const;
+    void deref() const;
+
+    static auto [[clang::annotate_type("webkit.nodelete")]] create() {
+      return adoptRef(*new ObjectWithDefaultConstructorWithoutMemberVariables());
+    }
+  };
+
+  struct ObjectWithDefaultConstructorWithPODMemberVariables {
+    void ref() const;
+    void deref() const;
+
+    static auto [[clang::annotate_type("webkit.nodelete")]] create() {
+      return adoptRef(*new ObjectWithDefaultConstructorWithPODMemberVariables());
+    }
+
+  private:
+    int value { 0 };
+    RefCountable* ptr { nullptr };
+  };
+
+  struct ObjectWithOpaqueCtor {
+    ObjectWithOpaqueCtor();
+  };
+
+  struct ObjectWithDefaultConstructorWithOpaqueCtorMemberVariables {
+    void ref() const;
+    void deref() const;
+
+    static auto [[clang::annotate_type("webkit.nodelete")]] create() {
+      return adoptRef(*new ObjectWithDefaultConstructorWithOpaqueCtorMemberVariables());
+      // expected-warning@-1{{A function 'create' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+    }
+
+  private:
+    ObjectWithOpaqueCtor obj;
+  };
+
+} // namespace create_with_default_constructor
+
+
+namespace trivial_implicit_ctor_in_new_expr {
+
+// 'new T()' with parens emits a CXXConstructExpr for T's implicit default
+// ctor. That ctor has no body in the AST (the synthesized body is materialised
+// only at codegen), but it is trivial by the C++ standard and runs no user
+// code, so it cannot delete. Verify the fast-path treats it as trivial.
+struct Plain { int x; };
+
+void [[clang::annotate_type("webkit.nodelete")]] valueInitNew() {
+  Plain* p = new Plain();
+  (void)p;
+}
+
+} // namespace trivial_implicit_ctor_in_new_expr

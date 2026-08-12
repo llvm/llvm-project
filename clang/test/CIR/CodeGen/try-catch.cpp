@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fcxx-exceptions -fexceptions -fclangir -emit-cir %s -o %t.cir
+// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
+// supports the builtin i32 in the Itanium EH personality signature.
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fcxx-exceptions -fexceptions -fclangir -fno-clangir-call-conv-lowering -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fcxx-exceptions -fexceptions -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fcxx-exceptions -fexceptions -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fcxx-exceptions -fexceptions -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
@@ -40,7 +42,7 @@ void try_catch_with_empty_catch_all() {
   }
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!s32i>
 // CIR: %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
 // CIR: cir.store{{.*}} %[[CONST_1]], %[[A_ADDR]] : !s32i, !cir.ptr<!s32i
 // CIR: cir.scope {
@@ -54,7 +56,7 @@ void try_catch_with_empty_catch_all() {
 // CIR:   }
 // CIR: }
 
-// LLVM:   %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:   %[[A_ADDR:.*]] = alloca i32, align 4
 // LLVM:   store i32 1, ptr %[[A_ADDR]], align 4
 // LLVM:   br label %[[BB_2:.*]]
 // LLVM: [[BB_2]]:
@@ -84,7 +86,7 @@ void try_catch_with_empty_catch_all_2() {
   }
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!s32i>
 // CIR: %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
 // CIR: cir.store{{.*}} %[[CONST_1]], %[[A_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR: cir.scope {
@@ -96,7 +98,7 @@ void try_catch_with_empty_catch_all_2() {
 // CIR:   }
 // CIR: }
 
-// LLVM:   %[[A_ADDR]] = alloca i32, i64 1, align 4
+// LLVM:   %[[A_ADDR]] = alloca i32, align 4
 // LLVM:   store i32 1, ptr %[[A_ADDR]], align 4
 // LLVM:   br label %[[BB_2:.*]]
 // LLVM: [[BB_2]]:
@@ -129,9 +131,9 @@ void try_catch_with_alloca() {
 
 // CIR: cir.func {{.*}} @_Z21try_catch_with_allocav() personality(@__gxx_personality_v0)
 // CIR: cir.scope {
-// CIR:   %[[A_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a"]
-// CIR:   %[[B_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b"]
-// CIR:   %[[C_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["c", init]
+// CIR:   %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!s32i>
 // CIR:   cir.try {
 // CIR:     %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR:     %[[TMP_B:.*]] = cir.load{{.*}} %[[B_ADDR]] : !cir.ptr<!s32i>, !s32i
@@ -141,9 +143,9 @@ void try_catch_with_alloca() {
 // CIR:   }
 // CIR: }
 
-// LLVM:  %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM:  %[[B_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM:  %[[C_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:  %[[A_ADDR:.*]] = alloca i32, align 4
+// LLVM:  %[[B_ADDR:.*]] = alloca i32, align 4
+// LLVM:  %[[C_ADDR:.*]] = alloca i32, align 4
 // LLVM:  br label %[[LABEL_1:.*]]
 // LLVM: [[LABEL_1]]:
 // LLVM:  br label %[[LABEL_2:.*]]
@@ -886,7 +888,7 @@ void cleanup_inside_try_body() {
 
 // CIR: cir.func {{.*}} @_Z23cleanup_inside_try_bodyv(){{.*}} personality(@__gxx_personality_v0){{.*}} {
 // CIR: cir.scope {
-// CIR:   %[[S:.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["s"]
+// CIR:   %[[S:.*]] = cir.alloca "s" {{.*}} : !cir.ptr<!rec_S>
 // CIR:   cir.try {
 // CIR:     cir.cleanup.scope {
 // CIR:       cir.call @_Z8divisionv()
@@ -1113,7 +1115,7 @@ void call_function_inside_try_catch_with_ref_ptr_of_record_exception_type() {
 }
 
 // CIR: cir.func {{.*}} @_Z68call_function_inside_try_catch_with_ref_ptr_of_record_exception_typev(){{.*}} personality(@__gxx_personality_v0){{.*}} {
-// CIR:   %[[E_ADDR:.*]] = cir.alloca !cir.ptr<!cir.ptr<!rec_Record>>, !cir.ptr<!cir.ptr<!cir.ptr<!rec_Record>>>, ["ref_ptr", const]
+// CIR:   %[[E_ADDR:.*]] = cir.alloca "ref_ptr" {{.*}} const : !cir.ptr<!cir.ptr<!cir.ptr<!rec_Record>>>
 // CIR:   cir.try {
 // CIR:     %[[CALL:.*]] = cir.call @_Z8divisionv() : () -> (!s32i {llvm.noundef})
 // CIR:     cir.yield
@@ -1345,10 +1347,10 @@ int init_catch_param_with_type_int() {
 }
 
 // CIR: cir.func {{.*}} @_Z30init_catch_param_with_type_intv() {{.*}} personality(@__gxx_personality_v0)
-// CIR:   %[[RET_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
-// CIR:   %[[RV_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["rv", init]
+// CIR:   %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[RV_ADDR:.*]] = cir.alloca "rv" {{.*}} init : !cir.ptr<!s32i>
 // CIR:   cir.scope {
-// CIR:     %[[X_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x"]
+// CIR:     %[[X_ADDR:.*]] = cir.alloca "x" {{.*}} : !cir.ptr<!s32i>
 // CIR:     cir.try {
 // CIR:       %[[CALL:.*]] = cir.call @_Z8divisionv() : () -> (!s32i {llvm.noundef})
 // CIR:       cir.yield
@@ -1374,9 +1376,9 @@ int init_catch_param_with_type_int() {
 // CIR:   cir.return %[[TMP_RET]] : !s32i
 
 // LLVM: define {{.*}} i32 @_Z30init_catch_param_with_type_intv() {{.*}} personality ptr @__gxx_personality_v0
-// LLVM:   %[[X_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM:   %[[RET_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM:   %[[RV_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:   %[[X_ADDR:.*]] = alloca i32, align 4
+// LLVM:   %[[RET_ADDR:.*]] = alloca i32, align 4
+// LLVM:   %[[RV_ADDR:.*]] = alloca i32, align 4
 // LLVM:   br label %[[TRY_SCOPE:.*]]
 // LLVM: [[TRY_SCOPE]]:
 // LLVM:   br label %[[TRY_BEGIN:.*]]
@@ -1486,10 +1488,10 @@ int init_catch_param_with_type_int_ptr() {
 }
 
 // CIR: cir.func {{.*}} @_Z34init_catch_param_with_type_int_ptrv() {{.*}} personality(@__gxx_personality_v0)
-// CIR:   %[[RET_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
-// CIR:   %[[RV_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["rv", init]
+// CIR:   %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[RV_ADDR:.*]] = cir.alloca "rv" {{.*}} init : !cir.ptr<!s32i>
 // CIR:   cir.scope {
-// CIR:     %[[X_ADDR:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["x"]
+// CIR:     %[[X_ADDR:.*]] = cir.alloca "x" {{.*}} : !cir.ptr<!cir.ptr<!s32i>>
 // CIR:     cir.try {
 // CIR:       %[[CALL:.*]] = cir.call @_Z8divisionv() : () -> (!s32i {llvm.noundef})
 // CIR:       cir.yield
@@ -1516,9 +1518,9 @@ int init_catch_param_with_type_int_ptr() {
 // CIR:   cir.return %[[TMP_RET]] : !s32i
 
 // LLVM: define {{.*}} i32 @_Z34init_catch_param_with_type_int_ptrv() {{.*}} personality ptr @__gxx_personality_v0
-// LLVM:   %[[X_ADDR:.*]] = alloca ptr, i64 1, align 8
-// LLVM:   %[[RET_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM:   %[[RV_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:   %[[X_ADDR:.*]] = alloca ptr, align 8
+// LLVM:   %[[RET_ADDR:.*]] = alloca i32, align 4
+// LLVM:   %[[RV_ADDR:.*]] = alloca i32, align 4
 // LLVM:   br label %[[TRY_SCOPE:.*]]
 // LLVM: [[TRY_SCOPE]]:
 // LLVM:   br label %[[TRY_BEGIN:.*]]
@@ -1627,10 +1629,10 @@ int init_catch_param_with_ref_to_ptr_to_non_record() {
 }
 
 // CIR: cir.func {{.*}} @_Z46init_catch_param_with_ref_to_ptr_to_non_recordv() {{.*}} personality(@__gxx_personality_v0)
-// CIR:   %[[RET_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
-// CIR:   %[[RV_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["rv", init]
+// CIR:   %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[RV_ADDR:.*]] = cir.alloca "rv" {{.*}} init : !cir.ptr<!s32i>
 // CIR:   cir.scope {
-// CIR:     %[[P_ADDR:.*]] = cir.alloca !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>, ["p", const]
+// CIR:     %[[P_ADDR:.*]] = cir.alloca "p" {{.*}} const : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
 // CIR:     cir.try {
 // CIR:       %[[CALL:.*]] = cir.call @_Z8divisionv() : () -> (!s32i {llvm.noundef})
 // CIR:       cir.yield
@@ -1659,9 +1661,9 @@ int init_catch_param_with_ref_to_ptr_to_non_record() {
 // CIR:   cir.return %[[TMP_RET]] : !s32i
 
 // LLVM: define {{.*}} i32 @_Z46init_catch_param_with_ref_to_ptr_to_non_recordv() {{.*}} personality ptr @__gxx_personality_v0
-// LLVM:   %[[P_ADDR:.*]] = alloca ptr, i64 1, align 8
-// LLVM:   %[[RET_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM:   %[[RV_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:   %[[P_ADDR:.*]] = alloca ptr, align 8
+// LLVM:   %[[RET_ADDR:.*]] = alloca i32, align 4
+// LLVM:   %[[RV_ADDR:.*]] = alloca i32, align 4
 // LLVM:   br label %[[TRY_SCOPE:.*]]
 // LLVM: [[TRY_SCOPE]]:
 // LLVM:   br label %[[TRY_BEGIN:.*]]
@@ -1772,7 +1774,7 @@ void direct_inside_try_catch_with_exception_type() {
 
 // CIR: cir.func {{.*}} @_Z43direct_inside_try_catch_with_exception_typev() personality(@__gxx_personality_v0)
 // CIR:   cir.scope {
-// CIR:     %[[E:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["e"]
+// CIR:     %[[E:.*]] = cir.alloca "e" {{.*}} : !cir.ptr<!s32i>
 // CIR:     cir.try {
 // CIR:       %[[EXN:.*]] = cir.alloc.exception 4 -> !cir.ptr<!s32i>
 // CIR:       %[[FORTYTWO:.*]] = cir.const #cir.int<42> : !s32i

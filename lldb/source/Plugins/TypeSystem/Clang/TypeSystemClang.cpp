@@ -695,7 +695,7 @@ void TypeSystemClang::CreateASTContext() {
             m_target_triple)
             .str();
 
-    LLDB_LOG(GetLog(LLDBLog::Expressions), err.c_str());
+    LLDB_LOG(GetLog(LLDBLog::Expressions), "{0}", err);
 
     static std::once_flag s_uninitialized_target_warning;
     Debugger::ReportWarning(std::move(err), /*debugger_id=*/std::nullopt,
@@ -1449,11 +1449,8 @@ void TypeSystemClang::CreateFunctionTemplateSpecializationInfo(
   TemplateArgumentList *template_args_ptr = TemplateArgumentList::CreateCopy(
       func_decl->getASTContext(), infos.GetArgs());
 
-  func_decl->setFunctionTemplateSpecialization(
-      func_decl->getASTContext(), func_tmpl_decl, template_args_ptr,
-      /*InsertPos=*/nullptr, TSK_ImplicitInstantiation,
-      /*TemplateParams=*/nullptr, /*TemplateArgsAsWritten=*/nullptr,
-      /*PointOfInstantiation=*/SourceLocation(), /*AddSpecialization=*/true);
+  func_decl->setFunctionTemplateSpecialization(func_tmpl_decl,
+                                               template_args_ptr, nullptr);
 }
 
 /// Returns true if the given template parameter can represent the given value.
@@ -1652,40 +1649,6 @@ TypeSystemClang::CreateTemplateTemplateParmDecl(const char *template_name) {
       template_param_list);
 }
 
-static const ASTTemplateArgumentListInfo *getTrivialTemplateArgumentListInfo(
-    ASTContext &ast, ArrayRef<TemplateArgument> args, SourceLocation Loc) {
-  TemplateArgumentListInfo Args(/*LAngleLoc=*/Loc, /*RAngleLoc=*/Loc);
-  for (const auto &arg : args) {
-    if (arg.getIsDefaulted())
-      break;
-    switch (arg.getKind()) {
-    case TemplateArgument::Type:
-      Args.addArgument(TemplateArgumentLoc(
-          arg.getAsType(), ast.getTrivialTypeSourceInfo(arg.getAsType(), Loc)));
-      break;
-    case TemplateArgument::Expression:
-      Args.addArgument(TemplateArgumentLoc(arg, arg.getAsExpr()));
-      break;
-    case TemplateArgument::Template:
-    case TemplateArgument::TemplateExpansion:
-      Args.addArgument(
-          TemplateArgumentLoc(ast, arg, Loc, NestedNameSpecifierLoc(), Loc));
-      break;
-    case TemplateArgument::Declaration:
-    case TemplateArgument::Integral:
-    case TemplateArgument::NullPtr:
-    case TemplateArgument::Pack:
-    case TemplateArgument::StructuralValue:
-      Args.addArgument(
-          TemplateArgumentLoc(arg, TemplateArgumentLocInfo(ast, Loc)));
-      break;
-    case TemplateArgument::Null:
-      llvm_unreachable("unexpected null template argument");
-    }
-  }
-  return ASTTemplateArgumentListInfo::Create(ast, Args);
-}
-
 ClassTemplateSpecializationDecl *
 TypeSystemClang::CreateClassTemplateSpecializationDecl(
     DeclContext *decl_ctx, OptionalClangModuleID owning_module,
@@ -1728,13 +1691,6 @@ TypeSystemClang::CreateClassTemplateSpecializationDecl(
 
   class_template_specialization_decl->setSpecializationKind(
       TSK_ExplicitSpecialization);
-  SourceLocation FakeLoc = class_template_specialization_decl->getLocation();
-  auto *TemplateParams = TemplateParameterList::Create(
-      ast, /*TemplateLoc=*/FakeLoc, /*LAngleLoc=*/FakeLoc,
-      /*Params=*/ArrayRef<NamedDecl *>(), /*RAngleLoc=*/FakeLoc,
-      /*RequiresClause=*/nullptr);
-  class_template_specialization_decl->setExplicitSpecializationInfo(
-      TemplateParams, ::getTrivialTemplateArgumentListInfo(ast, args, FakeLoc));
 
   return class_template_specialization_decl;
 }
@@ -2456,6 +2412,14 @@ CompilerType TypeSystemClang::GetPointerDiffType(bool is_signed) {
   if (is_signed)
     return GetType(getASTContext().getPointerDiffType());
   return GetType(getASTContext().getUnsignedPointerDiffType());
+}
+
+CompilerType TypeSystemClang::GetSizeType() {
+  // Check if builtin types are initialized.
+  if (!getASTContext().VoidPtrTy)
+    return {};
+
+  return GetType(getASTContext().getSizeType());
 }
 
 void TypeSystemClang::DumpDeclContextHiearchy(clang::DeclContext *decl_ctx) {
@@ -4143,6 +4107,9 @@ TypeSystemClang::GetTypeClass(lldb::opaque_compiler_type_t type) {
   case clang::Type::Using:
   case clang::Type::PredefinedSugar:
     llvm_unreachable("Handled in RemoveWrappingTypes!");
+  case clang::Type::LateParsedAttr:
+    llvm_unreachable("LateParsedAttrType is a transient parsing placeholder "
+                     "that is resolved before the AST is finalized.");
   case clang::Type::UnaryTransform:
     break;
   case clang::Type::FunctionNoProto:
@@ -4847,6 +4814,9 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type) {
   case clang::Type::Using:
   case clang::Type::PredefinedSugar:
     llvm_unreachable("Handled in RemoveWrappingTypes!");
+  case clang::Type::LateParsedAttr:
+    llvm_unreachable("LateParsedAttrType is a transient parsing placeholder "
+                     "that is resolved before the AST is finalized.");
 
   case clang::Type::UnaryTransform:
     break;
@@ -5048,6 +5018,11 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type) {
   case clang::BuiltinType::Id:
 #include "clang/Basic/AMDGPUTypes.def"
       break;
+
+      // SPIR-V builtin types.
+#define SPIRV_TYPE(Name, Id, SingletonId) case clang::BuiltinType::Id:
+#include "clang/Basic/SPIRVTypes.def"
+      break;
     }
     break;
   // All pointer types are represented as unsigned integer encodings. We may
@@ -5149,6 +5124,9 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
   case clang::Type::Using:
   case clang::Type::PredefinedSugar:
     llvm_unreachable("Handled in RemoveWrappingTypes!");
+  case clang::Type::LateParsedAttr:
+    llvm_unreachable("LateParsedAttrType is a transient parsing placeholder "
+                     "that is resolved before the AST is finalized.");
   case clang::Type::UnaryTransform:
     break;
 
@@ -8521,14 +8499,19 @@ TypeSystemClang::dump(lldb::opaque_compiler_type_t type) const {
 namespace {
 struct ScopedASTColor {
   ScopedASTColor(clang::ASTContext &ast, bool show_colors)
-      : ast(ast), old_show_colors(ast.getDiagnostics().getShowColors()) {
-    ast.getDiagnostics().setShowColors(show_colors);
+      : ast(ast),
+        old_show_colors(
+            ast.getDiagnostics().getDiagnosticOptions().getShowColors()) {
+    ast.getDiagnostics().getDiagnosticOptions().setShowColors(
+        show_colors ? clang::ShowColorsKind::On : clang::ShowColorsKind::Off);
   }
 
-  ~ScopedASTColor() { ast.getDiagnostics().setShowColors(old_show_colors); }
+  ~ScopedASTColor() {
+    ast.getDiagnostics().getDiagnosticOptions().setShowColors(old_show_colors);
+  }
 
   clang::ASTContext &ast;
-  const bool old_show_colors;
+  const clang::ShowColorsKind old_show_colors;
 };
 } // namespace
 

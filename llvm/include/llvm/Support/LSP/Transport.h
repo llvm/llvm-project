@@ -73,7 +73,7 @@ private:
 };
 
 /// Concrete implementation of the JSONTransportInput that reads from a file.
-class JSONTransportInputOverFile : public JSONTransportInput {
+class LLVM_ABI JSONTransportInputOverFile : public JSONTransportInput {
 public:
   explicit JSONTransportInputOverFile(
       std::FILE *In, JSONStreamStyle Style = JSONStreamStyle::Standard)
@@ -82,8 +82,8 @@ public:
   bool hasError() const final { return ferror(In); }
   bool isEndOfInput() const final { return feof(In); }
 
-  LLVM_ABI_FOR_TEST LogicalResult readDelimitedMessage(std::string &Json) final;
-  LLVM_ABI_FOR_TEST LogicalResult readStandardMessage(std::string &Json) final;
+  LogicalResult readDelimitedMessage(std::string &Json) final;
+  LogicalResult readStandardMessage(std::string &Json) final;
 
 private:
   std::FILE *In;
@@ -104,14 +104,14 @@ public:
         PrettyOutput(PrettyOutput) {}
 
   /// The following methods are used to send a message to the LSP client.
-  LLVM_ABI_FOR_TEST void notify(StringRef Method, llvm::json::Value Params);
-  LLVM_ABI_FOR_TEST void call(StringRef Method, llvm::json::Value Params,
-                              llvm::json::Value Id);
-  LLVM_ABI_FOR_TEST void reply(llvm::json::Value Id,
-                               llvm::Expected<llvm::json::Value> Result);
+  LLVM_ABI void notify(StringRef Method, llvm::json::Value Params);
+  LLVM_ABI void call(StringRef Method, llvm::json::Value Params,
+                     llvm::json::Value Id);
+  LLVM_ABI void reply(llvm::json::Value Id,
+                      llvm::Expected<llvm::json::Value> Result);
 
   /// Start executing the JSON-RPC transport.
-  LLVM_ABI_FOR_TEST llvm::Error run(MessageHandler &Handler);
+  LLVM_ABI llvm::Error run(MessageHandler &Handler);
 
 private:
   /// Dispatches the given incoming json message to the message handler.
@@ -161,28 +161,20 @@ class MessageHandler {
 public:
   MessageHandler(JSONTransport &Transport) : Transport(Transport) {}
 
-  bool onNotify(StringRef Method, llvm::json::Value Value);
-  bool onCall(StringRef Method, llvm::json::Value Params, llvm::json::Value Id);
-  bool onReply(llvm::json::Value Id, llvm::Expected<llvm::json::Value> Result);
+  LLVM_ABI bool onNotify(StringRef Method, llvm::json::Value Value);
+  LLVM_ABI bool onCall(StringRef Method, llvm::json::Value Params,
+                       llvm::json::Value Id);
+  LLVM_ABI bool onReply(llvm::json::Value Id,
+                        llvm::Expected<llvm::json::Value> Result);
 
   template <typename T>
   static llvm::Expected<T> parse(const llvm::json::Value &Raw,
                                  StringRef PayloadName, StringRef PayloadKind) {
     T Result;
     llvm::json::Path::Root Root;
-    if (fromJSON(Raw, Result, Root))
-      return std::move(Result);
-
-    // Dump the relevant parts of the broken message.
-    std::string Context;
-    llvm::raw_string_ostream Os(Context);
-    Root.printErrorContext(Raw, Os);
-
-    // Report the error (e.g. to the client).
-    return llvm::make_error<LSPError>(
-        llvm::formatv("failed to decode {0} {1}: {2}", PayloadName, PayloadKind,
-                      fmt_consume(Root.getError())),
-        ErrorCode::InvalidParams);
+    if (!fromJSON(Raw, Result, Root))
+      return handleParseError(Raw, PayloadName, PayloadKind, Root);
+    return std::move(Result);
   }
 
   template <typename Param, typename Result, typename ThisT>
@@ -264,6 +256,10 @@ public:
   }
 
 private:
+  LLVM_ABI static llvm::Error
+  handleParseError(const llvm::json::Value &Raw, StringRef PayloadName,
+                   StringRef PayloadKind, const llvm::json::Path::Root &Root);
+
   template <typename HandlerT>
   using HandlerMap = llvm::StringMap<llvm::unique_function<HandlerT>>;
 

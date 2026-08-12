@@ -62,7 +62,4 @@ export namespace std {
   using std::sqrt;
   using std::tan;
   using std::tanh;
-
-  using std::begin;
-  using std::end;
 } // namespace std

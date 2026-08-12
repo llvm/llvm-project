@@ -1325,10 +1325,8 @@ OverloadKind Sema::CheckOverload(Scope *S, FunctionDecl *New,
       !New->getType()->isDependentType()) {
     LookupResult TemplateSpecResult(LookupResult::Temporary, Old);
     TemplateSpecResult.addAllDecls(Old);
-    if (CheckFunctionTemplateSpecialization(New, /*TemplateParams=*/nullptr,
-                                            /*ExplicitTemplateArgs=*/nullptr,
-                                            TemplateSpecResult,
-                                            /*QualifiedFriend*/ true)) {
+    if (CheckFunctionTemplateSpecialization(New, nullptr, TemplateSpecResult,
+                                            /*QualifiedFriend*/true)) {
       New->setInvalidDecl();
       return OverloadKind::Overload;
     }
@@ -1847,6 +1845,11 @@ TryImplicitConversion(Sema &S, Expr *From, QualType ToType,
     // exists. When we actually perform initialization, we'll find the
     // appropriate constructor to copy the returned object, if needed.
     ICS.Standard.CopyConstructor = nullptr;
+
+    // In HLSL, a conversion of an expression of class type to the same class
+    // type needs implicit LvaluetoRvalue conversion.
+    if (S.getLangOpts().HLSL)
+      ICS.Standard.First = ICK_Lvalue_To_Rvalue;
 
     // Determine whether this is considered a derived-to-base conversion.
     if (!S.Context.hasSameUnqualifiedType(FromType, ToType))
@@ -6268,6 +6271,14 @@ ExprResult Sema::PerformImplicitObjectArgumentInitialization(
   QualType FromRecordType, DestType;
   QualType ImplicitParamRecordType = Method->getFunctionObjectParameterType();
 
+  if (getLangOpts().HLSL &&
+      From->getType().getAddressSpace() == LangAS::hlsl_constant) {
+    QualType CastType = From->getType().getLocalUnqualifiedType().withConst();
+    From = ImplicitCastExpr::Create(Context, CastType, CK_LValueToRValue, From,
+                                    /*BasePath=*/nullptr, VK_PRValue,
+                                    FPOptionsOverride());
+  }
+
   Expr::Classification FromClassification;
   if (const PointerType *PT = From->getType()->getAs<PointerType>()) {
     FromRecordType = PT->getPointeeType();
@@ -6488,6 +6499,9 @@ static ExprResult BuildConvertedConstantExpression(Sema &S, Expr *From,
     return ExprError();
 
   if (From->containsErrors()) {
+    if (S.Context.hasSameType(From->getType(), T))
+      return From;
+
     // The expression already has errors, so the correct cast kind can't be
     // determined. Use RecoveryExpr to keep the expected type T and mark the
     // result as invalid, preventing further cascading errors.
@@ -7033,6 +7047,7 @@ ExprResult Sema::PerformContextualImplicitConversion(
   // Try converting the expression to an Lvalue first, to get rid of qualifiers.
   ExprResult Converted = DefaultLvalueConversion(From);
   QualType T = Converted.isUsable() ? Converted.get()->getType() : QualType();
+  From = Converted.isUsable() ? Converted.get() : nullptr;
   // If the expression already has a matching type, we're golden.
   if (Converter.match(T))
     return Converted;
@@ -7373,7 +7388,16 @@ void Sema::AddOverloadCandidate(
         Function->isFromGlobalModule() &&
         (IsImplicitlyInstantiated || Function->isInlined());
 
-    if (ND->getFormalLinkage() == Linkage::Internal && !IsInlineFunctionInGMF) {
+    // Don't exclude internal-linkage entities from the current TU's global
+    // module fragment.
+    const Module *CurrentModule = getCurrentModule();
+    const bool IsCurrentUnitGMFDecl =
+        Function->isFromGlobalModule() && CurrentModule &&
+        Function->getOwningModule()->getTopLevelModule() ==
+            CurrentModule->getTopLevelModule();
+
+    if (ND->getFormalLinkage() == Linkage::Internal && !IsInlineFunctionInGMF &&
+        !IsCurrentUnitGMFDecl) {
       Candidate.Viable = false;
       Candidate.FailureKind = ovl_fail_module_mismatched;
       return;
@@ -8192,7 +8216,7 @@ void Sema::AddMethodTemplateCandidate(
     return;
 
   if (ExplicitTemplateArgs ||
-      !CandidateSet.shouldDeferTemplateArgumentDeduction(getLangOpts())) {
+      !CandidateSet.shouldDeferTemplateArgumentDeduction(*this)) {
     AddMethodTemplateCandidateImmediately(
         *this, CandidateSet, MethodTmpl, FoundDecl, ActingContext,
         ExplicitTemplateArgs, ObjectType, ObjectClassification, Args,
@@ -8322,7 +8346,7 @@ void Sema::AddTemplateOverloadCandidate(
   bool DependentExplicitSpecifier = hasDependentExplicit(FunctionTemplate);
 
   if (ExplicitTemplateArgs ||
-      !CandidateSet.shouldDeferTemplateArgumentDeduction(getLangOpts()) ||
+      !CandidateSet.shouldDeferTemplateArgumentDeduction(*this) ||
       (isa<CXXConstructorDecl>(FunctionTemplate->getTemplatedDecl()) &&
        DependentExplicitSpecifier)) {
 
@@ -8760,7 +8784,7 @@ void Sema::AddTemplateConversionCandidate(
   if (!CandidateSet.isNewCandidate(FunctionTemplate))
     return;
 
-  if (!CandidateSet.shouldDeferTemplateArgumentDeduction(getLangOpts()) ||
+  if (!CandidateSet.shouldDeferTemplateArgumentDeduction(*this) ||
       CandidateSet.getKind() ==
           OverloadCandidateSet::CSK_InitByUserDefinedConversion ||
       CandidateSet.getKind() == OverloadCandidateSet::CSK_InitByConstructor) {
@@ -11581,7 +11605,7 @@ OverloadingResult OverloadCandidateSet::BestViableFunction(Sema &S,
                                                            SourceLocation Loc,
                                                            iterator &Best) {
 
-  assert((shouldDeferTemplateArgumentDeduction(S.getLangOpts()) ||
+  assert((shouldDeferTemplateArgumentDeduction(S) ||
           DeferredCandidatesCount == 0) &&
          "Unexpected deferred template candidates");
 
@@ -13533,6 +13557,28 @@ void OverloadCandidateSet::NoteCandidates(Sema &S, ArrayRef<Expr *> Args,
   }
 }
 
+bool OverloadCandidateSet::shouldDeferTemplateArgumentDeduction(
+    const Sema &S) const {
+  if (S.getLangOpts().CUDA) {
+    auto *Caller = S.getCurFunctionDecl(true);
+    // Overloading based on __host__ and __device__ attributes takes
+    // higher priority, HD functions may favor template candidates even when a
+    // non-template candidate would be a perfect match.
+    if (Caller && Caller->hasAttr<CUDAHostAttr>() &&
+        Caller->hasAttr<CUDADeviceAttr>())
+      return false;
+  }
+
+  return
+      // For user defined conversion we need to check against different
+      // combination of CV qualifiers and look at any explicit specifier, so
+      // always deduce template candidates.
+      Kind != CSK_InitByUserDefinedConversion
+      // When doing code completion, we want to see all the
+      // viable candidates.
+      && Kind != CSK_CodeCompletion;
+}
+
 static SourceLocation
 GetLocationForCandidate(const TemplateSpecCandidate *Cand) {
   return Cand->Specialization ? Cand->Specialization->getLocation()
@@ -15184,6 +15230,24 @@ ExprResult Sema::BuildCXXMemberCallExpr(Expr *E, NamedDecl *FoundDecl,
   return CheckForImmediateInvocation(CE, CE->getDirectCallee());
 }
 
+void Sema::LookupOverloadedUnaryOp(OverloadCandidateSet &CandidateSet,
+                                   OverloadedOperatorKind Op,
+                                   const UnresolvedSetImpl &Fns,
+                                   ArrayRef<Expr *> Args, bool PerformADL) {
+  assert(Op != OO_None && "Invalid opcode for overloaded unary operator");
+
+  SourceLocation OpLoc = CandidateSet.getLocation();
+  DeclarationName OpName = Context.DeclarationNames.getCXXOperatorName(Op);
+
+  AddNonMemberOperatorCandidates(Fns, Args, CandidateSet);
+  AddMemberOperatorCandidates(Op, OpLoc, Args, CandidateSet);
+  if (PerformADL)
+    AddArgumentDependentLookupCandidates(OpName, OpLoc, Args,
+                                         /*ExplicitTemplateArgs*/ nullptr,
+                                         CandidateSet);
+  AddBuiltinOperatorCandidates(Op, OpLoc, Args, CandidateSet);
+}
+
 ExprResult
 Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
                               const UnresolvedSetImpl &Fns,
@@ -15237,22 +15301,7 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
 
   // Build an empty overload set.
   OverloadCandidateSet CandidateSet(OpLoc, OverloadCandidateSet::CSK_Operator);
-
-  // Add the candidates from the given function set.
-  AddNonMemberOperatorCandidates(Fns, ArgsArray, CandidateSet);
-
-  // Add operator candidates that are member functions.
-  AddMemberOperatorCandidates(Op, OpLoc, ArgsArray, CandidateSet);
-
-  // Add candidates from ADL.
-  if (PerformADL) {
-    AddArgumentDependentLookupCandidates(OpName, OpLoc, ArgsArray,
-                                         /*ExplicitTemplateArgs*/nullptr,
-                                         CandidateSet);
-  }
-
-  // Add builtin operator candidates.
-  AddBuiltinOperatorCandidates(Op, OpLoc, ArgsArray, CandidateSet);
+  LookupOverloadedUnaryOp(CandidateSet, Op, Fns, ArgsArray, PerformADL);
 
   bool HadMultipleCandidates = (CandidateSet.size() > 1);
 
@@ -15527,7 +15576,13 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
   // various built-in candidates, but as DR507 points out, this can lead to
   // problems. So we do it this way, which pretty much follows what GCC does.
   // Note that we go the traditional code path for compound assignment forms.
-  if (Opc == BO_Assign && !Args[0]->getType()->isOverloadableType())
+  // In HLSL, user-defined structs/classes do not have constructors or
+  // overloadable assignment operators, so we can take this shortcut too.
+  const Type *LHSTy = Args[0]->getType().getTypePtr();
+  if (Opc == BO_Assign &&
+      (!LHSTy->isOverloadableType() ||
+       (getLangOpts().HLSL && LHSTy->isRecordType() &&
+        !LHSTy->getAsCXXRecordDecl()->isHLSLBuiltinRecord())))
     return CreateBuiltinBinOp(OpLoc, Opc, Args[0], Args[1]);
 
   // Build the overload set.

@@ -31,6 +31,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
@@ -491,6 +492,10 @@ class LowerTypeTestsModule {
 
   GlobalVariable *GlobalAnnotation;
   DenseSet<Value *> FunctionAnnotations;
+
+  // Cross-DSO CFI emits jumptable entries for exported functions as well as
+  // address taken functions in case they are address taken in other modules.
+  bool CrossDsoCfi = M.getModuleFlag("Cross-DSO CFI") != nullptr;
 
   bool shouldExportConstantsAsAbsoluteSymbols();
   uint8_t *exportTypeId(StringRef TypeId, const TypeIdLowering &TIL);
@@ -1584,6 +1589,20 @@ createJumpTableDebugInfo(Function *F, ArrayRef<GlobalTypeMember *> Functions) {
 void LowerTypeTestsModule::createJumpTable(
     Function *F, ArrayRef<GlobalTypeMember *> Functions,
     Triple::ArchType JumpTableArch) {
+  unsigned JumpTableEntrySize = getJumpTableEntrySize(JumpTableArch);
+  // Give the jumptable section this type in order to enable jumptable
+  // relaxation. Only do this if cross-DSO CFI is disabled because jumptable
+  // relaxation violates cross-DSO CFI's restrictions on the ordering of the
+  // jumptable relative to other sections.
+  if (!CrossDsoCfi)
+    F->setMetadata(LLVMContext::MD_elf_section_properties,
+                   MDNode::get(F->getContext(),
+                               ArrayRef<Metadata *>{
+                                   ConstantAsMetadata::get(ConstantInt::get(
+                                       Int64Ty, ELF::SHT_LLVM_CFI_JUMP_TABLE)),
+                                   ConstantAsMetadata::get(ConstantInt::get(
+                                       Int64Ty, JumpTableEntrySize))}));
+
   BasicBlock *BB = BasicBlock::Create(M.getContext(), "entry", F);
   IRBuilder<> IRB(BB);
 
@@ -1611,7 +1630,7 @@ void LowerTypeTestsModule::createJumpTable(
   IRB.CreateUnreachable();
 
   // Align the whole table by entry size.
-  F->setAlignment(Align(getJumpTableEntrySize(JumpTableArch)));
+  F->setPreferredAlignment(Align(JumpTableEntrySize));
   F->addFnAttr(Attribute::Naked);
   if (JumpTableArch == Triple::arm)
     F->addFnAttr("target-features", "-thumb-mode");
@@ -1788,9 +1807,7 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
     }
 
     if (IsExported) {
-      // TODO: use F->getGUID() once #184065 is relanded.
-      GlobalValue::GUID GUID = GlobalValue::getGUIDAssumingExternalLinkage(
-          GlobalValue::dropLLVMManglingEscape(F->getName()));
+      GlobalValue::GUID GUID = F->getGUID();
       if (IsJumpTableCanonical)
         ExportSummary->cfiFunctionDefs().addSymbolWithThinLTOGUID(F->getName(),
                                                                   GUID);
@@ -2168,10 +2185,6 @@ bool LowerTypeTestsModule::lower() {
   unsigned CurUniqueId = 0;
   SmallVector<MDNode *, 2> Types;
 
-  // Cross-DSO CFI emits jumptable entries for exported functions as well as
-  // address taken functions in case they are address taken in other modules.
-  const bool CrossDsoCfi = M.getModuleFlag("Cross-DSO CFI") != nullptr;
-
   struct ExportedFunctionInfo {
     CfiFunctionLinkage Linkage;
     MDNode *FuncMD; // {name, linkage, type[, type...]}
@@ -2255,22 +2268,28 @@ bool LowerTypeTestsModule::lower() {
           F = nullptr;
         }
 
-        if (!F)
+        if (!F) {
           F = Function::Create(
               FunctionType::get(Type::getVoidTy(M.getContext()), false),
               GlobalVariable::ExternalLinkage,
               M.getDataLayout().getProgramAddressSpace(), FunctionName, &M);
-
+          F->setMetadata(
+              LLVMContext::MD_guid,
+              MDTuple::get(M.getContext(), {FuncMD->getOperand(2).get()}));
+        }
         // If the function is available_externally, remove its definition so
         // that it is handled the same way as a declaration. Later we will try
         // to create an alias using this function's linkage, which will fail if
         // the linkage is available_externally. This will also result in us
         // following the code path below to replace the type metadata.
         if (F->hasAvailableExternallyLinkage()) {
+          // Maintain !guid metadata.
+          auto *OrigGUIDMD = F->getMetadata(LLVMContext::MD_guid);
           F->setLinkage(GlobalValue::ExternalLinkage);
           F->deleteBody();
           F->setComdat(nullptr);
           F->clearMetadata();
+          F->setMetadata(LLVMContext::MD_guid, OrigGUIDMD);
         }
 
         // Update the linkage for extern_weak declarations when a definition
@@ -2437,7 +2456,11 @@ bool LowerTypeTestsModule::lower() {
           report_fatal_error(
               "Expected branch funnel operand to be global value");
 
-        GlobalTypeMember *GTM = GlobalTypeMembers[Base];
+        auto It = GlobalTypeMembers.find(Base);
+        if (It == GlobalTypeMembers.end())
+          reportFatalUsageError("Expected branch funnel operand to be a "
+                                "defined global value with type metadata");
+        GlobalTypeMember *GTM = It->second;
         Targets.push_back(GTM);
         GlobalClassesTy::member_iterator NewSet =
             GlobalClasses.findLeader(GlobalClasses.insert(GTM));

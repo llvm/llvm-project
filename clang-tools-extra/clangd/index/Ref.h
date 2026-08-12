@@ -171,10 +171,6 @@ private:
 namespace llvm {
 template <> struct DenseMapInfo<clang::clangd::RefSlab::Builder::Entry> {
   using Entry = clang::clangd::RefSlab::Builder::Entry;
-  static inline Entry getEmptyKey() {
-    static Entry E{clang::clangd::SymbolID(""), {}};
-    return E;
-  }
   static unsigned getHashValue(const Entry &Val) {
     return llvm::hash_combine(
         Val.Symbol, reinterpret_cast<uintptr_t>(Val.Reference.Location.FileURI),

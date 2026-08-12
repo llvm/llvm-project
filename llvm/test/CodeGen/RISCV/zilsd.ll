@@ -84,25 +84,25 @@ define i64 @load_unaligned(ptr %p) {
 ; SLOW-LABEL: load_unaligned:
 ; SLOW:       # %bb.0:
 ; SLOW-NEXT:    lbu a1, 1(a0)
-; SLOW-NEXT:    lbu a2, 2(a0)
-; SLOW-NEXT:    lbu a3, 3(a0)
-; SLOW-NEXT:    lbu a4, 0(a0)
+; SLOW-NEXT:    lbu a2, 0(a0)
+; SLOW-NEXT:    lbu a3, 2(a0)
+; SLOW-NEXT:    lbu a4, 3(a0)
 ; SLOW-NEXT:    slli a1, a1, 8
-; SLOW-NEXT:    slli a2, a2, 16
-; SLOW-NEXT:    slli a3, a3, 24
-; SLOW-NEXT:    or a1, a1, a4
-; SLOW-NEXT:    or a2, a3, a2
-; SLOW-NEXT:    lbu a3, 5(a0)
-; SLOW-NEXT:    lbu a4, 4(a0)
-; SLOW-NEXT:    lbu a5, 6(a0)
-; SLOW-NEXT:    lbu a0, 7(a0)
-; SLOW-NEXT:    slli a3, a3, 8
-; SLOW-NEXT:    or a3, a3, a4
-; SLOW-NEXT:    slli a5, a5, 16
-; SLOW-NEXT:    slli a0, a0, 24
-; SLOW-NEXT:    or a5, a0, a5
-; SLOW-NEXT:    or a0, a2, a1
-; SLOW-NEXT:    or a1, a5, a3
+; SLOW-NEXT:    lbu a5, 5(a0)
+; SLOW-NEXT:    lbu a6, 6(a0)
+; SLOW-NEXT:    lbu a7, 7(a0)
+; SLOW-NEXT:    lbu a0, 4(a0)
+; SLOW-NEXT:    or a1, a1, a2
+; SLOW-NEXT:    slli a3, a3, 16
+; SLOW-NEXT:    slli a4, a4, 24
+; SLOW-NEXT:    or a3, a4, a3
+; SLOW-NEXT:    slli a5, a5, 8
+; SLOW-NEXT:    slli a6, a6, 16
+; SLOW-NEXT:    slli a7, a7, 24
+; SLOW-NEXT:    or a5, a5, a0
+; SLOW-NEXT:    or a2, a7, a6
+; SLOW-NEXT:    or a0, a3, a1
+; SLOW-NEXT:    or a1, a2, a5
 ; SLOW-NEXT:    ret
 ;
 ; FAST-LABEL: load_unaligned:
@@ -113,25 +113,25 @@ define i64 @load_unaligned(ptr %p) {
 ; 4BYTEALIGN-LABEL: load_unaligned:
 ; 4BYTEALIGN:       # %bb.0:
 ; 4BYTEALIGN-NEXT:    lbu a1, 1(a0)
-; 4BYTEALIGN-NEXT:    lbu a2, 2(a0)
-; 4BYTEALIGN-NEXT:    lbu a3, 3(a0)
-; 4BYTEALIGN-NEXT:    lbu a4, 0(a0)
+; 4BYTEALIGN-NEXT:    lbu a2, 0(a0)
+; 4BYTEALIGN-NEXT:    lbu a3, 2(a0)
+; 4BYTEALIGN-NEXT:    lbu a4, 3(a0)
 ; 4BYTEALIGN-NEXT:    slli a1, a1, 8
-; 4BYTEALIGN-NEXT:    slli a2, a2, 16
-; 4BYTEALIGN-NEXT:    slli a3, a3, 24
-; 4BYTEALIGN-NEXT:    or a1, a1, a4
-; 4BYTEALIGN-NEXT:    or a2, a3, a2
-; 4BYTEALIGN-NEXT:    lbu a3, 5(a0)
-; 4BYTEALIGN-NEXT:    lbu a4, 4(a0)
-; 4BYTEALIGN-NEXT:    lbu a5, 6(a0)
-; 4BYTEALIGN-NEXT:    lbu a0, 7(a0)
-; 4BYTEALIGN-NEXT:    slli a3, a3, 8
-; 4BYTEALIGN-NEXT:    or a3, a3, a4
-; 4BYTEALIGN-NEXT:    slli a5, a5, 16
-; 4BYTEALIGN-NEXT:    slli a0, a0, 24
-; 4BYTEALIGN-NEXT:    or a5, a0, a5
-; 4BYTEALIGN-NEXT:    or a0, a2, a1
-; 4BYTEALIGN-NEXT:    or a1, a5, a3
+; 4BYTEALIGN-NEXT:    lbu a5, 5(a0)
+; 4BYTEALIGN-NEXT:    lbu a6, 6(a0)
+; 4BYTEALIGN-NEXT:    lbu a7, 7(a0)
+; 4BYTEALIGN-NEXT:    lbu a0, 4(a0)
+; 4BYTEALIGN-NEXT:    or a1, a1, a2
+; 4BYTEALIGN-NEXT:    slli a3, a3, 16
+; 4BYTEALIGN-NEXT:    slli a4, a4, 24
+; 4BYTEALIGN-NEXT:    or a3, a4, a3
+; 4BYTEALIGN-NEXT:    slli a5, a5, 8
+; 4BYTEALIGN-NEXT:    slli a6, a6, 16
+; 4BYTEALIGN-NEXT:    slli a7, a7, 24
+; 4BYTEALIGN-NEXT:    or a5, a5, a0
+; 4BYTEALIGN-NEXT:    or a2, a7, a6
+; 4BYTEALIGN-NEXT:    or a0, a3, a1
+; 4BYTEALIGN-NEXT:    or a1, a2, a5
 ; 4BYTEALIGN-NEXT:    ret
   %res = load i64, ptr %p, align 1
   ret i64 %res
@@ -143,17 +143,17 @@ define void @store_unaligned(ptr %p, i64 %v) {
 ; SLOW-NEXT:    srli a3, a2, 24
 ; SLOW-NEXT:    srli a4, a2, 16
 ; SLOW-NEXT:    srli a5, a2, 8
-; SLOW-NEXT:    srli a6, a1, 24
-; SLOW-NEXT:    srli a7, a1, 16
 ; SLOW-NEXT:    sb a2, 4(a0)
 ; SLOW-NEXT:    sb a5, 5(a0)
 ; SLOW-NEXT:    sb a4, 6(a0)
 ; SLOW-NEXT:    sb a3, 7(a0)
-; SLOW-NEXT:    srli a2, a1, 8
+; SLOW-NEXT:    srli a2, a1, 24
+; SLOW-NEXT:    srli a3, a1, 16
+; SLOW-NEXT:    srli a4, a1, 8
 ; SLOW-NEXT:    sb a1, 0(a0)
-; SLOW-NEXT:    sb a2, 1(a0)
-; SLOW-NEXT:    sb a7, 2(a0)
-; SLOW-NEXT:    sb a6, 3(a0)
+; SLOW-NEXT:    sb a4, 1(a0)
+; SLOW-NEXT:    sb a3, 2(a0)
+; SLOW-NEXT:    sb a2, 3(a0)
 ; SLOW-NEXT:    ret
 ;
 ; FAST-LABEL: store_unaligned:
@@ -168,17 +168,17 @@ define void @store_unaligned(ptr %p, i64 %v) {
 ; 4BYTEALIGN-NEXT:    srli a3, a2, 24
 ; 4BYTEALIGN-NEXT:    srli a4, a2, 16
 ; 4BYTEALIGN-NEXT:    srli a5, a2, 8
-; 4BYTEALIGN-NEXT:    srli a6, a1, 24
-; 4BYTEALIGN-NEXT:    srli a7, a1, 16
 ; 4BYTEALIGN-NEXT:    sb a2, 4(a0)
 ; 4BYTEALIGN-NEXT:    sb a5, 5(a0)
 ; 4BYTEALIGN-NEXT:    sb a4, 6(a0)
 ; 4BYTEALIGN-NEXT:    sb a3, 7(a0)
-; 4BYTEALIGN-NEXT:    srli a2, a1, 8
+; 4BYTEALIGN-NEXT:    srli a2, a1, 24
+; 4BYTEALIGN-NEXT:    srli a3, a1, 16
+; 4BYTEALIGN-NEXT:    srli a4, a1, 8
 ; 4BYTEALIGN-NEXT:    sb a1, 0(a0)
-; 4BYTEALIGN-NEXT:    sb a2, 1(a0)
-; 4BYTEALIGN-NEXT:    sb a7, 2(a0)
-; 4BYTEALIGN-NEXT:    sb a6, 3(a0)
+; 4BYTEALIGN-NEXT:    sb a4, 1(a0)
+; 4BYTEALIGN-NEXT:    sb a3, 2(a0)
+; 4BYTEALIGN-NEXT:    sb a2, 3(a0)
 ; 4BYTEALIGN-NEXT:    ret
   store i64 %v, ptr %p, align 1
   ret void
@@ -276,18 +276,53 @@ entry:
 }
 
 define void @basic_store_zero_combine(ptr %0, i32 %1, i32 %2) {
-; SLOW-LABEL: basic_store_zero_combine:
-; SLOW:       # %bb.0:
-; SLOW-NEXT:    sw zero, 0(a0)
-; SLOW-NEXT:    sw zero, 4(a0)
-; SLOW-NEXT:    ret
-;
-; FAST-LABEL: basic_store_zero_combine:
-; FAST:       # %bb.0:
-; FAST-NEXT:    sd zero, 0(a0)
-; FAST-NEXT:    ret
+; CHECK-LABEL: basic_store_zero_combine:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sw zero, 0(a0)
+; CHECK-NEXT:    sw zero, 4(a0)
+; CHECK-NEXT:    ret
   store i32 0, ptr %0, align 4
   %4 = getelementptr inbounds i32, ptr %0, i32 1
   store i32 0, ptr %4, align 4
+  ret void
+}
+
+declare void @llvm.memset.p0.i32(ptr, i8, i32, i1 immarg)
+
+define void @no_coalesce() #0 {
+; CHECK-LABEL: no_coalesce:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    li a0, 1
+; CHECK-NEXT:    j .LBB12_2
+; CHECK-NEXT:  .LBB12_1: # %crash
+; CHECK-NEXT:    # in Loop: Header=BB12_2 Depth=1
+; CHECK-NEXT:    sd a0, 0(zero)
+; CHECK-NEXT:    sw a1, 8(zero)
+; CHECK-NEXT:    sw a1, 0(zero)
+; CHECK-NEXT:    sw a1, 4(zero)
+; CHECK-NEXT:  .LBB12_2: # %loop
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    bnez a1, .LBB12_1
+; CHECK-NEXT:  # %bb.3: # %loop
+; CHECK-NEXT:    # in Loop: Header=BB12_2 Depth=1
+; CHECK-NEXT:    beqz a1, .LBB12_2
+; CHECK-NEXT:  # %bb.4: # %exit
+; CHECK-NEXT:    ret
+entry:
+  br label %loop
+
+loop:
+  switch i8 0, label %loop [
+    i8 1, label %crash
+    i8 3, label %exit
+  ]
+
+crash:
+  store i64 1, ptr null, align 8
+  call void @llvm.memset.p0.i32(ptr null, i8 0, i32 12, i1 false)
+  br label %loop
+
+exit:
   ret void
 }
