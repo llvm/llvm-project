@@ -12,8 +12,6 @@
 #include "Integral.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/ComparisonCategories.h"
-#include "llvm/ADT/APSInt.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstddef>
 #include <cstdint>
