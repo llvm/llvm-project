@@ -10,6 +10,13 @@
 #include "src/compiler/__stack_chk_fail.h"
 #include "test/UnitTest/Test.h"
 
+#ifdef EXPECT_DEATH
 TEST(LlvmLibcStackChkFail, Death) {
   EXPECT_DEATH([] { __stack_chk_fail(); }, WITH_SIGNAL(SIGABRT));
 }
+#else
+TEST(LlvmLibcStackChkFail, Dummy) {
+  // Need at least one test, because a completely empty test file
+  // counts as failure
+}
+#endif // EXPECT_DEATH
