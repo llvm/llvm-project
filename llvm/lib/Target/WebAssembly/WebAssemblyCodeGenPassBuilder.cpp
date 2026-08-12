@@ -27,6 +27,7 @@
 #include "llvm/Passes/CodeGenPassBuilder.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Transforms/Utils/LowerGlobalDtors.h"
 #include "llvm/Transforms/Utils/LowerInvoke.h"
@@ -80,6 +81,8 @@ public:
   void addIRPasses(PassManagerWrapper &PMW) const;
   void addISelPrepare(PassManagerWrapper &PMW) const;
   Error addInstSelector(PassManagerWrapper &PMW) const;
+  Error addRegAssignAndRewriteFast(PassManagerWrapper &PMW) const;
+  Expected<bool> addRegAssignAndRewriteOptimized(PassManagerWrapper &PMW) const;
   void addPreEmitPass(PassManagerWrapper &PMW) const;
   void addAsmPrinterBegin(PassManagerWrapper &PMW) const;
   void addAsmPrinter(PassManagerWrapper &PMW) const;
@@ -172,6 +175,16 @@ Error WebAssemblyCodeGenPassBuilder::addInstSelector(
   return Error::success();
 }
 
+Error WebAssemblyCodeGenPassBuilder::addRegAssignAndRewriteFast(
+    PassManagerWrapper &PMW) const {
+  return Error::success();
+}
+
+Expected<bool> WebAssemblyCodeGenPassBuilder::addRegAssignAndRewriteOptimized(
+    PassManagerWrapper &PMW) const {
+  return false;
+}
+
 void WebAssemblyCodeGenPassBuilder::addPreEmitPass(
     PassManagerWrapper &PMW) const {
   Base::addPreEmitPass(PMW);
@@ -251,7 +264,7 @@ void WebAssemblyCodeGenPassBuilder::addPreEmitPass(
 
 void WebAssemblyCodeGenPassBuilder::addAsmPrinterBegin(
     PassManagerWrapper &PMW) const {
-  addModulePass(WebAssemblyAsmPrinterBeginPass(), PMW);
+  addModulePass(WebAssemblyAsmPrinterBeginPass(), PMW, /*Force=*/true);
 }
 
 void WebAssemblyCodeGenPassBuilder::addAsmPrinter(
