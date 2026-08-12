@@ -213,9 +213,9 @@ bool ByteCodeEmitter::emitOp(Opcode Op, const Tys &...Args, SourceInfo SI) {
   // attached to the address after the opcode.
   emit(P, Code, Op, Success);
   if (LocOverride)
-    SrcMap.emplace_back(Code.size(), *LocOverride);
+    SrcMap.push(Code.size(), *LocOverride);
   else if (SI)
-    SrcMap.emplace_back(Code.size(), SI);
+    SrcMap.push(Code.size(), SI);
 
   (..., emit(P, Code, Args, Success));
   return Success;

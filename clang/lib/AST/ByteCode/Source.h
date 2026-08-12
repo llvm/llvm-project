@@ -17,6 +17,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/Stmt.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Endian.h"
 
 namespace clang {
@@ -97,7 +98,30 @@ private:
 };
 static_assert(sizeof(SourceInfo) == sizeof(void *));
 
-using SourceMap = std::vector<std::pair<unsigned, SourceInfo>>;
+// A map from byte code offset to source information.
+// This is used to get the location in the input source file for diagnostics.
+class SourceMap final {
+private:
+  llvm::SmallVector<uint32_t> Offsets;
+  llvm::SmallVector<SourceInfo> Infos;
+
+public:
+  SourceMap() = default;
+  void push(uint32_t Offset, SourceInfo Info) {
+    Offsets.push_back(Offset);
+    Infos.push_back(Info);
+  }
+
+  SourceInfo findSourceForOffset(uint32_t Offset) const {
+    assert(!Offsets.empty());
+    assert(Offsets.size() == Infos.size());
+#ifndef NDEBUG
+    assert(llvm::is_sorted(Offsets));
+#endif
+    const auto *It = llvm::lower_bound(Offsets, Offset);
+    return Infos[It - Offsets.begin()];
+  }
+};
 
 /// Interface for classes which map locations to sources.
 class SourceMapper {
