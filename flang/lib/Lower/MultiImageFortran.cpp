@@ -276,10 +276,10 @@ Fortran::lower::getCosubscripts(Fortran::lower::AbstractConverter &converter,
   mlir::Type i64Ty = builder.getI64Type();
   unsigned corank = expr.cosubscript().size();
   for (unsigned dim = 0; dim < corank; ++dim) {
-    auto image = ToInt64(expr.cosubscript()[dim]);
+    auto cosub = ToInt64(expr.cosubscript()[dim]);
     mlir::Value idx;
-    if (image.has_value())
-      idx = builder.createIntegerConstant(loc, i64Ty, image.value());
+    if (cosub.has_value())
+      idx = builder.createIntegerConstant(loc, i64Ty, cosub.value());
     else {
       auto s = ignoreEvConvert(expr.cosubscript()[dim]);
       idx = builder.createConvert(
