@@ -64,6 +64,7 @@
 #include "SIDefines.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/InitializePasses.h"
 
 using namespace llvm;
@@ -2668,6 +2669,12 @@ SILoadStoreOptimizer::collectMergeableInsts(
       continue;
 
     if (InstClass == TBUFFER_LOAD || InstClass == TBUFFER_STORE) {
+      if (!STM->hasRelaxedTBufferOOBMode()) {
+        LLVM_DEBUG(
+            dbgs() << "Skip tbuffer combine: relaxed OOB mode not enabled\n");
+        continue;
+      }
+
       const MachineOperand *Fmt =
           TII->getNamedOperand(MI, AMDGPU::OpName::format);
       if (!AMDGPU::getGcnBufferFormatInfo(Fmt->getImm(), *STM)) {

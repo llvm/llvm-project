@@ -2,6 +2,7 @@ add_llvm_component_library(LLVMTransformUtils
   AddDiscriminators.cpp
   AMDGPUEmitPrintf.cpp
   ASanStackFrameLayout.cpp
+  AssignGUID.cpp
   AssumeBundleBuilder.cpp
   BasicBlockUtils.cpp
   BreakCriticalEdges.cpp
@@ -54,6 +55,7 @@ add_llvm_component_library(LLVMTransformUtils
   LoopUtils.cpp
   LoopVersioning.cpp
   LowerAtomic.cpp
+  LowerCommentStringPass.cpp
   LowerGlobalDtors.cpp
   LowerIFunc.cpp
   LowerInvoke.cpp
@@ -91,7 +93,6 @@ add_llvm_component_library(LLVMTransformUtils
   StripNonLineTableDebugInfo.cpp
   SymbolRewriter.cpp
   TriggerCrashPass.cpp
-  UnifyFunctionExitNodes.cpp
   UnifyLoopExits.cpp
   Utils.cpp
   ValueMapper.cpp

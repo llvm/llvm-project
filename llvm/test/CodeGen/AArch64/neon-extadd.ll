@@ -1368,95 +1368,83 @@ entry:
 define <16 x i32> @i12(<16 x i12> %s0, <16 x i12> %s1) {
 ; CHECK-SD-LABEL: i12:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    str x23, [sp, #-48]! // 8-byte Folded Spill
-; CHECK-SD-NEXT:    stp x22, x21, [sp, #16] // 16-byte Folded Spill
-; CHECK-SD-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-SD-NEXT:    .cfi_offset w19, -8
-; CHECK-SD-NEXT:    .cfi_offset w20, -16
-; CHECK-SD-NEXT:    .cfi_offset w21, -24
-; CHECK-SD-NEXT:    .cfi_offset w22, -32
-; CHECK-SD-NEXT:    .cfi_offset w23, -48
-; CHECK-SD-NEXT:    ldr w13, [sp, #112]
-; CHECK-SD-NEXT:    ldr w14, [sp, #144]
-; CHECK-SD-NEXT:    fmov s2, w4
-; CHECK-SD-NEXT:    ldr w17, [sp, #176]
-; CHECK-SD-NEXT:    ldr w19, [sp, #208]
+; CHECK-SD-NEXT:    ldr w8, [sp, #32]
+; CHECK-SD-NEXT:    ldr w9, [sp, #40]
+; CHECK-SD-NEXT:    fmov s1, w4
+; CHECK-SD-NEXT:    ldr w10, [sp, #128]
 ; CHECK-SD-NEXT:    fmov s3, w0
-; CHECK-SD-NEXT:    ldr w20, [sp, #80]
-; CHECK-SD-NEXT:    ldr w21, [sp, #48]
-; CHECK-SD-NEXT:    fmov s5, w13
-; CHECK-SD-NEXT:    fmov s4, w19
-; CHECK-SD-NEXT:    fmov s6, w17
-; CHECK-SD-NEXT:    fmov s7, w14
-; CHECK-SD-NEXT:    fmov s0, w20
-; CHECK-SD-NEXT:    fmov s1, w21
-; CHECK-SD-NEXT:    ldr w10, [sp, #120]
-; CHECK-SD-NEXT:    ldr w11, [sp, #152]
-; CHECK-SD-NEXT:    ldr w12, [sp, #184]
-; CHECK-SD-NEXT:    ldr w15, [sp, #216]
-; CHECK-SD-NEXT:    ldr w22, [sp, #88]
-; CHECK-SD-NEXT:    ldr w23, [sp, #56]
-; CHECK-SD-NEXT:    mov v2.h[1], w5
-; CHECK-SD-NEXT:    mov v3.h[1], w1
-; CHECK-SD-NEXT:    mov v5.h[1], w10
-; CHECK-SD-NEXT:    mov v4.h[1], w15
-; CHECK-SD-NEXT:    mov v0.h[1], w22
-; CHECK-SD-NEXT:    mov v1.h[1], w23
-; CHECK-SD-NEXT:    mov v6.h[1], w12
-; CHECK-SD-NEXT:    mov v7.h[1], w11
-; CHECK-SD-NEXT:    ldr w8, [sp, #128]
-; CHECK-SD-NEXT:    ldr w9, [sp, #160]
-; CHECK-SD-NEXT:    ldr w16, [sp, #64]
-; CHECK-SD-NEXT:    ldr w18, [sp, #96]
-; CHECK-SD-NEXT:    ldr w10, [sp, #192]
-; CHECK-SD-NEXT:    ldr w11, [sp, #224]
-; CHECK-SD-NEXT:    mov v2.h[2], w6
-; CHECK-SD-NEXT:    mov v3.h[2], w2
-; CHECK-SD-NEXT:    mov v0.h[2], w18
-; CHECK-SD-NEXT:    mov v1.h[2], w16
-; CHECK-SD-NEXT:    mov v5.h[2], w8
-; CHECK-SD-NEXT:    mov v4.h[2], w11
-; CHECK-SD-NEXT:    mov v6.h[2], w10
-; CHECK-SD-NEXT:    mov v7.h[2], w9
-; CHECK-SD-NEXT:    ldr w12, [sp, #72]
-; CHECK-SD-NEXT:    ldr w13, [sp, #104]
-; CHECK-SD-NEXT:    ldr w8, [sp, #136]
-; CHECK-SD-NEXT:    ldr w9, [sp, #168]
-; CHECK-SD-NEXT:    ldr w10, [sp, #200]
-; CHECK-SD-NEXT:    ldr w11, [sp, #232]
-; CHECK-SD-NEXT:    mov v0.h[3], w13
-; CHECK-SD-NEXT:    mov v1.h[3], w12
-; CHECK-SD-NEXT:    mov v2.h[3], w7
-; CHECK-SD-NEXT:    mov v3.h[3], w3
-; CHECK-SD-NEXT:    mov v5.h[3], w8
-; CHECK-SD-NEXT:    mov v4.h[3], w11
-; CHECK-SD-NEXT:    mov v6.h[3], w10
-; CHECK-SD-NEXT:    mov v7.h[3], w9
+; CHECK-SD-NEXT:    ldr w11, [sp, #72]
+; CHECK-SD-NEXT:    fmov s0, w8
+; CHECK-SD-NEXT:    ldr w8, [sp]
 ; CHECK-SD-NEXT:    movi v16.4s, #15, msl #8
-; CHECK-SD-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-SD-NEXT:    fmov s5, w10
+; CHECK-SD-NEXT:    ldr w10, [sp, #104]
+; CHECK-SD-NEXT:    mov v1.h[1], w5
+; CHECK-SD-NEXT:    fmov s2, w8
+; CHECK-SD-NEXT:    ldr w8, [sp, #8]
+; CHECK-SD-NEXT:    mov v3.h[1], w1
+; CHECK-SD-NEXT:    mov v0.h[1], w9
+; CHECK-SD-NEXT:    ldr w9, [sp, #48]
+; CHECK-SD-NEXT:    mov v2.h[1], w8
+; CHECK-SD-NEXT:    ldr w8, [sp, #160]
+; CHECK-SD-NEXT:    mov v1.h[2], w6
+; CHECK-SD-NEXT:    mov v3.h[2], w2
+; CHECK-SD-NEXT:    fmov s4, w8
+; CHECK-SD-NEXT:    mov v0.h[2], w9
+; CHECK-SD-NEXT:    ldr w9, [sp, #168]
+; CHECK-SD-NEXT:    ldr w8, [sp, #64]
+; CHECK-SD-NEXT:    mov v1.h[3], w7
+; CHECK-SD-NEXT:    mov v4.h[1], w9
+; CHECK-SD-NEXT:    ldr w9, [sp, #96]
+; CHECK-SD-NEXT:    fmov s6, w8
+; CHECK-SD-NEXT:    ldr w8, [sp, #136]
+; CHECK-SD-NEXT:    mov v3.h[3], w3
+; CHECK-SD-NEXT:    fmov s7, w9
+; CHECK-SD-NEXT:    ldr w9, [sp, #16]
+; CHECK-SD-NEXT:    mov v6.h[1], w11
+; CHECK-SD-NEXT:    mov v5.h[1], w8
+; CHECK-SD-NEXT:    ldr w8, [sp, #80]
+; CHECK-SD-NEXT:    mov v2.h[2], w9
+; CHECK-SD-NEXT:    ldr w9, [sp, #176]
+; CHECK-SD-NEXT:    ldr w11, [sp, #144]
+; CHECK-SD-NEXT:    mov v7.h[1], w10
+; CHECK-SD-NEXT:    ldr w10, [sp, #112]
 ; CHECK-SD-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-SD-NEXT:    ushll v2.4s, v2.4h, #0
+; CHECK-SD-NEXT:    mov v4.h[2], w9
+; CHECK-SD-NEXT:    ldr w9, [sp, #56]
 ; CHECK-SD-NEXT:    ushll v3.4s, v3.4h, #0
-; CHECK-SD-NEXT:    ushll v5.4s, v5.4h, #0
-; CHECK-SD-NEXT:    ushll v4.4s, v4.4h, #0
+; CHECK-SD-NEXT:    mov v6.h[2], w8
+; CHECK-SD-NEXT:    ldr w8, [sp, #24]
+; CHECK-SD-NEXT:    mov v5.h[2], w11
+; CHECK-SD-NEXT:    ldr w11, [sp, #120]
+; CHECK-SD-NEXT:    mov v0.h[3], w9
+; CHECK-SD-NEXT:    ldr w9, [sp, #152]
+; CHECK-SD-NEXT:    mov v7.h[2], w10
+; CHECK-SD-NEXT:    ldr w10, [sp, #88]
+; CHECK-SD-NEXT:    mov v2.h[3], w8
+; CHECK-SD-NEXT:    ldr w8, [sp, #184]
+; CHECK-SD-NEXT:    and v1.16b, v1.16b, v16.16b
+; CHECK-SD-NEXT:    mov v6.h[3], w10
+; CHECK-SD-NEXT:    mov v5.h[3], w9
+; CHECK-SD-NEXT:    mov v4.h[3], w8
+; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-SD-NEXT:    mov v7.h[3], w11
+; CHECK-SD-NEXT:    ushll v2.4s, v2.4h, #0
 ; CHECK-SD-NEXT:    ushll v6.4s, v6.4h, #0
-; CHECK-SD-NEXT:    ushll v7.4s, v7.4h, #0
+; CHECK-SD-NEXT:    ushll v5.4s, v5.4h, #0
 ; CHECK-SD-NEXT:    and v17.16b, v0.16b, v16.16b
-; CHECK-SD-NEXT:    and v18.16b, v1.16b, v16.16b
-; CHECK-SD-NEXT:    and v1.16b, v2.16b, v16.16b
+; CHECK-SD-NEXT:    ushll v4.4s, v4.4h, #0
+; CHECK-SD-NEXT:    and v2.16b, v2.16b, v16.16b
 ; CHECK-SD-NEXT:    and v0.16b, v3.16b, v16.16b
-; CHECK-SD-NEXT:    and v2.16b, v5.16b, v16.16b
-; CHECK-SD-NEXT:    and v3.16b, v4.16b, v16.16b
-; CHECK-SD-NEXT:    and v4.16b, v6.16b, v16.16b
-; CHECK-SD-NEXT:    and v5.16b, v7.16b, v16.16b
-; CHECK-SD-NEXT:    ldp x22, x21, [sp, #16] // 16-byte Folded Reload
-; CHECK-SD-NEXT:    add v0.4s, v0.4s, v2.4s
-; CHECK-SD-NEXT:    add v3.4s, v17.4s, v3.4s
-; CHECK-SD-NEXT:    add v1.4s, v1.4s, v5.4s
-; CHECK-SD-NEXT:    add v2.4s, v18.4s, v4.4s
-; CHECK-SD-NEXT:    ldr x23, [sp], #48 // 8-byte Folded Reload
+; CHECK-SD-NEXT:    ushll v7.4s, v7.4h, #0
+; CHECK-SD-NEXT:    and v3.16b, v6.16b, v16.16b
+; CHECK-SD-NEXT:    and v5.16b, v5.16b, v16.16b
+; CHECK-SD-NEXT:    and v4.16b, v4.16b, v16.16b
+; CHECK-SD-NEXT:    and v6.16b, v7.16b, v16.16b
+; CHECK-SD-NEXT:    add v0.4s, v0.4s, v3.4s
+; CHECK-SD-NEXT:    add v2.4s, v2.4s, v5.4s
+; CHECK-SD-NEXT:    add v3.4s, v17.4s, v4.4s
+; CHECK-SD-NEXT:    add v1.4s, v1.4s, v6.4s
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: i12:

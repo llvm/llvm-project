@@ -30,9 +30,6 @@ namespace clang::CIRGen {
 
 class CIRGenBuilderTy : public cir::CIRBaseBuilderTy {
   const CIRGenTypeCache &typeCache;
-  bool isFPConstrained = false;
-  llvm::fp::ExceptionBehavior defaultConstrainedExcept = llvm::fp::ebStrict;
-  llvm::RoundingMode defaultConstrainedRounding = llvm::RoundingMode::Dynamic;
 
   llvm::StringMap<unsigned> recordNames;
   llvm::StringMap<unsigned> globalsVersioning;
@@ -120,43 +117,6 @@ public:
     return baseName + "." + std::to_string(recordNames[baseName]++);
   }
 
-  //
-  // Floating point specific helpers
-  // -------------------------------
-  //
-
-  /// Enable/Disable use of constrained floating point math. When enabled the
-  /// CreateF<op>() calls instead create constrained floating point intrinsic
-  /// calls. Fast math flags are unaffected by this setting.
-  void setIsFPConstrained(bool isCon) { isFPConstrained = isCon; }
-
-  /// Query for the use of constrained floating point math
-  bool getIsFPConstrained() const { return isFPConstrained; }
-
-  /// Set the exception handling to be used with constrained floating point
-  void setDefaultConstrainedExcept(llvm::fp::ExceptionBehavior newExcept) {
-    assert(llvm::convertExceptionBehaviorToStr(newExcept) &&
-           "Garbage strict exception behavior!");
-    defaultConstrainedExcept = newExcept;
-  }
-
-  /// Get the exception handling used with constrained floating point
-  llvm::fp::ExceptionBehavior getDefaultConstrainedExcept() const {
-    return defaultConstrainedExcept;
-  }
-
-  /// Set the rounding mode handling to be used with constrained floating point
-  void setDefaultConstrainedRounding(llvm::RoundingMode newRounding) {
-    assert(llvm::convertRoundingModeToStr(newRounding) &&
-           "Garbage strict rounding mode!");
-    defaultConstrainedRounding = newRounding;
-  }
-
-  /// Get the rounding mode handling used with constrained floating point
-  llvm::RoundingMode getDefaultConstrainedRounding() const {
-    return defaultConstrainedRounding;
-  }
-
   cir::LongDoubleType getLongDoubleTy(const llvm::fltSemantics &format) const {
     if (&format == &llvm::APFloat::IEEEdouble())
       return cir::LongDoubleType::get(getContext(), typeCache.doubleTy);
@@ -239,6 +199,16 @@ public:
   // Operation creation helpers
   // --------------------------
   //
+  using CIRBaseBuilderTy::createCopy;
+  cir::CopyOp createCopy(Address dst, Address src, bool isVolatile = false,
+                         bool skipTailPadding = false) {
+    cir::CopyOp op = createCopy(dst.getPointer(), src.getPointer(), isVolatile,
+                                skipTailPadding);
+    op.setDstAlignment(dst.getAlignment().getQuantity());
+    op.setSrcAlignment(src.getAlignment().getQuantity());
+    return op;
+  }
+
   cir::MemCpyOp createMemCpy(mlir::Location loc, mlir::Value dst,
                              mlir::Value src, mlir::Value len) {
     return cir::MemCpyOp::create(*this, loc, dst, src, len);
@@ -264,8 +234,8 @@ public:
   // ---------------------------
 
   cir::DataMemberAttr getDataMemberAttr(cir::DataMemberType ty,
-                                        unsigned memberIndex) {
-    return cir::DataMemberAttr::get(ty, memberIndex);
+                                        llvm::ArrayRef<int32_t> path) {
+    return cir::DataMemberAttr::get(ty, path);
   }
 
   cir::DataMemberAttr getNullDataMemberAttr(cir::DataMemberType ty) {
@@ -487,10 +457,9 @@ public:
   // TODO: split this to createFPExt/createFPTrunc when we have dedicated cast
   // operations.
   mlir::Value createFloatingCast(mlir::Value v, mlir::Type destType) {
-    assert(!cir::MissingFeatures::fpConstraints());
-
     return cir::CastOp::create(*this, v.getLoc(), destType,
-                               cir::CastKind::floating, v);
+                               cir::CastKind::floating, v,
+                               getConstrainedFPAttr());
   }
 
   mlir::Value createDynCast(mlir::Location loc, mlir::Value src,
@@ -561,6 +530,13 @@ public:
   //===--------------------------------------------------------------------===//
   cir::IsFPClassOp createIsFPClass(mlir::Location loc, mlir::Value src,
                                    cir::FPClassTest flags) {
+    // FPClassTest occupies bits 0-9 (fcAllFlags).  Sema rejects an
+    // out-of-range __builtin_isfpclass mask, so any extra bit here is an
+    // internal error; assert and mask it off so lowering stays well-formed.
+    uint32_t raw = static_cast<uint32_t>(flags);
+    uint32_t all = static_cast<uint32_t>(cir::FPClassTest::All);
+    assert((raw & ~all) == 0 && "FPClassTest mask has bits outside 0-9");
+    flags = static_cast<cir::FPClassTest>(raw & all);
     return cir::IsFPClassOp::create(*this, loc, src, flags);
   }
 
@@ -577,12 +553,14 @@ public:
   }
 
   cir::LoadOp createLoad(mlir::Location loc, Address addr,
-                         bool isVolatile = false) {
+                         bool isVolatile = false, bool isNontemporal = false) {
     mlir::IntegerAttr align = getAlignmentAttr(addr.getAlignment());
     return cir::LoadOp::create(*this, loc, addr.getPointer(), /*isDeref=*/false,
-                               isVolatile, /*alignment=*/align,
+                               isVolatile, isNontemporal,
+                               /*alignment=*/align,
                                /*sync_scope=*/cir::SyncScopeKindAttr{},
-                               /*mem_order=*/cir::MemOrderAttr{});
+                               /*mem_order=*/cir::MemOrderAttr{},
+                               /*invariant=*/false);
   }
 
   cir::LoadOp createAlignedLoad(mlir::Location loc, mlir::Type ty,
@@ -592,9 +570,11 @@ public:
     uint64_t alignment = align ? align->value() : 0;
     mlir::IntegerAttr alignAttr = getAlignmentAttr(alignment);
     return cir::LoadOp::create(*this, loc, ptr, /*isDeref=*/false,
-                               /*isVolatile=*/false, alignAttr,
+                               /*isVolatile=*/false, /*isNontemporal=*/false,
+                               alignAttr,
                                /*sync_scope=*/cir::SyncScopeKindAttr{},
-                               /*mem_order=*/cir::MemOrderAttr{});
+                               /*mem_order=*/cir::MemOrderAttr{},
+                               /*invariant=*/false);
   }
 
   cir::LoadOp
@@ -604,14 +584,14 @@ public:
   }
 
   cir::StoreOp createStore(mlir::Location loc, mlir::Value val, Address dst,
-                           bool isVolatile = false,
+                           bool isVolatile = false, bool isNontemporal = false,
                            mlir::IntegerAttr align = {},
                            cir::SyncScopeKindAttr scope = {},
                            cir::MemOrderAttr order = {}) {
     if (!align)
       align = getAlignmentAttr(dst.getAlignment());
     return CIRBaseBuilderTy::createStore(loc, val, dst.getPointer(), isVolatile,
-                                         align, scope, order);
+                                         isNontemporal, align, scope, order);
   }
 
   /// Create a cir.complex.real_ptr operation that derives a pointer to the real

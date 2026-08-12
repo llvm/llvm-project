@@ -44,7 +44,9 @@ class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
         self, connection: str, name: str, *, sleep_seconds_in_middle: float = 0
     ):
         self.dap_server = dap_server.DebugAdapterServer(
-            connection=connection, spawn_helper=self.spawnSubprocess
+            connection=connection,
+            init_commands=self.setUpCommands(),
+            spawn_helper=self.spawnSubprocess,
         )
         program = self.getBuildArtifact("a.out")
         source = "main.c"
@@ -74,7 +76,7 @@ class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
         self.run_debug_session(connection, "Alice")
         self.run_debug_session(connection, "Bob")
 
-    @skipIfWindows
+    @requirePOSIX
     def test_server_unix_socket(self):
         """
         Test launching a binary with a lldb-dap in server mode on a unix socket.

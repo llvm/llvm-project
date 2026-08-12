@@ -46,7 +46,6 @@ if (LLVM_ENABLE_DOXYGEN)
     set(polly_doxygen_qhp_cust_filter_attrs "")
   endif()
 
-  include(HandleDoxygen)
   llvm_configure_doxygen()
 
   set(abs_top_srcdir)

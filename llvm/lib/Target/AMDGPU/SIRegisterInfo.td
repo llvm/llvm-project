@@ -160,7 +160,8 @@ multiclass SIRegLoHi16 <string n, bits<10> regIdx, bit ArtificialHigh = 1,
 }
 
 // Special Registers
-defm VCC_LO : SIRegLoHi16<"vcc_lo", 106>;
+defm VCC_LO : SIRegLoHi16<"vcc_lo", 106, /*ArtificialHigh=*/1, /*isVGPR=*/0,
+                          /*isAGPR=*/0, /*DwarfEncodings=*/[512, 512]>;
 defm VCC_HI : SIRegLoHi16<"vcc_hi", 107>;
 
 // Pseudo-registers: Used as placeholders during isel and immediately
@@ -178,7 +179,7 @@ def PC_REG : SIReg<"pc", 0>, DwarfRegNum<[16, 16]> {
 }
 
 // VCC for 64-bit instructions
-def VCC : RegisterWithSubRegs<"vcc", [VCC_LO, VCC_HI]> {
+def VCC : RegisterWithSubRegs<"vcc", [VCC_LO, VCC_HI]>, DwarfRegNum<[768, 512]> {
   let Namespace = "AMDGPU";
   let SubRegIndices = [sub0, sub1];
   let HWEncoding = VCC_LO.HWEncoding;
@@ -1445,6 +1446,8 @@ def VSrc_f64    : SrcRegOrImm9 <VS_64_AlignTarget, "OPERAND_REG_IMM_FP64"> {
 }
 def VSrc_v2b32 : SrcRegOrImm9 <VS_64_AlignTarget, "OPERAND_REG_IMM_V2INT32">;
 def VSrc_v2f32 : SrcRegOrImm9 <VS_64_AlignTarget, "OPERAND_REG_IMM_V2FP32">;
+def VSrc_v2b64 : SrcRegOrImm9 <VS_128, "OPERAND_REG_IMM_V2INT64">;
+def VSrc_v2f64 : SrcRegOrImm9 <VS_128, "OPERAND_REG_IMM_V2FP64">;
 
 def VSrc_NoInline_v2f16  : SrcRegOrImm9 <VS_32, "OPERAND_REG_IMM_NOINLINE_V2FP16">;
 

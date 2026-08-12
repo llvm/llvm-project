@@ -228,5 +228,58 @@ module attributes {
       // CHECK: spirv.Return
       gpu.return
     }
+
+    // CHECK-LABEL: spirv.func @gpu_wmma_function_array
+    gpu.func @gpu_wmma_function_array(%index: index, %scalar: f32) kernel
+        attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
+      // CHECK: %[[ARRAY:.+]] = spirv.Variable : !spirv.ptr<!spirv.array<16 x !spirv.coopmatrix<4x4xf32, Subgroup, MatrixAcc>>, Function>
+      // CHECK: %[[STORE_PTR:.+]] = spirv.AccessChain %[[ARRAY]][%{{.+}}] : !spirv.ptr<!spirv.array<16 x !spirv.coopmatrix<4x4xf32, Subgroup, MatrixAcc>>, Function>
+      // CHECK: spirv.Store "Function" %[[STORE_PTR]], %{{.+}} : !spirv.coopmatrix<4x4xf32, Subgroup, MatrixAcc>
+      // CHECK: spirv.Load "Function" %[[STORE_PTR]] : !spirv.coopmatrix<4x4xf32, Subgroup, MatrixAcc>
+      %array = memref.alloca() : memref<16x!gpu.mma_matrix<4x4xf32, "COp">, #spirv.storage_class<Function>>
+      %value = gpu.subgroup_mma_constant_matrix %scalar : !gpu.mma_matrix<4x4xf32, "COp">
+      memref.store %value, %array[%index] : memref<16x!gpu.mma_matrix<4x4xf32, "COp">, #spirv.storage_class<Function>>
+      %loaded = memref.load %array[%index] : memref<16x!gpu.mma_matrix<4x4xf32, "COp">, #spirv.storage_class<Function>>
+      gpu.return
+    }
+
+  }
+}
+
+// -----
+
+module attributes {
+  gpu.container_module,
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.6,
+    [Shader, CooperativeMatrixKHR],
+    [SPV_KHR_storage_buffer_storage_class, SPV_KHR_cooperative_matrix]>,
+    #spirv.resource_limits<>>} {
+
+  gpu.module @kernels {
+    gpu.func @negative_gpu_wmma_workgroup_array() kernel
+        attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
+      // expected-error @+1 {{failed to legalize operation 'memref.alloc'}}
+      %array = memref.alloc() : memref<16x!gpu.mma_matrix<4x4xf32, "COp">, #spirv.storage_class<Workgroup>>
+      gpu.return
+    }
+  }
+}
+
+// -----
+
+module attributes {
+  gpu.container_module,
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.6,
+    [Shader, CooperativeMatrixKHR],
+    [SPV_KHR_storage_buffer_storage_class, SPV_KHR_cooperative_matrix]>,
+    #spirv.resource_limits<>>} {
+
+  gpu.module @kernels {
+    gpu.func @negative_gpu_wmma_strided_function_array() kernel
+        attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
+      // expected-error @+1 {{failed to legalize operation 'memref.alloca'}}
+      %array = memref.alloca() : memref<16x!gpu.mma_matrix<4x4xf32, "COp">, strided<[2]>, #spirv.storage_class<Function>>
+      gpu.return
+    }
   }
 }

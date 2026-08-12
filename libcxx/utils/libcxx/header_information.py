@@ -9,13 +9,13 @@
 import pathlib, functools
 
 libcxx_root = pathlib.Path(__file__).resolve().parent.parent.parent
-libcxx_include = libcxx_root / "include"
 assert libcxx_root.exists()
 
 def _is_header_file(file):
     """Returns whether the given file is a header file, i.e. not a directory or the modulemap file."""
     return not file.is_dir() and not file.name in [
         "module.modulemap.in",
+        "target.modulemap",
         "CMakeLists.txt",
         "libcxx.imp",
         "__config_site.in",
@@ -102,13 +102,6 @@ class Header:
 
     def is_in_modulemap(self) -> bool:
         """Returns whether a header should be listed in the modulemap."""
-        # TODO: Should `__config_site` be in the modulemap?
-        if self._name == "__config_site":
-            return False
-
-        if self._name == "__assertion_handler":
-            return False
-
         # exclude libc++abi files
         if self._name in ["cxxabi.h", "__cxxabi_config.h"]:
             return False
@@ -151,6 +144,7 @@ class Header:
 
 
 # Commonly-used sets of headers
+libcxx_include = libcxx_root / "include"
 all_headers = [Header(p.relative_to(libcxx_include).as_posix()) for p in libcxx_include.rglob("[_a-z]*") if _is_header_file(p)]
 all_headers += [Header("__config_site"), Header("__assertion_handler")] # Headers generated during the build process
 public_headers = [h for h in all_headers if h.is_public()]
@@ -172,32 +166,7 @@ headers_not_available = list(map(Header, [
     "spanstream",
     "stacktrace",
     "stdfloat",
-    "text_encoding",
 ]))
-
-lit_header_restrictions = {
-    "barrier": "// UNSUPPORTED: no-threads, c++03, c++11, c++14, c++17",
-    "coroutine": "// UNSUPPORTED: c++03, c++11, c++14, c++17",
-    "cwchar": "// UNSUPPORTED: no-wide-characters",
-    "cwctype": "// UNSUPPORTED: no-wide-characters",
-    "experimental/iterator": "// UNSUPPORTED: c++03",
-    "experimental/propagate_const": "// UNSUPPORTED: c++03",
-    "experimental/simd": "// UNSUPPORTED: c++03",
-    "experimental/type_traits": "// UNSUPPORTED: c++03",
-    "experimental/utility": "// UNSUPPORTED: c++03",
-    "filesystem": "// UNSUPPORTED: no-filesystem, c++03, c++11, c++14",
-    "future": "// UNSUPPORTED: no-threads, c++03",
-    "latch": "// UNSUPPORTED: no-threads, c++03, c++11, c++14, c++17",
-    "mutex": "// UNSUPPORTED: no-threads, c++03",
-    "print": "// UNSUPPORTED: no-filesystem, c++03, c++11, c++14, c++17, c++20, availability-fp_to_chars-missing", # TODO PRINT investigate
-    "semaphore": "// UNSUPPORTED: no-threads, c++03, c++11, c++14, c++17",
-    "shared_mutex": "// UNSUPPORTED: no-threads, c++03, c++11",
-    "stdatomic.h": "// UNSUPPORTED: no-threads, c++03, c++11, c++14, c++17, c++20",
-    "stop_token": "// UNSUPPORTED: no-threads, c++03, c++11, c++14, c++17",
-    "thread": "// UNSUPPORTED: no-threads, c++03",
-    "wchar.h": "// UNSUPPORTED: no-wide-characters",
-    "wctype.h": "// UNSUPPORTED: no-wide-characters",
-}
 
 # Undeprecate headers that are deprecated in C++17 and removed in C++20.
 lit_header_undeprecations = {
@@ -214,6 +183,7 @@ lit_header_undeprecations = {
 # For example, [algorithm.syn] contains "#include <initializer_list>".
 mandatory_inclusions = {
     "algorithm": ["initializer_list"],
+    "any": ["initializer_list", "typeinfo"],
     "array": ["compare", "initializer_list"],
     "bitset": ["iosfwd", "string"],
     "chrono": ["compare"],
@@ -224,10 +194,11 @@ mandatory_inclusions = {
     "filesystem": ["compare"],
     "flat_map": ["compare", "initializer_list"],
     "flat_set": ["compare", "initializer_list"],
+    "functional": ["initializer_list", "typeinfo"],
     "forward_list": ["compare", "initializer_list"],
     "ios": ["iosfwd"],
     "iostream": ["ios", "istream", "ostream", "streambuf"],
-    "iterator": ["compare", "concepts"],
+    "iterator": ["compare", "concepts", "initializer_list"],
     "list": ["compare", "initializer_list"],
     "map": ["compare", "initializer_list"],
     "memory": ["compare"],
@@ -245,7 +216,7 @@ mandatory_inclusions = {
     "tgmath.h": ["cmath", "complex"],
     "thread": ["compare"],
     "tuple": ["compare"],
-    "typeindex": ["compare"],
+    "typeindex": ["compare", "typeinfo"],
     "unordered_map": ["compare", "initializer_list"],
     "unordered_set": ["compare", "initializer_list"],
     "utility": ["compare", "initializer_list"],

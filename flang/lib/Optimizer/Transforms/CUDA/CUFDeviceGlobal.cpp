@@ -8,19 +8,17 @@
 
 #include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
-#include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "flang/Runtime/CUDA/common.h"
-#include "flang/Runtime/allocatable.h"
-#include "flang/Support/Fortran.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include <functional>
 
 namespace fir {
 #define GEN_PASS_DEF_CUFDEVICEGLOBAL
@@ -50,11 +48,14 @@ static void processAddrOfOp(fir::AddrOfOp addrOfOp,
           addrOfOp.getSymbol().getRootReference().getValue())) {
     // TO DO: limit candidates to non-scalars. Scalars appear to have been
     // folded in already.
+    // Insert before recursing so cycles among globals (e.g. mutually
+    // referencing type descriptors) do not cause infinite recursion.
+    if (!candidates.insert(globalOp).second)
+      return;
     if (recurseInGlobal)
       globalOp.walk([&](fir::AddrOfOp op) {
         processAddrOfOp(op, symbolTable, candidates, recurseInGlobal);
       });
-    candidates.insert(globalOp);
   }
 }
 
@@ -63,13 +64,13 @@ static void processTypeDescriptor(fir::RecordType recTy,
                                   llvm::DenseSet<fir::GlobalOp> &candidates) {
   if (auto globalOp = symbolTable.lookup<fir::GlobalOp>(
           fir::NameUniquer::getTypeDescriptorName(recTy.getName()))) {
-    if (!candidates.contains(globalOp)) {
-      globalOp.walk([&](fir::AddrOfOp op) {
-        processAddrOfOp(op, symbolTable, candidates,
-                        /*recurseInGlobal=*/true);
-      });
-      candidates.insert(globalOp);
-    }
+    // Insert before walking so cyclic addr_of chains terminate.
+    if (!candidates.insert(globalOp).second)
+      return;
+    globalOp.walk([&](fir::AddrOfOp op) {
+      processAddrOfOp(op, symbolTable, candidates,
+                      /*recurseInGlobal=*/true);
+    });
   }
 }
 
@@ -114,6 +115,87 @@ processPotentialTypeDescriptor(mlir::Type candidateType,
   candidateType = fir::unwrapSequenceType(fir::unwrapRefType(candidateType));
   if (auto recTy = mlir::dyn_cast<fir::RecordType>(candidateType))
     processTypeDescriptor(recTy, symbolTable, candidates);
+}
+
+/// NVPTX cannot emit global initializers that form a reference cycle (see
+/// VisitGlobalVariableForEmission). Fortran type-info globals often do
+/// (mutually recursive derived types). Replace the initializer of a feedback
+/// vertex set of GPU copies with a zero value so the remaining dependency
+/// graph is acyclic, while keeping those symbols as real definitions (not
+/// `.extern`) so nvlink can resolve references from other device objects.
+static void dropCyclicGlobalInitializers(mlir::gpu::GPUModuleOp gpuMod) {
+  llvm::DenseMap<llvm::StringRef, fir::GlobalOp> byName;
+  llvm::SmallVector<fir::GlobalOp, 16> globals;
+  for (auto global : gpuMod.getOps<fir::GlobalOp>()) {
+    byName[global.getSymName()] = global;
+    globals.push_back(global);
+  }
+  if (globals.empty())
+    return;
+
+  llvm::sort(globals, [](fir::GlobalOp lhs, fir::GlobalOp rhs) {
+    return lhs.getSymName() < rhs.getSymName();
+  });
+
+  // Adjacency: global -> targets referenced via fir.address_of in its body.
+  llvm::DenseMap<fir::GlobalOp, llvm::SmallVector<fir::GlobalOp, 4>> adj;
+  for (fir::GlobalOp global : globals) {
+    global.walk([&](fir::AddrOfOp addrOf) {
+      fir::GlobalOp target =
+          byName.lookup(addrOf.getSymbol().getRootReference().getValue());
+      if (!target)
+        return;
+      adj[global].push_back(target);
+    });
+  }
+
+  // Greedily construct a feedback vertex set. Replacing one initializer with
+  // a zero value removes all outgoing dependency edges from that global.
+  // Restart the DFS after each cut until no back edge remains.
+  llvm::DenseSet<fir::GlobalOp> zeroInitOnly;
+  while (true) {
+    // 0: unvisited, 1: active, 2: complete.
+    llvm::DenseMap<fir::GlobalOp, unsigned> state;
+    fir::GlobalOp cut;
+    std::function<bool(fir::GlobalOp)> findCycle =
+        [&](fir::GlobalOp global) -> bool {
+      if (zeroInitOnly.contains(global))
+        return false;
+      state[global] = 1;
+      for (fir::GlobalOp target : adj.lookup(global)) {
+        if (zeroInitOnly.contains(target))
+          continue;
+        if (state.lookup(target) == 1) {
+          cut = global;
+          return true;
+        }
+        if (state.lookup(target) == 0 && findCycle(target))
+          return true;
+      }
+      state[global] = 2;
+      return false;
+    };
+
+    for (fir::GlobalOp global : globals)
+      if (state.lookup(global) == 0 && findCycle(global))
+        break;
+    if (!cut)
+      break;
+    zeroInitOnly.insert(cut);
+  }
+
+  for (fir::GlobalOp global : zeroInitOnly) {
+    global.getRegion().getBlocks().clear();
+    global.removeInitValAttr();
+    // Keep linkage (typically linkonce). Emit a zero initializer so the
+    // symbol remains a definition with no fir.address_of dependency edges.
+    mlir::OpBuilder builder(global.getContext());
+    mlir::Block *block = builder.createBlock(&global.getRegion());
+    builder.setInsertionPointToStart(block);
+    mlir::Value zero =
+        fir::ZeroOp::create(builder, global.getLoc(), global.getType());
+    fir::HasValueOp::create(builder, global.getLoc(), zero);
+  }
 }
 
 class CUFDeviceGlobal : public fir::impl::CUFDeviceGlobalBase<CUFDeviceGlobal> {
@@ -166,6 +248,7 @@ public:
         continue;
       }
       auto *cloned = globalOp->clone();
+      auto clonedGlobal = mlir::cast<fir::GlobalOp>(cloned);
       // Under -gpu=mem:unified, plain host module-scope variables (no
       // explicit CUF data attribute, not a constant) get a no-body
       // declaration in the GPU module: clear the body, init value, and
@@ -173,18 +256,27 @@ public:
       // External linkage (see convertLinkage in CodeGen.cpp), so an
       // initializer-less global emits as `.extern .global ...` in PTX.
       // The host-side definition stays. CUFAddConstructor will emit
-      // CUFRegisterExternalVariable (= __cudaRegisterHostVar) so the CUDA
+      // cuf.register_variable_static so the CUDA
       // runtime maps the device extern to the host pointer at module-load
       // time, and HMM/ATS handles migration.
       if (cudaUnified && !globalOp.getConstant() &&
           !globalOp.getDataAttrAttr()) {
-        auto clonedGlobal = mlir::cast<fir::GlobalOp>(cloned);
         clonedGlobal.getRegion().getBlocks().clear();
         clonedGlobal.removeInitValAttr();
         clonedGlobal.removeLinkNameAttr();
       }
+      // Registered CUDA globals with internal linkage must have a visible
+      // device symbol so runtime lookups (cudaGetSymbolAddress) can resolve
+      // them. Drop internal linkage from the GPU clone so it uses default
+      // external linkage.
+      if (cuf::isRegisteredDeviceGlobal(globalOp) &&
+          globalOp.getLinkName() == "internal")
+        clonedGlobal.removeLinkNameAttr();
       gpuSymTable.insert(cloned);
     }
+    // Type-info globals for mutually recursive derived types form initializer
+    // cycles; NVPTX rejects those. Drop initializers from cyclic GPU copies.
+    dropCyclicGlobalInitializers(gpuMod);
   }
 };
 } // namespace

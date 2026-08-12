@@ -1,6 +1,6 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx900 -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1010 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgpu9.00-unknown-unknown -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgpu10.10-unknown-unknown -emit-llvm -o - %s | FileCheck %s
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 typedef unsigned int uint;
@@ -25,4 +25,11 @@ void test_s_memtime(global ulong* out)
 void test_groupstaticsize(global uint* out)
 {
   *out = __builtin_amdgcn_groupstaticsize();
+}
+
+// CHECK-LABEL: @test_s_bitreplicate
+// CHECK: call i64 @llvm.amdgcn.s.bitreplicate(i32 %a)
+void test_s_bitreplicate(global ulong* out, uint a)
+{
+  *out = __builtin_amdgcn_s_bitreplicate(a);
 }
