@@ -1385,14 +1385,12 @@ bool StraightLineStrengthReduceLegacyPass::runOnFunction(Function &F) {
 }
 
 // Go through all operands of instruction, and check if any operand is used in
-// another block different from the instruction's block and the another use is
+// another block different from the instruction's block and the other use is
 // not rewritable. return true if such operand is found, otherwise return false.
 bool StraightLineStrengthReduce::
     hasOperandsUsedInNonRewritableUsersInAnotherBlock(
         llvm::Instruction *Inst) const {
   llvm::BasicBlock *InstBB = Inst->getParent();
-  if (!InstBB)
-    return false;
 
   for (Value *OpVal : Inst->operand_values()) {
     auto *OpInst = dyn_cast<Instruction>(OpVal);
@@ -1400,7 +1398,9 @@ bool StraightLineStrengthReduce::
       continue;
 
     for (const User *U : OpInst->users())
-      if (auto *UI = dyn_cast<Instruction>(U))
+      if (auto *UI = dyn_cast<Instruction>(U)) {
+        if (UI->isDebugOrPseudoInst())
+          continue;
         if (UI->getParent() != InstBB && !hasRewritableCandidates(UI)) {
           LLVM_DEBUG(dbgs()
                      << "Inst's operand is used in another block "
@@ -1413,6 +1413,7 @@ bool StraightLineStrengthReduce::
                      << ") " << *UI << "\n");
           return true;
         }
+      }
   }
   return false;
 }
@@ -1500,7 +1501,7 @@ bool StraightLineStrengthReduce::runOnFunction(Function &F) {
   LLVM_DEBUG(dbgs() << "SLSR on Function: " << F.getName() << "\n");
   // Traverse the dominator tree in the depth-first order. This order makes sure
   // all bases of a candidate are in Candidates when we process it.
-  for (const auto Node : depth_first(DT))
+  for (auto *const Node : depth_first(DT))
     for (auto &I : *(Node->getBlock()))
       allocateCandidatesAndFindBasis(&I);
 
@@ -1525,7 +1526,7 @@ bool StraightLineStrengthReduce::runOnFunction(Function &F) {
   //    range from the Basis by increasing the live range of the Basis.
   //    -- TODO: If needed, a refinement to check that "another block" is
   //    properly dominated by the candidate's Inst's block can be added.
-  // 2. When the candidate's Basis's should beused only in the the same block
+  // 2. When the candidate's Basis's is only used in the the same block
   // and its last use is before the candidate's Inst, the difference between the
   // last use of Basis and the Inst is larger than a threshold.
   //    -- This is also for avoiding increasing the live range of the Basis by
