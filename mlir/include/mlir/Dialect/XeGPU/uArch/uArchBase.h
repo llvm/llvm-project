@@ -34,6 +34,29 @@ namespace mlir {
 namespace xegpu {
 namespace uArch {
 
+/// Maximum number of components allowed in a vector operand of an elementwise
+/// (compute) operation.
+///
+/// The XeVM targets supported today are backed by SPIR-V, whose `OpTypeVector`
+/// is limited to 16 components, and the backend has no legalization rules for
+/// wider compute vectors. This is a limitation of the currently supported
+/// chips rather than of the XeVM dialect itself, which is why it is declared
+/// here alongside the other microarchitectural queries instead of being
+/// hardcoded in a pass.
+///
+/// Note this is a *component count*, deliberately not a bit width: a
+/// `vector<32xbf16>` is exactly 512 bits yet is illegal as a compute operand,
+/// while a 256-bit `vector<64xf4E2M1FN>` DPAS payload is fine because it is
+/// packed into a `vector<8xi32>` when lowered.
+///
+/// This is also unrelated to `getSubgroupSize()`, which happens to be 16 as
+/// well, and to `getMaxLaneAccessSizeBytes()`, which is 16 *bytes* of block IO.
+///
+/// TODO: Promote this to a virtual `uArch` query once the interface grows a
+/// vector-width entry, and have callers resolve it from the target attribute
+/// rather than using this default.
+constexpr unsigned kDefaultMaxVectorComponents = 16;
+
 // An enum class to represent the scope of an instruction
 enum class InstructionScope { Lane, Subgroup, Workgroup, Cluster };
 enum class InstructionKind {
