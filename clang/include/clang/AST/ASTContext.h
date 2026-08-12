@@ -1997,7 +1997,7 @@ public:
                              QualType equivalentType) const;
 
   QualType getAttributedType(NullabilityKind nullability, QualType modifiedType,
-                             QualType equivalentType);
+                             QualType equivalentType) const;
 
   QualType getBTFTagAttributedType(const BTFTypeTagAttr *BTFAttr,
                                    QualType Wrapped) const;
