@@ -2120,13 +2120,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       break;
 
     case Stmt::LambdaExprClass:
-      if (AMgr.options.ShouldInlineLambdas) {
-        VisitLambdaExpr(cast<LambdaExpr>(S), Pred, Dst);
-      } else {
-        const ExplodedNode *Node = Engine.makePostStmtNode(
-            S, Pred->getState(), Pred, /*MarkAsSink=*/true);
-        Engine.addAbortedBlock(Node, getCurrBlock());
-      }
+      VisitLambdaExpr(cast<LambdaExpr>(S), Pred, Dst);
       break;
 
     case Stmt::BinaryOperatorClass: {

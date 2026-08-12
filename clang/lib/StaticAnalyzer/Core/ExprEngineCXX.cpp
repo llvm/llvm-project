@@ -1122,6 +1122,14 @@ void ExprEngine::VisitCXXThisExpr(const CXXThisExpr *TE, ExplodedNode *Pred,
 
 void ExprEngine::VisitLambdaExpr(const LambdaExpr *LE, ExplodedNode *Pred,
                                  ExplodedNodeSet &Dst) {
+
+  if (!AMgr.options.ShouldInlineLambdas) {
+    const ExplodedNode *Node = Engine.makePostStmtNode(
+        LE, Pred->getState(), Pred, /*MarkAsSink=*/true);
+    Engine.addAbortedBlock(Node, getCurrBlock());
+    return;
+  }
+
   const StackFrame *SF = Pred->getStackFrame();
 
   // Get the region of the lambda itself.
