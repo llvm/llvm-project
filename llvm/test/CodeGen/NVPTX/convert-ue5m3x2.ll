@@ -9,9 +9,9 @@ define <2 x half> @test_ue5m3x2_to_f16x2_rn(i16 %a) {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [test_ue5m3x2_to_f16x2_rn_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [test_ue5m3x2_to_f16x2_rn_param_0];
 ; CHECK-NEXT:    cvt.rn.f16x2.ue5m3x2 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %val = call <2 x half> @llvm.nvvm.ue5m3x2.to.f16x2.rn(i16 %a)
   ret <2 x half> %val
@@ -24,9 +24,9 @@ define <2 x bfloat> @test_ue5m3x2_to_bf16x2_rn(i16 %a) {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [test_ue5m3x2_to_bf16x2_rn_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [test_ue5m3x2_to_bf16x2_rn_param_0];
 ; CHECK-NEXT:    cvt.rn.bf16x2.ue5m3x2 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %val = call <2 x bfloat> @llvm.nvvm.ue5m3x2.to.bf16x2.rn(i16 %a)
   ret <2 x bfloat> %val
@@ -39,9 +39,9 @@ define <2 x bfloat> @test_ue5m3x2_to_bf16x2_rn_satfinite(i16 %a) {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [test_ue5m3x2_to_bf16x2_rn_satfinite_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [test_ue5m3x2_to_bf16x2_rn_satfinite_param_0];
 ; CHECK-NEXT:    cvt.rn.satfinite.bf16x2.ue5m3x2 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %val = call <2 x bfloat> @llvm.nvvm.ue5m3x2.to.bf16x2.rn.satfinite(i16 %a)
   ret <2 x bfloat> %val
@@ -54,10 +54,10 @@ define <2 x bfloat> @test_ue5m3x2_to_bf16x2_rn_scale_ue8m0(i16 %a, i16 %b) {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [test_ue5m3x2_to_bf16x2_rn_scale_ue8m0_param_0];
-; CHECK-NEXT:    ld.param.b16 %rs2, [test_ue5m3x2_to_bf16x2_rn_scale_ue8m0_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [test_ue5m3x2_to_bf16x2_rn_scale_ue8m0_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs2, [test_ue5m3x2_to_bf16x2_rn_scale_ue8m0_param_1];
 ; CHECK-NEXT:    cvt.rn.scaled::n2::ue8m0.bf16x2.ue5m3x2 %r1, %rs1, %rs2;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %val = call <2 x bfloat> @llvm.nvvm.ue5m3x2.to.bf16x2.rn.scale.n2.ue8m0(i16 %a, i16 %b)
   ret <2 x bfloat> %val
@@ -70,10 +70,10 @@ define <2 x bfloat> @test_ue5m3x2_to_bf16x2_rn_satfinite_scale_ue8m0(i16 %a, i16
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [test_ue5m3x2_to_bf16x2_rn_satfinite_scale_ue8m0_param_0];
-; CHECK-NEXT:    ld.param.b16 %rs2, [test_ue5m3x2_to_bf16x2_rn_satfinite_scale_ue8m0_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [test_ue5m3x2_to_bf16x2_rn_satfinite_scale_ue8m0_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs2, [test_ue5m3x2_to_bf16x2_rn_satfinite_scale_ue8m0_param_1];
 ; CHECK-NEXT:    cvt.rn.satfinite.scaled::n2::ue8m0.bf16x2.ue5m3x2 %r1, %rs1, %rs2;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %val = call <2 x bfloat> @llvm.nvvm.ue5m3x2.to.bf16x2.rn.satfinite.scale.n2.ue8m0(i16 %a, i16 %b)
   ret <2 x bfloat> %val

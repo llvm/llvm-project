@@ -15,7 +15,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify=expected,since-cxx26,cxx17,cxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++2c -fexperimental-new-constant-interpreter -DNEW_INTERP
 
 // FIXME Location is (frontend)
-// cxx17-note@*:* {{candidate function not viable: requires 2 arguments, but 3 were provided}}
+// cxx17-note@*:* {{candidate function not viable: requires 2 arguments, but 4 were provided}}
 
 #include <stddef.h>
 

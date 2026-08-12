@@ -194,6 +194,105 @@ TEST(SimplePackedSerializationTest, SpanSerialization) {
   EXPECT_EQ(InS.data(), Buffer.get() + sizeof(uint64_t));
 }
 
+// span has no operator==, and the SPSExecutorAddrRange trait transmits a span's
+// bounds rather than its contents, so round-trip tests compare base and size.
+template <typename T> struct SpanBoundsEq {
+  bool operator()(const span<T> &LHS, const span<T> &RHS) const {
+    return LHS.data() == RHS.data() && LHS.size() == RHS.size();
+  }
+};
+
+// Deserialize a span from an explicit (Start, End) address pair, as sent by a
+// controller. Used to feed the trait address pairs it should reject.
+template <typename T>
+static bool deserializeSpanFromAddrs(uint64_t Start, uint64_t End,
+                                     span<T> &Out) {
+  auto B = spsSerialize<SPSArgList<SPSExecutorAddr, SPSExecutorAddr>>(
+      ExecutorAddr(Start), ExecutorAddr(End));
+  if (!B)
+    return false;
+  return spsDeserialize<SPSArgList<SPSExecutorAddrRange>>(*B, Out);
+}
+
+TEST(SimplePackedSerializationTest, SpanAsAddrRangeSerialization) {
+  char Data[7] = {};
+  blobSerializationRoundTrip<SPSExecutorAddrRange, span<char>,
+                             SpanBoundsEq<char>>(
+      span<char>(Data, sizeof(Data)));
+}
+
+TEST(SimplePackedSerializationTest, SpanAsAddrRangeNonCharElement) {
+  // A non-char element type exercises the sizeof(T) scaling on both sides.
+  uint32_t Data[4] = {1, 2, 3, 4};
+  blobSerializationRoundTrip<SPSExecutorAddrRange, span<uint32_t>,
+                             SpanBoundsEq<uint32_t>>(span<uint32_t>(Data, 4));
+}
+
+TEST(SimplePackedSerializationTest, SpanAsAddrRangeConstElement) {
+  // Read-only executor memory arrives as span<const T>.
+  static const char Data[5] = {};
+  blobSerializationRoundTrip<SPSExecutorAddrRange, span<const char>,
+                             SpanBoundsEq<const char>>(
+      span<const char>(Data, sizeof(Data)));
+}
+
+TEST(SimplePackedSerializationTest, SpanAsAddrRangeEmpty) {
+  // A default-constructed span round-trips as (nullptr, 0).
+  blobSerializationRoundTrip<SPSExecutorAddrRange, span<char>,
+                             SpanBoundsEq<char>>(span<char>());
+
+  // An empty-but-non-null span must keep its base address.
+  char Data[1] = {};
+  blobSerializationRoundTrip<SPSExecutorAddrRange, span<char>,
+                             SpanBoundsEq<char>>(span<char>(Data, 0));
+}
+
+TEST(SimplePackedSerializationTest, SpanAsAddrRangeMatchesExecutorAddrRange) {
+  // The span and ExecutorAddrRange traits share a wire format, so a controller
+  // can send an ExecutorAddrRange to a handler taking a span, and vice versa.
+  uint32_t Data[4] = {1, 2, 3, 4};
+
+  {
+    auto B =
+        spsSerialize<SPSArgList<SPSExecutorAddrRange>>(span<uint32_t>(Data, 4));
+    ASSERT_TRUE(B.has_value());
+    ExecutorAddrRange R;
+    EXPECT_TRUE(spsDeserialize<SPSArgList<SPSExecutorAddrRange>>(*B, R));
+    EXPECT_EQ(R.Start, ExecutorAddr::fromPtr(Data));
+    EXPECT_EQ(R.size(), sizeof(Data));
+  }
+
+  {
+    auto B = spsSerialize<SPSArgList<SPSExecutorAddrRange>>(ExecutorAddrRange(
+        ExecutorAddr::fromPtr(Data), ExecutorAddr::fromPtr(Data + 4)));
+    ASSERT_TRUE(B.has_value());
+    span<uint32_t> S;
+    EXPECT_TRUE(spsDeserialize<SPSArgList<SPSExecutorAddrRange>>(*B, S));
+    EXPECT_EQ(S.data(), Data);
+    EXPECT_EQ(S.size(), 4u);
+  }
+}
+
+TEST(SimplePackedSerializationTest, SpanAsAddrRangeRejectsPartialElement) {
+  // A range length that isn't a whole number of elements must be rejected.
+  span<uint32_t> S;
+  EXPECT_FALSE(deserializeSpanFromAddrs(0x1000, 0x1006, S));
+}
+
+TEST(SimplePackedSerializationTest, SpanAsAddrRangeRejectsInvertedRange) {
+  // End < Start must be rejected rather than wrapping to a huge length.
+  span<char> S;
+  EXPECT_FALSE(deserializeSpanFromAddrs(0x2000, 0x1000, S));
+}
+
+TEST(SimplePackedSerializationTest, SpanAsAddrRangeRejectsTruncatedInput) {
+  // A buffer holding only one of the two addresses must fail cleanly.
+  auto B = spsSerialize<SPSArgList<SPSExecutorAddr>>(ExecutorAddr(0x1000));
+  ASSERT_TRUE(B.has_value());
+  span<char> S;
+  EXPECT_FALSE(spsDeserialize<SPSArgList<SPSExecutorAddrRange>>(*B, S));
+}
+
 TEST(SimplePackedSerializationTest, StdTupleSerialization) {
   std::tuple<int32_t, std::string, bool> P(42, "foo", true);
   blobSerializationRoundTrip<SPSTuple<int32_t, SPSString, bool>>(P);

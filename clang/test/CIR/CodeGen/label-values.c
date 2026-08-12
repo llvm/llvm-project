@@ -21,7 +21,7 @@ LABEL_A:
 // CIR:    cir.return
 
 // LLVM: define dso_local void @A()
-// LLVM:   [[PTR:%.*]] = alloca ptr, i64 1, align 8
+// LLVM:   [[PTR:%.*]] = alloca ptr, align 8
 // LLVM:   store ptr blockaddress(@A, %[[LABEL_A:.*]]), ptr [[PTR]], align 8
 // LLVM:   [[BLOCKADD:%.*]] = load ptr, ptr [[PTR]], align 8
 // LLVM:   br label %[[indirectgoto:.*]]
@@ -59,7 +59,7 @@ LABEL_B:
 // CIR:    cir.indirect_goto [[BLOCKADD]] : !cir.ptr<!void>
 
 // LLVM: define dso_local void @B
-// LLVM:   %[[PTR:.*]] = alloca ptr, i64 1, align 8
+// LLVM:   %[[PTR:.*]] = alloca ptr, align 8
 // LLVM:   br label %[[LABEL_B:.*]]
 // LLVM: [[LABEL_B]]:
 // LLVM:   store ptr blockaddress(@B, %[[LABEL_B]]), ptr %[[PTR]], align 8
@@ -154,9 +154,9 @@ LABEL_A:
 // CIR:    cir.return
 
 // LLVM: define dso_local void @D
-// LLVM:   %[[PTR:.*]] = alloca ptr, i64 1, align 8
-// LLVM:   %[[PTR2:.*]] = alloca ptr, i64 1, align 8
-// LLVM:   %[[PTR3:.*]] = alloca ptr, i64 1, align 8
+// LLVM:   %[[PTR:.*]] = alloca ptr, align 8
+// LLVM:   %[[PTR2:.*]] = alloca ptr, align 8
+// LLVM:   %[[PTR3:.*]] = alloca ptr, align 8
 // LLVM:   store ptr blockaddress(@D, %[[LABEL_A:.*]]), ptr %[[PTR]], align 8
 // LLVM:   store ptr blockaddress(@D, %[[LABEL_A]]), ptr %[[PTR2]], align 8
 // LLVM:   %[[BLOCKADD:.*]] = load ptr, ptr %[[PTR2]], align 8

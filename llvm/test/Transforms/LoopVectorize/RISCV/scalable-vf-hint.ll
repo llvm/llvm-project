@@ -34,4 +34,4 @@ exit:
 
 !6 = !{!6, !7, !8}
 !7 = !{!"llvm.loop.vectorize.width", i32 2}
-!8 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!8 = !{!"llvm.loop.vectorize.scalable.enable"}

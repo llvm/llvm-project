@@ -28,7 +28,7 @@ define void @loop_contains_store_condition_load_has_single_user(ptr dereferencea
 ; CHECK-NEXT:      WIDEN ir<%ee.val> = load vp<[[VP5]]>
 ; CHECK-NEXT:      WIDEN ir<%ee.cond> = icmp sgt ir<%ee.val>, ir<500>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = first-active-lane ir<%ee.cond>
-; CHECK-NEXT:      EMIT vp<%uncountable.exit.mask> = active lane mask ir<0>, vp<[[VP6]]>, ir<1>
+; CHECK-NEXT:      EMIT vp<%uncountable.exit.mask> = active lane mask ir<0>, vp<[[VP6]]>
 ; CHECK-NEXT:      CLONE ir<%st.addr> = getelementptr ir<%array>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer i16, ir<%st.addr>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%data> = load vp<[[VP7]]>, vp<%uncountable.exit.mask>
@@ -117,7 +117,7 @@ define void @loop_contains_store_after_uncountable_exit(ptr dereferenceable(40) 
 ; CHECK-NEXT:      WIDEN ir<%ee.val> = load vp<[[VP5]]>
 ; CHECK-NEXT:      WIDEN ir<%ee.cond> = icmp sgt ir<%ee.val>, ir<500>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = first-active-lane ir<%ee.cond>
-; CHECK-NEXT:      EMIT vp<%uncountable.exit.mask> = active lane mask ir<0>, vp<[[VP6]]>, ir<1>
+; CHECK-NEXT:      EMIT vp<%uncountable.exit.mask> = active lane mask ir<0>, vp<[[VP6]]>
 ; CHECK-NEXT:      CLONE ir<%st.addr> = getelementptr ir<%array>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer i16, ir<%st.addr>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%data> = load vp<[[VP7]]>, vp<%uncountable.exit.mask>
@@ -202,7 +202,7 @@ define i16 @uncountable_exit_with_live_out(ptr dereferenceable(40) noalias %arra
 ; CHECK-NEXT:      WIDEN ir<%ee.val> = load vp<[[VP5]]>
 ; CHECK-NEXT:      WIDEN ir<%ee.cond> = icmp sgt ir<%ee.val>, ir<500>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = first-active-lane ir<%ee.cond>
-; CHECK-NEXT:      EMIT vp<%uncountable.exit.mask> = active lane mask ir<0>, vp<[[VP6]]>, ir<1>
+; CHECK-NEXT:      EMIT vp<%uncountable.exit.mask> = active lane mask ir<0>, vp<[[VP6]]>
 ; CHECK-NEXT:      CLONE ir<%st.addr> = getelementptr ir<%array>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer i16, ir<%st.addr>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%data> = load vp<[[VP7]]>, vp<%uncountable.exit.mask>

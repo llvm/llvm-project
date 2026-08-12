@@ -469,18 +469,10 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
                                        bool isNontemporal) {
 
   if (const auto *clangVecTy = ty->getAs<clang::VectorType>()) {
-    // Boolean vectors use `iN` as storage type.
-    if (clangVecTy->isExtVectorBoolType())
-      cgm.errorNYI(addr.getPointer().getLoc(),
-                   "emitStoreOfScalar ExtVectorBoolType");
-
     // Handle vectors of size 3 like size 4 for better performance.
-    const mlir::Type elementType = addr.getElementType();
-    const auto vecTy = cast<cir::VectorType>(elementType);
-
     // TODO(CIR): Use `ABIInfo::getOptimalVectorMemoryType` once it upstreamed
     assert(!cir::MissingFeatures::cirgenABIInfo());
-    if (vecTy.getSize() == 3 && !getLangOpts().PreserveVec3Type)
+    if (clangVecTy->getNumElements() == 3 && !getLangOpts().PreserveVec3Type)
       cgm.errorNYI(addr.getPointer().getLoc(),
                    "emitStoreOfScalar Vec3 & PreserveVec3Type disabled");
   }
@@ -708,13 +700,13 @@ mlir::Value CIRGenFunction::emitToMemory(mlir::Value value, QualType ty) {
   if (auto *atomicTy = ty->getAs<AtomicType>())
     ty = atomicTy->getValueType();
 
-  if (ty->isExtVectorBoolType()) {
-    cgm.errorNYI("emitToMemory: extVectorBoolType");
+  if (ty->isConstantMatrixBoolType()) {
+    cgm.errorNYI("emitToMemory: ConstantMatrixBoolType");
+    return {};
   }
 
   // Unlike in classic codegen CIR, bools are kept as `cir.bool` and BitInts are
   // kept as `cir.int<N>` until further lowering
-
   return value;
 }
 
@@ -748,18 +740,10 @@ mlir::Value CIRGenFunction::emitLoadOfScalar(Address addr, bool isVolatile,
   // Traditional LLVM codegen handles thread local separately, CIR handles
   // as part of getAddrOfGlobalVar (GetGlobalOp).
   mlir::Type eltTy = addr.getElementType();
-
   if (const auto *clangVecTy = ty->getAs<clang::VectorType>()) {
-    if (clangVecTy->isExtVectorBoolType()) {
-      cgm.errorNYI(loc, "emitLoadOfScalar: ExtVectorBoolType");
-      return nullptr;
-    }
-
-    const auto vecTy = cast<cir::VectorType>(eltTy);
-
     // Handle vectors of size 3 like size 4 for better performance.
     assert(!cir::MissingFeatures::cirgenABIInfo());
-    if (vecTy.getSize() == 3 && !getLangOpts().PreserveVec3Type)
+    if (clangVecTy->getNumElements() == 3 && !getLangOpts().PreserveVec3Type)
       cgm.errorNYI(addr.getPointer().getLoc(),
                    "emitLoadOfScalar Vec3 & PreserveVec3Type disabled");
   }

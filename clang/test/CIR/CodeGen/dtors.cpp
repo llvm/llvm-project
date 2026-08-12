@@ -20,7 +20,7 @@ void test_temporary_dtor() {
 // CIR:   cir.call @_ZN1AD1Ev(%[[ALLOCA]]) nothrow : (!cir.ptr<!rec_A> {{.*}}) -> ()
 
 // LLVM: define dso_local void @_Z19test_temporary_dtorv(){{.*}}
-// LLVM:   %[[ALLOCA:.*]] = alloca %struct.A, i64 1, align 1
+// LLVM:   %[[ALLOCA:.*]] = alloca %struct.A, align 1
 // LLVM:   call void @_ZN1AD1Ev(ptr {{.*}} %[[ALLOCA]])
 
 // OGCG: define dso_local void @_Z19test_temporary_dtorv()

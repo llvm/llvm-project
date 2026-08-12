@@ -43,8 +43,10 @@ void f(int n) {
   __builtin_coro_free(__builtin_coro_frame());
   // CIR: cir.coro.intrinsic.free(%[[COROID]], %[[FRAME]])
 
-  // TODO(CIR):
-  //__builtin_coro_end(__builtin_coro_frame(), 0);
+  __builtin_coro_end(__builtin_coro_frame(), false);
+  // CIR: %[[FALSE:.*]] = cir.const #false
+  // CIR: %[[TK_NONE:.*]] = cir.token.none
+  // CIR: cir.coro.intrinsic.end(%[[FRAME]], %[[FALSE]], %[[TK_NONE]]) : (!cir.ptr<!void>, !cir.bool, token)
 
   // TODO(CIR):
   //__builtin_coro_suspend(1);

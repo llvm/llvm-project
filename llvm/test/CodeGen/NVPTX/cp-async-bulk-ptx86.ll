@@ -15,11 +15,11 @@ define void @cp_async_bulk_g2s(ptr addrspace(1) %src, ptr addrspace(3) %bar, ptr
 ; CHECK-PTX64-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-PTX64-EMPTY:
 ; CHECK-PTX64-NEXT:  // %bb.0:
-; CHECK-PTX64-NEXT:    ld.param.b64 %rd1, [cp_async_bulk_g2s_param_0];
-; CHECK-PTX64-NEXT:    ld.param.b64 %rd2, [cp_async_bulk_g2s_param_1];
-; CHECK-PTX64-NEXT:    ld.param.b64 %rd3, [cp_async_bulk_g2s_param_2];
-; CHECK-PTX64-NEXT:    ld.param.b32 %r1, [cp_async_bulk_g2s_param_3];
-; CHECK-PTX64-NEXT:    ld.param.b64 %rd4, [cp_async_bulk_g2s_param_4];
+; CHECK-PTX64-NEXT:    ld.param::func.b64 %rd1, [cp_async_bulk_g2s_param_0];
+; CHECK-PTX64-NEXT:    ld.param::func.b64 %rd2, [cp_async_bulk_g2s_param_1];
+; CHECK-PTX64-NEXT:    ld.param::func.b64 %rd3, [cp_async_bulk_g2s_param_2];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r1, [cp_async_bulk_g2s_param_3];
+; CHECK-PTX64-NEXT:    ld.param::func.b64 %rd4, [cp_async_bulk_g2s_param_4];
 ; CHECK-PTX64-NEXT:    cp.async.bulk.shared::cta.global.mbarrier::complete_tx::bytes [%rd3], [%rd1], %r1, [%rd2];
 ; CHECK-PTX64-NEXT:    cp.async.bulk.shared::cta.global.mbarrier::complete_tx::bytes.L2::cache_hint [%rd3], [%rd1], %r1, [%rd2], %rd4;
 ; CHECK-PTX64-NEXT:    ret;
@@ -30,11 +30,11 @@ define void @cp_async_bulk_g2s(ptr addrspace(1) %src, ptr addrspace(3) %bar, ptr
 ; CHECK-PTX-SHARED32-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-PTX-SHARED32-EMPTY:
 ; CHECK-PTX-SHARED32-NEXT:  // %bb.0:
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b64 %rd1, [cp_async_bulk_g2s_param_0];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r1, [cp_async_bulk_g2s_param_1];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r2, [cp_async_bulk_g2s_param_2];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r3, [cp_async_bulk_g2s_param_3];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b64 %rd2, [cp_async_bulk_g2s_param_4];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b64 %rd1, [cp_async_bulk_g2s_param_0];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r1, [cp_async_bulk_g2s_param_1];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r2, [cp_async_bulk_g2s_param_2];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r3, [cp_async_bulk_g2s_param_3];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b64 %rd2, [cp_async_bulk_g2s_param_4];
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.shared::cta.global.mbarrier::complete_tx::bytes [%r2], [%rd1], %r3, [%r1];
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.shared::cta.global.mbarrier::complete_tx::bytes.L2::cache_hint [%r2], [%rd1], %r3, [%r1], %rd2;
 ; CHECK-PTX-SHARED32-NEXT:    ret;

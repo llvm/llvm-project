@@ -97,27 +97,36 @@ static bool foldAddresses(MachineFunction &MF) {
 /// ----------------------------------------------------------------------------
 
 namespace {
-struct NVPTXAddressFolderPass : public MachineFunctionPass {
+struct NVPTXAddressFolderLegacyPass : public MachineFunctionPass {
   static char ID;
-  NVPTXAddressFolderPass() : MachineFunctionPass(ID) {}
+  NVPTXAddressFolderLegacyPass() : MachineFunctionPass(ID) {}
 
-  bool runOnMachineFunction(MachineFunction &MF) override;
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    if (skipFunction(MF.getFunction()))
+      return false;
+    return foldAddresses(MF);
+  }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
 } // namespace
 
-char NVPTXAddressFolderPass::ID = 0;
+char NVPTXAddressFolderLegacyPass::ID = 0;
 
-INITIALIZE_PASS(NVPTXAddressFolderPass, "nvptx-address-folder",
+INITIALIZE_PASS(NVPTXAddressFolderLegacyPass, "nvptx-address-folder",
                 "NVPTX Address Folder", false, false)
 
-bool NVPTXAddressFolderPass::runOnMachineFunction(MachineFunction &MF) {
-  return foldAddresses(MF);
+MachineFunctionPass *llvm::createNVPTXAddressFolderLegacyPass() {
+  return new NVPTXAddressFolderLegacyPass();
 }
 
-MachineFunctionPass *llvm::createNVPTXAddressFolderPass() {
-  return new NVPTXAddressFolderPass();
+PreservedAnalyses
+NVPTXAddressFolderPass::run(MachineFunction &MF,
+                            MachineFunctionAnalysisManager &MFAM) {
+  if (!foldAddresses(MF))
+    return PreservedAnalyses::all();
+  return getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>();
 }

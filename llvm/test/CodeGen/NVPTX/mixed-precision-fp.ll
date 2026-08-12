@@ -13,8 +13,8 @@ define float @test_add_f32_f16_1(half %a, float %b) {
 ; CHECK-NEXT:    .reg .b32 %r<10>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [test_add_f32_f16_1_param_0];
-; CHECK-NEXT:    ld.param.b32 %r1, [test_add_f32_f16_1_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [test_add_f32_f16_1_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_add_f32_f16_1_param_1];
 ; CHECK-NEXT:    add.rn.f32.f16 %r2, %rs1, %r1;
 ; CHECK-NEXT:    add.rz.f32.f16 %r3, %rs1, %r2;
 ; CHECK-NEXT:    add.rm.f32.f16 %r4, %rs1, %r3;
@@ -23,7 +23,7 @@ define float @test_add_f32_f16_1(half %a, float %b) {
 ; CHECK-NEXT:    add.rz.sat.f32.f16 %r7, %rs1, %r6;
 ; CHECK-NEXT:    add.rm.sat.f32.f16 %r8, %rs1, %r7;
 ; CHECK-NEXT:    add.rp.sat.f32.f16 %r9, %rs1, %r8;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r9;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r9;
 ; CHECK-NEXT:    ret;
   %r0 = fpext half %a to float
 
@@ -48,10 +48,10 @@ define float @test_add_f32_f16_2(half %a, float %b) {
 ; CHECK-NOF32FTZ-NEXT:    .reg .b32 %r<3>;
 ; CHECK-NOF32FTZ-EMPTY:
 ; CHECK-NOF32FTZ-NEXT:  // %bb.0:
-; CHECK-NOF32FTZ-NEXT:    ld.param.b16 %rs1, [test_add_f32_f16_2_param_0];
-; CHECK-NOF32FTZ-NEXT:    ld.param.b32 %r1, [test_add_f32_f16_2_param_1];
+; CHECK-NOF32FTZ-NEXT:    ld.param::func.b16 %rs1, [test_add_f32_f16_2_param_0];
+; CHECK-NOF32FTZ-NEXT:    ld.param::func.b32 %r1, [test_add_f32_f16_2_param_1];
 ; CHECK-NOF32FTZ-NEXT:    add.rn.f32.f16 %r2, %rs1, %r1;
-; CHECK-NOF32FTZ-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NOF32FTZ-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NOF32FTZ-NEXT:    ret;
 ;
 ; CHECK-F32FTZ-LABEL: test_add_f32_f16_2(
@@ -60,11 +60,11 @@ define float @test_add_f32_f16_2(half %a, float %b) {
 ; CHECK-F32FTZ-NEXT:    .reg .b32 %r<4>;
 ; CHECK-F32FTZ-EMPTY:
 ; CHECK-F32FTZ-NEXT:  // %bb.0:
-; CHECK-F32FTZ-NEXT:    ld.param.b16 %rs1, [test_add_f32_f16_2_param_0];
+; CHECK-F32FTZ-NEXT:    ld.param::func.b16 %rs1, [test_add_f32_f16_2_param_0];
 ; CHECK-F32FTZ-NEXT:    cvt.ftz.f32.f16 %r1, %rs1;
-; CHECK-F32FTZ-NEXT:    ld.param.b32 %r2, [test_add_f32_f16_2_param_1];
+; CHECK-F32FTZ-NEXT:    ld.param::func.b32 %r2, [test_add_f32_f16_2_param_1];
 ; CHECK-F32FTZ-NEXT:    add.rn.ftz.f32 %r3, %r1, %r2;
-; CHECK-F32FTZ-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-F32FTZ-NEXT:    st.param::func.b32 [func_retval0], %r3;
 ; CHECK-F32FTZ-NEXT:    ret;
   %r0 = fpext half %a to float
   %r1 = fadd float %r0, %b
@@ -79,8 +79,8 @@ define float @test_add_f32_bf16_1(bfloat %a, float %b) {
 ; CHECK-NEXT:    .reg .b32 %r<10>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [test_add_f32_bf16_1_param_0];
-; CHECK-NEXT:    ld.param.b32 %r1, [test_add_f32_bf16_1_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [test_add_f32_bf16_1_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_add_f32_bf16_1_param_1];
 ; CHECK-NEXT:    add.rn.f32.bf16 %r2, %rs1, %r1;
 ; CHECK-NEXT:    add.rz.f32.bf16 %r3, %rs1, %r2;
 ; CHECK-NEXT:    add.rm.f32.bf16 %r4, %rs1, %r3;
@@ -89,7 +89,7 @@ define float @test_add_f32_bf16_1(bfloat %a, float %b) {
 ; CHECK-NEXT:    add.rz.sat.f32.bf16 %r7, %rs1, %r6;
 ; CHECK-NEXT:    add.rm.sat.f32.bf16 %r8, %rs1, %r7;
 ; CHECK-NEXT:    add.rp.sat.f32.bf16 %r9, %rs1, %r8;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r9;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r9;
 ; CHECK-NEXT:    ret;
   %r0 = fpext bfloat %a to float
 
@@ -113,10 +113,10 @@ define float @test_add_f32_bf16_2(bfloat %a, float %b) {
 ; CHECK-NOF32FTZ-NEXT:    .reg .b32 %r<3>;
 ; CHECK-NOF32FTZ-EMPTY:
 ; CHECK-NOF32FTZ-NEXT:  // %bb.0:
-; CHECK-NOF32FTZ-NEXT:    ld.param.b16 %rs1, [test_add_f32_bf16_2_param_0];
-; CHECK-NOF32FTZ-NEXT:    ld.param.b32 %r1, [test_add_f32_bf16_2_param_1];
+; CHECK-NOF32FTZ-NEXT:    ld.param::func.b16 %rs1, [test_add_f32_bf16_2_param_0];
+; CHECK-NOF32FTZ-NEXT:    ld.param::func.b32 %r1, [test_add_f32_bf16_2_param_1];
 ; CHECK-NOF32FTZ-NEXT:    add.rn.f32.bf16 %r2, %rs1, %r1;
-; CHECK-NOF32FTZ-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NOF32FTZ-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NOF32FTZ-NEXT:    ret;
 ;
 ; CHECK-F32FTZ-LABEL: test_add_f32_bf16_2(
@@ -125,11 +125,11 @@ define float @test_add_f32_bf16_2(bfloat %a, float %b) {
 ; CHECK-F32FTZ-NEXT:    .reg .b32 %r<4>;
 ; CHECK-F32FTZ-EMPTY:
 ; CHECK-F32FTZ-NEXT:  // %bb.0:
-; CHECK-F32FTZ-NEXT:    ld.param.b16 %rs1, [test_add_f32_bf16_2_param_0];
+; CHECK-F32FTZ-NEXT:    ld.param::func.b16 %rs1, [test_add_f32_bf16_2_param_0];
 ; CHECK-F32FTZ-NEXT:    cvt.ftz.f32.bf16 %r1, %rs1;
-; CHECK-F32FTZ-NEXT:    ld.param.b32 %r2, [test_add_f32_bf16_2_param_1];
+; CHECK-F32FTZ-NEXT:    ld.param::func.b32 %r2, [test_add_f32_bf16_2_param_1];
 ; CHECK-F32FTZ-NEXT:    add.rn.ftz.f32 %r3, %r1, %r2;
-; CHECK-F32FTZ-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-F32FTZ-NEXT:    st.param::func.b32 [func_retval0], %r3;
 ; CHECK-F32FTZ-NEXT:    ret;
   %r0 = fpext bfloat %a to float
   %r1 = fadd float %r0, %b
@@ -146,8 +146,8 @@ define float @test_sub_f32_f16_1(half %a, float %b) {
 ; CHECK-NEXT:    .reg .b32 %r<9>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [test_sub_f32_f16_1_param_0];
-; CHECK-NEXT:    ld.param.b32 %r1, [test_sub_f32_f16_1_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [test_sub_f32_f16_1_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_sub_f32_f16_1_param_1];
 ; CHECK-NEXT:    sub.rn.f32.f16 %r2, %rs1, %r1;
 ; CHECK-NEXT:    sub.rz.f32.f16 %r3, %rs1, %r2;
 ; CHECK-NEXT:    sub.rm.f32.f16 %r4, %rs1, %r3;
@@ -155,7 +155,7 @@ define float @test_sub_f32_f16_1(half %a, float %b) {
 ; CHECK-NEXT:    sub.rn.sat.f32.f16 %r6, %rs1, %r5;
 ; CHECK-NEXT:    sub.rz.sat.f32.f16 %r7, %rs1, %r6;
 ; CHECK-NEXT:    sub.rm.sat.f32.f16 %r8, %rs1, %r7;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r8;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r8;
 ; CHECK-NEXT:    ret;
   %r0 = fpext half %a to float
 
@@ -194,10 +194,10 @@ define float @test_sub_f32_f16_2(half %a, float %b) {
 ; CHECK-NOF32FTZ-NEXT:    .reg .b32 %r<3>;
 ; CHECK-NOF32FTZ-EMPTY:
 ; CHECK-NOF32FTZ-NEXT:  // %bb.0:
-; CHECK-NOF32FTZ-NEXT:    ld.param.b16 %rs1, [test_sub_f32_f16_2_param_0];
-; CHECK-NOF32FTZ-NEXT:    ld.param.b32 %r1, [test_sub_f32_f16_2_param_1];
+; CHECK-NOF32FTZ-NEXT:    ld.param::func.b16 %rs1, [test_sub_f32_f16_2_param_0];
+; CHECK-NOF32FTZ-NEXT:    ld.param::func.b32 %r1, [test_sub_f32_f16_2_param_1];
 ; CHECK-NOF32FTZ-NEXT:    sub.rn.f32.f16 %r2, %rs1, %r1;
-; CHECK-NOF32FTZ-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NOF32FTZ-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NOF32FTZ-NEXT:    ret;
 ;
 ; CHECK-F32FTZ-LABEL: test_sub_f32_f16_2(
@@ -206,11 +206,11 @@ define float @test_sub_f32_f16_2(half %a, float %b) {
 ; CHECK-F32FTZ-NEXT:    .reg .b32 %r<4>;
 ; CHECK-F32FTZ-EMPTY:
 ; CHECK-F32FTZ-NEXT:  // %bb.0:
-; CHECK-F32FTZ-NEXT:    ld.param.b16 %rs1, [test_sub_f32_f16_2_param_0];
+; CHECK-F32FTZ-NEXT:    ld.param::func.b16 %rs1, [test_sub_f32_f16_2_param_0];
 ; CHECK-F32FTZ-NEXT:    cvt.ftz.f32.f16 %r1, %rs1;
-; CHECK-F32FTZ-NEXT:    ld.param.b32 %r2, [test_sub_f32_f16_2_param_1];
+; CHECK-F32FTZ-NEXT:    ld.param::func.b32 %r2, [test_sub_f32_f16_2_param_1];
 ; CHECK-F32FTZ-NEXT:    sub.rn.ftz.f32 %r3, %r1, %r2;
-; CHECK-F32FTZ-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-F32FTZ-NEXT:    st.param::func.b32 [func_retval0], %r3;
 ; CHECK-F32FTZ-NEXT:    ret;
   %r0 = fpext half %a to float
   %r1 = fsub float %r0, %b
@@ -225,8 +225,8 @@ define float @test_sub_f32_bf16_1(bfloat %a, float %b) {
 ; CHECK-NEXT:    .reg .b32 %r<10>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [test_sub_f32_bf16_1_param_0];
-; CHECK-NEXT:    ld.param.b32 %r1, [test_sub_f32_bf16_1_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [test_sub_f32_bf16_1_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_sub_f32_bf16_1_param_1];
 ; CHECK-NEXT:    sub.rn.f32.bf16 %r2, %rs1, %r1;
 ; CHECK-NEXT:    sub.rz.f32.bf16 %r3, %rs1, %r2;
 ; CHECK-NEXT:    sub.rm.f32.bf16 %r4, %rs1, %r3;
@@ -235,7 +235,7 @@ define float @test_sub_f32_bf16_1(bfloat %a, float %b) {
 ; CHECK-NEXT:    sub.rz.sat.f32.bf16 %r7, %rs1, %r6;
 ; CHECK-NEXT:    sub.rm.sat.f32.bf16 %r8, %rs1, %r7;
 ; CHECK-NEXT:    sub.rp.sat.f32.bf16 %r9, %rs1, %r8;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r9;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r9;
 ; CHECK-NEXT:    ret;
   %r0 = fpext bfloat %a to float
 
@@ -274,10 +274,10 @@ define float @test_sub_f32_bf16_2(bfloat %a, float %b) {
 ; CHECK-NOF32FTZ-NEXT:    .reg .b32 %r<3>;
 ; CHECK-NOF32FTZ-EMPTY:
 ; CHECK-NOF32FTZ-NEXT:  // %bb.0:
-; CHECK-NOF32FTZ-NEXT:    ld.param.b16 %rs1, [test_sub_f32_bf16_2_param_0];
-; CHECK-NOF32FTZ-NEXT:    ld.param.b32 %r1, [test_sub_f32_bf16_2_param_1];
+; CHECK-NOF32FTZ-NEXT:    ld.param::func.b16 %rs1, [test_sub_f32_bf16_2_param_0];
+; CHECK-NOF32FTZ-NEXT:    ld.param::func.b32 %r1, [test_sub_f32_bf16_2_param_1];
 ; CHECK-NOF32FTZ-NEXT:    sub.rn.f32.bf16 %r2, %rs1, %r1;
-; CHECK-NOF32FTZ-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NOF32FTZ-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NOF32FTZ-NEXT:    ret;
 ;
 ; CHECK-F32FTZ-LABEL: test_sub_f32_bf16_2(
@@ -286,11 +286,11 @@ define float @test_sub_f32_bf16_2(bfloat %a, float %b) {
 ; CHECK-F32FTZ-NEXT:    .reg .b32 %r<4>;
 ; CHECK-F32FTZ-EMPTY:
 ; CHECK-F32FTZ-NEXT:  // %bb.0:
-; CHECK-F32FTZ-NEXT:    ld.param.b16 %rs1, [test_sub_f32_bf16_2_param_0];
+; CHECK-F32FTZ-NEXT:    ld.param::func.b16 %rs1, [test_sub_f32_bf16_2_param_0];
 ; CHECK-F32FTZ-NEXT:    cvt.ftz.f32.bf16 %r1, %rs1;
-; CHECK-F32FTZ-NEXT:    ld.param.b32 %r2, [test_sub_f32_bf16_2_param_1];
+; CHECK-F32FTZ-NEXT:    ld.param::func.b32 %r2, [test_sub_f32_bf16_2_param_1];
 ; CHECK-F32FTZ-NEXT:    sub.rn.ftz.f32 %r3, %r1, %r2;
-; CHECK-F32FTZ-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-F32FTZ-NEXT:    st.param::func.b32 [func_retval0], %r3;
 ; CHECK-F32FTZ-NEXT:    ret;
   %r0 = fpext bfloat %a to float
   %r1 = fsub float %r0, %b
@@ -307,9 +307,9 @@ define float @test_fma_f32_f16_1(half %a, half %b, float %c) {
 ; CHECK-NEXT:    .reg .b32 %r<9>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [test_fma_f32_f16_1_param_0];
-; CHECK-NEXT:    ld.param.b16 %rs2, [test_fma_f32_f16_1_param_1];
-; CHECK-NEXT:    ld.param.b32 %r1, [test_fma_f32_f16_1_param_2];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [test_fma_f32_f16_1_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs2, [test_fma_f32_f16_1_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_fma_f32_f16_1_param_2];
 ; CHECK-NEXT:    fma.rn.f32.f16 %r2, %rs1, %rs2, %r1;
 ; CHECK-NEXT:    fma.rz.f32.f16 %r3, %rs1, %rs2, %r2;
 ; CHECK-NEXT:    fma.rm.f32.f16 %r4, %rs1, %rs2, %r3;
@@ -317,7 +317,7 @@ define float @test_fma_f32_f16_1(half %a, half %b, float %c) {
 ; CHECK-NEXT:    fma.rn.sat.f32.f16 %r6, %rs1, %rs2, %r5;
 ; CHECK-NEXT:    fma.rz.sat.f32.f16 %r7, %rs1, %rs2, %r6;
 ; CHECK-NEXT:    fma.rm.sat.f32.f16 %r8, %rs1, %rs2, %r7;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r8;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r8;
 ; CHECK-NEXT:    ret;
   %r0 = fpext half %a to float
   %r1 = fpext half %b to float
@@ -343,11 +343,11 @@ define float @test_fma_f32_f16_2(half %a, half %b, float %c) {
 ; CHECK-NOF32FTZ-NEXT:    .reg .b32 %r<3>;
 ; CHECK-NOF32FTZ-EMPTY:
 ; CHECK-NOF32FTZ-NEXT:  // %bb.0:
-; CHECK-NOF32FTZ-NEXT:    ld.param.b16 %rs1, [test_fma_f32_f16_2_param_0];
-; CHECK-NOF32FTZ-NEXT:    ld.param.b16 %rs2, [test_fma_f32_f16_2_param_1];
-; CHECK-NOF32FTZ-NEXT:    ld.param.b32 %r1, [test_fma_f32_f16_2_param_2];
+; CHECK-NOF32FTZ-NEXT:    ld.param::func.b16 %rs1, [test_fma_f32_f16_2_param_0];
+; CHECK-NOF32FTZ-NEXT:    ld.param::func.b16 %rs2, [test_fma_f32_f16_2_param_1];
+; CHECK-NOF32FTZ-NEXT:    ld.param::func.b32 %r1, [test_fma_f32_f16_2_param_2];
 ; CHECK-NOF32FTZ-NEXT:    fma.rn.f32.f16 %r2, %rs1, %rs2, %r1;
-; CHECK-NOF32FTZ-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NOF32FTZ-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NOF32FTZ-NEXT:    ret;
 ;
 ; CHECK-F32FTZ-LABEL: test_fma_f32_f16_2(
@@ -356,13 +356,13 @@ define float @test_fma_f32_f16_2(half %a, half %b, float %c) {
 ; CHECK-F32FTZ-NEXT:    .reg .b32 %r<5>;
 ; CHECK-F32FTZ-EMPTY:
 ; CHECK-F32FTZ-NEXT:  // %bb.0:
-; CHECK-F32FTZ-NEXT:    ld.param.b16 %rs1, [test_fma_f32_f16_2_param_0];
+; CHECK-F32FTZ-NEXT:    ld.param::func.b16 %rs1, [test_fma_f32_f16_2_param_0];
 ; CHECK-F32FTZ-NEXT:    cvt.ftz.f32.f16 %r1, %rs1;
-; CHECK-F32FTZ-NEXT:    ld.param.b16 %rs2, [test_fma_f32_f16_2_param_1];
+; CHECK-F32FTZ-NEXT:    ld.param::func.b16 %rs2, [test_fma_f32_f16_2_param_1];
 ; CHECK-F32FTZ-NEXT:    cvt.ftz.f32.f16 %r2, %rs2;
-; CHECK-F32FTZ-NEXT:    ld.param.b32 %r3, [test_fma_f32_f16_2_param_2];
+; CHECK-F32FTZ-NEXT:    ld.param::func.b32 %r3, [test_fma_f32_f16_2_param_2];
 ; CHECK-F32FTZ-NEXT:    fma.rn.ftz.f32 %r4, %r1, %r2, %r3;
-; CHECK-F32FTZ-NEXT:    st.param.b32 [func_retval0], %r4;
+; CHECK-F32FTZ-NEXT:    st.param::func.b32 [func_retval0], %r4;
 ; CHECK-F32FTZ-NEXT:    ret;
   %r0 = fpext half %a to float
   %r1 = fpext half %b to float
@@ -378,9 +378,9 @@ define float @test_fma_f32_bf16_1(bfloat %a, bfloat %b, float %c) {
 ; CHECK-NEXT:    .reg .b32 %r<9>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [test_fma_f32_bf16_1_param_0];
-; CHECK-NEXT:    ld.param.b16 %rs2, [test_fma_f32_bf16_1_param_1];
-; CHECK-NEXT:    ld.param.b32 %r1, [test_fma_f32_bf16_1_param_2];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [test_fma_f32_bf16_1_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs2, [test_fma_f32_bf16_1_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_fma_f32_bf16_1_param_2];
 ; CHECK-NEXT:    fma.rn.f32.bf16 %r2, %rs1, %rs2, %r1;
 ; CHECK-NEXT:    fma.rz.f32.bf16 %r3, %rs1, %rs2, %r2;
 ; CHECK-NEXT:    fma.rm.f32.bf16 %r4, %rs1, %rs2, %r3;
@@ -388,7 +388,7 @@ define float @test_fma_f32_bf16_1(bfloat %a, bfloat %b, float %c) {
 ; CHECK-NEXT:    fma.rn.sat.f32.bf16 %r6, %rs1, %rs2, %r5;
 ; CHECK-NEXT:    fma.rz.sat.f32.bf16 %r7, %rs1, %rs2, %r6;
 ; CHECK-NEXT:    fma.rm.sat.f32.bf16 %r8, %rs1, %rs2, %r7;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r8;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r8;
 ; CHECK-NEXT:    ret;
   %r0 = fpext bfloat %a to float
   %r1 = fpext bfloat %b to float
@@ -414,11 +414,11 @@ define float @test_fma_f32_bf16_2(bfloat %a, bfloat %b, float %c) {
 ; CHECK-NOF32FTZ-NEXT:    .reg .b32 %r<3>;
 ; CHECK-NOF32FTZ-EMPTY:
 ; CHECK-NOF32FTZ-NEXT:  // %bb.0:
-; CHECK-NOF32FTZ-NEXT:    ld.param.b16 %rs1, [test_fma_f32_bf16_2_param_0];
-; CHECK-NOF32FTZ-NEXT:    ld.param.b16 %rs2, [test_fma_f32_bf16_2_param_1];
-; CHECK-NOF32FTZ-NEXT:    ld.param.b32 %r1, [test_fma_f32_bf16_2_param_2];
+; CHECK-NOF32FTZ-NEXT:    ld.param::func.b16 %rs1, [test_fma_f32_bf16_2_param_0];
+; CHECK-NOF32FTZ-NEXT:    ld.param::func.b16 %rs2, [test_fma_f32_bf16_2_param_1];
+; CHECK-NOF32FTZ-NEXT:    ld.param::func.b32 %r1, [test_fma_f32_bf16_2_param_2];
 ; CHECK-NOF32FTZ-NEXT:    fma.rn.f32.bf16 %r2, %rs1, %rs2, %r1;
-; CHECK-NOF32FTZ-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NOF32FTZ-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NOF32FTZ-NEXT:    ret;
 ;
 ; CHECK-F32FTZ-LABEL: test_fma_f32_bf16_2(
@@ -427,13 +427,13 @@ define float @test_fma_f32_bf16_2(bfloat %a, bfloat %b, float %c) {
 ; CHECK-F32FTZ-NEXT:    .reg .b32 %r<5>;
 ; CHECK-F32FTZ-EMPTY:
 ; CHECK-F32FTZ-NEXT:  // %bb.0:
-; CHECK-F32FTZ-NEXT:    ld.param.b16 %rs1, [test_fma_f32_bf16_2_param_0];
+; CHECK-F32FTZ-NEXT:    ld.param::func.b16 %rs1, [test_fma_f32_bf16_2_param_0];
 ; CHECK-F32FTZ-NEXT:    cvt.ftz.f32.bf16 %r1, %rs1;
-; CHECK-F32FTZ-NEXT:    ld.param.b16 %rs2, [test_fma_f32_bf16_2_param_1];
+; CHECK-F32FTZ-NEXT:    ld.param::func.b16 %rs2, [test_fma_f32_bf16_2_param_1];
 ; CHECK-F32FTZ-NEXT:    cvt.ftz.f32.bf16 %r2, %rs2;
-; CHECK-F32FTZ-NEXT:    ld.param.b32 %r3, [test_fma_f32_bf16_2_param_2];
+; CHECK-F32FTZ-NEXT:    ld.param::func.b32 %r3, [test_fma_f32_bf16_2_param_2];
 ; CHECK-F32FTZ-NEXT:    fma.rn.ftz.f32 %r4, %r1, %r2, %r3;
-; CHECK-F32FTZ-NEXT:    st.param.b32 [func_retval0], %r4;
+; CHECK-F32FTZ-NEXT:    st.param::func.b32 [func_retval0], %r4;
 ; CHECK-F32FTZ-NEXT:    ret;
   %r0 = fpext bfloat %a to float
   %r1 = fpext bfloat %b to float

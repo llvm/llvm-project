@@ -488,7 +488,7 @@ D::D() {}
 // CIR-COMMON:        cir.store{{.*}} %[[VPTR]], %[[VPTR_ADDR]] : !cir.vptr, !cir.ptr<!cir.vptr>
 
 // LLVM-COMMON: define {{.*}} void @_ZN1AC2Ev(ptr {{.*}} %[[THIS_ARG:.*]]){{.*}} {
-// LLVM-COMMON:   %[[THIS_ADDR:.*]] = alloca ptr, i64 1, align 8
+// LLVM-COMMON:   %[[THIS_ADDR:.*]] = alloca ptr, align 8
 // LLVM-COMMON:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]], align 8
 // LLVM-COMMON:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]], align 8
 // LLVM-COMMON:   store ptr getelementptr inbounds nuw (i8, ptr @_ZTV1A, i64 16), ptr %[[THIS]]

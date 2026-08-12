@@ -11,7 +11,7 @@ import time
 import os
 
 
-@requireNotWasm  # no attach support
+@requireNotWasm("no attach support")
 class TestDAP_disconnect(lldbdap_testcase.DAPTestCaseBase):
     SHARED_BUILD_TESTCASE = False
 

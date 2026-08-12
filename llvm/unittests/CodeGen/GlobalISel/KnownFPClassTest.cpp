@@ -1517,7 +1517,7 @@ TEST_F(AArch64GISelMITest, TestFPClassFAsinPos) {
   Register SrcReg = FinalCopy->getOperand(1).getReg();
   GISelValueTracking Info(*MF);
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
-  EXPECT_EQ(fcPosFinite | fcNan, Known.KnownFPClasses);
+  EXPECT_EQ(fcPosFinite | fcQNan, Known.KnownFPClasses);
   EXPECT_EQ(std::nullopt, Known.SignBit);
 }
 
@@ -1559,7 +1559,7 @@ TEST_F(AArch64GISelMITest, TestFPClassFAcosPos) {
   Register SrcReg = FinalCopy->getOperand(1).getReg();
   GISelValueTracking Info(*MF);
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
-  EXPECT_EQ(fcPosFinite | fcNan, Known.KnownFPClasses);
+  EXPECT_EQ(fcPosFinite | fcQNan, Known.KnownFPClasses);
   EXPECT_EQ(std::nullopt, Known.SignBit);
 }
 

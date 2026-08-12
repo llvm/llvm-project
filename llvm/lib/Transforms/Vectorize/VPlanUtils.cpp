@@ -465,13 +465,13 @@ bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
   const VPRecipeBase *R = V->getDefiningRecipe();
   const VPBasicBlock *VPBB = R ? R->getParent() : nullptr;
   const VPlan *Plan = VPBB ? VPBB->getPlan() : nullptr;
-  if (VPBB) {
-    if ((VPBB == Plan->getVectorPreheader() || VPBB == Plan->getEntry())) {
-      if (match(V->getDefiningRecipe(),
-                m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>()))
-        return false;
-      return all_of(R->operands(), isUniformAcrossVFsAndUFs);
-    }
+  if (VPBB &&
+      (VPBB == Plan->getVectorPreheader() || VPBB == Plan->getEntry())) {
+    if (match(R,
+              m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>()) ||
+        match(R, m_ExtractVectorForPart(m_VPValue(), m_VPValue())))
+      return false;
+    return all_of(R->operands(), isUniformAcrossVFsAndUFs);
   }
 
   return TypeSwitch<const VPRecipeBase *, bool>(R)

@@ -192,7 +192,9 @@ bool HeatmapBlockSpecParser::parse(cl::Option &O, StringRef ArgName,
   unsigned PreviousSize = 0;
   for (StringRef Size : Sizes) {
     StringRef OrigSize = Size;
-    unsigned &SizeVal = Val.emplace_back(0);
+    HeatmapBlockSize &Block = Val.emplace_back();
+    Block.Spec = OrigSize.str();
+    unsigned &SizeVal = Block.Value;
     if (Size.consumeInteger(10, SizeVal)) {
       O.error("'" + OrigSize + "' value can't be parsed as an integer");
       return true;
@@ -216,8 +218,15 @@ cl::opt<opts::HeatmapBlockSizes, false, opts::HeatmapBlockSpecParser>
     HeatmapBlock(
         "block-size", cl::value_desc("initial_size{,zoom-out_size,...}"),
         cl::desc("heatmap bucket size, optionally followed by zoom-out sizes "
-                 "for coarse-grained heatmaps (default 64B, 4K, 256K)."),
-        cl::init(HeatmapBlockSizes{/*Initial*/ 64, /*Zoom-out*/ 4096, 262144}),
+                 "for coarse-grained heatmaps (default 64, 4K, 16K, 64K, 2M)."),
+        // Cache line, then the page sizes x86-64 and AArch64 actually use
+        // (4K, and 16K/64K on AArch64), then the PMD hugepage above a 4K base
+        // page.
+        cl::init(HeatmapBlockSizes{/*Initial*/ {64, "64"},
+                                   /*Zoom-out*/ {4096, "4K"},
+                                   {16384, "16K"},
+                                   {65536, "64K"},
+                                   {2097152, "2M"}}),
         cl::cat(HeatmapCategory));
 
 cl::opt<int> HeatmapCdfPct(

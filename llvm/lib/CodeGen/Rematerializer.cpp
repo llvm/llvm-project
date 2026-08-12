@@ -844,6 +844,8 @@ void Rematerializer::extendToNewUsers(RegisterIdx RegIdx,
       LI.refineSubRanges(
           LIS.getVNInfoAllocator(), RegMask, [](LiveInterval::SubRange &SR) {},
           *LIS.getSlotIndexes(), TRI);
+      // Refining may have introduced empty sub-ranges, which are illegal.
+      LI.removeEmptySubRanges();
     }
     extendInterval(LI, RegMask, UseIdx);
   }

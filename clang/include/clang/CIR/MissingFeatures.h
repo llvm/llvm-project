@@ -194,6 +194,7 @@ struct MissingFeatures {
   static bool assignMemcpyizer() { return false; }
   static bool astVarDeclInterface() { return false; }
   static bool attributeNoBuiltin() { return false; }
+  static bool branchProtection() { return false; }
   static bool builtinCall() { return false; }
   static bool builtinCallF128() { return false; }
   static bool builtinBitCountExpr() { return false; }

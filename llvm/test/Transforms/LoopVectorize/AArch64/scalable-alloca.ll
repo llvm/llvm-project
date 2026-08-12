@@ -28,4 +28,4 @@ for.end:
 declare void @foo(ptr)
 
 !0 = !{!0, !1}
-!1 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!1 = !{!"llvm.loop.vectorize.scalable.enable"}

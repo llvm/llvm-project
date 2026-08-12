@@ -111,6 +111,7 @@ public:
                          mlir::omp::NumThreadsClauseOps &result) const;
   bool processOrder(mlir::omp::OrderClauseOps &result) const;
   bool processOrdered(mlir::omp::OrderedClauseOps &result) const;
+  bool processFull() const;
   bool processPartial(std::optional<int64_t> &result) const;
   bool processPriority(lower::StatementContext &stmtCtx,
                        mlir::omp::PriorityClauseOps &result) const;

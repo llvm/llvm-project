@@ -123,9 +123,19 @@ private:
     return any(m_validity & set);
   }
 
+  /// Returns the mask of sets that would be invalidated if the given set was
+  /// invalidated. That is, the set itself and any sets that depend on it.
+  ///
+  /// If you need anything more complex such as only invalidating during certain
+  /// modes, put that logic in the function that calls Invalidate().
+  RegisterSetType GetInvalidationMask(const RegisterSetType set) const;
+
+  /// Invalidate our saved copies of the given register sets and any sets that
+  /// depend on those sets.
   template <typename... Ts> void Invalidate(RegisterSetType first, Ts... rest) {
     static_assert((std::is_same_v<Ts, RegisterSetType> && ...));
-    m_validity &= ~(first | ... | rest);
+    m_validity &=
+        ~(GetInvalidationMask(first) | ... | GetInvalidationMask(rest));
   }
 
   Status RestoreRegisters(void *buffer, const uint8_t **src, size_t len,

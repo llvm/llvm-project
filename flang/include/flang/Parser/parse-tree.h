@@ -4225,6 +4225,14 @@ struct OmpMapTypeModifier {
   WRAPPER_CLASS_BOILERPLATE(OmpMapTypeModifier, Value);
 };
 
+// Ref: [5.2:181-182]
+//
+// mem-space ->
+//    MEMSPACE(memspace-handle)                     // since 5.2
+struct OmpMemSpace {
+  WRAPPER_CLASS_BOILERPLATE(OmpMemSpace, ScalarIntExpr);
+};
+
 // Ref: [4.5:56-63], [5.0:101-109], [5.1:126-133], [5.2:252-254]
 //
 // modifier ->
@@ -4361,6 +4369,14 @@ struct OmpStepSimpleModifier {
 struct OmpTaskDependenceType {
   using Value = common::OmpDependenceKind;
   WRAPPER_CLASS_BOILERPLATE(OmpTaskDependenceType, Value);
+};
+
+// Ref: [5.2:181-182]
+//
+// traits-array ->
+//    TRAITS(traits-array)                          // since 5.2
+struct OmpTraitsArray {
+  WRAPPER_CLASS_BOILERPLATE(OmpTraitsArray, common::Indirection<Expr>);
 };
 
 // Ref: [4.5:229-230], [5.0:324-325], [5.1:357-358], [5.2:161-162]
@@ -5163,6 +5179,28 @@ struct OmpWhenClause {
 // 14.1.3 use-clause -> USE (interop-var)
 struct OmpUseClause {
   WRAPPER_CLASS_BOILERPLATE(OmpUseClause, OmpObject);
+};
+
+// Ref: [5.0:170-175], [5.1:197-203], [5.2:181-182]
+//
+// uses-allocators-clause ->
+//    USES_ALLOCATORS(allocator[(traits-array)]
+//        [, allocator[(traits-array)]]...) |       // since 5.0, dep. 5.2
+//    USES_ALLOCATORS([modifier...:] allocator)     // since 5.2
+// modifier ->
+//    mem-space |
+//    traits-array                                  // since 5.2
+struct OmpUsesAllocatorsClause {
+  struct AllocatorSpec {
+    TUPLE_CLASS_BOILERPLATE(AllocatorSpec);
+    MODIFIER_BOILERPLATE(OmpMemSpace, OmpTraitsArray);
+    CharBlock source;
+    // The traits of the deprecated "allocator(traits-array)" form are stored
+    // as a traits-array modifier. The flag records which of the two surface
+    // syntaxes was written.
+    std::tuple<MODIFIERS(), ScalarIntExpr, /*IsLegacySyntax=*/bool> t;
+  };
+  WRAPPER_CLASS_BOILERPLATE(OmpUsesAllocatorsClause, std::list<AllocatorSpec>);
 };
 
 // OpenMP Clauses

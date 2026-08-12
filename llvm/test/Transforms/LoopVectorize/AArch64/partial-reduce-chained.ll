@@ -1686,5 +1686,5 @@ exit:
 attributes #0 = { vscale_range(1,16) }
 
 !0 = distinct !{!0, !1, !2}
-!1 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!1 = !{!"llvm.loop.vectorize.scalable.enable"}
 !2 = !{!"llvm.loop.interleave.count", i32 1}

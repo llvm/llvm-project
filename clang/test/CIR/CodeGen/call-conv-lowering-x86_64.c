@@ -148,7 +148,7 @@ void call_union_big_over_aligned(UBigOverAligned u) {
 // CIR: cir.func {{.*}}@call_union_big_over_aligned(%arg0: !cir.ptr<!rec_UBigOverAligned> {{.*}}llvm.align = 32 : i64{{.*}})
 // CIR:   cir.call @take_union_big_over_aligned(%{{.+}}) : (!cir.ptr<!rec_UBigOverAligned> {{.*}}llvm.align = 32 : i64{{.*}}) -> ()
 // LLVM-CIR: define dso_local void @call_union_big_over_aligned(ptr noalias noundef byval(%union.UBigOverAligned) align 32 %{{.+}})
-// LLVM-CIR:   alloca %union.UBigOverAligned, i64 1, align 32
+// LLVM-CIR:   alloca %union.UBigOverAligned, align 32
 // LLVM-CIR:   call void @take_union_big_over_aligned(ptr noalias noundef byval(%union.UBigOverAligned) align 32 %{{.+}})
 // LLVM-OGCG: define dso_local void @call_union_big_over_aligned(ptr noundef byval(%union.UBigOverAligned) align 32 %{{.+}})
 // LLVM-OGCG:   call void @take_union_big_over_aligned(ptr noundef byval(%union.UBigOverAligned) align 32 %{{.+}})

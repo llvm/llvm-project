@@ -5011,13 +5011,6 @@ llvm::Intrinsic::ID Tcgen05DeallocOp::getIntrinsicIDAndArgs(
   return id;
 }
 
-#define TCGEN05_COMMIT_IMPL(cg, mc)                                            \
-  llvm::Intrinsic::nvvm_tcgen05_commit##mc##_##cg
-
-#define GET_TCGEN05_COMMIT_ID(cta_group, has_mc)                               \
-  has_mc ? TCGEN05_COMMIT_IMPL(cta_group, _mc)                                 \
-         : TCGEN05_COMMIT_IMPL(cta_group, )
-
 llvm::Intrinsic::ID
 Tcgen05CommitOp::getIntrinsicIDAndArgs(Operation &op,
                                        LLVM::ModuleTranslation &mt,
@@ -5025,11 +5018,26 @@ Tcgen05CommitOp::getIntrinsicIDAndArgs(Operation &op,
   auto curOp = cast<NVVM::Tcgen05CommitOp>(op);
   bool hasMulticast = static_cast<bool>(curOp.getMulticastMask());
   bool is2CTAMode = curOp.getGroup() == CTAGroupKind::CTA_2;
+  bool hasSmemARead = curOp.getSmemARead();
+  unsigned index = (static_cast<unsigned>(hasSmemARead) << 1) |
+                   static_cast<unsigned>(is2CTAMode);
 
-  llvm::Intrinsic::ID id = is2CTAMode
-                               ? GET_TCGEN05_COMMIT_ID(cg2, hasMulticast)
-                               : GET_TCGEN05_COMMIT_ID(cg1, hasMulticast);
+  using namespace llvm::Intrinsic;
+  static constexpr ID IDs[] = {
+      nvvm_tcgen05_commit_cg1,
+      nvvm_tcgen05_commit_cg2,
+      nvvm_tcgen05_commit_smem_a_read_cg1,
+      nvvm_tcgen05_commit_smem_a_read_cg2,
+  };
 
+  static constexpr ID multicastIDs[] = {
+      nvvm_tcgen05_commit_mc_cg1,
+      nvvm_tcgen05_commit_mc_cg2,
+      nvvm_tcgen05_commit_smem_a_read_mc_cg1,
+      nvvm_tcgen05_commit_smem_a_read_mc_cg2,
+  };
+
+  ID id = hasMulticast ? multicastIDs[index] : IDs[index];
   // Fill the Intrinsic Args
   args.push_back(mt.lookupValue(curOp.getAddr()));
   if (hasMulticast)

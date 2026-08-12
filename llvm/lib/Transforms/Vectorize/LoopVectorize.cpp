@@ -255,11 +255,6 @@ static cl::opt<TailFoldingStyle> ForceTailFoldingStyle(
                    "Use predicated EVL instructions for tail folding. If EVL "
                    "is unsupported, fallback to data-without-lane-mask.")));
 
-cl::opt<bool> llvm::EnableWideActiveLaneMask(
-    "enable-wide-lane-mask", cl::init(false), cl::Hidden,
-    cl::desc("Enable use of wide lane masks when used for control flow in "
-             "tail-folded loops"));
-
 static cl::opt<bool> EnableInterleavedMemAccesses(
     "enable-interleaved-mem-accesses", cl::init(false), cl::Hidden,
     cl::desc("Enable vectorization on interleaved memory accesses in a loop"));
@@ -1217,15 +1212,6 @@ public:
   /// Returns true if all loop blocks should have partial aliases masked.
   bool maskPartialAliasing() const {
     return PartialAliasMaskingStatus == AliasMaskingStatus::Enabled;
-  }
-
-  /// Returns true if the use of wide lane masks is requested and the loop is
-  /// using tail-folding with a lane mask for control flow.
-  bool useWideActiveLaneMask() const {
-    if (!EnableWideActiveLaneMask)
-      return false;
-
-    return getTailFoldingStyle() == TailFoldingStyle::DataAndControlFlow;
   }
 
   /// Returns true if the instructions in this block requires predication
@@ -3651,12 +3637,10 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
   // 3. We don't interleave if we think that we will spill registers to memory
   // due to the increased register pressure.
 
-  // Only interleave tail-folded loops if wide lane masks are requested, as the
-  // overhead of multiple instructions to calculate the predicate is likely
-  // not beneficial. If an epilogue is not allowed for any other reason,
-  // do not interleave.
-  if (!CM.isEpilogueAllowed() &&
-      !(CM.preferTailFoldedLoop() && CM.useWideActiveLaneMask()))
+  // Do not interleave tail-folded loops, as the overhead of multiple
+  // instructions to calculate the predicate is likely not beneficial.
+  // If an epilogue is not allowed for any other reason, do not interleave.
+  if (!CM.isEpilogueAllowed())
     return 1;
 
   if (any_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),

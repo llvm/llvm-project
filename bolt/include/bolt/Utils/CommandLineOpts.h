@@ -48,7 +48,13 @@ enum SplitFunctionsStrategy : char {
   All
 };
 
-using HeatmapBlockSizes = std::vector<unsigned>;
+/// A bucket size and how it was spelled on the command line, so output can
+/// echo "64K" rather than reformatting the value.
+struct HeatmapBlockSize {
+  unsigned Value = 0;
+  std::string Spec;
+};
+using HeatmapBlockSizes = std::vector<HeatmapBlockSize>;
 struct HeatmapBlockSpecParser : public llvm::cl::parser<HeatmapBlockSizes> {
   explicit HeatmapBlockSpecParser(llvm::cl::Option &O)
       : llvm::cl::parser<HeatmapBlockSizes>(O) {}

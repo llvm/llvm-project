@@ -1175,12 +1175,31 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     return Cost;
   }
   case Intrinsic::cttz: {
-    auto LT = getTypeLegalizationCost(ICA.getArgTypes()[0]);
-    if (LT.second == MVT::v8i8 || LT.second == MVT::v16i8)
-      return LT.first * 2;
-    if (LT.second == MVT::v4i16 || LT.second == MVT::v8i16 ||
-        LT.second == MVT::v2i32 || LT.second == MVT::v4i32)
-      return LT.first * 3;
+    auto LT = getTypeLegalizationCost(RetTy);
+    if (LT.second == MVT::i32 || LT.second == MVT::i64) {
+      // Extra cost for and mask of smaller types
+      InstructionCost ExtraCost =
+          LT.second.getSizeInBits() > RetTy->getScalarSizeInBits() ? 1 : 0;
+      // And combine larger sizes to i64 with cmp+add+csel
+      if (LT.second.getSizeInBits() < RetTy->getScalarSizeInBits())
+        ExtraCost += (LT.first - 1) * 3;
+      // Basic cost is rbit+clz or ctz.
+      return LT.first * (ST->hasCSSC() ? 1 : 2) + ExtraCost;
+    }
+
+    static const CostTblEntry BaseCostTbl[] = {
+        {Intrinsic::cttz, MVT::v8i8, 2}, // rbit+clz
+        {Intrinsic::cttz, MVT::v16i8, 2},
+        {Intrinsic::cttz, MVT::v4i16, 3}, // rev16+rbit+clz
+        {Intrinsic::cttz, MVT::v8i16, 3},
+        {Intrinsic::cttz, MVT::v2i32, 3},
+        {Intrinsic::cttz, MVT::v4i32, 3},
+        {Intrinsic::cttz, MVT::v1i64, 6}, // add+bic+cnt+reduce
+        {Intrinsic::cttz, MVT::v2i64, 6}};
+    const auto *Entry =
+        CostTableLookup(BaseCostTbl, Intrinsic::cttz, LT.second);
+    if (Entry)
+      return LT.first * Entry->Cost;
     break;
   }
   case Intrinsic::experimental_cttz_elts: {
@@ -7227,15 +7246,9 @@ static bool containsDecreasingPointers(Loop *TheLoop,
   return false;
 }
 
-bool AArch64TTIImpl::preferFixedOverScalableIfEqualCost(bool IsEpilogue) const {
+bool AArch64TTIImpl::preferFixedOverScalableIfEqualCost() const {
   if (SVEPreferFixedOverScalableIfEqualCost.getNumOccurrences())
     return SVEPreferFixedOverScalableIfEqualCost;
-  // For cases like post-LTO vectorization, when we eventually know the trip
-  // count, epilogue with fixed-width vectorization can be deleted if the trip
-  // count is less than the epilogue iterations. That's why we prefer
-  // fixed-width vectorization in epilogue in case of equal costs.
-  if (IsEpilogue)
-    return true;
   return ST->useFixedOverScalableIfEqualCost();
 }
 

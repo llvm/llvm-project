@@ -995,6 +995,9 @@ struct OmpMapTypeModifierParser {
 
 TYPE_PARSER(OmpMapTypeModifierParser{})
 
+TYPE_PARSER(construct<OmpMemSpace>( //
+    "MEMSPACE" >> parenthesized(scalarIntExpr)))
+
 TYPE_PARSER(construct<OmpOrderModifier>(
     "REPRODUCIBLE" >> pure(OmpOrderModifier::Value::Reproducible) ||
     "UNCONSTRAINED" >> pure(OmpOrderModifier::Value::Unconstrained)))
@@ -1049,6 +1052,9 @@ TYPE_PARSER(construct<OmpTaskDependenceType>(
     "INOUTSET"_id >> pure(OmpTaskDependenceType::Value::Inoutset) ||
     "MUTEXINOUTSET" >> pure(OmpTaskDependenceType::Value::Mutexinoutset) ||
     "OUT" >> pure(OmpTaskDependenceType::Value::Out)))
+
+TYPE_PARSER(construct<OmpTraitsArray>( //
+    "TRAITS" >> parenthesized(indirect(expr))))
 
 TYPE_PARSER(construct<OmpVariableCategory>(
     "AGGREGATE" >> pure(OmpVariableCategory::Value::Aggregate) ||
@@ -1198,6 +1204,12 @@ TYPE_PARSER(sourced(construct<OmpTaskReductionClause::Modifier>(
 
 TYPE_PARSER(sourced(
     construct<OmpThreadLimitClause::Modifier>(Parser<OmpDimsModifier>{})))
+
+TYPE_PARSER(sourced(construct<OmpUsesAllocatorsClause::AllocatorSpec::Modifier>(
+    sourced(construct<OmpUsesAllocatorsClause::AllocatorSpec::Modifier>(
+                Parser<OmpMemSpace>{}) ||
+        construct<OmpUsesAllocatorsClause::AllocatorSpec::Modifier>(
+            Parser<OmpTraitsArray>{})))))
 
 TYPE_PARSER(sourced(construct<OmpWhenClause::Modifier>( //
     Parser<OmpContextSelector>{})))
@@ -1560,6 +1572,55 @@ TYPE_PARSER(construct<OmpSeverityClause>(
 TYPE_PARSER(construct<OmpMessageClause>(expr))
 
 TYPE_PARSER(construct<OmpHoldsClause>(indirect(expr)))
+
+// The deprecated "allocator[(traits-array)]" form is normalized into the 5.2
+// representation so that both surface syntaxes share one parse tree shape.
+static OmpUsesAllocatorsClause::AllocatorSpec makeLegacyAllocatorSpec(
+    Name &&name, common::Indirection<Expr> &&traits) {
+  using AllocatorSpec = OmpUsesAllocatorsClause::AllocatorSpec;
+  CharBlock traitsSource{traits.value().source};
+  AllocatorSpec::Modifier mod{OmpTraitsArray{std::move(traits)}};
+  mod.source = traitsSource;
+  std::list<AllocatorSpec::Modifier> mods;
+  mods.emplace_back(std::move(mod));
+
+  CharBlock allocatorSource{name.source};
+  Expr allocator{Designator{DataRef{std::move(name)}}};
+  allocator.source = allocatorSource;
+  return AllocatorSpec{std::move(mods),
+      ScalarIntExpr{IntExpr{common::Indirection<Expr>{std::move(allocator)}}},
+      /*IsLegacySyntax=*/true};
+}
+
+static OmpUsesAllocatorsClause::AllocatorSpec makeCanonicalAllocatorSpec(
+    std::list<OmpUsesAllocatorsClause::AllocatorSpec::Modifier> &&mods,
+    ScalarIntExpr &&allocator) {
+  return OmpUsesAllocatorsClause::AllocatorSpec{
+      std::move(mods), std::move(allocator), /*IsLegacySyntax=*/false};
+}
+
+// Parse "modifier...: allocator" first: a modifier list is followed by a
+// colon, which neither of the other two forms can contain.
+TYPE_PARSER(sourced( //
+    applyFunction<OmpUsesAllocatorsClause::AllocatorSpec>(
+        makeCanonicalAllocatorSpec,
+        nonemptyList(
+            Parser<OmpUsesAllocatorsClause::AllocatorSpec::Modifier>{}) /
+            ":",
+        scalarIntExpr) ||
+    // Parse the deprecated "allocator(traits-array)" before a bare allocator,
+    // because it is also syntactically an array element reference.
+    applyFunction<OmpUsesAllocatorsClause::AllocatorSpec>(
+        makeLegacyAllocatorSpec, Parser<Name>{},
+        parenthesized(indirect(expr))) ||
+    construct<OmpUsesAllocatorsClause::AllocatorSpec>(
+        pure<std::optional<
+            std::list<OmpUsesAllocatorsClause::AllocatorSpec::Modifier>>>(),
+        scalarIntExpr, pure(false))))
+
+TYPE_PARSER(construct<OmpUsesAllocatorsClause>(
+    nonemptyList(Parser<OmpUsesAllocatorsClause::AllocatorSpec>{})))
+
 TYPE_PARSER(construct<OmpAbsentClause>(many(maybe(","_tok) >>
     construct<llvm::omp::Directive>(unwrap(OmpDirectiveNameParser{})))))
 TYPE_PARSER(construct<OmpContainsClause>(many(maybe(","_tok) >>
@@ -1783,6 +1844,9 @@ TYPE_PARSER( //
     "USE_DEVICE_ADDR" >>
         construct<OmpClause>(construct<OmpClause::UseDeviceAddr>(
             parenthesized(Parser<OmpObjectList>{}))) ||
+    "USES_ALLOCATORS" >>
+        construct<OmpClause>(construct<OmpClause::UsesAllocators>(
+            parenthesized(Parser<OmpUsesAllocatorsClause>{}))) ||
     "UNIFIED_ADDRESS" >>
         construct<OmpClause>(construct<OmpClause::UnifiedAddress>(
             maybe(parenthesized(scalarLogicalConstantExpr)))) ||

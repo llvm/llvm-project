@@ -177,20 +177,6 @@ void SimpleRemoteEPC::handleDisconnect(Error Err) {
   DisconnectCV.notify_all();
 }
 
-Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
-SimpleRemoteEPC::createDefaultMemoryManager(SimpleRemoteEPC &SREPC) {
-  EPCGenericJITLinkMemoryManager::SymbolAddrs SAs;
-  if (auto Err = SREPC.getBootstrapSymbols(
-          {{SAs.Allocator, rt::SimpleExecutorMemoryManagerInstanceName},
-           {SAs.Reserve, rt::SimpleExecutorMemoryManagerReserveWrapperName},
-           {SAs.Initialize,
-            rt::SimpleExecutorMemoryManagerInitializeWrapperName},
-           {SAs.Release, rt::SimpleExecutorMemoryManagerReleaseWrapperName}}))
-    return std::move(Err);
-
-  return std::make_unique<EPCGenericJITLinkMemoryManager>(SREPC, SAs);
-}
-
 Error SimpleRemoteEPC::sendMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
                                    ExecutorAddr TagAddr,
                                    ArrayRef<char> ArgBytes) {

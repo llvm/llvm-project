@@ -256,6 +256,13 @@ add_entrypoint_object(
     .${LIBC_TARGET_OS}.fdopen
 )
 
+add_entrypoint_object(
+  tmpfile
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.tmpfile
+)
+
 # These entrypoints have multiple potential implementations.
 add_stdio_entrypoint_object(feof)
 add_stdio_entrypoint_object(feof_unlocked)

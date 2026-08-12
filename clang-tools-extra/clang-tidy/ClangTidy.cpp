@@ -188,7 +188,7 @@ public:
       }
       reportFix(Diag, Error.Message.Fix);
     }
-    for (const auto Fix : FixLocations) {
+    for (const auto &Fix : FixLocations) {
       Diags.Report(Fix.first, Fix.second ? diag::note_fixit_applied
                                          : diag::note_fixit_failed);
     }

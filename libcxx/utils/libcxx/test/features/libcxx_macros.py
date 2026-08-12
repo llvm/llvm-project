@@ -60,15 +60,8 @@ for macro, feature in true_false_macros.items():
     )
 
 inverted_macros = {
-    "_LIBCPP_HAS_TIME_ZONE_DATABASE": "no-tzdb",
-    "_LIBCPP_HAS_FILESYSTEM": "no-filesystem",
-    "_LIBCPP_HAS_LOCALIZATION": "no-localization",
-    "_LIBCPP_HAS_THREADS": "no-threads",
     "_LIBCPP_HAS_MONOTONIC_CLOCK": "no-monotonic-clock",
-    "_LIBCPP_HAS_WIDE_CHARACTERS": "no-wide-characters",
     "_LIBCPP_HAS_VENDOR_AVAILABILITY_ANNOTATIONS": "libcpp-has-no-availability-markup",
-    "_LIBCPP_HAS_RANDOM_DEVICE": "no-random-device",
-    "_LIBCPP_HAS_UNICODE": "libcpp-has-no-unicode",
 }
 for macro, feature in inverted_macros.items():
     features.append(

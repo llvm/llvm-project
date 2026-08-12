@@ -266,8 +266,6 @@ class NodeBuilder {
 protected:
   const NodeBuilderContext &C;
 
-  bool HasGeneratedNodes = false;
-
   /// The frontier set - a set of nodes which need to be propagated after
   /// the builder dies.
   ExplodedNodeSet &Frontier;
@@ -324,8 +322,6 @@ public:
   }
 
   const ExplodedNodeSet &getResults() const { return Frontier; }
-
-  bool hasGeneratedNodes() const { return HasGeneratedNodes; }
 
   void takeNodes(const ExplodedNodeSet &S) {
     for (const auto I : S)
