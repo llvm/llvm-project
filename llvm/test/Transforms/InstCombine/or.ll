@@ -2413,6 +2413,19 @@ define <2 x i32> @fold_disjoint_or_zext_xor_splat(<2 x i8> %x) {
   ret <2 x i32> %r
 }
 
+; or(zext nneg(or X, C1), C2) -> zext nneg(or X, C1 | trunc(C2))
+define i32 @fold_or_zext_or_nneg(i8 %x) {
+; CHECK-LABEL: @fold_or_zext_or_nneg(
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[R:%.*]] = zext nneg i8 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = or i8 %x, 2
+  %z = zext nneg i8 %a to i32
+  %r = or i32 %z, 1
+  ret i32 %r
+}
+
 define i32 @no_fold_or_zext_xor(i8 %x) {
 ; CHECK-LABEL: @no_fold_or_zext_xor(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -2
