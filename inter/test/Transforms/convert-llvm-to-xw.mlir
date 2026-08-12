@@ -5,6 +5,9 @@
 // RUN:   FileCheck %s --check-prefix=WIDTH32
 
 module {
+  llvm.module_flags [#llvm.mlir.module_flag<warning, "Debug Info Version",
+                                             3 : i32>]
+
   llvm.func spir_kernelcc @vector_add(%out: !llvm.ptr<1>,
                                       %in: !llvm.ptr<1>) {
     %axis = llvm.mlir.constant(0 : i32) : i32
@@ -145,6 +148,7 @@ module {
   }
 }
 
+// CHECK-NOT: llvm.module_flags
 // CHECK-LABEL: func.func @vector_add(%{{.*}}: !xw.ptr<#xw.global>
 // CHECK: xw.global_id 0
 // CHECK: xw.ptradd

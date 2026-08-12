@@ -11,6 +11,12 @@ def ImportLLVM : Pass<"inter-import-llvm", "::mlir::ModuleOp"> {
                         "kernel SIMD width (8, 16, or 32)">];
 }
 
+def DiscoverCacheControls
+    : Pass<"inter-discover-cache-controls", "::mlir::ModuleOp"> {
+  let summary = "resolve pointer cache annotations onto memory consumers";
+  let dependentDialects = ["xw::XWDialect", "mlir::LLVM::LLVMDialect"];
+}
+
 def VerifyStructured : Pass<"inter-verify-structured", "::mlir::ModuleOp"> {
   let summary = "reject unstructured control flow before semantic conversion";
 }

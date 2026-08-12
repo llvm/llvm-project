@@ -11,7 +11,9 @@ module attributes {transform.with_named_sequence} {
       %root: !transform.any_op {transform.consumed}) -> !transform.any_op {
     %r0 = transform.apply_registered_pass "inter-import-llvm" to %root
         : (!transform.any_op) -> !transform.any_op
-    %r1 = transform.apply_registered_pass "lift-cf-to-scf" to %r0
+    %r0a = transform.apply_registered_pass "inter-discover-cache-controls" to %r0
+        : (!transform.any_op) -> !transform.any_op
+    %r1 = transform.apply_registered_pass "lift-cf-to-scf" to %r0a
         : (!transform.any_op) -> !transform.any_op
     %r2 = transform.apply_registered_pass "inter-verify-structured" to %r1
         : (!transform.any_op) -> !transform.any_op

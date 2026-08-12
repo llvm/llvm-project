@@ -1,6 +1,7 @@
 add_mlir_library(InterTransforms
   InterSelect.cpp
   InterImportLLVM.cpp
+  InterDiscoverCacheControls.cpp
   InterConvertLLVMToXW.cpp
   InterRefineDistribution.cpp
   InterInferMemoryTokens.cpp

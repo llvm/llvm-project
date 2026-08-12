@@ -64,4 +64,20 @@ def XW_CastExtensionEnum : I32EnumAttr<"CastExtension",
   let cppNamespace = "::xw";
 }
 
+def XW_CachePolicyUncached : I32EnumAttrCase<"Uncached", 0, "uncached">;
+def XW_CachePolicyCached : I32EnumAttrCase<"Cached", 1, "cached">;
+def XW_CachePolicyStreaming : I32EnumAttrCase<"Streaming", 2, "streaming">;
+def XW_CachePolicyReadInvalidate
+    : I32EnumAttrCase<"ReadInvalidate", 3, "read_invalidate">;
+def XW_CachePolicyWriteBack
+    : I32EnumAttrCase<"WriteBack", 4, "write_back">;
+def XW_CachePolicyWriteThrough
+    : I32EnumAttrCase<"WriteThrough", 5, "write_through">;
+def XW_CachePolicyEnum : I32EnumAttr<"CachePolicyKind", "XW cache policy", [
+    XW_CachePolicyUncached, XW_CachePolicyCached, XW_CachePolicyStreaming,
+    XW_CachePolicyReadInvalidate, XW_CachePolicyWriteBack,
+    XW_CachePolicyWriteThrough]> {
+  let cppNamespace = "::xw";
+}
+
 #endif // INTER_DIALECT_INTER_IR_XWENUMS_TD

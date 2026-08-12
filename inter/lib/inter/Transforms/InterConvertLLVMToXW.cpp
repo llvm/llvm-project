@@ -26,6 +26,19 @@ using namespace mlir;
 
 namespace {
 
+static void eraseDebugInfoModuleFlags(ModuleOp moduleOp) {
+  SmallVector<LLVM::ModuleFlagsOp> debugFlags;
+  for (LLVM::ModuleFlagsOp flags : moduleOp.getOps<LLVM::ModuleFlagsOp>()) {
+    if (llvm::all_of(flags.getFlags(), [](Attribute flag) {
+          auto moduleFlag = dyn_cast<LLVM::ModuleFlagAttr>(flag);
+          return moduleFlag && moduleFlag.getKey() == "Debug Info Version";
+        }))
+      debugFlags.push_back(flags);
+  }
+  for (LLVM::ModuleFlagsOp flags : debugFlags)
+    flags.erase();
+}
+
 static bool containsLLVMType(Type type) {
   if (type.getDialect().getNamespace() ==
       LLVM::LLVMDialect::getDialectNamespace())
@@ -1721,6 +1734,7 @@ struct ConvertLLVMToXW final
     : inter::impl::ConvertLLVMToXWBase<ConvertLLVMToXW> {
   void runOnOperation() override {
     MLIRContext *context = &getContext();
+    eraseDebugInfoModuleFlags(getOperation());
     for (func::FuncOp function : getOperation().getOps<func::FuncOp>()) {
       for (Type type : function.getArgumentTypes()) {
         auto pointer = dyn_cast<LLVM::LLVMPointerType>(type);

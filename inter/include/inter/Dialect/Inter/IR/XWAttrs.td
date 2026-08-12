@@ -26,6 +26,10 @@ def XW_CastExtensionPolicyAttr
   let parameters = (ins EnumParameter<XW_CastExtensionEnum>:$value);
   let assemblyFormat = "`<` $value `>`";
 }
+def XW_CachePolicyAttr : XW_Attr<"CachePolicy", "cache_policy"> {
+  let parameters = (ins EnumParameter<XW_CachePolicyEnum>:$value);
+  let assemblyFormat = "`<` $value `>`";
+}
 
 def XW_PrivateAddressSpaceAttr : XW_Attr<"PrivateAddressSpace", "private"> {
   let assemblyFormat = "";
