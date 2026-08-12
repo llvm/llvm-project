@@ -33,7 +33,7 @@ Symbol::Symbol()
       m_size_is_synthesized(false), m_size_is_valid(false),
       m_demangled_is_synthesized(false), m_contains_linker_annotations(false),
       m_is_weak(false), m_type(eSymbolTypeInvalid), m_mangled(),
-      m_addr_range() {}
+      m_addr_or_reexport(*this) {}
 
 Symbol::Symbol(uint32_t symID, llvm::StringRef name, SymbolType type,
                bool external, bool is_debug, bool is_trampoline,
@@ -46,12 +46,13 @@ Symbol::Symbol(uint32_t symID, llvm::StringRef name, SymbolType type,
       m_size_is_synthesized(false), m_size_is_valid(size_is_valid || size > 0),
       m_demangled_is_synthesized(false),
       m_contains_linker_annotations(contains_linker_annotations),
-      m_is_weak(false), m_type(type), m_mangled(name), m_addr_range(),
-      m_flags(flags) {
+      m_is_weak(false), m_type(type), m_mangled(name),
+      m_addr_or_reexport(*this), m_flags(flags) {
   if (m_type == eSymbolTypeReExported)
-    m_reexport_info = ReExportInfo();
+    m_addr_or_reexport.SetRexportInfo(*this, ReExportInfo());
   else
-    m_addr_range = AddressRange(section_sp, offset, size);
+    m_addr_or_reexport.SetAddressRange(*this,
+                                       AddressRange(section_sp, offset, size));
 }
 
 Symbol::Symbol(uint32_t symID, const Mangled &mangled, SymbolType type,
@@ -66,12 +67,12 @@ Symbol::Symbol(uint32_t symID, const Mangled &mangled, SymbolType type,
       m_size_is_valid(size_is_valid || range.GetByteSize() > 0),
       m_demangled_is_synthesized(false),
       m_contains_linker_annotations(contains_linker_annotations),
-      m_is_weak(false), m_type(type), m_mangled(mangled), m_addr_range(),
-      m_flags(flags) {
+      m_is_weak(false), m_type(type), m_mangled(mangled),
+      m_addr_or_reexport(*this), m_flags(flags) {
   if (m_type == eSymbolTypeReExported)
-    m_reexport_info = ReExportInfo();
+    m_addr_or_reexport.SetRexportInfo(*this, ReExportInfo());
   else
-    m_addr_range = range;
+    m_addr_or_reexport.SetAddressRange(*this, range);
 }
 
 Symbol::Symbol(const Symbol &rhs)
@@ -84,11 +85,13 @@ Symbol::Symbol(const Symbol &rhs)
       m_demangled_is_synthesized(rhs.m_demangled_is_synthesized),
       m_contains_linker_annotations(rhs.m_contains_linker_annotations),
       m_is_weak(rhs.m_is_weak), m_type(rhs.m_type), m_mangled(rhs.m_mangled),
-      m_addr_range(), m_flags(rhs.m_flags) {
+      m_addr_or_reexport(*this), m_flags(rhs.m_flags) {
   if (rhs.m_type == eSymbolTypeReExported)
-    m_reexport_info = rhs.m_reexport_info;
+    m_addr_or_reexport.SetRexportInfo(
+        *this, rhs.m_addr_or_reexport.GetReExportInfo(*this));
   else
-    m_addr_range = rhs.m_addr_range;
+    m_addr_or_reexport.SetAddressRange(
+        *this, rhs.m_addr_or_reexport.GetAddressRange(*this));
 }
 
 const Symbol &Symbol::operator=(const Symbol &rhs) {
@@ -108,12 +111,14 @@ const Symbol &Symbol::operator=(const Symbol &rhs) {
     m_is_weak = rhs.m_is_weak;
     m_mangled = rhs.m_mangled;
     if (m_type != eSymbolTypeReExported && m_type != eSymbolTypeInvalid)
-      m_addr_range.Clear();
+      m_addr_or_reexport.GetAddressRange(*this).Clear();
     m_type = rhs.m_type;
     if (rhs.m_type == eSymbolTypeReExported)
-      m_reexport_info = rhs.m_reexport_info;
+      m_addr_or_reexport.SetRexportInfo(
+          *this, rhs.m_addr_or_reexport.GetReExportInfo(*this));
     else
-      m_addr_range = rhs.m_addr_range;
+      m_addr_or_reexport.SetAddressRange(
+          *this, rhs.m_addr_or_reexport.GetAddressRange(*this));
     m_flags = rhs.m_flags;
   }
   return *this;
@@ -180,13 +185,15 @@ void Symbol::Clear() {
   m_is_weak = false;
   m_type = eSymbolTypeInvalid;
   m_flags = 0;
-  m_addr_range.Clear();
+  m_addr_or_reexport.GetAddressRange(*this).Clear();
 }
 
 bool Symbol::ValueIsAddress() const {
   if (m_type == eSymbolTypeReExported)
     return false;
-  return (bool)m_addr_range.GetBaseAddress().GetSection();
+  return (bool)m_addr_or_reexport.GetAddressRange(*this)
+      .GetBaseAddress()
+      .GetSection();
 }
 
 ConstString Symbol::GetDisplayName() const {
@@ -197,37 +204,39 @@ ConstString Symbol::GetReExportedSymbolName() const {
   if (m_type != eSymbolTypeReExported)
     return ConstString();
 
-  return m_reexport_info.name;
+  return m_addr_or_reexport.GetReExportInfo(*this).name;
 }
 
 FileSpec Symbol::GetReExportedSymbolSharedLibrary() const {
   if (m_type != eSymbolTypeReExported)
     return FileSpec();
 
-  return m_reexport_info.library;
+  return m_addr_or_reexport.GetReExportInfo(*this).library;
 }
 
 void Symbol::SetReExportedSymbolName(ConstString name) {
   if (m_type != eSymbolTypeReExported && m_type != eSymbolTypeInvalid)
-    m_addr_range.Clear();
+    m_addr_or_reexport.GetAddressRange(*this).Clear();
   if (m_type != eSymbolTypeReExported)
-    m_reexport_info = ReExportInfo();
+    m_addr_or_reexport.SetRexportInfo(*this, ReExportInfo());
   m_type = eSymbolTypeReExported;
-  m_reexport_info.name = name;
+  m_addr_or_reexport.GetReExportInfo(*this).name = name;
 }
 
 bool Symbol::SetReExportedSymbolSharedLibrary(const FileSpec &fspec) {
   if (m_type != eSymbolTypeReExported)
     return false;
   if (m_type != eSymbolTypeReExported && m_type != eSymbolTypeInvalid)
-    m_addr_range.Clear();
+    m_addr_or_reexport.GetAddressRange(*this).Clear();
   m_type = eSymbolTypeReExported;
-  m_reexport_info.library = fspec;
+  m_addr_or_reexport.GetReExportInfo(*this).library = fspec;
   return true;
 }
 
 uint32_t Symbol::GetSiblingIndex() const {
-  return m_size_is_sibling ? m_addr_range.GetByteSize() : UINT32_MAX;
+  return m_size_is_sibling
+             ? m_addr_or_reexport.GetAddressRange(*this).GetByteSize()
+             : UINT32_MAX;
 }
 
 bool Symbol::IsTrampoline() const { return m_type == eSymbolTypeTrampoline; }
@@ -239,29 +248,36 @@ void Symbol::GetDescription(
     std::optional<Stream::HighlightSettings> settings) const {
   s->Printf("id = {0x%8.8x}", m_uid);
 
-  if (m_addr_range.GetBaseAddress().GetSection()) {
+  if (m_addr_or_reexport.GetAddressRange(*this).GetBaseAddress().GetSection()) {
     if (ValueIsAddress()) {
       const lldb::addr_t byte_size = GetByteSize();
       if (byte_size > 0) {
         s->PutCString(", range = ");
-        m_addr_range.Dump(s, target, Address::DumpStyleLoadAddress,
-                          Address::DumpStyleFileAddress);
+        m_addr_or_reexport.GetAddressRange(*this).Dump(
+            s, target, Address::DumpStyleLoadAddress,
+            Address::DumpStyleFileAddress);
       } else {
         s->PutCString(", address = ");
-        m_addr_range.GetBaseAddress().Dump(s, target,
-                                           Address::DumpStyleLoadAddress,
-                                           Address::DumpStyleFileAddress);
+        m_addr_or_reexport.GetAddressRange(*this).GetBaseAddress().Dump(
+            s, target, Address::DumpStyleLoadAddress,
+            Address::DumpStyleFileAddress);
       }
     } else
       s->Printf(", value = 0x%16.16" PRIx64,
-                m_addr_range.GetBaseAddress().GetOffset());
+                m_addr_or_reexport.GetAddressRange(*this)
+                    .GetBaseAddress()
+                    .GetOffset());
   } else {
     if (m_size_is_sibling)
       s->Printf(", sibling = %5" PRIu64,
-                m_addr_range.GetBaseAddress().GetOffset());
+                m_addr_or_reexport.GetAddressRange(*this)
+                    .GetBaseAddress()
+                    .GetOffset());
     else
       s->Printf(", value = 0x%16.16" PRIx64,
-                m_addr_range.GetBaseAddress().GetOffset());
+                m_addr_or_reexport.GetAddressRange(*this)
+                    .GetBaseAddress()
+                    .GetOffset());
   }
   if (ConstString demangled = m_mangled.GetDemangledName()) {
     s->PutCString(", name=\"");
@@ -286,14 +302,14 @@ void Symbol::Dump(Stream *s, Target *target, uint32_t index,
 
   ConstString name = GetMangled().GetName(name_preference);
   if (ValueIsAddress()) {
-    if (!m_addr_range.GetBaseAddress().Dump(s, nullptr,
-                                            Address::DumpStyleFileAddress))
+    if (!m_addr_or_reexport.GetAddressRange(*this).GetBaseAddress().Dump(
+            s, nullptr, Address::DumpStyleFileAddress))
       s->Printf("%*s", 18, "");
 
     s->PutChar(' ');
 
-    if (!m_addr_range.GetBaseAddress().Dump(s, target,
-                                            Address::DumpStyleLoadAddress))
+    if (!m_addr_or_reexport.GetAddressRange(*this).GetBaseAddress().Dump(
+            s, target, Address::DumpStyleLoadAddress))
       s->Printf("%*s", 18, "");
 
     const char *format = m_size_is_sibling ? " Sibling -> [%5llu] 0x%8.8x %s\n"
@@ -317,8 +333,10 @@ void Symbol::Dump(Stream *s, Target *target, uint32_t index,
               "                    Sibling -> [%5llu] 0x%8.8x %s\n"
             : "0x%16.16" PRIx64 "                    0x%16.16" PRIx64
               " 0x%8.8x %s\n";
-    s->Printf(format, m_addr_range.GetBaseAddress().GetOffset(), GetByteSize(),
-              m_flags, name.AsCString(""));
+    s->Printf(
+        format,
+        m_addr_or_reexport.GetAddressRange(*this).GetBaseAddress().GetOffset(),
+        GetByteSize(), m_flags, name.AsCString(""));
   }
 }
 
@@ -327,7 +345,8 @@ uint32_t Symbol::GetPrologueByteSize() {
     if (!m_type_data_resolved) {
       m_type_data_resolved = true;
 
-      const Address &base_address = m_addr_range.GetBaseAddress();
+      const Address &base_address =
+          m_addr_or_reexport.GetAddressRange(*this).GetBaseAddress();
       Function *function = base_address.CalculateSymbolContextFunction();
       if (function) {
         // Functions have line entries which can also potentially have end of
@@ -371,7 +390,8 @@ uint32_t Symbol::GetPrologueByteSize() {
               addr.Slide(sc_temp.line_entry.range.GetByteSize());
               total_offset += sc_temp.line_entry.range.GetByteSize();
               // If we've gone too far, bail out.
-              if (total_offset >= m_addr_range.GetByteSize())
+              if (total_offset >=
+                  m_addr_or_reexport.GetAddressRange(*this).GetByteSize())
                 break;
             }
 
@@ -380,7 +400,8 @@ uint32_t Symbol::GetPrologueByteSize() {
             // entries surrounding us won't lie inside our function. In that
             // case, the line entry will be bigger than we are, so we do that
             // quick check and if that is true, we just return 0.
-            if (m_type_data >= m_addr_range.GetByteSize())
+            if (m_type_data >=
+                m_addr_or_reexport.GetAddressRange(*this).GetByteSize())
               m_type_data = 0;
           } else {
             // TODO: expose something in Process to figure out the
@@ -440,7 +461,12 @@ void Symbol::DumpSymbolContext(Stream *s) {
   s->Printf("Symbol{0x%8.8x}", GetID());
 }
 
-lldb::addr_t Symbol::GetByteSize() const { return m_addr_range.GetByteSize(); }
+lldb::addr_t Symbol::GetByteSize() const {
+  if (GetType() == eSymbolTypeReExported)
+    return 0;
+  else
+    return m_addr_or_reexport.GetAddressRange(*this).GetByteSize();
+}
 
 Symbol *Symbol::ResolveReExportedSymbolInModuleSpec(
     Target &target, ConstString reexport_name, ModuleSpec &module_spec,
@@ -564,11 +590,13 @@ lldb::addr_t Symbol::ResolveCallableAddress(Target &target) const {
 lldb::DisassemblerSP Symbol::GetInstructions(const ExecutionContext &exe_ctx,
                                              const char *flavor,
                                              bool prefer_file_cache) {
-  ModuleSP module_sp(m_addr_range.GetBaseAddress().GetModule());
+  ModuleSP module_sp(
+      m_addr_or_reexport.GetAddressRange(*this).GetBaseAddress().GetModule());
   if (module_sp && exe_ctx.HasTargetScope()) {
     return Disassembler::DisassembleRange(
         module_sp->GetArchitecture(), nullptr, flavor, nullptr, nullptr,
-        exe_ctx.GetTargetRef(), m_addr_range, !prefer_file_cache);
+        exe_ctx.GetTargetRef(), m_addr_or_reexport.GetAddressRange(*this),
+        !prefer_file_cache);
   }
   return lldb::DisassemblerSP();
 }
@@ -589,7 +617,8 @@ bool Symbol::GetDisassembly(const ExecutionContext &exe_ctx, const char *flavor,
 }
 
 bool Symbol::ContainsFileAddress(lldb::addr_t file_addr) const {
-  return m_addr_range.ContainsFileAddress(file_addr);
+  return m_addr_or_reexport.GetAddressRange(*this).ContainsFileAddress(
+      file_addr);
 }
 
 bool Symbol::IsSyntheticWithAutoGeneratedName() const {
@@ -615,8 +644,10 @@ void Symbol::SynthesizeNameIfNeeded() const {
     llvm::SmallString<256> name;
     llvm::raw_svector_ostream os(name);
     os << GetSyntheticSymbolPrefix()
-       << llvm::format_hex_no_prefix(
-              m_addr_range.GetBaseAddress().GetFileAddress(), 0);
+       << llvm::format_hex_no_prefix(m_addr_or_reexport.GetAddressRange(*this)
+                                         .GetBaseAddress()
+                                         .GetFileAddress(),
+                                     0);
     m_mangled.SetDemangledName(ConstString(os.str()));
   }
 }
@@ -648,20 +679,24 @@ bool Symbol::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
     const bool is_addr = data.GetU8(offset_ptr) != 0;
     const uint64_t value = data.GetU64(offset_ptr);
     if (is_addr) {
-      m_addr_range.GetBaseAddress().ResolveAddressUsingFileSections(
-          value, section_list);
+      m_addr_or_reexport.GetAddressRange(*this)
+          .GetBaseAddress()
+          .ResolveAddressUsingFileSections(value, section_list);
     } else {
-      m_addr_range.GetBaseAddress().Clear();
-      m_addr_range.GetBaseAddress().SetOffset(value);
+      m_addr_or_reexport.GetAddressRange(*this).GetBaseAddress().Clear();
+      m_addr_or_reexport.GetAddressRange(*this).GetBaseAddress().SetOffset(
+          value);
     }
-    m_addr_range.SetByteSize(data.GetU64(offset_ptr));
+    m_addr_or_reexport.GetAddressRange(*this).SetByteSize(
+        data.GetU64(offset_ptr));
   } else {
-    m_reexport_info.name = ConstString(strtab.Get(data.GetU32(offset_ptr)));
+    m_addr_or_reexport.GetReExportInfo(*this).name =
+        ConstString(strtab.Get(data.GetU32(offset_ptr)));
     // m_reexport_info.library is calculated based on the
     // binaries loaded in the target, lazily.  It is not
     // saved in the serialized Symbol format as it could vary
     // depending on the Target libraries.
-    m_reexport_info.library = FileSpec();
+    m_addr_or_reexport.GetReExportInfo(*this).library = FileSpec();
   }
   m_flags = data.GetU32(offset_ptr);
   return true;
@@ -724,12 +759,17 @@ void Symbol::Encode(DataEncoder &file, ConstStringTable &strtab) const {
     // symbol's base address doesn't have a section, then it is a constant
     // value. If it does have a section, we will encode the file address and
     // re-resolve the address when we decode it.
-    bool is_addr = m_addr_range.GetBaseAddress().GetSection().get() != nullptr;
+    bool is_addr = m_addr_or_reexport.GetAddressRange(*this)
+                       .GetBaseAddress()
+                       .GetSection()
+                       .get() != nullptr;
     file.AppendU8(is_addr);
-    file.AppendU64(m_addr_range.GetBaseAddress().GetFileAddress());
-    file.AppendU64(m_addr_range.GetByteSize());
+    file.AppendU64(m_addr_or_reexport.GetAddressRange(*this)
+                       .GetBaseAddress()
+                       .GetFileAddress());
+    file.AppendU64(m_addr_or_reexport.GetAddressRange(*this).GetByteSize());
   } else {
-    file.AppendU32(strtab.Add(m_reexport_info.name));
+    file.AppendU32(strtab.Add(m_addr_or_reexport.GetReExportInfo(*this).name));
     // m_reexport_info.library is calculated based on the
     // binaries loaded in the target, lazily.  It is not
     // saved in the serialized Symbol format as it could vary
@@ -767,9 +807,11 @@ bool Symbol::operator==(const Symbol &rhs) const {
     return false;
   if (m_mangled != rhs.m_mangled)
     return false;
-  if (m_addr_range.GetBaseAddress() != rhs.m_addr_range.GetBaseAddress())
+  if (m_addr_or_reexport.GetAddressRange(*this).GetBaseAddress() !=
+      rhs.m_addr_or_reexport.GetAddressRange(*this).GetBaseAddress())
     return false;
-  if (m_addr_range.GetByteSize() != rhs.m_addr_range.GetByteSize())
+  if (m_addr_or_reexport.GetAddressRange(*this).GetByteSize() !=
+      rhs.m_addr_or_reexport.GetAddressRange(*this).GetByteSize())
     return false;
   if (m_flags != rhs.m_flags)
     return false;
@@ -847,6 +889,47 @@ lldb::SymbolType Symbol::GetTypeFromString(const char *str) {
       .Case("objcivar", eSymbolTypeObjCIVar)
       .Case("reexported", eSymbolTypeReExported)
       .Default(eSymbolTypeInvalid);
+}
+
+AddressRange &Symbol::AddrRangeOrReExport::GetAddressRange(Symbol &sym) {
+  assert(sym.GetType() != eSymbolTypeReExported);
+  return m_addr_range;
+}
+
+const AddressRange &
+Symbol::AddrRangeOrReExport::GetAddressRange(const Symbol &sym) const {
+  assert(sym.GetType() != eSymbolTypeReExported);
+  return m_addr_range;
+}
+
+Symbol::ReExportInfo &
+Symbol::AddrRangeOrReExport::GetReExportInfo(Symbol &sym) {
+  assert(sym.GetType() == eSymbolTypeReExported);
+  return m_reexport_info;
+}
+
+const Symbol::ReExportInfo &
+Symbol::AddrRangeOrReExport::GetReExportInfo(const Symbol &sym) const {
+  assert(sym.GetType() == eSymbolTypeReExported);
+  return m_reexport_info;
+}
+
+void Symbol::AddrRangeOrReExport::SetAddressRange(
+    Symbol &sym, const AddressRange addr_range) {
+  if (sym.GetType() == eSymbolTypeReExported) {
+    m_reexport_info.Clear();
+    sym.SetType(eSymbolTypeInvalid);
+  }
+  m_addr_range = addr_range;
+}
+
+void Symbol::AddrRangeOrReExport::SetRexportInfo(
+    Symbol &sym, const Symbol::ReExportInfo reexport_info) {
+  if (sym.GetType() != eSymbolTypeReExported) {
+    m_addr_range.Clear();
+    sym.SetType(eSymbolTypeReExported);
+  }
+  m_reexport_info = reexport_info;
 }
 
 namespace llvm {
