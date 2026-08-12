@@ -1654,7 +1654,7 @@ void AddressSanitizer::getInterestingMemoryOperands(
 }
 
 static bool isPointerOperand(Value *V) {
-  return V->getType()->isPointerTy() || isa<PtrToIntInst>(V);
+  return V->getType()->isPointerTy() || isa<PtrToIntInst, PtrToAddrInst>(V);
 }
 
 // This is a rough heuristic; it may cause both false positives and
@@ -3734,6 +3734,8 @@ void FunctionStackPoisoner::processStaticAllocas() {
     replaceDbgDeclare(AI, LocalStackBaseAlloca, DIB, DIExprFlags, Desc.Offset);
     Value *NewAllocaPtr = IRB.CreatePtrAdd(
         LocalStackBase, ConstantInt::get(IntptrTy, Desc.Offset));
+    if (NewAllocaPtr->getType() != AI->getType())
+      NewAllocaPtr = IRB.CreateAddrSpaceCast(NewAllocaPtr, AI->getType());
     AI->replaceAllUsesWith(NewAllocaPtr);
     NewAllocaPtrs.push_back(NewAllocaPtr);
   }

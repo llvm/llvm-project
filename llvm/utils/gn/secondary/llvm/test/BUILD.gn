@@ -1,5 +1,6 @@
 import("//llvm/include/llvm/Config/config.gni")
 import("//llvm/lib/DebugInfo/PDB/enable_dia.gni")
+import("//llvm/lib/Target/targets.gni")
 import("//llvm/lib/Target/targets_string.gni")
 import("//llvm/triples.gni")
 import("//llvm/utils/gn/build/buildflags.gni")
@@ -171,11 +172,13 @@ write_lit_config("lit_site_cfg") {
   if (host_os == "mac") {
     extra_values += [
       "CMAKE_OSX_SYSROOT=" + rebase_path(mac_sdk_path, dir),
+      "CMAKE_XCRUN=xcrun",
       "LD64_EXECUTABLE=ld",
     ]
   } else {
     extra_values += [
       "CMAKE_OSX_SYSROOT=",
+      "CMAKE_XCRUN=",
       "LD64_EXECUTABLE=",
     ]
   }
@@ -326,7 +329,6 @@ group("test") {
     "//llvm/tools/llvm-reduce",
     "//llvm/tools/llvm-remarkutil",
     "//llvm/tools/llvm-rtdyld",
-    "//llvm/tools/llvm-sim",
     "//llvm/tools/llvm-size",
     "//llvm/tools/llvm-split",
     "//llvm/tools/llvm-stress",
@@ -356,6 +358,10 @@ group("test") {
     # its tests, but nothing in the tree depends on them.
     "//third-party/unittest/UnitTestMain:gtest_main",
   ]
+
+  if (llvm_build_AMDGPU) {
+    deps += [ "//llvm/tools/llvm-calc-occupancy" ]
+  }
 
   # FIXME: llvm_build_examples
   testonly = true

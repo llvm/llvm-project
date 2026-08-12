@@ -53,11 +53,8 @@ class WebAssemblyCFGSortLegacy final : public MachineFunctionPass {
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addPreserved<MachineDominatorTreeWrapperPass>();
     AU.addRequired<MachineLoopInfoWrapperPass>();
-    AU.addPreserved<MachineLoopInfoWrapperPass>();
     AU.addRequired<WebAssemblyExceptionInfoWrapperPass>();
-    AU.addPreserved<WebAssemblyExceptionInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 

@@ -1,17 +1,17 @@
 // Two-step host-BC ->  device pipeline that mirrors the offloading driver.
 //
 // Step 1: Host compilation to bitcode (provides offload entry info to device pass).
-// RUN: %clang_cc1 -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa \
+// RUN: %clang_cc1 -fopenmp -fopenmp-targets=amdgpu-amd-amdhsa \
 // RUN:   -fclangir -emit-llvm-bc %s -o %t-cir-host.bc
-// RUN: %clang_cc1 -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa \
+// RUN: %clang_cc1 -fopenmp -fopenmp-targets=amdgpu-amd-amdhsa \
 // RUN:   -emit-llvm-bc %s -o %t-ogcg-host.bc
 //
 // Step 2: Device compilation using host BC.
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fopenmp -fopenmp-is-target-device \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fopenmp -fopenmp-is-target-device \
 // RUN:   -fopenmp-host-ir-file-path %t-cir-host.bc \
 // RUN:   -fclangir -emit-llvm %s -o - \
 // RUN:   | FileCheck %s --check-prefix=LLVM
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fopenmp -fopenmp-is-target-device \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fopenmp -fopenmp-is-target-device \
 // RUN:   -fopenmp-host-ir-file-path %t-ogcg-host.bc \
 // RUN:   -emit-llvm %s -o - \
 // RUN:   | FileCheck %s --check-prefix=OGCG

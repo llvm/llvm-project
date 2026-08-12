@@ -529,10 +529,11 @@ PGI passes host instance links in descriptors in additional arguments
 that are not always successfully forwarded across implicit interfaces,
 sometimes leading to crashes when they turn out to be needed.
 
-Flang will manage a pool of trampolines in its runtime support library
-that can be used to pass internal procedures as effective arguments
-to F77ish procedures, so that
-a bare code address can serve to represent the effective argument.
+By default, Flang uses a stack-allocated trampoline to pass an internal
+procedure as an effective argument to an F77ish procedure. When
+`-fsafe-trampoline` is enabled on a supported target, Flang instead uses a
+fixed-capacity pool of trampolines in its runtime support library. In either
+case, a bare code address can serve to represent the effective argument.
 But targets that can only be called with an explicit interface
 have the option of using a "fat pointer" (or additional argument)
 to represent a dummy procedure closure so as

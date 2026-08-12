@@ -25,7 +25,7 @@ TEST_F(LlvmLibcChownTest, ChownSuccess) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   uid_t my_uid = LIBC_NAMESPACE::getuid();
   gid_t my_gid = LIBC_NAMESPACE::getgid();
-  constexpr const char *FILENAME = "chown.test";
+  constexpr const char *FILENAME = APPEND_LIBC_TEST("chown.test");
   auto TEST_FILE = libc_make_test_file_path(FILENAME);
 
   // Create a test file.

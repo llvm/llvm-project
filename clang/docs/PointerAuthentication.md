@@ -1389,6 +1389,17 @@ override the schema used for the v-table pointer of the base type of
 polymorphic class hierarchy. This attribute permits the configuration of the
 key, address diversity mode, and any extra constant discriminator to be used.
 
+Like object v-table pointers, pointers to virtual tables stored in VTTs are
+signed with the `DA` key. By default, no additional address or type
+discrimination is applied. When `-fptrauth-vtt-vtable-pointer-discrimination`
+is enabled, they are additionally discriminated by address and/or type,
+as controlled by the `-fptrauth-vtable-pointer-{address,type}-discrimination`
+options. Address discrimination uses the address of the corresponding VTT entry.
+Type discrimination uses the string hash (see [`ptrauth_string_discriminator`](#ptrauth-string-discriminator))
+of the mangled v-table identifier of the current class with an appended `_VTT`
+suffix. Unlike object v-table pointers, explicit schema customization for VTT
+entries is currently not supported.
+
 Virtual functions in a C++ virtual table are signed with the `IA` key, address
 diversity, and a constant discriminator equal to the string hash (see
 [`ptrauth_string_discriminator`](#ptrauth-string-discriminator)) of the mangled name of the function which

@@ -9,6 +9,7 @@ from lldbsuite.test.decorators import (
     skipIf,
     skipIfAsan,
     skipIfBuildType,
+    skipIfWasm,
     skipIfWindows,
 )
 from lldbsuite.test.tools.lldb_dap.types import Console, LaunchArgs
@@ -21,6 +22,7 @@ class TestDAP_launch_stdio_redirection_and_console(DAPTestCaseBase):
     """
 
     @skipIfAsan
+    @skipIfWasm  # runInTerminal has the client run the program, and a Wasm module is not executable
     @skipIfWindows  # https://github.com/llvm/llvm-project/issues/198763
     @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
     @skipIfBuildType(["debug"])

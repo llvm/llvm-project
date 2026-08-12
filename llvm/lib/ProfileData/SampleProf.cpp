@@ -43,12 +43,12 @@ static cl::opt<bool> GenerateMergedBaseProfiles(
 
 namespace llvm {
 namespace sampleprof {
-bool FunctionSamples::ProfileIsProbeBased = false;
-bool FunctionSamples::ProfileIsCS = false;
-bool FunctionSamples::ProfileIsPreInlined = false;
-bool FunctionSamples::UseMD5 = false;
-bool FunctionSamples::HasUniqSuffix = true;
-bool FunctionSamples::ProfileIsFS = false;
+std::atomic<bool> FunctionSamples::ProfileIsProbeBased;
+std::atomic<bool> FunctionSamples::ProfileIsCS;
+std::atomic<bool> FunctionSamples::ProfileIsPreInlined;
+std::atomic<bool> FunctionSamples::UseMD5;
+std::atomic<bool> FunctionSamples::HasUniqSuffix = true;
+std::atomic<bool> FunctionSamples::ProfileIsFS;
 
 std::error_code
 serializeTypeMap(const TypeCountMap &Map,

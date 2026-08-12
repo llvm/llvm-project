@@ -239,6 +239,8 @@ unsigned AMDGPUTargetStreamer::getElfMach(StringRef GPU) {
   case GK_GFX12_GENERIC:    return ELF::EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC;
   case GK_GFX12_5_GENERIC:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX12_5_GENERIC;
   case GK_GFX13_GENERIC:    return ELF::EF_AMDGPU_MACH_AMDGCN_GFX13_GENERIC;
+  case GK_GENERIC:
+  case GK_GENERIC_HSA:
   case GK_NONE:    return ELF::EF_AMDGPU_MACH_NONE;
   }
   // clang-format on

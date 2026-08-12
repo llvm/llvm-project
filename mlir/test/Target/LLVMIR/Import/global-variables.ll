@@ -92,6 +92,21 @@
 ; CHECK-SAME:  {addr_space = 0 : i32} : !llvm.struct<"my_struct", (struct<"sub_struct", ()>, i64)>
 @thread_local_var = external thread_local global %my_struct
 
+; Note: Classic LLVM-IR doesn't parse 'generaldynamic' in 'thread_local' as the dialect does,
+; so there is no _gd test.
+
+; CHECK:  llvm.mlir.global external thread_local(localdynamic) @thread_local_var_ld
+; CHECK-SAME:  {addr_space = 0 : i32} : !llvm.struct<"my_struct", (struct<"sub_struct", ()>, i64)>
+@thread_local_var_ld = external thread_local(localdynamic) global %my_struct
+
+; CHECK:  llvm.mlir.global external thread_local(initialexec) @thread_local_var_ie
+; CHECK-SAME:  {addr_space = 0 : i32} : !llvm.struct<"my_struct", (struct<"sub_struct", ()>, i64)>
+@thread_local_var_ie = external thread_local(initialexec) global %my_struct
+
+; CHECK:  llvm.mlir.global external thread_local(localexec) @thread_local_var_le
+; CHECK-SAME:  {addr_space = 0 : i32} : !llvm.struct<"my_struct", (struct<"sub_struct", ()>, i64)>
+@thread_local_var_le = external thread_local(localexec) global %my_struct
+
 ; // -----
 
 ; addr_space attribute.

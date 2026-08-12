@@ -2044,3 +2044,13 @@ namespace VariadicCtorStartsLifetime {
   /// Used to not start the lifetime of 's'.
   constexpr C c;
 }
+
+namespace BaseInitViaDIE {
+  struct S {
+    int a = 42, b = a;
+  };
+
+  struct SS : S {};
+  constexpr SS ss {};
+  static_assert(ss.b == 42, "");
+}

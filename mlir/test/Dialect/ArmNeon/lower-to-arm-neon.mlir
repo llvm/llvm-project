@@ -515,6 +515,27 @@ func.func @vector_arm_neon_mnk_unroll(%lhs: vector<4x16xi8>, %rhs: vector<4x16xi
   return %res : vector<4x4xi32>
 }
 
+// -----
+
+// Masked contractions must be left alone: rewriting one in place would leave
+// more than one op inside the `vector.mask` region, which is invalid.
+
+// CHECK-LABEL: func @vector_arm_neon_masked_contract_not_lowered
+// CHECK:       %[[RES:.*]] = vector.mask %{{.*}} { vector.contract
+// CHECK-NOT:   arm_neon.intr.smmla
+// CHECK:       return %[[RES]]
+func.func @vector_arm_neon_masked_contract_not_lowered(
+    %lhs: vector<4x8xi8>, %rhs: vector<4x8xi8>, %acc: vector<4x4xi32>,
+    %m: index, %n: index, %k: index) -> vector<4x4xi32> {
+  %mask = vector.create_mask %m, %n, %k : vector<4x4x8xi1>
+  %lhs_extsi = arith.extsi %lhs : vector<4x8xi8> to vector<4x8xi32>
+  %rhs_extsi = arith.extsi %rhs : vector<4x8xi8> to vector<4x8xi32>
+  %res = vector.mask %mask {
+    vector.contract {indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d2)>, affine_map<(d0, d1, d2) -> (d1, d2)>, affine_map<(d0, d1, d2) -> (d0, d1)>], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %lhs_extsi, %rhs_extsi, %acc : vector<4x8xi32>, vector<4x8xi32> into vector<4x4xi32>
+  } : vector<4x4x8xi1> -> vector<4x4xi32>
+  return %res : vector<4x4xi32>
+}
+
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %module : (!transform.any_op) -> !transform.op<"func.func">

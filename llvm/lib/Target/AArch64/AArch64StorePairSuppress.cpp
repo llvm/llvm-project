@@ -52,7 +52,6 @@ private:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     AU.addRequired<MachineTraceMetricsWrapperPass>();
     AU.addPreserved<MachineTraceMetricsWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);

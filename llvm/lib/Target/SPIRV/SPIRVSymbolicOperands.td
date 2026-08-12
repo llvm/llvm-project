@@ -404,6 +404,7 @@ defm SPV_AMD_weak_linkage : ExtensionOperand<137, [EnvOpenCL]>;
 // Message Type, which is not yet implemented.
 defm SPV_KHR_abort : ExtensionOperand<138, [EnvOpenCL]>;
 defm SPV_KHR_poison_freeze : ExtensionOperand<139, [EnvVulkan, EnvOpenCL]>;
+defm SPV_KHR_untyped_pointers : ExtensionOperand<140, [EnvOpenCL]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -642,6 +643,7 @@ defm ArbitraryPrecisionFixedPointALTERA : CapabilityOperand<5922, 0, 0, [SPV_ALT
 defm ArbitraryPrecisionFloatingPointALTERA : CapabilityOperand<5845, 0, 0,[SPV_ALTERA_arbitrary_precision_floating_point], []>;
 defm UnstructuredLoopControlsINTEL : CapabilityOperand<5886, 0, 0, [SPV_INTEL_unstructured_loop_controls], []>;
 defm PoisonFreezeKHR : CapabilityOperand<5156, 0, 0, [SPV_KHR_poison_freeze], []>;
+defm UntypedPointersKHR : CapabilityOperand<4473, 0, 0, [SPV_KHR_untyped_pointers], []>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define SourceLanguage enum values and at the same time
@@ -1867,6 +1869,8 @@ multiclass OpcodeOperand<bits<32> value> {
 // TODO: implement other mnemonics.
 defm InBoundsAccessChain : OpcodeOperand<66>;
 defm InBoundsPtrAccessChain : OpcodeOperand<70>;
+defm UntypedInBoundsAccessChainKHR : OpcodeOperand<4420>;
+defm UntypedInBoundsPtrAccessChainKHR : OpcodeOperand<4424>;
 defm PtrCastToGeneric : OpcodeOperand<121>;
 defm GenericCastToPtr : OpcodeOperand<122>;
 defm GenericCastToPtrExplicit : OpcodeOperand<123>;
@@ -2026,6 +2030,10 @@ defm AccessChain :  SpecConstantOpOperandsOperand<65, [], [Kernel]>;
 defm InBoundsAccessChain :  SpecConstantOpOperandsOperand<66, [], [Kernel]>;
 defm PtrAccessChain :  SpecConstantOpOperandsOperand<67, [], [Kernel]>;
 defm InBoundsPtrAccessChain :  SpecConstantOpOperandsOperand<70, [], [Kernel]>;
+defm UntypedAccessChainKHR :  SpecConstantOpOperandsOperand<4419, [SPV_KHR_untyped_pointers], [Kernel]>;
+defm UntypedInBoundsAccessChainKHR :  SpecConstantOpOperandsOperand<4420, [SPV_KHR_untyped_pointers], [Kernel]>;
+defm UntypedPtrAccessChainKHR :  SpecConstantOpOperandsOperand<4423, [SPV_KHR_untyped_pointers], [Kernel]>;
+defm UntypedInBoundsPtrAccessChainKHR :  SpecConstantOpOperandsOperand<4424, [SPV_KHR_untyped_pointers], [Kernel]>;
 defm CooperativeMatrixLengthKHR : SpecConstantOpOperandsOperand<4460, [], []>;
 
 //===----------------------------------------------------------------------===//

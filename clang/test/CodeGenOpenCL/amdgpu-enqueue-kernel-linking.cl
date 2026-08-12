@@ -1,8 +1,8 @@
 // Make sure that invoking blocks in static functions with the same name in
 // different modules are linked together.
 
-// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -fno-ident -DKERNEL_NAME=test_kernel_first -DTYPE=float -DCONST=256.0f -emit-llvm-bc -o %t.0.bc %s
-// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -fno-ident -DKERNEL_NAME=test_kernel_second -DTYPE=int -DCONST=128.0f -emit-llvm-bc -o %t.1.bc %s
+// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgpu-amd-amdhsa -fno-ident -DKERNEL_NAME=test_kernel_first -DTYPE=float -DCONST=256.0f -emit-llvm-bc -o %t.0.bc %s
+// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgpu-amd-amdhsa -fno-ident -DKERNEL_NAME=test_kernel_second -DTYPE=int -DCONST=128.0f -emit-llvm-bc -o %t.1.bc %s
 
 // Make sure nothing strange happens with the linkage choices.
 // RUN: opt -passes=globalopt -o %t.opt.0.bc %t.0.bc

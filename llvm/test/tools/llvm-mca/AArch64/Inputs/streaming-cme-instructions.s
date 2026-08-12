@@ -39,9 +39,25 @@ mla z0.d, p0/m, z1.d, z2.d
 index z0.s, w0, #1
 index z0.s, #0, w0
 index z0.s, w0, w1
+index z23.d, x13, #8
 insr z0.s, w0
 lasta d0, p7, z31.d
+lasta x0, p0, z1.d
 faddv d0, p0, z1.d
 fmaxnmv d0, p0, z1.d
 sqcvtn z0.h, { z0.s, z1.s }
 uaddv d0, p7, z31.b
+clasta	z0.b, p7, z0.b, z31.b
+clastb	z0.b, p7, z0.b, z31.b
+compact z31.s, p7, z31.s
+splice	z29.b, p7, { z30.b, z31.b }
+cmpeq	p0.b, p0/z, z0.b, #-16
+cmpge	p0.b, p0/z, z0.b, #-16
+cmpgt	p0.b, p0/z, z0.b, #-16
+cmphi	p0.d, p0/z, z0.d, #127
+cmphs	p0.b, p0/z, z0.b, #0
+cmple	p0.b, p0/z, z0.b, #-16
+cmplo	p0.b, p0/z, z0.b, #0
+cmpls	p0.b, p0/z, z0.b, #0
+cmplt	p0.b, p0/z, z0.b, #-16
+cmpne	p0.b, p0/z, z0.b, #-16

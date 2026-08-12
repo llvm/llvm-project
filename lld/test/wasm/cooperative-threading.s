@@ -2,7 +2,7 @@
 # thread-context globals (__init_stack_pointer, __init_tls_base, etc.) and
 # works without --shared-memory and atomics.
 
-# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.o %s
+# RUN: llvm-mc -mattr=+call-indirect-overlong -filetype=obj -triple=wasm32-unknown-unknown -o %t.o %s
 # RUN: wasm-ld --cooperative-threading -no-gc-sections -o %t.wasm %t.o
 # RUN: obj2yaml %t.wasm | FileCheck %s
 # RUN: llvm-objdump -d --no-print-imm-hex --no-show-raw-insn %t.wasm | FileCheck %s --check-prefix=DIS
@@ -11,10 +11,20 @@
 # RUN: not wasm-ld --cooperative-threading --shared-memory %t.o -o %t2.wasm 2>&1 | FileCheck %s --check-prefix=INCOMPAT
 # INCOMPAT: --cooperative-threading is incompatible with --shared-memory
 
+.globl __indirect_function_table
+.tabletype __indirect_function_table, funcref
+
 .globl         __wasm_get_tls_base
 __wasm_get_tls_base:
   .functype   __wasm_get_tls_base () -> (i32)
   i32.const 0
+  end_function
+
+.globl do_call_indirect
+do_call_indirect:
+  .functype do_call_indirect () -> ()
+  i32.const 1
+  call_indirect __indirect_function_table, () -> ()
   end_function
 
 .globl _start
@@ -66,11 +76,22 @@ foo:
   .int8 7
   .ascii  "atomics"
 
+# CHECK:      - Type:            TABLE
+# CHECK-NEXT:   Tables:
+# CHECK-NEXT:     - Index:           0
+# CHECK-NEXT:       ElemType:        FUNCREF
+
 # Memory must NOT be marked as shared.
 # CHECK:      - Type:            MEMORY
 # CHECK-NEXT:   Memories:
 # CHECK-NEXT:     - Minimum:         0x2
 # CHECK-NOT:       Shared
+
+# The function table is exported by default.
+# CHECK:      - Type:            EXPORT
+# CHECK:          - Name:            __indirect_function_table
+# CHECK-NEXT:       Kind:            TABLE
+# CHECK-NEXT:       Index:           0
 
 # Only TLS needs a passive data segment; .data stays active and .bss gets no
 # segment at all since memory is only instantiated once and starts zeroed.
@@ -118,3 +139,14 @@ foo:
 # DIS-NEXT:       i32.load        0
 # DIS-NEXT:       i32.add
 # DIS-NEXT:       end
+
+# When the table is imported instead there is no need to also export it.
+# RUN: wasm-ld --cooperative-threading --import-table -no-gc-sections -o %t3.wasm %t.o
+# RUN: obj2yaml %t3.wasm | FileCheck %s --check-prefix=IMPORT-TABLE
+
+# When the table is imported instead there is no need to also export it.
+# IMPORT-TABLE:      - Type:            IMPORT
+# IMPORT-TABLE:          - Module:          env
+# IMPORT-TABLE-NEXT:       Field:           __indirect_function_table
+# IMPORT-TABLE-NEXT:       Kind:            TABLE
+# IMPORT-TABLE-NOT:        Kind:            TABLE

@@ -101,9 +101,11 @@ add_header_library(
     macros/properties/compiler.h
     macros/attributes.h
     macros/config.h
+    macros/hardening.h
   DEPENDS
     libc.hdr.stdint_proxy
     libc.src.__support.CPP.bit
+    libc.src.__support.macros.hardening
 )
 
 add_header_library(
@@ -162,10 +164,10 @@ list(APPEND wctype_utils_deps
   libc.hdr.types.wchar_t
 )
 
-if ("${LIBC_CONF_WCTYPE_MODE}" STREQUAL "LIBC_WCTYPE_MODE_UTF8")
+if("${LIBC_CONF_WCTYPE_MODE}" STREQUAL "LIBC_WCTYPE_MODE_UTF8")
   list(APPEND wctype_utils_deps
-      libc.src.__support.wctype.wctype_classification_utils
-      libc.src.__support.wctype.wctype_conversion_utils
+    libc.src.__support.wctype.wctype_classification_utils
+    libc.src.__support.wctype.wctype_conversion_utils
   )
 endif()
 
@@ -389,6 +391,8 @@ if(LIBC_COPT_USE_C_ASSERT OR NOT LLVM_LIBC_FULL_BUILD)
     libc_assert
     HDRS
       libc_assert.h
+    DEPENDS
+      libc.src.__support.macros.hardening
   )
 else()
   add_header_library(
@@ -399,6 +403,7 @@ else()
       .integer_to_string
       libc.src.__support.OSUtil.osutil
       libc.src.__support.macros.optimization
+      libc.src.__support.macros.hardening
   )
 endif()
 

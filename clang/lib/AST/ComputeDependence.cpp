@@ -616,6 +616,29 @@ ExprDependence clang::computeDependence(DeclRefExpr *E, const ASTContext &Ctx) {
       Deps |= ExprDependence::ValueInstantiation;
   }
 
+  // The standard doesn't explicitly specify rules for when individial bindings
+  // a structured binding declaration are value-dependent. Handle them using a
+  // similar rule to the rule for variables:
+  //
+  // - An id-expression referring to a tuple binding is value-dependent if
+  //   an id-expression referring to the synthetic variable used to store the
+  //   result of get() would be value-dependent.
+  // - An id-expression referring to a non-tuple binding is value-dependent if
+  //   an id-expression referring to the synthetic variable used to store the
+  //   initializer would be value-dependent.
+  //
+  // Internally, this is equivalent to just checking whether the expression
+  // representing the binding is value-dependent.
+  if (const auto *BD = dyn_cast<BindingDecl>(Decl)) {
+    if (const Expr *Init = BD->getBinding()) {
+      if (Init->containsErrors())
+        Deps |= ExprDependence::Error;
+
+      if (Init->isValueDependent())
+        Deps |= ExprDependence::ValueInstantiation;
+    }
+  }
+
   return Deps;
 }
 

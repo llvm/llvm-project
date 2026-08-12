@@ -1469,7 +1469,7 @@ void Thread::PushProviderFrameList(StackFrameListSP frames) {
   HostThread current(Host::GetCurrentThread());
   auto &stack = m_active_frame_providers_by_thread[current];
   LLDB_LOG(GetLog(LLDBLog::Thread),
-           "Thread::PushProviderFrameList: tid = 0x{0:x}, depth = {1} -> {2}",
+           "Thread::PushProviderFrameList: tid = {0:x}, depth = {1} -> {2}",
            GetID(), stack.size(), stack.size() + 1);
   stack.push_back(std::move(frames));
 }
@@ -1481,7 +1481,7 @@ void Thread::PopProviderFrameList() {
   size_t pre_pop_depth =
       (it != m_active_frame_providers_by_thread.end()) ? it->second.size() : 0;
   LLDB_LOG(GetLog(LLDBLog::Thread),
-           "Thread::PopProviderFrameList: tid = 0x{0:x}, depth = {1} -> {2}",
+           "Thread::PopProviderFrameList: tid = {0:x}, depth = {1} -> {2}",
            GetID(), pre_pop_depth, pre_pop_depth ? pre_pop_depth - 1 : 0);
   assert(it != m_active_frame_providers_by_thread.end() && !it->second.empty());
   if (it == m_active_frame_providers_by_thread.end() || it->second.empty())
@@ -1621,7 +1621,7 @@ StackFrameListSP Thread::GetStackFrameList() {
           *this, input_frames, m_prev_frames_sp, true, last_provider, last_id);
     } else {
       LLDB_LOG(GetLog(LLDBLog::Thread),
-               "Missing frame provider (id = {0}) in Thread #{1:x}}", last_id,
+               "Missing frame provider (id = {0}) in Thread #{1:x}", last_id,
                GetID());
     }
   }

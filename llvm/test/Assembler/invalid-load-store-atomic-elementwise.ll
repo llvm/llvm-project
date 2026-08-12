@@ -5,6 +5,7 @@
 ; RUN: not llvm-as -disable-output %t/load-odd-sized.ll 2>&1 | FileCheck %t/load-odd-sized.ll
 ; RUN: not llvm-as -disable-output %t/load-non-byte.ll 2>&1 | FileCheck %t/load-non-byte.ll
 ; RUN: not llvm-as -disable-output %t/load-non-byte-element.ll 2>&1 | FileCheck %t/load-non-byte-element.ll
+; RUN: not llvm-as -disable-output %t/load-seq-cst.ll 2>&1 | FileCheck %t/load-seq-cst.ll
 
 ;--- load-non-atomic.ll
 ; CHECK: elementwise load must be atomic
@@ -46,4 +47,11 @@ define <4 x i1> @bad_non_byte(ptr %p) {
 define <8 x i1> @bad_non_byte_element(ptr %p) {
   %v = load atomic elementwise <8 x i1>, ptr %p monotonic, align 1
   ret <8 x i1> %v
+}
+
+;--- load-seq-cst.ll
+; CHECK: atomic elementwise load cannot be sequentially consistent
+define <4 x i32> @bad_seq_cst(ptr %p) {
+  %v = load atomic elementwise <4 x i32>, ptr %p seq_cst, align 4
+  ret <4 x i32> %v
 }

@@ -78,12 +78,6 @@ public:
     return TargetABI == ARM::ARM_ABI_AAPCS16;
   }
 
-  bool isTargetHardFloat() const {
-    // -target-abi=aapcs16 overrides the triple default.
-    return TargetABI == ARM::ARM_ABI_AAPCS16 ||
-           TargetTriple.getDefaultFloatABI() == FloatABI::Hard;
-  }
-
   bool targetSchedulesPostRAScheduling() const override { return true; };
 
   MachineFunctionInfo *

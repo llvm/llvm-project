@@ -194,7 +194,11 @@ template <class charT> class messages_byname;
 
 #  if _LIBCPP_HAS_LOCALIZATION
 
-#    include <__locale>
+#    include <__locale_dir/codecvt.h>
+#    include <__locale_dir/collate.h>
+#    include <__locale_dir/ctype.h>
+#    include <__locale_dir/ctype_base.h>
+#    include <__locale_dir/locale.h>
 #    include <__locale_dir/messages.h>
 #    include <__locale_dir/money.h>
 #    include <__locale_dir/num.h>
@@ -210,17 +214,6 @@ template <class charT> class messages_byname;
 
 #  endif // _LIBCPP_HAS_LOCALIZATION
 
-#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
-#    include <atomic>
-#    include <concepts>
-#    include <cstdarg>
-#    include <iterator>
-#    include <mutex>
-#    include <optional>
-#    include <stdexcept>
-#    include <type_traits>
-#    include <typeinfo>
-#  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_LOCALE

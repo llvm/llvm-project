@@ -615,12 +615,13 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
     AffineMap readMap = readOp.getPermutationMap();
     bool isTransposeLoad = isInnermostTwoDimsTransposed(readMap);
 
-    // Prefer an nd block load. It requires HW block-load support, a non-0D
-    // vector backed by a scalar-element memref, and a map the block load can
-    // realize. Out-of-bounds reads are allowed as long as the padding matches
-    // load_nd's implicit zero padding.
+    // Prefer an nd block load. It requires HW block-load support, a vector of
+    // rank >= 2 backed by a scalar-element memref, and a map the block load can
+    // realize. 1D vectors use the scattered xegpu.load path instead, which has
+    // a richer interface (e.g. layout capabilities). Out-of-bounds reads are
+    // allowed as long as the padding matches load_nd's implicit zero padding.
     bool canLowerToLoadNd =
-        hasBlockLoadSupport && loadedVecTy.getRank() > 0 &&
+        hasBlockLoadSupport && loadedVecTy.getRank() > 1 &&
         (readMap.isMinorIdentity() || isTransposeLoad) &&
         readMemTy.getElementType().isIntOrFloat() &&
         (!isOutOfBounds || isZeroOrPoisonPadding(readOp.getPadding()));
@@ -726,12 +727,13 @@ struct TransferWriteLowering
     bool hasBlockStoreSupport =
         (chip == "pvc" || chip == "bmg" || chip == "cri");
 
-    // Prefer an nd block store. It requires HW block-store support, a non-0D
-    // vector backed by a scalar-element memref, and a minor-identity map (block
-    // stores have no transpose support). Out-of-bounds writes are handled by
-    // the descriptor's boundary check.
+    // Prefer an nd block store. It requires HW block-store support, a vector of
+    // rank >= 2 backed by a scalar-element memref, and a minor-identity map
+    // (block stores have no transpose support). 1D vectors use the scattered
+    // xegpu.store path instead, which has a richer interface. Out-of-bounds
+    // writes are handled by the descriptor's boundary check.
     AffineMap map = writeOp.getPermutationMap();
-    bool canLowerToStoreNd = hasBlockStoreSupport && vecTy.getRank() > 0 &&
+    bool canLowerToStoreNd = hasBlockStoreSupport && vecTy.getRank() > 1 &&
                              map.isMinorIdentity() &&
                              writeMemTy.getElementType().isIntOrFloat();
 
@@ -924,6 +926,63 @@ struct StoreLowering : public OpRewritePattern<vector::StoreOp> {
   }
 };
 
+// If `indexingMaps` describe a (batched) row-major matmul
+//   lhs[b..., m, k], rhs[b..., k, n], acc[b..., m, n]
+// return the number of leading batch dims (0 for a plain 2D matmul);
+// otherwise return std::nullopt.
+static std::optional<int64_t>
+getRowMajorMatmulBatchRank(ArrayAttr indexingMaps) {
+  if (indexingMaps.size() != 3)
+    return std::nullopt;
+
+  AffineMap mapA = cast<AffineMapAttr>(indexingMaps[0]).getValue();
+  AffineMap mapB = cast<AffineMapAttr>(indexingMaps[1]).getValue();
+  AffineMap mapC = cast<AffineMapAttr>(indexingMaps[2]).getValue();
+
+  // The result map exposes the batch dims followed by the core (m, n) dims.
+  if (mapC.getNumResults() < 2)
+    return std::nullopt;
+  int64_t batchRank = mapC.getNumResults() - 2;
+
+  // A single `k` reduction gives batchRank + 3 iteration dims; each operand
+  // map exposes batchRank + 2 dims (batch dims + 2 core dims).
+  unsigned numDims = static_cast<unsigned>(batchRank) + 3;
+  unsigned numOperandResults = static_cast<unsigned>(batchRank) + 2;
+  if (mapA.getNumInputs() != numDims || mapB.getNumInputs() != numDims ||
+      mapC.getNumInputs() != numDims)
+    return std::nullopt;
+  if (mapA.getNumResults() != numOperandResults ||
+      mapB.getNumResults() != numOperandResults)
+    return std::nullopt;
+
+  // Reconstruct the canonical maps from the batch/m/n dims of the result and
+  // the k dim of lhs, then compare against the actual maps.
+  MLIRContext *context = indexingMaps.getContext();
+  ArrayRef<AffineExpr> batchDims = mapC.getResults().take_front(batchRank);
+  AffineExpr m = mapC.getResult(batchRank);
+  AffineExpr n = mapC.getResult(batchRank + 1);
+  AffineExpr k = mapA.getResult(batchRank + 1);
+
+  SmallVector<AffineExpr> aDims = llvm::to_vector(batchDims);
+  aDims.push_back(m);
+  aDims.push_back(k);
+  SmallVector<AffineExpr> bDims = llvm::to_vector(batchDims);
+  bDims.push_back(k);
+  bDims.push_back(n);
+  SmallVector<AffineExpr> cDims = llvm::to_vector(batchDims);
+  cDims.push_back(m);
+  cDims.push_back(n);
+
+  auto expected = ArrayAttr::get(
+      context,
+      {AffineMapAttr::get(AffineMap::get(numDims, 0, aDims, context)),
+       AffineMapAttr::get(AffineMap::get(numDims, 0, bDims, context)),
+       AffineMapAttr::get(AffineMap::get(numDims, 0, cDims, context))});
+  if (indexingMaps != expected)
+    return std::nullopt;
+  return batchRank;
+}
+
 struct ContractionLowering : public OpRewritePattern<vector::ContractionOp> {
   using Base::Base;
 
@@ -935,21 +994,26 @@ struct ContractionLowering : public OpRewritePattern<vector::ContractionOp> {
       return rewriter.notifyMatchFailure(contractOp,
                                          "Expects add combining kind");
 
-    TypedValue<Type> acc = contractOp.getAcc();
-    VectorType accType = dyn_cast<VectorType>(acc.getType());
-    if (!accType || accType.getRank() != 2)
-      return rewriter.notifyMatchFailure(contractOp, "Expects acc 2D vector");
-
-    // Accept only plain 2D data layout.
-    // VNNI packing is applied to DPAS as a separate lowering step.
     TypedValue<VectorType> lhs = contractOp.getLhs();
     TypedValue<VectorType> rhs = contractOp.getRhs();
-    if (lhs.getType().getRank() != 2 || rhs.getType().getRank() != 2)
-      return rewriter.notifyMatchFailure(contractOp,
-                                         "Expects lhs and rhs 2D vectors");
+    TypedValue<Type> acc = contractOp.getAcc();
+    VectorType accType = dyn_cast<VectorType>(acc.getType());
+    if (!accType)
+      return rewriter.notifyMatchFailure(contractOp, "Expects vector acc");
 
-    if (!isRowMajorMatmul(contractOp.getIndexingMapsAttr()))
-      return rewriter.notifyMatchFailure(contractOp, "Invalid indexing maps");
+    std::optional<int64_t> batchRank =
+        getRowMajorMatmulBatchRank(contractOp.getIndexingMapsAttr());
+    if (!batchRank)
+      return rewriter.notifyMatchFailure(
+          contractOp,
+          "Expects a (batched) row-major matmul: leading dims must "
+          "be batch dims shared by lhs, rhs, and acc; innermost two "
+          "dims must be (M, K), (K, N), and (M, N)");
+
+    // xegpu.dpas operands are limited to 2 batch + 2 core dims.
+    if (*batchRank > 2)
+      return rewriter.notifyMatchFailure(contractOp,
+                                         "Expects operands of rank 4 or less");
 
     auto dpasOp = xegpu::DpasOp::create(rewriter, loc,
                                         TypeRange{contractOp.getResultType()},

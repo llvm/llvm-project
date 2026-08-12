@@ -1063,11 +1063,6 @@ struct Emplaceable {
       : A0(std::forward<A0Ty>(A0)), A1(std::forward<A1Ty>(A1)),
         State(ES_Emplaced) {}
 
-  template <class A0Ty, class A1Ty, class A2Ty>
-  Emplaceable(A0Ty &&A0, A1Ty &&A1, A2Ty &&A2)
-      : A0(std::forward<A0Ty>(A0)), A1(std::forward<A1Ty>(A1)),
-        A2(std::forward<A2Ty>(A2)), State(ES_Emplaced) {}
-
   template <class A0Ty, class A1Ty, class A2Ty, class A3Ty>
   Emplaceable(A0Ty &&A0, A1Ty &&A1, A2Ty &&A2, A3Ty &&A3)
       : A0(std::forward<A0Ty>(A0)), A1(std::forward<A1Ty>(A1)),

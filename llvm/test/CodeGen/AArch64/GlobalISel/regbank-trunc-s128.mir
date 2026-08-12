@@ -12,13 +12,13 @@ body:             |
     ; CHECK-LABEL: name: trunc_s64_s128
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr(s128) = COPY $q0
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:fpr(s64) = G_TRUNC [[COPY]](s128)
-    ; CHECK-NEXT: $d2 = COPY [[TRUNC]](s64)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr(i128) = COPY $q0
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:fpr(i64) = G_TRUNC [[COPY]](i128)
+    ; CHECK-NEXT: $d2 = COPY [[TRUNC]](i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d2
-    %0:_(s128) = COPY $q0
-    %1:_(s64) = G_TRUNC %0(s128)
-    $d2 = COPY %1(s64)
+    %0:_(i128) = COPY $q0
+    %1:_(i64) = G_TRUNC %0(i128)
+    $d2 = COPY %1(i64)
     RET_ReallyLR implicit $d2
 
 ...

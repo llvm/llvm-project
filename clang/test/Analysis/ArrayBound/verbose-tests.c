@@ -44,8 +44,7 @@ struct TwoInts underflowReportedAsStruct(void) {
 
 struct TwoInts underflowOnlyByteOffset(void) {
   // In this case the negative byte offset is not a multiple of the size of the
-  // accessed element, so the part "= -... * sizeof(type)" is omitted at the
-  // end of the message.
+  // accessed element, so we use a byte offset instead of an index.
   return *(struct TwoInts*)(TenElements - 3);
   // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
   // expected-note@-2 {{Access of 'TenElements' at negative byte offset -12}}
@@ -410,3 +409,19 @@ int *nothingIsCertain(int x, int y) {
 
   return mem;
 }
+
+#ifndef _WIN32
+// We disable this test under Windows because 'struct Empty {}' has a nozero
+// size on that platform. Note that '_WIN32' is also defined on 64-bit systems
+// and is apparently the customary way to detect Windows OS.
+
+struct Empty {};
+struct Empty ZeroSizeElements[10];
+
+struct Empty zeroSizeElements(void) {
+  // FIXME: We probably shouldn't report this access.
+  return ZeroSizeElements[5];
+  // expected-warning@-1 {{Out of bound access to memory after the end of 'ZeroSizeElements'}}
+  // expected-note@-2 {{Access of 'ZeroSizeElements' at byte offset 0, while it holds only 0 byte}}
+}
+#endif

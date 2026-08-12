@@ -46,7 +46,7 @@ func.func @simple_loop(%arg0: !fir.ref<!fir.array<100xi32>>) {
 // CHECK: %[[C0:.*]] = arith.constant 0 : index
 // CHECK: %[[C1:.*]] = arith.constant 1 : index
 // CHECK: scf.for %{{.*}} = %[[C0]] to %[[TRIP]] step %[[C1]] iter_args(%[[IV:.*]] = %[[LB]]) -> (i32) {
-// CHECK:   %[[NEXT:.*]] = arith.addi %[[IV]], %[[STEP]] : i32
+// CHECK:   %[[NEXT:.*]] = arith.addi %[[IV]], %[[STEP]] overflow<nsw> : i32
 // CHECK:   fir.store %[[IV]] to %[[ADDR]] : !fir.ref<i32>
 // CHECK:   scf.yield %[[NEXT]] : i32
 // CHECK: }
@@ -212,7 +212,7 @@ func.func @loop_with_final_value_yielding_iv() {
 // CHECK:           %[[C0:.*]] = arith.constant 0 : index
 // CHECK:           %[[ONE:.*]] = arith.constant 1 : index
 // CHECK:           %[[LOOP:.*]]:2 = scf.for %{{.*}} = %[[C0]] to %[[TRIP]] step %[[ONE]] iter_args(%[[IVIN:.*]] = %[[C1]], %[[ACCIN:.*]] = %[[C0I32]]) -> (index, i32) {
-// CHECK:             %[[IVNEXT:.*]] = arith.addi %{{.*}}, %[[C1]] : index
+// CHECK:             %[[IVNEXT:.*]] = arith.addi %{{.*}}, %[[C1]] overflow<nsw> : index
 // CHECK:             %[[ACCOUT:.*]] = arith.addi %[[ACCIN]], %[[ACCIN]] : i32
 // CHECK:             scf.yield %[[IVNEXT]], %[[ACCOUT]] : index, i32
 // CHECK:           }

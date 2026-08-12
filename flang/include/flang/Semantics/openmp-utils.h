@@ -298,6 +298,21 @@ bool HasDataEnvironment(llvm::omp::Directive dir);
 
 bool IsFullUnroll(const parser::OmpDirectiveSpecification &spec);
 
+/// The AT, SEVERITY, and MESSAGE clause values of an `!$omp error` directive.
+/// `at` and `severity` default to AT(compilation)/SEVERITY(fatal) when absent;
+/// `message` is null when there is no MESSAGE clause.
+struct OmpErrorArgs {
+  parser::OmpAtClause::ActionTime at{
+      parser::OmpAtClause::ActionTime::Compilation};
+  parser::OmpSeverityClause::SevLevel severity{
+      parser::OmpSeverityClause::SevLevel::Fatal};
+  const parser::Expr *message{nullptr};
+};
+
+/// Scan the clause list of an `!$omp error` directive for its AT, SEVERITY, and
+/// MESSAGE clause values.
+OmpErrorArgs GetErrorDirectiveArgs(const parser::OmpErrorDirective &errDir);
+
 inline bool IsDoConcurrentLegal(unsigned version) {
   // DO CONCURRENT is allowed (as an alternative to a Canonical Loop Nest)
   // in OpenMP 6.0+.

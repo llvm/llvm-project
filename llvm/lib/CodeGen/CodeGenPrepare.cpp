@@ -659,7 +659,7 @@ bool CodeGenPrepare::_run(Function &F) {
            "Incorrect DominatorTree updates in CGP");
 
   if (VerifyLoopInfo)
-    LI->verify(getDT());
+    LI->verify();
 #endif
 
   // If we are optimzing huge function, we need to consider the build time.
@@ -723,7 +723,7 @@ bool CodeGenPrepare::_run(Function &F) {
              "Incorrect DominatorTree updates in CGP");
 
     if (VerifyLoopInfo)
-      LI->verify(getDT());
+      LI->verify();
 #endif
 
     // Really free removed instructions during promotion.
@@ -856,9 +856,8 @@ void CodeGenPrepare::removeAllAssertingVHReferences(Value *V) {
   DominatorTree NewDT(F);
   CycleInfo NewCI;
   NewCI.compute(F);
-  LoopInfo NewLI(NewDT);
   BranchProbabilityInfo NewBPI(F, NewCI, TLInfo);
-  BlockFrequencyInfo NewBFI(F, NewBPI, NewLI);
+  BlockFrequencyInfo NewBFI(F, NewBPI, NewCI);
   NewBFI.verifyMatch(*BFI);
 }
 

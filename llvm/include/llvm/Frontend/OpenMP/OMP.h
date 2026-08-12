@@ -17,11 +17,140 @@
 #include "llvm/Support/Compiler.h"
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Bitset.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace llvm::omp {
+template <typename Enum, size_t Size> struct EnumSet;
+
+namespace detail {
+template <size_t Size>
+static constexpr inline size_t findFirstSet(size_t Begin, size_t End,
+                                            const llvm::Bitset<Size> &Set) {
+  unsigned BeginWord = Begin / 64;
+  unsigned EndWord = (End + 63) / 64;
+
+  for (unsigned I = BeginWord; I < EndWord; ++I) {
+    uint64_t Word = Set.getWord64(I);
+    if (I == BeginWord && Begin % 64 != 0) {
+      Word &= ~uint64_t() << (Begin % 64);
+    }
+    auto Count = static_cast<unsigned>(llvm::countr_zero_constexpr(Word));
+    if (Count < 64) {
+      unsigned Idx = I * 64 + Count;
+      if (Idx >= Begin && Idx < End)
+        return Idx;
+    }
+  }
+  return Size;
+}
+
+template <typename Enum, size_t Size> struct EnumSetIterator {
+  using value_type = Enum;
+  static constexpr size_t enum_size = Size;
+
+  constexpr EnumSetIterator(const EnumSet<Enum, Size> &Set, size_t At)
+      : Set(Set), At(At) {}
+
+  constexpr Enum operator*() const;
+  constexpr auto &operator++();
+
+  constexpr bool operator==(const EnumSetIterator<Enum, Size> &Other) const {
+    return &Set == &Other.Set && At == Other.At;
+  }
+  constexpr bool operator!=(const EnumSetIterator<Enum, Size> &Other) const {
+    return !operator==(Other);
+  }
+
+private:
+  const EnumSet<Enum, Size> &Set;
+  size_t At;
+};
+} // namespace detail
+
+template <typename Enum, size_t Size>
+struct EnumSet : public llvm::Bitset<Size> {
+  using value_type = Enum;
+  using Base = llvm::Bitset<Size>;
+  using Base::Base;
+  using iterator = detail::EnumSetIterator<Enum, Size>;
+
+  constexpr EnumSet(Base &&B) : Base(std::move(B)) {}
+  constexpr EnumSet(std::initializer_list<value_type> Init) {
+    for (value_type E : Init) {
+      auto Value = static_cast<unsigned>(E);
+      assert(Value < Base::size() && "Invalid enumeration value");
+      Base::set(Value);
+    }
+  }
+
+  constexpr bool empty() const { return Base::none(); }
+  constexpr size_t size() const { return Base::count(); }
+  constexpr size_t max_size() const { return Size; }
+
+  constexpr bool test(Enum E) const {
+    return Base::test(static_cast<unsigned>(E));
+  }
+  constexpr bool operator[](Enum E) const {
+    return Base::operator[](static_cast<unsigned>(E));
+  }
+  constexpr EnumSet &flip(Enum E) {
+    Base::flip(static_cast<unsigned>(E));
+    return *this;
+  }
+  constexpr EnumSet &reset(Enum E) {
+    Base::reset(static_cast<unsigned>(E));
+    return *this;
+  }
+  constexpr EnumSet &set(Enum E) {
+    Base::set(static_cast<unsigned>(E));
+    return *this;
+  }
+
+  constexpr EnumSet &operator|=(const EnumSet &S) {
+    Base::operator|=(S);
+    return *this;
+  }
+  constexpr EnumSet &operator&=(const EnumSet &S) {
+    Base::operator&=(S);
+    return *this;
+  }
+  constexpr EnumSet operator|(const EnumSet &S) const {
+    EnumSet T{*this};
+    return T |= S;
+  }
+  constexpr EnumSet operator&(const EnumSet &S) const {
+    EnumSet T{*this};
+    return T &= S;
+  }
+
+  constexpr iterator begin() const {
+    return iterator(*this, detail::findFirstSet<Size>(0, Size, *this));
+  }
+  constexpr iterator end() const { return iterator(*this, Size); }
+};
+
+namespace detail {
+template <typename Enum, size_t Size>
+constexpr Enum EnumSetIterator<Enum, Size>::operator*() const {
+  // Older gcc doesn't like assert(Set.Base::test(At));
+  assert((static_cast<const llvm::Bitset<Size> &>(Set).test(At)));
+  return static_cast<Enum>(At);
+}
+
+template <typename Enum, size_t Size>
+constexpr auto &EnumSetIterator<Enum, Size>::operator++() {
+  At = findFirstSet<Size>(At + 1, Size, Set);
+  return *this;
+}
+} // namespace detail
+
+using ClauseSet = EnumSet<llvm::omp::Clause, llvm::omp::Clause_enumSize>;
+using DirectiveSet =
+    EnumSet<llvm::omp::Directive, llvm::omp::Directive_enumSize>;
+
 LLVM_ABI ArrayRef<Directive> getLeafConstructs(Directive D);
 LLVM_ABI ArrayRef<Directive> getLeafConstructsOrSelf(Directive D);
 

@@ -508,3 +508,25 @@ func.func @parallel_minnumf_reduce() {
   return
 }
 
+
+// -----
+
+// CHECK-LABEL: func.func @affine_load_store_alignment
+func.func @affine_load_store_alignment(%memref: memref<4xi32>) {
+  // CHECK: affine.load {{.*}} {alignment = 16 : i64}
+  %val = affine.load %memref[0] { alignment = 16 } : memref<4xi32>
+  // CHECK: affine.store {{.*}} {alignment = 16 : i64}
+  affine.store %val, %memref[0] { alignment = 16 } : memref<4xi32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @affine_vector_load_store_alignment
+func.func @affine_vector_load_store_alignment(%memref: memref<16xi32>) {
+  // CHECK: affine.vector_load {{.*}} {alignment = 8 : i64}
+  %val = affine.vector_load %memref[0] { alignment = 8 } : memref<16xi32>, vector<4xi32>
+  // CHECK: affine.vector_store {{.*}} {alignment = 8 : i64}
+  affine.vector_store %val, %memref[0] { alignment = 8 } : memref<16xi32>, vector<4xi32>
+  return
+}

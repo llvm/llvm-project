@@ -76,6 +76,7 @@ public:
   virtual void reportDanglingField(const Expr *IssueExpr,
                                    const FieldDecl *Field,
                                    const Expr *MovedExpr,
+                                   bool IsCapturedByLambda,
                                    SourceLocation ExpiryLoc) {}
 
   virtual void reportDanglingGlobal(const Expr *IssueExpr,

@@ -27,6 +27,7 @@ public:
   enum Kind {
     amp,
     arrow,
+    caret,
     colon,
     coloncolon,
     eof,
@@ -44,12 +45,14 @@ public:
     minusequal,
     percent,
     period,
+    pipe,
     plus,
     plusequal,
     r_paren,
     r_square,
     slash,
     star,
+    tilde,
   };
 
   Token(Kind kind, std::string spelling, uint32_t start)

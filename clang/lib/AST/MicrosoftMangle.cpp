@@ -1019,6 +1019,7 @@ void MicrosoftCXXNameMangler::mangleFloat(llvm::APFloat Number) {
   case APFloat::S_Float8E3M4:
   case APFloat::S_FloatTF32:
   case APFloat::S_Float8E8M0FNU:
+  case APFloat::S_Float8E5M3FNU:
   case APFloat::S_Float6E3M2FN:
   case APFloat::S_Float6E2M3FN:
   case APFloat::S_Float4E2M1FN:
@@ -3025,6 +3026,11 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
 
   case BuiltinType::SveCount:
     mangleArtificialTagType(TagTypeKind::Struct, "__SVCount_t", {"__clang"});
+    break;
+
+#define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/SPIRVTypes.def"
+    Error(Range.getBegin(), "SPIR-V built-in type") << Range;
     break;
 
   // Issue an error for any type not explicitly handled.

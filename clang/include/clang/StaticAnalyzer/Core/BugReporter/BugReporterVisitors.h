@@ -75,8 +75,8 @@ public:
 
   /// Last function called on the visitor, no further calls to VisitNode
   /// would follow.
-  virtual void finalizeVisitor(BugReporterContext &BRC,
-                               const ExplodedNode *EndPathNode,
+  virtual void finalizeVisitor(const ExplodedNode *EndPathNode,
+                               BugReporterContext &BRC,
                                PathSensitiveBugReport &BR);
 
   /// Provide custom definition for the final diagnostic piece on the
@@ -84,8 +84,8 @@ public:
   ///
   /// NOTE that this function can be implemented on at most one used visitor,
   /// and otherwise it crahes at runtime.
-  virtual PathDiagnosticPieceRef getEndPath(BugReporterContext &BRC,
-                                            const ExplodedNode *N,
+  virtual PathDiagnosticPieceRef getEndPath(const ExplodedNode *N,
+                                            BugReporterContext &BRC,
                                             PathSensitiveBugReport &BR);
 
   virtual void Profile(llvm::FoldingSetNodeID &ID) const = 0;
@@ -541,7 +541,7 @@ public:
     return nullptr;
   }
 
-  void finalizeVisitor(BugReporterContext &BRC, const ExplodedNode *N,
+  void finalizeVisitor(const ExplodedNode *N, BugReporterContext &BRC,
                        PathSensitiveBugReport &BR) override;
 };
 

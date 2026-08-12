@@ -25,7 +25,7 @@ class DeepBundleTestCase(TestBase):
         TestBase.tearDown(self)
 
     @skipIfRemote
-    @skipUnlessDarwin
+    @requireDarwin
     # This test is explicitly a dSYM test, it doesn't need to run for any other config.
     @skipIf(debug_info=no_match(["dsym"]))
     def test_attach_and_check_dsyms(self):

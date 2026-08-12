@@ -1927,8 +1927,10 @@ define <2 x half> @basic_fract_v2f16_nonan(<2 x half> nofpclass(nan) %x) {
 ; GFX11-TRUE16-LABEL: basic_fract_v2f16_nonan:
 ; GFX11-TRUE16:       ; %bb.0: ; %entry
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX11-TRUE16-NEXT:    v_fract_f16_e32 v0.l, v0.l
-; GFX11-TRUE16-NEXT:    v_fract_f16_e32 v0.h, v0.h
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-TRUE16-NEXT:    v_fract_f16_e32 v0.h, v1.l
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-FAKE16-LABEL: basic_fract_v2f16_nonan:
 ; GFX11-FAKE16:       ; %bb.0: ; %entry
@@ -1946,8 +1948,10 @@ define <2 x half> @basic_fract_v2f16_nonan(<2 x half> nofpclass(nan) %x) {
 ; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX12-TRUE16-NEXT:    v_fract_f16_e32 v0.l, v0.l
-; GFX12-TRUE16-NEXT:    v_fract_f16_e32 v0.h, v0.h
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-TRUE16-NEXT:    v_fract_f16_e32 v0.h, v1.l
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX12-FAKE16-LABEL: basic_fract_v2f16_nonan:
 ; GFX12-FAKE16:       ; %bb.0: ; %entry
@@ -2948,16 +2952,17 @@ define <2 x half> @safe_math_fract_v2f16(<2 x half> %x, ptr addrspace(1) writeon
 ; GFX11-TRUE16-LABEL: safe_math_fract_v2f16:
 ; GFX11-TRUE16:       ; %bb.0: ; %entry
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
 ; GFX11-TRUE16-NEXT:    v_fract_f16_e32 v3.l, v0.l
-; GFX11-TRUE16-NEXT:    v_fract_f16_e32 v3.h, v0.h
-; GFX11-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.h, 0x204
 ; GFX11-TRUE16-NEXT:    v_cmp_class_f16_e64 s1, v0.l, 0x204
-; GFX11-TRUE16-NEXT:    v_floor_f16_e32 v4.h, v0.h
-; GFX11-TRUE16-NEXT:    v_floor_f16_e32 v4.l, v0.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.h, v3.h, 0, s0
+; GFX11-TRUE16-NEXT:    v_floor_f16_e32 v5.l, v0.l
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_3) | instid1(VALU_DEP_3)
+; GFX11-TRUE16-NEXT:    v_fract_f16_e32 v0.h, v4.l
+; GFX11-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v4.l, 0x204
+; GFX11-TRUE16-NEXT:    v_floor_f16_e32 v5.h, v4.l
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, v3.l, 0, s1
-; GFX11-TRUE16-NEXT:    global_store_b32 v[1:2], v4, off
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.h, v0.h, 0, s0
+; GFX11-TRUE16-NEXT:    global_store_b32 v[1:2], v5, off
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-FAKE16-LABEL: safe_math_fract_v2f16:
 ; GFX11-FAKE16:       ; %bb.0: ; %entry
@@ -2984,16 +2989,18 @@ define <2 x half> @safe_math_fract_v2f16(<2 x half> %x, ptr addrspace(1) writeon
 ; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-TRUE16-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
 ; GFX12-TRUE16-NEXT:    v_fract_f16_e32 v3.l, v0.l
-; GFX12-TRUE16-NEXT:    v_fract_f16_e32 v3.h, v0.h
-; GFX12-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.h, 0x204
 ; GFX12-TRUE16-NEXT:    v_cmp_class_f16_e64 s1, v0.l, 0x204
-; GFX12-TRUE16-NEXT:    v_floor_f16_e32 v4.h, v0.h
-; GFX12-TRUE16-NEXT:    v_floor_f16_e32 v4.l, v0.l
+; GFX12-TRUE16-NEXT:    v_floor_f16_e32 v5.l, v0.l
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_4) | instid1(VALU_DEP_3)
+; GFX12-TRUE16-NEXT:    v_fract_f16_e32 v0.h, v4.l
+; GFX12-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v4.l, 0x204
+; GFX12-TRUE16-NEXT:    v_floor_f16_e32 v5.h, v4.l
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-TRUE16-NEXT:    v_cndmask_b16 v0.h, v3.h, 0, s0
 ; GFX12-TRUE16-NEXT:    v_cndmask_b16 v0.l, v3.l, 0, s1
-; GFX12-TRUE16-NEXT:    global_store_b32 v[1:2], v4, off
+; GFX12-TRUE16-NEXT:    v_cndmask_b16 v0.h, v0.h, 0, s0
+; GFX12-TRUE16-NEXT:    global_store_b32 v[1:2], v5, off
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX12-FAKE16-LABEL: safe_math_fract_v2f16:
 ; GFX12-FAKE16:       ; %bb.0: ; %entry

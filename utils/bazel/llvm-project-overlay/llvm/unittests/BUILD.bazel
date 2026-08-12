@@ -429,6 +429,7 @@ cc_test(
         "//llvm:TargetParser",
         "//llvm:TestingSupport",
         "//llvm:config",
+        "//llvm:orc_headers",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],

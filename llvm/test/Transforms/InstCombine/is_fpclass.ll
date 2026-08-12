@@ -3922,6 +3922,14 @@ define i1 @test_class_is_not_psub_pnorm_pinf__dynamic(float %arg) #3 {
   ret i1 %class
 }
 
+define i1 @test_class_is_pnorm_subset_of_normal_mask(float nofpclass(nan inf zero sub nnorm) %arg) {
+; CHECK-LABEL: @test_class_is_pnorm_subset_of_normal_mask(
+; CHECK-NEXT:    ret i1 true
+;
+  %class = call i1 @llvm.is.fpclass.f32(float %arg, i32 264)
+  ret i1 %class
+}
+
 ; Make sure we don't take sign bit from NaN operands.
 
 define i1 @minnum_qnan(i32 %x) {

@@ -388,8 +388,9 @@ public:
                             ExplodedNode *Pred, ExplodedNodeSet &Dst);
 
   /// Called by CoreEngine when processing the entrance of a CFGBlock.
-  void processCFGBlockEntrance(const BlockEdge &L, const BlockEntrance &BE,
-                               NodeBuilder &Builder, ExplodedNode *Pred);
+  /// Returns nullptr or a node descending from Pred.
+  ExplodedNode *processCFGBlockEntrance(const BlockEntrance &BE,
+                                        ExplodedNode *Pred);
 
   void runCheckersForBlockEntrance(const BlockEntrance &Entrance,
                                    ExplodedNode *Pred, ExplodedNodeSet &Dst);
@@ -679,7 +680,7 @@ public:
   ProgramStateRef handleLValueBitCast(ProgramStateRef state, const Expr *Ex,
                                       const StackFrame *SF, QualType T,
                                       QualType ExTy, const CastExpr *CastE,
-                                      NodeBuilder &Bldr, ExplodedNode *Pred);
+                                      ExplodedNodeSet &Dst, ExplodedNode *Pred);
 
 public:
   SVal evalBinOp(ProgramStateRef ST, BinaryOperator::Opcode Op,

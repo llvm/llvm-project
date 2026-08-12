@@ -66,4 +66,4 @@ LLVM_FIXED_MD_KIND(MD_guid, "guid", 51)
 LLVM_FIXED_MD_KIND(MD_mem_cache_hint, "mem.cache_hint", 52)
 LLVM_FIXED_MD_KIND(MD_block_uniformity_profile, "block.uniformity.profile", 53)
 LLVM_FIXED_MD_KIND(MD_callgraph, "callgraph", 54)
-
+LLVM_FIXED_MD_KIND(MD_metadata_section_kind, "metadata_section_kind", 55)

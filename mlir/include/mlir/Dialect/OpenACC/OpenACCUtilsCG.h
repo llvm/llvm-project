@@ -95,6 +95,18 @@ void updateParDimsAttr(Operation *op, GPUParallelDimsAttr attr);
 /// Copy parallel dimensions from \p from to \p to.
 void copyParDimsAttr(Operation *from, Operation *to);
 
+/// Obtain the active parallel dimensions carried by \p op, if any.
+ActiveParDimsAttr getActiveParDimsAttr(Operation *op);
+
+/// Return whether \p op carries active parallel dimensions.
+bool hasActiveParDimsAttr(Operation *op);
+
+/// Set active parallel dimensions on \p op.
+void setActiveParDimsAttr(Operation *op, ActiveParDimsAttr attr);
+
+/// Set active parallel dimensions on \p op from a dimension list.
+void setActiveParDimsAttr(Operation *op, ArrayRef<GPUParallelDimAttr> dims);
+
 /// Return whether \p op is marked with the `acc.gpu_block_redundant` attribute,
 /// i.e. it executes redundantly across all thread blocks. Such an op must not
 /// be assigned block/grid-level work-sharing; only thread-level parallelism may

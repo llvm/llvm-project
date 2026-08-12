@@ -478,6 +478,11 @@ def BroadcastOp : LinalgStructuredBase_Op<"broadcast", [
   let description = [{
     Broadcast the input into the given shape by adding `dimensions`.
 
+    Each index in the `dimensions` attribute refers to a dimension of `init`
+    that is added by the operation. The indices must be unique and within the
+    rank of `init`; the sizes of the remaining (non-added) dimensions of
+    `init` must match the shape of `input`.
+
     Example:
     ```mlir
       %bcast = linalg.broadcast

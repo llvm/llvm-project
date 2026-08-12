@@ -750,9 +750,9 @@ static Error runAOTCompile(StringRef InputFile, StringRef OutputFile,
                            const ArgList &Args) {
   StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
   OffloadArch OA = StringToOffloadArch(Arch);
-  if (IsIntelGPUOffloadArch(OA))
+  if (OA.isIntelGPU())
     return runAOTCompileIntelGPU(InputFile, OutputFile, Args);
-  if (IsIntelCPUOffloadArch(OA))
+  if (OA.isIntelCPU())
     return runAOTCompileIntelCPU(InputFile, OutputFile, Args);
 
   llvm_unreachable("runAOTCompile dispatched on unsupported arch");
@@ -978,8 +978,8 @@ static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
     SplitModules = std::move(*SplitModulesOrErr);
   }
 
-  bool IsAOTCompileNeeded = IsIntelOffloadArch(
-      StringToOffloadArch(Args.getLastArgValue(OPT_arch_EQ)));
+  bool IsAOTCompileNeeded =
+      StringToOffloadArch(Args.getLastArgValue(OPT_arch_EQ)).isIntel();
 
   StringRef OutputFileNameExt = ".spv";
 

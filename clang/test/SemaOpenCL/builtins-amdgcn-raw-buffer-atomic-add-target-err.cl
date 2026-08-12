@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx908 -S -verify=gfx908,expected -o - %s
+// RUN: %clang_cc1 -triple amdgpu9.08-unknown-unknown -S -verify=gfx908,expected -o - %s
 // REQUIRES: amdgpu-registered-target
 
 typedef half __attribute__((ext_vector_type(2))) float16x2_t;

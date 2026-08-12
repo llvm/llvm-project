@@ -191,8 +191,8 @@ define amdgpu_gs <2 x half> @v_fptrunc_round_poison_to_v2f16_towardzero(float %a
 ; GISEL-LABEL: v_fptrunc_round_poison_to_v2f16_towardzero:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    v_cvt_pkrtz_f16_f32_e32 v0, v0, v0
-; GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GISEL-NEXT:    v_lshl_or_b32 v0, s0, 16, v0
+; GISEL-NEXT:    v_lshlrev_b32_e64 v1, 16, s0
+; GISEL-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-SDAG-LABEL: v_fptrunc_round_poison_to_v2f16_towardzero:
@@ -1133,10 +1133,10 @@ define amdgpu_gs <2 x i32> @s_fptrunc_round_v2f32_to_v2f16_towardzero(<2 x float
 define amdgpu_gs void @s_fptrunc_round_v2f32_to_v2f16_upward_multiple_calls(<2 x float> inreg %a, <2 x float> inreg %b, ptr addrspace(1) %out) {
 ; SDAG-LABEL: s_fptrunc_round_v2f32_to_v2f16_upward_multiple_calls:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    v_mov_b32_e32 v2, s0
-; SDAG-NEXT:    v_mov_b32_e32 v3, s2
-; SDAG-NEXT:    v_mov_b32_e32 v4, s1
-; SDAG-NEXT:    v_mov_b32_e32 v5, s3
+; SDAG-NEXT:    v_mov_b32_e32 v2, s1
+; SDAG-NEXT:    v_mov_b32_e32 v3, s3
+; SDAG-NEXT:    v_mov_b32_e32 v4, s0
+; SDAG-NEXT:    v_mov_b32_e32 v5, s2
 ; SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 1), 1
 ; SDAG-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; SDAG-NEXT:    v_cvt_f16_f32_e32 v6, v3
@@ -1144,13 +1144,13 @@ define amdgpu_gs void @s_fptrunc_round_v2f32_to_v2f16_upward_multiple_calls(<2 x
 ; SDAG-NEXT:    v_cvt_f16_f32_e32 v7, v5
 ; SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 2
 ; SDAG-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; SDAG-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; SDAG-NEXT:    v_and_b32_e32 v6, 0xffff, v6
-; SDAG-NEXT:    v_and_b32_e32 v3, 0xffff, v3
-; SDAG-NEXT:    v_lshl_or_b32 v2, v4, 16, v2
+; SDAG-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; SDAG-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
+; SDAG-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; SDAG-NEXT:    v_or_b32_sdwa v2, v2, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; SDAG-NEXT:    v_cvt_f16_f32_e32 v4, v5
-; SDAG-NEXT:    v_lshl_or_b32 v5, v7, 16, v6
-; SDAG-NEXT:    v_lshl_or_b32 v3, v4, 16, v3
+; SDAG-NEXT:    v_or_b32_sdwa v5, v6, v7 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; SDAG-NEXT:    v_or_b32_sdwa v3, v3, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 3, 1), 0
 ; SDAG-NEXT:    v_pk_add_f16 v2, v2, v5
 ; SDAG-NEXT:    v_pk_add_f16 v2, v3, v2
@@ -1315,13 +1315,13 @@ define amdgpu_gs <3 x half> @v_fptrunc_round_v3f32_to_v3f16_upward(<3 x float> %
 ;
 ; GISEL-LABEL: v_fptrunc_round_v3f32_to_v3f16_upward:
 ; GISEL:       ; %bb.0:
+; GISEL-NEXT:    v_lshlrev_b32_e64 v3, 16, s0
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 1), 1
-; GISEL-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GISEL-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; GISEL-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; GISEL-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GISEL-NEXT:    v_lshl_or_b32 v1, s0, 16, v2
+; GISEL-NEXT:    v_or_b32_sdwa v1, v3, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-SDAG-LABEL: v_fptrunc_round_v3f32_to_v3f16_upward:
@@ -1375,13 +1375,13 @@ define amdgpu_gs <3 x half> @v_fptrunc_round_v3f32_to_v3f16_downward(<3 x float>
 ;
 ; GISEL-LABEL: v_fptrunc_round_v3f32_to_v3f16_downward:
 ; GISEL:       ; %bb.0:
+; GISEL-NEXT:    v_lshlrev_b32_e64 v3, 16, s0
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 3, 1), 1
-; GISEL-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GISEL-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; GISEL-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; GISEL-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GISEL-NEXT:    v_lshl_or_b32 v1, s0, 16, v2
+; GISEL-NEXT:    v_or_b32_sdwa v1, v3, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-SDAG-LABEL: v_fptrunc_round_v3f32_to_v3f16_downward:

@@ -17,8 +17,8 @@ define void @caller() sspreq {
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.StackGuardSlot
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i64) = G_LOAD [[FRAME_INDEX2]](p0) :: (volatile load (i64) from %stack.0.StackGuardSlot)
-  ; CHECK-NEXT:   [[LOAD_STACK_GUARD2:%[0-9]+]]:gpr64sp(s64) = LOAD_STACK_GUARD :: (dereferenceable invariant load (p0) from @__stack_chk_guard)
-  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[LOAD_STACK_GUARD2]](s64), [[LOAD]]
+  ; CHECK-NEXT:   [[LOAD_STACK_GUARD2:%[0-9]+]]:gpr64sp(i64) = LOAD_STACK_GUARD :: (dereferenceable invariant load (p0) from @__stack_chk_guard)
+  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[LOAD_STACK_GUARD2]](i64), [[LOAD]]
   ; CHECK-NEXT:   G_BRCOND [[ICMP]](i1), %bb.3
   ; CHECK-NEXT:   G_BR %bb.2
   ; CHECK-NEXT: {{  $}}

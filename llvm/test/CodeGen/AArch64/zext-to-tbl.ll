@@ -71,7 +71,8 @@
 ; CHECK-NEXT:    .byte   255                             ; 0xff
 ; CHECK-NEXT:    .byte   255                             ; 0xff
 
-; CHECK-BE: .LCPI0_0:
+; CHECK-BE-LABEL: .type .LCPI0_0,@object
+; CHECK-BE-NEXT: .LCPI0_0:
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
@@ -88,6 +89,8 @@
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
 ; CHECK-BE-NEXT: 	.byte	3                               // 0x3
+; CHECK-BE-NEXT:  .size .LCPI0_0, 16
+; CHECK-BE-LABEL: .type .LCPI0_1,@object
 ; CHECK-BE-NEXT: .LCPI0_1:
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
@@ -105,6 +108,8 @@
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
 ; CHECK-BE-NEXT: 	.byte	7                               // 0x7
+; CHECK-BE-NEXT:  .size .LCPI0_1, 16
+; CHECK-BE-LABEL: .type .LCPI0_2,@object
 ; CHECK-BE-NEXT: .LCPI0_2:
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
@@ -122,6 +127,8 @@
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
 ; CHECK-BE-NEXT: 	.byte	11                              // 0xb
+; CHECK-BE-NEXT:  .size .LCPI0_2, 16
+; CHECK-BE-LABEL: .type .LCPI0_3,@object
 ; CHECK-BE-NEXT: .LCPI0_3:
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
@@ -139,6 +146,7 @@
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
 ; CHECK-BE-NEXT: 	.byte	15                              // 0xf
+; CHECK-BE-NEXT:  .size .LCPI0_3, 16
 
 ; It's profitable to convert the zext to a shuffle, which in turn will be
 ; lowered to 4 tbl instructions. The masks are materialized outside the loop.
@@ -583,7 +591,8 @@ exit:
 ; CHECK-NEXT:     .byte   255                             ; 0xff
 ; CHECK-NEXT:     .byte   255                             ; 0xff
 
-; CHECK-BE:       .LCPI6_0:
+; CHECK-BE-LABEL: .type .LCPI6_0,@object
+; CHECK-BE-NEXT: .LCPI6_0:
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
@@ -600,6 +609,8 @@ exit:
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
 ; CHECK-BE-NEXT: 	.byte	3                               // 0x3
+; CHECK-BE-NEXT: 	.size .LCPI6_0, 16
+; CHECK-BE-NEXT: 	.type	.LCPI6_1,@object
 ; CHECK-BE-NEXT: .LCPI6_1:
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
@@ -617,6 +628,7 @@ exit:
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
 ; CHECK-BE-NEXT: 	.byte	7                               // 0x7
+; CHECK-BE-NEXT: 	.size .LCPI6_1, 16
 
 define void @zext_v8i8_to_v8i32_in_loop(ptr %src, ptr %dst) {
 ; CHECK-LABEL: zext_v8i8_to_v8i32_in_loop:
@@ -1100,7 +1112,8 @@ exit:
 ; CHECK-NEXT: 	.byte	255                             ; 0xff
 ; CHECK-NEXT: 	.byte	255                             ; 0xff
 
-; CHECK-BE-LABEL: .LCPI12_0:
+; CHECK-BE-LABEL: .type .LCPI12_0,@object
+; CHECK-BE-NEXT: .LCPI12_0:
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
@@ -1117,6 +1130,8 @@ exit:
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
 ; CHECK-BE-NEXT: 	.byte	3                               // 0x3
+; CHECK-BE-NEXT: 	.size .LCPI12_0, 16
+; CHECK-BE-NEXT: 	.type	.LCPI12_1,@object
 ; CHECK-BE-NEXT: .LCPI12_1:
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
@@ -1134,6 +1149,8 @@ exit:
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
 ; CHECK-BE-NEXT: 	.byte	7                               // 0x7
+; CHECK-BE-NEXT: 	.size .LCPI12_1, 16
+; CHECK-BE-NEXT: 	.type	.LCPI12_2,@object
 ; CHECK-BE-NEXT: .LCPI12_2:
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
@@ -1151,6 +1168,7 @@ exit:
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
 ; CHECK-BE-NEXT: 	.byte	255                             // 0xff
 ; CHECK-BE-NEXT: 	.byte	11                              // 0xb
+; CHECK-BE-NEXT: 	.size .LCPI12_2, 16
 
 define void @zext_v12i8_to_v12i32_in_loop(ptr %src, ptr %dst) {
 ; CHECK-LABEL: zext_v12i8_to_v12i32_in_loop:
@@ -2086,7 +2104,8 @@ exit:
 ; CHECK-NEXT: .byte	255                             ; 0xff
 ; CHECK-NEXT: .byte	255                             ; 0xff
 
-; CHECK-BE-LABEL: .LCPI20_0:
+; CHECK-BE-LABEL: .type .LCPI20_0,@object
+; CHECK-BE-NEXT:  .LCPI20_0:
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
 ; CHECK-BE-NEXT:  	.byte	0                               // 0x0
@@ -2103,6 +2122,8 @@ exit:
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
+; CHECK-BE-NEXT:  	.size .LCPI20_0, 16
+; CHECK-BE-NEXT:  	.type	.LCPI20_1,@object
 ; CHECK-BE-NEXT:  .LCPI20_1:
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
@@ -2120,6 +2141,8 @@ exit:
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
 ; CHECK-BE-NEXT:  	.byte	4                               // 0x4
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
+; CHECK-BE-NEXT:  	.size .LCPI20_1, 16
+; CHECK-BE-NEXT:  	.type	.LCPI20_2,@object
 ; CHECK-BE-NEXT:  .LCPI20_2:
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
 ; CHECK-BE-NEXT:  	.byte	5                               // 0x5
@@ -2137,6 +2160,8 @@ exit:
 ; CHECK-BE-NEXT:  	.byte	9                               // 0x9
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
+; CHECK-BE-NEXT:  	.size .LCPI20_2, 16
+; CHECK-BE-NEXT:  	.type	.LCPI20_3,@object
 ; CHECK-BE-NEXT:  .LCPI20_3:
 ; CHECK-BE-NEXT:  	.byte	10                              // 0xa
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
@@ -2154,6 +2179,7 @@ exit:
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
 ; CHECK-BE-NEXT:  	.byte	15                              // 0xf
+; CHECK-BE-NEXT:  	.size .LCPI20_3, 16
 
 define void @zext_v20i8_to_v20i24_in_loop(ptr %src, ptr %dst) {
 ; CHECK-LABEL: zext_v20i8_to_v20i24_in_loop:
@@ -2363,7 +2389,8 @@ exit:
 ; CHECK-NEXT: 	.byte	255                             ; 0xff
 ; CHECK-NEXT: 	.byte	255                             ; 0xff
 
-; CHECK-BE-LABEL:  .LCPI21_0:
+; CHECK-BE-LABEL:  .type .LCPI21_0,@object
+; CHECK-BE-NEXT:  .LCPI21_0:
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
@@ -2380,6 +2407,8 @@ exit:
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
+; CHECK-BE-NEXT:  	.size .LCPI21_0, 16
+; CHECK-BE-NEXT:  	.type	.LCPI21_1,@object
 ; CHECK-BE-NEXT:  .LCPI21_1:
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
@@ -2397,6 +2426,8 @@ exit:
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
+; CHECK-BE-NEXT:  	.size .LCPI21_1, 16
+; CHECK-BE-NEXT:  	.type	.LCPI21_2,@object
 ; CHECK-BE-NEXT:  .LCPI21_2:
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
 ; CHECK-BE-NEXT:  	.byte	2                               // 0x2
@@ -2414,6 +2445,8 @@ exit:
 ; CHECK-BE-NEXT:  	.byte	4                               // 0x4
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
+; CHECK-BE-NEXT:  	.size .LCPI21_2, 16
+; CHECK-BE-NEXT:  	.type	.LCPI21_3,@object
 ; CHECK-BE-NEXT:  .LCPI21_3:
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
@@ -2431,6 +2464,8 @@ exit:
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
 ; CHECK-BE-NEXT:  	.byte	7                               // 0x7
+; CHECK-BE-NEXT:  	.size .LCPI21_3, 16
+; CHECK-BE-NEXT:  	.type	.LCPI21_4,@object
 ; CHECK-BE-NEXT:  .LCPI21_4:
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
@@ -2448,6 +2483,8 @@ exit:
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
+; CHECK-BE-NEXT:  	.size .LCPI21_4, 16
+; CHECK-BE-NEXT:  	.type	.LCPI21_5,@object
 ; CHECK-BE-NEXT:  .LCPI21_5:
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
 ; CHECK-BE-NEXT:  	.byte	10                              // 0xa
@@ -2465,6 +2502,8 @@ exit:
 ; CHECK-BE-NEXT:  	.byte	12                              // 0xc
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
+; CHECK-BE-NEXT:  	.size .LCPI21_5, 16
+; CHECK-BE-NEXT:  	.type	.LCPI21_6,@object
 ; CHECK-BE-NEXT:  .LCPI21_6:
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
@@ -2482,6 +2521,7 @@ exit:
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
 ; CHECK-BE-NEXT:  	.byte	255                             // 0xff
 ; CHECK-BE-NEXT:  	.byte	15                              // 0xf
+; CHECK-BE-NEXT:  	.size .LCPI21_6, 16
 
 define void @zext_v23i8_to_v23i48_in_loop(ptr %src, ptr %dst) {
 ; CHECK-LABEL: zext_v23i8_to_v23i48_in_loop:

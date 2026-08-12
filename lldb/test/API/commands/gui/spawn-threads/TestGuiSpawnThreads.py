@@ -21,6 +21,8 @@ class TestGuiSpawnThreadsTest(PExpectTest):
     # under ASAN on a loaded machine..
     @skipIfAsan
     @skipIfCursesSupportMissing
+    # Temporary fix for CI timeouts - https://github.com/llvm/llvm-project/issues/209874.
+    @skipIfLinux
     def test_gui(self):
         self.build()
 

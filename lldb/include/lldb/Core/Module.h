@@ -1122,6 +1122,7 @@ protected:
   std::atomic<bool> m_did_load_objfile{false};
   std::atomic<bool> m_did_load_symfile{false};
   std::atomic<bool> m_did_set_uuid{false};
+  std::atomic<bool> m_did_preload_symbols{false};
   mutable bool m_file_has_changed : 1,
       m_first_file_changed_log : 1; /// See if the module was modified after it
                                     /// was initially opened.

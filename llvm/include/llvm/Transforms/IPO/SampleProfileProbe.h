@@ -49,7 +49,7 @@ public:
   LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC);
 
   // Implementation of pass instrumentation callbacks for new pass manager.
-  LLVM_ABI void runAfterPass(StringRef PassID, Any IR);
+  LLVM_ABI void runAfterPass(StringRef PassID, const Any &IR);
 
 private:
   // Allow a little bias due the rounding to integral factors.

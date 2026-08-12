@@ -1776,6 +1776,37 @@ def BarrierOp : OpenMP_Op<"barrier"> {
 }
 
 //===----------------------------------------------------------------------===//
+// [5.1] 2.5.4 error directive
+//===----------------------------------------------------------------------===//
+
+def ErrorOp : OpenMP_Op<"error"> {
+  let summary = "error directive";
+  let description = [{
+    The error directive instructs the compiler or runtime to display a message
+    and, when the severity is `fatal`, to terminate execution. The
+    `at(compilation)` form is handled entirely by the frontend; this operation
+    represents only the `at(execution)` form, which lowers to a call to the
+    `__kmpc_error` runtime entry point.
+
+    The `severity` attribute selects `warning` or `fatal` behavior. The message
+    to display is optional and may be provided as a compile-time-constant
+    string in the `message` attribute, or a pointer to a null-terminated string.
+  }];
+
+  let arguments = (ins ClauseSeverityAttr:$severity,
+                       OptionalAttr<StrAttr>:$message,
+                       Optional<OpenMP_PointerLikeType>:$message_expr);
+
+  let assemblyFormat = [{
+    `severity` `(` custom<ClauseAttr>($severity) `)`
+    ( `message` `(` $message^ `)` )?
+    ( `message_expr` `(` $message_expr^ `:` type($message_expr) `)` )? attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // [5.1] 2.19.9 ordered Construct
 //===----------------------------------------------------------------------===//
 
@@ -2016,13 +2047,20 @@ def AtomicCompareOp : OpenMP_Op<"atomic.compare", traits = [
         omp.yield
       }
     ```
+
+    The optional `fail_memory_order` attribute specifies the memory ordering
+    to use for the comparison when the atomic conditional update fails (i.e.
+    the value of `x` is not updated). It corresponds to the OpenMP `fail`
+    clause and overrides the failure ordering that would otherwise be derived
+    from the construct's memory ordering.
   }] # clausesDescription;
 
   let arguments = !con(
       (ins Arg<OpenMP_PointerLikeType,
                "Address of variable to be compared/updated", [MemRead, MemWrite]>:$x,
            UnitAttr:$weak),
-      clausesArgs);
+      clausesArgs,
+      (ins OptionalAttr<MemoryOrderKindAttr>:$fail_memory_order));
 
   // Override region definition.
   let regions = (region SizedRegion<1>:$region);

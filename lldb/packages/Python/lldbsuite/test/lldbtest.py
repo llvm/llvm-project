@@ -347,13 +347,10 @@ class ValueCheck:
 
         test_base.assertSuccess(val.GetError())
 
-        # Python 3.6 doesn't declare a `re.Pattern` type, get the dynamic type.
-        pattern_type = type(re.compile(""))
-
         if self.expect_name:
             test_base.assertEqual(self.expect_name, val.GetName(), this_error_msg)
         if self.expect_value:
-            if isinstance(self.expect_value, pattern_type):
+            if isinstance(self.expect_value, re.Pattern):
                 test_base.assertRegex(val.GetValue(), self.expect_value, this_error_msg)
             else:
                 test_base.assertEqual(self.expect_value, val.GetValue(), this_error_msg)
@@ -362,7 +359,7 @@ class ValueCheck:
                 self.expect_type, val.GetDisplayTypeName(), this_error_msg
             )
         if self.expect_summary:
-            if isinstance(self.expect_summary, pattern_type):
+            if isinstance(self.expect_summary, re.Pattern):
                 test_base.assertRegex(
                     val.GetSummary(), self.expect_summary, this_error_msg
                 )
@@ -453,6 +450,11 @@ class _LocalProcess(_BaseProcess):
         self._delayafterterminate = 0.1
 
     @property
+    def args(self):
+        assert self._proc is not None, "No process"
+        return self._proc.args
+
+    @property
     def pid(self):
         assert self._proc is not None, "No process"
         return self._proc.pid
@@ -534,7 +536,12 @@ class _LocalProcess(_BaseProcess):
 class _RemoteProcess(_BaseProcess):
     def __init__(self, install_remote):
         self._pid = None
+        self._args = None
         self._install_remote = install_remote
+
+    @property
+    def args(self):
+        assert self._args
 
     @property
     def pid(self):
@@ -577,6 +584,7 @@ class _RemoteProcess(_BaseProcess):
                 "remote_platform.Launch('%s', '%s') failed: %s" % (dst_path, args, err)
             )
         self._pid = launch_info.GetProcessID()
+        self._args = args
 
     def terminate(self):
         lldb.remote_platform.Kill(self._pid)
@@ -1674,8 +1682,11 @@ class Base(unittest.TestCase):
 
     def runBuildCommand(self, command):
         self.trace(shlex.join(command))
+        env = dict(os.environ)
+        if configuration.sdkroot:
+            env["SDKROOT"] = configuration.sdkroot
         try:
-            output = check_output(command, stderr=STDOUT, errors="replace")
+            output = check_output(command, stderr=STDOUT, errors="replace", env=env)
         except CalledProcessError as cpe:
             raise build_exception.BuildError(cpe)
         self.trace(output)
@@ -2967,7 +2978,6 @@ FileCheck output:
         )
 
         frame = self.frame()
-
         if not options:
             options = lldb.SBExpressionOptions()
 

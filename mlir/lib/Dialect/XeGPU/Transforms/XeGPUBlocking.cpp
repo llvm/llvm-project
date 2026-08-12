@@ -109,7 +109,7 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
 
   if (auto convertLayoutOp = dyn_cast<xegpu::ConvertLayoutOp>(op)) {
     auto inputInstData =
-        convertLayoutOp.getInputLayout().getEffectiveInstDataAsInt();
+        convertLayoutOp.getEffectiveInputLayout().getEffectiveInstDataAsInt();
     auto targetInstData =
         convertLayoutOp.getTargetLayout().getEffectiveInstDataAsInt();
     // return the one with larger size

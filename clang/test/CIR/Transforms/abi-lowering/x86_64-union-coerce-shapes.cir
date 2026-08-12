@@ -1,0 +1,80 @@
+// RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 | FileCheck %s
+// RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 -cir-to-llvm -o - 2>/dev/null \
+// RUN:   | mlir-translate -mlir-to-llvmir --allow-unregistered-dialect \
+// RUN:   | FileCheck %s --check-prefix=LLVM
+
+!s8i = !cir.int<s, 8>
+!u8i = !cir.int<u, 8>
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!s128i = !cir.int<s, 128>
+!rec_U128 = !cir.union<"U128" {!s128i, !cir.array<!s8i x 16>}>
+!rec_UMixed = !cir.union<"UMixed" {!cir.array<!cir.double x 2>, !s64i}>
+!rec_UD2 = !cir.union<"UD2" {!cir.array<!cir.double x 2>}>
+!rec_U12 = !cir.union<"U12" {!cir.array<!s8i x 12>, !s32i}, padding = {!cir.array<!u8i x 8>}>
+!rec_UEmpty16 = !cir.union<"UEmpty16" {}, padding = {!cir.array<!u8i x 16>}>
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>,
+    #dlti.dl_entry<i128, dense<128>: vector<2xi64>>,
+    #dlti.dl_entry<f64, dense<64>: vector<2xi64>>>
+} {
+
+  // A 16-byte union whose spanning member is one 128-bit integer coerces to that
+  // integer rather than to a pair of eightbytes.
+  cir.func @take_u128(%arg0: !rec_U128) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_u128(%arg0: !s128i)
+
+  // The two eightbytes need not share a class.  The first covers half of the
+  // double array and merges to INTEGER against the long, while the second is all
+  // double and stays SSE.
+  cir.func @take_umixed(%arg0: !rec_UMixed) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_umixed(%arg0: !u64i, %arg1: !cir.double)
+
+  // With no integer member to merge against, both eightbytes stay SSE.
+  cir.func @take_ud2(%arg0: !rec_UD2) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_ud2(%arg0: !cir.double, %arg1: !cir.double)
+
+  // The second eightbyte is partial.  The classifier reduces this union to its
+  // 4-byte integer, so an eightbyte sized from that member would cover only the
+  // first four bytes and drop the rest of the array.
+  cir.func @take_u12(%arg0: !rec_U12) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_u12(%arg0: !u64i, %arg1: !u32i)
+
+  // Two eightbytes in return position, flattened to an anonymous struct.
+  cir.func @ret_umixed(%arg0: !rec_UMixed) -> !rec_UMixed {
+    cir.return %arg0 : !rec_UMixed
+  }
+
+  // CHECK: cir.func{{.*}} @ret_umixed(%arg0: !u64i, %arg1: !cir.double) -> !rec_anon_struct1
+
+  // A member-less union at exactly two eightbytes still classifies Ignore.  One
+  // byte more is MEMORY, which x86_64-aggregate-nyi.cir covers.
+  cir.func @take_empty16(%arg0: !rec_UEmpty16) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_empty16()
+}
+
+// LLVM: define void @take_u128(i128 %{{.+}})
+// LLVM: define void @take_umixed(i64 %{{.+}}, double %{{.+}})
+// LLVM: define void @take_ud2(double %{{.+}}, double %{{.+}})
+// LLVM: define void @take_u12(i64 %{{.+}}, i32 %{{.+}})
+// LLVM: define { i64, double } @ret_umixed(i64 %{{.+}}, double %{{.+}})
+// LLVM: define void @take_empty16()

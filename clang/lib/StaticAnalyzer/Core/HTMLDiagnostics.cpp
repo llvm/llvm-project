@@ -22,6 +22,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Frontend/DiagnosticRenderer.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/Token.h"
@@ -1257,35 +1258,15 @@ void HTMLDiagnostics::HighlightRange(Rewriter& R, FileID BugFileID,
   SourceManager &SM = R.getSourceMgr();
   const LangOptions &LangOpts = R.getLangOpts();
 
-  SourceLocation InstantiationStart = SM.getExpansionLoc(Range.getBegin());
-  unsigned StartLineNo = SM.getExpansionLineNumber(InstantiationStart);
-
-  SourceLocation InstantiationEnd = SM.getExpansionLoc(Range.getEnd());
-  unsigned EndLineNo = SM.getExpansionLineNumber(InstantiationEnd);
-
-  if (EndLineNo < StartLineNo)
+  std::optional<CharSourceRange> FileRange = getExpansionRangeInFile(
+      CharSourceRange::getTokenRange(Range), BugFileID, SM);
+  if (!FileRange)
     return;
 
-  if (SM.getFileID(InstantiationStart) != BugFileID ||
-      SM.getFileID(InstantiationEnd) != BugFileID)
-    return;
-
-  // Compute the column number of the end.
-  unsigned EndColNo = SM.getExpansionColumnNumber(InstantiationEnd);
-  unsigned OldEndColNo = EndColNo;
-
-  if (EndColNo) {
-    // Add in the length of the token, so that we cover multi-char tokens.
-    EndColNo += Lexer::MeasureTokenLength(Range.getEnd(), SM, LangOpts)-1;
-  }
-
-  // Highlight the range.  Make the span tag the outermost tag for the
-  // selected range.
-
-  SourceLocation E =
-    InstantiationEnd.getLocWithOffset(EndColNo - OldEndColNo);
-
-  html::HighlightRange(R, InstantiationStart, E, HighlightStart, HighlightEnd);
+  CharSourceRange CharRange = Lexer::getAsCharRange(*FileRange, SM, LangOpts);
+  html::HighlightRange(R, CharRange.getBegin(), CharRange.getEnd(),
+                       HighlightStart, HighlightEnd,
+                       /*IsTokenRange=*/false);
 }
 
 StringRef HTMLDiagnostics::generateKeyboardNavigationJavascript() {

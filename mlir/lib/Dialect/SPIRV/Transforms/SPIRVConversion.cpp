@@ -1380,15 +1380,18 @@ Value mlir::spirv::getVulkanElementPtr(const SPIRVTypeConverter &typeConverter,
   SmallVector<Value, 2> linearizedIndices;
   auto zero = spirv::ConstantOp::getZero(indexType, loc, builder);
 
-  // Add a '0' at the start to index into the struct.
-  linearizedIndices.push_back(zero);
-
   if (baseType.getRank() == 0) {
     linearizedIndices.push_back(zero);
   } else {
     linearizedIndices.push_back(
         linearizeIndex(indices, strides, offset, indexType, loc, builder));
   }
+
+  const Type pointeeType =
+      cast<spirv::PointerType>(basePtr.getType()).getPointeeType();
+  // Interface memrefs are wrapped in a struct: index to its first elem.
+  if (isa<spirv::StructType>(pointeeType))
+    linearizedIndices.insert(linearizedIndices.begin(), zero);
   return spirv::AccessChainOp::create(builder, loc, basePtr, linearizedIndices);
 }
 

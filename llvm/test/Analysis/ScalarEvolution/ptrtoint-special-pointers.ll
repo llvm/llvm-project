@@ -18,7 +18,7 @@ define i64 @sub_ptrtoint_fat_to_addrwidth(ptr addrspace(1) %p, ptr addrspace(1) 
 ; CHECK-NEXT:    %q.int = ptrtoint ptr addrspace(1) %q to i64
 ; CHECK-NEXT:    --> %q.int U: full-set S: full-set
 ; CHECK-NEXT:    %sub = sub i64 %p.int, %q.int
-; CHECK-NEXT:    --> ((-1 * %q.int) + %p.int) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * (ptrtoaddr ptr addrspace(1) %q to i64)) + (ptrtoaddr ptr addrspace(1) %p to i64)) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @sub_ptrtoint_fat_to_addrwidth
 ;
   %p.int = ptrtoint ptr addrspace(1) %p to i64
@@ -75,7 +75,7 @@ define i64 @sub_ptrtoint_external_state(ptr addrspace(3) %p, ptr addrspace(3) %q
 ; CHECK-NEXT:    %q.int = ptrtoint ptr addrspace(3) %q to i64
 ; CHECK-NEXT:    --> %q.int U: full-set S: full-set
 ; CHECK-NEXT:    %sub = sub i64 %p.int, %q.int
-; CHECK-NEXT:    --> ((-1 * %q.int) + %p.int) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * (ptrtoaddr ptr addrspace(3) %q to i64)) + (ptrtoaddr ptr addrspace(3) %p to i64)) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @sub_ptrtoint_external_state
 ;
   %p.int = ptrtoint ptr addrspace(3) %p to i64
@@ -91,7 +91,7 @@ define void @ptrtoint_addrec_fat_to_addrwidth(ptr addrspace(1) %in) {
 ; CHECK-NEXT:    %iv = phi ptr addrspace(1) [ %in, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {%in,+,4}<nuw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.int = ptrtoint ptr addrspace(1) %iv to i64
-; CHECK-NEXT:    --> %iv.int U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> {(ptrtoaddr ptr addrspace(1) %in to i64),+,4}<nuw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = getelementptr inbounds i32, ptr addrspace(1) %iv, i64 1
 ; CHECK-NEXT:    --> {(4 + %in),+,4}<nw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %c = call i1 @cond()
@@ -155,7 +155,7 @@ define i32 @sub_ptrtoint_narrower_than_addr(ptr addrspace(1) %p, ptr addrspace(1
 ; CHECK-NEXT:    %q.int = ptrtoint ptr addrspace(1) %q to i32
 ; CHECK-NEXT:    --> %q.int U: full-set S: full-set
 ; CHECK-NEXT:    %sub = sub i32 %p.int, %q.int
-; CHECK-NEXT:    --> ((-1 * %q.int) + %p.int) U: full-set S: full-set
+; CHECK-NEXT:    --> ((trunc i64 (ptrtoaddr ptr addrspace(1) %p to i64) to i32) + (-1 * (trunc i64 (ptrtoaddr ptr addrspace(1) %q to i64) to i32))) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @sub_ptrtoint_narrower_than_addr
 ;
   %p.int = ptrtoint ptr addrspace(1) %p to i32
@@ -169,13 +169,14 @@ define void @fat_ptr_ult_backedge_count(ptr addrspace(1) %start, ptr addrspace(1
 ; CHECK-LABEL: 'fat_ptr_ult_backedge_count'
 ; CHECK-NEXT:  Classifying expressions for: @fat_ptr_ult_backedge_count
 ; CHECK-NEXT:    %iv = phi ptr addrspace(1) [ %start, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {%start,+,4}<nuw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%start,+,4}<nuw><%loop> U: full-set S: full-set Exits: ((4 * ((-1 + (-1 * (ptrtoaddr ptr addrspace(1) %start to i64)) + ((4 + (ptrtoaddr ptr addrspace(1) %start to i64))<nuw> umax (ptrtoaddr ptr addrspace(1) %end to i64))) /u 4))<nuw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = getelementptr inbounds i32, ptr addrspace(1) %iv, i64 1
-; CHECK-NEXT:    --> {(4 + %start)<nuw>,+,4}<nuw><%loop> U: [4,0) S: [4,0) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(4 + %start)<nuw>,+,4}<nuw><%loop> U: [4,0) S: [4,0) Exits: (4 + (4 * ((-1 + (-1 * (ptrtoaddr ptr addrspace(1) %start to i64)) + ((4 + (ptrtoaddr ptr addrspace(1) %start to i64))<nuw> umax (ptrtoaddr ptr addrspace(1) %end to i64))) /u 4))<nuw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @fat_ptr_ult_backedge_count
-; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 + (-1 * (ptrtoaddr ptr addrspace(1) %start to i64)) + ((4 + (ptrtoaddr ptr addrspace(1) %start to i64))<nuw> umax (ptrtoaddr ptr addrspace(1) %end to i64))) /u 4)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4611686018427387902
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 + (-1 * (ptrtoaddr ptr addrspace(1) %start to i64)) + ((4 + (ptrtoaddr ptr addrspace(1) %start to i64))<nuw> umax (ptrtoaddr ptr addrspace(1) %end to i64))) /u 4)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop

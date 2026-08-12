@@ -62,7 +62,7 @@ class ProcessSaveCoreTestCase(TestBase):
             if os.path.isfile(core):
                 os.unlink(core)
 
-    @skipUnlessPlatform(["freebsd", "netbsd"])
+    @requirePlatform(["freebsd", "netbsd"])
     def test_save_core_via_process_plugin(self):
         self.build()
         exe = self.getBuildArtifact("a.out")

@@ -38,8 +38,12 @@ and MLIR integration layer; FIR can adopt the same infrastructure with minimal
 dialect-specific adaptation (e.g.  cdecl when calling C from Fortran).  ABI
 compliance will be validated through differential testing against Classic Clang
 CodeGen, and performance overhead should remain under 5% compared to a direct,
-dialect-specific implementation.  Initial scope focuses on fixed-argument
-functions; variadic support (varargs) is deferred.
+dialect-specific implementation.  Variadic calls are lowered on x86_64 by
+classifying each call site from its own operand types, since an argument
+passed through an ellipsis competes for registers with the declared ones.
+An indirect variadic call whose operands already carry their wire form is left
+as written.  One that needs an ABI rewrite is deferred, as is variadic
+lowering for other targets.
 
 Background and Context
 ======================
@@ -563,6 +567,20 @@ The pass takes one of two driver modes via pass options:
   routing through any real classifier.
 
 Exactly one of the two options must be set.
+
+Enabling the Pass
+-----------------
+
+``cir-call-conv-lowering`` runs by default whenever ClangIR code generation is
+enabled on an x86_64 target.  On every other triple the pipeline omits the
+pass, because x86_64 System V is the only classifier implemented so far, and
+signatures reach the LLVM dialect in their high-level form.
+
+``-fno-clangir-call-conv-lowering`` turns the pass off and
+``-fclangir-call-conv-lowering`` turns it back on.  The last one on the
+command line wins, so a build can disable the pass globally and re-enable it
+for a single translation unit.  Both are ``-cc1`` options, so reach them from
+the driver through ``-Xclang``.
 
 Open Questions
 ==============

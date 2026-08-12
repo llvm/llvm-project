@@ -8,7 +8,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipIfWasm  # no exec() on WebAssembly
+@requireNotWasm  # no exec() on WebAssembly
 class ExecTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -21,7 +21,7 @@ class ExecTestCase(TestBase):
     )  # this exec test has problems on ios systems
     @expectedFailureNetBSD
     @skipIfAsan  # rdar://problem/43756823
-    @skipIfWindows
+    @requirePOSIX
     def test_hitting_exec(self):
         self.do_test(False)
 
@@ -34,7 +34,7 @@ class ExecTestCase(TestBase):
     )  # this exec test has problems on ios systems
     @expectedFailureNetBSD
     @skipIfAsan  # rdar://problem/43756823
-    @skipIfWindows
+    @requirePOSIX
     def test_skipping_exec(self):
         self.do_test(True)
 
@@ -135,7 +135,7 @@ class ExecTestCase(TestBase):
     )  # this exec test has problems on ios systems
     @expectedFailureNetBSD
     @skipIfAsan  # rdar://problem/43756823
-    @skipIfWindows
+    @requirePOSIX
     def test_correct_thread_plan_state_before_exec(self):
         """
         In this test we make sure that the Thread* cache in the ThreadPlans

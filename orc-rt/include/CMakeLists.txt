@@ -42,6 +42,7 @@ set(ORC_RT_HEADERS
     orc-rt/span.h
     orc-rt/sps-ci/AllSPSCI.h
     orc-rt/sps-ci/CallSPSCI.h
+    orc-rt/sps-ci/GDBJITRegistrarSPSCI.h
     orc-rt/sps-ci/MemoryAccessSPSCI.h
     orc-rt/sps-ci/NativeDylibManagerSPSCI.h
     orc-rt/sps-ci/SimpleNativeMemoryMapSPSCI.h

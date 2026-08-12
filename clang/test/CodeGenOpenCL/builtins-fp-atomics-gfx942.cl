@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -target-cpu gfx942 \
+// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgpu9.42-amd-amdhsa \
 // RUN:   %s -emit-llvm -o - | FileCheck %s
 
-// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -target-cpu gfx942 \
+// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgpu9.42-amd-amdhsa \
 // RUN:   -S -o - %s | FileCheck -check-prefix=GFX942 %s
 
 // REQUIRES: amdgpu-registered-target

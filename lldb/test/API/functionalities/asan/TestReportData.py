@@ -21,7 +21,7 @@ class AsanTestReportDataCase(TestBase):
         self.build(make_targets=["compiler_rt-asan"])
         self.asan_tests()
 
-    @skipUnlessDarwin
+    @requireDarwin
     @skipIf(bugnumber="rdar://109913184&143590169")
     def test_libsanitizers_asan(self):
         try:

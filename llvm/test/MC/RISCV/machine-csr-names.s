@@ -187,6 +187,20 @@ csrrs t1, mcounteren, zero
 # uimm12
 csrrs t2, 0x306, zero
 
+# mijt
+# name
+# CHECK-INST: csrrs t1, mijt, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x70,0x30]
+# CHECK-INST-ALIAS: csrr t1, mijt
+# uimm12
+# CHECK-INST: csrrs t2, mijt, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x70,0x30]
+# CHECK-INST-ALIAS: csrr t2, mijt
+# name
+csrrs t1, mijt, zero
+# uimm12
+csrrs t2, 0x307, zero
+
 # mscratch
 # name
 # CHECK-INST: csrrs t1, mscratch, zero
@@ -256,6 +270,20 @@ csrrs t2, 0x343, zero
 csrrs t1, mip, zero
 # uimm12
 csrrs t2, 0x344, zero
+
+# mspcs
+# name
+# CHECK-INST: csrrs t1, mspcs, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x90,0x34]
+# CHECK-INST-ALIAS: csrr t1, mspcs
+# uimm12
+# CHECK-INST: csrrs t2, mspcs, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x90,0x34]
+# CHECK-INST-ALIAS: csrr t2, mspcs
+# name
+csrrs t1, mspcs, zero
+# uimm12
+csrrs t2, 0x349, zero
 
 # mtinst
 # name

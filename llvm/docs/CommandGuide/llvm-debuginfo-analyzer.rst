@@ -3,8 +3,6 @@ llvm-debuginfo-analyzer - Print a logical representation of low-level debug info
 
 .. program:: llvm-debuginfo-analyzer
 
-.. contents::
-   :local:
 
 SYNOPSIS
 --------

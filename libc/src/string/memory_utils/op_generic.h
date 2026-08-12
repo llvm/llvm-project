@@ -125,7 +125,7 @@ template <typename T> constexpr size_t array_size_v = array_size<T>::value;
 template <typename T> T load(CPtr src) {
   static_assert(is_element_type_v<T>);
   if constexpr (is_scalar_v<T> || is_vector_v<T>) {
-    return ::LIBC_NAMESPACE::load<T>(src);
+    return load_unaligned<T>(src);
   } else if constexpr (is_array_v<T>) {
     using value_type = typename T::value_type;
     T value;
@@ -138,7 +138,7 @@ template <typename T> T load(CPtr src) {
 template <typename T> void store(Ptr dst, T value) {
   static_assert(is_element_type_v<T>);
   if constexpr (is_scalar_v<T> || is_vector_v<T>) {
-    ::LIBC_NAMESPACE::store<T>(dst, value);
+    store_unaligned<T>(dst, value);
   } else if constexpr (is_array_v<T>) {
     using value_type = typename T::value_type;
     for (size_t i = 0; i < array_size_v<T>; ++i)
@@ -357,7 +357,7 @@ template <typename T> struct Memmove {
 // Making the offset explicit hints the compiler to use relevant addressing mode
 // consistently.
 template <typename T> LIBC_INLINE T load(CPtr ptr, size_t offset) {
-  return ::LIBC_NAMESPACE::load<T>(ptr + offset);
+  return load_unaligned<T>(ptr + offset);
 }
 
 // Same as above but also makes sure the loaded value is in big endian format.

@@ -1263,7 +1263,8 @@ struct CancellingBlockScaledCastsOptimization
           castOp, "inner input type must match outer output type");
 
     const Type innerOutputElemType = innerOutputTy.getElementType();
-    const bool isLosslessCast = isa<Float32Type>(innerOutputElemType);
+    const bool isLosslessCast =
+        isa<Float32Type, BFloat16Type>(innerOutputElemType);
     if (!isLosslessCast)
       return rewriter.notifyMatchFailure(
           castOp, "avoid cancelling casts that should be lossy");
@@ -1796,7 +1797,7 @@ OpFoldResult IntDivOp::fold(FoldAdaptor adaptor) {
   }
 
   if (rhsAttr && lhsAttr && rhsAttr.isSplat() && lhsAttr.isSplat() &&
-      llvm::isa<IntegerType>(resultETy)) {
+      llvm::isa<IntegerType>(resultETy) && resultTy.hasStaticShape()) {
     APInt l = lhsAttr.getSplatValue<APInt>();
     APInt r = rhsAttr.getSplatValue<APInt>();
     if (!r.isZero()) {
@@ -1841,6 +1842,9 @@ std::optional<APInt> mulInt(APInt lhs, APInt rhs, int32_t shift,
 
 DenseElementsAttr mulBinaryFolder(DenseElementsAttr lhs, DenseElementsAttr rhs,
                                   RankedTensorType ty, int32_t shift) {
+  // A constant result can only be built for a statically-shaped type.
+  if (!ty.hasStaticShape())
+    return {};
   if (rhs && lhs && rhs.isSplat() && lhs.isSplat()) {
     if (llvm::isa<IntegerType>(ty.getElementType())) {
       APInt l = lhs.getSplatValue<APInt>();
@@ -2113,13 +2117,18 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
   if (!inputTy.getElementType().isIntOrIndexOrFloat())
     return {};
 
+  // Constants must have static shape.
+  if (!outputTy.hasStaticShape())
+    return {};
+
+  // Reshaping a resource-backed constant only requires updating its type.
+  if (auto operand = llvm::dyn_cast_if_present<DenseResourceElementsAttr>(
+          adaptor.getInput1()))
+    return DenseResourceElementsAttr::get(outputTy, operand.getRawHandle());
+
   // reshape(const(x)) -> const(reshape-attr(x))
   if (auto operand =
           llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getInput1())) {
-    // Constants must have static shape.
-    if (!outputTy.hasStaticShape())
-      return {};
-
     // Okay to duplicate splat constants.
     if (operand.isSplat())
       return SplatElementsAttr::get(outputTy,

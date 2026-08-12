@@ -621,6 +621,7 @@ options. For GNU :program:`objcopy` compatibility, the values are all bfdnames.
 - `elf32-loongarch`
 - `elf64-loongarch`
 - `elf64-s390`
+- `elf64-amdgpu`
 
 The following formats are supported by :program:`llvm-objcopy` for the
 :option:`--output-target` only:

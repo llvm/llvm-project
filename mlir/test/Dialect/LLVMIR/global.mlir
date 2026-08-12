@@ -98,6 +98,18 @@ llvm.mlir.global internal constant @sectionvar("teststring")  {section = ".mysec
 // CHECK: llvm.mlir.global internal thread_local constant @thread_local(42 : i32)
 llvm.mlir.global internal thread_local constant @thread_local(42 : i32) : i32
 
+// CHECK: llvm.mlir.global internal thread_local constant @thread_local_gd(42 : i32)
+llvm.mlir.global internal thread_local(generaldynamic) constant @thread_local_gd(42 : i32) : i32
+
+// CHECK: llvm.mlir.global internal thread_local(localdynamic) constant @thread_local_ld(42 : i32)
+llvm.mlir.global internal thread_local(localdynamic) constant @thread_local_ld(42 : i32) : i32
+
+// CHECK: llvm.mlir.global internal thread_local(initialexec) constant @thread_local_ie(42 : i32)
+llvm.mlir.global internal thread_local(initialexec) constant @thread_local_ie(42 : i32) : i32
+
+// CHECK: llvm.mlir.global internal thread_local(localexec) constant @thread_local_le(42 : i32)
+llvm.mlir.global internal thread_local(localexec) constant @thread_local_le(42 : i32) : i32
+
 // Visibility types.
 // CHECK: llvm.mlir.global internal hidden constant @hidden(42 : i32)
 llvm.mlir.global internal hidden constant @hidden(42 : i32) : i32

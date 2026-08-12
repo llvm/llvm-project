@@ -10,6 +10,7 @@
 //   - aggregate locals (a struct and a fixed stack array)
 //   - a variable-length array (dynamically sized stack storage, like alloca)
 //   - pointer locals, including a pointer to heap memory
+//   - stack-passed parameters
 //
 // The outer frames (func_d / func_c) also carry locals of these kinds, so that
 // walking the whole stack and examining every frame reads the same variety of
@@ -31,11 +32,18 @@ struct Stats {
   double mean;
 };
 
+// A large by-value struct.  Passed as an argument it does not fit in registers,
+// so it is passed on the stack, above the callee's frame in the caller.
+struct Big {
+  long v[8];
+};
+
 // The innermost frame, where we stop.  It carries several kind of local: a
 // scalar, aggregates (struct + array), pointers (including one into heap
 // memory) and a variable-length array.  Examining this single frame on a stop
 // reads both stack and heap memory.
-static int func_e(int depth) {
+static int func_e(int depth, int a1, int a2, int a3, int a4, int a5, int a6,
+                  int a7, int a8, int a9, struct Big big) {
   int i = depth + 1;
   long l = (long)depth * 1000;
   double d = depth + 0.5;
@@ -51,9 +59,10 @@ static int func_e(int depth) {
   const char *str = "hello from func_e";
   int *self = &i;
   g_sink = i + l + (long)d + stats.sum + arr[3] + vla[n - 1] +
-           heap[HEAP_COUNT - 1] + str[0] + *self; // break here
+           heap[HEAP_COUNT - 1] + str[0] + *self + a8 + a9 +
+           big.v[7]; // break here
   int r = i + (int)l + (int)d + (int)stats.sum + (int)arr[3] + (int)vla[n - 1] +
-          (int)heap[HEAP_COUNT - 1] + str[0] + *self;
+          (int)heap[HEAP_COUNT - 1] + str[0] + *self + a8 + a9 + (int)big.v[7];
   free(heap);
   return r;
 }
@@ -62,7 +71,11 @@ static int func_e(int depth) {
 static int func_d(int x) {
   struct Stats stats = {.sum = x, .min = x - 1, .max = x + 1, .mean = x + 0.5};
   long arr[4] = {x, x + 1, x + 2, x + 3};
-  int r = func_e(x);
+  struct Big big;
+  for (int k = 0; k < 8; ++k)
+    big.v[k] = 100 + k;
+  int r = func_e(x, x + 1, x + 2, x + 3, x + 4, x + 5, x + 6, x + 7, x + 8,
+                 x + 9, big);
   return r + (int)stats.sum + (int)arr[3];
 }
 

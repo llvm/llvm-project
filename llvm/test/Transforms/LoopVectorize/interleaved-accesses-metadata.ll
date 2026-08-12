@@ -25,16 +25,16 @@ define void @merge_tbaa_interleave_group(ptr nocapture readonly %p, ptr noalias 
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_VEC4R]], ptr [[P]], i64 [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = load double, ptr [[TMP2]], align 8, !tbaa [[TBAA0:![0-9]+]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load double, ptr [[TMP3]], align 8, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> poison, double [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> [[TMP6]], double [[TMP5]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> poison, double [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> [[TMP6]], double [[TMP5]], i64 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul <2 x double> [[TMP7]], splat (double 2.000000e+00)
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [20 x [[STRUCT_VEC2R:%.*]]], ptr [[CP]], i64 0, i64 [[INDEX]], i32 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT_VEC4R]], ptr [[P]], i64 [[INDEX]], i32 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT_VEC4R]], ptr [[P]], i64 [[TMP1]], i32 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = load double, ptr [[TMP10]], align 8, !tbaa [[TBAA5:![0-9]+]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = load double, ptr [[TMP11]], align 8, !tbaa [[TBAA5]]
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x double> poison, double [[TMP12]], i32 0
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x double> [[TMP14]], double [[TMP13]], i32 1
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x double> poison, double [[TMP12]], i64 0
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x double> [[TMP14]], double [[TMP13]], i64 1
 ; CHECK-NEXT:    [[TMP16:%.*]] = fmul <2 x double> [[TMP15]], splat (double 3.000000e+00)
 ; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <2 x double> [[TMP8]], <2 x double> [[TMP16]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x double> [[TMP17]], <4 x double> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
@@ -76,21 +76,18 @@ define void @ir_tbaa_different(ptr %base, ptr %end, ptr %src) {
 ; CHECK-LABEL: define void @ir_tbaa_different(
 ; CHECK-SAME: ptr [[BASE:%.*]], ptr [[END:%.*]], ptr [[SRC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[BASE2:%.*]] = ptrtoint ptr [[BASE]] to i64
-; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; CHECK-NEXT:    [[END2:%.*]] = ptrtoint ptr [[END]] to i64
-; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[BASE]] to i64
-; CHECK-NEXT:    [[TMP16:%.*]] = sub i64 [[END2]], [[TMP10]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP16]], -8
+; CHECK-NEXT:    [[BASE2:%.*]] = ptrtoaddr ptr [[BASE]] to i64
+; CHECK-NEXT:    [[END2:%.*]] = ptrtoaddr ptr [[END]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[END2]], -8
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[BASE2]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[END1]], -8
+; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[END2]], -8
 ; CHECK-NEXT:    [[TMP12:%.*]] = sub i64 [[TMP17]], [[BASE2]]
-; CHECK-NEXT:    [[TMP13:%.*]] = lshr i64 [[TMP12]], 3
-; CHECK-NEXT:    [[TMP14:%.*]] = shl nuw i64 [[TMP13]], 3
+; CHECK-NEXT:    [[TMP14:%.*]] = and i64 [[TMP12]], -8
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP14]], 8
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP15]]
 ; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[SRC]], i64 4
@@ -99,7 +96,7 @@ define void @ir_tbaa_different(ptr %base, ptr %end, ptr %src) {
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 2
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP4]]
@@ -170,16 +167,16 @@ define void @noalias_metadata_from_versioning(ptr %base, ptr %end, ptr %src) {
 ; CHECK-LABEL: define void @noalias_metadata_from_versioning(
 ; CHECK-SAME: ptr [[BASE:%.*]], ptr [[END:%.*]], ptr [[SRC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[BASE]] to i64
-; CHECK-NEXT:    [[TMP11:%.*]] = sub i64 [[END1]], [[TMP10]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP11]], -8
+; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoaddr ptr [[BASE]] to i64
+; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[END1]], -8
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP11]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 2
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP4]]

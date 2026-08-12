@@ -5,9 +5,9 @@
 
 # Schedule the NRK that defines the compare source low to help comparison
 # elimination.
-# CHECK:      ********** MI Scheduling **********
+# CHECK:      Current Schedule Region
 # CHECK-NEXT: fun0:%bb.0
-# CHECK:      ********** MI Scheduling **********
+# CHECK:      Current Schedule Region
 # CHECK-NEXT: fun0:%bb.1
 # CHECK:      Queue BotQ.A: 6 4
 # CHECK-NEXT:   Cand SU(6) FIRST

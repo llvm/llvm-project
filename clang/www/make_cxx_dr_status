@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 import sys, os, re, urllib.request
 
-latest_release = 21
+latest_release = 22
 
 clang_www_dir = os.path.dirname(__file__)
 default_issue_list_path = os.path.join(clang_www_dir, 'cwg_index.html')
@@ -17,7 +17,7 @@ class DR:
     return '%s (%s): %s' % (self.number, self.status, self.title)
 
   pattern = re.compile('''
-<TD.*>(?P<section_number>.*) <A href="(?P<section_link>.*)">(?P<section_name>.*)</A>
+<TD.*>(?P<section_number>.*) <A href="\\s*(?P<section_link>.*)">(?P<section_name>.*)</A>
 </TD>
 <TD.*><A HREF="(?P<url>.*)">(?P<number>.*)</A></TD>
 <TD.*>(?P<status>.*)</TD>

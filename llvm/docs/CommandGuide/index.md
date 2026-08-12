@@ -15,6 +15,7 @@ llvm-addr2line
 llvm-ar
 llvm-as
 llvm-bcanalyzer
+llvm-calc-occupancy
 llvm-cgdata
 llvm-config
 llvm-cov
@@ -143,6 +144,7 @@ interested in.
 * {doc}`llvm-profgen`
 * {doc}`llvm-tli-checker`
 * {doc}`llvm-offload-binary`
+* {doc}`llvm-calc-occupancy`
 
 ## Remarks Tools
 

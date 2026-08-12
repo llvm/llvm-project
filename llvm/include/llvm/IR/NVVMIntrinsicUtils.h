@@ -19,6 +19,7 @@
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
@@ -40,6 +41,28 @@ enum class TMAReductionOp : uint8_t {
   OR = 6,
   XOR = 7,
 };
+
+inline StringRef getTMATensorReductionOpName(TMAReductionOp Op) {
+  switch (Op) {
+  case TMAReductionOp::ADD:
+    return "add";
+  case TMAReductionOp::MIN:
+    return "min";
+  case TMAReductionOp::MAX:
+    return "max";
+  case TMAReductionOp::INC:
+    return "inc";
+  case TMAReductionOp::DEC:
+    return "dec";
+  case TMAReductionOp::AND:
+    return "and";
+  case TMAReductionOp::OR:
+    return "or";
+  case TMAReductionOp::XOR:
+    return "xor";
+  }
+  llvm_unreachable("invalid TMA tensorreduction operation");
+}
 
 // Enum to represent the cta_group::1 and
 // cta_group::2 variants in TMA/TCGEN05 family of
@@ -105,6 +128,8 @@ enum class TensormapFillMode : uint8_t {
 };
 
 LLVM_ABI void printTcgen05MMAKind(raw_ostream &OS, const Constant *ImmArgVal);
+
+LLVM_ABI void printTMAReductionOp(raw_ostream &OS, const Constant *ImmArgVal);
 
 LLVM_ABI void printTcgen05CollectorUsageOp(raw_ostream &OS,
                                            const Constant *ImmArgVal);

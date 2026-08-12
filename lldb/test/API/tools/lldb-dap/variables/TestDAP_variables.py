@@ -8,9 +8,9 @@ from typing import List, Optional
 from lldbsuite.test import lldbplatformutil
 from lldbsuite.test.decorators import (
     no_debug_info_test,
+    requireDarwin,
     skipIfAsan,
     skipIfWindows,
-    skipUnlessDarwin,
 )
 from lldbsuite.test.lldbtest import line_number
 from lldbsuite.test.tools.lldb_dap.types import (
@@ -724,7 +724,7 @@ class TestDAP_variables(DAPTestCaseBase):
         self.assertIn("at main.cpp:", pc_reg.value)
 
     @no_debug_info_test
-    @skipUnlessDarwin
+    @requireDarwin
     def test_darwin_dwarf_missing_obj(self):
         """
         Test that if we build a binary with DWARF in .o files and we remove
@@ -738,7 +738,7 @@ class TestDAP_variables(DAPTestCaseBase):
         self.darwin_dwarf_missing_obj(None)
 
     @no_debug_info_test
-    @skipUnlessDarwin
+    @requireDarwin
     def test_darwin_dwarf_missing_obj_with_symbol_ondemand_enabled(self):
         """
         Test that if we build a binary with DWARF in .o files and we remove

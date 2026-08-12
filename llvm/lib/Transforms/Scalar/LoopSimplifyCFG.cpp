@@ -654,7 +654,7 @@ public:
            "DT broken after transform!");
 #endif
     assert(DT.isReachableFromEntry(Header));
-    LI.verify(DT);
+    LI.verify();
 #endif
 
     return true;

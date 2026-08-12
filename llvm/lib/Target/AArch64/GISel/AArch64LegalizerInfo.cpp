@@ -1352,6 +1352,13 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_EXTRACT_SUBVECTOR)
       .legalFor({{v8s8, v16s8}, {v4s16, v8s16}, {v2s32, v4s32}})
       .widenScalarOrEltToNextPow2(0)
+      .clampMaxNumElements(0, s8, 16)
+      .clampMaxNumElements(0, s16, 8)
+      .clampMaxNumElements(0, s32, 4)
+      .clampNumElements(1, v8s8, v16s8)
+      .clampNumElements(1, v4s16, v8s16)
+      .clampNumElements(1, v2s32, v4s32)
+      .lower()
       .immIdx(0); // Inform verifier imm idx 0 is handled.
 
   // TODO: {nxv16s8, s8}, {nxv8s16, s16}
@@ -2091,6 +2098,8 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     MI.eraseFromParent();
     return true;
   }
+  case Intrinsic::aarch64_neon_addhn:
+    return LowerBinOp(AArch64::G_ADDHN);
   case Intrinsic::aarch64_neon_sqadd: {
     if (MRI.getType(MI.getOperand(0).getReg()).isVector())
       return LowerBinOp(TargetOpcode::G_SADDSAT);

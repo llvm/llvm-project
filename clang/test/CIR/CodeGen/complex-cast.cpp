@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-canonicalize -o %t.cir %s 2>&1 | FileCheck --check-prefix=CIR-BEFORE %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir -mmlir --mlir-print-ir-after=cir-lowering-prepare -o %t.cir %s 2>&1 | FileCheck --check-prefixes=CIR-AFTER %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-llvm %s -o %t-cir.ll
+// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
+// supports _Complex types.
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fno-clangir-call-conv-lowering -emit-cir -mmlir --mlir-print-ir-before=cir-canonicalize -o %t.cir %s 2>&1 | FileCheck --check-prefix=CIR-BEFORE %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fno-clangir-call-conv-lowering -emit-cir -mmlir --mlir-print-ir-after=cir-lowering-prepare -o %t.cir %s 2>&1 | FileCheck --check-prefixes=CIR-AFTER %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
@@ -340,8 +342,8 @@ void lvalue_to_rvalue_bitcast() {
 
 // CIR-AFTER: %{{.*}} = cir.cast bitcast %{{.*}} : !cir.ptr<!rec_CX> -> !cir.ptr<!cir.complex<!cir.double>>
 
-// LLVM: %[[PTR_ADDR:.*]] = alloca %struct.CX, i64 1, align 8
-// LLVM: %[[COMPLEX_ADDR:.*]] = alloca { double, double }, i64 1, align 8
+// LLVM: %[[PTR_ADDR:.*]] = alloca %struct.CX, align 8
+// LLVM: %[[COMPLEX_ADDR:.*]] = alloca { double, double }, align 8
 // LLVM: %[[PTR_TO_COMPLEX:.*]] = load { double, double }, ptr %[[PTR_ADDR]], align 8
 // LLVM: store { double, double } %[[PTR_TO_COMPLEX]], ptr %[[COMPLEX_ADDR]], align 8
 
@@ -365,7 +367,7 @@ void lvalue_bitcast() {
 
 // CIR-AFTER: %{{.*}} = cir.cast bitcast %{{.*}} : !cir.ptr<!rec_CX> -> !cir.ptr<!cir.complex<!cir.double>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca %struct.CX, i64 1, align 8
+// LLVM: %[[A_ADDR:.*]] = alloca %struct.CX, align 8
 // LLVM: store { double, double } zeroinitializer, ptr %[[A_ADDR]], align 8
 
 // OGCG: %[[A_ADDR]] = alloca %struct.CX, align 8

@@ -45,6 +45,11 @@ class FlatAffineValueConstraints : public FlatLinearValueConstraints {
 public:
   using FlatLinearValueConstraints::FlatLinearValueConstraints;
 
+  /// Creates an affine constraint system from an IntegerSet. Returns failure
+  /// if `set` is semi-affine, as flattening is not implemented for those.
+  static FailureOr<FlatAffineValueConstraints>
+  create(IntegerSet set, ValueRange operands = {});
+
   /// Return the kind of this object.
   Kind getKind() const override { return Kind::FlatAffineValueConstraints; }
 

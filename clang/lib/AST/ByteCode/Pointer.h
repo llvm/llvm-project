@@ -544,15 +544,15 @@ public:
   SourceLocation getDeclLoc() const { return getDeclDesc()->getLocation(); }
 
   /// Returns the expression or declaration the pointer has been created for.
-  DeclTy getSource() const {
+  DeclOrExpr getSource() const {
     if (isBlockPointer())
       return getDeclDesc()->getSource();
     if (isFunctionPointer()) {
       const Function *F = Fn.Func;
-      return F ? F->getDecl() : DeclTy();
+      return F ? F->getDecl() : DeclOrExpr();
     }
     llvm_unreachable("Unsupported pointer type in getSource()");
-    return DeclTy();
+    return DeclOrExpr();
   }
 
   /// Returns a pointer to the object of which this pointer is a field.

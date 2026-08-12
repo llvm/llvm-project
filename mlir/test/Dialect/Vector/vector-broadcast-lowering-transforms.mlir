@@ -209,6 +209,33 @@ func.func @broadcast_scalable_duplication(%arg0: vector<[32]xf32>) -> vector<1x[
   return %res : vector<1x[32]xf32>
 }
 
+// TODO: Add support for scalable vectors
+
+// CHECK-LABEL: @broadcast_vec2d_from_vec1d_scalable_leading
+// CHECK-SAME:  %[[A:.*]]: vector<2xf32>)
+// CHECK: vector.broadcast %[[A]] : vector<2xf32> to vector<[4]x2xf32>
+
+func.func @broadcast_vec2d_from_vec1d_scalable_leading(%arg0: vector<2xf32>) -> vector<[4]x2xf32> {
+  %0 = vector.broadcast %arg0 : vector<2xf32> to vector<[4]x2xf32>
+  return %0 : vector<[4]x2xf32>
+}
+
+// TODO: Add support for scalable vectors
+
+// CHECK-LABEL: @broadcast_vec2d_from_vec1d_scalable_inner
+// CHECK-SAME:  %[[A:.*]]: vector<2xf32>)
+// CHECK:       %[[T0:.*]] = ub.poison : vector<3x[4]x2xf32>
+// CHECK:       %[[T1:.*]] = vector.broadcast %[[A]] : vector<2xf32> to vector<[4]x2xf32>
+// CHECK:       %[[T2:.*]] = vector.insert %[[T1]], %[[T0]] [0] : vector<[4]x2xf32> into vector<3x[4]x2xf32>
+// CHECK:       %[[T3:.*]] = vector.insert %[[T1]], %[[T2]] [1] : vector<[4]x2xf32> into vector<3x[4]x2xf32>
+// CHECK:       %[[T4:.*]] = vector.insert %[[T1]], %[[T3]] [2] : vector<[4]x2xf32> into vector<3x[4]x2xf32>
+// CHECK:       return %[[T4]] : vector<3x[4]x2xf32>
+
+func.func @broadcast_vec2d_from_vec1d_scalable_inner(%arg0: vector<2xf32>) -> vector<3x[4]x2xf32> {
+  %0 = vector.broadcast %arg0 : vector<2xf32> to vector<3x[4]x2xf32>
+  return %0 : vector<3x[4]x2xf32>
+}
+
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
     %f = transform.structured.match ops{["func.func"]} in %module_op

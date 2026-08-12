@@ -1915,45 +1915,6 @@ ds_swizzle_b32 v8, v2 offset:swizzle(BROADCAST,8,7)
 ds_swizzle_b32 v8, v2 offset:swizzle(BITMASK_PERM, "01pip")
 // GFX13: ds_swizzle_b32 v8, v2 offset:swizzle(BITMASK_PERM,"01pip") ; encoding: [0x07,0x09,0xd4,0xd8,0x02,0x00,0x00,0x08]
 
-ds_add_f64 v1, v[2:3] offset:65535
-// GFX13: ds_add_f64 v1, v[2:3] offset:65535      ; encoding: [0xff,0xff,0x50,0xd9,0x01,0x02,0x00,0x00]
-
-ds_add_f64 v255, v[2:3] offset:65535
-// GFX13: ds_add_f64 v255, v[2:3] offset:65535    ; encoding: [0xff,0xff,0x50,0xd9,0xff,0x02,0x00,0x00]
-
-ds_add_f64 v1, v[254:255] offset:65535
-// GFX13: ds_add_f64 v1, v[254:255] offset:65535  ; encoding: [0xff,0xff,0x50,0xd9,0x01,0xfe,0x00,0x00]
-
-ds_add_f64 v1, v[2:3]
-// GFX13: ds_add_f64 v1, v[2:3]                   ; encoding: [0x00,0x00,0x50,0xd9,0x01,0x02,0x00,0x00]
-
-ds_add_f64 v1, v[2:3]
-// GFX13: ds_add_f64 v1, v[2:3]                   ; encoding: [0x00,0x00,0x50,0xd9,0x01,0x02,0x00,0x00]
-
-ds_add_f64 v1, v[2:3] offset:4
-// GFX13: ds_add_f64 v1, v[2:3] offset:4          ; encoding: [0x04,0x00,0x50,0xd9,0x01,0x02,0x00,0x00]
-
-ds_add_rtn_f64 v[4:5], v1, v[2:3] offset:65535
-// GFX13: ds_add_rtn_f64 v[4:5], v1, v[2:3] offset:65535 ; encoding: [0xff,0xff,0xd0,0xd9,0x01,0x02,0x00,0x04]
-
-ds_add_rtn_f64 v[254:255], v1, v[2:3] offset:65535
-// GFX13: ds_add_rtn_f64 v[254:255], v1, v[2:3] offset:65535 ; encoding: [0xff,0xff,0xd0,0xd9,0x01,0x02,0x00,0xfe]
-
-ds_add_rtn_f64 v[4:5], v255, v[2:3] offset:65535
-// GFX13: ds_add_rtn_f64 v[4:5], v255, v[2:3] offset:65535 ; encoding: [0xff,0xff,0xd0,0xd9,0xff,0x02,0x00,0x04]
-
-ds_add_rtn_f64 v[4:5], v1, v[254:255] offset:65535
-// GFX13: ds_add_rtn_f64 v[4:5], v1, v[254:255] offset:65535 ; encoding: [0xff,0xff,0xd0,0xd9,0x01,0xfe,0x00,0x04]
-
-ds_add_rtn_f64 v[4:5], v1, v[2:3]
-// GFX13: ds_add_rtn_f64 v[4:5], v1, v[2:3]       ; encoding: [0x00,0x00,0xd0,0xd9,0x01,0x02,0x00,0x04]
-
-ds_add_rtn_f64 v[4:5], v1, v[2:3]
-// GFX13: ds_add_rtn_f64 v[4:5], v1, v[2:3]       ; encoding: [0x00,0x00,0xd0,0xd9,0x01,0x02,0x00,0x04]
-
-ds_add_rtn_f64 v[4:5], v1, v[2:3] offset:4
-// GFX13: ds_add_rtn_f64 v[4:5], v1, v[2:3] offset:4 ; encoding: [0x04,0x00,0xd0,0xd9,0x01,0x02,0x00,0x04]
-
 ds_load_tr8_b64 v[1:2], v0
 // GFX13-W32: ds_load_tr8_b64 v[1:2], v0              ; encoding: [0x00,0x00,0xf4,0xdb,0x00,0x00,0x00,0x01]
 // GFX13-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32

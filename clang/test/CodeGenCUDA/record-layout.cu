@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -fdump-record-layouts \
 // RUN:   -emit-llvm -o %t -xhip %s 2>&1 | FileCheck %s --check-prefix=AST
 // RUN: cat %t | FileCheck --check-prefixes=CHECK,HOST %s
-// RUN: %clang_cc1 -fcuda-is-device -triple amdgcn-amd-amdhsa -target-cpu gfx1100 \
+// RUN: %clang_cc1 -fcuda-is-device -triple amdgpu11.00-amd-amdhsa \
 // RUN:   -emit-llvm -fdump-record-layouts -aux-triple x86_64-pc-windows-msvc \
 // RUN:   -o %t -xhip %s | FileCheck %s --check-prefix=AST
 // RUN: cat %t | FileCheck --check-prefixes=CHECK,DEV %s

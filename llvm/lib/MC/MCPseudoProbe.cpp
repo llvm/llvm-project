@@ -216,9 +216,11 @@ void MCPseudoProbeSections::emit(MCObjectStreamer *MCOS) {
     Vec.emplace_back(ProbeSec.first, &ProbeSec.second);
   for (auto I : llvm::enumerate(MCOS->getAssembler()))
     I.value().setOrdinal(I.index());
-  llvm::sort(Vec, [](auto A, auto B) {
-    return A.first->getSection().getOrdinal() <
-           B.first->getSection().getOrdinal();
+  llvm::sort(Vec, [](const auto &A, const auto &B) {
+    return std::make_pair(A.first->getSection().getOrdinal(),
+                          A.first->getName()) <
+           std::make_pair(B.first->getSection().getOrdinal(),
+                          B.first->getName());
   });
   for (auto [FuncSym, RootPtr] : Vec) {
     const auto &Root = *RootPtr;

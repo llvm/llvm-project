@@ -46,6 +46,12 @@ static NameLoc getLocFromDebugInfoString(OpBuilder &builder, StringRef source) {
 //===----------------------------------------------------------------------===//
 
 Value spirv::Deserializer::getValue(uint32_t id) {
+  if (std::optional<std::pair<Attribute, Type>> constCompositeReplicateInfo =
+          getConstantCompositeReplicate(id)) {
+    return spirv::EXTConstantCompositeReplicateOp::create(
+        opBuilder, unknownLoc, constCompositeReplicateInfo->second,
+        constCompositeReplicateInfo->first);
+  }
   if (auto constInfo = getConstant(id)) {
     // Materialize a `spirv.Constant` op at every use site.
     Location loc = unknownLoc;
@@ -53,12 +59,6 @@ Value spirv::Deserializer::getValue(uint32_t id) {
       loc = Location(locAttr);
     return spirv::ConstantOp::create(opBuilder, loc, constInfo->second,
                                      constInfo->first);
-  }
-  if (std::optional<std::pair<Attribute, Type>> constCompositeReplicateInfo =
-          getConstantCompositeReplicate(id)) {
-    return spirv::EXTConstantCompositeReplicateOp::create(
-        opBuilder, unknownLoc, constCompositeReplicateInfo->second,
-        constCompositeReplicateInfo->first);
   }
   if (auto varOp = getGlobalVariable(id)) {
     auto addressOfOp =

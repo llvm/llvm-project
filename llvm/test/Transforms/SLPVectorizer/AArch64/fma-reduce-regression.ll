@@ -5,11 +5,14 @@ define float @test(float %arg, <2 x float> %arg1, i64 %arg2) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[ARG2:%.*]] to i16
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> poison, i64 [[ARG2]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr <2 x i64> [[TMP1]], <i64 32, i64 16>
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc <2 x i64> [[TMP2]] to <2 x i16>
-; CHECK-NEXT:    [[TMP4:%.*]] = uitofp <2 x i16> [[TMP3]] to <2 x float>
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i64 [[ARG2]], 16
+; CHECK-NEXT:    [[LSHR6:%.*]] = lshr i64 [[ARG2]], 32
+; CHECK-NEXT:    [[TRUNC7:%.*]] = trunc i64 [[LSHR6]] to i16
+; CHECK-NEXT:    [[TRUNC5:%.*]] = trunc i64 [[LSHR]] to i16
+; CHECK-NEXT:    [[UITOFP:%.*]] = uitofp i16 [[TRUNC7]] to float
+; CHECK-NEXT:    [[UITOFP8:%.*]] = uitofp i16 [[TRUNC5]] to float
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> poison, float [[UITOFP]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> [[TMP0]], float [[UITOFP8]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = fsub fast <2 x float> [[ARG1:%.*]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul fast <2 x float> [[TMP5]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call fast float @llvm.vector.reduce.fadd.v2f32(float 0.000000e+00, <2 x float> [[TMP6]])

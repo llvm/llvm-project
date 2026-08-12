@@ -12,8 +12,6 @@
 #include "Integral.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/ComparisonCategories.h"
-#include "llvm/ADT/APSInt.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstddef>
 #include <cstdint>
@@ -80,7 +78,9 @@ public:
     return Boolean(Val);
   }
 
-  void bitcastToMemory(std::byte *Buff) { std::memcpy(Buff, &V, sizeof(V)); }
+  void bitcastToMemory(std::byte *Buff) const {
+    std::memcpy(Buff, &V, sizeof(V));
+  }
 
   void print(llvm::raw_ostream &OS) const { OS << (V ? "true" : "false"); }
   std::string toDiagnosticString(const ASTContext &Ctx) const {

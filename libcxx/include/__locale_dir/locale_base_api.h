@@ -116,7 +116,7 @@
 #    include <__locale_dir/support/netbsd.h>
 #  elif defined(__OpenBSD__)
 #    include <__locale_dir/support/openbsd.h>
-#  elif defined(_LIBCPP_MSVCRT_LIKE)
+#  elif defined(_WIN32)
 #    include <__locale_dir/support/windows.h>
 #  elif defined(__Fuchsia__)
 #    include <__locale_dir/support/fuchsia.h>

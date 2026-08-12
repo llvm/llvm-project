@@ -19,9 +19,11 @@ namespace llvm::omp {
 DirectiveNameParser::DirectiveNameParser(SourceLanguage L) {
   // Take every directive, get its name in every version, break the name up
   // into whitespace-separated tokens, and insert each token.
-  for (size_t I : llvm::seq<size_t>(Directive_enumSize)) {
-    auto D = static_cast<Directive>(I);
+  for (Directive D : directives()) {
     if (D == Directive::OMPD_unknown || !(getDirectiveLanguages(D) & L))
+      continue;
+    // Parse "ORDERED" as OMPD_ordered_standalone.
+    if (D == OMPD_ordered_blockassoc)
       continue;
     for (unsigned Ver : getOpenMPVersions())
       insertName(getOpenMPDirectiveName(D, Ver), D);

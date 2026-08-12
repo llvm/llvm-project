@@ -1,17 +1,17 @@
-// RUN: %clang_cc1 -x hip %s -emit-llvm -o - -triple=amdgcn-amd-amdhsa \
-// RUN:   -fcuda-is-device -target-cpu gfx906 -fnative-half-type \
+// RUN: %clang_cc1 -x hip %s -emit-llvm -o - -triple=amdgpu9.06-amd-amdhsa \
+// RUN:   -fcuda-is-device -fnative-half-type \
 // RUN:   -fnative-half-arguments-and-returns | FileCheck -check-prefixes=FUN,CHECK,SAFEIR %s
 
-// RUN: %clang_cc1 -x hip %s -emit-llvm -o - -triple=amdgcn-amd-amdhsa \
-// RUN:   -fcuda-is-device -target-cpu gfx906 -fnative-half-type \
+// RUN: %clang_cc1 -x hip %s -emit-llvm -o - -triple=amdgpu9.06-amd-amdhsa \
+// RUN:   -fcuda-is-device -fnative-half-type \
 // RUN:   -fnative-half-arguments-and-returns -munsafe-fp-atomics | FileCheck -check-prefixes=FUN,CHECK,UNSAFEIR %s
 
-// RUN: %clang_cc1 -x hip %s -O3 -S -o - -triple=amdgcn-amd-amdhsa \
-// RUN:   -fcuda-is-device -target-cpu gfx1100 -fnative-half-type \
+// RUN: %clang_cc1 -x hip %s -O3 -S -o - -triple=amdgpu11.00-amd-amdhsa \
+// RUN:   -fcuda-is-device -fnative-half-type \
 // RUN:   -fnative-half-arguments-and-returns | FileCheck -check-prefixes=FUN,SAFE %s
 
-// RUN: %clang_cc1 -x hip %s -O3 -S -o - -triple=amdgcn-amd-amdhsa \
-// RUN:   -fcuda-is-device -target-cpu gfx942 -fnative-half-type \
+// RUN: %clang_cc1 -x hip %s -O3 -S -o - -triple=amdgpu9.42-amd-amdhsa \
+// RUN:   -fcuda-is-device -fnative-half-type \
 // RUN:   -fnative-half-arguments-and-returns -munsafe-fp-atomics \
 // RUN:   | FileCheck -check-prefixes=FUN,UNSAFE %s
 

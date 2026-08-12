@@ -134,9 +134,13 @@ struct MMAMatrixStorageType : public TypeStorage {
 ///
 ///   gpu.subgroup_mma_store_matrix %3, %arg22[%c0, %c0] {leadDimension = 16
 ///           : index}: !gpu.mma_matrix<16x16xf32, "COp">, memref<16x16xf32>
+///
+/// MMA matrices may be memref elements on targets that support storing them,
+/// for example SPIRV can represent arrays of MMA matrices.
 // TODO: consider moving this to ODS.
 class MMAMatrixType
-    : public Type::TypeBase<MMAMatrixType, Type, MMAMatrixStorageType> {
+    : public Type::TypeBase<MMAMatrixType, Type, MMAMatrixStorageType,
+                            MemRefElementTypeInterface::Trait> {
 public:
   using Base::Base;
 

@@ -1,4 +1,4 @@
-//  RUN: not llvm-mc -triple=amdgcn -filetype=obj -o /dev/null %s 2>&1 | FileCheck -check-prefix=ERROR %s
+//  RUN: not llvm-mc -triple=amdgpu6.00 -filetype=obj -o /dev/null %s 2>&1 | FileCheck -check-prefix=ERROR %s
 //  ERROR: max-branch-distance.s:7:12: error: branch size exceeds simm16
 
 // fill v_nop

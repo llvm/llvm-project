@@ -84,8 +84,8 @@ bool isReassociationValid(ArrayRef<AffineMap> reassociation,
                           int *invalidIndex = nullptr);
 
 template <typename ReshapeOpTy, typename InverseReshapeOpTy>
-static OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp,
-                                  ArrayRef<Attribute> operands) {
+OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp,
+                           ArrayRef<Attribute> operands) {
   // Fold identity reshape.
   if (reshapeOp.getSrcType() == reshapeOp.getType())
     return reshapeOp.getSrc();
@@ -140,8 +140,8 @@ static OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp,
 /// Common verifier for reshape-like types. Fills `expandedType` and
 ///`collapsedType` with the proper `src` or `result` type.
 template <typename Op, typename T>
-static LogicalResult verifyReshapeLikeTypes(Op op, T expandedType,
-                                            T collapsedType, bool isExpansion) {
+LogicalResult verifyReshapeLikeTypes(Op op, T expandedType, T collapsedType,
+                                     bool isExpansion) {
 
   unsigned expandedRank = expandedType.getRank();
   unsigned collapsedRank = collapsedType.getRank();

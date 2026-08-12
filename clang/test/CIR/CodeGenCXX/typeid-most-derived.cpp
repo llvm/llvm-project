@@ -1,7 +1,9 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %s -o %t.cir 2> %t-before.cir
+// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
+// supports padded, packed, and over-aligned record shapes.
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fno-clangir-call-conv-lowering -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %s -o %t.cir 2> %t-before.cir
 // RUN: FileCheck %s --input-file=%t-before.cir --check-prefixes=CIR
 // RUN: FileCheck %s --input-file=%t.cir --check-prefixes=CIR
-// RUN: %clang_cc1 %s -triple %itanium_abi_triple -Wno-unused-value -std=c++11 -fclangir -emit-llvm -o - -std=c++11 | FileCheck %s --check-prefixes=CIR-TO-LLVM
+// RUN: %clang_cc1 %s -triple %itanium_abi_triple -Wno-unused-value -std=c++11 -fclangir -fno-clangir-call-conv-lowering -emit-llvm -o - -std=c++11 | FileCheck %s --check-prefixes=CIR-TO-LLVM
 // RUN: %clang_cc1 %s -triple %itanium_abi_triple -Wno-unused-value -std=c++11 -emit-llvm -o - -std=c++11 | FileCheck %s --check-prefixes=LLVM
 
 // FIXME: missing `inbounds` in `getelementptr` in CIR-TO-LLVM output.

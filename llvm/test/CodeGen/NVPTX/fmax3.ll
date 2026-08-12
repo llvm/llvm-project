@@ -11,11 +11,11 @@ define void @test_fmaxnum3(float %a, float %b, float %c, ptr addrspace(1) %outpu
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b32 %r1, [test_fmaxnum3_param_0];
-; CHECK-NEXT:    ld.param.b32 %r2, [test_fmaxnum3_param_1];
-; CHECK-NEXT:    ld.param.b32 %r3, [test_fmaxnum3_param_2];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_fmaxnum3_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [test_fmaxnum3_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r3, [test_fmaxnum3_param_2];
 ; CHECK-NEXT:    max.f32 %r4, %r1, %r2, %r3;
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_fmaxnum3_param_3];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_fmaxnum3_param_3];
 ; CHECK-NEXT:    st.global.b32 [%rd1], %r4;
 ; CHECK-NEXT:    ret;
 entry:
@@ -32,11 +32,11 @@ define void @test_fminnum3(float %a, float %b, float %c, ptr addrspace(1) %outpu
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b32 %r1, [test_fminnum3_param_0];
-; CHECK-NEXT:    ld.param.b32 %r2, [test_fminnum3_param_1];
-; CHECK-NEXT:    ld.param.b32 %r3, [test_fminnum3_param_2];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_fminnum3_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [test_fminnum3_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r3, [test_fminnum3_param_2];
 ; CHECK-NEXT:    min.f32 %r4, %r1, %r2, %r3;
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_fminnum3_param_3];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_fminnum3_param_3];
 ; CHECK-NEXT:    st.global.b32 [%rd1], %r4;
 ; CHECK-NEXT:    ret;
 entry:
@@ -53,11 +53,11 @@ define void @test_fmaximum3(float %a, float %b, float %c, ptr addrspace(1) %outp
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b32 %r1, [test_fmaximum3_param_0];
-; CHECK-NEXT:    ld.param.b32 %r2, [test_fmaximum3_param_1];
-; CHECK-NEXT:    ld.param.b32 %r3, [test_fmaximum3_param_2];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_fmaximum3_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [test_fmaximum3_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r3, [test_fmaximum3_param_2];
 ; CHECK-NEXT:    max.NaN.f32 %r4, %r1, %r2, %r3;
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_fmaximum3_param_3];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_fmaximum3_param_3];
 ; CHECK-NEXT:    st.global.b32 [%rd1], %r4;
 ; CHECK-NEXT:    ret;
 entry:
@@ -74,11 +74,11 @@ define void @test_fminimum3(float %a, float %b, float %c, ptr addrspace(1) %outp
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b32 %r1, [test_fminimum3_param_0];
-; CHECK-NEXT:    ld.param.b32 %r2, [test_fminimum3_param_1];
-; CHECK-NEXT:    ld.param.b32 %r3, [test_fminimum3_param_2];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_fminimum3_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [test_fminimum3_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r3, [test_fminimum3_param_2];
 ; CHECK-NEXT:    min.NaN.f32 %r4, %r1, %r2, %r3;
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_fminimum3_param_3];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_fminimum3_param_3];
 ; CHECK-NEXT:    st.global.b32 [%rd1], %r4;
 ; CHECK-NEXT:    ret;
 entry:
@@ -95,11 +95,11 @@ define void @test_fmaximumnum3(float %a, float %b, float %c, ptr addrspace(1) %o
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b32 %r1, [test_fmaximumnum3_param_0];
-; CHECK-NEXT:    ld.param.b32 %r2, [test_fmaximumnum3_param_1];
-; CHECK-NEXT:    ld.param.b32 %r3, [test_fmaximumnum3_param_2];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_fmaximumnum3_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [test_fmaximumnum3_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r3, [test_fmaximumnum3_param_2];
 ; CHECK-NEXT:    max.f32 %r4, %r1, %r2, %r3;
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_fmaximumnum3_param_3];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_fmaximumnum3_param_3];
 ; CHECK-NEXT:    st.global.b32 [%rd1], %r4;
 ; CHECK-NEXT:    ret;
 entry:
@@ -116,11 +116,11 @@ define void @test_fminimumnum3(float %a, float %b, float %c, ptr addrspace(1) %o
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b32 %r1, [test_fminimumnum3_param_0];
-; CHECK-NEXT:    ld.param.b32 %r2, [test_fminimumnum3_param_1];
-; CHECK-NEXT:    ld.param.b32 %r3, [test_fminimumnum3_param_2];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_fminimumnum3_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [test_fminimumnum3_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r3, [test_fminimumnum3_param_2];
 ; CHECK-NEXT:    min.f32 %r4, %r1, %r2, %r3;
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_fminimumnum3_param_3];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_fminimumnum3_param_3];
 ; CHECK-NEXT:    st.global.b32 [%rd1], %r4;
 ; CHECK-NEXT:    ret;
 entry:
@@ -138,11 +138,11 @@ define void @test_fmaxnum3_commuted(float %a, float %b, float %c, ptr addrspace(
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b32 %r1, [test_fmaxnum3_commuted_param_0];
-; CHECK-NEXT:    ld.param.b32 %r2, [test_fmaxnum3_commuted_param_1];
-; CHECK-NEXT:    ld.param.b32 %r3, [test_fmaxnum3_commuted_param_2];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_fmaxnum3_commuted_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [test_fmaxnum3_commuted_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r3, [test_fmaxnum3_commuted_param_2];
 ; CHECK-NEXT:    max.f32 %r4, %r1, %r2, %r3;
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_fmaxnum3_commuted_param_3];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_fmaxnum3_commuted_param_3];
 ; CHECK-NEXT:    st.global.b32 [%rd1], %r4;
 ; CHECK-NEXT:    ret;
 entry:
@@ -160,12 +160,12 @@ define void @test_mixed_minmax_no_combine(float %a, float %b, float %c, ptr addr
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b32 %r1, [test_mixed_minmax_no_combine_param_0];
-; CHECK-NEXT:    ld.param.b32 %r2, [test_mixed_minmax_no_combine_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_mixed_minmax_no_combine_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [test_mixed_minmax_no_combine_param_1];
 ; CHECK-NEXT:    min.f32 %r3, %r1, %r2;
-; CHECK-NEXT:    ld.param.b32 %r4, [test_mixed_minmax_no_combine_param_2];
+; CHECK-NEXT:    ld.param::func.b32 %r4, [test_mixed_minmax_no_combine_param_2];
 ; CHECK-NEXT:    max.f32 %r5, %r3, %r4;
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_mixed_minmax_no_combine_param_3];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_mixed_minmax_no_combine_param_3];
 ; CHECK-NEXT:    st.global.b32 [%rd1], %r5;
 ; CHECK-NEXT:    ret;
 entry:
@@ -183,12 +183,12 @@ define void @test_mixed_maxnum_maximum_no_combine(float %a, float %b, float %c, 
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b32 %r1, [test_mixed_maxnum_maximum_no_combine_param_0];
-; CHECK-NEXT:    ld.param.b32 %r2, [test_mixed_maxnum_maximum_no_combine_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_mixed_maxnum_maximum_no_combine_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [test_mixed_maxnum_maximum_no_combine_param_1];
 ; CHECK-NEXT:    max.f32 %r3, %r1, %r2;
-; CHECK-NEXT:    ld.param.b32 %r4, [test_mixed_maxnum_maximum_no_combine_param_2];
+; CHECK-NEXT:    ld.param::func.b32 %r4, [test_mixed_maxnum_maximum_no_combine_param_2];
 ; CHECK-NEXT:    max.NaN.f32 %r5, %r3, %r4;
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_mixed_maxnum_maximum_no_combine_param_3];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_mixed_maxnum_maximum_no_combine_param_3];
 ; CHECK-NEXT:    st.global.b32 [%rd1], %r5;
 ; CHECK-NEXT:    ret;
 entry:
@@ -206,12 +206,12 @@ define void @test_f16_no_combine(half %a, half %b, half %c, ptr addrspace(1) %ou
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b16 %rs1, [test_f16_no_combine_param_0];
-; CHECK-NEXT:    ld.param.b16 %rs2, [test_f16_no_combine_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [test_f16_no_combine_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs2, [test_f16_no_combine_param_1];
 ; CHECK-NEXT:    max.f16 %rs3, %rs1, %rs2;
-; CHECK-NEXT:    ld.param.b16 %rs4, [test_f16_no_combine_param_2];
+; CHECK-NEXT:    ld.param::func.b16 %rs4, [test_f16_no_combine_param_2];
 ; CHECK-NEXT:    max.f16 %rs5, %rs3, %rs4;
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_f16_no_combine_param_3];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_f16_no_combine_param_3];
 ; CHECK-NEXT:    st.global.b16 [%rd1], %rs5;
 ; CHECK-NEXT:    ret;
 entry:
@@ -229,14 +229,14 @@ define void @test_multiple_uses_no_combine(float %a, float %b, float %c, ptr add
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b32 %r1, [test_multiple_uses_no_combine_param_0];
-; CHECK-NEXT:    ld.param.b32 %r2, [test_multiple_uses_no_combine_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_multiple_uses_no_combine_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [test_multiple_uses_no_combine_param_1];
 ; CHECK-NEXT:    max.f32 %r3, %r1, %r2;
-; CHECK-NEXT:    ld.param.b32 %r4, [test_multiple_uses_no_combine_param_2];
+; CHECK-NEXT:    ld.param::func.b32 %r4, [test_multiple_uses_no_combine_param_2];
 ; CHECK-NEXT:    max.f32 %r5, %r3, %r4;
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_multiple_uses_no_combine_param_3];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_multiple_uses_no_combine_param_3];
 ; CHECK-NEXT:    st.global.b32 [%rd1], %r3;
-; CHECK-NEXT:    ld.param.b64 %rd2, [test_multiple_uses_no_combine_param_4];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [test_multiple_uses_no_combine_param_4];
 ; CHECK-NEXT:    st.global.b32 [%rd2], %r5;
 ; CHECK-NEXT:    ret;
 entry:

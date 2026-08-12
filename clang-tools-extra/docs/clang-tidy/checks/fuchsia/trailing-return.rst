@@ -32,4 +32,4 @@ Exceptions are made for lambdas and ``decltype`` specifiers:
   }
 
 
-See the features disallowed in Fuchsia at https://fuchsia.dev/fuchsia-src/development/languages/c-cpp/cxx?hl=en
+See the features disallowed in Fuchsia at https://fuchsia.dev/fuchsia-src/development/languages/c-cpp/cxx

@@ -328,7 +328,8 @@ bool GlobalsAAResult::AnalyzeUsesOfPointer(Value *V,
       if (Readers)
         Readers->insert(LI->getParent()->getParent());
     } else if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
-      if (V == SI->getOperand(1)) {
+      // Check the pointer operand use of the store.
+      if (&U == &SI->getOperandUse(1)) {
         if (Writers)
           Writers->insert(SI->getParent()->getParent());
       } else if (SI->getOperand(1) != OkayStoreDest) {

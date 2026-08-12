@@ -489,6 +489,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::MASKED_SDIV:
   case ISD::MASKED_UREM:
   case ISD::MASKED_SREM:
+  case ISD::VECTOR_MATCH:
     Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
     break;
   case ISD::SMULFIX:
@@ -1323,6 +1324,9 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::VECREDUCE_SEQ_FADD:
   case ISD::VECREDUCE_SEQ_FMUL:
     Results.push_back(TLI.expandVecReduceSeq(Node, DAG));
+    return;
+  case ISD::VECTOR_MATCH:
+    Results.push_back(TLI.expandVectorMatch(Node, DAG));
     return;
   case ISD::SREM:
   case ISD::UREM:

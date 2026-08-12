@@ -409,36 +409,26 @@ const Expr *OMPOrderedClause::getLoopCounter(unsigned NumLoop) const {
   return getTrailingObjects()[NumberOfLoops + NumLoop];
 }
 
-OMPUpdateClause *OMPUpdateClause::Create(const ASTContext &C,
-                                         SourceLocation StartLoc,
-                                         SourceLocation EndLoc) {
-  return new (C) OMPUpdateClause(StartLoc, EndLoc, /*IsExtended=*/false);
-}
-
-OMPUpdateClause *
-OMPUpdateClause::Create(const ASTContext &C, SourceLocation StartLoc,
-                        SourceLocation LParenLoc, SourceLocation ArgumentLoc,
-                        OpenMPDependClauseKind DK, SourceLocation EndLoc) {
+OMPUpdateDependObjectsClause *OMPUpdateDependObjectsClause::Create(
+    const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
+    SourceLocation ArgumentLoc, OpenMPDependClauseKind DK,
+    SourceLocation EndLoc) {
   void *Mem =
       C.Allocate(totalSizeToAlloc<SourceLocation, OpenMPDependClauseKind>(2, 1),
-                 alignof(OMPUpdateClause));
-  auto *Clause =
-      new (Mem) OMPUpdateClause(StartLoc, EndLoc, /*IsExtended=*/true);
+                 alignof(OMPUpdateDependObjectsClause));
+  auto *Clause = new (Mem) OMPUpdateDependObjectsClause(StartLoc, EndLoc);
   Clause->setLParenLoc(LParenLoc);
   Clause->setArgumentLoc(ArgumentLoc);
   Clause->setDependencyKind(DK);
   return Clause;
 }
 
-OMPUpdateClause *OMPUpdateClause::CreateEmpty(const ASTContext &C,
-                                              bool IsExtended) {
-  if (!IsExtended)
-    return new (C) OMPUpdateClause(/*IsExtended=*/false);
+OMPUpdateDependObjectsClause *
+OMPUpdateDependObjectsClause::CreateEmpty(const ASTContext &C) {
   void *Mem =
       C.Allocate(totalSizeToAlloc<SourceLocation, OpenMPDependClauseKind>(2, 1),
-                 alignof(OMPUpdateClause));
-  auto *Clause = new (Mem) OMPUpdateClause(/*IsExtended=*/true);
-  Clause->IsExtended = true;
+                 alignof(OMPUpdateDependObjectsClause));
+  auto *Clause = new (Mem) OMPUpdateDependObjectsClause();
   return Clause;
 }
 
@@ -2261,14 +2251,16 @@ void OMPClausePrinter::VisitOMPReadClause(OMPReadClause *) { OS << "read"; }
 
 void OMPClausePrinter::VisitOMPWriteClause(OMPWriteClause *) { OS << "write"; }
 
-void OMPClausePrinter::VisitOMPUpdateClause(OMPUpdateClause *Node) {
+void OMPClausePrinter::VisitOMPUpdateClause(OMPUpdateClause *) {
   OS << "update";
-  if (Node->isExtended()) {
-    OS << "(";
-    OS << getOpenMPSimpleClauseTypeName(Node->getClauseKind(),
-                                        Node->getDependencyKind());
-    OS << ")";
-  }
+}
+
+void OMPClausePrinter::VisitOMPUpdateDependObjectsClause(
+    OMPUpdateDependObjectsClause *Node) {
+  OS << "update(";
+  OS << getOpenMPSimpleClauseTypeName(Node->getClauseKind(),
+                                      Node->getDependencyKind());
+  OS << ")";
 }
 
 void OMPClausePrinter::VisitOMPCaptureClause(OMPCaptureClause *) {

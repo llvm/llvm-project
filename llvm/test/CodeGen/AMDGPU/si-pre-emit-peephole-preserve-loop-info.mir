@@ -1,7 +1,7 @@
-# RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -passes="require<machine-loops>,si-pre-emit-peephole,print<machine-loops>" -debug-pass-manager -filetype=null %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -passes="require<machine-dom-tree>,require<machine-loops>,si-pre-emit-peephole,print<machine-loops>" -debug-pass-manager -filetype=null %s 2>&1 | FileCheck %s
 
+# CHECK: Running analysis: MachineDominatorTreeAnalysis on vcc_and_removal_preserves_mli
 # CHECK: Running analysis: MachineLoopAnalysis on vcc_and_removal_preserves_mli
-# CHECK-NEXT: Running analysis: MachineDominatorTreeAnalysis on vcc_and_removal_preserves_mli
 # CHECK-NEXT: Running pass: SIPreEmitPeepholePass on vcc_and_removal_preserves_mli
 # CHECK-NEXT: Invalidating analysis: MachineDominatorTreeAnalysis on vcc_and_removal_preserves_mli
 # CHECK-NEXT: Running pass: MachineLoopPrinterPass on vcc_and_removal_preserves_mli

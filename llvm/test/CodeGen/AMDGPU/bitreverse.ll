@@ -905,8 +905,9 @@ define float @missing_truncate_promote_bitreverse(i32 %arg) {
 ; GFX11-FLAT-TRUE16:       ; %bb.0: ; %bb
 ; GFX11-FLAT-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-FLAT-TRUE16-NEXT:    v_bfrev_b32_e32 v0, v0
-; GFX11-FLAT-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-FLAT-TRUE16-NEXT:    v_cvt_f32_f16_e32 v0, v0.h
+; GFX11-FLAT-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-FLAT-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX11-FLAT-TRUE16-NEXT:    v_cvt_f32_f16_e32 v0, v0.l
 ; GFX11-FLAT-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FLAT-FAKE16-LABEL: missing_truncate_promote_bitreverse:

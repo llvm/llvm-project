@@ -260,6 +260,24 @@ TEST_F(OpenACCUtilsCGTest, setParDimsAttrSetsInherentAttribute) {
   EXPECT_EQ(privatize.getParDimsAttr(), blockAttr);
 }
 
+TEST_F(OpenACCUtilsCGTest, activeParDimsOperationAttributes) {
+  OwningOpRef<ModuleOp> module = ModuleOp::create(b, loc);
+  Operation *op = module->getOperation();
+  ActiveParDimsAttr activeAttr = ActiveParDimsAttr::get(
+      &context, {GPUParallelDimAttr::blockXDim(&context),
+                 GPUParallelDimAttr::threadXDim(&context)});
+
+  EXPECT_FALSE(hasActiveParDimsAttr(op));
+  setActiveParDimsAttr(op, activeAttr);
+  EXPECT_TRUE(hasActiveParDimsAttr(op));
+  EXPECT_EQ(getActiveParDimsAttr(op), activeAttr);
+
+  ActiveParDimsAttr threadAttr = ActiveParDimsAttr::get(
+      &context, {GPUParallelDimAttr::threadXDim(&context)});
+  setActiveParDimsAttr(op, threadAttr);
+  EXPECT_EQ(getActiveParDimsAttr(op), threadAttr);
+}
+
 //===----------------------------------------------------------------------===//
 // buildComputeRegion Tests
 //===----------------------------------------------------------------------===//

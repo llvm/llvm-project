@@ -109,7 +109,7 @@ protected:
   friend class SBValueList;
   friend class SBWatchpoint;
 
-  friend class lldb_private::ScriptInterpreter;
+  friend class lldb_private::ScriptInterpreterBridge;
   friend class lldb_private::python::SWIGBridge;
 
   SBError(lldb_private::Status &&error);

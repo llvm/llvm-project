@@ -700,8 +700,7 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVExpanderShlNSW) {
 
     SCEVExpander Exp(SE, "expander");
     auto *I = cast<Instruction>(Exp.expandCodeFor(AndSCEV, nullptr, And));
-    EXPECT_EQ(I->getOpcode(), Instruction::Shl);
-    EXPECT_FALSE(I->hasNoSignedWrap());
+    EXPECT_EQ(I->getOpcode(), Instruction::And);
   };
 
   checkOneCase("define void @f(ptr %arrayidx) { "

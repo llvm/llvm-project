@@ -8,20 +8,20 @@ define ptr addrspace(1) @exit_value_narrow_address(ptr addrspace(1) %start, ptr 
 ; CHECK-LABEL: define ptr addrspace(1) @exit_value_narrow_address(
 ; CHECK-SAME: ptr addrspace(1) [[START:%.*]], ptr addrspace(1) [[END:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[START2:%.*]] = ptrtoaddr ptr addrspace(1) [[START]] to i32
+; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr addrspace(1) [[END]] to i32
 ; CHECK-NEXT:    [[PRE:%.*]] = icmp ult ptr addrspace(1) [[START]], [[END]]
 ; CHECK-NEXT:    br i1 [[PRE]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[P:%.*]] = phi ptr addrspace(1) [ [[P_NEXT:%.*]], %[[LOOP]] ], [ [[START]], %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[P_NEXT]] = getelementptr inbounds i8, ptr addrspace(1) [[P]], i64 1
-; CHECK-NEXT:    [[C:%.*]] = icmp ult ptr addrspace(1) [[P_NEXT]], [[END]]
-; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT_LOOPEXIT:.*]]
+; CHECK-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT_LOOPEXIT:.*]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
-; CHECK-NEXT:    [[P_NEXT_LCSSA:%.*]] = phi ptr addrspace(1) [ [[P_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[END1]], [[START2]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr addrspace(1) [[START]], i32 [[TMP0]]
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi ptr addrspace(1) [ [[START]], %[[ENTRY]] ], [ [[P_NEXT_LCSSA]], %[[EXIT_LOOPEXIT]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi ptr addrspace(1) [ [[START]], %[[ENTRY]] ], [ [[SCEVGEP]], %[[EXIT_LOOPEXIT]] ]
 ; CHECK-NEXT:    ret ptr addrspace(1) [[RES]]
 ;
 entry:

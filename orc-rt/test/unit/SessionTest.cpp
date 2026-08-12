@@ -14,6 +14,8 @@
 #include "orc-rt/QueueingRunner.h"
 #include "orc-rt/SPSWrapperFunction.h"
 
+#include "orc-rt-c/Session.h"
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -177,7 +179,8 @@ public:
     notifyDisconnected();
   }
 
-  void callController(OnControllerCallReturn OnComplete, HandlerTag T,
+  void callController(OnControllerCallReturn OnComplete,
+                      orc_rt_ControllerHandlerTag T,
                       WrapperFunctionBuffer ArgBytes) override {
     // Simulate a call to the controller by running the requested function via
     // the test-supplied Post hook (or inline, if no hook was provided).
@@ -200,13 +203,13 @@ public:
 
     runOrPost([this, CId, T, ArgBytes = std::move(ArgBytes)]() mutable {
       auto Fn = reinterpret_cast<orc_rt_WrapperFunction>(T);
-      Fn(reinterpret_cast<orc_rt_SessionRef>(this), CId, ccReturn,
-         ArgBytes.release());
+      Fn(reinterpret_cast<orc_rt_SessionRef>(this), ArgBytes.release(),
+         ccReturn, CId);
     });
   }
 
-  void sendWrapperResult(uint64_t CallId,
-                         WrapperFunctionBuffer ResultBytes) override {
+  void sendWrapperResult(WrapperFunctionBuffer ResultBytes,
+                         uint64_t CallId) override {
     // Respond to a simulated call by the controller.
     ConnectGuard CG;
     Session::OnControllerCallReturnFn OnComplete;
@@ -266,7 +269,7 @@ public:
             "Controller disconnected"));
       });
 
-    handleWrapperCall(CId, Fn, std::move(ArgBytes));
+    handleWrapperCall(Fn, std::move(ArgBytes), CId);
   }
 
 private:
@@ -277,8 +280,9 @@ private:
       Work();
   }
 
-  static void ccReturn(orc_rt_SessionRef S, uint64_t CallId,
-                       orc_rt_WrapperFunctionBuffer ResultBytes) {
+  static void ccReturn(orc_rt_SessionRef S,
+                       orc_rt_WrapperFunctionBuffer ResultBytes,
+                       uint64_t CallId) {
     // Abuse "session" to refer to the ControllerAccess object.
     // We can just re-use sendFunctionResult for this.
     reinterpret_cast<MockControllerAccess *>(S)->returnFromController(
@@ -630,11 +634,12 @@ public:
   DeadControllerAccess(Session &S) : ControllerAccess(S) {}
   void connect(BootstrapInfo) override {}
   void disconnect() override { notifyDisconnected(); }
-  void callController(OnControllerCallReturn OnComplete, HandlerTag,
+  void callController(OnControllerCallReturn OnComplete,
+                      orc_rt_ControllerHandlerTag,
                       WrapperFunctionBuffer) override {
     failControllerCallInline(std::move(OnComplete));
   }
-  void sendWrapperResult(uint64_t, WrapperFunctionBuffer) override {}
+  void sendWrapperResult(WrapperFunctionBuffer, uint64_t) override {}
 };
 
 TEST(ControllerAccessTest, SynchronousCallControllerFailureRunsInline) {
@@ -662,14 +667,64 @@ TEST(ControllerAccessTest, SynchronousCallControllerFailureRunsInline) {
   EXPECT_EQ(ErrMsg, "disconnected");
 }
 
-static void add_sps_wrapper(orc_rt_SessionRef S, uint64_t CallId,
+static void add_sps_wrapper(orc_rt_SessionRef S,
+                            orc_rt_WrapperFunctionBuffer ArgBytes,
                             orc_rt_WrapperFunctionReturn Return,
-                            orc_rt_WrapperFunctionBuffer ArgBytes) {
+                            uint64_t CallId) {
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::handle(
-      S, CallId, Return, ArgBytes,
+      S, ArgBytes, Return, CallId,
       [](move_only_function<void(int32_t)> Return, int32_t X, int32_t Y) {
         Return(X + Y);
       });
+}
+
+// Wrapper handler that echoes its argument bytes straight back as the result.
+// Used to exercise the C callController entry point without pulling in SPS
+// (de)serialization -- the payload is opaque to the code under test.
+static void echo_wrapper(orc_rt_SessionRef S,
+                         orc_rt_WrapperFunctionBuffer ArgBytes,
+                         orc_rt_WrapperFunctionReturn Return, uint64_t CallId) {
+  Return(S, ArgBytes, CallId);
+}
+
+// Captures what orc_rt_Session_callController threads back to its C return
+// function, so the test can inspect it after the call completes.
+struct CAPICallControllerResult {
+  bool Ran = false;
+  orc_rt_SessionRef S = nullptr;
+  std::string Result;
+};
+
+static void capiCallControllerReturn(orc_rt_SessionRef S,
+                                     orc_rt_WrapperFunctionBuffer ResultBytes,
+                                     void *Ctx) {
+  auto &R = *static_cast<CAPICallControllerResult *>(Ctx);
+  R.Ran = true;
+  R.S = S;
+  WrapperFunctionBuffer Result(ResultBytes);
+  R.Result.assign(Result.data(), Result.size());
+}
+
+TEST(ControllerAccessTest, CAPICallControllerRoundTrip) {
+  // Drive a controller call through the C API entry point
+  // (orc_rt_Session_callController) and confirm that the result bytes, the
+  // session handle, and the caller-supplied context are all threaded back to
+  // the C return function.
+  QueueingRunner<>::WorkQueue Tasks;
+  Session S(mockExecutorProcessInfo(), QueueingRunner(Tasks), noErrors);
+  S.attach<MockControllerAccess>(BootstrapInfo(S), postOnto(Tasks));
+
+  CAPICallControllerResult R;
+  orc_rt_Session_callController(
+      wrap(&S), reinterpret_cast<orc_rt_ControllerHandlerTag>(&echo_wrapper),
+      WrapperFunctionBuffer::copyFrom("hello", 5).release(),
+      &capiCallControllerReturn, &R);
+
+  QueueingRunner<>::runFIFOUntilEmpty(Tasks);
+
+  EXPECT_TRUE(R.Ran) << "C return function never fired";
+  EXPECT_EQ(R.S, wrap(&S)) << "Session handle not threaded through";
+  EXPECT_EQ(R.Result, "hello") << "Result bytes not round-tripped";
 }
 
 TEST(ControllerAccessTest, ValidCallToController) {
@@ -681,7 +736,7 @@ TEST(ControllerAccessTest, ValidCallToController) {
   int32_t Result = 0;
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
       S.controllerCaller(
-          reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
+          reinterpret_cast<orc_rt_ControllerHandlerTag>(add_sps_wrapper)),
       [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); }, 41, 1);
 
   QueueingRunner<>::runFIFOUntilEmpty(Tasks);
@@ -697,7 +752,7 @@ TEST(ControllerAccessTest, CallToControllerBeforeAttach) {
   Error Err = Error::success();
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
       S.controllerCaller(
-          reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
+          reinterpret_cast<orc_rt_ControllerHandlerTag>(add_sps_wrapper)),
       [&](Expected<int32_t> R) {
         ErrorAsOutParameter _(Err);
         Err = R.takeError();
@@ -718,7 +773,7 @@ TEST(ControllerAccessTest, CallToControllerAfterDetach) {
   Error Err = Error::success();
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
       S.controllerCaller(
-          reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
+          reinterpret_cast<orc_rt_ControllerHandlerTag>(add_sps_wrapper)),
       [&](Expected<int32_t> R) {
         ErrorAsOutParameter _(Err);
         Err = R.takeError();
@@ -749,11 +804,12 @@ TEST(ControllerAccessTest, CallFromController) {
 // Stashes Return, via the address passed as the wrapper call's argument,
 // instead of calling it -- simulating a wrapper function that defers
 // completion past its own return.
-static void deferred_wrapper(orc_rt_SessionRef S, uint64_t CallId,
+static void deferred_wrapper(orc_rt_SessionRef S,
+                             orc_rt_WrapperFunctionBuffer ArgBytes,
                              orc_rt_WrapperFunctionReturn Return,
-                             orc_rt_WrapperFunctionBuffer ArgBytes) {
+                             uint64_t CallId) {
   SPSWrapperFunction<void(SPSExecutorAddr)>::handle(
-      S, CallId, Return, ArgBytes,
+      S, ArgBytes, Return, CallId,
       [](move_only_function<void()> Return, ExecutorAddr P) {
         *P.toPtr<move_only_function<void()> *>() = std::move(Return);
       });
@@ -853,7 +909,7 @@ TEST(ControllerAccessTest, TryAttachSuccess) {
   int32_t Result = 0;
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
       S.controllerCaller(
-          reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
+          reinterpret_cast<orc_rt_ControllerHandlerTag>(add_sps_wrapper)),
       [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); }, 41, 1);
 
   QueueingRunner<>::runFIFOUntilEmpty(Tasks);
@@ -873,7 +929,7 @@ TEST(ControllerAccessTest, TryAttachFailure) {
   Error CallErr = Error::success();
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
       S.controllerCaller(
-          reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
+          reinterpret_cast<orc_rt_ControllerHandlerTag>(add_sps_wrapper)),
       [&](Expected<int32_t> R) {
         ErrorAsOutParameter _(CallErr);
         CallErr = R.takeError();

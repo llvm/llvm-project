@@ -870,6 +870,27 @@ bool Parser::ConsumeAndStoreUntil(tok::TokenKind T1, tok::TokenKind T2,
       // Ran out of tokens.
       return false;
 
+    case tok::annot_pragma_openacc:
+    case tok::annot_pragma_openmp:
+    case tok::annot_attr_openmp: {
+      // Ignore any tokens inside of a OMP/OpenACC pragma, as these should just
+      // be taken as 1.
+      tok::TokenKind EndKind = Tok.is(tok::annot_pragma_openacc)
+                                   ? tok::annot_pragma_openacc_end
+                                   : tok::annot_pragma_openmp_end;
+      Toks.push_back(Tok);
+      ConsumeAnnotationToken();
+      while (Tok.isNot(EndKind) && Tok.isNot(tok::eof)) {
+        Toks.push_back(Tok);
+        ConsumeAnyToken();
+      }
+      if (Tok.is(EndKind)) {
+        Toks.push_back(Tok);
+        ConsumeAnnotationToken();
+      }
+      break;
+    }
+
     case tok::l_paren:
       // Recursively consume properly-nested parens.
       Toks.push_back(Tok);

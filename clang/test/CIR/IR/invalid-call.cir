@@ -80,3 +80,27 @@ cir.func @f13() {
   cir.call @f12(%0) : (!s32i) -> ()
   cir.return
 }
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+cir.func private @f14()
+cir.func @f15() {
+  %0 = cir.const #cir.int<1> : !s32i
+  cir.call @f14() : () { inline_kind = 1 } () -> ()
+  cir.call @f14() : () { inline_kind = 6 } () -> ()
+  cir.return
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+cir.func private @f16()
+cir.func @f17() {
+  // expected-error@+2{{failed to parse CIR_InlineKindAttr parameter 'value' which is to be a `::cir::InlineKind`}}
+  // expected-error@below{{expected ::cir::InlineKind to be one of: no_inline, always_inline, inline_hint}}
+  cir.call @f16() { inline_kind = #cir.inline_kind<nonsense> } : () -> () 
+  cir.return
+}

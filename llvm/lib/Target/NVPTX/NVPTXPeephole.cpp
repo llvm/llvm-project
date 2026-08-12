@@ -44,28 +44,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "nvptx-peephole"
 
-namespace {
-struct NVPTXPeephole : public MachineFunctionPass {
- public:
-  static char ID;
-  NVPTXPeephole() : MachineFunctionPass(ID) {}
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  StringRef getPassName() const override {
-    return "NVPTX optimize redundant cvta.to.local instruction";
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-};
-}
-
-char NVPTXPeephole::ID = 0;
-
-INITIALIZE_PASS(NVPTXPeephole, "nvptx-peephole", "NVPTX Peephole", false, false)
-
 static bool isCVTAToLocalCombinationCandidate(MachineInstr &Root) {
   auto &MBB = *Root.getParent();
   auto &MF = *MBB.getParent();
@@ -130,10 +108,7 @@ static void CombineCVTAToLocal(MachineInstr &Root) {
   Root.eraseFromParent();
 }
 
-bool NVPTXPeephole::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
-    return false;
-
+static bool runNVPTXPeephole(MachineFunction &MF) {
   bool Changed = false;
   // Loop over all of the basic blocks.
   for (auto &MBB : MF) {
@@ -157,10 +132,48 @@ bool NVPTXPeephole::runOnMachineFunction(MachineFunction &MF) {
   if (MRI.use_empty(NRI->getFrameRegister(MF))) {
     if (auto MI = MRI.getUniqueVRegDef(NRI->getFrameRegister(MF))) {
       MI->eraseFromParent();
+      Changed = true;
     }
   }
 
   return Changed;
 }
 
-MachineFunctionPass *llvm::createNVPTXPeephole() { return new NVPTXPeephole(); }
+namespace {
+struct NVPTXPeepholeLegacyPass : public MachineFunctionPass {
+public:
+  static char ID;
+  NVPTXPeepholeLegacyPass() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    if (skipFunction(MF.getFunction()))
+      return false;
+    return runNVPTXPeephole(MF);
+  }
+
+  StringRef getPassName() const override {
+    return "NVPTX optimize redundant cvta.to.local instruction";
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+};
+} // namespace
+
+char NVPTXPeepholeLegacyPass::ID = 0;
+
+INITIALIZE_PASS(NVPTXPeepholeLegacyPass, "nvptx-peephole", "NVPTX Peephole",
+                false, false)
+
+MachineFunctionPass *llvm::createNVPTXPeepholeLegacyPass() {
+  return new NVPTXPeepholeLegacyPass();
+}
+
+PreservedAnalyses NVPTXPeepholePass::run(MachineFunction &MF,
+                                         MachineFunctionAnalysisManager &MFAM) {
+  if (!runNVPTXPeephole(MF))
+    return PreservedAnalyses::all();
+  return getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>();
+}

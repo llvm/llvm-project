@@ -757,7 +757,8 @@ FailureOr<omp::TargetOp> splitTargetData(omp::TargetOp targetOp,
   // Create the inner target op
   auto newTargetOp = omp::TargetOp::create(
       rewriter, targetOp.getLoc(), targetOp.getAllocateVars(),
-      targetOp.getAllocatorVars(), targetOp.getDependKindsAttr(),
+      targetOp.getAllocatorVars(), targetOp.getAllocateAlignmentsAttr(),
+      targetOp.getAllocatePrivateIndicesAttr(), targetOp.getDependKindsAttr(),
       targetOp.getDependVars(), targetOp.getDependIteratedKindsAttr(),
       targetOp.getDependIterated(), targetOp.getDevice(),
       targetOp.getDynGroupprivateAccessGroupAttr(),
@@ -1482,7 +1483,8 @@ genPreTargetOp(omp::TargetOp targetOp, SmallVector<Value> &preMapOperands,
   // update the hostEvalVars of preTargetOp
   omp::TargetOp preTargetOp = omp::TargetOp::create(
       rewriter, targetOp.getLoc(), targetOp.getAllocateVars(),
-      targetOp.getAllocatorVars(), targetOp.getDependKindsAttr(),
+      targetOp.getAllocatorVars(), targetOp.getAllocateAlignmentsAttr(),
+      targetOp.getAllocatePrivateIndicesAttr(), targetOp.getDependKindsAttr(),
       targetOp.getDependVars(), targetOp.getDependIteratedKindsAttr(),
       targetOp.getDependIterated(), targetOp.getDevice(),
       targetOp.getDynGroupprivateAccessGroupAttr(),
@@ -1576,7 +1578,8 @@ genIsolatedTargetOp(omp::TargetOp targetOp, SmallVector<Value> &postMapOperands,
   // Create the isolated target op
   omp::TargetOp isolatedTargetOp = omp::TargetOp::create(
       rewriter, targetOp.getLoc(), targetOp.getAllocateVars(),
-      targetOp.getAllocatorVars(), targetOp.getDependKindsAttr(),
+      targetOp.getAllocatorVars(), targetOp.getAllocateAlignmentsAttr(),
+      targetOp.getAllocatePrivateIndicesAttr(), targetOp.getDependKindsAttr(),
       targetOp.getDependVars(), targetOp.getDependIteratedKindsAttr(),
       targetOp.getDependIterated(), targetOp.getDevice(),
       targetOp.getDynGroupprivateAccessGroupAttr(),
@@ -1662,7 +1665,8 @@ static omp::TargetOp genPostTargetOp(omp::TargetOp targetOp,
   // Create the post target op
   omp::TargetOp postTargetOp = omp::TargetOp::create(
       rewriter, targetOp.getLoc(), targetOp.getAllocateVars(),
-      targetOp.getAllocatorVars(), targetOp.getDependKindsAttr(),
+      targetOp.getAllocatorVars(), targetOp.getAllocateAlignmentsAttr(),
+      targetOp.getAllocatePrivateIndicesAttr(), targetOp.getDependKindsAttr(),
       targetOp.getDependVars(), targetOp.getDependIteratedKindsAttr(),
       targetOp.getDependIterated(), targetOp.getDevice(),
       targetOp.getDynGroupprivateAccessGroupAttr(),

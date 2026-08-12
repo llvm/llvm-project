@@ -8,7 +8,8 @@ define void @pr170051(i32 %cond) {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
 ; CHECK-NEXT:    .reg .b32 %r<4>;
-; CHECK-NEXT:  $L_brx_0:
+; CHECK-EMPTY:
+; CHECK-NEXT:  JTI0_0:
 ; CHECK-NEXT:    .branchtargets
 ; CHECK-NEXT:     $L__BB0_2,
 ; CHECK-NEXT:     $L__BB0_3,
@@ -34,7 +35,7 @@ define void @pr170051(i32 %cond) {
 ; CHECK-NEXT:  // %bb.4: // %BS_LABEL_1
 ; CHECK-NEXT:    // in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    mov.b32 %r3, %r1;
-; CHECK-NEXT:    brx.idx %r1, $L_brx_0;
+; CHECK-NEXT:    brx.idx %r1, JTI0_0;
 ; CHECK-NEXT:  $L__BB0_5: // %unreachable
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    exit;

@@ -16,6 +16,7 @@
 #include <level_zero/ze_api.h>
 
 #include "Shared/EnvironmentVar.h"
+#include "llvm/Support/Allocator.h"
 
 #include "L0Defs.h"
 

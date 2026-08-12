@@ -4,8 +4,6 @@
 DWARF Extensions For Heterogeneous Debugging
 ********************************************
 
-.. contents::
-   :local:
 
 .. warning::
 

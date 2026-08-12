@@ -1,0 +1,31 @@
+[
+  {
+    "lnt-machine": "macos-26.5-arm64",
+    "runner": ["self-hosted", "macOS", "ARM64", "26", "26.5"],
+    "cxx": "clang++",
+    "running-on": "macos",
+    "xcode-version": "26.5",
+    "benchmark-suite-version": "810062e9771d8b47c25a89311139c621c13bbf9f",
+    "coverage": {
+      "since": "2025-01-01",
+      "every": "week",
+      "samples": 3,
+      "max-in-flight": 4,
+      "lnt-url": "http://lnt.llvm.org"
+    }
+  },
+  {
+    "lnt-machine": "linux-x86_64",
+    "runner": "llvm-premerge-libcxx-runners",
+    "cxx": "clang++-22",
+    "running-on": "linux",
+    "benchmark-suite-version": "810062e9771d8b47c25a89311139c621c13bbf9f",
+    "coverage": {
+      "since": "2025-01-01",
+      "every": "week",
+      "samples": 3,
+      "max-in-flight": 8,
+      "lnt-url": "http://lnt.llvm.org"
+    }
+  }
+]

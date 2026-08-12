@@ -3,8 +3,6 @@ CodeView Type Records
 =====================================
 
 
-.. contents::
-   :local:
 
 .. _types_intro:
 

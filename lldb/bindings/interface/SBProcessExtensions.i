@@ -73,7 +73,8 @@ STRING_EXTENSION_OUTSIDE(SBProcess)
 
         def __iter__(self):
             '''Iterate over all threads in a lldb.SBProcess object.'''
-            return lldb_iter(self, 'GetNumThreads', 'GetThreadAtIndex')
+            for i in range(self.GetNumThreads()):
+                yield self.GetThreadAtIndex(i)
 
         def __len__(self):
             '''Return the number of threads in a lldb.SBProcess object.'''

@@ -417,7 +417,6 @@ private:
 
   friend class LoopInfoBase<BasicBlock, Loop>;
   friend class LoopBase<BasicBlock, Loop>;
-  explicit Loop(BasicBlock *BB) : LoopBase<BasicBlock, Loop>(BB) {}
   ~Loop() = default;
 };
 

@@ -182,3 +182,27 @@ class TestFrameVarDILAssignment(TestBase):
             error=True,
             substrs=["new value is too big"],
         )
+
+        # A negative value that is representable in the (signed) destination
+        # type must be accepted.
+        self.expect("frame variable 's = -2'", substrs=["s = -2"])
+        self.expect_var_path("s", value="-2")
+        self.expect("frame variable 's = j'", substrs=["s = -4"])
+        self.expect_var_path("s", value="-4")
+        # The boundary values of a signed short must be accepted.
+        self.expect("frame variable 's = 32767'", substrs=["s = 32767"])
+        self.expect_var_path("s", value="32767")
+        self.expect("frame variable 's = -32768'", substrs=["s = -32768"])
+        self.expect_var_path("s", value="-32768")
+        # A positive value that overflows the signed range must be rejected
+        # instead of silently wrapping.
+        self.expect(
+            "frame variable 's = 32768'",
+            error=True,
+            substrs=["new value is too big"],
+        )
+        self.expect(
+            "frame variable 's = -32769'",
+            error=True,
+            substrs=["new value is too big"],
+        )

@@ -251,6 +251,6 @@ declare i32 @llvm.wasm.get.ehselector(token) #0
 declare void @__cxa_rethrow()
 declare ptr @__cxa_begin_catch(ptr)
 declare void @__cxa_end_catch()
-declare i32 @__gxx_wasm_personality_v0(...)
+declare i32 @__gxx_wasm_personality_v0(ptr)
 
 attributes #0 = { nounwind }

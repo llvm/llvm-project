@@ -4092,23 +4092,23 @@ exit:
 define void @ktest_6(<32 x i16> %w, <32 x i16> %x, <32 x i16> %y, <32 x i16> %z) {
 ; KNL-LABEL: ktest_6:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm4
-; KNL-NEXT:    vpxor %xmm5, %xmm5, %xmm5
-; KNL-NEXT:    vpcmpeqw %ymm5, %ymm4, %ymm4
-; KNL-NEXT:    vpcmpeqw %ymm5, %ymm0, %ymm0
-; KNL-NEXT:    vinserti64x4 $1, %ymm4, %zmm0, %zmm0
-; KNL-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
-; KNL-NEXT:    vpcmpeqw %ymm5, %ymm4, %ymm4
-; KNL-NEXT:    vpcmpeqw %ymm5, %ymm1, %ymm1
-; KNL-NEXT:    vinserti64x4 $1, %ymm4, %zmm1, %zmm1
+; KNL-NEXT:    vpxor %xmm4, %xmm4, %xmm4
+; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm5
+; KNL-NEXT:    vpcmpeqw %ymm4, %ymm5, %ymm5
+; KNL-NEXT:    vpcmpeqw %ymm4, %ymm0, %ymm0
+; KNL-NEXT:    vinserti64x4 $1, %ymm5, %zmm0, %zmm0
+; KNL-NEXT:    vextracti64x4 $1, %zmm1, %ymm5
+; KNL-NEXT:    vpcmpeqw %ymm4, %ymm5, %ymm5
+; KNL-NEXT:    vpcmpeqw %ymm4, %ymm1, %ymm1
+; KNL-NEXT:    vinserti64x4 $1, %ymm5, %zmm1, %zmm1
 ; KNL-NEXT:    vporq %zmm1, %zmm0, %zmm0
 ; KNL-NEXT:    vextracti64x4 $1, %zmm2, %ymm1
-; KNL-NEXT:    vpcmpeqw %ymm5, %ymm1, %ymm1
-; KNL-NEXT:    vpcmpeqw %ymm5, %ymm2, %ymm2
+; KNL-NEXT:    vpcmpeqw %ymm4, %ymm1, %ymm1
+; KNL-NEXT:    vpcmpeqw %ymm4, %ymm2, %ymm2
 ; KNL-NEXT:    vinserti64x4 $1, %ymm1, %zmm2, %zmm1
 ; KNL-NEXT:    vextracti64x4 $1, %zmm3, %ymm2
-; KNL-NEXT:    vpcmpeqw %ymm5, %ymm2, %ymm2
-; KNL-NEXT:    vpcmpeqw %ymm5, %ymm3, %ymm3
+; KNL-NEXT:    vpcmpeqw %ymm4, %ymm2, %ymm2
+; KNL-NEXT:    vpcmpeqw %ymm4, %ymm3, %ymm3
 ; KNL-NEXT:    vinserti64x4 $1, %ymm2, %zmm3, %zmm2
 ; KNL-NEXT:    vpternlogq {{.*#+}} zmm2 = zmm0 & (zmm2 | zmm1)
 ; KNL-NEXT:    vextracti64x4 $1, %zmm2, %ymm0
@@ -4173,23 +4173,23 @@ define void @ktest_6(<32 x i16> %w, <32 x i16> %x, <32 x i16> %y, <32 x i16> %z)
 ;
 ; AVX512DQ-LABEL: ktest_6:
 ; AVX512DQ:       ## %bb.0:
-; AVX512DQ-NEXT:    vextracti64x4 $1, %zmm0, %ymm4
-; AVX512DQ-NEXT:    vpxor %xmm5, %xmm5, %xmm5
-; AVX512DQ-NEXT:    vpcmpeqw %ymm5, %ymm4, %ymm4
-; AVX512DQ-NEXT:    vpcmpeqw %ymm5, %ymm0, %ymm0
-; AVX512DQ-NEXT:    vinserti64x4 $1, %ymm4, %zmm0, %zmm0
-; AVX512DQ-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
-; AVX512DQ-NEXT:    vpcmpeqw %ymm5, %ymm4, %ymm4
-; AVX512DQ-NEXT:    vpcmpeqw %ymm5, %ymm1, %ymm1
-; AVX512DQ-NEXT:    vinserti64x4 $1, %ymm4, %zmm1, %zmm1
+; AVX512DQ-NEXT:    vpxor %xmm4, %xmm4, %xmm4
+; AVX512DQ-NEXT:    vextracti64x4 $1, %zmm0, %ymm5
+; AVX512DQ-NEXT:    vpcmpeqw %ymm4, %ymm5, %ymm5
+; AVX512DQ-NEXT:    vpcmpeqw %ymm4, %ymm0, %ymm0
+; AVX512DQ-NEXT:    vinserti64x4 $1, %ymm5, %zmm0, %zmm0
+; AVX512DQ-NEXT:    vextracti64x4 $1, %zmm1, %ymm5
+; AVX512DQ-NEXT:    vpcmpeqw %ymm4, %ymm5, %ymm5
+; AVX512DQ-NEXT:    vpcmpeqw %ymm4, %ymm1, %ymm1
+; AVX512DQ-NEXT:    vinserti64x4 $1, %ymm5, %zmm1, %zmm1
 ; AVX512DQ-NEXT:    vporq %zmm1, %zmm0, %zmm0
 ; AVX512DQ-NEXT:    vextracti64x4 $1, %zmm2, %ymm1
-; AVX512DQ-NEXT:    vpcmpeqw %ymm5, %ymm1, %ymm1
-; AVX512DQ-NEXT:    vpcmpeqw %ymm5, %ymm2, %ymm2
+; AVX512DQ-NEXT:    vpcmpeqw %ymm4, %ymm1, %ymm1
+; AVX512DQ-NEXT:    vpcmpeqw %ymm4, %ymm2, %ymm2
 ; AVX512DQ-NEXT:    vinserti64x4 $1, %ymm1, %zmm2, %zmm1
 ; AVX512DQ-NEXT:    vextracti64x4 $1, %zmm3, %ymm2
-; AVX512DQ-NEXT:    vpcmpeqw %ymm5, %ymm2, %ymm2
-; AVX512DQ-NEXT:    vpcmpeqw %ymm5, %ymm3, %ymm3
+; AVX512DQ-NEXT:    vpcmpeqw %ymm4, %ymm2, %ymm2
+; AVX512DQ-NEXT:    vpcmpeqw %ymm4, %ymm3, %ymm3
 ; AVX512DQ-NEXT:    vinserti64x4 $1, %ymm2, %zmm3, %zmm2
 ; AVX512DQ-NEXT:    vpternlogq {{.*#+}} zmm2 = zmm0 & (zmm2 | zmm1)
 ; AVX512DQ-NEXT:    vextracti64x4 $1, %zmm2, %ymm0
@@ -4252,23 +4252,23 @@ exit:
 define void @ktest_7(<64 x i8> %w, <64 x i8> %x, <64 x i8> %y, <64 x i8> %z) {
 ; KNL-LABEL: ktest_7:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm4
-; KNL-NEXT:    vpxor %xmm5, %xmm5, %xmm5
-; KNL-NEXT:    vpcmpeqb %ymm5, %ymm4, %ymm4
-; KNL-NEXT:    vpcmpeqb %ymm5, %ymm0, %ymm0
-; KNL-NEXT:    vinserti64x4 $1, %ymm4, %zmm0, %zmm0
-; KNL-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
-; KNL-NEXT:    vpcmpeqb %ymm5, %ymm4, %ymm4
-; KNL-NEXT:    vpcmpeqb %ymm5, %ymm1, %ymm1
-; KNL-NEXT:    vinserti64x4 $1, %ymm4, %zmm1, %zmm1
+; KNL-NEXT:    vpxor %xmm4, %xmm4, %xmm4
+; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm5
+; KNL-NEXT:    vpcmpeqb %ymm4, %ymm5, %ymm5
+; KNL-NEXT:    vpcmpeqb %ymm4, %ymm0, %ymm0
+; KNL-NEXT:    vinserti64x4 $1, %ymm5, %zmm0, %zmm0
+; KNL-NEXT:    vextracti64x4 $1, %zmm1, %ymm5
+; KNL-NEXT:    vpcmpeqb %ymm4, %ymm5, %ymm5
+; KNL-NEXT:    vpcmpeqb %ymm4, %ymm1, %ymm1
+; KNL-NEXT:    vinserti64x4 $1, %ymm5, %zmm1, %zmm1
 ; KNL-NEXT:    vporq %zmm1, %zmm0, %zmm0
 ; KNL-NEXT:    vextracti64x4 $1, %zmm2, %ymm1
-; KNL-NEXT:    vpcmpeqb %ymm5, %ymm1, %ymm1
-; KNL-NEXT:    vpcmpeqb %ymm5, %ymm2, %ymm2
+; KNL-NEXT:    vpcmpeqb %ymm4, %ymm1, %ymm1
+; KNL-NEXT:    vpcmpeqb %ymm4, %ymm2, %ymm2
 ; KNL-NEXT:    vinserti64x4 $1, %ymm1, %zmm2, %zmm1
 ; KNL-NEXT:    vextracti64x4 $1, %zmm3, %ymm2
-; KNL-NEXT:    vpcmpeqb %ymm5, %ymm2, %ymm2
-; KNL-NEXT:    vpcmpeqb %ymm5, %ymm3, %ymm3
+; KNL-NEXT:    vpcmpeqb %ymm4, %ymm2, %ymm2
+; KNL-NEXT:    vpcmpeqb %ymm4, %ymm3, %ymm3
 ; KNL-NEXT:    vinserti64x4 $1, %ymm2, %zmm3, %zmm2
 ; KNL-NEXT:    vpternlogq {{.*#+}} zmm2 = zmm0 & (zmm2 | zmm1)
 ; KNL-NEXT:    vextracti64x4 $1, %zmm2, %ymm0
@@ -4331,23 +4331,23 @@ define void @ktest_7(<64 x i8> %w, <64 x i8> %x, <64 x i8> %y, <64 x i8> %z) {
 ;
 ; AVX512DQ-LABEL: ktest_7:
 ; AVX512DQ:       ## %bb.0:
-; AVX512DQ-NEXT:    vextracti64x4 $1, %zmm0, %ymm4
-; AVX512DQ-NEXT:    vpxor %xmm5, %xmm5, %xmm5
-; AVX512DQ-NEXT:    vpcmpeqb %ymm5, %ymm4, %ymm4
-; AVX512DQ-NEXT:    vpcmpeqb %ymm5, %ymm0, %ymm0
-; AVX512DQ-NEXT:    vinserti64x4 $1, %ymm4, %zmm0, %zmm0
-; AVX512DQ-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
-; AVX512DQ-NEXT:    vpcmpeqb %ymm5, %ymm4, %ymm4
-; AVX512DQ-NEXT:    vpcmpeqb %ymm5, %ymm1, %ymm1
-; AVX512DQ-NEXT:    vinserti64x4 $1, %ymm4, %zmm1, %zmm1
+; AVX512DQ-NEXT:    vpxor %xmm4, %xmm4, %xmm4
+; AVX512DQ-NEXT:    vextracti64x4 $1, %zmm0, %ymm5
+; AVX512DQ-NEXT:    vpcmpeqb %ymm4, %ymm5, %ymm5
+; AVX512DQ-NEXT:    vpcmpeqb %ymm4, %ymm0, %ymm0
+; AVX512DQ-NEXT:    vinserti64x4 $1, %ymm5, %zmm0, %zmm0
+; AVX512DQ-NEXT:    vextracti64x4 $1, %zmm1, %ymm5
+; AVX512DQ-NEXT:    vpcmpeqb %ymm4, %ymm5, %ymm5
+; AVX512DQ-NEXT:    vpcmpeqb %ymm4, %ymm1, %ymm1
+; AVX512DQ-NEXT:    vinserti64x4 $1, %ymm5, %zmm1, %zmm1
 ; AVX512DQ-NEXT:    vporq %zmm1, %zmm0, %zmm0
 ; AVX512DQ-NEXT:    vextracti64x4 $1, %zmm2, %ymm1
-; AVX512DQ-NEXT:    vpcmpeqb %ymm5, %ymm1, %ymm1
-; AVX512DQ-NEXT:    vpcmpeqb %ymm5, %ymm2, %ymm2
+; AVX512DQ-NEXT:    vpcmpeqb %ymm4, %ymm1, %ymm1
+; AVX512DQ-NEXT:    vpcmpeqb %ymm4, %ymm2, %ymm2
 ; AVX512DQ-NEXT:    vinserti64x4 $1, %ymm1, %zmm2, %zmm1
 ; AVX512DQ-NEXT:    vextracti64x4 $1, %zmm3, %ymm2
-; AVX512DQ-NEXT:    vpcmpeqb %ymm5, %ymm2, %ymm2
-; AVX512DQ-NEXT:    vpcmpeqb %ymm5, %ymm3, %ymm3
+; AVX512DQ-NEXT:    vpcmpeqb %ymm4, %ymm2, %ymm2
+; AVX512DQ-NEXT:    vpcmpeqb %ymm4, %ymm3, %ymm3
 ; AVX512DQ-NEXT:    vinserti64x4 $1, %ymm2, %zmm3, %zmm2
 ; AVX512DQ-NEXT:    vpternlogq {{.*#+}} zmm2 = zmm0 & (zmm2 | zmm1)
 ; AVX512DQ-NEXT:    vextracti64x4 $1, %zmm2, %ymm0

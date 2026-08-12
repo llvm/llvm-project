@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL2.0 -include opencl-c.h -triple spir64 -emit-llvm -o - -Wno-void-pointer-to-int-cast -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast | FileCheck %s --check-prefixes=CHECK,SPIR64
 // RUN: %clang_cc1 -no-enable-noundef-analysis %s -O0 -cl-std=CL2.0 -include opencl-c.h -triple spir64 -emit-llvm -o - -Wno-void-pointer-to-int-cast -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast | FileCheck --check-prefixes=CHECK-NOOPT,SPIR64-NOOPT %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL2.0 -include opencl-c.h -triple amdgcn -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,AMDGCN
-// RUN: %clang_cc1 -no-enable-noundef-analysis %s -O0 -cl-std=CL2.0 -include opencl-c.h -triple amdgcn -emit-llvm -o - | FileCheck --check-prefixes=CHECK-NOOPT,AMDGCN-NOOPT %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL2.0 -include opencl-c.h -triple amdgcn---opencl -emit-llvm -o - | FileCheck %s --check-prefix=AMDGCN
-// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL2.0 -include opencl-c.h -triple amdgcn -fcommon -emit-llvm -o - | FileCheck %s --check-prefix=AMDGCN-COMMON
+// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL2.0 -include opencl-c.h -triple amdgpu -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,AMDGCN
+// RUN: %clang_cc1 -no-enable-noundef-analysis %s -O0 -cl-std=CL2.0 -include opencl-c.h -triple amdgpu -emit-llvm -o - | FileCheck --check-prefixes=CHECK-NOOPT,AMDGCN-NOOPT %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL2.0 -include opencl-c.h -triple amdgpu---opencl -emit-llvm -o - | FileCheck %s --check-prefix=AMDGCN
+// RUN: %clang_cc1 -no-enable-noundef-analysis %s -cl-std=CL2.0 -include opencl-c.h -triple amdgpu -fcommon -emit-llvm -o - | FileCheck %s --check-prefix=AMDGCN-COMMON
 
 typedef struct {
   private char *p1;

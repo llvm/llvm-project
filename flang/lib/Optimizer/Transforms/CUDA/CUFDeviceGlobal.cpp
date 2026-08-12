@@ -12,6 +12,7 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -118,9 +119,10 @@ processPotentialTypeDescriptor(mlir::Type candidateType,
 
 /// NVPTX cannot emit global initializers that form a reference cycle (see
 /// VisitGlobalVariableForEmission). Fortran type-info globals often do
-/// (mutually recursive derived types). Make a subset of the GPU copies extern
-/// declarations so that the remaining initializer dependency graph is
-/// acyclic, while preserving as many complete initializers as possible.
+/// (mutually recursive derived types). Replace the initializer of a feedback
+/// vertex set of GPU copies with a zero value so the remaining dependency
+/// graph is acyclic, while keeping those symbols as real definitions (not
+/// `.extern`) so nvlink can resolve references from other device objects.
 static void dropCyclicGlobalInitializers(mlir::gpu::GPUModuleOp gpuMod) {
   llvm::DenseMap<llvm::StringRef, fir::GlobalOp> byName;
   llvm::SmallVector<fir::GlobalOp, 16> globals;
@@ -147,21 +149,21 @@ static void dropCyclicGlobalInitializers(mlir::gpu::GPUModuleOp gpuMod) {
     });
   }
 
-  // Greedily construct a feedback vertex set. Dropping one initializer
-  // removes all outgoing dependency edges from that global. Restart the DFS
-  // after each cut until no back edge remains.
-  llvm::DenseSet<fir::GlobalOp> declarationOnly;
+  // Greedily construct a feedback vertex set. Replacing one initializer with
+  // a zero value removes all outgoing dependency edges from that global.
+  // Restart the DFS after each cut until no back edge remains.
+  llvm::DenseSet<fir::GlobalOp> zeroInitOnly;
   while (true) {
     // 0: unvisited, 1: active, 2: complete.
     llvm::DenseMap<fir::GlobalOp, unsigned> state;
     fir::GlobalOp cut;
     std::function<bool(fir::GlobalOp)> findCycle =
         [&](fir::GlobalOp global) -> bool {
-      if (declarationOnly.contains(global))
+      if (zeroInitOnly.contains(global))
         return false;
       state[global] = 1;
       for (fir::GlobalOp target : adj.lookup(global)) {
-        if (declarationOnly.contains(target))
+        if (zeroInitOnly.contains(target))
           continue;
         if (state.lookup(target) == 1) {
           cut = global;
@@ -179,15 +181,20 @@ static void dropCyclicGlobalInitializers(mlir::gpu::GPUModuleOp gpuMod) {
         break;
     if (!cut)
       break;
-    declarationOnly.insert(cut);
+    zeroInitOnly.insert(cut);
   }
 
-  for (fir::GlobalOp global : declarationOnly) {
+  for (fir::GlobalOp global : zeroInitOnly) {
     global.getRegion().getBlocks().clear();
     global.removeInitValAttr();
-    // No initializer: use default external linkage so NVPTX emits
-    // `.extern .global` with no initializer dependency edges.
-    global.removeLinkNameAttr();
+    // Keep linkage (typically linkonce). Emit a zero initializer so the
+    // symbol remains a definition with no fir.address_of dependency edges.
+    mlir::OpBuilder builder(global.getContext());
+    mlir::Block *block = builder.createBlock(&global.getRegion());
+    builder.setInsertionPointToStart(block);
+    mlir::Value zero =
+        fir::ZeroOp::create(builder, global.getLoc(), global.getType());
+    fir::HasValueOp::create(builder, global.getLoc(), zero);
   }
 }
 
@@ -249,7 +256,7 @@ public:
       // External linkage (see convertLinkage in CodeGen.cpp), so an
       // initializer-less global emits as `.extern .global ...` in PTX.
       // The host-side definition stays. CUFAddConstructor will emit
-      // CUFRegisterExternalVariable (= __cudaRegisterHostVar) so the CUDA
+      // cuf.register_variable_static so the CUDA
       // runtime maps the device extern to the host pointer at module-load
       // time, and HMM/ATS handles migration.
       if (cudaUnified && !globalOp.getConstant() &&

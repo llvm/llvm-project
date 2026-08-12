@@ -546,11 +546,13 @@ TEST(LlvmLibcSPrintfTest, PointerConv) {
   written = LIBC_NAMESPACE::sprintf(buff, "%p", nullptr);
   ASSERT_STREQ_LEN(written, buff, "(nullptr)");
 
-  written = LIBC_NAMESPACE::sprintf(buff, "%p", 0x1a2b3c4d);
+  written =
+      LIBC_NAMESPACE::sprintf(buff, "%p", static_cast<uintptr_t>(0x1a2b3c4d));
   ASSERT_STREQ_LEN(written, buff, "0x1a2b3c4d");
 
   if constexpr (sizeof(void *) > 4) {
-    written = LIBC_NAMESPACE::sprintf(buff, "%p", 0x1a2b3c4d5e6f7081);
+    written = LIBC_NAMESPACE::sprintf(
+        buff, "%p", static_cast<uintptr_t>(0x1a2b3c4d5e6f7081));
     ASSERT_STREQ_LEN(written, buff, "0x1a2b3c4d5e6f7081");
   }
 
@@ -562,7 +564,8 @@ TEST(LlvmLibcSPrintfTest, PointerConv) {
   written = LIBC_NAMESPACE::sprintf(buff, "%20p", nullptr);
   ASSERT_STREQ_LEN(written, buff, "           (nullptr)");
 
-  written = LIBC_NAMESPACE::sprintf(buff, "%20p", 0x1a2b3c4d);
+  written =
+      LIBC_NAMESPACE::sprintf(buff, "%20p", static_cast<uintptr_t>(0x1a2b3c4d));
   ASSERT_STREQ_LEN(written, buff, "          0x1a2b3c4d");
 
   // Flag tests:
@@ -570,12 +573,14 @@ TEST(LlvmLibcSPrintfTest, PointerConv) {
   written = LIBC_NAMESPACE::sprintf(buff, "%-20p", nullptr);
   ASSERT_STREQ_LEN(written, buff, "(nullptr)           ");
 
-  written = LIBC_NAMESPACE::sprintf(buff, "%-20p", 0x1a2b3c4d);
+  written = LIBC_NAMESPACE::sprintf(buff, "%-20p",
+                                    static_cast<uintptr_t>(0x1a2b3c4d));
   ASSERT_STREQ_LEN(written, buff, "0x1a2b3c4d          ");
 
   // Using the 0 flag is technically undefined, but here we're following the
   // convention of matching the behavior of %#x.
-  written = LIBC_NAMESPACE::sprintf(buff, "%020p", 0x1a2b3c4d);
+  written = LIBC_NAMESPACE::sprintf(buff, "%020p",
+                                    static_cast<uintptr_t>(0x1a2b3c4d));
   ASSERT_STREQ_LEN(written, buff, "0x00000000001a2b3c4d");
 
   // Precision tests:
@@ -587,7 +592,8 @@ TEST(LlvmLibcSPrintfTest, PointerConv) {
 
   // Precision specifies the number of digits to be written for %x conversions,
   // and the "0x" doesn't count as part of the digits.
-  written = LIBC_NAMESPACE::sprintf(buff, "%.20p", 0x1a2b3c4d);
+  written = LIBC_NAMESPACE::sprintf(buff, "%.20p",
+                                    static_cast<uintptr_t>(0x1a2b3c4d));
   ASSERT_STREQ_LEN(written, buff, "0x0000000000001a2b3c4d");
 }
 
@@ -3801,7 +3807,8 @@ TEST(LlvmLibcSPrintfTest, IndexModeParsing) {
 }
 #endif // LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
 
-#ifndef LIBC_COPT_PRINTF_DISABLE_WIDE
+#if !defined(LIBC_COPT_PRINTF_DISABLE_WIDE) &&                                 \
+    !defined(LIBC_TARGET_ARCH_IS_GPU) // llvm.org/pr214433
 TEST(LlvmLibcSprintfTest, WideCharConversion) {
   char buff[16];
   int written;
@@ -3993,4 +4000,4 @@ TEST(LlvmLibcSprintfTest, WideCharStringConversion) {
   EXPECT_EQ(written, 6);
   ASSERT_STREQ_LEN(written, buff, "   (nu");
 }
-#endif // LIBC_COPT_PRINTF_DISABLE_WIDE
+#endif // !LIBC_COPT_PRINTF_DISABLE_WIDE && !LIBC_TARGET_ARCH_IS_GPU

@@ -505,6 +505,7 @@ __OMP_RTL(__kmpc_end_sharing_variables, false, Void, )
 __OMP_RTL(__kmpc_get_shared_variables, false, Void, VoidPtrPtrPtr)
 __OMP_RTL(__kmpc_parallel_level, false, Int16, IdentPtr, Int32)
 __OMP_RTL(__kmpc_is_spmd_exec_mode, false, Int8, )
+__OMP_RTL(__kmpc_is_team_main_thread, false, Int32, )
 __OMP_RTL(__kmpc_barrier_simple_spmd, false, Void, IdentPtr, Int32)
 __OMP_RTL(__kmpc_barrier_simple_generic, false, Void, IdentPtr, Int32)
 
@@ -1104,6 +1105,7 @@ __OMP_RTL_ATTRS(__kmpc_shuffle_int64, AttributeSet(), AttributeSet(),
                 ParamAttrs(AttributeSet(), SExt, SExt))
 
 __OMP_RTL_ATTRS(__kmpc_is_spmd_exec_mode, AttributeSet(), SExt, ParamAttrs())
+__OMP_RTL_ATTRS(__kmpc_is_team_main_thread, AttributeSet(), SExt, ParamAttrs())
 
 #undef __OMP_RTL_ATTRS
 #undef OMP_RTL_ATTRS

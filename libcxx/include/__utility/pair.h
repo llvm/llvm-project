@@ -96,9 +96,7 @@ struct pair
   _T2 second;
 
   using __trivially_relocatable _LIBCPP_NODEBUG =
-      __conditional_t<__libcpp_is_trivially_relocatable<_T1>::value && __libcpp_is_trivially_relocatable<_T2>::value,
-                      pair,
-                      void>;
+      __conditional_t<__is_trivially_relocatable_v<_T1> && __is_trivially_relocatable_v<_T2>, pair, void>;
 
   pair(pair const&) = default;
   pair(pair&&)      = default;

@@ -109,7 +109,6 @@ public:
     AU.addPreserved<LiveIntervalsWrapperPass>();
     AU.addRequired<SlotIndexesWrapperPass>();
     AU.addPreserved<SlotIndexesWrapperPass>();
-    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };

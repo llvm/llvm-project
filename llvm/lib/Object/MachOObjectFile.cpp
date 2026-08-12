@@ -883,6 +883,48 @@ parseBuildVersionCommand(const MachOObjectFile &Obj,
   return Error::success();
 }
 
+static Error
+checkTargetTripleCommand(const MachOObjectFile &Obj,
+                         const MachOObjectFile::LoadCommandInfo &Load,
+                         uint32_t LoadCommandIndex) {
+  // Check the command size is big enough for the command struct.
+  if (Load.C.cmdsize < sizeof(MachO::target_triple_command))
+    return malformedError("load command " + Twine(LoadCommandIndex) +
+                          " LC_TARGET_TRIPLE cmdsize too small");
+
+  auto TTOrErr = getStructOrErr<MachO::target_triple_command>(Obj, Load.Ptr);
+  if (!TTOrErr)
+    return TTOrErr.takeError();
+  MachO::target_triple_command TT = TTOrErr.get();
+
+  // Check the triple offset is after the command struct.
+  if (TT.triple < sizeof(MachO::target_triple_command))
+    return malformedError(
+        "load command " + Twine(LoadCommandIndex) +
+        " LC_TARGET_TRIPLE triple.offset field too small, not past the end of "
+        "the target_triple_command struct");
+
+  // Check the triple offset is before the end of the command.
+  if (TT.triple >= TT.cmdsize)
+    return malformedError("load command " + Twine(LoadCommandIndex) +
+                          " LC_TARGET_TRIPLE triple.offset field extends past "
+                          "the end of the load command");
+
+  // Check there is a NUL between the starting offset of the triple and the end
+  // of the command.
+  uint32_t i;
+  const char *P = (const char *)Load.Ptr;
+  for (i = TT.triple; i < TT.cmdsize; i++)
+    if (P[i] == '\0')
+      break;
+  if (i >= TT.cmdsize)
+    return malformedError("load command " + Twine(LoadCommandIndex) +
+                          " LC_TARGET_TRIPLE triple name extends past the end "
+                          "of the load command");
+
+  return Error::success();
+}
+
 static Error checkRpathCommand(const MachOObjectFile &Obj,
                                const MachOObjectFile::LoadCommandInfo &Load,
                                uint32_t LoadCommandIndex) {
@@ -1474,6 +1516,9 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
         return;
     } else if (Load.C.cmd == MachO::LC_BUILD_VERSION) {
       if ((Err = parseBuildVersionCommand(*this, Load, BuildTools, I)))
+        return;
+    } else if (Load.C.cmd == MachO::LC_TARGET_TRIPLE) {
+      if ((Err = checkTargetTripleCommand(*this, Load, I)))
         return;
     } else if (Load.C.cmd == MachO::LC_RPATH) {
       if ((Err = checkRpathCommand(*this, Load, I)))
@@ -4748,6 +4793,11 @@ MachOObjectFile::getNoteLoadCommand(const LoadCommandInfo &L) const {
 MachO::build_version_command
 MachOObjectFile::getBuildVersionLoadCommand(const LoadCommandInfo &L) const {
   return getStruct<MachO::build_version_command>(*this, L.Ptr);
+}
+
+MachO::target_triple_command
+MachOObjectFile::getTargetTripleLoadCommand(const LoadCommandInfo &L) const {
+  return getStruct<MachO::target_triple_command>(*this, L.Ptr);
 }
 
 MachO::build_tool_version

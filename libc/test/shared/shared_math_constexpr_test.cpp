@@ -200,7 +200,7 @@ static_assert(3.0f16 == LIBC_NAMESPACE::shared::f16addf(1.0f, 2.0f));
 #if 0
 static_assert(3.0f16 == LIBC_NAMESPACE::shared::f16addl(1.0L, 2.0L));
 #endif
-#ifdef LIBC_TYPES_HAS_FLOAT128
+#ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
 static_assert(3.0f16 ==
               LIBC_NAMESPACE::shared::f16addf128(float128(1.0), float128(2.0)));
 #endif
@@ -377,7 +377,7 @@ static_assert(0 == LIBC_NAMESPACE::shared::isnanl(0.0L));
 //                       Float128 Tests
 //===----------------------------------------------------------------------===//
 
-#ifdef LIBC_TYPES_HAS_FLOAT128
+#ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 static_assert(0 == [] {
   float128 cx = float128(0.0);
@@ -506,7 +506,7 @@ static_assert(float128(0.0) ==
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::truncf128(float128(0.0)));
 
-#endif // LIBC_TYPES_HAS_FLOAT128
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 //===----------------------------------------------------------------------===//
 //                       BFloat16 Tests

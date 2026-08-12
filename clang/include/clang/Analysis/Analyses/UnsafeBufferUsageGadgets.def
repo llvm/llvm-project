@@ -42,6 +42,7 @@ WARNING_OPTIONAL_GADGET(ArraySubscript)
 WARNING_OPTIONAL_GADGET(UnsafeLibcFunctionCall)
 WARNING_OPTIONAL_GADGET(UnsafeFormatAttributedFunctionCall)
 WARNING_OPTIONAL_GADGET(SpanTwoParamConstructor) // Uses of `std::span(arg0, arg1)`
+WARNING_OPTIONAL_GADGET(StringViewTwoParamConstructor)
 FIXABLE_GADGET(ULCArraySubscript)          // `DRE[any]` in an Unspecified Lvalue Context
 FIXABLE_GADGET(DerefSimplePtrArithFixable)
 FIXABLE_GADGET(PointerDereference)

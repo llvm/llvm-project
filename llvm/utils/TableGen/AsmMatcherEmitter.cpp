@@ -799,7 +799,7 @@ private:
 
 private:
   /// getTokenClass - Lookup or create the class for the given token.
-  ClassInfo *getTokenClass(StringRef Token);
+  ClassInfo *getTokenClass(StringRef Token, bool WantDiagnostic = false);
 
   /// getOperandClass - Lookup or create the class for the given operand.
   ClassInfo *getOperandClass(const CGIOperandList::OperandInfo &OI,
@@ -1176,7 +1176,7 @@ static std::string getEnumNameForToken(StringRef Str) {
   return Res;
 }
 
-ClassInfo *AsmMatcherInfo::getTokenClass(StringRef Token) {
+ClassInfo *AsmMatcherInfo::getTokenClass(StringRef Token, bool WantDiagnostic) {
   ClassInfo *&Entry = TokenClasses[Token.str()];
 
   if (!Entry) {
@@ -1192,6 +1192,14 @@ ClassInfo *AsmMatcherInfo::getTokenClass(StringRef Token) {
     Entry->DiagnosticType = "";
     Entry->IsOptional = false;
     Entry->DefaultMethod = "<invalid>";
+  }
+
+  // Outside the creation block so a later WantDiagnostic=true call can
+  // update an entry first created with WantDiagnostic=false.
+  if (WantDiagnostic && Entry->DiagnosticType.empty() &&
+      AsmParser->getValueAsBit("EmitTokenDiagnosticTypes")) {
+    Entry->DiagnosticType = "InvalidToken" + getEnumNameForToken(Token);
+    Entry->DiagnosticString = "expected '" + Token.str() + "'";
   }
 
   return Entry;
@@ -1659,7 +1667,7 @@ void AsmMatcherInfo::buildInfo() {
 
       // Check for simple tokens.
       if (Token[0] != '$') {
-        Op.Class = getTokenClass(Token);
+        Op.Class = getTokenClass(Token, /*WantDiagnostic=*/true);
         continue;
       }
 
@@ -2520,6 +2528,101 @@ static void emitRegisterMatchErrorFunc(AsmMatcherInfo &Info, raw_ostream &OS) {
   OS << "}\n\n";
 }
 
+/// emitTokenDiagFunction - Emit a function mapping token class kinds to
+/// diagnostics.
+static void emitTokenDiagFunction(AsmMatcherInfo &Info, raw_ostream &OS) {
+  OS << "static unsigned getDiagKindFromTokenClass(MatchClassKind Kind) {\n";
+  OS << "  switch (Kind) {\n";
+  OS << "  default:\n";
+  OS << "    return MCTargetAsmParser::Match_InvalidOperand;\n";
+  for (const auto &CI : Info.Classes) {
+    if (CI.Kind == ClassInfo::Token && !CI.DiagnosticType.empty()) {
+      OS << "  case " << CI.Name << ":\n";
+      OS << "    return " << Info.Target.getName() << "AsmParser::Match_"
+         << CI.DiagnosticType << ";\n";
+    }
+  }
+  OS << "  }\n";
+  OS << "}\n\n";
+}
+
+// Returns true if ClassName corresponds to a RegisterClass defined in the
+// target description (and thus has a generated RegClassID), rather than a
+// singleton register or an anonymous derived register class.
+static bool isDefinedRegisterClass(const AsmMatcherInfo &Info,
+                                   StringRef ClassName) {
+  for (const auto &RC : Info.Target.getRegBank().getRegClasses()) {
+    if (RC.getName() == ClassName)
+      return true;
+  }
+  return false;
+}
+
+static void emitGetRegClassFromMatchKindFunc(AsmMatcherInfo &Info,
+                                             raw_ostream &OS) {
+  OS << "[[maybe_unused]] static const MCRegisterClass "
+        "*getRegClassFromMatchKind(MatchClassKind Kind) {\n";
+  OS << "  switch (Kind) {\n";
+
+  // Emit the straightforward RegisterClass mapping.
+  for (const auto &CI : Info.Classes) {
+    if (CI.isRegisterClass() && !CI.ValueName.empty() &&
+        isDefinedRegisterClass(Info, CI.ClassName)) {
+      OS << "  case " << CI.Name << ":\n";
+      OS << "    return &get" << Info.Target.getName() << "MCRegisterClass("
+         << Info.Target.getName() << "::" << CI.ClassName << "RegClassID);\n";
+    }
+  }
+
+  // Next Collect RegisterOperand MCK_* -> RegisterClass mappings and emit
+  // it for all non-ambiguous RegisterOperands.
+  // Many targets reuse the same ParserMatchClass for different register
+  // classes so we can't emit a these unconditionally.
+  std::map<const ClassInfo *, const ClassInfo *> UserClassToRegClassMap;
+  for (const Record *RO :
+       Info.Records.getAllDerivedDefinitions("RegisterOperand")) {
+    const RecordVal *R = RO->getValue("ParserMatchClass");
+    if (!R)
+      continue;
+    const DefInit *DI = dyn_cast<DefInit>(R->getValue());
+    if (!DI)
+      continue;
+    const Record *PMC = DI->getDef();
+    const Record *RC = RO->getValueAsDef("RegClass");
+    if (!RC || !RC->isSubClassOf("RegisterClassLike"))
+      continue;
+    auto PMC_It = Info.AsmOperandClasses.find(PMC);
+    auto RC_It = Info.RegisterClassClasses.find(RC);
+    if (PMC_It == Info.AsmOperandClasses.end() ||
+        RC_It == Info.RegisterClassClasses.end())
+      continue;
+    const ClassInfo *UserCI = PMC_It->second;
+    const ClassInfo *RegCI = RC_It->second;
+
+    auto It = UserClassToRegClassMap.find(UserCI);
+    if (It == UserClassToRegClassMap.end()) {
+      UserClassToRegClassMap[UserCI] = RegCI;
+    } else if (It->second && It->second != RegCI) {
+      // TODO: Warn about ambiguous ParserMatchClass mapping when we can.
+      // Many targets currently have ambiguous mappings.
+      It->second = nullptr; // Mark as ambiguous
+    }
+  }
+  for (const auto [UserCI, RegCI] : UserClassToRegClassMap) {
+    if (RegCI && isDefinedRegisterClass(Info, RegCI->ClassName)) {
+      OS << "  case " << UserCI->Name << ":\n";
+      OS << "    return &get" << Info.Target.getName() << "MCRegisterClass("
+         << Info.Target.getName() << "::" << RegCI->ClassName
+         << "RegClassID);\n";
+    }
+  }
+
+  OS << "  default:\n";
+  OS << "    return nullptr;\n";
+  OS << "  }\n";
+  OS << "}\n\n";
+}
+
 /// emitValidateOperandClass - Emit the function to validate an operand class.
 static void emitValidateOperandClass(const CodeGenTarget &Target,
                                      AsmMatcherInfo &Info, raw_ostream &OS) {
@@ -2533,11 +2636,15 @@ static void emitValidateOperandClass(const CodeGenTarget &Target,
   OS << "    return MCTargetAsmParser::Match_InvalidOperand;\n\n";
 
   // Check for Token operands first.
-  // FIXME: Use a more specific diagnostic type.
-  OS << "  if (Operand.isToken() && Kind <= MCK_LAST_TOKEN)\n";
-  OS << "    return isSubclass(matchTokenString(Operand.getToken()), Kind) ?\n"
-     << "             MCTargetAsmParser::Match_Success :\n"
-     << "             MCTargetAsmParser::Match_InvalidOperand;\n\n";
+  OS << "  if (Kind <= MCK_LAST_TOKEN) {\n";
+  OS << "    if (Operand.isToken() &&\n"
+     << "        isSubclass(matchTokenString(Operand.getToken()), Kind))\n";
+  OS << "      return MCTargetAsmParser::Match_Success;\n";
+  if (Info.AsmParser->getValueAsBit("EmitTokenDiagnosticTypes"))
+    OS << "    return getDiagKindFromTokenClass(Kind);\n";
+  else
+    OS << "    return MCTargetAsmParser::Match_InvalidOperand;\n";
+  OS << "  }\n\n";
 
   // Check the user classes. We don't care what order since we're only
   // actually matching against one of them.
@@ -2569,7 +2676,11 @@ static void emitValidateOperandClass(const CodeGenTarget &Target,
   unsigned NumClassesByHwMode = RegClassesByHwMode.size();
 
   if (!RegClassesByHwMode.empty()) {
-    OS << "  if (Operand.isReg() && Kind > MCK_LAST_REGISTER &&"
+    // Resolve RegClassByHwMode kinds to their concrete class regardless of
+    // whether Operand is actually a register, so that the diagnostic
+    // fallback paths below (for both register and non-register operands)
+    // see a concrete class rather than an unresolved by-hwmode one.
+    OS << "  if (Kind > MCK_LAST_REGISTER &&"
           " Kind <= MCK_LAST_REGCLASS_BY_HWMODE) {\n";
 
     const CodeGenHwModes &CGH = Target.getHwModes();
@@ -2802,13 +2913,9 @@ static void emitMatchRegisterAltName(const CodeGenTarget &Target,
 static void emitOperandDiagnosticTypes(AsmMatcherInfo &Info, raw_ostream &OS) {
   // Get the set of diagnostic types from all of the operand classes.
   std::set<StringRef> Types;
-  for (const auto &OpClassEntry : Info.AsmOperandClasses) {
-    if (!OpClassEntry.second->DiagnosticType.empty())
-      Types.insert(OpClassEntry.second->DiagnosticType);
-  }
-  for (const auto &OpClassEntry : Info.RegisterClassClasses) {
-    if (!OpClassEntry.second->DiagnosticType.empty())
-      Types.insert(OpClassEntry.second->DiagnosticType);
+  for (const auto &CI : Info.Classes) {
+    if (!CI.DiagnosticType.empty())
+      Types.insert(CI.DiagnosticType);
   }
 
   if (Types.empty())
@@ -3528,11 +3635,18 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   // Emit a function to map register classes to operand match failure codes.
   emitRegisterMatchErrorFunc(Info, OS);
 
+  // Emit a function to map MatchClassKind to MCRegisterClass.
+  emitGetRegClassFromMatchKindFunc(Info, OS);
+
   // Emit the routine to match token strings to their match class.
   emitMatchTokenString(Target, Info.Classes, OS);
 
   // Emit the subclass predicate routine.
   emitIsSubclass(Target, Info.Classes, OS);
+
+  // Emit the function mapping token class kinds to diagnostic codes.
+  if (AsmParser->getValueAsBit("EmitTokenDiagnosticTypes"))
+    emitTokenDiagFunction(Info, OS);
 
   // Emit the routine to validate an operand against a match class.
   emitValidateOperandClass(Target, Info, OS);

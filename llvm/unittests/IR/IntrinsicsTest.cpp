@@ -57,9 +57,6 @@ public:
     }
     return Builder.CreateCall(Decl, ProcessedArgs);
   }
-  template <typename T> void checkIsa(const Instruction &I) {
-    EXPECT_TRUE(isa<T>(I));
-  }
 };
 
 TEST(IntrinsicNameLookup, Basic) {

@@ -813,6 +813,64 @@ bool LoopInterchangeLegality::containsUnsafeInstructions(BasicBlock *BB,
   });
 }
 
+static FreezeInst *findFreezeInReNestedBlocks(Loop *OuterLoop,
+                                              Loop *InnerLoop) {
+  // adjustLoopLinks swaps the preheader bodies after changing their loop
+  // roles, so the original outer-preheader body remains outside the new outer
+  // loop and retains its execution count.
+  BasicBlock *Blocks[] = {
+      OuterLoop->getHeader(),
+      OuterLoop->getLoopLatch(),
+      InnerLoop->getLoopPreheader(),
+      InnerLoop->getExitBlock(),
+  };
+  for (BasicBlock *BB : Blocks)
+    if (BB)
+      for (Instruction &I : *BB)
+        if (auto *Freeze = dyn_cast<FreezeInst>(&I))
+          return Freeze;
+  return nullptr;
+}
+
+static FreezeInst *
+findFreezeInInnerLatchCloneSet(Loop *InnerLoop,
+                               ArrayRef<PHINode *> InnerLoopInductions) {
+  // Mirror the latch-condition and induction-update operand closure cloned by
+  // MoveInstructions in LoopInterchangeTransform::transform.
+  SmallSetVector<Instruction *, 8> Worklist;
+  auto IsDirectInnerLoopBlock = [InnerLoop](BasicBlock *BB) {
+    return InnerLoop->contains(BB) &&
+           none_of(InnerLoop->getSubLoops(),
+                   [BB](Loop *SubLoop) { return SubLoop->contains(BB); });
+  };
+  auto *LatchBranch =
+      dyn_cast<CondBrInst>(InnerLoop->getLoopLatch()->getTerminator());
+  if (LatchBranch)
+    if (auto *Condition = dyn_cast<Instruction>(LatchBranch->getCondition()))
+      Worklist.insert(Condition);
+
+  for (PHINode *Induction : InnerLoopInductions) {
+    auto *Incoming = dyn_cast<Instruction>(
+        Induction->getIncomingValueForBlock(InnerLoop->getLoopLatch()));
+    if (Incoming && !is_contained(InnerLoopInductions, Incoming))
+      Worklist.insert(Incoming);
+  }
+
+  for (unsigned I = 0; I < Worklist.size(); ++I) {
+    Instruction *Current = Worklist[I];
+    if (auto *Freeze = dyn_cast<FreezeInst>(Current))
+      return Freeze;
+    for (Value *Operand : Current->operands()) {
+      auto *OperandI = dyn_cast<Instruction>(Operand);
+      if (!OperandI || !IsDirectInnerLoopBlock(OperandI->getParent()) ||
+          is_contained(InnerLoopInductions, OperandI))
+        continue;
+      Worklist.insert(OperandI);
+    }
+  }
+  return nullptr;
+}
+
 bool LoopInterchangeLegality::tightlyNested(Loop *OuterLoop, Loop *InnerLoop) {
   BasicBlock *OuterLoopHeader = OuterLoop->getHeader();
   BasicBlock *InnerLoopPreHeader = InnerLoop->getLoopPreheader();
@@ -1583,6 +1641,21 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
     return false;
   }
 
+  FreezeInst *Freeze = findFreezeInReNestedBlocks(OuterLoop, InnerLoop);
+  if (!Freeze)
+    Freeze = findFreezeInInnerLatchCloneSet(InnerLoop, InnerLoopInductions);
+  if (Freeze) {
+    LLVM_DEBUG(dbgs() << "Interchange would re-nest or duplicate freeze\n");
+    ORE->emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "UnsafeInst",
+                                      Freeze->getDebugLoc(),
+                                      Freeze->getParent())
+             << "Cannot interchange loops because re-nesting or duplicating "
+                "freeze may change its sampling behavior.";
+    });
+    return false;
+  }
+
   // TODO: The loops could not be interchanged due to current limitations in the
   // transform module.
   if (currentLimitations()) {
@@ -2136,6 +2209,8 @@ void LoopInterchangeTransform::transform(
       SplitBlock(InnerLoop->getLoopLatch(),
                  InnerLoop->getLoopLatch()->getTerminator(), DT, LI);
 
+  // Keep these seeds and the operand filter aligned with
+  // findFreezeInInnerLatchCloneSet.
   SmallSetVector<Instruction *, 4> WorkList;
   unsigned i = 0;
   auto MoveInstructions = [&i, &WorkList, this, &InductionPHIs, NewLatch]() {

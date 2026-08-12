@@ -313,10 +313,10 @@ define void @narrow_scatter_with_uniform_addr_to_scalar_unroll(ptr noalias %src,
 ; VF4IC1-NEXT:    [[TMP24:%.*]] = load i16, ptr [[TMP20]], align 4
 ; VF4IC1-NEXT:    [[TMP25:%.*]] = load i16, ptr [[TMP21]], align 4
 ; VF4IC1-NEXT:    [[TMP16:%.*]] = load i16, ptr [[TMP22]], align 4
-; VF4IC1-NEXT:    [[TMP17:%.*]] = insertelement <4 x i16> poison, i16 [[TMP23]], i32 0
-; VF4IC1-NEXT:    [[TMP18:%.*]] = insertelement <4 x i16> [[TMP17]], i16 [[TMP24]], i32 1
-; VF4IC1-NEXT:    [[TMP19:%.*]] = insertelement <4 x i16> [[TMP18]], i16 [[TMP25]], i32 2
-; VF4IC1-NEXT:    [[BROADCAST_SPLAT:%.*]] = insertelement <4 x i16> [[TMP19]], i16 [[TMP16]], i32 3
+; VF4IC1-NEXT:    [[TMP17:%.*]] = insertelement <4 x i16> poison, i16 [[TMP23]], i64 0
+; VF4IC1-NEXT:    [[TMP18:%.*]] = insertelement <4 x i16> [[TMP17]], i16 [[TMP24]], i64 1
+; VF4IC1-NEXT:    [[TMP19:%.*]] = insertelement <4 x i16> [[TMP18]], i16 [[TMP25]], i64 2
+; VF4IC1-NEXT:    [[BROADCAST_SPLAT:%.*]] = insertelement <4 x i16> [[TMP19]], i16 [[TMP16]], i64 3
 ; VF4IC1-NEXT:    [[TMP10:%.*]] = trunc <4 x i16> [[BROADCAST_SPLAT]] to <4 x i8>
 ; VF4IC1-NEXT:    [[TMP11:%.*]] = extractelement <4 x i8> [[TMP10]], i64 3
 ; VF4IC1-NEXT:    store i8 [[TMP11]], ptr [[DST2]], align 4

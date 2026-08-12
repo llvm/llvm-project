@@ -266,6 +266,11 @@ template<class T> complex<T> tanh (const complex<T>&);
 #  include <__tuple/tuple_element.h>
 #  include <__tuple/tuple_size.h>
 #  include <__type_traits/conditional.h>
+#  include <__type_traits/is_arithmetic.h>
+#  include <__type_traits/is_floating_point.h>
+#  include <__type_traits/is_integral.h>
+#  include <__type_traits/is_same.h>
+#  include <__type_traits/promote.h>
 #  include <__utility/move.h>
 #  include <cmath>
 #  include <version>
@@ -1484,11 +1489,6 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
-#    include <iosfwd>
-#    include <stdexcept>
-#    include <type_traits>
-#  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_COMPLEX

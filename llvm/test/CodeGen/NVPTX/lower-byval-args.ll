@@ -551,7 +551,6 @@ define dso_local ptx_kernel void @copy_on_store(ptr nocapture noundef readonly %
 ; PTX-LABEL: copy_on_store(
 ; PTX:       {
 ; PTX-EMPTY:
-; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0: // %bb
 ; PTX-NEXT:    ret;
 bb:

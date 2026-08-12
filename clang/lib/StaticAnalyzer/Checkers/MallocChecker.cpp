@@ -1074,8 +1074,8 @@ public:
                                    BugReporterContext &BRC,
                                    PathSensitiveBugReport &BR) override;
 
-  PathDiagnosticPieceRef getEndPath(BugReporterContext &BRC,
-                                    const ExplodedNode *EndPathNode,
+  PathDiagnosticPieceRef getEndPath(const ExplodedNode *EndPathNode,
+                                    BugReporterContext &BRC,
                                     PathSensitiveBugReport &BR) override {
     if (!IsLeak)
       return nullptr;

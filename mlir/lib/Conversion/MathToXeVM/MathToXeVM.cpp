@@ -12,6 +12,7 @@
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -28,6 +29,35 @@ using namespace mlir;
 
 #define DEBUG_TYPE "math-to-xevm"
 
+static bool isSizeOneVector(Type type) {
+  auto vecType = dyn_cast<VectorType>(type);
+  return vecType && vecType.getShape().size() == 1 &&
+         vecType.getShape()[0] == 1 && vecType.getElementType().isFloat();
+}
+
+static bool isSPIRVCompatibleFloatOrVec(Type type) {
+  if (type.isFloat())
+    return true;
+  if (auto vecType = dyn_cast<VectorType>(type)) {
+    if (!vecType.getElementType().isFloat())
+      return false;
+    // SPIRV distinguishes between vectors and matrices: OpenCL native math
+    // intrsinics are not compatible with matrices.
+    ArrayRef<int64_t> shape = vecType.getShape();
+    if (shape.size() != 1)
+      return false;
+    // SPIRV has no size-1 vector type; such degenerate vectors are handled
+    // by unwrapping to the scalar intrinsic (see matchAndRewrite).
+    if (shape[0] == 1)
+      return true;
+    // SPIRV only allows vectors of size 2, 3, 4, 8, 16.
+    if (shape[0] == 2 || shape[0] == 3 || shape[0] == 4 || shape[0] == 8 ||
+        shape[0] == 16)
+      return true;
+  }
+  return false;
+}
+
 /// Convert math ops marked with `fast` (`afn`) to native OpenCL intrinsics.
 template <typename Op>
 struct ConvertNativeFuncPattern final : public OpConversionPattern<Op> {
@@ -35,65 +65,6 @@ struct ConvertNativeFuncPattern final : public OpConversionPattern<Op> {
   ConvertNativeFuncPattern(MLIRContext *context, StringRef nativeFunc,
                            PatternBenefit benefit = 1)
       : OpConversionPattern<Op>(context, benefit), nativeFunc(nativeFunc) {}
-
-  LogicalResult
-  matchAndRewrite(Op op, typename Op::Adaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    if (!isSPIRVCompatibleFloatOrVec(op.getType()))
-      return failure();
-
-    arith::FastMathFlags fastFlags = op.getFastmath();
-    if (!arith::bitEnumContainsAll(fastFlags, arith::FastMathFlags::afn))
-      return rewriter.notifyMatchFailure(op, "not a fastmath `afn` operation");
-
-    SmallVector<Type, 1> operandTypes;
-    for (auto operand : adaptor.getOperands()) {
-      Type opTy = operand.getType();
-      // This pass only supports operations on vectors that are already in SPIRV
-      // supported vector sizes: Distributing unsupported vector sizes to SPIRV
-      // supported vector sizes are done in other blocking optimization passes.
-      if (!isSPIRVCompatibleFloatOrVec(opTy))
-        return rewriter.notifyMatchFailure(
-            op, llvm::formatv("incompatible operand type: '{0}'", opTy));
-      operandTypes.push_back(opTy);
-    }
-
-    auto moduleOp = op->template getParentWithTrait<OpTrait::SymbolTable>();
-    auto funcOpRes = LLVM::lookupOrCreateFn(
-        rewriter, moduleOp, getMangledNativeFuncName(operandTypes),
-        operandTypes, op.getType());
-    assert(!failed(funcOpRes));
-    LLVM::LLVMFuncOp funcOp = funcOpRes.value();
-
-    auto callOp = rewriter.replaceOpWithNewOp<LLVM::CallOp>(
-        op, funcOp, adaptor.getOperands());
-    // Preserve fastmath flags in our MLIR op when converting to llvm function
-    // calls, in order to allow further fastmath optimizations: We thus need to
-    // convert arith fastmath attrs into attrs recognized by llvm.
-    arith::AttrConvertFastMathToLLVM<Op, LLVM::CallOp> fastAttrConverter(op);
-    mlir::NamedAttribute fastAttr = fastAttrConverter.getAttrs()[0];
-    callOp->setAttr(fastAttr.getName(), fastAttr.getValue());
-    return success();
-  }
-
-  inline bool isSPIRVCompatibleFloatOrVec(Type type) const {
-    if (type.isFloat())
-      return true;
-    if (auto vecType = dyn_cast<VectorType>(type)) {
-      if (!vecType.getElementType().isFloat())
-        return false;
-      // SPIRV distinguishes between vectors and matrices: OpenCL native math
-      // intrsinics are not compatible with matrices.
-      ArrayRef<int64_t> shape = vecType.getShape();
-      if (shape.size() != 1)
-        return false;
-      // SPIRV only allows vectors of size 2, 3, 4, 8, 16.
-      if (shape[0] == 2 || shape[0] == 3 || shape[0] == 4 || shape[0] == 8 ||
-          shape[0] == 16)
-        return true;
-    }
-    return false;
-  }
 
   inline std::string
   getMangledNativeFuncName(const ArrayRef<Type> operandTypes) const {
@@ -118,6 +89,72 @@ struct ConvertNativeFuncPattern final : public OpConversionPattern<Op> {
     }
 
     return mangledFuncName;
+  }
+
+  LogicalResult
+  matchAndRewrite(Op op, typename Op::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (!isSPIRVCompatibleFloatOrVec(op.getType()))
+      return failure();
+
+    arith::FastMathFlags fastFlags = op.getFastmath();
+    if (!arith::bitEnumContainsAll(fastFlags, arith::FastMathFlags::afn))
+      return rewriter.notifyMatchFailure(op, "not a fastmath `afn` operation");
+
+    Location loc = op.getLoc();
+
+    // SPIRV has no size-1 vector type: such vectors are the degenerate result
+    // of distributing/linearizing larger vectors down to a single element (e.g.
+    // by the XeGPU lowering pipeline). They have no OpenCL vector intrinsic, so
+    // unwrap them to the scalar element type and use the scalar intrinsic.
+    SmallVector<Value, 1> operands(adaptor.getOperands());
+    SmallVector<Type, 1> operandTypes;
+    bool unwrapSizeOneVec = isSizeOneVector(op.getType());
+    for (Value &operand : operands) {
+      Type opTy = operand.getType();
+      // This pass only supports operations on vectors that are already in SPIRV
+      // supported vector sizes: Distributing unsupported vector sizes to SPIRV
+      // supported vector sizes are done in other blocking optimization passes.
+      if (!isSPIRVCompatibleFloatOrVec(opTy))
+        return rewriter.notifyMatchFailure(
+            op, llvm::formatv("incompatible operand type: '{0}'", opTy));
+      if (unwrapSizeOneVec) {
+        assert(isSizeOneVector(opTy) &&
+               "expected all operands to be size-1 vectors");
+        opTy = cast<VectorType>(opTy).getElementType();
+        operand = vector::ExtractOp::create(rewriter, loc, operand,
+                                            ArrayRef<int64_t>{0});
+      }
+      operandTypes.push_back(opTy);
+    }
+
+    Type resultType = unwrapSizeOneVec
+                          ? cast<VectorType>(op.getType()).getElementType()
+                          : op.getType();
+
+    auto moduleOp = op->template getParentWithTrait<OpTrait::SymbolTable>();
+    auto funcOpRes = LLVM::lookupOrCreateFn(
+        rewriter, moduleOp, getMangledNativeFuncName(operandTypes),
+        operandTypes, resultType);
+    assert(!failed(funcOpRes));
+    LLVM::LLVMFuncOp funcOp = funcOpRes.value();
+
+    auto callOp = LLVM::CallOp::create(rewriter, loc, funcOp, operands);
+    // Preserve fastmath flags in our MLIR op when converting to llvm function
+    // calls, in order to allow further fastmath optimizations: We thus need to
+    // convert arith fastmath attrs into attrs recognized by llvm.
+    arith::AttrConvertFastMathToLLVM<Op, LLVM::CallOp> fastAttrConverter(op);
+    mlir::NamedAttribute fastAttr = fastAttrConverter.getAttrs()[0];
+    callOp->setAttr(fastAttr.getName(), fastAttr.getValue());
+
+    if (unwrapSizeOneVec) {
+      // Re-wrap the scalar result back into a size-1 vector to preserve types.
+      rewriter.replaceOpWithNewOp<vector::BroadcastOp>(op, op.getType(),
+                                                       callOp.getResult());
+    } else {
+      rewriter.replaceOp(op, callOp);
+    }
+    return success();
   }
 
   const StringRef nativeFunc;
@@ -253,6 +290,10 @@ void ConvertMathToXeVMPass::runOnOperation() {
                       LLVM::Log10Op, LLVM::Log2Op, LLVM::SinOp, LLVM::SqrtOp>();
   }
   target.addLegalDialect<BuiltinDialect, LLVM::LLVMDialect>();
+  // The size-1-vector patterns unwrap to the scalar intrinsic via
+  // vector.extract / vector.broadcast; these must be legal for the partial
+  // conversion to succeed.
+  target.addLegalOp<vector::ExtractOp, vector::BroadcastOp>();
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))
     signalPassFailure();

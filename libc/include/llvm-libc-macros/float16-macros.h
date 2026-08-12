@@ -20,9 +20,9 @@
 
 // TODO: This would no longer be required if HdrGen let us guard function
 // declarations with multiple macros.
-#ifdef LIBC_TYPES_HAS_FLOAT128
+#ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
 #define LIBC_TYPES_HAS_FLOAT16_AND_FLOAT128
-#endif // LIBC_TYPES_HAS_FLOAT128
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 #endif
 
 #endif // LLVM_LIBC_MACROS_FLOAT16_MACROS_H

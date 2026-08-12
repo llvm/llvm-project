@@ -235,8 +235,7 @@ define <4 x i1> @no_subcarry_vector(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %y0,
 ; CHECK-NEXT:    cmhi v0.4s, v2.4s, v0.4s
 ; CHECK-NEXT:    cmhi v1.4s, v3.4s, v1.4s
 ; CHECK-NEXT:    and v0.16b, v0.16b, v4.16b
-; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
-; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    addhn v0.4h, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
   %b0 = icmp ult <4 x i32> %x0, %y0
   %b1 = icmp ult <4 x i32> %x1, %y1

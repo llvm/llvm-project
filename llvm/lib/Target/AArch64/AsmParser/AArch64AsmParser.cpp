@@ -1442,13 +1442,15 @@ public:
   }
 
   template <RegKind VectorKind, unsigned NumRegs, unsigned NumElements,
-            unsigned ElementWidth, unsigned RegClass>
-  DiagnosticPredicate isTypedVectorListInRegClass() const {
+            unsigned ElementWidth, unsigned FirstReg, unsigned LastReg,
+            unsigned Multiple>
+  DiagnosticPredicate isTypedVectorListInRange() const {
     bool Res =
         isTypedVectorList<VectorKind, NumRegs, NumElements, ElementWidth>();
     if (!Res)
       return DiagnosticPredicate::NoMatch;
-    if (!getAArch64MCRegisterClass(RegClass).contains(VectorList.Reg))
+    if (VectorList.Reg < FirstReg || VectorList.Reg > LastReg ||
+        (VectorList.Reg - FirstReg) % Multiple != 0)
       return DiagnosticPredicate::NearMatch;
     return DiagnosticPredicate::Match;
   }

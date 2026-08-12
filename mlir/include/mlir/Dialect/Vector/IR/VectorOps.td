@@ -585,6 +585,7 @@ def Vector_InterleaveOp :
     }
   }];
   let hasCanonicalizer = 1;
+  let hasFolder = 1;
 }
 
 class ResultIsHalfSourceVectorType<string result> : TypesMatchWith<

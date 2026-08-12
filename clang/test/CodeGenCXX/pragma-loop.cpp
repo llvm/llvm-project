@@ -256,7 +256,7 @@ void for_test_interleave_vectorize_disable_unroll(int *List, int Length) {
 // CHECK-DAG: ![[INTERLEAVE_10:[0-9]+]] = !{!"llvm.loop.interleave.count", i32 10}
 // CHECK-DAG: ![[INTERLEAVE_16:[0-9]+]] = !{!"llvm.loop.interleave.count", i32 16}
 
-// CHECK-DAG: ![[VECTORIZE_ENABLE:[0-9]+]] = !{!"llvm.loop.vectorize.enable", i1 true}
+// CHECK-DAG: ![[VECTORIZE_ENABLE:[0-9]+]] = !{!"llvm.loop.vectorize.enable"}
 // CHECK-DAG: ![[FIXED_VEC:[0-9]+]] = !{!"llvm.loop.vectorize.scalable.enable", i1 false}
 // CHECK-DAG: ![[SCALABLE_VEC:[0-9]+]] = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
 // CHECK-DAG: ![[WIDTH_1:[0-9]+]] = !{!"llvm.loop.vectorize.width", i32 1}

@@ -17,8 +17,6 @@
 
 #include "ScriptedThread.h"
 
-#include <mutex>
-
 namespace lldb_private {
 class ScriptedProcess : public Process {
 public:

@@ -68,16 +68,32 @@ def TestFirstSameRegFusion: Fusion<"test-first-same-reg", "HasTestFirstSameRegFu
   bit IsCommutable = 1;
 }
 
+// A fusion that only runs in the pre-RA scheduler.
+let RunPostRA = false in
+def TestPreRAOnlyFusion: SimpleFusion<"test-prera-only", "HasTestPreRAOnlyFusion",
+                                      "Test Pre-RA Only Fusion",
+                                      CheckOpcode<[Inst0]>,
+                                      CheckOpcode<[Inst1]>>;
+
+// A fusion that only runs in the post-RA scheduler.
+let RunPreRA = false in
+def TestPostRAOnlyFusion: SimpleFusion<"test-postra-only", "HasTestPostRAOnlyFusion",
+                                       "Test Post-RA Only Fusion",
+                                       CheckOpcode<[Inst0]>,
+                                       CheckOpcode<[Inst1]>>;
+
 // CHECK-PREDICATOR:       #ifdef GET_Test_MACRO_FUSION_PRED_DECL
 // CHECK-PREDICATOR-NEXT:  #undef GET_Test_MACRO_FUSION_PRED_DECL
 // CHECK-PREDICATOR-EMPTY:
 // CHECK-PREDICATOR-NEXT:  namespace llvm {
 // CHECK-PREDICATOR-EMPTY:
-// CHECK-PREDICATOR-NEXT:  bool isTestBothFusionPredicate(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &);
-// CHECK-PREDICATOR-NEXT:  bool isTestCommutableFusion(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &);
-// CHECK-PREDICATOR-NEXT:  bool isTestFirstSameRegFusion(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &);
-// CHECK-PREDICATOR-NEXT:  bool isTestFusion(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &);
-// CHECK-PREDICATOR-NEXT:  bool isTestSingleFusion(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &);
+// CHECK-PREDICATOR-NEXT:  bool isTestBothFusionPredicate(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &, const SDep *);
+// CHECK-PREDICATOR-NEXT:  bool isTestCommutableFusion(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &, const SDep *);
+// CHECK-PREDICATOR-NEXT:  bool isTestFirstSameRegFusion(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &, const SDep *);
+// CHECK-PREDICATOR-NEXT:  bool isTestFusion(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &, const SDep *);
+// CHECK-PREDICATOR-NEXT:  bool isTestPostRAOnlyFusion(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &, const SDep *);
+// CHECK-PREDICATOR-NEXT:  bool isTestPreRAOnlyFusion(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &, const SDep *);
+// CHECK-PREDICATOR-NEXT:  bool isTestSingleFusion(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &, const SDep *);
 // CHECK-PREDICATOR-EMPTY:
 // CHECK-PREDICATOR-NEXT:  } // namespace llvm
 // CHECK-PREDICATOR-EMPTY:
@@ -95,7 +111,9 @@ def TestFirstSameRegFusion: Fusion<"test-first-same-reg", "HasTestFirstSameRegFu
 // CHECK-PREDICATOR-NEXT:      const TargetInstrInfo &TII,
 // CHECK-PREDICATOR-NEXT:      const TargetSubtargetInfo &STI,
 // CHECK-PREDICATOR-NEXT:      const MachineInstr *FirstMI,
-// CHECK-PREDICATOR-NEXT:      const MachineInstr &SecondMI) {
+// CHECK-PREDICATOR-NEXT:      const MachineInstr &SecondMI, const SDep *Dep) {
+// CHECK-PREDICATOR-NEXT:    if (isNonDataDep(Dep))
+// CHECK-PREDICATOR-NEXT:      return false;
 // CHECK-PREDICATOR-NEXT:    {{[[]}}{{[[]}}maybe_unused{{[]]}}{{[]]}} auto &MRI = SecondMI.getMF()->getRegInfo();
 // CHECK-PREDICATOR-NEXT:    {
 // CHECK-PREDICATOR-NEXT:      {{[[]}}{{[[]}}maybe_unused{{[]]}}{{[]]}} const MachineInstr *MI = FirstMI;
@@ -119,7 +137,9 @@ def TestFirstSameRegFusion: Fusion<"test-first-same-reg", "HasTestFirstSameRegFu
 // CHECK-PREDICATOR-NEXT:      const TargetInstrInfo &TII,
 // CHECK-PREDICATOR-NEXT:      const TargetSubtargetInfo &STI,
 // CHECK-PREDICATOR-NEXT:      const MachineInstr *FirstMI,
-// CHECK-PREDICATOR-NEXT:      const MachineInstr &SecondMI) {
+// CHECK-PREDICATOR-NEXT:      const MachineInstr &SecondMI, const SDep *Dep) {
+// CHECK-PREDICATOR-NEXT:    if (isNonDataDep(Dep))
+// CHECK-PREDICATOR-NEXT:      return false;
 // CHECK-PREDICATOR-NEXT:    {{[[]}}{{[[]}}maybe_unused{{[]]}}{{[]]}} auto &MRI = SecondMI.getMF()->getRegInfo();
 // CHECK-PREDICATOR-NEXT:    {
 // CHECK-PREDICATOR-NEXT:      {{[[]}}{{[[]}}maybe_unused{{[]]}}{{[]]}} const MachineInstr *MI = &SecondMI;
@@ -173,7 +193,9 @@ def TestFirstSameRegFusion: Fusion<"test-first-same-reg", "HasTestFirstSameRegFu
 // CHECK-PREDICATOR-NEXT:      const TargetInstrInfo &TII,
 // CHECK-PREDICATOR-NEXT:      const TargetSubtargetInfo &STI,
 // CHECK-PREDICATOR-NEXT:      const MachineInstr *FirstMI,
-// CHECK-PREDICATOR-NEXT:      const MachineInstr &SecondMI) {
+// CHECK-PREDICATOR-NEXT:      const MachineInstr &SecondMI, const SDep *Dep) {
+// CHECK-PREDICATOR-NEXT:    if (isNonDataDep(Dep))
+// CHECK-PREDICATOR-NEXT:      return false;
 // CHECK-PREDICATOR-NEXT:    {{[[]}}{{[[]}}maybe_unused{{[]]}}{{[]]}} auto &MRI = SecondMI.getMF()->getRegInfo();
 // CHECK-PREDICATOR-NEXT:    if (!FirstMI->getOperand(0).getReg().isVirtual()) {
 // CHECK-PREDICATOR-NEXT:      if (FirstMI->getOperand(0).getReg() != FirstMI->getOperand(1).getReg()) {
@@ -197,7 +219,9 @@ def TestFirstSameRegFusion: Fusion<"test-first-same-reg", "HasTestFirstSameRegFu
 // CHECK-PREDICATOR-NEXT:      const TargetInstrInfo &TII,
 // CHECK-PREDICATOR-NEXT:      const TargetSubtargetInfo &STI,
 // CHECK-PREDICATOR-NEXT:      const MachineInstr *FirstMI,
-// CHECK-PREDICATOR-NEXT:      const MachineInstr &SecondMI) {
+// CHECK-PREDICATOR-NEXT:      const MachineInstr &SecondMI, const SDep *Dep) {
+// CHECK-PREDICATOR-NEXT:    if (isNonDataDep(Dep))
+// CHECK-PREDICATOR-NEXT:      return false;
 // CHECK-PREDICATOR-NEXT:    {{[[]}}{{[[]}}maybe_unused{{[]]}}{{[]]}} auto &MRI = SecondMI.getMF()->getRegInfo();
 // CHECK-PREDICATOR-NEXT:    {
 // CHECK-PREDICATOR-NEXT:      {{[[]}}{{[[]}}maybe_unused{{[]]}}{{[]]}} const MachineInstr *MI = &SecondMI;
@@ -233,13 +257,93 @@ def TestFirstSameRegFusion: Fusion<"test-first-same-reg", "HasTestFirstSameRegFu
 // CHECK-PREDICATOR-NEXT:      ++NumTestFusionPreRA;
 // CHECK-PREDICATOR-NEXT:    return true;
 // CHECK-PREDICATOR-NEXT:  }
+// CHECK-PREDICATOR-NEXT:  STATISTIC(NumTestPostRAOnlyFusionPostRA, "Times TestPostRAOnlyFusion Triggered (post-ra)");
+// CHECK-PREDICATOR-NEXT:  bool isTestPostRAOnlyFusion(
+// CHECK-PREDICATOR-NEXT:      const TargetInstrInfo &TII,
+// CHECK-PREDICATOR-NEXT:      const TargetSubtargetInfo &STI,
+// CHECK-PREDICATOR-NEXT:      const MachineInstr *FirstMI,
+// CHECK-PREDICATOR-NEXT:      const MachineInstr &SecondMI, const SDep *Dep) {
+// CHECK-PREDICATOR-NEXT:    if (isNonDataDep(Dep))
+// CHECK-PREDICATOR-NEXT:      return false;
+// CHECK-PREDICATOR-NEXT:    {{[[]}}{{[[]}}maybe_unused{{[]]}}{{[]]}} auto &MRI = SecondMI.getMF()->getRegInfo();
+// CHECK-PREDICATOR-NEXT:    if (!SecondMI.getMF()->getProperties().hasNoVRegs())
+// CHECK-PREDICATOR-NEXT:      return false;
+// CHECK-PREDICATOR-NEXT:    {
+// CHECK-PREDICATOR-NEXT:      {{[[]}}{{[[]}}maybe_unused{{[]]}}{{[]]}} const MachineInstr *MI = &SecondMI;
+// CHECK-PREDICATOR-NEXT:      if (( MI->getOpcode() != Test::Inst1 ))
+// CHECK-PREDICATOR-NEXT:        return false;
+// CHECK-PREDICATOR-NEXT:    }
+// CHECK-PREDICATOR-NEXT:    if (!FirstMI)
+// CHECK-PREDICATOR-NEXT:      return true;
+// CHECK-PREDICATOR-NEXT:    {
+// CHECK-PREDICATOR-NEXT:      {{[[]}}{{[[]}}maybe_unused{{[]]}}{{[]]}} const MachineInstr *MI = FirstMI;
+// CHECK-PREDICATOR-NEXT:      if (( MI->getOpcode() != Test::Inst0 ))
+// CHECK-PREDICATOR-NEXT:        return false;
+// CHECK-PREDICATOR-NEXT:    }
+// CHECK-PREDICATOR-NEXT:    if (!SecondMI.getOperand(0).getReg().isVirtual()) {
+// CHECK-PREDICATOR-NEXT:      if (SecondMI.getOperand(0).getReg() != SecondMI.getOperand(1).getReg())
+// CHECK-PREDICATOR-NEXT:        return false;
+// CHECK-PREDICATOR-NEXT:    }
+// CHECK-PREDICATOR-NEXT:    {
+// CHECK-PREDICATOR-NEXT:      Register FirstDest = FirstMI->getOperand(0).getReg();
+// CHECK-PREDICATOR-NEXT:      if (FirstDest.isVirtual() && !MRI.hasOneNonDBGUse(FirstDest))
+// CHECK-PREDICATOR-NEXT:        return false;
+// CHECK-PREDICATOR-NEXT:    }
+// CHECK-PREDICATOR-NEXT:    if (!(FirstMI->getOperand(0).isReg() &&
+// CHECK-PREDICATOR-NEXT:          SecondMI.getOperand(1).isReg() &&
+// CHECK-PREDICATOR-NEXT:          FirstMI->getOperand(0).getReg() == SecondMI.getOperand(1).getReg()))
+// CHECK-PREDICATOR-NEXT:      return false;
+// CHECK-PREDICATOR-NEXT:    ++NumTestPostRAOnlyFusionPostRA;
+// CHECK-PREDICATOR-NEXT:    return true;
+// CHECK-PREDICATOR-NEXT:  }
+// CHECK-PREDICATOR-NEXT:  STATISTIC(NumTestPreRAOnlyFusionPreRA, "Times TestPreRAOnlyFusion Triggered (pre-ra)");
+// CHECK-PREDICATOR-NEXT:  bool isTestPreRAOnlyFusion(
+// CHECK-PREDICATOR-NEXT:      const TargetInstrInfo &TII,
+// CHECK-PREDICATOR-NEXT:      const TargetSubtargetInfo &STI,
+// CHECK-PREDICATOR-NEXT:      const MachineInstr *FirstMI,
+// CHECK-PREDICATOR-NEXT:      const MachineInstr &SecondMI, const SDep *Dep) {
+// CHECK-PREDICATOR-NEXT:    if (isNonDataDep(Dep))
+// CHECK-PREDICATOR-NEXT:      return false;
+// CHECK-PREDICATOR-NEXT:    {{[[]}}{{[[]}}maybe_unused{{[]]}}{{[]]}} auto &MRI = SecondMI.getMF()->getRegInfo();
+// CHECK-PREDICATOR-NEXT:    if (SecondMI.getMF()->getProperties().hasNoVRegs())
+// CHECK-PREDICATOR-NEXT:      return false;
+// CHECK-PREDICATOR-NEXT:    {
+// CHECK-PREDICATOR-NEXT:      {{[[]}}{{[[]}}maybe_unused{{[]]}}{{[]]}} const MachineInstr *MI = &SecondMI;
+// CHECK-PREDICATOR-NEXT:      if (( MI->getOpcode() != Test::Inst1 ))
+// CHECK-PREDICATOR-NEXT:        return false;
+// CHECK-PREDICATOR-NEXT:    }
+// CHECK-PREDICATOR-NEXT:    if (!FirstMI)
+// CHECK-PREDICATOR-NEXT:      return true;
+// CHECK-PREDICATOR-NEXT:    {
+// CHECK-PREDICATOR-NEXT:      {{[[]}}{{[[]}}maybe_unused{{[]]}}{{[]]}} const MachineInstr *MI = FirstMI;
+// CHECK-PREDICATOR-NEXT:      if (( MI->getOpcode() != Test::Inst0 ))
+// CHECK-PREDICATOR-NEXT:        return false;
+// CHECK-PREDICATOR-NEXT:    }
+// CHECK-PREDICATOR-NEXT:    if (!SecondMI.getOperand(0).getReg().isVirtual()) {
+// CHECK-PREDICATOR-NEXT:      if (SecondMI.getOperand(0).getReg() != SecondMI.getOperand(1).getReg())
+// CHECK-PREDICATOR-NEXT:        return false;
+// CHECK-PREDICATOR-NEXT:    }
+// CHECK-PREDICATOR-NEXT:    {
+// CHECK-PREDICATOR-NEXT:      Register FirstDest = FirstMI->getOperand(0).getReg();
+// CHECK-PREDICATOR-NEXT:      if (FirstDest.isVirtual() && !MRI.hasOneNonDBGUse(FirstDest))
+// CHECK-PREDICATOR-NEXT:        return false;
+// CHECK-PREDICATOR-NEXT:    }
+// CHECK-PREDICATOR-NEXT:    if (!(FirstMI->getOperand(0).isReg() &&
+// CHECK-PREDICATOR-NEXT:          SecondMI.getOperand(1).isReg() &&
+// CHECK-PREDICATOR-NEXT:          FirstMI->getOperand(0).getReg() == SecondMI.getOperand(1).getReg()))
+// CHECK-PREDICATOR-NEXT:      return false;
+// CHECK-PREDICATOR-NEXT:    ++NumTestPreRAOnlyFusionPreRA;
+// CHECK-PREDICATOR-NEXT:    return true;
+// CHECK-PREDICATOR-NEXT:  }
 // CHECK-PREDICATOR-NEXT:  STATISTIC(NumTestSingleFusionPreRA, "Times TestSingleFusion Triggered (pre-ra)");
 // CHECK-PREDICATOR-NEXT:  STATISTIC(NumTestSingleFusionPostRA, "Times TestSingleFusion Triggered (post-ra)");
 // CHECK-PREDICATOR-NEXT:  bool isTestSingleFusion(
 // CHECK-PREDICATOR-NEXT:      const TargetInstrInfo &TII,
 // CHECK-PREDICATOR-NEXT:      const TargetSubtargetInfo &STI,
 // CHECK-PREDICATOR-NEXT:      const MachineInstr *FirstMI,
-// CHECK-PREDICATOR-NEXT:      const MachineInstr &SecondMI) {
+// CHECK-PREDICATOR-NEXT:      const MachineInstr &SecondMI, const SDep *Dep) {
+// CHECK-PREDICATOR-NEXT:    if (isNonDataDep(Dep))
+// CHECK-PREDICATOR-NEXT:      return false;
 // CHECK-PREDICATOR-NEXT:    {{[[]}}{{[[]}}maybe_unused{{[]]}}{{[]]}} auto &MRI = SecondMI.getMF()->getRegInfo();
 // CHECK-PREDICATOR-NEXT:    {
 // CHECK-PREDICATOR-NEXT:      {{[[]}}{{[[]}}maybe_unused{{[]]}}{{[]]}} const MachineInstr *MI = &SecondMI;
@@ -304,6 +408,8 @@ def TestFirstSameRegFusion: Fusion<"test-first-same-reg", "HasTestFirstSameRegFu
 // CHECK-SUBTARGET-NEXT:   if (hasFeature(Test::TestCommutableFusion)) Fusions.push_back(llvm::isTestCommutableFusion);
 // CHECK-SUBTARGET-NEXT:   if (hasFeature(Test::TestFirstSameRegFusion)) Fusions.push_back(llvm::isTestFirstSameRegFusion);
 // CHECK-SUBTARGET-NEXT:   if (hasFeature(Test::TestFusion)) Fusions.push_back(llvm::isTestFusion);
+// CHECK-SUBTARGET-NEXT:   if (hasFeature(Test::TestPostRAOnlyFusion)) Fusions.push_back(llvm::isTestPostRAOnlyFusion);
+// CHECK-SUBTARGET-NEXT:   if (hasFeature(Test::TestPreRAOnlyFusion)) Fusions.push_back(llvm::isTestPreRAOnlyFusion);
 // CHECK-SUBTARGET-NEXT:   if (hasFeature(Test::TestSingleFusion)) Fusions.push_back(llvm::isTestSingleFusion);
 // CHECK-SUBTARGET-NEXT:   return Fusions;
 // CHECK-SUBTARGET-NEXT: }

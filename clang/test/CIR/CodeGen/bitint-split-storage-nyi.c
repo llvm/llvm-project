@@ -1,7 +1,9 @@
-// RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm -DGLOBAL %s -o - 2>&1 | FileCheck %s --check-prefix=GLOBAL
-// RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm -DALLOCA %s -o - 2>&1 | FileCheck %s --check-prefix=ALLOCA
-// RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm -DSTORE %s -o - 2>&1 | FileCheck %s --check-prefix=STORE
-// RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm -DLOAD %s -o - 2>&1 | FileCheck %s --check-prefix=LOAD
+// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
+// supports _BitInt wider than 128 bits.
+// RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fno-clangir-call-conv-lowering -emit-llvm -DGLOBAL %s -o - 2>&1 | FileCheck %s --check-prefix=GLOBAL
+// RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fno-clangir-call-conv-lowering -emit-llvm -DALLOCA %s -o - 2>&1 | FileCheck %s --check-prefix=ALLOCA
+// RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fno-clangir-call-conv-lowering -emit-llvm -DSTORE %s -o - 2>&1 | FileCheck %s --check-prefix=STORE
+// RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fno-clangir-call-conv-lowering -emit-llvm -DLOAD %s -o - 2>&1 | FileCheck %s --check-prefix=LOAD
 
 #ifdef GLOBAL
 signed _BitInt(129) g129 = 1;

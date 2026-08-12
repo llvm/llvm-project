@@ -167,6 +167,9 @@ let HasPassthruOp = true, HasMaskOp = true in {
   def riscv_cttz_vl       : RVSDNode<"CTTZ_VL",       SDT_RISCVIntUnOp_VL>;
   def riscv_ctpop_vl      : RVSDNode<"CTPOP_VL",      SDT_RISCVIntUnOp_VL>;
 
+  def riscv_clmul_vl  : RVSDNode<"CLMUL_VL",  SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
+  def riscv_clmulh_vl : RVSDNode<"CLMULH_VL", SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
+
   // Averaging adds of signed integers.
   def riscv_avgfloors_vl  : RVSDNode<"AVGFLOORS_VL", SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
   // Averaging adds of unsigned integers.

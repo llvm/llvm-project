@@ -105,6 +105,18 @@ void DependencyTracker::verifyKeepChain() {
 #endif
 }
 
+static bool isNamespaceLikeEntry(const DWARFDebugInfoEntry *Entry) {
+  switch (Entry->getTag()) {
+  case dwarf::DW_TAG_compile_unit:
+  case dwarf::DW_TAG_module:
+  case dwarf::DW_TAG_namespace:
+    return true;
+
+  default:
+    return false;
+  }
+}
+
 bool DependencyTracker::resolveDependenciesAndMarkLiveness(
     bool InterCUProcessingStarted, std::atomic<bool> &HasNewInterconnectedCUs) {
   RootEntriesWorkList.clear();
@@ -216,7 +228,19 @@ void DependencyTracker::collectRootsToKeep(
       llvm_unreachable("Called for incorrect DIE");
     } break;
     default:
-      // A forward-declared type nested in a DW_TAG_module is the module's
+      // A module compile unit has no relocations, so liveness analysis never
+      // reaches a type definition that nothing else in the unit references. The
+      // module owns the only copy of those definitions, so keep them.
+      if (Entry.CU->isClangModule() && isNamespaceLikeEntry(Entry.DieEntry) &&
+          dwarf::isType(CurChild->getTag())) {
+        addActionToRootEntriesWorkList(
+            LiveRootWorklistActionTy::MarkTypeEntryRec, ChildEntry,
+            ReferencedBy);
+        break;
+      }
+
+      // An importing unit emits a skeleton of the module it imports, so a
+      // forward-declared type nested in a DW_TAG_module there is the module's
       // record that the name exists, even when no full definition has been
       // emitted. Route it through the type pool: when another CU emits a
       // real definition for the same synthetic name, the existing
@@ -224,7 +248,8 @@ void DependencyTracker::collectRootsToKeep(
       // the definition and drops this declaration at emission time. For
       // non-ODR languages getFinalPlacementForEntry forces PlainDwarf,
       // so the forward decl is kept in place under its module.
-      if (Entry.DieEntry->getTag() == dwarf::DW_TAG_module &&
+      if (!Entry.CU->isClangModule() &&
+          Entry.DieEntry->getTag() == dwarf::DW_TAG_module &&
           dwarf::isType(CurChild->getTag()) &&
           dwarf::toUnsigned(Entry.CU->find(CurChild, dwarf::DW_AT_declaration),
                             0)) {
@@ -312,18 +337,6 @@ void DependencyTracker::setPlainDwarfPlacementRec(
        CurChild && CurChild->getAbbreviationDeclarationPtr();
        CurChild = Entry.CU->getSiblingEntry(CurChild))
     setPlainDwarfPlacementRec(UnitEntryPairTy{Entry.CU, CurChild});
-}
-
-static bool isNamespaceLikeEntry(const DWARFDebugInfoEntry *Entry) {
-  switch (Entry->getTag()) {
-  case dwarf::DW_TAG_compile_unit:
-  case dwarf::DW_TAG_module:
-  case dwarf::DW_TAG_namespace:
-    return true;
-
-  default:
-    return false;
-  }
 }
 
 bool isAlreadyMarked(const CompileUnit::DIEInfo &Info,

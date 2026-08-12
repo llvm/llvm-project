@@ -91,3 +91,15 @@ namespace ConstexprUnknownReference {
   }
 
 }
+
+namespace UnknownSizeArrayString {
+  constexpr const char foo[] = {bar}; // both-error {{use of undeclared identifier}} \
+                                      // ref-note {{declared here}}
+  struct S {
+    constexpr int size() const { return 4; }
+    constexpr const char *data() const { return foo; }
+  };
+  static_assert(false, S{}); // both-error {{the message in a static assertion must be produced by a constant expression}} \
+                             // ref-note {{initializer of 'foo' is unknown}} \
+                             // both-error {{static assertion failed}}
+}

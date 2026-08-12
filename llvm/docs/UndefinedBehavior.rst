@@ -2,9 +2,6 @@
 LLVM IR Undefined Behavior (UB) Manual
 ======================================
 
-.. contents::
-   :local:
-   :depth: 2
 
 Abstract
 ========

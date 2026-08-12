@@ -26,9 +26,14 @@ namespace ento {
 class SMTConv {
 public:
   static inline uint64_t getSMTBitWidth(ASTContext &Ctx, QualType Ty) {
+    Ty = getSymbolicValueType(Ty);
     if (Ty->isIntegralOrEnumerationType())
       return Ctx.getIntWidth(Ty);
     return Ctx.getTypeSize(Ty);
+  }
+
+  static inline QualType getSymbolicValueType(QualType Ty) {
+    return Ty.getAtomicUnqualifiedType().getCanonicalType();
   }
 
   // Returns an appropriate sort, given a QualType and it's bit width.
@@ -270,8 +275,14 @@ public:
                                           QualType ToTy, uint64_t ToBitWidth,
                                           QualType FromTy,
                                           uint64_t FromBitWidth) {
-    if ((FromTy.getAtomicUnqualifiedType()->isIntegralOrEnumerationType() &&
-         ToTy.getAtomicUnqualifiedType()->isIntegralOrEnumerationType()) ||
+    FromTy = getSymbolicValueType(FromTy);
+    ToTy = getSymbolicValueType(ToTy);
+
+    if (FromTy == ToTy && FromBitWidth == ToBitWidth)
+      return Exp;
+
+    if ((FromTy->isIntegralOrEnumerationType() &&
+         ToTy->isIntegralOrEnumerationType()) ||
         (FromTy->isAnyPointerType() ^ ToTy->isAnyPointerType()) ||
         (FromTy->isBlockPointerType() ^ ToTy->isBlockPointerType()) ||
         (FromTy->isReferenceType() ^ ToTy->isReferenceType())) {
@@ -467,13 +478,13 @@ public:
   getSymExpr(llvm::SMTSolverRef &Solver, ASTContext &Ctx, SymbolRef Sym,
              QualType &RetTy, bool *hasComparison) {
     if (const SymbolData *SD = dyn_cast<SymbolData>(Sym)) {
-      RetTy = Sym->getType();
+      RetTy = getSymbolicValueType(Sym->getType());
 
       return fromData(Solver, Ctx, SD);
     }
 
     if (const SymbolCast *SC = dyn_cast<SymbolCast>(Sym)) {
-      RetTy = Sym->getType();
+      RetTy = getSymbolicValueType(Sym->getType());
 
       QualType FromTy;
       std::optional<llvm::SMTExprRef> Exp =
@@ -485,11 +496,11 @@ public:
       // e.g. (signed char) (x > 0)
       if (hasComparison)
         *hasComparison = false;
-      return getCastExpr(Solver, Ctx, Exp.value(), FromTy, Sym->getType());
+      return getCastExpr(Solver, Ctx, Exp.value(), FromTy, RetTy);
     }
 
     if (const UnarySymExpr *USE = dyn_cast<UnarySymExpr>(Sym)) {
-      RetTy = Sym->getType();
+      RetTy = getSymbolicValueType(Sym->getType());
 
       QualType OperandTy;
       std::optional<llvm::SMTExprRef> OperandExp =
@@ -523,7 +534,7 @@ public:
       if (Ctx.getTypeSize(OperandTy) != Ctx.getTypeSize(Sym->getType())) {
         if (hasComparison)
           *hasComparison = false;
-        return getCastExpr(Solver, Ctx, UnaryExp, OperandTy, Sym->getType());
+        return getCastExpr(Solver, Ctx, UnaryExp, OperandTy, RetTy);
       }
       return UnaryExp;
     }

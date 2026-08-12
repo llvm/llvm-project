@@ -96,10 +96,7 @@ static ModuleCollection &GetModuleCollection() {
   // it for now.  If we decide this is a big problem we can introduce a
   // Finalize method that will tear everything down in a predictable order.
 
-  static ModuleCollection *g_module_collection = nullptr;
-  if (g_module_collection == nullptr)
-    g_module_collection = new ModuleCollection();
-
+  static ModuleCollection *g_module_collection = new ModuleCollection();
   return *g_module_collection;
 }
 
@@ -109,9 +106,8 @@ std::recursive_mutex &Module::GetAllocationModuleCollectionMutex() {
   // will tear itself down before the "g_module_collection_mutex" below will.
   // So we leak a Mutex object below to safeguard against that
 
-  static std::recursive_mutex *g_module_collection_mutex = nullptr;
-  if (g_module_collection_mutex == nullptr)
-    g_module_collection_mutex = new std::recursive_mutex; // NOTE: known leak
+  static std::recursive_mutex *g_module_collection_mutex =
+      new std::recursive_mutex; // NOTE: known leak
   return *g_module_collection_mutex;
 }
 
@@ -1336,6 +1332,9 @@ void Module::FindSymbolsMatchingRegExAndType(
 }
 
 void Module::PreloadSymbols() {
+  if (m_did_preload_symbols.exchange(true))
+    return;
+
   LockedPtr<SymbolFile> sym_file = GetSymbolFileLocked();
   if (!sym_file)
     return;
@@ -1409,6 +1408,7 @@ void Module::SetSymbolFileFileSpec(const FileSpec &file) {
   m_symfile_spec = file;
   m_symfile_up.reset();
   m_did_load_symfile = false;
+  m_did_preload_symbols = false;
 }
 
 bool Module::IsExecutable() {

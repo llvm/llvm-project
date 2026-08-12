@@ -273,9 +273,9 @@ INITIALIZE_PASS_END(SVEShuffleOpts, DEBUG_TYPE, name, false, false)
 
 Pass *llvm::createSVEShuffleOptsPass() { return new SVEShuffleOpts(); }
 
-PreservedAnalyses SVEShuffleOptsPass::run(Loop &L, LoopAnalysisManager &AM,
-                                          LoopStandardAnalysisResults &AR,
-                                          LPMUpdater &U) {
+PreservedAnalyses
+AArch64SVEShuffleOptsPass::run(Loop &L, LoopAnalysisManager &AM,
+                               LoopStandardAnalysisResults &AR, LPMUpdater &U) {
   const AArch64Subtarget &ST =
       *TM.getSubtargetImpl(*L.getHeader()->getParent());
 

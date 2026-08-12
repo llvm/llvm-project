@@ -57,7 +57,7 @@ void sequence_container_benchmarks(std::string container) {
   static constexpr std::size_t BatchSize = 32;
 
   auto bench = [&](std::string operation, auto f) {
-    benchmark::RegisterBenchmark(container + "::" + operation, f)->Arg(32)->Arg(1024)->Arg(8192);
+    benchmark::RegisterBenchmark(container + "::" + operation, f)->Arg(32)->Arg(8192);
   };
 
   /////////////////////////
@@ -333,7 +333,6 @@ void sequence_container_benchmarks(std::string container) {
           };
 
           std::vector<Container> c(BatchSize, at_capacity(Container(in.begin(), in.end())));
-          std::vector<Container> const original = c;
 
           while (st.KeepRunningBatch(BatchSize)) {
             for (std::size_t i = 0; i != BatchSize; ++i) {

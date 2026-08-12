@@ -44,10 +44,13 @@ define void @test_no_scalarization(ptr %a, ptr noalias %b, i32 %idx, i32 %n) #0 
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP12:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP13:%.*]] = mul nuw i32 [[TMP12]], 2
-; CHECK-NEXT:    [[TMP14:%.*]] = sub i32 [[TMP13]], 1
-; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <vscale x 2 x ptr> [[TMP15]], i32 [[TMP14]]
+; CHECK-NEXT:    [[TMP11:%.*]] = sext i32 [[IDX]] to i64
+; CHECK-NEXT:    [[TMP12:%.*]] = shl nsw i64 [[TMP11]], 3
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP12]]
+; CHECK-NEXT:    [[TMP14:%.*]] = sub nuw i32 [[N_VEC]], 1
+; CHECK-NEXT:    [[TMP17:%.*]] = zext i32 [[TMP14]] to i64
+; CHECK-NEXT:    [[TMP19:%.*]] = shl i64 [[TMP17]], 3
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP13]], i64 [[TMP19]]
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP1]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[L_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:

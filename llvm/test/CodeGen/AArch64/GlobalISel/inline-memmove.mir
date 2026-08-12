@@ -27,13 +27,13 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
-    ; CHECK-NEXT: G_MEMMOVE [[COPY]](p0), [[COPY1]](p0), [[COPY2]](s64), 1 :: (store (s8), align 4), (load (s8), align 4)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i64) = COPY $x2
+    ; CHECK-NEXT: G_MEMMOVE [[COPY]](p0), [[COPY1]](p0), [[COPY2]](i64), 1 :: (store (s8), align 4), (load (s8), align 4)
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
-    %2:_(s64) = COPY $x2
-    G_MEMMOVE %0(p0), %1(p0), %2(s64), 1 :: (store (s8), align 4), (load (s8), align 4)
+    %2:_(i64) = COPY $x2
+    G_MEMMOVE %0(p0), %1(p0), %2(i64), 1 :: (store (s8), align 4), (load (s8), align 4)
     RET_ReallyLR
 
 ...
@@ -67,8 +67,8 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
-    %2:_(s64) = G_CONSTANT i64 48
-    G_MEMMOVE %0(p0), %1(p0), %2(s64), 1 :: (store (s8), align 4), (load (s8), align 4)
+    %2:_(i64) = G_CONSTANT i64 48
+    G_MEMMOVE %0(p0), %1(p0), %2(i64), 1 :: (store (s8), align 4), (load (s8), align 4)
     RET_ReallyLR
 
 ...
@@ -120,8 +120,8 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
-    %2:_(s64) = G_CONSTANT i64 96
-    G_MEMMOVE %0(p0), %1(p0), %2(s64), 1 :: (store (s8), align 4), (load (s8), align 4)
+    %2:_(i64) = G_CONSTANT i64 96
+    G_MEMMOVE %0(p0), %1(p0), %2(i64), 1 :: (store (s8), align 4), (load (s8), align 4)
     RET_ReallyLR
 
 ...
@@ -161,8 +161,8 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
-    %2:_(s64) = G_CONSTANT i64 52
-    G_MEMMOVE %0(p0), %1(p0), %2(s64), 1 :: (store (s8), align 4), (load (s8), align 4)
+    %2:_(i64) = G_CONSTANT i64 52
+    G_MEMMOVE %0(p0), %1(p0), %2(i64), 1 :: (store (s8), align 4), (load (s8), align 4)
     RET_ReallyLR
 
 ...
@@ -196,8 +196,8 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(p1) = COPY $x0
     %1:_(p2) = COPY $x1
-    %2:_(s64) = G_CONSTANT i64 48
-    G_MEMMOVE %0(p1), %1(p2), %2(s64), 1 :: (store (s8), align 4, addrspace 1), (load (s8), align 4, addrspace 2)
+    %2:_(i64) = G_CONSTANT i64 48
+    G_MEMMOVE %0(p1), %1(p2), %2(i64), 1 :: (store (s8), align 4, addrspace 1), (load (s8), align 4, addrspace 2)
     RET_ReallyLR
 
 ...

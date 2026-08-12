@@ -3,7 +3,8 @@
     %pythoncode%{
     def __iter__(self):
         '''Iterate over all strings in a lldb.SBStringList object.'''
-        return lldb_iter(self, 'GetSize', 'GetStringAtIndex')
+        for i in range(self.GetSize()):
+            yield self.GetStringAtIndex(i)
 
     def __len__(self):
         '''Return the number of strings in a lldb.SBStringList object.'''

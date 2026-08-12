@@ -71,7 +71,7 @@ void l1() {
 // CIR-NEXT: }
 
 // LLVM: define{{.*}} void @_Z2l1v(){{.*}}
-// LLVM:   %[[I:.*]] = alloca i32, i64 1, align 4
+// LLVM:   %[[I:.*]] = alloca i32, align 4
 // LLVM:   br label %[[LABEL1:.*]]
 // LLVM: [[LABEL1]]:
 // LLVM:   store i32 0, ptr %[[I]], align 4
@@ -121,7 +121,7 @@ void l2() {
 // CIR-NEXT: }
 
 // LLVM: define{{.*}} void @_Z2l2v(){{.*}}
-// LLVM:   %[[I:.*]] = alloca i32, i64 1, align 4
+// LLVM:   %[[I:.*]] = alloca i32, align 4
 // LLVM:   br label %[[LABEL1:.*]]
 // LLVM: [[LABEL1]]:
 // LLVM:   br label %[[LABEL2:.*]]
@@ -169,7 +169,7 @@ void l3() {
 // CIR-NEXT: }
 
 // LLVM: define{{.*}} void @_Z2l3v(){{.*}}
-// LLVM:   %[[I:.*]] = alloca i32, i64 1, align 4
+// LLVM:   %[[I:.*]] = alloca i32, align 4
 // LLVM:   br label %[[LABEL1:.*]]
 // LLVM: [[LABEL1]]:
 // LLVM:   br label %[[LABEL2:.*]]
@@ -523,7 +523,7 @@ void unreachable_after_continue() {
 // CIR: }
 
 // LLVM: define{{.*}} void @_Z26unreachable_after_continuev(){{.*}}
-// LLVM:   %[[X:.*]] = alloca i32, i64 1, align 4
+// LLVM:   %[[X:.*]] = alloca i32, align 4
 // LLVM:   br label %[[LABEL1:.*]]
 // LLVM: [[LABEL1]]:
 // LLVM:   br label %[[LABEL2:.*]]
@@ -583,7 +583,7 @@ void unreachable_after_break() {
 // CIR: }
 
 // LLVM: define{{.*}} void @_Z23unreachable_after_breakv(){{.*}}
-// LLVM:   %[[X:.*]] = alloca i32, i64 1, align 4
+// LLVM:   %[[X:.*]] = alloca i32, align 4
 // LLVM:   br label %[[LABEL1:.*]]
 // LLVM: [[LABEL1]]:
 // LLVM:   br label %[[LABEL2:.*]]

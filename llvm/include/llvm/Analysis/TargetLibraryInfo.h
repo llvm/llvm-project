@@ -230,7 +230,7 @@ public:
     ShouldSignExtI32Return = Val;
   }
 
-  /// Returns the size of the wchar_t type in bytes or 0 if the size is unknown.
+  /// Returns the size of the wchar_t type in bytes.
   /// This queries the 'wchar_size' metadata.
   LLVM_ABI unsigned getWCharSize(const Module &M) const;
 

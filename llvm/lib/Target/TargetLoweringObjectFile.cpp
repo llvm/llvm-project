@@ -291,11 +291,16 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalObject *GO,
   }
 
   // Global variables with '!exclude' should get the exclude section kind if
-  // they have an explicit section and no other metadata.
-  if (GVar->hasSection())
+  // they have an explicit section and no other metadata. Similarly,
+  // '!metadata_section_kind' forces the section kind to be 'metadata'.
+  if (GVar->hasSection()) {
     if (MDNode *MD = GVar->getMetadata(LLVMContext::MD_exclude))
       if (!MD->getNumOperands())
         return SectionKind::getExclude();
+    if (MDNode *MD = GVar->getMetadata(LLVMContext::MD_metadata_section_kind))
+      if (!MD->getNumOperands())
+        return SectionKind::getMetadata();
+  }
 
   // If the global is marked constant, we can put it into a mergable section,
   // a mergable string section, or general .data if it contains relocations.

@@ -159,8 +159,8 @@ define void @fp_vector_atomicrmw(ptr %x, <2 x half> %val) {
   ; CHECK: %atomic.elem.fadd = atomicrmw elementwise fadd ptr %x, <2 x half> %val monotonic
   %atomic.elem.fadd = atomicrmw elementwise fadd ptr %x, <2 x half> %val monotonic
 
-  ; CHECK: %atomic.elem.fadd.vol = atomicrmw volatile elementwise fadd ptr %x, <2 x half> %val seq_cst
-  %atomic.elem.fadd.vol = atomicrmw volatile elementwise fadd ptr %x, <2 x half> %val seq_cst
+  ; CHECK: %atomic.elem.fadd.vol = atomicrmw volatile elementwise fadd ptr %x, <2 x half> %val acq_rel
+  %atomic.elem.fadd.vol = atomicrmw volatile elementwise fadd ptr %x, <2 x half> %val acq_rel
 
   ret void
 }

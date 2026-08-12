@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -std=c++11 \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -std=c++11 \
 // RUN:   -emit-llvm -o - -x hip %s | FileCheck \
 // RUN:   -check-prefixes=COMMON,DEV,NORDC-D %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -std=c++11 \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -std=c++11 \
 // RUN:   -emit-llvm -fgpu-rdc -cuid=abc -o - -x hip %s > %t.dev
 // RUN: cat %t.dev | FileCheck -check-prefixes=COMMON,DEV,RDC-D %s
 

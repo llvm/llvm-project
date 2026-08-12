@@ -24,6 +24,8 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "amp";
   case Kind::arrow:
     return "arrow";
+  case Kind::caret:
+    return "caret";
   case Kind::colon:
     return "colon";
   case Kind::coloncolon:
@@ -58,6 +60,8 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "percent";
   case Kind::period:
     return "period";
+  case Kind::pipe:
+    return "pipe";
   case Kind::plus:
     return "plus";
   case Kind::plusequal:
@@ -70,6 +74,8 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "slash";
   case Token::star:
     return "star";
+  case Token::tilde:
+    return "tilde";
   }
   llvm_unreachable("Unknown token name");
 }
@@ -205,6 +211,7 @@ llvm::Expected<Token> DILLexer::Lex(llvm::StringRef expr,
       {Token::minusequal, "-="},
       {Token::plusequal, "+="},
       {Token::amp, "&"},
+      {Token::caret, "^"},
       {Token::colon, ":"},
       {Token::equal, "="},
       {Token::l_paren, "("},
@@ -212,11 +219,13 @@ llvm::Expected<Token> DILLexer::Lex(llvm::StringRef expr,
       {Token::minus, "-"},
       {Token::percent, "%"},
       {Token::period, "."},
+      {Token::pipe, "|"},
       {Token::plus, "+"},
       {Token::r_paren, ")"},
       {Token::r_square, "]"},
       {Token::slash, "/"},
       {Token::star, "*"},
+      {Token::tilde, "~"},
   };
   for (auto [kind, str] : operators) {
     if (remainder.consume_front(str))

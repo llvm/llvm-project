@@ -1367,13 +1367,63 @@ define i8 @test_scalar_uadd_sub_commuted_wrong(i8 %a, i8 %b) {
 
 define i8 @test_scalar_uadd_sub_const(i8 %a) {
 ; CHECK-LABEL: @test_scalar_uadd_sub_const(
-; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[A:%.*]], i8 42)
-; CHECK-NEXT:    [[RES:%.*]] = add i8 [[SAT]], -42
+; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.umin.i8(i8 [[A:%.*]], i8 -43)
 ; CHECK-NEXT:    ret i8 [[RES]]
 ;
   %sat = call i8 @llvm.uadd.sat.i8(i8 %a, i8 42)
   %res = sub i8 %sat, 42
   ret i8 %res
+}
+
+define <2 x i8> @test_vector_uadd_sub_const(<2 x i8> %a) {
+; CHECK-LABEL: @test_vector_uadd_sub_const(
+; CHECK-NEXT:    [[RES:%.*]] = call <2 x i8> @llvm.umin.v2i8(<2 x i8> [[A:%.*]], <2 x i8> splat (i8 -43))
+; CHECK-NEXT:    ret <2 x i8> [[RES]]
+;
+  %sat = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> %a, <2 x i8> splat (i8 42))
+  %res = sub <2 x i8> %sat, splat (i8 42)
+  ret <2 x i8> %res
+}
+
+; negative test - the constants do not cancel
+
+define i8 @test_scalar_uadd_sub_const_mismatch(i8 %a) {
+; CHECK-LABEL: @test_scalar_uadd_sub_const_mismatch(
+; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[A:%.*]], i8 42)
+; CHECK-NEXT:    [[RES:%.*]] = add i8 [[SAT]], -43
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %sat = call i8 @llvm.uadd.sat.i8(i8 %a, i8 42)
+  %res = sub i8 %sat, 43
+  ret i8 %res
+}
+
+; negative test - extra use of the saturating add
+
+define i8 @test_scalar_uadd_sub_const_multiuse(i8 %a) {
+; CHECK-LABEL: @test_scalar_uadd_sub_const_multiuse(
+; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[A:%.*]], i8 42)
+; CHECK-NEXT:    [[RES:%.*]] = add i8 [[SAT]], -42
+; CHECK-NEXT:    call void @usei8(i8 [[SAT]])
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %sat = call i8 @llvm.uadd.sat.i8(i8 %a, i8 42)
+  %res = sub i8 %sat, 42
+  call void @usei8(i8 %sat)
+  ret i8 %res
+}
+
+; negative test - non-splat vector
+
+define <2 x i8> @test_vector_uadd_sub_const_nonsplat(<2 x i8> %a) {
+; CHECK-LABEL: @test_vector_uadd_sub_const_nonsplat(
+; CHECK-NEXT:    [[SAT:%.*]] = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> <i8 42, i8 3>)
+; CHECK-NEXT:    [[RES:%.*]] = add <2 x i8> [[SAT]], <i8 -42, i8 -3>
+; CHECK-NEXT:    ret <2 x i8> [[RES]]
+;
+  %sat = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> %a, <2 x i8> <i8 42, i8 3>)
+  %res = sub <2 x i8> %sat, <i8 42, i8 3>
+  ret <2 x i8> %res
 }
 
 define i1 @scalar_uadd_eq_zero(i8 %a, i8 %b) {

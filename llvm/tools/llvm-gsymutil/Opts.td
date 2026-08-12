@@ -67,3 +67,11 @@ def benchmark_reader_all :
   Flag<["--"], "benchmark-reader">,
   HelpText<"Benchmark reader by looking up every address">,
   Flags<[HelpHidden]>;
+def statistics_EQ :
+  Joined<["--"], "statistics=">,
+  HelpText<"Print the size of each section in the input GSYM file(s).\nFormat: text (default), json, or pretty-json">;
+def statistics :
+  Flag<["--"], "statistics">,
+  Alias<statistics_EQ>,
+  AliasArgs<["text"]>,
+  HelpText<"Alias for --statistics=text">;

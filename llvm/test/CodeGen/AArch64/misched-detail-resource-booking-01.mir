@@ -103,7 +103,7 @@ body:             |
 # CHECK-EMPTY:
 # CHECK-NEXT: # End machine code for function umull_and_v8i32.
 # CHECK-EMPTY:
-# CHECK-NEXT: ********** MI Scheduling **********
+# CHECK-NEXT: Current Schedule Region
 # CHECK-NEXT: umull_and_v8i32:%bb.0 entry
 # CHECK-NEXT:   From: %2:fpr128 = COPY $q2
 # CHECK-NEXT:     To: RET_ReallyLR implicit $q0, implicit $q1

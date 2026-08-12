@@ -99,7 +99,7 @@ void Fortran::lower::genSyncTeamStatement(
       std::get<Fortran::parser::TeamValue>(stmt.t);
   const SomeExpr *teamExpr = Fortran::semantics::GetExpr(teamValue);
   mlir::Value team =
-      fir::getBase(converter.genExprBox(loc, *teamExpr, stmtCtx));
+      fir::getBase(converter.genExprAddr(loc, *teamExpr, stmtCtx));
 
   // Handle STAT and ERRMSG values
   const std::list<Fortran::parser::StatOrErrmsg> &statOrErrList =
@@ -163,7 +163,7 @@ Fortran::lower::genChangeTeamStmt(Fortran::lower::AbstractConverter &converter,
   // Handle TEAM-VALUE
   const auto *teamExpr =
       Fortran::semantics::GetExpr(std::get<Fortran::parser::TeamValue>(stmt.t));
-  team = fir::getBase(converter.genExprBox(loc, *teamExpr, stmtCtx));
+  team = fir::getBase(converter.genExprAddr(loc, *teamExpr, stmtCtx));
 
   return mif::ChangeTeamOp::create(builder, loc, team, statAddr, errMsgAddr);
 }
@@ -253,7 +253,7 @@ void Fortran::lower::genFormTeamStatement(
   // Handle TEAM-VARIABLE
   const auto *teamExpr = Fortran::semantics::GetExpr(
       std::get<Fortran::parser::TeamVariable>(stmt.t));
-  team = fir::getBase(converter.genExprBox(loc, *teamExpr, stmtCtx));
+  team = fir::getBase(converter.genExprAddr(loc, *teamExpr, stmtCtx));
 
   mif::FormTeamOp::create(builder, loc, teamNumber, team, newIndex, statAddr,
                           errMsgAddr);

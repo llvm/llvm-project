@@ -245,9 +245,9 @@ define <16 x float> @expand12(<8 x float> %a) {
 ; CHECK-LABEL: expand12:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; CHECK-NEXT:    vpmovsxbd {{.*#+}} zmm2 = [0,16,2,16,4,16,6,16,0,16,1,16,2,16,3,16]
-; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpermt2ps %zmm0, %zmm2, %zmm1
+; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpmovsxbd {{.*#+}} zmm1 = [0,16,2,16,4,16,6,16,0,16,1,16,2,16,3,16]
+; CHECK-NEXT:    vpermi2ps %zmm0, %zmm2, %zmm1
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
    %res = shufflevector <8 x float> zeroinitializer, <8 x float> %a, <16 x i32> <i32 0, i32 8, i32 1, i32 8, i32 2, i32 8, i32 3, i32 8,i32 0, i32 8, i32 1, i32 8, i32 2, i32 8, i32 3, i32 8>

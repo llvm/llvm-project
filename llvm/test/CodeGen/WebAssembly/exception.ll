@@ -47,7 +47,7 @@ define void @throw(ptr %p) {
 ; CHECK:   local.get  0
 ; CHECK:   global.set  __stack_pointer
 ; CHECK:   i32.store  __wasm_lpad_context
-; CHECK:   call  _Unwind_CallPersonality
+; CHECK:   call  __gxx_wasm_personality_v0
 ; CHECK:   block
 ; CHECK:     br_if     0
 ; CHECK:     call  __cxa_begin_catch
@@ -648,7 +648,7 @@ try.cont:                                         ; preds = %entry
 declare void @foo()
 declare void @bar(ptr)
 declare void @take_i32(i32)
-declare i32 @__gxx_wasm_personality_v0(...)
+declare i32 @__gxx_wasm_personality_v0(ptr)
 ; Function Attrs: noreturn
 declare void @llvm.wasm.throw(i32, ptr) #1
 ; Function Attrs: nounwind

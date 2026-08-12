@@ -4,8 +4,6 @@
 User Guide for AMDGPU Backend
 =============================
 
-.. contents::
-   :local:
 
 .. toctree::
    :hidden:
@@ -669,7 +667,7 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                            work-item
                                                                            IDs
 
-     ``gfx1250``                 ``amdgpu12.50``  APU                    - Architected                   *TBA*
+     ``gfx1250``                 ``amdgpu12.50``  APU   - sramecc        - Architected                   *TBA*
                                                                            flat
                                                                            scratch                         .. TODO::
                                                                          - Packed
@@ -681,7 +679,7 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                          - Workgroup
                                                                            Clusters
 
-     ``gfx1251``                 ``amdgpu12.51``  APU                    - Architected                   *TBA*
+     ``gfx1251``                 ``amdgpu12.51``  APU   - sramecc        - Architected                   *TBA*
                                                                            flat
                                                                            scratch                       .. TODO::
                                                                          - Packed
@@ -818,7 +816,7 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
                                                                                 work-item
                                                                                 IDs
 
-     ``gfx12-5-generic``  ``amdgpu12.5`` - ``gfx1250``                        - Architected     Functionally equivalent to
+     ``gfx12-5-generic``  ``amdgpu12.5`` - ``gfx1250``     - sramecc          - Architected     Functionally equivalent to
                                          - ``gfx1251``                          flat scratch    gfx1250.
                                                                               - Packed
                                                                                 work-item
@@ -1303,14 +1301,14 @@ supported for the ``amdgcn`` target.
   Buffer resources can be created from 64-bit pointers (which should be either
   generic or global) using the ``llvm.amdgcn.make.buffer.rsrc`` intrinsic, which
   takes the pointer, which becomes the base of the resource,
-  the 16-bit stride (and swzizzle control) field stored in bits `63:48` of a `V#`,
-  the 32-bit NumRecords/extent field (bits `95:64`), and the 32-bit flags field
-  (bits `127:96`). The specific interpretation of these fields varies by the
-  target architecture and is detailed in the ISA descriptions.
+  the 16-bit stride (and swizzle control) field stored in bits `63:48` of a `V#`,
+  the NumRecords/extent field, and the 32-bit flags field. NumRecords may be
+  any integer width and is zero-extended or truncated to the target resource
+  field width. The specific interpretation of these fields varies by the target
+  architecture and is detailed in the ISA descriptions.
 
   On gfx1250, the base pointer is instead truncated to 57 bits and the NumRecords
-  field is 45 bits, which necessitated a change to ``make.buffer.rsrcs``'s arguments
-  in order to make that field an ``i64``.
+  field is 45 bits.
 
   When buffer resources are passed to buffer intrinsics such as
   ``llvm.amdgcn.raw.ptr.buffer.load`` or
@@ -1908,10 +1906,16 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    - 0x0002: VALU instructions may be scheduled across sched_barrier.
                                                    - 0x0004: SALU instructions may be scheduled across sched_barrier.
                                                    - 0x0008: MFMA/WMMA instructions may be scheduled across sched_barrier.
-                                                   - 0x0010: All VMEM instructions may be scheduled across sched_barrier.
-                                                   - 0x0020: VMEM read instructions may be scheduled across sched_barrier.
-                                                   - 0x0040: VMEM write instructions may be scheduled across sched_barrier.
-                                                   - 0x0080: All DS instructions may be scheduled across sched_barrier.
+                                                   - 0x0010: All VMEM instructions may be scheduled across sched_barrier. This
+                                                     includes LDSDMA instructions.
+                                                   - 0x0020: VMEM read instructions may be scheduled across sched_barrier. This
+                                                     does not include LDSDMA loads, even though they also read from global
+                                                     memory; only loads targeting VGPRs are classified as VMEM read.
+                                                   - 0x0040: VMEM write instructions may be scheduled across sched_barrier. This
+                                                     does not include LDSDMA stores, even though they also write to global
+                                                     memory; only stores sourcing from VGPRs are classified as VMEM write.
+                                                   - 0x0080: All DS instructions may be scheduled across sched_barrier. This
+                                                     includes LDSDMA instructions.
                                                    - 0x0100: All DS read instructions may be scheduled across sched_barrier.
                                                    - 0x0200: All DS write instructions may be scheduled across sched_barrier.
                                                    - 0x0400: All Transcendental (e.g. V_EXP) instructions may be scheduled across sched_barrier.
@@ -2115,6 +2119,8 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 .. TODO::
 
    List AMDGPU intrinsics.
+
+.. _amdgpu-av-load-store:
 
 '``llvm.amdgcn.av``' Intrinsics
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -20423,7 +20429,7 @@ after the source language arguments in the following order:
 
 1.  Work-Item ID (1 VGPR)
 
-    The X, Y and Z work-item ID are packed into a single VGRP with the following
+    The X, Y and Z work-item ID are packed into a single VGPR with the following
     layout. Only fields actually used by the function are set. The other bits
     are undefined.
 

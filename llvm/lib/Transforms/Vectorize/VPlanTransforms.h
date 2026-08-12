@@ -417,7 +417,8 @@ struct VPlanTransforms {
   /// IV values by feeding them precomputed end values instead, possibly taken
   /// one step backwards.
   static void optimizeInductionLiveOutUsers(VPlan &Plan,
-                                            PredicatedScalarEvolution &PSE);
+                                            PredicatedScalarEvolution &PSE,
+                                            const Loop *L);
 
   /// Add explicit broadcasts for live-ins and VPValues defined in \p Plan's entry block if they are used as vectors.
   static void materializeBroadcasts(VPlan &Plan);
@@ -570,7 +571,9 @@ struct VPlanTransforms {
   /// Optimize FindLast reductions selecting IVs (or expressions of IVs) by
   /// converting them to FindIV reductions, if their IV range excludes a
   /// suitable sentinel value. For expressions of IVs, the expression is sunk
-  /// to the middle block.
+  /// to the middle block. The decision is based on SCEV expressions for \p L,
+  /// so this must run before any transform that changes the plan's iteration
+  /// space relative to \p L.
   static void optimizeFindIVReductions(VPlan &Plan,
                                        PredicatedScalarEvolution &PSE, Loop &L);
 

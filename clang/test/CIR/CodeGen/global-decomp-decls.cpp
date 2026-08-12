@@ -29,19 +29,25 @@ auto [t1, t2, t3] = t;
 // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}@_ZDC2t12t22t3E, ptr {{.*}}@t, i64 12, i1 false)
 
 const auto & [t11, t12, t13] = getT<Type>();
+// CIR: cir.func {{.*}} @_Z4getTI4TypeEDav() -> !rec_anon_struct
+
 // CIR: cir.global external @_ZDC3t113t123t13E = #cir.ptr<null> : !cir.ptr<!rec_Type>
 // CIR: cir.func internal private @__cxx_global_var_init{{.*}}() {
+// CIR:   %[[COERCE:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!rec_anon_struct>
 // CIR:   %[[SB:.*]] = cir.get_global @_ZDC3t113t123t13E : !cir.ptr<!cir.ptr<!rec_Type>>
 // CIR:   %[[SB_REF:.*]] = cir.get_global @_ZGRDC3t113t123t13E_ : !cir.ptr<!rec_Type>
-// CIR:   %[[GETTCALL:.*]] = cir.call @_Z4getTI4TypeEDav() : () -> !rec_Type
-// CIR:   cir.store align(4) %[[GETTCALL]], %[[SB_REF]] : !rec_Type, !cir.ptr<!rec_Type>
+// CIR:   %[[GETTCALL:.*]] = cir.call @_Z4getTI4TypeEDav() : () -> !rec_anon_struct
+// CIR:   cir.store %[[GETTCALL]], %[[COERCE]] : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
+// CIR:   %[[COERCE_REC:.*]] = cir.cast bitcast %[[COERCE]] : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!rec_Type>
+// CIR:   %[[TVAL:.*]] = cir.load %[[COERCE_REC]] : !cir.ptr<!rec_Type>, !rec_Type
+// CIR:   cir.store align(4) %[[TVAL]], %[[SB_REF]] : !rec_Type, !cir.ptr<!rec_Type>
 // CIR:   cir.store align(8) %[[SB_REF]], %[[SB]] : !cir.ptr<!rec_Type>, !cir.ptr<!cir.ptr<!rec_Type>>
 
 // LLVM: define internal void @__cxx_global_var_init{{.*}}()
-// LLVMCIR:   %[[GETTCALL:.*]] = call %struct.Type @_Z4getTI4TypeEDav()
-// OGCG:      %[[GETTCALL:.*]] = call { i64, i32 } @_Z4getTI4TypeEDav()
-// LLVMCIR:   store %struct.Type %[[GETTCALL]], ptr @_ZGRDC3t113t123t13E_, align 4
-// OGCG:      store { i64, i32 } %call, ptr %[[COERCED_PTR:.*]],
+// LLVM:   %[[GETTCALL:.*]] = call { i64, i32 } @_Z4getTI4TypeEDav()
+// LLVM:   store { i64, i32 } %[[GETTCALL]], ptr %[[COERCED_PTR:.*]], align 8
+// LLVMCIR:   %[[TVAL:.*]] = load %struct.Type, ptr %[[COERCED_PTR]], align 4
+// LLVMCIR:   store %struct.Type %[[TVAL]], ptr @_ZGRDC3t113t123t13E_, align 4
 // OGCG:      call void @llvm.memcpy.p0.p0.i64(ptr align 4 @_ZGRDC3t113t123t13E_, ptr align 8 %[[COERCED_PTR]], i64 12, i1 false)
 // LLVM:   store ptr @_ZGRDC3t113t123t13E_, ptr @_ZDC3t113t123t13E, align 8
 

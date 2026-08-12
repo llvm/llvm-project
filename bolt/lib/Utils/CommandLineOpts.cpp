@@ -220,6 +220,12 @@ cl::opt<opts::HeatmapBlockSizes, false, opts::HeatmapBlockSpecParser>
         cl::init(HeatmapBlockSizes{/*Initial*/ 64, /*Zoom-out*/ 4096, 262144}),
         cl::cat(HeatmapCategory));
 
+cl::opt<int> HeatmapCdfPct(
+    "heatmap-cdf-pct", cl::init(990000),
+    cl::desc("Sample CDF cutoff, in millionths, at which to report the working "
+             "set."),
+    cl::value_desc("n"), cl::cat(HeatmapCategory));
+
 cl::opt<unsigned long long> HeatmapMaxAddress(
     "max-address", cl::init(0xffffffff),
     cl::desc("maximum address considered valid for heatmap (default 4GB)"),
@@ -364,6 +370,12 @@ cl::opt<unsigned>
     Verbosity("v", cl::desc("set verbosity level for diagnostic output"),
               cl::init(0), cl::ZeroOrMore, cl::cat(BoltCategory),
               cl::sub(cl::SubCommand::getAll()));
+
+cl::opt<bool> FixBranchesWithLiveness(
+    "fix-branches-with-liveness",
+    cl::desc("use liveness analysis during branch fixup "
+             "(needed for branch inversion on AArch64)"),
+    cl::init(false), cl::cat(BoltCategory));
 
 bool processAllFunctions() {
   if (opts::AggregateOnly)

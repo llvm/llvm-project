@@ -177,6 +177,7 @@ void negative_size() {
   static constexpr NegativeSize n;
   template for (auto x : n) g(x); // expected-error {{expansion statement size is not a constant expression}} \
                                      old-interp-note {{constexpr evaluation hit maximum step limit}} \
+                                     old-interp-note {{use -fconstexpr-steps}} \
                                      new-interp-note {{cannot refer to element 5 of array of 4 elements in a constant expression}} \
                                      expected-note {{in call to}}
   template for (constexpr auto x : n) g(x); // expected-error {{expansion statement size is not a constant expression}} \
@@ -1588,4 +1589,21 @@ void f() {
   // the function template.
   Template<void>().instantiated<void>(); // expected-note {{in instantiation of function template specialization 'decl_context::Template<void>::instantiated<void>'}}
 }
+}
+
+namespace gh211917 {
+auto f() {
+  template for (constexpr auto x : {1,2,3}) {
+    return 3;
+  }
+}
+
+template<typename T>
+T tf() {
+  template for (constexpr auto x : {1,2,3}) {
+    return 3;
+  }
+}
+
+template long tf<long>();
 }

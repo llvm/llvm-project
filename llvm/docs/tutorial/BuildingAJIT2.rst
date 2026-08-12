@@ -2,8 +2,6 @@
 Building a JIT: Adding Optimizations -- An introduction to ORC Layers
 =====================================================================
 
-.. contents::
-   :local:
 
 **This tutorial is under active development. It is incomplete and details may
 change frequently.** Nonetheless we invite you to try it out as it stands, and

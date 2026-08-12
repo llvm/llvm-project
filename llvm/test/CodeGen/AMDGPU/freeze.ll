@@ -14409,13 +14409,13 @@ define void @freeze_v3i8(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, 0xff
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-GISEL-NEXT:    v_lshrrev_b32_e32 v4, 8, v0
-; GFX9-GISEL-NEXT:    v_and_b32_e32 v4, 0xff, v4
-; GFX9-GISEL-NEXT:    v_lshlrev_b16_e32 v4, 8, v4
 ; GFX9-GISEL-NEXT:    v_and_b32_sdwa v1, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX9-GISEL-NEXT:    v_or_b32_sdwa v0, v0, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; GFX9-GISEL-NEXT:    v_and_b32_e32 v4, 0xff, v4
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX9-GISEL-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GFX9-GISEL-NEXT:    v_lshlrev_b16_e32 v4, 8, v4
+; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX9-GISEL-NEXT:    v_or_b32_sdwa v0, v0, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; GFX9-GISEL-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX9-GISEL-NEXT:    global_store_short v[2:3], v0, off
 ; GFX9-GISEL-NEXT:    global_store_byte_d16_hi v[2:3], v0, off offset:2
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -14437,12 +14437,12 @@ define void @freeze_v3i8(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v1, 0xff
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-GISEL-NEXT:    v_lshrrev_b32_e32 v4, 8, v0
-; GFX10-GISEL-NEXT:    v_and_b32_sdwa v4, v4, v1 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX10-GISEL-NEXT:    v_and_b32_sdwa v1, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX10-GISEL-NEXT:    v_or_b32_sdwa v0, v0, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
-; GFX10-GISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX10-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX10-GISEL-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GFX10-GISEL-NEXT:    v_and_b32_sdwa v5, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10-GISEL-NEXT:    v_and_b32_sdwa v1, v4, v1 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX10-GISEL-NEXT:    v_and_b32_e32 v4, 0xffff, v5
+; GFX10-GISEL-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; GFX10-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v4
+; GFX10-GISEL-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX10-GISEL-NEXT:    global_store_short v[2:3], v0, off
 ; GFX10-GISEL-NEXT:    global_store_byte_d16_hi v[2:3], v0, off offset:2
 ; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]

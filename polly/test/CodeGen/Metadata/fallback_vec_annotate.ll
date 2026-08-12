@@ -4,7 +4,7 @@
 ; Verify vectorization is not disabled when RTC of Polly is false
 
 ; CHECK: attributes {{.*}} = { "polly-optimized" }
-; CHECK-NOT: {{.*}} = !{!"llvm.loop.vectorize.enable", i32 0}
+; CHECK-NOT: {{.*}} = !{!"llvm.loop.vectorize.disable"}
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
 target triple = "aarch64-unknown-linux-android10000"

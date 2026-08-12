@@ -19,13 +19,14 @@
 #include "Shared/Debug.h"
 
 #include "OpenMP/OMPT/Callback.h"
-#include "OpenMP/OMPT/Connector.h"
 #include "OpenMP/OMPT/Interface.h"
-
-#include "llvm/Support/DynamicLibrary.h"
 
 #undef DEBUG_PREFIX
 #define DEBUG_PREFIX "OMPT"
+
+/// Registers this library's initialize and finalize functions with libomp,
+/// which always defines this entry point (a stub if built without OMPT).
+extern "C" void ompt_libomp_connect(ompt_start_tool_result_t *);
 
 // Define OMPT callback functions (bound to actual callbacks later on)
 #define defineOmptCallback(Name, Type, Code)                                   \
@@ -537,18 +538,14 @@ void llvm::omp::target::ompt::finalizeLibrary(ompt_data_t *data) {
 
 void llvm::omp::target::ompt::connectLibrary() {
   ODBG(ODT_Tool) << "Entering connectLibrary";
-  // Connect with libomp
-  static OmptLibraryConnectorTy LibompConnector("libomp");
+  // libomp retains this pointer to run the finalizer
   static ompt_start_tool_result_t OmptResult;
-
-  // Initialize OmptResult with the init and fini functions that will be
-  // called by the connector
   OmptResult.initialize = ompt::initializeLibrary;
   OmptResult.finalize = ompt::finalizeLibrary;
   OmptResult.tool_data.value = 0;
 
-  // Now call connect that causes the above init/fini functions to be called
-  LibompConnector.connect(&OmptResult);
+  // Calls initializeLibrary if a tool enabled OMPT
+  ompt_libomp_connect(&OmptResult);
 
 #define bindOmptCallback(Name, Type, Code)                                     \
   if (lookupCallbackByCode)                                                    \

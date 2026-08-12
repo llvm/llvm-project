@@ -725,10 +725,8 @@ void CIRGenFunction::emitStaticVarDecl(const VarDecl &d,
   // We can't have a VLA here, but we can have a pointer to a VLA,
   // even though that doesn't really make any sense.
   // Make sure to evaluate VLA bounds now so that we have them for later.
-  if (d.getType()->isVariablyModifiedType()) {
-    cgm.errorNYI(d.getSourceRange(),
-                 "emitStaticVarDecl: variably modified type");
-  }
+  if (d.getType()->isVariablyModifiedType())
+    emitVariablyModifiedType(d.getType());
 
   // Save the type in case adding the initializer forces a type change.
   mlir::Type expectedType = addr.getType();
@@ -760,9 +758,8 @@ void CIRGenFunction::emitStaticVarDecl(const VarDecl &d,
     cgm.errorNYI(d.getSourceRange(),
                  "emitStaticVarDecl: CIR global Relro section attribute");
 
-  if (d.getAttr<SectionAttr>())
-    cgm.errorNYI(d.getSourceRange(),
-                 "emitStaticVarDecl: CIR global object file section attribute");
+  if (const SectionAttr *sa = d.getAttr<SectionAttr>())
+    var.setSectionAttr(builder.getStringAttr(sa->getName()));
 
   if (cgm.getCodeGenOpts().KeepPersistentStorageVariables)
     cgm.errorNYI(d.getSourceRange(), "static var keep persistent storage");

@@ -18,6 +18,7 @@
 #include <__cstddef/ptrdiff_t.h>
 #include <__exception/exception.h>
 #include <__functional/binary_function.h>
+#include <__functional/hash.h>
 #include <__functional/operations.h>
 #include <__functional/reference_wrapper.h>
 #include <__fwd/ostream.h>
@@ -554,6 +555,22 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI bool __owner_equivalent(const shared_ptr& __p) const { return __cntrl_ == __p.__cntrl_; }
+
+#if _LIBCPP_STD_VER >= 26
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI size_t owner_hash() const noexcept {
+    return std::hash<__shared_weak_count*>()(__cntrl_);
+  }
+
+  template <class _Up>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool owner_equal(shared_ptr<_Up> const& __p) const noexcept {
+    return __cntrl_ == __p.__cntrl_;
+  }
+
+  template <class _Up>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool owner_equal(weak_ptr<_Up> const& __p) const noexcept {
+    return __cntrl_ == __p.__cntrl_;
+  }
+#endif
 
 #if _LIBCPP_STD_VER >= 17
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI __add_lvalue_reference_t<element_type> operator[](ptrdiff_t __i) const {
@@ -1245,6 +1262,22 @@ public:
     return __cntrl_ < __r.__cntrl_;
   }
 
+#if _LIBCPP_STD_VER >= 26
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI size_t owner_hash() const noexcept {
+    return std::hash<__shared_weak_count*>()(__cntrl_);
+  }
+
+  template <class _Up>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool owner_equal(shared_ptr<_Up> const& __p) const noexcept {
+    return __cntrl_ == __p.__cntrl_;
+  }
+
+  template <class _Up>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool owner_equal(weak_ptr<_Up> const& __p) const noexcept {
+    return __cntrl_ == __p.__cntrl_;
+  }
+#endif
+
   template <class _Up>
   friend class weak_ptr;
   template <class _Up>
@@ -1315,6 +1348,46 @@ struct owner_less<void> {
     return __x.owner_before(__y);
   }
   typedef void is_transparent;
+};
+#endif
+
+#if _LIBCPP_STD_VER >= 26
+struct owner_hash {
+  template <class _Tp>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI size_t operator()(shared_ptr<_Tp> const& __p) const noexcept {
+    return __p.owner_hash();
+  }
+  template <class _Tp>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI size_t operator()(weak_ptr<_Tp> const& __p) const noexcept {
+    return __p.owner_hash();
+  }
+
+  using is_transparent = void;
+};
+
+struct owner_equal {
+  template <class _Tp, class _Up>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool
+  operator()(shared_ptr<_Tp> const& __x, shared_ptr<_Up> const& __y) const noexcept {
+    return __x.owner_equal(__y);
+  }
+  template <class _Tp, class _Up>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool
+  operator()(shared_ptr<_Tp> const& __x, weak_ptr<_Up> const& __y) const noexcept {
+    return __x.owner_equal(__y);
+  }
+  template <class _Tp, class _Up>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool
+  operator()(weak_ptr<_Tp> const& __x, shared_ptr<_Up> const& __y) const noexcept {
+    return __x.owner_equal(__y);
+  }
+  template <class _Tp, class _Up>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool
+  operator()(weak_ptr<_Tp> const& __x, weak_ptr<_Up> const& __y) const noexcept {
+    return __x.owner_equal(__y);
+  }
+
+  using is_transparent = void;
 };
 #endif
 

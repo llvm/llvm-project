@@ -21,6 +21,7 @@
 
 #include <algorithm>
 #include <numeric>
+#include <memory>
 
 #include "check_assertion.h"
 #include "test_execution_policies.h"
@@ -128,6 +129,14 @@ int main(int, char**) {
       }
 
       {
+        // destroy(first, last)
+        assert_non_throwing([=, &policy] { (void)std::destroy(policy, std::move(first1), std::move(last1)); });
+
+        // destroy_n(first, n)
+        assert_non_throwing([=, &policy] { (void)std::destroy_n(policy, std::move(first1), n); });
+      }
+
+      {
         auto binary_pred = maybe_throw(tokens[5], [](int x, int y) -> bool { return x == y; });
 
         // equal(first1, last1, first2)
@@ -211,6 +220,27 @@ int main(int, char**) {
       }
 
       {
+        auto pred = maybe_throw(tokens[5], [](int, int) -> bool { return true; });
+
+        // lexicographical_compare(first1, last1, first2, last2)
+        assert_non_throwing([=, &policy] {
+          (void)std::lexicographical_compare(
+              policy, std::move(first1), std::move(last1), std::move(first2), std::move(last2));
+        });
+
+        // lexicographical_compare(first1, last1, first2, last2, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::lexicographical_compare(
+              policy, std::move(first1), std::move(last1), std::move(first2), std::move(last2), pred);
+        });
+      }
+
+      {
+        // reverse(first, last)
+        assert_non_throwing([=, &policy] { std::reverse(policy, std::move(first1), std::move(last1)); });
+      }
+
+      {
         // reverse_copy(first, last, dest)
         assert_non_throwing([=, &policy] {
           (void)std::reverse_copy(policy, std::move(first1), std::move(last1), std::move(dest));
@@ -245,6 +275,43 @@ int main(int, char**) {
               std::move(last2),
               std::move(dest),
               compare);
+        });
+      }
+
+      {
+        auto compare = maybe_throw(tokens[5], [](int x, int y) -> bool { return x < y; });
+
+        // mismatch(first1, last1, first2)
+        assert_non_throwing([=, &policy] {
+          (void)std::mismatch(policy, std::move(first1), std::move(last1), std::move(first2));
+        });
+
+        // mismatch(first1, last1, first2, last2)
+        assert_non_throwing([=, &policy] {
+          (void)std::mismatch(policy, std::move(first1), std::move(last1), std::move(first2), std::move(last2));
+        });
+
+        // mismatch(first1, last1, first2, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::mismatch(policy, std::move(first1), std::move(last1), std::move(first2), compare);
+        });
+
+        // mismatch(first1, last1, first2, last2, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::mismatch(
+              policy, std::move(first1), std::move(last1), std::move(first2), std::move(last2), compare);
+        });
+      }
+
+      {
+        auto pred = maybe_throw(tokens[5], [](int x, int y) -> bool { return x == y; });
+
+        // adjacent_find(first, last)
+        assert_non_throwing([=, &policy] { (void)std::adjacent_find(policy, std::move(first1), std::move(last1)); });
+
+        // adjacent_find(first, last, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::adjacent_find(policy, std::move(first1), std::move(last1), pred);
         });
       }
 
@@ -311,6 +378,14 @@ int main(int, char**) {
         // is_sorted(first, last, comp)
         assert_non_throwing([=, &policy] {
           (void)std::is_sorted(policy, std::move(first1), std::move(last1), compare);
+        });
+
+        // is_sorted_until(first, last)
+        assert_non_throwing([=, &policy] { (void)std::is_sorted_until(policy, std::move(first1), std::move(last1)); });
+
+        // is_sorted_until(first, last, comp)
+        assert_non_throwing([=, &policy] {
+          (void)std::is_sorted_until(policy, std::move(first1), std::move(last1), compare);
         });
       }
 
@@ -381,4 +456,6 @@ int main(int, char**) {
       }
     }
   });
+
+  return 0;
 }

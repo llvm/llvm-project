@@ -2,8 +2,6 @@
 LLVM PC Sections Metadata
 =========================
 
-.. contents::
-   :local:
 
 Introduction
 ============

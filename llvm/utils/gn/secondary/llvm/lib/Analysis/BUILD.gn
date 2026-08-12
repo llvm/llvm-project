@@ -64,7 +64,6 @@ static_library("Analysis") {
     "HashRecognize.cpp",
     "HeatUtils.cpp",
     "IR2Vec.cpp",
-    "IRSimilarityIdentifier.cpp",
     "IVDescriptors.cpp",
     "IVUsers.cpp",
     "ImportedFunctionsInliningStatistics.cpp",

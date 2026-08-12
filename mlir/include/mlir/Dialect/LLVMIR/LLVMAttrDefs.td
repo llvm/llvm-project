@@ -360,6 +360,15 @@ def LLVM_DILanguageParameter : LLVM_DIParameter<
   "language", /*default=*/"0", "Language", /*errorCase=*/"0"
 >;
 
+// Source-language dialect values are defined by LLVM's
+// dwarf::LanguageDialectAttribute enum in llvm/BinaryFormat/Dwarf.h. LLVM
+// represents "no source-language dialect" as 0; the LLVM IR printer omits the
+// `dialect:` field for that value.
+def LLVM_DILanguageDialectParameter : LLVM_DIParameter<
+  "language dialect", /*default=*/"0", "LanguageDialect",
+  /*errorCase=*/"~0U"
+>;
+
 def LLVM_DITagParameter : LLVM_DIParameter<
   "tag", /*default=*/"0", "Tag", /*errorCase=*/"llvm::dwarf::DW_TAG_invalid"
 >;
@@ -448,6 +457,7 @@ def LLVM_DICompileUnitAttr : LLVM_Attr<"DICompileUnit", "di_compile_unit",
     // DICompileUnitAttr specific parameters.
     OptionalParameter<"DistinctAttr">:$id,
     LLVM_DILanguageParameter:$sourceLanguage,
+    LLVM_DILanguageDialectParameter:$sourceLanguageDialect,
     OptionalParameter<"DIFileAttr">:$file,
     OptionalParameter<"StringAttr">:$producer,
     OptionalParameter<"bool">:$isOptimized,
@@ -459,6 +469,21 @@ def LLVM_DICompileUnitAttr : LLVM_Attr<"DICompileUnit", "di_compile_unit",
   );
   let builders = [
     AttrBuilderWithInferredContext<(ins
+      "DistinctAttr":$id, "unsigned":$sourceLanguage,
+      "unsigned":$sourceLanguageDialect, "DIFileAttr":$file,
+      "StringAttr":$producer, "bool":$isOptimized,
+      "DIEmissionKind":$emissionKind,
+      CArg<"bool", "false">:$isDebugInfoForProfiling,
+      CArg<"DINameTableKind", "DINameTableKind::Default">:$nameTableKind,
+      CArg<"StringAttr", "{}">:$splitDebugFilename,
+      CArg<"ArrayRef<DINodeAttr>", "{}">:$importedEntities
+    ), [{
+      return $_get(id.getContext(), /*recId=*/nullptr, /*isRecSelf=*/false, id,
+                   sourceLanguage, sourceLanguageDialect, file, producer,
+                   isOptimized, emissionKind, isDebugInfoForProfiling,
+                   nameTableKind, splitDebugFilename, importedEntities);
+    }]>,
+    AttrBuilderWithInferredContext<(ins
       "DistinctAttr":$id, "unsigned":$sourceLanguage, "DIFileAttr":$file,
       "StringAttr":$producer, "bool":$isOptimized,
       "DIEmissionKind":$emissionKind,
@@ -468,9 +493,9 @@ def LLVM_DICompileUnitAttr : LLVM_Attr<"DICompileUnit", "di_compile_unit",
       CArg<"ArrayRef<DINodeAttr>", "{}">:$importedEntities
     ), [{
       return $_get(id.getContext(), /*recId=*/nullptr, /*isRecSelf=*/false, id,
-                   sourceLanguage, file, producer, isOptimized, emissionKind,
-                   isDebugInfoForProfiling, nameTableKind, splitDebugFilename,
-                   importedEntities);
+                   sourceLanguage, /*sourceLanguageDialect=*/0, file, producer,
+                   isOptimized, emissionKind, isDebugInfoForProfiling,
+                   nameTableKind, splitDebugFilename, importedEntities);
     }]>
   ];
   let assemblyFormat = "`<` struct(params) `>`";
@@ -1774,15 +1799,15 @@ def LLVM_MDConstantAttr : LLVM_Attr<"MDConstant", "md_const"> {
   let assemblyFormat = "`<` $value `>`";
 }
 
-def LLVM_MDFuncAttr : LLVM_Attr<"MDFunc", "md_func"> {
-  let summary = "LLVM function-as-metadata";
+def LLVM_MDGlobalValueAttr : LLVM_Attr<"MDGlobalValue", "md_global_value"> {
+  let summary = "LLVM global value-as-metadata";
   let description = [{
-    References a function (or global) symbol as LLVM metadata, corresponding
-    to `llvm::ValueAsMetadata::get(function)` in LLVM IR.
+    References a symbol-backed global value as LLVM metadata, corresponding to
+    `llvm::ValueAsMetadata::get(value)` in LLVM IR.
 
     Example:
     ```mlir
-    #llvm.md_func<@my_kernel>
+    #llvm.md_global_value<@my_kernel>
     ```
   }];
   let parameters = (ins "FlatSymbolRefAttr":$name);
@@ -1794,7 +1819,7 @@ def LLVM_MDNodeAttr : LLVM_Attr<"MDNode", "md_node"> {
   let description = [{
     Represents an LLVM metadata node. The operands
     can be any combination of metadata attributes: `#llvm.md_string`,
-    `#llvm.md_const`, `#llvm.md_func`, or nested `#llvm.md_node`.
+    `#llvm.md_const`, `#llvm.md_global_value`, or nested `#llvm.md_node`.
 
     Example:
     ```mlir
@@ -1806,8 +1831,13 @@ def LLVM_MDNodeAttr : LLVM_Attr<"MDNode", "md_node"> {
   let assemblyFormat = "`<` (`>`) : ($operands^ `>`)?";
 }
 
+def LLVM_MDNodeArrayAttr
+    : TypedArrayAttrBase<LLVM_MDNodeAttr,
+                         "array of #llvm.md_node attributes">;
+
 def LLVM_AnyMDAttr : AnyAttrOf<[
-    LLVM_MDStringAttr, LLVM_MDConstantAttr, LLVM_MDFuncAttr, LLVM_MDNodeAttr],
-    "LLVM metadata attribute (md_string, md_const, md_func, or md_node)">;
+    LLVM_MDStringAttr, LLVM_MDConstantAttr, LLVM_MDGlobalValueAttr,
+    LLVM_MDNodeAttr],
+    "LLVM metadata attribute (md_string, md_const, md_global_value, or md_node)">;
 
 #endif // LLVMIR_ATTRDEFS

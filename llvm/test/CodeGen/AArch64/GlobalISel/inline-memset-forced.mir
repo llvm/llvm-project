@@ -66,12 +66,11 @@ body:             |
     ; CHECK-NEXT: [[PTR_ADD7:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C8]](s64)
     ; CHECK-NEXT: G_STORE [[BUILD_VECTOR]](<2 x i64>), [[PTR_ADD7]](p0) :: (store (<2 x i64>) into %ir.dst + 127, align 1, basealign 4)
     ; CHECK-NEXT: RET_ReallyLR
-    ;
     %0:_(p0) = COPY $x0
     %1:_(i32) = COPY $w1
     %2:_(i8) = G_TRUNC %1(i32)
-    %3:_(s64) = G_CONSTANT i64 143
-    G_MEMSET_INLINE %0(p0), %2(i8), %3(s64) :: (store (s8) into %ir.dst, align 4)
+    %3:_(i64) = G_CONSTANT i64 143
+    G_MEMSET_INLINE %0(p0), %2(i8), %3(i64) :: (store (s8) into %ir.dst, align 4)
     RET_ReallyLR
 
 ...

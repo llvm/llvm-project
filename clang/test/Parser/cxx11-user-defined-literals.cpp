@@ -3,8 +3,8 @@
 // A ud-suffix cannot be used on string literals in a whole bunch of contexts:
 
 #include "foo"_bar // expected-error {{expected "FILENAME" or <FILENAME>}}
-#line 1 "foo"_bar // expected-error {{user-defined suffix cannot be used here}}
-# 1 "foo"_bar 1 // expected-error {{user-defined suffix cannot be used here}}
+#line 1 "foo"_bar // expected-error {{invalid filename for #line directive}}
+# 1 "foo"_bar 1 // expected-error {{invalid filename for #line directive}}
 #ident "foo"_bar // expected-error {{user-defined suffix cannot be used here}}
 _Pragma("foo"_bar) // expected-error {{user-defined suffix cannot be used here}}
 #pragma comment(lib, "foo"_bar) // expected-error {{user-defined suffix cannot be used here}}

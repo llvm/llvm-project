@@ -14,11 +14,11 @@ define <2 x float> @t0(<2 x float> %a, <2 x float> %b, <2 x float> %c) {
 ; FAST-NEXT:    .reg .b64 %rd<5>;
 ; FAST-EMPTY:
 ; FAST-NEXT:  // %bb.0:
-; FAST-NEXT:    ld.param.b64 %rd1, [t0_param_0];
-; FAST-NEXT:    ld.param.b64 %rd2, [t0_param_1];
-; FAST-NEXT:    ld.param.b64 %rd3, [t0_param_2];
+; FAST-NEXT:    ld.param::func.b64 %rd1, [t0_param_0];
+; FAST-NEXT:    ld.param::func.b64 %rd2, [t0_param_1];
+; FAST-NEXT:    ld.param::func.b64 %rd3, [t0_param_2];
 ; FAST-NEXT:    fma.rn.f32x2 %rd4, %rd1, %rd2, %rd3;
-; FAST-NEXT:    st.param.b64 [func_retval0], %rd4;
+; FAST-NEXT:    st.param::func.b64 [func_retval0], %rd4;
 ; FAST-NEXT:    ret;
 ;
 ; DEFAULT-LABEL: t0(
@@ -26,12 +26,12 @@ define <2 x float> @t0(<2 x float> %a, <2 x float> %b, <2 x float> %c) {
 ; DEFAULT-NEXT:    .reg .b64 %rd<6>;
 ; DEFAULT-EMPTY:
 ; DEFAULT-NEXT:  // %bb.0:
-; DEFAULT-NEXT:    ld.param.b64 %rd1, [t0_param_0];
-; DEFAULT-NEXT:    ld.param.b64 %rd2, [t0_param_1];
+; DEFAULT-NEXT:    ld.param::func.b64 %rd1, [t0_param_0];
+; DEFAULT-NEXT:    ld.param::func.b64 %rd2, [t0_param_1];
 ; DEFAULT-NEXT:    mul.rn.f32x2 %rd3, %rd1, %rd2;
-; DEFAULT-NEXT:    ld.param.b64 %rd4, [t0_param_2];
+; DEFAULT-NEXT:    ld.param::func.b64 %rd4, [t0_param_2];
 ; DEFAULT-NEXT:    add.rn.f32x2 %rd5, %rd3, %rd4;
-; DEFAULT-NEXT:    st.param.b64 [func_retval0], %rd5;
+; DEFAULT-NEXT:    st.param::func.b64 [func_retval0], %rd5;
 ; DEFAULT-NEXT:    ret;
   %v0 = fmul <2 x float> %a, %b
   %v1 = fadd <2 x float> %v0, %c
@@ -46,12 +46,12 @@ define <2 x float> @t1(<2 x float> %a, <2 x float> %b) {
 ; FAST-NEXT:    .reg .b64 %rd<6>;
 ; FAST-EMPTY:
 ; FAST-NEXT:  // %bb.0:
-; FAST-NEXT:    ld.param.b64 %rd1, [t1_param_0];
-; FAST-NEXT:    ld.param.b64 %rd2, [t1_param_1];
+; FAST-NEXT:    ld.param::func.b64 %rd1, [t1_param_0];
+; FAST-NEXT:    ld.param::func.b64 %rd2, [t1_param_1];
 ; FAST-NEXT:    add.f32x2 %rd3, %rd1, %rd2;
 ; FAST-NEXT:    sub.f32x2 %rd4, %rd1, %rd2;
 ; FAST-NEXT:    mul.f32x2 %rd5, %rd3, %rd4;
-; FAST-NEXT:    st.param.b64 [func_retval0], %rd5;
+; FAST-NEXT:    st.param::func.b64 [func_retval0], %rd5;
 ; FAST-NEXT:    ret;
 ;
 ; DEFAULT-LABEL: t1(
@@ -59,12 +59,12 @@ define <2 x float> @t1(<2 x float> %a, <2 x float> %b) {
 ; DEFAULT-NEXT:    .reg .b64 %rd<6>;
 ; DEFAULT-EMPTY:
 ; DEFAULT-NEXT:  // %bb.0:
-; DEFAULT-NEXT:    ld.param.b64 %rd1, [t1_param_0];
-; DEFAULT-NEXT:    ld.param.b64 %rd2, [t1_param_1];
+; DEFAULT-NEXT:    ld.param::func.b64 %rd1, [t1_param_0];
+; DEFAULT-NEXT:    ld.param::func.b64 %rd2, [t1_param_1];
 ; DEFAULT-NEXT:    add.rn.f32x2 %rd3, %rd1, %rd2;
 ; DEFAULT-NEXT:    sub.rn.f32x2 %rd4, %rd1, %rd2;
 ; DEFAULT-NEXT:    mul.rn.f32x2 %rd5, %rd3, %rd4;
-; DEFAULT-NEXT:    st.param.b64 [func_retval0], %rd5;
+; DEFAULT-NEXT:    st.param::func.b64 [func_retval0], %rd5;
 ; DEFAULT-NEXT:    ret;
   %v1 = fadd <2 x float> %a, %b
   %v2 = fsub <2 x float> %a, %b
@@ -80,12 +80,12 @@ define <2 x float> @t2(<2 x float> %a, <2 x float> %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [t2_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [t2_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [t2_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [t2_param_1];
 ; CHECK-NEXT:    add.f32x2 %rd3, %rd1, %rd2;
 ; CHECK-NEXT:    sub.f32x2 %rd4, %rd1, %rd2;
 ; CHECK-NEXT:    mul.f32x2 %rd5, %rd3, %rd4;
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd5;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd5;
 ; CHECK-NEXT:    ret;
   %v1 = fadd contract <2 x float> %a, %b
   %v2 = fsub contract <2 x float> %a, %b
@@ -100,11 +100,11 @@ define <2 x float> @t3(<2 x float> %a, <2 x float> %b, <2 x float> %c) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [t3_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [t3_param_1];
-; CHECK-NEXT:    ld.param.b64 %rd3, [t3_param_2];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [t3_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [t3_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [t3_param_2];
 ; CHECK-NEXT:    fma.rn.f32x2 %rd4, %rd1, %rd2, %rd3;
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd4;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd4;
 ; CHECK-NEXT:    ret;
   %v0 = fmul contract <2 x float> %a, %b
   %v1 = fadd contract <2 x float> %v0, %c
@@ -119,10 +119,10 @@ define float @dot_reduce_contract(<8 x float> %a, <8 x float> %b) {
 ; CHECK-NEXT:    .reg .b32 %r<25>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [dot_reduce_contract_param_0+16];
-; CHECK-NEXT:    ld.param.v4.b32 {%r5, %r6, %r7, %r8}, [dot_reduce_contract_param_0];
-; CHECK-NEXT:    ld.param.v4.b32 {%r9, %r10, %r11, %r12}, [dot_reduce_contract_param_1+16];
-; CHECK-NEXT:    ld.param.v4.b32 {%r13, %r14, %r15, %r16}, [dot_reduce_contract_param_1];
+; CHECK-NEXT:    ld.param::func.v4.b32 {%r1, %r2, %r3, %r4}, [dot_reduce_contract_param_0+16];
+; CHECK-NEXT:    ld.param::func.v4.b32 {%r5, %r6, %r7, %r8}, [dot_reduce_contract_param_0];
+; CHECK-NEXT:    ld.param::func.v4.b32 {%r9, %r10, %r11, %r12}, [dot_reduce_contract_param_1+16];
+; CHECK-NEXT:    ld.param::func.v4.b32 {%r13, %r14, %r15, %r16}, [dot_reduce_contract_param_1];
 ; CHECK-NEXT:    fma.rn.f32 %r17, %r5, %r13, 0f00000000;
 ; CHECK-NEXT:    fma.rn.f32 %r18, %r6, %r14, %r17;
 ; CHECK-NEXT:    fma.rn.f32 %r19, %r7, %r15, %r18;
@@ -131,7 +131,7 @@ define float @dot_reduce_contract(<8 x float> %a, <8 x float> %b) {
 ; CHECK-NEXT:    fma.rn.f32 %r22, %r2, %r10, %r21;
 ; CHECK-NEXT:    fma.rn.f32 %r23, %r3, %r11, %r22;
 ; CHECK-NEXT:    fma.rn.f32 %r24, %r4, %r12, %r23;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r24;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r24;
 ; CHECK-NEXT:    ret;
   %mul = fmul contract <8 x float> %a, %b
   %red = call contract float @llvm.vector.reduce.fadd.v8f32(float 0.0, <8 x float> %mul)

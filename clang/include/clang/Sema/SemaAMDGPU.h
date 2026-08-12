@@ -89,6 +89,13 @@ public:
   void AddPotentiallyUnguardedBuiltinUser(FunctionDecl *FD);
   bool HasPotentiallyUnguardedBuiltinUsage(FunctionDecl *FD) const;
   void DiagnoseUnguardedBuiltinUsage(FunctionDecl *FD);
+
+  /// Check if \p Ty is supported on this AMDGPU target.
+  /// \returns false if \p Ty is unsupported and a diagnostic was emitted.
+  bool checkAMDGPUTypeSupport(QualType Ty, SourceLocation Loc);
+
+  /// Called in `ActOnFields` - whenever a C/C++ Record is being finalized.
+  void checkNamedBarrierWrapper(RecordDecl *R);
 };
 } // namespace clang
 

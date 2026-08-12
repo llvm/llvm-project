@@ -77,7 +77,7 @@ static_library("LLVMWebAssemblyCodeGen") {
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/TargetParser",
-     "//llvm/lib/Transforms/ObjCARC",
+    "//llvm/lib/Transforms/ObjCARC",
   ]
   include_dirs = [ "." ]
   sources = [

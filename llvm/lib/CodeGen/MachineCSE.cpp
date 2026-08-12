@@ -144,12 +144,8 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
-    AU.addPreservedID(MachineLoopInfoID);
     AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addPreserved<MachineDominatorTreeWrapperPass>();
     AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
-    AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
-    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
   }
 
   MachineFunctionProperties getRequiredProperties() const override {
@@ -961,9 +957,6 @@ PreservedAnalyses MachineCSEPass::run(MachineFunction &MF,
     return PreservedAnalyses::all();
 
   auto PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserve<MachineLoopAnalysis>();
-  PA.preserve<MachineDominatorTreeAnalysis>();
-  PA.preserve<MachineBlockFrequencyAnalysis>();
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }

@@ -4,12 +4,14 @@ stack, variables, threads has changes but the client does not
 know about it.
 """
 
+from lldbsuite.test.decorators import skipIfWasm
 from lldbsuite.test.lldbtest import line_number
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
 
 
 class TestDAP_invalidatedEvent(DAPTestCaseBase):
+    @skipIfWasm  # No ABI plugin for Wasm to set a return value with
     def test_invalidated_stack_area_event(self):
         """
         Test an invalidated event for the stack area.

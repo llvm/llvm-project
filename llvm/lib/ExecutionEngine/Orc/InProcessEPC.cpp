@@ -134,17 +134,6 @@ Expected<int32_t> InProcessEPC::runAsMain(ExecutorAddr MainFnAddr,
   return orc::runAsMain(MainFnAddr.toPtr<MainTy>(), Args);
 }
 
-Expected<int32_t> InProcessEPC::runAsVoidFunction(ExecutorAddr VoidFnAddr) {
-  using VoidTy = int (*)();
-  return orc::runAsVoidFunction(VoidFnAddr.toPtr<VoidTy>());
-}
-
-Expected<int32_t> InProcessEPC::runAsIntFunction(ExecutorAddr IntFnAddr,
-                                                 int Arg) {
-  using IntTy = int (*)(int);
-  return orc::runAsIntFunction(IntFnAddr.toPtr<IntTy>(), Arg);
-}
-
 void InProcessEPC::callWrapperAsync(ExecutorAddr WrapperFnAddr,
                                     IncomingWFRHandler OnComplete,
                                     ArrayRef<char> ArgBuffer) {
@@ -181,23 +170,7 @@ Expected<std::unique_ptr<DylibManager>> InProcessEPC::createDefaultDylibMgr() {
 Expected<std::unique_ptr<MemoryAccess>>
 InProcessEPC::createDefaultMemoryAccess() {
   // FIXME: Should actually use in-process for this.
-  EPCGenericMemoryAccess::FuncAddrs FAs;
-  if (auto Err = getBootstrapSymbols(
-          {{FAs.WriteUInt8s, rt::MemoryWriteUInt8sWrapperName},
-           {FAs.WriteUInt16s, rt::MemoryWriteUInt16sWrapperName},
-           {FAs.WriteUInt32s, rt::MemoryWriteUInt32sWrapperName},
-           {FAs.WriteUInt64s, rt::MemoryWriteUInt64sWrapperName},
-           {FAs.WriteBuffers, rt::MemoryWriteBuffersWrapperName},
-           {FAs.WritePointers, rt::MemoryWritePointersWrapperName},
-           {FAs.ReadUInt8s, rt::MemoryReadUInt8sWrapperName},
-           {FAs.ReadUInt16s, rt::MemoryReadUInt16sWrapperName},
-           {FAs.ReadUInt32s, rt::MemoryReadUInt32sWrapperName},
-           {FAs.ReadUInt64s, rt::MemoryReadUInt64sWrapperName},
-           {FAs.ReadBuffers, rt::MemoryReadBuffersWrapperName},
-           {FAs.ReadStrings, rt::MemoryReadStringsWrapperName}}))
-    return std::move(Err);
-
-  return std::make_unique<EPCGenericMemoryAccess>(*this, FAs);
+  return EPCGenericMemoryAccess::Create(getExecutionSession());
 }
 
 Error InProcessEPC::disconnect() {

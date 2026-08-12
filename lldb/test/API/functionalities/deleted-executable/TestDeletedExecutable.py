@@ -10,11 +10,11 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipIfWasm  # attaching requires launching the inferior as a host process
+@requireNotWasm  # attaching requires launching the inferior as a host process
 class TestDeletedExecutable(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipIfWindows  # cannot delete a running executable
+    @requireNotWindows  # cannot delete a running executable
     def test(self):
         self.build()
         exe = self.getBuildArtifact("a.out")

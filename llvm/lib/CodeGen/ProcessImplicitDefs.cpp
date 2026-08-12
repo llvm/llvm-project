@@ -67,7 +67,6 @@ INITIALIZE_PASS(ProcessImplicitDefsLegacy, DEBUG_TYPE,
 void ProcessImplicitDefsLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   AU.addPreserved<AAResultsWrapperPass>();
-  AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 

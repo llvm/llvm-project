@@ -15,6 +15,10 @@
 
 ; RUN: not llc -global-isel=0 -mtriple=amdgpu10.12 < %s 2>&1 | FileCheck -check-prefix=ERR %s
 ; RUN: not llc -global-isel=1 -mtriple=amdgpu10.12 < %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not llc -global-isel=0 -mtriple=amdgpu12.50 < %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not llc -global-isel=1 -mtriple=amdgpu12.50 < %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not llc -global-isel=0 -mtriple=amdgpu13.10 < %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not llc -global-isel=1 -mtriple=amdgpu13.10 < %s 2>&1 | FileCheck -check-prefix=ERR %s
 
 ; uint4 llvm.amdgcn.image.bvh.intersect.ray.i32.v4f32(uint node_ptr, float ray_extent, float3 ray_origin, float3 ray_dir, float3 ray_inv_dir, uint4 texture_descr)
 ; uint4 llvm.amdgcn.image.bvh.intersect.ray.i32.v4f16(uint node_ptr, float ray_extent, float3 ray_origin, half3 ray_dir, half3 ray_inv_dir, uint4 texture_descr)

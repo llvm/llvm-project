@@ -140,23 +140,6 @@ bool RuntimeLibcallsInfo::isAAPCS_ABI(const Triple &TT, StringRef ABIName) {
   return TargetABI == ARM::ARM_ABI_AAPCS || TargetABI == ARM::ARM_ABI_AAPCS16;
 }
 
-bool RuntimeLibcallsInfo::darwinHasExp10(const Triple &TT) {
-  switch (TT.getOS()) {
-  case Triple::MacOSX:
-    return !TT.isMacOSXVersionLT(10, 9);
-  case Triple::IOS:
-    return !TT.isOSVersionLT(7, 0);
-  case Triple::DriverKit:
-  case Triple::TvOS:
-  case Triple::WatchOS:
-  case Triple::XROS:
-  case Triple::BridgeOS:
-    return true;
-  default:
-    return false;
-  }
-}
-
 /// TODO: There is really no guarantee that sizeof(size_t) is equal to the index
 /// size of the default address space. This matches TargetLibraryInfo and should
 /// be kept in sync.

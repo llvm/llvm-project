@@ -91,8 +91,8 @@ AST_MATCHER(CXXMethodDecl, hasNonConstOverload) {
   if (LookupResult.isSingleResult())
     return false;
 
-  auto HasSameParameterTypes = [](const CXXMethodDecl &MD1,
-                                  const CXXMethodDecl &MD2) {
+  const auto HasSameParameterTypes = [](const CXXMethodDecl &MD1,
+                                        const CXXMethodDecl &MD2) {
     if (MD1.getNumParams() != MD2.getNumParams())
       return false;
     for (unsigned I = 0, E = MD1.getNumParams(); I < E; ++I)

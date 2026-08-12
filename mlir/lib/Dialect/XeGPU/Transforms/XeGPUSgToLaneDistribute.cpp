@@ -1673,7 +1673,7 @@ struct SgToLaneConvertLayout
   LogicalResult
   matchAndRewrite(xegpu::ConvertLayoutOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto inputLayout = op.getInputLayoutAttr();
+    auto inputLayout = op.getEffectiveInputLayout();
     auto targetLayout = op.getTargetLayoutAttr();
     Type valType = op.getResult().getType();
 

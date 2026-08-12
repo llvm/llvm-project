@@ -17,8 +17,8 @@ typedef union vec3 {
 
 // In C mode, this does do zero padding.
 vec3 ret_vec3() {
-  // CIR-LABEL: ret_vec3
-  // CIR: %[[RET_ALLOCA:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_vec3>
+  // CIR-LABEL: cir.func {{.*}} @ret_vec3
+  // CIR-SAME: (%[[RET_ALLOCA:.*]]: !cir.ptr<!rec_vec3> {{.*}}llvm.sret = !rec_vec3{{.*}})
   // CIR: %[[GET_ANON:.*]] = cir.get_member %[[RET_ALLOCA]][0] {name = ""}
   // CIR: %[[GET_X:.*]] = cir.get_member %[[GET_ANON]][0] {name = "x"}
   // CIR: %[[FIVE:.*]] = cir.const #cir.fp<5.{{.*}}> : !cir.double
@@ -30,9 +30,8 @@ vec3 ret_vec3() {
   // CIR: %[[ZERO:.*]] = cir.const #cir.fp<0.{{.*}}> : !cir.double
   // CIR: cir.store{{.*}} %[[ZERO]], %[[GET_Z]]
 
-  // LLVM-LABEL: ret_vec3
-  // OGCG-SAME: ptr{{.*}}sret(%union.vec3){{.*}}%[[RET_ALLOCA:.*]])
-  // LLVMCIR: %[[RET_ALLOCA:.*]] = alloca %union.vec3
+  // LLVM-LABEL: define dso_local void @ret_vec3
+  // LLVM-SAME: (ptr dead_on_unwind noalias writable sret(%union.vec3) align 8 %[[RET_ALLOCA:.*]])
   // LLVM: %[[GET_X:.*]] = getelementptr {{.*}}, ptr %[[RET_ALLOCA]], i32 0, i32 0
   // LLVM: store double 5{{.*}}, ptr %[[GET_X]]
   // LLVM: %[[GET_Y:.*]] = getelementptr {{.*}}, ptr %[[RET_ALLOCA]], i32 0, i32 1
@@ -60,7 +59,11 @@ struct outer ret_outer() {
   // CIR: %[[GET_GLOB:.*]] = cir.get_global @__const.ret_outer.__retval : !cir.ptr<!rec_outer>
   // CIR: cir.copy %[[GET_GLOB]] to %[[RET_ALLOCA]] : !cir.ptr<!rec_outer>
 
-  // LLVM-LABEL: ret_outer
-  // LLVM: %[[RET_ALLOCA:.*]] = alloca %struct.outer
-  // LLVM: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}%[[RET_ALLOCA]], ptr {{.*}}@__const.ret_outer.{{.*}}, i64 16, i1 false)
+  // LLVM-LABEL: define dso_local { i64, i32 } @ret_outer()
+  // LLVM: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}%[[RET_ALLOCA:.*]], ptr {{.*}}@__const.ret_outer.{{.*}}, i64 16, i1 false)
+  // LLVMCIR: %[[OUTER:.*]] = load %struct.outer, ptr %[[RET_ALLOCA]]
+  // LLVMCIR: store %struct.outer %[[OUTER]], ptr %[[COERCE:.*]], align 8
+  // LLVMCIR: %[[RET:.*]] = load { i64, i32 }, ptr %[[COERCE]]
+  // OGCG: %[[RET:.*]] = load { i64, i32 }, ptr %[[RET_ALLOCA]]
+  // LLVM: ret { i64, i32 } %[[RET]]
 }

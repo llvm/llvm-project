@@ -182,7 +182,6 @@ void SPIRVCombinerHelper::applySPIRVFaceForward(MachineInstr &MI) const {
   if (TrueInstr->getOpcode() == TargetOpcode::G_FNEG ||
       TrueInstr->getOpcode() == TargetOpcode::G_FMUL)
     std::swap(TrueReg, FalseReg);
-  MachineInstr *FalseInstr = MRI.getVRegDef(FalseReg);
 
   Register ResultReg = MI.getOperand(0).getReg();
   Builder.setInstrAndDebugLoc(MI);
@@ -191,27 +190,7 @@ void SPIRVCombinerHelper::applySPIRVFaceForward(MachineInstr &MI) const {
       .addUse(DotOperand1)  // I
       .addUse(DotOperand2); // Ng
 
-  SPIRVGlobalRegistry *GR =
-      MI.getMF()->getSubtarget<SPIRVSubtarget>().getSPIRVGlobalRegistry();
-  auto RemoveAllUses = [&](Register Reg) {
-    SmallVector<MachineInstr *, 4> UsesToErase;
-    for (auto &UseMI : MRI.use_instructions(Reg))
-      UsesToErase.push_back(&UseMI);
-
-    // calling eraseFromParent to early invalidates the iterator.
-    for (auto *MIToErase : UsesToErase)
-      MIToErase->eraseFromParent();
-  };
-
-  RemoveAllUses(CondReg); // remove all uses of FCMP Result
-  GR->invalidateMachineInstr(CondInstr);
-  CondInstr->eraseFromParent(); // remove FCMP instruction
-  RemoveAllUses(DotReg);        // remove all uses of spv_fdot/G_FMUL Result
-  GR->invalidateMachineInstr(DotInstr);
-  DotInstr->eraseFromParent(); // remove spv_fdot/G_FMUL instruction
-  RemoveAllUses(FalseReg);
-  GR->invalidateMachineInstr(FalseInstr);
-  FalseInstr->eraseFromParent();
+  MI.eraseFromParent();
 }
 
 bool SPIRVCombinerHelper::matchMatrixTranspose(MachineInstr &MI) const {

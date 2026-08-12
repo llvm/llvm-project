@@ -1850,16 +1850,15 @@ val fold_successors : (llbasicblock -> 'a -> 'a) -> llvalue -> 'a -> 'a
 
 (** {7 Operations on branches} *)
 
-(** [is_conditional v] returns true if the branch instruction [v] is conditional.
-    See the method [llvm::BranchInst::isConditional]. *)
+(** [is_conditional v] returns true if the branch instruction [v] is conditional. *)
 val is_conditional : llvalue -> bool
 
 (** [condition v] return the condition of the branch instruction [v].
-    See the method [llvm::BranchInst::getCondition]. *)
+    See the method [llvm::CondBrInst::getCondition]. *)
 val condition : llvalue -> llvalue
 
 (** [set_condition v c] sets the condition of the branch instruction [v] to the value [c].
-    See the method [llvm::BranchInst::setCondition]. *)
+    See the method [llvm::CondBrInst::setCondition]. *)
 val set_condition : llvalue -> llvalue -> unit
 
 (** [get_branch c] returns a description of the branch instruction [c]. *)

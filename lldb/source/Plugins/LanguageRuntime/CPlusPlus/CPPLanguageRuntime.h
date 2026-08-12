@@ -13,7 +13,7 @@
 
 #include "llvm/ADT/StringMap.h"
 
-#include "ItaniumABIRuntime.h"
+#include "CommonABIRuntime.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/lldb-private.h"
@@ -143,7 +143,18 @@ private:
   OperatorStringToCallableInfoMap CallableLookupCache;
 
   lldb::BreakpointSP m_cxx_exception_bp_sp;
-  ItaniumABIRuntime m_itanium_runtime;
+  std::vector<std::unique_ptr<CommonABIRuntime>> m_abi_runtimes;
+
+  struct VTableInfoEntry {
+    VTableInfo info;
+    CommonABIRuntime *runtime;
+  };
+
+  llvm::Expected<VTableInfoEntry> GetVTableInfoEntry(ValueObject &in_value,
+                                                     bool check_type);
+
+  std::map<Address, VTableInfoEntry> m_vtable_info_map;
+  std::mutex m_vtable_mutex;
 };
 
 } // namespace lldb_private

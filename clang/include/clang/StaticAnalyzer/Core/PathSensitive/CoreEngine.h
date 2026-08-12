@@ -54,7 +54,7 @@ class CoreEngine {
 
 public:
   using BlocksExhausted =
-      std::vector<std::pair<BlockEdge, const ExplodedNode *>>;
+      std::vector<std::pair<BlockEntrance, const ExplodedNode *>>;
 
   using BlocksAborted =
       std::vector<std::pair<const CFGBlock *, const ExplodedNode *>>;
@@ -266,8 +266,6 @@ class NodeBuilder {
 protected:
   const NodeBuilderContext &C;
 
-  bool HasGeneratedNodes = false;
-
   /// The frontier set - a set of nodes which need to be propagated after
   /// the builder dies.
   ExplodedNodeSet &Frontier;
@@ -324,8 +322,6 @@ public:
   }
 
   const ExplodedNodeSet &getResults() const { return Frontier; }
-
-  bool hasGeneratedNodes() const { return HasGeneratedNodes; }
 
   void takeNodes(const ExplodedNodeSet &S) {
     for (const auto I : S)

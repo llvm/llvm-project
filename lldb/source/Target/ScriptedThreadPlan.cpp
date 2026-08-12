@@ -20,6 +20,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -89,6 +90,10 @@ void ScriptedThreadPlan::DidPush() {
                                                       this->shared_from_this());
     if (!obj_or_err) {
       m_error_str = llvm::toString(obj_or_err.takeError());
+      Debugger::ReportError(
+          llvm::formatv("failed to create ScriptedThreadPlan: {0}", m_error_str)
+              .str(),
+          m_process.GetTarget().GetDebugger().GetID());
       SetPlanComplete(false);
     } else
       m_implementation_sp = *obj_or_err;
@@ -104,7 +109,7 @@ bool ScriptedThreadPlan::ShouldStop(Event *event_ptr) {
     auto should_stop_or_err = m_interface->ShouldStop(event_ptr);
     if (!should_stop_or_err) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Thread), should_stop_or_err.takeError(),
-                     "Can't call ScriptedThreadPlan::ShouldStop.");
+                     "Can't call ScriptedThreadPlan::ShouldStop: {0}");
       SetPlanComplete(false);
     } else
       should_stop = *should_stop_or_err;
@@ -121,7 +126,7 @@ bool ScriptedThreadPlan::IsPlanStale() {
     auto is_stale_or_err = m_interface->IsStale();
     if (!is_stale_or_err) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Thread), is_stale_or_err.takeError(),
-                     "Can't call ScriptedThreadPlan::IsStale.");
+                     "Can't call ScriptedThreadPlan::IsStale: {0}");
       SetPlanComplete(false);
     } else
       is_stale = *is_stale_or_err;
@@ -139,7 +144,7 @@ bool ScriptedThreadPlan::DoPlanExplainsStop(Event *event_ptr) {
     if (!explains_stop_or_error) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Thread),
                      explains_stop_or_error.takeError(),
-                     "Can't call ScriptedThreadPlan::ExplainsStop.");
+                     "Can't call ScriptedThreadPlan::ExplainsStop: {0}");
       SetPlanComplete(false);
     } else
       explains_stop = *explains_stop_or_error;

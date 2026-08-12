@@ -18,8 +18,8 @@ void non_atomic_to_atomic_cast() {
 // CIR: %[[SA_ADDR:.*]] = cir.alloca "as" {{.*}} init : !cir.ptr<!rec_S>
 // CIR: cir.copy %[[S_ADDR]] align(4) to %[[SA_ADDR]] align(4) : !cir.ptr<!rec_S>
 
-// LLVM:  %[[S_ADDR:.*]] = alloca %struct.S, i64 1, align 4
-// LLVM: %[[SA_ADDR:.*]] = alloca %struct.S, i64 1, align 4
+// LLVM:  %[[S_ADDR:.*]] = alloca %struct.S, align 4
+// LLVM: %[[SA_ADDR:.*]] = alloca %struct.S, align 4
 // LLVM: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[SA_ADDR]], ptr align 4 %[[S_ADDR]], i64 4, i1 false)
 
 // OGCG: %[[S_ADDR:.*]] = alloca %struct.S, align 4
@@ -39,8 +39,8 @@ void atomic_to_non_atomic_cast() {
 // CIR: %[[S_PTR:.*]] = cir.cast bitcast %[[S_ADDR]] : !cir.ptr<!rec_S> -> !cir.ptr<!u32i>
 // CIR: cir.store {{.*}} %[[ATOMIC_LOAD]], %[[S_PTR]] : !u32i, !cir.ptr<!u32i>
 
-// LLVM: %[[AS_ADDR:.*]] = alloca %struct.S, i64 1, align 4
-// LLVM: %[[S_ADDR:.*]] = alloca %struct.S, i64 1, align 4
+// LLVM: %[[AS_ADDR:.*]] = alloca %struct.S, align 4
+// LLVM: %[[S_ADDR:.*]] = alloca %struct.S, align 4
 // LLVM: %[[ATOMIC_LOAD:.*]] = load atomic i32, ptr %[[AS_ADDR]] seq_cst, align 4
 // LLVM: store i32 %[[ATOMIC_LOAD]], ptr %[[S_ADDR]], align 4
 

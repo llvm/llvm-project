@@ -44,7 +44,8 @@ private:
 };
 
 inline orc_rt::ExecutorProcessInfo mockExecutorProcessInfo() noexcept {
-  return orc_rt::ExecutorProcessInfo("arm64-apple-darwin", 16384);
+  return orc_rt::ExecutorProcessInfo("arm64-apple-darwin", 16384,
+                                     "+neon, +fullfp16");
 }
 
 /// DispatchFn for tests that should never dispatch a task. Records a test

@@ -22,7 +22,7 @@ namespace llvm {
 
 class Function;
 
-class LogicalSROAPass : public PassInfoMixin<LogicalSROAPass> {
+class LogicalSROAPass : public OptionalPassInfoMixin<LogicalSROAPass> {
 public:
   LogicalSROAPass();
 

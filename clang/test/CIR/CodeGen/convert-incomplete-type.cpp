@@ -21,14 +21,13 @@ void use() {
 // CIR: cir.func {{.*}} @_Z3usev()
 // CIR:   %[[FP:.*]] = cir.get_global @fp
 // CIR:   %[[LOAD:.*]] = cir.load {{.*}} %[[FP]]
-// CIR:   cir.call %[[LOAD]]() : (!cir.ptr<!cir.func<() -> !rec_Delayed>>) -> !rec_Delayed
-
-// The difference between LLVM and OGCG is due to missing ABI lowering.
+// CIR:   %[[FN:.*]] = cir.cast bitcast %[[LOAD]] : !cir.ptr<!cir.func<() -> !rec_Delayed>> -> !cir.ptr<!cir.func<() -> !s32i>>
+// CIR:   cir.call %[[FN]]() : (!cir.ptr<!cir.func<() -> !s32i>>) -> !s32i
 
 // LLVM: @fp = global ptr null
 // LLVM: define {{.*}} void @_Z3usev()
 // LLVM:   %[[FP:.*]] = load ptr, ptr @fp
-// LLVM:   %[[CALL:.*]] = call %struct.Delayed %[[FP]]()
+// LLVM:   %[[CALL:.*]] = call i32 %[[FP]]()
 
 // OGCG: @fp = global ptr null
 // OGCG: define {{.*}} void @_Z3usev()

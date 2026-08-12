@@ -34,6 +34,7 @@
 #include <cstdint>
 #include <iterator>
 #include <optional>
+#include <type_traits>
 #include <vector>
 
 // Helper macros for defining get() overrides.
@@ -3534,15 +3535,29 @@ public:
     ExprOperand() = default;
     explicit ExprOperand(const uint64_t *Op) : Op(Op) {}
 
+    explicit operator bool() const { return Op != nullptr; }
+
     const uint64_t *get() const { return Op; }
 
     /// Get the operand code.
-    uint64_t getOp() const { return *Op; }
+    ///
+    /// The operand has to be present.
+    uint64_t getOp() const {
+      assert(Op && "operand is not present");
+      return *Op;
+    }
+
+    /// Return true if this is \p Opcode.
+    bool is(uint64_t Opcode) const { return getOp() == Opcode; }
 
     /// Get an argument to the operand.
     ///
-    /// Never returns the operand itself.
-    uint64_t getArg(unsigned I) const { return Op[I + 1]; }
+    /// Never returns the operand itself. The operand has to be present and \p I
+    /// has to be less than getNumArgs().
+    uint64_t getArg(unsigned I) const {
+      assert(Op && "operand is not present");
+      return Op[I + 1];
+    }
 
     unsigned getNumArgs() const { return getSize() - 1; }
 
@@ -3551,10 +3566,154 @@ public:
     /// Return the number of elements in the operand (1 + args).
     LLVM_ABI unsigned getSize() const;
 
+    /// Return true if CodeGen handles this operand without adding bytes to the
+    /// DWARF expression.
+    LLVM_ABI bool isNonEmitting() const;
+
     /// Append the elements of this operand to \p V.
     void appendToVector(SmallVectorImpl<uint64_t> &V) const {
       V.append(get(), get() + getSize());
     }
+  };
+
+  // Typed views name an ExprOperand's arguments. Use cast<FragmentOp>(Op) for a
+  // known opcode and dyn_cast<ArgOp>(Op) for a conditional match. A failed
+  // dyn_cast returns an empty view, which tests false and holds no operand to
+  // read, so check it before calling an accessor. Keep using ExprOperand for
+  // operations without a typed view.
+  //
+  // A view takes an operand rather than an optional one. A cursor hands back
+  // std::optional<ExprOperand>, so check it and then dereference it.
+  // dyn_cast_if_present does not compile on std::optional<ExprOperand>, because
+  // an operand is constructible from a null pointer, which leaves
+  // ValueIsPresent ambiguous between its optional and its nullable
+  // specialization.
+
+  /// A view of a DW_OP_LLVM_arg operation.
+  class ArgOp : public ExprOperand {
+    template <typename To, typename From, typename Enable>
+    friend struct llvm::CastInfo;
+
+    explicit ArgOp(ExprOperand Op) : ExprOperand(Op) {}
+
+  public:
+    /// Return the location operand index.
+    uint64_t getIndex() const { return getArg(0); }
+
+    LLVM_ABI static bool classof(const ExprOperand *Op);
+  };
+
+  /// A view of a DW_OP_LLVM_fragment operation.
+  class FragmentOp : public ExprOperand {
+    template <typename To, typename From, typename Enable>
+    friend struct llvm::CastInfo;
+
+    explicit FragmentOp(ExprOperand Op) : ExprOperand(Op) {}
+
+  public:
+    /// Return the fragment offset in bits.
+    uint64_t getOffsetInBits() const { return getArg(0); }
+
+    /// Return the fragment size in bits.
+    uint64_t getSizeInBits() const { return getArg(1); }
+
+    LLVM_ABI static bool classof(const ExprOperand *Op);
+  };
+
+  /// A view of the DW_OP_LLVM_extract_bits_[sz]ext operations.
+  class ExtractBitsOp : public ExprOperand {
+    template <typename To, typename From, typename Enable>
+    friend struct llvm::CastInfo;
+
+    explicit ExtractBitsOp(ExprOperand Op) : ExprOperand(Op) {}
+
+  public:
+    /// Return the extract offset in bits.
+    uint64_t getOffsetInBits() const { return getArg(0); }
+
+    /// Return the extract size in bits.
+    uint64_t getSizeInBits() const { return getArg(1); }
+
+    /// Return whether the extracted value is sign-extended.
+    LLVM_ABI bool isSigned() const;
+
+    LLVM_ABI static bool classof(const ExprOperand *Op);
+  };
+
+  /// A view of a DW_OP_LLVM_convert operation.
+  class ConvertOp : public ExprOperand {
+    template <typename To, typename From, typename Enable>
+    friend struct llvm::CastInfo;
+
+    explicit ConvertOp(ExprOperand Op) : ExprOperand(Op) {}
+
+  public:
+    /// Return the destination size in bits.
+    uint64_t getBitSize() const { return getArg(0); }
+
+    /// Return the raw destination type encoding.
+    uint64_t getEncoding() const { return getArg(1); }
+
+    LLVM_ABI static bool classof(const ExprOperand *Op);
+  };
+
+  /// A view of a DW_OP_LLVM_entry_value operation.
+  class EntryValueOp : public ExprOperand {
+    template <typename To, typename From, typename Enable>
+    friend struct llvm::CastInfo;
+
+    explicit EntryValueOp(ExprOperand Op) : ExprOperand(Op) {}
+
+  public:
+    /// Return the number of operations the entry value covers. The count
+    /// includes the operation that precedes it, so the operations that follow
+    /// are one fewer than this.
+    uint64_t getNumOperations() const { return getArg(0); }
+
+    LLVM_ABI static bool classof(const ExprOperand *Op);
+  };
+
+  /// A view of a DW_OP_LLVM_tag_offset operation.
+  class TagOffsetOp : public ExprOperand {
+    template <typename To, typename From, typename Enable>
+    friend struct llvm::CastInfo;
+
+    explicit TagOffsetOp(ExprOperand Op) : ExprOperand(Op) {}
+
+  public:
+    /// Return the offset a memory tag is derived from. How a target derives
+    /// the tag from it is implementation defined.
+    uint64_t getTagOffset() const { return getArg(0); }
+
+    LLVM_ABI static bool classof(const ExprOperand *Op);
+  };
+
+  /// A view of a DW_OP_constu operation.
+  class ConstuOp : public ExprOperand {
+    template <typename To, typename From, typename Enable>
+    friend struct llvm::CastInfo;
+
+    explicit ConstuOp(ExprOperand Op) : ExprOperand(Op) {}
+
+  public:
+    /// Return the unsigned constant value.
+    uint64_t getValue() const { return getArg(0); }
+
+    LLVM_ABI static bool classof(const ExprOperand *Op);
+  };
+
+  /// A view of a DW_OP_plus_uconst operation.
+  class PlusUconstOp : public ExprOperand {
+    template <typename To, typename From, typename Enable>
+    friend struct llvm::CastInfo;
+
+    explicit PlusUconstOp(ExprOperand Op) : ExprOperand(Op) {}
+
+  public:
+    /// Return the unsigned offset.
+    uint64_t getOffset() const { return getArg(0); }
+
+    LLVM_ABI static bool classof(const ExprOperand *Op);
   };
 
   /// An iterator for expression operands.
@@ -3924,6 +4083,31 @@ public:
   /// evaluated at compile time. Returns a new expression on success, or the old
   /// expression if there is nothing to be reduced.
   LLVM_ABI DIExpression *foldConstantMath();
+};
+
+template <typename To, typename From>
+struct CastInfo<
+    To, From,
+    std::enable_if_t<
+        std::is_same_v<std::remove_const_t<From>, DIExpression::ExprOperand> &&
+        !std::is_same_v<std::remove_const_t<To>, DIExpression::ExprOperand>>>
+    : CastIsPossible<To, From>,
+      DefaultDoCastIfPossible<To, From, CastInfo<To, From>> {
+  static To doCast(const From &Op) { return To(Op); }
+  static To castFailed() { return To(DIExpression::ExprOperand()); }
+};
+
+/// Treat a default-constructed expression operand as absent.
+template <> struct ValueIsPresent<DIExpression::ExprOperand> {
+  using UnwrappedType = DIExpression::ExprOperand;
+
+  static bool isPresent(const DIExpression::ExprOperand &Op) {
+    return bool(Op);
+  }
+
+  static DIExpression::ExprOperand &unwrapValue(DIExpression::ExprOperand &Op) {
+    return Op;
+  }
 };
 
 inline bool operator==(const DIExpression::FragmentInfo &A,

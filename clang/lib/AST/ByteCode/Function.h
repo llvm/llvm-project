@@ -178,7 +178,7 @@ public:
   SourceInfo getSource(CodePtr PC) const;
 
   /// Checks if the function is valid to call.
-  bool isValid() const { return IsValid || isLambdaStaticInvoker(); }
+  bool isValid() const { return IsValid; }
 
   /// Checks if the function is virtual.
   bool isVirtual() const { return Virtual; };

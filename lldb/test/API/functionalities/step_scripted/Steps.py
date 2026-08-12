@@ -37,6 +37,11 @@ class StepOut(StepWithChild):
         return self.thread_plan.QueueThreadPlanForStepOut(0)
 
 
+class FailingConstructor:
+    def __init__(self, thread_plan, args_data):
+        raise ValueError("scripted plan construction failed")
+
+
 class StepScripted(StepWithChild):
     def __init__(self, thread_plan, dict):
         StepWithChild.__init__(self, thread_plan)

@@ -43,7 +43,7 @@ define amdgpu_ps float @_amdgpu_ps_main() #0 {
 ; GFX10-NEXT:    v_sub_f32_e32 v8, s0, v1
 ; GFX10-NEXT:    v_fma_f32 v7, -s2, v6, s6
 ; GFX10-NEXT:    v_fma_f32 v5, v6, v5, 1.0
-; GFX10-NEXT:    v_mad_f32 v10, s2, v6, v2
+; GFX10-NEXT:    v_fma_f32 v10, s2, v6, v2
 ; GFX10-NEXT:    s_mov_b32 s0, 0x3c23d70a
 ; GFX10-NEXT:    v_fmac_f32_e32 v1, v6, v8
 ; GFX10-NEXT:    v_fmac_f32_e32 v10, v7, v6
@@ -102,16 +102,16 @@ define amdgpu_ps float @_amdgpu_ps_main() #0 {
 ; GFX11-NEXT:    s_buffer_load_b128 s[16:19], s[0:3], 0x0
 ; GFX11-NEXT:    s_buffer_load_b128 s[20:23], s[0:3], 0x70
 ; GFX11-NEXT:    v_fma_f32 v1, v1, v5, s28
-; GFX11-NEXT:    v_max_f32_e64 v6, s0, s0 clamp
 ; GFX11-NEXT:    s_buffer_load_b128 s[24:27], s[0:3], 0x10
+; GFX11-NEXT:    v_max_f32_e64 v6, s0, s0 clamp
 ; GFX11-NEXT:    v_add_f32_e64 v5, s29, -1.0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX11-NEXT:    v_sub_f32_e32 v8, s0, v1
-; GFX11-NEXT:    v_fma_f32 v7, -s2, v6, s6
-; GFX11-NEXT:    v_fma_f32 v10, s2, v6, v2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_2) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_fma_f32 v5, v6, v5, 1.0
 ; GFX11-NEXT:    s_mov_b32 s0, 0x3c23d70a
+; GFX11-NEXT:    v_fma_f32 v7, -s2, v6, s6
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_fma_f32 v5, v6, v5, 1.0
+; GFX11-NEXT:    v_fma_f32 v10, s2, v6, v2
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_fmac_f32 v10, v7, v6 :: v_dual_mul_f32 v9, s10, v0
 ; GFX11-NEXT:    v_fma_f32 v0, -v0, s10, s14
@@ -143,7 +143,7 @@ define amdgpu_ps float @_amdgpu_ps_main() #0 {
 .entry:
   %0 = call <3 x float> @llvm.amdgcn.image.sample.2d.v3f32.f32(i32 7, float poison, float poison, <8 x i32> poison, <4 x i32> poison, i1 false, i32 0, i32 0)
   %.i2243 = extractelement <3 x float> %0, i32 2
-  %1 = call <3 x i32> @llvm.amdgcn.s.buffer.load.v3i32(<4 x i32> poison, i32 0, i32 0)
+  %1 = call <3 x i32> @llvm.amdgcn.ptr.s.buffer.load.v3i32(ptr addrspace(8) poison, i32 0, i32 0), !invariant.load !0
   %2 = shufflevector <3 x i32> %1, <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
   %3 = bitcast <4 x i32> %2 to <4 x float>
   %.i2248 = extractelement <4 x float> %3, i32 2
@@ -156,17 +156,17 @@ define amdgpu_ps float @_amdgpu_ps_main() #0 {
   %.i1408 = extractelement <2 x float> %7, i32 1
   %.i0364 = extractelement <2 x float> %7, i32 0
   %8 = call float @llvm.amdgcn.image.sample.2d.f32.f32(i32 1, float poison, float poison, <8 x i32> poison, <4 x i32> poison, i1 false, i32 0, i32 0)
-  %9 = call <3 x i32> @llvm.amdgcn.s.buffer.load.v3i32(<4 x i32> poison, i32 112, i32 0)
+  %9 = call <3 x i32> @llvm.amdgcn.ptr.s.buffer.load.v3i32(ptr addrspace(8) poison, i32 112, i32 0), !invariant.load !0
   %10 = shufflevector <3 x i32> %9, <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
   %11 = bitcast <4 x i32> %10 to <4 x float>
   %.i2360 = extractelement <4 x float> %11, i32 2
   %.i2363 = fmul reassoc nnan nsz arcp contract afn float %.i2360, %8
-  %12 = call <3 x i32> @llvm.amdgcn.s.buffer.load.v3i32(<4 x i32> poison, i32 96, i32 0)
+  %12 = call <3 x i32> @llvm.amdgcn.ptr.s.buffer.load.v3i32(ptr addrspace(8) poison, i32 96, i32 0), !invariant.load !0
   %13 = shufflevector <3 x i32> %12, <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
   %14 = bitcast <4 x i32> %13 to <4 x float>
   %.i2367 = extractelement <4 x float> %14, i32 2
   %.i2370 = fmul reassoc nnan nsz arcp contract afn float %.i0364, %.i2367
-  %15 = call <3 x i32> @llvm.amdgcn.s.buffer.load.v3i32(<4 x i32> poison, i32 32, i32 0)
+  %15 = call <3 x i32> @llvm.amdgcn.ptr.s.buffer.load.v3i32(ptr addrspace(8) poison, i32 32, i32 0), !invariant.load !0
   %16 = shufflevector <3 x i32> %15, <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
   %17 = bitcast <4 x i32> %16 to <4 x float>
   %.i2373 = extractelement <4 x float> %17, i32 2
@@ -179,19 +179,19 @@ define amdgpu_ps float @_amdgpu_ps_main() #0 {
   %.i2397 = fmul reassoc nnan nsz arcp contract afn float %.i2363, %18
   %.i2404 = fmul reassoc nnan nsz arcp contract afn float %.i2394, %4
   %.i2407 = fadd reassoc nnan nsz arcp contract afn float %.i2397, %.i2404
-  %20 = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> poison, i32 92, i32 0)
+  %20 = call i32 @llvm.amdgcn.ptr.s.buffer.load.i32(ptr addrspace(8) poison, i32 92, i32 0), !invariant.load !0
   %21 = bitcast i32 %20 to float
-  %22 = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> poison, i32 124, i32 0)
+  %22 = call i32 @llvm.amdgcn.ptr.s.buffer.load.i32(ptr addrspace(8) poison, i32 124, i32 0), !invariant.load !0
   %23 = bitcast i32 %22 to float
   %24 = fsub reassoc nnan nsz arcp contract afn float %21, %23
   %25 = fmul reassoc nnan nsz arcp contract afn float %.i1408, %24
   %26 = fadd reassoc nnan nsz arcp contract afn float %25, %23
-  %27 = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> poison, i32 44, i32 0)
+  %27 = call i32 @llvm.amdgcn.ptr.s.buffer.load.i32(ptr addrspace(8) poison, i32 44, i32 0), !invariant.load !0
   %28 = bitcast i32 %27 to float
   %29 = fsub reassoc nnan nsz arcp contract afn float %28, %26
   %30 = fmul reassoc nnan nsz arcp contract afn float %6, %29
   %31 = fadd reassoc nnan nsz arcp contract afn float %26, %30
-  %32 = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> poison, i32 192, i32 0)
+  %32 = call i32 @llvm.amdgcn.ptr.s.buffer.load.i32(ptr addrspace(8) poison, i32 192, i32 0), !invariant.load !0
   %33 = bitcast i32 %32 to float
   %34 = fadd reassoc nnan nsz arcp contract afn float %33, -1.000000e+00
   %35 = fmul reassoc nnan nsz arcp contract afn float %18, %34
@@ -209,12 +209,12 @@ define amdgpu_ps float @_amdgpu_ps_main() #0 {
   %.i2465 = extractelement <3 x float> %44, i32 2
   %.i2466 = fmul reassoc nnan nsz arcp contract afn float %.i2465, %43
   %.i2469 = fmul reassoc nnan nsz arcp contract afn float %.i2415, %.i2466
-  %45 = call <3 x i32> @llvm.amdgcn.s.buffer.load.v3i32(<4 x i32> poison, i32 64, i32 0)
+  %45 = call <3 x i32> @llvm.amdgcn.ptr.s.buffer.load.v3i32(ptr addrspace(8) poison, i32 64, i32 0), !invariant.load !0
   %46 = shufflevector <3 x i32> %45, <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
   %47 = bitcast <4 x i32> %46 to <4 x float>
   %.i2476 = extractelement <4 x float> %47, i32 2
   %.i2479 = fmul reassoc nnan nsz arcp contract afn float %.i2476, %18
-  %48 = call <3 x i32> @llvm.amdgcn.s.buffer.load.v3i32(<4 x i32> poison, i32 80, i32 0)
+  %48 = call <3 x i32> @llvm.amdgcn.ptr.s.buffer.load.v3i32(ptr addrspace(8) poison, i32 80, i32 0), !invariant.load !0
   %49 = shufflevector <3 x i32> %48, <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
   %50 = bitcast <4 x i32> %49 to <4 x float>
   %.i2482 = extractelement <4 x float> %50, i32 2
@@ -227,7 +227,7 @@ define amdgpu_ps float @_amdgpu_ps_main() #0 {
   %.i2516 = fadd reassoc nnan nsz arcp contract afn float %.i2515, %.i2494
   %.i2522 = fadd reassoc nnan nsz arcp contract afn float %.i2521, %.i2516
   %.i2525 = fmul reassoc nnan nsz arcp contract afn float %.i2522, %43
-  %52 = call <3 x i32> @llvm.amdgcn.s.buffer.load.v3i32(<4 x i32> poison, i32 16, i32 0)
+  %52 = call <3 x i32> @llvm.amdgcn.ptr.s.buffer.load.v3i32(ptr addrspace(8) poison, i32 16, i32 0), !invariant.load !0
   %53 = shufflevector <3 x i32> %52, <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
   %54 = bitcast <4 x i32> %53 to <4 x float>
   %.i2530 = extractelement <4 x float> %54, i32 2
@@ -432,12 +432,14 @@ declare <3 x float> @llvm.amdgcn.image.sample.2d.v3f32.f32(i32 immarg, float, fl
 declare <3 x float> @llvm.amdgcn.image.load.mip.2d.v3f32.i32(i32 immarg, i32, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #3
 
 ; Function Attrs: nounwind readnone willreturn
-declare i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32>, i32, i32 immarg) #3
+declare i32 @llvm.amdgcn.ptr.s.buffer.load.i32(ptr addrspace(8), i32, i32 immarg) #3
 
 ; Function Attrs: nounwind readnone willreturn
-declare <3 x i32> @llvm.amdgcn.s.buffer.load.v3i32(<4 x i32>, i32, i32 immarg) #3
+declare <3 x i32> @llvm.amdgcn.ptr.s.buffer.load.v3i32(ptr addrspace(8), i32, i32 immarg) #3
 
 attributes #0 = { denormal_fpenv(float: preservesign) }
 attributes #1 = { nofree nosync nounwind readnone speculatable willreturn }
 attributes #2 = { nounwind readnone speculatable willreturn }
 attributes #3 = { nounwind readonly willreturn }
+
+!0 = !{}

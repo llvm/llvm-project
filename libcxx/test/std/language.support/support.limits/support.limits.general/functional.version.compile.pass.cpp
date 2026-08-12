@@ -494,17 +494,11 @@
 #    endif
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_function_ref
-#      error "__cpp_lib_function_ref should be defined in c++26"
-#    endif
-#    if __cpp_lib_function_ref != 202306L
-#      error "__cpp_lib_function_ref should have the value 202306L in c++26"
-#    endif
-#  else
-#    ifdef __cpp_lib_function_ref
-#      error "__cpp_lib_function_ref should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_function_ref
+#    error "__cpp_lib_function_ref should be defined in c++26"
+#  endif
+#  if __cpp_lib_function_ref != 202603L
+#    error "__cpp_lib_function_ref should have the value 202603L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_invoke

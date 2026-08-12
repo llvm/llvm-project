@@ -5,8 +5,8 @@
 ; RUN: opt -passes='spirv-structurizer' -disable-output -debug-pass-manager \
 ; RUN:   -mtriple=spirv-unknown-unknown %s 2>&1 | FileCheck %s --check-prefix=INVALIDATE
 ; INVALIDATE: Running pass: SPIRVStructurizerWrapper on test_branch
-; INVALIDATE: Invalidating analysis: DominatorTreeAnalysis on test_branch
 ; INVALIDATE: Invalidating analysis: LoopAnalysis on test_branch
+; INVALIDATE: Invalidating analysis: DominatorTreeAnalysis on test_branch
 ; INVALIDATE: Invalidating analysis: SPIRVConvergenceRegionAnalysis on test_branch
 
 ; CHECK-LABEL: define spir_func noundef i32 @test_branch

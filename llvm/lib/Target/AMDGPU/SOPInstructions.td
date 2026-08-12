@@ -264,7 +264,9 @@ def S_BREV_B64 : SOP1_64 <"s_brev_b64",
 } // End isReMaterializable = 1, isAsCheapAsAMove = 1
 
 let Defs = [SCC] in {
-def S_BCNT0_I32_B32 : SOP1_32 <"s_bcnt0_i32_b32">;
+def S_BCNT0_I32_B32 : SOP1_32 <"s_bcnt0_i32_b32",
+  [(set i32:$sdst, (UniformBinFrag<sub> 32, (ctpop i32:$src0)))]
+>;
 def S_BCNT0_I32_B64 : SOP1_32_64 <"s_bcnt0_i32_b64">;
 def S_BCNT1_I32_B32 : SOP1_32 <"s_bcnt1_i32_b32",
   [(set i32:$sdst, (UniformUnaryFrag<ctpop> i32:$src0))]
@@ -1949,6 +1951,13 @@ def : GCNPat <
 >;
 
 def : GCNPat <
+   (i64 (UniformBinFrag<sub> 64, (ctpop i64:$src))),
+    (i64 (REG_SEQUENCE SReg_64,
+     (i32 (COPY_TO_REGCLASS (S_BCNT0_I32_B64 $src), SReg_32)), sub0,
+     (S_MOV_B32 (i32 0)), sub1))
+>;
+
+def : GCNPat <
   (i32 (UniformBinFrag<smax> i32:$x, (i32 (ineg i32:$x)))),
   (S_ABS_I32 SReg_32:$x)
 >;
@@ -2042,7 +2051,7 @@ let SubtargetPredicate = isNotGFX9Plus in {
 def : GetFPModePat<fpmode_mask_gfx6plus>;
 }
 
-let SubtargetPredicate = isGFX9GFX10 in
+let SubtargetPredicate = HasPopsExitingWaveID in
 def : GCNPat<
   (int_amdgcn_pops_exiting_wave_id),
   (S_MOV_B32_sideeffects (i32 SRC_POPS_EXITING_WAVE_ID))
@@ -2139,7 +2148,7 @@ def : GCNPat<
 }
 
 // v2i64 shl is legal, we need a way to select scalar code
-let SubtargetPredicate = HasPackedU64Ops in {
+let SubtargetPredicate = HasAnyPackedU64Ops in {
 def : GCNPat<
   (v2i64 (UniformBinFrag<cshl_64> v2i64:$src0, v2i64:$src1)),
   (v2i64 (REG_SEQUENCE SReg_128,

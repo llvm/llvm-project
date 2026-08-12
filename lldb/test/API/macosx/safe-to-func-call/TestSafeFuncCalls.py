@@ -8,7 +8,7 @@ from lldbsuite.test import lldbutil
 
 
 class TestSafeFuncCalls(TestBase):
-    @skipUnlessDarwin
+    @requireDarwin
     @add_test_categories(["pyapi"])
     def test_with_python_api(self):
         """Test function call thread safety."""

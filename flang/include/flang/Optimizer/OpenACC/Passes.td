@@ -11,6 +11,15 @@
 
 include "mlir/Pass/PassBase.td"
 
+def ACCEmitNYIFlang
+    : Pass<"acc-emit-nyi-flang", "mlir::ModuleOp"> {
+  let summary = "Emit not-yet-implemented messages for OpenACC";
+  let description = [{
+    Emits not-yet-implemented messages for OpenACC directives that are not yet
+    supported through code generation.
+  }];
+}
+
 def ACCInitializeFIRAnalyses
     : Pass<"acc-initialize-fir-analyses", "mlir::ModuleOp"> {
   let summary = "Initialize FIR analyses for OpenACC passes";
@@ -18,9 +27,14 @@ def ACCInitializeFIRAnalyses
     This pass initializes analyses that can be used by subsequent OpenACC passes
     in the pipeline. It creates and caches the OpenACCSupport analysis with a
     FIR-specific implementation that can handle FIR types and operations.
-    It also initializes FIR's AliasAnalysis for use in OpenACC passes.
+    It can also initialize FIR's AliasAnalysis for use in OpenACC passes.
     This pass needs to rerun if any analyses were invalidated by MLIR's framework.
   }];
+  let options = [
+    Option<"addFIRAliasAnalysis", "add-fir-alias-analysis", "bool",
+           /*default=*/"true",
+           "Initialize FIR AliasAnalysis for use by subsequent OpenACC passes.">
+  ];
   // In addition to pre-registering the needed analyses, this pass also
   // pre-registers the dialects that various OpenACC passes may generate.
   let dependentDialects = ["fir::FIROpsDialect", "hlfir::hlfirDialect",
@@ -93,6 +107,33 @@ def ACCOptimizeFirstprivateMap
     runtime.
   }];
   let dependentDialects = ["mlir::acc::OpenACCDialect", "fir::FIROpsDialect"];
+}
+
+def ACCDevicePtrToCUFKernel
+    : Pass<"acc-device-ptr-to-cuf-kernel", "mlir::ModuleOp"> {
+  let summary = "Pass device addresses to CUDA Fortran kernels launched inside "
+                "OpenACC data regions";
+  let description = [{
+    A CUDA Fortran kernel launched inside an OpenACC data region must receive
+    the device address of any host variable that OpenACC has made present, not
+    the host address. Otherwise the kernel dereferences a host pointer, which is
+    only valid on shared-memory/unified-addressing systems and is illegal on a
+    device with a separate address space.
+
+    For each cuf.kernel_launch whose reference arguments resolve to a variable
+    mapped by an enclosing acc.data region, this pass wraps the launch in an
+    acc.host_data construct with acc.use_device operands for the mapped
+    variables, and rebuilds the launch argument addressing on top of the
+    use_device result so the kernel receives the device pointer.
+
+    Both directly-addressed variables (e.g. static arrays, whose data address is
+    the mapped varPtr) and descriptor-based variables (e.g. allocatables and
+    pointers, whose data address is box_addr(load(<descriptor>))) are handled.
+
+    This must run before the pass that lowers cuf.kernel_launch to
+    gpu.launch_func.
+  }];
+  let dependentDialects = ["mlir::acc::OpenACCDialect"];
 }
 
 #endif // FORTRAN_OPTIMIZER_OPENACC_PASSES

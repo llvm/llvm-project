@@ -138,11 +138,18 @@ llvm::DIBasicType *DebugTranslation::translateImpl(DIBasicTypeAttr attr) {
       /*AlignInBits=*/0, attr.getEncoding(), llvm::DINode::FlagZero);
 }
 
+static llvm::DISourceLanguageName getSourceLanguage(DICompileUnitAttr attr) {
+  // DISourceLanguageName represents "no source-language dialect" as 0; the
+  // LLVM IR printer omits the `dialect:` field for that value.
+  return llvm::DISourceLanguageName(
+      static_cast<uint16_t>(attr.getSourceLanguage()),
+      static_cast<uint16_t>(attr.getSourceLanguageDialect()));
+}
+
 llvm::TempDICompileUnit
 DebugTranslation::translateTemporaryImpl(DICompileUnitAttr attr) {
   return llvm::DICompileUnit::getTemporary(
-      llvmCtx,
-      static_cast<llvm::DISourceLanguageName>(attr.getSourceLanguage()),
+      llvmCtx, getSourceLanguage(attr),
       /*File=*/nullptr, "", attr.getIsOptimized(),
       /*Flags=*/"", /*RuntimeVersion=*/0,
       /*splitDebugFileName=*/"",
@@ -166,7 +173,7 @@ llvm::DICompileUnit *DebugTranslation::translateImpl(DICompileUnitAttr attr) {
 
   llvm::DIBuilder builder(llvmModule);
   llvm::DICompileUnit *cu = builder.createCompileUnit(
-      attr.getSourceLanguage(), translate(attr.getFile()),
+      getSourceLanguage(attr), translate(attr.getFile()),
       attr.getProducer() ? attr.getProducer().getValue() : "",
       attr.getIsOptimized(),
       /*Flags=*/"", /*RV=*/0,

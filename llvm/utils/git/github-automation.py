@@ -539,7 +539,7 @@ class ReleaseWorkflow:
 
     @property
     def push_url(self) -> str:
-        return "https://{}@github.com/{}".format(
+        return "https://x-access-token:{}@github.com/{}".format(
             self.branch_repo_token, self.branch_repo_name
         )
 

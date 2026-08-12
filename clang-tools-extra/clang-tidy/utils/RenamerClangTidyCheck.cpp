@@ -69,12 +69,10 @@ public:
 
 static const NamedDecl *findDecl(const RecordDecl &RecDecl,
                                  StringRef DeclName) {
-  for (const Decl *D : RecDecl.decls()) {
-    if (const auto *ND = dyn_cast<NamedDecl>(D)) {
-      if (ND->getDeclName().isIdentifier() && ND->getName() == DeclName)
-        return ND;
-    }
-  }
+  for (const Decl *D : RecDecl.decls())
+    if (const auto *ND = dyn_cast<NamedDecl>(D);
+        ND && ND->getDeclName().isIdentifier() && ND->getName() == DeclName)
+      return ND;
   return nullptr;
 }
 
@@ -107,10 +105,10 @@ static const NamedDecl *getFailureForNamedDecl(const NamedDecl *ND) {
 
   if (const auto *Method = dyn_cast<CXXMethodDecl>(ND)) {
     if (const CXXMethodDecl *Overridden = getOverrideMethod(Method))
-      Canonical = cast<NamedDecl>(Overridden->getCanonicalDecl());
+      Canonical = Overridden->getCanonicalDecl();
     else if (const FunctionTemplateDecl *Primary = Method->getPrimaryTemplate())
       if (const FunctionDecl *TemplatedDecl = Primary->getTemplatedDecl())
-        Canonical = cast<NamedDecl>(TemplatedDecl->getCanonicalDecl());
+        Canonical = TemplatedDecl->getCanonicalDecl();
 
     if (Canonical != ND)
       return Canonical;
@@ -136,7 +134,7 @@ static NameLookup findDeclInBases(const CXXRecordDecl &Parent,
   const auto *Definition = Parent.getDefinition();
   if (!Visited.insert(Definition).second)
     return NameLookup(nullptr);
-  auto RemoveFromVisited =
+  const auto RemoveFromVisited =
       llvm::scope_exit([&Visited, Definition] { Visited.erase(Definition); });
 
   if (const NamedDecl *InClassRef = findDecl(Parent, DeclName))
@@ -155,8 +153,8 @@ static NameLookup findDeclInBases(const CXXRecordDecl &Parent,
     }
     if (!Record)
       continue;
-    if (auto Search = findDeclInBases(*Record, DeclName,
-                                      AggressiveTemplateLookup, Visited)) {
+    if (const auto Search = findDeclInBases(
+            *Record, DeclName, AggressiveTemplateLookup, Visited)) {
       if (*Search) {
         if (Found)
           return NameLookup(
@@ -351,9 +349,8 @@ public:
     if (!Decl)
       return true;
 
-    if (const auto *ClassDecl = dyn_cast<TemplateDecl>(Decl))
-      if (const NamedDecl *TemplDecl = ClassDecl->getTemplatedDecl())
-        Check->addUsage(TemplDecl, Loc.getTemplateNameLoc(), SM);
+    if (const NamedDecl *TemplDecl = Decl->getTemplatedDecl())
+      Check->addUsage(TemplDecl, Loc.getTemplateNameLoc(), SM);
 
     return true;
   }
@@ -493,7 +490,7 @@ void RenamerClangTidyCheck::addUsage(const NamedDecl *Decl,
   if (!Failure.shouldFix())
     return;
   const IdentifierTable &Idents = FailureDecl->getASTContext().Idents;
-  auto CheckNewIdentifier = Idents.find(Failure.Info.Fixup);
+  const auto CheckNewIdentifier = Idents.find(Failure.Info.Fixup);
   if (CheckNewIdentifier != Idents.end()) {
     const IdentifierInfo *Ident = CheckNewIdentifier->second;
     if (Ident->isKeyword(getLangOpts()))
@@ -543,7 +540,7 @@ void RenamerClangTidyCheck::expandMacro(const Token &MacroNameTok,
   const StringRef Name = MacroNameTok.getIdentifierInfo()->getName();
   const NamingCheckId ID(MI->getDefinitionLoc(), Name);
 
-  auto Failure = NamingCheckFailures.find(ID);
+  const auto Failure = NamingCheckFailures.find(ID);
   if (Failure == NamingCheckFailures.end())
     return;
 
@@ -573,10 +570,7 @@ getDiagnosticSuffix(const RenamerClangTidyCheck::ShouldFixStatus FixStatus,
 }
 
 void RenamerClangTidyCheck::onEndOfTranslationUnit() {
-  for (const auto &Pair : NamingCheckFailures) {
-    const NamingCheckId &Decl = Pair.first;
-    const NamingCheckFailure &Failure = Pair.second;
-
+  for (const auto &[Decl, Failure] : NamingCheckFailures) {
     if (Failure.Info.KindName.empty())
       continue;
 

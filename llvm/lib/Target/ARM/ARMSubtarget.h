@@ -206,13 +206,17 @@ protected:
 
   const ARMBaseTargetMachine &TM;
 
+  /// The floating-point ABI in effect for this subtarget.
+  FloatABI::ABIType FloatABIType;
+
 public:
   /// This constructor initializes the data members to match that
   /// of the specified triple.
   ///
   ARMSubtarget(const Triple &TT, const std::string &CPU, const std::string &FS,
                const ARMBaseTargetMachine &TM, bool IsLittle,
-               bool MinSize = false, DenormalMode DM = DenormalMode::getIEEE());
+               FloatABI::ABIType FloatABI, bool MinSize = false,
+               DenormalMode DM = DenormalMode::getIEEE());
 
   /// getMaxInlineSizeThreshold - Returns the maximum memset / memcpy size
   /// that still makes it profitable to inline the call.
@@ -365,6 +369,12 @@ public:
     return TargetTriple.isTargetEHABICompatible();
   }
   /// @}
+
+  /// Returns the floating-point ABI in effect for this subtarget.
+  FloatABI::ABIType getFloatABI() const { return FloatABIType; }
+
+  /// Returns true if the subtarget uses the hard floating-point ABI.
+  bool isTargetHardFloat() const { return FloatABIType == FloatABI::Hard; }
 
   bool isReadTPSoft() const {
     return !(isReadTPTPIDRURW() || isReadTPTPIDRURO() || isReadTPTPIDRPRW());

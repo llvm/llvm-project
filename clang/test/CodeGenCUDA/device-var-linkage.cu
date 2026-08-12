@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple amdgcn -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgpu -fcuda-is-device \
 // RUN:   -emit-llvm -o - -x hip %s \
 // RUN:   | FileCheck -check-prefixes=DEV,NORDC %s
-// RUN: %clang_cc1 -triple amdgcn -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgpu -fcuda-is-device \
 // RUN:   -fgpu-rdc -cuid=abc -emit-llvm -o - -x hip %s \
 // RUN:   | FileCheck -check-prefixes=DEV,RDC %s
 // RUN: %clang_cc1 -triple x86_64-unknown-gnu-linux \

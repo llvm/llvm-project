@@ -88,7 +88,7 @@ All features except those listed in the following table are supported.
 | Feature                                                    | Status | Comments                                                |
 |------------------------------------------------------------|--------|---------------------------------------------------------|
 | do concurrent                                              | Y      | See [Do Concurrent Conversion To OpenMP](DoConcurrentConversionToOpenMP.md) for implementation details.|
-| Internal procedure as an actual argument or pointer target | Y      | Current implementation requires stack to be executable. See [FAQ](FAQ.md#why-do-i-get-a-warning-or-an-error-about-an-executable-stack) and [Proposal](InternalProcedureTrampolines.md) |
+| Internal procedure as an actual argument or pointer target | Y      | The default implementation requires an executable stack; `-fsafe-trampoline` uses a runtime-managed pool on supported targets. See [FAQ](FAQ.md#why-do-i-get-a-warning-or-an-error-about-an-executable-stack) and [design documentation](InternalProcedureTrampolines.md) |
 | Intrinsic functions this_image, num_images                 | P      | Experimental support via [PRIF](ParallelMultiImageFortranRuntime.md) |
 | Sync all, sync images, sync memory statements              | P      | Experimental support via [PRIF](ParallelMultiImageFortranRuntime.md) |
 | Non-allocatable save coarrays of intrinsic type            | P      | Experimental support via [PRIF](ParallelMultiImageFortranRuntime.md) |

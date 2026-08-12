@@ -16,7 +16,7 @@ void template_foo() {
 // CIR: %[[ADD:.*]] = cir.add nsw %[[CONST_1]], %[[CONST_2]] : !s32i
 // CIR: cir.store{{.*}} %[[ADD]], %[[INIT]] : !s32i, !cir.ptr<!s32i>
 
-// LLVM: %[[INIT:.*]] = alloca i32, i64 1, align 4
+// LLVM: %[[INIT:.*]] = alloca i32, align 4
 // LLVM: store i32 6, ptr %[[INIT]], align 4
 
 // OGCG: %[[INIT:.*]] = alloca i32, align 4

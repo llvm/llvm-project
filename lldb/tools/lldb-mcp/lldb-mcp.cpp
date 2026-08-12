@@ -25,9 +25,11 @@
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/WithColor.h"
@@ -117,6 +119,24 @@ llvm::Error connectBackend(lldb_mcp::Multiplexer &multiplexer, MainLoop &loop,
   return llvm::Error::success();
 }
 
+void printHelp(StringRef tool_name) {
+  outs() << "OVERVIEW: LLDB MCP\n\nUSAGE: " << tool_name << " [options]\n";
+  outs() << R"___(
+Multiplexes the Model Context Protocol over stdio across the running LLDB
+instances, and hosts its own debug sessions.
+
+OPTIONS:
+  -h, --help     Display this help message
+  -v, --version  Display the version
+)___";
+}
+
+void printVersion(StringRef tool_name) {
+  outs() << tool_name << ": ";
+  cl::PrintVersionMessage();
+  outs() << "liblldb: " << SBDebugger::GetVersionString() << '\n';
+}
+
 } // namespace
 
 int main(int argc, char *argv[]) {
@@ -140,6 +160,22 @@ int main(int argc, char *argv[]) {
   UNUSED_IF_ASSERT_DISABLED(result);
   assert(result);
 #endif
+
+  StringRef tool_name = sys::path::filename(argv[0]);
+  for (int i = 1; i < argc; ++i) {
+    StringRef arg(argv[i]);
+    if (arg == "-h" || arg == "--help") {
+      printHelp(tool_name);
+      return EXIT_SUCCESS;
+    }
+    if (arg == "-v" || arg == "--version") {
+      printVersion(tool_name);
+      return EXIT_SUCCESS;
+    }
+    WithColor::error(errs()) << "unknown argument '" << arg << "'\n";
+    printHelp(tool_name);
+    return EXIT_FAILURE;
+  }
 
   // Bring up the debug engine (through the public SB API) so lldb-mcp can host
   // debug sessions in its own process.

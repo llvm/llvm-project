@@ -17,7 +17,6 @@ macro(add_host_subdirectory group)
 endmacro()
 
 add_host_subdirectory(common
-  common/ConPTYUtils.cpp
   common/DiagnosticsRendering.cpp
   common/DomainSocket.cpp
   common/FileAction.cpp
@@ -78,6 +77,7 @@ add_host_subdirectory(posix
 
 if (CMAKE_SYSTEM_NAME MATCHES "Windows")
   add_host_subdirectory(windows
+    windows/ConPTYUtils.cpp
     windows/ConnectionConPTYWindows.cpp
     windows/ConnectionGenericFileWindows.cpp
     windows/DomainSocketWindows.cpp

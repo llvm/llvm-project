@@ -20,9 +20,9 @@
 #include "llvm/Support/PatternMatchHelpers.h"
 #include <utility>
 
-using namespace llvm::PatternMatchHelpers;
-
 namespace llvm::VPlanPatternMatch {
+
+using namespace llvm::PatternMatchHelpers;
 
 template <typename Val, typename Pattern> bool match(Val *V, const Pattern &P) {
   return P.match(V);
@@ -198,6 +198,11 @@ inline bind_const_int m_ConstantInt(uint64_t &C) { return C; }
 
 /// Match a VPValue, capturing it if we match.
 inline match_bind<VPValue> m_VPValue(VPValue *&V) { return V; }
+
+/// Match against the nested pattern, and capture the value if we match.
+template <typename Op_t> inline auto m_VPValue(VPValue *&V, const Op_t &Op) {
+  return m_CombineAnd(Op, m_VPValue(V));
+}
 
 /// Match a VPIRValue.
 inline match_bind<VPIRValue> m_VPIRValue(VPIRValue *&V) { return V; }

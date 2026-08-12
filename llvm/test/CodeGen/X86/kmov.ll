@@ -12,10 +12,10 @@ define <2 x i1> @i8_mask_extract2(i8 %mask) {
 ; X64-KNL-LABEL: i8_mask_extract2:
 ; X64-KNL:       # %bb.0:
 ; X64-KNL-NEXT:    vmovd %edi, %xmm0
-; X64-KNL-NEXT:    vpbroadcastw {{.*#+}} xmm1 = [1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2]
 ; X64-KNL-NEXT:    vpbroadcastb %xmm0, %xmm0
-; X64-KNL-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; X64-KNL-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; X64-KNL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-KNL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X64-KNL-NEXT:    vpcmpgtb %xmm1, %xmm0, %xmm0
 ; X64-KNL-NEXT:    vpmovzxbq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero
 ; X64-KNL-NEXT:    retq
   %.splatinsert = insertelement <2 x i8> poison, i8 %mask, i64 0
@@ -60,9 +60,9 @@ define <4 x i1> @i8_mask_extract_4(i8 %mask) {
 ; X64-KNL:       # %bb.0:
 ; X64-KNL-NEXT:    vmovd %edi, %xmm0
 ; X64-KNL-NEXT:    vpbroadcastb %xmm0, %xmm0
-; X64-KNL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [1,2,4,8,1,2,4,8,1,2,4,8,1,2,4,8]
-; X64-KNL-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; X64-KNL-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; X64-KNL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-KNL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X64-KNL-NEXT:    vpcmpgtb %xmm1, %xmm0, %xmm0
 ; X64-KNL-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
 ; X64-KNL-NEXT:    retq
   %.splatinsert = insertelement <4 x i8> poison, i8 %mask, i64 0
@@ -205,9 +205,9 @@ define <4 x i1> @i16_mask_extract_4(i16 %mask) {
 ; X64-KNL:       # %bb.0:
 ; X64-KNL-NEXT:    vmovd %edi, %xmm0
 ; X64-KNL-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X64-KNL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [1,2,4,8,1,2,4,8]
-; X64-KNL-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; X64-KNL-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
+; X64-KNL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-KNL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X64-KNL-NEXT:    vpcmpgtw %xmm1, %xmm0, %xmm0
 ; X64-KNL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; X64-KNL-NEXT:    retq
   %.splatinsert = insertelement <4 x i16> poison, i16 %mask, i64 0

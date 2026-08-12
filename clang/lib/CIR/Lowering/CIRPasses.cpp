@@ -13,6 +13,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/PassManager.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/Passes.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -26,6 +27,34 @@ static CallConvTarget getCallConvTarget(const llvm::Triple &triple) {
   if (triple.getArch() == llvm::Triple::x86_64)
     return CallConvTarget::X86_64;
   return CallConvTarget::None;
+}
+
+/// The x86_64 ABI-compatibility flags, derived from the target and the
+/// requested compatibility version.  Every flag defaults to true in the ABI
+/// library, which is not what any target computes: Clang11Compat is false for a
+/// modern Linux target, so leaving it at the default classifies a union larger
+/// than an eightbyte as though every member spanned its size.  Mirrors the
+/// predicates in clang/lib/CodeGen/Targets/X86.cpp and the derivation in
+/// CodeGenModule::getLLVMABITargetInfo, which computes the same five flags for
+/// the classic path.
+static llvm::abi::ABICompatInfo
+getX86ABICompatInfo(const clang::ASTContext &astContext) {
+  const llvm::Triple &triple = astContext.getTargetInfo().getTriple();
+  const clang::LangOptions &langOpts = astContext.getLangOpts();
+  clang::LangOptions::ClangABI compat = langOpts.getClangABICompat();
+  llvm::abi::ABICompatInfo abiCompat;
+  abiCompat.HonorsRevision98 = !triple.isOSDarwin();
+  abiCompat.ClassifyIntegerMMXAsSSE =
+      compat > clang::LangOptions::ClangABI::Ver3_8 && !triple.isOSDarwin() &&
+      !triple.isPS() && !triple.isOSFreeBSD();
+  abiCompat.PassInt128VectorsInMem =
+      compat > clang::LangOptions::ClangABI::Ver9 &&
+      (triple.isOSLinux() || triple.isOSNetBSD());
+  abiCompat.ReturnCXXRecordGreaterThan128InMem =
+      compat > clang::LangOptions::ClangABI::Ver20 && !triple.isPS();
+  abiCompat.Clang11Compat =
+      compat <= clang::LangOptions::ClangABI::Ver11 || triple.isPS();
+  return abiCompat;
 }
 
 mlir::LogicalResult
@@ -70,7 +99,8 @@ runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
         getCallConvTarget(astContext.getTargetInfo().getTriple());
     if (target != CallConvTarget::None)
       pm.addPass(mlir::createCallConvLoweringPass(
-          target, llvm::abi::X86AVXABILevel::None));
+          target, llvm::abi::X86AVXABILevel::None,
+          getX86ABICompatInfo(astContext)));
   }
 
   pm.addPass(mlir::createLoweringPreparePass(&astContext));

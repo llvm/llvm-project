@@ -78,6 +78,13 @@ between standard floating-point types, integer types and packed low-precision fo
 }];
 }
 
+def DocCatAMDGPUPrefetch : DocumentationCategory<"Prefetch Builtins"> {
+  let Content = [{
+These builtins provide access to AMDGPU prefetch instructions, including instructions
+for prefetching data and instructions.
+}];
+}
+
 //===----------------------------------------------------------------------===//
 // ABI / Special Register Builtins — Documentation records
 //===----------------------------------------------------------------------===//
@@ -725,7 +732,7 @@ value gives an undefined result.
 
 def DocCatSBufferLoad : DocumentationCategory<"S-Buffer Load Builtins"> {
   let Content = [{
-These builtins lower to ``llvm.amdgcn.s.buffer.load`` and issue an
+These builtins lower to ``llvm.amdgcn.ptr.s.buffer.load`` and issue an
 ``s_buffer_load`` when the byte offset is uniform across the wavefront.
 When the offset is divergent, the backend may lower to a ``buffer_load``.
 
@@ -742,8 +749,7 @@ When the offset is divergent, the backend may lower to a ``buffer_load``.
 
 These builtins take the buffer resource as ``__amdgpu_buffer_rsrc_t``, which
 can be created with ``__builtin_amdgcn_make_buffer_rsrc``. The backend
-lowers the resource to the 4-dword SGPR descriptor required by
-``llvm.amdgcn.s.buffer.load``.
+lowers the resource to the 4-dword SGPR descriptor required by the instruction.
 
 The return type selects the load width. Separate builtins are provided for
 each supported scalar and vector element type.
@@ -791,5 +797,18 @@ Scales a packed 32-component single-precision floating-point input ``src``
 using the scale factor ``scale``, then converts the values to a packed
 32-component FP6 value, returned as a 6-element vector of 32-bit unsigned
 integers.
+}];
+}
+
+//===----------------------------------------------------------------------===//
+// Prefetch Builtins
+//===----------------------------------------------------------------------===//
+
+def DocPrefetchInst_GFX12 : Documentation {
+  let Category = DocCatAMDGPUPrefetch;
+  let Content = [{
+Prefetch instructions into I-Cache from the address given by ``ptr`` pointing
+to instruction memory, with the length specified by ``len``, which should be
+0-31 (1-32 chunks, units of 128 bytes).
 }];
 }

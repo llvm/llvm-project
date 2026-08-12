@@ -2,8 +2,6 @@
 LLVM Bug Life Cycle
 ===================
 
-.. contents::
-   :local:
 
 
 

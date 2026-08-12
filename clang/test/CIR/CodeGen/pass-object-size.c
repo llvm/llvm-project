@@ -63,3 +63,51 @@ void test_vla(int n) {
 // OGCG:   call void @b(ptr noundef %[[VLA]], i64 noundef %[[SIZE1]])
 // OGCG:   %[[SIZE2:.*]] = call i64 @llvm.objectsize.i64.p0(ptr %[[VLA]], i1 true, i1 true, i1 false)
 // OGCG:   call void @e(ptr noundef %[[VLA]], i64 noundef %[[SIZE2]])
+
+// A pass_object_size parameter on a variadic callee occupies one of the
+// signature's required argument slots. Calling such a function with no
+// variadic arguments must still work -- this is how glibc declares the
+// fortified printf family for clang, so printf("hello") hits it.
+
+void v(void *__attribute__((pass_object_size(0))), ...);
+
+void test_variadic_no_varargs(void) {
+  int a;
+  v(&a);
+}
+
+// CIR: cir.func private @v(!cir.ptr<!void> {llvm.noundef}, !u64i {llvm.noundef}, ...)
+
+// CIR: cir.func {{.*}} @test_variadic_no_varargs()
+// CIR:   %[[ALLOCA:.*]] = cir.alloca {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[CAST:.*]] = cir.cast bitcast %[[ALLOCA]] : !cir.ptr<!s32i> -> !cir.ptr<!void>
+// CIR:   %[[SIZE:.*]] = cir.const #cir.int<4> : !u64i
+// CIR:   cir.call @v(%[[CAST]], %[[SIZE]]) : (!cir.ptr<!void> {{.*}}, !u64i {{.*}}) -> ()
+
+// LLVM: define dso_local void @test_variadic_no_varargs()
+// LLVM:   %[[ALLOCA:.*]] = alloca i32
+// LLVM:   call void (ptr, i64, ...) @v(ptr noundef %[[ALLOCA]], i64 noundef 4)
+
+// OGCG: define dso_local void @test_variadic_no_varargs()
+// OGCG:   %[[A:.*]] = alloca i32
+// OGCG:   call void (ptr, i64, ...) @v(ptr noundef %[[A]], i64 noundef 4)
+
+void test_variadic_with_varargs(void) {
+  int a;
+  v(&a, 1);
+}
+
+// CIR: cir.func {{.*}} @test_variadic_with_varargs()
+// CIR:   %[[ALLOCA:.*]] = cir.alloca {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[CAST:.*]] = cir.cast bitcast %[[ALLOCA]] : !cir.ptr<!s32i> -> !cir.ptr<!void>
+// CIR:   %[[SIZE:.*]] = cir.const #cir.int<4> : !u64i
+// CIR:   %[[ARG:.*]] = cir.const #cir.int<1> : !s32i
+// CIR:   cir.call @v(%[[CAST]], %[[SIZE]], %[[ARG]]) : (!cir.ptr<!void> {{.*}}, !u64i {{.*}}, !s32i {{.*}}) -> ()
+
+// LLVM: define dso_local void @test_variadic_with_varargs()
+// LLVM:   %[[ALLOCA:.*]] = alloca i32
+// LLVM:   call void (ptr, i64, ...) @v(ptr noundef %[[ALLOCA]], i64 noundef 4, i32 noundef 1)
+
+// OGCG: define dso_local void @test_variadic_with_varargs()
+// OGCG:   %[[A:.*]] = alloca i32
+// OGCG:   call void (ptr, i64, ...) @v(ptr noundef %[[A]], i64 noundef 4, i32 noundef 1)

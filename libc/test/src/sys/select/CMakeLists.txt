@@ -1,6 +1,6 @@
 add_custom_target(libc_sys_select_unittests)
 
-add_libc_unittest(
+add_libc_test(
   select_ui_test
   NO_RUN_POSTBUILD
   SUITE
@@ -16,7 +16,7 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   select_failure_test
   SUITE
     libc_sys_select_unittests

@@ -175,9 +175,7 @@ void CognitiveComplexity::account(SourceLocation Loc, unsigned short Nesting,
   Details.emplace_back(Loc, Nesting, C);
   const Detail &D = Details.back();
 
-  unsigned MsgId = 0;
-  unsigned short Increase = 0;
-  std::tie(MsgId, Increase) = D.process();
+  const auto [MsgId, Increase] = D.process();
 
   Total += Increase;
 }
@@ -527,9 +525,7 @@ void FunctionCognitiveComplexityCheck::check(
 
   // Output all the basic increments of complexity.
   for (const auto &Detail : Visitor.CC.Details) {
-    unsigned MsgId = 0;          // The id of the message to output.
-    unsigned short Increase = 0; // How much of an increment?
-    std::tie(MsgId, Increase) = Detail.process();
+    auto [MsgId, Increase] = Detail.process();
     assert(MsgId < Msgs.size() && "MsgId should always be valid");
     // Increase, on the other hand, can be 0.
 

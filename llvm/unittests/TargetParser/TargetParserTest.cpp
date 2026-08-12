@@ -2659,6 +2659,161 @@ TEST(TargetParserTest, testAMDGPUisCPUValidForSubArch) {
   EXPECT_FALSE(
       AMDGPU::isCPUValidForSubArch(Triple::NoSubArch, AMDGPU::GK_NONE));
   EXPECT_FALSE(AMDGPU::isCPUValidForSubArch(Triple::NoSubArch, ""));
+
+  // The pseudo targets "generic"/"generic-hsa" represent no hardware and have
+  // no subarch of their own. They are not valid for an explicit subarch (their
+  // NoSubArch must not act as a wildcard). A legacy NoSubArch triple still
+  // accepts them, matching the wildcard behavior for any known GPU (the backend
+  // resolves "generic-hsa" as the default device for a bare amdhsa triple).
+  EXPECT_FALSE(AMDGPU::isCPUValidForSubArch(Triple::AMDGPUSubArch900,
+                                            AMDGPU::GK_GENERIC));
+  EXPECT_FALSE(
+      AMDGPU::isCPUValidForSubArch(Triple::AMDGPUSubArch900, "generic"));
+  EXPECT_TRUE(
+      AMDGPU::isCPUValidForSubArch(Triple::NoSubArch, AMDGPU::GK_GENERIC));
+  EXPECT_TRUE(AMDGPU::isCPUValidForSubArch(Triple::NoSubArch, "generic"));
+
+  EXPECT_FALSE(AMDGPU::isCPUValidForSubArch(Triple::AMDGPUSubArch900,
+                                            AMDGPU::GK_GENERIC_HSA));
+  EXPECT_FALSE(
+      AMDGPU::isCPUValidForSubArch(Triple::AMDGPUSubArch900, "generic-hsa"));
+  EXPECT_TRUE(
+      AMDGPU::isCPUValidForSubArch(Triple::NoSubArch, AMDGPU::GK_GENERIC_HSA));
+  EXPECT_TRUE(AMDGPU::isCPUValidForSubArch(Triple::NoSubArch, "generic-hsa"));
+}
+
+TEST(TargetParserTest, testAMDGPUparseArchR600) {
+  // Canonical R600 GPU names map to their own GPUKind and round-trip through
+  // getArchNameR600.
+  struct CanonicalGPU {
+    StringRef Name;
+    AMDGPU::GPUKind Kind;
+    AMDGPU::R600FeatureKind Features;
+  };
+  static const CanonicalGPU Canonicals[] = {
+      {"r600", AMDGPU::GK_R600, AMDGPU::R600_FEATURE_NONE},
+      {"r630", AMDGPU::GK_R630, AMDGPU::R600_FEATURE_NONE},
+      {"rs880", AMDGPU::GK_RS880, AMDGPU::R600_FEATURE_NONE},
+      {"rv670", AMDGPU::GK_RV670, AMDGPU::R600_FEATURE_NONE},
+      {"rv710", AMDGPU::GK_RV710, AMDGPU::R600_FEATURE_NONE},
+      {"rv730", AMDGPU::GK_RV730, AMDGPU::R600_FEATURE_NONE},
+      {"rv770", AMDGPU::GK_RV770, AMDGPU::R600_FEATURE_NONE},
+      {"cedar", AMDGPU::GK_CEDAR, AMDGPU::R600_FEATURE_NONE},
+      {"cypress", AMDGPU::GK_CYPRESS, AMDGPU::R600_FEATURE_FMA},
+      {"juniper", AMDGPU::GK_JUNIPER, AMDGPU::R600_FEATURE_NONE},
+      {"redwood", AMDGPU::GK_REDWOOD, AMDGPU::R600_FEATURE_NONE},
+      {"sumo", AMDGPU::GK_SUMO, AMDGPU::R600_FEATURE_NONE},
+      {"barts", AMDGPU::GK_BARTS, AMDGPU::R600_FEATURE_NONE},
+      {"caicos", AMDGPU::GK_CAICOS, AMDGPU::R600_FEATURE_NONE},
+      {"cayman", AMDGPU::GK_CAYMAN, AMDGPU::R600_FEATURE_FMA},
+      {"turks", AMDGPU::GK_TURKS, AMDGPU::R600_FEATURE_NONE},
+  };
+  for (const CanonicalGPU &G : Canonicals) {
+    EXPECT_EQ(AMDGPU::parseArchR600(G.Name), G.Kind) << G.Name;
+    EXPECT_EQ(AMDGPU::getArchNameR600(G.Kind), G.Name) << G.Name;
+    EXPECT_EQ(AMDGPU::getArchAttrR600(G.Kind), G.Features) << G.Name;
+  }
+
+  // Aliases resolve to the canonical GPUKind but are not returned by
+  // getArchNameR600.
+  struct AliasGPU {
+    StringRef Alias;
+    AMDGPU::GPUKind Kind;
+  };
+  static const AliasGPU Aliases[] = {
+      {"rv630", AMDGPU::GK_R600},  {"rv635", AMDGPU::GK_R600},
+      {"rs780", AMDGPU::GK_RS880}, {"rv610", AMDGPU::GK_RS880},
+      {"rv620", AMDGPU::GK_RS880}, {"rv740", AMDGPU::GK_RV770},
+      {"palm", AMDGPU::GK_CEDAR},  {"hemlock", AMDGPU::GK_CYPRESS},
+      {"sumo2", AMDGPU::GK_SUMO},  {"aruba", AMDGPU::GK_CAYMAN},
+  };
+  for (const AliasGPU &A : Aliases) {
+    EXPECT_EQ(AMDGPU::parseArchR600(A.Alias), A.Kind) << A.Alias;
+    EXPECT_NE(AMDGPU::getArchNameR600(A.Kind), A.Alias) << A.Alias;
+  }
+
+  // Unknown and AMDGCN names do not parse as R600 GPUs.
+  EXPECT_EQ(AMDGPU::parseArchR600(""), AMDGPU::GK_NONE);
+  EXPECT_EQ(AMDGPU::parseArchR600("not-a-cpu"), AMDGPU::GK_NONE);
+  EXPECT_EQ(AMDGPU::parseArchR600("gfx900"), AMDGPU::GK_NONE);
+
+  // All canonical and alias names appear in the valid-arch list.
+  SmallVector<StringRef, 0> Values;
+  AMDGPU::fillValidArchListR600(Values);
+  for (const CanonicalGPU &G : Canonicals)
+    EXPECT_TRUE(llvm::is_contained(Values, G.Name)) << G.Name;
+  for (const AliasGPU &A : Aliases)
+    EXPECT_TRUE(llvm::is_contained(Values, A.Alias)) << A.Alias;
+}
+
+TEST(TargetParserTest, testAMDGPUfillAMDGPUFeatureMap) {
+  auto HasFeature = [](StringRef GPU, StringRef Feature) {
+    StringMap<bool> Features;
+    AMDGPU::fillAMDGPUFeatureMap(GPU, Triple("amdgcn-amd-amdhsa"), Features);
+    auto It = Features.find(Feature);
+    return It != Features.end() && It->second;
+  };
+
+  // Features are the transitive SubtargetFeature closure, so gfx900 gets the
+  // gfx8/gfx9 instruction sets it implies.
+  EXPECT_TRUE(HasFeature("gfx900", "gfx9-insts"));
+  EXPECT_TRUE(HasFeature("gfx900", "gfx8-insts"));
+  EXPECT_TRUE(HasFeature("gfx900", "ci-insts"));
+  EXPECT_TRUE(HasFeature("gfx900", "dpp"));
+  EXPECT_TRUE(HasFeature("gfx900", "cvt-pknorm-vop2-insts"));
+  EXPECT_TRUE(HasFeature("gfx900", "extended-image-insts"));
+  EXPECT_TRUE(HasFeature("gfx1100", "extended-image-insts"));
+
+  // Only frontend-visible features appear, so backend-only ones are dropped
+  // even when in the closure.
+  EXPECT_FALSE(HasFeature("gfx900", "cvt-pknorm-vop3-insts"));
+  EXPECT_FALSE(HasFeature("gfx900", "flat-scratch-insts"));
+  EXPECT_FALSE(HasFeature("gfx900", "sdwa"));
+
+  // Single-mode GPUs pin their native wavesize; dual-mode GPUs default to
+  // wavefrontsize32.
+  EXPECT_TRUE(HasFeature("gfx900", "wavefrontsize64"));
+  EXPECT_FALSE(HasFeature("gfx900", "wavefrontsize32"));
+  EXPECT_TRUE(HasFeature("gfx1250", "wavefrontsize32"));
+  EXPECT_FALSE(HasFeature("gfx1250", "wavefrontsize64"));
+  EXPECT_TRUE(HasFeature("gfx1010", "wavefrontsize32"));
+  EXPECT_FALSE(HasFeature("gfx1010", "wavefrontsize64"));
+
+  // gfx1250 dropped bvh-ray-tracing-insts for the newer bvh-dual-and-bvh8.
+  EXPECT_TRUE(HasFeature("gfx1200", "bvh-ray-tracing-insts"));
+  EXPECT_FALSE(HasFeature("gfx1250", "bvh-ray-tracing-insts"));
+
+  EXPECT_TRUE(HasFeature("gfx1250", "smem-prefetch-insts"));
+  EXPECT_TRUE(HasFeature("gfx950", "bf16-cvt-insts"));
+}
+
+TEST(TargetParserTest, testAMDGPUgetFeatureBitset) {
+  // getFeatureBitset exposes the same per-GPU frontend feature set that
+  // fillAMDGPUFeatureMap consumes internally.
+  const AMDGPU::AMDGPUFeatureBitset &GFX900 =
+      AMDGPU::getFeatureBitset(AMDGPU::GK_GFX900);
+  EXPECT_TRUE(GFX900.test(AMDGPU::FEAT_GFX9_INSTS));
+  EXPECT_TRUE(GFX900.test(AMDGPU::FEAT_GFX8_INSTS));
+  EXPECT_TRUE(GFX900.test(AMDGPU::FEAT_DPP));
+  EXPECT_TRUE(GFX900.test(AMDGPU::FEAT_WAVEFRONTSIZE64));
+  EXPECT_FALSE(GFX900.test(AMDGPU::FEAT_WAVEFRONTSIZE32));
+
+  // An unknown kind yields an empty bitset.
+  EXPECT_EQ(AMDGPU::getFeatureBitset(AMDGPU::GK_NONE).count(), 0u);
+
+  // getFeatureNames maps the set bits back to their SubtargetFeature names, one
+  // per set bit.
+  SmallVector<StringRef, 0> Names;
+  AMDGPU::getFeatureNames(GFX900, Names);
+  EXPECT_EQ(Names.size(), GFX900.count());
+  EXPECT_NE(llvm::find(Names, "gfx9-insts"), Names.end());
+  EXPECT_NE(llvm::find(Names, "dpp"), Names.end());
+  EXPECT_NE(llvm::find(Names, "wavefrontsize64"), Names.end());
+  EXPECT_EQ(llvm::find(Names, "wavefrontsize32"), Names.end());
+
+  SmallVector<StringRef, 0> Empty;
+  AMDGPU::getFeatureNames(AMDGPU::getFeatureBitset(AMDGPU::GK_NONE), Empty);
+  EXPECT_TRUE(Empty.empty());
 }
 
 TEST(TargetParserTest, testAMDGPUfillValidArchListAMDGCN) {
@@ -2950,6 +3105,33 @@ TEST(TargetParserTest, testAMDGPUParseTargetIDString) {
       TargetID::parseTargetIDString("amdgcn-amd-amdhsa-unknown-gfx900::"));
   EXPECT_FALSE(TargetID::parseTargetIDString(
       "amdgcn-amd-amdhsa-unknown-gfx900:xnack+:"));
+
+  // A processor inconsistent with the triple's subarch is rejected.
+  EXPECT_TRUE(
+      TargetID::parseTargetIDString("amdgpu9.00-amd-amdhsa-unknown-gfx900")
+          .has_value());
+  EXPECT_FALSE(
+      TargetID::parseTargetIDString("amdgpu9.00-amd-amdhsa-unknown-gfx803"));
+  EXPECT_FALSE(
+      TargetID::parseTargetIDString("amdgpu9.00-amd-amdhsa-unknown-gfx90a"));
+
+  // A major-family subarch accepts any processor it covers, but not one from a
+  // different family or one that is its own major subarch.
+  EXPECT_TRUE(TargetID::parseTargetIDString("amdgpu9-amd-amdhsa-unknown-gfx900")
+                  .has_value());
+  EXPECT_FALSE(
+      TargetID::parseTargetIDString("amdgpu9-amd-amdhsa-unknown-gfx908"));
+  EXPECT_FALSE(
+      TargetID::parseTargetIDString("amdgpu11-amd-amdhsa-unknown-gfx1200"));
+
+  // A subarchless "amdgpu" or an unrecognized "amdgpu<x>" arch is rejected,
+  // even with an otherwise valid processor.
+  EXPECT_FALSE(
+      TargetID::parseTargetIDString("amdgpu-amd-amdhsa-unknown-gfx900"));
+  EXPECT_FALSE(
+      TargetID::parseTargetIDString("amdgpufoo-amd-amdhsa-unknown-gfx900"));
+  EXPECT_FALSE(TargetID::parseTargetIDString("amdgpu-amd-amdhsa-unknown-"));
+  EXPECT_FALSE(TargetID::parseTargetIDString("amdgpufoo-amd-amdhsa-unknown"));
 
   // Constructing directly from a triple and processor+features string must
   // also be crash-safe on empty components.

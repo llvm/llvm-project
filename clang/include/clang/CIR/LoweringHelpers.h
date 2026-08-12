@@ -34,15 +34,13 @@ convertToDenseElementsAttr(cir::ConstArrayAttr attr,
                            const llvm::SmallVectorImpl<int64_t> &dims,
                            mlir::Type type);
 
-std::optional<mlir::Attribute>
-lowerConstArrayAttr(cir::ConstArrayAttr constArr,
-                    const mlir::TypeConverter *converter,
-                    mlir::ModuleOp moduleOp = {});
+std::optional<mlir::Attribute> lowerConstArrayAttr(
+    cir::ConstArrayAttr constArr, mlir::SymbolTableCollection &symbolTables,
+    const mlir::TypeConverter *converter, mlir::ModuleOp moduleOp = {});
 
-std::optional<mlir::Attribute>
-lowerConstRecordAttr(cir::ConstRecordAttr constRecord,
-                     const mlir::TypeConverter *converter,
-                     mlir::ModuleOp moduleOp = {});
+std::optional<mlir::Attribute> lowerConstRecordAttr(
+    cir::ConstRecordAttr constRecord, mlir::SymbolTableCollection &symbolTables,
+    const mlir::TypeConverter *converter, mlir::ModuleOp moduleOp = {});
 
 /// Adjust \p llvmType (the converted type of \p init) to the concrete LLVM type
 /// a global constant initialized with \p init actually lowers to. This differs

@@ -1466,6 +1466,34 @@ func.func @omp_atomic_compare_invalid_hint2(%x: memref<i32>, %e: i32, %d: i32) {
 }
 
 // -----
+// OpenMP 5.2 [15.8.3]: 'release' is not a valid argument to the fail clause.
+
+func.func @omp_atomic_compare_invalid_fail_release(%x: memref<i32>, %e: i32, %d: i32) {
+  // expected-error @below {{fail_memory_order must be 'seq_cst', 'acquire' or 'relaxed'}}
+  omp.atomic.compare %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = llvm.icmp "eq" %xval, %e : i32
+    %sel = llvm.select %cmp, %d, %xval : i1, i32
+    omp.yield(%sel : i32)
+  } {fail_memory_order = #omp<memoryorderkind release>}
+  return
+}
+
+// -----
+// OpenMP 5.2 [15.8.3]: 'acq_rel' is not a valid argument to the fail clause.
+
+func.func @omp_atomic_compare_invalid_fail_acq_rel(%x: memref<i32>, %e: i32, %d: i32) {
+  // expected-error @below {{fail_memory_order must be 'seq_cst', 'acquire' or 'relaxed'}}
+  omp.atomic.compare %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = llvm.icmp "eq" %xval, %e : i32
+    %sel = llvm.select %cmp, %d, %xval : i1, i32
+    omp.yield(%sel : i32)
+  } {fail_memory_order = #omp<memoryorderkind acq_rel>}
+  return
+}
+
+// -----
 // float comparison operators mentionend in ArithBase.td not permitted for
 //     !omp atomic compare
 
@@ -3362,6 +3390,140 @@ func.func @omp_distribute_allocate(%data_var : memref<i32>, %lb : i32, %ub : i32
 
 // -----
 
+omp.private {type = private} @allocate_private : i32
+
+func.func @omp_parallel_allocate_empty_map() {
+  // expected-error @below {{unexpected allocate private indices without allocate variables}}
+  omp.parallel {
+    omp.terminator
+  } {allocate_private_indices = array<i64>}
+  return
+}
+
+// -----
+
+func.func @omp_parallel_allocate_empty_alignments() {
+  // expected-error @below {{unexpected allocate alignments without allocate variables}}
+  omp.parallel {
+    omp.terminator
+  } {allocate_alignments = array<i64>}
+  return
+}
+
+// -----
+
+omp.private {type = private} @allocate_private : i32
+
+func.func @omp_parallel_allocate_alignment_size(
+    %allocator : i64, %var : !llvm.ptr) {
+  // expected-error @below {{expected as many allocate alignments as allocate variables}}
+  omp.parallel allocate(%allocator : i64 -> %var : !llvm.ptr)
+      private(@allocate_private %var -> %private : !llvm.ptr) {
+    omp.terminator
+  } {allocate_alignments = array<i64: 64, 128>, allocate_private_indices = array<i64: 0>}
+  return
+}
+
+// -----
+
+omp.private {type = private} @allocate_private : i32
+
+func.func @omp_parallel_allocate_negative_alignment(
+    %allocator : i64, %var : !llvm.ptr) {
+  // expected-error @below {{expected non-negative allocate alignments}}
+  omp.parallel allocate(%allocator : i64 -> %var : !llvm.ptr)
+      private(@allocate_private %var -> %private : !llvm.ptr) {
+    omp.terminator
+  } {allocate_alignments = array<i64: -64>, allocate_private_indices = array<i64: 0>}
+  return
+}
+
+// -----
+
+omp.private {type = private} @allocate_private : i32
+
+func.func @omp_parallel_allocate_non_power_of_two_alignment(
+    %allocator : i64, %var : !llvm.ptr) {
+  // expected-error @below {{expected positive allocate alignments to be powers of two}}
+  omp.parallel allocate(%allocator : i64 -> %var : !llvm.ptr)
+      private(@allocate_private %var -> %private : !llvm.ptr) {
+    omp.terminator
+  } {allocate_alignments = array<i64: 24>, allocate_private_indices = array<i64: 0>}
+  return
+}
+
+// -----
+
+omp.private {type = private} @allocate_private : i32
+
+func.func @omp_parallel_allocate_missing_map(%allocator : i64, %var : !llvm.ptr) {
+  // expected-error @below {{expected an allocate private index for each allocate variable}}
+  omp.parallel allocate(%allocator : i64 -> %var : !llvm.ptr)
+      private(@allocate_private %var -> %private : !llvm.ptr) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+omp.private {type = private} @allocate_private : i32
+
+func.func @omp_parallel_allocate_map_size(%allocator : i64, %var : !llvm.ptr) {
+  // expected-error @below {{expected as many allocate private indices as allocate variables}}
+  omp.parallel allocate(%allocator : i64 -> %var : !llvm.ptr)
+      private(@allocate_private %var -> %private : !llvm.ptr) {
+    omp.terminator
+  } {allocate_private_indices = array<i64: 0, 0>}
+  return
+}
+
+// -----
+
+omp.private {type = private} @allocate_private : i32
+
+func.func @omp_parallel_allocate_map_range(%allocator : i64, %var : !llvm.ptr) {
+  // expected-error @below {{allocate private index is out of range}}
+  omp.parallel allocate(%allocator : i64 -> %var : !llvm.ptr)
+      private(@allocate_private %var -> %private : !llvm.ptr) {
+    omp.terminator
+  } {allocate_private_indices = array<i64: 1>}
+  return
+}
+
+// -----
+
+omp.private {type = private} @x_private : i32
+omp.private {type = private} @y_private : i32
+
+func.func @omp_parallel_allocate_map_duplicate(
+    %allocator : i64, %x : !llvm.ptr, %y : !llvm.ptr) {
+  // expected-error @below {{allocate private index refers to a private variable more than once}}
+  omp.parallel allocate(%allocator : i64 -> %x : !llvm.ptr,
+                        %allocator : i64 -> %y : !llvm.ptr)
+      private(@x_private %x -> %x_private,
+              @y_private %y -> %y_private : !llvm.ptr, !llvm.ptr) {
+    omp.terminator
+  } {allocate_private_indices = array<i64: 0, 0>}
+  return
+}
+
+// -----
+
+omp.private {type = private} @allocate_private : i32
+
+func.func @omp_parallel_allocate_type_mismatch(
+    %allocator : i64, %allocate_var : i64, %private_var : !llvm.ptr) {
+  // expected-error @below {{type mismatch between allocate variable and private variable at index 0}}
+  omp.parallel allocate(%allocator : i64 -> %allocate_var : i64)
+      private(@allocate_private %private_var -> %private : !llvm.ptr) {
+    omp.terminator
+  } {allocate_private_indices = array<i64: 0>}
+  return
+}
+
+// -----
+
 func.func @omp_distribute_nested_wrapper(%lb: index, %ub: index, %step: index) -> () {
   // expected-error @below {{an 'omp.wsloop' nested wrapper is only allowed when a composite 'omp.parallel' is the direct parent}}
   omp.distribute {
@@ -4911,5 +5073,12 @@ func.func @omp_unroll_partial_factor_zero(%cli : !omp.cli) -> () {
 func.func @omp_unroll_partial_factor_negative(%cli : !omp.cli) -> () {
   // expected-error @below {{op attribute 'unroll_factor' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive}}
   omp.unroll_partial(%cli) {unroll_factor = -1 : i64}
+  return
+}
+
+// -----
+func.func @omp_error_message_and_message_expr(%msg : !llvm.ptr) -> () {
+  // expected-error @below {{the message must be provided either as a constant `message` attribute or as a `message_expr` operand, but not both}}
+  omp.error severity(warning) message("a warning") message_expr(%msg : !llvm.ptr)
   return
 }

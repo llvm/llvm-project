@@ -304,8 +304,11 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::OMPScanDirectiveClass:
     EmitOMPScanDirective(cast<OMPScanDirective>(*S));
     break;
-  case Stmt::OMPOrderedDirectiveClass:
-    EmitOMPOrderedDirective(cast<OMPOrderedDirective>(*S));
+  case Stmt::OMPOrderedStandaloneDirectiveClass:
+    EmitOMPOrderedStandaloneDirective(cast<OMPOrderedStandaloneDirective>(*S));
+    break;
+  case Stmt::OMPOrderedBlockAssocDirectiveClass:
+    EmitOMPOrderedBlockAssocDirective(cast<OMPOrderedBlockAssocDirective>(*S));
     break;
   case Stmt::OMPAtomicDirectiveClass:
     EmitOMPAtomicDirective(cast<OMPAtomicDirective>(*S));
@@ -783,6 +786,7 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
   bool noinline = false;
   bool alwaysinline = false;
   bool noconvergent = false;
+  StringRef amdgpuAVMode;
   HLSLControlFlowHintAttr::Spelling flattenOrBranch =
       HLSLControlFlowHintAttr::SpellingNotCalculated;
   const CallExpr *musttail = nullptr;
@@ -820,6 +824,9 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
     case attr::Atomic:
       AA = cast<AtomicAttr>(A);
       break;
+    case attr::AMDGPUAvailableVisible:
+      amdgpuAVMode = cast<AMDGPUAvailableVisibleAttr>(A)->getMode();
+      break;
     case attr::HLSLControlFlowHint: {
       flattenOrBranch = cast<HLSLControlFlowHintAttr>(A)->getSemanticSpelling();
     } break;
@@ -829,6 +836,7 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
   SaveAndRestore save_noinline(InNoInlineAttributedStmt, noinline);
   SaveAndRestore save_alwaysinline(InAlwaysInlineAttributedStmt, alwaysinline);
   SaveAndRestore save_noconvergent(InNoConvergentAttributedStmt, noconvergent);
+  SaveAndRestore save_amdgpuav(AMDGPUAvailableVisibleMode, amdgpuAVMode);
   SaveAndRestore save_musttail(MustTailCall, musttail);
   SaveAndRestore save_flattenOrBranch(HLSLControlFlowAttr, flattenOrBranch);
   CGAtomicOptionsRAII AORAII(CGM, AA);
@@ -1789,7 +1797,8 @@ void CodeGenFunction::EmitCaseStmtRange(const CaseStmt &S,
   Stmt::Likelihood LH = Stmt::getLikelihood(Attrs);
   llvm::APInt Range = RHS - LHS;
   // FIXME: parameters such as this should not be hardcoded.
-  if (Range.ult(llvm::APInt(Range.getBitWidth(), 64))) {
+  if (Range.getBitWidth() < 7 ||
+      Range.ult(llvm::APInt(Range.getBitWidth(), 64))) {
     // Range is small enough to add multiple switch instruction cases.
     uint64_t Total = getProfileCount(&S);
     unsigned NCases = Range.getZExtValue() + 1;

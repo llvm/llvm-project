@@ -15,13 +15,10 @@
 </style>
 ```
 
-```{contents}
-:local:
-```
 
-```{warning}
+:::{warning}
 This is a work in progress.
-```
+:::
 ## Introduction
 
 The LLVM target-independent code generator is a framework that provides a suite
@@ -1199,9 +1196,9 @@ of the basic block.  Live intervals for virtual registers are computed for some
 ordering of the machine instructions `[1, N]`.  A live interval is an interval
 `[i, j)`, where `1 >= i >= j > N`, for which a variable is live.
 
-```{note}
+:::{note}
 More to come...
-```
+:::
 (Register Allocation)=
 (register allocator)=
 
@@ -1451,9 +1448,9 @@ $ llc -regalloc=pbqp file.bc -o pbqp.s
 
 ### Prolog/Epilog Code Insertion
 
-```{note}
+:::{note}
 To Be Written
-```
+:::
 ### Compact Unwind
 
 Throwing an exception requires *unwinding* out of a function. The information on
@@ -1525,9 +1522,9 @@ the function in bits 9-12 (mask: `0x00001C00`).
 
 ### Late Machine Code Optimizations
 
-```{note}
+:::{note}
 To Be Written
-```
+:::
 (Code Emission)=
 
 ### Code Emission
@@ -1648,9 +1645,9 @@ compiler.
 
 ### Instruction Parsing
 
-```{note}
+:::{note}
 To Be Written
-```
+:::
 ### Instruction Alias Processing
 
 Once the instruction is parsed, it enters the MatchInstructionImpl function.
@@ -1753,9 +1750,9 @@ as the third parameter to the InstAlias definition.
 
 ### Instruction Matching
 
-```{note}
+:::{note}
 To Be Written
-```
+:::
 (Implementations of the abstract target description interfaces)=
 (implement the target description)=
 
@@ -2094,9 +2091,9 @@ makes it convenient to locate programmatically and during debugging.
 
 #### Dynamic Allocation
 
-```{note}
+:::{note}
 TODO - More to come.
-```
+:::
 ### The NVPTX backend
 
 The NVPTX code generator under lib/Target/NVPTX is an open-source version of

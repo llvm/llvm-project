@@ -23,31 +23,29 @@ namespace llvm {
 /// NVPTXTargetMachine
 ///
 class NVPTXTargetMachine : public CodeGenTargetMachineImpl {
-  bool is64bit;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
-  NVPTX::DrvInterface drvInterface;
   NVPTXSubtarget Subtarget;
 
   // Hold Strings that can be free'd all together with NVPTXTargetMachine
-  BumpPtrAllocator StrAlloc;
-  UniqueStringSaver StrPool;
+  mutable BumpPtrAllocator StrAlloc;
+  mutable UniqueStringSaver StrPool;
 
 public:
   NVPTXTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                      StringRef FS, const TargetOptions &Options,
                      std::optional<Reloc::Model> RM,
-                     std::optional<CodeModel::Model> CM, CodeGenOptLevel OP,
-                     bool is64bit);
+                     std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
+                     bool JIT);
   ~NVPTXTargetMachine() override;
   const NVPTXSubtarget *getSubtargetImpl(const Function &) const override {
     return &Subtarget;
   }
   const NVPTXSubtarget *getSubtargetImpl() const { return &Subtarget; }
-  bool is64Bit() const { return is64bit; }
-  NVPTX::DrvInterface getDrvInterface() const { return drvInterface; }
-  UniqueStringSaver &getStrPool() const {
-    return const_cast<UniqueStringSaver &>(StrPool);
+  NVPTX::DrvInterface getDrvInterface() const {
+    return getTargetTriple().getOS() == Triple::NVCL ? NVPTX::NVCL
+                                                     : NVPTX::CUDA;
   }
+  UniqueStringSaver &getStrPool() const { return StrPool; }
 
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 
@@ -70,35 +68,11 @@ public:
 
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 
-  bool isMachineVerifierClean() const override {
-    return false;
-  }
+  bool isMachineVerifierClean() const override { return false; }
 
   std::pair<const Value *, unsigned>
   getPredicatedAddrSpace(const Value *V) const override;
 }; // NVPTXTargetMachine.
-
-class NVPTXTargetMachine32 : public NVPTXTargetMachine {
-  virtual void anchor();
-
-public:
-  NVPTXTargetMachine32(const Target &T, const Triple &TT, StringRef CPU,
-                       StringRef FS, const TargetOptions &Options,
-                       std::optional<Reloc::Model> RM,
-                       std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
-                       bool JIT);
-};
-
-class NVPTXTargetMachine64 : public NVPTXTargetMachine {
-  virtual void anchor();
-
-public:
-  NVPTXTargetMachine64(const Target &T, const Triple &TT, StringRef CPU,
-                       StringRef FS, const TargetOptions &Options,
-                       std::optional<Reloc::Model> RM,
-                       std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
-                       bool JIT);
-};
 
 } // end namespace llvm
 

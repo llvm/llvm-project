@@ -69,6 +69,12 @@ OptionalDiagnostic State::Note(SourceLocation Loc, diag::kind DiagId) {
   return OptionalDiagnostic(&addDiag(Loc, DiagId));
 }
 
+OptionalDiagnostic State::Note(SourceInfo SI, diag::kind DiagId) {
+  if (!hasActiveDiagnostic())
+    return OptionalDiagnostic();
+  return OptionalDiagnostic(&addDiag(SI.getLoc(), DiagId));
+}
+
 void State::addNotes(ArrayRef<PartialDiagnosticAt> Diags) {
   if (hasActiveDiagnostic())
     llvm::append_range(*EvalStatus.Diag, Diags);

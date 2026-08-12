@@ -31,6 +31,8 @@
 
 namespace fir {
 
+class GlobalOp;
+
 using PassConstructor = std::unique_ptr<mlir::Pass>();
 
 template <typename F, typename OP>
@@ -61,11 +63,25 @@ void addNestedPassConditionally(mlir::PassManager &pm,
 }
 
 template <typename F>
-void addNestedPassToAllTopLevelOperations(mlir::PassManager &pm, F ctor);
+void addNestedPassToAllTopLevelOperations(mlir::PassManager &pm, F ctor) {
+  addNestedPassToOps<F, mlir::func::FuncOp, mlir::omp::DeclareMapperOp,
+                     mlir::omp::DeclareReductionOp, mlir::omp::PrivateClauseOp,
+                     fir::GlobalOp>(pm, ctor);
+}
 
 template <typename F>
 void addNestedPassToAllTopLevelOperationsConditionally(
-    mlir::PassManager &pm, llvm::cl::opt<bool> &disabled, F ctor);
+    mlir::PassManager &pm, llvm::cl::opt<bool> &disabled, F ctor) {
+  if (!disabled)
+    addNestedPassToAllTopLevelOperations<F>(pm, ctor);
+}
+
+template <typename F>
+void addPassToGPUModuleOperations(mlir::PassManager &pm, F ctor) {
+  mlir::OpPassManager &nestPM = pm.nest<mlir::gpu::GPUModuleOp>();
+  nestPM.addNestedPass<mlir::func::FuncOp>(ctor());
+  nestPM.addNestedPass<mlir::gpu::GPUFuncOp>(ctor());
+}
 
 /// Add MLIR Canonicalizer pass with region simplification disabled.
 /// FIR does not support the promotion of some SSA value to block arguments (or
@@ -81,9 +97,9 @@ void addCanonicalizerPassWithoutRegionSimplification(mlir::OpPassManager &pm);
 void addCfgConversionPass(mlir::PassManager &pm,
                           const MLIRToLLVMPassPipelineConfig &config);
 
-void addAVC(mlir::PassManager &pm, const llvm::OptimizationLevel &optLevel);
-
 void addMemoryAllocationOpt(mlir::PassManager &pm);
+
+void addAllocationPlacement(mlir::PassManager &pm, bool stackArrays);
 
 void addCodeGenRewritePass(mlir::PassManager &pm, bool preserveDeclare);
 

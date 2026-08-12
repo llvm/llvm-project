@@ -4,22 +4,22 @@
 // CHECK: CXXRecordDecl {{.*}} SamplerState definition
 // CHECK: FinalAttr {{.*}} Implicit final
 // CHECK-NEXT: FieldDecl {{.*}} implicit {{.*}} __handle '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(Sampler)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
 
 // CHECK: CXXRecordDecl {{.*}} SamplerComparisonState definition
 // CHECK: FinalAttr {{.*}} Implicit final
 // CHECK-NEXT: FieldDecl {{.*}} implicit {{.*}} __handle '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(Sampler)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
 
 // CHECK: ClassTemplateDecl {{.*}} [[TEXTURE]]
 // CHECK: TemplateTypeParmDecl {{.*}} element_type
 // CHECK: CXXRecordDecl {{.*}} [[TEXTURE]] definition
 // CHECK: FinalAttr {{.*}} Implicit final
 // CHECK-NEXT: FieldDecl {{.*}} implicit __handle '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
 // ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// CHECK-SAME{LITERAL}: [[hlsl::dimension("2D")]]
 
 // CHECK: CXXMethodDecl {{.*}} Load 'element_type (vector<int, [[LOCATION_DIM]]>)'
 // CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<int, [[LOCATION_DIM]]>'
@@ -29,10 +29,10 @@
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_load_level' 'void (...) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
 // ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// CHECK-SAME{LITERAL}: [[hlsl::dimension("2D")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<int, [[LOCATION_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<int, [[LOCATION_DIM]]>'
@@ -47,10 +47,10 @@
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_load_level' 'void (...) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
 // ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// CHECK-SAME{LITERAL}: [[hlsl::dimension("2D")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<int, [[LOCATION_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<int, [[LOCATION_DIM]]>'
@@ -66,10 +66,10 @@
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
 // ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// CHECK-SAME{LITERAL}: [[hlsl::dimension("2D")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'const hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<unsigned int, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Index' 'vector<unsigned int, [[COORD_DIM]]>'
@@ -84,14 +84,14 @@
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample' 'void (...) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
 // ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// CHECK-SAME{LITERAL}: [[hlsl::dimension("2D")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(Sampler)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
 // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
@@ -107,14 +107,14 @@
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample' 'void (...) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
 // ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// CHECK-SAME{LITERAL}: [[hlsl::dimension("2D")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(Sampler)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
 // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
@@ -132,14 +132,14 @@
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample' 'void (...) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
 // ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// CHECK-SAME{LITERAL}: [[hlsl::dimension("2D")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(Sampler)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
 // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
@@ -157,14 +157,14 @@
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_bias' 'void (...) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
 // ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// CHECK-SAME{LITERAL}: [[hlsl::dimension("2D")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(Sampler)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
 // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
@@ -182,14 +182,14 @@
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_bias' 'void (...) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
 // ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// CHECK-SAME{LITERAL}: [[hlsl::dimension("2D")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(Sampler)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
 // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
@@ -209,14 +209,14 @@
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_bias' 'void (...) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
 // ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// CHECK-SAME{LITERAL}: [[hlsl::dimension("2D")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(Sampler)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
 // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
@@ -236,14 +236,14 @@
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_grad' 'void (...) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
 // ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// CHECK-SAME{LITERAL}: [[hlsl::dimension("2D")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(Sampler)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
 // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
@@ -263,14 +263,14 @@
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_grad' 'void (...) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
 // ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// CHECK-SAME{LITERAL}: [[hlsl::dimension("2D")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(Sampler)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
 // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
@@ -292,14 +292,14 @@
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_grad' 'void (...) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
 // ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// CHECK-SAME{LITERAL}: [[hlsl::dimension("2D")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(Sampler)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
 // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
@@ -319,14 +319,14 @@
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_level' 'void (...) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
 // ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// CHECK-SAME{LITERAL}: [[hlsl::dimension("2D")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(Sampler)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
 // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
@@ -344,14 +344,14 @@
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_level' 'void (...) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
 // ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// CHECK-SAME{LITERAL}: [[hlsl::dimension("2D")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(Sampler)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
 // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
@@ -369,14 +369,14 @@
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_cmp' 'void (...) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
 // ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// CHECK-SAME{LITERAL}: [[hlsl::dimension("2D")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(Sampler)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerComparisonState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerComparisonState'
 // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
@@ -394,14 +394,14 @@
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_cmp' 'void (...) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
 // ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// CHECK-SAME{LITERAL}: [[hlsl::dimension("2D")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(Sampler)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerComparisonState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerComparisonState'
 // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
@@ -421,14 +421,14 @@
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_cmp' 'void (...) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
 // ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// CHECK-SAME{LITERAL}: [[hlsl::dimension("2D")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(Sampler)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerComparisonState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerComparisonState'
 // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
@@ -447,14 +447,14 @@
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_cmp_level_zero' 'void (...) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
 // ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// CHECK-SAME{LITERAL}: [[hlsl::dimension("2D")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(Sampler)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerComparisonState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerComparisonState'
 // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
@@ -472,14 +472,14 @@
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_cmp_level_zero' 'void (...) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
 // ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// CHECK-SAME{LITERAL}: [[hlsl::dimension("2D")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(Sampler)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerComparisonState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerComparisonState'
 // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
@@ -496,14 +496,14 @@
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_calculate_lod' 'void (...) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
 // ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// CHECK-SAME{LITERAL}: [[hlsl::dimension("2D")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(Sampler)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
 // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, 2>' lvalue ParmVar {{.*}} 'Location' 'vector<float, 2>'
@@ -518,14 +518,14 @@
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_calculate_lod_unclamped' 'void (...) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
 // ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// CHECK-SAME{LITERAL}: [[hlsl::dimension("2D")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(Sampler)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
 // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, 2>' lvalue ParmVar {{.*}} 'Location' 'vector<float, 2>'
@@ -540,10 +540,10 @@
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getdimensions_xy' 'void (__hlsl_resource_t, unsigned int &, unsigned int &) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
 // ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// CHECK-SAME{LITERAL}: [[hlsl::dimension("2D")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' lvalue ParmVar {{.*}} 'width' 'unsigned int &__restrict'
@@ -562,10 +562,10 @@
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getdimensions_levels_xy' 'void (__hlsl_resource_t, unsigned int, unsigned int &, unsigned int &, unsigned int &) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
 // ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// CHECK-SAME{LITERAL}: [[hlsl::dimension("2D")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' lvalue ParmVar {{.*}} 'mipLevel' 'unsigned int'
@@ -583,10 +583,10 @@
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getdimensions_xy_float' 'void (__hlsl_resource_t, float &, float &) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
 // ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// CHECK-SAME{LITERAL}: [[hlsl::dimension("2D")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'width' 'float &__restrict'
@@ -605,10 +605,10 @@
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getdimensions_levels_xy_float' 'void (__hlsl_resource_t, unsigned int, float &, float &, float &) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
 // ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// CHECK-SAME{LITERAL}: [[hlsl::dimension("2D")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' lvalue ParmVar {{.*}} 'mipLevel' 'unsigned int'

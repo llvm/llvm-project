@@ -87,3 +87,19 @@ define <2 x i16> @extract_mul_insert(<2 x i8> %x) {
   %trunc = trunc <2 x i32> %insr to <2 x i16>
   ret <2 x i16> %trunc
 }
+
+; The index is not part of the expression graph and must remain available to
+; the rebuilt insertelement.
+define i8 @insert_index_is_reduced_value() {
+; CHECK-LABEL: @insert_index_is_reduced_value(
+; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <1 x i32> zeroinitializer, i32 0, i32 0
+; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <1 x i32> [[VECINS]], i32 0
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[VECEXT]] to i8
+; CHECK-NEXT:    ret i8 [[TRUNC]]
+;
+  %cast = trunc i64 0 to i32
+  %vecins = insertelement <1 x i32> zeroinitializer, i32 %cast, i32 %cast
+  %vecext = extractelement <1 x i32> %vecins, i32 0
+  %trunc = trunc i32 %vecext to i8
+  ret i8 %trunc
+}

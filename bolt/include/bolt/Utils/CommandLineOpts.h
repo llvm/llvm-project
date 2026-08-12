@@ -94,6 +94,7 @@ extern llvm::cl::opt<HeatmapBlockSizes, false, HeatmapBlockSpecParser>
     HeatmapBlock;
 extern llvm::cl::opt<unsigned long long> HeatmapMaxAddress;
 extern llvm::cl::opt<unsigned long long> HeatmapMinAddress;
+extern llvm::cl::opt<int> HeatmapCdfPct;
 extern llvm::cl::opt<bool> HeatmapPrintMappings;
 extern llvm::cl::opt<std::string> HeatmapOutput;
 extern llvm::cl::opt<bool> HotData;
@@ -131,6 +132,10 @@ extern llvm::cl::opt<bool> UpdateDebugSections;
 // errs() for errors and warnings.
 // dbgs() for output within DEBUG().
 extern llvm::cl::opt<unsigned> Verbosity;
+
+// Option to control whether liveness analysis should be used by
+// FixupBranches and LongJmpPass. Needed for branch inversion on AArch64.
+extern llvm::cl::opt<bool> FixBranchesWithLiveness;
 
 /// Return true if we should process all functions in the binary.
 bool processAllFunctions();

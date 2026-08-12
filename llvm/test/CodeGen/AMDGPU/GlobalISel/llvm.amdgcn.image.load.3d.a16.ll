@@ -9,10 +9,10 @@
 define amdgpu_ps <4 x float> @load_3d_v4f32_xyzw(<8 x i32> inreg %rsrc, i16 %s, i16 %t, i16 %r) {
 ; GFX9-LABEL: load_3d_v4f32_xyzw:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX9-NEXT:    s_mov_b32 s0, s2
-; GFX9-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
-; GFX9-NEXT:    v_and_b32_e32 v1, 0xffff, v2
+; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX9-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_lshlrev_b32_e64 v1, 16, s0
 ; GFX9-NEXT:    s_mov_b32 s1, s3
 ; GFX9-NEXT:    s_mov_b32 s2, s4
 ; GFX9-NEXT:    s_mov_b32 s3, s5
@@ -20,26 +20,26 @@ define amdgpu_ps <4 x float> @load_3d_v4f32_xyzw(<8 x i32> inreg %rsrc, i16 %s, 
 ; GFX9-NEXT:    s_mov_b32 s5, s7
 ; GFX9-NEXT:    s_mov_b32 s6, s8
 ; GFX9-NEXT:    s_mov_b32 s7, s9
-; GFX9-NEXT:    v_lshl_or_b32 v1, s0, 16, v1
+; GFX9-NEXT:    v_or_b32_sdwa v1, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX9-NEXT:    image_load v[0:3], v[0:1], s[0:7] dmask:0xf unorm a16
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_3d_v4f32_xyzw:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX10-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; GFX10-NEXT:    s_mov_b32 s0, s2
+; GFX10-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX10-NEXT:    v_lshlrev_b32_e64 v3, 16, s0
 ; GFX10-NEXT:    s_mov_b32 s1, s3
 ; GFX10-NEXT:    s_mov_b32 s2, s4
-; GFX10-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
-; GFX10-NEXT:    v_lshl_or_b32 v1, s0, 16, v2
 ; GFX10-NEXT:    s_mov_b32 s3, s5
+; GFX10-NEXT:    v_or_b32_sdwa v1, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX10-NEXT:    v_or_b32_sdwa v2, v3, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX10-NEXT:    s_mov_b32 s4, s6
 ; GFX10-NEXT:    s_mov_b32 s5, s7
 ; GFX10-NEXT:    s_mov_b32 s6, s8
 ; GFX10-NEXT:    s_mov_b32 s7, s9
-; GFX10-NEXT:    image_load v[0:3], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_3D unorm a16
+; GFX10-NEXT:    image_load v[0:3], v[1:2], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_3D unorm a16
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
@@ -115,11 +115,11 @@ define amdgpu_ps <4 x float> @load_3d_v4f32_xyzw(<8 x i32> inreg %rsrc, i16 %s, 
 define amdgpu_ps <4 x float> @load_3d_v4f32_xyzw_tfe(<8 x i32> inreg %rsrc, ptr addrspace(1) inreg %out, i16 %s, i16 %t, i16 %r) {
 ; GFX9-LABEL: load_3d_v4f32_xyzw_tfe:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX9-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX9-NEXT:    s_mov_b32 s0, s2
-; GFX9-NEXT:    v_lshl_or_b32 v10, v1, 16, v0
-; GFX9-NEXT:    v_and_b32_e32 v0, 0xffff, v2
+; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX9-NEXT:    v_mov_b32_e32 v5, 0
+; GFX9-NEXT:    v_or_b32_sdwa v10, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_lshlrev_b32_e64 v0, 16, s0
 ; GFX9-NEXT:    v_mov_b32_e32 v6, v5
 ; GFX9-NEXT:    v_mov_b32_e32 v7, v5
 ; GFX9-NEXT:    v_mov_b32_e32 v8, v5
@@ -131,7 +131,7 @@ define amdgpu_ps <4 x float> @load_3d_v4f32_xyzw_tfe(<8 x i32> inreg %rsrc, ptr 
 ; GFX9-NEXT:    s_mov_b32 s5, s7
 ; GFX9-NEXT:    s_mov_b32 s6, s8
 ; GFX9-NEXT:    s_mov_b32 s7, s9
-; GFX9-NEXT:    v_lshl_or_b32 v11, s0, 16, v0
+; GFX9-NEXT:    v_or_b32_sdwa v11, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v5
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v6
 ; GFX9-NEXT:    v_mov_b32_e32 v2, v7
@@ -145,18 +145,18 @@ define amdgpu_ps <4 x float> @load_3d_v4f32_xyzw_tfe(<8 x i32> inreg %rsrc, ptr 
 ;
 ; GFX10-LABEL: load_3d_v4f32_xyzw_tfe:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_mov_b32_e32 v5, 0
-; GFX10-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX10-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; GFX10-NEXT:    s_mov_b32 s0, s2
+; GFX10-NEXT:    v_mov_b32_e32 v5, 0
+; GFX10-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX10-NEXT:    v_lshlrev_b32_e64 v3, 16, s0
 ; GFX10-NEXT:    s_mov_b32 s1, s3
+; GFX10-NEXT:    s_mov_b32 s2, s4
 ; GFX10-NEXT:    v_mov_b32_e32 v6, v5
 ; GFX10-NEXT:    v_mov_b32_e32 v7, v5
 ; GFX10-NEXT:    v_mov_b32_e32 v8, v5
 ; GFX10-NEXT:    v_mov_b32_e32 v9, v5
-; GFX10-NEXT:    v_lshl_or_b32 v10, v1, 16, v0
-; GFX10-NEXT:    v_lshl_or_b32 v11, s0, 16, v2
-; GFX10-NEXT:    s_mov_b32 s2, s4
+; GFX10-NEXT:    v_or_b32_sdwa v10, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX10-NEXT:    v_or_b32_sdwa v11, v3, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX10-NEXT:    s_mov_b32 s3, s5
 ; GFX10-NEXT:    s_mov_b32 s4, s6
 ; GFX10-NEXT:    s_mov_b32 s5, s7
@@ -283,11 +283,11 @@ define amdgpu_ps <4 x float> @load_3d_v4f32_xyzw_tfe(<8 x i32> inreg %rsrc, ptr 
 define amdgpu_ps <4 x float> @load_3d_v4f32_xyzw_tfe_lwe(<8 x i32> inreg %rsrc, ptr addrspace(1) inreg %out, i16 %s, i16 %t, i16 %r) {
 ; GFX9-LABEL: load_3d_v4f32_xyzw_tfe_lwe:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX9-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX9-NEXT:    s_mov_b32 s0, s2
-; GFX9-NEXT:    v_lshl_or_b32 v10, v1, 16, v0
-; GFX9-NEXT:    v_and_b32_e32 v0, 0xffff, v2
+; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX9-NEXT:    v_mov_b32_e32 v5, 0
+; GFX9-NEXT:    v_or_b32_sdwa v10, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-NEXT:    v_lshlrev_b32_e64 v0, 16, s0
 ; GFX9-NEXT:    v_mov_b32_e32 v6, v5
 ; GFX9-NEXT:    v_mov_b32_e32 v7, v5
 ; GFX9-NEXT:    v_mov_b32_e32 v8, v5
@@ -299,7 +299,7 @@ define amdgpu_ps <4 x float> @load_3d_v4f32_xyzw_tfe_lwe(<8 x i32> inreg %rsrc, 
 ; GFX9-NEXT:    s_mov_b32 s5, s7
 ; GFX9-NEXT:    s_mov_b32 s6, s8
 ; GFX9-NEXT:    s_mov_b32 s7, s9
-; GFX9-NEXT:    v_lshl_or_b32 v11, s0, 16, v0
+; GFX9-NEXT:    v_or_b32_sdwa v11, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v5
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v6
 ; GFX9-NEXT:    v_mov_b32_e32 v2, v7
@@ -313,18 +313,18 @@ define amdgpu_ps <4 x float> @load_3d_v4f32_xyzw_tfe_lwe(<8 x i32> inreg %rsrc, 
 ;
 ; GFX10-LABEL: load_3d_v4f32_xyzw_tfe_lwe:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_mov_b32_e32 v5, 0
-; GFX10-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX10-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; GFX10-NEXT:    s_mov_b32 s0, s2
+; GFX10-NEXT:    v_mov_b32_e32 v5, 0
+; GFX10-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX10-NEXT:    v_lshlrev_b32_e64 v3, 16, s0
 ; GFX10-NEXT:    s_mov_b32 s1, s3
+; GFX10-NEXT:    s_mov_b32 s2, s4
 ; GFX10-NEXT:    v_mov_b32_e32 v6, v5
 ; GFX10-NEXT:    v_mov_b32_e32 v7, v5
 ; GFX10-NEXT:    v_mov_b32_e32 v8, v5
 ; GFX10-NEXT:    v_mov_b32_e32 v9, v5
-; GFX10-NEXT:    v_lshl_or_b32 v10, v1, 16, v0
-; GFX10-NEXT:    v_lshl_or_b32 v11, s0, 16, v2
-; GFX10-NEXT:    s_mov_b32 s2, s4
+; GFX10-NEXT:    v_or_b32_sdwa v10, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX10-NEXT:    v_or_b32_sdwa v11, v3, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX10-NEXT:    s_mov_b32 s3, s5
 ; GFX10-NEXT:    s_mov_b32 s4, s6
 ; GFX10-NEXT:    s_mov_b32 s5, s7

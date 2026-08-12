@@ -9,7 +9,7 @@ define void @cond_call(ptr readonly %src, ptr noalias %dest, i64 %N) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 2
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -89,6 +89,68 @@ for.loop:
   br i1 %loopcond, label %end, label %for.body
 
 end:
+  ret void
+}
+
+; Test for a masked scalar call to an intrinsic whose result is used as part of
+; a load address.
+define void @masked_umax_used_by_load_address(ptr noalias %src, ptr noalias %dst, i64 %n, i1 %c) {
+; CHECK-LABEL: @masked_umax_used_by_load_address(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.umax.i64(i64 [[N:%.*]], i64 1)
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i16, ptr [[SRC:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_LOAD_CONTINUE2:%.*]] ]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
+; CHECK:       pred.load.if:
+; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[TMP1]], align 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i16> poison, i16 [[TMP2]], i64 0
+; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE]]
+; CHECK:       pred.load.continue:
+; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x i16> [ poison, [[VECTOR_BODY]] ], [ [[TMP3]], [[PRED_LOAD_IF]] ]
+; CHECK-NEXT:    br i1 [[C]], label [[PRED_LOAD_IF1:%.*]], label [[PRED_LOAD_CONTINUE2]]
+; CHECK:       pred.load.if1:
+; CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[TMP1]], align 2
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i16> [[TMP4]], i16 [[TMP5]], i64 1
+; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE2]]
+; CHECK:       pred.load.continue2:
+; CHECK-NEXT:    [[TMP7:%.*]] = phi <2 x i16> [ [[TMP4]], [[PRED_LOAD_CONTINUE]] ], [ [[TMP6]], [[PRED_LOAD_IF1]] ]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[C]], <2 x i16> [[TMP7]], <2 x i16> zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i16, ptr [[DST:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    store <2 x i16> [[PREDPHI]], ptr [[TMP8]], align 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  br i1 %c, label %then, label %loop.latch
+
+then:
+  %umax = call i64 @llvm.umax.i64(i64 %n, i64 1)
+  %gep.src = getelementptr i16, ptr %src, i64 %umax
+  %l = load i16, ptr %gep.src, align 2
+  br label %loop.latch
+
+loop.latch:
+  %m = phi i16 [ 0, %loop.header ], [ %l, %then ]
+  %gep.dst = getelementptr i16, ptr %dst, i64 %iv
+  store i16 %m, ptr %gep.dst, align 2
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 100
+  br i1 %ec, label %exit, label %loop.header
+
+exit:
   ret void
 }
 

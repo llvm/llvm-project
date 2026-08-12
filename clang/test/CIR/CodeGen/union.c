@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
+// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
+// supports padded, packed, and over-aligned record shapes.
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fno-clangir-call-conv-lowering -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
@@ -59,7 +61,7 @@ void f1(void) {
 // CIR-NEXT:   cir.return
 
 // LLVM:      define{{.*}} void @f1()
-// LLVM-NEXT:   %[[P:.*]] = alloca ptr, i64 1, align 8
+// LLVM-NEXT:   %[[P:.*]] = alloca ptr, align 8
 // LLVM-NEXT:   ret void
 
 // OGCG:      define{{.*}} void @f1()
@@ -86,8 +88,8 @@ int f2(void) {
 // CIR-NEXT:   cir.return %[[RET]] : !s32i
 
 // LLVM:      define{{.*}} i32 @f2()
-// LLVM-NEXT:   %[[RETVAL:.*]] = alloca i32, i64 1, align 4
-// LLVM-NEXT:   %[[U:.*]] = alloca %union.U1, i64 1, align 4
+// LLVM-NEXT:   %[[RETVAL:.*]] = alloca i32, align 4
+// LLVM-NEXT:   %[[U:.*]] = alloca %union.U1, align 4
 // LLVM-NEXT:   store i32 42, ptr %[[U]], align 4
 // LLVM-NEXT:   %[[N_VAL:.*]] = load i32, ptr %[[U]], align 4
 // LLVM-NEXT:   store i32 %[[N_VAL]], ptr %[[RETVAL]], align 4
@@ -138,7 +140,7 @@ void shouldGenerateUnionAccess(union U2 u) {
 // CIR-NEXT:   cir.return
 
 // LLVM:      define{{.*}} void @shouldGenerateUnionAccess(%union.U2 %[[ARG:.*]])
-// LLVM-NEXT:   %[[U:.*]] = alloca %union.U2, i64 1, align 8
+// LLVM-NEXT:   %[[U:.*]] = alloca %union.U2, align 8
 // LLVM-NEXT:   store %union.U2 %[[ARG]], ptr %[[U]], align 8
 // LLVM-NEXT:   store i8 0, ptr %[[U]], align 8
 // LLVM-NEXT:   %[[B_VAL:.*]] = load i8, ptr %[[U]], align 8
@@ -180,7 +182,7 @@ void f3(union U3 u) {
 // CIR-NEXT:   cir.return
 
 // LLVM:      define{{.*}} void @f3(%union.U3 %[[ARG:.*]])
-// LLVM-NEXT:   %[[U:.*]] = alloca %union.U3, i64 1, align 1
+// LLVM-NEXT:   %[[U:.*]] = alloca %union.U3, align 1
 // LLVM-NEXT:   store %union.U3 %[[ARG]], ptr %[[U]], align 1
 // LLVM-NEXT:   %[[ELEM_PTR:.*]] = getelementptr [5 x i8], ptr %[[U]], i32 0, i64 2
 // LLVM-NEXT:   store i8 0, ptr %[[ELEM_PTR]], align 1
@@ -209,7 +211,7 @@ void f5(union U4 u) {
 // CIR-NEXT:   cir.return
 
 // LLVM:      define{{.*}} void @f5(%union.U4 %[[ARG:.*]])
-// LLVM-NEXT:   %[[U:.*]] = alloca %union.U4, i64 1, align 4
+// LLVM-NEXT:   %[[U:.*]] = alloca %union.U4, align 4
 // LLVM-NEXT:   store %union.U4 %[[ARG]], ptr %[[U]], align 4
 // LLVM-NEXT:   %[[ELEM_PTR:.*]] = getelementptr [5 x i8], ptr %[[U]], i32 0, i64 4
 // LLVM-NEXT:   store i8 65, ptr %[[ELEM_PTR]], align 4

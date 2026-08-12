@@ -285,10 +285,12 @@ static T createIfNonNull(MLIRContext *ctx, const P &...args) {
 }
 
 FailureOr<LoopVectorizeAttr> LoopMetadataConversion::convertVectorizeAttr() {
-  FailureOr<BoolAttr> enable =
-      lookupBoolNode("llvm.loop.vectorize.enable", true);
+  FailureOr<BoolAttr> enable = lookupBooleanUnitNode(
+      "llvm.loop.vectorize.enable", "llvm.loop.vectorize.disable",
+      /*negated=*/true);
   FailureOr<BoolAttr> predicateEnable =
-      lookupBoolNode("llvm.loop.vectorize.predicate.enable");
+      lookupBooleanUnitNode("llvm.loop.vectorize.predicate.enable",
+                            "llvm.loop.vectorize.predicate.disable");
   FailureOr<BoolAttr> scalableEnable =
       lookupBoolNode("llvm.loop.vectorize.scalable.enable");
   FailureOr<IntegerAttr> width = lookupIntNode("llvm.loop.vectorize.width");

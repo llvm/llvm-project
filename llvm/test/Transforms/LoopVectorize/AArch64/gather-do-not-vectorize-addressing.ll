@@ -14,7 +14,7 @@ define double @test(ptr nocapture noundef readonly %data, ptr nocapture noundef 
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 2
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -31,8 +31,8 @@ define double @test(ptr nocapture noundef readonly %data, ptr nocapture noundef 
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds double, ptr [[DATA]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = load double, ptr [[TMP8]], align 8
 ; CHECK-NEXT:    [[TMP11:%.*]] = load double, ptr [[TMP9]], align 8
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <2 x double> poison, double [[TMP10]], i32 0
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x double> [[TMP12]], double [[TMP11]], i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <2 x double> poison, double [[TMP10]], i64 0
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x double> [[TMP12]], double [[TMP11]], i64 1
 ; CHECK-NEXT:    [[TMP14]] = fadd <2 x double> [[VEC_PHI]], [[TMP13]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -81,7 +81,7 @@ define double @test(ptr nocapture noundef readonly %data, ptr nocapture noundef 
 ; SVE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; SVE:       vector.body:
 ; SVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; SVE-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x double> [ insertelement (<vscale x 2 x double> splat (double -0.000000e+00), double 0.000000e+00, i32 0), [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
+; SVE-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x double> [ insertelement (<vscale x 2 x double> splat (double -0.000000e+00), double 0.000000e+00, i64 0), [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
 ; SVE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[OFFSET:%.*]], i64 [[INDEX]]
 ; SVE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i32>, ptr [[TMP5]], align 4
 ; SVE-NEXT:    [[TMP7:%.*]] = sext <vscale x 2 x i32> [[WIDE_LOAD]] to <vscale x 2 x i64>

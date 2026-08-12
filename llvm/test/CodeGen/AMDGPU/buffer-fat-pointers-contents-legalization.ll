@@ -2333,11 +2333,10 @@ define void @store_v6i8(<6 x i8> %data, ptr addrspace(8) inreg %buf) {
 ; GISEL-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GISEL-NEXT:    v_and_b32_e32 v1, 0xff, v3
 ; GISEL-NEXT:    v_lshlrev_b16_e32 v1, 8, v1
-; GISEL-NEXT:    v_or_b32_sdwa v1, v2, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; GISEL-NEXT:    v_or_b32_sdwa v1, v2, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GISEL-NEXT:    v_and_b32_e32 v2, 0xff, v5
-; GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GISEL-NEXT:    v_lshlrev_b16_e32 v2, 8, v2
-; GISEL-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GISEL-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GISEL-NEXT:    v_or_b32_sdwa v2, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GISEL-NEXT:    buffer_store_dword v0, off, s[16:19], 0
 ; GISEL-NEXT:    buffer_store_short v2, off, s[16:19], 0 offset:4
@@ -3862,11 +3861,10 @@ define void @volatile_store_v6i8(<6 x i8> %data, ptr addrspace(8) inreg %buf) {
 ; GISEL-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GISEL-NEXT:    v_and_b32_e32 v1, 0xff, v3
 ; GISEL-NEXT:    v_lshlrev_b16_e32 v1, 8, v1
-; GISEL-NEXT:    v_or_b32_sdwa v1, v2, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; GISEL-NEXT:    v_or_b32_sdwa v1, v2, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GISEL-NEXT:    v_and_b32_e32 v2, 0xff, v5
-; GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GISEL-NEXT:    v_lshlrev_b16_e32 v2, 8, v2
-; GISEL-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GISEL-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GISEL-NEXT:    v_or_b32_sdwa v2, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GISEL-NEXT:    buffer_store_dword v0, off, s[16:19], 0
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)

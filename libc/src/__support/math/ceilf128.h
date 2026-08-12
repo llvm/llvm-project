@@ -11,7 +11,7 @@
 
 #include "include/llvm-libc-types/float128.h"
 
-#ifdef LIBC_TYPES_HAS_FLOAT128
+#ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 #include "src/__support/FPUtil/NearestIntegerOperations.h"
 #include "src/__support/macros/config.h"
@@ -24,6 +24,6 @@ LIBC_INLINE constexpr float128 ceilf128(float128 x) { return fputil::ceil(x); }
 } // namespace math
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LIBC_TYPES_HAS_FLOAT128
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MATH_CEILF128_H

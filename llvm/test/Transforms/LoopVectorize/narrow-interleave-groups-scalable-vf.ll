@@ -109,14 +109,14 @@ define void @scalablevf_distinct_args(ptr %dst.start, i8 %a0, i8 %a1, i8 %a2, i8
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i8> poison, i8 [[A0]], i32 0
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x i8> [[TMP13]], i8 [[A1]], i32 1
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x i8> [[TMP14]], i8 [[A2]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> [[TMP15]], i8 [[A3]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i8> poison, i8 [[B0]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i8> [[TMP4]], i8 [[B1]], i32 1
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i8> [[TMP5]], i8 [[B2]], i32 2
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i8> [[TMP6]], i8 [[B3]], i32 3
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i8> poison, i8 [[A0]], i64 0
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x i8> [[TMP13]], i8 [[A1]], i64 1
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x i8> [[TMP14]], i8 [[A2]], i64 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> [[TMP15]], i8 [[A3]], i64 3
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i8> poison, i8 [[B0]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i8> [[TMP4]], i8 [[B1]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i8> [[TMP5]], i8 [[B2]], i64 2
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i8> [[TMP6]], i8 [[B3]], i64 3
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]

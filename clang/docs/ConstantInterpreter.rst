@@ -48,7 +48,7 @@ Primitive Types
 
   Signed or unsigned integers of a specific bit width.
   1-byte types are also 1 byte in size. Sizes >= 16 bits are implemented
-  using the ``Integral`` class. they take up 24 bytes each since they
+  using the ``Integral`` class. They take up 24 bytes each since they
   need to be able to represent a pointer that has been casted to an integer.
 
 
@@ -253,7 +253,7 @@ be derived to the object are illustrated in the following diagram:
   +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
       ^   ^   ^       ^       ^   ^   ^       ^       ^   ^       ^       ^
       |   |   |       |       |   |   |   &a.c[0].b   |   |   &a.c[1].b   |
-      a   |&a.b.x   &a.y    &a.c  |&a.c[0].a          |&a.c[1].a          |
+      a   |&a.b.x  &a.b.y   &a.c  |&a.c[0].a          |&a.c[1].a          |
         &a.b                   &a.c[0]            &a.c[1]               &a.z
 
 The ``Base`` offset of all pointers points to the start of a field or

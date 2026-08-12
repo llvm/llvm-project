@@ -89,7 +89,7 @@ else()
 endif()
 
 set(LLDB_TEST_EXECUTABLE "${LLDB_DEFAULT_TEST_EXECUTABLE}" CACHE PATH "lldb executable used for testing")
-set(LLDB_TEST_COMPILER "${LLDB_DEFAULT_TEST_COMPILER}" CACHE PATH "C Compiler to use for building LLDB test inferiors")
+set(LLDB_TEST_COMPILER "${LLDB_DEFAULT_TEST_COMPILER}" CACHE PATH "C Compiler to use for building LLDB test inferiors (the C++ compiler will be inferred from this)")
 set(LLDB_TEST_DSYMUTIL "${LLDB_DEFAULT_TEST_DSYMUTIL}" CACHE PATH "dsymutil used for generating dSYM bundles")
 set(LLDB_TEST_MAKE "${LLDB_DEFAULT_TEST_MAKE}" CACHE PATH "make tool used for building test executables")
 set(LLDB_TEST_RESOURCE_DIR "" CACHE PATH "Clang resource directory for cross-compiling test inferiors")

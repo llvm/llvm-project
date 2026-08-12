@@ -343,10 +343,11 @@ AST_MATCHER_P(DeclRefExpr, doesNotMutateObject, int, Indirections) {
 SmallPtrSet<const DeclRefExpr *, 16>
 constReferenceDeclRefExprs(const VarDecl &VarDecl, const Stmt &Stmt,
                            ASTContext &Context, int Indirections) {
-  auto Matches = match(findAll(declRefExpr(to(varDecl(equalsNode(&VarDecl))),
-                                           doesNotMutateObject(Indirections))
-                                   .bind("declRef")),
-                       Stmt, Context);
+  const auto Matches =
+      match(findAll(declRefExpr(to(varDecl(equalsNode(&VarDecl))),
+                                doesNotMutateObject(Indirections))
+                        .bind("declRef")),
+            Stmt, Context);
   SmallPtrSet<const DeclRefExpr *, 16> DeclRefs;
   extractNodesByIdTo(Matches, "declRef", DeclRefs);
 
@@ -360,8 +361,8 @@ bool isOnlyUsedAsConst(const VarDecl &Var, const Stmt &Stmt,
   // reference parameter.
   // If the difference is empty it is safe for the loop variable to be a const
   // reference.
-  auto AllDeclRefs = allDeclRefExprs(Var, Stmt, Context);
-  auto ConstReferenceDeclRefs =
+  const auto AllDeclRefs = allDeclRefExprs(Var, Stmt, Context);
+  const auto ConstReferenceDeclRefs =
       constReferenceDeclRefExprs(Var, Stmt, Context, Indirections);
   return isSetDifferenceEmpty(AllDeclRefs, ConstReferenceDeclRefs);
 }
@@ -369,7 +370,7 @@ bool isOnlyUsedAsConst(const VarDecl &Var, const Stmt &Stmt,
 SmallPtrSet<const DeclRefExpr *, 16> allDeclRefExprs(const ValueDecl &ValueDecl,
                                                      const Stmt &Stmt,
                                                      ASTContext &Context) {
-  auto Matches = match(
+  const auto Matches = match(
       findAll(
           declRefExpr(to(valueDecl(equalsNode(&ValueDecl)))).bind("declRef")),
       Stmt, Context);
@@ -381,7 +382,7 @@ SmallPtrSet<const DeclRefExpr *, 16> allDeclRefExprs(const ValueDecl &ValueDecl,
 SmallPtrSet<const DeclRefExpr *, 16> allDeclRefExprs(const ValueDecl &ValueDecl,
                                                      const Decl &Decl,
                                                      ASTContext &Context) {
-  auto Matches = match(
+  const auto Matches = match(
       decl(forEachDescendant(
           declRefExpr(to(valueDecl(equalsNode(&ValueDecl)))).bind("declRef"))),
       Decl, Context);
@@ -392,10 +393,10 @@ SmallPtrSet<const DeclRefExpr *, 16> allDeclRefExprs(const ValueDecl &ValueDecl,
 
 bool isCopyConstructorArgument(const DeclRefExpr &DeclRef, const Decl &Decl,
                                ASTContext &Context) {
-  auto UsedAsConstRefArg = forEachArgumentWithParam(
+  const auto UsedAsConstRefArg = forEachArgumentWithParam(
       declRefExpr(equalsNode(&DeclRef)),
       parmVarDecl(hasType(matchers::isReferenceToConst())));
-  auto Matches = match(
+  const auto Matches = match(
       decl(hasDescendant(
           cxxConstructExpr(UsedAsConstRefArg, hasDeclaration(cxxConstructorDecl(
                                                   isCopyConstructor())))
@@ -406,10 +407,10 @@ bool isCopyConstructorArgument(const DeclRefExpr &DeclRef, const Decl &Decl,
 
 bool isCopyAssignmentArgument(const DeclRefExpr &DeclRef, const Decl &Decl,
                               ASTContext &Context) {
-  auto UsedAsConstRefArg = forEachArgumentWithParam(
+  const auto UsedAsConstRefArg = forEachArgumentWithParam(
       declRefExpr(equalsNode(&DeclRef)),
       parmVarDecl(hasType(matchers::isReferenceToConst())));
-  auto Matches = match(
+  const auto Matches = match(
       decl(hasDescendant(
           cxxOperatorCallExpr(UsedAsConstRefArg, hasOverloadedOperatorName("="),
                               callee(cxxMethodDecl(isCopyAssignmentOperator())))

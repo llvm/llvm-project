@@ -424,7 +424,7 @@ gpu.module @test_kernel {
     %a_tdesc = xegpu.create_nd_tdesc %arg0 : memref<16x16xf16> -> !xegpu.tensor_desc<16x16xf16, #a>
     %a = xegpu.load_nd %a_tdesc[0, 0] {layout = #a}: !xegpu.tensor_desc<16x16xf16, #a> -> vector<16x16xf16>
     %a_reduce = vector.multi_reduction <add>, %a, %acc [0, 1] : vector<16x16xf16> to f16
-    %13 = xegpu.convert_layout %a_reduce <{input_layout = #xegpu.slice<#a, dims = [0, 1]>, target_layout = #xegpu.slice<#a, dims = [0, 1]>}> : f16
+    %13 = xegpu.convert_layout %a_reduce <{target_layout = #xegpu.slice<#a, dims = [0, 1]>}> : f16
     memref.store %13, %arg1[%c0] : memref<4xf16>
     gpu.return
   }
@@ -483,7 +483,7 @@ gpu.module @test_kernel {
   gpu.func @convert_layout(%B: vector<8x32x2xf16>) -> vector<8x32x2xf16> {
     %b = xegpu.convert_layout %B <{input_layout = #lb, target_layout = #b}> : vector<8x32x2xf16>
     %e = math.exp %b : vector<8x32x2xf16>
-    %anchor = xegpu.convert_layout %e <{input_layout = #b, target_layout = #b}> : vector<8x32x2xf16>
+    %anchor = xegpu.convert_layout %e <{target_layout = #b}> : vector<8x32x2xf16>
     gpu.return %e : vector<8x32x2xf16>
   }
 }

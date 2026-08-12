@@ -4,11 +4,11 @@ include_directories(..)
 
 # Unit tests target.
 add_custom_target(OrcRTUnitTests)
-set_target_properties(OrcRTUnitTests PROPERTIES FOLDER "Compiler-RT/Tests")
+set_target_properties(OrcRTUnitTests PROPERTIES FOLDER "compiler-rt/Tests")
 
 # Testing tools target.
 add_custom_target(OrcRTTools)
-set_target_properties(OrcRTTools PROPERTIES FOLDER "Compiler-RT/Tools")
+set_target_properties(OrcRTTools PROPERTIES FOLDER "compiler-rt/Tools")
 
 set(ORC_UNITTEST_CFLAGS
 # FIXME: This should be set for all unit tests.
@@ -22,7 +22,7 @@ function(add_orc_lib library)
   add_library(${library} STATIC ${ARGN})
   set_target_properties(${library} PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    FOLDER "Compiler-RT/Tests/Runtime")
+    FOLDER "compiler-rt/Tests/Runtime")
 endfunction()
 
 function(get_orc_lib_for_arch arch lib)

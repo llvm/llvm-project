@@ -2832,7 +2832,6 @@ TemplateInstantiator::TransformNestedRequirement(
 
   ASTContext &C = SemaRef.Context;
 
-  Expr *Constraint = Req->getConstraintExpr();
   ConstraintSatisfaction Satisfaction;
 
   auto NestedReqWithDiag = [&C, this](Expr *E,
@@ -2851,6 +2850,8 @@ TemplateInstantiator::TransformNestedRequirement(
                                       Req->getConstraintSatisfaction());
     return Req;
   }
+
+  Expr *Constraint = Req->getConstraintExpr();
 
   if (!getEvaluateConstraints()) {
     ExprResult TransConstraint = TransformExpr(Req->getConstraintExpr());
@@ -3911,7 +3912,6 @@ bool Sema::InstantiateInClassInitializer(
         << OutermostClass << Pattern;
     Diag(Pattern->getEndLoc(),
          diag::note_default_member_initializer_not_yet_parsed);
-    Instantiation->setInvalidDecl();
     return true;
   }
 

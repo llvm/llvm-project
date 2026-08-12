@@ -1,0 +1,105 @@
+// RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 | FileCheck %s
+
+!s16i = !cir.int<s, 16>
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {!s64i, !s64i, !s64i}>
+!rec_Pair = !cir.struct<"Pair" {!s32i, !s32i}>
+!rec_Empty = !cir.struct<"Empty" {}>
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i16, dense<16>: vector<2xi64>>,
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // Scalar indirect call: no ABI reshaping, so it passes through unchanged
+  // (and is no longer rejected as NYI).
+  cir.func @call_scalar(%fp: !cir.ptr<!cir.func<(!s32i) -> !s32i>>,
+                        %arg0: !s32i) -> !s32i {
+    %0 = cir.call %fp(%arg0)
+        : (!cir.ptr<!cir.func<(!s32i) -> !s32i>>, !s32i) -> !s32i
+    cir.return %0 : !s32i
+  }
+
+  // CHECK: cir.func{{.*}} @call_scalar
+  // CHECK:   cir.call %{{.+}}(%{{.+}}) : (!cir.ptr<!cir.func<(!s32i) -> !s32i>>, !s32i) -> !s32i
+
+  // Indirect call whose sub-32-bit int arg/return is Extend: the signext
+  // attribute is applied at the call site and the callee pointer keeps its
+  // signature (Extend does not change the value type, so no bitcast).
+  cir.func @call_ext(%fp: !cir.ptr<!cir.func<(!s16i) -> !s16i>>,
+                     %arg0: !s16i) -> !s16i {
+    %0 = cir.call %fp(%arg0)
+        : (!cir.ptr<!cir.func<(!s16i) -> !s16i>>, !s16i) -> !s16i
+    cir.return %0 : !s16i
+  }
+
+  // CHECK: cir.func{{.*}} @call_ext
+  // CHECK-NOT: cir.cast bitcast
+  // CHECK:   cir.call %{{.+}}(%{{.+}}) : (!cir.ptr<!cir.func<(!s16i) -> !s16i>>, !s16i {llvm.signext}) -> (!s16i {llvm.signext})
+
+  // Indirect call whose small-struct argument and return are Direct with a
+  // coerce type: the callee pointer is bitcast so its pointee tracks both the
+  // coerced parameter and the coerced result.
+  cir.func @call_coerce(%fp: !cir.ptr<!cir.func<(!rec_Pair) -> !rec_Pair>>,
+                        %out: !cir.ptr<!rec_Pair>) {
+    %0 = cir.alloca "p" align(4) : !cir.ptr<!rec_Pair>
+    %1 = cir.load %0 : !cir.ptr<!rec_Pair>, !rec_Pair
+    %2 = cir.call %fp(%1)
+        : (!cir.ptr<!cir.func<(!rec_Pair) -> !rec_Pair>>,
+           !rec_Pair) -> !rec_Pair
+    cir.store %2, %out : !rec_Pair, !cir.ptr<!rec_Pair>
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @call_coerce(%arg0: !cir.ptr<!cir.func<(!rec_Pair) -> !rec_Pair>>
+  // CHECK:   %[[CCAST:.*]] = cir.cast bitcast %arg0 : !cir.ptr<!cir.func<(!rec_Pair) -> !rec_Pair>> -> !cir.ptr<!cir.func<(!u64i) -> !u64i>>
+  // CHECK:   cir.call %[[CCAST]](%{{.+}}) : (!cir.ptr<!cir.func<(!u64i) -> !u64i>>, !u64i) -> !u64i
+
+  // Indirect call with an Ignore-classified empty-record argument: the operand
+  // is dropped and the callee pointer loses that parameter.
+  cir.func @call_ignore(%fp: !cir.ptr<!cir.func<(!rec_Empty, !s32i) -> !s32i>>,
+                        %x: !s32i) -> !s32i {
+    %0 = cir.alloca "e" align(1) : !cir.ptr<!rec_Empty>
+    %1 = cir.load %0 : !cir.ptr<!rec_Empty>, !rec_Empty
+    %2 = cir.call %fp(%1, %x)
+        : (!cir.ptr<!cir.func<(!rec_Empty, !s32i) -> !s32i>>,
+           !rec_Empty, !s32i) -> !s32i
+    cir.return %2 : !s32i
+  }
+
+  // CHECK: cir.func{{.*}} @call_ignore(%arg0: !cir.ptr<!cir.func<(!rec_Empty, !s32i) -> !s32i>>
+  // CHECK:   %[[ICAST:.*]] = cir.cast bitcast %arg0 : !cir.ptr<!cir.func<(!rec_Empty, !s32i) -> !s32i>> -> !cir.ptr<!cir.func<(!s32i) -> !s32i>>
+  // CHECK:   cir.call %[[ICAST]](%arg1) : (!cir.ptr<!cir.func<(!s32i) -> !s32i>>, !s32i) -> !s32i
+
+  // Indirect call with a by-value (byval) struct argument: the argument is
+  // spilled to a stack slot and the callee pointer is bitcast to the coerced
+  // signature before the call is rebuilt.
+  cir.func @call_byval(%fp: !cir.ptr<!cir.func<(!rec_Big) -> !s64i>>) -> !s64i {
+    %0 = cir.alloca "b" align(8) : !cir.ptr<!rec_Big>
+    %1 = cir.load %0 : !cir.ptr<!rec_Big>, !rec_Big
+    %2 = cir.call %fp(%1)
+        : (!cir.ptr<!cir.func<(!rec_Big) -> !s64i>>, !rec_Big) -> !s64i
+    cir.return %2 : !s64i
+  }
+
+  // CHECK: cir.func{{.*}} @call_byval(%arg0: !cir.ptr<!cir.func<(!rec_Big) -> !s64i>>)
+  // CHECK:   %[[SLOT:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Big>
+  // CHECK:   cir.store %{{.+}}, %[[SLOT]] : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK:   %[[CAST:.*]] = cir.cast bitcast %arg0 : !cir.ptr<!cir.func<(!rec_Big) -> !s64i>> -> !cir.ptr<!cir.func<(!cir.ptr<!rec_Big>) -> !s64i>>
+  // CHECK:   cir.call %[[CAST]](%[[SLOT]]) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_Big>) -> !s64i>>, !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noalias, llvm.noundef}) -> !s64i
+
+  // Indirect call returning a large struct: an sret pointer slot is prepended
+  // and the callee is bitcast to the void-returning sret signature.
+  cir.func @call_sret(%fp: !cir.ptr<!cir.func<() -> !rec_Big>>) {
+    %0 = cir.call %fp() : (!cir.ptr<!cir.func<() -> !rec_Big>>) -> !rec_Big
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @call_sret(%arg0: !cir.ptr<!cir.func<() -> !rec_Big>>)
+  // CHECK:   %[[SRET:.*]] = cir.alloca "sret" align(8) : !cir.ptr<!rec_Big>
+  // CHECK:   %[[SCAST:.*]] = cir.cast bitcast %arg0 : !cir.ptr<!cir.func<() -> !rec_Big>> -> !cir.ptr<!cir.func<(!cir.ptr<!rec_Big>)>>
+  // CHECK:   cir.call %[[SCAST]](%[[SRET]]) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_Big>)>>, !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.sret = !rec_Big, llvm.writable}) -> ()
+}

@@ -69,6 +69,8 @@ LANGOPT(OpenMPSimd, 1, false)
 LANGOPT(NoReallocateLHS, 1, false)
 /// Enable fast MOD operations for REAL
 LANGOPT(FastRealMod, 1, false)
+/// Bitmask of floating-point exceptions to trap on (from -ffpe-trap=)
+LANGOPT(FPExceptionTraps, 8, 0)
 LANGOPT(VScaleMin, 32, 0)  ///< Minimum vscale range value
 LANGOPT(VScaleMax, 32, 0)  ///< Maximum vscale range value
 

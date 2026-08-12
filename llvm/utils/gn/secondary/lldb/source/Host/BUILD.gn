@@ -16,7 +16,6 @@ static_library("Host") {
   ]
   public_deps = [ "//llvm/utils/gn/build/libs/xml" ]
   sources = [
-    "common/ConPTYUtils.cpp",
     "common/DiagnosticsRendering.cpp",
     "common/DomainSocket.cpp",
     "common/File.cpp",
@@ -69,6 +68,7 @@ static_library("Host") {
 
   if (current_os == "win") {
     sources += [
+      "windows/ConPTYUtils.cpp",
       "windows/ConnectionConPTYWindows.cpp",
       "windows/ConnectionGenericFileWindows.cpp",
       "windows/DomainSocketWindows.cpp",

@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -76,6 +77,11 @@ class SCEVExpander : public SCEVUseVisitor<SCEVExpander, Value *> {
   // InsertedExpressions caches Values for reuse, so must track RAUW.
   DenseMap<std::pair<SCEVUse, Instruction *>, TrackingVH<Value>>
       InsertedExpressions;
+
+  // InsertedOverflowChecks caches Values for reuse, so must track RAUW.
+  DenseMap<std::tuple<Value *, Value *, Instruction *>,
+           std::pair<TrackingVH<Value>, TrackingVH<Value>>>
+      InsertedOverflowChecks;
 
   // InsertedValues only flags inserted instructions so needs no RAUW.
   DenseSet<AssertingVH<Value>> InsertedValues;
@@ -210,6 +216,7 @@ public:
   /// places within the same BasicBlock can do so.
   void clear() {
     InsertedExpressions.clear();
+    InsertedOverflowChecks.clear();
     InsertedValues.clear();
     InsertedPostIncValues.clear();
     ReusedValues.clear();
@@ -315,6 +322,13 @@ public:
   LLVM_ABI static void
   dropPoisonGeneratingAnnotationsAndReinfer(ScalarEvolution &SE,
                                             Instruction *I);
+
+  /// Find an existing cast among \p PtrOp's users that computes the same value
+  /// as a `ptrtoaddr` of \p PtrOp to \p Ty and can be reused when expanding
+  /// ptrtoaddr.
+  LLVM_ABI static CastInst *
+  findReusableCastForPtrToAddr(Value *PtrOp, Type *Ty, const DataLayout &DL,
+                               function_ref<bool(const CastInst *)> Dominates);
 
   /// Insert code to directly compute the specified SCEV expression into the
   /// program.  The code is inserted into the specified block.
@@ -506,8 +520,6 @@ private:
   Value *visitVScale(SCEVUseT<const SCEVVScale *> S);
 
   Value *visitPtrToAddrExpr(SCEVUseT<const SCEVPtrToAddrExpr *> S);
-
-  Value *visitPtrToIntExpr(SCEVUseT<const SCEVPtrToIntExpr *> S);
 
   Value *visitTruncateExpr(SCEVUseT<const SCEVTruncateExpr *> S);
 

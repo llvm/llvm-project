@@ -54,6 +54,7 @@
 #include <algorithm>
 #include <iterator>
 #include <limits>
+#include <optional>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -65,6 +66,8 @@ namespace llvm {
 class DWARFUnit;
 
 namespace bolt {
+
+class BranchLivenessInfo;
 
 using InputOffsetToAddressMapTy = std::unordered_multimap<uint64_t, uint64_t>;
 
@@ -403,11 +406,15 @@ private:
   /// to avoid redundant processing.
   bool NeedBranchValidation{true};
 
-  /// Name for the section this function code should reside in.
-  std::string CodeSectionName;
+  /// Name for the section this function code should reside in. When unset, the
+  /// default name is derived on demand from the function's name (see
+  /// getMainSectionName()). Deferring this avoids eagerly storing a copy of the
+  /// (potentially large, mangled) function name for every function, which is a
+  /// significant source of memory use on large binaries.
+  std::optional<std::string> CodeSectionName;
 
-  /// Name for the corresponding cold code section.
-  std::string ColdCodeSectionName;
+  /// Name for the corresponding cold code section. See CodeSectionName.
+  std::optional<std::string> ColdCodeSectionName;
 
   /// Parent function fragment for split function fragments.
   using FragmentsSetTy = SmallPtrSet<BinaryFunction *, 1>;
@@ -747,12 +754,24 @@ private:
   static std::string buildColdCodeSectionName(StringRef Name,
                                               const BinaryContext &BC);
 
+  /// Return the name of the main code section, using the default derived from
+  /// the function's name when no name has been explicitly assigned.
+  std::string getMainSectionName() const {
+    return CodeSectionName ? *CodeSectionName
+                           : buildCodeSectionName(getOneName(), BC);
+  }
+
+  /// Return the name of the cold code section, using the default derived from
+  /// the function's name when no name has been explicitly assigned.
+  std::string getColdSectionName() const {
+    return ColdCodeSectionName ? *ColdCodeSectionName
+                               : buildColdCodeSectionName(getOneName(), BC);
+  }
+
   /// Creation should be handled by RewriteInstance or BinaryContext
   BinaryFunction(const std::string &Name, BinarySection &Section,
                  uint64_t Address, uint64_t Size, BinaryContext &BC)
       : OriginSection(&Section), Address(Address), Size(Size), BC(BC),
-        CodeSectionName(buildCodeSectionName(Name, BC)),
-        ColdCodeSectionName(buildColdCodeSectionName(Name, BC)),
         FunctionNumber(++Count) {
     Symbols.push_back(BC.Ctx->getOrCreateSymbol(Name));
   }
@@ -1398,12 +1417,12 @@ public:
   SmallString<32>
   getCodeSectionName(const FragmentNum Fragment = FragmentNum::main()) const {
     if (Fragment == FragmentNum::main())
-      return SmallString<32>(CodeSectionName);
+      return SmallString<32>(getMainSectionName());
     if (Fragment == FragmentNum::cold())
-      return SmallString<32>(ColdCodeSectionName);
+      return SmallString<32>(getColdSectionName());
     if (BC.HasWarmSection && Fragment == FragmentNum::warm())
       return SmallString<32>(BC.getWarmCodeSectionName());
-    return formatv("{0}.{1}", ColdCodeSectionName, Fragment.get() - 1);
+    return formatv("{0}.{1}", getColdSectionName(), Fragment.get() - 1);
   }
 
   /// Assign a code section name to the function.
@@ -2504,7 +2523,7 @@ public:
   /// while the second successor - false/fall-through branch.
   ///
   /// When we reverse the branch condition, the CFG is updated accordingly.
-  void fixBranches();
+  void fixBranches(const BranchLivenessInfo *BLI = nullptr);
 
   /// Mark function as finalized. No further optimizations are permitted.
   void setFinalized() { CurrentState = State::CFG_Finalized; }
