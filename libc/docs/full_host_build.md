@@ -67,13 +67,13 @@ To run a specific unit test for a function, you can target it directly using its
 full name:
 
 ```sh
-ninja -C build libc.test.src.<HEADER>.<FUNCTION>_test.__unit__
+ninja -C build libc.test.src.<HEADER>.<FUNCTION>_test
 ```
 
 For example, to run the test for `isalpha` in `ctype.h`:
 
 ```sh
-ninja -C build libc.test.src.ctype.isalpha_test.__unit__
+ninja -C build libc.test.src.ctype.isalpha_test
 ```
 
 ## Building Documentation
