@@ -2394,3 +2394,105 @@ loop:
 exit:
   ret void
 }
+
+;; Test 21: One member's GEP is not inbounds.
+;; 3 loads from %a at byte offsets {0, cdj, 2*cdj}; the cdj member's GEP has
+;; no inbounds. The merge does not need inbounds facts of its own: the merged
+;; bounds reuse the members' Start/End values, the same values the unmerged
+;; checks would compare, so no new address is computed. The group merges as
+;; usual with the cdj > 0 predicate.
+define void @stencil_merge_no_inbounds_member(ptr %a, ptr %out, i64 %n, i64 %cdj) {
+; MERGE-LABEL: 'stencil_merge_no_inbounds_member'
+; MERGE-NEXT:    loop:
+; MERGE-NEXT:      Memory dependences are safe with run-time checks
+; MERGE-NEXT:      Dependences:
+; MERGE-NEXT:      Run-time memory checks:
+; MERGE-NEXT:      Check 0:
+; MERGE-NEXT:        Comparing group GRP0:
+; MERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; MERGE-NEXT:        Against group GRP1:
+; MERGE-NEXT:          %p2 = getelementptr inbounds i8, ptr %base, i64 %pos2cdj
+; MERGE-NEXT:          %p1 = getelementptr i8, ptr %base, i64 %cdj
+; MERGE-NEXT:          %base = getelementptr inbounds double, ptr %a, i64 %iv
+; MERGE-NEXT:      Grouped accesses:
+; MERGE-NEXT:        Group GRP0:
+; MERGE-NEXT:          (Low: %out High: ((8 * (1 smax %n)) + %out))
+; MERGE-NEXT:            Member: {%out,+,8}<nuw><%loop>
+; MERGE-NEXT:        Group GRP1:
+; MERGE-NEXT:          (Low: %a High: ((2 * %cdj)<nsw> + (8 * (1 smax %n)) + %a))
+; MERGE-NEXT:            Member: {((2 * %cdj)<nsw> + %a),+,8}<nw><%loop>
+; MERGE-NEXT:            Member: {(%cdj + %a),+,8}<nw><%loop>
+; MERGE-NEXT:            Member: {%a,+,8}<nuw><%loop>
+; MERGE-EMPTY:
+; MERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; MERGE-NEXT:      SCEV assumptions:
+; MERGE-NEXT:      Compare predicate: %cdj sgt) 0
+; MERGE-EMPTY:
+; MERGE-NEXT:      Expressions re-written:
+;
+; NOMERGE-LABEL: 'stencil_merge_no_inbounds_member'
+; NOMERGE-NEXT:    loop:
+; NOMERGE-NEXT:      Memory dependences are safe with run-time checks
+; NOMERGE-NEXT:      Dependences:
+; NOMERGE-NEXT:      Run-time memory checks:
+; NOMERGE-NEXT:      Check 0:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; NOMERGE-NEXT:        Against group GRP1:
+; NOMERGE-NEXT:          %p2 = getelementptr inbounds i8, ptr %base, i64 %pos2cdj
+; NOMERGE-NEXT:      Check 1:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; NOMERGE-NEXT:        Against group GRP2:
+; NOMERGE-NEXT:          %p1 = getelementptr i8, ptr %base, i64 %cdj
+; NOMERGE-NEXT:      Check 2:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; NOMERGE-NEXT:        Against group GRP3:
+; NOMERGE-NEXT:          %base = getelementptr inbounds double, ptr %a, i64 %iv
+; NOMERGE-NEXT:      Grouped accesses:
+; NOMERGE-NEXT:        Group GRP0:
+; NOMERGE-NEXT:          (Low: %out High: ((8 * (1 smax %n)) + %out))
+; NOMERGE-NEXT:            Member: {%out,+,8}<nuw><%loop>
+; NOMERGE-NEXT:        Group GRP1:
+; NOMERGE-NEXT:          (Low: ((2 * %cdj)<nsw> + %a) High: ((2 * %cdj)<nsw> + (8 * (1 smax %n)) + %a))
+; NOMERGE-NEXT:            Member: {((2 * %cdj)<nsw> + %a),+,8}<nw><%loop>
+; NOMERGE-NEXT:        Group GRP2:
+; NOMERGE-NEXT:          (Low: (%cdj + %a) High: ((8 * (1 smax %n)) + %cdj + %a))
+; NOMERGE-NEXT:            Member: {(%cdj + %a),+,8}<nw><%loop>
+; NOMERGE-NEXT:        Group GRP3:
+; NOMERGE-NEXT:          (Low: %a High: ((8 * (1 smax %n)) + %a))
+; NOMERGE-NEXT:            Member: {%a,+,8}<nuw><%loop>
+; NOMERGE-EMPTY:
+; NOMERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; NOMERGE-NEXT:      SCEV assumptions:
+; NOMERGE-EMPTY:
+; NOMERGE-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %base = getelementptr inbounds double, ptr %a, i64 %iv
+  %v0 = load double, ptr %base, align 8
+
+  %p1 = getelementptr i8, ptr %base, i64 %cdj
+  %v1 = load double, ptr %p1, align 8
+
+  %pos2cdj = mul nsw i64 %cdj, 2
+  %p2 = getelementptr inbounds i8, ptr %base, i64 %pos2cdj
+  %v2 = load double, ptr %p2, align 8
+
+  %s0 = fadd double %v0, %v1
+  %s1 = fadd double %s0, %v2
+  %outp = getelementptr inbounds double, ptr %out, i64 %iv
+  store double %s1, ptr %outp, align 8
+
+  %iv.next = add nuw nsw i64 %iv, 1
+  %cond = icmp slt i64 %iv.next, %n
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret void
+}
