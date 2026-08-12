@@ -14076,8 +14076,7 @@ void ScalarEvolution::SCEVCallbackVH::allUsesReplacedWith(Value *V) {
   // value.
   if (const SCEV *S = SE->getExistingSCEV(getValPtr()))
     if (auto *AR = dyn_cast<SCEVAddRecExpr>(S))
-      const_cast<SCEVAddRecExpr *>(AR)->SubclassData &=
-          ~static_cast<unsigned short>(SCEV::NoWrapMask);
+      const_cast<SCEVAddRecExpr *>(AR)->clearNoWrapFlags();
 
   SE->forgetValue(getValPtr());
   // this now dangles!
