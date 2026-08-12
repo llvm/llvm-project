@@ -13,9 +13,9 @@
 // libc++ extension: sorted deduplication uses one-direction key comparison.
 
 #include <algorithm>
-#include <flat_set>
-
 #include <cassert>
+#include <flat_set>
+#include <vector>
 
 #include "test_macros.h"
 
