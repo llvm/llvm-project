@@ -1396,6 +1396,31 @@ template <> struct MDNodeKeyImpl<DIObjCProperty> {
   }
 };
 
+template <> struct MDNodeKeyImpl<DIProperty> {
+  MDString *Name;
+  Metadata *File;
+  unsigned Line;
+  Metadata *Type;
+  Metadata *Getter;
+
+  MDNodeKeyImpl(MDString *Name, Metadata *File, unsigned Line, Metadata *Type,
+                Metadata *Getter)
+      : Name(Name), File(File), Line(Line), Type(Type), Getter(Getter) {}
+  MDNodeKeyImpl(const DIProperty *N)
+      : Name(N->getRawName()), File(N->getRawFile()), Line(N->getLine()),
+        Type(N->getRawType()), Getter(N->getRawGetter()) {}
+
+  bool isKeyOf(const DIProperty *RHS) const {
+    return Name == RHS->getRawName() && File == RHS->getRawFile() &&
+           Line == RHS->getLine() && Type == RHS->getRawType() &&
+           Getter == RHS->getRawGetter();
+  }
+
+  unsigned getHashValue() const {
+    return hash_combine(Name, File, Line, Type, Getter);
+  }
+};
+
 template <> struct MDNodeKeyImpl<DIImportedEntity> {
   unsigned Tag;
   Metadata *Scope;

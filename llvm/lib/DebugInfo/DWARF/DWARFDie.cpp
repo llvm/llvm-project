@@ -251,6 +251,11 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
             Die.getAttributeValueAsReferencedDie(FormValue).getName(
                 DINameKind::LinkageName))
       OS << Space << "\"" << Name << '\"';
+  } else if (Attr == DW_AT_property_forward) {
+    if (const char *Name =
+            Die.getAttributeValueAsReferencedDie(FormValue).getName(
+                DINameKind::ShortName))
+      OS << Space << "\"" << Name << '\"';
   } else if (Attr == DW_AT_APPLE_property) {
     auto PropDIE = Die.getAttributeValueAsReferencedDie(FormValue);
     if (auto PropNameOrErr = getApplePropertyName(PropDIE))

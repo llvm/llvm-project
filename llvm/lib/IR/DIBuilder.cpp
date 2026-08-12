@@ -572,6 +572,12 @@ DIBuilder::createObjCProperty(StringRef Name, DIFile *File, unsigned LineNumber,
                              SetterName, PropertyAttributes, Ty);
 }
 
+DIProperty *DIBuilder::createProperty(StringRef Name, DIFile *File,
+                                      unsigned LineNumber, DIType *Ty,
+                                      DIDerivedType *Getter) {
+  return DIProperty::get(VMContext, Name, File, LineNumber, Ty, Getter);
+}
+
 DITemplateTypeParameter *
 DIBuilder::createTemplateTypeParameter(DIScope *Context, StringRef Name,
                                        DIType *Ty, bool isDefault) {

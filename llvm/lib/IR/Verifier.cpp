@@ -1770,6 +1770,21 @@ void Verifier::visitDIObjCProperty(const DIObjCProperty &N) {
     CheckDI(isa<DIFile>(F), "invalid file", &N, F);
 }
 
+void Verifier::visitDIProperty(const DIProperty &N) {
+  CheckDI(N.getTag() == dwarf::DW_TAG_property, "invalid tag", &N);
+  if (auto *T = N.getRawType())
+    CheckDI(isType(T), "invalid type ref", &N, T);
+  if (auto *F = N.getRawFile())
+    CheckDI(isa<DIFile>(F), "invalid file", &N, F);
+  // DWARF allows a property getter to forward to a subprogram, variable, or
+  // constant too, but the backend only knows how to forward to a member.
+  if (DINode *G = N.getGetter()) {
+    auto *DT = dyn_cast<DIDerivedType>(G);
+    CheckDI(DT && DT->getTag() == dwarf::DW_TAG_member,
+            "property getter must be a member", &N, G);
+  }
+}
+
 void Verifier::visitDIImportedEntity(const DIImportedEntity &N) {
   CheckDI(N.getTag() == dwarf::DW_TAG_imported_module ||
               N.getTag() == dwarf::DW_TAG_imported_declaration,
