@@ -18,14 +18,12 @@
 #include "NVPTXTargetObjectFile.h"
 #include "NVPTXTargetTransformInfo.h"
 #include "TargetInfo/NVPTXTargetInfo.h"
-#include "llvm/Analysis/KernelInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
-#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetMachine.h"
@@ -60,29 +58,6 @@ static cl::opt<bool> DisableRequireStructuredCFG(
     cl::desc("Transitional flag to turn off NVPTX's requirement on preserving "
              "structured CFG. The requirement should be disabled only when "
              "unexpected regressions happen."),
-    cl::init(false), cl::Hidden);
-
-// byval arguments in NVPTX are special. We're only allowed to read from them
-// using a special instruction, and if we ever need to write to them or take an
-// address, we must make a local copy and use it, instead.
-//
-// The problem is that local copies are very expensive, and we create them very
-// late in the compilation pipeline, so LLVM does not have much of a chance to
-// eliminate them, if they turn out to be unnecessary.
-//
-// One way around that is to create such copies early on, and let them percolate
-// through the optimizations. The copying itself will never trigger creation of
-// another copy later on, as the reads are allowed. If LLVM can eliminate it,
-// it's a win. It the full optimization pipeline can't remove the copy, that's
-// as good as it gets in terms of the effort we could've done, and it's
-// certainly a much better effort than what we do now.
-//
-// This early injection of the copies has potential to create undesireable
-// side-effects, so it's disabled by default, for now, until it sees more
-// testing.
-static cl::opt<bool> EarlyByValArgsCopy(
-    "nvptx-early-byval-copy",
-    cl::desc("Create a copy of byval function arguments early."),
     cl::init(false), cl::Hidden);
 
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
@@ -198,36 +173,6 @@ MachineFunctionInfo *NVPTXTargetMachine::createMachineFunctionInfo(
 
 void NVPTXTargetMachine::registerEarlyDefaultAliasAnalyses(AAManager &AAM) {
   AAM.registerFunctionAnalysis<NVPTXAA>();
-}
-
-void NVPTXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
-#define GET_PASS_REGISTRY "NVPTXPassRegistry.def"
-#include "llvm/Passes/TargetPassRegistry.inc"
-
-  PB.registerPipelineStartEPCallback(
-      [this](ModulePassManager &PM, OptimizationLevel Level) {
-        // We do not want to fold out calls to nvvm.reflect early if the user
-        // has not provided a target architecture just yet.
-        if (Subtarget.hasTargetName())
-          PM.addPass(NVVMReflectPass(Subtarget.getSmVersion()));
-
-        FunctionPassManager FPM;
-        // Note: NVVMIntrRangePass was causing numerical discrepancies at one
-        // point, if issues crop up, consider disabling.
-        FPM.addPass(NVVMIntrRangePass());
-        if (EarlyByValArgsCopy)
-          FPM.addPass(NVPTXCopyByValArgsPass());
-        PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
-      });
-
-  if (!NoKernelInfoEndLTO) {
-    PB.registerFullLinkTimeOptimizationLastEPCallback(
-        [this](ModulePassManager &PM, OptimizationLevel Level) {
-          FunctionPassManager FPM;
-          FPM.addPass(KernelInfoPrinter(this));
-          PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
-        });
-  }
 }
 
 TargetTransformInfo

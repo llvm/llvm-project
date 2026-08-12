@@ -1,22 +1,23 @@
-//===-- NVPTXCodeGenPassBuilder.cpp - Build NVPTX CodeGen pipeline --------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// New pass manager version of the NVPTX codegen pipeline. This mirrors
-// NVPTXPassConfig in NVPTXTargetMachine.cpp; the two must be kept in sync
-// until the legacy pass manager path is removed.
-//
+/// \file
+/// This file contains the NVPTX CodeGen pipeline builder. It mirrors
+/// NVPTXPassConfig in NVPTXTargetMachine.cpp; the two must be kept in sync
+/// until the legacy pass manager path is removed.
 //===----------------------------------------------------------------------===//
 
 #include "NVPTX.h"
+#include "NVPTXAliasAnalysis.h"
 #include "NVPTXAsmPrinter.h"
 #include "NVPTXCtorDtorLowering.h"
 #include "NVPTXSubtarget.h"
 #include "NVPTXTargetMachine.h"
+#include "llvm/Analysis/KernelInfo.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/DeadMachineInstructionElim.h"
 #include "llvm/CodeGen/MachineCopyPropagation.h"
@@ -56,6 +57,29 @@ using namespace llvm;
 
 extern cl::opt<bool> DisableLoadStoreVectorizer;
 extern cl::opt<bool> DisableNVPTXIRPeephole;
+
+// byval arguments in NVPTX are special. We're only allowed to read from them
+// using a special instruction, and if we ever need to write to them or take an
+// address, we must make a local copy and use it, instead.
+//
+// The problem is that local copies are very expensive, and we create them very
+// late in the compilation pipeline, so LLVM does not have much of a chance to
+// eliminate them, if they turn out to be unnecessary.
+//
+// One way around that is to create such copies early on, and let them percolate
+// through the optimizations. The copying itself will never trigger creation of
+// another copy later on, as the reads are allowed. If LLVM can eliminate it,
+// it's a win. It the full optimization pipeline can't remove the copy, that's
+// as good as it gets in terms of the effort we could've done, and it's
+// certainly a much better effort than what we do now.
+//
+// This early injection of the copies has potential to create undesireable
+// side-effects, so it's disabled by default, for now, until it sees more
+// testing.
+static cl::opt<bool> EarlyByValArgsCopy(
+    "nvptx-early-byval-copy",
+    cl::desc("Create a copy of byval function arguments early."),
+    cl::init(false), cl::Hidden);
 
 namespace {
 
@@ -293,6 +317,36 @@ void NVPTXCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) const {
 }
 
 } // namespace
+
+void NVPTXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+#define GET_PASS_REGISTRY "NVPTXPassRegistry.def"
+#include "llvm/Passes/TargetPassRegistry.inc"
+
+  PB.registerPipelineStartEPCallback(
+      [this](ModulePassManager &PM, OptimizationLevel Level) {
+        // We do not want to fold out calls to nvvm.reflect early if the user
+        // has not provided a target architecture just yet.
+        if (Subtarget.hasTargetName())
+          PM.addPass(NVVMReflectPass(Subtarget.getSmVersion()));
+
+        FunctionPassManager FPM;
+        // Note: NVVMIntrRangePass was causing numerical discrepancies at one
+        // point, if issues crop up, consider disabling.
+        FPM.addPass(NVVMIntrRangePass());
+        if (EarlyByValArgsCopy)
+          FPM.addPass(NVPTXCopyByValArgsPass());
+        PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+      });
+
+  if (!NoKernelInfoEndLTO) {
+    PB.registerFullLinkTimeOptimizationLastEPCallback(
+        [this](ModulePassManager &PM, OptimizationLevel Level) {
+          FunctionPassManager FPM;
+          FPM.addPass(KernelInfoPrinter(this));
+          PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+        });
+  }
+}
 
 Error NVPTXTargetMachine::buildCodeGenPipeline(
     ModulePassManager &MPM, ModuleAnalysisManager &MAM, raw_pwrite_stream &Out,
