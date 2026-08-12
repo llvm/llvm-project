@@ -70,9 +70,7 @@ NVPTXTargetInfo::NVPTXTargetInfo(const llvm::Triple &Triple,
   HasFastHalfType = true;
   HasFloat16 = true;
 
-  // TODO: Make shortptr a proper ABI?
-  DataLayoutString =
-      Triple.computeDataLayout(Opts.NVPTXUseShortPointers ? "shortptr" : "");
+  DataLayoutString = Triple.computeDataLayout();
 
   // If possible, get a TargetInfo for our host triple, so we can match its
   // types.
@@ -160,6 +158,14 @@ NVPTXTargetInfo::NVPTXTargetInfo(const llvm::Triple &Triple,
   //   do the same.
 }
 
+bool NVPTXTargetInfo::setABI(const std::string &Name) {
+  if (Name != "shortptr")
+    return false;
+
+  resetDataLayout(getTriple().computeDataLayout(Name));
+  return true;
+}
+
 ArrayRef<const char *> NVPTXTargetInfo::getGCCRegNames() const {
   return llvm::ArrayRef(GCCRegNames);
 }
@@ -176,7 +182,7 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__NVPTX__");
 
   // Skip setting architecture dependent macros if undefined.
-  if (!IsNVIDIAOffloadArch(GPU))
+  if (!GPU.isNVPTX())
     return;
 
   if (Opts.CUDAIsDevice || Opts.OpenMPIsTargetDevice || !HostTarget) {

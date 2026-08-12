@@ -3802,6 +3802,17 @@ def : Pat<(AArch64call texternalsym:$func), (BL texternalsym:$func)>;
 //===----------------------------------------------------------------------===//
 // Exception generation instructions.
 //===----------------------------------------------------------------------===//
+
+// Nodes for the HVC/SVC exception-generating calls.  The single operand is the
+// 16-bit instruction immediate; the argument registers, clobber mask and glue
+// are attached as variadic operands during lowering.
+def AArch64hvc : SDNode<"AArch64ISD::HVC", SDTypeProfile<0, 1, [SDTCisInt<0>]>,
+                        [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue, SDNPVariadic,
+                         SDNPMayLoad, SDNPMayStore]>;
+def AArch64svc : SDNode<"AArch64ISD::SVC", SDTypeProfile<0, 1, [SDTCisInt<0>]>,
+                        [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue, SDNPVariadic,
+                         SDNPMayLoad, SDNPMayStore]>;
+
 let isTrap = 1 in {
 def BRK   : ExceptionGeneration<0b001, 0b00, "brk",
                                 [(int_aarch64_break timm32_0_65535:$imm)]>;
@@ -3811,9 +3822,18 @@ def DCPS2 : ExceptionGeneration<0b101, 0b10, "dcps2">;
 def DCPS3 : ExceptionGeneration<0b101, 0b11, "dcps3">, Requires<[HasEL3]>;
 def HLT   : ExceptionGeneration<0b010, 0b00, "hlt",
                                 [(int_aarch64_hlt timm32_0_65535:$imm)]>;
+// Following the Microsoft __hvc/__svc calling convention (a software
+// convention, not an architectural rule), HVC and SVC pass up to four arguments
+// in X0-X3 and return a value in X0.  They are therefore selected from the
+// AArch64hvc/AArch64svc nodes (built by LowerINTRINSIC_W_CHAIN) rather than a
+// plain intrinsic pattern, and define X0 for the result.
+let mayLoad = 1, mayStore = 1, Defs = [X0] in
 def HVC   : ExceptionGeneration<0b000, 0b10, "hvc">;
 def SMC   : ExceptionGeneration<0b000, 0b11, "smc">, Requires<[HasEL3]>;
+let mayLoad = 1, mayStore = 1, Defs = [X0] in
 def SVC   : ExceptionGeneration<0b000, 0b01, "svc">;
+def : Pat<(AArch64hvc timm32_0_65535:$imm), (HVC timm32_0_65535:$imm)>;
+def : Pat<(AArch64svc timm32_0_65535:$imm), (SVC timm32_0_65535:$imm)>;
 
 // DCPSn defaults to an immediate operand of zero if unspecified.
 def : InstAlias<"dcps1", (DCPS1 0)>;
@@ -9149,6 +9169,9 @@ def fixedpoint_scalar_xform : SDNodeXForm<timm, [{
   (void)N;
   return V;
 }]>;
+def gi_fixedpoint_scalar_xform
+    : GICustomOperandRenderer<"renderFixedPointScalarXForm">,
+      GISDNodeXFormEquiv<fixedpoint_scalar_xform>;
 
 multiclass FPToFixedScalarPats<SDPatternOperator OpN, string INST > {
   // Allow integer result to remain in GPR register.
@@ -9162,12 +9185,7 @@ multiclass FPToFixedScalarPats<SDPatternOperator OpN, string INST > {
           (!cast<Instruction>(INST # "s") FPR32:$Rn, vecshiftR32:$imm)>;
   def : Pat<(f64 (bitconvert(i64 (OpN (f64 FPR64:$Rn), vecshiftR64:$imm)))),
           (!cast<Instruction>(INST # "d") FPR64:$Rn, vecshiftR64:$imm)>;
-
-  // FPR fallback patterns.
-  def : Pat<(i32 (OpN FPR32:$Rn, vecshiftR32:$imm)),
-          (!cast<Instruction>(INST # "s") FPR32:$Rn, vecshiftR32:$imm)>;
-  def : Pat<(i64 (OpN (f64 FPR64:$Rn), vecshiftR64:$imm)),
-          (!cast<Instruction>(INST # "d") FPR64:$Rn, vecshiftR64:$imm)>;
+          
   def : Pat<(v1i64 (OpN (v1f64 FPR64:$Rn), vecshiftR64:$imm)),
           (!cast<Instruction>(INST # "d") FPR64:$Rn, vecshiftR64:$imm)>;
   def : Pat<(i32 (OpN (f16 FPR16:$Rn), vecshiftR32:$imm)),
