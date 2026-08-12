@@ -171,7 +171,8 @@ public:
 
   bool hasTcgen05MMASparseMxf4nvf4() const {
     return hasFeature(NVPTX::PTX87) &&
-           hasAnyFeature({NVPTX::SM100a, NVPTX::SM103a, NVPTX::SM110a, NVPTX::SM107a});
+           hasAnyFeature(
+               {NVPTX::SM100a, NVPTX::SM103a, NVPTX::SM110a, NVPTX::SM107a});
   }
 
   bool hasTcgen05MMASparseMxf4() const {
