@@ -13,8 +13,7 @@ define i32 @f(i64 %a3, i64 %numElements) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[A1]], [[A3]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_END_I:%.*]], label [[ABORT:%.*]]
 ; CHECK:       if.end.i:
-; CHECK-NEXT:    [[CMP2_NOT_I:%.*]] = icmp ult i64 [[A1]], [[A3]]
-; CHECK-NEXT:    br i1 [[CMP2_NOT_I]], label [[ABORT]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 false, label [[ABORT]], label [[EXIT:%.*]]
 ; CHECK:       abort:
 ; CHECK-NEXT:    ret i32 -1
 ; CHECK:       exit:
@@ -90,8 +89,7 @@ define i1 @fm_overflow_recovery(i64 %n, i64 %i, i64 %lim) {
 ; CHECK-NEXT:    [[F2:%.*]] = icmp ult i64 [[N4M4]], [[LIM]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[F2]])
 ; CHECK-NEXT:    [[I4:%.*]] = shl nuw i64 [[I]], 2
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i64 [[I4]], [[LIM]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %big = icmp ule i64 %n, 2305843009213693952
@@ -105,4 +103,93 @@ entry:
   %i4 = shl nuw i64 %i, 2
   %c = icmp ult i64 %i4, %lim
   ret i1 %c
+}
+
+define i1 @eq_inverted_normal_coeff(i64 %a, i64 %b) {
+; CHECK-LABEL: define i1 @eq_inverted_normal_coeff(
+; CHECK-SAME: i64 [[A:%.*]], i64 [[B:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[RES:%.*]] = and i1 true, true
+; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %cmp = icmp eq i64 %a, %b
+  br i1 %cmp, label %then, label %else
+
+then:
+  %t.1 = icmp uge i64 %a, %b
+  %t.2 = icmp ule i64 %a, %b
+  %res = and i1 %t.1, %t.2
+  ret i1 %res
+
+else:
+  ret i1 false
+}
+
+; The offsets of the decomposed operands overflow, so no constraint is built for
+; the ne fact. Make sure it is not added as its ule relaxation; %t must not be
+; folded, as it is false for %x = -1, %y = 0.
+define i1 @ne_fact_with_overflowing_offsets_not_added(i64 %x, i64 %y) {
+; CHECK-LABEL: define i1 @ne_fact_with_overflowing_offsets_not_added(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = sub nuw i64 [[X]], 4611686018427387904
+; CHECK-NEXT:    [[B:%.*]] = add nuw i64 [[Y]], 4611686018427387904
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[T:%.*]] = icmp ule i64 [[A]], [[B]]
+; CHECK-NEXT:    ret i1 [[T]]
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %a = sub nuw i64 %x, 4611686018427387904
+  %b = add nuw i64 %y, 4611686018427387904
+  %cmp = icmp ne i64 %a, %b
+  br i1 %cmp, label %then, label %else
+
+then:
+  %t = icmp ule i64 %a, %b
+  ret i1 %t
+
+else:
+  ret i1 false
+}
+
+; Same as @ne_fact_with_overflowing_offsets_not_added, but with an eq fact.
+; Combining the offsets overflows, so no constraint is built and %t is not
+; folded.
+; TODO: %t could be proven by using %a and %b as-is.
+define i1 @eq_fact_with_overflowing_offsets_not_added(i64 %x, i64 %y) {
+; CHECK-LABEL: define i1 @eq_fact_with_overflowing_offsets_not_added(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = sub nuw i64 [[X]], 4611686018427387904
+; CHECK-NEXT:    [[B:%.*]] = add nuw i64 [[Y]], 4611686018427387904
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[T:%.*]] = icmp ule i64 [[A]], [[B]]
+; CHECK-NEXT:    ret i1 [[T]]
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %a = sub nuw i64 %x, 4611686018427387904
+  %b = add nuw i64 %y, 4611686018427387904
+  %cmp = icmp eq i64 %a, %b
+  br i1 %cmp, label %then, label %else
+
+then:
+  %t = icmp ule i64 %a, %b
+  ret i1 %t
+
+else:
+  ret i1 false
 }

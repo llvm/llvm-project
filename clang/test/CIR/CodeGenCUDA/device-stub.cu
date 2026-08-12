@@ -129,7 +129,7 @@ __device__ _BitInt(36) c;
 // CIR-SAME: #cir.int<1> : !s32i,
 // CIR-SAME: #cir.global_view<@__cuda_fatbin_str> : !cir.ptr<!void>,
 // CIR-SAME: #cir.ptr<null> : !cir.ptr<!void>
-// CIR-SAME: }> : !rec_anon_struct {section = ".nvFatBinSegment"}
+// CIR-SAME: }> : !rec_anon_struct{{[0-9]*}} {section = ".nvFatBinSegment"}
 
 // Check the GPU binary handle global.
 // CIR: cir.global "private" internal @__cuda_gpubin_handle = #cir.ptr<null> : !cir.ptr<!cir.ptr<!void>>
@@ -249,13 +249,13 @@ __device__ _BitInt(36) c;
 
 // Fatbin string + wrapper live in the HIP-specific sections; magic
 // 0x48495046 = 1212764230.
-// HIP-CIR: cir.global "private" constant cir_private @__hip_fatbin_str = #cir.const_array<"GPU binary would be here." : !cir.array<!u8i x 25>> : !cir.array<!u8i x 25> {alignment = 8 : i64, section = ".hip_fatbin"}
+// HIP-CIR: cir.global "private" constant cir_private @__hip_fatbin_str = #cir.const_array<"GPU binary would be here." : !cir.array<!u8i x 25>> : !cir.array<!u8i x 25> {alignment = 4096 : i64, section = ".hip_fatbin"}
 // HIP-CIR: cir.global constant cir_private @__hip_fatbin_wrapper = #cir.const_record<{
 // HIP-CIR-SAME: #cir.int<1212764230> : !s32i,
 // HIP-CIR-SAME: #cir.int<1> : !s32i,
 // HIP-CIR-SAME: #cir.global_view<@__hip_fatbin_str> : !cir.ptr<!void>,
 // HIP-CIR-SAME: #cir.ptr<null> : !cir.ptr<!void>
-// HIP-CIR-SAME: }> : !rec_anon_struct {section = ".hipFatBinSegment"}
+// HIP-CIR-SAME: }> : !rec_anon_struct{{[0-9]*}} {section = ".hipFatBinSegment"}
 
 // HIP-CIR: cir.global "private" internal @__hip_gpubin_handle = #cir.ptr<null> : !cir.ptr<!cir.ptr<!void>>
 // HIP-CIR: cir.func private @__hipRegisterFatBinary(!cir.ptr<!void>) -> !cir.ptr<!cir.ptr<!void>>
@@ -286,7 +286,7 @@ __device__ _BitInt(36) c;
 // HIP-CIR: cir.global constant external @_Z10kernelfunciii = #cir.global_view<@_Z25__device_stub__kernelfunciii> : !cir.ptr<!cir.func<(!s32i, !s32i, !s32i)>> {alignment = 8 : i64}
 
 // HIP OGCG cross-check (LLVM IR matches what OG codegen emits for HIP).
-// HIP-OGCG: @{{.*}} = private constant [25 x i8] c"GPU binary would be here.", section ".hip_fatbin"
+// HIP-OGCG: @{{.*}} = private constant [25 x i8] c"GPU binary would be here.", section ".hip_fatbin", align 4096
 // HIP-OGCG: @__hip_fatbin_wrapper = internal constant { i32, i32, ptr, ptr } { i32 1212764230, i32 1, ptr @{{.*}}, ptr null }, section ".hipFatBinSegment"
 // HIP-OGCG: @__hip_gpubin_handle = internal global ptr null
 // HIP-OGCG: @llvm.global_ctors = appending global {{.*}}@__hip_module_ctor
@@ -307,7 +307,7 @@ __device__ _BitInt(36) c;
 // HIP-OGCG:   store ptr null, ptr @__hip_gpubin_handle
 
 // HIP LLVM lowering cross-check.
-// HIP-LLVM: @{{.*}} = private constant [25 x i8] c"GPU binary would be here.", section ".hip_fatbin", align 8
+// HIP-LLVM: @{{.*}} = private constant [25 x i8] c"GPU binary would be here.", section ".hip_fatbin", align 4096
 // HIP-LLVM: @__hip_fatbin_wrapper = {{.*}}constant { i32, i32, ptr, ptr } { i32 1212764230, i32 1, ptr @{{.*}}, ptr null }, section ".hipFatBinSegment"
 // HIP-LLVM: @__hip_gpubin_handle = internal global ptr null
 // HIP-LLVM: @_Z10kernelfunciii = constant ptr @_Z25__device_stub__kernelfunciii, align 8

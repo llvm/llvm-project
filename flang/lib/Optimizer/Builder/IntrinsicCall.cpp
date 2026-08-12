@@ -21,6 +21,7 @@
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Builder/MIFCommon.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Builder/OpenACCIntrinsicCall.h"
 #include "flang/Optimizer/Builder/PPCIntrinsicCall.h"
@@ -642,7 +643,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"null", &I::genNull, {{{"mold", asInquired}}}, /*isElemental=*/false},
     {"num_images",
      &I::genNumImages,
-     {{{"team_number", asValue}, {"team", asBox}}},
+     {{{"team_number", asValue}, {"team", asAddr}}},
      /*isElemental*/ false},
     {"pack",
      &I::genPack,
@@ -829,13 +830,13 @@ static constexpr IntrinsicHandler handlers[]{
     {"tanpi", &I::genTanpi},
     {"team_number",
      &I::genTeamNumber,
-     {{{"team", asBox, handleDynamicOptional}}},
+     {{{"team", asAddr, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"this_image",
      &I::genThisImage,
      {{{"coarray", asBox},
        {"dim", asValue},
-       {"team", asBox, handleDynamicOptional}}},
+       {"team", asAddr, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"time", &I::genTime, {}, /*isElemental=*/false},
     {"timef", &I::genTimef, {}, /*isElemental=*/false},
@@ -3602,13 +3603,19 @@ mlir::Value IntrinsicLibrary::genCospi(mlir::Type resultType,
 
 // COSHAPE
 fir::ExtendedValue
-IntrinsicLibrary::genCoshape(mlir::Type,
+IntrinsicLibrary::genCoshape(mlir::Type resultType,
                              llvm::ArrayRef<fir::ExtendedValue> args) {
   checkCoarrayEnabled(loc, options);
   assert(args.size() == 2);
 
-  return mif::CoshapeOp::create(builder, loc,
-                                /*coarray*/ fir::getBase(args[0]));
+  // Use the declared Fortran element type (e.g. i32 for default integer kind)
+  // rather than hardcoding i64. MIFCoshapeOpConversion converts the i64 values
+  // written by the prif_coshape runtime to the declared type.
+  mlir::Type eleTy = hlfir::getFortranElementType(resultType);
+  mlir::Type coshapeResultTy = fir::BoxType::get(
+      fir::SequenceType::get({fir::SequenceType::getUnknownExtent()}, eleTy));
+  return mif::CoshapeOp::create(builder, loc, coshapeResultTy,
+                                fir::getBase(args[0]));
 }
 
 // COUNT
@@ -4268,7 +4275,7 @@ mlir::Value IntrinsicLibrary::genGetTeam(mlir::Type resultType,
                                          llvm::ArrayRef<mlir::Value> args) {
   checkCoarrayEnabled(loc, options);
   assert(args.size() == 1);
-  return mif::GetTeamOp::create(builder, loc, fir::BoxType::get(resultType),
+  return mif::GetTeamOp::create(builder, loc, builder.getRefType(resultType),
                                 /*level*/ args[0]);
 }
 
@@ -6326,9 +6333,8 @@ IntrinsicLibrary::genImageIndex(mlir::Type resultType,
     if (fir::isa_integer(fir::unwrapRefType(team.getType())))
       team = fir::LoadOp::create(builder, loc, team);
   }
-  return mif::ImageIndexOp::create(builder, loc,
-                                   /*coarray*/ fir::getBase(args[0]),
-                                   /*sub*/ fir::getBase(args[1]), team);
+  return mif::genImageIndex(builder, loc, fir::getBase(args[0]),
+                            fir::getBase(args[1]), team);
 }
 
 // INDEX
@@ -8248,15 +8254,16 @@ IntrinsicLibrary::genSize(mlir::Type resultType,
 
   // Get the DIM argument.
   mlir::Value dim = fir::getBase(args[1]);
+  std::optional<std::int64_t> cstDim;
   if (!args[0].hasAssumedRank())
-    if (std::optional<std::int64_t> cstDim = fir::getIntIfConstant(dim)) {
-      // If both DIM and the rank are compile time constants, skip the runtime
-      // call.
-      return builder.createConvert(
-          loc, resultType,
-          fir::factory::readExtent(builder, loc, fir::BoxValue{array},
-                                   cstDim.value() - 1));
-    }
+    if (std::optional<llvm::APInt> constantDim = fir::getIntIfConstant(dim))
+      cstDim = constantDim->trySExtValue();
+  // If both DIM and the rank are compile time constants, skip the runtime call.
+  if (cstDim)
+    return builder.createConvert(loc, resultType,
+                                 fir::factory::readExtent(builder, loc,
+                                                          fir::BoxValue{array},
+                                                          cstDim.value() - 1));
   if (!fir::isa_ref_type(dim.getType()))
     return builder.createConvert(
         loc, resultType, fir::runtime::genSizeDim(builder, loc, array, dim));
@@ -8348,10 +8355,16 @@ IntrinsicLibrary::genThisImage(mlir::Type resultType,
   const bool dimIsAbsent = args.size() < 3;
   mlir::Value team = fir::getBase(args[args.size() - 1]);
 
+  if (team)
+    team = fir::BoxAddrOp::create(builder, loc, team);
+
   if (!coarrayIsAbsent && dimIsAbsent) {
-    mlir::Value res =
-        mif::ThisImageOp::create(builder, loc, fir::getBase(args[0]), team);
-    return res;
+    mlir::Type eleTy = hlfir::getFortranElementType(resultType);
+    mlir::Type thisImageResultTy = fir::BoxType::get(
+        fir::SequenceType::get({fir::SequenceType::getUnknownExtent()}, eleTy));
+    return mif::ThisImageOp::create(builder, loc, thisImageResultTy,
+                                    fir::getBase(args[0]),
+                                    /*dim=*/mlir::Value{}, team);
   }
   mlir::Value res;
   if (!dimIsAbsent) {
@@ -8456,14 +8469,16 @@ IntrinsicLibrary::genLbound(mlir::Type resultType,
 
   // If it is a compile time constant and the rank is known, skip the runtime
   // call.
+  std::optional<std::int64_t> cstDim;
   if (!array.hasAssumedRank())
-    if (std::optional<std::int64_t> cstDim = fir::getIntIfConstant(dim)) {
-      mlir::Value one = builder.createIntegerConstant(loc, resultType, 1);
-      mlir::Value zero = builder.createIntegerConstant(loc, indexType, 0);
-      mlir::Value lb =
-          computeLBOUND(builder, loc, array, *cstDim - 1, zero, one);
-      return builder.createConvert(loc, resultType, lb);
-    }
+    if (std::optional<llvm::APInt> constantDim = fir::getIntIfConstant(dim))
+      cstDim = constantDim->trySExtValue();
+  if (cstDim) {
+    mlir::Value one = builder.createIntegerConstant(loc, resultType, 1);
+    mlir::Value zero = builder.createIntegerConstant(loc, indexType, 0);
+    mlir::Value lb = computeLBOUND(builder, loc, array, *cstDim - 1, zero, one);
+    return builder.createConvert(loc, resultType, lb);
+  }
 
   fir::ExtendedValue box = createBoxForRuntimeBoundInquiry(loc, builder, array);
   return builder.createConvert(

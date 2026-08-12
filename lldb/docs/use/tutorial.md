@@ -399,12 +399,12 @@ a variable called `global` for write operation, but only stop if the condition
 
 ```
 (lldb) watch set var global
-Watchpoint created: Watchpoint 1: addr = 0x100001018 size = 4 state = enabled type = w
+Watchpoint created: Watchpoint 1: addr = 0x100001018, size = 4, state = enabled, type = w
    declare @ '/Volumes/data/lldb/svn/ToT/test/functionalities/watchpoint/watchpoint_commands/condition/main.cpp:12'
 (lldb) watch modify -c '(global==5)'
 (lldb) watch list
 Current watchpoints:
-Watchpoint 1: addr = 0x100001018 size = 4 state = enabled type = w
+Watchpoint 1: addr = 0x100001018, size = 4, state = enabled, type = w
    declare @ '/Volumes/data/lldb/svn/ToT/test/functionalities/watchpoint/watchpoint_commands/condition/main.cpp:12'
    condition = '(global==5)'
 (lldb) c
@@ -433,7 +433,7 @@ Process 15562 stopped
 (int32_t) global = 5
 (lldb) watch list -v
 Current watchpoints:
-Watchpoint 1: addr = 0x100001018 size = 4 state = enabled type = w
+Watchpoint 1: addr = 0x100001018, size = 4, state = enabled, type = w
    declare @ '/Volumes/data/lldb/svn/ToT/test/functionalities/watchpoint/watchpoint_commands/condition/main.cpp:12'
    condition = '(global==5)'
    hit_count = 5     ignore_count = 0

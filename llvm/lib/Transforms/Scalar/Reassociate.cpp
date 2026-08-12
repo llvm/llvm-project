@@ -203,33 +203,59 @@ void ReassociatePass::BuildRankMap(Function &F,
 }
 
 unsigned ReassociatePass::getRank(Value *V) {
-  Instruction *I = dyn_cast<Instruction>(V);
-  if (!I) {
-    if (isa<Argument>(V)) return ValueRankMap[V];   // Function argument.
-    return 0;  // Otherwise it's a global or constant, rank 0.
+  // Return 1+MAX(rank(LHS), rank(RHS)) for expressions so we can reassociate
+  // expressions for code motion. Use an explicit worklist rather than native
+  // recursion so long acyclic use-def chains do not overflow the stack.
+  struct RankWorkItem {
+    Value *V;
+    unsigned OpNo;
+    unsigned Rank;
+  };
+
+  // Each item is one suspended recursive getRank() call.
+  // Completed ranks are folded back into the parent.
+  SmallVector<RankWorkItem, 16> Worklist;
+  Worklist.push_back(RankWorkItem{V, 0, 0});
+
+  while (true) {
+    RankWorkItem &Item = Worklist.back();
+    Instruction *I = dyn_cast<Instruction>(Item.V);
+    unsigned Rank = 0;
+    if (!I) {
+      // Function argument, global or constant
+      Rank = isa<Argument>(Item.V) ? ValueRankMap[Item.V] : 0;
+    } else if (ValueRankMap[I]) {
+      // Instruction that is not movable.
+      Rank = ValueRankMap[I];
+    } else if (Item.OpNo == I->getNumOperands() ||
+               Item.Rank == RankMap[I->getParent()]) {
+      // All operands were visited or the max block rank was reached.
+      Rank = Item.Rank;
+      // If this is a 'not' or 'neg' instruction, do not count it for rank.
+      // This assures us that X and ~X will have the same rank.
+      if (!match(I, m_Not(m_Value())) && !match(I, m_Neg(m_Value())) &&
+          !match(I, m_FNeg(m_Value())))
+        ++Rank;
+
+      LLVM_DEBUG(dbgs() << "Calculated Rank[" << I->getName() << "] = " << Rank
+                        << "\n");
+
+      ValueRankMap[I] = Rank;
+    } else {
+      Worklist.push_back(RankWorkItem{I->getOperand(Item.OpNo), 0, 0});
+      continue;
+    }
+
+    // Once the current use-def node has a known rank, carry that rank back to
+    // the parent expression and advance past the operand that led here.
+    Worklist.pop_back();
+    if (Worklist.empty())
+      return Rank;
+
+    RankWorkItem &Parent = Worklist.back();
+    Parent.Rank = std::max(Parent.Rank, Rank);
+    ++Parent.OpNo;
   }
-
-  if (unsigned Rank = ValueRankMap[I])
-    return Rank;    // Rank already known?
-
-  // If this is an expression, return the 1+MAX(rank(LHS), rank(RHS)) so that
-  // we can reassociate expressions for code motion!  Since we do not recurse
-  // for PHI nodes, we cannot have infinite recursion here, because there
-  // cannot be loops in the value graph that do not go through PHI nodes.
-  unsigned Rank = 0, MaxRank = RankMap[I->getParent()];
-  for (unsigned i = 0, e = I->getNumOperands(); i != e && Rank != MaxRank; ++i)
-    Rank = std::max(Rank, getRank(I->getOperand(i)));
-
-  // If this is a 'not' or 'neg' instruction, do not count it for rank. This
-  // assures us that X and ~X will have the same rank.
-  if (!match(I, m_Not(m_Value())) && !match(I, m_Neg(m_Value())) &&
-      !match(I, m_FNeg(m_Value())))
-    ++Rank;
-
-  LLVM_DEBUG(dbgs() << "Calculated Rank[" << V->getName() << "] = " << Rank
-                    << "\n");
-
-  return ValueRankMap[I] = Rank;
 }
 
 // Canonicalize constants to RHS.  Otherwise, sort the operands by rank.
@@ -2035,6 +2061,8 @@ void ReassociatePass::RecursivelyEraseDeadInsts(Instruction *I,
   ValueRankMap.erase(I);
   Insts.remove(I);
   RedoInsts.remove(I);
+  if (UA)
+    UA->forgetValue(I);
   llvm::salvageDebugInfo(*I);
   I->eraseFromParent();
   for (auto *Op : Ops)
@@ -2052,6 +2080,8 @@ void ReassociatePass::EraseInst(Instruction *I) {
   // Erase the dead instruction.
   ValueRankMap.erase(I);
   RedoInsts.remove(I);
+  if (UA)
+    UA->forgetValue(I);
   llvm::salvageDebugInfo(*I);
   I->eraseFromParent();
   // Optimize its operands.
@@ -2370,6 +2400,31 @@ void ReassociatePass::ReassociateExpression(BinaryOperator *I) {
 
   LLVM_DEBUG(dbgs() << "RAIn:\t"; PrintOps(I, Ops); dbgs() << '\n');
 
+  // Boost the rank of divergent operands so they sort towards the root of the
+  // expression tree, clustering uniform operands together at the leaves. On
+  // targets without divergence UniformityInfo is empty and this is a no-op.
+  //
+  // Example: (uniform1 + divergent) + uniform2
+  //       -> (uniform1 + uniform2) + divergent
+  if (UA && Ops.size() > 2) {
+    constexpr unsigned DivergentRankOffset = 1U << 28;
+    BasicBlock *ParentBB = I->getParent();
+    for (ValueEntry &Entry : Ops) {
+      if (isa<Constant>(Entry.Op))
+        continue;
+      bool Divergent = false;
+      for (const Use &U : Entry.Op->uses()) {
+        Instruction *Usr = dyn_cast<Instruction>(U.getUser());
+        if (Usr && Usr->getParent() == ParentBB) {
+          Divergent = UA->isDivergentAtUse(U);
+          break;
+        }
+      }
+      if (Divergent)
+        Entry.Rank += DivergentRankOffset;
+    }
+  }
+
   // Now that we have linearized the tree to a list and have gathered all of
   // the operands and their ranks, sort the operands by their rank.  Use a
   // stable_sort so that values with equal ranks will have their relative
@@ -2619,7 +2674,17 @@ ReassociatePass::BuildPairMap(ReversePostOrderTraversal<Function *> &RPOT) {
   }
 }
 
-PreservedAnalyses ReassociatePass::run(Function &F, FunctionAnalysisManager &) {
+PreservedAnalyses ReassociatePass::run(Function &F,
+                                       FunctionAnalysisManager &AM) {
+  // UniformityInfo is empty (and cheap) on targets without branch divergence,
+  // so request it unconditionally.
+  UniformityInfo &UI = AM.getResult<UniformityInfoAnalysis>(F);
+  return runImpl(F, UI);
+}
+
+PreservedAnalyses ReassociatePass::runImpl(Function &F, UniformityInfo &UI) {
+  UA = &UI;
+
   // Get the functions basic blocks in Reverse Post Order. This order is used by
   // BuildRankMap to pre calculate ranks correctly. It also excludes dead basic
   // blocks (it has been seen that the analysis in this pass could hang when
@@ -2682,11 +2747,12 @@ PreservedAnalyses ReassociatePass::run(Function &F, FunctionAnalysisManager &) {
     }
   }
 
-  // We are done with the rank map and pair map.
+  // We are done with the rank map, pair map, and uniformity info.
   RankMap.clear();
   ValueRankMap.clear();
   for (auto &Entry : PairMap)
     Entry.clear();
+  UA = nullptr;
 
   if (MadeChange) {
     PreservedAnalyses PA;
@@ -2713,15 +2779,17 @@ public:
     if (skipFunction(F))
       return false;
 
-    FunctionAnalysisManager DummyFAM;
-    auto PA = Impl.run(F, DummyFAM);
+    UniformityInfo &UI =
+        getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
+
+    PreservedAnalyses PA = Impl.runImpl(F, UI);
     return !PA.areAllPreserved();
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
+    AU.addRequired<UniformityInfoWrapperPass>();
     AU.addPreserved<AAResultsWrapperPass>();
-    AU.addPreserved<BasicAAWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
   }
 };
@@ -2730,8 +2798,11 @@ public:
 
 char ReassociateLegacyPass::ID = 0;
 
-INITIALIZE_PASS(ReassociateLegacyPass, "reassociate",
-                "Reassociate expressions", false, false)
+INITIALIZE_PASS_BEGIN(ReassociateLegacyPass, "reassociate",
+                      "Reassociate expressions", false, false)
+INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
+INITIALIZE_PASS_END(ReassociateLegacyPass, "reassociate",
+                    "Reassociate expressions", false, false)
 
 // Public interface to the Reassociate pass
 FunctionPass *llvm::createReassociatePass() {

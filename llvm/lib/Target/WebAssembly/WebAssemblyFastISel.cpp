@@ -583,26 +583,23 @@ unsigned WebAssemblyFastISel::signExtend(unsigned Reg, const Value *V,
     Register Result = createResultReg(&WebAssembly::I64RegClass);
 
     if (Subtarget->hasSignExt()) {
-      if (From != MVT::i32) {
+      switch (From) {
+      case MVT::i8:
+      case MVT::i16: {
         BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
                 TII.get(WebAssembly::I64_EXTEND_U_I32), Result)
             .addReg(Reg);
 
         Reg = Result;
         Result = createResultReg(&WebAssembly::I64RegClass);
-      }
 
-      switch (From) {
-      case MVT::i8:
         BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-                TII.get(WebAssembly::I64_EXTEND8_S_I64), Result)
+                TII.get(From == MVT::i8 ? WebAssembly::I64_EXTEND8_S_I64
+                                        : WebAssembly::I64_EXTEND16_S_I64),
+                Result)
             .addReg(Reg);
         return Result;
-      case MVT::i16:
-        BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-                TII.get(WebAssembly::I64_EXTEND16_S_I64), Result)
-            .addReg(Reg);
-        return Result;
+      }
       case MVT::i32:
         BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
                 TII.get(WebAssembly::I64_EXTEND_S_I32), Result)
@@ -611,14 +608,15 @@ unsigned WebAssemblyFastISel::signExtend(unsigned Reg, const Value *V,
       default:
         break;
       }
-    } else {
-      Reg = signExtendToI32(Reg, V, From);
-
-      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-              TII.get(WebAssembly::I64_EXTEND_S_I32), Result)
-          .addReg(Reg);
     }
 
+    Reg = signExtendToI32(Reg, V, From);
+    if (Reg == 0)
+      return 0;
+
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+            TII.get(WebAssembly::I64_EXTEND_S_I32), Result)
+        .addReg(Reg);
     return Result;
   }
 

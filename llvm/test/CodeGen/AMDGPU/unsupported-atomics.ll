@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=null %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=amdgpu9.00-amd-amdhsa -filetype=null %s 2>&1 | FileCheck %s
 
 ; CHECK: error: unsupported atomic load: target supports atomics up to 8 bytes, but this atomic accesses 16 bytes
 define i128 @test_load_i128(ptr %p) nounwind {

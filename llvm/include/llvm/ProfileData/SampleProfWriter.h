@@ -12,6 +12,7 @@
 #ifndef LLVM_PROFILEDATA_SAMPLEPROFWRITER_H
 #define LLVM_PROFILEDATA_SAMPLEPROFWRITER_H
 
+#include "llvm/ADT/Eytzinger.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/ProfileSummary.h"
@@ -22,7 +23,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 #include <memory>
-#include <set>
 #include <system_error>
 
 namespace llvm {
@@ -224,8 +224,6 @@ protected:
   virtual std::error_code writeContextIdx(const SampleContext &Context);
   std::error_code writeNameIdx(FunctionId FName);
   std::error_code writeBody(const FunctionSamples &S);
-  inline void stablizeNameTable(MapVector<FunctionId, uint32_t> &NameTable,
-                                std::set<FunctionId> &V);
 
   MapVector<FunctionId, uint32_t> NameTable;
 
@@ -417,8 +415,14 @@ protected:
 
   // Functions to write various kinds of sections.
   std::error_code writeNameTableSection(const SampleProfileMap &ProfileMap);
-  std::error_code writeFuncOffsetTable();
+  std::error_code
+  writeEytzingerNameTableSection(const SampleProfileMap &ProfileMap);
+  std::error_code writeFuncOffsetTable(bool IsNested);
+  std::error_code writeEytzingerFuncOffsetTable(bool IsNested);
+  std::error_code writeLegacyFuncOffsetTable();
   std::error_code writeProfileSymbolListSection();
+  std::error_code writeStringBasedProfileSymbolListSection();
+  std::error_code writeMD5ProfileSymbolListSection();
 
   SectionLayout SecLayout = DefaultLayout;
   // Specifiy the order of sections in section header table. Note
@@ -464,6 +468,8 @@ private:
   MapVector<SampleContext, uint64_t> FuncOffsetTable;
   // Whether to use MD5 to represent string.
   bool UseMD5 = false;
+  size_t NumNested = 0;
+  size_t NumFlat = 0;
 
   /// CSNameTable maps function context to its offset in SecCSNameTable section.
   /// The offset will be used everywhere where the context is referenced.

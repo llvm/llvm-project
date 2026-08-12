@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Missing some math functions that compiler-rt buildins need.
-// XFAIL: LLVM-LIBC-FIXME
-
 // <complex>
 
 // complex& operator/=(const complex& rhs); // constexpr in C++20

@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98-14,cxx98
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-20,cxx98-14,cxx11-17,since-cxx11,cxx11
-// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-20,since-cxx14,cxx98-14,cxx11-17,since-cxx11,since-cxx14
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-20,since-cxx14,since-cxx17,cxx11-17,since-cxx11,since-cxx14,cxx17
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-20,since-cxx14,since-cxx17,since-cxx20,since-cxx11,since-cxx14
-// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx14,since-cxx17,since-cxx20,since-cxx23,since-cxx11,since-cxx14
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-20,cxx11-23,cxx98-14,cxx11-17,since-cxx11,cxx11
+// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-20,cxx11-23,since-cxx14,cxx98-14,cxx11-17,since-cxx11,since-cxx14
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-20,cxx11-23,since-cxx14,since-cxx17,cxx11-17,since-cxx11,since-cxx14,cxx17
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-20,cxx11-23,since-cxx14,since-cxx17,since-cxx20,since-cxx11,since-cxx14
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx23,cxx11-23,since-cxx14,since-cxx17,since-cxx20,since-cxx23,since-cxx11,since-cxx14
 // RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx14,since-cxx17,since-cxx20,since-cxx23,since-cxx11,since-cxx14
 
 #if __cplusplus == 199711L
@@ -283,20 +283,16 @@ auto e = [] {
 namespace cwg1821 { // cwg1821: 2.9
 struct A {
   template <typename> struct B {
-    void f(); // #cwg1821-B-f
+    void f();
   };
   template <typename T> void B<T>::f(){};
   // expected-error@-1 {{non-friend class member 'f' cannot have a qualified name}}
-  // expected-error@-2 {{class member cannot be redeclared}}
-  //   expected-note@#cwg1821-B-f {{previous declaration is here}}
 
   struct C {
-    void f(); // #cwg1821-C-f
+    void f();
   };
   void C::f() {}
   // expected-error@-1 {{non-friend class member 'f' cannot have a qualified name}}
-  // expected-error@-2 {{class member cannot be redeclared}}
-  //   expected-note@#cwg1821-C-f {{previous declaration is here}}
 };
 } // namespace cwg1821
 
@@ -506,9 +502,9 @@ namespace cwg1872 { // cwg1872: 9
   static_assert(y2 == 0);
 #endif
   constexpr int z = A<Z>().f();
-  // since-cxx11-error@-1 {{constexpr variable 'z' must be initialized by a constant expression}}
+  // cxx11-23-error@-1 {{constexpr variable 'z' must be initialized by a constant expression}}
   //   cxx11-20-note@-2 {{non-literal type 'A<Z>' cannot be used in a constant expression}}
-  //   since-cxx23-note@-3 {{cannot construct object of type 'A<cwg1872::Z>' with virtual base class in a constant expression}}
+  //   cxx23-note@-3 {{cannot construct object of type 'A<cwg1872::Z>' with virtual base class in a constant expression}}
 #endif
 } // namespace cwg1872
 

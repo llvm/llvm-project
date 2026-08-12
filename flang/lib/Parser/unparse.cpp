@@ -592,10 +592,14 @@ public:
         common::visitors{
             [&](const std::list<ExplicitShapeSpec> &y) { Walk(y, ","); },
             [&](const ExplicitShapeBoundsSpec &y) {
-              llvm_unreachable(
-                  "Unparse for ExplicitShapeBoundsSpec should not be reached");
+              Walk(std::get<std::optional<IntExpr>>(y.t), ":");
+              Walk(std::get<IntExpr>(y.t));
             },
             [&](const std::list<AssumedShapeSpec> &y) { Walk(y, ","); },
+            [&](const AssumedShapeBoundsSpec &y) {
+              llvm_unreachable(
+                  "Unparse for AssumedShapeBoundsSpec should not be reached");
+            },
             [&](const DeferredShapeSpecList &y) { Walk(y); },
             [&](const AssumedSizeSpec &y) { Walk(y); },
             [&](const ImpliedShapeSpec &y) { Walk(y); },
@@ -2213,6 +2217,17 @@ public:
   }
   void Unparse(const OmpAppendArgsClause &x) { Walk(x.v, ","); }
   void Unparse(const OmpArgumentList &x) { Walk(x.v, ", "); }
+  void Unparse(const OmpLoopModifier &x) {
+    Word(
+        llvm::omp::getLoopModifierName(std::get<llvm::omp::LoopModifier>(x.t)));
+    Walk("(", std::get<std::optional<std::list<ScalarIntConstantExpr>>>(x.t),
+        ")");
+  }
+  void Unparse(const OmpApplyClause &x) {
+    using Modifier = OmpApplyClause::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
+    Walk(std::get<std::list<OmpDirectiveSpecification>>(x.t));
+  }
   void Unparse(const OmpAttachModifier &x) {
     Word("ATTACH(");
     Walk(x.v);
@@ -2620,6 +2635,37 @@ public:
     using Modifier = OmpToClause::Modifier;
     Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<OmpObjectList>(x.t));
+  }
+  void Unparse(const OmpMemSpace &x) {
+    Word("MEMSPACE(");
+    Walk(x.v);
+    Put(")");
+  }
+  void Unparse(const OmpTraitsArray &x) {
+    Word("TRAITS(");
+    Walk(x.v);
+    Put(")");
+  }
+  void Unparse(const OmpUsesAllocatorsClause &x) { Walk(x.v, ", "); }
+  void Unparse(const OmpUsesAllocatorsClause::AllocatorSpec &x) {
+    using Modifier = OmpUsesAllocatorsClause::AllocatorSpec::Modifier;
+    const auto &modifiers{std::get<std::optional<std::list<Modifier>>>(x.t)};
+    if (std::get<bool>(x.t)) {
+      // Unparse using the deprecated pre-5.2 syntax.
+      Walk(std::get<ScalarIntExpr>(x.t));
+      if (modifiers) {
+        for (const Modifier &m : *modifiers) {
+          if (auto *traits{std::get_if<OmpTraitsArray>(&m.u)}) {
+            Put("(");
+            Walk(traits->v);
+            Put(")");
+          }
+        }
+      }
+    } else {
+      Walk(modifiers, ": ");
+      Walk(std::get<ScalarIntExpr>(x.t));
+    }
   }
   void Unparse(const OmpTraitPropertyExtension::Complex &x) {
     using PropList = std::list<common::Indirection<OmpTraitPropertyExtension>>;

@@ -443,6 +443,7 @@ PrintingPolicy CGDebugInfo::getPrintingPolicy() const {
   PP.UsePreferredNames = false;
   PP.AlwaysIncludeTypeForTemplateArgument = true;
   PP.UseEnumerators = false;
+  PP.PrettyEnums = false;
 
   // Apply -fdebug-prefix-map.
   PP.Callbacks = &PrintCB;
@@ -1141,6 +1142,10 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
     return SingletonId;                                                        \
   }
 #include "clang/Basic/AMDGPUTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId)                                      \
+  case BuiltinType::Id:                                                        \
+    return getOrCreateStructPtrType(Name, SingletonId);
+#include "clang/Basic/SPIRVTypes.def"
   case BuiltinType::UChar:
   case BuiltinType::Char_U:
     Encoding = llvm::dwarf::DW_ATE_unsigned_char;
@@ -4352,6 +4357,7 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
   case Type::PredefinedSugar:
     return getOrCreateType(cast<PredefinedSugarType>(Ty)->desugar(), Unit);
   case Type::CountAttributed:
+  case Type::LateParsedAttr:
   case Type::Auto:
   case Type::Attributed:
   case Type::BTFTagAttributed:
@@ -6411,8 +6417,8 @@ void CGDebugInfo::EmitPseudoVariable(CGBuilderTy &Builder,
                                   Type, false, llvm::DINode::FlagArtificial);
 
   if (auto InsertPoint = Value->getInsertionPointAfterDef()) {
-    DBuilder.insertDbgValueIntrinsic(Value, D, DBuilder.createExpression(), DIL,
-                                     *InsertPoint);
+    DBuilder.insertDbgValue(Value, D, DBuilder.createExpression(), DIL,
+                            *InsertPoint);
   }
 }
 

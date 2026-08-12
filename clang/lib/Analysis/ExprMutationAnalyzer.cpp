@@ -127,6 +127,8 @@ class ExprPointeeResolve {
     if (const auto *BO = dyn_cast<BinaryOperator>(E)) {
       if (BO->isAdditiveOp())
         return (resolveExpr(BO->getLHS()) || resolveExpr(BO->getRHS()));
+      if (BO->getOpcode() == BO_AddAssign || BO->getOpcode() == BO_SubAssign)
+        return resolveExpr(BO->getLHS());
       if (BO->isCommaOp())
         return resolveExpr(BO->getRHS());
       return false;
@@ -136,7 +138,7 @@ class ExprPointeeResolve {
       return resolveExpr(PE->getSubExpr());
 
     if (const auto *UO = dyn_cast<UnaryOperator>(E)) {
-      if (UO->getOpcode() == UO_AddrOf)
+      if (UO->getOpcode() == UO_AddrOf || UO->isIncrementDecrementOp())
         return resolveExpr(UO->getSubExpr());
     }
 
@@ -690,7 +692,7 @@ ExprMutationAnalyzer::Analyzer::findFunctionArgMutation(const Expr *Exp) {
       canResolveToExpr(Exp),
       parmVarDecl(hasType(nonConstReferenceType())).bind("parm"));
   const auto IsInstantiated = hasDeclaration(isInstantiated());
-  const auto FuncDecl = hasDeclaration(functionDecl());
+  const auto FuncDecl = hasDeclaration(functionDecl().bind("func"));
   const auto Matches = match(
       traverse(
           TK_AsIs,
@@ -704,16 +706,13 @@ ExprMutationAnalyzer::Analyzer::findFunctionArgMutation(const Expr *Exp) {
       Stm, Context);
   for (const auto &Nodes : Matches) {
     const auto *Exp = Nodes.getNodeAs<Expr>(NodeID<Expr>::value);
-    const auto *Parm = Nodes.getNodeAs<ParmVarDecl>("parm");
-    const auto *Func =
-        cast<FunctionDecl>(Parm->getDeclContext())->getDefinition();
-    if (!Func || !Func->doesThisDeclarationHaveABody())
+    const auto *Func = Nodes.getNodeAs<FunctionDecl>("func");
+    if (!Func->getBody() || !Func->getPrimaryTemplate())
       return Exp;
-    Parm = Func->getParamDecl(Parm->getFunctionScopeIndex());
 
+    const auto *Parm = Nodes.getNodeAs<ParmVarDecl>("parm");
     const ArrayRef<ParmVarDecl *> AllParams =
-        Func->getTemplateInstantiationPattern(/*ForDefinition=*/true)
-            ->parameters();
+        Func->getPrimaryTemplate()->getTemplatedDecl()->parameters();
     QualType ParmType =
         AllParams[std::min<size_t>(Parm->getFunctionScopeIndex(),
                                    AllParams.size() - 1)]

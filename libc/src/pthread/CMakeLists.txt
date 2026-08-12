@@ -143,7 +143,7 @@ add_entrypoint_object(
     pthread_condattr_getclock.h
   DEPENDS
     libc.include.pthread
-    libc.include.sys_types
+    libc.hdr.types.clockid_t
 )
 
 add_entrypoint_object(
@@ -174,8 +174,9 @@ add_entrypoint_object(
   HDRS
     pthread_condattr_setclock.h
   DEPENDS
+    libc.hdr.time_macros
+    libc.hdr.types.clockid_t
     libc.include.pthread
-    libc.include.sys_types
     libc.include.time
     libc.src.errno.errno
 )
@@ -939,4 +940,30 @@ add_entrypoint_object(
     libc.include.pthread
     libc.src.__support.threads.fork_callbacks
     libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  pthread_setschedparam
+  SRCS
+    pthread_setschedparam.cpp
+  HDRS
+    pthread_setschedparam.h
+  DEPENDS
+    libc.hdr.types.pthread_t
+    libc.hdr.types.struct_sched_param
+    libc.src.__support.macros.null_check
+    libc.src.__support.threads.thread
+)
+
+add_entrypoint_object(
+  pthread_getschedparam
+  SRCS
+    pthread_getschedparam.cpp
+  HDRS
+    pthread_getschedparam.h
+  DEPENDS
+    libc.hdr.types.pthread_t
+    libc.hdr.types.struct_sched_param
+    libc.src.__support.macros.null_check
+    libc.src.__support.threads.thread
 )
