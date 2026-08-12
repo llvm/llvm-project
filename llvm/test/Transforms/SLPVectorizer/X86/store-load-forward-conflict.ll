@@ -801,3 +801,214 @@ for.body:
 for.end:
   ret void
 }
+
+;
+; Test 12: Aligned load that is WIDER than the widened store (crossing).
+;
+; i8 store chain, VF=4 => widened store window W = 4 bytes. A backward i64
+; load (element size 8 > 4) sits at aligned Distance = 4: 4 % 4 == 0 (not
+; misaligned), but the load itself overruns its window and straddles two
+; widened stores. The misalignment-only test would miss this; the load-width
+; term catches it, so vectorization must be rejected with the check on.
+;
+define void @stlf_conflict_cross_boundary_wider_load(ptr noalias %A, i64 %n) {
+; STLF-ON-LABEL: define void @stlf_conflict_cross_boundary_wider_load(
+; STLF-ON-SAME: ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; STLF-ON-NEXT:  [[ENTRY:.*]]:
+; STLF-ON-NEXT:    br label %[[FOR_BODY:.*]]
+; STLF-ON:       [[FOR_BODY]]:
+; STLF-ON-NEXT:    [[I:%.*]] = phi i64 [ 8, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[FOR_BODY]] ]
+; STLF-ON-NEXT:    [[B0:%.*]] = sub i64 [[I]], 4
+; STLF-ON-NEXT:    [[G0:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[B0]]
+; STLF-ON-NEXT:    [[X0:%.*]] = load i64, ptr [[G0]], align 1
+; STLF-ON-NEXT:    [[B1:%.*]] = add i64 [[I]], 64
+; STLF-ON-NEXT:    [[G1:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[B1]]
+; STLF-ON-NEXT:    [[X1:%.*]] = load i64, ptr [[G1]], align 1
+; STLF-ON-NEXT:    [[B2:%.*]] = add i64 [[I]], 128
+; STLF-ON-NEXT:    [[G2:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[B2]]
+; STLF-ON-NEXT:    [[X2:%.*]] = load i64, ptr [[G2]], align 1
+; STLF-ON-NEXT:    [[B3:%.*]] = add i64 [[I]], 192
+; STLF-ON-NEXT:    [[G3:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[B3]]
+; STLF-ON-NEXT:    [[X3:%.*]] = load i64, ptr [[G3]], align 1
+; STLF-ON-NEXT:    [[T0:%.*]] = trunc i64 [[X0]] to i8
+; STLF-ON-NEXT:    [[T1:%.*]] = trunc i64 [[X1]] to i8
+; STLF-ON-NEXT:    [[T2:%.*]] = trunc i64 [[X2]] to i8
+; STLF-ON-NEXT:    [[T3:%.*]] = trunc i64 [[X3]] to i8
+; STLF-ON-NEXT:    [[S0:%.*]] = add i8 [[T0]], 1
+; STLF-ON-NEXT:    [[S1:%.*]] = add i8 [[T1]], 2
+; STLF-ON-NEXT:    [[S2:%.*]] = add i8 [[T2]], 3
+; STLF-ON-NEXT:    [[S3:%.*]] = add i8 [[T3]], 4
+; STLF-ON-NEXT:    [[I1:%.*]] = add nuw nsw i64 [[I]], 1
+; STLF-ON-NEXT:    [[I2:%.*]] = add nuw nsw i64 [[I]], 2
+; STLF-ON-NEXT:    [[I3:%.*]] = add nuw nsw i64 [[I]], 3
+; STLF-ON-NEXT:    [[P0:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[I]]
+; STLF-ON-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[I1]]
+; STLF-ON-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[I2]]
+; STLF-ON-NEXT:    [[P3:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[I3]]
+; STLF-ON-NEXT:    store i8 [[S0]], ptr [[P0]], align 1
+; STLF-ON-NEXT:    store i8 [[S1]], ptr [[P1]], align 1
+; STLF-ON-NEXT:    store i8 [[S2]], ptr [[P2]], align 1
+; STLF-ON-NEXT:    store i8 [[S3]], ptr [[P3]], align 1
+; STLF-ON-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 4
+; STLF-ON-NEXT:    [[CMP:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
+; STLF-ON-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_END:.*]]
+; STLF-ON:       [[FOR_END]]:
+; STLF-ON-NEXT:    ret void
+;
+; STLF-OFF-LABEL: define void @stlf_conflict_cross_boundary_wider_load(
+; STLF-OFF-SAME: ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; STLF-OFF-NEXT:  [[ENTRY:.*]]:
+; STLF-OFF-NEXT:    [[TMP0:%.*]] = insertelement <4 x ptr> poison, ptr [[A]], i64 0
+; STLF-OFF-NEXT:    [[TMP1:%.*]] = shufflevector <4 x ptr> [[TMP0]], <4 x ptr> poison, <4 x i32> zeroinitializer
+; STLF-OFF-NEXT:    br label %[[FOR_BODY:.*]]
+; STLF-OFF:       [[FOR_BODY]]:
+; STLF-OFF-NEXT:    [[I:%.*]] = phi i64 [ 8, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[FOR_BODY]] ]
+; STLF-OFF-NEXT:    [[P0:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[I]]
+; STLF-OFF-NEXT:    [[TMP2:%.*]] = insertelement <4 x i64> poison, i64 [[I]], i64 0
+; STLF-OFF-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i64> [[TMP2]], <4 x i64> poison, <4 x i32> zeroinitializer
+; STLF-OFF-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[TMP3]], <i64 -4, i64 64, i64 128, i64 192>
+; STLF-OFF-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, <4 x ptr> [[TMP1]], <4 x i64> [[TMP4]]
+; STLF-OFF-NEXT:    [[TMP6:%.*]] = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 1 [[TMP5]], <4 x i1> splat (i1 true), <4 x i64> poison)
+; STLF-OFF-NEXT:    [[TMP7:%.*]] = trunc <4 x i64> [[TMP6]] to <4 x i8>
+; STLF-OFF-NEXT:    [[TMP8:%.*]] = add <4 x i8> [[TMP7]], <i8 1, i8 2, i8 3, i8 4>
+; STLF-OFF-NEXT:    store <4 x i8> [[TMP8]], ptr [[P0]], align 1
+; STLF-OFF-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 4
+; STLF-OFF-NEXT:    [[CMP:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
+; STLF-OFF-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_END:.*]]
+; STLF-OFF:       [[FOR_END]]:
+; STLF-OFF-NEXT:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i64 [ 8, %entry ], [ %i.next, %for.body ]
+
+  %b0 = sub i64 %i, 4
+  %g0 = getelementptr inbounds i8, ptr %A, i64 %b0
+  %x0 = load i64, ptr %g0, align 1
+  %b1 = add i64 %i, 64
+  %g1 = getelementptr inbounds i8, ptr %A, i64 %b1
+  %x1 = load i64, ptr %g1, align 1
+  %b2 = add i64 %i, 128
+  %g2 = getelementptr inbounds i8, ptr %A, i64 %b2
+  %x2 = load i64, ptr %g2, align 1
+  %b3 = add i64 %i, 192
+  %g3 = getelementptr inbounds i8, ptr %A, i64 %b3
+  %x3 = load i64, ptr %g3, align 1
+
+  %t0 = trunc i64 %x0 to i8
+  %t1 = trunc i64 %x1 to i8
+  %t2 = trunc i64 %x2 to i8
+  %t3 = trunc i64 %x3 to i8
+
+  %s0 = add i8 %t0, 1
+  %s1 = add i8 %t1, 2
+  %s2 = add i8 %t2, 3
+  %s3 = add i8 %t3, 4
+
+  %i1 = add nuw nsw i64 %i, 1
+  %i2 = add nuw nsw i64 %i, 2
+  %i3 = add nuw nsw i64 %i, 3
+
+  %p0 = getelementptr inbounds i8, ptr %A, i64 %i
+  %p1 = getelementptr inbounds i8, ptr %A, i64 %i1
+  %p2 = getelementptr inbounds i8, ptr %A, i64 %i2
+  %p3 = getelementptr inbounds i8, ptr %A, i64 %i3
+
+  store i8 %s0, ptr %p0, align 1
+  store i8 %s1, ptr %p1, align 1
+  store i8 %s2, ptr %p2, align 1
+  store i8 %s3, ptr %p3, align 1
+
+  %i.next = add nuw nsw i64 %i, 4
+  %cmp = icmp slt i64 %i.next, %n
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:
+  ret void
+}
+
+;
+; Test 13: Aligned load wider than the element but CONTAINED (no crossing).
+;
+; Same shape as Test 12, but the backward load is i32 (element size 4 == W).
+; Starting aligned, it exactly fills one widened store window and does not
+; overrun into the next one, so it is NOT a forwarding conflict. Vectorization
+; must happen regardless of the STLF check, proving the load-width term does
+; not over-reject aligned, contained loads.
+;
+define void @stlf_no_conflict_wider_contained_load(ptr noalias %A, i64 %n) {
+; CHECK-LABEL: define void @stlf_no_conflict_wider_contained_load(
+; CHECK-SAME: ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x ptr> poison, ptr [[A]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x ptr> [[TMP0]], <4 x ptr> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 8, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[I]]
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i64> poison, i64 [[I]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i64> [[TMP2]], <4 x i64> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[TMP3]], <i64 -4, i64 64, i64 128, i64 192>
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, <4 x ptr> [[TMP1]], <4 x i64> [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 1 [[TMP5]], <4 x i1> splat (i1 true), <4 x i32> poison)
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc <4 x i32> [[TMP6]] to <4 x i8>
+; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i8> [[TMP7]], <i8 1, i8 2, i8 3, i8 4>
+; CHECK-NEXT:    store <4 x i8> [[TMP8]], ptr [[P0]], align 1
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_END:.*]]
+; CHECK:       [[FOR_END]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i64 [ 8, %entry ], [ %i.next, %for.body ]
+
+  %b0 = sub i64 %i, 4
+  %g0 = getelementptr inbounds i8, ptr %A, i64 %b0
+  %x0 = load i32, ptr %g0, align 1
+  %b1 = add i64 %i, 64
+  %g1 = getelementptr inbounds i8, ptr %A, i64 %b1
+  %x1 = load i32, ptr %g1, align 1
+  %b2 = add i64 %i, 128
+  %g2 = getelementptr inbounds i8, ptr %A, i64 %b2
+  %x2 = load i32, ptr %g2, align 1
+  %b3 = add i64 %i, 192
+  %g3 = getelementptr inbounds i8, ptr %A, i64 %b3
+  %x3 = load i32, ptr %g3, align 1
+
+  %t0 = trunc i32 %x0 to i8
+  %t1 = trunc i32 %x1 to i8
+  %t2 = trunc i32 %x2 to i8
+  %t3 = trunc i32 %x3 to i8
+
+  %s0 = add i8 %t0, 1
+  %s1 = add i8 %t1, 2
+  %s2 = add i8 %t2, 3
+  %s3 = add i8 %t3, 4
+
+  %i1 = add nuw nsw i64 %i, 1
+  %i2 = add nuw nsw i64 %i, 2
+  %i3 = add nuw nsw i64 %i, 3
+
+  %p0 = getelementptr inbounds i8, ptr %A, i64 %i
+  %p1 = getelementptr inbounds i8, ptr %A, i64 %i1
+  %p2 = getelementptr inbounds i8, ptr %A, i64 %i2
+  %p3 = getelementptr inbounds i8, ptr %A, i64 %i3
+
+  store i8 %s0, ptr %p0, align 1
+  store i8 %s1, ptr %p1, align 1
+  store i8 %s2, ptr %p2, align 1
+  store i8 %s3, ptr %p3, align 1
+
+  %i.next = add nuw nsw i64 %i, 4
+  %cmp = icmp slt i64 %i.next, %n
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:
+  ret void
+}

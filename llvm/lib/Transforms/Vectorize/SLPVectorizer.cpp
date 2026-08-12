@@ -28367,14 +28367,19 @@ bool BoUpSLP::findStoreLoadForwardingConflict(StoreInst *BaseStore,
     LLVM_DEBUG(dbgs() << "SLP: STLF: load=" << *LoadI << " distance="
                       << Distance << " bytes from chain base\n");
 
-    // Conflict if the load is misaligned to the wide store within the recency
-    // window.
+    // Conflict if the load overlaps two wide stores within the recency window,
+    // either because it is misaligned or because the load itself is wider than
+    // the wide store and overruns its window.
+    TypeSize LoadTypeSize = DL->getTypeStoreSize(LoadI->getType());
+    uint64_t LoadElementSize =
+        LoadTypeSize.isScalable() ? 0 : LoadTypeSize.getFixedValue();
     if (MemoryDepChecker::isStoreLoadForwardingConflict(
-            Distance, VectorStoreBytes, ElementSize)) {
+            Distance, VectorStoreBytes, ElementSize, LoadElementSize)) {
       LLVM_DEBUG(dbgs() << "SLP: Store-load forwarding conflict: "
                         << (isVectorized(LoadI) ? "widened" : "scalar")
                         << " load, distance " << Distance
                         << " bytes, vector store width " << VectorStoreBytes
+                        << " bytes, load width " << LoadElementSize
                         << " bytes, misalignment "
                         << (Distance % VectorStoreBytes) << "\n");
       return CacheAndReturn(true);
