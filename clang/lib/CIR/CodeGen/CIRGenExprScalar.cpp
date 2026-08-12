@@ -1953,9 +1953,10 @@ static bool isIntegerVectorBinOp(mlir::Type ty) {
 // the addend respectively. This allows fmuladd to represent a*b-c, or c-a*b.
 // Patterns in LLVM should catch the negated forms and translate them to
 // efficient operations.
-static mlir::Value buildFMulAdd(mlir::Location loc, cir::FMulOp mulOp,
+static mlir::Value buildFMulAdd(mlir::Location addLoc, cir::FMulOp mulOp,
                                 mlir::Value addend, CIRGenBuilderTy &builder,
                                 bool negMul, bool negAdd) {
+  mlir::Location loc = builder.getFusedLoc({mulOp.getLoc(), addLoc});
   mlir::Value mulOp0 = mulOp.getLhs();
   mlir::Value mulOp1 = mulOp.getRhs();
   if (negMul)
