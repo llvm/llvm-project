@@ -392,8 +392,8 @@ getInitialTeamIndex(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::Type addrType = builder.getRefType(i64Ty);
   for (unsigned i = 0; i < corank; ++i) {
     mlir::Value cs = builder.createConvert(loc, i64Ty, cosubscripts[i]);
-    auto index = builder.createIntegerConstant(loc, indexType, i);
-    auto addr = fir::CoordinateOp::create(builder, loc, addrType, sub, index);
+    auto cs_index = builder.createIntegerConstant(loc, indexType, i);
+    auto addr = fir::CoordinateOp::create(builder, loc, addrType, sub, cs_index);
     fir::StoreOp::create(builder, loc, cs, addr);
   }
   sub = builder.createBox(loc, sub);
