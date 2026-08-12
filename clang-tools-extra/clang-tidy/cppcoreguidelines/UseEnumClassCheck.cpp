@@ -12,14 +12,13 @@
 using namespace clang::ast_matchers;
 using namespace clang::ast_matchers::internal;
 
+namespace clang::tidy::cppcoreguidelines {
 namespace {
 // FIXME: The matcher 'hasName(Name)' asserts that its argument 'Name' is
 // nonempty. Perhaps remove that assertion and replace 'isUnnamed()' with
 // 'hasName("")'.
-AST_MATCHER(clang::EnumDecl, isUnnamed) { return Node.getName().empty(); }
+AST_MATCHER(EnumDecl, isUnnamed) { return Node.getName().empty(); }
 } // namespace
-
-namespace clang::tidy::cppcoreguidelines {
 
 UseEnumClassCheck::UseEnumClassCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
