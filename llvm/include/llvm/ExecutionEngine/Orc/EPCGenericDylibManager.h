@@ -58,11 +58,6 @@ public:
     ResolveProxy Resolve;
   };
 
-  /// Create an EPCGenericDylibManager instance by looking up the LLVM-style
-  /// SimpleExecutorDylibManager symbol names in the EPC's bootstrap table.
-  static Expected<EPCGenericDylibManager>
-  CreateWithDefaultBootstrapSymbols(ExecutorProcessControl &EPC);
-
   /// Create an EPCGenericDylibManager for the ORC runtime's NativeDylibManager
   /// interface, resolving its symbols in the given JITDylib.
   static Expected<EPCGenericDylibManager> Create(JITDylib &JD);

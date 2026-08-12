@@ -94,6 +94,7 @@ extern llvm::cl::opt<HeatmapBlockSizes, false, HeatmapBlockSpecParser>
     HeatmapBlock;
 extern llvm::cl::opt<unsigned long long> HeatmapMaxAddress;
 extern llvm::cl::opt<unsigned long long> HeatmapMinAddress;
+extern llvm::cl::opt<int> HeatmapCdfPct;
 extern llvm::cl::opt<bool> HeatmapPrintMappings;
 extern llvm::cl::opt<std::string> HeatmapOutput;
 extern llvm::cl::opt<bool> HotData;

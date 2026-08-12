@@ -52,6 +52,19 @@ func.func @par_dims_block_thread() {
 
 // -----
 
+// CHECK-LABEL: func @active_par_dims_attr
+func.func @active_par_dims_attr() {
+  %private = acc.privatize {acc.active_par_dims = #acc<active_par_dims[block_x, thread_x]>}
+      : () -> !acc.private_type<memref<i32>>
+  %local = acc.private_local %private {acc.active_par_dims = #acc<active_par_dims[block_x, thread_x]>}
+      : (!acc.private_type<memref<i32>>) -> memref<i32>
+  return
+}
+// CHECK: acc.privatize {{.*}}{acc.active_par_dims = #acc<active_par_dims[block_x, thread_x]>}
+// CHECK: acc.private_local {{.*}}{acc.active_par_dims = #acc<active_par_dims[block_x, thread_x]>}
+
+// -----
+
 // All GPU parallel dimensions (par_dim values) in par_dims list
 func.func @par_dims_all_dims() {
   %c0 = arith.constant 0 : index
