@@ -87,12 +87,23 @@ else:
         # For nvptx64 target, it falls back to the default.
         if "spirv" in config.target_arch:
             builtins_bitcode_library = os.path.join(
-                config.compiler_rt_libdir, "libclang_rt.builtins%s.bc" % config.target_suffix)
-            librt_flags = "-Xclang -mlink-builtin-bitcode -Xclang " + builtins_bitcode_library + " "
+                config.compiler_rt_libdir,
+                "libclang_rt.builtins%s.bc" % config.target_suffix
+            )
+            librt_flags = (
+                "-Xclang -mlink-builtin-bitcode -Xclang "
+                + builtins_bitcode_library
+                + " "
+            )
             libc_bitcode_library = os.path.join(
-                config.llvm_shlib_dir, config.target_triple, "libcbitcode.bc")
+                config.llvm_shlib_dir, config.target_triple, "libcbitcode.bc"
+            )
             if (os.path.exists(libc_bitcode_library)):
-                librt_flags += "-Xclang -mlink-builtin-bitcode -Xclang " + libc_bitcode_library + " "
+                librt_flags += (
+                    "-Xclang -mlink-builtin-bitcode -Xclang "
+                    + libc_bitcode_library
+                    + " "
+                )
             config.substitutions.append(("%librt ", librt_flags))
         elif linker_supports_start_group and "nvptx" not in config.target_arch:
             config.substitutions.append(
