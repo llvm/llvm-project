@@ -49,7 +49,7 @@ ModulePass *createNVPTXCtorDtorLoweringLegacyPass();
 FunctionPass *createNVPTXAtomicLowerLegacyPass();
 FunctionPass *createNVVMIntrRangePass();
 ModulePass *createNVVMReflectPass(unsigned int SmVersion);
-MachineFunctionPass *createNVPTXPrologEpilogPass();
+MachineFunctionPass *createNVPTXPrologEpilogLegacyPass();
 MachineFunctionPass *createNVPTXReplaceImageHandlesLegacyPass();
 FunctionPass *createNVPTXImageOptimizerLegacyPass();
 ModulePass *createNVPTXLowerArgsPass();
@@ -90,7 +90,7 @@ void initializeNVPTXPeepholeLegacyPassPass(PassRegistry &);
 void initializeNVPTXMarkKernelPtrsGlobalLegacyPassPass(PassRegistry &);
 void initializeNVPTXTagInvariantLoadLegacyPassPass(PassRegistry &);
 void initializeNVPTXIRPeepholePass(PassRegistry &);
-void initializeNVPTXPrologEpilogPassPass(PassRegistry &);
+void initializeNVPTXPrologEpilogLegacyPassPass(PassRegistry &);
 
 struct NVVMIntrRangePass : OptionalPassInfoMixin<NVVMIntrRangePass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
@@ -172,6 +172,13 @@ private:
 public:
   NVPTXLowerArgsPass(TargetMachine &TM) : TM(TM) {};
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
+class NVPTXPrologEpilogPass
+    : public RequiredPassInfoMixin<NVPTXPrologEpilogPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
 };
 
 struct NVPTXMarkKernelPtrsGlobalPass

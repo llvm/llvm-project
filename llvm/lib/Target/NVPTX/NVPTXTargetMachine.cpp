@@ -118,7 +118,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeNVPTXPeepholeLegacyPassPass(PR);
   initializeNVPTXTagInvariantLoadLegacyPassPass(PR);
   initializeNVPTXIRPeepholePass(PR);
-  initializeNVPTXPrologEpilogPassPass(PR);
+  initializeNVPTXPrologEpilogLegacyPassPass(PR);
 }
 
 NVPTXTargetMachine::NVPTXTargetMachine(const Target &T, const Triple &TT,
@@ -408,7 +408,7 @@ void NVPTXPassConfig::addPreRegAlloc() {
 }
 
 void NVPTXPassConfig::addPostRegAlloc() {
-  addPass(createNVPTXPrologEpilogPass());
+  addPass(createNVPTXPrologEpilogLegacyPass());
   if (getOptLevel() != CodeGenOptLevel::None) {
     // NVPTXPrologEpilogPass calculates frame object offset and replace frame
     // index with VRFrame register. NVPTXPeephole need to be run after that and
