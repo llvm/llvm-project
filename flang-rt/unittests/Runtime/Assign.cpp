@@ -204,3 +204,167 @@ TEST(AssignSimple, ZeroSizeArray) {
   dest->Destroy();
   source->Destroy();
 }
+
+TEST(AssignSimple, AliasedOverlappingSection) {
+  // Test aliasing with overlapping array sections: a(3:7) = a(1:5)
+  // This is a classic case where the destination partially overlaps the source.
+  // Without a temporary buffer, elements would be corrupted as the copy progresses.
+  //
+  // Example:
+  // Initial:  [1, 2, 3, 4, 5, 6, 7, 8]
+  // a(3:7) = a(1:5) should produce [1, 2, 1, 2, 3, 4, 5, 8]
+
+  int data[8] = {1, 2, 3, 4, 5, 6, 7, 8};
+  constexpr int elementBytes = sizeof(int);
+  TypeCode intType{TypeCategory::Integer, 4};
+
+  // Source descriptor: a(1:5) - elements at indices 0-4
+  StaticDescriptor<1> staticSource;
+  Descriptor &source{staticSource.descriptor()};
+  SubscriptValue extent[1]{5};
+  source.Establish(intType, elementBytes, data, 1, extent);
+  source.GetDimension(0).SetLowerBound(1);
+
+  // Dest descriptor: a(3:7) - elements at indices 2-6 (same backing array)
+  StaticDescriptor<1> staticDest;
+  Descriptor &dest{staticDest.descriptor()};
+  dest.Establish(intType, elementBytes, &data[2], 1, extent);
+  dest.GetDimension(0).SetLowerBound(1);
+
+  RTNAME(AssignSimple)(dest, source, __FILE__, __LINE__);
+
+  // Expected result: [1, 2, 1, 2, 3, 4, 5, 8]
+  // Positions 3-7 (indices 2-6) should now contain values from positions 1-5
+  int expected[8] = {1, 2, 1, 2, 3, 4, 5, 8};
+  EXPECT_EQ(std::memcmp(data, expected, 8 * sizeof(int)), 0);
+}
+
+TEST(AssignSimple, AliasedTwoDimensionalReverse) {
+  // Test aliasing in 2D array with column reversal: a(:, 2:1:-1) = a(:, 1:2)
+  // This tests that aliasing detection works across multiple dimensions.
+  //
+  // Initial array (3x2, column-major):
+  //   Column 1  Column 2
+  //   [1]       [4]
+  //   [2]       [5]
+  //   [3]       [6]
+  //
+  // After a(:, 2:1:-1) = a(:, 1:2), should be:
+  //   [4]  [1]
+  //   [5]  [2]
+  //   [6]  [3]
+  //
+  // Backing storage (column-major): [1,2,3,4,5,6] -> [4,5,6,1,2,3]
+
+  int data[6] = {1, 2, 3, 4, 5, 6};
+  constexpr int elementBytes = sizeof(int);
+  TypeCode intType{TypeCategory::Integer, 4};
+
+  // Source descriptor: a(:, 1:2) - all rows, columns 1-2 (forward)
+  StaticDescriptor<2> staticSource;
+  Descriptor &source{staticSource.descriptor()};
+  SubscriptValue extent[2]{3, 2}; // 3 rows, 2 columns
+  source.Establish(intType, elementBytes, data, 2, extent);
+  source.GetDimension(0).SetLowerBound(1);
+  source.GetDimension(0).SetByteStride(elementBytes); // Rows are contiguous
+  source.GetDimension(1).SetLowerBound(1);
+  source.GetDimension(1).SetByteStride(3 * elementBytes); // Column stride
+
+  // Dest descriptor: a(:, 2:1:-1) - all rows, columns 2-1 (reverse)
+  StaticDescriptor<2> staticDest;
+  Descriptor &dest{staticDest.descriptor()};
+  dest.Establish(
+      intType, elementBytes, &data[3], 2, extent); // Start at column 2
+  dest.GetDimension(0).SetLowerBound(1);
+  dest.GetDimension(0).SetByteStride(elementBytes);
+  dest.GetDimension(1).SetLowerBound(1);
+  dest.GetDimension(1).SetByteStride(-3 * elementBytes); // Negative stride
+
+  RTNAME(AssignSimple)(dest, source, __FILE__, __LINE__);
+
+  // Expected: columns swapped
+  // Column-major storage: [4,5,6,1,2,3]
+  int expected[6] = {4, 5, 6, 1, 2, 3};
+  EXPECT_EQ(std::memcmp(data, expected, 6 * sizeof(int)), 0);
+}
+
+TEST(AssignSimple, AliasedReallocatableSelfAssign) {
+  // Test aliasing when LHS is allocatable and gets reallocated during a
+  // self-assignment with a different shape: a = a(1:3)
+  //
+  // This is tricky because:
+  // 1. Aliasing is detected (LHS and RHS point to same memory)
+  // 2. Shapes differ, so reallocation is needed
+  // 3. Deallocating LHS would free RHS memory
+  // 4. Temp buffer must be created BEFORE deallocation
+
+  // Initial array: [10, 20, 30, 40, 50]
+  auto dest{MakeArray<TypeCategory::Integer, 4>(
+      std::vector<int>{5}, std::vector<int>{10, 20, 30, 40, 50}, sizeof(int))};
+
+  // Create source descriptor pointing to first 3 elements of dest
+  StaticDescriptor<1> staticSource;
+  Descriptor &source{staticSource.descriptor()};
+  SubscriptValue extent[1]{3};
+  source.Establish(TypeCode{TypeCategory::Integer, 4}, sizeof(int),
+      dest->OffsetElement(), 1, extent);
+  source.GetDimension(0).SetLowerBound(1);
+
+  EXPECT_TRUE(dest->IsAllocated());
+  EXPECT_EQ(dest->GetDimension(0).Extent(), 5);
+
+  // Self-assign with different shape: dest = dest(1:3)
+  RTNAME(AssignSimple)(*dest, source, __FILE__, __LINE__);
+
+  // Verify dest was reallocated to size 3 with correct values
+  EXPECT_TRUE(dest->IsAllocated());
+  EXPECT_EQ(dest->GetDimension(0).Extent(), 3);
+
+  int expected[3] = {10, 20, 30};
+  EXPECT_EQ(
+      std::memcmp(dest->OffsetElement<int>(0), expected, 3 * sizeof(int)), 0);
+
+  dest->Destroy();
+}
+
+TEST(AssignSimple, AliasedNonContiguousToNonContiguous) {
+  // Test aliasing where both LHS and RHS are non-contiguous strided views
+  // a(6:2:-2) = a(1:5:2)
+  //
+  // This ensures the temporary buffer path works correctly when BOTH sides
+  // are non-contiguous, requiring element-wise copy in both directions.
+  //
+  // Initial: [1, 2, 3, 4, 5, 6, 7, 8]
+  // Source: a(1:5:2) = indices [0, 2, 4] = [1, 3, 5]
+  // Dest: a(6:2:-2) = indices [5, 3, 1] = [6, 4, 2] (reverse)
+  //
+  // After assignment: [1, 5, 3, 3, 5, 1, 7, 8]
+
+  int data[8] = {1, 2, 3, 4, 5, 6, 7, 8};
+  constexpr int elementBytes = sizeof(int);
+  TypeCode intType{TypeCategory::Integer, 4};
+
+  // Source: a(1:5:2) - indices [0, 2, 4] forward, stride 2
+  StaticDescriptor<1> staticSource;
+  Descriptor &source{staticSource.descriptor()};
+  SubscriptValue extent[1]{3};
+  source.Establish(intType, elementBytes, &data[0], 1, extent);
+  source.GetDimension(0).SetLowerBound(1);
+  source.GetDimension(0).SetByteStride(2 * elementBytes);
+  EXPECT_FALSE(source.IsContiguous());
+
+  // Dest: a(6:2:-2) - indices [5, 3, 1] reverse, stride -2
+  StaticDescriptor<1> staticDest;
+  Descriptor &dest{staticDest.descriptor()};
+  dest.Establish(intType, elementBytes, &data[5], 1, extent); // Start at index 5
+  dest.GetDimension(0).SetLowerBound(1);
+  dest.GetDimension(0).SetByteStride(-2 * elementBytes);
+  EXPECT_FALSE(dest.IsContiguous());
+
+  RTNAME(AssignSimple)(dest, source, __FILE__, __LINE__);
+
+  // Expected: dest positions [5,3,1] get source values [1,3,5]
+  // Result: [1, 5, 3, 3, 5, 1, 7, 8]
+  int expected[8] = {1, 5, 3, 3, 5, 1, 7, 8};
+  EXPECT_EQ(std::memcmp(data, expected, 8 * sizeof(int)), 0);
+}
