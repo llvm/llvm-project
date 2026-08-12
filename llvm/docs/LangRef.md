@@ -7236,7 +7236,11 @@ addition to its primary source position. It is independent of `inlinedAt:`; a
 location may have either, both, or neither. A location with no intermediate
 position omits the field entirely. The field belongs to the location that
 carries it: locations in an `inlinedAt:` chain may each have their own, and LLVM
-defines no relationship between them.
+defines no relationship between them, with one exception. Hoisting an
+instruction drops its source position but not its intermediate ones: if any
+location in its `inlinedAt:` chain has layers, the instruction gets a line 0
+location in the enclosing function's scope, with no `inlinedAt:`, that keeps the
+layers of the innermost such location, starting with its own.
 
 ```text
 !0 = !DILocation(line: 2900, column: 42, scope: !1, irlayers: !3)

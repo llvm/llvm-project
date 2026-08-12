@@ -1885,6 +1885,103 @@ TEST(InstructionsTest, DropLocation) {
   }
 }
 
+TEST(InstructionsTest, UpdateLocationAfterHoist) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C,
+                                      R"(
+      declare void @callee()
+
+      define void @no_parent_scope(i32 %x) {
+        %own = add i32 %x, 1, !dbg !20 ; Layers, but no function scope.
+        ret void
+      }
+
+      define void @with_parent_scope(i32 %x) !dbg !8 {
+        %own = add i32 %x, 1, !dbg !20   ; Own layers.
+        %none = add i32 %x, 2, !dbg !21  ; No layers anywhere in the chain.
+        %outer = add i32 %x, 3, !dbg !22 ; Layers only on its inlined-at.
+        %both = add i32 %x, 4, !dbg !24  ; Own and inlined-at layers.
+        call void @callee(), !dbg !20    ; Call with own layers.
+        ret void
+      }
+
+      !llvm.dbg.cu = !{!0}
+      !llvm.module.flags = !{!3}
+      !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug)
+      !1 = !DIFile(filename: "t.c", directory: "foo")
+      !3 = !{i32 2, !"Debug Info Version", i32 3}
+      !8 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 1, type: !9, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !0)
+      !9 = !DISubroutineType(types: !10)
+      !10 = !{null}
+      !11 = distinct !DISubprogram(name: "g", scope: !1, file: !1, line: 5, type: !9, scopeLine: 5, spFlags: DISPFlagDefinition, unit: !0)
+      !12 = !DIFile(filename: "t.ir", directory: "foo")
+      !13 = !DILayerLoc(line: 100, column: 1, file: !12, kind: "IntermediateIR")
+      !14 = !DILayerLocList(!13)
+      !15 = !DILayerLoc(line: 200, column: 1, file: !12, kind: "IntermediateIR")
+      !16 = !DILayerLocList(!15)
+      !20 = !DILocation(line: 2, column: 7, scope: !8, irlayers: !14)
+      !21 = !DILocation(line: 3, column: 7, scope: !8)
+      !22 = !DILocation(line: 6, column: 7, scope: !11, inlinedAt: !23)
+      !23 = !DILocation(line: 4, column: 7, scope: !8, irlayers: !16)
+      !24 = !DILocation(line: 7, column: 7, scope: !11, inlinedAt: !23, irlayers: !14)
+  )");
+  ASSERT_TRUE(M);
+
+  {
+    Function *F = cast<Function>(M->getNamedValue("no_parent_scope"));
+    Instruction *Own = &*F->front().getFirstNonPHIIt();
+    ASSERT_TRUE(Own->getDebugLoc()->getIRLayers());
+    // No function scope to hold a line 0 location, so the layers go too.
+    Own->updateLocationAfterHoist();
+    EXPECT_EQ(Own->getDebugLoc(), DebugLoc());
+  }
+
+  {
+    Function *F = cast<Function>(M->getNamedValue("with_parent_scope"));
+    MDNode *Scope = F->getSubprogram();
+    auto It = F->front().getFirstNonPHIIt();
+    Instruction *Own = &*It++;
+    Instruction *None = &*It++;
+    Instruction *Outer = &*It++;
+    Instruction *Both = &*It++;
+    Instruction *Call = &*It;
+
+    DILayerLocList *OwnLayers = Own->getDebugLoc()->getIRLayers();
+    DILayerLocList *OuterLayers =
+        Outer->getDebugLoc()->getInlinedAt()->getIRLayers();
+    ASSERT_TRUE(OwnLayers);
+    ASSERT_TRUE(OuterLayers);
+    ASSERT_NE(OwnLayers, OuterLayers);
+
+    auto ExpectLine0WithLayers = [&](Instruction *I, DILayerLocList *Layers) {
+      const DebugLoc &DL = I->getDebugLoc();
+      ASSERT_TRUE(DL);
+      EXPECT_EQ(DL.getLine(), 0U);
+      EXPECT_EQ(DL.getCol(), 0U);
+      EXPECT_EQ(DL.getScope(), Scope);
+      EXPECT_EQ(DL.getInlinedAt(), nullptr);
+      EXPECT_EQ(DL->getIRLayers(), Layers);
+    };
+
+    Own->updateLocationAfterHoist();
+    ExpectLine0WithLayers(Own, OwnLayers);
+
+    // Nothing to keep, so the location is dropped as by dropLocation().
+    None->updateLocationAfterHoist();
+    EXPECT_EQ(None->getDebugLoc(), DebugLoc());
+
+    // The layers come from the innermost location in the chain that has any.
+    Outer->updateLocationAfterHoist();
+    ExpectLine0WithLayers(Outer, OuterLayers);
+
+    Both->updateLocationAfterHoist();
+    ExpectLine0WithLayers(Both, OwnLayers);
+
+    Call->updateLocationAfterHoist();
+    ExpectLine0WithLayers(Call, OwnLayers);
+  }
+}
+
 TEST(InstructionsTest, BranchWeightOverflow) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C,

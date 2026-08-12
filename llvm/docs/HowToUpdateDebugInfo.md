@@ -143,6 +143,14 @@ The purpose of this rule is to prevent erratic or misleading single-stepping
 behavior in situations in which an instruction has no clear, unambiguous
 relationship to a source location.
 
+That purpose does not apply to a location's intermediate-IR layers (the
+`irlayers:` field of a `DILocation`). Profilers use them to attribute machine
+code to the intermediate IRs it was lowered through; they play no part in
+single-stepping, and moving an instruction does not change what it was lowered
+from. So when the instruction is hoisted into a predecessor block, use
+`Instruction::updateLocationAfterHoist()` instead of `dropLocation()`: it drops
+the source location the same way but keeps the layers.
+
 To handle an instruction without a location, the DWARF generator
 defaults to allowing the last-set location after a label to cascade forward, or
 to setting a line 0 location with viable scope information if no previous
