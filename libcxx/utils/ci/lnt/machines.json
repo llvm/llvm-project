@@ -5,8 +5,8 @@
     "cxx": "clang++",
     "running-on": "macos",
     "xcode-version": "26.5",
+    "benchmark-suite-version": "810062e9771d8b47c25a89311139c621c13bbf9f",
     "coverage": {
-      "benchmark-suite-version": "810062e9771d8b47c25a89311139c621c13bbf9f",
       "since": "2025-01-01",
       "every": "week",
       "samples": 3,
@@ -19,8 +19,8 @@
     "runner": "llvm-premerge-libcxx-runners",
     "cxx": "clang++-22",
     "running-on": "linux",
+    "benchmark-suite-version": "810062e9771d8b47c25a89311139c621c13bbf9f",
     "coverage": {
-      "benchmark-suite-version": "810062e9771d8b47c25a89311139c621c13bbf9f",
       "since": "2025-01-01",
       "every": "week",
       "samples": 3,

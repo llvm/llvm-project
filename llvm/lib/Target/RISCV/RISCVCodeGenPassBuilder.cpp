@@ -11,6 +11,7 @@
 
 #include "RISCV.h"
 #include "RISCVAsmPrinter.h"
+#include "RISCVGatherScatterLowering.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/BranchRelaxation.h"
@@ -65,12 +66,12 @@ public:
 
 void RISCVCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
   addFunctionPass(AtomicExpandPass(TM), PMW);
-  // TODO: RISCVZacasABIFixPass
+  addFunctionPass(RISCVZacasABIFixPass(&TM), PMW);
 
   if (getOptLevel() != CodeGenOptLevel::None) {
     addFunctionPass(LoopDataPrefetchPass(), PMW);
 
-    // TODO: RISCVGatherScatterLoweringPass
+    addFunctionPass(RISCVGatherScatterLoweringPass(&TM), PMW);
     addFunctionPass(InterleavedAccessPass(TM), PMW);
     addFunctionPass(RISCVCodeGenPreparePass(&TM), PMW);
   }

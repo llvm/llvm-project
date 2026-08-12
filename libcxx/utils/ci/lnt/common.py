@@ -15,15 +15,6 @@ def is_sha(string: str) -> bool:
     return len(string) == 40 and all(c in '0123456789abcdef' for c in string.lower())
 
 
-def sha(string: str) -> str:
-    """
-    An argparse type for a full commit SHA, normalized to lowercase.
-    """
-    if not is_sha(string):
-        raise argparse.ArgumentTypeError(f'expected a full 40-character SHA, got {string!r}')
-    return string.lower()
-
-
 def at_least(minimum: int) -> Callable[[str], int]:
     """
     Return an argparse type that accepts integers no smaller than `minimum`.
