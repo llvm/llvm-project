@@ -110,10 +110,10 @@ void ExpensiveValueOrCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void ExpensiveValueOrCheck::registerMatchers(MatchFinder *Finder) {
-  auto OptionalTypesMatcher =
+  const auto OptionalTypesMatcher =
       matchers::matchesAnyListedRegexName(OptionalTypes);
-  auto ValueOrMatcher = hasAnyName("value_or", "valueOr", "ValueOr");
-  auto ValueOrCall = cxxMemberCallExpr(
+  const auto ValueOrMatcher = hasAnyName("value_or", "valueOr", "ValueOr");
+  const auto ValueOrCall = cxxMemberCallExpr(
       callee(cxxMethodDecl(ValueOrMatcher, ofClass(OptionalTypesMatcher))),
       anyOf(on(isLValueExpr()),
             hasType(qualType(unless(hasNonTrivialMoveCtor())))),
@@ -162,9 +162,9 @@ void ExpensiveValueOrCheck::check(const MatchFinder::MatchResult &Result) {
   const bool HasSideEffects = FallbackArg->HasSideEffects(Ctx);
 
   {
-    auto Diag = diag(Call->getExprLoc(), "'%0' copies expensive type %1; %2")
-                << Method->getName() << ValueType
-                << buildSuggestion(OptionalClass);
+    const auto Diag =
+        diag(Call->getExprLoc(), "'%0' copies expensive type %1; %2")
+        << Method->getName() << ValueType << buildSuggestion(OptionalClass);
 
     if (!HasSideEffects) {
       if (auto Fix = buildFixIt(Call, ObjExpr, FallbackArg, OptionalClass, Ctx))

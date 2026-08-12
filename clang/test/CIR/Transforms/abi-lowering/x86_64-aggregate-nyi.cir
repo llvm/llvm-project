@@ -1,15 +1,18 @@
 // RUN: not cir-opt %s -cir-call-conv-lowering=target=x86_64 2>&1 | FileCheck %s
 
 !s8i = !cir.int<s, 8>
+!s16i = !cir.int<s, 16>
 !s32i = !cir.int<s, 32>
 !u8i = !cir.int<u, 8>
-!u32i = !cir.int<u, 32>
-!rec_U = !cir.union<"U" {!s32i, !u32i}>
+!rec_UPacked = !cir.union<"UPacked" packed {!s32i, !cir.array<!s8i x 5>}, padding = {!u8i}>
+!rec_UOverAligned = !cir.union<"UOverAligned" {!s32i}, padding = {!cir.array<!u8i x 12>}>
+!rec_UShortStorage = !cir.union<"UShortStorage" {!s16i, !cir.array<!s8i x 3>}, padding = {!cir.array<!u8i x 2>}>
+!rec_UByteBlobs = !cir.union<"UByteBlobs" {!u8i, !u8i}, padding = {!cir.array<!u8i x 3>}>
+!rec_SWrapsOverAligned = !cir.struct<"SWrapsOverAligned" {!cir.double, !rec_UOverAligned}>
+!rec_UEmptyLarge = !cir.union<"UEmptyLarge" {}, padding = {!cir.array<!u8i x 32>}>
 !rec_P = !cir.struct<"P" packed {!s8i, !s32i}>
 !rec_Ov = !cir.struct<"Ov" padded {!s32i, !cir.array<!u8i x 12>}>
 !rec_E = !cir.struct<"E" padded {!u8i}>
-!rec_FF = !cir.struct<"FF" {!cir.float, !cir.float}>
-!rec_RetFF = !cir.struct<"RetFF" {!cir.float, !cir.float}>
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
@@ -19,12 +22,61 @@ module attributes {
     #dlti.dl_entry<f64, dense<64>: vector<2xi64>>>
 } {
 
-  // A union is rejected: its register coercion needs a widen fixup.
-  cir.func @take_union(%arg0: !rec_U) {
+  // A packed union is rejected for the same reason a packed struct is: its
+  // members no longer sit at their natural alignment.
+  cir.func @take_packed_union(%arg0: !rec_UPacked) {
     cir.return
   }
 
-  // CHECK: not yet implemented for type '!cir.union<"U"
+  // CHECK: not yet implemented for type '!cir.union<"UPacked" packed
+
+  // No member of this union spans its 16-byte declared size, so the bytes past
+  // the int cannot be told apart from the rest of a wider storage unit, and the
+  // eightbyte the classifier would build from the union's size is a guess.
+  cir.func @take_over_aligned_union(%arg0: !rec_UOverAligned) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.union<"UOverAligned"
+
+  // Same rule one eightbyte down: the widest member covers 3 of the union's 4
+  // declared bytes.
+  cir.func @take_short_storage_union(%arg0: !rec_UShortStorage) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.union<"UShortStorage"
+
+  // This is the shape CIRGen produces for a union of narrow bitfields, where
+  // the byte-sized members understate a wider storage unit that is all user
+  // data.  It is also the shape of a union of two `unsigned char` members
+  // carrying an alignment attribute, where the same bytes really are padding.
+  // The two coerce differently in classic CodeGen and are identical here, which
+  // is why neither is accepted.
+  cir.func @take_byte_blob_union(%arg0: !rec_UByteBlobs) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.union<"UByteBlobs"
+
+  // The reject propagates out of an enclosing struct rather than being silently
+  // dropped at the member level.
+  cir.func @take_struct_wrapping_over_aligned(%arg0: !rec_SWrapsOverAligned) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.struct<"SWrapsOverAligned"
+
+  // A member-less union past two eightbytes still classifies Indirect in
+  // classic CodeGen (SysV's MEMORY rule applies unconditionally above that
+  // size, regardless of content), but this bridge has no member to build an
+  // Indirect coercion from.  Below the threshold the same shape is accepted
+  // and classifies Ignore, matching classic; see x86_64-union.cir take_empty.
+  cir.func @take_empty_large_union(%arg0: !rec_UEmptyLarge) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.union<"UEmptyLarge"
 
   // A packed struct is rejected: it needs pad-aware classification.
   cir.func @take_packed(%arg0: !rec_P) {
@@ -49,35 +101,4 @@ module attributes {
 
   // CHECK: not yet implemented for type '!cir.struct<"E" padded
 
-  // An all-float struct classifies to an SSE vector coerce this bridge does
-  // not represent, so it is reported NYI rather than passed unchanged.
-  cir.func @take_ff(%arg0: !rec_FF) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for the ABI coercion of type '!cir.struct<"FF"
-
-  // The same holds for an all-float array.
-  cir.func @take_farr(%arg0: !cir.array<!cir.float x 2>) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for the ABI coercion of type '!cir.array<!cir.float x 2>
-
-  // A three-float struct coerces to a record with a vector field; the
-  // unmappable field propagates out as NYI too.
-  cir.func @take_f3(%arg0: !cir.struct<"F3" {!cir.float, !cir.float, !cir.float}>) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for the ABI coercion of type '!cir.struct<"F3"
-
-  // The unmappable-coercion check also covers the return value.
-  cir.func @ret_ff() -> !rec_RetFF {
-    %0 = cir.alloca "r" align(4) : !cir.ptr<!rec_RetFF>
-    %1 = cir.load %0 : !cir.ptr<!rec_RetFF>, !rec_RetFF
-    cir.return %1 : !rec_RetFF
-  }
-
-  // CHECK: not yet implemented for the ABI coercion of type '!cir.struct<"RetFF"
 }

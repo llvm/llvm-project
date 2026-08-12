@@ -329,10 +329,10 @@ public:
   bool shouldConvertConstantLoadToIntImm(const APInt &Imm,
                                          Type *Ty) const override;
 
-  /// Return true if EXTRACT_SUBVECTOR is cheap for this result type
-  /// with this index.
-  bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
-                               unsigned Index) const override;
+  /// Return the cost of EXTRACT_SUBVECTOR for this result type with this
+  /// index.
+  ExtractSubvectorCost getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
+                                               unsigned Index) const override;
 
   bool shouldFormOverflowOp(unsigned Opcode, EVT VT,
                             bool MathUsed) const override {
@@ -565,10 +565,7 @@ public:
                              bool AllowUnknown = false) const override;
 
   bool shouldExpandGetActiveLaneMask(EVT VT, EVT OpVT) const override;
-
   bool shouldExpandCttzElements(EVT VT) const override;
-
-  bool shouldExpandVectorMatch(EVT VT, unsigned SearchSize) const override;
 
   /// If a change in streaming mode is required on entry to/return from a
   /// function call it emits and returns the corresponding SMSTART or SMSTOP
