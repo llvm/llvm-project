@@ -273,7 +273,7 @@ private:
 };
 
 // Calculate and gets the 'padding intervals' inside of a type.
-llvm::SmallVector<BitInterval>
+inline llvm::SmallVector<BitInterval>
 CalculatePaddingIntervals(const ASTContext &Ctx, const TargetInfo &TI,
                           QualType Ty, unsigned PointerSizeInBits) {
   PaddingCalculator pc{Ctx, TI, PointerSizeInBits};
