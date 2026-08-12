@@ -1553,9 +1553,10 @@ int32_t GenericPluginTy::load_binary(int32_t DeviceId,
 
 void *GenericPluginTy::data_alloc(int32_t DeviceId, int64_t Size, void *HostPtr,
                                   int32_t Kind) {
-  OFFLOAD_TRACE_CALL(DeviceId, Size, HostPtr, TargetAllocTy(Kind));
-  auto AllocOrErr = getDevice(DeviceId).dataAlloc(
-      Size, HostPtr, (TargetAllocTy)Kind, /*Alignment=*/0);
+  auto AllocKind = static_cast<TargetAllocTy>(Kind);
+  OFFLOAD_TRACE_CALL(DeviceId, Size, HostPtr, AllocKind);
+  auto AllocOrErr =
+      getDevice(DeviceId).dataAlloc(Size, HostPtr, AllocKind, /*Alignment=*/0);
   if (!AllocOrErr) {
     auto Err = AllocOrErr.takeError();
     REPORT() << "Failure to allocate device memory: "
@@ -1569,9 +1570,9 @@ void *GenericPluginTy::data_alloc(int32_t DeviceId, int64_t Size, void *HostPtr,
 
 int32_t GenericPluginTy::data_delete(int32_t DeviceId, void *TgtPtr,
                                      int32_t Kind) {
-  OFFLOAD_TRACE_CALL(DeviceId, TgtPtr, TargetAllocTy(Kind));
-  auto Err =
-      getDevice(DeviceId).dataDelete(TgtPtr, static_cast<TargetAllocTy>(Kind));
+  auto AllocKind = static_cast<TargetAllocTy>(Kind);
+  OFFLOAD_TRACE_CALL(DeviceId, TgtPtr, AllocKind);
+  auto Err = getDevice(DeviceId).dataDelete(TgtPtr, AllocKind);
   if (Err) {
     REPORT() << "Failure to deallocate device pointer " << TgtPtr << ": "
              << toString(std::move(Err));
@@ -1716,7 +1717,7 @@ int32_t GenericPluginTy::data_exchange_async(int32_t SrcDeviceId, void *SrcPtr,
 int32_t GenericPluginTy::launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
                                        KernelLaunchArgsTy &LaunchArgs,
                                        __tgt_async_info *AsyncInfoPtr) {
-  OFFLOAD_TRACE_CALL(DeviceId, TgtEntryPtr, &LaunchArgs, AsyncInfoPtr);
+  OFFLOAD_TRACE_CALL(DeviceId, TgtEntryPtr, LaunchArgs, AsyncInfoPtr);
   auto Err =
       getDevice(DeviceId).launchKernel(TgtEntryPtr, LaunchArgs, AsyncInfoPtr);
   if (Err) {
@@ -1855,6 +1856,10 @@ void GenericPluginTy::set_info_flag(uint32_t NewInfoLevel) {
   OFFLOAD_TRACE_CALL(NewInfoLevel);
   std::atomic<uint32_t> &InfoLevel = getInfoLevelInternal();
   InfoLevel.store(NewInfoLevel);
+}
+
+void GenericPluginTy::set_api_trace(bool Enable) {
+  llvm::offload::trace::setTraceEnabled(Enable);
 }
 
 int32_t GenericPluginTy::init_async_info(int32_t DeviceId,

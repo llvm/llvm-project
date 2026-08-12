@@ -589,6 +589,9 @@ EXTERN void __tgt_set_info_flag(uint32_t NewInfoLevel) {
   assert(PM && "Runtime not initialized");
   std::atomic<uint32_t> &InfoLevel = getInfoLevelInternal();
   InfoLevel.store(NewInfoLevel);
+
+  for (auto &Plugin : PM->plugins())
+    Plugin.set_api_trace(NewInfoLevel & OMP_INFOTYPE_API_TRACE);
 }
 
 EXTERN int __tgt_print_device_info(int64_t DeviceId) {

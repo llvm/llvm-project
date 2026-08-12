@@ -6,10 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Prints one line per offload API call when the OMP_INFOTYPE_API_TRACE bit of
-// LIBOMPTARGET_INFO is set:
+// Prints one line per offload API call while tracing is enabled:
 //
 //   ---> init_device(.DeviceId = 0)-> OFFLOAD_SUCCESS (1053 us)
+//
+// Tracing is off until the runtime above the plugins turns it on, see
+// GenericPluginTy::set_api_trace.
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,22 +19,33 @@
 #define OMPTARGET_SHARED_API_TRACE_H
 
 #include "APITypes.h"
-#include "Debug.h"
 #include "omptarget.h"
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <atomic>
 #include <chrono>
 #include <type_traits>
 #include <utility>
 
 namespace llvm::offload::trace {
 
-/// The level is read on every call so that __tgt_set_info_flag can turn tracing
-/// on and off around a region of interest.
-inline bool isTraceEnabled() { return getInfoLevel() & OMP_INFOTYPE_API_TRACE; }
+inline std::atomic<bool> &getTraceEnabledFlag() {
+  static std::atomic<bool> Enabled = false;
+  return Enabled;
+}
+
+/// The flag is read on every call so that tracing can be toggled around a
+/// region of interest.
+inline bool isTraceEnabled() {
+  return getTraceEnabledFlag().load(std::memory_order_relaxed);
+}
+
+inline void setTraceEnabled(bool Enable) {
+  getTraceEnabledFlag().store(Enable, std::memory_order_relaxed);
+}
 
 inline raw_ostream &operator<<(raw_ostream &OS, __tgt_device_binary Binary) {
   return OS << reinterpret_cast<void *>(Binary.handle);
@@ -94,20 +107,12 @@ class CallTraceTy {
   std::chrono::steady_clock::time_point Start;
   bool Enabled;
 
-  /// Argument names arrive as one stringified list, consumed alongside the
-  /// values they belong to. Only the trailing identifier is kept so that a
-  /// conversion such as 'TargetAllocTy(Kind)' is still named 'Kind'.
+  /// The argument names arrive as a single stringified macro argument list,
+  /// e.g. "DeviceId, Size, HostPtr", which is consumed one name at a time.
   static StringRef takeName(StringRef &Names) {
-    static constexpr StringLiteral IdentChars =
-        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
-
     auto [Name, Rest] = Names.split(',');
     Names = Rest;
-
-    size_t End = Name.find_last_of(IdentChars);
-    if (End == StringRef::npos)
-      return Name.trim();
-    return Name.slice(Name.find_last_not_of(IdentChars, End) + 1, End + 1);
+    return Name.trim();
   }
 
 public:
