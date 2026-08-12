@@ -11,6 +11,9 @@ ldr s0, [x0]
 ldr q0, [x0, x1, lsl #4]
 str s0, [x0]
 fadd v0.4s, v1.4s, v2.4s
+fcadd v0.4s, v1.4s, v2.4s, #90
+cadd z0.s, z0.s, z2.s, #90
+sqcadd z0.s, z0.s, z2.s, #90
 bfdot v0.4s, v1.8h, v2.8h
 add z0.s, z1.s, z2.s
 andv b0, p7, z31.b
@@ -63,3 +66,8 @@ cmplo	p0.b, p0/z, z0.b, #0
 cmpls	p0.b, p0/z, z0.b, #0
 cmplt	p0.b, p0/z, z0.b, #-16
 cmpne	p0.b, p0/z, z0.b, #-16
+cpy     z0.s, p0/m, w0
+sdiv    z0.s, p0/m, z0.s, z1.s
+tbx     v0.8b, {v1.16b}, v1.8b
+trn1    v0.4s, v1.4s, v2.4s
+sunpkhi z0.h, z1.b

@@ -175,6 +175,7 @@ def C1PWrite_11c_1SA_1CMEST : C1PCMEWrite<11, [C1PUnitSA, C1PUnitCMEST]>;
 def C1PWrite_1c_1CMEPERM : C1PCMEWrite<1, [C1PUnitCMEPERM]>;
 def C1PWrite_1c_1CMEPERM_2rc : C1PCMEWriteRC<1, [C1PUnitCMEPERM], [2]>;
 def C1PWrite_4c_1CMEPERM : C1PCMEWrite<4, [C1PUnitCMEPERM]>;
+def C1PWrite_4c_1CMEPERMS : C1PCMEWrite<4, [C1PUnitCMEPERMS]>;
 def C1PWrite_4c_1CMEPERM_2rc : C1PCMEWriteRC<4, [C1PUnitCMEPERM], [2]>;
 def C1PWrite_4c_1CMEPERMF : C1PCMEWrite<4, [C1PUnitCMEPERMF]>;
 def C1PWrite_4c_1CMEPERMF_1rc : C1PCMEWriteRC<4, [C1PUnitCMEPERMF], [1]>;
@@ -186,9 +187,8 @@ def C1PWrite_5c_1CMEPERM_1rc : C1PCMEWriteRC<5, [C1PUnitCMEPERM], [1]>;
 def C1PWrite_5c_1CMEPERMF_2rc : C1PCMEWriteRC<5, [C1PUnitCMEPERMF], [2]>;
 def C1PWrite_8c_1CMEPERMF_1CMEVX0ALU_1rc
     : C1PCMEWriteRC<8, [C1PUnitCMEPERMF, C1PUnitCMEVX0ALU], [1, 1]>;
-def C1PWrite_8c_1CMEPERMF_1CMEPERMS_1rc
-    : C1PCMEWriteRC<8, [C1PUnitCMEPERMF, C1PUnitCMEPERM], [1, 2]>;
-
+def C1PWrite_8c_1CMEPERMF_1CMEPERMS
+    : C1PCMEWrite<8, [C1PUnitCMEPERMF, C1PUnitCMEPERM]>;
 def C1PWrite_4c_1CMEVXALU_1CMEPERMF_1d1rc
     : C1PCMEWriteRC<4, [C1PUnitCMEVXALU, C1PUnitCMEPERMF], [2, 1]>;
 def C1PWrite_8c_1CMEVXALU_1CMEPERMS_1rc
@@ -840,6 +840,7 @@ def C1PWrite_4c_2V_CMEFPReduceMaxMinD
                                 C1PWrite_4c_2V>;
 
 def C1PWrite_2c_1V_CME : C1PSMEStreamingSchedWrite<C1PWrite_4c_1CMEVXALU, C1PWrite_2c_1V>;
+def C1PWrite_2c_1V_CMEPERMS : C1PSMEStreamingSchedWrite<C1PWrite_4c_1CMEPERMS, C1PWrite_2c_1V>;
 def C1PWrite_2c_1V0_CME : C1PSMEStreamingSchedWrite<C1PWrite_4c_1CMEVX0ALU, C1PWrite_2c_1V0>;
 def C1PWrite_2c_1V01_CME : C1PSMEStreamingSchedWrite<C1PWrite_4c_1CMEVXALU, C1PWrite_2c_1V01>;
 def C1PWrite_2c_1V0134_CME : C1PSMEStreamingSchedWrite<C1PWrite_4c_1CMEVXALU, C1PWrite_2c_1V>;
@@ -997,10 +998,10 @@ def C1PWrite_4c_1V_1CMEVXALU
 def C1PWrite_4c_1V_1CMEVXMUL
     : C1PSMEStreamingSchedWrite<C1PWrite_4c_1CMEVXMUL, C1PWrite_4c_1V>;
 def C1PWrite_5c_1M0_1V_1CMEPERMF_1CMEPERMS
-    : C1PSMEStreamingSchedWrite<C1PWrite_8c_1CMEPERMF_1CMEPERMS_1rc,
+    : C1PSMEStreamingSchedWrite<C1PWrite_8c_1CMEPERMF_1CMEPERMS,
                                 C1PWrite_5c_1M0_1V>;
 def C1PWrite_3c_1M0_1CMEPERMF
-    : C1PSMEStreamingSchedWrite<C1PWrite_4c_1CMEPERMF, C1PWrite_3c_1M0>;
+    : C1PSMEStreamingSchedWrite<C1PWrite_4c_1CMEPERM, C1PWrite_3c_1M0>;
 def C1PWrite_7c_1M0_1V0134_CMEINDEX_IRRI
     : C1PSMEStreamingSchedWrite<C1PWrite_4c_1CMEVXALU_1CMEPERMF_1d1rc,
                                 C1PWrite_7c_1M0_1V>;
@@ -1013,7 +1014,12 @@ def C1PWrite_8c_1M0_1V1_1V_CMELAST
 def C1PWrite_8c_1M0_1V1_1V_CMECLAST
     : C1PSMEStreamingSchedWrite<C1PWrite_12c_1M0_1CMEPERMF_1CMEVX0ALU_2rc,
                                 C1PWrite_8c_1M0_1V1_1V>;
-
+def C1PWrite_12c_1V0_12rc_CMEDIV
+    : C1PSMEStreamingSchedWrite<C1PWrite_11c_1CMEMC_11rc,
+                                C1PWrite_12c_1V0_12rc>;
+def C1PWrite_20c_1V0_20rc_CMEDIV
+    : C1PSMEStreamingSchedWrite<C1PWrite_11c_1CMEMC_11rc,
+                                C1PWrite_20c_1V0_20rc>;
 // Miscellaneous
 // -----------------------------------------------------------------------------
 
@@ -1521,7 +1527,7 @@ def : InstRW<[C1PWrite_2c_1V_1CMEVXALU], (instregex "^FADD(v2|v4|v8)(f16|f32)")>
 
 // ASIMD FP complex add
 // ASIMD FP max/min, pairwise
-def : InstRW<[C1PWrite_3c_1V], (instregex "^FCADDv",
+def : InstRW<[C1PWrite_3c_1V_1CMEVXMUL], (instregex "^FCADDv",
                                           "^(FMAXP|FMAXNMP|FMINP|FMINNMP)v")>;
 
 // ASIMD FP complex multiply add
@@ -1654,7 +1660,6 @@ def : InstRW<[C1PWr_VBFMAL_CME, C1PRd_VBFMAL, C1PRd_VBFMMA],
 // ASIMD move, integer immed
 // ASIMD reverse
 // ASIMD table lookup extension, 1 table reg
-// ASIMD transpose
 // ASIMD unzip/zip
 // Handled by SchedAlias<WriteV[dq], ...>
 
@@ -1700,6 +1705,9 @@ def : InstRW<[C1PWrite_2c_1V_1CMEPERMF_1rc], (instrs TBLv8i8Three, TBLv16i8Three
 // ASIMD table lookup, 4 table regs
 def : InstRW<[C1PWrite_4c_3V], (instrs TBLv8i8Four, TBLv16i8Four)>;
 
+// ASIMD table lookup, 1 table reg
+def : InstRW<[C1PWrite_2c_1V_1CMEPERMF_1rc], (instrs TBXv8i8One, TBXv16i8One)>;
+
 // ASIMD table lookup extension, 2 table reg
 def : InstRW<[C1PWrite_2c_1V_1CMEPERMF_1rc], (instrs TBXv8i8Two, TBXv16i8Two)>;
 
@@ -1708,6 +1716,9 @@ def : InstRW<[C1PWrite_2c_1V_1CMEPERMF_1rc], (instrs TBXv8i8Three, TBXv16i8Three
 
 // ASIMD table lookup extension, 4 table reg
 def : InstRW<[C1PWrite_6c_5V], (instrs TBXv8i8Four, TBXv16i8Four)>;
+
+// ASIMD transpose
+def : InstRW<[C1PWrite_2c_1V_1CMEPERM], (instregex "^TRN(1|2)v")>;
 
 // ASIMD transfer, element to gen reg
 def : InstRW<[C1PWrite_2c_1V], (instregex "^[SU]MOVv")>;
@@ -2160,7 +2171,7 @@ def : InstRW<[C1PWrite_PredCmp],
                         "^CMP(EQ|GE|GT|HI|HS|LE|LO|LS|LT|NE)_WIDE_PPzZZ_[BHS]")>;
 
 // Complex add
-def : InstRW<[C1PWrite_2c_1V], (instregex "^(SQ)?CADD_ZZI_[BHSD]")>;
+def : InstRW<[C1PWrite_2c_1V_1CMEVXALU], (instregex "^(SQ)?CADD_ZZI_[BHSD]")>;
 
 // Complex dot product 8-bit element
 def : InstRW<[C1PWr_ZDOTB, C1PRd_ZDOTB, C1PRd_ZDOTB], (instrs CDOT_ZZZ_S, CDOT_ZZZI_S)>;
@@ -2191,18 +2202,18 @@ def : InstRW<[C1PWrite_3c_1V], (instregex "^[SU]CVTF_ZPmZ_Sto[HS]")>;
 def : InstRW<[C1PWrite_3c_1V], (instregex "^[SU]CVTF_ZPmZ_HtoH")>;
 
 // Copy, scalar
-def : InstRW<[C1PWrite_5c_1M0_1V], (instregex "^CPY_ZPmR_[BHSD]")>;
+def : InstRW<[C1PWrite_5c_1M0_1V_1CMEPERMF_1CMEPERMS], (instregex "^CPY_ZPmR_[BHSD]")>;
 
 // Copy, scalar SIMD&FP or imm
 def : InstRW<[C1PWrite_2c_1V], (instregex "^CPY_ZPm[IV]_[BHSD]",
                                          "^CPY_ZPzI_[BHSD]")>;
 
 // Divides, 32 bit
-def : InstRW<[C1PWrite_12c_1V0_12rc], (instregex "^[SU]DIVR?_ZPmZ_S",
+def : InstRW<[C1PWrite_12c_1V0_12rc_CMEDIV], (instregex "^[SU]DIVR?_ZPmZ_S",
                                            "^[SU]DIV_ZPZZ_S")>;
 
 // Divides, 64 bit
-def : InstRW<[C1PWrite_20c_1V0_20rc], (instregex "^[SU]DIVR?_ZPmZ_D",
+def : InstRW<[C1PWrite_20c_1V0_20rc_CMEDIV], (instregex "^[SU]DIVR?_ZPmZ_D",
                                            "^[SU]DIV_ZPZZ_D")>;
 
 // Dot product, 8 bit
@@ -2418,7 +2429,7 @@ def : InstRW<[C1PWrite_2c_1V0], (instregex "^FACG[ET]_PPzZZ_[HSD]",
                                           "^FCMUO_PPzZZ_[HSD]")>;
 
 // Floating point complex add
-def : InstRW<[C1PWrite_3c_1V], (instregex "^FCADD_ZPmZ_[HSD]")>;
+def : InstRW<[C1PWrite_3c_1V_1CMEVXMUL], (instregex "^FCADD_ZPmZ_[HSD]")>;
 
 // Floating point complex multiply add
 def : InstRW<[C1PWr_ZFCMA, ReadDefault, C1PRd_ZFCMA, C1PRd_ZFCMA], (instregex "^FCMLA_ZPmZZ_[HSD]")>;
