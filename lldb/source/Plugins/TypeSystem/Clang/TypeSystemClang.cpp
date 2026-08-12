@@ -695,7 +695,7 @@ void TypeSystemClang::CreateASTContext() {
             m_target_triple)
             .str();
 
-    LLDB_LOG(GetLog(LLDBLog::Expressions), err.c_str());
+    LLDB_LOG(GetLog(LLDBLog::Expressions), "{0}", err);
 
     static std::once_flag s_uninitialized_target_warning;
     Debugger::ReportWarning(std::move(err), /*debugger_id=*/std::nullopt,
@@ -2412,6 +2412,14 @@ CompilerType TypeSystemClang::GetPointerDiffType(bool is_signed) {
   if (is_signed)
     return GetType(getASTContext().getPointerDiffType());
   return GetType(getASTContext().getUnsignedPointerDiffType());
+}
+
+CompilerType TypeSystemClang::GetSizeType() {
+  // Check if builtin types are initialized.
+  if (!getASTContext().VoidPtrTy)
+    return {};
+
+  return GetType(getASTContext().getSizeType());
 }
 
 void TypeSystemClang::DumpDeclContextHiearchy(clang::DeclContext *decl_ctx) {

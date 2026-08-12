@@ -178,6 +178,10 @@ def SDTIntToFPOp : SDTypeProfile<1, 1, [    // [su]int_to_fp
 def SDTConvertFromArbitraryFPOp : SDTypeProfile<1, 2, [
   SDTCisFP<0>, SDTCisInt<1>, SDTCisInt<2>, SDTCisSameNumEltsAs<0, 1>
 ]>;
+def SDTConvertToArbitraryFPOp : SDTypeProfile<1, 4, [
+  SDTCisInt<0>, SDTCisFP<1>, SDTCisInt<2>, SDTCisInt<3>, SDTCisInt<4>,
+  SDTCisSameNumEltsAs<0, 1>
+]>;
 def SDTFPToIntOp : SDTypeProfile<1, 1, [    // fp_to_[su]int
   SDTCisInt<0>, SDTCisFP<1>, SDTCisSameNumEltsAs<0, 1>
 ]>;
@@ -651,6 +655,8 @@ def sint_to_fp : SDNode<"ISD::SINT_TO_FP" , SDTIntToFPOp>;
 def uint_to_fp : SDNode<"ISD::UINT_TO_FP" , SDTIntToFPOp>;
 def convert_from_arbitrary_fp : SDNode<"ISD::CONVERT_FROM_ARBITRARY_FP",
                                         SDTConvertFromArbitraryFPOp>;
+def convert_to_arbitrary_fp : SDNode<"ISD::CONVERT_TO_ARBITRARY_FP",
+                                      SDTConvertToArbitraryFPOp>;
 def fp_to_sint : SDNode<"ISD::FP_TO_SINT" , SDTFPToIntOp>;
 def fp_to_uint : SDNode<"ISD::FP_TO_UINT" , SDTFPToIntOp>;
 def fp_to_sint_sat : SDNode<"ISD::FP_TO_SINT_SAT" , SDTFPToIntSatOp>;
@@ -935,6 +941,13 @@ def get_active_lane_mask
           "ISD::GET_ACTIVE_LANE_MASK",
           SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisInt<1>, SDTCisSameAs<1, 2>]>,
           []>;
+
+def vector_match
+    : SDNode<"ISD::VECTOR_MATCH",
+             SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>,
+                                  SDTCisVec<3>, SDTCisSameNumEltsAs<0, 1>,
+                                  SDTCisSameAs<0, 3>]>,
+             []>;
 
 // Nodes for intrinsics, you should use the intrinsic itself and let tblgen use
 // these internally.  Don't reference these directly.
@@ -1279,10 +1292,15 @@ class ImmLeaf<ValueType vt, code pred, SDNodeXForm xform = NOOP_SDNodeXForm,
 class TImmLeaf<ValueType vt, code pred, SDNodeXForm xform = NOOP_SDNodeXForm,
   SDNode ImmNode = timm> : ImmLeaf<vt, pred, xform, ImmNode>;
 
-// llvm.convert.from.arbitrary.fp format-selector predicates.
+// llvm.convert.{from,to}.arbitrary.fp format-selector predicates.
 // Only OCP formats are matched here; FNUZ formats use the generic expansion.
 def Float8E4M3FN : TImmLeaf<i32, [{ return Imm == APFloatBase::S_Float8E4M3FN; }]>;
 def Float8E5M2 : TImmLeaf<i32, [{ return Imm == APFloatBase::S_Float8E5M2; }]>;
+
+// llvm.convert.to.arbitrary.fp rounding-mode and saturation selectors.
+def NearestTiesToEven : TImmLeaf<i32,
+    [{ return Imm == static_cast<int>(RoundingMode::NearestTiesToEven); }]>;
+def FPNoSaturation : TImmLeaf<i32, [{ return Imm == 0; }]>;
 
 // An ImmLeaf where the `Imm` in the C++ predicate is an `APInt`.
 //
