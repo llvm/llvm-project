@@ -353,6 +353,8 @@ define void @tcgen05_mma_sp_disable_output_lane_collector_b_ti16_cta1(ptr addrsp
 ; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.sp.shared.disable_output_lane.cg1(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, <4 x i32> %disable_output_lanev4, /* kind=ti16 */ i32 4, /* collector_a=use */ i32 3, /* collector_b=lastuse */ i32 1)
 ; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.sp.shared.disable_output_lane.cg1(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, <4 x i32> %disable_output_lanev4, /* kind=ti16 */ i32 4, /* collector_a=use */ i32 3, /* collector_b=discard */ i32 0)
 ; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.sp.shared.disable_output_lane.cg1(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, <4 x i32> %disable_output_lanev4, /* kind=ti16 */ i32 4, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.sp.tensor.disable_output_lane.cg1.ashift(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, <4 x i32> %disable_output_lanev4, /* kind=ti16 */ i32 4, /* collector_a=lastuse */ i32 1, /* collector_b=use */ i32 3)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.sp.shared.disable_output_lane.cg1(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, <4 x i32> %disable_output_lanev4, /* kind=ti16 */ i32 4, /* collector_a=fill */ i32 2, /* collector_b=lastuse */ i32 1)
 ; CHECK-LABEL: tcgen05_mma_sp_disable_output_lane_collector_b_ti16_cta1(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -383,6 +385,8 @@ define void @tcgen05_mma_sp_disable_output_lane_collector_b_ti16_cta1(ptr addrsp
 ; CHECK-NEXT:    tcgen05.mma.sp.cta_group::1.kind::ti16.collector::a::use.collector::b::lastuse [%r1], %rd1, %rd2, [%r3], %r2, {%r4, %r5, %r6, %r7}, %p1;
 ; CHECK-NEXT:    tcgen05.mma.sp.cta_group::1.kind::ti16.collector::a::use [%r1], %rd1, %rd2, [%r3], %r2, {%r4, %r5, %r6, %r7}, %p1;
 ; CHECK-NEXT:    tcgen05.mma.sp.cta_group::1.kind::ti16.collector::a::discard [%r1], %rd1, %rd2, [%r3], %r2, {%r4, %r5, %r6, %r7}, %p1;
+; CHECK-NEXT:    tcgen05.mma.sp.cta_group::1.kind::ti16.ashift.collector::a::lastuse.collector::b::use [%r1], [%r8], %rd2, [%r3], %r2, {%r4, %r5, %r6, %r7}, %p1;
+; CHECK-NEXT:    tcgen05.mma.sp.cta_group::1.kind::ti16.collector::a::fill.collector::b::lastuse [%r1], %rd1, %rd2, [%r3], %r2, {%r4, %r5, %r6, %r7}, %p1;
 ; CHECK-NEXT:    ret;
   call void @llvm.nvvm.tcgen05.mma.sp.shared.disable_output_lane.cg1(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, <4 x i32> %disable_output_lanev4, i32 4, i32 0, i32 1)
   ; kind=ti16(4), cta_group=1, collector_a=discard(0), collector_b=fill(2)
@@ -407,6 +411,10 @@ define void @tcgen05_mma_sp_disable_output_lane_collector_b_ti16_cta1(ptr addrsp
   call void @llvm.nvvm.tcgen05.mma.sp.shared.disable_output_lane.cg1(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, <4 x i32> %disable_output_lanev4, i32 4, i32 3, i32 0)
   ; kind=ti16(4), cta_group=1, collector_a=discard(0), collector_b=discard(0)
   call void @llvm.nvvm.tcgen05.mma.sp.shared.disable_output_lane.cg1(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, <4 x i32> %disable_output_lanev4, i32 4, i32 0, i32 0)
+  ; kind=ti16(4), cta_group=1, collector_a=lastuse(1), collector_b=use(3), tensor.ashift
+  call void @llvm.nvvm.tcgen05.mma.sp.tensor.disable_output_lane.cg1.ashift(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, <4 x i32> %disable_output_lanev4, i32 4, i32 1, i32 3)
+  ; kind=ti16(4), cta_group=1, collector_a=fill(2), collector_b=lastuse(1)
+  call void @llvm.nvvm.tcgen05.mma.sp.shared.disable_output_lane.cg1(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, <4 x i32> %disable_output_lanev4, i32 4, i32 2, i32 1)
   ret void
 }
 
@@ -423,6 +431,7 @@ define void @tcgen05_mma_sp_disable_output_lane_collector_b_ti16_cta2(ptr addrsp
 ; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.sp.shared.disable_output_lane.cg2(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, <8 x i32> %disable_output_lanev8, /* kind=ti16 */ i32 4, /* collector_a=lastuse */ i32 1, /* collector_b=use */ i32 3)
 ; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.sp.shared.disable_output_lane.cg2(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, <8 x i32> %disable_output_lanev8, /* kind=ti16 */ i32 4, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
 ; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.sp.shared.disable_output_lane.cg2(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, <8 x i32> %disable_output_lanev8, /* kind=ti16 */ i32 4, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.sp.tensor.disable_output_lane.cg2(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, <8 x i32> %disable_output_lanev8, /* kind=ti16 */ i32 4, /* collector_a=discard */ i32 0, /* collector_b=use */ i32 3)
 ; CHECK-LABEL: tcgen05_mma_sp_disable_output_lane_collector_b_ti16_cta2(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -448,6 +457,7 @@ define void @tcgen05_mma_sp_disable_output_lane_collector_b_ti16_cta2(ptr addrsp
 ; CHECK-NEXT:    tcgen05.mma.sp.cta_group::2.kind::ti16.collector::a::lastuse.collector::b::use [%r1], %rd1, %rd2, [%r3], %r2, {%r8, %r9, %r10, %r11, %r4, %r5, %r6, %r7}, %p1;
 ; CHECK-NEXT:    tcgen05.mma.sp.cta_group::2.kind::ti16.collector::a::lastuse [%r1], %rd1, %rd2, [%r3], %r2, {%r8, %r9, %r10, %r11, %r4, %r5, %r6, %r7}, %p1;
 ; CHECK-NEXT:    tcgen05.mma.sp.cta_group::2.kind::ti16.collector::a::discard [%r1], %rd1, %rd2, [%r3], %r2, {%r8, %r9, %r10, %r11, %r4, %r5, %r6, %r7}, %p1;
+; CHECK-NEXT:    tcgen05.mma.sp.cta_group::2.kind::ti16.collector::a::discard.collector::b::use [%r1], [%r12], %rd2, [%r3], %r2, {%r8, %r9, %r10, %r11, %r4, %r5, %r6, %r7}, %p1;
 ; CHECK-NEXT:    ret;
   call void @llvm.nvvm.tcgen05.mma.sp.shared.disable_output_lane.cg2(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, <8 x i32> %disable_output_lanev8, i32 4, i32 0, i32 1)
   ; kind=ti16(4), cta_group=2, collector_a=discard(0), collector_b=fill(2), tensor
@@ -460,6 +470,8 @@ define void @tcgen05_mma_sp_disable_output_lane_collector_b_ti16_cta2(ptr addrsp
   call void @llvm.nvvm.tcgen05.mma.sp.shared.disable_output_lane.cg2(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, <8 x i32> %disable_output_lanev8, i32 4, i32 1, i32 0)
   ; kind=ti16(4), cta_group=2, collector_a=discard(0), collector_b=discard(0)
   call void @llvm.nvvm.tcgen05.mma.sp.shared.disable_output_lane.cg2(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, <8 x i32> %disable_output_lanev8, i32 4, i32 0, i32 0)
+  ; kind=ti16(4), cta_group=2, collector_a=discard(0), collector_b=use(3), tensor
+  call void @llvm.nvvm.tcgen05.mma.sp.tensor.disable_output_lane.cg2(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, <8 x i32> %disable_output_lanev8, i32 4, i32 0, i32 3)
   ret void
 }
 
