@@ -200,20 +200,17 @@ struct UnrollCreateNdOp : public UnrollPattern<xegpu::CreateNdDescOp> {
     if (!targetShape)
       return failure();
 
-    // Keep the original (possibly high-D) source and only shrink the
-    // descriptor's tile shape. Leading (batch) dims are unrolled to unit tiles
-    // like any other dim; the batch position rides on the load/store/prefetch
-    // offsets (see unrollByTile) and is folded into the base pointer at XeVM
-    // lowering. We therefore never slice the source with a memref.subview,
-    // which for a dynamic-shape source could not guarantee a valid base
-    // address.
+    // Keep the original (possibly high-D) source and only shrink the tile
+    // shape; batch dims unroll to unit tiles and their offsets ride on the
+    // load/store/prefetch, folded into the base pointer at XeVM lowering. We
+    // never slice the source with a memref.subview -- for a dynamic-shape
+    // source it could not guarantee a valid base address.
     Value src = op.getSource();
     auto makeCreateNd = [&](Type tdesc) -> Value {
       auto ndTy = cast<xegpu::TensorDescType>(tdesc);
+      // A memref source uses the bare-memref builder: a dynamic dim has no SSA
+      // operand for getMixedSizes/getMixedStrides.
       if (isa<MemRefType>(src.getType()))
-        // A memref source carries its own (possibly dynamic) shape/strides; use
-        // the bare-memref builder rather than getMixedSizes/getMixedStrides,
-        // which cannot represent a dynamic memref dim without an SSA operand.
         return xegpu::CreateNdDescOp::create(rewriter, loc, ndTy,
                                              cast<TypedValue<MemRefType>>(src));
       return xegpu::CreateNdDescOp::create(
@@ -223,13 +220,11 @@ struct UnrollCreateNdOp : public UnrollPattern<xegpu::CreateNdDescOp> {
     SmallVector<Type> newTdescTys = getUnrolledTypes(tdescTy, *targetShape);
     SmallVector<Value> newOps;
     if (tdescTy.getRank() <= 2) {
-      // For 2D descriptors a single tdesc is reused for every unrolled tile via
-      // offsets; the pack/unpack resolution broadcasts the one source.
+      // 2D: one tdesc, broadcast across tiles by pack/unpack.
       newOps.push_back(makeCreateNd(newTdescTys[0]));
     } else {
-      // For >2D (batched) descriptors the unpack expands the leading dims, so
-      // the source count must match the consumer's pack count. Emit one
-      // (identical, full-source) tdesc per tile; the redundant ones fold away.
+      // >2D: unpack expands the leading dims, so the source count must match
+      // the pack count. Emit one (identical) tdesc per tile; CSE folds them.
       for (Type t : newTdescTys)
         newOps.push_back(makeCreateNd(t));
     }
@@ -254,9 +249,8 @@ struct UnrollPrefetchNdOp : public UnrollPattern<xegpu::PrefetchNdOp> {
     if (layout)
       layout = layout.dropInstData();
 
-    // Batch (leading) dims are unrolled to unit tiles by unrollByTile like any
-    // other dim; their offsets ride on the prefetch and are folded into the
-    // base pointer at XeVM lowering, so no per-batch tdesc/subview is needed.
+    // Batch (leading) dims unroll to unit tiles like any other dim; a single
+    // tdesc serves all tiles (offsets are folded into the base at XeVM).
     SmallVector<Type> convertedTdescTypes =
         getUnrolledTypes(tdescTy, *targetShape);
     SmallVector<Value> convertedTdesc = pack(
@@ -298,9 +292,8 @@ struct UnrollLoadNdOp : public UnrollPattern<xegpu::LoadNdOp> {
 
     SmallVector<Value> newOps;
 
-    // Batch (leading) dims are unrolled to unit tiles by unrollByTile like any
-    // other dim; their offsets ride on the load and are folded into the base
-    // pointer at XeVM lowering, so a single tdesc is reused for all tiles.
+    // Batch (leading) dims unroll to unit tiles like any other dim; a single
+    // tdesc serves all tiles (offsets are folded into the base at XeVM).
     SmallVector<Type> convertedTdescTypes =
         getUnrolledTypes(tdescTy, *targetShape);
     SmallVector<Value> convertedTdescs = pack(
@@ -345,10 +338,9 @@ struct UnrollStoreNdOp : public UnrollPattern<xegpu::StoreNdOp> {
 
     size_t valueIndex = 0;
 
-    // Batch (leading) dims are unrolled to unit tiles by unrollByTile like any
-    // other dim; their offsets ride on the store and are folded into the base
-    // pointer at XeVM lowering. valueIndex advances in the same tile order
-    // unrollByTile iterates, so it stays in sync with the pre-packed values.
+    // Batch (leading) dims unroll to unit tiles like any other dim. valueIndex
+    // advances in unrollByTile's tile order, staying in sync with the packed
+    // values.
     SmallVector<Type> convertedTdescTypes =
         getUnrolledTypes(tdescTy, *targetShape);
     SmallVector<Value> convertedTdescs = pack(

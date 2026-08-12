@@ -56,10 +56,8 @@ enum class NdTdescOffset : uint32_t {
   BaseShapeH = 3,     // Base shape height (i32)
   BasePitch = 4,      // Base pitch/stride of dim rank-2 (i32)
   LeadingStride0 = 5, // Element strides of the leading (batch) dims of a >2D
-  LeadingStride1 = 6, // descriptor (i32). The load/store/prefetch lowering
-  LeadingStride2 = 7, // uses these to fold the batch offsets into the base
-                      // pointer, keeping the 2D-block surface at the innermost
-                      // matrix. Left at 0 for 2D descriptors.
+  LeadingStride1 = 6, // descriptor (i32); folded into the base pointer by the
+  LeadingStride2 = 7, // load/store lowering. Left at 0 for 2D descriptors.
 };
 
 static int32_t getNumericXeVMAddrSpace(xegpu::MemorySpace xeGpuMemspace) {
@@ -240,20 +238,11 @@ class CreateNdDescToXeVMPattern
     auto sourceTy = source.getType();
     auto sourceMemrefTy = dyn_cast<MemRefType>(sourceTy);
 
-    // Shape and strides. For a memref source they are recovered from the memref
-    // value itself (a dynamic memref carries them at runtime and does not
-    // attach them as op operands); otherwise they come from the op's explicit
-    // operands.
+    // For a memref source, shape/strides come from the memref (dynamic dims are
+    // recovered from runtime metadata); an integer source carries them as
+    // explicit op operands.
     SmallVector<OpFoldResult> mixedSizes;
     SmallVector<OpFoldResult> mixedStrides;
-    memref::ExtractStridedMetadataOp srcMeta;
-    // Lazily materialize memref metadata (base buffer, offset, sizes, strides).
-    auto getSrcMeta = [&]() -> memref::ExtractStridedMetadataOp {
-      if (!srcMeta)
-        srcMeta =
-            memref::ExtractStridedMetadataOp::create(rewriter, loc, source);
-      return srcMeta;
-    };
     // If source is a memref, we need to extract the aligned pointer as index.
     // Pointer type is passed as i32 or i64 by type converter.
     if (sourceMemrefTy) {
@@ -265,18 +254,18 @@ class CreateNdDescToXeVMPattern
       if (failed(
               sourceMemrefTy.getStridesAndOffset(staticStrides, staticOffset)))
         return rewriter.notifyMatchFailure(op, "Expected strided Memref.");
-      // A memref is authoritative for its own shape/strides (explicit
-      // shape/strides on a memref create_nd are deprecated). A fully static
-      // memref yields constants directly; a dynamic one recovers its dynamic
-      // dims from runtime metadata (getConstified* keeps static dims as attrs).
+      // A fully static memref yields constants directly; a dynamic one recovers
+      // its dynamic dims from runtime metadata.
       bool allStatic = sourceMemrefTy.hasStaticShape() &&
                        llvm::none_of(staticStrides, ShapedType::isDynamic);
       if (allStatic) {
         mixedSizes = op.getMixedSizes();
         mixedStrides = op.getMixedStrides();
       } else {
-        mixedSizes = getSrcMeta().getConstifiedMixedSizes();
-        mixedStrides = getSrcMeta().getConstifiedMixedStrides();
+        auto srcMeta =
+            memref::ExtractStridedMetadataOp::create(rewriter, loc, source);
+        mixedSizes = srcMeta.getConstifiedMixedSizes();
+        mixedStrides = srcMeta.getConstifiedMixedStrides();
       }
       // Access adaptor after failure check to avoid rolling back generated code
       // for materialization cast.
@@ -327,15 +316,9 @@ class CreateNdDescToXeVMPattern
         vector::InsertOp::create(rewriter, loc, basePitch, payload,
                                  static_cast<int>(NdTdescOffset::BasePitch));
     // For a >2D descriptor, encode the leading (batch) dim element strides into
-    // the spare payload slots. The load/store/prefetch lowering folds the batch
-    // offsets into the base pointer using these, so the batch position stays
-    // out of the 2D-block surface (which remains the innermost matrix computed
-    // above). This applies to both memref sources and integer (pointer) sources
-    // with explicit shape/strides -- e.g. a batched descriptor whose source was
-    // rewritten to an i64 base by the transpose peephole; in that case the
-    // strides come from the op's explicit operands. 2D descriptors leave these
-    // slots at 0 and the load/store path skips reading them (2D path
-    // unchanged).
+    // the spare payload slots; the load/store/prefetch lowering folds the batch
+    // offsets into the base pointer with these, keeping the 2D-block surface at
+    // the innermost matrix. 2D descriptors leave these slots at 0.
     if (rank > 2) {
       if (rank - 2 > 3)
         return rewriter.notifyMatchFailure(
@@ -456,12 +439,10 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
                                                     mixedOffsets[tileRank - 2]);
       offsetH = getValueOrCreateCastToIndexLike(rewriter, loc,
                                                 rewriter.getI32Type(), offsetH);
-      // For a >2D descriptor, fold the leading (batch) offsets into the base
-      // pointer: basePtr += (sum_d offset[d] * leadingStride[d]) * elemBytes.
-      // The batch element strides were encoded into the payload at create time
-      // (see CreateNdDescToXeVMPattern). This keeps the 2D-block surface at the
-      // innermost matrix (so the HW surface-size limits are unaffected) instead
-      // of baking the batch into a (possibly out-of-range) collapsed surface.
+      // Fold the leading (batch) offsets into the base pointer:
+      //   basePtr += (sum_d offset[d] * leadingStride[d]) * elemBytes
+      // using the batch strides encoded at create time. This keeps the 2D-block
+      // surface at the innermost matrix, avoiding the HW surface-size limits.
       if (tileRank > 2) {
         Type i64Ty = rewriter.getI64Type();
         Value batchElemOffset;

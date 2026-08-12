@@ -305,10 +305,9 @@ public:
     Value source = createNdOp.getSource();
     auto memrefType = dyn_cast<MemRefType>(source.getType());
 
-    // A fully static memref (static shape and strides) can use the op
-    // accessors directly. A dynamic memref cannot -- getMixedSizes/getMixed
-    // Strides can't represent a dynamic dim that has no SSA operand -- so its
-    // shape/strides are recovered from runtime metadata.
+    // A dynamic memref's shape/strides are recovered from runtime metadata
+    // (getMixedSizes/getMixedStrides can't represent a dynamic dim); a static
+    // one uses the op accessors directly.
     auto isStaticMemref = [](MemRefType mt) {
       if (!mt.hasStaticShape())
         return false;
@@ -346,13 +345,10 @@ public:
         rewriter, loc, convertToValue(rewriter, loc, modifiedShape.back()),
         innerLaneData);
     // Repacking narrow elements into wider ones (f16 -> i32) reinterprets the
-    // innermost dim, so every stride *except* the innermost (which stays 1)
-    // counts the wider element and must be divided by innerLaneData. This
-    // includes the pitch (second-to-last) and, for a >2D descriptor, the
-    // leading (batch) strides -- the latter are read back by the XeVM load/
-    // store fold, which multiplies them by the *repacked* element byte size,
-    // so they must already be in repacked-element units. (For a 2D descriptor
-    // this is exactly the second-to-last stride, matching prior behavior.)
+    // innermost dim, so every stride except the innermost (which stays 1) must
+    // be divided by innerLaneData to count the wider element -- the pitch and,
+    // for a >2D descriptor, the leading (batch) strides (the XeVM fold reads
+    // the latter back in repacked-element units).
     assert(mixedStrides.size() >= 2 &&
            "Expected at least 2 strides for CreateNdDescOp");
     SmallVector<OpFoldResult> modifiedStrides(mixedStrides);
