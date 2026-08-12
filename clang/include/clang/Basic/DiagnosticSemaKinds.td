@@ -6590,7 +6590,11 @@ def err_inline_decl_follows_def : Error<
 def err_inline_declaration_block_scope : Error<
   "inline declaration of %0 not allowed in block scope">;
 def err_static_non_static : Error<
-  "static declaration of %0 follows non-static declaration">;
+  "static declaration of %0 follows non-static declaration"
+  "%select{|; behavior is undefined}1">;
+def err_internal_extern_mismatch : Error<
+  "variable %0%select{| cannot be}1 declared with external linkage following "
+  "a declaration with internal linkage%select{; behavior is undefined|}1">;
 def err_different_language_linkage : Error<
   "declaration of %0 has a different language linkage">;
 def ext_retained_language_linkage : Extension<
@@ -9646,6 +9650,9 @@ def err_atomic_builtin_cannot_be_const : Error<
 def err_atomic_builtin_must_be_pointer_intfltptr : Error<
   "address argument to atomic builtin must be a pointer to integer,"
   " floating-point or pointer (%0 invalid)">;
+def err_aarch64_svc_hvc_invalid_arg_type : Error<
+  "%ordinal0 argument to %1 must have integer, floating-point, or pointer "
+  "type (%2 invalid)">;
 def err_atomic_builtin_pointer_size : Error<
   "address argument to atomic builtin must be a pointer to 1,2,4,8 or 16 byte "
   "type (%0 invalid)">;
@@ -11110,6 +11117,8 @@ def note_lifetime_safety_escapes_to_global_here: Note<"escapes to this global st
 def note_lifetime_safety_escapes_to_static_storage_here: Note<"escapes to this static storage">;
 def note_lifetime_safety_lifetimebound_here: Note<"'lifetimebound' attribute appears here on the definition">;
 def note_lifetime_safety_aliases_storage : Note<"%0 aliases the storage of %1">;
+def note_lifetime_safety_aliases_storage_lifetimebound : Note<
+  "%0 aliases the storage of %1 because %select{parameter %3|the implicit object parameter}2 is lifetimebound">;
 
 def warn_lifetime_safety_intra_tu_param_suggestion
     : Warning<"parameter in intra-TU function should be marked "

@@ -42,8 +42,7 @@ plan-benchmarks --commit-list anchor-commits.txt                                
 
 # Request the corresponding workflow runs, at most 4 at a time to be a good citizen.
 export GITHUB_TOKEN=$(gh auth token)
-dispatch-benchmarks --work-items plan.jsonl --test-suite-commit <benchmark suite SHA>   \
-                    --max-in-flight 4 --dry-run
+dispatch-benchmarks --work-items plan.jsonl --max-in-flight 4 --dry-run
 ```
 
 In a nutshell, `select-anchor-commits` produces the list of anchor commits that we want
