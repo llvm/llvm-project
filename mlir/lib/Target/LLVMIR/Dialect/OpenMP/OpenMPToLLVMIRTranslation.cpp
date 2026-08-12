@@ -791,13 +791,18 @@ collectNoAliasPointerArgs(llvm::IRBuilderBase &builder) {
 }
 
 /// Returns true if translating \p op emits a construct that implies a flush of
-/// all thread-visible variables. Explicit `omp.flush` with a list is handled
-/// separately, pinning only the listed variables.
+/// all thread-visible variables. For single/sections/wsloop the flush comes
+/// from the end barrier, which `nowait` omits. Explicit `omp.flush` with a list
+/// is handled separately, pinning only the listed variables.
 static bool impliesFlushAll(mlir::Operation *op) {
+  if (auto single = mlir::dyn_cast<mlir::omp::SingleOp>(op))
+    return !single.getNowait();
+  if (auto sections = mlir::dyn_cast<mlir::omp::SectionsOp>(op))
+    return !sections.getNowait();
+  if (auto wsloop = mlir::dyn_cast<mlir::omp::WsloopOp>(op))
+    return !wsloop.getNowait();
   return mlir::isa<mlir::omp::BarrierOp, mlir::omp::CriticalOp,
-                   mlir::omp::SingleOp, mlir::omp::SectionsOp,
-                   mlir::omp::WsloopOp, mlir::omp::OrderedOp,
-                   mlir::omp::OrderedRegionOp>(op);
+                   mlir::omp::OrderedOp, mlir::omp::OrderedRegionOp>(op);
 }
 
 /// Converts an OpenMP 'critical' operation into LLVM IR using OpenMPIRBuilder.

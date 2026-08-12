@@ -71,6 +71,17 @@ llvm.func @test_single_noalias(%arg0: !llvm.ptr {llvm.noalias}) {
   llvm.return
 }
 
+// A single with nowait has no end barrier, so no pin is emitted.
+// CHECK-LABEL: define void @test_single_nowait_noalias(ptr noalias %{{[0-9]+}}
+llvm.func @test_single_nowait_noalias(%arg0: !llvm.ptr {llvm.noalias}) {
+  // CHECK-NOT: call void asm sideeffect
+  // CHECK: call i32 @__kmpc_single
+  omp.single nowait {
+    omp.terminator
+  }
+  llvm.return
+}
+
 // CHECK-LABEL: define void @test_omp_parallel_1()
 llvm.func @test_omp_parallel_1() -> () {
   // CHECK: call void{{.*}}@__kmpc_fork_call{{.*}}@[[OMP_OUTLINED_FN_1:.*]])
