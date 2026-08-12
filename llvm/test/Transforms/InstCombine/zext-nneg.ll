@@ -232,11 +232,26 @@ entry:
   ret i64 %zext
 }
 
+; trunc then zext nneg to the same size as before isn't a no-op, and we need to
+; have an and.
+define i64 @zext_of_trunc_same_size(i64 %arg) {
+; CHECK-LABEL: define i64 @zext_of_trunc_same_size(
+; CHECK-SAME: i64 [[ARG:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[ZEXT:%.*]] = and i64 [[ARG]], 4294967295
+; CHECK-NEXT:    ret i64 [[ZEXT]]
+;
+entry:
+  %trunc = trunc i64 %arg to i32
+  %zext = zext nneg i32 %trunc to i64
+  ret i64 %zext
+}
+
 ; FIXME: The and isn't needed here, as the trunc nsw means we know the high bits
 ; are all equal to the sign bit, and zext nneg means we know the sign bit is
 ; zero.
-define i32 @zext_of_trunc(i64 %arg) {
-; CHECK-LABEL: define i32 @zext_of_trunc(
+define i32 @zext_of_trunc_nsw(i64 %arg) {
+; CHECK-LABEL: define i32 @zext_of_trunc_nsw(
 ; CHECK-SAME: i64 [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[ARG]] to i32
 ; CHECK-NEXT:    [[ZEXT:%.*]] = and i32 [[TMP1]], 65535
