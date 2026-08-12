@@ -116,9 +116,9 @@ class TestDAP_console(DAPTestCaseBase):
     def test_empty_escape_prefix(self):
         self.do_test_with_escape_prefix("")
 
-    @requireNotWindows
+    @requireNotWindows("requires lldb-server")
     @requirePsutil
-    @requireNotWasm  # the test signals the debug server, which for Wasm is the runtime
+    @requireNotWasm("the test signals the debug server, which for Wasm is the runtime")
     def test_exit_status_message_sigterm(self):
         import psutil
 

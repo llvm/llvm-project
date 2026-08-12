@@ -8,7 +8,7 @@ from lldbsuite.test.lldbreverse import ReverseTestBase
 from lldbsuite.test import lldbutil
 
 
-@requireNotWasm  # no reverse execution
+@requireNotWasm("no reverse execution")
 class TestReverseContinueWatchpoints(ReverseTestBase):
     @skipIfRemote
     # Watchpoints don't work in single-step mode

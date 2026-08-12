@@ -21,7 +21,7 @@ class ExprCommandThatRestartsTestCase(TestBase):
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     @skipIfDarwin  # llvm.org/pr19246: intermittent failure
-    @requireNotWindows  # Test relies on signals, unsupported on Windows
+    @requireNotWindows("Test relies on signals, unsupported on Windows")
     @expectedFlakeyAndroid(bugnumber="llvm.org/pr19246")
     @expectedFlakeyNetBSD
     def test(self):
