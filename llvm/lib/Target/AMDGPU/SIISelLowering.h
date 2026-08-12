@@ -382,8 +382,9 @@ public:
       unsigned *IsFast = nullptr) const override {
     if (IsFast)
       *IsFast = 0;
-    return allowsMisalignedMemoryAccessesImpl(Ty.getSizeInBits(), AddrSpace,
-                                              Alignment, Flags, IsFast);
+    return allowsMisalignedMemoryAccessesImpl(
+        static_cast<unsigned>(Ty.getSizeInBits()), AddrSpace, Alignment, Flags,
+        IsFast);
   }
 
   bool allowsMisalignedMemoryAccesses(
