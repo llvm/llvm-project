@@ -14,7 +14,7 @@
 // initializer for a symbol.
 
 #include "expression.h"
-#include "flang/Evaluate/character-value.h"
+#include "flang/Evaluate/char.h"
 #include <map>
 #include <optional>
 #include <vector>
@@ -101,7 +101,7 @@ public:
       } else {
         Result result{OkNoChange};
         for (auto at{x.lbounds()}; elements-- > 0; x.IncrementSubscripts(at)) {
-          CharacterValue<KIND> scalar{x.At(at)};
+          typename value::Character<KIND> scalar{x.At(at)};
           auto scalarBytes{scalar.size() * KIND};
           if (scalarBytes != elementBytes) {
             result = LengthMismatch;

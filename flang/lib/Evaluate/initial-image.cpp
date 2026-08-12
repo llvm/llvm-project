@@ -163,7 +163,7 @@ public:
       llvm::SmallVector<char, 256> buffer;
       const char *data{GetTailPaddedData(offset_, elements * stride, buffer)};
       for (std::size_t j{0}; j < elements; ++j) {
-        typedValue[j] = CharacterValue<T::kind>::FromRawBytes(
+        typedValue[j] = value::Character<T::kind>::FromRawBytes(
             data + j * stride, length * T::kind);
       }
       return AsGenericExpr(
