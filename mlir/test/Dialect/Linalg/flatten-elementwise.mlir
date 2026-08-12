@@ -93,6 +93,27 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// CHECK-LABEL: func.func @broadcast_as_named_non_rank0_tensor(
+// CHECK-SAME:                         %[[ARG0:.*]]: tensor<4x8xf32>,
+// CHECK-SAME:                         %[[ARG1:.*]]: tensor<4x8xf32>
+// CHECK-NEXT:    %[[RESULT:.*]] = linalg.broadcast ins(%[[ARG0]] : tensor<4x8xf32>) outs(%[[ARG1]] : tensor<4x8xf32>) dimensions = []
+// CHECK-NEXT:    return %[[RESULT]] : tensor<4x8xf32>
+func.func @broadcast_as_named_non_rank0_tensor(%arg0: tensor<4x8xf32>, %arg1: tensor<4x8xf32>) -> tensor<4x8xf32> {
+  %0 = linalg.broadcast ins(%arg0 : tensor<4x8xf32>) outs(%arg1 : tensor<4x8xf32>) dimensions = []
+  return %0 : tensor<4x8xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match interface{LinalgOp} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %flattened = transform.structured.flatten_elementwise %0
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 // CHECK-LABEL: func.func @map_memref(
 // CHECK-SAME:                 %[[ARG0:[a-zA-Z0-9_]*]]: memref<32x7xf32>
 // CHECK-SAME:                 %[[ARG1:[a-zA-Z0-9_]*]]: memref<32x7xf32>
