@@ -1631,14 +1631,15 @@ TEST(DebugLocTest, IntermediateLocEquality) {
   DebugLoc DL4(DILocation::get(Ctx, 10, 5, SP)); // no layers
 
   ASSERT_NE(DL1.get(), DL2.get());
-  // Distinct nodes with same line/col/scope and identical (uniqued) layers ->
-  // same source location (exercises the layer-aware structural compare).
+  // isSameSourceLocation compares the primary position only, so all three of
+  // these are the same source location: identical layers, differing layers, and
+  // layers versus none. See IntermediateLocEqualityWithLayers for the
+  // layer-aware comparison.
   EXPECT_TRUE(DL1.isSameSourceLocation(DL2));
-  // Same line/col/scope but different layers -> NOT the same source location.
-  EXPECT_FALSE(DL1.isSameSourceLocation(DL3));
-  // One has layers, the other doesn't -> NOT the same source location.
-  EXPECT_FALSE(DL1.isSameSourceLocation(DL4));
+  EXPECT_TRUE(DL1.isSameSourceLocation(DL3));
+  EXPECT_TRUE(DL1.isSameSourceLocation(DL4));
 }
+
 
 TEST(DebugLocTest, MergedLocationWithIntermediate) {
   LLVMContext Ctx;

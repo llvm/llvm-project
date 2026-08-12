@@ -239,15 +239,17 @@ public:
   appendInlinedAt(const DebugLoc &DL, DILocation *InlinedAt, LLVMContext &Ctx,
                   DenseMap<const MDNode *, MDNode *> &Cache);
 
-  /// Return true if the source locations match, ignoring isImplicitCode and
-  /// source atom info.
+  /// Return true if the source locations match, ignoring isImplicitCode,
+  /// source atom info and intermediate-IR layers. Layers are deliberately not
+  /// part of this comparison: two locations at the same source position are the
+  /// same source position regardless of which intermediate IR they came from.
+  /// Callers that must also match layers use isSameSourceLocationAndIRLayers.
   bool isSameSourceLocation(const DebugLoc &Other) const {
     if (get() == Other.get())
       return true;
     return ((bool)*this == (bool)Other) && getLine() == Other.getLine() &&
            getCol() == Other.getCol() && getScope() == Other.getScope() &&
-           getInlinedAt() == Other.getInlinedAt() &&
-           getRawIRLayers() == Other.getRawIRLayers();
+           getInlinedAt() == Other.getInlinedAt();
   }
 
   LLVM_ABI unsigned getLine() const;
