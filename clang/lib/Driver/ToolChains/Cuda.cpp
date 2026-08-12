@@ -97,6 +97,10 @@ CudaVersion getCudaVersion(uint32_t raw_version) {
     return CudaVersion::CUDA_131;
   if (raw_version < 13030)
     return CudaVersion::CUDA_132;
+  if (raw_version < 13040)
+    return CudaVersion::CUDA_133;
+  if (raw_version < 13050)
+    return CudaVersion::CUDA_134;
   return CudaVersion::NEW;
 }
 
@@ -696,6 +700,8 @@ void NVPTX::getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   case CudaVersion::CUDA_##CUDA_VER:                                           \
     PtxFeature = "+ptx" #PTX_VER;                                              \
     break;
+    CASE_CUDA_VERSION(134, 94);
+    CASE_CUDA_VERSION(133, 93);
     CASE_CUDA_VERSION(132, 92);
     CASE_CUDA_VERSION(131, 91);
     CASE_CUDA_VERSION(130, 90);
@@ -902,7 +908,7 @@ void CudaToolChain::addClangTargetOptions(
 
   if (DriverArgs.hasFlag(options::OPT_fcuda_short_ptr,
                          options::OPT_fno_cuda_short_ptr, false))
-    CC1Args.append({"-mllvm", "--nvptx-short-ptr"});
+    CC1Args.append({"-target-abi", "shortptr"});
 
   if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
                           true))
