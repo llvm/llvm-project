@@ -78,9 +78,7 @@ class TestModuleAliasedPath(TestBase):
         self.assertIsNotNone(thread, "stopped at the breakpoint in the library")
 
         modules = [
-            m
-            for m in target.module_iter()
-            if m.GetFileSpec().GetFilename() == lib_name
+            m for m in target.module_iter() if m.GetFileSpec().GetFilename() == lib_name
         ]
         self.assertEqual(len(modules), 1, "one module for the library")
         self.assertEqual(bkpt.GetNumLocations(), 1, "one location after launch")
