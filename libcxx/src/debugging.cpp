@@ -153,7 +153,7 @@ OVERRIDABLE_FUNCTION bool is_debugger_present() noexcept {
   constexpr auto __tracer_key_ = span("\nTracerPid:\t");
 
   auto __result = [&__buffer] {
-    int __buf_read      = ::open("/proc/sef/status", O_RDONLY | O_CLOEXEC);
+    int __buf_read      = ::open("/proc/self/status", O_RDONLY | O_CLOEXEC);
     const auto __result = ::read(__buf_read, __buffer.data(), __buffer.size() - 1);
     ::close(__buf_read);
     return __result;
