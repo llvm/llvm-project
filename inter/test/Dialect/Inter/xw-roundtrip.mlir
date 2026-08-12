@@ -1,6 +1,13 @@
 // RUN: inter-opt %s | inter-opt | FileCheck %s
 
 // CHECK-LABEL: func.func @surface
+// CHECK-DAG: #xw.private
+// CHECK-DAG: #xw.global
+// CHECK-DAG: #xw.constant
+// CHECK-DAG: #xw.local
+// CHECK-DAG: #xw.generic
+// CHECK-DAG: !xw.mem.token
+// CHECK-DAG: xw.freeze {{.*}} : !xw.simd<i32, 16>
 func.func @surface(%u: i32, %private: !xw.ptr<#xw.private>,
                    %p: !xw.ptr<#xw.global>,
                    %constant: !xw.ptr<#xw.constant>,
@@ -11,6 +18,9 @@ func.func @surface(%u: i32, %private: !xw.ptr<#xw.private>,
   %s = xw.splat %u : i32 -> !xw.simd<i32, 8>
   %first = xw.read_first %s : !xw.simd<i32, 8> -> i32
   %expanded = xw.expand %v : !xw.simd<i32, 8> -> !xw.simd<i32, 16>
+  %frozen = xw.freeze %expanded : !xw.simd<i32, 16>
+  %freeze_use = xw.binary addi %frozen, %frozen
+      : !xw.simd<i32, 16>, !xw.simd<i32, 16> -> !xw.simd<i32, 16>
   %sum = xw.binary addi %s, %u
       : !xw.simd<i32, 8>, i32 -> !xw.simd<i32, 8>
   %wide = xw.cast intconvert %sum policy {extension = #xw.cast_extension<zero>}
@@ -68,11 +78,5 @@ func.func @surface(%u: i32, %private: !xw.ptr<#xw.private>,
   return
 }
 
-// CHECK: #xw.private
-// CHECK: #xw.global
-// CHECK: #xw.constant
-// CHECK: #xw.local
-// CHECK: #xw.generic
-// CHECK: !xw.mem.token
 // CHECK-NOT: !llvm.ptr
 // CHECK-NOT: !xemachine.mem.token

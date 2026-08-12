@@ -7,4 +7,4 @@ module {
   }
 }
 
-// CHECK: undef and poison have no sound XW representation
+// CHECK: undef has no sound XW representation

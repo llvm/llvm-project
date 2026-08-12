@@ -2,17 +2,6 @@
 // RUN:   --inter-convert-llvm-to-xw -verify-diagnostics %s
 
 module {
-  llvm.func spir_kernelcc @freeze(%value: i32) {
-    // expected-error@+2 {{freeze is unsupported without proof that its operand is non-poison}}
-    // expected-error@+1 {{failed to legalize operation 'llvm.freeze'}}
-    %frozen = llvm.freeze %value : i32
-    llvm.return
-  }
-}
-
-// -----
-
-module {
   llvm.func spir_kernelcc @local_to_generic(%local: !llvm.ptr<3>) {
     // expected-error@+2 {{local and generic address-space casts require provenance-preserving selection}}
     // expected-error@+1 {{failed to legalize operation 'llvm.addrspacecast'}}

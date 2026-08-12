@@ -16,6 +16,29 @@ module {
 // -----
 
 module {
+  func.func @unsupported_poison() attributes {
+      xemachine.kernel, xemachine.kernel_args = [],
+      xw.simd_width = 8 : i32} {
+    // expected-error@+1 {{unsupported UB poison result type 'vector<2xi32>'}}
+    %poison = ub.poison : vector<2xi32>
+    return
+  }
+}
+
+// -----
+
+module {
+  func.func @unsupported_ub() attributes {
+      xemachine.kernel, xemachine.kernel_args = [],
+      xw.simd_width = 8 : i32} {
+    // expected-error@+1 {{selector accepts only fully poisoned ub.poison operations}}
+    ub.unreachable
+  }
+}
+
+// -----
+
+module {
   func.func @unsupported_dialect() attributes {
       xemachine.kernel, xemachine.kernel_args = [],
       xw.simd_width = 8 : i32} {

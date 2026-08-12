@@ -8,4 +8,5 @@ add_mlir_library(InterAnalysis
   MLIRFuncDialect
   MLIRAnalysis
   MLIRIR
+  MLIRUBDialect
 )

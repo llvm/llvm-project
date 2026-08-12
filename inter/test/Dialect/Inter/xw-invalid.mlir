@@ -59,3 +59,27 @@ func.func @bad_local_base() {
   %base = xw.local_memory_base : !xw.ptr<#xw.global>
   return
 }
+
+// -----
+
+func.func @freeze_token(%token: !xw.mem.token) {
+  // expected-error@+1 {{requires a bare or SIMD signless integer, index, floating-point, or XW pointer payload}}
+  %frozen = xw.freeze %token : !xw.mem.token
+  return
+}
+
+// -----
+
+func.func @freeze_aggregate(%value: vector<2xi32>) {
+  // expected-error@+1 {{requires a bare or SIMD signless integer, index, floating-point, or XW pointer payload}}
+  %frozen = xw.freeze %value : vector<2xi32>
+  return
+}
+
+// -----
+
+func.func @freeze_missing_width(%value: !xw.simd<i32, 8>) {
+  // expected-error@+1 {{requires an enclosing xw.simd_width}}
+  %frozen = xw.freeze %value : !xw.simd<i32, 8>
+  return
+}

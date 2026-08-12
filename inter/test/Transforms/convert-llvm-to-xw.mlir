@@ -86,6 +86,62 @@ module {
   llvm.func spir_funccc @__builtin_IB_get_global_size(i32) -> i64
   llvm.func spir_funccc @__builtin_IB_get_local_size(i32) -> i64
   llvm.func spir_funccc @_Z10atomic_addPU3AS1Vjj(!llvm.ptr<1>, i32) -> i32
+
+  llvm.func spir_kernelcc @poison_freeze(%pointer: !llvm.ptr<1>) {
+    %llvm_poison = llvm.mlir.poison : i32
+    %frozen_poison = llvm.freeze %llvm_poison {boundary.note = "kept"} : i32
+    %lifted_poison = ub.poison : !llvm.ptr<1>
+    %frozen_pointer = llvm.freeze %lifted_poison : !llvm.ptr<1>
+    llvm.return
+  }
+
+  llvm.func spir_kernelcc @mixed(%pointer: !llvm.ptr<1>, %integer: i64,
+                                 %floating: f32) {
+    %axis = llvm.mlir.constant(0 : i32) : i32
+    %gid = llvm.call spir_funccc @_Z13get_global_idj(%axis) : (i32) -> i64
+    %integer_cmp = llvm.icmp "ult" %gid, %integer : i64
+    %integer_reverse = llvm.icmp "ugt" %integer, %gid : i64
+    %element = llvm.getelementptr %pointer[%gid]
+        : (!llvm.ptr<1>, i64) -> !llvm.ptr<1>, f32
+    %pointer_cmp = llvm.icmp "eq" %element, %pointer : !llvm.ptr<1>
+    %loaded = llvm.load %element : !llvm.ptr<1> -> f32
+    %float_cmp = llvm.fcmp "olt" %loaded, %floating : f32
+    %selected_integer = llvm.select %integer_cmp, %gid, %integer : i1, i64
+    %selected_pointer = llvm.select %pointer_cmp, %element, %pointer
+        : i1, !llvm.ptr<1>
+    %selected_float = llvm.select %float_cmp, %floating, %loaded : i1, f32
+    llvm.return
+  }
+
+  llvm.func spir_kernelcc @divergent_if(%out: !llvm.ptr<1>, %limit: i64) {
+    %axis = llvm.mlir.constant(0 : i32) : i32
+    %gid = llvm.call spir_funccc @_Z13get_global_idj(%axis) : (i32) -> i64
+    %active = llvm.icmp "ult" %gid, %limit : i64
+    llvm.cond_br %active, ^then, ^else
+  ^then:
+    %one = llvm.mlir.constant(1 : i32) : i32
+    llvm.br ^merge(%one : i32)
+  ^else:
+    %zero = llvm.mlir.constant(0 : i32) : i32
+    llvm.br ^merge(%zero : i32)
+  ^merge(%value: i32):
+    llvm.store %value, %out : i32, !llvm.ptr<1>
+    llvm.return
+  }
+
+  llvm.func spir_kernelcc @one_sided_divergent(%out: !llvm.ptr<1>,
+                                                %limit: i64) {
+    %axis = llvm.mlir.constant(0 : i32) : i32
+    %gid = llvm.call spir_funccc @_Z13get_global_idj(%axis) : (i32) -> i64
+    %active = llvm.icmp "ult" %gid, %limit : i64
+    llvm.cond_br %active, ^then, ^merge
+  ^then:
+    %one = llvm.mlir.constant(1 : i32) : i32
+    llvm.store %one, %out : i32, !llvm.ptr<1>
+    llvm.br ^merge
+  ^merge:
+    llvm.return
+  }
 }
 
 // CHECK-LABEL: func.func @vector_add(%{{.*}}: !xw.ptr<#xw.global>
@@ -142,3 +198,36 @@ module {
 // WIDTH32: xw.lane_id {{.*}} : !xw.simd<i32, 32>
 // WIDTH32: xw.local_id 1 {{.*}} : !xw.simd<i64, 32>
 // WIDTH32: xw.atomic_rmw addi {{.*}} -> (!xw.simd<i32, 32>, !xw.mem.token)
+
+// CHECK-LABEL: func.func @poison_freeze
+// CHECK: %[[POISON:.*]] = ub.poison : i32
+// CHECK: xw.freeze %[[POISON]] {{.*}}boundary.note = "kept"
+// CHECK: %[[PTR_POISON:.*]] = ub.poison : !xw.ptr<#xw.global>
+// CHECK: xw.freeze %[[PTR_POISON]]
+// CHECK-NOT: llvm.
+
+// CHECK-LABEL: func.func @mixed
+// CHECK: %[[INT_SPLAT:.*]] = xw.splat {{.*}} : i64 -> !xw.simd<i64, 16>
+// CHECK: xw.cmpi ult {{.*}}, %[[INT_SPLAT]] {{.*}} : !xw.simd<i64, 16>, !xw.simd<i64, 16> -> !xw.mask<16>
+// CHECK: xw.splat {{.*}} : i64 -> !xw.simd<i64, 16>
+// CHECK: xw.cmpi ugt {{.*}} : !xw.simd<i64, 16>, !xw.simd<i64, 16> -> !xw.mask<16>
+// CHECK: xw.splat {{.*}} : !xw.ptr<#xw.global> -> !xw.simd<!xw.ptr<#xw.global>, 16>
+// CHECK: xw.ptr_cmp eq {{.*}} -> !xw.mask<16>
+// CHECK: xw.splat {{.*}} : f32 -> !xw.simd<f32, 16>
+// CHECK: xw.cmpf olt {{.*}} -> !xw.mask<16>
+// CHECK: xw.select {{.*}} : !xw.mask<16>, !xw.simd<i64, 16>
+// CHECK: xw.select {{.*}} : !xw.mask<16>, !xw.simd<!xw.ptr<#xw.global>, 16>
+// CHECK: xw.select {{.*}} : !xw.mask<16>, !xw.simd<f32, 16>
+
+// CHECK-LABEL: func.func @divergent_if
+// CHECK: xw.where {{.*}} {
+// CHECK: xw.yield
+// CHECK: } otherwise {
+// CHECK: xw.yield
+// CHECK-NOT: scf.if
+
+// CHECK-LABEL: func.func @one_sided_divergent
+// CHECK: xw.where {{.*}} {
+// CHECK: xw.store
+// CHECK: } otherwise {
+// CHECK-NOT: scf.if

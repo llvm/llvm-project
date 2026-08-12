@@ -29,6 +29,7 @@ add_mlir_library(InterTransforms
   MLIRDialectUtils
   MLIRSCFTransforms
   MLIRTransformUtils
+  MLIRUBDialect
   MLIRIR
   MLIRPass
 )

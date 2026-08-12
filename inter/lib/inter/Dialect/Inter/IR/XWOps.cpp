@@ -34,8 +34,8 @@ static std::optional<int64_t> getTypeCardinality(Type type) {
 
 static std::optional<int64_t> getEnclosingWidth(Operation *op) {
   for (Operation *scope = op; scope; scope = scope->getParentOp()) {
-    IntegerAttr width = scope->getAttrOfType<IntegerAttr>(
-        XWDialect::getSimdWidthAttrName());
+    IntegerAttr width =
+        scope->getAttrOfType<IntegerAttr>(XWDialect::getSimdWidthAttrName());
     if (width)
       return width.getInt();
   }
@@ -43,11 +43,13 @@ static std::optional<int64_t> getEnclosingWidth(Operation *op) {
 }
 
 static LogicalResult verifyCardinalities(Operation *op) {
-  bool hasCardinality = llvm::any_of(op->getOperandTypes(), [](Type type) {
-    return getTypeCardinality(type).has_value();
-  }) || llvm::any_of(op->getResultTypes(), [](Type type) {
-    return getTypeCardinality(type).has_value();
-  });
+  bool hasCardinality =
+      llvm::any_of(
+          op->getOperandTypes(),
+          [](Type type) { return getTypeCardinality(type).has_value(); }) ||
+      llvm::any_of(op->getResultTypes(), [](Type type) {
+        return getTypeCardinality(type).has_value();
+      });
   if (!hasCardinality)
     return success();
   std::optional<int64_t> width = getEnclosingWidth(op);
@@ -112,7 +114,8 @@ classifyNumber(Type type,
   }
   if (isa<FloatType>(type))
     return Shape{type, cardinality};
-  return emitError("expected a signless integer, index, or floating-point type");
+  return emitError(
+      "expected a signless integer, index, or floating-point type");
 }
 
 static FailureOr<PointerShape>
@@ -146,8 +149,7 @@ static LogicalResult verifyFloatShape(Operation *op, Type lhs, Type rhs,
   return success();
 }
 
-static LogicalResult verifyDimQuery(Operation *op, int64_t dim,
-                                    bool varying) {
+static LogicalResult verifyDimQuery(Operation *op, int64_t dim, bool varying) {
   if (dim < 0 || dim > 2)
     return op->emitOpError("dimension must be 0, 1, or 2");
   Type result = op->getResult(0).getType();
@@ -161,9 +163,8 @@ static LogicalResult verifyDimQuery(Operation *op, int64_t dim,
   return verifyCardinalities(op);
 }
 
-static LogicalResult verifyPointerValueCardinality(Operation *op,
-                                                   Type pointerType,
-                                                   Type valueType) {
+static LogicalResult
+verifyPointerValueCardinality(Operation *op, Type pointerType, Type valueType) {
   auto emit = [op](const Twine &message) { return op->emitOpError(message); };
   FailureOr<PointerShape> pointer = classifyPointer(pointerType, emit);
   if (failed(pointer))
@@ -241,9 +242,7 @@ LogicalResult SplatOp::verify() {
   return verifyCardinalities(getOperation());
 }
 
-OpFoldResult SplatOp::fold(FoldAdaptor adaptor) {
-  return adaptor.getSource();
-}
+OpFoldResult SplatOp::fold(FoldAdaptor adaptor) { return adaptor.getSource(); }
 
 LogicalResult ReadFirstOp::verify() {
   if (cast<SimdType>(getSource().getType()).getElementType() !=
@@ -272,8 +271,21 @@ LogicalResult ExpandOp::verify() {
   return verifyCardinalities(getOperation());
 }
 
-OpFoldResult ExpandOp::fold(FoldAdaptor adaptor) {
-  return adaptor.getSource();
+OpFoldResult ExpandOp::fold(FoldAdaptor adaptor) { return adaptor.getSource(); }
+
+LogicalResult FreezeOp::verify() {
+  Type type = getSource().getType();
+  if (type != getResult().getType())
+    return emitOpError("source and result must have the same type");
+  if (SimdType simd = dyn_cast<SimdType>(type))
+    type = simd.getElementType();
+  IntegerType integer = dyn_cast<IntegerType>(type);
+  if ((!integer || !integer.isSignless()) && !type.isIndex() &&
+      !isa<FloatType, PtrType>(type))
+    return emitOpError(
+        "requires a bare or SIMD signless integer, index, floating-point, or "
+        "XW pointer payload");
+  return verifyCardinalities(getOperation());
 }
 
 LogicalResult BinaryOp::verify() {
@@ -324,38 +336,66 @@ OpFoldResult BinaryOp::fold(FoldAdaptor adaptor) {
   APInt b = rhs.getValue();
   APInt value = a;
   switch (getKind()) {
-  case BinaryKind::AddI: value = a + b; break;
-  case BinaryKind::SubI: value = a - b; break;
-  case BinaryKind::MulI: value = a * b; break;
-  case BinaryKind::AndI: value = a & b; break;
-  case BinaryKind::OrI: value = a | b; break;
-  case BinaryKind::XOrI: value = a ^ b; break;
+  case BinaryKind::AddI:
+    value = a + b;
+    break;
+  case BinaryKind::SubI:
+    value = a - b;
+    break;
+  case BinaryKind::MulI:
+    value = a * b;
+    break;
+  case BinaryKind::AndI:
+    value = a & b;
+    break;
+  case BinaryKind::OrI:
+    value = a | b;
+    break;
+  case BinaryKind::XOrI:
+    value = a ^ b;
+    break;
   case BinaryKind::ShLI:
-    if (b.uge(b.getBitWidth())) return {};
-    value = a.shl(b); break;
+    if (b.uge(b.getBitWidth()))
+      return {};
+    value = a.shl(b);
+    break;
   case BinaryKind::ShRUI:
-    if (b.uge(b.getBitWidth())) return {};
-    value = a.lshr(b); break;
+    if (b.uge(b.getBitWidth()))
+      return {};
+    value = a.lshr(b);
+    break;
   case BinaryKind::ShRSI:
-    if (b.uge(b.getBitWidth())) return {};
-    value = a.ashr(b); break;
+    if (b.uge(b.getBitWidth()))
+      return {};
+    value = a.ashr(b);
+    break;
   case BinaryKind::DivUI:
-    if (b.isZero()) return {};
-    value = a.udiv(b); break;
+    if (b.isZero())
+      return {};
+    value = a.udiv(b);
+    break;
   case BinaryKind::DivSI: {
     bool overflow = false;
-    if (b.isZero()) return {};
+    if (b.isZero())
+      return {};
     value = a.sdiv_ov(b, overflow);
-    if (overflow) return {};
+    if (overflow)
+      return {};
     break;
   }
   case BinaryKind::RemUI:
-    if (b.isZero()) return {};
-    value = a.urem(b); break;
+    if (b.isZero())
+      return {};
+    value = a.urem(b);
+    break;
   case BinaryKind::RemSI:
-    if (b.isZero()) return {};
-    value = a.srem(b); break;
-  case BinaryKind::MulHUI: value = llvm::APIntOps::mulhu(a, b); break;
+    if (b.isZero())
+      return {};
+    value = a.srem(b);
+    break;
+  case BinaryKind::MulHUI:
+    value = llvm::APIntOps::mulhu(a, b);
+    break;
   }
   return IntegerAttr::get(getPayloadType(getType()), value);
 }
@@ -415,12 +455,12 @@ LogicalResult CastOp::verify() {
           field.getName() != "extension")
         return emitOpError("unknown cast policy field '")
                << field.getName() << "'";
-  bool hasRounding = hasPolicyField(
-      policy, "rounding", TypeID::get<CastRoundingPolicyAttr>());
+  bool hasRounding =
+      hasPolicyField(policy, "rounding", TypeID::get<CastRoundingPolicyAttr>());
   bool needsSignedness =
       getKind() == CastKind::IntToFp || getKind() == CastKind::FpToInt;
-  bool hasSignedness = hasPolicyField(
-      policy, "signedness", TypeID::get<CastSignednessPolicyAttr>());
+  bool hasSignedness = hasPolicyField(policy, "signedness",
+                                      TypeID::get<CastSignednessPolicyAttr>());
   if (needsSignedness != hasSignedness)
     return emitOpError(needsSignedness
                            ? "signedness policy is required"
@@ -432,18 +472,18 @@ LogicalResult CastOp::verify() {
   if (hasRounding && getKind() != CastKind::FpConvert &&
       getKind() != CastKind::IntToFp)
     return emitOpError("rounding policy requires fpconvert or int_to_fp");
-  bool wideningInteger =
-      getKind() == CastKind::IntConvert &&
-      getNumberBitWidth(result->elementType) >
-          getNumberBitWidth(source->elementType);
-  bool hasExtension = hasPolicyField(
-      policy, "extension", TypeID::get<CastExtensionPolicyAttr>());
+  bool wideningInteger = getKind() == CastKind::IntConvert &&
+                         getNumberBitWidth(result->elementType) >
+                             getNumberBitWidth(source->elementType);
+  bool hasExtension = hasPolicyField(policy, "extension",
+                                     TypeID::get<CastExtensionPolicyAttr>());
   if (policy && policy.get("extension") && !hasExtension)
     return emitOpError("extension policy has the wrong attribute type");
   if (wideningInteger != hasExtension)
-    return emitOpError(wideningInteger
-                           ? "extension policy is required for widening intconvert"
-                           : "extension policy is only valid for widening intconvert");
+    return emitOpError(
+        wideningInteger
+            ? "extension policy is required for widening intconvert"
+            : "extension policy is only valid for widening intconvert");
   return verifyCardinalities(getOperation());
 }
 
@@ -479,24 +519,21 @@ LogicalResult FmaOp::verify() {
 LogicalResult FExp2Op::verify() {
   if (getSource().getType() != getResult().getType())
     return emitOpError("operand and result must have the same SIMD type");
-  if (!isa<FloatType>(
-          cast<SimdType>(getSource().getType()).getElementType()))
+  if (!isa<FloatType>(cast<SimdType>(getSource().getType()).getElementType()))
     return emitOpError("SIMD element type must be floating-point");
   return verifyCardinalities(getOperation());
 }
 LogicalResult FRcpOp::verify() {
   if (getSource().getType() != getResult().getType())
     return emitOpError("operand and result must have the same SIMD type");
-  if (!isa<FloatType>(
-          cast<SimdType>(getSource().getType()).getElementType()))
+  if (!isa<FloatType>(cast<SimdType>(getSource().getType()).getElementType()))
     return emitOpError("SIMD element type must be floating-point");
   return verifyCardinalities(getOperation());
 }
 
 namespace {
-static LogicalResult verifyComparison(Operation *op, Type lhsType,
-                                      Type rhsType, Type resultType,
-                                      bool floating) {
+static LogicalResult verifyComparison(Operation *op, Type lhsType, Type rhsType,
+                                      Type resultType, bool floating) {
   auto emit = [op](const Twine &message) { return op->emitOpError(message); };
   FailureOr<Shape> lhs =
       floating ? classifyNumber(lhsType, emit) : classifyInteger(lhsType, emit);
@@ -504,16 +541,15 @@ static LogicalResult verifyComparison(Operation *op, Type lhsType,
       floating ? classifyNumber(rhsType, emit) : classifyInteger(rhsType, emit);
   if (failed(lhs) || failed(rhs))
     return failure();
-  if (floating && (!isa<FloatType>(lhs->elementType) ||
-                   !isa<FloatType>(rhs->elementType)))
+  if (floating &&
+      (!isa<FloatType>(lhs->elementType) || !isa<FloatType>(rhs->elementType)))
     return op->emitOpError("operands must have floating-point elements");
   if (lhsType != rhsType)
     return op->emitOpError("operands must have the same type");
   if (lhs->cardinality) {
     MaskType mask = dyn_cast<MaskType>(resultType);
     if (!mask || mask.getCardinality() != *lhs->cardinality)
-      return op->emitOpError(
-          "SIMD comparison result must be a matching mask");
+      return op->emitOpError("SIMD comparison result must be a matching mask");
   } else if (!resultType.isInteger(1)) {
     return op->emitOpError("uniform comparison result must be i1");
   }
@@ -535,8 +571,9 @@ OpFoldResult CmpIOp::fold(FoldAdaptor adaptor) {
   IntegerAttr rhs = dyn_cast_or_null<IntegerAttr>(adaptor.getRhs());
   if (!lhs || !rhs)
     return {};
-  return Builder(getContext()).getBoolAttr(
-      arith::applyCmpPredicate(getPredicate(), lhs.getValue(), rhs.getValue()));
+  return Builder(getContext())
+      .getBoolAttr(arith::applyCmpPredicate(getPredicate(), lhs.getValue(),
+                                            rhs.getValue()));
 }
 
 OpFoldResult CmpFOp::fold(FoldAdaptor) { return {}; }
@@ -550,7 +587,8 @@ LogicalResult SelectOp::verify() {
     return emitOpError("condition must be i1 or an XW mask");
   std::optional<int64_t> resultCardinality = getTypeCardinality(getType());
   if (!resultCardinality || *resultCardinality != mask.getCardinality())
-    return emitOpError("mask condition requires a matching SIMD or mask result");
+    return emitOpError(
+        "mask condition requires a matching SIMD or mask result");
   return verifyCardinalities(getOperation());
 }
 
@@ -567,61 +605,75 @@ OpFoldResult SelectOp::fold(FoldAdaptor adaptor) {
 static LogicalResult verifyMaskOperation(Operation *op) {
   return verifyCardinalities(op);
 }
-LogicalResult MaskAndOp::verify() { return verifyMaskOperation(getOperation()); }
+LogicalResult MaskAndOp::verify() {
+  return verifyMaskOperation(getOperation());
+}
 LogicalResult MaskOrOp::verify() { return verifyMaskOperation(getOperation()); }
-LogicalResult MaskXorOp::verify() { return verifyMaskOperation(getOperation()); }
-LogicalResult MaskNotOp::verify() { return verifyMaskOperation(getOperation()); }
+LogicalResult MaskXorOp::verify() {
+  return verifyMaskOperation(getOperation());
+}
+LogicalResult MaskNotOp::verify() {
+  return verifyMaskOperation(getOperation());
+}
 
 OpFoldResult MaskAndOp::fold(FoldAdaptor adaptor) {
-  if (getLhs() == getRhs()) return getLhs();
-  if (matchPattern(adaptor.getLhs(), m_Zero())) return adaptor.getLhs();
-  if (matchPattern(adaptor.getRhs(), m_Zero())) return adaptor.getRhs();
+  if (getLhs() == getRhs())
+    return getLhs();
+  if (matchPattern(adaptor.getLhs(), m_Zero()))
+    return adaptor.getLhs();
+  if (matchPattern(adaptor.getRhs(), m_Zero()))
+    return adaptor.getRhs();
   return {};
 }
 OpFoldResult MaskOrOp::fold(FoldAdaptor adaptor) {
-  if (getLhs() == getRhs()) return getLhs();
-  if (matchPattern(adaptor.getLhs(), m_Zero())) return getRhs();
-  if (matchPattern(adaptor.getRhs(), m_Zero())) return getLhs();
+  if (getLhs() == getRhs())
+    return getLhs();
+  if (matchPattern(adaptor.getLhs(), m_Zero()))
+    return getRhs();
+  if (matchPattern(adaptor.getRhs(), m_Zero()))
+    return getLhs();
   return {};
 }
 OpFoldResult MaskXorOp::fold(FoldAdaptor adaptor) {
   if (getLhs() == getRhs())
     return Builder(getContext()).getBoolAttr(false);
-  if (matchPattern(adaptor.getLhs(), m_Zero())) return getRhs();
-  if (matchPattern(adaptor.getRhs(), m_Zero())) return getLhs();
+  if (matchPattern(adaptor.getLhs(), m_Zero()))
+    return getRhs();
+  if (matchPattern(adaptor.getRhs(), m_Zero()))
+    return getLhs();
   return {};
 }
 OpFoldResult MaskNotOp::fold(FoldAdaptor adaptor) {
   IntegerAttr value = dyn_cast_or_null<IntegerAttr>(adaptor.getInput());
-  if (!value) return {};
+  if (!value)
+    return {};
   return Builder(getContext()).getBoolAttr(value.getValue().isZero());
 }
 
 LogicalResult BallotOp::verify() {
-  int64_t cardinality =
-      cast<MaskType>(getMask().getType()).getCardinality();
+  int64_t cardinality = cast<MaskType>(getMask().getType()).getCardinality();
   unsigned expectedWidth = cardinality <= 8 ? 8 : cardinality <= 16 ? 16 : 32;
   if (getResult().getType().getWidth() != expectedWidth)
-    return emitOpError("result width must be 8, 16, or 32 and cover the mask cardinality");
+    return emitOpError(
+        "result width must be 8, 16, or 32 and cover the mask cardinality");
   return verifyCardinalities(getOperation());
 }
 
 OpFoldResult BallotOp::fold(FoldAdaptor adaptor) {
   IntegerAttr mask = dyn_cast_or_null<IntegerAttr>(adaptor.getMask());
-  if (!mask) return {};
+  if (!mask)
+    return {};
   unsigned width = getResult().getType().getWidth();
-  APInt value = mask.getValue().isZero()
-                    ? APInt::getZero(width)
-                    : APInt::getLowBitsSet(
-                          width, cast<MaskType>(getMask().getType())
-                                     .getCardinality());
+  APInt value =
+      mask.getValue().isZero()
+          ? APInt::getZero(width)
+          : APInt::getLowBitsSet(
+                width, cast<MaskType>(getMask().getType()).getCardinality());
   return IntegerAttr::get(getResult().getType(), value);
 }
 
 namespace {
-static Type getVectorPayload(Type type) {
-  return getPayloadType(type);
-}
+static Type getVectorPayload(Type type) { return getPayloadType(type); }
 } // namespace
 
 LogicalResult PackOp::verify() {
@@ -656,7 +708,8 @@ OpFoldResult PackOp::fold(FoldAdaptor) {
 }
 
 LogicalResult ExtractOp::verify() {
-  VectorType sourceVector = dyn_cast<VectorType>(getVectorPayload(getSource().getType()));
+  VectorType sourceVector =
+      dyn_cast<VectorType>(getVectorPayload(getSource().getType()));
   if (!sourceVector || sourceVector.getRank() != 1)
     return emitOpError("source payload must be a 1-D vector");
   if (getIndex() >= static_cast<uint64_t>(sourceVector.getNumElements()))
@@ -672,14 +725,16 @@ LogicalResult ExtractOp::verify() {
       getIndex() + static_cast<uint64_t>(resultCount) >
           static_cast<uint64_t>(sourceVector.getNumElements()))
     return emitOpError("result payload must be an in-bounds source slice");
-  if (getTypeCardinality(getSource().getType()) != getTypeCardinality(getType()))
+  if (getTypeCardinality(getSource().getType()) !=
+      getTypeCardinality(getType()))
     return emitOpError("source and result SIMD shapes must match");
   return verifyCardinalities(getOperation());
 }
 
 OpFoldResult ExtractOp::fold(FoldAdaptor) {
   PackOp pack = getSource().getDefiningOp<PackOp>();
-  if (!pack || getIndex() >= pack.getInputs().size()) return {};
+  if (!pack || getIndex() >= pack.getInputs().size())
+    return {};
   Value input = pack.getInputs()[getIndex()];
   return input.getType() == getType() ? OpFoldResult(input) : OpFoldResult();
 }
@@ -692,7 +747,8 @@ LogicalResult PtrAddOp::verify() {
   FailureOr<PointerShape> base = classifyPointer(getBase().getType(), emit);
   FailureOr<Shape> offset = classifyInteger(getOffset().getType(), emit);
   FailureOr<PointerShape> result = classifyPointer(getResult().getType(), emit);
-  if (failed(base) || failed(offset) || failed(result)) return failure();
+  if (failed(base) || failed(offset) || failed(result))
+    return failure();
   if (base->pointerType != result->pointerType)
     return emitOpError("result pointer type must match base pointer type");
   if (base->cardinality && offset->cardinality &&
@@ -709,10 +765,12 @@ LogicalResult AddrspaceCastOp::verify() {
   auto emit = [this](const Twine &message) { return emitOpError(message); };
   FailureOr<PointerShape> source = classifyPointer(getSource().getType(), emit);
   FailureOr<PointerShape> result = classifyPointer(getResult().getType(), emit);
-  if (failed(source) || failed(result)) return failure();
+  if (failed(source) || failed(result))
+    return failure();
   if (source->cardinality != result->cardinality)
     return emitOpError("source and result pointer shapes must match");
-  if (source->pointerType.getAddressSpace() == result->pointerType.getAddressSpace())
+  if (source->pointerType.getAddressSpace() ==
+      result->pointerType.getAddressSpace())
     return emitOpError("source and result address spaces must differ");
   return verifyCardinalities(getOperation());
 }
@@ -721,7 +779,8 @@ LogicalResult PtrToIntOp::verify() {
   auto emit = [this](const Twine &message) { return emitOpError(message); };
   FailureOr<PointerShape> source = classifyPointer(getSource().getType(), emit);
   FailureOr<Shape> result = classifyInteger(getResult().getType(), emit);
-  if (failed(source) || failed(result)) return failure();
+  if (failed(source) || failed(result))
+    return failure();
   if (source->cardinality != result->cardinality)
     return emitOpError("source and result shapes must match");
   return verifyCardinalities(getOperation());
@@ -731,7 +790,8 @@ LogicalResult IntToPtrOp::verify() {
   auto emit = [this](const Twine &message) { return emitOpError(message); };
   FailureOr<Shape> source = classifyInteger(getSource().getType(), emit);
   FailureOr<PointerShape> result = classifyPointer(getResult().getType(), emit);
-  if (failed(source) || failed(result)) return failure();
+  if (failed(source) || failed(result))
+    return failure();
   if (source->cardinality != result->cardinality)
     return emitOpError("source and result shapes must match");
   return verifyCardinalities(getOperation());
@@ -739,7 +799,8 @@ LogicalResult IntToPtrOp::verify() {
 
 LogicalResult NullOp::verify() {
   auto emit = [this](const Twine &message) { return emitOpError(message); };
-  if (failed(classifyPointer(getResult().getType(), emit))) return failure();
+  if (failed(classifyPointer(getResult().getType(), emit)))
+    return failure();
   return verifyCardinalities(getOperation());
 }
 
@@ -750,8 +811,10 @@ LogicalResult PtrCmpOp::verify() {
   auto emit = [this](const Twine &message) { return emitOpError(message); };
   FailureOr<PointerShape> lhs = classifyPointer(getLhs().getType(), emit);
   FailureOr<PointerShape> rhs = classifyPointer(getRhs().getType(), emit);
-  if (failed(lhs) || failed(rhs)) return failure();
-  if (lhs->pointerType != rhs->pointerType || lhs->cardinality != rhs->cardinality)
+  if (failed(lhs) || failed(rhs))
+    return failure();
+  if (lhs->pointerType != rhs->pointerType ||
+      lhs->cardinality != rhs->cardinality)
     return emitOpError("pointer operands must have the same type");
   if (lhs->cardinality) {
     MaskType result = dyn_cast<MaskType>(getResult().getType());
@@ -764,15 +827,19 @@ LogicalResult PtrCmpOp::verify() {
 }
 
 OpFoldResult PtrCmpOp::fold(FoldAdaptor) {
-  if (getLhs() != getRhs()) return {};
-  return Builder(getContext()).getBoolAttr(getPredicate() == arith::CmpIPredicate::eq);
+  if (getLhs() != getRhs())
+    return {};
+  return Builder(getContext())
+      .getBoolAttr(getPredicate() == arith::CmpIPredicate::eq);
 }
 
 LogicalResult WhereOp::verify() {
-  if (failed(verifyCardinalities(getOperation()))) return failure();
+  if (failed(verifyCardinalities(getOperation())))
+    return failure();
   auto verifyYield = [&](Region &region, StringRef name) -> LogicalResult {
     YieldOp yield = dyn_cast<YieldOp>(region.front().getTerminator());
-    if (!yield) return emitOpError(name) << " region must terminate with xw.yield";
+    if (!yield)
+      return emitOpError(name) << " region must terminate with xw.yield";
     if (yield.getValues().size() != getResults().size())
       return emitOpError(name) << " yield count must match result count";
     for (auto [value, result] : llvm::zip(yield.getValues(), getResults()))
@@ -780,8 +847,10 @@ LogicalResult WhereOp::verify() {
         return emitOpError(name) << " yield types must match result types";
     return success();
   };
-  if (failed(verifyYield(getThenRegion(), "then"))) return failure();
-  if (!getElseRegion().empty()) return verifyYield(getElseRegion(), "else");
+  if (failed(verifyYield(getThenRegion(), "then")))
+    return failure();
+  if (!getElseRegion().empty())
+    return verifyYield(getElseRegion(), "else");
   if (getNumResults() != 0)
     return emitOpError("with results requires an otherwise region");
   return success();
@@ -791,8 +860,10 @@ void WhereOp::getSuccessorRegions(RegionBranchPoint point,
                                   SmallVectorImpl<RegionSuccessor> &regions) {
   if (point.isParent()) {
     regions.emplace_back(&getThenRegion());
-    if (!getElseRegion().empty()) regions.emplace_back(&getElseRegion());
-    else if (getNumResults() == 0) regions.emplace_back(getOperation());
+    if (!getElseRegion().empty())
+      regions.emplace_back(&getElseRegion());
+    else if (getNumResults() == 0)
+      regions.emplace_back(getOperation());
     return;
   }
   regions.emplace_back(getOperation());
@@ -804,7 +875,8 @@ OperandRange WhereOp::getEntrySuccessorOperands(RegionSuccessor) {
 ValueRange WhereOp::getSuccessorInputs(RegionSuccessor successor) {
   return successor.isOperation() ? ValueRange(getResults()) : ValueRange();
 }
-MutableOperandRange YieldOp::getMutableSuccessorOperands(RegionSuccessor successor) {
+MutableOperandRange
+YieldOp::getMutableSuccessorOperands(RegionSuccessor successor) {
   MutableOperandRange values = getValuesMutable();
   return successor.isOperation() ? values : values.slice(0, 0);
 }
@@ -816,21 +888,38 @@ LogicalResult LaneIdOp::verify() {
     return emitOpError("result SIMD element must be a signless integer");
   return verifyCardinalities(getOperation());
 }
-LogicalResult GlobalIdOp::verify() { return verifyDimQuery(getOperation(), getDim(), true); }
-LogicalResult LocalIdOp::verify() { return verifyDimQuery(getOperation(), getDim(), true); }
-LogicalResult GroupIdOp::verify() { return verifyDimQuery(getOperation(), getDim(), false); }
-LogicalResult GlobalSizeOp::verify() { return verifyDimQuery(getOperation(), getDim(), false); }
-LogicalResult LocalSizeOp::verify() { return verifyDimQuery(getOperation(), getDim(), false); }
-LogicalResult NumGroupsOp::verify() { return verifyDimQuery(getOperation(), getDim(), false); }
-LogicalResult LaunchGridSizeOp::verify() { return verifyDimQuery(getOperation(), getDim(), false); }
-LogicalResult LaunchBlockSizeOp::verify() { return verifyDimQuery(getOperation(), getDim(), false); }
+LogicalResult GlobalIdOp::verify() {
+  return verifyDimQuery(getOperation(), getDim(), true);
+}
+LogicalResult LocalIdOp::verify() {
+  return verifyDimQuery(getOperation(), getDim(), true);
+}
+LogicalResult GroupIdOp::verify() {
+  return verifyDimQuery(getOperation(), getDim(), false);
+}
+LogicalResult GlobalSizeOp::verify() {
+  return verifyDimQuery(getOperation(), getDim(), false);
+}
+LogicalResult LocalSizeOp::verify() {
+  return verifyDimQuery(getOperation(), getDim(), false);
+}
+LogicalResult NumGroupsOp::verify() {
+  return verifyDimQuery(getOperation(), getDim(), false);
+}
+LogicalResult LaunchGridSizeOp::verify() {
+  return verifyDimQuery(getOperation(), getDim(), false);
+}
+LogicalResult LaunchBlockSizeOp::verify() {
+  return verifyDimQuery(getOperation(), getDim(), false);
+}
 
 LogicalResult ShuffleOp::verify() {
   if (getSource().getType() != getResult().getType())
     return emitOpError("source and result SIMD types must match");
   auto emit = [this](const Twine &message) { return emitOpError(message); };
   FailureOr<Shape> lane = classifyInteger(getSourceLane().getType(), emit);
-  if (failed(lane)) return failure();
+  if (failed(lane))
+    return failure();
   if (lane->cardinality &&
       *lane->cardinality !=
           cast<SimdType>(getSource().getType()).getCardinality())
@@ -838,9 +927,15 @@ LogicalResult ShuffleOp::verify() {
   return verifyCardinalities(getOperation());
 }
 
-OpFoldResult IssueTokenOp::fold(FoldAdaptor) { return foldTokenMerge(getDependencies()); }
-OpFoldResult AfterOp::fold(FoldAdaptor) { return foldTokenMerge(getDependencies()); }
-OpFoldResult JoinOp::fold(FoldAdaptor) { return foldTokenMerge(getDependencies()); }
+OpFoldResult IssueTokenOp::fold(FoldAdaptor) {
+  return foldTokenMerge(getDependencies());
+}
+OpFoldResult AfterOp::fold(FoldAdaptor) {
+  return foldTokenMerge(getDependencies());
+}
+OpFoldResult JoinOp::fold(FoldAdaptor) {
+  return foldTokenMerge(getDependencies());
+}
 
 LogicalResult LoadOp::verify() {
   return verifyPointerValueCardinality(getOperation(), getPtr().getType(),

@@ -40,6 +40,7 @@ def SelectToMachine : Pass<"inter-select-to-machine", "::mlir::ModuleOp"> {
   let dependentDialects = [
     "inter::xemachine::XeMachineDialect",
     "mlir::func::FuncDialect",
+    "mlir::ub::UBDialect",
   ];
 }
 

@@ -3,6 +3,7 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "llvm/Support/MathExtras.h"
@@ -44,7 +45,7 @@ static Distribution getTypeDistribution(Type type, unsigned simdWidth) {
     return {static_cast<unsigned>(mask.getCardinality())};
   if (isa<xw::MemTokenType>(type))
     return Distribution::bare();
-  return Distribution::full(simdWidth);
+  return Distribution::bare();
 }
 
 static bool isUniformSource(Operation *op) {
@@ -69,6 +70,10 @@ LogicalResult DistributionAnalysis::visitOperation(
   } else if (isa<xw::GlobalIdOp, xw::LocalIdOp, xw::LaneIdOp>(op)) {
     output = Distribution::full(simdWidth);
   } else if (isa<xw::SplatOp, xw::ExpandOp>(op)) {
+    output = getTypeDistribution(op->getResult(0).getType(), simdWidth);
+  } else if (isa<xw::FreezeOp>(op)) {
+    output = operands.front()->getValue();
+  } else if (isa<ub::PoisonOp>(op)) {
     output = getTypeDistribution(op->getResult(0).getType(), simdWidth);
   } else if (isa<xw::ReadFirstOp, xw::BallotOp>(op)) {
     output = Distribution::bare();

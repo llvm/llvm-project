@@ -1,4 +1,4 @@
-// RUN: inter-opt -canonicalize %s | FileCheck %s
+// RUN: inter-opt -canonicalize -cse %s | FileCheck %s
 
 // CHECK-LABEL: func.func @integer
 // CHECK-NEXT: %[[C:.*]] = xw.constant 7 : i32
@@ -33,4 +33,16 @@ func.func @token() -> !xw.mem.token {
   %root = xw.token : !xw.mem.token
   %joined = xw.join %root : !xw.mem.token -> !xw.mem.token
   return %joined : !xw.mem.token
+}
+
+// CHECK-LABEL: func.func @freeze
+// CHECK: %[[POISON:.*]] = ub.poison : i32
+// CHECK-NEXT: %[[A:.*]] = xw.freeze %[[POISON]] : i32
+// CHECK-NEXT: %[[B:.*]] = xw.freeze %[[POISON]] : i32
+// CHECK-NEXT: return %[[A]], %[[B]] : i32, i32
+func.func @freeze() -> (i32, i32) {
+  %poison = ub.poison : i32
+  %a = xw.freeze %poison : i32
+  %b = xw.freeze %poison : i32
+  return %a, %b : i32, i32
 }

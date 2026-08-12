@@ -8,6 +8,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
+#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
@@ -88,7 +89,42 @@ static std::optional<int64_t> getCardinality(Type type) {
   return std::nullopt;
 }
 
+static FailureOr<std::optional<int64_t>>
+getExactCardinality(Operation *op, ValueRange values) {
+  std::optional<int64_t> cardinality;
+  for (Value value : values) {
+    std::optional<int64_t> candidate = getCardinality(value.getType());
+    if (!candidate)
+      continue;
+    if (cardinality && cardinality != candidate)
+      return op->emitOpError("SIMD cardinalities must match; use xw.expand "
+                             "explicitly"),
+             failure();
+    cardinality = candidate;
+  }
+  return cardinality;
+}
+
+static Value createSplat(OpBuilder &builder, Location loc, Value value,
+                         int64_t cardinality) {
+  OperationState state(loc, "xw.splat");
+  state.addOperands(value);
+  state.addTypes(
+      xw::SimdType::get(value.getContext(), value.getType(), cardinality));
+  return builder.create(state)->getResult(0);
+}
+
+static Value splatToCardinality(Operation *anchor, Value value,
+                                int64_t cardinality) {
+  if (getCardinality(value.getType()))
+    return value;
+  OpBuilder builder(anchor);
+  return createSplat(builder, anchor->getLoc(), value, cardinality);
+}
+
 static LogicalResult reconcileMaterializedShapes(ModuleOp module) {
+  module.walk([](scf::IfOp op) { op->removeAttr("xw.boundary_converted"); });
+
   SmallVector<UnrealizedConversionCastOp> casts;
   module.walk([&](UnrealizedConversionCastOp cast) { casts.push_back(cast); });
   for (UnrealizedConversionCastOp cast : casts) {
@@ -97,9 +133,78 @@ static LogicalResult reconcileMaterializedShapes(ModuleOp module) {
             getPayloadType(cast.getResult(0).getType()))
       return cast.emitOpError(
           "non-shape unrealized conversion survived the LLVM boundary");
-    cast.getResult(0).replaceAllUsesWith(cast.getOperand(0));
+    Value replacement = cast.getOperand(0);
+    if (!getCardinality(replacement.getType()))
+      if (auto resultType =
+              dyn_cast<xw::SimdType>(cast.getResult(0).getType())) {
+        OpBuilder builder(cast);
+        replacement = xw::SplatOp::create(builder, cast.getLoc(), resultType,
+                                          replacement);
+      }
+    cast.getResult(0).replaceAllUsesWith(replacement);
     cast.erase();
   }
+
+  auto normalizeMixed = [&]() -> LogicalResult {
+    WalkResult normalized = module.walk([&](Operation *op) {
+      if (isa<xw::CmpIOp, xw::CmpFOp, xw::PtrCmpOp>(op)) {
+        FailureOr<std::optional<int64_t>> cardinality =
+            getExactCardinality(op, op->getOperands());
+        if (failed(cardinality))
+          return WalkResult::interrupt();
+        if (!*cardinality)
+          return WalkResult::advance();
+        OpBuilder builder(op);
+        for (unsigned index : llvm::seq<unsigned>(op->getNumOperands())) {
+          Value operand = op->getOperand(index);
+          if (getCardinality(operand.getType()))
+            continue;
+          op->setOperand(index, createSplat(builder, op->getLoc(), operand,
+                                            **cardinality));
+        }
+        op->getResult(0).setType(
+            xw::MaskType::get(op->getContext(), **cardinality));
+        return WalkResult::advance();
+      }
+
+      auto select = dyn_cast<xw::SelectOp>(op);
+      if (!select)
+        return WalkResult::advance();
+      FailureOr<std::optional<int64_t>> armCardinality = getExactCardinality(
+          op, ValueRange{select.getTrueValue(), select.getFalseValue()});
+      if (failed(armCardinality))
+        return WalkResult::interrupt();
+      std::optional<int64_t> conditionCardinality =
+          getCardinality(select.getCondition().getType());
+      if (conditionCardinality && *armCardinality &&
+          conditionCardinality != *armCardinality) {
+        op->emitOpError("select mask and arm cardinalities must match; use "
+                        "xw.expand explicitly");
+        return WalkResult::interrupt();
+      }
+      std::optional<int64_t> cardinality =
+          conditionCardinality ? conditionCardinality : *armCardinality;
+      if (!cardinality)
+        return WalkResult::advance();
+      OpBuilder builder(op);
+      for (unsigned index : {1u, 2u}) {
+        Value operand = op->getOperand(index);
+        if (getCardinality(operand.getType()))
+          continue;
+        op->setOperand(
+            index, createSplat(builder, op->getLoc(), operand, *cardinality));
+      }
+      if (op->getOperand(1).getType() != op->getOperand(2).getType()) {
+        op->emitOpError("select arms must have the same converted type");
+        return WalkResult::interrupt();
+      }
+      op->getResult(0).setType(op->getOperand(1).getType());
+      return WalkResult::advance();
+    });
+    return normalized.wasInterrupted() ? failure() : success();
+  };
+  if (failed(normalizeMixed()))
+    return failure();
 
   bool changed;
   do {
@@ -115,7 +220,7 @@ static LogicalResult reconcileMaterializedShapes(ModuleOp module) {
 
       Type resultType = op->getResult(0).getType();
       Type replacement;
-      if (isa<xw::CmpIOp, xw::CmpFOp>(op))
+      if (isa<xw::CmpIOp, xw::CmpFOp, xw::PtrCmpOp>(op))
         replacement = xw::MaskType::get(op->getContext(), *cardinality);
       else if (auto ptradd = dyn_cast<xw::PtrAddOp>(op)) {
         Type pointer = getPayloadType(ptradd.getBase().getType());
@@ -131,6 +236,39 @@ static LogicalResult reconcileMaterializedShapes(ModuleOp module) {
       }
     });
   } while (changed);
+
+  if (failed(normalizeMixed()))
+    return failure();
+
+  SmallVector<scf::IfOp> divergentIfs;
+  module.walk([&](scf::IfOp op) {
+    if (isa<xw::MaskType>(op->getOperand(0).getType()))
+      divergentIfs.push_back(op);
+  });
+  for (scf::IfOp op : divergentIfs) {
+    OperationState state(op.getLoc(), "xw.where");
+    state.addOperands(op->getOperand(0));
+    state.addTypes(op.getResultTypes());
+    state.addAttributes(op->getDiscardableAttrDictionary().getValue());
+    Region *thenRegion = state.addRegion();
+    Region *elseRegion = state.addRegion();
+    thenRegion->takeBody(op.getThenRegion());
+    elseRegion->takeBody(op.getElseRegion());
+    for (Region *region : {thenRegion, elseRegion}) {
+      if (region->empty())
+        continue;
+      scf::YieldOp yield = cast<scf::YieldOp>(region->front().getTerminator());
+      OpBuilder builder(yield);
+      OperationState yieldState(yield.getLoc(), "xw.yield");
+      yieldState.addOperands(yield.getOperands());
+      builder.create(yieldState);
+      yield.erase();
+    }
+    OpBuilder builder(op);
+    Operation *where = builder.create(state);
+    op->replaceAllUsesWith(where->getResults());
+    op.erase();
+  }
 
   SmallVector<xw::SplatOp> redundantSplats;
   module.walk([&](xw::SplatOp splat) {
@@ -154,7 +292,12 @@ static LogicalResult reconcileMaterializedShapes(ModuleOp module) {
   Operation *illegal = nullptr;
   module.walk([&](Operation *op) {
     auto hasLLVMType = [](Type type) { return containsLLVMType(type); };
-    if (llvm::any_of(op->getOperandTypes(), hasLLVMType) ||
+    if (isa<UnrealizedConversionCastOp>(op) ||
+        op->getName().getDialectNamespace() ==
+            LLVM::LLVMDialect::getDialectNamespace() ||
+        op->getName().getDialectNamespace() ==
+            cf::ControlFlowDialect::getDialectNamespace() ||
+        llvm::any_of(op->getOperandTypes(), hasLLVMType) ||
         llvm::any_of(op->getResultTypes(), hasLLVMType) ||
         llvm::any_of(op->getAttrs(), [](NamedAttribute attr) {
           return containsLLVMType(attr.getValue());
@@ -320,13 +463,32 @@ public:
     if (auto gep = dyn_cast<LLVM::GEPOp>(op))
       return convertGEP(gep, operands, rewriter);
 
-    if (isa<LLVM::UndefOp, LLVM::PoisonOp>(op))
-      return op->emitOpError(
-          "undef and poison have no sound XW representation");
+    if (isa<LLVM::UndefOp>(op))
+      return op->emitOpError("undef has no sound XW representation");
 
-    if (isa<LLVM::FreezeOp>(op))
-      return op->emitOpError(
-          "freeze is unsupported without proof that its operand is non-poison");
+    if (auto poison = dyn_cast<LLVM::PoisonOp>(op)) {
+      Type type = getTypeConverter()->convertType(poison.getType());
+      if (!type)
+        return rewriter.notifyMatchFailure(op,
+                                           "poison type has no XW conversion");
+      rewriter.replaceOpWithNewOp<ub::PoisonOp>(
+          poison, type, ub::PoisonAttr::get(op->getContext()));
+      return success();
+    }
+
+    if (auto freeze = dyn_cast<LLVM::FreezeOp>(op)) {
+      if (operands.size() != 1)
+        return rewriter.notifyMatchFailure(op, "freeze requires one operand");
+      Type type = getTypeConverter()->convertType(freeze.getType());
+      if (!type || type != operands.front().getType())
+        return rewriter.notifyMatchFailure(
+            op, "freeze source and result must have the same converted shape");
+      xw::FreezeOp converted = xw::FreezeOp::create(rewriter, freeze.getLoc(),
+                                                    type, operands.front());
+      converted->setAttrs(getImportedAttributes(op, rewriter));
+      rewriter.replaceOp(freeze, converted.getResult());
+      return success();
+    }
 
     if (isa<LLVM::FenceOp>(op))
       return op->emitOpError(
@@ -463,10 +625,45 @@ public:
       resultTypes.front() = distributedType(resultTypes.front());
     if (!resultTypes.empty() &&
         (replacement == "xw.cmpi" || replacement == "xw.cmpf")) {
-      Type distributed = distributedType(rewriter.getI1Type());
-      if (auto simd = dyn_cast<xw::SimdType>(distributed))
+      FailureOr<std::optional<int64_t>> cardinality =
+          getExactCardinality(op, rewrittenOperands);
+      if (failed(cardinality))
+        return failure();
+      if (*cardinality) {
+        for (unsigned index : llvm::seq<unsigned>(rewrittenOperands.size()))
+          rewrittenOperands[index] =
+              splatToCardinality(op, rewrittenOperands[index], **cardinality);
         resultTypes.front() =
-            xw::MaskType::get(op->getContext(), simd.getCardinality());
+            xw::MaskType::get(op->getContext(), **cardinality);
+      } else {
+        resultTypes.front() = rewriter.getI1Type();
+      }
+    }
+    if (!resultTypes.empty() && replacement == "xw.select") {
+      if (rewrittenOperands.size() != 3)
+        return rewriter.notifyMatchFailure(op,
+                                           "select requires three operands");
+      FailureOr<std::optional<int64_t>> armCardinality =
+          getExactCardinality(op, ValueRange(rewrittenOperands).drop_front());
+      if (failed(armCardinality))
+        return failure();
+      std::optional<int64_t> conditionCardinality =
+          getCardinality(rewrittenOperands.front().getType());
+      if (conditionCardinality && *armCardinality &&
+          conditionCardinality != *armCardinality)
+        return op->emitOpError("select mask and arm cardinalities must match; "
+                               "use xw.expand explicitly");
+      std::optional<int64_t> cardinality =
+          conditionCardinality ? conditionCardinality : *armCardinality;
+      if (cardinality) {
+        rewrittenOperands[1] =
+            splatToCardinality(op, rewrittenOperands[1], *cardinality);
+        rewrittenOperands[2] =
+            splatToCardinality(op, rewrittenOperands[2], *cardinality);
+      }
+      if (rewrittenOperands[1].getType() != rewrittenOperands[2].getType())
+        return op->emitOpError("select arms must have the same converted type");
+      resultTypes.front() = rewrittenOperands[1].getType();
     }
     if (!resultTypes.empty() &&
         (replacement == "xw.lane_id" || replacement == "xw.global_id" ||
@@ -801,6 +998,74 @@ private:
   }
 };
 
+class ConvertPoison final : public OpConversionPattern<ub::PoisonOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(ub::PoisonOp op, OpAdaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Attribute value = op.getValue();
+    if (value && !isa<ub::PoisonAttr>(value))
+      return op.emitOpError("only full ub.poison is supported");
+    Type type = getTypeConverter()->convertType(op.getType());
+    if (!type)
+      return rewriter.notifyMatchFailure(op,
+                                         "poison type has no XW conversion");
+    rewriter.replaceOpWithNewOp<ub::PoisonOp>(
+        op, type, ub::PoisonAttr::get(op.getContext()));
+    return success();
+  }
+};
+
+class ConvertSCFIf final : public OpConversionPattern<scf::IfOp> {
+public:
+  ConvertSCFIf(TypeConverter &converter, MLIRContext *context)
+      : OpConversionPattern(converter, context, 2) {}
+
+  LogicalResult
+  matchAndRewrite(scf::IfOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type conditionType = adaptor.getCondition().getType();
+    if (!conditionType.isInteger(1) && !isa<xw::MaskType>(conditionType))
+      return op.emitOpError("converted condition must be i1 or an XW mask");
+
+    SmallVector<Type> resultTypes;
+    if (failed(
+            getTypeConverter()->convertTypes(op.getResultTypes(), resultTypes)))
+      return rewriter.notifyMatchFailure(op,
+                                         "result type has no XW conversion");
+
+    OperationState state(op.getLoc(),
+                         conditionType.isInteger(1) ? "scf.if" : "xw.where");
+    state.addOperands(adaptor.getCondition());
+    state.addTypes(resultTypes);
+    state.addAttributes(getImportedAttributes(op, rewriter).getValue());
+    if (conditionType.isInteger(1))
+      state.addAttribute("xw.boundary_converted", rewriter.getUnitAttr());
+    Region *thenRegion = state.addRegion();
+    Region *elseRegion = state.addRegion();
+    thenRegion->takeBody(op.getThenRegion());
+    elseRegion->takeBody(op.getElseRegion());
+
+    if (isa<xw::MaskType>(conditionType)) {
+      for (Region *region : {thenRegion, elseRegion}) {
+        if (region->empty())
+          continue;
+        scf::YieldOp yield =
+            cast<scf::YieldOp>(region->front().getTerminator());
+        OpBuilder builder(yield);
+        xw::YieldOp::create(builder, yield.getLoc(), yield.getOperands());
+        yield.erase();
+      }
+    }
+
+    Operation *converted = rewriter.create(state);
+    rewriter.replaceOp(op, converted->getResults());
+    return success();
+  }
+};
+
 class ConvertFuncReturn final : public OpConversionPattern<func::ReturnOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
@@ -883,8 +1148,8 @@ struct ConvertLLVMToXW final
     }
     LLVMToXWTypeConverter converter(context);
     RewritePatternSet patterns(context);
-    patterns.add<ConvertLLVMOperation, ConvertFuncReturn, ConvertArithConstant>(
-        converter, context);
+    patterns.add<ConvertLLVMOperation, ConvertPoison, ConvertSCFIf,
+                 ConvertFuncReturn, ConvertArithConstant>(converter, context);
     populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(patterns,
                                                                    converter);
     scf::populateSCFStructuralTypeConversions(converter, patterns);
@@ -892,7 +1157,13 @@ struct ConvertLLVMToXW final
     ConversionTarget target(*context);
     target.addLegalDialect<xw::XWDialect, func::FuncDialect, scf::SCFDialect>();
     target.addLegalOp<ModuleOp>();
-    target.addIllegalDialect<LLVM::LLVMDialect, cf::ControlFlowDialect>();
+    target.addIllegalDialect<LLVM::LLVMDialect, cf::ControlFlowDialect,
+                             ub::UBDialect>();
+    target.addDynamicallyLegalOp<ub::PoisonOp>([&](ub::PoisonOp poison) {
+      Attribute value = poison.getValue();
+      return (!value || isa<ub::PoisonAttr>(value)) &&
+             converter.isLegal(poison.getType());
+    });
     target.markUnknownOpDynamicallyLegal([](Operation *op) {
       auto legalType = [](Type type) { return !containsLLVMType(type); };
       bool legalBuiltin = op->getName().getDialectNamespace() == "builtin";
@@ -907,6 +1178,13 @@ struct ConvertLLVMToXW final
              converter.isLegal(&function.getBody());
     });
     scf::populateSCFStructuralTypeConversionTarget(converter, target);
+    target.addDynamicallyLegalOp<scf::IfOp>([&](scf::IfOp op) {
+      return op->hasAttr("xw.boundary_converted") &&
+             converter.isLegal(op.getCondition().getType()) &&
+             converter.isLegal(op.getResultTypes()) &&
+             converter.isLegal(&op.getThenRegion()) &&
+             converter.isLegal(&op.getElseRegion());
+    });
 
     if (failed(
             applyFullConversion(getOperation(), target, std::move(patterns))) ||

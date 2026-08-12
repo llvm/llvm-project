@@ -192,3 +192,18 @@ func.func @boundary_caller(%arg: !xw.simd<i32, 8>) -> !xw.simd<i32, 8>
 // CHECK-LABEL: func.func @boundary_caller(%{{.*}}: !xw.simd<i32, 8>) -> !xw.simd<i32, 8>
 // CHECK: call @boundary_callee({{.*}}) : (!xw.simd<i32, 8>) -> !xw.simd<i32, 8>
 // CHECK: return {{.*}} : !xw.simd<i32, 8>
+
+func.func @poison_and_freeze()
+    attributes {xw.simd_width = 16 : i64} {
+  %poison8 = ub.poison : !xw.simd<i32, 8>
+  %poison_bare = ub.poison : i32
+  %frozen8 = xw.freeze %poison8 : !xw.simd<i32, 8>
+  %frozen_bare = xw.freeze %poison_bare : i32
+  return
+}
+
+// CHECK-LABEL: func.func @poison_and_freeze
+// CHECK: %[[P8:.*]] = ub.poison : !xw.simd<i32, 8>
+// CHECK: %[[PB:.*]] = ub.poison : i32
+// CHECK: xw.freeze %[[P8]] : !xw.simd<i32, 8>
+// CHECK: xw.freeze %[[PB]] : i32

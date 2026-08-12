@@ -2,9 +2,9 @@
 
 module {
   llvm.func spir_kernelcc @bad() {
-    %value = llvm.mlir.poison : i32
+    %value = llvm.mlir.undef : i32
     llvm.return
   }
 }
 
-// CHECK: undef and poison have no sound XW representation
+// CHECK: undef has no sound XW representation

@@ -6,6 +6,7 @@
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 
@@ -618,6 +619,58 @@ private:
       return WideValue{*scalar, *scalar};
     return owner->emitOpError("SIMD32 i64 operand was not decomposed"),
            failure();
+  }
+
+  LogicalResult lowerPoison(ub::PoisonOp operation) {
+    if (!isa<ub::PoisonAttr>(operation.getValue()))
+      return operation.emitOpError(
+          "selector accepts only fully poisoned #ub.poison values");
+
+    Type type = operation.getType();
+    FailureOr<ValueShape> shape = getShape(type, operation);
+    if (failed(shape))
+      return failure();
+    Type elementType = shape->elementType;
+    if (!elementType.isIntOrIndexOrFloat() && !isa<xw::PtrType>(elementType))
+      return operation.emitOpError("unsupported UB poison result type ")
+             << type;
+
+    Type machineType = elementType;
+    if (xw::PtrType pointer = dyn_cast<xw::PtrType>(elementType))
+      machineType = isa<xw::LocalAddressSpaceAttr>(pointer.getAddressSpace())
+                        ? i32()
+                        : i64();
+    Value zero = immediate(0, machineType);
+    if (isWideSimd(type)) {
+      WideValue result{zero, zero};
+      wideValues[operation.getResult()] = result;
+      if (isa<xw::PtrType>(elementType))
+        widePointers[operation.getResult()] = result;
+    } else {
+      values[operation.getResult()] = zero;
+    }
+    return success();
+  }
+
+  LogicalResult lowerFreeze(xw::FreezeOp operation) {
+    Type type = operation.getType();
+    if (isWideSimd(type)) {
+      FailureOr<WideValue> source =
+          isa<xw::PtrType>(cast<xw::SimdType>(type).getElementType())
+              ? materializeWidePointer(operation.getSource(), operation, 32)
+              : getWideValue(operation.getSource(), operation);
+      if (failed(source))
+        return failure();
+      wideValues[operation.getResult()] = *source;
+      if (isa<xw::PtrType>(cast<xw::SimdType>(type).getElementType()))
+        widePointers[operation.getResult()] = *source;
+      return success();
+    }
+    FailureOr<Value> source = getValue(operation.getSource(), operation);
+    if (failed(source))
+      return failure();
+    values[operation.getResult()] = *source;
+    return success();
   }
 
   FailureOr<Value> materialize(Value source, Operation *owner) {
@@ -2181,7 +2234,11 @@ private:
 
   LogicalResult lowerBlock(Block &block) {
     for (Operation &operation : block) {
-      if (xw::ConstantOp constant = dyn_cast<xw::ConstantOp>(operation)) {
+      if (ub::PoisonOp poison = dyn_cast<ub::PoisonOp>(operation)) {
+        if (failed(lowerPoison(poison)))
+          return failure();
+      } else if (xw::ConstantOp constant =
+                     dyn_cast<xw::ConstantOp>(operation)) {
         if (isWideSimd(constant.getResult().getType())) {
           FailureOr<int64_t> bits = getConstantBits(constant);
           if (failed(bits))
@@ -2199,6 +2256,9 @@ private:
           return failure();
       } else if (xw::ExpandOp expand = dyn_cast<xw::ExpandOp>(operation)) {
         if (failed(lowerView(expand, expand.getSource())))
+          return failure();
+      } else if (xw::FreezeOp freeze = dyn_cast<xw::FreezeOp>(operation)) {
+        if (failed(lowerFreeze(freeze)))
           return failure();
       } else if (xw::BinaryOp binary = dyn_cast<xw::BinaryOp>(operation)) {
         if (failed(lowerBinary(binary)))
@@ -2384,6 +2444,9 @@ private:
       } else if (operation.getName().getDialectNamespace() == "xw") {
         return operation.emitOpError(
             "unsupported semantic XW operation during XeMachine selection");
+      } else if (operation.getName().getDialectNamespace() == "ub") {
+        return operation.emitOpError(
+            "selector accepts only fully poisoned ub.poison operations");
       } else {
         return operation.emitOpError(
             "selector accepts only func, scf, and XW operations");

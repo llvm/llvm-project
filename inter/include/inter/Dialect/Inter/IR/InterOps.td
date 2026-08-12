@@ -56,6 +56,13 @@ def XW_ExpandOp : XW_Op<"expand", [Pure]> {
   let hasVerifier = 1;
 }
 
+def XW_FreezeOp : XW_Op<"freeze", [AllTypesMatch<["source", "result"]>]> {
+  let arguments = (ins AnyType:$source);
+  let results = (outs AnyType:$result);
+  let assemblyFormat = "$source attr-dict `:` type($source)";
+  let hasVerifier = 1;
+}
+
 def XW_BinaryOp : XW_Op<"binary", [Pure, Elementwise]> {
   let arguments = (ins XW_BinaryKindEnum:$kind, AnyType:$lhs, AnyType:$rhs);
   let results = (outs AnyType:$result);
