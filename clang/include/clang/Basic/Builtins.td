@@ -5767,12 +5767,6 @@ def HLSLSign : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
-def HLSLRadians : LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_elementwise_radians"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
-  let Prototype = "void(...)";
-}
-
 def HLSLBufferUpdateCounter : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_buffer_update_counter"];
   let Attributes = [NoThrow];
