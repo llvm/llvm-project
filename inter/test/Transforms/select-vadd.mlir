@@ -43,8 +43,8 @@ module {
 // CHECK: xemachine.load_block_a32
 // CHECK: xemachine.payload_prologue_end
 // CHECK: }
-// CHECK: xemachine.mov {{.*}}src0Type = i16
-// CHECK-COUNT-2: xemachine.add
+// CHECK-COUNT-2: xemachine.mov {{.*}}dstRegion = #xemachine.dstregion<4>
+// CHECK-COUNT-4: xemachine.add
 // CHECK-COUNT-2: xemachine.load_a64
 // CHECK: xemachine.add
 // CHECK: xemachine.store_a64

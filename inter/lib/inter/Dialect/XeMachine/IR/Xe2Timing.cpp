@@ -63,8 +63,8 @@ static unsigned getExecutionSize(Operation *operation) {
 }
 
 static Type getElementType(Operation *operation) {
-  if (TypeAttr elementType = operation->getAttrOfType<TypeAttr>("elemType"))
-    return elementType.getValue();
+  if (auto alu = dyn_cast<ALUOpInterface>(operation))
+    return alu.getInstructionElementType();
   return {};
 }
 

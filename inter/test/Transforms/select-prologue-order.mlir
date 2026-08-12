@@ -27,5 +27,5 @@ module {
 // CHECK: xemachine.load_block_a32
 // CHECK: xemachine.sync allwr
 // CHECK: xemachine.atomic_iadd_a64
-// CHECK: xemachine.mov {{.*}}src0Type = i16
-// CHECK-COUNT-2: xemachine.add
+// CHECK-COUNT-2: xemachine.mov {{.*}}dstRegion = #xemachine.dstregion<4>
+// CHECK-COUNT-4: xemachine.add

@@ -8,9 +8,9 @@ module {
   // CHECK-LABEL: func.func @payload_prologue
   // CHECK: xemachine.payload_prologue {
   // CHECK: [[BEFORE:%.*]] = xemachine.mov
-  // CHECK: xemachine.sync allwr
   // CHECK: xemachine.payload_prologue_end
   // CHECK: }
+  // CHECK: xemachine.sync allwr
   // CHECK: [[AFTER:%.*]] = xemachine.mov
   func.func @payload_prologue() attributes {
       xemachine.target = #xemachine.target<chip = "bmg">} {
@@ -18,9 +18,9 @@ module {
     xemachine.payload_prologue {
       %before = xemachine.mov %one {execSize = 1 : i32, noMask}
           : (!xemachine.imm, i32) -> !xemachine.reg<16, -1>
-      %boundary = xemachine.sync allwr : !xemachine.mem.token
       xemachine.payload_prologue_end
     }
+    %boundary = xemachine.sync allwr : !xemachine.mem.token
     %after = xemachine.mov %one {execSize = 1 : i32, noMask}
         : (!xemachine.imm, i32) -> !xemachine.reg<16, -1>
     return

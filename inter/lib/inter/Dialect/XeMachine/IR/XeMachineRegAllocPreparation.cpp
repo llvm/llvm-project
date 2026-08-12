@@ -31,8 +31,8 @@ static bool isMarkedCopy(Operation *operation) {
 static void legalizeWideImmediates(func::FuncOp function) {
   SmallVector<OpOperand *> operands;
   function.walk([&](Operation *operation) {
-    TypeAttr elementType = operation->getAttrOfType<TypeAttr>("elemType");
-    if (!elementType || !elementType.getValue().isInteger(64) ||
+    auto alu = dyn_cast<ALUOpInterface>(operation);
+    if (!alu || !alu.getInstructionElementType().isInteger(64) ||
         isa<MovOp>(operation))
       return;
     for (OpOperand &operand : operation->getOpOperands())
@@ -50,13 +50,11 @@ static void legalizeWideImmediates(func::FuncOp function) {
         /*maskOffset=*/0, operand->get());
     move->setAttr(kImmediateLegalizationAttr, builder.getUnitAttr());
     operand->set(move.getDst());
-    constexpr std::array<StringLiteral, 3> regionNames = {
-        "src0Region", "src1Region", "src2Region"};
     unsigned operandNumber = operand->getOperandNumber();
-    if (operandNumber < regionNames.size() &&
-        !owner->getAttr(regionNames[operandNumber]))
-      owner->setAttr(regionNames[operandNumber],
-                     RegionAttr::get(function.getContext(), 0, 1, 0));
+    ALUOpInterface alu = cast<ALUOpInterface>(owner);
+    if (!alu.getSourceRegion(operandNumber))
+      alu.setSourceRegion(operandNumber,
+                          RegionAttr::get(function.getContext(), 0, 1, 0));
   }
 }
 

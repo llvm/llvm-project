@@ -15,6 +15,79 @@ using namespace inter::xemachine;
 #define GET_OP_INTERFACE_CLASSES
 #include "inter/Dialect/XeMachine/IR/XeMachineInterfaces.cpp.inc"
 
+#define DEFINE_ALU_ELEMENT_TYPE(Op)                                        \
+  Type Op::getInstructionElementType() { return getElemType(); }
+
+#define DEFINE_UNARY_ALU_INTERFACE(Op)                                     \
+  DEFINE_ALU_ELEMENT_TYPE(Op)                                              \
+  RegionAttr Op::getSourceRegion(unsigned index) {                         \
+    return index == 0 ? getSrc0RegionAttr() : RegionAttr();                 \
+  }                                                                        \
+  void Op::setSourceRegion(unsigned index, RegionAttr region) {            \
+    if (index == 0)                                                        \
+      setSrc0RegionAttr(region);                                           \
+  }                                                                        \
+  std::optional<Type> Op::getExplicitSourceElementType(unsigned index) {   \
+    return index == 0 ? getSrc0Type() : std::nullopt;                       \
+  }
+
+#define DEFINE_BINARY_ALU_INTERFACE(Op)                                    \
+  DEFINE_ALU_ELEMENT_TYPE(Op)                                              \
+  RegionAttr Op::getSourceRegion(unsigned index) {                         \
+    if (index == 0)                                                        \
+      return getSrc0RegionAttr();                                          \
+    return index == 1 ? getSrc1RegionAttr() : RegionAttr();                 \
+  }                                                                        \
+  void Op::setSourceRegion(unsigned index, RegionAttr region) {            \
+    if (index == 0)                                                        \
+      setSrc0RegionAttr(region);                                           \
+    else if (index == 1)                                                   \
+      setSrc1RegionAttr(region);                                           \
+  }                                                                        \
+  std::optional<Type> Op::getExplicitSourceElementType(unsigned index) {   \
+    if (index == 0)                                                        \
+      return getSrc0Type();                                                \
+    return index == 1 ? getSrc1Type() : std::nullopt;                       \
+  }
+
+DEFINE_UNARY_ALU_INTERFACE(MovOp)
+DEFINE_BINARY_ALU_INTERFACE(AddOp)
+DEFINE_BINARY_ALU_INTERFACE(SubOp)
+DEFINE_BINARY_ALU_INTERFACE(ShlOp)
+DEFINE_BINARY_ALU_INTERFACE(ShrOp)
+DEFINE_BINARY_ALU_INTERFACE(AndOp)
+DEFINE_BINARY_ALU_INTERFACE(OrOp)
+DEFINE_BINARY_ALU_INTERFACE(MulOp)
+DEFINE_BINARY_ALU_INTERFACE(CmpOp)
+
+DEFINE_ALU_ELEMENT_TYPE(Add3Op)
+RegionAttr Add3Op::getSourceRegion(unsigned index) {
+  if (index == 0)
+    return getSrc0RegionAttr();
+  if (index == 1)
+    return getSrc1RegionAttr();
+  return index == 2 ? getSrc2RegionAttr() : RegionAttr();
+}
+void Add3Op::setSourceRegion(unsigned index, RegionAttr region) {
+  if (index == 0)
+    setSrc0RegionAttr(region);
+  else if (index == 1)
+    setSrc1RegionAttr(region);
+  else if (index == 2)
+    setSrc2RegionAttr(region);
+}
+std::optional<Type> Add3Op::getExplicitSourceElementType(unsigned index) {
+  if (index == 0)
+    return getSrc0Type();
+  if (index == 1)
+    return getSrc1Type();
+  return index == 2 ? getSrc2Type() : std::nullopt;
+}
+
+#undef DEFINE_UNARY_ALU_INTERFACE
+#undef DEFINE_BINARY_ALU_INTERFACE
+#undef DEFINE_ALU_ELEMENT_TYPE
+
 FailureOr<KernelResourceUsage>
 inter::xemachine::analyzeKernelResources(func::FuncOp function,
                                          int64_t grfCount) {

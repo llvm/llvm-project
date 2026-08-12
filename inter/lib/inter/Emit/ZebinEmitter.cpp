@@ -119,6 +119,8 @@ FailureOr<std::string> buildZeInfo(func::FuncOp kernel,
   auto hasNoStatelessWrite =
       kernel->getAttrOfType<BoolAttr>(kHasNoStatelessWriteAttrName);
   auto hasDpas = kernel->getAttrOfType<BoolAttr>(kHasDpasAttrName);
+  ArrayAttr requiredWorkGroupSize =
+      kernel->getAttrOfType<ArrayAttr>(kRequiredWorkGroupSizeAttrName);
   if (!grfCount || !grfUsed || !simdSize || !barrierCount ||
       !hasGlobalAtomics || !hasNoStatelessWrite || !hasDpas)
     return kernel.emitOpError("missing machine resource attributes"), failure();
@@ -170,8 +172,20 @@ FailureOr<std::string> buildZeInfo(func::FuncOp kernel,
   output << "---\n"
          << "version: '1.64'\n"
          << "kernels:\n"
-         << "  - name: " << quoteYaml(kernel.getName()) << "\n"
-         << "    execution_env:\n"
+         << "  - name: " << quoteYaml(kernel.getName()) << "\n";
+  if (requiredWorkGroupSize || simdSize.getInt() == 16) {
+    output << "    user_attributes:\n";
+    if (simdSize.getInt() == 16)
+      output << "      intel_reqd_sub_group_size: 16\n";
+    if (requiredWorkGroupSize) {
+      output << "      reqd_work_group_size: [";
+      for (auto [index, value] : llvm::enumerate(requiredWorkGroupSize))
+        output << (index == 0 ? "" : ", ")
+               << cast<IntegerAttr>(value).getInt();
+      output << "]\n";
+    }
+  }
+  output << "    execution_env:\n"
          << "      disable_mid_thread_preemption: true\n"
          << "      grf_count: " << grfCount.getInt() << "\n";
   if (hasBufferArguments)
@@ -180,13 +194,20 @@ FailureOr<std::string> buildZeInfo(func::FuncOp kernel,
     output << "      has_global_atomics: true\n";
   if (hasDpas.getValue())
     output << "      has_dpas: true\n";
+  if (requiredWorkGroupSize) {
+    output << "      required_work_group_size: [";
+    for (auto [index, value] : llvm::enumerate(requiredWorkGroupSize))
+      output << (index == 0 ? "" : ", ") << cast<IntegerAttr>(value).getInt();
+    output << "]\n";
+  }
   output << "      has_no_stateless_write: "
          << (hasNoStatelessWrite.getValue() ? "true" : "false") << "\n";
-  if (usesPayload) {
-    output << "      inline_data_payload_size: " << inlineSize.getInt() << "\n"
-           << "      offset_to_skip_per_thread_data_load: "
+  if (usesPayload)
+    output << "      inline_data_payload_size: " << inlineSize.getInt()
+           << "\n";
+  if (usesThreadIds)
+    output << "      offset_to_skip_per_thread_data_load: "
            << payloadEntryOffset << "\n";
-  }
   output << "      simd_size: " << simdSize.getInt() << "\n";
   if (barrierCount.getInt() != 0)
     output << "      barrier_count: " << barrierCount.getInt() << "\n";
@@ -359,12 +380,9 @@ LogicalResult inter::emitZebin(ModuleOp moduleOp, llvm::raw_ostream &output) {
   Bytes text;
   llvm::raw_svector_ostream textOutput(text);
   uint32_t payloadEntryOffset = 0;
-  ArrayAttr kernelArgs =
-      kernels.front()->getAttrOfType<ArrayAttr>(kKernelArgsAttrName);
-  bool usesPayload = kernels.front()->hasAttr(kUsesThreadIdsAttrName) ||
-                     (kernelArgs && !kernelArgs.empty());
+  bool usesThreadIds = kernels.front()->hasAttr(kUsesThreadIdsAttrName);
   if (failed(emitGedBinary(moduleOp, textOutput,
-                           usesPayload ? &payloadEntryOffset : nullptr)))
+                           usesThreadIds ? &payloadEntryOffset : nullptr)))
     return failure();
   FailureOr<std::string> zeInfo =
       buildZeInfo(kernels.front(), payloadEntryOffset);

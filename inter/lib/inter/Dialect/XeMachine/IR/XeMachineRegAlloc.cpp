@@ -87,9 +87,8 @@ static LogicalResult validateAluFootprint(Operation *operation) {
   if (!isa<MovOp, AddOp, SubOp, ShlOp, ShrOp, AndOp, OrOp, Add3Op, MulOp,
            CmpOp>(operation))
     return success();
-  TypeAttr elementTypeAttr = operation->getAttrOfType<TypeAttr>("elemType");
-  if (!elementTypeAttr)
-    return operation->emitError("register operation requires elemType");
+  ALUOpInterface alu = cast<ALUOpInterface>(operation);
+  Type elementType = alu.getInstructionElementType();
   int64_t executionSize = getIntegerAttr(operation, "execSize", 16);
   if (executionSize <= 0)
     return operation->emitError("execution size must be positive");
@@ -98,7 +97,7 @@ static LogicalResult validateAluFootprint(Operation *operation) {
     auto destinationType = dyn_cast<RegType>(operation->getResult(0).getType());
     if (destinationType && destinationType.getWidthDwords() != 0) {
       std::optional<uint64_t> bytes =
-          getElementBytes(elementTypeAttr.getValue());
+          getElementBytes(elementType);
       if (!bytes)
         return operation->emitError("unsupported destination element type");
       int64_t sub = getIntegerAttr(operation, "dstSub", 0);
@@ -114,25 +113,21 @@ static LogicalResult validateAluFootprint(Operation *operation) {
     }
   }
 
-  constexpr std::array<StringLiteral, 3> regionNames = {
-      "src0Region", "src1Region", "src2Region"};
   constexpr std::array<StringLiteral, 3> subNames = {"src0Sub", "src1Sub",
-                                                     "src2Sub"};
-  constexpr std::array<StringLiteral, 3> typeNames = {"src0Type", "src1Type",
-                                                      "src2Type"};
+                                                      "src2Sub"};
   for (auto [index, operand] : llvm::enumerate(operation->getOperands())) {
     auto registerType = dyn_cast<RegType>(operand.getType());
     if (!registerType)
       continue;
-    Type sourceType = elementTypeAttr.getValue();
-    if (TypeAttr attr = operation->getAttrOfType<TypeAttr>(typeNames[index]))
-      sourceType = attr.getValue();
+    Type sourceType = elementType;
+    if (std::optional<Type> explicitType =
+            alu.getExplicitSourceElementType(index))
+      sourceType = *explicitType;
     std::optional<uint64_t> bytes = getElementBytes(sourceType);
     if (!bytes)
       return operation->emitError("unsupported source element type");
     int64_t sub = getIntegerAttr(operation, subNames[index], 0);
-    RegionAttr region =
-        operation->getAttrOfType<RegionAttr>(regionNames[index]);
+    RegionAttr region = alu.getSourceRegion(index);
     int64_t vertical = region ? region.getVstride() : 1;
     int64_t width = region ? region.getWidth() : 1;
     int64_t horizontal = region ? region.getHstride() : 0;

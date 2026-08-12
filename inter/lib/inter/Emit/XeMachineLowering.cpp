@@ -81,15 +81,8 @@ private:
     return 0;
   }
 
-  Type getSourceType(Operation *operation, StringRef name,
-                     Type fallback) const {
-    if (TypeAttr attr = operation->getAttrOfType<TypeAttr>(name))
-      return attr.getValue();
-    return fallback;
-  }
-
-  SourceRegion getSourceRegion(Operation *operation, StringRef name) const {
-    if (RegionAttr attr = operation->getAttrOfType<RegionAttr>(name))
+  SourceRegion getSourceRegion(RegionAttr attr) const {
+    if (attr)
       return {attr.getVstride(), attr.getWidth(), attr.getHstride()};
     return {};
   }
@@ -138,9 +131,8 @@ private:
           instructionIndices.lookup(operation) - iterator->second;
       if (distance < 1 || distance > 7)
         continue;
-      TypeAttr elementType =
-          definingOperation->getAttrOfType<TypeAttr>("elemType");
-      DistancePipe pipe = elementType && elementType.getValue().isF32()
+      auto alu = dyn_cast<ALUOpInterface>(definingOperation);
+      DistancePipe pipe = alu && alu.getInstructionElementType().isF32()
                               ? DistancePipe::floating
                               : DistancePipe::inOrder;
       if (youngest.distance < 0)
@@ -512,13 +504,11 @@ private:
     instruction.dataType = getDataType(compare.getElemType());
     instruction.isSigned = compare->hasAttr("signed");
 
-    constexpr std::array<StringLiteral, 2> regionNames = {"src0Region",
-                                                          "src1Region"};
     constexpr std::array<StringLiteral, 2> subNames = {"src0Sub", "src1Sub"};
-    constexpr std::array<StringLiteral, 2> typeNames = {"src0Type", "src1Type"};
+    ALUOpInterface alu = cast<ALUOpInterface>(compare.getOperation());
     for (auto [index, operand] : llvm::enumerate(compare.getOperands())) {
-      Type sourceType =
-          getSourceType(compare, typeNames[index], compare.getElemType());
+      std::optional<Type> explicitType = alu.getExplicitSourceElementType(index);
+      Type sourceType = explicitType.value_or(compare.getElemType());
       if (failed(validateDataType(compare, sourceType)))
         return failure();
       if (ImmOp immediate = operand.getDefiningOp<ImmOp>())
@@ -526,7 +516,7 @@ private:
           return failure();
       SourceOperand source = getSourceOperand(
           operand, getSub(compare, subNames[index]), sourceType,
-          getSourceRegion(compare, regionNames[index]));
+          getSourceRegion(alu.getSourceRegion(index)));
       source.isSigned = instruction.isSigned;
       instruction.sources.push_back(std::move(source));
     }
@@ -560,10 +550,8 @@ private:
     else
       return operation->emitError("unsupported operation in Xe emitter");
 
-    TypeAttr elementTypeAttr = operation->getAttrOfType<TypeAttr>("elemType");
-    if (!elementTypeAttr)
-      return operation->emitError("expected an elemType attribute");
-    Type elementType = elementTypeAttr.getValue();
+    ALUOpInterface alu = cast<ALUOpInterface>(operation);
+    Type elementType = alu.getInstructionElementType();
     if (failed(validateDataType(operation, elementType)))
       return failure();
     instruction.destinationType = getDataType(elementType);
@@ -585,14 +573,11 @@ private:
                              elementType),
         destinationStride};
 
-    constexpr std::array<StringLiteral, 3> regionNames = {
-        "src0Region", "src1Region", "src2Region"};
     constexpr std::array<StringLiteral, 3> subNames = {"src0Sub", "src1Sub",
-                                                       "src2Sub"};
-    constexpr std::array<StringLiteral, 3> typeNames = {"src0Type", "src1Type",
-                                                        "src2Type"};
+                                                        "src2Sub"};
     for (auto [index, operand] : llvm::enumerate(operation->getOperands())) {
-      Type sourceType = getSourceType(operation, typeNames[index], elementType);
+      std::optional<Type> explicitType = alu.getExplicitSourceElementType(index);
+      Type sourceType = explicitType.value_or(elementType);
       if (failed(validateDataType(operation, sourceType)))
         return failure();
       if (ImmOp immediate = operand.getDefiningOp<ImmOp>())
@@ -600,8 +585,8 @@ private:
           return failure();
       SourceOperand source = getSourceOperand(
           operand, getSub(operation, subNames[index]), sourceType,
-          getSourceRegion(operation, regionNames[index]));
-      if (operand.getDefiningOp<ImmOp>())
+          getSourceRegion(alu.getSourceRegion(index)));
+      if (operand.getDefiningOp<ImmOp>() && !explicitType)
         source.type = index == 1 && isa<ShlOp, ShrOp>(operation)
                           ? DataType::ud
                           : instruction.destinationType;

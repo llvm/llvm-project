@@ -55,7 +55,8 @@ def XeMachine_ImmOp : XeMachine_Op<"imm", [NoMemoryEffect,
 // by a pass via RegionLegalityOpInterface, not by op verifiers.
 class XeMachine_ALUOp<string mnemonic, list<Trait> traits = [],
                       string issueClass = "moveOrLogic"> :
-    XeMachine_Op<mnemonic, traits # [NoMemoryEffect], issueClass> {
+    XeMachine_Op<mnemonic, traits # [NoMemoryEffect,
+      DeclareOpInterfaceMethods<XeMachine_ALUOpInterface>], issueClass> {
   let cppNamespace = "::inter::xemachine";
 }
 
@@ -80,9 +81,9 @@ class XeMachine_BinOp<string mnemonic, string issueClass = "arithmetic"> :
     XeMachine_ALUOp<mnemonic, [], issueClass> {
   let arguments = (ins TypeAttr:$elemType,
                        DefaultValuedAttr<I32Attr, "16">:$execSize,
-                       OptionalAttr<XeMachine_DstRegionAttr>:$dstRegion,
-                       OptionalAttr<XeMachine_RegionAttr>:$src0Region,
-                       OptionalAttr<XeMachine_RegionAttr>:$src1Region,
+                        OptionalAttr<XeMachine_DstRegionAttr>:$dstRegion,
+                        OptionalAttr<XeMachine_RegionAttr>:$src0Region,
+                        OptionalAttr<XeMachine_RegionAttr>:$src1Region,
                        OptionalAttr<I32Attr>:$dstSub,
                        OptionalAttr<I32Attr>:$src0Sub,
                        OptionalAttr<I32Attr>:$src1Sub,
@@ -366,10 +367,12 @@ def XeMachine_MulOp :
                        OptionalAttr<XeMachine_DstRegionAttr>:$dstRegion,
                        OptionalAttr<XeMachine_RegionAttr>:$src0Region,
                        OptionalAttr<XeMachine_RegionAttr>:$src1Region,
-                       OptionalAttr<I32Attr>:$dstSub,
-                       OptionalAttr<I32Attr>:$src0Sub,
-                       OptionalAttr<I32Attr>:$src1Sub,
-                       UnitAttr:$noMask,
+                        OptionalAttr<I32Attr>:$dstSub,
+                        OptionalAttr<I32Attr>:$src0Sub,
+                        OptionalAttr<I32Attr>:$src1Sub,
+                        OptionalAttr<TypeAttr>:$src0Type,
+                        OptionalAttr<TypeAttr>:$src1Type,
+                        UnitAttr:$noMask,
                        DefaultValuedAttr<I32Attr, "0">:$maskOffset,
                        XeMachine_RegOrImm:$src0, XeMachine_RegOrImm:$src1);
   let results = (outs XeMachine_ARFType:$dst);
@@ -395,7 +398,8 @@ def XeMachine_DpasOp : XeMachine_Op<"dpas", [NoMemoryEffect,
 
 // Compare: writes a flag register, no GRF destination.
 // cmp (exec|M0) (gt)f0.0 null<1>:ud src0 src1
-def XeMachine_CmpOp : XeMachine_Op<"cmp", [NoMemoryEffect], "arfWrite"> {
+def XeMachine_CmpOp : XeMachine_Op<"cmp", [NoMemoryEffect,
+    DeclareOpInterfaceMethods<XeMachine_ALUOpInterface>], "arfWrite"> {
   let summary = "compare into a flag register";
   let arguments = (ins XeMachine_CondModifier:$cond,
                        TypeAttr:$elemType,

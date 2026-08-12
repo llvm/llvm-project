@@ -22,10 +22,13 @@ module {
 }
 
 // CHECK-LABEL: func.func @block2d
+// CHECK: xemachine.imm 1823 : i32
 // CHECK: xemachine.update_tuple
 // CHECK: xemachine.send ugm {{.*}}desc = 34079235
+// CHECK: xemachine.imm 1823 : i32
 // CHECK: xemachine.update_tuple
 // CHECK: xemachine.send ugm {{.*}}desc = 37749251
+// CHECK: xemachine.imm 1855 : i32
 // CHECK: xemachine.update_tuple
 // CHECK: xemachine.send ugm {{.*}}data {{.*}}desc = 33555463
 // CHECK: xemachine.eot

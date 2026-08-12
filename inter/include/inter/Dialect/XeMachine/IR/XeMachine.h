@@ -13,6 +13,7 @@
 #include "llvm/ADT/StringRef.h"
 
 #include <cstdint>
+#include <optional>
 
 namespace inter::xemachine {
 
@@ -24,6 +25,8 @@ inline constexpr llvm::StringLiteral kGrfUsedAttrName = "xemachine.grf_used";
 inline constexpr llvm::StringLiteral kReservedGrfCountAttrName =
     "xemachine.reserved_grf_count";
 inline constexpr llvm::StringLiteral kSimdSizeAttrName = "xemachine.simd_size";
+inline constexpr llvm::StringLiteral kRequiredWorkGroupSizeAttrName =
+    "xemachine.required_work_group_size";
 inline constexpr llvm::StringLiteral kUsesThreadIdsAttrName =
     "xemachine.uses_thread_ids";
 inline constexpr llvm::StringLiteral kInlineDataPayloadSizeAttrName =

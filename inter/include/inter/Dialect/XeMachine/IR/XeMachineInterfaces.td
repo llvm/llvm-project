@@ -36,6 +36,27 @@ def XeMachine_RegionLegalityOpInterface : OpInterface<"RegionLegalityOpInterface
   ];
 }
 
+def XeMachine_ALUOpInterface : OpInterface<"ALUOpInterface"> {
+  let description = [{
+    Structural ALU operand metadata used by encoding and register allocation.
+  }];
+  let cppNamespace = "::inter::xemachine";
+  let methods = [
+    InterfaceMethod<"Instruction destination element type.",
+                    "::mlir::Type", "getInstructionElementType", (ins)>,
+    InterfaceMethod<"Source register region, or the canonical region.",
+                    "::inter::xemachine::RegionAttr", "getSourceRegion",
+                    (ins "unsigned":$index)>,
+    InterfaceMethod<"Sets a source register region.", "void",
+                    "setSourceRegion",
+                    (ins "unsigned":$index,
+                         "::inter::xemachine::RegionAttr":$region)>,
+    InterfaceMethod<"Explicit source element type override, if present.",
+                    "::std::optional<::mlir::Type>",
+                    "getExplicitSourceElementType", (ins "unsigned":$index)>,
+  ];
+}
+
 def XeMachine_InstructionIssueOpInterface : OpInterface<"InstructionIssueOpInterface"> {
   let description = [{
     Timing-oracle hooks. The cost model answers; ops only classify themselves.

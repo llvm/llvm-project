@@ -278,7 +278,7 @@ private:
     uint64_t offset = descriptor->getOffset();
     uint64_t size = descriptor->getSize();
     if (offset < kInlineMirrorSize)
-      return std::pair<Value, int64_t>{architecturalRegister(4), offset / size};
+      return std::pair<Value, int64_t>{getInlineDataRegister(), offset / size};
     uint64_t tailOffset = offset - kInlineMirrorSize;
     uint64_t chunk = tailOffset / 64;
     if (chunk >= payloadTail.size() || tailOffset % 64 + size > 64)
@@ -434,6 +434,17 @@ private:
                              moduleBuilder.getI32IntegerAttr(5));
     machineFunction->setAttr(kSimdSizeAttrName,
                              moduleBuilder.getI32IntegerAttr(simdWidth));
+    if (ArrayAttr workGroupSize =
+            kernel->getAttrOfType<ArrayAttr>("xw.required_work_group_size")) {
+      if (workGroupSize.size() != 3 ||
+          llvm::any_of(workGroupSize, [](Attribute value) {
+            IntegerAttr integer = dyn_cast<IntegerAttr>(value);
+            return !integer || integer.getInt() <= 0;
+          }))
+        return kernel.emitOpError(
+            "xw.required_work_group_size must contain three positive integers");
+      machineFunction->setAttr(kRequiredWorkGroupSizeAttrName, workGroupSize);
+    }
     if (*slmSize != 0)
       machineFunction->setAttr(kSlmSizeAttrName,
                                moduleBuilder.getI64IntegerAttr(*slmSize));
@@ -465,18 +476,12 @@ private:
     return success();
   }
 
-  void emitArgumentEntry() {
-    MovOp::create(*builder, *location, RegType::get(context, 16, 4), i32(), 8,
-                  canonicalDestination(), canonicalRegion(), IntegerAttr(),
-                  IntegerAttr(), TypeAttr(), true, 0, architecturalRegister(1));
-    for (unsigned index = 0; index < 11; ++index)
-      emitSync(SyncKind::nop);
-  }
-
   void emitLocalIdEntry() {
     Value r0 = architecturalRegister(0);
     Value r1 = architecturalRegister(1);
-    MovOp::create(*builder, *location, RegType::get(context, 16, 4), i32(), 8,
+    int64_t inlineDataRegister = 1 + getPerThreadPayloadSize() / 64;
+    MovOp::create(*builder, *location,
+                  RegType::get(context, 16, inlineDataRegister), i32(), 8,
                   canonicalDestination(), canonicalRegion(), IntegerAttr(),
                   IntegerAttr(), TypeAttr(), true, 0, r1);
     Value base =
@@ -493,21 +498,21 @@ private:
                       immediate(kLocalIdLoadOffset, i32()))
             .getResult();
     Value threadSlot =
-        AndOp::create(*builder, *location, RegType::get(context, 16, 7), i32(),
+        AndOp::create(*builder, *location, RegType::get(context, 16, 7), i16(),
                       1, canonicalDestination(), uniformRegion(), RegionAttr(),
-                      IntegerAttr(), builder->getI32IntegerAttr(1),
+                      IntegerAttr(), builder->getI32IntegerAttr(2),
                       IntegerAttr(), TypeAttr(), TypeAttr(), true, 0, r0,
-                      immediate(0xff, i32()))
+                      immediate(0xff, i16()))
             .getResult();
-    Value offsetAccumulator =
-        MulOp::create(*builder, *location,
-                      ARFType::get(context, ARFFile::acc, 16, 0), i32(), 1,
-                      canonicalDestination(), uniformRegion(), RegionAttr(),
-                      IntegerAttr(), IntegerAttr(), IntegerAttr(), true, 0,
-                      threadSlot, immediate(getPerThreadPayloadSize(), i32()))
-            .getResult();
+    MulOp offsetAccumulator = MulOp::create(
+        *builder, *location, ARFType::get(context, ARFFile::acc, 16, 0), i32(),
+        1, canonicalDestination(), uniformRegion(), RegionAttr(), IntegerAttr(),
+        IntegerAttr(), IntegerAttr(), typeAttr(i16()), typeAttr(i16()), true, 0,
+        threadSlot,
+        immediate(getPerThreadPayloadSize(), i16()));
     Value threadOffset = emitMove(RegType::get(context, 16, 8), i32(), 1,
-                                  offsetAccumulator, uniformRegion(), true);
+                                  offsetAccumulator.getResult(), uniformRegion(),
+                                  true);
     Value address =
         AddOp::create(*builder, *location, RegType::get(context, 16, 9), i32(),
                       1, canonicalDestination(), uniformRegion(),
@@ -536,8 +541,6 @@ private:
       z->setAttr(kAllowFixedOverlapAttrName, builder->getUnitAttr());
       memoryToken = z.getToken();
     }
-    for (unsigned index = 0; index < 4; ++index)
-      emitSync(SyncKind::nop);
   }
 
   int64_t getPerThreadPayloadSize() const {
@@ -547,22 +550,31 @@ private:
     llvm_unreachable("thread payload size requires a used ID axis");
   }
 
+  Value getInlineDataRegister() {
+    int64_t index = 1;
+    if (usedIdAxes[0] || usedIdAxes[1] || usedIdAxes[2])
+      index += getPerThreadPayloadSize() / 64;
+    return architecturalRegister(index);
+  }
+
   LogicalResult emitPrologue() {
     if (prologueEmitted)
       return success();
     prologueEmitted = true;
     bool usesThreadIds = usedIdAxes[0] || usedIdAxes[1] || usedIdAxes[2];
-    PayloadPrologueOp prologue = PayloadPrologueOp::create(*builder, *location);
-    Block &body = prologue.getBody().emplaceBlock();
-    builder->setInsertionPointToStart(&body);
-    if (usesThreadIds)
+    if (usesThreadIds) {
+      PayloadPrologueOp prologue =
+          PayloadPrologueOp::create(*builder, *location);
+      Block &body = prologue.getBody().emplaceBlock();
+      builder->setInsertionPointToStart(&body);
       emitLocalIdEntry();
-    else
-      emitArgumentEntry();
-    emitSync(SyncKind::allwr);
-    PayloadPrologueEndOp::create(*builder, *location);
-    builder->setInsertionPointAfter(prologue);
-    memoryToken = Value();
+      PayloadPrologueEndOp::create(*builder, *location);
+      builder->setInsertionPointAfter(prologue);
+      memoryToken = Value();
+      for (unsigned index = 0; index < 4; ++index)
+        emitSync(SyncKind::nop);
+      emitSync(SyncKind::allwr);
+    }
 
     Value r0 = architecturalRegister(0);
     Value base =
@@ -959,8 +971,8 @@ private:
                         ARFType::get(context, ARFFile::acc, *footprint, 0),
                         shape->elementType, shape->cardinality,
                         canonicalDestination(), lhsRegion, rhsRegion,
-                        IntegerAttr(), IntegerAttr(), IntegerAttr(),
-                        shape->cardinality == 1, 0, *lhs, *rhs)
+                        IntegerAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(),
+                        TypeAttr(), shape->cardinality == 1, 0, *lhs, *rhs)
               .getResult();
       result =
           emitMove(reg(*footprint), shape->elementType, shape->cardinality,
@@ -1278,7 +1290,8 @@ private:
             shape->elementType, shape->cardinality, canonicalDestination(),
             sourceRegion(operation.getLhs(), shape->cardinality, operation),
             sourceRegion(operation.getRhs(), shape->cardinality, operation),
-            IntegerAttr(), IntegerAttr(), IntegerAttr(), false, 0, *lhs, *rhs)
+            IntegerAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(), TypeAttr(),
+            false, 0, *lhs, *rhs)
             .getResult();
     values[operation.getResult()] =
         emitMove(reg(*footprint), shape->elementType, shape->cardinality,
@@ -2506,13 +2519,14 @@ private:
   LogicalResult lowerBlock2D(Operation *operation, Value base,
                              Value surfaceWidth, Value surfaceHeight,
                              Value surfacePitch, Value x, Value y,
-                             int64_t blockWidth, int64_t blockHeight,
-                             int64_t blocks, Value data, Value dependency,
-                             Value valueResult, Value tokenResult,
-                             uint32_t descriptor) {
+                             int64_t elementBits, int64_t blockWidth,
+                             int64_t blockHeight, int64_t blocks, Value data,
+                             Value dependency, Value valueResult,
+                             Value tokenResult, uint32_t descriptor) {
+    int64_t blockWidthBytes = blockWidth * elementBits / 8;
     FailureOr<Value> payload = buildBlock2DPayload(
         operation, base, surfaceWidth, surfaceHeight, surfacePitch, x, y,
-        blockWidth, blockHeight, blocks);
+        blockWidthBytes, blockHeight, blocks);
     FailureOr<Value> selectedDependency = mapDependency(operation, dependency);
     if (failed(payload) || failed(selectedDependency))
       return failure();
@@ -2707,37 +2721,69 @@ private:
                    .getResult();
     } else {
       Value r0 = architecturalRegister(0);
-      Value inlineData = architecturalRegister(4);
+      Value inlineData = getInlineDataRegister();
       Value accumulator =
           MulOp::create(
               *builder, *location, ARFType::get(context, ARFFile::acc, 16, 0),
               i32(), 1, canonicalDestination(), uniformRegion(),
               uniformRegion(), IntegerAttr(),
               builder->getI32IntegerAttr(1 + dim),
-              builder->getI32IntegerAttr(3 + dim), true, 0, r0, inlineData)
+              builder->getI32IntegerAttr(3 + dim), TypeAttr(), TypeAttr(), true,
+              0, r0, inlineData)
               .getResult();
       Value base =
           emitMove(reg(16), i32(), 1, accumulator, uniformRegion(), true);
-      Value expandedLocal =
-          MovOp::create(*builder, *location, reg(simdWidth), i32(), simdWidth,
-                        canonicalDestination(), canonicalRegion(),
-                        IntegerAttr(), builder->getI32IntegerAttr(dim),
-                        typeAttr(i16()), false, 0, local)
+      auto lowerHalf = [&](int64_t offset) {
+        Value spacedLocal =
+            MovOp::create(*builder, *location, reg(32), i16(), 16,
+                          DstRegionAttr::get(context, 4), canonicalRegion(),
+                          IntegerAttr(), builder->getI32IntegerAttr(offset),
+                          TypeAttr(), false, offset, local)
+                .getResult();
+        if (elementType.isInteger(64)) {
+          Value groupLocal =
+              AddOp::create(
+                  *builder, *location, reg(32), i64(), 16,
+                  canonicalDestination(), uniformRegion(),
+                  RegionAttr::get(context, 4, 1, 0), IntegerAttr(),
+                  IntegerAttr(), IntegerAttr(), typeAttr(i32()), typeAttr(i16()),
+                  false, offset, base, spacedLocal)
+                  .getResult();
+          return AddOp::create(
+                     *builder, *location, reg(32), i64(), 16,
+                     canonicalDestination(), canonicalRegion(),
+                     uniformRegion(), IntegerAttr(), IntegerAttr(),
+                     builder->getI32IntegerAttr(dim), TypeAttr(), typeAttr(i32()),
+                     false, offset, groupLocal, inlineData)
               .getResult();
-      Value groupLocal =
-          AddOp::create(*builder, *location, reg(simdWidth), i32(), simdWidth,
-                        canonicalDestination(), uniformRegion(),
-                        canonicalRegion(), IntegerAttr(), IntegerAttr(),
-                        IntegerAttr(), TypeAttr(), TypeAttr(), false, 0, base,
-                        expandedLocal)
-              .getResult();
-      result =
-          AddOp::create(*builder, *location, reg(simdWidth), i32(), simdWidth,
-                        canonicalDestination(), canonicalRegion(),
-                        uniformRegion(), IntegerAttr(), IntegerAttr(),
-                        builder->getI32IntegerAttr(dim), TypeAttr(), TypeAttr(),
-                        false, 0, groupLocal, inlineData)
-              .getResult();
+        }
+        Value groupLocal =
+            AddOp::create(*builder, *location, reg(16), i32(), 16,
+                          canonicalDestination(), uniformRegion(),
+                          RegionAttr::get(context, 4, 1, 0), IntegerAttr(),
+                          IntegerAttr(), IntegerAttr(), TypeAttr(),
+                          typeAttr(i16()), false, offset, base, spacedLocal)
+                .getResult();
+        return AddOp::create(
+                   *builder, *location, reg(16), i32(), 16,
+                   canonicalDestination(), canonicalRegion(), uniformRegion(),
+                   IntegerAttr(), IntegerAttr(),
+                   builder->getI32IntegerAttr(dim), TypeAttr(), TypeAttr(),
+                   false, offset, groupLocal, inlineData)
+            .getResult();
+      };
+      result = lowerHalf(0);
+      if (elementType.isInteger(64)) {
+        if (simdWidth == 32)
+          wideValues[operation->getResult(0)] = {result, lowerHalf(16)};
+        else
+          values[operation->getResult(0)] = result;
+        return success();
+      }
+      if (simdWidth == 32)
+        result = TupleFromElementsOp::create(*builder, *location, reg(32),
+                                             ValueRange{result, lowerHalf(16)})
+                     .getTuple();
     }
     if (elementType.isInteger(32) || isa<IndexType>(elementType)) {
       values[operation->getResult(0)] = result;
@@ -2766,7 +2812,7 @@ private:
   }
 
   LogicalResult lowerUniformQuery(Operation *operation, int64_t dim,
-                                  int sourceSub) {
+                                  int sourceSub, bool inlineData) {
     if (dim < 0 || dim >= 3)
       return operation->emitOpError("query axis must be 0, 1, or 2");
     if (failed(emitPrologue()))
@@ -2778,13 +2824,12 @@ private:
     if (failed(shape) || failed(footprint) || shape->cardinality != 1)
       return operation->emitOpError("uniform query must return a bare value");
     Value source =
-        sourceSub < 3 ? architecturalRegister(0) : architecturalRegister(4);
-    int sub = sourceSub < 3 ? sourceSub : sourceSub - 3;
+        inlineData ? getInlineDataRegister() : architecturalRegister(0);
     values[operation->getResult(0)] =
         MovOp::create(*builder, *location, reg(*footprint), shape->elementType,
                       1, canonicalDestination(), uniformRegion(), IntegerAttr(),
-                      builder->getI32IntegerAttr(sub), typeAttr(i32()), true, 0,
-                      source)
+                       builder->getI32IntegerAttr(sourceSub), typeAttr(i32()),
+                       true, 0, source)
             .getResult();
     return success();
   }
@@ -3031,31 +3076,33 @@ private:
       } else if (xw::Block2DPrefetchOp prefetch =
                      dyn_cast<xw::Block2DPrefetchOp>(operation)) {
         if (failed(lowerBlock2D(
-                prefetch, prefetch.getBase(), prefetch.getSurfaceWidth(),
-                prefetch.getSurfaceHeight(), prefetch.getSurfacePitch(),
-                prefetch.getX(), prefetch.getY(), prefetch.getBlockWidth(),
-                prefetch.getBlockHeight(), prefetch.getBlocks(), Value(),
-                prefetch.getDependency(), Value(), prefetch.getToken(),
-                0x02080203)))
+                 prefetch, prefetch.getBase(), prefetch.getSurfaceWidth(),
+                 prefetch.getSurfaceHeight(), prefetch.getSurfacePitch(),
+                 prefetch.getX(), prefetch.getY(), prefetch.getElementBits(),
+                 prefetch.getBlockWidth(), prefetch.getBlockHeight(),
+                 prefetch.getBlocks(), Value(), prefetch.getDependency(),
+                 Value(), prefetch.getToken(), 0x02080203)))
           return failure();
       } else if (xw::Block2DReadOp read =
                      dyn_cast<xw::Block2DReadOp>(operation)) {
         uint32_t descriptor = read.getVnni() ? 0x02800283 : 0x02400203;
         if (failed(lowerBlock2D(
-                read, read.getBase(), read.getSurfaceWidth(),
-                read.getSurfaceHeight(), read.getSurfacePitch(), read.getX(),
-                read.getY(), read.getBlockWidth(), read.getBlockHeight(),
-                read.getBlocks(), Value(), read.getDependency(),
-                read.getValue(), read.getToken(), descriptor)))
+                 read, read.getBase(), read.getSurfaceWidth(),
+                 read.getSurfaceHeight(), read.getSurfacePitch(), read.getX(),
+                 read.getY(), read.getElementBits(), read.getBlockWidth(),
+                 read.getBlockHeight(), read.getBlocks(), Value(),
+                 read.getDependency(), read.getValue(), read.getToken(),
+                 descriptor)))
           return failure();
       } else if (xw::Block2DWriteOp write =
                      dyn_cast<xw::Block2DWriteOp>(operation)) {
         if (failed(lowerBlock2D(
-                write, write.getBase(), write.getSurfaceWidth(),
-                write.getSurfaceHeight(), write.getSurfacePitch(), write.getX(),
-                write.getY(), write.getBlockWidth(), write.getBlockHeight(),
-                write.getBlocks(), write.getValue(), write.getDependency(),
-                Value(), write.getToken(), 0x02000407)))
+                 write, write.getBase(), write.getSurfaceWidth(),
+                 write.getSurfaceHeight(), write.getSurfacePitch(), write.getX(),
+                 write.getY(), write.getElementBits(), write.getBlockWidth(),
+                 write.getBlockHeight(), write.getBlocks(), write.getValue(),
+                 write.getDependency(), Value(), write.getToken(),
+                 0x02000407)))
           return failure();
       } else if (xw::AtomicRMWOp atomic =
                      dyn_cast<xw::AtomicRMWOp>(operation)) {
@@ -3090,14 +3137,16 @@ private:
         if (failed(lowerId(id, id.getDim(), false)))
           return failure();
       } else if (xw::GroupIdOp id = dyn_cast<xw::GroupIdOp>(operation)) {
-        if (failed(lowerUniformQuery(id, id.getDim(), 1 + id.getDim())))
+        constexpr std::array<int, 3> groupIdSubregisters = {1, 6, 7};
+        if (failed(lowerUniformQuery(id, id.getDim(),
+                                     groupIdSubregisters[id.getDim()], false)))
           return failure();
       } else if (xw::LocalSizeOp size = dyn_cast<xw::LocalSizeOp>(operation)) {
-        if (failed(lowerUniformQuery(size, size.getDim(), 3 + size.getDim())))
+        if (failed(lowerUniformQuery(size, size.getDim(), size.getDim(), true)))
           return failure();
       } else if (xw::LaunchBlockSizeOp size =
                      dyn_cast<xw::LaunchBlockSizeOp>(operation)) {
-        if (failed(lowerUniformQuery(size, size.getDim(), 3 + size.getDim())))
+        if (failed(lowerUniformQuery(size, size.getDim(), size.getDim(), true)))
           return failure();
       } else if (isa<xw::GlobalSizeOp, xw::NumGroupsOp, xw::LaunchGridSizeOp>(
                      operation)) {
