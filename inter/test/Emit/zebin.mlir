@@ -1,4 +1,5 @@
 // RUN: inter-translate %S/../Integration/vadd.ll --import-llvm -o %t.mlir
+// RUN: inter-opt %t.mlir '--inter-import-llvm=simd-width=32' -o %t.mlir
 // RUN: inter-opt %t.mlir --pass-pipeline='builtin.module(transform-preload-library{transform-library-paths=%inter_pipelines},transform-interpreter{entry-point=inter_backend})' -o %t.xemachine.mlir
 // RUN: inter-translate %t.xemachine.mlir --xemachine-to-zebin -o %t.bin
 // RUN: llvm-readobj --file-headers --sections --symbols %t.bin | FileCheck %s --check-prefix=ELF
@@ -51,8 +52,8 @@
 // ZE: has_4gb_buffers: true
 // ZE: has_no_stateless_write: false
 // ZE: inline_data_payload_size: 32
-// ZE: offset_to_skip_per_thread_data_load: 192
-// ZE: simd_size: 16
+// ZE: offset_to_skip_per_thread_data_load: 208
+// ZE: simd_size: 32
 // ZE: arg_type: global_id_offset
 // ZE: arg_type: enqueued_local_size
 // ZE: arg_type: arg_bypointer
@@ -69,7 +70,7 @@
 // ZE-NEXT: arg_index: 2
 // ZE: per_thread_payload_arguments:
 // ZE: arg_type: local_id
-// ZE: size: 192
+// ZE: size: 64
 
 // SLM: name: 'slm_kernel'
 // SLM: barrier_count: 1

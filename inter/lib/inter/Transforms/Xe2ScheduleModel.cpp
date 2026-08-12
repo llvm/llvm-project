@@ -374,7 +374,8 @@ public:
   }
 
   bool isSupportedRegionOperation(Operation *operation) const override {
-    return isa<ExecIfOp, UniformIfOp, UniformLoopOp>(operation);
+    return isa<ExecIfOp, UniformIfOp, UniformLoopOp, PayloadPrologueOp>(
+        operation);
   }
 
   inter::MachineHazardKind

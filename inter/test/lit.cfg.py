@@ -8,7 +8,7 @@ from lit.llvm.subst import ToolSubst
 
 config.name = "inter-integration" if config.inter_test_is_integration else "inter"
 config.test_format = lit.formats.ShTest(False)
-config.suffixes = [".ll"] if config.inter_test_is_integration else [".ll", ".mlir"]
+config.suffixes = [".ll", ".mlir"]
 config.excludes = ["Inputs", "lit.cfg.py", "lit.site.cfg.py"]
 if not config.inter_test_is_integration:
     config.excludes.append("Integration")
@@ -59,6 +59,11 @@ if config.inter_test_is_integration:
             ToolSubst(
                 "inter-runner",
                 command=config.inter_runner,
+                unresolved="fatal",
+            ),
+            ToolSubst(
+                "inter-matmul-runner",
+                command=config.inter_matmul_runner,
                 unresolved="fatal",
             ),
         ]

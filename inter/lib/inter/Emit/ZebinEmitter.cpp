@@ -99,7 +99,8 @@ std::string quoteYaml(llvm::StringRef value) {
   return result;
 }
 
-FailureOr<std::string> buildZeInfo(func::FuncOp kernel) {
+FailureOr<std::string> buildZeInfo(func::FuncOp kernel,
+                                   uint32_t payloadEntryOffset) {
   auto target = kernel->getAttrOfType<TargetAttr>(kTargetAttrName);
   if (!target || target.getChip().getValue() != "bmg")
     return kernel.emitOpError("zebin emission requires a BMG target"),
@@ -153,14 +154,14 @@ FailureOr<std::string> buildZeInfo(func::FuncOp kernel) {
       kernel->getAttrOfType<IntegerAttr>(kInlineDataPayloadSizeAttrName);
   auto perThreadSize =
       kernel->getAttrOfType<IntegerAttr>(kPerThreadPayloadSizeAttrName);
-  auto entryOffset =
-      kernel->getAttrOfType<IntegerAttr>(kPayloadEntryOffsetAttrName);
-  if (usesPayload && (!inlineSize || !entryOffset))
+  if (usesPayload && !inlineSize)
     return kernel.emitOpError("incomplete thread payload attributes"),
            failure();
-  if (usesPayload && (inlineSize.getInt() != 32 || entryOffset.getInt() != 192))
+  if (usesPayload && inlineSize.getInt() != 32)
     return kernel.emitOpError("unsupported thread payload layout"), failure();
-  if (usesThreadIds && (!perThreadSize || perThreadSize.getInt() != 192))
+  if (usesThreadIds &&
+      (!perThreadSize || perThreadSize.getInt() < 64 ||
+       perThreadSize.getInt() > 192 || perThreadSize.getInt() % 64 != 0))
     return kernel.emitOpError("unsupported per-thread payload layout"),
            failure();
 
@@ -184,7 +185,7 @@ FailureOr<std::string> buildZeInfo(func::FuncOp kernel) {
   if (usesPayload) {
     output << "      inline_data_payload_size: " << inlineSize.getInt() << "\n"
            << "      offset_to_skip_per_thread_data_load: "
-           << entryOffset.getInt() << "\n";
+           << payloadEntryOffset << "\n";
   }
   output << "      simd_size: " << simdSize.getInt() << "\n";
   if (barrierCount.getInt() != 0)
@@ -355,13 +356,22 @@ LogicalResult inter::emitZebin(ModuleOp moduleOp, llvm::raw_ostream &output) {
     return moduleOp.emitError("zebin emission requires exactly one kernel"),
            failure();
 
-  FailureOr<std::string> zeInfo = buildZeInfo(kernels.front());
-  if (failed(zeInfo))
-    return failure();
-
   Bytes text;
   llvm::raw_svector_ostream textOutput(text);
-  if (failed(emitGedBinary(moduleOp, textOutput)) || text.empty())
+  uint32_t payloadEntryOffset = 0;
+  ArrayAttr kernelArgs =
+      kernels.front()->getAttrOfType<ArrayAttr>(kKernelArgsAttrName);
+  bool usesPayload = kernels.front()->hasAttr(kUsesThreadIdsAttrName) ||
+                     (kernelArgs && !kernelArgs.empty());
+  if (failed(emitGedBinary(moduleOp, textOutput,
+                           usesPayload ? &payloadEntryOffset : nullptr)))
     return failure();
+  FailureOr<std::string> zeInfo =
+      buildZeInfo(kernels.front(), payloadEntryOffset);
+  if (failed(zeInfo))
+    return failure();
+  if (text.empty())
+    return kernels.front().emitOpError("encoded kernel text is empty"),
+           failure();
   return writeElf(kernels.front(), text, *zeInfo, output);
 }

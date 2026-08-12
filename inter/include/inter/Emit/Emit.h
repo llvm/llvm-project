@@ -4,6 +4,8 @@
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <cstdint>
+
 namespace mlir {
 class ModuleOp;
 }
@@ -11,7 +13,8 @@ class ModuleOp;
 namespace inter {
 
 mlir::LogicalResult emitGedBinary(mlir::ModuleOp moduleOp,
-                                  llvm::raw_ostream &output);
+                                  llvm::raw_ostream &output,
+                                  uint32_t *payloadEntryOffset = nullptr);
 mlir::LogicalResult emitZebin(mlir::ModuleOp moduleOp,
                               llvm::raw_ostream &output);
 

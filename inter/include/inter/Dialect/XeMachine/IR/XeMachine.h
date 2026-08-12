@@ -30,8 +30,6 @@ inline constexpr llvm::StringLiteral kInlineDataPayloadSizeAttrName =
     "xemachine.inline_data_payload_size";
 inline constexpr llvm::StringLiteral kPerThreadPayloadSizeAttrName =
     "xemachine.per_thread_payload_size";
-inline constexpr llvm::StringLiteral kPayloadEntryOffsetAttrName =
-    "xemachine.payload_entry_offset";
 inline constexpr llvm::StringLiteral kSlmSizeAttrName = "xemachine.slm_size";
 inline constexpr llvm::StringLiteral kScratchSizeAttrName =
     "xemachine.scratch_size";

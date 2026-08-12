@@ -5,6 +5,27 @@
 // RUN: diff %t.once %t.twice
 
 module {
+  // CHECK-LABEL: func.func @payload_prologue
+  // CHECK: xemachine.payload_prologue {
+  // CHECK: [[BEFORE:%.*]] = xemachine.mov
+  // CHECK: xemachine.sync allwr
+  // CHECK: xemachine.payload_prologue_end
+  // CHECK: }
+  // CHECK: [[AFTER:%.*]] = xemachine.mov
+  func.func @payload_prologue() attributes {
+      xemachine.target = #xemachine.target<chip = "bmg">} {
+    %one = xemachine.imm 1 : i32
+    xemachine.payload_prologue {
+      %before = xemachine.mov %one {execSize = 1 : i32, noMask}
+          : (!xemachine.imm, i32) -> !xemachine.reg<16, -1>
+      %boundary = xemachine.sync allwr : !xemachine.mem.token
+      xemachine.payload_prologue_end
+    }
+    %after = xemachine.mov %one {execSize = 1 : i32, noMask}
+        : (!xemachine.imm, i32) -> !xemachine.reg<16, -1>
+    return
+  }
+
   func.func @alu_gap_fill() attributes {
       xemachine.target = #xemachine.target<chip = "bmg">} {
     %r0 = xemachine.archreg 0 : !xemachine.reg<16, 0>

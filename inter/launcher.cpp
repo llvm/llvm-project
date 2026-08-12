@@ -1,8 +1,8 @@
 // Generic zebin runner: wraps a zebin in an OffloadBinary, loads via
 // liboffload, launches, dumps output buffers. No kernel knowledge.
 //
-// Usage: inter-runner [--compact] [--sort-output] <zebin.bin> <kernel-name>
-//                     <n> <arg-spec>...
+// Usage: inter-runner [--compact] [--sort-output] [--group-size <n>]
+//                     <zebin.bin> <kernel-name> <n> <arg-spec>...
 //        inter-runner --probe [device-name-substring]
 //   arg-spec (in kernel arg order):
 //     out        device buffer, printed as hex after the run
@@ -152,6 +152,7 @@ int main(int argc, char **argv) {
 
   bool compactOutput = false;
   bool sortOutput = false;
+  uint32_t groupSize = 32;
   int firstArg = 1;
   while (firstArg < argc) {
     std::string option = argv[firstArg];
@@ -159,6 +160,17 @@ int main(int argc, char **argv) {
       compactOutput = true;
     else if (option == "--sort-output")
       sortOutput = true;
+    else if (option == "--group-size") {
+      if (++firstArg == argc) {
+        fprintf(stderr, "FAIL: --group-size requires a value\n");
+        return 1;
+      }
+      groupSize = strtoul(argv[firstArg], nullptr, 0);
+      if (groupSize == 0) {
+        fprintf(stderr, "FAIL: group size must be nonzero\n");
+        return 1;
+      }
+    }
     else
       break;
     ++firstArg;
@@ -166,7 +178,7 @@ int main(int argc, char **argv) {
 
   if (argc - firstArg < 3) {
     fprintf(stderr,
-            "usage: %s [--compact] [--sort-output] "
+            "usage: %s [--compact] [--sort-output] [--group-size <n>] "
             "<zebin.bin> <kernel> <n> <spec>...\n"
             "  spec: out | in:<mul> | inout:<mul> | u32:<value>\n",
             argv[0]);
@@ -175,8 +187,9 @@ int main(int argc, char **argv) {
   const char *zebinPath = argv[firstArg];
   const char *kernelName = argv[firstArg + 1];
   size_t n = strtoul(argv[firstArg + 2], nullptr, 0);
-  if (n == 0 || n % 32 != 0) {
-    fprintf(stderr, "FAIL: launch size must be a nonzero multiple of 32\n");
+  if (n == 0 || n % groupSize != 0) {
+    fprintf(stderr,
+            "FAIL: launch size must be a nonzero multiple of group size\n");
     return 1;
   }
   int numArgs = argc - firstArg - 3;
@@ -244,8 +257,8 @@ int main(int argc, char **argv) {
 
   ol_kernel_launch_size_args_t lsa;
   lsa.Dimensions = 1;
-  lsa.NumGroups = {uint32_t((n + 31) / 32), 1, 1};
-  lsa.GroupSize = {32, 1, 1};
+  lsa.NumGroups = {uint32_t(n / groupSize), 1, 1};
+  lsa.GroupSize = {groupSize, 1, 1};
   lsa.DynSharedMemory = 0;
   CHECK(olLaunchKernel(nullptr, dev, kern, &lsa, nullptr, numArgs,
                        argPtrs.data(), argSizes.data()));

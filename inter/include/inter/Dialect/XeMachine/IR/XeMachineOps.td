@@ -283,6 +283,23 @@ def XeMachine_EotOp : XeMachine_MsgOp<"eot",
       "$payload (`dep` $dependency^)? attr-dict `:` qualified(type($payload))";
 }
 
+// Software setup skipped when the walker provides the architectural payload.
+// The region has no SSA interface because both entry paths communicate only
+// through the fixed architectural registers.
+def XeMachine_PayloadPrologueOp : XeMachine_Op<"payload_prologue",
+    [SingleBlock, NoRegionArguments, RecursiveMemoryEffects]> {
+  let summary = "software setup for the alternate kernel payload entry";
+  let regions = (region AnyRegion:$body);
+  let assemblyFormat = "$body attr-dict";
+}
+
+def XeMachine_PayloadPrologueEndOp : XeMachine_Op<"payload_prologue_end",
+    [Pure, Terminator, XeMachine_NoMachineInst, XeMachine_NoAsmEmission,
+     HasParent<"PayloadPrologueOp">]> {
+  let summary = "mark the alternate kernel payload entry";
+  let assemblyFormat = "attr-dict";
+}
+
 // Structured control flow. exec_if = mask-stack push/pop; uniform_if =
 // scalar-condition branch. The emitter sees control flow only as these
 // region ops.

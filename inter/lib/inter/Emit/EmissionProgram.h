@@ -154,6 +154,7 @@ using EmissionItem =
 
 struct EmissionProgram {
   llvm::SmallVector<EmissionItem> items;
+  std::optional<uint32_t> payloadEntryLabel;
 };
 
 mlir::LogicalResult lowerToEmissionProgram(mlir::ModuleOp moduleOp,

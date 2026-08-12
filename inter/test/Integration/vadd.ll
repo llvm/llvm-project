@@ -1,5 +1,6 @@
 ; REQUIRES: host-supports-inter-bmg
 ; RUN: inter-translate %s --import-llvm -o %t.mlir
+; RUN: inter-opt %t.mlir '--inter-import-llvm=simd-width=32' -o %t.mlir
 ; RUN: inter-opt %t.mlir --pass-pipeline='builtin.module(transform-preload-library{transform-library-paths=%inter_pipelines},transform-interpreter{entry-point=inter_backend})' -o %t.xemachine.mlir
 ; RUN: inter-translate %t.xemachine.mlir --xemachine-to-zebin -o %t.bin
 ; RUN: inter-runner --compact %t.bin vadd 32 in:1 in:1000 out | FileCheck %s

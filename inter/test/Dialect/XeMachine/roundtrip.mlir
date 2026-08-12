@@ -25,6 +25,13 @@ func.func @kernel(%arg0: !xemachine.reg<32, -1>, %flag: !xemachine.arf<f, 2, -1>
   %t2 = xemachine.after %t1 : !xemachine.mem.token
   %t3 = xemachine.token_join %t0, %t2 : !xemachine.mem.token, !xemachine.mem.token
 
+  // CHECK: xemachine.payload_prologue {
+  // CHECK-NEXT: xemachine.payload_prologue_end
+  // CHECK-NEXT: }
+  xemachine.payload_prologue {
+    xemachine.payload_prologue_end
+  }
+
   // CHECK: xemachine.exec_if %{{.*}} : !xemachine.arf<f, 2, -1>
   xemachine.exec_if %flag : !xemachine.arf<f, 2, -1> {
     xemachine.yield

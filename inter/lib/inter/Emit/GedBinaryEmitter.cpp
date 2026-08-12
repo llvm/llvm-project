@@ -58,6 +58,13 @@ public:
     return success();
   }
 
+  std::optional<uint32_t> getLabelOffset(uint32_t label) const {
+    auto iterator = labelOffsets.find(label);
+    if (iterator == labelOffsets.end())
+      return std::nullopt;
+    return iterator->second;
+  }
+
 private:
   LogicalResult layout(const EmissionProgram &program) {
     uint64_t pc = 0;
@@ -909,11 +916,25 @@ private:
 
 namespace inter {
 
-LogicalResult emitGedBinary(ModuleOp moduleOp, llvm::raw_ostream &output) {
+LogicalResult emitGedBinary(ModuleOp moduleOp, llvm::raw_ostream &output,
+                            uint32_t *payloadEntryOffset) {
   detail::EmissionProgram program;
   if (failed(detail::lowerToEmissionProgram(moduleOp, program)))
     return failure();
-  return detail::GedEncoder(moduleOp, output).encode(program);
+  detail::GedEncoder encoder(moduleOp, output);
+  if (failed(encoder.encode(program)))
+    return failure();
+  if (payloadEntryOffset) {
+    if (!program.payloadEntryLabel)
+      return moduleOp.emitError("kernel has no payload prologue"), failure();
+    std::optional<uint32_t> offset =
+        encoder.getLabelOffset(*program.payloadEntryLabel);
+    if (!offset)
+      return moduleOp.emitError("payload entry label was not laid out"),
+             failure();
+    *payloadEntryOffset = *offset;
+  }
+  return success();
 }
 
 } // namespace inter

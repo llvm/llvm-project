@@ -26,7 +26,6 @@ namespace {
 
 constexpr int kInlineMirrorSize = 32;
 constexpr int kLocalIdLoadOffset = 0x20;
-constexpr int kPerThreadPayloadSize = 192;
 
 struct ValueShape {
   Type elementType;
@@ -447,12 +446,11 @@ private:
     if (needsPayload) {
       machineFunction->setAttr(kInlineDataPayloadSizeAttrName,
                                moduleBuilder.getI32IntegerAttr(32));
-      machineFunction->setAttr(kPayloadEntryOffsetAttrName,
-                               moduleBuilder.getI32IntegerAttr(192));
     }
     if (usesThreadIds)
       machineFunction->setAttr(kPerThreadPayloadSizeAttrName,
-                               moduleBuilder.getI32IntegerAttr(192));
+                               moduleBuilder.getI32IntegerAttr(
+                                   getPerThreadPayloadSize()));
 
     builder = OpBuilder::atBlockBegin(machineFunction.addEntryBlock());
     if (needsPayload && failed(emitPrologue()))
@@ -497,7 +495,7 @@ private:
     Value threadSlot =
         AndOp::create(*builder, *location, RegType::get(context, 16, 7), i32(),
                       1, canonicalDestination(), uniformRegion(), RegionAttr(),
-                      IntegerAttr(), builder->getI32IntegerAttr(4),
+                      IntegerAttr(), builder->getI32IntegerAttr(1),
                       IntegerAttr(), TypeAttr(), TypeAttr(), true, 0, r0,
                       immediate(0xff, i32()))
             .getResult();
@@ -506,7 +504,7 @@ private:
                       ARFType::get(context, ARFFile::acc, 16, 0), i32(), 1,
                       canonicalDestination(), uniformRegion(), RegionAttr(),
                       IntegerAttr(), IntegerAttr(), IntegerAttr(), true, 0,
-                      threadSlot, immediate(kPerThreadPayloadSize, i32()))
+                      threadSlot, immediate(getPerThreadPayloadSize(), i32()))
             .getResult();
     Value threadOffset = emitMove(RegType::get(context, 16, 8), i32(), 1,
                                   offsetAccumulator, uniformRegion(), true);
@@ -542,16 +540,29 @@ private:
       emitSync(SyncKind::nop);
   }
 
+  int64_t getPerThreadPayloadSize() const {
+    for (int64_t axis = 2; axis >= 0; --axis)
+      if (usedIdAxes[axis])
+        return (axis + 1) * 64;
+    llvm_unreachable("thread payload size requires a used ID axis");
+  }
+
   LogicalResult emitPrologue() {
     if (prologueEmitted)
       return success();
     prologueEmitted = true;
     bool usesThreadIds = usedIdAxes[0] || usedIdAxes[1] || usedIdAxes[2];
+    PayloadPrologueOp prologue = PayloadPrologueOp::create(*builder, *location);
+    Block &body = prologue.getBody().emplaceBlock();
+    builder->setInsertionPointToStart(&body);
     if (usesThreadIds)
       emitLocalIdEntry();
     else
       emitArgumentEntry();
     emitSync(SyncKind::allwr);
+    PayloadPrologueEndOp::create(*builder, *location);
+    builder->setInsertionPointAfter(prologue);
+    memoryToken = Value();
 
     Value r0 = architecturalRegister(0);
     Value base =
@@ -2707,13 +2718,26 @@ private:
               .getResult();
       Value base =
           emitMove(reg(16), i32(), 1, accumulator, uniformRegion(), true);
-      result = Add3Op::create(
-                   *builder, *location, reg(simdWidth), i32(), simdWidth,
-                   canonicalDestination(), uniformRegion(), canonicalRegion(),
-                   uniformRegion(), IntegerAttr(), IntegerAttr(), IntegerAttr(),
-                   builder->getI32IntegerAttr(dim), TypeAttr(), typeAttr(i16()),
-                   TypeAttr(), false, 0, base, local, inlineData)
-                   .getResult();
+      Value expandedLocal =
+          MovOp::create(*builder, *location, reg(simdWidth), i32(), simdWidth,
+                        canonicalDestination(), canonicalRegion(),
+                        IntegerAttr(), builder->getI32IntegerAttr(dim),
+                        typeAttr(i16()), false, 0, local)
+              .getResult();
+      Value groupLocal =
+          AddOp::create(*builder, *location, reg(simdWidth), i32(), simdWidth,
+                        canonicalDestination(), uniformRegion(),
+                        canonicalRegion(), IntegerAttr(), IntegerAttr(),
+                        IntegerAttr(), TypeAttr(), TypeAttr(), false, 0, base,
+                        expandedLocal)
+              .getResult();
+      result =
+          AddOp::create(*builder, *location, reg(simdWidth), i32(), simdWidth,
+                        canonicalDestination(), canonicalRegion(),
+                        uniformRegion(), IntegerAttr(), IntegerAttr(),
+                        builder->getI32IntegerAttr(dim), TypeAttr(), TypeAttr(),
+                        false, 0, groupLocal, inlineData)
+              .getResult();
     }
     if (elementType.isInteger(32) || isa<IndexType>(elementType)) {
       values[operation->getResult(0)] = result;

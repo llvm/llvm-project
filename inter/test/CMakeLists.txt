@@ -57,9 +57,16 @@ if(INTER_INCLUDE_INTEGRATION_TESTS)
   add_executable(inter-runner ${PROJECT_SOURCE_DIR}/launcher.cpp)
   target_include_directories(inter-runner PRIVATE ${INTER_OFFLOAD_INCLUDE_DIR})
   target_link_libraries(inter-runner PRIVATE InterLLVMOffload)
+  add_executable(inter-matmul-runner matmul-runner.cpp)
+  target_include_directories(inter-matmul-runner PRIVATE
+    ${INTER_OFFLOAD_INCLUDE_DIR})
+  target_link_libraries(inter-matmul-runner PRIVATE InterLLVMOffload)
   get_filename_component(INTER_OFFLOAD_LIBRARY_DIR
     "${INTER_OFFLOAD_LIBRARY}" DIRECTORY)
   set_target_properties(inter-runner PROPERTIES
+    BUILD_RPATH "${INTER_OFFLOAD_LIBRARY_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Integration")
+  set_target_properties(inter-matmul-runner PROPERTIES
     BUILD_RPATH "${INTER_OFFLOAD_LIBRARY_DIR}"
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Integration")
 
@@ -75,6 +82,6 @@ if(INTER_INCLUDE_INTEGRATION_TESTS)
   add_lit_testsuite(check-inter-integration
     "Running the inter Intel Xe integration tests"
     ${CMAKE_CURRENT_BINARY_DIR}/Integration
-    DEPENDS ${INTER_TEST_DEPENDS} inter-runner)
+    DEPENDS ${INTER_TEST_DEPENDS} inter-runner inter-matmul-runner)
   set_target_properties(check-inter-integration PROPERTIES FOLDER "Tests")
 endif()

@@ -15,6 +15,7 @@ config.filecheck = "@LLVM_TOOLS_BINARY_DIR@/FileCheck"
 config.llvm_objcopy = "@LLVM_TOOLS_BINARY_DIR@/llvm-objcopy"
 config.llvm_readobj = "@LLVM_TOOLS_BINARY_DIR@/llvm-readobj"
 config.inter_runner = "@CMAKE_CURRENT_BINARY_DIR@/Integration/inter-runner"
+config.inter_matmul_runner = "@CMAKE_CURRENT_BINARY_DIR@/Integration/inter-matmul-runner"
 config.inter_device_name = "@INTER_INTEGRATION_DEVICE_NAME@"
 
 import lit.llvm

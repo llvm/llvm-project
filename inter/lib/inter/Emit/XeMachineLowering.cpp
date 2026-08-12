@@ -205,6 +205,19 @@ private:
         lowerDpas(dpas);
         continue;
       }
+      if (PayloadPrologueOp prologue =
+              dyn_cast<PayloadPrologueOp>(&operation)) {
+        if (prologue.getBody().empty())
+          return prologue.emitError("emission requires a non-empty body");
+        if (program.payloadEntryLabel)
+          return prologue.emitError("emission supports one payload prologue");
+        if (failed(lowerBlock(prologue.getBody().front())))
+          return failure();
+        uint32_t entryLabel = nextLabel++;
+        program.items.emplace_back(Label{entryLabel});
+        program.payloadEntryLabel = entryLabel;
+        continue;
+      }
       if (ExecIfOp ifOp = dyn_cast<ExecIfOp>(&operation)) {
         if (failed(lowerIf(ifOp.getOperation())))
           return failure();
