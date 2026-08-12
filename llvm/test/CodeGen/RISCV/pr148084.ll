@@ -11,7 +11,7 @@ define fastcc i16 @search_tx_type() #0 {
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:  # %bb.1: # %bb
 ; CHECK-NEXT:    lbu a0, 0(zero)
-; CHECK-NEXT:    lh a2, 0(zero)
+; CHECK-NEXT:    lhu a2, 0(zero)
 ; CHECK-NEXT:    lw a1, 0(zero)
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    addi a0, a0, -1
@@ -165,16 +165,23 @@ define fastcc i16 @search_tx_type() #0 {
 ; CHECK-NEXT:  .LBB0_52: # %bb
 ; CHECK-NEXT:    sgtz a1, a1
 ; CHECK-NEXT:    slli a1, a1, 15
-; CHECK-NEXT:    bset a2, zero, a2
-; CHECK-NEXT:    and a3, a2, a1
-; CHECK-NEXT:    seqz a3, a3
+; CHECK-NEXT:    bset a3, zero, a2
+; CHECK-NEXT:    and a4, a3, a1
+; CHECK-NEXT:    lui a3, 16
 ; CHECK-NEXT:    addi a3, a3, -1
-; CHECK-NEXT:    and a2, a2, a3
-; CHECK-NEXT:    andn a1, a1, a2
-; CHECK-NEXT:    andn a0, a0, a1
-; CHECK-NEXT:  # %bb.53: # %get_tx_mask.exit
-; CHECK-NEXT:    slli a1, a0, 48
-; CHECK-NEXT:    seqz a1, a1
+; CHECK-NEXT:    bnez a4, .LBB0_54
+; CHECK-NEXT:  # %bb.53: # %bb
+; CHECK-NEXT:    mv a2, a3
+; CHECK-NEXT:    j .LBB0_55
+; CHECK-NEXT:  .LBB0_54:
+; CHECK-NEXT:    li a4, -2
+; CHECK-NEXT:    rol a2, a4, a2
+; CHECK-NEXT:  .LBB0_55: # %bb
+; CHECK-NEXT:    and a1, a1, a2
+; CHECK-NEXT:    xor a1, a1, a3
+; CHECK-NEXT:    and a0, a0, a1
+; CHECK-NEXT:  # %bb.56: # %get_tx_mask.exit
+; CHECK-NEXT:    seqz a1, a0
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    ret
