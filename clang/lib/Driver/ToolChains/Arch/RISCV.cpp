@@ -410,7 +410,7 @@ riscv::getRISCVTuneCPU(const Driver &D, const llvm::opt::ArgList &Args,
   auto Idx = TuneCPU.find(':');
   if (Idx != StringRef::npos) {
     if (!Args.hasFlag(options::OPT_mexperimental_mtune_syntax,
-                    options::OPT_mno_experimental_mtune_syntax, false)) {
+                      options::OPT_mno_experimental_mtune_syntax, false)) {
       // Only print this diagnostics if it's used for retrieving tune features
       // to avoid printing the same error message multiple times.
       if (TuneFeatures)
