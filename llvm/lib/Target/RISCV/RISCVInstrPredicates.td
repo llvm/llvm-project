@@ -33,7 +33,6 @@ def isSEXT_W
                    MCReturnStatement<CheckAll<[
                      CheckOpcode<[ADDIW]>,
                      CheckIsRegOperand<1>,
-                     CheckIsImmOperand<2>,
                      CheckImmOperand<2, 0>
                    ]>>>;
 
@@ -52,7 +51,6 @@ def isZEXT_B
                    MCReturnStatement<CheckAll<[
                      CheckOpcode<[ANDI]>,
                      CheckIsRegOperand<1>,
-                     CheckIsImmOperand<2>,
                      CheckImmOperand<2, 255>
                    ]>>>;
 
