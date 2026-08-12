@@ -3663,6 +3663,39 @@ static void verifyUses(Scop *S, LoopInfo &LI, DominatorTree &DT) {
 }
 #endif
 
+void ScopBuilder::ensureEscapingValuesOfEmptyDomainStmts() {
+  for (ScopStmt &Stmt : scop->Stmts) {
+    BasicBlock *BB = Stmt.getEntryBlock();
+    if (!BB)
+      continue;
+
+    // A statement with a null or empty domain is pruned before code generation.
+    isl::set Domain = scop->DomainMap.lookup(BB);
+    if (!(Domain.is_null() || Domain.is_empty()))
+      continue;
+
+    // When that statement is pruned we lose the ScopArrayInfo for any escaping
+    // scalar it defines. Codegen then skips the merge PHI for the escaping use
+    // at the versioned region exit, and we're left with a use that doesn't
+    // dominate the merge block. So create the Value ScopArrayInfo up front,
+    // before the prune, and codegen will still build the merge PHI. On the
+    // optimized-copy edge that PHI reloads an alloca nobody ever stored to
+    // which is poison.
+    for (MemoryAccess *MA : Stmt) {
+      if (!MA->isValueKind() || !MA->isMustWrite())
+        continue;
+      auto *AccInst = dyn_cast<Instruction>(MA->getAccessValue());
+      if (!AccInst || !scop->contains(AccInst))
+        continue;
+      if (!scop->isEscaping(AccInst))
+        continue;
+
+      scop->getOrCreateScopArrayInfo(AccInst, AccInst->getType(), {},
+                                     MemoryKind::Value);
+    }
+  }
+}
+
 void ScopBuilder::buildScop(Region &R, AssumptionCache &AC) {
   scop = Scop::makeScop(R, SE, LI, DT, *SD.getDetectionContext(&R), ORE,
                         SD.getNextID());
@@ -3744,6 +3777,10 @@ void ScopBuilder::buildScop(Region &R, AssumptionCache &AC) {
     else
       Stmt.setInvalidDomain(InvalidDomainMap[getRegionNodeBasicBlock(
           Stmt.getRegion()->getNode())]);
+
+  // Preserve the ScopArrayInfo of escaping scalars whose defining statement is
+  // about to be removed.
+  ensureEscapingValuesOfEmptyDomainStmts();
 
   // Remove empty statements.
   // Exit early in case there are no executable statements left in this scop.
