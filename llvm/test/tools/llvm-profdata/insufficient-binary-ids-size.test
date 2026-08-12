@@ -31,4 +31,4 @@ RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0' >> %t.profraw
 
 RUN: not llvm-profdata show --binary-ids  %t.profraw 2>&1 | FileCheck %s
-CHECK: invalid instrumentation profile data (file header is corrupt): BinaryIdSize (8) is not a multiple of 8 or the profile is truncated
+CHECK: truncated profile data

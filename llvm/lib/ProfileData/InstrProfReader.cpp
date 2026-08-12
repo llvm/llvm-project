@@ -597,11 +597,14 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
       reinterpret_cast<const uint8_t *>(&Header) + sizeof(RawInstrProf::Header);
   const uint8_t *BinaryIdEnd = BinaryIdStart + BinaryIdSize;
   const uint8_t *BufferEnd = (const uint8_t *)DataBuffer->getBufferEnd();
-  if (BinaryIdSize % sizeof(uint64_t) || BinaryIdEnd > BufferEnd)
-    return error(instrprof_error::bad_header,
-                 ("BinaryIdSize (" + Twine(BinaryIdSize) +
-                  ") is not a multiple of 8 or the profile is truncated")
-                     .str());
+  if (BinaryIdSize % sizeof(uint64_t))
+    return error(
+        instrprof_error::bad_header,
+        ("BinaryIdSize (" + Twine(BinaryIdSize) + ") is not a multiple of 8")
+            .str());
+  if (BinaryIdEnd > BufferEnd)
+    return error(instrprof_error::truncated);
+
   ArrayRef<uint8_t> BinaryIdsBuffer(BinaryIdStart, BinaryIdSize);
   if (!BinaryIdsBuffer.empty()) {
     if (Error Err = readBinaryIdsInternal(*DataBuffer, BinaryIdsBuffer,
