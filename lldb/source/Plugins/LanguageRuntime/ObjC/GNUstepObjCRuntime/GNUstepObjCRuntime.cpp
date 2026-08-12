@@ -20,9 +20,9 @@
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/FunctionCaller.h"
 #include "lldb/Expression/UtilityFunction.h"
-#include "lldb/Symbol/DeclVendor.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Symbol/Type.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
@@ -115,9 +115,10 @@ public:
         if (!inst) {
           // A constant expression has no instruction to anchor the call to;
           // such a selector stays unregistered.
-          LLDB_LOG(GetLog(LLDBLog::Expressions),
-                   "not registering selector used by a constant expression: {0}",
-                   gv->getName());
+          LLDB_LOG(
+              GetLog(LLDBLog::Expressions),
+              "not registering selector used by a constant expression: {0}",
+              gv->getName());
           continue;
         }
         llvm::Function *func = inst->getFunction();
@@ -454,8 +455,8 @@ bool GNUstepObjCRuntime::CalculateHasNewLiteralsAndIndexing() {
   const ModuleList &images = GetTargetRef().GetImages();
   for (llvm::StringRef class_name : g_required_classes) {
     SymbolContextList sc_list;
-    images.FindSymbolsWithNameAndType(ConstString(prefix.str() + class_name.str()),
-                                      eSymbolTypeAny, sc_list);
+    images.FindSymbolsWithNameAndType(
+        ConstString(prefix.str() + class_name.str()), eSymbolTypeAny, sc_list);
     if (sc_list.GetSize() == 0)
       return false;
   }
@@ -596,7 +597,8 @@ GNUstepObjCRuntime::GetStepThroughTrampolinePlan(Thread &thread,
   if (!(m_tagged_pointer_vendor_up &&
         m_tagged_pointer_vendor_up->IsPossibleTaggedPointer(receiver))) {
     Status error;
-    const addr_t isa_candidate = process->ReadPointerFromMemory(receiver, error);
+    const addr_t isa_candidate =
+        process->ReadPointerFromMemory(receiver, error);
     if (error.Success())
       isa = isa_candidate;
   }
@@ -679,7 +681,8 @@ FunctionCaller *GNUstepObjCRuntime::GetMsgLookupFunctionCaller(Thread &thread) {
   static const char *g_lookup_name = "$__lldb_gnustep_objc_msg_lookup";
   static const char *g_lookup_code =
       "void *objc_msg_lookup(void *receiver, void *selector);\n"
-      "void *$__lldb_gnustep_objc_msg_lookup(void *receiver, void *selector) {\n"
+      "void *$__lldb_gnustep_objc_msg_lookup(void *receiver, void *selector) "
+      "{\n"
       "  return objc_msg_lookup(receiver, selector);\n"
       "}\n";
 
@@ -722,9 +725,8 @@ FunctionCaller *GNUstepObjCRuntime::GetMsgLookupFunctionCaller(Thread &thread) {
   args.PushValue(void_ptr_value);
 
   Status error;
-  m_msg_lookup_caller =
-      m_msg_lookup_utility_up->MakeFunctionCaller(void_ptr_type, args,
-                                                  thread_sp, error);
+  m_msg_lookup_caller = m_msg_lookup_utility_up->MakeFunctionCaller(
+      void_ptr_type, args, thread_sp, error);
   if (error.Fail()) {
     LLDB_LOG(log, "failed to make objc_msg_lookup caller: {0}",
              error.AsCString());

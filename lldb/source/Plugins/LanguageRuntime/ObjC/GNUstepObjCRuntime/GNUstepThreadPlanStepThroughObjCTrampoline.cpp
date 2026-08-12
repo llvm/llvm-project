@@ -43,8 +43,7 @@ void GNUstepThreadPlanStepThroughObjCTrampoline::DidPush() {
   // Setting up the called function might require allocations in the
   // inferior, i.e. a nested function call. This needs to be done as a
   // PreResumeAction.
-  m_process.AddPreResumeAction(PreResumeInitializeFunctionCaller,
-                               (void *)this);
+  m_process.AddPreResumeAction(PreResumeInitializeFunctionCaller, (void *)this);
 }
 
 void GNUstepThreadPlanStepThroughObjCTrampoline::DidPop() {

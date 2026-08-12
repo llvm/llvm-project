@@ -126,8 +126,8 @@ void GNUstepObjCClassDescriptor::Read() {
         m_isa + layout.instance_size_offset, layout.long_size, 0, error);
     if (error.Fail())
       return;
-    m_instance_size = static_cast<uint64_t>(
-        instance_size < 0 ? -instance_size : instance_size);
+    m_instance_size = static_cast<uint64_t>(instance_size < 0 ? -instance_size
+                                                              : instance_size);
     m_superclass_isa = superclass;
   }
 

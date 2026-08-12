@@ -25,10 +25,10 @@ __attribute__((objc_root_class))
 @end
 
 @interface Calc : NSObject
-- (int)addFourtyTwoTo:(int)value;
+- (int)addFortyTwoTo:(int)value;
 @end
 @implementation Calc
-- (int)addFourtyTwoTo:(int)value {
+- (int)addFortyTwoTo:(int)value {
   return value + 42;
 }
 @end
@@ -38,17 +38,17 @@ __attribute__((objc_root_class))
 // without it the dispatch reaches the runtime with an unregistered selector.
 //
 // RUN: %lldb -b -o "b objc-gnustep-expr.m:47" -o "run" \
-// RUN:          -o "expr [c addFourtyTwoTo:100]" \
-// RUN:          -o "expr (int)[[Calc new] addFourtyTwoTo:1]" -- %t | FileCheck %s
+// RUN:          -o "expr [c addFortyTwoTo:100]" \
+// RUN:          -o "expr (int)[[Calc new] addFortyTwoTo:1]" -- %t | FileCheck %s
 //
 int main() {
   Calc *c = [Calc new];
-  (void)[c addFourtyTwoTo:0];
+  (void)[c addFortyTwoTo:0];
   return 0;
 }
 //
-// CHECK: (lldb) expr [c addFourtyTwoTo:100]
+// CHECK: (lldb) expr [c addFortyTwoTo:100]
 // CHECK: (int) {{\$[0-9]+}} = 142
 //
-// CHECK: addFourtyTwoTo:1]
+// CHECK: addFortyTwoTo:1]
 // CHECK: (int) {{\$[0-9]+}} = 43
