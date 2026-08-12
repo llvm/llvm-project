@@ -54,7 +54,12 @@ elseif("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^nvptx" OR
   list(APPEND compile_options --cuda-feature=+ptx63)
 elseif("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^spirv" OR
        "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^spirv")
-  set(target_name "spirv") 
+  set(target_name "spirv")
+  # The SPIR-V translator cannot handle vectorised IR reliably; the loop
+  # vectoriser is disabled here to match the device compiler flags set in
+  # SPIRVOpenMPToolChain::addClangTargetOptions. The SLP vectoriser is
+  # already disabled globally above.
+  list(APPEND compile_flags "SHELL:-mllvm -vectorize-loops=false")
 endif()
 
 # Trick to combine these into a bitcode file via the linker's LTO pass.
