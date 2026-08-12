@@ -378,6 +378,11 @@ Error L0DeviceTy::dataRetrieveImpl(void *HstPtr, const void *TgtPtr,
   return Plugin::success();
 }
 
+Error L0DeviceTy::dataMemcpyImpl(void *DstPtr, const void *SrcPtr, int64_t Size,
+                                 AsyncInfoWrapperTy &AsyncInfoWrapper) {
+  return enqueueMemCopy(DstPtr, SrcPtr, Size, AsyncInfoWrapper);
+}
+
 Error L0DeviceTy::enqueueHostCallImpl(void (*Callback)(void *), void *UserData,
                                       AsyncInfoWrapperTy &AsyncInfoWrapper) {
   __tgt_async_info *AsyncInfo = AsyncInfoWrapper;
@@ -957,11 +962,11 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
 
   AsyncInfoWrapperTy AsyncInfoWrapper(*this, /*AsyncInfoPtr=*/nullptr);
 
-  KernelArgsTy KernelArgs{};
+  KernelLaunchArgsTy LaunchArgs{};
   uint32_t NumBlocksAndThreads[3] = {1u, 1u, 1u};
   auto Err =
       L0Kernel.launchImpl(*this, NumBlocksAndThreads, NumBlocksAndThreads, 0,
-                          KernelArgs, KernelLaunchParamsTy{}, AsyncInfoWrapper);
+                          LaunchArgs, AsyncInfoWrapper);
 
   AsyncInfoWrapper.finalize(Err);
   return CleanupBufferAndErr(std::move(Err));

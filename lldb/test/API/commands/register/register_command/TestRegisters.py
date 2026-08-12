@@ -608,7 +608,7 @@ class RegisterCommandsTestCase(TestBase):
         # The behaviour of this command is generic but the specific registers
         # are not, so this is written for AArch64 only.
         # Text alignment and ordering are checked in the DumpRegisterInfo and
-        # RegisterFlags unit tests.
+        # RegisterTypeFlags unit tests.
         self.build()
         self.common_setup()
 
@@ -702,7 +702,7 @@ class RegisterCommandsTestCase(TestBase):
             "fs_base does not equal to pthread_self() value.",
         )
 
-    @skipIfWasm  # attaching requires launching the inferior as a host process
+    @requireNotWasm("attaching requires launching the inferior as a host process")
     def test_process_must_be_stopped(self):
         """Check that all register commands error when the process is not stopped."""
         self.build()

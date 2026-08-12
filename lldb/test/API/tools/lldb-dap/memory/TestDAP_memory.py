@@ -76,6 +76,7 @@ class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
         )
 
     @skipIfWindows
+    @skipIfWasm  # the test finds the memory to read by evaluating an expression
     def test_readMemory(self):
         """
         Tests the 'readMemory' request
@@ -126,6 +127,7 @@ class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
 
     # Flakey on 32-bit Arm Linux.
     @skipIf(oslist=["linux"], archs=["arm$"])
+    @skipIfWasm  # the test finds the memory to write by evaluating an expression
     def test_writeMemory(self):
         """
         Tests the 'writeMemory' request

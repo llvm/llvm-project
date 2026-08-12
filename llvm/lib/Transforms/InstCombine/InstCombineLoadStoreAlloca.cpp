@@ -16,6 +16,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/Loads.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
@@ -260,7 +261,7 @@ private:
   }
 
   SmallSetVector<Instruction *, 32> UsersToReplace;
-  MapVector<Value *, Value *> WorkMap;
+  DenseMap<Value *, Value *> WorkMap;
   InstCombinerImpl &IC;
   Instruction &Root;
   unsigned FromAS;
@@ -423,15 +424,30 @@ void PointerReplacer::replace(Instruction *I) {
     // replacement (new value).
     WorkMap[NewI] = NewI;
   } else if (auto *PHI = dyn_cast<PHINode>(I)) {
-    // Create a new PHI by replacing any incoming value that is a user of the
-    // root pointer and has a replacement.
-    Value *V = WorkMap.lookup(PHI->getIncomingValue(0));
-    PHI->mutateType(V ? V->getType() : PHI->getIncomingValue(0)->getType());
-    for (unsigned int I = 0; I < PHI->getNumIncomingValues(); ++I) {
-      Value *V = WorkMap.lookup(PHI->getIncomingValue(I));
-      PHI->setIncomingValue(I, V ? V : PHI->getIncomingValue(I));
+    Value *FirstIncoming = PHI->getIncomingValue(0);
+    Value *V = WorkMap.lookup(FirstIncoming);
+    Type *NewType = V ? V->getType() : FirstIncoming->getType();
+    if (PHI->getType() == NewType) {
+      for (unsigned I = 0; I < PHI->getNumIncomingValues(); ++I) {
+        Value *V = WorkMap.lookup(PHI->getIncomingValue(I));
+        PHI->setIncomingValue(I, V ? V : PHI->getIncomingValue(I));
+      }
+      WorkMap[PHI] = PHI;
+      return;
     }
-    WorkMap[PHI] = PHI;
+
+    auto *NewPHI = PHINode::Create(NewType, PHI->getNumIncomingValues(), "");
+    IC.InsertNewInstWith(NewPHI, PHI->getIterator());
+    NewPHI->takeName(PHI);
+    NewPHI->copyMetadata(*PHI);
+    WorkMap[PHI] = NewPHI;
+    for (auto [IncomingValue, IncomingBlock] :
+         zip_equal(PHI->incoming_values(), PHI->blocks())) {
+      Value *V = WorkMap.lookup(IncomingValue);
+      assert(V && V->getType() == NewType &&
+             "Type-changing PHI incoming value was not replaced");
+      NewPHI->addIncoming(V, IncomingBlock);
+    }
   } else if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
     auto *V = getReplacement(GEP->getPointerOperand());
     assert(V && "Operand not replaced");
@@ -1737,6 +1753,10 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
   AAMDNodes AATags = SI.getAAMetadata();
   if (AATags)
     NewSI->setAAMetadata(AATags.merge(OtherStore->getAAMetadata()));
+
+  // If the two stores had access groups, intersect them.
+  NewSI->setMetadata(LLVMContext::MD_access_group,
+                     intersectAccessGroups(&SI, OtherStore));
 
   // Nuke the old stores.
   eraseInstFromFunction(SI);
