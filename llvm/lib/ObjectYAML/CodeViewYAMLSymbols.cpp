@@ -63,6 +63,7 @@ LLVM_YAML_DECLARE_ENUM_TRAITS(TrampolineType)
 LLVM_YAML_DECLARE_ENUM_TRAITS(ThunkOrdinal)
 LLVM_YAML_DECLARE_ENUM_TRAITS(JumpTableEntrySize)
 LLVM_YAML_DECLARE_ENUM_TRAITS(SourceLanguage)
+LLVM_YAML_DECLARE_ENUM_TRAITS(EncodedFramePtrReg)
 
 LLVM_YAML_STRONG_TYPEDEF(StringRef, TypeName)
 
@@ -212,6 +213,14 @@ void ScalarEnumerationTraits<SourceLanguage>::enumeration(IO &IO,
   auto Names = getSourceLanguageNames();
   for (const auto &E : Names) {
     IO.enumCase(L, E.name(), static_cast<SourceLanguage>(E.value()));
+  }
+}
+
+void ScalarEnumerationTraits<EncodedFramePtrReg>::enumeration(
+    IO &IO, EncodedFramePtrReg &R) {
+  auto Names = getEncodedFramePtrRegNames();
+  for (const auto &E : Names) {
+    IO.enumCase(R, E.name(), static_cast<EncodedFramePtrReg>(E.value()));
   }
 }
 
@@ -523,7 +532,17 @@ template <> void SymbolRecordImpl<FrameProcSym>::map(IO &IO) {
   IO.mapRequired("OffsetOfExceptionHandler", Symbol.OffsetOfExceptionHandler);
   IO.mapRequired("SectionIdOfExceptionHandler",
                  Symbol.SectionIdOfExceptionHandler);
-  IO.mapRequired("Flags", Symbol.Flags);
+  FrameProcedureOptions Flags = Symbol.getFlags();
+  EncodedFramePtrReg LocalFP = Symbol.getEncodedLocalFramePtrReg();
+  EncodedFramePtrReg ParamFP = Symbol.getEncodedParamFramePtrReg();
+  IO.mapRequired("Flags", Flags);
+  IO.mapOptional("LocalFramePtrReg", LocalFP, EncodedFramePtrReg::None);
+  IO.mapOptional("ParamFramePtrReg", ParamFP, EncodedFramePtrReg::None);
+  if (!IO.outputting()) {
+    Symbol.setFlags(Flags);
+    Symbol.setEncodedLocalFramePtrReg(LocalFP);
+    Symbol.setEncodedParamFramePtrReg(ParamFP);
+  }
 }
 
 template <> void SymbolRecordImpl<CallSiteInfoSym>::map(IO &IO) {
