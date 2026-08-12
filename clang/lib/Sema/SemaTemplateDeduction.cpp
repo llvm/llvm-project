@@ -907,21 +907,6 @@ private:
     llvm::SmallBitVector SawIndices(TemplateParams->size());
     llvm::SmallVector<TemplateArgument, 4> ExtraDeductions;
 
-    // This is basically clang::getDepthAndIndex but this also handles function
-    // parameter packs.
-    auto GetDepthAndIndex = [](UnexpandedParameterPack UPP)
-        -> std::optional<std::pair<unsigned, unsigned>> {
-      if (const auto *TTP = dyn_cast<const TemplateTypeParmType *>(UPP.first))
-        return std::make_pair(TTP->getDepth(), TTP->getIndex());
-      if (isa<const TemplateSpecializationType *,
-              const SubstBuiltinTemplatePackType *>(UPP.first))
-        return std::nullopt;
-      const auto *ND = cast<NamedDecl *>(UPP.first);
-      if (isa<ParmVarDecl>(ND))
-        return std::nullopt;
-      return getDepthAndIndex(ND);
-    };
-
     auto AddPack = [&](unsigned Index) {
       if (SawIndices[Index])
         return;
@@ -950,7 +935,12 @@ private:
       S.collectUnexpandedParameterPacks(Pattern, Unexpanded);
       for (unsigned I = 0, N = Unexpanded.size(); I != N; ++I) {
         unsigned Depth, Index;
-        if (auto DI = GetDepthAndIndex(Unexpanded[I]))
+
+        // Function parameter packs cannot be deduced.
+        if (isa_and_nonnull<ParmVarDecl>(
+                dyn_cast<NamedDecl *>(Unexpanded[I].first)))
+          continue;
+        if (auto DI = getDepthAndIndex(Unexpanded[I]))
           std::tie(Depth, Index) = *DI;
         else
           continue;
