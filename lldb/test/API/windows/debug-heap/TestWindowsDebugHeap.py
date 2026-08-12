@@ -8,7 +8,7 @@ from lldbsuite.test.lldbtest import *
 from typing import List
 
 
-@requireWindows
+@requireWindows()
 class DebugHeapTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

@@ -5,7 +5,7 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
-    @requireDarwin
+    @requireDarwin()
     def test(self):
         self.build()
 

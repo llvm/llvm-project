@@ -9,7 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@requireSignals
+@requireSignals()
 class RaiseTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
