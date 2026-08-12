@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <execution>
 #include <iterator>
+#include <numeric>
 
 void test() {
   int a[]    = {1};
@@ -58,4 +59,8 @@ void test() {
   std::is_sorted(std::execution::par, std::begin(a), std::end(a), pred2);
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::reverse_copy(std::execution::par, std::begin(a), std::end(a), std::begin(b));
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::adjacent_difference(std::execution::par, std::begin(a), std::end(a), std::begin(b));
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::adjacent_difference(std::execution::par, std::begin(a), std::end(a), std::begin(b), pred2);
 }

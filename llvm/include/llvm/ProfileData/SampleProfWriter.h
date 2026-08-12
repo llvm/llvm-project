@@ -415,6 +415,8 @@ protected:
 
   // Functions to write various kinds of sections.
   std::error_code writeNameTableSection(const SampleProfileMap &ProfileMap);
+  std::error_code
+  writeEytzingerNameTableSection(const SampleProfileMap &ProfileMap);
   std::error_code writeFuncOffsetTable();
   std::error_code writeProfileSymbolListSection();
   std::error_code writeStringBasedProfileSymbolListSection();

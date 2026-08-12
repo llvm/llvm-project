@@ -209,7 +209,7 @@ define i64 @f64_to_u64(double %x) {
   ret i64 %cvt
 }
 
-define i32 @strict_convert_signed(double %x) #0 {
+define i32 @strict_convert_signed(double %x) {
 ; CHECK-LABEL: strict_convert_signed:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtzs w0, d0
@@ -224,7 +224,7 @@ define i32 @strict_convert_signed(double %x) #0 {
   ret i32 %cvt
 }
 
-define i32 @strict_convert_unsigned(float %x) #0 {
+define i32 @strict_convert_unsigned(float %x) {
 ; CHECK-LABEL: strict_convert_unsigned:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtzu w0, s0

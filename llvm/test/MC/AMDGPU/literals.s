@@ -299,7 +299,7 @@ v_dot2_f32_f16 v5, v1, lit(1.0), v2
 // NOVI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (tonga): v_dot2_f32_f16
 
 v_cvt_pk_fp8_f16 v1.l, 1.0
-// GFX1250: v_cvt_pk_fp8_f16 v1.l, 0x3c00           ; encoding: [0x01,0x00,0x72,0xd7,0xff,0x00,0x01,0x02,0x00,0x3c,0x00,0x00]
+// GFX1250: v_cvt_pk_fp8_f16_e64 v1.l, 0x3c00           ; encoding: [0x01,0x00,0x72,0xd7,0xff,0x00,0x01,0x02,0x00,0x3c,0x00,0x00]
 // NOCI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (bonaire): v_cvt_pk_fp8_f16
 // NOGFX11: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx1100): v_cvt_pk_fp8_f16
 // NOGFX12: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1200): v_cvt_pk_fp8_f16
@@ -308,8 +308,8 @@ v_cvt_pk_fp8_f16 v1.l, 1.0
 // NOVI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (tonga): v_cvt_pk_fp8_f16
 
 v_cvt_pk_fp8_f16 v1.l, lit(1.0)
-// GFX1250-ASM: v_cvt_pk_fp8_f16 v1.l, lit(0x3c00)      ; encoding: [0x01,0x00,0x72,0xd7,0xff,0x00,0x01,0x02,0x00,0x3c,0x00,0x00]
-// GFX1250-DIS: v_cvt_pk_fp8_f16 v1.l, 0x3c00           ; encoding: [0x01,0x00,0x72,0xd7,0xff,0x00,0x01,0x02,0x00,0x3c,0x00,0x00]
+// GFX1250-ASM: v_cvt_pk_fp8_f16_e64 v1.l, lit(0x3c00)      ; encoding: [0x01,0x00,0x72,0xd7,0xff,0x00,0x01,0x02,0x00,0x3c,0x00,0x00]
+// GFX1250-DIS: v_cvt_pk_fp8_f16_e64 v1.l, 0x3c00           ; encoding: [0x01,0x00,0x72,0xd7,0xff,0x00,0x01,0x02,0x00,0x3c,0x00,0x00]
 // NOCI: :[[@LINE-3]]:1: error: instruction not supported on this GPU (bonaire): v_cvt_pk_fp8_f16
 // NOGFX11: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1100): v_cvt_pk_fp8_f16
 // NOGFX12: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx1200): v_cvt_pk_fp8_f16
@@ -775,7 +775,7 @@ v_dot2_f32_f16 v5, v1, lit(1), v2
 // NOVI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (tonga): v_dot2_f32_f16
 
 v_cvt_pk_fp8_f16 v1.l, 1
-// GFX1250: v_cvt_pk_fp8_f16 v1.l, 1                ; encoding: [0x01,0x00,0x72,0xd7,0xff,0x00,0x01,0x02,0x01,0x00,0x00,0x00]
+// GFX1250: v_cvt_pk_fp8_f16_e64 v1.l, 1                ; encoding: [0x01,0x00,0x72,0xd7,0xff,0x00,0x01,0x02,0x01,0x00,0x00,0x00]
 // NOCI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (bonaire): v_cvt_pk_fp8_f16
 // NOGFX11: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx1100): v_cvt_pk_fp8_f16
 // NOGFX12: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1200): v_cvt_pk_fp8_f16
@@ -784,8 +784,8 @@ v_cvt_pk_fp8_f16 v1.l, 1
 // NOVI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (tonga): v_cvt_pk_fp8_f16
 
 v_cvt_pk_fp8_f16 v1.l, lit(1)
-// GFX1250-ASM: v_cvt_pk_fp8_f16 v1.l, lit(0x1)         ; encoding: [0x01,0x00,0x72,0xd7,0xff,0x00,0x01,0x02,0x01,0x00,0x00,0x00]
-// GFX1250-DIS: v_cvt_pk_fp8_f16 v1.l, 1                ; encoding: [0x01,0x00,0x72,0xd7,0xff,0x00,0x01,0x02,0x01,0x00,0x00,0x00]
+// GFX1250-ASM: v_cvt_pk_fp8_f16_e64 v1.l, lit(0x1)         ; encoding: [0x01,0x00,0x72,0xd7,0xff,0x00,0x01,0x02,0x01,0x00,0x00,0x00]
+// GFX1250-DIS: v_cvt_pk_fp8_f16_e64 v1.l, 1                ; encoding: [0x01,0x00,0x72,0xd7,0xff,0x00,0x01,0x02,0x01,0x00,0x00,0x00]
 // NOCI: :[[@LINE-3]]:1: error: instruction not supported on this GPU (bonaire): v_cvt_pk_fp8_f16
 // NOGFX11: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1100): v_cvt_pk_fp8_f16
 // NOGFX12: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx1200): v_cvt_pk_fp8_f16

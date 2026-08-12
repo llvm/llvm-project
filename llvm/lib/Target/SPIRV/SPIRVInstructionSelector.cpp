@@ -464,6 +464,9 @@ private:
                            MachineInstr &I) const;
   bool selectFrexp(Register ResVReg, SPIRVTypeInst ResType,
                    MachineInstr &I) const;
+
+  bool selectLdexp(Register ResVReg, SPIRVTypeInst ResType,
+                   MachineInstr &I) const;
   bool selectSincos(Register ResVReg, SPIRVTypeInst ResType,
                     MachineInstr &I) const;
   bool selectExp10(Register ResVReg, SPIRVTypeInst ResType,
@@ -1131,8 +1134,9 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, CL::fma, GL::Fma);
   }
 
+  case TargetOpcode::G_FLDEXP:
   case TargetOpcode::G_STRICT_FLDEXP:
-    return selectExtInst(ResVReg, ResType, I, CL::ldexp);
+    return selectLdexp(ResVReg, ResType, I);
 
   case TargetOpcode::G_FPOW:
     return selectExtInst(ResVReg, ResType, I, CL::pow, GL::Pow);
@@ -1551,6 +1555,37 @@ bool SPIRVInstructionSelector::selectFrexp(Register ResVReg,
     return true;
   }
   return false;
+}
+
+bool SPIRVInstructionSelector::selectLdexp(Register ResVReg,
+                                           SPIRVTypeInst ResType,
+                                           MachineInstr &I) const {
+  Register XReg = I.getOperand(1).getReg();
+  Register ExpReg = I.getOperand(2).getReg();
+
+  // Both OpenCL.std ldexp and GLSL.std.450 Ldexp require the exponent to have
+  // the same number of components as the result, but G_FLDEXP's exponent is
+  // scalar even for vector operands. Splat it when the result is a vector.
+  SPIRVTypeInst ExpType = GR.getSPIRVTypeForVReg(ExpReg);
+  if (ResType->getOpcode() == SPIRV::OpTypeVector &&
+      ExpType->getOpcode() != SPIRV::OpTypeVector) {
+    unsigned NumElts = ResType->getOperand(2).getImm();
+    SPIRVTypeInst ExpVecType =
+        GR.getOrCreateSPIRVVectorType(ExpType, NumElts, I, TII);
+    Register SplatReg =
+        createVirtualRegister(ExpVecType, &GR, MRI, MRI->getMF());
+    auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                       TII.get(SPIRV::OpCompositeConstruct))
+                   .addDef(SplatReg)
+                   .addUse(GR.getSPIRVTypeID(ExpVecType));
+    for (unsigned J = 0; J < NumElts; ++J)
+      MIB.addUse(ExpReg);
+    MIB.constrainAllUses(TII, TRI, RBI);
+    ExpReg = SplatReg;
+  }
+
+  return selectExtInst(ResVReg, ResType, I, CL::ldexp, GL::Ldexp,
+                       /*setMIFlags=*/true, /*useMISrc=*/false, {XReg, ExpReg});
 }
 
 bool SPIRVInstructionSelector::selectSincos(Register ResVReg,

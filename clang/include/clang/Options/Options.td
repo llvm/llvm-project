@@ -3459,6 +3459,11 @@ def clangir_enable_idiom_recognizer : Flag<["-"], "clangir-enable-idiom-recogniz
   HelpText<"ClangIR: Enable Idiom Recognizer pass">,
   MarshallingInfoFlag<FrontendOpts<"ClangIREnableIdiomRecognizer">>;
 
+def clangir_enable_call_conv_lowering : Flag<["-"], "clangir-enable-call-conv-lowering">,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"ClangIR: Enable calling-convention lowering pass (x86_64 only)">,
+  MarshallingInfoFlag<FrontendOpts<"ClangIREnableCallConvLowering">>;
+
 def clangir_lib_opt_EQ : Joined<["-"], "clangir-lib-opt=">,
   Visibility<[ClangOption, CC1Option]>, Group<f_Group>, Values<"all">,
   HelpText<"Enable C/C++ library based optimizations (with options)">,
@@ -4933,6 +4938,19 @@ def fno_wrapv : Flag<["-"], "fno-wrapv">, Group<f_Group>,
 def fwrapv_pointer : Flag<["-"], "fwrapv-pointer">, Group<f_Group>,
   Visibility<[ClangOption, CLOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Treat pointer overflow as two's complement">;
+def fdefined_pointer_subtraction :
+  Flag<["-"], "fdefined-pointer-subtraction">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<
+    "Define subtraction of pointers not aligned to object boundaries"
+  >,
+  DocBrief<
+    "When subtracting two pointers, do not assume that the byte difference is an "
+    "exact multiple of the pointee type size, thereby preventing such subtraction "
+    "from resulting in undefined behavior. Users should prefer casting pointers "
+    "to ``char *`` before subtracting them rather than relying on this flag."
+  >,
+  MarshallingInfoFlag<LangOpts<"StablePointerSubtraction">>;
 def fno_wrapv_pointer : Flag<["-"], "fno-wrapv-pointer">, Group<f_Group>,
   Visibility<[ClangOption, CLOption, FlangOption]>;
 def fwritable_strings : Flag<["-"], "fwritable-strings">, Group<f_Group>,
@@ -5966,10 +5984,18 @@ defm cumode : SimpleMFlag<"cumode",
   " execution mode (AMDGPU only)", m_amdgpu_Features_Group>;
 defm tgsplit : SimpleMFlag<"tgsplit", "Enable", "Disable",
   " threadgroup split execution mode (AMDGPU only)", m_amdgpu_Features_Group>;
-defm xnack : SimpleMFlag<"xnack", "Enable", "Disable",
-  " XNACK (AMDGPU only)", m_amdgpu_Features_Group>;
-defm sramecc : SimpleMFlag<"sramecc", "Enable", "Disable",
-  " SRAMECC (AMDGPU only)", m_amdgpu_Features_Group>;
+def mxnack : Flag<["-"], "mxnack">, Group<m_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Enable XNACK (AMDGPU only)">;
+def mno_xnack : Flag<["-"], "mno-xnack">, Group<m_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Disable XNACK (AMDGPU only)">;
+def msramecc : Flag<["-"], "msramecc">, Group<m_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Enable SRAMECC (AMDGPU only)">;
+def mno_sramecc : Flag<["-"], "mno-sramecc">, Group<m_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Disable SRAMECC (AMDGPU only)">;
 defm wavefrontsize64 : SimpleMFlag<"wavefrontsize64",
   "Specify wavefront size 64", "Specify wavefront size 32",
   " mode (AMDGPU only)">;
@@ -9902,6 +9928,9 @@ def dxc_gis : DXCFlag<"Gis">,
 def : Option<["/", "-"], "Qembed_debug", KIND_FLAG>, Group<dxc_Group>,
   Flags<[Ignored]>, Visibility<[DXCOption]>,
   HelpText<"Embed PDB in shader container (ignored)">;
+def dxc_Qpdb_in_private : DXCFlag<"Qpdb_in_private">,
+                          Flags<[HelpHidden]>,
+                          HelpText<"Store PDB in private user data">;
 def spirv : DXCFlag<"spirv">,
   HelpText<"Generate SPIR-V code">;
 def metal : DXCFlag<"metal">, HelpText<"Generate Metal library">;

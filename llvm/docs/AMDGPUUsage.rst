@@ -1012,10 +1012,48 @@ consumed by the AMDGPU backend during code generation.
      - Same as above, but for typed buffer instructions (``tbuffer_load`` /
        ``tbuffer_store``).
 
+   * - ``amdgpu.xnack``
+     - ``i32``
+     - Error
+     - Controls XNACK (page fault) replay mode. This is ignored on
+       targets which do not support xnack.
+
+       - absent: **any**. The module can be loaded and executed in a process
+         with XNACK replay either enabled or disabled. Code generation
+         assumes XNACK may be enabled.
+       - ``0``: **off**. The module can only be loaded and executed in a
+         process with XNACK replay disabled. Code generation is optimized
+         for XNACK disabled.
+       - ``1``: **on**. The module can only be loaded and executed in a
+         process with XNACK replay enabled. Code generation assumes XNACK
+         is enabled.
+
+       At link time, modules with conflicting settings (``0`` vs ``1``)
+       produce an error. Modules with **any** (absent flag) are compatible
+       with any setting.
+
+   * - ``amdgpu.sramecc``
+     - ``i32``
+     - Error
+     - Controls SRAMECC mode. This is ignored on targets which do not
+       support sramecc.
+
+       - absent: **any**. The module can be loaded and executed in a process
+         with SRAMECC either enabled or disabled.
+       - ``0``: **off**. The module can only be loaded and executed in a
+         process with SRAMECC disabled.
+       - ``1``: **on**. The module can only be loaded and executed in a
+         process with SRAMECC enabled. Some instructions behave differently
+         (e.g., D16 memory instructions).
+
+       At link time, modules with conflicting settings (``0`` vs ``1``)
+       produce an error. Modules with **any** (absent flag) are compatible
+       with any setting.
+
 .. note::
 
    Frontends that require misaligned-access merging for performance should
-   set both flags to ``1`` (relaxed).  Frontends that require strict
+   set both buffer OOB flags to ``1`` (relaxed).  Frontends that require strict
    per-byte OOB guarantees should set the flags to ``2`` (strict) as needed.
    Modules that do not use buffer operations or are indifferent to OOB semantics
    (e.g. device libraries) should leave the flags absent.

@@ -23,7 +23,10 @@ using namespace mlir::abi;
 // For byval (ArgClassification::byVal == true) the callee gets
 // llvm.byval + llvm.noalias + llvm.noundef; for byref (byVal == false)
 // the callee gets llvm.byref without the ownership attrs.  Both pass
-// through an alloca+store at the call site.
+// through an alloca+store at the call site.  At the callee, byval loads
+// the incoming pointer (a local copy), while byref rewires the CIRGen
+// param-slot alloca to the incoming pointer so the body mutates the
+// caller's storage in place.
 //
 // For Expand, the single struct argument is replaced by N scalar arguments
 // (one per field).  At the callee, the N field block arguments are stored
@@ -437,9 +440,12 @@ emitStructFieldArgs(mlir::OpBuilder &builder, mlir::Location loc,
 
 /// For each Direct arg with a coerced type, change the block argument's type
 /// to the coerced type and insert a coercion at function entry that maps it
-/// back to the original type for body uses.  For each Indirect (byval/byref)
-/// arg, change the block argument's type to a pointer and insert a load at
-/// entry so the body sees the original value type.  For each Expand arg,
+/// back to the original type for body uses.  For each Indirect byval arg,
+/// change the block argument's type to a pointer and insert a load at entry
+/// so the body sees a local copy of the original value type.  For each
+/// Indirect byref arg, change the block argument to a pointer and rewire the
+/// CIRGen param-slot alloca to that pointer (no entry load / byte-copy) so
+/// the body operates on the caller's storage in place.  For each Expand arg,
 /// replace the single struct block argument with N scalar block arguments (one
 /// per field) and store each field directly into the parameter's own alloca
 /// (the CIRGen spill slot), erasing the original whole-struct store.
@@ -619,19 +625,56 @@ void insertArgCoercion(mlir::FunctionOpInterface funcOp,
       // to adapted (now of the original type != the alloca's pointee type).
       blockArg.replaceAllUsesExcept(adapted, coercionOps);
     } else if (ac.kind == ArgKind::Indirect) {
-      // byval and byref: the wire type is !cir.ptr<T>.  Change the block arg
-      // to the pointer type and insert a load so the body sees the original
-      // T.  The body transformation is the same for both; the distinction
-      // between byval (llvm.byval) and byref (llvm.byref) is in the arg
-      // attributes applied by updateArgAttrs.
-      mlir::Type origTy = blockArg.getType();
-      auto ptrTy = cir::PointerType::get(origTy);
-      blockArg.setType(ptrTy);
+      // byval and byref share a !cir.ptr<T> wire type; the llvm.byval vs
+      // llvm.byref distinction is in the attrs applied by updateArgAttrs.
+      // Body lowering differs: byval copies into the callee (load at entry),
+      // while byref must operate on the caller's storage in place.
+      auto ptrTy = cir::PointerType::get(blockArg.getType());
 
-      builder.setInsertionPointToStart(&entry);
-      auto loadOp = cir::LoadOp::create(builder, funcOp.getLoc(), blockArg);
-      SmallPtrSet<mlir::Operation *, 1> loadOps = {loadOp};
-      blockArg.replaceAllUsesExcept(loadOp.getResult(), loadOps);
+      if (!ac.byVal) {
+        // byref: CIRGen spills every by-value parameter into a local alloca
+        // with a single store before any other use, and CallConvLowering runs
+        // on that CIRGen output before any alloca-promoting/splitting pass, so
+        // the block argument still has exactly that one use here.  Rewire the
+        // alloca to the incoming pointer and drop the store so the body
+        // operates on the caller's storage in place.  A byte-copy would be
+        // wrong for non-trivially-copyable aggregates (e.g. libstdc++ SSO
+        // std::string, where it would leave `_M_p` aliasing the source's
+        // `_M_local_buf`).  DCE may have removed a dead spill; tolerate that by
+        // only retyping the block argument.
+        cir::StoreOp paramStore;
+        cir::AllocaOp destAlloca;
+        if (!blockArg.use_empty()) {
+          assert(blockArg.hasOneUse() &&
+                 "byref arg must have exactly one use (the CIRGen param "
+                 "spill)");
+          paramStore = cast<cir::StoreOp>(*blockArg.user_begin());
+          assert(paramStore.getValue() == blockArg &&
+                 "byref arg's use must be the value operand of its store");
+          destAlloca =
+              cast<cir::AllocaOp>(paramStore.getAddr().getDefiningOp());
+        }
+
+        if (paramStore)
+          paramStore->erase();
+
+        // Update the block argument to point to its original type.
+        blockArg.setType(ptrTy);
+
+        if (destAlloca) {
+          destAlloca.getResult().replaceAllUsesWith(blockArg);
+          destAlloca->erase();
+        }
+      } else {
+        // byval: load the incoming pointer so the body sees a T value (and
+        // any CIRGen param-slot store becomes a local copy of that value).
+        blockArg.setType(ptrTy);
+
+        builder.setInsertionPointToStart(&entry);
+        auto loadOp = cir::LoadOp::create(builder, funcOp.getLoc(), blockArg);
+        SmallPtrSet<mlir::Operation *, 1> loadOps = {loadOp};
+        blockArg.replaceAllUsesExcept(loadOp.getResult(), loadOps);
+      }
     }
     // Ignore, Extend, and Direct-without-coerce need no block-level changes.
 

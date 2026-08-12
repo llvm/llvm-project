@@ -583,6 +583,58 @@ VPValue *vputils::findIncomingAliasMask(const VPlan &Plan) {
   return nullptr;
 }
 
+VPScalarIVStepsRecipe *vputils::createScalarIVSteps(
+    VPlan &Plan, InductionDescriptor::InductionKind Kind,
+    Instruction::BinaryOps InductionOpcode, FPMathOperator *FPBinOp,
+    Instruction *TruncI, VPIRValue *StartV, VPValue *Step, DebugLoc DL,
+    VPBuilder &Builder) {
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
+  VPValue *CanonicalIV = LoopRegion->getCanonicalIV();
+  VPSingleDefRecipe *BaseIV =
+      Builder.createDerivedIV(Kind, FPBinOp, StartV, CanonicalIV, Step);
+
+  // Truncate base induction if needed.
+  Type *ResultTy = BaseIV->getScalarType();
+  if (TruncI) {
+    Type *TruncTy = TruncI->getType();
+    assert(ResultTy->getScalarSizeInBits() > TruncTy->getScalarSizeInBits() &&
+           "Not truncating.");
+    assert(ResultTy->isIntegerTy() && "Truncation requires an integer type");
+    BaseIV = Builder.createScalarCast(Instruction::Trunc, BaseIV, TruncTy, DL);
+    ResultTy = TruncTy;
+  }
+
+  // Truncate step if needed.
+  Type *StepTy = Step->getScalarType();
+  if (ResultTy != StepTy) {
+    assert(StepTy->getScalarSizeInBits() > ResultTy->getScalarSizeInBits() &&
+           "Not truncating.");
+    assert(StepTy->isIntegerTy() && "Truncation requires an integer type");
+    auto *VecPreheader =
+        cast<VPBasicBlock>(HeaderVPBB->getSingleHierarchicalPredecessor());
+    VPBuilder::InsertPointGuard Guard(Builder);
+    Builder.setInsertPoint(VecPreheader);
+    Step = Builder.createScalarCast(Instruction::Trunc, Step, ResultTy, DL);
+  }
+  return Builder.createScalarIVSteps(InductionOpcode, FPBinOp, BaseIV, Step,
+                                     &Plan.getVF(), DL);
+}
+
+VPValue *
+vputils::scalarizeVPWidenPointerInduction(VPWidenPointerInductionRecipe *PtrIV,
+                                          VPlan &Plan, VPBuilder &Builder) {
+  const InductionDescriptor &ID = PtrIV->getInductionDescriptor();
+  VPIRValue *StartV = Plan.getZero(ID.getStep()->getType());
+  VPValue *StepV = PtrIV->getOperand(1);
+  VPScalarIVStepsRecipe *Steps = createScalarIVSteps(
+      Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr,
+      nullptr, StartV, StepV, PtrIV->getDebugLoc(), Builder);
+
+  return Builder.createPtrAdd(PtrIV->getStartValue(), Steps,
+                              PtrIV->getDebugLoc(), "next.gep");
+}
+
 bool VPBlockUtils::isHeader(const VPBlockBase *VPB,
                             const VPDominatorTree &VPDT) {
   auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
@@ -756,8 +808,7 @@ bool vputils::isUsedByLoadStoreAddress(const VPValue *V) {
     for (VPUser *U : Cur->users()) {
       auto *VPI = dyn_cast<VPInstruction>(U);
       if (VPI && VPI->getMask() == Cur &&
-          none_of(VPI->operandsWithoutMask(),
-                  [Cur](VPValue *Op) { return Op == Cur; }))
+          none_of(VPI->operandsWithoutMask(), equal_to(Cur)))
         continue;
       if (match(U, m_VPInstruction<Instruction::Load>()))
         continue;

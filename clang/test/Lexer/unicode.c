@@ -7,8 +7,8 @@
 
 // This file contains Unicode characters; please do not "fix" them!
 
-extern int x; // expected-warning {{treating Unicode character as whitespace}}
-extern int　x; // expected-warning {{treating Unicode character as whitespace}}
+extern int x; // expected-error {{treating character ' ' U+00A0 as whitespace}}
+extern int　x; // expected-error {{treating character '　' U+3000 as whitespace}}
 
 // CHECK: extern int {{x}}
 // CHECK: extern int　{{x}}
@@ -52,11 +52,11 @@ extern int a\N{TANGSALETTERGA}; // expected-error {{'TANGSALETTERGA' is not a va
                                 // expected-error {{expected ';' after top level declarator}} \
                                 // expected-note {{character names in Unicode escape sequences are sensitive to case and whitespace}}
 
-extern int 𝛛; // expected-warning {{mathematical notation character <U+1D6DB> in an identifier is a Clang extension}}
-extern int ₉; // expected-error {{character <U+2089> not allowed at the start of an identifier}} \\
+extern int 𝛛; // expected-warning {{mathematical notation character '𝛛' U+1D6DB in an identifier is a Clang extension}}
+extern int ₉; // expected-error {{character '₉' U+2089 not allowed at the start of an identifier}} \\
                  expected-warning {{declaration does not declare anything}}
 
-extern int a\N{PICKLE}; // expected-error {{character <U+1FADD> not allowed in an identifier}}
+extern int a\N{PICKLE}; // expected-error {{character '🫝' U+1FADD not allowed in an identifier}}
 
 int a¹b₍₄₂₎∇; // expected-warning 6{{mathematical notation character}}
 
@@ -70,20 +70,20 @@ int a\N{SUBSCRIPT EQUALS SIGN} = 1; // expected-warning {{mathematical notation 
 extern int  \U00016AC0; // TANGSA DIGIT ZERO  // cxx-error {{expected unqualified-id}} \
                                               // c2x-error {{expected identifier or '('}}
 
-extern int 🌹; // expected-error {{unexpected character <U+1F339>}} \
+extern int 🌹; // expected-error {{unexpected character '🌹' U+1F339}} \
                   expected-warning {{declaration does not declare anything}}
 
 extern int 🫎;   // MOOSE (Unicode 15) \
-                // expected-error {{unexpected character <U+1FACE>}} \
+                // expected-error {{unexpected character '🫎' U+1FACE}} \
                    expected-warning {{declaration does not declare anything}}
 
-extern int 👷; // expected-error {{unexpected character <U+1F477>}} \
+extern int 👷; // expected-error {{unexpected character '👷' U+1F477}} \
                   expected-warning {{declaration does not declare anything}}
 
 extern int 👷‍♀; // expected-warning {{declaration does not declare anything}} \
-                  expected-error {{unexpected character <U+1F477>}} \
-                  expected-error {{character <U+200D> not allowed at the start of an identifier}} \
-                  expected-error {{unexpected character <U+2640>}}
+                  expected-error {{unexpected character '👷' U+1F477}} \
+                  expected-error {{character U+200D not allowed at the start of an identifier}} \
+                  expected-error {{unexpected character '♀' U+2640}}
 #else
 
 // A 🌹 by any other name....
@@ -94,19 +94,19 @@ int main (void) {
   return 🌷;
 }
 
-int n; = 3; // expected-warning {{treating Unicode character <U+037E> as an identifier character rather than as ';' symbol}}
-int *n꞉꞉v = &n;; // expected-warning 2{{treating Unicode character <U+A789> as an identifier character rather than as ':' symbol}}
-                 // expected-warning@-1 {{treating Unicode character <U+037E> as an identifier character rather than as ';' symbol}}
-int v＝［＝］（auto）｛return～x；｝（）; // expected-warning 12{{treating Unicode character}}
+int n; = 3; // expected-warning {{treating character ';' U+037E as an identifier character rather than as ';' symbol}}
+int *n꞉꞉v = &n;; // expected-warning 2{{treating character '꞉' U+A789 as an identifier character rather than as ':' symbol}}
+                 // expected-warning@-1 {{treating character ';' U+037E as an identifier character rather than as ';' symbol}}
+int v＝［＝］（auto）｛return～x；｝（）; // expected-warning 12{{treating character}}
 
 int ⁠x﻿x‍;
-// expected-warning@-1 {{identifier contains Unicode character <U+2060> that is invisible in some environments}}
-// expected-warning@-2 {{identifier contains Unicode character <U+FEFF> that is invisible in some environments}}
-// expected-warning@-3 {{identifier contains Unicode character <U+200D> that is invisible in some environments}}
-int foo​bar = 0; // expected-warning {{identifier contains Unicode character <U+200B> that is invisible in some environments}}
+// expected-warning@-1 {{identifier contains character U+2060 that is invisible in some environments}}
+// expected-warning@-2 {{identifier contains character U+FEFF that is invisible in some environments}}
+// expected-warning@-3 {{identifier contains character U+200D that is invisible in some environments}}
+int foo​bar = 0; // expected-warning {{identifier contains character U+200B that is invisible in some environments}}
 int x = foobar; // expected-error {{undeclared identifier}}
 
-int ∣foo; // expected-error {{unexpected character <U+2223>}}
+int ∣foo; // expected-error {{unexpected character '∣' U+2223}}
 #ifndef PP_ONLY
 #define ∶ x // expected-error {{macro name must be an identifier}}
 #endif

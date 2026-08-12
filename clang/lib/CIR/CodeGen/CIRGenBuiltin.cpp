@@ -163,11 +163,12 @@ static Address checkAtomicAlignment(CIRGenFunction &cgf, const CallExpr *e) {
 
 /// Utility to insert an atomic instruction based on Intrinsic::ID
 /// and the expression node.
-static mlir::Value makeBinaryAtomicValue(
-    CIRGenFunction &cgf, cir::AtomicFetchKind kind, const CallExpr *expr,
-    mlir::Type *originalArgType = nullptr,
-    mlir::Value *emittedArgValue = nullptr,
-    cir::MemOrder ordering = cir::MemOrder::SequentiallyConsistent) {
+mlir::Value CIRGenFunction::makeBinaryAtomicValue(cir::AtomicFetchKind kind,
+                                                  const CallExpr *expr,
+                                                  mlir::Type *originalArgType,
+                                                  mlir::Value *emittedArgValue,
+                                                  cir::MemOrder ordering) {
+  CIRGenFunction &cgf = *this;
 
   QualType type = expr->getType();
   QualType ptrType = expr->getArg(0)->getType();
@@ -224,7 +225,7 @@ static mlir::Value makeBinaryAtomicValue(
 static RValue emitBinaryAtomic(CIRGenFunction &cgf,
                                cir::AtomicFetchKind atomicOpkind,
                                const CallExpr *e) {
-  return RValue::get(makeBinaryAtomicValue(cgf, atomicOpkind, e));
+  return RValue::get(cgf.makeBinaryAtomicValue(atomicOpkind, e));
 }
 
 template <typename BinOp>
@@ -234,8 +235,8 @@ static RValue emitBinaryAtomicPost(CIRGenFunction &cgf,
   mlir::Value emittedArgValue;
   mlir::Type originalArgType;
   clang::QualType typ = e->getType();
-  mlir::Value result = makeBinaryAtomicValue(
-      cgf, atomicOpkind, e, &originalArgType, &emittedArgValue);
+  mlir::Value result = cgf.makeBinaryAtomicValue(
+      atomicOpkind, e, &originalArgType, &emittedArgValue);
   clang::CIRGen::CIRGenBuilderTy &builder = cgf.getBuilder();
   result = BinOp::create(builder, result.getLoc(), result, emittedArgValue);
 

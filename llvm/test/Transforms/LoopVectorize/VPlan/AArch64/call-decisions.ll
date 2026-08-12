@@ -27,7 +27,7 @@ define void @pick_wide_call(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; CHECK-NEXT:      CLONE ir<%in.gep> = getelementptr inbounds ir<%in.ptr>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds ir<%in.gep>
 ; CHECK-NEXT:      WIDEN ir<%in> = load vp<[[VP4]]>
-; CHECK-NEXT:      WIDEN-CALL ir<%call> = call  @acos(ir<%in>) (using library function: _ZGVnN2v_acos)
+; CHECK-NEXT:      WIDEN-CALL ir<%call> = call @acos(ir<%in>) (using library function: _ZGVnN2v_acos)
 ; CHECK-NEXT:      CLONE ir<%out.gep> = getelementptr inbounds ir<%out.ptr>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%out.gep>
 ; CHECK-NEXT:      WIDEN store vp<[[VP5]]>, ir<%call>

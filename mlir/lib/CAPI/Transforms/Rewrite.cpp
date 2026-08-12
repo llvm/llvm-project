@@ -543,6 +543,23 @@ MlirLogicalResult mlirConversionPatternRewriterConvertRegionTypes(
                                                    *unwrap(typeConverter)));
 }
 
+void mlirConversionPatternRewriterReplaceOpWithMultiple(
+    MlirConversionPatternRewriter rewriter, MlirOperation op, intptr_t nRanges,
+    intptr_t *rangeSizes, MlirValue *values) {
+  SmallVector<SmallVector<Value>> ranges;
+  ranges.reserve(nRanges);
+  MlirValue *cur = values;
+  for (intptr_t i = 0; i < nRanges; ++i) {
+    intptr_t rangeSize = rangeSizes[i];
+    SmallVector<Value> range;
+    range.reserve(rangeSize);
+    for (intptr_t j = 0; j < rangeSize; ++j, ++cur)
+      range.push_back(unwrap(*cur));
+    ranges.push_back(std::move(range));
+  }
+  unwrap(rewriter)->replaceOpWithMultiple(unwrap(op), std::move(ranges));
+}
+
 //===----------------------------------------------------------------------===//
 /// ConversionTarget API
 //===----------------------------------------------------------------------===//
@@ -652,21 +669,169 @@ void mlirTypeConverterAddConversion(
     MlirTypeConverterConversionCallback convertType, void *userData) {
   unwrap(typeConverter)
       ->addConversion(
-          [convertType, userData](Type type) -> std::optional<Type> {
+          [convertType, userData](Type type, SmallVectorImpl<Type> &results)
+              -> std::optional<LogicalResult> {
             MlirType converted{nullptr};
-            MlirLogicalResult result =
+            MlirTypeConverterConversionStatus status =
                 convertType(wrap(type), &converted, userData);
-            if (mlirLogicalResultIsFailure(result))
-              return std::nullopt; // allowed to try another conversion function
-            if (mlirTypeIsNull(converted))
-              return nullptr;
-            return unwrap(converted);
+            switch (status) {
+            case MlirTypeConverterConversionStatusSuccess:
+              results.push_back(unwrap(converted));
+              return success();
+            case MlirTypeConverterConversionStatusFailure:
+              // Failure: fail the conversion without trying another
+              // registered conversion function.
+              return failure();
+            case MlirTypeConverterConversionStatusDeclined:
+              // Declined: allow the driver to try another conversion function.
+              return std::nullopt;
+            }
+            llvm_unreachable("unknown MlirTypeConverterConversionStatus");
+          });
+}
+
+void mlirTypeConverterConversionResultsAppend(
+    MlirTypeConverterConversionResults results, MlirType type) {
+  static_cast<SmallVectorImpl<Type> *>(results.ptr)->push_back(unwrap(type));
+}
+
+void mlirTypeConverterAdd1ToNConversion(
+    MlirTypeConverter typeConverter,
+    MlirTypeConverter1ToNConversionCallback convertType, void *userData) {
+  unwrap(typeConverter)
+      ->addConversion(
+          [convertType, userData](Type type, SmallVectorImpl<Type> &results)
+              -> std::optional<LogicalResult> {
+            size_t numPriorResults = results.size();
+            MlirTypeConverterConversionResults wrappedResults{&results};
+            MlirTypeConverterConversionStatus status =
+                convertType(wrap(type), wrappedResults, userData);
+            switch (status) {
+            case MlirTypeConverterConversionStatusSuccess:
+              return success();
+            case MlirTypeConverterConversionStatusFailure:
+              // Failure. Restore any types the callback appended (a
+              // non-succeeding conversion function must not mutate `results`)
+              // and fail the conversion without trying another function.
+              results.truncate(numPriorResults);
+              return failure();
+            case MlirTypeConverterConversionStatusDeclined:
+              // The callback declined. Restore any types it appended so the
+              // driver's "try the next conversion" invariant holds (a declining
+              // conversion function must not mutate `results`).
+              results.truncate(numPriorResults);
+              return std::nullopt;
+            }
+            llvm_unreachable("unknown MlirTypeConverterConversionStatus");
           });
 }
 
 MlirType mlirTypeConverterConvertType(MlirTypeConverter typeConverter,
                                       MlirType type) {
   return wrap(unwrap(typeConverter)->convertType(unwrap(type)));
+}
+
+namespace {
+SmallVector<MlirValue> wrapInputs(ValueRange inputs) {
+  SmallVector<MlirValue> wrappedInputs;
+  wrappedInputs.reserve(inputs.size());
+  for (Value v : inputs)
+    wrappedInputs.push_back(wrap(v));
+  return wrappedInputs;
+}
+
+std::function<Value(OpBuilder &, Type, ValueRange, Location)>
+wrapSourceMaterializationCallback(
+    MlirTypeConverterSourceMaterializationCallback callback, void *userData) {
+  return [callback, userData](OpBuilder &builder, Type type, ValueRange inputs,
+                              Location loc) -> Value {
+    SmallVector<MlirValue> wrappedInputs = wrapInputs(inputs);
+    MlirValue result =
+        callback(wrap(static_cast<RewriterBase *>(&builder)), wrap(type),
+                 static_cast<intptr_t>(wrappedInputs.size()),
+                 wrappedInputs.data(), wrap(loc), userData);
+    return mlirValueIsNull(result) ? Value() : unwrap(result);
+  };
+}
+
+std::function<Value(OpBuilder &, Type, ValueRange, Location, Type)>
+wrapTargetMaterializationCallback(
+    MlirTypeConverterTargetMaterializationCallback callback, void *userData) {
+  return [callback, userData](OpBuilder &builder, Type type, ValueRange inputs,
+                              Location loc, Type originalType) -> Value {
+    SmallVector<MlirValue> wrappedInputs = wrapInputs(inputs);
+    MlirValue result =
+        callback(wrap(static_cast<RewriterBase *>(&builder)), wrap(type),
+                 static_cast<intptr_t>(wrappedInputs.size()),
+                 wrappedInputs.data(), wrap(loc), wrap(originalType), userData);
+    return mlirValueIsNull(result) ? Value() : unwrap(result);
+  };
+}
+
+std::function<SmallVector<Value>(OpBuilder &, TypeRange, ValueRange, Location,
+                                 Type)>
+wrap1ToNTargetMaterializationCallback(
+    MlirTypeConverter1ToNTargetMaterializationCallback callback,
+    void *userData) {
+  return [callback, userData](OpBuilder &builder, TypeRange outputTypes,
+                              ValueRange inputs, Location loc,
+                              Type originalType) -> SmallVector<Value> {
+    SmallVector<MlirType> wrappedOutputTypes;
+    wrappedOutputTypes.reserve(outputTypes.size());
+    for (Type t : outputTypes)
+      wrappedOutputTypes.push_back(wrap(t));
+    SmallVector<MlirValue> wrappedInputs = wrapInputs(inputs);
+    SmallVector<MlirValue> wrappedOutputs(outputTypes.size(),
+                                          MlirValue{nullptr});
+    MlirLogicalResult result = callback(
+        wrap(static_cast<RewriterBase *>(&builder)),
+        static_cast<intptr_t>(wrappedOutputTypes.size()),
+        wrappedOutputTypes.data(), static_cast<intptr_t>(wrappedInputs.size()),
+        wrappedInputs.data(), wrap(loc), wrap(originalType),
+        wrappedOutputs.data(), userData);
+    if (mlirLogicalResultIsFailure(result))
+      return {}; // declined; another materialization may be attempted
+    SmallVector<Value> outputs;
+    outputs.reserve(wrappedOutputs.size());
+    for (MlirValue v : wrappedOutputs) {
+      // On success the callback must fill every output; a null entry is a
+      // contract violation (to decline, the callback returns failure instead).
+      assert(!mlirValueIsNull(v) &&
+             "1:N target materialization succeeded but left one of the outputs "
+             "null");
+      outputs.push_back(unwrap(v));
+    }
+    return outputs;
+  };
+}
+} // namespace
+
+void mlirTypeConverterAddSourceMaterialization(
+    MlirTypeConverter typeConverter,
+    MlirTypeConverterSourceMaterializationCallback callback, void *userData) {
+  assert(callback && "expected non-null materialization callback");
+  unwrap(typeConverter)
+      ->addSourceMaterialization(
+          wrapSourceMaterializationCallback(callback, userData));
+}
+
+void mlirTypeConverterAddTargetMaterialization(
+    MlirTypeConverter typeConverter,
+    MlirTypeConverterTargetMaterializationCallback callback, void *userData) {
+  assert(callback && "expected non-null materialization callback");
+  unwrap(typeConverter)
+      ->addTargetMaterialization(
+          wrapTargetMaterializationCallback(callback, userData));
+}
+
+void mlirTypeConverterAdd1ToNTargetMaterialization(
+    MlirTypeConverter typeConverter,
+    MlirTypeConverter1ToNTargetMaterializationCallback callback,
+    void *userData) {
+  assert(callback && "expected non-null materialization callback");
+  unwrap(typeConverter)
+      ->addTargetMaterialization(
+          wrap1ToNTargetMaterializationCallback(callback, userData));
 }
 
 //===----------------------------------------------------------------------===//
@@ -704,6 +869,28 @@ public:
         wrap(static_cast<const mlir::ConversionPattern *>(this)), wrap(op),
         wrappedOperands.size(), wrappedOperands.data(), wrap(&rewriter),
         userData));
+  }
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<ValueRange> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    // Without a 1:N callback, defer to the default behavior, which dispatches
+    // to the 1:1 matchAndRewrite above or fails to match on a 1:N mapping.
+    if (!callbacks.matchAndRewrite1ToN)
+      return dispatchTo1To1(*this, op, operands, rewriter);
+    SmallVector<intptr_t> rangeSizes;
+    rangeSizes.reserve(operands.size());
+    std::vector<MlirValue> wrappedOperands;
+    for (ValueRange range : operands) {
+      rangeSizes.push_back(static_cast<intptr_t>(range.size()));
+      for (Value val : range)
+        wrappedOperands.push_back(wrap(val));
+    }
+    return unwrap(callbacks.matchAndRewrite1ToN(
+        wrap(static_cast<const mlir::ConversionPattern *>(this)), wrap(op),
+        static_cast<intptr_t>(rangeSizes.size()), rangeSizes.data(),
+        static_cast<intptr_t>(wrappedOperands.size()), wrappedOperands.data(),
+        wrap(&rewriter), userData));
   }
 
 private:

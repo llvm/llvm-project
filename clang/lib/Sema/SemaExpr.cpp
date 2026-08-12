@@ -5698,17 +5698,12 @@ struct ImmediateCallVisitor : DynamicRecursiveASTVisitor {
   }
 
   // A nested lambda might have parameters with immediate invocations
-  // in their default arguments, or init-captures that are evaluated in the
-  // enclosing context.
+  // in their default arguments.
   // The compound statement is not visited (as it does not constitute a
   // subexpression).
+  // FIXME: We should consider visiting and transforming captures
+  // with init expressions.
   bool VisitLambdaExpr(LambdaExpr *E) override {
-    auto Init = E->capture_init_begin();
-    for (auto C = E->capture_begin(), CEnd = E->capture_end(); C != CEnd;
-         ++C, ++Init) {
-      if (E->isInitCapture(C) && !TraverseLambdaCapture(E, C, *Init))
-        return false;
-    }
     return VisitCXXMethodDecl(E->getCallOperator());
   }
 
@@ -5723,51 +5718,16 @@ struct ImmediateCallVisitor : DynamicRecursiveASTVisitor {
 
 struct EnsureImmediateInvocationInDefaultArgs
     : TreeTransform<EnsureImmediateInvocationInDefaultArgs> {
-  using Base = TreeTransform<EnsureImmediateInvocationInDefaultArgs>;
-
   EnsureImmediateInvocationInDefaultArgs(Sema &SemaRef)
       : TreeTransform(SemaRef) {}
 
   bool AlwaysRebuild() { return true; }
-  bool ReplacingOriginal() { return true; }
 
-  // Lambda bodies are not subexpressions of the enclosing default initializer,
-  // but init-capture expressions are evaluated in the enclosing context. Keep
-  // the existing closure type and capture declarations so the existing body
-  // still refers to the right declarations.
-  ExprResult TransformLambdaExpr(LambdaExpr *E) {
-    SmallVector<Expr *, 4> CaptureInits(E->capture_inits());
-
-    bool Changed = false;
-    for (unsigned I = 0, N = E->capture_size(); I != N; ++I) {
-      const LambdaCapture *C = E->capture_begin() + I;
-      if (!E->isInitCapture(C))
-        continue;
-
-      auto *VD = cast<VarDecl>(C->getCapturedVar());
-      Expr *Init = CaptureInits[I];
-      ExprResult NewInit =
-          TransformInitializer(Init, VD->getInitStyle() == VarDecl::CallInit);
-      if (NewInit.isInvalid())
-        return ExprError();
-      Changed |= NewInit.get() != Init;
-      CaptureInits[I] = NewInit.get();
-    }
-
-    LambdaExpr *Lambda = E;
-    if (Changed) {
-      // Reuse the existing closure class: it owns the capture declarations,
-      // fields, and call operator body. Only the LambdaExpr's capture
-      // initializer list is replaced.
-      Lambda = LambdaExpr::Create(
-          SemaRef.Context, E->getLambdaClass(), E->getIntroducerRange(),
-          E->getCaptureDefault(), E->getCaptureDefaultLoc(),
-          E->hasExplicitParameters(), E->hasExplicitResultType(), CaptureInits,
-          E->getEndLoc(), E->containsUnexpandedParameterPack());
-    }
-
-    return SemaRef.MaybeBindToTemporary(Lambda);
-  }
+  // Lambda can only have immediate invocations in the default
+  // args of their parameters, which is transformed upon calling the closure.
+  // The body is not a subexpression, so we have nothing to do.
+  // FIXME: Immediate calls in capture initializers should be transformed.
+  ExprResult TransformLambdaExpr(LambdaExpr *E) { return E; }
   ExprResult TransformBlockExpr(BlockExpr *E) { return E; }
 
   // Make sure we don't rebuild the this pointer as it would

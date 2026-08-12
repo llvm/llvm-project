@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
@@ -357,6 +358,62 @@ AMDGPU::IsaVersion AMDGPU::getIsaVersion(Triple::SubArchType SubArch) {
   }
 }
 
+unsigned AMDGPU::getTotalNumSGPRs(GPUKind AK) {
+  IsaVersion Version = getIsaVersion(getSubArch(AK));
+  if (Version.Major >= 8)
+    return 800;
+  return 512;
+}
+
+unsigned AMDGPU::getTotalNumSGPRs(Triple::SubArchType SubArch) {
+  IsaVersion Version = getIsaVersion(SubArch);
+  if (Version.Major >= 8)
+    return 800;
+  return 512;
+}
+
+unsigned AMDGPU::getAddressableNumSGPRs(GPUKind AK) {
+  if (getArchAttrAMDGCN(AK) & FEATURE_SGPR_INIT_BUG)
+    return FIXED_NUM_SGPRS_FOR_INIT_BUG;
+
+  IsaVersion Version = getIsaVersion(getSubArch(AK));
+  if (Version.Major >= 10)
+    return 106;
+  if (Version.Major >= 8)
+    return 102;
+  return 104;
+}
+
+unsigned AMDGPU::getAddressableNumSGPRs(Triple::SubArchType SubArch) {
+  if (getArchAttrAMDGCN(SubArch) & FEATURE_SGPR_INIT_BUG)
+    return FIXED_NUM_SGPRS_FOR_INIT_BUG;
+
+  IsaVersion Version = getIsaVersion(SubArch);
+  if (Version.Major >= 10)
+    return 106;
+  if (Version.Major >= 8)
+    return 102;
+  return 104;
+}
+
+unsigned AMDGPU::getSGPRAllocGranule(GPUKind AK) {
+  IsaVersion Version = getIsaVersion(getSubArch(AK));
+  if (Version.Major >= 10)
+    return getAddressableNumSGPRs(AK);
+  if (Version.Major >= 8)
+    return 16;
+  return 8;
+}
+
+unsigned AMDGPU::getSGPRAllocGranule(Triple::SubArchType SubArch) {
+  IsaVersion Version = getIsaVersion(SubArch);
+  if (Version.Major >= 10)
+    return getAddressableNumSGPRs(SubArch);
+  if (Version.Major >= 8)
+    return 16;
+  return 8;
+}
+
 StringRef AMDGPU::getCanonicalArchName(const Triple &T, StringRef Arch) {
   assert(T.isAMDGPU());
   auto ProcKind = T.isAMDGCN() ? parseArchAMDGCN(Arch) : parseArchR600(Arch);
@@ -370,7 +427,10 @@ static std::pair<FeatureError, StringRef>
 insertWaveSizeFeature(StringRef GPU, const Triple &T,
                       const StringMap<bool> &DefaultFeatures,
                       StringMap<bool> &Features) {
-  const bool IsNullGPU = GPU.empty();
+  // A bare subarch triple (no -target-cpu) still pins down the target, so it is
+  // not a null GPU: DefaultFeatures has already been populated from the
+  // subarch.
+  const bool IsNullGPU = T.getSubArch() == Triple::NoSubArch && GPU.empty();
   const bool TargetHasWave32 = DefaultFeatures.count("wavefrontsize32");
   const bool TargetHasWave64 = DefaultFeatures.count("wavefrontsize64");
 
@@ -427,7 +487,10 @@ insertWaveSizeFeature(StringRef GPU, const Triple &T,
 /// default target features with entries overridden by \p Features.
 static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
                                  StringMap<bool> &Features) {
-  AMDGPU::GPUKind Kind = parseArchAMDGCN(GPU);
+  // With no explicit GPU, the triple's subarch identifies the target.
+  AMDGPU::GPUKind Kind = GPU.empty() && T.getSubArch() != Triple::NoSubArch
+                             ? getGPUKindFromSubArch(T.getSubArch())
+                             : parseArchAMDGCN(GPU);
   switch (Kind) {
   case GK_GFX1310:
   case GK_GFX13_GENERIC:
@@ -463,6 +526,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["atomic-ds-pk-add-16-insts"] = true;
     Features["s-wakeup-barrier-inst"] = true;
     Features["f16bf16-to-fp6bf6-cvt-scale-insts"] = true;
+    Features["f32-to-fp6bf6-cvt-scale-insts"] = true;
     Features["clusters"] = true;
     Features["cube-insts"] = true;
     Features["lerp-inst"] = true;
@@ -471,6 +535,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["cvt-pknorm-vop2-insts"] = true;
     Features["cvt-pknorm-vop3-insts"] = true;
     Features["image-insts"] = true;
+    Features["async-load-to-lds-insts"] = true;
     break;
   case GK_GFX1251:
     Features["gfx1251-gemm-insts"] = true;
@@ -530,6 +595,8 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["wavefrontsize32"] = true;
     Features["clusters"] = true;
     Features["mcast-load-insts"] = true;
+    Features["async-load-to-lds-insts"] = true;
+    Features["async-store-from-lds-insts"] = true;
     Features["asynccnt"] = true;
     break;
   case GK_GFX1201:
@@ -952,14 +1019,15 @@ TargetID::TargetID(GPUKind Arch, const Triple &TT, TargetIDSetting XnackSetting,
       XnackSetting(XnackSetting), SramEccSetting(SramEccSetting),
       IsAMDHSA(TT.getOS() == Triple::AMDHSA) {}
 
-static TargetIDSetting
-getTargetIDSettingFromFeatureString(StringRef FeatureString) {
-  if (FeatureString.ends_with("-"))
-    return TargetIDSetting::Off;
-  if (FeatureString.ends_with("+"))
+// Parse a feature modifier sign ("+"/"-"). Returns "Unsupported" if \p Sign is
+// neither (i.e. the modifier is malformed).
+static TargetIDSetting getTargetIDSettingFromFeatureString(StringRef Sign) {
+  if (Sign == "+")
     return TargetIDSetting::On;
+  if (Sign == "-")
+    return TargetIDSetting::Off;
 
-  llvm_unreachable("Malformed feature string");
+  return TargetIDSetting::Unsupported;
 }
 
 // Derive the architecture from the processor name in \p TargetIDStr. "generic"
@@ -971,72 +1039,136 @@ static GPUKind getGPUKindFromTargetID(const Triple &TT, StringRef TargetIDStr) {
              : parseArchAMDGCN(CPUName);
 }
 
+// Compute the xnack/sramecc settings for processor \p Arch from the
+// processor+features string \p TargetIDStr
+// (e.g. "gfx90a:xnack+:sramecc-"). Returns false if a modifier names an unknown
+// or repeated feature, names one the processor does not support, or has a
+// malformed sign.
+static bool computeTargetIDFeatures(GPUKind Arch, StringRef TargetIDStr,
+                                    TargetIDSetting &XnackSetting,
+                                    TargetIDSetting &SramEccSetting) {
+  unsigned ArchAttr = getArchAttrAMDGCN(Arch);
+  XnackSetting = (ArchAttr & FEATURE_XNACK_ON_OFF_MODES)
+                     ? TargetIDSetting::Any
+                     : TargetIDSetting::Unsupported;
+  SramEccSetting = (ArchAttr & FEATURE_SRAMECC) ? TargetIDSetting::Any
+                                                : TargetIDSetting::Unsupported;
+
+  // The first component is the processor; the rest are feature modifiers of the
+  // form "<feature><+|->".
+  SmallVector<StringRef, 3> Split;
+  TargetIDStr.split(Split, ':');
+  bool SeenXnack = false;
+  bool SeenSramEcc = false;
+  bool Valid = true;
+  for (unsigned I = 1, E = Split.size(); I != E; ++I) {
+    StringRef FeatureString = Split[I];
+    if (FeatureString.consume_front("xnack")) {
+      TargetIDSetting Sign = getTargetIDSettingFromFeatureString(FeatureString);
+      if (SeenXnack || XnackSetting == TargetIDSetting::Unsupported ||
+          Sign == TargetIDSetting::Unsupported)
+        Valid = false;
+      else
+        XnackSetting = Sign;
+      SeenXnack = true;
+    } else if (FeatureString.consume_front("sramecc")) {
+      TargetIDSetting Sign = getTargetIDSettingFromFeatureString(FeatureString);
+      if (SeenSramEcc || SramEccSetting == TargetIDSetting::Unsupported ||
+          Sign == TargetIDSetting::Unsupported)
+        Valid = false;
+      else
+        SramEccSetting = Sign;
+      SeenSramEcc = true;
+    } else {
+      // Unknown feature name.
+      Valid = false;
+    }
+  }
+  return Valid;
+}
+
 TargetID::TargetID(const Triple &TT, StringRef TargetIDStr)
     : TargetID(getGPUKindFromTargetID(TT, TargetIDStr), TT,
                TargetIDSetting::Unsupported, TargetIDSetting::Unsupported) {
-  // Default xnack/sramecc to the "Any" wildcard when the architecture supports
-  // them, then apply any explicit feature overrides from the target-id string.
-  unsigned ArchAttr = getArchAttrAMDGCN(Arch);
-  if (ArchAttr & FEATURE_XNACK)
-    XnackSetting = TargetIDSetting::Any;
-  if (ArchAttr & FEATURE_SRAMECC)
-    SramEccSetting = TargetIDSetting::Any;
-  setTargetIDFromTargetIDStream(TargetIDStr);
+  // Derive the feature settings from the string. Validity is not checked here;
+  // parseTargetIDString validates untrusted input.
+  computeTargetIDFeatures(Arch, TargetIDStr, XnackSetting, SramEccSetting);
 }
 
-void TargetID::setTargetIDFromTargetIDStream(StringRef TargetID) {
-  SmallVector<StringRef, 3> TargetIDSplit;
-  TargetID.split(TargetIDSplit, ':');
+std::optional<TargetID> TargetID::parse(const Triple &TT,
+                                        StringRef ProcAndFeatures) {
+  if (!TT.isAMDGCN())
+    return std::nullopt;
 
-  for (const auto &FeatureString : TargetIDSplit) {
-    if (FeatureString.starts_with("xnack"))
-      XnackSetting = getTargetIDSettingFromFeatureString(FeatureString);
-    if (FeatureString.starts_with("sramecc"))
-      SramEccSetting = getTargetIDSettingFromFeatureString(FeatureString);
-  }
+  // A named processor (i.e. not the empty/generic wildcard, which is resolved
+  // from the triple's subarch) must be a recognized GPU.
+  StringRef CPUName = ProcAndFeatures.split(':').first;
+  if (!CPUName.empty() && CPUName != "generic" &&
+      parseArchAMDGCN(CPUName) == GK_NONE)
+    return std::nullopt;
+
+  // Parse the processor and its feature modifiers, then construct directly from
+  // the resulting fields.
+  GPUKind Arch = getGPUKindFromTargetID(TT, ProcAndFeatures);
+  TargetIDSetting XnackSetting, SramEccSetting;
+  if (!computeTargetIDFeatures(Arch, ProcAndFeatures, XnackSetting,
+                               SramEccSetting))
+    return std::nullopt;
+
+  return TargetID(Arch, TT, XnackSetting, SramEccSetting);
 }
 
 std::optional<TargetID>
 TargetID::parseTargetIDString(StringRef TargetIDDirective) {
-  // Split on '-' to get arch-vendor-os-environment-processor:features
-  // There is a single dash separator after the 4-component triple
+  // Split on '-' to get arch-vendor-os-environment-processor:features. There is
+  // a single dash separator after the 4-component triple, so the
+  // processor+features field must be present (even if empty).
   SmallVector<StringRef, 5> Parts;
   TargetIDDirective.split(Parts, '-', /*MaxSplit=*/4);
-  if (Parts.size() < 4)
+  if (Parts.size() < 5)
     return std::nullopt;
 
-  Triple TT(Parts[0], Parts[1], Parts[2], Parts[3]);
-  if (!TT.isAMDGCN())
-    return std::nullopt;
+  return parse(Triple(Parts[0], Parts[1], Parts[2], Parts[3]), Parts[4]);
+}
 
-  // The processor+features field must be present, even if empty (the ISA can
-  // be encoded in the triple's subarch, e.g.
-  // "amdgpu12.50-amd-amdhsa-unknown-").
-  return TargetID(TT, Parts[4]);
+// Append the explicit (On/Off) sramecc/xnack feature modifiers in canonical
+// order, e.g. ":sramecc-:xnack+".
+static void printFeatureModifiers(raw_ostream &OS, TargetIDSetting SramEcc,
+                                  TargetIDSetting Xnack) {
+  if (SramEcc == TargetIDSetting::Off)
+    OS << ":sramecc-";
+  else if (SramEcc == TargetIDSetting::On)
+    OS << ":sramecc+";
+
+  if (Xnack == TargetIDSetting::Off)
+    OS << ":xnack-";
+  else if (Xnack == TargetIDSetting::On)
+    OS << ":xnack+";
 }
 
 void TargetID::print(raw_ostream &StreamRep) const {
   StreamRep << TargetTripleString << '-' << getArchNameAMDGCN(Arch);
 
-  if (IsAMDHSA) {
-    // sramecc.
-    if (getSramEccSetting() == TargetIDSetting::Off)
-      StreamRep << ":sramecc-";
-    else if (getSramEccSetting() == TargetIDSetting::On)
-      StreamRep << ":sramecc+";
-
-    // xnack.
-    if (getXnackSetting() == TargetIDSetting::Off)
-      StreamRep << ":xnack-";
-    else if (getXnackSetting() == TargetIDSetting::On)
-      StreamRep << ":xnack+";
-  }
+  if (IsAMDHSA)
+    printFeatureModifiers(StreamRep, getSramEccSetting(), getXnackSetting());
 }
 
 std::string TargetID::toString() const {
   std::string Str;
   raw_string_ostream OS(Str);
   OS << *this;
+  return Str;
+}
+
+void TargetID::printCanonicalTargetIDString(raw_ostream &OS) const {
+  OS << getArchNameAMDGCN(Arch);
+  printFeatureModifiers(OS, getSramEccSetting(), getXnackSetting());
+}
+
+std::string TargetID::getCanonicalFeatureString() const {
+  std::string Str;
+  raw_string_ostream OS(Str);
+  printCanonicalTargetIDString(OS);
   return Str;
 }
 

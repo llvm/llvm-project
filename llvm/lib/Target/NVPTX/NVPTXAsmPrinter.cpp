@@ -46,6 +46,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
@@ -210,6 +211,11 @@ MCOperand NVPTXAsmPrinter::lowerOperand(const MachineOperand &MO) {
         MCSymbolRefExpr::create(MO.getMBB()->getSymbol(), OutContext));
   case MachineOperand::MO_ExternalSymbol:
     return GetSymbolRef(GetExternalSymbolSymbol(MO.getSymbolName()));
+  case MachineOperand::MO_JumpTableIndex:
+    // The jump table index names the .branchtargets list emitted for a brx.idx
+    // (see emitFunctionBodyStart); reference it by that label.
+    return GetSymbolRef(
+        OutContext.getOrCreateSymbol("$L_brx_" + Twine(MO.getIndex())));
   case MachineOperand::MO_GlobalAddress:
     return GetSymbolRef(getSymbol(MO.getGlobal()));
   case MachineOperand::MO_FPImmediate: {
@@ -413,6 +419,21 @@ void NVPTXAsmPrinter::emitCallPrototype(const CallBase &CB,
   O << ";\n";
 }
 
+void NVPTXAsmPrinter::emitJumpTable(const MachineJumpTableEntry &MJT,
+                                    unsigned MJTI, raw_ostream &O) const {
+  O << "$L_brx_" << MJTI << ":\n";
+
+  if (MJT.MBBs.empty())
+    return;
+
+  O << "\t.branchtargets\n\t\t";
+  interleave(
+      MJT.MBBs, O,
+      [&](const MachineBasicBlock *MBB) { MBB->getSymbol()->print(O, MAI); },
+      ",\n\t\t");
+  O << ";\n";
+}
+
 // Return true if MBB is the header of a loop marked with
 // llvm.loop.unroll.disable or llvm.loop.unroll.count=1.
 bool NVPTXAsmPrinter::isLoopHeaderOfNoUnroll(
@@ -514,6 +535,10 @@ void NVPTXAsmPrinter::emitFunctionBodyStart() {
   const auto *MFI = MF->getInfo<NVPTXMachineFunctionInfo>();
   for (const auto &[Id, CB] : MFI->getCallPrototypes())
     emitCallPrototype(*CB, Id, O);
+
+  if (const MachineJumpTableInfo *MJTI = MF->getJumpTableInfo())
+    for (const auto &[Idx, JT] : enumerate(MJTI->getJumpTables()))
+      emitJumpTable(JT, Idx, O);
 
   OutStreamer->emitRawText(O.str());
 }

@@ -499,7 +499,8 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
   case OL_DEVICE_INFO_SINGLE_FP_CONFIG:
   case OL_DEVICE_INFO_DOUBLE_FP_CONFIG:
   case OL_DEVICE_INFO_HALF_FP_CONFIG:
-  case OL_DEVICE_INFO_MEMORY_CLOCK_RATE: {
+  case OL_DEVICE_INFO_MEMORY_CLOCK_RATE:
+  case OL_DEVICE_INFO_NUM_LANES: {
     // Uint32 values
     if (!std::holds_alternative<uint64_t>(Entry->Value))
       return makeError(ErrorCode::BACKEND_FAILURE,

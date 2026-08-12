@@ -2,4 +2,5 @@ set(TARGET_PUBLIC_HEADERS
   libc.include.alloca
   libc.include.assert
   libc.include.cpio
+  libc.include.langinfo
 )

@@ -17,7 +17,6 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SetOperations.h"
 #include "llvm/Support/GenericLoopInfo.h"
 
 namespace llvm {
@@ -92,8 +91,8 @@ std::pair<BlockT *, bool> getExitBlockHelper(const LoopBase<BlockT, LoopT> *L,
 }
 
 template <class BlockT, class LoopT>
-bool LoopBase<BlockT, LoopT>::hasNoExitBlocks() const {
-  auto RC = getExitBlockHelper(this, false);
+bool LoopInfoBase<BlockT, LoopT>::hasNoExitBlocks(const LoopT &L) const {
+  auto RC = getExitBlockHelper(&L, false);
   if (RC.second)
     // found multiple exit blocks
     return false;
@@ -160,24 +159,24 @@ BlockT *LoopBase<BlockT, LoopT>::getUniqueExitBlock() const {
 }
 
 template <class BlockT, class LoopT>
-BlockT *LoopBase<BlockT, LoopT>::getUniqueLatchExitBlock() const {
-  BlockT *Latch = getLoopLatch();
+BlockT *
+LoopInfoBase<BlockT, LoopT>::getUniqueLatchExitBlock(const LoopT &L) const {
+  BlockT *Latch = L.getLoopLatch();
   assert(Latch && "Latch block must exists");
-  auto IsExitBlock = [this](BlockT *BB, bool AllowRepeats) -> BlockT * {
+  auto IsExitBlock = [&L](BlockT *BB, bool AllowRepeats) -> BlockT * {
     assert(!AllowRepeats && "Unexpected parameter value.");
-    return !contains(BB) ? BB : nullptr;
+    return !L.contains(BB) ? BB : nullptr;
   };
   return find_singleton<BlockT>(children<BlockT *>(Latch), IsExitBlock);
 }
 
 /// getExitEdges - Return all pairs of (_inside_block_,_outside_block_).
 template <class BlockT, class LoopT>
-void LoopBase<BlockT, LoopT>::getExitEdges(
-    SmallVectorImpl<Edge> &ExitEdges) const {
-  assert(!isInvalid() && "Loop not in a valid state!");
-  for (const auto BB : blocks())
+void LoopInfoBase<BlockT, LoopT>::getExitEdges(
+    const LoopT &L, SmallVectorImpl<Edge> &ExitEdges) const {
+  for (const auto BB : L.blocks())
     for (auto *Succ : children<BlockT *>(BB))
-      if (!contains(Succ))
+      if (!L.contains(Succ))
         // Not in current loop? It must be an exit block.
         ExitEdges.emplace_back(BB, Succ);
 }
@@ -495,7 +494,7 @@ static void discoverAndMapSubloop(LoopT *L, ArrayRef<BlockT *> Backedges,
       // Discover a subloop of this loop.
       Subloop->setParentLoop(L);
       ++NumSubloops;
-      NumBlocks += Subloop->getBlocksVector().capacity();
+      NumBlocks += Subloop->getBlocksCapacity();
       PredBB = Subloop->getHeader();
       // Continue traversal along predecessors that are not loop-back edges from
       // within this subloop tree itself. Note that a predecessor may directly
@@ -507,7 +506,7 @@ static void discoverAndMapSubloop(LoopT *L, ArrayRef<BlockT *> Backedges,
       }
     }
   }
-  L->getSubLoopsVector().reserve(NumSubloops);
+  L->reserveSubLoops(NumSubloops);
   L->reserveBlocks(NumBlocks);
 }
 
@@ -544,15 +543,14 @@ void PopulateLoopsDFS<BlockT, LoopT>::insertIntoLoop(BlockT *Block) {
     // We reach this point once per subloop after processing all the blocks in
     // the subloop.
     if (!Subloop->isOutermost())
-      Subloop->getParentLoop()->getSubLoopsVector().push_back(Subloop);
+      Subloop->getParentLoop()->SubLoops.push_back(Subloop);
     else
       LI->addTopLevelLoop(Subloop);
 
     // For convenience, Blocks and Subloops are inserted in postorder. Reverse
     // the lists, except for the loop header, which is always at the beginning.
     Subloop->reverseBlock(1);
-    std::reverse(Subloop->getSubLoopsVector().begin(),
-                 Subloop->getSubLoopsVector().end());
+    std::reverse(Subloop->SubLoops.begin(), Subloop->SubLoops.end());
 
     Subloop = Subloop->getParentLoop();
   }
@@ -660,11 +658,12 @@ LoopT *LoopInfoBase<BlockT, LoopT>::getSmallestCommonLoop(LoopT *A,
   if (!A || !B)
     return nullptr;
 
-  // If lops A and B have different depth replace them with parent loop
+  // If loops A and B have different depth replace them with parent loop
   // until they have the same depth.
-  while (A->getLoopDepth() > B->getLoopDepth())
+  unsigned DepthA = A->getLoopDepth(), DepthB = B->getLoopDepth();
+  for (; DepthA > DepthB; --DepthA)
     A = A->getParentLoop();
-  while (B->getLoopDepth() > A->getLoopDepth())
+  for (; DepthB > DepthA; --DepthB)
     B = B->getParentLoop();
 
   // Loops A and B are at same depth but may be disjoint, replace them with
@@ -738,13 +737,6 @@ static void compareLoops(const LoopT *L, const LoopT *OtherL,
   std::vector<BlockT *> OtherBBs = OtherL->getBlocks();
   assert(compareVectors(BBs, OtherBBs) &&
          "Mismatched basic blocks in the loops!");
-
-  const SmallPtrSetImpl<const BlockT *> &BlocksSet = L->getBlocksSet();
-  const SmallPtrSetImpl<const BlockT *> &OtherBlocksSet =
-      OtherL->getBlocksSet();
-  assert(BlocksSet.size() == OtherBlocksSet.size() &&
-         llvm::set_is_subset(BlocksSet, OtherBlocksSet) &&
-         "Mismatched basic blocks in BlocksSets!");
 }
 #endif
 
@@ -759,21 +751,31 @@ void LoopInfoBase<BlockT, LoopT>::verify(
 
 // Verify that blocks are mapped to valid loops.
 #ifndef NDEBUG
-  for (auto It : enumerate(BBMap)) {
-    LoopT *L = It.value();
-    unsigned Number = It.index();
-    if (!L)
-      continue;
-    assert(Loops.count(L) && "orphaned loop");
-    // We have no way to map block numbers back to blocks, so find it.
-    auto BBIt = find_if(L->Blocks, [&Number](BlockT *BB) {
-      return GraphTraits<BlockT *>::getNumber(BB) == Number;
-    });
-    BlockT *BB = BBIt != L->Blocks.end() ? *BBIt : nullptr;
-    assert(BB && "orphaned block");
-    for (LoopT *ChildLoop : *L)
-      assert(!ChildLoop->contains(BB) &&
-             "BBMap should point to the innermost loop containing BB");
+  // Every loop must point back at this LoopInfo (see resetLoopInfoOwners).
+  for (const LoopT *L : Loops)
+    assert(L->LI == this && "Loop has a stale owning-LoopInfo back-pointer");
+
+  // Recompute the innermost loop of each block from the loops' block lists,
+  // which are maintained independently of BBMap. Using contains() here would
+  // derive from BBMap itself and check nothing.
+  SmallVector<const LoopT *> Innermost(BBMap.size());
+  SmallVector<const LoopT *, 8> Worklist(begin(), end());
+  while (!Worklist.empty()) {
+    const LoopT *L = Worklist.pop_back_val();
+    // A loop is visited before its children, so a child's blocks overwrite the
+    // entries written by its ancestors.
+    for (const BlockT *BB : L->getBlocks()) {
+      unsigned Number = GraphTraits<const BlockT *>::getNumber(BB);
+      assert(Number < Innermost.size() && "block missing from BBMap");
+      Innermost[Number] = L;
+    }
+    Worklist.append(L->begin(), L->end());
+  }
+
+  for (auto [Number, L] : enumerate(BBMap)) {
+    assert((!L || Loops.count(L)) && "orphaned loop");
+    assert(L == Innermost[Number] &&
+           "BBMap should point to the innermost loop containing the block");
   }
 
   // Recompute LoopInfo to verify loops structure.

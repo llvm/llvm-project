@@ -195,9 +195,6 @@ llvm::Value *TargetCodeGenInfo::createEnqueuedBlockKernel(
   CGF.CGM.addDefaultFunctionDefinitionAttributes(KernelAttrs);
   F->addFnAttrs(KernelAttrs);
 
-  if (CGF.Builder.getIsFPConstrained())
-    F->addFnAttr(llvm::Attribute::StrictFP);
-
   auto IP = CGF.Builder.saveIP();
   auto *BB = llvm::BasicBlock::Create(C, "entry", F);
   auto &Builder = CGF.Builder;

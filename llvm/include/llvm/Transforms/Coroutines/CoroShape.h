@@ -112,6 +112,7 @@ struct Shape {
     unsigned IndexOffset;
     bool HasFinalSuspend;
     bool HasUnwindCoroEnd;
+    bool HasCoroElideNoAllocVariant;
   };
 
   struct RetconLoweringStorage {

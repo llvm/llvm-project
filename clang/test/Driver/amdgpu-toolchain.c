@@ -29,7 +29,7 @@
 // RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx90a:xnack+:sramecc- -nogpulib \
 // RUN:   -L. -flto -fconvergent-functions %s 2>&1 | FileCheck -check-prefix=LTO %s
 // LTO: clang{{.*}}"-flto=full"{{.*}}"-fconvergent-functions"
-// LTO: ld.lld{{.*}}"-plugin-opt=mcpu=gfx90a"{{.*}}"-plugin-opt=-mattr=+xnack,-sramecc"{{.*}}
+// LTO: ld.lld{{.*}}"-plugin-opt=mcpu=gfx90a"
 
 // RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx90a:xnack+:sramecc- -nogpulib \
 // RUN:   -L. -fconvergent-functions %s 2>&1 | FileCheck -check-prefix=MCPU %s
@@ -37,7 +37,7 @@
 // RUN: %clang -### --target=amdgpu9.0a-amd-amdhsa -mcpu=gfx90a:xnack+:sramecc- -nogpulib \
 // RUN:   -L. -fconvergent-functions %s 2>&1 | FileCheck -check-prefix=MCPU %s
 
-// MCPU: ld.lld{{.*}}"-plugin-opt=mcpu=gfx90a"{{.*}}"-plugin-opt=-mattr=+xnack,-sramecc"{{.*}}
+// MCPU: ld.lld{{.*}}"-plugin-opt=mcpu=gfx90a"
 
 // RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx906 -nogpulib \
 // RUN:   -fuse-ld=ld %s 2>&1 | FileCheck -check-prefixes=LD %s

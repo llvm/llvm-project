@@ -106,6 +106,7 @@ template <ARM::ISAKind ISAKind> struct AssertSameExtensionFlags {
                             FormatExtensionFlags(GotFlags), GotFlags, CPUName,
                             FormatExtensionFlags(ExpectedFlags ^ GotFlags));
   }
+
 private:
   StringRef CPUName;
 };
@@ -2828,6 +2829,160 @@ TEST(TargetParserTest, testAMDGPUgetIsaVersionFromSubArch) {
             (AMDGPU::IsaVersion{0, 0, 0}));
 }
 
+TEST(TargetParserTest, testAMDGPUgetNumSGPRs) {
+  // getTotalNumSGPRs: 800 for GFX8+, 512 otherwise.
+  EXPECT_EQ(AMDGPU::getTotalNumSGPRs(Triple::AMDGPUSubArch600), 512u);
+  EXPECT_EQ(AMDGPU::getTotalNumSGPRs(Triple::AMDGPUSubArch700), 512u);
+  EXPECT_EQ(AMDGPU::getTotalNumSGPRs(Triple::AMDGPUSubArch900), 800u);
+  EXPECT_EQ(AMDGPU::getTotalNumSGPRs(Triple::AMDGPUSubArch1030), 800u);
+
+  // getAddressableNumSGPRs resolves the SGPR init bug from the device kind:
+  // 106 for GFX10+, 102 for GFX8/GFX9, 104 otherwise; gfx802/gfx805 have the
+  // init bug and return the fixed size.
+  EXPECT_EQ(AMDGPU::getAddressableNumSGPRs(Triple::AMDGPUSubArch600), 104u);
+  EXPECT_EQ(AMDGPU::getAddressableNumSGPRs(Triple::AMDGPUSubArch803), 102u);
+  EXPECT_EQ(AMDGPU::getAddressableNumSGPRs(Triple::AMDGPUSubArch900), 102u);
+  EXPECT_EQ(AMDGPU::getAddressableNumSGPRs(Triple::AMDGPUSubArch1030), 106u);
+  EXPECT_EQ(AMDGPU::getAddressableNumSGPRs(Triple::AMDGPUSubArch802),
+            AMDGPU::FIXED_NUM_SGPRS_FOR_INIT_BUG);
+  EXPECT_EQ(AMDGPU::getAddressableNumSGPRs(Triple::AMDGPUSubArch805),
+            AMDGPU::FIXED_NUM_SGPRS_FOR_INIT_BUG);
+
+  // The GPUKind overloads resolve to the same values.
+  EXPECT_EQ(AMDGPU::getTotalNumSGPRs(AMDGPU::GK_GFX600), 512u);
+  EXPECT_EQ(AMDGPU::getTotalNumSGPRs(AMDGPU::GK_GFX900), 800u);
+  EXPECT_EQ(AMDGPU::getAddressableNumSGPRs(AMDGPU::GK_GFX900), 102u);
+  EXPECT_EQ(AMDGPU::getAddressableNumSGPRs(AMDGPU::GK_GFX1030), 106u);
+  EXPECT_EQ(AMDGPU::getAddressableNumSGPRs(AMDGPU::GK_GFX802),
+            AMDGPU::FIXED_NUM_SGPRS_FOR_INIT_BUG);
+  EXPECT_EQ(AMDGPU::getAddressableNumSGPRs(AMDGPU::GK_GFX805),
+            AMDGPU::FIXED_NUM_SGPRS_FOR_INIT_BUG);
+}
+
+TEST(TargetParserTest, testAMDGPUgetSGPRAllocGranule) {
+  // 8 for pre-GFX8, 16 for GFX8/GFX9, addressable count for GFX10+.
+  EXPECT_EQ(AMDGPU::getSGPRAllocGranule(Triple::AMDGPUSubArch600), 8u);
+  EXPECT_EQ(AMDGPU::getSGPRAllocGranule(Triple::AMDGPUSubArch802), 16u);
+  EXPECT_EQ(AMDGPU::getSGPRAllocGranule(Triple::AMDGPUSubArch900), 16u);
+  EXPECT_EQ(AMDGPU::getSGPRAllocGranule(Triple::AMDGPUSubArch1030), 106u);
+
+  // The GPUKind overload resolves to the same values.
+  EXPECT_EQ(AMDGPU::getSGPRAllocGranule(AMDGPU::GK_GFX600), 8u);
+  EXPECT_EQ(AMDGPU::getSGPRAllocGranule(AMDGPU::GK_GFX802), 16u);
+  EXPECT_EQ(AMDGPU::getSGPRAllocGranule(AMDGPU::GK_GFX1030), 106u);
+}
+
+TEST(TargetParserTest, testAMDGPUParseTargetIDString) {
+  using AMDGPU::TargetID;
+  using AMDGPU::TargetIDSetting;
+
+  // A well-formed target id parses, canonicalizing the processor and
+  // features.
+  {
+    std::optional<TargetID> TID =
+        TargetID::parseTargetIDString("amdgcn-amd-amdhsa-unknown-gfx90a");
+    ASSERT_TRUE(TID.has_value());
+    EXPECT_EQ(TID->getGPUKind(), AMDGPU::GK_GFX90A);
+    EXPECT_EQ(TID->getXnackSetting(), TargetIDSetting::Any);
+    EXPECT_EQ(TID->getSramEccSetting(), TargetIDSetting::Any);
+  }
+
+  // Explicit feature modifiers are applied.
+  {
+    std::optional<TargetID> TID = TargetID::parseTargetIDString(
+        "amdgcn-amd-amdhsa-unknown-gfx90a:xnack+:sramecc-");
+    ASSERT_TRUE(TID.has_value());
+    EXPECT_EQ(TID->getXnackSetting(), TargetIDSetting::On);
+    EXPECT_EQ(TID->getSramEccSetting(), TargetIDSetting::Off);
+  }
+
+  // The processor+features field may be empty; the ISA is taken from the
+  // triple subarch.
+  EXPECT_TRUE(TargetID::parseTargetIDString("amdgpu9.0a-amd-amdhsa-unknown-")
+                  .has_value());
+
+  // Structurally malformed strings (missing the processor+features field or a
+  // non-AMDGCN triple) are rejected.
+  EXPECT_FALSE(TargetID::parseTargetIDString("not-a-valid-target-id"));
+  EXPECT_FALSE(
+      TargetID::parseTargetIDString("x86_64-unknown-linux-gnu-gfx90a"));
+
+  // An unrecognized processor is rejected.
+  EXPECT_FALSE(
+      TargetID::parseTargetIDString("amdgcn-amd-amdhsa-unknown-gfxbogus"));
+
+  // A feature the processor does not support is rejected: gfx600 has neither
+  // xnack nor sramecc.
+  EXPECT_FALSE(
+      TargetID::parseTargetIDString("amdgcn-amd-amdhsa-unknown-gfx600:xnack+"));
+  EXPECT_FALSE(TargetID::parseTargetIDString(
+      "amdgcn-amd-amdhsa-unknown-gfx900:sramecc+"));
+
+  // xnack is only a valid modifier when the processor supports on/off modes.
+  // gfx1250 has xnack permanently enabled (FEATURE_XNACK without
+  // FEATURE_XNACK_ON_OFF_MODES), so an xnack modifier is rejected.
+  EXPECT_FALSE(TargetID::parseTargetIDString(
+      "amdgcn-amd-amdhsa-unknown-gfx1250:xnack+"));
+  EXPECT_FALSE(TargetID::parseTargetIDString(
+      "amdgcn-amd-amdhsa-unknown-gfx1250:xnack-"));
+
+  // A feature modifier with no "+"/"-" sign is rejected.
+  EXPECT_FALSE(
+      TargetID::parseTargetIDString("amdgcn-amd-amdhsa-unknown-gfx908:xnack"));
+
+  // An unknown feature name is rejected, even alongside a valid one.
+  EXPECT_FALSE(TargetID::parseTargetIDString(
+      "amdgcn-amd-amdhsa-unknown-gfx908:unknown+"));
+  EXPECT_FALSE(TargetID::parseTargetIDString(
+      "amdgcn-amd-amdhsa-unknown-gfx908:sramecc+:unknown+"));
+
+  // A repeated feature is rejected.
+  EXPECT_FALSE(TargetID::parseTargetIDString(
+      "amdgcn-amd-amdhsa-unknown-gfx908:xnack+:xnack+"));
+
+  // Empty processor and/or feature components must be handled without
+  // crashing.
+  EXPECT_FALSE(TargetID::parseTargetIDString("amdgcn-amd-amdhsa-unknown-:"));
+  EXPECT_FALSE(TargetID::parseTargetIDString("amdgcn-amd-amdhsa-unknown-::"));
+  EXPECT_FALSE(
+      TargetID::parseTargetIDString("amdgcn-amd-amdhsa-unknown-gfx900:"));
+  EXPECT_FALSE(
+      TargetID::parseTargetIDString("amdgcn-amd-amdhsa-unknown-gfx900::"));
+  EXPECT_FALSE(TargetID::parseTargetIDString(
+      "amdgcn-amd-amdhsa-unknown-gfx900:xnack+:"));
+
+  // Constructing directly from a triple and processor+features string must
+  // also be crash-safe on empty components.
+  Triple AMDHSA("amdgcn-amd-amdhsa");
+  (void)TargetID(AMDHSA, ":");
+  (void)TargetID(AMDHSA, "::");
+  (void)TargetID(AMDHSA, "gfx900:");
+
+  // TargetID::parse validates a separate triple + processor/features string.
+  {
+    std::optional<TargetID> TID = TargetID::parse(AMDHSA, "gfx90a:xnack+");
+    ASSERT_TRUE(TID.has_value());
+    EXPECT_EQ(TID->getGPUKind(), AMDGPU::GK_GFX90A);
+    EXPECT_EQ(TID->getXnackSetting(), AMDGPU::TargetIDSetting::On);
+  }
+
+  EXPECT_EQ(TargetID::parse(AMDHSA, "gfx908:xnack+:sramecc-")
+                ->getCanonicalFeatureString(),
+            "gfx908:sramecc-:xnack+");
+  EXPECT_EQ(TargetID::parse(AMDHSA, "gfx908")->getCanonicalFeatureString(),
+            "gfx908");
+  EXPECT_EQ(TargetID::parse(Triple("amdgcn-amd-amdpal"), "gfx908:xnack-")
+                ->getCanonicalFeatureString(),
+            "gfx908:xnack-");
+  EXPECT_TRUE(TargetID::parse(AMDHSA, "").has_value());
+  EXPECT_FALSE(TargetID::parse(AMDHSA, "gfxbogus").has_value());
+  EXPECT_FALSE(TargetID::parse(AMDHSA, "gfx600:xnack+").has_value());
+  EXPECT_FALSE(TargetID::parse(AMDHSA, "gfx900:").has_value());
+  // A non-AMDGCN triple has no target-id features.
+  EXPECT_FALSE(
+      TargetID::parse(Triple("r600-unknown-unknown"), "cypress").has_value());
+}
+
 TEST(TargetParserTest, testAMDGPUTargetIDProvidesFor) {
   using AMDGPU::TargetID;
   Triple AMDHSA("amdgcn-amd-amdhsa");
@@ -2855,8 +3010,8 @@ TEST(TargetParserTest, testAMDGPUTargetIDProvidesFor) {
   EXPECT_TRUE(TargetID(AMDHSA, "").providesFor(TargetID(AMDHSA, "gfx908")));
 
   // A major-family/generic processor provides for a specific member of its
-  // family (gfx900), but a specific processor does not provide for the generic
-  // family.
+  // family (gfx900), but a specific processor does not provide for the
+  // generic family.
   Triple AMDHSAMajor9("amdgpu9-amd-amdhsa");
   EXPECT_TRUE(
       TargetID(AMDHSAMajor9, "").providesFor(TargetID(AMDHSA, "gfx900")));
@@ -2908,9 +3063,9 @@ TEST(TargetParserTest, testAMDGPUTargetIDProvidesFor) {
   EXPECT_FALSE(TargetID(AMDHSA, "gfx90a:sramecc+")
                    .providesFor(TargetID(AMDHSA, "gfx90a:sramecc-")));
 
-  // Both feature modifiers together: a wildcard provides for a fully-specified
-  // request, but a partially-specified image only provides when its explicit
-  // features match.
+  // Both feature modifiers together: a wildcard provides for a
+  // fully-specified request, but a partially-specified image only provides
+  // when its explicit features match.
   EXPECT_TRUE(TargetID(AMDHSA, "gfx90a")
                   .providesFor(TargetID(AMDHSA, "gfx90a:sramecc+:xnack+")));
   EXPECT_TRUE(TargetID(AMDHSA, "gfx90a:sramecc+")
@@ -2930,8 +3085,8 @@ TEST(TargetParserTest, testAMDGPUTargetIDEquivalent) {
   Triple AMDHSA("amdgcn-amd-amdhsa");
   Triple AMDHSACanon("amdgpu-amd-amdhsa");
 
-  // TargetID::isEquivalent is a symmetric semantic equality: same processor and
-  // features, looking through triple spelling differences.
+  // TargetID::isEquivalent is a symmetric semantic equality: same processor
+  // and features, looking through triple spelling differences.
   auto Equivalent = [](const TargetID &A, const TargetID &B) {
     EXPECT_EQ(A.isEquivalent(B), B.isEquivalent(A));
     return A.isEquivalent(B);
@@ -2954,8 +3109,8 @@ TEST(TargetParserTest, testAMDGPUTargetIDEquivalent) {
   EXPECT_TRUE(
       Equivalent(TargetID(AMDHSA, "gfx90a"), TargetID(AMDHSACanon, "gfx90a")));
 
-  // The same processor spelled via the triple subarch (with no processor name)
-  // and via the processor name (with a major-family subarch triple) are
+  // The same processor spelled via the triple subarch (with no processor
+  // name) and via the processor name (with a major-family subarch triple) are
   // equivalent, e.g. amdgpu9-amd-amdhsa + "gfx900" and amdgpu9.00-amd-amdhsa.
   Triple AMDHSAMajor9("amdgpu9-amd-amdhsa");
   Triple AMDHSASub900("amdgpu9.00-amd-amdhsa");
@@ -2986,8 +3141,8 @@ TEST(TargetParserTest, testAMDGPUTargetIDEquivalent) {
                           TargetID(AMDHSA, "gfx90a:sramecc-:xnack+")));
   EXPECT_FALSE(Equivalent(TargetID(AMDHSA, "gfx90a:sramecc+:xnack+"),
                           TargetID(AMDHSA, "gfx90a:sramecc-:xnack-")));
-  // A fully-specified target ID is not equivalent to one that leaves a feature
-  // unspecified, even if the specified features agree.
+  // A fully-specified target ID is not equivalent to one that leaves a
+  // feature unspecified, even if the specified features agree.
   EXPECT_FALSE(Equivalent(TargetID(AMDHSA, "gfx90a:sramecc+:xnack+"),
                           TargetID(AMDHSA, "gfx90a:sramecc+")));
   EXPECT_FALSE(Equivalent(TargetID(AMDHSA, "gfx90a:sramecc+:xnack+"),

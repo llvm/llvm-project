@@ -659,19 +659,6 @@ MachineInstr *llvm::getOpcodeDef(unsigned Opcode, Register Reg,
   return DefMI && DefMI->getOpcode() == Opcode ? DefMI : nullptr;
 }
 
-APFloat llvm::getAPFloatFromSize(double Val, unsigned Size) {
-  if (Size == 32)
-    return APFloat(float(Val));
-  if (Size == 64)
-    return APFloat(Val);
-  if (Size != 16)
-    llvm_unreachable("Unsupported FPConstant size");
-  bool Ignored;
-  APFloat APF(Val);
-  APF.convert(APFloat::IEEEhalf(), APFloat::rmNearestTiesToEven, &Ignored);
-  return APF;
-}
-
 std::optional<APInt> llvm::ConstantFoldBinOp(unsigned Opcode,
                                              const Register Op1,
                                              const Register Op2,

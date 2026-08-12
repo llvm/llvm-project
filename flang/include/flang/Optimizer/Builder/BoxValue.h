@@ -465,11 +465,6 @@ getTypeParams(mlir::Location loc, FirOpBuilder &builder, ArrayLoadOp load);
 llvm::SmallVector<mlir::Value>
 getExtents(mlir::Location loc, FirOpBuilder &builder, const ExtendedValue &box);
 
-/// Get exactly one extent for any array-like extended value, \p exv. If \p exv
-/// is not an array or has rank less then \p dim, the result will be a nullptr.
-mlir::Value getExtentAtDimension(mlir::Location loc, FirOpBuilder &builder,
-                                 const ExtendedValue &exv, unsigned dim);
-
 } // namespace factory
 
 /// An extended value is a box of values pertaining to a discrete entity. It is

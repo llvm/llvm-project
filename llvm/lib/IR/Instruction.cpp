@@ -1503,6 +1503,14 @@ void Instruction::swapProfMetadata() {
               MDNode::get(ProfileData->getContext(), Ops));
 }
 
+void Instruction::copyProfileAndDebugMetadata(const Instruction &SrcInst) {
+  // TODO: Include additional metadata in the future if appropriate.
+  static const unsigned SafeIDs[] = {
+      LLVMContext::MD_dbg, LLVMContext::MD_prof, LLVMContext::MD_memprof,
+      LLVMContext::MD_callsite};
+  copyMetadata(SrcInst, SafeIDs);
+}
+
 void Instruction::copyMetadata(const Instruction &SrcInst,
                                ArrayRef<unsigned> WL) {
   if (WL.empty() || is_contained(WL, LLVMContext::MD_dbg))
