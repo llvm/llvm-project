@@ -16,7 +16,7 @@ class TestSwiftExplicitModuleCaching(TestBase):
             self, "break here", lldb.SBFileSpec('main.swift')
         )
         log = self.getBuildArtifact("types.log")
-        self.expect('log enable lldb types symbols -f "%s"' % log)
+        self.expect('log enable lldb types symbol -f "%s"' % log)
         self.expect("expression obj", DATA_TYPES_DISPLAYED_CORRECTLY,
                     substrs=["b ="])
 
