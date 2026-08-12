@@ -212,12 +212,12 @@ SPMD and tile boundaries above; it is not the architecture to extend.
 ### Prototype debt that must be removed
 
 The current `InterSelect.cpp` implementation is deliberately not accepted as a
-general lowering path. In particular, `emitByteOffsets()` hardcodes
-`global_id.x * 4`, global load/store require a single GEP whose base is a direct
-block argument, `pointerArg()` derives payload locations from argument index,
-SLM uses only the last GEP index times four, and selection assumes i32/SIMD32.
-These shortcuts made the first hardware proof possible; matmul work deletes
-them rather than adding more cases around them.
+general lowering path. Exact byte pointer arithmetic and the shared kernel ABI
+descriptor have landed, but selection still bypasses a complete semantic XW
+type boundary, retains LLVM pointer types, reuses machine memory-token types,
+and supports mostly i32/SIMD32 operations through hand-written cases. The next
+frontend slice replaces that mixed dialect with the closed XW surface below;
+matmul work does not add more LLVM cases directly to the machine selector.
 
 ## 7. SPMD value model and uniformity
 
@@ -233,11 +233,11 @@ The enclosing kernel carries one selected hardware width `W` (for example,
 `xw.simd_width = 32`). `N` is the number of stored values and must divide `W`:
 `simd<T, W>` is fully lane-varying, while `simd<T, W / 2>` stores one value per
 adjacent lane pair. Ordinary bare values are uniform, following wave-mlir; no
-uniform wrapper type is required. Every SIMD value carries an active mask
-through divergent branches, loops, tails, and masked memory operations. Lane
-ID, subgroup ID, workgroup ID, local/global IDs, shuffle, broadcast, ballot,
-and reduction are semantic operations before they become EU regions or control
-flow.
+uniform wrapper type is required. Every SIMD value is interpreted under the
+enclosing thread's active mask through divergent branches, loops, tails, and
+masked memory operations. Lane ID, subgroup ID, workgroup ID, local/global IDs,
+shuffle, broadcast, ballot, and reduction are semantic operations before they
+become EU regions or control flow.
 
 Uniformity is dense forward dataflow above target selection. Its advisory
 lattice is:
@@ -298,14 +298,13 @@ values are produced at their storage width and broadcast only on reads. Sends
 and other operations requiring one physical payload element per lane must
 explicitly expand the value.
 
-Elementwise operations use the least common compatible cardinality. Bare plus
-bare remains bare; bare plus `simd<T, N>` produces `simd<T, N>`; and
-`simd<T, A>` plus `simd<T, B>` produces `simd<T, lcm(A, B)>`, provided the
-cardinality divides `W`. Coarser operands broadcast on read. Conversion from a
-finer cardinality to a coarser one is never implicit and requires a proof that
-the values agree in every destination group. Operations and region boundaries
-that require an exact cardinality use explicit splat, expand, or proven-compact
-conversion operations.
+Following Wave's operation contract, elementwise promotion is deliberately
+simple: bare plus bare remains bare; bare plus `simd<T, N>` produces
+`simd<T, N>`; two SIMD operands must have the same `N`. Different SIMD
+cardinalities require an explicit `xw.expand`. Selection may implement expansion
+only as source regioning rather than a copy. Conversion from a finer cardinality
+to a coarser one is never implicit and requires `xw.compact` carrying or
+referencing a proof that values agree in every destination group.
 
 Compact SIMD representations are legal across divergent control flow only
 when the active mask is compatible with the same lane grouping. If lanes that
@@ -319,6 +318,267 @@ an i64 remains i64 when Xe lowers its SIMD32 execution into two SIMD16
 instructions. Lane distribution describes frontend value semantics and
 storage cardinality; instruction splitting does not.
 
+### Recommended XW frontend surface
+
+The frontend dialect should closely copy Wave's operation shape and verifier
+architecture. This is a complete semantic boundary, not a handful of wrapper
+operations mixed indefinitely with LLVM. The LLVM-to-XW conversion declares
+all LLVM dialect operations and types illegal, converts every accepted
+operation and signature, and diagnoses anything left over. Before conversion,
+analysis chooses bare versus SIMD representation and a compact cardinality.
+After conversion, types are authoritative and no pass re-infers uniformity.
+LLVM CFG analysis and proof import run first, then reducible control flow is
+structured immediately: PHIs become structured region results or loop-carried
+arguments, and LLVM/cf branches become `scf` control. No PHI or unstructured
+branch enters XW conversion.
+
+#### Types and execution scope
+
+- Bare builtin integers, floats, indices, fixed vectors, and opaque XW pointers
+  are uniform by contract.
+- `!xw.simd<T, N>` contains `N` compact values under the enclosing kernel's
+  `xw.simd_width = W`; `N` is positive and divides `W`. `T` may itself be a
+  fixed vector or opaque XW pointer.
+- `!xw.mask<N>` is a compact lane predicate with the same cardinality rules.
+  Selection expands it to the hardware execution-mask width when necessary.
+- `!xw.mem.token` is a frontend-owned memory dependency token. The semantic
+  dialect must not reuse `!xemachine.mem.token`.
+- `!xw.ptr<#space>` is an opaque pointer carrying only an XW address-space
+  attribute. Initial spaces are private, global, constant, local, and generic;
+  target extensions may add spaces without changing pointer syntax. Pointee
+  types never reappear after LLVM import.
+- Kernel/function attributes carry `xw.simd_width`, launch geometry, and other
+  execution-scope facts. SIMD values may not cross scopes with incompatible
+  widths without explicit specialization.
+
+#### Constants, arithmetic, and conversion
+
+- `xw.constant` materializes bare, SIMD, or mask constants using an attribute
+  of the payload type.
+- `xw.splat` converts a bare value to an exact SIMD cardinality. Mixed
+  elementwise integer/index operations may consume a bare operand directly;
+  this is a read broadcast and does not change the bare SSA value.
+- `xw.read_first` is the explicit SIMD-to-bare boundary. Reductions and
+  proof-bearing compaction are separate operations; SIMD-to-bare assignment is
+  never implicit.
+- `xw.binary` covers integer/index add, subtract, multiply, shifts, bitwise
+  operations, signed/unsigned division and remainder, and high multiply. It
+  accepts bare/bare, bare/SIMD, SIMD/bare, or equal-cardinality SIMD/SIMD
+  operands. Overflow and signedness semantics remain operation attributes.
+- `xw.urecip` and `xw.ctz` cover specialized elementwise integer operations
+  without introducing target machine mnemonics into the frontend.
+- `xw.fadd`, `xw.fsub`, `xw.fmul`, `xw.fmax`, `xw.fma`, `xw.fexp2`, and
+  `xw.frcp` are elementwise SIMD operations with explicit fast-math flags.
+  Bare floating-point arithmetic stays in `arith`; a scalar operand is splatted
+  before a SIMD floating operation.
+- `xw.cast` handles scalar or SIMD numeric conversion while preserving shape.
+  Rounding, integer signedness, and extension policy are separate attributes;
+  integer types remain signless.
+- `xw.assume` is a runtime identity whose result carries symbolic range,
+  divisibility, or comparison predicates. Consumers use the result SSA value;
+  assumptions are never hidden pass state.
+- `xw.expand` converts `simd<T, A>` to `simd<T, B>` when `A` divides `B` and
+  both divide `W`. `xw.compact` performs the reverse conversion only with a
+  proof of group equality. Both are semantic views until target lowering proves
+  that data movement is required.
+
+#### Predicates and structured control
+
+- Uniform integer/floating comparisons use `arith.cmpi`/`arith.cmpf` and return
+  bare `i1`.
+- `xw.cmpi` and `xw.cmpf` compare equal-cardinality SIMD operands and return
+  `!xw.mask<N>`. Mixed scalar/SIMD comparison first splats the scalar.
+- `xw.select` uses bare `i1` for whole-value selection or `!xw.mask<N>` for
+  lane-wise selection. Arms have identical types. Token arms conservatively
+  select or join dependencies rather than pretending tokens are data bits.
+- Standard `scf.if` and `scf.for` represent uniform structured control.
+- `xw.where` plus `xw.yield` represents structured lane-mask predication with
+  result-carrying regions. A result defined under `mask<N>` may not have a
+  coarser SIMD cardinality than `N`; expand before the region when lane activity
+  can differ inside one compact value group.
+- `xw.ballot` materializes a logical mask as integer bits. Mask algebra
+  (`and`, `or`, `xor`, `not`, `any`, `all`, `none`, `popcount`) belongs in the
+  same frontend layer rather than being reconstructed from machine flags.
+
+#### Identity and cross-lane operations
+
+- `xw.lane_id` and per-workitem IDs return SIMD values; workgroup, subgroup,
+  subgroup-size, and launch-shape queries return bare values when uniform.
+- `xw.shuffle` reads a SIMD source through a bare or equal-cardinality SIMD lane
+  index.
+- `xw.redistribute` represents general packet/lane movement as a total symbolic
+  gather relation. Target lowering chooses region moves, shuffles, or shared
+  memory.
+- `xw.reduce` uses a closed, pure combiner region and explicit associativity and
+  commutativity permissions. Ordinary subgroup reductions should use this
+  shape only after the symbolic packet model is present.
+
+#### Vectors and packets
+
+- Builtin `vector<M x T>` remains a per-workitem packet, distinct from the
+  subgroup lane axis. `!xw.simd<vector<M x T>, N>` stores one packet for each of
+  the `N` compact values.
+- `xw.pack` builds vectors or SIMD-of-vector packets from equal-shaped inputs.
+- `xw.extract` extracts a scalar element or contiguous subvector while
+  preserving bare/SIMD shape.
+- Pack/extract folders and canonicalizers preserve round trips, push slices
+  through packs, and permit packed loop-carried state without target-specific
+  fragment operations.
+
+#### Pointers, symbolic indices, and memory
+
+- Copy Wave's pointer-type shape but make it unconditionally opaque:
+  `!xw.ptr<#space>` has no optional element type. A bare XW pointer is uniform;
+  `!xw.simd<!xw.ptr<#space>, N>` is a compact set of distributed pointers.
+- LLVM pointer types are converted in function signatures, block arguments,
+  region arguments, operation results, and attributes. Successful semantic
+  conversion leaves no LLVM pointer type or LLVM dialect operation in the
+  module.
+- `xw.ptradd` follows `xw.binary` shape promotion: bare+bare is bare;
+  bare/SIMD or SIMD/bare is SIMD; SIMD/SIMD requires equal cardinality. It
+  remains bytewise and preserves XW address space plus imported GEP no-wrap
+  semantics. LLVM GEP element types are consumed while computing this byte
+  offset and do not survive the conversion.
+- LLVM pointer bitcasts disappear because both source and result become the
+  same opaque XW pointer type. `xw.addrspace_cast` represents a real address
+  space conversion and preserves bare/SIMD shape. `xw.ptr_to_int` and
+  `xw.int_to_ptr` preserve explicit LLVM conversion semantics and are never
+  folded into ordinary integer arithmetic without provenance proof.
+- `xw.null` materializes a null pointer of an exact XW address space. Other
+  pointer constants require a documented symbolic or relocation form rather
+  than embedding host addresses.
+- `xw.index_expr` materializes symbolic index algebra from named bare or SIMD
+  bindings. All-bare bindings produce bare `index`; any SIMD binding selects
+  that exact cardinality, with mismatches requiring explicit expansion.
+- `xw.load` accepts a bare or SIMD pointer and returns an explicitly requested
+  SIMD payload plus a token. Even a uniform pointer does not imply a uniform
+  load; compaction requires a separate proof.
+- `xw.store` consumes a SIMD value, a compatible bare or SIMD pointer, an
+  optional dependency token, and returns a token. Atomics use separate
+  operations with explicit ordering and scope.
+- `xw.gather` and `xw.scatter` combine pointer bases, symbolic bindings, packet
+  bindings, and a symbolic memory mapping when the packet-memory level lands.
+  Their mappings describe semantics; Xe message selection remains downstream.
+- `xw.shared_memory_base`, `xw.alloc`, and `xw.alloc_release` represent uniform
+  workgroup-memory bases and explicit allocation lifetimes.
+
+#### Token algebra and synchronization
+
+- `xw.token` creates an inert seed; `xw.issue_token` preserves issue ordering
+  without completion events; `xw.after` derives ordering; and `xw.join`
+  combines dependencies. Join canonicalization removes inert inputs,
+  deduplicates dependencies, and folds zero/one-input joins.
+- Memory operations consume optional dependencies and always return frontend
+  tokens. `xw.barrier` consumes all explicit dependencies, carries workgroup or
+  cluster scope, and returns the ordering token for subsequent accesses.
+- Alias analysis constructs dependency edges before target selection. Token
+  canonicalization may simplify explicit edges but no later pass invents
+  memory ordering.
+
+#### Verifiers, folders, and canonicalizers
+
+- Shared classifiers unwrap bare versus SIMD payloads, compare compact
+  cardinalities, and derive result shape for binary operations, casts, pointer
+  arithmetic, and symbolic indices. Individual verifiers call these helpers
+  rather than reimplementing promotion rules.
+- Operations implement standard MLIR interfaces where applicable:
+  `InferIntRangeInterface`, integer overflow flags, fast-math flags,
+  `ViewLikeOpInterface`, region-branch interfaces, and precise memory effects.
+- Cheap constant evaluation and algebraic identities are folders. Structural
+  rewrites such as pack/extract slicing, FMA formation, symbolic-expression
+  simplification, and token deduplication are canonicalizers.
+- Region operations verify exact yield arity and types. Reduction combiners are
+  closed, pure, capture-free regions. No verifier consults target scheduling or
+  register-allocation state.
+
+#### Deliberately excluded from the copied surface
+
+- AMD EXEC terminology, wave32/64-only constraints, shader-cycle registers,
+  AMD buffer/cache attributes, MFMA/WMMA fragments, DMA/TDM operations, and
+  packed AMD register-allocation state.
+- Wave frontend inconsistencies such as the undefined `wave.wait`, rejection of
+  otherwise-legal uniform-pointer loads, and incorrect SIMD float comparison
+  lowering.
+- Machine scheduling barriers and register-allocation state in the semantic
+  dialect. Those belong in `xemachine`.
+
+The first implementation slice should establish `simd`, `mask`, and frontend
+tokens together with constant/splat/read-first, integer binary/cast, compare,
+select, `where`/yield, pointer addition, and tokenized load/store. Pack/extract,
+shuffle, symbolic index expressions, redistribution, and packet gather/scatter
+follow as closed vertical slices; unsupported LLVM operations remain hard
+conversion failures throughout.
+
+### Sparse distribution inference and type refinement
+
+LLVM import has no type-level lane distinction, so conversion starts from a
+safe representation: sources known uniform by semantics become bare values;
+every other lane-capable value initially becomes `!xw.simd<T, W>`. This is the
+"everything varying" fallback in the IR. It guarantees correctness before any
+proof and lets unsupported transfer cases remain fully varying.
+
+The sparse dataflow lattice itself must not initialize every value to varying,
+because a monotone solver could then never refine it. Its states are:
+
+```
+uninitialized
+bare                         // cardinality 1
+simd<N>                      // N divides W
+```
+
+Cardinalities are ordered by divisibility and the control-flow join is `lcm`,
+bounded by `W`. Thus analysis starts uninitialized, discovers the smallest
+proved cardinality, and monotonically degrades toward `W` when operands,
+region inputs, loop backedges, or unknown effects require more variation.
+
+Transfer rules include:
+
+- Constants, kernel scalar arguments, workgroup/subgroup IDs, launch sizes,
+  and uniform pointer bases produce `bare`.
+- Lane and per-workitem IDs produce `simd<W>` unless a builtin's semantics
+  explicitly expose a coarser cardinality.
+- Elementwise operations join operand cardinalities. Bare operands do not
+  increase cardinality.
+- Selects, structured region results, and loop-carried arguments join all
+  conditions, yielded values, initial values, and backedges that can affect the
+  result.
+- Unknown calls, volatile memory, atomics, and ordinary loads conservatively
+  produce `simd<W>`. A uniform pointer alone does not prove a uniform load.
+- Casts preserve cardinality; pointer addition joins base and offset; shuffle,
+  reduction, redistribution, and memory operations provide operation-specific
+  transfer functions.
+
+Cardinality alone propagates existing clustering but cannot discover cases such
+as `lane_id >> 1`. A companion lane-expression analysis uses the imported
+ixsimpl store to evaluate supported pure operations for each logical lane.
+With Xe widths at most 32, retaining one hash-consed expression handle per lane
+is bounded and practical. Two lanes may share a compact element only when their
+expressions are structurally or provably equal for every yield reaching an
+`scf.if` result. `scf.for` and other structured loops join initial and
+loop-carried values until their partitions stabilize; loop joins stay lattice
+operations rather than growing recursive symbolic expressions.
+
+`simd<T, N>` admits only the contiguous mapping
+`floor(L * N / W)`. Merely proving that a value has N unique lane values is not
+enough: an alternating pattern such as `lane_id % 2` is not `simd<T, 2>` under
+this model. Non-contiguous patterns stay `simd<T, W>` until represented by an
+explicit shuffle or redistribution.
+
+Analysis never mutates types while the solver is running. After the fixed point,
+a dedicated refinement rewrite updates function signatures, block arguments,
+operation results, region yields, and loop-carried values together. Cardinality
+1 becomes a bare type; other proved cardinalities become `simd<T, N>`. The
+rewrite removes redundant splats, inserts explicit expansion where a consumer
+requires a finer cardinality, and creates `xw.compact` only from the recorded
+proof. Canonicalization and CSE run after this whole-function rewrite.
+
+The same analysis computes compact mask cardinality. A value defined under a
+mask finer than its proposed storage cardinality is forced to at least the mask
+cardinality, preventing two differently active lanes from writing one compact
+element. Distribution remarks should report every failed refinement and its
+first varying or unknown cause; failure to prove refinement is never a
+compilation error.
+
 Exemplars to mine for lattice plumbing: `WaitLattice`/`HazardLattice` in
 wave-mlir (`lib/Dialect/Wave/Transforms/WaveAMDMachineWaitcnt.cpp`,
 `WaveAMDHazardWaits.cpp`) — dense dataflow over region-bearing control flow,
@@ -329,20 +589,22 @@ join/back-edge handling included.
 Every memory operation consumes:
 
 ```
-opaque LLVM pointer SSA value plus the memory operation's access type,
+opaque XW pointer SSA value plus the memory operation's access type,
 alignment, and active mask
 ```
 
-- Opaque pointers retain their LLVM address space and SSA structure through the
-  semantic layer. Typed GEPs normalize to `xw.ptradd(base, byteOffset)`, where
-  the offset uses the address-space-specific index width and the source element
-  type plus data layout determines byte strides. GEP no-wrap/inbounds semantics
-  are preserved. Loads/stores continue to consume pointers rather than a second
-  target-independent address object.
+- During LLVM-to-XW conversion, LLVM opaque pointers become
+  `!xw.ptr<#space>`. Typed GEP syntax normalizes to
+  `xw.ptradd(base, byteOffset)`, where the offset uses the address-space-specific
+  index width and the source element type plus imported data layout determines
+  byte strides. GEP no-wrap/inbounds semantics are preserved; pointee types and
+  all LLVM dialect types are then gone. Loads/stores continue to consume
+  pointers rather than a second target-independent address object.
 - Byte-offset arithmetic preserves sign/zero extension, truncation, shifts,
-  division/remainder, selects, PHI/add recurrences, `inbounds`, `nuw`/`nsw`,
-  and modular integer width. Algebra may use ixsimpl or an equivalent
-  hash-consed engine, but only after LLVM semantics are represented exactly.
+  division/remainder, selects, loop-carried/add recurrences, `inbounds`,
+  `nuw`/`nsw`, and modular integer width. Algebra may use ixsimpl or an
+  equivalent hash-consed engine, but only after LLVM semantics are represented
+  exactly.
 - Pointer provenance survives GEP, bitcast, and address-space cast. Arbitrary
   ptr-to-int arithmetic is conservative; absent a proved base/range it remains
   a general address. Generic address-space pointers are specialized only when
@@ -373,7 +635,7 @@ alignment, and active mask
   otherwise scratch. Scalar, vector, block, 2D, and prefetch operations all use
   this same pointer representation.
 
-## 9. Memory model: tokens and early alias analysis
+## 9. Memory model: tokens and semantic alias analysis
 
 Memory ordering is explicit. Legality is SSA dominance plus token edges. No
 pass below token synthesis may infer ordering.
@@ -387,21 +649,39 @@ pass below token synthesis may infer ordering.
   *issue*, the scoreboard orders *writeback*.
 - Tokens thread through regions as ordinary SSA: yielded by `scf.if` /
   machine `exec_if`, carried by `scf.for` / `uniform_loop` iter args.
-- **Token synthesis is the one place semantic alias analysis exists.** It runs
-  above selection while LLVM `noalias`, alias scopes, TBAA, access groups,
-  MemorySSA, address-space facts, and proved byte ranges remain visible.
-  Distinct pointer arguments are *not* assumed disjoint without `noalias` or an
-  equivalent proof. Read/read operations need no edge; writes, volatile and
-  atomic operations, fences, and potentially aliasing accesses receive the
-  necessary edges. Runtime alias checks may split fast and fallback paths.
+- LLVM-to-XW conversion creates token-producing memory operations with their
+  source-explicit dependencies preserved and inferred dependencies initially
+  absent. Distribution analysis does not require a completed token graph.
+- **Token synthesis is the one place semantic alias analysis exists.** It is the
+  final semantic-memory pass: run after distribution refinement, symbolic
+  address canonicalization, contraction/tiling, SLM staging, and every other
+  transformation that may create, duplicate, or reorder memory operations, but
+  before Intel message selection. Imported LLVM `noalias`, alias scopes, TBAA,
+  access groups, MemorySSA facts, address spaces, and proved byte ranges have
+  already become XW attributes or analysis facts; no LLVM type or operation is
+  required at this point.
+- The pass computes a sparse region dataflow memory frontier over structured
+  control. A read depends on prior potentially aliasing writes; a write depends
+  on prior potentially aliasing reads and writes; read/read needs no edge.
+  `scf.if` results join region frontiers and structured loop iter_args carry
+  explicit token backedges. Volatile and atomic operations, fences, and
+  barriers obey their ordering and scope even when ordinary alias analysis
+  proves disjoint addresses. Barriers join every live chain in their scope.
+  Kernel exit joins outstanding side effects needed before EOT.
+- Distinct pointer arguments are *not* assumed disjoint without `noalias` or an
+  equivalent proof. Compact pointer cardinality and symbolic lane expressions
+  may improve range/disjointness proofs, but a failed proof only adds a
+  conservative edge. Runtime alias checks may split fast and fallback paths.
   Output is a minimal explicit dependence graph. Below this point there is no
   implicit AA, barrier inference, or loop dependence rediscovery.
 - Barriers: `inter.barrier` joins incoming tokens; lowering is `sync.bar`
   plus the required fence sends, with fence scope from the memory-model
   attributes on the op.
-- Tiling, unrolling, contraction recovery, and software pipelining must
-  transform the dependence graph explicitly. A pass may not discard ordering
-  and ask physical instruction analysis to reconstruct source semantics later.
+- A semantic pass that runs after synthesis and changes memory must update the
+  graph through the common dependency API or invalidate and rerun synthesis
+  before selection. Machine scheduling and software pipelining transform the
+  explicit graph; they may not discard ordering and ask physical instruction
+  analysis to reconstruct source semantics later.
 
 ## 10. The `xemachine` dialect
 
@@ -637,8 +917,8 @@ after this pass.
   after all represented source/destination obligations complete, propagates
   state across branches/joins/backedges, and inserts `.src`, `.dst`, distance,
   or `sync` dependencies. More than 32 sends is a normal stress case, not an
-  encoder failure. If CFG merge or token pressure cannot be represented, drain
-  conservatively and continue.
+  encoder failure. If a structured merge or token pressure cannot be
+  represented, drain conservatively and continue.
 - DPAS dependencies include the systolic pipeline, destructive accumulator
   chain, source-read window, read suppression, and interleaved send completion.
 - Output is final SWSB attributes on physical instructions. A verifier then
