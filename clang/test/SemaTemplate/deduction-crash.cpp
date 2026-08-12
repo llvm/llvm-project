@@ -190,6 +190,15 @@ extern template void a();
 }
 
 namespace GH213760 {
-template <typename... Ts> void f(Ts... args, decltype(args)...);
-void g() { f(); }
+template <typename... Ts> void f(Ts... args, decltype(args)...); // #GH213760-f
+void g() {
+  f();
+  f<int>(1, 2);
+  f(1, 2);
+  // expected-error@-1 {{no matching function for call to 'f'}}
+  // expected-note@#GH213760-f {{candidate function [with Ts = <>] not viable: requires 0 arguments, but 2 were provided}}
+  f<int, int>(1, 2);
+  // expected-error@-1 {{no matching function for call to 'f'}}
+  // expected-note@#GH213760-f {{candidate function [with Ts = <int, int>] not viable: requires 4 arguments, but 2 were provided}}
+}
 }

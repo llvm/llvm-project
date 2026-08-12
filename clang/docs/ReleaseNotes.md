@@ -445,7 +445,7 @@ features cannot lower the translation-unit ABI level;
   affect C++26 constexpr structured bindings and expansion statements, but
   also affects some uses of plain structured bindings. (#GH211930)
 
-- Fixed an assertion during template argument deduction where a function parameter pack is referenced by other types in the function type. (GH28877, GH213760)
+- Fixed an assertion during template argument deduction where a function parameter pack is referenced by other types in the function type. (GH28877), (GH213760)
 
 #### Bug Fixes to AST Handling
 
