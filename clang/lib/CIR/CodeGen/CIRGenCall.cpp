@@ -500,11 +500,18 @@ void CIRGenModule::constructAttributeList(
         "sigsetjmp", "__sigsetjmp", "savectx", "getcontext"};
     if (returnsTwiceFn.contains(name))
       addUnitAttr(cir::CIRDialect::getReturnsTwiceAttrName());
+
+    llvm::StringMap<std::string> cpuAndFeatures;
+    if (getCPUAndFeaturesAttributes(calleeInfo.getCalleeDecl(),
+                                    cpuAndFeatures)) {
+      for (const auto &[key, val] : cpuAndFeatures)
+        attrs.set(key, builder.getStringAttr(val));
+    }
   }
 
   // TODO(cir): A bunch of non-call-site function IR attributes from
   // declaration-specific information, including tail calls,
-  // cmse_nonsecure_entry, CPU-features/overrides, and hotpatch support.
+  // cmse_nonsecure_entry, and hotpatch support.
 
   // TODO(cir): Add loader-replaceable attribute here.
 
