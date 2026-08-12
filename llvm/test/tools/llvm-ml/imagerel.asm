@@ -1,11 +1,8 @@
 ; RUN: llvm-ml -filetype=s %s /Fo - | FileCheck %s
 
 .data
-sym1:
-dd 42
-
-sym2:
-dd 43
+sym1 dd 42
+sym2 dd 43
 
 ; CHECK-LABEL: rva_data:
 ; CHECK: .long sym1@IMGREL
@@ -32,7 +29,6 @@ struct_inst_default MY_STRUCT <>
 struct_inst_override MY_STRUCT <IMAGEREL sym2>
 
 .code
-sym3:
 ; CHECK-LABEL: t1:
 ; CHECK: mov eax, offset sym1@IMGREL
 t1:

@@ -5,8 +5,7 @@
 ; RUN: llvm-readobj --relocations %t.64.obj | FileCheck %s --check-prefix=CHECK-AMD64
 
 .data
-sym1:
-dd 42
+sym1 dd 42
 
 ; CHECK-I386:      Relocations [
 ; CHECK-I386:        IMAGE_REL_I386_DIR32NB sym1
