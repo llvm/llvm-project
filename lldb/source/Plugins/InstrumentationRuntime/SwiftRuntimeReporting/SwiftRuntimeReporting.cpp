@@ -91,7 +91,7 @@ static StructuredData::ArraySP ReadThreads(ProcessSP process_sp, addr_t addr) {
     addr_t description_ptr = process_sp->ReadUnsignedIntegerFromMemory(
         thread_ptr, ptr_size, 0, read_error);
     if (description_ptr)
-      target.ReadCStringFromMemory(description_ptr, thread_description,
+      target.ReadCStringFromMemory(Address(description_ptr), thread_description,
                                    read_error);
     // TODO
     // uint64_t thread_id =
@@ -136,7 +136,7 @@ static StructuredData::ArraySP ReadFixits(ProcessSP process_sp, addr_t addr) {
     addr_t description_ptr = process_sp->ReadUnsignedIntegerFromMemory(
         fixit_ptr, ptr_size, 0, read_error);
     if (description_ptr)
-      target.ReadCStringFromMemory(description_ptr, fixit_filename,
+      target.ReadCStringFromMemory(Address(description_ptr), fixit_filename,
                                    read_error);
 
     uint64_t start_line = process_sp->ReadUnsignedIntegerFromMemory(
@@ -152,7 +152,7 @@ static StructuredData::ArraySP ReadFixits(ProcessSP process_sp, addr_t addr) {
     addr_t replacement_ptr = process_sp->ReadUnsignedIntegerFromMemory(
         fixit_ptr + 5 * ptr_size, ptr_size, 0, read_error);
     if (replacement_ptr)
-      target.ReadCStringFromMemory(replacement_ptr, fixit_replacement,
+      target.ReadCStringFromMemory(Address(replacement_ptr), fixit_replacement,
                                    read_error);
 
     StructuredData::DictionarySP fixit(new StructuredData::Dictionary());
@@ -185,7 +185,7 @@ static StructuredData::ArraySP ReadNotes(ProcessSP process_sp, addr_t addr) {
     std::string note_description;
     addr_t description_ptr = process_sp->ReadUnsignedIntegerFromMemory(note_ptr, ptr_size, 0, read_error);
     if (description_ptr)
-      target.ReadCStringFromMemory(description_ptr, note_description, read_error);
+      target.ReadCStringFromMemory(Address(description_ptr), note_description, read_error);
 
     auto fixits = ReadFixits(process_sp, note_ptr + ptr_size);
 
@@ -247,13 +247,13 @@ SwiftRuntimeReporting::RetrieveReportData(ExecutionContextRef exe_ctx_ref) {
     addr_t error_type_ptr = process_sp->ReadUnsignedIntegerFromMemory(
         details_ptr + ptr_size, ptr_size, 0, read_error);
     if (error_type_ptr)
-      target.ReadCStringFromMemory(error_type_ptr, error_type, read_error);
+      target.ReadCStringFromMemory(Address(error_type_ptr), error_type, read_error);
 
     addr_t current_stack_description_ptr =
         process_sp->ReadUnsignedIntegerFromMemory(details_ptr + 2 * ptr_size,
                                                   ptr_size, 0, read_error);
     if (current_stack_description_ptr)
-      target.ReadCStringFromMemory(current_stack_description_ptr,
+      target.ReadCStringFromMemory(Address(current_stack_description_ptr),
                                    current_stack_description, read_error);
 
     frames_to_skip = process_sp->ReadUnsignedIntegerFromMemory(
@@ -302,7 +302,7 @@ SwiftRuntimeReporting::RetrieveReportData(ExecutionContextRef exe_ctx_ref) {
   }
 
   std::string message = "";
-  target.ReadCStringFromMemory(message_ptr, message, read_error);
+  target.ReadCStringFromMemory(Address(message_ptr), message, read_error);
   if (read_error.Fail())
     return StructuredData::ObjectSP();
 

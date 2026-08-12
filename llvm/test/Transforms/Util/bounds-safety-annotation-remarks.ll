@@ -32,6 +32,19 @@
 ; CHECK-NEXT:   - type:            bounds-safety-total-summary
 ; CHECK-NEXT: ...
 
+; Check that we don't crash on operand that is an MDTuple.
+; CHECK-NEXT: --- !Analysis
+; CHECK-NEXT: Pass:            annotation-remarks
+; CHECK-NEXT: Name:            AnnotationSummary
+; CHECK-NEXT: Function:        alloc
+; CHECK-NEXT: Args:
+; CHECK-NEXT:   - String:          'Annotated '
+; CHECK-NEXT:   - count:           '1'
+; CHECK-NEXT:   - String:          ' instructions with '
+; CHECK-NEXT:   - type:            type-descriptor
+; CHECK-NEXT: ...
+; CHECK-NOT: bounds-safety-total-summary
+
 define void @ptr_bound_compare([2 x i64] %arg, i32 %arg1) {
 bb:
   %extractvalue = extractvalue [2 x i64] %arg, 0
@@ -70,8 +83,18 @@ bb10:                                             ; preds = %bb6
 ; Function Attrs: cold noreturn nounwind
 declare void @llvm.ubsantrap(i8 immarg) #0
 
+declare ptr @malloc_type_malloc(i64, i64)
+
+define ptr @alloc(i64 %n) {
+entry:
+  %p = call ptr @malloc_type_malloc(i64 %n, i64 1914196594), !annotation !3
+  ret ptr %p
+}
+
 attributes #0 = { cold noreturn nounwind }
 
 !0 = !{!"bounds-safety-check-ptr-lt-upper-bound"}
 !1 = !{!"bounds-safety-check-ptr-ge-lower-bound"}
 !2 = !{!"bounds-safety-check-ptr-lt-upper-bound", !"bounds-safety-check-ptr-ge-lower-bound"}
+!3 = !{!4}
+!4 = !{!"type-descriptor", !"1914196594", !"1914196594", !"flags"}

@@ -8,7 +8,7 @@ from lldbsuite.test import lldbutil
 @skipIfDarwinEmbedded
 class TestCase(TestBase):
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @skipUnlessDarwin
     @swiftTest
     def test_body(self):
@@ -18,7 +18,7 @@ class TestCase(TestBase):
         )
         self._do_test("self._count", 41, is_graph_update=True)
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @skipUnlessDarwin
     @swiftTest
     def test_appear(self):
@@ -30,7 +30,7 @@ class TestCase(TestBase):
         )
         self._do_test("self._count", 41, is_graph_update=False)
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @skipUnlessDarwin
     @swiftTest
     def test_change(self):

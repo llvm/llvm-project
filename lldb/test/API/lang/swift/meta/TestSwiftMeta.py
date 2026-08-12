@@ -24,7 +24,7 @@ class TestSwiftMeta(lldbtest.TestBase):
     def test_swiftDecorator(self):
         self.assertTrue(self.getDebugInfo() != "gmodules")
 
-    @skipEmbeddedSwift
+    @skipEmbeddedSwiftOnWindows
     @swiftTest
     def test_swiftBuild(self):
         self.build()

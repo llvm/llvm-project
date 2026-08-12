@@ -102,7 +102,7 @@ ExtractSomeIfAny(ValueObject *optional,
     ptr = runtime->MaskMaybeBridgedPointer(ptr);
     auto exe_ctx = valobj.GetExecutionContextRef().Lock(true);
     return ValueObjectMemory::Create(exe_ctx.GetBestExecutionContextScope(),
-                                     g_some, ptr, projected_type, &valobj);
+                                     g_some, Address(ptr), projected_type, &valobj);
   };
 
   auto project_enum =
@@ -313,6 +313,14 @@ lldb::ValueObjectSP lldb_private::formatters::swift::
     return nullptr;
 
   ValueObjectSP some = m_some;
+
+  // This frontend hides the `some` level so `x.some.a` becomes `x.a`.
+  // A clone is a ValueObjectCast, which stands in for its parent
+  // rather than nesting under it, so the children hang off the
+  // Optional directly.
+  if (ValueObjectSP transparent_sp = some->Clone(ConstString()))
+    some = transparent_sp;
+
   if (some->HasSyntheticValue())
     some = some->GetSyntheticValue();
 
@@ -352,7 +360,7 @@ llvm::Expected<size_t> lldb_private::formatters::swift::
     SwiftOptionalSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
   if (IsEmpty())
     return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
+                                   name.AsCString(""));
 
   return m_some->GetIndexOfChildWithName(name);
 }

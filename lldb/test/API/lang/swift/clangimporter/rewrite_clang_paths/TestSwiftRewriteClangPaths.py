@@ -18,7 +18,7 @@ import os
 import shutil
 
 class TestSwiftRewriteClangPaths(TestBase):
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     # Don't run ClangImporter tests if Clangimporter is disabled.
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
     @skipUnlessDarwin
@@ -27,7 +27,7 @@ class TestSwiftRewriteClangPaths(TestBase):
     def testWithRemap(self):
         self.dotest(True)
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     # Don't run ClangImporter tests if Clangimporter is disabled.
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
     @skipUnlessDarwin

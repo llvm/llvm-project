@@ -19,7 +19,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestSwiftInterfaceDSYM(TestBase):
     @swiftTest
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift # library evolution cannot be enabled with embedded Swift
     @skipIf(archs=no_match("x86_64"))
     @skipIf(debug_info=no_match(["dsym"]))
     def test_dsym_swiftinterface(self):
@@ -80,7 +80,7 @@ class TestSwiftInterfaceDSYM(TestBase):
         self.assertEqual(len(a_modules), 1)
 
     @swiftTest
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift # library evolution cannot be enabled with embedded Swift
     @skipIf(archs=no_match("x86_64"))
     @skipIf(debug_info=no_match(["dsym"]))
     def test_sanity_negative(self):
@@ -116,7 +116,7 @@ class TestSwiftInterfaceDSYM(TestBase):
         self.expect("expression x", error=1)
 
     @swiftTest
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift # embedded Swift cannot load a module from a .swiftinterface
     @skipIf(archs=no_match("x86_64"))
     @skipIf(debug_info=no_match(["dsym"]))
     def test_sanity_positive(self):

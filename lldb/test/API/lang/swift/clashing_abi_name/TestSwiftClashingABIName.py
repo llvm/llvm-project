@@ -4,7 +4,7 @@ from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 
 class TestSwiftClashingABIName(TestBase):
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test(self):
         """Test that expressions with types in modules with clashing abi names works"""
@@ -22,7 +22,7 @@ class TestSwiftClashingABIName(TestBase):
 
         self.expect('expr --bind-generic-types true -- generic3',
                     substrs=['a.Generic2<a.Generic<a.One>>', 't2 =', 't =', 'j = 98'])
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_in_self(self):
         """Test a library with a private import for which there is no debug info"""

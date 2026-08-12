@@ -18,7 +18,8 @@ class TestSwiftCommandMemoryFind(TestBase):
         self.expect(f'memory find -e "{expr}" {hex(addr)} {hex(addr + 8)}',
                     substrs=["data found at location"])
 
-    @skipEmbeddedSwift
+    @skipEmbeddedSwiftOnLinux # `memory find -e` does not locate the value in embedded Swift on Linux.
+    @skipEmbeddedSwiftOnWindows
     @swiftTest
     def test(self):
         self.build()

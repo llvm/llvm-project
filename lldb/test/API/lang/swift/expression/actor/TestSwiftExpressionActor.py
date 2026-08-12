@@ -6,7 +6,7 @@ import os
 
 
 class TestSwiftExpressionActor(TestBase):
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_static_func(self):
         self.build()
@@ -16,7 +16,7 @@ class TestSwiftExpressionActor(TestBase):
 
         self.expect("expr self", substrs=["A.Type"])
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_func(self):
         self.build()

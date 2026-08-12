@@ -27,6 +27,7 @@ def getOlderVersion(major, minor):
     return '%d.%d' % (major-1, minor)
 
 class TestAvailability(TestBase):
+    SHARED_BUILD_TESTCASE = False
 
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -34,7 +35,7 @@ class TestAvailability(TestBase):
         # Call super's setUp().
         TestBase.setUp(self)
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift # embedded Swift strips functions the program never calls, so f() is not in the binary to call
     @swiftTest
     @skipIf(oslist=['linux', 'windows'])
     def testAvailability(self):

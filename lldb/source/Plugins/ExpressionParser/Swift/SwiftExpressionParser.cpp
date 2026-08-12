@@ -162,7 +162,7 @@ swift::SILValue LLDBNameLookup::emitLValueForVariable(
   ConstString variable_const_string(variable_name.get());
 
   SwiftExpressionParser::SILVariableMap::iterator vi =
-      m_variable_map.find(variable_const_string.AsCString());
+      m_variable_map.find(variable_const_string.AsCString(nullptr));
 
   if (vi == m_variable_map.end())
     return swift::SILValue();
@@ -1013,6 +1013,15 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
       actual_type =
           swift_ast_ctx->GetTypeRefType(actual_type.GetOpaqueQualType());
 
+      // Hoist the type into the scratch typesystem.
+      if (lldb::StackFrameSP frame_sp = stack_frame_wp.lock())
+        if (auto *runtime =
+                SwiftLanguageRuntime::Get(frame_sp->CalculateProcess()))
+          if (auto rt = runtime->GetRuntimeType(actual_type,
+                                                ExecutionContext(frame_sp)))
+            if (rt->IsValid())
+              actual_type = *rt;
+
       offset = materializer.AddResultVariable(
           actual_type, false, true,
           is_result ? &user_expression.GetResultDelegate()
@@ -1092,7 +1101,7 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
         log,
         "Added persistent variable %s with flags 0x%llx to "
         "struct at offset %llu",
-        variable_metadata->m_persistent_variable_sp->GetName().AsCString(),
+        variable_metadata->m_persistent_variable_sp->GetName().AsCString(""),
         (unsigned long long)
             variable_metadata->m_persistent_variable_sp->m_flags,
         (unsigned long long)offset);
@@ -1644,7 +1653,7 @@ RedirectCallFromSinkToTrampolineFunction(llvm::Module &module,
 
   // Find the call to the sink.
   llvm::CallInst *sink_call = nullptr;
-  for (auto &I : basic_block.instructionsWithoutDebug()) {
+  for (auto &I : basic_block) {
     if (auto *call = llvm::dyn_cast<llvm::CallInst>(&I)) {
       if (call->getCalledFunction() == sink_func) {
         sink_call = call;
@@ -2121,7 +2130,6 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
         &parsed_expr->module, IRGenOpts, m_swift_ast_ctx.GetTBDGenOptions(),
         std::move(sil_module), "lldb_module",
         swift::PrimarySpecificPaths("", parsed_expr->main_filename),
-        llvm::ArrayRef<std::string>(), llvm::ArrayRef<std::string>());
         /*CAS=*/nullptr, llvm::ArrayRef<std::string>(),
         llvm::ArrayRef<std::string>());
     if (GenModule) {

@@ -67,7 +67,7 @@ class TestCase(lldbtest.TestBase):
             myvar = frame.FindVariable("myvar")
             lldbutil.check_variable(self, myvar, False, value=expected_value)
 
-    @skipEmbeddedSwift
+    @skipEmbeddedSwift  # rdar://183960945 (Fix async tests running in embedded mode)
     @swiftTest
     @skipIf(oslist=["windows"])
     def test(self):

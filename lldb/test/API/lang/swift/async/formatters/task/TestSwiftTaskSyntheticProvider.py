@@ -7,7 +7,7 @@ from lldbsuite.test import lldbutil
 
 class TestCase(TestBase):
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_top_level_task(self):
         """Test Task synthetic child provider for top-level Task."""
@@ -34,7 +34,7 @@ class TestCase(TestBase):
             ],
         )
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_current_task(self):
         """Test Task synthetic child for UnsafeCurrentTask (from an async let)."""

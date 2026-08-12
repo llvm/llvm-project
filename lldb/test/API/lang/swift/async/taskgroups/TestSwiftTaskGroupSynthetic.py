@@ -7,7 +7,7 @@ from lldbsuite.test import lldbutil
 
 class TestCase(TestBase):
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_print_task_group(self):
         """Print a TaskGroup and verify its children."""
@@ -17,7 +17,7 @@ class TestCase(TestBase):
         )
         self.do_test_print()
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_print_throwing_task_group(self):
         """Print a ThrowingTaskGroup and verify its children."""
@@ -61,7 +61,7 @@ class TestCase(TestBase):
             ],
         )
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_api_task_group(self):
         """Verify a TaskGroup contains its expected children."""
@@ -71,7 +71,7 @@ class TestCase(TestBase):
         )
         self.do_test_api(process)
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_api_throwing_task_group(self):
         """Verify a ThrowingTaskGroup contains its expected children."""

@@ -4,7 +4,7 @@ import lldbsuite.test.lldbtest as lldbtest
 import lldbsuite.test.lldbutil as lldbutil
 
 class TestSwiftSubmoduleImport(lldbtest.TestBase):
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test(self):
         """Test imports of Clang submodules"""

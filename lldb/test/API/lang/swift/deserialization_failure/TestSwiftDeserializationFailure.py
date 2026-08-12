@@ -30,7 +30,7 @@ class TestSwiftDeserializationFailure(TestBase):
         # FIXME: this is formatted incorrectly.
         self.expect("fr var -d no-dynamic t", substrs=["(T)"]) #, "world"])
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift # embedded Swift monomorphizes every generic, so the parameter is never typed (T)
     @swiftTest
     @skipIf(debug_info=no_match(["dwarf"]))
     def test_missing_module(self):
@@ -39,7 +39,7 @@ class TestSwiftDeserializationFailure(TestBase):
         target, process, _, _ = lldbutil.run_to_name_breakpoint(self, 'main')
         self.run_tests(target, process)
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift # embedded Swift monomorphizes every generic, so the parameter is never typed (T)
     @swiftTest
     @skipIf(debug_info=no_match(["dwarf"]))
     def test_damaged_module(self):

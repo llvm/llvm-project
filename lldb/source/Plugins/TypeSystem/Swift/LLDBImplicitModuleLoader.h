@@ -45,7 +45,7 @@ public:
                   std::unique_ptr<llvm::MemoryBuffer> *moduleSourceInfoBuffer,
                   std::string *CacheKey, bool isCanImportLookup,
                   bool isTestableDependencyLookup, bool &isFramework,
-                  bool &isSystemModule) override;
+                  bool &isSystemModule, bool isSourceCanImport) override;
   std::error_code findModuleFilesInDirectory(
       swift::ImportPath::Element ModuleID,
       const swift::SerializedModuleBaseName &BaseName,
@@ -59,8 +59,8 @@ public:
 
   bool isSDKOverlay(swift::ImportPath::Module named) const;
   bool canImportModule(swift::ImportPath::Module named, swift::SourceLoc loc,
-                       ModuleVersionInfo *versionInfo,
-                       bool isTestableImport = false) override;
+                       ModuleVersionInfo *versionInfo, bool isTestableImport,
+                       bool isSourceCanImport) override;
 
   swift::ModuleDecl *loadModule(swift::SourceLoc importLoc,
                                 swift::ImportPath::Module path,

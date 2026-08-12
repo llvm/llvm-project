@@ -9,7 +9,7 @@ class TestSwiftExprAllocator(lldbtest.TestBase):
 
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_allocator_self(self):
         """Test expressions involving self in a allocating constructor. In an

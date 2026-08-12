@@ -20,7 +20,7 @@ import os
 
 
 class TestDictionaryNSObjectAnyObject(TestBase):
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @skipUnlessDarwin
     @swiftTest
     def test_dictionary_nsobject_any_object(self):

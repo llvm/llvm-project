@@ -133,7 +133,7 @@ class TestSwiftInterfaceNoDebugInfo(TestBase):
                             "Swiftmodule file was regenerated rather than reused")
 
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_swift_interface_fallback(self):
         """Test that we fall back to load from the .swiftinterface file if the .swiftmodule is invalid"""

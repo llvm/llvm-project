@@ -20,7 +20,7 @@ import os
 
 
 class TestSwiftReferenceStorageTypes(TestBase):
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @decorators.skipIf(archs=['ppc64le']) #SR-10215
     @swiftTest
     def test_swift_reference_storage_types(self):

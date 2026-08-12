@@ -20,7 +20,7 @@ import os
 
 
 class TestSwiftArchetypeResolution(TestBase):
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_swift_associated_type_resolution(self):
         """Test that archetype-typed objects get resolved to their proper location in memory"""

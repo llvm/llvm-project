@@ -8,7 +8,7 @@ class TestSwiftSystemFramework(lldbtest.TestBase):
     mydir = lldbtest.TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     @skipIf(oslist=no_match(["macosx"]))
     def test_system_framework(self):

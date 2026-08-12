@@ -70,8 +70,8 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
         self.filecheck_log(log, __file__, "--check-prefix=CHECK-TYPEINFO")
         # CHECK-TYPEINFO: [LLDBTypeInfoProvider] Looking up debug type info for So4CMYKV
 
-    @skipEmbeddedSwift
     @skipIf(archs=['ppc64le'], bugnumber='SR-10214')
+    @skipEmbeddedSwiftOnWindows
     @swiftTest
     def test_dwarf_importer_exprs(self):
         self.build()

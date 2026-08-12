@@ -51,7 +51,7 @@ class TestSwiftClosureVarNotCaptured(TestBase):
         target.BreakpointDelete(bkpt.GetID())
         return (target, process, thread)
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_simple_closure(self):
         self.build()
@@ -60,7 +60,7 @@ class TestSwiftClosureVarNotCaptured(TestBase):
         check_not_captured_error(self, thread.frames[0], "arg", "func_1(arg:)")
         check_no_enhanced_diagnostic(self, thread.frames[0], "dont_find_me")
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_nested_closure(self):
         self.build()
@@ -85,7 +85,7 @@ class TestSwiftClosureVarNotCaptured(TestBase):
         )
         check_no_enhanced_diagnostic(self, thread.frames[0], "dont_find_me")
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     # Async variable inspection on Linux/Windows are still problematic.
     @skipIf(oslist=["windows", "linux"])
@@ -109,7 +109,7 @@ class TestSwiftClosureVarNotCaptured(TestBase):
         )
         check_no_enhanced_diagnostic(self, thread.frames[0], "dont_find_me")
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     # Async variable inspection on Linux/Windows are still problematic.
     @skipIf(oslist=["windows", "linux"])
@@ -122,7 +122,7 @@ class TestSwiftClosureVarNotCaptured(TestBase):
             self, thread.frames[0], "x", "task_inside_non_async_function()"
         )
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_ctor_class_closure(self):
         self.build()
@@ -180,7 +180,7 @@ class TestSwiftClosureVarNotCaptured(TestBase):
         )
         check_no_enhanced_diagnostic(self, thread.frames[0], "dont_find_me")
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_ctor_struct_closure(self):
         self.build()
@@ -238,7 +238,7 @@ class TestSwiftClosureVarNotCaptured(TestBase):
         )
         check_no_enhanced_diagnostic(self, thread.frames[0], "dont_find_me")
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_ctor_enum_closure(self):
         self.build()

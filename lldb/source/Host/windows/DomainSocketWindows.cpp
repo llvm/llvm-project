@@ -31,7 +31,7 @@ llvm::Expected<DomainSocket::Pair> DomainSocketWindows::CreatePair() {
   llvm::SmallString<128> path;
   llvm::sys::fs::createUniquePath(model, path, /*MakeAbsolute=*/false);
   auto remove_file =
-      llvm::make_scope_exit([&] { llvm::sys::fs::remove(path); });
+      llvm::scope_exit([&] { llvm::sys::fs::remove(path); });
 
   auto listen_socket =
       std::make_unique<DomainSocketWindows>(/*should_close=*/true);

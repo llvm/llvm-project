@@ -9,7 +9,7 @@ import os
 
 
 class TestSwiftActorTypes(TestBase):
-    @skipEmbeddedSwift
+    @skipEmbeddedSwift  # rdar://183960945 (Fix async tests running in embedded mode)
     @swiftTest
     def test_swift_class_types(self):
         """Test swift Actor types"""

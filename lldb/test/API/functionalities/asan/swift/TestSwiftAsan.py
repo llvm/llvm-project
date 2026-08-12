@@ -22,10 +22,11 @@ import json
 
 
 class AsanSwiftTestCase(lldbtest.TestBase):
+    SHARED_BUILD_TESTCASE = False
 
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     @skipIfWindows
     @skipIfLinux

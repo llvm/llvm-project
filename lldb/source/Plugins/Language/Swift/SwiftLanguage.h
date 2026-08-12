@@ -36,7 +36,7 @@ public:
   bool IsTopLevelFunction(Function &function) override;
 
   std::vector<Language::MethodNameVariant>
-  GetMethodNameVariants(ConstString method_name) const override;
+  GetMethodNameVariants(llvm::StringRef method_name) const override;
 
   lldb::TypeCategoryImplSP GetFormatters() override;
 
@@ -135,8 +135,6 @@ public:
   static llvm::StringRef GetPluginNameStatic() { return "swift"; }
 
   bool SymbolNameFitsToLanguage(const Mangled &mangled) const override;
-
-  llvm::StringRef GetInstanceVariableName() override { return "self"; }
 
   bool HandleFrameFormatVariable(const SymbolContext &sc,
                                  const ExecutionContext *exe_ctx,

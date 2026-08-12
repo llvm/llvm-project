@@ -68,7 +68,8 @@ public:
   /// Return a reflection context.
   static std::unique_ptr<ReflectionContextInterface> CreateReflectionContext(
       uint8_t pointer_size, std::shared_ptr<swift::remote::MemoryReader> reader,
-      bool objc_interop, SwiftMetadataCache *swift_metadata_cache);
+      bool objc_interop, SwiftMetadataCache *swift_metadata_cache,
+      swift::Mangle::ManglingFlavor flavor);
 
   virtual ~ReflectionContextInterface() = default;
 
@@ -82,7 +83,6 @@ public:
            llvm::SmallVector<llvm::StringRef, 1> likely_module_names = {}) = 0;
   virtual std::optional<uint32_t>
   ReadELF(swift::remote::RemoteAddress ImageStart,
-          std::optional<llvm::sys::MemoryBlock> FileBuffer,
           llvm::SmallVector<llvm::StringRef, 1> likely_module_names = {}) = 0;
   virtual llvm::Expected<const swift::reflection::TypeRef &>
   GetTypeRef(llvm::StringRef mangled_type_name) = 0;

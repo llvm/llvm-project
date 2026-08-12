@@ -9,7 +9,7 @@ import os
 
 
 class TestMultilangFormatterCategories(TestBase):
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     @skipUnlessDarwin
     def test_multilang_formatter_categories(self):

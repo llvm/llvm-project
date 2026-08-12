@@ -11,6 +11,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class TestSwiftMetadataCache(TestBase):
+    SHARED_BUILD_TESTCASE = False
 
     def setUp(self):
         # Call super's setUp().
@@ -40,7 +41,7 @@ class TestSwiftMetadataCache(TestBase):
         return False
             
         
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_swift_metadata_cache(self):
         """Test the swift metadata cache."""

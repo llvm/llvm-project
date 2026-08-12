@@ -347,7 +347,7 @@ public:
     if (!ts)
       return nullptr;
     CompilerType clang_type =
-        m_runtime.LookupAnonymousClangType(mangled.AsCString());
+        m_runtime.LookupAnonymousClangType(mangled.AsCString(nullptr));
     // If this is an objc type consult the ObjC runtime first, as it should be
     // cheaper than looking for the type in the module and work when the ObjC is
     // compiled without debug info.
@@ -424,7 +424,7 @@ public:
           llvm::raw_string_ostream(unique_swift_name)
               << '#' << m_num_anonymous_clang_types++;
           swift_type = typesystem.CreateClangStructType(unique_swift_name);
-          auto *key = swift_type.GetMangledTypeName().AsCString();
+          auto *key = swift_type.GetMangledTypeName().AsCString(nullptr);
           m_runtime.RegisterAnonymousClangType(key, field_type);
         } else {
           // TODO: The mangling flavor should be threaded through getTypeInfo.
@@ -835,6 +835,18 @@ private:
                                      VisitCallback visit_callback);
 };
 
+/// Augment generic reflection failures with LLDB-specific explanations.
+static llvm::Error AugmentReflectionError(llvm::Error error) {
+  std::string message;
+  llvm::handleAllErrors(std::move(error), [&](const llvm::ErrorInfoBase &info) {
+    message = info.message();
+  });
+  if (llvm::StringRef(message).contains("accessor function symbolic reference"))
+    message += ": non-copyable fields in resilient types with "
+               "a deployment target < 27.0 are not supported in LLDB";
+  return llvm::createStringError(message);
+}
+
 llvm::Expected<unsigned>
 SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
                                    VisitCallback visit_callback) {
@@ -962,7 +974,7 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
 
   {
     CompilerType clang_type = m_runtime.LookupAnonymousClangType(
-        m_type.GetMangledTypeName().AsCString());
+        m_type.GetMangledTypeName().AsCString(nullptr));
     if (!clang_type)
       ts.IsImportedType(m_type.GetOpaqueQualType(), &clang_type);
     if (clang_type) {
@@ -1311,7 +1323,7 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
           *tr, &tip,
           ts.GetDescriptorFinder(m_exe_ctx.GetBestExecutionContextScope()));
       if (!cti_or_err)
-        return cti_or_err.takeError();
+        return AugmentReflectionError(cti_or_err.takeError());
       if (auto *rti = llvm::dyn_cast_or_null<swift::reflection::RecordTypeInfo>(
               &*cti_or_err)) {
         LLDB_LOG(GetLog(LLDBLog::Types),
@@ -1455,11 +1467,9 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
 
       auto cti_or_err =
           reflection_ctx->GetClassInstanceTypeInfo(*tr, &tip, desc_finder);
-      const swift::reflection::TypeInfo *cti = nullptr;
-      if (cti_or_err)
-        cti = &*cti_or_err;
-      else
-        LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), cti_or_err.takeError(), "{0}");
+      if (!cti_or_err)
+        return AugmentReflectionError(cti_or_err.takeError());
+      const swift::reflection::TypeInfo *cti = &*cti_or_err;
       if (auto *rti =
               llvm::dyn_cast_or_null<swift::reflection::RecordTypeInfo>(cti)) {
         auto fields = rti->getFields();
@@ -1746,7 +1756,7 @@ SwiftLanguageRuntime::ProjectEnum(ValueObject &valobj) {
 
     return ValueObjectMemory::Create(exe_ctx.GetBestExecutionContextScope(),
                                      "$indirect." + field_info.Name,
-                                     payload_addr, payload_type, &valobj);
+                                     Address(payload_addr), payload_type, &valobj);
   };
 
   // Type infos of single case enums simply are the payload's type's type info,
@@ -1798,7 +1808,7 @@ SwiftLanguageRuntime::ProjectEnum(ValueObject &valobj) {
     }
     
     return ValueObjectMemory::Create(exe_ctx.GetBestExecutionContextScope(),
-                                     "$indirect.$single_case", payload,
+                                     "$indirect.$single_case", Address(payload),
                                      payload_type, &valobj);
   };
 
@@ -1853,8 +1863,8 @@ SwiftLanguageRuntime::ProjectEnum(ValueObject &valobj) {
     assert(false);
     return llvm::createStringError("enum with unexpected offset");
   }
-  return ValueObjectCast::Create(valobj, ConstString(field_info.Name),
-                                 projected_type);
+  return valobj.GetSyntheticChildAtOffset(0, projected_type, /*can_create=*/true,
+                                          ConstString(field_info.Name));
 }
 
 std::pair<SwiftLanguageRuntime::LookupResult, std::optional<size_t>>
@@ -2210,7 +2220,7 @@ SwiftLanguageRuntime::BindGenericPackType(StackFrame &frame,
         // Read the type metadata pointer.
         Status status;
         lldb::addr_t md = LLDB_INVALID_ADDRESS;
-        target.ReadMemory(md_ptr, &md, ptr_size, status, true);
+        target.ReadMemory(Address(md_ptr), &md, ptr_size, status, true);
         if (!status.Success())
           return llvm::createStringError(
                     "cannot decode pack_expansion type: failed to read type "
@@ -2922,7 +2932,7 @@ CompilerType SwiftLanguageRuntime::GetTypeFromMetadata(TypeSystemSwift &ts,
 std::optional<lldb::addr_t>
 SwiftLanguageRuntime::GetTypeMetadataForTypeNameAndFrame(StringRef mdvar_name,
                                                          StackFrame &frame) {
-  VariableList *var_list = frame.GetVariableList(false, nullptr);
+  VariableList *var_list = frame.GetVariableList(false, false, nullptr);
   if (!var_list)
     return {};
 
@@ -3563,7 +3573,9 @@ static CompilerType HoistToScratchTypeSystem(CompilerType type,
 std::optional<CompilerType>
 SwiftLanguageRuntime::GetRuntimeType(CompilerType base_type,
                                      ExecutionContextRef exe_ctx) {
-  // Hoist the type into a scratch typesystem.
+  // Hoist the type into a scratch typesystem. The resulting type is
+  // bound to exe_ctx, so subsequent queries resolve frame-dependent
+  // properties such as generic parameters.
   if (!base_type.GetTypeSystem().isa_and_nonnull<TypeSystemSwiftTypeRef>())
     return {};
   if (CompilerType run_type = HoistToScratchTypeSystem(base_type, exe_ctx))
@@ -3834,7 +3846,7 @@ lldb::addr_t SwiftLanguageRuntime::FixupAddress(lldb::addr_t addr,
     Target &target = GetProcess().GetTarget();
     size_t ptr_size = GetProcess().GetAddressByteSize();
     lldb::addr_t refd_addr = LLDB_INVALID_ADDRESS;
-    target.ReadMemory(stripped_addr, &refd_addr, ptr_size, error, true);
+    target.ReadMemory(Address(stripped_addr), &refd_addr, ptr_size, error, true);
     return refd_addr;
   }
   return addr;

@@ -19,7 +19,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class SwiftNSErrorTest(TestBase):
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @skipUnlessDarwin
     @swiftTest
     def test_swift_nserror(self):

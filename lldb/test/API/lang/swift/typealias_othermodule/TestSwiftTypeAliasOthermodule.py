@@ -7,7 +7,7 @@ import lldbsuite.test.lldbutil as lldbutil
 class TestSwiftTypeAliasOtherModule(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_frame_variable(self):
         """Test that type aliases can be imported from reflection metadata"""
@@ -19,7 +19,7 @@ class TestSwiftTypeAliasOtherModule(TestBase):
         self.expect("continue")
         self.expect("frame variable -- payload", substrs=["Bool", "true"])
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_expression(self):
         """Test that type aliases can be imported into expressions from reflection metadata"""

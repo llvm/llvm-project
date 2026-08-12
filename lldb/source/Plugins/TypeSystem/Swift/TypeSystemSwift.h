@@ -262,7 +262,8 @@ public:
                               swift::Mangle::ManglingFlavor flavor) = 0;
 
   /// \see lldb_private::TypeSystem::Dump
-  void Dump(llvm::raw_ostream &output, llvm::StringRef filter) override;
+  void Dump(llvm::raw_ostream &output, llvm::StringRef filter,
+            bool show_color) override;
 
   lldb::Format GetFormat(lldb::opaque_compiler_type_t type) override;
 
@@ -321,6 +322,9 @@ public:
           lldb::opaque_compiler_type_t type) override {
     return false;
   }
+  bool IsMemberDataPointerType(lldb::opaque_compiler_type_t type) override {
+    return false;
+  }
   bool IsPolymorphicClass(lldb::opaque_compiler_type_t type) override {
     return false;
   }
@@ -352,7 +356,8 @@ public:
   CompilerType GetBasicTypeFromAST(lldb::BasicType basic_type) override {
     return {};
   }
-  const llvm::fltSemantics &GetFloatTypeSemantics(size_t byte_size) override {
+  const llvm::fltSemantics &GetFloatTypeSemantics(size_t byte_size,
+                                                  lldb::Format format) override {
     // See: https://reviews.llvm.org/D67239. At this time of writing this API
     // is only used by DumpDataExtractor for the C type system.
     llvm_unreachable("GetFloatTypeSemantics not implemented.");
@@ -393,6 +398,8 @@ public:
   CompilerType GetNonReferenceType(lldb::opaque_compiler_type_t type) override {
     return {};
   }
+
+  CompilerType GetPointerDiffType(bool is_signed) override { return {}; }
 
   unsigned GetPtrAuthKey(lldb::opaque_compiler_type_t type) override;
   unsigned GetPtrAuthDiscriminator(lldb::opaque_compiler_type_t type) override;

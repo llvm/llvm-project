@@ -133,7 +133,7 @@ class TestSwiftInterfaceNoDebugInfo(TestBase):
                             "Swiftmodule file was regenerated rather than reused")
 
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_swift_interface(self):
         """Test that we load and handle modules that only have textual .swiftinterface files"""

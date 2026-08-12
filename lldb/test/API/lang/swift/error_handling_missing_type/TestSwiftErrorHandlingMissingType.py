@@ -6,7 +6,7 @@ import lldbsuite.test.lldbutil as lldbutil
 class TestSwiftErrorHandlingMissingTypes(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift # the embedded variant is never crossed with noclang, so this test never runs as embedded
     @swiftTest
     @skipIf(setting=('symbols.use-swift-clangimporter', 'true'))
     def test(self):

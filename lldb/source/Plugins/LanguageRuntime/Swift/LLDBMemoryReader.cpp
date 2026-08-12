@@ -134,11 +134,11 @@ LLDBMemoryReader::getSymbolAddress(const std::string &name) {
   Status error;
   auto load_addr = sym_ctx.symbol->GetLoadAddress(&m_process.GetTarget());
   uint64_t sym_value = m_process.GetTarget().ReadUnsignedIntegerFromMemory(
-      load_addr, m_process.GetAddressByteSize(), 0, error, true);
+      Address(load_addr), m_process.GetAddressByteSize(), 0, error, true);
   for (unsigned i = 1; i < sc_list.GetSize(); ++i) {
     uint64_t other_sym_value =
         m_process.GetTarget().ReadUnsignedIntegerFromMemory(
-            load_addr, m_process.GetAddressByteSize(), 0, error, true);
+            Address(load_addr), m_process.GetAddressByteSize(), 0, error, true);
     if (sym_value != other_sym_value) {
       LLDB_LOG_VERBOSE(log, "[MemoryReader] symbol resolution failed {0}",
                        name);

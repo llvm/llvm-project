@@ -24,7 +24,7 @@ class TestSwiftStepping(lldbtest.TestBase):
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @swiftTest
-    @skipEmbeddedSwift
+    @skipEmbeddedSwift # embedded Swift steps to the wrong line on x86_64, and the inferior does not link on Linux.
     @skipIf(oslist=["linux"], archs=no_match("x86_64"))
     def test_swift_stepping(self):
         """Tests that we can step reliably in swift code."""

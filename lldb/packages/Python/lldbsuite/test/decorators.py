@@ -30,6 +30,7 @@ from lldbsuite.support import temp_file
 from lldbsuite.test import lldbplatform
 from lldbsuite.test import lldbplatformutil
 from lldbsuite.test.cpu_feature import CPUFeature
+from lldbsuite.test.skip_reason import UnsupportedReason
 import swift
 
 
@@ -1132,9 +1133,34 @@ def swiftTest(func):
     return skipTestIfFn(is_not_swift_compatible)(func)
 
 def skipEmbeddedSwift(func):
+    """Skip a test that ought to work in embedded Swift but currently doesn't.
+
+    Use this when the test is expected to run in embedded Swift eventually and
+    removing the annotation is the goal.    
+    
+    For a test that can never run in embedded Swift, use
+    `requireNotEmbeddedSwift` instead.
+    """
     def skip_fn(swift_embedded=None, **kwargs):
         if swift_embedded == "swiftembed":
             return "not supported in embedded Swift"
+        return None
+    return _skipForVariant("swift_embedded", skip_fn, func)
+
+def requireNotEmbeddedSwift(func):
+    """Mark a test as inherently inapplicable to embedded Swift.
+
+    Use this when the test can never run as embedded Swift: it imports
+    Foundation or another Objective-C module, needs library evolution, drives a
+    facility with no embedded counterpart (playgrounds, the sanitizer runtimes),
+    or uses a language feature not available in Embedded Swift.
+
+    Unlike `skipEmbeddedSwift`, these tests are reported as UNSUPPORTED rather
+    than SKIPPED.
+    """
+    def skip_fn(swift_embedded=None, **kwargs):
+        if swift_embedded == "swiftembed":
+            return UnsupportedReason("requires non-embedded Swift")
         return None
     return _skipForVariant("swift_embedded", skip_fn, func)
 

@@ -22,7 +22,7 @@ def execute_command(command):
 
 
 class TestSwiftResilience(TestBase):
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @skipUnlessDarwin
     @swiftTest
     # Because we rename the .swiftmodule files after building the
@@ -34,7 +34,7 @@ class TestSwiftResilience(TestBase):
         self.build()
         self.doTestWithFlavor("a", "a")
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @skipUnlessDarwin
     @swiftTest
     @skipIf(debug_info=no_match(["dsym"]))
@@ -43,7 +43,7 @@ class TestSwiftResilience(TestBase):
         self.build()
         self.doTestWithFlavor("a", "b")
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @skipUnlessDarwin
     @swiftTest
     @skipIf(debug_info=no_match(["dsym"]))
@@ -52,7 +52,7 @@ class TestSwiftResilience(TestBase):
         self.build()
         self.doTestWithFlavor("b", "a")
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @skipUnlessDarwin
     @swiftTest
     @skipIf(debug_info=no_match(["dsym"]))

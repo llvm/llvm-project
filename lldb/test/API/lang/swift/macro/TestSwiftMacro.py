@@ -5,6 +5,7 @@ import lldbsuite.test.lldbutil as lldbutil
 import os
 
 class TestSwiftMacro(lldbtest.TestBase):
+    SHARED_BUILD_TESTCASE = False
 
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -26,7 +27,7 @@ class TestSwiftMacro(lldbtest.TestBase):
             'settings set target.experimental.swift-plugin-server-for-path %s=%s'
             % (self.getBuildDir(), swift_plugin_server))
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     @skipIfWindows
     # At the time of writing swift/test/Macros/macro_expand.swift is also disabled.
@@ -91,7 +92,7 @@ class TestSwiftMacro(lldbtest.TestBase):
         b = target.BreakpointCreateByName("stringify")
         self.assertGreaterEqual(b.GetNumLocations(), 1)
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     @skipIfWindows
     # At the time of writing swift/test/Macros/macro_expand.swift is also disabled.
