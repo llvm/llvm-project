@@ -425,6 +425,9 @@ riscv::getRISCVTuneCPU(const Driver &D, const llvm::opt::ArgList &Args,
     TuneCPU = TuneCPU.slice(0, Idx);
   }
 
+  if (TuneCPU == "native")
+    TuneCPU = llvm::sys::getHostCPUName();
+
   if (!TuneFeatures || TFString.empty())
     return TuneCPU;
   if (auto E = llvm::RISCV::parseTuneFeatureString(TuneCPU, TFString,
