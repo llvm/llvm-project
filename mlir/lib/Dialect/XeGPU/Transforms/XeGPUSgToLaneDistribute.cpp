@@ -1790,12 +1790,22 @@ computePerLaneElementCoords(xegpu::DistributeLayoutAttr layout,
 
 /// Describes how one element of the distributed result is obtained from the
 /// broadcasted source. With `t` the index of the current lane within the
-/// target lane layout, the lane extracts element `stride * t + offset` of the
-/// copy it holds and, unless that value is already the one it owns,
-/// `gpu.shuffle idx` pulls it from lane `t + laneOffset`.
+/// target lane layout, the lane extracts element
+/// `stride * ((t / divisor) % modulus) + offset` of the copy it holds and,
+/// unless that value is already the one it owns, `gpu.shuffle idx` pulls it
+/// from lane `t + laneOffset`.
+///
+/// `divisor` and `modulus` single out the one coordinate of the target lane
+/// layout that the element index varies with: `divisor` is the number of
+/// consecutive lanes sharing that coordinate and `modulus` the number of
+/// distinct values it takes. A `divisor` of 1 paired with a `modulus`
+/// spanning the whole target lane layout recovers the plain `stride * t +
+/// offset` of a layout whose distributed dimension varies fastest.
 struct BroadcastRedistribution {
   int64_t stride;
   int64_t offset;
+  int64_t divisor;
+  int64_t modulus;
   int64_t laneOffset;
   bool needsShuffle;
 };
@@ -1834,13 +1844,42 @@ static FailureOr<BroadcastRedistribution> deriveBroadcastRedistribution(
       continue;
 
     // The extracted element is computed from the lane id at runtime, so it has
-    // to be an affine function of the lane's position in the target layout.
+    // to be a strided function of a single coordinate of the lane's position
+    // in the target lane layout. Lanes sharing that coordinate are adjacent,
+    // so the index is constant over blocks of `divisor` consecutive lanes.
     int64_t offset = elements[0];
-    int64_t stride = numTargetLanes > 1 ? elements[1] - offset : 0;
-    if (stride < 0)
+    int64_t divisor = 1;
+    while (divisor < numTargetLanes && elements[divisor] == offset)
+      divisor++;
+    int64_t stride = divisor < numTargetLanes ? elements[divisor] - offset : 0;
+    if (stride < 0 || numTargetLanes % divisor != 0)
       continue;
+
+    // How many distinct values the coordinate takes before repeating. Derived
+    // from the largest block index actually observed, so that a coordinate
+    // that wraps around within the target lane layout is picked up as well.
+    int64_t modulus = 1;
+    if (stride == 0) {
+      // A lane-invariant index: the divisor is immaterial, normalize it away
+      // so equal indices share a single extract.
+      divisor = 1;
+    } else {
+      bool strided = true;
+      for (int64_t t = 0; t < numTargetLanes && strided; t++) {
+        int64_t diff = elements[t] - offset;
+        strided = diff >= 0 && diff % stride == 0;
+        if (strided)
+          modulus = std::max(modulus, diff / stride + 1);
+      }
+      if (!strided)
+        continue;
+    }
+
+    auto elementIndex = [=](int64_t t) {
+      return stride * ((t / divisor) % modulus) + offset;
+    };
     if (!llvm::all_of(llvm::seq<int64_t>(0, numTargetLanes), [&](int64_t t) {
-          return elements[t] == stride * t + offset;
+          return elements[t] == elementIndex(t);
         }))
       continue;
 
@@ -1851,10 +1890,11 @@ static FailureOr<BroadcastRedistribution> deriveBroadcastRedistribution(
     bool needsShuffle =
         laneOffset != 0 ||
         !llvm::all_of(llvm::seq<int64_t>(0, numTargetLanes), [&](int64_t lane) {
-          return srcCoords[lane][stride * (lane % numTargetLanes) + offset] ==
+          return srcCoords[lane][elementIndex(lane % numTargetLanes)] ==
                  resCoords[lane][pos];
         });
-    return BroadcastRedistribution{stride, offset, laneOffset, needsShuffle};
+    return BroadcastRedistribution{stride,  offset,     divisor,
+                                   modulus, laneOffset, needsShuffle};
   }
   return failure();
 }
@@ -1945,17 +1985,44 @@ redistributeBroadcastedValue(ConversionPatternRewriter &rewriter, Location loc,
                                         rewriter.getZeroAttr(flatResTy));
   Value width;
   Value laneIdxI32;
-  llvm::DenseMap<std::pair<int64_t, int64_t>, Value> extracted;
+
+  // The lane coordinate the extract index is derived from,
+  // `(laneIdx / divisor) % modulus`, shared by every element that reads the
+  // same coordinate. Both steps are skipped when they are no-ops over the
+  // range of `laneIdx`, so a layout distributed along its fastest varying
+  // dimension keeps indexing by the lane index directly.
+  llvm::DenseMap<std::pair<int64_t, int64_t>, Value> laneTerms;
+  auto getLaneTerm = [&](int64_t divisor, int64_t modulus) -> Value {
+    Value &term = laneTerms[{divisor, modulus}];
+    if (term)
+      return term;
+    term = laneIdx;
+    if (divisor != 1)
+      term = arith::DivUIOp::create(
+          rewriter, loc, term,
+          arith::ConstantIndexOp::create(rewriter, loc, divisor));
+    if (modulus < numTargetLanes / divisor)
+      term = arith::RemUIOp::create(
+          rewriter, loc, term,
+          arith::ConstantIndexOp::create(rewriter, loc, modulus));
+    return term;
+  };
+
+  llvm::DenseMap<std::tuple<int64_t, int64_t, int64_t, int64_t>, Value>
+      extracted;
   for (auto [pos, redistribution] : llvm::enumerate(redistributions)) {
-    // Extract element `stride * laneIdx + offset` of the local copy. Result
-    // elements coming from the same element of the copy share the extract.
-    Value &value = extracted[{redistribution.stride, redistribution.offset}];
+    // Extract element `stride * ((laneIdx / divisor) % modulus) + offset` of
+    // the local copy. Result elements coming from the same element of the copy
+    // share the extract.
+    Value &value = extracted[{redistribution.stride, redistribution.offset,
+                              redistribution.divisor, redistribution.modulus}];
     if (!value) {
       OpFoldResult element;
       if (redistribution.stride == 0) {
         element = rewriter.getIndexAttr(redistribution.offset);
       } else {
-        Value index = laneIdx;
+        Value index =
+            getLaneTerm(redistribution.divisor, redistribution.modulus);
         if (redistribution.stride != 1)
           index =
               arith::MulIOp::create(rewriter, loc, index,
