@@ -521,6 +521,11 @@ static void handlePAuthABI(const Driver &D, const ArgList &DriverArgs,
     CC1Args.push_back("-fptrauth-vtable-pointer-type-discrimination");
 
   if (!DriverArgs.hasArg(
+          options::OPT_fptrauth_vtt_vtable_pointer_discrimination,
+          options::OPT_fno_ptrauth_vtt_vtable_pointer_discrimination))
+    CC1Args.push_back("-fptrauth-vtt-vtable-pointer-discrimination");
+
+  if (!DriverArgs.hasArg(
           options::OPT_fptrauth_type_info_vtable_pointer_discrimination,
           options::OPT_fno_ptrauth_type_info_vtable_pointer_discrimination))
     CC1Args.push_back("-fptrauth-type-info-vtable-pointer-discrimination");
