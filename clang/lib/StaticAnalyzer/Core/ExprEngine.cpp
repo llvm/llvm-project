@@ -1118,6 +1118,7 @@ static bool justRunCheckersAsPreVisit(const Stmt *S) {
   case Stmt::GCCAsmStmtClass:
   case Stmt::CXXNewExprClass:
   case Stmt::MaterializeTemporaryExprClass:
+  case Stmt::ReturnStmtClass:
   case Stmt::OffsetOfExprClass:
   case Stmt::UnaryExprOrTypeTraitExprClass:
   case Stmt::UnaryOperatorClass:

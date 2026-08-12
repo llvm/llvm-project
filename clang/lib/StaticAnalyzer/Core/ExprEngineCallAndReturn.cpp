@@ -1304,14 +1304,9 @@ void ExprEngine::dynDispatchBifurcate(const MemRegion *BifurReg,
 
 void ExprEngine::VisitReturnStmt(const ReturnStmt *RS, ExplodedNode *Pred,
                                  ExplodedNodeSet &Dst) {
-  ExplodedNodeSet DstPreVisit;
-  getCheckerManager().runCheckersForPreStmt(DstPreVisit, Pred, RS, *this);
-
   if (RS->getRetValue()) {
-    for (ExplodedNode *N : DstPreVisit) {
-      Dst.insert(Engine.makePostStmtNode(RS, N->getState(), N));
-    }
+    Dst.insert(Engine.makePostStmtNode(RS, Pred->getState(), Pred));
   } else {
-    Dst.insert(DstPreVisit);
+    Dst.insert(Pred);
   }
 }
