@@ -46,17 +46,29 @@ struct TestSpanBuf : std::basic_spanbuf<CharT, TraitsT> {
 
   struct InternalState {
     std::span<CharT> span;
+
+    // Pointers to the get area
     CharT* eback;
     CharT* gptr;
     CharT* egptr;
+    // Pointers to the put area
     CharT* pbase;
     CharT* pptr;
     CharT* epptr;
+
     std::locale loc;
   };
 
-  InternalState snapshot() const {
-    return InternalState{this->span(), this->eback(), this->gptr(), this->egptr(), this->pbase(), this->pptr(), this->epptr(), this->getloc()};
+  InternalState get_internal_state() const {
+    return InternalState{
+        this->span(),
+        this->eback(),
+        this->gptr(),
+        this->egptr(),
+        this->pbase(),
+        this->pptr(),
+        this->epptr(),
+        this->getloc()};
   }
 };
 
@@ -131,33 +143,32 @@ void test_postconditions() {
       std::span<CharT> sp{arr};
       TestSpanBuf<CharT, TraitsT> rhsSpanBuf(sp, std::ios_base::in);
 
-      // Capture pre-move state
-      auto old = rhsSpanBuf.snapshot();
+      auto oldInternalState = rhsSpanBuf.get_internal_state();
 
       TestSpanBuf<CharT, TraitsT> spanBuf = std::move(static_cast<SpanBuf&>(rhsSpanBuf));
 
-      // Moved-to should have the old state
-      auto got = spanBuf.snapshot();
-      assert(got.span.data() == old.span.data());
-      assert(got.span.size() == old.span.size());
-      assert(got.eback == old.eback);
-      assert(got.gptr == old.gptr);
-      assert(got.egptr == old.egptr);
-      assert(got.pbase == old.pbase);
-      assert(got.pptr == old.pptr);
-      assert(got.epptr == old.epptr);
-      assert(got.loc == old.loc);
+      // Moved-to buffer should have the old state.
+      auto movedToInternalState = spanBuf.get_internal_state();
+      assert(movedToInternalState.span.data() == oldInternalState.span.data());
+      assert(movedToInternalState.span.size() == oldInternalState.span.size());
+      assert(movedToInternalState.eback == oldInternalState.eback);
+      assert(movedToInternalState.gptr == oldInternalState.gptr);
+      assert(movedToInternalState.egptr == oldInternalState.egptr);
+      assert(movedToInternalState.pbase == oldInternalState.pbase);
+      assert(movedToInternalState.pptr == oldInternalState.pptr);
+      assert(movedToInternalState.epptr == oldInternalState.epptr);
+      assert(movedToInternalState.loc == oldInternalState.loc);
 
-      // Moved-from must be cleared
-      auto empty = rhsSpanBuf.snapshot();
-      assert(empty.span.data() == nullptr);
-      assert(empty.span.size() == 0);
-      // assert(empty.eback == nullptr);
-      // assert(empty.gptr == nullptr);
-      // assert(empty.egptr == nullptr);
-      // assert(empty.pbase == nullptr);
-      // assert(empty.pptr == nullptr);
-      // assert(empty.epptr == nullptr);
+      // Moved-from buffer must be cleared.
+      auto moveFromInternalState = rhsSpanBuf.get_internal_state();
+      assert(moveFromInternalState.span.data() == nullptr);
+      assert(moveFromInternalState.span.size() == 0);
+      assert(moveFromInternalState.eback == nullptr);
+      assert(moveFromInternalState.gptr == nullptr);
+      assert(moveFromInternalState.egptr == nullptr);
+      assert(moveFromInternalState.pbase == nullptr);
+      assert(moveFromInternalState.pptr == nullptr);
+      assert(moveFromInternalState.epptr == nullptr);
     }
     // Mode: `out`
     {
@@ -267,7 +278,7 @@ void test() {
     }
   }
 
-  // Non-empty `span`
+  // Non-moveFromInternalState `span`
   {
     CharT arr[4];
     std::span<CharT> sp{arr};
