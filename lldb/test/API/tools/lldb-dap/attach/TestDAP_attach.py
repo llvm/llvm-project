@@ -10,8 +10,8 @@ from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import (
     expectedFailureWindows,
     expectedFailureWindowsAndNoLLDBServer,
+    requireNotWasm,
     skipIf,
-    skipIfWasm,
     skipIfWindowsAndLLDBServer,
 )
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
@@ -25,7 +25,7 @@ from lldbsuite.test.tools.lldb_dap.types import (
 # Often fails on Arm Linux, but not specifically because it's Arm, something in
 # process scheduling can cause a massive (minutes) delay during this test.
 @skipIf(oslist=["linux"], archs=["arm$"])
-@skipIfWasm  # No attach support
+@requireNotWasm  # No attach support
 class TestDAP_attach(DAPTestCaseBase):
     SHARED_BUILD_TESTCASE = False
 
