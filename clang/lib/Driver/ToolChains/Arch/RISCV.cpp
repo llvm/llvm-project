@@ -404,22 +404,25 @@ riscv::getRISCVTuneCPU(const Driver &D, const llvm::opt::ArgList &Args,
   if (!MTuneArg)
     return "";
 
-  StringRef MTune = MTuneArg->getValue();
-  // Split the CPU name part from the tune features string.
-  auto [TuneCPU, TFString] = MTune.split(':');
-  if (!Args.hasFlag(options::OPT_mexperimental_mtune_syntax,
-                    options::OPT_mno_experimental_mtune_syntax, false)) {
-    if (!TFString.empty()) {
+  StringRef TuneCPU = MTuneArg->getValue();
+  StringRef TFString;
+
+  auto Idx = TuneCPU.find(':');
+  if (Idx != StringRef::npos) {
+    if (!Args.hasFlag(options::OPT_mexperimental_mtune_syntax,
+                      options::OPT_mno_experimental_mtune_syntax, false)) {
       // Only print this diagnostics if it's used for retrieving tune features
       // to avoid printing the same error message multiple times.
       if (TuneFeatures)
         D.Diag(diag::err_drv_invalid_riscv_mtune_string)
-            << 0 << MTune
+            << 0 << TuneCPU
             << "require '-mexperimental-mtune-syntax' to use with tune feature "
                "string";
       return std::nullopt;
     }
-    return MTune;
+
+    TFString = TuneCPU.substr(Idx + 1);
+    TuneCPU = TuneCPU.slice(0, Idx);
   }
 
   if (!TuneFeatures || TFString.empty())
