@@ -443,8 +443,8 @@ public:
 
 /// Helper for resource handle reading that returns LogicalResult.
 template <typename T, typename... Ts>
-static LogicalResult readResourceHandle(DialectBytecodeReader &reader,
-                                        FailureOr<T> &value, Ts &&...params) {
+LogicalResult readResourceHandle(DialectBytecodeReader &reader,
+                                 FailureOr<T> &value, Ts &&...params) {
   FailureOr<T> handle = reader.readResourceHandle<T>();
   if (failed(handle))
     return failure();
