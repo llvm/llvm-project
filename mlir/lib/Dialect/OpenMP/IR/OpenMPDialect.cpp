@@ -4551,6 +4551,13 @@ LogicalResult UnrollFullOp::verify() {
   if (!gen)
     return emitOpError() << "applyee CLI has no generator";
 
+  // Full unrolling leaves no loop, so the trip count must be constant. Only
+  // omp.canonical_loop states one.
+  if (auto loop = dyn_cast<CanonicalLoopOp>(gen->getOwner())) {
+    if (!matchPattern(loop.getTripCount(), m_Constant()))
+      return emitOpError() << "applyee loop must have a constant trip count";
+  }
+
   return success();
 }
 

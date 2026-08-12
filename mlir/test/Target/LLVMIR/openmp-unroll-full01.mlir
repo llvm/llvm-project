@@ -1,7 +1,8 @@
 // Test lowering of omp.unroll_full (single loop)
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
 
-llvm.func @unroll_full_trivial_loop(%baseptr: !llvm.ptr, %tc: i32) -> () {
+llvm.func @unroll_full_trivial_loop(%baseptr: !llvm.ptr) -> () {
+  %tc = llvm.mlir.constant(100 : i32) : i32
   %literal_cli = omp.new_cli
   omp.canonical_loop(%literal_cli) %iv : i32 in range(%tc) {
     %ptr = llvm.getelementptr inbounds %baseptr[%iv] : (!llvm.ptr, i32) -> !llvm.ptr, f32
