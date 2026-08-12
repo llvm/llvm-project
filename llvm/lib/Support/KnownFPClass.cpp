@@ -644,6 +644,9 @@ KnownFPClass KnownFPClass::asin(const KnownFPClass &KnownSrc) {
   // asin is bounded to [-pi/2, pi/2], never Inf.
   Known.knownNot(fcInf);
 
+  if (KnownSrc.isKnownNever(fcSNan))
+    Known.knownNot(fcSNan);
+
   // asin is sign-preserving.
   if (KnownSrc.isKnownNever(fcNegative))
     Known.knownNot(fcNegative);
@@ -659,6 +662,9 @@ KnownFPClass KnownFPClass::acos(const KnownFPClass &KnownSrc) {
   // acos is bounded to [0, pi], never Inf or negative.
   Known.knownNot(fcInf);
   Known.knownNot(fcNegative);
+
+  if (KnownSrc.isKnownNever(fcSNan))
+    Known.knownNot(fcSNan);
 
   // NaN propagates. acos(x) is also NaN for |x| > 1, so we cannot rule
   // out NaN without knowing the source is in [-1, 1].
