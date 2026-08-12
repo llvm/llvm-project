@@ -255,8 +255,19 @@ llvm::Expected<std::string> getAbsolutePath(llvm::vfs::FileSystem &FS,
                                             StringRef File) {
   StringRef RelativePath(File);
   // FIXME: Should '.\\' be accepted on Win32?
-  RelativePath.consume_front("./");
-
+  if (RelativePath.startswith("./")) {  
+    // Unix-like relative path
+    RelativePath = RelativePath.drop_front(2);  
+  } else if (RelativePath.startswith(".\\")) {  
+    // Windows-style relative path
+    RelativePath = RelativePath.drop_front(2);  
+  } else if (RelativePath.startswith("../")) {  
+    // Unix-like parent directory reference
+    RelativePath = RelativePath.drop_front(3);  
+  } else if (RelativePath.startswith("..\\")) {  
+    // Windows-style parent directory reference
+    RelativePath = RelativePath.drop_front(3);  
+  }
   SmallString<1024> AbsolutePath = RelativePath;
   if (auto EC = FS.makeAbsolute(AbsolutePath))
     return llvm::errorCodeToError(EC);
