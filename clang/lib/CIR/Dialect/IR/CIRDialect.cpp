@@ -2875,18 +2875,12 @@ mlir::LogicalResult cir::FuncOp::verify() {
   if (!isDeclaration() && getCoroutine()) {
     bool foundAwait = false;
     int coroBodyCount = 0;
-    int coroRetPointCount = 0;
     this->walk([&](Operation *op) {
       if (auto await = dyn_cast<AwaitOp>(op)) {
         foundAwait = true;
       } else if (isa<CoroBodyOp>(op)) {
         coroBodyCount++;
         if (coroBodyCount > 1) {
-          return mlir::WalkResult::interrupt();
-        }
-      } else if (isa<CoroRetPointOp>(op)) {
-        coroRetPointCount++;
-        if (coroRetPointCount > 1) {
           return mlir::WalkResult::interrupt();
         }
       }
@@ -2898,9 +2892,6 @@ mlir::LogicalResult cir::FuncOp::verify() {
     if (coroBodyCount != 1)
       return emitOpError()
              << "coroutine function must have exactly one cir.body op";
-    if (coroRetPointCount != 1)
-      return emitOpError() << "coroutine function must have exactly one "
-                              "cir.coro.ret_point op";
   }
 
   llvm::SmallSet<llvm::StringRef, 16> labels;
@@ -3343,68 +3334,49 @@ void cir::CoroBodyOp::build(OpBuilder &builder, OperationState &result,
   bodyBuilder(builder, result.location);
 }
 
+
 //===----------------------------------------------------------------------===//
-// CoroRetPoint
+// CoroutineOp
 //===----------------------------------------------------------------------===//
 
-void cir::CoroRetPointOp::build(OpBuilder &builder, OperationState &result,
+void cir::CoroutineOp::build(OpBuilder &builder, OperationState &result,
+                                BuilderCallbackRef initialSuspendBuilder,
                                 BuilderCallbackRef bodyBuilder,
-                                BuilderCallbackRef retBuilder) {
-  {
-    OpBuilder::InsertionGuard guard(builder);
-    Region *bodyRegion = result.addRegion();
-    builder.createBlock(bodyRegion);
-    bodyBuilder(builder, result.location);
-  }
+                                BuilderCallbackRef finalSuspendBuilder,
+                                BuilderCallbackRef destroyBuilder,
+                                BuilderCallbackRef exitBuilder) {
+  //{
+  //  OpBuilder::InsertionGuard guard(builder);
+  //  Region *bodyRegion = result.addRegion();
+  //  builder.createBlock(bodyRegion);
+  //  bodyBuilder(builder, result.location);
+  //}
 
-  {
-    OpBuilder::InsertionGuard guard(builder);
-    Region *retRegion = result.addRegion();
-    builder.createBlock(retRegion);
-    retBuilder(builder, result.location);
-  }
+  //{
+  //  OpBuilder::InsertionGuard guard(builder);
+  //  Region *retRegion = result.addRegion();
+  //  builder.createBlock(retRegion);
+  //  retBuilder(builder, result.location);
+  //}
 }
 
-void cir::CoroRetPointOp::getSuccessorRegions(
+void cir::CoroutineOp::getSuccessorRegions(
     mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   if (!point.isParent()) {
     regions.emplace_back(getOperation());
     return;
   }
 
-  regions.push_back(RegionSuccessor(&getBodyRegion()));
-  regions.push_back(RegionSuccessor(&getRetRegion()));
+  //regions.push_back(RegionSuccessor(&getBodyRegion()));
+  //regions.push_back(RegionSuccessor(&getRetRegion()));
 }
 
 mlir::ValueRange
-cir::CoroRetPointOp::getSuccessorInputs(RegionSuccessor successor) {
+cir::CoroutineOp::getSuccessorInputs(RegionSuccessor successor) {
   return ValueRange();
 }
 
-LogicalResult cir::CoroRetPointOp::verify() {
-
-  // TODO: Should we verify that the return region contains a
-  // `cir.coro.intrinsic.end`? Coroutine semantics require `coro.end` to mark
-  // the end of access to the coroutine frame before the coroutine completes.
-  bool hasReturn = false;
-  this->getBodyRegion().walk<mlir::WalkOrder::PreOrder>(
-      [&](mlir::Operation *op) {
-        if (mlir::isa<cir::ReturnOp>(op)) {
-          hasReturn = true;
-          return WalkResult::interrupt();
-        }
-        return WalkResult::advance();
-      });
-
-  if (hasReturn)
-    return emitError()
-           << "body region must not contain 'cir.return' operations";
-
-  if (!mlir::isa<cir::YieldOp>(this->getBodyRegion().back().back()))
-    return emitError() << "body region must terminate with 'cir.yield'";
-
-  if (!mlir::isa<cir::ReturnOp>(this->getRetRegion().back().back()))
-    return emitError() << "return region must terminate with 'cir.return'";
+LogicalResult cir::CoroutineOp::verify() {
 
   return mlir::success();
 }

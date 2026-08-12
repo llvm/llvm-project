@@ -936,7 +936,7 @@ def CIR_StoreOp : CIR_Op<"store", [
 
 defvar CIR_ReturnableScopes = [
   "FuncOp", "ScopeOp", "IfOp", "SwitchOp", "CaseOp", "CleanupScopeOp",
-  "DoWhileOp", "WhileOp", "ForOp", "TryOp", "CoroRetPointOp"
+  "DoWhileOp", "WhileOp", "ForOp", "TryOp"
 ];
 
 def CIR_ReturnOp : CIR_Op<"return", [
@@ -1087,7 +1087,7 @@ def CIR_ConditionOp : CIR_Op<"condition", [
 defvar CIR_YieldableScopes = [
   "ArrayCtor", "ArrayDtor", "AwaitOp", "CaseOp", "CleanupScopeOp", "CoroBodyOp",
   "DoWhileOp", "ForOp", "GlobalOp", "IfOp", "LocalInitOp", "ScopeOp", "SwitchOp",
-  "TernaryOp", "TryOp", "WhileOp", "CoroRetPointOp"
+  "TernaryOp", "TryOp", "WhileOp"
 ];
 
 def CIR_YieldOp : CIR_Op<"yield", [
@@ -4989,7 +4989,7 @@ def CIR_CoroSizeOp : CIR_CoroIntrinsicOp<"size", (ins),
 //===----------------------------------------------------------------------===//
 
 def CIR_CoroSuspendPoint : CIR_Op<"coro.suspend_point", [
-  Pure, Terminator, HasParent<"AwaitOp">, HasAncestor<"CoroRetPointOp">
+  Pure, Terminator, HasParent<"AwaitOp">
 ]> {
   let summary = "Marks the point where a coroutine actually suspends";
   let description = [{
@@ -5028,55 +5028,49 @@ def CIR_CoroSuspendPoint : CIR_Op<"coro.suspend_point", [
 }
 
 //===----------------------------------------------------------------------===//
-// CoroRetPoint
+// CoroutineOp
 //===----------------------------------------------------------------------===//
 
-def CIR_CoroRetPointOp : CIR_Op<"coro.ret_point", [
+def CIR_CoroutineOp : CIR_Op<"coroutine", [
   DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
   NoRegionArguments
 ]> {
 
-  let summary = "Marks the coroutine's structured suspend/exit region";
+  let summary = "";
   let description = [{
-    Pairs a coroutine's body its normal execution, including any
-    `cir.await`s and cleanups with a single, shared exit destination
-    (`retRegion`) that every suspend point in the body jumps to.
 
-    Every `cir.coro.suspend_point` inside `bodyRegion` is guaranteed to have
-    `cir.coro.ret_point` as an ancestor, so all suspend paths converge on
-    the same `retRegion` regardless of where in the body they occur. This
-    gives the coroutine a single, well-defined place to run final teardown
-    (e.g. `__builtin_coro_end`) and return control to the caller.
-
-    Example:
-    ```mlir
-    cir.coro.ret_point {
-      // body: awaits, cleanups, etc.
-    }, ret : {
-      // shared jump target for any suspend point in the body
-      cir.coro.intrinsic.end(...)
-      cir.return
-    }
-    ```
   }];
 
-  let regions = (region AnyRegion:$bodyRegion,
-                        AnyRegion:$retRegion);
-   let skipDefaultBuilders = 1;
+// TODO: ver como funciona con cleanup
+  let regions = (region AnyRegion:$initialSuspend,
+                        AnyRegion:$body,
+                        AnyRegion:$finalSuspend,
+                        AnyRegion:$destroy,
+                        AnyRegion:$exit);
+
+  let skipDefaultBuilders = 1;
 
   let builders = [
-    OpBuilder<(ins "BuilderCallbackRef":$bodyBuilder,
-      "BuilderCallbackRef":$retBuilder)>
+    OpBuilder<(ins "BuilderCallbackRef":$initialSuspendBuilder,
+      "BuilderCallbackRef":$bodyBuilder,
+      "BuilderCallbackRef":$finalSuspendBuilder,
+      "BuilderCallbackRef":$destroyBuilder,
+      "BuilderCallbackRef":$exitBuilder)>
   ];
 
   let assemblyFormat = [{
-    $bodyRegion `,`
-    `ret` `:` $retRegion
+    `initialSuspend` `:` $initialSuspend `,`
+    `body` `:` $body `,`
+    `finalSuspend` `:` $finalSuspend `,`
+    `destroy` `:` $destroy `,`
+    `exit` `:` $exit
     attr-dict
   }];
+
   let hasLLVMLowering = false;
   let hasVerifier = 1;
 }
+
 
 //===----------------------------------------------------------------------===//
 // CopyOp
