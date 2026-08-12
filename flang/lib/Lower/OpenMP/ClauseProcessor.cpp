@@ -337,27 +337,6 @@ static mlir::Value buildIteratorOp(Fortran::lower::AbstractConverter &converter,
   return itOp.getResult();
 }
 
-// Return whether an iterator map object has a supported array-reference shape.
-static bool isSupportedIteratorMapObject(const omp::Object &object) {
-  const std::optional<evaluate::Expr<evaluate::SomeType>> &ref = object.ref();
-  if (!ref)
-    return false;
-
-  std::optional<evaluate::DataRef> dataRef = evaluate::ExtractDataRef(*ref);
-  if (!dataRef)
-    return false;
-  const auto *arrayRef = std::get_if<evaluate::ArrayRef>(&dataRef->u);
-  if (!arrayRef || arrayRef->subscript().empty())
-    return false;
-
-  for (const auto &subscript : arrayRef->subscript()) {
-    if (!std::holds_alternative<evaluate::Triplet>(subscript.u) &&
-        subscript.Rank() > 0)
-      return false;
-  }
-  return true;
-}
-
 // Build an omp.iterator op that yields a MapInfoOp for a single
 // iterated object.
 static mlir::Value buildIteratedMapEntry(
@@ -2012,30 +1991,26 @@ void ClauseProcessor::processMapObjectsWithIterator(
 
   auto declareMapper = mlir::dyn_cast_if_present<mlir::omp::DeclareMapperOp>(
       converter.getFirOpBuilder().getRegion().getParentOp());
-  auto isDeclareMapperVariable = [&](const omp::Object &object) {
-    if (!declareMapper)
-      return false;
+  auto isDeclareMapperVariable =
+      [&](const IteratorMapObjectAnalysis &analysis) {
+        if (!declareMapper || !analysis.rootSym)
+          return false;
 
-    omp::Object rootObject{object};
-    while (std::optional<omp::Object> baseObject =
-               getBaseObject(rootObject, semaCtx))
-      rootObject = *baseObject;
+        mlir::Value rootAddress = converter.getSymbolAddress(*analysis.rootSym);
+        while (rootAddress) {
+          if (auto declare = rootAddress.getDefiningOp<hlfir::DeclareOp>()) {
+            rootAddress = declare.getMemref();
+            continue;
+          }
+          if (auto declare = rootAddress.getDefiningOp<fir::DeclareOp>()) {
+            rootAddress = declare.getMemref();
+            continue;
+          }
+          break;
+        }
 
-    mlir::Value rootAddress = converter.getSymbolAddress(*rootObject.sym());
-    while (rootAddress) {
-      if (auto declare = rootAddress.getDefiningOp<hlfir::DeclareOp>()) {
-        rootAddress = declare.getMemref();
-        continue;
-      }
-      if (auto declare = rootAddress.getDefiningOp<fir::DeclareOp>()) {
-        rootAddress = declare.getMemref();
-        continue;
-      }
-      break;
-    }
-
-    return rootAddress == declareMapper.getRegion().front().getArgument(0);
-  };
+        return rootAddress == declareMapper.getRegion().front().getArgument(0);
+      };
 
   constexpr mlir::omp::ClauseMapFlags unsupportedReferenceModifiers =
       mlir::omp::ClauseMapFlags::ref_ptr | mlir::omp::ClauseMapFlags::ref_ptee |
@@ -2050,17 +2025,18 @@ void ClauseProcessor::processMapObjectsWithIterator(
   // iterator variables, so handle each object separately.
   for (const omp::Object &object : objects) {
     if (hasIteratorIVReference(object, *ivSyms)) {
-      bool isMapperVariable = isDeclareMapperVariable(object);
       if (hasUnsupportedReferenceModifier)
         TODO(clauseLocation,
              "iterator modifier with reference or attach modifier");
-      if (!isSupportedIteratorMapObject(object))
-        TODO(clauseLocation, "object type not supported by iterator modifier");
-      if (getBaseObject(object, semaCtx) && !isMapperVariable)
+      IteratorMapObjectAnalysis analysis = analyzeIteratorMapObject(object);
+      bool isMapperVariable = isDeclareMapperVariable(analysis);
+      if (analysis.isDerivedTypeMember && !isMapperVariable)
         TODO(clauseLocation, "iterator modifier with derived type member map");
-      if (declareMapper && !isMapperVariable)
+      if (declareMapper && analysis.rootSym && !isMapperVariable)
         TODO(clauseLocation,
              "iterator modifier with locator outside declare mapper variable");
+      if (!analysis.isSupported)
+        TODO(clauseLocation, "object type not supported by iterator modifier");
       if (const auto *symbol{object.sym()};
           symbol && semantics::IsOptional(*symbol))
         TODO(clauseLocation, "iterator modifier with optional locator");

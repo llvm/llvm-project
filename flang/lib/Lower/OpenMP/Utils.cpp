@@ -1447,6 +1447,39 @@ resolveDeclareVariantCallee(const semantics::Symbol &base,
   return variants[bestIdx];
 }
 
+// Analyze an iterator locator without lowering it or assuming that every
+// DataRef alternative is supported by OpenMP map lowering.
+IteratorMapObjectAnalysis analyzeIteratorMapObject(const omp::Object &object) {
+  IteratorMapObjectAnalysis analysis;
+  const std::optional<ExprTy> &ref = object.ref();
+  if (!ref)
+    return analysis;
+
+  std::optional<evaluate::DataRef> dataRef = evaluate::ExtractDataRef(*ref);
+  if (!dataRef)
+    return analysis;
+
+  analysis.rootSym = &dataRef->GetFirstSymbol();
+  analysis.isCoindexed = evaluate::ExtractCoarrayRef(*dataRef).has_value();
+
+  const auto *component = std::get_if<evaluate::Component>(&dataRef->u);
+  const auto *arrayRef = std::get_if<evaluate::ArrayRef>(&dataRef->u);
+  analysis.isDerivedTypeMember =
+      component || (arrayRef && arrayRef->base().UnwrapComponent());
+
+  if (!arrayRef || arrayRef->subscript().empty() || analysis.isCoindexed)
+    return analysis;
+
+  for (const auto &subscript : arrayRef->subscript()) {
+    if (!std::holds_alternative<evaluate::Triplet>(subscript.u) &&
+        subscript.Rank() > 0)
+      return analysis;
+  }
+
+  analysis.isSupported = true;
+  return analysis;
+}
+
 // Lower the stable base entity for an iterator map/motion locator.
 //
 // MapInfoOp stores this base in var_ptr and represents the iterator-selected
@@ -1643,6 +1676,9 @@ genIteratorMapInfo(Fortran::lower::AbstractConverter &converter,
                    Fortran::semantics::SemanticsContext &semaCtx,
                    Fortran::lower::StatementContext &stmtCtx,
                    const omp::Object &object, mlir::Location loc) {
+  if (!analyzeIteratorMapObject(object).isSupported)
+    return std::nullopt;
+
   std::optional<hlfir::Entity> entity =
       getIteratorMapEntity(converter, builder, semaCtx, stmtCtx, object, loc);
   if (!entity)

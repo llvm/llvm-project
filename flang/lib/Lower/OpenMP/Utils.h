@@ -260,6 +260,17 @@ struct IteratorMapInfo {
   llvm::SmallVector<mlir::Value> bounds;
 };
 
+/// Properties needed to validate an iterator map locator without lowering it.
+/// The analysis is total for every evaluate::DataRef alternative.
+struct IteratorMapObjectAnalysis {
+  const semantics::Symbol *rootSym = nullptr;
+  bool isDerivedTypeMember = false;
+  bool isCoindexed = false;
+  bool isSupported = false;
+};
+
+IteratorMapObjectAnalysis analyzeIteratorMapObject(const omp::Object &object);
+
 std::optional<IteratorMapInfo>
 genIteratorMapInfo(Fortran::lower::AbstractConverter &converter,
                    fir::FirOpBuilder &builder,
