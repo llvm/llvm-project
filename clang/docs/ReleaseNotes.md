@@ -186,7 +186,7 @@ features cannot lower the translation-unit ABI level;
   identifier for a type, directly named entity, or lvalue expression. It can
   report CUDA/HIP storage address spaces for known `__device__`, `__shared__`,
   and `__constant__` variables. Clang also now emits predefined
-  `__CLANG_ADDRESS_SPACE_*` macros for these values.
+  `__ADDRSPACE_*` macros for these values.
 
 ### New Compiler Flags
 

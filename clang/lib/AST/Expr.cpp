@@ -1761,15 +1761,14 @@ unsigned UnaryExprOrTypeTraitExpr::getAddressSpaceQueryResult(
     T = D->getType();
     LangAS AS = T.getNonReferenceType().getAddressSpace();
     if (AS != LangAS::Default)
-      return AddressSpaceQuery::encode(AS, Ctx.getLangOpts().HIP);
+      return AddressSpaceQuery::encode(AS);
     if (std::optional<LangAS> AS = getCUDADeclAddressSpace(Ctx, D))
-      return AddressSpaceQuery::encode(*AS, Ctx.getLangOpts().HIP);
+      return AddressSpaceQuery::encode(*AS);
   } else {
     T = getArgumentExpr()->getType();
   }
 
-  return AddressSpaceQuery::encode(T.getNonReferenceType().getAddressSpace(),
-                                   Ctx.getLangOpts().HIP);
+  return AddressSpaceQuery::encode(T.getNonReferenceType().getAddressSpace());
 }
 
 MemberExpr::MemberExpr(Expr *Base, bool IsArrow, SourceLocation OperatorLoc,

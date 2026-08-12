@@ -4025,24 +4025,24 @@ query into an expression query.
 ```c++
 __device__ int *p;
 
-static_assert(__addrspaceof(p) == __CLANG_ADDRESS_SPACE_CUDA_DEVICE);
-static_assert(__addrspaceof(*p) == __CLANG_ADDRESS_SPACE_DEFAULT);
-static_assert(__addrspaceof((p)) == __CLANG_ADDRESS_SPACE_DEFAULT);
+static_assert(__addrspaceof(p) == __ADDRSPACE_GLOBAL);
+static_assert(__addrspaceof(*p) == __ADDRSPACE_DEFAULT);
+static_assert(__addrspaceof((p)) == __ADDRSPACE_DEFAULT);
 ```
 
 The first query reports where the pointer variable is stored. The second
 reports the address space of the pointed-to object type. The third treats `p`
 as an lvalue expression because of the extra parentheses.
 
-Clang predefines named macros for the values returned by this operator. For
-language-level address spaces, the result is one of the
-`__CLANG_ADDRESS_SPACE_*` values. For an address space written explicitly with
+Clang predefines macros for the values returned by this operator. Most language
+address spaces are reported using common memory regions:
+`__ADDRSPACE_DEFAULT`, `__ADDRSPACE_GLOBAL`, `__ADDRSPACE_LOCAL`,
+`__ADDRSPACE_CONSTANT`, `__ADDRSPACE_PRIVATE`, and `__ADDRSPACE_GENERIC`.
+OpenCL, CUDA, HIP, SYCL, and HLSL address spaces that describe the same memory
+region produce the same value. For an address space written explicitly with
 `__attribute__((address_space(N)))`, the result is
-`__CLANG_ADDRESS_SPACE_TARGET_OFFSET + N`. CUDA mode uses the
-`__CLANG_ADDRESS_SPACE_CUDA_*` values, and HIP mode uses the corresponding
-`__CLANG_ADDRESS_SPACE_HIP_*` values. Deprecated OpenCL and SYCL
-`global_device` and `global_host` address spaces are reported as their
-corresponding global address space.
+`__ADDRSPACE_TARGET_OFFSET + N`. Deprecated OpenCL and SYCL `global_device` and
+`global_host` address spaces are reported as the global address space.
 
 **Example use**:
 
@@ -4051,9 +4051,9 @@ using local_int = int __attribute__((address_space(3)));
 local_int *p;
 
 static_assert(__addrspaceof(local_int) ==
-              __CLANG_ADDRESS_SPACE_TARGET_OFFSET + 3);
+              __ADDRSPACE_TARGET_OFFSET + 3);
 static_assert(__addrspaceof(*p) ==
-              __CLANG_ADDRESS_SPACE_TARGET_OFFSET + 3);
+              __ADDRSPACE_TARGET_OFFSET + 3);
 ```
 
 **OpenCL example use**:
@@ -4063,9 +4063,9 @@ __global int *global_p;
 __local int *local_p;
 
 static_assert(__addrspaceof(*global_p) ==
-              __CLANG_ADDRESS_SPACE_OPENCL_GLOBAL);
+              __ADDRSPACE_GLOBAL);
 static_assert(__addrspaceof(*local_p) ==
-              __CLANG_ADDRESS_SPACE_OPENCL_LOCAL);
+              __ADDRSPACE_LOCAL);
 ```
 
 **CUDA/HIP example use**:
@@ -4077,18 +4077,18 @@ __constant__ int cst;
 __device__ const int dev_cst = 1;
 
 static_assert(__addrspaceof(dev) ==
-              __CLANG_ADDRESS_SPACE_CUDA_DEVICE);
+              __ADDRSPACE_GLOBAL);
 static_assert(__addrspaceof(dev_arr) ==
-              __CLANG_ADDRESS_SPACE_CUDA_DEVICE);
+              __ADDRSPACE_GLOBAL);
 static_assert(__addrspaceof(cst) ==
-              __CLANG_ADDRESS_SPACE_CUDA_CONSTANT);
+              __ADDRSPACE_CONSTANT);
 static_assert(__addrspaceof(dev_cst) ==
-              __CLANG_ADDRESS_SPACE_CUDA_CONSTANT);
+              __ADDRSPACE_CONSTANT);
 ```
 
-HIP compilation returns the corresponding `__CLANG_ADDRESS_SPACE_HIP_*`
-values. The operator is a static frontend query. It does not classify an
-arbitrary runtime pointer value and does not use optimizer or backend analysis.
+CUDA and HIP compilation return the same common memory-region values. The
+operator is a static frontend query. It does not classify an arbitrary runtime
+pointer value and does not use optimizer or backend analysis.
 
 Query for this extension with `__has_extension(addrspaceof)`.
 

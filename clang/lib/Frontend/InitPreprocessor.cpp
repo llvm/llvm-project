@@ -919,59 +919,19 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro(Name, Twine(static_cast<unsigned>(AS)));
   };
 
-  DefineAddressSpaceMacro("__CLANG_ADDRESS_SPACE_DEFAULT",
-                          AddressSpaceQuery::Default);
-  DefineAddressSpaceMacro("__CLANG_ADDRESS_SPACE_OPENCL_GLOBAL",
-                          AddressSpaceQuery::OpenCLGlobal);
-  DefineAddressSpaceMacro("__CLANG_ADDRESS_SPACE_OPENCL_LOCAL",
-                          AddressSpaceQuery::OpenCLLocal);
-  DefineAddressSpaceMacro("__CLANG_ADDRESS_SPACE_OPENCL_CONSTANT",
-                          AddressSpaceQuery::OpenCLConstant);
-  DefineAddressSpaceMacro("__CLANG_ADDRESS_SPACE_OPENCL_PRIVATE",
-                          AddressSpaceQuery::OpenCLPrivate);
-  DefineAddressSpaceMacro("__CLANG_ADDRESS_SPACE_OPENCL_GENERIC",
-                          AddressSpaceQuery::OpenCLGeneric);
-  DefineAddressSpaceMacro("__CLANG_ADDRESS_SPACE_CUDA_DEVICE",
-                          AddressSpaceQuery::CUDADevice);
-  DefineAddressSpaceMacro("__CLANG_ADDRESS_SPACE_CUDA_CONSTANT",
-                          AddressSpaceQuery::CUDAConstant);
-  DefineAddressSpaceMacro("__CLANG_ADDRESS_SPACE_CUDA_SHARED",
-                          AddressSpaceQuery::CUDAShared);
-  DefineAddressSpaceMacro("__CLANG_ADDRESS_SPACE_SYCL_GLOBAL",
-                          AddressSpaceQuery::SYCLGlobal);
-  DefineAddressSpaceMacro("__CLANG_ADDRESS_SPACE_SYCL_LOCAL",
-                          AddressSpaceQuery::SYCLLocal);
-  DefineAddressSpaceMacro("__CLANG_ADDRESS_SPACE_SYCL_PRIVATE",
-                          AddressSpaceQuery::SYCLPrivate);
-  DefineAddressSpaceMacro("__CLANG_ADDRESS_SPACE_PTR32_SPTR",
-                          AddressSpaceQuery::Ptr32Sptr);
-  DefineAddressSpaceMacro("__CLANG_ADDRESS_SPACE_PTR32_UPTR",
-                          AddressSpaceQuery::Ptr32Uptr);
-  DefineAddressSpaceMacro("__CLANG_ADDRESS_SPACE_PTR64",
-                          AddressSpaceQuery::Ptr64);
-  DefineAddressSpaceMacro("__CLANG_ADDRESS_SPACE_HLSL_GROUPSHARED",
-                          AddressSpaceQuery::HLSLGroupShared);
-  DefineAddressSpaceMacro("__CLANG_ADDRESS_SPACE_HLSL_CONSTANT",
-                          AddressSpaceQuery::HLSLConstant);
-  DefineAddressSpaceMacro("__CLANG_ADDRESS_SPACE_HLSL_PRIVATE",
-                          AddressSpaceQuery::HLSLPrivate);
-  DefineAddressSpaceMacro("__CLANG_ADDRESS_SPACE_HLSL_DEVICE",
-                          AddressSpaceQuery::HLSLDevice);
-  DefineAddressSpaceMacro("__CLANG_ADDRESS_SPACE_HLSL_INPUT",
+  DefineAddressSpaceMacro("__ADDRSPACE_DEFAULT", AddressSpaceQuery::Default);
+  DefineAddressSpaceMacro("__ADDRSPACE_GLOBAL", AddressSpaceQuery::Global);
+  DefineAddressSpaceMacro("__ADDRSPACE_LOCAL", AddressSpaceQuery::Local);
+  DefineAddressSpaceMacro("__ADDRSPACE_CONSTANT", AddressSpaceQuery::Constant);
+  DefineAddressSpaceMacro("__ADDRSPACE_PRIVATE", AddressSpaceQuery::Private);
+  DefineAddressSpaceMacro("__ADDRSPACE_GENERIC", AddressSpaceQuery::Generic);
+  DefineAddressSpaceMacro("__ADDRSPACE_HLSL_INPUT",
                           AddressSpaceQuery::HLSLInput);
-  DefineAddressSpaceMacro("__CLANG_ADDRESS_SPACE_HLSL_OUTPUT",
+  DefineAddressSpaceMacro("__ADDRSPACE_HLSL_OUTPUT",
                           AddressSpaceQuery::HLSLOutput);
-  DefineAddressSpaceMacro("__CLANG_ADDRESS_SPACE_HLSL_PUSH_CONSTANT",
+  DefineAddressSpaceMacro("__ADDRSPACE_HLSL_PUSH_CONSTANT",
                           AddressSpaceQuery::HLSLPushConstant);
-  DefineAddressSpaceMacro("__CLANG_ADDRESS_SPACE_WASM_FUNCREF",
-                          AddressSpaceQuery::WasmFuncRef);
-  DefineAddressSpaceMacro("__CLANG_ADDRESS_SPACE_HIP_DEVICE",
-                          AddressSpaceQuery::HIPDevice);
-  DefineAddressSpaceMacro("__CLANG_ADDRESS_SPACE_HIP_CONSTANT",
-                          AddressSpaceQuery::HIPConstant);
-  DefineAddressSpaceMacro("__CLANG_ADDRESS_SPACE_HIP_SHARED",
-                          AddressSpaceQuery::HIPShared);
-  DefineAddressSpaceMacro("__CLANG_ADDRESS_SPACE_TARGET_OFFSET",
+  DefineAddressSpaceMacro("__ADDRSPACE_TARGET_OFFSET",
                           AddressSpaceQuery::TargetOffset);
 
   // Define macros for floating-point data classes, used in __builtin_isfpclass.
