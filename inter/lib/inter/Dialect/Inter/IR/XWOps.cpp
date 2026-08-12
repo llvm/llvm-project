@@ -534,6 +534,30 @@ LogicalResult CastOp::verify() {
   return verifyCardinalities(getOperation());
 }
 
+LogicalResult BitcastOp::verify() {
+  auto getBits = [&](Type type) -> FailureOr<int64_t> {
+    if (SimdType simd = dyn_cast<SimdType>(type))
+      type = simd.getElementType();
+    if (VectorType vector = dyn_cast<VectorType>(type)) {
+      if (vector.isScalable())
+        return failure();
+      return vector.getNumElements() *
+             vector.getElementType().getIntOrFloatBitWidth();
+    }
+    if (isa<IntegerType, FloatType>(type))
+      return type.getIntOrFloatBitWidth();
+    return failure();
+  };
+  FailureOr<int64_t> sourceBits = getBits(getSource().getType());
+  FailureOr<int64_t> resultBits = getBits(getResult().getType());
+  if (failed(sourceBits) || failed(resultBits) || *sourceBits != *resultBits)
+    return emitOpError("source and result must have equal fixed bit widths");
+  if (getTypeCardinality(getSource().getType()) !=
+      getTypeCardinality(getResult().getType()))
+    return emitOpError("source and result must have the same SIMD shape");
+  return verifyCardinalities(getOperation());
+}
+
 OpFoldResult CastOp::fold(FoldAdaptor) {
   if (getSource().getType() == getType())
     return getSource();
@@ -988,6 +1012,11 @@ LogicalResult LaneIdOp::verify() {
            .isSignlessInteger())
     return emitOpError("result SIMD element must be a signless integer");
   return verifyCardinalities(getOperation());
+}
+LogicalResult SubgroupIdOp::verify() {
+  if (!getResult().getType().isSignlessInteger())
+    return emitOpError("result must be a bare signless integer");
+  return success();
 }
 LogicalResult GlobalIdOp::verify() {
   return verifyDimQuery(getOperation(), getDim(), true);

@@ -68,7 +68,7 @@ private:
   DenseMap<Value, WideValue> widePointers;
   ArrayAttr kernelArguments;
   Value memoryToken;
-  Value payloadTail;
+  SmallVector<Value> payloadTail;
   std::array<Value, 3> localIds;
   std::array<bool, 3> usedIdAxes{};
   int64_t simdWidth = 0;
@@ -145,6 +145,28 @@ private:
     if (failed(bits))
       return failure();
     return (*bits * shape->cardinality + 31) / 32;
+  }
+
+  FailureOr<Value> materializeVectorSplat(int64_t bits, VectorType vector,
+                                          int64_t cardinality,
+                                          Operation *owner) {
+    FailureOr<int64_t> footprint =
+        getFootprint(xw::SimdType::get(context, vector, cardinality), owner);
+    FailureOr<int64_t> scalarBits = getElementBits(vector.getElementType(), owner);
+    if (failed(footprint) || failed(scalarBits))
+      return failure();
+    if (*footprint % 16 != 0 || *scalarBits == 0 || 512 % *scalarBits != 0 ||
+        512 / *scalarBits > 32)
+      return owner->emitOpError("vector splat has no whole-GRF packet form"),
+             failure();
+    Value scalar = immediate(bits, vector.getElementType());
+    SmallVector<Value> pieces;
+    for (int64_t offset = 0; offset < *footprint; offset += 16)
+      pieces.push_back(emitMove(reg(16), vector.getElementType(),
+                                512 / *scalarBits, scalar, RegionAttr(), false));
+    return TupleFromElementsOp::create(*builder, *location, reg(*footprint),
+                                       pieces)
+        .getTuple();
   }
 
   bool isWideSimd(Type type) const {
@@ -258,11 +280,15 @@ private:
     uint64_t size = descriptor->getSize();
     if (offset < kInlineMirrorSize)
       return std::pair<Value, int64_t>{architecturalRegister(4), offset / size};
-    if (!payloadTail || offset + size > 64)
-      return owner->emitOpError("kernel argument is outside loaded payload"),
+    uint64_t tailOffset = offset - kInlineMirrorSize;
+    uint64_t chunk = tailOffset / 64;
+    if (chunk >= payloadTail.size() || tailOffset % 64 + size > 64)
+      return owner->emitOpError("kernel argument at offset ")
+                 << offset << " is outside loaded payload with "
+                 << payloadTail.size() << " chunks",
              failure();
-    return std::pair<Value, int64_t>{payloadTail,
-                                     (offset - kInlineMirrorSize) / size};
+    return std::pair<Value, int64_t>{payloadTail[chunk],
+                                     tailOffset % 64 / size};
   }
 
   LogicalResult validateKernelArguments(func::FuncOp kernel) {
@@ -355,7 +381,7 @@ private:
     localPointers.clear();
     widePointers.clear();
     memoryToken = nullptr;
-    payloadTail = nullptr;
+    payloadTail.clear();
     localIds.fill(Value());
     usedIdAxes.fill(false);
     prologueEmitted = false;
@@ -534,11 +560,28 @@ private:
                       IntegerAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(),
                       TypeAttr(), true, 0, r0, immediate(0xFFFFFFC0, i32()))
             .getResult();
-    LoadBlockA32Op tail =
-        LoadBlockA32Op::create(*builder, *location, reg(16),
-                               MemTokenType::get(context), base, Value(), 8);
-    memoryToken = tail.getToken();
-    payloadTail = tail.getDst();
+    uint64_t payloadEnd = kInlineMirrorSize;
+    for (Attribute attribute : kernelArguments) {
+      KernelArgAttr descriptor = cast<KernelArgAttr>(attribute);
+      payloadEnd = std::max(payloadEnd,
+                            descriptor.getOffset() + descriptor.getSize());
+    }
+    for (uint64_t offset = kInlineMirrorSize; offset < payloadEnd; offset += 64) {
+      Value address = base;
+      if (offset != kInlineMirrorSize)
+        address = AddOp::create(
+                      *builder, *location, reg(16), i32(), 1,
+                      canonicalDestination(), uniformRegion(), RegionAttr(),
+                      IntegerAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(),
+                      TypeAttr(), true, 0, base,
+                      immediate(offset - kInlineMirrorSize, i32()))
+                      .getResult();
+      LoadBlockA32Op tail = LoadBlockA32Op::create(
+          *builder, *location, reg(16), MemTokenType::get(context), address,
+          memoryToken, 16);
+      memoryToken = tail.getToken();
+      payloadTail.push_back(tail.getDst());
+    }
     for (unsigned axis = 0; axis < 3; ++axis)
       if (usedIdAxes[axis])
         localIds[axis] = architecturalRegister(1 + axis);
@@ -595,6 +638,14 @@ private:
     FailureOr<int64_t> bits = getConstantBits(value, owner);
     if (failed(shape) || failed(bits))
       return failure();
+    if (VectorType vector = dyn_cast<VectorType>(shape->elementType)) {
+      FailureOr<Value> splat =
+          materializeVectorSplat(*bits, vector, shape->cardinality, owner);
+      if (failed(splat))
+        return failure();
+      values[result] = *splat;
+      return success();
+    }
     Value selected = immediate(*bits, shape->elementType);
     if (isWideSimd(result.getType()))
       wideValues[result] = {selected, selected};
@@ -670,6 +721,14 @@ private:
     if (failed(shape))
       return failure();
     Type elementType = shape->elementType;
+    if (VectorType vector = dyn_cast<VectorType>(elementType)) {
+      if (vector.getRank() != 1 || vector.isScalable() ||
+          !vector.getElementType().isIntOrIndexOrFloat())
+        return operation.emitOpError("unsupported UB poison result type ")
+               << type;
+      values[operation.getResult()] = immediate(0, vector.getElementType());
+      return success();
+    }
     if (!elementType.isIntOrIndexOrFloat() && !isa<xw::PtrType>(elementType))
       return operation.emitOpError("unsupported UB poison result type ")
              << type;
@@ -720,6 +779,14 @@ private:
       return failure();
     if (!value->getDefiningOp<ImmOp>())
       return *value;
+    if (VectorType vector = dyn_cast<VectorType>(shape->elementType)) {
+      ImmOp immediateValue = value->getDefiningOp<ImmOp>();
+      FailureOr<Value> splat = materializeVectorSplat(
+          immediateValue.getValue(), vector, shape->cardinality, owner);
+      if (failed(splat))
+        return failure();
+      return *splat;
+    }
     return emitMove(reg(*footprint), shape->elementType, shape->cardinality,
                     *value, RegionAttr(), shape->cardinality == 1);
   }
@@ -734,6 +801,18 @@ private:
     if (failed(resultShape) || failed(sourceShape) || failed(input) ||
         failed(footprint))
       return failure();
+    if (input->getDefiningOp<ImmOp>() &&
+        isa<VectorType>(resultShape->elementType)) {
+      VectorType vector = cast<VectorType>(resultShape->elementType);
+      ImmOp immediateValue = input->getDefiningOp<ImmOp>();
+      FailureOr<Value> splat = materializeVectorSplat(
+          immediateValue.getValue(), vector, resultShape->cardinality,
+          operation);
+      if (failed(splat))
+        return failure();
+      values[operation->getResult(0)] = *splat;
+      return success();
+    }
     if (isWideSimd(operation->getResult(0).getType())) {
       auto moveHalf = [&](int64_t maskOffset) {
         RegionAttr region =
@@ -1220,6 +1299,20 @@ private:
     return success();
   }
 
+  LogicalResult lowerBitcast(xw::BitcastOp operation) {
+    FailureOr<Value> source = getValue(operation.getSource(), operation);
+    FailureOr<int64_t> sourceFootprint =
+        getFootprint(operation.getSource().getType(), operation);
+    FailureOr<int64_t> resultFootprint =
+        getFootprint(operation.getType(), operation);
+    if (failed(source) || failed(sourceFootprint) || failed(resultFootprint))
+      return failure();
+    if (*sourceFootprint != *resultFootprint)
+      return operation.emitOpError("bitcast register footprints must match");
+    values[operation.getResult()] = *source;
+    return success();
+  }
+
   LogicalResult lowerUnsupportedFloat(Operation *operation,
                                       StringRef primitive) {
     return operation->emitOpError()
@@ -1623,6 +1716,13 @@ private:
         FailureOr<ValueShape> shape = getShape(source.getType(), sourceYield);
         if (failed(value) || failed(shape))
           return failure();
+        if (VectorType vector = dyn_cast<VectorType>(shape->elementType)) {
+          if (value->getType() != machineIf->getResult(index).getType())
+            return sourceYield->emitOpError(
+                "vector packet yield register footprint mismatch");
+          yielded.push_back(*value);
+          continue;
+        }
         yielded.push_back(
             emitMove(machineIf->getResult(index).getType(), shape->elementType,
                      shape->cardinality, *value,
@@ -1790,6 +1890,17 @@ private:
         return failure();
       Value source = stateInitial[index] ? stateInitial[index]
                                          : immediate(0, shape->elementType);
+      if (source.getDefiningOp<ImmOp>() &&
+          isa<VectorType>(shape->elementType)) {
+        VectorType vector = cast<VectorType>(shape->elementType);
+        ImmOp vectorImmediate = source.getDefiningOp<ImmOp>();
+        FailureOr<Value> splat = materializeVectorSplat(
+            vectorImmediate.getValue(), vector, shape->cardinality, operation);
+        if (failed(splat))
+          return failure();
+        stateInitial[index] = *splat;
+        continue;
+      }
       stateInitial[index] = emitMove(
           resultTypes[index], shape->elementType, shape->cardinality, source,
           source.getDefiningOp<ImmOp>() ? RegionAttr() : uniformRegion(),
@@ -2342,6 +2453,10 @@ private:
       FailureOr<Value> selected = getValue(source, operation);
       if (failed(selected))
         return failure();
+      if (ImmOp immediateValue = selected->getDefiningOp<ImmOp>())
+        return emitMove(reg(1), i32(), 1,
+                        immediate(immediateValue.getValue() - 1, i32()),
+                        RegionAttr(), true);
       return SubOp::create(
                  *builder, *location, reg(1), i32(), 1,
                  canonicalDestination(), RegionAttr(), uniformRegion(),
@@ -2655,6 +2770,23 @@ private:
         "lane ID has no XeMachine channel-index primitive");
   }
 
+  LogicalResult lowerSubgroupId(xw::SubgroupIdOp operation) {
+    FailureOr<ValueShape> shape = getShape(operation.getType(), operation);
+    FailureOr<int64_t> footprint = getFootprint(operation.getType(), operation);
+    if (failed(shape) || failed(footprint))
+      return failure();
+    if (shape->cardinality != 1 || !shape->elementType.isInteger(32))
+      return operation.emitOpError("subgroup ID must be a bare i32 value");
+    values[operation.getResult()] =
+        AndOp::create(*builder, *location, reg(*footprint), i32(), 1,
+                      canonicalDestination(), uniformRegion(), RegionAttr(),
+                      IntegerAttr(), builder->getI32IntegerAttr(2),
+                      IntegerAttr(), TypeAttr(), TypeAttr(), true, 0,
+                      architecturalRegister(0), immediate(0xff, i32()))
+            .getResult();
+    return success();
+  }
+
   LogicalResult lowerShuffle(xw::ShuffleOp operation) {
     xw::ConstantOp lane =
         operation.getSourceLane().getDefiningOp<xw::ConstantOp>();
@@ -2756,6 +2888,9 @@ private:
           return failure();
       } else if (xw::DpasOp dpas = dyn_cast<xw::DpasOp>(operation)) {
         if (failed(lowerDpas(dpas)))
+          return failure();
+      } else if (xw::BitcastOp bitcast = dyn_cast<xw::BitcastOp>(operation)) {
+        if (failed(lowerBitcast(bitcast)))
           return failure();
       } else if (isa<xw::FMaxOp>(operation)) {
         if (failed(lowerUnsupportedFloat(&operation, "floating maximum")))
@@ -2946,6 +3081,10 @@ private:
           return failure();
       } else if (xw::LaneIdOp lane = dyn_cast<xw::LaneIdOp>(operation)) {
         if (failed(lowerLaneId(lane)))
+          return failure();
+      } else if (xw::SubgroupIdOp id =
+                     dyn_cast<xw::SubgroupIdOp>(operation)) {
+        if (failed(lowerSubgroupId(id)))
           return failure();
       } else if (xw::ShuffleOp shuffle = dyn_cast<xw::ShuffleOp>(operation)) {
         if (failed(lowerShuffle(shuffle)))

@@ -264,8 +264,10 @@ static Value adaptStructuredValue(OpBuilder &builder, Location loc, Value value,
   value = unwrapMaterializedShape(value);
   if (value.getType() == type)
     return value;
-  (void)cast<xw::SimdType>(type);
-  return xw::SplatOp::create(builder, loc, type, value);
+  if (isa<xw::SimdType>(type))
+    return xw::SplatOp::create(builder, loc, type, value);
+  return UnrealizedConversionCastOp::create(builder, loc, type, value)
+      .getResult(0);
 }
 
 static LogicalResult reconcileIfShape(scf::IfOp op, bool &changed) {
@@ -542,8 +544,9 @@ static LogicalResult reconcileMaterializedShapes(ModuleOp module) {
     SmallVector<Operation *> candidates;
     module.walk<WalkOrder::PostOrder>([&](Operation *op) {
       if (op->getNumResults() != 0 && (isa<xw::CmpIOp, xw::CmpFOp, xw::PtrCmpOp,
-                                           xw::PtrAddOp, xw::FreezeOp>(op) ||
-                                       op->hasTrait<OpTrait::Elementwise>()))
+                                           xw::PtrAddOp, xw::FreezeOp,
+                                           xw::BitcastOp>(op) ||
+                                        op->hasTrait<OpTrait::Elementwise>()))
         candidates.push_back(op);
     });
     for (Operation *op : candidates) {
@@ -563,8 +566,8 @@ static LogicalResult reconcileMaterializedShapes(ModuleOp module) {
         Type pointer = getPayloadType(ptradd.getBase().getType());
         replacement =
             xw::SimdType::get(op->getContext(), pointer, **cardinality);
-      } else if (isa<xw::FreezeOp>(op) ||
-                 op->hasTrait<OpTrait::Elementwise>()) {
+      } else if (isa<xw::FreezeOp, xw::BitcastOp>(op) ||
+                  op->hasTrait<OpTrait::Elementwise>()) {
         replacement = xw::SimdType::get(
             op->getContext(), getPayloadType(resultType), **cardinality);
       }
@@ -719,6 +722,7 @@ private:
 
 enum class BuiltinKind {
   LaneId,
+  SubgroupId,
   GlobalId,
   LocalId,
   GroupId,
@@ -734,8 +738,11 @@ enum class BuiltinKind {
 static std::optional<BuiltinKind> classifyBuiltin(StringRef symbol) {
   return StringSwitch<std::optional<BuiltinKind>>(symbol)
       .Cases({"_Z22get_sub_group_local_idv", "_Z22get_sub_group_local_id",
-              "get_sub_group_local_id"},
-             BuiltinKind::LaneId)
+               "get_sub_group_local_id"},
+              BuiltinKind::LaneId)
+      .Cases({"_Z16get_sub_group_idv", "_Z16get_sub_group_id",
+              "get_sub_group_id"},
+             BuiltinKind::SubgroupId)
       .Cases({"_Z13get_global_idj", "_Z13get_global_idm", "get_global_id"},
              BuiltinKind::GlobalId)
       .Cases({"_Z12get_local_idj", "_Z12get_local_idm", "get_local_id"},
@@ -1095,6 +1102,28 @@ public:
   }
 };
 
+class ConvertLLVMBitcast final : public OpConversionPattern<LLVM::BitcastOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(LLVM::BitcastOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    SmallVector<Value> operands = unwrapOperands(adaptor.getOperands());
+    FailureOr<Type> type = convertResultType(op, *getTypeConverter(), rewriter);
+    if (failed(type))
+      return failure();
+    Type resultType = distributeType(*type, operands);
+    if (resultType == operands.front().getType()) {
+      rewriter.replaceOp(op, operands.front());
+      return success();
+    }
+    xw::BitcastOp converted = xw::BitcastOp::create(
+        rewriter, op.getLoc(), resultType, operands.front());
+    return replaceConverted(op, converted, rewriter);
+  }
+};
+
 class ConvertLLVMICmp final : public OpConversionPattern<LLVM::ICmpOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
@@ -1373,8 +1402,9 @@ public:
           xw::SimdType::get(op.getContext(), resultTypes.front(), *width);
 
     std::optional<int64_t> dimension;
-    if (*builtin != BuiltinKind::LaneId && *builtin != BuiltinKind::Barrier &&
-        *builtin != BuiltinKind::AtomicAdd) {
+    if (*builtin != BuiltinKind::LaneId &&
+        *builtin != BuiltinKind::SubgroupId &&
+        *builtin != BuiltinKind::Barrier && *builtin != BuiltinKind::AtomicAdd) {
       if (adaptor.getOperands().size() != 1)
         return rewriter.notifyMatchFailure(op,
                                            "dimension query requires one axis");
@@ -1390,6 +1420,10 @@ public:
     case BuiltinKind::LaneId:
       converted =
           xw::LaneIdOp::create(rewriter, op.getLoc(), resultTypes.front());
+      break;
+    case BuiltinKind::SubgroupId:
+      converted =
+          xw::SubgroupIdOp::create(rewriter, op.getLoc(), resultTypes.front());
       break;
     case BuiltinKind::GlobalId:
       converted = xw::GlobalIdOp::create(rewriter, op.getLoc(),
@@ -1819,7 +1853,7 @@ struct ConvertLLVMToXW final
         ConvertLLVMCast<LLVM::UIToFPOp, xw::CastKind::IntToFp>,
         ConvertLLVMCast<LLVM::FPToSIOp, xw::CastKind::FpToInt>,
         ConvertLLVMCast<LLVM::FPToUIOp, xw::CastKind::FpToInt>,
-        ConvertLLVMCast<LLVM::BitcastOp, xw::CastKind::IntConvert>,
+        ConvertLLVMBitcast,
         ConvertLLVMICmp, ConvertLLVMFCmp, ConvertLLVMSelect,
         ConvertLLVMAddrspaceCast,
         ConvertLLVMOneSourcePointerCast<LLVM::PtrToIntOp, xw::PtrToIntOp>,

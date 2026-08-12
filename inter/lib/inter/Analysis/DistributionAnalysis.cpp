@@ -50,7 +50,8 @@ static Distribution getTypeDistribution(Type type, unsigned simdWidth) {
 
 static bool isUniformSource(Operation *op) {
   return isa<arith::ConstantOp, xw::ConstantOp, xw::NullOp,
-             xw::LocalMemoryBaseOp, xw::AllocOp, xw::GroupIdOp,
+              xw::LocalMemoryBaseOp, xw::AllocOp, xw::SubgroupIdOp,
+              xw::GroupIdOp,
              xw::GlobalSizeOp, xw::LocalSizeOp, xw::NumGroupsOp,
              xw::LaunchGridSizeOp, xw::LaunchBlockSizeOp>(op);
 }

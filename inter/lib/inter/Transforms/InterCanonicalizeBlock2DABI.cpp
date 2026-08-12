@@ -40,6 +40,46 @@ static Value castValue(OpBuilder &builder, Location location, Type type,
       .getResult(0);
 }
 
+static void collectDescriptorPointers(Value value,
+                                      SmallVectorImpl<Value> &pointers) {
+  if (LLVM::PtrToIntOp cast = value.getDefiningOp<LLVM::PtrToIntOp>()) {
+    pointers.push_back(cast.getArg());
+    return;
+  }
+  Operation *operation = value.getDefiningOp();
+  if (!operation ||
+      !isa<LLVM::IntToPtrOp, LLVM::ExtractElementOp, LLVM::InsertElementOp,
+           LLVM::BitcastOp>(operation))
+    return;
+  for (Value operand : operation->getOperands())
+    collectDescriptorPointers(operand, pointers);
+}
+
+static Value getBlock2DBase(Value value) {
+  if (!value.getDefiningOp<LLVM::IntToPtrOp>())
+    return value;
+  SmallVector<Value> pointers;
+  collectDescriptorPointers(value, pointers);
+  if (pointers.empty() ||
+      !llvm::all_of(pointers, [&](Value pointer) {
+        return pointer == pointers.front();
+      }))
+    return value;
+  return pointers.front();
+}
+
+static void eraseDeadDescriptorChain(Value value) {
+  Operation *operation = value.getDefiningOp();
+  if (!operation || !operation->use_empty() ||
+      !isa<LLVM::IntToPtrOp, LLVM::ExtractElementOp, LLVM::InsertElementOp,
+           LLVM::BitcastOp, LLVM::PtrToIntOp>(operation))
+    return;
+  SmallVector<Value> operands(operation->getOperands());
+  operation->erase();
+  for (Value operand : operands)
+    eraseDeadDescriptorChain(operand);
+}
+
 static FailureOr<std::array<Value, 2>> getCoordinates(LLVM::CallOp call,
                                                        OpBuilder &builder) {
   LLVM::InsertElementOp yInsert =
@@ -80,11 +120,16 @@ static void eraseCoordinates(LLVM::CallOp call) {
   LLVM::InsertElementOp xInsert =
       yInsert ? yInsert.getVector().getDefiningOp<LLVM::InsertElementOp>()
               : LLVM::InsertElementOp();
+  Value seed = xInsert ? xInsert.getVector() : Value();
   call.erase();
   if (yInsert && yInsert->use_empty())
     yInsert.erase();
   if (xInsert && xInsert->use_empty())
     xInsert.erase();
+  if (LLVM::UndefOp undef = seed ? seed.getDefiningOp<LLVM::UndefOp>()
+                                 : LLVM::UndefOp();
+      undef && undef->use_empty())
+    undef.erase();
 }
 
 static LogicalResult canonicalizeCall(LLVM::CallOp call,
@@ -107,10 +152,11 @@ static LogicalResult canonicalizeCall(LLVM::CallOp call,
                                    : IntegerAttr();
   if (!simdWidth)
     return call.emitOpError("requires an enclosing xw.simd_width");
+  Value originalBase = call.getArgOperands()[0];
   Value base = castValue(
       builder, call.getLoc(),
       xw::PtrType::get(context, xw::GlobalAddressSpaceAttr::get(context)),
-      call.getArgOperands()[0]);
+      getBlock2DBase(originalBase));
   std::array<Value, 3> surface = {
       call.getArgOperands()[1], call.getArgOperands()[2],
       call.getArgOperands()[3]};
@@ -126,6 +172,7 @@ static LogicalResult canonicalizeCall(LLVM::CallOp call,
         blockWidth, blockHeight, 1, false, false, Value());
     operation->setDiscardableAttrs(call->getDiscardableAttrDictionary());
     eraseCoordinates(call);
+    eraseDeadDescriptorChain(originalBase);
     return success();
   }
 
@@ -174,6 +221,7 @@ static LogicalResult canonicalizeCall(LLVM::CallOp call,
     store.erase();
   }
   eraseCoordinates(call);
+  eraseDeadDescriptorChain(originalBase);
   (*allocation).erase();
   return success();
 }

@@ -17,7 +17,5 @@ module {
 // CHECK-LABEL: func.func @argument_only
 // CHECK-SAME: xemachine.simd_size = 8 : i32
 // CHECK-NOT: xemachine.uses_thread_ids
-// CHECK: xemachine.load_block_a32
-// CHECK: xemachine.mov {{.*}}execSize = 8
-// CHECK-SAME: src0Region = #xemachine.region<0, 1, 0>
+// CHECK: xemachine.mov {{.*}}execSize = 8{{.*}}src0Region = #xemachine.region<0, 1, 0>
 // CHECK: xemachine.load_a64

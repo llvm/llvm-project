@@ -37,7 +37,7 @@ mlir::LogicalResult
 inter::xemachine::verifyKernelArgLayout(mlir::ArrayAttr arguments,
                                         mlir::Operation *owner) {
   constexpr uint64_t firstExplicitArgument = 24;
-  constexpr uint64_t loadedPayloadBytes = 64;
+  constexpr uint64_t loadedPayloadBytes = 192;
   if (!arguments)
     return owner->emitOpError("missing or invalid kernel argument layout");
 

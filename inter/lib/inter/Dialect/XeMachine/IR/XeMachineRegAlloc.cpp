@@ -105,7 +105,7 @@ static LogicalResult validateAluFootprint(Operation *operation) {
       DstRegionAttr region =
           operation->getAttrOfType<DstRegionAttr>("dstRegion");
       int64_t stride = region ? region.getHstride() : 1;
-      int64_t last = sub + (executionSize - 1) * stride;
+      int64_t last = (executionSize - 1) * stride;
       if (sub < 0 || stride < 0 ||
           static_cast<uint64_t>(last + 1) * *bytes >
               destinationType.getWidthDwords() * 4)
@@ -212,10 +212,16 @@ static LogicalResult finalizeComponents(func::FuncOp function,
       const RegisterAliasAnalysis::ValueInfo *valueInfo =
           state.aliases.lookup(value);
       assert(valueInfo && "register value is missing alias information");
-      if (valueInfo->offsetDwords % 16 != 0)
-        return function.emitError(
-            "register-storage alias is not GRF-aligned after selection");
-      if (Operation *definition = value.getDefiningOp())
+      Operation *definition = value.getDefiningOp();
+      bool placedAtAliasOffset =
+          definition && getIntegerAttr(definition, "dstSub", 0) ==
+                            valueInfo->offsetDwords % 16;
+      if (valueInfo->offsetDwords % 16 != 0 && !placedAtAliasOffset)
+        return function.emitError()
+               << "register-storage alias at dword offset "
+               << valueInfo->offsetDwords
+               << " is not GRF-aligned after selection; value: " << value;
+      if (definition)
         component.allowFixedOverlap |=
             definition->hasAttr(kAllowFixedOverlapAttrName);
       component.start =

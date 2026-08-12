@@ -5,8 +5,8 @@ module {
   func.func @unsupported_poison() attributes {
       xemachine.kernel, xemachine.kernel_args = [],
       xw.simd_width = 8 : i32} {
-    // expected-error@+1 {{unsupported UB poison result type 'vector<2xi32>'}}
-    %poison = ub.poison : vector<2xi32>
+    // expected-error@+1 {{unsupported UB poison result type 'vector<[2]xi32>'}}
+    %poison = ub.poison : vector<[2]xi32>
     return
   }
 }

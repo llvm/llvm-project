@@ -44,7 +44,7 @@ module {
   func.func @out_of_bounds(%arg: !xw.ptr<#xw.global>) attributes {
       xemachine.kernel,
       xemachine.kernel_args = [
-        #xemachine.kernel_arg<kind = by_pointer, address_space = "global", access = "read_write", size = 8, alignment = 8, offset = 64>
+        #xemachine.kernel_arg<kind = by_pointer, address_space = "global", access = "read_write", size = 8, alignment = 8, offset = 192>
        ], xw.simd_width = 8 : i32} {
     return
   }

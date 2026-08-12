@@ -84,6 +84,13 @@ def XW_CastOp : XW_Op<"cast", [Pure, Elementwise]> {
   let hasVerifier = 1;
 }
 
+def XW_BitcastOp : XW_Op<"bitcast", [Pure]> {
+  let arguments = (ins AnyType:$source);
+  let results = (outs AnyType:$result);
+  let assemblyFormat = "$source attr-dict `:` type($source) `->` type($result)";
+  let hasVerifier = 1;
+}
+
 class XW_FloatBinary<string mnemonic> : XW_Op<mnemonic, [Pure, Elementwise]> {
   let arguments = (ins XW_Simd:$lhs, XW_Simd:$rhs,
                        DefaultValuedAttr<Arith_FastMathAttr,
@@ -267,6 +274,11 @@ class XW_DimQueryOp<string mnemonic, string summaryText>
 def XW_LaneIdOp : XW_Op<"lane_id", [Pure]> {
   let results = (outs XW_Simd:$result);
   let assemblyFormat = "attr-dict `:` qualified(type($result))";
+  let hasVerifier = 1;
+}
+def XW_SubgroupIdOp : XW_Op<"subgroup_id", [Pure]> {
+  let results = (outs AnyType:$result);
+  let assemblyFormat = "attr-dict `:` type($result)";
   let hasVerifier = 1;
 }
 def XW_GlobalIdOp : XW_DimQueryOp<"global_id", "global invocation id">;

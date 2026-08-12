@@ -92,9 +92,10 @@ static Value getCopiedSource(Value value) {
 }
 
 static FailureOr<Value> materializeRegisterCopy(OpBuilder &builder,
-                                                Location location, Value source,
-                                                RegType destinationType,
-                                                StringRef kind) {
+                                                 Location location, Value source,
+                                                 RegType destinationType,
+                                                 StringRef kind,
+                                                 int64_t destinationSub = 0) {
   RegType sourceType = dyn_cast<RegType>(source.getType());
   if (!sourceType)
     return emitError(location)
@@ -122,17 +123,22 @@ static FailureOr<Value> materializeRegisterCopy(OpBuilder &builder,
   Type i32 = builder.getI32Type();
   for (uint32_t offset = 0; offset < width;) {
     uint32_t pieceWidth = std::min<uint32_t>(32, width - offset);
+    int64_t pieceSub = destinationSub;
     int32_t destinationBase = destinationType.getBaseGRF();
-    if (destinationBase >= 0)
-      destinationBase += offset / 16;
+    if (destinationBase >= 0) {
+      destinationBase += offset / 16 + pieceSub / 16;
+      pieceSub %= 16;
+    }
     RegType pieceType = RegType::get(context, pieceWidth, destinationBase);
+    IntegerAttr destinationSubAttr =
+        pieceSub == 0 ? IntegerAttr() : builder.getI32IntegerAttr(pieceSub);
     IntegerAttr sourceSub =
         offset == 0 ? IntegerAttr() : builder.getI32IntegerAttr(offset);
     MovOp move =
         MovOp::create(builder, location, pieceType, i32,
-                      /*execSize=*/pieceWidth, DstRegionAttr(), RegionAttr(),
-                      IntegerAttr(), sourceSub, TypeAttr(), /*noMask=*/false,
-                      /*maskOffset=*/0, source);
+                       /*execSize=*/pieceWidth, DstRegionAttr(), RegionAttr(),
+                       destinationSubAttr, sourceSub, TypeAttr(),
+                       /*noMask=*/false, /*maskOffset=*/0, source);
     move->setAttr(kRegisterCopyAttr, builder.getStringAttr(kind));
     pieces.push_back(move.getDst());
     offset += pieceWidth;
@@ -562,12 +568,14 @@ static LogicalResult repairUpdateTuples(func::FuncOp function) {
     update->setOperand(0, *copy);
     for (unsigned index = 0; index < update.getUpdates().size(); ++index) {
       Value replacement = update.getUpdates()[index];
+      int64_t offset = cast<IntegerAttr>(update.getOffsets()[index]).getInt();
       RegType replacementType = cast<RegType>(replacement.getType());
       RegType replacementCopyType = RegType::get(
           function.getContext(), replacementType.getWidthDwords(), -1);
       FailureOr<Value> replacementCopy =
           materializeRegisterCopy(builder, update.getLoc(), replacement,
-                                  replacementCopyType, "update-value");
+                                  replacementCopyType, "update-value",
+                                  offset % 16);
       if (failed(replacementCopy))
         return failure();
       update->setOperand(index + 1, *replacementCopy);

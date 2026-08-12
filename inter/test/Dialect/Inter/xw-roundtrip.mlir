@@ -37,9 +37,12 @@ func.func @surface(%u: i32, %private: !xw.ptr<#xw.private>,
   %packed = xw.pack %sum, %selected
       : !xw.simd<i32, 8>, !xw.simd<i32, 8>
       -> !xw.simd<vector<2xi32>, 8>
+  %reinterpreted = xw.bitcast %packed : !xw.simd<vector<2xi32>, 8>
+      -> !xw.simd<vector<2xf32>, 8>
   %element = xw.extract %packed[0] : !xw.simd<vector<2xi32>, 8>
       -> !xw.simd<i32, 8>
   %lane = xw.lane_id : !xw.simd<i32, 8>
+  %subgroup = xw.subgroup_id : i32
   %gid = xw.global_id 0 : !xw.simd<i32, 8>
   %group = xw.group_id 0 : i32
   %grid = xw.launch_grid_size 0 : i32

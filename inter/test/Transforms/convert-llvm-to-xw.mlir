@@ -61,6 +61,7 @@ module {
                                              %lhs: f32, %rhs: f32) {
     %axis = llvm.mlir.constant(1 : i32) : i32
     %lane = llvm.call spir_funccc @_Z22get_sub_group_local_id() : () -> i32
+    %subgroup = llvm.call spir_funccc @_Z16get_sub_group_id() : () -> i32
     %lid = llvm.call spir_funccc @_Z12get_local_idm(%axis) : (i32) -> i64
     %group = llvm.call spir_funccc @_Z12get_group_idm(%axis) : (i32) -> i64
     %global_size = llvm.call spir_funccc @_Z15get_global_sizem(%axis) : (i32) -> i64
@@ -82,6 +83,7 @@ module {
   }
 
   llvm.func spir_funccc @_Z22get_sub_group_local_id() -> i32
+  llvm.func spir_funccc @_Z16get_sub_group_id() -> i32
   llvm.func spir_funccc @_Z12get_local_idm(i32) -> i64
   llvm.func spir_funccc @_Z12get_group_idm(i32) -> i64
   llvm.func spir_funccc @_Z15get_global_sizem(i32) -> i64
@@ -181,6 +183,7 @@ module {
 
 // CHECK-LABEL: func.func @queries_and_math
 // CHECK: xw.lane_id : !xw.simd<i32, 16>
+// CHECK: xw.subgroup_id : i32
 // CHECK: xw.local_id 1 : !xw.simd<i64, 16>
 // CHECK: xw.group_id 1 : i64
 // CHECK: xw.global_size 1 : i64
