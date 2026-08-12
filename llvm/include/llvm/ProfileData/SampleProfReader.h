@@ -397,6 +397,12 @@ public:
   virtual size_t size() const = 0;
   bool empty() const { return size() == 0; }
   virtual FunctionId operator[](size_t Idx) const = 0;
+
+  virtual EytzingerTableSpan<support::ulittle64_t>
+  getEytzingerSpan(bool IsNested) const {
+    llvm_unreachable(
+        "getEytzingerSpan is exclusively supported for Eytzinger layout");
+  }
   virtual bool contains(StringRef Key) const {
     return contains(FunctionId(Key).getHashCode());
   }
@@ -501,17 +507,23 @@ class EytzingerSampleProfileNameTable final : public SampleProfileNameTable {
 
 public:
   EytzingerSampleProfileNameTable(const support::ulittle64_t *Data,
-                                  size_t NumCS, size_t NumFlat,
+                                  size_t NumNested, size_t NumFlat,
                                   size_t NumInlinees)
-      : Array(Data, NumCS + NumFlat + NumInlinees),
-        Spans{{{Data, NumCS},
-               {Data + NumCS, NumFlat},
-               {Data + NumCS + NumFlat, NumInlinees}}} {}
+      : Array(Data, NumNested + NumFlat + NumInlinees),
+        Spans{{{Data, NumNested},
+               {Data + NumNested, NumFlat},
+               {Data + NumNested + NumFlat, NumInlinees}}} {}
 
   size_t size() const override { return Array.size(); }
 
   FunctionId operator[](size_t Idx) const override {
     return FunctionId(Array[Idx]);
+  }
+
+  EytzingerTableSpan<support::ulittle64_t>
+  getEytzingerSpan(bool IsNested) const override {
+    return Spans[static_cast<size_t>(IsNested ? EytzingerSpan::Nested
+                                              : EytzingerSpan::Flat)];
   }
 
   bool contains(uint64_t GUID) const override {
@@ -1004,8 +1016,11 @@ public:
 /// Tags to select the initialization mode of SampleProfileFuncOffsetTable.
 struct InMemoryModeT {};
 struct OnDiskModeT {};
+struct EytzingerModeT {};
+
 inline constexpr InMemoryModeT InMemoryMode{};
 inline constexpr OnDiskModeT OnDiskMode{};
+inline constexpr EytzingerModeT EytzingerMode{};
 
 /// A unified wrapper representing the function offset table.
 ///
@@ -1019,12 +1034,16 @@ inline constexpr OnDiskModeT OnDiskMode{};
 /// - An OnDiskIterableChainedHashTable providing the same mapping directly from
 ///   the file in (non-context-sensitive) version 104 profiles.
 ///
+/// - A raw slice of 32-bit relative offsets for Eytzinger parallel lookups.
+///
 /// It exposes a single, type-agnostic lookup interface, shielding the reader
 /// from the underlying container types. To prevent hybrid-state corruption, the
 /// table's mode is locked at construction time, and assertions prevent
 /// modification in on-disk mode.
 class SampleProfileFuncOffsetTable {
 public:
+  enum class TableMode { InMemory, OnDisk, Eytzinger };
+
   using OnDiskTableType =
       llvm::OnDiskIterableChainedHashTable<FuncOffsetHashTableInfo>;
 
@@ -1037,9 +1056,16 @@ public:
   operator=(SampleProfileFuncOffsetTable &&) = delete;
 
   explicit SampleProfileFuncOffsetTable(InMemoryModeT,
-                                        size_t InitialCapacity = 0) {
+                                        size_t InitialCapacity = 0)
+      : Mode(TableMode::InMemory) {
     InMemoryTable.reserve(InitialCapacity);
   }
+
+  SampleProfileFuncOffsetTable(
+      EytzingerModeT, EytzingerTableSpan<support::ulittle64_t> NameSpan,
+      ArrayRef<support::ulittle32_t> FuncOffsetSpan)
+      : Mode(TableMode::Eytzinger), NameSpan(NameSpan),
+        FuncOffsetSpan(FuncOffsetSpan) {}
 
   /// Insert a function GUID and its profile offset into the in-memory map.
   /// Enforces that the on-disk table must not have been set first.
@@ -1051,13 +1077,22 @@ public:
 
   /// Instantiate the on-disk chained hash table using raw stream pointers.
   SampleProfileFuncOffsetTable(OnDiskModeT, const uint8_t *Buckets,
-                               const uint8_t *Payload, const uint8_t *Base) {
+                               const uint8_t *Payload, const uint8_t *Base)
+      : Mode(TableMode::OnDisk) {
     OnDiskTable.reset(OnDiskTableType::Create(Buckets, Payload, Base));
   }
 
   /// Query the offset table for the profile offset associated with the given
   /// GUID. Returns the offset if found, or std::nullopt if the key is missing.
   std::optional<uint64_t> lookup(uint64_t GUID) const {
+    if (isEytzinger()) {
+      if (std::optional<size_t> Idx = NameSpan.findIndex(GUID)) {
+        uint32_t RelOffset = FuncOffsetSpan[*Idx];
+        if (RelOffset != UINT32_MAX)
+          return RelOffset;
+      }
+      return std::nullopt;
+    }
     if (OnDiskTable) {
       auto Iter = OnDiskTable->find(GUID);
       if (Iter != OnDiskTable->end())
@@ -1070,9 +1105,28 @@ public:
     return std::nullopt;
   }
 
+  /// Direct read-only array (`ArrayRef`) of function offsets aligned parallel
+  /// to the corresponding Eytzinger name span.
+  ArrayRef<support::ulittle32_t> getFuncOffsets() const {
+    assert(isEytzinger() &&
+           "Cannot call getFuncOffsets() on non-Eytzinger table");
+    return FuncOffsetSpan;
+  }
+
+  size_t getExpectedSize() const {
+    assert(isEytzinger() &&
+           "Cannot call getExpectedSize() on non-Eytzinger table");
+    return NameSpan.size();
+  }
+
+  bool isEytzinger() const { return Mode == TableMode::Eytzinger; }
+
 private:
+  TableMode Mode;
   llvm::DenseMap<hash_code, uint64_t> InMemoryTable;
   std::unique_ptr<OnDiskTableType> OnDiskTable;
+  EytzingerTableSpan<support::ulittle64_t> NameSpan;
+  ArrayRef<support::ulittle32_t> FuncOffsetSpan;
 };
 
 /// SampleProfileReaderExtBinaryBase/SampleProfileWriterExtBinaryBase defines
@@ -1112,7 +1166,9 @@ protected:
   std::error_code readFuncMetadata(DenseSet<FunctionSamples *> &Profiles);
   std::error_code readFuncMetadata();
   std::error_code readFuncMetadata(FunctionSamples *FProfile);
-  std::error_code readFuncOffsetTable();
+  std::error_code readFuncOffsetTable(bool IsEytzinger, bool IsNested);
+  std::error_code readEytzingerFuncOffsetTable(bool IsNested);
+  std::error_code readLegacyFuncOffsetTable();
   std::error_code readFuncProfiles();
   std::error_code readFuncProfiles(const DenseSet<StringRef> &FuncsToUse,
                                    SampleProfileMap &Profiles);

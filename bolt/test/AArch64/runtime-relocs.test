@@ -27,11 +27,21 @@ CHECKEXE: {{.*}} R_AARCH64_JUMP_SLOT    {{.*}} inc + 0
 // the initial binary was built with gcc and ld with -mtls-dialect=trad flag.
 
 RUN: yaml2obj %p/Inputs/tls-trad.yaml &> %t.trad.so
-RUN: llvm-bolt %t.trad.so -o %t.trad.bolt.so --use-old-text=0 --lite=0
+RUN: llvm-bolt %t.trad.so -o %t.trad.bolt.so --use-old-text=0 --lite=0 2>&1 | \
+RUN:   FileCheck %s --check-prefix=CHECKTRAD-BOLT
 RUN: llvm-readelf -rW %t.trad.so | FileCheck %s -check-prefix=CHECKTRAD
+RUN: llvm-objdump -d --no-show-raw-insn --start-address=0x4000e0 \
+RUN:   --stop-address=0x4000e8 %t.trad.bolt.so | \
+RUN:   FileCheck %s --check-prefix=CHECKTRAD-TEXT
 
+CHECKTRAD-BOLT: BOLT-INFO: enabling relocation mode
+CHECKTRAD-BOLT-NOT: Failed to analyze
 CHECKTRAD: {{.*}} R_AARCH64_TLS_DTPMOD64 {{.*}} t1 + 0
 CHECKTRAD: {{.*}} R_AARCH64_TLS_DTPREL64 {{.*}} t1 + 0
+CHECKTRAD: {{.*}} R_AARCH64_TLSGD_ADR_PAGE21 {{.*}} t1 + 0
+CHECKTRAD: {{.*}} R_AARCH64_TLSGD_ADD_LO12_NC {{.*}} t1 + 0
+CHECKTRAD-TEXT: adrp x0, 0x10000
+CHECKTRAD-TEXT-NEXT: add x0, x0, #0xfd0
 
 // The ld linker emits R_AARCH64_TLSDESC to .rela.plt section, check that
 // it is emitted correctly.
