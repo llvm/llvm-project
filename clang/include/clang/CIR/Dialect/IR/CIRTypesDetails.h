@@ -13,6 +13,7 @@
 #ifndef CIR_DIALECT_IR_CIRTYPESDETAILS_H
 #define CIR_DIALECT_IR_CIRTYPESDETAILS_H
 
+#include "mlir/IR/AttrTypeSubElements.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Support/LogicalResult.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
@@ -211,5 +212,55 @@ struct UnionTypeStorage : public mlir::TypeStorage {
 
 } // namespace detail
 } // namespace cir
+
+namespace mlir {
+
+/// Allow walking and replacing the subelements of a StructTypeStorage key.
+template <>
+struct AttrTypeSubElementHandler<cir::detail::StructTypeStorage::KeyTy> {
+  static void walk(const cir::detail::StructTypeStorage::KeyTy &param,
+                   AttrTypeImmediateSubElementWalker &walker) {
+    walker.walkRange(param.members);
+  }
+  static FailureOr<cir::detail::StructTypeStorage::KeyTy>
+  replace(const cir::detail::StructTypeStorage::KeyTy &param,
+          AttrSubElementReplacements &attrRepls,
+          TypeSubElementReplacements &typeRepls) {
+    // TODO: It's not clear how we support replacing sub-elements of mutable
+    // types.
+    if (param.name)
+      return failure();
+
+    return cir::detail::StructTypeStorage::KeyTy(
+        typeRepls.take_front(param.members.size()), param.name,
+        param.incomplete, param.packed, param.padded, param.is_class);
+  }
+};
+
+/// Allow walking and replacing the subelements of a UnionTypeStorage key.
+template <>
+struct AttrTypeSubElementHandler<cir::detail::UnionTypeStorage::KeyTy> {
+  static void walk(const cir::detail::UnionTypeStorage::KeyTy &param,
+                   AttrTypeImmediateSubElementWalker &walker) {
+    walker.walkRange(param.members);
+    walker.walk(param.padding);
+  }
+  static FailureOr<cir::detail::UnionTypeStorage::KeyTy>
+  replace(const cir::detail::UnionTypeStorage::KeyTy &param,
+          AttrSubElementReplacements &attrRepls,
+          TypeSubElementReplacements &typeRepls) {
+    // TODO: It's not clear how we support replacing sub-elements of mutable
+    // types.
+    if (param.name)
+      return failure();
+
+    llvm::ArrayRef<Type> members = typeRepls.take_front(param.members.size());
+    Type padding = param.padding ? typeRepls.take_front(1)[0] : Type();
+    return cir::detail::UnionTypeStorage::KeyTy(
+        members, param.name, param.incomplete, param.packed, padding);
+  }
+};
+
+} // namespace mlir
 
 #endif // CIR_DIALECT_IR_CIRTYPESDETAILS_H
