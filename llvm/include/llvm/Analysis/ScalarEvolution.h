@@ -2050,7 +2050,8 @@ private:
   /// Collect operands of \p V for which SCEV expressions should be constructed
   /// first. Returns a SCEV directly if it can be constructed trivially for \p
   /// V.
-  const SCEV *getOperandsToCreate(Value *V, SmallVectorImpl<Value *> &Ops);
+  const SCEV *getOperandsToCreate(Value *V, SmallVectorImpl<Value *> &Ops,
+                                  bool &AddRecPHISlowPath);
 
   /// Returns SCEV for the first operand of a phi if all phi operands have
   /// identical opcodes and operands.
@@ -2062,9 +2063,11 @@ private:
   /// Helper function called from createNodeForPHI.
   const SCEV *createAddRecFromPHI(PHINode *PN);
 
-  /// A helper function for createAddRecFromPHI to handle simple cases.
-  const SCEV *createSimpleAffineAddRec(PHINode *PN, Value *BEValueV,
-                                            Value *StartValueV);
+  const SCEV *handleAddRecBackedgeForPHI(PHINode *PN, const SCEV *SymbolicName,
+                                         Value *BEValueV, Value *StartValueV);
+
+  /// Helper function called from createNodeForPHI.
+  const SCEV *createSimpleAffineAddRec(PHINode *PNV);
 
   /// Helper function called from createNodeForPHI.
   const SCEV *createNodeFromSelectLikePHI(PHINode *PN);
