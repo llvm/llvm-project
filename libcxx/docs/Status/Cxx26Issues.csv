@@ -142,7 +142,7 @@
 "`LWG4235 <https://wg21.link/LWG4235>`__","``cache_latest_view`` and ``to_input_view`` miss ``reserve_hint``","2025-06 (Sofia)","","","`#148219 <https://github.com/llvm/llvm-project/issues/148219>`__",""
 "`LWG4236 <https://wg21.link/LWG4236>`__","``chunk_view::outer-iterator::value_type`` should provide ``reserve_hint``","2025-06 (Sofia)","","","`#148220 <https://github.com/llvm/llvm-project/issues/148220>`__",""
 "`LWG4239 <https://wg21.link/LWG4239>`__","``flat_map``'s transparent comparator no longer works for string literals","2025-06 (Sofia)","","","`#148223 <https://github.com/llvm/llvm-project/issues/148223>`__",""
-"`LWG4242 <https://wg21.link/LWG4242>`__","``ranges::distance`` does not work with volatile iterators","2025-06 (Sofia)","","","`#148224 <https://github.com/llvm/llvm-project/issues/148224>`__",""
+"`LWG4242 <https://wg21.link/LWG4242>`__","``ranges::distance`` does not work with volatile iterators","2025-06 (Sofia)","|Complete|","14","`#148224 <https://github.com/llvm/llvm-project/issues/148224>`__",""
 "`LWG4245 <https://wg21.link/LWG4245>`__","Operators that interact with ``counted_iterator`` and ``default_sentinel_t`` should be ``noexcept``","2025-06 (Sofia)","","","`#148226 <https://github.com/llvm/llvm-project/issues/148226>`__",""
 "`LWG4247 <https://wg21.link/LWG4247>`__","Header ``<stdbit.h>`` is not yet freestanding","2025-06 (Sofia)","","","`#148227 <https://github.com/llvm/llvm-project/issues/148227>`__",""
 "","","","","","",""

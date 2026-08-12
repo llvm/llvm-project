@@ -1,0 +1,217 @@
+#!/usr/bin/env python3
+# ===----------------------------------------------------------------------===##
+#
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+#
+# ===----------------------------------------------------------------------===##
+
+from typing import Dict, List, NamedTuple, Optional, Sequence
+import argparse
+import datetime
+import logging
+import os
+import pathlib
+import subprocess
+import sys
+import tabulate
+
+
+# Commits that cannot change the performance of the library are not worth
+# benchmarking. This is the set of paths we consider for libc++ changes.
+BENCHMARK_PATHS = ['libcxx/include', 'libcxx/src']
+
+GRANULARITIES = ('day', 'week', 'month')
+
+
+class Commit(NamedTuple):
+    """
+    A commit, and the UTC time at which it landed in seconds since the epoch.
+
+    The order of the fields is deliberate: comparing two commits orders them
+    chronologically and falls back to the SHA when the timestamps are equal,
+    which makes this tool deterministic.
+    """
+    timestamp: int
+    sha: str
+
+
+class HelpFormatter(argparse.ArgumentDefaultsHelpFormatter,
+                    argparse.RawDescriptionHelpFormatter):
+    """Show defaults, but keep the paragraphs of the description intact."""
+
+def directory_path(string: str) -> pathlib.Path:
+    if not os.path.isdir(string):
+        raise argparse.ArgumentTypeError(f'{string} is not a directory')
+    return pathlib.Path(string)
+
+def date(string: str) -> datetime.date:
+    try:
+        return datetime.date.fromisoformat(string)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f'{string} is not a valid ISO 8601 date (YYYY-MM-DD)')
+
+def git(git_repo: pathlib.Path, *args: str) -> str:
+    command = ['git', '-C', str(git_repo), *args]
+    logging.debug(f'$ {" ".join(command)}')
+    try:
+        return subprocess.run(command, check=True, text=True, stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE).stdout
+    except subprocess.CalledProcessError as error:
+        raise ValueError(f'{" ".join(command)} failed: {error.stderr.strip()}')
+
+
+def benchmarkable_commits(git_repo: pathlib.Path, rev: str,
+                          paths: Sequence[str]) -> List[Commit]:
+    """
+    Return the commits that are candidates for benchmarking, oldest first.
+    """
+    output = git(git_repo, 'log', '--reverse', '--first-parent', '--no-show-signature',
+                 '--format=%ct %H', rev, '--', *paths)
+    commits: List[Commit] = []
+    for line in output.splitlines():
+        fields = line.split()
+        if len(fields) != 2:
+            raise ValueError(f'unexpected output from git log: {line!r}')
+        commits.append(Commit(timestamp=int(fields[0]), sha=fields[1]))
+    return commits
+
+
+def clamp_date(day: datetime.date, granularity: str, *, direction: str) -> datetime.date:
+    """
+    Clamp a date to the nearest day/week/month, going in the specified direction.
+
+    For example, clamping a date that falls on a Wednesday using 'week' granularity
+    will produce the next date that is a Monday in forward direction, and the previous
+    date that was a Monday in backward direction.
+    """
+    if granularity == 'day':
+        at_boundary = lambda d: True
+    elif granularity == 'week':
+        at_boundary = lambda d: d.weekday() == 0 # Monday
+    elif granularity == 'month':
+        at_boundary = lambda d: d.day == 1 # first of the month
+    else:
+        raise ValueError(f'invalid granularity {granularity}, expected one of {GRANULARITIES}')
+
+    if direction == 'forward':
+        step = datetime.timedelta(days=1)
+    elif direction == 'backward':
+        step = datetime.timedelta(days=-1)
+    else:
+        raise ValueError(f'invalid direction {direction}, expected one of backward, forward')
+
+    while not at_boundary(day):
+        day += step
+    return day
+
+
+def select_anchor_commits(commits: Sequence[Commit],
+                          granularity: str,
+                          since: Optional[datetime.date] = None,
+                          until: Optional[datetime.date] = None) -> List[Commit]:
+    """
+    Select one commit per calendar bucket: the oldest one in each, oldest first.
+
+    `since` is inclusive and `until` exclusive, both interpreted as UTC dates.
+    """
+    buckets: Dict[datetime.date, Commit] = {}
+    for commit in commits:
+        day = datetime.datetime.fromtimestamp(commit.timestamp, datetime.timezone.utc).date()
+        if since is not None and day < since:
+            continue
+        if until is not None and day >= until:
+            continue
+        bucket = clamp_date(day, granularity, direction='backward')
+        existing = buckets.get(bucket)
+        if existing is None or commit < existing:
+            buckets[bucket] = commit
+    return [anchor for (_, anchor) in sorted(buckets.items())]
+
+
+def main(argv: List[str]) -> int:
+    parser = argparse.ArgumentParser(
+        prog='select-anchor-commits',
+        description='Select the libc++ commits that should have benchmark data, by picking one '
+                    'commit in each calendar bucket (one per week by default). The commits are '
+                    'printed to standard output from oldest to newest, one per line.\n'
+                    '\n'
+                    'The selection depends only on the calendar and on the history of the '
+                    'repository, so it is stable as new commits land: the same options always '
+                    'produce the same commits. This makes it possible to recompute the list in '
+                    'a reproducible fashion, which is useful when e.g. re-generating historical '
+                    'performance data after a configuration change.',
+        epilog='This script depends on the modules listed in `libcxx/utils/requirements.txt`.',
+        formatter_class=HelpFormatter)
+    parser.add_argument('--since', type=date, required=True,
+        help='Only select commits on or after this date (UTC). Selection starts at the first '
+             'bucket beginning on or after it, so a date partway through a bucket skips that '
+             'bucket rather than truncating it -- a truncated bucket would yield a different '
+             'commit than a run starting earlier would.')
+    parser.add_argument('--until', type=date, required=False,
+        help='Only select commits strictly before this date (UTC). Unlike --since this needs no '
+             'adjustment: a bucket cut short at the end still yields the same commit, since the '
+             'oldest one in it is the one selected. By default, there is no limit.')
+    parser.add_argument('--every', type=str, choices=GRANULARITIES, default='week',
+        help='The calendar granularity at which to select commits.')
+    parser.add_argument('--paths', type=str, nargs='+', default=BENCHMARK_PATHS,
+        help='Only consider commits touching these paths.')
+    parser.add_argument('--rev', type=str, default='HEAD',
+        help='The revision whose history is walked.')
+    parser.add_argument('--git-repo', type=directory_path, default=pathlib.Path(os.getcwd()),
+        help='Path to the Git repository to use.')
+    parser.add_argument('--output', type=pathlib.Path, default=None,
+        help='Where to write the selected commits. Defaults to standard output.')
+    parser.add_argument('-q', '--quiet', action='store_true',
+        help='Do not print a human-readable summary to standard error.')
+    parser.add_argument('-v', '--verbose', action='count', default=0,
+        help='Verbosity level: passing the option multiple times increases the level.')
+    args = parser.parse_args(argv)
+
+    # --quiet raises the logging threshold rather than silencing everything, since we
+    # still want to see warnings.
+    logging.basicConfig(format='%(levelname)s: %(message)s',
+                        level=logging.DEBUG if args.verbose else
+                              logging.WARNING if args.quiet else logging.INFO)
+
+    since = clamp_date(args.since, args.every, direction='forward')
+    if args.until is not None and args.until <= since:
+        raise ValueError(f'--until {args.until} leaves no whole {args.every} between it and '
+                         f'--since {args.since}: the first one starts on {since}.')
+
+    git(args.git_repo, 'rev-parse', '--verify', f'{args.rev}^{{commit}}')
+    commits = benchmarkable_commits(args.git_repo, args.rev, args.paths)
+    anchors = select_anchor_commits(commits, args.every, since=since,
+                                    until=args.until)
+
+    if not args.quiet:
+        print(f'Anchor commits from {" ".join(str(p) for p in args.paths)} in {args.git_repo} '
+              f'at {args.rev}', file=sys.stderr)
+        print(f'Range: {since} to {args.until if args.until else "now"}, '
+              f'one per {args.every}', file=sys.stderr)
+        print(f'Candidate commits: {len(commits)}   Selected: {len(anchors)}', file=sys.stderr)
+        rows = []
+        for commit in anchors:
+            when = datetime.datetime.fromtimestamp(commit.timestamp, datetime.timezone.utc)
+            bucket = clamp_date(when.date(), args.every, direction='backward')
+            label = f'{bucket} ({bucket:%G-W%V})' if args.every == 'week' else str(bucket)
+            rows.append((label, commit.sha, when.strftime('%Y-%m-%d %H:%M')))
+        if rows:
+            print(tabulate.tabulate(rows, headers=['BUCKET', 'COMMIT', 'DATE (UTC)'],
+                                    tablefmt='plain', disable_numparse=True), file=sys.stderr)
+
+    # Write the output all at once at the end, to avoid partial output in case of failure.
+    contents = ''.join(f'{commit.sha}\n' for commit in anchors)
+    if args.output is None:
+        sys.stdout.write(contents)
+    else:
+        args.output.write_text(contents)
+    return 0
+
+
+if __name__ == '__main__':
+    try:
+        sys.exit(main(sys.argv[1:]))
+    except (ValueError, OSError) as error:
+        sys.exit(f'error: {error}')

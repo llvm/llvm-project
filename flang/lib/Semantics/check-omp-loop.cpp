@@ -186,7 +186,8 @@ void OmpStructureChecker::CheckSIMDNest(const parser::OpenMPConstruct &c) {
           // Allow `!$OMP ORDERED SIMD`
           [&](const parser::OmpBlockConstruct &c) {
             const parser::OmpDirectiveSpecification &beginSpec{c.BeginDir()};
-            if (beginSpec.DirId() == llvm::omp::Directive::OMPD_ordered) {
+            if (beginSpec.DirId() ==
+                llvm::omp::Directive::OMPD_ordered_blockassoc) {
               if (parser::omp::FindClause(
                       beginSpec, llvm::omp::Clause::OMPC_simd)) {
                 eligibleSIMD = true;
@@ -197,7 +198,7 @@ void OmpStructureChecker::CheckSIMDNest(const parser::OpenMPConstruct &c) {
             if (auto *ssc{std::get_if<parser::OpenMPSimpleStandaloneConstruct>(
                     &c.u)}) {
               llvm::omp::Directive dirId{ssc->v.DirId()};
-              if (dirId == llvm::omp::Directive::OMPD_ordered) {
+              if (dirId == llvm::omp::Directive::OMPD_ordered_standalone) {
                 if (parser::omp::FindClause(
                         ssc->v, llvm::omp::Clause::OMPC_simd)) {
                   eligibleSIMD = true;
@@ -443,6 +444,41 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
       beginName.v == llvm::omp::Directive::OMPD_distribute_simd) {
     CheckDistLinear(x);
   }
+  if (beginName.v == llvm::omp::Directive::OMPD_unroll) {
+    CheckUnrollFullTripCount(x);
+  }
+}
+
+// A loop that is fully unrolled must have a trip count that is known at compile
+// time, so its bounds and step have to be constant expressions.
+void OmpStructureChecker::CheckUnrollFullTripCount(
+    const parser::OpenMPLoopConstruct &x) {
+  const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
+  const parser::OmpClause *full{
+      parser::omp::FindClause(beginSpec, llvm::omp::Clause::OMPC_full)};
+  if (!full) {
+    return;
+  }
+
+  const parser::DoConstruct *doConstruct{x.GetNestedLoop()};
+  if (!doConstruct) {
+    return;
+  }
+  const auto &control{doConstruct->GetLoopControl()};
+  if (!control) {
+    return;
+  }
+  const auto *bounds{std::get_if<parser::LoopControl::Bounds>(&control->u)};
+  if (!bounds) {
+    return;
+  }
+  bool isConstant{GetIntValue(bounds->Lower()).has_value() &&
+      GetIntValue(bounds->Upper()).has_value() &&
+      (!bounds->Step() || GetIntValue(*bounds->Step()).has_value())};
+  if (!isConstant) {
+    context_.Say(full->source,
+        "The loop associated with an UNROLL directive with a FULL clause must have a constant trip count"_err_en_US);
+  }
 }
 
 const parser::Name OmpStructureChecker::GetLoopIndex(
@@ -472,8 +508,14 @@ void OmpStructureChecker::CheckIterationVariables(
   for (const parser::OmpClause &clause : spec.Clauses().v) {
     llvm::omp::Clause clauseId{clause.Id()};
     if (llvm::omp::isDataSharingAttributeClause(clauseId, version)) {
-      for (const parser::OmpObject &object :
-          parser::omp::GetOmpObjectList(clause)->v) {
+      // Not every data-sharing attribute clause takes an object list, e.g.
+      // USES_ALLOCATORS takes allocator specifications instead.
+      const parser::OmpObjectList *objects{
+          parser::omp::GetOmpObjectList(clause)};
+      if (!objects) {
+        continue;
+      }
+      for (const parser::OmpObject &object : objects->v) {
         if (const Symbol *symbol{GetObjectSymbol(object, /*ultimate=*/true)}) {
           auto maybeSource{parser::omp::GetObjectSource(object)};
           assert(maybeSource && "Expecting object source");

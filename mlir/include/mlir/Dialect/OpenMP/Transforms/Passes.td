@@ -43,7 +43,6 @@ def MarkDeclareTargetPass : Pass<"omp-mark-declare-target", "ModuleOp"> {
     called from within an explicitly marked declare target function or a target
     region (omp.target).
     }];
-  let dependentDialects = ["mlir::omp::OpenMPDialect"];
 }
 
 def PrepareForOMPOffloadPrivatizationPass : Pass<"omp-offload-privatization-prepare", "ModuleOp"> {
