@@ -1592,15 +1592,6 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         retType, CGM.getHLSLRuntime().getSignIntrinsic(),
         ArrayRef<Value *>{Op0}, nullptr, "hlsl.sign");
   }
-  case Builtin::BI__builtin_hlsl_elementwise_radians: {
-    Value *Op0 = EmitScalarExpr(E->getArg(0));
-    assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
-           "radians operand must have a float representation");
-    return Builder.CreateIntrinsic(
-        /*ReturnType=*/Op0->getType(),
-        CGM.getHLSLRuntime().getRadiansIntrinsic(), ArrayRef<Value *>{Op0},
-        nullptr, "hlsl.radians");
-  }
   case Builtin::BI__builtin_hlsl_buffer_update_counter: {
     Value *ResHandle = EmitScalarExpr(E->getArg(0));
     Value *Offset = EmitScalarExpr(E->getArg(1));

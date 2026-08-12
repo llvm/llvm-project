@@ -1354,11 +1354,12 @@ def hlsl_quad_read_across_diagonal : HLSLOneArgBuiltin<"QuadReadAcrossDiagonal",
 }
 
 // Converts the specified value from degrees to radians.
-def hlsl_radians : HLSLOneArgBuiltin<"radians", "__builtin_hlsl_elementwise_radians"> {
+def hlsl_radians : HLSLOneArgDetail<"radians", "radians_impl"> {
   let Doc = [{
 \fn T radians(T Val)
 \brief Converts the specified value from degrees to radians.
 }];
+  let ParamNames = ["Val"];
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingMatDims = [];
 }
