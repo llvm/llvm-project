@@ -2555,56 +2555,52 @@ SDValue DAGTypeLegalizer::ExpandFloatOp_STORE(SDNode *N, unsigned OpNo) {
                            ST->getMemoryVT(), ST->getMemOperand());
 }
 
-SDValue DAGTypeLegalizer::ExpandFloatOp_LROUND(SDNode *N) {
+SDValue DAGTypeLegalizer::ExpandFloatOp_XRINT_XROUND(SDNode *N,
+                                                     RTLIB::Libcall LC) {
   EVT RVT = N->getValueType(0);
-  EVT RetVT = N->getOperand(0).getValueType();
+  RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
+  if (LCImpl == RTLIB::Unsupported) {
+    DAG.getContext()->emitError(Twine("no libcall available for ") +
+                                N->getOperationName(&DAG));
+    return DAG.getPOISON(RVT);
+  }
+
   TargetLowering::MakeLibCallOptions CallOptions;
-  return TLI.makeLibCall(DAG, GetFPLibCall(RetVT,
-                                           RTLIB::LROUND_F32,
-                                           RTLIB::LROUND_F64,
-                                           RTLIB::LROUND_F80,
-                                           RTLIB::LROUND_F128,
-                                           RTLIB::LROUND_PPCF128),
-                         RVT, N->getOperand(0), CallOptions, SDLoc(N)).first;
+  return TLI
+      .makeLibCall(DAG, LCImpl, RVT, N->getOperand(0), CallOptions, SDLoc(N))
+      .first;
+}
+
+SDValue DAGTypeLegalizer::ExpandFloatOp_LROUND(SDNode *N) {
+  EVT RetVT = N->getOperand(0).getValueType();
+  return ExpandFloatOp_XRINT_XROUND(
+      N, GetFPLibCall(RetVT, RTLIB::LROUND_F32, RTLIB::LROUND_F64,
+                      RTLIB::LROUND_F80, RTLIB::LROUND_F128,
+                      RTLIB::LROUND_PPCF128));
 }
 
 SDValue DAGTypeLegalizer::ExpandFloatOp_LLROUND(SDNode *N) {
-  EVT RVT = N->getValueType(0);
   EVT RetVT = N->getOperand(0).getValueType();
-  TargetLowering::MakeLibCallOptions CallOptions;
-  return TLI.makeLibCall(DAG, GetFPLibCall(RetVT,
-                                           RTLIB::LLROUND_F32,
-                                           RTLIB::LLROUND_F64,
-                                           RTLIB::LLROUND_F80,
-                                           RTLIB::LLROUND_F128,
-                                           RTLIB::LLROUND_PPCF128),
-                         RVT, N->getOperand(0), CallOptions, SDLoc(N)).first;
+  return ExpandFloatOp_XRINT_XROUND(
+      N, GetFPLibCall(RetVT, RTLIB::LLROUND_F32, RTLIB::LLROUND_F64,
+                      RTLIB::LLROUND_F80, RTLIB::LLROUND_F128,
+                      RTLIB::LLROUND_PPCF128));
 }
 
 SDValue DAGTypeLegalizer::ExpandFloatOp_LRINT(SDNode *N) {
-  EVT RVT = N->getValueType(0);
   EVT RetVT = N->getOperand(0).getValueType();
-  TargetLowering::MakeLibCallOptions CallOptions;
-  return TLI.makeLibCall(DAG, GetFPLibCall(RetVT,
-                                           RTLIB::LRINT_F32,
-                                           RTLIB::LRINT_F64,
-                                           RTLIB::LRINT_F80,
-                                           RTLIB::LRINT_F128,
-                                           RTLIB::LRINT_PPCF128),
-                         RVT, N->getOperand(0), CallOptions, SDLoc(N)).first;
+  return ExpandFloatOp_XRINT_XROUND(
+      N,
+      GetFPLibCall(RetVT, RTLIB::LRINT_F32, RTLIB::LRINT_F64, RTLIB::LRINT_F80,
+                   RTLIB::LRINT_F128, RTLIB::LRINT_PPCF128));
 }
 
 SDValue DAGTypeLegalizer::ExpandFloatOp_LLRINT(SDNode *N) {
-  EVT RVT = N->getValueType(0);
   EVT RetVT = N->getOperand(0).getValueType();
-  TargetLowering::MakeLibCallOptions CallOptions;
-  return TLI.makeLibCall(DAG, GetFPLibCall(RetVT,
-                                           RTLIB::LLRINT_F32,
-                                           RTLIB::LLRINT_F64,
-                                           RTLIB::LLRINT_F80,
-                                           RTLIB::LLRINT_F128,
-                                           RTLIB::LLRINT_PPCF128),
-                         RVT, N->getOperand(0), CallOptions, SDLoc(N)).first;
+  return ExpandFloatOp_XRINT_XROUND(
+      N, GetFPLibCall(RetVT, RTLIB::LLRINT_F32, RTLIB::LLRINT_F64,
+                      RTLIB::LLRINT_F80, RTLIB::LLRINT_F128,
+                      RTLIB::LLRINT_PPCF128));
 }
 
 //===----------------------------------------------------------------------===//
