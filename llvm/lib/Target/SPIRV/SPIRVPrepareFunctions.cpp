@@ -695,20 +695,18 @@ bool SPIRVPrepareFunctionsImpl::substituteAbortKHRCalls(Function *F) {
   if (!isAbortKHRBuiltin(*F))
     return false;
 
-  SmallVector<CallInst *> Calls;
-  for (User *U : F->users()) {
+  bool Changed = false;
+  for (User *U : make_early_inc_range(F->users())) {
     auto *CI = dyn_cast<CallInst>(U);
     if (!CI || CI->getCalledFunction() != F)
       continue;
     if (CI->arg_size() != 1)
       continue;
-    Calls.push_back(CI);
+    rewriteAbortKHRCall(CI);
+    Changed = true;
   }
 
-  for (CallInst *CI : Calls)
-    rewriteAbortKHRCall(CI);
-
-  return !Calls.empty();
+  return Changed;
 }
 
 // When the SPV_KHR_abort extension is enabled, `llvm.trap` and
@@ -734,16 +732,11 @@ bool SPIRVPrepareFunctionsImpl::terminateBlocksAfterTrap(Module &M,
   if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_abort))
     return false;
 
-  SmallVector<CallInst *> Calls;
-  for (User *U : F->users()) {
+  bool Changed = false;
+  for (User *U : make_early_inc_range(F->users())) {
     auto *CI = dyn_cast<CallInst>(U);
     if (!CI || CI->getCalledFunction() != F)
       continue;
-    Calls.push_back(CI);
-  }
-
-  bool Changed = false;
-  for (CallInst *CI : Calls) {
     Instruction *Next = CI->getNextNode();
     if (!Next || isa<UnreachableInst>(Next))
       continue;
@@ -883,6 +876,7 @@ bool SPIRVPrepareFunctionsImpl::runOnModule(Module &M) {
     }
   }
 
+  std::vector<Function *> FuncsWorklist;
   for (Function &F : M) {
     // MachineFunctionPass skips available_externally; strip + tag so AuxData
     // can re-emit the original linkage as NonSemantic.AuxData::Linkage.
@@ -895,11 +889,8 @@ bool SPIRVPrepareFunctionsImpl::runOnModule(Module &M) {
     Changed |= substituteIntrinsicCalls(&F);
     Changed |= sortBlocks(F);
     Changed |= removeAggregateTypesFromCalls(&F);
-  }
-
-  std::vector<Function *> FuncsWorklist;
-  for (auto &F : M)
     FuncsWorklist.push_back(&F);
+  }
 
   for (auto *F : FuncsWorklist) {
     Function *NewF = removeAggregateTypesFromSignature(F);
