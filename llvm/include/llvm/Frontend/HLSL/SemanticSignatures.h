@@ -102,6 +102,8 @@ struct SemanticSignatureElement {
   LLVM_ABI MDNode *toMetadata(LLVMContext &Ctx) const;
 };
 
+LLVM_ABI dxbc::PSV::SemanticKind getSemanticKind(StringRef SemanticName);
+
 } // namespace hlsl
 } // namespace llvm
 

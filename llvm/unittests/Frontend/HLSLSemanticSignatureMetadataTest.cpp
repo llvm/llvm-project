@@ -70,6 +70,24 @@ protected:
 // Success cases
 //===----------------------------------------------------------------------===//
 
+TEST_F(HLSLSemanticSignatureMetadataTest, SemanticKindLookup) {
+  // Names without the "SV_" prefix denote user-defined semantics
+  EXPECT_EQ(getSemanticKind("TEXCOORD"), dxbc::PSV::SemanticKind::Arbitrary);
+  EXPECT_EQ(getSemanticKind(""), dxbc::PSV::SemanticKind::Arbitrary);
+  EXPECT_EQ(getSemanticKind("Target"), dxbc::PSV::SemanticKind::Arbitrary);
+
+  // System value names are matched case-insensitively, prefix included
+  EXPECT_EQ(getSemanticKind("SV_Target"), dxbc::PSV::SemanticKind::Target);
+  EXPECT_EQ(getSemanticKind("sv_target"), dxbc::PSV::SemanticKind::Target);
+  EXPECT_EQ(getSemanticKind("Sv_TaRgEt"), dxbc::PSV::SemanticKind::Target);
+  EXPECT_EQ(getSemanticKind("SV_Position"), dxbc::PSV::SemanticKind::Position);
+
+  // An unrecognized system value name is invalid rather than arbitrary
+  EXPECT_EQ(getSemanticKind("SV_NotASemantic"),
+            dxbc::PSV::SemanticKind::Invalid);
+  EXPECT_EQ(getSemanticKind("SV_"), dxbc::PSV::SemanticKind::Invalid);
+}
+
 TEST_F(HLSLSemanticSignatureMetadataTest, StructHelpers) {
   SemanticSignatureElement Elem(/*SigId=*/0, "TEXCOORD", dxil::ElementType::F32,
                                 dxbc::PSV::SemanticKind::Arbitrary,

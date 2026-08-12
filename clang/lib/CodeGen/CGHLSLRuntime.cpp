@@ -36,7 +36,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/DXILResource.h"
+#include "llvm/Frontend/HLSL/HLSLResource.h"
 #include "llvm/Frontend/HLSL/RootSignatureMetadata.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -1284,19 +1284,7 @@ static llvm::dxil::ElementType getSignatureComponentType(CodeGenModule &CGM,
 
   llvm::Type *IRTy = CGM.getTypes().ConvertTypeForMem(Ty);
   bool IsSigned = Ty->isSignedIntegerOrEnumerationType();
-  return llvm::dxil::toDXILElementType(IRTy, IsSigned);
-}
-
-static llvm::dxbc::PSV::SemanticKind
-getSignatureSemanticKind(StringRef SemanticName) {
-  if (!SemanticName.consume_front_insensitive("SV_"))
-    return llvm::dxbc::PSV::SemanticKind::Arbitrary;
-
-  for (const auto &Kind : llvm::dxbc::PSV::getSemanticKinds())
-    if (SemanticName.equals_insensitive(Kind.name()))
-      return Kind.value();
-
-  return llvm::dxbc::PSV::SemanticKind::Invalid;
+  return llvm::hlsl::getDXILElementType(IRTy, IsSigned);
 }
 
 static llvm::hlsl::SemanticSignatureElement createSemanticSignatureElement(
@@ -1316,7 +1304,7 @@ static llvm::hlsl::SemanticSignatureElement createSemanticSignatureElement(
   // FIXME #189762: Element.InterpMode is to be set
   return llvm::hlsl::SemanticSignatureElement(
       SigId, Name, getSignatureComponentType(CGM, Shape.RowType),
-      getSignatureSemanticKind(Name), SemanticIndices,
+      llvm::hlsl::getSemanticKind(Name), SemanticIndices,
       static_cast<uint8_t>(Shape.Cols));
 }
 
