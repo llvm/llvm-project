@@ -122,6 +122,11 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` check by treating
   `std::array` the same as built-in arrays when `IgnoreArrays` option is enabled.
 
+- Improved {doc}`misc-const-correctness
+  <clang-tidy/checks/misc/const-correctness>` check by fixing false positives
+  when the pointee is written through a pointer that is incremented,
+  decremented or adjusted with `+=` or `-=`, such as `*p++ = 0`.
+
 - Improved {doc}`misc-redundant-expression
   <clang-tidy/checks/misc/redundant-expression>` by fixing false positives in
   nested expressions involving different macros or a mix of macro and
