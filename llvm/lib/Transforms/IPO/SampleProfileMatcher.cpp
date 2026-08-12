@@ -523,7 +523,14 @@ void SampleProfileMatcher::recordCallsiteMatchStates(
     if (It == ProfileAnchors.end())
       continue;
     const auto &ProfCalleeId = It->second;
-    if (IRCalleeId == ProfCalleeId) {
+    // An IR indirect callsite is considered matched with whatever callee the
+    // profile records at the same location. When only one of the call targets
+    // is sampled, the profile records the indirect call like a direct call, so
+    // the differing callee names don't imply a stale location. This is not a
+    // perf issue either: the samples are attributed to the promoted callee
+    // once the callsite is transformed by ICP.
+    if (IRCalleeId == ProfCalleeId ||
+        IRCalleeId == FunctionId(UnknownIndirectCallee)) {
       auto It = CallsiteMatchStates.find(ProfileLoc);
       if (It == CallsiteMatchStates.end())
         CallsiteMatchStates.try_emplace(ProfileLoc, MatchState::InitialMatch);
