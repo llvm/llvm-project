@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fcxx-exceptions -fexceptions -fclangir -emit-cir %s -o %t.cir
+// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
+// supports the builtin i32 in the Itanium EH personality signature.
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fcxx-exceptions -fexceptions -fclangir -fno-clangir-call-conv-lowering -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fcxx-exceptions -fexceptions -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fcxx-exceptions -fexceptions -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fcxx-exceptions -fexceptions -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
@@ -54,7 +56,7 @@ void try_catch_with_empty_catch_all() {
 // CIR:   }
 // CIR: }
 
-// LLVM:   %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:   %[[A_ADDR:.*]] = alloca i32, align 4
 // LLVM:   store i32 1, ptr %[[A_ADDR]], align 4
 // LLVM:   br label %[[BB_2:.*]]
 // LLVM: [[BB_2]]:
@@ -96,7 +98,7 @@ void try_catch_with_empty_catch_all_2() {
 // CIR:   }
 // CIR: }
 
-// LLVM:   %[[A_ADDR]] = alloca i32, i64 1, align 4
+// LLVM:   %[[A_ADDR]] = alloca i32, align 4
 // LLVM:   store i32 1, ptr %[[A_ADDR]], align 4
 // LLVM:   br label %[[BB_2:.*]]
 // LLVM: [[BB_2]]:
@@ -141,9 +143,9 @@ void try_catch_with_alloca() {
 // CIR:   }
 // CIR: }
 
-// LLVM:  %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM:  %[[B_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM:  %[[C_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:  %[[A_ADDR:.*]] = alloca i32, align 4
+// LLVM:  %[[B_ADDR:.*]] = alloca i32, align 4
+// LLVM:  %[[C_ADDR:.*]] = alloca i32, align 4
 // LLVM:  br label %[[LABEL_1:.*]]
 // LLVM: [[LABEL_1]]:
 // LLVM:  br label %[[LABEL_2:.*]]
@@ -1374,9 +1376,9 @@ int init_catch_param_with_type_int() {
 // CIR:   cir.return %[[TMP_RET]] : !s32i
 
 // LLVM: define {{.*}} i32 @_Z30init_catch_param_with_type_intv() {{.*}} personality ptr @__gxx_personality_v0
-// LLVM:   %[[X_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM:   %[[RET_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM:   %[[RV_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:   %[[X_ADDR:.*]] = alloca i32, align 4
+// LLVM:   %[[RET_ADDR:.*]] = alloca i32, align 4
+// LLVM:   %[[RV_ADDR:.*]] = alloca i32, align 4
 // LLVM:   br label %[[TRY_SCOPE:.*]]
 // LLVM: [[TRY_SCOPE]]:
 // LLVM:   br label %[[TRY_BEGIN:.*]]
@@ -1516,9 +1518,9 @@ int init_catch_param_with_type_int_ptr() {
 // CIR:   cir.return %[[TMP_RET]] : !s32i
 
 // LLVM: define {{.*}} i32 @_Z34init_catch_param_with_type_int_ptrv() {{.*}} personality ptr @__gxx_personality_v0
-// LLVM:   %[[X_ADDR:.*]] = alloca ptr, i64 1, align 8
-// LLVM:   %[[RET_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM:   %[[RV_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:   %[[X_ADDR:.*]] = alloca ptr, align 8
+// LLVM:   %[[RET_ADDR:.*]] = alloca i32, align 4
+// LLVM:   %[[RV_ADDR:.*]] = alloca i32, align 4
 // LLVM:   br label %[[TRY_SCOPE:.*]]
 // LLVM: [[TRY_SCOPE]]:
 // LLVM:   br label %[[TRY_BEGIN:.*]]
@@ -1659,9 +1661,9 @@ int init_catch_param_with_ref_to_ptr_to_non_record() {
 // CIR:   cir.return %[[TMP_RET]] : !s32i
 
 // LLVM: define {{.*}} i32 @_Z46init_catch_param_with_ref_to_ptr_to_non_recordv() {{.*}} personality ptr @__gxx_personality_v0
-// LLVM:   %[[P_ADDR:.*]] = alloca ptr, i64 1, align 8
-// LLVM:   %[[RET_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM:   %[[RV_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:   %[[P_ADDR:.*]] = alloca ptr, align 8
+// LLVM:   %[[RET_ADDR:.*]] = alloca i32, align 4
+// LLVM:   %[[RV_ADDR:.*]] = alloca i32, align 4
 // LLVM:   br label %[[TRY_SCOPE:.*]]
 // LLVM: [[TRY_SCOPE]]:
 // LLVM:   br label %[[TRY_BEGIN:.*]]

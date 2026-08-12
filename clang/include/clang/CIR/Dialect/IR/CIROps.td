@@ -3302,10 +3302,10 @@ def CIR_GlobalLinkageKind : CIR_I32EnumAttr<
 // is upstreamed.
 
 def CIR_TLSModel : CIR_I32EnumAttr<"TLS_Model", "TLS model", [
-  I32EnumAttrCase<"GeneralDynamic", 0, "tls_dyn">,
-  I32EnumAttrCase<"LocalDynamic", 1, "tls_local_dyn">,
-  I32EnumAttrCase<"InitialExec", 2, "tls_init_exec">,
-  I32EnumAttrCase<"LocalExec", 3, "tls_local_exec">
+  I32EnumAttrCase<"GeneralDynamic", 1, "tls_dyn">,
+  I32EnumAttrCase<"LocalDynamic", 2, "tls_local_dyn">,
+  I32EnumAttrCase<"InitialExec", 3, "tls_init_exec">,
+  I32EnumAttrCase<"LocalExec", 4, "tls_local_exec">
 ]>;
 
 def CIR_GlobalOp : CIR_Op<"global", [
@@ -3328,6 +3328,11 @@ def CIR_GlobalOp : CIR_Op<"global", [
     function-local static variable that requires guarded initialization
     (e.g., C++ static local variables with non-constant initializers).
     It contains the mangled name of the guard variable.
+
+    The `strictfp` attribute indicates that the dynamic initialization emitted
+    into the `ctorRegion`/`dtorRegion` runs under a constrained floating-point
+    environment. LoweringPrepare forwards it to the `strictfp` attribute of the
+    generated `__cxx_global_var_init` function.
   }];
 
   // Note that both sym_name and sym_visibility are tied to Symbol trait.
@@ -3353,7 +3358,8 @@ def CIR_GlobalOp : CIR_Op<"global", [
                        OptionalAttr<ASTVarDeclInterface>:$ast,
                        OptionalAttr<StrAttr>:$section,
                        OptionalAttr<CIR_AnnotationArrayAttr>:$annotations,
-                       OptionalAttr<FlatSymbolRefAttr>:$aliasee
+                       OptionalAttr<FlatSymbolRefAttr>:$aliasee,
+                       UnitAttr:$strictfp
                        );
 
   let regions = (region AnyRegion:$ctorRegion,
@@ -4215,7 +4221,7 @@ def CIR_FuncOp : CIR_Op<"func", [
     TypeAttrOf<CIR_FuncType>:$function_type,
     UnitAttr:$builtin,
     UnitAttr:$coroutine,
-    OptionalAttr<CIR_InlineKind>:$inline_kind,
+    OptionalAttr<CIR_InlineKindAttr>:$inline_kind,
     UnitAttr:$lambda,
     UnitAttr:$no_proto,
     UnitAttr:$dso_local,
@@ -4496,9 +4502,6 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
                        mlir::cast<mlir::SymbolRefAttr>(callee));
     }
 
-    bool isIndirect() { return !getCallee(); }
-    mlir::Value getIndirectCall();
-
     /// Returns the `cir.func` being called or null if the call is indirect or
     /// cannot be resolved.
     cir::FuncOp resolveCalleeInTable(mlir::SymbolTableCollection &symbolTable);
@@ -4515,6 +4518,8 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
   }];
 
   let extraClassDefinition = [{
+    bool $cppClass::isIndirect() { return !getCallee(); }
+
     cir::FuncOp $cppClass::resolveCalleeInTable(
         mlir::SymbolTableCollection &symbolTable) {
       mlir::FlatSymbolRefAttr callee = getCalleeAttr();
@@ -4535,6 +4540,7 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
   dag commonArgs = (ins OptionalAttr<FlatSymbolRefAttr>:$callee,
       Variadic<CIR_AnyType>:$args,
       UnitAttr:$nothrow,
+      OptionalAttr<CIR_InlineKindAttr>:$inline_kind,
       UnitAttr:$musttail,
       DefaultValuedAttr<CIR_SideEffect, "SideEffect::All">:$side_effect,
       OptionalAttr<DictArrayAttr>:$arg_attrs,
@@ -4579,9 +4585,6 @@ def CIR_CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
         $_state.addTypes(resType);
     }]>
   ];
-
-  let customLLVMLoweringConstructorDecl =
-    LoweringBuilders<(ins "mlir::SymbolTableCollection &":$symbolTables)>;
 }
 
 def CIR_TryCallOp : CIR_CallOpBase<"try_call",[
@@ -4671,9 +4674,6 @@ def CIR_TryCallOp : CIR_CallOpBase<"try_call",[
       $_state.addSuccessors(unwindDest);
     }]>
   ];
-
-  let customLLVMLoweringConstructorDecl =
-    LoweringBuilders<(ins "mlir::SymbolTableCollection &":$symbolTables)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -4832,6 +4832,120 @@ def CIR_CoReturnOp : CIR_Op<"co_return", [
   let hasLLVMLowering = false;
 }
 
+//===----------------------------------------------------------------------===//
+// Coroutine intrinsics
+//===----------------------------------------------------------------------===//
+
+class CIR_CoroIntrinsicOp<string mnem, dag ins, dag outs,
+                          list<Trait> traits = []>
+                          : CIR_Op<"coro.intrinsic." # mnem, traits> {
+  let hasLLVMLowering = 1;
+  let arguments = ins;
+  let results = outs;
+
+  let assemblyFormat = [{
+    `(` operands `)` `:` functional-type(operands, results) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Coroutine intrinsic IdOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroIdOp : CIR_CoroIntrinsicOp<"id",
+    (ins CIR_AnyIntType:$align, CIR_VoidPtrType:$promise,
+         CIR_VoidPtrType:$coroaddr, CIR_VoidPtrType:$fnaddrs),
+    (outs Token:$result), [TokenProducerTrait]> {
+  let summary = "Represents llvm.coro.id";
+  let description = [{
+    Marks the beginning of a coroutine's lifetime and identifies it to the
+    rest of the coroutine intrinsics. Takes the required alignment of the
+    coroutine frame, a pointer to the coroutine promise (or null if none),
+    the address of the coroutine function itself, and an opaque pointer used
+    by the frontend to convey additional information to the coroutine
+    lowering passes (or null).
+
+    The result is a token that must be passed to every other
+    `coro.intrinsic.*` operation associated with this coroutine
+    (`coro.alloc`, `coro.begin`, `coro.free`, etc.), tying them all to the
+    same coroutine instance.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Coroutine intrinsic AllocOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroAllocOp : CIR_CoroIntrinsicOp<"alloc", (ins Token:$id),
+    (outs CIR_AnyBoolType:$result), [TokenConsumerTrait]> {
+  let summary = "Represents llvm.coro.alloc";
+  let description = [{
+    Queries whether the coroutine identified by `id` needs a dynamically
+    allocated frame. Returns `true` if the coroutine frame must be allocated,
+    or `false` otherwise.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Coroutine intrinsic BeginOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroBeginOp : CIR_CoroIntrinsicOp<"begin",
+    (ins Token:$id, CIR_VoidPtrType:$coroframeAddr),
+    (outs CIR_VoidPtrType:$result), [TokenConsumerTrait]> {
+  let summary = "Represents llvm.coro.begin";
+  let description = [{
+    Initializes the coroutine frame using `coroframeAddr`. `id` is the token
+    from `coro.intrinsic.id`, and `coroframeAddr` points to the memory used
+    for the coroutine frame. Returns the coroutine handle.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Coroutine intrinsic EndOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroEndOp : CIR_CoroIntrinsicOp<"end",
+    (ins CIR_VoidPtrType:$handle, CIR_AnyBoolType:$unwind, Token:$resultToken),
+    (outs CIR_AnyVoidType:$result), [TokenConsumerTrait]> {
+  let summary = "Represents llvm.coro.end";
+  let description = [{
+    Marks a point at which a coroutine must be suspended or destroyed for the
+    last time, e.g. right before the coroutine returns control to its caller
+    for the final time, or along an exceptional unwind path. `handle` is the
+    coroutine handle produced by `coro.intrinsic.begin`, and `unwind`
+    indicates whether this occurrence of `coro.intrinsic.end` lies on the
+    unwind path (`true`) or the normal control-flow path (`false`).
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Coroutine intrinsic FreeOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroFreeOp : CIR_CoroIntrinsicOp<"free",
+    (ins Token:$id, CIR_VoidPtrType:$coroframe),
+    (outs CIR_VoidPtrType:$result), [TokenConsumerTrait]> {
+  let summary = "Represents llvm.coro.free";
+  let description = [{
+    Given the coroutine identified by `id` and its frame pointer `coroframe`
+    (the handle from `coro.intrinsic.begin`), returns the pointer that must
+    be passed to the deallocation function to free the coroutine frame, or a
+    null pointer if the coroutine frame was not dynamically allocated.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Coroutine intrinsic SizeOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroSizeOp : CIR_CoroIntrinsicOp<"size", (ins),
+    (outs CIR_UInt64:$result)> {
+  let summary = "Represents llvm.coro.size";
+  let description = [{
+    Returns the size, in bytes, of the coroutine frame.
+  }];
+}
 
 //===----------------------------------------------------------------------===//
 // CopyOp
@@ -7619,6 +7733,7 @@ class CIR_TernaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
   ];
 
   let llvmOp = llvmOpName;
+  let constrainedLLVMIntrinsic = mnemonic;
 }
 
 def CIR_FMAOp : CIR_TernaryFPToFPBuiltinOp<"fma", "FMAOp"> {
@@ -7639,6 +7754,35 @@ def CIR_FMAOp : CIR_TernaryFPToFPBuiltinOp<"fma", "FMAOp"> {
 
       // vector
       %v = cir.fma %a, %b, %c : !cir.vector<4 x !cir.float>
+  }];
+}
+
+def CIR_FMulAddOp : CIR_TernaryFPToFPBuiltinOp<"fmuladd", "FMulAddOp"> {
+  let summary = "Contractable fused multiply-add operation";
+
+  let description = [{
+    Computes `(a * b) + c`, allowing the multiply and add to be fused (or not)
+    into a single rounding step at the target's discretion. It lowers to the
+    `llvm.fmuladd` intrinsic (or its constrained variant when an `fenv`
+    attribute is present).
+
+    Unlike `cir.fma`, which maps to `llvm.fma` and guarantees a single
+    rounding, `cir.fmuladd` expresses the FP-contraction relaxation used for
+    `a * b + c` under `-ffp-contract=on` / `fast`, where the backend is free to
+    emit either a fused or an unfused sequence.
+
+    The inputs must be either:
+      • floating-point scalar types, or
+      • vectors whose element type is floating-point.
+
+    The result type must match the input type exactly.
+
+    Examples:
+      // scalar
+      %r = cir.fmuladd %a, %b, %c : !cir.float
+
+      // vector
+      %v = cir.fmuladd %a, %b, %c : !cir.vector<4 x !cir.float>
   }];
 }
 
@@ -8618,6 +8762,23 @@ def CIR_ConstructCatchParamOp : CIR_Op<"construct_catch_param", [
   }];
 
   let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
+// TokenNoneOp
+//===----------------------------------------------------------------------===//
+
+def CIR_TokenNoneOp : CIR_Op<"token.none", [
+  Pure, TokenProducerTrait
+]> {
+  let summary = "Produces an empty token value.";
+  let description = [{
+    Produces a `none` token value, mirroring LLVM IR's `none` token
+    literal. Lowers to `llvm::ConstantTokenNone`.
+  }];
+
+  let results = (outs Token:$result);
+  let assemblyFormat = "attr-dict";
 }
 
 //===----------------------------------------------------------------------===//

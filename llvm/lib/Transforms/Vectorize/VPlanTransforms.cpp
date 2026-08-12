@@ -49,6 +49,8 @@ using namespace SCEVPatternMatch;
 static std::optional<int64_t> getConstantStride(VPValue *Addr, Type *AccessTy,
                                                 PredicatedScalarEvolution &PSE,
                                                 const Loop *L) {
+  assert(!hasIrregularType(AccessTy, L->getHeader()->getDataLayout()) &&
+         "should not try to widen irregular types");
   const SCEV *AddrSCEV = vputils::getSCEVExprForVPValue(Addr, PSE, L);
   auto *AddRec = dyn_cast<SCEVAddRecExpr>(AddrSCEV);
   if (!AddRec)
@@ -60,6 +62,13 @@ static std::optional<int64_t> getConstantStride(VPValue *Addr, Type *AccessTy,
 bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
     VPlan &Plan, const TargetLibraryInfo &TLI, PredicatedScalarEvolution &PSE,
     Loop *OuterLoop) {
+
+  // Returns true if the access of \p AccessTy at \p Addr can be widened to a
+  // consecutive vector access.
+  auto IsConsecutiveAccess = [&](VPValue *Addr, Type *AccessTy) {
+    return !hasIrregularType(AccessTy, Plan.getDataLayout()) &&
+           getConstantStride(Addr, AccessTy, PSE, OuterLoop) == 1;
+  };
 
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getVectorLoopRegion());
@@ -94,16 +103,13 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
         // Create VPWidenMemoryRecipe for loads and stores.
         if (LoadInst *Load = dyn_cast<LoadInst>(Inst)) {
           bool IsConsecutive =
-              getConstantStride(VPI->getOperand(0), VPI->getScalarType(), PSE,
-                                OuterLoop) == 1;
+              IsConsecutiveAccess(VPI->getOperand(0), VPI->getScalarType());
           NewRecipe = new VPWidenLoadRecipe(*Load, Ingredient.getOperand(0),
                                             nullptr /*Mask*/, IsConsecutive,
                                             *VPI, Ingredient.getDebugLoc());
         } else if (StoreInst *Store = dyn_cast<StoreInst>(Inst)) {
-          bool IsConsecutive =
-              getConstantStride(VPI->getOperand(1),
-                                VPI->getOperand(0)->getScalarType(), PSE,
-                                OuterLoop) == 1;
+          bool IsConsecutive = IsConsecutiveAccess(
+              VPI->getOperand(1), VPI->getOperand(0)->getScalarType());
           NewRecipe = new VPWidenStoreRecipe(
               *Store, Ingredient.getOperand(1), Ingredient.getOperand(0),
               nullptr /*Mask*/, IsConsecutive, *VPI, Ingredient.getDebugLoc());
@@ -1366,6 +1372,12 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
   }
 
   const APInt *APC;
+  if (CanCreateNewRecipe && match(Def, m_URem(m_VPValue(X), m_APInt(APC))) &&
+      APC->isPowerOf2()) {
+    return Def->replaceAllUsesWith(Builder.createAnd(
+        X, Plan->getConstantInt(*APC - 1), Def->getDebugLoc()));
+  }
+
   if (CanCreateNewRecipe && match(Def, m_c_Mul(m_VPValue(A), m_APInt(APC))) &&
       APC->isPowerOf2()) {
     auto *MulR = cast<VPRecipeWithIRFlags>(Def);
@@ -2025,103 +2037,44 @@ static bool isConditionTrueViaVFAndUF(VPValue *Cond, VPlan &Plan,
   return SE.isKnownPredicate(CmpInst::ICMP_EQ, VectorTripCount, C);
 }
 
-/// Try to replace multiple active lane masks used for control flow with
-/// a single, wide active lane mask instruction followed by multiple
-/// extract subvector intrinsics. This applies to the active lane mask
-/// instructions both in the loop and in the preheader.
-/// Incoming values of all ActiveLaneMaskPHIs are updated to use the
-/// new extracts from the first active lane mask, which has it's last
-/// operand (multiplier) set to UF.
-static bool tryToReplaceALMWithWideALM(VPlan &Plan, ElementCount VF,
-                                       unsigned UF) {
-  if (!EnableWideActiveLaneMask || !VF.isVector() || UF == 1)
+// Replaces ExtractVectorForPart instructions with ICMP when the VF is scalar
+// and the source is a WideActiveLaneMask. The unused mask is removed later
+// when removing dead recipes.
+static bool replaceMaskWithCompare(VPlan &Plan, ElementCount BestVF) {
+  if (!BestVF.isScalar())
     return false;
 
+  bool MadeChange = false;
+  VPBuilder Builder;
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
+  VPBasicBlock *PreheaderVPBB = Plan.getVectorPreheader();
   VPBasicBlock *ExitingVPBB = VectorRegion->getExitingBasicBlock();
-  auto *Term = &ExitingVPBB->back();
 
-  using namespace llvm::VPlanPatternMatch;
-  if (!match(Term, m_BranchOnCond(m_Not(m_ActiveLaneMask(
-                       m_VPValue(), m_VPValue(), m_VPValue())))))
-    return false;
+  VPValue *Start, *TC;
+  uint64_t Idx;
+  for (VPBasicBlock *VPBB : {PreheaderVPBB, ExitingVPBB}) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      if (!match(&R, m_ExtractVectorForPart(
+                         m_WideActiveLaneMask(m_VPValue(Start), m_VPValue(TC),
+                                              m_VPValue()),
+                         m_ConstantInt(Idx))))
+        continue;
 
-  auto *Header = cast<VPBasicBlock>(VectorRegion->getEntry());
-  LLVMContext &Ctx = Plan.getContext();
+      auto *Extract = cast<VPInstruction>(&R);
+      Builder.setInsertPoint(Extract);
 
-  auto ExtractFromALM = [&](VPInstruction *ALM,
-                            SmallVectorImpl<VPValue *> &Extracts) {
-    DebugLoc DL = ALM->getDebugLoc();
-    for (unsigned Part = 0; Part < UF; ++Part) {
-      SmallVector<VPValue *> Ops;
-      Ops.append({ALM, Plan.getConstantInt(64, VF.getKnownMinValue() * Part)});
-      auto *Ext =
-          new VPWidenIntrinsicRecipe(Intrinsic::vector_extract, Ops,
-                                     IntegerType::getInt1Ty(Ctx), {}, {}, DL);
-      Extracts[Part] = Ext;
-      Ext->insertAfter(ALM);
-    }
-  };
+      if (Idx > 0)
+        Start = Builder.createAdd(
+            Start, Plan.getConstantInt(Start->getScalarType(), Idx));
 
-  // Create a list of each active lane mask phi, ordered by unroll part.
-  SmallVector<VPActiveLaneMaskPHIRecipe *> Phis(UF, nullptr);
-  for (VPRecipeBase &R : Header->phis()) {
-    auto *Phi = dyn_cast<VPActiveLaneMaskPHIRecipe>(&R);
-    if (!Phi)
-      continue;
-    VPValue *Index = nullptr;
-    match(Phi->getBackedgeValue(),
-          m_ActiveLaneMask(m_VPValue(Index), m_VPValue(), m_VPValue()));
-    assert(Index && "Expected index from ActiveLaneMask instruction");
-
-    uint64_t Part;
-    if (match(Index,
-              m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>(
-                  m_VPValue(), m_Mul(m_VPValue(), m_ConstantInt(Part)))))
-      Phis[Part] = Phi;
-    else {
-      // Anything other than a CanonicalIVIncrementForPart is part 0
-      assert(!match(
-          Index,
-          m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>()));
-      Phis[0] = Phi;
+      VPValue *ICmp = Builder.createICmp(CmpInst::ICMP_ULT, Start, TC);
+      Extract->replaceAllUsesWith(ICmp);
+      Extract->eraseFromParent();
+      MadeChange = true;
     }
   }
 
-  assert(all_of(Phis, not_equal_to(nullptr)) &&
-         "Expected one VPActiveLaneMaskPHIRecipe for each unroll part");
-
-  auto *EntryALM = cast<VPInstruction>(Phis[0]->getStartValue());
-  auto *LoopALM = cast<VPInstruction>(Phis[0]->getBackedgeValue());
-
-  assert((EntryALM->getOpcode() == VPInstruction::ActiveLaneMask &&
-          LoopALM->getOpcode() == VPInstruction::ActiveLaneMask) &&
-         "Expected incoming values of Phi to be ActiveLaneMasks");
-
-  // When using wide lane masks, the return type of the get.active.lane.mask
-  // intrinsic is VF x UF (last operand).
-  VPValue *ALMMultiplier = Plan.getConstantInt(64, UF);
-  EntryALM->setOperand(2, ALMMultiplier);
-  LoopALM->setOperand(2, ALMMultiplier);
-
-  // Create UF x extract vectors and insert into preheader.
-  SmallVector<VPValue *> EntryExtracts(UF);
-  ExtractFromALM(EntryALM, EntryExtracts);
-
-  // Create UF x extract vectors and insert before the loop compare & branch,
-  // updating the compare to use the first extract.
-  SmallVector<VPValue *> LoopExtracts(UF);
-  ExtractFromALM(LoopALM, LoopExtracts);
-  VPInstruction *Not = cast<VPInstruction>(Term->getOperand(0));
-  Not->setOperand(0, LoopExtracts[0]);
-
-  // Update the incoming values of active lane mask phis.
-  for (unsigned Part = 0; Part < UF; ++Part) {
-    Phis[Part]->setStartValue(EntryExtracts[Part]);
-    Phis[Part]->setBackedgeValue(LoopExtracts[Part]);
-  }
-
-  return true;
+  return MadeChange;
 }
 
 /// Try to simplify the branch condition of \p Plan. This may restrict the
@@ -2139,10 +2092,13 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
   if (match(Term, m_BranchOnCount(
                       m_CombineOr(m_CanIVInc, m_c_Add(m_CanIVInc, m_LiveIn())),
                       m_VPValue())) ||
-      match(Term, m_BranchOnCond(m_Not(m_ActiveLaneMask(
-                      m_VPValue(), m_VPValue(), m_VPValue()))))) {
+      match(Term,
+            m_BranchOnCond(m_Not(m_ExtractVectorForPart(
+                m_WideActiveLaneMask(m_VPValue(), m_VPValue(), m_VPValue()),
+                m_ZeroInt()))))) {
     // Try to simplify the branch condition if VectorTC <= VF * UF when the
-    // latch terminator is BranchOnCount or BranchOnCond(Not(ActiveLaneMask)).
+    // latch terminator is BranchOnCount or
+    // BranchOnCond(Not(ExtractVectorForPart(WideActiveLaneMask), 0))
     const SCEV *VectorTripCount =
         vputils::getSCEVExprForVPValue(&Plan.getVectorTripCount(), PSE);
     if (isa<SCEVCouldNotCompute>(VectorTripCount))
@@ -2186,7 +2142,7 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
   assert(Plan.hasVF(BestVF) && "BestVF is not available in Plan");
   assert(Plan.hasUF(BestUF) && "BestUF is not available in Plan");
 
-  bool MadeChange = tryToReplaceALMWithWideALM(Plan, BestVF, BestUF);
+  bool MadeChange = replaceMaskWithCompare(Plan, BestVF);
   MadeChange |= simplifyBranchConditionForVFAndUF(Plan, BestVF, BestUF, PSE);
   MadeChange |= optimizeVectorInductionWidthForTCAndVFUF(Plan, BestVF, BestUF);
 
@@ -3187,13 +3143,12 @@ static bool handleUncountableExitsWithSideEffects(
   VPBuilder MaskBuilder(HeaderVPBB, InsertIt);
   VPValue *FirstActive = MaskBuilder.createFirstActiveLane(*Cond);
   Type *IVScalarTy = IV->getScalarType();
-  VPValue *ALMMultiplier = Plan.getConstantInt(IVScalarTy, 1);
   VPValue *Zero = Plan.getZero(IVScalarTy);
   FirstActive =
       MaskBuilder.createScalarZExtOrTrunc(FirstActive, IVScalarTy, DebugLoc());
   VPValue *Mask = MaskBuilder.createNaryOp(VPInstruction::ActiveLaneMask,
-                                           {Zero, FirstActive, ALMMultiplier},
-                                           DebugLoc(), "uncountable.exit.mask");
+                                           {Zero, FirstActive}, DebugLoc(),
+                                           "uncountable.exit.mask");
 
   // Convert all other memory operations to use the mask.
   for (VPBasicBlock *VPBB : vp_rpo_plain_cfg_loop_body(HeaderVPBB))
