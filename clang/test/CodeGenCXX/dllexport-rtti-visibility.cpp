@@ -3,21 +3,28 @@
 
 // RUN: %clang_cc1 -emit-llvm -triple x86_64-windows-gnu -fdeclspec -fvisibility=hidden -o - %s | FileCheck %s --check-prefixes=CHECK,GNU
 // RUN: %clang_cc1 -emit-llvm -triple x86_64-windows-itanium -fdeclspec -fvisibility=hidden -o - %s | FileCheck %s --check-prefixes=CHECK,ITANIUM
+// RUN: %clang_cc1 -emit-llvm -triple x86_64-scei-ps4 -fdeclspec -fvisibility=hidden -o - %s | FileCheck %s --check-prefix=PS
+// RUN: %clang_cc1 -emit-llvm -triple x86_64-sie-ps5 -fdeclspec -fvisibility=hidden -o - %s | FileCheck %s --check-prefix=PS
 
 // GNU-DAG: @_ZTI5plain = linkonce_odr hidden constant
 // GNU-DAG: @_ZTS5plain = linkonce_odr hidden constant
 // ITANIUM-DAG: @_ZTI5plain = hidden constant
 // ITANIUM-DAG: @_ZTS5plain = hidden constant
+// PS-DAG: @_ZTI5plain = {{(linkonce_odr )?}}hidden constant
+// PS-DAG: @_ZTS5plain = {{(linkonce_odr )?}}hidden constant
 struct plain {
   virtual ~plain();
 };
 plain::~plain() {}
 
-/// RTTI is only dllexported for Windows Itanium.
+/// RTTI is only dllexported for Windows Itanium; PS4/PS5 export the type info
+/// but not the type name.
 // GNU-DAG: @_ZTI8exported = linkonce_odr hidden constant
 // GNU-DAG: @_ZTS8exported = linkonce_odr hidden constant
 // ITANIUM-DAG: @_ZTI8exported = dso_local dllexport constant
 // ITANIUM-DAG: @_ZTS8exported = dso_local dllexport constant
+// PS-DAG: @_ZTI8exported = {{(dso_local )?}}dllexport constant
+// PS-DAG: @_ZTS8exported = {{(linkonce_odr )?}}hidden constant
 struct __declspec(dllexport) exported {
   virtual ~exported();
 };
@@ -29,6 +36,11 @@ exported::~exported() {}
 // GNU-DAG: @_ZTSN10__cxxabiv123__fundamental_type_infoE = linkonce_odr hidden constant
 // ITANIUM-DAG: @_ZTIN10__cxxabiv123__fundamental_type_infoE = dso_local dllexport constant
 // ITANIUM-DAG: @_ZTSN10__cxxabiv123__fundamental_type_infoE = dso_local dllexport constant
+// PS-DAG: @_ZTIN10__cxxabiv123__fundamental_type_infoE = {{(dso_local )?}}dllexport constant
+// PS-DAG: @_ZTSN10__cxxabiv123__fundamental_type_infoE = {{(linkonce_odr )?}}hidden constant
+
+// PS-DAG: @_ZTIv = {{(dso_local )?}}dllexport constant
+// PS-DAG: @_ZTSv = {{(dso_local )?}}dllexport constant
 
 // CHECK-DAG: @_ZTIv = dso_local dllexport constant
 // CHECK-DAG: @_ZTSv = dso_local dllexport constant

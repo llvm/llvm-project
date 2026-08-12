@@ -4187,6 +4187,19 @@ static llvm::GlobalVariable::LinkageTypes getTypeInfoLinkage(CodeGenModule &CGM,
   llvm_unreachable("Invalid linkage!");
 }
 
+/// Returns the visibility to use for an RTTI global with the given DLL storage
+/// class. A dllexported global must not be hidden, so dllexport takes
+/// precedence over the visibility implied by -fvisibility=hidden, as
+/// CodeGenModule::setGlobalVisibility does for other globals.
+static llvm::GlobalValue::VisibilityTypes
+getRTTIVisibility(llvm::GlobalValue::VisibilityTypes Visibility,
+                  llvm::GlobalValue::DLLStorageClassTypes DLLStorageClass) {
+  if (DLLStorageClass == llvm::GlobalValue::DLLExportStorageClass &&
+      Visibility == llvm::GlobalValue::HiddenVisibility)
+    return llvm::GlobalValue::DefaultVisibility;
+  return Visibility;
+}
+
 llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(QualType Ty) {
   // We want to operate on the canonical type.
   Ty = Ty.getCanonicalType();
@@ -4234,19 +4247,9 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(QualType Ty) {
          llvmVisibility == llvm::GlobalValue::DefaultVisibility))
       DLLStorageClass = llvm::GlobalValue::DLLExportStorageClass;
   }
-  return BuildTypeInfo(Ty, Linkage, llvmVisibility, DLLStorageClass);
-}
+  llvmVisibility = getRTTIVisibility(llvmVisibility, DLLStorageClass);
 
-/// Returns the visibility to use for an RTTI global. A dllexported global must
-/// not be hidden, so dllexport takes precedence over the visibility implied by
-/// -fvisibility=hidden, as CodeGenModule::setGlobalVisibility does elsewhere.
-static llvm::GlobalValue::VisibilityTypes
-getRTTIVisibility(llvm::GlobalValue::VisibilityTypes Visibility,
-                  llvm::GlobalValue::DLLStorageClassTypes DLLStorageClass) {
-  if (DLLStorageClass == llvm::GlobalValue::DLLExportStorageClass &&
-      Visibility == llvm::GlobalValue::HiddenVisibility)
-    return llvm::GlobalValue::DefaultVisibility;
-  return Visibility;
+  return BuildTypeInfo(Ty, Linkage, llvmVisibility, DLLStorageClass);
 }
 
 llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
@@ -4391,14 +4394,17 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
 
   // Export the typeinfo in the same circumstances as the vtable is exported.
   auto GVDLLStorageClass = DLLStorageClass;
+  auto GVVisibility = Visibility;
   if (CGM.getTarget().hasPS4DLLImportExport() &&
       GVDLLStorageClass != llvm::GlobalVariable::DLLExportStorageClass) {
     if (const RecordType *RecordTy = dyn_cast<RecordType>(Ty)) {
       const auto *RD =
           cast<CXXRecordDecl>(RecordTy->getDecl())->getDefinitionOrSelf();
       if (RD->hasAttr<DLLExportAttr>() ||
-          CXXRecordNonInlineHasAttr<DLLExportAttr>(RD))
+          CXXRecordNonInlineHasAttr<DLLExportAttr>(RD)) {
         GVDLLStorageClass = llvm::GlobalVariable::DLLExportStorageClass;
+        GVVisibility = getRTTIVisibility(GVVisibility, GVDLLStorageClass);
+      }
     }
   }
 
@@ -4431,10 +4437,10 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
   // All of this is to say that it's important that both the type_info
   // object and the type_info name be uniqued when weakly emitted.
 
-  TypeName->setVisibility(getRTTIVisibility(Visibility, DLLStorageClass));
+  TypeName->setVisibility(Visibility);
   CGM.setDSOLocal(TypeName);
 
-  GV->setVisibility(getRTTIVisibility(Visibility, GVDLLStorageClass));
+  GV->setVisibility(GVVisibility);
   CGM.setDSOLocal(GV);
 
   TypeName->setDLLStorageClass(DLLStorageClass);
@@ -4734,8 +4740,8 @@ void ItaniumCXXABI::EmitFundamentalRTTIDescriptors(const CXXRecordDecl *RD) {
       RD->hasAttr<DLLExportAttr>() || CGM.shouldMapVisibilityToDLLExport(RD)
           ? llvm::GlobalValue::DLLExportStorageClass
           : llvm::GlobalValue::DefaultStorageClass;
-  llvm::GlobalValue::VisibilityTypes Visibility =
-      CodeGenModule::GetLLVMVisibility(RD->getVisibility());
+  llvm::GlobalValue::VisibilityTypes Visibility = getRTTIVisibility(
+      CodeGenModule::GetLLVMVisibility(RD->getVisibility()), DLLStorageClass);
   for (const QualType &FundamentalType : FundamentalTypes) {
     QualType PointerType = getContext().getPointerType(FundamentalType);
     QualType PointerTypeConst = getContext().getPointerType(
