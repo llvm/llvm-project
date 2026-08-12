@@ -23,9 +23,6 @@ class AMDGPUGPUInfo<list<int> isa = []> {
   list<int> IsaVersion = isa;
   list<Processor> CoveredGPUs = [];
   bit IsPseudoTarget = false;
-  int MaxWavesPerEU = 10;
-  int FullSIMDs = 4;
-  int HalfSIMDs = 4;
 }
 
 def : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[9, 0, 0]>;
@@ -42,9 +39,6 @@ class AMDGPUGPUInfo<list<int> isa = []> {
   list<int> IsaVersion = isa;
   list<Processor> CoveredGPUs = [];
   bit IsPseudoTarget = false;
-  int MaxWavesPerEU = 10;
-  int FullSIMDs = 4;
-  int HalfSIMDs = 4;
 }
 
 def DupA : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[9, 0, 0]>;
@@ -61,9 +55,6 @@ class AMDGPUGPUInfo<list<int> isa = []> {
   list<int> IsaVersion = isa;
   list<Processor> CoveredGPUs = [];
   bit IsPseudoTarget = false;
-  int MaxWavesPerEU = 10;
-  int FullSIMDs = 4;
-  int HalfSIMDs = 4;
 }
 
 def : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[9, 0, 0]>;
@@ -80,9 +71,6 @@ class AMDGPUGPUInfo<list<int> isa = []> {
   list<int> IsaVersion = isa;
   list<Processor> CoveredGPUs = [];
   bit IsPseudoTarget = false;
-  int MaxWavesPerEU = 10;
-  int FullSIMDs = 4;
-  int HalfSIMDs = 4;
 }
 // A malformed IsaVersion is reported (not asserted), so this stays a clean
 // diagnostic in release builds.
@@ -98,9 +86,6 @@ class AMDGPUGPUInfo<list<int> isa = []> {
   list<int> IsaVersion = isa;
   list<Processor> CoveredGPUs = [];
   bit IsPseudoTarget = false;
-  int MaxWavesPerEU = 10;
-  int FullSIMDs = 4;
-  int HalfSIMDs = 4;
 }
 // The stepping must fit in a single hex digit so it can be spelled in the
 // triple subarch name (e.g. "amdgpu9.0c").
@@ -116,9 +101,6 @@ class AMDGPUGPUInfo<list<int> isa = []> {
   list<int> IsaVersion = isa;
   list<Processor> CoveredGPUs = [];
   bit IsPseudoTarget = false;
-  int MaxWavesPerEU = 10;
-  int FullSIMDs = 4;
-  int HalfSIMDs = 4;
 }
 
 def FeatureFoo : SubtargetFeature<"foo", "HasFoo", "true", "Foo">;

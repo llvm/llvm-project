@@ -175,6 +175,12 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   if (LDSBankCount == 0)
     LDSBankCount = 32;
 
+  if (MaxWavesPerEU == 0)
+    MaxWavesPerEU = 10;
+
+  if (HalfSIMDs == 0)
+    HalfSIMDs = 4;
+
   if (FlatOffsetBitWidth == 0)
     FlatOffsetBitWidth = 13;
 
@@ -246,10 +252,8 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
   LLVM_DEBUG(dbgs() << "sramecc setting for subtarget: "
                     << TargetID.getSramEccSetting() << '\n');
 
-  MaxWavesPerEU = AMDGPU::getMaxWavesPerEU(TargetID.getGPUKind());
   // CU mode confines a work-group to half of the block's SIMDs.
-  WorkGroupSIMDs = AMDGPU::getWorkGroupSIMDs(
-      TargetID.getGPUKind(), /*FullSIMDMode=*/!isCuModeEnabled());
+  WorkGroupSIMDs = isCuModeEnabled() ? HalfSIMDs : AMDGPU::FullSIMDs;
 
   TSInfo = std::make_unique<AMDGPUSelectionDAGInfo>();
 

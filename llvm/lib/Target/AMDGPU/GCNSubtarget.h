@@ -78,6 +78,9 @@ protected:
   int LDSBankCount = 0;
   unsigned MaxPrivateElementSize = 0;
 
+  // SIMDs outside full-SIMD mode; set from TableGen subtarget features.
+  unsigned HalfSIMDs = 0;
+
   // Instruction cache line size in bytes; set from TableGen subtarget features.
   unsigned InstCacheLineSize = 0;
 

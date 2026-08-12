@@ -3037,10 +3037,8 @@ TEST(TargetParserTest, testAMDGPUgetSGPRAllocGranule) {
 }
 
 TEST(TargetParserTest, testAMDGPUgetWorkGroupSIMDs) {
-  // The functional block has four SIMDs everywhere. A target that can split it
-  // runs a work-group on two of them outside full-SIMD mode; one that cannot -
-  // pre-GFX10, and GFX10+ targets such as GFX12.5 - runs on four either way.
-  // The second argument is the full-SIMD-mode flag.
+  // Two SIMDs outside full-SIMD mode on hardware that can split the block,
+  // four everywhere else. The second argument is the full-SIMD-mode flag.
   EXPECT_EQ(AMDGPU::getWorkGroupSIMDs(Triple::AMDGPUSubArch900, true), 4u);
   EXPECT_EQ(AMDGPU::getWorkGroupSIMDs(Triple::AMDGPUSubArch908, true), 4u);
   EXPECT_EQ(AMDGPU::getWorkGroupSIMDs(Triple::AMDGPUSubArch942, true), 4u);

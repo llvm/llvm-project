@@ -55,7 +55,8 @@ protected:
   bool HasFminFmaxLegacy = true;
 
   unsigned WorkGroupSIMDs = 4;
-  unsigned MaxWavesPerEU = 10;
+  // Set from TableGen subtarget features; R600Subtarget sets it directly.
+  unsigned MaxWavesPerEU = 0;
   unsigned LocalMemorySize = 0;
   unsigned AddressableLocalMemorySize = 0;
   unsigned LDSAllocationGranularity = 0;
@@ -237,9 +238,8 @@ public:
     return AddressableLocalMemorySize;
   }
 
-  /// Number of SIMDs (execution units) a work-group's waves run on: all four
-  /// of the block's SIMDs in full-SIMD mode, two when the work-group is
-  /// confined to half of them.
+  /// \returns Number of SIMDs a work-group's waves run on: all of the block's
+  /// SIMDs in full-SIMD mode, half of them otherwise.
   unsigned getWorkGroupSIMDs() const { return WorkGroupSIMDs; }
 
   Align getAlignmentForImplicitArgPtr() const {
