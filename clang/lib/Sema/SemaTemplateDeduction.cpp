@@ -937,7 +937,7 @@ private:
         unsigned Depth, Index;
 
         // Function parameter packs cannot be deduced.
-        if (isa_and_nonnull<ParmVarDecl>(
+        if (isa_and_present<ParmVarDecl>(
                 dyn_cast<NamedDecl *>(Unexpanded[I].first)))
           continue;
         if (auto DI = getDepthAndIndex(Unexpanded[I]))
