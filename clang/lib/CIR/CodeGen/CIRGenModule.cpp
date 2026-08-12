@@ -24,9 +24,11 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/GlobalDecl.h"
+#include "clang/AST/Mangle.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
@@ -3888,6 +3890,24 @@ void CIRGenModule::release() {
     getCUDARuntime().finalizeModule();
 
   emitLLVMUsed();
+
+  // Precompute the mangled C++20 named-module initializer function name and
+  // stash it on the ModuleOp so LoweringPrepare (which may run without a live
+  // ASTContext in split-compilation flows) can read it back as an attribute.
+  if (langOpts.CPlusPlusModules &&
+      getCXXABI().getMangleContext().getKind() ==
+          clang::ItaniumMangleContext::MK_Itanium) {
+    if (clang::Module *primary = astContext.getCurrentNamedModule();
+        primary && !primary->isModuleImplementation()) {
+      llvm::SmallString<256> fnName;
+      llvm::raw_svector_ostream out(fnName);
+      cast<clang::ItaniumMangleContext>(getCXXABI().getMangleContext())
+          .mangleModuleInitializer(primary, out);
+      theModule->setAttr(
+          cir::CIRDialect::getCXXModuleInitFnNameAttrName(),
+          builder.getStringAttr(fnName));
+    }
+  }
 
   // Classic codegen calls `checkAliases` here to validate any alias
   // definitions emitted during codegen.

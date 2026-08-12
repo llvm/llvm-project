@@ -1967,9 +1967,16 @@ void LoweringPreparePass::buildCXXGlobalInitFunc() {
   // and makes sure these symbols appear lexicographically behind the symbols
   // with priority (TBD).  Module implementation units behave the same
   // way as a non-modular TU with imports.
-  // TODO: check CXX20ModuleInits
-  if (astCtx->getCurrentNamedModule() &&
-      !astCtx->getCurrentNamedModule()->isModuleImplementation()) {
+  // The C++20 named-module init function name is precomputed by CIRGen and
+  // stored as a module-level attribute, so this pass does not need a live
+  // ASTContext in split-compilation flows. Fall back to the AST-based path
+  // only when the attribute is absent (e.g. tests that bypass CIRGen).
+  if (auto fnNameAttr = mlirModule->getAttrOfType<mlir::StringAttr>(
+          cir::CIRDialect::getCXXModuleInitFnNameAttrName())) {
+    fnName += fnNameAttr.getValue();
+    linkage = cir::GlobalLinkageKind::ExternalLinkage;
+  } else if (astCtx && astCtx->getCurrentNamedModule() &&
+             !astCtx->getCurrentNamedModule()->isModuleImplementation()) {
     llvm::raw_svector_ostream out(fnName);
     std::unique_ptr<clang::MangleContext> mangleCtx(
         astCtx->createMangleContext());
