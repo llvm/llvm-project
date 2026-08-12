@@ -133,6 +133,20 @@
 // RUN: FileCheck --input-file=%t.err -check-prefix=MCPU-NATIVE %s
 // MCPU-NATIVE-NOT: "-target-cpu" "native"
 
+// -march=native is an alias for -mcpu=native. We cannot check much for it, but
+// it should be replaced by a valid CPU string and never treated as an ISA
+// string.
+// RUN: %clang --target=riscv64 -### -c %s -march=native 2> %t.err || true
+// RUN: FileCheck --input-file=%t.err -check-prefix=MARCH-NATIVE %s
+// MARCH-NATIVE-NOT: "-target-cpu" "native"
+// MARCH-NATIVE-NOT: invalid arch name 'native'
+
+// -mcpu takes priority over -march=native when choosing the target CPU,
+// regardless of the order of the options.
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -march=native -mcpu=rocket-rv64 | FileCheck -check-prefix=MARCH-NATIVE-MCPU %s
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=rocket-rv64 -march=native | FileCheck -check-prefix=MARCH-NATIVE-MCPU %s
+// MARCH-NATIVE-MCPU: "-target-cpu" "rocket-rv64"
+
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mtune=rocket-rv32 | FileCheck -check-prefix=MTUNE-ROCKET32 %s
 // MTUNE-ROCKET32: "-tune-cpu" "rocket-rv32"
 
