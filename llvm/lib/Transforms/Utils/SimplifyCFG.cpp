@@ -1240,7 +1240,7 @@ static void cloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
   if (auto &PredDL = PTI->getDebugLoc()) {
     auto &DL = BB->getTerminator()->getDebugLoc();
     if (!PredDL->getAtomGroup() && DL && DL->getAtomGroup() &&
-        PredDL.isSameSourceLocation(DL)) {
+        PredDL.isSameSourceLocationAndIRLayers(DL)) {
       PTI->setDebugLoc(DL);
       RemapSourceAtom(PTI, VMap);
     }

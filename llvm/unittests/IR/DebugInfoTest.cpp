@@ -1640,6 +1640,44 @@ TEST(DebugLocTest, IntermediateLocEquality) {
   EXPECT_TRUE(DL1.isSameSourceLocation(DL4));
 }
 
+TEST(DebugLocTest, IntermediateLocEqualityWithLayers) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("MyModule", Ctx);
+  DIBuilder DIB(*M);
+  DIFile *F = DIB.createFile("source.cu", "/");
+  DIFile *IntF = DIB.createFile("intermediate.mlir", "/");
+  DICompileUnit *CU =
+      DIB.createCompileUnit(dwarf::DW_LANG_C, F, "test", false, "", 0);
+  DISubprogram *SP =
+      DIB.createFunction(CU, "foo", "", F, 1, DIB.createSubroutineType({}), 1,
+                         DINode::FlagZero, DISubprogram::SPFlagDefinition);
+
+  MDString *Kind = MDString::get(Ctx, "TileIR");
+  DILayerLoc *LayerA = DILayerLoc::get(Ctx, Kind, IntF, 100, 1);
+  DILayerLoc *LayerB = DILayerLoc::get(Ctx, Kind, IntF, 100, 2);
+  DILayerLocList *ListA = DILayerLocList::get(Ctx, {LayerA});
+  DILayerLocList *ListB = DILayerLocList::get(Ctx, {LayerB});
+
+  auto Layered = [&](DILayerLocList *L) {
+    return DILocation::get(Ctx, 10, 5, SP, /*InlinedAt=*/nullptr,
+                           /*ImplicitCode=*/false, /*AtomGroup=*/0,
+                           /*AtomRank=*/0, /*IRLayers=*/L);
+  };
+  DebugLoc DL1(Layered(ListA));
+  DebugLoc DL2(DILocation::getDistinct(Ctx, 10, 5, SP, /*InlinedAt=*/nullptr,
+                                       /*ImplicitCode=*/false, /*AtomGroup=*/0,
+                                       /*AtomRank=*/0, /*IRLayers=*/ListA));
+  DebugLoc DL3(Layered(ListB));
+  DebugLoc DL4(DILocation::get(Ctx, 10, 5, SP)); // no layers
+
+  ASSERT_NE(DL1.get(), DL2.get());
+  // Identical layers (distinct nodes, same layer list) -> same.
+  EXPECT_TRUE(DL1.isSameSourceLocationAndIRLayers(DL2));
+  // Same source coordinate but different layers -> NOT the same.
+  EXPECT_FALSE(DL1.isSameSourceLocationAndIRLayers(DL3));
+  // One has layers, the other doesn't -> NOT the same.
+  EXPECT_FALSE(DL1.isSameSourceLocationAndIRLayers(DL4));
+}
 
 TEST(DebugLocTest, MergedLocationWithIntermediate) {
   LLVMContext Ctx;
