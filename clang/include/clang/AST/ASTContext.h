@@ -1384,6 +1384,8 @@ public:
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) CanQualType SingletonId;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId) CanQualType SingletonId;
+#include "clang/Basic/SPIRVTypes.def"
 
   // Types for deductions in C++0x [stmt.ranged]'s desugaring. Built on demand.
   mutable QualType AutoDeductTy;     // Deduction against 'auto'.
@@ -1514,9 +1516,9 @@ public:
   QualType removeAddrSpaceQualType(QualType T) const;
 
   /// Return the "other" discriminator used for the pointer auth schema used for
-  /// vtable pointers in instances of the requested type.
-  uint16_t
-  getPointerAuthVTablePointerDiscriminator(const CXXRecordDecl *RD);
+  /// vtable pointers using the given discriminator type.
+  uint16_t getPointerAuthVTablePointerDiscriminator(const CXXRecordDecl *RD,
+                                                    bool IsVTTEntry);
 
   /// Return the "other" type-specific discriminator for the given type.
   uint16_t getPointerAuthTypeDiscriminator(QualType T);
@@ -1995,7 +1997,7 @@ public:
                              QualType equivalentType) const;
 
   QualType getAttributedType(NullabilityKind nullability, QualType modifiedType,
-                             QualType equivalentType);
+                             QualType equivalentType) const;
 
   QualType getBTFTagAttributedType(const BTFTypeTagAttr *BTFAttr,
                                    QualType Wrapped) const;

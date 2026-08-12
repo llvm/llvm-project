@@ -49,8 +49,10 @@ RegisterContextCorePOSIX_riscv32::RegisterContextCorePOSIX_riscv32(
   // Compute the maximum register counts for GPR, FPR, and CSR.
   constexpr uint32_t k_num_gpr_registers =
       std::size(g_register_infos_riscv32_gpr);
+  UNUSED_IF_ASSERT_DISABLED(k_num_gpr_registers);
   constexpr uint32_t k_num_fpr_registers =
       std::size(g_register_infos_riscv32_fpr);
+  UNUSED_IF_ASSERT_DISABLED(k_num_fpr_registers);
   constexpr uint32_t k_num_csr_registers =
       std::size(g_register_infos_riscv32_csr);
   const ArchSpec &target_arch = m_reg_infos_up->GetTargetArchitecture();
@@ -336,6 +338,5 @@ RegisterContextCorePOSIX_riscv32::BuildDynamicRegister(
       CopyRegisterListToVector(reg_info.value_regs),
       CopyRegisterListToVector(reg_info.invalidate_regs),
       /*value_reg_offset=*/0,
-      llvm::dyn_cast_if_present<lldb_private::RegisterFlags>(
-          reg_info.register_type)};
+      reg_info.register_type};
 }
