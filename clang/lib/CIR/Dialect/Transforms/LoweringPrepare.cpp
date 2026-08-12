@@ -1460,17 +1460,11 @@ void LoweringPreparePass::lowerLocalInitOp(cir::LocalInitOp initOp) {
   // Remove the init local op, now that we've done everything we need with it.
   initOp.erase();
 }
-static bool isThreadWrapperReplaceable(mlir::Operation *op, cir::TLSModel tls,
-                                       clang::ASTContext &astCtx) {
-  // Note: we can't really test this as we don't have darwin properly done for a
-  // target-info, so for now just emit an NYI. The OGCG implementation of this
-  // checks against the variable-decl being a TLS_Dynamic (NOT the same as
-  // TLS_Model::GeneralDynamic!), but it isn't clear to me that we can get here
-  // in any case where this isn't just 'isOSDarwin'.
-  if (astCtx.getTargetInfo().getTriple().isOSDarwin())
-    op->emitError(
-        "NYI: Darwin replaceable thread-wrapper determination for linakge");
-
+static bool isThreadWrapperReplaceable(clang::ASTContext &astCtx) {
+  // Note: Classic codegen needs to check that the VarDecl.getTLSKind() ==
+  // TLS_Dynamic, but we don't attempt to emit the thread wrapper unless that is
+  // already the case.  So the only thing that matters here is whether it is
+  // darwin.
   return astCtx.getTargetInfo().getTriple().isOSDarwin();
 }
 
@@ -1479,7 +1473,7 @@ getThreadLocalWrapperLinkage(GlobalOp op, clang::ASTContext &astCtx) {
   if (isLocalLinkage(op.getLinkage()))
     return op.getLinkage();
 
-  if (isThreadWrapperReplaceable(op, *op.getTlsModel(), astCtx))
+  if (isThreadWrapperReplaceable(astCtx))
     if (!isLinkOnceLinkage(op.getLinkage()) &&
         !isWeakODRLinkage(op.getLinkage()))
       return op.getLinkage();
@@ -1523,12 +1517,12 @@ LoweringPreparePass::getOrCreateThreadLocalWrapper(CIRBaseBuilderTy &builder,
       func, mlir::SymbolTable::Visibility::Private);
 
   if (!isLocalLinkage(linkageKind)) {
-    if (!isThreadWrapperReplaceable(op, *op.getTlsModel(), *astCtx) ||
+    if (!isThreadWrapperReplaceable(*astCtx) ||
         isLinkOnceLinkage(linkageKind) || isWeakODRLinkage(linkageKind) ||
         op.getGlobalVisibility() == cir::VisibilityKind::Hidden)
       func.setGlobalVisibility(cir::VisibilityKind::Hidden);
   }
-  if (isThreadWrapperReplaceable(op, *op.getTlsModel(), *astCtx))
+  if (isThreadWrapperReplaceable(*astCtx))
     op->emitError("Unhandled thread wrapper attributes for CC and Nounwind");
 
   threadLocalWrappers.insert({wrapperName.getValue(), func});

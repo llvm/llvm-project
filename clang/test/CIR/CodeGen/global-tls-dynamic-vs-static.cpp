@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %s -o %t.cir 2>&1 | FileCheck %s --check-prefix=CIR-BEFORE-LPP
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o - | FileCheck %s --check-prefix=CIR
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o - | FileCheck %s --check-prefix=LLVM
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=LLVM
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o - | FileCheck %s --check-prefix=CIR,NOWRAP
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o - | FileCheck %s --check-prefix=LLVM,NOWRAP
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=LLVM,NOWRAP
 
 int f();
 __thread      int a = 5;
@@ -42,8 +42,8 @@ thread_local  int d = f();
 // LLVM-DAG: @_ZTH1d = alias void (), ptr @__tls_init
 // LLVM-DAG: define weak_odr hidden {{.*}}ptr @_ZTW1d()
 
-// LLVM-NOT: @_ZTW1a
-// LLVM-NOT: @_ZTH1a
-// LLVM-NOT: @_ZTW1b
-// LLVM-NOT: @_ZTH1b
-// LLVM-NOT: @_ZTH1c
+// NOWRAP-NOT: @_ZTW1a
+// NOWRAP-NOT: @_ZTH1a
+// NOWRAP-NOT: @_ZTW1b
+// NOWRAP-NOT: @_ZTH1b
+// NOWRAP-NOT: @_ZTH1c
