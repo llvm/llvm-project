@@ -420,22 +420,35 @@ void DiagnosticInfoUnsupported::print(DiagnosticPrinter &DP) const {
 }
 
 DiagnosticInfoUnsupportedTargetIntrinsic::
-    DiagnosticInfoUnsupportedTargetIntrinsic(const Function &Fn,
-                                             unsigned IntrinsicID,
-                                             const DiagnosticLocation &Loc)
+    DiagnosticInfoUnsupportedTargetIntrinsic(
+        const Function &Fn, unsigned IntrinsicID, FunctionType *IntrinsicType,
+        const DiagnosticLocation &Loc,
+        std::optional<StringRef> RequiredFeatures)
     : DiagnosticInfoWithLocationBase(DK_UnsupportedTargetIntrinsic, DS_Error,
                                      Fn, Loc),
-      IntrinsicID(IntrinsicID),
-      RequiredFeatures(Intrinsic::getRequiredTargetFeatures(
-          static_cast<Intrinsic::ID>(IntrinsicID))) {
-  assert(!RequiredFeatures.empty() &&
+      IntrinsicID(IntrinsicID), IntrinsicType(IntrinsicType),
+      RequiredFeatures(RequiredFeatures) {
+  assert(IntrinsicType && "intrinsic type should not be null");
+  assert((!RequiredFeatures || !RequiredFeatures->empty()) &&
          "intrinsic without required features should be supported");
 }
 
 std::string DiagnosticInfoUnsupportedTargetIntrinsic::getMessage() const {
-  return (Twine(
-              Intrinsic::getBaseName(static_cast<Intrinsic::ID>(IntrinsicID))) +
-          " requires target feature '" + RequiredFeatures + "'")
+  Intrinsic::ID ID = static_cast<Intrinsic::ID>(IntrinsicID);
+  SmallVector<Type *, 4> OverloadTys;
+  [[maybe_unused]] bool IsValid =
+      Intrinsic::isSignatureValid(ID, IntrinsicType, OverloadTys);
+  assert(IsValid && "invalid intrinsic type");
+  // Name uniquing for overloads involving unnamed types updates module state.
+  Module *M = const_cast<Module *>(getFunction().getParent());
+  std::string IntrinsicName =
+      Intrinsic::getName(ID, OverloadTys, M, IntrinsicType);
+
+  if (!RequiredFeatures)
+    return (Twine(IntrinsicName) + " is not supported on this target").str();
+
+  return (Twine(IntrinsicName) + " requires target feature '" +
+          *RequiredFeatures + "'")
       .str();
 }
 

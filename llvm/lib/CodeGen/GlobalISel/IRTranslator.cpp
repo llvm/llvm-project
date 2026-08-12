@@ -2886,11 +2886,8 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
 
   assert(ID != Intrinsic::not_intrinsic && "unknown intrinsic");
 
-  if (!MF->getSubtarget().isIntrinsicSupported(ID)) {
-    const Function &Fn = MF->getFunction();
-    Fn.getContext().diagnose(
-        DiagnosticInfoUnsupportedTargetIntrinsic(Fn, ID, CI.getDebugLoc()));
-  }
+  if (!MF->getSubtarget().isIntrinsicSupported(ID, CI.getFunctionType()))
+    return translateUnsupportedIntrinsic(CI, ID, MIRBuilder);
 
   if (translateKnownIntrinsic(CI, ID, MIRBuilder))
     return true;
@@ -2901,15 +2898,31 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
   return translateIntrinsic(CI, ID, MIRBuilder, Infos);
 }
 
+bool IRTranslator::translateUnsupportedIntrinsic(const CallBase &CB,
+                                                 Intrinsic::ID ID,
+                                                 MachineIRBuilder &MIRBuilder) {
+  const Function &F = MF->getFunction();
+  std::optional<StringRef> RequiredFeatures =
+      MF->getSubtarget().getRequiredTargetFeaturesForIntrinsic(
+          ID, CB.getFunctionType());
+  F.getContext().diagnose(DiagnosticInfoUnsupportedTargetIntrinsic(
+      F, ID, CB.getFunctionType(), CB.getDebugLoc(), RequiredFeatures));
+
+  // The diagnostic makes compilation fail. Define any results so GlobalISel
+  // can finish without sending the unsupported intrinsic to instruction
+  // selection.
+  if (!CB.getType()->isVoidTy())
+    for (Register ResultReg : getOrCreateVRegs(CB))
+      MIRBuilder.buildUndef(ResultReg);
+  return true;
+}
+
 /// Translate a call or callbr to an intrinsic.
 bool IRTranslator::translateIntrinsic(
     const CallBase &CB, Intrinsic::ID ID, MachineIRBuilder &MIRBuilder,
     ArrayRef<TargetLowering::IntrinsicInfo> TgtMemIntrinsicInfos) {
-  if (!MF->getSubtarget().isIntrinsicSupported(ID)) {
-    const Function &F = MF->getFunction();
-    F.getContext().diagnose(
-        DiagnosticInfoUnsupportedTargetIntrinsic(F, ID, CB.getDebugLoc()));
-  }
+  if (!MF->getSubtarget().isIntrinsicSupported(ID, CB.getFunctionType()))
+    return translateUnsupportedIntrinsic(CB, ID, MIRBuilder);
 
   ArrayRef<Register> ResultRegs;
   if (!CB.getType()->isVoidTy())

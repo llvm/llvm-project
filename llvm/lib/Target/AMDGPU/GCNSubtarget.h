@@ -23,6 +23,7 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/Support/AMDHSAKernelDescriptor.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <optional>
 
 #define GET_SUBTARGETINFO_HEADER
 #include "AMDGPUGenSubtargetInfo.inc"
@@ -127,6 +128,10 @@ public:
   /// Diagnose inconsistent subtarget features before attempting to codegen
   /// function \p F.
   void checkSubtargetFeatures(const Function &F) const;
+
+  std::optional<StringRef>
+  getRequiredTargetFeaturesForIntrinsic(unsigned IntrinsicID,
+                                        const FunctionType *FTy) const override;
 
   const SIInstrInfo *getInstrInfo() const override { return &InstrInfo; }
 

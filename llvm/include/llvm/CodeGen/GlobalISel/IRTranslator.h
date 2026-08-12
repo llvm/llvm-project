@@ -297,6 +297,9 @@ private:
   /// \pre \p U is a call instruction.
   bool translateCall(const User &U, MachineIRBuilder &MIRBuilder);
 
+  bool translateUnsupportedIntrinsic(const CallBase &CB, Intrinsic::ID ID,
+                                     MachineIRBuilder &MIRBuilder);
+
   bool translateIntrinsic(
       const CallBase &CB, Intrinsic::ID ID, MachineIRBuilder &MIRBuilder,
       ArrayRef<TargetLowering::IntrinsicInfo> TgtMemIntrinsicInfos = {});

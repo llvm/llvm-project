@@ -2,6 +2,9 @@
 ; RUN: llc -mtriple=amdgpu10.10 -global-isel < %s | FileCheck -check-prefixes=CHECK,GFX10 %s
 ; RUN: llc -mtriple=amdgpu11.00 -mattr=+real-true16 -amdgpu-enable-delay-alu=0 -global-isel < %s | FileCheck -check-prefixes=CHECK,GFX11,GFX11-TRUE16 %s
 ; RUN: llc -mtriple=amdgpu11.00 -mattr=-real-true16 -amdgpu-enable-delay-alu=0 -global-isel < %s | FileCheck -check-prefixes=CHECK,GFX11,GFX11-FAKE16 %s
+; RUN: llvm-extract --func=constant_false -S %s | not llc -mtriple=amdgpu9.00 -global-isel -filetype=null 2>&1 | FileCheck -check-prefix=ERR %s
+
+; ERR: error: {{.*}}: in function {{@?}}constant_false{{.*}}: llvm.amdgcn.ballot.i32 requires target feature 'wavefrontsize32'
 
 declare i32 @llvm.amdgcn.ballot.i32(i1)
 declare i32 @llvm.ctpop.i32(i32)

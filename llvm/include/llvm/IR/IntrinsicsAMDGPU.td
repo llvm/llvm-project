@@ -2508,7 +2508,9 @@ def int_amdgcn_fcmp :
 // in all active lanes, and zero in all inactive lanes.
 def int_amdgcn_ballot :
   Intrinsic<[llvm_anyint_ty], [llvm_i1_ty],
-            [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree, IntrNoCreateUndefOrPoison]>;
+            [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback,
+             IntrNoFree, IntrNoCreateUndefOrPoison]>,
+  RequiresCustomTargetFeatures;
 
 // Inverse of ballot: return the bit corresponding to the current lane from the
 // given mask.

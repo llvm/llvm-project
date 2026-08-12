@@ -26,11 +26,13 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace llvm {
 
 class APInt;
+class FunctionType;
 class MachineFunction;
 class ScheduleDAGMutation;
 class CallLowering;
@@ -95,6 +97,20 @@ public:
   /// \returns true if the target intrinsic \p IntrinsicID is supported by this
   /// subtarget.
   bool isIntrinsicSupported(unsigned IntrinsicID) const;
+
+  /// Like the overload above, but uses \p FTy to resolve the feature expression
+  /// for intrinsics marked as requiring custom target features.
+  bool isIntrinsicSupported(unsigned IntrinsicID,
+                            const FunctionType *FTy) const;
+
+  /// Returns the target features required by the target intrinsic
+  /// \p IntrinsicID with signature \p FTy. An empty expression means no
+  /// features are required; \c std::nullopt means no feature expression
+  /// supports the intrinsic. Targets override this for intrinsics marked as
+  /// requiring custom target features.
+  virtual std::optional<StringRef>
+  getRequiredTargetFeaturesForIntrinsic(unsigned IntrinsicID,
+                                        const FunctionType *FTy) const;
 
   // Interfaces to the major aspects of target machine information:
   //

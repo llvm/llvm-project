@@ -24,7 +24,9 @@
 #include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include <algorithm>
@@ -54,6 +56,20 @@ static cl::opt<unsigned>
                  cl::init(2), cl::Hidden);
 
 GCNSubtarget::~GCNSubtarget() = default;
+
+std::optional<StringRef> GCNSubtarget::getRequiredTargetFeaturesForIntrinsic(
+    unsigned IntrinsicID, const FunctionType *FTy) const {
+  if (IntrinsicID == Intrinsic::amdgcn_ballot) {
+    if (!FTy)
+      return std::nullopt;
+    if (FTy->getReturnType()->isIntegerTy(32))
+      return "wavefrontsize32";
+    return StringRef();
+  }
+
+  return TargetSubtargetInfo::getRequiredTargetFeaturesForIntrinsic(IntrinsicID,
+                                                                    FTy);
+}
 
 static AMDGPUSubtarget::Generation computeDefaultGeneration(const Triple &TT) {
   // Legacy triples without a subarch default to the first target that supports

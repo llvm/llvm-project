@@ -34,10 +34,37 @@ bool TargetSubtargetInfo::isIntrinsicSupported(unsigned IntrinsicID) const {
   if (RequiredFeatures.empty())
     return true;
 
+  if (RequiredFeatures == Intrinsic::CustomTargetFeatures)
+    return false;
+
   auto [It, Inserted] = IntrinsicSupportCache.try_emplace(IntrinsicID);
   if (Inserted)
     It->second = checkFeatureExpression(RequiredFeatures);
   return It->second;
+}
+
+bool TargetSubtargetInfo::isIntrinsicSupported(unsigned IntrinsicID,
+                                               const FunctionType *FTy) const {
+  StringRef RequiredFeatures = Intrinsic::getRequiredTargetFeatures(
+      static_cast<Intrinsic::ID>(IntrinsicID));
+  if (RequiredFeatures != Intrinsic::CustomTargetFeatures)
+    return isIntrinsicSupported(IntrinsicID);
+
+  std::optional<StringRef> CustomRequiredFeatures =
+      getRequiredTargetFeaturesForIntrinsic(IntrinsicID, FTy);
+  return CustomRequiredFeatures &&
+         (CustomRequiredFeatures->empty() ||
+          checkFeatureExpression(*CustomRequiredFeatures));
+}
+
+std::optional<StringRef>
+TargetSubtargetInfo::getRequiredTargetFeaturesForIntrinsic(
+    unsigned IntrinsicID, const FunctionType *FTy) const {
+  StringRef RequiredFeatures = Intrinsic::getRequiredTargetFeatures(
+      static_cast<Intrinsic::ID>(IntrinsicID));
+  if (RequiredFeatures == Intrinsic::CustomTargetFeatures)
+    return std::nullopt;
+  return RequiredFeatures;
 }
 
 bool TargetSubtargetInfo::enableAtomicExpand() const {
