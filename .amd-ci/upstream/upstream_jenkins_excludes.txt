@@ -1,19 +1,8 @@
-# Extended regexp patterns of files to exclude from the AOCC 'upstream' pipeline.
-^.*aocc-essentials/notes/
+# Extended regexp patterns of files to exclude from the LLVM 'upstream' pipeline.
 ^.*_jenkins_excludes.txt
-^.*/bump_aocc_ver.sh
-^.*/bump_llvm_ver.sh
-^.*/create_rel_branch.sh
 # Other pipelines or their test materials:
-^aocc-essentials/build_essentials/Jenkinsfile.*
-^aocc-essentials/build_essentials/groovy_lib/test/
-^aocc-essentials/build_essentials/groovy_lib/src/test/
-^.*aocc-essentials/build_essentials/groovy_lib/Jenkinsfile.GitHub
-^.*aocc-essentials/build_essentials/groovy_lib/build.gradle
-^.*aocc-essentials/build_essentials/groovy_lib/test.sh
+^.amd-ci/coverage/
 #
-^.*prj-essentials/devo/aocc/merge/
-^prj-essentials/devo/aocc/CODEOWNERS\.AOCC\.m4
 ^\.github/\.ai_pr_platform/
 ^\.github/copilot-instructions\.md
 ^\.github/instructions/

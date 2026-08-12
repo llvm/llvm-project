@@ -1,0 +1,239 @@
+// AOCC Coverage Pipeline
+//
+// Purpose: Build instrumented AOCC compiler for code coverage analysis
+// Approach: Two-stage build (Stage 1 bootstraps Stage 2)
+//
+// Currently only compiler/tools are instrumented; runtimes (compiler-rt, openmp,
+// flang-rt) are built as a separate CMake sub-project and don't inherit coverage
+// flags — extending to runtimes is future work.
+
+import hudson.model.Result
+
+/* groovylint-disable-next-line CompileStatic */
+String actualHead = env.CHANGE_BRANCH ?: env.BRANCH_NAME
+String githubUrl = 'https://github.amd.com/cpu-compilers/llvm-project'
+Boolean isPrBranch = env.CHANGE_BRANCH != null
+
+String abortedResultStr = Result.ABORTED, failureResultStr = Result.FAILURE
+String successResultStr = Result.SUCCESS, notBuiltResultStr = Result.NOT_BUILT
+String oneStr = '1'
+String instrumentationScript = 'aocc-essentials/build_essentials/llvm_instrumentation.sh'
+String reportIndex = 'index.html'
+
+List propsList = [
+    disableConcurrentBuilds(abortPrevious: true),
+    buildDiscarder(
+        logRotator(
+            daysToKeepStr: '7',
+            numToKeepStr: '10',
+            artifactDaysToKeepStr: oneStr,
+            artifactNumToKeepStr: oneStr
+        )
+    )
+]
+
+// Only set cron trigger for non-PR branches
+if (!isPrBranch) {
+    propsList.add(pipelineTriggers([cron('TZ=Asia/Kolkata\nH 0 * * *')]))
+}
+
+properties(propsList)
+
+// Coverage builds are expensive (~4-5 h, heavy disk I/O) and run nightly on
+// long-lived branches only.  PR branches are unconditionally blocked — add the
+// "run-coverage" label to the PR, or run locally:
+//   bash llvm-project/aocc-essentials/build_essentials/llvm_instrumentation.sh --patch_coverage
+String manualCause = 'hudson.model.Cause$UserIdCause'
+String timerCause = 'hudson.triggers.TimerTrigger$TimerTriggerCause'
+if (isPrBranch) {
+    echo 'The nightly coverage pipeline is disabled for PR branches.'
+    echo 'For patch coverage, add the "run-coverage" label to your PR,'
+    echo 'or run locally: llvm_instrumentation.sh --patch_coverage'
+    currentBuild.result = notBuiltResultStr
+    return this
+}
+
+// Only run on timer or manual trigger
+if (
+    !currentBuild.getBuildCauses(manualCause) &&
+        !currentBuild.getBuildCauses(timerCause)
+) {
+    currentBuild.result = notBuiltResultStr
+    echo 'Pipeline only runs if manually or timer triggered.'
+    return this
+}
+
+timeout(time: 6, unit: 'HOURS') {
+    String compilerZip = null
+    Boolean hasSourceChanges = true
+
+    node('atl && apptainer') {
+        try {
+            skipDefaultCheckout()
+
+            stage('clone') {
+                String referenceRepo = env.JENKINS_REMOTE_GIT_CACHE ?: 'NoSuchReferenceRepo'
+                cleanWs(deleteDirs: true)
+
+                // groovylint-disable-next-line NoDef, VariableTypeRequired
+                def gitVars = null
+                dir('llvm-project') {
+                    gitVars = checkout(
+                        changelog: true,
+                        scm: scmGit(
+                            gitTool: 'LinuxGit2.45',
+                            branches: [[name: actualHead]],
+                            browser: github(githubUrl),
+                            extensions: [
+                                cloneOption(
+                                    honorRefspec: true,
+                                    noTags: true,
+                                    reference: referenceRepo + '/llvm-project.git'
+                                )
+                            ],
+                            userRemoteConfigs: [
+                                [
+                                    credentialsId: 'Jenkins-AOCC-nonER',
+                                    refspec: (
+                                        '+refs/heads/' + actualHead + ':' +
+                                            'refs/remotes/origin/' + actualHead
+                                    ),
+                                    url: githubUrl
+                                ]
+                            ]
+                        )
+                    )
+                }
+
+                // For timer builds, check if there have been any changes since last successful build
+                if (
+                    currentBuild.getBuildCauses(timerCause) &&
+                        gitVars.GIT_PREVIOUS_SUCCESSFUL_COMMIT &&
+                        gitVars.GIT_PREVIOUS_SUCCESSFUL_COMMIT == gitVars.GIT_COMMIT
+                ) {
+                    echo 'No changes since last successful build at ' + gitVars.GIT_COMMIT
+                    echo 'Skipping timer-triggered build to avoid stagnation.'
+                    hasSourceChanges = false
+                }
+            }
+
+            if (!hasSourceChanges) {
+                currentBuild.result = notBuiltResultStr
+                cleanWs(deleteDirs: true)
+                return // from try, to finally
+            }
+
+            // Resolve aocc-essentials path
+            // In-tree on amd-staging branches; cloned separately on upstream-main
+            String inTreeScript = 'llvm-project/' + instrumentationScript
+            String essScript
+            if (fileExists(inTreeScript)) {
+                essScript = inTreeScript
+            } else if (fileExists(instrumentationScript)) {
+                essScript = instrumentationScript
+            } else {
+                error 'aocc-essentials not found in llvm-project/ or workspace root'
+            }
+
+            stage('dual-boot-build') {
+                // llvm_instrumentation.sh handles:
+                //   - Apptainer invocation via container_aocc_build.sh
+                //   - Stage 1 build (bootstrap compiler, C/C++ only)
+                //   - Stage 2 build (full compiler using Stage 1, with coverage)
+                //   - Stage 2 test (check-clang generates .profraw files)
+                //   - Hello World validation + profraw verification
+                //   - Coverage report generation (profdata merge + HTML report)
+                //
+                // Model A: Parameterized script, specialized pipelines
+                sh(
+                    label: 'dual-boot-build-sh',
+                    script: 'bash ' + essScript + ' --coverage'
+                )
+            }
+
+            stage('coverage-report') {
+                // Publish coverage reports generated by llvm_instrumentation.sh --coverage
+                // Nightly produces two reports: AOCC-modified (primary) and Full (secondary).
+                // Patch coverage (--report_patch) is local-only — not published here.
+
+                // AOCC-modified: aocc/ dirs + upstream files with AOCC extensions (primary)
+                publishHTML(target: [
+                    allowMissing: true,
+                    alwaysLinkToLastBuild: true,
+                    keepAll: false,
+                    reportDir: 'Release_build_s2/coverage_report_aocc_modified',
+                    reportFiles: reportIndex,
+                    reportName: 'AOCC Modified Coverage',
+                    useWrapperFileDirectly: true
+                ])
+
+                // Full: all clang + LLVM source (secondary, broad context)
+                publishHTML(target: [
+                    allowMissing: true,
+                    alwaysLinkToLastBuild: true,
+                    keepAll: false,
+                    reportDir: 'Release_build_s2/coverage_report',
+                    reportFiles: reportIndex,
+                    reportName: 'Full Coverage Report (all sources)',
+                    useWrapperFileDirectly: true
+                ])
+            }
+        } catch (org.jenkinsci.plugins.workflow.steps.FlowInterruptedException e) {
+            currentBuild.result = abortedResultStr
+            echo e.toString()
+            throw e
+        } catch (Exception e) {
+            currentBuild.result = failureResultStr
+            echo e.toString()
+            throw e
+        } finally {
+            stage('archive') {
+                // Skip archiving if build was skipped (workspace was cleaned)
+                if (hasSourceChanges) {
+                    // Archive artifacts from BOTH stages, even if build failed
+                    // This allows debugging of failed builds
+
+                    // Find Stage 2 compiler tarball (may not exist if build failed)
+                    // groovylint-disable-next-line NoDef, VariableTypeRequired
+                    def foundZips = findFiles(glob: 'Release_build_s2/aocc-compiler-*.tar.xz')
+                    if (foundZips) {
+                        compilerZip = foundZips[0].path
+                        currentBuild.description = 'Stage 2: ' + compilerZip.split('/').last()
+                    }
+
+                    // Archive whatever artifacts we have (allowEmptyArchive handles missing files)
+                    // NOTE: Globs are intentionally specific to avoid archiving
+                    // Release_build_s2/profraw/ (coverage data, potentially multi-GB)
+                    // and Release_build_s2/coverage_report/ (HTML, published via publishHTML)
+                    archiveArtifacts(
+                        allowEmptyArchive: true,
+                        artifacts: (
+                            // Stage 2 artifacts
+                            'Release_build_s2/aocc-compiler-*.tar.xz,' +
+                                'Release_build_s2/*.txt,' +
+                                'Release_build_s2/config_logs/*,' +
+                                'Release_build_s2/ninja_logs/*,' +
+                                // Coverage summaries (small text files)
+                                'Release_build_s2/coverage_report/summary.txt,' +
+                                'Release_build_s2/coverage_report_aocc_modified/summary.txt,' +
+                                // Stage 1 artifacts (for diagnostics)
+                                'Release_build_s1/*.txt,' +
+                                'Release_build_s1/config_logs/*,' +
+                                'Release_build_s1/ninja_logs/*'
+                        )
+                    )
+
+                    cleanWs(deleteDirs: true)
+                } else {
+                    echo 'Skipping archiving - build was skipped'
+                }
+            }
+        }
+    }
+
+    // Only mark SUCCESS when the build stages actually ran; a stagnation
+    // skip sets NOT_BUILT earlier and must not be overwritten.
+    if (hasSourceChanges) {
+        currentBuild.result = successResultStr
+    }
+}
