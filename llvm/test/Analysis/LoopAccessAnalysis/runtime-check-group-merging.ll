@@ -2496,3 +2496,79 @@ loop:
 exit:
   ret void
 }
+
+;; Test 22: An early-exit loop; the loads at {cdj, 2*cdj} sit after the
+;; early exit. LAA still emits runtime checks for this loop, but it cannot
+;; compute where the accesses end (every High bound is the unknown-end
+;; marker), so Range = End - Start is not computable and the merge skips
+;; the DepSet. The checks stay exactly as without merging.
+define void @early_exit_no_merge(ptr %a, ptr %out, i64 %n, i64 %cdj) {
+; CHECK-LABEL: 'early_exit_no_merge'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %p2 = getelementptr inbounds i8, ptr %base, i64 %pos2cdj
+; CHECK-NEXT:      Check 1:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP2:
+; CHECK-NEXT:          %p1 = getelementptr inbounds i8, ptr %base, i64 %cdj
+; CHECK-NEXT:      Check 2:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP3:
+; CHECK-NEXT:          %base = getelementptr inbounds double, ptr %a, i64 %iv
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %out High: inttoptr (i64 -1 to ptr))
+; CHECK-NEXT:            Member: {%out,+,8}<nw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: ((2 * %cdj) + %a) High: inttoptr (i64 -1 to ptr))
+; CHECK-NEXT:            Member: {((2 * %cdj) + %a),+,8}<nw><%loop>
+; CHECK-NEXT:        Group GRP2:
+; CHECK-NEXT:          (Low: (%cdj + %a) High: inttoptr (i64 -1 to ptr))
+; CHECK-NEXT:            Member: {(%cdj + %a),+,8}<nw><%loop>
+; CHECK-NEXT:        Group GRP3:
+; CHECK-NEXT:          (Low: %a High: inttoptr (i64 -1 to ptr))
+; CHECK-NEXT:            Member: {%a,+,8}<nuw><%loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
+  %base = getelementptr inbounds double, ptr %a, i64 %iv
+  %v0 = load double, ptr %base, align 8
+  %ee = fcmp oeq double %v0, 0.0
+  br i1 %ee, label %exit, label %latch
+
+latch:
+  %p1 = getelementptr inbounds i8, ptr %base, i64 %cdj
+  %v1 = load double, ptr %p1, align 8
+
+  %pos2cdj = mul nsw i64 %cdj, 2
+  %p2 = getelementptr inbounds i8, ptr %base, i64 %pos2cdj
+  %v2 = load double, ptr %p2, align 8
+
+  %s0 = fadd double %v0, %v1
+  %s1 = fadd double %s0, %v2
+  %outp = getelementptr inbounds double, ptr %out, i64 %iv
+  store double %s1, ptr %outp, align 8
+
+  %iv.next = add nuw nsw i64 %iv, 1
+  %cond = icmp slt i64 %iv.next, %n
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret void
+}
