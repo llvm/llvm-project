@@ -410,11 +410,10 @@ static bool preservesUniformity(unsigned Opcode) {
 }
 
 bool vputils::isElementwise(const VPValue *V) {
-  // TODO: Handle more opcodes and recipes.
+  // TODO: Handle more recipes.
   if (!isa<VPInstruction, VPWidenRecipe>(V))
     return false;
-  unsigned Opcode = getOpcode(V);
-  return Instruction::isUnaryOp(Opcode) || Instruction::isBinaryOp(Opcode);
+  return preservesUniformity(getOpcode(V));
 }
 
 bool vputils::isSingleScalar(const VPValue *VPV) {
