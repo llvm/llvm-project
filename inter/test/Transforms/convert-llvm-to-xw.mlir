@@ -165,7 +165,7 @@ module {
 // CHECK-SAME: !xw.ptr<#xw.local>
 // CHECK-SAME: !xw.ptr<#xw.generic>
 // CHECK: xw.local_memory_base {{.*}}xw.global = @scratch
-// CHECK: xw.local_memory_base {offset = 16 : i64{{.*}}xw.global = @scratch_wide
+// CHECK: xw.local_memory_base {{.*}}offset = 16 : i64{{.*}}xw.global = @scratch_wide
 // CHECK: xw.cast intconvert
 // CHECK: xw.cast intconvert {{.*}} : i32 -> i1
 // CHECK: xw.cmpi eq
@@ -175,14 +175,14 @@ module {
 // CHECK-NOT: {{(^|[^s])cf\.}}
 
 // CHECK-LABEL: func.func @queries_and_math
-// CHECK: xw.lane_id {{.*}} : !xw.simd<i32, 16>
-// CHECK: xw.local_id 1 {{.*}} : !xw.simd<i64, 16>
-// CHECK: xw.group_id 1 {{.*}} : i64
-// CHECK: xw.global_size 1 {{.*}} : i64
-// CHECK: xw.local_size 1 {{.*}} : i64
-// CHECK: xw.num_groups 1 {{.*}} : i64
-// CHECK: xw.launch_grid_size 1 {{.*}} : i64
-// CHECK: xw.launch_block_size 1 {{.*}} : i64
+// CHECK: xw.lane_id : !xw.simd<i32, 16>
+// CHECK: xw.local_id 1 : !xw.simd<i64, 16>
+// CHECK: xw.group_id 1 : i64
+// CHECK: xw.global_size 1 : i64
+// CHECK: xw.local_size 1 : i64
+// CHECK: xw.num_groups 1 : i64
+// CHECK: xw.launch_grid_size 1 : i64
+// CHECK: xw.launch_block_size 1 : i64
 // CHECK: xw.ptr_cmp eq
 // CHECK: xw.ptr_cmp ne
 // CHECK: xw.fadd {{.*}} : !xw.simd<f32, 16>, !xw.simd<f32, 16> -> !xw.simd<f32, 16>
@@ -195,10 +195,10 @@ module {
 // CHECK-NOT: unrealized_conversion_cast
 // CHECK-NOT: llvm.
 
-// WIDTH32: xw.global_id 0 {{.*}} : !xw.simd<i64, 32>
+// WIDTH32: xw.global_id 0 : !xw.simd<i64, 32>
 // WIDTH32: xw.load {{.*}} -> (!xw.simd<i32, 32>, !xw.mem.token)
-// WIDTH32: xw.lane_id {{.*}} : !xw.simd<i32, 32>
-// WIDTH32: xw.local_id 1 {{.*}} : !xw.simd<i64, 32>
+// WIDTH32: xw.lane_id : !xw.simd<i32, 32>
+// WIDTH32: xw.local_id 1 : !xw.simd<i64, 32>
 // WIDTH32: xw.atomic_rmw addi {{.*}} -> (!xw.simd<i32, 32>, !xw.mem.token)
 
 // CHECK-LABEL: func.func @poison_freeze
@@ -210,7 +210,7 @@ module {
 
 // CHECK-LABEL: func.func @mixed
 // CHECK: %[[INT_SPLAT:.*]] = xw.splat {{.*}} : i64 -> !xw.simd<i64, 16>
-// CHECK: xw.cmpi ult {{.*}}, %[[INT_SPLAT]] {{.*}} : !xw.simd<i64, 16>, !xw.simd<i64, 16> -> !xw.mask<16>
+// CHECK: xw.cmpi ult {{.*}}, %[[INT_SPLAT]] : !xw.simd<i64, 16>, !xw.simd<i64, 16> -> !xw.mask<16>
 // CHECK: xw.splat {{.*}} : i64 -> !xw.simd<i64, 16>
 // CHECK: xw.cmpi ugt {{.*}} : !xw.simd<i64, 16>, !xw.simd<i64, 16> -> !xw.mask<16>
 // CHECK: xw.splat {{.*}} : !xw.ptr<#xw.global> -> !xw.simd<!xw.ptr<#xw.global>, 16>
@@ -233,3 +233,6 @@ module {
 // CHECK: xw.store
 // CHECK: } otherwise {
 // CHECK-NOT: scf.if
+// CHECK-NOT: xw.imported
+// CHECK-NOT: xw.imported_llvm_metadata
+// CHECK-NOT: gep_flags

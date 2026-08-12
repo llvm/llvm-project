@@ -85,13 +85,9 @@ struct ImportLLVM final : inter::impl::ImportLLVMBase<ImportLLVM> {
     function->setAttr(xw::XWDialect::getSimdWidthAttrName(),
                       builder.getI32IntegerAttr(simdWidth));
     function->setAttr("xw.kernel_args", builder.getArrayAttr(descriptors));
-    NamedAttrList imported;
     for (NamedAttribute attr : llvmFunction->getDiscardableAttrs())
       if (!attr.getName().strref().starts_with("llvm."))
-        imported.set(attr.getName(), attr.getValue());
-    if (!imported.empty())
-      function->setAttr("xw.imported_llvm_metadata",
-                        builder.getDictionaryAttr(imported));
+        function->setAttr(attr.getName(), attr.getValue());
     function.getBody().takeBody(llvmFunction.getBody());
 
     SmallVector<Operation *> terminators;
