@@ -15,7 +15,7 @@ which are going to be added to clang documentation in the future.
 
 | Macro | Description |
 | --- | --- |
-| `__CLANG_RDC__` | Defined when Clang is compiling code in Relocatable Device Code (RDC) mode. RDC is necessary for linking device codes across translation units. It is enabled by default for SYCL and can be disabled with `-fno-gpu-rdc` compiler option. |
+| `__CLANG_RDC__` | Defined when Clang is compiling code in Relocatable Device Code (RDC) mode. RDC is necessary for linking device code across translation units. It is enabled by default for SYCL and can be disabled with the `-fno-gpu-rdc` compiler option. |
 
 ## Address space handling
 
