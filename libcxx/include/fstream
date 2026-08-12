@@ -432,6 +432,7 @@ private:
 
   _LIBCPP_HIDE_FROM_ABI static int __fseek(FILE* __file, pos_type __offset, int __whence);
   _LIBCPP_HIDE_FROM_ABI static pos_type __ftell(FILE* __file);
+  _LIBCPP_HIDE_FROM_ABI static FILE* __fopen(const char* __name, const char* __mode);
 
   _LIBCPP_EXPORTED_FROM_ABI friend FILE* __get_ostream_file(ostream&);
 
@@ -780,6 +781,15 @@ const wchar_t* basic_filebuf<_CharT, _Traits>::__make_mdwstring(ios_base::openmo
 #    endif
 
 template <class _CharT, class _Traits>
+FILE* basic_filebuf<_CharT, _Traits>::__fopen(const char* __name, const char* __mode) {
+#   if defined(_AIX) && !defined(__64BIT__)
+  return fopen64(__name, __mode);
+#   else
+  return std::fopen(__name, __mode);
+#   endif
+}
+
+template <class _CharT, class _Traits>
 basic_filebuf<_CharT, _Traits>* basic_filebuf<_CharT, _Traits>::open(const char* __s, ios_base::openmode __mode) {
   if (__file_)
     return nullptr;
@@ -787,7 +797,7 @@ basic_filebuf<_CharT, _Traits>* basic_filebuf<_CharT, _Traits>::open(const char*
   if (!__mdstr)
     return nullptr;
 
-  return __adopt_file(std::fopen(__s, __mdstr), __mode);
+  return __adopt_file(__fopen(__s, __mdstr), __mode);
 }
 
 template <class _CharT, class _Traits>
@@ -1067,6 +1077,8 @@ int basic_filebuf<_CharT, _Traits>::__fseek(FILE* __file, pos_type __offset, int
   return _fseeki64(__file, __offset, __whence);
 #    elif _LIBCPP_LIBC_NEWLIB
   return fseek(__file, __offset, __whence);
+#    elif defined(_AIX) && !defined(__64BIT__)
+  return fseeko64(__file, __offset, __whence);
 #    else
   return ::fseeko(__file, __offset, __whence);
 #    endif
@@ -1078,6 +1090,8 @@ typename basic_filebuf<_CharT, _Traits>::pos_type basic_filebuf<_CharT, _Traits>
   return _ftelli64(__file);
 #    elif _LIBCPP_LIBC_NEWLIB
   return ftell(__file);
+#    elif defined(_AIX) && !defined(__64BIT__)
+  return ftello64(__file);
 #    else
   return ftello(__file);
 #    endif
