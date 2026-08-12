@@ -1044,11 +1044,13 @@ Lighthouse supplies three references, not selector templates:
 - Lighthouse's `test/run/pipeline-check.mlir` is the first reproducible matmul
   corpus. Lower it to LLVM IR, freeze pre-opt plus `opt -O2/-O3` IR, and use its
   deterministic inputs/reference for generic-path bring-up.
-- Lighthouse's `examples/xegpu/matmul.py` is the Intel performance and layout
+- Lighthouse's `examples/xegpu/matmul.py` at
+  `ec3a77574cc5f049736f47b121bdd4aeeb854201` is the Intel performance and layout
   oracle: f16/bf16->f32, M8xN16xK16 DPAS geometry, 2D block
   load/store/prefetch, transpose, bias/ReLU, Level Zero validation, and staged
-  MLIR dumps. Inter does not pattern-match its generated names or operation
-  order.
+  MLIR dumps. The frozen `128x128x64` workgroup-stage corpus is
+  `test/Frontend/Inputs/lighthouse-matmul-xegpu-wg.mlir`. Inter does not
+  pattern-match its generated names or operation order.
 - The pinned KernelBench `level1/2_Standard_matrix_multiplication_` becomes the
   production corpus once initialized. Capture its LLVM-dialect output, translate
   to LLVM IR, run `opt -O2/-O3`, and validate against PyTorch before benchmarking.

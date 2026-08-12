@@ -5,6 +5,8 @@ target_link_libraries(inter-opt PRIVATE
   InterTransforms
   MLIROptLib
   MLIRFuncDialect
+  MLIRGPUDialect
+  MLIRMemRefDialect
   MLIRSCFDialect
   MLIRArithDialect
   MLIRControlFlowDialect
@@ -14,5 +16,8 @@ target_link_libraries(inter-opt PRIVATE
   MLIRTransformDialectTransforms
   MLIRTransforms
   MLIRUBDialect
+  MLIRVectorDialect
+  MLIRXeGPUDialect
+  MLIRXeVMDialect
 )
 mlir_check_link_libraries(inter-opt)
