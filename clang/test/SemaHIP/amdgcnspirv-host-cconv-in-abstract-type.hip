@@ -29,3 +29,10 @@ static_assert(classify_fn<void __vectorcall()>::value == 2,
 // Variadic __cdecl is accepted, as it is on the host, so that prevalent Windows
 // headers remain includable during device compilation.
 using VariadicCdecl = int __cdecl(int, ...);
+
+struct ThiscallBase {
+  virtual void __attribute__((thiscall)) boo();
+};
+struct ThiscallDerived : ThiscallBase {
+  void boo() override;
+};
