@@ -290,7 +290,6 @@ add_fp_unittest(
 
 add_fp_unittest(
   faddf128_test
-  NEED_MPFR
   SUITE
     libc-math-unittests
   SRCS
