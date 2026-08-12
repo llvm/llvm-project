@@ -237,6 +237,11 @@ if is_configured("has_libcxx") and config.has_libcxx:
                 ]
             dotest_cmd += ["--libcxx-library-dir", config.libcxx_libs_dir]
 
+# If a GNUstep libobjc2 installation is available, build Objective-C tests
+# against it on non-Apple platforms.
+if is_configured("objc_gnustep_dir"):
+    dotest_cmd += ["--objc-gnustep-dir", config.objc_gnustep_dir]
+
 # Forward ASan-specific environment variables to tests, as a test may load an
 # ASan-ified dylib.
 for env_var in ("ASAN_OPTIONS", "DYLD_INSERT_LIBRARIES"):

@@ -243,6 +243,11 @@ class Builder:
             return libcpp_args
         return []
 
+    def getObjcGnustepArgs(self):
+        if configuration.objc_gnustep_dir:
+            return ["OBJC_GNUSTEP_DIR={}".format(configuration.objc_gnustep_dir)]
+        return []
+
     def getLLDBObjRoot(self):
         if configuration.lldb_obj_root:
             return [f"LLDB_OBJ_ROOT={configuration.lldb_obj_root}"]
@@ -303,6 +308,7 @@ class Builder:
             self.getExtraMakeArgs(),
             self.getModuleCacheSpec(),
             self.getLibCxxArgs(),
+            self.getObjcGnustepArgs(),
             self.getLLDBObjRoot(),
             self.getResourceDirArgs(),
             self.getCmdLine(dictionary),

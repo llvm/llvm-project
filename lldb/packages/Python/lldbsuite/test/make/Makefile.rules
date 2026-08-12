@@ -546,6 +546,22 @@ ifneq "$(strip $(OBJCXX_SOURCES))" ""
 	endif
 endif
 
+#----------------------------------------------------------------------
+# Build Objective-C sources against a GNUstep libobjc2 installation when one
+# has been configured, which is how Objective-C tests run on platforms with
+# no system runtime. Mirrors the flags the Shell test helper uses.
+#----------------------------------------------------------------------
+ifneq "$(strip $(OBJC_GNUSTEP_DIR))" ""
+	ifneq "$(strip $(OBJC_SOURCES)$(OBJCXX_SOURCES))" ""
+		OBJCFLAGS +=-fobjc-runtime=gnustep-2.0 -I$(OBJC_GNUSTEP_DIR)/include
+		CFLAGS +=-fobjc-runtime=gnustep-2.0 -I$(OBJC_GNUSTEP_DIR)/include
+		LDFLAGS +=-L$(OBJC_GNUSTEP_DIR)/lib
+		ifeq "$(OS)" "Linux"
+			LDFLAGS +=-Wl,-rpath,$(OBJC_GNUSTEP_DIR)/lib
+		endif
+	endif
+endif
+
 ifeq ($(CC_TYPE), clang)
 	CXXFLAGS += --driver-mode=g++
 endif

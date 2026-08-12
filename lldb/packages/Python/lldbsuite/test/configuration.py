@@ -148,6 +148,10 @@ libcxx_include_dir = None
 libcxx_include_target_dir = None
 libcxx_library_dir = None
 
+# GNUstep libobjc2 installation directory used to build Objective-C tests on
+# non-Apple platforms.
+objc_gnustep_dir = None
+
 # A plugin whose tests will be enabled, like intel-pt.
 enabled_plugins = []
 

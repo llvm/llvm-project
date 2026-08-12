@@ -85,6 +85,14 @@ def create_parser():
             "Specify the path to a custom libc++ library directory. Must be used in conjunction with --libcxx-include-dir."
         ),
     )
+    group.add_argument(
+        "--objc-gnustep-dir",
+        metavar="dir",
+        dest="objc_gnustep_dir",
+        help=textwrap.dedent(
+            "Specify the path to a GNUstep libobjc2 installation to build Objective-C tests against on non-Apple platforms."
+        ),
+    )
     # FIXME? This won't work for different extra flags according to each triple.
     group.add_argument(
         "-E",
