@@ -58,7 +58,7 @@ GOFFObjectFile::getContinuousData(SmallVectorImpl<uint8_t> &CompleteData,
   // Append the data.
   const uint8_t *Ptr = Record + DataIndex;
   size_t SliceLength =
-      std::min(DataLength, (uint16_t)(GOFF::RecordLength - DataIndex));
+      std::min(DataLength, static_cast<uint16_t>(GOFF::RecordLength - DataIndex));
   CompleteData.append(Ptr, Ptr + SliceLength);
   DataLength -= SliceLength;
   Ptr += SliceLength;
@@ -74,7 +74,7 @@ GOFFObjectFile::getContinuousData(SmallVectorImpl<uint8_t> &CompleteData,
       return createStringError(object_error::parse_failed,
                                "continued bit should not be set");
 
-    SliceLength = std::min(DataLength, (uint16_t)GOFF::PayloadLength);
+    SliceLength = std::min(DataLength, static_cast<uint16_t>(GOFF::PayloadLength));
     Ptr += GOFF::RecordPrefixLength; // Skip the 3-byte prefix
     CompleteData.append(Ptr, Ptr + SliceLength);
     DataLength -= SliceLength;
@@ -333,11 +333,6 @@ GOFFObjectFile::GOFFObjectFile(MemoryBufferRef Object, Error &Err)
     case GOFF::RT_HDR:
       LLVM_DEBUG(dbgs() << "  --  HDR (GOFF record type) unhandled\n");
       break;
-    default:
-      Err = createStringError(object_error::parse_failed,
-                              "record %zu has unknown record type 0x%02" PRIX8,
-                              RecordNum, RecordType);
-      return;
     }
   }
 }
