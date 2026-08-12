@@ -398,7 +398,7 @@ void sequence_container_benchmarks(std::string container) {
         }
       });
 
-#if TEST_STD_VER >= 23
+#if defined(__cpp_lib_containers_ranges) && __cpp_lib_containers_ranges >= 202202L
     for (auto gen : generators)
       bench("append_range() (into empty container)" + tostr(gen), [gen](auto& state) {
         auto const size = state.range(0);

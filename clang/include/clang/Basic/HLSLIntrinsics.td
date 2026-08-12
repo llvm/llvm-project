@@ -1082,7 +1082,6 @@ to True if the x parameter is +INF or -INF. Otherwise, False.
 }];
   let ReturnType = VaryingShape<BoolTy>;
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
 }
 
 // Determines if the specified value x is Not a Number.
@@ -1097,7 +1096,6 @@ to True if the x parameter is NaN or QNaN. Otherwise, False.
 }];
   let ReturnType = VaryingShape<BoolTy>;
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
 }
 
 // Returns the result of multiplying the specified value by two raised
@@ -1145,7 +1143,7 @@ Length is based on the following formula: sqrt(x[0]^2 + x[1]^2 + ...).
 }
 
 // Returns the linear interpolation of x to y by s.
-def hlsl_lerp : HLSLThreeArgBuiltin<"lerp", "__builtin_hlsl_lerp"> {
+def hlsl_lerp : HLSLThreeArgDetail<"lerp", "lerp_impl"> {
   let Doc = [{
 \fn T lerp(T x, T y, T s)
 \brief Returns the linear interpolation of x to y by s.
@@ -1157,6 +1155,7 @@ the y parameter.
 Linear interpolation is based on the following formula: x*(1-s) + y*s which
 can equivalently be written as x + s(y-x).
 }];
+  let ParamNames = ["x", "y", "s"];
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingMatDims = [];
 }
@@ -1356,11 +1355,12 @@ def hlsl_quad_read_across_diagonal : HLSLOneArgBuiltin<"QuadReadAcrossDiagonal",
 }
 
 // Converts the specified value from degrees to radians.
-def hlsl_radians : HLSLOneArgBuiltin<"radians", "__builtin_hlsl_elementwise_radians"> {
+def hlsl_radians : HLSLOneArgDetail<"radians", "radians_impl"> {
   let Doc = [{
 \fn T radians(T Val)
 \brief Converts the specified value from degrees to radians.
 }];
+  let ParamNames = ["Val"];
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingMatDims = [];
 }
@@ -1562,7 +1562,7 @@ def hlsl_sqrt : HLSLOneArgBuiltin<"sqrt", "__builtin_elementwise_sqrt"> {
 
 // Returns 1 if the x parameter is greater than or equal to the y parameter;
 // otherwise, 0.
-def hlsl_step : HLSLTwoArgBuiltin<"step", "__builtin_hlsl_step"> {
+def hlsl_step : HLSLTwoArgDetail<"step", "step_impl"> {
   let Doc = [{
 \fn T step(T y, T x)
 \brief Returns 1 if the x parameter is greater than or equal to the y
@@ -1572,6 +1572,7 @@ parameter; otherwise, 0.
 
 Step is based on the following formula: (x >= y) ? 1 : 0
 }];
+  let ParamNames = ["y", "x"];
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingMatDims = [];
 }
