@@ -17,6 +17,8 @@
 #define FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
 FUNCTION_PASS("riscv-codegenprepare", RISCVCodeGenPreparePass(this))
+FUNCTION_PASS("riscv-gather-scatter-lowering",
+              RISCVGatherScatterLoweringPass(this))
 FUNCTION_PASS("riscv-zacas-abi-fix", RISCVZacasABIFixPass(this))
 #undef FUNCTION_PASS
 
