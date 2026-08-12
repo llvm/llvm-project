@@ -9,8 +9,10 @@
 #ifndef LLDB_SOURCE_PLUGINS_REGISTERTYPEBUILDER_REGISTERTYPEBUILDERCLANG_H
 #define LLDB_SOURCE_PLUGINS_REGISTERTYPEBUILDER_REGISTERTYPEBUILDERCLANG_H
 
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Target/RegisterTypeBuilder.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/RegisterTypeFlags.h"
 
 namespace lldb_private {
 class RegisterTypeBuilderClang : public RegisterTypeBuilder {
@@ -28,11 +30,17 @@ public:
   }
   static lldb::RegisterTypeBuilderSP CreateInstance(Target &target);
 
-  CompilerType GetRegisterType(const std::string &name,
-                               const lldb_private::RegisterFlags &flags,
-                               uint32_t byte_size) override;
+  CompilerType GetRegisterType(const RegisterInfo &reg_info) override;
 
 private:
+  CompilerType BuildEnumType(const RegisterTypeEnum &enum_type_info,
+                             uint32_t register_byte_size,
+                             lldb::TypeSystemClangSP type_system);
+
+  CompilerType BuildFlagsType(const RegisterTypeFlags &flags_info,
+                              uint32_t register_byte_size,
+                              lldb::TypeSystemClangSP type_system);
+
   Target &m_target;
 };
 } // namespace lldb_private

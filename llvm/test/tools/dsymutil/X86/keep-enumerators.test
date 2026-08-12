@@ -1,0 +1,160 @@
+# RUN: yaml2obj %s -o %t.o
+# RUN: echo '---' > %t.map
+# RUN: echo "triple:          'x86_64-apple-darwin'" >> %t.map
+# RUN: echo 'objects:'  >> %t.map
+# RUN: echo " -  filename: '%t.o'" >> %t.map
+# RUN: echo '    symbols:' >> %t.map
+# RUN: echo '      - { sym: _foo, objAddr: 0x0, binAddr: 0x10000, size: 0x10 }' >> %t.map
+# RUN: echo '...' >> %t.map
+# RUN: dsymutil --linker classic -f -y %t.map -o - | llvm-dwarfdump --debug-info - | FileCheck %s
+# RUN: dsymutil --linker parallel -f -y %t.map -o - | llvm-dwarfdump --debug-info - | FileCheck %s
+
+## An enumeration type that only becomes live through the parent chain of a kept
+## DIE -- here a subprogram definition pointing back at a declaration nested in
+## the enumeration type -- must still keep its enumerators.
+
+# CHECK: DW_TAG_enumeration_type
+# CHECK:   DW_AT_name{{.*}}"E"
+# CHECK:   DW_TAG_enumerator
+# CHECK:     DW_AT_name{{.*}}"One"
+# CHECK:   DW_TAG_enumerator
+# CHECK:     DW_AT_name{{.*}}"Two"
+
+--- !mach-o
+FileHeader:
+  magic:      0xFEEDFACF
+  cputype:    0x01000007
+  cpusubtype: 0x00000003
+  filetype:   0x00000001
+  ncmds:      2
+  sizeofcmds: 296
+  flags:      0x00002000
+  reserved:   0x00000000
+LoadCommands:
+  - cmd:      LC_SEGMENT_64
+    cmdsize:  232
+    segname:  ''
+    vmaddr:   0x00
+    vmsize:   0x200
+    fileoff:  0x200
+    filesize: 0x200
+    maxprot:  7
+    initprot: 7
+    nsects:   2
+    flags:    0
+    Sections:
+      - sectname:  __debug_abbrev
+        segname:   __DWARF
+        addr:      0x0000000000000000
+        size:      0x36
+        offset:    0x00000280
+        align:     0
+        reloff:    0x00000000
+        nreloc:    0
+        flags:     0x02000000
+        reserved1: 0x00000000
+        reserved2: 0x00000000
+        reserved3: 0x00000000
+      - sectname:  __debug_info
+        segname:   __DWARF
+        addr:      0x0000000000000100
+        size:      0x3b
+        offset:    0x000002C0
+        align:     0
+        reloff:    0x00000400
+        nreloc:    1
+        flags:     0x02000000
+        reserved1: 0x00000000
+        reserved2: 0x00000000
+        reserved3: 0x00000000
+        relocations:
+          - address:         0x2a
+            symbolnum:       0
+            pcrel:           false
+            length:          3
+            extern:          true
+            type:            0
+            scattered:       false
+            value:           0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          0x500
+    nsyms:           1
+    stroff:          0x510
+    strsize:         6
+LinkEditData:
+  NameList:
+    - n_strx:          1
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+  StringTable:
+    - ''
+    - '_foo'
+    - ''
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_enumeration_type
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_enumerator
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_const_value
+            Form:      DW_FORM_data1
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_declaration
+            Form:      DW_FORM_flag
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data4
+          - Attribute: DW_AT_specification
+            Form:      DW_FORM_ref4
+  debug_info:
+    - Version: 4
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: CU1
+        - AbbrCode: 2
+          Values:
+            - CStr: E
+        - AbbrCode: 3
+          Values:
+            - CStr: One
+            - Value:  0x01
+        - AbbrCode: 3
+          Values:
+            - CStr: Two
+            - Value:  0x02
+        - AbbrCode: 4
+          Values:
+            - CStr: member
+            - Value:  0x01
+        - AbbrCode: 0
+        - AbbrCode: 5
+          Values:
+            - Value:  0x0000000000000000
+            - Value:  0x00000010
+            - Value:  0x0000001f
+        - AbbrCode: 0
+...

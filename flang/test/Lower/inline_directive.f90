@@ -36,14 +36,14 @@ subroutine test_inline()
 
   !dir$ forceinline
   do i = 1, 100
-    !CHECK: fir.do_loop %[[ARG_0:.*]] = %[[FROM:.*]] to %[[TO:.*]] step %[[C1:.*]]  iter_args(%[[ARG_1:.*]] = {{.*}}) -> (i32) {
+    !CHECK: fir.do_loop %[[ARG_0:.*]] = %[[FROM:.*]] to %[[TO:.*]] step %[[C1:.*]] {
     !CHECK:  fir.call @_QFtest_inlinePf(%[[VAL_1]], %[[VAL_3]]) fastmath<contract> {inline_attr = #fir.inline_attrs<always_inline>} : (!fir.ref<i32>, !fir.ref<i32>) -> ()
     call f(x, y)
   enddo
 
   !dir$ inline
   do i = 1, 100
-    !CHECK: fir.do_loop %[[ARG_0:.*]] = %[[FROM:.*]] to %[[TO:.*]] step %[[C1:.*]]  iter_args(%[[ARG_1:.*]] = {{.*}}) -> (i32) {
+    !CHECK: fir.do_loop %[[ARG_0:.*]] = %[[FROM:.*]] to %[[TO:.*]] step %[[C1:.*]] {
     !CHECK:  fir.call @_QFtest_inlinePf(%[[VAL_1]], %[[VAL_3]]) fastmath<contract> {inline_attr = #fir.inline_attrs<inline_hint>} : (!fir.ref<i32>, !fir.ref<i32>) -> ()
     call f(x, y)
   enddo

@@ -21,7 +21,6 @@ def static_libgfortran : Flag<["-"], "static-libgfortran">, Group<gfortran_Group
 // "f" options with values for gfortran.
 def fblas_matmul_limit_EQ : Joined<["-"], "fblas-matmul-limit=">, Group<gfortran_Group>;
 def fcheck_EQ : Joined<["-"], "fcheck=">, Group<gfortran_Group>;
-def ffpe_trap_EQ : Joined<["-"], "ffpe-trap=">, Group<gfortran_Group>;
 def ffree_line_length_VALUE : Joined<["-"], "ffree-line-length-">, Group<gfortran_Group>;
 def finit_character_EQ : Joined<["-"], "finit-character=">, Group<gfortran_Group>;
 def finit_integer_EQ : Joined<["-"], "finit-integer=">, Group<gfortran_Group>;
@@ -115,18 +114,6 @@ def static_libflangrt : Flag<["-"], "static-libflangrt">,
   Visibility<[FlangOption]>, Flags<[NoArgumentUnused]>;
 
 //===----------------------------------------------------------------------===//
-// FlangOption + NoXarchOption
-//===----------------------------------------------------------------------===//
-
-def flang_experimental_hlfir : Flag<["-"], "flang-experimental-hlfir">,
-  Flags<[HelpHidden]>, Visibility<[FlangOption, FC1Option]>,
-  HelpText<"Use HLFIR lowering (experimental)">;
-
-def flang_deprecated_no_hlfir : Flag<["-"], "flang-deprecated-no-hlfir">,
-  Flags<[HelpHidden]>, Visibility<[FlangOption, FC1Option]>,
-  HelpText<"Do not use HLFIR lowering (deprecated)">;
-
-//===----------------------------------------------------------------------===//
 // FlangOption + CoreOption + NoXarchOption
 //===----------------------------------------------------------------------===//
 
@@ -202,6 +189,13 @@ defm ppc_native_vec_elem_order: BoolOptionWithoutMarshalling<"f", "ppc-native-ve
   PosFlag<SetTrue, [], [ClangOption], "Specifies PowerPC native vector element order (default)">,
   NegFlag<SetFalse, [], [ClangOption], "Specifies PowerPC non-native vector element order">>;
 defm unsigned : OptInFC1FFlag<"unsigned", "Enables UNSIGNED type">;
+defm enumeration_type : OptInFC1FFlag<"enumeration-type", "Enables F2023 ENUMERATION TYPE (experimental; FIR lowering is incomplete)">;
+defm openacc_default_none_scalars_strict : OptOutFC1FFlag<"openacc-default-none-scalars-strict",
+  "Require explicit data clauses for all variables (including scalars) under OpenACC DEFAULT(NONE)",
+  "Allow scalars without explicit data clauses under OpenACC DEFAULT(NONE) (default, pre-OpenACC-3.2 behavior)">;
+defm openacc_multiple_names_in_routine : OptOutFC1FFlag<"openacc-multiple-names-in-routine",
+  "Accept multiple names in OpenACC ROUTINE directive (extension)",
+  "Do not accept multiple names in OpenACC ROUTINE directive">;
 
 def fno_automatic : Flag<["-"], "fno-automatic">, Group<f_Group>,
   HelpText<"Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE">;
@@ -291,16 +285,14 @@ defm unsafe_cray_pointers : BoolOptionWithoutMarshalling<"f", "unsafe-cray-point
   PosFlag<SetTrue, [], [FlangOption, FC1Option], "Optimizations allow for unsafe Cray pointer usages">,
   NegFlag<SetFalse, [], [FlangOption, FC1Option], "Optimizations don't allow for unsafe Cray pointer usages (default)">>;
 
-def relaxed_c_loc : Flag<["-"], "frelaxed-c-loc">, Group<f_Group>,
+def relaxed_c_loc : Flag<["-"], "frelaxed-c-loc-checks">, Group<f_Group>,
   Visibility<[FlangOption, FC1Option]>,
-  HelpText<"Unsafe relaxation of C_LOC() argument restrictions for compatibility">,
+  HelpText<"Allow a data object or function pointer as the C_LOC() argument">,
   DocBrief<[{
-    Unsafe relaxation of C_LOC() argument restrictions for compatibility.
-    All C_LOC values should be passed directly to C calls.
-
-    This is unsafe, because it can be used to create aliases the compiler
-    is unaware of, please fix your applications instead of using this flag.
-    This may be removed in the future.}]>;
+    Allow a data object or function pointer as the C_LOC() argument
+    (not just pointers/targets). The compiler will not reason about aliases
+    created through non-target non-pointer arguments and code generated
+    using such aliases may exhibit unexpected behavior.}]>;
 
 def fhermetic_module_files : Flag<["-"], "fhermetic-module-files">, Group<f_Group>,
   HelpText<"Emit hermetic module files (no nested USE association)">;
@@ -316,6 +308,87 @@ def ffast_real_mod : Flag<["-"], "ffast-real-mod">, Group<f_Group>,
   HelpText<"Enable optimization of MOD for REAL types">;
 def fno_fast_real_mod : Flag<["-"], "fno-fast-real-mod">, Group<f_Group>,
   HelpText<"Disable optimization of MOD for REAL types in presence of -ffast-math">;
+
+defm fp_sum_reassociation
+    : BoolOptionWithoutMarshalling<
+          "f", "fp-sum-reassociation",
+          PosFlag<SetTrue, [], [],
+                  "Enable Fortran-standard compliant reassociation within "
+                  "individual REAL and COMPLEX sum expressions. This may "
+                  "change exact floating-point results">,
+          NegFlag<SetFalse, [], [],
+                  "Disable reassociation within individual REAL and COMPLEX "
+                  "sum expressions">>,
+      DocBrief<[{
+        Enable Fortran-standard compliant reassociation within individual
+        ``REAL`` and ``COMPLEX`` sum expressions. This can improve optimization
+        opportunities and may change exact floating-point results while
+        preserving standard-conforming Fortran semantics.
+      }]>;
+
+def freal_sum_reassociation : Flag<["-"], "freal-sum-reassociation">,
+  Flags<[HelpHidden]>, Alias<ffp_sum_reassociation>;
+def fno_real_sum_reassociation : Flag<["-"], "fno-real-sum-reassociation">,
+  Flags<[HelpHidden]>, Alias<fno_fp_sum_reassociation>;
+
+def ffpe_trap_EQ : Joined<["-"], "ffpe-trap=">, Group<f_Group>,
+  HelpText<"Set the initial floating-point exception halting mode for the main program">,
+  DocBrief<[{The ``-ffpe-trap=[list]`` option sets the initial floating-point
+exception halting mode for the main program unit. This is the halting mode in
+effect when the main program begins execution; the program may subsequently
+change it (for example, with ``IEEE_SET_HALTING_MODE``). ``[list]`` is a
+(possibly empty) comma-separated list of ``none`` or the following exceptions:
+``invalid``, ``zero``, ``overflow``, ``underflow``, ``inexact``, and
+``denormal``. The first five exceptions correspond to the Fortran 2023 (17.6)
+``IEEE_FLAG_TYPE`` values ``IEEE_INVALID``, ``IEEE_DIVIDE_BY_ZERO``,
+``IEEE_OVERFLOW``, ``IEEE_UNDERFLOW``, and ``IEEE_INEXACT``, whereas
+``denormal`` is a non-standard GFortran-compatible extension that halts on the
+hardware denormal (subnormal) operand exception. The value ``none`` may appear
+anywhere in the list; it disables halting and clears any preceding exceptions in
+the list, while exceptions following it are still effective (e.g.,
+``invalid,none,zero`` enables halting on ``zero`` only). In the absence of this
+option, or when an empty list is passed to it, the program runs with traps
+disabled (equivalent to passing ``none``). Multiple occurrences of this option
+are allowed, in which case only the last one takes effect.
+
+Run-time halting relies on glibc's ``feenableexcept`` (exposed as
+``IEEE_SUPPORT_HALTING``). The compile-time warning is a conservative
+approximation from the target triple; the runtime is the definitive authority on
+which exceptions can be trapped.
+
+The table below summarizes the halting behavior for different system
+configurations. The C standard library is ``glibc`` (in practice Linux) or
+``non-glibc``; "Standard Exception" covers ``invalid``, ``zero``, ``overflow``,
+``underflow``, and ``inexact``. In the Standard Exception and Denormal columns,
+each cell names the compiler action followed by the run-time action:
+``compiler accepts`` = the compiler forwards the request without a warning,
+``compiler warns`` = the compiler emits a warning, ``runtime halts`` = the
+exception is trapped at run time, and ``runtime ignores`` = the request is
+silently ignored at run time.
+
++--------------+--------------------+--------------------+-------------------+
+| Architecture | C Standard Library | Standard Exception | Denormal          |
++==============+====================+====================+===================+
+| x86          | glibc              | compiler accepts,  | compiler accepts, |
+|              |                    | runtime halts      | runtime halts     |
++--------------+--------------------+--------------------+-------------------+
+| non-x86      | glibc              | compiler accepts,  | compiler warns,   |
+|              |                    | runtime halts      | runtime ignores   |
++--------------+--------------------+--------------------+-------------------+
+| x86          | non-glibc          | compiler accepts,  | compiler accepts, |
+|              |                    | runtime ignores    | runtime ignores   |
++--------------+--------------------+--------------------+-------------------+
+| non-x86      | non-glibc          | compiler warns,    | compiler warns,   |
+|              |                    | runtime ignores    | runtime ignores   |
++--------------+--------------------+--------------------+-------------------+
+
+Notes:
+
+* On non-x86 targets the standard exceptions halt only where the target's glibc
+  ``feenableexcept`` supports them; the runtime probes each at start-up (via
+  ``IEEE_SUPPORT_HALTING``) and enables only those it can.
+* ``denormal`` is honored only on x86_64; on 32-bit x86 it is silently ignored
+  (no warning).}]>;
 
 defm init_global_zero : BoolOptionWithoutMarshalling<"f", "init-global-zero",
   PosFlag<SetTrue, [], [], "Zero initialize globals without default initialization (default)">,
@@ -404,6 +477,7 @@ def fno_reformat : Flag<["-"], "fno-reformat">, Group<Preprocessor_Group>,
 def fpreprocess_include_lines : Flag<["-"], "fpreprocess-include-lines">, Group<Preprocessor_Group>,
   HelpText<"Treat INCLUDE lines like #include directives in -E mode">;
 defm analyzed_objects_for_unparse : OptOutFC1FFlag<"analyzed-objects-for-unparse", "", "Do not use the analyzed objects when unparsing">;
+def foffload_device : Flag<["-"], "foffload-device">, Group<f_Group>, Flags<[HelpHidden]>;
 
 def emit_fir : Flag<["-"], "emit-fir">, Group<Action_Group>,
   HelpText<"Build the parse tree, then lower it to FIR">;

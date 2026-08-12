@@ -14,12 +14,6 @@ int scoped;
 float np_scoped = 1; // namespace variables are like globals
 } // namespace foo
 
-// Lambdas should be ignored, because they do not follow the normal variable
-// semantic (e.g. the type is only known to the compiler).
-void lambdas() {
-  auto Lambda = [](int i) { return i < 0; };
-}
-
 void some_function(double, wchar_t);
 
 void some_function(double np_arg0, wchar_t np_arg1) {

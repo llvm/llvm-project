@@ -8,6 +8,8 @@
 
 #include "GCNRegPressure.h"
 #include "AMDGPUUnitTests.h"
+#include "GCNSubtarget.h"
+#include "SIRegisterInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
@@ -20,9 +22,9 @@
 
 using namespace llvm;
 
-class GCNRegPressureTest : public llvm::CodeGenTestBase {
+class GCNRegPressureTest : public AMDGPUCodeGenTestBase {
 public:
-  void SetUp() override { setUpImpl("amdgcn--", "gfx908", ""); }
+  void SetUp() override { setUpImpl("amdgpu9.08--", "", ""); }
 };
 
 TEST_F(GCNRegPressureTest, DownwardTrackerEndOnDbgVal) {
@@ -82,25 +84,18 @@ body:             |
     // which would return false in this case.
     //
     // There aren't any non-debug instruction between the beginning of bb1 and
-    // Dbg1 (exclusive). However, the call to reset takes the end of the MBB as
-    // the limit, so it pushes the beginning of the block up to %2's def and
-    // considers the reset successful.
-    EXPECT_TRUE(RPTracker.reset(*MBB1.begin(), &MBB1LiveIns));
-    EXPECT_TRUE(RPTrackerNoLiveIns.reset(*MBB1.begin(), nullptr));
-    // advance then unnecessarily processes instructions in order until the end
-    // of the block, even though it is already past Dbg1. It still returns false
-    // because it is stopped by the end of block delimiter, not the end
-    // iterator.
+    // Dbg1 (exclusive), the reset is therefore unsuccessful. The advance caller
+    // returns early on a failure to reset. Calling advance after this does
+    // nothing and produces false because the internal iterator already points
+    // to the second debug instruction.
+    EXPECT_FALSE(RPTracker.reset(*MBB1.begin(), Dbg1, &MBB1LiveIns));
+    EXPECT_FALSE(RPTrackerNoLiveIns.reset(*MBB1.begin(), Dbg1, nullptr));
     EXPECT_FALSE(RPTracker.advance(Dbg1));
     EXPECT_FALSE(RPTrackerNoLiveIns.advance(Dbg1));
 
-    // In that case, the maximum pressure is also the pressure induced by the
-    // block's live-ins plus %2's def i.e., 3 VGPRs. This is confusing because
-    // %2's def is outside the [Begin,End) range we passed to advance, and there
-    // is no indication that a false return value should make the tracked
-    // pressure invalid.
-    EXPECT_EQ(RPTracker.moveMaxPressure().getVGPRNum(false), 3U);
-    EXPECT_EQ(RPTrackerNoLiveIns.moveMaxPressure().getVGPRNum(false), 3U);
+    // Register pressure should be the one at the block's live-ins.
+    EXPECT_EQ(RPTracker.moveMaxPressure().getVGPRNum(false), 2U);
+    EXPECT_EQ(RPTrackerNoLiveIns.moveMaxPressure().getVGPRNum(false), 2U);
   }
 }
 
@@ -137,20 +132,117 @@ body:             |
 
   // The following unpacks a call to
   // advance(MBB1.begin(), MBB1.end(), [MBB1LiveIns|nullptr])
-  // which would return true in this case.
+  // which would return false in this case.
   //
   // There aren't any non-debug instruction in bb.2, the reset is therefore
-  // unsuccessful. However the advance caller discards that return value and
-  // proceeds to calling its override.
-  EXPECT_FALSE(RPTracker.reset(*MBB1.begin(), &MBB1LiveIns));
-  EXPECT_FALSE(RPTrackerNoLiveIns.reset(*MBB1.begin(), nullptr));
-  // advance then produces true even though no advancement actually happened.
-  EXPECT_TRUE(RPTracker.advance(MBB1.end()));
-  EXPECT_TRUE(RPTrackerNoLiveIns.advance(MBB1.end()));
+  // unsuccessful. The advance caller returns early on a failure to reset.
+  // Calling advance after this does nothing and produces false because the
+  // internal iterator is already at the block's end.
+  EXPECT_FALSE(RPTracker.reset(*MBB1.begin(), MBB1.end(), &MBB1LiveIns));
+  EXPECT_FALSE(RPTrackerNoLiveIns.reset(*MBB1.begin(), MBB1.end(), nullptr));
+  EXPECT_FALSE(RPTracker.advance(MBB1.end()));
+  EXPECT_FALSE(RPTrackerNoLiveIns.advance(MBB1.end()));
 
-  // In that case, the maximum pressure is unchanged from the beginning since
-  // reset was unsuccessful. This is confusing because the top-level advance
-  // call produced true, yet the block's live-in pressure was not considered.
-  EXPECT_EQ(RPTracker.moveMaxPressure().getVGPRNum(false), 0U);
-  EXPECT_EQ(RPTrackerNoLiveIns.moveMaxPressure().getVGPRNum(false), 0U);
+  // Register pressure should be the one at the block's live-ins.
+  EXPECT_EQ(RPTracker.moveMaxPressure().getVGPRNum(false), 1U);
+  EXPECT_EQ(RPTrackerNoLiveIns.moveMaxPressure().getVGPRNum(false), 1U);
+}
+
+// Tests the correct handling of multiple uses of the same virtual register
+// in bumpDownwardPressure (speculative estimate of register pressure).
+TEST_F(GCNRegPressureTest, BumpDownwardPressureLastUseAfterCommit) {
+  StringRef MIR = R"(
+name:            BumpDownwardPressureLastUseAfterCommit
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vreg_256_align2 = IMPLICIT_DEF
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %0
+    S_ENDPGM 0
+...
+)";
+  ASSERT_TRUE(parseMIR(MIR));
+  MachineFunction &MF = getMF("BumpDownwardPressureLastUseAfterCommit");
+  const LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  const SIRegisterInfo *TRI = MF.getSubtarget<GCNSubtarget>().getRegisterInfo();
+
+  MachineBasicBlock &MBB = *MF.getBlockNumbered(0);
+
+  SmallVector<MachineInstr *, 8> Instrs;
+  for (MachineInstr &MI : MBB)
+    Instrs.push_back(&MI);
+  // 0: def %0, 1: def %1, 2: U1 (use %1), 3: U2 (last use %1),
+  // 4: use %0, 5: S_ENDPGM
+  MachineInstr *DefV0 = Instrs[0];
+  MachineInstr *DefV1 = Instrs[1];
+  MachineInstr *U1 = Instrs[2];
+  MachineInstr *U2 = Instrs[3];
+
+  GCNDownwardRPTracker RPTracker(LIS);
+  GCNRPTracker::LiveRegSet Empty;
+  RPTracker.reset(MRI, Empty);
+
+  // Commit the defs and the first use of %1 via the externally-managed
+  // iterator (same as while scheduling).
+  RPTracker.advance(DefV0, /*UseInternalIterator=*/false);
+  RPTracker.advance(DefV1, /*UseInternalIterator=*/false);
+  RPTracker.advance(U1, /*UseInternalIterator=*/false);
+
+  // After committing U1, both %0 (1 VGPR) and %1 (vreg_256 = 8 VGPRs) are live.
+  EXPECT_EQ(RPTracker.getPressure().getArchVGPRNum(), 9U);
+
+  // Speculate the last use of %1. %1 must die here, dropping its 8 VGPRs and
+  // leaving only %0 live.
+  GCNRegPressure P = RPTracker.bumpDownwardPressure(U2, TRI);
+  EXPECT_EQ(P.getArchVGPRNum(), 1U);
+}
+
+// Tests bumpDownwardPressure for an instruction that uses and redefines
+// the same register.
+TEST_F(GCNRegPressureTest, BumpDownwardPressureUseAndRedef) {
+  StringRef MIR = R"(
+name:            BumpDownwardPressureUseAndRedef
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:sgpr_32 = IMPLICIT_DEF
+    %0:sgpr_32 = S_OR_B32 %0:sgpr_32, 1, implicit-def dead $scc
+    S_NOP 0, implicit %0
+    S_ENDPGM 0
+...
+)";
+  ASSERT_TRUE(parseMIR(MIR));
+  MachineFunction &MF = getMF("BumpDownwardPressureUseAndRedef");
+  const LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  const SIRegisterInfo *TRI = MF.getSubtarget<GCNSubtarget>().getRegisterInfo();
+
+  MachineBasicBlock &MBB = *MF.getBlockNumbered(0);
+
+  SmallVector<MachineInstr *, 8> Instrs;
+  for (MachineInstr &MI : MBB)
+    Instrs.push_back(&MI);
+  // 0: def %0 (sgpr_32 = 1 SGPR)
+  // 1: use+redef of %0
+  // 2: use %0
+  // 3: S_ENDPGM
+  MachineInstr *DefS0 = Instrs[0];
+  MachineInstr *UseRedef = Instrs[1];
+
+  GCNDownwardRPTracker RPTracker(LIS);
+  GCNRPTracker::LiveRegSet Empty;
+  RPTracker.reset(MRI, Empty);
+
+  // Commit the def; %0 occupies 1 SGPR and stays live.
+  RPTracker.advance(DefS0, /*UseInternalIterator=*/false);
+  EXPECT_EQ(RPTracker.getPressure().getSGPRNum(), 1U);
+
+  // Speculate the instruction. It uses and redefines %0, which stays live, so
+  // pressure must be unchanged.
+  GCNRegPressure P = RPTracker.bumpDownwardPressure(UseRedef, TRI);
+  EXPECT_EQ(P.getSGPRNum(), 1U);
 }

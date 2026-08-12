@@ -34,7 +34,7 @@ body:             |
 # CHECK-EMPTY:
 # CHECK-NEXT: # End machine code for function f.
 # CHECK-EMPTY:
-# CHECK-NEXT: ********** MI Scheduling **********
+# CHECK-NEXT: Current Schedule Region
 # CHECK-NEXT: f:%bb.0
 # CHECK-NEXT:   From: $x3 = ADDXrr $x0, $x0
 # CHECK-NEXT:     To: End

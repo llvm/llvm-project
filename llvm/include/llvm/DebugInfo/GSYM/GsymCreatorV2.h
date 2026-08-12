@@ -16,7 +16,7 @@ namespace llvm {
 namespace gsym {
 
 /// GsymCreatorV2 emits GSYM V2 data with a GlobalData-based section layout.
-class GsymCreatorV2 : public GsymCreator {
+class LLVM_ABI GsymCreatorV2 : public GsymCreator {
   uint64_t calculateHeaderAndTableSize() const override;
   std::unique_ptr<GsymCreator> createNew(bool Quiet) const override {
     return std::make_unique<GsymCreatorV2>(Quiet);
@@ -28,7 +28,7 @@ public:
   uint8_t getStringOffsetSize() const override {
     return HeaderV2::getStringOffsetSize();
   }
-  LLVM_ABI llvm::Error encode(FileWriter &O) const override;
+  llvm::Error encode(FileWriter &O) const override;
 };
 
 } // namespace gsym

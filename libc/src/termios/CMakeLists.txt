@@ -5,76 +5,76 @@ endif()
 add_entrypoint_object(
   cfgetispeed
   ALIAS
-    DEPENDS
-      .${LIBC_TARGET_OS}.cfgetispeed
+  DEPENDS
+    .${LIBC_TARGET_OS}.cfgetispeed
 )
 
 add_entrypoint_object(
   cfsetispeed
   ALIAS
-    DEPENDS
-      .${LIBC_TARGET_OS}.cfsetispeed
+  DEPENDS
+    .${LIBC_TARGET_OS}.cfsetispeed
 )
 
 add_entrypoint_object(
   cfgetospeed
   ALIAS
-    DEPENDS
-      .${LIBC_TARGET_OS}.cfgetospeed
+  DEPENDS
+    .${LIBC_TARGET_OS}.cfgetospeed
 )
 
 add_entrypoint_object(
   cfsetospeed
   ALIAS
-    DEPENDS
-      .${LIBC_TARGET_OS}.cfsetospeed
+  DEPENDS
+    .${LIBC_TARGET_OS}.cfsetospeed
 )
 
 add_entrypoint_object(
   tcgetsid
   ALIAS
-    DEPENDS
-      .${LIBC_TARGET_OS}.tcgetsid
+  DEPENDS
+    .${LIBC_TARGET_OS}.tcgetsid
 )
 
 add_entrypoint_object(
   tcdrain
   ALIAS
-    DEPENDS
-      .${LIBC_TARGET_OS}.tcdrain
+  DEPENDS
+    .${LIBC_TARGET_OS}.tcdrain
 )
 
 add_entrypoint_object(
   tcflow
   ALIAS
-    DEPENDS
-      .${LIBC_TARGET_OS}.tcflow
+  DEPENDS
+    .${LIBC_TARGET_OS}.tcflow
 )
 
 add_entrypoint_object(
   tcflush
   ALIAS
-    DEPENDS
-      .${LIBC_TARGET_OS}.tcflush
+  DEPENDS
+    .${LIBC_TARGET_OS}.tcflush
 )
 
 add_entrypoint_object(
   tcsendbreak
   ALIAS
-    DEPENDS
-      .${LIBC_TARGET_OS}.tcsendbreak
+  DEPENDS
+    .${LIBC_TARGET_OS}.tcsendbreak
 )
 
 add_entrypoint_object(
   tcgetattr
   ALIAS
-    DEPENDS
-      .${LIBC_TARGET_OS}.tcgetattr
+  DEPENDS
+    .${LIBC_TARGET_OS}.tcgetattr
 )
 
 add_entrypoint_object(
   tcsetattr
   ALIAS
-    DEPENDS
-      .${LIBC_TARGET_OS}.tcsetattr
+  DEPENDS
+    .${LIBC_TARGET_OS}.tcsetattr
 )

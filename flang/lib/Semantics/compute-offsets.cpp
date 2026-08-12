@@ -9,7 +9,6 @@
 #include "compute-offsets.h"
 #include "flang/Evaluate/fold-designator.h"
 #include "flang/Evaluate/fold.h"
-#include "flang/Evaluate/shape.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Runtime/descriptor-consts.h"
 #include "flang/Semantics/scope.h"
@@ -398,6 +397,12 @@ std::size_t ComputeOffsetsHelper::DoSymbol(
   }
   SizeAndAlignment s{GetSizeAndAlignment(symbol, true)};
   if (s.size == 0) {
+    // Zero-size symbols (e.g. CHARACTER*0) still occupy their sequential
+    // position in a COMMON block or derived-type sequence. Record the current
+    // offset so that LOC() and storage-association checks see the correct
+    // address rather than always returning the block base (offset 0).
+    symbol.set_size(0);
+    symbol.set_offset(offset_);
     return 0;
   }
   std::size_t previousOffset{offset_};

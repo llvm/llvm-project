@@ -31,8 +31,6 @@ public:
 
   Type GetType() const override { return eTypeProperties; }
 
-  void Clear() override;
-
   static lldb::OptionValuePropertiesSP
   CreateLocalCopy(const Properties &global_properties);
 
@@ -60,7 +58,8 @@ public:
                                    Stream &strm) const;
 
   void Apropos(llvm::StringRef keyword,
-               std::vector<const Property *> &matching_properties) const;
+               std::vector<const Property *> &matching_properties,
+               std::vector<const Property *> &matching_property_paths) const;
 
   void Initialize(const PropertyCollectionDefinition &setting_definitions);
 
@@ -179,6 +178,8 @@ protected:
   }
 
   bool VerifyPath();
+
+  void ClearImpl() override;
 
   std::string m_name;
   std::vector<Property> m_properties;

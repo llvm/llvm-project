@@ -24,7 +24,8 @@ extend-exclude = '''
 
 [tool.pyright]
 executionEnvironments = [
-  { root = "lldb/packages/Python", pythonVersion = "3.8" }
+  { root = "lldb/packages/Python", pythonVersion = "3.8" },
+  { root = "utils/docs", pythonVersion = "3.8" },
 ]
 
 [dependency-groups]

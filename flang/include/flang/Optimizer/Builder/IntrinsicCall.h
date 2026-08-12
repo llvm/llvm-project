@@ -14,26 +14,23 @@
 #include "flang/Optimizer/Builder/Runtime/Character.h"
 #include "flang/Optimizer/Builder/Runtime/Numeric.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
-#include "flang/Runtime/entry-names.h"
 #include "flang/Runtime/iostat-consts.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/Math/IR/Math.h"
 #include <optional>
-
-namespace Fortran {
-namespace lower {
-// TODO: remove the usage of AbstractConverter to avoid making IntrinsicCall.cpp
-// depend upon Lower/Evaluate and use a data structure to pass options to
-// IntrinsicLibrary.
-class AbstractConverter;
-} // namespace lower
-} // namespace Fortran
 
 namespace fir {
 
 class StatementContext;
 struct IntrinsicHandlerEntry;
+
+/// Options controlling intrinsic lowering that depend on front-end state.
+struct IntrinsicLoweringOptions {
+  /// Whether multi-image (coarray) features are enabled (e.g. via -fcoarray).
+  bool coarrayEnabled = false;
+  /// Whether to avoid using the native vector element order on PPC targets.
+  bool noPPCNativeVecElemOrder = false;
+};
 
 /// Lower an intrinsic call given the intrinsic \p name, its \p resultType (that
 /// must be std::nullopt if and only if this is a subroutine call), and its
@@ -44,7 +41,7 @@ std::pair<fir::ExtendedValue, bool>
 genIntrinsicCall(fir::FirOpBuilder &, mlir::Location, llvm::StringRef name,
                  std::optional<mlir::Type> resultType,
                  llvm::ArrayRef<fir::ExtendedValue> args,
-                 Fortran::lower::AbstractConverter *converter = nullptr);
+                 IntrinsicLoweringOptions options = {});
 
 /// Same as the entry above except that instead of an intrinsic name it takes an
 /// IntrinsicHandlerEntry obtained by a previous lookup for a handler to lower
@@ -54,7 +51,7 @@ genIntrinsicCall(fir::FirOpBuilder &, mlir::Location,
                  const IntrinsicHandlerEntry &,
                  std::optional<mlir::Type> resultType,
                  llvm::ArrayRef<fir::ExtendedValue> args,
-                 Fortran::lower::AbstractConverter *converter = nullptr);
+                 IntrinsicLoweringOptions options = {});
 
 /// Enum specifying how intrinsic argument evaluate::Expr should be
 /// lowered to fir::ExtendedValue to be passed to genIntrinsicCall.
@@ -101,10 +98,9 @@ struct IntrinsicArgumentLoweringRules;
 struct IntrinsicLibrary {
 
   // Constructors.
-  explicit IntrinsicLibrary(
-      fir::FirOpBuilder &builder, mlir::Location loc,
-      Fortran::lower::AbstractConverter *converter = nullptr)
-      : builder{builder}, loc{loc}, converter{converter} {}
+  explicit IntrinsicLibrary(fir::FirOpBuilder &builder, mlir::Location loc,
+                            IntrinsicLoweringOptions options = {})
+      : builder{builder}, loc{loc}, options{options} {}
   IntrinsicLibrary() = delete;
   IntrinsicLibrary(const IntrinsicLibrary &) = delete;
 
@@ -176,6 +172,7 @@ struct IntrinsicLibrary {
                                          llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genCmplx(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genConjg(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genCoshape(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genCount(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genCpuTime(llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genCshift(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -237,6 +234,7 @@ struct IntrinsicLibrary {
   mlir::Value genGetPID(mlir::Type resultType,
                         llvm::ArrayRef<mlir::Value> args);
   void genGetCommandArgument(mlir::ArrayRef<fir::ExtendedValue> args);
+  void genGetarg(mlir::ArrayRef<fir::ExtendedValue> args);
   void genGetEnvironmentVariable(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genGetGID(mlir::Type resultType,
                         llvm::ArrayRef<mlir::Value> args);
@@ -248,6 +246,7 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genIall(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genIand(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genIany(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genIargc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genIbclr(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIbits(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIbset(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -296,6 +295,8 @@ struct IntrinsicLibrary {
   mlir::Value genIeeeUnordered(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIeeeValue(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIeor(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genImageIndex(mlir::Type,
+                                   llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genIndex(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genIor(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genIparity(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -310,6 +311,8 @@ struct IntrinsicLibrary {
   mlir::Value genIshft(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIshftc(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genLbound(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genLcobound(mlir::Type,
+                                 llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genLeadz(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genLen(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genLenTrim(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -416,6 +419,8 @@ struct IntrinsicLibrary {
                                   llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genTrim(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genUbound(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genUcobound(mlir::Type,
+                                 llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genUnlink(std::optional<mlir::Type> resultType,
                                llvm::ArrayRef<fir::ExtendedValue> args);
   fir::ExtendedValue genUnpack(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -524,7 +529,7 @@ struct IntrinsicLibrary {
   fir::FirOpBuilder &builder;
   mlir::Location loc;
   bool resultMustBeFreed = false;
-  Fortran::lower::AbstractConverter *converter = nullptr;
+  IntrinsicLoweringOptions options;
 };
 
 struct IntrinsicDummyArgument {
@@ -791,7 +796,8 @@ mlir::Value genLibSplitComplexArgsCall(fir::FirOpBuilder &builder,
 /// \p intrinsicName.
 std::optional<IntrinsicHandlerEntry>
 lookupIntrinsicHandler(fir::FirOpBuilder &, llvm::StringRef intrinsicName,
-                       std::optional<mlir::Type> resultType);
+                       std::optional<mlir::Type> resultType,
+                       bool isBindcCall = false);
 
 /// Generate a TODO error message for an as yet unimplemented intrinsic.
 void crashOnMissingIntrinsic(mlir::Location loc, llvm::StringRef name);
@@ -840,6 +846,19 @@ mlir::Value genDivC(fir::FirOpBuilder &builder, mlir::Location loc,
 /// result type.
 mlir::Value genPow(fir::FirOpBuilder &, mlir::Location, mlir::Type resultType,
                    mlir::Value x, mlir::Value y);
+
+template <std::size_t N>
+static constexpr bool isSorted(const IntrinsicHandler (&array)[N]) {
+  // Replace by std::sorted when C++20 is default (will be constexpr).
+  const IntrinsicHandler *lastSeen{nullptr};
+  bool isSorted{true};
+  for (const auto &x : array) {
+    if (lastSeen)
+      isSorted &= std::string_view{lastSeen->name} < std::string_view{x.name};
+    lastSeen = &x;
+  }
+  return isSorted;
+}
 
 } // namespace fir
 

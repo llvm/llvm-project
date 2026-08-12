@@ -1717,7 +1717,48 @@ bool operator==(const StatusOr<T> &lhs, const StatusOr<T> &rhs);
 template <typename T>
 bool operator!=(const StatusOr<T> &lhs, const StatusOr<T> &rhs);
 
+using StatusBuilder = Status;
+namespace status_macro_internal {
+class ReturnIfErrorAdaptor {
+ public:
+  explicit ReturnIfErrorAdaptor(
+      const absl::Status& status,
+      absl::SourceLocation loc = absl::SourceLocation::current());
+
+  explicit ReturnIfErrorAdaptor(
+      absl::Status&& status,
+      absl::SourceLocation loc = absl::SourceLocation::current());
+
+  ~ReturnIfErrorAdaptor();
+
+  explicit operator bool() const;
+  StatusBuilder Consume();
+};
+
+ReturnIfErrorAdaptor MacroAdaptor(const absl::Status& s,
+                                         absl::SourceLocation loc);
+ReturnIfErrorAdaptor MacroAdaptor(absl::Status&& s,
+                                         absl::SourceLocation loc);
+}
+
 } // namespace absl
+
+#define ABSL_INTERNAL_STATUS_MACROS_IMPL_ELSE_BLOCKER_ \
+  switch (0)                                           \
+  case 0:                                              \
+  default:  // NOLINT
+
+#define ABSL_INTERNAL_STATUS_MACROS_RETURN_IF_ERROR_IMPL_(return_keyword, \
+                                                          expr)           \
+  ABSL_INTERNAL_STATUS_MACROS_IMPL_ELSE_BLOCKER_                          \
+  if (auto status_macro_internal_adaptor =                                \
+          absl::status_macro_internal::MacroAdaptor(                      \
+              (expr), absl::SourceLocation::current())) {                 \
+  } else /* NOLINT */                                                     \
+    return_keyword status_macro_internal_adaptor.Consume()
+
+#define ABSL_RETURN_IF_ERROR(expr) \
+  ABSL_INTERNAL_STATUS_MACROS_RETURN_IF_ERROR_IMPL_(return, expr)
 
 #endif // STATUSOR_H_
 )cc";

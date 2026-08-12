@@ -9,14 +9,13 @@
 #include "src/sys/select/select.h"
 
 #include "hdr/types/sigset_t.h"
+#include "hdr/types/size_t.h"
 #include "hdr/types/struct_timespec.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-
-#include <stddef.h>      // For size_t
 #include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {
@@ -54,12 +53,17 @@ LLVM_LIBC_FUNCTION(int, select,
     }
   }
   pselect6_sigset_t pss{nullptr, sizeof(sigset_t)};
-#if SYS_pselect6
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_pselect6, nfds, read_set,
-                                              write_set, error_set, &ts, &pss);
-#elif defined(SYS_pselect6_time64)
+#if defined(SYS_pselect6_time64)
   int ret = LIBC_NAMESPACE::syscall_impl<int>(
       SYS_pselect6_time64, nfds, read_set, write_set, error_set, &ts, &pss);
+#elif defined(SYS_pselect6)
+  static_assert(
+      sizeof(timespec::tv_nsec) == sizeof(long),
+      "This legacy syscall fallback is only safe on platforms where tv_nsec "
+      "matches the register size (long). It is unsafe on 32-bit platforms "
+      "with 64-bit tv_nsec.");
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_pselect6, nfds, read_set,
+                                              write_set, error_set, &ts, &pss);
 #else
 #error "SYS_pselect6 and SYS_pselect6_time64 syscalls not available."
 #endif

@@ -2252,7 +2252,7 @@ define <8 x i16> @ushll2_8h(ptr %A) nounwind {
 ; CHECK-GI-LABEL: ushll2_8h:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr q0, [x0]
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #1
 ; CHECK-GI-NEXT:    ret
   %load1 = load <16 x i8>, ptr %A
@@ -2272,7 +2272,7 @@ define <4 x i32> @ushll2_4s(ptr %A) nounwind {
 ; CHECK-GI-LABEL: ushll2_4s:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr q0, [x0]
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #1
 ; CHECK-GI-NEXT:    ret
   %load1 = load <8 x i16>, ptr %A
@@ -2292,7 +2292,7 @@ define <2 x i64> @ushll2_2d(ptr %A) nounwind {
 ; CHECK-GI-LABEL: ushll2_2d:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr q0, [x0]
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    ushll v0.2d, v0.2s, #1
 ; CHECK-GI-NEXT:    ret
   %load1 = load <4 x i32>, ptr %A
@@ -2892,7 +2892,7 @@ define <8 x i16> @sshll2_8h(ptr %A) nounwind {
 ; CHECK-GI-LABEL: sshll2_8h:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr q0, [x0]
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    sshll v0.8h, v0.8b, #1
 ; CHECK-GI-NEXT:    ret
   %load1 = load <16 x i8>, ptr %A
@@ -2912,7 +2912,7 @@ define <4 x i32> @sshll2_4s(ptr %A) nounwind {
 ; CHECK-GI-LABEL: sshll2_4s:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr q0, [x0]
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    sshll v0.4s, v0.4h, #1
 ; CHECK-GI-NEXT:    ret
   %load1 = load <8 x i16>, ptr %A
@@ -2932,7 +2932,7 @@ define <2 x i64> @sshll2_2d(ptr %A) nounwind {
 ; CHECK-GI-LABEL: sshll2_2d:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr q0, [x0]
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    sshll v0.2d, v0.2s, #1
 ; CHECK-GI-NEXT:    ret
   %load1 = load <4 x i32>, ptr %A
@@ -4623,13 +4623,8 @@ define <4 x i16> @lshr_trunc_v4i64_v4i16(<4 x i64> %a) {
 ;
 ; CHECK-GI-LABEL: lshr_trunc_v4i64_v4i16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI278_0
 ; CHECK-GI-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI278_0]
-; CHECK-GI-NEXT:    uzp1 v2.4s, v2.4s, v2.4s
-; CHECK-GI-NEXT:    neg v1.4s, v2.4s
-; CHECK-GI-NEXT:    ushl v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    xtn v0.4h, v0.4s
+; CHECK-GI-NEXT:    shrn v0.4h, v0.4s, #8
 ; CHECK-GI-NEXT:    ret
   %b = lshr <4 x i64> %a, <i64 8, i64 8, i64 8, i64 8>
   %c = trunc <4 x i64> %b to <4 x i16>
@@ -4664,13 +4659,8 @@ define <4 x i16> @ashr_trunc_v4i64_v4i16(<4 x i64> %a) {
 ;
 ; CHECK-GI-LABEL: ashr_trunc_v4i64_v4i16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI280_0
 ; CHECK-GI-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI280_0]
-; CHECK-GI-NEXT:    uzp1 v2.4s, v2.4s, v2.4s
-; CHECK-GI-NEXT:    neg v1.4s, v2.4s
-; CHECK-GI-NEXT:    sshl v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    xtn v0.4h, v0.4s
+; CHECK-GI-NEXT:    shrn v0.4h, v0.4s, #8
 ; CHECK-GI-NEXT:    ret
   %b = ashr <4 x i64> %a, <i64 8, i64 8, i64 8, i64 8>
   %c = trunc <4 x i64> %b to <4 x i16>
@@ -4695,23 +4685,12 @@ define <2 x i8> @shl_trunc_v2i64_v2i8(<2 x i64> %a) {
 }
 
 define <4 x i16> @shl_trunc_v4i64_v4i16(<4 x i64> %a) {
-; CHECK-SD-LABEL: shl_trunc_v4i64_v4i16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
-; CHECK-SD-NEXT:    xtn v0.4h, v0.4s
-; CHECK-SD-NEXT:    shl v0.4h, v0.4h, #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: shl_trunc_v4i64_v4i16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI282_0
-; CHECK-GI-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI282_0]
-; CHECK-GI-NEXT:    uzp1 v1.4s, v2.4s, v2.4s
-; CHECK-GI-NEXT:    xtn v0.4h, v0.4s
-; CHECK-GI-NEXT:    xtn v1.4h, v1.4s
-; CHECK-GI-NEXT:    ushl v0.4h, v0.4h, v1.4h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: shl_trunc_v4i64_v4i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    shl v0.4h, v0.4h, #8
+; CHECK-NEXT:    ret
   %b = shl <4 x i64> %a, <i64 8, i64 8, i64 8, i64 8>
   %c = trunc <4 x i64> %b to <4 x i16>
   ret <4 x i16> %c
