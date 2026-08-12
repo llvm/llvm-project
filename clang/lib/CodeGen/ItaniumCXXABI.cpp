@@ -4237,6 +4237,18 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(QualType Ty) {
   return BuildTypeInfo(Ty, Linkage, llvmVisibility, DLLStorageClass);
 }
 
+/// Returns the visibility to use for an RTTI global. A dllexported global must
+/// not be hidden, so dllexport takes precedence over the visibility implied by
+/// -fvisibility=hidden, as CodeGenModule::setGlobalVisibility does elsewhere.
+static llvm::GlobalValue::VisibilityTypes
+getRTTIVisibility(llvm::GlobalValue::VisibilityTypes Visibility,
+                  llvm::GlobalValue::DLLStorageClassTypes DLLStorageClass) {
+  if (DLLStorageClass == llvm::GlobalValue::DLLExportStorageClass &&
+      Visibility == llvm::GlobalValue::HiddenVisibility)
+    return llvm::GlobalValue::DefaultVisibility;
+  return Visibility;
+}
+
 llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
       QualType Ty,
       llvm::GlobalVariable::LinkageTypes Linkage,
@@ -4419,10 +4431,10 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
   // All of this is to say that it's important that both the type_info
   // object and the type_info name be uniqued when weakly emitted.
 
-  TypeName->setVisibility(Visibility);
+  TypeName->setVisibility(getRTTIVisibility(Visibility, DLLStorageClass));
   CGM.setDSOLocal(TypeName);
 
-  GV->setVisibility(Visibility);
+  GV->setVisibility(getRTTIVisibility(Visibility, GVDLLStorageClass));
   CGM.setDSOLocal(GV);
 
   TypeName->setDLLStorageClass(DLLStorageClass);
