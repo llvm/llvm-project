@@ -2979,7 +2979,7 @@ bool Sema::FindAllocationFunctions(
   // 3) The first argument is always size_t. Append the arguments from the
   //   placement form.
 
-  SmallVector<Expr*, 8> AllocArgs;
+  SmallVector<Expr *, 8> AllocArgs;
   AllocArgs.reserve(IAP.getNumImplicitArgs() + PlaceArgs.size());
 
   // C++ [expr.new]p8:
