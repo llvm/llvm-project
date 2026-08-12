@@ -162,7 +162,12 @@ void LoopAnnotationConversion::convertLoopOptions(LoopLICMAttr options) {
 }
 
 void LoopAnnotationConversion::convertLoopOptions(LoopDistributeAttr options) {
-  convertBoolNode("llvm.loop.distribute.enable", options.getDisable(), true);
+  if (auto disable = options.getDisable()) {
+    if (disable.getValue())
+      addUnitNode("llvm.loop.distribute.disable");
+    else
+      addUnitNode("llvm.loop.distribute.enable");
+  }
   convertFollowupNode("llvm.loop.distribute.followup_coincident",
                       options.getFollowupCoincident());
   convertFollowupNode("llvm.loop.distribute.followup_sequential",

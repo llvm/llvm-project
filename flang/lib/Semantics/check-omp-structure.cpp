@@ -5975,6 +5975,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::ThreadLimit &x) {
 
 void OmpStructureChecker::Enter(const parser::OpenMPInteropConstruct &x) {
   bool isDependClauseOccurred{false};
+  bool hasInitClause{false};
   int targetCount{0}, targetSyncCount{0};
   std::set<const Symbol *> objectSymbolList;
   const auto &clauseList{std::get<std::optional<parser::OmpClauseList>>(x.v.t)};
@@ -5982,6 +5983,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPInteropConstruct &x) {
     common::visit(
         common::visitors{
             [&](const parser::OmpClause::Init &initClause) {
+              hasInitClause = true;
               if (OmpVerifyModifiers(initClause.v, llvm::omp::OMPC_init,
                       GetContext().directiveSource, context_)) {
 
@@ -6003,6 +6005,38 @@ void OmpStructureChecker::Enter(const parser::OpenMPInteropConstruct &x) {
                   context_.Say(OmpGetModifierSource(modifiers, depInfo),
                       "The '%s' is not allowed on INTEROP construct"_err_en_US,
                       desc.name.str());
+                }
+                // A prefer_type foreign-runtime-identifier must be a
+                // constant expression of integer OpenMP type or a base
+                // language string literal. This is enforced for the flat form
+                // (prefer_type(fr-id, ...)); the OpenMP 6.0
+                // brace form (prefer_type({fr(...), attr(...)}, ...)) is not
+                // yet supported in lowering and is diagnosed there, so its
+                // operands are not validated here.
+                if (auto *preferType{
+                        OmpGetUniqueModifier<parser::OmpPreferType>(
+                            modifiers)}) {
+                  for (const auto &prefSpec : preferType->v) {
+                    const auto *fri{
+                        std::get_if<parser::OmpPreferenceSpecification::
+                                ForeignRuntimeIdentifier>(&prefSpec.u)};
+                    if (!fri) {
+                      continue;
+                    }
+                    if (const auto *expr{GetExpr(context_, fri->value())}) {
+                      std::optional<evaluate::DynamicType> type{
+                          expr->GetType()};
+                      bool isIntOrChar{type &&
+                          (type->category() ==
+                                  evaluate::TypeCategory::Integer ||
+                              type->category() ==
+                                  evaluate::TypeCategory::Character)};
+                      if (!evaluate::IsConstantExpr(*expr) || !isIntOrChar) {
+                        context_.Say(fri->value().source,
+                            "The foreign-runtime-identifier in a `prefer_type` modifier must be a constant expression of integer OpenMP type or a base language string literal"_err_en_US);
+                      }
+                    }
+                  }
                 }
               }
               const auto *interopVar{parser::Unwrap<parser::OmpObject>(
@@ -6058,7 +6092,11 @@ void OmpStructureChecker::Enter(const parser::OpenMPInteropConstruct &x) {
     context_.Say(GetContext().directiveSource,
         "Each interop-type may be specified at most once."_err_en_US);
   }
-  if (isDependClauseOccurred && !targetSyncCount) {
+  // Only enforce the depend/targetsync constraint when an init clause is
+  // present on this directive. For use/destroy-only directives, the interop
+  // object's type was established at its init site, which may be in a
+  // different statement — we cannot verify it statically here.
+  if (isDependClauseOccurred && hasInitClause && !targetSyncCount) {
     context_.Say(GetContext().directiveSource,
         "A DEPEND clause can only appear on the directive if the interop-type includes TARGETSYNC"_err_en_US);
   }

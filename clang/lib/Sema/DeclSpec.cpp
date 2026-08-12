@@ -1244,11 +1244,19 @@ void DeclSpec::CheckTypeSpec(Sema &S, const PrintingPolicy &Policy) {
                (S.getLangOpts().CPlusPlus && !S.getLangOpts().CPlusPlus11)) {
       // In C23 or C++98, convert 'auto' to storage class specifier
       if (TypeSpecType == TST_auto) {
-        // "auto int" case: Convert 'auto' to storage class specifier
-        StorageClassSpec = SCS_auto;
-        StorageClassSpecLoc = TSTLoc;
-        TypeSpecType = ConflictingTypeSpecifier;
-        TSTLoc = ConflictingTypeSpecifierLoc;
+        // "auto int" case: Convert 'auto' to storage class specifier.
+        // But typedef + any storage-class-specifier is unconditionally invalid
+        // per [dcl.stc]p1, regardless of C++ version.
+        if (StorageClassSpec == SCS_typedef) {
+          S.Diag(TSTLoc, diag::err_invalid_decl_spec_combination)
+              << "typedef" << FixItHint::CreateRemoval(TSTLoc);
+          TypeSpecType = TST_error;
+        } else {
+          StorageClassSpec = SCS_auto;
+          StorageClassSpecLoc = TSTLoc;
+          TypeSpecType = ConflictingTypeSpecifier;
+          TSTLoc = ConflictingTypeSpecifierLoc;
+        }
         // Clear the conflict tracking
         ConflictingTypeSpecifier = TST_unspecified;
         ConflictingTypeSpecifierLoc = SourceLocation();
@@ -1273,11 +1281,19 @@ void DeclSpec::CheckTypeSpec(Sema &S, const PrintingPolicy &Policy) {
           return;
         }
         // int auto (without constexpr): Convert 'auto' to storage class
-        // specifier. No type conflict error - auto is treated as storage class,
-        // not type specifier.
-        StorageClassSpec = SCS_auto;
-        StorageClassSpecLoc = ConflictingTypeSpecifierLoc;
-        // TypeSpecType already has the correct type (e.g., TST_int)
+        // specifier. But typedef + any storage-class-specifier is
+        // unconditionally invalid per [dcl.stc]p1.
+        if (StorageClassSpec == SCS_typedef) {
+          S.Diag(ConflictingTypeSpecifierLoc,
+                 diag::err_invalid_decl_spec_combination)
+              << "typedef"
+              << FixItHint::CreateRemoval(ConflictingTypeSpecifierLoc);
+          TypeSpecType = TST_error;
+        } else {
+          StorageClassSpec = SCS_auto;
+          StorageClassSpecLoc = ConflictingTypeSpecifierLoc;
+          // TypeSpecType already has the correct type (e.g., TST_int)
+        }
         // Clear the conflict tracking
         ConflictingTypeSpecifier = TST_unspecified;
         ConflictingTypeSpecifierLoc = SourceLocation();

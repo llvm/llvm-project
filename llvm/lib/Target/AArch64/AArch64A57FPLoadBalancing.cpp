@@ -38,6 +38,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -107,12 +108,14 @@ class Chain;
 
 class AArch64A57FPLoadBalancingImpl {
 public:
+  explicit AArch64A57FPLoadBalancingImpl(RegisterClassInfo *RCI) : RCI(RCI) {}
+
   bool run(MachineFunction &MF);
 
 private:
   MachineRegisterInfo *MRI;
   const TargetRegisterInfo *TRI;
-  RegisterClassInfo RCI;
+  RegisterClassInfo *RCI = nullptr;
 
   bool runOnBasicBlock(MachineBasicBlock &MBB);
   bool colorChainSet(std::vector<Chain *> GV, MachineBasicBlock &MBB,
@@ -145,6 +148,8 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
+    AU.addRequired<MachineRegisterClassInfoWrapperPass>();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -154,6 +159,7 @@ char AArch64A57FPLoadBalancingLegacy::ID = 0;
 
 INITIALIZE_PASS_BEGIN(AArch64A57FPLoadBalancingLegacy, DEBUG_TYPE,
                       "AArch64 A57 FP Load-Balancing", false, false)
+INITIALIZE_PASS_DEPENDENCY(MachineRegisterClassInfoWrapperPass)
 INITIALIZE_PASS_END(AArch64A57FPLoadBalancingLegacy, DEBUG_TYPE,
                     "AArch64 A57 FP Load-Balancing", false, false)
 
@@ -316,7 +322,6 @@ bool AArch64A57FPLoadBalancingImpl::run(MachineFunction &MF) {
 
   MRI = &MF.getRegInfo();
   TRI = MF.getRegInfo().getTargetRegisterInfo();
-  RCI.runOnMachineFunction(MF);
 
   for (auto &MBB : MF) {
     Changed |= runOnBasicBlock(MBB);
@@ -329,13 +334,16 @@ bool AArch64A57FPLoadBalancingLegacy::runOnMachineFunction(
     MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
-  return AArch64A57FPLoadBalancingImpl().run(MF);
+  RegisterClassInfo *RCI =
+      &getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
+  return AArch64A57FPLoadBalancingImpl(RCI).run(MF);
 }
 
 PreservedAnalyses
 AArch64A57FPLoadBalancingPass::run(MachineFunction &MF,
                                    MachineFunctionAnalysisManager &MFAM) {
-  if (AArch64A57FPLoadBalancingImpl().run(MF)) {
+  RegisterClassInfo *RCI = &MFAM.getResult<MachineRegisterClassAnalysis>(MF);
+  if (AArch64A57FPLoadBalancingImpl(RCI).run(MF)) {
     PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
     PA.preserveSet<CFGAnalyses>();
     return PA;
@@ -535,7 +543,7 @@ int AArch64A57FPLoadBalancingImpl::scavengeRegister(Chain *G, Color C,
 
   // Make sure we allocate in-order, to get the cheapest registers first.
   unsigned RegClassID = ChainBegin->getDesc().operands()[0].RegClass;
-  auto Ord = RCI.getOrder(TRI->getRegClass(RegClassID));
+  auto Ord = RCI->getOrder(TRI->getRegClass(RegClassID));
   for (auto Reg : Ord) {
     if (!Units.available(Reg))
       continue;

@@ -2893,6 +2893,9 @@ FailureOr<LoopLikeOpInterface> AffineForOp::replaceWithAdditionalYields(
   AffineForOp newLoop = AffineForOp::create(
       rewriter, getLoc(), getLowerBoundOperands(), getLowerBoundMap(),
       getUpperBoundOperands(), getUpperBoundMap(), getStepAsInt(), inits);
+  // Existing operands, results, and region arguments retain their positions;
+  // only new loop-carried values are appended.
+  newLoop->setDiscardableAttrs(getOperation()->getDiscardableAttrDictionary());
 
   // Generate the new yield values and append them to the scf.yield operation.
   auto yieldOp = cast<AffineYieldOp>(getBody()->getTerminator());

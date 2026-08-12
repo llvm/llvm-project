@@ -449,7 +449,7 @@ Expected<InfoTreeNode> L0DeviceTy::obtainInfoImpl() {
   Info.add("Number of total EUs", getNumEUs(), "",
            DeviceInfo::NUM_COMPUTE_UNITS);
   Info.add("Number of threads per EU", getNumThreadsPerEU());
-  Info.add("EU SIMD width", getSIMDWidth());
+  Info.add("EU SIMD width", getSIMDWidth(), "", DeviceInfo::NUM_LANES);
   Info.add("Number of EUs per subslice", getNumEUsPerSubslice());
   Info.add("Number of subslices per slice", getNumSubslicesPerSlice());
   Info.add("Number of slices", getNumSlices());

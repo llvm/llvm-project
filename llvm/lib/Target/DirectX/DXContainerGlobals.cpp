@@ -43,6 +43,8 @@ static cl::opt<bool> ShaderHashDependsOnSource(
     "dx-Zss", cl::desc("Compute Shader Hash considering source information"));
 extern cl::opt<std::string> PdbDebugPath;
 extern cl::opt<bool> SourceInDebugModule;
+cl::opt<bool> PdbInPrivate("dx-pdb-in-private",
+                           cl::desc("Store PDB in private user data"));
 
 namespace {
 class DXContainerGlobals : public llvm::ModulePass {
@@ -159,22 +161,26 @@ void DXContainerGlobals::computeShaderHashAndDebugName(
   SmallString<40> DebugNameStr;
   Digest.stringifyResult(MD5, DebugNameStr);
   DebugNameStr += ".pdb";
-  if (!PdbDebugPath.empty()) {
-    StringRef DebugFile = PdbDebugPath.getValue();
-    SmallString<256> AbsoluteDebugName;
-    if (sys::path::is_separator(DebugFile.back())) {
-      // If /Fd was specified as a directory, put the MD5.pdb file there.
-      AbsoluteDebugName = DebugFile;
-      sys::path::append(AbsoluteDebugName, DebugNameStr);
-    } else {
-      // Otherwise, use /Fd value as a user-provided PDB file name.
-      DebugNameStr = DebugFile;
-      AbsoluteDebugName = DebugNameStr;
+  if (!PdbDebugPath.empty() || PdbInPrivate) {
+    if (!PdbDebugPath.empty()) {
+      StringRef DebugFile = PdbDebugPath.getValue();
+      SmallString<256> AbsoluteDebugName;
+      if (sys::path::is_separator(DebugFile.back())) {
+        // If PDB output path was specified as a directory, put the MD5.pdb file
+        // there.
+        AbsoluteDebugName = DebugFile;
+        sys::path::append(AbsoluteDebugName, DebugNameStr);
+      } else {
+        // Otherwise, use PDB output path as a user-provided PDB file name.
+        DebugNameStr = DebugFile;
+        AbsoluteDebugName = DebugNameStr;
+      }
+
+      // Pass PDB name to DXContainerPDBPass via PDBNAME section.
+      addSection(M, Globals, AbsoluteDebugName, "dx.pdb.name",
+                 PdbFileNameSectionName);
     }
 
-    // Pass PDB name to DXContainerPDBPass via PDBNAME section.
-    addSection(M, Globals, AbsoluteDebugName, "dx.pdb.name",
-               PdbFileNameSectionName);
     // Pass module hash to DXContainerPDBPass.
     Globals.emplace_back(buildContainerGlobal(
         M, ConstantDataArray::get(M.getContext(), ArrayRef(HashData.Digest)),

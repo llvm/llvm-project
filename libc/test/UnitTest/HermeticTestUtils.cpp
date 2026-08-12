@@ -132,9 +132,15 @@ void *operator new(size_t size) { return malloc(size); }
 
 void *operator new[](size_t size) { return malloc(size); }
 
-void operator delete(void *ptr) { free(ptr); }
+void operator delete(void *) {
+  // The libc runtime should not use the global delete operator. Hence,
+  // we just trap here to catch any such accidental usages.
+  __builtin_trap();
+}
 
-void operator delete(void *ptr, [[maybe_unused]] size_t size) { free(ptr); }
+void operator delete([[maybe_unused]] void *ptr, [[maybe_unused]] size_t size) {
+  __builtin_trap();
+}
 
 // Defining members in the std namespace is not preferred. But, we do it here
 // so that we can use it to define the operator new which takes std::align_val_t
@@ -143,8 +149,11 @@ namespace std {
 enum class align_val_t : size_t {};
 } // namespace std
 
-void operator delete(void *ptr, std::align_val_t) noexcept { free(ptr); }
+void operator delete([[maybe_unused]] void *mem, std::align_val_t) noexcept {
+  __builtin_trap();
+}
 
-void operator delete(void *ptr, unsigned int, std::align_val_t) noexcept {
-  free(ptr);
+void operator delete([[maybe_unused]] void *mem, unsigned int,
+                     std::align_val_t) noexcept {
+  __builtin_trap();
 }

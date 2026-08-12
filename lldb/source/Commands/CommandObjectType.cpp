@@ -251,11 +251,12 @@ public:
               }
             } else {
               LockedStreamFile locked_stream = error_sp->Lock();
-              locked_stream.Printf("error: unable to generate a function.\n");
+              locked_stream.PutCString(
+                  "error: unable to generate a function.\n");
             }
           } else {
             LockedStreamFile locked_stream = error_sp->Lock();
-            locked_stream.Printf("error: no script interpreter.\n");
+            locked_stream.PutCString("error: no script interpreter.\n");
           }
         } else {
           LockedStreamFile locked_stream = error_sp->Lock();
@@ -485,18 +486,18 @@ protected:
                     }
                   } else {
                     LockedStreamFile locked_stream = error_sp->Lock();
-                    locked_stream.Printf("error: invalid type name.\n");
+                    locked_stream.PutCString("error: invalid type name.\n");
                     break;
                   }
                 }
               }
             } else {
               LockedStreamFile locked_stream = error_sp->Lock();
-              locked_stream.Printf("error: unable to generate a class.\n");
+              locked_stream.PutCString("error: unable to generate a class.\n");
             }
           } else {
             LockedStreamFile locked_stream = error_sp->Lock();
-            locked_stream.Printf("error: no script interpreter.\n");
+            locked_stream.PutCString("error: no script interpreter.\n");
           }
         } else {
           LockedStreamFile locked_stream = error_sp->Lock();

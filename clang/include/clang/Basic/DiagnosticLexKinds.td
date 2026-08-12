@@ -133,20 +133,20 @@ def err_invalid_utf8 : Error<
 def warn_invalid_utf8_in_comment : Extension<
   "invalid UTF-8 in comment">, InGroup<DiagGroup<"invalid-utf8">>;
 def err_character_not_allowed : Error<
-  "unexpected character <U+%0>">;
+  "unexpected character %0">;
 def err_character_not_allowed_identifier : Error<
-  "character <U+%0> not allowed %select{in|at the start of}1 an identifier">;
+  "character %0 not allowed %select{in|at the start of}1 an identifier">;
 def ext_unicode_whitespace : ExtWarn<
-  "treating Unicode character as whitespace">,
-  InGroup<DiagGroup<"unicode-whitespace">>;
+  "treating character %0 as whitespace">,
+  InGroup<DiagGroup<"unicode-whitespace">>, DefaultError;
 def warn_utf8_symbol_homoglyph : Warning<
-  "treating Unicode character <U+%0> as an identifier character rather than "
+  "treating character %0 as an identifier character rather than "
   "as '%1' symbol">, InGroup<DiagGroup<"unicode-homoglyph">>;
 def warn_utf8_symbol_zero_width : Warning<
-  "identifier contains Unicode character <U+%0> that is invisible in "
+  "identifier contains character %0 that is invisible in "
   "some environments">, InGroup<DiagGroup<"unicode-zero-width">>;
 def ext_mathematical_notation : ExtWarn<
-  "mathematical notation character <U+%0> in an identifier is a Clang extension">,
+  "mathematical notation character %0 in an identifier is a Clang extension">,
   InGroup<DiagGroup<"mathematical-notation-identifier-extension">>;
 
 def ext_delimited_escape_sequence : Extension<

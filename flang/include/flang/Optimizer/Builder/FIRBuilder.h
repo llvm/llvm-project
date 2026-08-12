@@ -781,12 +781,6 @@ llvm::SmallVector<mlir::Value>
 getNonDefaultLowerBounds(fir::FirOpBuilder &builder, mlir::Location loc,
                          const fir::ExtendedValue &exv);
 
-/// Return LEN parameters associated to \p exv that are not deferred (that are
-/// available without having to read any fir.box values). Empty if \p exv has no
-/// LEN parameters or if they are all deferred.
-llvm::SmallVector<mlir::Value>
-getNonDeferredLenParams(const fir::ExtendedValue &exv);
-
 //===----------------------------------------------------------------------===//
 // String literal helper helpers
 //===----------------------------------------------------------------------===//
@@ -867,20 +861,6 @@ void genRecordAssignment(fir::FirOpBuilder &builder, mlir::Location loc,
 /// flang/include/flang/Runtime/ragged.h.
 mlir::TupleType getRaggedArrayHeaderType(fir::FirOpBuilder &builder);
 
-/// Generate the, possibly dynamic, LEN of a CHARACTER. \p arrLoad determines
-/// the base array. After applying \p path, the result must be a reference to a
-/// `!fir.char` type object. \p substring must have 0, 1, or 2 members. The
-/// first member is the starting offset. The second is the ending offset.
-mlir::Value genLenOfCharacter(fir::FirOpBuilder &builder, mlir::Location loc,
-                              fir::ArrayLoadOp arrLoad,
-                              llvm::ArrayRef<mlir::Value> path,
-                              llvm::ArrayRef<mlir::Value> substring);
-mlir::Value genLenOfCharacter(fir::FirOpBuilder &builder, mlir::Location loc,
-                              fir::SequenceType seqTy, mlir::Value memref,
-                              llvm::ArrayRef<mlir::Value> typeParams,
-                              llvm::ArrayRef<mlir::Value> path,
-                              llvm::ArrayRef<mlir::Value> substring);
-
 /// Create the zero value of a given the numerical or logical \p type (`false`
 /// for logical types).
 mlir::Value createZeroValue(fir::FirOpBuilder &builder, mlir::Location loc,
@@ -890,10 +870,6 @@ mlir::Value createZeroValue(fir::FirOpBuilder &builder, mlir::Location loc,
 /// for logical types).
 mlir::Value createOneValue(fir::FirOpBuilder &builder, mlir::Location loc,
                            mlir::Type type);
-
-/// Get the integer constants of triplet and compute the extent.
-std::optional<std::int64_t> getExtentFromTriplet(mlir::Value lb, mlir::Value ub,
-                                                 mlir::Value stride);
 
 /// Compute the extent value given the lower bound \lb and upper bound \ub.
 /// All inputs must have the same SSA integer type.

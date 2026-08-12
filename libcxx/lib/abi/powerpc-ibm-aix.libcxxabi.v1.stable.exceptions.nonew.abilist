@@ -1816,6 +1816,7 @@
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZTINSt3__111__money_putIwEE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZTINSt3__112codecvt_baseE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZTINSt3__113basic_filebufIcNS_11char_traitsIcEEEE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
+{'import_export': 'wEXP', 'is_defined': True, 'name': '_ZTINSt3__113basic_filebufIwNS_11char_traitsIwEEEE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZTINSt3__113basic_istreamIcNS_11char_traitsIcEEEE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZTINSt3__113basic_istreamIwNS_11char_traitsIwEEEE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZTINSt3__113basic_ostreamIcNS_11char_traitsIcEEEE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
@@ -1889,6 +1890,7 @@
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZTSNSt3__111__money_putIwEE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZTSNSt3__112codecvt_baseE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZTSNSt3__113basic_filebufIcNS_11char_traitsIcEEEE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
+{'import_export': 'wEXP', 'is_defined': True, 'name': '_ZTSNSt3__113basic_filebufIwNS_11char_traitsIwEEEE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZTSNSt3__113basic_istreamIcNS_11char_traitsIcEEEE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZTSNSt3__113basic_istreamIwNS_11char_traitsIwEEEE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZTSNSt3__113basic_ostreamIcNS_11char_traitsIcEEEE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
@@ -1963,6 +1965,7 @@
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZTVNSt3__110moneypunctIwLb0EEE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZTVNSt3__110moneypunctIwLb1EEE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZTVNSt3__113basic_filebufIcNS_11char_traitsIcEEEE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
+{'import_export': 'wEXP', 'is_defined': True, 'name': '_ZTVNSt3__113basic_filebufIwNS_11char_traitsIwEEEE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZTVNSt3__113basic_istreamIcNS_11char_traitsIcEEEE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZTVNSt3__113basic_istreamIwNS_11char_traitsIwEEEE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZTVNSt3__113basic_ostreamIcNS_11char_traitsIcEEEE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}

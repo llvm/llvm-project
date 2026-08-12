@@ -3,16 +3,18 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporterVisitors.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 
 using namespace clang;
 using namespace ento;
 
 namespace {
-class DanglingPtrDeref : public Checker<check::Location> {
+class DanglingPtrDeref : public Checker<check::Location, check::PostCall> {
 public:
   void checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
                      CheckerContext &C) const;
+  void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
   void reportUseAfterScope(const MemRegion *Region, ExplodedNode *N,
                            CheckerContext &C) const;
   const BugType BugMsg{this, "ReportDanglingPtrDeref", "LifetimeBound"};
@@ -45,6 +47,22 @@ void DanglingPtrDeref::checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
       if (ExplodedNode *N = C.generateNonFatalErrorNode(State))
         reportUseAfterScope(LocRegion, N, C);
     }
+  }
+}
+
+void DanglingPtrDeref::checkPostCall(const CallEvent &Call,
+                                     CheckerContext &C) const {
+  ProgramStateRef State = C.getState();
+  // Only check calls arguments if it is not inlined by the engine. In case a
+  // function is inlined checkLocation handles any dereference in its body.
+  if (C.wasInlined)
+    return;
+
+  for (unsigned Idx = 0; Idx < Call.getNumArgs(); Idx++) {
+    if (const MemRegion *ArgRegion = Call.getArgSVal(Idx).getAsRegion())
+      if (lifetime_modeling::isDeallocated(State, ArgRegion))
+        if (ExplodedNode *N = C.generateNonFatalErrorNode())
+          reportUseAfterScope(ArgRegion, N, C);
   }
 }
 

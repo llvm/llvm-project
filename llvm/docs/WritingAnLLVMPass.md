@@ -635,7 +635,6 @@ Pre-ISel Intrinsic Lowering
 FunctionPass Manager
   Expand IR instructions
   Expand Atomic instructions
-SVE intrinsics optimizations
   FunctionPass Manager
     Dominator Tree Construction
 FunctionPass Manager

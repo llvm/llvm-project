@@ -4071,10 +4071,12 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
   const DataLayout &DL = DAG.getDataLayout();
   LLVMContext &Ctx = *DAG.getContext();
-  auto PtrVT = getPointerTy(DAG.getDataLayout());
 
   const Function &F = DAG.getMachineFunction().getFunction();
   const bool IsKernel = isKernelFunction(F);
+
+  const MVT PtrVT = getPointerTy(DL, IsKernel ? ADDRESS_SPACE_ENTRY_PARAM
+                                              : ADDRESS_SPACE_LOCAL);
 
   SDValue Root = DAG.getRoot();
   SmallVector<SDValue, 16> OutChains;
@@ -4129,18 +4131,17 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
       const auto &ByvalIn = ArgIns[0];
       assert(getValueType(DL, Ty) == ByvalIn.VT &&
              "Ins type did not match function type");
-      assert(ByvalIn.VT == PtrVT && "ByVal argument must be a pointer");
 
       SDValue P;
       if (IsKernel) {
-        assert(Arg.getType()->getPointerAddressSpace() ==
-                   ADDRESS_SPACE_ENTRY_PARAM &&
+        assert(Ty->getPointerAddressSpace() == ADDRESS_SPACE_ENTRY_PARAM &&
                "Kernel ByVal argument must be lowered to the param address "
                "space by NVPTXLowerArgs");
         P = ArgSymbol;
         P.getNode()->setIROrder(Arg.getArgNo() + 1);
       } else {
-        P = DAG.getNode(NVPTXISD::MoveParam, dl, ByvalIn.VT, ArgSymbol);
+        P = DAG.getNode(NVPTXISD::MoveParam, dl, ArgSymbol.getValueType(),
+                        ArgSymbol);
         P.getNode()->setIROrder(Arg.getArgNo() + 1);
         P = DAG.getAddrSpaceCast(dl, ByvalIn.VT, P, ADDRESS_SPACE_LOCAL,
                                  ADDRESS_SPACE_GENERIC);

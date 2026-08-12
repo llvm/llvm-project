@@ -997,3 +997,20 @@ func.func @post_decrement_unmatch_type(%arg0: !emitc.lvalue<i32>) {
   %1 = "emitc.post_decrement"(%arg0) : (!emitc.lvalue<i32>) -> i8
   return
 }
+
+// -----
+
+func.func @add_assign_to_block_argument(%arg0: i32, %arg1: !emitc.lvalue<i32>) {
+  // expected-error @+1 {{'emitc.add_assign' op cannot assign to block argument}}
+  emitc.add_assign %arg0 : i32 to %arg1 : !emitc.lvalue<i32>
+  return
+}
+
+// -----
+
+func.func @sub_assign_type_mismatch(%arg0: f32) {
+  %v = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
+  // expected-error @+1 {{'emitc.sub_assign' op requires value's type ('f32') to match variable's type ('i32')}}
+  emitc.sub_assign %arg0 : f32 to %v : !emitc.lvalue<i32>
+  return
+}

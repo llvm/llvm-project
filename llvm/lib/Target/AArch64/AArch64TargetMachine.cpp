@@ -162,11 +162,6 @@ static cl::opt<int> EnableGlobalISelAtO(
     cl::init(0));
 
 static cl::opt<bool>
-    EnableSVEIntrinsicOpts("aarch64-enable-sve-intrinsic-opts", cl::Hidden,
-                           cl::desc("Enable SVE intrinsic opts"),
-                           cl::init(true));
-
-static cl::opt<bool>
     EnableSMEPeepholeOpt("enable-aarch64-sme-peephole-opt", cl::init(true),
                          cl::Hidden,
                          cl::desc("Perform SME peephole optimization"));
@@ -279,7 +274,6 @@ LLVMInitializeAArch64Target() {
   initializeMachineSMEABIPass(PR);
   initializeAArch64SRLTDefineSuperRegsLegacyPass(PR);
   initializeSMEPeepholeOptPass(PR);
-  initializeSVEIntrinsicOptsPass(PR);
   initializeAArch64SpeculationHardeningPass(PR);
   initializeAArch64SLSHardeningLegacyPass(PR);
   initializeAArch64StackTaggingPass(PR);
@@ -651,11 +645,6 @@ void AArch64PassConfig::addIRPasses() {
   // Always expand atomic operations, we don't deal with atomicrmw or cmpxchg
   // ourselves.
   addPass(createAtomicExpandLegacyPass());
-
-  // Expand any SVE vector library calls that we can't code generate directly.
-  if (EnableSVEIntrinsicOpts &&
-      TM->getOptLevel() != CodeGenOptLevel::None)
-    addPass(createSVEIntrinsicOptsPass());
 
   // Cmpxchg instructions are often used with a subsequent comparison to
   // determine whether it succeeded. We can exploit existing control-flow in

@@ -690,6 +690,16 @@ __packed_psabs(psabs_i16x2, int16x2_t, __builtin_riscv_psabs_i16x2)
 __packed_psabs(psabs_i8x8, int8x8_t, __builtin_riscv_psabs_i8x8)
 __packed_psabs(psabs_i16x4, int16x4_t, __builtin_riscv_psabs_i16x4)
 
+/* Packed "Q-format" Multiplication (32-bit) */
+__packed_binary_builtin(pmulq_i16x2, int16x2_t, __builtin_riscv_pmulq_i16x2)
+__packed_binary_builtin(pmulqr_i16x2, int16x2_t, __builtin_riscv_pmulqr_i16x2)
+
+/* Packed "Q-format" Multiplication (64-bit) */
+__packed_binary_builtin(pmulq_i16x4, int16x4_t, __builtin_riscv_pmulq_i16x4)
+__packed_binary_builtin(pmulqr_i16x4, int16x4_t, __builtin_riscv_pmulqr_i16x4)
+__packed_binary_builtin(pmulq_i32x2, int32x2_t, __builtin_riscv_pmulq_i32x2)
+__packed_binary_builtin(pmulqr_i32x2, int32x2_t, __builtin_riscv_pmulqr_i32x2)
+
 /* Reinterpret Casts, Packed <-> Scalar (32-bit) */
 __packed_reinterpret(u8x4_u32, uint32_t, uint8x4_t)
 __packed_reinterpret(u16x2_u32, uint32_t, uint16x2_t)

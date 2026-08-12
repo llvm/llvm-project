@@ -13,12 +13,17 @@
 
 #include "src/stdlib/realpath.h"
 #include "hdr/errno_macros.h"
+#include "hdr/fcntl_macros.h"
 #include "hdr/limits_macros.h"
+#include "hdr/sys_stat_macros.h"
+#include "hdr/types/mode_t.h"
 #include "hdr/types/size_t.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/OSUtil/linux/stat/kernel_statx_types.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/getcwd.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/statx.h"
 #include "src/__support/OSUtil/path.h"
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
@@ -81,6 +86,8 @@ public:
   //
   // Must be free'd by the caller.
   char *release() { return path_.release_c_str(); }
+
+  const char *c_str() const { return path_.c_str(); }
 
   // Copies the content of this path to `dst`.
   void copy_to(char *dst) {
@@ -151,6 +158,20 @@ private:
   cpp::string_view view_;
 };
 
+ErrorOr<mode_t> read_file_type(const char *path) {
+  internal::kernel_statx_buf buf;
+  ErrorOr<int> ret =
+      linux_syscalls::statx(AT_FDCWD, path, AT_SYMLINK_NOFOLLOW,
+                            internal::KERNEL_STATX_TYPE_MASK, &buf);
+  if (!ret)
+    return Error(ret.error());
+
+  if (!(buf.stx_mask & internal::KERNEL_STATX_TYPE_MASK))
+    return Error(EIO);
+
+  return static_cast<mode_t>(buf.stx_mode);
+}
+
 cpp::optional<Error> resolve_path(PendingPath &pending_path,
                                   ResolvedPath &resolved_path) {
   while (!pending_path.empty()) {
@@ -165,6 +186,19 @@ cpp::optional<Error> resolve_path(PendingPath &pending_path,
 
     if (cpp::optional<Error> err = resolved_path.push_component(component); err)
       return err;
+
+    ErrorOr<mode_t> mode = read_file_type(resolved_path.c_str());
+    if (!mode)
+      return Error(mode.error());
+
+    // TODO: Resolve symbolic links.
+    if (S_ISLNK(*mode))
+      return Error(ENOSYS);
+
+    // If the path is not a directory, but there is more to resolve, then error.
+    // For example, realpath("/path/to/file.txt/") should give ENOTDIR.
+    if (!S_ISDIR(*mode) && !pending_path.empty())
+      return Error(ENOTDIR);
   }
 
   return cpp::nullopt;

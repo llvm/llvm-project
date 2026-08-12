@@ -726,6 +726,13 @@ public:
   std::optional<llvm::SmallVector<int32_t>>
   buildMemberPath(const CXXRecordDecl *destClass, const FieldDecl *field);
 
+  /// Returns true if \p field is an empty field that isn't laid out in the CIR
+  /// record (e.g. a [[no_unique_address]] empty member). Such fields have no
+  /// CIR field index, so a pointer-to-data-member to them is represented by an
+  /// explicit byte offset (#cir.data_member_offset) rather than a field-index
+  /// path.
+  bool isEmptyFieldForMemberPointer(const FieldDecl *field);
+
   llvm::StringRef getMangledName(clang::GlobalDecl gd);
   // This function is to support the OpenACC 'bind' clause, which names an
   // alternate name for the function to be called by. This function mangles

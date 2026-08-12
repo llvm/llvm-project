@@ -3554,7 +3554,6 @@ void MallocChecker::checkEscapeOnReturn(const ReturnStmt *S,
     return;
 
   // Check if we are returning a symbol.
-  ProgramStateRef State = C.getState();
   SVal RetVal = C.getSVal(E);
   SymbolRef Sym = RetVal.getAsSymbol();
   if (!Sym)
@@ -4112,8 +4111,8 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
         ReleaseFunctionSF = CurrentSF;
         // ...but if the stack contains a destructor call, then we say that the
         // outermost destructor stack frame is the _responsible_ one:
-        for (const StackFrame *SF = CurrentSF; SF; SF = SF->getParent()) {
-          if (const auto *DD = dyn_cast<CXXDestructorDecl>(SF->getDecl())) {
+        for (const StackFrame &SF : N->stackframes()) {
+          if (const auto *DD = dyn_cast<CXXDestructorDecl>(SF.getDecl())) {
             if (isReferenceCountingPointerDestructor(DD)) {
               // This immediately looks like a reference-counting destructor.
               // We're bad at guessing the original reference count of the
@@ -4149,7 +4148,7 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
             //   if (refPut(data))
             //     doFree(data);
             // }
-            ReleaseFunctionSF = SF;
+            ReleaseFunctionSF = &SF;
           }
         }
 

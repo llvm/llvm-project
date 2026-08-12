@@ -249,11 +249,13 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-LABEL: // Custom renderers.
 // CHECK-NEXT: enum {
 // CHECK-NEXT:   GICR_Invalid,
+// CHECK-NEXT:   GICR_renderFrameIndex,
 // CHECK-NEXT:   GICR_renderImm,
 // CHECK-NEXT: };
 // CHECK-NEXT: MyTargetInstructionSelector::CustomRendererFn
 // CHECK-NEXT: MyTargetInstructionSelector::CustomRenderers[] = {
 // CHECK-NEXT:   nullptr, // GICR_Invalid
+// CHECK-NEXT:   &MyTargetInstructionSelector::renderFrameIndex,
 // CHECK-NEXT:   &MyTargetInstructionSelector::renderImm,
 // CHECK-NEXT: };
 

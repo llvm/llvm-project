@@ -1736,11 +1736,12 @@ define amdgpu_kernel void @div_afn_k_x_pat_f16(ptr addrspace(1) %out) #0 {
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    v_rcp_f32_e32 v1, 0x41200000
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    buffer_load_ushort v0, off, s[0:3], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-NEXT:    v_mul_f32_e32 v0, 0x3dcccccd, v0
+; SI-NEXT:    v_mul_f32_e32 v0, v0, v1
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
@@ -1812,11 +1813,12 @@ define amdgpu_kernel void @div_afn_neg_k_x_pat_f16(ptr addrspace(1) %out) #0 {
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    v_rcp_f32_e32 v1, 0xc1200000
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    buffer_load_ushort v0, off, s[0:3], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-NEXT:    v_mul_f32_e32 v0, 0xbdcccccd, v0
+; SI-NEXT:    v_mul_f32_e32 v0, v0, v1
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm

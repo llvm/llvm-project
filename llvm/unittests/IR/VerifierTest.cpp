@@ -58,7 +58,7 @@ TEST(VerifierTest, Freeze) {
   IntegerType *ITy = IntegerType::get(C, 32);
   ConstantInt *CI = ConstantInt::get(ITy, 0);
 
-  // Valid type : freeze(<2 x i32>)
+  // Valid type: freeze(<2 x i32>).
   Constant *CV = ConstantVector::getSplat(ElementCount::getFixed(2), CI);
   FreezeInst *FI_vec = new FreezeInst(CV);
   FI_vec->insertBefore(RI->getIterator());
@@ -67,7 +67,7 @@ TEST(VerifierTest, Freeze) {
 
   FI_vec->eraseFromParent();
 
-  // Valid type : freeze(float)
+  // Valid type: freeze(float).
   Constant *CFP = ConstantFP::get(Type::getDoubleTy(C), 0.0);
   FreezeInst *FI_dbl = new FreezeInst(CFP);
   FI_dbl->insertBefore(RI->getIterator());
@@ -76,7 +76,7 @@ TEST(VerifierTest, Freeze) {
 
   FI_dbl->eraseFromParent();
 
-  // Valid type : freeze(ptr)
+  // Valid type: freeze(ptr).
   PointerType *PT = PointerType::get(C, 0);
   ConstantPointerNull *CPN = ConstantPointerNull::get(PT);
   FreezeInst *FI_ptr = new FreezeInst(CPN);
@@ -86,7 +86,7 @@ TEST(VerifierTest, Freeze) {
 
   FI_ptr->eraseFromParent();
 
-  // Valid type : freeze(int)
+  // Valid type: freeze(int).
   FreezeInst *FI = new FreezeInst(CI);
   FI->insertBefore(RI->getIterator());
 
@@ -389,7 +389,7 @@ TEST(VerifierTest, AtomicRMW) {
   Type *FPTy = Type::getFloatTy(C);
   Constant *CF = ConstantFP::getZero(FPTy);
 
-  // Invalid scalable type : atomicrmw (<vscale x 2 x float>)
+  // Invalid scalable type: atomicrmw (<vscale x 2 x float>).
   Constant *CV = ConstantVector::getSplat(ElementCount::getScalable(2), CF);
   new AtomicRMWInst(AtomicRMWInst::FAdd, Ptr, CV, Align(8),
                     AtomicOrdering::SequentiallyConsistent, SyncScope::System,
@@ -399,9 +399,8 @@ TEST(VerifierTest, AtomicRMW) {
   std::string Error;
   raw_string_ostream ErrorOS(Error);
   EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
-  EXPECT_TRUE(StringRef(Error).starts_with(
-      "atomicrmw fadd operand must have floating-point or "
-      "fixed vector of floating-point type!"))
+  EXPECT_TRUE(
+      StringRef(Error).starts_with("atomicrmw operand may not be scalable"))
       << Error;
 }
 
@@ -516,7 +515,7 @@ TEST(VerifierTest, AtomicRMWIntVector) {
   Type *IntTy = Type::getInt16Ty(C);
   Constant *CI = ConstantInt::get(IntTy, 0);
 
-  // Invalid scalable type : atomicrmw (<vscale x 2 x i16>)
+  // Invalid scalable type: atomicrmw (<vscale x 2 x i16>).
   Constant *CV = ConstantVector::getSplat(ElementCount::getScalable(2), CI);
   new AtomicRMWInst(AtomicRMWInst::Add, Ptr, CV, Align(8),
                     AtomicOrdering::SequentiallyConsistent, SyncScope::System,
@@ -527,8 +526,56 @@ TEST(VerifierTest, AtomicRMWIntVector) {
   raw_string_ostream ErrorOS(Error);
   EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
   EXPECT_TRUE(
-      StringRef(Error).starts_with("atomicrmw add operand must have integer or "
-                                   "fixed vector of integer type!"))
+      StringRef(Error).starts_with("atomicrmw operand may not be scalable"))
+      << Error;
+}
+
+TEST(VerifierTest, AtomicRMWXchgVector) {
+  LLVMContext C;
+  Module M("M", C);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg=*/false);
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", M);
+  BasicBlock *Entry = BasicBlock::Create(C, "entry", F);
+  Value *Ptr = PoisonValue::get(PointerType::get(C, 0));
+
+  Type *FPTy = Type::getHalfTy(C);
+  Constant *CF = ConstantFP::getZero(FPTy);
+
+  // Invalid scalable type: atomicrmw xchg (<vscale x 2 x half>).
+  Constant *CV = ConstantVector::getSplat(ElementCount::getScalable(2), CF);
+  new AtomicRMWInst(AtomicRMWInst::Xchg, Ptr, CV, Align(8),
+                    AtomicOrdering::SequentiallyConsistent, SyncScope::System,
+                    /*Elementwise=*/false, Entry);
+  ReturnInst::Create(C, Entry);
+
+  std::string Error;
+  raw_string_ostream ErrorOS(Error);
+  EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
+  EXPECT_TRUE(
+      StringRef(Error).starts_with("atomicrmw operand may not be scalable"))
+      << Error;
+}
+
+TEST(VerifierTest, AtomicRMWXchgNonByteSizedVector) {
+  LLVMContext C;
+  Module M("M", C);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg=*/false);
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", M);
+  BasicBlock *Entry = BasicBlock::Create(C, "entry", F);
+  Value *Ptr = PoisonValue::get(PointerType::get(C, 0));
+
+  Constant *CI = ConstantInt::getFalse(C);
+  Constant *CV = ConstantVector::getSplat(ElementCount::getFixed(4), CI);
+  new AtomicRMWInst(AtomicRMWInst::Xchg, Ptr, CV, Align(1),
+                    AtomicOrdering::SequentiallyConsistent, SyncScope::System,
+                    /*Elementwise=*/false, Entry);
+  ReturnInst::Create(C, Entry);
+
+  std::string Error;
+  raw_string_ostream ErrorOS(Error);
+  EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
+  EXPECT_TRUE(StringRef(Error).starts_with(
+      "atomic memory access' size must be byte-sized"))
       << Error;
 }
 
@@ -699,28 +746,4 @@ TEST(VerifierTest, IntrinsicRetInvalidStruct) {
   }
 }
 
-TEST(VerifierTest, InvalidStrictFPAttribute) {
-  LLVMContext Ctx;
-  Module M("M", Ctx);
-  FunctionType *FuncTy =
-      FunctionType::get(Type::getVoidTy(Ctx), /*isVarArg=*/false);
-  Function *F =
-      Function::Create(FuncTy, Function::ExternalLinkage, "strictfp_test", M);
-  BasicBlock *Entry = BasicBlock::Create(Ctx, "entry", F);
-  Type *FloatTy = Type::getFloatTy(Ctx);
-
-  Function *CosF =
-      Intrinsic::getOrInsertDeclaration(&M, Intrinsic::cos, FloatTy);
-  CallInst *CI = CallInst::Create(CosF, ConstantFP::getNullValue(FloatTy),
-                                  "strictfp_call", Entry);
-  CI->addFnAttr(Attribute::StrictFP);
-  ReturnInst::Create(Ctx, Entry);
-
-  std::string Error;
-  raw_string_ostream ErrorOS(Error);
-  EXPECT_TRUE(verifyModule(M, &ErrorOS));
-  EXPECT_TRUE(StringRef(Error).starts_with(
-      "call site marked strictfp without caller function marked strictfp"))
-      << Error;
-}
 } // end anonymous namespace

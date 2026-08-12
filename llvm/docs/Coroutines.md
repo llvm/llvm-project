@@ -2087,7 +2087,7 @@ and replaces `coro.alloc` and `coro.free` intrinsics with `false` and `null`
 respectively to remove the deallocation code.
 
 ### CoroElide
-The pass CoroElide examines if the inlined coroutine is eligible for heap
+The pass CoroElide examines if the coroutine is eligible for heap
 allocation elision optimization. If so, it replaces
 `coro.begin` intrinsic with an address of a coroutine frame placed on its caller
 and replaces `coro.alloc` and `coro.free` intrinsics with `false` and `null`

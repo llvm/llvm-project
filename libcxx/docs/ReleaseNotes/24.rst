@@ -38,6 +38,7 @@ What's New in Libc++ 24.0.0?
 Implemented Papers
 ------------------
 
+- P0493R5: Atomic minimum/maximum (`Github <https://llvm.org/PR105418>`__)
 
 Improvements and New Features
 -----------------------------

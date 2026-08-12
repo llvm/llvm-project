@@ -863,9 +863,9 @@ add_libc_test(
   SRCS
     shared_rpc_test.cpp
   DEPENDS
-    libc.src.stdio.printf_core.converter
-    libc.src.stdio.printf_core.parser
-    libc.src.stdio.printf_core.writer
+    libc.src.__support.printf_core.converter
+    libc.src.__support.printf_core.parser
+    libc.src.__support.printf_core.writer
     libc.src.__support.arg_list
 )
 endif()

@@ -71,6 +71,13 @@ on all AMDGCN targets unless otherwise noted.
 }];
 }
 
+def DocCatAMDGPUConversion : DocumentationCategory<"Conversion Builtins"> {
+  let Content = [{
+These builtins provide access to AMDGPU conversion instructions, including conversions
+between standard floating-point types, integer types and packed low-precision formats.
+}];
+}
+
 //===----------------------------------------------------------------------===//
 // ABI / Special Register Builtins — Documentation records
 //===----------------------------------------------------------------------===//
@@ -760,5 +767,29 @@ Loads data from a buffer using an SGPR buffer descriptor.
   - GFX12+: bits [0-2] = th, bits [3-4] = scope, bit 6 = swz.
 
   The volatile bit is not permitted for this intrinsic.
+}];
+}
+
+//===----------------------------------------------------------------------===//
+// Conversion Builtins
+//===----------------------------------------------------------------------===//
+
+def DocCvtScaleF32Pk32BF6F32 : Documentation {
+  let Category = DocCatAMDGPUConversion;
+  let Content = [{
+Scales a packed 32-component single-precision floating-point input ``src``
+using the scale factor ``scale``, then converts the values to a packed
+32-component BF6 value, returned as a 6-element vector of 32-bit unsigned
+integers.
+}];
+}
+
+def DocCvtScaleF32Pk32FP6F32 : Documentation {
+  let Category = DocCatAMDGPUConversion;
+  let Content = [{
+Scales a packed 32-component single-precision floating-point input ``src``
+using the scale factor ``scale``, then converts the values to a packed
+32-component FP6 value, returned as a 6-element vector of 32-bit unsigned
+integers.
 }];
 }

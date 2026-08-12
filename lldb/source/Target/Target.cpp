@@ -4147,8 +4147,8 @@ void Target::ClearDummySignals(Args &signal_names) {
 }
 
 void Target::PrintDummySignals(Stream &strm, Args &signal_args) {
-  strm.Printf("NAME         PASS     STOP     NOTIFY\n");
-  strm.Printf("===========  =======  =======  =======\n");
+  strm.PutCString("NAME         PASS     STOP     NOTIFY\n");
+  strm.PutCString("===========  =======  =======  =======\n");
 
   auto str_for_lazy = [] (LazyBool lazy) -> const char * {
     switch (lazy) {

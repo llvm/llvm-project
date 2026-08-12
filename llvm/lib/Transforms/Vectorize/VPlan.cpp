@@ -1010,7 +1010,8 @@ void VPlan::execute(VPTransformState *State) {
 
     Loop *OrigLoop =
         State->LI->getLoopFor(getScalarHeader()->getIRBasicBlock());
-    auto Blocks = OrigLoop->getBlocksVector();
+    SmallVector<BasicBlock *> Blocks(OrigLoop->block_begin(),
+                                     OrigLoop->block_end());
     Blocks.push_back(ScalarPh);
     while (!OrigLoop->isInnermost())
       State->LI->erase(*OrigLoop->begin());

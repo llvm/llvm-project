@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
+#include "AArch64ExpandImm.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64TargetMachine.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
@@ -476,6 +477,7 @@ private:
   bool SelectAddrModeXRO(SDValue N, unsigned Size, SDValue &Base,
                          SDValue &Offset, SDValue &SignExtend,
                          SDValue &DoShift);
+  bool isWorthNegatingImm(SDValue V) const;
   bool isWorthFoldingALU(SDValue V, bool LSL = false) const;
   bool isWorthFoldingAddr(SDValue V, unsigned Size) const;
   bool SelectExtendedSHL(SDValue N, unsigned Size, bool WantExtend,
@@ -992,6 +994,25 @@ getExtendTypeForNode(SDValue N, bool IsLoadStore = false) {
   }
 
   return AArch64_AM::InvalidShiftExtend;
+}
+
+/// Determine whether constant -V is cheaper to materialise than V.
+bool AArch64DAGToDAGISel::isWorthNegatingImm(SDValue V) const {
+  assert(isa<ConstantSDNode>(V) && "invalid node");
+
+  EVT VT = V.getValueType();
+  assert((VT == MVT::i32 || VT == MVT::i64) && "invalid type");
+
+  // It's only worth negating the constant if it doesn't have other uses.
+  if (!V.hasOneUse())
+    return false;
+
+  uint64_t Imm = cast<ConstantSDNode>(V)->getZExtValue();
+  unsigned BitSize = VT.getSizeInBits();
+  SmallVector<AArch64_IMM::ImmInsnModel, 4> OrigCost, NewCost;
+  AArch64_IMM::expandMOVImm(Imm, BitSize, OrigCost);
+  AArch64_IMM::expandMOVImm(-Imm, BitSize, NewCost);
+  return NewCost.size() < OrigCost.size();
 }
 
 /// Determine whether it is worth to fold V into an extended register of an
