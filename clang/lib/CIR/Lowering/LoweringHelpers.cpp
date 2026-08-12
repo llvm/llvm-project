@@ -236,12 +236,12 @@ static bool containsBlockAddress(mlir::Attribute attr) {
 }
 
 static std::optional<mlir::Attribute> lowerConstRecordMemberAttr(
-  mlir::Attribute attr, mlir::SymbolTableCollection &symbolTables,
-  const mlir::TypeConverter *converter, mlir::ModuleOp moduleOp);
+    mlir::Attribute attr, mlir::SymbolTableCollection &symbolTables,
+    const mlir::TypeConverter *converter, mlir::ModuleOp moduleOp);
 
 std::optional<mlir::Attribute> lowerConstArrayAttr(
-  cir::ConstArrayAttr constArr, mlir::SymbolTableCollection &symbolTables,
-  const mlir::TypeConverter *converter, mlir::ModuleOp moduleOp) {
+    cir::ConstArrayAttr constArr, mlir::SymbolTableCollection &symbolTables,
+    const mlir::TypeConverter *converter, mlir::ModuleOp moduleOp) {
   // Ensure ConstArrayAttr has a type.
   const auto typedConstArr = mlir::cast<mlir::TypedAttr>(constArr);
 
