@@ -10,7 +10,6 @@ from . import availability
 from . import carveouts
 from . import compiler
 from . import debugger
-from . import gdb
 from . import hardening
 from . import libcxx_macros
 from . import localization
