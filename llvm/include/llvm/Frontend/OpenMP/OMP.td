@@ -1483,7 +1483,7 @@ def OMP_Unroll : Directive<[Spelling<"unroll">]> {
   let allowedClauses = [
     VersionedClause<OMPC_Apply, 60>,
   ];
-  let allowedOnceClauses = [
+  let allowedExclusiveClauses = [
     VersionedClause<OMPC_Full, 51>,
     VersionedClause<OMPC_Partial, 51>,
   ];

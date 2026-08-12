@@ -558,6 +558,37 @@ def UnrollHeuristicOp : OpenMPTransform_Op<"unroll_heuristic", []> {
 }
 
 //===----------------------------------------------------------------------===//
+// OpenMP unroll_full operation
+//===----------------------------------------------------------------------===//
+
+def UnrollFullOp : OpenMPTransform_Op<"unroll_full", []> {
+  let summary = "OpenMP full unroll operation";
+  let description = [{
+    Represents a `#pragma omp unroll full` construct introduced in OpenMP 5.1.
+
+    The operation has one applyee and no generatees. The applyee is fully
+    unrolled, so it must have a compile-time constant trip count. Because no
+    loop remains afterwards, there is no generatee and no further
+    loop-associated transformation can be chained onto it.
+
+    The lowering is implemented using `OpenMPIRBuilder::unrollLoopFull`.
+
+    Assembly formats:
+      omp.unroll_full(%cli)
+      omp.unroll_full(%cli) -> ()
+  }];
+
+  let arguments = (ins CanonicalLoopInfoType:$applyee);
+
+  let builders = [
+    OpBuilder<(ins "::mlir::Value":$cli)>,
+  ];
+
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // OpenMP unroll_partial operation
 //===----------------------------------------------------------------------===//
 

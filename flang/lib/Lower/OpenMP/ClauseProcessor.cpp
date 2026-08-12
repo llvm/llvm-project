@@ -848,6 +848,10 @@ bool ClauseProcessor::processOrdered(
   return false;
 }
 
+bool ClauseProcessor::processFull() const {
+  return findUniqueClause<omp::clause::Full>() != nullptr;
+}
+
 bool ClauseProcessor::processPartial(std::optional<int64_t> &result) const {
   if (auto *clause = findUniqueClause<omp::clause::Partial>()) {
     if (clause->v.has_value())
