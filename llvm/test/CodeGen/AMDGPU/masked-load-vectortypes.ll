@@ -103,9 +103,9 @@ define <8 x i32> @uniform_masked_load_ptr1_mask_v8i32(ptr addrspace(1) inreg noc
 ; GFX942-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX942-NEXT:    s_cbranch_execz .LBB3_2
 ; GFX942-NEXT:  ; %bb.1: ; %cond.load
-; GFX942-NEXT:    v_mov_b32_e32 v8, 0
-; GFX942-NEXT:    global_load_dwordx4 v[4:7], v8, s[0:1] offset:16
-; GFX942-NEXT:    global_load_dwordx4 v[0:3], v8, s[0:1]
+; GFX942-NEXT:    v_mov_b32_e32 v9, 0
+; GFX942-NEXT:    global_load_dwordx4 v[4:7], v9, s[0:1] offset:16
+; GFX942-NEXT:    global_load_dwordx4 v[0:3], v9, s[0:1]
 ; GFX942-NEXT:  .LBB3_2:
 ; GFX942-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
@@ -138,9 +138,9 @@ define <8 x float> @uniform_masked_load_ptr1_mask_v8f32(ptr addrspace(1) inreg n
 ; GFX942-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX942-NEXT:    s_cbranch_execz .LBB4_2
 ; GFX942-NEXT:  ; %bb.1: ; %cond.load
-; GFX942-NEXT:    v_mov_b32_e32 v8, 0
-; GFX942-NEXT:    global_load_dwordx4 v[4:7], v8, s[0:1] offset:16
-; GFX942-NEXT:    global_load_dwordx4 v[0:3], v8, s[0:1]
+; GFX942-NEXT:    v_mov_b32_e32 v9, 0
+; GFX942-NEXT:    global_load_dwordx4 v[4:7], v9, s[0:1] offset:16
+; GFX942-NEXT:    global_load_dwordx4 v[0:3], v9, s[0:1]
 ; GFX942-NEXT:  .LBB4_2:
 ; GFX942-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)

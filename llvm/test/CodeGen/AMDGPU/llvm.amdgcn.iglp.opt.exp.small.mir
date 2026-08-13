@@ -38,7 +38,7 @@
   ; GCN-NEXT:    s_waitcnt vmcnt(0)
   ; GCN-NEXT:    ds_write_b128 v16, v[0:3]
   ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-  ; GCN-NEXT:    buffer_load_dwordx4 v[0:3], v4, s[0:3], 0 offen offset:64 sc0 sc1
+  ; GCN-NEXT:    buffer_load_dwordx4 v[20:23], v4, s[0:3], 0 offen offset:64 sc0 sc1
   ; GCN-NEXT:    s_waitcnt vmcnt(0)
   ; GCN-NEXT:    buffer_inv sc0 sc1
   ; GCN-NEXT:    ; implicit-def: $vgpr4
@@ -81,7 +81,7 @@
   ; GCN-NEXT:    ;;#ASMEND
   ; GCN-NEXT:    buffer_wbl2 sc0 sc1
   ; GCN-NEXT:    s_waitcnt vmcnt(0)
-  ; GCN-NEXT:    ds_write_b128 v16, v[0:3]
+  ; GCN-NEXT:    ds_write_b128 v16, v[20:23]
   ; GCN-NEXT:    v_mfma_f32_32x32x8_f16 v[48:63], v[4:5], v[8:9], v[48:63]
   ; GCN-NEXT:    ;;#ASMSTART
   ; GCN-NEXT:    s_waitcnt vmcnt(8)

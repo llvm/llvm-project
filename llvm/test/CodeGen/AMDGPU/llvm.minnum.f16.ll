@@ -125,17 +125,17 @@ define amdgpu_kernel void @minnum_f16_ieee(
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s15, s11
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s6, s10
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s7, s11
+; GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.h, v0.h, v0.h
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s13, s3
 ; GFX11-TRUE16-NEXT:    buffer_load_d16_b16 v0, off, s[12:15], 0 glc dlc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    buffer_load_d16_hi_b16 v0, off, s[4:7], 0 glc dlc
+; GFX11-TRUE16-NEXT:    buffer_load_d16_b16 v1, off, s[4:7], 0 glc dlc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s8, s0
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s9, s1
 ; GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.l, v0.l, v0.l
-; GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.h, v0.h, v0.h
 ; GFX11-TRUE16-NEXT:    v_min_f16_e32 v0.l, v0.l, v0.h
 ; GFX11-TRUE16-NEXT:    buffer_store_b16 v0, off, s[8:11], 0
 ; GFX11-TRUE16-NEXT:    s_endpgm

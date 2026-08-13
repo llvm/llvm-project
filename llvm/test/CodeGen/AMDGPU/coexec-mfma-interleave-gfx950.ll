@@ -22,9 +22,9 @@ define amdgpu_kernel void @mfma_16x16_interleave(
 ; CHECK-NEXT:    v_mul_hi_i32_i24_e32 v13, -12, v12
 ; CHECK-NEXT:    v_mul_i32_i24_e32 v12, -12, v12
 ; CHECK-NEXT:    v_lshl_add_u64 v[14:15], s[0:1], 0, v[28:29]
-; CHECK-NEXT:    v_lshl_add_u64 v[16:17], v[14:15], 0, v[12:13]
-; CHECK-NEXT:    global_load_dwordx2 v[30:31], v[16:17], off offset:16
-; CHECK-NEXT:    global_load_dwordx4 v[12:15], v[16:17], off
+; CHECK-NEXT:    v_lshl_add_u64 v[18:19], v[14:15], 0, v[12:13]
+; CHECK-NEXT:    global_load_dwordx2 v[30:31], v[18:19], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 v[12:15], v[18:19], off
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    ; sched_barrier mask(0x00000000)
 ; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 v[16:19], v[0:3], v[4:7], v[0:3]

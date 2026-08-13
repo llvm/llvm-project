@@ -7,15 +7,15 @@ define amdgpu_kernel void @d16_load_and_valu(ptr %in1, ptr %in2) {
 ; GFX11-LABEL: d16_load_and_valu:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-NEXT:    v_or_b16 v0.h, v0.h, 1
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v2, s1 :: v_dual_mov_b32 v1, s0
 ; GFX11-NEXT:    v_dual_mov_b32 v4, s3 :: v_dual_mov_b32 v3, s2
 ; GFX11-NEXT:    flat_load_d16_b16 v0, v[1:2]
-; GFX11-NEXT:    flat_load_d16_hi_b16 v0, v[3:4]
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    flat_load_d16_b16 v5, v[3:4]
+; GFX11-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(1)
 ; GFX11-NEXT:    v_or_b16 v0.l, v0.l, 1
-; GFX11-NEXT:    v_or_b16 v0.h, v0.h, 1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_nc_u16 v0.l, v0.l, 10
 ; GFX11-NEXT:    flat_store_b16 v[1:2], v0
 ; GFX11-NEXT:    flat_store_d16_hi_b16 v[3:4], v0
@@ -24,15 +24,15 @@ define amdgpu_kernel void @d16_load_and_valu(ptr %in1, ptr %in2) {
 ; GFX12-LABEL: d16_load_and_valu:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX12-NEXT:    v_or_b16 v0.h, v0.h, 1
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_dual_mov_b32 v2, s1 :: v_dual_mov_b32 v1, s0
 ; GFX12-NEXT:    v_dual_mov_b32 v4, s3 :: v_dual_mov_b32 v3, s2
 ; GFX12-NEXT:    flat_load_d16_b16 v0, v[1:2]
-; GFX12-NEXT:    flat_load_d16_hi_b16 v0, v[3:4]
-; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    flat_load_d16_b16 v5, v[3:4]
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x101
 ; GFX12-NEXT:    v_or_b16 v0.l, v0.l, 1
-; GFX12-NEXT:    v_or_b16 v0.h, v0.h, 1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_add_nc_u16 v0.l, v0.l, 10
 ; GFX12-NEXT:    flat_store_b16 v[1:2], v0
 ; GFX12-NEXT:    flat_store_d16_hi_b16 v[3:4], v0
