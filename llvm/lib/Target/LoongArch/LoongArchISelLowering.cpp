@@ -7300,6 +7300,22 @@ static bool combine_CC(SDValue &LHS, SDValue &RHS, SDValue &CC, const SDLoc &DL,
   return false;
 }
 
+static SDValue performBRCONDCombine(SDNode *N, SelectionDAG &DAG,
+                                    TargetLowering::DAGCombinerInfo &DCI,
+                                    const LoongArchSubtarget &Subtarget) {
+  SDValue Chain = N->getOperand(0);
+  SDValue Cond = N->getOperand(1);
+  SDValue BB = N->getOperand(2);
+  SDLoc DL(N);
+
+  if (isNullConstantOrUndef(Cond))
+    return Chain;
+  if (isa<ConstantSDNode>(Cond))
+    return DAG.getNode(ISD::BR, DL, MVT::Other, Chain, BB);
+
+  return SDValue();
+}
+
 static SDValue performBR_CCCombine(SDNode *N, SelectionDAG &DAG,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    const LoongArchSubtarget &Subtarget) {
@@ -8698,6 +8714,8 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
     return performFP_TO_INTCombine(N, DAG, DCI, Subtarget);
   case LoongArchISD::BITREV_W:
     return performBITREV_WCombine(N, DAG, DCI, Subtarget);
+  case LoongArchISD::BRCOND:
+    return performBRCONDCombine(N, DAG, DCI, Subtarget);
   case LoongArchISD::BR_CC:
     return performBR_CCCombine(N, DAG, DCI, Subtarget);
   case LoongArchISD::SELECT_CC:
