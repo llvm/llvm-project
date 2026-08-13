@@ -696,6 +696,12 @@ private:
   using ParameterIndexTable = llvm::DenseMap<const VarDecl *, unsigned>;
   ParameterIndexTable ParamIndices;
 
+  /// Map from numbering information for lambdas to the corresponding lambdas.
+  /// This is intentionally not serialized, and is instead reconstructed as we
+  /// read each lambda.
+  llvm::DenseMap<std::pair<const Decl *, unsigned>, CXXRecordDecl *>
+      LambdaDeclarationsForMerging;
+
 public:
   struct CXXRecordDeclRelocationInfo {
     unsigned IsRelocatable;
@@ -704,6 +710,15 @@ public:
   getRelocationInfoForCXXRecord(const CXXRecordDecl *) const;
   void setRelocationInfoForCXXRecord(const CXXRecordDecl *,
                                      CXXRecordDeclRelocationInfo);
+
+  // Returns a reference to the first lambda declaration with a given index in a
+  // given context. Used to merge lambdas in the case where the same lambda is
+  // redefined in multiple modules.
+  CXXRecordDecl *&getLambdaDeclarationSlotForMerging(const Decl *ContextDecl,
+                                                     int IndexInContext) {
+    return LambdaDeclarationsForMerging[{ContextDecl->getCanonicalDecl(),
+                                         IndexInContext}];
+  }
 
   /// Examines a given type, and returns whether the type itself
   /// is address discriminated, or any transitively embedded types
