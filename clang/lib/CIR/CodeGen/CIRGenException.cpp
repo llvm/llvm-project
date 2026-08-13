@@ -189,7 +189,7 @@ const EHPersonality &EHPersonality::get(CIRGenFunction &cgf) {
 static llvm::StringRef getPersonalityFn(CIRGenModule &cgm,
                                         const EHPersonality &personality) {
   // Create the personality function type: i32 (...)
-  mlir::Type i32Ty = cgm.getBuilder().getI32Type();
+  mlir::Type i32Ty = cgm.getBuilder().getSInt32Ty();
   auto funcTy = cir::FuncType::get({}, i32Ty, /*isVarArg=*/true);
 
   cir::FuncOp personalityFn = cgm.createRuntimeFunction(
