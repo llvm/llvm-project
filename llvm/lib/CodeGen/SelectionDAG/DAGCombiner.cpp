@@ -24362,22 +24362,27 @@ SDValue DAGCombiner::replaceStoreOfInsertLoad(StoreSDNode *ST) {
     return SDValue();
 
   MachinePointerInfo PointerInfo(ST->getAddressSpace());
+  Align NewAlign;
 
   // If the offset is a known constant then try to recover the pointer
   // info
   SDValue NewPtr;
   if (auto *CIdx = dyn_cast<ConstantSDNode>(Idx)) {
-    unsigned COffset = CIdx->getSExtValue() * EltVT.getSizeInBits() / 8;
+    unsigned COffset = CIdx->getSExtValue() * EltVT.getFixedSizeInBits() / 8;
     NewPtr = DAG.getMemBasePlusOffset(Ptr, TypeSize::getFixed(COffset), DL);
     PointerInfo = ST->getPointerInfo().getWithOffset(COffset);
+    NewAlign = ST->getAlign();
   } else {
     // The original DAG loaded the entire vector from memory, so arithmetic
     // within it must be inbounds.
     NewPtr = TLI.getInboundsVectorElementPointer(DAG, Ptr, Value.getValueType(),
                                                  Idx);
+    // MachinePointerInfo can't represent a variable offset, so use a generic
+    // MachinePointerInfo and recompute the alignment.
+    NewAlign = commonAlignment(ST->getAlign(), EltVT.getFixedSizeInBits() / 8);
   }
 
-  return DAG.getStore(Chain, DL, Elt, NewPtr, PointerInfo, ST->getAlign(),
+  return DAG.getStore(Chain, DL, Elt, NewPtr, PointerInfo, NewAlign,
                       ST->getMemOperand()->getFlags());
 }
 
