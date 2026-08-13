@@ -28,6 +28,7 @@
 #include <cstddef>
 #include <execution>
 #include <numeric>
+#include <memory>
 
 #include "test_iterators.h"
 
@@ -68,6 +69,11 @@ void f(non_forward_iterator non_fwd,
   {
     (void)std::count(pol, non_fwd, non_fwd, val);     // expected-error@*:* {{static assertion failed: count}}
     (void)std::count_if(pol, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: count_if}}
+  }
+
+  {
+    (void)std::destroy(pol, non_fwd, non_fwd); // expected-error@*:* {{static assertion failed: destroy}}
+    (void)std::destroy_n(pol, non_fwd, n);     // expected-error@*:* {{static assertion failed: destroy_n}}
   }
 
   {

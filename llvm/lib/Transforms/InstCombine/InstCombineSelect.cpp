@@ -4511,6 +4511,77 @@ static Instruction *foldSelectNegNot(SelectInst &SI,
   return nullptr;
 }
 
+/// Fold select (A & Shift == 0 | B & Shift == 0), 0, Shift -> Shift & A & B
+/// where Shift is known to be a power of two.
+static Instruction *foldSelectAndOrPowerOfTwo(SelectInst &SI,
+                                              InstCombiner::BuilderTy &Builder,
+                                              const SimplifyQuery &SQ) {
+  Value *Cond = SI.getCondition();
+
+  if (!Cond->hasOneUse())
+    return nullptr;
+
+  Value *TrueVal = SI.getTrueValue();
+  Value *FalseVal = SI.getFalseValue();
+
+  Value *A, *B, *Shift;
+
+  bool Case1 =
+      match(TrueVal, m_Zero()) && match(FalseVal, m_Value(Shift)) &&
+      match(Cond, m_Or(m_SpecificICmp(ICmpInst::ICMP_EQ,
+                                      m_c_And(m_Specific(Shift), m_Value(A)),
+                                      m_Zero()),
+                       m_SpecificICmp(ICmpInst::ICMP_EQ,
+                                      m_c_And(m_Specific(Shift), m_Value(B)),
+                                      m_Zero())));
+
+  bool Case2 =
+      match(FalseVal, m_Zero()) && match(TrueVal, m_Value(Shift)) &&
+      match(Cond, m_And(m_SpecificICmp(ICmpInst::ICMP_NE,
+                                       m_c_And(m_Specific(Shift), m_Value(A)),
+                                       m_Zero()),
+                        m_SpecificICmp(ICmpInst::ICMP_NE,
+                                       m_c_And(m_Specific(Shift), m_Value(B)),
+                                       m_Zero())));
+
+  if ((Case1 || Case2) && isKnownToBeAPowerOfTwo(Shift, /*OrZero=*/true,
+                                                 SQ.getWithInstruction(&SI))) {
+    Value *And1 = Builder.CreateAnd(Shift, A);
+    return BinaryOperator::CreateAnd(And1, B);
+  }
+
+  return nullptr;
+}
+
+// Return true if no use can observe the sign of zero of the select result,
+// looking through phis, selects and the loop back edge to the select itself.
+static bool isSelectZeroSignInsignificant(SelectInst &SI) {
+  // Bound the number of uses to look through to keep the compile time in
+  // check.
+  constexpr unsigned MaxUsesToLookThrough = 16;
+  unsigned NumUses = 0;
+  SmallPtrSet<Instruction *, 4> Visited;
+  SmallVector<Instruction *> Worklist(1, &SI);
+  while (!Worklist.empty()) {
+    for (Use &U : Worklist.pop_back_val()->uses()) {
+      if (++NumUses > MaxUsesToLookThrough)
+        return false;
+      auto *User = cast<Instruction>(U.getUser());
+      if (User == &SI)
+        continue;
+      if (canIgnoreSignBitOfZero(U))
+        continue;
+      if (isa<PHINode, SelectInst>(User)) {
+        if (Visited.insert(User).second)
+          Worklist.push_back(User);
+        continue;
+      }
+      return false;
+    }
+  }
+  return true;
+}
+
 Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   Value *CondVal = SI.getCondition();
   Value *TrueVal = SI.getTrueValue();
@@ -4600,6 +4671,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   }
 
   if (Instruction *I = foldSelectNegNot(SI, Builder))
+    return I;
+
+  if (Instruction *I = foldSelectAndOrPowerOfTwo(SI, Builder, SQ))
     return I;
 
   auto *SIFPOp = dyn_cast<FPMathOperator>(&SI);
@@ -4785,9 +4859,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     // has the `nnan nsz` flags, which allow it to be lowered *back* to a
     // fcmp+select if that's the best way to express it on the target.
     if (FCmp && FCmp->hasNoNaNs() &&
-        (SIFPOp->hasNoSignedZeros() ||
-         (SIFPOp->hasOneUse() &&
-          canIgnoreSignBitOfZero(*SIFPOp->use_begin())))) {
+        (SIFPOp->hasNoSignedZeros() || isSelectZeroSignInsignificant(SI))) {
       Value *X, *Y;
       if (match(&SI, m_OrdOrUnordFMax(m_Value(X), m_Value(Y)))) {
         Value *BinIntr =
@@ -4798,9 +4870,8 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
           BinIntrInst->setHasNoInfs(FCmp->hasNoInfs());
           // The `nsz` flag is a precondition, so let's ensure it's always added
           // to the min/max operation, even if it wasn't on the select. This
-          // could happen if `canIgnoreSignBitOfZero` is true--for instance, if
-          // the select doesn't have `nsz`, but the result is being used in an
-          // operation that doesn't care about signed zero.
+          // could happen if the select doesn't have `nsz`, but no use of the
+          // result can observe the sign of zero.
           BinIntrInst->setHasNoSignedZeros(true);
           // As mentioned above, `nnan` is also a precondition, so we always set
           // the flag.
