@@ -1145,14 +1145,13 @@ define void @stencil_merge_range_could_not_compute(ptr %p, ptr %q, i64 %m) {
 ; CHECK-NEXT:            Member: %q
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: ((1 + %m + %p) umin %p) High: (1 + ((1 + %m + %p) umax %p)))
-; CHECK-NEXT:            Member: {%p,+,(1 + %m)}<%loop>
+; CHECK-NEXT:            Member: {%p,+,(1 + %m)}<nw><%loop>
 ; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: %p High: (1 + %p))
 ; CHECK-NEXT:            Member: %p
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      {%p,+,(1 + %m)}<%loop> Added Flags: <nusw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ;
@@ -1319,7 +1318,7 @@ define void @stencil_merge_mixed_member(ptr %a, ptr %out, i64 %n, i64 %s1, i64 %
 ; MERGE-NEXT:          (Low: (32 + %out) High: (-32 + (8 * %n) + %out))
 ; MERGE-NEXT:            Member: {(32 + %out),+,8}<nuw><%loop>
 ; MERGE-NEXT:        Group GRP1:
-; MERGE-NEXT:          (Low: ((32 + (-5 * %s2) + (ptrtoint ptr %a to i64)) umin (32 + (-5 * %s1) + (ptrtoint ptr %a to i64))) High: (-32 + (5 * %s1) + (5 * %s2) + (8 * %n) + %a))
+; MERGE-NEXT:          (Low: ((32 + (-5 * %s2) + (ptrtoaddr ptr %a to i64)) umin (32 + (-5 * %s1) + (ptrtoaddr ptr %a to i64))) High: (-32 + (5 * %s1) + (5 * %s2) + (8 * %n) + %a))
 ; MERGE-NEXT:            Member: {(32 + (5 * %s1) + (5 * %s2) + %a),+,8}<nw><%loop>
 ; MERGE-NEXT:            Member: {(32 + (5 * %s2) + %a),+,8}<nw><%loop>
 ; MERGE-NEXT:            Member: {(32 + (-5 * %s2) + %a),+,8}<nw><%loop>
@@ -2043,7 +2042,7 @@ define void @stencil_merge_constant_and_stride_candidates(ptr %a, ptr %out, ptr 
 ; MERGE-NEXT:          (Low: (16 + %out2) High: (-16 + (8 * %n) + %out2))
 ; MERGE-NEXT:            Member: {(16 + %out2),+,8}<nuw><%loop>
 ; MERGE-NEXT:        Group GRP2:
-; MERGE-NEXT:          (Low: ((16 + (-1 * %cdj) + (ptrtoint ptr %a to i64)) umin (ptrtoint ptr %a to i64)) High: (((8 * %n) + (ptrtoint ptr %a to i64)) umax (-16 + (8 * %n) + (ptrtoint ptr %a to i64) + %cdj)))
+; MERGE-NEXT:          (Low: ((16 + (-1 * %cdj) + (ptrtoaddr ptr %a to i64)) umin (ptrtoaddr ptr %a to i64)) High: (((8 * %n) + (ptrtoaddr ptr %a to i64)) umax (-16 + (8 * %n) + (ptrtoaddr ptr %a to i64) + %cdj)))
 ; MERGE-NEXT:            Member: {(16 + %cdj + %a),+,8}<nw><%loop>
 ; MERGE-NEXT:            Member: {(16 + (-1 * %cdj) + %a),+,8}<nw><%loop>
 ; MERGE-NEXT:            Member: {(32 + %a),+,8}<nuw><%loop>
@@ -2214,7 +2213,7 @@ define void @stencil_merge_three_stride_star(ptr %a, ptr %out, ptr %out2, i64 %n
 ; MERGE-NEXT:          (Low: (32 + %out2) High: (-32 + (8 * %n) + %out2))
 ; MERGE-NEXT:            Member: {(32 + %out2),+,8}<nuw><%loop>
 ; MERGE-NEXT:        Group GRP2:
-; MERGE-NEXT:          (Low: ((32 + (-1 * %s3) + (ptrtoint ptr %a to i64)) umin (32 + (-1 * %s2) + (ptrtoint ptr %a to i64)) umin (32 + (-1 * %s1) + (ptrtoint ptr %a to i64))) High: ((-32 + (8 * %n) + (ptrtoint ptr %a to i64) + %s1) umax (-32 + (8 * %n) + (ptrtoint ptr %a to i64) + %s2) umax (-32 + (8 * %n) + (ptrtoint ptr %a to i64) + %s3)))
+; MERGE-NEXT:          (Low: ((32 + (-1 * %s3) + (ptrtoaddr ptr %a to i64)) umin (32 + (-1 * %s2) + (ptrtoaddr ptr %a to i64)) umin (32 + (-1 * %s1) + (ptrtoaddr ptr %a to i64))) High: ((-32 + (8 * %n) + (ptrtoaddr ptr %a to i64) + %s1) umax (-32 + (8 * %n) + (ptrtoaddr ptr %a to i64) + %s2) umax (-32 + (8 * %n) + (ptrtoaddr ptr %a to i64) + %s3)))
 ; MERGE-NEXT:            Member: {(32 + %s3 + %a),+,8}<nw><%loop>
 ; MERGE-NEXT:            Member: {(32 + (-1 * %s3) + %a),+,8}<nw><%loop>
 ; MERGE-NEXT:            Member: {(32 + %s2 + %a),+,8}<nw><%loop>
