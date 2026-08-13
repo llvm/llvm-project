@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc -O3 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 \
+; RUN: llc -O3 -mtriple=amdgpu9.50-amd-amdhsa \
 ; RUN:   -stop-after=amdgpu-rewrite-agpr-copy-mfma \
 ; RUN:   -debug-only=amdgpu-rewrite-agpr-copy-mfma -filetype=null %s 2>&1 \
 ; RUN:   | FileCheck %s
