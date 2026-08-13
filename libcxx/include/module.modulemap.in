@@ -20,6 +20,7 @@ module std_config {
 
 module std_core {
   module cmath {
+    module lerp              { header "__cmath/lerp.h" }
     module special_functions { header "__cmath/special_functions.h" }
   }
 
@@ -1700,6 +1701,7 @@ module std {
     module noexcept_move_assign_container     { header "__memory/noexcept_move_assign_container.h" }
     module out_ptr                            { header "__memory/out_ptr.h" }
     module pointer_traits                     { header "__memory/pointer_traits.h" }
+    module pstl                               { header "__memory/pstl.h" }    
     module ranges_construct_at                { header "__memory/ranges_construct_at.h" }
     module ranges_destroy                     { header "__memory/ranges_destroy.h" }
     module ranges_uninitialized_algorithms {
@@ -2434,6 +2436,12 @@ module std {
       }
       module reverse {
         header "__pstl/cpu_algos/reverse.h"
+      }
+      module search {
+        header "__pstl/cpu_algos/search.h"
+      }
+      module search_n {
+        header "__pstl/cpu_algos/search_n.h"
       }
       module stable_sort {
         header "__pstl/cpu_algos/stable_sort.h"
