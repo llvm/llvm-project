@@ -100,7 +100,9 @@ public:
   // Append the 32-bit VGPR lanes of physical VGPR `Reg` (any width) to `Lanes`.
 bitset<AMDGPU::NUM_TARGET_REGS> GCNBreakLoadClusterDepsImpl::getVGPR32Lanes(Register Reg) const {
   bitset<AMDGPU::NUM_TARGET_REGS> to_return;
-  assert(Reg.isPhysical());
+  if (!TRI->isVGPR(*MRI,Reg))
+    return to_return;
+  
   const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(Reg);
   unsigned NumLanes = TRI->getRegSizeInBits(*RC).getFixedValue() / 32;
   if (NumLanes <= 1) { // already a VGPR_32
@@ -211,7 +213,7 @@ bool GCNBreakLoadClusterDepsImpl::runOnMachineBasicBlock(
         // Find the instruction which kills the def in RIt
         bitset<AMDGPU::NUM_TARGET_REGS> killed_subregs;
         MachineBasicBlock::iterator KillerIns = vec_load_ins;
-        for (MachineBasicBlock::iterator CandidateKiller = std::next(KillerIns);
+        for (MachineBasicBlock::iterator CandidateKiller = KillerIns;
              CandidateKiller != MBB.end(); ++CandidateKiller) {
           if (CandidateKiller->modifiesRegister(old_reg, TRI)) {
             killed_subregs |= get_uses_and_defs_for(*CandidateKiller).first;
