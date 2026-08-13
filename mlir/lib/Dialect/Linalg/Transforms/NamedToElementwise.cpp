@@ -79,17 +79,6 @@ void mlir::linalg::populateLinalgNamedToElementwisePatterns(
   patterns.add<NamedToElementwisePattern<DivOp>>(patterns.getContext());
   patterns.add<NamedToElementwisePattern<DivUnsignedOp>>(patterns.getContext());
   patterns.add<NamedToElementwisePattern<PowFOp>>(patterns.getContext());
-  patterns.add<NamedToElementwisePattern<ExpOp>>(patterns.getContext());
-  patterns.add<NamedToElementwisePattern<LogOp>>(patterns.getContext());
-  patterns.add<NamedToElementwisePattern<AbsOp>>(patterns.getContext());
-  patterns.add<NamedToElementwisePattern<CeilOp>>(patterns.getContext());
-  patterns.add<NamedToElementwisePattern<FloorOp>>(patterns.getContext());
-  patterns.add<NamedToElementwisePattern<NegFOp>>(patterns.getContext());
-  patterns.add<NamedToElementwisePattern<ReciprocalOp>>(patterns.getContext());
-  patterns.add<NamedToElementwisePattern<RoundOp>>(patterns.getContext());
-  patterns.add<NamedToElementwisePattern<SqrtOp>>(patterns.getContext());
-  patterns.add<NamedToElementwisePattern<RsqrtOp>>(patterns.getContext());
-  patterns.add<NamedToElementwisePattern<SquareOp>>(patterns.getContext());
-  patterns.add<NamedToElementwisePattern<TanhOp>>(patterns.getContext());
-  patterns.add<NamedToElementwisePattern<ErfOp>>(patterns.getContext());
+  // The unary ops (ExpOp..ErfOp) are now `linalg.elementwise` views rather than
+  // distinct named ops, so there is nothing to convert for them here.
 }

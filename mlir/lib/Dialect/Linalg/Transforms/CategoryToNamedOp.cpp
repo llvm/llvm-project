@@ -46,32 +46,9 @@ struct ElementwiseToNamedPattern : public OpRewritePattern<ElementwiseOp> {
     };
 
     switch (op.getKind()) {
-    case ElementwiseKind::exp:
-      return replaceWith(ExpOp{});
-    case ElementwiseKind::log:
-      return replaceWith(LogOp{});
-    case ElementwiseKind::abs:
-      return replaceWith(AbsOp{});
-    case ElementwiseKind::ceil:
-      return replaceWith(CeilOp{});
-    case ElementwiseKind::floor:
-      return replaceWith(FloorOp{});
-    case ElementwiseKind::negf:
-      return replaceWith(NegFOp{});
-    case ElementwiseKind::reciprocal:
-      return replaceWith(ReciprocalOp{});
-    case ElementwiseKind::round:
-      return replaceWith(RoundOp{});
-    case ElementwiseKind::sqrt:
-      return replaceWith(SqrtOp{});
-    case ElementwiseKind::rsqrt:
-      return replaceWith(RsqrtOp{});
-    case ElementwiseKind::square:
-      return replaceWith(SquareOp{});
-    case ElementwiseKind::tanh:
-      return replaceWith(TanhOp{});
-    case ElementwiseKind::erf:
-      return replaceWith(ErfOp{});
+    // The unary kinds (exp..erf) are modeled directly as `linalg.elementwise`
+    // views (ExpOp..ErfOp derive from ElementwiseOp), so there is no distinct
+    // named op to convert them to; leave them as-is.
     case ElementwiseKind::add:
       return replaceWith(AddOp{});
     case ElementwiseKind::sub:

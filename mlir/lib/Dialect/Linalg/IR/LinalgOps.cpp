@@ -5114,6 +5114,30 @@ Speculation::Speculatability ElementwiseOp::getSpeculatability() {
   return getGenericSpeculatabilityImpl(cast<LinalgOp>(getOperation()));
 }
 
+void mlir::linalg::detail::buildElementwiseUnaryOp(
+    OpBuilder &b, OperationState &state,
+    std::optional<TypeRange> resultTensorTypes, ValueRange inputs,
+    ValueRange outputs, ElementwiseKind kind,
+    ArrayRef<NamedAttribute> attributes) {
+  state.addAttribute("kind", ElementwiseKindAttr::get(b.getContext(), kind));
+
+  // Provide the default identity indexing maps unless the caller set them.
+  bool hasMaps = llvm::any_of(attributes, [](NamedAttribute attr) {
+    return attr.getName() == "indexing_maps";
+  });
+  if (!hasMaps && !outputs.empty()) {
+    unsigned numMaps = inputs.size() + outputs.size();
+    unsigned numDims = cast<ShapedType>(outputs.front().getType()).getRank();
+    SmallVector<Attribute> maps = llvm::map_to_vector(
+        ElementwiseOp::getDefaultIndexingMaps(numMaps, numDims, b.getContext()),
+        [](AffineMap map) -> Attribute { return AffineMapAttr::get(map); });
+    state.addAttribute("indexing_maps", b.getArrayAttr(maps));
+  }
+
+  buildStructuredOp(b, state, resultTensorTypes, inputs, outputs, attributes,
+                    ElementwiseOp::getRegionBuilder());
+}
+
 //===----------------------------------------------------------------------===//
 // PackOp/UnPackOp Common
 //===----------------------------------------------------------------------===//

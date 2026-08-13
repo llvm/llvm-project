@@ -341,6 +341,176 @@ public:
   static bool classof(Operation *op);
 };
 
+//===----------------------------------------------------------------------===//
+// Unary specializations of `linalg.elementwise`.
+//===----------------------------------------------------------------------===//
+
+namespace detail {
+/// Builds a `linalg.elementwise` op carrying the given unary `kind` and, unless
+/// the caller provided `indexing_maps` in `attributes`, the default identity
+/// indexing maps. Shared by the unary `ElementwiseOp` specializations below.
+void buildElementwiseUnaryOp(OpBuilder &builder, OperationState &result,
+                             std::optional<TypeRange> resultTensorTypes,
+                             ValueRange inputs, ValueRange outputs,
+                             ElementwiseKind kind,
+                             ArrayRef<NamedAttribute> attributes);
+} // namespace detail
+
+/// CRTP base factoring the shared builders and `classof` for the hand-written
+/// unary specializations of `linalg.elementwise`. Each concrete op fixes its
+/// `ElementwiseKind` through a static `getElementwiseKind()`. Like
+/// `MatmulTransposeAOp`, these are convenience views over the generic op and are
+/// not registered as distinct operations.
+template <typename ConcreteOp>
+class ElementwiseUnaryOp : public ElementwiseOp {
+public:
+  using ElementwiseOp::ElementwiseOp;
+  static ::mlir::TypeID resolveTypeID() { return TypeID::get<ElementwiseOp>(); }
+
+  /// Implicitly usable wherever the generic `LinalgOp` interface is expected,
+  /// mirroring the registered named ops these views replace. Needed because the
+  /// interface's converting constructor keys on the exact op type.
+  operator LinalgOp() { return llvm::cast<LinalgOp>(getOperation()); }
+
+  static void build(OpBuilder &builder, OperationState &result,
+                    ValueRange inputs, ValueRange outputs,
+                    ArrayRef<NamedAttribute> attributes = {}) {
+    detail::buildElementwiseUnaryOp(builder, result, std::nullopt, inputs,
+                                    outputs, ConcreteOp::getElementwiseKind(),
+                                    attributes);
+  }
+
+  static void build(OpBuilder &builder, OperationState &result,
+                    TypeRange resultTensorTypes, ValueRange inputs,
+                    ValueRange outputs,
+                    ArrayRef<NamedAttribute> attributes = {}) {
+    detail::buildElementwiseUnaryOp(builder, result, resultTensorTypes, inputs,
+                                    outputs, ConcreteOp::getElementwiseKind(),
+                                    attributes);
+  }
+
+  static ConcreteOp create(OpBuilder &builder, Location location,
+                           ValueRange inputs, ValueRange outputs,
+                           ArrayRef<NamedAttribute> attributes = {}) {
+    OperationState state(location, ElementwiseOp::getOperationName());
+    ConcreteOp::build(builder, state, inputs, outputs, attributes);
+    auto res = llvm::dyn_cast<ConcreteOp>(builder.create(state));
+    assert(res && "builder didn't return the right type");
+    return res;
+  }
+
+  static ConcreteOp create(OpBuilder &builder, Location location,
+                           TypeRange resultTensorTypes, ValueRange inputs,
+                           ValueRange outputs,
+                           ArrayRef<NamedAttribute> attributes = {}) {
+    OperationState state(location, ElementwiseOp::getOperationName());
+    ConcreteOp::build(builder, state, resultTensorTypes, inputs, outputs,
+                      attributes);
+    auto res = llvm::dyn_cast<ConcreteOp>(builder.create(state));
+    assert(res && "builder didn't return the right type");
+    return res;
+  }
+
+  static bool classof(Operation *op) {
+    auto elementwise = llvm::dyn_cast_or_null<ElementwiseOp>(op);
+    return elementwise &&
+           elementwise.getKind() == ConcreteOp::getElementwiseKind();
+  }
+};
+
+/// Specialization of `linalg.elementwise` op for the unary `exp` kind.
+class ExpOp : public ElementwiseUnaryOp<ExpOp> {
+public:
+  using ElementwiseUnaryOp::ElementwiseUnaryOp;
+  static ElementwiseKind getElementwiseKind() { return ElementwiseKind::exp; }
+};
+
+/// Specialization of `linalg.elementwise` op for the unary `log` kind.
+class LogOp : public ElementwiseUnaryOp<LogOp> {
+public:
+  using ElementwiseUnaryOp::ElementwiseUnaryOp;
+  static ElementwiseKind getElementwiseKind() { return ElementwiseKind::log; }
+};
+
+/// Specialization of `linalg.elementwise` op for the unary `abs` kind.
+class AbsOp : public ElementwiseUnaryOp<AbsOp> {
+public:
+  using ElementwiseUnaryOp::ElementwiseUnaryOp;
+  static ElementwiseKind getElementwiseKind() { return ElementwiseKind::abs; }
+};
+
+/// Specialization of `linalg.elementwise` op for the unary `ceil` kind.
+class CeilOp : public ElementwiseUnaryOp<CeilOp> {
+public:
+  using ElementwiseUnaryOp::ElementwiseUnaryOp;
+  static ElementwiseKind getElementwiseKind() { return ElementwiseKind::ceil; }
+};
+
+/// Specialization of `linalg.elementwise` op for the unary `floor` kind.
+class FloorOp : public ElementwiseUnaryOp<FloorOp> {
+public:
+  using ElementwiseUnaryOp::ElementwiseUnaryOp;
+  static ElementwiseKind getElementwiseKind() { return ElementwiseKind::floor; }
+};
+
+/// Specialization of `linalg.elementwise` op for the unary `negf` kind.
+class NegFOp : public ElementwiseUnaryOp<NegFOp> {
+public:
+  using ElementwiseUnaryOp::ElementwiseUnaryOp;
+  static ElementwiseKind getElementwiseKind() { return ElementwiseKind::negf; }
+};
+
+/// Specialization of `linalg.elementwise` op for the unary `reciprocal` kind.
+class ReciprocalOp : public ElementwiseUnaryOp<ReciprocalOp> {
+public:
+  using ElementwiseUnaryOp::ElementwiseUnaryOp;
+  static ElementwiseKind getElementwiseKind() {
+    return ElementwiseKind::reciprocal;
+  }
+};
+
+/// Specialization of `linalg.elementwise` op for the unary `round` kind.
+class RoundOp : public ElementwiseUnaryOp<RoundOp> {
+public:
+  using ElementwiseUnaryOp::ElementwiseUnaryOp;
+  static ElementwiseKind getElementwiseKind() { return ElementwiseKind::round; }
+};
+
+/// Specialization of `linalg.elementwise` op for the unary `sqrt` kind.
+class SqrtOp : public ElementwiseUnaryOp<SqrtOp> {
+public:
+  using ElementwiseUnaryOp::ElementwiseUnaryOp;
+  static ElementwiseKind getElementwiseKind() { return ElementwiseKind::sqrt; }
+};
+
+/// Specialization of `linalg.elementwise` op for the unary `rsqrt` kind.
+class RsqrtOp : public ElementwiseUnaryOp<RsqrtOp> {
+public:
+  using ElementwiseUnaryOp::ElementwiseUnaryOp;
+  static ElementwiseKind getElementwiseKind() { return ElementwiseKind::rsqrt; }
+};
+
+/// Specialization of `linalg.elementwise` op for the unary `square` kind.
+class SquareOp : public ElementwiseUnaryOp<SquareOp> {
+public:
+  using ElementwiseUnaryOp::ElementwiseUnaryOp;
+  static ElementwiseKind getElementwiseKind() { return ElementwiseKind::square; }
+};
+
+/// Specialization of `linalg.elementwise` op for the unary `tanh` kind.
+class TanhOp : public ElementwiseUnaryOp<TanhOp> {
+public:
+  using ElementwiseUnaryOp::ElementwiseUnaryOp;
+  static ElementwiseKind getElementwiseKind() { return ElementwiseKind::tanh; }
+};
+
+/// Specialization of `linalg.elementwise` op for the unary `erf` kind.
+class ErfOp : public ElementwiseUnaryOp<ErfOp> {
+public:
+  using ElementwiseUnaryOp::ElementwiseUnaryOp;
+  static ElementwiseKind getElementwiseKind() { return ElementwiseKind::erf; }
+};
+
 } // namespace mlir::linalg
 
 #endif // MLIR_DIALECT_LINALG_IR_LINALG_H
