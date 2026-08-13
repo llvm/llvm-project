@@ -7,8 +7,8 @@ from typing import Sequence
 from lldbsuite.test.decorators import (
     expectedFailureAll,
     expectedFailureNetBSD,
-    skipIfLinux,
     requireThreadSupport,
+    skipIfLinux,
     skipIfWindows,
 )
 from lldbsuite.test.lldbtest import line_number

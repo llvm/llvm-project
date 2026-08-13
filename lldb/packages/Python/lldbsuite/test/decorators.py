@@ -1248,14 +1248,14 @@ def requireDarwinHost(func):
 
 
 def requireThreadSupport(func):
-    """Skip tests that require thread support (e.g. pthreads)."""
+    """Mark the item as requiring thread support (e.g. pthreads) on the target."""
     platform = lldbplatformutil.getPlatform()
     return unittest.skipIf(
         # WASI targets ending in "-threads" (e.g. wasip1-threads) support threads;
         # other WASI targets (e.g. wasip1, wasip2) do not.
         platform.startswith("wasi") and not platform.endswith("threads"),
         UnsupportedReason(f"threads are not supported on {platform}"),
-    )
+    )(func)
 
 
 def skipIfTargetDoesNotSupportSharedLibraries():
