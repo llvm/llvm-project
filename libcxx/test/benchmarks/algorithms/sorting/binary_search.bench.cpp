@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 #include "../../GenerateInput.h"
 
 int main(int argc, char** argv) {
@@ -31,7 +32,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto binary_search) {
       benchmark::RegisterBenchmark(
           name,
-          [binary_search](auto& st) {
+          [binary_search](auto& st) TEST_ALIGN_BENCHMARK {
             using ValueType        = typename Container::value_type;
             std::size_t const size = st.range(0);
 
@@ -76,7 +77,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto binary_search) {
       benchmark::RegisterBenchmark(
           name,
-          [binary_search](auto& st) {
+          [binary_search](auto& st) TEST_ALIGN_BENCHMARK {
             using ValueType        = typename Container::value_type;
             std::size_t const size = st.range(0);
 
