@@ -6027,6 +6027,8 @@ public:
   /// \param Record The completed class.
   void CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record);
 
+  void CheckForMultipleExportedDefaultConstructors(CXXRecordDecl *Class);
+
   /// Check that the C++ class annoated with "trivial_abi" satisfies all the
   /// conditions that are needed for the attribute to have an effect.
   void checkIllFormedTrivialABIStruct(CXXRecordDecl &RD);

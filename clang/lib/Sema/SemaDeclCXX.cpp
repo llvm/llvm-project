@@ -6389,14 +6389,15 @@ static void ReferenceDllExportedMembers(Sema &S, CXXRecordDecl *Class) {
   }
 }
 
-static void checkForMultipleExportedDefaultConstructors(Sema &S,
-                                                        CXXRecordDecl *Class) {
+void Sema::CheckForMultipleExportedDefaultConstructors(CXXRecordDecl *Class) {
   // Only the MS ABI has default constructor closures, so we don't need to do
   // this semantic checking anywhere else.
-  if (!S.Context.getTargetInfo().getCXXABI().isMicrosoft())
+  if (!Context.getTargetInfo().getCXXABI().isMicrosoft())
     return;
 
-  if (Class->isInvalidDecl())
+  // Dependent classes must be checked after instantiation, when constructor
+  // parameter packs and constraints can be evaluated.
+  if (Class->isInvalidDecl() || Class->isDependentContext())
     return;
 
   CXXConstructorDecl *LastExportedDefaultCtor = nullptr;
@@ -6405,7 +6406,7 @@ static void checkForMultipleExportedDefaultConstructors(Sema &S,
     // class, so check each nested definition here.
     if (auto *NestedClass = dyn_cast<CXXRecordDecl>(Member)) {
       if (NestedClass->isThisDeclarationADefinition())
-        checkForMultipleExportedDefaultConstructors(S, NestedClass);
+        CheckForMultipleExportedDefaultConstructors(NestedClass);
       continue;
     }
 
@@ -6417,18 +6418,30 @@ static void checkForMultipleExportedDefaultConstructors(Sema &S,
     if (!Attr)
       continue;
 
-    // If the class is non-dependent, mark the default arguments as ODR-used so
-    // that we can properly codegen the constructor closure.
-    if (!Class->isDependentContext()) {
-      S.BuildCtorClosureDefaultArgs(Attr->getLocation(), CD);
-      S.DiscardCleanupsInEvaluationContext();
+    // Constructors with unsatisfied constraints do not participate.
+    if (CD->getTrailingRequiresClause()) {
+      ConstraintSatisfaction Satisfaction;
+      if (CheckFunctionConstraints(CD, Satisfaction) ||
+          !Satisfaction.IsSatisfied)
+        continue;
+    }
+
+    // Constructor closure default arguments for class-level dllexport and
+    // explicit instantiations are handled by existing class-member and
+    // member-instantiation paths. Handle member-level dllexport here when no
+    // such path applies.
+    TemplateSpecializationKind TSK = Class->getTemplateSpecializationKind();
+    if (!getDLLAttr(Class) && TSK != TSK_ExplicitInstantiationDeclaration &&
+        TSK != TSK_ExplicitInstantiationDefinition) {
+      BuildCtorClosureDefaultArgs(Attr->getLocation(), CD);
+      DiscardCleanupsInEvaluationContext();
     }
 
     if (LastExportedDefaultCtor) {
-      S.Diag(LastExportedDefaultCtor->getLocation(),
-             diag::err_attribute_dll_ambiguous_default_ctor)
+      Diag(LastExportedDefaultCtor->getLocation(),
+           diag::err_attribute_dll_ambiguous_default_ctor)
           << Class;
-      S.Diag(CD->getLocation(), diag::note_entity_declared_at)
+      Diag(CD->getLocation(), diag::note_entity_declared_at)
           << CD->getDeclName();
       return;
     }
@@ -14782,7 +14795,7 @@ void Sema::ActOnFinishCXXMemberDecls() {
       DelayedEquivalentExceptionSpecChecks.clear();
       return;
     }
-    checkForMultipleExportedDefaultConstructors(*this, Record);
+    CheckForMultipleExportedDefaultConstructors(Record);
   }
 }
 
