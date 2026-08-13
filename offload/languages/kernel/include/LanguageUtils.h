@@ -13,6 +13,11 @@
 #include "OffloadAPI.h"
 #include "State.h"
 #include "Stream.h"
+#include "llvm/ADT/SmallVector.h"
+
+using RuntimeState = llvm::offload::StateTy;
+using ThreadState = llvm::offload::ThreadStateTy;
+using StreamTy = llvm::offload::StreamTy;
 
 /// Convert an ol_result_t to the active language's Error_t.
 static inline Error_t convertResult(ol_result_t Result) {
@@ -40,8 +45,7 @@ static inline Error_t convertResult(ol_result_t Result) {
 /// Set the last error for the current thread and return it.
 static inline Error_t setLastError(Error_t Error) {
   // TODO: find a more efficient way to set last error
-  return static_cast<Error_t>(
-      llvm::offload::ThreadStateTy::setLastError(Error));
+  return static_cast<Error_t>(ThreadState::setLastError(Error));
 }
 
 /// Convert an ol_result_t to the active language's Error_t and set it as the
@@ -51,12 +55,51 @@ static inline Error_t convertAndSetLastError(ol_result_t Result) {
 }
 
 /// Convert between the language-facing opaque stream and the internal stream.
-static inline Stream_t makeLanguageStream(llvm::offload::StreamTy *Stream) {
+static inline Stream_t makeLanguageStream(StreamTy *Stream) {
   return reinterpret_cast<Stream_t>(Stream);
 }
 
 static inline llvm::offload::StreamTy *getInternalStream(Stream_t Stream) {
-  return reinterpret_cast<llvm::offload::StreamTy *>(Stream);
+  return reinterpret_cast<StreamTy *>(Stream);
+}
+
+/// Wait for blocking streams before executing if we are legacy default stream.
+static inline ol_result_t waitOnBlockingStreams() {
+  ol_device_handle_t Device = ThreadState::getDefaultDevice();
+  if (!RuntimeState::hasLegacyDefaultStream(Device) ||
+      RuntimeState::getBlockingStreams(Device).empty())
+    return OL_SUCCESS;
+  StreamTy *DefaultStream = ThreadState::getDefaultStream();
+  llvm::SmallVector<ol_event_handle_t, 8> Events;
+  for (StreamTy *BlockingStream : RuntimeState::getBlockingStreams(Device)) {
+    ol_event_handle_t Event = nullptr;
+    ol_result_t Result =
+        olCreateEvent(BlockingStream->Queue, OL_EVENT_FLAGS_NONE, &Event);
+    if (Result != OL_SUCCESS)
+      return Result;
+    Events.push_back(Event);
+  }
+
+  return olWaitEvents(DefaultStream->Queue, Events.data(), Events.size());
+}
+
+/// Wait for the legacy default stream to complete before launching a kernel on
+/// a blocking stream.
+static inline ol_result_t waitOnLegacyDefaultStream(StreamTy *SourceStream,
+                                                    ol_device_handle_t Device) {
+  if (!RuntimeState::hasLegacyDefaultStream(Device))
+    return OL_SUCCESS;
+
+  StreamTy *DefaultStream = ThreadState::getDefaultStream();
+  assert(DefaultStream->Kind == llvm::offload::QueueKind::LegacyDefault &&
+         "Default stream is not a legacy default stream");
+
+  ol_event_handle_t Event = nullptr;
+  ol_result_t Result =
+      olCreateEvent(DefaultStream->Queue, OL_EVENT_FLAGS_NONE, &Event);
+  if (Result != OL_SUCCESS)
+    return Result;
+  return olWaitEvents(SourceStream->Queue, &Event, 1);
 }
 
 /// Convert a Stream_t to an ol_queue_handle_t.
