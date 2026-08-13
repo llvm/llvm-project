@@ -551,7 +551,8 @@ def err_member_ptr_requires_complete_type
             "%0 to perform this expression">;
 
 def warn_dyndbg_unable_to_create_target : Warning<
-    "ignoring -fdynamic-debugging: unable to create target: '%0'">;
+    "ignoring -fdynamic-debugging: unable to create target: '%0'">,
+    InGroup<DynamicDebugging>;
 
 def err_dyndbg_no_instrumentation : Error<
     "'-fdynamic-debugging' unsupported with instrumentation (PGO/code coverage)">;
