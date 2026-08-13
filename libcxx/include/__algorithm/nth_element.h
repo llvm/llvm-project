@@ -28,13 +28,79 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-// Handles ranges of at most 5 elements by sorting them entirely, which trivially satisfies the
-// nth_element postconditions. Sorting networks are the most efficient way to handle such small
-// ranges, and this function boils down to one of them when the size of the range is known at
-// compile time. Returns false if the range was too large to be handled.
+// Selects the median of 5 elements and partitions the other 4 around it, so the nth_element
+// postconditions hold for nth == first + 2. Uses 6 comparisons, which is optimal
+// (Knuth, TAOCP 5.3.3).
+template <class _AlgPolicy,
+          class _Compare,
+          class _RandomAccessIterator,
+          __enable_if_t<!__use_branchless_sort<_Compare, _RandomAccessIterator>, int> = 0>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
+__nth_element_median5(_RandomAccessIterator __first, _Compare __comp) {
+  using _Ops = _IterOps<_AlgPolicy>;
+
+  _RandomAccessIterator __x1 = __first;
+  _RandomAccessIterator __x2 = __first + 1;
+  _RandomAccessIterator __x3 = __first + 2;
+  _RandomAccessIterator __x4 = __first + 3;
+  _RandomAccessIterator __x5 = __first + 4;
+
+  // Sort pairs (__x1, __x2) and (__x3, __x4).
+  if (__comp(*__x2, *__x1))
+    _Ops::iter_swap(__x1, __x2);
+  if (__comp(*__x4, *__x3))
+    _Ops::iter_swap(__x3, __x4);
+
+  // Order those pairs by their larger element: *__x1 <= *__x2 <= *__x4 and *__x3 <= *__x4.
+  // *__x4 has at least 3 elements <= it, so it cannot be the median.
+  if (__comp(*__x4, *__x2)) {
+    _Ops::iter_swap(__x1, __x3);
+    _Ops::iter_swap(__x2, __x4);
+  }
+
+  // Insert __x5 beside __x3.
+  if (__comp(*__x5, *__x3))
+    _Ops::iter_swap(__x3, __x5);
+
+  // Order pairs (__x1, __x2) and (__x3, __x5) by their larger element:
+  // *__x1 <= *__x2 <= *__x5 and *__x3 <= *__x5.
+  if (__comp(*__x5, *__x2)) {
+    _Ops::iter_swap(__x1, __x3);
+    _Ops::iter_swap(__x2, __x5);
+  }
+
+  // The median is the larger of __x2 and __x3.
+  if (__comp(*__x3, *__x2))
+    _Ops::iter_swap(__x2, __x3);
+}
+
+// Branchless 7-comparator selection network. One extra comparison vs the adaptive algorithm
+// above, but no control flow, which is faster for cheap arithmetic types.
+template <class,
+          class _Compare,
+          class _RandomAccessIterator,
+          __enable_if_t<__use_branchless_sort<_Compare, _RandomAccessIterator>, int> = 0>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
+__nth_element_median5(_RandomAccessIterator __first, _Compare __comp) {
+  _RandomAccessIterator __x1 = __first;
+  _RandomAccessIterator __x2 = __first + 1;
+  _RandomAccessIterator __x3 = __first + 2;
+  _RandomAccessIterator __x4 = __first + 3;
+  _RandomAccessIterator __x5 = __first + 4;
+
+  std::__cond_swap<_Compare>(__x1, __x2, __comp);
+  std::__cond_swap<_Compare>(__x3, __x4, __comp);
+  std::__cond_swap<_Compare>(__x1, __x3, __comp);
+  std::__cond_swap<_Compare>(__x2, __x4, __comp);
+  std::__cond_swap<_Compare>(__x2, __x3, __comp);
+  std::__cond_swap<_Compare>(__x2, __x5, __comp);
+  std::__cond_swap<_Compare>(__x3, __x5, __comp);
+}
+
+// Handles ranges of at most 5 elements. Returns false if the range was too large to be handled.
 template <class _AlgPolicy, class _Compare, class _RandomAccessIterator>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool
-__nth_element_small(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp) {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool __nth_element_small(
+    _RandomAccessIterator __first, _RandomAccessIterator __nth, _RandomAccessIterator __last, _Compare __comp) {
   using _Ops = _IterOps<_AlgPolicy>;
   typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
   switch (__last - __first) {
@@ -53,6 +119,10 @@ __nth_element_small(_RandomAccessIterator __first, _RandomAccessIterator __last,
         __first, __first + difference_type(1), __first + difference_type(2), --__last, __comp);
     return true;
   case 5:
+    if (__nth == __first + difference_type(2)) {
+      std::__nth_element_median5<_AlgPolicy, _Compare>(__first, __comp);
+      return true;
+    }
     std::__sort5<_AlgPolicy, _Compare>(
         __first,
         __first + difference_type(1),
@@ -92,7 +162,7 @@ __nth_element(
   while (true) {
     if (__nth == __last)
       return;
-    if (std::__nth_element_small<_AlgPolicy, _Compare>(__first, __last, __comp))
+    if (std::__nth_element_small<_AlgPolicy, _Compare>(__first, __nth, __last, __comp))
       return;
     difference_type __len = __last - __first;
     if (__len <= __limit) {
@@ -266,7 +336,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __nth_element_im
   // pass a constant size even though it is not a constant expression here.
   bool __small_constant_size =
       __builtin_constant_p(__last - __first) &&
-      std::__nth_element_small<_AlgPolicy, __comp_ref_type<_Compare> >(__first, __last, __comp);
+      std::__nth_element_small<_AlgPolicy, __comp_ref_type<_Compare> >(__first, __nth, __last, __comp);
   if (!__small_constant_size)
     std::__nth_element<_AlgPolicy, __comp_ref_type<_Compare> >(__first, __nth, __last, __comp);
 
