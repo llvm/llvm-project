@@ -36,6 +36,9 @@ def GlobalDocumentation {
 :local: true
 ```
 
+```{program} clang
+```
+
 ## Introduction
 
 This page lists the attributes currently supported by Clang.
@@ -331,9 +334,9 @@ void nestingEscapes(__attribute__((noescape)) int **p) {
 }
 ```
 
-Additionally, when the parameter is a `block pointer
-<https://clang.llvm.org/docs/BlockLanguageSpec.html>`, the same restriction
-applies to copies of the block. For example:
+Additionally, when the parameter is a
+{doc}`block pointer <BlockLanguageSpec>`, the same restriction applies to
+copies of the block. For example:
 
 ```c
 typedef void (^BlockTy)();
@@ -1570,7 +1573,8 @@ identically to `pass_object_size`, but evaluates a call to
 `__builtin_dynamic_object_size` at the callee instead of
 `__builtin_object_size`. `__builtin_dynamic_object_size` provides some extra
 runtime checks when the object size can't be determined at compile-time. You can
-read more about `__builtin_dynamic_object_size` [here](https://clang.llvm.org/docs/LanguageExtensions.html#evaluating-object-size-dynamically).
+read more about `__builtin_dynamic_object_size` in
+{ref}`Evaluating Object Size <langext-evaluating-object-size>`.
 
   }];
 }
@@ -1776,7 +1780,7 @@ Mind that many more checkers are affected by dynamic memory modeling changes to
 some extent.
 
 Further reading for other annotations:
-[Source Annotations in the Clang Static Analyzer](https://clang.llvm.org/docs/analyzer/user-docs/Annotations.html).
+{doc}`Static Analyzer source annotations <analyzer/user-docs/Annotations>`.
   }];
 }
 
@@ -2447,7 +2451,8 @@ void infersTVOSAvailabilityFromAttributeNextToDeclaration(void)
 #pragma clang attribute pop
 ```
 
-Also see the documentation for [@available](http://clang.llvm.org/docs/LanguageExtensions.html#objective-c-available)
+Also see the documentation for
+{ref}`@available <langext-objective-c-available>`
   }];
 }
 
@@ -5003,8 +5008,8 @@ specified for the subsequent loop. The directive allows pipelining to be
 disabled, or vectorization, vector predication, interleaving, and unrolling to
 be enabled or disabled. Vector width, vector predication, interleave count,
 unrolling count, and the initiation interval for pipelining can be explicitly
-specified. See [language extensions](http://clang.llvm.org/docs/LanguageExtensions.html#extensions-for-loop-hint-optimizations)
-for details.
+specified. See
+{ref}`loop hint optimizations <langext-loop-hint-optimizations>` for details.
   }];
 }
 
@@ -5059,8 +5064,8 @@ for (...) {
 `#pragma clang loop unroll(enable)` and
 `#pragma clang loop unroll_count(_value_)` respectively. `#pragma nounroll`
 is equivalent to `#pragma clang loop unroll(disable)`. See
-[language extensions](http://clang.llvm.org/docs/LanguageExtensions.html#extensions-for-loop-hint-optimizations)
-for further details including limitations of the unroll hints.
+{ref}`loop hint optimizations <langext-loop-hint-optimizations>` for further
+details including limitations of the unroll hints.
   }];
 }
 
@@ -6277,9 +6282,9 @@ void f (struct stack_frame *frame) {
     ...
 }
 ```
->
-> Where `struct stack_frame` is a suitable struct matching the stack frame pushed by the
-> processor.
+
+Where `struct stack_frame` is a suitable struct matching the stack frame pushed
+by the processor.
 
 An exception handler must take the following arguments:
 
@@ -6289,8 +6294,8 @@ void g (struct stack_frame *frame, unsigned long code) {
     ...
 }
 ```
->
-> On 32-bit targets, the `code` argument should be of type `unsigned int`.
+
+On 32-bit targets, the `code` argument should be of type `unsigned int`.
 
 Exception handlers should only be used when an error code is pushed by the processor.
 Using the incorrect handler type will crash the system.
@@ -6333,11 +6338,11 @@ void f (int arg1, int arg2) {
   ...
 }
 ```
->
-> In this case parameters 'arg1' and 'arg2' will be passed in registers.
-> In this case, on 32-bit x86 targets, the function 'f' will use ECX and EDX as
-> register parameters. However, it will not assume any scratch registers and
-> should save and restore any modified registers except for ECX and EDX.
+
+In this case parameters 'arg1' and 'arg2' will be passed in registers.
+In this case, on 32-bit x86 targets, the function 'f' will use ECX and EDX as
+register parameters. However, it will not assume any scratch registers and
+should save and restore any modified registers except for ECX and EDX.
   }];
 }
 
@@ -6647,7 +6652,8 @@ any issues in source code annotated with the attribute.
 The attribute cannot be used to suppress traditional Clang warnings, because
 many such warnings are emitted before the attribute is fully parsed.
 Consider using `#pragma clang diagnostic` to control such diagnostics,
-as described in [Controlling Diagnostics via Pragmas](https://clang.llvm.org/docs/UsersManual.html#controlling-diagnostics-via-pragmas).
+as described in
+{ref}`Controlling Diagnostics via Pragmas <pragma-gcc-diagnostic>`.
 
 The `suppress` attribute can be placed on an individual statement in order to
 suppress warnings about undesirable behavior occurring at that statement:
@@ -7362,10 +7368,11 @@ id __attribute__((noderef)) obj = [NSObject new]; // warning: 'noderef' can only
 def CFIUncheckedCalleeDocs : Documentation {
   let Category = DocCatType;
   let Content = [{
-`cfi_unchecked_callee` is a function type attribute which prevents the compiler from instrumenting
-[Control Flow Integrity](https://clang.llvm.org/docs/ControlFlowIntegrity.html) checks on indirect
+`cfi_unchecked_callee` is a function type attribute which prevents the
+compiler from instrumenting
+{doc}`Control Flow Integrity <ControlFlowIntegrity>` checks on indirect
 function calls. This also includes control flow checks added by
-`-fsanitize=function <https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html#available-checks>`.
+`-fsanitize=function`; see {ref}`Available checks <ubsan-checks>`.
 Specifically, the attribute has the following semantics:
 
 1. Indirect calls to a function type with this attribute will not be instrumented with CFI. That is,
@@ -7664,47 +7671,49 @@ GNU inline semantics are the default behavior with `-std=gnu89`,
 def SpeculativeLoadHardeningDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
-> This attribute can be applied to a function declaration in order to indicate
-> that [Speculative Load Hardening](https://llvm.org/docs/SpeculativeLoadHardening.html)
-> should be enabled for the function body. This can also be applied to a method
-> in Objective C. This attribute will take precedence over the command line flag in
-> the case where [-mno-speculative-load-hardening](https://clang.llvm.org/docs/ClangCommandLineReference.html#cmdoption-clang-mspeculative-load-hardening) is specified.
->
-> Speculative Load Hardening is a best-effort mitigation against
-> information leak attacks that make use of control flow
-> miss-speculation - specifically miss-speculation of whether a branch
-> is taken or not. Typically vulnerabilities enabling such attacks are
-> classified as "Spectre variant #1". Notably, this does not attempt to
-> mitigate against miss-speculation of branch target, classified as
-> "Spectre variant #2" vulnerabilities.
->
-> When inlining, the attribute is sticky. Inlining a function that
-> carries this attribute will cause the caller to gain the
-> attribute. This is intended to provide a maximally conservative model
-> where the code in a function annotated with this attribute will always
-> (even after inlining) end up hardened.
+This attribute can be applied to a function declaration in order to indicate
+that [Speculative Load Hardening][slh]
+should be enabled for the function body. This can also be applied to a method
+in Objective C. This attribute will take precedence over the command line flag
+in the case where {option}`-mno-speculative-load-hardening` is specified.
+
+[slh]: https://llvm.org/docs/SpeculativeLoadHardening.html
+
+Speculative Load Hardening is a best-effort mitigation against
+information leak attacks that make use of control flow
+miss-speculation - specifically miss-speculation of whether a branch
+is taken or not. Typically vulnerabilities enabling such attacks are
+classified as "Spectre variant #1". Notably, this does not attempt to
+mitigate against miss-speculation of branch target, classified as
+"Spectre variant #2" vulnerabilities.
+
+When inlining, the attribute is sticky. Inlining a function that
+carries this attribute will cause the caller to gain the
+attribute. This is intended to provide a maximally conservative model
+where the code in a function annotated with this attribute will always
+(even after inlining) end up hardened.
   }];
 }
 
 def NoSpeculativeLoadHardeningDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
-> This attribute can be applied to a function declaration in order to indicate
-> that [Speculative Load Hardening](https://llvm.org/docs/SpeculativeLoadHardening.html)
-> is *not* needed for the function body. This can also be applied to a method
-> in Objective C. This attribute will take precedence over the command line flag in
-> the case where [-mspeculative-load-hardening](https://clang.llvm.org/docs/ClangCommandLineReference.html#cmdoption-clang-mspeculative-load-hardening) is specified.
->
-> Warning: This attribute may not prevent Speculative Load Hardening from being
-> enabled for a function which inlines a function that has the
-> 'speculative_load_hardening' attribute. This is intended to provide a
-> maximally conservative model where the code that is marked with the
-> 'speculative_load_hardening' attribute will always (even when inlined)
-> be hardened. A user of this attribute may want to mark functions called by
-> a function they do not want to be hardened with the 'noinline' attribute.
->
-> For example:
->
+This attribute can be applied to a function declaration in order to indicate
+that [Speculative Load Hardening][slh] is *not* needed for the function body.
+This can also be applied to a method in Objective C. This attribute will take
+precedence over the command line flag in the case where
+{option}`-mspeculative-load-hardening` is specified.
+
+Warning: This attribute may not prevent Speculative Load Hardening from being
+enabled for a function which inlines a function that has the
+'speculative_load_hardening' attribute. This is intended to provide a
+maximally conservative model where the code that is marked with the
+'speculative_load_hardening' attribute will always (even when inlined)
+be hardened. A user of this attribute may want to mark functions called by
+a function they do not want to be hardened with the 'noinline' attribute.
+
+For example:
+
 ```c
 __attribute__((speculative_load_hardening))
 int foo(int i) {
@@ -7727,7 +7736,7 @@ def ObjCExternallyRetainedDocs : Documentation {
   let Content = [{
 The `objc_externally_retained` attribute can be applied to strong local
 variables, functions, methods, or blocks to opt into
-[externally-retained semantics](https://clang.llvm.org/docs/AutomaticReferenceCounting.html#externally-retained-variables).
+{ref}`externally-retained semantics <arc.misc.externally_retained>`.
 
 When applied to the definition of a function, method, or block, every parameter
 of the function with implicit strong retainable object pointer type is
@@ -7752,7 +7761,7 @@ When compiled without `-fobjc-arc`, this attribute is ignored.
 def MIGConventionDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
-> The Mach Interface Generator release-on-success convention dictates
+The Mach Interface Generator release-on-success convention dictates
 
 functions that follow it to only release arguments passed to them when they
 return "success" (a `kern_return_t` error code that indicates that
@@ -8992,7 +9001,8 @@ targets such as AMDGPU. You can annotate compound statements with options
 to modify how atomic instructions inside that statement are emitted at the IR
 level.
 
-For details, see the documentation for [@atomic](http://clang.llvm.org/docs/LanguageExtensions.html#extensions-for-controlling-atomic-code-generation)
+For details, see the documentation for
+{ref}`@atomic <langext-atomic-code-generation>`
 
   }];
 }
@@ -10188,10 +10198,11 @@ void __attribute__((clspv_libclc_builtin)) libclc_builtin() {}
 def NoTrivialAutoVarInitDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{
-The `__declspec(no_init_all)` attribute disables the automatic initialization that the
-[-ftrivial-auto-var-init](https://clang.llvm.org/docs/ClangCommandLineReference.html#cmdoption-clang-ftrivial-auto-var-init) flag would have applied to locals in a marked function, or instances of
-a marked type. Note that this attribute has no effect for locals that are automatically initialized
-without the [-ftrivial-auto-var-init](https://clang.llvm.org/docs/ClangCommandLineReference.html#cmdoption-clang-ftrivial-auto-var-init) flag.
+The `__declspec(no_init_all)` attribute disables the automatic initialization
+that the {option}`-ftrivial-auto-var-init` flag would have applied to locals in
+a marked function, or instances of a marked type. Note that this attribute has
+no effect for locals that are automatically initialized without the
+{option}`-ftrivial-auto-var-init` flag.
 }];
 }
 
