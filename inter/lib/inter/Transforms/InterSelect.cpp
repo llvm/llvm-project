@@ -514,9 +514,9 @@ private:
             .getResult();
     Value threadSlot =
         AndOp::create(*builder, *location, RegType::get(context, 16, 7), i16(),
-                      1, canonicalDestination(), uniformRegion(), RegionAttr(),
-                      IntegerAttr(), builder->getI32IntegerAttr(2),
-                      IntegerAttr(), TypeAttr(), TypeAttr(), true, 0, r0,
+                       1, canonicalDestination(), uniformRegion(), RegionAttr(),
+                       IntegerAttr(), builder->getI32IntegerAttr(4),
+                       IntegerAttr(), TypeAttr(), TypeAttr(), true, 0, r0,
                       immediate(0xff, i16()))
             .getResult();
     MulOp offsetAccumulator = MulOp::create(
@@ -880,6 +880,111 @@ private:
       return failure();
     if (isWideSimd(operation.getType()))
       return lowerWideBinary(operation);
+    if (operation.getKind() == xw::BinaryKind::MulI) {
+      xw::ConstantOp multiplier =
+          operation.getRhs().getDefiningOp<xw::ConstantOp>();
+      Value source = operation.getLhs();
+      if (!multiplier) {
+        multiplier = operation.getLhs().getDefiningOp<xw::ConstantOp>();
+        source = operation.getRhs();
+      }
+      if (multiplier) {
+        FailureOr<int64_t> multiplierBits = getConstantBits(multiplier);
+        if (failed(multiplierBits))
+          return failure();
+        uint64_t value = static_cast<uint64_t>(*multiplierBits);
+        if (llvm::isPowerOf2_64(value)) {
+          FailureOr<Value> selected = getValue(source, operation);
+          FailureOr<int64_t> footprint =
+              getFootprint(operation.getType(), operation);
+          if (failed(selected) || failed(footprint))
+            return failure();
+          values[operation.getResult()] =
+              ShlOp::create(*builder, *location, reg(*footprint),
+                            shape->elementType, shape->cardinality,
+                            canonicalDestination(),
+                            sourceRegion(source, shape->cardinality, operation),
+                            RegionAttr(), IntegerAttr(), IntegerAttr(),
+                            IntegerAttr(), TypeAttr(),
+                            shape->elementType.isInteger(64) ? typeAttr(i16())
+                                                             : TypeAttr(),
+                            shape->cardinality == 1, 0, *selected,
+                            immediate(llvm::Log2_64(value), i16()))
+                  .getResult();
+          return success();
+        }
+      }
+    }
+    if (operation.getKind() == xw::BinaryKind::DivUI ||
+        operation.getKind() == xw::BinaryKind::RemUI) {
+      xw::ConstantOp divisor =
+          operation.getRhs().getDefiningOp<xw::ConstantOp>();
+      if (divisor) {
+        FailureOr<int64_t> divisorBits = getConstantBits(divisor);
+        if (failed(divisorBits))
+          return failure();
+        uint64_t value = static_cast<uint64_t>(*divisorBits);
+        if (llvm::isPowerOf2_64(value)) {
+          Value dividendSource = operation.getLhs();
+          Type arithmeticType = shape->elementType;
+          xw::CastOp extension =
+              operation.getLhs().getDefiningOp<xw::CastOp>();
+          if (shape->cardinality == 1 && shape->elementType.isInteger(64) &&
+              value <= std::numeric_limits<uint32_t>::max() && extension &&
+              extension.getKind() == xw::CastKind::IntConvert &&
+              extension.getSource().getType().isInteger(32) &&
+              extension.getPolicy()) {
+            auto policy = dyn_cast_or_null<xw::CastExtensionPolicyAttr>(
+                extension.getPolicy()->get("extension"));
+            if (policy && policy.getValue() == xw::CastExtension::Zero) {
+              dividendSource = extension.getSource();
+              arithmeticType = i32();
+            }
+          }
+          FailureOr<Value> dividend = getValue(dividendSource, operation);
+          FailureOr<int64_t> footprint =
+              getFootprint(operation.getType(), operation);
+          if (failed(dividend) || failed(footprint))
+            return failure();
+          RegionAttr region = sourceRegion(dividendSource, shape->cardinality,
+                                           operation);
+          int64_t arithmeticFootprint =
+              arithmeticType != shape->elementType ? 1 : *footprint;
+          Value result;
+          if (operation.getKind() == xw::BinaryKind::DivUI)
+            result =
+                ShrOp::create(*builder, *location, reg(arithmeticFootprint),
+                              arithmeticType, shape->cardinality,
+                              canonicalDestination(), region, RegionAttr(),
+                              IntegerAttr(), IntegerAttr(), IntegerAttr(),
+                              TypeAttr(),
+                              arithmeticType.isInteger(64) ? typeAttr(i16())
+                                                           : TypeAttr(),
+                              shape->cardinality == 1, 0, *dividend,
+                              immediate(llvm::Log2_64(value), i16()))
+                    .getResult();
+          else
+            result = AndOp::create(*builder, *location,
+                              reg(arithmeticFootprint), arithmeticType,
+                              shape->cardinality,
+                              canonicalDestination(), region, RegionAttr(),
+                              IntegerAttr(), IntegerAttr(), IntegerAttr(),
+                              TypeAttr(), TypeAttr(), shape->cardinality == 1, 0,
+                              *dividend,
+                              immediate(value - 1, arithmeticType))
+                    .getResult();
+          if (arithmeticType != shape->elementType)
+            result = MovOp::create(
+                         *builder, *location, reg(*footprint),
+                         shape->elementType, 1, canonicalDestination(),
+                         uniformRegion(), IntegerAttr(), IntegerAttr(),
+                         typeAttr(i32()), true, 0, result)
+                         .getResult();
+          values[operation.getResult()] = result;
+          return success();
+        }
+      }
+    }
     if (operation.getKind() == xw::BinaryKind::DivUI ||
         operation.getKind() == xw::BinaryKind::RemUI ||
         operation.getKind() == xw::BinaryKind::DivSI ||
@@ -1912,6 +2017,10 @@ private:
         if (stateIndex >= stateInitial.size())
           return sourceYield.emitOpError(
               "machine while state index is invalid");
+        if (stateInitial[stateIndex])
+          return sourceYield.emitOpError(
+              "asymmetric machine while backedge maps multiple initializers "
+              "to one state");
         stateInitial[stateIndex] = initial[index];
         beforeStateIndices.push_back(stateIndex);
       }
@@ -1958,9 +2067,39 @@ private:
         memoryToken = body.getArgument(stateIndex);
     }
     builder->setInsertionPointToStart(&body);
+    scf::ConditionOp condition = cast<scf::ConditionOp>(before.getTerminator());
+    DenseSet<unsigned> backedgeStateSet(beforeStateIndices.begin(),
+                                        beforeStateIndices.end());
+    SmallVector<Value> earlyExitValues(resultTypes.size());
+    for (unsigned index = 0; index < condition.getArgs().size(); ++index) {
+      if (backedgeStateSet.contains(index) ||
+          isa<xw::MemTokenType>(condition.getArgs()[index].getType()))
+        continue;
+      BlockArgument argument = dyn_cast<BlockArgument>(condition.getArgs()[index]);
+      if (!argument || argument.getOwner() != &before)
+        continue;
+      Value source = body.getArgument(beforeStateIndices[argument.getArgNumber()]);
+      RegType resultType = cast<RegType>(resultTypes[index]);
+      SmallVector<Value, 4> pieces;
+      for (uint32_t offset = 0; offset < resultType.getWidthDwords();) {
+        uint32_t width = std::min<uint32_t>(
+            simdWidth, resultType.getWidthDwords() - offset);
+        IntegerAttr sourceSub = offset == 0
+                                    ? IntegerAttr()
+                                    : builder->getI32IntegerAttr(offset);
+        pieces.push_back(emitMove(reg(width), i32(), width, source,
+                                  canonicalRegion(), false, 0, sourceSub));
+        offset += width;
+      }
+      earlyExitValues[index] =
+          pieces.size() == 1
+              ? pieces.front()
+              : TupleFromElementsOp::create(*builder, *location, resultType,
+                                            pieces)
+                    .getTuple();
+    }
     if (failed(lowerBlock(before)))
       return failure();
-    scf::ConditionOp condition = cast<scf::ConditionOp>(before.getTerminator());
     FailureOr<Value> selectedCondition =
         getUniformCondition(condition.getCondition(), condition);
     if (failed(selectedCondition))
@@ -1987,9 +2126,28 @@ private:
         conditionArguments.push_back(*selected);
         conditionTypes.push_back(selected->getType());
       }
+      if (earlyExitValues[conditionArguments.size() - 1]) {
+        conditionArguments.back() = earlyExitValues[conditionArguments.size() - 1];
+        conditionTypes.back() = conditionArguments.back().getType();
+      }
     }
+    DenseMap<unsigned, unsigned> backedgeResults;
+    SmallVector<Type> backedgeTypes;
+    for (unsigned stateIndex : beforeStateIndices) {
+      backedgeResults.try_emplace(stateIndex, backedgeTypes.size());
+      backedgeTypes.push_back(conditionTypes[stateIndex]);
+    }
+    Value bodyCondition =
+        CmpOp::create(*builder, *location,
+                      ARFType::get(context, ARFFile::f, 2, -1),
+                      CondModifierAttr::get(context, CondModifier::ne),
+                      typeAttr(i32()), builder->getI32IntegerAttr(1),
+                      uniformRegion(), RegionAttr(), IntegerAttr(),
+                      IntegerAttr(), TypeAttr(), TypeAttr(), conditionSnapshot,
+                      immediate(0, i32()))
+            .getFlag();
     UniformIfOp executeBody = UniformIfOp::create(
-        *builder, *location, conditionTypes, *selectedCondition);
+        *builder, *location, backedgeTypes, bodyCondition);
     builder->setInsertionPointToStart(
         &executeBody.getThenRegion().emplaceBlock());
     for (unsigned index = 0; index < after.getNumArguments(); ++index) {
@@ -1999,25 +2157,27 @@ private:
     }
     if (failed(lowerBlock(after)))
       return failure();
-    SmallVector<Value> thenValues;
-    thenValues.append(conditionArguments.begin(), conditionArguments.end());
+    SmallVector<Value> thenValues(beforeStateIndices.size());
     for (auto [index, operand] : llvm::enumerate(sourceYield.getOperands())) {
       if (isa<xw::MemTokenType>(operand.getType())) {
         Value selected = values.lookup(operand);
         if (!selected)
           return sourceYield.emitOpError("while token yield was not selected");
-        thenValues[beforeStateIndices[index]] = selected;
+        thenValues[index] = selected;
       } else {
         FailureOr<Value> selected = getValue(operand, sourceYield);
         if (failed(selected))
           return failure();
-        thenValues[beforeStateIndices[index]] = *selected;
+        thenValues[index] = *selected;
       }
     }
     YieldOp::create(*builder, *location, thenValues);
     builder->setInsertionPointToStart(
         &executeBody.getElseRegion().emplaceBlock());
-    YieldOp::create(*builder, *location, conditionArguments);
+    SmallVector<Value> elseValues;
+    for (unsigned stateIndex : beforeStateIndices)
+      elseValues.push_back(conditionArguments[stateIndex]);
+    YieldOp::create(*builder, *location, elseValues);
     builder->setInsertionPointAfter(executeBody);
     Value continueCondition =
         CmpOp::create(*builder, *location,
@@ -2028,8 +2188,15 @@ private:
                       IntegerAttr(), TypeAttr(), TypeAttr(), conditionSnapshot,
                       immediate(0, i32()))
             .getFlag();
-    ContinueIfOp::create(*builder, *location, continueCondition,
-                         executeBody.getResults());
+    SmallVector<Value> carried;
+    for (unsigned index = 0; index < conditionArguments.size(); ++index) {
+      DenseMap<unsigned, unsigned>::iterator backedge =
+          backedgeResults.find(index);
+      carried.push_back(backedge == backedgeResults.end()
+                            ? conditionArguments[index]
+                            : executeBody.getResult(backedge->second));
+    }
+    ContinueIfOp::create(*builder, *location, continueCondition, carried);
     builder->setInsertionPointAfter(loop);
     for (unsigned index = 0; index < operation.getNumResults(); ++index) {
       values[operation.getResult(index)] = loop.getResult(index);

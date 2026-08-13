@@ -22,6 +22,7 @@ module {
 // CHECK-LABEL: func.func @subgroup_id
 // CHECK-SAME: xemachine.per_thread_payload_size = 64 : i32
 // CHECK: xemachine.payload_prologue
+// CHECK: xemachine.and {{.*}}src0Sub = 4 : i32{{.*}}, i16)
 // CHECK: xemachine.shr
 
 // CHECK-LABEL: func.func @group_ids

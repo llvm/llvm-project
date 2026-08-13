@@ -67,11 +67,13 @@ struct Destination {
 };
 
 enum class DistancePipe { none, all, floating, inOrder };
+enum class TokenMode { none, set, destination };
 
 struct SwsbInfo {
   DistancePipe pipe = DistancePipe::none;
   int32_t distance = -1;
   int32_t token = -1;
+  TokenMode tokenMode = TokenMode::none;
 };
 
 struct AluInstruction {

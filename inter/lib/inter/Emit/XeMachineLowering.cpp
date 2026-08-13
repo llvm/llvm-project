@@ -146,7 +146,28 @@ private:
     return youngest;
   }
 
-  SwsbInfo getInOrderSwsb(Operation *operation, ValueRange operands) const {
+  SwsbInfo getInOrderSwsb(Operation *operation, ValueRange operands) {
+    std::optional<int32_t> token;
+    for (Value operand : operands) {
+      auto producer = dpasTokens.find(operand);
+      if (producer == dpasTokens.end())
+        continue;
+      if (token && *token != producer->second) {
+        program.items.emplace_back(SyncInstruction{SyncKind::allwr});
+        dpasTokens.clear();
+        nextToken = 0;
+        return {};
+      }
+      token = producer->second;
+    }
+    if (token) {
+      for (Value operand : operands) {
+        auto producer = dpasTokens.find(operand);
+        if (producer != dpasTokens.end() && producer->second == *token)
+          dpasTokens.erase(producer);
+      }
+      return {DistancePipe::none, -1, *token, TokenMode::destination};
+    }
     ProducerDistance producer = getYoungestProducer(operation, operands);
     if (producer.distance < 0)
       return {};
@@ -160,7 +181,7 @@ private:
       pipe = DistancePipe::inOrder;
     else if (pipe == DistancePipe::floating)
       pipe = DistancePipe::all;
-    return {pipe, producer.distance, nextToken++};
+    return {pipe, producer.distance, nextToken++, TokenMode::set};
   }
 
   LogicalResult lowerBlock(Block &block) {
@@ -353,6 +374,10 @@ private:
 
   void lowerSync(SyncOp sync) {
     program.items.emplace_back(SyncInstruction{sync.getKind()});
+    if (sync.getKind() == SyncKind::allwr) {
+      dpasTokens.clear();
+      nextToken = 0;
+    }
   }
 
   struct MessageForm {
@@ -452,7 +477,11 @@ private:
     instruction.bPrecision = dpas.getBPrecision();
     instruction.systolicDepth = dpas.getSystolicDepth();
     instruction.repeatCount = dpas.getRepeatCount();
-    instruction.swsb = getInOrderSwsb(dpas, dpas.getOperands());
+    auto chain = dpasTokens.find(dpas.getAcc());
+    int32_t token = chain == dpasTokens.end() ? nextToken++ : chain->second;
+    instruction.swsb.token = token;
+    instruction.swsb.tokenMode = TokenMode::set;
+    dpasTokens[dpas.getDst()] = token;
     program.items.push_back(instruction);
   }
 
@@ -622,6 +651,7 @@ private:
   SmallVector<LoopHeader> loopHeaders;
   int32_t nextInstruction = 0;
   int32_t nextToken = 0;
+  DenseMap<Value, int32_t> dpasTokens;
   uint32_t divergentDepth = 0;
   uint32_t nextLabel = 1;
   bool hasWrittenAddressRegister = false;

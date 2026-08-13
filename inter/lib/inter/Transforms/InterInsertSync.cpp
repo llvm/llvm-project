@@ -333,8 +333,15 @@ static bool isAsyncMessage(Operation *operation) {
 }
 
 static WaitRequirement computeRequirement(Operation *operation,
-                                          const SyncState &state) {
+                                           const SyncState &state) {
   WaitRequirement requirement;
+  if (isa<ContinueIfOp>(operation)) {
+    for (const CompletionTicket &ticket : state.completions)
+      requirement.write |= ticket.write;
+    for (const SourceTicket &ticket : state.sources)
+      requirement.write |= ticket.completedByAllWr;
+    return requirement;
+  }
   if (isFullDrain(operation)) {
     for (const CompletionTicket &ticket : state.completions) {
       requirement.read |= ticket.read;

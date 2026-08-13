@@ -248,8 +248,10 @@ private:
                                                             : 0x18;
       return pipe | static_cast<uint32_t>(swsb.distance);
     }
-    if (swsb.token >= 0)
-      return 0xC0 | static_cast<uint32_t>(swsb.token);
+    if (swsb.token >= 0) {
+      uint32_t mode = swsb.tokenMode == TokenMode::destination ? 0x80 : 0xC0;
+      return mode | static_cast<uint32_t>(swsb.token);
+    }
     return 0;
   }
 

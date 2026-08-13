@@ -27,6 +27,27 @@ module {
     }
     return
   }
+
+  func.func @asymmetric_while() attributes {
+      xemachine.kernel, xemachine.kernel_args = [],
+      xw.simd_width = 8 : i32} {
+    %zero = xw.constant 0 : index
+    %one = xw.constant 1 : index
+    %two = xw.constant 2 : index
+    %initial = xw.constant 0 : i32 -> !xw.simd<i32, 8>
+    %result:3 = scf.while (%iv = %zero, %iter = %initial)
+        : (index, !xw.simd<i32, 8>)
+        -> (index, !xw.simd<i32, 8>, !xw.simd<i32, 8>) {
+      %condition = xw.cmpi slt %iv, %two : index, index -> i1
+      %next = xw.binary addi %iv, %one : index, index -> index
+      scf.condition(%condition) %next, %iter, %iter
+          : index, !xw.simd<i32, 8>, !xw.simd<i32, 8>
+    } do {
+    ^bb0(%iv: index, %iter: !xw.simd<i32, 8>, %exit: !xw.simd<i32, 8>):
+      scf.yield %iv, %iter : index, !xw.simd<i32, 8>
+    }
+    return
+  }
 }
 
 // CHECK-NOT: llvm
@@ -36,7 +57,16 @@ module {
 // CHECK: xemachine.uniform_loop
 // CHECK: [[COND:%.*]] = xemachine.cmp
 // CHECK-NEXT: [[SNAPSHOT:%.*]] = xemachine.mov [[COND]]
-// CHECK: xemachine.uniform_if [[COND]]
+// CHECK: [[BODY_COND:%.*]] = xemachine.cmp ne [[SNAPSHOT]]
+// CHECK-NEXT: xemachine.uniform_if [[BODY_COND]]
 // CHECK: [[CONTINUE:%.*]] = xemachine.cmp ne [[SNAPSHOT]]
 // CHECK-NEXT: xemachine.continue_if [[CONTINUE]]
 // CHECK: xemachine.eot
+
+// CHECK-LABEL: func.func @asymmetric_while
+// CHECK: xemachine.uniform_loop
+// CHECK: ^bb0([[IV:%.*]]: {{.*}}, [[ITER:%.*]]: !xemachine.reg<8, -1>, [[EXIT:%.*]]: !xemachine.reg<8, -1>):
+// CHECK-NEXT: [[EXIT_SNAPSHOT:%.*]] = xemachine.mov [[ITER]]
+// CHECK-SAME: execSize = 8 : i32
+// CHECK: [[BODY:%.*]]:2 = xemachine.uniform_if
+// CHECK: xemachine.continue_if {{.*}}([[BODY]]#0, [[BODY]]#1, [[EXIT_SNAPSHOT]]

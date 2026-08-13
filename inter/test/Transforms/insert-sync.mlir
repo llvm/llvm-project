@@ -343,6 +343,24 @@ func.func @loop_carried_token(%flag: !xemachine.arf<f, 2, 0>) {
   return
 }
 
+// Store-only loop backedges do not require destination completion.
+// CHECK-LABEL: func.func @loop_store_only
+// CHECK: xemachine.store_a64
+// CHECK-NEXT: xemachine.continue_if
+func.func @loop_store_only(%flag: !xemachine.arf<f, 2, 0>) {
+  %root = xemachine.token
+  %address = xemachine.archreg 20 : !xemachine.reg<64, 20>
+  %data = xemachine.archreg 2 : !xemachine.reg<16, 2>
+  xemachine.uniform_loop () {
+  ^bb0:
+    %store = xemachine.store_a64 %address data %data dep %root
+        : (!xemachine.reg<64, 20>, !xemachine.reg<16, 2>)
+        -> !xemachine.mem.token
+    xemachine.continue_if %flag : !xemachine.arf<f, 2, 0>
+  } : () -> ()
+  return
+}
+
 // Nested region interfaces participate in the enclosing loop fixed point.
 // CHECK-LABEL: func.func @nested_loop_branch
 // CHECK: [[LOOP:%.*]] = xemachine.uniform_loop
@@ -474,7 +492,8 @@ func.func @nested_replay_after_fixpoint(%flag: !xemachine.arf<f, 2, 0>) {
 // CHECK: xemachine.uniform_loop
 // CHECK-NEXT: xemachine.sync allwr
 // CHECK-NEXT: xemachine.load_a64
-// CHECK: xemachine.continue_if
+// CHECK: xemachine.sync allwr
+// CHECK-NEXT: xemachine.continue_if
 // CHECK: }
 // CHECK: xemachine.sync allwr
 // CHECK-NEXT: xemachine.mov
