@@ -4902,6 +4902,23 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
     }
   }
 
+  auto &&typeMods{
+      OmpGetRepeatableModifier<parser::OmpMapTypeModifier>(modifiers)};
+  struct Less {
+    using Iterator = decltype(typeMods.begin());
+    bool operator()(Iterator a, Iterator b) const {
+      const parser::OmpMapTypeModifier *pa = *a;
+      const parser::OmpMapTypeModifier *pb = *b;
+      return pa->v < pb->v;
+    }
+  };
+  if (auto maybeIter{FindDuplicate<Less>(typeMods)}) {
+    context_.Say(GetContext().clauseSource,
+        "Duplicate map-type-modifier entry '%s' will be ignored"_warn_en_US,
+        parser::ToUpperCaseLetters(
+            parser::OmpMapTypeModifier::EnumToString((**maybeIter)->v)));
+  }
+
   if (version < 60) {
     for (const parser::OmpObject &object : objects.v) {
       if (IsWholeAssumedSizeArray(object)) {

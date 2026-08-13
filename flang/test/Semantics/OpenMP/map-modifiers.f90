@@ -1,18 +1,24 @@
 !RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=52 -Werror -Wno-experimental-option
 
+subroutine f10(x)
+  integer :: x
+!PORTABILITY: The specification of modifiers without comma separators for the 'MAP' clause has been deprecated in OpenMP 5.2
+  !$omp target map(always, present close, to: x)
+  x = x + 1
+  !$omp end target
+end
+
 subroutine f11(x)
   integer :: x
 !PORTABILITY: The specification of modifiers without comma separators for the 'MAP' clause has been deprecated in OpenMP 5.2
-  !$omp target map(close to: x)
+  !$omp target map(always, present, close to: x)
   x = x + 1
   !$omp end target
 end
 
 subroutine f12(x)
   integer :: x
-!ERROR: 'map-type-modifier' modifier cannot occur multiple times
-!ERROR: 'map-type-modifier' modifier cannot occur multiple times
-!ERROR: 'map-type-modifier' modifier cannot occur multiple times
+!WARNING: Duplicate map-type-modifier entry 'PRESENT' will be ignored
   !$omp target map(always, present, close, present, to: x)
   x = x + 1
   !$omp end target
