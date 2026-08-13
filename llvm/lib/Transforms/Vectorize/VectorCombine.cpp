@@ -2333,7 +2333,7 @@ bool VectorCombine::scalarizeExtExtract(Instruction &I) {
   return true;
 }
 
-/// Fold fptoui(fdiv(uitofp(x),uitofp(y))) --> udiv(x,y)
+/// Try to fold fptoui(fdiv(uitofp(x),uitofp(y))) to udiv(x,y)
 bool VectorCombine::foldFDivToUDiv(Instruction &I) {
   Instruction *X, *Y;
   if (!match(&I, m_FPToUI(m_OneUse(m_FDiv(m_OneUse(m_Instruction(X)),
@@ -2352,12 +2352,16 @@ bool VectorCombine::foldFDivToUDiv(Instruction &I) {
   if (IntTy != SrcY->getType() || IntTy != I.getType())
     return false;
 
+  // Require uitofp(x) and uitofp(y) to be exact conversions, i.e. IntWidth
+  // must fit within the float type's mantissa precision.
   unsigned IntWidth = IntTy->getScalarSizeInBits();
   unsigned Precision =
       APFloat::semanticsPrecision(FloatTy->getScalarType()->getFltSemantics());
-
   if (IntWidth > Precision)
     return false;
+
+  // Integer division by zero is UB. We must prove the divisor
+  // is known non-zero to safely transform fdiv into udiv.
   if (!isKnownNonZero(SrcY, SQ.getWithInstruction(&I)))
     return false;
 
@@ -2370,6 +2374,10 @@ bool VectorCombine::foldFDivToUDiv(Instruction &I) {
   InstructionCost NewCost =
       TTI.getArithmeticInstrCost(Instruction::UDiv, IntTy, CostKind);
 
+  LLVM_DEBUG(dbgs() << "Found division of vector float to unsigned integer: "
+                    << I << "\n  OldCost: " << OldCost
+                    << " vs NewCost: " << NewCost << "\n");
+
   if (NewCost > OldCost)
     return false;
 
@@ -2377,6 +2385,7 @@ bool VectorCombine::foldFDivToUDiv(Instruction &I) {
   replaceValue(I, *NewInst);
   return true;
 }
+
 /// Try to fold "(or (zext (bitcast X)), (shl (zext (bitcast Y)), C))"
 /// to "(bitcast (concat X, Y))"
 /// where X/Y are bitcasted from i1 mask vectors.
