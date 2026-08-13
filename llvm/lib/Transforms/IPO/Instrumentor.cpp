@@ -1208,7 +1208,8 @@ Value *AllocaIO::getAlignment(Value &V, Type &Ty, InstrumentationConfig &IConf,
 }
 ///}
 
-// Check if a pointer comes from an intrinsic function and is one of the AMD GCN intrinsics we avoid when instrumenting
+// Check if a pointer comes from an intrinsic function and is one of the AMD GCN
+// intrinsics we avoid when instrumenting
 static bool ptrOriginatesFromAMDGCNIntrinsic(llvm::Value *PtrArg) {
   SmallVector<const llvm::Value *, 4> Objs;
   llvm::getUnderlyingObjects(PtrArg, Objs, nullptr, 20);
