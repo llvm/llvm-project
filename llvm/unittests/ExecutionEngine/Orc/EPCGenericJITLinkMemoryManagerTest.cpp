@@ -112,19 +112,20 @@ TEST(EPCGenericJITLinkMemoryManagerTest, AllocFinalizeFree) {
 
   // Register the test wrappers in the bootstrap JITDylib under the default
   // SimpleNativeMemoryMap names so that Create resolves its proxies to them.
-  auto &SNs = rt::orc_rt_SimpleNativeMemoryMapSPSSymbols;
+  namespace sps = rt::sps;
   auto Exported = JITSymbolFlags::Exported;
   cantFail(ES.getBootstrapJITDylib().define(absoluteSymbols({
-      {ES.intern(SNs.AllocatorName), {ExecutorAddr::fromPtr(&SA), Exported}},
-      {ES.intern(SNs.ReserveName),
+      {ES.intern(sps::MemMgrInstanceCIName),
+       {ExecutorAddr::fromPtr(&SA), Exported}},
+      {ES.intern(sps::MemMgrReserveCIName),
        {ExecutorAddr::fromPtr(&testReserve), Exported}},
-      {ES.intern(SNs.InitializeName),
+      {ES.intern(sps::MemMgrInitializeCIName),
        {ExecutorAddr::fromPtr(&testInitialize), Exported}},
       // Deinitialize is part of the interface but unused here; the release
       // wrapper (same signature) stands in so the proxy resolves.
-      {ES.intern(SNs.DeinitializeName),
+      {ES.intern(sps::MemMgrDeinitializeCIName),
        {ExecutorAddr::fromPtr(&testRelease), Exported}},
-      {ES.intern(SNs.ReleaseName),
+      {ES.intern(sps::MemMgrReleaseCIName),
        {ExecutorAddr::fromPtr(&testRelease), Exported}},
   })));
 
