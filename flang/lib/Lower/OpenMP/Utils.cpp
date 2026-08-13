@@ -1235,7 +1235,6 @@ resolveMapperId(Fortran::lower::AbstractConverter &converter,
           (mapTypeBits & mlir::omp::ClauseMapFlags::implicit) ==
           mlir::omp::ClauseMapFlags::implicit;
       bool needsDefaultMapper =
-          isAllocOrPointer ||
           requiresImplicitDefaultDeclareMapper(*objectTypeSpec);
       // For implicit captures, avoid synthesizing default mappers for
       // pointer entities (which can over-map pointer payloads) and for
