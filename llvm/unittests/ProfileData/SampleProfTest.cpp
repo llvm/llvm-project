@@ -603,6 +603,16 @@ TEST_F(SampleProfTest, SampleProfileFuncOffsetTableInMemory) {
   EXPECT_EQ(Table.lookup(0x55556666ULL), std::nullopt);
 }
 
+#if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
+// Verify that function-offset flags are rejected for unrelated section types.
+TEST(SampleProfSectionFlagTest, RejectsMismatchedSectionSpecificFlag) {
+  SecHdrTableEntry Entry{SecLBRProfile, 0, 0, 0, 0};
+  EXPECT_DEATH(
+      static_cast<void>(hasSecFlag(Entry, SecFuncOffsetFlags::SecFlagOrdered)),
+      "Misuse of a flag in an incompatible section");
+}
+#endif
+
 // Verify that requesting format version 103 results in a version 103 profile.
 TEST_F(SampleProfTest, SampleProfileFormatVersion103) {
   auto BufferOrErr = writeProfileToBuffer(103);
