@@ -1317,8 +1317,23 @@ void RuntimePointerChecking::mergeStencilGroups(PredicatedScalarEvolution &PSE,
                       << ", max=" << MaxCandidates.size() << " of "
                       << MemberOffsets.size() << "\n");
 
-    // OffsetTy is an integer type as wide as an address. The umin/umax
-    // operands below are member addresses converted to this type.
+    // Local cost model: decide whether replacing this DepSet's groups with the
+    // single merged group actually reduces the number of runtime checks. Run
+    // it before building the merged bounds: a rejected DepSet then creates no
+    // umin/umax expressions that would only be thrown away.
+    auto [ChecksBefore, ChecksAfter] = computeStencilMergeCost(
+        *this, GroupIndices, MergedGroupIndices,
+        LocalStridesNeedingPreds.getArrayRef(), CommittedStridePredicates,
+        MinCandidates.size(), MaxCandidates.size());
+    if (ChecksAfter >= ChecksBefore) {
+      LLVM_DEBUG(dbgs() << "LAA:   Not beneficial, skipping DepSet\n");
+      continue;
+    }
+
+    // OffsetTy is the integer type ptrtoaddr produces for the base pointer.
+    // Every umin/umax operand below must have this one type. A member in an
+    // address space with a different address width would produce a different
+    // type; BuildBound returns null then, and the DepSet is skipped.
     Type *OffsetTy = SE->getEffectiveSCEVType(BaseLow->getType());
 
     // Build one side of the merged bounds from its candidate members.
@@ -1328,8 +1343,8 @@ void RuntimePointerChecking::mergeStencilGroups(PredicatedScalarEvolution &PSE,
     // way every value is a real member address, so the merge computes no new
     // address and no new overflow is possible.
     // SCEV umin/umax needs integer operands, so convert each pointer with
-    // ptrtoint. That fails for non-integral pointers; return null then, and
-    // the DepSet is skipped.
+    // ptrtoaddr. That fails for pointers whose address bits are not stable;
+    // return null then, and the DepSet is skipped.
     const auto BuildBound = [&](ArrayRef<unsigned> Candidates,
                                 bool IsLow) -> const SCEV * {
       auto GetBound = [&](unsigned K) {
@@ -1343,8 +1358,9 @@ void RuntimePointerChecking::mergeStencilGroups(PredicatedScalarEvolution &PSE,
         const SCEV *Bound = GetBound(K);
         if (!Bound->getType()->isPointerTy())
           return nullptr;
-        const SCEV *IntBound = SE->getPtrToIntExpr(Bound, OffsetTy);
-        if (isa<SCEVCouldNotCompute>(IntBound))
+        const SCEV *IntBound = SE->getPtrToAddrExpr(Bound);
+        if (isa<SCEVCouldNotCompute>(IntBound) ||
+            IntBound->getType() != OffsetTy)
           return nullptr;
         Ops.push_back(IntBound);
       }
@@ -1361,17 +1377,6 @@ void RuntimePointerChecking::mergeStencilGroups(PredicatedScalarEvolution &PSE,
 
     LLVM_DEBUG(dbgs() << "LAA:   Merged bounds: Low=" << *MergedLow
                       << ", High=" << *MergedHigh << "\n");
-
-    // Local cost model: decide whether replacing this DepSet's groups with the
-    // single merged group actually reduces the number of runtime checks.
-    auto [ChecksBefore, ChecksAfter] = computeStencilMergeCost(
-        *this, GroupIndices, MergedGroupIndices,
-        LocalStridesNeedingPreds.getArrayRef(), CommittedStridePredicates,
-        MinCandidates.size(), MaxCandidates.size());
-    if (ChecksAfter >= ChecksBefore) {
-      LLVM_DEBUG(dbgs() << "LAA:   Not beneficial, skipping DepSet\n");
-      continue;
-    }
     LLVM_DEBUG(dbgs() << "LAA:   Merging, net saving "
                       << ChecksBefore - ChecksAfter << "\n");
 
