@@ -154,7 +154,8 @@ private:
                                           Operation *owner) {
     FailureOr<int64_t> footprint =
         getFootprint(xw::SimdType::get(context, vector, cardinality), owner);
-    FailureOr<int64_t> scalarBits = getElementBits(vector.getElementType(), owner);
+    FailureOr<int64_t> scalarBits =
+        getElementBits(vector.getElementType(), owner);
     if (failed(footprint) || failed(scalarBits))
       return failure();
     if (*footprint % 16 != 0 || *scalarBits == 0 || 512 % *scalarBits != 0 ||
@@ -165,7 +166,8 @@ private:
     SmallVector<Value> pieces;
     for (int64_t offset = 0; offset < *footprint; offset += 16)
       pieces.push_back(emitMove(reg(16), vector.getElementType(),
-                                512 / *scalarBits, scalar, RegionAttr(), false));
+                                512 / *scalarBits, scalar, RegionAttr(),
+                                false));
     return TupleFromElementsOp::create(*builder, *location, reg(*footprint),
                                        pieces)
         .getTuple();
@@ -474,9 +476,9 @@ private:
                                moduleBuilder.getI32IntegerAttr(32));
     }
     if (usesThreadIds)
-      machineFunction->setAttr(kPerThreadPayloadSizeAttrName,
-                               moduleBuilder.getI32IntegerAttr(
-                                   getPerThreadPayloadSize()));
+      machineFunction->setAttr(
+          kPerThreadPayloadSizeAttrName,
+          moduleBuilder.getI32IntegerAttr(getPerThreadPayloadSize()));
 
     builder = OpBuilder::atBlockBegin(machineFunction.addEntryBlock());
     if (needsPayload && failed(emitPrologue()))
@@ -514,20 +516,19 @@ private:
             .getResult();
     Value threadSlot =
         AndOp::create(*builder, *location, RegType::get(context, 16, 7), i16(),
-                       1, canonicalDestination(), uniformRegion(), RegionAttr(),
-                       IntegerAttr(), builder->getI32IntegerAttr(4),
-                       IntegerAttr(), TypeAttr(), TypeAttr(), true, 0, r0,
+                      1, canonicalDestination(), uniformRegion(), RegionAttr(),
+                      IntegerAttr(), builder->getI32IntegerAttr(4),
+                      IntegerAttr(), TypeAttr(), TypeAttr(), true, 0, r0,
                       immediate(0xff, i16()))
             .getResult();
     MulOp offsetAccumulator = MulOp::create(
         *builder, *location, ARFType::get(context, ARFFile::acc, 16, 0), i32(),
         1, canonicalDestination(), uniformRegion(), RegionAttr(), IntegerAttr(),
         IntegerAttr(), IntegerAttr(), typeAttr(i16()), typeAttr(i16()), true, 0,
-        threadSlot,
-        immediate(getPerThreadPayloadSize(), i16()));
-    Value threadOffset = emitMove(RegType::get(context, 16, 8), i32(), 1,
-                                  offsetAccumulator.getResult(), uniformRegion(),
-                                  true);
+        threadSlot, immediate(getPerThreadPayloadSize(), i16()));
+    Value threadOffset =
+        emitMove(RegType::get(context, 16, 8), i32(), 1,
+                 offsetAccumulator.getResult(), uniformRegion(), true);
     Value address =
         AddOp::create(*builder, *location, RegType::get(context, 16, 9), i32(),
                       1, canonicalDestination(), uniformRegion(),
@@ -601,22 +602,23 @@ private:
     uint64_t payloadEnd = kInlineMirrorSize;
     for (Attribute attribute : kernelArguments) {
       KernelArgAttr descriptor = cast<KernelArgAttr>(attribute);
-      payloadEnd = std::max(payloadEnd,
-                            descriptor.getOffset() + descriptor.getSize());
+      payloadEnd =
+          std::max(payloadEnd, descriptor.getOffset() + descriptor.getSize());
     }
-    for (uint64_t offset = kInlineMirrorSize; offset < payloadEnd; offset += 64) {
+    for (uint64_t offset = kInlineMirrorSize; offset < payloadEnd;
+         offset += 64) {
       Value address = base;
       if (offset != kInlineMirrorSize)
-        address = AddOp::create(
-                      *builder, *location, reg(16), i32(), 1,
-                      canonicalDestination(), uniformRegion(), RegionAttr(),
-                      IntegerAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(),
-                      TypeAttr(), true, 0, base,
-                      immediate(offset - kInlineMirrorSize, i32()))
-                      .getResult();
-      LoadBlockA32Op tail = LoadBlockA32Op::create(
-          *builder, *location, reg(16), MemTokenType::get(context), address,
-          memoryToken, 16);
+        address =
+            AddOp::create(*builder, *location, reg(16), i32(), 1,
+                          canonicalDestination(), uniformRegion(), RegionAttr(),
+                          IntegerAttr(), IntegerAttr(), IntegerAttr(),
+                          TypeAttr(), TypeAttr(), true, 0, base,
+                          immediate(offset - kInlineMirrorSize, i32()))
+                .getResult();
+      LoadBlockA32Op tail = LoadBlockA32Op::create(*builder, *location, reg(16),
+                                                   MemTokenType::get(context),
+                                                   address, memoryToken, 16);
       memoryToken = tail.getToken();
       payloadTail.push_back(tail.getDst());
     }
@@ -724,12 +726,11 @@ private:
              failure();
     }
     return CmpOp::create(
-               *builder, *location,
-               ARFType::get(context, ARFFile::f, 2, -1),
-               CondModifierAttr::get(context, CondModifier::ne), typeAttr(i32()),
-               builder->getI32IntegerAttr(1), uniformRegion(), RegionAttr(),
-               IntegerAttr(), IntegerAttr(), TypeAttr(), TypeAttr(), *selected,
-               immediate(0, i32()))
+               *builder, *location, ARFType::get(context, ARFFile::f, 2, -1),
+               CondModifierAttr::get(context, CondModifier::ne),
+               typeAttr(i32()), builder->getI32IntegerAttr(1), uniformRegion(),
+               RegionAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(),
+               TypeAttr(), *selected, immediate(0, i32()))
         .getFlag();
   }
 
@@ -843,9 +844,9 @@ private:
         isa<VectorType>(resultShape->elementType)) {
       VectorType vector = cast<VectorType>(resultShape->elementType);
       ImmOp immediateValue = input->getDefiningOp<ImmOp>();
-      FailureOr<Value> splat = materializeVectorSplat(
-          immediateValue.getValue(), vector, resultShape->cardinality,
-          operation);
+      FailureOr<Value> splat =
+          materializeVectorSplat(immediateValue.getValue(), vector,
+                                 resultShape->cardinality, operation);
       if (failed(splat))
         return failure();
       values[operation->getResult(0)] = *splat;
@@ -880,116 +881,6 @@ private:
       return failure();
     if (isWideSimd(operation.getType()))
       return lowerWideBinary(operation);
-    if (operation.getKind() == xw::BinaryKind::MulI) {
-      xw::ConstantOp multiplier =
-          operation.getRhs().getDefiningOp<xw::ConstantOp>();
-      Value source = operation.getLhs();
-      if (!multiplier) {
-        multiplier = operation.getLhs().getDefiningOp<xw::ConstantOp>();
-        source = operation.getRhs();
-      }
-      if (multiplier) {
-        FailureOr<int64_t> multiplierBits = getConstantBits(multiplier);
-        if (failed(multiplierBits))
-          return failure();
-        uint64_t value = static_cast<uint64_t>(*multiplierBits);
-        if (llvm::isPowerOf2_64(value)) {
-          FailureOr<Value> selected = getValue(source, operation);
-          FailureOr<int64_t> footprint =
-              getFootprint(operation.getType(), operation);
-          if (failed(selected) || failed(footprint))
-            return failure();
-          values[operation.getResult()] =
-              ShlOp::create(*builder, *location, reg(*footprint),
-                            shape->elementType, shape->cardinality,
-                            canonicalDestination(),
-                            sourceRegion(source, shape->cardinality, operation),
-                            RegionAttr(), IntegerAttr(), IntegerAttr(),
-                            IntegerAttr(), TypeAttr(),
-                            shape->elementType.isInteger(64) ? typeAttr(i16())
-                                                             : TypeAttr(),
-                            shape->cardinality == 1, 0, *selected,
-                            immediate(llvm::Log2_64(value), i16()))
-                  .getResult();
-          return success();
-        }
-      }
-    }
-    if (operation.getKind() == xw::BinaryKind::DivUI ||
-        operation.getKind() == xw::BinaryKind::RemUI) {
-      xw::ConstantOp divisor =
-          operation.getRhs().getDefiningOp<xw::ConstantOp>();
-      if (divisor) {
-        FailureOr<int64_t> divisorBits = getConstantBits(divisor);
-        if (failed(divisorBits))
-          return failure();
-        uint64_t value = static_cast<uint64_t>(*divisorBits);
-        if (llvm::isPowerOf2_64(value)) {
-          Value dividendSource = operation.getLhs();
-          Type arithmeticType = shape->elementType;
-          xw::CastOp extension =
-              operation.getLhs().getDefiningOp<xw::CastOp>();
-          if (shape->cardinality == 1 && shape->elementType.isInteger(64) &&
-              value <= std::numeric_limits<uint32_t>::max() && extension &&
-              extension.getKind() == xw::CastKind::IntConvert &&
-              extension.getSource().getType().isInteger(32) &&
-              extension.getPolicy()) {
-            auto policy = dyn_cast_or_null<xw::CastExtensionPolicyAttr>(
-                extension.getPolicy()->get("extension"));
-            if (policy && policy.getValue() == xw::CastExtension::Zero) {
-              dividendSource = extension.getSource();
-              arithmeticType = i32();
-            }
-          }
-          FailureOr<Value> dividend = getValue(dividendSource, operation);
-          FailureOr<int64_t> footprint =
-              getFootprint(operation.getType(), operation);
-          if (failed(dividend) || failed(footprint))
-            return failure();
-          RegionAttr region = sourceRegion(dividendSource, shape->cardinality,
-                                           operation);
-          int64_t arithmeticFootprint =
-              arithmeticType != shape->elementType ? 1 : *footprint;
-          Value result;
-          if (operation.getKind() == xw::BinaryKind::DivUI)
-            result =
-                ShrOp::create(*builder, *location, reg(arithmeticFootprint),
-                              arithmeticType, shape->cardinality,
-                              canonicalDestination(), region, RegionAttr(),
-                              IntegerAttr(), IntegerAttr(), IntegerAttr(),
-                              TypeAttr(),
-                              arithmeticType.isInteger(64) ? typeAttr(i16())
-                                                           : TypeAttr(),
-                              shape->cardinality == 1, 0, *dividend,
-                              immediate(llvm::Log2_64(value), i16()))
-                    .getResult();
-          else
-            result = AndOp::create(*builder, *location,
-                              reg(arithmeticFootprint), arithmeticType,
-                              shape->cardinality,
-                              canonicalDestination(), region, RegionAttr(),
-                              IntegerAttr(), IntegerAttr(), IntegerAttr(),
-                              TypeAttr(), TypeAttr(), shape->cardinality == 1, 0,
-                              *dividend,
-                              immediate(value - 1, arithmeticType))
-                    .getResult();
-          if (arithmeticType != shape->elementType)
-            result = MovOp::create(
-                         *builder, *location, reg(*footprint),
-                         shape->elementType, 1, canonicalDestination(),
-                         uniformRegion(), IntegerAttr(), IntegerAttr(),
-                         typeAttr(i32()), true, 0, result)
-                         .getResult();
-          values[operation.getResult()] = result;
-          return success();
-        }
-      }
-    }
-    if (operation.getKind() == xw::BinaryKind::DivUI ||
-        operation.getKind() == xw::BinaryKind::RemUI ||
-        operation.getKind() == xw::BinaryKind::DivSI ||
-        operation.getKind() == xw::BinaryKind::RemSI)
-      return lowerDivision(operation, *shape);
     FailureOr<Value> lhs = getValue(operation.getLhs(), operation);
     FailureOr<Value> rhs = getValue(operation.getRhs(), operation);
     FailureOr<int64_t> footprint = getFootprint(operation.getType(), operation);
@@ -1104,206 +995,6 @@ private:
           "integer operation has no XeMachine instruction selection");
     }
     values[operation.getResult()] = result;
-    return success();
-  }
-
-  Value emitIntegerSub(Value lhs, Value rhs, Type resultType, Type elementType,
-                       int64_t executionSize, RegionAttr lhsRegion,
-                       RegionAttr rhsRegion) {
-    return SubOp::create(*builder, *location, resultType, elementType,
-                         executionSize, canonicalDestination(), rhsRegion,
-                         lhsRegion, IntegerAttr(), IntegerAttr(), IntegerAttr(),
-                         TypeAttr(), TypeAttr(), executionSize == 1, 0, rhs,
-                         lhs)
-        .getResult();
-  }
-
-  Value emitMerge(Value condition, Value trueValue, Value falseValue,
-                  Type resultType, Type elementType, int64_t executionSize) {
-    ExecIfOp merge =
-        ExecIfOp::create(*builder, *location, TypeRange{resultType}, condition);
-    std::array<Value, 2> alternatives = {trueValue, falseValue};
-    for (unsigned index = 0; index < alternatives.size(); ++index) {
-      Region &region =
-          index == 0 ? merge.getThenRegion() : merge.getElseRegion();
-      builder->setInsertionPointToStart(&region.emplaceBlock());
-      Value selected =
-          emitMove(resultType, elementType, executionSize, alternatives[index],
-                   canonicalRegion(), executionSize == 1);
-      YieldOp::create(*builder, *location, ValueRange{selected});
-    }
-    builder->setInsertionPointAfter(merge);
-    return merge.getResult(0);
-  }
-
-  Value emitSignedNegative(Value value, Type resultType, Type elementType,
-                           int64_t executionSize) {
-    CmpOp negative = CmpOp::create(
-        *builder, *location, ARFType::get(context, ARFFile::f, 2, -1),
-        CondModifierAttr::get(context, CondModifier::lt), typeAttr(elementType),
-        builder->getI32IntegerAttr(executionSize), canonicalRegion(),
-        RegionAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(), TypeAttr(),
-        value, immediate(0, elementType));
-    negative->setAttr("signed", builder->getUnitAttr());
-    return negative.getFlag();
-  }
-
-  std::pair<Value, Value> emitUnsignedDivRem(Value dividend, Value divisor,
-                                             Type resultType, Type elementType,
-                                             int64_t executionSize) {
-    Value quotient =
-        emitMove(resultType, elementType, executionSize,
-                 immediate(0, elementType), RegionAttr(), executionSize == 1);
-    Value remainder =
-        emitMove(resultType, elementType, executionSize,
-                 immediate(0, elementType), RegionAttr(), executionSize == 1);
-    unsigned width = cast<IntegerType>(elementType).getWidth();
-    for (unsigned step = 0; step < width; ++step) {
-      unsigned bit = width - step - 1;
-      Value shiftedDividend =
-          ShrOp::create(
-              *builder, *location, resultType, elementType, executionSize,
-              canonicalDestination(), canonicalRegion(), RegionAttr(),
-              IntegerAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(),
-              elementType.isInteger(64) ? typeAttr(i16()) : TypeAttr(),
-              executionSize == 1, 0, dividend, immediate(bit, i16()))
-              .getResult();
-      Value incoming =
-          AndOp::create(*builder, *location, resultType, elementType,
-                        executionSize, canonicalDestination(),
-                        canonicalRegion(), RegionAttr(), IntegerAttr(),
-                        IntegerAttr(), IntegerAttr(), TypeAttr(), TypeAttr(),
-                        executionSize == 1, 0, shiftedDividend,
-                        immediate(1, elementType))
-              .getResult();
-      Value shiftedRemainder =
-          ShlOp::create(
-              *builder, *location, resultType, elementType, executionSize,
-              canonicalDestination(), canonicalRegion(), RegionAttr(),
-              IntegerAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(),
-              elementType.isInteger(64) ? typeAttr(i16()) : TypeAttr(),
-              executionSize == 1, 0, remainder, immediate(1, i16()))
-              .getResult();
-      Value extendedRemainder =
-          OrOp::create(*builder, *location, resultType, elementType,
-                       executionSize, canonicalDestination(), canonicalRegion(),
-                       canonicalRegion(), IntegerAttr(), IntegerAttr(),
-                       IntegerAttr(), TypeAttr(), TypeAttr(),
-                       executionSize == 1, 0, shiftedRemainder, incoming)
-              .getResult();
-      Value reduced =
-          emitIntegerSub(extendedRemainder, divisor, resultType, elementType,
-                         executionSize, canonicalRegion(), canonicalRegion());
-      CmpOp ge = CmpOp::create(
-          *builder, *location, ARFType::get(context, ARFFile::f, 2, -1),
-          CondModifierAttr::get(context, CondModifier::ge),
-          typeAttr(elementType), builder->getI32IntegerAttr(executionSize),
-          canonicalRegion(), canonicalRegion(), IntegerAttr(), IntegerAttr(),
-          TypeAttr(), TypeAttr(), extendedRemainder, divisor);
-      Value quotientBit =
-          OrOp::create(*builder, *location, resultType, elementType,
-                       executionSize, canonicalDestination(), canonicalRegion(),
-                       RegionAttr(), IntegerAttr(), IntegerAttr(),
-                       IntegerAttr(), TypeAttr(), TypeAttr(),
-                       executionSize == 1, 0, quotient,
-                       immediate(uint64_t{1} << bit, elementType))
-              .getResult();
-      remainder = emitMerge(ge.getFlag(), reduced, extendedRemainder,
-                            resultType, elementType, executionSize);
-      quotient = emitMerge(ge.getFlag(), quotientBit, quotient, resultType,
-                           elementType, executionSize);
-    }
-    return {quotient, remainder};
-  }
-
-  LogicalResult lowerDivision(xw::BinaryOp operation, const ValueShape &shape) {
-    IntegerType elementType = dyn_cast<IntegerType>(shape.elementType);
-    if (!elementType || elementType.getWidth() > 64)
-      return operation.emitOpError(
-          "integer division supports element widths up to 64 bits");
-    FailureOr<Value> lhs = getValue(operation.getLhs(), operation);
-    FailureOr<Value> rhs = getValue(operation.getRhs(), operation);
-    FailureOr<int64_t> footprint = getFootprint(operation.getType(), operation);
-    if (failed(lhs) || failed(rhs) || failed(footprint))
-      return failure();
-    Type resultType = reg(*footprint);
-    Value dividend = *lhs;
-    Value divisor = *rhs;
-    if (lhs->getDefiningOp<ImmOp>())
-      dividend = emitMove(resultType, elementType, shape.cardinality, *lhs,
-                          RegionAttr(), shape.cardinality == 1);
-    else if (sourceRegion(operation.getLhs(), shape.cardinality, operation) !=
-             canonicalRegion())
-      dividend = emitMove(
-          resultType, elementType, shape.cardinality, *lhs,
-          sourceRegion(operation.getLhs(), shape.cardinality, operation),
-          shape.cardinality == 1);
-    if (rhs->getDefiningOp<ImmOp>() ||
-        sourceRegion(operation.getRhs(), shape.cardinality, operation) !=
-            canonicalRegion())
-      divisor = emitMove(
-          resultType, elementType, shape.cardinality, *rhs,
-          sourceRegion(operation.getRhs(), shape.cardinality, operation),
-          shape.cardinality == 1);
-
-    bool isSigned = operation.getKind() == xw::BinaryKind::DivSI ||
-                    operation.getKind() == xw::BinaryKind::RemSI;
-    Value dividendNegative;
-    Value quotientNegative;
-    if (isSigned) {
-      dividendNegative = emitSignedNegative(dividend, resultType, elementType,
-                                            shape.cardinality);
-      Value divisorNegative = emitSignedNegative(
-          divisor, resultType, elementType, shape.cardinality);
-      Value negatedDividend = emitIntegerSub(
-          immediate(0, elementType), dividend, resultType, elementType,
-          shape.cardinality, RegionAttr(), canonicalRegion());
-      Value negatedDivisor = emitIntegerSub(
-          immediate(0, elementType), divisor, resultType, elementType,
-          shape.cardinality, RegionAttr(), canonicalRegion());
-      dividend = emitMerge(dividendNegative, negatedDividend, dividend,
-                           resultType, elementType, shape.cardinality);
-      divisor = emitMerge(divisorNegative, negatedDivisor, divisor, resultType,
-                          elementType, shape.cardinality);
-      Type flagType = ARFType::get(context, ARFFile::f, 2, -1);
-      Value joined =
-          OrOp::create(*builder, *location, reg(1), i32(), 1,
-                       canonicalDestination(), uniformRegion(), uniformRegion(),
-                       IntegerAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(),
-                       TypeAttr(), true, 0, dividendNegative, divisorNegative)
-              .getResult();
-      Value overlap =
-          AndOp::create(*builder, *location, reg(1), i32(), 1,
-                        canonicalDestination(), uniformRegion(),
-                        uniformRegion(), IntegerAttr(), IntegerAttr(),
-                        IntegerAttr(), TypeAttr(), TypeAttr(), true, 0,
-                        dividendNegative, divisorNegative)
-              .getResult();
-      quotientNegative = SubOp::create(*builder, *location, flagType, i32(), 1,
-                                       canonicalDestination(), uniformRegion(),
-                                       uniformRegion(), IntegerAttr(),
-                                       IntegerAttr(), IntegerAttr(), TypeAttr(),
-                                       TypeAttr(), true, 0, overlap, joined)
-                             .getResult();
-    }
-
-    std::pair<Value, Value> result = emitUnsignedDivRem(
-        dividend, divisor, resultType, elementType, shape.cardinality);
-    Value selected = operation.getKind() == xw::BinaryKind::DivUI ||
-                             operation.getKind() == xw::BinaryKind::DivSI
-                         ? result.first
-                         : result.second;
-    if (isSigned) {
-      Value sign = operation.getKind() == xw::BinaryKind::DivSI
-                       ? quotientNegative
-                       : dividendNegative;
-      Value negated = emitIntegerSub(immediate(0, elementType), selected,
-                                     resultType, elementType, shape.cardinality,
-                                     RegionAttr(), canonicalRegion());
-      selected = emitMerge(sign, negated, selected, resultType, elementType,
-                           shape.cardinality);
-    }
-    values[operation.getResult()] = selected;
     return success();
   }
 
@@ -1531,8 +1222,12 @@ private:
                                   IntegerAttr(), IntegerAttr(), IntegerAttr(),
                                   TypeAttr(), TypeAttr(), true, 0, *lhs, *rhs)
                         .getResult();
-    values[operation.getResult()] = emitIntegerSub(
-        joined, overlap, reg(1), i1(), 1, uniformRegion(), uniformRegion());
+    values[operation.getResult()] =
+        SubOp::create(*builder, *location, reg(1), i1(), 1,
+                      canonicalDestination(), uniformRegion(), uniformRegion(),
+                      IntegerAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(),
+                      TypeAttr(), true, 0, overlap, joined)
+            .getResult();
     return success();
   }
 
@@ -2075,28 +1770,28 @@ private:
       if (backedgeStateSet.contains(index) ||
           isa<xw::MemTokenType>(condition.getArgs()[index].getType()))
         continue;
-      BlockArgument argument = dyn_cast<BlockArgument>(condition.getArgs()[index]);
+      BlockArgument argument =
+          dyn_cast<BlockArgument>(condition.getArgs()[index]);
       if (!argument || argument.getOwner() != &before)
         continue;
-      Value source = body.getArgument(beforeStateIndices[argument.getArgNumber()]);
+      Value source =
+          body.getArgument(beforeStateIndices[argument.getArgNumber()]);
       RegType resultType = cast<RegType>(resultTypes[index]);
       SmallVector<Value, 4> pieces;
       for (uint32_t offset = 0; offset < resultType.getWidthDwords();) {
-        uint32_t width = std::min<uint32_t>(
-            simdWidth, resultType.getWidthDwords() - offset);
-        IntegerAttr sourceSub = offset == 0
-                                    ? IntegerAttr()
-                                    : builder->getI32IntegerAttr(offset);
+        uint32_t width =
+            std::min<uint32_t>(simdWidth, resultType.getWidthDwords() - offset);
+        IntegerAttr sourceSub =
+            offset == 0 ? IntegerAttr() : builder->getI32IntegerAttr(offset);
         pieces.push_back(emitMove(reg(width), i32(), width, source,
                                   canonicalRegion(), false, 0, sourceSub));
         offset += width;
       }
       earlyExitValues[index] =
-          pieces.size() == 1
-              ? pieces.front()
-              : TupleFromElementsOp::create(*builder, *location, resultType,
-                                            pieces)
-                    .getTuple();
+          pieces.size() == 1 ? pieces.front()
+                             : TupleFromElementsOp::create(*builder, *location,
+                                                           resultType, pieces)
+                                   .getTuple();
     }
     if (failed(lowerBlock(before)))
       return failure();
@@ -2127,7 +1822,8 @@ private:
         conditionTypes.push_back(selected->getType());
       }
       if (earlyExitValues[conditionArguments.size() - 1]) {
-        conditionArguments.back() = earlyExitValues[conditionArguments.size() - 1];
+        conditionArguments.back() =
+            earlyExitValues[conditionArguments.size() - 1];
         conditionTypes.back() = conditionArguments.back().getType();
       }
     }
@@ -2138,16 +1834,15 @@ private:
       backedgeTypes.push_back(conditionTypes[stateIndex]);
     }
     Value bodyCondition =
-        CmpOp::create(*builder, *location,
-                      ARFType::get(context, ARFFile::f, 2, -1),
-                      CondModifierAttr::get(context, CondModifier::ne),
-                      typeAttr(i32()), builder->getI32IntegerAttr(1),
-                      uniformRegion(), RegionAttr(), IntegerAttr(),
-                      IntegerAttr(), TypeAttr(), TypeAttr(), conditionSnapshot,
-                      immediate(0, i32()))
+        CmpOp::create(
+            *builder, *location, ARFType::get(context, ARFFile::f, 2, -1),
+            CondModifierAttr::get(context, CondModifier::ne), typeAttr(i32()),
+            builder->getI32IntegerAttr(1), uniformRegion(), RegionAttr(),
+            IntegerAttr(), IntegerAttr(), TypeAttr(), TypeAttr(),
+            conditionSnapshot, immediate(0, i32()))
             .getFlag();
-    UniformIfOp executeBody = UniformIfOp::create(
-        *builder, *location, backedgeTypes, bodyCondition);
+    UniformIfOp executeBody =
+        UniformIfOp::create(*builder, *location, backedgeTypes, bodyCondition);
     builder->setInsertionPointToStart(
         &executeBody.getThenRegion().emplaceBlock());
     for (unsigned index = 0; index < after.getNumArguments(); ++index) {
@@ -2180,13 +1875,12 @@ private:
     YieldOp::create(*builder, *location, elseValues);
     builder->setInsertionPointAfter(executeBody);
     Value continueCondition =
-        CmpOp::create(*builder, *location,
-                      ARFType::get(context, ARFFile::f, 2, -1),
-                      CondModifierAttr::get(context, CondModifier::ne),
-                      typeAttr(i32()), builder->getI32IntegerAttr(1),
-                      uniformRegion(), RegionAttr(), IntegerAttr(),
-                      IntegerAttr(), TypeAttr(), TypeAttr(), conditionSnapshot,
-                      immediate(0, i32()))
+        CmpOp::create(
+            *builder, *location, ARFType::get(context, ARFFile::f, 2, -1),
+            CondModifierAttr::get(context, CondModifier::ne), typeAttr(i32()),
+            builder->getI32IntegerAttr(1), uniformRegion(), RegionAttr(),
+            IntegerAttr(), IntegerAttr(), TypeAttr(), TypeAttr(),
+            conditionSnapshot, immediate(0, i32()))
             .getFlag();
     SmallVector<Value> carried;
     for (unsigned index = 0; index < conditionArguments.size(); ++index) {
@@ -2650,22 +2344,22 @@ private:
       return failure();
     if (!selected->getDefiningOp<ImmOp>())
       return *selected;
-    return emitMove(reg(dwords), shape->elementType, 1, *selected,
-                    RegionAttr(), true);
+    return emitMove(reg(dwords), shape->elementType, 1, *selected, RegionAttr(),
+                    true);
   }
 
   FailureOr<Value> buildBlock2DPayload(Operation *operation, Value base,
                                        Value surfaceWidth, Value surfaceHeight,
                                        Value surfacePitch, Value x, Value y,
-                                       int64_t blockWidth,
-                                       int64_t blockHeight, int64_t blocks) {
+                                       int64_t blockWidth, int64_t blockHeight,
+                                       int64_t blocks) {
     FailureOr<Value> selectedBase = getValue(base, operation);
     if (failed(selectedBase))
       return failure();
-    Value address = selectedBase->getDefiningOp<ImmOp>()
-                        ? emitMove(reg(2), i64(), 1, *selectedBase,
-                                   RegionAttr(), true)
-                        : *selectedBase;
+    Value address =
+        selectedBase->getDefiningOp<ImmOp>()
+            ? emitMove(reg(2), i64(), 1, *selectedBase, RegionAttr(), true)
+            : *selectedBase;
     auto subtractOne = [&](Value source) -> FailureOr<Value> {
       FailureOr<Value> selected = getValue(source, operation);
       if (failed(selected))
@@ -2674,21 +2368,21 @@ private:
         return emitMove(reg(1), i32(), 1,
                         immediate(immediateValue.getValue() - 1, i32()),
                         RegionAttr(), true);
-      return SubOp::create(
-                 *builder, *location, reg(1), i32(), 1,
-                 canonicalDestination(), RegionAttr(), uniformRegion(),
-                 IntegerAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(),
-                 TypeAttr(), true, 0, immediate(1, i32()), *selected)
+      return SubOp::create(*builder, *location, reg(1), i32(), 1,
+                           canonicalDestination(), RegionAttr(),
+                           uniformRegion(), IntegerAttr(), IntegerAttr(),
+                           IntegerAttr(), TypeAttr(), TypeAttr(), true, 0,
+                           immediate(1, i32()), *selected)
           .getResult();
     };
-    Value zero = emitMove(reg(16), i32(), 16, immediate(0, i32()),
-                          RegionAttr(), true);
-    Value shape = emitMove(
-        reg(1), i32(), 1,
-        immediate((blockWidth - 1) | ((blockHeight - 1) << 8) |
-                      ((blocks - 1) << 16),
-                  i32()),
-        RegionAttr(), true);
+    Value zero =
+        emitMove(reg(16), i32(), 16, immediate(0, i32()), RegionAttr(), true);
+    Value shape =
+        emitMove(reg(1), i32(), 1,
+                 immediate((blockWidth - 1) | ((blockHeight - 1) << 8) |
+                               ((blocks - 1) << 16),
+                           i32()),
+                 RegionAttr(), true);
     FailureOr<Value> selectedX = emitBlock2DScalar(x, 1, operation);
     FailureOr<Value> selectedY = emitBlock2DScalar(y, 1, operation);
     FailureOr<Value> selectedWidth = subtractOne(surfaceWidth);
@@ -2698,14 +2392,14 @@ private:
         failed(selectedHeight) || failed(selectedPitch))
       return failure();
     std::array<Value, 7> updates = {
-        address, *selectedWidth, *selectedHeight, *selectedPitch, *selectedX,
+        address,    *selectedWidth, *selectedHeight, *selectedPitch, *selectedX,
         *selectedY, shape};
     SmallVector<Attribute> offsets;
     for (int64_t offset : {0, 2, 3, 4, 5, 6, 7})
       offsets.push_back(builder->getI64IntegerAttr(offset));
-    UpdateTupleOp payload = UpdateTupleOp::create(
-        *builder, *location, reg(16), zero, updates,
-        builder->getArrayAttr(offsets));
+    UpdateTupleOp payload =
+        UpdateTupleOp::create(*builder, *location, reg(16), zero, updates,
+                              builder->getArrayAttr(offsets));
     return payload.getResult();
   }
 
@@ -2713,9 +2407,9 @@ private:
                              Value surfaceWidth, Value surfaceHeight,
                              Value surfacePitch, Value x, Value y,
                              int64_t blockWidth, int64_t blockHeight,
-                             int64_t blocks, Value data,
-                             Value dependency, Value valueResult,
-                             Value tokenResult, uint32_t descriptor) {
+                             int64_t blocks, Value data, Value dependency,
+                             Value valueResult, Value tokenResult,
+                             uint32_t descriptor) {
     FailureOr<Value> payload = buildBlock2DPayload(
         operation, base, surfaceWidth, surfaceHeight, surfacePitch, x, y,
         blockWidth, blockHeight, blocks);
@@ -2731,15 +2425,16 @@ private:
     }
     int64_t resultDwords = 0;
     if (valueResult) {
-      FailureOr<int64_t> footprint = getFootprint(valueResult.getType(), operation);
+      FailureOr<int64_t> footprint =
+          getFootprint(valueResult.getType(), operation);
       if (failed(footprint))
         return failure();
       resultDwords = *footprint;
     }
-    SendOp send = SendOp::create(
-        *builder, *location, reg(resultDwords), MemTokenType::get(context),
-        SendFn::ugm, 0, descriptor, 0, 1, true, false, *payload, selectedData,
-        Value(), *selectedDependency);
+    SendOp send = SendOp::create(*builder, *location, reg(resultDwords),
+                                 MemTokenType::get(context), SendFn::ugm, 0,
+                                 descriptor, 0, 1, true, false, *payload,
+                                 selectedData, Value(), *selectedDependency);
     if (valueResult)
       values[valueResult] = send.getDst();
     values[tokenResult] = send.getToken();
@@ -2915,13 +2610,13 @@ private:
       Value r0 = architecturalRegister(0);
       Value inlineData = getInlineDataRegister();
       Value accumulator =
-          MulOp::create(
-              *builder, *location, ARFType::get(context, ARFFile::acc, 16, 0),
-              i32(), 1, canonicalDestination(), uniformRegion(),
-              uniformRegion(), IntegerAttr(),
-              builder->getI32IntegerAttr(1 + dim),
-              builder->getI32IntegerAttr(3 + dim), TypeAttr(), TypeAttr(), true,
-              0, r0, inlineData)
+          MulOp::create(*builder, *location,
+                        ARFType::get(context, ARFFile::acc, 16, 0), i32(), 1,
+                        canonicalDestination(), uniformRegion(),
+                        uniformRegion(), IntegerAttr(),
+                        builder->getI32IntegerAttr(1 + dim),
+                        builder->getI32IntegerAttr(3 + dim), TypeAttr(),
+                        TypeAttr(), true, 0, r0, inlineData)
               .getResult();
       Value base =
           emitMove(reg(16), i32(), 1, accumulator, uniformRegion(), true);
@@ -2934,19 +2629,18 @@ private:
                 .getResult();
         if (elementType.isInteger(64)) {
           Value groupLocal =
-              AddOp::create(
-                  *builder, *location, reg(32), i64(), 16,
-                  canonicalDestination(), uniformRegion(),
-                  RegionAttr::get(context, 4, 1, 0), IntegerAttr(),
-                  IntegerAttr(), IntegerAttr(), typeAttr(i32()), typeAttr(i16()),
-                  false, offset, base, spacedLocal)
+              AddOp::create(*builder, *location, reg(32), i64(), 16,
+                            canonicalDestination(), uniformRegion(),
+                            RegionAttr::get(context, 4, 1, 0), IntegerAttr(),
+                            IntegerAttr(), IntegerAttr(), typeAttr(i32()),
+                            typeAttr(i16()), false, offset, base, spacedLocal)
                   .getResult();
-          return AddOp::create(
-                     *builder, *location, reg(32), i64(), 16,
-                     canonicalDestination(), canonicalRegion(),
-                     uniformRegion(), IntegerAttr(), IntegerAttr(),
-                     builder->getI32IntegerAttr(dim), TypeAttr(), typeAttr(i32()),
-                     false, offset, groupLocal, inlineData)
+          return AddOp::create(*builder, *location, reg(32), i64(), 16,
+                               canonicalDestination(), canonicalRegion(),
+                               uniformRegion(), IntegerAttr(), IntegerAttr(),
+                               builder->getI32IntegerAttr(dim), TypeAttr(),
+                               typeAttr(i32()), false, offset, groupLocal,
+                               inlineData)
               .getResult();
         }
         Value groupLocal =
@@ -2956,12 +2650,11 @@ private:
                           IntegerAttr(), IntegerAttr(), TypeAttr(),
                           typeAttr(i16()), false, offset, base, spacedLocal)
                 .getResult();
-        return AddOp::create(
-                   *builder, *location, reg(16), i32(), 16,
-                   canonicalDestination(), canonicalRegion(), uniformRegion(),
-                   IntegerAttr(), IntegerAttr(),
-                   builder->getI32IntegerAttr(dim), TypeAttr(), TypeAttr(),
-                   false, offset, groupLocal, inlineData)
+        return AddOp::create(*builder, *location, reg(16), i32(), 16,
+                             canonicalDestination(), canonicalRegion(),
+                             uniformRegion(), IntegerAttr(), IntegerAttr(),
+                             builder->getI32IntegerAttr(dim), TypeAttr(),
+                             TypeAttr(), false, offset, groupLocal, inlineData)
             .getResult();
       };
       result = lowerHalf(0);
@@ -3020,8 +2713,8 @@ private:
     values[operation->getResult(0)] =
         MovOp::create(*builder, *location, reg(*footprint), shape->elementType,
                       1, canonicalDestination(), uniformRegion(), IntegerAttr(),
-                       builder->getI32IntegerAttr(sourceSub), typeAttr(i32()),
-                       true, 0, source)
+                      builder->getI32IntegerAttr(sourceSub), typeAttr(i32()),
+                      true, 0, source)
             .getResult();
     return success();
   }
@@ -3056,22 +2749,20 @@ private:
           .getResult();
     };
     auto multiply = [&](Value lhs, Value rhs) {
-      Value product =
-          MulOp::create(*builder, *location,
-                        ARFType::get(context, ARFFile::acc, 1, 0), i32(), 1,
-                        canonicalDestination(), uniformRegion(),
-                        uniformRegion(), IntegerAttr(), IntegerAttr(),
-                        IntegerAttr(), TypeAttr(), TypeAttr(), true, 0, lhs,
-                        rhs)
-              .getResult();
+      Value product = MulOp::create(*builder, *location,
+                                    ARFType::get(context, ARFFile::acc, 1, 0),
+                                    i32(), 1, canonicalDestination(),
+                                    uniformRegion(), uniformRegion(),
+                                    IntegerAttr(), IntegerAttr(), IntegerAttr(),
+                                    TypeAttr(), TypeAttr(), true, 0, lhs, rhs)
+                          .getResult();
       return emitMove(reg(1), i32(), 1, product, uniformRegion(), true);
     };
     auto add = [&](Value lhs, Value rhs) {
-      return AddOp::create(*builder, *location, reg(1), i32(), 1,
-                           canonicalDestination(), uniformRegion(),
-                           uniformRegion(), IntegerAttr(), IntegerAttr(),
-                           IntegerAttr(), TypeAttr(), TypeAttr(), true, 0, lhs,
-                           rhs)
+      return AddOp::create(
+                 *builder, *location, reg(1), i32(), 1, canonicalDestination(),
+                 uniformRegion(), uniformRegion(), IntegerAttr(), IntegerAttr(),
+                 IntegerAttr(), TypeAttr(), TypeAttr(), true, 0, lhs, rhs)
           .getResult();
     };
     Value linear = readLocalId(0);
@@ -3314,31 +3005,31 @@ private:
       } else if (xw::Block2DPrefetchOp prefetch =
                      dyn_cast<xw::Block2DPrefetchOp>(operation)) {
         if (failed(lowerBlock2D(
-                 prefetch, prefetch.getBase(), prefetch.getSurfaceWidth(),
-                 prefetch.getSurfaceHeight(), prefetch.getSurfacePitch(),
-                  prefetch.getX(), prefetch.getY(), prefetch.getBlockWidth(),
-                  prefetch.getBlockHeight(), prefetch.getBlocks(), Value(),
-                  prefetch.getDependency(), Value(), prefetch.getToken(),
-                  0x02080203)))
+                prefetch, prefetch.getBase(), prefetch.getSurfaceWidth(),
+                prefetch.getSurfaceHeight(), prefetch.getSurfacePitch(),
+                prefetch.getX(), prefetch.getY(), prefetch.getBlockWidth(),
+                prefetch.getBlockHeight(), prefetch.getBlocks(), Value(),
+                prefetch.getDependency(), Value(), prefetch.getToken(),
+                0x02080203)))
           return failure();
       } else if (xw::Block2DReadOp read =
                      dyn_cast<xw::Block2DReadOp>(operation)) {
         uint32_t descriptor = read.getVnni() ? 0x02800283 : 0x02400203;
-        if (failed(lowerBlock2D(
-                 read, read.getBase(), read.getSurfaceWidth(),
-                 read.getSurfaceHeight(), read.getSurfacePitch(), read.getX(),
-                  read.getY(), read.getBlockWidth(), read.getBlockHeight(),
-                  read.getBlocks(), Value(), read.getDependency(),
-                  read.getValue(), read.getToken(), descriptor)))
+        if (failed(lowerBlock2D(read, read.getBase(), read.getSurfaceWidth(),
+                                read.getSurfaceHeight(), read.getSurfacePitch(),
+                                read.getX(), read.getY(), read.getBlockWidth(),
+                                read.getBlockHeight(), read.getBlocks(),
+                                Value(), read.getDependency(), read.getValue(),
+                                read.getToken(), descriptor)))
           return failure();
       } else if (xw::Block2DWriteOp write =
                      dyn_cast<xw::Block2DWriteOp>(operation)) {
         if (failed(lowerBlock2D(
-                 write, write.getBase(), write.getSurfaceWidth(),
-                 write.getSurfaceHeight(), write.getSurfacePitch(), write.getX(),
-                  write.getY(), write.getBlockWidth(), write.getBlockHeight(),
-                  write.getBlocks(), write.getValue(), write.getDependency(),
-                  Value(), write.getToken(), 0x02000407)))
+                write, write.getBase(), write.getSurfaceWidth(),
+                write.getSurfaceHeight(), write.getSurfacePitch(), write.getX(),
+                write.getY(), write.getBlockWidth(), write.getBlockHeight(),
+                write.getBlocks(), write.getValue(), write.getDependency(),
+                Value(), write.getToken(), 0x02000407)))
           return failure();
       } else if (xw::AtomicRMWOp atomic =
                      dyn_cast<xw::AtomicRMWOp>(operation)) {
@@ -3391,8 +3082,7 @@ private:
       } else if (xw::LaneIdOp lane = dyn_cast<xw::LaneIdOp>(operation)) {
         if (failed(lowerLaneId(lane)))
           return failure();
-      } else if (xw::SubgroupIdOp id =
-                     dyn_cast<xw::SubgroupIdOp>(operation)) {
+      } else if (xw::SubgroupIdOp id = dyn_cast<xw::SubgroupIdOp>(operation)) {
         if (failed(lowerSubgroupId(id)))
           return failure();
       } else if (xw::ShuffleOp shuffle = dyn_cast<xw::ShuffleOp>(operation)) {

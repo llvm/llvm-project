@@ -3,6 +3,7 @@
 #include "mlir/Dialect/CommonFolders.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/PatternMatch.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -442,6 +443,65 @@ OpFoldResult BinaryOp::fold(FoldAdaptor adaptor) {
 }
 
 namespace {
+struct StrengthReducePowerOfTwo final : OpRewritePattern<BinaryOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(BinaryOp operation,
+                                PatternRewriter &rewriter) const override {
+    BinaryKind replacementKind;
+    Value source = operation.getLhs();
+    Value constant = operation.getRhs();
+    switch (operation.getKind()) {
+    case BinaryKind::MulI:
+      replacementKind = BinaryKind::ShLI;
+      if (!constant.getDefiningOp<ConstantOp>()) {
+        std::swap(source, constant);
+        if (!constant.getDefiningOp<ConstantOp>())
+          return failure();
+      }
+      break;
+    case BinaryKind::DivUI:
+      replacementKind = BinaryKind::ShRUI;
+      break;
+    case BinaryKind::RemUI:
+      replacementKind = BinaryKind::AndI;
+      break;
+    default:
+      return failure();
+    }
+
+    ConstantOp constantOp = constant.getDefiningOp<ConstantOp>();
+    if (!constantOp)
+      return failure();
+    IntegerAttr valueAttr = dyn_cast<IntegerAttr>(constantOp.getValue());
+    if (!valueAttr || !valueAttr.getValue().isPowerOf2())
+      return failure();
+
+    APInt replacementValue = replacementKind == BinaryKind::AndI
+                                 ? valueAttr.getValue() - 1
+                                 : APInt(valueAttr.getValue().getBitWidth(),
+                                         valueAttr.getValue().logBase2());
+    Type constantType = getPayloadType(constant.getType());
+    ConstantOp replacementConstant =
+        ConstantOp::create(rewriter, operation.getLoc(), constantType,
+                           IntegerAttr::get(constantType, replacementValue));
+    BinaryOp replacement =
+        BinaryOp::create(rewriter, operation.getLoc(), operation.getType(),
+                         replacementKind, source, replacementConstant);
+    if (replacementKind == BinaryKind::ShLI)
+      replacement.setOverflowFlags(operation.getOverflowFlags());
+    rewriter.replaceOp(operation, replacement);
+    return success();
+  }
+};
+} // namespace
+
+void BinaryOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                           MLIRContext *context) {
+  patterns.add<StrengthReducePowerOfTwo>(context);
+}
+
+namespace {
 enum class NumberKind { Integer, Float };
 
 static NumberKind getNumberKind(Type type) {
@@ -733,8 +793,8 @@ LogicalResult BallotOp::verify() {
 LogicalResult DpasOp::verify() {
   auto verifyPacket = [&](Type type, const Twine &name) -> LogicalResult {
     SimdType simd = dyn_cast<SimdType>(type);
-    VectorType packet = simd ? dyn_cast<VectorType>(simd.getElementType())
-                             : VectorType();
+    VectorType packet =
+        simd ? dyn_cast<VectorType>(simd.getElementType()) : VectorType();
     if (!simd || !packet || packet.getRank() != 1 || packet.isScalable())
       return emitOpError() << name
                            << " must be a SIMD value with a fixed 1-D packet";
@@ -752,8 +812,7 @@ LogicalResult DpasOp::verify() {
     return emitOpError("K must match systolic depth and source precision");
   VectorType resultPacket =
       cast<VectorType>(cast<SimdType>(getResult().getType()).getElementType());
-  if (getRepeatCount() !=
-      static_cast<uint64_t>(resultPacket.getNumElements()))
+  if (getRepeatCount() != static_cast<uint64_t>(resultPacket.getNumElements()))
     return emitOpError("repeat count must match the result packet length");
   if (getSystolicDepth() <= 0 || getRepeatCount() <= 0)
     return emitOpError("systolic depth and repeat count must be positive");

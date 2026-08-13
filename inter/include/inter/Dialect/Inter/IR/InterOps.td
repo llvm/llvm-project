@@ -69,6 +69,7 @@ def XW_BinaryOp : XW_Op<"binary", [Pure, Elementwise]> {
           "::mlir::arith::IntegerOverflowFlags::none">:$overflowFlags);
   let results = (outs AnyType:$result);
   let assemblyFormat = "$kind $lhs `,` $rhs (`overflow` `` $overflowFlags^)? attr-dict `:` type($lhs) `,` type($rhs) `->` type($result)";
+  let hasCanonicalizer = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
 }

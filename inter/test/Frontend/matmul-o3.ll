@@ -2,7 +2,8 @@
 ; RUN: inter-translate %s --import-llvm | inter-opt \
 ; RUN:   --inter-import-llvm --lift-cf-to-scf --inter-verify-structured \
 ; RUN:   --inter-convert-llvm-to-xw --inter-refine-distribution \
-; RUN:   --canonicalize --cse --inter-infer-memory-tokens \
+; RUN:   --canonicalize --inter-expand-arithmetic --canonicalize --cse \
+; RUN:   --inter-infer-memory-tokens \
 ; RUN:   --inter-select-to-machine --verify-each | \
 ; RUN:   FileCheck %s --check-prefix=SELECT
 ; RUN: inter-translate %s --import-llvm | inter-opt --verify-each \

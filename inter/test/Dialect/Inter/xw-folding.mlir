@@ -46,3 +46,33 @@ func.func @freeze() -> (i32, i32) {
   %b = xw.freeze %poison : i32
   return %a, %b : i32, i32
 }
+
+// CHECK-LABEL: func.func @power_of_two
+// CHECK: %[[MASK:.*]] = xw.constant 3 : i64
+// CHECK: %[[SHIFT:.*]] = xw.constant 2 : i64
+// CHECK: %[[DIV:.*]] = xw.binary shrui %arg0, %[[SHIFT]]
+// CHECK: %[[REM:.*]] = xw.binary andi %arg0, %[[MASK]]
+// CHECK: %[[MUL:.*]] = xw.binary shli %arg0, %[[SHIFT]] overflow<nsw>
+// CHECK: return %[[DIV]], %[[REM]], %[[MUL]]
+func.func @power_of_two(%arg0: i64) -> (i64, i64, i64) {
+  %four = xw.constant 4 : i64
+  %div = xw.binary divui %arg0, %four : i64, i64 -> i64
+  %rem = xw.binary remui %arg0, %four : i64, i64 -> i64
+  %mul = xw.binary muli %four, %arg0 overflow<nsw>
+      : i64, i64 -> i64
+  return %div, %rem, %mul : i64, i64, i64
+}
+
+// CHECK-LABEL: func.func @simd_power_of_two
+// CHECK: xw.binary shrui
+// CHECK: xw.binary andi
+func.func @simd_power_of_two(%arg0: !xw.simd<i32, 16>)
+    -> (!xw.simd<i32, 16>, !xw.simd<i32, 16>) attributes {
+      xw.simd_width = 16 : i32} {
+  %four = xw.constant 4 : i32
+  %div = xw.binary divui %arg0, %four
+      : !xw.simd<i32, 16>, i32 -> !xw.simd<i32, 16>
+  %rem = xw.binary remui %arg0, %four
+      : !xw.simd<i32, 16>, i32 -> !xw.simd<i32, 16>
+  return %div, %rem : !xw.simd<i32, 16>, !xw.simd<i32, 16>
+}

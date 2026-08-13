@@ -47,6 +47,11 @@ def RefineDistribution : Pass<"inter-refine-distribution", "::mlir::ModuleOp"> {
                         "kernel SIMD width">];
 }
 
+def ExpandArithmetic : Pass<"inter-expand-arithmetic", "::mlir::ModuleOp"> {
+  let summary = "expand generic XW arithmetic before machine selection";
+  let dependentDialects = ["xw::XWDialect"];
+}
+
 def InferMemoryTokens : Pass<"inter-infer-memory-tokens", "::mlir::ModuleOp"> {
   let summary = "materialize XW memory dependencies from alias analysis";
   let dependentDialects = ["xw::XWDialect", "mlir::func::FuncDialect",

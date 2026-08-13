@@ -25,7 +25,11 @@ module attributes {transform.with_named_sequence} {
         : (!transform.any_op) -> !transform.any_op
     %r4 = transform.apply_registered_pass "inter-refine-distribution" to %r3
         : (!transform.any_op) -> !transform.any_op
-    %r5 = transform.apply_registered_pass "canonicalize" to %r4
+    %r4a = transform.apply_registered_pass "canonicalize" to %r4
+        : (!transform.any_op) -> !transform.any_op
+    %r4b = transform.apply_registered_pass "inter-expand-arithmetic" to %r4a
+        : (!transform.any_op) -> !transform.any_op
+    %r5 = transform.apply_registered_pass "canonicalize" to %r4b
         : (!transform.any_op) -> !transform.any_op
     %r6 = transform.apply_registered_pass "cse" to %r5
         : (!transform.any_op) -> !transform.any_op
