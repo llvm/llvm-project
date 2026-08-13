@@ -18,5 +18,5 @@ void Use_PassSharedStruct(uint Idx) {
 [numthreads(8,8,1)]
 void main(uint3 Tid : SV_DispatchThreadID) {
     uint Idx = Tid.x + Tid.y * 8;
-    Use_PassSharedStruct(Idx);    
+    Use_PassSharedStruct(Idx);
 }

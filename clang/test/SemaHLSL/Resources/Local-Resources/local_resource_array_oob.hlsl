@@ -7,6 +7,6 @@ RWByteAddressBuffer GBufArray[4] : register(u0);
 void main(uint3 Tid : SV_DispatchThreadID) {
 // expected-warning@+1 {{array index 5 is past the end of the array (that has type 'RWByteAddressBuffer[4]')}}
     RWByteAddressBuffer Buf = GBufArray[5];
-    
+
     Buf.Store(Tid.x * 4, 42);
 }
