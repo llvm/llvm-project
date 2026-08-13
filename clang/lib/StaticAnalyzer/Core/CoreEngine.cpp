@@ -325,19 +325,12 @@ void CoreEngine::HandleBlockEdge(const BlockEdge &L, ExplodedNode *Pred) {
 
   // Call into the ExprEngine to process entering the CFGBlock.
   BlockEntrance BE(L.getSrc(), L.getDst(), Pred->getStackFrame());
-  ExplodedNodeSet DstNodes;
-  NodeBuilder Builder(Pred, DstNodes, ExprEng.getBuilderContext());
-  ExprEng.processCFGBlockEntrance(L, BE, Builder, Pred);
-
-  // Auto-generate a node.
-  if (!Builder.hasGeneratedNodes()) {
-    Builder.generateNode(BE, Pred->State, Pred);
-  }
+  ExplodedNode *Processed = ExprEng.processCFGBlockEntrance(BE, Pred);
 
   ExplodedNodeSet CheckerNodes;
-  for (auto *N : DstNodes) {
-    ExprEng.runCheckersForBlockEntrance(BE, N, CheckerNodes);
-  }
+
+  if (Processed)
+    ExprEng.runCheckersForBlockEntrance(BE, Processed, CheckerNodes);
 
   // Enqueue nodes onto the worklist.
   enqueue(CheckerNodes);
@@ -681,7 +674,6 @@ void CoreEngine::enqueueEndOfFunction(ExplodedNodeSet &Set, const ReturnStmt *RS
 ExplodedNode *NodeBuilder::generateNode(const ProgramPoint &Loc,
                                         ProgramStateRef State,
                                         ExplodedNode *FromN, bool MarkAsSink) {
-  HasGeneratedNodes = true;
   Frontier.erase(FromN);
   ExplodedNode *N = C.getEngine().makeNode(Loc, State, FromN, MarkAsSink);
 

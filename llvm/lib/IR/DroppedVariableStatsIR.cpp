@@ -20,12 +20,12 @@
 using namespace llvm;
 
 template <typename IRUnitT>
-const IRUnitT *DroppedVariableStatsIR::unwrapIR(Any IR) {
-  const IRUnitT **IRPtr = llvm::any_cast<const IRUnitT *>(&IR);
+const IRUnitT *DroppedVariableStatsIR::unwrapIR(const Any &IR) {
+  const IRUnitT *const *IRPtr = llvm::any_cast<const IRUnitT *>(&IR);
   return IRPtr ? *IRPtr : nullptr;
 }
 
-void DroppedVariableStatsIR::runBeforePass(StringRef P, Any IR) {
+void DroppedVariableStatsIR::runBeforePass(StringRef P, const Any &IR) {
   setup();
   if (const auto *M = unwrapIR<Module>(IR))
     return this->runOnModule(P, M, true);
@@ -33,7 +33,7 @@ void DroppedVariableStatsIR::runBeforePass(StringRef P, Any IR) {
     return this->runOnFunction(P, F, true);
 }
 
-void DroppedVariableStatsIR::runAfterPass(StringRef P, Any IR) {
+void DroppedVariableStatsIR::runAfterPass(StringRef P, const Any &IR) {
   if (const auto *M = unwrapIR<Module>(IR))
     runAfterPassModule(P, M);
   else if (const auto *F = unwrapIR<Function>(IR))
@@ -92,9 +92,9 @@ void DroppedVariableStatsIR::registerCallbacks(
     return;
 
   PIC.registerBeforeNonSkippedPassCallback(
-      [this](StringRef P, Any IR) { return runBeforePass(P, IR); });
+      [this](StringRef P, const Any &IR) { return runBeforePass(P, IR); });
   PIC.registerAfterPassCallback(
-      [this](StringRef P, Any IR, const PreservedAnalyses &PA) {
+      [this](StringRef P, const Any &IR, const PreservedAnalyses &PA) {
         return runAfterPass(P, IR);
       });
   PIC.registerAfterPassInvalidatedCallback(

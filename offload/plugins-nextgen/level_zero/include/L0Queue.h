@@ -13,9 +13,7 @@
 #ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_ASYNCQUEUE_H
 #define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_ASYNCQUEUE_H
 
-#include "L0Defs.h"
 #include "L0Event.h"
-#include "L0Trace.h"
 #include "PluginInterface.h"
 
 #include <mutex>
@@ -27,6 +25,7 @@
 namespace llvm::omp::target::plugin {
 
 class L0DeviceTy;
+class LevelZeroPluginContextTy;
 struct L0LaunchEnvTy;
 
 /// Abstract queue that supports asynchronous command submission.
@@ -38,16 +37,24 @@ protected:
   L0CmdListManagerTy *CmdList = nullptr;
   /// Whether the queue is in-order or out-of-order.
   bool CreateQueueInOrder;
+  /// Plugin-owned context this queue belongs to (never null on an active
+  /// queue).
+  LevelZeroPluginContextTy *UserCtx = nullptr;
 
 public:
   L0QueueTy(L0DeviceTy &Device, bool IsInorder = true)
       : Device(Device), CreateQueueInOrder(IsInorder) {}
   virtual ~L0QueueTy() {}
 
+  L0DeviceTy &getDevice() const { return Device; }
+
+  LevelZeroPluginContextTy *getUserCtx() const { return UserCtx; }
+  void setUserCtx(LevelZeroPluginContextTy *Ctx) { UserCtx = Ctx; }
+
   /// Clear data.
   void reset() { resetImpl(); }
 
-  Error init();
+  Error init(ze_context_handle_t UserZeCtx);
   Error deinit();
   Error synchronize() { return synchronizeImpl(); }
   Expected<bool> hasPendingWork() { return hasPendingWorkImpl(); }
@@ -273,17 +280,15 @@ public:
 
 /// Simple cache for queue objects.
 class L0QueueCacheTy {
-  L0DeviceTy &Device;
-  llvm::SmallVector<L0QueueTy *> Queues;
+  LevelZeroPluginContextTy &UserCtx;
+  llvm::DenseMap<L0DeviceTy *, llvm::SmallVector<L0QueueTy *>> Queues;
   std::mutex Mtx;
-  CommandModeTy CachedCmdMode = CommandModeTy::InOrder;
 
 public:
-  L0QueueCacheTy(L0DeviceTy &Device) : Device(Device) {}
-  Expected<L0QueueTy *> getQueue();
+  L0QueueCacheTy(LevelZeroPluginContextTy &Ctx) : UserCtx(Ctx) {}
+  Expected<L0QueueTy *> getQueue(L0DeviceTy &Device);
   void releaseQueue(L0QueueTy *Queue);
   Error deinit();
-  void setCommandMode(CommandModeTy CmdMode) { CachedCmdMode = CmdMode; }
 };
 
 } // namespace llvm::omp::target::plugin
