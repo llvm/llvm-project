@@ -296,13 +296,11 @@ bool verifyVersions(const std::optional<std::list<UnionTy>> &modifiers,
   bool result{true};
   for (auto &m : *modifiers) {
     const llvm::omp::descriptor::Modifier &desc{OmpGetDescriptor(m)};
-    const auto &versions{desc.getVersions()};
-    if (llvm::is_contained(versions, std::max(version, 45u))) {
       if (desc.getClauses(version).test(id)) {
         continue;
       }
-    }
     // Find the next higher version that allows this modifier on this clause.
+    const auto &versions{desc.getVersions()};
     unsigned since{~0u};
     for (unsigned v : versions) {
       if (v > version && desc.getClauses(v).test(id)) {

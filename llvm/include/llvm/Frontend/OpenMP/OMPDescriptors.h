@@ -50,14 +50,6 @@ struct Base {
   Properties Props;
 };
 
-// struct Directive : public Base {
-//   StringRef Spelling;
-//   Association Assoc;
-//   Category Cat;
-//   Clauses Cls;
-//   SourceLanguage Langs;
-// };
-
 struct Clause : public Base {
   StringRef Spelling;
   Directives Dirs;
@@ -79,7 +71,7 @@ template <typename DetailsTy> struct Descriptor {
       : Name(N), Details(std::move(D)) {}
 
   StringRef getName() const { return Name; }
-  const DetailsMap<DetailsTy> getDetails() const { return Details; }
+  const DetailsMap<DetailsTy> &getDetails() const { return Details; }
 
   SmallVector<unsigned> getVersions() const {
     SmallVector<unsigned> Vs;
@@ -116,8 +108,8 @@ struct Modifier : public Descriptor<details::Modifier> {
 template <typename Enum, typename DescriptorTy>
 using DescriptorMap = DenseMap<Enum, DescriptorTy>;
 
-const descriptor::Clause &getDescriptor(llvm::omp::Clause C);
-const descriptor::Modifier &getDescriptor(llvm::omp::Modifier M);
+LLVM_ABI const descriptor::Clause &getDescriptor(llvm::omp::Clause C);
+LLVM_ABI const descriptor::Modifier &getDescriptor(llvm::omp::Modifier M);
 
 Properties getProperties(Clause C, unsigned Version);
 } // namespace llvm::omp

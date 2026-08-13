@@ -75,6 +75,6 @@ const descriptor::Modifier &getDescriptor(llvm::omp::Modifier M) {
 }
 
 Properties getProperties(Clause C, unsigned Version) {
-  return getDescriptor(C).getDetails().at(std::max(Version, 45u)).Props;
+  return getDescriptor(C).getProperties(std::max(Version, 45u));
 }
 } // namespace llvm::omp
