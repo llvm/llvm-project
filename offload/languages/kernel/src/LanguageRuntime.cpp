@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/SmallPtrSet.h"
 #ifndef LANGUAGE
 #error This file should be included, or used, with a LANGUAGE macro set.
 #endif
@@ -23,7 +24,6 @@
 #include "Types.h"
 
 #include "OffloadAPI.h"
-#include "llvm/ADT/SmallVector.h"
 
 #include <cassert>
 #include <cstdio>
@@ -89,12 +89,18 @@ Error_t Memcpy(void *Dst, const void *Src, size_t Size, MemcpyKind Kind) {
 }
 
 Error_t DeviceSynchronize() {
-  // TODO: This is not correct. We likely want to pipe this through to the
-  // plugins.
-  StreamTy *DefaultStream = ThreadState::getDefaultStream();
-  ol_result_t Result =
-      DefaultStream ? DefaultStream->syncStream() : olSyncQueue(nullptr);
-  return convertAndSetLastError(Result);
+  ol_device_handle_t Device = ThreadState::getDefaultDevice();
+  if (!Device)
+    return setLastError(ErrorInvalidDevice);
+
+  llvm::SmallPtrSet<StreamTy *, 8> DeviceStreams =
+      RuntimeState::getDeviceStreams(Device);
+  for (StreamTy *Stream : DeviceStreams) {
+    ol_result_t Result = Stream->syncStream();
+    if (Result != OL_SUCCESS)
+      return convertAndSetLastError(Result);
+  }
+  return setLastError(Success);
 }
 
 Error_t GetDevice(int *DeviceNo) {

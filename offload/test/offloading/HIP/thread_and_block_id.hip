@@ -33,6 +33,7 @@ int main(int argc, char **argv) {
   printf("DevPtr %p\n", DevPtr);
   // CHECK: DevPtr [[DevPtr:0x.*]]
   fill<<<NBlocks, NThreads>>>(DevPtr);
+  hipDeviceSynchronize();
   hipMemcpy(Ptr, DevPtr, Size, hipMemcpyDeviceToHost);
 
   for (int I = 0; I < NBlocks * NThreads; ++I) {
