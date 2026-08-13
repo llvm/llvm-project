@@ -23,7 +23,6 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/MC/MCSchedule.h"
 #include <optional>
 #include <utility>
 
@@ -682,14 +681,11 @@ public:
 
   virtual unsigned getCacheLineSize() const { return 0; }
 
+  // Defined out of line in TargetTransformInfo.cpp so this widely-included
+  // header does not need to pull in llvm/MC/MCSchedule.h just to reference the
+  // default store-to-load forwarding penalty.
   virtual InstructionCost getStoreLoadForwardingConflictCost(
-      Type *VecTy, TargetTransformInfo::TargetCostKind CostKind) const {
-    // No subtarget scheduling model is available here, so fall back to the same
-    // default store-to-load forwarding penalty the scheduling model uses.
-    // Targets with a real scheduling model go through BasicTTIImpl and use
-    // their own StoreLoadForwardingPenalty instead.
-    return InstructionCost(MCSchedModel::DefaultStoreLoadForwardingPenalty);
-  }
+      Type *VecTy, TargetTransformInfo::TargetCostKind CostKind) const;
   virtual std::optional<unsigned>
   getCacheSize(TargetTransformInfo::CacheLevel Level) const {
     switch (Level) {

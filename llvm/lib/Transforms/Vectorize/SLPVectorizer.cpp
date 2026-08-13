@@ -28323,7 +28323,8 @@ bool BoUpSLP::findStoreLoadForwardingConflict(StoreInst *BaseStore,
     return CacheAndReturn(false);
 
   // Store-to-load forwarding hazards are a loop-carried concern.
-  if (!LI->getLoopFor(FirstStore->getParent()))
+  const Loop *StoreL = LI->getLoopFor(FirstStore->getParent());
+  if (!StoreL)
     return CacheAndReturn(false);
 
   uint64_t VectorStoreBytes = VF * ElementSize;
@@ -28338,7 +28339,7 @@ bool BoUpSLP::findStoreLoadForwardingConflict(StoreInst *BaseStore,
   SmallPtrSet<LoadInst *, 8> CandidateLoads;
   for (const std::unique_ptr<TreeEntry> &TEPtr : VectorizableTree) {
     const TreeEntry *TE = TEPtr.get();
-    if (DeletedNodes.contains(TE))
+    if (DeletedNodes.contains(TE) || TransformedToGatherNodes.contains(TE))
       continue;
     if (!TE->isGather() &&
         !(TE->hasState() && TE->getOpcode() == Instruction::Load))
@@ -28356,6 +28357,9 @@ bool BoUpSLP::findStoreLoadForwardingConflict(StoreInst *BaseStore,
   // For each candidate load, the widened chain becomes one wide store at the
   // base; check whether the load straddles two such wide stores.
   for (LoadInst *LoadI : CandidateLoads) {
+    // Only loads in the store's loop share its loop-carried dependence.
+    if (LI->getLoopFor(LoadI->getParent()) != StoreL)
+      continue;
     std::optional<int64_t> Diff =
         getPointersDiff(ValueTy, FirstStore->getPointerOperand(),
                         LoadI->getType(), LoadI->getPointerOperand(), *DL, *SE,
@@ -28367,12 +28371,26 @@ bool BoUpSLP::findStoreLoadForwardingConflict(StoreInst *BaseStore,
     LLVM_DEBUG(dbgs() << "SLP: STLF: load=" << *LoadI << " distance="
                       << Distance << " bytes from chain base\n");
 
-    // Conflict if the load overlaps two wide stores within the recency window,
-    // either because it is misaligned or because the load itself is wider than
-    // the wide store and overruns its window.
+    // A widened (regularly vectorized) load accesses the whole vector at once,
+    // so its effective width is VectorFactor * element size, not one element.
+    // Such a wide load can straddle two wide stores even when perfectly
+    // aligned, which the misalignment-only test would miss.
     TypeSize LoadTypeSize = DL->getTypeStoreSize(LoadI->getType());
     uint64_t LoadElementSize =
         LoadTypeSize.isScalable() ? 0 : LoadTypeSize.getFixedValue();
+    for (const TreeEntry *LTE : getTreeEntries(LoadI)) {
+      if (LTE->isGather() || DeletedNodes.contains(LTE) ||
+          TransformedToGatherNodes.contains(LTE))
+        continue;
+      if (LTE->hasState() && LTE->State == TreeEntry::Vectorize &&
+          LTE->getOpcode() == Instruction::Load) {
+        LoadElementSize *= LTE->getVectorFactor();
+        break;
+      }
+    }
+    // Conflict if the load overlaps two wide stores within the recency window,
+    // either because it is misaligned or because the load itself is wider than
+    // the wide store and overruns its window.
     if (MemoryDepChecker::isStoreLoadForwardingConflict(
             Distance, VectorStoreBytes, ElementSize, LoadElementSize)) {
       LLVM_DEBUG(dbgs() << "SLP: Store-load forwarding conflict: "
