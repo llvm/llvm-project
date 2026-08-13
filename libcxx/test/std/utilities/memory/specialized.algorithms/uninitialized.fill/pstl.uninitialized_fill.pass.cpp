@@ -44,7 +44,7 @@ struct CountedInit {
 // Each Counted object has a dedicated external atomic counter
 struct Counted {
   std::atomic_int* counter_;
-  Counted(CountedInit init) : counter_(init.counters_ + (this - init.first_)) { counter_->fetch_add(1); }
+  explicit Counted(CountedInit init) : counter_(init.counters_ + (this - init.first_)) { counter_->fetch_add(1); }
   Counted(Counted const& other) : counter_(other.counter_) { counter_->fetch_add(1); }
   ~Counted() { counter_->fetch_sub(1); }
   friend void operator&(Counted) = delete;
