@@ -1815,7 +1815,7 @@ def LLVM_MDGlobalValueAttr : LLVM_Attr<"MDGlobalValue", "md_global_value"> {
 }
 
 def LLVM_MDNullAttr : LLVM_Attr<"MDNull", "md_null"> {
-  let summary = "LLVM null-pointer-as-metadata";
+  let summary = "LLVM null pointer as metadata";
   let description = [{
     Wraps a null pointer constant as an LLVM metadata node, corresponding to
     `llvm::ConstantAsMetadata` wrapping a `llvm::ConstantPointerNull` in LLVM
