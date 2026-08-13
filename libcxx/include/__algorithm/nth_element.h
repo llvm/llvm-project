@@ -38,12 +38,13 @@ template <class _AlgPolicy,
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
 __nth_element_median5(_RandomAccessIterator __first, _Compare __comp) {
   using _Ops = _IterOps<_AlgPolicy>;
+  typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
 
   _RandomAccessIterator __x1 = __first;
-  _RandomAccessIterator __x2 = __first + 1;
-  _RandomAccessIterator __x3 = __first + 2;
-  _RandomAccessIterator __x4 = __first + 3;
-  _RandomAccessIterator __x5 = __first + 4;
+  _RandomAccessIterator __x2 = __first + difference_type(1);
+  _RandomAccessIterator __x3 = __first + difference_type(2);
+  _RandomAccessIterator __x4 = __first + difference_type(3);
+  _RandomAccessIterator __x5 = __first + difference_type(4);
 
   // Sort pairs (__x1, __x2) and (__x3, __x4).
   if (__comp(*__x2, *__x1))
@@ -82,11 +83,13 @@ template <class,
           __enable_if_t<__use_branchless_sort<_Compare, _RandomAccessIterator>, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
 __nth_element_median5(_RandomAccessIterator __first, _Compare __comp) {
+  typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
+
   _RandomAccessIterator __x1 = __first;
-  _RandomAccessIterator __x2 = __first + 1;
-  _RandomAccessIterator __x3 = __first + 2;
-  _RandomAccessIterator __x4 = __first + 3;
-  _RandomAccessIterator __x5 = __first + 4;
+  _RandomAccessIterator __x2 = __first + difference_type(1);
+  _RandomAccessIterator __x3 = __first + difference_type(2);
+  _RandomAccessIterator __x4 = __first + difference_type(3);
+  _RandomAccessIterator __x5 = __first + difference_type(4);
 
   std::__cond_swap<_Compare>(__x1, __x2, __comp);
   std::__cond_swap<_Compare>(__x3, __x4, __comp);
@@ -106,18 +109,19 @@ template <class _AlgPolicy,
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
 __nth_element4(_RandomAccessIterator __first, _RandomAccessIterator __nth, _Compare __comp) {
   using _Ops = _IterOps<_AlgPolicy>;
+  typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
 
   _RandomAccessIterator __x1 = __first;
-  _RandomAccessIterator __x2 = __first + 1;
-  _RandomAccessIterator __x3 = __first + 2;
-  _RandomAccessIterator __x4 = __first + 3;
+  _RandomAccessIterator __x2 = __first + difference_type(1);
+  _RandomAccessIterator __x3 = __first + difference_type(2);
+  _RandomAccessIterator __x4 = __first + difference_type(3);
 
   if (__comp(*__x2, *__x1))
     _Ops::iter_swap(__x1, __x2);
   if (__comp(*__x4, *__x3))
     _Ops::iter_swap(__x3, __x4);
 
-  const typename iterator_traits<_RandomAccessIterator>::difference_type __k = __nth - __first;
+  const difference_type __k = __nth - __first;
   if (__k == 0) {
     if (__comp(*__x3, *__x1))
       _Ops::iter_swap(__x1, __x3);
@@ -153,7 +157,9 @@ template <class _AlgPolicy,
           __enable_if_t<__use_branchless_sort<_Compare, _RandomAccessIterator>, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
 __nth_element4(_RandomAccessIterator __first, _RandomAccessIterator, _Compare __comp) {
-  std::__sort4<_AlgPolicy, _Compare>(__first, __first + 1, __first + 2, __first + 3, __comp);
+  typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
+  std::__sort4<_AlgPolicy, _Compare>(
+      __first, __first + difference_type(1), __first + difference_type(2), __first + difference_type(3), __comp);
 }
 
 // nth_element on 3 elements. Min or max takes 2 comparisons; the middle element is a
@@ -165,12 +171,13 @@ template <class _AlgPolicy,
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
 __nth_element3(_RandomAccessIterator __first, _RandomAccessIterator __nth, _Compare __comp) {
   using _Ops = _IterOps<_AlgPolicy>;
+  typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
 
   _RandomAccessIterator __x1 = __first;
-  _RandomAccessIterator __x2 = __first + 1;
-  _RandomAccessIterator __x3 = __first + 2;
+  _RandomAccessIterator __x2 = __first + difference_type(1);
+  _RandomAccessIterator __x3 = __first + difference_type(2);
 
-  const typename iterator_traits<_RandomAccessIterator>::difference_type __k = __nth - __first;
+  const difference_type __k = __nth - __first;
   if (__k == 0) {
     if (__comp(*__x2, *__x1))
       _Ops::iter_swap(__x1, __x2);
@@ -194,7 +201,8 @@ template <class _AlgPolicy,
           __enable_if_t<__use_branchless_sort<_Compare, _RandomAccessIterator>, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
 __nth_element3(_RandomAccessIterator __first, _RandomAccessIterator, _Compare __comp) {
-  std::__sort3<_AlgPolicy, _Compare>(__first, __first + 1, __first + 2, __comp);
+  typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
+  std::__sort3<_AlgPolicy, _Compare>(__first, __first + difference_type(1), __first + difference_type(2), __comp);
 }
 
 // Handles ranges of at most 5 elements. Returns false if the range was too large to be handled.
