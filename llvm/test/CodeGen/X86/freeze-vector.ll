@@ -909,7 +909,7 @@ define <2 x i64> @freeze_vselect_knownbits(<8 x i32> %csrc, <4 x i32> %a, <4 x i
 ; X86-NEXT:    vblendvps %ymm0, {{\.?LCPI[0-9]+_[0-9]+}}, %ymm1, %ymm0
 ; X86-NEXT:    vmovaps %ymm0, (%eax)
 ; X86-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; X86-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0 # [16,0,16,0]
+; X86-NEXT:    vorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
 ;
@@ -927,7 +927,7 @@ define <2 x i64> @freeze_vselect_knownbits(<8 x i32> %csrc, <4 x i32> %a, <4 x i
 ; X64-NEXT:    vblendvps %ymm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm0
 ; X64-NEXT:    vmovaps %ymm0, (%rdi)
 ; X64-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; X64-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [16,16]
+; X64-NEXT:    vorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
   %poisonable.src = add nsw <8 x i32> %csrc, splat (i32 1)
