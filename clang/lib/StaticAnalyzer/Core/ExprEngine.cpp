@@ -1162,6 +1162,8 @@ static bool justRunCheckersAsPreVisit(const Stmt *S) {
   case Stmt::ArrayInitLoopExprClass:
   case Stmt::ArraySubscriptExprClass:
   case Stmt::AttributedStmtClass:
+  case Stmt::CXXDefaultArgExprClass:
+  case Stmt::CXXDefaultInitExprClass:
   case Stmt::AtomicExprClass:
   case Stmt::ImplicitCastExprClass:
   case Stmt::CStyleCastExprClass:
@@ -1248,6 +1250,8 @@ static bool justRunCheckersAsPostVisit(const Stmt *S) {
   case Stmt::ArrayInitLoopExprClass:
   case Stmt::ArraySubscriptExprClass:
   case Stmt::AttributedStmtClass:
+  case Stmt::CXXDefaultArgExprClass:
+  case Stmt::CXXDefaultInitExprClass:
   case Stmt::AtomicExprClass:
   case Stmt::BlockExprClass:
   case Stmt::ImplicitCastExprClass:
@@ -2125,9 +2129,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::SYCLUniqueStableNameExprClass:
     case Stmt::OpenACCAsteriskSizeExprClass:
     case Stmt::TypeTraitExprClass: {
-      ExplodedNodeSet preVisit;
-      getCheckerManager().runCheckersForPreStmt(preVisit, Pred, S, *this);
-      getCheckerManager().runCheckersForPostStmt(Dst, preVisit, S, *this);
+      Dst.insert(Pred);
       break;
     }
 
@@ -2137,10 +2139,6 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
 
     case Stmt::CXXDefaultArgExprClass:
     case Stmt::CXXDefaultInitExprClass: {
-      ExplodedNodeSet PreVisit;
-      getCheckerManager().runCheckersForPreStmt(PreVisit, Pred, S, *this);
-
-      ExplodedNodeSet Tmp;
 
       const Expr *ArgE;
       if (const auto *DefE = dyn_cast<CXXDefaultArgExpr>(S))
@@ -2161,16 +2159,13 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
         ConstantVal = UnknownVal();
 
       const StackFrame *SF = Pred->getStackFrame();
-      for (const auto I : PreVisit) {
-        ProgramStateRef State = I->getState();
-        State = State->BindExpr(cast<Expr>(S), SF, *ConstantVal);
-        if (IsTemporary)
-          State = createTemporaryRegionIfNeeded(State, SF, cast<Expr>(S),
-                                                cast<Expr>(S));
-        Tmp.insert(Engine.makePostStmtNode(S, State, I));
-      }
+      ProgramStateRef State = Pred->getState();
+      State = State->BindExpr(cast<Expr>(S), SF, *ConstantVal);
+      if (IsTemporary)
+        State = createTemporaryRegionIfNeeded(State, SF, cast<Expr>(S),
+                                              cast<Expr>(S));
+      Dst.insert(Engine.makePostStmtNode(S, State, Pred));
 
-      getCheckerManager().runCheckersForPostStmt(Dst, Tmp, S, *this);
       break;
     }
 
