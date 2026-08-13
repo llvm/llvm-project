@@ -4891,6 +4891,8 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
                    options::OPT_fno_dynamic_debugging, false)) {
     // As this is an experimental feature we can afford to be strict about
     // supported configurations.
+    // NOTE on adding target support, consider adding "tail-pad-to-size"
+    // support in `llvm::prepareForDynamicDebugging`.
     if (!TC.getTriple().isX86())
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << Args.getLastArg(options::OPT_fdynamic_debugging)->getAsString(Args)
