@@ -83,8 +83,6 @@ else:
         linker_supports_start_group = get_required_attr(
             config, "linker_supports_start_group"
         )
-        # Check if the linker supports --start-group and --end-group
-        # For nvptx64 target, it falls back to the default.
         if "spirv" in config.target_arch:
             builtins_bitcode_library = os.path.join(
                 config.compiler_rt_libdir,
@@ -105,6 +103,8 @@ else:
                     + " "
                 )
             config.substitutions.append(("%librt ", librt_flags))
+        # Check if the linker supports --start-group and --end-group
+        # For nvptx64 target, it falls back to the default.
         elif linker_supports_start_group and "nvptx" not in config.target_arch:
             config.substitutions.append(
                 (
