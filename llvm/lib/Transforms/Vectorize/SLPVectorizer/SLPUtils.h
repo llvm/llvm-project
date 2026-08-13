@@ -24,6 +24,7 @@
 
 #include <optional>
 #include <string>
+#include <utility>
 
 namespace llvm {
 class Constant;
@@ -335,6 +336,16 @@ bool isOnceUsedSeed(const Instruction *I);
 /// removed: both casts must allow contraction and the widening cast cannot
 /// produce nan/inf.
 Instruction *lookThroughCastRoundTrip(Value *V, bool MustBeElidable);
+
+/// Recursively collects the narrow leaves of the widened reduction value
+/// \p V with the accumulated shift amount \p Shift. zext is looked through
+/// directly, same-kind binops per operand, shl - only if no bits are
+/// shifted out in the current type. Also collects the looked-through
+/// instructions into \p ChainInsts.
+void collectNarrowedLeaves(
+    Value *V, unsigned RdxOpcode, unsigned WideBW, unsigned MaxDepth,
+    SmallVectorImpl<std::pair<Value *, unsigned>> &Leaves,
+    SmallVectorImpl<Value *> &ChainInsts);
 
 } // namespace llvm::slpvectorizer
 

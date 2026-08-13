@@ -8,6 +8,7 @@
 
 #include "SLPUtils.h"
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -768,6 +769,59 @@ Instruction *lookThroughCastRoundTrip(Value *V, bool MustBeElidable) {
                           Wide->hasNoInfs() && Narrow->hasAllowContract()))
     return nullptr;
   return Narrow;
+}
+
+static void
+collectNarrowedLeavesImpl(Value *V, unsigned RdxOpcode, unsigned WideBW,
+                          unsigned Shift, unsigned Depth, unsigned MaxDepth,
+                          SmallVectorImpl<std::pair<Value *, unsigned>> &Leaves,
+                          SmallVectorImpl<Value *> &ChainInsts) {
+  if (Depth >= MaxDepth) {
+    Leaves.emplace_back(V, Shift);
+    return;
+  }
+  if (auto *Z = dyn_cast<ZExtInst>(V);
+      Z && Z->getSrcTy()->isIntegerTy() && !Z->getSrcTy()->isIntegerTy(1)) {
+    ChainInsts.push_back(Z);
+    return collectNarrowedLeavesImpl(Z->getOperand(0), RdxOpcode, WideBW, Shift,
+                                     Depth + 1, MaxDepth, Leaves, ChainInsts);
+  }
+  auto *BO = dyn_cast<BinaryOperator>(V);
+  if (!BO) {
+    Leaves.emplace_back(V, Shift);
+    return;
+  }
+  if (BO->getOpcode() == RdxOpcode) {
+    ChainInsts.push_back(BO);
+    collectNarrowedLeavesImpl(BO->getOperand(0), RdxOpcode, WideBW, Shift,
+                              Depth + 1, MaxDepth, Leaves, ChainInsts);
+    collectNarrowedLeavesImpl(BO->getOperand(1), RdxOpcode, WideBW, Shift,
+                              Depth + 1, MaxDepth, Leaves, ChainInsts);
+    return;
+  }
+  const APInt *Amt;
+  unsigned BW = V->getType()->getScalarSizeInBits();
+  auto *Z = dyn_cast<ZExtInst>(BO->getOperand(0));
+  if (BO->getOpcode() == Instruction::Shl && Z &&
+      match(BO->getOperand(1), m_APInt(Amt)) && Amt->ult(BW) &&
+      Z->getSrcTy()->isIntegerTy() && !Z->getSrcTy()->isIntegerTy(1) &&
+      (BW == WideBW ||
+       Z->getSrcTy()->getIntegerBitWidth() + Amt->getZExtValue() <= BW)) {
+    ChainInsts.push_back(BO);
+    ChainInsts.push_back(Z);
+    return collectNarrowedLeavesImpl(Z->getOperand(0), RdxOpcode, WideBW,
+                                     Shift + Amt->getZExtValue(), Depth + 1,
+                                     MaxDepth, Leaves, ChainInsts);
+  }
+  Leaves.emplace_back(V, Shift);
+}
+
+void collectNarrowedLeaves(
+    Value *V, unsigned RdxOpcode, unsigned WideBW, unsigned MaxDepth,
+    SmallVectorImpl<std::pair<Value *, unsigned>> &Leaves,
+    SmallVectorImpl<Value *> &ChainInsts) {
+  collectNarrowedLeavesImpl(V, RdxOpcode, WideBW, /*Shift=*/0, /*Depth=*/0,
+                            MaxDepth, Leaves, ChainInsts);
 }
 
 } // namespace llvm::slpvectorizer
