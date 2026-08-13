@@ -19100,7 +19100,7 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
       }
 
       if (Func->isDefaulted() && !Func->isDeleted()) {
-        DefaultedComparisonKind DCK = getDefaultedComparisonKind(Func);
+        DefaultedComparisonKind DCK = Func->getDefaultedComparisonKind();
         if (DCK != DefaultedComparisonKind::None)
           DefineDefaultedComparison(Loc, Func, DCK);
       }
