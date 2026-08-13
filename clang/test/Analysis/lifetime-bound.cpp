@@ -434,7 +434,6 @@ int test_multi_param_highlight() {
   // CHECK: note: Value's lifetime bound to the lifetime of 'local_two' here
   // CHECK: return multi_params_annotated(&local_one, &local_two);
   // CHECK-NEXT:{{\|                                             \^~~~~~~~~~$}}
-<<<<<<< HEAD
 }
 
 int global_var;
@@ -450,8 +449,6 @@ int test_correct_param_highlight() {
   // CHECK: note: Value's lifetime bound to the lifetime of 'local_n' here
   // CHECK: return multi_params_annotated(&global_var, &local_n);
   // CHECK-NEXT:{{\|                                              \^~~~~~~~$}}
-=======
->>>>>>> 99586f75316d (Strict whitespace matching applied.)
 }
 
 int test_multi_local_bound_to_param_highlight() {
