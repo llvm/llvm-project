@@ -24,7 +24,7 @@ using LlvmLibcTruncateTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST_F(LlvmLibcTruncateTest, CreateAndTruncate) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
-  constexpr const char *FILENAME = APPEND_LIBC_TEST("truncate.test");
+  constexpr const char *FILENAME = "truncate.test";
   auto TEST_FILE = libc_make_test_file_path(FILENAME);
   constexpr const char WRITE_DATA[] = "hello, truncate";
   constexpr size_t WRITE_SIZE = sizeof(WRITE_DATA);
