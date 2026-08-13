@@ -434,10 +434,30 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
     }
   }
 
-  // Any return value split in to more than two values can't be returned
-  // directly. Vectors are returned via the available vector registers.
+  RISCVABI::ABI ABI = Subtarget.getTargetABI();
+  bool IsEABI = ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E;
+
+  // A swiftself (Swift context) argument is passed in x20 (s4), a register
+  // that is otherwise callee-saved so that the callee preserves it across
+  // ordinary calls, mirroring AArch64's use of x20. The E ABIs do not treat
+  // x20 as callee-saved, and the Swift calling convention is rejected there.
+  if (!IsRet && ArgFlags.isSwiftSelf() && LocVT == XLenVT && !IsEABI) {
+    if (MCRegister Reg = State.AllocateReg(RISCV::X20)) {
+      State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+      return false;
+    }
+  }
+
+  // Swift returns values directly in up to four registers (a0-a3/fa0-fa3);
+  // other conventions return in at most two. This must cover everything
+  // clang's SwiftABIInfo::shouldPassIndirectly (limit: four registers)
+  // classifies as a direct return. Any return value split in to more values
+  // than this can't be returned directly. Vectors are returned via the
+  // available vector registers.
+  unsigned MaxDirectRetVals =
+      State.getCallingConv() == CallingConv::Swift && !IsEABI ? 4 : 2;
   if ((!LocVT.isVector() || Subtarget.isPExtPackedType(LocVT)) && IsRet &&
-      ValNo > 1)
+      ValNo >= MaxDirectRetVals)
     return true;
 
   // Double wide packed types require 2 GPRs so we can only return 1 of them.
@@ -450,7 +470,6 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
   // UseFPRForF64 if targeting an FLEN>=64 ABI and the argument isn't variadic.
   bool AllowFPRForF64 = false;
 
-  RISCVABI::ABI ABI = Subtarget.getTargetABI();
   switch (ABI) {
   default:
     llvm_unreachable("Unexpected ABI");
