@@ -20,6 +20,7 @@ void __throw_bad_alloc_shim();
 
 #ifndef _LIBCPP_ASSERT_SHIM
 #  error _LIBCPP_ASSERT_SHIM should be defined
+#  define _LIBCPP_ASSERT_SHIM // make the header parseable
 #endif
 
 static void* operator_new_impl(std::size_t size) {
