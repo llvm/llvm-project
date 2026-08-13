@@ -63544,6 +63544,10 @@ bool X86TargetLowering::isTypeDesirableForOp(unsigned Opc, EVT VT) const {
   if (!isTypeLegal(VT))
     return false;
 
+  // Legacy AVX/AVX2 masked stores are slow on pre-AVX-512 Zen CPUs.
+  if (Opc == ISD::MSTORE && Subtarget.isVecMaskStoreSlow())
+    return false;
+
   // There are no vXi8 shifts.
   if (Opc == ISD::SHL && VT.isVectorOf(MVT::i8))
     return false;
