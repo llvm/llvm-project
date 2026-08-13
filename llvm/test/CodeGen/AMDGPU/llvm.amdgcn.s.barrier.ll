@@ -76,22 +76,21 @@ define amdgpu_kernel void @test_barrier(ptr addrspace(1) %out, i32 %size) #0 {
 ; VARIANT2-GISEL:       ; %bb.0: ; %entry
 ; VARIANT2-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; VARIANT2-GISEL-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; VARIANT2-GISEL-NEXT:    v_lshlrev_b32_e32 v4, 2, v0
+; VARIANT2-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; VARIANT2-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; VARIANT2-GISEL-NEXT:    global_store_dword v4, v0, s[0:1]
+; VARIANT2-GISEL-NEXT:    global_store_dword v2, v0, s[0:1]
 ; VARIANT2-GISEL-NEXT:    s_add_i32 s2, s2, -1
 ; VARIANT2-GISEL-NEXT:    v_sub_u32_e32 v0, s2, v0
 ; VARIANT2-GISEL-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; VARIANT2-GISEL-NEXT:    v_lshlrev_b64 v[0:1], 2, v[0:1]
-; VARIANT2-GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; VARIANT2-GISEL-NEXT:    v_mov_b32_e32 v3, s1
-; VARIANT2-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
+; VARIANT2-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s0, v0
 ; VARIANT2-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, v3, v1, vcc
 ; VARIANT2-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; VARIANT2-GISEL-NEXT:    s_barrier
 ; VARIANT2-GISEL-NEXT:    global_load_dword v0, v[0:1], off
 ; VARIANT2-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; VARIANT2-GISEL-NEXT:    global_store_dword v4, v0, s[0:1]
+; VARIANT2-GISEL-NEXT:    global_store_dword v2, v0, s[0:1]
 ; VARIANT2-GISEL-NEXT:    s_endpgm
 ;
 ; VARIANT3-LABEL: test_barrier:

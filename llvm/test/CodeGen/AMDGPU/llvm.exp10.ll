@@ -406,8 +406,8 @@ define amdgpu_kernel void @s_exp10_v2f32(ptr addrspace(1) %out, <2 x float> %in)
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v1, 0x3a2784bc
 ; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-GISEL-NEXT:    s_and_b32 s4, s2, 0xfffff000
-; VI-GISEL-NEXT:    v_mov_b32_e32 v2, s4
-; VI-GISEL-NEXT:    v_sub_f32_e32 v2, s2, v2
+; VI-GISEL-NEXT:    v_mov_b32_e32 v2, s2
+; VI-GISEL-NEXT:    v_subrev_f32_e32 v2, s4, v2
 ; VI-GISEL-NEXT:    v_mul_f32_e32 v4, 0x3a2784bc, v2
 ; VI-GISEL-NEXT:    v_mul_f32_e32 v2, 0x40549000, v2
 ; VI-GISEL-NEXT:    v_mul_f32_e32 v3, s4, v0

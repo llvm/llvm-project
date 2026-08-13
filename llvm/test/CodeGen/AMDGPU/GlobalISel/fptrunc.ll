@@ -489,9 +489,7 @@ define amdgpu_ps <2 x half> @fptrunc_v2f32_to_v2f16_uniform(<2 x float> inreg %a
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_cvt_pk_f16_f32 v0, v0, v1
+; GFX1250-NEXT:    v_cvt_pk_f16_f32 v0, s0, s1
 ; GFX1250-NEXT:    ; return to shader part epilog
   %result = fptrunc <2 x float> %a to <2 x half>
   ret <2 x half> %result

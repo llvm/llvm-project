@@ -770,17 +770,16 @@ define amdgpu_kernel void @load_v4i8_to_v4f32_2_uses(ptr addrspace(1) noalias %o
 ; VI-LABEL: load_v4i8_to_v4f32_2_uses:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x34
-; VI-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
+; VI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; VI-NEXT:    v_mov_b32_e32 v2, 0xff
 ; VI-NEXT:    v_mov_b32_e32 v6, 9
 ; VI-NEXT:    v_mov_b32_e32 v7, 8
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
-; VI-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
+; VI-NEXT:    v_add_u32_e32 v0, vcc, s0, v0
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    flat_load_dword v1, v[0:1]
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; VI-NEXT:    v_mov_b32_e32 v2, 0xff
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v5, s1
 ; VI-NEXT:    v_mov_b32_e32 v4, s0

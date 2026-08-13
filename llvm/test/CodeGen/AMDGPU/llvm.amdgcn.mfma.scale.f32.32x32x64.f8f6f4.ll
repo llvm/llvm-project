@@ -7888,29 +7888,13 @@ define amdgpu_kernel void @test_mfma_scale_f32_32x32x64_f8f6f4_0_0__nonmac(<8 x 
 ; AGPR-GISEL-NEXT:    global_store_dwordx4 v[22:23], v[12:15], off sc0 sc1
 ; AGPR-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; AGPR-GISEL-NEXT:    s_nop 2
-; AGPR-GISEL-NEXT:    v_accvgpr_read_b32 v0, a0
-; AGPR-GISEL-NEXT:    v_accvgpr_read_b32 v1, a1
-; AGPR-GISEL-NEXT:    v_accvgpr_read_b32 v2, a2
-; AGPR-GISEL-NEXT:    v_accvgpr_read_b32 v3, a3
-; AGPR-GISEL-NEXT:    v_accvgpr_read_b32 v4, a4
-; AGPR-GISEL-NEXT:    v_accvgpr_read_b32 v5, a5
-; AGPR-GISEL-NEXT:    v_accvgpr_read_b32 v6, a6
-; AGPR-GISEL-NEXT:    v_accvgpr_read_b32 v7, a7
-; AGPR-GISEL-NEXT:    v_accvgpr_read_b32 v8, a8
-; AGPR-GISEL-NEXT:    v_accvgpr_read_b32 v9, a9
-; AGPR-GISEL-NEXT:    v_accvgpr_read_b32 v10, a10
-; AGPR-GISEL-NEXT:    v_accvgpr_read_b32 v11, a11
-; AGPR-GISEL-NEXT:    v_accvgpr_read_b32 v12, a12
-; AGPR-GISEL-NEXT:    v_accvgpr_read_b32 v13, a13
-; AGPR-GISEL-NEXT:    v_accvgpr_read_b32 v14, a14
-; AGPR-GISEL-NEXT:    v_accvgpr_read_b32 v15, a15
-; AGPR-GISEL-NEXT:    global_store_dwordx4 v[16:17], v[0:3], off sc0 sc1
+; AGPR-GISEL-NEXT:    global_store_dwordx4 v[16:17], a[0:3], off sc0 sc1
 ; AGPR-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; AGPR-GISEL-NEXT:    global_store_dwordx4 v[18:19], v[4:7], off sc0 sc1
+; AGPR-GISEL-NEXT:    global_store_dwordx4 v[18:19], a[4:7], off sc0 sc1
 ; AGPR-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; AGPR-GISEL-NEXT:    global_store_dwordx4 v[20:21], v[8:11], off sc0 sc1
+; AGPR-GISEL-NEXT:    global_store_dwordx4 v[20:21], a[8:11], off sc0 sc1
 ; AGPR-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; AGPR-GISEL-NEXT:    global_store_dwordx4 v[22:23], v[12:15], off sc0 sc1
+; AGPR-GISEL-NEXT:    global_store_dwordx4 v[22:23], a[12:15], off sc0 sc1
 ; AGPR-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; AGPR-GISEL-NEXT:    s_endpgm
   %result = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v8i32.v8i32(<8 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 0, i32 0, i32 0, i32 %scale0, i32 0, i32 %scale1)
@@ -8180,29 +8164,13 @@ define amdgpu_kernel void @test_mfma_scale_f32_32x32x64_f8f6f4_25_42__nonmac(<8 
 ; AGPR-GISEL-NEXT:    global_store_dwordx4 v[22:23], v[12:15], off sc0 sc1
 ; AGPR-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; AGPR-GISEL-NEXT:    s_nop 2
-; AGPR-GISEL-NEXT:    v_accvgpr_read_b32 v0, a0
-; AGPR-GISEL-NEXT:    v_accvgpr_read_b32 v1, a1
-; AGPR-GISEL-NEXT:    v_accvgpr_read_b32 v2, a2
-; AGPR-GISEL-NEXT:    v_accvgpr_read_b32 v3, a3
-; AGPR-GISEL-NEXT:    v_accvgpr_read_b32 v4, a4
-; AGPR-GISEL-NEXT:    v_accvgpr_read_b32 v5, a5
-; AGPR-GISEL-NEXT:    v_accvgpr_read_b32 v6, a6
-; AGPR-GISEL-NEXT:    v_accvgpr_read_b32 v7, a7
-; AGPR-GISEL-NEXT:    v_accvgpr_read_b32 v8, a8
-; AGPR-GISEL-NEXT:    v_accvgpr_read_b32 v9, a9
-; AGPR-GISEL-NEXT:    v_accvgpr_read_b32 v10, a10
-; AGPR-GISEL-NEXT:    v_accvgpr_read_b32 v11, a11
-; AGPR-GISEL-NEXT:    v_accvgpr_read_b32 v12, a12
-; AGPR-GISEL-NEXT:    v_accvgpr_read_b32 v13, a13
-; AGPR-GISEL-NEXT:    v_accvgpr_read_b32 v14, a14
-; AGPR-GISEL-NEXT:    v_accvgpr_read_b32 v15, a15
-; AGPR-GISEL-NEXT:    global_store_dwordx4 v[16:17], v[0:3], off sc0 sc1
+; AGPR-GISEL-NEXT:    global_store_dwordx4 v[16:17], a[0:3], off sc0 sc1
 ; AGPR-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; AGPR-GISEL-NEXT:    global_store_dwordx4 v[18:19], v[4:7], off sc0 sc1
+; AGPR-GISEL-NEXT:    global_store_dwordx4 v[18:19], a[4:7], off sc0 sc1
 ; AGPR-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; AGPR-GISEL-NEXT:    global_store_dwordx4 v[20:21], v[8:11], off sc0 sc1
+; AGPR-GISEL-NEXT:    global_store_dwordx4 v[20:21], a[8:11], off sc0 sc1
 ; AGPR-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; AGPR-GISEL-NEXT:    global_store_dwordx4 v[22:23], v[12:15], off sc0 sc1
+; AGPR-GISEL-NEXT:    global_store_dwordx4 v[22:23], a[12:15], off sc0 sc1
 ; AGPR-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; AGPR-GISEL-NEXT:    s_endpgm
   %result = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v8i32.v8i32(<8 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 0, i32 2, i32 0, i32 25, i32 0, i32 42)

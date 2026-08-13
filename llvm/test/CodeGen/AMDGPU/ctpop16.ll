@@ -313,15 +313,14 @@ define amdgpu_kernel void @v_ctpop_add_chain_i16(ptr addrspace(1) noalias %out, 
 ; VI-GISEL:       ; %bb.0:
 ; VI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-GISEL-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x34
-; VI-GISEL-NEXT:    v_lshlrev_b32_e32 v4, 1, v0
+; VI-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 1, v0
 ; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v1, s3
-; VI-GISEL-NEXT:    v_add_u32_e32 v0, vcc, v0, v4
+; VI-GISEL-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
 ; VI-GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-GISEL-NEXT:    v_mov_b32_e32 v2, s4
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v3, s5
-; VI-GISEL-NEXT:    v_add_u32_e32 v2, vcc, v2, v4
+; VI-GISEL-NEXT:    v_add_u32_e32 v2, vcc, s4, v2
 ; VI-GISEL-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; VI-GISEL-NEXT:    flat_load_ushort v0, v[0:1] glc
 ; VI-GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -2139,9 +2138,8 @@ define amdgpu_kernel void @v_ctpop_i16_add_vvar_inv(ptr addrspace(1) noalias %ou
 ; VI-GISEL-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
 ; VI-GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-GISEL-NEXT:    flat_load_ushort v3, v[0:1]
-; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v1, s5
-; VI-GISEL-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
+; VI-GISEL-NEXT:    v_add_u32_e32 v0, vcc, s4, v2
 ; VI-GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-GISEL-NEXT:    flat_load_ushort v0, v[0:1]
 ; VI-GISEL-NEXT:    s_mov_b32 s2, -1
