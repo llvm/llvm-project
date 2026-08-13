@@ -6508,14 +6508,13 @@ TEST_P(ErrorHandlingTest, ErrorHappensBeforeCreatingANewNode) {
 // encountering the error.
 TEST_P(ErrorHandlingTest,
        ErrorHappensAfterCreatingTheNodeButBeforeLinkingThatToTheAST) {
-  TranslationUnitDecl *FromTU = getTuDecl(
-      std::string(R"(
+  TranslationUnitDecl *FromTU = getTuDecl(std::string(R"(
       struct S {
         S() : X(({ )") + ErroneousStmt + R"( 0; })) {}
         int X;
       };
       )",
-      Lang_CXX03);
+                                          Lang_CXX03);
   auto *FromCtor = FirstDeclMatcher<CXXConstructorDecl>().match(
       FromTU, cxxConstructorDecl(hasName("S"), unless(isImplicit())));
 
@@ -9339,7 +9338,8 @@ TEST_P(ASTImporterOptionSpecificTestBase,
       }
     } selfRef { []{ (void)selfRef; } };
     void trigger() { selfRef; }
-    )"), Lang_CXX20);
+    )"),
+                                          Lang_CXX20);
   auto *FromFunc = FirstDeclMatcher<FunctionDecl>().match(
       FromTU, functionDecl(hasName("trigger")));
   auto *ToFunc = Import(FromFunc, Lang_CXX20);
