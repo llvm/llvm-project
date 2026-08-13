@@ -67,9 +67,6 @@ skip lldb-shell :: Commands/command-expr-diagnostics.test
 skip lldb-unit :: Host/./HostTests.exe
 skip lldb-api :: commands/platform/connect/TestPlatformConnect.py
 
-# https://github.com/swiftlang/llvm-project/issues/9073
-skip lldb-api :: lang/c/trampoline_stepping/TestTrampolineStepping.py
-
 # Untriaged: new in stable/21.x
 skip lldb-api :: commands/frame/var-dil/basics/QualifiedId/TestFrameVarDILQualifiedId.py
 skip lldb-api :: lang/cpp/forward/TestCPPForwardDeclaration.py
