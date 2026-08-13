@@ -1413,10 +1413,8 @@ FunctionPass *TargetPassConfig::createTargetRegisterAllocator(bool Optimized) {
 /// FIXME: When MachinePassRegistry register pass IDs instead of function ptrs,
 /// this can be folded into addPass.
 FunctionPass *TargetPassConfig::createRegAllocPass(bool Optimized) {
-  // Initialize the global default.
-  llvm::call_once(InitializeDefaultRegisterAllocatorFlag,
-                  initializeDefaultRegisterAllocatorOnce);
-
+  // getOptimizeRegAlloc, called before the pipeline branches, has initialized
+  // the global default.
   RegisterRegAlloc::FunctionPassCtor Ctor = RegisterRegAlloc::getDefault();
   if (Ctor != useDefaultRegisterAllocator)
     return Ctor();
