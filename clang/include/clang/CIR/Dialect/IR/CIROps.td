@@ -3301,12 +3301,22 @@ def CIR_GlobalLinkageKind : CIR_I32EnumAttr<
 // properties of a global variable will be added over time as more of ClangIR
 // is upstreamed.
 
-def CIR_TLSModel : CIR_I32EnumAttr<"TLS_Model", "TLS model", [
+def CIR_TLSModel : CIR_I32EnumAttr<"TLSModel", "TLS model", [
   I32EnumAttrCase<"GeneralDynamic", 1, "tls_dyn">,
   I32EnumAttrCase<"LocalDynamic", 2, "tls_local_dyn">,
   I32EnumAttrCase<"InitialExec", 3, "tls_init_exec">,
   I32EnumAttrCase<"LocalExec", 4, "tls_local_exec">
-]>;
+  ]> {
+  let genSpecializedAttr = 0;
+}
+
+def CIR_TLSModelAttr: CIR_EnumAttr<CIR_TLSModel, "tls_model"> {
+  let summary = "TLS Model attribute";
+  let description = [{
+     The TLS mode for the global, which comes from either the
+    `tls_model` attribute, or `-ftls-model` flag.
+  }];
+}
 
 def CIR_GlobalOp : CIR_Op<"global", [
   DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
@@ -3347,8 +3357,8 @@ def CIR_GlobalOp : CIR_Op<"global", [
                        TypeAttr:$sym_type,
                        CIR_GlobalLinkageKind:$linkage,
                        OptionalAttr<MemorySpaceAttrInterface>:$addr_space,
-                       OptionalAttr<CIR_TLSModel>:$tls_model,
-                       OptionalAttr<CIR_ThreadLocalGlobalWrapperInitAttr>:$dyn_tls_refs,
+                       OptionalAttr<CIR_TLSModelAttr>:$tls_model,
+                       OptionalAttr<CIR_ThreadLocalGlobalWrapperInitAttr>:$tls_refs,
                        OptionalAttr<AnyAttr>:$initial_value,
                        UnitProp:$comdat,
                        UnitProp:$constant,
@@ -3371,8 +3381,8 @@ def CIR_GlobalOp : CIR_Op<"global", [
     (`constant` $constant^)?
     $linkage
     (`comdat` $comdat^)?
-    ($tls_model^)?
-    (`dyn_tls_refs` `=` $dyn_tls_refs^)?
+    (`tls_model` `=` $tls_model^)?
+    (`tls_refs` `=` $tls_refs^)?
     (`dso_local` $dso_local^)?
     (`static_local_guard` `` $static_local_guard^)?
     (` ` custom<GlobalAddressSpaceValue>($addr_space)^ )?
