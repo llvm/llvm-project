@@ -38,14 +38,17 @@
   .type conditional_tail_calls, @function
   .p2align 1
 conditional_tail_calls:
-  beq a0, a1, .Lcallee
-  bne a0, a1, .Lcallee
-  blt a0, a1, .Lcallee
-  bge a0, a1, .Lcallee
-  bltu a0, a1, .Lcallee
-  bgeu a0, a1, .Lcallee
-  c.beqz a0, .Lcallee
-  c.bnez a0, .Lcallee
+  .option push
+  .option exact
+  beq a0, a1, callee
+  bne a0, a1, callee
+  blt a0, a1, callee
+  bge a0, a1, callee
+  bltu a0, a1, callee
+  bgeu a0, a1, callee
+  c.beqz a0, callee
+  c.bnez a0, callee
+  .option pop
   ret
   .size conditional_tail_calls, .-conditional_tail_calls
 
@@ -53,7 +56,6 @@ conditional_tail_calls:
   .type callee, @function
   .p2align 1
 callee:
-.Lcallee:
   ret
   .size callee, .-callee
 
