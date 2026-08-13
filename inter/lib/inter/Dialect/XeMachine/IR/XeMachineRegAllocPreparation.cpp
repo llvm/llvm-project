@@ -90,11 +90,10 @@ static Value getCopiedSource(Value value) {
   return source;
 }
 
-static FailureOr<Value> materializeRegisterCopy(OpBuilder &builder,
-                                                 Location location, Value source,
-                                                 RegType destinationType,
-                                                 StringRef kind,
-                                                 int64_t destinationSub = 0) {
+static FailureOr<Value>
+materializeRegisterCopy(OpBuilder &builder, Location location, Value source,
+                        RegType destinationType, StringRef kind,
+                        int64_t destinationSub = 0, bool noMask = false) {
   RegType sourceType = dyn_cast<RegType>(source.getType());
   if (!sourceType)
     return emitError(location)
@@ -133,11 +132,10 @@ static FailureOr<Value> materializeRegisterCopy(OpBuilder &builder,
         pieceSub == 0 ? IntegerAttr() : builder.getI32IntegerAttr(pieceSub);
     IntegerAttr sourceSub =
         offset == 0 ? IntegerAttr() : builder.getI32IntegerAttr(offset);
-    MovOp move =
-        MovOp::create(builder, location, pieceType, i32,
-                       /*execSize=*/pieceWidth, DstRegionAttr(), RegionAttr(),
-                       destinationSubAttr, sourceSub, TypeAttr(),
-                       /*noMask=*/false, /*maskOffset=*/0, source);
+    MovOp move = MovOp::create(builder, location, pieceType, i32,
+                               /*execSize=*/pieceWidth, DstRegionAttr(),
+                               RegionAttr(), destinationSubAttr, sourceSub,
+                               TypeAttr(), noMask, /*maskOffset=*/0, source);
     move->setAttr(kRegisterCopyAttr, builder.getStringAttr(kind));
     pieces.push_back(move.getDst());
     offset += pieceWidth;
@@ -725,6 +723,7 @@ repairAcyclicExits(func::FuncOp function, const RegionFlow &flow,
       incomingValues.try_emplace(transfer.operand, transfer.operand->get());
 
     for (auto [terminator, transfers] : groups) {
+      bool noMask = isa<UniformIfOp>(branch.operation);
       bool crossing = false;
       for (auto [lhsIndex, lhs] : llvm::enumerate(transfers)) {
         Value lhsSource = lhs->operand->get();
@@ -749,7 +748,8 @@ repairAcyclicExits(func::FuncOp function, const RegionFlow &flow,
                                               sourceType.getWidthDwords(), -1);
           FailureOr<Value> snapshot =
               materializeRegisterCopy(builder, terminator->getLoc(), source,
-                                      snapshotType, "branch-snapshot");
+                                      snapshotType, "branch-snapshot",
+                                      /*destinationSub=*/0, noMask);
           if (failed(snapshot))
             return failure();
           snapshots[index] = *snapshot;
@@ -761,7 +761,8 @@ repairAcyclicExits(func::FuncOp function, const RegionFlow &flow,
               cast<RegType>(transfers[index]->input.getType());
           FailureOr<Value> destination =
               materializeRegisterCopy(builder, terminator->getLoc(), snapshot,
-                                      destinationType, "branch-yield");
+                                      destinationType, "branch-yield",
+                                      /*destinationSub=*/0, noMask);
           if (failed(destination))
             return failure();
           transfers[index]->operand->set(*destination);
@@ -787,7 +788,8 @@ repairAcyclicExits(func::FuncOp function, const RegionFlow &flow,
         RegType destinationType = cast<RegType>(transfer->input.getType());
         FailureOr<Value> destination =
             materializeRegisterCopy(builder, terminator->getLoc(), source,
-                                    destinationType, "branch-yield");
+                                    destinationType, "branch-yield",
+                                    /*destinationSub=*/0, noMask);
         if (failed(destination))
           return failure();
         transfer->operand->set(*destination);

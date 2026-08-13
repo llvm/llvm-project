@@ -653,7 +653,7 @@ module {
 
 // PREP-LABEL: func.func @external_branch_yield
 // PREP: xemachine.uniform_if
-// PREP: [[YIELD_COPY:%.*]] = xemachine.mov {{.*}}xemachine.regalloc_copy = "branch-yield"
+// PREP: [[YIELD_COPY:%.*]] = xemachine.mov {{.*}}noMask{{.*}}xemachine.regalloc_copy = "branch-yield"
 // PREP-NEXT: xemachine.yield [[YIELD_COPY]]
 
 // PREP-LABEL: func.func @dead_external_uniform_branch_yield
@@ -668,8 +668,8 @@ module {
 
 // PREP-LABEL: func.func @duplicate_uniform_branch_result
 // PREP: xemachine.uniform_if
-// PREP: [[DUPLICATE_RESULT_COPY0:%.*]] = xemachine.mov {{.*}}xemachine.regalloc_copy = "branch-yield"
-// PREP-NEXT: [[DUPLICATE_RESULT_COPY1:%.*]] = xemachine.mov {{.*}}xemachine.regalloc_copy = "branch-yield"
+// PREP: [[DUPLICATE_RESULT_COPY0:%.*]] = xemachine.mov {{.*}}noMask{{.*}}xemachine.regalloc_copy = "branch-yield"
+// PREP-NEXT: [[DUPLICATE_RESULT_COPY1:%.*]] = xemachine.mov {{.*}}noMask{{.*}}xemachine.regalloc_copy = "branch-yield"
 // PREP-NEXT: xemachine.yield [[DUPLICATE_RESULT_COPY0]], [[DUPLICATE_RESULT_COPY1]]
 
 // PREP-LABEL: func.func @duplicate_live_loop_inits
@@ -720,7 +720,7 @@ module {
 // PREP: [[EXEC_EXTERNAL:%.*]] = xemachine.mov
 // PREP: xemachine.exec_if
 // PREP: [[EXEC_PARTS:%.*]]:2 = xemachine.tuple_to_elements [[EXEC_EXTERNAL]]
-// PREP-NEXT: [[EXEC_COPY:%.*]] = xemachine.mov [[EXEC_PARTS]]#0 {{.*}}xemachine.regalloc_copy = "branch-yield"
+// PREP-NEXT: [[EXEC_COPY:%.*]] = xemachine.mov [[EXEC_PARTS]]#0 {xemachine.regalloc_copy = "branch-yield"}
 // PREP-NEXT: xemachine.yield [[EXEC_COPY]]
 // PREP: } otherwise {
 // PREP-NEXT: [[EXEC_LOCAL:%.*]] = xemachine.mov {{.*}}noMask
