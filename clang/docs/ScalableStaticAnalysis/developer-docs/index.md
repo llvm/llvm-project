@@ -1,10 +1,10 @@
-=======================
-Developer Documentation
-=======================
+# Developer Documentation
 
-.. toctree::
-   :numbered:
-   :maxdepth: 2
-   :glob:
+```{toctree}
+:glob: true
+:maxdepth: 2
+:numbered: true
 
-   *
+*
+```
+
