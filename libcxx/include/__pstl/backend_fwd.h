@@ -188,6 +188,13 @@ struct __merge;
 //                       _ForwardOutIterator __result, _Comp __comp) const noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
+struct __search_n;
+// template <class _Policy, class _ForwardIterator, class _Size, class _T, class _Predicate>
+// optional<_ForwardIterator>
+// operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last,
+//                       _Size __count, const _T& __value, _Predicate __pred) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
 struct __stable_sort;
 // template <class _Policy, class _RandomAccessIterator, class _Comp>
 // optional<__empty>
