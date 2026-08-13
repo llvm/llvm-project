@@ -21,19 +21,19 @@ void main(COORD_TYPE DTid : SV_DispatchThreadID) {
 // CHECK: %[[VAL3:.*]] = alloca <3 x i32>
 // CHECK: store <[[COORD_DIM]] x i32> %[[DTID]], ptr %[[DTID_ADDR]]
 // CHECK: %[[DTID_VAL:.*]] = load <[[COORD_DIM]] x i32>, ptr %[[DTID_ADDR]]
-// CHECK: %[[CALL1:.*]] = call noundef {{.*}}ptr{{.*}} @hlsl::[[TEXTURE]]<float vector[4]>::operator[](unsigned int vector[[[COORD_DIM]]]) const(ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) @Tex, <[[COORD_DIM]] x i32> noundef %[[DTID_VAL]])
+// CHECK: %[[CALL1:.*]] = call {{(spir_func )?}}noundef {{.*}}ptr{{.*}} @hlsl::[[TEXTURE]]<float vector[4]>::operator[](unsigned int vector[[[COORD_DIM]]]) const(ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) @Tex, <[[COORD_DIM]] x i32> noundef %[[DTID_VAL]])
 // CHECK: %[[LOAD_VAL:.*]] = load <4 x float>, ptr{{.*}} %[[CALL1]]
 // CHECK: store <4 x float> %[[LOAD_VAL]], ptr %[[VAL]]
 // CHECK: %[[DTID_VAL2:.*]] = load <[[COORD_DIM]] x i32>, ptr %[[DTID_ADDR]]
-// CHECK: %[[CALL2:.*]] = call noundef {{.*}}ptr{{.*}} @hlsl::[[TEXTURE]]<float>::operator[](unsigned int vector[[[COORD_DIM]]]) const(ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) @Tex2, <[[COORD_DIM]] x i32> noundef %[[DTID_VAL2]])
+// CHECK: %[[CALL2:.*]] = call {{(spir_func )?}}noundef {{.*}}ptr{{.*}} @hlsl::[[TEXTURE]]<float>::operator[](unsigned int vector[[[COORD_DIM]]]) const(ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) @Tex2, <[[COORD_DIM]] x i32> noundef %[[DTID_VAL2]])
 // CHECK: %[[LOAD_VAL2:.*]] = load float, ptr{{.*}} %[[CALL2]]
 // CHECK: store float %[[LOAD_VAL2]], ptr %[[VAL2]]
 // CHECK: %[[DTID_VAL3:.*]] = load <[[COORD_DIM]] x i32>, ptr %[[DTID_ADDR]]
-// CHECK: %[[CALL3:.*]] = call noundef {{.*}}ptr{{.*}} @hlsl::[[TEXTURE]]<int vector[3]>::operator[](unsigned int vector[[[COORD_DIM]]]) const(ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) @Tex3, <[[COORD_DIM]] x i32> noundef %[[DTID_VAL3]])
+// CHECK: %[[CALL3:.*]] = call {{(spir_func )?}}noundef {{.*}}ptr{{.*}} @hlsl::[[TEXTURE]]<int vector[3]>::operator[](unsigned int vector[[[COORD_DIM]]]) const(ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) @Tex3, <[[COORD_DIM]] x i32> noundef %[[DTID_VAL3]])
 // CHECK: %[[LOAD_VAL3:.*]] = load <3 x i32>, ptr{{.*}} %[[CALL3]]
 // CHECK: store <3 x i32> %[[LOAD_VAL3]], ptr %[[VAL3]]
 
-// CHECK: define linkonce_odr hidden noundef {{.*}}ptr{{.*}} @hlsl::[[TEXTURE]]<float vector[4]>::operator[](unsigned int vector[[[COORD_DIM]]]) const(ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %[[THIS:.*]], <[[COORD_DIM]] x i32> noundef %[[INDEX:.*]])
+// CHECK: define linkonce_odr hidden {{(spir_func )?}}noundef {{.*}}ptr{{.*}} @hlsl::[[TEXTURE]]<float vector[4]>::operator[](unsigned int vector[[[COORD_DIM]]]) const(ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %[[THIS:.*]], <[[COORD_DIM]] x i32> noundef %[[INDEX:.*]])
 // CHECK: %[[THIS_ADDR:.*]] = alloca ptr
 // CHECK: %[[INDEX_ADDR:.*]] = alloca <[[COORD_DIM]] x i32>
 // CHECK: store ptr %[[THIS]], ptr %[[THIS_ADDR]]
@@ -47,7 +47,7 @@ void main(COORD_TYPE DTid : SV_DispatchThreadID) {
 // SPIRV: %[[PTR:.*]] = call ptr addrspace(11) @llvm.spv.resource.getpointer.p11.{{.*}}(target("spirv.Image", float, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE]], <[[COORD_DIM]] x i32> %[[INDEX_VAL]])
 // CHECK: ret ptr {{.*}}%[[PTR]]
 
-// CHECK: define linkonce_odr hidden noundef {{.*}}ptr{{.*}} @hlsl::[[TEXTURE]]<float>::operator[](unsigned int vector[[[COORD_DIM]]]) const(ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %[[THIS:.*]], <[[COORD_DIM]] x i32> noundef %[[INDEX:.*]])
+// CHECK: define linkonce_odr hidden {{(spir_func )?}}noundef {{.*}}ptr{{.*}} @hlsl::[[TEXTURE]]<float>::operator[](unsigned int vector[[[COORD_DIM]]]) const(ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %[[THIS:.*]], <[[COORD_DIM]] x i32> noundef %[[INDEX:.*]])
 // CHECK: %[[THIS_ADDR:.*]] = alloca ptr
 // CHECK: %[[INDEX_ADDR:.*]] = alloca <[[COORD_DIM]] x i32>
 // CHECK: store ptr %[[THIS]], ptr %[[THIS_ADDR]]
@@ -61,7 +61,7 @@ void main(COORD_TYPE DTid : SV_DispatchThreadID) {
 // SPIRV: %[[PTR:.*]] = call ptr addrspace(11) @llvm.spv.resource.getpointer.p11.{{.*}}(target("spirv.Image", float, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE]], <[[COORD_DIM]] x i32> %[[INDEX_VAL]])
 // CHECK: ret ptr {{.*}}%[[PTR]]
 
-// CHECK: define linkonce_odr hidden noundef {{.*}}ptr{{.*}} @hlsl::[[TEXTURE]]<int vector[3]>::operator[](unsigned int vector[[[COORD_DIM]]]) const(ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %[[THIS:.*]], <[[COORD_DIM]] x i32> noundef %[[INDEX:.*]])
+// CHECK: define linkonce_odr hidden {{(spir_func )?}}noundef {{.*}}ptr{{.*}} @hlsl::[[TEXTURE]]<int vector[3]>::operator[](unsigned int vector[[[COORD_DIM]]]) const(ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %[[THIS:.*]], <[[COORD_DIM]] x i32> noundef %[[INDEX:.*]])
 // CHECK: %[[THIS_ADDR:.*]] = alloca ptr
 // CHECK: %[[INDEX_ADDR:.*]] = alloca <[[COORD_DIM]] x i32>
 // CHECK: store ptr %[[THIS]], ptr %[[THIS_ADDR]]

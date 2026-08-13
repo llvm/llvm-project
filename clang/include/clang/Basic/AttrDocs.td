@@ -3554,6 +3554,49 @@ create machine code that meets the request.
   }];
 }
 
+def LaunchBoundsDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``__launch_bounds__`` attribute (also spelled ``launch_bounds``) originates
+in CUDA. It informs the compiler of the launch configuration a kernel will be
+dispatched with, allowing it to optimize the kernel accordingly. It takes the
+form ``__launch_bounds__(<max-threads-per-block>[,
+<min-blocks-per-multiprocessor>[, <max-blocks-per-cluster>]])``. All arguments
+are constant expressions.
+
+The attribute only takes effect on ``__global__`` (kernel) functions; like
+NVCC, Clang ignores it on any other function.
+
+``<max-threads-per-block>`` specifies the maximum number of threads per block
+the kernel will be launched with. ``<min-blocks-per-multiprocessor>`` specifies
+the desired minimum number of blocks resident per multiprocessor, and
+``<max-blocks-per-cluster>`` the maximum number of blocks per cluster.
+
+For the NVPTX target, ``<max-threads-per-block>`` and
+``<min-blocks-per-multiprocessor>`` map to the ``.maxntid`` and ``.minnctapersm``
+PTX directives, respectively, and ``<max-blocks-per-cluster>`` (which requires
+``sm_90`` or newer) maps to ``.maxclusterrank``.
+
+For the AMDGPU target, the attribute is translated into the equivalent AMDGPU
+kernel attributes:
+
+  - ``<max-threads-per-block>`` sets the maximum
+    ``amdgpu_flat_work_group_size`` (as ``1, <max-threads-per-block>``).
+  - ``<min-blocks-per-multiprocessor>`` sets the minimum
+    ``amdgpu_waves_per_eu``. Note that HIP reinterprets this CUDA argument as a
+    minimum number of waves per execution unit, so its meaning differs from the
+    NVPTX interpretation.
+  - ``<max-blocks-per-cluster>`` is currently ignored.
+
+An explicit ``amdgpu_flat_work_group_size`` or ``amdgpu_waves_per_eu`` attribute
+takes precedence over the value derived from ``__launch_bounds__``.
+
+When the same kernel is declared multiple times, the launch bounds from the most
+recent declaration that specifies them are used; a definition without
+``__launch_bounds__`` inherits the bounds from an earlier declaration.
+  }];
+}
+
 def AMDGPUNumSGPRNumVGPRDocs : Documentation {
   let Category = DocCatAMDGPUAttributes;
   let Content = [{
@@ -9030,6 +9073,31 @@ for details.
   }];
 }
 
+def HLSLControlFlowHintDocs : Documentation {
+  let Category = DocCatStmt;
+  let Heading = "branch, flatten";
+  let Content = [{
+
+The ``branch`` and ``flatten`` attributes can be applied to *if* and *switch*
+statements in the HLSL language mode to provide hints for how the backend
+should execute them.
+
+- ``branch`` means that control flow is preferred. The condition should be
+  evaluated first and we should only execute the block guarded by it.
+
+- ``flatten`` means that control flow should be avoided. All blocks should be
+  executed and variables that are modified should be conditionally assigned.
+
+These control flow hints are preserved through the compilation and emitted in a
+backend-specific way.
+
+For details, see the Direct3D documentation for `if Statement`_ and `switch Statement`_.
+
+.. _`if Statement`: https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-if
+.. _`switch Statement`: https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-switchhttps://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-switch
+  }];
+}
+
 def AtomicDocs : Documentation {
   let Category = DocCatStmt;
   let Content = [{
@@ -9120,6 +9188,120 @@ Examples:
   }
 
 The full documentation is available here: https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-variable-packoffset
+  }];
+}
+
+def HLSLResourceClassDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``hlsl::resource_class`` attribute specifies the resource class of the HLSL
+resource represented by a member variable of type ``__hlsl_resource_t``,
+declaring it to be an SRV, UAV, CBuffer, or Sampler resource.
+
+This attribute is only valid for resource handles, and is an implementation
+detail of clang's HLSL implementation. For more information see `HLSL Resource
+Types`_
+
+.. _`HLSL Resource Types`: https://clang.llvm.org/docs/HLSL/ResourceTypes.html>
+  }];
+}
+
+def HLSLResourceDimensionDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``hlsl::dimension`` attribute specifies the dimensions of the HLSL resource
+represented by a member variable of type ``__hlsl_resource_t``, declaring the
+resource to have Unknown, 1D, 2D, 3D, or Cube dimension.
+
+This attribute is only valid for resource handles, and is an implementation
+detail of clang's HLSL implementation. For more information see `HLSL Resource
+Types`_
+
+.. _`HLSL Resource Types`: https://clang.llvm.org/docs/HLSL/ResourceTypes.html>
+  }];
+}
+
+def HLSLContainedTypeDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``hlsl::contained_type`` attribute specifies the type of the HLSL resource
+represented by a member variable of type ``__hlsl_resource_t``.
+
+This attribute is only valid for resource handles, and is an implementation
+detail of clang's HLSL implementation. For more information see `HLSL Resource
+Types`_
+
+.. _`HLSL Resource Types`: https://clang.llvm.org/docs/HLSL/ResourceTypes.html>
+  }];
+}
+
+def HLSLRawBufferDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``hlsl::raw_buffer`` attribute specifies that the HLSL resource represented
+by a member variable of type ``__hlsl_resource_t`` has raw buffer semantics.
+
+This attribute is only valid for resource handles, and is an implementation
+detail of clang's HLSL implementation. For more information see `HLSL Resource
+Types`_
+
+.. _`HLSL Resource Types`: https://clang.llvm.org/docs/HLSL/ResourceTypes.html>
+  }];
+}
+
+def HLSLIsArrayDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``hlsl::is_array`` attribute specifies that the HLSL resource represented
+by a member variable of type ``__hlsl_resource_t`` has array dimensions.
+
+This attribute is only valid for resource handles, and is an implementation
+detail of clang's HLSL implementation. For more information see `HLSL Resource
+Types`_
+
+.. _`HLSL Resource Types`: https://clang.llvm.org/docs/HLSL/ResourceTypes.html>
+  }];
+}
+
+def HLSLIsMultiSampledDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``hlsl::is_array`` attribute specifies that the HLSL resource represented
+by a member variable of type ``__hlsl_resource_t`` is multisampled.
+
+This attribute is only valid for resource handles, and is an implementation
+detail of clang's HLSL implementation. For more information see `HLSL Resource
+Types`_
+
+.. _`HLSL Resource Types`: https://clang.llvm.org/docs/HLSL/ResourceTypes.html>
+  }];
+}
+
+def HLSLIsROVDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``hlsl::is_rov`` attribute specifies that the HLSL resource represented by
+a member variable of type ``__hlsl_resource_t`` is a rasterizer ordered view.
+
+This attribute is only valid for resource handles, and is an implementation
+detail of clang's HLSL implementation. For more information see `HLSL Resource
+Types`_
+
+.. _`HLSL Resource Types`: https://clang.llvm.org/docs/HLSL/ResourceTypes.html>
+  }];
+}
+
+def HLSLIsCounterDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``hlsl::is_counter`` attribute specifies that the HLSL resource represented
+by a member variable of type ``__hlsl_resource_t`` is a counter buffer.
+
+This attribute is only valid for resource handles, and is an implementation
+detail of clang's HLSL implementation. For more information see `HLSL Resource
+Types`_
+
+.. _`HLSL Resource Types`: https://clang.llvm.org/docs/HLSL/ResourceTypes.html>
   }];
 }
 
