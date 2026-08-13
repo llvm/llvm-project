@@ -1036,8 +1036,8 @@ llvm::Expected<lldb::ValueObjectSP>
 Interpreter::EvaluateLogical(const BinaryOpNode &node) {
   // Operations {'&&', '||'} work for:
   //  {IsContextuallyConvertibleToBool} <-> {IsContextuallyConvertibleToBool}
-  // Note: Unlike C++, these operators will not evaluate or check the type
-  // of RHS if the result is determined after evaluating LHS.
+  // Note: These operators will not evaluate or check the type of RHS
+  // if the result is determined after evaluating LHS.
   auto lhs_or_err = EvaluateAndDereference(node.GetLHS());
   if (!lhs_or_err)
     return lhs_or_err;
