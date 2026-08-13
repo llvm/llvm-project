@@ -9,6 +9,9 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_LOG10BF16_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_LOG10BF16_H
 
+#include "hdr/errno_macros.h"
+#include "hdr/fenv_macros.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/__support/FPUtil/cast.h"
