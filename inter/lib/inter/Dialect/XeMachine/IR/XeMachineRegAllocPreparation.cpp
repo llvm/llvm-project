@@ -193,7 +193,8 @@ struct AliasValueInfo {
 class WeightedOverlapSummary {
 public:
   LogicalResult build(func::FuncOp function, bool includeRegionAliases = true,
-                      Operation *excludedRegionBranch = nullptr) {
+                      Operation *excludedRegionBranch = nullptr,
+                      Operation *excludedAliasOperation = nullptr) {
     values.clear();
     graph.clear();
     info.clear();
@@ -225,7 +226,7 @@ public:
     function.walk([&](Operation *operation) {
       RegisterStorageAliasOpInterface interface =
           dyn_cast<RegisterStorageAliasOpInterface>(operation);
-      if (interface) {
+      if (interface && operation != excludedAliasOperation) {
         SmallVector<RegisterStorageAlias, 4> aliases;
         interface.getRegisterStorageAliases(aliases);
         for (const RegisterStorageAlias &relation : aliases)
@@ -519,9 +520,29 @@ static bool storageIsLiveAfter(const WeightedOverlapSummary &summary,
   });
 }
 
+static bool storageIsDefinedAfter(const WeightedOverlapSummary &summary,
+                                  Value value, Value anchor,
+                                  DominanceInfo &dominance) {
+  Operation *anchorDefinition = anchor.getDefiningOp();
+  if (!anchorDefinition)
+    return false;
+  Operation *definition = value.getDefiningOp();
+  if (definition && isPotentiallyAfter(definition, anchorDefinition, dominance))
+    return true;
+  return llvm::any_of(summary.getOverlappingValues(value), [&](Value alias) {
+    Operation *aliasDefinition = alias.getDefiningOp();
+    return aliasDefinition &&
+           isPotentiallyAfter(aliasDefinition, anchorDefinition, dominance);
+  });
+}
+
+static bool isDefinedInside(Region &region, Value value);
+
 static LogicalResult repairUpdateTuples(func::FuncOp function) {
   SmallVector<UpdateTupleOp> updates;
   function.walk([&](UpdateTupleOp update) { updates.push_back(update); });
+  DominanceInfo dominance(function);
+  RegionFlow regionFlow(function);
   for (UpdateTupleOp update : updates) {
     Value base = update.getBase();
     if (isMarkedCopy(base, "update-base") &&
@@ -529,18 +550,59 @@ static LogicalResult repairUpdateTuples(func::FuncOp function) {
           return isMarkedCopy(replacement, "update-value");
         }))
       continue;
-    RegType baseType = cast<RegType>(base.getType());
-    RegType copyType =
-        RegType::get(function.getContext(), baseType.getWidthDwords(), -1);
     OpBuilder builder(update);
-    FailureOr<Value> copy = materializeRegisterCopy(
-        builder, update.getLoc(), base, copyType, "update-base");
-    if (failed(copy))
+    WeightedOverlapSummary summary;
+    if (failed(summary.build(function, /*includeRegionAliases=*/true,
+                             /*excludedRegionBranch=*/nullptr, update)))
       return failure();
-    update->setOperand(0, *copy);
+
+    Region *repetitiveRegion = regionFlow.getEnclosingRepetitiveRegion(update);
+    bool repeatedExternalBase =
+        repetitiveRegion && !isDefinedInside(*repetitiveRegion, base);
+    if (repeatedExternalBase ||
+        storageIsLiveAfter(summary, base, update, dominance)) {
+      RegType baseType = cast<RegType>(base.getType());
+      RegType copyType =
+          RegType::get(function.getContext(), baseType.getWidthDwords(), -1);
+      FailureOr<Value> copy = materializeRegisterCopy(
+          builder, update.getLoc(), base, copyType, "update-base");
+      if (failed(copy))
+        return failure();
+      update->setOperand(0, *copy);
+    }
+
     for (unsigned index = 0; index < update.getUpdates().size(); ++index) {
       Value replacement = update.getUpdates()[index];
+      bool uniqueStorage = llvm::all_of(
+          llvm::enumerate(update.getUpdates()), [&](auto candidate) {
+            return candidate.index() == index ||
+                   !summary.overlaps(replacement, candidate.value());
+          });
+      SmallVector<Value, 8> aliases = summary.getOverlappingValues(replacement);
+      bool unconstrainedStorage =
+          aliases.size() == 1 && aliases.front() == replacement;
+      Operation *definition = replacement.getDefiningOp();
+      ALUOpInterface alu = dyn_cast_or_null<ALUOpInterface>(definition);
       int64_t offset = cast<IntegerAttr>(update.getOffsets()[index]).getInt();
+      int64_t destinationSub = 0;
+      bool representableOffset = offset % 16 == 0;
+      if (alu && alu.getInstructionElementType().isIntOrFloat()) {
+        unsigned elementBits =
+            alu.getInstructionElementType().getIntOrFloatBitWidth();
+        int64_t offsetBits = (offset % 16) * 32;
+        representableOffset = offsetBits % elementBits == 0;
+        destinationSub = offsetBits / elementBits;
+      }
+      if (uniqueStorage && unconstrainedStorage &&
+          representableOffset && (offset % 16 == 0 || alu) &&
+          !storageIsDefinedAfter(summary, update.getBase(), replacement,
+                                 dominance) &&
+          !storageIsLiveAfter(summary, replacement, update, dominance)) {
+        if (offset % 16 == 0 || succeeded(alu.setDestinationSubregister(
+                                    destinationSub)))
+          continue;
+      }
+
       RegType replacementType = cast<RegType>(replacement.getType());
       RegType replacementCopyType = RegType::get(
           function.getContext(), replacementType.getWidthDwords(), -1);

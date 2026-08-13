@@ -23,6 +23,11 @@ using namespace inter::xemachine;
   DstRegionAttr Op::getDestinationRegion() { return getDstRegionAttr(); }   \
   int64_t Op::getDestinationSubregister() {                                \
     return getDstSubAttr() ? getDstSubAttr().getInt() : 0;                 \
+  }                                                                        \
+  LogicalResult Op::setDestinationSubregister(int64_t subregister) {       \
+    setDstSubAttr(IntegerAttr::get(                                        \
+        IntegerType::get(getContext(), 32), subregister));                 \
+    return success();                                                      \
   }
 
 #define DEFINE_SOURCE_SUBREGISTER(Op)                                      \
@@ -184,6 +189,9 @@ DEFINE_SWSB_INTERFACE(Add3Op)
 DEFINE_ALU_COMMON(CmpOp)
 DstRegionAttr CmpOp::getDestinationRegion() { return {}; }
 int64_t CmpOp::getDestinationSubregister() { return 0; }
+LogicalResult CmpOp::setDestinationSubregister(int64_t subregister) {
+  return success(subregister == 0);
+}
 RegionAttr CmpOp::getSourceRegion(unsigned index) {
   if (index == 0)
     return getSrc0RegionAttr();

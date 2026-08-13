@@ -631,16 +631,14 @@ module {
 // PREP-LABEL: func.func @early_update_source
 // PREP: [[EARLY_UPDATE:%.*]] = xemachine.mov
 // PREP: [[EARLY_BASE:%.*]] = xemachine.mov
-// PREP-NEXT: [[EARLY_BASE_COPY:%.*]] = xemachine.mov [[EARLY_BASE]] {{.*}}xemachine.regalloc_copy = "update-base"
 // PREP-NEXT: [[EARLY_UPDATE_COPY:%.*]] = xemachine.mov [[EARLY_UPDATE]] {{.*}}xemachine.regalloc_copy = "update-value"
-// PREP-NEXT: xemachine.update_tuple [[EARLY_BASE_COPY]], [[EARLY_UPDATE_COPY]]
+// PREP-NEXT: xemachine.update_tuple [[EARLY_BASE]], [[EARLY_UPDATE_COPY]]
 
 // PREP-LABEL: func.func @wrong_offset_update_alias
 // PREP: [[OFFSET_BASE:%.*]] = xemachine.mov
 // PREP: [[OFFSET_PARTS:%.*]]:2 = xemachine.tuple_to_elements [[OFFSET_BASE]]
-// PREP-NEXT: [[OFFSET_BASE_COPY:%.*]] = xemachine.mov [[OFFSET_BASE]] {{.*}}xemachine.regalloc_copy = "update-base"
 // PREP-NEXT: [[OFFSET_UPDATE_COPY:%.*]] = xemachine.mov [[OFFSET_PARTS]]#0 {{.*}}xemachine.regalloc_copy = "update-value"
-// PREP-NEXT: xemachine.update_tuple [[OFFSET_BASE_COPY]], [[OFFSET_UPDATE_COPY]]
+// PREP-NEXT: xemachine.update_tuple [[OFFSET_BASE]], [[OFFSET_UPDATE_COPY]]
 
 // PREP-LABEL: func.func @live_tuple_view_after_update
 // PREP: [[VIEW_BASE:%.*]] = xemachine.mov
@@ -683,17 +681,14 @@ module {
 // PREP: [[DUP_UPDATE_BASE:%.*]] = xemachine.mov {{.*}}execSize = 32
 // PREP-NEXT: [[DUP_UPDATE:%.*]] = xemachine.mov
 // PREP: [[DUP_UPDATE_COPY0:%.*]] = xemachine.mov [[DUP_UPDATE]] {{.*}}xemachine.regalloc_copy = "update-value"
-// PREP-NEXT: [[DUP_UPDATE_COPY1:%.*]] = xemachine.mov [[DUP_UPDATE]] {{.*}}xemachine.regalloc_copy = "update-value"
-// PREP-NEXT: xemachine.update_tuple {{%.*}}, [[DUP_UPDATE_COPY0]], [[DUP_UPDATE_COPY1]]
+// PREP-NEXT: xemachine.update_tuple {{%.*}}, [[DUP_UPDATE_COPY0]], [[DUP_UPDATE]]
 
 // PREP-LABEL: func.func @intervening_base_view_read
 // PREP: [[READ_BASE:%.*]] = xemachine.mov
 // PREP: [[READ_PARTS:%.*]]:2 = xemachine.tuple_to_elements [[READ_BASE]]
 // PREP: [[READ_REPLACEMENT:%.*]] = xemachine.mov
 // PREP-NEXT: xemachine.add [[READ_PARTS]]#1,
-// PREP-NEXT: [[READ_BASE_COPY:%.*]] = xemachine.mov [[READ_BASE]] {{.*}}xemachine.regalloc_copy = "update-base"
-// PREP-NEXT: [[READ_UPDATE_COPY:%.*]] = xemachine.mov [[READ_REPLACEMENT]] {{.*}}xemachine.regalloc_copy = "update-value"
-// PREP-NEXT: xemachine.update_tuple [[READ_BASE_COPY]], [[READ_UPDATE_COPY]]
+// PREP-NEXT: xemachine.update_tuple [[READ_BASE]], [[READ_REPLACEMENT]]
 
 // PREP-LABEL: func.func @fixed_shifted_tuple_view
 // PREP: [[SHIFT_PARTS:%.*]]:2 = xemachine.tuple_to_elements

@@ -17,6 +17,5 @@ func.func @subgrf_update() attributes {
 
 // CHECK: xemachine.update_tuple {{.*}} {offsets = [8]}
 
-// ALLOC: [[UPDATE:%.*]] = xemachine.mov {{.*}}!xemachine.reg<16,
-// ALLOC: [[COPY:%.*]] = xemachine.mov [[UPDATE]] {{.*}}dstSub = 8 : i32
-// ALLOC: xemachine.update_tuple {{.*}}, [[COPY]] {offsets = [8]}
+// ALLOC: [[UPDATE:%.*]] = xemachine.mov {{.*}}dstSub = 8 : i32{{.*}}!xemachine.reg<16, [[BASE:[0-9]+]]>
+// ALLOC-NEXT: xemachine.update_tuple {{.*}}, [[UPDATE]] {offsets = [8]} {{.*}}!xemachine.reg<32, [[BASE]]>

@@ -1,4 +1,6 @@
 // RUN: inter-opt %s --inter-select-to-machine | FileCheck %s
+// RUN: inter-opt %s --inter-select-to-machine -o %t
+// RUN: inter-opt %t --pass-pipeline='builtin.module(transform-preload-library{transform-library-paths=%inter_pipelines},transform-interpreter{entry-point=inter_regalloc})' | FileCheck %s --check-prefix=ALLOC
 
 module {
   func.func @block2d(%base: !xw.ptr<#xw.global>) attributes {
@@ -32,3 +34,14 @@ module {
 // CHECK: xemachine.update_tuple
 // CHECK: xemachine.send ugm {{.*}}data {{.*}}desc = 33555463
 // CHECK: xemachine.eot
+
+// ALLOC-LABEL: func.func @block2d
+// ALLOC: [[SHAPE:%.*]] = xemachine.mov {{.*}}dstSub = 7{{.*}}-> !xemachine.reg<1, [[PAYLOAD:[0-9]+]]>
+// ALLOC: [[X:%.*]] = xemachine.mov {{.*}}dstSub = 5{{.*}}-> !xemachine.reg<1, [[PAYLOAD]]>
+// ALLOC: [[Y:%.*]] = xemachine.mov {{.*}}dstSub = 6{{.*}}-> !xemachine.reg<1, [[PAYLOAD]]>
+// ALLOC: [[WIDTH:%.*]] = xemachine.mov {{.*}}dstSub = 2{{.*}}-> !xemachine.reg<1, [[PAYLOAD]]>
+// ALLOC: [[HEIGHT:%.*]] = xemachine.mov {{.*}}dstSub = 3{{.*}}-> !xemachine.reg<1, [[PAYLOAD]]>
+// ALLOC: [[PITCH:%.*]] = xemachine.mov {{.*}}dstSub = 4{{.*}}-> !xemachine.reg<1, [[PAYLOAD]]>
+// ALLOC: [[ADDRESS:%.*]] = xemachine.mov {{.*}}xemachine.regalloc_copy = "update-value"{{.*}}-> !xemachine.reg<2, [[PAYLOAD]]>
+// ALLOC-NEXT: [[TUPLE:%.*]] = xemachine.update_tuple {{%.*}}, [[ADDRESS]], [[WIDTH]], [[HEIGHT]], [[PITCH]], [[X]], [[Y]], [[SHAPE]]
+// ALLOC-NEXT: xemachine.send ugm [[TUPLE]]
