@@ -13,51 +13,87 @@
 using namespace clang;
 using namespace clang::interp;
 
-static bool isRecordOrPointerToRecordType(const Type *T) {
-  return T->isRecordType() ||
-         (T->isPointerOrReferenceType() && T->getPointeeType()->isRecordType());
+static bool isPointerOrMemberPointerType(const Type *T) {
+  return T->isPointerType() || T->isMemberPointerType();
+}
+static bool isPointerOrMemberPointerType(QualType T) {
+  return isPointerOrMemberPointerType(T.getTypePtr());
 }
 
 bool ExceptionTableEntry::canCatch(const Type *ThrowType,
                                    const ASTContext &ASTCtx) const {
   const Type *CatchType = this->CatchType;
+  // "A handler is a match for an exception object of type E if ..."
 
-  if (!CatchType || ASTContext::hasSameType(CatchType, ThrowType))
+  // "The handler is of type cv T or cv T& and E and T are the same type
+  // (ignoring the top-level cv-qualifiers)"
+  if (!CatchType || ASTContext::hasSameType(CatchType, ThrowType) ||
+      (CatchType->isReferenceType() &&
+       ASTContext::hasSameType(CatchType->getPointeeType().getTypePtr(),
+                               ThrowType)))
     return true;
 
   assert(CatchType);
 
-  // nullptr_t can be caught by any pointer type (including member pointers)
-  // and references of pointer types.
+  // "the handler is of type cv T or const T& where T is a pointer or
+  // pointer-to-member type and E is std::nullptr_t"
   if (ThrowType->isNullPtrType()) {
-    if (CatchType->isPointerType() || CatchType->isMemberPointerType())
+    if (isPointerOrMemberPointerType(CatchType))
       return true;
+
     if (CatchType->isReferenceType() &&
-        CatchType->getPointeeType()->isPointerType())
+        (CatchType->getPointeeType()->isPointerType() ||
+         CatchType->getPointeeType()->isMemberPointerType()))
       return true;
   }
 
-  // void* can catch all thown pointer types.
+  // void* can catch all thrown pointer types.
   if (ThrowType->isPointerType() && CatchType->isVoidPointerType())
     return true;
 
-  // T& can catch T.
-  if (CatchType->isReferenceType() &&
-      ASTContext::hasSameType(CatchType->getPointeeType().getTypePtr(),
-                              ThrowType))
-    return true;
+  // "the handler is of type cv T or const T& where T is a pointer or
+  // pointer-to-member type and E is a pointer or pointer-to-member type that
+  // can be converted to T by one or more of ..."
+  if ((isPointerOrMemberPointerType(CatchType) ||
+       (CatchType->isReferenceType() &&
+        isPointerOrMemberPointerType(CatchType->getPointeeType()))) &&
+      isPointerOrMemberPointerType(ThrowType)) {
 
-  // From this point foward, we only care about T, T* or T& where T is a record
-  // type.
-  if (!isRecordOrPointerToRecordType(ThrowType) ||
-      !isRecordOrPointerToRecordType(CatchType))
-    return false;
+    // "a function pointer conversion"
+    if (CatchType->isFunctionPointerType() &&
+        ThrowType->isFunctionPointerType()) {
+      const auto *FuncT =
+          CatchType->getPointeeType()->castAs<FunctionProtoType>();
+      const auto *FuncE =
+          ThrowType->getPointeeType()->castAs<FunctionProtoType>();
 
-  // T can catch T.
-  if (CatchType == ThrowType)
-    return true;
+      // We can catch a noexcept function as non-noexcept, but not the other way
+      // around.
+      if (FuncT->hasNoexceptExceptionSpec() &&
+          !FuncE->hasNoexceptExceptionSpec())
+        return false;
+      // Both being noexcept is also fine.
+      return true;
+    }
 
-  // T& can catch T.
+    // "a qualification conversion"
+    if (CatchType->isPointerType() && ThrowType->isPointerType()) {
+      QualType PointeeT = CatchType->getPointeeType();
+      QualType PointeeE = ThrowType->getPointeeType();
+
+      if (ASTContext::hasSameType(PointeeT, PointeeE))
+        return true;
+
+      // We can catch T* as const T*, not not the other way around.
+      if (!PointeeT.isConstQualified() && PointeeE.isConstQualified())
+        return false;
+      if (ASTCtx.hasSimilarType(PointeeT, PointeeE))
+        return true;
+    }
+  }
+
+  // "the handler is of type cv T or cv T& and T is an unambiguous public base
+  // class of E"
   if (CatchType->isReferenceType())
     CatchType = CatchType->getPointeeType().getTypePtr();
 
@@ -67,7 +103,6 @@ bool ExceptionTableEntry::canCatch(const Type *ThrowType,
     ThrowType = ThrowType->getPointeeType().getTypePtr();
   }
 
-  // Check for base casts.
   if (CatchType->isRecordType() && ThrowType->isRecordType()) {
     const CXXRecordDecl *CatchDecl = CatchType->getAsCXXRecordDecl();
     const CXXRecordDecl *ThrowDecl = ThrowType->getAsCXXRecordDecl();
@@ -77,7 +112,6 @@ bool ExceptionTableEntry::canCatch(const Type *ThrowType,
     if (CatchDecl == ThrowDecl)
       return true;
 
-    // "T is an unambiguous public base class of E."
     CXXBasePaths Paths;
     if (ThrowDecl->isDerivedFrom(CatchDecl, Paths)) {
       if (Paths.isAmbiguous(ASTCtx.getCanonicalTagType(CatchDecl)))

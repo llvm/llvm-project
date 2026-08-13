@@ -566,10 +566,6 @@ namespace Inheritance {
     return -1;
   }
   static_assert(foo12() == 2);
-
-
-
-
 }
 
 namespace Pointer {
@@ -1325,6 +1321,91 @@ namespace MemberPointers {
     return nullptr;
   }
   static_assert(foo() == &S::m);
+
+  constexpr int S::* foo2() {
+    try {
+      throw &S::m;
+    } catch (int S::* &pm) {
+      return pm;
+    }
+    return nullptr;
+  }
+  static_assert(foo2() == &S::m);
+
+  /// Here, we catch the null pointer as a reference-to-member-pointer.
+  /// This works in regular runtime code. However, there is no proper point of conversion
+  /// from the null pointer to a member pointer.
+  /// We then eventually reject the function when trying to load the member pointer in the
+  /// return statement.
+  /// This matches GCC's behavior for compile-time exceptions.
+  constexpr int S::* foo3() {
+    try {
+      throw nullptr;
+    } catch (int S::* &pm) {
+      return pm;
+    }
+    return nullptr;
+  }
+  static_assert(foo3() == &S::m); // expected-error {{not an integral constant expression}}
+}
+
+namespace FunctionPointers {
+#define fold(x) (__builtin_constant_p(x) ? (x) : (x))
+  extern int zomg();
+
+  constexpr int foo() {
+    try {
+      throw &zomg;
+    } catch (int (*)()) {
+      return 2;
+    } catch (const int ) {
+      return 0;
+    }
+    return -1;
+  }
+  static_assert(foo() == 2);
+
+  constexpr int foo2() {
+    try {
+      throw &zomg;
+    } catch (void* p) {
+      return p == fold((void*)&zomg);
+    }
+    return -1;
+  }
+  static_assert(foo2() == 1);
+
+
+  extern int zomg2() noexcept;
+  constexpr int foo3() {
+    try {
+      throw &zomg;
+    } catch ( int (*)()) {
+      return 13;
+    }
+    return -1;
+  }
+  static_assert(foo3() == 13);
+
+  constexpr int foo4() {
+    try {
+      throw &zomg2;
+    } catch ( int (*)() noexcept) {
+      return 13;
+    }
+    return -1;
+  }
+  static_assert(foo4() == 13);
+
+  constexpr int foo5() {
+    try {
+      throw &zomg; // expected-note {{uncaught exception of type 'int (*)()': '&zomg'}}
+    } catch ( int (*) () noexcept ) {
+      return 13;
+    }
+    return -1;
+  }
+  static_assert(foo5() == 0); // expected-error {{not an integral constant expression}}
 }
 
 namespace CopCtors {
@@ -1379,5 +1460,42 @@ namespace CopCtors {
   }
   static_assert(foo3() == 11);
 
+
+}
+
+namespace QualificationConversion {
+  constexpr int foo() {
+    int a = 100;
+    try {
+      throw &a;
+    } catch ( const int *k) {
+      return *k;
+    }
+    return -1;
+  }
+  static_assert(foo() == 100);
+
+  constexpr int foo2() {
+    const int a = 100;
+    try {
+      throw &a;
+    } catch ( const int *k) {
+      return *k;
+    }
+    return -1;
+  }
+  static_assert(foo2() == 100);
+
+
+  constexpr int foo3() {
+    const int a = 100;
+    try {
+      throw &a; // expected-note {{uncaught exception of type 'const int *': '&a'}}
+    } catch (int *k) {
+      return *k;
+    }
+    return -1;
+  }
+  static_assert(foo3() == -1); // expected-error {{not an integral constant expression}}
 
 }
