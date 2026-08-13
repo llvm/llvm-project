@@ -514,7 +514,7 @@ Error RawInstrProfReader<IntPtrT>::readHeader() {
     return error(instrprof_error::bad_magic);
   if (DataBuffer->getBufferSize() < sizeof(RawInstrProf::Header))
     return error(instrprof_error::bad_header,
-                 std::string("Profile file header is truncated"));
+                 std::string("profile file header is truncated"));
   auto *Header = reinterpret_cast<const RawInstrProf::Header *>(
       DataBuffer->getBufferStart());
   ShouldSwapBytes = Header->Magic != RawInstrProf::getMagic<IntPtrT>();
@@ -603,8 +603,8 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
             .str());
   if (BinaryIdEnd > BufferEnd)
     return error(instrprof_error::header_size_mismatch,
-                 ("Header.BinaryIdSize = " + Twine(BinaryIdSize) +
-                  " bytes, Incomplete binary IDs data")
+                 ("Header.BinaryIdSize = " + Twine(BinaryIdSize) + " bytes; " +
+                  Twine(BufferEnd - BinaryIdStart) + " bytes available")
                      .str());
 
   ArrayRef<uint8_t> BinaryIdsBuffer(BinaryIdStart, BinaryIdSize);
@@ -661,9 +661,10 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   if (Start + ValueDataOffset > DataBuffer->getBufferEnd())
     return error(
         instrprof_error::header_size_mismatch,
-        ("Profile file size (" + Twine(DataBuffer->getBufferSize()) +
+        ("profile file size (" + Twine(DataBuffer->getBufferSize()) +
          " bytes) smaller than expected (at least " + Twine(ValueDataOffset) +
          " bytes = " +
+         Twine(sizeof(RawInstrProf::Header)) + "(Header) + " +
          Twine(BinaryIdSize) + "(BinaryIdSize) + " +
          Twine(DataSize) + "(DataSize) + " +
          Twine(CountersSize) + "(CountersSize) + " +
@@ -672,10 +673,10 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
          Twine(NamesSize) + "(NamesSize) + " +
          Twine(VTableSectionSize) + "(VTableSectionSize) + " +
          Twine(VTableNameSize) + "(VTableNameSize) + " +
-         Twine(DataOffset - BinaryIdSize + PaddingBytesBeforeCounters +
-               PaddingBytesAfterCounters + PaddingBytesAfterBitmapBytes +
-               PaddingBytesAfterUniformCounters + PaddingBytesAfterNames +
-               PaddingBytesAfterVTableProfData + PaddingBytesAfterVTableNames) +
+         Twine(PaddingBytesBeforeCounters + PaddingBytesAfterCounters +
+               PaddingBytesAfterBitmapBytes + PaddingBytesAfterUniformCounters +
+               PaddingBytesAfterNames + PaddingBytesAfterVTableProfData +
+               PaddingBytesAfterVTableNames) +
          "(Padding))")
             .str());
 

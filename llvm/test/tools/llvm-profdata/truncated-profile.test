@@ -41,4 +41,4 @@ RUN: printf '\3\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0' >> %t.profraw
 
 RUN: not llvm-profdata show  %t.profraw 2>&1 | FileCheck %s
-CHECK: profile file size does not match header expectations (file may be truncated or header may be corrupt): Profile file size (156 bytes) smaller than expected (at least 248 bytes = 0(BinaryIdSize) + 72(DataSize) + 8(CountersSize) + 0(NumBitmapBytes) + 0(UniformCountersSectionSize) + 16(NamesSize) + 0(VTableSectionSize) + 0(VTableNameSize) + 152(Padding))
+CHECK: profile file size does not match header expectations (file may be truncated or header may be corrupt): profile file size (156 bytes) smaller than expected (at least 248 bytes = 152(Header) + 0(BinaryIdSize) + 72(DataSize) + 8(CountersSize) + 0(NumBitmapBytes) + 0(UniformCountersSectionSize) + 16(NamesSize) + 0(VTableSectionSize) + 0(VTableNameSize) + 0(Padding))
