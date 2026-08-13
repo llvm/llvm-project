@@ -33,9 +33,9 @@ func.func @test_rescale_output_unsigned(%arg0: tensor<1x1xi8>) -> (tensor<1x1xui
 // -----
 
 // CHECK-LABEL: test_validate_without_tosa
-func.func @test_validate_without_tosa(%arg0: f32) -> f32 {
-  %0 = math.asin %arg0 : f32
-  return %0 : f32
+func.func @test_validate_without_tosa(%arg0: tensor<f32>) -> tensor<f32> {
+  %0 = math.asin %arg0 : tensor<f32>
+  return %0 : tensor<f32>
 }
 
 // -----
