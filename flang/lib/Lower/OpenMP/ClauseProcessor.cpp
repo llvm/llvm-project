@@ -94,11 +94,11 @@ getSimdModifier(const omp::clause::Schedule &clause) {
   return mlir::omp::ScheduleModifier::none;
 }
 
-static void
-genAllocateClause(lower::AbstractConverter &converter,
-                  const omp::clause::Allocate &clause,
-                  llvm::SmallVectorImpl<mlir::Value> &allocatorOperands,
-                  llvm::SmallVectorImpl<mlir::Value> &allocateOperands) {
+static void genAllocateClause(
+    lower::AbstractConverter &converter, const omp::clause::Allocate &clause,
+    llvm::SmallVectorImpl<mlir::Value> &allocatorOperands,
+    llvm::SmallVectorImpl<mlir::Value> &allocateOperands,
+    llvm::SmallVectorImpl<int64_t> &alignments, bool supportAlignment) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   mlir::Location currentLocation = converter.getCurrentLocation();
   lower::StatementContext stmtCtx;
@@ -106,20 +106,26 @@ genAllocateClause(lower::AbstractConverter &converter,
   auto &objects = std::get<omp::ObjectList>(clause.t);
 
   using Allocate = omp::clause::Allocate;
-  // ALIGN in this context is unimplemented
-  if (std::get<std::optional<Allocate::AlignModifier>>(clause.t))
+  auto &align = std::get<std::optional<Allocate::AlignModifier>>(clause.t);
+  if (align && !supportAlignment)
     TODO(currentLocation, "OmpAllocateClause ALIGN modifier");
 
-  // Check if allocate clause has allocator specified. If so, add it
-  // to list of allocators, otherwise, add default allocator to
-  // list of allocators.
+  if (align) {
+    if (alignments.empty())
+      alignments.resize(allocateOperands.size(), 0);
+    alignments.append(objects.size(), evaluate::ToInt64(align->v).value());
+  } else if (!alignments.empty()) {
+    alignments.append(objects.size(), 0);
+  }
+
+  // Use a null handle to select the binding task's default allocator.
   using ComplexModifier = Allocate::AllocatorComplexModifier;
   if (auto &mod = std::get<std::optional<ComplexModifier>>(clause.t)) {
     mlir::Value operand = fir::getBase(converter.genExprValue(mod->v, stmtCtx));
     allocatorOperands.append(objects.size(), operand);
   } else {
     mlir::Value operand = firOpBuilder.createIntegerConstant(
-        currentLocation, firOpBuilder.getI32Type(), 1);
+        currentLocation, firOpBuilder.getI32Type(), mlir::omp::kNullAllocator);
     allocatorOperands.append(objects.size(), operand);
   }
 
@@ -842,6 +848,10 @@ bool ClauseProcessor::processOrdered(
   return false;
 }
 
+bool ClauseProcessor::processFull() const {
+  return findUniqueClause<omp::clause::Full>() != nullptr;
+}
+
 bool ClauseProcessor::processPartial(std::optional<int64_t> &result) const {
   if (auto *clause = findUniqueClause<omp::clause::Partial>()) {
     if (clause->v.has_value())
@@ -1138,12 +1148,13 @@ bool ClauseProcessor::processAligned(
       });
 }
 
-bool ClauseProcessor::processAllocate(
-    mlir::omp::AllocateClauseOps &result) const {
+bool ClauseProcessor::processAllocate(mlir::omp::AllocateClauseOps &result,
+                                      bool supportAlignment) const {
   return findRepeatableClause<omp::clause::Allocate>(
       [&](const omp::clause::Allocate &clause, const parser::CharBlock &) {
         genAllocateClause(converter, clause, result.allocatorVars,
-                          result.allocateVars);
+                          result.allocateVars, result.allocateAlignments,
+                          supportAlignment);
       });
 }
 
@@ -1712,8 +1723,7 @@ bool ClauseProcessor::processInReduction(
                 currentLocation, converter,
                 std::get<typename omp::clause::ReductionOperatorList>(clause.t),
                 inReductionVars, inReduceVarByRef, inReductionDeclSymbols,
-                inReductionSyms, inReductionObjects, converter.getSymbolMap(),
-                &semaCtx))
+                inReductionSyms, &semaCtx))
           TODO(currentLocation, "Lowering unrecognised reduction type");
 
         // Copy local lists into the output.
@@ -2131,8 +2141,7 @@ bool ClauseProcessor::processReduction(
                 currentLocation, converter,
                 std::get<typename omp::clause::ReductionOperatorList>(clause.t),
                 reductionVars, reduceVarByRef, reductionDeclSymbols,
-                reductionSyms, reductionObjects, converter.getSymbolMap(),
-                &semaCtx, reductionVarCache))
+                reductionSyms, &semaCtx, reductionVarCache))
           TODO(currentLocation, "Lowering unrecognised reduction type");
         // Copy local lists into the output.
         llvm::copy(reductionVars, std::back_inserter(result.reductionVars));
@@ -2161,8 +2170,7 @@ bool ClauseProcessor::processTaskReduction(
                 currentLocation, converter,
                 std::get<typename omp::clause::ReductionOperatorList>(clause.t),
                 taskReductionVars, taskReduceVarByRef, taskReductionDeclSymbols,
-                taskReductionSyms, taskReductionObjects,
-                converter.getSymbolMap(), &semaCtx))
+                taskReductionSyms, &semaCtx))
           TODO(currentLocation, "Lowering unrecognised reduction type");
         // Copy local lists into the output.
         llvm::copy(taskReductionVars,

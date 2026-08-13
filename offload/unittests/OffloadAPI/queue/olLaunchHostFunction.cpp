@@ -12,7 +12,22 @@
 #include <thread>
 
 struct olLaunchHostFunctionTest : OffloadQueueTest {
-  void SetUp() override { RETURN_ON_FATAL_FAILURE(OffloadQueueTest::SetUp()); }
+  void SetUp() override {
+    RETURN_ON_FATAL_FAILURE(OffloadQueueTest::SetUp());
+
+    // Test if olLaunchHostFunction is supported
+    auto *Result = olLaunchHostFunction(
+        Queue,
+        [](void *) {
+          printf(""); // Making sure the function has side effect
+        },
+        nullptr);
+
+    if (Result != nullptr && Result->Code == OL_ERRC_UNSUPPORTED)
+      GTEST_SKIP() << "olLaunchHostFunction is not supported on this platform. "
+                      "Either the device does not support the feature or "
+                      "you need to update its drivers";
+  }
 };
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olLaunchHostFunctionTest);
 

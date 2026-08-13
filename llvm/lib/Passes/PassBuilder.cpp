@@ -240,11 +240,9 @@
 #include "llvm/Transforms/IPO/GlobalOpt.h"
 #include "llvm/Transforms/IPO/GlobalSplit.h"
 #include "llvm/Transforms/IPO/HotColdSplitting.h"
-#include "llvm/Transforms/IPO/IROutliner.h"
 #include "llvm/Transforms/IPO/InferFunctionAttrs.h"
 #include "llvm/Transforms/IPO/Instrumentor.h"
 #include "llvm/Transforms/IPO/Internalize.h"
-#include "llvm/Transforms/IPO/LoopExtractor.h"
 #include "llvm/Transforms/IPO/LowerTypeTests.h"
 #include "llvm/Transforms/IPO/MemProfContextDisambiguation.h"
 #include "llvm/Transforms/IPO/MergeFunctions.h"
@@ -967,10 +965,6 @@ Expected<bool> parseEntryExitInstrumenterPassOptions(StringRef Params) {
 Expected<bool> parseDropUnnecessaryAssumesPassOptions(StringRef Params) {
   return PassBuilder::parseSinglePassOption(Params, "drop-deref",
                                             "DropUnnecessaryAssumes");
-}
-
-Expected<bool> parseLoopExtractorPassOptions(StringRef Params) {
-  return PassBuilder::parseSinglePassOption(Params, "single", "LoopExtractor");
 }
 
 Expected<bool> parseLowerMatrixIntrinsicsPassOptions(StringRef Params) {

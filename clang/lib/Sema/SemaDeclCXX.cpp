@@ -514,6 +514,14 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
       continue;
     }
 
+    if (PrevForDefaultArgs->getFriendObjectKind()) {
+      // Don't inherit default arguments from a friend declaration. It's invalid
+      // to redeclare such a function at all if it owns the default arguments;
+      // we check for that later. Otherwise, it's not the declaration that we're
+      // inheriting them from.
+      continue;
+    }
+
     // We found the right previous declaration.
     break;
   }
@@ -2343,6 +2351,7 @@ CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
 
   case Stmt::LabelStmtClass:
   case Stmt::GotoStmtClass:
+  case Stmt::IndirectGotoStmtClass:
     if (Cxx2bLoc.isInvalid())
       Cxx2bLoc = S->getBeginLoc();
     for (Stmt *SubStmt : S->children()) {
@@ -6387,8 +6396,19 @@ static void checkForMultipleExportedDefaultConstructors(Sema &S,
   if (!S.Context.getTargetInfo().getCXXABI().isMicrosoft())
     return;
 
+  if (Class->isInvalidDecl())
+    return;
+
   CXXConstructorDecl *LastExportedDefaultCtor = nullptr;
   for (Decl *Member : Class->decls()) {
+    // Nested classes finish delayed default argument parsing with the outermost
+    // class, so check each nested definition here.
+    if (auto *NestedClass = dyn_cast<CXXRecordDecl>(Member)) {
+      if (NestedClass->isThisDeclarationADefinition())
+        checkForMultipleExportedDefaultConstructors(S, NestedClass);
+      continue;
+    }
+
     // Look for exported default constructors.
     auto *CD = dyn_cast<CXXConstructorDecl>(Member);
     if (!CD || !CD->isDefaultConstructor())
@@ -15507,10 +15527,30 @@ void Sema::DefineImplicitCopyAssignment(SourceLocation CurrentLocation,
     Statements.push_back(Copy.getAs<Expr>());
   }
 
+  // A defaulted copy assignment operator for a union copies the object
+  // representation as if by a memcpy, the same way the defaulted union copy
+  // constructor does.  The memberwise loop below skips union members.
+  if (ClassDecl->isUnion()) {
+    ExprBuilder &To = ExplicitObject
+                          ? static_cast<ExprBuilder &>(*ExplicitObject)
+                          : static_cast<ExprBuilder &>(*DerefThis);
+    // Copying the object representation is correct even for a union that is
+    // not trivially copyable, so -Wnontrivial-memcall is a false positive
+    // here.  Ignoring warnings rather than casting the arguments to void*
+    // keeps them typed, which preserves their address space.
+    IgnoreAllWarningDiagRAII IgnoreWarnings(Diags);
+    StmtResult Copy = buildMemcpyForAssignmentOp(
+        *this, Loc, Context.getCanonicalTagType(ClassDecl), To, OtherRef);
+    if (Copy.isInvalid()) {
+      CopyAssignOperator->setInvalidDecl();
+      return;
+    }
+    Statements.push_back(Copy.getAs<Stmt>());
+  }
+
   // Assign non-static members.
   for (auto *Field : ClassDecl->fields()) {
-    // FIXME: We should form some kind of AST representation for the implied
-    // memcpy in a union copy operation.
+    // Union members are copied by the whole-object memcpy emitted above.
     if (Field->isUnnamedBitField() || Field->getParent()->isUnion())
       continue;
 
@@ -15897,10 +15937,30 @@ void Sema::DefineImplicitMoveAssignment(SourceLocation CurrentLocation,
     Statements.push_back(Move.getAs<Expr>());
   }
 
+  // A defaulted move assignment operator for a union copies the object
+  // representation as if by a memcpy, the same way the defaulted union copy
+  // constructor does.  The memberwise loop below skips union members.
+  if (ClassDecl->isUnion()) {
+    ExprBuilder &To = ExplicitObject
+                          ? static_cast<ExprBuilder &>(*ExplicitObject)
+                          : static_cast<ExprBuilder &>(*DerefThis);
+    // Copying the object representation is correct even for a union that is
+    // not trivially copyable, so -Wnontrivial-memcall is a false positive
+    // here.  Ignoring warnings rather than casting the arguments to void*
+    // keeps them typed, which preserves their address space.
+    IgnoreAllWarningDiagRAII IgnoreWarnings(Diags);
+    StmtResult Copy = buildMemcpyForAssignmentOp(
+        *this, Loc, Context.getCanonicalTagType(ClassDecl), To, OtherRef);
+    if (Copy.isInvalid()) {
+      MoveAssignOperator->setInvalidDecl();
+      return;
+    }
+    Statements.push_back(Copy.getAs<Stmt>());
+  }
+
   // Assign non-static members.
   for (auto *Field : ClassDecl->fields()) {
-    // FIXME: We should form some kind of AST representation for the implied
-    // memcpy in a union copy operation.
+    // Union members are copied by the whole-object memcpy emitted above.
     if (Field->isUnnamedBitField() || Field->getParent()->isUnion())
       continue;
 

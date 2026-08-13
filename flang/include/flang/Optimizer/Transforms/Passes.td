@@ -76,6 +76,22 @@ def AffineDialectDemotion : Pass<"demote-affine", "::mlir::func::FuncOp"> {
   ];
 }
 
+def SelectOpsConversion : Pass<"fir-select-ops-conversion", "::mlir::func::FuncOp"> {
+  let summary = "Lower fir.select / fir.select_case / fir.select_rank to cf.*";
+
+  let description = [{
+    Lowers FIR multi-way branch terminators to control-flow dialect ops
+    (`cf.switch`, `cf.cond_br`, `cf.br`), keeping the same CFG shape (block
+    count, branch directions, destination operand forwarding).
+
+    `fir.select_type` is intentionally NOT handled here since it's already
+    handled by `PolymorphicOpConversion`.
+  }];
+
+  let dependentDialects = ["mlir::arith::ArithDialect",
+      "mlir::cf::ControlFlowDialect", "fir::FIROpsDialect"];
+}
+
 def FIRToSCFPass : Pass<"fir-to-scf"> {
   let summary = "Convert FIR structured control flow ops to SCF dialect.";
   let description = [{
@@ -385,8 +401,8 @@ def PolymorphicOpConversion : Pass<"fir-polymorphic-op", "mlir::ModuleOp"> {
   let summary =
     "Simplify operations on polymorphic types";
   let description = [{
-    This pass breaks up the lowering of operations on polymorphic types by 
-    introducing an intermediate FIR level that simplifies code geneation. 
+    This pass breaks up the lowering of operations on polymorphic types by
+    introducing an intermediate FIR level that simplifies code generation.
   }];
   let dependentDialects = [
     "fir::FIROpsDialect", "mlir::func::FuncDialect"
@@ -410,6 +426,7 @@ def VScaleAttr : Pass<"vscale-attr", "mlir::func::FuncOp"> {
      Set an attribute for the vscale range on functions, to allow scalable
      vector operations to be used on processors with variable vector length.
   }];
+  let dependentDialects = ["mlir::LLVM::LLVMDialect"];
   let options = [Option<"vscaleMin", "vscale-min", "unsigned", /*default=*/"1",
                         "vector scale minimum value. Defaults to \"1\"">,
                  Option<"vscaleMax", "vscale-max", "unsigned", /*default=*/"0",

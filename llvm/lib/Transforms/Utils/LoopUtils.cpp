@@ -250,15 +250,37 @@ void llvm::addStringMetadataToLoop(Loop *TheLoop, const char *StringMD,
   TheLoop->setLoopID(NewLoopID);
 }
 
+void llvm::addStringMetadataToLoop(Loop *TheLoop, StringRef StringMD) {
+  LLVMContext &Context = TheLoop->getHeader()->getContext();
+  SmallVector<Metadata *, 4> MDs(1);
+  // Retain existing metadata, skipping a name-only node with the same string.
+  if (MDNode *LoopID = TheLoop->getLoopID())
+    for (const MDOperand &Op : drop_begin(LoopID->operands())) {
+      MDNode *Node = cast<MDNode>(Op);
+      if (Node->getNumOperands() == 1)
+        if (auto *S = dyn_cast<MDString>(Node->getOperand(0)))
+          if (S->getString() == StringMD)
+            return;
+      MDs.push_back(Node);
+    }
+  MDs.push_back(MDNode::get(Context, {MDString::get(Context, StringMD)}));
+  MDNode *NewLoopID = MDNode::get(Context, MDs);
+  // Set operand 0 to refer to the loop id itself.
+  NewLoopID->replaceOperandWith(0, NewLoopID);
+  TheLoop->setLoopID(NewLoopID);
+}
+
 std::optional<ElementCount>
 llvm::getOptionalElementCountLoopAttribute(const Loop *TheLoop) {
   std::optional<int> Width =
       getOptionalIntLoopAttribute(TheLoop, "llvm.loop.vectorize.width");
 
   if (Width) {
-    std::optional<int> IsScalable = getOptionalIntLoopAttribute(
-        TheLoop, "llvm.loop.vectorize.scalable.enable");
-    return ElementCount::get(*Width, IsScalable.value_or(false));
+    // Presence of the scalable.enable unit node means a scalable ElementCount;
+    // disable or absence both mean fixed-width.
+    bool IsScalable =
+        getBooleanLoopAttribute(TheLoop, "llvm.loop.vectorize.scalable.enable");
+    return ElementCount::get(*Width, IsScalable);
   }
 
   return std::nullopt;
@@ -405,11 +427,10 @@ TransformationMode llvm::hasUnrollAndJamTransformation(const Loop *L) {
 }
 
 TransformationMode llvm::hasVectorizeTransformation(const Loop *L) {
-  std::optional<bool> Enable =
-      getOptionalBoolLoopAttribute(L, "llvm.loop.vectorize.enable");
-
-  if (Enable == false)
+  if (getBooleanLoopAttribute(L, "llvm.loop.vectorize.disable"))
     return TM_SuppressedByUser;
+
+  bool Enable = getBooleanLoopAttribute(L, "llvm.loop.vectorize.enable");
 
   std::optional<ElementCount> VectorizeWidth =
       getOptionalElementCountLoopAttribute(L);
@@ -418,14 +439,14 @@ TransformationMode llvm::hasVectorizeTransformation(const Loop *L) {
 
   // 'Forcing' vector width and interleave count to one effectively disables
   // this tranformation.
-  if (Enable == true && VectorizeWidth && VectorizeWidth->isScalar() &&
+  if (Enable && VectorizeWidth && VectorizeWidth->isScalar() &&
       InterleaveCount == 1)
     return TM_SuppressedByUser;
 
   if (getBooleanLoopAttribute(L, "llvm.loop.isvectorized"))
     return TM_Disable;
 
-  if (Enable == true)
+  if (Enable)
     return TM_ForcedByUser;
 
   if ((VectorizeWidth && VectorizeWidth->isScalar()) && InterleaveCount == 1)
@@ -2259,9 +2280,10 @@ Value *llvm::addRuntimeChecks(
   return MemoryRuntimeCheck;
 }
 
-Value *llvm::addDiffRuntimeChecks(
-    Instruction *Loc, ArrayRef<PointerDiffInfo> Checks, SCEVExpander &Expander,
-    function_ref<Value *(IRBuilderBase &, unsigned)> GetVF, unsigned IC) {
+Value *llvm::addDiffRuntimeChecks(Instruction *Loc,
+                                  ArrayRef<PointerDiffInfo> Checks,
+                                  SCEVExpander &Expander, ElementCount VF,
+                                  unsigned IC) {
 
   LLVMContext &Ctx = Loc->getContext();
   IRBuilder ChkBuilder(Ctx, InstSimplifyFolder(Loc->getDataLayout()));
@@ -2273,22 +2295,13 @@ Value *llvm::addDiffRuntimeChecks(
   // Map to keep track of created compares, The key is the pair of operands for
   // the compare, to allow detecting and re-using redundant compares.
   DenseMap<std::pair<Value *, Value *>, Value *> SeenCompares;
-  // Cache of (VF * IC * AccessSize) - 1, shared across checks with matching
-  // type and IC*AccessSize to avoid emitting duplicate runtime computations.
-  DenseMap<std::pair<Type *, unsigned>, Value *> ThresholdCache;
   for (const auto &[SrcStart, SinkStart, AccessSize, NeedsFreeze] : Checks) {
     assert(IC * AccessSize > 0 &&
            "Threshold must be non-zero to use diff-check");
     Type *Ty = SinkStart->getType();
-    unsigned ICTimesAccessSize = IC * AccessSize;
-    Value *One = ConstantInt::get(Ty, 1);
-    Value *&ThresholdMinusOne = ThresholdCache[{Ty, ICTimesAccessSize}];
-    if (!ThresholdMinusOne) {
-      Value *VFTimesICTimesSize =
-          ChkBuilder.CreateMul(GetVF(ChkBuilder, Ty->getScalarSizeInBits()),
-                               ConstantInt::get(Ty, ICTimesAccessSize));
-      ThresholdMinusOne = ChkBuilder.CreateSub(VFTimesICTimesSize, One);
-    }
+    const SCEV *TotalAccessSize = SE.getElementCount(Ty, VF * IC * AccessSize);
+    Value *ThresholdMinusOne = Expander.expandCodeFor(
+        SE.getMinusSCEV(TotalAccessSize, SE.getConstant(Ty, 1)), Ty, Loc);
     Value *Diff =
         Expander.expandCodeFor(SE.getMinusSCEV(SinkStart, SrcStart), Ty, Loc);
 
@@ -2300,8 +2313,9 @@ Value *llvm::addDiffRuntimeChecks(
 
     // Use (Diff - 1) <u (Threshold - 1), equivalent to 0 < Diff <u Threshold,
     // to exclude Diff == 0 (equal pointers are safe).
-    IsConflict = ChkBuilder.CreateICmpULT(ChkBuilder.CreateSub(Diff, One),
-                                          ThresholdMinusOne, "diff.check");
+    IsConflict = ChkBuilder.CreateICmpULT(
+        ChkBuilder.CreateSub(Diff, ConstantInt::get(Ty, 1)), ThresholdMinusOne,
+        "diff.check");
     SeenCompares.insert({{Diff, ThresholdMinusOne}, IsConflict});
     if (NeedsFreeze)
       IsConflict =

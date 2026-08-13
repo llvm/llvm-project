@@ -9,6 +9,7 @@
 #include <memory>
 #include <mutex>
 
+#include "APIHelpers.h"
 #include "DLWrap.h"
 #include "Shared/Debug.h"
 #include "llvm/Support/DynamicLibrary.h"
@@ -94,6 +95,8 @@ DLWRAP(zeCommandListHostSynchronize, 2)
 DLWRAP(zeCommandListAppendSignalEvent, 2)
 DLWRAP(zeCommandListAppendWaitOnEvents, 3)
 DLWRAP(zeEventQueryStatus, 1)
+DLWRAP(zeDriverGetDefaultContext, 1)
+DLWRAP(zeCommandListAppendHostFunction, 7)
 
 DLWRAP_FINALIZE()
 
@@ -110,18 +113,29 @@ DLWRAP_FINALIZE()
 #define DEBUG_PREFIX "TARGET " GETNAME(TARGET_NAME) " RTL"
 #endif
 
+// Macro used to make APIs that are returning
+// ZE_RESULT_ERROR_UNSUPPORTED_FEATURE nullptr in dlwrap.
+#define INVALIDATE_LEVEL_ZERO_API(function)                                    \
+  if (dlwrap::function##_loaded() &&                                           \
+      api_helper::callWithDefaultArgs(function) ==                             \
+          ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {                               \
+    for (size_t I = 0; I < dlwrap::size(); I++) {                              \
+      const char *Sym = dlwrap::symbol(I);                                     \
+      if (std::strcmp(Sym, #function) != 0)                                    \
+        continue;                                                              \
+      ODBG(OLDT_Init) << #function                                             \
+                      << " returns ZE_RESULT_ERROR_UNSUPPORTED_FEATURE, "      \
+                         "fallback might be available";                        \
+      *dlwrap::pointer(I) = nullptr;                                           \
+    }                                                                          \
+  }
+
 // Extension function pointer for getting argument sizes.
 static ze_result_t (*zexKernelGetArgumentSize_ptr)(ze_kernel_handle_t, uint32_t,
                                                    uint32_t *) = nullptr;
 
-static ze_result_t zeCommandListAppendLaunchKernelWithArgumentsFallback(
-    ze_command_list_handle_t hCommandList, ze_kernel_handle_t hKernel,
-    const ze_group_count_t groupCounts, const ze_group_size_t groupSizes,
-    void **pArguments, const void *pNext, ze_event_handle_t hSignalEvent,
-    uint32_t numWaitEvents, ze_event_handle_t *phWaitEvents) {
-
+static bool zeCommandListAppendLaunchKernelWithArgumentsFallbackAvailable() {
   static std::once_flag zexKernelGetArgumentSize_once;
-  ze_result_t Res;
 
   // Load zexKernelGetArgumentSize extension if available.
   std::call_once(zexKernelGetArgumentSize_once, []() {
@@ -143,13 +157,16 @@ static ze_result_t zeCommandListAppendLaunchKernelWithArgumentsFallback(
       }
     }
   });
-  if (!zexKernelGetArgumentSize_ptr) {
-    ODBG(OLDT_Kernel) << "zeCommandListAppendLaunchKernelWithArguments is not "
-                         "available, and no fallback is possible without "
-                         "argument size information.";
-    return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE;
-  }
+  return zexKernelGetArgumentSize_ptr != nullptr;
+}
 
+static ze_result_t zeCommandListAppendLaunchKernelWithArgumentsFallback(
+    ze_command_list_handle_t hCommandList, ze_kernel_handle_t hKernel,
+    const ze_group_count_t groupCounts, const ze_group_size_t groupSizes,
+    void **pArguments, const void *pNext, ze_event_handle_t hSignalEvent,
+    uint32_t numWaitEvents, ze_event_handle_t *phWaitEvents) {
+
+  ze_result_t Res;
   Res = zeKernelSetGroupSize(hKernel, groupSizes.groupSizeX,
                              groupSizes.groupSizeY, groupSizes.groupSizeZ);
   if (Res != ZE_RESULT_SUCCESS)
@@ -199,17 +216,29 @@ static ze_result_t zeCommandListAppendLaunchKernelWithArgumentsFallback(
 static struct {
   const char *Name;
   void *FallbackFunc;
+  bool (*FallbackAvailable)();
 } ZeFallbacksTbl[] = {
     {"zeCommandListAppendLaunchKernelWithArguments",
      reinterpret_cast<void *>(
-         &zeCommandListAppendLaunchKernelWithArgumentsFallback)}};
+         &zeCommandListAppendLaunchKernelWithArgumentsFallback),
+     zeCommandListAppendLaunchKernelWithArgumentsFallbackAvailable}};
 constexpr size_t ZeFallbacksTblSz =
     sizeof(ZeFallbacksTbl) / sizeof(ZeFallbacksTbl[0]);
 
 static void *findZeFallback(std::string_view Name) {
   for (size_t i = 0; i < ZeFallbacksTblSz; i++) {
-    if (Name == ZeFallbacksTbl[i].Name)
+    if (Name == ZeFallbacksTbl[i].Name) {
+      if (!ZeFallbacksTbl[i].FallbackAvailable()) {
+        ODBG(OLDT_Init)
+            << "Symbol '" << Name
+            << "' has fallback but it's not compatible with the platform!";
+        // In theory we could have multiple fallback entries for one
+        // symbol, continue the search
+        continue;
+      }
+
       return ZeFallbacksTbl[i].FallbackFunc;
+    }
   }
   return nullptr;
 }
@@ -258,30 +287,64 @@ static bool loadLevelZero() {
     const char *Sym = dlwrap::symbol(I);
 
     void *P = DynlibHandle->getAddressOfSymbol(Sym);
-    void *Fallback = nullptr;
-    if (P == nullptr) {
-      Fallback = findZeFallback(Sym);
-      if (!Fallback) {
-        ODBG(OLDT_Init) << "Symbol '" << Sym << "' not found in '" << L0Library
-                        << "' and no fallback is available!";
-        EmitCheckVersion();
-        return false;
-      }
-      ODBG(OLDT_Init) << "Symbol '" << Sym << "' not found in '" << L0Library
-                      << "'. Using fallback implementation -> " << Fallback;
-    }
     if (P)
       ODBG(OLDT_Init) << "Implementing " << Sym << " with dlsym(" << Sym
                       << ") -> " << P;
-
-    *dlwrap::pointer(I) = P ? P : Fallback;
+    *dlwrap::pointer(I) = P;
   }
 
   return true;
 }
 
+// Some APIs might be invalid in some Level Zero and
+// compute runtime environments. They will return
+// `ZE_RESULT_ERROR_UNSUPPORTED_FEATURE`. This
+// function sets their dlwrap pointers to null
+// in this situation.
+static void invalidateLevelZeroSymbols() {
+  INVALIDATE_LEVEL_ZERO_API(zeCommandListAppendLaunchKernelWithArguments);
+}
+
+static void addLevelZeroFallbacks() {
+  std::string L0Library{LEVEL_ZERO_LIBRARY};
+
+  for (size_t I = 0; I < dlwrap::size(); I++) {
+    if (*dlwrap::pointer(I) != nullptr)
+      continue;
+
+    // Sym is missing, try to find fallback
+    const char *Sym = dlwrap::symbol(I);
+    void *Fallback = nullptr;
+
+    Fallback = findZeFallback(Sym);
+    if (Fallback == nullptr) {
+      ODBG(OLDT_Init) << "Symbol '" << Sym << "' not found in '" << L0Library
+                      << "' and no fallback is available!";
+      continue;
+    }
+
+    ODBG(OLDT_Init) << "Symbol '" << Sym << "' not found in '" << L0Library
+                    << "'. Using fallback implementation -> " << Fallback;
+    *dlwrap::pointer(I) = Fallback;
+  }
+}
+
 ze_result_t ZE_APICALL zeInit(ze_init_flags_t flags) {
   if (!loadLevelZero())
     return ZE_RESULT_ERROR_UNKNOWN;
-  return dlwrap_zeInit(flags);
+
+  auto InitResult = dlwrap_zeInit(flags);
+
+  if (InitResult != ZE_RESULT_SUCCESS)
+    return InitResult;
+
+  // Some functions might be present in loader but return
+  // ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+  invalidateLevelZeroSymbols();
+
+  // Add fallbacks after calling zeInit, so we can
+  // use level_zero APIs to check if they work
+  addLevelZeroFallbacks();
+
+  return InitResult;
 }

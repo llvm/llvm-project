@@ -26,6 +26,7 @@
 #include "SIInstrInfo.h"
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/TargetParser/AtomicScope.h"
 
 using namespace llvm;
 
@@ -44,17 +45,22 @@ private:
 public:
   BarrierLatency(MachineFunction *MF) {
     LLVMContext &Context = MF->getFunction().getContext();
+    const Triple &TT = MF->getSubtarget<GCNSubtarget>().getTargetTriple();
+    auto ScopeID = [&](AtomicScope Scope, bool OneAS) {
+      return Context.getOrInsertSyncScopeID(
+          *getAtomicScopeIRString(TT, Scope, OneAS));
+    };
     IgnoredScopes.insert(SyncScope::SingleThread);
-    IgnoredScopes.insert(Context.getOrInsertSyncScopeID("wavefront"));
-    IgnoredScopes.insert(Context.getOrInsertSyncScopeID("wavefront-one-as"));
-    IgnoredScopes.insert(Context.getOrInsertSyncScopeID("singlethread-one-as"));
+    IgnoredScopes.insert(ScopeID(AtomicScope::Wavefront, /*OneAS=*/false));
+    IgnoredScopes.insert(ScopeID(AtomicScope::Wavefront, /*OneAS=*/true));
+    IgnoredScopes.insert(ScopeID(AtomicScope::Single, /*OneAS=*/true));
 
     const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
     bool TgSplit =
         ST.hasTgSplitSupport() && AMDGPU::isTgSplitEnabled(MF->getFunction());
     if (!ST.requiresWaitOnWorkgroupReleaseFence(TgSplit)) {
       // Prior to GFX10 workgroup scope does not normally require waitcnts
-      IgnoredScopes.insert(Context.getOrInsertSyncScopeID("workgroup"));
+      IgnoredScopes.insert(ScopeID(AtomicScope::Workgroup, /*OneAS=*/false));
     }
   }
   void apply(ScheduleDAGInstrs *DAG) override;

@@ -58,11 +58,10 @@ static mlir::Value emitVectorFCmp(CIRGenFunction &cgf, const CallExpr &expr,
                                   llvm::SmallVector<mlir::Value> &ops,
                                   cir::CmpOpKind pred, bool shouldInvert) {
   CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, &expr);
-  // TODO(cir): Add isSignaling boolean once emitConstrainedFPCall implemented
-  assert(!cir::MissingFeatures::emitConstrainedFPCall());
   clang::CIRGen::CIRGenBuilderTy &builder = cgf.getBuilder();
   mlir::Value cmp = builder.createVecCompare(cgf.getLoc(expr.getExprLoc()),
                                              pred, ops[0], ops[1]);
+  // TODO(cir): Add dedicated predicates to avoid the need to invert this.
   mlir::Value bitCast = builder.createBitcast(
       shouldInvert ? builder.createNot(cmp) : cmp, ops[0].getType());
   return bitCast;
@@ -2560,7 +2559,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
       break;
     }
 
-    auto resVector = cir::VectorType::get(builder.getBoolTy(), numElts);
+    auto resVector = cir::VectorType::get(builder.getSIntNTy(1), numElts);
 
     cir::StructType resRecord =
         cir::StructType::get(&getMLIRContext(), {resVector, resVector},

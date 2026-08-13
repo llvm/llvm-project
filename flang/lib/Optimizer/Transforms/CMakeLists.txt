@@ -44,6 +44,7 @@ add_flang_library(FIRTransforms
   GenRuntimeCallsForTest.cpp
   LoopInvariantCodeMotion.cpp
   LoopVersioning.cpp
+  SelectOpsConversion.cpp
   MIFOpConversion.cpp
   MemRefDataFlowOpt.cpp
   MemoryAllocation.cpp

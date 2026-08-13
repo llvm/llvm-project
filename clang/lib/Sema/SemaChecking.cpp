@@ -541,9 +541,9 @@ struct BuiltinDumpStructGenerator {
     S.popCodeSynthesisContext();
     if (!RealCall.isInvalid())
       Actions.push_back(RealCall.get());
-    // Bail out if we've hit any errors, even if we managed to build the
-    // call. We don't want to produce more than one error.
-    return RealCall.isInvalid() || ErrorTracker.hasErrorOccurred();
+    // Bail out if we've hit any unrecoverable errors, even if we managed
+    // to build the call.
+    return RealCall.isInvalid() || ErrorTracker.hasUnrecoverableErrorOccurred();
   }
 
   Expr *getIndentString(unsigned Depth) {
@@ -2352,7 +2352,8 @@ checkMathBuiltinElementType(Sema &S, SourceLocation Loc, QualType ArgTy,
 
   switch (ArgTyRestr) {
   case Sema::EltwiseBuiltinArgTyRestriction::None:
-    if (!ArgTy->getAs<VectorType>() && !isValidMathElementType(ArgTy)) {
+    if (!ArgTy->getAs<VectorType>() && !ArgTy->getAs<MatrixType>() &&
+        !isValidMathElementType(ArgTy)) {
       return S.Diag(Loc, diag::err_builtin_invalid_arg_type)
              << ArgOrdinal << /* vector */ 2 << /* integer */ 1 << /* fp */ 1
              << ArgTy;
