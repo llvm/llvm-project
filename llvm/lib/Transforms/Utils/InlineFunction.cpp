@@ -2013,7 +2013,13 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
     if (isa<PseudoProbeInst>(I))
       return;
 
-    I.setDebugLoc(TheCallDL);
+    DebugLoc DL = TheCallDL;
+    // An inlined call without a debug location has no callsite probe of its
+    // own. Do not let it inherit the caller's probe discriminator.
+    if (isa<CallBase>(I) && DL &&
+        DILocation::isPseudoProbeDiscriminator(DL->getDiscriminator()))
+      DL = DL->cloneWithDiscriminator(0);
+    I.setDebugLoc(DL);
   };
 
   // Helper-util for updating debug-info records attached to instructions.

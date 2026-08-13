@@ -1,6 +1,12 @@
-; RUN: opt < %s -passes='pseudo-probe,cgscc(inline)' -S | FileCheck %s
+; RUN: opt < %s -passes='pseudo-probe,cgscc(inline)' -S -o %t
+; RUN: FileCheck %s < %t
+; RUN: llc %t -mtriple=x86_64 -stop-after=pseudo-probe-inserter -o - | FileCheck %s --check-prefix=MIR
 
 ; CHECK-LABEL: @caller(
+
+; This call came from the callee without debug metadata. It keeps the caller's
+; source location but must not inherit the caller's callsite probe.
+; CHECK: call void @inner(){{.*}}!dbg ![[INNER_CALL_LOC:[0-9]+]]
 
 ; This instruction did not have a !dbg metadata in the callee but get a !dbg after inlined.
 ; CHECK: store i32 1, {{.*}}, !dbg ![[#]]
@@ -9,12 +15,19 @@
 ; CHECK-NOT:  call void @llvm.pseudoprobe({{.*}}), !dbg ![[#]]
 ; CHECK:  call void @llvm.pseudoprobe({{.*}})
 
+; MIR-LABEL: name: caller
+; MIR-NOT: PSEUDO_PROBE {{.*}}, 2, 2
+; MIR: CALL64pcrel32 {{.*}}@inner
+
 @a = common global i32 0, align 4
 @b = common global i32 0, align 4
+
+declare void @inner()
 
 ; Function Attrs: nounwind uwtable
 define void @callee() {
 entry:
+  call void @inner()
   store i32 1, ptr @a, align 4
   ret void
 }
