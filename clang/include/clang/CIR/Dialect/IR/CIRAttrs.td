@@ -1637,6 +1637,35 @@ def CIR_AddressPointAttr : CIR_Attr<"AddressPoint", "address_point"> {
 }
 
 //===----------------------------------------------------------------------===//
+// OffsetPairAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_OffsetPairAttr : CIR_Attr<"OffsetPair", "offset_pair"> {
+  let summary = "Offset Pair attribute";
+
+  let description = [{
+    An attribute that specifies a pair of positive integral values that
+    represent a bit-offset range in an existing structure.  The range
+    represented by this is [start, end).
+
+    Example:
+    ```
+    cir.clear_padding(align(1) %1,
+                      [#cir.offset_pair<0, 2>, #cir.offset_pair<6, 8>])
+                      : <rec_Type> -> ()
+    ```
+  }];
+
+  let parameters = (ins "uint64_t":$start,
+                        "uint64_t":$end);
+
+  let assemblyFormat = [{
+    `<` $start`,` $end `>`
+  }];
+  let canHaveIllegalCXXABIType = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // TypeInfoAttr
 //===----------------------------------------------------------------------===//
 
