@@ -13,15 +13,15 @@ define void @test_store_release_v1i8(ptr %ptr, <1 x i8> %data) nounwind {
   ret void
 }
 
-define void @test_store_release_v1i16(ptr %ptr, <1 x i16> %data) nounwind {
-; CHECK-SD-LABEL: test_store_release_v1i16:
+define void @test_store_monotonic_v1i16(ptr %ptr, <1 x i16> %data) nounwind {
+; CHECK-SD-LABEL: test_store_monotonic_v1i16:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    umov w8, v0.h[0]
 ; CHECK-SD-NEXT:    strh w8, [x0]
 ; CHECK-SD-NEXT:    ret
 ;
-; CHECK-GI-LABEL: test_store_release_v1i16:
+; CHECK-GI-LABEL: test_store_monotonic_v1i16:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    str h0, [x0]
 ; CHECK-GI-NEXT:    ret
@@ -29,18 +29,19 @@ define void @test_store_release_v1i16(ptr %ptr, <1 x i16> %data) nounwind {
   ret void
 }
 
-define void @test_store_release_v1i32(ptr %ptr, <1 x i32> %data) nounwind {
-; CHECK-SD-LABEL: test_store_release_v1i32:
+define void @test_store_seq_cst_v1i32(ptr %ptr, <1 x i32> %data) nounwind {
+; CHECK-SD-LABEL: test_store_seq_cst_v1i32:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    fmov w8, s0
-; CHECK-SD-NEXT:    str w8, [x0]
+; CHECK-SD-NEXT:    stlr w8, [x0]
 ; CHECK-SD-NEXT:    ret
 ;
-; CHECK-GI-LABEL: test_store_release_v1i32:
+; CHECK-GI-LABEL: test_store_seq_cst_v1i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    str s0, [x0]
+; CHECK-GI-NEXT:    fmov w8, s0
+; CHECK-GI-NEXT:    stlr w8, [x0]
 ; CHECK-GI-NEXT:    ret
-  store atomic <1 x i32> %data, ptr %ptr unordered, align 4
+  store atomic <1 x i32> %data, ptr %ptr seq_cst, align 4
   ret void
 }
