@@ -33,7 +33,7 @@ aaron@aaronballman.com (email), aaron.ballman (Phabricator), [AaronBallman](http
 ### AST Visitors
 
 Ambrose Leeb \
-aleeb@nvidia.com (email), [aleeb-nvidia](https://github.com/aleeb-nvidia) (GitHub), Ætérnal (Discord), Sirraide (Discourse)
+aleeb@nvidia.com (email), [Sirraide](https://github.com/Sirraide) (GitHub), Ætérnal (Discord), Sirraide (Discourse)
 
 ### Clang LLVM IR generation
 
@@ -62,7 +62,7 @@ yitzhakm@google.com (email), ymandel (Phabricator), [ymand](https://github.com/y
 ### Sema
 
 Ambrose Leeb \
-aleeb@nvidia.com (email), [aleeb-nvidia](https://github.com/aleeb-nvidia) (GitHub), Ætérnal (Discord), Sirraide (Discourse)
+aleeb@nvidia.com (email), [Sirraide](https://github.com/Sirraide) (GitHub), Ætérnal (Discord), Sirraide (Discourse)
 
 Mariya Podchishchaeva \
 Mariya.Podchishchaeva@amd.com (email), [Fznamznon](https://github.com/Fznamznon) (GitHub), fznamznon (Discord), Fznamznon (Discourse)
@@ -180,7 +180,7 @@ Doug Wyatt \
 dwyatt@apple.com (email), [dougsonos](https://github.com/dougsonos) (GitHub), dougsonos (Discourse)
 
 Ambrose Leeb \
-aleeb@nvidia.com (email), [aleeb-nvidia](https://github.com/aleeb-nvidia) (GitHub), Ætérnal (Discord), Sirraide (Discourse)
+aleeb@nvidia.com (email), [Sirraide](https://github.com/Sirraide) (GitHub), Ætérnal (Discord), Sirraide (Discourse)
 
 ### Code Coverage
 
