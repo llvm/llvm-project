@@ -659,6 +659,10 @@ void X86_64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
       continue;
     int64_t addend = rs.getAddend<ELFT>(rel, type);
     RelExpr expr;
+    auto isLargeModelTlsCall = [&] {
+      auto next = std::next(it);
+      return next != rels.end() && next->getType(false) == R_X86_64_PLTOFF64;
+    };
     // Relocation types that only need a RelExpr set `expr` and break out of
     // the switch to reach rs.process(). Types that need special handling
     // (fast-path helpers, TLS) call a handler and use `continue`.
@@ -727,12 +731,15 @@ void X86_64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
       rs.handleTlsIe(R_GOT_PC, type, offset, addend, sym);
       continue;
     case R_X86_64_TLSGD:
-      if (rs.handleTlsGd(R_TLSGD_PC, R_GOT_PC, R_TPREL, type, offset, addend,
-                         sym))
+      // GCC's large-model sequence uses PLTOFF64 to call __tls_get_addr and
+      // does not match the fixed-size sequence required by TLS relaxation.
+      if (rs.handleTlsGd(R_TLSGD_PC, isLargeModelTlsCall() ? R_NONE : R_GOT_PC,
+                         R_TPREL, type, offset, addend, sym))
         ++it;
       continue;
     case R_X86_64_TLSLD:
-      if (rs.handleTlsLd(R_TLSLD_PC, type, offset, addend, sym))
+      if (rs.handleTlsLd(R_TLSLD_PC, type, offset, addend, sym,
+                         !isLargeModelTlsCall()))
         ++it;
       continue;
     case R_X86_64_DTPOFF32:

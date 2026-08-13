@@ -127,8 +127,8 @@ public:
   // Handle TLS Local-Dynamic relocation. Returns true if the __tls_get_addr
   // call should be skipped (i.e., caller should ++it).
   bool handleTlsLd(RelExpr sharedExpr, RelType type, uint64_t offset,
-                   int64_t addend, Symbol &sym) {
-    if (ctx.arg.shared) {
+                   int64_t addend, Symbol &sym, bool enableLdToLe = true) {
+    if (ctx.arg.shared || !enableLdToLe) {
       ctx.needsTlsLd.store(true, std::memory_order_relaxed);
       sec->addReloc({sharedExpr, type, offset, addend, &sym});
       return false;
