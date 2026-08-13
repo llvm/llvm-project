@@ -7,15 +7,14 @@ declare void @usef(float)
 
 define void @gpu_addr_hoist(i32 %tmp20, i64 %sub47, i64 %stride, i32 %sub, ptr %tau1) {
 ; CHECK-LABEL: @gpu_addr_hoist(
-; CHECK: call i32 @llvm.smax.i32(i32 [[SUB:%.*]], i32 0)
+; CHECK: mul i64 [[STRIDE:%.*]], {{%.*}}
+; CHECK: shl i64 {{%.*}}, 2
 ; CHECK: body:
-; CHECK: sext i32 {{%.*}} to i64
-; CHECK: mul nsw i64 [[STRIDE:%.*]], {{%.*}}
-; CHECK: add nsw i64 [[SUB47:%.*]], {{%.*}}
-; CHECK: shl nsw i64 {{%.*}}, 2
-; CHECK: getelementptr inbounds i8, ptr [[TAU1:%.*]], i64 {{%.*}}
-; CHECK: load float, ptr {{%.*}}
-; CHECK: icmp ne i32 {{%.*}}, 0
+; CHECK: [[LSR_IV:%.*]] = phi ptr [ {{%.*}} ], [ {{%.*}} ]
+; CHECK-NEXT: [[J:%.*]] = phi i32 [ 0, {{%.*}} ], [ [[INC:%.*]], {{.*}} ]
+; CHECK-NEXT: load float, ptr [[LSR_IV]]
+; CHECK: [[INC]] = add nuw i32 [[J]], 1
+; CHECK: icmp sgt i32 [[INC]], [[SUB:%.*]]
 entry:
   br label %pre
 pre:
@@ -41,14 +40,15 @@ exit:
 
 define void @gpu_twostream_hoist(i32 %tmp20, i64 %sub47, i64 %stride, i32 %sub, ptr %tau1, ptr %tau2) {
 ; CHECK-LABEL: @gpu_twostream_hoist(
+; CHECK: mul i64 [[STRIDE:%.*]], {{%.*}}
 ; CHECK: body:
-; CHECK: sext i32 {{%.*}} to i64
-; CHECK: mul nsw i64 [[STRIDE:%.*]], {{%.*}}
-; CHECK: getelementptr inbounds i8, ptr [[TAU1:%.*]], i64 {{%.*}}
-; CHECK: getelementptr inbounds i8, ptr [[TAU2:%.*]], i64 {{%.*}}
-; CHECK: load float, ptr {{%.*}}
-; CHECK: load float, ptr {{%.*}}
-; CHECK: icmp ne i32 {{%.*}}, 0
+; CHECK: [[LSR_IV:%.*]] = phi i64 [ {{%.*}} ], [ {{%.*}} ]
+; CHECK-NEXT: [[J:%.*]] = phi i32 [ 0, {{%.*}} ], [ [[INC:%.*]], {{.*}} ]
+; CHECK-NEXT: getelementptr i8, ptr [[TAU1:%.*]], i64 [[LSR_IV]]
+; CHECK-NEXT: getelementptr i8, ptr [[TAU2:%.*]], i64 [[LSR_IV]]
+; CHECK-NEXT: load float, ptr {{%.*}}
+; CHECK-NEXT: load float, ptr {{%.*}}
+; CHECK: icmp sgt i32 [[INC:%.*]], [[SUB:%.*]]
 entry:
   br label %pre
 pre:
@@ -77,14 +77,18 @@ exit:
 
 define void @gpu_four_load(i32 %tmp20, i64 %sub47, i64 %stride, i32 %sub, ptr %tau1) {
 ; CHECK-LABEL: @gpu_four_load(
+; CHECK: mul i64 [[STRIDE:%.*]], {{%.*}}
 ; CHECK: body:
-; CHECK: sext i32 {{%.*}} to i64
-; CHECK: mul nsw i64 [[STRIDE:%.*]], {{%.*}}
-; CHECK: load float, ptr {{%.*}}
-; CHECK: load float, ptr {{%.*}}
-; CHECK: load float, ptr {{%.*}}
-; CHECK: load float, ptr {{%.*}}
-; CHECK: icmp ne i32 {{%.*}}, 0
+; CHECK: [[LSR_IV:%.*]] = phi ptr [ {{%.*}} ], [ {{%.*}} ]
+; CHECK-NEXT: [[J:%.*]] = phi i32 [ 0, {{%.*}} ], [ [[INC:%.*]], {{.*}} ]
+; CHECK-NEXT: getelementptr i8, ptr [[LSR_IV]], i64 4
+; CHECK-NEXT: getelementptr i8, ptr [[LSR_IV]], i64 8
+; CHECK-NEXT: getelementptr i8, ptr [[LSR_IV]], i64 12
+; CHECK-NEXT: load float, ptr [[LSR_IV]]
+; CHECK-NEXT: load float, ptr {{%.*}}
+; CHECK-NEXT: load float, ptr {{%.*}}
+; CHECK-NEXT: load float, ptr {{%.*}}
+; CHECK: icmp sgt i32 [[INC:%.*]], [[SUB:%.*]]
 entry:
   br label %pre
 pre:
