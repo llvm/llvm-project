@@ -801,6 +801,12 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
         Type *Ty = CI->getArgOperand(0)->getType();
         if (!TM || !isa<ScalableVectorType>(Ty))
           return false;
+        // Avoid scalarizing if the vector library provides an implementation.
+        auto *VTy = cast<VectorType>(Ty);
+        if (hasIntrinsicVectorMapping(LookupTLI(*CI->getFunction()),
+                                      F.getIntrinsicID(), VTy->getElementType(),
+                                      VTy->getElementCount(), &M))
+          return false;
         const TargetLowering *TL = TM->getSubtargetImpl(F)->getTargetLowering();
         unsigned Op = TL->IntrinsicIDToISD(F.getIntrinsicID());
         assert(Op != ISD::DELETED_NODE && "unsupported intrinsic");

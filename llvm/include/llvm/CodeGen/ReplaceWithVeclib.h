@@ -18,9 +18,24 @@
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/TypeSize.h"
 
 namespace llvm {
 class Function;
+class Module;
+class TargetLibraryInfo;
+class Type;
+
+namespace Intrinsic {
+typedef unsigned ID;
+}
+
+/// Returns true when \p TLI has a vector mapping for \p IID at the given
+/// element type and \p EC.
+LLVM_ABI bool hasIntrinsicVectorMapping(const TargetLibraryInfo &TLI,
+                                        Intrinsic::ID IID, Type *ScalarTy,
+                                        ElementCount EC, Module *M);
+
 struct ReplaceWithVeclib : public RequiredPassInfoMixin<ReplaceWithVeclib> {
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
