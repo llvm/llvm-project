@@ -1,0 +1,23 @@
+# RUN: not --crash llc %s -mtriple=x86_64-- -run-pass=none -filetype=null 2>&1 | FileCheck %s
+
+# A PHI is illegal while the usesBlockArgs property is set.
+# CHECK: *** Bad machine code: PHI instruction with UsesBlockArgs property set ***
+---
+name: phi_with_block_args
+tracksRegLiveness: true
+usesBlockArgs: true
+body: |
+  bb.0:
+    successors: %bb.2
+    %0:gr32 = MOV32ri 1
+    JMP_1 %bb.2
+
+  bb.1:
+    successors: %bb.2
+    %1:gr32 = MOV32ri 2
+    JMP_1 %bb.2
+
+  bb.2:
+    %2:gr32 = PHI %0, %bb.0, %1, %bb.1
+    RET64
+...

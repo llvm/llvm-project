@@ -1,0 +1,21 @@
+# RUN: not --crash llc %s -mtriple=x86_64-- -run-pass=none -filetype=null 2>&1 | FileCheck %s
+
+# CHECK: *** Bad machine code: SUCC_ARGS successor is not a CFG successor ***
+# CHECK: - instruction: SUCC_ARGS %bb.2, %0:gr32
+
+---
+name: succ_args_block_not_cfg_successor
+tracksRegLiveness: true
+usesBlockArgs: true
+body: |
+  bb.0:
+    successors: %bb.1
+    %0:gr32 = MOV32ri 7
+    SUCC_ARGS %bb.2, %0
+    JMP_1 %bb.1
+
+  bb.1:
+    RET64
+
+  bb.2:
+...

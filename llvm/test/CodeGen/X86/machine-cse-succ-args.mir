@@ -1,0 +1,34 @@
+# RUN: llc -mtriple=x86_64-- -run-pass=machine-cse -o - %s | FileCheck %s
+# SUCC_ARGS is edge-specific and must not be common-subexpression-eliminated,
+# even when a dominating block forwards the same register to the same successor
+# along a different edge. Each predecessor must retain its own SUCC_ARGS.
+
+---
+name: no_cse_succ_args
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: no_cse_succ_args
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $edi, $esi
+    %0:gr32 = COPY $edi
+    %1:gr32 = COPY $esi
+    TEST32rr %0, %0, implicit-def $eflags
+    ; CHECK: SUCC_ARGS %bb.2, %1
+    SUCC_ARGS %bb.2, %1
+    JCC_1 %bb.2, 5, implicit $eflags
+    JMP_1 %bb.1
+
+  ; bb.1 is dominated by bb.0. Its SUCC_ARGS is identical to bb.0's but feeds a
+  ; different edge, so it must not be CSE'd away.
+  ; CHECK: bb.1:
+  ; CHECK: SUCC_ARGS %bb.2, %1
+  bb.1:
+    successors: %bb.2
+    SUCC_ARGS %bb.2, %1
+    JMP_1 %bb.2
+
+  bb.2:
+    $eax = COPY %1
+    RET64 implicit $eax
+...
