@@ -98,6 +98,10 @@ namespace __pstl {
 // ------------
 // No other algorithms based on reverse
 //
+// search_n family
+// ------------------
+// No other algorithms based on search_n
+//
 // stable_sort family
 // ------------------
 // - sort

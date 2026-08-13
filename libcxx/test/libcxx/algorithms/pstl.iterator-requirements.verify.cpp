@@ -224,6 +224,11 @@ void f(non_forward_iterator non_fwd,
   }
 
   {
+    (void)std::search_n(pol, non_fwd, non_fwd, 1, 1);       // expected-error@*:* {{static assertion failed: search_n}}
+    (void)std::search_n(pol, non_fwd, non_fwd, 1, 1, pred); // expected-error@*:* {{static assertion failed: search_n}}
+  }
+
+  {
     (void)std::sort(pol, non_fwd, non_fwd);       // expected-error@*:* {{static assertion failed: sort}}
     (void)std::sort(pol, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: sort}}
   }

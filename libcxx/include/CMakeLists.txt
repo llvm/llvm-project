@@ -699,6 +699,7 @@ set(files
   __pstl/cpu_algos/merge.h
   __pstl/cpu_algos/mismatch.h
   __pstl/cpu_algos/reverse.h
+  __pstl/cpu_algos/search_n.h
   __pstl/cpu_algos/stable_sort.h
   __pstl/cpu_algos/transform.h
   __pstl/cpu_algos/transform_reduce.h

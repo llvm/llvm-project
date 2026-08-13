@@ -356,6 +356,18 @@ int main(int, char**) {
       }
 
       {
+        auto pred = maybe_throw(tokens[5], [](int x, int y) -> bool { return x == y; });
+
+        // search_n(first, last, n, val)
+        assert_non_throwing([=, &policy] { (void)std::search_n(policy, std::move(first1), std::move(last1), 1, 1); });
+
+        // search_n(first, last, n, val, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::search_n(policy, std::move(first1), std::move(last1), 1, 1, pred);
+        });
+      }
+
+      {
         auto compare = maybe_throw(tokens[5], [](int x, int y) -> bool { return x < y; });
 
         // sort(first, last)
