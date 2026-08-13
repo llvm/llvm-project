@@ -407,6 +407,12 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     Known.Zero.setHighBits(MaxValue.countl_zero());
     break;
   }
+  case TargetOpcode::G_VSCALE: {
+    const Function &F = getMachineFunction().getFunction();
+    const APInt &Multiplier = MI.getOperand(1).getCImm()->getValue();
+    Known = getVScaleRange(&F, BitWidth).multiply(Multiplier).toKnownBits();
+    break;
+  }
   case TargetOpcode::G_CONSTANT: {
     Known = KnownBits::makeConstant(MI.getOperand(1).getCImm()->getValue());
     break;
