@@ -2672,6 +2672,69 @@ private:
     return CGF.getContext().getTypeSize(Ty);
   }
 
+  /// Compute the occupied bit intervals for a bitfield.
+  ///
+  /// In the case of little endian, the occupied bits are always contiguous so a
+  /// single interval is sufficient; whereas in big endian mode, the occupied
+  /// bits are not necessarily contiguous since the byte order is reversed. Care
+  /// is also taken if the bitfield is volatile because the field size and
+  /// offset can be different in this case.
+  SmallVector<BitInterval>
+  computeBitfieldOccupiedIntervals(const RecordDecl *RD, const FieldDecl *Field,
+                                   uint64_t StartBitOffset) const {
+    const CGRecordLayout &Layout = CGF.CGM.getTypes().getCGRecordLayout(RD);
+    const CGBitFieldInfo &Info = Layout.getBitFieldInfo(Field);
+    bool IsLittleEndian = CGF.getTarget().isLittleEndian();
+    bool IsVolatile = Field->getType().isVolatileQualified() &&
+                      Info.VolatileStorageSize != 0 &&
+                      CGF.CGM.getTarget().getABI().starts_with("aapcs");
+
+    uint64_t DeclaredTySizeInBits =
+        getScalarOccupiedSizeInBits(Field->getType());
+    // In case of over-sized bitfields, the number of bits actually occupied
+    // with values is smaller than the declared bitfield width (Info.Size).
+    uint64_t ValueSizeInBits =
+        std::min(static_cast<uint64_t>(Info.Size), DeclaredTySizeInBits);
+
+    const uint64_t Offset = IsVolatile ? Info.VolatileOffset : Info.Offset;
+
+    // This calculation looks different between volatile and non-volatile
+    // because StorageOffset is in bytes, whereas VolatileStorageOffset is in
+    // VolatileStorageSize units.
+    const uint64_t StorageOffset =
+        IsVolatile ? Info.VolatileStorageOffset.getQuantity() *
+                         Info.VolatileStorageSize
+                   : CGF.getContext().toBits(Info.StorageOffset);
+
+    if (IsLittleEndian)
+      return {BitInterval{StartBitOffset + StorageOffset + Offset,
+                          StartBitOffset + StorageOffset + Offset +
+                              ValueSizeInBits}};
+
+    const uint64_t StorageSize =
+        IsVolatile ? Info.VolatileStorageSize : Info.StorageSize;
+    const uint64_t BitsInByte = CGF.getContext().getCharWidth();
+
+    SmallVector<BitInterval> Intervals;
+
+    for (uint64_t Start = Offset, End = Start + ValueSizeInBits; Start < End;
+         Start = (Start + BitsInByte) & (~0UL << 3)) {
+      uint64_t ByteBoundaryStart = Start & (~0UL << 3);
+      uint64_t ByteBoundaryEnd = ByteBoundaryStart + BitsInByte;
+      uint64_t OffsetWithinByte = Start - ByteBoundaryStart;
+      uint64_t SizeWithinByte =
+          std::min(End - Start, BitsInByte - OffsetWithinByte);
+      uint64_t ByteOffset = StorageSize - ByteBoundaryEnd;
+
+      BitInterval BI{StartBitOffset + StorageOffset + ByteOffset +
+                         OffsetWithinByte,
+                     StartBitOffset + StorageOffset + ByteOffset +
+                         OffsetWithinByte + SizeWithinByte};
+      Intervals.push_back(std::move(BI));
+    }
+    return Intervals;
+  }
+
   /// Compute the occupied bit intervals for a BitInt.
   ///
   /// In the case of little endian, the occupied bits are always contiguous so a
@@ -2816,12 +2879,11 @@ private:
       if (Field->isUnnamedBitField())
         continue;
 
-      auto FieldOffset = ASTLayout.getFieldOffset(Field->getFieldIndex());
       if (Field->isBitField()) {
-        OccuppiedIntervals.push_back(BitInterval{
-            StartBitOffset + FieldOffset,
-            StartBitOffset + FieldOffset + Field->getBitWidthValue()});
+        OccuppiedIntervals.append(
+            computeBitfieldOccupiedIntervals(R, Field, StartBitOffset));
       } else {
+        auto FieldOffset = ASTLayout.getFieldOffset(Field->getFieldIndex());
         Stack.push_back(Data{StartBitOffset + FieldOffset, Field->getType(),
                              /*VisitVirtualBase*/ true});
       }
