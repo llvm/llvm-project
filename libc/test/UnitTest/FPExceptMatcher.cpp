@@ -21,12 +21,7 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include <setjmp.h>
 
-// To make this test work on bare-metal targets without working signal.h, find
-// out if signal-macros.h did anything, before including the full signal.h. It
-// doesn't define a specific macro of the form HAVE_SIGNALS, so we just test
-// for one of the macros it _does_ define.
-#include "llvm-libc-macros/signal-macros.h"
-#ifdef __NSIGSET_WORDS
+#if HAVE_SIGNAL_H
 #include <signal.h>
 #endif
 
@@ -47,7 +42,7 @@ using sighandler_t = __sighandler_t *;
 
 static thread_local bool caughtExcept;
 
-#ifdef __NSIGSET_WORDS
+#if HAVE_SIGNAL_H
 
 static thread_local sigjmp_buf jumpBuffer;
 
@@ -59,14 +54,14 @@ static void sigfpeHandler([[maybe_unused]] int sig) {
 #endif // __NSIGSET_WORDS
 
 FPExceptMatcher::FPExceptMatcher(FunctionCaller *func) {
-#ifdef __NSIGSET_WORDS
+#if HAVE_SIGNAL_H
   auto *oldSIGFPEHandler = signal(SIGFPE, &sigfpeHandler);
 #endif
 
   caughtExcept = false;
   fenv_t oldEnv;
   fputil::get_env(&oldEnv);
-#ifdef __NSIGSET_WORDS
+#if HAVE_SIGNAL_H
   if (sigsetjmp(jumpBuffer, 1) == 0)
 #endif
     func->call();
@@ -74,7 +69,7 @@ FPExceptMatcher::FPExceptMatcher(FunctionCaller *func) {
   // We restore the previous floating point environment after
   // the call to the function which can potentially raise SIGFPE.
   fputil::set_env(&oldEnv);
-#ifdef __NSIGSET_WORDS
+#if HAVE_SIGNAL_H
   signal(SIGFPE, oldSIGFPEHandler);
 #endif
   exceptionRaised = caughtExcept;

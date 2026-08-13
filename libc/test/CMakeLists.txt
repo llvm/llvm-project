@@ -10,6 +10,15 @@ add_custom_target(libc-hermetic-tests-build)
 add_custom_target(libc-integration-tests-build)
 add_custom_target(libc_include_tests-build)
 
+# Allow compiled tests to check for the existence of particular headers in this
+# library build, by defining HAVE_STDIO_H, HAVE_SIGNAL_H etc to indicate that
+# they are present.
+foreach(target ${TARGET_PUBLIC_HEADERS})
+  string(REPLACE "libc.include." "" header ${target})
+  string(TOUPPER ${header} header)
+  add_compile_definitions(HAVE_${header}_H)
+endforeach()
+
 # Configure the site config file for lit
 configure_lit_site_cfg(
   ${LIBC_SOURCE_DIR}/test/lit.site.cfg.py.in
