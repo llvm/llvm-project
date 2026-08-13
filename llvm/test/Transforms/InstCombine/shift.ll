@@ -2134,7 +2134,7 @@ define i32 @shl2_cttz_multiuse(i32 %x) {
   ret i32 %shl
 }
 
-; negative test: is_zero_poison = false, should not fold
+; is_zero_poison = false will be upgraded to true when used as shift amount
 define i32 @shl2_cttz_zero_poison_false(i32 %x) {
 ; CHECK-LABEL: @shl2_cttz_zero_poison_false(
 ; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
