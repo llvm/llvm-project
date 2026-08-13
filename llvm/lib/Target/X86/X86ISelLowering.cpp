@@ -50819,10 +50819,16 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
     EVT FP16VT = VT.changeVectorElementType(*DAG.getContext(), MVT::f16);
     if (DAG.getTargetLoweringInfo().isTypeLegal(FP16VT))
       FPSclVT = MVT::f16;
-  }
-  else if (EltBits <= 16 || BothFitFP(APFloat::IEEEsingle()))
+    else
+      FPSclVT = MVT::f32;
+  } else if (EltBits <= 16 || BothFitFP(APFloat::IEEEsingle()))
     FPSclVT = MVT::f32;
   EVT FPVT = VT.changeVectorElementType(*DAG.getContext(), FPSclVT);
+
+  // FP16-to-i32 SAE conversions consume half as many lanes as FP16-to-i16.
+  MVT StrictISclVT = FPSclVT == MVT::f16 && EltBits <= 16 ? MVT::i16 : MVT::i32;
+  unsigned MaxStrictElts = std::min(512 / FPSclVT.getSizeInBits(),
+                                    512 / StrictISclVT.getSizeInBits());
 
   bool IsStrict = DAG.getMachineFunction().getFunction().hasFnAttribute(
       Attribute::StrictFP);
@@ -50853,13 +50859,9 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
   // Nothing will split an illegal FP type after type legalization and the
   // strict SAE divide is 512-bit only.
   bool FPVTUsable = IsStrict
-                        ? FPVT.getSizeInBits() <= 512
+                        ? VT.getVectorNumElements() <= MaxStrictElts
                         : DCI.isBeforeLegalize() ||
                               DAG.getTargetLoweringInfo().isTypeLegal(FPVT);
-  LLVM_DEBUG(dbgs() << "FPVT = " << FPVT << "\n");
-  LLVM_DEBUG(dbgs() << "legal = "
-                  << DAG.getTargetLoweringInfo().isTypeLegal(FPVT)
-                  << "\n");
 
   // Halve the divide while the integer halves stay legal.
   if (!FPVTUsable) {
@@ -50878,19 +50880,22 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
   if (IsStrict) {
     // The converts are exact so only the divide and the truncate can
     // raise flags.
-    unsigned WideElts = 512 / FPSclVT.getSizeInBits(); // 16 f32 or 8 f64
-    MVT WideFP = MVT::getVectorVT(FPSclVT, WideElts);
-    MVT WideIScl = MVT::i32;
-    MVT WideI = MVT::getVectorVT(WideIScl, WideElts);
+    unsigned WideFPElts = 512 / FPSclVT.getSizeInBits();
+    MVT WideFP = MVT::getVectorVT(FPSclVT, WideFPElts);
+    MVT WideI = MVT::getVectorVT(StrictISclVT, MaxStrictElts);
     SDValue RN = DAG.getTargetConstant(X86::STATIC_ROUNDING::TO_NEAREST_INT, DL,
                                        MVT::i32); // {rn-sae}
     SDValue Quot =
         DAG.getNode(X86ISD::FDIV_RND, DL, WideFP,
                     widenSubVector(X, false, Subtarget, DAG, DL, 512),
                     widenSubVector(Y, false, Subtarget, DAG, DL, 512), RN);
+    if (MaxStrictElts != WideFPElts) {
+      MVT CvtFP = MVT::getVectorVT(FPSclVT, MaxStrictElts);
+      Quot = extractSubVector(Quot, 0, DAG, DL, CvtFP.getSizeInBits());
+    }
     unsigned FromFP = IsSigned ? X86ISD::CVTTP2SI_SAE : X86ISD::CVTTP2UI_SAE;
-    Q = DAG.getNode(FromFP, DL, WideI, Quot); // vcvttp*2dq/qq {sae}
-    MVT NarrowI = MVT::getVectorVT(WideIScl, VT.getVectorNumElements());
+    Q = DAG.getNode(FromFP, DL, WideI, Quot);
+    MVT NarrowI = MVT::getVectorVT(StrictISclVT, VT.getVectorNumElements());
     Q = extractSubVector(Q, 0, DAG, DL, NarrowI.getSizeInBits());
     Q = IsSigned ? DAG.getSExtOrTrunc(Q, DL, VT)
                  : DAG.getZExtOrTrunc(Q, DL, VT);
