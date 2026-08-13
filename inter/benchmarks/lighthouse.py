@@ -37,7 +37,7 @@ def require(path: Path) -> Path:
 
 
 def build_binaries(
-    build_dir: Path, output_dir: Path, igc_device: str
+    build_dir: Path, output_dir: Path, igc_device: str, size: int
 ) -> tuple[Path, Path, str]:
     inter_opt = require(build_dir / "tools" / "inter-opt" / "inter-opt")
     inter_translate = require(
@@ -47,6 +47,42 @@ def build_binaries(
     output_dir.mkdir(parents=True, exist_ok=True)
     machine = output_dir / "lighthouse-inter.mlir"
     inter_binary = output_dir / "lighthouse-inter.bin"
+    inter_source = output_dir / "lighthouse-input.mlir"
+    source_text = INTER_SOURCE.read_text()
+    replacements = {
+        "%18 = llvm.mlir.constant(512 : i32) : i32": (
+            f"%18 = llvm.mlir.constant({size * 4} : i32) : i32\n"
+            f"    %matrix_size = llvm.mlir.constant({size} : i32) : i32"
+        ),
+        "%15 = llvm.mlir.constant(256 : i32) : i32": (
+            f"%15 = llvm.mlir.constant({size * 2} : i32) : i32"
+        ),
+        "(%45, %7, %7, %7, %47)": "(%45, %7, %matrix_size, %7, %47)",
+        "(%45, %7, %7, %7, %88)": "(%45, %7, %matrix_size, %7, %88)",
+        "(%45, %7, %7, %7, %93, %94)": (
+            "(%45, %7, %matrix_size, %7, %93, %94)"
+        ),
+        "(%45, %7, %7, %7, %100, %101)": (
+            "(%45, %7, %matrix_size, %7, %100, %101)"
+        ),
+        "(%45, %7, %7, %7, %106, %107)": (
+            "(%45, %7, %matrix_size, %7, %106, %107)"
+        ),
+        "(%45, %7, %7, %7, %111, %112)": (
+            "(%45, %7, %matrix_size, %7, %111, %112)"
+        ),
+        "(%149, %18, %7, %18, %152, %153)": (
+            "(%149, %18, %matrix_size, %18, %152, %153)"
+        ),
+        "(%149, %18, %7, %18, %157, %158)": (
+            "(%149, %18, %matrix_size, %18, %157, %158)"
+        ),
+    }
+    for frozen, replacement in replacements.items():
+        if source_text.count(frozen) != 1:
+            raise SystemExit(f"frozen Inter input no longer has one {frozen!r}")
+        source_text = source_text.replace(frozen, replacement)
+    inter_source.write_text(source_text)
     pipeline = (
         "builtin.module("
         f"transform-preload-library{{transform-library-paths={pipelines}}},"
@@ -55,7 +91,7 @@ def build_binaries(
     run(
         [
             str(inter_opt),
-            str(INTER_SOURCE),
+            str(inter_source),
             f"--pass-pipeline={pipeline}",
             "-o",
             str(machine),
@@ -87,6 +123,8 @@ def build_binaries(
             str(IGC_SOURCE),
             "-device",
             igc_device,
+            "-options",
+            f"-DMATRIX_SIZE={size}",
             "-out_dir",
             str(igc_dir),
         ]
@@ -108,6 +146,7 @@ def measure(
     warmups: int,
     batches: int,
     iterations: int,
+    size: int,
 ) -> float:
     output = run(
         [
@@ -118,6 +157,7 @@ def measure(
             str(warmups),
             str(batches),
             str(iterations),
+            str(size),
             "payload_kernel",
         ],
         capture=True,
@@ -137,6 +177,7 @@ def main() -> int:
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--device", default="B60")
     parser.add_argument("--igc-device", default="bmg-g21")
+    parser.add_argument("--size", type=int, default=128)
     parser.add_argument("--runs", type=int, default=5)
     parser.add_argument("--warmups", type=int, default=200)
     parser.add_argument("--batches", type=int, default=15)
@@ -144,15 +185,18 @@ def main() -> int:
     args = parser.parse_args()
     if min(args.runs, args.warmups, args.batches, args.iterations) < 1:
         parser.error("run counts must be positive")
+    if args.size < 64 or args.size % 64:
+        parser.error("--size must be a positive multiple of 64")
 
     build_dir = args.build_dir.resolve()
     output_dir = (args.output_dir or build_dir / "benchmarks" / "lighthouse").resolve()
     runner = require(build_dir / "benchmarks" / "inter-lighthouse-benchmark")
     inter_binary, igc_binary, ocloc_version = build_binaries(
-        build_dir, output_dir, args.igc_device
+        build_dir, output_dir, args.igc_device, args.size
     )
     print(
         f"configuration device={args.device} igc_device={args.igc_device} "
+        f"shape={args.size}x{args.size}x64 "
         f"runs={args.runs} warmups={args.warmups} batches={args.batches} "
         f"iterations={args.iterations} timestamp=level-zero-kernel "
         f"ocloc={ocloc_version}"
@@ -171,6 +215,7 @@ def main() -> int:
                     args.warmups,
                     args.batches,
                     args.iterations,
+                    args.size,
                 )
             )
 

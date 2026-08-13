@@ -74,11 +74,11 @@ static bool selectDevice(const char *requiredName, ze_driver_handle_t &driver,
 }
 
 int main(int argc, char **argv) {
-  if (argc != 8 ||
+  if (argc != 9 ||
       (std::string(argv[1]) != "inter" && std::string(argv[1]) != "igc")) {
     fprintf(stderr,
             "usage: %s inter|igc <zebin> <device> <warmups> <batches> "
-            "<iterations> <kernel>\n",
+            "<iterations> <size> <kernel>\n",
             argv[0]);
     return 1;
   }
@@ -86,12 +86,17 @@ int main(int argc, char **argv) {
   const int warmups = std::atoi(argv[4]);
   const int batches = std::atoi(argv[5]);
   const int iterations = std::atoi(argv[6]);
+  const int64_t size = std::atoll(argv[7]);
   if (warmups < 1 || batches < 1 || iterations < 1) {
     fprintf(stderr, "warmups, batches, and iterations must be positive\n");
     return 1;
   }
-  constexpr int64_t m = 128;
-  constexpr int64_t n = 128;
+  if (size < 64 || size % 64 != 0) {
+    fprintf(stderr, "matrix size must be a positive multiple of 64\n");
+    return 1;
+  }
+  const int64_t m = size;
+  const int64_t n = size;
   constexpr int64_t k = 64;
 
   ZE_CHECK(zeInit(ZE_INIT_FLAG_GPU_ONLY));
@@ -120,7 +125,7 @@ int main(int argc, char **argv) {
   ze_module_handle_t module;
   ZE_CHECK(zeModuleCreate(context, device, &moduleDesc, &module, nullptr));
   ze_kernel_desc_t kernelDesc{ZE_STRUCTURE_TYPE_KERNEL_DESC};
-  kernelDesc.pKernelName = argv[7];
+  kernelDesc.pKernelName = argv[8];
   ze_kernel_handle_t kernel;
   ZE_CHECK(zeKernelCreate(module, &kernelDesc, &kernel));
   ZE_CHECK(zeKernelSetGroupSize(kernel, 256, 1, 1));
@@ -189,7 +194,8 @@ int main(int argc, char **argv) {
   eventDesc.wait = ZE_EVENT_SCOPE_FLAG_HOST;
   ze_event_handle_t event;
   ZE_CHECK(zeEventCreate(eventPool, &eventDesc, &event));
-  ze_group_count_t groups{2, 2, 1};
+  ze_group_count_t groups{static_cast<uint32_t>(size / 64),
+                          static_cast<uint32_t>(size / 64), 1};
   auto launch = [&]() -> ze_result_t {
     ze_result_t result = zeCommandListAppendLaunchKernel(
         commandList, kernel, &groups, event, 0, nullptr);

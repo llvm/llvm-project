@@ -23,6 +23,10 @@ The default runtime device substring is `B60`, paired with IGC's `bmg-g21`
 target. Override both `--device` and `--igc-device` together when targeting a
 different GPU architecture.
 
+Use `--size 256` (or another multiple of 64) to scale the square M/N dimensions
+while retaining `K=64` and the same `64x64` workgroup tile. This isolates grid
+scaling from reduction-loop scaling.
+
 The OpenCL reference mirrors the Lighthouse operations and cache policy. Its
 2D prefetch builtins compile to cached `load_block2d.ugm.d16.a64.ca.ca`
 messages, matching the cached prefetch contract in the Inter input.
