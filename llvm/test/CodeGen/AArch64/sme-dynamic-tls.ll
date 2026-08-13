@@ -37,15 +37,32 @@ define i32 @load_tls_streaming_compat() nounwind "aarch64_pstate_sm_compatible" 
 ;
 ; CHECK-DARWIN-LABEL: load_tls_streaming_compat:
 ; CHECK-DARWIN:       ; %bb.0: ; %entry
-; CHECK-DARWIN-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
+; CHECK-DARWIN-NEXT:    stp d15, d14, [sp, #-80]! ; 16-byte Folded Spill
+; CHECK-DARWIN-NEXT:    stp d13, d12, [sp, #16] ; 16-byte Folded Spill
 ; CHECK-DARWIN-NEXT:  Lloh0:
 ; CHECK-DARWIN-NEXT:    adrp x0, _x@TLVPPAGE
+; CHECK-DARWIN-NEXT:    stp d11, d10, [sp, #32] ; 16-byte Folded Spill
+; CHECK-DARWIN-NEXT:    stp d9, d8, [sp, #48] ; 16-byte Folded Spill
+; CHECK-DARWIN-NEXT:    stp x29, x30, [sp, #64] ; 16-byte Folded Spill
 ; CHECK-DARWIN-NEXT:  Lloh1:
 ; CHECK-DARWIN-NEXT:    ldr x0, [x0, _x@TLVPPAGEOFF]
-; CHECK-DARWIN-NEXT:    ldr x8, [x0]
-; CHECK-DARWIN-NEXT:    blr x8
+; CHECK-DARWIN-NEXT:    mrs x8, SVCR
+; CHECK-DARWIN-NEXT:    ldr x9, [x0]
+; CHECK-DARWIN-NEXT:    tbz w8, #0, LBB0_2
+; CHECK-DARWIN-NEXT:  ; %bb.1: ; %entry
+; CHECK-DARWIN-NEXT:    smstop sm
+; CHECK-DARWIN-NEXT:  LBB0_2: ; %entry
+; CHECK-DARWIN-NEXT:    blr x9
+; CHECK-DARWIN-NEXT:    tbz w8, #0, LBB0_4
+; CHECK-DARWIN-NEXT:  ; %bb.3: ; %entry
+; CHECK-DARWIN-NEXT:    smstart sm
+; CHECK-DARWIN-NEXT:  LBB0_4: ; %entry
+; CHECK-DARWIN-NEXT:    ldp x29, x30, [sp, #64] ; 16-byte Folded Reload
 ; CHECK-DARWIN-NEXT:    ldr w0, [x0]
-; CHECK-DARWIN-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
+; CHECK-DARWIN-NEXT:    ldp d9, d8, [sp, #48] ; 16-byte Folded Reload
+; CHECK-DARWIN-NEXT:    ldp d11, d10, [sp, #32] ; 16-byte Folded Reload
+; CHECK-DARWIN-NEXT:    ldp d13, d12, [sp, #16] ; 16-byte Folded Reload
+; CHECK-DARWIN-NEXT:    ldp d15, d14, [sp], #80 ; 16-byte Folded Reload
 ; CHECK-DARWIN-NEXT:    ret
 ; CHECK-DARWIN-NEXT:    .loh AdrpLdr Lloh0, Lloh1
 entry:
@@ -80,15 +97,25 @@ define i32 @load_tls_streaming() nounwind "aarch64_pstate_sm_enabled" {
 ;
 ; CHECK-DARWIN-LABEL: load_tls_streaming:
 ; CHECK-DARWIN:       ; %bb.0: ; %entry
-; CHECK-DARWIN-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
+; CHECK-DARWIN-NEXT:    stp d15, d14, [sp, #-80]! ; 16-byte Folded Spill
+; CHECK-DARWIN-NEXT:    stp d13, d12, [sp, #16] ; 16-byte Folded Spill
 ; CHECK-DARWIN-NEXT:  Lloh2:
 ; CHECK-DARWIN-NEXT:    adrp x0, _x@TLVPPAGE
+; CHECK-DARWIN-NEXT:    stp d11, d10, [sp, #32] ; 16-byte Folded Spill
+; CHECK-DARWIN-NEXT:    stp d9, d8, [sp, #48] ; 16-byte Folded Spill
+; CHECK-DARWIN-NEXT:    stp x29, x30, [sp, #64] ; 16-byte Folded Spill
 ; CHECK-DARWIN-NEXT:  Lloh3:
 ; CHECK-DARWIN-NEXT:    ldr x0, [x0, _x@TLVPPAGEOFF]
 ; CHECK-DARWIN-NEXT:    ldr x8, [x0]
+; CHECK-DARWIN-NEXT:    smstop sm
 ; CHECK-DARWIN-NEXT:    blr x8
+; CHECK-DARWIN-NEXT:    smstart sm
+; CHECK-DARWIN-NEXT:    ldp x29, x30, [sp, #64] ; 16-byte Folded Reload
 ; CHECK-DARWIN-NEXT:    ldr w0, [x0]
-; CHECK-DARWIN-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
+; CHECK-DARWIN-NEXT:    ldp d9, d8, [sp, #48] ; 16-byte Folded Reload
+; CHECK-DARWIN-NEXT:    ldp d11, d10, [sp, #32] ; 16-byte Folded Reload
+; CHECK-DARWIN-NEXT:    ldp d13, d12, [sp, #16] ; 16-byte Folded Reload
+; CHECK-DARWIN-NEXT:    ldp d15, d14, [sp], #80 ; 16-byte Folded Reload
 ; CHECK-DARWIN-NEXT:    ret
 ; CHECK-DARWIN-NEXT:    .loh AdrpLdr Lloh2, Lloh3
 entry:
@@ -133,13 +160,32 @@ define i32 @load_tls_shared_za() nounwind "aarch64_inout_za" {
 ; CHECK-DARWIN-LABEL: load_tls_shared_za:
 ; CHECK-DARWIN:       ; %bb.0: ; %entry
 ; CHECK-DARWIN-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
+; CHECK-DARWIN-NEXT:    mov x29, sp
+; CHECK-DARWIN-NEXT:    sub sp, sp, #16
+; CHECK-DARWIN-NEXT:    rdsvl x8, #1
+; CHECK-DARWIN-NEXT:    mov x9, sp
+; CHECK-DARWIN-NEXT:    msub x9, x8, x8, x9
+; CHECK-DARWIN-NEXT:    mov sp, x9
 ; CHECK-DARWIN-NEXT:  Lloh4:
 ; CHECK-DARWIN-NEXT:    adrp x0, _x@TLVPPAGE
+; CHECK-DARWIN-NEXT:    sub x11, x29, #16
 ; CHECK-DARWIN-NEXT:  Lloh5:
 ; CHECK-DARWIN-NEXT:    ldr x0, [x0, _x@TLVPPAGEOFF]
-; CHECK-DARWIN-NEXT:    ldr x8, [x0]
-; CHECK-DARWIN-NEXT:    blr x8
-; CHECK-DARWIN-NEXT:    ldr w0, [x0]
+; CHECK-DARWIN-NEXT:    stp x9, x8, [x29, #-16]
+; CHECK-DARWIN-NEXT:    msr TPIDR2_EL0, x11
+; CHECK-DARWIN-NEXT:    ldr x10, [x0]
+; CHECK-DARWIN-NEXT:    blr x10
+; CHECK-DARWIN-NEXT:    ldr w8, [x0]
+; CHECK-DARWIN-NEXT:    smstart za
+; CHECK-DARWIN-NEXT:    mrs x9, TPIDR2_EL0
+; CHECK-DARWIN-NEXT:    sub x0, x29, #16
+; CHECK-DARWIN-NEXT:    cbnz x9, LBB2_2
+; CHECK-DARWIN-NEXT:  ; %bb.1: ; %entry
+; CHECK-DARWIN-NEXT:    bl ___arm_tpidr2_restore
+; CHECK-DARWIN-NEXT:  LBB2_2: ; %entry
+; CHECK-DARWIN-NEXT:    mov w0, w8
+; CHECK-DARWIN-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-DARWIN-NEXT:    mov sp, x29
 ; CHECK-DARWIN-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; CHECK-DARWIN-NEXT:    ret
 ; CHECK-DARWIN-NEXT:    .loh AdrpLdr Lloh4, Lloh5
@@ -196,15 +242,46 @@ define i32 @load_tls_streaming_shared_za() nounwind "aarch64_inout_za" "aarch64_
 ;
 ; CHECK-DARWIN-LABEL: load_tls_streaming_shared_za:
 ; CHECK-DARWIN:       ; %bb.0: ; %entry
-; CHECK-DARWIN-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
+; CHECK-DARWIN-NEXT:    stp d15, d14, [sp, #-96]! ; 16-byte Folded Spill
+; CHECK-DARWIN-NEXT:    stp d13, d12, [sp, #16] ; 16-byte Folded Spill
+; CHECK-DARWIN-NEXT:    stp d11, d10, [sp, #32] ; 16-byte Folded Spill
+; CHECK-DARWIN-NEXT:    stp d9, d8, [sp, #48] ; 16-byte Folded Spill
+; CHECK-DARWIN-NEXT:    stp x20, x19, [sp, #64] ; 16-byte Folded Spill
+; CHECK-DARWIN-NEXT:    stp x29, x30, [sp, #80] ; 16-byte Folded Spill
+; CHECK-DARWIN-NEXT:    add x29, sp, #80
+; CHECK-DARWIN-NEXT:    sub sp, sp, #16
+; CHECK-DARWIN-NEXT:    rdsvl x8, #1
+; CHECK-DARWIN-NEXT:    mov x9, sp
+; CHECK-DARWIN-NEXT:    msub x9, x8, x8, x9
+; CHECK-DARWIN-NEXT:    mov sp, x9
 ; CHECK-DARWIN-NEXT:  Lloh6:
 ; CHECK-DARWIN-NEXT:    adrp x0, _x@TLVPPAGE
 ; CHECK-DARWIN-NEXT:  Lloh7:
 ; CHECK-DARWIN-NEXT:    ldr x0, [x0, _x@TLVPPAGEOFF]
-; CHECK-DARWIN-NEXT:    ldr x8, [x0]
-; CHECK-DARWIN-NEXT:    blr x8
-; CHECK-DARWIN-NEXT:    ldr w0, [x0]
-; CHECK-DARWIN-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
+; CHECK-DARWIN-NEXT:    stp x9, x8, [x29, #-96]
+; CHECK-DARWIN-NEXT:    ldr x10, [x0]
+; CHECK-DARWIN-NEXT:    smstop sm
+; CHECK-DARWIN-NEXT:    sub x8, x29, #96
+; CHECK-DARWIN-NEXT:    msr TPIDR2_EL0, x8
+; CHECK-DARWIN-NEXT:    blr x10
+; CHECK-DARWIN-NEXT:    smstart sm
+; CHECK-DARWIN-NEXT:    ldr w8, [x0]
+; CHECK-DARWIN-NEXT:    smstart za
+; CHECK-DARWIN-NEXT:    mrs x9, TPIDR2_EL0
+; CHECK-DARWIN-NEXT:    sub x0, x29, #96
+; CHECK-DARWIN-NEXT:    cbnz x9, LBB3_2
+; CHECK-DARWIN-NEXT:  ; %bb.1: ; %entry
+; CHECK-DARWIN-NEXT:    bl ___arm_tpidr2_restore
+; CHECK-DARWIN-NEXT:  LBB3_2: ; %entry
+; CHECK-DARWIN-NEXT:    mov w0, w8
+; CHECK-DARWIN-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-DARWIN-NEXT:    sub sp, x29, #80
+; CHECK-DARWIN-NEXT:    ldp x29, x30, [sp, #80] ; 16-byte Folded Reload
+; CHECK-DARWIN-NEXT:    ldp x20, x19, [sp, #64] ; 16-byte Folded Reload
+; CHECK-DARWIN-NEXT:    ldp d9, d8, [sp, #48] ; 16-byte Folded Reload
+; CHECK-DARWIN-NEXT:    ldp d11, d10, [sp, #32] ; 16-byte Folded Reload
+; CHECK-DARWIN-NEXT:    ldp d13, d12, [sp, #16] ; 16-byte Folded Reload
+; CHECK-DARWIN-NEXT:    ldp d15, d14, [sp], #96 ; 16-byte Folded Reload
 ; CHECK-DARWIN-NEXT:    ret
 ; CHECK-DARWIN-NEXT:    .loh AdrpLdr Lloh6, Lloh7
 entry:
