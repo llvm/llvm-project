@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: std-at-least-c++26
+// UNSUPPORTED: availability-debugging-missing
 
 // <debugging>
 

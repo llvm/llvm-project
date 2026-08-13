@@ -9,6 +9,7 @@
 // REQUIRES: std-at-least-c++26
 // REQUIRES: linux && no-filesystem
 // REQUIRES: libcpp-hardening-mode=debug
+// UNSUPPORTED: availability-debugging-missing
 
 // <debugging>
 
