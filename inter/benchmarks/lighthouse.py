@@ -37,7 +37,11 @@ def require(path: Path) -> Path:
 
 
 def build_binaries(
-    build_dir: Path, output_dir: Path, igc_device: str, size: int
+    build_dir: Path,
+    output_dir: Path,
+    igc_device: str,
+    size: int,
+    reduction_size: int,
 ) -> tuple[Path, Path, str]:
     inter_opt = require(build_dir / "tools" / "inter-opt" / "inter-opt")
     inter_translate = require(
@@ -52,24 +56,49 @@ def build_binaries(
     replacements = {
         "%18 = llvm.mlir.constant(512 : i32) : i32": (
             f"%18 = llvm.mlir.constant({size * 4} : i32) : i32\n"
-            f"    %matrix_size = llvm.mlir.constant({size} : i32) : i32"
+            f"    %matrix_size = llvm.mlir.constant({size} : i32) : i32\n"
+            "    %reduction_size = "
+            f"llvm.mlir.constant({reduction_size} : i32) : i32\n"
+            "    %reduction_bytes = "
+            f"llvm.mlir.constant({reduction_size * 2} : i32) : i32\n"
+            "    %reduction_bound = "
+            f"llvm.mlir.constant({reduction_size} : i64) : i64"
         ),
         "%15 = llvm.mlir.constant(256 : i32) : i32": (
             f"%15 = llvm.mlir.constant({size * 2} : i32) : i32"
         ),
-        "(%45, %7, %7, %7, %47)": "(%45, %7, %matrix_size, %7, %47)",
-        "(%45, %7, %7, %7, %88)": "(%45, %7, %matrix_size, %7, %88)",
+        "(%45, %7, %7, %7, %47)": (
+            "(%45, %reduction_bytes, %matrix_size, %reduction_bytes, %47)"
+        ),
+        "(%45, %7, %7, %7, %88)": (
+            "(%45, %reduction_bytes, %matrix_size, %reduction_bytes, %88)"
+        ),
         "(%45, %7, %7, %7, %93, %94)": (
-            "(%45, %7, %matrix_size, %7, %93, %94)"
+            "(%45, %reduction_bytes, %matrix_size, %reduction_bytes, %93, %94)"
         ),
         "(%45, %7, %7, %7, %100, %101)": (
-            "(%45, %7, %matrix_size, %7, %100, %101)"
+            "(%45, %reduction_bytes, %matrix_size, %reduction_bytes, %100, %101)"
         ),
         "(%45, %7, %7, %7, %106, %107)": (
-            "(%45, %7, %matrix_size, %7, %106, %107)"
+            "(%45, %reduction_bytes, %matrix_size, %reduction_bytes, %106, %107)"
         ),
         "(%45, %7, %7, %7, %111, %112)": (
-            "(%45, %7, %matrix_size, %7, %111, %112)"
+            "(%45, %reduction_bytes, %matrix_size, %reduction_bytes, %111, %112)"
+        ),
+        "(%65, %15, %5, %15, %67)": (
+            "(%65, %15, %reduction_size, %15, %67)"
+        ),
+        "(%65, %15, %5, %15, %84)": (
+            "(%65, %15, %reduction_size, %15, %84)"
+        ),
+        "(%65, %15, %5, %15, %118, %119)": (
+            "(%65, %15, %reduction_size, %15, %118, %119)"
+        ),
+        "(%65, %15, %5, %15, %125, %126)": (
+            "(%65, %15, %reduction_size, %15, %125, %126)"
+        ),
+        '%79 = llvm.icmp "slt" %76, %2 : i64': (
+            '%79 = llvm.icmp "slt" %76, %reduction_bound : i64'
         ),
         "(%149, %18, %7, %18, %152, %153)": (
             "(%149, %18, %matrix_size, %18, %152, %153)"
@@ -124,7 +153,7 @@ def build_binaries(
             "-device",
             igc_device,
             "-options",
-            f"-DMATRIX_SIZE={size}",
+            f"-DMATRIX_SIZE={size} -DREDUCTION_SIZE={reduction_size}",
             "-out_dir",
             str(igc_dir),
         ]
@@ -147,6 +176,7 @@ def measure(
     batches: int,
     iterations: int,
     size: int,
+    reduction_size: int,
 ) -> float:
     output = run(
         [
@@ -158,6 +188,7 @@ def measure(
             str(batches),
             str(iterations),
             str(size),
+            str(reduction_size),
             "payload_kernel",
         ],
         capture=True,
@@ -178,6 +209,7 @@ def main() -> int:
     parser.add_argument("--device", default="B60")
     parser.add_argument("--igc-device", default="bmg-g21")
     parser.add_argument("--size", type=int, default=128)
+    parser.add_argument("--reduction-size", type=int, default=64)
     parser.add_argument("--runs", type=int, default=5)
     parser.add_argument("--warmups", type=int, default=200)
     parser.add_argument("--batches", type=int, default=15)
@@ -187,16 +219,18 @@ def main() -> int:
         parser.error("run counts must be positive")
     if args.size < 64 or args.size % 64:
         parser.error("--size must be a positive multiple of 64")
+    if args.reduction_size < 32 or args.reduction_size % 32:
+        parser.error("--reduction-size must be a positive multiple of 32")
 
     build_dir = args.build_dir.resolve()
     output_dir = (args.output_dir or build_dir / "benchmarks" / "lighthouse").resolve()
     runner = require(build_dir / "benchmarks" / "inter-lighthouse-benchmark")
     inter_binary, igc_binary, ocloc_version = build_binaries(
-        build_dir, output_dir, args.igc_device, args.size
+        build_dir, output_dir, args.igc_device, args.size, args.reduction_size
     )
     print(
         f"configuration device={args.device} igc_device={args.igc_device} "
-        f"shape={args.size}x{args.size}x64 "
+        f"shape={args.size}x{args.size}x{args.reduction_size} "
         f"runs={args.runs} warmups={args.warmups} batches={args.batches} "
         f"iterations={args.iterations} timestamp=level-zero-kernel "
         f"ocloc={ocloc_version}"
@@ -216,6 +250,7 @@ def main() -> int:
                     args.batches,
                     args.iterations,
                     args.size,
+                    args.reduction_size,
                 )
             )
 

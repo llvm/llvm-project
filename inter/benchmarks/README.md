@@ -27,6 +27,9 @@ Use `--size 256` (or another multiple of 64) to scale the square M/N dimensions
 while retaining `K=64` and the same `64x64` workgroup tile. This isolates grid
 scaling from reduction-loop scaling.
 
+Use `--reduction-size 256` (or another multiple of 32) to scale K independently.
+The script updates A/B surfaces and the Inter/IGC loop bounds consistently.
+
 The OpenCL reference mirrors the Lighthouse operations and cache policy. Its
 2D prefetch builtins compile to cached `load_block2d.ugm.d16.a64.ca.ca`
 messages, matching the cached prefetch contract in the Inter input.

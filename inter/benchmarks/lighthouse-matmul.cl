@@ -5,6 +5,10 @@
 #define MATRIX_SIZE 128
 #endif
 
+#ifndef REDUCTION_SIZE
+#define REDUCTION_SIZE 64
+#endif
+
 __attribute__((intel_reqd_sub_group_size(16)))
 __attribute__((reqd_work_group_size(256, 1, 1)))
 kernel void payload_kernel(global half *a, global half *b, global float *c) {
@@ -17,11 +21,11 @@ kernel void payload_kernel(global half *a, global half *b, global float *c) {
   float8 acc1 = 0.0f;
 
   intel_sub_group_2d_block_prefetch_16b_8r16x1c(
-      a, 128, MATRIX_SIZE, 128, (int2)(0, row));
+      a, REDUCTION_SIZE * 2, MATRIX_SIZE, REDUCTION_SIZE * 2, (int2)(0, row));
   intel_sub_group_2d_block_prefetch_16b_8r16x1c(
-      b, MATRIX_SIZE * 2, 64, MATRIX_SIZE * 2, (int2)(column, 0));
+      b, MATRIX_SIZE * 2, REDUCTION_SIZE, MATRIX_SIZE * 2, (int2)(column, 0));
 
-  for (uint inner = 0; inner < 64; inner += 32) {
+  for (uint inner = 0; inner < REDUCTION_SIZE; inner += 32) {
     ushort8 a00;
     ushort8 a01;
     ushort8 a10;
@@ -30,27 +34,33 @@ kernel void payload_kernel(global half *a, global half *b, global float *c) {
     uint8 b1;
 
     intel_sub_group_2d_block_prefetch_16b_8r16x1c(
-        a, 128, MATRIX_SIZE, 128, (int2)(inner + 32, row));
+        a, REDUCTION_SIZE * 2, MATRIX_SIZE, REDUCTION_SIZE * 2,
+        (int2)(inner + 32, row));
     intel_sub_group_2d_block_prefetch_16b_8r16x1c(
-        b, MATRIX_SIZE * 2, 64, MATRIX_SIZE * 2,
+        b, MATRIX_SIZE * 2, REDUCTION_SIZE, MATRIX_SIZE * 2,
         (int2)(column, inner + 32));
     intel_sub_group_2d_block_read_16b_8r16x1c(
-        a, 128, MATRIX_SIZE, 128, (int2)(inner, row),
+        a, REDUCTION_SIZE * 2, MATRIX_SIZE, REDUCTION_SIZE * 2,
+        (int2)(inner, row),
         (private ushort *)&a00);
     intel_sub_group_2d_block_read_16b_8r16x1c(
-        a, 128, MATRIX_SIZE, 128, (int2)(inner + 16, row),
+        a, REDUCTION_SIZE * 2, MATRIX_SIZE, REDUCTION_SIZE * 2,
+        (int2)(inner + 16, row),
         (private ushort *)&a01);
     intel_sub_group_2d_block_read_16b_8r16x1c(
-        a, 128, MATRIX_SIZE, 128, (int2)(inner, row + 8),
+        a, REDUCTION_SIZE * 2, MATRIX_SIZE, REDUCTION_SIZE * 2,
+        (int2)(inner, row + 8),
         (private ushort *)&a10);
     intel_sub_group_2d_block_read_16b_8r16x1c(
-        a, 128, MATRIX_SIZE, 128, (int2)(inner + 16, row + 8),
+        a, REDUCTION_SIZE * 2, MATRIX_SIZE, REDUCTION_SIZE * 2,
+        (int2)(inner + 16, row + 8),
         (private ushort *)&a11);
     intel_sub_group_2d_block_read_transform_16b_16r16x1c(
-        b, MATRIX_SIZE * 2, 64, MATRIX_SIZE * 2, (int2)(column, inner),
+        b, MATRIX_SIZE * 2, REDUCTION_SIZE, MATRIX_SIZE * 2,
+        (int2)(column, inner),
         (private uint *)&b0);
     intel_sub_group_2d_block_read_transform_16b_16r16x1c(
-        b, MATRIX_SIZE * 2, 64, MATRIX_SIZE * 2,
+        b, MATRIX_SIZE * 2, REDUCTION_SIZE, MATRIX_SIZE * 2,
         (int2)(column, inner + 16), (private uint *)&b1);
     acc0 = intel_sub_group_f16_f16_matrix_mad_k16(as_short8(a00), as_int8(b0),
                                                    acc0);
