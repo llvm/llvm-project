@@ -33,6 +33,7 @@ int main(int argc, char **argv) {
   int Result = 0;
   cudaMalloc(&DevPtr, sizeof(int));
   reduceBlock<<<1, 64>>>(DevPtr);
+  cudaDeviceSynchronize();
   cudaMemcpy(&Result, DevPtr, sizeof(int), cudaMemcpyDeviceToHost);
 
   printf("sum: %i\n", Result);
