@@ -147,10 +147,12 @@ bool VFSelectionContext::isLegalMaskedLoadOrStore(bool IsLoad, Type *ScalarTy,
 }
 
 bool VFSelectionContext::isLegalGatherOrScatter(bool IsLoad, Type *ScalarTy,
-                                                Align Alignment) const {
+                                                Align Alignment,
+                                                ElementCount VF) const {
+  Type *VectorTy = toVectorTy(ScalarTy, VF);
   return ForceTargetSupportsGatherScatterOps ||
-         (IsLoad ? TTI.isLegalMaskedGather(ScalarTy, Alignment)
-                 : TTI.isLegalMaskedScatter(ScalarTy, Alignment));
+         (IsLoad ? TTI.isLegalMaskedGather(VectorTy, Alignment)
+                 : TTI.isLegalMaskedScatter(VectorTy, Alignment));
 }
 
 bool VFSelectionContext::supportsScalableVectors() const {

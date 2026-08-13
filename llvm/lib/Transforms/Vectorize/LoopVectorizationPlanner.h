@@ -788,9 +788,10 @@ public:
                                 unsigned AddressSpace) const;
 
   /// Returns true if the target machine supports a gather (if \p IsLoad)
-  /// or scatter of scalar type \p ScalarTy with \p Alignment.
-  bool isLegalGatherOrScatter(bool IsLoad, Type *ScalarTy,
-                              Align Alignment) const;
+  /// or scatter of scalar type \p ScalarTy with \p Alignment for vectorization
+  /// factor \p VF.
+  bool isLegalGatherOrScatter(bool IsLoad, Type *ScalarTy, Align Alignment,
+                              ElementCount VF) const;
 
   /// Split reductions into those that happen in the loop, and those that
   /// happen outside. In-loop reductions are collected into InLoopReductions.

@@ -2460,7 +2460,7 @@ bool LoopVectorizationCostModel::isLegalGatherOrScatter(Instruction *I,
                                                         ElementCount VF) const {
   assert((isa<LoadInst, StoreInst>(I)));
   return Config.isLegalGatherOrScatter(isa<LoadInst>(I), getLoadStoreType(I),
-                                       getLoadStoreAlignment(I));
+                                       getLoadStoreAlignment(I), VF);
 }
 
 bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
