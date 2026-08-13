@@ -1,0 +1,18 @@
+# RUN: not llc -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# A quoted block name that is never closed must be diagnosed, not lexed as an
+# identifier.
+
+--- |
+
+  define void @f() {
+  entry:
+    ret void
+  }
+
+...
+---
+name:            f
+body: |
+  ; CHECK: [[@LINE+1]]:{{[0-9]+}}: unable to parse quoted string from opening quote
+  bb.0."unterminated
+...
