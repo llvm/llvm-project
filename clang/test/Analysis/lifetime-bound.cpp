@@ -155,22 +155,6 @@ void caller_nine() {
   // expected-note-re@-2    {{Origin '&SymRegion{{.*}}' bound to 'first_num', 'second_num'}}
 }
 
-struct View {
-  int *p;
-};
-View makeView(int &x [[clang::lifetimebound]]);
-
-void clang_analyzer_dumpLifetimeOriginsOf(View);
-
-void caller_view() {
-  int v = 42;
-  View w = makeView(v);
-  // FIXME: Currently none of the maps cover LazyCompoundVal.
-  clang_analyzer_dumpLifetimeOriginsOf(w); // no-warning
-}
-
-
-
 // These are the test cases for testing the correctness of the emitted warning from the UseAfterLifetimeEnd checker.
 
 // Return value bound to annotated param cases.
@@ -409,4 +393,81 @@ void no_dangling_by_value_argument() {
   // The BoundToSelf temporary's frame is not live on the stack when `self()` returns.
   // The returned reference does not dangle.
   takes_by_value(BoundToSelf());
+}
+
+struct IntPtr {
+  int *p;
+};
+
+IntPtr makeView(int &x [[clang::lifetimebound]]) { return IntPtr{&x}; }
+
+IntPtr whole_struct_return_lazycompoundval() {
+  int x = 5; // expected-note {{'x' initialized here}}
+  return makeView(x);
+  // expected-warning@-1 {{Returning value bound to 'x' that will go out of scope}}
+  // expected-note@-2    {{Lifetime of 'x' ended here}}
+  // expected-note@-3    {{Value's lifetime bound to the lifetime of 'x' here}}
+  // expected-warning@-4 {{Address of stack memory associated with local variable 'x' returned to caller}}
+  // expected-note@-5    {{Address of stack memory associated with local variable 'x' returned to caller}}
+  // expected-warning@-6 {{address of stack memory associated with local variable 'x' returned}}
+}
+
+struct PtrPair {
+  int *p;
+  int *q;
+};
+
+int global_v = 4;
+
+PtrPair makePair(int &x [[clang::lifetimebound]]) {
+  return PtrPair{&x, &global_v};
+}
+
+PtrPair return_pair_by_value() {
+  int local = 5; // expected-note {{'local' initialized here}}
+  return makePair(local);
+  // expected-warning@-1 {{Returning value bound to 'local' that will go out of scope}}
+  // expected-note@-2    {{Lifetime of 'local' ended here}}
+  // expected-note@-3    {{Value's lifetime bound to the lifetime of 'local' here}}
+  // expected-warning@-4 {{Address of stack memory associated with local variable 'local' returned to caller}}
+  // expected-note@-5    {{Address of stack memory associated with local variable 'local' returned to caller}}
+  // expected-warning@-6 {{address of stack memory associated with local variable 'local' returned}}
+}
+
+struct NestedIntPtr {
+  IntPtr inner;
+  int *q;
+};
+
+NestedIntPtr makeNested(int &x [[clang::lifetimebound]]) {
+  return NestedIntPtr{IntPtr{&x}};
+}
+
+// FIXME: Nested structs are not yet handled by getRegionsFromAggrVal,
+// that is why this dangling pointer is not yet detected.
+NestedIntPtr nested_struct_return_not_yet_detected() {
+  int y = 5;
+  return makeNested(y);
+  // expected-warning@-1 {{Address of stack memory associated with local variable 'y' returned to caller}}
+  // expected-note@-2    {{Address of stack memory associated with local variable 'y' returned to caller}}
+  // expected-warning@-3 {{address of stack memory associated with local variable 'y' returned}}
+}
+
+struct IntPtrArr {
+  int *arr[4];
+};
+
+IntPtrArr makeIntPtrArr(int &x [[clang::lifetimebound]]) {
+  return IntPtrArr{{&x, &global_v}};
+}
+
+// FIXME: Array fields are not split into their individual elements by
+// getRegionsFromAggrVal, that is why this dangling pointer is not yet
+// detected.
+IntPtrArr return_array_field_not_yet_detected() {
+  int z = 5;
+  return makeIntPtrArr(z);
+  // expected-warning@-1 {{Address of stack memory associated with local variable 'z' returned to caller}}
+  // expected-note@-2    {{Address of stack memory associated with local variable 'z' returned to caller}}
+  // expected-warning@-3 {{address of stack memory associated with local variable 'z' returned}}
 }
