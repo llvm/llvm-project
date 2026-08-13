@@ -11,7 +11,6 @@
 
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/MIF/MIFOps.h"
-#include "flang/Optimizer/Support/InternalNames.h"
 
 static constexpr llvm::StringRef coarrayHandleSuffix = "_coarray_handle";
 static constexpr llvm::StringRef mifSaveCoarraysAllocName =
