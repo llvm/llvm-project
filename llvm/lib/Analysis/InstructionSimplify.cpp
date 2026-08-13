@@ -4087,28 +4087,7 @@ static Value *simplifyICmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
         // Otherwise the upper bits of LHS are all equal, while RHS has varying
         // bits there.  Use this to work out the result of the comparison.
         if (AnyEq->isNullValue()) {
-          // icmp samesign with an unrepresentable C: matching signs make the
-          // unsigned compare constant (C is outside the sext range); mismatch
-          // is poison, which may be refined to that same constant.
-          if (Pred.hasSameSign()) {
-            if (const auto *CI = dyn_cast<ConstantInt>(C)) {
-              bool CNeg = CI->isNegative();
-              switch (Pred) {
-              default:
-                break;
-              case ICmpInst::ICMP_ULT:
-              case ICmpInst::ICMP_ULE:
-                return CNeg ? ConstantInt::getFalse(ITy)
-                            : ConstantInt::getTrue(ITy);
-              case ICmpInst::ICMP_UGT:
-              case ICmpInst::ICMP_UGE:
-                return CNeg ? ConstantInt::getTrue(ITy)
-                            : ConstantInt::getFalse(ITy);
-              }
-            }
-          }
-
-          switch (Pred) {
+          switch (Pred.getPreferredSignedPredicate()) {
           default:
             llvm_unreachable("Unknown ICmp predicate!");
           case ICmpInst::ICMP_EQ:
