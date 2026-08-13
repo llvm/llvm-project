@@ -1833,7 +1833,7 @@ def LLVM_MDNullAttr : LLVM_Attr<"MDNull", "md_null"> {
 
 def LLVM_MDAddrSpaceCastAttr
     : LLVM_Attr<"MDAddrSpaceCast", "md_addrspacecast"> {
-  let summary = "LLVM addrspacecast-constant-expression-as-metadata";
+  let summary = "LLVM addrspacecast constant expression as metadata";
   let description = [{
     Wraps an `addrspacecast` constant expression as an LLVM metadata node,
     corresponding to `llvm::ConstantAsMetadata` wrapping a `llvm::ConstantExpr`
