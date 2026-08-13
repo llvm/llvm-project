@@ -31,6 +31,30 @@ add_llvm_offload_kernel_language_runtime_objects(
 add_llvm_offload_kernel_language_runtime_objects(
   LLVMOffloadKernelHipRuntimeObjects hip)
 
+add_library(LLVMOffloadKernelPerThreadDefaultStreamObject OBJECT
+  src/PerThreadDefaultStream.cpp
+)
+target_compile_options(LLVMOffloadKernelPerThreadDefaultStreamObject
+  PRIVATE ${offload_compile_flags})
+set_target_properties(LLVMOffloadKernelPerThreadDefaultStreamObject PROPERTIES
+  POSITION_INDEPENDENT_CODE ON)
+
+set(LLVM_OFFLOAD_KERNEL_PER_THREAD_DEFAULT_STREAM_OBJECT
+  "${LLVM_LIBRARY_OUTPUT_INTDIR}/${OFFLOAD_TARGET_SUBDIR}/LLVMOffloadKernelPerThreadDefaultStream.o")
+add_custom_command(
+  OUTPUT ${LLVM_OFFLOAD_KERNEL_PER_THREAD_DEFAULT_STREAM_OBJECT}
+  COMMAND ${CMAKE_COMMAND} -E make_directory
+          "${LLVM_LIBRARY_OUTPUT_INTDIR}/${OFFLOAD_TARGET_SUBDIR}"
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different
+          $<TARGET_OBJECTS:LLVMOffloadKernelPerThreadDefaultStreamObject>
+          ${LLVM_OFFLOAD_KERNEL_PER_THREAD_DEFAULT_STREAM_OBJECT}
+  DEPENDS
+          LLVMOffloadKernelPerThreadDefaultStreamObject
+          $<TARGET_OBJECTS:LLVMOffloadKernelPerThreadDefaultStreamObject>
+  VERBATIM)
+add_custom_target(LLVMOffloadKernelPerThreadDefaultStream
+  DEPENDS ${LLVM_OFFLOAD_KERNEL_PER_THREAD_DEFAULT_STREAM_OBJECT})
+
 add_llvm_library(
   LLVMOffloadKernel SHARED
 
@@ -48,6 +72,7 @@ else()
   llvm_map_components_to_libnames(llvm_libs Support)
 endif()
 target_link_libraries(LLVMOffloadKernel PRIVATE ${llvm_libs} LLVMOffload)
+add_dependencies(LLVMOffloadKernel LLVMOffloadKernelPerThreadDefaultStream)
 
 if(LLVM_HAVE_LINK_VERSION_SCRIPT)
   target_link_libraries(LLVMOffloadKernel PRIVATE "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/exports")
@@ -74,6 +99,9 @@ install(TARGETS LLVMOffloadKernel
         RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
         LIBRARY DESTINATION "${OFFLOAD_INSTALL_LIBDIR}"
         ARCHIVE DESTINATION "${OFFLOAD_INSTALL_LIBDIR}")
+install(FILES ${LLVM_OFFLOAD_KERNEL_PER_THREAD_DEFAULT_STREAM_OBJECT}
+        DESTINATION "${OFFLOAD_INSTALL_LIBDIR}"
+        COMPONENT offload)
 
 install(FILES
         ${CMAKE_CURRENT_SOURCE_DIR}/../include/kernel/DefineLanguageNames.inc

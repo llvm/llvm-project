@@ -25,8 +25,11 @@
 using namespace llvm;
 using namespace offload;
 
-// Weak so another runtime object can override the default stream mode.
-__attribute__((weak)) uint32_t PerThreadQueue = 0;
+// Weak fallback used unless the driver links the strong per-thread default
+// stream mode object for -fgpu-default-stream=per-thread.
+extern "C" {
+__attribute__((weak)) uint32_t LLVMOffloadingPerThreadDefaultStream = 0;
+}
 
 static constexpr ol_error_struct_t InvalidNullPointerError = {
     OL_ERRC_INVALID_NULL_POINTER, "invalid null stream pointer"};
@@ -153,7 +156,7 @@ StreamTy *ThreadStateTy::getDefaultStream() {
   if (!Device)
     return nullptr;
 
-  if (!PerThreadQueue) [[likely]]
+  if (!LLVMOffloadingPerThreadDefaultStream) [[likely]]
     return StateTy::get().getOrCreateDefaultStream(Device);
 
   return ThreadStateTy::get().getOrCreateDefaultStream(Device);
