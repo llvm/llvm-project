@@ -12,6 +12,7 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_VECUTILS_H
 #define LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_VECUTILS_H
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/SandboxIR/Type.h"
@@ -250,6 +251,46 @@ public:
   LLVM_ABI static SmallVector<BundleTy>
   getNextUserBundles(ArrayRef<Value *> Bndl, const InstrMaps &IMaps,
                      SmallPtrSet<Instruction *, 4> &Claimed);
+
+  /// After we create vectors for groups of instructions, the original
+  /// instructions are potentially dead and may need to be removed. This
+  /// function collects these instructions (along with the pointer operands
+  /// for loads/stores) into \p DeadInstrCandidates so they can be cleaned up
+  /// later by tryEraseDeadInstrs().
+  template <typename ValT>
+  static void
+  collectPotentiallyDeadInstrs(ArrayRef<ValT *> Bndl,
+                               DenseSet<Instruction *> &DeadInstrCandidates) {
+    for (auto *V : Bndl)
+      DeadInstrCandidates.insert(cast<Instruction>(V));
+    // Also collect the GEPs of vectorized loads and stores. The first
+    // load/store's pointer is reused by the vector instruction, so only
+    // consider the remaining ones.
+    auto Opcode = cast<Instruction>(Bndl[0])->getOpcode();
+    switch (Opcode) {
+    case Instruction::Opcode::Load: {
+      for (auto *V : drop_begin(Bndl))
+        if (auto *Ptr =
+                dyn_cast<Instruction>(cast<LoadInst>(V)->getPointerOperand()))
+          DeadInstrCandidates.insert(Ptr);
+      break;
+    }
+    case Instruction::Opcode::Store: {
+      for (auto *V : drop_begin(Bndl))
+        if (auto *Ptr =
+                dyn_cast<Instruction>(cast<StoreInst>(V)->getPointerOperand()))
+          DeadInstrCandidates.insert(Ptr);
+      break;
+    }
+    default:
+      break;
+    }
+  }
+
+  /// Erases all dead instructions in \p DeadInstrCandidates, walking
+  /// bottom-to-top per BB. Clears \p DeadInstrCandidates when done.
+  LLVM_ABI static void
+  tryEraseDeadInstrs(DenseSet<Instruction *> &DeadInstrCandidates);
 
   /// Helper struct for `matchPack()`. Describes the instructions and operands
   /// of a pack pattern.

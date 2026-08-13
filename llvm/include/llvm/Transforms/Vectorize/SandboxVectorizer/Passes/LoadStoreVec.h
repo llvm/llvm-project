@@ -24,6 +24,7 @@ class DataLayout;
 
 namespace sandboxir {
 
+class Context;
 class Value;
 class Instruction;
 class Scheduler;
@@ -49,13 +50,30 @@ class LLVM_ABI LoadStoreVec final : public RegionPass {
   std::optional<Type *> canVectorize(ArrayRef<Instruction *> Bndl,
                                      Scheduler &Sched);
 
-  void tryEraseDeadInstrs(ArrayRef<Instruction *> Stores,
-                          ArrayRef<Value *> Operands);
+  /// Builds a single vector load out of the loads in \p Operands. \Returns
+  /// the new load, or nullptr if \p Operands are not a vectorizable load
+  /// chain.
+  Value *createVectorLoad(ArrayRef<Value *> Operands, Scheduler &Sched,
+                          const Analyses &A, Context &Ctx);
 
-  /// Tries to vectorize the load/store/constant ops chain \p Bndl
-  /// into a single vector store. \Returns whether it succeeded.
+  /// Flattens constant store operands in \p Operands (including vector and
+  /// aggregate constants) into a single ConstantVector.
+  Value *createConstantVector(ArrayRef<Value *> Operands, Context &Ctx);
+
+  /// Tries to vectorize the store bundle \p Bndl into a single vector store.
+  /// Load value-operands are vectorized via vectorizeLoads(); constant
+  /// operands are packed into a ConstantVector. \Returns whether it succeeded.
   bool vectorizeStores(ArrayRef<Instruction *> Bndl, Region &Rgn,
                        Scheduler &Sched, const Analyses &A);
+
+  /// Tries to vectorize the load chain \p Bndl into a single vector load.
+  /// If \p OwnTransaction is true, also unpacks for remaining uses, erases
+  /// dead original loads, and save/accept-or-reverts. If false, only emits
+  /// the vector load; the caller owns the IR transaction.
+  /// \Returns the new vector load, or nullptr on failure.
+  Value *vectorizeLoads(ArrayRef<Instruction *> Bndl, Region &Rgn,
+                        Scheduler &Sched, const Analyses &A,
+                        bool OwnTransaction = true);
 
 public:
   LoadStoreVec(StringRef AuxArg) : RegionPass("load-store-vec") {
