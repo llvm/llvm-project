@@ -7,10 +7,10 @@
 func.func @func_alloca(%lb: index, %ub: index) {
   // CHECK-DAG: scf.forall (%[[ARG0:.*]], %[[ARG1:.*]]) in (%[[LB]], %[[UB]])
   scf.forall (%arg0, %arg1) in (%lb, %ub) {
-    // CHECK-DAG: %[[MR0:.*]] = memref.get_global @[[ALLOC0]] : memref<2x32xf32>
-    // CHECK-DAG: %[[MR1:.*]] = memref.get_global @[[ALLOC1]] : memref<2x32xf32>
-    // CHECK-DAG: memref.store %{{.*}}, %[[MR0]][%{{.*}}, %{{.*}}] : memref<2x32xf32>
-    // CHECK-DAG: memref.store %{{.*}}, %[[MR1]][%{{.*}}, %{{.*}}] : memref<2x32xf32>
+    // CHECK-DAG: %[[BUF0:.*]] = memref.get_global @[[ALLOC0]] : memref<2x32xf32>
+    // CHECK-DAG: %[[BUF1:.*]] = memref.get_global @[[ALLOC1]] : memref<2x32xf32>
+    // CHECK-DAG: memref.store %{{.*}}, %[[BUF0]][%{{.*}}, %{{.*}}] : memref<2x32xf32>
+    // CHECK-DAG: memref.store %{{.*}}, %[[BUF1]][%{{.*}}, %{{.*}}] : memref<2x32xf32>
     %cst = arith.constant 0.0 : f32
     %mr0 = memref.alloca() : memref<2x32xf32>
     %mr1 = memref.alloca() : memref<2x32xf32>
@@ -38,8 +38,8 @@ module attributes {transform.with_named_sequence} {
 
 // CHECK-DAG: func.func @func_alloc()
 func.func @func_alloc() {
-  // CHECK-DAG: %[[MR0:.*]] = memref.get_global @[[ALLOC0]] : memref<2xf32>
-  // CHECK-DAG: %[[MR1:.*]] = memref.get_global @[[ALLOC1]] : memref<2xf32>
+  // CHECK-DAG: %[[BUF0:.*]] = memref.get_global @[[ALLOC0]] : memref<2xf32>
+  // CHECK-DAG: %[[BUF1:.*]] = memref.get_global @[[ALLOC1]] : memref<2xf32>
   // CHECK-NOT: memref.dealloc
   %mr0 = memref.alloc() : memref<2xf32>
   %mr1 = memref.alloc() : memref<2xf32>
@@ -65,8 +65,8 @@ module attributes {transform.with_named_sequence} {
 
 // CHECK-DAG: func.func @func_alloc_with_uses(%[[VAL:.*]]: f32, %[[IDX:.*]]: index)
 func.func @func_alloc_with_uses(%val: f32, %idx: index) {
-  // CHECK-DAG: %[[MR:.*]] = memref.get_global @[[ALLOC]] : memref<2xf32>
-  // CHECK-DAG: memref.store %[[VAL]], %[[MR]][%[[IDX]]] : memref<2xf32>
+  // CHECK-DAG: %[[BUF:.*]] = memref.get_global @[[ALLOC]] : memref<2xf32>
+  // CHECK-DAG: memref.store %[[VAL]], %[[BUF]][%[[IDX]]] : memref<2xf32>
   // CHECK-NOT: memref.dealloc
   %mr = memref.alloc() : memref<2xf32>
   memref.store %val, %mr[%idx] : memref<2xf32>
