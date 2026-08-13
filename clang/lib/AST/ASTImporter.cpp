@@ -9823,8 +9823,12 @@ Expected<Decl *> ASTImporter::Import(Decl *FromD) {
       // Remove the imported type mapping as well.
       // The imported type can point to a declaration that failed to import
       // later.
-      if (const auto *FromTD = dyn_cast<TagDecl>(FromD))
-        ImportedTypes.erase(cast<TypeDecl>(FromTD)->getTypeForDecl());
+      if (const auto *FromTD = dyn_cast<TagDecl>(FromD)) {
+        if (const Type *FromTy =
+                getFromContext().getCanonicalTagType(FromTD).getTypePtr()) {
+          ImportedTypes.erase(FromTy);
+        }
+      }
 
       // ImportedDecls and ImportedFromDecls are not symmetric.  It may happen
       // (e.g. with namespaces) that several decls from the 'from' context are
@@ -9880,8 +9884,12 @@ Expected<Decl *> ASTImporter::Import(Decl *FromD) {
         PrevFromDi = FromDi;
         setImportDeclError(FromDi, ErrOut);
 
-        if (const auto *FromTDi = dyn_cast<TagDecl>(FromDi))
-          ImportedTypes.erase(cast<TypeDecl>(FromTDi)->getTypeForDecl());
+        if (const auto *FromTDi = dyn_cast<TagDecl>(FromDi)) {
+          if (const Type *FromTyi =
+                  getFromContext().getCanonicalTagType(FromTDi).getTypePtr()) {
+            ImportedTypes.erase(FromTyi);
+          }
+        }
 
         //FIXME Should we remove these Decls from ImportedDecls?
         // Set the error for the mapped to Decl, which is in the "to" context.
