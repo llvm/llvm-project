@@ -1243,8 +1243,10 @@ let IsPointer = true in {
 
 // untyped_imm is for operands where isImm() will be true. It currently has no
 // special behaviour and is only used for clarity.
-def untyped_imm_0 : TypedOperand<"OPERAND_GENERIC_IMM_0"> {
-  let IsImmediate = true;
+let IsImmediate = true in {
+  def untyped_imm_0 : TypedOperand<"OPERAND_GENERIC_IMM_0">;
+  def untyped_imm_1 : TypedOperand<"OPERAND_GENERIC_IMM_1">;
+  def untyped_imm_2 : TypedOperand<"OPERAND_GENERIC_IMM_2">;
 }
 
 /// zero_reg definition - Special node to stand for the zero register.
