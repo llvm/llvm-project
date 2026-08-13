@@ -33,7 +33,7 @@ struct NoopExtraction {
 
 template <class CharT, class Traits>
 std::basic_istream<CharT, Traits>& operator>>(std::basic_istream<CharT, Traits>& is, const NoopExtraction&) {
-return is; // intentionally doesn't modify the NoopExtraction object
+  return is; // intentionally doesn't modify the NoopExtraction object
 }
 
 template <class CharT>
@@ -48,7 +48,7 @@ void test() {
 
   // LWG 3568. value_ must be initialized for basic_istream_view to be constexpr-constructible
   {
-    static auto fn_local_iss = make_string_stream<CharT>("");
+    static auto fn_local_iss            = make_string_stream<CharT>("");
     [[maybe_unused]] constexpr auto isv = std::views::istream<int>(fn_local_iss);
   }
 
