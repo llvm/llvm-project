@@ -21,7 +21,13 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include <setjmp.h>
 
-#if HAVE_SIGNAL_H
+// If LLVM libc is not providing <signal.h> and it's also not an overlay on
+// another libc that is, don't try to detect signals raised by FP exceptions.
+#if HAVE_SIGNAL_H || defined(LIBC_FULL_BUILD)
+#define TRY_TO_CATCH_SIGNALS
+#endif
+
+#ifdef TRY_TO_CATCH_SIGNALS
 #include <signal.h>
 #endif
 
@@ -42,7 +48,7 @@ using sighandler_t = __sighandler_t *;
 
 static thread_local bool caughtExcept;
 
-#if HAVE_SIGNAL_H
+#ifdef TRY_TO_CATCH_SIGNALS
 
 static thread_local sigjmp_buf jumpBuffer;
 
@@ -54,14 +60,14 @@ static void sigfpeHandler([[maybe_unused]] int sig) {
 #endif // __NSIGSET_WORDS
 
 FPExceptMatcher::FPExceptMatcher(FunctionCaller *func) {
-#if HAVE_SIGNAL_H
+#ifdef TRY_TO_CATCH_SIGNALS
   auto *oldSIGFPEHandler = signal(SIGFPE, &sigfpeHandler);
 #endif
 
   caughtExcept = false;
   fenv_t oldEnv;
   fputil::get_env(&oldEnv);
-#if HAVE_SIGNAL_H
+#ifdef TRY_TO_CATCH_SIGNALS
   if (sigsetjmp(jumpBuffer, 1) == 0)
 #endif
     func->call();
@@ -69,7 +75,7 @@ FPExceptMatcher::FPExceptMatcher(FunctionCaller *func) {
   // We restore the previous floating point environment after
   // the call to the function which can potentially raise SIGFPE.
   fputil::set_env(&oldEnv);
-#if HAVE_SIGNAL_H
+#ifdef TRY_TO_CATCH_SIGNALS
   signal(SIGFPE, oldSIGFPEHandler);
 #endif
   exceptionRaised = caughtExcept;
