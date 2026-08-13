@@ -17,6 +17,13 @@ functions:
     arguments:
       - type: int
       - type: struct rlimit *
+  - name: getrusage
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: int
+      - type: struct rusage *
   - name: setrlimit
     standards:
       - posix

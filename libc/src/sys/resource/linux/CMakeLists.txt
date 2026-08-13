@@ -11,6 +11,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  getrusage
+  SRCS
+    getrusage.cpp
+  HDRS
+    ../getrusage.h
+  DEPENDS
+    libc.hdr.types.struct_rusage
+    libc.src.__support.common
+)
+
+add_entrypoint_object(
   setrlimit
   SRCS
     setrlimit.cpp
