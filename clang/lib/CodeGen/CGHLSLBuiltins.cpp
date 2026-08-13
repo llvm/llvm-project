@@ -320,8 +320,16 @@ static Value *handleInterlockedOp(CodeGenFunction &CGF, const CallExpr *E,
   assert(E->getArg(1)->getType()->isIntegerType() &&
          "Intrinsic InterlockedOp value operand must be an integer");
 
+  // Scopeless atomics will default to CrossDevice, which is illegal in Vulkan.
+  // Set the memory scope: Workgroup for groupshared, otherwise Device.
+  StringRef ScopeName = DestLV.getAddressSpace() == LangAS::hlsl_groupshared
+                            ? "workgroup"
+                            : "device";
+  llvm::SyncScope::ID SSID =
+      CGF.getLLVMContext().getOrInsertSyncScopeID(ScopeName);
+
   llvm::AtomicRMWInst *Call = CGF.Builder.CreateAtomicRMW(
-      Op, DestAddr, Val, llvm::AtomicOrdering::Monotonic);
+      Op, DestAddr, Val, llvm::AtomicOrdering::Monotonic, SSID);
 
   // The 3-arg overload writes the old value (the RMW's return value) into
   // the `original_value` reference parameter.
@@ -556,6 +564,16 @@ static Value *emitGetDimensions(CodeGenFunction &CGF, const CallExpr *E,
     LastStore = CGF.Builder.CreateStore(Elem, DimOut.getAddress());
   }
   return LastStore;
+}
+
+static llvm::Type *getAggregateType(llvm::Type *ScalarTy, QualType ArgTy) {
+  if (auto *MatTy = ArgTy->getAs<ConstantMatrixType>())
+    return llvm::VectorType::get(
+        ScalarTy, ElementCount::getFixed(MatTy->getNumElementsFlattened()));
+  if (auto *VecTy = ArgTy->getAs<clang::VectorType>())
+    return llvm::VectorType::get(
+        ScalarTy, ElementCount::getFixed(VecTy->getNumElements()));
+  return ScalarTy;
 }
 
 Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
@@ -1119,16 +1137,6 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         CGM.getHLSLRuntime().getFirstBitLowIntrinsic(), ArrayRef<Value *>{X},
         nullptr, "hlsl.firstbitlow");
   }
-  case Builtin::BI__builtin_hlsl_lerp: {
-    Value *X = EmitScalarExpr(E->getArg(0));
-    Value *Y = EmitScalarExpr(E->getArg(1));
-    Value *S = EmitScalarExpr(E->getArg(2));
-    if (!E->getArg(0)->getType()->hasFloatingRepresentation())
-      llvm_unreachable("lerp operand must have a float representation");
-    return Builder.CreateIntrinsic(
-        /*ReturnType=*/X->getType(), CGM.getHLSLRuntime().getLerpIntrinsic(),
-        ArrayRef<Value *>{X, Y, S}, nullptr, "hlsl.lerp");
-  }
   case Builtin::BI__builtin_hlsl_normalize: {
     Value *X = EmitScalarExpr(E->getArg(0));
 
@@ -1139,16 +1147,6 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         /*ReturnType=*/X->getType(),
         CGM.getHLSLRuntime().getNormalizeIntrinsic(), ArrayRef<Value *>{X},
         nullptr, "hlsl.normalize");
-  }
-  case Builtin::BI__builtin_hlsl_elementwise_degrees: {
-    Value *X = EmitScalarExpr(E->getArg(0));
-
-    assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
-           "degree operand must have a float representation");
-
-    return Builder.CreateIntrinsic(
-        /*ReturnType=*/X->getType(), CGM.getHLSLRuntime().getDegreesIntrinsic(),
-        ArrayRef<Value *>{X}, nullptr, "hlsl.degrees");
   }
   case Builtin::BI__builtin_hlsl_elementwise_f16tof32: {
     return handleElementwiseF16ToF32(*this, E);
@@ -1166,30 +1164,20 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   }
   case Builtin::BI__builtin_hlsl_elementwise_isinf: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
-    llvm::Type *Xty = Op0->getType();
-    llvm::Type *retType = llvm::Type::getInt1Ty(this->getLLVMContext());
-    if (Xty->isVectorTy()) {
-      auto *XVecTy = E->getArg(0)->getType()->castAs<VectorType>();
-      retType = llvm::VectorType::get(
-          retType, ElementCount::getFixed(XVecTy->getNumElements()));
-    }
     if (!E->getArg(0)->getType()->hasFloatingRepresentation())
       llvm_unreachable("isinf operand must have a float representation");
+    llvm::Type *retType = getAggregateType(
+        llvm::Type::getInt1Ty(getLLVMContext()), E->getArg(0)->getType());
     return Builder.CreateIntrinsic(
         retType, CGM.getHLSLRuntime().getIsInfIntrinsic(),
         ArrayRef<Value *>{Op0}, nullptr, "hlsl.isinf");
   }
   case Builtin::BI__builtin_hlsl_elementwise_isnan: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
-    llvm::Type *Xty = Op0->getType();
-    llvm::Type *retType = llvm::Type::getInt1Ty(this->getLLVMContext());
-    if (Xty->isVectorTy()) {
-      auto *XVecTy = E->getArg(0)->getType()->castAs<VectorType>();
-      retType = llvm::VectorType::get(
-          retType, ElementCount::getFixed(XVecTy->getNumElements()));
-    }
     if (!E->getArg(0)->getType()->hasFloatingRepresentation())
       llvm_unreachable("isnan operand must have a float representation");
+    llvm::Type *retType = getAggregateType(
+        llvm::Type::getInt1Ty(getLLVMContext()), E->getArg(0)->getType());
     return Builder.CreateIntrinsic(
         retType, CGM.getHLSLRuntime().getIsNaNIntrinsic(),
         ArrayRef<Value *>{Op0}, nullptr, "hlsl.isnan");
@@ -1583,15 +1571,6 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateIntrinsic(
         retType, CGM.getHLSLRuntime().getSignIntrinsic(),
         ArrayRef<Value *>{Op0}, nullptr, "hlsl.sign");
-  }
-  case Builtin::BI__builtin_hlsl_elementwise_radians: {
-    Value *Op0 = EmitScalarExpr(E->getArg(0));
-    assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
-           "radians operand must have a float representation");
-    return Builder.CreateIntrinsic(
-        /*ReturnType=*/Op0->getType(),
-        CGM.getHLSLRuntime().getRadiansIntrinsic(), ArrayRef<Value *>{Op0},
-        nullptr, "hlsl.radians");
   }
   case Builtin::BI__builtin_hlsl_buffer_update_counter: {
     Value *ResHandle = EmitScalarExpr(E->getArg(0));

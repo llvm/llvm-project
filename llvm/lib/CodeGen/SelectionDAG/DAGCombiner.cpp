@@ -11880,12 +11880,14 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
         SDValue LastElt = BV.getOperand(NumElts - 1);
         assert(LastElt.getScalarValueSizeInBits() >= EltSizeInBits &&
                "Expected BUILD_VECTOR operand as wide as element type");
-        LastElt = DAG.getBitcast(LastElt.getValueType().changeTypeToInteger(),
-                                 LastElt);
-        SDValue Ext = DAG.getZExtOrTrunc(LastElt, DL, VT);
-        APInt Mask = APInt::getLowBitsSet(VT.getSizeInBits(), EltSizeInBits);
-        return DAG.getNode(ISD::AND, DL, VT, Ext,
-                           DAG.getConstant(Mask, DL, VT));
+        EVT IntEltVT = LastElt.getValueType().changeTypeToInteger();
+        if (!LegalTypes || TLI.isTypeLegal(IntEltVT)) {
+          LastElt = DAG.getBitcast(IntEltVT, LastElt);
+          SDValue Ext = DAG.getZExtOrTrunc(LastElt, DL, VT);
+          APInt Mask = APInt::getLowBitsSet(VT.getSizeInBits(), EltSizeInBits);
+          return DAG.getNode(ISD::AND, DL, VT, Ext,
+                             DAG.getConstant(Mask, DL, VT));
+        }
       }
     }
   }

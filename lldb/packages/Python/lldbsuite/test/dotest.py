@@ -31,6 +31,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import time
 
 # Third-party modules
 import unittest
@@ -1148,14 +1149,31 @@ def run_suite():
             platform_connect_options = lldb.SBPlatformConnectOptions(
                 configuration.lldb_platform_url
             )
-            err = lldb.remote_platform.ConnectRemote(platform_connect_options)
+            # Connecting to a remote platform through a port forward can fail
+            # transiently while the connection itself is perfectly healthy, so
+            # retry a few times before giving up. Every attempt is reported, and
+            # a device that is genuinely unreachable still fails quickly with the
+            # same error on each attempt, so this doesn't hide a broken device.
+            max_connect_attempts = 4
+            for attempt in range(1, max_connect_attempts + 1):
+                err = lldb.remote_platform.ConnectRemote(platform_connect_options)
+                if err.Success():
+                    break
+                print(
+                    "error: failed to connect to remote platform using URL "
+                    "'%s': %s (attempt %d of %d)"
+                    % (
+                        configuration.lldb_platform_url,
+                        err,
+                        attempt,
+                        max_connect_attempts,
+                    )
+                )
+                if attempt < max_connect_attempts:
+                    time.sleep(attempt)
             if err.Success():
                 print("Connected.")
             else:
-                print(
-                    "error: failed to connect to remote platform using URL '%s': %s"
-                    % (configuration.lldb_platform_url, err)
-                )
                 exitTestSuite(1)
         else:
             configuration.lldb_platform_url = None

@@ -538,7 +538,7 @@ function(add_header_test target_name source_file deps std_mode)
     add_libc_test(
       ${target_name}
       C_TEST
-      HERMETIC_TEST_ONLY
+      FULL_BUILD_ONLY
       SUITE
         libc_include_tests
       SRCS
