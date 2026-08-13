@@ -9,10 +9,12 @@
 #include "LanguageLaunch.h"
 #include "LanguageUtils.h"
 #include "State.h"
+#include "Stream.h"
 #include <cstdio>
 
 using RuntimeState = llvm::offload::StateTy;
 using ThreadState = llvm::offload::ThreadStateTy;
+using StreamTy = llvm::offload::StreamTy;
 
 static constexpr ol_error_struct_t InvalidKernelError = {
     OL_ERRC_INVALID_NULL_HANDLE, "kernel is not registered"};
@@ -54,7 +56,7 @@ ol_result_t __llvmLaunchKernelImpl(const char *KernelID, dim3 GridDim,
   LaunchSizeArgs.GroupSize.z = BlockDim.z;
   LaunchSizeArgs.DynSharedMemory = DynamicSharedMem;
 
-  ol_queue_handle_t Queue = Stream ? reinterpret_cast<ol_queue_handle_t>(Stream)
+  ol_queue_handle_t Queue = Stream ? reinterpret_cast<StreamTy *>(Stream)->Queue
                                    : ThreadState::getDefaultQueue();
 
   struct OffloadKernelArgs {

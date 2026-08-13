@@ -10,10 +10,12 @@
 #define LLVM_OFFLOAD_LANGUAGES_KERNEL_INCLUDE_STATE_H
 
 #include "OffloadAPI.h"
+#include "Stream.h"
 #include "Types.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
@@ -51,8 +53,11 @@ using KernelIDTy = const void *;
 struct ThreadStateTy {
   ~ThreadStateTy();
 
-  /// Return the default queue for the current host thread
+  /// Return the default queue for the current host thread.
   static ol_queue_handle_t getDefaultQueue();
+
+  /// Return the default stream for the current host thread and device.
+  static StreamTy *getDefaultStream();
 
   /// Return the thread-local default device, or the first discovered device.
   static ol_device_handle_t getDefaultDevice();
@@ -75,17 +80,16 @@ struct ThreadStateTy {
   /// Return the pending kernel launch configuration for this thread.
   static CallConfigurationTy &getCallConfiguration();
 
-  /// Set the thread-local default device to \p Device and recreate its queue.
-  static void setDefaultDevice(ol_device_handle_t Device);
-
 private:
   static ThreadStateTy &get();
 
-  void createDefaultQueue(ol_device_handle_t Device);
+  StreamTy *getOrCreateDefaultStream(ol_device_handle_t Device);
+  void destroyDefaultStreams();
 
   int DefaultDevice = 0;
   uint32_t LastError = 0;
-  ol_queue_handle_t DefaultQueue = nullptr;
+  llvm::DenseMap<ol_device_handle_t, StreamTy *>
+      PerThreadDeviceDefaultStreamMap;
 
   CallConfigurationTy CC = {};
 
@@ -136,6 +140,27 @@ struct StateTy {
   /// Return the loaded program handle for binary image key \p ID.
   static ol_program_handle_t getProgram(const void *ID);
 
+  /// Return all streams currently known for \p Device.
+  static llvm::SmallPtrSet<StreamTy *, 8>
+  getDeviceStreams(ol_device_handle_t Device);
+
+  /// Return all explicitly created blocking streams for \p Device.
+  static llvm::SmallPtrSet<StreamTy *, 8>
+  getBlockingStreams(ol_device_handle_t Device);
+
+  /// Return true if \p Device has an existing legacy default stream.
+  static bool hasLegacyDefaultStream(ol_device_handle_t Device);
+
+  /// Create a stream for \p Device and register it with the process state.
+  static ol_result_t createStream(ol_device_handle_t Device, QueueKind Kind,
+                                  StreamTy **Stream);
+
+  /// Destroy \p Stream after removing it from the process state.
+  static ol_result_t destroyStream(StreamTy *Stream);
+
+  /// Return true if \p Stream is currently registered with the process state.
+  static bool isStreamRegistered(StreamTy *Stream);
+
 private:
   static StateTy &get();
   static StateTy *tryGet();
@@ -146,6 +171,12 @@ private:
   void addDevice(ol_device_handle_t Device);
   void setHostDevice(ol_device_handle_t Device);
 
+  StreamTy *getOrCreateDefaultStream(ol_device_handle_t Device);
+  void destroyDefaultStreams();
+
+  void addStream(StreamTy *Stream);
+  void removeStream(StreamTy *Stream);
+
   void addKernel(KernelIDTy KernelID, ol_symbol_handle_t Kernel);
   void removeKernel(KernelIDTy KernelID);
   ol_symbol_handle_t lookupKernel(KernelIDTy KernelID);
@@ -154,14 +185,19 @@ private:
   ol_program_handle_t removeProgram(const void *Binary);
   ol_program_handle_t lookupProgram(const void *Binary);
 
+  void destroyRegisteredStreams();
   void destroyRegisteredPrograms();
 
   llvm::DenseMap<const void *, ol_program_handle_t> BinaryRegisterMap;
   llvm::DenseMap<KernelIDTy, ol_symbol_handle_t> KernelMap;
   llvm::SmallVector<ol_device_handle_t, 8> Devices;
+  llvm::DenseMap<ol_device_handle_t, StreamTy *> DeviceDefaultStreamsMap;
+  llvm::DenseMap<ol_device_handle_t, llvm::SmallPtrSet<StreamTy *, 8>>
+      DeviceStreamsMap;
+  llvm::DenseMap<ol_device_handle_t, llvm::SmallPtrSet<StreamTy *, 8>>
+      DeviceBlockingStreamsMap;
 
   ol_context_handle_t Context = nullptr;
-  ol_queue_handle_t DefaultQueue = nullptr;
   ol_device_handle_t HostDevice = nullptr;
 
   StateTy();

@@ -12,6 +12,7 @@
 #include "LanguageRuntime.h"
 #include "OffloadAPI.h"
 #include "State.h"
+#include "Stream.h"
 
 /// Convert an ol_result_t to the active language's Error_t.
 static inline Error_t convertResult(ol_result_t Result) {
@@ -49,12 +50,26 @@ static inline Error_t convertAndSetLastError(ol_result_t Result) {
   return setLastError(convertResult(Result));
 }
 
+/// Convert between the language-facing opaque stream and the internal stream.
+static inline Stream_t makeLanguageStream(llvm::offload::StreamTy *Stream) {
+  return reinterpret_cast<Stream_t>(Stream);
+}
+
+static inline llvm::offload::StreamTy *getInternalStream(Stream_t Stream) {
+  return reinterpret_cast<llvm::offload::StreamTy *>(Stream);
+}
+
 /// Convert a Stream_t to an ol_queue_handle_t.
 static inline Error_t getQueueFromStream(Stream_t Stream,
                                          ol_queue_handle_t *Queue) {
   if (!Stream)
     return ErrorInvalidValue;
-  *Queue = reinterpret_cast<ol_queue_handle_t>(Stream);
+
+  llvm::offload::StreamTy *InternalStream = getInternalStream(Stream);
+  if (!llvm::offload::StateTy::isStreamRegistered(InternalStream))
+    return ErrorInvalidResourceHandle;
+
+  *Queue = InternalStream->Queue;
   return Success;
 }
 

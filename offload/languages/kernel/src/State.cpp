@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "State.h"
+#include "Stream.h"
 #include "Types.h"
 
 #include "OffloadAPI.h"
@@ -27,6 +28,15 @@ using namespace offload;
 // Weak so another runtime object can override the default stream mode.
 __attribute__((weak)) uint32_t PerThreadQueue = 0;
 
+static constexpr ol_error_struct_t InvalidNullPointerError = {
+    OL_ERRC_INVALID_NULL_POINTER, "invalid null stream pointer"};
+
+static constexpr ol_error_struct_t InvalidDeviceError = {OL_ERRC_INVALID_DEVICE,
+                                                         "invalid device"};
+
+static constexpr ol_error_struct_t InvalidStreamError = {OL_ERRC_INVALID_QUEUE,
+                                                         "invalid stream"};
+
 // Process-wide singleton and thread-state registry.
 static std::mutex &getStateLock() {
   static std::mutex StateLock;
@@ -42,6 +52,21 @@ static std::mutex &getThreadStatesLock() {
 }
 using ThreadStatesTy = SmallVector<ThreadStateTy *, 64>;
 static ThreadStatesTy *ThreadStatesPtr = nullptr;
+
+static std::mutex &getDeviceDefaultStreamsMapLock() {
+  static std::mutex DeviceDefaultStreamsMapLock;
+  return DeviceDefaultStreamsMapLock;
+}
+
+static std::mutex &getDeviceStreamsMapLock() {
+  static std::mutex DeviceStreamsMapLock;
+  return DeviceStreamsMapLock;
+}
+
+static std::mutex &getDeviceBlockingStreamsMapLock() {
+  static std::mutex DeviceBlockingStreamsMapLock;
+  return DeviceBlockingStreamsMapLock;
+}
 
 static void deleteThreadStates() {
   // Detach the registry before deletion because deleteThreadState may be called
@@ -61,31 +86,47 @@ static void deleteThreadStates() {
 
 static void deleteState() {
   StateTy *ST = StatePtr.load();
-  StatePtr.store(nullptr);
+  if (!ST)
+    return;
   delete ST;
-  StatePtr = nullptr;
+  StatePtr.store(nullptr);
 }
 
-static void destroyQueue(ol_queue_handle_t &Queue) {
-  if (!Queue)
+static void destroyStreamHandle(StreamTy *&Stream) {
+  if (!Stream)
     return;
 
-  olSyncQueue(Queue);
-  olDestroyQueue(Queue);
-  Queue = nullptr;
+  olSyncQueue(Stream->Queue);
+  olDestroyQueue(Stream->Queue);
+  delete Stream;
+  Stream = nullptr;
 }
 
 namespace llvm {
 namespace offload {
 
+static bool removeStreamFromMap(
+    DenseMap<ol_device_handle_t, SmallPtrSet<StreamTy *, 8>> &StreamsMap,
+    StreamTy *Stream) {
+  bool Removed = false;
+  SmallVector<ol_device_handle_t, 8> EmptyDevices;
+
+  for (auto &It : StreamsMap) {
+    Removed |= It.second.erase(Stream);
+    if (It.second.empty())
+      EmptyDevices.push_back(It.first);
+  }
+
+  for (ol_device_handle_t Device : EmptyDevices)
+    StreamsMap.erase(Device);
+
+  return Removed;
+}
+
 // ThreadStateTy implementation.
 
-ThreadStateTy::ThreadStateTy() {
-  if (PerThreadQueue) [[unlikely]]
-    createDefaultQueue(getDefaultDevice());
-  atexit(deleteThreadStates);
-}
-ThreadStateTy::~ThreadStateTy() { destroyQueue(DefaultQueue); }
+ThreadStateTy::ThreadStateTy() { atexit(deleteThreadStates); }
+ThreadStateTy::~ThreadStateTy() { destroyDefaultStreams(); }
 
 ThreadStateTy &ThreadStateTy::get() {
   auto *&TS = ThreadState;
@@ -100,14 +141,28 @@ ThreadStateTy &ThreadStateTy::get() {
 }
 
 ol_device_handle_t ThreadStateTy::getDefaultDevice() {
+  ArrayRef<ol_device_handle_t> Devices = StateTy::get().getDevices();
   int DD = ThreadStateTy::get().DefaultDevice;
-  return StateTy::get().getDevices()[DD];
+  if (DD < 0 || DD >= static_cast<int>(Devices.size()))
+    return nullptr;
+  return Devices[DD];
+}
+
+StreamTy *ThreadStateTy::getDefaultStream() {
+  ol_device_handle_t Device = getDefaultDevice();
+  if (!Device)
+    return nullptr;
+
+  if (!PerThreadQueue) [[likely]]
+    return StateTy::get().getOrCreateDefaultStream(Device);
+
+  return ThreadStateTy::get().getOrCreateDefaultStream(Device);
 }
 
 ol_queue_handle_t ThreadStateTy::getDefaultQueue() {
-  if (!PerThreadQueue) [[likely]]
-    return StateTy::get().DefaultQueue;
-  return ThreadStateTy::get().DefaultQueue;
+  if (StreamTy *Stream = getDefaultStream())
+    return Stream->Queue;
+  return nullptr;
 }
 
 CallConfigurationTy &ThreadStateTy::getCallConfiguration() {
@@ -119,9 +174,7 @@ ol_device_handle_t ThreadStateTy::setDefaultDevice(int DeviceNo) {
   if (DeviceNo < 0 || DeviceNo >= static_cast<int>(Devices.size()))
     return nullptr;
   ThreadStateTy::get().DefaultDevice = DeviceNo;
-  ol_device_handle_t DD = Devices[DeviceNo];
-  ThreadStateTy::get().createDefaultQueue(DD);
-  return DD;
+  return Devices[DeviceNo];
 }
 
 ol_device_handle_t ThreadStateTy::getDevice(int *DeviceNo) {
@@ -137,11 +190,32 @@ uint32_t ThreadStateTy::setLastError(uint32_t Error) {
   return ThreadStateTy::get().LastError = Error;
 }
 
-void ThreadStateTy::createDefaultQueue(ol_device_handle_t Device) {
-  if (DefaultQueue)
-    olDestroyQueue(DefaultQueue);
-  CHECK_FATAL(olCreateQueue(StateTy::getContext(), Device, &DefaultQueue),
-              "Failed to create per-thread default queue");
+StreamTy *ThreadStateTy::getOrCreateDefaultStream(ol_device_handle_t Device) {
+  if (!Device)
+    return nullptr;
+
+  ol_context_handle_t Context = StateTy::getContext();
+  if (!Context)
+    return nullptr;
+
+  StreamTy *&Stream = PerThreadDeviceDefaultStreamMap[Device];
+  if (!Stream) {
+    ol_queue_handle_t Queue = nullptr;
+    CHECK_FATAL(olCreateQueue(Context, Device, &Queue),
+                "Failed to create per-thread default queue for device");
+    Stream = new StreamTy{Queue, Device, QueueKind::PerThreadDefault};
+    StateTy::get().addStream(Stream);
+  }
+  return Stream;
+}
+
+void ThreadStateTy::destroyDefaultStreams() {
+  for (auto &It : PerThreadDeviceDefaultStreamMap) {
+    if (StateTy *State = StateTy::tryGet())
+      State->removeStream(It.second);
+    destroyStreamHandle(It.second);
+  }
+  PerThreadDeviceDefaultStreamMap.clear();
 }
 
 // StateTy implementation.
@@ -160,6 +234,130 @@ StateTy &StateTy::get() {
 }
 
 StateTy *StateTy::tryGet() { return StatePtr.load(); }
+
+StreamTy *StateTy::getOrCreateDefaultStream(ol_device_handle_t Device) {
+  if (!Device)
+    return nullptr;
+
+  ol_context_handle_t RuntimeContext = StateTy::getContext();
+  if (!RuntimeContext)
+    return nullptr;
+
+  std::lock_guard<std::mutex> LG(getDeviceDefaultStreamsMapLock());
+  StreamTy *&Stream = DeviceDefaultStreamsMap[Device];
+  if (!Stream) {
+    ol_queue_handle_t Queue = nullptr;
+    CHECK_FATAL(olCreateQueue(RuntimeContext, Device, &Queue),
+                "Failed to create default queue for device");
+    Stream = new StreamTy{Queue, Device, QueueKind::LegacyDefault};
+    addStream(Stream);
+  }
+  return Stream;
+}
+
+void StateTy::destroyDefaultStreams() {
+  std::lock_guard<std::mutex> LG(getDeviceDefaultStreamsMapLock());
+  for (auto &It : DeviceDefaultStreamsMap) {
+    removeStream(It.second);
+    destroyStreamHandle(It.second);
+  }
+  DeviceDefaultStreamsMap.clear();
+}
+
+void StateTy::addStream(StreamTy *Stream) {
+  std::lock_guard<std::mutex> LG(getDeviceStreamsMapLock());
+  DeviceStreamsMap[Stream->Device].insert(Stream);
+}
+
+void StateTy::removeStream(StreamTy *Stream) {
+  if (!Stream)
+    return;
+
+  {
+    std::lock_guard<std::mutex> LG(getDeviceStreamsMapLock());
+    if (!removeStreamFromMap(DeviceStreamsMap, Stream))
+      return;
+  }
+
+  std::lock_guard<std::mutex> LG(getDeviceBlockingStreamsMapLock());
+  removeStreamFromMap(DeviceBlockingStreamsMap, Stream);
+}
+
+SmallPtrSet<StreamTy *, 8>
+StateTy::getDeviceStreams(ol_device_handle_t Device) {
+  StateTy &State = get();
+  std::lock_guard<std::mutex> LG(getDeviceStreamsMapLock());
+  auto It = State.DeviceStreamsMap.find(Device);
+  if (It == State.DeviceStreamsMap.end())
+    return {};
+  return It->second;
+}
+
+SmallPtrSet<StreamTy *, 8>
+StateTy::getBlockingStreams(ol_device_handle_t Device) {
+  StateTy &State = get();
+  std::lock_guard<std::mutex> LG(getDeviceBlockingStreamsMapLock());
+  auto It = State.DeviceBlockingStreamsMap.find(Device);
+  if (It == State.DeviceBlockingStreamsMap.end())
+    return {};
+  return It->second;
+}
+
+bool StateTy::hasLegacyDefaultStream(ol_device_handle_t Device) {
+  StateTy &State = get();
+  std::lock_guard<std::mutex> LG(getDeviceDefaultStreamsMapLock());
+  auto It = State.DeviceDefaultStreamsMap.find(Device);
+  return It != State.DeviceDefaultStreamsMap.end() && It->second;
+}
+
+ol_result_t StateTy::createStream(ol_device_handle_t Device, QueueKind Kind,
+                                  StreamTy **Stream) {
+  if (!Stream)
+    return &InvalidNullPointerError;
+  *Stream = nullptr;
+
+  ol_context_handle_t RuntimeContext = getContext();
+  if (!Device || !RuntimeContext)
+    return &InvalidDeviceError;
+
+  ol_queue_handle_t Queue = nullptr;
+  ol_result_t Result = olCreateQueue(RuntimeContext, Device, &Queue);
+  if (Result == OL_SUCCESS) {
+    *Stream = new StreamTy{Queue, Device, Kind};
+    get().addStream(*Stream);
+    if (Kind == QueueKind::ExplicitBlocking) {
+      StateTy &State = get();
+      std::lock_guard<std::mutex> LG(getDeviceBlockingStreamsMapLock());
+      State.DeviceBlockingStreamsMap[Device].insert(*Stream);
+    }
+  }
+  return Result;
+}
+
+ol_result_t StateTy::destroyStream(StreamTy *Stream) {
+  if (!Stream)
+    return &InvalidNullPointerError;
+
+  if (!isStreamRegistered(Stream))
+    return &InvalidStreamError;
+
+  get().removeStream(Stream);
+  ol_result_t Result = olDestroyQueue(Stream->Queue);
+  delete Stream;
+  return Result;
+}
+
+bool StateTy::isStreamRegistered(StreamTy *Stream) {
+  if (!Stream)
+    return false;
+
+  StateTy &State = get();
+  std::lock_guard<std::mutex> LG(getDeviceStreamsMapLock());
+  for (auto &It : State.DeviceStreamsMap)
+    if (It.second.contains(Stream))
+      return true;
+  return false;
+}
 
 ol_device_handle_t StateTy::getHostDevice() { return get().HostDevice; }
 
@@ -269,21 +467,34 @@ StateTy::StateTy() {
     CHECK_FATAL(olCreateContext(Devices.size(), Devices.data(), &Context),
                 "Failed to create default context");
 
-  if (!PerThreadQueue) [[likely]]
-    if (!Devices.empty()) [[likely]]
-      CHECK_FATAL(olCreateQueue(Context, Devices.front(), &DefaultQueue),
-                  "Failed to create default queue");
-
   atexit(deleteState);
 }
 
 StateTy::~StateTy() {
   deleteThreadStates();
-  destroyQueue(DefaultQueue);
+  destroyDefaultStreams();
+  destroyRegisteredStreams();
   destroyRegisteredPrograms();
   if (Context)
     olDestroyContext(Context);
   olShutDown();
+}
+
+void StateTy::destroyRegisteredStreams() {
+  SmallVector<StreamTy *, 16> Streams;
+  {
+    std::lock_guard<std::mutex> LG(getDeviceStreamsMapLock());
+    for (auto &It : DeviceStreamsMap)
+      Streams.append(It.second.begin(), It.second.end());
+    DeviceStreamsMap.clear();
+  }
+  {
+    std::lock_guard<std::mutex> LG(getDeviceBlockingStreamsMapLock());
+    DeviceBlockingStreamsMap.clear();
+  }
+
+  for (StreamTy *&Stream : Streams)
+    destroyStreamHandle(Stream);
 }
 
 void StateTy::destroyRegisteredPrograms() {

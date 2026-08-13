@@ -19,6 +19,7 @@
 
 #include "LanguageUtils.h"
 #include "State.h"
+#include "Stream.h"
 #include "Types.h"
 
 #include "OffloadAPI.h"
@@ -144,20 +145,17 @@ Error_t GetDeviceProperties(DeviceProp_t *DeviceProp, int DeviceNo) {
 }
 
 Error_t StreamCreate(Stream_t *Stream) {
-  ol_queue_handle_t Queue;
-  ol_result_t Result = olCreateQueue(RuntimeState::getContext(),
-                                     ThreadState::getDefaultDevice(), &Queue);
+  llvm::offload::StreamTy *StreamObj = nullptr;
+  ol_result_t Result = RuntimeState::createStream(
+      ThreadState::getDefaultDevice(),
+      llvm::offload::QueueKind::ExplicitBlocking, &StreamObj);
   if (Result == OL_SUCCESS)
-    *Stream = reinterpret_cast<Stream_t>(Queue);
+    *Stream = makeLanguageStream(StreamObj);
   return convertAndSetLastError(Result);
 }
 
 Error_t StreamDestroy(Stream_t Stream) {
-  ol_queue_handle_t Queue;
-  Error_t Err = getQueueFromStream(Stream, &Queue);
-  if (Err != Success)
-    return setLastError(Err);
-  ol_result_t Result = olDestroyQueue(Queue);
+  ol_result_t Result = RuntimeState::destroyStream(getInternalStream(Stream));
   return convertAndSetLastError(Result);
 }
 
