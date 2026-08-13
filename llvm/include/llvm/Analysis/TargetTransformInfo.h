@@ -1086,6 +1086,8 @@ public:
   struct BuildVectorUseOp {
     unsigned Opcode;
     int OperandIndex;
+    BuildVectorUseOp(unsigned Opcode, int OperandIndex)
+        : Opcode(Opcode), OperandIndex(OperandIndex) {}
   };
 
   /// Calculates a VectorInstrContext from \p I.

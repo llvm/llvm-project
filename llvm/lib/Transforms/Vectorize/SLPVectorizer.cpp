@@ -23067,8 +23067,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
         auto *UserTE = TE->UserTreeIndex.UserTE;
         if (!UserTE || !UserTE->hasState() || UserTE->isAltShuffle())
           return false;
-        UserOps.push_back(
-            {UserTE->getOpcode(), static_cast<int>(TE->UserTreeIndex.EdgeIdx)});
+        UserOps.emplace_back(UserTE->getOpcode(), TE->UserTreeIndex.EdgeIdx);
       }
       assert(UserOps.size() && "Ought to at least match with current entry");
       return true;
