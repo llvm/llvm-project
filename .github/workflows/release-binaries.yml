@@ -197,7 +197,7 @@ jobs:
           # These runners cannot build the full release package faster than
           # the 6 hours timeout limit, so we need to use a configuration
           # that builds more quickly.
-          macos-14)
+          macos-14 | windows-11-arm)
             bootstrap_prefix="BOOTSTRAP"
             target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF -DLLVM_RELEASE_ENABLE_PGO=OFF"
             ;;
