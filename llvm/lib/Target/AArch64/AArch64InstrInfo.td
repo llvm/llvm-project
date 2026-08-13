@@ -9463,9 +9463,16 @@ let HasOneUse = 1 in {
                             (fmul node:$lhs, node:$rhs)>;
 }
 
-// The FNEG can sit above the FMUL or on one of its operands.
+// -(Rn * Rm) in all its forms.  Only the by-element patterns below look at
+// splats; they take Rm apart for the lane operand, so Rn is bound to the FNEG'd
+// operand -- the one a split FNEG+FMUL materializes anyway.  Both FMUL orders
+// are listed because TableGen's commuted copies sort after these.
 def fnmul_frags : PatFrags<(ops node:$Rn, node:$Rm),
                            [(fneg (fmul_oneuse node:$Rn, node:$Rm)),
+                            (fmul (fneg_oneuse node:$Rn), node:$Rm),
+                            (fmul node:$Rm, (fneg_oneuse node:$Rn)),
+                            // Lane slot for the FNEG'd operand, when it is the
+                            // only splat.
                             (fmul node:$Rn, (fneg_oneuse node:$Rm))]>;
 
 let Predicates = [HasNEON, HasFullFP16] in {

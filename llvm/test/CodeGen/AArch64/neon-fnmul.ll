@@ -11,7 +11,7 @@ define <4 x float> @fmul_neg_v4f32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: fmul_neg_v4f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v2.4s, #128, lsl #24
-; CHECK-NEXT:    fmls v2.4s, v0.4s, v1.4s
+; CHECK-NEXT:    fmls v2.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    mov v0.16b, v2.16b
 ; CHECK-NEXT:    ret
   %n = fneg <4 x float> %b
@@ -23,7 +23,7 @@ define <2 x float> @fmul_neg_v2f32(<2 x float> %a, <2 x float> %b) {
 ; CHECK-LABEL: fmul_neg_v2f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v2.2s, #128, lsl #24
-; CHECK-NEXT:    fmls v2.2s, v0.2s, v1.2s
+; CHECK-NEXT:    fmls v2.2s, v1.2s, v0.2s
 ; CHECK-NEXT:    fmov d0, d2
 ; CHECK-NEXT:    ret
   %n = fneg <2 x float> %b
@@ -49,7 +49,7 @@ define <8 x half> @fmul_neg_v8f16(<8 x half> %a, <8 x half> %b) {
 ; CHECK-SD-FP16-LABEL: fmul_neg_v8f16:
 ; CHECK-SD-FP16:       // %bb.0:
 ; CHECK-SD-FP16-NEXT:    movi v2.8h, #128, lsl #8
-; CHECK-SD-FP16-NEXT:    fmls v2.8h, v0.8h, v1.8h
+; CHECK-SD-FP16-NEXT:    fmls v2.8h, v1.8h, v0.8h
 ; CHECK-SD-FP16-NEXT:    mov v0.16b, v2.16b
 ; CHECK-SD-FP16-NEXT:    ret
 ;
@@ -70,7 +70,7 @@ define <8 x half> @fmul_neg_v8f16(<8 x half> %a, <8 x half> %b) {
 ; CHECK-GI-FP16-LABEL: fmul_neg_v8f16:
 ; CHECK-GI-FP16:       // %bb.0:
 ; CHECK-GI-FP16-NEXT:    movi v2.8h, #128, lsl #8
-; CHECK-GI-FP16-NEXT:    fmls v2.8h, v0.8h, v1.8h
+; CHECK-GI-FP16-NEXT:    fmls v2.8h, v1.8h, v0.8h
 ; CHECK-GI-FP16-NEXT:    mov v0.16b, v2.16b
 ; CHECK-GI-FP16-NEXT:    ret
   %n = fneg <8 x half> %b
@@ -92,7 +92,7 @@ define <4 x half> @fmul_neg_v4f16(<4 x half> %a, <4 x half> %b) {
 ; CHECK-SD-FP16-LABEL: fmul_neg_v4f16:
 ; CHECK-SD-FP16:       // %bb.0:
 ; CHECK-SD-FP16-NEXT:    movi v2.4h, #128, lsl #8
-; CHECK-SD-FP16-NEXT:    fmls v2.4h, v0.4h, v1.4h
+; CHECK-SD-FP16-NEXT:    fmls v2.4h, v1.4h, v0.4h
 ; CHECK-SD-FP16-NEXT:    fmov d0, d2
 ; CHECK-SD-FP16-NEXT:    ret
 ;
@@ -109,7 +109,7 @@ define <4 x half> @fmul_neg_v4f16(<4 x half> %a, <4 x half> %b) {
 ; CHECK-GI-FP16-LABEL: fmul_neg_v4f16:
 ; CHECK-GI-FP16:       // %bb.0:
 ; CHECK-GI-FP16-NEXT:    movi v2.4h, #128, lsl #8
-; CHECK-GI-FP16-NEXT:    fmls v2.4h, v0.4h, v1.4h
+; CHECK-GI-FP16-NEXT:    fmls v2.4h, v1.4h, v0.4h
 ; CHECK-GI-FP16-NEXT:    fmov d0, d2
 ; CHECK-GI-FP16-NEXT:    ret
   %n = fneg <4 x half> %b
@@ -231,7 +231,7 @@ define <4 x float> @fmul_neg_commuted_v4f32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: fmul_neg_commuted_v4f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v2.4s, #128, lsl #24
-; CHECK-NEXT:    fmls v2.4s, v0.4s, v1.4s
+; CHECK-NEXT:    fmls v2.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    mov v0.16b, v2.16b
 ; CHECK-NEXT:    ret
   %n = fneg <4 x float> %b
@@ -382,6 +382,124 @@ define <4 x half> @neg_fmul_lane_v4f16(<4 x half> %a, <8 x half> %b) {
   %m = fmul <4 x half> %a, %sp
   %n = fneg <4 x half> %m
   ret <4 x half> %n
+}
+
+define <4 x float> @fneg_lhs_lane_v4f32(<4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: fneg_lhs_lane_v4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.4s, #128, lsl #24
+; CHECK-NEXT:    fmls v2.4s, v0.4s, v1.s[1]
+; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    ret
+  %sp = shufflevector <4 x float> %b, <4 x float> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %n = fneg <4 x float> %a
+  %m = fmul <4 x float> %n, %sp
+  ret <4 x float> %m
+}
+
+define <4 x float> @fneg_lhs_dup_v4f32(<4 x float> %a, float %b) {
+; CHECK-LABEL: fneg_lhs_dup_v4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.4s, #128, lsl #24
+; CHECK-NEXT:    // kill: def $s1 killed $s1 def $q1
+; CHECK-NEXT:    fmls v2.4s, v0.4s, v1.s[0]
+; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    ret
+  %ie = insertelement <4 x float> poison, float %b, i32 0
+  %sp = shufflevector <4 x float> %ie, <4 x float> poison, <4 x i32> zeroinitializer
+  %n = fneg <4 x float> %a
+  %m = fmul <4 x float> %n, %sp
+  ret <4 x float> %m
+}
+
+define <2 x float> @fneg_lhs_lane_v2f32(<2 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: fneg_lhs_lane_v2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.2s, #128, lsl #24
+; CHECK-NEXT:    fmls v2.2s, v0.2s, v1.s[3]
+; CHECK-NEXT:    fmov d0, d2
+; CHECK-NEXT:    ret
+  %sp = shufflevector <4 x float> %b, <4 x float> poison, <2 x i32> <i32 3, i32 3>
+  %n = fneg <2 x float> %a
+  %m = fmul <2 x float> %n, %sp
+  ret <2 x float> %m
+}
+
+define <8 x half> @fneg_lhs_lane_v8f16(<8 x half> %a, <8 x half> %b) {
+; CHECK-SD-NOFP16-LABEL: fneg_lhs_lane_v8f16:
+; CHECK-SD-NOFP16:       // %bb.0:
+; CHECK-SD-NOFP16-NEXT:    movi v2.8h, #128, lsl #8
+; CHECK-SD-NOFP16-NEXT:    dup v1.8h, v1.h[3]
+; CHECK-SD-NOFP16-NEXT:    fcvtl v3.4s, v1.4h
+; CHECK-SD-NOFP16-NEXT:    fcvtl2 v1.4s, v1.8h
+; CHECK-SD-NOFP16-NEXT:    eor v0.16b, v0.16b, v2.16b
+; CHECK-SD-NOFP16-NEXT:    fcvtl v2.4s, v0.4h
+; CHECK-SD-NOFP16-NEXT:    fcvtl2 v0.4s, v0.8h
+; CHECK-SD-NOFP16-NEXT:    fmul v2.4s, v2.4s, v3.4s
+; CHECK-SD-NOFP16-NEXT:    fmul v1.4s, v0.4s, v1.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtn v0.4h, v2.4s
+; CHECK-SD-NOFP16-NEXT:    fcvtn2 v0.8h, v1.4s
+; CHECK-SD-NOFP16-NEXT:    ret
+;
+; CHECK-SD-FP16-LABEL: fneg_lhs_lane_v8f16:
+; CHECK-SD-FP16:       // %bb.0:
+; CHECK-SD-FP16-NEXT:    movi v2.8h, #128, lsl #8
+; CHECK-SD-FP16-NEXT:    fmls v2.8h, v0.8h, v1.h[3]
+; CHECK-SD-FP16-NEXT:    mov v0.16b, v2.16b
+; CHECK-SD-FP16-NEXT:    ret
+;
+; CHECK-GI-NOFP16-LABEL: fneg_lhs_lane_v8f16:
+; CHECK-GI-NOFP16:       // %bb.0:
+; CHECK-GI-NOFP16-NEXT:    movi v2.8h, #128, lsl #8
+; CHECK-GI-NOFP16-NEXT:    dup v1.4h, v1.h[3]
+; CHECK-GI-NOFP16-NEXT:    eor v0.16b, v0.16b, v2.16b
+; CHECK-GI-NOFP16-NEXT:    fcvtl v1.4s, v1.4h
+; CHECK-GI-NOFP16-NEXT:    fcvtl v2.4s, v0.4h
+; CHECK-GI-NOFP16-NEXT:    fcvtl2 v0.4s, v0.8h
+; CHECK-GI-NOFP16-NEXT:    fmul v2.4s, v2.4s, v1.4s
+; CHECK-GI-NOFP16-NEXT:    fmul v1.4s, v0.4s, v1.4s
+; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v2.4s
+; CHECK-GI-NOFP16-NEXT:    fcvtn2 v0.8h, v1.4s
+; CHECK-GI-NOFP16-NEXT:    ret
+;
+; CHECK-GI-FP16-LABEL: fneg_lhs_lane_v8f16:
+; CHECK-GI-FP16:       // %bb.0:
+; CHECK-GI-FP16-NEXT:    movi v2.8h, #128, lsl #8
+; CHECK-GI-FP16-NEXT:    fmls v2.8h, v0.8h, v1.h[3]
+; CHECK-GI-FP16-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-FP16-NEXT:    ret
+  %sp = shufflevector <8 x half> %b, <8 x half> poison, <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
+  %n = fneg <8 x half> %a
+  %m = fmul <8 x half> %n, %sp
+  ret <8 x half> %m
+}
+
+define <4 x float> @lane_shared_with_fmla(<4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: lane_shared_with_fmla:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.4s, #128, lsl #24
+; CHECK-NEXT:    movi v3.4s, #128, lsl #24
+; CHECK-NEXT:    dup v4.4s, v0.s[1]
+; CHECK-NEXT:    dup v0.4s, v0.s[2]
+; CHECK-NEXT:    fmls v3.4s, v4.4s, v1.s[2]
+; CHECK-NEXT:    fmls v2.4s, v0.4s, v1.s[0]
+; CHECK-NEXT:    fmla v3.4s, v0.4s, v1.s[1]
+; CHECK-NEXT:    fmla v2.4s, v4.4s, v1.s[2]
+; CHECK-NEXT:    fadd v0.4s, v3.4s, v2.4s
+; CHECK-NEXT:    ret
+  %a1 = shufflevector <4 x float> %a, <4 x float> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %a2 = shufflevector <4 x float> %a, <4 x float> poison, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
+  %b0 = shufflevector <4 x float> %b, <4 x float> poison, <4 x i32> zeroinitializer
+  %b1 = shufflevector <4 x float> %b, <4 x float> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %b2 = shufflevector <4 x float> %b, <4 x float> poison, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
+  %n1 = fneg <4 x float> %a1
+  %t0 = fmul <4 x float> %b2, %n1
+  %x = call <4 x float> @llvm.fma.v4f32(<4 x float> %b1, <4 x float> %a2, <4 x float> %t0)
+  %n2 = fneg <4 x float> %a2
+  %t1 = fmul <4 x float> %b0, %n2
+  %y = call <4 x float> @llvm.fma.v4f32(<4 x float> %b2, <4 x float> %a1, <4 x float> %t1)
+  %r = fadd <4 x float> %x, %y
+  ret <4 x float> %r
 }
 
 ; Negative test: the fneg feeds two multiplies, so the splat stays live.
