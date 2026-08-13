@@ -590,10 +590,10 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
                   "\nPLEASE update this tool to version in the raw profile, or "
                   "regenerate raw profile with expected version.")
                      .str());
-  const uint8_t *ProfileStart = reinterpret_cast<const uint8_t *>(&Header);
   uint64_t BinaryIdSize = swap(Header.BinaryIdsSize);
   // Binary id start just after the header if exists.
-  const uint8_t *BinaryIdStart = ProfileStart + sizeof(RawInstrProf::Header);
+  const uint8_t *BinaryIdStart =
+      reinterpret_cast<const uint8_t *>(&Header) + sizeof(RawInstrProf::Header);
   const uint8_t *BinaryIdEnd = BinaryIdStart + BinaryIdSize;
   const uint8_t *BufferEnd = (const uint8_t *)DataBuffer->getBufferEnd();
   if (BinaryIdSize % sizeof(uint64_t))
