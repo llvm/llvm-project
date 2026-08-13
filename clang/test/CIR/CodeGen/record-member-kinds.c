@@ -27,6 +27,13 @@ struct ZeroLenArr { int a[0]; };
 struct Fam { int n; int a[]; };
 // CIR-DAG: !rec_Fam = !cir.struct<"Fam" {data !s32i, data !cir.array<!s32i x 0>}>
 
+// A trailing array of empty records is empty only when its length is constant.
+struct FamOfEmpty { struct E e; struct E a[]; };
+// CIR-DAG: !rec_FamOfEmpty = !cir.struct<"FamOfEmpty" {empty !rec_E, data !cir.array<!rec_E x 0>}>
+
+struct ZeroLenOfEmpty { struct E e; struct E a[0]; };
+// CIR-DAG: !rec_ZeroLenOfEmpty = !cir.struct<"ZeroLenOfEmpty" {empty !rec_E, empty !cir.array<!rec_E x 0>}>
+
 struct UnnamedBitOnly { int : 8; };
 // CIR-DAG: !rec_UnnamedBitOnly = !cir.struct<"UnnamedBitOnly" {empty !u8i}>
 
@@ -78,7 +85,8 @@ struct AlignedTail { char c; int i __attribute__((aligned(8))); };
 // Name every record so that its CIR type reaches the output.
 void useTypes(struct ContainsEmpty *a, struct ContainsEmptyAndInt *b,
               struct EmptyArr *c, struct MultiDimEmpty *d,
-              struct ZeroLenArr *e, struct Fam *f, struct UnnamedBitOnly *g,
+              struct ZeroLenArr *e, struct Fam *f, struct FamOfEmpty *f2,
+              struct ZeroLenOfEmpty *f3, struct UnnamedBitOnly *g,
               struct UnnamedBitThenField *h, struct MsOnlyUnnamed *i,
               struct MsNamedThenUnnamed *j, struct MsUnnamedThenNamed *k,
               struct MsMixed *l, struct MsEmptyFirst *m,
