@@ -660,6 +660,12 @@ public:
           // If handleCASError didn't abort, treat as miss.
           return Cb(std::error_code());
         }
+
+        // The key was found in the action cache but the object it points to is
+        // not available in the CAS. Treat it as a miss.
+        if (!*MaybeObject)
+          return Cb(std::error_code());
+
         return Cb((*MaybeObject)->getMemoryBuffer("", /*NullTerminated=*/true));
       });
     });
