@@ -2210,6 +2210,9 @@ Trade-offs:
 - Lookups take $O(\log N)$ time via binary search rather than $O(1)$ in `DenseMap`.
 - Insertions and deletions take $O(N)$ time due to shifting elements in the
   underlying vector, making it best suited for small $N$ or mostly-read data.
+- Like other vector-based containers (and unlike `std::map`), iterators and
+  references are invalidated by insertions (due to element shifting or
+  reallocations) and erasures (due to element shifting).
 - Compared to `std::map`, elements are stored contiguously, eliminating per-node
   heap allocations and pointer chasing.
 - Compared to `MapVector`, elements are ordered by key rather than insertion
