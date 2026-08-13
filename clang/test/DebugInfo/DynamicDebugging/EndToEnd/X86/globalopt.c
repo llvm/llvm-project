@@ -5,7 +5,7 @@
 
 // RUN: %clang -cc1 %s -emit-obj -O3 -debug-info-kind=limited -fdynamic-debugging -o - -triple x86_64-unknown-unknown | llvm-nm - | FileCheck %s
 // CHECK: t a
-// CHECK: T a.dyndbg.[[hash:[A-Z0-9]+]]
+// CHECK: T a.dyndbg.[[hash:[A-F0-9]+]]
 // CHECK: T b
 // CHECK: U c
 // CHECK: t d
