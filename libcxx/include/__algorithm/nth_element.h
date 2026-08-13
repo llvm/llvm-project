@@ -330,10 +330,9 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __nth_element_im
   std::__debug_randomize_range<_AlgPolicy>(__first, __last);
 
   // When the size of the range is known at compile time (e.g. in a median-of-5 filter), this
-  // dispatch constant-folds to the appropriate sorting network. Otherwise, the check disappears
-  // entirely and we fall through to the general algorithm, which handles small ranges itself.
-  // Note that __builtin_constant_p is only resolved after inlining, so this catches callers that
-  // pass a constant size even though it is not a constant expression here.
+  // dispatch constant-folds to the appropriate small-range algorithm. Otherwise, the check
+  // disappears entirely and we fall through to the general algorithm, which handles small ranges
+  // itself.
   bool __small_constant_size =
       __builtin_constant_p(__last - __first) &&
       std::__nth_element_small<_AlgPolicy, __comp_ref_type<_Compare> >(__first, __nth, __last, __comp);
