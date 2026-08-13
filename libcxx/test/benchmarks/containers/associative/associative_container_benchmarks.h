@@ -147,18 +147,21 @@ void associative_container_benchmarks(std::string container) {
     std::pmr::monotonic_buffer_resource rs2(size * 64 * BatchSize); // 64 bytes should be enough per node
     while (st.KeepRunningBatch(BatchSize)) {
       for (std::size_t i = 0; i != BatchSize; ++i) {
-        new (c + i * sizeof(PMRContainer)) PMRContainer(std::move(srcs[i]), &rs2);
-        benchmark::DoNotOptimize(c + i);
+        PMRContainer* p = reinterpret_cast<PMRContainer*>(c) + i;
+        new (p) PMRContainer(std::move(srcs[i]), &rs2);
+        benchmark::DoNotOptimize(p);
         benchmark::ClobberMemory();
       }
 
       st.PauseTiming();
       for (std::size_t i = 0; i != BatchSize; ++i) {
-        reinterpret_cast<PMRContainer*>(c + i * sizeof(PMRContainer))->~PMRContainer();
+        PMRContainer* p = reinterpret_cast<PMRContainer*>(c) + i;
+        p->~PMRContainer();
       }
       rs2.release();
       srcs.clear();
-      for (size_t i = 0; i != BatchSize; ++i)
+      rs.release();
+      for (std::size_t i = 0; i != BatchSize; ++i)
         srcs.emplace_back(&rs).insert(in.begin(), in.end());
 
       st.ResumeTiming();
