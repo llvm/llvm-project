@@ -9524,6 +9524,14 @@ flags metadata, using the following key-value pairs:
 
 ### Other Module Flags
 
+`executable-stack`
+:   A non-zero value indicates the module contains code requiring an executable
+    stack, such as a trampoline built in stack memory and jumped to. On ELF
+    targets a non-zero value emits `.note.GNU-stack` with `SHF_EXECINSTR` set,
+    telling the linker to mark the binary's stack executable. The flag must use
+    the `max` merge behavior, so that a module requiring an executable stack
+    still gets one after linking with modules that do not.
+
 `require-logical-pointer`
 :   This flag indicates this module must only use logical pointer intrinsics
     such as {ref}`@llvm.structured.gep <i_structured_gep>` or
@@ -21663,10 +21671,9 @@ These intrinsics make it possible to excise one parameter, marked with
 the {ref}`nest <nest>` attribute, from a function. The result is a
 callable function pointer lacking the nest parameter - the caller does
 not need to provide a value for it. Instead, the value to use is stored
-in advance in a "trampoline", a block of memory usually allocated on the
-stack, which also contains code to splice the nest value into the
-argument list. This is used to implement the GCC nested function address
-extension.
+in advance in a "trampoline", a block of memory which also contains code
+to splice the nest value into the argument list. This is used to
+implement the GCC nested function address extension.
 
 For example, if the function is `i32 f(ptr nest %c, i32 %x, i32 %y)`
 then the resulting function pointer has signature `i32 (i32, i32)`.
@@ -21705,6 +21712,13 @@ intrinsic. Note that the size and the alignment are target-specific -
 LLVM currently provides no portable way of determining them, so a
 front-end that generates this intrinsic needs to have some
 target-specific knowledge.
+
+The block may be allocated anywhere - the stack, the heap, a global, or a
+runtime-managed pool - as long as it is writable when
+`llvm.init.trampoline` executes and the address returned by
+{ref}`llvm.adjust.trampoline <int_at>` is executable when called. Those two
+addresses need not be equal, so a W^X implementation may map the block
+twice, once writable and once executable.
 
 The `func` argument must be a constant (potentially bitcasted) pointer to a
 function declaration or definition, since the calling convention may affect the
