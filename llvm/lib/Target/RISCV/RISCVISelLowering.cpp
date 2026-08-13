@@ -9902,34 +9902,35 @@ SDValue RISCVTargetLowering::lowerPARTIAL_REDUCE_MLA(SDValue Op,
 
   // vdot4a* only produces an i32 result. For an i64 accumulator, perform the
   // dot product into a fresh i32 accumulator (each result is the sum of four
-  // i8 products, which cannot overflow i32), then widen the i32 partial sums
-  // to i64 and accumulate. This mirrors the AArch64 sdot+sadalp idiom.
+  // i8 products, which cannot overflow i32), reduce those i32 partial sums
+  // down to the accumulator's element count while still in i32 (a sum of eight
+  // i8 products still cannot overflow i32), and only then extend to i64 and add
+  // to the accumulator.
   if (VT.getVectorElementType() == MVT::i64) {
     assert(Accum.getSimpleValueType() == VT);
     // vdot4a* reduces each group of four i8 lanes into one i32 lane, so the
     // intermediate i32 result has 1/4 the element count of the i8 inputs.
-    MVT I32VT = MVT::getVectorVT(
+    MVT DotVT = MVT::getVectorVT(
         MVT::i32, ArgVT.getVectorElementCount().divideCoefficientBy(4));
-    SDValue Dot = DAG.getNode(Op.getOpcode(), DL, I32VT,
-                              {DAG.getConstant(0, DL, I32VT), A, B});
-    // Widen the i32 partial sums to i64. They are signed for SMLA/SUMLA and
-    // unsigned for UMLA.
+    SDValue Dot = DAG.getNode(Op.getOpcode(), DL, DotVT,
+                              {DAG.getConstant(0, DL, DotVT), A, B});
+    // Add the i32 partial sums down to the accumulator's element count by
+    // extracting and summing the subvectors (still in i32 to avoid a wider
+    // extend).
+    MVT NarrowVT = VT.changeVectorElementType(MVT::i32);
+    unsigned Stride = NarrowVT.getVectorMinNumElements();
+    SDValue Sum = DAG.getExtractSubvector(DL, NarrowVT, Dot, 0);
+    for (unsigned I = 1, E = DotVT.getVectorMinNumElements() / Stride; I != E;
+         ++I)
+      Sum = DAG.getNode(ISD::ADD, DL, NarrowVT, Sum,
+                        DAG.getExtractSubvector(DL, NarrowVT, Dot, I * Stride));
+    // Extend the reduced i32 sums to i64 and accumulate. They are signed for
+    // SMLA/SUMLA and unsigned for UMLA.
     unsigned ExtOpc = Op.getOpcode() == ISD::PARTIAL_REDUCE_UMLA
                           ? ISD::ZERO_EXTEND
                           : ISD::SIGN_EXTEND;
-    MVT WideVT = I32VT.changeVectorElementType(MVT::i64);
-    SDValue Wide = DAG.getNode(ExtOpc, DL, WideVT, Dot);
-    // The widened dot result has twice the elements of the i64 accumulator.
-    // Reduce it in by splitting into subvectors matching the accumulator and
-    // adding them together (the same lowering the generic expander would use
-    // for a multiplier-free partial reduction, but without a redundant mul).
-    unsigned Stride = VT.getVectorMinNumElements();
-    SDValue Res = Accum;
-    for (unsigned I = 0, E = WideVT.getVectorMinNumElements() / Stride; I != E;
-         ++I)
-      Res = DAG.getNode(ISD::ADD, DL, VT, Res,
-                        DAG.getExtractSubvector(DL, VT, Wide, I * Stride));
-    return Res;
+    return DAG.getNode(ISD::ADD, DL, VT, Accum,
+                       DAG.getNode(ExtOpc, DL, VT, Sum));
   }
 
   assert(Accum.getSimpleValueType() == VT &&
