@@ -102,10 +102,10 @@ public:
     return valueMapping.lookup(value);
   }
 
-  /// Remap old value with new value. When oldValue is a LLVM constant, builder
-  /// is used to materialize any constant-expression users as instructions.
-  void remapAllValuesWith(llvm::Value *oldValue, llvm::Value *newValue,
-                          llvm::IRBuilderBase *builder = nullptr);
+  /// Remap old value with new value in the MLIR-to-LLVM value map so later
+  /// translations use the replacement. Existing LLVM instructions are not
+  /// rewritten.
+  void remapAllValuesWith(llvm::Value *oldValue, llvm::Value *newValue);
 
   /// Looks up remapped a list of remapped values.
   SmallVector<llvm::Value *> lookupValues(ValueRange values);

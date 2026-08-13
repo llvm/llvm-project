@@ -159,33 +159,60 @@ llvm.func @test_allocate_use(%arg0: !llvm.ptr) {
 
 // -----
 
-// Verifies remapping when a global has multiple GEP users (COMMON block shape).
+// Verifies that a use before omp.allocate_dir keeps the original storage while
+// later uses go through the OMP-allocated pointer.
 //
-// CHECK-LABEL: define void @test_allocate_global_gep_users
+// CHECK-LABEL: define void @test_allocate_use_before
+// CHECK-SAME: (ptr %[[ARG0:.*]])
+// CHECK:   %[[PRE:.*]] = load i32, ptr %[[ARG0]]
 // CHECK:   %[[TID:.*]] = call i32 @__kmpc_global_thread_num(
 // CHECK:   %[[ALLOC:.*]] = call ptr @__kmpc_alloc(i32 %[[TID]], i64 8, ptr null)
-// CHECK:   %[[GEP4:.*]] = getelementptr i8, ptr %[[ALLOC]], i64 4
-// CHECK:   store i32 1, ptr %[[ALLOC]], align 4
-// CHECK:   store i32 2, ptr %[[GEP4]], align 4
+// CHECK:   store i32 42, ptr %[[ALLOC]]
 // CHECK:   %[[TID_FREE:.*]] = call i32 @__kmpc_global_thread_num(
 // CHECK:   call void @__kmpc_free(i32 %[[TID_FREE]], ptr %[[ALLOC]], ptr null)
 // CHECK:   ret void
-llvm.mlir.global internal @common_like() : !llvm.array<2 x i32> {
-  %0 = llvm.mlir.zero : !llvm.array<2 x i32>
-  llvm.return %0 : !llvm.array<2 x i32>
+llvm.func @test_allocate_use_before(%arg0: !llvm.ptr) {
+  %pre = llvm.load %arg0 : !llvm.ptr -> i32
+  omp.allocate_dir (%arg0 : !llvm.ptr)
+  %c42 = llvm.mlir.constant(42 : i32) : i32
+  llvm.store %c42, %arg0 : i32, !llvm.ptr
+  omp.allocate_free (%arg0 : !llvm.ptr)
+  llvm.return
 }
 
-llvm.func @test_allocate_global_gep_users() {
-  %base = llvm.mlir.addressof @common_like : !llvm.ptr
-  %c0 = llvm.mlir.constant(0 : i64) : i64
-  %c1 = llvm.mlir.constant(1 : i64) : i64
-  %m0 = llvm.getelementptr %base[%c0, %c0] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.array<2 x i32>
-  %m1 = llvm.getelementptr %base[%c0, %c1] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.array<2 x i32>
-  omp.allocate_dir (%base : !llvm.ptr)
-  %one = llvm.mlir.constant(1 : i32) : i32
-  %two = llvm.mlir.constant(2 : i32) : i32
-  llvm.store %one, %m0 : i32, !llvm.ptr
-  llvm.store %two, %m1 : i32, !llvm.ptr
-  omp.allocate_free (%base : !llvm.ptr)
+// -----
+
+// Verifies dynamic array size with an i32 element count on llvm.alloca.
+//
+// CHECK-LABEL: define void @test_allocate_dynamic_i32_count
+// CHECK:   %[[TID:.*]] = call i32 @__kmpc_global_thread_num(
+// CHECK:   %[[ALLOC:.*]] = call ptr @__kmpc_alloc(i32 %[[TID]], i64 40, ptr null)
+// CHECK:   %[[TID_FREE:.*]] = call i32 @__kmpc_global_thread_num(
+// CHECK:   call void @__kmpc_free(i32 %[[TID_FREE]], ptr %[[ALLOC]], ptr null)
+// CHECK:   ret void
+llvm.func @test_allocate_dynamic_i32_count() {
+  %count = llvm.mlir.constant(10 : i32) : i32
+  %arr = llvm.alloca %count x i32 : (i32) -> !llvm.ptr
+  omp.allocate_dir (%arr : !llvm.ptr)
+  omp.allocate_free (%arr : !llvm.ptr)
+  llvm.return
+}
+
+// -----
+
+// Verifies runtime dynamic array size from a stack alloca: count * 4 bytes.
+//
+// CHECK-LABEL: define void @test_allocate_dynamic_runtime_count
+// CHECK-SAME: (i64 %[[COUNT:.*]])
+// CHECK:   %[[MUL:.*]] = mul i64 %[[COUNT]], 4
+// CHECK:   %[[TID:.*]] = call i32 @__kmpc_global_thread_num(
+// CHECK:   %[[ALLOC:.*]] = call ptr @__kmpc_alloc(i32 %[[TID]], i64 {{.*}}, ptr null)
+// CHECK:   %[[TID_FREE:.*]] = call i32 @__kmpc_global_thread_num(
+// CHECK:   call void @__kmpc_free(i32 %[[TID_FREE]], ptr %[[ALLOC]], ptr null)
+// CHECK:   ret void
+llvm.func @test_allocate_dynamic_runtime_count(%count: i64) {
+  %arr = llvm.alloca %count x i32 : (i64) -> !llvm.ptr
+  omp.allocate_dir (%arr : !llvm.ptr)
+  omp.allocate_free (%arr : !llvm.ptr)
   llvm.return
 }

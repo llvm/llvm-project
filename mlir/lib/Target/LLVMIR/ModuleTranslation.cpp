@@ -43,12 +43,10 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/Operator.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -2583,58 +2581,14 @@ SmallVector<llvm::Value *> ModuleTranslation::lookupValues(ValueRange values) {
   return remapped;
 }
 
-static void remapConstantPointerUses(
-    llvm::Constant *oldPtr, llvm::Value *newPtr, llvm::IRBuilderBase &builder,
-    llvm::DenseMap<llvm::Constant *, llvm::Value *> &replacements) {
-  for (llvm::Use &use : llvm::make_early_inc_range(oldPtr->uses())) {
-    if (auto *constantExpr =
-            llvm::dyn_cast<llvm::ConstantExpr>(use.getUser())) {
-      if (constantExpr->getOpcode() == llvm::Instruction::GetElementPtr) {
-        auto *gep = llvm::cast<llvm::GEPOperator>(constantExpr);
-        llvm::SmallVector<llvm::Value *, 4> indices;
-        for (unsigned i = 1, e = constantExpr->getNumOperands(); i < e; ++i)
-          indices.push_back(constantExpr->getOperand(i));
-        llvm::Value *newGEP =
-            builder.CreateGEP(gep->getSourceElementType(), newPtr, indices);
-        replacements[constantExpr] = newGEP;
-        constantExpr->replaceAllUsesWith(newGEP);
-        continue;
-      }
-      llvm::Instruction *newInst = constantExpr->getAsInstruction();
-      builder.Insert(newInst);
-      replacements[constantExpr] = newInst;
-      constantExpr->replaceAllUsesWith(newInst);
-      continue;
-    }
-    use.set(newPtr);
-  }
-}
-
 void ModuleTranslation::remapAllValuesWith(llvm::Value *oldValue,
-                                           llvm::Value *newValue,
-                                           llvm::IRBuilderBase *builder) {
+                                           llvm::Value *newValue) {
   if (oldValue == newValue)
     return;
 
-  llvm::DenseMap<llvm::Constant *, llvm::Value *> constantReplacements;
-  if (auto *constant = llvm::dyn_cast<llvm::Constant>(oldValue)) {
-    assert(builder &&
-           "IRBuilder required when remapping constant storage pointers");
-    remapConstantPointerUses(constant, newValue, *builder,
-                             constantReplacements);
-  } else {
-    oldValue->replaceAllUsesWith(newValue);
-  }
-
-  for (auto &entry : valueMapping) {
-    if (entry.second == oldValue) {
+  for (auto &entry : valueMapping)
+    if (entry.second == oldValue)
       entry.second = newValue;
-      continue;
-    }
-    if (auto *constant = llvm::dyn_cast<llvm::Constant>(entry.second))
-      if (llvm::Value *replacement = constantReplacements.lookup(constant))
-        entry.second = replacement;
-  }
 }
 
 llvm::OpenMPIRBuilder *ModuleTranslation::getOpenMPBuilder() {

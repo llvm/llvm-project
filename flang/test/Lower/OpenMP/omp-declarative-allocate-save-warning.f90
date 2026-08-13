@@ -11,6 +11,13 @@ subroutine save_allocate_warning
   !$omp allocate(counter) allocator(1)
 end subroutine save_allocate_warning
 
+subroutine implicit_save_allocate_warning
+  implicit none
+  integer :: implicit_counter = 100
+
+  !$omp allocate(implicit_counter) allocator(1)
+end subroutine implicit_save_allocate_warning
+
 subroutine common_allocate_warning
   implicit none
   real :: cb_a, cb_b
@@ -21,9 +28,14 @@ end subroutine common_allocate_warning
 
 ! Warnings are emitted during lowering before HLFIR is printed.
 ! CHECK: warning: {{.*}}TODO : OpenMP declarative ALLOCATE on SAVE variables or COMMON blocks is not yet supported, ignoring the ALLOCATE directive for 'counter'
+! CHECK: warning: {{.*}}TODO : OpenMP declarative ALLOCATE on SAVE variables or COMMON blocks is not yet supported, ignoring the ALLOCATE directive for 'implicit_counter'
 ! CHECK: warning: {{.*}}TODO : OpenMP declarative ALLOCATE on SAVE variables or COMMON blocks is not yet supported, ignoring the ALLOCATE directive for 'myblock'
 
 ! CHECK-LABEL: func.func @_QPsave_allocate_warning
+! CHECK-NOT: omp.allocate_dir
+! CHECK-NOT: omp.allocate_free
+
+! CHECK-LABEL: func.func @_QPimplicit_save_allocate_warning
 ! CHECK-NOT: omp.allocate_dir
 ! CHECK-NOT: omp.allocate_free
 

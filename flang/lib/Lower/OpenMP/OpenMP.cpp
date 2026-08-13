@@ -2861,7 +2861,7 @@ static void genAllocateDirOp(lower::AbstractConverter &converter,
     assert(sym && "Expected Symbol");
     const semantics::Symbol &ultimate = sym->GetUltimate();
     if (semantics::omp::IsCommonBlock(ultimate) ||
-        ultimate.attrs().test(semantics::Attr::SAVE)) {
+        semantics::IsSaved(ultimate)) {
       mlir::emitWarning(
           loc, "TODO : OpenMP declarative ALLOCATE on SAVE variables or "
                "COMMON blocks is not yet supported, ignoring the ALLOCATE "
