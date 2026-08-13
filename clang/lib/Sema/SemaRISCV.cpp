@@ -1686,15 +1686,6 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
     Types.insert(Type);
   }
 
-  const bool IsSiFiveCLICTriple =
-      Types.size() == 3 && Types.contains(RISCVInterruptAttr::machine) &&
-      Types.contains(RISCVInterruptAttr::SiFiveCLICPreemptible) &&
-      Types.contains(RISCVInterruptAttr::SiFiveCLICStackSwap);
-  if (AL.getNumArgs() == 3 && !IsSiFiveCLICTriple) {
-    Diag(AL.getLoc(), diag::err_riscv_attribute_interrupt_invalid_combination);
-    return;
-  }
-
   if (HasUnaryType && Types.size() > 1) {
     Diag(AL.getLoc(), diag::err_riscv_attribute_interrupt_invalid_combination);
     return;
