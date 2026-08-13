@@ -606,6 +606,31 @@ Interpreter::Visit(const UnaryOpNode &node) {
     if (flipped)
       return ValueObject::CreateValueObjectFromScalar(
           m_stack_frame, scalar, operand->GetCompilerType(), "result");
+    break;
+  }
+  case UnaryOpKind::LNot: {
+    if (operand->GetCompilerType().IsReferenceType()) {
+      operand = operand->Dereference(error);
+      if (error.Fail())
+        return error.ToError();
+    }
+    CompilerType operand_type = operand->GetCompilerType();
+    if (!operand_type.IsContextuallyConvertibleToBool()) {
+      std::string errMsg =
+          llvm::formatv("invalid argument type '{0}' to unary expression",
+                        operand_type.GetTypeName());
+      return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
+                                                  node.GetLocation());
+    }
+    llvm::Expected<lldb::TypeSystemSP> type_system =
+        GetTypeSystemFromCU(m_stack_frame);
+    if (!type_system)
+      return type_system.takeError();
+    auto value_or_err = operand->GetValueAsBool();
+    if (!value_or_err)
+      return value_or_err.takeError();
+    return ValueObject::CreateValueObjectFromBool(m_stack_frame, *type_system,
+                                                  !(*value_or_err), "result");
   }
   }
   return llvm::make_error<DILDiagnosticError>(m_expr, "invalid unary operation",
@@ -1008,7 +1033,67 @@ Interpreter::EvaluateBinaryShift(BinaryOpKind kind, lldb::ValueObjectSP lhs,
 }
 
 llvm::Expected<lldb::ValueObjectSP>
+Interpreter::EvaluateLogical(const BinaryOpNode &node) {
+  // Operations {'&&', '||'} work for:
+  //  {IsContextuallyConvertibleToBool} <-> {IsContextuallyConvertibleToBool}
+  // Note: These operators will not evaluate or check the type of RHS
+  // if the result is determined after evaluating LHS.
+  auto lhs_or_err = EvaluateAndDereference(node.GetLHS());
+  if (!lhs_or_err)
+    return lhs_or_err;
+  lldb::ValueObjectSP lhs = *lhs_or_err;
+  auto lhs_type = lhs->GetCompilerType();
+  if (!lhs_type.IsContextuallyConvertibleToBool()) {
+    std::string errMsg = llvm::formatv(
+        "value of type {0} is not contextually convertible to 'bool'",
+        lhs_type.TypeDescription());
+    return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
+                                                node.GetLocation());
+  }
+  llvm::Expected<lldb::TypeSystemSP> type_system =
+      GetTypeSystemFromCU(m_stack_frame);
+  if (!type_system)
+    return type_system.takeError();
+
+  // For "&&", exit early if LHS is "false"
+  // For "||", exit early if LHS is "true".
+  auto lvalue_or_err = lhs->GetValueAsBool();
+  if (!lvalue_or_err)
+    return lvalue_or_err.takeError();
+  bool lhs_val = *lvalue_or_err;
+  bool exit_early = node.GetKind() == BinaryOpKind::LAnd ? !lhs_val : lhs_val;
+  if (exit_early)
+    return ValueObject::CreateValueObjectFromBool(m_stack_frame, *type_system,
+                                                  lhs_val, "result");
+
+  // If the result is to be determined, evaluate the RHS.
+  auto rhs_or_err = EvaluateAndDereference(node.GetRHS());
+  if (!rhs_or_err)
+    return rhs_or_err;
+  lldb::ValueObjectSP rhs = *rhs_or_err;
+  auto rhs_type = rhs->GetCompilerType();
+  if (!rhs_type.IsContextuallyConvertibleToBool()) {
+    std::string errMsg = llvm::formatv(
+        "value of type {0} is not contextually convertible to 'bool'",
+        rhs_type.TypeDescription());
+    return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
+                                                node.GetLocation());
+  }
+
+  auto rvalue_or_err = rhs->GetValueAsBool();
+  if (!rvalue_or_err)
+    return rvalue_or_err.takeError();
+  return ValueObject::CreateValueObjectFromBool(m_stack_frame, *type_system,
+                                                *rvalue_or_err, "result");
+}
+
+llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const BinaryOpNode &node) {
+  // Handle logical operators separately. They may or may not evaluate RHS.
+  if (node.GetKind() == BinaryOpKind::LAnd ||
+      node.GetKind() == BinaryOpKind::LOr)
+    return EvaluateLogical(node);
+
   auto lhs_or_err = EvaluateAndDereference(node.GetLHS());
   if (!lhs_or_err)
     return lhs_or_err;
@@ -1060,6 +1145,8 @@ Interpreter::Visit(const BinaryOpNode &node) {
   case BinaryOpKind::Shl:
   case BinaryOpKind::Shr:
     return EvaluateBinaryShift(node.GetKind(), lhs, rhs, node.GetLocation());
+  default:
+    break;
   }
 
   return llvm::make_error<DILDiagnosticError>(
@@ -1680,6 +1767,46 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const CastNode &node) {
                     op_type.TypeDescription(), target_type.TypeDescription());
   return llvm::make_error<DILDiagnosticError>(m_expr, std::move(errMsg),
                                               node.GetLocation());
+}
+
+llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const SizeOfNode &node) {
+  CompilerType typearg = node.GetTypeArg();
+  Scalar size;
+  if (typearg.IsValid()) {
+    if (typearg.IsReferenceType())
+      typearg = typearg.GetNonReferenceType();
+    llvm::Expected<uint64_t> byte_size = typearg.GetByteSize(m_target.get());
+    if (!byte_size)
+      return byte_size.takeError();
+    size = *byte_size;
+  } else {
+    auto arg_or_err = EvaluateAndDereference(node.GetNodeArg());
+    if (!arg_or_err)
+      return arg_or_err;
+    lldb::ValueObjectSP arg = *arg_or_err;
+
+    if (arg->IsBitfield())
+      return llvm::make_error<DILDiagnosticError>(
+          m_expr, "invalid application of 'sizeof' to bit-field",
+          node.GetLocation());
+
+    llvm::Expected<uint64_t> byte_size = arg->GetByteSize();
+    if (!byte_size)
+      return byte_size.takeError();
+    size = *byte_size;
+  }
+
+  llvm::Expected<lldb::TypeSystemSP> type_system =
+      GetTypeSystemFromCU(m_stack_frame);
+  if (!type_system)
+    return type_system.takeError();
+  CompilerType size_type = type_system.get()->GetSizeType();
+  if (!size_type)
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr, "unable to determine size type", node.GetLocation());
+
+  return ValueObject::CreateValueObjectFromScalar(m_stack_frame, size,
+                                                  size_type, "result");
 }
 
 } // namespace lldb_private::dil

@@ -44,9 +44,7 @@ struct CIRRecordLowering final {
     CharUnits offset;
     enum class InfoKind { VFPtr, Field, Base, VBase } kind;
     mlir::Type data;
-    /// What this member holds, recorded on the CIR record type so that later
-    /// passes can tell declared storage from compiler-inserted padding.  Every
-    /// constructor takes it, so a new member cannot be added without deciding.
+    /// What this member holds, recorded on the CIR record type.
     cir::RecordMemberKind memberKind;
     union {
       const FieldDecl *fieldDecl;
@@ -233,7 +231,6 @@ struct CIRRecordLowering final {
     }
   }
 
-  /// The single entry point for appending an output field.
   void addField(mlir::Type ty, cir::RecordMemberKind memberKind) {
     fieldTypes.push_back(ty);
     fieldKinds.push_back(memberKind);
@@ -371,9 +368,6 @@ void CIRRecordLowering::lower(bool nonVirtualBaseType) {
 
 void CIRRecordLowering::fillOutputFields() {
   for (const MemberInfo &member : members) {
-    // A bit-field occupant and a primary virtual base without own storage both
-    // carry null data, so the kind must be appended inside this guard or every
-    // later mark shifts by one while the two lengths still agree.
     if (member.data)
       addField(member.data, member.memberKind);
     if (member.kind == MemberInfo::InfoKind::Field) {
@@ -797,7 +791,7 @@ marksMatchABIEmptiness(const ASTContext &astContext, const RecordDecl *rd,
                        cir::RecordType recordTy, bool droppedFieldHoldingData) {
   if (droppedFieldHoldingData)
     return true;
-  return cir::allMembersNonData(recordTy) ==
+  return recordTy.isEmptyForABI() ==
          isEmptyRecordForABI(astContext, astContext.getCanonicalTagType(rd));
 }
 
@@ -999,13 +993,13 @@ void CIRRecordLowering::lowerUnion(bool nonVirtualBaseType) {
     zeroInitializable = zeroInitializableAsBase = false;
 
   // If we have no candidates for storage, we are JUST padding.
-  if (fieldTypes.empty()) {
+  if (getFieldTypes().empty()) {
     appendPaddingBytes(layoutSize);
     return;
   }
 
   mlir::Type storageType =
-      cir::UnionType::getUnionStorageType(dataLayout.layout, fieldTypes);
+      cir::UnionType::getUnionStorageType(dataLayout.layout, getFieldTypes());
 
   // If our storage size was bigger than our required size (can happen in the
   // case of packed bitfields on Itanium) then just use an I8 array.
@@ -1019,7 +1013,7 @@ void CIRRecordLowering::lowerUnion(bool nonVirtualBaseType) {
     // One member stands in for every variant, so it holds data unless no
     // variant does.  Computed before clearFields() drops the variant marks.
     const cir::RecordMemberKind storageKind =
-        llvm::is_contained(fieldKinds, cir::RecordMemberKind::Data)
+        llvm::is_contained(getFieldKinds(), cir::RecordMemberKind::Data)
             ? cir::RecordMemberKind::Data
             : cir::RecordMemberKind::Empty;
     clearFields();

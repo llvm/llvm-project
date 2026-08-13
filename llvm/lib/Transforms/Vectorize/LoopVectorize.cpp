@@ -255,11 +255,6 @@ static cl::opt<TailFoldingStyle> ForceTailFoldingStyle(
                    "Use predicated EVL instructions for tail folding. If EVL "
                    "is unsupported, fallback to data-without-lane-mask.")));
 
-cl::opt<bool> llvm::EnableWideActiveLaneMask(
-    "enable-wide-lane-mask", cl::init(false), cl::Hidden,
-    cl::desc("Enable use of wide lane masks when used for control flow in "
-             "tail-folded loops"));
-
 static cl::opt<bool> EnableInterleavedMemAccesses(
     "enable-interleaved-mem-accesses", cl::init(false), cl::Hidden,
     cl::desc("Enable vectorization on interleaved memory accesses in a loop"));
@@ -1219,15 +1214,6 @@ public:
     return PartialAliasMaskingStatus == AliasMaskingStatus::Enabled;
   }
 
-  /// Returns true if the use of wide lane masks is requested and the loop is
-  /// using tail-folding with a lane mask for control flow.
-  bool useWideActiveLaneMask() const {
-    if (!EnableWideActiveLaneMask)
-      return false;
-
-    return getTailFoldingStyle() == TailFoldingStyle::DataAndControlFlow;
-  }
-
   /// Returns true if the instructions in this block requires predication
   /// for any reason, e.g. because tail folding now requires a predicate
   /// or because the block in the original loop was predicated.
@@ -1417,7 +1403,7 @@ private:
 
   /// Holds the instructions (address computations) that are forced to be
   /// scalarized.
-  DenseMap<ElementCount, SmallPtrSet<Instruction *, 4>> ForcedScalars;
+  DenseMap<ElementCount, SmallSetVector<Instruction *, 4>> ForcedScalars;
 
   /// Returns the expected difference in cost from scalarizing the expression
   /// feeding a predicated instruction \p PredInst. The instructions to
@@ -2228,18 +2214,19 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
 
   // A helper that returns true if the use of Ptr by MemAccess will be scalar.
   // The pointer operands of loads and stores will be scalar as long as the
-  // memory access is not a gather or scatter operation. The value operand of a
-  // store will remain scalar if the store is scalarized.
+  // memory access is not a gather/scatter or histogram operation. The value
+  // operand of a store will remain scalar if the store is scalarized.
   auto IsScalarUse = [&](Instruction *MemAccess, Value *Ptr) {
     InstWidening WideningDecision = getWideningDecision(MemAccess, VF);
     assert(WideningDecision != CM_Unknown &&
            "Widening decision should be ready at this moment");
-    if (auto *Store = dyn_cast<StoreInst>(MemAccess))
-      if (Ptr == Store->getValueOperand())
-        return WideningDecision == CM_Scalarize;
+    auto *Store = dyn_cast<StoreInst>(MemAccess);
+    if (Store && Ptr == Store->getValueOperand())
+      return WideningDecision == CM_Scalarize;
     assert(Ptr == getLoadStorePointerOperand(MemAccess) &&
            "Ptr is neither a value or pointer operand");
-    return WideningDecision != CM_GatherScatter;
+    return WideningDecision != CM_GatherScatter &&
+           !(Store && Legal->getHistogramInfo(Store));
   };
 
   // A helper that returns true if the given value is a getelementptr
@@ -3651,12 +3638,10 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
   // 3. We don't interleave if we think that we will spill registers to memory
   // due to the increased register pressure.
 
-  // Only interleave tail-folded loops if wide lane masks are requested, as the
-  // overhead of multiple instructions to calculate the predicate is likely
-  // not beneficial. If an epilogue is not allowed for any other reason,
-  // do not interleave.
-  if (!CM.isEpilogueAllowed() &&
-      !(CM.preferTailFoldedLoop() && CM.useWideActiveLaneMask()))
+  // Do not interleave tail-folded loops, as the overhead of multiple
+  // instructions to calculate the predicate is likely not beneficial.
+  // If an epilogue is not allowed for any other reason, do not interleave.
+  if (!CM.isEpilogueAllowed())
     return 1;
 
   if (any_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
@@ -5655,6 +5640,9 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
   // and skip all recipes that represent induction phis and increments (the
   // former case) later on, if they exist, to avoid counting them twice.
   // Similarly we pre-compute the cost of any optimized truncates.
+  // Inductions that are represented by a VPWidenIntOrFpInductionRecipe are an
+  // exception: their cost is computed by the recipe's computeCost (see below),
+  // so they are not precomputed here.
   // TODO: Switch to more accurate costing based on VPlan.
 
   // If the vector loop gets executed exactly once with the given VF, ignore the
@@ -5663,28 +5651,24 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
   // TODO: Remove this code after stepping away from the legacy cost model and
   // adding code to simplify VPlans before calculating their costs.
   auto TC = getSmallConstantTripCount(PSE.getSE(), OrigLoop);
-  bool IsFullyUnrolled = TC == VF && !Plan.hasTailFolded();
   SmallPtrSet<const Value *, 4> WidenedIVs;
-  bool HasTruncatedIV = false;
-  if (IsFullyUnrolled) {
+  if (TC == VF && !Plan.hasTailFolded()) {
     addFullyUnrolledInstructionsToIgnore(OrigLoop, Legal->getInductionVars(),
                                          CostCtx.SkipCostComputation);
   } else {
     // Inductions represented by a VPWidenIntOrFpInductionRecipe have their cost
     // computed by the recipe, so collect their phis to skip the legacy
-    // increment cost below. If any induction is truncated the VPlan-based cost
-    // will diverge. Still fall back to the legacy cost model for now.
+    // increment cost below.
     VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
     for (VPRecipeBase &R : *LoopRegion->getEntryBasicBlock())
       if (auto *WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R)) {
-        HasTruncatedIV |= WideIV->getTruncInst() != nullptr;
         if (PHINode *IVPhi = WideIV->getPHINode())
           WidenedIVs.insert(IVPhi);
       }
   }
 
   for (const auto &[IV, IndDesc] : Legal->getInductionVars()) {
-    if (!HasTruncatedIV && WidenedIVs.contains(IV))
+    if (WidenedIVs.contains(IV))
       continue;
     Instruction *IVInc = cast<Instruction>(
         IV->getIncomingValueForBlock(OrigLoop->getLoopLatch()));
@@ -7751,6 +7735,8 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
     auto *ExpandR = dyn_cast<VPExpandSCEVRecipe>(&R);
     if (!ExpandR)
       continue;
+    assert(ExpandedSCEVs.contains(ExpandR->getSCEV()) &&
+           "Epilogue plan needs a SCEV not expanded for the main loop");
     VPValue *ExpandedVal =
         Plan.getOrAddLiveIn(ExpandedSCEVs.lookup(ExpandR->getSCEV()));
     ExpandR->replaceAllUsesWith(ExpandedVal);

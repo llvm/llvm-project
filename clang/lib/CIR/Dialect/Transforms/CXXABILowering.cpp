@@ -853,8 +853,9 @@ class CIRABITypeConverter : public mlir::TypeConverter {
     // just do a conversion on it.
     if (!type.getName()) {
       llvm::SmallVector<mlir::Type> converted = convertRecordMemberTypes(type);
-      // Member conversion is one type in, one type out, so the marks carry
-      // over by index.
+      assert(converted.size() == type.getNumElements() &&
+             "member conversion must be one type in, one type out for the "
+             "kinds to carry over by index");
       if (auto u = mlir::dyn_cast<cir::UnionType>(type)) {
         mlir::Type loweredPadding;
         if (mlir::Type pad = u.getPadding())
@@ -905,6 +906,9 @@ class CIRABITypeConverter : public mlir::TypeConverter {
         [&recursiveStack]() { recursiveStack.pop_back(); });
 
     SmallVector<mlir::Type> convertedMembers = convertRecordMemberTypes(type);
+    assert(convertedMembers.size() == type.getNumElements() &&
+           "member conversion must be one type in, one type out for the kinds "
+           "to carry over by index");
 
     mlir::Type loweredPadding;
     if (auto u = mlir::dyn_cast<cir::UnionType>(type))

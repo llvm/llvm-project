@@ -570,9 +570,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   if (Subtarget.canUseCMPXCHG16B())
     setOperationAction(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, MVT::i128, Custom);
 
-  // FIXME - use subtarget debug flags
-  if (!Subtarget.isTargetDarwin() && !Subtarget.isTargetELF() &&
-      !Subtarget.isTargetCygMing() && !Subtarget.isTargetWin64() &&
+  // 32-bit Windows non-GNU EH (MSVC/Itanium SEH) does not use per-invoke EH
+  // labels, so expand them away. SjLj EH does use them.
+  if (Subtarget.isTargetWin32() && !Subtarget.isTargetCygMing() &&
       TM.Options.ExceptionModel != ExceptionHandling::SjLj) {
     setOperationAction(ISD::EH_LABEL, MVT::Other, Expand);
   }
@@ -8107,6 +8107,95 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
           }
           return DAG.getBitcast(VT, Broadcast);
         }
+      }
+    }
+  }
+
+  // STRIDED - element loads at a uniform byte stride larger than the element
+  // size are folded into wide load(s) + vector truncation.
+  // Depth 1 lets the REVERSE block below recurse into us to catch reverse
+  // strides.
+  if (Depth <= 1 && Subtarget.hasAVX2() && !IsConsecutiveLoad &&
+      LoadMask.isAllOnes() && isPowerOf2_32(NumElems) && BaseSizeInBits <= 32 &&
+      VT.getSizeInBits() >= 128) {
+    unsigned WideEltBits = 0;
+    for (unsigned Trial : {16u, 32u, 64u}) {
+      if (Trial <= BaseSizeInBits || Trial % BaseSizeInBits != 0)
+        continue;
+      unsigned LaneStride = Trial / BaseSizeInBits;
+      bool AllMatch = true;
+      for (unsigned K = 1; K < NumElems && AllMatch; ++K) {
+        AllMatch = AllMatch && ByteOffsets[K] == 0 &&
+                   DAG.areNonVolatileConsecutiveLoads(
+                       Loads[K], LDBase, BaseSizeInBytes, K * LaneStride);
+      }
+      if (AllMatch) {
+        WideEltBits = Trial;
+        break;
+      }
+    }
+    if (WideEltBits != 0) {
+      MVT WideEltVT = MVT::getIntegerVT(WideEltBits);
+      MVT SrcEltVT = MVT::getIntegerVT(BaseSizeInBits);
+      // The wide loads read (stride - element) bytes past the last element.
+      // A stride-aligned base keeps every stride block inside a page that an
+      // accessed element touches.
+      unsigned StrideBytes = WideEltBits / 8;
+      bool RangeSafe =
+          LDBase->getBaseAlign() >= Align(StrideBytes) ||
+          LDBase->getPointerInfo().isDereferenceable(
+              NumElems * StrideBytes, *DAG.getContext(), DAG.getDataLayout());
+      for (unsigned WideRegBits : {512u, 256u, 128u}) {
+        unsigned LanesPerWideLoad = WideRegBits / WideEltBits;
+        if (LanesPerWideLoad < 2 || NumElems % LanesPerWideLoad != 0)
+          continue;
+        // Truncate to a legal piece at least 128-bit and no narrower
+        // than the source element.
+        unsigned PieceEltBits =
+            std::max(BaseSizeInBits, 128 / LanesPerWideLoad);
+        MVT PieceEltVT = MVT::getIntegerVT(PieceEltBits);
+        MVT WideVT = MVT::getVectorVT(WideEltVT, LanesPerWideLoad);
+        MVT PieceVT = MVT::getVectorVT(PieceEltVT, LanesPerWideLoad);
+        MVT TruncVT = MVT::getVectorVT(SrcEltVT, NumElems);
+        MVT ConcatVT = MVT::getVectorVT(PieceEltVT, NumElems);
+        if (!TLI.isTypeLegal(WideVT) || !TLI.isTypeLegal(PieceVT) ||
+            !TLI.isTypeLegal(ConcatVT) || !TLI.isTypeLegal(TruncVT))
+          continue;
+        unsigned NumWideLoads = NumElems / LanesPerWideLoad;
+        unsigned BytesPerWideLoad = WideRegBits / 8;
+        // Without a provable range the last load is shifted back to end at
+        // the last element. It overlaps the previous load so two are needed.
+        bool CanShift = NumWideLoads >= 2;
+        if (!RangeSafe && !CanShift)
+          continue;
+        unsigned TailBits = WideEltBits - BaseSizeInBits;
+        auto MMOFlags = LDBase->getMemOperand()->getFlags();
+        SDValue BasePtr = LDBase->getBasePtr();
+        SmallVector<SDValue, 8> Pieces;
+        for (unsigned K = 0; K != NumWideLoads; ++K) {
+          bool ShiftLast = !RangeSafe && K == NumWideLoads - 1;
+          unsigned Offset = K * BytesPerWideLoad;
+          if (ShiftLast)
+            Offset -= TailBits / 8;
+          SDValue Ptr =
+              DAG.getMemBasePlusOffset(BasePtr, TypeSize::getFixed(Offset), DL);
+          Align LdAlign = commonAlignment(LDBase->getBaseAlign(), Offset);
+          SDValue Ld =
+              DAG.getLoad(WideVT, DL, LDBase->getChain(), Ptr,
+                          LDBase->getPointerInfo().getWithOffset(Offset),
+                          LdAlign, MMOFlags);
+          for (auto *LD : Loads)
+            if (LD)
+              DAG.makeEquivalentMemoryOrdering(LD, Ld);
+          // The shifted load leaves each element in its lane's high bits.
+          if (ShiftLast)
+            Ld = DAG.getNode(ISD::SRL, DL, WideVT, Ld,
+                             DAG.getShiftAmountConstant(TailBits, WideVT, DL));
+          Pieces.push_back(DAG.getNode(ISD::TRUNCATE, DL, PieceVT, Ld));
+        }
+        SDValue Result = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, Pieces);
+        Result = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, Result);
+        return DAG.getBitcast(VT, Result);
       }
     }
   }
@@ -40742,6 +40831,10 @@ static SDValue combineX86ShuffleChain(
   SDValue V2 = (UnaryShuffle ? DAG.getUNDEF(V1.getValueType())
                              : peekThroughBitcasts(Inputs[1]));
 
+  if (!(V1.getValueType().isVector() && V1.getValueType().isSimple() &&
+        V2.getValueType().isVector() && V2.getValueType().isSimple()))
+    return SDValue();
+
   MVT VT1 = V1.getSimpleValueType();
   MVT VT2 = V2.getSimpleValueType();
   assert((RootSizeInBits % VT1.getSizeInBits()) == 0 &&
@@ -53853,27 +53946,28 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
     if (SDValue Res = combineX86ShufflesRecursively(Op, DAG, Subtarget))
       return Res;
 
-    // If either operand is a constant mask, then only the elements that aren't
-    // allones are actually demanded by the other operand.
-    auto SimplifyUndemandedElts = [&](SDValue Op, SDValue OtherOp) {
-      APInt UndefElts;
-      SmallVector<APInt> EltBits;
-      int NumElts = VT.getVectorNumElements();
-      int EltSizeInBits = VT.getScalarSizeInBits();
-      if (!getTargetConstantBitsFromNode(Op, EltSizeInBits, UndefElts, EltBits))
-        return false;
-
+    // If second operand is a constant mask, then only the elements that aren't
+    // allones are actually demanded by the first operand.
+    APInt UndefElts;
+    SmallVector<APInt> EltBits;
+    int NumElts = VT.getVectorNumElements();
+    int EltSizeInBits = VT.getScalarSizeInBits();
+    if (getTargetConstantBitsFromNode(N1, EltSizeInBits, UndefElts, EltBits)) {
       APInt DemandedElts = APInt::getZero(NumElts);
       for (int I = 0; I != NumElts; ++I)
         if (!EltBits[I].isAllOnes())
           DemandedElts.setBit(I);
 
-      return TLI.SimplifyDemandedVectorElts(OtherOp, DemandedElts, DCI);
-    };
-    if (SimplifyUndemandedElts(N0, N1) || SimplifyUndemandedElts(N1, N0)) {
-      if (N->getOpcode() != ISD::DELETED_NODE)
-        DCI.AddToWorklist(N);
-      return SDValue(N, 0);
+      // We must freeze the result to prevent OR(poison,-1) -> poison.
+      // Restrict the fold to prevent infinite loops due to
+      // SimplifyDemandedVectorElts removing the freeze.
+      if (!DemandedElts.isAllOnes() &&
+          !DAG.isGuaranteedNotToBeUndefOrPoison(N0, DemandedElts) &&
+          TLI.SimplifyDemandedVectorElts(N0, DemandedElts, DCI)) {
+        SDValue F0 = DAG.getFreeze(N->getOperand(0), ~DemandedElts);
+        DAG.UpdateNodeOperands(N, F0, N->getOperand(1));
+        return SDValue(N, 0);
+      }
     }
   }
 
@@ -61342,6 +61436,16 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         return DAG.getNode(Opcode, DL, VT, ConcatSubOperand(NewSrcVT, Ops, 0));
       }
       break;
+    case X86ISD::CVTNEPS2BF16:
+      // Always profitable to concat to a single op.
+      // NOTE: Swapped operands.
+      if (NumOps == 2 && (VT.is256BitVector() || VT.is512BitVector()) &&
+          llvm::all_of(Ops, [VT](SDValue Op) {
+            return Op.getOperand(0).getValueSizeInBits() == VT.getSizeInBits();
+          }))
+        return DAG.getNode(X86ISD::VFPROUND2, DL, VT, Ops[1].getOperand(0),
+                           Ops[0].getOperand(0));
+      break;
     case X86ISD::HADD:
     case X86ISD::HSUB:
     case X86ISD::FHADD:
@@ -63439,6 +63543,10 @@ bool X86TargetLowering::preferSextInRegOfTruncate(EVT TruncVT, EVT VT,
 
 bool X86TargetLowering::isTypeDesirableForOp(unsigned Opc, EVT VT) const {
   if (!isTypeLegal(VT))
+    return false;
+
+  // Legacy AVX/AVX2 masked stores are slow on pre-AVX-512 Zen CPUs.
+  if (Opc == ISD::MSTORE && Subtarget.isVecMaskStoreSlow())
     return false;
 
   // There are no vXi8 shifts.
