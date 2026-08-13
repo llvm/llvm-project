@@ -337,11 +337,6 @@ protected:
         addSecFlag(Entry, Flag);
     }
   }
-  template <class SecFlagType>
-  void addSectionFlag(uint32_t SectionIdx, SecFlagType Flag) {
-    addSecFlag(SectionHdrLayout[SectionIdx], Flag);
-  }
-
   void addContext(const SampleContext &Context) override;
 
   // placeholder for subclasses to dispatch their own section writers.
@@ -352,9 +347,12 @@ protected:
   // specify the order to write sections.
   virtual std::error_code writeSections(const SampleProfileMap &ProfileMap) = 0;
 
-  // Dispatch section writer for each section. \p LayoutIdx is the sequence
-  // number indicating where the section is located in SectionHdrLayout.
-  virtual std::error_code writeOneSection(SecType Type, uint32_t LayoutIdx,
+  // Find the first unwritten entry in SectionHdrLayout matching Type, returning
+  // its layout index.
+  unsigned findUnwrittenEntry(SecType Type);
+
+  // Dispatch section writer for each section.
+  virtual std::error_code writeOneSection(SecType Type,
                                           const SampleProfileMap &ProfileMap);
 
   // Helper function to write name table.
