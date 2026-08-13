@@ -725,7 +725,7 @@ void associative_container_benchmarks(std::string container) {
       for (auto _ : st) {
         Key const& key = keys[draws[i]];
         auto result    = func(c, key);
-        i = (i == N_DRAWS ? 0 : i + 1);
+        i              = (i == N_DRAWS ? 0 : i + 1);
         benchmark::DoNotOptimize(c);
         benchmark::DoNotOptimize(result);
         benchmark::ClobberMemory();
