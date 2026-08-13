@@ -1299,8 +1299,12 @@ void AMDGPUToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
     if (DriverArgs.hasFlag(options::OPT_offload_inc,
                            options::OPT_no_offload_inc, true) &&
         !DriverArgs.hasArg(options::OPT_nohipwrapperinc) &&
-        !DriverArgs.hasArg(options::OPT_nobuiltininc))
-      CC1Args.append({"-include", "__clang_gpu_device_functions.h"});
+        !DriverArgs.hasArg(options::OPT_nobuiltininc)) {
+      SmallString<128> P(getDriver().ResourceDir);
+      llvm::sys::path::append(P, "include", "hip_wrappers");
+      CC1Args.push_back("-internal-isystem");
+      CC1Args.push_back(DriverArgs.MakeArgString(P));
+    }
     return;
   }
 

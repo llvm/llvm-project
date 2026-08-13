@@ -15,8 +15,9 @@
 #include "associative_container_benchmarks.h"
 #include "../../GenerateInput.h"
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 
-static void BM_map_find_string_literal(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_map_find_string_literal(benchmark::State& state) {
   std::map<std::string, int> map;
   map.emplace("Something very very long to show a long string situation", 1);
   map.emplace("Something Else", 2);

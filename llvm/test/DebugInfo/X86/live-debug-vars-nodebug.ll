@@ -5,10 +5,10 @@
 ; RUN:   -experimental-debug-variable-locations \
 ; RUN:   | FileCheck %s --check-prefix=EXPER-INPUT
 
-; RUN: llc %s -mtriple=x86_64-unknown-unknown -o - -stop-after=livedebugvars \
+; RUN: llc %s -mtriple=x86_64-unknown-unknown -o - -stop-before=x86-asm-printer \
 ; RUN:   | FileCheck %s --check-prefix=OUTPUT
 
-; RUN: llc %s -mtriple=x86_64-unknown-unknown -o - -stop-after=livedebugvars \
+; RUN: llc %s -mtriple=x86_64-unknown-unknown -o - -stop-before=x86-asm-printer \
 ; RUN:   -experimental-debug-variable-locations \
 ; RUN:   | FileCheck %s --check-prefix=OUTPUT
 

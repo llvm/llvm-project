@@ -2197,6 +2197,36 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::CLMUL, MVT::nxv2i64, Custom);
   }
 
+  if (Subtarget->isSVEAvailable() ||
+      (Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSME2p2())) {
+    // We can lower types that have <vscale x {2|4}> elements to compact.
+    for (auto VT :
+         {MVT::nxv4i32, MVT::nxv2i64, MVT::nxv2f32, MVT::nxv4f32, MVT::nxv2f64})
+      setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
+
+    // If we have SVE, we can use SVE logic for legal NEON vectors in the lowest
+    // bits of the SVE register.
+    for (auto VT : {MVT::v2i32, MVT::v4i32, MVT::v2i64, MVT::v2f32, MVT::v4f32,
+                    MVT::v2f64})
+      setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
+
+    if (Subtarget->hasSVE2p2() || Subtarget->hasSME2p2()) {
+      // With +sve2p2/+sme2p2 the full range of vector types are supported.
+      for (auto VT : {MVT::nxv16i8, MVT::nxv8i16, MVT::nxv8f16, MVT::nxv8bf16})
+        setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
+
+      for (auto VT : {MVT::v8i8, MVT::v16i8, MVT::v4i16, MVT::v8i16, MVT::v4f16,
+                      MVT::v8f16, MVT::v4bf16, MVT::v8bf16})
+        setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
+    } else {
+      // Promote v4i16/f16 to v4i32/f32 as the SVE container for v4i16 is nxv8,
+      // which is not supported with for compact (with only +sve).
+      setOperationPromotedToType(ISD::VECTOR_COMPRESS, MVT::v4bf16, MVT::v4i16);
+      setOperationPromotedToType(ISD::VECTOR_COMPRESS, MVT::v4f16, MVT::v4i16);
+      setOperationPromotedToType(ISD::VECTOR_COMPRESS, MVT::v4i16, MVT::v4i32);
+    }
+  }
+
   // Handle non-aliasing elements mask
   if (Subtarget->hasSVE2() ||
       (Subtarget->hasSME() && Subtarget->isStreaming())) {
@@ -2229,23 +2259,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                     MVT::nxv4f32, MVT::nxv2f64, MVT::v4f16, MVT::v8f16,
                     MVT::v2f32, MVT::v4f32, MVT::v2f64})
       setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
-
-    // We can lower types that have <vscale x {2|4}> elements to compact.
-    for (auto VT :
-         {MVT::nxv4i32, MVT::nxv2i64, MVT::nxv2f32, MVT::nxv4f32, MVT::nxv2f64})
-      setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
-
-    // If we have SVE, we can use SVE logic for legal NEON vectors in the lowest
-    // bits of the SVE register.
-    for (auto VT : {MVT::v2i32, MVT::v4i32, MVT::v2i64, MVT::v2f32, MVT::v4f32,
-                    MVT::v2f64})
-      setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
-
-    // Promote v4i16/f16 to v4i32/f32 as the SVE container for v4i16 is nxv8,
-    // which is not supported with for compact (with only +sve).
-    setOperationPromotedToType(ISD::VECTOR_COMPRESS, MVT::v4bf16, MVT::v4i16);
-    setOperationPromotedToType(ISD::VECTOR_COMPRESS, MVT::v4f16, MVT::v4i16);
-    setOperationPromotedToType(ISD::VECTOR_COMPRESS, MVT::v4i16, MVT::v4i32);
 
     for (auto VT : {MVT::nxv2i8, MVT::nxv2i16, MVT::nxv2i32, MVT::nxv2i64,
                     MVT::nxv2f32, MVT::nxv2f64, MVT::nxv4i8, MVT::nxv4i16,
@@ -8128,9 +8141,6 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorCompressToSVE(
 SDValue AArch64TargetLowering::LowerVECTOR_COMPRESS(SDValue Op,
                                                     SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
-  if (!Subtarget->isSVEAvailable())
-    return SDValue();
-
   if (VT.isFixedLengthVector())
     return LowerFixedLengthVectorCompressToSVE(Op, DAG);
 
@@ -16993,8 +17003,16 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
                                                  SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
 
-  bool OverrideNEON = !Subtarget->isNeonAvailable() ||
-                      cast<BuildVectorSDNode>(Op)->isArithmeticSequence();
+  bool OverrideNEON = !Subtarget->isNeonAvailable();
+  if (!OverrideNEON && Subtarget->isSVEorStreamingSVEAvailable()) {
+    if (auto Seq = cast<BuildVectorSDNode>(Op)->isArithmeticSequence()) {
+      // Only attempt to use the SVE index instruction if both operands are
+      // immediate, otherwise it's better to load a literal.
+      if (Seq->first.sge(-16) && Seq->first.slt(16) && Seq->second.sge(-16) &&
+          Seq->second.slt(16))
+        OverrideNEON = true;
+    }
+  }
   if (useSVEForFixedLengthVectorVT(VT, OverrideNEON))
     return LowerFixedLengthBuildVectorToSVE(Op, DAG);
 
