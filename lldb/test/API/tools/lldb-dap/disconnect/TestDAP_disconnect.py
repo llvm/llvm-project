@@ -7,14 +7,10 @@ import subprocess
 import uuid
 
 from lldbsuite.test import lldbutil
-from lldbsuite.test.decorators import (
-    expectedFailureNetBSD,
-    requireNotWasm,
-    skipIfWindows,
-)
-from lldbsuite.test.lldbtest import line_number
+from lldbsuite.test.decorators import *
+from lldbsuite.test.lldbtest import *
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
-from lldbsuite.test.tools.lldb_dap.types import AttachArgs, LaunchArgs, TerminatedEvent
+from lldbsuite.test.tools.lldb_dap.types import *
 
 
 @requireNotWasm("no attach support")
