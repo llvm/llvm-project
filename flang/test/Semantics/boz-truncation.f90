@@ -9,6 +9,7 @@ program boztest
 
   ! INTEGER targets
   i4 = z'FFFFFFFF' ! fits in 32 bits, no warning
+  i4 = z'0000000FFFFFFFF' ! long BOZ string with non-overflowing value
   !WARNING: BOZ literal constant is too large for INTEGER(KIND=4) assignment target [-Wboz-literal-truncation]
   i4 = z'1FFFFFFFF' ! 33 bits, too large for INTEGER(4)
   i8 = z'FFFFFFFFFFFFFFFF' ! fits in 64 bits, no warning

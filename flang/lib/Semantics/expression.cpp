@@ -5880,7 +5880,7 @@ void ArgumentAnalyzer::ConvertBOZAssignmentRHS(const DynamicType &lhsType) {
       if (const auto *boz{std::get_if<BOZLiteralConstant>(&rhs.u)};
           boz && boz->bits - boz->LEADZ() > lhsType.kind() * 8) {
         context_.Warn(common::UsageWarning::BOZLiteralTruncation,
-            "BOZ literal constant is too large for %s(KIND=%d) assignment target"_warn_en_US,
+            "BOZ literal constant is too large for %s(KIND=%d) assignment target; truncated"_warn_en_US,
             lhsType.category() == TypeCategory::Unsigned ? "UNSIGNED"
                                                          : "INTEGER",
             lhsType.kind());
