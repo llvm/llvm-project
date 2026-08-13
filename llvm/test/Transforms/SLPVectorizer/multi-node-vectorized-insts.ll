@@ -5,7 +5,7 @@
 define void @test(double %0) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[TMP4:%.*]]
 ; CHECK:       4:
@@ -37,7 +37,7 @@ define void @test1(double %0, <4 x double> %v) {
 ; CHECK-LABEL: define void @test1(
 ; CHECK-SAME: double [[TMP0:%.*]], <4 x double> [[V:%.*]]) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[V]], <4 x double> poison, <2 x i32> <i32 poison, i32 0>
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 0>
 ; CHECK-NEXT:    br label [[TMP5:%.*]]
 ; CHECK:       5:
@@ -80,7 +80,7 @@ define void @test1(double %0, <4 x double> %v) {
 define void @test2(double %0) {
 ; CHECK-LABEL: define void @test2(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[TMP4:%.*]]
 ; CHECK:       4:

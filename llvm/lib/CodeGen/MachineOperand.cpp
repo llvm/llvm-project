@@ -790,6 +790,75 @@ static void printCFI(raw_ostream &OS, const MCCFIInstruction &CFI,
     if (MCSymbol *Label = CFI.getLabel())
       MachineOperand::printSymbol(OS, *Label);
     break;
+  case MCCFIInstruction::OpLLVMSetRAState: {
+    OS << "llvm_set_ra_state ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    OS << CFI.getRASignState() << ", ";
+    if (MCSymbol *PACSym = CFI.getRASignSymbol())
+      MachineOperand::printSymbol(OS, *PACSym);
+    else
+      OS << CFI.getRASignOffset();
+    break;
+  }
+  case MCCFIInstruction::OpLLVMRegisterPair: {
+    const auto &Fields =
+        CFI.getExtraFields<MCCFIInstruction::RegisterPairFields>();
+
+    OS << "llvm_register_pair ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    printCFIRegister(Fields.Register, OS, TRI);
+    OS << ", ";
+    printCFIRegister(Fields.Reg1, OS, TRI);
+    OS << ", " << Fields.Reg1SizeInBits << ", ";
+    printCFIRegister(Fields.Reg2, OS, TRI);
+    OS << ", " << Fields.Reg2SizeInBits;
+    break;
+  }
+  case MCCFIInstruction::OpLLVMVectorRegisters: {
+    const auto &Fields =
+        CFI.getExtraFields<MCCFIInstruction::VectorRegistersFields>();
+
+    OS << "llvm_vector_registers ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    printCFIRegister(Fields.Register, OS, TRI);
+    for (auto [Reg, Lane, Size] : Fields.VectorRegisters) {
+      OS << ", ";
+      printCFIRegister(Reg, OS, TRI);
+      OS << ", " << Lane << ", " << Size;
+    }
+    break;
+  }
+  case MCCFIInstruction::OpLLVMVectorOffset: {
+    const auto &Fields =
+        CFI.getExtraFields<MCCFIInstruction::VectorOffsetFields>();
+
+    OS << "llvm_vector_offset ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    printCFIRegister(Fields.Register, OS, TRI);
+    OS << ", " << Fields.RegisterSizeInBits << ", ";
+    printCFIRegister(Fields.MaskRegister, OS, TRI);
+    OS << ", " << Fields.MaskRegisterSizeInBits << ", " << Fields.Offset;
+    break;
+  }
+  case MCCFIInstruction::OpLLVMVectorRegisterMask: {
+    const auto &Fields =
+        CFI.getExtraFields<MCCFIInstruction::VectorRegisterMaskFields>();
+
+    OS << "llvm_vector_register_mask ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    printCFIRegister(Fields.Register, OS, TRI);
+    OS << ", ";
+    printCFIRegister(Fields.SpillRegister, OS, TRI);
+    OS << ", " << Fields.SpillRegisterLaneSizeInBits << ", ";
+    printCFIRegister(Fields.MaskRegister, OS, TRI);
+    OS << ", " << Fields.MaskRegisterSizeInBits;
+    break;
+  }
   default:
     // TODO: Print the other CFI Operations.
     OS << "<unserializable cfi directive>";
@@ -1076,9 +1145,9 @@ bool MachinePointerInfo::isDereferenceable(unsigned Size, LLVMContext &C,
   if (BasePtr == nullptr)
     return false;
 
-  return isDereferenceableAndAlignedPointer(
-      BasePtr, Align(1), APInt(DL.getPointerSizeInBits(), Offset + Size), DL,
-      dyn_cast<Instruction>(BasePtr));
+  return isDereferenceablePointer(
+      BasePtr, APInt(DL.getPointerSizeInBits(), Offset + Size),
+      SimplifyQuery(DL, dyn_cast<Instruction>(BasePtr)));
 }
 
 /// getConstantPool - Return a MachinePointerInfo record that refers to the
@@ -1111,13 +1180,15 @@ MachinePointerInfo MachinePointerInfo::getUnknownStack(MachineFunction &MF) {
   return MachinePointerInfo(MF.getDataLayout().getAllocaAddrSpace());
 }
 
-MachineMemOperand::MachineMemOperand(MachinePointerInfo ptrinfo, Flags f,
-                                     LLT type, Align a, const AAMDNodes &AAInfo,
-                                     const MDNode *Ranges, SyncScope::ID SSID,
+MachineMemOperand::MachineMemOperand(MachinePointerInfo PtrInfo, Flags F,
+                                     LLT Type, Align A,
+                                     const MMOMetadata &Metadata,
+                                     SyncScope::ID SSID,
                                      AtomicOrdering Ordering,
                                      AtomicOrdering FailureOrdering)
-    : PtrInfo(ptrinfo), MemoryType(type), FlagVals(f), BaseAlign(a),
-      AAInfo(AAInfo), Ranges(Ranges) {
+    : PtrInfo(PtrInfo), MemoryType(Type), FlagVals(F), BaseAlign(A),
+      AAInfo(Metadata.AAInfo), Ranges(Metadata.Ranges),
+      MemCacheHint(Metadata.MemCacheHint) {
   assert((PtrInfo.V.isNull() || isa<const PseudoSourceValue *>(PtrInfo.V) ||
           isa<PointerType>(cast<const Value *>(PtrInfo.V)->getType())) &&
          "invalid pointer value");
@@ -1131,19 +1202,19 @@ MachineMemOperand::MachineMemOperand(MachinePointerInfo ptrinfo, Flags f,
   assert(getFailureOrdering() == FailureOrdering && "Value truncated");
 }
 
-MachineMemOperand::MachineMemOperand(MachinePointerInfo ptrinfo, Flags F,
+MachineMemOperand::MachineMemOperand(MachinePointerInfo PtrInfo, Flags F,
                                      LocationSize TS, Align BaseAlignment,
-                                     const AAMDNodes &AAInfo,
-                                     const MDNode *Ranges, SyncScope::ID SSID,
+                                     const MMOMetadata &Metadata,
+                                     SyncScope::ID SSID,
                                      AtomicOrdering Ordering,
                                      AtomicOrdering FailureOrdering)
     : MachineMemOperand(
-          ptrinfo, F,
-          !TS.hasValue() ? LLT()
+          PtrInfo, F,
+          !TS.isPrecise() ? LLT()
           : TS.isScalable()
               ? LLT::scalable_vector(1, 8 * TS.getValue().getKnownMinValue())
               : LLT::scalar(8 * TS.getValue().getKnownMinValue()),
-          BaseAlignment, AAInfo, Ranges, SSID, Ordering, FailureOrdering) {}
+          BaseAlignment, Metadata, SSID, Ordering, FailureOrdering) {}
 
 void MachineMemOperand::refineAlignment(const MachineMemOperand *MMO) {
   // The Value and Offset may differ due to CSE. But the flags and size
@@ -1308,6 +1379,10 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
   if (getRanges()) {
     OS << ", !range ";
     getRanges()->printAsOperand(OS, MST);
+  }
+  if (getMemCacheHint()) {
+    OS << ", !mem.cache_hint ";
+    getMemCacheHint()->printAsOperand(OS, MST);
   }
   // FIXME: Implement addrspace printing/parsing in MIR.
   // For now, print this even though parsing it is not available in MIR.

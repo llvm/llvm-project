@@ -1266,97 +1266,95 @@ define <20 x i32> @v20(<20 x i8> %s0, <20 x i8> %s1) {
 ;
 ; CHECK-GI-LABEL: v20:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    and w9, w0, #0xff
 ; CHECK-GI-NEXT:    ldrb w10, [sp, #96]
-; CHECK-GI-NEXT:    and w11, w1, #0xff
+; CHECK-GI-NEXT:    and w9, w0, #0xff
+; CHECK-GI-NEXT:    ldrb w12, [sp, #104]
 ; CHECK-GI-NEXT:    fmov s0, w9
 ; CHECK-GI-NEXT:    ldrb w9, [sp]
-; CHECK-GI-NEXT:    ldrb w12, [sp, #104]
-; CHECK-GI-NEXT:    fmov s2, w10
+; CHECK-GI-NEXT:    and w11, w1, #0xff
+; CHECK-GI-NEXT:    fmov s1, w10
 ; CHECK-GI-NEXT:    ldrb w10, [sp, #160]
-; CHECK-GI-NEXT:    fmov s1, w9
+; CHECK-GI-NEXT:    fmov s2, w9
 ; CHECK-GI-NEXT:    ldrb w9, [sp, #168]
+; CHECK-GI-NEXT:    fmov s3, w10
 ; CHECK-GI-NEXT:    mov v0.h[1], w11
 ; CHECK-GI-NEXT:    ldrb w11, [sp, #8]
-; CHECK-GI-NEXT:    fmov s3, w10
-; CHECK-GI-NEXT:    mov v2.h[1], w12
+; CHECK-GI-NEXT:    mov v1.h[1], w12
 ; CHECK-GI-NEXT:    and w10, w2, #0xff
 ; CHECK-GI-NEXT:    and w12, w5, #0xff
-; CHECK-GI-NEXT:    mov v1.h[1], w11
+; CHECK-GI-NEXT:    mov v2.h[1], w11
 ; CHECK-GI-NEXT:    and w11, w4, #0xff
 ; CHECK-GI-NEXT:    mov v3.h[1], w9
 ; CHECK-GI-NEXT:    ldrb w9, [sp, #112]
 ; CHECK-GI-NEXT:    mov v0.h[2], w10
 ; CHECK-GI-NEXT:    ldrb w10, [sp, #16]
-; CHECK-GI-NEXT:    mov v2.h[2], w9
+; CHECK-GI-NEXT:    mov v1.h[2], w9
 ; CHECK-GI-NEXT:    ldrb w9, [sp, #176]
-; CHECK-GI-NEXT:    mov v1.h[2], w10
+; CHECK-GI-NEXT:    mov v2.h[2], w10
 ; CHECK-GI-NEXT:    and w10, w3, #0xff
 ; CHECK-GI-NEXT:    mov v3.h[2], w9
 ; CHECK-GI-NEXT:    ldrb w9, [sp, #120]
 ; CHECK-GI-NEXT:    mov v0.h[3], w10
 ; CHECK-GI-NEXT:    ldrb w10, [sp, #24]
-; CHECK-GI-NEXT:    mov v2.h[3], w9
+; CHECK-GI-NEXT:    mov v1.h[3], w9
 ; CHECK-GI-NEXT:    ldrb w9, [sp, #184]
-; CHECK-GI-NEXT:    mov v1.h[3], w10
-; CHECK-GI-NEXT:    ldr w10, [sp, #64]
+; CHECK-GI-NEXT:    mov v2.h[3], w10
+; CHECK-GI-NEXT:    ldrb w10, [sp, #128]
 ; CHECK-GI-NEXT:    mov v3.h[3], w9
-; CHECK-GI-NEXT:    ldrb w9, [sp, #128]
+; CHECK-GI-NEXT:    ldrb w9, [sp, #32]
 ; CHECK-GI-NEXT:    mov v0.h[4], w11
-; CHECK-GI-NEXT:    ldrb w11, [sp, #32]
-; CHECK-GI-NEXT:    fmov s4, w10
+; CHECK-GI-NEXT:    ldr w11, [sp, #64]
+; CHECK-GI-NEXT:    mov v1.h[4], w10
 ; CHECK-GI-NEXT:    ldrb w10, [sp, #192]
+; CHECK-GI-NEXT:    fmov s4, w11
+; CHECK-GI-NEXT:    ldrb w11, [sp, #136]
 ; CHECK-GI-NEXT:    mov v2.h[4], w9
-; CHECK-GI-NEXT:    ldr w9, [sp, #72]
-; CHECK-GI-NEXT:    mov v1.h[4], w11
-; CHECK-GI-NEXT:    ldr w11, [sp, #224]
+; CHECK-GI-NEXT:    ldr w9, [sp, #224]
 ; CHECK-GI-NEXT:    mov v3.h[4], w10
-; CHECK-GI-NEXT:    ldrb w10, [sp, #136]
-; CHECK-GI-NEXT:    mov v4.b[1], w9
-; CHECK-GI-NEXT:    fmov s5, w11
-; CHECK-GI-NEXT:    ldr w11, [sp, #232]
+; CHECK-GI-NEXT:    ldrb w10, [sp, #40]
 ; CHECK-GI-NEXT:    mov v0.h[5], w12
-; CHECK-GI-NEXT:    ldrb w12, [sp, #40]
+; CHECK-GI-NEXT:    ldr w12, [sp, #72]
+; CHECK-GI-NEXT:    fmov s5, w9
+; CHECK-GI-NEXT:    mov v1.h[5], w11
+; CHECK-GI-NEXT:    ldrb w9, [sp, #200]
 ; CHECK-GI-NEXT:    mov v2.h[5], w10
-; CHECK-GI-NEXT:    ldrb w10, [sp, #200]
+; CHECK-GI-NEXT:    ldr w10, [sp, #232]
+; CHECK-GI-NEXT:    mov v4.b[1], w12
+; CHECK-GI-NEXT:    mov v3.h[5], w9
 ; CHECK-GI-NEXT:    ldrb w9, [sp, #144]
-; CHECK-GI-NEXT:    mov v5.b[1], w11
-; CHECK-GI-NEXT:    mov v1.h[5], w12
-; CHECK-GI-NEXT:    mov v3.h[5], w10
-; CHECK-GI-NEXT:    ldr w10, [sp, #80]
-; CHECK-GI-NEXT:    ldr w12, [sp, #240]
 ; CHECK-GI-NEXT:    and w11, w6, #0xff
+; CHECK-GI-NEXT:    mov v5.b[1], w10
+; CHECK-GI-NEXT:    ldrb w10, [sp, #48]
 ; CHECK-GI-NEXT:    mov v0.h[6], w11
-; CHECK-GI-NEXT:    ldrb w11, [sp, #48]
-; CHECK-GI-NEXT:    mov v2.h[6], w9
+; CHECK-GI-NEXT:    mov v1.h[6], w9
 ; CHECK-GI-NEXT:    ldrb w9, [sp, #208]
-; CHECK-GI-NEXT:    mov v4.b[2], w10
-; CHECK-GI-NEXT:    ldrb w10, [sp, #152]
-; CHECK-GI-NEXT:    mov v5.b[2], w12
-; CHECK-GI-NEXT:    mov v1.h[6], w11
-; CHECK-GI-NEXT:    ldr w11, [sp, #248]
+; CHECK-GI-NEXT:    ldr w11, [sp, #80]
+; CHECK-GI-NEXT:    mov v2.h[6], w10
+; CHECK-GI-NEXT:    ldr w10, [sp, #240]
 ; CHECK-GI-NEXT:    mov v3.h[6], w9
-; CHECK-GI-NEXT:    ldr w9, [sp, #88]
-; CHECK-GI-NEXT:    and w12, w7, #0xff
-; CHECK-GI-NEXT:    mov v0.h[7], w12
+; CHECK-GI-NEXT:    ldrb w9, [sp, #152]
+; CHECK-GI-NEXT:    mov v4.b[2], w11
+; CHECK-GI-NEXT:    mov v5.b[2], w10
+; CHECK-GI-NEXT:    ldrb w10, [sp, #56]
+; CHECK-GI-NEXT:    and w11, w7, #0xff
+; CHECK-GI-NEXT:    mov v1.h[7], w9
+; CHECK-GI-NEXT:    ldrb w9, [sp, #216]
+; CHECK-GI-NEXT:    mov v0.h[7], w11
 ; CHECK-GI-NEXT:    mov v2.h[7], w10
-; CHECK-GI-NEXT:    ldrb w12, [sp, #56]
-; CHECK-GI-NEXT:    mov v4.b[3], w9
-; CHECK-GI-NEXT:    ldrb w10, [sp, #216]
-; CHECK-GI-NEXT:    mov v5.b[3], w11
-; CHECK-GI-NEXT:    mov v1.h[7], w12
-; CHECK-GI-NEXT:    mov v3.h[7], w10
-; CHECK-GI-NEXT:    add v0.8h, v0.8h, v2.8h
-; CHECK-GI-NEXT:    ushll v2.8h, v4.8b, #0
-; CHECK-GI-NEXT:    ushll v4.8h, v5.8b, #0
-; CHECK-GI-NEXT:    add v1.8h, v1.8h, v3.8h
-; CHECK-GI-NEXT:    ushll v3.4s, v0.4h, #0
+; CHECK-GI-NEXT:    ldr w10, [sp, #88]
+; CHECK-GI-NEXT:    mov v3.h[7], w9
+; CHECK-GI-NEXT:    ldr w9, [sp, #248]
+; CHECK-GI-NEXT:    mov v4.b[3], w10
+; CHECK-GI-NEXT:    mov v5.b[3], w9
+; CHECK-GI-NEXT:    add v0.8h, v0.8h, v1.8h
+; CHECK-GI-NEXT:    add v1.8h, v2.8h, v3.8h
+; CHECK-GI-NEXT:    ushll v2.4s, v0.4h, #0
 ; CHECK-GI-NEXT:    ushll2 v0.4s, v0.8h, #0
-; CHECK-GI-NEXT:    add v2.4h, v2.4h, v4.4h
+; CHECK-GI-NEXT:    uaddl v3.8h, v4.8b, v5.8b
 ; CHECK-GI-NEXT:    ushll v4.4s, v1.4h, #0
 ; CHECK-GI-NEXT:    ushll2 v1.4s, v1.8h, #0
-; CHECK-GI-NEXT:    stp q3, q0, [x8]
-; CHECK-GI-NEXT:    ushll v2.4s, v2.4h, #0
+; CHECK-GI-NEXT:    stp q2, q0, [x8]
+; CHECK-GI-NEXT:    ushll v2.4s, v3.4h, #0
 ; CHECK-GI-NEXT:    stp q4, q1, [x8, #32]
 ; CHECK-GI-NEXT:    str q2, [x8, #64]
 ; CHECK-GI-NEXT:    ret
@@ -1370,95 +1368,83 @@ entry:
 define <16 x i32> @i12(<16 x i12> %s0, <16 x i12> %s1) {
 ; CHECK-SD-LABEL: i12:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    str x23, [sp, #-48]! // 8-byte Folded Spill
-; CHECK-SD-NEXT:    stp x22, x21, [sp, #16] // 16-byte Folded Spill
-; CHECK-SD-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-SD-NEXT:    .cfi_offset w19, -8
-; CHECK-SD-NEXT:    .cfi_offset w20, -16
-; CHECK-SD-NEXT:    .cfi_offset w21, -24
-; CHECK-SD-NEXT:    .cfi_offset w22, -32
-; CHECK-SD-NEXT:    .cfi_offset w23, -48
-; CHECK-SD-NEXT:    ldr w13, [sp, #112]
-; CHECK-SD-NEXT:    ldr w14, [sp, #144]
-; CHECK-SD-NEXT:    fmov s2, w4
-; CHECK-SD-NEXT:    ldr w17, [sp, #176]
-; CHECK-SD-NEXT:    ldr w19, [sp, #208]
+; CHECK-SD-NEXT:    ldr w8, [sp, #32]
+; CHECK-SD-NEXT:    ldr w9, [sp, #40]
+; CHECK-SD-NEXT:    fmov s1, w4
+; CHECK-SD-NEXT:    ldr w10, [sp, #128]
 ; CHECK-SD-NEXT:    fmov s3, w0
-; CHECK-SD-NEXT:    ldr w20, [sp, #80]
-; CHECK-SD-NEXT:    ldr w21, [sp, #48]
-; CHECK-SD-NEXT:    fmov s5, w13
-; CHECK-SD-NEXT:    fmov s4, w19
-; CHECK-SD-NEXT:    fmov s6, w17
-; CHECK-SD-NEXT:    fmov s7, w14
-; CHECK-SD-NEXT:    fmov s0, w20
-; CHECK-SD-NEXT:    fmov s1, w21
-; CHECK-SD-NEXT:    ldr w10, [sp, #120]
-; CHECK-SD-NEXT:    ldr w11, [sp, #152]
-; CHECK-SD-NEXT:    ldr w12, [sp, #184]
-; CHECK-SD-NEXT:    ldr w15, [sp, #216]
-; CHECK-SD-NEXT:    ldr w22, [sp, #88]
-; CHECK-SD-NEXT:    ldr w23, [sp, #56]
-; CHECK-SD-NEXT:    mov v2.h[1], w5
-; CHECK-SD-NEXT:    mov v3.h[1], w1
-; CHECK-SD-NEXT:    mov v5.h[1], w10
-; CHECK-SD-NEXT:    mov v4.h[1], w15
-; CHECK-SD-NEXT:    mov v0.h[1], w22
-; CHECK-SD-NEXT:    mov v1.h[1], w23
-; CHECK-SD-NEXT:    mov v6.h[1], w12
-; CHECK-SD-NEXT:    mov v7.h[1], w11
-; CHECK-SD-NEXT:    ldr w8, [sp, #128]
-; CHECK-SD-NEXT:    ldr w9, [sp, #160]
-; CHECK-SD-NEXT:    ldr w16, [sp, #64]
-; CHECK-SD-NEXT:    ldr w18, [sp, #96]
-; CHECK-SD-NEXT:    ldr w10, [sp, #192]
-; CHECK-SD-NEXT:    ldr w11, [sp, #224]
-; CHECK-SD-NEXT:    mov v2.h[2], w6
-; CHECK-SD-NEXT:    mov v3.h[2], w2
-; CHECK-SD-NEXT:    mov v0.h[2], w18
-; CHECK-SD-NEXT:    mov v1.h[2], w16
-; CHECK-SD-NEXT:    mov v5.h[2], w8
-; CHECK-SD-NEXT:    mov v4.h[2], w11
-; CHECK-SD-NEXT:    mov v6.h[2], w10
-; CHECK-SD-NEXT:    mov v7.h[2], w9
-; CHECK-SD-NEXT:    ldr w12, [sp, #72]
-; CHECK-SD-NEXT:    ldr w13, [sp, #104]
-; CHECK-SD-NEXT:    ldr w8, [sp, #136]
-; CHECK-SD-NEXT:    ldr w9, [sp, #168]
-; CHECK-SD-NEXT:    ldr w10, [sp, #200]
-; CHECK-SD-NEXT:    ldr w11, [sp, #232]
-; CHECK-SD-NEXT:    mov v0.h[3], w13
-; CHECK-SD-NEXT:    mov v1.h[3], w12
-; CHECK-SD-NEXT:    mov v2.h[3], w7
-; CHECK-SD-NEXT:    mov v3.h[3], w3
-; CHECK-SD-NEXT:    mov v5.h[3], w8
-; CHECK-SD-NEXT:    mov v4.h[3], w11
-; CHECK-SD-NEXT:    mov v6.h[3], w10
-; CHECK-SD-NEXT:    mov v7.h[3], w9
+; CHECK-SD-NEXT:    ldr w11, [sp, #72]
+; CHECK-SD-NEXT:    fmov s0, w8
+; CHECK-SD-NEXT:    ldr w8, [sp]
 ; CHECK-SD-NEXT:    movi v16.4s, #15, msl #8
-; CHECK-SD-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-SD-NEXT:    fmov s5, w10
+; CHECK-SD-NEXT:    ldr w10, [sp, #104]
+; CHECK-SD-NEXT:    mov v1.h[1], w5
+; CHECK-SD-NEXT:    fmov s2, w8
+; CHECK-SD-NEXT:    ldr w8, [sp, #8]
+; CHECK-SD-NEXT:    mov v3.h[1], w1
+; CHECK-SD-NEXT:    mov v0.h[1], w9
+; CHECK-SD-NEXT:    ldr w9, [sp, #48]
+; CHECK-SD-NEXT:    mov v2.h[1], w8
+; CHECK-SD-NEXT:    ldr w8, [sp, #160]
+; CHECK-SD-NEXT:    mov v1.h[2], w6
+; CHECK-SD-NEXT:    mov v3.h[2], w2
+; CHECK-SD-NEXT:    fmov s4, w8
+; CHECK-SD-NEXT:    mov v0.h[2], w9
+; CHECK-SD-NEXT:    ldr w9, [sp, #168]
+; CHECK-SD-NEXT:    ldr w8, [sp, #64]
+; CHECK-SD-NEXT:    mov v1.h[3], w7
+; CHECK-SD-NEXT:    mov v4.h[1], w9
+; CHECK-SD-NEXT:    ldr w9, [sp, #96]
+; CHECK-SD-NEXT:    fmov s6, w8
+; CHECK-SD-NEXT:    ldr w8, [sp, #136]
+; CHECK-SD-NEXT:    mov v3.h[3], w3
+; CHECK-SD-NEXT:    fmov s7, w9
+; CHECK-SD-NEXT:    ldr w9, [sp, #16]
+; CHECK-SD-NEXT:    mov v6.h[1], w11
+; CHECK-SD-NEXT:    mov v5.h[1], w8
+; CHECK-SD-NEXT:    ldr w8, [sp, #80]
+; CHECK-SD-NEXT:    mov v2.h[2], w9
+; CHECK-SD-NEXT:    ldr w9, [sp, #176]
+; CHECK-SD-NEXT:    ldr w11, [sp, #144]
+; CHECK-SD-NEXT:    mov v7.h[1], w10
+; CHECK-SD-NEXT:    ldr w10, [sp, #112]
 ; CHECK-SD-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-SD-NEXT:    ushll v2.4s, v2.4h, #0
+; CHECK-SD-NEXT:    mov v4.h[2], w9
+; CHECK-SD-NEXT:    ldr w9, [sp, #56]
 ; CHECK-SD-NEXT:    ushll v3.4s, v3.4h, #0
-; CHECK-SD-NEXT:    ushll v5.4s, v5.4h, #0
-; CHECK-SD-NEXT:    ushll v4.4s, v4.4h, #0
+; CHECK-SD-NEXT:    mov v6.h[2], w8
+; CHECK-SD-NEXT:    ldr w8, [sp, #24]
+; CHECK-SD-NEXT:    mov v5.h[2], w11
+; CHECK-SD-NEXT:    ldr w11, [sp, #120]
+; CHECK-SD-NEXT:    mov v0.h[3], w9
+; CHECK-SD-NEXT:    ldr w9, [sp, #152]
+; CHECK-SD-NEXT:    mov v7.h[2], w10
+; CHECK-SD-NEXT:    ldr w10, [sp, #88]
+; CHECK-SD-NEXT:    mov v2.h[3], w8
+; CHECK-SD-NEXT:    ldr w8, [sp, #184]
+; CHECK-SD-NEXT:    and v1.16b, v1.16b, v16.16b
+; CHECK-SD-NEXT:    mov v6.h[3], w10
+; CHECK-SD-NEXT:    mov v5.h[3], w9
+; CHECK-SD-NEXT:    mov v4.h[3], w8
+; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-SD-NEXT:    mov v7.h[3], w11
+; CHECK-SD-NEXT:    ushll v2.4s, v2.4h, #0
 ; CHECK-SD-NEXT:    ushll v6.4s, v6.4h, #0
-; CHECK-SD-NEXT:    ushll v7.4s, v7.4h, #0
+; CHECK-SD-NEXT:    ushll v5.4s, v5.4h, #0
 ; CHECK-SD-NEXT:    and v17.16b, v0.16b, v16.16b
-; CHECK-SD-NEXT:    and v18.16b, v1.16b, v16.16b
-; CHECK-SD-NEXT:    and v1.16b, v2.16b, v16.16b
+; CHECK-SD-NEXT:    ushll v4.4s, v4.4h, #0
+; CHECK-SD-NEXT:    and v2.16b, v2.16b, v16.16b
 ; CHECK-SD-NEXT:    and v0.16b, v3.16b, v16.16b
-; CHECK-SD-NEXT:    and v2.16b, v5.16b, v16.16b
-; CHECK-SD-NEXT:    and v3.16b, v4.16b, v16.16b
-; CHECK-SD-NEXT:    and v4.16b, v6.16b, v16.16b
-; CHECK-SD-NEXT:    and v5.16b, v7.16b, v16.16b
-; CHECK-SD-NEXT:    ldp x22, x21, [sp, #16] // 16-byte Folded Reload
-; CHECK-SD-NEXT:    add v0.4s, v0.4s, v2.4s
-; CHECK-SD-NEXT:    add v3.4s, v17.4s, v3.4s
-; CHECK-SD-NEXT:    add v1.4s, v1.4s, v5.4s
-; CHECK-SD-NEXT:    add v2.4s, v18.4s, v4.4s
-; CHECK-SD-NEXT:    ldr x23, [sp], #48 // 8-byte Folded Reload
+; CHECK-SD-NEXT:    ushll v7.4s, v7.4h, #0
+; CHECK-SD-NEXT:    and v3.16b, v6.16b, v16.16b
+; CHECK-SD-NEXT:    and v5.16b, v5.16b, v16.16b
+; CHECK-SD-NEXT:    and v4.16b, v4.16b, v16.16b
+; CHECK-SD-NEXT:    and v6.16b, v7.16b, v16.16b
+; CHECK-SD-NEXT:    add v0.4s, v0.4s, v3.4s
+; CHECK-SD-NEXT:    add v2.4s, v2.4s, v5.4s
+; CHECK-SD-NEXT:    add v3.4s, v17.4s, v4.4s
+; CHECK-SD-NEXT:    add v1.4s, v1.4s, v6.4s
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: i12:

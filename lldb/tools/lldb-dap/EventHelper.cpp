@@ -27,6 +27,7 @@
 #include "lldb/API/SBPlatform.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBThread.h"
+#include "lldb/Host/PosixApi.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
 #include "llvm/Support/Error.h"
@@ -36,15 +37,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <mutex>
 #include <utility>
-
-#if defined(_WIN32)
-#define NOMINMAX
-#include <windows.h>
-
-#ifndef PATH_MAX
-#define PATH_MAX MAX_PATH
-#endif
-#endif
 
 using namespace llvm;
 
@@ -475,7 +467,7 @@ static void HandleTargetEvent(const lldb::SBEvent &event, Log &log) {
 
     // NOTE: Both mutexes must be acquired to prevent deadlock when
     // handling `modules_request`, which also requires both locks.
-    lldb::SBMutex api_mutex = dap->GetAPIMutex();
+    lldb::SBMutex api_mutex = target.GetAPIMutex();
     const std::scoped_lock<lldb::SBMutex, std::mutex> guard(api_mutex,
                                                             dap->modules_mutex);
     for (uint32_t i = 0; i < num_modules; ++i) {
@@ -483,7 +475,7 @@ static void HandleTargetEvent(const lldb::SBEvent &event, Log &log) {
           lldb::SBTarget::GetModuleAtIndexFromEvent(i, event);
 
       std::optional<protocol::Module> p_module =
-          CreateModule(dap->target, module, remove_module);
+          CreateModule(target, module, remove_module);
       if (!p_module)
         continue;
 
@@ -658,17 +650,9 @@ void EventThread(lldb::SBDebugger debugger, lldb::SBBroadcaster broadcaster,
   llvm::set_thread_name(thread_name);
 
   lldb::SBListener listener = debugger.GetListener();
-  broadcaster.AddListener(listener, eBroadcastBitStopEventThread);
-  debugger.GetBroadcaster().AddListener(
-      listener, lldb::eBroadcastBitError | lldb::eBroadcastBitWarning);
-
-  // listen for thread events.
-  listener.StartListeningForEventClass(
-      debugger, lldb::SBThread::GetBroadcasterClassName(),
-      lldb::SBThread::eBroadcastBitStackChanged);
-
   lldb::SBEvent event;
   bool done = false;
+
   while (!done) {
     if (!listener.WaitForEvent(UINT32_MAX, event))
       continue;
@@ -691,6 +675,7 @@ void EventThread(lldb::SBDebugger debugger, lldb::SBBroadcaster broadcaster,
       }
     }
   }
+  DAP_LOG(log, "Stopped Event Thread.");
 }
 
 } // namespace lldb_dap

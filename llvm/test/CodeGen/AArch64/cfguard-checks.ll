@@ -40,10 +40,10 @@ entry:
   ; CHECK-LABEL: func_optnone_cf
   ; CHECK:        adrp x8, target_func
   ; CHECK-NEXT:   add x8, x8, :lo12:target_func
-  ; CHECK-NEXT:   adrp x9, __guard_check_icall_fptr
   ; CHECK-NEXT:   str x8, [sp, #8]
   ; CHECK-NEXT:   ldr x15, [sp, #8]
-  ; CHECK-NEXT:   ldr x8, [x9, :lo12:__guard_check_icall_fptr]
+  ; CHECK-NEXT:   adrp x8, __guard_check_icall_fptr
+  ; CHECK-NEXT:   ldr x8, [x8, :lo12:__guard_check_icall_fptr]
   ; CHECK-NEXT:   blr x8
   ; CHECK-NEXT:   blr x15
 }

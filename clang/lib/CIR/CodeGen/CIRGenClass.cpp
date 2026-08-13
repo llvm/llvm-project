@@ -399,10 +399,14 @@ static Address applyNonVirtualAndVirtualOffset(
   mlir::Value baseOffset;
   if (!nonVirtualOffset.isZero()) {
     if (virtualOffset) {
-      cgf.cgm.errorNYI(
-          loc,
-          "applyNonVirtualAndVirtualOffset: virtual and non-virtual offset");
-      return Address::invalid();
+      mlir::Type offsetType =
+          (cgf.cgm.getTarget().getCXXABI().isItaniumFamily() &&
+           cgf.cgm.getLangOpts().RelativeCXXABIVTables)
+              ? cgf.sInt32Ty
+              : cgf.ptrDiffTy;
+      baseOffset = cgf.getBuilder().getConstInt(loc, offsetType,
+                                                nonVirtualOffset.getQuantity());
+      baseOffset = cgf.getBuilder().createAdd(loc, virtualOffset, baseOffset);
     } else {
       assert(baseValueTy && "expected base type");
       // If no virtualOffset is present this is the final stop.
@@ -715,7 +719,8 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
   QualType elementType;
   mlir::Value numElements = emitArrayLength(arrayType, elementType, arrayBegin);
   emitCXXAggrConstructorCall(ctor, numElements, arrayBegin, e,
-                             newPointerIsChecked, zeroInitialize);
+                             newPointerIsChecked, zeroInitialize,
+                             /*endOfInit=*/Address::invalid());
 }
 
 /// Emit a loop to call a particular constructor for each of several members
@@ -727,9 +732,16 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
 /// \param arrayBase a T*, where T is the type constructed by ctor
 /// \param zeroInitialize true if each element should be
 ///   zero-initialized before it is constructed
+/// \param endOfInit if valid, an alloca holding the upper bound of an
+///   already-pushed irregular partial-array EH cleanup. When valid, the
+///   loop body will update this slot before each constructor call so the
+///   caller's cleanup covers loop-constructed elements, and no
+///   partial-destruction region is attached to the resulting
+///   cir::ArrayCtor op.
 void CIRGenFunction::emitCXXAggrConstructorCall(
     const CXXConstructorDecl *ctor, mlir::Value numElements, Address arrayBase,
-    const CXXConstructExpr *e, bool newPointerIsChecked, bool zeroInitialize) {
+    const CXXConstructExpr *e, bool newPointerIsChecked, bool zeroInitialize,
+    Address endOfInit) {
   // It's legal for numElements to be zero.  This can happen both
   // dynamically, because x can be zero in 'new A[x]', and statically,
   // because of GCC extensions that permit zero-length arrays.  There
@@ -774,61 +786,70 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
     dynamicElPtr =
         builder.createPtrBitcast(arrayBase.getPointer(), elementType);
 
-  // C++ [class.temporary]p4:
-  // There are two contexts in which temporaries are destroyed at a different
-  // point than the end of the full-expression. The first context is when a
-  // default constructor is called to initialize an element of an array.
-  // If the constructor has one or more default arguments, the destruction of
-  // every temporary created in a default argument expression is sequenced
-  // before the construction of the next array element, if any.
-  {
-    RunCleanupsScope scope(*this);
+  // When the caller has already pushed an irregular partial-array cleanup
+  // (signalled by a valid endOfInit), our loop body will keep that cleanup's
+  // upper bound up to date, so we don't need a separate per-element
+  // partial-destruction region on the cir::ArrayCtor op.
+  bool needsPartialArrayCleanup = getLangOpts().Exceptions &&
+                                  !ctor->getParent()->hasTrivialDestructor() &&
+                                  !endOfInit.isValid();
 
-    bool needsPartialArrayCleanup =
-        getLangOpts().Exceptions && !ctor->getParent()->hasTrivialDestructor();
-
-    auto emitCtorBody = [&](mlir::OpBuilder &b, mlir::Location l) {
-      mlir::BlockArgument arg =
-          b.getInsertionBlock()->addArgument(ptrToElmType, l);
-      Address curAddr = Address(arg, elementType, eltAlignment);
-      assert(!cir::MissingFeatures::sanitizers());
-      if (zeroInitialize)
-        emitNullInitialization(l, curAddr, type);
-      auto currAVS = AggValueSlot::forAddr(
-          curAddr, type.getQualifiers(), AggValueSlot::IsDestructed,
-          AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap,
-          AggValueSlot::IsNotZeroed);
+  auto emitCtorBody = [&](mlir::OpBuilder &b, mlir::Location l) {
+    mlir::BlockArgument arg =
+        b.getInsertionBlock()->addArgument(ptrToElmType, l);
+    Address curAddr = Address(arg, elementType, eltAlignment);
+    // Extend the caller's irregular partial-array cleanup to cover the
+    // element we're about to construct. If this constructor throws, the
+    // cleanup will destroy every element strictly below this one.
+    if (endOfInit.isValid())
+      builder.createStore(l, arg, endOfInit);
+    assert(!cir::MissingFeatures::sanitizers());
+    if (zeroInitialize)
+      emitNullInitialization(l, curAddr, type);
+    auto currAVS = AggValueSlot::forAddr(
+        curAddr, type.getQualifiers(), AggValueSlot::IsDestructed,
+        AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap,
+        AggValueSlot::IsNotZeroed);
+    // C++ [class.temporary]p4:
+    // There are two contexts in which temporaries are destroyed at a
+    // different point than the end of the full-expression. The first context
+    // is when a default constructor is called to initialize an element of an
+    // array. If the constructor has one or more default arguments, the
+    // destruction of every temporary created in a default argument expression
+    // is sequenced before the construction of the next array element, if any.
+    {
+      RunCleanupsScope scope(*this);
       emitCXXConstructorCall(ctor, Ctor_Complete,
                              /*ForVirtualBase=*/false,
                              /*Delegating=*/false, currAVS, e);
-      cir::YieldOp::create(b, l);
-    };
-
-    llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>
-        emitPartialDtorBody = nullptr;
-    auto partialDtorBuilder = [&](mlir::OpBuilder &b, mlir::Location l) {
-      mlir::BlockArgument arg =
-          b.getInsertionBlock()->addArgument(ptrToElmType, l);
-      Address curAddr = Address(arg, elementType, eltAlignment);
-      emitCXXDestructorCall(ctor->getParent()->getDestructor(), Dtor_Complete,
-                            /*forVirtualBase=*/false,
-                            /*delegating=*/false, curAddr, type);
-      cir::YieldOp::create(b, l);
-    };
-    if (needsPartialArrayCleanup)
-      emitPartialDtorBody = partialDtorBuilder;
-
-    if (useDynamicArrayCtor) {
-      cir::ArrayCtor::create(builder, loc, dynamicElPtr, numElements,
-                             emitCtorBody, emitPartialDtorBody);
-    } else {
-      cir::ArrayType arrayTy =
-          cir::ArrayType::get(elementType, constElementCount);
-      mlir::Value arrayOp =
-          builder.createPtrBitcast(arrayBase.getPointer(), arrayTy);
-      cir::ArrayCtor::create(builder, loc, arrayOp, emitCtorBody,
-                             emitPartialDtorBody);
     }
+    cir::YieldOp::create(b, l);
+  };
+
+  llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>
+      emitPartialDtorBody = nullptr;
+  auto partialDtorBuilder = [&](mlir::OpBuilder &b, mlir::Location l) {
+    mlir::BlockArgument arg =
+        b.getInsertionBlock()->addArgument(ptrToElmType, l);
+    Address curAddr = Address(arg, elementType, eltAlignment);
+    emitCXXDestructorCall(ctor->getParent()->getDestructor(), Dtor_Complete,
+                          /*forVirtualBase=*/false,
+                          /*delegating=*/false, curAddr, type);
+    cir::YieldOp::create(b, l);
+  };
+  if (needsPartialArrayCleanup)
+    emitPartialDtorBody = partialDtorBuilder;
+
+  if (useDynamicArrayCtor) {
+    cir::ArrayCtor::create(builder, loc, dynamicElPtr, numElements,
+                           emitCtorBody, emitPartialDtorBody);
+  } else {
+    cir::ArrayType arrayTy =
+        cir::ArrayType::get(elementType, constElementCount);
+    mlir::Value arrayOp =
+        builder.createPtrBitcast(arrayBase.getPointer(), arrayTy);
+    cir::ArrayCtor::create(builder, loc, arrayOp, emitCtorBody,
+                           emitPartialDtorBody);
   }
 }
 
@@ -874,7 +895,7 @@ void CIRGenFunction::emitImplicitAssignmentOperatorBody(FunctionArgList &args) {
          "Body of an implicit assignment operator should be compound stmt.");
   const auto *rootCS = cast<CompoundStmt>(rootS);
 
-  cgm.setCXXSpecialMemberAttr(cast<cir::FuncOp>(curFn), assignOp);
+  cgm.setFuncInfoAttr(cast<cir::FuncOp>(curFn), assignOp);
 
   assert(!cir::MissingFeatures::incrementProfileCounter());
   assert(!cir::MissingFeatures::runCleanupsScope());
@@ -905,6 +926,15 @@ void CIRGenFunction::emitForwardingCallToLambda(
       callOperator->getType()->castAs<FunctionProtoType>();
   QualType resultType = fpt->getReturnType();
   ReturnValueSlot returnSlot;
+  // This should also be tracking volatile, unused, and externally destructed.
+  assert(!cir::MissingFeatures::returnValueSlotFeatures());
+  // For aggregate returns, write the callee's result directly into the
+  // static invoker's return slot.  Otherwise emitReturnOfRValue below would
+  // aggregate-copy a temporary into returnValue, which is incorrect for
+  // types without a trivial copy/move (e.g. std::string) -- and trips an
+  // assertion in emitAggregateCopy.
+  if (!resultType->isVoidType() && hasAggregateEvaluationKind(resultType))
+    returnSlot = ReturnValueSlot(returnValue);
 
   // We don't need to separately arrange the call arguments because
   // the call can't be variadic anyway --- it's impossible to forward
@@ -913,17 +943,18 @@ void CIRGenFunction::emitForwardingCallToLambda(
   // Now emit our call.
   CIRGenCallee callee =
       CIRGenCallee::forDirect(calleePtr, GlobalDecl(callOperator));
-  RValue rv = emitCall(calleeFnInfo, callee, returnSlot, callArgs);
+  RValue rv = emitCall(calleeFnInfo, callee, returnSlot, callArgs,
+                       /*isMustTail=*/false);
 
-  // If necessary, copy the returned value into the slot.
-  if (!resultType->isVoidType() && returnSlot.isNull()) {
-    if (getLangOpts().ObjCAutoRefCount && resultType->isObjCRetainableType())
+  // Forward the returned value through the function's return slot.
+  if (!resultType->isVoidType()) {
+    if (returnSlot.isNull() && getLangOpts().ObjCAutoRefCount &&
+        resultType->isObjCRetainableType())
       cgm.errorNYI(callOperator->getSourceRange(),
                    "emitForwardingCallToLambda: ObjCAutoRefCount");
     emitReturnOfRValue(*currSrcLoc, rv, resultType);
   } else {
-    cgm.errorNYI(callOperator->getSourceRange(),
-                 "emitForwardingCallToLambda: return slot is not null");
+    cir::ReturnOp::create(builder, *currSrcLoc);
   }
 }
 
@@ -1510,7 +1541,8 @@ void CIRGenFunction::emitCXXConstructorCall(
       args, d, type, extraArgs.prefix, extraArgs.suffix, passPrototypeArgs);
   CIRGenCallee callee = CIRGenCallee::forDirect(calleePtr, GlobalDecl(d, type));
   cir::CIRCallOpInterface c;
-  emitCall(info, callee, ReturnValueSlot(), args, &c, getLoc(loc));
+  emitCall(info, callee, ReturnValueSlot(), args, &c, /*isMustTail=*/false,
+           getLoc(loc));
 
   if (cgm.getCodeGenOpts().OptimizationLevel != 0 && !crd->isDynamicClass() &&
       type != Ctor_Base && cgm.getCodeGenOpts().StrictVTablePointers)

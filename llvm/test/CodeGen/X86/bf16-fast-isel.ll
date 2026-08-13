@@ -116,6 +116,36 @@ entry:
   ret i8 %call2
 }
 
+declare { bfloat, bfloat } @get_bfloats()
+declare void @take_bfloats({ bfloat, bfloat })
+
+define void @call_get_bfloats() nounwind {
+; CHECK-LABEL: call_get_bfloats:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    callq get_bfloats@PLT
+; CHECK-NEXT:    pextrw $0, %xmm1, %eax
+; CHECK-NEXT:    shll $16, %eax
+; CHECK-NEXT:    movl %eax, (%rsp) # 4-byte Spill
+; CHECK-NEXT:    pextrw $0, %xmm0, %eax
+; CHECK-NEXT:    shll $16, %eax
+; CHECK-NEXT:    movd %eax, %xmm0
+; CHECK-NEXT:    callq __truncsfbf2@PLT
+; CHECK-NEXT:    movd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; CHECK-NEXT:    movss (%rsp), %xmm0 # 4-byte Reload
+; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    callq __truncsfbf2@PLT
+; CHECK-NEXT:    movaps %xmm0, %xmm1
+; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
+; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    callq take_bfloats@PLT
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    retq
+  %res = call { bfloat, bfloat } @get_bfloats()
+  call void @take_bfloats({ bfloat, bfloat } %res)
+  ret void
+}
+
 declare bfloat @foo(ptr %f)
 declare zeroext i8 @bar(bfloat)
 declare fastcc bfloat @foo_fast(ptr %f)

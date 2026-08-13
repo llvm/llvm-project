@@ -19,10 +19,9 @@
 #include "orc-rt/WrapperFunction.h"
 
 #define ORC_RT_SPS_WRAPPER(Name, SPSSig, Handle)                               \
-  static void Name(orc_rt_SessionRef S, uint64_t CallId,                       \
-                   orc_rt_WrapperFunctionReturn Return,                        \
-                   orc_rt_WrapperFunctionBuffer ArgBytes) {                    \
-    orc_rt::SPSWrapperFunction<SPSSig>::handle(S, CallId, Return, ArgBytes,    \
+  static void Name(orc_rt_SessionRef S, orc_rt_WrapperFunctionBuffer ArgBytes, \
+                   orc_rt_WrapperFunctionReturn Return, uint64_t CallId) {     \
+    orc_rt::SPSWrapperFunction<SPSSig>::handle(S, ArgBytes, Return, CallId,    \
                                                Handle);                        \
   }
 
@@ -130,10 +129,10 @@ template <typename SPSSig> struct SPSWrapperFunction {
   }
 
   template <typename Handler>
-  static void handle(orc_rt_SessionRef S, uint64_t CallId,
-                     orc_rt_WrapperFunctionReturn Return,
-                     WrapperFunctionBuffer ArgBytes, Handler &&H) {
-    WrapperFunction::handle(S, CallId, Return, std::move(ArgBytes),
+  static void handle(orc_rt_SessionRef S, WrapperFunctionBuffer ArgBytes,
+                     orc_rt_WrapperFunctionReturn Return, uint64_t CallId,
+                     Handler &&H) {
+    WrapperFunction::handle(S, std::move(ArgBytes), Return, CallId,
                             WrapperFunctionSPSSerializer<SPSSig>(),
                             std::forward<Handler>(H));
   }
@@ -141,10 +140,10 @@ template <typename SPSSig> struct SPSWrapperFunction {
   /// Convenience override that takes ArgBytes as an
   /// orc_rt_WrapperFunctionBuffer.
   template <typename Handler>
-  static void handle(orc_rt_SessionRef S, uint64_t CallId,
-                     orc_rt_WrapperFunctionReturn Return,
-                     orc_rt_WrapperFunctionBuffer ArgBytes, Handler &&H) {
-    handle(S, CallId, Return, WrapperFunctionBuffer(ArgBytes),
+  static void handle(orc_rt_SessionRef S, orc_rt_WrapperFunctionBuffer ArgBytes,
+                     orc_rt_WrapperFunctionReturn Return, uint64_t CallId,
+                     Handler &&H) {
+    handle(S, WrapperFunctionBuffer(ArgBytes), Return, CallId,
            std::forward<Handler>(H));
   }
 };

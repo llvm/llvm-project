@@ -287,6 +287,10 @@ namespace {
       std::string S = std::string("get") + std::string(getUpperName()) + "()";
       return getArgEqualityFn().str() + "(" + S + ", Other." + S + ", Context)";
     }
+
+    virtual std::string emitAttrArgProfileCall() const {
+      return "profileAttrArg(ID, Ctx, get" + getUpperName().str() + "())";
+    }
   };
 
   class SimpleArgument : public Argument {
@@ -415,9 +419,9 @@ namespace {
     int64_t Default;
 
   public:
-    DefaultSimpleArgument(const Record &Arg, StringRef Attr,
-                          std::string T, int64_t Default)
-      : SimpleArgument(Arg, Attr, T), Default(Default) {}
+    DefaultSimpleArgument(const Record &Arg, StringRef Attr, std::string T,
+                          int64_t Default)
+        : SimpleArgument(Arg, Attr, std::move(T)), Default(Default) {}
 
     void writeAccessors(raw_ostream &OS) const override {
       SimpleArgument::writeAccessors(OS);
@@ -867,6 +871,11 @@ namespace {
              GenIter(false, "end") + ", " + GenIter(true, "begin") + ", " +
              GenIter(true, "end") + ", Context)";
     }
+
+    std::string emitAttrArgProfileCall() const override {
+      std::string LN = getLowerName().str();
+      return "profileAttrArg(ID, Ctx, " + LN + "_begin(), " + LN + "_end())";
+    }
   };
 
   class VariadicOMPInteropInfoArgument : public VariadicArgument {
@@ -896,8 +905,21 @@ namespace {
       OS << "I != E; ++I) {\n";
       OS << "      bool IsTarget = Record.readBool();\n";
       OS << "      bool IsTargetSync = Record.readBool();\n";
-      OS << "      " << getLowerName()
-         << ".emplace_back(IsTarget, IsTargetSync);\n";
+      OS << "      OMPInteropInfo Info(IsTarget, IsTargetSync);\n";
+      OS << "      Info.HasPreferAttrs = Record.readBool();\n";
+      OS << "      unsigned prefsSize = Record.readInt();\n";
+      OS << "      Info.Prefs.reserve(prefsSize);\n";
+      OS << "      for (unsigned J = 0; J < prefsSize; ++J) {\n";
+      OS << "        bool hasFr = Record.readBool();\n";
+      OS << "        Expr *Fr = hasFr ? Record.readExpr() : nullptr;\n";
+      OS << "        unsigned attrsSize = Record.readInt();\n";
+      OS << "        llvm::SmallVector<Expr *, 2> Attrs;\n";
+      OS << "        Attrs.reserve(attrsSize);\n";
+      OS << "        for (unsigned K = 0; K < attrsSize; ++K)\n";
+      OS << "          Attrs.push_back(Record.readExpr());\n";
+      OS << "        Info.Prefs.emplace_back(Fr, std::move(Attrs));\n";
+      OS << "      }\n";
+      OS << "      " << getLowerName() << ".push_back(Info);\n";
       OS << "    }\n";
     }
 
@@ -908,6 +930,41 @@ namespace {
          << getLowerName() << "_end(); I != E; ++I) {\n";
       OS << "      Record.writeBool(I->IsTarget);\n";
       OS << "      Record.writeBool(I->IsTargetSync);\n";
+      OS << "      Record.writeBool(I->HasPreferAttrs);\n";
+      OS << "      Record.push_back(I->Prefs.size());\n";
+      OS << "      for (auto &P : I->Prefs) {\n";
+      OS << "        Record.writeBool(P.Fr != nullptr);\n";
+      OS << "        if (P.Fr) Record.AddStmt(P.Fr);\n";
+      OS << "        Record.push_back(P.Attrs.size());\n";
+      OS << "        for (Expr *A : P.Attrs) Record.AddStmt(A);\n";
+      OS << "      }\n";
+      OS << "    }\n";
+    }
+
+    void writeASTVisitorTraversal(raw_ostream &OS) const override {
+      OS << "  {\n";
+      OS << "    OMPInteropInfo *I = A->" << getLowerName() << "_begin();\n";
+      OS << "    " << getType() << " *E = A->" << getLowerName() << "_end();\n";
+      OS << "    for (; I != E; ++I) {\n";
+      OS << "      for (auto &P : I->Prefs) {\n";
+      OS << "        if (P.Fr && !getDerived().TraverseStmt(P.Fr))\n";
+      OS << "          return false;\n";
+      OS << "        for (Expr *A : P.Attrs)\n";
+      OS << "          if (!getDerived().TraverseStmt(A))\n";
+      OS << "            return false;\n";
+      OS << "      }\n";
+      OS << "    }\n";
+      OS << "  }\n";
+    }
+
+    void writeDumpChildren(raw_ostream &OS) const override {
+      OS << "    for (" << getAttrName() << "Attr::" << getLowerName()
+         << "_iterator I = SA->" << getLowerName() << "_begin(), E = SA->"
+         << getLowerName() << "_end(); I != E; ++I) {\n";
+      OS << "      for (auto &P : I->Prefs) {\n";
+      OS << "        if (P.Fr) Visit(P.Fr);\n";
+      OS << "        for (Expr *A : P.Attrs) Visit(A);\n";
+      OS << "      }\n";
       OS << "    }\n";
     }
   };
@@ -2006,6 +2063,23 @@ static void emitClangAttrLateParsedExperimentalList(const RecordKeeper &Records,
   emitClangAttrLateParsedListImpl(Records, OS,
                                   LateAttrParseKind::ExperimentalExt);
   OS << "#endif // CLANG_ATTR_LATE_PARSED_EXPERIMENTAL_EXT_LIST\n\n";
+}
+
+// Emits a list of attributes whose argument list is parsed inside a function
+// prototype scope so it can refer to the enclosing function's parameters.
+static void
+emitClangAttrParseArgsInFunctionScopeList(const RecordKeeper &Records,
+                                          raw_ostream &OS) {
+  OS << "#if defined(CLANG_ATTR_PARSE_ARGS_IN_FUNCTION_SCOPE_LIST)\n";
+  for (const auto *Attr : Records.getAllDerivedDefinitions("Attr")) {
+    if (!Attr->getValueAsBit("ParseArgsInFunctionScope"))
+      continue;
+    // FIXME: Handle non-GNU attributes
+    for (const auto &I : GetFlattenedSpellings(*Attr))
+      if (I.variety() == "GNU")
+        OS << ".Case(\"" << I.name() << "\", 1)\n";
+  }
+  OS << "#endif // CLANG_ATTR_PARSE_ARGS_IN_FUNCTION_SCOPE_LIST\n\n";
 }
 
 static bool hasGNUorCXX11Spelling(const Record &Attribute) {
@@ -3249,6 +3323,22 @@ static void emitAttributes(const RecordKeeper &Records, raw_ostream &OS,
       OS << "}\n\n";
     }
 
+    StringRef ProfileSig = "Profile(llvm::FoldingSetNodeID &ID, "
+                           "const ASTContext &Ctx) const";
+    if (Header) {
+      OS << "  void " << ProfileSig << ";\n";
+    } else {
+      OS << "void " << R.getName() << "Attr::" << ProfileSig << " {\n";
+      std::string CustomFn = R.getValueAsString("profileFn").str();
+      if (CustomFn.empty()) {
+        for (const auto &ai : Args)
+          OS << "  " << ai->emitAttrArgProfileCall() << ";\n";
+      } else {
+        OS << "  " << CustomFn << "(*this, ID, Ctx);\n";
+      }
+      OS << "}\n\n";
+    }
+
     if (Header) {
       if (DelayedArgs) {
         DelayedArgs->writeAccessors(OS);
@@ -3321,6 +3411,23 @@ static void emitEquivalenceFunction(const RecordKeeper &Records,
   OS << "}\n\n";
 }
 
+static void emitProfileFunction(const RecordKeeper &Records, raw_ostream &OS) {
+  OS << "void Attr::Profile(llvm::FoldingSetNodeID &ID, "
+        "const ASTContext &Ctx) const {\n";
+  OS << "  switch (getKind()) {\n";
+  for (const auto *Attr : Records.getAllDerivedDefinitions("Attr")) {
+    const Record &R = *Attr;
+    if (!R.getValueAsBit("ASTNode"))
+      continue;
+    OS << "  case attr::" << R.getName() << ":\n";
+    OS << "    return cast<" << R.getName()
+       << "Attr>(this)->Profile(ID, Ctx);\n";
+  }
+  OS << "  }\n";
+  OS << "  llvm_unreachable(\"Unexpected attribute kind!\");\n";
+  OS << "}\n\n";
+}
+
 // Emits the class method definitions for attributes.
 void clang::EmitClangAttrImpl(const RecordKeeper &Records, raw_ostream &OS) {
   emitSourceFileHeader("Attribute classes' member function definitions", OS,
@@ -3357,6 +3464,7 @@ void clang::EmitClangAttrImpl(const RecordKeeper &Records, raw_ostream &OS) {
   EmitFunc("printPretty(OS, Policy)");
 
   emitEquivalenceFunction(Records, OS);
+  emitProfileFunction(Records, OS);
 }
 
 static void emitAttrList(raw_ostream &OS, StringRef Class,
@@ -5268,6 +5376,7 @@ void EmitClangAttrParserStringSwitches(const RecordKeeper &Records,
   emitClangAttrTypeArgList(Records, OS);
   emitClangAttrLateParsedList(Records, OS);
   emitClangAttrLateParsedExperimentalList(Records, OS);
+  emitClangAttrParseArgsInFunctionScopeList(Records, OS);
   emitClangAttrStrictIdentifierArgList(Records, OS);
 }
 
@@ -5314,7 +5423,7 @@ public:
     return Spellings[(size_t)K];
   }
 
-  void add(const Record &Attr, FlattenedSpelling Spelling) {
+  void add(const Record &Attr, const FlattenedSpelling &Spelling) {
     SpellingKind Kind =
         StringSwitch<SpellingKind>(Spelling.variety())
             .Case("GNU", SpellingKind::GNU)
@@ -5505,6 +5614,49 @@ static void WriteDocumentation(const RecordKeeper &Records,
   OS << ContentStr.trim();
 
   OS << "\n\n\n";
+}
+
+void GetListOfUndocumentedAttributes(
+    const RecordKeeper &Records,
+    std::vector<const Record *> &UndocumentedAttrs) {
+  const Record *Documentation = Records.getDef("GlobalDocumentation");
+  if (!Documentation) {
+    PrintFatalError("The Documentation top-level definition is missing.");
+    return;
+  }
+
+  for (const auto *A : Records.getAllDerivedDefinitions("Attr")) {
+    const Record &Attr = *A;
+    std::vector<const Record *> Docs =
+        Attr.getValueAsListOfDefs("Documentation");
+    for (const auto *D : Docs) {
+      const Record &Doc = *D;
+      const Record *Category = Doc.getValueAsDef("Category");
+      if (Category->getValueAsString("Name") == "Undocumented")
+        UndocumentedAttrs.push_back(A);
+    }
+  }
+}
+
+void EmitClangUndocumentedAttrList(const llvm::RecordKeeper &Records,
+                                   llvm::raw_ostream &OS) {
+  // Emit a newline separated list of attributes whose Documentation is set to
+  // Undocumented.
+  std::vector<const Record *> UndocumentedAttrs;
+  GetListOfUndocumentedAttributes(Records, UndocumentedAttrs);
+
+  // Print a small header; this helps catch the situation where someone adds an
+  // attribute without documentation but it is alphabetically before the first
+  // attribute in the test file.
+  OS << "Undocumented attributes:\n";
+
+  for (const auto *A : UndocumentedAttrs) {
+    OS << A->getName() << "\n";
+  }
+
+  // Also print the count; this helps catch attributes after the last one in
+  // the test file.
+  OS << "Total: " << UndocumentedAttrs.size() << "\n";
 }
 
 void EmitClangAttrDocs(const RecordKeeper &Records, raw_ostream &OS) {

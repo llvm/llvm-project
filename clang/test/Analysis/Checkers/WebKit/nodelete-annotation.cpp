@@ -45,7 +45,7 @@ namespace WTF {
       if (!m_buffer)
         return;
       for (unsigned i = 0; i < m_size; ++i)
-        m_buffer[i]->~T();
+        m_buffer[i].~T();
       free(m_buffer);
       m_buffer = nullptr;
     }
@@ -316,8 +316,21 @@ public:
 };
 
 struct Data {
-  static Ref<Data> create() {
+  static Ref<Data> [[clang::annotate_type("webkit.nodelete")]] create() {
     return adoptRef(*new Data);
+  }
+
+  static Ref<Data> [[clang::annotate_type("webkit.nodelete")]] create(double) {
+    return adoptRef(*new Data(RefCountable::create()->next()));
+    // expected-warning@-1{{A function 'create' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+  }
+
+  static Data* [[clang::annotate_type("webkit.nodelete")]] create(int) {
+    return adoptRef(new Data); // expected-warning{{A function 'create' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+  }
+
+  static Ref<Data> create(const char*) {
+    return std::move(adoptRef(*new Data));
   }
 
   void ref() {
@@ -338,6 +351,7 @@ struct Data {
   
 protected:
   Data() = default;
+  Data(RefCountable*) { }
 
 private:
   unsigned refCount { 0 };
@@ -475,3 +489,273 @@ struct ObjectWithContainers {
     // expected-warning@-1{{A function 'shrinkVector3' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
   }
 };
+
+struct SomeObject {
+  void ref() const;
+  void deref() const;
+  
+  void doTrivialWork() { }
+
+  void [[clang::annotate_type("webkit.nodelete")]] deleteItems() {
+    delete[] m_items;
+    // expected-warning@-1{{A function 'deleteItems' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+  }
+
+private:
+  SomeObject* m_items;
+};
+
+void [[clang::annotate_type("webkit.nodelete")]] deleteArray(SomeObject* obj) {
+  delete[] obj;
+  // expected-warning@-1{{A function 'deleteArray' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+}
+
+template <typename Callback>
+void callLambda(Callback callback) {
+  callback();
+}
+
+template <typename Callback>
+void noopWithLambda(Callback) {
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] deleteInLambda(SomeObject* someObj) {
+  callLambda([&]() {
+    // expected-warning@-1{{A function 'deleteInLambda' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+    delete someObj;
+  });
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] deleteInLambda2(SomeObject* someObj) {
+  noopWithLambda([&]() {
+    // expected-warning@-1{{A function 'deleteInLambda2' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+    delete someObj;
+  });
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] deleteIfNeeded(SomeObject* someObj) {
+  if (someObj)
+    delete someObj;
+    // expected-warning@-1{{A function 'deleteIfNeeded' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+}
+
+struct MemberAssignment {
+public:
+  void [[clang::annotate_type("webkit.nodelete")]] clearMember() {
+    m_someObject = nullptr;
+    // expected-warning@-1{{A function 'clearMember' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+  }
+
+  void [[clang::annotate_type("webkit.nodelete")]] assignMember(SomeObject* ptr) {
+    m_someObject = ptr;
+    // expected-warning@-1{{A function 'assignMember' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+  }
+  
+  RefPtr<SomeObject> [[clang::annotate_type("webkit.nodelete")]] takeMember() {
+    return std::exchange(m_someObject, nullptr);
+    // expected-warning@-1{{A function 'takeMember' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+  }
+
+  void [[clang::annotate_type("webkit.nodelete")]] takeAsTemp() {
+    takeMember();
+    // expected-warning@-1{{A function 'takeAsTemp' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+  }
+
+  void [[clang::annotate_type("webkit.nodelete")]] takeToLocalVar() {
+    if (RefPtr ptr = std::exchange(m_someObject, nullptr))
+      // expected-warning@-1{{A function 'takeToLocalVar' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+      ptr->doTrivialWork();
+  }
+
+  void [[clang::annotate_type("webkit.nodelete")]] takeObjectsAsTemp() {
+    std::exchange(m_objects, { });
+    // expected-warning@-1{{A function 'takeObjectsAsTemp' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+  }
+
+private:
+  RefPtr<SomeObject> m_someObject;
+  Vector<Ref<SomeObject>> m_objects;
+};
+
+namespace copy_elision_edge_cases {
+
+// These cases all inhibit NRVO/copy elision (so a real move or copy constructor runs into the return slot),
+// but none of them perform any local destruction:
+//   - Moved-from operands are emptied; their dtors are no-ops at the caller.
+//   - Globals/statics are not destructed here at all.
+//   - The return-slot temporary is destructed by the caller, not by us.
+// All the mock Ref<T> copy/move ctors only manipulate pointers and a
+// refcount, so the trivial-ctor analysis correctly classifies these as
+// safe. The tests below document that the checker accepts each shape.
+
+Ref<RefCountable> [[clang::annotate_type("webkit.nodelete")]] returnStdMoved(Ref<RefCountable>&& obj) {
+  return std::move(obj);
+}
+
+Ref<RefCountable> [[clang::annotate_type("webkit.nodelete")]] returnFromBranches(bool b, Ref<RefCountable>&& a, Ref<RefCountable>&& c) {
+  if (b)
+    return std::move(a);
+  return std::move(c);
+}
+
+Ref<RefCountable> [[clang::annotate_type("webkit.nodelete")]] returnDerefedParam(Ref<RefCountable>* param) {
+  return *param;
+}
+
+// Returning a by-value parameter also requires a real copy/move construction.
+// The function is still flagged here because of unsafe-parameter diagnostic that fires for the parameter declaration.
+Ref<RefCountable> [[clang::annotate_type("webkit.nodelete")]] returnByValueParam(Ref<RefCountable> param) {
+  // expected-warning@-1{{A function 'returnByValueParam' has [[clang::annotate_type("webkit.nodelete")]] but it contains a parameter 'param' which could destruct an object}}
+  return param;
+}
+
+extern Ref<RefCountable> g_ref;
+Ref<RefCountable> [[clang::annotate_type("webkit.nodelete")]] returnGlobal() {
+  return g_ref;
+}
+
+struct StaticHolder {
+  static Ref<RefCountable> s_ref;
+};
+Ref<RefCountable> [[clang::annotate_type("webkit.nodelete")]] returnClassStatic() {
+  return StaticHolder::s_ref;
+}
+
+} // namespace copy_elision_edge_cases
+
+namespace temp_object_typecheck {
+
+struct Tracked {
+  Tracked();
+  ~Tracked();
+};
+
+Tracked [[clang::annotate_type("webkit.nodelete")]] makeTracked();
+
+struct Box {
+  Box(const Tracked&) {}
+};
+
+Box [[clang::annotate_type("webkit.nodelete")]] makeBox() {
+  return Box(makeTracked());
+  // expected-warning@-1{{A function 'makeBox' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+}
+
+} // namespace temp_object_typecheck
+
+namespace argument_temporaries_are_not_elided {
+
+// Only a *returned* prvalue is elided into the caller's return slot. A
+// smart-pointer temporary passed as a call argument is destructed in this
+// function at the end of the full-expression (the caller destroys arguments),
+// so its destructor -- which may run delete -- is correctly flagged, no matter
+// how the callee binds it (by value, by rvalue reference, or by const
+// reference). The factory and sinks are annotated no-delete so the only
+// possible offender is the argument temporary's destruction.
+
+Ref<RefCountable> [[clang::annotate_type("webkit.nodelete")]] makeRef();
+void [[clang::annotate_type("webkit.nodelete")]] sinkByValue(Ref<RefCountable>);
+void [[clang::annotate_type("webkit.nodelete")]] sinkByRvalueRef(Ref<RefCountable>&&);
+void [[clang::annotate_type("webkit.nodelete")]] observeByConstRef(const Ref<RefCountable>&);
+
+// Returned prvalue: constructed into the caller's return slot -> no local
+// destruction here.
+Ref<RefCountable> [[clang::annotate_type("webkit.nodelete")]] returnedPrvalueIsElided() {
+  return makeRef();
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] passedByValueIsFlagged() {
+  sinkByValue(makeRef());
+  // expected-warning@-1{{A function 'passedByValueIsFlagged' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] passedByRvalueRefIsFlagged() {
+  sinkByRvalueRef(makeRef());
+  // expected-warning@-1{{A function 'passedByRvalueRefIsFlagged' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] passedByConstRefIsFlagged() {
+  observeByConstRef(makeRef());
+  // expected-warning@-1{{A function 'passedByConstRefIsFlagged' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] discardedTemporaryIsFlagged() {
+  makeRef();
+  // expected-warning@-1{{A function 'discardedTemporaryIsFlagged' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+}
+
+} // namespace argument_temporaries_are_not_elided
+
+namespace returned_prvalue_typedef {
+
+// A returned prvalue spelled through a typedef/alias is still the return-slot
+// object and must be elided. The elision relies on a canonical, unqualified
+// type comparison rather than exact QualType identity.
+
+using RefRC = Ref<RefCountable>;
+RefRC [[clang::annotate_type("webkit.nodelete")]] makeAlias();
+
+Ref<RefCountable> [[clang::annotate_type("webkit.nodelete")]] returnTypedefPrvalue() {
+  return makeAlias(); // no warning: the elided temporary is the return slot.
+}
+
+} // namespace returned_prvalue_typedef
+
+namespace create_with_default_constructor {
+
+  struct ObjectWithDefaultConstructorWithoutMemberVariables {
+    void ref() const;
+    void deref() const;
+
+    static auto [[clang::annotate_type("webkit.nodelete")]] create() {
+      return adoptRef(*new ObjectWithDefaultConstructorWithoutMemberVariables());
+    }
+  };
+
+  struct ObjectWithDefaultConstructorWithPODMemberVariables {
+    void ref() const;
+    void deref() const;
+
+    static auto [[clang::annotate_type("webkit.nodelete")]] create() {
+      return adoptRef(*new ObjectWithDefaultConstructorWithPODMemberVariables());
+    }
+
+  private:
+    int value { 0 };
+    RefCountable* ptr { nullptr };
+  };
+
+  struct ObjectWithOpaqueCtor {
+    ObjectWithOpaqueCtor();
+  };
+
+  struct ObjectWithDefaultConstructorWithOpaqueCtorMemberVariables {
+    void ref() const;
+    void deref() const;
+
+    static auto [[clang::annotate_type("webkit.nodelete")]] create() {
+      return adoptRef(*new ObjectWithDefaultConstructorWithOpaqueCtorMemberVariables());
+      // expected-warning@-1{{A function 'create' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+    }
+
+  private:
+    ObjectWithOpaqueCtor obj;
+  };
+
+} // namespace create_with_default_constructor
+
+
+namespace trivial_implicit_ctor_in_new_expr {
+
+// 'new T()' with parens emits a CXXConstructExpr for T's implicit default
+// ctor. That ctor has no body in the AST (the synthesized body is materialised
+// only at codegen), but it is trivial by the C++ standard and runs no user
+// code, so it cannot delete. Verify the fast-path treats it as trivial.
+struct Plain { int x; };
+
+void [[clang::annotate_type("webkit.nodelete")]] valueInitNew() {
+  Plain* p = new Plain();
+  (void)p;
+}
+
+} // namespace trivial_implicit_ctor_in_new_expr

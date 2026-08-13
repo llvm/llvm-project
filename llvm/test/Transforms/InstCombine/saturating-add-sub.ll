@@ -1367,13 +1367,63 @@ define i8 @test_scalar_uadd_sub_commuted_wrong(i8 %a, i8 %b) {
 
 define i8 @test_scalar_uadd_sub_const(i8 %a) {
 ; CHECK-LABEL: @test_scalar_uadd_sub_const(
-; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[A:%.*]], i8 42)
-; CHECK-NEXT:    [[RES:%.*]] = add i8 [[SAT]], -42
+; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.umin.i8(i8 [[A:%.*]], i8 -43)
 ; CHECK-NEXT:    ret i8 [[RES]]
 ;
   %sat = call i8 @llvm.uadd.sat.i8(i8 %a, i8 42)
   %res = sub i8 %sat, 42
   ret i8 %res
+}
+
+define <2 x i8> @test_vector_uadd_sub_const(<2 x i8> %a) {
+; CHECK-LABEL: @test_vector_uadd_sub_const(
+; CHECK-NEXT:    [[RES:%.*]] = call <2 x i8> @llvm.umin.v2i8(<2 x i8> [[A:%.*]], <2 x i8> splat (i8 -43))
+; CHECK-NEXT:    ret <2 x i8> [[RES]]
+;
+  %sat = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> %a, <2 x i8> splat (i8 42))
+  %res = sub <2 x i8> %sat, splat (i8 42)
+  ret <2 x i8> %res
+}
+
+; negative test - the constants do not cancel
+
+define i8 @test_scalar_uadd_sub_const_mismatch(i8 %a) {
+; CHECK-LABEL: @test_scalar_uadd_sub_const_mismatch(
+; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[A:%.*]], i8 42)
+; CHECK-NEXT:    [[RES:%.*]] = add i8 [[SAT]], -43
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %sat = call i8 @llvm.uadd.sat.i8(i8 %a, i8 42)
+  %res = sub i8 %sat, 43
+  ret i8 %res
+}
+
+; negative test - extra use of the saturating add
+
+define i8 @test_scalar_uadd_sub_const_multiuse(i8 %a) {
+; CHECK-LABEL: @test_scalar_uadd_sub_const_multiuse(
+; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[A:%.*]], i8 42)
+; CHECK-NEXT:    [[RES:%.*]] = add i8 [[SAT]], -42
+; CHECK-NEXT:    call void @usei8(i8 [[SAT]])
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %sat = call i8 @llvm.uadd.sat.i8(i8 %a, i8 42)
+  %res = sub i8 %sat, 42
+  call void @usei8(i8 %sat)
+  ret i8 %res
+}
+
+; negative test - non-splat vector
+
+define <2 x i8> @test_vector_uadd_sub_const_nonsplat(<2 x i8> %a) {
+; CHECK-LABEL: @test_vector_uadd_sub_const_nonsplat(
+; CHECK-NEXT:    [[SAT:%.*]] = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> <i8 42, i8 3>)
+; CHECK-NEXT:    [[RES:%.*]] = add <2 x i8> [[SAT]], <i8 -42, i8 -3>
+; CHECK-NEXT:    ret <2 x i8> [[RES]]
+;
+  %sat = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> %a, <2 x i8> <i8 42, i8 3>)
+  %res = sub <2 x i8> %sat, <i8 42, i8 3>
+  ret <2 x i8> %res
 }
 
 define i1 @scalar_uadd_eq_zero(i8 %a, i8 %b) {
@@ -3086,4 +3136,48 @@ define i8 @no_fold_umin_to_uadd_sat_if_not_zero(i8 %a, i8 %b) {
   %cmp = call i16 @llvm.smax.i16(i16 %zsub, i16 2)
   %r = trunc nuw i16 %cmp to i8
   ret i8 %r
+}
+
+define i8 @fold_icmpeq_to_ssub_sat(i8 %a) {
+; CHECK-LABEL: @fold_icmpeq_to_ssub_sat(
+; CHECK-NEXT:    [[SEL:%.*]] = call i8 @llvm.ssub.sat.i8(i8 0, i8 [[A:%.*]])
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %cmp = icmp eq i8 %a, -128
+  %sub = sub i8 0, %a
+  %sel = select i1 %cmp, i8 127, i8 %sub
+  ret i8 %sel
+}
+
+define i8 @fold_icmpne_to_ssub_sat(i8 %a) {
+; CHECK-LABEL: @fold_icmpne_to_ssub_sat(
+; CHECK-NEXT:    [[SEL:%.*]] = call i8 @llvm.ssub.sat.i8(i8 0, i8 [[A:%.*]])
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %cmp = icmp ne i8 %a, -128
+  %sub = sub i8 0, %a
+  %sel = select i1 %cmp, i8 %sub, i8 127
+  ret i8 %sel
+}
+
+define <4 x i8> @fold_icmpeq_to_ssub_sat_vec(<4 x i8> %a) {
+; CHECK-LABEL: @fold_icmpeq_to_ssub_sat_vec(
+; CHECK-NEXT:    [[SEL:%.*]] = call <4 x i8> @llvm.ssub.sat.v4i8(<4 x i8> zeroinitializer, <4 x i8> [[A:%.*]])
+; CHECK-NEXT:    ret <4 x i8> [[SEL]]
+;
+  %cmp = icmp eq <4 x i8> %a, splat (i8 -128)
+  %sub = sub <4 x i8> zeroinitializer, %a
+  %sel = select <4 x i1> %cmp, <4 x i8> splat (i8 127), <4 x i8> %sub
+  ret <4 x i8> %sel
+}
+
+define <4 x i8> @fold_icmpne_to_ssub_sat_vec(<4 x i8> %a) {
+; CHECK-LABEL: @fold_icmpne_to_ssub_sat_vec(
+; CHECK-NEXT:    [[SEL:%.*]] = call <4 x i8> @llvm.ssub.sat.v4i8(<4 x i8> zeroinitializer, <4 x i8> [[A:%.*]])
+; CHECK-NEXT:    ret <4 x i8> [[SEL]]
+;
+  %cmp = icmp ne <4 x i8> %a, splat (i8 -128)
+  %sub = sub <4 x i8> zeroinitializer, %a
+  %sel = select <4 x i1> %cmp, <4 x i8> %sub, <4 x i8> splat (i8 127)
+  ret <4 x i8> %sel
 }

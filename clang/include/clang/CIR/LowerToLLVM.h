@@ -18,6 +18,9 @@
 namespace llvm {
 class LLVMContext;
 class Module;
+namespace vfs {
+class FileSystem;
+} // namespace vfs
 } // namespace llvm
 
 namespace mlir {
@@ -29,8 +32,9 @@ namespace cir {
 namespace direct {
 std::unique_ptr<llvm::Module>
 lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp mlirModule,
-                             llvm::LLVMContext &llvmCtx,
-                             llvm::StringRef mlirSaveTempsOutFile = {});
+                             llvm::LLVMContext &llvmCtx, bool enableOpenMP,
+                             llvm::StringRef mlirSaveTempsOutFile = {},
+                             llvm::vfs::FileSystem *fs = nullptr);
 } // namespace direct
 } // namespace cir
 

@@ -27,6 +27,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -153,11 +154,8 @@ void X86AsmPrinter::EmitKCFITypePadding(const MachineFunction &MF,
                                         bool HasType) {
   // Keep the function entry aligned, taking patchable-function-prefix into
   // account if set.
-  int64_t PrefixBytes = 0;
-  (void)MF.getFunction()
-      .getFnAttribute("patchable-function-prefix")
-      .getValueAsString()
-      .getAsInteger(10, PrefixBytes);
+  int64_t PrefixBytes = MF.getFunction().getFnAttributeAsParsedInteger(
+      "patchable-function-prefix");
 
   // Also take the type identifier into account if we're emitting
   // one. Otherwise, just pad with nops. The X86::MOV32ri instruction emitted
@@ -192,7 +190,7 @@ void X86AsmPrinter::emitKCFITypeId(const MachineFunction &MF) {
   // symbols for weak parent functions.
   MCSymbol *FnSym = OutContext.getOrCreateSymbol("__cfi_" + MF.getName());
   emitLinkage(&MF.getFunction(), FnSym);
-  if (MAI->hasDotTypeDotSizeDirective())
+  if (MAI.hasDotTypeDotSizeDirective())
     OutStreamer->emitSymbolAttribute(FnSym, MCSA_ELF_TypeFunction);
   OutStreamer->emitLabel(FnSym);
 
@@ -237,7 +235,7 @@ void X86AsmPrinter::emitKCFITypeId(const MachineFunction &MF) {
                               .addReg(DestReg)
                               .addImm(MaskKCFIType(Type->getZExtValue())));
 
-  if (MAI->hasDotTypeDotSizeDirective()) {
+  if (MAI.hasDotTypeDotSizeDirective()) {
     MCSymbol *EndSym = OutContext.createTempSymbol("cfi_func_end");
     OutStreamer->emitLabel(EndSym);
 
@@ -434,6 +432,10 @@ void X86AsmPrinter::PrintLeaMemReference(const MachineInstr *MI, unsigned OpNo,
   // If we really don't want to print out (rip), don't.
   bool HasBaseReg = BaseReg.getReg() != 0;
   if (HasBaseReg && Modifier == "no-rip" && BaseReg.getReg() == X86::RIP)
+    HasBaseReg = false;
+
+  // If we really just want to print out displacement.
+  if ((DispSpec.isGlobal() || DispSpec.isSymbol()) && Modifier == "disp-only")
     HasBaseReg = false;
 
   // HasParenPart - True if we will print out the () part of the mem ref.
@@ -759,6 +761,7 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     if (ExtraCode[1] != 0) return true; // Unknown modifier.
 
     const MachineOperand &MO = MI->getOperand(OpNo);
+    const bool IsIntel = MI->getInlineAsmDialect() == InlineAsm::AD_Intel;
 
     switch (ExtraCode[0]) {
     default:
@@ -781,9 +784,9 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
           O << "(%rip)";
         return false;
       case MachineOperand::MO_Register:
-        O << '(';
+        O << (IsIntel ? '[' : '(');
         PrintOperand(MI, OpNo, O);
-        O << ')';
+        O << (IsIntel ? ']' : ')');
         return false;
       }
 
@@ -807,7 +810,8 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
 
     case 'A': // Print '*' before a register (it must be a register)
       if (MO.isReg()) {
-        O << '*';
+        if (!IsIntel)
+          O << '*';
         PrintOperand(MI, OpNo, O);
         return false;
       }
@@ -960,11 +964,15 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
 
     if (M.getModuleFlag("import-call-optimization"))
       EnableImportCallOptimization = true;
+
+    // Unwind v3 is set for the entire module, not just individual functions.
+    if (M.getWinX64EHUnwindMode() == WinX64EHUnwindMode::V3)
+      OutStreamer->emitWinCFIUnwindVersion(3);
   }
 
   // TODO: Support prefixed registers for the Intel syntax.
   const bool IntelSyntax =
-      MAI->getOutputAssemblerDialect() == InlineAsm::AD_Intel;
+      MAI.getOutputAssemblerDialect() == InlineAsm::AD_Intel;
   OutStreamer->emitSyntaxDirective(IntelSyntax ? "intel" : "att",
                                    IntelSyntax ? "noprefix" : "");
 
@@ -1132,7 +1140,7 @@ void X86AsmPrinter::emitEndOfAsmFile(Module &M) {
       OutStreamer->switchSection(ReadOnlySection);
       OutStreamer->emitLabel(AddrSymbol);
 
-      unsigned PtrSize = MAI->getCodePointerSize();
+      unsigned PtrSize = MAI.getCodePointerSize();
       OutStreamer->emitSymbolValue(GetExternalSymbolSymbol("__morestack"),
                                    PtrSize);
     }
@@ -1156,12 +1164,18 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86AsmPrinter() {
 
 PreservedAnalyses X86AsmPrinterBeginPass::run(Module &M,
                                               ModuleAnalysisManager &MAM) {
+  // Force the computation of SDPI so that it is available for the
+  // actual pass, where it cannot be explicitly requested.
+  MAM.getResult<StaticDataProfileInfoAnalysis>(M);
   X86AsmPrinter &AsmPrinter = static_cast<X86AsmPrinter &>(
       MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
   AsmPrinter.GetPSI = [&MAM](Module &M) {
     return &MAM.getResult<ProfileSummaryAnalysis>(M);
   };
-  AsmPrinter.GetSDPI = [](Module &M) { return nullptr; };
+  AsmPrinter.GetSDPI = [&MAM](Module &M) {
+    return &MAM.getResult<StaticDataProfileInfoAnalysis>(M)
+                .getStaticDataProfileInfo();
+  };
   setupModuleAsmPrinter(M, MAM, AsmPrinter);
   AsmPrinter.doInitialization(M);
   return PreservedAnalyses::all();
@@ -1177,7 +1191,12 @@ PreservedAnalyses X86AsmPrinterPass::run(MachineFunction &MF,
     return MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
         .getCachedResult<ProfileSummaryAnalysis>(M);
   };
-  AsmPrinter.GetSDPI = [](Module &M) { return nullptr; };
+  AsmPrinter.GetSDPI = [&MFAM, &MF](Module &M) {
+    return &MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+                .getCachedResult<StaticDataProfileInfoAnalysis>(
+                    *MF.getFunction().getParent())
+                ->getStaticDataProfileInfo();
+  };
   setupMachineFunctionAsmPrinter(MFAM, MF, AsmPrinter);
   AsmPrinter.runOnMachineFunction(MF);
   return PreservedAnalyses::all();
@@ -1190,7 +1209,10 @@ PreservedAnalyses X86AsmPrinterEndPass::run(Module &M,
   AsmPrinter.GetPSI = [&MAM](Module &M) {
     return &MAM.getResult<ProfileSummaryAnalysis>(M);
   };
-  AsmPrinter.GetSDPI = [](Module &M) { return nullptr; };
+  AsmPrinter.GetSDPI = [&MAM](Module &M) {
+    return &MAM.getResult<StaticDataProfileInfoAnalysis>(M)
+                .getStaticDataProfileInfo();
+  };
   setupModuleAsmPrinter(M, MAM, AsmPrinter);
   AsmPrinter.doFinalization(M);
   return PreservedAnalyses::all();

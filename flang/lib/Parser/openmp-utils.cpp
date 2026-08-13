@@ -13,7 +13,6 @@
 #include "flang/Parser/openmp-utils.h"
 
 #include "flang/Common/indirection.h"
-#include "flang/Common/template.h"
 #include "flang/Common/visit.h"
 #include "flang/Parser/tools.h"
 #include "llvm/ADT/StringRef.h"
@@ -24,6 +23,81 @@
 #include <variant>
 
 namespace Fortran::parser::omp {
+
+const parser::Designator *GetDesignatorFromObj(
+    const parser::OmpObject &object) {
+  return std::get_if<parser::Designator>(&object.u);
+}
+
+const parser::DataRef *GetDataRefFromObj(const parser::OmpObject &object) {
+  if (auto *desg{GetDesignatorFromObj(object)}) {
+    return std::get_if<parser::DataRef>(&desg->u);
+  }
+  return nullptr;
+}
+
+const parser::OmpLocator *GetLocatorFromObj(const parser::OmpObject &object) {
+  return std::get_if<parser::OmpLocator>(&object.u);
+}
+
+const parser::Name *GetCommonBlockFromObj(const parser::OmpObject &object) {
+  return std::get_if<parser::Name>(&object.u);
+}
+
+const parser::ArrayElement *GetArrayElementFromObj(
+    const parser::OmpObject &object) {
+  if (auto *dataRef{GetDataRefFromObj(object)}) {
+    using ElementIndirection = common::Indirection<parser::ArrayElement>;
+    if (auto *ind{std::get_if<ElementIndirection>(&dataRef->u)}) {
+      return &ind->value();
+    }
+  }
+  return nullptr;
+}
+
+std::optional<parser::CharBlock> GetObjectSource(
+    const parser::OmpObject &object) {
+  if (auto *name{GetCommonBlockFromObj(object)}) {
+    return name->source;
+  } else if (auto *desg{GetDesignatorFromObj(object)}) {
+    return GetLastName(*desg).source;
+  } else if (auto *locator{GetLocatorFromObj(object)}) {
+    return common::visit( //
+        common::visitors{
+            [](const parser::OmpReservedIdentifier &x) { return x.v.source; },
+            [](const parser::FunctionReference &x) { return x.source; },
+        },
+        locator->u);
+  }
+  return std::nullopt;
+}
+
+const parser::OmpObject *GetArgumentObject(
+    const parser::OmpArgument &argument) {
+  return std::get_if<parser::OmpObject>(&argument.u);
+}
+
+namespace detail {
+struct DirectiveSpecificationScope {
+  using ODS = OmpDirectiveSpecification;
+  template <typename T> static const ODS &GetODS(const T &x) {
+    if constexpr ( //
+        std::is_base_of_v<OmpBlockConstruct, T> ||
+        std::is_same_v<OpenMPSectionsConstruct, T>) {
+      return x.BeginDir();
+    } else if constexpr (WrapperTrait<T>) {
+      return GetODS(x.v);
+    } else if constexpr (UnionTrait<T>) {
+      return std::visit(
+          [](auto &&s) -> decltype(auto) { return GetODS(s); }, x.u);
+    } else {
+      static_assert(std::is_same_v<OmpSectionDirective, T>);
+      llvm_unreachable("This function does not work for SECTION");
+    }
+  }
+  static inline const ODS &GetODS(const ODS &x) { return x; }
+};
+} // namespace detail
 
 const OmpDirectiveSpecification &GetOmpDirectiveSpecification(
     const OpenMPConstruct &x) {
@@ -87,23 +161,6 @@ const DoConstruct *GetDoConstruct(const ExecutionPartConstruct &x) {
     }
   }
   return nullptr;
-}
-
-const OmpObjectList *GetOmpObjectList(const OmpClause &clause) {
-  return common::visit([](auto &&s) { return GetOmpObjectList(s); }, clause.u);
-}
-
-const OmpObjectList *GetOmpObjectList(const OmpClause::Depend &clause) {
-  return common::visit(
-      common::visitors{
-          [](const OmpDoacross &) -> const OmpObjectList * { return nullptr; },
-          [](const OmpDependClause::TaskDep &x) { return GetOmpObjectList(x); },
-      },
-      clause.v.u);
-}
-
-const OmpObjectList *GetOmpObjectList(const OmpDependClause::TaskDep &x) {
-  return &std::get<OmpObjectList>(x.t);
 }
 
 const OmpClause *FindClause(

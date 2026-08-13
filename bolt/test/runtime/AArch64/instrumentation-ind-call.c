@@ -35,7 +35,7 @@ RUN:   | FileCheck %s --check-prefix=CHECKINDIRECTREG
 
 CHECKINDIRECTREG: mov w0, #0xa
 CHECKINDIRECTREG-NEXT: mov w1, #0x14
-CHECKINDIRECTREG: blr x8
+CHECKINDIRECTREG-NEXT: blr x8
 
 RUN: llvm-bolt %t.exe --instrument --instrumentation-file=%t.fdata \
 RUN:   -o %t.instrumented \
@@ -57,7 +57,7 @@ RUN:   %t.instrumented | FileCheck %s --check-prefix=CHECK-INSTR-INDIR-CALL-FUNC
 CHECK-MAIN: mov w0, #0xa
 CHECK-MAIN-NEXT: mov w1, #0x14
 // store current values
-CHECK-MAIN: stp x0, x30, [sp
+CHECK-MAIN-NEXT: stp x0, x30, [sp
 // load callsite id
 CHECK-MAIN-NEXT: mov x0,
 CHECK-MAIN-NEXT: stp x8, x0, [sp

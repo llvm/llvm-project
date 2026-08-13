@@ -14,15 +14,18 @@
 #include "CGOpenMPRuntimeGPU.h"
 #include "CGDebugInfo.h"
 #include "CodeGenFunction.h"
+#include "TargetInfo.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/OpenMPClause.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
-#include "clang/Basic/Cuda.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/TargetParser/NVPTXTargetParser.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -559,7 +562,8 @@ static bool hasNestedSPMDDirective(ASTContext &Ctx,
     case OMPD_parallel_for_simd:
     case OMPD_cancel:
     case OMPD_cancellation_point:
-    case OMPD_ordered:
+    case OMPD_ordered_standalone:
+    case OMPD_ordered_blockassoc:
     case OMPD_threadprivate:
     case OMPD_allocate:
     case OMPD_task:
@@ -647,7 +651,8 @@ static bool supportsSPMDExecutionMode(ASTContext &Ctx,
   case OMPD_parallel_for_simd:
   case OMPD_cancel:
   case OMPD_cancellation_point:
-  case OMPD_ordered:
+  case OMPD_ordered_standalone:
+  case OMPD_ordered_blockassoc:
   case OMPD_threadprivate:
   case OMPD_allocate:
   case OMPD_task:
@@ -788,8 +793,7 @@ void CGOpenMPRuntimeGPU::emitKernelDeinit(CodeGenFunction &CGF,
           ? 0
           : DL.getTypeAllocSize(LLVMReductionsBufferTy).getFixedValue();
   CGBuilderTy &Bld = CGF.Builder;
-  OMPBuilder.createTargetDeinit(Bld, ReductionDataSize,
-                                C.getLangOpts().OpenMPCUDAReductionBufNum);
+  OMPBuilder.createTargetDeinit(Bld, ReductionDataSize);
   TeamsReductions.clear();
 }
 
@@ -1374,7 +1378,7 @@ void CGOpenMPRuntimeGPU::emitCriticalRegion(
   // Initialize the counter variable for the loop.
   QualType Int32Ty =
       CGF.getContext().getIntTypeForBitwidth(/*DestWidth=*/32, /*Signed=*/0);
-  Address Counter = CGF.CreateMemTemp(Int32Ty, "critical_counter");
+  Address Counter = CGF.CreateMemTempWithoutCast(Int32Ty, "critical_counter");
   LValue CounterLVal = CGF.MakeAddrLValue(Counter, Int32Ty);
   CGF.EmitStoreOfScalar(llvm::Constant::getNullValue(CGM.Int32Ty), CounterLVal,
                         /*isInit=*/true);
@@ -1436,7 +1440,7 @@ static llvm::Value *castValueToType(CodeGenFunction &CGF, llvm::Value *Val,
   if (CastTy->isIntegerType() && ValTy->isIntegerType())
     return CGF.Builder.CreateIntCast(Val, LLVMCastTy,
                                      CastTy->hasSignedIntegerRepresentation());
-  Address CastItem = CGF.CreateMemTemp(CastTy);
+  Address CastItem = CGF.CreateMemTempWithoutCast(CastTy);
   Address ValCastItem = CastItem.withElementType(Val->getType());
   CGF.EmitStoreOfScalar(Val, ValCastItem, /*Volatile=*/false, ValTy,
                         LValueBaseInfo(AlignmentSource::Type),
@@ -1444,6 +1448,59 @@ static llvm::Value *castValueToType(CodeGenFunction &CGF, llvm::Value *Val,
   return CGF.EmitLoadOfScalar(CastItem, /*Volatile=*/false, CastTy, Loc,
                               LValueBaseInfo(AlignmentSource::Type),
                               TBAAAccessInfo());
+}
+
+/// Extracts the built-in reduction operator from a combiner of the form `x = x
+/// <op> rhs` (or the min/max conditional), or nullopt if the shape is not
+/// recognized (e.g. user-defined reductions).
+static std::optional<BinaryOperatorKind>
+getReductionBinOpKind(const Expr *ReductionOp) {
+  const auto *Assign = dyn_cast<BinaryOperator>(ReductionOp);
+  if (!Assign || Assign->getOpcode() != BO_Assign)
+    return std::nullopt;
+  const Expr *RHS = Assign->getRHS();
+  // min/max are lowered as `x <cmp> rhs ? x : rhs`; the comparison identifies
+  // it.
+  if (const auto *ACO =
+          dyn_cast<AbstractConditionalOperator>(RHS->IgnoreParenImpCasts()))
+    RHS = ACO->getCond();
+  if (const auto *BO = dyn_cast<BinaryOperator>(RHS->IgnoreParenImpCasts()))
+    return BO->getOpcode();
+  return std::nullopt;
+}
+
+/// Maps a built-in reduction operator to an atomicrmw opcode for the atomic
+/// cross-team reduction fast path, or nullopt if there is no direct atomicrmw
+/// (e.g. user-defined, complex, fp min/max) so the buffer path is used instead.
+static std::optional<llvm::AtomicRMWInst::BinOp>
+getReductionAtomicRMWOp(BinaryOperatorKind BOK, QualType Ty) {
+  bool IsInt = Ty->isIntegerType();
+  bool IsSigned = Ty->hasSignedIntegerRepresentation();
+  switch (BOK) {
+  case BO_Add:
+  case BO_Sub: // A `-` reduction sums the partials, so it accumulates with add.
+    if (IsInt)
+      return llvm::AtomicRMWInst::Add;
+    if (Ty->isFloatingType())
+      return llvm::AtomicRMWInst::FAdd;
+    return std::nullopt;
+  case BO_And:
+    return IsInt ? std::optional(llvm::AtomicRMWInst::And) : std::nullopt;
+  case BO_Or:
+    return IsInt ? std::optional(llvm::AtomicRMWInst::Or) : std::nullopt;
+  case BO_Xor:
+    return IsInt ? std::optional(llvm::AtomicRMWInst::Xor) : std::nullopt;
+  case BO_LT: // min
+    if (IsInt)
+      return IsSigned ? llvm::AtomicRMWInst::Min : llvm::AtomicRMWInst::UMin;
+    return std::nullopt;
+  case BO_GT: // max
+    if (IsInt)
+      return IsSigned ? llvm::AtomicRMWInst::Max : llvm::AtomicRMWInst::UMax;
+    return std::nullopt;
+  default:
+    return std::nullopt;
+  }
 }
 
 ///
@@ -1698,8 +1755,6 @@ void CGOpenMPRuntimeGPU::emitReduction(
   bool ParallelReduction = isOpenMPParallelDirective(Options.ReductionKind);
   bool TeamsReduction = isOpenMPTeamsDirective(Options.ReductionKind);
 
-  ASTContext &C = CGM.getContext();
-
   if (Options.SimpleReduction) {
     assert(!TeamsReduction && !ParallelReduction &&
            "Invalid reduction selection in emitReduction.");
@@ -1719,8 +1774,13 @@ void CGOpenMPRuntimeGPU::emitReduction(
   const RecordDecl *ReductionRec = ::buildRecordForGlobalizedVars(
       CGM.getContext(), PrivatesReductions, {}, VarFieldMap, 1);
 
-  if (TeamsReduction)
-    TeamsReductions.push_back(ReductionRec);
+  // The atomic cross-team reduction fast path is opt-in. Hand each eligible
+  // scalar reduction an atomic combiner; createReductionsGPU uses the atomic
+  // path only if every reduction in the set has one. Track whether that holds
+  // so we can skip the (then unused) per-team buffer registration.
+  bool UseAtomicReduction =
+      TeamsReduction && CGM.getLangOpts().OpenMPTargetAtomicReduction;
+  bool AllAtomicable = UseAtomicReduction;
 
   // Source location for the ident struct
   llvm::Value *RTLoc = emitUpdateLocation(CGF, Loc);
@@ -1767,6 +1827,13 @@ void CGOpenMPRuntimeGPU::emitReduction(
       auto *CurFn = CGF.CurFn;
       CGF.CurFn = NewFunc;
 
+      // The helper has no DISubprogram of its own, so a debug location here
+      // would name the enclosing function's scope, which is invalid IR.
+      // Suppress them, as the other OpenMPIRBuilder-generated helpers do.
+      llvm::DebugLoc SavedDebugLoc = CGF.Builder.getCurrentDebugLocation();
+      CGF.Builder.SetCurrentDebugLocation(llvm::DebugLoc());
+      CGF.disableDebugInfo();
+
       *LHSPtr = CGF.GetAddrOfLocalVar(
                        cast<VarDecl>(cast<DeclRefExpr>(LHSExprs[I])->getDecl()))
                     .emitRawPointer(CGF);
@@ -1778,11 +1845,52 @@ void CGOpenMPRuntimeGPU::emitReduction(
                                   cast<DeclRefExpr>(LHSExprs[I]),
                                   cast<DeclRefExpr>(RHSExprs[I]));
 
+      CGF.enableDebugInfo();
+      CGF.Builder.SetCurrentDebugLocation(SavedDebugLoc);
       CGF.CurFn = CurFn;
 
       return InsertPointTy(CGF.Builder.GetInsertBlock(),
                            CGF.Builder.GetInsertPoint());
     };
+
+    // For the atomic fast path, hand this reduction an atomic combiner if it is
+    // a scalar with a direct atomicrmw; otherwise the set is not fully
+    // atomicable and falls back to the buffer path.
+    if (UseAtomicReduction) {
+      std::optional<llvm::AtomicRMWInst::BinOp> AtomicOp;
+      if (EvalKind == llvm::OpenMPIRBuilder::EvalKind::Scalar) {
+        if (std::optional<BinaryOperatorKind> BOK =
+                getReductionBinOpKind(ReductionOps[Idx]))
+          AtomicOp = getReductionAtomicRMWOp(*BOK, Private->getType());
+      }
+      if (!AtomicOp) {
+        AllAtomicable = false;
+      } else {
+        llvm::AtomicRMWInst::BinOp Op = *AtomicOp;
+        llvm::Align Alignment =
+            CGM.getModule().getDataLayout().getPrefTypeAlign(ElementType);
+        // Device (agent) scope suffices: all teams accumulate on-device and the
+        // host reads the result only after the kernel (via map-back), so the
+        // far costlier system scope is unnecessary. The
+        // no.fine.grained/no.remote memory metadata is omitted so the atomic
+        // stays correct under USM.
+        llvm::SyncScope::ID SSID = CGF.getTargetHooks().getLLVMSyncScopeID(
+            CGF.getLangOpts(), SyncScope::DeviceScope,
+            llvm::AtomicOrdering::Monotonic, CGF.getLLVMContext());
+        AtomicReductionGen = [Op, Alignment,
+                              SSID](InsertPointTy IP, llvm::Type *EltTy,
+                                    llvm::Value *LHS, llvm::Value *RHS)
+            -> llvm::OpenMPIRBuilder::InsertPointOrErrorTy {
+          llvm::IRBuilder<> Builder(IP.getBlock(), IP.getPoint());
+          llvm::Value *Val = Builder.CreateLoad(EltTy, RHS);
+          Builder.CreateAtomicRMW(Op, LHS, Val, Alignment,
+                                  llvm::AtomicOrdering::Monotonic, SSID);
+          return InsertPointTy(Builder.GetInsertBlock(),
+                               Builder.GetInsertPoint());
+        };
+      }
+    }
+
     ReductionInfos.emplace_back(llvm::OpenMPIRBuilder::ReductionInfo(
         ElementType, Variable, PrivateVariable, EvalKind,
         /*ReductionGen=*/nullptr, ReductionGen, AtomicReductionGen,
@@ -1790,12 +1898,18 @@ void CGOpenMPRuntimeGPU::emitReduction(
     Idx++;
   }
 
+  // The atomic path folds directly into the mapped variable and needs no
+  // per-team buffer; register the record for buffer allocation otherwise.
+  if (TeamsReduction && !AllAtomicable)
+    TeamsReductions.push_back(ReductionRec);
+
+  bool IsSPMD = getExecutionMode() == CGOpenMPRuntimeGPU::EM_SPMD;
   llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
       cantFail(OMPBuilder.createReductionsGPU(
           OmpLoc, AllocaIP, CodeGenIP, ReductionInfos, /*IsByRef=*/{}, false,
-          TeamsReduction, llvm::OpenMPIRBuilder::ReductionGenCBKind::Clang,
-          CGF.getTarget().getGridValue(),
-          C.getLangOpts().OpenMPCUDAReductionBufNum, RTLoc));
+          TeamsReduction, IsSPMD,
+          llvm::OpenMPIRBuilder::ReductionGenCBKind::Clang,
+          CGF.getTarget().getGridValue(), RTLoc));
   CGF.Builder.restoreIP(AfterIP);
 }
 
@@ -1894,14 +2008,14 @@ llvm::Function *CGOpenMPRuntimeGPU::createParallelDataSharingWrapper(
       Ctx.getIntTypeForBitwidth(/*DestWidth=*/16, /*Signed=*/false);
   QualType Int32QTy =
       Ctx.getIntTypeForBitwidth(/*DestWidth=*/32, /*Signed=*/false);
-  ImplicitParamDecl ParallelLevelArg(Ctx, /*DC=*/nullptr, D.getBeginLoc(),
-                                     /*Id=*/nullptr, Int16QTy,
-                                     ImplicitParamKind::Other);
-  ImplicitParamDecl WrapperArg(Ctx, /*DC=*/nullptr, D.getBeginLoc(),
-                               /*Id=*/nullptr, Int32QTy,
-                               ImplicitParamKind::Other);
-  WrapperArgs.emplace_back(&ParallelLevelArg);
-  WrapperArgs.emplace_back(&WrapperArg);
+  auto *ParallelLevelArg = ImplicitParamDecl::Create(
+      Ctx, /*DC=*/nullptr, D.getBeginLoc(),
+      /*Id=*/nullptr, Int16QTy, ImplicitParamKind::Other);
+  auto *WrapperArg = ImplicitParamDecl::Create(
+      Ctx, /*DC=*/nullptr, D.getBeginLoc(),
+      /*Id=*/nullptr, Int32QTy, ImplicitParamKind::Other);
+  WrapperArgs.emplace_back(ParallelLevelArg);
+  WrapperArgs.emplace_back(WrapperArg);
 
   const CGFunctionInfo &CGFI =
       CGM.getTypes().arrangeBuiltinFunctionDeclaration(Ctx.VoidTy, WrapperArgs);
@@ -1935,7 +2049,7 @@ llvm::Function *CGOpenMPRuntimeGPU::createParallelDataSharingWrapper(
   // Get the array of arguments.
   SmallVector<llvm::Value *, 8> Args;
 
-  Args.emplace_back(CGF.GetAddrOfLocalVar(&WrapperArg).emitRawPointer(CGF));
+  Args.emplace_back(CGF.GetAddrOfLocalVar(WrapperArg).emitRawPointer(CGF));
   Args.emplace_back(ZeroAddr.emitRawPointer(CGF));
 
   CGBuilderTy &Bld = CGF.Builder;
@@ -2261,129 +2375,22 @@ bool CGOpenMPRuntimeGPU::hasAllocateAttributeForGlobalVar(const VarDecl *VD,
   return false;
 }
 
-static OffloadArch getOffloadArch(const CodeGenModule &CGM) {
-  // FIXME: This should not require parsing
-  return StringToOffloadArch(CGM.getTarget().getTargetOpts().CPU);
-}
-
 /// Check to see if target architecture supports unified addressing which is
 /// a restriction for OpenMP requires clause "unified_shared_memory".
 void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
-  for (const OMPClause *Clause : D->clauselists()) {
-    if (Clause->getClauseKind() == OMPC_unified_shared_memory) {
-      OffloadArch Arch = getOffloadArch(CGM);
-      switch (Arch) {
-      case OffloadArch::SM_20:
-      case OffloadArch::SM_21:
-      case OffloadArch::SM_30:
-      case OffloadArch::SM_32_:
-      case OffloadArch::SM_35:
-      case OffloadArch::SM_37:
-      case OffloadArch::SM_50:
-      case OffloadArch::SM_52:
-      case OffloadArch::SM_53: {
-        SmallString<256> Buffer;
-        llvm::raw_svector_ostream Out(Buffer);
-        Out << "Target architecture " << OffloadArchToString(Arch)
-            << " does not support unified addressing";
-        CGM.Error(Clause->getBeginLoc(), Out.str());
+  StringRef CPU = CGM.getTarget().getTargetOpts().CPU;
+  if (CGM.getTarget().getTriple().isNVPTX() &&
+      !llvm::NVPTX::supportsUnifiedAddressing(llvm::NVPTX::parseArch(CPU))) {
+    for (const OMPClause *Clause : D->clauselists()) {
+      if (Clause->getClauseKind() == OMPC_unified_shared_memory) {
+        CGM.getDiags().Report(Clause->getBeginLoc(),
+                              diag::err_omp_unified_shared_memory_unsupported)
+            << CPU;
         return;
-      }
-      case OffloadArch::SM_60:
-      case OffloadArch::SM_61:
-      case OffloadArch::SM_62:
-      case OffloadArch::SM_70:
-      case OffloadArch::SM_72:
-      case OffloadArch::SM_75:
-      case OffloadArch::SM_80:
-      case OffloadArch::SM_86:
-      case OffloadArch::SM_87:
-      case OffloadArch::SM_88:
-      case OffloadArch::SM_89:
-      case OffloadArch::SM_90:
-      case OffloadArch::SM_90a:
-      case OffloadArch::SM_100:
-      case OffloadArch::SM_100a:
-      case OffloadArch::SM_101:
-      case OffloadArch::SM_101a:
-      case OffloadArch::SM_103:
-      case OffloadArch::SM_103a:
-      case OffloadArch::SM_110:
-      case OffloadArch::SM_110a:
-      case OffloadArch::SM_120:
-      case OffloadArch::SM_120a:
-      case OffloadArch::SM_121:
-      case OffloadArch::SM_121a:
-      case OffloadArch::GFX600:
-      case OffloadArch::GFX601:
-      case OffloadArch::GFX602:
-      case OffloadArch::GFX700:
-      case OffloadArch::GFX701:
-      case OffloadArch::GFX702:
-      case OffloadArch::GFX703:
-      case OffloadArch::GFX704:
-      case OffloadArch::GFX705:
-      case OffloadArch::GFX801:
-      case OffloadArch::GFX802:
-      case OffloadArch::GFX803:
-      case OffloadArch::GFX805:
-      case OffloadArch::GFX810:
-      case OffloadArch::GFX9_GENERIC:
-      case OffloadArch::GFX900:
-      case OffloadArch::GFX902:
-      case OffloadArch::GFX904:
-      case OffloadArch::GFX906:
-      case OffloadArch::GFX908:
-      case OffloadArch::GFX909:
-      case OffloadArch::GFX90a:
-      case OffloadArch::GFX90c:
-      case OffloadArch::GFX9_4_GENERIC:
-      case OffloadArch::GFX942:
-      case OffloadArch::GFX950:
-      case OffloadArch::GFX10_1_GENERIC:
-      case OffloadArch::GFX1010:
-      case OffloadArch::GFX1011:
-      case OffloadArch::GFX1012:
-      case OffloadArch::GFX1013:
-      case OffloadArch::GFX10_3_GENERIC:
-      case OffloadArch::GFX1030:
-      case OffloadArch::GFX1031:
-      case OffloadArch::GFX1032:
-      case OffloadArch::GFX1033:
-      case OffloadArch::GFX1034:
-      case OffloadArch::GFX1035:
-      case OffloadArch::GFX1036:
-      case OffloadArch::GFX11_GENERIC:
-      case OffloadArch::GFX1100:
-      case OffloadArch::GFX1101:
-      case OffloadArch::GFX1102:
-      case OffloadArch::GFX1103:
-      case OffloadArch::GFX1150:
-      case OffloadArch::GFX1151:
-      case OffloadArch::GFX1152:
-      case OffloadArch::GFX1153:
-      case OffloadArch::GFX1170:
-      case OffloadArch::GFX1171:
-      case OffloadArch::GFX1172:
-      case OffloadArch::GFX12_GENERIC:
-      case OffloadArch::GFX1200:
-      case OffloadArch::GFX1201:
-      case OffloadArch::GFX1250:
-      case OffloadArch::GFX1251:
-      case OffloadArch::GFX12_5_GENERIC:
-      case OffloadArch::GFX1310:
-      case OffloadArch::AMDGCNSPIRV:
-      case OffloadArch::Generic:
-      case OffloadArch::GRANITERAPIDS:
-      case OffloadArch::BMG_G21:
-      case OffloadArch::Unused:
-      case OffloadArch::Unknown:
-        break;
-      case OffloadArch::LAST:
-        llvm_unreachable("Unexpected GPU arch.");
       }
     }
   }
+
   CGOpenMPRuntime::processRequiresDirective(D);
 }
 

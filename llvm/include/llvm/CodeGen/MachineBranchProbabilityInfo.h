@@ -30,27 +30,27 @@ class MachineBranchProbabilityInfo {
   static const uint32_t DEFAULT_WEIGHT = 16;
 
 public:
-  bool invalidate(MachineFunction &, const PreservedAnalyses &PA,
-                  MachineFunctionAnalysisManager::Invalidator &);
+  LLVM_ABI bool invalidate(MachineFunction &, const PreservedAnalyses &PA,
+                           MachineFunctionAnalysisManager::Invalidator &);
 
   // Return edge probability.
-  BranchProbability getEdgeProbability(const MachineBasicBlock *Src,
-                                       const MachineBasicBlock *Dst) const;
+  LLVM_ABI BranchProbability getEdgeProbability(
+      const MachineBasicBlock *Src, const MachineBasicBlock *Dst) const;
 
   // Same as above, but using the successor index from Src. This is faster.
-  BranchProbability getEdgeProbability(const MachineBasicBlock *Src,
-                                       unsigned SuccIdx) const;
+  LLVM_ABI BranchProbability getEdgeProbability(const MachineBasicBlock *Src,
+                                                unsigned SuccIdx) const;
 
   // A 'Hot' edge is an edge which probability is >= 80%.
-  bool isEdgeHot(const MachineBasicBlock *Src,
-                 const MachineBasicBlock *Dst) const;
+  LLVM_ABI bool isEdgeHot(const MachineBasicBlock *Src,
+                          const MachineBasicBlock *Dst) const;
 
   // Print value between 0 (0% probability) and 1 (100% probability),
   // however the value is never equal to 0, and can be 1 only iff SRC block
   // has only one successor.
-  raw_ostream &printEdgeProbability(raw_ostream &OS,
-                                    const MachineBasicBlock *Src,
-                                    const MachineBasicBlock *Dst) const;
+  LLVM_ABI raw_ostream &
+  printEdgeProbability(raw_ostream &OS, const MachineBasicBlock *Src,
+                       const MachineBasicBlock *Dst) const;
 };
 
 class MachineBranchProbabilityAnalysis
@@ -62,20 +62,20 @@ class MachineBranchProbabilityAnalysis
 public:
   using Result = MachineBranchProbabilityInfo;
 
-  Result run(MachineFunction &, MachineFunctionAnalysisManager &);
+  LLVM_ABI Result run(MachineFunction &, MachineFunctionAnalysisManager &);
 };
 
 class MachineBranchProbabilityPrinterPass
-    : public PassInfoMixin<MachineBranchProbabilityPrinterPass> {
+    : public RequiredPassInfoMixin<MachineBranchProbabilityPrinterPass> {
   raw_ostream &OS;
 
 public:
   MachineBranchProbabilityPrinterPass(raw_ostream &OS) : OS(OS) {}
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
 };
 
-class MachineBranchProbabilityInfoWrapperPass : public ImmutablePass {
+class LLVM_ABI MachineBranchProbabilityInfoWrapperPass : public ImmutablePass {
   virtual void anchor();
 
   MachineBranchProbabilityInfo MBPI;

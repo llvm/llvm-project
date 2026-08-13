@@ -14,8 +14,10 @@ b0:
 
 ; CHECK-LABEL: f1
 ; This is a rotate left by %a1(r1). Use register-pair shift to implement it.
-; CHECK: r[[R10:[0-9]+]]:[[R11:[0-9]+]] = combine(r0,r0)
-; CHECK: r[[R12:[0-9]+]]:[[R13:[0-9]+]] = asl(r[[R10]]:[[R11]],r1)
+; The amount must be masked modulo 32 because Hexagon's variable shift does not
+; reduce it and treats it as signed.
+; CHECK: r[[R1A:[0-9]+]] = and(r1,#31)
+; CHECK: r[[R12:[0-9]+]]:[[R13:[0-9]+]] = asl(r{{[0-9]+}}:{{[0-9]+}},r[[R1A]])
 ; CHECK: r0 = r[[R12]]
 define i32 @f1(i32 %a0, i32 %a1) #0 {
 b0:
@@ -38,8 +40,10 @@ b0:
 
 ; CHECK-LABEL: f3
 ; This is a rotate right by %a1(r1). Use register-pair shift to implement it.
-; CHECK: r[[R30:[0-9]+]]:[[R31:[0-9]+]] = combine(r0,r0)
-; CHECK: r[[R32:[0-9]+]]:[[R33:[0-9]+]] = lsr(r[[R30]]:[[R31]],r1)
+; The amount must be masked modulo 32 because Hexagon's variable shift does not
+; reduce it and treats it as signed.
+; CHECK: r[[R3A:[0-9]+]] = and(r1,#31)
+; CHECK: r[[R32:[0-9]+]]:[[R33:[0-9]+]] = lsr(r{{[0-9]+}}:{{[0-9]+}},r[[R3A]])
 define i32 @f3(i32 %a0, i32 %a1) #0 {
 b0:
   %v0 = lshr i32 %a0, %a1

@@ -16,8 +16,6 @@
 // Ensure that money_get::do_get correct works when the input doesn't fit into the stack buffer
 // (100 characters currently).
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <cassert>
 #include <cstddef>
 #include <ios>

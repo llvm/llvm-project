@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -amdgpu-enable-object-linking -passes=amdgpu-lower-exec-sync,amdgpu-lower-module-lds < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgpu-amd-amdhsa -amdgpu-enable-object-linking -passes=amdgpu-lower-exec-sync,amdgpu-lower-module-lds < %s | FileCheck %s
 
 ; Verify that with object linking enabled:
 ; 1. AMDGPULowerExecSync externalizes named barriers and emits
@@ -17,10 +17,10 @@
 
 define amdgpu_kernel void @kernel(i32 %idx) {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel(
-; CHECK:         call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @[[BAR]], i32 3)
 ; CHECK:         call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) @[[BAR]])
-  call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar, i32 3)
+; CHECK:         call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @[[BAR]], i32 3)
   call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) @bar)
+  call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar, i32 3)
   call void @llvm.amdgcn.s.barrier.wait(i16 1)
   %gep = getelementptr [4 x i32], ptr addrspace(3) @lds, i32 0, i32 %idx
   store i32 42, ptr addrspace(3) %gep, align 4

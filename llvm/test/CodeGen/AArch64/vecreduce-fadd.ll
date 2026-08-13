@@ -639,15 +639,23 @@ define float @fadd_reduct_reassoc_v4f32(<4 x float> %a, <4 x float> %b) {
 }
 
 define float @fadd_reduct_reassoc_v4f32_init(float %i, <4 x float> %a, <4 x float> %b) {
-; CHECK-LABEL: fadd_reduct_reassoc_v4f32_init:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    faddp v1.4s, v1.4s, v1.4s
-; CHECK-NEXT:    faddp v2.4s, v2.4s, v2.4s
-; CHECK-NEXT:    faddp s1, v1.2s
-; CHECK-NEXT:    fadd s0, s0, s1
-; CHECK-NEXT:    faddp s1, v2.2s
-; CHECK-NEXT:    fadd s0, s0, s1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: fadd_reduct_reassoc_v4f32_init:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fadd v1.4s, v2.4s, v1.4s
+; CHECK-SD-NEXT:    faddp v1.4s, v1.4s, v1.4s
+; CHECK-SD-NEXT:    faddp s1, v1.2s
+; CHECK-SD-NEXT:    fadd s0, s1, s0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fadd_reduct_reassoc_v4f32_init:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    faddp v1.4s, v1.4s, v1.4s
+; CHECK-GI-NEXT:    faddp v2.4s, v2.4s, v2.4s
+; CHECK-GI-NEXT:    faddp s1, v1.2s
+; CHECK-GI-NEXT:    fadd s0, s0, s1
+; CHECK-GI-NEXT:    faddp s1, v2.2s
+; CHECK-GI-NEXT:    fadd s0, s0, s1
+; CHECK-GI-NEXT:    ret
   %r1 = call fast float @llvm.vector.reduce.fadd.f32.v4f32(float %i, <4 x float> %a)
   %r2 = call fast float @llvm.vector.reduce.fadd.f32.v4f32(float -0.0, <4 x float> %b)
   %r = fadd fast float %r1, %r2

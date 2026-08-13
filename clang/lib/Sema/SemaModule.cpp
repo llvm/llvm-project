@@ -389,6 +389,11 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
       else if (const ModuleFileName *FileName = M->getASTFileName())
         Diag(M->DefinitionLoc, diag::note_prev_module_definition_from_ast_file)
             << *FileName;
+      // A Clang module or a header unit cannot be used as the current named
+      // module while recovering from it. See clang/test/Modules/GH204632.cppm
+      // for an example.
+      if (!M->isNamedModule())
+        return nullptr;
       Mod = M;
       break;
     }
@@ -418,6 +423,13 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
                                              Module::AllVisible,
                                              /*IsInclusionDirective=*/false);
     const_cast<LangOptions &>(getLangOpts()).CurrentModule = ModuleName;
+
+    // A Clang module or a header unit cannot serve as the primary module
+    // interface while recovering from an implementation unit declaration.
+    if (Interface && !Interface->isNamedModule()) {
+      Diag(ModuleLoc, diag::err_module_not_defined) << ModuleName;
+      return nullptr;
+    }
 
     if (!Interface) {
       Diag(ModuleLoc, diag::err_module_not_defined) << ModuleName;
@@ -483,7 +495,7 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
     // Sequence initialization of the imported module before that of the current
     // module, if any.
     Context.addModuleInitializer(ModuleScopes.back().Module, Import);
-    Mod->Imports.insert(Interface); // As if we imported it.
+    Mod->Imports.push_back(Interface); // As if we imported it.
     // Also save this as a shortcut to checking for decls in the interface
     ThePrimaryInterface = Interface;
     // If we made an implicit import of the module interface, then return the
@@ -710,7 +722,7 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
     if (ExportLoc.isValid() || getEnclosingExportDecl(Import))
       getCurrentModule()->Exports.emplace_back(Mod, false);
     else
-      getCurrentModule()->Imports.insert(Mod);
+      getCurrentModule()->Imports.push_back(Mod);
   }
 
   HadImportedNamedModules = true;

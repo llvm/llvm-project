@@ -13,10 +13,10 @@
 
 namespace llvm {
 
-struct InferAddressSpacesPass : PassInfoMixin<InferAddressSpacesPass> {
-  InferAddressSpacesPass();
-  InferAddressSpacesPass(unsigned AddressSpace);
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+struct InferAddressSpacesPass : OptionalPassInfoMixin<InferAddressSpacesPass> {
+  LLVM_ABI InferAddressSpacesPass();
+  LLVM_ABI InferAddressSpacesPass(unsigned AddressSpace);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
 private:
   unsigned FlatAddrSpace = 0;

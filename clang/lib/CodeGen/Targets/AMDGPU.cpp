@@ -8,7 +8,9 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
+#include "clang/AST/DeclCXX.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 
 using namespace clang;
@@ -75,62 +77,6 @@ bool AMDGPUABIInfo::isHomogeneousAggregateSmallEnough(
 
   // Homogeneous Aggregates may occupy at most 16 registers.
   return Members * NumRegs <= MaxNumRegsForArgsRet;
-}
-
-/// Check if all fields in an aggregate type contain only sub-32-bit integer
-/// types. Such aggregates should be packed into i32 registers rather than
-/// passed as individual elements. Aggregates containing floats or full-sized
-/// integer types (i32, i64) should preserve their original types.
-static bool containsOnlyPackableIntegerTypes(const RecordDecl *RD,
-                                             const ASTContext &Context) {
-  for (const FieldDecl *Field : RD->fields()) {
-    QualType FieldTy = Field->getType();
-
-    // For bitfields, they are always integer types so they're always packable.
-    // A bitfield like "unsigned a : 4" should be packable even though
-    // 'unsigned' is 32 bits. Similarly, larger bitfields that fill into
-    // wider ints (like i64) should also be packed.
-    if (Field->isBitField()) {
-      continue;
-    }
-
-    // Recursively check nested structs
-    if (const RecordDecl *NestedRD = FieldTy->getAsRecordDecl()) {
-      if (!containsOnlyPackableIntegerTypes(NestedRD, Context))
-        return false;
-      continue;
-    }
-
-    // Arrays - check the element type
-    if (const ConstantArrayType *AT = Context.getAsConstantArrayType(FieldTy)) {
-      QualType EltTy = AT->getElementType();
-      if (const RecordDecl *NestedRD = EltTy->getAsRecordDecl()) {
-        if (!containsOnlyPackableIntegerTypes(NestedRD, Context))
-          return false;
-        continue;
-      }
-      // For non-struct array elements, check if they're packable integers
-      if (!EltTy->isIntegerType())
-        return false;
-      uint64_t EltSize = Context.getTypeSize(EltTy);
-      if (EltSize >= 32)
-        return false;
-      continue;
-    }
-
-    // Floating point types should not be packed into integers
-    if (FieldTy->isFloatingType())
-      return false;
-
-    // Only integer types that are smaller than 32 bits should be packed
-    if (!FieldTy->isIntegerType())
-      return false;
-
-    uint64_t FieldSize = Context.getTypeSize(FieldTy);
-    if (FieldSize >= 32)
-      return false;
-  }
-  return true;
 }
 
 /// Estimate number of registers the type will use when passed in registers.
@@ -211,27 +157,17 @@ ABIArgInfo AMDGPUABIInfo::classifyReturnType(QualType RetTy) const {
           RD && RD->hasFlexibleArrayMember())
         return DefaultABIInfo::classifyReturnType(RetTy);
 
-      // Pack aggregates <= 8 bytes into single VGPR or pair, but only if they
-      // contain sub-32-bit integer types. Aggregates with floats or full-sized
-      // integers should preserve their original types.
+      // Pack aggregates <= 4 bytes into single VGPR or pair.
       uint64_t Size = getContext().getTypeSize(RetTy);
+      if (Size <= 16)
+        return ABIArgInfo::getDirect(llvm::Type::getInt16Ty(getVMContext()));
+
+      if (Size <= 32)
+        return ABIArgInfo::getDirect(llvm::Type::getInt32Ty(getVMContext()));
+
       if (Size <= 64) {
-        const RecordDecl *RD = RetTy->getAsRecordDecl();
-        bool ShouldPackToInt =
-            RD && containsOnlyPackableIntegerTypes(RD, getContext());
-
-        if (ShouldPackToInt) {
-          if (Size <= 16)
-            return ABIArgInfo::getDirect(
-                llvm::Type::getInt16Ty(getVMContext()));
-
-          if (Size <= 32)
-            return ABIArgInfo::getDirect(
-                llvm::Type::getInt32Ty(getVMContext()));
-
-          llvm::Type *I32Ty = llvm::Type::getInt32Ty(getVMContext());
-          return ABIArgInfo::getDirect(llvm::ArrayType::get(I32Ty, 2));
-        }
+        llvm::Type *I32Ty = llvm::Type::getInt32Ty(getVMContext());
+        return ABIArgInfo::getDirect(llvm::ArrayType::get(I32Ty, 2));
       }
 
       if (numRegsForType(RetTy) <= MaxNumRegsForArgsRet)
@@ -312,28 +248,21 @@ ABIArgInfo AMDGPUABIInfo::classifyArgumentType(QualType Ty, bool Variadic,
         RD && RD->hasFlexibleArrayMember())
       return DefaultABIInfo::classifyArgumentType(Ty);
 
-    // Pack aggregates <= 8 bytes into single VGPR or pair, but only if they
-    // contain sub-32-bit integer types. Aggregates with floats or full-sized
-    // integers (i32, i64) should preserve their original types.
+    // Pack aggregates <= 8 bytes into single VGPR or pair.
     uint64_t Size = getContext().getTypeSize(Ty);
     if (Size <= 64) {
-      const RecordDecl *RD = Ty->getAsRecordDecl();
-      bool ShouldPackToInt =
-          RD && containsOnlyPackableIntegerTypes(RD, getContext());
+      unsigned NumRegs = (Size + 31) / 32;
+      NumRegsLeft -= std::min(NumRegsLeft, NumRegs);
 
-      if (ShouldPackToInt) {
-        unsigned NumRegs = (Size + 31) / 32;
-        NumRegsLeft -= std::min(NumRegsLeft, NumRegs);
+      if (Size <= 16)
+        return ABIArgInfo::getDirect(llvm::Type::getInt16Ty(getVMContext()));
 
-        if (Size <= 16)
-          return ABIArgInfo::getDirect(llvm::Type::getInt16Ty(getVMContext()));
+      if (Size <= 32)
+        return ABIArgInfo::getDirect(llvm::Type::getInt32Ty(getVMContext()));
 
-        if (Size <= 32)
-          return ABIArgInfo::getDirect(llvm::Type::getInt32Ty(getVMContext()));
-
-        llvm::Type *I32Ty = llvm::Type::getInt32Ty(getVMContext());
-        return ABIArgInfo::getDirect(llvm::ArrayType::get(I32Ty, 2));
-      }
+      // XXX: Should this be i64 instead, and should the limit increase?
+      llvm::Type *I32Ty = llvm::Type::getInt32Ty(getVMContext());
+      return ABIArgInfo::getDirect(llvm::ArrayType::get(I32Ty, 2));
     }
 
     if (NumRegsLeft > 0) {
@@ -377,10 +306,8 @@ public:
   llvm::Constant *getNullPointer(const CodeGen::CodeGenModule &CGM,
       llvm::PointerType *T, QualType QT) const override;
 
-  LangAS getASTAllocaAddressSpace() const override {
-    return getLangASFromTargetAS(
-        getABIInfo().getDataLayout().getAllocaAddrSpace());
-  }
+  LangAS getSRetAddrSpace(const CXXRecordDecl *RD) const override;
+
   LangAS getGlobalVarAddressSpace(CodeGenModule &CGM,
                                   const VarDecl *D) const override;
   StringRef getLLVMSyncScopeStr(const LangOptions &LangOpts, SyncScope Scope,
@@ -420,8 +347,30 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
   const bool IsHIPKernel = M.getLangOpts().HIP && FD->hasAttr<CUDAGlobalAttr>();
 
   const auto *FlatWGS = FD->getAttr<AMDGPUFlatWorkGroupSizeAttr>();
+
+  // __launch_bounds__ only takes effect on kernels and is silently ignored on
+  // other functions The arguments are honored only if the equivalent native
+  // amdgpu_flat_work_group_size / amdgpu_waves_per_eu attribute was not also
+  // used out; those take precedence.
+  const auto *LaunchBounds =
+      IsHIPKernel ? FD->getAttr<CUDALaunchBoundsAttr>() : nullptr;
+  unsigned LBMaxThreads = 0;
+  unsigned LBMinWaves = 0;
+  if (LaunchBounds) {
+    LBMaxThreads = LaunchBounds->getMaxThreads()
+                       ->EvaluateKnownConstInt(M.getContext())
+                       .getExtValue();
+    if (const Expr *MinBlocks = LaunchBounds->getMinBlocks()) {
+      LBMinWaves =
+          MinBlocks->EvaluateKnownConstInt(M.getContext()).getExtValue();
+    }
+  }
+
   if (ReqdWGS || FlatWGS) {
     M.handleAMDGPUFlatWorkGroupSizeAttr(F, FlatWGS, ReqdWGS);
+  } else if (LBMaxThreads > 0) {
+    F->addFnAttr("amdgpu-flat-work-group-size",
+                 "1," + llvm::utostr(LBMaxThreads));
   } else if (IsOpenCLKernel || IsHIPKernel) {
     // By default, restrict the maximum size to a value specified by
     // --gpu-max-threads-per-block=n or its default value for HIP.
@@ -434,8 +383,15 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
     F->addFnAttr("amdgpu-flat-work-group-size", AttrVal);
   }
 
-  if (const auto *Attr = FD->getAttr<AMDGPUWavesPerEUAttr>())
+  if (const auto *Attr = FD->getAttr<AMDGPUWavesPerEUAttr>()) {
     M.handleAMDGPUWavesPerEUAttr(F, Attr);
+  } else if (LBMinWaves > 0) {
+    // HIP reinterprets the second argument as the minimum waves per EU.
+    //
+    // TODO: The third argument (maxclusterrank) could be used if the AMDGPU
+    // "clusters" feature is supported for the current subtarget.
+    F->addFnAttr("amdgpu-waves-per-eu", llvm::utostr(LBMinWaves));
+  }
 
   if (const auto *Attr = FD->getAttr<AMDGPUNumSGPRAttr>()) {
     unsigned NumSGPR = Attr->getNumSGPR();
@@ -541,6 +497,16 @@ llvm::Constant *AMDGPUTargetCodeGenInfo::getNullPointer(
 }
 
 LangAS
+AMDGPUTargetCodeGenInfo::getSRetAddrSpace(const CXXRecordDecl *RD) const {
+  // Types with no viable copy/move must be constructed in-place , use the
+  // default AS so the sret pointer matches the "this" convention.
+  if (RD && !RD->canPassInRegisters())
+    return LangAS::Default;
+  return getLangASFromTargetAS(
+      getABIInfo().getDataLayout().getAllocaAddrSpace());
+}
+
+LangAS
 AMDGPUTargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
                                                   const VarDecl *D) const {
   assert(!CGM.getLangOpts().OpenCL &&
@@ -574,32 +540,11 @@ StringRef AMDGPUTargetCodeGenInfo::getLLVMSyncScopeStr(
                   Scope <= SyncScope::OpenCLSubGroup &&
                   Ordering != llvm::AtomicOrdering::SequentiallyConsistent);
 
-  switch (Scope) {
-  case SyncScope::HIPSingleThread:
-  case SyncScope::SingleScope:
-    return IsOneAs ? "singlethread-one-as" : "singlethread";
-  case SyncScope::HIPWavefront:
-  case SyncScope::OpenCLSubGroup:
-  case SyncScope::WavefrontScope:
-    return IsOneAs ? "wavefront-one-as" : "wavefront";
-  case SyncScope::HIPCluster:
-  case SyncScope::ClusterScope:
-    assert(!IsOneAs && "OpenCL does not have cluster scope");
-    return "cluster";
-  case SyncScope::HIPWorkgroup:
-  case SyncScope::OpenCLWorkGroup:
-  case SyncScope::WorkgroupScope:
-    return IsOneAs ? "workgroup-one-as" : "workgroup";
-  case SyncScope::HIPAgent:
-  case SyncScope::OpenCLDevice:
-  case SyncScope::DeviceScope:
-    return IsOneAs ? "agent-one-as" : "agent";
-  case SyncScope::SystemScope:
-  case SyncScope::HIPSystem:
-  case SyncScope::OpenCLAllSVMDevices:
-    return IsOneAs ? "one-as" : "";
-  }
-  llvm_unreachable("Unknown SyncScope enum");
+  llvm::AtomicScope AS = getAtomicScope(Scope);
+  assert((AS != llvm::AtomicScope::Cluster || !IsOneAs) &&
+         "OpenCL does not have cluster scope");
+  return *llvm::getAtomicScopeIRString(getABIInfo().getTarget().getTriple(), AS,
+                                       IsOneAs);
 }
 
 void AMDGPUTargetCodeGenInfo::setTargetAtomicMetadata(
@@ -623,6 +568,8 @@ void AMDGPUTargetCodeGenInfo::setTargetAtomicMetadata(
         llvm::APInt(32, llvm::AMDGPUAS::PRIVATE_ADDRESS + 1));
     AtomicInst.setMetadata(llvm::LLVMContext::MD_noalias_addrspace, ASRange);
   }
+
+  CGF.AddAMDGPUAvailableVisibleMMRA(&AtomicInst);
 
   if (!RMW)
     return;
@@ -795,15 +742,15 @@ void CodeGenModule::handleAMDGPUFlatWorkGroupSizeAttr(
   auto Eval = [&](Expr *E) {
     return E->EvaluateKnownConstInt(getContext()).getExtValue();
   };
-  if (FlatWGS) {
+  if (ReqdWGS) {
+    Min = Max = Eval(ReqdWGS->getXDim()) * Eval(ReqdWGS->getYDim()) *
+                Eval(ReqdWGS->getZDim());
+  } else if (FlatWGS) {
     Min = Eval(FlatWGS->getMin());
     Max = Eval(FlatWGS->getMax());
   }
-  if (ReqdWGS && Min == 0 && Max == 0)
-    Min = Max = Eval(ReqdWGS->getXDim()) * Eval(ReqdWGS->getYDim()) *
-                Eval(ReqdWGS->getZDim());
 
-  if (Min != 0) {
+  if (Min != 0 || ReqdWGS) {
     assert(Min <= Max && "Min must be less than or equal Max");
 
     if (MinThreadsVal)

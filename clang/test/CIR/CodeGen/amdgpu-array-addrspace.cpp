@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fclangir -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fclangir -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fclangir -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 
 // Test that address spaces are preserved through array-to-pointer decay
@@ -35,7 +35,7 @@ void pass_global_array() {
 
 // CIR-LABEL: cir.func{{.*}} @_Z18index_global_arrayi
 // CIR:         %[[ARR:.*]] = cir.get_global @globalArr : !cir.ptr<!cir.array<!s32i x 10>, target_address_space(1)>
-// CIR-NEXT:    %[[ELEM:.*]] = cir.get_element %[[ARR]][%{{.*}} : !s32i] : !cir.ptr<!cir.array<!s32i x 10>, target_address_space(1)> -> !cir.ptr<!s32i, target_address_space(1)>
+// CIR-NEXT:    %[[ELEM:.*]] = cir.get_element %[[ARR]][%{{.*}} : !s64i] : !cir.ptr<!cir.array<!s32i x 10>, target_address_space(1)> -> !cir.ptr<!s32i, target_address_space(1)>
 // CIR-NEXT:    %{{.*}} = cir.load align(4) %[[ELEM]] : !cir.ptr<!s32i, target_address_space(1)>, !s32i
 
 // LLVM-LABEL: define{{.*}} i32 @_Z18index_global_arrayi

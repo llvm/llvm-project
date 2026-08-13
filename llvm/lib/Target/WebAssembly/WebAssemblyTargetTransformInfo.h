@@ -59,6 +59,7 @@ public:
   bool enableInterleavedAccessVectorization() const override { return true; }
 
   unsigned getNumberOfRegisters(unsigned ClassID) const override;
+  unsigned getMinVectorRegisterBitWidth() const override { return 32; }
   TypeSize
   getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const override;
   InstructionCost getArithmeticInstrCost(

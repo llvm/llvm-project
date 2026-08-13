@@ -120,6 +120,56 @@ RISCVRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   }
 }
 
+const TargetRegisterClass *RISCVRegisterInfo::getConstrainedRegClassForOperand(
+    const MachineOperand &MO, const MachineRegisterInfo &MRI) const {
+  const RISCVSubtarget &STI = MRI.getMF().getSubtarget<RISCVSubtarget>();
+
+  const RegClassOrRegBank &RCOrRB = MRI.getRegClassOrRegBank(MO.getReg());
+  if (const RegisterBank *RB = dyn_cast<const RegisterBank *>(RCOrRB))
+    return getRegClassForTypeOnBank(MRI.getType(MO.getReg()), *RB,
+                                    STI.is64Bit());
+
+  if (const auto *RC = dyn_cast<const TargetRegisterClass *>(RCOrRB)) {
+    return getAllocatableClass(RC);
+  }
+
+  return nullptr;
+}
+
+const TargetRegisterClass *
+RISCVRegisterInfo::getRegClassForTypeOnBank(LLT Ty, const RegisterBank &RB,
+                                            bool Is64Bit) const {
+  if (RB.getID() == RISCV::GPRBRegBankID) {
+    if (Ty.getSizeInBits() <= 32 || (Is64Bit && Ty.getSizeInBits() == 64))
+      return &RISCV::GPRRegClass;
+  }
+
+  if (RB.getID() == RISCV::FPRBRegBankID) {
+    if (Ty.getSizeInBits() == 16)
+      return &RISCV::FPR16RegClass;
+    if (Ty.getSizeInBits() == 32)
+      return &RISCV::FPR32RegClass;
+    if (Ty.getSizeInBits() == 64)
+      return &RISCV::FPR64RegClass;
+  }
+
+  if (RB.getID() == RISCV::VRBRegBankID) {
+    if (Ty.getSizeInBits().getKnownMinValue() <= 64)
+      return &RISCV::VRRegClass;
+
+    if (Ty.getSizeInBits().getKnownMinValue() == 128)
+      return &RISCV::VRM2RegClass;
+
+    if (Ty.getSizeInBits().getKnownMinValue() == 256)
+      return &RISCV::VRM4RegClass;
+
+    if (Ty.getSizeInBits().getKnownMinValue() == 512)
+      return &RISCV::VRM8RegClass;
+  }
+
+  return nullptr;
+}
+
 BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   const RISCVFrameLowering *TFI = getFrameLowering(MF);
   BitVector Reserved(getNumRegs());
@@ -127,12 +177,16 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
   for (size_t Reg = 0; Reg < getNumRegs(); Reg++) {
     // Mark any GPRs requested to be reserved as such
-    if (Subtarget.isRegisterReservedByUser(Reg))
-      markSuperRegs(Reserved, Reg);
+    if (Subtarget.isRegisterReservedByUser(Reg)) {
+      for (MCPhysReg Sub : subregs_inclusive(Reg))
+        markSuperRegs(Reserved, Sub);
+    }
 
     // Mark all the registers defined as constant in TableGen as reserved.
-    if (isConstantPhysReg(Reg))
-      markSuperRegs(Reserved, Reg);
+    if (isConstantPhysReg(Reg)) {
+      for (MCPhysReg Sub : subregs_inclusive(Reg))
+        markSuperRegs(Reserved, Sub);
+    }
   }
 
   // Use markSuperRegs to ensure any register aliases are also reserved
@@ -220,8 +274,12 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
       const int64_t NumOfVReg = Offset.getScalable() / 8;
       const int64_t FixedOffset = NumOfVReg * VLENB;
       if (!isInt<32>(FixedOffset)) {
-        reportFatalUsageError(
-            "Frame size outside of the signed 32-bit range not supported");
+        // This check might also need to be updated to 64bit.
+        // However mulImm() still assumes 32bit. For now only support fixed
+        // 64bit frame offsets, since scalable offsets would require the number
+        // of spilled registers to exceed 2^31, which is unlikely.
+        reportFatalUsageError("Scalable frame size outside of the signed "
+                              "32-bit range not supported");
       }
       Offset = StackOffset::getFixed(FixedOffset + Offset.getFixed());
     }
@@ -379,6 +437,18 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
     }
   }
 
+  // Emit a PseudoAddUpperImm instead of LUI+ADD when the offset is a multiple
+  // of 4096 and the source is the frame register. The frame register is
+  // invariant after PEI, so MachineLateInstrsCleanup can CSE identical pseudos.
+  // The pseudo is later expanded back to LUI+ADD.
+  if (Flag == MachineInstr::NoFlags && !KillSrcReg && DestReg != SrcReg &&
+      SrcReg == getFrameRegister(MF) && isShiftedInt<20, 12>(Val)) {
+    BuildMI(MBB, II, DL, TII->get(RISCV::PseudoAddUpperImm), DestReg)
+        .addReg(SrcReg)
+        .addImm(static_cast<uint32_t>(Val) >> 12);
+    return;
+  }
+
   unsigned Opc = RISCV::ADD;
   if (Val < 0) {
     Val = -Val;
@@ -503,6 +573,29 @@ void RISCVRegisterInfo::lowerSegmentSpillReload(MachineBasicBlock::iterator II,
   II->eraseFromParent();
 }
 
+static unsigned getXqciloWideOpcode(unsigned Opc) {
+  switch (Opc) {
+  case RISCV::LW:
+    return RISCV::QC_E_LW;
+  case RISCV::SW:
+    return RISCV::QC_E_SW;
+  case RISCV::LB:
+    return RISCV::QC_E_LB;
+  case RISCV::LBU:
+    return RISCV::QC_E_LBU;
+  case RISCV::LH:
+    return RISCV::QC_E_LH;
+  case RISCV::LHU:
+    return RISCV::QC_E_LHU;
+  case RISCV::SB:
+    return RISCV::QC_E_SB;
+  case RISCV::SH:
+    return RISCV::QC_E_SH;
+  default:
+    return 0;
+  }
+}
+
 bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                             int SPAdj, unsigned FIOperandNum,
                                             RegScavenger *RS) const {
@@ -511,6 +604,9 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   MachineInstr &MI = *II;
   MachineFunction &MF = *MI.getParent()->getParent();
   MachineRegisterInfo &MRI = MF.getRegInfo();
+  const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
+  const RISCVInstrInfo *TII = ST.getInstrInfo();
+  bool Is64Bit = ST.is64Bit();
   DebugLoc DL = MI.getDebugLoc();
 
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
@@ -521,14 +617,15 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   if (!IsRVVSpill)
     Offset += StackOffset::getFixed(MI.getOperand(FIOperandNum + 1).getImm());
 
-  if (!isInt<32>(Offset.getFixed())) {
-    reportFatalUsageError(
-        "Frame offsets outside of the signed 32-bit range not supported");
+  if (!Is64Bit && !isInt<32>(Offset.getFixed())) {
+    reportFatalUsageError("Frame offsets outside of the signed 32-bit range "
+                          "not supported on RV32");
   }
 
   if (!IsRVVSpill) {
     int64_t Val = Offset.getFixed();
     int64_t Lo12 = SignExtend64<12>(Val);
+    int64_t Lo26 = SignExtend64<26>(Val);
     unsigned Opc = MI.getOpcode();
 
     if (Opc == RISCV::ADDI && !isInt<12>(Val)) {
@@ -555,6 +652,22 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       // instruction will add 4 to the immediate. If that would overflow 12
       // bits, we can't fold the offset.
       MI.getOperand(FIOperandNum + 1).ChangeToImmediate(0);
+    } else if (unsigned WideOpc = getXqciloWideOpcode(Opc);
+               !isInt<12>(Val) && ST.hasVendorXqcilo() && WideOpc) {
+      // The resolved frame offset exceeds simm12 but the instruction is a
+      // standard load/store (LW/SW/etc). Promote to the wide Xqcilo equivalent
+      // so the full 26-bit offset folds directly, avoiding a separate
+      // base-adjust instruction. This runs post-RA and does not affect
+      // register allocation decisions.
+      MI.setDesc(TII->get(WideOpc));
+      MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Lo26);
+      Offset = StackOffset::get((uint64_t)Val - (uint64_t)Lo26,
+                                Offset.getScalable());
+    } else if (Opc == RISCV::QC_E_ADDI || RISCVInstrInfo::isBaseQCLoad(MI) ||
+               RISCVInstrInfo::isBaseQCStore(MI)) {
+      MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Lo26);
+      Offset = StackOffset::get((uint64_t)Val - (uint64_t)Lo26,
+                                Offset.getScalable());
     } else {
       // We can encode an add with 12 bit signed immediate in the immediate
       // operand of our user instruction.  As a result, the remaining
@@ -675,7 +788,13 @@ bool RISCVRegisterInfo::needsFrameBaseReg(MachineInstr *MI,
     }
 
     int64_t MaxFPOffset = Offset - CalleeSavedSize;
-    return !isFrameOffsetLegal(MI, RISCV::X8, MaxFPOffset);
+    if (isFrameOffsetLegal(MI, RISCV::X8, MaxFPOffset))
+      return false;
+
+    // If the FP-relative offset doesn't fit, fall through to check the
+    // SP-relative offset. getFrameIndexReference may select SP over FP when
+    // the SP offset fits in the compressed instruction immediate range, so a
+    // base register might not be needed.
   }
 
   // Assume 128 bytes spill slots size to estimate the maximum possible
@@ -757,6 +876,23 @@ int64_t RISCVRegisterInfo::getFrameIndexInstrOffset(const MachineInstr *MI,
 Register RISCVRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   const TargetFrameLowering *TFI = getFrameLowering(MF);
   return TFI->hasFP(MF) ? RISCV::X8 : RISCV::X2;
+}
+
+bool RISCVRegisterInfo::isArgumentRegister(const MachineFunction &MF,
+                                           MCRegister Reg) const {
+  auto const &STI = MF.getSubtarget<RISCVSubtarget>();
+  const RISCVRegisterInfo *TRI = STI.getRegisterInfo();
+
+  if (TRI->isGeneralPurposeRegister(MF, Reg))
+    return llvm::is_contained(RISCV::getArgGPRs(STI), Reg);
+
+  if (TRI->isFPRegister(Reg))
+    return llvm::is_contained(RISCV::getArgFPRs(STI), Reg);
+
+  if (RISCV::VRRegClass.contains(Reg))
+    return llvm::is_contained(RISCV::getArgVRs(STI), Reg);
+
+  return false;
 }
 
 StringRef RISCVRegisterInfo::getRegAsmName(MCRegister Reg) const {
@@ -847,7 +983,10 @@ void RISCVRegisterInfo::getOffsetOpcodes(const StackOffset &Offset,
 
 unsigned
 RISCVRegisterInfo::getRegisterCostTableIndex(const MachineFunction &MF) const {
-  return MF.getSubtarget<RISCVSubtarget>().hasStdExtZca() && !DisableCostPerUse
+  // Set CostPerUse to 1 only when optimizing for size and RVC exists.
+  return MF.getFunction().hasOptSize() &&
+                 MF.getSubtarget<RISCVSubtarget>().hasStdExtZca() &&
+                 !DisableCostPerUse
              ? 1
              : 0;
 }

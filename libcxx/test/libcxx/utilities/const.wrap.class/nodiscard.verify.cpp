@@ -35,6 +35,9 @@ struct Ops {
   constexpr Ops operator>>=(Ops) const { return {}; }
 
   constexpr Ops operator=(auto) const { return {}; }
+
+  constexpr Ops operator()(Ops) const { return {}; }
+  constexpr Ops operator[](Ops) const { return {}; }
 };
 
 void test() {
@@ -140,4 +143,10 @@ void test() {
   std::constant_wrapper<Ops{}> a;
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   a = std::cw<5>;
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::cw<Ops{}>(std::cw<Ops{}>);
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::cw<Ops{}>[std::cw<Ops{}>];
 }

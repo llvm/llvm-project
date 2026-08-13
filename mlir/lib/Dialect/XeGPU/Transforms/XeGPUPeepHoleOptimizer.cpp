@@ -18,8 +18,8 @@
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/Dialect/XeGPU/Transforms/XeGPULayoutImpl.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
-#include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
 #include "mlir/Dialect/XeGPU/uArch/uArchBase.h"
+#include "mlir/Dialect/XeGPU/uArch/uArchCommon.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Types.h"
@@ -106,8 +106,9 @@ static bool canBeOptimizedForTranspose(xegpu::TensorDescType tdescType) {
 
 /// Check if a tensor desc type can be optimized for transpose, if so return the
 /// new optimized tensor desc type with a valid transpose layout.
-static xegpu::TensorDescType tryOptimize(xegpu::TensorDescType tdescType,
-                                         const uArch *targetuArch) {
+static xegpu::TensorDescType
+tryOptimize(xegpu::TensorDescType tdescType,
+            const xegpu::uArch::uArch *targetuArch) {
   if (!canBeOptimizedForTranspose(tdescType))
     return tdescType;
   auto laneData = getMaybeLaneData(tdescType)
@@ -124,8 +125,10 @@ static xegpu::TensorDescType tryOptimize(xegpu::TensorDescType tdescType,
   Type newElemTy = IntegerType::get(tdescType.getContext(), newBitWidth);
   // Supported shape is the max transpose shape that can be supported by
   // hardware that is less than or equal to required shape.
-  auto *blockLoadTarget = dyn_cast<Subgroup2DBlockLoadInstruction>(
-      targetuArch->getInstruction(InstructionKind::Subgroup2DBlockLoad));
+  auto *blockLoadTarget =
+      dyn_cast<xegpu::uArch::Subgroup2DBlockLoadInstruction>(
+          targetuArch->getInstruction(
+              xegpu::uArch::InstructionKind::Subgroup2DBlockLoad));
   auto maybeHWParams = blockLoadTarget->getBlockWidthHeightCount(
       newElemTy, /** has transform */ false, /** has transpose */ true);
   // If no HW params found, return the original type.
@@ -256,10 +259,12 @@ public:
     // Get the target uArch info.
     auto chipStr = xegpu::getChipStr(createNdOp);
     // Check if the chip is supported.
-    assert(
-        chipStr && (chipStr.value() == "pvc" || chipStr.value() == "bmg") &&
-        "Expecting target chip to be pvc or bmg for transpose optimization.");
-    const uArch *targetuArch = xegpu::uArch::getUArch(chipStr.value());
+    assert(chipStr &&
+           (chipStr.value() == "pvc" || chipStr.value() == "bmg" ||
+            chipStr.value() == "cri") &&
+           "Expecting target chip to be pvc, bmg or cri for transpose "
+           "optimization.");
+    const auto *targetuArch = xegpu::uArch::getUArch(chipStr.value());
 
     auto convertType = tryOptimize(tdescTy, targetuArch);
     if (convertType == tdescTy)
@@ -449,17 +454,39 @@ class MultiRed2dOpPattern
     auto loc = reductionOp.getLoc();
     auto acc = reductionOp.getAcc();
 
-    // If the result is scalar after reduction, look for consumer
-    // convert_layout op and remove it. The layout propagation pass will
-    // re-install it properly after the decomposition.
-    Type resultType = reductionOp.getResult().getType();
-    if (resultType.isIntOrFloat()) {
-      for (auto &use : reductionOp.getResult().getUses()) {
-        if (auto convertLayoutOp =
-                llvm::dyn_cast<xegpu::ConvertLayoutOp>(use.getOwner())) {
-          rewriter.replaceOp(convertLayoutOp, reductionOp.getResult());
-          break;
-        }
+    // The decomposition below splits the 2D reduction into an intra-lane
+    // then a cross-lane 1D reduction. The natural result layout of the
+    // decomposed sequence (a doubly-sliced layout) differs from the
+    // original 2D reduction's result layout that the rest of the IR was
+    // written/propagated against. To keep the post-peephole IR
+    // self-consistent without depending on a follow-up layout
+    // propagation pass, we always insert a bridge xegpu.convert_layout
+    // from the natural post-decomposition layout to the original
+    // reduction's result layout. Trivial bridges fold away in
+    // canonicalization.
+    xegpu::DistributeLayoutAttr postDecompLayout;
+    if (resLayout) {
+      // Derive the source vector's layout.
+      xegpu::DistributeLayoutAttr srcLayoutForCvt;
+      if (auto resSlice = dyn_cast_if_present<xegpu::SliceAttr>(resLayout))
+        srcLayoutForCvt = resSlice.getParent();
+      if (!srcLayoutForCvt)
+        srcLayoutForCvt =
+            xegpu::getDistributeLayoutAttr(reductionOp.getSource());
+      if (srcLayoutForCvt) {
+        // The natural layout of the post-decomposition reduction result
+        // is a nested SliceAttr: REDUCE_1 (reduces `intraLaneDim` from
+        // the source) yields `slice<src, [intraLaneDim]>`; REDUCE_2
+        // then reduces `adjCrossLaneDim` from that intermediate, giving
+        // `slice<slice<src, [intraLaneDim]>, [adjCrossLaneDim]>`.
+        MLIRContext *ctx = reductionOp.getContext();
+        int64_t adjCrossLaneDim =
+            crossLaneDim > intraLaneDim ? crossLaneDim - 1 : crossLaneDim;
+        auto intermediateLayout = xegpu::SliceAttr::get(
+            ctx, srcLayoutForCvt, DenseI64ArrayAttr::get(ctx, {intraLaneDim}));
+        postDecompLayout = xegpu::SliceAttr::get(
+            ctx, intermediateLayout,
+            DenseI64ArrayAttr::get(ctx, {adjCrossLaneDim}));
       }
     }
 
@@ -481,7 +508,21 @@ class MultiRed2dOpPattern
         ArrayRef<int64_t>(crossLaneDim));
     assert(crossLaneReduced.getType() == reductionOp.getResult().getType() &&
            "Type mismatch");
-    rewriter.replaceOp(reductionOp, crossLaneReduced);
+
+    Value replacement = crossLaneReduced;
+    if (resLayout && postDecompLayout) {
+      // Bridge from the natural post-decomposition layout to the
+      // original reduction's result layout. This preserves the contract
+      // any consumer (convert_layout, anchor op, or otherwise) was
+      // written against, so the rewrite is correct independent of
+      // whether layout propagation runs afterwards.
+      auto bridgeOp = xegpu::ConvertLayoutOp::create(
+          rewriter, loc, crossLaneReduced.getType(), crossLaneReduced,
+          postDecompLayout, resLayout);
+      replacement = bridgeOp.getResult();
+    }
+
+    rewriter.replaceOp(reductionOp, replacement);
     return success();
   }
 
@@ -531,19 +572,32 @@ struct XeGPUPeepHoleOptimizerPass final
     RewritePatternSet patterns(&context);
     ConversionTarget target(context);
 
-    // This pass is only meant for PVC and BMG targets. If unsupported target
-    // is found, exit early.
+    // This pass is only meant for PVC, BMG or CRI targets. If unsupported
+    // target is found, exit early.
     bool isTargetSupported = false;
     getOperation()->walk([&](gpu::GPUFuncOp funcOp) {
       auto chipStr = xegpu::getChipStr(funcOp);
-      if (chipStr && (chipStr.value() == "pvc" || chipStr.value() == "bmg"))
+      if (chipStr && (chipStr.value() == "pvc" || chipStr.value() == "bmg" ||
+                      chipStr.value() == "cri"))
         isTargetSupported = true;
     });
 
     if (!isTargetSupported) {
-      DBGS() << "XeGPUPeepHoleOptimizerPass only supports PVC and BMG targets."
+      DBGS() << "XeGPUPeepHoleOptimizerPass only supports PVC, BMG targets."
              << "\n";
       return;
+    }
+
+    // Run array length optimization patterns first so that subsequent transpose
+    // peephole patterns operate on the array-length-optimized tensor descs.
+    {
+      RewritePatternSet arrayLenPatterns(&context);
+      xegpu::populateXeGPUArrayLengthOptimizationPatterns(arrayLenPatterns);
+      if (failed(applyPatternsGreedily(getOperation(),
+                                       std::move(arrayLenPatterns)))) {
+        DBGS() << "Array length optimization patterns failed.\n";
+        return signalPassFailure();
+      }
     }
 
     // CreateNdDescOp and LoadNdOp with optimizable tensor desc types must be
@@ -584,6 +638,9 @@ struct XeGPUPeepHoleOptimizerPass final
 
     target.addLegalDialect<arith::ArithDialect, memref::MemRefDialect,
                            vector::VectorDialect>();
+    // xegpu.convert_layout is left untouched by this pass; mark it legal
+    // so in-place updates don't trigger re-legalization failures.
+    target.addLegalOp<xegpu::ConvertLayoutOp>();
     scf::populateSCFStructuralTypeConversionsAndLegality(converter, patterns,
                                                          target);
     xegpu::populateXeGPUPeepHoleOptimizerPatterns(patterns);

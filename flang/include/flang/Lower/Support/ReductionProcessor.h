@@ -32,6 +32,9 @@ namespace Fortran {
 namespace lower {
 class AbstractConverter;
 } // namespace lower
+namespace semantics {
+class SemanticsContext;
+} // namespace semantics
 } // namespace Fortran
 
 namespace Fortran {
@@ -76,6 +79,14 @@ public:
   static ReductionIdentifier
   getReductionType(omp::clause::DefinedOperator::IntrinsicOperator intrinsicOp);
 
+  /// Map a clause-level intrinsic operator to the parser-level one, so callers
+  /// can build the operator's mangled reduction name
+  /// (MangledIntrinsicOperatorReductionName) that semantics stores a
+  /// user-defined intrinsic-operator reduction under. Only the operators a user
+  /// reduction may use are handled.
+  static parser::DefinedOperator::IntrinsicOperator
+  toParserIntrinsicOperator(omp::clause::DefinedOperator::IntrinsicOperator op);
+
   static ReductionIdentifier
   getReductionType(const fir::ReduceOperationEnum &pd);
 
@@ -95,6 +106,20 @@ public:
   static std::string getReductionName(ReductionIdentifier redId,
                                       const fir::KindMapping &kindMap,
                                       mlir::Type ty, bool isByRef);
+
+  /// Returns the module-unique name of the omp.declare_reduction op for a
+  /// user-defined reduction (named or operator). Derived from the reduction
+  /// symbol's ultimate name, qualified with its owning scope via
+  /// AbstractConverter::mangleName so same-spelling reductions in different
+  /// modules do not collide, then suffixed with the reduction type (via
+  /// getReductionName) so a reduction listing several types produces one op per
+  /// type (single-type is N=1). The directive and clause sides must both call
+  /// this with the same unwrapped type and isByRef, since both tokens are part
+  /// of the name, or the names diverge.
+  static std::string
+  getScopedUserReductionName(AbstractConverter &converter,
+                             const semantics::Symbol &reductionSymbol,
+                             mlir::Type reductionType, bool isByRef);
 
   /// This function returns the identity value of the operator \p
   /// reductionOpName. For example:
@@ -144,6 +169,12 @@ public:
 
   /// Creates a reduction declaration and associates it with an OpenMP block
   /// directive.
+  /// \param [in,out] reductionVarCache - optional cache mapping reduction
+  ///   symbols to their SSA values. When provided, array/box reduction
+  ///   variables that have already been allocated will be reused instead of
+  ///   creating new allocas. This ensures that nested composite wrappers
+  ///   (e.g. wsloop and simd in DO SIMD) share the same SSA values, allowing
+  ///   the genLoopVars() mapper to correctly remap inner wrapper operands.
   template <typename OpType, typename RedOperatorListTy>
   static bool processReductionArguments(
       mlir::Location currentLocation, lower::AbstractConverter &converter,
@@ -151,7 +182,10 @@ public:
       llvm::SmallVectorImpl<mlir::Value> &reductionVars,
       llvm::SmallVectorImpl<bool> &reduceVarByRef,
       llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
-      const llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols);
+      const llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols,
+      semantics::SemanticsContext *semaCtx = nullptr,
+      llvm::DenseMap<const semantics::Symbol *, mlir::Value>
+          *reductionVarCache = nullptr);
 };
 
 template <typename FloatOp, typename IntegerOp>
