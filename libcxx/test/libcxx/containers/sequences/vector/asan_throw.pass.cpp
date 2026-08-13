@@ -182,7 +182,7 @@ void test_insert_n2() {
     v.insert(v.cbegin(), 5, ThrowOnCopy());
     assert(0);
   } catch (int e) {
-    assert(v.size() == 11);
+    assert(v.size() == 10);
     assert(is_contiguous_container_asan_correct(v));
     return;
   }

@@ -302,6 +302,30 @@ uninitialized_move_n(_InputIterator __ifirst, _Size __n, _ForwardIterator __ofir
 
 #endif // _LIBCPP_STD_VER >= 17
 
+template <class _Alloc, class _Iter, class _Sent, class _Tp>
+_LIBCPP_CONSTEXPR_SINCE_CXX20
+_Iter __uninitialized_allocator_fill(_Alloc& __alloc, _Iter __first, _Sent __last, const _Tp& __value) {
+  auto __iter = __first;
+
+  auto __guard = std::__make_exception_guard([&] { std::__allocator_destroy(__alloc, __first, __iter); });
+  for (; __iter != __last; ++__iter)
+    allocator_traits<_Alloc>::construct(__alloc, std::__to_address(__iter), __value);
+  __guard.__complete();
+  return __iter;
+}
+
+template <class _Alloc, class _Iter, class _Sent>
+_LIBCPP_CONSTEXPR_SINCE_CXX20
+_Iter __uninitialized_allocator_value_construct(_Alloc& __alloc, _Iter __first, _Sent __last) {
+  auto __iter = __first;
+
+  auto __guard = std::__make_exception_guard([&] { std::__allocator_destroy(__alloc, __first, __iter); });
+  for (; __iter != __last; ++__iter)
+    allocator_traits<_Alloc>::construct(__alloc, std::__to_address(__iter));
+  __guard.__complete();
+  return __iter;
+}
+
 template <class _Alloc, class _Iter>
 class _AllocatorDestroyRangeReverse {
 public:
@@ -379,6 +403,20 @@ inline const bool __allocator_has_trivial_move_construct_v = !__has_construct_v<
 
 template <class _Type>
 inline const bool __allocator_has_trivial_move_construct_v<allocator<_Type>, _Type> = true;
+
+template <class _Alloc, class _InIter, class _Sent, class _OutIter>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 __in_out_result<_InIter, _OutIter>
+__uninitialized_allocator_move(_Alloc& __alloc, _InIter __first, _Sent __last, _OutIter __result) {
+  auto __destruct_first = __result;
+  auto __guard = std::__make_exception_guard([&] { std::__allocator_destroy(__alloc, __destruct_first, __result); });
+  while (__first != __last) {
+    allocator_traits<_Alloc>::construct(__alloc, std::__to_address(__result), std::move(*__first));
+    ++__first;
+    ++__result;
+  }
+  __guard.__complete();
+  return {std::move(__first), std::move(__result)};
+}
 
 template <class _Alloc, class _Tp>
 inline const bool __allocator_has_trivial_destroy_v = !__has_destroy_v<_Alloc, _Tp*>;
