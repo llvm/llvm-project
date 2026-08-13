@@ -90,13 +90,22 @@ Error L0QueueTy::memoryFillFallbackImpl(void *Ptr, const void *Pattern,
   return memoryFillReplicateImpl(Ptr, Pattern, PatternSize, Size);
 }
 
-static void extendPattern(unsigned char *Dst, size_t Size, const void *Pattern,
-                          size_t PatternSize) {
-  assert(Size >= PatternSize && Size % PatternSize == 0 &&
-         "Invalid pattern extension size");
-  std::copy_n(static_cast<const unsigned char *>(Pattern), PatternSize, Dst);
-  for (size_t Offset = PatternSize; Offset < Size; ++Offset)
-    Dst[Offset] = Dst[Offset - PatternSize];
+/// Construct a seed by repeating \p Pattern. When \p PatternSize is at most
+/// \p MinSize, the seed size is a multiple of \p PatternSize in the range
+/// [MinSize, 2 * MinSize). Otherwise, return a copy of \p Pattern.
+static std::vector<unsigned char>
+extendPattern(const void *Pattern, size_t PatternSize, size_t MinSize) {
+  assert(PatternSize > 0 && MinSize > 0 && "Invalid pattern extension size");
+  const auto *PatternBytes = static_cast<const unsigned char *>(Pattern);
+  if (PatternSize > MinSize)
+    return std::vector<unsigned char>(PatternBytes, PatternBytes + PatternSize);
+
+  const size_t NumPatterns = (MinSize + PatternSize - 1) / PatternSize;
+  std::vector<unsigned char> Seed(NumPatterns * PatternSize);
+  std::copy_n(PatternBytes, PatternSize, Seed.begin());
+  for (size_t Offset = PatternSize; Offset < Seed.size(); ++Offset)
+    Seed[Offset] = Seed[Offset - PatternSize];
+  return Seed;
 }
 
 Error L0QueueTy::memoryFillReplicateImpl(void *Ptr, const void *Pattern,
@@ -104,22 +113,21 @@ Error L0QueueTy::memoryFillReplicateImpl(void *Ptr, const void *Pattern,
   auto *Dst = static_cast<unsigned char *>(Ptr);
 
   // Extend small patterns to avoid several inefficient device copies.
-  constexpr size_t MinExtendedSeedSize = 1024;
-  const size_t SeedLimit =
-      std::min(Size, std::max(PatternSize, MinExtendedSeedSize));
-  size_t BytesFilled = (SeedLimit / PatternSize) * PatternSize;
-  std::vector<unsigned char> Seed(BytesFilled);
-  extendPattern(Seed.data(), BytesFilled, Pattern, PatternSize);
+  const auto Seed = extendPattern(Pattern, PatternSize, /*MinSize=*/1024);
+  size_t BytesFilled = std::min(Seed.size(), Size);
 
   const auto TgtType = Device.getMemAllocType(Ptr);
-  if (TgtType == ZE_MEMORY_TYPE_HOST || TgtType == ZE_MEMORY_TYPE_SHARED)
+  // dataSubmit() writes host/shared destinations directly, so complete earlier
+  // queue work before modifying the destination from the host.
+  if (TgtType == ZE_MEMORY_TYPE_HOST || TgtType == ZE_MEMORY_TYPE_SHARED) {
     if (auto Err = synchronize())
       return Err;
+  }
 
   if (auto Err = dataSubmit(Dst, Seed.data(), BytesFilled))
     return Err;
 
-  // Ensure the asynchronous submission no longer references the host seed.
+  // Complete the seed submission before its host storage goes out of scope.
   if (auto Err = synchronize())
     return Err;
 
