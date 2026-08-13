@@ -182,11 +182,12 @@ isSignificantBitCheckWellFormed(const RecurrenceInfo &ConditionalRecurrence,
               m_ZExtOrTruncOrSelf(m_Specific(SimpleRecurrence.Phi))));
 
   BinaryOperator *BitShift = ConditionalRecurrence.BO;
-  auto MatchBitShiftXorGenPoly = match_fn(m_c_Xor(
-      m_Specific(BitShift), m_SpecificInt(*ConditionalRecurrence.ExtraConst)));
-  if (!IsBigEndian && match(SI, m_Select(m_Trunc(m_Value(L)), m_Instruction(TV),
-                                         m_Specific(BitShift))))
-    return match(L, MatchPred) && MatchBitShiftXorGenPoly(TV);
+  auto MatchBitShiftXorGenPoly = m_c_Xor(
+      m_Specific(BitShift), m_SpecificInt(*ConditionalRecurrence.ExtraConst));
+  if (!IsBigEndian &&
+      match(SI, m_Select(m_Trunc(MatchPred), MatchBitShiftXorGenPoly,
+                         m_Specific(BitShift))))
+    return true;
   if (!match(SI, m_Select(m_ICmp(Pred, m_Value(L), m_APInt(R)),
                           m_Instruction(TV), m_Instruction(FV))))
     return false;
@@ -205,9 +206,9 @@ isSignificantBitCheckWellFormed(const RecurrenceInfo &ConditionalRecurrence,
                                             : APInt(BW, 1));
 
   if (AllowedByR == CheckAllowedByR)
-    return TV == BitShift && MatchBitShiftXorGenPoly(FV);
+    return TV == BitShift && match(FV, MatchBitShiftXorGenPoly);
   if (AllowedByR.inverse() == CheckAllowedByR)
-    return FV == BitShift && MatchBitShiftXorGenPoly(TV);
+    return FV == BitShift && match(TV, MatchBitShiftXorGenPoly);
   return false;
 }
 
