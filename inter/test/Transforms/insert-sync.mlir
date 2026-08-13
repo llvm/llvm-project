@@ -93,6 +93,53 @@ func.func @tuple_distance() {
   return
 }
 
+// DPAS uses its asynchronous token and materializes an ALU input distance on a
+// preceding sync because DPAS cannot encode both.
+// CHECK-LABEL: func.func @dpas_token_only
+// CHECK: xemachine.mov
+// CHECK-NEXT: xemachine.sync nop {{.*}}swsbDistance = 1
+// CHECK: xemachine.dpas
+// CHECK-SAME: swsbTokenMode = 1
+// CHECK-NOT: swsbDistance
+// CHECK: return
+func.func @dpas_token_only() {
+  %a = xemachine.archreg 20 : !xemachine.reg<64, 20>
+  %b = xemachine.archreg 24 : !xemachine.reg<128, 24>
+  %zero = xemachine.imm 0 : f32
+  %acc = xemachine.mov %zero {execSize = 16 : i32}
+      : (!xemachine.imm, f32) -> !xemachine.reg<128, 32>
+  %result = xemachine.dpas %a, %b, %acc {
+      aPrecision = 0 : i32, bPrecision = 0 : i32, elemType = f32}
+      : (!xemachine.reg<64, 20>, !xemachine.reg<128, 24>,
+         !xemachine.reg<128, 32>) -> !xemachine.reg<128, 32>
+  return
+}
+
+// A DPAS may need both an ALU input distance and a send-result token wait. The
+// two preceding syncs remain stable when the pass is repeated.
+// CHECK-LABEL: func.func @dpas_distance_and_token_wait
+// CHECK: xemachine.load_a64
+// CHECK: xemachine.mov
+// CHECK: xemachine.sync nop {{.*}}swsbDistance = 1
+// CHECK-NEXT: xemachine.sync nop {{.*}}swsbTokenMode = 3
+// CHECK-NEXT: xemachine.dpas
+func.func @dpas_distance_and_token_wait() {
+  %root = xemachine.token
+  %address = xemachine.archreg 40 : !xemachine.reg<64, 40>
+  %b = xemachine.archreg 24 : !xemachine.reg<128, 24>
+  %loaded, %token = xemachine.load_a64 %address dep %root
+      : !xemachine.reg<64, 40>
+      -> (!xemachine.reg<128, 32>, !xemachine.mem.token)
+  %zero = xemachine.imm 0 : i32
+  %a = xemachine.mov %zero {execSize = 16 : i32}
+      : (!xemachine.imm, i32) -> !xemachine.reg<64, 20>
+  %result = xemachine.dpas %a, %b, %loaded {
+      aPrecision = 0 : i32, bPrecision = 0 : i32, elemType = f32}
+      : (!xemachine.reg<64, 20>, !xemachine.reg<128, 24>,
+         !xemachine.reg<128, 32>) -> !xemachine.reg<128, 32>
+  return
+}
+
 // Exact SSA consumers still classify virtual message destinations as writes.
 // CHECK-LABEL: func.func @virtual_destination
 // CHECK: xemachine.load_a64
@@ -526,5 +573,108 @@ func.func @loop_physical_waw(%flag: !xemachine.arf<f, 2, 0>) {
   } : () -> ()
   %reuse = xemachine.mov %zero : (!xemachine.imm, i32)
       -> !xemachine.reg<16, 4>
+  return
+}
+
+// Mutually exclusive uniform arms inherit the same parent state, not each
+// other's lexical instruction history.
+// CHECK-LABEL: func.func @distance_uniform_arms
+// CHECK: xemachine.uniform_if
+// CHECK: xemachine.mov {{.*}} -> !xemachine.reg<16, 6>
+// CHECK: } otherwise {
+// CHECK: xemachine.mov {{.*}} -> !xemachine.reg<16, 8>
+// CHECK-NOT: swsbDistance
+// CHECK: }
+func.func @distance_uniform_arms(%flag: !xemachine.arf<f, 2, 0>) {
+  %zero = xemachine.imm 0 : i32
+  xemachine.uniform_if %flag : !xemachine.arf<f, 2, 0> {
+    %then = xemachine.mov %zero : (!xemachine.imm, i32)
+        -> !xemachine.reg<16, 6>
+    xemachine.yield
+  } otherwise {
+    %else = xemachine.mov %zero : (!xemachine.imm, i32)
+        -> !xemachine.reg<16, 8>
+    xemachine.yield
+  }
+  return
+}
+
+// A loop backedge carries the previous iteration's physical ALU write.
+// CHECK-LABEL: func.func @distance_loop_backedge
+// CHECK: xemachine.uniform_loop
+// CHECK: xemachine.mov {{.*}}swsbDistance = 1
+func.func @distance_loop_backedge(%flag: !xemachine.arf<f, 2, 0>) {
+  %storage = xemachine.archreg 4 : !xemachine.reg<16, 4>
+  %zero = xemachine.imm 0 : i32
+  xemachine.uniform_loop () {
+  ^bb0:
+    %read = xemachine.mov %storage : (!xemachine.reg<16, 4>, i32)
+        -> !xemachine.reg<16, 6>
+    %write = xemachine.mov %zero : (!xemachine.imm, i32)
+        -> !xemachine.reg<16, 4>
+    xemachine.continue_if %flag : !xemachine.arf<f, 2, 0>
+  } : () -> ()
+  return
+}
+
+// Region footprints distinguish GRFs within one multi-GRF allocation.
+// CHECK-LABEL: func.func @distance_disjoint_grfs
+// CHECK: xemachine.mov
+// CHECK-NEXT: xemachine.mov
+// CHECK-NOT: swsbDistance
+// CHECK: return
+func.func @distance_disjoint_grfs() {
+  %zero = xemachine.imm 0 : i32
+  %low = xemachine.mov %zero {execSize = 1 : i32}
+      : (!xemachine.imm, i32) -> !xemachine.reg<32, 4>
+  %high = xemachine.mov %low {execSize = 1 : i32, src0Sub = 16 : i32}
+      : (!xemachine.reg<32, 4>, i32) -> !xemachine.reg<1, 8>
+  return
+}
+
+// Subregisters in one GRF share its hardware dependency bucket.
+// CHECK-LABEL: func.func @distance_same_grf
+// CHECK: xemachine.mov
+// CHECK-NEXT: xemachine.mov {{.*}}swsbDistance = 1
+func.func @distance_same_grf() {
+  %zero = xemachine.imm 0 : i32
+  %low = xemachine.mov %zero {execSize = 1 : i32}
+      : (!xemachine.imm, i32) -> !xemachine.reg<16, 4>
+  %high = xemachine.mov %low {execSize = 1 : i32, src0Sub = 1 : i32}
+      : (!xemachine.reg<16, 4>, i32) -> !xemachine.reg<1, 8>
+  return
+}
+
+// A type conversion crossing ALU pipes requires an all-pipe distance.
+// CHECK-LABEL: func.func @distance_cross_pipe
+// CHECK: xemachine.mov
+// CHECK-NEXT: xemachine.mov {{.*}}swsbDistance = 1{{.*}}swsbPipe = 1
+func.func @distance_cross_pipe() {
+  %zero = xemachine.imm 0 : f32
+  %float = xemachine.mov %zero {execSize = 16 : i32}
+      : (!xemachine.imm, f32) -> !xemachine.reg<16, 4>
+  %integer = xemachine.mov %float {execSize = 16 : i32, src0Type = f32}
+      : (!xemachine.reg<16, 4>, i32) -> !xemachine.reg<16, 8>
+  return
+}
+
+// The payload setup may execute or be bypassed, so continuation state merges
+// both paths instead of assuming the nested body always ran.
+// CHECK-LABEL: func.func @distance_payload_bypass
+// CHECK: xemachine.payload_prologue
+// CHECK: xemachine.mov
+// CHECK: }
+// CHECK-NEXT: xemachine.mov {{.*}}swsbDistance = 1
+// CHECK: return
+func.func @distance_payload_bypass() {
+  %zero = xemachine.imm 0 : i32
+  %storage = xemachine.archreg 4 : !xemachine.reg<16, 4>
+  xemachine.payload_prologue {
+    %setup = xemachine.mov %zero : (!xemachine.imm, i32)
+        -> !xemachine.reg<16, 4>
+    xemachine.payload_prologue_end
+  }
+  %continuation = xemachine.mov %storage : (!xemachine.reg<16, 4>, i32)
+      -> !xemachine.reg<16, 8>
   return
 }

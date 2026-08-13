@@ -83,13 +83,33 @@ static int64_t getIntegerAttr(Operation *operation, StringRef name,
   return fallback;
 }
 
+static uint64_t getDestinationStorageDwords(Operation *operation,
+                                            RegType destinationType) {
+  uint64_t storageDwords = destinationType.getWidthDwords();
+  for (OpOperand &use : operation->getResult(0).getUses()) {
+    UpdateTupleOp update = dyn_cast<UpdateTupleOp>(use.getOwner());
+    if (!update || use.getOperandNumber() == 0)
+      continue;
+    RegType baseType = cast<RegType>(update.getBase().getType());
+    unsigned updateIndex = use.getOperandNumber() - 1;
+    int64_t offset =
+        cast<IntegerAttr>(update.getOffsets()[updateIndex]).getInt();
+    assert(offset >= 0 && static_cast<uint64_t>(offset) <=
+                              baseType.getWidthDwords() &&
+           "verified tuple update offset must fit its base storage");
+    storageDwords = std::max<uint64_t>(
+        storageDwords, baseType.getWidthDwords() - offset);
+  }
+  return storageDwords;
+}
+
 static LogicalResult validateAluFootprint(Operation *operation) {
   if (!isa<MovOp, AddOp, SubOp, ShlOp, ShrOp, AndOp, OrOp, Add3Op, MulOp,
            CmpOp>(operation))
     return success();
   ALUOpInterface alu = cast<ALUOpInterface>(operation);
   Type elementType = alu.getInstructionElementType();
-  int64_t executionSize = getIntegerAttr(operation, "execSize", 16);
+  int64_t executionSize = alu.getExecutionSize();
   if (executionSize <= 0)
     return operation->emitError("execution size must be positive");
 
@@ -100,21 +120,18 @@ static LogicalResult validateAluFootprint(Operation *operation) {
           getElementBytes(elementType);
       if (!bytes)
         return operation->emitError("unsupported destination element type");
-      int64_t sub = getIntegerAttr(operation, "dstSub", 0);
-      DstRegionAttr region =
-          operation->getAttrOfType<DstRegionAttr>("dstRegion");
+      int64_t sub = alu.getDestinationSubregister();
+      DstRegionAttr region = alu.getDestinationRegion();
       int64_t stride = region ? region.getHstride() : 1;
-      int64_t last = (executionSize - 1) * stride;
+      int64_t last = sub + (executionSize - 1) * stride;
       if (sub < 0 || stride < 0 ||
           static_cast<uint64_t>(last + 1) * *bytes >
-              destinationType.getWidthDwords() * 4)
+              getDestinationStorageDwords(operation, destinationType) * 4)
         return operation->emitError(
             "destination region exceeds declared register storage");
     }
   }
 
-  constexpr std::array<StringLiteral, 3> subNames = {"src0Sub", "src1Sub",
-                                                      "src2Sub"};
   for (auto [index, operand] : llvm::enumerate(operation->getOperands())) {
     auto registerType = dyn_cast<RegType>(operand.getType());
     if (!registerType)
@@ -126,15 +143,17 @@ static LogicalResult validateAluFootprint(Operation *operation) {
     std::optional<uint64_t> bytes = getElementBytes(sourceType);
     if (!bytes)
       return operation->emitError("unsupported source element type");
-    int64_t sub = getIntegerAttr(operation, subNames[index], 0);
+    int64_t sub = alu.getSourceSubregister(index);
     RegionAttr region = alu.getSourceRegion(index);
     int64_t vertical = region ? region.getVstride() : 1;
     int64_t width = region ? region.getWidth() : 1;
     int64_t horizontal = region ? region.getHstride() : 0;
     if (sub < 0 || vertical < 0 || width <= 0 || horizontal < 0)
       return operation->emitError("invalid source register region");
-    int64_t lane = executionSize - 1;
-    int64_t last = sub + lane / width * vertical + lane % width * horizontal;
+    int64_t last = sub;
+    for (int64_t lane : llvm::seq<int64_t>(0, executionSize))
+      last = std::max(last, sub + lane / width * vertical +
+                                lane % width * horizontal);
     if (static_cast<uint64_t>(last + 1) * *bytes >
         registerType.getWidthDwords() * 4)
       return operation->emitError(

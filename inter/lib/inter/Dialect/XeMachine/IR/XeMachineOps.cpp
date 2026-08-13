@@ -15,8 +15,22 @@ using namespace inter::xemachine;
 #define GET_OP_INTERFACE_CLASSES
 #include "inter/Dialect/XeMachine/IR/XeMachineInterfaces.cpp.inc"
 
-#define DEFINE_ALU_ELEMENT_TYPE(Op)                                        \
-  Type Op::getInstructionElementType() { return getElemType(); }
+#define DEFINE_ALU_COMMON(Op)                                              \
+  Type Op::getInstructionElementType() { return getElemType(); }           \
+  unsigned Op::getExecutionSize() { return getExecSize(); }
+
+#define DEFINE_ALU_DESTINATION(Op)                                         \
+  DstRegionAttr Op::getDestinationRegion() { return getDstRegionAttr(); }   \
+  int64_t Op::getDestinationSubregister() {                                \
+    return getDstSubAttr() ? getDstSubAttr().getInt() : 0;                 \
+  }
+
+#define DEFINE_SOURCE_SUBREGISTER(Op)                                      \
+  int64_t Op::getSourceSubregister(unsigned index) {                       \
+    if (index == 0)                                                        \
+      return getSrc0SubAttr() ? getSrc0SubAttr().getInt() : 0;             \
+    return 0;                                                              \
+  }
 
 #define DEFINE_SWSB_INTERFACE(Op)                                          \
   FinalSWSB Op::getFinalSWSB() {                                           \
@@ -32,7 +46,9 @@ using namespace inter::xemachine;
   }
 
 #define DEFINE_UNARY_ALU_INTERFACE(Op)                                     \
-  DEFINE_ALU_ELEMENT_TYPE(Op)                                              \
+  DEFINE_ALU_COMMON(Op)                                                    \
+  DEFINE_ALU_DESTINATION(Op)                                               \
+  DEFINE_SOURCE_SUBREGISTER(Op)                                            \
   RegionAttr Op::getSourceRegion(unsigned index) {                         \
     return index == 0 ? getSrc0RegionAttr() : RegionAttr();                 \
   }                                                                        \
@@ -45,7 +61,8 @@ using namespace inter::xemachine;
   }
 
 #define DEFINE_BINARY_ALU_INTERFACE(Op)                                    \
-  DEFINE_ALU_ELEMENT_TYPE(Op)                                              \
+  DEFINE_ALU_COMMON(Op)                                                    \
+  DEFINE_ALU_DESTINATION(Op)                                               \
   RegionAttr Op::getSourceRegion(unsigned index) {                         \
     if (index == 0)                                                        \
       return getSrc0RegionAttr();                                          \
@@ -61,6 +78,13 @@ using namespace inter::xemachine;
     if (index == 0)                                                        \
       return getSrc0Type();                                                \
     return index == 1 ? getSrc1Type() : std::nullopt;                       \
+  }                                                                        \
+  int64_t Op::getSourceSubregister(unsigned index) {                       \
+    if (index == 0)                                                        \
+      return getSrc0SubAttr() ? getSrc0SubAttr().getInt() : 0;             \
+    if (index == 1)                                                        \
+      return getSrc1SubAttr() ? getSrc1SubAttr().getInt() : 0;             \
+    return 0;                                                              \
   }
 
 DEFINE_UNARY_ALU_INTERFACE(MovOp)
@@ -71,7 +95,6 @@ DEFINE_BINARY_ALU_INTERFACE(ShrOp)
 DEFINE_BINARY_ALU_INTERFACE(AndOp)
 DEFINE_BINARY_ALU_INTERFACE(OrOp)
 DEFINE_BINARY_ALU_INTERFACE(MulOp)
-DEFINE_BINARY_ALU_INTERFACE(CmpOp)
 
 DEFINE_SWSB_INTERFACE(MovOp)
 DEFINE_SWSB_INTERFACE(AddOp)
@@ -123,7 +146,8 @@ AsyncScoreboardKind DpasOp::getAsyncScoreboardKind() {
 }
 bool DpasOp::hasAsyncDestination() { return true; }
 
-DEFINE_ALU_ELEMENT_TYPE(Add3Op)
+DEFINE_ALU_COMMON(Add3Op)
+DEFINE_ALU_DESTINATION(Add3Op)
 RegionAttr Add3Op::getSourceRegion(unsigned index) {
   if (index == 0)
     return getSrc0RegionAttr();
@@ -146,11 +170,49 @@ std::optional<Type> Add3Op::getExplicitSourceElementType(unsigned index) {
     return getSrc1Type();
   return index == 2 ? getSrc2Type() : std::nullopt;
 }
+int64_t Add3Op::getSourceSubregister(unsigned index) {
+  if (index == 0)
+    return getSrc0SubAttr() ? getSrc0SubAttr().getInt() : 0;
+  if (index == 1)
+    return getSrc1SubAttr() ? getSrc1SubAttr().getInt() : 0;
+  if (index == 2)
+    return getSrc2SubAttr() ? getSrc2SubAttr().getInt() : 0;
+  return 0;
+}
 DEFINE_SWSB_INTERFACE(Add3Op)
+
+DEFINE_ALU_COMMON(CmpOp)
+DstRegionAttr CmpOp::getDestinationRegion() { return {}; }
+int64_t CmpOp::getDestinationSubregister() { return 0; }
+RegionAttr CmpOp::getSourceRegion(unsigned index) {
+  if (index == 0)
+    return getSrc0RegionAttr();
+  return index == 1 ? getSrc1RegionAttr() : RegionAttr();
+}
+void CmpOp::setSourceRegion(unsigned index, RegionAttr region) {
+  if (index == 0)
+    setSrc0RegionAttr(region);
+  else if (index == 1)
+    setSrc1RegionAttr(region);
+}
+std::optional<Type> CmpOp::getExplicitSourceElementType(unsigned index) {
+  if (index == 0)
+    return getSrc0Type();
+  return index == 1 ? getSrc1Type() : std::nullopt;
+}
+int64_t CmpOp::getSourceSubregister(unsigned index) {
+  if (index == 0)
+    return getSrc0SubAttr() ? getSrc0SubAttr().getInt() : 0;
+  if (index == 1)
+    return getSrc1SubAttr() ? getSrc1SubAttr().getInt() : 0;
+  return 0;
+}
 
 #undef DEFINE_UNARY_ALU_INTERFACE
 #undef DEFINE_BINARY_ALU_INTERFACE
-#undef DEFINE_ALU_ELEMENT_TYPE
+#undef DEFINE_SOURCE_SUBREGISTER
+#undef DEFINE_ALU_DESTINATION
+#undef DEFINE_ALU_COMMON
 #undef DEFINE_SWSB_INTERFACE
 #undef DEFINE_SEND_SCOREBOARD_INTERFACE
 
@@ -430,7 +492,18 @@ LogicalResult AtomicIAddA64Op::verify() {
 // exec_if: parent -> arms/fallthrough; then -> else/parent; else -> parent.
 // uniform_if: parent -> either arm/fallthrough; regions -> parent.
 // uniform_loop: parent -> body; body -> body (back-edge) or parent (exit).
+// payload_prologue: parent -> body or bypass; body -> parent.
 //===----------------------------------------------------------------------===//
+
+void PayloadPrologueOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  if (point.isParent()) {
+    regions.emplace_back(&getBody());
+    regions.emplace_back(getOperation());
+    return;
+  }
+  regions.emplace_back(getOperation());
+}
 
 void ExecIfOp::getSuccessorRegions(RegionBranchPoint point,
                                    SmallVectorImpl<RegionSuccessor> &regions) {
@@ -481,6 +554,10 @@ ValueRange ExecIfOp::getSuccessorInputs(RegionSuccessor successor) {
   return successor.isOperation() ? ValueRange(getResults()) : ValueRange();
 }
 
+ValueRange PayloadPrologueOp::getSuccessorInputs(RegionSuccessor) {
+  return {};
+}
+
 ValueRange UniformIfOp::getSuccessorInputs(RegionSuccessor successor) {
   return successor.isOperation() ? ValueRange(getResults()) : ValueRange();
 }
@@ -507,4 +584,9 @@ MutableOperandRange
 ContinueIfOp::getMutableSuccessorOperands(RegionSuccessor point) {
   // Operand 0 is the condition; only carried values flow to successors.
   return MutableOperandRange(getOperation(), /*start=*/1, getNumOperands() - 1);
+}
+
+MutableOperandRange PayloadPrologueEndOp::getMutableSuccessorOperands(
+    RegionSuccessor) {
+  return MutableOperandRange(getOperation(), 0, 0);
 }

@@ -434,7 +434,6 @@ private:
     instruction.dataType = getDataType(compare.getElemType());
     instruction.isSigned = compare->hasAttr("signed");
 
-    constexpr std::array<StringLiteral, 2> subNames = {"src0Sub", "src1Sub"};
     ALUOpInterface alu = cast<ALUOpInterface>(compare.getOperation());
     for (auto [index, operand] : llvm::enumerate(compare.getOperands())) {
       std::optional<Type> explicitType = alu.getExplicitSourceElementType(index);
@@ -445,7 +444,7 @@ private:
         if (failed(validateDataType(compare, immediate.getElemType())))
           return failure();
       SourceOperand source = getSourceOperand(
-          operand, getSub(compare, subNames[index]), sourceType,
+          operand, alu.getSourceSubregister(index), sourceType,
           getSourceRegion(alu.getSourceRegion(index)));
       source.isSigned = instruction.isSigned;
       instruction.sources.push_back(std::move(source));
@@ -485,26 +484,20 @@ private:
     if (failed(validateDataType(operation, elementType)))
       return failure();
     instruction.destinationType = getDataType(elementType);
-    if (IntegerAttr attr = operation->getAttrOfType<IntegerAttr>("execSize"))
-      instruction.execution.size = attr.getInt();
-    else
-      instruction.execution.size = 16;
+    instruction.execution.size = alu.getExecutionSize();
     if (IntegerAttr attr = operation->getAttrOfType<IntegerAttr>("maskOffset"))
       instruction.execution.maskOffset = attr.getInt();
     instruction.execution.noMask = operation->hasAttr("noMask");
 
     Value destination = operation->getResult(0);
-    uint32_t destinationStride = 1;
-    if (DstRegionAttr attr =
-            operation->getAttrOfType<DstRegionAttr>("dstRegion"))
-      destinationStride = attr.getHstride();
+    DstRegionAttr destinationRegion = alu.getDestinationRegion();
+    uint32_t destinationStride =
+        destinationRegion ? destinationRegion.getHstride() : 1;
     instruction.destination = Destination{
-        getRegisterReference(destination.getType(), getSub(operation, "dstSub"),
-                             elementType),
+        getRegisterReference(destination.getType(),
+                             alu.getDestinationSubregister(), elementType),
         destinationStride};
 
-    constexpr std::array<StringLiteral, 3> subNames = {"src0Sub", "src1Sub",
-                                                        "src2Sub"};
     for (auto [index, operand] : llvm::enumerate(operation->getOperands())) {
       std::optional<Type> explicitType = alu.getExplicitSourceElementType(index);
       Type sourceType = explicitType.value_or(elementType);
@@ -514,7 +507,7 @@ private:
         if (failed(validateDataType(operation, immediate.getElemType())))
           return failure();
       SourceOperand source = getSourceOperand(
-          operand, getSub(operation, subNames[index]), sourceType,
+          operand, alu.getSourceSubregister(index), sourceType,
           getSourceRegion(alu.getSourceRegion(index)));
       if (operand.getDefiningOp<ImmOp>() && !explicitType)
         source.type = index == 1 && isa<ShlOp, ShrOp>(operation)

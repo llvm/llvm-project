@@ -171,16 +171,30 @@ static std::optional<RegisterSpan> getRegisterSpan(Value value) {
   if (RegType type = dyn_cast<RegType>(value.getType())) {
     if (type.getBaseGRF() < 0 || type.getWidthDwords() == 0)
       return std::nullopt;
-    int64_t begin = type.getBaseGRF() * 16;
-    return RegisterSpan{begin, begin + type.getWidthDwords()};
+    int64_t begin = type.getBaseGRF() * 64;
+    int64_t widthDwords = type.getWidthDwords();
+    for (OpOperand &use : value.getUses()) {
+      UpdateTupleOp update = dyn_cast<UpdateTupleOp>(use.getOwner());
+      if (!update || use.getOperandNumber() == 0)
+        continue;
+      RegType baseType = cast<RegType>(update.getBase().getType());
+      unsigned updateIndex = use.getOperandNumber() - 1;
+      int64_t offset =
+          cast<IntegerAttr>(update.getOffsets()[updateIndex]).getInt();
+      assert(offset >= 0 && offset <= baseType.getWidthDwords() &&
+             "verified tuple update offset must fit its base storage");
+      widthDwords =
+          std::max<int64_t>(widthDwords, baseType.getWidthDwords() - offset);
+    }
+    return RegisterSpan{begin, begin + widthDwords * 4};
   }
   if (ARFType type = dyn_cast<ARFType>(value.getType())) {
     if (type.getIndex() < 0 || type.getWidthDwords() == 0)
       return std::nullopt;
     constexpr int64_t arfBase = int64_t{1} << 32;
     int64_t begin = arfBase + static_cast<int64_t>(type.getFile()) * (1 << 20) +
-                    type.getIndex() * 16;
-    return RegisterSpan{begin, begin + type.getWidthDwords()};
+                    type.getIndex() * 64;
+    return RegisterSpan{begin, begin + type.getWidthDwords() * 4};
   }
   return std::nullopt;
 }
@@ -530,6 +544,9 @@ static void runTransfer(Operation *operation, SyncState &state,
     return;
   }
 
+  if (isa<PayloadPrologueOp>(operation))
+    return;
+
   if (isa<RegionBranchOpInterface>(operation)) {
     applyDrain(operation, state, mode, emit);
     return;
@@ -770,10 +787,86 @@ static void rewriteWithSolver(func::FuncOp function, DataFlowSolver &solver) {
 }
 
 struct DistanceAccess {
+  Operation *producer;
   Xe2IssuePipe pipe;
-  int32_t pipeID;
+  uint8_t age;
   SmallVector<RegisterSpan, 4> sources;
   SmallVector<RegisterSpan, 2> destinations;
+};
+
+struct DistanceState {
+  SmallVector<DistanceAccess, 16> accesses;
+  bool initialized = false;
+  bool allPathsWroteAddressRegister = false;
+};
+
+class DistanceLattice : public AbstractDenseLattice {
+public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(DistanceLattice)
+
+  using AbstractDenseLattice::AbstractDenseLattice;
+
+  const DistanceState &get() const { return state; }
+
+  ChangeResult joinWith(const DistanceState &incoming) {
+    if (!incoming.initialized)
+      return ChangeResult::NoChange;
+    if (!state.initialized) {
+      state = incoming;
+      return ChangeResult::Change;
+    }
+
+    bool changed = false;
+    bool allPathsWrote = state.allPathsWroteAddressRegister &&
+                         incoming.allPathsWroteAddressRegister;
+    if (allPathsWrote != state.allPathsWroteAddressRegister) {
+      state.allPathsWroteAddressRegister = allPathsWrote;
+      changed = true;
+    }
+    for (const DistanceAccess &access : incoming.accesses) {
+      auto existing = llvm::find_if(state.accesses, [&](const DistanceAccess &it) {
+        return it.producer == access.producer;
+      });
+      if (existing == state.accesses.end()) {
+        state.accesses.push_back(access);
+        changed = true;
+        continue;
+      }
+      assert(existing->pipe == access.pipe &&
+             existing->sources == access.sources &&
+             existing->destinations == access.destinations &&
+             "one instruction must have one physical distance footprint");
+      uint8_t age = std::min(existing->age, access.age);
+      if (age != existing->age) {
+        existing->age = age;
+        changed = true;
+      }
+    }
+    return changed ? ChangeResult::Change : ChangeResult::NoChange;
+  }
+
+  ChangeResult join(const AbstractDenseLattice &rhs) override {
+    return joinWith(static_cast<const DistanceLattice &>(rhs).state);
+  }
+
+  ChangeResult setEntryState() {
+    DistanceState entry;
+    entry.initialized = true;
+    if (state.initialized && state.accesses.empty() &&
+        !state.allPathsWroteAddressRegister)
+      return ChangeResult::NoChange;
+    state = entry;
+    return ChangeResult::Change;
+  }
+
+  void print(raw_ostream &os) const override {
+    os << "initialized=" << state.initialized
+       << " accesses=" << state.accesses.size()
+       << " wrote-a0=" << state.allPathsWroteAddressRegister;
+  }
+
+private:
+  DistanceState state;
 };
 
 static std::optional<unsigned> getPipeIndex(Xe2IssuePipe pipe) {
@@ -805,6 +898,76 @@ static SmallVector<RegisterSpan, 4> getRegisterSpans(ValueRange values) {
   return spans;
 }
 
+static std::optional<int64_t> getElementBytes(Type type) {
+  if (IntegerType integer = dyn_cast<IntegerType>(type))
+    return llvm::divideCeil(integer.getWidth(), 8u);
+  if (FloatType floating = dyn_cast<FloatType>(type))
+    return llvm::divideCeil(floating.getWidth(), 8u);
+  return std::nullopt;
+}
+
+static void appendElementSpan(SmallVectorImpl<RegisterSpan> &spans,
+                              RegisterSpan storage, int64_t element,
+                              int64_t elementBytes) {
+  constexpr int64_t bytesPerGRF = 64;
+  int64_t byteBegin = storage.begin + element * elementBytes;
+  int64_t byteEnd = byteBegin + elementBytes;
+  assert(byteBegin >= storage.begin && byteEnd <= storage.end &&
+         "verified ALU region must fit its register storage");
+  RegisterSpan span{byteBegin / bytesPerGRF * bytesPerGRF,
+                    (byteEnd + bytesPerGRF - 1) / bytesPerGRF * bytesPerGRF};
+  insertSpan(spans, span);
+}
+
+static SmallVector<RegisterSpan, 4>
+getALUSourceSpans(Operation *operation, ALUOpInterface alu) {
+  SmallVector<RegisterSpan, 4> spans;
+  for (auto [index, operand] : llvm::enumerate(operation->getOperands())) {
+    std::optional<RegisterSpan> storage = getRegisterSpan(operand);
+    if (!storage)
+      continue;
+    Type elementType = alu.getExplicitSourceElementType(index).value_or(
+        alu.getInstructionElementType());
+    std::optional<int64_t> elementBytes = getElementBytes(elementType);
+    assert(elementBytes && "verified ALU element type must have a byte width");
+    RegionAttr region = alu.getSourceRegion(index);
+    int64_t vertical = region ? region.getVstride() : 1;
+    int64_t width = region ? region.getWidth() : 1;
+    int64_t horizontal = region ? region.getHstride() : 0;
+    int64_t subregister = alu.getSourceSubregister(index);
+    for (unsigned lane = 0; lane < alu.getExecutionSize(); ++lane) {
+      int64_t element = subregister + lane / width * vertical +
+                        lane % width * horizontal;
+      appendElementSpan(spans, *storage, element, *elementBytes);
+    }
+  }
+  return spans;
+}
+
+static SmallVector<RegisterSpan, 4>
+getALUDestinationSpans(Operation *operation, ALUOpInterface alu) {
+  if (operation->getNumResults() == 0)
+    return {};
+  std::optional<RegisterSpan> storage =
+      getRegisterSpan(operation->getResult(0));
+  if (!storage)
+    return {};
+  if (isa<CmpOp>(operation))
+    return {*storage};
+
+  std::optional<int64_t> elementBytes =
+      getElementBytes(alu.getInstructionElementType());
+  assert(elementBytes && "verified ALU element type must have a byte width");
+  DstRegionAttr region = alu.getDestinationRegion();
+  int64_t stride = region ? region.getHstride() : 1;
+  int64_t subregister = alu.getDestinationSubregister();
+  SmallVector<RegisterSpan, 4> spans;
+  for (unsigned lane = 0; lane < alu.getExecutionSize(); ++lane)
+    appendElementSpan(spans, *storage, subregister + lane * stride,
+                      *elementBytes);
+  return spans;
+}
+
 static bool anyOverlap(ArrayRef<RegisterSpan> lhs,
                        ArrayRef<RegisterSpan> rhs) {
   return llvm::any_of(lhs, [&](RegisterSpan left) {
@@ -814,82 +977,214 @@ static bool anyOverlap(ArrayRef<RegisterSpan> lhs,
   });
 }
 
-static LogicalResult assignDistanceDependencies(func::FuncOp function) {
-  std::array<int32_t, 2> nextPipeID{};
-  SmallVector<DistanceAccess> liveAccesses;
-  bool hasWrittenAddressRegister = false;
-  WalkResult walkResult = function.walk([&](Operation *operation) {
-    SWSBInfoOpInterface swsb = dyn_cast<SWSBInfoOpInterface>(operation);
-    if (!swsb)
-      return WalkResult::advance();
+static LogicalResult transferDistance(Operation *operation,
+                                      DistanceState &state, bool annotate,
+                                      OpBuilder *builder = nullptr) {
+  if (!state.initialized)
+    return success();
+  SWSBInfoOpInterface swsb = dyn_cast<SWSBInfoOpInterface>(operation);
+  if (!swsb)
+    return success();
+  if (isa<SyncOp>(operation)) {
+    return success();
+  }
 
-    FailureOr<Xe2InstructionTiming> timing =
-        getXe2InstructionTiming(operation);
-    if (failed(timing))
-      return WalkResult::interrupt();
-    Xe2IssuePipe distancePipe = timing->pipe;
-    std::optional<unsigned> currentPipeIndex = getPipeIndex(distancePipe);
-    SmallVector<RegisterSpan, 4> sources =
-        getRegisterSpans(operation->getOperands());
-    SmallVector<RegisterSpan, 4> destinations =
-        getRegisterSpans(operation->getResults());
+  FailureOr<Xe2InstructionTiming> timing = getXe2InstructionTiming(operation);
+  if (failed(timing))
+    return failure();
+  Xe2IssuePipe distancePipe = timing->pipe;
+  std::optional<unsigned> currentPipeIndex = getPipeIndex(distancePipe);
+  ALUOpInterface alu = dyn_cast<ALUOpInterface>(operation);
+  SmallVector<RegisterSpan, 4> sources =
+      alu ? getALUSourceSpans(operation, alu)
+          : getRegisterSpans(operation->getOperands());
+  SmallVector<RegisterSpan, 4> destinations =
+      alu ? getALUDestinationSpans(operation, alu)
+          : getRegisterSpans(operation->getResults());
 
-    FinalSWSB final = swsb.getFinalSWSB();
-    int32_t youngestDistance = -1;
-    SWSBDistancePipe pipe = SWSBDistancePipe::none;
-    for (const DistanceAccess &access : llvm::reverse(liveAccesses)) {
-      unsigned producerPipeIndex = *getPipeIndex(access.pipe);
-      int32_t distance = nextPipeID[producerPipeIndex] - access.pipeID;
-      if (distance < 1 || distance > 7)
-        continue;
+  int32_t youngestDistance = -1;
+  SWSBDistancePipe pipe = SWSBDistancePipe::none;
+  for (const DistanceAccess &access : state.accesses) {
+    if (access.age > 7)
+      continue;
 
-      bool raw = anyOverlap(sources, access.destinations);
-      bool crossPipe = !currentPipeIndex || distancePipe != access.pipe;
-      bool waw = crossPipe && anyOverlap(destinations, access.destinations);
-      bool war = crossPipe && anyOverlap(destinations, access.sources);
-      if (!raw && !waw && !war)
-        continue;
+    bool raw = anyOverlap(sources, access.destinations);
+    bool crossPipe = !currentPipeIndex || distancePipe != access.pipe;
+    bool waw = crossPipe && anyOverlap(destinations, access.destinations);
+    bool war = crossPipe && anyOverlap(destinations, access.sources);
+    if (!raw && !waw && !war)
+      continue;
 
-      SWSBDistancePipe producerPipe = getSWSBDistancePipe(access.pipe);
-      if (youngestDistance < 0) {
-        youngestDistance = distance;
-        pipe = producerPipe;
-      } else {
-        youngestDistance = std::min(youngestDistance, distance);
-        if (pipe != producerPipe)
-          pipe = SWSBDistancePipe::all;
-      }
+    SWSBDistancePipe producerPipe =
+        waw || war || (currentPipeIndex && crossPipe)
+            ? SWSBDistancePipe::all
+            : getSWSBDistancePipe(access.pipe);
+    if (youngestDistance < 0) {
+      youngestDistance = access.age;
+      pipe = producerPipe;
+    } else {
+      youngestDistance = std::min<int32_t>(youngestDistance, access.age);
+      if (pipe != producerPipe)
+        pipe = SWSBDistancePipe::all;
     }
+  }
 
-    if (final.tokenMode == SWSBTokenMode::set &&
-        pipe == SWSBDistancePipe::floating)
-      pipe = SWSBDistancePipe::all;
-    final.pipe = pipe;
-    final.distance = youngestDistance;
-
-    if (!hasWrittenAddressRegister) {
-      for (Type type : operation->getResultTypes()) {
+  bool writesAddressRegister = llvm::any_of(
+      operation->getResultTypes(), [](Type type) {
         ARFType arf = dyn_cast<ARFType>(type);
-        if (!arf || arf.getFile() != ARFFile::a0)
-          continue;
-        final.pipe = SWSBDistancePipe::floating;
-        final.distance = 1;
-        hasWrittenAddressRegister = true;
-        break;
-      }
-    }
-    swsb.setFinalSWSB(final);
+        return arf && arf.getFile() == ARFFile::a0;
+      });
+  if (writesAddressRegister && !state.allPathsWroteAddressRegister) {
+    pipe = SWSBDistancePipe::floating;
+    youngestDistance = 1;
+  }
 
-    if (currentPipeIndex) {
-      liveAccesses.push_back(DistanceAccess{distancePipe,
-                                            nextPipeID[*currentPipeIndex],
-                                            std::move(sources),
-                                            std::move(destinations)});
-      ++nextPipeID[*currentPipeIndex];
+  if (annotate) {
+    if (isa<DpasOp>(operation) && youngestDistance >= 0) {
+      assert(builder && "distance replay requires a builder");
+      FinalSWSB distance;
+      distance.pipe = pipe;
+      distance.distance = youngestDistance;
+      SyncOp sync;
+      for (Operation *previous = operation->getPrevNode(); previous;
+           previous = previous->getPrevNode()) {
+        SyncOp candidate = dyn_cast<SyncOp>(previous);
+        if (!candidate)
+          break;
+        if (candidate.getKind() == SyncKind::nop &&
+            candidate.getFinalSWSB().token < 0 &&
+            candidate.getFinalSWSB().pipe == distance.pipe &&
+            candidate.getFinalSWSB().distance == distance.distance) {
+          sync = candidate;
+          break;
+        }
+      }
+      if (!sync) {
+        builder->setInsertionPoint(operation);
+        sync = SyncOp::create(*builder, operation->getLoc(),
+                              MemTokenType::get(builder->getContext()),
+                              SyncKind::nop, Value());
+        sync.setFinalSWSB(distance);
+      }
+      FinalSWSB final = swsb.getFinalSWSB();
+      final.pipe = SWSBDistancePipe::none;
+      final.distance = -1;
+      swsb.setFinalSWSB(final);
+    } else {
+      FinalSWSB final = swsb.getFinalSWSB();
+      if (final.tokenMode == SWSBTokenMode::set &&
+          pipe == SWSBDistancePipe::floating)
+        pipe = SWSBDistancePipe::all;
+      final.pipe = pipe;
+      final.distance = youngestDistance;
+      swsb.setFinalSWSB(final);
     }
-    return WalkResult::advance();
+  }
+
+  if (writesAddressRegister)
+    state.allPathsWroteAddressRegister = true;
+  if (!currentPipeIndex)
+    return success();
+
+  constexpr uint8_t expiredAge = 8;
+  for (DistanceAccess &access : state.accesses)
+    if (access.pipe == distancePipe)
+      access.age = std::min<uint8_t>(access.age + 1, expiredAge);
+  llvm::erase_if(state.accesses, [&](const DistanceAccess &access) {
+    return access.producer == operation;
   });
-  return success(!walkResult.wasInterrupted());
+  state.accesses.push_back(DistanceAccess{operation, distancePipe, 1,
+                                          std::move(sources),
+                                          std::move(destinations)});
+  return success();
+}
+
+class DistanceAnalysis : public DenseForwardDataFlowAnalysis<DistanceLattice> {
+public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(DistanceAnalysis)
+
+  using DenseForwardDataFlowAnalysis::DenseForwardDataFlowAnalysis;
+
+  LogicalResult initialize(Operation *top) override {
+    auto markRegions = [&](Operation *operation) {
+      for (Region &region : operation->getRegions()) {
+        for (Block &block : region) {
+          Executable *blockLive =
+              getOrCreate<Executable>(getProgramPointBefore(&block));
+          propagateIfChanged(blockLive, blockLive->setToLive());
+          Operation *terminator = block.getTerminator();
+          if (!terminator)
+            continue;
+          for (Block *successor : terminator->getSuccessors()) {
+            Executable *edgeLive = getOrCreate<Executable>(
+                getLatticeAnchor<CFGEdge>(&block, successor));
+            propagateIfChanged(edgeLive, edgeLive->setToLive());
+          }
+        }
+      }
+    };
+    markRegions(top);
+    top->walk(markRegions);
+    return DenseForwardDataFlowAnalysis<DistanceLattice>::initialize(top);
+  }
+
+  void setToEntryState(DistanceLattice *lattice) override {
+    propagateIfChanged(lattice, lattice->setEntryState());
+  }
+
+  LogicalResult visitOperation(Operation *operation,
+                               const DistanceLattice &before,
+                               DistanceLattice *after) override {
+    DistanceState next = before.get();
+    if (failed(transferDistance(operation, next, false)))
+      return failure();
+    propagateIfChanged(after, after->joinWith(next));
+    return success();
+  }
+
+  void visitBlockTransfer(Block *, ProgramPoint *, Block *,
+                          const DistanceLattice &before,
+                          DistanceLattice *after) override {
+    propagateIfChanged(after, after->joinWith(before.get()));
+  }
+
+  void visitRegionBranchControlFlowTransfer(RegionBranchOpInterface,
+                                             std::optional<unsigned>,
+                                             std::optional<unsigned>,
+                                             const DistanceLattice &before,
+                                             DistanceLattice *after) override {
+    propagateIfChanged(after, after->joinWith(before.get()));
+  }
+};
+
+static LogicalResult assignDistanceDependencies(func::FuncOp function) {
+  DataFlowSolver solver;
+  loadBaselineAnalyses(solver);
+  solver.load<DistanceAnalysis>();
+  if (failed(solver.initializeAndRun(function)))
+    return failure();
+
+  SmallVector<Block *> blocks;
+  collectBlocks(function.getBody(), blocks);
+  OpBuilder builder(function.getContext());
+  for (Block *block : blocks) {
+    DistanceState local;
+    if (const DistanceLattice *entry = solver.lookupState<DistanceLattice>(
+            solver.getProgramPointBefore(block)))
+      local = entry->get();
+    SmallVector<Operation *> operations;
+    for (Operation &operation : *block)
+      operations.push_back(&operation);
+    for (Operation *operation : operations) {
+      if (failed(transferDistance(operation, local, true, &builder)))
+        return failure();
+      if (isa<RegionBranchOpInterface>(operation))
+        if (const DistanceLattice *post = solver.lookupState<DistanceLattice>(
+                solver.getProgramPointAfter(operation)))
+          local = post->get();
+    }
+  }
+  return success();
 }
 
 class InsertSync : public inter::impl::InsertSyncBase<InsertSync> {
