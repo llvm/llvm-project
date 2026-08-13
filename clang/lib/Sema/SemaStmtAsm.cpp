@@ -247,7 +247,7 @@ ExprResult Sema::ActOnGCCAsmStmtString(Expr *Expr, bool ForAsmLabel,
           << SL->getSourceRange();
     }
     if (!IsConstExpr &&
-        Context.getTargetInfo().FromSystemEncodingConverter != nullptr) {
+        !Context.getTargetInfo().FromSystemEncodingConverter->isNoop()) {
       SmallString<16> ConvertedAsm;
       Context.getTargetInfo().FromSystemEncodingConverter->convert(
           SL->getString(), ConvertedAsm);
@@ -259,6 +259,7 @@ ExprResult Sema::ActOnGCCAsmStmtString(Expr *Expr, bool ForAsmLabel,
     }
     return SL;
   }
+
   if (DiagnoseUnexpandedParameterPack(Expr))
     return ExprError();
   if (Expr->getDependence() != ExprDependence::None)
