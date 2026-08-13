@@ -1,6 +1,7 @@
 #include "inter/Dialect/XeMachine/IR/XeMachineRegAllocPreparation.h"
 
 #include "inter/Dialect/XeMachine/IR/XeMachine.h"
+#include "inter/Dialect/XeMachine/IR/XeMachineRegionFlow.h"
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Dominance.h"
@@ -191,7 +192,8 @@ struct AliasValueInfo {
 
 class WeightedOverlapSummary {
 public:
-  LogicalResult build(func::FuncOp function, bool includeRegionAliases = true) {
+  LogicalResult build(func::FuncOp function, bool includeRegionAliases = true,
+                      Operation *excludedRegionBranch = nullptr) {
     values.clear();
     graph.clear();
     info.clear();
@@ -229,42 +231,14 @@ public:
         for (const RegisterStorageAlias &relation : aliases)
           connect(relation.storage, relation.alias, relation.offset);
       }
-      if (!includeRegionAliases)
-        return;
-
-      auto connectYields = [&](Region &region) {
-        if (region.empty())
-          return;
-        YieldOp yield = dyn_cast<YieldOp>(region.front().getTerminator());
-        if (!yield || yield.getValues().size() != operation->getNumResults())
-          return;
-        for (auto [result, value] :
-             llvm::zip_equal(operation->getResults(), yield.getValues()))
-          connect(result, value, 0);
-      };
-      if (ExecIfOp branch = dyn_cast<ExecIfOp>(operation)) {
-        connectYields(branch.getThenRegion());
-        connectYields(branch.getElseRegion());
-        return;
-      }
-      if (UniformIfOp branch = dyn_cast<UniformIfOp>(operation)) {
-        connectYields(branch.getThenRegion());
-        connectYields(branch.getElseRegion());
-        return;
-      }
-      UniformLoopOp loop = dyn_cast<UniformLoopOp>(operation);
-      if (!loop || loop.getBody().empty())
-        return;
-      Block &body = loop.getBody().front();
-      ContinueIfOp terminator = dyn_cast<ContinueIfOp>(body.getTerminator());
-      if (!terminator || loop.getInits().size() != body.getNumArguments() ||
-          terminator.getCarried().size() != body.getNumArguments() ||
-          loop.getNumResults() != body.getNumArguments())
-        return;
-      for (auto [init, result] :
-           llvm::zip_equal(loop.getInits(), loop.getResults()))
-        connect(result, init, 0);
     });
+    if (includeRegionAliases) {
+      RegionFlow regionFlow(function);
+      for (const RegionFlow::Branch &branch : regionFlow.getBranches())
+        if (branch.operation != excludedRegionBranch)
+          for (const RegionFlow::Transfer &transfer : branch.transfers)
+            connect(transfer.operand->get(), transfer.input, 0);
+    }
 
     SmallVector<Value, 16> pending;
     for (Value root : values) {
@@ -570,26 +544,15 @@ static LogicalResult repairUpdateTuples(func::FuncOp function) {
       RegType replacementType = cast<RegType>(replacement.getType());
       RegType replacementCopyType = RegType::get(
           function.getContext(), replacementType.getWidthDwords(), -1);
-      FailureOr<Value> replacementCopy =
-          materializeRegisterCopy(builder, update.getLoc(), replacement,
-                                  replacementCopyType, "update-value",
-                                  offset % 16);
+      FailureOr<Value> replacementCopy = materializeRegisterCopy(
+          builder, update.getLoc(), replacement, replacementCopyType,
+          "update-value", offset % 16);
       if (failed(replacementCopy))
         return failure();
       update->setOperand(index + 1, *replacementCopy);
     }
   }
   return success();
-}
-
-static bool isDefinedInside(Operation *container, Value value) {
-  if (Operation *definition = value.getDefiningOp())
-    return container->isProperAncestor(definition);
-  BlockArgument argument = dyn_cast<BlockArgument>(value);
-  if (!argument)
-    return false;
-  Operation *parent = argument.getOwner()->getParentOp();
-  return parent && (parent == container || container->isProperAncestor(parent));
 }
 
 static bool isDefinedInside(Region &region, Value value) {
@@ -609,16 +572,6 @@ static bool storageIsDefinedInside(const WeightedOverlapSummary &summary,
   });
 }
 
-static bool storageIsDefinedInside(const WeightedOverlapSummary &summary,
-                                   Operation *container, Value value,
-                                   Operation *operation,
-                                   DominanceInfo &dominance) {
-  return llvm::all_of(summary.getOverlappingValues(value), [&](Value alias) {
-    return !isAvailableBefore(alias, operation, dominance) ||
-           isDefinedInside(container, alias);
-  });
-}
-
 static bool storageHasUseInside(const WeightedOverlapSummary &summary,
                                 Value value, Operation *container,
                                 Operation *operation,
@@ -633,152 +586,127 @@ static bool storageHasUseInside(const WeightedOverlapSummary &summary,
   });
 }
 
-template <typename IfOp>
-static LogicalResult repairBranchYields(IfOp branch,
-                                        const WeightedOverlapSummary &summary,
-                                        DominanceInfo &dominance) {
-  for (Region *region : {&branch.getThenRegion(), &branch.getElseRegion()}) {
-    for (Block &block : *region) {
-      YieldOp yield = dyn_cast<YieldOp>(block.getTerminator());
-      if (!yield)
-        continue;
-      if (yield.getValues().size() != branch.getNumResults())
-        return branch.emitError(
-            "cannot prepare branch with mismatched yield/result counts");
-      bool prepared =
-          llvm::all_of(llvm::enumerate(yield.getValues()), [&](auto indexed) {
-            return !isa<RegType>(
-                       branch->getResult(indexed.index()).getType()) ||
-                   isMarkedCopy(indexed.value(), "branch-yield");
-          });
-      if (prepared)
-        continue;
+static LogicalResult
+repairAcyclicExits(func::FuncOp function, const RegionFlow &flow,
+                   const WeightedOverlapSummary &intrinsicSummary,
+                   DominanceInfo &dominance) {
+  for (const RegionFlow::Branch &branch : flow.getBranches()) {
+    WeightedOverlapSummary surroundingSummary;
+    if (failed(surroundingSummary.build(function, /*includeRegionAliases=*/true,
+                                        branch.operation)))
+      return failure();
+    DenseMap<Operation *, SmallVector<const RegionFlow::Transfer *, 4>> groups;
+    for (const RegionFlow::Transfer &transfer : branch.transfers)
+      if (transfer.source && !transfer.target &&
+          !flow.isRepetitive(transfer.source) &&
+          isa<RegType>(transfer.input.getType()))
+        groups[transfer.sourceOperation].push_back(&transfer);
 
-      OpBuilder builder(yield);
-      unsigned registerResultCount =
-          llvm::count_if(branch->getResults(), [](Value result) {
-            return isa<RegType>(result.getType());
-          });
-      if (registerResultCount == 1) {
-        for (unsigned index = 0; index < yield.getValues().size(); ++index) {
-          Value value = yield.getValues()[index];
-          RegType resultType =
-              dyn_cast<RegType>(branch->getResult(index).getType());
-          bool localStorage =
-              resultType &&
-              storageIsDefinedInside(summary, *region, value, yield, dominance);
-          if (!resultType ||
-              (localStorage && !isa<ExecIfOp>(branch.getOperation())))
+    for (auto [terminator, transfers] : groups) {
+      bool crossing = false;
+      for (auto [lhsIndex, lhs] : llvm::enumerate(transfers)) {
+        Value lhsSource = lhs->operand->get();
+        if (!isa<RegType>(lhsSource.getType()))
+          continue;
+        for (auto [rhsIndex, rhs] : llvm::enumerate(transfers)) {
+          if (lhsIndex == rhsIndex || lhsSource == rhs->operand->get())
             continue;
-          FailureOr<Value> destination = materializeRegisterCopy(
-              builder, yield.getLoc(), value, resultType, "branch-yield");
+          crossing |= surroundingSummary.overlaps(lhsSource, rhs->input);
+        }
+      }
+
+      OpBuilder builder(terminator);
+      if (crossing) {
+        SmallVector<Value, 4> snapshots(transfers.size());
+        for (auto [index, transfer] : llvm::enumerate(transfers)) {
+          Value source = transfer->operand->get();
+          RegType sourceType = dyn_cast<RegType>(source.getType());
+          if (!sourceType)
+            continue;
+          RegType snapshotType = RegType::get(function.getContext(),
+                                              sourceType.getWidthDwords(), -1);
+          FailureOr<Value> snapshot =
+              materializeRegisterCopy(builder, terminator->getLoc(), source,
+                                      snapshotType, "branch-snapshot");
+          if (failed(snapshot))
+            return failure();
+          snapshots[index] = *snapshot;
+        }
+        for (auto [index, snapshot] : llvm::enumerate(snapshots)) {
+          if (!snapshot)
+            continue;
+          RegType destinationType =
+              cast<RegType>(transfers[index]->input.getType());
+          FailureOr<Value> destination =
+              materializeRegisterCopy(builder, terminator->getLoc(), snapshot,
+                                      destinationType, "branch-yield");
           if (failed(destination))
             return failure();
-          yield->setOperand(index, *destination);
+          transfers[index]->operand->set(*destination);
         }
         continue;
       }
 
-      SmallVector<Value, 4> snapshots(yield.getValues().size());
-      for (unsigned index = 0; index < yield.getValues().size(); ++index) {
-        Value value = yield.getValues()[index];
-        RegType resultType =
-            dyn_cast<RegType>(branch->getResult(index).getType());
-        if (!resultType)
+      DenseSet<Value> seen;
+      for (const RegionFlow::Transfer *transfer : transfers) {
+        Value source = transfer->operand->get();
+        if (!isa<RegType>(source.getType()) ||
+            isMarkedCopy(source, "branch-yield"))
           continue;
-        RegType snapshotType =
-            RegType::get(branch.getContext(), resultType.getWidthDwords(), -1);
-        FailureOr<Value> snapshot = materializeRegisterCopy(
-            builder, yield.getLoc(), value, snapshotType, "branch-snapshot");
-        if (failed(snapshot))
-          return failure();
-        snapshots[index] = *snapshot;
-      }
-      for (auto [index, snapshot] : llvm::enumerate(snapshots)) {
-        if (!snapshot)
+        bool local = storageIsDefinedInside(intrinsicSummary, *transfer->source,
+                                            source, terminator, dominance);
+        bool duplicate = !seen.insert(source).second;
+        if (local && !duplicate)
           continue;
-        RegType resultType = cast<RegType>(branch->getResult(index).getType());
-        FailureOr<Value> destination = materializeRegisterCopy(
-            builder, yield.getLoc(), snapshot, resultType, "branch-yield");
+        RegType destinationType = cast<RegType>(transfer->input.getType());
+        FailureOr<Value> destination =
+            materializeRegisterCopy(builder, terminator->getLoc(), source,
+                                    destinationType, "branch-yield");
         if (failed(destination))
           return failure();
-        yield->setOperand(index, *destination);
+        transfer->operand->set(*destination);
       }
     }
   }
   return success();
 }
 
-static LogicalResult repairBranches(func::FuncOp function) {
-  WeightedOverlapSummary summary;
-  if (failed(summary.build(function)))
-    return failure();
-  DominanceInfo dominance(function);
-  SmallVector<Operation *> branches;
-  function.walk([&](Operation *operation) {
-    if (isa<ExecIfOp, UniformIfOp>(operation))
-      branches.push_back(operation);
-  });
-  for (Operation *operation : branches) {
-    if (ExecIfOp branch = dyn_cast<ExecIfOp>(operation)) {
-      if (failed(repairBranchYields(branch, summary, dominance)))
-        return failure();
-      continue;
-    }
-    if (failed(repairBranchYields(cast<UniformIfOp>(operation), summary,
-                                  dominance)))
-      return failure();
-  }
-  return success();
-}
-
-static LogicalResult repairLoopInits(func::FuncOp function,
-                                     DominanceInfo &dominance,
-                                     const WeightedOverlapSummary &summary) {
-  SmallVector<UniformLoopOp> loops;
-  function.walk([&](UniformLoopOp loop) { loops.push_back(loop); });
-  for (UniformLoopOp loop : loops) {
-    if (loop.getBody().empty())
-      continue;
-    Block &body = loop.getBody().front();
-    if (loop.getInits().size() != body.getNumArguments())
-      return loop.emitError(
-          "cannot prepare loop with mismatched init/argument counts");
-    SmallVector<Value, 4> previous;
-    for (unsigned index = 0; index < loop.getInits().size(); ++index) {
-      Value init = loop.getInits()[index];
-      Value originalInit = init;
-      RegType argumentType =
-          dyn_cast<RegType>(body.getArgument(index).getType());
-      if (!argumentType)
+static LogicalResult
+repairRepetitiveEntries(func::FuncOp function, const RegionFlow &flow,
+                        const WeightedOverlapSummary &summary,
+                        DominanceInfo &dominance) {
+  for (const RegionFlow::Branch &branch : flow.getBranches()) {
+    DenseMap<Region *, SmallVector<Value, 4>> previous;
+    for (const RegionFlow::Transfer &transfer : branch.transfers) {
+      if (transfer.source || !transfer.target ||
+          !flow.isRepetitive(transfer.target))
         continue;
-      bool duplicate = llvm::any_of(previous, [&](Value earlier) {
-        return summary.overlaps(earlier, init);
-      });
-      bool invariantRead =
-          storageHasUseInside(summary, init, loop, loop, dominance);
-      bool nestedRepetitive = false;
-      for (Operation *parent = loop->getParentOp(); parent;
-           parent = parent->getParentOp()) {
-        UniformLoopOp enclosing = dyn_cast<UniformLoopOp>(parent);
-        if (!enclosing)
-          continue;
-        nestedRepetitive =
-            !storageIsDefinedInside(summary, enclosing, init, loop, dominance);
-        break;
-      }
-      bool liveThrough = storageIsLiveAfter(summary, init, loop, dominance) ||
-                         invariantRead || nestedRepetitive;
+      Value init = transfer.operand->get();
+      RegType inputType = dyn_cast<RegType>(transfer.input.getType());
+      if (!inputType)
+        continue;
+      bool duplicate =
+          llvm::any_of(previous[transfer.target], [&](Value value) {
+            return summary.overlaps(value, init);
+          });
+      bool invariantRead = storageHasUseInside(summary, init, branch.operation,
+                                               branch.operation, dominance);
+      Region *enclosing = flow.getEnclosingRepetitiveRegion(branch.operation);
+      bool nestedRepetitive =
+          enclosing && !storageIsDefinedInside(summary, *enclosing, init,
+                                               branch.operation, dominance);
+      bool liveThrough =
+          storageIsLiveAfter(summary, init, branch.operation, dominance) ||
+          invariantRead || nestedRepetitive;
       if (duplicate || liveThrough) {
-        OpBuilder builder(loop);
+        OpBuilder builder(branch.operation);
         FailureOr<Value> copy = materializeRegisterCopy(
-            builder, loop.getLoc(), init, argumentType, "loop-init");
+            builder, branch.operation->getLoc(), init, inputType, "loop-init");
         if (failed(copy))
           return failure();
-        loop->setOperand(index, *copy);
-        init = *copy;
+        transfer.operand->set(*copy);
       }
-      previous.push_back(originalInit);
+      previous[transfer.target].push_back(init);
     }
   }
   return success();
@@ -789,10 +717,12 @@ static bool isPreparedBackedge(Value carried) {
   return snapshot && getCopiedSource(snapshot);
 }
 
-static bool hasArgumentUseAfterDefinition(const WeightedOverlapSummary &summary,
-                                          UniformLoopOp loop,
-                                          BlockArgument argument,
-                                          Operation *definition) {
+static bool hasInputUseAfterDefinition(const WeightedOverlapSummary &summary,
+                                       Region &region, Value input,
+                                       Operation *definition) {
+  BlockArgument argument = dyn_cast<BlockArgument>(input);
+  if (!argument)
+    return true;
   Block *block = argument.getOwner();
   Operation *top = definition;
   while (top && top->getBlock() != block)
@@ -807,7 +737,7 @@ static bool hasArgumentUseAfterDefinition(const WeightedOverlapSummary &summary,
       } else {
         Operation *aliasDefinition = alias.getDefiningOp();
         if (!aliasDefinition || aliasDefinition == definition ||
-            !loop->isProperAncestor(aliasDefinition))
+            !region.isAncestor(aliasDefinition->getParentRegion()))
           return false;
       }
     }
@@ -824,80 +754,82 @@ static bool hasArgumentUseAfterDefinition(const WeightedOverlapSummary &summary,
 }
 
 static LogicalResult
-repairLoopBackedges(func::FuncOp function,
-                    const WeightedOverlapSummary &summary) {
-  SmallVector<UniformLoopOp> loops;
-  function.walk([&](UniformLoopOp loop) { loops.push_back(loop); });
-  for (UniformLoopOp loop : loops) {
-    if (loop.getBody().empty())
-      continue;
-    Block &body = loop.getBody().front();
-    ContinueIfOp terminator = dyn_cast<ContinueIfOp>(body.getTerminator());
-    if (!terminator)
-      continue;
-    if (terminator.getCarried().size() != body.getNumArguments())
-      return loop.emitError(
-          "cannot prepare loop with mismatched carried/argument counts");
-
-    bool hazardous = false;
-    for (auto [index, carried] : llvm::enumerate(terminator.getCarried())) {
-      if (!isa<RegType>(carried.getType()))
-        continue;
-      if (carried != body.getArgument(index) && !isPreparedBackedge(carried)) {
-        Operation *definition = carried.getDefiningOp();
-        if (!definition || !loop->isProperAncestor(definition) ||
-            hasArgumentUseAfterDefinition(summary, loop,
-                                          body.getArgument(index), definition))
-          hazardous = true;
+repairRepetitiveCycles(func::FuncOp function, const RegionFlow &flow,
+                       const WeightedOverlapSummary &summary) {
+  for (const RegionFlow::Branch &branch : flow.getBranches()) {
+    DenseMap<Operation *, SmallVector<const RegionFlow::Transfer *, 4>> groups;
+    for (const RegionFlow::Transfer &transfer : branch.transfers)
+      if (transfer.source && transfer.target &&
+          flow.isRepetitive(transfer.target) &&
+          flow.mayReach(transfer.target, transfer.source) &&
+          isa<RegType>(transfer.input.getType()))
+        groups[transfer.sourceOperation].push_back(&transfer);
+    for (auto [terminator, transfers] : groups) {
+      bool hazardous = false;
+      for (auto [index, transfer] : llvm::enumerate(transfers)) {
+        Value carried = transfer->operand->get();
+        if (!isa<RegType>(carried.getType()))
+          continue;
+        if (carried != transfer->input && !isPreparedBackedge(carried)) {
+          Operation *definition = carried.getDefiningOp();
+          if (!definition ||
+              !transfer->source->isAncestor(definition->getParentRegion()) ||
+              hasInputUseAfterDefinition(summary, *transfer->source,
+                                         transfer->input, definition))
+            hazardous = true;
+        }
+        for (auto [otherIndex, other] : llvm::enumerate(transfers)) {
+          if (otherIndex != index && summary.overlaps(carried, other->input))
+            hazardous = true;
+        }
+        for (const RegionFlow::Transfer *earlier :
+             ArrayRef(transfers).take_front(index))
+          if (isa<RegType>(earlier->operand->get().getType()) &&
+              summary.overlaps(carried, earlier->operand->get()))
+            hazardous = true;
       }
-      for (unsigned other = 0; other < body.getNumArguments(); ++other) {
-        if (other != index &&
-            summary.overlaps(carried, body.getArgument(other)))
-          hazardous = true;
+      if (!hazardous)
+        continue;
+
+      bool alreadyPrepared =
+          llvm::all_of(transfers, [&](const RegionFlow::Transfer *transfer) {
+            Value carried = transfer->operand->get();
+            return !isa<RegType>(carried.getType()) ||
+                   isPreparedBackedge(carried);
+          });
+      if (alreadyPrepared)
+        continue;
+
+      // Complete every read before emitting any write tied to a destination.
+      SmallVector<Value, 4> snapshots(transfers.size());
+      OpBuilder builder(terminator);
+      for (auto [index, transfer] : llvm::enumerate(transfers)) {
+        Value carried = transfer->operand->get();
+        RegType carriedType = dyn_cast<RegType>(carried.getType());
+        if (!carriedType)
+          continue;
+        RegType snapshotType = RegType::get(function.getContext(),
+                                            carriedType.getWidthDwords(), -1);
+        FailureOr<Value> snapshot =
+            materializeRegisterCopy(builder, terminator->getLoc(), carried,
+                                    snapshotType, "loop-snapshot");
+        if (failed(snapshot))
+          return failure();
+        snapshots[index] = *snapshot;
       }
-      for (Value earlier : terminator.getCarried().take_front(index))
-        if (isa<RegType>(earlier.getType()) &&
-            summary.overlaps(carried, earlier))
-          hazardous = true;
-    }
-    if (!hazardous)
-      continue;
 
-    bool alreadyPrepared =
-        llvm::all_of(terminator.getCarried(), [&](Value carried) {
-          return !isa<RegType>(carried.getType()) ||
-                 isPreparedBackedge(carried);
-        });
-    if (alreadyPrepared)
-      continue;
-
-    // Complete every read before emitting any write tied to a destination.
-    SmallVector<Value, 4> snapshots(terminator.getCarried().size());
-    OpBuilder builder(terminator);
-    for (auto [index, carried] : llvm::enumerate(terminator.getCarried())) {
-      RegType carriedType = dyn_cast<RegType>(carried.getType());
-      if (!carriedType)
-        continue;
-      RegType snapshotType =
-          RegType::get(function.getContext(), carriedType.getWidthDwords(), -1);
-      FailureOr<Value> snapshot = materializeRegisterCopy(
-          builder, terminator.getLoc(), carried, snapshotType, "loop-snapshot");
-      if (failed(snapshot))
-        return failure();
-      snapshots[index] = *snapshot;
-    }
-
-    for (auto [index, snapshot] : llvm::enumerate(snapshots)) {
-      if (!snapshot)
-        continue;
-      RegType destinationType =
-          cast<RegType>(body.getArgument(index).getType());
-      FailureOr<Value> destination =
-          materializeRegisterCopy(builder, terminator.getLoc(), snapshot,
-                                  destinationType, "loop-backedge");
-      if (failed(destination))
-        return failure();
-      terminator->setOperand(index + 1, *destination);
+      for (auto [index, snapshot] : llvm::enumerate(snapshots)) {
+        if (!snapshot)
+          continue;
+        RegType destinationType =
+            cast<RegType>(transfers[index]->input.getType());
+        FailureOr<Value> destination =
+            materializeRegisterCopy(builder, terminator->getLoc(), snapshot,
+                                    destinationType, "loop-backedge");
+        if (failed(destination))
+          return failure();
+        transfers[index]->operand->set(*destination);
+      }
     }
   }
   return success();
@@ -915,20 +847,24 @@ inter::xemachine::prepareRegisterAllocation(func::FuncOp function) {
     return failure();
   if (failed(repairUpdateTuples(function)))
     return failure();
-  if (failed(repairBranches(function)))
-    return failure();
 
-  WeightedOverlapSummary initSummary;
-  if (failed(initSummary.build(function)))
+  WeightedOverlapSummary intrinsicSummary;
+  if (failed(intrinsicSummary.build(function, /*includeRegionAliases=*/false)))
     return failure();
+  RegionFlow regionFlow(function);
   {
     DominanceInfo dominance(function);
-    if (failed(repairLoopInits(function, dominance, initSummary)))
+    if (failed(repairAcyclicExits(function, regionFlow, intrinsicSummary,
+                                  dominance)))
+      return failure();
+    if (failed(repairRepetitiveEntries(function, regionFlow, intrinsicSummary,
+                                       dominance)))
       return failure();
   }
 
   WeightedOverlapSummary backedgeSummary;
-  if (failed(backedgeSummary.build(function)))
+  if (failed(backedgeSummary.build(function, /*includeRegionAliases=*/false)))
     return failure();
-  return repairLoopBackedges(function, backedgeSummary);
+  RegionFlow updatedFlow(function);
+  return repairRepetitiveCycles(function, updatedFlow, backedgeSummary);
 }

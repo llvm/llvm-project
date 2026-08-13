@@ -3,6 +3,7 @@
 #include "inter/Dialect/XeMachine/IR/XeMachine.h"
 #include "inter/Dialect/XeMachine/IR/XeMachineAliasAnalysis.h"
 #include "inter/Dialect/XeMachine/IR/XeMachineRegAllocPreparation.h"
+#include "inter/Dialect/XeMachine/IR/XeMachineRegionFlow.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Transform/IR/TransformOps.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
@@ -268,7 +269,7 @@ static LogicalResult finalizeComponents(func::FuncOp function,
         end = std::max(end, getTokenEnd(result));
         forwarded = true;
       }
-      if (!forwarded && isa<YieldOp, ContinueIfOp>(owner))
+      if (!forwarded && isa<RegionBranchTerminatorOpInterface>(owner))
         end = std::max<int64_t>(end, state.positions.size());
     }
     visiting.erase(token);
@@ -297,31 +298,36 @@ static LogicalResult finalizeComponents(func::FuncOp function,
     }
   });
 
-  function.walk([&](UniformLoopOp loop) {
-    int64_t loopEnd = state.positions.lookup(loop);
-    loop.getBody().walk([&](Operation *operation) {
-      loopEnd = std::max(loopEnd, state.positions.lookup(operation));
-    });
-    loop.getBody().walk([&](Operation *operation) {
-      for (Value operand : operation->getOperands()) {
-        if (!isRegister(operand))
-          continue;
-        Operation *definition = operand.getDefiningOp();
-        if (definition && loop->isProperAncestor(definition))
-          continue;
-        if (BlockArgument argument = dyn_cast<BlockArgument>(operand)) {
-          Operation *parent = argument.getOwner()->getParentOp();
-          if (parent && loop->isProperAncestor(parent))
+  RegionFlow regionFlow(function);
+  for (const RegionFlow::Branch &branch : regionFlow.getBranches()) {
+    for (Region *region : branch.regions) {
+      if (!regionFlow.isRepetitive(region))
+        continue;
+      int64_t loopEnd = state.positions.lookup(branch.operation);
+      region->walk([&](Operation *operation) {
+        loopEnd = std::max(loopEnd, state.positions.lookup(operation));
+      });
+      region->walk([&](Operation *operation) {
+        for (Value operand : operation->getOperands()) {
+          if (!isRegister(operand))
             continue;
+          Operation *definition = operand.getDefiningOp();
+          if (definition && region->isAncestor(definition->getParentRegion()))
+            continue;
+          if (BlockArgument argument = dyn_cast<BlockArgument>(operand)) {
+            if (region->isAncestor(argument.getOwner()->getParent()))
+              continue;
+          }
+          const RegisterAliasAnalysis::ValueInfo *valueInfo =
+              state.aliases.lookup(operand);
+          assert(valueInfo && "register operand is missing alias information");
+          AllocationComponent &component =
+              state.components[valueInfo->component];
+          component.end = std::max(component.end, loopEnd);
         }
-        const RegisterAliasAnalysis::ValueInfo *valueInfo =
-            state.aliases.lookup(operand);
-        assert(valueInfo && "register operand is missing alias information");
-        AllocationComponent &component = state.components[valueInfo->component];
-        component.end = std::max(component.end, loopEnd);
-      }
-    });
-  });
+      });
+    }
+  }
   return success();
 }
 
@@ -793,34 +799,39 @@ buildArfState(func::FuncOp function) {
   if (walkResult.wasInterrupted())
     return failure();
 
-  function.walk([&](UniformLoopOp loop) {
-    int64_t loopEnd = positions.lookup(loop);
-    loop.getBody().walk([&](Operation *operation) {
-      loopEnd = std::max(loopEnd, positions.lookup(operation));
-    });
-    for (ArfLiveRange &range : ranges) {
-      bool captured = llvm::any_of(range.value.getUses(), [&](OpOperand &use) {
-        Operation *owner = use.getOwner();
-        if (!loop->isProperAncestor(owner))
-          return false;
-        Operation *definition = range.value.getDefiningOp();
-        if (definition)
-          return !loop->isProperAncestor(definition);
-        BlockArgument argument = cast<BlockArgument>(range.value);
-        Operation *parent = argument.getOwner()->getParentOp();
-        return !parent || !loop->isProperAncestor(parent);
+  RegionFlow regionFlow(function);
+  for (const RegionFlow::Branch &branch : regionFlow.getBranches()) {
+    for (Region *region : branch.regions) {
+      if (!regionFlow.isRepetitive(region))
+        continue;
+      int64_t loopEnd = positions.lookup(branch.operation);
+      region->walk([&](Operation *operation) {
+        loopEnd = std::max(loopEnd, positions.lookup(operation));
       });
-      if (captured)
-        range.end = std::max(range.end, loopEnd);
+      for (ArfLiveRange &range : ranges) {
+        bool captured =
+            llvm::any_of(range.value.getUses(), [&](OpOperand &use) {
+              Operation *owner = use.getOwner();
+              if (!region->isAncestor(owner->getParentRegion()))
+                return false;
+              Operation *definition = range.value.getDefiningOp();
+              if (definition)
+                return !region->isAncestor(definition->getParentRegion());
+              BlockArgument argument = cast<BlockArgument>(range.value);
+              return !region->isAncestor(argument.getOwner()->getParent());
+            });
+        if (captured)
+          range.end = std::max(range.end, loopEnd);
+      }
     }
-  });
+  }
 
-  llvm::stable_sort(ranges, [](const ArfLiveRange &lhs,
-                               const ArfLiveRange &rhs) {
-    if (lhs.start != rhs.start)
-      return lhs.start < rhs.start;
-    return lhs.assignment >= 0 && rhs.assignment < 0;
-  });
+  llvm::stable_sort(ranges,
+                    [](const ArfLiveRange &lhs, const ArfLiveRange &rhs) {
+                      if (lhs.start != rhs.start)
+                        return lhs.start < rhs.start;
+                      return lhs.assignment >= 0 && rhs.assignment < 0;
+                    });
   for (auto [index, range] : llvm::enumerate(ranges)) {
     if (range.type.getFile() != ARFFile::f || range.assignment < 0)
       continue;

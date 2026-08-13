@@ -657,8 +657,7 @@ module {
 // PREP-NEXT: xemachine.yield [[EXEC_COPY]]
 // PREP: } otherwise {
 // PREP-NEXT: [[EXEC_LOCAL:%.*]] = xemachine.mov {{.*}}noMask
-// PREP-NEXT: [[EXEC_LOCAL_COPY:%.*]] = xemachine.mov [[EXEC_LOCAL]] {{.*}}xemachine.regalloc_copy = "branch-yield"
-// PREP-NEXT: xemachine.yield [[EXEC_LOCAL_COPY]]
+// PREP-NEXT: xemachine.yield [[EXEC_LOCAL]]
 
 // PREP-LABEL: func.func @loop_init_alias_live_through
 // PREP: [[LIVE_WHOLE:%.*]] = xemachine.mov
@@ -726,8 +725,7 @@ module {
 
 // PREP-LABEL: func.func @sequential_loop_alias_inits
 // PREP: [[FIRST_LOOP:%.*]] = xemachine.uniform_loop
-// PREP: [[SEQUENTIAL_COPY:%.*]] = xemachine.mov {{.*}}xemachine.regalloc_copy = "loop-init"
-// PREP-NEXT: {{%.*}}:2 = xemachine.uniform_loop([[FIRST_LOOP]], [[SEQUENTIAL_COPY]])
+// PREP: {{%.*}}:2 = xemachine.uniform_loop([[FIRST_LOOP]],
 
 // PREP-LABEL: func.func @aligned_tuple_view
 // PREP: [[ALIGNED_PARTS:%.*]]:2 = xemachine.tuple_to_elements
@@ -772,6 +770,12 @@ module {
 // ALLOC: [[ALLOC_SPLIT_COPY:%.*]] = xemachine.mov {{.*}}-> !xemachine.reg<16, 0>
 // ALLOC-LABEL: func.func @fixed_upper_tuple_view
 // ALLOC: [[ALLOC_UPPER_COPY:%.*]] = xemachine.mov {{.*}}-> !xemachine.reg<16, 2>
+// ALLOC-LABEL: func.func @sequential_loop_alias_inits
+// ALLOC: [[SLOT_INIT:%.*]] = xemachine.mov {{.*}}xemachine.regalloc_copy = "loop-init"{{.*}}-> !xemachine.reg<16, [[SLOT:[0-9]+]]>
+// ALLOC: [[SLOT_RESULT:%.*]] = xemachine.uniform_loop([[SLOT_INIT]])
+// ALLOC: ^{{.*}}([[SLOT_ARG:%.*]]: !xemachine.reg<16, [[SLOT]]>):
+// ALLOC: xemachine.continue_if {{.*}}([[SLOT_ARG]] : !xemachine.reg<16, [[SLOT]]>)
+// ALLOC: } : (!xemachine.reg<16, [[SLOT]]>) -> !xemachine.reg<16, [[SLOT]]>
 // ALLOC-LABEL: func.func @inconsistent_fixed_tuple_split
 // ALLOC: [[ALLOC_CONFLICT_COPY:%.*]] = xemachine.mov {{.*}}-> !xemachine.reg<16, 2>
 // ALLOC-NOT: !xemachine.reg<{{[0-9]+}}, -1>

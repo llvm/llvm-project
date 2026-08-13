@@ -1,6 +1,7 @@
 #include "inter/Dialect/XeMachine/IR/XeMachineAliasAnalysis.h"
 
 #include "inter/Dialect/XeMachine/IR/XeMachine.h"
+#include "inter/Dialect/XeMachine/IR/XeMachineRegionFlow.h"
 
 #include "mlir/IR/Visitors.h"
 #include "llvm/ADT/STLExtras.h"
@@ -39,44 +40,6 @@ RegisterAliasAnalysis::create(func::FuncOp function) {
         {storage, -offsetDwords, owner, destructive});
   };
 
-  auto addRegionAliases = [&](Operation *operation) {
-    auto addYields = [&](Region &region) {
-      if (region.empty())
-        return;
-      YieldOp yield = dyn_cast<YieldOp>(region.front().getTerminator());
-      if (!yield)
-        return;
-      for (auto [result, yielded] :
-           llvm::zip_equal(operation->getResults(), yield.getValues()))
-        addAlias(result, yielded, 0, operation);
-    };
-
-    if (ExecIfOp ifOp = dyn_cast<ExecIfOp>(operation)) {
-      addYields(ifOp.getThenRegion());
-      addYields(ifOp.getElseRegion());
-      return;
-    }
-    if (UniformIfOp ifOp = dyn_cast<UniformIfOp>(operation)) {
-      addYields(ifOp.getThenRegion());
-      addYields(ifOp.getElseRegion());
-      return;
-    }
-    UniformLoopOp loop = dyn_cast<UniformLoopOp>(operation);
-    if (!loop || loop.getBody().empty())
-      return;
-    Block &body = loop.getBody().front();
-    ContinueIfOp terminator = dyn_cast<ContinueIfOp>(body.getTerminator());
-    if (!terminator)
-      return;
-    for (auto [init, argument, carried, result] :
-         llvm::zip_equal(loop.getInits(), body.getArguments(),
-                         terminator.getCarried(), loop.getResults())) {
-      addAlias(result, init, 0, operation);
-      addAlias(result, argument, 0, operation);
-      addAlias(result, carried, 0, operation);
-    }
-  };
-
   DenseMap<int64_t, Value> architecturalRegisters;
   function.walk<WalkOrder::PreOrder>([&](Operation *operation) {
     if (RegisterStorageAliasOpInterface aliasOp =
@@ -95,8 +58,11 @@ RegisterAliasAnalysis::create(func::FuncOp function) {
         architecturalRegisters.try_emplace(archReg.getIndex(),
                                            archReg.getResult());
     }
-    addRegionAliases(operation);
   });
+  RegionFlow regionFlow(function);
+  for (const RegionFlow::Branch &branch : regionFlow.getBranches())
+    for (const RegionFlow::Transfer &transfer : branch.transfers)
+      addAlias(transfer.operand->get(), transfer.input, 0, branch.operation);
 
   SmallVector<int64_t> minimumOffsets;
   SmallVector<Value, 16> pending;
