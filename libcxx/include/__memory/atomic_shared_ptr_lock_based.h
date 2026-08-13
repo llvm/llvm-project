@@ -278,7 +278,7 @@ struct atomic<shared_ptr<_Tp>> {
     __shared_weak_count* __cur_c = __atomic_smart_ptr_storage::__decode(
         std::__cxx_atomic_load(__builtin_addressof(__fields_.__ctrl_), memory_order_relaxed));
 
-    if (__atomic_smart_ptr_equivalent(__cur_ptr, __cur_c, __expected.__ptr_, __expected.__cntrl_)) {
+    if (std::__atomic_smart_ptr_equivalent(__cur_ptr, __cur_c, __expected.__ptr_, __expected.__cntrl_)) {
       _Tp* __desired_ptr               = __desired.__ptr_;
       __shared_weak_count* __desired_c = __desired.__cntrl_;
       __desired.__ptr_                 = nullptr;
@@ -327,7 +327,7 @@ struct atomic<shared_ptr<_Tp>> {
       if (__cur_c != __old_c)
         return true;
       _Tp* __cur_ptr = std::__cxx_atomic_load(__builtin_addressof(__fields_.__ptr_), __m);
-      return !__atomic_smart_ptr_equivalent(__cur_ptr, __cur_c, __old_ptr, __old_c);
+      return !std::__atomic_smart_ptr_equivalent(__cur_ptr, __cur_c, __old_ptr, __old_c);
     });
   }
 
@@ -422,7 +422,7 @@ struct atomic<weak_ptr<_Tp>> {
     __shared_weak_count* __cur_c = __atomic_smart_ptr_storage::__decode(
         std::__cxx_atomic_load(__builtin_addressof(__fields_.__ctrl_), memory_order_relaxed));
 
-    if (__atomic_smart_ptr_equivalent(__cur_ptr, __cur_c, __expected.__ptr_, __expected.__cntrl_)) {
+    if (std::__atomic_smart_ptr_equivalent(__cur_ptr, __cur_c, __expected.__ptr_, __expected.__cntrl_)) {
       _Tp* __desired_ptr               = __desired.__ptr_;
       __shared_weak_count* __desired_c = __desired.__cntrl_;
       __desired.__ptr_                 = nullptr;
@@ -471,7 +471,7 @@ struct atomic<weak_ptr<_Tp>> {
       if (__cur_c != __old_c)
         return true;
       _Tp* __cur_ptr = std::__cxx_atomic_load(__builtin_addressof(__fields_.__ptr_), __m);
-      return !__atomic_smart_ptr_equivalent(__cur_ptr, __cur_c, __old_ptr, __old_c);
+      return !std::__atomic_smart_ptr_equivalent(__cur_ptr, __cur_c, __old_ptr, __old_c);
     });
   }
 

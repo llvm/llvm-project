@@ -16,14 +16,12 @@
 #  pragma GCC system_header
 #endif
 
-#if !defined(_LIBCPP_HAS_LOCKFREE_ATOMIC_SHARED_PTR)
-#  if _LIBCPP_HAS_THREADS &&                                                                                           \
-      (((defined(__x86_64__) || defined(_M_X64)) && defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_16)) ||                   \
-       ((defined(__aarch64__) || defined(_M_ARM64)) && defined(__ARM_FEATURE_ATOMICS)))
-#    define _LIBCPP_HAS_LOCKFREE_ATOMIC_SHARED_PTR 1
-#  else
-#    define _LIBCPP_HAS_LOCKFREE_ATOMIC_SHARED_PTR 0
-#  endif
+#if _LIBCPP_HAS_THREADS &&                                                                                             \
+    (((defined(__x86_64__) || defined(_M_X64)) && defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_16)) ||                     \
+     ((defined(__aarch64__) || defined(_M_ARM64)) && defined(__ARM_FEATURE_ATOMICS)))
+#  define _LIBCPP_HAS_LOCKFREE_ATOMIC_SHARED_PTR 1
+#else
+#  define _LIBCPP_HAS_LOCKFREE_ATOMIC_SHARED_PTR 0
 #endif
 
 #if _LIBCPP_HAS_LOCKFREE_ATOMIC_SHARED_PTR

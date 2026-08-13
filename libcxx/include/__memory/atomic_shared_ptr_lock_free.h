@@ -281,7 +281,7 @@ struct atomic<shared_ptr<_Tp>> {
       auto __word                  = __fields_.__dwcas_load(__m);
       __shared_weak_count* __cur_c = __atomic_smart_ptr_storage::__decode_dwcas(__fields::__pair_ctrl(__word));
       _Tp* __cur_ptr               = __fields::__pair_ptr(__word);
-      return !__atomic_smart_ptr_equivalent(__cur_ptr, __cur_c, __old_ptr, __old_c);
+      return !std::__atomic_smart_ptr_equivalent(__cur_ptr, __cur_c, __old_ptr, __old_c);
     });
   }
 
@@ -419,7 +419,7 @@ private:
       _Tp* __cur_ptr                = __fields_type::__pair_ptr(__cur);
       __shared_weak_count* __cur_cb = __atomic_smart_ptr_storage::__decode_dwcas(__cur_ctrl);
 
-      if (!__atomic_smart_ptr_equivalent(__cur_ptr, __cur_cb, __exp_ptr, __exp_c)) {
+      if (!std::__atomic_smart_ptr_equivalent(__cur_ptr, __cur_cb, __exp_ptr, __exp_c)) {
         // Ownership mismatch. Update __expected to the actual current value
         // (with a fresh shared_ptr reference). __desired is NOT consumed;
         // its destructor will release its own ref.
@@ -545,7 +545,7 @@ struct atomic<weak_ptr<_Tp>> {
       auto __word                  = __fields_.__dwcas_load(__m);
       __shared_weak_count* __cur_c = __atomic_smart_ptr_storage::__decode_dwcas(__fields::__pair_ctrl(__word));
       _Tp* __cur_ptr               = __fields::__pair_ptr(__word);
-      return !__atomic_smart_ptr_equivalent(__cur_ptr, __cur_c, __old_ptr, __old_c);
+      return !std::__atomic_smart_ptr_equivalent(__cur_ptr, __cur_c, __old_ptr, __old_c);
     });
   }
 
@@ -664,7 +664,7 @@ private:
       _Tp* __cur_ptr                = __fields_type::__pair_ptr(__cur);
       __shared_weak_count* __cur_cb = __atomic_smart_ptr_storage::__decode_dwcas(__cur_ctrl);
 
-      if (!__atomic_smart_ptr_equivalent(__cur_ptr, __cur_cb, __exp_ptr, __exp_c)) {
+      if (!std::__atomic_smart_ptr_equivalent(__cur_ptr, __cur_cb, __exp_ptr, __exp_c)) {
         (void)__success;
         __expected = __load_dwcas(__failure);
         return false;
