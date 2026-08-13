@@ -183,7 +183,8 @@ define <2 x i8> @and1_shl1_is_cmp_eq_0_vec_poison(<2 x i8> %x) {
 
 define i8 @and1_lshr1_is_cmp_eq_0(i8 %x) {
 ; CHECK-LABEL: @and1_lshr1_is_cmp_eq_0(
-; CHECK-NEXT:    [[SH:%.*]] = lshr i8 1, [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[SH:%.*]] = zext i1 [[TMP1]] to i8
 ; CHECK-NEXT:    ret i8 [[SH]]
 ;
   %sh = lshr i8 1, %x
@@ -193,8 +194,8 @@ define i8 @and1_lshr1_is_cmp_eq_0(i8 %x) {
 
 define i8 @and1_lshr1_is_cmp_eq_0_multiuse(i8 %x) {
 ; CHECK-LABEL: @and1_lshr1_is_cmp_eq_0_multiuse(
-; CHECK-NEXT:    [[SH:%.*]] = lshr i8 1, [[X:%.*]]
-; CHECK-NEXT:    [[ADD:%.*]] = shl nuw nsw i8 [[SH]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[TMP1]], i8 2, i8 0
 ; CHECK-NEXT:    ret i8 [[ADD]]
 ;
   %sh = lshr i8 1, %x
@@ -207,7 +208,8 @@ define i8 @and1_lshr1_is_cmp_eq_0_multiuse(i8 %x) {
 
 define <2 x i8> @and1_lshr1_is_cmp_eq_0_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @and1_lshr1_is_cmp_eq_0_vec(
-; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i8> splat (i8 1), [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i8> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[SH:%.*]] = zext <2 x i1> [[TMP1]] to <2 x i8>
 ; CHECK-NEXT:    ret <2 x i8> [[SH]]
 ;
   %sh = lshr <2 x i8> <i8 1, i8 1>, %x
@@ -217,7 +219,8 @@ define <2 x i8> @and1_lshr1_is_cmp_eq_0_vec(<2 x i8> %x) {
 
 define <2 x i8> @and1_lshr1_is_cmp_eq_0_vec_poison(<2 x i8> %x) {
 ; CHECK-LABEL: @and1_lshr1_is_cmp_eq_0_vec_poison(
-; CHECK-NEXT:    [[AND:%.*]] = lshr <2 x i8> <i8 1, i8 poison>, [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i8> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[AND:%.*]] = zext <2 x i1> [[TMP1]] to <2 x i8>
 ; CHECK-NEXT:    ret <2 x i8> [[AND]]
 ;
   %sh = lshr <2 x i8> <i8 1, i8 poison>, %x

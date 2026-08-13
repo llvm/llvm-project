@@ -264,7 +264,9 @@ def S_BREV_B64 : SOP1_64 <"s_brev_b64",
 } // End isReMaterializable = 1, isAsCheapAsAMove = 1
 
 let Defs = [SCC] in {
-def S_BCNT0_I32_B32 : SOP1_32 <"s_bcnt0_i32_b32">;
+def S_BCNT0_I32_B32 : SOP1_32 <"s_bcnt0_i32_b32",
+  [(set i32:$sdst, (UniformBinFrag<sub> 32, (ctpop i32:$src0)))]
+>;
 def S_BCNT0_I32_B64 : SOP1_32_64 <"s_bcnt0_i32_b64">;
 def S_BCNT1_I32_B32 : SOP1_32 <"s_bcnt1_i32_b32",
   [(set i32:$sdst, (UniformUnaryFrag<ctpop> i32:$src0))]
@@ -477,27 +479,10 @@ let SubtargetPredicate = HasSALUFloatInsts, AddedComplexity = 9 in {
                  (S_CVT_I32_F32 $src0)>;
     def : GCNPat<(i16 (UniformUnaryFrag<fp_to_uint> f32:$src0)),
                  (S_CVT_U32_F32 $src0)>;
-    // f16 -> i32 : form chain f16 -> f32 -> i32
-    def : GCNPat<(i32 (UniformUnaryFrag<fp_to_sint> f16:$src0)),
-                 (S_CVT_I32_F32 (S_CVT_F32_F16 $src0))>;
-    def : GCNPat<(i32 (UniformUnaryFrag<fp_to_uint> f16:$src0)),
-                 (S_CVT_U32_F32 (S_CVT_F32_F16 $src0))>;
-
-    // i32 -> f16 : form chain i32 -> f32 -> f16
-    def : GCNPat<(f16 (UniformUnaryFrag<sint_to_fp> i32:$src0)),
-                 (S_CVT_F16_F32 (S_CVT_F32_I32 $src0))>;
-    def : GCNPat<(f16 (UniformUnaryFrag<uint_to_fp> i32:$src0)),
-                 (S_CVT_F16_F32 (S_CVT_F32_U32 $src0))>;
-
     // f32 -> i32 saturated conversions
     def : GCNPat<(i32 (UniformBinFrag<fp_to_sint_sat> f32:$src0, i32)),
                  (S_CVT_I32_F32 (f32 $src0))>;
     def : GCNPat<(i32 (UniformBinFrag<fp_to_uint_sat> f32:$src0, i32)),
-                 (S_CVT_U32_F32 (f32 $src0))>;
-
-    def : GCNPat<(i32 (UniformUnaryFrag<fp_to_sint_sat_gi> f32:$src0)),
-                 (S_CVT_I32_F32 (f32 $src0))>;
-    def : GCNPat<(i32 (UniformUnaryFrag<fp_to_uint_sat_gi> f32:$src0)),
                  (S_CVT_U32_F32 (f32 $src0))>;
 }
 
@@ -705,12 +690,10 @@ def S_SUB_I32 : SOP2_32 <"s_sub_i32",
 
 let Uses = [SCC] in { // Carry in comes from SCC
 let isCommutable = 1 in {
-def S_ADDC_U32 : SOP2_32 <"s_addc_u32",
-  [(set i32:$sdst, (UniformBinFrag<adde> (i32 SSrc_b32:$src0), (i32 SSrc_b32:$src1)))]>;
+def S_ADDC_U32 : SOP2_32 <"s_addc_u32">;
 } // End isCommutable = 1
 
-def S_SUBB_U32 : SOP2_32 <"s_subb_u32",
-  [(set i32:$sdst, (UniformBinFrag<sube> (i32 SSrc_b32:$src0), (i32 SSrc_b32:$src1)))]>;
+def S_SUBB_U32 : SOP2_32 <"s_subb_u32">;
 } // End Uses = [SCC]
 
 let isCommutable = 1 in {
@@ -728,6 +711,21 @@ def S_MAX_U32 : SOP2_32 <"s_max_u32",
 >;
 } // End isCommutable = 1
 } // End Defs = [SCC]
+
+// f32 -> i16 saturated conversions. Required because those conversions
+// are kept legal for the V_CVT_PK_[IU]16_F32 packed patterns.
+class SOP_FPToUSatPat<dag lhs, int hi> : GCNPat<
+  lhs, (S_MIN_U32 (S_CVT_U32_F32 (f32 $src0)), (i32 hi))>;
+class SOP_FPToSSatPat<dag lhs, int hi, int lo> : GCNPat<
+  lhs, (S_MAX_I32 (S_MIN_I32 (S_CVT_I32_F32 (f32 $src0)), (i32 hi)),
+                  (i32 lo))>;
+
+let SubtargetPredicate = HasSALUFloatInsts, AddedComplexity = 9 in {
+  def : SOP_FPToUSatPat<(i16 (UniformBinFrag<fp_to_uint_sat> f32:$src0, i16)),
+                       0xffff>;
+  def : SOP_FPToSSatPat<(i16 (UniformBinFrag<fp_to_sint_sat> f32:$src0, i16)),
+                       0x7fff, 0xffff8000>;
+}
 
 let SubtargetPredicate = isGFX12Plus in {
   def S_ADD_U64 : SOP2_64<"s_add_u64">{
@@ -855,8 +853,7 @@ def S_ASHR_I64 : SOP2_64_32 <"s_ashr_i64",
 } // End Defs = [SCC]
 
 let isReMaterializable = 1 in {
-def S_BFM_B32 : SOP2_32 <"s_bfm_b32",
-  [(set i32:$sdst, (UniformBinFrag<AMDGPUbfm> i32:$src0, i32:$src1))]>;
+def S_BFM_B32 : SOP2_32 <"s_bfm_b32">;
 def S_BFM_B64 : SOP2_64_32_32 <"s_bfm_b64">;
 
 def S_MUL_I32 : SOP2_32 <"s_mul_i32",
@@ -1954,6 +1951,13 @@ def : GCNPat <
 >;
 
 def : GCNPat <
+   (i64 (UniformBinFrag<sub> 64, (ctpop i64:$src))),
+    (i64 (REG_SEQUENCE SReg_64,
+     (i32 (COPY_TO_REGCLASS (S_BCNT0_I32_B64 $src), SReg_32)), sub0,
+     (S_MOV_B32 (i32 0)), sub1))
+>;
+
+def : GCNPat <
   (i32 (UniformBinFrag<smax> i32:$x, (i32 (ineg i32:$x)))),
   (S_ABS_I32 SReg_32:$x)
 >;
@@ -2047,7 +2051,7 @@ let SubtargetPredicate = isNotGFX9Plus in {
 def : GetFPModePat<fpmode_mask_gfx6plus>;
 }
 
-let SubtargetPredicate = isGFX9GFX10 in
+let SubtargetPredicate = HasPopsExitingWaveID in
 def : GCNPat<
   (int_amdgcn_pops_exiting_wave_id),
   (S_MOV_B32_sideeffects (i32 SRC_POPS_EXITING_WAVE_ID))
@@ -2078,12 +2082,17 @@ let AddedComplexity = 20 in {
   >;
 }
 
-// V_ADD_I32_e32/S_ADD_U32 produces carry in VCC/SCC. For the vector
-// case, the sgpr-copies pass will fix this to use the vector version.
-def : GCNPat <
-  (i32 (addc i32:$src0, i32:$src1)),
-  (S_ADD_U32 $src0, $src1)
->;
+// Higher complexity to prefer scalar over VALU patterns for uniform values.
+let AddedComplexity = 20 in {
+  def : GCNPat<
+    (i32 (UniformBinFrag<uaddsat> i32:$src0, i32:$src1)),
+    (S_ADD_U32 (S_MIN_U32 $src0, (S_NOT_B32 $src1)), $src1)
+  >;
+  def : GCNPat<
+    (i32 (UniformBinFrag<usubsat> i32:$src0, i32:$src1)),
+    (S_SUB_I32 (S_MAX_U32 $src0, $src1), $src1)
+  >;
+} // End AddedComplexity = 20
 
 // FIXME: We need to use COPY_TO_REGCLASS to work-around the fact that
 // REG_SEQUENCE patterns don't support instructions with multiple
@@ -2135,6 +2144,20 @@ let WaveSizePredicate = isWave64 in {
 def : GCNPat<
   (i1 (not (or_oneuse i1:$src0, i1:$src1))),
   (S_NOR_B64 i1:$src0, i1:$src1)
+>;
+}
+
+// v2i64 shl is legal, we need a way to select scalar code
+let SubtargetPredicate = HasAnyPackedU64Ops in {
+def : GCNPat<
+  (v2i64 (UniformBinFrag<cshl_64> v2i64:$src0, v2i64:$src1)),
+  (v2i64 (REG_SEQUENCE SReg_128,
+    (i64 (COPY_TO_REGCLASS
+           (S_LSHL_B64 (i64 (EXTRACT_SUBREG $src0, sub0_sub1)),
+                       (i32 (EXTRACT_SUBREG $src1, sub0))), SGPR_64)), sub0_sub1,
+    (i64 (COPY_TO_REGCLASS
+           (S_LSHL_B64 (i64 (EXTRACT_SUBREG $src0, sub2_sub3)),
+                       (i32 (EXTRACT_SUBREG $src1, sub2))), SGPR_64)), sub2_sub3))
 >;
 }
 

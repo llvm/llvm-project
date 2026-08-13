@@ -200,7 +200,7 @@ static_assert(3.0f16 == LIBC_NAMESPACE::shared::f16addf(1.0f, 2.0f));
 #if 0
 static_assert(3.0f16 == LIBC_NAMESPACE::shared::f16addl(1.0L, 2.0L));
 #endif
-#ifdef LIBC_TYPES_HAS_FLOAT128
+#ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
 static_assert(3.0f16 ==
               LIBC_NAMESPACE::shared::f16addf128(float128(1.0), float128(2.0)));
 #endif
@@ -258,7 +258,7 @@ static_assert(0 == [] {
   float16 setpayload_x = 0.0f16;
   return LIBC_NAMESPACE::shared::setpayloadf16(&setpayload_x, 0.0f16);
 }());
-static_assert(0LL == LIBC_NAMESPACE::shared::llrintf16(0.0));
+static_assert(0LL == LIBC_NAMESPACE::shared::llrintf16(0.0f16));
 static_assert(0LL == LIBC_NAMESPACE::shared::llroundf16(0.0f16));
 static_assert(0L == LIBC_NAMESPACE::shared::lrintf16(0.0f16));
 static_assert(0L == LIBC_NAMESPACE::shared::lroundf16(0.0f16));
@@ -266,6 +266,7 @@ static_assert(0.0f16 == LIBC_NAMESPACE::shared::nearbyintf16(0.0f16));
 static_assert(0.0f16 == LIBC_NAMESPACE::shared::nextafterf16(0.0f16, 0.0f16));
 static_assert(0.0f16 == LIBC_NAMESPACE::shared::rintf16(0.0f16));
 static_assert(1 == LIBC_NAMESPACE::shared::iscanonicalf16(0.0f16));
+static_assert(0 == LIBC_NAMESPACE::shared::isnanf16(0.0f16));
 static_assert(0.0 == LIBC_NAMESPACE::shared::issignalingf16(0.0f16));
 static_assert(1 == [] {
   const char arg{};
@@ -376,7 +377,7 @@ static_assert(0 == LIBC_NAMESPACE::shared::isnanl(0.0L));
 //                       Float128 Tests
 //===----------------------------------------------------------------------===//
 
-#ifdef LIBC_TYPES_HAS_FLOAT128
+#ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 static_assert(0 == [] {
   float128 cx = float128(0.0);
@@ -490,6 +491,7 @@ static_assert(float128(0.0) ==
                                                     float128(0.0)));
 static_assert(float128(0.0) == LIBC_NAMESPACE::shared::rintf128(float128(0.0)));
 static_assert(1 == LIBC_NAMESPACE::shared::iscanonicalf128(float128(0.0)));
+static_assert(0 == LIBC_NAMESPACE::shared::isnanf128(float128(0.0)));
 static_assert(0.0 == LIBC_NAMESPACE::shared::issignalingf128(float128(0.0)));
 static_assert(1 == [] {
   const char arg{};
@@ -504,7 +506,7 @@ static_assert(float128(0.0) ==
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::truncf128(float128(0.0)));
 
-#endif // LIBC_TYPES_HAS_FLOAT128
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 //===----------------------------------------------------------------------===//
 //                       BFloat16 Tests

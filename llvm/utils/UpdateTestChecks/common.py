@@ -40,6 +40,7 @@ SUPPORTED_ANALYSES = {
     "Dependence Analysis",
     "Delinearization",
     "Loop Access Analysis",
+    "Loop Cache Analysis",
     "Scalar Evolution Analysis",
     "Scalar Evolution Division",
 }
@@ -504,6 +505,19 @@ def getSubstitutions(sourcepath):
         ("%p", sourcedir),
         ("%{pathsep}", os.pathsep),
     ]
+
+
+def split_run_line(run_line):
+    """Split a FileCheck RUN line into its tool, FileCheck, and pre-processing commands."""
+    if "%if" in run_line:
+        match = re.search(r"%{\s*(.*?)\s*%}", run_line)
+        if match:
+            run_line = match.group(1)
+
+    commands = [cmd.strip() for cmd in run_line.split("|")]
+    assert len(commands) >= 2
+    preprocess_cmd = " | ".join(commands[:-2]) or None
+    return commands[-2], commands[-1], preprocess_cmd
 
 
 def applySubstitutions(s, substitutions):

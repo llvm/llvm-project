@@ -1385,44 +1385,44 @@ zip2	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      8     5.00                        fsqrt	v0.8h, v0.8h
 # CHECK-NEXT:  1      4     0.50                        fsub	v0.2s, v0.2s, v0.2s
 # CHECK-NEXT:  1      3     0.50    *                   ld1	{ v0.16b }, [x0]
-# CHECK-NEXT:  2      4     1.00    *                   ld1	{ v0.2d, v1.2d, v2.2d }, [x0], #48
-# CHECK-NEXT:  1      4     1.00    *                   ld1	{ v0.2d, v1.2d, v2.2d, v3.2d }, [x0]
-# CHECK-NEXT:  2      4     1.00    *                   ld1	{ v0.4s, v1.4s }, [sp], #32
-# CHECK-NEXT:  1      4     1.00    *                   ld1	{ v0.4s, v1.4s, v2.4s }, [sp]
-# CHECK-NEXT:  2      4     1.00    *                   ld1	{ v0.8b, v1.8b, v2.8b, v3.8b }, [x0], x3
-# CHECK-NEXT:  2      4     1.00    *                   ld1	{ v0.8h }, [x15], x2
-# CHECK-NEXT:  1      3     0.50    *                   ld1	{ v0.8h, v1.8h }, [x15]
+# CHECK-NEXT:  2      4     2.00    *                   ld1	{ v0.2d, v1.2d, v2.2d }, [x0], #48
+# CHECK-NEXT:  1      4     2.00    *                   ld1	{ v0.2d, v1.2d, v2.2d, v3.2d }, [x0]
+# CHECK-NEXT:  2      3     1.00    *                   ld1	{ v0.4s, v1.4s }, [sp], #32
+# CHECK-NEXT:  1      4     2.00    *                   ld1	{ v0.4s, v1.4s, v2.4s }, [sp]
+# CHECK-NEXT:  2      4     2.00    *                   ld1	{ v0.8b, v1.8b, v2.8b, v3.8b }, [x0], x3
+# CHECK-NEXT:  2      3     0.50    *                   ld1	{ v0.8h }, [x15], x2
+# CHECK-NEXT:  1      3     1.00    *                   ld1	{ v0.8h, v1.8h }, [x15]
 # CHECK-NEXT:  1      3     0.50    *                   ld1	{ v0.b }[9], [x0]
 # CHECK-NEXT:  2      3     0.50    *                   ld1	{ v0.b }[9], [x0], #1
 # CHECK-NEXT:  1      3     0.50    *                   ld1r	{ v0.16b }, [x0]
 # CHECK-NEXT:  2      3     0.50    *                   ld1r	{ v0.16b }, [x0], #1
 # CHECK-NEXT:  1      3     0.50    *                   ld1r	{ v0.8h }, [x15]
 # CHECK-NEXT:  2      3     0.50    *                   ld1r	{ v0.8h }, [x15], #2
-# CHECK-NEXT:  2      6     2.00    *                   ld2	{ v0.16b, v1.16b }, [x0], x1
+# CHECK-NEXT:  2      4     2.00    *                   ld2	{ v0.16b, v1.16b }, [x0], x1
 # CHECK-NEXT:  1      4     1.00    *                   ld2	{ v0.8b, v1.8b }, [x0]
-# CHECK-NEXT:  1      4     1.00    *                   ld2	{ v0.h, v1.h }[7], [x15]
-# CHECK-NEXT:  2      4     1.00    *                   ld2	{ v0.h, v1.h }[7], [x15], #4
-# CHECK-NEXT:  1      4     1.00    *                   ld2r	{ v0.2d, v1.2d }, [x0]
-# CHECK-NEXT:  2      4     1.00    *                   ld2r	{ v0.2d, v1.2d }, [x0], #16
-# CHECK-NEXT:  1      4     1.00    *                   ld2r	{ v0.4s, v1.4s }, [sp]
-# CHECK-NEXT:  2      4     1.00    *                   ld2r	{ v0.4s, v1.4s }, [sp], #8
-# CHECK-NEXT:  1      5     1.50    *                   ld3	{ v0.4h, v1.4h, v2.4h }, [x15]
-# CHECK-NEXT:  2      5     1.50    *                   ld3	{ v0.8h, v1.8h, v2.8h }, [x15], x2
-# CHECK-NEXT:  1      4     1.00    *                   ld3	{ v0.s, v1.s, v2.s }[3], [sp]
-# CHECK-NEXT:  2      4     1.00    *                   ld3	{ v0.s, v1.s, v2.s }[3], [sp], x3
-# CHECK-NEXT:  1      4     1.00    *                   ld3r	{ v0.4h, v1.4h, v2.4h }, [x15]
-# CHECK-NEXT:  2      4     1.00    *                   ld3r	{ v0.4h, v1.4h, v2.4h }, [x15], #6
-# CHECK-NEXT:  1      4     1.00    *                   ld3r	{ v0.8b, v1.8b, v2.8b }, [x0]
-# CHECK-NEXT:  2      4     1.00    *                   ld3r	{ v0.8b, v1.8b, v2.8b }, [x0], #3
-# CHECK-NEXT:  1      6     2.00    *                   ld4	{ v0.2s, v1.2s, v2.2s, v3.2s }, [sp]
-# CHECK-NEXT:  2      6     2.00    *                   ld4	{ v0.4s, v1.4s, v2.4s, v3.4s }, [sp], #64
-# CHECK-NEXT:  1      4     1.00    *                   ld4	{ v0.d, v1.d, v2.d, v3.d }[1], [x0]
-# CHECK-NEXT:  2      4     1.00    *                   ld4	{ v0.d, v1.d, v2.d, v3.d }[1], [x0], #32
-# CHECK-NEXT:  2      4     1.00    *                   ld4	{ v0.h, v1.h, v2.h, v3.h }[7], [x0], x0
-# CHECK-NEXT:  1      4     1.00    *                   ld4r	{ v0.1d, v1.1d, v2.1d, v3.1d }, [sp]
-# CHECK-NEXT:  2      4     1.00    *                   ld4r	{ v0.1d, v1.1d, v2.1d, v3.1d }, [sp], x7
-# CHECK-NEXT:  1      4     1.00    *                   ld4r	{ v0.2s, v1.2s, v2.2s, v3.2s }, [sp]
-# CHECK-NEXT:  2      4     1.00    *                   ld4r	{ v0.2s, v1.2s, v2.2s, v3.2s }, [sp], x30
+# CHECK-NEXT:  1      4     2.00    *                   ld2	{ v0.h, v1.h }[7], [x15]
+# CHECK-NEXT:  2      4     2.00    *                   ld2	{ v0.h, v1.h }[7], [x15], #4
+# CHECK-NEXT:  1      3     1.00    *                   ld2r	{ v0.2d, v1.2d }, [x0]
+# CHECK-NEXT:  2      3     1.00    *                   ld2r	{ v0.2d, v1.2d }, [x0], #16
+# CHECK-NEXT:  1      3     1.00    *                   ld2r	{ v0.4s, v1.4s }, [sp]
+# CHECK-NEXT:  2      3     1.00    *                   ld2r	{ v0.4s, v1.4s }, [sp], #8
+# CHECK-NEXT:  1      5     3.00    *                   ld3	{ v0.4h, v1.4h, v2.4h }, [x15]
+# CHECK-NEXT:  2      5     3.00    *                   ld3	{ v0.8h, v1.8h, v2.8h }, [x15], x2
+# CHECK-NEXT:  1      5     3.00    *                   ld3	{ v0.s, v1.s, v2.s }[3], [sp]
+# CHECK-NEXT:  2      5     3.00    *                   ld3	{ v0.s, v1.s, v2.s }[3], [sp], x3
+# CHECK-NEXT:  1      4     2.00    *                   ld3r	{ v0.4h, v1.4h, v2.4h }, [x15]
+# CHECK-NEXT:  2      4     2.00    *                   ld3r	{ v0.4h, v1.4h, v2.4h }, [x15], #6
+# CHECK-NEXT:  1      4     2.00    *                   ld3r	{ v0.8b, v1.8b, v2.8b }, [x0]
+# CHECK-NEXT:  2      4     2.00    *                   ld3r	{ v0.8b, v1.8b, v2.8b }, [x0], #3
+# CHECK-NEXT:  1      5     3.00    *                   ld4	{ v0.2s, v1.2s, v2.2s, v3.2s }, [sp]
+# CHECK-NEXT:  2      5     3.00    *                   ld4	{ v0.4s, v1.4s, v2.4s, v3.4s }, [sp], #64
+# CHECK-NEXT:  1      6     4.00    *                   ld4	{ v0.d, v1.d, v2.d, v3.d }[1], [x0]
+# CHECK-NEXT:  2      6     4.00    *                   ld4	{ v0.d, v1.d, v2.d, v3.d }[1], [x0], #32
+# CHECK-NEXT:  2      6     4.00    *                   ld4	{ v0.h, v1.h, v2.h, v3.h }[7], [x0], x0
+# CHECK-NEXT:  1      4     2.00    *                   ld4r	{ v0.1d, v1.1d, v2.1d, v3.1d }, [sp]
+# CHECK-NEXT:  2      4     2.00    *                   ld4r	{ v0.1d, v1.1d, v2.1d, v3.1d }, [sp], x7
+# CHECK-NEXT:  1      4     2.00    *                   ld4r	{ v0.2s, v1.2s, v2.2s, v3.2s }, [sp]
+# CHECK-NEXT:  2      4     2.00    *                   ld4r	{ v0.2s, v1.2s, v2.2s, v3.2s }, [sp], x30
 # CHECK-NEXT:  1      4     0.50                        mla	v0.8b, v0.8b, v0.8b
 # CHECK-NEXT:  1      4     0.50                        mls	v0.4h, v0.4h, v0.4h
 # CHECK-NEXT:  1      4     0.50                        mov	b0, v0.b[15]
@@ -2148,7 +2148,7 @@ zip2	v0.8h, v0.8h, v0.8h
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1.0]  [1.1]  [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10.0] [10.1] [11]
-# CHECK-NEXT:  -      -      -      -      -     39.00  91.00   -      -     501.00 501.00 3.00   3.00   197.00
+# CHECK-NEXT:  -      -      -      -      -     71.00  123.00  -      -     501.00 501.00 3.00   3.00   197.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1.0]  [1.1]  [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10.0] [10.1] [11]   Instructions:
@@ -2467,13 +2467,13 @@ zip2	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     5.00   fsqrt	v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fsub	v0.2s, v0.2s, v0.2s
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld1	{ v0.16b }, [x0]
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1	{ v0.2d, v1.2d, v2.2d }, [x0], #48
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1	{ v0.2d, v1.2d, v2.2d, v3.2d }, [x0]
+# CHECK-NEXT:  -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld1	{ v0.2d, v1.2d, v2.2d }, [x0], #48
+# CHECK-NEXT:  -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld1	{ v0.2d, v1.2d, v2.2d, v3.2d }, [x0]
 # CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1	{ v0.4s, v1.4s }, [sp], #32
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1	{ v0.4s, v1.4s, v2.4s }, [sp]
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1	{ v0.8b, v1.8b, v2.8b, v3.8b }, [x0], x3
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1	{ v0.8h }, [x15], x2
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld1	{ v0.8h, v1.8h }, [x15]
+# CHECK-NEXT:  -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld1	{ v0.4s, v1.4s, v2.4s }, [sp]
+# CHECK-NEXT:  -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld1	{ v0.8b, v1.8b, v2.8b, v3.8b }, [x0], x3
+# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld1	{ v0.8h }, [x15], x2
+# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld1	{ v0.8h, v1.8h }, [x15]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld1	{ v0.b }[9], [x0]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld1	{ v0.b }[9], [x0], #1
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld1r	{ v0.16b }, [x0]
@@ -2482,29 +2482,29 @@ zip2	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld1r	{ v0.8h }, [x15], #2
 # CHECK-NEXT:  -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld2	{ v0.16b, v1.16b }, [x0], x1
 # CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld2	{ v0.8b, v1.8b }, [x0]
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld2	{ v0.h, v1.h }[7], [x15]
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld2	{ v0.h, v1.h }[7], [x15], #4
+# CHECK-NEXT:  -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld2	{ v0.h, v1.h }[7], [x15]
+# CHECK-NEXT:  -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld2	{ v0.h, v1.h }[7], [x15], #4
 # CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld2r	{ v0.2d, v1.2d }, [x0]
 # CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld2r	{ v0.2d, v1.2d }, [x0], #16
 # CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld2r	{ v0.4s, v1.4s }, [sp]
 # CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld2r	{ v0.4s, v1.4s }, [sp], #8
-# CHECK-NEXT:  -      -      -      -      -     1.50   1.50    -      -      -      -      -      -      -     ld3	{ v0.4h, v1.4h, v2.4h }, [x15]
-# CHECK-NEXT:  -      -      -      -      -     1.50   1.50    -      -      -      -      -      -      -     ld3	{ v0.8h, v1.8h, v2.8h }, [x15], x2
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld3	{ v0.s, v1.s, v2.s }[3], [sp]
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld3	{ v0.s, v1.s, v2.s }[3], [sp], x3
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld3r	{ v0.4h, v1.4h, v2.4h }, [x15]
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld3r	{ v0.4h, v1.4h, v2.4h }, [x15], #6
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld3r	{ v0.8b, v1.8b, v2.8b }, [x0]
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld3r	{ v0.8b, v1.8b, v2.8b }, [x0], #3
-# CHECK-NEXT:  -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld4	{ v0.2s, v1.2s, v2.2s, v3.2s }, [sp]
-# CHECK-NEXT:  -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld4	{ v0.4s, v1.4s, v2.4s, v3.4s }, [sp], #64
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld4	{ v0.d, v1.d, v2.d, v3.d }[1], [x0]
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld4	{ v0.d, v1.d, v2.d, v3.d }[1], [x0], #32
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld4	{ v0.h, v1.h, v2.h, v3.h }[7], [x0], x0
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld4r	{ v0.1d, v1.1d, v2.1d, v3.1d }, [sp]
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld4r	{ v0.1d, v1.1d, v2.1d, v3.1d }, [sp], x7
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld4r	{ v0.2s, v1.2s, v2.2s, v3.2s }, [sp]
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ld4r	{ v0.2s, v1.2s, v2.2s, v3.2s }, [sp], x30
+# CHECK-NEXT:  -      -      -      -      -     3.00   3.00    -      -      -      -      -      -      -     ld3	{ v0.4h, v1.4h, v2.4h }, [x15]
+# CHECK-NEXT:  -      -      -      -      -     3.00   3.00    -      -      -      -      -      -      -     ld3	{ v0.8h, v1.8h, v2.8h }, [x15], x2
+# CHECK-NEXT:  -      -      -      -      -     3.00   3.00    -      -      -      -      -      -      -     ld3	{ v0.s, v1.s, v2.s }[3], [sp]
+# CHECK-NEXT:  -      -      -      -      -     3.00   3.00    -      -      -      -      -      -      -     ld3	{ v0.s, v1.s, v2.s }[3], [sp], x3
+# CHECK-NEXT:  -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld3r	{ v0.4h, v1.4h, v2.4h }, [x15]
+# CHECK-NEXT:  -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld3r	{ v0.4h, v1.4h, v2.4h }, [x15], #6
+# CHECK-NEXT:  -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld3r	{ v0.8b, v1.8b, v2.8b }, [x0]
+# CHECK-NEXT:  -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld3r	{ v0.8b, v1.8b, v2.8b }, [x0], #3
+# CHECK-NEXT:  -      -      -      -      -     3.00   3.00    -      -      -      -      -      -      -     ld4	{ v0.2s, v1.2s, v2.2s, v3.2s }, [sp]
+# CHECK-NEXT:  -      -      -      -      -     3.00   3.00    -      -      -      -      -      -      -     ld4	{ v0.4s, v1.4s, v2.4s, v3.4s }, [sp], #64
+# CHECK-NEXT:  -      -      -      -      -     4.00   4.00    -      -      -      -      -      -      -     ld4	{ v0.d, v1.d, v2.d, v3.d }[1], [x0]
+# CHECK-NEXT:  -      -      -      -      -     4.00   4.00    -      -      -      -      -      -      -     ld4	{ v0.d, v1.d, v2.d, v3.d }[1], [x0], #32
+# CHECK-NEXT:  -      -      -      -      -     4.00   4.00    -      -      -      -      -      -      -     ld4	{ v0.h, v1.h, v2.h, v3.h }[7], [x0], x0
+# CHECK-NEXT:  -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld4r	{ v0.1d, v1.1d, v2.1d, v3.1d }, [sp]
+# CHECK-NEXT:  -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld4r	{ v0.1d, v1.1d, v2.1d, v3.1d }, [sp], x7
+# CHECK-NEXT:  -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld4r	{ v0.2s, v1.2s, v2.2s, v3.2s }, [sp]
+# CHECK-NEXT:  -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld4r	{ v0.2s, v1.2s, v2.2s, v3.2s }, [sp], x30
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     mla	v0.8b, v0.8b, v0.8b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     mls	v0.4h, v0.4h, v0.4h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     mov	b0, v0.b[15]

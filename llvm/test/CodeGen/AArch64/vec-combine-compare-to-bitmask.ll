@@ -1198,3 +1198,28 @@ define <2 x i8> @vector_to_vector_cast(<16 x i1> %arg) nounwind {
   %bc = bitcast <16 x i1> %arg to <2 x i8>
   ret <2 x i8> %bc
 }
+
+; Regression test for the assertion failure when type legalization splits a
+; <32 x i1> bitcast result into two <16 x i1> halves and applies the v16i8
+; bitmask lowering to each half.
+define <32 x i1> @bitmask_v32i8_split(<32 x i8> %a, <32 x i8> %b) {
+; CHECK-LABEL: bitmask_v32i8_split:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    cmeq.16b v1, v1, v3
+; CHECK-NEXT:    adrp x9, lCPI21_0@PAGE
+; CHECK-NEXT:    cmeq.16b v0, v0, v2
+; CHECK-NEXT:    ldr q2, [x9, lCPI21_0@PAGEOFF]
+; CHECK-NEXT:    and.16b v1, v1, v2
+; CHECK-NEXT:    and.16b v0, v0, v2
+; CHECK-NEXT:    addp.16b v1, v1, v1
+; CHECK-NEXT:    addp.16b v0, v0, v0
+; CHECK-NEXT:    addp.16b v1, v1, v1
+; CHECK-NEXT:    addp.16b v0, v0, v0
+; CHECK-NEXT:    addp.16b v1, v1, v1
+; CHECK-NEXT:    addp.16b v0, v0, v0
+; CHECK-NEXT:    str h1, [x8, #2]
+; CHECK-NEXT:    str h0, [x8]
+; CHECK-NEXT:    ret
+  %r = icmp eq <32 x i8> %a, %b
+  ret <32 x i1> %r
+}

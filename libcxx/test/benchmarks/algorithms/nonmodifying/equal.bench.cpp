@@ -17,6 +17,7 @@
 
 #include <benchmark/benchmark.h>
 #include "../../GenerateInput.h"
+#include "test_macros.h"
 
 int main(int argc, char** argv) {
   auto std_equal_3leg = [](auto first1, auto last1, auto first2, auto) { return std::equal(first1, last1, first2); };
@@ -24,18 +25,10 @@ int main(int argc, char** argv) {
     return std::equal(first1, last1, first2, last2);
   };
   auto std_equal_3leg_pred = [](auto first1, auto last1, auto first2, auto) {
-    return std::equal(first1, last1, first2, [](auto x, auto y) {
-      benchmark::DoNotOptimize(x);
-      benchmark::DoNotOptimize(y);
-      return x == y;
-    });
+    return std::equal(first1, last1, first2, [](auto x, auto y) { return x == y; });
   };
   auto std_equal_4leg_pred = [](auto first1, auto last1, auto first2, auto last2) {
-    return std::equal(first1, last1, first2, last2, [](auto x, auto y) {
-      benchmark::DoNotOptimize(x);
-      benchmark::DoNotOptimize(y);
-      return x == y;
-    });
+    return std::equal(first1, last1, first2, last2, [](auto x, auto y) { return x == y; });
   };
 
   // Benchmark {std,ranges}::equal where we determine inequality at the very end (worst case).
@@ -43,7 +36,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto equal) {
       benchmark::RegisterBenchmark(
           name,
-          [equal](auto& st) {
+          [equal](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             ValueType x            = Generate<ValueType>::random();
@@ -92,7 +85,7 @@ int main(int argc, char** argv) {
     auto bm = [](std::string name, auto equal, bool aligned) {
       benchmark::RegisterBenchmark(
           name,
-          [=](auto& st) {
+          [=](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range();
             std::vector<bool> c1(size, true);
             std::vector<bool> c2(size + 8, true);

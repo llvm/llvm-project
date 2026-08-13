@@ -734,6 +734,10 @@ protected:
   /// Target-specific source line recording.
   virtual void recordTargetSourceLine(const DebugLoc &DL, unsigned Flags);
 
+  /// Target-specific compile unit attribute finalization.
+  virtual void finishTargetUnitAttributes(const DICompileUnit &DIUnit,
+                                          DwarfCompileUnit &NewCU) {}
+
   const SmallVectorImpl<std::unique_ptr<DwarfCompileUnit>> &getUnits() {
     return InfoHolder.getUnits();
   }
@@ -867,8 +871,7 @@ public:
     return HasAppleExtensionAttributes;
   }
 
-  /// Returns whether or not to change the current debug info for the
-  /// split dwarf proposal support.
+  /// Returns whether or not to change the current debug info for split DWARF.
   bool useSplitDwarf() const { return HasSplitDwarf; }
 
   /// Returns whether to generate a string offsets table with (possibly shared)

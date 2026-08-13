@@ -23,11 +23,13 @@
 
 using namespace llvm;
 
+cl::OptionCategory llvm::MCScheduleOptions("Machine scheduling model options");
+
 static constexpr float DefaultReservationStationScaleFactor = 1.0f;
 
 static cl::opt<float> ReservationStationScaleFactor(
     "sched-model-reservation-station-scale-factor", cl::Hidden,
-    cl::init(DefaultReservationStationScaleFactor),
+    cl::init(DefaultReservationStationScaleFactor), cl::cat(MCScheduleOptions),
     cl::desc("Scale the buffer size of all reservation stations by a positive "
              "factor. Buffer sizes of -1/0/1 (unlimited/unbuffered/in-order) "
              "are preserved. Likewise, if the scaled result is <= 1, the "

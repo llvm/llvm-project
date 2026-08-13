@@ -448,6 +448,7 @@ static bool dieNeedsChildrenToBeMeaningful(uint32_t Tag) {
     return false;
   case dwarf::DW_TAG_class_type:
   case dwarf::DW_TAG_common_block:
+  case dwarf::DW_TAG_enumeration_type:
   case dwarf::DW_TAG_lexical_block:
   case dwarf::DW_TAG_structure_type:
   case dwarf::DW_TAG_subprogram:
@@ -523,8 +524,7 @@ DWARFLinker::getVariableRelocAdjustment(AddressesMap &RelocMgr,
     return std::make_pair(false, std::nullopt);
 
   // Parse 'exprloc' expression.
-  DataExtractor Data(toStringRef(*Expr), U->getContext().isLittleEndian(),
-                     U->getAddressByteSize());
+  DataExtractor Data(*Expr, U->getContext().isLittleEndian());
   DWARFExpression Expression(Data, U->getAddressByteSize(),
                              U->getFormParams().Format);
 
@@ -1384,8 +1384,7 @@ unsigned DWARFLinker::DIECloner::cloneBlockAttribute(
   if (DWARFAttribute::mayHaveLocationExpr(AttrSpec.Attr) &&
       (Val.isFormClass(DWARFFormValue::FC_Block) ||
        Val.isFormClass(DWARFFormValue::FC_Exprloc))) {
-    DataExtractor Data(StringRef((const char *)Bytes.data(), Bytes.size()),
-                       IsLittleEndian, OrigUnit.getAddressByteSize());
+    DataExtractor Data(Bytes, IsLittleEndian);
     DWARFExpression Expr(Data, OrigUnit.getAddressByteSize(),
                          OrigUnit.getFormParams().Format);
     cloneExpression(Data, Expr, File, Unit, Buffer,
@@ -2562,7 +2561,7 @@ void DWARFLinker::patchFrameInfoForObject(LinkContext &Context) {
       AllUnitsRanges.insert(CurRange.Range, CurRange.Value);
   }
 
-  DataExtractor Data(FrameData, OrigDwarf.isLittleEndian(), 0);
+  DataExtractor Data(FrameData, OrigDwarf.isLittleEndian());
   uint64_t InputOffset = 0;
 
   // Store the data of the CIEs defined in this object, keyed by their
@@ -2893,8 +2892,7 @@ Expected<uint64_t> DWARFLinker::DIECloner::cloneAllCompileUnits(
                              SmallVectorImpl<uint8_t> &OutBytes,
                              int64_t RelocAdjustment) {
         DWARFUnit &OrigUnit = CurrentUnit->getOrigUnit();
-        DataExtractor Data(SrcBytes, IsLittleEndian,
-                           OrigUnit.getAddressByteSize());
+        DataExtractor Data(SrcBytes, IsLittleEndian);
         cloneExpression(Data,
                         DWARFExpression(Data, OrigUnit.getAddressByteSize(),
                                         OrigUnit.getFormParams().Format),

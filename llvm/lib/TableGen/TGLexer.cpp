@@ -647,6 +647,7 @@ tgtok::TokKind TGLexer::LexExclaim() {
           .Case("gt", tgtok::XGt)
           .Case("if", tgtok::XIf)
           .Case("cond", tgtok::XCond)
+          .Case("switch", tgtok::XSwitch)
           .Case("isa", tgtok::XIsA)
           .Case("head", tgtok::XHead)
           .Case("tail", tgtok::XTail)
@@ -912,7 +913,7 @@ bool TGLexer::prepSkipRegion(bool MustNeverBeFalse) {
 
   do {
     // Skip all symbols to the line end.
-    while (*CurPtr != '\n')
+    while (CurPtr != CurBuf.end() && *CurPtr != '\n' && *CurPtr != '\r')
       ++CurPtr;
 
     // Find the first non-whitespace symbol in the next line(s).

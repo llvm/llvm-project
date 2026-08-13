@@ -10,6 +10,7 @@
 
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/lldb-enumerations.h"
 
@@ -93,7 +94,8 @@ void OperatingSystemPythonInterface::Initialize() {
   const std::vector<llvm::StringRef> api_usages = {};
   PluginManager::RegisterPlugin(
       GetPluginNameStatic(), llvm::StringRef("Mock thread state"),
-      CreateInstance, eScriptLanguagePython, {ci_usages, api_usages});
+      CreateInstance, eScriptedExtensionOperatingSystem, eScriptLanguagePython,
+      {ci_usages, api_usages});
 }
 
 void OperatingSystemPythonInterface::Terminate() {

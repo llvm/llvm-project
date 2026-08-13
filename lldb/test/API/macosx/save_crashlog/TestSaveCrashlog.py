@@ -16,7 +16,7 @@ class TestSaveCrashlog(TestBase):
     # each debug info format.
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_save_crashlog(self):
         """There can be many tests in a test case - describe this test here."""
         self.build()

@@ -464,12 +464,12 @@ def SPIRV_DotOp : SPIRV_Op<"Dot",
   }];
 
   let arguments = (ins
-    SPIRV_VectorOf<SPIRV_AnyFloat>:$vector1,
-    SPIRV_VectorOf<SPIRV_AnyFloat>:$vector2
+    AnyTypeOf<[SPIRV_FloatVector, SPIRV_VectorOf<SPIRV_BFloat16KHR>]>:$vector1,
+    AnyTypeOf<[SPIRV_FloatVector, SPIRV_VectorOf<SPIRV_BFloat16KHR>]>:$vector2
   );
 
   let results = (outs
-    SPIRV_AnyFloat:$result
+    AnyTypeOf<[SPIRV_Float, SPIRV_BFloat16KHR]>:$result
   );
 
   let assemblyFormat = "operands attr-dict `:` type($vector1) `->` type($result)";

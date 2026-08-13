@@ -11,8 +11,11 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/Analysis/AnyCall.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "llvm/ADT/StringSet.h"
 
@@ -105,6 +108,90 @@ bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
   return isNormalAssignmentOperator(FD);
 }
 
+FunctionCallInfo getFunctionCallInfo(const Expr *Call) {
+  FunctionCallInfo Info;
+  if (!Call)
+    return Info;
+
+  Call = Call->IgnoreParenImpCasts();
+  std::optional<AnyCall> AC = AnyCall::forExpr(Call);
+  if (!AC)
+    return Info;
+
+  Info.FD = dyn_cast_or_null<FunctionDecl>(AC->getDecl());
+  if (!Info.FD)
+    return Info;
+
+  if (const auto *MCE = dyn_cast<CXXMemberCallExpr>(Call))
+    Info.Args.push_back(MCE->getImplicitObjectArgument());
+
+  Info.Args.append(AC->arg_begin(), AC->arg_end());
+
+  if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(Call))
+    // For `static operator()`, the first argument is the object argument,
+    // remove it from the argument list to avoid off-by-one errors.
+    if (OCE->getOperator() == OO_Call && Info.FD->isStatic())
+      Info.Args.erase(Info.Args.begin());
+
+  return Info;
+}
+
+std::optional<LifetimeBoundParamInfo>
+getTrackedArgInfo(const FunctionDecl *FD, llvm::ArrayRef<const Expr *> Args,
+                  unsigned I) {
+  FD = getDeclWithMergedLifetimeBoundAttrs(FD);
+  if (!FD || I >= Args.size())
+    return std::nullopt;
+
+  const ParmVarDecl *PVD = nullptr;
+
+  if (const auto *Method = dyn_cast<CXXMethodDecl>(FD);
+      Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD)) {
+    if (I == 0) {
+      // For the 'this' argument, the attribute is on the method itself.
+      if (implicitObjectParamIsLifetimeBound(Method) ||
+          shouldTrackImplicitObjectArg(*Args[0], Method,
+                                       /*RunningUnderLifetimeSafety=*/true))
+        return LifetimeBoundParamInfo(Method);
+      return std::nullopt;
+    }
+    if ((I - 1) < Method->getNumParams())
+      // For explicit arguments, find the corresponding parameter declaration.
+      PVD = Method->getParamDecl(I - 1);
+  } else if (I == 0 && shouldTrackFirstArgument(FD)) {
+    return LifetimeBoundParamInfo(FD->getParamDecl(I));
+  } else if (I == 1 && shouldTrackSecondArgument(FD)) {
+    return LifetimeBoundParamInfo(FD->getParamDecl(I));
+  } else if (I < FD->getNumParams()) {
+    // For free functions or static methods.
+    PVD = FD->getParamDecl(I);
+  }
+
+  if (PVD && PVD->hasAttr<clang::LifetimeBoundAttr>())
+    return LifetimeBoundParamInfo(PVD);
+
+  return std::nullopt;
+}
+
+std::optional<LifetimeBoundParamInfo>
+getTrackingInfoForCallArg(const Expr *Call, const Expr *Source) {
+  if (!Call || !Source)
+    return std::nullopt;
+
+  FunctionCallInfo CallInfo = getFunctionCallInfo(Call);
+  if (!CallInfo.FD)
+    return std::nullopt;
+
+  for (unsigned I = 0; I < CallInfo.Args.size(); ++I)
+    if (CallInfo.Args[I]->IgnoreParenImpCasts() ==
+        Source->IgnoreParenImpCasts())
+      if (std::optional<LifetimeBoundParamInfo> ParamInfo =
+              getTrackedArgInfo(CallInfo.FD, CallInfo.Args, I))
+        return ParamInfo;
+
+  return std::nullopt;
+}
+
 bool isInStlNamespace(const Decl *D) {
   for (const DeclContext *DC = D->getDeclContext(); DC; DC = DC->getParent()) {
     if (DC->isStdNamespace())
@@ -128,16 +215,22 @@ static bool isReferenceOrPointerLikeType(QualType QT) {
   return QT->isReferenceType() || isPointerLikeType(QT);
 }
 
-bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee,
+bool shouldTrackImplicitObjectArg(const Expr &ImplicitObjectArgument,
+                                  const CXXMethodDecl *Callee,
                                   bool RunningUnderLifetimeSafety) {
   if (!Callee)
     return false;
+  // Check both the declaring class and the call-site object: a gsl::Owner
+  // may inherit its accessors from a non-Owner base (e.g. libc++ optional).
+  const bool IsGslOwnerImplicitObject =
+      isGslOwnerType(Callee->getFunctionObjectParameterType()) ||
+      (RunningUnderLifetimeSafety &&
+       isGslOwnerType(ImplicitObjectArgument.getBestDynamicClassType()));
   if (auto *Conv = dyn_cast<CXXConversionDecl>(Callee))
-    if (isGslPointerType(Conv->getConversionType()) &&
-        Callee->getParent()->hasAttr<OwnerAttr>())
+    if (isGslPointerType(Conv->getConversionType()) && IsGslOwnerImplicitObject)
       return true;
   if (!isGslPointerType(Callee->getFunctionObjectParameterType()) &&
-      !isGslOwnerType(Callee->getFunctionObjectParameterType()))
+      !IsGslOwnerImplicitObject)
     return false;
 
   // Begin and end iterators.
@@ -181,7 +274,7 @@ bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee,
     if (!Callee->getIdentifier())
       // e.g., std::optional<T>::operator->() returns T*.
       return RunningUnderLifetimeSafety
-                 ? Callee->getParent()->hasAttr<OwnerAttr>() &&
+                 ? IsGslOwnerImplicitObject &&
                        Callee->getOverloadedOperator() ==
                            OverloadedOperatorKind::OO_Arrow
                  : false;
@@ -192,7 +285,7 @@ bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee,
   if (Callee->getReturnType()->isReferenceType()) {
     if (!Callee->getIdentifier()) {
       auto OO = Callee->getOverloadedOperator();
-      if (!Callee->getParent()->hasAttr<OwnerAttr>())
+      if (!IsGslOwnerImplicitObject)
         return false;
       return OO == OverloadedOperatorKind::OO_Subscript ||
              OO == OverloadedOperatorKind::OO_Star;
@@ -272,8 +365,7 @@ bool shouldTrackSecondArgument(const FunctionDecl *FD) {
          !isa<CXXMethodDecl>(FD);
 }
 
-template <typename T> static bool isRecordWithAttr(QualType Type) {
-  auto *RD = Type->getAsCXXRecordDecl();
+template <typename T> static bool isRecordWithAttr(const CXXRecordDecl *RD) {
   if (!RD)
     return false;
   // Generally, if a primary template class declaration is annotated with an
@@ -299,8 +391,15 @@ template <typename T> static bool isRecordWithAttr(QualType Type) {
   return Result;
 }
 
+template <typename T> static bool isRecordWithAttr(QualType Type) {
+  return isRecordWithAttr<T>(Type->getAsCXXRecordDecl());
+}
+
 bool isGslPointerType(QualType QT) { return isRecordWithAttr<PointerAttr>(QT); }
 bool isGslOwnerType(QualType QT) { return isRecordWithAttr<OwnerAttr>(QT); }
+bool isGslOwnerType(const CXXRecordDecl *RD) {
+  return isRecordWithAttr<OwnerAttr>(RD);
+}
 
 static StringRef getName(const CXXRecordDecl &RD) {
   if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(&RD))
@@ -446,6 +545,21 @@ bool isStdCallableWrapperType(const CXXRecordDecl *RD) {
     return false;
   StringRef Name = getName(*RD);
   return Name == "function" || Name == "move_only_function";
+}
+
+bool isStdReferenceCast(const FunctionDecl *FD) {
+  if (!FD)
+    return false;
+  switch (FD->getBuiltinID()) {
+  case Builtin::BImove:
+  case Builtin::BImove_if_noexcept:
+  case Builtin::BIforward:
+  case Builtin::BIforward_like:
+  case Builtin::BIas_const:
+    return true;
+  default:
+    return false;
+  }
 }
 
 } // namespace clang::lifetimes

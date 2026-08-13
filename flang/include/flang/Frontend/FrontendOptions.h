@@ -145,10 +145,10 @@ enum class FortranForm {
   /// The user has not specified a form. Base the form off the file extension.
   Unknown,
 
-  /// -ffixed-form
+  /// -ffree-form
   FixedForm,
 
-  /// -ffree-form
+  /// -ffixed-form
   FreeForm
 };
 
@@ -273,6 +273,12 @@ struct FrontendOptions {
   /// The output file, if any.
   std::string outputFile;
 
+  /// The dependency-file (.d) to write, if any (-dependency-file).
+  std::string dependencyOutputFile;
+
+  /// Target name(s) for the dependency rule (-MT), already quoted for Make.
+  std::vector<std::string> dependencyTargets;
+
   /// The frontend action to perform.
   frontend::ActionKind programAction = ParseSyntaxOnly;
 
@@ -285,12 +291,6 @@ struct FrontendOptions {
   // The column after which characters are ignored in fixed form lines in the
   // source file.
   int fixedFormColumns = 72;
-
-  // The column after which characters are ignored in free form lines in the
-  // source file.
-  // In F2023 6.3.2.1 p1, in free form source a line shall contain at most ten
-  // thousand characters.
-  int freeFormColumns = 10000;
 
   /// The input kind, either specified via -x argument or deduced from the input
   /// file name.
