@@ -1296,6 +1296,69 @@ static void addNoWrapDecorations(Operation *op,
                 builder.getUnitAttr());
 }
 
+static std::optional<uint64_t> getMaxLinearizedIndex(ArrayRef<int64_t> shape,
+                                                     ArrayRef<int64_t> strides,
+                                                     int64_t offset) {
+  if (shape.size() != strides.size() || offset < 0)
+    return std::nullopt;
+
+  uint64_t maxLinearIndex = offset;
+  for (auto [dimension, stride] : llvm::zip(shape, strides)) {
+    if (dimension <= 0 || stride < 0)
+      return std::nullopt;
+    std::optional<uint64_t> nextMaxLinearIndex = llvm::checkedMulAddUnsigned(
+        static_cast<uint64_t>(dimension - 1), static_cast<uint64_t>(stride),
+        maxLinearIndex);
+    if (!nextMaxLinearIndex)
+      return std::nullopt;
+    maxLinearIndex = *nextMaxLinearIndex;
+  }
+  return maxLinearIndex;
+}
+
+static std::optional<uint64_t> getStorageBufferElementCount(Value basePtr) {
+  auto pointerType = dyn_cast<spirv::PointerType>(basePtr.getType());
+  if (!pointerType ||
+      pointerType.getStorageClass() != spirv::StorageClass::StorageBuffer)
+    return std::nullopt;
+
+  Type pointeeType = pointerType.getPointeeType();
+  if (auto structType = dyn_cast<spirv::StructType>(pointeeType)) {
+    if (structType.getNumElements() != 1)
+      return std::nullopt;
+    pointeeType = structType.getElementType(0);
+  }
+  auto arrayType = dyn_cast<spirv::ArrayType>(pointeeType);
+  if (!arrayType)
+    return std::nullopt;
+  return arrayType.getNumElements();
+}
+
+static bool shouldEmitInBoundsAccessChain(MemRefType baseType, Value basePtr,
+                                          ArrayRef<int64_t> strides,
+                                          int64_t offset,
+                                          uint64_t accessElementCount) {
+  // Sub-16-bit integer memrefs may be stored using a wider SPIR-V array element
+  // than the source element. Keep a plain access chain so later bitwidth
+  // emulation can adjust the final index in storage-element units.
+  if (auto integerType = dyn_cast<IntegerType>(baseType.getElementType()))
+    if (integerType.getWidth() < 16)
+      return false;
+
+  std::optional<uint64_t> maxLinearIndex =
+      getMaxLinearizedIndex(baseType.getShape(), strides, offset);
+  std::optional<uint64_t> objectElementCount =
+      getStorageBufferElementCount(basePtr);
+  if (!maxLinearIndex || !objectElementCount || !accessElementCount ||
+      accessElementCount > *objectElementCount)
+    return false;
+
+  // The source memory operation guarantees that its dynamic indices, including
+  // a vector access width, are in bounds. The static layout proof here ensures
+  // that this contract describes the same fixed-size SPIR-V buffer object.
+  return *maxLinearIndex < *objectElementCount;
+}
+
 static spirv::LinearizedIndexNoWrapFlags
 shouldEmitNoWrapDecorations(const SPIRVTypeConverter &typeConverter,
                             MemRefType baseType, ArrayRef<int64_t> strides,
@@ -1366,19 +1429,13 @@ mlir::spirv::getLinearizedIndexNoWrapFlags(ArrayRef<int64_t> shape,
                                            int64_t offset, Type integerType) {
   LinearizedIndexNoWrapFlags flags;
   auto integer = dyn_cast<IntegerType>(integerType);
-  if (!integer || shape.size() != strides.size() || offset < 0)
+  if (!integer)
     return flags;
 
-  std::optional<uint64_t> maxLinearIndex = static_cast<uint64_t>(offset);
-  for (auto [dimension, stride] : llvm::zip(shape, strides)) {
-    if (dimension <= 0 || stride < 0)
-      return flags;
-    maxLinearIndex = llvm::checkedMulAddUnsigned(
-        static_cast<uint64_t>(dimension - 1), static_cast<uint64_t>(stride),
-        *maxLinearIndex);
-    if (!maxLinearIndex)
-      return flags;
-  }
+  std::optional<uint64_t> maxLinearIndex =
+      getMaxLinearizedIndex(shape, strides, offset);
+  if (!maxLinearIndex)
+    return flags;
 
   flags.noSignedWrap =
       *maxLinearIndex <=
@@ -1424,7 +1481,8 @@ Value mlir::spirv::linearizeIndex(ValueRange indices, ArrayRef<int64_t> strides,
 Value mlir::spirv::getVulkanElementPtr(const SPIRVTypeConverter &typeConverter,
                                        MemRefType baseType, Value basePtr,
                                        ValueRange indices, Location loc,
-                                       OpBuilder &builder) {
+                                       OpBuilder &builder,
+                                       uint64_t accessElementCount) {
   // Get base and offset of the MemRefType and verify they are static.
 
   int64_t offset;
@@ -1454,7 +1512,19 @@ Value mlir::spirv::getVulkanElementPtr(const SPIRVTypeConverter &typeConverter,
   // Interface memrefs are wrapped in a struct: index to its first elem.
   if (isa<spirv::StructType>(pointeeType))
     linearizedIndices.insert(linearizedIndices.begin(), zero);
+  if (shouldEmitInBoundsAccessChain(baseType, basePtr, strides, offset,
+                                    accessElementCount))
+    return spirv::InBoundsAccessChainOp::create(builder, loc, basePtr,
+                                                linearizedIndices);
   return spirv::AccessChainOp::create(builder, loc, basePtr, linearizedIndices);
+}
+
+Value mlir::spirv::getVulkanElementPtr(const SPIRVTypeConverter &typeConverter,
+                                       MemRefType baseType, Value basePtr,
+                                       ValueRange indices, Location loc,
+                                       OpBuilder &builder) {
+  return getVulkanElementPtr(typeConverter, baseType, basePtr, indices, loc,
+                             builder, /*accessElementCount=*/1);
 }
 
 Value mlir::spirv::getOpenCLElementPtr(const SPIRVTypeConverter &typeConverter,
@@ -1497,7 +1567,8 @@ Value mlir::spirv::getOpenCLElementPtr(const SPIRVTypeConverter &typeConverter,
 Value mlir::spirv::getElementPtr(const SPIRVTypeConverter &typeConverter,
                                  MemRefType baseType, Value basePtr,
                                  ValueRange indices, Location loc,
-                                 OpBuilder &builder) {
+                                 OpBuilder &builder,
+                                 uint64_t accessElementCount) {
 
   if (typeConverter.allows(spirv::Capability::Kernel)) {
     return getOpenCLElementPtr(typeConverter, baseType, basePtr, indices, loc,
@@ -1505,7 +1576,15 @@ Value mlir::spirv::getElementPtr(const SPIRVTypeConverter &typeConverter,
   }
 
   return getVulkanElementPtr(typeConverter, baseType, basePtr, indices, loc,
-                             builder);
+                             builder, accessElementCount);
+}
+
+Value mlir::spirv::getElementPtr(const SPIRVTypeConverter &typeConverter,
+                                 MemRefType baseType, Value basePtr,
+                                 ValueRange indices, Location loc,
+                                 OpBuilder &builder) {
+  return getElementPtr(typeConverter, baseType, basePtr, indices, loc, builder,
+                       /*accessElementCount=*/1);
 }
 
 //===----------------------------------------------------------------------===//

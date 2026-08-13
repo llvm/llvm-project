@@ -121,6 +121,40 @@ void spirv::AccessChainOp::getCanonicalizationPatterns(
   results.add<CombineChainedAccessChain>(context);
 }
 
+namespace {
+
+/// Combines chained `spirv::InBoundsAccessChainOp` operations while retaining
+/// the in-bounds contract of both segments.
+struct CombineChainedInBoundsAccessChain final
+    : OpRewritePattern<spirv::InBoundsAccessChainOp> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(spirv::InBoundsAccessChainOp accessChainOp,
+                                PatternRewriter &rewriter) const override {
+    auto parentAccessChainOp =
+        accessChainOp.getBasePtr()
+            .getDefiningOp<spirv::InBoundsAccessChainOp>();
+
+    if (!parentAccessChainOp)
+      return failure();
+
+    SmallVector<Value, 4> indices(parentAccessChainOp.getIndices());
+    llvm::append_range(indices, accessChainOp.getIndices());
+
+    rewriter.replaceOpWithNewOp<spirv::InBoundsAccessChainOp>(
+        accessChainOp, parentAccessChainOp.getBasePtr(), indices);
+
+    return success();
+  }
+};
+
+} // namespace
+
+void spirv::InBoundsAccessChainOp::getCanonicalizationPatterns(
+    RewritePatternSet &results, MLIRContext *context) {
+  results.add<CombineChainedInBoundsAccessChain>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // spirv.IAddCarry / spirv.ISubBorrow
 //===----------------------------------------------------------------------===//
