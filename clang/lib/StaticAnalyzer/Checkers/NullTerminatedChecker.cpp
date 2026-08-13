@@ -58,7 +58,7 @@ private:
 };
 
 /// Return true if we can't prove \p Val is non-zero on the current path.
-bool mayBeZero(ProgramStateRef State, SValBuilder &SVB, QualType Ty, SVal Val) {
+bool mayBeZero(ProgramStateRef State, SVal Val) {
   // Unknown or undefined: can't reason either way.
   auto DV = Val.getAs<DefinedSVal>();
   if (!DV)
@@ -78,12 +78,10 @@ bool mayBeZero(ProgramStateRef State, SValBuilder &SVB, QualType Ty, SVal Val) {
   if (Sym && isa<SymbolData>(Sym))
     return true;
 
-  // Worst case: try to solve symbolic expression.
-  SVal EqZero = SVB.evalEQ(State, *DV, SVB.makeZeroVal(Ty));
-  auto EqZeroDV = EqZero.getAs<DefinedSVal>();
-  if (!EqZeroDV)
-    return true;
-  return static_cast<bool>(State->assume(*EqZeroDV, true));
+  // Worst case: ask the solver if the value can be zero.
+  assert(!DV->isConstant() &&
+         "Constants should have been handled by the fast path");
+  return static_cast<bool>(State->assume(*DV, /*Assumption=*/false));
 }
 
 /// Load element \p Idx of the array \p Arr from the store. This is relatively
@@ -103,9 +101,7 @@ SVal loadElement(ProgramStateRef State, SValBuilder &SVB, QualType EltTy,
 /// looking for an element that may be zero.
 class ElementBindingScanner : public StoreManager::ClusterBindingsHandler {
   ProgramStateRef State;
-  SValBuilder &SVB;
   ASTContext &Ctx;
-  QualType EltTy;
   /// The region the offset of the array is relative to.
   const MemRegion *OffsetRegion;
   /// Offset of the array within \c OffsetRegion, in bits.
@@ -120,12 +116,12 @@ class ElementBindingScanner : public StoreManager::ClusterBindingsHandler {
   bool FoundPossibleZero = false;
 
 public:
-  ElementBindingScanner(ProgramStateRef State, SValBuilder &SVB,
-                        ASTContext &Ctx, QualType EltTy, RegionOffset ArrOffset,
-                        uint64_t EltBits, uint64_t ArraySize)
-      : State(State), SVB(SVB), Ctx(Ctx), EltTy(EltTy),
-        OffsetRegion(ArrOffset.getRegion()), ArrOffset(ArrOffset.getOffset()),
-        EltBits(EltBits), Covered(ArraySize) {}
+  ElementBindingScanner(ProgramStateRef State, ASTContext &Ctx,
+                        RegionOffset ArrOffset, uint64_t EltBits,
+                        uint64_t ArraySize)
+      : State(State), Ctx(Ctx), OffsetRegion(ArrOffset.getRegion()),
+        ArrOffset(ArrOffset.getOffset()), EltBits(EltBits), Covered(ArraySize) {
+  }
 
   bool foundPossibleZero() const { return FoundPossibleZero; }
   bool isImprecise() const { return Imprecise; }
@@ -174,7 +170,7 @@ public:
     }
 
     Covered.set(Idx);
-    if (mayBeZero(State, SVB, EltTy, Val)) {
+    if (mayBeZero(State, Val)) {
       FoundPossibleZero = true;
       return false;
     }
@@ -213,8 +209,7 @@ bool NullTerminatedChecker::mayContainZeroElement(
   if (EltBits == 0)
     return true;
 
-  ElementBindingScanner Scanner(State, SVB, Ctx, EltTy, Offset, EltBits,
-                                ArraySize);
+  ElementBindingScanner Scanner(State, Ctx, Offset, EltBits, ArraySize);
   State->getStateManager().getStoreManager().iterClusterBindings(
       State->getStore(), Offset.getRegion()->getBaseRegion(), Scanner);
 
@@ -229,7 +224,7 @@ bool NullTerminatedChecker::mayContainZeroElement(
   for (uint64_t I = ArraySize; I-- > 0;) {
     if (Scanner.hasBinding(I))
       continue;
-    if (mayBeZero(State, SVB, EltTy, loadElement(State, SVB, EltTy, I, Arr)))
+    if (mayBeZero(State, loadElement(State, SVB, EltTy, I, Arr)))
       return true;
   }
   return false;
