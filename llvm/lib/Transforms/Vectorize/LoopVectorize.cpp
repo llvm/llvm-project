@@ -3668,8 +3668,7 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
   if (hasFindLastReductionPhi(Plan))
     return 1;
 
-  VPRegisterUsage R =
-      calculateRegisterUsageForPlan(Plan, {VF}, TTI, CM.ValuesToIgnore)[0];
+  VPRegisterUsage R = calculateRegisterUsageForPlan(Plan, {VF}, TTI)[0];
 
   // If we did not calculate the cost for VF (because the user selected the VF)
   // then we calculate the cost of VF here.
@@ -5871,7 +5870,7 @@ LoopVectorizationPlanner::computeBestVF() {
       return Config.shouldConsiderRegPressureForVF(VF);
     });
     if (ConsiderRegPressure)
-      RUs = calculateRegisterUsageForPlan(*P, VFs, TTI, CM.ValuesToIgnore);
+      RUs = calculateRegisterUsageForPlan(*P, VFs, TTI);
 
     for (unsigned I = 0; I < VFs.size(); I++) {
       ElementCount VF = VFs[I];
@@ -5929,8 +5928,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
     ++LoopsEarlyExitVectorized;
 
   RUN_VPLAN_PASS(VPlanTransforms::replaceWideCanonicalIVWithWideIV, BestVPlan,
-                 *PSE.getSE(), TTI, Config.CostKind, BestVF, BestUF,
-                 CM.ValuesToIgnore);
+                 *PSE.getSE(), TTI, Config.CostKind, BestVF, BestUF);
   // TODO: Move to VPlan transform stage once the transition to the VPlan-based
   // cost model is complete for better cost estimates.
   RUN_VPLAN_PASS(VPlanTransforms::unrollByUF, BestVPlan, BestUF);
