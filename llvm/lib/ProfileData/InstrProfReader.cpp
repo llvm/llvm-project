@@ -663,7 +663,7 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
         instrprof_error::header_size_mismatch,
         ("profile file size (" + Twine(DataBuffer->getBufferSize()) +
          " bytes) smaller than expected (at least " + Twine(ValueDataOffset) +
-         " bytes = " +
+         " bytes: " +
          Twine(sizeof(RawInstrProf::Header)) + "(Header) + " +
          Twine(BinaryIdSize) + "(BinaryIdSize) + " +
          Twine(DataSize) + "(DataSize) + " +
