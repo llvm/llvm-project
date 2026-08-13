@@ -12,8 +12,9 @@
 #include <system_error>
 
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 
-static void BM_SystemErrorWithMessage(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_SystemErrorWithMessage(benchmark::State& state) {
   for (auto _ : state) {
     std::error_code ec{};
     benchmark::DoNotOptimize(std::system_error{ec, ""});
@@ -21,7 +22,7 @@ static void BM_SystemErrorWithMessage(benchmark::State& state) {
 }
 BENCHMARK(BM_SystemErrorWithMessage);
 
-static void BM_SystemErrorWithoutMessage(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_SystemErrorWithoutMessage(benchmark::State& state) {
   for (auto _ : state) {
     std::error_code ec{};
     benchmark::DoNotOptimize(std::system_error{ec});
