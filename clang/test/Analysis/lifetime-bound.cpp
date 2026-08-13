@@ -1,7 +1,7 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.cplusplus.UseAfterLifetimeEnd,debug.DebugLifetimeModeling \
 // RUN:   -analyzer-config cfg-lifetime=true -analyzer-output=text -verify %s
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.cplusplus.UseAfterLifetimeEnd,debug.DebugLifetimeModeling \
-// RUN:   -analyzer-output=text %s 2>&1 | FileCheck %s
+// RUN:   -analyzer-output=text %s 2>&1 | FileCheck --strict-whitespace %s
 struct A {};
 
 struct Pair {
@@ -467,14 +467,14 @@ int test_multi_local_bound_to_param_highlight() {
   
   // CHECK: note: Value's lifetime bound to the lifetime of 'j' here
   // CHECK-NEXT: int j = 4, k = 5;
-  // CHECK-NEXT:     ~
+  // CHECK-NEXT:{{\|       ~$}}
   // CHECK: note: Lifetime of 'j' ended here
   // CHECK-NEXT: int j = 4, k = 5;
-  // CHECK-NEXT:     ~
+  // CHECK-NEXT:{{\|       ~$}}
   // CHECK: note: Value's lifetime bound to the lifetime of 'k' here
   // CHECK-NEXT: int j = 4, k = 5;
-  // CHECK-NEXT:            ~
+  // CHECK-NEXT:{{\|              ~$}}
   // CHECK: note: Lifetime of 'k' ended here
   // CHECK-NEXT: int j = 4, k = 5;
-  // CHECK-NEXT:            ~
+  // CHECK-NEXT:{{\|              ~$}}
 }
