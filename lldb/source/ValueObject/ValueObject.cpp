@@ -1259,18 +1259,27 @@ llvm::Error ValueObject::SetValueFromInteger(const llvm::APInt &value,
   // Exclude size check when assigning an integer 1 or 0 to a boolean.
   if (!val_type.IsBoolean() || (!value.isOne() && !value.isZero())) {
     byte_size = llvm::expectedToOptional(GetByteSize()).value_or(0);
-    if (value.getBitWidth() > byte_size * CHAR_BIT) {
-      // The type is too big, but maybe the value itself is small enough?
-      uint64_t u_max = (1 << (byte_size * CHAR_BIT)) - 1;
-      if (*(value.getRawData()) > u_max)
-        return llvm::createStringError(
-            "Illegal argument: new value is too big");
-    }
+    // Check that the value is representable in the destination type.
+    unsigned dest_bits = byte_size * CHAR_BIT;
+    unsigned needed_bits = val_type.IsSigned() ? value.getSignificantBits()
+                                               : value.getActiveBits();
+    if (needed_bits > dest_bits)
+      return llvm::createStringError("Illegal argument: new value is too big");
   }
+
+  // The DataExtractor below reads exactly byte_size bytes from the APInt's raw
+  // storage.  If the incoming value has fewer bits than the destination type,
+  // reading byte_size bytes could run past the APInt's backing store and pull
+  // in garbage (an out-of-bounds read). Extend the value so its storage always
+  // covers the full read, preserving the sign so that negative values keep
+  // their value in the wider destination.
+  llvm::APInt sized_value = value;
+  if (sized_value.getBitWidth() < byte_size * CHAR_BIT)
+    sized_value = sized_value.sext(byte_size * CHAR_BIT);
 
   Status error;
   lldb::DataExtractorSP data_sp = std::make_shared<DataExtractor>(
-      reinterpret_cast<const void *>(value.getRawData()), byte_size,
+      reinterpret_cast<const void *>(sized_value.getRawData()), byte_size,
       target->GetArchitecture().GetByteOrder(),
       static_cast<uint8_t>(target->GetArchitecture().GetAddressByteSize()));
   SetData(*data_sp, error);
@@ -2904,9 +2913,6 @@ ValueObjectSP ValueObject::Dereference(Status &error) {
 }
 
 ValueObjectSP ValueObject::AddressOf(Status &error) {
-  if (m_addr_of_valobj_sp)
-    return m_addr_of_valobj_sp;
-
   auto [addr, address_type] = GetAddressOf(/*scalar_is_load_address=*/false);
   error.Clear();
   if (addr != LLDB_INVALID_ADDRESS && address_type != eAddressTypeHost) {
@@ -2920,6 +2926,10 @@ ValueObjectSP ValueObject::AddressOf(Status &error) {
 
     case eAddressTypeFile:
     case eAddressTypeLoad: {
+      if (m_addr_of_valobj_sp &&
+          m_addr_of_valobj_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS) == addr)
+        return m_addr_of_valobj_sp;
+      m_addr_of_valobj_sp.reset();
       CompilerType compiler_type = GetCompilerType();
       if (compiler_type) {
         std::string name(1, '&');

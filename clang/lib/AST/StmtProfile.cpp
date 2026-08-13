@@ -630,6 +630,9 @@ void OMPClauseProfiler::VisitOMPWriteClause(const OMPWriteClause *) {}
 
 void OMPClauseProfiler::VisitOMPUpdateClause(const OMPUpdateClause *) {}
 
+void OMPClauseProfiler::VisitOMPUpdateDependObjectsClause(
+    const OMPUpdateDependObjectsClause *) {}
+
 void OMPClauseProfiler::VisitOMPCaptureClause(const OMPCaptureClause *) {}
 
 void OMPClauseProfiler::VisitOMPCompareClause(const OMPCompareClause *) {}
@@ -1200,7 +1203,13 @@ void StmtProfiler::VisitOMPScanDirective(const OMPScanDirective *S) {
   VisitOMPExecutableDirective(S);
 }
 
-void StmtProfiler::VisitOMPOrderedDirective(const OMPOrderedDirective *S) {
+void StmtProfiler::VisitOMPOrderedStandaloneDirective(
+    const OMPOrderedStandaloneDirective *S) {
+  VisitOMPExecutableDirective(S);
+}
+
+void StmtProfiler::VisitOMPOrderedBlockAssocDirective(
+    const OMPOrderedBlockAssocDirective *S) {
   VisitOMPExecutableDirective(S);
 }
 

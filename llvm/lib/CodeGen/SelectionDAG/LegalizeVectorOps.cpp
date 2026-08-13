@@ -489,6 +489,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::MASKED_SDIV:
   case ISD::MASKED_UREM:
   case ISD::MASKED_SREM:
+  case ISD::VECTOR_MATCH:
     Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
     break;
   case ISD::SMULFIX:
@@ -1278,17 +1279,12 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     break;
   case ISD::SMULFIX:
   case ISD::UMULFIX:
+  case ISD::SMULFIXSAT:
+  case ISD::UMULFIXSAT:
     if (SDValue Expanded = TLI.expandFixedPointMul(Node, DAG)) {
       Results.push_back(Expanded);
       return;
     }
-    break;
-  case ISD::SMULFIXSAT:
-  case ISD::UMULFIXSAT:
-    // FIXME: We do not expand SMULFIXSAT/UMULFIXSAT here yet, not sure exactly
-    // why. Maybe it results in worse codegen compared to the unroll for some
-    // targets? This should probably be investigated. And if we still prefer to
-    // unroll an explanation could be helpful.
     break;
   case ISD::SDIVFIX:
   case ISD::UDIVFIX:
@@ -1328,6 +1324,9 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::VECREDUCE_SEQ_FADD:
   case ISD::VECREDUCE_SEQ_FMUL:
     Results.push_back(TLI.expandVecReduceSeq(Node, DAG));
+    return;
+  case ISD::VECTOR_MATCH:
+    Results.push_back(TLI.expandVectorMatch(Node, DAG));
     return;
   case ISD::SREM:
   case ISD::UREM:

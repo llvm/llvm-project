@@ -122,6 +122,24 @@ func.func @inc_dec() {
   return
 }
 
+// CHECK-LABEL: void compound_assign(
+// CHECK-SAME: int32_t [[ARG0:[^ ]*]]) {
+func.func @compound_assign(%arg0: i32) {
+  // CHECK-NEXT: int32_t [[V1:[^ ]*]] = 0;
+  %v = "emitc.variable"() <{value = 0 : i32}> : () -> !emitc.lvalue<i32>
+  // CHECK-NEXT: [[V1]] += [[ARG0]];
+  emitc.add_assign %arg0 : i32 to %v : !emitc.lvalue<i32>
+  // CHECK-NEXT: [[V1]] -= [[ARG0]];
+  emitc.sub_assign %arg0 : i32 to %v : !emitc.lvalue<i32>
+  // CHECK-NEXT: [[V1]] *= [[ARG0]];
+  emitc.mul_assign %arg0 : i32 to %v : !emitc.lvalue<i32>
+  // CHECK-NEXT: [[V1]] /= [[ARG0]];
+  emitc.div_assign %arg0 : i32 to %v : !emitc.lvalue<i32>
+  // CHECK-NEXT: [[V1]] %= [[ARG0]];
+  emitc.rem_assign %arg0 : i32 to %v : !emitc.lvalue<i32>
+  return
+}
+
 // CHECK-LABEL: int32_t inc_dec_expression() {
 func.func @inc_dec_expression() -> i32 {
   // CHECK-NEXT: int32_t [[V1:[^ ]*]] = 0;

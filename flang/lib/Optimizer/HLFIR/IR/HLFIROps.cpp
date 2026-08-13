@@ -1197,7 +1197,8 @@ void hlfir::SetLengthOp::build(mlir::OpBuilder &builder,
                                mlir::Value len) {
   fir::CharacterType::LenType resultTypeLen = fir::CharacterType::unknownLen();
   if (auto cstLen = fir::getIntIfConstant(len))
-    resultTypeLen = *cstLen;
+    if (std::optional<std::int64_t> cstLen64 = cstLen->trySExtValue())
+      resultTypeLen = *cstLen64;
   unsigned kind = getCharacterKind(string.getType());
   auto resultType = hlfir::ExprType::get(
       builder.getContext(), hlfir::ExprType::Shape{},
@@ -1568,8 +1569,15 @@ static llvm::LogicalResult verifyArrayShift(Op op) {
   int64_t dimVal = -1;
   if (!op.getDim())
     dimVal = 1;
-  else if (auto dim = fir::getIntIfConstant(op.getDim()))
-    dimVal = *dim;
+  else if (std::optional<llvm::APInt> dim =
+               fir::getIntIfConstant(op.getDim())) {
+    if (std::optional<std::int64_t> dim64 = dim->trySExtValue())
+      dimVal = *dim64;
+    else if (useStrictIntrinsicVerifier)
+      return op.emitOpError(dim->isNegative()
+                                ? "DIM must be >= 1"
+                                : "DIM must be <= input array's rank");
+  }
 
   // The DIM argument may be statically invalid (e.g. exceed the
   // input array rank) in dead code after constant propagation,
