@@ -69,7 +69,8 @@ static StringRef ToolName;
 static cl::list<std::string> InputFileNames(cl::Positional,
                                             cl::desc("<input object files>"));
 
-static int MinLength = 4;
+static constexpr int DefaultMinLength = 4;
+static int MinLength = DefaultMinLength;
 static bool PrintFileName;
 
 enum radix { none, octal, hexadecimal, decimal };
@@ -92,31 +93,39 @@ static void parseIntArg(const opt::InputArgList &Args, int ID, T &Value) {
 static void strings(raw_ostream &OS, StringRef FileName,
                     sys::fs::file_t Handle) {
   SmallString<sys::fs::DefaultReadChunkSize> Buffer;
-  auto print = [&OS, FileName](unsigned Offset, StringRef L) {
-    if (L.size() < static_cast<size_t>(MinLength))
-      return;
-    if (PrintFileName)
-      OS << FileName << ": ";
-    switch (Radix) {
-    case none:
-      break;
-    case octal:
-      OS << format("%7o ", Offset);
-      break;
-    case hexadecimal:
-      OS << format("%7x ", Offset);
-      break;
-    case decimal:
-      OS << format("%7u ", Offset);
-      break;
+  SmallString<DefaultMinLength> Prefix;
+  auto print = [&OS, FileName, &Prefix](unsigned Offset, StringRef L) {
+    if (Prefix.size() + L.size() >= static_cast<size_t>(MinLength)) {
+      if (PrintFileName)
+        OS << FileName << ": ";
+      switch (Radix) {
+      case none:
+        break;
+      case octal:
+        OS << format("%7o ", Offset);
+        break;
+      case hexadecimal:
+        OS << format("%7x ", Offset);
+        break;
+      case decimal:
+        OS << format("%7u ", Offset);
+        break;
+      }
+      OS << Prefix << L << '\n';
     }
-    OS << L << '\n';
+    Prefix.clear();
   };
 
   Buffer.resize_for_overwrite(sys::fs::DefaultReadChunkSize);
-  std::string StringBuffer;
+  // Offset of the start of the current chunk within the file.
   unsigned Offset = 0;
   while (true) {
+    /*
+     * llvm-strings should be able to process a very large file on a
+     * memory-budgeted machine. To handle this, we read the file in chunk
+     * instead of allocate a very large memory and copy the whole file to the
+     * memory.
+     */
     Expected<size_t> ReadBytesOrErr = sys::fs::readNativeFile(
         Handle, MutableArrayRef(Buffer.data(), Buffer.size()));
     if (!ReadBytesOrErr) {
@@ -125,25 +134,28 @@ static void strings(raw_ostream &OS, StringRef FileName,
       return;
     }
     std::size_t CurSize = *ReadBytesOrErr;
-    if (CurSize <= 0)
+    if (CurSize == 0)
       break;
-    for (std::size_t I = 0; I != CurSize; ++I) {
-      char C = Buffer[I];
-      if (isPrint(C) || C == '\t') {
-        StringBuffer.push_back(C);
-      } else if (StringBuffer.size()) {
-        print(Offset, StringRef(StringBuffer.c_str(), StringBuffer.size()));
-        Offset += StringBuffer.size();
-        StringBuffer.clear();
-        ++Offset;
-      } else {
-        ++Offset;
+
+    const char *B = Buffer.data();
+    const char *E = B + CurSize;
+    const char *S = Prefix.empty() ? nullptr : B;
+    for (const char *P = B; P != E; ++P) {
+      if (isPrint(*P) || *P == '\t') {
+        if (!S)
+          S = P;
+      } else if (S) {
+        print(Offset + (S - B) - Prefix.size(), StringRef(S, P - S));
+        S = nullptr;
       }
     }
+    if (S)
+      Prefix.append(S, E);
+    Offset += CurSize;
   }
 
-  if (StringBuffer.size())
-    print(Offset, StringRef(StringBuffer.c_str(), StringBuffer.size()));
+  if (!Prefix.empty())
+    print(Offset - Prefix.size(), StringRef());
 }
 
 int main(int argc, char **argv) {
@@ -198,8 +210,8 @@ int main(int argc, char **argv) {
     if (File == "-") {
       strings(llvm::outs(), "{standard input}", sys::fs::getStdinHandle());
     } else {
-      Expected<sys::fs::file_t> FDOrErr = sys::fs::openNativeFileForReadWrite(
-          File, sys::fs::CD_OpenExisting, sys::fs::OF_None);
+      Expected<sys::fs::file_t> FDOrErr =
+          sys::fs::openNativeFileForRead(File, sys::fs::OF_TextWithCRLF);
       if (!FDOrErr) {
         errs() << File << ": " << FDOrErr.takeError() << '\n';
         continue;
