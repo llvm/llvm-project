@@ -1793,9 +1793,13 @@ llvm::DIType *CGDebugInfo::CreateType(const TypedefType *Ty,
                                 Flags, Annotations);
 }
 
-static unsigned getDwarfCC(CallingConv CC) {
+static unsigned getDwarfCC(CallingConv CC, const llvm::Triple &T) {
   switch (CC) {
   case CC_C:
+    // On SPIR/SPIR-V, CC_C is the target default calling convention and lowers
+    // to spir_func, so describe it that way.
+    if (T.isSPIROrSPIRV())
+      return llvm::dwarf::DW_CC_LLVM_SpirFunction;
     // Avoid emitting DW_AT_calling_convention if the C convention was used.
     return 0;
 
@@ -1899,7 +1903,8 @@ llvm::DIType *CGDebugInfo::CreateType(const FunctionType *Ty,
 
   llvm::DITypeArray EltTypeArray = DBuilder.getOrCreateTypeArray(EltTys);
   llvm::DIType *F = DBuilder.createSubroutineType(
-      EltTypeArray, Flags, getDwarfCC(Ty->getCallConv()));
+      EltTypeArray, Flags,
+      getDwarfCC(Ty->getCallConv(), CGM.getTarget().getTriple()));
   return F;
 }
 
@@ -2384,8 +2389,9 @@ CGDebugInfo::getOrCreateInstanceMethodType(QualType ThisPtr,
 
   llvm::DITypeArray EltTypeArray = DBuilder.getOrCreateTypeArray(Elts);
 
-  return DBuilder.createSubroutineType(EltTypeArray, OriginalFunc->getFlags(),
-                                       getDwarfCC(Func->getCallConv()));
+  return DBuilder.createSubroutineType(
+      EltTypeArray, OriginalFunc->getFlags(),
+      getDwarfCC(Func->getCallConv(), CGM.getTarget().getTriple()));
 }
 
 /// isFunctionLocalClass - Return true if CXXRecordDecl is defined
@@ -4909,8 +4915,9 @@ llvm::DISubroutineType *CGDebugInfo::getOrCreateFunctionType(const Decl *D,
       Elts.push_back(DBuilder.createUnspecifiedParameter());
 
     llvm::DITypeArray EltTypeArray = DBuilder.getOrCreateTypeArray(Elts);
-    return DBuilder.createSubroutineType(EltTypeArray, llvm::DINode::FlagZero,
-                                         getDwarfCC(CC));
+    return DBuilder.createSubroutineType(
+        EltTypeArray, llvm::DINode::FlagZero,
+        getDwarfCC(CC, CGM.getTarget().getTriple()));
   }
 
   // Handle variadic function types; they need an additional
@@ -4924,8 +4931,9 @@ llvm::DISubroutineType *CGDebugInfo::getOrCreateFunctionType(const Decl *D,
           EltTys.push_back(getOrCreateType(ParamType, F));
       EltTys.push_back(DBuilder.createUnspecifiedParameter());
       llvm::DITypeArray EltTypeArray = DBuilder.getOrCreateTypeArray(EltTys);
-      return DBuilder.createSubroutineType(EltTypeArray, llvm::DINode::FlagZero,
-                                           getDwarfCC(CC));
+      return DBuilder.createSubroutineType(
+          EltTypeArray, llvm::DINode::FlagZero,
+          getDwarfCC(CC, CGM.getTarget().getTriple()));
     }
 
   return cast<llvm::DISubroutineType>(getOrCreateType(FnType, F));
