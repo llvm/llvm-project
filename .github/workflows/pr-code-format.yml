@@ -46,6 +46,9 @@ jobs:
         env:
           GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+          # This runs a release ahead of the pinned clang-format, so it must
+          # not use newly added clang-format options.
+          CLANG_FORMAT_PATH: ./clang/tools/clang-format/git-clang-format
         # Create an empty comments file so the pr-write job doesn't fail.
         run: |
           echo "[]" > comments &&
