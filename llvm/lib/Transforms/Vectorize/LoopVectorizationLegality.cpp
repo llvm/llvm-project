@@ -91,7 +91,6 @@ bool LoopVectorizeHints::Hint::validate(unsigned Val) {
   case HK_INTERLEAVE:
     return isPowerOf2_32(Val) && Val <= MaxInterleaveFactor;
   case HK_ISVECTORIZED:
-  case HK_SCALABLE:
     return (Val == 0 || Val == 1);
   }
   return false;
@@ -105,9 +104,7 @@ LoopVectorizeHints::LoopVectorizeHints(const Loop *L,
             VectorizerParams::VectorizationFactor.getKnownMinValue(), HK_WIDTH),
       Interleave("interleave.count", InterleaveOnlyWhenForced, HK_INTERLEAVE),
       Force(FK_Undefined), IsVectorized("isvectorized", 0, HK_ISVECTORIZED),
-      Predicate(FK_Undefined),
-      Scalable("vectorize.scalable.enable", SK_Unspecified, HK_SCALABLE),
-      TheLoop(L), ORE(ORE) {
+      Predicate(FK_Undefined), Scalable(SK_Unspecified), TheLoop(L), ORE(ORE) {
   // Populate values with existing loop metadata.
   getHintsFromMetadata();
 
@@ -121,31 +118,31 @@ LoopVectorizeHints::LoopVectorizeHints(const Loop *L,
   //  - Target default
   //  - Metadata width
   //  - Force option (always overrides)
-  if ((LoopVectorizeHints::ScalableForceKind)Scalable.Value == SK_Unspecified) {
+  if ((LoopVectorizeHints::ScalableForceKind)Scalable == SK_Unspecified) {
     if (TTI)
-      Scalable.Value = TTI->enableScalableVectorization() ? SK_PreferScalable
-                                                          : SK_FixedWidthOnly;
+      Scalable = TTI->enableScalableVectorization() ? SK_PreferScalable
+                                                    : SK_FixedWidthOnly;
 
     if (Width.Value)
       // If the width is set, but the metadata says nothing about the scalable
       // property, then assume it concerns only a fixed-width UserVF.
       // If width is not set, the flag takes precedence.
-      Scalable.Value = SK_FixedWidthOnly;
+      Scalable = SK_FixedWidthOnly;
   }
 
   // If the flag is set to force any use of scalable vectors, override the loop
   // hints.
   if (ForceScalableVectorization.getValue() !=
       LoopVectorizeHints::SK_Unspecified)
-    Scalable.Value = ForceScalableVectorization.getValue();
+    Scalable = ForceScalableVectorization.getValue();
 
   // If force-vector-width is scalable, force scalable vectorization.
   if (VectorizerParams::VectorizationFactor.isScalable())
-    Scalable.Value = SK_AlwaysScalable;
+    Scalable = SK_AlwaysScalable;
 
   // Scalable vectorization is disabled if no preference is specified.
-  if ((LoopVectorizeHints::ScalableForceKind)Scalable.Value == SK_Unspecified)
-    Scalable.Value = SK_FixedWidthOnly;
+  if ((LoopVectorizeHints::ScalableForceKind)Scalable == SK_Unspecified)
+    Scalable = SK_FixedWidthOnly;
 
   if (IsVectorized.Value != 1)
     // If the vectorization width and interleaving count are both 1 then
@@ -293,6 +290,10 @@ void LoopVectorizeHints::getHintsFromMetadata() {
         Predicate = FK_Enabled;
       else if (Name == "llvm.loop.vectorize.predicate.disable")
         Predicate = FK_Disabled;
+      else if (Name == "llvm.loop.vectorize.scalable.enable")
+        Scalable = SK_PreferScalable;
+      else if (Name == "llvm.loop.vectorize.scalable.disable")
+        Scalable = SK_FixedWidthOnly;
       continue;
     }
     if (Args.size() == 1)
@@ -309,9 +310,9 @@ void LoopVectorizeHints::setHint(StringRef Name, Metadata *Arg) {
     return;
   unsigned Val = C->getZExtValue();
 
-  // Force and Predicate are omitted: they are only spelled as single-operand
-  // enable/disable nodes, which never reach setHint().
-  Hint *Hints[] = {&Width, &Interleave, &IsVectorized, &Scalable};
+  // Force, Predicate, and Scalable are omitted: they are only spelled as
+  // single-operand enable/disable nodes, which never reach setHint().
+  Hint *Hints[] = {&Width, &Interleave, &IsVectorized};
   for (auto *H : Hints) {
     if (Name == H->Name) {
       if (H->validate(Val))
@@ -1133,6 +1134,10 @@ static bool findHistogram(LoadInst *LI, StoreInst *HSt, Loop *TheLoop,
   LoadInst *IndexedLoad = cast<LoadInst>(HBinOp->getOperand(0));
   BasicBlock *LdBB = IndexedLoad->getParent();
   if (LdBB != HBinOp->getParent() || LdBB != HSt->getParent())
+    return false;
+
+  // The bucket value and its update must not be used outside the histogram.
+  if (!IndexedLoad->hasOneUse() || !HBinOp->hasOneUse())
     return false;
 
   LLVM_DEBUG(dbgs() << "LV: Found histogram for: " << *HSt << "\n");
