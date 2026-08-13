@@ -23,6 +23,7 @@
 #include "Types.h"
 
 #include "OffloadAPI.h"
+#include "llvm/ADT/SmallVector.h"
 
 #include <cassert>
 #include <cstdio>
@@ -44,10 +45,13 @@ Error_t Free(void *DevPtr) {
 }
 
 Error_t Memcpy(void *Dst, const void *Src, size_t Size, MemcpyKind Kind) {
-  StateTy &State = StateTy::get();
-  ThreadStateTy &ThreadState = ThreadStateTy::get();
-  ol_queue_handle_t Queue = ThreadState.getDefaultQueue();
-
+  if (Kind != MemcpyHostToHost) {
+    ol_result_t Result = waitOnBlockingStreams();
+    if (Result != OL_SUCCESS)
+      return convertAndSetLastError(Result);
+  }
+  ol_device_handle_t Device = ThreadState::getDefaultDevice();
+  ol_queue_handle_t Queue = ThreadState::getDefaultQueue();
   ol_result_t Result;
   switch (Kind) {
   case MemcpyHostToHost: {
@@ -80,6 +84,9 @@ Error_t Memcpy(void *Dst, const void *Src, size_t Size, MemcpyKind Kind) {
   };
 
   if (Result != OL_SUCCESS)
+    return convertAndSetLastError(Result);
+
+  if (!Queue)
     return convertAndSetLastError(Result);
 
   Result = olSyncQueue(Queue);

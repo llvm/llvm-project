@@ -8372,6 +8372,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (IsHIP) {
     CmdArgs.push_back("-fcuda-allow-variadic-functions");
+    /// TODO: Why is this not forwarded when IsCUDA?
     Args.AddLastArg(CmdArgs, options::OPT_fgpu_default_stream_EQ);
   }
 
