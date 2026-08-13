@@ -1442,7 +1442,8 @@ struct RegisterBudgetState {
   bool Unknown = true;
 
   bool operator==(const RegisterBudgetState &Other) const {
-    return Unknown == Other.Unknown && VGPRs == Other.VGPRs && AGPRs ==  Other.AGPRs;
+    return Unknown == Other.Unknown && VGPRs == Other.VGPRs &&
+           AGPRs == Other.AGPRs;
   }
   bool operator!=(const RegisterBudgetState &Other) const {
     return !(*this == Other);
@@ -1464,27 +1465,28 @@ struct RegisterBudgetState {
 
 /// An abstract attribute to propagate the register file split a kernel was
 /// compiled with down the call graph to its device functions, emitted as
-/// "amdgpu-register-budget". Entry functions seed the split from their own vector
-/// register budget; every other function inherits the tightest split over its
-/// callers.
+/// "amdgpu-register-budget". Entry functions seed the split from their own
+/// vector register budget; every other function inherits the tightest split
+/// over its callers.
 struct AAAMDGPURegisterBudget
     : public StateWrapper<BooleanState, AbstractAttribute> {
   using Base = StateWrapper<BooleanState, AbstractAttribute>;
   AAAMDGPURegisterBudget(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
 
   static AAAMDGPURegisterBudget &createForPosition(const IRPosition &IRP,
-                                               Attributor &A) {
+                                                   Attributor &A) {
     if (IRP.getPositionKind() == IRPosition::IRP_FUNCTION)
       return *new (A.Allocator) AAAMDGPURegisterBudget(IRP, A);
     llvm_unreachable(
         "AAAMDGPURegisterBudget is only valid for function position");
   }
 
-  // When we known not all callers are known, we know that any unknown caller that reaches
-  // this function will have a pessimistic amdgpu-agpr-alloc attribute. This being pessimistic 
-  // means that the budget for the number of VGPRs and AGPRs will be split in half for the unknown 
-  // caller. We also know that the FlatWorkGroupSize attribute will also be pessimistic for at 
-  // least the current function (the one being called in the indirect callsite)
+  // When we known not all callers are known, we know that any unknown caller
+  // that reaches this function will have a pessimistic amdgpu-agpr-alloc
+  // attribute. This being pessimistic means that the budget for the number of
+  // VGPRs and AGPRs will be split in half for the unknown caller. We also know
+  // that the FlatWorkGroupSize attribute will also be pessimistic for at least
+  // the current function (the one being called in the indirect callsite)
   unsigned computePessimisticValue(Attributor &A) const {
     Function *F = getAssociatedFunction();
     auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
@@ -1492,8 +1494,9 @@ struct AAAMDGPURegisterBudget
     unsigned MaxWG = ST.getMaxFlatWorkGroupSize();
     unsigned Occ = std::clamp(ST.getWavesPerEUForWorkGroup(MaxWG), 1u,
                               ST.getMaxWavesPerEU());
-    unsigned Budget = ST.getMaxNumVGPRs(Occ, AMDGPU::getDynamicVGPRBlockSize(*F));
-    return Budget / 2;  // 128/2 == 64 on gfx90a at the max work-group size
+    unsigned Budget =
+        ST.getMaxNumVGPRs(Occ, AMDGPU::getDynamicVGPRBlockSize(*F));
+    return Budget / 2; // 128/2 == 64 on gfx90a at the max work-group size
   }
 
   ChangeStatus updateImpl(Attributor &A) override {
@@ -1514,18 +1517,17 @@ struct AAAMDGPURegisterBudget
       unsigned MaxRegs = ST.getMaxNumVGPRs(*F);
       if (!AGPRAlloc || !AGPRAlloc->isValidState()) {
         VGPRBudget = AGPRBudget = MaxRegs / 2; // pessimistic
-        if(VGPRBudget == computePessimisticValue(A))
+        if (VGPRBudget == computePessimisticValue(A))
           return indicatePessimisticFixpoint();
-      }
-      else
-      {
+      } else {
         AGPRBudget = AGPRAlloc->getAssumed();
         AGPRBudget = alignTo(AGPRBudget, 4);
         VGPRBudget = MaxRegs - std::min(MaxRegs, AGPRBudget);
       }
-        
+
       Budget = {VGPRBudget, AGPRBudget, /*Unknown=*/false};
-      LLVM_DEBUG(dbgs() << "Register budget for " << F->getName() << ": " << VGPRBudget << ", " << AGPRBudget << "\n");
+      LLVM_DEBUG(dbgs() << "Register budget for " << F->getName() << ": "
+                        << VGPRBudget << ", " << AGPRBudget << "\n");
     } else {
       RegisterBudgetState Merged;
 
@@ -1541,17 +1543,19 @@ struct AAAMDGPURegisterBudget
           return true;
         }
         AbstractCallSite ACS(&U);
-        const Use *EffectiveUse = ACS && ACS.isCallbackCall() ? &ACS.getCalleeUseForCallback() : &U;
-        if(!ACS || !ACS.isCallee(EffectiveUse)) 
+        const Use *EffectiveUse =
+            ACS && ACS.isCallbackCall() ? &ACS.getCalleeUseForCallback() : &U;
+        if (!ACS || !ACS.isCallee(EffectiveUse))
           return true;
 
         Function *Caller = ACS.getInstruction()->getFunction();
-        const auto *CallerAA = A.getAAFor<AAAMDGPURegisterBudget>(*this, IRPosition::function(*Caller), DepClassTy::REQUIRED);
-        if(!CallerAA || !CallerAA->isValidState())
+        const auto *CallerAA = A.getAAFor<AAAMDGPURegisterBudget>(
+            *this, IRPosition::function(*Caller), DepClassTy::REQUIRED);
+        if (!CallerAA || !CallerAA->isValidState())
           return true;
 
         const RegisterBudgetState &CallerBudget = CallerAA->getBudget();
-        if(!CallerBudget.Unknown)
+        if (!CallerBudget.Unknown)
           Merged.merge(CallerBudget);
         return true;
       };
@@ -1560,11 +1564,15 @@ struct AAAMDGPURegisterBudget
 
       // Checks for unknown call sites.
       bool DummyUAI = false;
-      bool AllCallsitesKnown = A.checkForAllCallSites([](AbstractCallSite) { return true; }, *this, true, DummyUAI);
+      bool AllCallsitesKnown = A.checkForAllCallSites(
+          [](AbstractCallSite) { return true; }, *this, true, DummyUAI);
       if (!AllCallsitesKnown && !Merged.Unknown) {
-        if (std::optional<unsigned> PessimisticValue = computePessimisticValue(A)) {
-          Merged.merge({*PessimisticValue, *PessimisticValue, /*Unknown=*/false});
-        } else return indicatePessimisticFixpoint();
+        if (std::optional<unsigned> PessimisticValue =
+                computePessimisticValue(A)) {
+          Merged.merge(
+              {*PessimisticValue, *PessimisticValue, /*Unknown=*/false});
+        } else
+          return indicatePessimisticFixpoint();
       }
       // Stays unknown when no caller contributed a budget, so that functions
       // outside any kernel's reach are left unconstrained.

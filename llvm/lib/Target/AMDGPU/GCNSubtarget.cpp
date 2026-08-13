@@ -675,11 +675,13 @@ GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
     std::tie(MinNumAGPRs, MaxNumAGPRs) =
         AMDGPU::getIntegerPairAttribute(F, "amdgpu-agpr-alloc", DefaultNumAGPR,
                                         /*OnlyFirstRequired=*/true);
-    std::tie(VGPRCap, AGPRCap) =
-        AMDGPU::getIntegerPairAttribute(F, "amdgpu-register-budget", DefaultRegisterBudget,
-                                        /*OnlyFirstRequired=*/false);
-    
-    if (MinNumAGPRs == DefaultNumAGPR.first || (VGPRCap == DefaultRegisterBudget.first && !AMDGPU::isEntryFunctionCC(F.getCallingConv()))) {
+    std::tie(VGPRCap, AGPRCap) = AMDGPU::getIntegerPairAttribute(
+        F, "amdgpu-register-budget", DefaultRegisterBudget,
+        /*OnlyFirstRequired=*/false);
+
+    if (MinNumAGPRs == DefaultNumAGPR.first ||
+        (VGPRCap == DefaultRegisterBudget.first &&
+         !AMDGPU::isEntryFunctionCC(F.getCallingConv()))) {
       MinNumAGPRs = MaxNumAGPRs = MaxVectorRegs / 2;
     } else {
       // Align to accum_offset's allocation granularity.
@@ -692,7 +694,8 @@ GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
     MaxNumAGPRs = std::min(std::max(MinNumAGPRs, MaxNumAGPRs), MaxVectorRegs);
     MinNumAGPRs = std::min({MinNumAGPRs, TotalNumAGPRs, MaxNumAGPRs});
 
-    MaxNumVGPRs = std::min({MaxVectorRegs - MinNumAGPRs, NumArchVGPRs, VGPRCap});
+    MaxNumVGPRs =
+        std::min({MaxVectorRegs - MinNumAGPRs, NumArchVGPRs, VGPRCap});
     MaxNumAGPRs = std::min({MaxVectorRegs - MaxNumVGPRs, MaxNumAGPRs, AGPRCap});
 
     LLVM_DEBUG(dbgs() << "MaxNumVGPRs: " << MaxNumVGPRs << ", MaxNumAGPRs: "
