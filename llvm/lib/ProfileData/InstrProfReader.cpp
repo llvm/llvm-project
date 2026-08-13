@@ -590,11 +590,10 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
                   "\nPLEASE update this tool to version in the raw profile, or "
                   "regenerate raw profile with expected version.")
                      .str());
-
+  const uint8_t *ProfileStart = reinterpret_cast<const uint8_t *>(&Header);
   uint64_t BinaryIdSize = swap(Header.BinaryIdsSize);
   // Binary id start just after the header if exists.
-  const uint8_t *BinaryIdStart =
-      reinterpret_cast<const uint8_t *>(&Header) + sizeof(RawInstrProf::Header);
+  const uint8_t *BinaryIdStart = ProfileStart + sizeof(RawInstrProf::Header);
   const uint8_t *BinaryIdEnd = BinaryIdStart + BinaryIdSize;
   const uint8_t *BufferEnd = (const uint8_t *)DataBuffer->getBufferEnd();
   if (BinaryIdSize % sizeof(uint64_t))
@@ -603,7 +602,12 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
         ("BinaryIdSize (" + Twine(BinaryIdSize) + ") is not a multiple of 8")
             .str());
   if (BinaryIdEnd > BufferEnd)
-    return error(instrprof_error::truncated);
+    return error(instrprof_error::header_size_mismatch,
+                 ("Header.BinaryIdSize = " + Twine(BinaryIdSize) +
+                  " bytes, file size is " + Twine(DataBuffer->getBufferSize()) +
+                  " bytes but expected at least " +
+                  Twine(BinaryIdEnd - ProfileStart) + " bytes")
+                     .str());
 
   ArrayRef<uint8_t> BinaryIdsBuffer(BinaryIdStart, BinaryIdSize);
   if (!BinaryIdsBuffer.empty()) {
@@ -658,7 +662,7 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   auto *Start = reinterpret_cast<const char *>(&Header);
   if (Start + ValueDataOffset > DataBuffer->getBufferEnd())
     return error(
-        instrprof_error::bad_header,
+        instrprof_error::header_size_mismatch,
         ("Profile file size (" + Twine(DataBuffer->getBufferSize()) +
          " bytes) smaller than expected (at least " + Twine(ValueDataOffset) +
          " bytes = " +
@@ -1398,10 +1402,10 @@ Error IndexedInstrProfReader::readHeader() {
     uint64_t BinaryIdsSize =
         support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
     if (BinaryIdsSize % sizeof(uint64_t))
-      return error(instrprof_error::bad_header,
-                   ("BinaryIdSize (" + Twine(BinaryIdsSize) +
-                    ") is not a multiple of 8")
-                       .str());
+      return error(
+          instrprof_error::bad_header,
+          ("BinaryIdSize (" + Twine(BinaryIdsSize) + ") is not a multiple of 8")
+              .str());
     // Set the binary ids start.
     BinaryIdsBuffer = ArrayRef<uint8_t>(Ptr, BinaryIdsSize);
     if (Ptr > (const unsigned char *)DataBuffer->getBufferEnd())

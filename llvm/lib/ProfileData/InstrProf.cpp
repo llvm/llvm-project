@@ -101,6 +101,10 @@ static std::string getInstrProfErrString(instrprof_error Err,
   case instrprof_error::bad_header:
     OS << "invalid instrumentation profile data (file header is corrupt)";
     break;
+  case instrprof_error::header_size_mismatch:
+    OS << "profile file size does not match header expectations (file may be "
+          "truncated or header may be corrupt)";
+    break;
   case instrprof_error::unsupported_version:
     OS << "unsupported instrumentation profile format version";
     break;
