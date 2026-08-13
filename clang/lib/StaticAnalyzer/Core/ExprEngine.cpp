@@ -1104,6 +1104,7 @@ static bool justRunCheckersAsPreVisit(const Stmt *S) {
   switch (S->getStmtClass()) {
   default:
     return false;
+  case Stmt::ArrayInitLoopExprClass:
   case Stmt::ArraySubscriptExprClass:
   case Stmt::AttributedStmtClass:
   case Stmt::AtomicExprClass:
@@ -1134,6 +1135,7 @@ static bool justRunCheckersAsPostVisit(const Stmt *S) {
   switch (S->getStmtClass()) {
   default:
     return false;
+  case Stmt::ArrayInitLoopExprClass:
   case Stmt::ArraySubscriptExprClass:
   case Stmt::AttributedStmtClass:
   case Stmt::AtomicExprClass:
@@ -3177,96 +3179,88 @@ void ExprEngine::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *Ex,
                                         ExplodedNodeSet &Dst) {
   const Expr *Arr = Ex->getCommonExpr()->getSourceExpr();
 
-  ExplodedNodeSet CheckerPreStmt;
-  getCheckerManager().runCheckersForPreStmt(CheckerPreStmt, Pred, Ex, *this);
-
-  ExplodedNodeSet EvalSet;
+  // The constructor visitor has already handled everything, so let's skip
+  // forward to PostStmt handling.
   if (isa<CXXConstructExpr>(Ex->getSubExpr())) {
-    // The constructor visitor has already handled everything, so let's skip
-    // forward to PostStmt handling by clearing the range of the 'for' loop.
-    EvalSet.insert(CheckerPreStmt);
-    CheckerPreStmt.clear();
+    Dst.insert(Pred);
+    return;
   }
 
-  for (auto *Node : CheckerPreStmt) {
-    const StackFrame *SF = Node->getStackFrame();
-    ProgramStateRef state = Node->getState();
+  const StackFrame *SF = Pred->getStackFrame();
+  ProgramStateRef state = Pred->getState();
 
-    SVal Base = UnknownVal();
+  SVal Base = UnknownVal();
 
-    // As in case of this expression the sub-expressions are not visited by any
-    // other transfer functions, they are handled by matching their AST.
+  // As in case of this expression the sub-expressions are not visited by any
+  // other transfer functions, they are handled by matching their AST.
 
-    // Case of implicit copy or move ctor of object with array member
-    //
-    // Note: ExprEngine::VisitMemberExpr is not able to bind the array to the
-    // environment.
-    //
-    //    struct S {
-    //      int arr[2];
-    //    };
-    //
-    //
-    //    S a;
-    //    S b = a;
-    //
-    // The AST in case of a *copy constructor* looks like this:
-    //    ArrayInitLoopExpr
-    //    |-OpaqueValueExpr
-    //    | `-MemberExpr              <-- match this
-    //    |   `-DeclRefExpr
-    //    ` ...
-    //
-    //
-    //    S c;
-    //    S d = std::move(d);
-    //
-    // In case of a *move constructor* the resulting AST looks like:
-    //    ArrayInitLoopExpr
-    //    |-OpaqueValueExpr
-    //    | `-MemberExpr              <-- match this first
-    //    |   `-CXXStaticCastExpr     <-- match this after
-    //    |     `-DeclRefExpr
-    //    ` ...
-    if (const auto *ME = dyn_cast<MemberExpr>(Arr)) {
-      Expr *MEBase = ME->getBase();
+  // Case of implicit copy or move ctor of object with array member
+  //
+  // Note: ExprEngine::VisitMemberExpr is not able to bind the array to the
+  // environment.
+  //
+  //    struct S {
+  //      int arr[2];
+  //    };
+  //
+  //
+  //    S a;
+  //    S b = a;
+  //
+  // The AST in case of a *copy constructor* looks like this:
+  //    ArrayInitLoopExpr
+  //    |-OpaqueValueExpr
+  //    | `-MemberExpr              <-- match this
+  //    |   `-DeclRefExpr
+  //    ` ...
+  //
+  //
+  //    S c;
+  //    S d = std::move(d);
+  //
+  // In case of a *move constructor* the resulting AST looks like:
+  //    ArrayInitLoopExpr
+  //    |-OpaqueValueExpr
+  //    | `-MemberExpr              <-- match this first
+  //    |   `-CXXStaticCastExpr     <-- match this after
+  //    |     `-DeclRefExpr
+  //    ` ...
+  if (const auto *ME = dyn_cast<MemberExpr>(Arr)) {
+    Expr *MEBase = ME->getBase();
 
-      // Move ctor
-      if (auto CXXSCE = dyn_cast<CXXStaticCastExpr>(MEBase)) {
-        MEBase = CXXSCE->getSubExpr();
-      }
-
-      auto ObjDeclExpr = cast<DeclRefExpr>(MEBase);
-      SVal Obj = state->getLValue(cast<VarDecl>(ObjDeclExpr->getDecl()), SF);
-
-      Base = state->getLValue(cast<FieldDecl>(ME->getMemberDecl()), Obj);
+    // Move ctor
+    if (auto CXXSCE = dyn_cast<CXXStaticCastExpr>(MEBase)) {
+      MEBase = CXXSCE->getSubExpr();
     }
 
-    // Case of lambda capture and decomposition declaration
-    //
-    //    int arr[2];
-    //
-    //    [arr]{ int a = arr[0]; }();
-    //    auto[a, b] = arr;
-    //
-    // In both of these cases the AST looks like the following:
-    //    ArrayInitLoopExpr
-    //    |-OpaqueValueExpr
-    //    | `-DeclRefExpr             <-- match this
-    //    ` ...
-    if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(Arr))
-      Base = state->getLValue(cast<VarDecl>(DRE->getDecl()), SF);
+    auto ObjDeclExpr = cast<DeclRefExpr>(MEBase);
+    SVal Obj = state->getLValue(cast<VarDecl>(ObjDeclExpr->getDecl()), SF);
 
-    // Create a lazy compound value to the original array
-    if (const MemRegion *R = Base.getAsRegion())
-      Base = state->getSVal(R);
-    else
-      Base = UnknownVal();
-
-    EvalSet.insert(Engine.makeNodeWithBinding(Node, Ex, Base));
+    Base = state->getLValue(cast<FieldDecl>(ME->getMemberDecl()), Obj);
   }
 
-  getCheckerManager().runCheckersForPostStmt(Dst, EvalSet, Ex, *this);
+  // Case of lambda capture and decomposition declaration
+  //
+  //    int arr[2];
+  //
+  //    [arr]{ int a = arr[0]; }();
+  //    auto[a, b] = arr;
+  //
+  // In both of these cases the AST looks like the following:
+  //    ArrayInitLoopExpr
+  //    |-OpaqueValueExpr
+  //    | `-DeclRefExpr             <-- match this
+  //    ` ...
+  if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(Arr))
+    Base = state->getLValue(cast<VarDecl>(DRE->getDecl()), SF);
+
+  // Create a lazy compound value to the original array
+  if (const MemRegion *R = Base.getAsRegion())
+    Base = state->getSVal(R);
+  else
+    Base = UnknownVal();
+
+  Dst.insert(Engine.makeNodeWithBinding(Pred, Ex, Base));
 }
 
 /// VisitArraySubscriptExpr - Transfer function for array accesses
