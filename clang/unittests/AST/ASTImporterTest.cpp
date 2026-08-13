@@ -9273,12 +9273,12 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportRecursiveFieldInitializer1) {
 }
 
 // Check that we are able to import a global variable of class type that
-// is initialized with a lambda that captures a reference to the variable itself,
-// and that the class's constructor template names a variable template specialization
-// whose (dependent) argument is the lambda's own closure type.
+// is initialized with a lambda that captures a reference to the variable
+// itself, and that the class's constructor template names a variable template
+// specialization whose (dependent) argument is the lambda's own closure type.
 // The lambda's call operator is looked up during the import of its own body
-// (through a chain of decls). This is problematic if we do not link function decls
-// to the context before importing their bodies.
+// (through a chain of decls). This is problematic if we do not link function
+// decls to the context before importing their bodies.
 TEST_P(ASTImporterOptionSpecificTestBase,
        ImportSelfReferencingGlobalWithLambdaInTemplateArg) {
   TranslationUnitDecl *FromTU = getTuDecl(std::string(R"(
@@ -9292,7 +9292,7 @@ TEST_P(ASTImporterOptionSpecificTestBase,
       }
     } selfRef { []{ (void)selfRef; } };
     void trigger() { selfRef; }
-    )", Lang_CXX20);
+    )"), Lang_CXX20);
   auto *FromFunc = FirstDeclMatcher<FunctionDecl>().match(
       FromTU, functionDecl(hasName("trigger")));
   auto *ToFunc = Import(FromFunc, Lang_CXX20);
