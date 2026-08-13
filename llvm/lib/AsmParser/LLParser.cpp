@@ -4275,6 +4275,12 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     // ValID ::= '<' ConstVector '>'         --> Vector.
     // ValID ::= '<' '{' ConstVector '}' '>' --> Packed Struct.
     Lex.Lex();
+
+    // guard constant vector elements must begin with a type.
+    if (Lex.getKind() == lltok::APSInt)
+      return error(Lex.getLoc(), "unexpected vector type; constant vector "
+                                 "elements should not repeat the type");
+
     bool isPackedStruct = EatIfPresent(lltok::lbrace);
 
     SmallVector<Constant*, 16> Elts;
