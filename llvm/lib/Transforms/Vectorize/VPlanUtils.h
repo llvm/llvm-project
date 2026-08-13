@@ -180,6 +180,12 @@ bool isUsedByLoadStoreAddress(const VPValue *V);
 /// inserted for predicated reductions or tail folding.
 VPInstruction *findComputeReductionResult(VPReductionPHIRecipe *PhiR);
 
+/// Returns the type an extend of \p ExtSrc should be costed as extending from
+/// when forming a partial reduction. Normally that is just the type of
+/// \p ExtSrc. A compare is the exception as its i1 result says nothing about
+/// width so the type of what it compared is used instead.
+Type *getExtendSrcTypeForPartialReduction(VPValue *ExtSrc);
+
 /// Finds the incoming alias-mask within the vector preheader.
 VPValue *findIncomingAliasMask(const VPlan &Plan);
 

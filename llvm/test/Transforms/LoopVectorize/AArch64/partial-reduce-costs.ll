@@ -978,11 +978,29 @@ exit:
 define i64 @count_matches_i8_i64(ptr %src, i32 %n) {
 ; NEON-LABEL: 'count_matches_i8_i64'
 ; SVE-LABEL: 'count_matches_i8_i64'
+; SVE:  Cost of 1 for VF 16: EXPRESSION vp<[[VP7:%[0-9]+]]> = ir<%acc> + partial.reduce.add (ir<%cmp> zext to i64)
+; SVE:  Cost of 1 for VF vscale x 16: EXPRESSION vp<[[VP7]]> = ir<%acc> + partial.reduce.add (ir<%cmp> zext to i64)
+;
 ; SVE2-LABEL: 'count_matches_i8_i64'
+; SVE2:  Cost of 1 for VF 16: EXPRESSION vp<[[VP7:%[0-9]+]]> = ir<%acc> + partial.reduce.add (ir<%cmp> zext to i64)
+; SVE2:  Cost of 1 for VF vscale x 16: EXPRESSION vp<[[VP7]]> = ir<%acc> + partial.reduce.add (ir<%cmp> zext to i64)
+;
 ; SVE2p1-LABEL: 'count_matches_i8_i64'
+; SVE2p1:  Cost of 1 for VF 16: EXPRESSION vp<[[VP7:%[0-9]+]]> = ir<%acc> + partial.reduce.add (ir<%cmp> zext to i64)
+; SVE2p1:  Cost of 1 for VF vscale x 16: EXPRESSION vp<[[VP7]]> = ir<%acc> + partial.reduce.add (ir<%cmp> zext to i64)
+;
 ; SVE2p3-LABEL: 'count_matches_i8_i64'
+; SVE2p3:  Cost of 1 for VF 16: EXPRESSION vp<[[VP7:%[0-9]+]]> = ir<%acc> + partial.reduce.add (ir<%cmp> zext to i64)
+; SVE2p3:  Cost of 1 for VF vscale x 16: EXPRESSION vp<[[VP7]]> = ir<%acc> + partial.reduce.add (ir<%cmp> zext to i64)
+;
 ; SME2-LABEL: 'count_matches_i8_i64'
+; SME2:  Cost of 1 for VF 16: EXPRESSION vp<[[VP7:%[0-9]+]]> = ir<%acc> + partial.reduce.add (ir<%cmp> zext to i64)
+; SME2:  Cost of 1 for VF vscale x 16: EXPRESSION vp<[[VP7]]> = ir<%acc> + partial.reduce.add (ir<%cmp> zext to i64)
+;
 ; I8MM-LABEL: 'count_matches_i8_i64'
+; I8MM:  Cost of 1 for VF 16: EXPRESSION vp<[[VP7:%[0-9]+]]> = ir<%acc> + partial.reduce.add (ir<%cmp> zext to i64)
+; I8MM:  Cost of 1 for VF vscale x 16: EXPRESSION vp<[[VP7]]> = ir<%acc> + partial.reduce.add (ir<%cmp> zext to i64)
+;
 entry:
   br label %loop
 
