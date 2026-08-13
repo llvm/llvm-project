@@ -98,6 +98,8 @@ DECLARE_DESCRIPTOR(parser::OmpMapType, llvm::omp::Modifier::MapType)
 DECLARE_DESCRIPTOR(
     parser::OmpMapTypeModifier, llvm::omp::Modifier::MapTypeModifier)
 DECLARE_DESCRIPTOR(parser::OmpMemSpace, llvm::omp::Modifier::MemSpace)
+DECLARE_DESCRIPTOR(
+    parser::OmpMotionModifier, llvm::omp::Modifier::MotionModifier)
 DECLARE_DESCRIPTOR(parser::OmpOrderModifier, llvm::omp::Modifier::OrderModifier)
 DECLARE_DESCRIPTOR(
     parser::OmpOrderingModifier, llvm::omp::Modifier::OrderingModifier)

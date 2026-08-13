@@ -82,6 +82,7 @@
   MapTypeModifier,
   Mapper,
   MemSpace,
+  MotionModifier,
   NeedDeviceAddr,
   NeedDevicePtr,
   NoncommutativeModifier,

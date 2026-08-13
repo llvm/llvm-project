@@ -974,6 +974,12 @@ From make(const parser::OmpClause::From &inp,
           semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpFromClause
   CLAUSET_ENUM_CONVERT( //
+      convertMot, parser::OmpMotionModifier::Value, From::Expectation,
+      // clang-format off
+      MS(Present, Present)
+      // clang-format on
+  );
+  CLAUSET_ENUM_CONVERT( //
       convertExp, parser::OmpExpectation::Value, From::Expectation,
       // clang-format off
       MS(Present, Present)
@@ -987,33 +993,35 @@ From make(const parser::OmpClause::From &inp,
   );
 
   auto &mods = semantics::OmpGetModifiers(inp.v);
-  auto *t0 = semantics::OmpGetUniqueModifier<parser::OmpExpectation>(mods);
-  auto *t1 = semantics::OmpGetUniqueModifier<parser::OmpPresentModifier>(mods);
-  auto *t2 = semantics::OmpGetUniqueModifier<parser::OmpMapper>(mods);
-  auto *t3 = semantics::OmpGetUniqueModifier<parser::OmpIterator>(mods);
-  auto &t4 = std::get<parser::OmpObjectList>(inp.v.t);
+  auto *t0 = semantics::OmpGetUniqueModifier<parser::OmpMotionModifier>(mods);
+  auto *t1 = semantics::OmpGetUniqueModifier<parser::OmpExpectation>(mods);
+  auto *t2 = semantics::OmpGetUniqueModifier<parser::OmpPresentModifier>(mods);
+  auto *t3 = semantics::OmpGetUniqueModifier<parser::OmpMapper>(mods);
+  auto *t4 = semantics::OmpGetUniqueModifier<parser::OmpIterator>(mods);
+  auto &t5 = std::get<parser::OmpObjectList>(inp.v.t);
 
   std::optional<From::Expectation> maybeExp = //
-      t0   ? maybeApplyToV(convertExp, t0)
-      : t1 ? maybeApplyToV(convertPre, t1)
+      t0   ? maybeApplyToV(convertMot, t0)
+      : t1 ? maybeApplyToV(convertExp, t1)
+      : t2 ? maybeApplyToV(convertPre, t2)
            : std::optional<From::Expectation>{};
 
   auto mappers = [&]() -> std::optional<List<Mapper>> {
-    if (t2)
-      return List<Mapper>{Mapper{makeObject(t2->v, semaCtx)}};
+    if (t3)
+      return List<Mapper>{Mapper{makeObject(t3->v, semaCtx)}};
     return std::nullopt;
   }();
 
   auto iterator = [&]() -> std::optional<Iterator> {
-    if (t3)
-      return makeIterator(*t3, semaCtx);
+    if (t4)
+      return makeIterator(*t4, semaCtx);
     return std::nullopt;
   }();
 
   return From{{/*Expectation=*/maybeExp,
                /*Mappers=*/std::move(mappers),
                /*Iterator=*/std::move(iterator),
-               /*LocatorList=*/makeObjects(t4, semaCtx)}};
+               /*LocatorList=*/makeObjects(t5, semaCtx)}};
 }
 
 // Full: empty
@@ -1706,6 +1714,12 @@ To make(const parser::OmpClause::To &inp,
         semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpToClause
   CLAUSET_ENUM_CONVERT( //
+      convertMot, parser::OmpMotionModifier::Value, To::Expectation,
+      // clang-format off
+      MS(Present, Present)
+      // clang-format on
+  );
+  CLAUSET_ENUM_CONVERT( //
       convertExp, parser::OmpExpectation::Value, To::Expectation,
       // clang-format off
       MS(Present, Present)
@@ -1719,33 +1733,35 @@ To make(const parser::OmpClause::To &inp,
   );
 
   auto &mods = semantics::OmpGetModifiers(inp.v);
-  auto *t0 = semantics::OmpGetUniqueModifier<parser::OmpExpectation>(mods);
-  auto *t1 = semantics::OmpGetUniqueModifier<parser::OmpPresentModifier>(mods);
-  auto *t2 = semantics::OmpGetUniqueModifier<parser::OmpMapper>(mods);
-  auto *t3 = semantics::OmpGetUniqueModifier<parser::OmpIterator>(mods);
-  auto &t4 = std::get<parser::OmpObjectList>(inp.v.t);
+  auto *t0 = semantics::OmpGetUniqueModifier<parser::OmpMotionModifier>(mods);
+  auto *t1 = semantics::OmpGetUniqueModifier<parser::OmpExpectation>(mods);
+  auto *t2 = semantics::OmpGetUniqueModifier<parser::OmpPresentModifier>(mods);
+  auto *t3 = semantics::OmpGetUniqueModifier<parser::OmpMapper>(mods);
+  auto *t4 = semantics::OmpGetUniqueModifier<parser::OmpIterator>(mods);
+  auto &t5 = std::get<parser::OmpObjectList>(inp.v.t);
 
   std::optional<To::Expectation> maybeExp = //
-      t0   ? maybeApplyToV(convertExp, t0)
-      : t1 ? maybeApplyToV(convertPre, t1)
+      t0   ? maybeApplyToV(convertMot, t0)
+      : t1 ? maybeApplyToV(convertExp, t1)
+      : t2 ? maybeApplyToV(convertPre, t2)
            : std::optional<To::Expectation>{};
 
   auto mappers = [&]() -> std::optional<List<Mapper>> {
-    if (t2)
-      return List<Mapper>{Mapper{makeObject(t2->v, semaCtx)}};
+    if (t3)
+      return List<Mapper>{Mapper{makeObject(t3->v, semaCtx)}};
     return std::nullopt;
   }();
 
   auto iterator = [&]() -> std::optional<Iterator> {
-    if (t3)
-      return makeIterator(*t3, semaCtx);
+    if (t4)
+      return makeIterator(*t4, semaCtx);
     return std::nullopt;
   }();
 
   return To{{/*Expectation=*/maybeExp,
              /*Mappers=*/{std::move(mappers)},
              /*Iterator=*/std::move(iterator),
-             /*LocatorList=*/makeObjects(t4, semaCtx)}};
+             /*LocatorList=*/makeObjects(t5, semaCtx)}};
 }
 
 UnifiedAddress make(const parser::OmpClause::UnifiedAddress &inp,

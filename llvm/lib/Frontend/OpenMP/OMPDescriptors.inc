@@ -539,7 +539,7 @@
       {
         {45, {{{Property::DataMotionAttribute}}, "from", {Directive::OMPD_target_update}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
         {50, {{{Property::DataMotionAttribute}}, "from", {Directive::OMPD_target_update}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::Mapper}}},
-        {51, {{{Property::DataMotionAttribute}}, "from", {Directive::OMPD_target_update}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::Iterator, Modifier::Mapper, Modifier::PresentModifier}}},
+        {51, {{{Property::DataMotionAttribute}}, "from", {Directive::OMPD_target_update}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::Iterator, Modifier::Mapper, Modifier::MotionModifier}}},
         {52, {{{Property::DataMotionAttribute}}, "from", {Directive::OMPD_target_update}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::Expectation, Modifier::Iterator, Modifier::Mapper}}},
         {60, {{{Property::DataMotionAttribute}}, "from", {Directive::OMPD_target_update}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::Iterator, Modifier::Mapper, Modifier::PresentModifier}}},
         {61, {{{Property::DataMotionAttribute}}, "from", {Directive::OMPD_target_update}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::Iterator, Modifier::Mapper, Modifier::PresentModifier}}},
@@ -1432,7 +1432,7 @@
       {
         {45, {{{Property::DataMotionAttribute}}, "to", {Directive::OMPD_declare_target, Directive::OMPD_target_update}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
         {50, {{{Property::DataMotionAttribute}}, "to", {Directive::OMPD_declare_target, Directive::OMPD_target_update}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::Mapper}}},
-        {51, {{{Property::DataMotionAttribute}}, "to", {Directive::OMPD_declare_target, Directive::OMPD_target_update}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::Iterator, Modifier::Mapper, Modifier::PresentModifier}}},
+        {51, {{{Property::DataMotionAttribute}}, "to", {Directive::OMPD_declare_target, Directive::OMPD_target_update}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::Iterator, Modifier::Mapper, Modifier::MotionModifier}}},
         {52, {{{Property::DataMotionAttribute}}, "to", {Directive::OMPD_target_update}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::Expectation, Modifier::Iterator, Modifier::Mapper}}},
         {60, {{{Property::DataMotionAttribute}}, "to", {Directive::OMPD_target_update}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::Iterator, Modifier::Mapper, Modifier::PresentModifier}}},
         {61, {{{Property::DataMotionAttribute}}, "to", {Directive::OMPD_target_update}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::Iterator, Modifier::Mapper, Modifier::PresentModifier}}},
@@ -2048,6 +2048,15 @@
     ),
   },
   {
+    Modifier::MotionModifier,
+    descriptor::Modifier(
+      "motion-modifier",
+      {
+        {51, {{{Property::Unique}}, {Clause::OMPC_from, Clause::OMPC_to}}},
+      }
+    ),
+  },
+  {
     Modifier::NeedDeviceAddr,
     descriptor::Modifier(
       "need-device-addr",
@@ -2187,7 +2196,6 @@
     descriptor::Modifier(
       "present-modifier",
       {
-        {51, {{{Property::MapTypeModifying, Property::Unique}}, {Clause::OMPC_from, Clause::OMPC_to}}},
         {60, {{{Property::MapTypeModifying, Property::Unique}}, {Clause::OMPC_from, Clause::OMPC_map, Clause::OMPC_to}}},
         {61, {{{Property::Unique}}, {Clause::OMPC_from, Clause::OMPC_map, Clause::OMPC_to}}},
       }
