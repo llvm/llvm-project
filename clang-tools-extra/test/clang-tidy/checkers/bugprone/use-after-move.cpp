@@ -68,6 +68,9 @@ public:
 
   void foo() const;
   [[clang::reinitializes]] void clear();
+  [[clang::annotate("clang-tidy",
+                        "bugprone-use-after-move",
+                        "specified_after_move")]] bool empty() const;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1004,6 +1007,15 @@ void reinitAnnotation() {
     obj1.foo();
     // CHECK-NOTES: [[@LINE-1]]:5: warning: 'obj1' used after it was
     // CHECK-NOTES: [[@LINE-4]]:5: note: move occurred here
+  }
+}
+
+void usableOnMovedAnnotation() {
+  {
+    AnnotatedContainer<int> obj;
+    std::move(obj);
+    obj.empty();
+    // No warning expected, empty is flagged as usable_on_moved
   }
 }
 

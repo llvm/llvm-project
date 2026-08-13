@@ -30,6 +30,14 @@ namespace clang::tidy::bugprone {
 
 using matchers::hasUnevaluatedContext;
 
+static std::optional<StringRef> getStringLiteral(const Expr *E) {
+  assert(E);
+  if (const auto *SL = dyn_cast<StringLiteral>(E->IgnoreParenImpCasts()))
+    return SL->getString();
+  return std::nullopt;
+}
+
+
 namespace {
 AST_MATCHER_P(Expr, hasParentIgnoringParenImpCasts,
               ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
@@ -45,6 +53,28 @@ AST_MATCHER_P(Expr, hasParentIgnoringParenImpCasts,
 
   return InnerMatcher.matches(*E, Finder, Builder);
 }
+
+// Methods can be decorated with [[clang::annotate]] to specify it has
+// a user-defined behavior when called on a moved-from.
+AST_MATCHER(CXXMethodDecl, hasSpecifiedAfterMoveAnnotation) {
+  for(const AnnotateAttr *Attr : Node.specific_attrs<AnnotateAttr>()) {
+    if (Attr->getAnnotation() != "clang-tidy")
+      continue;
+
+    if (Attr->args_size() != 2)
+      continue;
+
+    std::optional<StringRef> Plugin = getStringLiteral(Attr->args_begin()[0]);
+    std::optional<StringRef> Annotation =
+        getStringLiteral(Attr->args_begin()[1]);
+
+    if (Plugin && Annotation && *Plugin == "bugprone-use-after-move" &&
+        *Annotation == "specified_after_move")
+      return true;
+         }
+         return false;
+              }
+
 
 /// Contains information about a use-after-move.
 struct UseAfterMove {
@@ -351,13 +381,6 @@ void UseAfterMoveFinder::getUsesAndReinits(
   });
 }
 
-static std::optional<StringRef> getStringLiteral(const Expr *E) {
-  assert(E);
-  if (const auto *SL = dyn_cast<StringLiteral>(E->IgnoreParenImpCasts()))
-    return SL->getString();
-  return std::nullopt;
-}
-
 // User defined types can use [[clang::annotate]] to mark smart-pointer-like
 // types with a specified move from state that matches the standard smart
 // pointer's moved-from state (nullptr).
@@ -434,12 +457,13 @@ void UseAfterMoveFinder::getDeclRefs(
     };
 
     const auto DeclRefMatcher =
-        declRefExpr(hasDeclaration(equalsNode(MovedVariable)),
-                    unless(inDecltypeOrTemplateArg()),
-                    unless(hasParentIgnoringParenImpCasts(
-                        memberExpr(hasDeclaration(cxxDestructorDecl())))),
-                    optionally(hasParentIgnoringParenImpCasts(
-                        memberExpr().bind("member-expr"))))
+        declRefExpr(
+            hasDeclaration(equalsNode(MovedVariable)),
+            unless(inDecltypeOrTemplateArg()),
+            unless(hasParentIgnoringParenImpCasts(memberExpr(hasDeclaration(
+                anyOf(cxxDestructorDecl(), cxxMethodDecl(hasSpecifiedAfterMoveAnnotation())))))),
+            optionally(hasParentIgnoringParenImpCasts(
+                memberExpr().bind("member-expr"))))
             .bind("declref");
 
     AddDeclRefs(match(traverse(TK_AsIs, findAll(DeclRefMatcher)), *S->getStmt(),
