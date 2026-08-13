@@ -6,12 +6,50 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
+#include "lldb/Utility/StreamString.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Regex.h"
 #include "gtest/gtest.h"
+#include <optional>
 #include <thread>
 
 using namespace lldb_private;
+
+namespace {
+struct CategoryStats {
+  double seconds;
+  double total;
+  double child;
+  int count;
+};
+
+/// Finds the line describing \p category in a DumpCategoryTimes() dump and
+/// parses its statistics. A line looks like:
+///   0.105202764 sec (total: 0.132s; child: 0.027s; count: 1) for CAT1
+std::optional<CategoryStats> ParseCategory(llvm::StringRef dump,
+                                           llvm::StringRef category) {
+  llvm::Regex line_pattern(R"(^([0-9.]+) sec \(total: ([0-9.]+)s; )"
+                           R"(child: ([0-9.]+)s; count: ([0-9]+)\) for (.+)$)");
+  for (llvm::StringRef line : llvm::split(dump, '\n')) {
+    llvm::SmallVector<llvm::StringRef, 6> matches;
+    if (!line_pattern.match(line.trim(), &matches))
+      continue;
+    if (matches[5] != category)
+      continue;
+    CategoryStats stats;
+    if (matches[1].getAsDouble(stats.seconds) ||
+        matches[2].getAsDouble(stats.total) ||
+        matches[3].getAsDouble(stats.child) ||
+        matches[4].getAsInteger(10, stats.count))
+      return std::nullopt;
+    return stats;
+  }
+  return std::nullopt;
+}
+} // namespace
 
 TEST(TimerTest, CategoryTimes) {
   Timer::ResetCategoryTimes();
@@ -60,16 +98,14 @@ TEST(TimerTest, CategoryTimes2) {
   }
   StreamString ss;
   Timer::DumpCategoryTimes(ss);
-  double seconds1, seconds2;
-  ASSERT_EQ(2, sscanf(ss.GetData(),
-                      "%lf sec (total: %*fs; child: %*fs; count: %*d) for "
-                      "CAT1%*[\n ]%lf sec for CAT2",
-                      &seconds1, &seconds2))
-      << "String: " << ss.GetData();
-  EXPECT_LT(0.01, seconds1);
-  EXPECT_GT(1, seconds1);
-  EXPECT_LT(0.001, seconds2);
-  EXPECT_GT(0.1, seconds2);
+  std::optional<CategoryStats> cat1 = ParseCategory(ss.GetString(), "CAT1");
+  std::optional<CategoryStats> cat2 = ParseCategory(ss.GetString(), "CAT2");
+  ASSERT_TRUE(cat1.has_value()) << "String: " << ss.GetData();
+  ASSERT_TRUE(cat2.has_value()) << "String: " << ss.GetData();
+  EXPECT_LT(0.01, cat1->seconds);
+  EXPECT_GT(1, cat1->seconds);
+  EXPECT_LT(0.001, cat2->seconds);
+  EXPECT_GT(0.1, cat2->seconds);
 }
 
 TEST(TimerTest, CategoryTimesStats) {
@@ -88,21 +124,14 @@ TEST(TimerTest, CategoryTimesStats) {
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
   }
-  // Example output:
-  // 0.105202764 sec (total: 0.132s; child: 0.027s; count: 1) for CAT1
-  // 0.026772798 sec (total: 0.027s; child: 0.000s; count: 2) for CAT2
   StreamString ss;
   Timer::DumpCategoryTimes(ss);
-  double seconds1, total1, child1, seconds2;
-  int count1, count2;
-  ASSERT_EQ(
-      6, sscanf(ss.GetData(),
-                "%lf sec (total: %lfs; child: %lfs; count: %d) for CAT1%*[\n\r ]"
-                "%lf sec (total: %*fs; child: %*fs; count: %d) for CAT2",
-                &seconds1, &total1, &child1, &count1, &seconds2, &count2))
-      << "String: " << ss.GetData();
-  EXPECT_NEAR(total1 - child1, seconds1, 0.002);
-  EXPECT_EQ(1, count1);
-  EXPECT_NEAR(child1, seconds2, 0.002);
-  EXPECT_EQ(2, count2);
+  std::optional<CategoryStats> cat1 = ParseCategory(ss.GetString(), "CAT1");
+  std::optional<CategoryStats> cat2 = ParseCategory(ss.GetString(), "CAT2");
+  ASSERT_TRUE(cat1.has_value()) << "String: " << ss.GetData();
+  ASSERT_TRUE(cat2.has_value()) << "String: " << ss.GetData();
+  EXPECT_NEAR(cat1->total - cat1->child, cat1->seconds, 0.002);
+  EXPECT_EQ(1, cat1->count);
+  EXPECT_NEAR(cat1->child, cat2->seconds, 0.002);
+  EXPECT_EQ(2, cat2->count);
 }

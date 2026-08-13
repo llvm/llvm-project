@@ -397,6 +397,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed a bug where `__func__`, `__PRETTY_FUNCTION__` and `__FUNCTION__` were not resolving to the proper function when inside a lambda return type (#GH211811)
 - Fixed USR generation for declarations whose signature mentions a class-type
   non-type template parameter. (#GH212351)
+- Fixed a crash when checking scalar type with excess braces. (#GH69213), (#GH137845), (#GH198767), (#GH207566), (#GH106180)
 - Fixed an assertion crash when instantiating a nested requirement with an invalid constraint. (#GH213575)
 - Clang now defines the GCC-compatible predefined macro `__SIG_ATOMIC_TYPE__`. (#GH213895)
 - Fixed a bug where a stray closing curley brace in an OpenMP/OpenACC pragma could cause pragma parsing issues when inside of a member function. (#GH214195)
@@ -467,6 +468,14 @@ features cannot lower the translation-unit ABI level;
 - Fixed friend declarations sometimes making non-visible default arguments
   incorrectly visible to default argument redefinition checks across modules.
 
+- Fixed handling of SFINAE failures for expressions which depend on in-class
+  member initializers of templates which are not yet parsed. An example is
+  using ``__is_constructible`` on a nested class template inside the definition
+  of the containing class. (#GH215166)
+
+- Fixed merging of lambdas across modules in the case where neither lambda is
+  imported from an AST file. (#GH214560)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
@@ -525,6 +534,11 @@ features cannot lower the translation-unit ABI level;
 #### LoongArch Support
 
 #### RISC-V Support
+
+- Added `-march=native` for better compatibility with ARM, AArch64, and X86. This
+  option will be treated like `-mcpu=native` if `-mcpu` is not present. If
+  `-mcpu` is present, the ISA will be selected from the host CPU and the tune
+  CPU will be selected from `-mcpu`.
 
 #### CUDA/HIP Language Changes
 

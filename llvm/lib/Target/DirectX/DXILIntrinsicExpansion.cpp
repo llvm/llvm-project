@@ -216,16 +216,13 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_uclamp:
   case Intrinsic::dx_sclamp:
   case Intrinsic::dx_nclamp:
-  case Intrinsic::dx_degrees:
   case Intrinsic::dx_isinf:
   case Intrinsic::dx_isnan:
-  case Intrinsic::dx_lerp:
   case Intrinsic::dx_normalize:
   case Intrinsic::dx_fdot:
   case Intrinsic::dx_sdot:
   case Intrinsic::dx_udot:
   case Intrinsic::dx_sign:
-  case Intrinsic::dx_radians:
   case Intrinsic::usub_sat:
   case Intrinsic::vector_reduce_add:
   case Intrinsic::vector_reduce_fadd:
@@ -606,16 +603,6 @@ static Value *expandAnyOrAllIntrinsic(CallInst *Orig,
   return Result;
 }
 
-static Value *expandLerpIntrinsic(CallInst *Orig) {
-  Value *X = Orig->getOperand(0);
-  Value *Y = Orig->getOperand(1);
-  Value *S = Orig->getOperand(2);
-  IRBuilder<> Builder(Orig);
-  auto *V = Builder.CreateFSub(Y, X);
-  V = Builder.CreateFMul(S, V);
-  return Builder.CreateFAdd(X, V, "dx.lerp");
-}
-
 static Value *expandLogIntrinsic(CallInst *Orig,
                                  float LogConstVal = numbers::ln2f) {
   Value *X = Orig->getOperand(0);
@@ -798,14 +785,6 @@ static Value *expandPowIntrinsic(CallInst *Orig, Intrinsic::ID IntrinsicId) {
   Exp2Call->setTailCall(Orig->isTailCall());
   Exp2Call->setAttributes(Orig->getAttributes());
   return Exp2Call;
-}
-
-static Value *expandRadiansIntrinsic(CallInst *Orig) {
-  Value *X = Orig->getOperand(0);
-  Type *Ty = X->getType();
-  IRBuilder<> Builder(Orig);
-  Value *PiOver180 = ConstantFP::get(Ty, llvm::numbers::pi / 180.0);
-  return Builder.CreateFMul(X, PiOver180);
 }
 
 static bool expandBufferLoadIntrinsic(CallInst *Orig, bool IsRaw) {
@@ -1048,14 +1027,6 @@ static Value *expandClampIntrinsic(CallInst *Orig,
                                           {X, Min}, nullptr, "dx.max");
   return Builder.CreateIntrinsic(Ty, getMinForClamp(ClampIntrinsic),
                                  {MaxCall, Max}, nullptr, "dx.min");
-}
-
-static Value *expandDegreesIntrinsic(CallInst *Orig) {
-  Value *X = Orig->getOperand(0);
-  Type *Ty = X->getType();
-  IRBuilder<> Builder(Orig);
-  Value *DegreesRatio = ConstantFP::get(Ty, 180.0 * llvm::numbers::inv_pi);
-  return Builder.CreateFMul(X, DegreesRatio);
 }
 
 static Value *expandSignIntrinsic(CallInst *Orig) {
@@ -1309,17 +1280,11 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
   case Intrinsic::dx_nclamp:
     Result = expandClampIntrinsic(Orig, IntrinsicId);
     break;
-  case Intrinsic::dx_degrees:
-    Result = expandDegreesIntrinsic(Orig);
-    break;
   case Intrinsic::dx_isinf:
     Result = expand16BitIsInf(Orig);
     break;
   case Intrinsic::dx_isnan:
     Result = expand16BitIsNaN(Orig);
-    break;
-  case Intrinsic::dx_lerp:
-    Result = expandLerpIntrinsic(Orig);
     break;
   case Intrinsic::dx_normalize:
     Result = expandNormalizeIntrinsic(Orig);
@@ -1333,9 +1298,6 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     break;
   case Intrinsic::dx_sign:
     Result = expandSignIntrinsic(Orig);
-    break;
-  case Intrinsic::dx_radians:
-    Result = expandRadiansIntrinsic(Orig);
     break;
   case Intrinsic::dx_load_input:
     Result = expandLoadInput(Orig);

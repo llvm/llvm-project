@@ -9,6 +9,8 @@
 #ifndef LLVM_OFFLOAD_LANGUAGES_INCLUDE_KERNEL_LANGUAGE_RUNTIME_H
 #define LLVM_OFFLOAD_LANGUAGES_INCLUDE_KERNEL_LANGUAGE_RUNTIME_H
 
+#include "LanguageLaunch.h"
+#include "Types.h"
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>

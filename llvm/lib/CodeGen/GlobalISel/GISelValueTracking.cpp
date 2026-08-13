@@ -407,6 +407,12 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     Known.Zero.setHighBits(MaxValue.countl_zero());
     break;
   }
+  case TargetOpcode::G_VSCALE: {
+    const Function &F = getMachineFunction().getFunction();
+    const APInt &Multiplier = MI.getOperand(1).getCImm()->getValue();
+    Known = getVScaleRange(&F, BitWidth).multiply(Multiplier).toKnownBits();
+    break;
+  }
   case TargetOpcode::G_CONSTANT: {
     Known = KnownBits::makeConstant(MI.getOperand(1).getCImm()->getValue());
     break;
@@ -2421,6 +2427,13 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
         isConstantOrConstantSplatVector(MI.getOperand(2).getReg(), MRI);
     FirstAnswer =
         SignBitsOps::rot(Tmp, TyBits, MaybeAmt, Opcode == TargetOpcode::G_ROTR);
+    break;
+  }
+  case TargetOpcode::G_SAVGFLOOR:
+  case TargetOpcode::G_SAVGCEIL: {
+    Register Src1 = MI.getOperand(1).getReg();
+    Register Src2 = MI.getOperand(2).getReg();
+    FirstAnswer = computeNumSignBitsMin(Src1, Src2, DemandedElts, Depth + 1);
     break;
   }
   case TargetOpcode::G_SREM: {

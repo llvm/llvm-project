@@ -8,10 +8,8 @@ define <4 x i32> @udot(<4 x i32> %acc, <16 x i8> %u, <16 x i8> %s) {
 ; CHECK-NODOT:       // %bb.0:
 ; CHECK-NODOT-NEXT:    umull v3.8h, v2.8b, v1.8b
 ; CHECK-NODOT-NEXT:    umull2 v1.8h, v2.16b, v1.16b
-; CHECK-NODOT-NEXT:    uaddw v0.4s, v0.4s, v3.4h
-; CHECK-NODOT-NEXT:    uaddw2 v0.4s, v0.4s, v3.8h
-; CHECK-NODOT-NEXT:    uaddw v0.4s, v0.4s, v1.4h
-; CHECK-NODOT-NEXT:    uaddw2 v0.4s, v0.4s, v1.8h
+; CHECK-NODOT-NEXT:    uadalp v0.4s, v3.8h
+; CHECK-NODOT-NEXT:    uadalp v0.4s, v1.8h
 ; CHECK-NODOT-NEXT:    ret
 ;
 ; CHECK-DOT-LABEL: udot:
@@ -44,10 +42,8 @@ define <4 x i32> @udot_in_loop(ptr %p1, ptr %p2){
 ; CHECK-NODOT-NEXT:    umull v4.8h, v2.8b, v3.8b
 ; CHECK-NODOT-NEXT:    umull2 v2.8h, v2.16b, v3.16b
 ; CHECK-NODOT-NEXT:    cmp x8, #16
-; CHECK-NODOT-NEXT:    uaddw v1.4s, v1.4s, v4.4h
-; CHECK-NODOT-NEXT:    uaddw2 v1.4s, v1.4s, v4.8h
-; CHECK-NODOT-NEXT:    uaddw v1.4s, v1.4s, v2.4h
-; CHECK-NODOT-NEXT:    uaddw2 v1.4s, v1.4s, v2.8h
+; CHECK-NODOT-NEXT:    uadalp v1.4s, v4.8h
+; CHECK-NODOT-NEXT:    uadalp v1.4s, v2.8h
 ; CHECK-NODOT-NEXT:    b.ne .LBB1_1
 ; CHECK-NODOT-NEXT:  // %bb.2: // %end
 ; CHECK-NODOT-NEXT:    ret
@@ -109,16 +105,9 @@ define <2 x i32> @udot_narrow(<2 x i32> %acc, <8 x i8> %u, <8 x i8> %s) {
 ; CHECK-NODOT-LABEL: udot_narrow:
 ; CHECK-NODOT:       // %bb.0:
 ; CHECK-NODOT-NEXT:    umull v1.8h, v2.8b, v1.8b
-; CHECK-NODOT-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NODOT-NEXT:    ushll v2.4s, v1.4h, #0
-; CHECK-NODOT-NEXT:    uaddw v0.4s, v0.4s, v1.4h
-; CHECK-NODOT-NEXT:    ushll2 v3.4s, v1.8h, #0
+; CHECK-NODOT-NEXT:    uadalp v0.2s, v1.4h
 ; CHECK-NODOT-NEXT:    mov d1, v1.d[1]
-; CHECK-NODOT-NEXT:    mov d2, v2.d[1]
-; CHECK-NODOT-NEXT:    add v0.2s, v2.2s, v0.2s
-; CHECK-NODOT-NEXT:    mov d2, v3.d[1]
-; CHECK-NODOT-NEXT:    uaddw v0.4s, v0.4s, v1.4h
-; CHECK-NODOT-NEXT:    add v0.2s, v2.2s, v0.2s
+; CHECK-NODOT-NEXT:    uadalp v0.2s, v1.4h
 ; CHECK-NODOT-NEXT:    ret
 ;
 ; CHECK-DOT-LABEL: udot_narrow:
@@ -142,10 +131,8 @@ define <4 x i32> @sdot(<4 x i32> %acc, <16 x i8> %u, <16 x i8> %s) {
 ; CHECK-NODOT:       // %bb.0:
 ; CHECK-NODOT-NEXT:    smull v3.8h, v2.8b, v1.8b
 ; CHECK-NODOT-NEXT:    smull2 v1.8h, v2.16b, v1.16b
-; CHECK-NODOT-NEXT:    saddw v0.4s, v0.4s, v3.4h
-; CHECK-NODOT-NEXT:    saddw2 v0.4s, v0.4s, v3.8h
-; CHECK-NODOT-NEXT:    saddw v0.4s, v0.4s, v1.4h
-; CHECK-NODOT-NEXT:    saddw2 v0.4s, v0.4s, v1.8h
+; CHECK-NODOT-NEXT:    sadalp v0.4s, v3.8h
+; CHECK-NODOT-NEXT:    sadalp v0.4s, v1.8h
 ; CHECK-NODOT-NEXT:    ret
 ;
 ; CHECK-DOT-LABEL: sdot:
@@ -168,16 +155,9 @@ define <2 x i32> @sdot_narrow(<2 x i32> %acc, <8 x i8> %u, <8 x i8> %s) {
 ; CHECK-NODOT-LABEL: sdot_narrow:
 ; CHECK-NODOT:       // %bb.0:
 ; CHECK-NODOT-NEXT:    smull v1.8h, v2.8b, v1.8b
-; CHECK-NODOT-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NODOT-NEXT:    sshll v2.4s, v1.4h, #0
-; CHECK-NODOT-NEXT:    saddw v0.4s, v0.4s, v1.4h
-; CHECK-NODOT-NEXT:    sshll2 v3.4s, v1.8h, #0
+; CHECK-NODOT-NEXT:    sadalp v0.2s, v1.4h
 ; CHECK-NODOT-NEXT:    mov d1, v1.d[1]
-; CHECK-NODOT-NEXT:    mov d2, v2.d[1]
-; CHECK-NODOT-NEXT:    add v0.2s, v2.2s, v0.2s
-; CHECK-NODOT-NEXT:    mov d2, v3.d[1]
-; CHECK-NODOT-NEXT:    saddw v0.4s, v0.4s, v1.4h
-; CHECK-NODOT-NEXT:    add v0.2s, v2.2s, v0.2s
+; CHECK-NODOT-NEXT:    sadalp v0.2s, v1.4h
 ; CHECK-NODOT-NEXT:    ret
 ;
 ; CHECK-DOT-LABEL: sdot_narrow:
@@ -908,16 +888,9 @@ define <2 x i32> @udot_no_bin_op_narrow(<2 x i32> %acc, <8 x i8> %a){
 ; CHECK-NODOT-LABEL: udot_no_bin_op_narrow:
 ; CHECK-NODOT:       // %bb.0:
 ; CHECK-NODOT-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-NODOT-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NODOT-NEXT:    ushll v2.4s, v1.4h, #0
-; CHECK-NODOT-NEXT:    uaddw v0.4s, v0.4s, v1.4h
-; CHECK-NODOT-NEXT:    ushll2 v3.4s, v1.8h, #0
+; CHECK-NODOT-NEXT:    uadalp v0.2s, v1.4h
 ; CHECK-NODOT-NEXT:    mov d1, v1.d[1]
-; CHECK-NODOT-NEXT:    mov d2, v2.d[1]
-; CHECK-NODOT-NEXT:    add v0.2s, v2.2s, v0.2s
-; CHECK-NODOT-NEXT:    mov d2, v3.d[1]
-; CHECK-NODOT-NEXT:    uaddw v0.4s, v0.4s, v1.4h
-; CHECK-NODOT-NEXT:    add v0.2s, v2.2s, v0.2s
+; CHECK-NODOT-NEXT:    uadalp v0.2s, v1.4h
 ; CHECK-NODOT-NEXT:    ret
 ;
 ; CHECK-DOT-LABEL: udot_no_bin_op_narrow:
@@ -940,16 +913,9 @@ define <2 x i32> @sdot_no_bin_op_narrow(<2 x i32> %acc, <8 x i8> %a){
 ; CHECK-NODOT-LABEL: sdot_no_bin_op_narrow:
 ; CHECK-NODOT:       // %bb.0:
 ; CHECK-NODOT-NEXT:    sshll v1.8h, v1.8b, #0
-; CHECK-NODOT-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NODOT-NEXT:    sshll v2.4s, v1.4h, #0
-; CHECK-NODOT-NEXT:    saddw v0.4s, v0.4s, v1.4h
-; CHECK-NODOT-NEXT:    sshll2 v3.4s, v1.8h, #0
+; CHECK-NODOT-NEXT:    sadalp v0.2s, v1.4h
 ; CHECK-NODOT-NEXT:    mov d1, v1.d[1]
-; CHECK-NODOT-NEXT:    mov d2, v2.d[1]
-; CHECK-NODOT-NEXT:    add v0.2s, v2.2s, v0.2s
-; CHECK-NODOT-NEXT:    mov d2, v3.d[1]
-; CHECK-NODOT-NEXT:    saddw v0.4s, v0.4s, v1.4h
-; CHECK-NODOT-NEXT:    add v0.2s, v2.2s, v0.2s
+; CHECK-NODOT-NEXT:    sadalp v0.2s, v1.4h
 ; CHECK-NODOT-NEXT:    ret
 ;
 ; CHECK-DOT-LABEL: sdot_no_bin_op_narrow:
@@ -1050,8 +1016,7 @@ define <4 x i32> @not_udot(<4 x i32> %acc, <8 x i8> %u, <8 x i8> %s) #0{
 ; CHECK-COMMON-LABEL: not_udot:
 ; CHECK-COMMON:       // %bb.0:
 ; CHECK-COMMON-NEXT:    umull v1.8h, v2.8b, v1.8b
-; CHECK-COMMON-NEXT:    uaddw v0.4s, v0.4s, v1.4h
-; CHECK-COMMON-NEXT:    uaddw2 v0.4s, v0.4s, v1.8h
+; CHECK-COMMON-NEXT:    uadalp v0.4s, v1.8h
 ; CHECK-COMMON-NEXT:    ret
   %u.wide = zext <8 x i8> %u to <8 x i32>
   %s.wide = zext <8 x i8> %s to <8 x i32>
@@ -1483,26 +1448,13 @@ define <2 x i32> @udot_v16i8tov2i32(<2 x i32> %acc, <16 x i8> %input) {
 ; CHECK-NODOT-LABEL: udot_v16i8tov2i32:
 ; CHECK-NODOT:       // %bb.0: // %entry
 ; CHECK-NODOT-NEXT:    ushll v2.8h, v1.8b, #0
-; CHECK-NODOT-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NODOT-NEXT:    ushll2 v1.8h, v1.16b, #0
-; CHECK-NODOT-NEXT:    ushll v3.4s, v2.4h, #0
-; CHECK-NODOT-NEXT:    uaddw v0.4s, v0.4s, v2.4h
-; CHECK-NODOT-NEXT:    ushll2 v4.4s, v2.8h, #0
+; CHECK-NODOT-NEXT:    uadalp v0.2s, v2.4h
 ; CHECK-NODOT-NEXT:    mov d2, v2.d[1]
-; CHECK-NODOT-NEXT:    mov d3, v3.d[1]
-; CHECK-NODOT-NEXT:    add v0.2s, v3.2s, v0.2s
-; CHECK-NODOT-NEXT:    mov d3, v4.d[1]
-; CHECK-NODOT-NEXT:    uaddw v0.4s, v0.4s, v2.4h
-; CHECK-NODOT-NEXT:    ushll v2.4s, v1.4h, #0
-; CHECK-NODOT-NEXT:    add v0.2s, v3.2s, v0.2s
-; CHECK-NODOT-NEXT:    mov d2, v2.d[1]
-; CHECK-NODOT-NEXT:    ushll2 v3.4s, v1.8h, #0
-; CHECK-NODOT-NEXT:    uaddw v0.4s, v0.4s, v1.4h
+; CHECK-NODOT-NEXT:    uadalp v0.2s, v2.4h
+; CHECK-NODOT-NEXT:    uadalp v0.2s, v1.4h
 ; CHECK-NODOT-NEXT:    mov d1, v1.d[1]
-; CHECK-NODOT-NEXT:    add v0.2s, v2.2s, v0.2s
-; CHECK-NODOT-NEXT:    mov d2, v3.d[1]
-; CHECK-NODOT-NEXT:    uaddw v0.4s, v0.4s, v1.4h
-; CHECK-NODOT-NEXT:    add v0.2s, v2.2s, v0.2s
+; CHECK-NODOT-NEXT:    uadalp v0.2s, v1.4h
 ; CHECK-NODOT-NEXT:    ret
 ;
 ; CHECK-DOT-LABEL: udot_v16i8tov2i32:
@@ -1839,8 +1791,7 @@ define <2 x i64> @partial_reduce_sext_cmp_i32tov2i64(<2 x i64> %acc, <4 x i32> %
 ; CHECK-COMMON-LABEL: partial_reduce_sext_cmp_i32tov2i64:
 ; CHECK-COMMON:       // %bb.0:
 ; CHECK-COMMON-NEXT:    cmeq v1.4s, v1.4s, v2.4s
-; CHECK-COMMON-NEXT:    saddw v0.2d, v0.2d, v1.2s
-; CHECK-COMMON-NEXT:    saddw2 v0.2d, v0.2d, v1.4s
+; CHECK-COMMON-NEXT:    sadalp v0.2d, v1.4s
 ; CHECK-COMMON-NEXT:    ret
   %cmp = icmp eq <4 x i32> %a, %b
   %ext = sext <4 x i1> %cmp to <4 x i64>

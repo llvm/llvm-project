@@ -641,6 +641,7 @@ def OMPC_UseDevicePtr : Clause<[Spelling<"use_device_ptr">]> {
 }
 def OMPC_UsesAllocators : Clause<[Spelling<"uses_allocators">]> {
   let clangClass = "OMPUsesAllocatorsClause";
+  let flangClass = "OmpUsesAllocatorsClause";
 }
 def OMPC_Weak : Clause<[Spelling<"weak">]> {
   let clangClass = "OMPWeakClause";
@@ -1482,7 +1483,7 @@ def OMP_Unroll : Directive<[Spelling<"unroll">]> {
   let allowedClauses = [
     VersionedClause<OMPC_Apply, 60>,
   ];
-  let allowedOnceClauses = [
+  let allowedExclusiveClauses = [
     VersionedClause<OMPC_Full, 51>,
     VersionedClause<OMPC_Partial, 51>,
   ];
