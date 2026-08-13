@@ -271,9 +271,7 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
   CGBINDOPT(EnableHonorSignDependentRoundingFPMath);
 
   static cl::opt<FloatABI::ABIType> FloatABIForCalls(
-      "float-abi",
-      cl::desc(
-          "Choose float ABI type (writes the \"float-abi\" IR module flag)"),
+      "float-abi", cl::desc("Choose float ABI type"),
       cl::init(FloatABI::Default),
       cl::values(clEnumValN(FloatABI::Default, "default",
                             "Target default float ABI type"),
