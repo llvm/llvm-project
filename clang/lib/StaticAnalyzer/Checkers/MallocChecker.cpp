@@ -547,7 +547,7 @@ private:
       {{CDM::CLibrary, {"strdup"}, 1}, &MallocChecker::checkStrdup},
       {{CDM::CLibrary, {"_strdup"}, 1}, &MallocChecker::checkStrdup},
       {{CDM::CLibrary, {"kmalloc"}, 2}, &MallocChecker::checkKernelMalloc},
-      {{CDM::CLibrary, {"if_nameindex"}, 1}, &MallocChecker::checkIfNameIndex},
+      {{CDM::CLibrary, {"if_nameindex"}, 0}, &MallocChecker::checkIfNameIndex},
       {{CDM::CLibrary, {"wcsdup"}, 1}, &MallocChecker::checkStrdup},
       {{CDM::CLibrary, {"_wcsdup"}, 1}, &MallocChecker::checkStrdup},
       {{CDM::CLibrary, {"g_malloc"}, 1}, &MallocChecker::checkBasicAlloc},
@@ -1074,8 +1074,8 @@ public:
                                    BugReporterContext &BRC,
                                    PathSensitiveBugReport &BR) override;
 
-  PathDiagnosticPieceRef getEndPath(BugReporterContext &BRC,
-                                    const ExplodedNode *EndPathNode,
+  PathDiagnosticPieceRef getEndPath(const ExplodedNode *EndPathNode,
+                                    BugReporterContext &BRC,
                                     PathSensitiveBugReport &BR) override {
     if (!IsLeak)
       return nullptr;
@@ -3554,7 +3554,6 @@ void MallocChecker::checkEscapeOnReturn(const ReturnStmt *S,
     return;
 
   // Check if we are returning a symbol.
-  ProgramStateRef State = C.getState();
   SVal RetVal = C.getSVal(E);
   SymbolRef Sym = RetVal.getAsSymbol();
   if (!Sym)
@@ -4112,8 +4111,8 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
         ReleaseFunctionSF = CurrentSF;
         // ...but if the stack contains a destructor call, then we say that the
         // outermost destructor stack frame is the _responsible_ one:
-        for (const StackFrame *SF = CurrentSF; SF; SF = SF->getParent()) {
-          if (const auto *DD = dyn_cast<CXXDestructorDecl>(SF->getDecl())) {
+        for (const StackFrame &SF : N->stackframes()) {
+          if (const auto *DD = dyn_cast<CXXDestructorDecl>(SF.getDecl())) {
             if (isReferenceCountingPointerDestructor(DD)) {
               // This immediately looks like a reference-counting destructor.
               // We're bad at guessing the original reference count of the
@@ -4149,7 +4148,7 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
             //   if (refPut(data))
             //     doFree(data);
             // }
-            ReleaseFunctionSF = SF;
+            ReleaseFunctionSF = &SF;
           }
         }
 

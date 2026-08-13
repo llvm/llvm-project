@@ -1212,13 +1212,17 @@ struct ConvertShardToMPIPass
     populateCallOpTypeConversionPattern(patterns, typeConverter);
     populateReturnOpTypeConversionPattern(patterns, typeConverter);
 
-    (void)applyPartialConversion(getOperation(), target, std::move(patterns));
+    if (failed(applyPartialConversion(getOperation(), target,
+                                      std::move(patterns)))) {
+      return signalPassFailure();
+    }
 
     // Folding patterns cannot be mixed with conversion patterns -> extra pass.
     patterns.clear();
     SymbolTableCollection symbolTableCollection;
     mlir::shard::populateFoldingPatterns(patterns, symbolTableCollection);
-    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
+      return signalPassFailure();
   }
 };
 

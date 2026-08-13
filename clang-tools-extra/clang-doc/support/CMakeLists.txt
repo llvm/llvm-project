@@ -5,13 +5,6 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_clang_library(clangDocSupport STATIC
-  PARTIAL_SOURCES_INTENDED
   File.cpp
   Utils.cpp
   )
-
-add_clang_library(clangDocMarkdown STATIC
-  PARTIAL_SOURCES_INTENDED
-  Markdown.cpp
-  )
-  

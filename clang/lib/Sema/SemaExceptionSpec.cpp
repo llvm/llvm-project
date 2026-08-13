@@ -1302,6 +1302,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Expr::ConvertVectorExprClass:
   case Expr::VAArgExprClass:
   case Expr::CXXParenListInitExprClass:
+  case Expr::CXXExpansionSelectExprClass:
     return canSubStmtsThrow(*this, S);
 
   case Expr::CompoundLiteralExprClass:
@@ -1488,7 +1489,8 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Stmt::OMPMaskedTaskLoopDirectiveClass:
   case Stmt::OMPMasterTaskLoopSimdDirectiveClass:
   case Stmt::OMPMaskedTaskLoopSimdDirectiveClass:
-  case Stmt::OMPOrderedDirectiveClass:
+  case Stmt::OMPOrderedStandaloneDirectiveClass:
+  case Stmt::OMPOrderedBlockAssocDirectiveClass:
   case Stmt::OMPCanonicalLoopClass:
   case Stmt::OMPParallelDirectiveClass:
   case Stmt::OMPParallelForDirectiveClass:
@@ -1555,6 +1557,13 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Stmt::SwitchStmtClass:
   case Stmt::WhileStmtClass:
   case Stmt::DeferStmtClass:
+  case Stmt::CXXExpansionStmtInstantiationClass:
+    return canSubStmtsThrow(*this, S);
+
+  case Stmt::CXXExpansionStmtPatternClass:
+    if (auto *Pattern = cast<CXXExpansionStmtPattern>(S);
+        Pattern->isDependent())
+      return CT_Dependent;
     return canSubStmtsThrow(*this, S);
 
   case Stmt::DeclStmtClass: {

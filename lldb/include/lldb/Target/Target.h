@@ -82,6 +82,8 @@ enum DynamicClassInfoHelper {
   eDynamicClassInfoHelperGetRealizedClassList,
 };
 
+enum JITEngine { eJITEngineMCJIT, eJITEngineORC };
+
 class TargetExperimentalProperties : public Properties {
 public:
   TargetExperimentalProperties();
@@ -186,6 +188,8 @@ public:
   bool GetEnableNotifyAboutFixIts() const;
 
   FileSpec GetSaveJITObjectsDir() const;
+
+  JITEngine GetJITEngine() const;
 
   bool GetEnableSyntheticValue() const;
 
@@ -964,10 +968,10 @@ public:
   void RemoveNameFromBreakpoint(lldb::BreakpointSP &bp_sp,
                                 llvm::StringRef name);
 
-  BreakpointName *FindBreakpointName(ConstString name, bool can_create,
+  BreakpointName *FindBreakpointName(llvm::StringRef name, bool can_create,
                                      Status &error);
 
-  void DeleteBreakpointName(ConstString name);
+  void DeleteBreakpointName(llvm::StringRef name);
 
   void ConfigureBreakpointName(BreakpointName &bp_name,
                                const BreakpointOptions &options,
@@ -1560,9 +1564,7 @@ public:
   ///     if none can be found.
   llvm::Expected<lldb_private::Address> GetEntryPointAddress();
 
-  CompilerType GetRegisterType(const std::string &name,
-                               const lldb_private::RegisterFlags &flags,
-                               uint32_t byte_size);
+  CompilerType GetRegisterType(const RegisterInfo &reg_info);
 
   /// Sends a breakpoint notification event.
   void NotifyBreakpointChanged(Breakpoint &bp,
@@ -1691,7 +1693,7 @@ public:
   private:
     llvm::StringRef GetScriptClassName() const;
 
-    lldb::ScriptedStopHookInterfaceSP m_interface_sp;
+    lldb::ScriptedHookInterfaceSP m_interface_sp;
 
     /// Use CreateStopHook to make a new empty stop hook. Use SetScriptCallback
     /// to set the script to execute, and SetSpecifier to set the specifier

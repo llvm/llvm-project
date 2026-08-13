@@ -1209,7 +1209,7 @@ void SBTarget::DeleteBreakpointName(const char *name) {
 
   if (TargetSP target_sp = GetSP()) {
     std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
-    target_sp->DeleteBreakpointName(ConstString(name));
+    target_sp->DeleteBreakpointName(llvm::StringRef(name));
   }
 }
 
@@ -2159,6 +2159,8 @@ lldb::SBInstructionList SBTarget::ReadInstructions(lldb::SBAddress base_addr,
       if (llvm::Expected<DisassemblerSP> disassembler =
               target_sp->ReadInstructions(*addr_ptr, count, flavor_string)) {
         sb_instructions.SetDisassembler(*disassembler);
+      } else {
+        LLDB_LOG_ERROR(GetLog(LLDBLog::API), disassembler.takeError(), "{0}");
       }
     }
   }

@@ -33,7 +33,7 @@ define void @foo(i32 %iCount, i32 %c, i32 %jCount) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT27]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT27]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[WIDE_TRIP_COUNT27]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT27]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[WIDE_TRIP_COUNT]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
@@ -44,15 +44,17 @@ define void @foo(i32 %iCount, i32 %c, i32 %jCount) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_LATCH:.*]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_LATCH]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [1024 x i32], ptr @A, i64 0, <4 x i64> [[VEC_IND]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[BROADCAST_SPLAT2]], <4 x ptr> align 4 [[TMP0]], <4 x i1> splat (i1 true))
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x ptr> [[TMP0]], i64 0
+; CHECK-NEXT:    store <4 x i32> [[BROADCAST_SPLAT2]], ptr [[TMP14]], align 4
 ; CHECK-NEXT:    br i1 [[CMP220]], label %[[FOR_BODY3_LR_PH3:.*]], label %[[VECTOR_LATCH]]
 ; CHECK:       [[FOR_BODY3_LR_PH3]]:
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 [[TMP0]], <4 x i1> splat (i1 true), <4 x i32> poison)
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x ptr> [[TMP0]], i64 0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP15]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <4 x i64> [[VEC_IND]] to <4 x i32>
 ; CHECK-NEXT:    br label %[[FOR_BODY34:.*]]
 ; CHECK:       [[FOR_BODY34]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi <4 x i64> [ zeroinitializer, %[[FOR_BODY3_LR_PH3]] ], [ [[TMP7:%.*]], %[[FOR_BODY34]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = phi <4 x i32> [ [[WIDE_MASKED_GATHER]], %[[FOR_BODY3_LR_PH3]] ], [ [[TMP6:%.*]], %[[FOR_BODY34]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi <4 x i32> [ [[WIDE_LOAD]], %[[FOR_BODY3_LR_PH3]] ], [ [[TMP6:%.*]], %[[FOR_BODY34]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1024 x i32], ptr @B, i64 0, <4 x i64> [[TMP2]]
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER5:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 [[TMP4]], <4 x i1> splat (i1 true), <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_GATHER5]], [[TMP1]]
@@ -62,7 +64,8 @@ define void @foo(i32 %iCount, i32 %c, i32 %jCount) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP8]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[FOR_COND1_FOR_INC9_CRIT_EDGE6:.*]], label %[[FOR_BODY34]]
 ; CHECK:       [[FOR_COND1_FOR_INC9_CRIT_EDGE6]]:
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[TMP6]], <4 x ptr> align 4 [[TMP0]], <4 x i1> splat (i1 true))
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x ptr> [[TMP0]], i64 0
+; CHECK-NEXT:    store <4 x i32> [[TMP6]], ptr [[TMP16]], align 4
 ; CHECK-NEXT:    br label %[[VECTOR_LATCH]]
 ; CHECK:       [[VECTOR_LATCH]]:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -154,4 +157,4 @@ exit:
 
 !1 = distinct !{!1, !2, !3}
 !2 = !{!"llvm.loop.vectorize.width", i32 4}
-!3 = !{!"llvm.loop.vectorize.enable", i1 true}
+!3 = !{!"llvm.loop.vectorize.enable"}
