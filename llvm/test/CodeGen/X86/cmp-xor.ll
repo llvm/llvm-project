@@ -177,5 +177,3 @@ define zeroext i1 @xor_cmp_rmw_ult_i32(ptr %x) {
   %cmp = icmp ult i32 %load, 7
   ret i1 %cmp
 }
-
-
