@@ -274,7 +274,6 @@ add_fp_unittest(
 
 add_fp_unittest(
   faddl_test
-  NEED_MPFR
   SUITE
     libc-math-unittests
   SRCS
@@ -4774,7 +4773,6 @@ add_fp_unittest(
 
 add_fp_unittest(
   atanpif16_test
-  NEED_MPFR
   SUITE
     libc-math-unittests
   SRCS
@@ -4832,7 +4830,6 @@ add_fp_unittest(
 
 add_fp_unittest(
   asinpif16_test
-  NEED_MPFR
   SUITE
     libc-math-unittests
   SRCS
