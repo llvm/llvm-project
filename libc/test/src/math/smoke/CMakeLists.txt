@@ -5006,7 +5006,6 @@ add_fp_unittest(
 
 add_fp_unittest(
   atanbf16_test
-  NEED_MPFR
   SUITE
     libc-math-smoke-tests
   SRCS

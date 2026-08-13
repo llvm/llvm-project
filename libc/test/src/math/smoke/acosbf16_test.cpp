@@ -40,11 +40,11 @@ public:
                               LIBC_NAMESPACE::acosbf16(neg_zero));
     EXPECT_MATH_ERRNO(0);
 
-    EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::acosbf16(1.0));
+    EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::acosbf16(bfloat16(1.0)));
     EXPECT_MATH_ERRNO(0);
 
     EXPECT_FP_EQ_ALL_ROUNDING(bfloat16(0x1.921fb6p1f),
-                              LIBC_NAMESPACE::acosbf16(-1.0));
+                              LIBC_NAMESPACE::acosbf16(bfloat16(-1.0)));
     EXPECT_MATH_ERRNO(0);
   }
 };
