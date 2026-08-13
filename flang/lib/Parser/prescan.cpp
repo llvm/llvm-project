@@ -726,7 +726,6 @@ void Prescanner::UpdateSourcePositionAfterSkip(const char *after) {
     --nl;
   }
   if (*nl == '\n' && after >= nextLine_) {
-    tabInCurrentLine_ = false;
     column_ = after - nl;
     nextLine_ = nl + 1;
     NextLine();
