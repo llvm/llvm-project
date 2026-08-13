@@ -11,6 +11,7 @@
 #include <cstddef>
 
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 
 template <std::size_t Depth>
 struct Chain : Chain<Depth - 1> {};
@@ -45,7 +46,7 @@ struct VDag<Index, 0> {
 };
 
 template <typename Dyn, typename From, typename To = Dyn>
-static void DynCast(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void DynCast(benchmark::State& state) {
   Dyn obj;
   From* from_ptr = &obj;
   for (auto _ : state) {
@@ -54,7 +55,7 @@ static void DynCast(benchmark::State& state) {
   }
 }
 
-static void StaticCast(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void StaticCast(benchmark::State& state) {
   Chain<9> obj;
   Chain<0>* from_ptr = &obj;
   for (auto _ : state) {

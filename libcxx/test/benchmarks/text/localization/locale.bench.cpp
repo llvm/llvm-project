@@ -13,8 +13,9 @@
 #include <locale>
 
 #include <benchmark/benchmark.h>
+#include "test_macros.h"
 
-static void BM_num_get(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_num_get(benchmark::State& state) {
   std::locale loc1, loc2;
 
   for (auto _ : state) {
