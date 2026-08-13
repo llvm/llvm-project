@@ -1,4 +1,4 @@
-// RUN: %clang -cc1 -triple %itanium_abi_triple %s -debug-info-kind=limited -fdynamic-debugging -o %t \
+// RUN: %clang -cc1 -triple x86_64-unknown-unknown %s -debug-info-kind=limited -fdynamic-debugging -o %t \
 // RUN:    -emit-llvm --save-dynamic-debugging-temps --discard-dynamic-debugging-debug-module
 // RUN: FileCheck %s --check-prefix=OUTER < %t.dyndbg.2.outer.ll
 

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple %itanium_abi_triple %s -Os -debug-info-kind=constructor -fdynamic-debugging -o %t \
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown %s -Os -debug-info-kind=constructor -fdynamic-debugging -o %t \
 // RUN:    -emit-llvm --save-dynamic-debugging-temps --discard-dynamic-debugging-debug-module
 // RUN: FileCheck %s --check-prefix=INPUT < %t.dyndbg.0.input.ll
 // RUN: FileCheck %s --check-prefix=INNER < %t.dyndbg.1.inner.ll
