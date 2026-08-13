@@ -1017,9 +1017,9 @@ public:
            getSubArch() == Triple::X86_64SubArch_apx;
   }
 
-  /// Tests whether the target is the Windows x86_64apx target, which defaults
-  /// to the wincall calling convention.
-  bool isWindowsAPX() const { return isX86_64APX() && isOSWindows(); }
+  /// Tests whether the target is a Windows or UEFI x86_64apx PE/COFF target,
+  /// which defaults to the wincall calling convention.
+  bool isWindowsAPX() const { return isX86_64APX() && isOSWindowsOrUEFI(); }
 
   /// Tests whether the target supports the EHABI exception
   /// handling standard.

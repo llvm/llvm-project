@@ -876,6 +876,7 @@ public:
     switch (CC) {
     case CC_C:
     case CC_Win64:
+    case CC_WinCall:
     case CC_X86_64SysV:
       return CCCR_OK;
     default:
@@ -1031,6 +1032,7 @@ public:
     case CC_SwiftAsync:
     case CC_X86RegCall:
     case CC_DeviceKernel:
+    case CC_WinCall:
       return CCCR_OK;
     default:
       return CCCR_Warning;

@@ -2,9 +2,9 @@
 
 ## What WinCall is
 
-WinCall is an x86-64 **calling convention for Windows targets**. It is
-spelled ``x86_wincallcc`` in LLVM IR and corresponds to
-``CallingConv::X86_WinCall`` (CC ID 128).
+WinCall is an x86-64 **calling convention for Windows and other PE/COFF
+targets** (Windows, Cygwin, MSYS and UEFI). It is spelled ``x86_wincallcc``
+in LLVM IR and corresponds to ``CallingConv::X86_WinCall`` (CC ID 128).
 
 Its purpose is to exploit the 16 additional general-purpose registers
 (R16-R31) introduced by Intel APX. On a conventional Windows x64 ABI only
@@ -22,10 +22,14 @@ opt-in and only affects code that is explicitly built for it.
 
 WinCall applies in two situations:
 
-1. It is the **default calling convention** of the ``x86_64apx-windows-msvc``
-   and ``x86_64apx-windows-gnu`` target triples
+1. It is the **default calling convention** of the ``x86_64apx`` **PE/COFF**
+   targets: ``x86_64apx-windows-msvc``, ``x86_64apx-windows-gnu``, and the
+   other PE targets that share the Windows ABI conventions — Cygwin
+   (``x86_64apx-pc-windows-cygnus``), MSYS (``x86_64apx-pc-windows-msys``)
+   and UEFI (``x86_64apx-unknown-uefi``).
    (``X86_64TargetInfo::getDefaultCallingConv`` returns ``CC_WinCall`` for
-   ``getTriple().isWindowsAPX()``).
+   ``getTriple().isWindowsAPX()``, which is true for any ``x86_64apx`` triple
+   whose OS is Windows or UEFI.)
 
 2. It can be selected per-function with the ``wincall`` attribute
    (``__attribute__((wincall))``, ``__wincall``, ``_wincall``), which maps to
@@ -44,7 +48,7 @@ modelled on how ``arm64ec`` is a sub-architecture of ``aarch64``:
   ``Triple::x86_64``.
 - ``Triple::isX86_64APX()`` is true for any ``x86_64apx-*`` triple.
 - ``Triple::isWindowsAPX()`` is true for ``x86_64apx-*`` triples whose OS is
-  Windows; only these default to WinCall.
+  Windows or UEFI (i.e. the PE/COFF targets); only these default to WinCall.
 - The name round-trips through ``Triple::getArchName()`` /
   ``Triple::parseSubArch()``.
 
@@ -212,21 +216,31 @@ and ``MinGW.cpp``, not by the assembler. If the user passes their own
 section-alignment ``-Wl`` flag, the driver's default is suppressed in favour
 of the user's value.
 
+The 64 KiB section alignment is only meaningful for binaries loaded by an OS
+using 64 KiB pages, so it is **not** added automatically for the Cygwin and
+UEFI toolchains (which use the generic GCC driver and ``lld-link``
+respectively); those are typically firmware or runtime-loader images that want
+a conventional section alignment. The stack alignment guarantee below still
+applies to them, since it is a property of the generated code, not of the
+linked image.
+
 ## Stack alignment
 
-On ``x86_64apx-windows`` targets the stack is kept **64-byte aligned** at
-every call site (``X86Subtarget`` sets the stack alignment to 64 for
-``isWindowsAPX()`` targets, instead of the 16-byte alignment of the classic
-Windows ABI). This is a deliberate part of the WinCall ABI: it means the
-backend can use aligned 64-byte moves (``vmovaps``/``vmovdqa64``) for
+On ``isWindowsAPX()`` targets (``x86_64apx-windows``, ``x86_64apx-cygnus``,
+``x86_64apx-msys`` and ``x86_64apx-uefi``) the stack is kept **64-byte
+aligned** at every call site (``X86Subtarget`` sets the stack alignment to 64
+for ``isWindowsAPX()`` targets, instead of the 16-byte alignment of the
+classic Windows ABI). This is a deliberate part of the WinCall ABI: it means
+the backend can use aligned 64-byte moves (``vmovaps``/``vmovdqa64``) for
 AVX-512 ZMM spills and aligned stack slots without dynamic stack realignment.
 
 This matters in practice because the classic Windows x64 ABI only guarantees
 16-byte stack alignment, which is not enough for 64-byte ZMM registers — this
 is why GCC still cannot support AVX-512 on Windows correctly. WinCall's 64-byte
-guarantee removes that limitation. Only ``x86_64apx-windows`` gets the 64-byte
-alignment; other ``x86_64apx`` targets (e.g. ``x86_64apx-linux``) keep the
-16-byte default, and a user-supplied ``-mstack-alignment`` still overrides it.
+guarantee removes that limitation. Only ``isWindowsAPX()`` targets get the
+64-byte alignment; other ``x86_64apx`` targets (e.g. ``x86_64apx-linux``) keep
+the 16-byte default, and a user-supplied ``-mstack-alignment`` still overrides
+it.
 
 ## Building a DLL that works with both WinCall and the classic ABI
 

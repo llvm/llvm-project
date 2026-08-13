@@ -1,9 +1,12 @@
 // RUN: %clang_cc1 -triple x86_64apx-unknown-windows-msvc -emit-llvm  -o - %s | FileCheck -check-prefix=MSVC %s
 // RUN: %clang_cc1 -triple x86_64apx-unknown-windows-gnu -emit-llvm  -o - %s | FileCheck -check-prefix=GNU %s
+// RUN: %clang_cc1 -triple x86_64apx-pc-windows-cygnus -emit-llvm  -o - %s | FileCheck -check-prefix=GNU %s
+// RUN: %clang_cc1 -triple x86_64apx-pc-windows-msys -emit-llvm  -o - %s | FileCheck -check-prefix=GNU %s
+// RUN: %clang_cc1 -triple x86_64apx-unknown-uefi -emit-llvm  -o - %s | FileCheck -check-prefix=GNU %s
 
-// The wincall calling convention is the default for x86_64apx-windows targets
-// and appends a @win suffix to the symbol so the linker can catch calling
-// convention mismatches.
+// The wincall calling convention is the default for x86_64apx PE/COFF
+// targets (Windows, Cygwin, MSYS and UEFI) and appends a @win suffix to the
+// symbol so the linker can catch calling convention mismatches.
 
 void plain(int, int, int);
 
