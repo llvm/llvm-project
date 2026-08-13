@@ -1261,6 +1261,7 @@ static bool justRunCheckersAsPostVisit(const Stmt *S) {
   case Expr::ObjCDictionaryLiteralClass:
   case Expr::ObjCBoxedExprClass:
   case Stmt::AtomicExprClass:
+  case Stmt::ObjCIvarRefExprClass:
   case Stmt::BlockExprClass:
   case Stmt::ImplicitCastExprClass:
   case Stmt::CStyleCastExprClass:

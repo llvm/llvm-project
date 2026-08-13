@@ -25,12 +25,7 @@ void ExprEngine::VisitLvalObjCIvarRefExpr(const ObjCIvarRefExpr *Ex,
   const StackFrame *SF = Pred->getStackFrame();
   SVal baseVal = state->getSVal(Ex->getBase(), SF);
   SVal location = state->getLValue(Ex->getDecl(), baseVal);
-
-  ExplodedNode *N = Engine.makeNodeWithBinding(Pred, Ex, location);
-
-  // Perform the post-condition check of the ObjCIvarRefExpr and store
-  // the created nodes in 'Dst'.
-  getCheckerManager().runCheckersForPostStmt(Dst, N, Ex, *this);
+  Dst.insert(Engine.makeNodeWithBinding(Pred, Ex, location));
 }
 
 void ExprEngine::VisitObjCAtSynchronizedStmt(const ObjCAtSynchronizedStmt *S,
