@@ -59397,10 +59397,10 @@ static SDValue combineCMP(SDNode *N, SelectionDAG &DAG,
 /// If a matching generic opcode node exists, replace its uses with the value
 /// of the target-specific node N.
 static void matchGenericOp(unsigned Opc, SDNode *N, SDValue N0, SDValue N1,
-                           SelectionDAG &DAG,
                            TargetLowering::DAGCombinerInfo &DCI,
                            bool Negate = false) {
   SDValue Ops[] = {N0, N1};
+  SelectionDAG &DAG = DCI.DAG;
   SDVTList VTs = DAG.getVTList(N->getValueType(0));
   if (SDNode *Generic = DAG.getNodeIfExists(Opc, VTs, Ops)) {
     SDValue Op(N, 0);
@@ -59440,23 +59440,23 @@ static SDValue combineX86AddSub(SDNode *N, SelectionDAG &DAG,
   }
 
   // Fold any similar generic ADD/SUB opcodes to reuse this node.
-  matchGenericOp(GenericOpc, N, LHS, RHS, DAG, DCI, false);
-  matchGenericOp(GenericOpc, N, RHS, LHS, DAG, DCI, IsSub);
+  matchGenericOp(GenericOpc, N, LHS, RHS, DCI, false);
+  matchGenericOp(GenericOpc, N, RHS, LHS, DCI, IsSub);
 
   if (auto *Const = dyn_cast<ConstantSDNode>(RHS)) {
     SDValue NegC = DAG.getConstant(-Const->getAPIntValue(), DL, VT);
     if (IsSub) {
       // Fold generic add(LHS, -C) to X86ISD::SUB(LHS, C).
-      matchGenericOp(ISD::ADD, N, LHS, NegC, DAG, DCI, false);
+      matchGenericOp(ISD::ADD, N, LHS, NegC, DCI, false);
     } else {
       // Negate X86ISD::ADD(LHS, C) and replace generic sub(-C, LHS).
-      matchGenericOp(ISD::SUB, N, NegC, LHS, DAG, DCI, true);
+      matchGenericOp(ISD::SUB, N, NegC, LHS, DCI, true);
     }
   } else if (auto *Const = dyn_cast<ConstantSDNode>(LHS)) {
     if (IsSub) {
       SDValue NegC = DAG.getConstant(-Const->getAPIntValue(), DL, VT);
       // Negate X86ISD::SUB(C, RHS) and replace generic add(RHS, -C).
-      matchGenericOp(ISD::ADD, N, RHS, NegC, DAG, DCI, true);
+      matchGenericOp(ISD::ADD, N, RHS, NegC, DCI, true);
     }
   }
 
@@ -59504,8 +59504,8 @@ static SDValue combineX86XOR(SDNode *N, SelectionDAG &DAG,
   }
 
   // Fold any matching generic nodes to reuse this node.
-  matchGenericOp(ISD::XOR, N, LHS, RHS, DAG, DCI);
-  matchGenericOp(ISD::XOR, N, RHS, LHS, DAG, DCI);
+  matchGenericOp(ISD::XOR, N, LHS, RHS, DCI);
+  matchGenericOp(ISD::XOR, N, RHS, LHS, DCI);
 
   return SDValue();
 }
