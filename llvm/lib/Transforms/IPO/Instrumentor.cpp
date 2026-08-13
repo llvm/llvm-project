@@ -1210,7 +1210,6 @@ Value *AllocaIO::getAlignment(Value &V, Type &Ty, InstrumentationConfig &IConf,
 
 // Check if a pointer comes from an intrinsic function and is one of the AMD GCN intrinsics we avoid when instrumenting
 static bool ptrOriginatesFromAMDGCNIntrinsic(llvm::Value *PtrArg) {
-  llvm::errs() << "checking if should instrument a pointer...";
   SmallVector<const llvm::Value *, 4> Objs;
   llvm::getUnderlyingObjects(PtrArg, Objs, nullptr, 20);
   assert(!Objs.empty() && "How can a pointer have no underlying objects?");
@@ -1236,7 +1235,6 @@ static bool ptrOriginatesFromAMDGCNIntrinsic(llvm::Value *PtrArg) {
          "'amdgcn' or none of them may contain it");
 
   bool ShouldInstrument = !SawAMDGCN;
-  llvm::errs() << "shouldInstrument =" << ShouldInstrument << "\n";
   return ShouldInstrument;
 }
 
