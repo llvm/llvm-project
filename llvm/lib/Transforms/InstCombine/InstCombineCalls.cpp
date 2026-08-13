@@ -1982,6 +1982,119 @@ static Value *foldSinAndCosToSinCos(IntrinsicInst *II, IRBuilderBase &B,
   return IsSin ? Sin : Cos;
 }
 
+/// [su]cmp only depends on the relative order of its operands, so applying the
+/// same order-preserving operation to both of them is a no-op. If both operands
+/// are computed by the same non-wrapping (and therefore monotonic) operation
+/// with a common operand, the comparison can be done on the original values:
+///   ucmp(add nuw X, Z, add nuw Y, Z) --> ucmp(X, Y)
+///   scmp(sub nsw Z, X, sub nsw Z, Y) --> scmp(Y, X)
+/// On a successful match \p X and \p Y are set to the new comparison operands,
+/// already swapped if the operation reverses the order.
+static bool matchOrderPreservingCmpOperands(Value *Op0, Value *Op1,
+                                            bool IsSigned, Value *&X, Value *&Y,
+                                            const SimplifyQuery &SQ,
+                                            const Instruction *CxtI) {
+  auto *BO0 = dyn_cast<BinaryOperator>(Op0);
+  auto *BO1 = dyn_cast<BinaryOperator>(Op1);
+  if (!BO0 || !BO1 || BO0->getOpcode() != BO1->getOpcode())
+    return false;
+
+  // Only an operation that cannot wrap in the compared domain is guaranteed to
+  // preserve the order of its operands.
+  auto HasNoWrap = [IsSigned](const BinaryOperator *BO) {
+    return IsSigned ? BO->hasNoSignedWrap() : BO->hasNoUnsignedWrap();
+  };
+  if (!HasNoWrap(BO0) || !HasNoWrap(BO1))
+    return false;
+
+  Value *A = BO0->getOperand(0), *B = BO0->getOperand(1);
+  Value *C = BO1->getOperand(0), *D = BO1->getOperand(1);
+
+  switch (BO0->getOpcode()) {
+  case Instruction::Add:
+    // (X + Z) cmp (Y + Z) --> X cmp Y (add is commutative)
+    if (B == D) {
+      X = A;
+      Y = C;
+      return true;
+    }
+    if (B == C) {
+      X = A;
+      Y = D;
+      return true;
+    }
+    if (A == D) {
+      X = B;
+      Y = C;
+      return true;
+    }
+    if (A == C) {
+      X = B;
+      Y = D;
+      return true;
+    }
+    return false;
+
+  case Instruction::Sub:
+    // (X - Z) cmp (Y - Z) --> X cmp Y
+    if (B == D) {
+      X = A;
+      Y = C;
+      return true;
+    }
+    // (Z - X) cmp (Z - Y) --> Y cmp X
+    if (A == C) {
+      X = D;
+      Y = B;
+      return true;
+    }
+    return false;
+
+  case Instruction::Mul: {
+    // Determine the common factor Z in (X * Z) cmp (Y * Z).
+    Value *Z;
+    if (B == D) {
+      Z = B;
+      X = A;
+      Y = C;
+    } else if (B == C) {
+      Z = B;
+      X = A;
+      Y = D;
+    } else if (A == D) {
+      Z = A;
+      X = B;
+      Y = C;
+    } else if (A == C) {
+      Z = A;
+      X = B;
+      Y = D;
+    } else {
+      return false;
+    }
+
+    SimplifyQuery Q = SQ.getWithInstruction(CxtI);
+    // Scaling by a non-zero factor preserves the unsigned order. A zero factor
+    // would map every value onto zero.
+    if (!IsSigned)
+      return isKnownNonZero(Z, Q);
+    // Scaling by a positive factor preserves the signed order, while a negative
+    // factor reverses it. The sign of the factor has to be known, because
+    // 'mul nsw' by an unknown value is not monotonic in either direction.
+    if (isKnownPositive(Z, Q))
+      return true;
+    if (isKnownNegative(Z, Q)) {
+      std::swap(X, Y);
+      return true;
+    }
+    return false;
+  }
+
+  default:
+    return false;
+  }
+}
+
 /// CallInst simplification. This mostly only handles folding of intrinsic
 /// instructions. For normal calls, it allows visitCallBase to do the heavy
 /// lifting.
@@ -2487,6 +2600,22 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return replaceInstUsesWith(
           CI,
           Builder.CreateIntrinsic(II->getType(), Intrinsic::scmp, {LHS, RHS}));
+
+    if (matchOrderPreservingCmpOperands(I0, I1, /*IsSigned=*/true, LHS, RHS, SQ,
+                                        II))
+      return replaceInstUsesWith(
+          CI,
+          Builder.CreateIntrinsic(II->getType(), Intrinsic::scmp, {LHS, RHS}));
+    break;
+  }
+  case Intrinsic::ucmp: {
+    Value *I0 = II->getArgOperand(0), *I1 = II->getArgOperand(1);
+    Value *LHS, *RHS;
+    if (matchOrderPreservingCmpOperands(I0, I1, /*IsSigned=*/false, LHS, RHS,
+                                        SQ, II))
+      return replaceInstUsesWith(
+          CI,
+          Builder.CreateIntrinsic(II->getType(), Intrinsic::ucmp, {LHS, RHS}));
     break;
   }
   case Intrinsic::bitreverse: {

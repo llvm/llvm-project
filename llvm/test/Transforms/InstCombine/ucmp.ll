@@ -622,3 +622,115 @@ define i8 @trunc_ucmp_multiuse(i32 %x, i32 %y) {
   %tr = trunc i32 %cmp to i8
   ret i8 %tr
 }
+
+; ucmp(add nuw X, Z, add nuw Y, Z) --> ucmp(X, Y)
+define i8 @ucmp_add_nuw_common_op(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: define i8 @ucmp_add_nuw_common_op(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    ret i8 [[CMP]]
+;
+  %xz = add nuw i32 %x, %z
+  %yz = add nuw i32 %y, %z
+  %cmp = call i8 @llvm.ucmp(i32 %xz, i32 %yz)
+  ret i8 %cmp
+}
+
+; The common operand may appear on either side of the add.
+define i8 @ucmp_add_nuw_commuted(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: define i8 @ucmp_add_nuw_commuted(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    ret i8 [[CMP]]
+;
+  %xz = add nuw i32 %z, %x
+  %yz = add nuw i32 %y, %z
+  %cmp = call i8 @llvm.ucmp(i32 %xz, i32 %yz)
+  ret i8 %cmp
+}
+
+; ucmp(sub nuw X, Z, sub nuw Y, Z) --> ucmp(X, Y)
+define i8 @ucmp_sub_nuw_common_rhs(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: define i8 @ucmp_sub_nuw_common_rhs(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    ret i8 [[CMP]]
+;
+  %xz = sub nuw i32 %x, %z
+  %yz = sub nuw i32 %y, %z
+  %cmp = call i8 @llvm.ucmp(i32 %xz, i32 %yz)
+  ret i8 %cmp
+}
+
+; Subtracting from a common value reverses the order:
+; ucmp(sub nuw Z, X, sub nuw Z, Y) --> ucmp(Y, X)
+define i8 @ucmp_sub_nuw_common_lhs(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: define i8 @ucmp_sub_nuw_common_lhs(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[Y]], i32 [[X]])
+; CHECK-NEXT:    ret i8 [[CMP]]
+;
+  %zx = sub nuw i32 %z, %x
+  %zy = sub nuw i32 %z, %y
+  %cmp = call i8 @llvm.ucmp(i32 %zx, i32 %zy)
+  ret i8 %cmp
+}
+
+; ucmp(mul nuw X, C, mul nuw Y, C) --> ucmp(X, Y) for a non-zero C
+define i8 @ucmp_mul_nuw_nonzero(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @ucmp_mul_nuw_nonzero(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    ret i8 [[CMP]]
+;
+  %xz = mul nuw i32 %x, 3
+  %yz = mul nuw i32 %y, 3
+  %cmp = call i8 @llvm.ucmp(i32 %xz, i32 %yz)
+  ret i8 %cmp
+}
+
+; Negative test: a zero factor maps every value onto zero, so the order is not
+; preserved.
+define i8 @ucmp_mul_nuw_maybe_zero(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: define i8 @ucmp_mul_nuw_maybe_zero(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
+; CHECK-NEXT:    [[XZ:%.*]] = mul nuw i32 [[X]], [[Z]]
+; CHECK-NEXT:    [[YZ:%.*]] = mul nuw i32 [[Y]], [[Z]]
+; CHECK-NEXT:    [[CMP:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[XZ]], i32 [[YZ]])
+; CHECK-NEXT:    ret i8 [[CMP]]
+;
+  %xz = mul nuw i32 %x, %z
+  %yz = mul nuw i32 %y, %z
+  %cmp = call i8 @llvm.ucmp(i32 %xz, i32 %yz)
+  ret i8 %cmp
+}
+
+; Negative test: without nuw on both operands the add may wrap.
+define i8 @ucmp_add_missing_nuw(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: define i8 @ucmp_add_missing_nuw(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
+; CHECK-NEXT:    [[XZ:%.*]] = add nuw i32 [[X]], [[Z]]
+; CHECK-NEXT:    [[YZ:%.*]] = add i32 [[Y]], [[Z]]
+; CHECK-NEXT:    [[CMP:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[XZ]], i32 [[YZ]])
+; CHECK-NEXT:    ret i8 [[CMP]]
+;
+  %xz = add nuw i32 %x, %z
+  %yz = add i32 %y, %z
+  %cmp = call i8 @llvm.ucmp(i32 %xz, i32 %yz)
+  ret i8 %cmp
+}
+
+; Negative test: nsw does not imply anything about the unsigned order.
+define i8 @ucmp_add_only_nsw(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: define i8 @ucmp_add_only_nsw(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
+; CHECK-NEXT:    [[XZ:%.*]] = add nsw i32 [[X]], [[Z]]
+; CHECK-NEXT:    [[YZ:%.*]] = add nsw i32 [[Y]], [[Z]]
+; CHECK-NEXT:    [[CMP:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[XZ]], i32 [[YZ]])
+; CHECK-NEXT:    ret i8 [[CMP]]
+;
+  %xz = add nsw i32 %x, %z
+  %yz = add nsw i32 %y, %z
+  %cmp = call i8 @llvm.ucmp(i32 %xz, i32 %yz)
+  ret i8 %cmp
+}
