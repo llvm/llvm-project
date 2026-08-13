@@ -57,8 +57,8 @@ GOFFObjectFile::getContinuousData(SmallVectorImpl<uint8_t> &CompleteData,
   CompleteData.append(Record + GOFF::RecordPrefixLength, Record + DataIndex);
   // Append the data.
   const uint8_t *Ptr = Record + DataIndex;
-  size_t SliceLength =
-      std::min(DataLength, static_cast<uint16_t>(GOFF::RecordLength - DataIndex));
+  size_t SliceLength = std::min(
+      DataLength, static_cast<uint16_t>(GOFF::RecordLength - DataIndex));
   CompleteData.append(Ptr, Ptr + SliceLength);
   DataLength -= SliceLength;
   Ptr += SliceLength;
@@ -74,7 +74,8 @@ GOFFObjectFile::getContinuousData(SmallVectorImpl<uint8_t> &CompleteData,
       return createStringError(object_error::parse_failed,
                                "continued bit should not be set");
 
-    SliceLength = std::min(DataLength, static_cast<uint16_t>(GOFF::PayloadLength));
+    SliceLength =
+        std::min(DataLength, static_cast<uint16_t>(GOFF::PayloadLength));
     Ptr += GOFF::RecordPrefixLength; // Skip the 3-byte prefix
     CompleteData.append(Ptr, Ptr + SliceLength);
     DataLength -= SliceLength;
