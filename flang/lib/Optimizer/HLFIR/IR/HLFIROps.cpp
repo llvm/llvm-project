@@ -1736,7 +1736,7 @@ llvm::LogicalResult hlfir::ReshapeOp::verify() {
       hlfir::getFortranElementOrSequenceType(shape.getType()));
   if (shapeArrayType.getDimension() != 1)
     return emitOpError("SHAPE must be an array of rank 1");
-  if (!mlir::isa<mlir::IntegerType>(shapeArrayType.getElementType()))
+  if (!fir::isa_integer(shapeArrayType.getElementType()))
     return emitOpError("SHAPE must be an integer array");
   if (shapeArrayType.hasDynamicExtents())
     return emitOpError("SHAPE must have known size");

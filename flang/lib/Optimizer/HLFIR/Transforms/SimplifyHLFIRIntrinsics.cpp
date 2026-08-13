@@ -3109,19 +3109,18 @@ public:
           builder, loc, totalSize,
           builder.createConvert(loc, indexType, extent));
 
-    mlir::Type i32Type = builder.getDefaultIntegerType();
     mlir::Value one = builder.createIntegerConstant(loc, indexType, 1);
     mlir::Value unitShape = fir::ShapeOp::create(builder, loc, one);
     mlir::Type shapeExprType =
-        hlfir::ExprType::get(builder.getContext(), {1}, i32Type,
+        hlfir::ExprType::get(builder.getContext(), {1}, indexType,
                              /*polymorphic=*/false);
 
     auto genShapeKernel = [&](mlir::Location loc, fir::FirOpBuilder &builder,
                               mlir::ValueRange) -> hlfir::Entity {
-      return hlfir::Entity{builder.createConvert(loc, i32Type, totalSize)};
+      return hlfir::Entity{totalSize};
     };
     mlir::Value shapeExpr = hlfir::genElementalOp(
-        loc, builder, i32Type, unitShape, /*typeParams=*/{}, genShapeKernel,
+        loc, builder, indexType, unitShape, /*typeParams=*/{}, genShapeKernel,
         /*isUnordered=*/true,
         /*polymorphicMold=*/mlir::Value{}, shapeExprType);
 
@@ -3129,6 +3128,8 @@ public:
         builder, loc, pack.getType(), pack.getArray(), shapeExpr,
         /*pad=*/mlir::Value{}, /*order=*/mlir::Value{});
     rewriter.replaceOp(pack, reshape);
+    rewriter.setInsertionPointAfter(reshape);
+    hlfir::DestroyOp::create(rewriter, loc, shapeExpr);
     return mlir::success();
   }
 };

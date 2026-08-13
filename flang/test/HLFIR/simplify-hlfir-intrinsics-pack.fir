@@ -13,13 +13,12 @@ func.func @pack_scalar_true_mask(%arg0: !fir.box<!fir.array<?xi32>>) -> !hlfir.e
 // CHECK:           %[[C0:.*]] = arith.constant 0 : index
 // CHECK:           %[[DIM0:.*]]:3 = fir.box_dims %[[ARRAY]], %[[C0]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 // CHECK:           %[[UNIT_SHAPE:.*]] = fir.shape %[[C1]] : (index) -> !fir.shape<1>
-// CHECK:           %[[SHAPE_EXPR:.*]] = hlfir.elemental %[[UNIT_SHAPE]] unordered : (!fir.shape<1>) -> !hlfir.expr<1xi32> {
+// CHECK:           %[[SHAPE_EXPR:.*]] = hlfir.elemental %[[UNIT_SHAPE]] unordered : (!fir.shape<1>) -> !hlfir.expr<1xindex> {
 // CHECK:           ^bb0(%{{.*}}: index):
-// CHECK:             %[[EXTENT:.*]] = fir.convert %[[DIM0]]#1 : (index) -> i32
-// CHECK:             hlfir.yield_element %[[EXTENT]] : i32
+// CHECK:             hlfir.yield_element %{{.*}} : index
 // CHECK:           }
-// CHECK:           %[[SHAPE_VAL:.*]] = hlfir.apply %[[SHAPE_EXPR]], %[[C1]] : (!hlfir.expr<1xi32>, index) -> i32
-// CHECK:           %[[RESULT_SHAPE:.*]] = fir.shape %[[SHAPE_VAL]] : (i32) -> !fir.shape<1>
+// CHECK:           %[[SHAPE_VAL:.*]] = hlfir.apply %[[SHAPE_EXPR]], %[[C1]] : (!hlfir.expr<1xindex>, index) -> index
+// CHECK:           %[[RESULT_SHAPE:.*]] = fir.shape %[[SHAPE_VAL]] : (index) -> !fir.shape<1>
 // CHECK:           %[[ELEMENTAL:.*]] = hlfir.elemental %[[RESULT_SHAPE]] unordered : (!fir.shape<1>) -> !hlfir.expr<?xi32> {
 // CHECK:           ^bb0(%[[IDX:.*]]: index):
 // CHECK:             %[[ARRAY_DIM0:.*]]:3 = fir.box_dims %[[ARRAY]], %[[C0]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
@@ -29,6 +28,7 @@ func.func @pack_scalar_true_mask(%arg0: !fir.box<!fir.array<?xi32>>) -> !hlfir.e
 // CHECK:             %[[ELEM:.*]] = fir.load %[[ELEM_ADDR]] : !fir.ref<i32>
 // CHECK:             hlfir.yield_element %[[ELEM]] : i32
 // CHECK:           }
+// CHECK:           hlfir.destroy %[[SHAPE_EXPR]] : !hlfir.expr<1xindex>
 // CHECK-NOT:       fir.alloca
 // CHECK-NOT:       hlfir.pack
 // CHECK-NOT:       hlfir.reshape
@@ -49,14 +49,13 @@ func.func @pack_scalar_true_mask_2d(%arg0: !fir.box<!fir.array<?x?xi32>>) -> !hl
 // CHECK:           %[[DIM1:.*]]:3 = fir.box_dims %[[ARRAY]], %[[C1]] : (!fir.box<!fir.array<?x?xi32>>, index) -> (index, index, index)
 // CHECK:           %[[PROD:.*]] = arith.muli %[[DIM0]]#1, %[[DIM1]]#1 overflow<nuw> : index
 // CHECK:           %[[UNIT_SHAPE:.*]] = fir.shape %[[C1]] : (index) -> !fir.shape<1>
-// CHECK:           %[[SHAPE_EXPR:.*]] = hlfir.elemental %[[UNIT_SHAPE]] unordered : (!fir.shape<1>) -> !hlfir.expr<1xi32> {
+// CHECK:           %[[SHAPE_EXPR:.*]] = hlfir.elemental %[[UNIT_SHAPE]] unordered : (!fir.shape<1>) -> !hlfir.expr<1xindex> {
 // CHECK:           ^bb0(%{{.*}}: index):
-// CHECK:             %[[EXTENT:.*]] = fir.convert %[[PROD]] : (index) -> i32
-// CHECK:             hlfir.yield_element %[[EXTENT]] : i32
+// CHECK:             hlfir.yield_element %[[PROD]] : index
 // CHECK:           }
 // CHECK:           %[[HOISTED_DIM0:.*]]:3 = fir.box_dims %[[ARRAY]], %[[C0]] : (!fir.box<!fir.array<?x?xi32>>, index) -> (index, index, index)
-// CHECK:           %[[SHAPE_VAL:.*]] = hlfir.apply %[[SHAPE_EXPR]], %[[C1]] : (!hlfir.expr<1xi32>, index) -> i32
-// CHECK:           %[[RESULT_SHAPE:.*]] = fir.shape %[[SHAPE_VAL]] : (i32) -> !fir.shape<1>
+// CHECK:           %[[SHAPE_VAL:.*]] = hlfir.apply %[[SHAPE_EXPR]], %[[C1]] : (!hlfir.expr<1xindex>, index) -> index
+// CHECK:           %[[RESULT_SHAPE:.*]] = fir.shape %[[SHAPE_VAL]] : (index) -> !fir.shape<1>
 // CHECK:           %[[ELEMENTAL:.*]] = hlfir.elemental %[[RESULT_SHAPE]] unordered : (!fir.shape<1>) -> !hlfir.expr<?xi32> {
 // CHECK:           ^bb0(%[[IDX:.*]]: index):
 // CHECK:             %[[ZERO_IDX:.*]] = arith.subi %[[IDX]], %[[C1]] overflow<nuw> : index
@@ -74,6 +73,7 @@ func.func @pack_scalar_true_mask_2d(%arg0: !fir.box<!fir.array<?x?xi32>>) -> !hl
 // CHECK:             %[[ELEM:.*]] = fir.load %[[ELEM_ADDR]] : !fir.ref<i32>
 // CHECK:             hlfir.yield_element %[[ELEM]] : i32
 // CHECK:           }
+// CHECK:           hlfir.destroy %[[SHAPE_EXPR]] : !hlfir.expr<1xindex>
 // CHECK-NOT:       fir.alloca
 // CHECK-NOT:       hlfir.pack
 // CHECK-NOT:       hlfir.reshape
