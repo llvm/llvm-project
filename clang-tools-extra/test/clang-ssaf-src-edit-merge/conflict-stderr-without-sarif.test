@@ -8,7 +8,7 @@
 
 # RUN: cp %S/Inputs/single-replacement.tpl.yaml %t.dir/a.yaml
 # RUN: cp %S/Inputs/conflict-text-y.tpl.yaml %t.dir/b.yaml
-# RUN: sed -i'' -e "s|@FOO@|%t.dir/foo.cpp|g" %t.dir/a.yaml %t.dir/b.yaml
+# RUN: sed -i'' -e "s|@FOO@|%/t.dir/foo.cpp|g" %t.dir/a.yaml %t.dir/b.yaml
 
 # RUN: clang-ssaf-src-edit-merge \
 # RUN:     -o %t.dir/merged.yaml %t.dir/a.yaml %t.dir/b.yaml \

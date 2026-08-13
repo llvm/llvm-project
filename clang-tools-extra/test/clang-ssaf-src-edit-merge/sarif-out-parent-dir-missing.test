@@ -6,7 +6,7 @@
 # RUN: mkdir -p %t.dir
 # RUN: printf '%%80s' '' > %t.dir/foo.cpp
 # RUN: cp %S/Inputs/single-replacement.tpl.yaml %t.dir/a.yaml
-# RUN: sed -i'' -e "s|@FOO@|%t.dir/foo.cpp|g" %t.dir/a.yaml
+# RUN: sed -i'' -e "s|@FOO@|%/t.dir/foo.cpp|g" %t.dir/a.yaml
 
 # Note: %t.dir/nonexistent-subdir does NOT exist.
 # RUN: not clang-ssaf-src-edit-merge \

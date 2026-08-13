@@ -9,7 +9,7 @@
 
 # RUN: cp %S/Inputs/non-overlapping-a.tpl.yaml %t.dir/a.yaml
 # RUN: cp %S/Inputs/non-overlapping-b.tpl.yaml %t.dir/b.yaml
-# RUN: sed -i'' -e "s|@FOO@|%t.dir/foo.cpp|g" %t.dir/a.yaml %t.dir/b.yaml
+# RUN: sed -i'' -e "s|@FOO@|%/t.dir/foo.cpp|g" %t.dir/a.yaml %t.dir/b.yaml
 
 # Run the tool twice with different argv orders.
 # RUN: clang-ssaf-src-edit-merge -o %t.dir/merged-ab.yaml %t.dir/a.yaml %t.dir/b.yaml

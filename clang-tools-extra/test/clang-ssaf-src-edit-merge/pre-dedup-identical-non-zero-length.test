@@ -10,7 +10,7 @@
 # Two inputs with byte-identical Length: 7 replacements at offset 10.
 # RUN: cp %S/Inputs/single-non-zero-length-replacement.tpl.yaml %t.dir/a.yaml
 # RUN: cp %S/Inputs/single-non-zero-length-replacement.tpl.yaml %t.dir/b.yaml
-# RUN: sed -i'' -e "s|@FOO@|%t.dir/foo.cpp|g" %t.dir/a.yaml %t.dir/b.yaml
+# RUN: sed -i'' -e "s|@FOO@|%/t.dir/foo.cpp|g" %t.dir/a.yaml %t.dir/b.yaml
 
 # RUN: clang-ssaf-src-edit-merge -o %t.dir/merged.yaml %t.dir/a.yaml %t.dir/b.yaml \
 # RUN:   2> %t.dir/stderr.txt

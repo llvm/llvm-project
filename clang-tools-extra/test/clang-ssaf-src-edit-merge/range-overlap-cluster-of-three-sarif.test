@@ -18,7 +18,7 @@
 # RUN: printf '%%80s' '' > %t.dir/foo.cpp
 
 # RUN: cp %S/Inputs/range-overlap-cluster-of-three.tpl.yaml %t.dir/a.yaml
-# RUN: sed -i'' -e "s|@FOO@|%t.dir/foo.cpp|g" %t.dir/a.yaml
+# RUN: sed -i'' -e "s|@FOO@|%/t.dir/foo.cpp|g" %t.dir/a.yaml
 
 # RUN: clang-ssaf-src-edit-merge \
 # RUN:     -o %t.dir/merged.yaml \
