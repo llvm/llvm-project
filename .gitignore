@@ -73,7 +73,6 @@ AGENTS.md
 # Directories to ignore (do not add trailing '/'s, they skip symlinks).
 #==============================================================================#
 # VS2017 and VSCode config files.
-.vscode
 .vs
 #zed config files
 .zed
@@ -90,3 +89,7 @@ pythonenv*
 /clang/utils/analyzer/projects/*/RefScanBuildResults
 # automodapi puts generated documentation files here.
 /lldb/docs/python_api/
+temp_auto_push.bat
+temp_interactive_push.bat
+branch_structure.json
+.gitignore
