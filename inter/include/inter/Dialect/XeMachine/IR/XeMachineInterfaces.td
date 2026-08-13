@@ -14,12 +14,27 @@ def XeMachine_SWSBInfoOpInterface : OpInterface<"SWSBInfoOpInterface"> {
   }];
   let cppNamespace = "::inter::xemachine";
   let methods = [
-    InterfaceMethod<"Dependency pipe class; 0 = untracked.",
-                    "unsigned", "getSWSBPipeClass", (ins), /*methodBody=*/"",
-                    /*defaultImplementation=*/"return 0;">,
-    InterfaceMethod<"True for send-family ops (async completion).",
-                    "bool", "isSendMessage", (ins), "",
-                    "return false;">,
+    InterfaceMethod<"Returns the final SWSB annotation.",
+                    "::inter::xemachine::FinalSWSB", "getFinalSWSB", (ins)>,
+    InterfaceMethod<"Sets the final SWSB annotation.", "void",
+                    "setFinalSWSB",
+                    (ins "const ::inter::xemachine::FinalSWSB &":$swsb)>,
+  ];
+}
+
+def XeMachine_AsyncScoreboardOpInterface
+    : OpInterface<"AsyncScoreboardOpInterface"> {
+  let description = [{
+    Common asynchronous-scoreboard semantics for send messages and systolic
+    instructions. Memory ordering remains represented by SSA memory tokens.
+  }];
+  let cppNamespace = "::inter::xemachine";
+  let methods = [
+    InterfaceMethod<"Asynchronous issue kind.",
+                    "::inter::xemachine::AsyncScoreboardKind",
+                    "getAsyncScoreboardKind", (ins)>,
+    InterfaceMethod<"Whether the instruction completes by writing a register.",
+                    "bool", "hasAsyncDestination", (ins)>,
   ];
 }
 
@@ -66,7 +81,11 @@ def XeMachine_InstructionIssueOpInterface : OpInterface<"InstructionIssueOpInter
     InterfaceMethod<"Target-independent instruction issue class.",
                     "::inter::xemachine::InstructionIssueClass",
                     "getIssueClass", (ins), "",
-                    "return ::inter::xemachine::InstructionIssueClass::none;">,
+                     "return ::inter::xemachine::InstructionIssueClass::none;">,
+    InterfaceMethod<"Concrete encoded machine instruction kind.",
+                    "::inter::xemachine::MachineInstructionKind",
+                    "getInstructionKind", (ins), "",
+                    "return ::inter::xemachine::MachineInstructionKind::none;">,
   ];
 }
 

@@ -27,11 +27,31 @@ enum class InstructionIssueClass : uint8_t {
   systolic,
 };
 
+enum class MachineInstructionKind : uint8_t {
+  none,
+  mov,
+  add,
+  add3,
+  shl,
+  shr,
+  and_,
+  or_,
+  mul,
+  cmp,
+  send,
+  sync,
+  dpas,
+  branch,
+};
+
+enum class AsyncScoreboardKind : uint8_t { send, dpas };
+
 enum class Xe2IssuePipe : uint8_t { none, integer, floating, send, systolic };
 
 enum class Xe2DependencyKind : uint8_t { raw, war, waw, order };
 
 struct Xe2InstructionTiming {
+  MachineInstructionKind instructionKind = MachineInstructionKind::none;
   InstructionIssueClass issueClass = InstructionIssueClass::none;
   Xe2IssuePipe pipe = Xe2IssuePipe::none;
   uint16_t completionLatency = 0;

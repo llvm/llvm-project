@@ -2739,7 +2739,7 @@ private:
     SendOp send = SendOp::create(
         *builder, *location, reg(resultDwords), MemTokenType::get(context),
         SendFn::ugm, 0, descriptor, 0, 1, true, false, *payload, selectedData,
-        Value(), *selectedDependency, IntegerAttr());
+        Value(), *selectedDependency);
     if (valueResult)
       values[valueResult] = send.getDst();
     values[tokenResult] = send.getToken();

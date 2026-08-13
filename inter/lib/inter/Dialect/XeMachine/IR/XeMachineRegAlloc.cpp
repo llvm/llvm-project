@@ -595,8 +595,8 @@ static SendOp createScratchSend(OpBuilder &builder, Location location,
       builder, location, destinationType, MemTokenType::get(context),
       SendFn::ugm, /*sfid=*/0, descriptor,
       /*exdesc=*/static_cast<int32_t>(kScratchExdescBias), /*execSize=*/1,
-      /*noMask=*/true, /*eot=*/false, address, data, surfaceOffset, dependency,
-      IntegerAttr());
+      /*noMask=*/true, /*eot=*/false, address, data, surfaceOffset,
+      dependency);
   send->setAttr(kScratchAccessAttrName, UnitAttr::get(context));
   return send;
 }

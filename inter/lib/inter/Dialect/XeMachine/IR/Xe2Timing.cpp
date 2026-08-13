@@ -167,6 +167,7 @@ inter::xemachine::getXe2InstructionTiming(Operation *operation) {
            failure();
 
   Xe2InstructionTiming timing;
+  timing.instructionKind = issue.getInstructionKind();
   timing.issueClass = issue.getIssueClass();
   if (timing.issueClass == InstructionIssueClass::none)
     return timing;

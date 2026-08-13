@@ -9,6 +9,8 @@ from lit.llvm.subst import ToolSubst
 config.name = "inter-integration" if config.inter_test_is_integration else "inter"
 config.test_format = lit.formats.ShTest(False)
 config.suffixes = [".ll", ".mlir"]
+if config.inter_test_is_integration:
+    config.suffixes.append(".cl")
 config.excludes = ["Inputs", "lit.cfg.py", "lit.site.cfg.py"]
 if not config.inter_test_is_integration:
     config.excludes.append("Integration")
@@ -66,6 +68,7 @@ if config.inter_test_is_integration:
                 command=config.inter_matmul_runner,
                 unresolved="fatal",
             ),
+            ToolSubst("ocloc", command=config.inter_ocloc, unresolved="fatal"),
         ]
     )
 

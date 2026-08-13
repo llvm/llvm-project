@@ -1,4 +1,4 @@
-// RUN: inter-translate --xemachine-to-ged %s -o %t
+// RUN: inter-opt %s --inter-insert-sync | inter-translate --xemachine-to-ged - -o %t
 // RUN: inter-ged-dump %t | FileCheck %s
 
 func.func @k() {

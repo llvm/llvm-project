@@ -5,7 +5,7 @@
 // A load destination must complete before an ALU consumer reads it.
 // CHECK-LABEL: func.func @load_consumer
 // CHECK: xemachine.load_a64
-// CHECK-NEXT: xemachine.sync allwr
+// CHECK-NEXT: xemachine.sync nop {{.*}}swsbTokenMode = 3
 // CHECK-NEXT: xemachine.add
 func.func @load_consumer() {
   %root = xemachine.token
@@ -22,7 +22,7 @@ func.func @load_consumer() {
 // dependent message issues.
 // CHECK-LABEL: func.func @store_order
 // CHECK: [[STORE:%.*]] = xemachine.store_a64
-// CHECK-NEXT: xemachine.sync allrd
+// CHECK-NEXT: xemachine.sync nop {{.*}}swsbTokenMode = 2
 // CHECK-NEXT: {{%.*}}, {{%.*}} = xemachine.load_a64 {{.*}} dep [[STORE]]
 func.func @store_order() {
   %root = xemachine.token
@@ -39,7 +39,7 @@ func.func @store_order() {
 // Reusing a physical payload register waits for outstanding send source reads.
 // CHECK-LABEL: func.func @payload_reuse
 // CHECK: xemachine.store_a64
-// CHECK: xemachine.sync allrd
+// CHECK: xemachine.sync nop {{.*}}swsbTokenMode = 2
 // CHECK-NEXT: xemachine.mov
 func.func @payload_reuse() {
   %root = xemachine.token
@@ -57,7 +57,7 @@ func.func @payload_reuse() {
 // A new physical definition cannot clobber an outstanding destination.
 // CHECK-LABEL: func.func @destination_reuse
 // CHECK: xemachine.load_a64
-// CHECK: xemachine.sync allwr
+// CHECK: xemachine.sync nop {{.*}}swsbTokenMode = 3
 // CHECK-NEXT: xemachine.mov
 func.func @destination_reuse() {
   %root = xemachine.token
@@ -73,7 +73,7 @@ func.func @destination_reuse() {
 // Exact SSA consumers still classify virtual message destinations as writes.
 // CHECK-LABEL: func.func @virtual_destination
 // CHECK: xemachine.load_a64
-// CHECK-NEXT: xemachine.sync allwr
+// CHECK-NEXT: xemachine.sync nop {{.*}}swsbTokenMode = 3
 // CHECK-NEXT: xemachine.add
 func.func @virtual_destination() {
   %root = xemachine.token
@@ -109,7 +109,7 @@ func.func @issue_only() {
 // CHECK-LABEL: func.func @bar_preserves_scoreboard
 // CHECK: {{%.*}}, [[LOAD:%.*]] = xemachine.load_a64
 // CHECK-NEXT: [[BAR:%.*]] = xemachine.sync bar dep [[LOAD]]
-// CHECK-NEXT: xemachine.sync allwr
+// CHECK-NEXT: xemachine.sync nop {{.*}}swsbTokenMode = 3
 // CHECK-NEXT: xemachine.add
 func.func @bar_preserves_scoreboard() {
   %root = xemachine.token
@@ -145,8 +145,8 @@ func.func @bar_retires_reads() {
 // CHECK: {{%.*}}, [[LOAD:%.*]] = xemachine.load_a64
 // CHECK: [[STORE:%.*]] = xemachine.store_a64
 // CHECK: [[JOIN:%.*]] = xemachine.token_join [[LOAD]], [[STORE]]
-// CHECK-NEXT: [[READ:%.*]] = xemachine.sync allrd
-// CHECK-NEXT: [[WRITE:%.*]] = xemachine.sync allwr dep [[READ]]
+// CHECK-NEXT: {{%.*}} = xemachine.sync nop {{.*}}swsbTokenMode = 3
+// CHECK-NEXT: {{%.*}} = xemachine.sync nop {{.*}}swsbTokenMode = 2
 // CHECK-NEXT: xemachine.eot {{.*}} dep [[JOIN]]
 func.func @joined_eot() {
   %root = xemachine.token
@@ -168,10 +168,10 @@ func.func @joined_eot() {
 // CHECK: [[ROOT:%.*]] = xemachine.token
 // CHECK: [[IF:%.*]] = xemachine.exec_if
 // CHECK: [[STORE:%.*]] = xemachine.store_a64 {{.*}} dep [[ROOT]]
+// CHECK: xemachine.sync nop {{.*}}swsbTokenMode = 2
 // CHECK: xemachine.yield [[STORE]]
 // CHECK: xemachine.yield [[ROOT]]
-// CHECK: xemachine.sync allrd
-// CHECK-NEXT: xemachine.load_a64 {{.*}} dep [[IF]]
+// CHECK: xemachine.load_a64 {{.*}} dep [[IF]]
 func.func @branch_join(%flag: !xemachine.arf<f, 2, 0>) {
   %root = xemachine.token
   %address = xemachine.archreg 20 : !xemachine.reg<64, 20>
@@ -194,9 +194,9 @@ func.func @branch_join(%flag: !xemachine.arf<f, 2, 0>) {
 // CHECK-LABEL: func.func @branch_data_result
 // CHECK: [[RESULTS:%.*]]:2 = xemachine.uniform_if
 // CHECK: {{%.*}}, {{%.*}} = xemachine.load_a64
+// CHECK: xemachine.sync nop {{.*}}swsbTokenMode = 3
 // CHECK-NEXT: xemachine.yield
 // CHECK: } -> !xemachine.reg<32, 4>, !xemachine.mem.token
-// CHECK-NEXT: xemachine.sync allwr
 // CHECK-NEXT: xemachine.add [[RESULTS]]#0, [[RESULTS]]#0
 func.func @branch_data_result(%flag: !xemachine.arf<f, 2, 0>) {
   %root = xemachine.token
@@ -225,9 +225,9 @@ func.func @branch_data_result(%flag: !xemachine.arf<f, 2, 0>) {
 // CHECK-LABEL: func.func @branch_without_else
 // CHECK: xemachine.store_a64
 // CHECK: xemachine.exec_if
-// CHECK: xemachine.sync allrd
+// CHECK: xemachine.sync nop {{.*}}swsbTokenMode = 2
 // CHECK: xemachine.yield
-// CHECK: xemachine.sync allrd
+// CHECK: xemachine.sync nop {{.*}}swsbTokenMode = 2
 func.func @branch_without_else(%flag: !xemachine.arf<f, 2, 0>) {
   %root = xemachine.token
   %address = xemachine.archreg 20 : !xemachine.reg<64, 20>
@@ -251,11 +251,11 @@ func.func @branch_without_else(%flag: !xemachine.arf<f, 2, 0>) {
 // CHECK-LABEL: func.func @cross_arm_hazards
 // CHECK: xemachine.load_a64
 // CHECK-NEXT: xemachine.store_a64
+// CHECK: xemachine.sync nop {{.*}}swsbTokenMode = 3
+// CHECK-NEXT: xemachine.sync nop {{.*}}swsbTokenMode = 2
 // CHECK-NEXT: xemachine.yield
 // CHECK-NEXT: } otherwise {
-// CHECK-NEXT: xemachine.sync allwr
 // CHECK-NEXT: xemachine.mov {{.*}}noMask{{.*}} -> !xemachine.reg<16, 4>
-// CHECK-NEXT: xemachine.sync allrd
 // CHECK-NEXT: xemachine.mov {{.*}}noMask{{.*}} -> !xemachine.reg<16, 6>
 func.func @cross_arm_hazards(%flag: !xemachine.arf<f, 2, 0>) {
   %root = xemachine.token
@@ -286,9 +286,7 @@ func.func @cross_arm_hazards(%flag: !xemachine.arf<f, 2, 0>) {
 // CHECK: [[ZERO:%.*]] = xemachine.imm 0
 // CHECK: {{%.*}}:2 = xemachine.uniform_if
 // CHECK: } -> !xemachine.mem.token, !xemachine.mem.token
-// CHECK-NEXT: xemachine.sync allwr
 // CHECK-NEXT: xemachine.mov [[ZERO]] {{.*}} -> !xemachine.reg<16, 4>
-// CHECK-NEXT: xemachine.sync allrd
 // CHECK-NEXT: xemachine.mov [[ZERO]] {{.*}} -> !xemachine.reg<64, 20>
 func.func @multiple_branch_tokens(%flag: !xemachine.arf<f, 2, 0>) {
   %root = xemachine.token
@@ -320,11 +318,10 @@ func.func @multiple_branch_tokens(%flag: !xemachine.arf<f, 2, 0>) {
 // CHECK-LABEL: func.func @loop_carried_token
 // CHECK: [[LOOP:%.*]] = xemachine.uniform_loop
 // CHECK: ^bb0([[ITER:%.*]]: !xemachine.mem.token):
-// CHECK-NEXT: xemachine.sync allrd
 // CHECK-NEXT: [[STORE:%.*]] = xemachine.store_a64 {{.*}} dep [[ITER]]
+// CHECK-NEXT: xemachine.sync nop {{.*}}swsbTokenMode = 2
 // CHECK-NEXT: xemachine.continue_if {{.*}}([[STORE]] : !xemachine.mem.token)
-// CHECK: xemachine.sync allrd
-// CHECK-NEXT: xemachine.load_a64 {{.*}} dep [[LOOP]]
+// CHECK: xemachine.load_a64 {{.*}} dep [[LOOP]]
 func.func @loop_carried_token(%flag: !xemachine.arf<f, 2, 0>) {
   %root = xemachine.token
   %address = xemachine.archreg 20 : !xemachine.reg<64, 20>
@@ -343,9 +340,10 @@ func.func @loop_carried_token(%flag: !xemachine.arf<f, 2, 0>) {
   return
 }
 
-// Store-only loop backedges do not require destination completion.
+// Store-only loop backedges retire the source phase before the next issue.
 // CHECK-LABEL: func.func @loop_store_only
 // CHECK: xemachine.store_a64
+// CHECK-NEXT: xemachine.sync nop {{.*}}swsbTokenMode = 2
 // CHECK-NEXT: xemachine.continue_if
 func.func @loop_store_only(%flag: !xemachine.arf<f, 2, 0>) {
   %root = xemachine.token
@@ -365,11 +363,9 @@ func.func @loop_store_only(%flag: !xemachine.arf<f, 2, 0>) {
 // CHECK-LABEL: func.func @nested_loop_branch
 // CHECK: [[LOOP:%.*]] = xemachine.uniform_loop
 // CHECK: [[BRANCH:%.*]] = xemachine.uniform_if
-// CHECK: xemachine.sync allrd
-// CHECK-NEXT: xemachine.store_a64
+// CHECK: xemachine.sync nop {{.*}}swsbTokenMode = 2
 // CHECK: xemachine.continue_if
-// CHECK: xemachine.sync allrd
-// CHECK-NEXT: xemachine.eot {{.*}} dep [[LOOP]]
+// CHECK: xemachine.eot {{.*}} dep [[LOOP]]
 func.func @nested_loop_branch(%flag: !xemachine.arf<f, 2, 0>) {
   %root = xemachine.token
   %address = xemachine.archreg 20 : !xemachine.reg<64, 20>
@@ -398,7 +394,7 @@ func.func @nested_loop_branch(%flag: !xemachine.arf<f, 2, 0>) {
 // CHECK: {{%.*}}, {{%.*}} = xemachine.load_a64
 // CHECK-NEXT: [[LOOP:%.*]] = xemachine.uniform_loop
 // CHECK: ^bb0([[ITER:%.*]]: !xemachine.reg<32, 4>):
-// CHECK-NEXT: xemachine.sync allwr
+// CHECK-NEXT: xemachine.sync nop {{.*}}swsbTokenMode = 3
 // CHECK-NEXT: xemachine.add [[ITER]], [[ITER]]
 func.func @loop_forwarded_init(%flag: !xemachine.arf<f, 2, 0>) {
   %root = xemachine.token
@@ -420,11 +416,10 @@ func.func @loop_forwarded_init(%flag: !xemachine.arf<f, 2, 0>) {
 // The analysis is driven by RegionBranchOpInterface, not XeMachine op names.
 // CHECK-LABEL: func.func @generic_region_branch_loop
 // CHECK: [[LOOP:%.*]] = scf.for
-// CHECK: xemachine.sync allrd
-// CHECK-NEXT: [[STORE:%.*]] = xemachine.store_a64
+// CHECK: [[STORE:%.*]] = xemachine.store_a64
+// CHECK-NEXT: xemachine.sync nop {{.*}}swsbTokenMode = 2
 // CHECK-NEXT: scf.yield [[STORE]]
-// CHECK: xemachine.sync allrd
-// CHECK-NEXT: xemachine.load_a64 {{.*}} dep [[LOOP]]
+// CHECK: xemachine.load_a64 {{.*}} dep [[LOOP]]
 func.func @generic_region_branch_loop() {
   %root = xemachine.token
   %address = xemachine.archreg 20 : !xemachine.reg<64, 20>
@@ -452,8 +447,7 @@ func.func @generic_region_branch_loop() {
 // CHECK: {{%.*}}, {{%.*}} = xemachine.load_a64 {{.*}} -> (!xemachine.reg<32, 8>, !xemachine.mem.token)
 // CHECK: xemachine.yield
 // CHECK-NEXT: }
-// CHECK-NEXT: xemachine.sync allwr
-// CHECK-NEXT: xemachine.mov {{.*}} -> !xemachine.reg<16, 8>
+// CHECK: xemachine.mov {{.*}} -> !xemachine.reg<16, 8>
 func.func @nested_replay_after_fixpoint(%flag: !xemachine.arf<f, 2, 0>) {
   %root = xemachine.token
   %address = xemachine.archreg 20 : !xemachine.reg<64, 20>
@@ -490,12 +484,10 @@ func.func @nested_replay_after_fixpoint(%flag: !xemachine.arf<f, 2, 0>) {
 // even without an SSA token carry.
 // CHECK-LABEL: func.func @loop_physical_waw
 // CHECK: xemachine.uniform_loop
-// CHECK-NEXT: xemachine.sync allwr
 // CHECK-NEXT: xemachine.load_a64
-// CHECK: xemachine.sync allwr
+// CHECK: xemachine.sync nop {{.*}}swsbTokenMode = 3
 // CHECK-NEXT: xemachine.continue_if
 // CHECK: }
-// CHECK: xemachine.sync allwr
 // CHECK-NEXT: xemachine.mov
 func.func @loop_physical_waw(%flag: !xemachine.arf<f, 2, 0>) {
   %root = xemachine.token

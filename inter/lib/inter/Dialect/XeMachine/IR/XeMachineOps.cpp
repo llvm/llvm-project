@@ -18,6 +18,19 @@ using namespace inter::xemachine;
 #define DEFINE_ALU_ELEMENT_TYPE(Op)                                        \
   Type Op::getInstructionElementType() { return getElemType(); }
 
+#define DEFINE_SWSB_INTERFACE(Op)                                          \
+  FinalSWSB Op::getFinalSWSB() {                                           \
+    return {getSwsbPipe(), static_cast<int32_t>(getSwsbDistance()),         \
+            static_cast<int32_t>(getSwsbToken()),                          \
+            getSwsbTokenMode()};                                           \
+  }                                                                        \
+  void Op::setFinalSWSB(const FinalSWSB &swsb) {                           \
+    setSwsbPipe(swsb.pipe);                                                \
+    setSwsbDistance(swsb.distance);                                        \
+    setSwsbToken(swsb.token);                                              \
+    setSwsbTokenMode(swsb.tokenMode);                                      \
+  }
+
 #define DEFINE_UNARY_ALU_INTERFACE(Op)                                     \
   DEFINE_ALU_ELEMENT_TYPE(Op)                                              \
   RegionAttr Op::getSourceRegion(unsigned index) {                         \
@@ -60,6 +73,56 @@ DEFINE_BINARY_ALU_INTERFACE(OrOp)
 DEFINE_BINARY_ALU_INTERFACE(MulOp)
 DEFINE_BINARY_ALU_INTERFACE(CmpOp)
 
+DEFINE_SWSB_INTERFACE(MovOp)
+DEFINE_SWSB_INTERFACE(AddOp)
+DEFINE_SWSB_INTERFACE(SubOp)
+DEFINE_SWSB_INTERFACE(ShlOp)
+DEFINE_SWSB_INTERFACE(ShrOp)
+DEFINE_SWSB_INTERFACE(AndOp)
+DEFINE_SWSB_INTERFACE(OrOp)
+DEFINE_SWSB_INTERFACE(MulOp)
+DEFINE_SWSB_INTERFACE(CmpOp)
+DEFINE_SWSB_INTERFACE(SendOp)
+DEFINE_SWSB_INTERFACE(SyncOp)
+DEFINE_SWSB_INTERFACE(LoadA64Op)
+DEFINE_SWSB_INTERFACE(StoreA64Op)
+DEFINE_SWSB_INTERFACE(LoadSLMOp)
+DEFINE_SWSB_INTERFACE(StoreSLMOp)
+DEFINE_SWSB_INTERFACE(AtomicIAddA64Op)
+DEFINE_SWSB_INTERFACE(LoadBlockA32Op)
+DEFINE_SWSB_INTERFACE(FenceSLMOp)
+DEFINE_SWSB_INTERFACE(FenceAwaitOp)
+DEFINE_SWSB_INTERFACE(BarrierSignalOp)
+DEFINE_SWSB_INTERFACE(EotOp)
+DEFINE_SWSB_INTERFACE(DpasOp)
+
+#define DEFINE_SEND_SCOREBOARD_INTERFACE(Op)                               \
+  AsyncScoreboardKind Op::getAsyncScoreboardKind() {                       \
+    return AsyncScoreboardKind::send;                                      \
+  }                                                                        \
+  bool Op::hasAsyncDestination() {                                         \
+    return llvm::any_of((*this)->getResultTypes(), [](Type type) {         \
+      RegType reg = dyn_cast<RegType>(type);                               \
+      return reg && reg.getWidthDwords() != 0;                             \
+    });                                                                    \
+  }
+
+DEFINE_SEND_SCOREBOARD_INTERFACE(SendOp)
+DEFINE_SEND_SCOREBOARD_INTERFACE(LoadA64Op)
+DEFINE_SEND_SCOREBOARD_INTERFACE(StoreA64Op)
+DEFINE_SEND_SCOREBOARD_INTERFACE(LoadSLMOp)
+DEFINE_SEND_SCOREBOARD_INTERFACE(StoreSLMOp)
+DEFINE_SEND_SCOREBOARD_INTERFACE(AtomicIAddA64Op)
+DEFINE_SEND_SCOREBOARD_INTERFACE(LoadBlockA32Op)
+DEFINE_SEND_SCOREBOARD_INTERFACE(FenceSLMOp)
+DEFINE_SEND_SCOREBOARD_INTERFACE(BarrierSignalOp)
+DEFINE_SEND_SCOREBOARD_INTERFACE(EotOp)
+
+AsyncScoreboardKind DpasOp::getAsyncScoreboardKind() {
+  return AsyncScoreboardKind::dpas;
+}
+bool DpasOp::hasAsyncDestination() { return true; }
+
 DEFINE_ALU_ELEMENT_TYPE(Add3Op)
 RegionAttr Add3Op::getSourceRegion(unsigned index) {
   if (index == 0)
@@ -83,10 +146,13 @@ std::optional<Type> Add3Op::getExplicitSourceElementType(unsigned index) {
     return getSrc1Type();
   return index == 2 ? getSrc2Type() : std::nullopt;
 }
+DEFINE_SWSB_INTERFACE(Add3Op)
 
 #undef DEFINE_UNARY_ALU_INTERFACE
 #undef DEFINE_BINARY_ALU_INTERFACE
 #undef DEFINE_ALU_ELEMENT_TYPE
+#undef DEFINE_SWSB_INTERFACE
+#undef DEFINE_SEND_SCOREBOARD_INTERFACE
 
 FailureOr<KernelResourceUsage>
 inter::xemachine::analyzeKernelResources(func::FuncOp function,

@@ -1,4 +1,4 @@
-// RUN: inter-translate --xemachine-to-ged %s -o %t
+// RUN: inter-opt %s --inter-insert-sync | inter-translate --xemachine-to-ged - -o %t
 // RUN: inter-ged-dump %t | FileCheck %s
 
 func.func @k() attributes {xemachine.has_dpas = true} {
@@ -9,7 +9,8 @@ func.func @k() attributes {xemachine.has_dpas = true} {
   %result = xemachine.dpas %a, %b, %acc {aPrecision = 0 : i32, bPrecision = 0 : i32, elemType = f32, repeatCount = 8 : i32, systolicDepth = 8 : i32} : (!xemachine.reg<64, 20>, !xemachine.reg<128, 24>, !xemachine.reg<128, 32>) -> !xemachine.reg<128, 32>
   // CHECK-NEXT: pc=16 opcode=dpas exec=16 swsb=0xc0
   %chained = xemachine.dpas %a, %b, %result {aPrecision = 0 : i32, bPrecision = 0 : i32, elemType = f32, repeatCount = 8 : i32, systolicDepth = 8 : i32} : (!xemachine.reg<64, 20>, !xemachine.reg<128, 24>, !xemachine.reg<128, 32>) -> !xemachine.reg<128, 32>
-  // CHECK-NEXT: pc=32 opcode=mov exec=32 swsb=0x80
+  // CHECK-NEXT: pc=32 opcode=sync exec=1 swsb=0x80 function=nop
+  // CHECK-NEXT: pc=48 opcode=mov exec=32 swsb=0x0
   %copy = xemachine.mov %chained {execSize = 32 : i32} : (!xemachine.reg<128, 32>, i32) -> !xemachine.reg<32, 40>
   return
 }

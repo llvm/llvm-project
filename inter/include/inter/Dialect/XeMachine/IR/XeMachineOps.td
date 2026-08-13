@@ -10,9 +10,9 @@ include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 class XeMachine_Op<string mnemonic, list<Trait> traits = [],
-                   string issueClass = "none"> :
+                   string issueClass = "none",
+                   string instructionKind = "none"> :
     Op<XeMachineDialect, mnemonic, traits # [
-      DeclareOpInterfaceMethods<XeMachine_SWSBInfoOpInterface>,
       DeclareOpInterfaceMethods<XeMachine_RegionLegalityOpInterface>,
       DeclareOpInterfaceMethods<XeMachine_InstructionIssueOpInterface>,
       DeclareOpInterfaceMethods<XeMachine_FixedPhysicalRegisterDefsOpInterface>,
@@ -22,6 +22,9 @@ class XeMachine_Op<string mnemonic, list<Trait> traits = [],
   let extraClassDeclaration = [{
     ::inter::xemachine::InstructionIssueClass getIssueClass() {
       return ::inter::xemachine::InstructionIssueClass::}] # issueClass # [{;
+    }
+    ::inter::xemachine::MachineInstructionKind getInstructionKind() {
+      return ::inter::xemachine::MachineInstructionKind::}] # instructionKind # [{;
     }
   }];
 }
@@ -54,15 +57,26 @@ def XeMachine_ImmOp : XeMachine_Op<"imm", [NoMemoryEffect,
 // Absent means canonical: dst <1>, src <1;1,0>. Region legality is checked
 // by a pass via RegionLegalityOpInterface, not by op verifiers.
 class XeMachine_ALUOp<string mnemonic, list<Trait> traits = [],
-                      string issueClass = "moveOrLogic"> :
+                       string issueClass = "moveOrLogic",
+                       string instructionKind = "mov"> :
     XeMachine_Op<mnemonic, traits # [NoMemoryEffect,
-      DeclareOpInterfaceMethods<XeMachine_ALUOpInterface>], issueClass> {
+      DeclareOpInterfaceMethods<XeMachine_ALUOpInterface>,
+      DeclareOpInterfaceMethods<XeMachine_SWSBInfoOpInterface>], issueClass,
+      instructionKind> {
   let cppNamespace = "::inter::xemachine";
 }
 
-def XeMachine_MovOp : XeMachine_ALUOp<"mov"> {
+class XeMachine_SWSBFields {
+  dag swsbFields = (ins
+      DefaultValuedAttr<XeMachine_SWSBDistancePipe, "SWSBDistancePipe::none">:$swsbPipe,
+      DefaultValuedAttr<I32Attr, "-1">:$swsbDistance,
+      DefaultValuedAttr<I32Attr, "-1">:$swsbToken,
+      DefaultValuedAttr<XeMachine_SWSBTokenMode, "SWSBTokenMode::none">:$swsbTokenMode);
+}
+
+def XeMachine_MovOp : XeMachine_ALUOp<"mov">, XeMachine_SWSBFields {
   let summary = "register/immediate move";
-  let arguments = (ins TypeAttr:$elemType,
+  let arguments = !con((ins TypeAttr:$elemType,
                        DefaultValuedAttr<I32Attr, "16">:$execSize,
                        OptionalAttr<XeMachine_DstRegionAttr>:$dstRegion,
                        OptionalAttr<XeMachine_RegionAttr>:$src0Region,
@@ -71,15 +85,17 @@ def XeMachine_MovOp : XeMachine_ALUOp<"mov"> {
                         OptionalAttr<TypeAttr>:$src0Type,
                         UnitAttr:$noMask,
                        DefaultValuedAttr<I32Attr, "0">:$maskOffset,
-                       XeMachine_RegOrImm:$src);
+                        XeMachine_RegOrImm:$src), swsbFields);
   let results = (outs XeMachine_RegOrARF:$dst);
   let assemblyFormat =
       "$src attr-dict `:` `(` qualified(type($src)) `,` $elemType `)` `->` qualified(type($dst))";
 }
 
-class XeMachine_BinOp<string mnemonic, string issueClass = "arithmetic"> :
-    XeMachine_ALUOp<mnemonic, [], issueClass> {
-  let arguments = (ins TypeAttr:$elemType,
+class XeMachine_BinOp<string mnemonic, string instructionKind,
+                      string issueClass = "arithmetic"> :
+    XeMachine_ALUOp<mnemonic, [], issueClass, instructionKind>,
+    XeMachine_SWSBFields {
+  let arguments = !con((ins TypeAttr:$elemType,
                        DefaultValuedAttr<I32Attr, "16">:$execSize,
                         OptionalAttr<XeMachine_DstRegionAttr>:$dstRegion,
                         OptionalAttr<XeMachine_RegionAttr>:$src0Region,
@@ -91,31 +107,34 @@ class XeMachine_BinOp<string mnemonic, string issueClass = "arithmetic"> :
                        OptionalAttr<TypeAttr>:$src1Type,
                        UnitAttr:$noMask,
                        DefaultValuedAttr<I32Attr, "0">:$maskOffset,
-                       XeMachine_RegOrImm:$src0, XeMachine_RegOrImm:$src1);
+                       XeMachine_RegOrImm:$src0, XeMachine_RegOrImm:$src1), swsbFields);
   let results = (outs XeMachine_RegOrARF:$dst);
   let assemblyFormat =
       "$src0 `,` $src1 attr-dict `:` `(` qualified(type($src0)) `,` qualified(type($src1)) `,` $elemType `)` `->` qualified(type($dst))";
 }
 
-def XeMachine_AddOp : XeMachine_BinOp<"add"> { let summary = "add"; }
-def XeMachine_ShlOp : XeMachine_BinOp<"shl"> { let summary = "shift left"; }
-def XeMachine_ShrOp : XeMachine_BinOp<"shr"> {
+def XeMachine_AddOp : XeMachine_BinOp<"add", "add"> { let summary = "add"; }
+def XeMachine_ShlOp : XeMachine_BinOp<"shl", "shl"> { let summary = "shift left"; }
+def XeMachine_ShrOp : XeMachine_BinOp<"shr", "shr"> {
   let summary = "logical shift right";
 }
-def XeMachine_AndOp : XeMachine_BinOp<"and", "moveOrLogic"> {
+def XeMachine_AndOp : XeMachine_BinOp<"and", "and_", "moveOrLogic"> {
   let summary = "bitwise and";
 }
-def XeMachine_OrOp : XeMachine_BinOp<"or", "moveOrLogic"> {
+def XeMachine_OrOp : XeMachine_BinOp<"or", "or_", "moveOrLogic"> {
   let summary = "bitwise or";
 }
 
 // EU sub is add with a negated first source; the emitter prints the add
 // mnemonic with a negated src0.
-def XeMachine_SubOp : XeMachine_BinOp<"sub"> { let summary = "sub: add(-s0, s1)"; }
+def XeMachine_SubOp : XeMachine_BinOp<"sub", "add"> {
+  let summary = "sub: add(-s0, s1)";
+}
 
-def XeMachine_Add3Op : XeMachine_ALUOp<"add3", [], "arithmetic"> {
+def XeMachine_Add3Op : XeMachine_ALUOp<"add3", [], "arithmetic", "add3">,
+    XeMachine_SWSBFields {
   let summary = "three-input add";
-  let arguments = (ins TypeAttr:$elemType,
+  let arguments = !con((ins TypeAttr:$elemType,
                        DefaultValuedAttr<I32Attr, "16">:$execSize,
                        OptionalAttr<XeMachine_DstRegionAttr>:$dstRegion,
                        OptionalAttr<XeMachine_RegionAttr>:$src0Region,
@@ -131,7 +150,7 @@ def XeMachine_Add3Op : XeMachine_ALUOp<"add3", [], "arithmetic"> {
                        UnitAttr:$noMask,
                        DefaultValuedAttr<I32Attr, "0">:$maskOffset,
                        XeMachine_RegOrImm:$src0, XeMachine_RegOrImm:$src1,
-                       XeMachine_RegOrImm:$src2);
+                       XeMachine_RegOrImm:$src2), swsbFields);
   let results = (outs XeMachine_RegType:$dst);
   let assemblyFormat =
       "$src0 `,` $src1 `,` $src2 attr-dict `:` `(` qualified(type($src0)) `,` qualified(type($src1)) `,` qualified(type($src2)) `,` $elemType `)` `->` qualified(type($dst))";
@@ -141,9 +160,12 @@ def XeMachine_Add3Op : XeMachine_ALUOp<"add3", [], "arithmetic"> {
 // (stores, EOT). Descriptor immediates stay raw until the send-descriptor
 // subsystem lands.
 def XeMachine_SendOp : XeMachine_Op<"send",
-    [MemoryEffects<[MemRead, MemWrite]>, AttrSizedOperandSegments], "send"> {
+    [MemoryEffects<[MemRead, MemWrite]>, AttrSizedOperandSegments,
+     DeclareOpInterfaceMethods<XeMachine_SWSBInfoOpInterface>,
+     DeclareOpInterfaceMethods<XeMachine_AsyncScoreboardOpInterface>], "send",
+    "send">, XeMachine_SWSBFields {
   let summary = "shared-function message";
-  let arguments = (ins XeMachine_SendFn:$fn, I32Attr:$sfid, I32Attr:$desc,
+  let arguments = !con((ins XeMachine_SendFn:$fn, I32Attr:$sfid, I32Attr:$desc,
                        I32Attr:$exdesc,
                        DefaultValuedAttr<I32Attr, "1">:$execSize,
                        UnitAttr:$noMask,
@@ -151,8 +173,7 @@ def XeMachine_SendOp : XeMachine_Op<"send",
                        XeMachine_RegType:$addrPayload,
                        Optional<XeMachine_RegType>:$dataPayload,
                        Optional<XeMachine_ARFType>:$exdescReg,
-                       Optional<XeMachine_MemTokenType>:$dependency,
-                       OptionalAttr<I64Attr>:$swsb);
+                       Optional<XeMachine_MemTokenType>:$dependency), swsbFields);
   let results = (outs XeMachine_RegType:$dst, XeMachine_MemTokenType:$token);
   let assemblyFormat =
       "$fn $addrPayload (`data` $dataPayload^)? (`exdesc` $exdescReg^ `:` qualified(type($exdescReg)))? (`dep` $dependency^)? attr-dict `:` `(` qualified(type($addrPayload)) (`,` qualified(type($dataPayload))^)? `)` `->` `(` qualified(type($dst)) `,` qualified(type($token)) `)`";
@@ -160,10 +181,12 @@ def XeMachine_SendOp : XeMachine_Op<"send",
 
 // Scoreboard/fence synchronization. kind: "nop", "allrd", "allwr", "bar".
 // Token-connected like everything else that orders memory.
-def XeMachine_SyncOp : XeMachine_Op<"sync", [], "sync"> {
+def XeMachine_SyncOp : XeMachine_Op<"sync",
+    [DeclareOpInterfaceMethods<XeMachine_SWSBInfoOpInterface>], "sync", "sync">,
+    XeMachine_SWSBFields {
   let summary = "software scoreboard synchronization";
-  let arguments = (ins XeMachine_SyncKind:$kind,
-                       Optional<XeMachine_MemTokenType>:$dependency);
+  let arguments = !con((ins XeMachine_SyncKind:$kind,
+                        Optional<XeMachine_MemTokenType>:$dependency), swsbFields);
   let results = (outs XeMachine_MemTokenType:$token);
   let assemblyFormat =
       "$kind (`dep` $dependency^)? attr-dict `:` qualified(type($token))";
@@ -173,15 +196,18 @@ def XeMachine_SyncOp : XeMachine_Op<"sync", [], "sync"> {
 // message semantics; the emitter owns the descriptor encodings. Memory
 // ordering between them is explicit token edges (design doc section 9).
 class XeMachine_MsgOp<string mnemonic, list<Trait> traits = []> :
-    XeMachine_Op<mnemonic, traits, "send"> {
+    XeMachine_Op<mnemonic, traits # [
+      DeclareOpInterfaceMethods<XeMachine_SWSBInfoOpInterface>,
+      DeclareOpInterfaceMethods<XeMachine_AsyncScoreboardOpInterface>], "send",
+      "send">, XeMachine_SWSBFields {
   let cppNamespace = "::inter::xemachine";
 }
 
 // A64 scattered dword load: load.ugm.d32.a64.
 def XeMachine_LoadA64Op : XeMachine_MsgOp<"load_a64", [MemoryEffects<[MemRead]>]> {
-  let arguments = (ins XeMachine_RegType:$addrPayload,
+  let arguments = !con((ins XeMachine_RegType:$addrPayload,
                        Optional<XeMachine_MemTokenType>:$dependency,
-                       DefaultValuedAttr<I32Attr, "32">:$execSize);
+                       DefaultValuedAttr<I32Attr, "32">:$execSize), swsbFields);
   let results = (outs XeMachine_RegType:$dst, XeMachine_MemTokenType:$token);
   let assemblyFormat =
       "$addrPayload (`dep` $dependency^)? attr-dict `:` qualified(type($addrPayload)) `->` `(` qualified(type($dst)) `,` qualified(type($token)) `)`";
@@ -190,10 +216,10 @@ def XeMachine_LoadA64Op : XeMachine_MsgOp<"load_a64", [MemoryEffects<[MemRead]>]
 
 // A64 scattered dword store: store.ugm.d32.a64.
 def XeMachine_StoreA64Op : XeMachine_MsgOp<"store_a64", [MemoryEffects<[MemWrite]>]> {
-  let arguments = (ins XeMachine_RegType:$addrPayload,
+  let arguments = !con((ins XeMachine_RegType:$addrPayload,
                        XeMachine_RegType:$dataPayload,
                        Optional<XeMachine_MemTokenType>:$dependency,
-                       DefaultValuedAttr<I32Attr, "32">:$execSize);
+                       DefaultValuedAttr<I32Attr, "32">:$execSize), swsbFields);
   let results = (outs XeMachine_MemTokenType:$token);
   let assemblyFormat =
       "$addrPayload `data` $dataPayload (`dep` $dependency^)? attr-dict `:` `(` qualified(type($addrPayload)) `,` qualified(type($dataPayload)) `)` `->` qualified(type($token))";
@@ -202,19 +228,19 @@ def XeMachine_StoreA64Op : XeMachine_MsgOp<"store_a64", [MemoryEffects<[MemWrite
 
 // SLM dword load/store: load/store.slm.d32.a32.
 def XeMachine_LoadSLMOp : XeMachine_MsgOp<"load_slm", [MemoryEffects<[MemRead]>]> {
-  let arguments = (ins XeMachine_RegType:$addrPayload,
+  let arguments = !con((ins XeMachine_RegType:$addrPayload,
                        Optional<XeMachine_MemTokenType>:$dependency,
-                       DefaultValuedAttr<I32Attr, "32">:$execSize);
+                       DefaultValuedAttr<I32Attr, "32">:$execSize), swsbFields);
   let results = (outs XeMachine_RegType:$dst, XeMachine_MemTokenType:$token);
   let assemblyFormat =
       "$addrPayload (`dep` $dependency^)? attr-dict `:` qualified(type($addrPayload)) `->` `(` qualified(type($dst)) `,` qualified(type($token)) `)`";
 }
 
 def XeMachine_StoreSLMOp : XeMachine_MsgOp<"store_slm", [MemoryEffects<[MemWrite]>]> {
-  let arguments = (ins XeMachine_RegType:$addrPayload,
+  let arguments = !con((ins XeMachine_RegType:$addrPayload,
                        XeMachine_RegType:$dataPayload,
                        Optional<XeMachine_MemTokenType>:$dependency,
-                       DefaultValuedAttr<I32Attr, "32">:$execSize);
+                       DefaultValuedAttr<I32Attr, "32">:$execSize), swsbFields);
   let results = (outs XeMachine_MemTokenType:$token);
   let assemblyFormat =
       "$addrPayload `data` $dataPayload (`dep` $dependency^)? attr-dict `:` `(` qualified(type($addrPayload)) `,` qualified(type($dataPayload)) `)` `->` qualified(type($token))";
@@ -223,10 +249,10 @@ def XeMachine_StoreSLMOp : XeMachine_MsgOp<"store_slm", [MemoryEffects<[MemWrite
 // A64 atomic iadd: atomic_iadd.ugm.d32.a64.
 def XeMachine_AtomicIAddA64Op : XeMachine_MsgOp<"atomic_iadd_a64",
     [MemoryEffects<[MemRead, MemWrite]>]> {
-  let arguments = (ins XeMachine_RegType:$addrPayload,
+  let arguments = !con((ins XeMachine_RegType:$addrPayload,
                        XeMachine_RegType:$dataPayload,
                        Optional<XeMachine_MemTokenType>:$dependency,
-                       DefaultValuedAttr<I32Attr, "32">:$execSize);
+                       DefaultValuedAttr<I32Attr, "32">:$execSize), swsbFields);
   let results = (outs XeMachine_RegType:$dst, XeMachine_MemTokenType:$token);
   let assemblyFormat =
       "$addrPayload `data` $dataPayload (`dep` $dependency^)? attr-dict `:` `(` qualified(type($addrPayload)) `,` qualified(type($dataPayload)) `)` `->` `(` qualified(type($dst)) `,` qualified(type($token)) `)`";
@@ -237,9 +263,9 @@ def XeMachine_AtomicIAddA64Op : XeMachine_MsgOp<"atomic_iadd_a64",
 // words selects the message width (8/16/32 dwords).
 def XeMachine_LoadBlockA32Op : XeMachine_MsgOp<"load_block_a32",
     [MemoryEffects<[MemRead]>]> {
-  let arguments = (ins XeMachine_RegType:$addrPayload,
+  let arguments = !con((ins XeMachine_RegType:$addrPayload,
                        Optional<XeMachine_MemTokenType>:$dependency,
-                       I32Attr:$words);
+                       I32Attr:$words), swsbFields);
   let results = (outs XeMachine_RegType:$dst, XeMachine_MemTokenType:$token);
   let assemblyFormat =
       "$addrPayload (`dep` $dependency^)? attr-dict `:` qualified(type($addrPayload)) `->` `(` qualified(type($dst)) `,` qualified(type($token)) `)`";
@@ -249,17 +275,19 @@ def XeMachine_LoadBlockA32Op : XeMachine_MsgOp<"load_block_a32",
 // drained (fence_await) before signaling.
 def XeMachine_FenceSLMOp : XeMachine_MsgOp<"fence_slm",
     [MemoryEffects<[MemRead, MemWrite]>]> {
-  let arguments = (ins XeMachine_RegType:$addrPayload,
-                       Optional<XeMachine_MemTokenType>:$dependency);
+  let arguments = !con((ins XeMachine_RegType:$addrPayload,
+                       Optional<XeMachine_MemTokenType>:$dependency), swsbFields);
   let results = (outs XeMachine_RegType:$readback, XeMachine_MemTokenType:$token);
   let assemblyFormat =
       "$addrPayload (`dep` $dependency^)? attr-dict `:` qualified(type($addrPayload)) `->` `(` qualified(type($readback)) `,` qualified(type($token)) `)`";
 }
 
 // Fence drain: waits for the fence readback. Prints as a null-dst mov.
-def XeMachine_FenceAwaitOp : XeMachine_Op<"fence_await", [], "moveOrLogic"> {
-  let arguments = (ins XeMachine_RegType:$readback,
-                       Optional<XeMachine_MemTokenType>:$dependency);
+def XeMachine_FenceAwaitOp : XeMachine_Op<"fence_await",
+    [DeclareOpInterfaceMethods<XeMachine_SWSBInfoOpInterface>], "moveOrLogic",
+    "mov">, XeMachine_SWSBFields {
+  let arguments = !con((ins XeMachine_RegType:$readback,
+                       Optional<XeMachine_MemTokenType>:$dependency), swsbFields);
   let results = (outs XeMachine_MemTokenType:$token);
   let assemblyFormat =
       "$readback (`dep` $dependency^)? attr-dict `:` qualified(type($readback)) `->` qualified(type($token))";
@@ -268,8 +296,8 @@ def XeMachine_FenceAwaitOp : XeMachine_Op<"fence_await", [], "moveOrLogic"> {
 // Barrier signal to the thread spawner: gtwy message.
 def XeMachine_BarrierSignalOp : XeMachine_MsgOp<"barrier_signal",
     [MemoryEffects<[MemRead, MemWrite]>]> {
-  let arguments = (ins XeMachine_RegType:$payload,
-                       Optional<XeMachine_MemTokenType>:$dependency);
+  let arguments = !con((ins XeMachine_RegType:$payload,
+                       Optional<XeMachine_MemTokenType>:$dependency), swsbFields);
   let results = (outs XeMachine_MemTokenType:$token);
   let assemblyFormat =
       "$payload (`dep` $dependency^)? attr-dict `:` qualified(type($payload)) `->` qualified(type($token))";
@@ -278,8 +306,8 @@ def XeMachine_BarrierSignalOp : XeMachine_MsgOp<"barrier_signal",
 // End of thread.
 def XeMachine_EotOp : XeMachine_MsgOp<"eot",
     [XeMachine_FullScoreboardDrain]> {
-  let arguments = (ins XeMachine_RegType:$payload,
-                       Optional<XeMachine_MemTokenType>:$dependency);
+  let arguments = !con((ins XeMachine_RegType:$payload,
+                       Optional<XeMachine_MemTokenType>:$dependency), swsbFields);
   let assemblyFormat =
       "$payload (`dep` $dependency^)? attr-dict `:` qualified(type($payload))";
 }
@@ -360,9 +388,10 @@ def XeMachine_ContinueIfOp : XeMachine_Op<"continue_if",
 }
 
 def XeMachine_MulOp :
-    XeMachine_ALUOp<"mul", [], "accumulatorArithmetic"> {
+    XeMachine_ALUOp<"mul", [], "accumulatorArithmetic", "mul">,
+    XeMachine_SWSBFields {
   let summary = "multiply, accumulator destination";
-  let arguments = (ins TypeAttr:$elemType,
+  let arguments = !con((ins TypeAttr:$elemType,
                        DefaultValuedAttr<I32Attr, "16">:$execSize,
                        OptionalAttr<XeMachine_DstRegionAttr>:$dstRegion,
                        OptionalAttr<XeMachine_RegionAttr>:$src0Region,
@@ -374,23 +403,25 @@ def XeMachine_MulOp :
                         OptionalAttr<TypeAttr>:$src1Type,
                         UnitAttr:$noMask,
                        DefaultValuedAttr<I32Attr, "0">:$maskOffset,
-                       XeMachine_RegOrImm:$src0, XeMachine_RegOrImm:$src1);
+                       XeMachine_RegOrImm:$src0, XeMachine_RegOrImm:$src1), swsbFields);
   let results = (outs XeMachine_ARFType:$dst);
   let assemblyFormat =
       "$src0 `,` $src1 attr-dict `:` `(` qualified(type($src0)) `,` qualified(type($src1)) `,` $elemType `)` `->` qualified(type($dst))";
 }
 
 def XeMachine_DpasOp : XeMachine_Op<"dpas", [NoMemoryEffect,
-    DeclareOpInterfaceMethods<XeMachine_RegisterStorageAliasOpInterface>],
-    "systolic"> {
+    DeclareOpInterfaceMethods<XeMachine_RegisterStorageAliasOpInterface>,
+    DeclareOpInterfaceMethods<XeMachine_SWSBInfoOpInterface>,
+    DeclareOpInterfaceMethods<XeMachine_AsyncScoreboardOpInterface>],
+    "systolic", "dpas">, XeMachine_SWSBFields {
   let summary = "SIMD16 DPAS matrix multiply-accumulate";
-  let arguments = (ins XeMachine_RegType:$a, XeMachine_RegType:$b,
+  let arguments = !con((ins XeMachine_RegType:$a, XeMachine_RegType:$b,
                        XeMachine_RegType:$acc,
                        XeMachine_DpasPrecision:$aPrecision,
                        XeMachine_DpasPrecision:$bPrecision,
                        DefaultValuedAttr<I32Attr, "8">:$systolicDepth,
                        DefaultValuedAttr<I32Attr, "8">:$repeatCount,
-                       TypeAttr:$elemType);
+                       TypeAttr:$elemType), swsbFields);
   let results = (outs XeMachine_RegType:$dst);
   let assemblyFormat = "$a `,` $b `,` $acc attr-dict `:` `(` qualified(type($a)) `,` qualified(type($b)) `,` qualified(type($acc)) `)` `->` qualified(type($dst))";
   let hasVerifier = 1;
@@ -399,9 +430,11 @@ def XeMachine_DpasOp : XeMachine_Op<"dpas", [NoMemoryEffect,
 // Compare: writes a flag register, no GRF destination.
 // cmp (exec|M0) (gt)f0.0 null<1>:ud src0 src1
 def XeMachine_CmpOp : XeMachine_Op<"cmp", [NoMemoryEffect,
-    DeclareOpInterfaceMethods<XeMachine_ALUOpInterface>], "arfWrite"> {
+    DeclareOpInterfaceMethods<XeMachine_ALUOpInterface>,
+    DeclareOpInterfaceMethods<XeMachine_SWSBInfoOpInterface>], "arfWrite",
+    "cmp">, XeMachine_SWSBFields {
   let summary = "compare into a flag register";
-  let arguments = (ins XeMachine_CondModifier:$cond,
+  let arguments = !con((ins XeMachine_CondModifier:$cond,
                        TypeAttr:$elemType,
                        DefaultValuedAttr<I32Attr, "16">:$execSize,
                        OptionalAttr<XeMachine_RegionAttr>:$src0Region,
@@ -410,7 +443,7 @@ def XeMachine_CmpOp : XeMachine_Op<"cmp", [NoMemoryEffect,
                        OptionalAttr<I32Attr>:$src1Sub,
                        OptionalAttr<TypeAttr>:$src0Type,
                        OptionalAttr<TypeAttr>:$src1Type,
-                       XeMachine_RegOrImm:$src0, XeMachine_RegOrImm:$src1);
+                       XeMachine_RegOrImm:$src0, XeMachine_RegOrImm:$src1), swsbFields);
   let results = (outs XeMachine_ARFType:$flag);
   let assemblyFormat =
       "$cond $src0 `,` $src1 attr-dict `:` `(` qualified(type($src0)) `,` qualified(type($src1)) `,` $elemType `)` `->` qualified(type($flag))";

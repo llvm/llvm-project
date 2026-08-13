@@ -77,6 +77,19 @@ struct RegisterStorageAlias {
 #include "inter/Dialect/XeMachine/IR/XeMachineDialect.h.inc"
 #include "inter/Dialect/XeMachine/IR/XeMachineEnums.h.inc"
 
+namespace inter::xemachine {
+
+struct FinalSWSB {
+  SWSBDistancePipe pipe = SWSBDistancePipe::none;
+  int32_t distance = -1;
+  int32_t token = -1;
+  SWSBTokenMode tokenMode = SWSBTokenMode::none;
+
+  bool empty() const { return distance < 0 && token < 0; }
+};
+
+} // namespace inter::xemachine
+
 #define GET_ATTRDEF_CLASSES
 #include "inter/Dialect/XeMachine/IR/XeMachineAttrs.h.inc"
 

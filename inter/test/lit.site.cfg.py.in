@@ -17,6 +17,7 @@ config.llvm_readobj = "@LLVM_TOOLS_BINARY_DIR@/llvm-readobj"
 config.inter_runner = "@CMAKE_CURRENT_BINARY_DIR@/Integration/inter-runner"
 config.inter_matmul_runner = "@CMAKE_CURRENT_BINARY_DIR@/Integration/inter-matmul-runner"
 config.inter_device_name = "@INTER_INTEGRATION_DEVICE_NAME@"
+config.inter_ocloc = "@INTER_OCLOC_EXECUTABLE@"
 
 import lit.llvm
 lit.llvm.initialize(lit_config, config)

@@ -1,4 +1,4 @@
-// RUN: inter-opt %s --inter-resource-info -o %t.mlir
+// RUN: inter-opt %s --inter-resource-info --inter-insert-sync -o %t.mlir
 // RUN: inter-translate %t.mlir --xemachine-to-ged -o %t
 // RUN: inter-ged-dump %t | FileCheck %s
 // RUN: inter-translate %t.mlir --xemachine-to-zebin -o %t.zebin

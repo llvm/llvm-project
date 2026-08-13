@@ -67,7 +67,7 @@ struct Destination {
 };
 
 enum class DistancePipe { none, all, floating, inOrder };
-enum class TokenMode { none, set, destination };
+enum class TokenMode { none, set, source, destination };
 
 struct SwsbInfo {
   DistancePipe pipe = DistancePipe::none;
@@ -123,6 +123,7 @@ struct SendInstruction {
 
 struct SyncInstruction {
   xemachine::SyncKind kind = xemachine::SyncKind::nop;
+  SwsbInfo swsb;
 };
 
 struct Predicate {

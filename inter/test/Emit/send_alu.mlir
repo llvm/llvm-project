@@ -1,7 +1,7 @@
 // GED encoding for ALU ops, sends, and sync.
-// RUN: inter-translate --xemachine-to-ged %s -o %t
+// RUN: inter-opt %s --inter-insert-sync | inter-translate --xemachine-to-ged - -o %t
 // RUN: inter-ged-dump %t | FileCheck %s
-// RUN: inter-translate --xemachine-to-asm %s | FileCheck %s --check-prefix=ASM
+// RUN: inter-opt %s --inter-insert-sync | inter-translate --xemachine-to-asm - | FileCheck %s --check-prefix=ASM
 
 func.func @k() {
   %root = xemachine.token
@@ -20,7 +20,9 @@ func.func @k() {
   // CHECK-NEXT: pc=64 opcode=send exec=32 swsb=0x361 sfid=ugm exdescRegFile=imm exdesc=0x0 desc=0x8000584 mask=normal channel=0 pred=normal dst=arf0 src0=grf4 src1=grf6 len=2 eot=0
   %n, %tok2 = xemachine.send ugm %base data %sum dep %t3 {desc = 134219140 : i32, exdesc = 0 : i32, execSize = 32 : i32, sfid = 0 : i32} : (!xemachine.reg<16, 4>, !xemachine.reg<32, 6>) -> (!xemachine.reg<0, 9>, !xemachine.mem.token)
   %eot_payload = xemachine.archreg 0 : !xemachine.reg<16, 10>
-  // CHECK-NEXT: pc=80 opcode=send exec=1 swsb=0xc2 sfid=gateway exdescRegFile=imm exdesc=0x0 desc=0x2000010 mask=nomask channel=0 pred=normal dst=arf0 src0=grf10 src1=arf0 len=0 eot=1
+  // CHECK-NEXT: pc=80 opcode=sync exec=1 swsb=0x80 function=nop
+  // CHECK-NEXT: pc=96 opcode=sync exec=1 swsb=0xa1 function=nop
+  // CHECK-NEXT: pc=112 opcode=send exec=1 swsb=0xc2 sfid=gateway exdescRegFile=imm exdesc=0x0 desc=0x2000010 mask=nomask channel=0 pred=normal dst=arf0 src0=grf10 src1=arf0 len=0 eot=1
   xemachine.eot %eot_payload dep %tok2 : !xemachine.reg<16, 10>
   return
 }
@@ -42,5 +44,11 @@ func.func @k() {
 // ASM-SAME: send.ugm (32|M0)
 // ASM-SAME: store.ugm.d32.a64
 // ASM-NEXT: /* [0050]
+// ASM-SAME: sync.nop
+// ASM-SAME: {$0.dst}
+// ASM-NEXT: /* [0060]
+// ASM-SAME: sync.nop
+// ASM-SAME: {$1.src}
+// ASM-NEXT: /* [0070]
 // ASM-SAME: send.gtwy (1|M0)
 // ASM-SAME: {EOT,$2}

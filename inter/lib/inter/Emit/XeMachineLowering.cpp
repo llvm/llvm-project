@@ -1,7 +1,6 @@
 #include "EmissionProgram.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 
 #include <algorithm>
@@ -21,12 +20,6 @@ public:
 
   LogicalResult lower(func::FuncOp function) {
     program.items.emplace_back(Label{0});
-    function.walk([&](Operation *operation) {
-      if (operation->hasTrait<OpTrait::xemachine::NoMachineInst>())
-        return;
-      for (Value result : operation->getResults())
-        definingOperations[result] = operation;
-    });
     return lowerBlock(function.getBody().front());
   }
 
@@ -102,94 +95,16 @@ private:
             type, region, false, false};
   }
 
-  struct ProducerDistance {
-    DistancePipe pipe = DistancePipe::none;
-    int32_t distance = -1;
-  };
-
-  ProducerDistance getYoungestProducer(Operation *operation,
-                                       ValueRange operands) const {
-    ProducerDistance youngest;
-    SmallVector<Value> worklist(operands.begin(), operands.end());
-    while (!worklist.empty()) {
-      Value operand = worklist.pop_back_val();
-      if (isa<MemTokenType>(operand.getType()))
-        continue;
-      Operation *ssaDefinition = operand.getDefiningOp();
-      if (ssaDefinition &&
-          ssaDefinition->hasTrait<OpTrait::xemachine::NoMachineInst>()) {
-        llvm::append_range(worklist, ssaDefinition->getOperands());
-        continue;
-      }
-      Operation *definingOperation = definingOperations.lookup(operand);
-      if (!definingOperation || isa<SendOp>(definingOperation))
-        continue;
-      auto iterator = instructionIndices.find(definingOperation);
-      if (iterator == instructionIndices.end())
-        continue;
-      int32_t distance =
-          instructionIndices.lookup(operation) - iterator->second;
-      if (distance < 1 || distance > 7)
-        continue;
-      auto alu = dyn_cast<ALUOpInterface>(definingOperation);
-      DistancePipe pipe = alu && alu.getInstructionElementType().isF32()
-                              ? DistancePipe::floating
-                              : DistancePipe::inOrder;
-      if (youngest.distance < 0)
-        youngest = {pipe, distance};
-      else {
-        if (pipe != youngest.pipe)
-          youngest.pipe = DistancePipe::all;
-        youngest.distance = std::min(youngest.distance, distance);
-      }
-    }
-    return youngest;
-  }
-
-  SwsbInfo getInOrderSwsb(Operation *operation, ValueRange operands) {
-    std::optional<int32_t> token;
-    for (Value operand : operands) {
-      auto producer = dpasTokens.find(operand);
-      if (producer == dpasTokens.end())
-        continue;
-      if (token && *token != producer->second) {
-        program.items.emplace_back(SyncInstruction{SyncKind::allwr});
-        dpasTokens.clear();
-        nextToken = 0;
-        return {};
-      }
-      token = producer->second;
-    }
-    if (token) {
-      for (Value operand : operands) {
-        auto producer = dpasTokens.find(operand);
-        if (producer != dpasTokens.end() && producer->second == *token)
-          dpasTokens.erase(producer);
-      }
-      return {DistancePipe::none, -1, *token, TokenMode::destination};
-    }
-    ProducerDistance producer = getYoungestProducer(operation, operands);
-    if (producer.distance < 0)
-      return {};
-    return {producer.pipe, producer.distance, -1};
-  }
-
-  SwsbInfo getSendSwsb(Operation *operation, ValueRange operands, bool eot) {
-    ProducerDistance producer = getYoungestProducer(operation, operands);
-    DistancePipe pipe = producer.pipe;
-    if (eot)
-      pipe = DistancePipe::inOrder;
-    else if (pipe == DistancePipe::floating)
-      pipe = DistancePipe::all;
-    return {pipe, producer.distance, nextToken++, TokenMode::set};
+  static SwsbInfo getFinalSwsb(Operation *operation) {
+    FinalSWSB final = cast<SWSBInfoOpInterface>(operation).getFinalSWSB();
+    return {static_cast<DistancePipe>(final.pipe), final.distance, final.token,
+            static_cast<TokenMode>(final.tokenMode)};
   }
 
   LogicalResult lowerBlock(Block &block) {
     for (Operation &operation : block) {
       if (operation.hasTrait<OpTrait::xemachine::NoAsmEmission>())
         continue;
-      instructionIndices[&operation] = nextInstruction++;
-
       if (SendOp send = dyn_cast<SendOp>(&operation)) {
         if (failed(lowerSend(send)))
           return failure();
@@ -373,11 +288,8 @@ private:
   }
 
   void lowerSync(SyncOp sync) {
-    program.items.emplace_back(SyncInstruction{sync.getKind()});
-    if (sync.getKind() == SyncKind::allwr) {
-      dpasTokens.clear();
-      nextToken = 0;
-    }
+    program.items.emplace_back(
+        SyncInstruction{sync.getKind(), getFinalSwsb(sync)});
   }
 
   struct MessageForm {
@@ -424,8 +336,7 @@ private:
       instruction.execution.size = attr.getInt();
     instruction.execution.noMask =
         operation->hasAttr("noMask") || instruction.execution.size == 1;
-    instruction.swsb =
-        getSendSwsb(operation, operation->getOperands(), instruction.eot);
+    instruction.swsb = getFinalSwsb(operation);
 
     Type i32 = IntegerType::get(context, 32);
     Value address = operation->getOperand(0);
@@ -457,7 +368,7 @@ private:
     instruction.destinationType = DataType::ud;
     instruction.sources.push_back(
         getSourceOperand(await.getReadback(), 0, i32, SourceRegion{1, 1, 0}));
-    instruction.swsb = getInOrderSwsb(await, await.getOperands());
+    instruction.swsb = getFinalSwsb(await);
     program.items.push_back(std::move(instruction));
   }
 
@@ -477,11 +388,7 @@ private:
     instruction.bPrecision = dpas.getBPrecision();
     instruction.systolicDepth = dpas.getSystolicDepth();
     instruction.repeatCount = dpas.getRepeatCount();
-    auto chain = dpasTokens.find(dpas.getAcc());
-    int32_t token = chain == dpasTokens.end() ? nextToken++ : chain->second;
-    instruction.swsb.token = token;
-    instruction.swsb.tokenMode = TokenMode::set;
-    dpasTokens[dpas.getDst()] = token;
+    instruction.swsb = getFinalSwsb(dpas);
     program.items.push_back(instruction);
   }
 
@@ -511,13 +418,7 @@ private:
       instruction.exdesc = static_cast<uint32_t>(send.getExdesc());
     instruction.desc = send.getDesc();
     instruction.eot = send.getEot();
-    if (std::optional<uint64_t> rawSwsb = send.getSwsb()) {
-      if (*rawSwsb > std::numeric_limits<uint32_t>::max())
-        return send.emitError("raw SWSB value exceeds 32 bits");
-      instruction.rawSwsb = static_cast<uint32_t>(*rawSwsb);
-    } else {
-      instruction.swsb = getSendSwsb(send, send.getOperands(), send.getEot());
-    }
+    instruction.swsb = getFinalSwsb(send);
     program.items.push_back(std::move(instruction));
     return success();
   }
@@ -549,7 +450,7 @@ private:
       source.isSigned = instruction.isSigned;
       instruction.sources.push_back(std::move(source));
     }
-    instruction.swsb = getInOrderSwsb(compare, compare.getOperands());
+    instruction.swsb = getFinalSwsb(compare);
     program.items.push_back(std::move(instruction));
     return success();
   }
@@ -623,7 +524,7 @@ private:
       source.isSigned = index == 0 && operation->hasAttr("signedSource");
       instruction.sources.push_back(std::move(source));
     }
-    instruction.swsb = getInOrderSwsb(operation, operation->getOperands());
+    instruction.swsb = getFinalSwsb(operation);
     ARFType destinationArf = dyn_cast<ARFType>(destination.getType());
     if (destinationArf && destinationArf.getFile() == ARFFile::a0 &&
         !hasWrittenAddressRegister) {
@@ -642,16 +543,12 @@ private:
 
   MLIRContext *context;
   EmissionProgram &program;
-  DenseMap<Value, Operation *> definingOperations;
-  DenseMap<Operation *, int32_t> instructionIndices;
   struct LoopHeader {
     UniformLoopOp loop;
     uint32_t headerLabel;
   };
   SmallVector<LoopHeader> loopHeaders;
   int32_t nextInstruction = 0;
-  int32_t nextToken = 0;
-  DenseMap<Value, int32_t> dpasTokens;
   uint32_t divergentDepth = 0;
   uint32_t nextLabel = 1;
   bool hasWrittenAddressRegister = false;

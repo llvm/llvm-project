@@ -118,6 +118,26 @@ def XeMachine_SyncKind : I32EnumAttr<"SyncKind", "sync function", [
   let cppNamespace = "::inter::xemachine";
 }
 
+def XeMachine_SWSBDistancePipe : I32EnumAttr<"SWSBDistancePipe",
+    "SWSB distance pipe", [
+      I32EnumAttrCase<"none", 0>,
+      I32EnumAttrCase<"all", 1>,
+      I32EnumAttrCase<"floating", 2>,
+      I32EnumAttrCase<"in_order", 3>,
+    ]> {
+  let cppNamespace = "::inter::xemachine";
+}
+
+def XeMachine_SWSBTokenMode : I32EnumAttr<"SWSBTokenMode",
+    "SWSB token operation", [
+      I32EnumAttrCase<"none", 0>,
+      I32EnumAttrCase<"set", 1>,
+      I32EnumAttrCase<"source", 2>,
+      I32EnumAttrCase<"destination", 3>,
+    ]> {
+  let cppNamespace = "::inter::xemachine";
+}
+
 def XeMachine_DpasPrecisionF16 : I32EnumAttrCase<"F16", 0, "f16">;
 def XeMachine_DpasPrecisionBF16 : I32EnumAttrCase<"BF16", 1, "bf16">;
 def XeMachine_DpasPrecision : I32EnumAttr<"DpasPrecision",

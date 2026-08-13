@@ -249,7 +249,9 @@ private:
       return pipe | static_cast<uint32_t>(swsb.distance);
     }
     if (swsb.token >= 0) {
-      uint32_t mode = swsb.tokenMode == TokenMode::destination ? 0x80 : 0xC0;
+      uint32_t mode = swsb.tokenMode == TokenMode::destination ? 0x80
+                      : swsb.tokenMode == TokenMode::source    ? 0xA0
+                                                              : 0xC0;
       return mode | static_cast<uint32_t>(swsb.token);
     }
     return 0;
@@ -811,7 +813,7 @@ private:
     } else {
       RETURN_IF_GED_ERROR(GED_SetSrc0RegFile(&instruction, GED_REG_FILE_ARF));
     }
-    return setOptions(instruction, {}, false);
+    return setOptions(instruction, value.swsb, false);
   }
 
   FailureOr<int32_t> getBranchOffset(uint32_t label) {

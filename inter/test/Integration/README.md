@@ -5,6 +5,8 @@ in its `RUN` lines, emits a complete zebin, invokes `inter-runner`, and checks
 the device result with `FileCheck` or the shared expression verifier. The M1-M3
 kernels also run at 128 lanes to cover multiple hardware workgroups.
 Allocator-generated scratch spill/fill code has a dedicated live-device test.
+`opencl-smoke.cl` compiles a reference kernel with IGC and provides a quick
+device-health check independent of Inter code generation.
 
 Build the LLVM offload runtime first, then enable the opt-in suite when
 configuring Inter:
