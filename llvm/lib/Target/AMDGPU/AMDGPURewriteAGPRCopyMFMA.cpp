@@ -26,6 +26,7 @@
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
@@ -126,6 +127,14 @@ public:
   /// be included in the map.
   void collectSpillIndexUses(ArrayRef<LiveInterval *> StackIntervals,
                              SpillReferenceMap &Map) const;
+
+  /// Return true if every path to \p LoadMI passes through a store to the
+  /// same stack slot first.
+  bool isJointlyDominatedByStores(
+      const MachineInstr &LoadMI, const LiveInterval &SlotLI,
+      const SmallPtrSetImpl<const MachineBasicBlock *> &Reachable,
+      const SmallPtrSetImpl<const MachineBasicBlock *> &StoreFreeReachable)
+      const;
 
   /// Attempt to unspill VGPRs by finding a free register and replacing the
   /// spill instructions with copies.
@@ -475,6 +484,26 @@ void AMDGPURewriteAGPRCopyMFMAImpl::collectSpillIndexUses(
   }
 }
 
+bool AMDGPURewriteAGPRCopyMFMAImpl::isJointlyDominatedByStores(
+    const MachineInstr &LoadMI, const LiveInterval &SlotLI,
+    const SmallPtrSetImpl<const MachineBasicBlock *> &Reachable,
+    const SmallPtrSetImpl<const MachineBasicBlock *> &StoreFreeReachable)
+    const {
+  // An unreachable reload has no reaching definition; keep it conservatively.
+  const MachineBasicBlock *LoadMBB = LoadMI.getParent();
+  if (!Reachable.contains(LoadMBB))
+    return false;
+
+  if (!StoreFreeReachable.contains(LoadMBB))
+    return true;
+
+  // A store-free path reaches this block, so any preceding store must be
+  // inside it. The slot being live at the load but not live-in means its
+  // reaching def is a store in this block, not the store-free path.
+  SlotIndex LoadIdx = LIS.getInstructionIndex(LoadMI);
+  return SlotLI.liveAt(LoadIdx) && !LIS.isLiveInToMBB(SlotLI, LoadMBB);
+}
+
 void AMDGPURewriteAGPRCopyMFMAImpl::eliminateSpillsOfReassignedVGPRs() const {
   unsigned NumSlots = LSS.getNumIntervals();
   if (NumSlots == 0)
@@ -522,11 +551,51 @@ void AMDGPURewriteAGPRCopyMFMAImpl::eliminateSpillsOfReassignedVGPRs() const {
   DenseMap<int, SmallVector<MachineInstr *, 4>> SpillSlotReferences;
   collectSpillIndexUses(StackIntervals, SpillSlotReferences);
 
+  const MachineBasicBlock *Entry = &MF.front();
+  df_iterator_default_set<const MachineBasicBlock *, 16> Reachable;
+  for (const MachineBasicBlock *MBB : depth_first_ext(Entry, Reachable))
+    (void)MBB;
+
   for (LiveInterval *LI : StackIntervals) {
+    if (LI->empty())
+      continue;
+
     int Slot = LI->reg().stackSlotIndex();
     auto SpillReferences = SpillSlotReferences.find(Slot);
     if (SpillReferences == SpillSlotReferences.end())
       continue;
+
+    // A reload with no dominating store is fine for a memory slot, but not
+    // once replaced by a register: its uses would not be dominated by its defs.
+    SmallPtrSet<const MachineBasicBlock *, 4> StoreBlocks;
+    for (const MachineInstr *MI : SpillReferences->second) {
+      if (MI->mayStore() && Reachable.contains(MI->getParent()))
+        StoreBlocks.insert(MI->getParent());
+    }
+
+    if (StoreBlocks.empty())
+      continue;
+
+    using ReachableSet = df_iterator_default_set<const MachineBasicBlock *, 16>;
+    ReachableSet StoreFreeReachable;
+    for (df_ext_iterator<const MachineBasicBlock *, ReachableSet>
+             I = df_ext_begin(Entry, StoreFreeReachable),
+             E = df_ext_end(Entry, StoreFreeReachable);
+         I != E;) {
+      if (StoreBlocks.contains(*I))
+        I.skipChildren();
+      else
+        ++I;
+    }
+
+    if (any_of(SpillReferences->second, [&](const MachineInstr *MI) {
+          return MI->mayLoad() && !isJointlyDominatedByStores(
+                                      *MI, *LI, Reachable, StoreFreeReachable);
+        })) {
+      LLVM_DEBUG(dbgs() << "Skipping SS#" << Slot
+                        << ": reload not jointly dominated by stores\n");
+      continue;
+    }
 
     const TargetRegisterClass *RC = LSS.getIntervalRegClass(Slot);
 
