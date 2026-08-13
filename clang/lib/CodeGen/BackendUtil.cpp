@@ -1492,6 +1492,89 @@ runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
   }
 }
 
+static void createAndEmbedModuleForDynamicDebugging(
+    CompilerInstance &CI, CodeGenOptions &CGOpts, llvm::Module *M,
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS, BackendConsumer *BC) {
+  /// Helper for saving the module(s) at various dyndbg stages.
+  auto SaveModule = [&](StringRef Name, llvm::Module &M) {
+    if (CGOpts.SaveDynDbgTempsFilePrefix == "")
+      return;
+    std::error_code EC;
+    std::string Path =
+        Twine(CGOpts.SaveDynDbgTempsFilePrefix + "." + Name + ".ll").str();
+    raw_fd_ostream OS(Path, EC, sys::fs::OpenFlags::OF_None);
+    if (EC) {
+      // Copy -save-temps behaviour: this is a debugging option so we simply
+      // exit if there's an issue.
+      errs() << "failed to open " << Path << ": " << EC.message() << '\n';
+      errs().flush();
+      exit(1);
+    }
+    M.print(OS, nullptr);
+  };
+
+  // Compute a hash suffix for promoting static globals (once per TU).
+  std::string PromotionSuffix;
+  {
+    // LLVM's hash/hash_combine is not guaranteed to be stable.
+    MD5 Hash;
+    // Include args in the hash else preprocessor definitions used to alter
+    // the same source file compiled twice won't generate unique hashes.
+    Hash.update(CGOpts.CmdArgs);
+    for (auto *CU : M->debug_compile_units()) {
+      Hash.update(CU->getDirectory());
+      Hash.update(CU->getFilename());
+    }
+
+    MD5::MD5Result Result;
+    Hash.final(Result);
+    PromotionSuffix = ".dyndbg." + utohexstr(Result.low());
+  }
+
+  SaveModule("dyndbg.0.input", *M);
+  // Modify M as needed and create an "unoptimized" clone.
+  auto UnoptM = prepareForDynamicDebugging(M, PromotionSuffix);
+  SaveModule("dyndbg.1.inner", *UnoptM);
+
+  if (!CGOpts.DiscardDynamicDebuggingDebugModule) {
+    CodeGenOptions UnoptOpts = CGOpts;
+    UnoptOpts.OptimizationLevel = 0;
+    UnoptOpts.OptimizeSize = 0;
+    EmitAssemblyHelper AsmHelper(CI, UnoptOpts, UnoptM.get(), VFS);
+
+    // Create a buffer and ostream for the inner ELF.
+    SmallVector<char, 0> UnoptBuf;
+    std::unique_ptr<llvm::raw_pwrite_stream> UnoptOS =
+        std::make_unique<llvm::raw_svector_ostream>(UnoptBuf);
+
+    // Always run the full codegen pipeline (Backend_EmitObj). This causes
+    // assertion failures if there's no registered backend which is why we
+    // disable the feature if that's the case (see
+    // warn_dyndbg_unable_to_create_target above).
+    AsmHelper.emitAssembly(Backend_EmitObj, std::move(UnoptOS), BC);
+    assert(!UnoptBuf.empty() && "Expected emitAssembly to fill UnoptBuf");
+
+    // Inject the inner ELF into the outer module.
+    StringRef SR(UnoptBuf.data(), UnoptBuf.size());
+    std::unique_ptr<MemoryBuffer> Buf =
+        MemoryBuffer::getMemBuffer(SR, "", false);
+
+    GlobalVariable *EmbeddedGV =
+        llvm::embedBufferInModule(*M, *Buf, ".debug_llvm_dyndbg", Align(8),
+                                  /*SectionExclude*/ false);
+    // Add ELF section properties metadata.
+    auto &C = M->getContext();
+    auto getU32Metadata = [&C](unsigned Val) {
+      return ConstantAsMetadata::get(ConstantInt::get(C, APInt(32, Val)));
+    };
+    EmbeddedGV->addMetadata(
+        LLVMContext::MD_elf_section_properties,
+        *MDTuple::get(C, {/*sh_type*/ getU32Metadata(ELF::SHT_LLVM_DYNDBG_ELF),
+                          /*sh_entsize*/ getU32Metadata(0)}));
+  }
+  SaveModule("dyndbg.2.outer", *M);
+}
+
 void clang::emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
                               StringRef TDesc, llvm::Module *M,
                               BackendAction Action,
@@ -1515,7 +1598,7 @@ void clang::emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
                       .moveInto(CombinedIndex)) {
       logAllUnhandledErrors(std::move(E), errs(),
                             "Error loading index file '" +
-                            CGOpts.ThinLTOIndexFile + "': ");
+                                CGOpts.ThinLTOIndexFile + "': ");
       return;
     }
 
@@ -1541,7 +1624,6 @@ void clang::emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
     }
   }
 
-
   bool EnableDynamicDebugging = CGOpts.DynamicDebugging;
   // Disable dyndbg if the target isn't available as we're compiling to the
   // inner module to object regardless of other options. (This may change).
@@ -1563,88 +1645,8 @@ void clang::emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
       EnableDynamicDebugging = false;
     }
   }
-
-  if (EnableDynamicDebugging) {
-    /// Helper for saving the module(s) at various dyndbg stages.
-    auto SaveModule = [&](StringRef Name, llvm::Module &M) {
-      if (CGOpts.SaveDynDbgTempsFilePrefix == "")
-        return;
-      std::error_code EC;
-      std::string Path =
-          Twine(CGOpts.SaveDynDbgTempsFilePrefix + "." + Name + ".ll").str();
-      raw_fd_ostream OS(Path, EC, sys::fs::OpenFlags::OF_None);
-      if (EC) {
-        // Copy -save-temps behaviour: this is a debugging option so we simply
-        // exit if there's an issue.
-        errs() << "failed to open " << Path << ": " << EC.message() << '\n';
-        errs().flush();
-        exit(1);
-      }
-      M.print(OS, nullptr);
-    };
-
-    // Compute a hash suffix for promoting static globals (once per TU).
-    std::string PromotionSuffix;
-    {
-      // LLVM's hash/hash_combine is not guaranteed to be stable.
-      MD5 Hash;
-      // Include args in the hash else preprocessor definitions used to alter
-      // the same source file compiled twice won't generate unique hashes.
-      Hash.update(CGOpts.CmdArgs);
-      for (auto *CU : M->debug_compile_units()) {
-        Hash.update(CU->getDirectory());
-        Hash.update(CU->getFilename());
-      }
-
-      MD5::MD5Result Result;
-      Hash.final(Result);
-      PromotionSuffix = ".dyndbg." + utohexstr(Result.low());
-    }
-
-    SaveModule("dyndbg.0.input", *M);
-    // Modify M as needed and create an "unoptimized" clone.
-    auto UnoptM = prepareForDynamicDebugging(M, PromotionSuffix);
-    SaveModule("dyndbg.1.inner", *UnoptM);
-
-    if (!CGOpts.DiscardDynamicDebuggingDebugModule) {
-      CodeGenOptions UnoptOpts = CGOpts;
-      UnoptOpts.OptimizationLevel = 0;
-      UnoptOpts.OptimizeSize = 0;
-      EmitAssemblyHelper AsmHelper(CI, UnoptOpts, UnoptM.get(), VFS);
-
-      // Create a buffer and ostream for the inner ELF.
-      SmallVector<char, 0> UnoptBuf;
-      std::unique_ptr<llvm::raw_pwrite_stream> UnoptOS =
-          std::make_unique<llvm::raw_svector_ostream>(UnoptBuf);
-
-      // Always run the full codegen pipeline (Backend_EmitObj). This causes
-      // assertion failures if there's no registered backend which is why we
-      // disable the feature if that's the case (see
-      // warn_dyndbg_unable_to_create_target above).
-      AsmHelper.emitAssembly(Backend_EmitObj, std::move(UnoptOS), BC);
-      assert(!UnoptBuf.empty() && "Expected emitAssembly to fill UnoptBuf");
-
-      // Inject the inner ELF into the outer module.
-      StringRef SR(UnoptBuf.data(), UnoptBuf.size());
-      std::unique_ptr<MemoryBuffer> Buf =
-          MemoryBuffer::getMemBuffer(SR, "", false);
-
-      GlobalVariable *EmbeddedGV =
-          llvm::embedBufferInModule(*M, *Buf, ".debug_llvm_dyndbg", Align(8),
-                                    /*SectionExclude*/ false);
-      // Add ELF section properties metadata.
-      auto &C = M->getContext();
-      auto getU32Metadata = [&C](unsigned Val) {
-        return ConstantAsMetadata::get(ConstantInt::get(C, APInt(32, Val)));
-      };
-      EmbeddedGV->addMetadata(
-          LLVMContext::MD_elf_section_properties,
-          *MDTuple::get(C,
-                        {/*sh_type*/ getU32Metadata(ELF::SHT_LLVM_DYNDBG_ELF),
-                         /*sh_entsize*/ getU32Metadata(0)}));
-    }
-    SaveModule("dyndbg.2.outer", *M);
-  }
+  if (EnableDynamicDebugging)
+    createAndEmbedModuleForDynamicDebugging(CI, CGOpts, M, VFS, BC);
 
   EmitAssemblyHelper AsmHelper(CI, CGOpts, M, VFS);
   AsmHelper.emitAssembly(Action, std::move(OS), BC);
