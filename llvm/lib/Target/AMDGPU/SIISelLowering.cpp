@@ -17739,7 +17739,11 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
       return Folded;
   }
 
-  if ((isMul(LHS) || isMul(RHS)) && Subtarget->hasDot7Insts() &&
+  // The dot4 accumulates and produces a 32-bit result; a wider VT would need
+  // its upper bits from something other than the dot, so the fold can't
+  // apply.
+  if (!VT.isVector() && VT.getSizeInBits() <= 32 &&
+      (isMul(LHS) || isMul(RHS)) && Subtarget->hasDot7Insts() &&
       (Subtarget->hasDot1Insts() || Subtarget->hasDot8Insts())) {
     SDValue TempNode(N, 0);
     std::optional<bool> IsSigned;
