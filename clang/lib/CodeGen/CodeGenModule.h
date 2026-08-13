@@ -864,10 +864,6 @@ public:
   bool lookupRepresentativeDecl(StringRef MangledName,
                                 GlobalDecl &Result) const;
 
-  std::string getMangledNameImpl(GlobalDecl GD, const NamedDecl *ND,
-                                 bool OmitMultiVersionMangling = false,
-                                 bool WantAsmLabel = true);
-
   llvm::Constant *getAtomicSetterHelperFnMap(QualType Ty) {
     return AtomicSetterHelperFnMap[Ty];
   }
@@ -1541,6 +1537,8 @@ public:
   void addDefaultFunctionDefinitionAttributes(llvm::AttrBuilder &attrs);
 
   StringRef getMangledName(GlobalDecl GD);
+  std::string getMangledNameIgnoringAsmLabel(GlobalDecl GD,
+                                             const NamedDecl *ND);
   StringRef getBlockMangledName(GlobalDecl GD, const BlockDecl *BD);
   const GlobalDecl getMangledNameDecl(StringRef);
 

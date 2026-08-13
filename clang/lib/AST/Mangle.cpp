@@ -127,7 +127,7 @@ static CCMangling getCallingConvMangling(const ASTContext &Context,
 }
 
 bool MangleContext::shouldMangleDeclName(const NamedDecl *D,
-                                         bool WantAsmLabel) {
+                                         bool IgnoreAsmLabel) {
   const ASTContext &ASTContext = getASTContext();
 
   CCMangling CC = getCallingConvMangling(ASTContext, D);
@@ -151,7 +151,7 @@ bool MangleContext::shouldMangleDeclName(const NamedDecl *D,
 
   // Any decl can be declared with __asm("foo") on it, and this takes precedence
   // over all other naming in the .o file.
-  if (WantAsmLabel && D->hasAttr<AsmLabelAttr>())
+  if (!IgnoreAsmLabel && D->hasAttr<AsmLabelAttr>())
     return true;
 
   // Declarations that don't have identifier names always need to be mangled.
@@ -244,49 +244,46 @@ static void emitLLDBAsmLabel(llvm::StringRef label, GlobalDecl GD,
 }
 
 void MangleContext::mangleName(GlobalDecl GD, raw_ostream &Out,
-                               bool WantAsmLabel) {
+                               bool IgnoreAsmLabel) {
   const ASTContext &ASTContext = getASTContext();
   const NamedDecl *D = cast<NamedDecl>(GD.getDecl());
 
   // Any decl can be declared with __asm("foo") on it, and this takes precedence
   // over all other naming in the .o file.
-  if (WantAsmLabel) {
-    if (const AsmLabelAttr *ALA = D->getAttr<AsmLabelAttr>()) {
-      // If we have an asm name, then we use it as the mangling.
+  if (const AsmLabelAttr *ALA = D->getAttr<AsmLabelAttr>();
+      ALA && !IgnoreAsmLabel) {
+    // If we have an asm name, then we use it as the mangling.
 
-      // If the label is an alias for an LLVM intrinsic,
-      // do not add a "\01" prefix.
-      if (ALA->getLabel().starts_with("llvm.")) {
-        Out << ALA->getLabel();
-        return;
-      }
-
-      // Adding the prefix can cause problems when one file has a "foo" and
-      // another has a "\01foo". That is known to happen on ELF with the
-      // tricks normally used for producing aliases (PR9177). Fortunately the
-      // llvm mangler on ELF is a nop, so we can just avoid adding the \01
-      // marker.
-      StringRef UserLabelPrefix =
-          getASTContext().getTargetInfo().getUserLabelPrefix();
-#ifndef NDEBUG
-      char GlobalPrefix =
-          llvm::DataLayout(
-              getASTContext().getTargetInfo().getDataLayoutString())
-              .getGlobalPrefix();
-      assert(
-          (UserLabelPrefix.empty() && !GlobalPrefix) ||
-          (UserLabelPrefix.size() == 1 && UserLabelPrefix[0] == GlobalPrefix));
-#endif
-      if (!UserLabelPrefix.empty())
-        Out << '\01'; // LLVM IR Marker for __asm("foo")
-
-      if (ALA->getLabel().starts_with(LLDBManglingABI::FunctionLabelPrefix))
-        emitLLDBAsmLabel(ALA->getLabel(), GD, Out);
-      else
-        Out << ALA->getLabel();
-
+    // If the label is an alias for an LLVM intrinsic,
+    // do not add a "\01" prefix.
+    if (ALA->getLabel().starts_with("llvm.")) {
+      Out << ALA->getLabel();
       return;
     }
+
+    // Adding the prefix can cause problems when one file has a "foo" and
+    // another has a "\01foo". That is known to happen on ELF with the
+    // tricks normally used for producing aliases (PR9177). Fortunately the
+    // llvm mangler on ELF is a nop, so we can just avoid adding the \01
+    // marker.
+    StringRef UserLabelPrefix =
+        getASTContext().getTargetInfo().getUserLabelPrefix();
+#ifndef NDEBUG
+    char GlobalPrefix =
+        llvm::DataLayout(getASTContext().getTargetInfo().getDataLayoutString())
+            .getGlobalPrefix();
+    assert((UserLabelPrefix.empty() && !GlobalPrefix) ||
+           (UserLabelPrefix.size() == 1 && UserLabelPrefix[0] == GlobalPrefix));
+#endif
+    if (!UserLabelPrefix.empty())
+      Out << '\01'; // LLVM IR Marker for __asm("foo")
+
+    if (ALA->getLabel().starts_with(LLDBManglingABI::FunctionLabelPrefix))
+      emitLLDBAsmLabel(ALA->getLabel(), GD, Out);
+    else
+      Out << ALA->getLabel();
+
+    return;
   }
 
   if (auto *GD = dyn_cast<MSGuidDecl>(D))
