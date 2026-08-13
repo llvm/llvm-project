@@ -2214,18 +2214,19 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
 
   // A helper that returns true if the use of Ptr by MemAccess will be scalar.
   // The pointer operands of loads and stores will be scalar as long as the
-  // memory access is not a gather or scatter operation. The value operand of a
-  // store will remain scalar if the store is scalarized.
+  // memory access is not a gather/scatter or histogram operation. The value
+  // operand of a store will remain scalar if the store is scalarized.
   auto IsScalarUse = [&](Instruction *MemAccess, Value *Ptr) {
     InstWidening WideningDecision = getWideningDecision(MemAccess, VF);
     assert(WideningDecision != CM_Unknown &&
            "Widening decision should be ready at this moment");
-    if (auto *Store = dyn_cast<StoreInst>(MemAccess))
-      if (Ptr == Store->getValueOperand())
-        return WideningDecision == CM_Scalarize;
+    auto *Store = dyn_cast<StoreInst>(MemAccess);
+    if (Store && Ptr == Store->getValueOperand())
+      return WideningDecision == CM_Scalarize;
     assert(Ptr == getLoadStorePointerOperand(MemAccess) &&
            "Ptr is neither a value or pointer operand");
-    return WideningDecision != CM_GatherScatter;
+    return WideningDecision != CM_GatherScatter &&
+           !(Store && Legal->getHistogramInfo(Store));
   };
 
   // A helper that returns true if the given value is a getelementptr
