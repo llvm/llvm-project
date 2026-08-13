@@ -31,8 +31,7 @@ public:
   };
 
   /// A single constraint, storing only entries with non-zero coefficients,
-  /// ordered by increasing variable index. The constant part is kept even if
-  /// zero.
+  /// ordered by increasing variable index.
   using RowTy = SmallVector<Entry, 8>;
 
 private:
@@ -47,7 +46,7 @@ private:
   /// Returns true if \p R does not have an entry for any variable, i.e. it is
   /// of the form 'c >= 0'.
   static bool isConstantOnly(ArrayRef<Entry> R) {
-    return all_of(R, [](const Entry &E) { return E.Id == 0; });
+    return R.empty() || (R.size() == 1 && R.front().Id == 0);
   }
 
   /// Returns the constant part of \p R, which is 0 if \p R does not have an
@@ -61,6 +60,8 @@ private:
   size_t NumVariables = 0;
 
   /// Current linear constraints in the system.
+  /// Each entry represents a constraint like
+  ///   c0 >= v0 * c1 + .... + v{n-1} * cn
   SmallVector<RowTy, 4> Constraints;
 
   /// A map of variables (IR values) to their corresponding index in the

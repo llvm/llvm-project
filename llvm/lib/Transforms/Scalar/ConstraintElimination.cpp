@@ -805,9 +805,8 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   erase_if(R, [](const Entry &E) { return E.Id != 0 && E.Coefficient == 0; });
 
   // Remove any new variable without a coefficient in the row.
-  while (!NewVariables.empty() &&
-         R.back().Id < Value2Index.size() + NewVariables.size())
-    NewVariables.pop_back();
+  if (R.back().Id >= Value2Index.size())
+    NewVariables.resize(R.back().Id - Value2Index.size());
 
   return ConstraintTy(std::move(R),
                       Value2Index.size() + NewVariables.size() + 1, IsSigned,
