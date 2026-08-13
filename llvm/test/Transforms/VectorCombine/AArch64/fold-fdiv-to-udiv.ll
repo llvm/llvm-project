@@ -5,14 +5,12 @@
 define <4 x i32> @no_fold_v4i32_to_v4f64(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: define <4 x i32> @no_fold_v4i32_to_v4f64(
 ; CHECK-SAME: <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[A:%.*]] = uitofp <4 x i32> [[X]] to <4 x double>
 ; CHECK-NEXT:    [[B:%.*]] = uitofp <4 x i32> [[Y]] to <4 x double>
 ; CHECK-NEXT:    [[R:%.*]] = fdiv <4 x double> [[A]], [[B]]
 ; CHECK-NEXT:    [[RES:%.*]] = fptoui <4 x double> [[R]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
-entry:
   %a = uitofp <4 x i32> %x to <4 x double>
   %b = uitofp <4 x i32> %y to <4 x double>
   %r = fdiv <4 x double> %a, %b
@@ -23,11 +21,9 @@ entry:
 define <4 x i32> @fold_v4i32_constant(<4 x i32> %x) {
 ; CHECK-LABEL: define <4 x i32> @fold_v4i32_constant(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[RES:%.*]] = udiv <4 x i32> [[X]], <i32 1, i32 2, i32 3, i32 4>
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
-entry:
   %a = uitofp <4 x i32> %x to <4 x double>
   %b = uitofp <4 x i32> <i32 1, i32 2, i32 3, i32 4> to <4 x double>
   %r = fdiv <4 x double> %a, %b
@@ -39,12 +35,10 @@ entry:
 define <4 x i32> @fold_value_tracking(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: define <4 x i32> @fold_value_tracking(
 ; CHECK-SAME: <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[NZ:%.*]] = or <4 x i32> [[Y]], splat (i32 1)
 ; CHECK-NEXT:    [[RES:%.*]] = udiv <4 x i32> [[X]], [[NZ]]
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
-entry:
   %nz = or <4 x i32> %y, <i32 1, i32 1, i32 1, i32 1>
   %a = uitofp <4 x i32> %x to <4 x double>
   %b = uitofp <4 x i32> %nz to <4 x double>
@@ -57,32 +51,27 @@ entry:
 define <4 x i32> @no_fold_precision(<4 x i32> %x) {
 ; CHECK-LABEL: define <4 x i32> @no_fold_precision(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[A:%.*]] = uitofp <4 x i32> [[X]] to <4 x float>
 ; CHECK-NEXT:    [[B:%.*]] = uitofp <4 x i32> <i32 1, i32 2, i32 3, i32 4> to <4 x float>
 ; CHECK-NEXT:    [[R:%.*]] = fdiv <4 x float> [[A]], [[B]]
 ; CHECK-NEXT:    [[RES:%.*]] = fptoui <4 x float> [[R]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
-entry:
   %a = uitofp <4 x i32> %x to <4 x float>
   %b = uitofp <4 x i32> <i32 1, i32 2, i32 3, i32 4> to <4 x float>
   %r = fdiv <4 x float> %a, %b
   %res = fptoui <4 x float> %r to <4 x i32>
   ret <4 x i32> %res
 }
-
 define <4 x i32> @no_fold_constant_zero(<4 x i32> %x) {
 ; CHECK-LABEL: define <4 x i32> @no_fold_constant_zero(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[A:%.*]] = uitofp <4 x i32> [[X]] to <4 x double>
 ; CHECK-NEXT:    [[B:%.*]] = uitofp <4 x i32> <i32 1, i32 0, i32 3, i32 4> to <4 x double>
 ; CHECK-NEXT:    [[R:%.*]] = fdiv <4 x double> [[A]], [[B]]
 ; CHECK-NEXT:    [[RES:%.*]] = fptoui <4 x double> [[R]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
-entry:
   %a = uitofp <4 x i32> %x to <4 x double>
   %b = uitofp <4 x i32> <i32 1, i32 0, i32 3, i32 4> to <4 x double>
   %r = fdiv <4 x double> %a, %b
@@ -93,7 +82,6 @@ entry:
 define <4 x i32> @no_fold_multiuse(<4 x i32> %x, ptr %p) {
 ; CHECK-LABEL: define <4 x i32> @no_fold_multiuse(
 ; CHECK-SAME: <4 x i32> [[X:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[A:%.*]] = uitofp <4 x i32> [[X]] to <4 x double>
 ; CHECK-NEXT:    [[B:%.*]] = uitofp <4 x i32> <i32 1, i32 2, i32 3, i32 4> to <4 x double>
 ; CHECK-NEXT:    [[R:%.*]] = fdiv <4 x double> [[A]], [[B]]
@@ -101,11 +89,39 @@ define <4 x i32> @no_fold_multiuse(<4 x i32> %x, ptr %p) {
 ; CHECK-NEXT:    [[RES:%.*]] = fptoui <4 x double> [[R]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
-entry:
   %a = uitofp <4 x i32> %x to <4 x double>
   %b = uitofp <4 x i32> <i32 1, i32 2, i32 3, i32 4> to <4 x double>
   %r = fdiv <4 x double> %a, %b
   store <4 x double> %r, ptr %p
   %res = fptoui <4 x double> %r to <4 x i32>
   ret <4 x i32> %res
+}
+
+define <vscale x 4 x i32> @no_fold_vscale_nonconstant(<vscale x 4 x i32> %x, <vscale x 4 x i32> %y) {
+; CHECK-LABEL: define <vscale x 4 x i32> @no_fold_vscale_nonconstant(
+; CHECK-SAME: <vscale x 4 x i32> [[X:%.*]], <vscale x 4 x i32> [[Y:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[A:%.*]] = uitofp <vscale x 4 x i32> [[X]] to <vscale x 4 x double>
+; CHECK-NEXT:    [[B:%.*]] = uitofp <vscale x 4 x i32> [[Y]] to <vscale x 4 x double>
+; CHECK-NEXT:    [[R:%.*]] = fdiv <vscale x 4 x double> [[A]], [[B]]
+; CHECK-NEXT:    [[RES:%.*]] = fptoui <vscale x 4 x double> [[R]] to <vscale x 4 x i32>
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[RES]]
+;
+  %a = uitofp <vscale x 4 x i32> %x to <vscale x 4 x double>
+  %b = uitofp <vscale x 4 x i32> %y to <vscale x 4 x double>
+  %r = fdiv <vscale x 4 x double> %a, %b
+  %res = fptoui <vscale x 4 x double> %r to <vscale x 4 x i32>
+  ret <vscale x 4 x i32> %res
+}
+
+define <vscale x 4 x i32> @fold_vscale_constant(<vscale x 4 x i32> %x) {
+; CHECK-LABEL: define <vscale x 4 x i32> @fold_vscale_constant(
+; CHECK-SAME: <vscale x 4 x i32> [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[RES:%.*]] = udiv <vscale x 4 x i32> [[X]], splat (i32 2)
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[RES]]
+;
+  %a = uitofp <vscale x 4 x i32> %x to <vscale x 4 x double>
+  %b = uitofp <vscale x 4 x i32> splat (i32 2) to <vscale x 4 x double>
+  %r = fdiv <vscale x 4 x double> %a, %b
+  %res = fptoui <vscale x 4 x double> %r to <vscale x 4 x i32>
+  ret <vscale x 4 x i32> %res
 }
