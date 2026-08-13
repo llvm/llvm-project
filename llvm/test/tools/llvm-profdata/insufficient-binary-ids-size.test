@@ -31,4 +31,4 @@ RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0' >> %t.profraw
 
 RUN: not llvm-profdata show --binary-ids  %t.profraw 2>&1 | FileCheck %s
-CHECK: profile file size does not match header expectations (file may be truncated or header may be corrupt)
+CHECK: profile file size does not match header expectations (file may be truncated or header may be corrupt): Header.BinaryIdSize = 8 bytes, file size is 159 bytes but expected at least 160 bytes
