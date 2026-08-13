@@ -143,14 +143,8 @@ OVERRIDABLE_FUNCTION bool is_debugger_present() noexcept {
 
 #elif defined(__linux__)
 
-#  if defined(_LIBCPP_HAS_NO_FILESYSTEM)
-  _LIBCPP_ASSERT_INTERNAL(false,
-                          "Function is not available. Could not open '/proc/self/status' for reading, libc++ was "
-                          "compiled with _LIBCPP_HAS_NO_FILESYSTEM.");
-  return false;
-#  else
   // https://docs.kernel.org/filesystems/proc.html
-  [[gnu::__aligned__(8)]] array<char, 256 + 1> __buffer;
+  alignas(8) array<char, 256 + 1> __buffer;
   constexpr auto __tracer_key_ = span("\nTracerPid:\t");
 
   auto __result = [&__buffer] {
@@ -168,7 +162,6 @@ OVERRIDABLE_FUNCTION bool is_debugger_present() noexcept {
 
   char* __pos = std::strstr(__buffer.data() + 64, __tracer_key_.data());
   return __pos != nullptr && __pos[__tracer_key_.size() - 1] != '0';
-#  endif // _LIBCPP_HAS_NO_FILESYSTEM
 
 #else
 
