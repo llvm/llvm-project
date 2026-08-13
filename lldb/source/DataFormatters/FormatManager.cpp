@@ -388,8 +388,7 @@ FormatManager::GetSyntheticForType(lldb::TypeNameSpecifierImplSP type_sp) {
     category_sp = GetCategoryAtIndex(category_id);
     if (!category_sp->IsEnabled())
       continue;
-    auto synth_current_sp =
-        category_sp->GetSyntheticForType(type_sp);
+    auto synth_current_sp = category_sp->GetSyntheticForType(type_sp);
 
     if (synth_current_sp && synth_current_sp->IsScripted() &&
         (synth_chosen_sp.get() == nullptr ||
