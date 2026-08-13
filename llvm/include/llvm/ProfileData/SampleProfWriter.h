@@ -279,7 +279,7 @@ const std::array<SmallVector<SecHdrTableEntry, 8>, NumOfLayout>
               0, 0, 0},
              {SecProfileSymbolList, 0, 0, 0, 0},
              {SecFuncMetadata, 0, 0, 0, 0}}),
-    };
+};
 
 class LLVM_ABI SampleProfileWriterExtBinaryBase
     : public SampleProfileWriterBinary {
