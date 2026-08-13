@@ -107,6 +107,7 @@ private:
     return selectShiftMask(Root, 32);
   }
   ComplexRendererFns selectAddrRegImm(MachineOperand &Root) const;
+  ComplexRendererFns selectAddrRegImmLsb00000(MachineOperand &Root) const;
 
   ComplexRendererFns selectSExtBits(MachineOperand &Root, unsigned Bits) const;
   template <unsigned Bits>
@@ -591,6 +592,42 @@ RISCVInstructionSelector::selectAddrRegImm(MachineOperand &Root) const {
   // the combiner?
   return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(Root.getReg()); },
            [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }}};
+}
+
+InstructionSelector::ComplexRendererFns
+RISCVInstructionSelector::selectAddrRegImmLsb00000(MachineOperand &Root) const {
+  if (!Root.isReg())
+    return std::nullopt;
+
+  MachineInstr *RootDef = MRI->getVRegDef(Root.getReg());
+  if (RootDef->getOpcode() == TargetOpcode::G_FRAME_INDEX) {
+    return {{
+        [=](MachineInstrBuilder &MIB) { MIB.add(RootDef->getOperand(1)); },
+        [=](MachineInstrBuilder &MIB) { MIB.addImm(0); },
+    }};
+  }
+
+  if (isBaseWithConstantOffset(Root, *MRI)) {
+    MachineOperand &LHS = RootDef->getOperand(1);
+    MachineOperand &RHS = RootDef->getOperand(2);
+    MachineInstr *LHSDef = MRI->getVRegDef(LHS.getReg());
+    MachineInstr *RHSDef = MRI->getVRegDef(RHS.getReg());
+    int64_t RHSC = RHSDef->getOperand(1).getCImm()->getSExtValue();
+    if (isInt<12>(RHSC) && (RHSC % 32 == 0)) {
+      if (LHSDef->getOpcode() == TargetOpcode::G_FRAME_INDEX)
+        return {{
+            [=](MachineInstrBuilder &MIB) { MIB.add(LHSDef->getOperand(1)); },
+            [=](MachineInstrBuilder &MIB) { MIB.addImm(RHSC); },
+        }};
+      return {{[=](MachineInstrBuilder &MIB) { MIB.add(LHS); },
+               [=](MachineInstrBuilder &MIB) { MIB.addImm(RHSC); }}};
+    }
+  }
+
+  return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(Root.getReg()); },
+           [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }}};
+  // TODO: fold large-constant offsets (ADDI adjustment / Hi-Lo12 split) like
+  // SDAG's SelectAddrRegImmLsb00000; load/store share this gap.
 }
 
 /// Returns the RISCVCC::CondCode that corresponds to the CmpInst::Predicate CC.
