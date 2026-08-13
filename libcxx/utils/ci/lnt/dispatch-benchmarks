@@ -159,7 +159,7 @@ def workflow_runs(workflow: github.Workflow.Workflow) -> List[WorkflowRun]:
     except github.GithubException as error:
         raise GithubError(f'could not list the runs of {workflow.path}: {error}')
     if dry:
-        logging.info(f'ignoring {len(dry)} dry runs')
+        logging.debug(f'ignoring {len(dry)} workflow dry runs: {", ".join(str(i) for i in sorted(dry))}')
     return list(runs.values())
 
 
