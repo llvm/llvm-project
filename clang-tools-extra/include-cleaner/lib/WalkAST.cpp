@@ -17,6 +17,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
+#include "clang/AST/OperationKinds.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
@@ -531,12 +532,17 @@ public:
   bool VisitCastExpr(CastExpr *E) {
     // Handle implicit or explicit casts between Objective-C object pointers
     // aimed towards protocol-qualification (e.g., `ClassName *` to
-    // `id<Proto>`).
+    // `id<Proto>`), as well as toll-free bridged C-pointer-to-ObjC casts.
     QualType SourceType = E->getSubExpr()->getType();
     QualType DestType = E->getType();
 
     const auto *SrcPtr = SourceType->getAs<ObjCObjectPointerType>();
     const auto *DestPtr = DestType->getAs<ObjCObjectPointerType>();
+
+    if (E->getCastKind() == CK_CPointerToObjCPointerCast) {
+      if (DestPtr && DestPtr->getInterfaceDecl())
+        report(E->getExprLoc(), DestPtr->getInterfaceDecl(), RefType::Implicit);
+    }
 
     // If we're casting from a known class pointer to protocol conformance.
     if (SrcPtr && DestPtr && SrcPtr->getInterfaceDecl()) {
