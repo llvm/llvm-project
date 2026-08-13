@@ -14,6 +14,7 @@ add_mlir_dialect_library(InterXeMachine
   MLIRIR
   MLIRSupport
   MLIRControlFlowInterfaces
+  MLIRLoopLikeInterface
   MLIRFuncDialect
   MLIRTransformDialect
 )

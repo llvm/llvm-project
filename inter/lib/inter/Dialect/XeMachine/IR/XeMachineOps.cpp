@@ -93,6 +93,10 @@ using namespace inter::xemachine;
   }
 
 DEFINE_UNARY_ALU_INTERFACE(MovOp)
+
+Speculation::Speculatability MovOp::getSpeculatability() {
+  return getNoMask() ? Speculation::Speculatable : Speculation::NotSpeculatable;
+}
 DEFINE_BINARY_ALU_INTERFACE(AddOp)
 DEFINE_BINARY_ALU_INTERFACE(SubOp)
 DEFINE_BINARY_ALU_INTERFACE(ShlOp)
@@ -554,6 +558,36 @@ void UniformLoopOp::getSuccessorRegions(
   regions.emplace_back(getOperation());
 }
 
+SmallVector<Region *> UniformLoopOp::getLoopRegions() {
+  SmallVector<Region *> regions{&getBody()};
+  getBody().walk([&](Operation *operation) {
+    if (isa<UniformLoopOp>(operation))
+      return WalkResult::skip();
+    for (Region &region : operation->getRegions())
+      regions.push_back(&region);
+    return WalkResult::advance();
+  });
+  return regions;
+}
+
+MutableArrayRef<OpOperand> UniformLoopOp::getInitsMutable() {
+  return getOperation()->getOpOperands();
+}
+
+Block::BlockArgListType UniformLoopOp::getRegionIterArgs() {
+  return getBody().front().getArguments();
+}
+
+std::optional<MutableArrayRef<OpOperand>>
+UniformLoopOp::getYieldedValuesMutable() {
+  auto terminator = cast<ContinueIfOp>(getBody().front().getTerminator());
+  return terminator->getOpOperands().drop_front();
+}
+
+std::optional<ResultRange> UniformLoopOp::getLoopResults() {
+  return getResults();
+}
+
 //===----------------------------------------------------------------------===//
 // Operand -> successor-input mapping.
 //===----------------------------------------------------------------------===//
@@ -577,7 +611,7 @@ ValueRange UniformLoopOp::getSuccessorInputs(RegionSuccessor successor) {
 
 OperandRange
 UniformLoopOp::getEntrySuccessorOperands(RegionSuccessor successor) {
-  return getInits();
+  return getInitialValues();
 }
 
 MutableOperandRange

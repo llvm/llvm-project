@@ -204,12 +204,12 @@ private:
     ContinueIfOp terminator = dyn_cast<ContinueIfOp>(body.getTerminator());
     if (!terminator)
       return loop.emitError("emission requires a continue_if terminator");
-    if (loop.getInits().size() != body.getNumArguments() ||
+    if (loop.getInitialValues().size() != body.getNumArguments() ||
         loop.getNumResults() != body.getNumArguments() ||
         terminator.getCarried().size() != body.getNumArguments())
       return loop.emitError("loop-carried value count mismatch at emission");
     for (auto [init, argument, carried, result] :
-         llvm::zip_equal(loop.getInits(), body.getArguments(),
+         llvm::zip_equal(loop.getInitialValues(), body.getArguments(),
                          terminator.getCarried(), loop.getResults())) {
       if (!hasSamePhysicalStorage(init.getType(), argument.getType()) ||
           !hasSamePhysicalStorage(init.getType(), carried.getType()) ||

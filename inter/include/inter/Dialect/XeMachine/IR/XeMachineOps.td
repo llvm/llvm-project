@@ -7,6 +7,7 @@
 include "inter/Dialect/XeMachine/IR/XeMachineTypes.td"
 include "inter/Dialect/XeMachine/IR/XeMachineInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 class XeMachine_Op<string mnemonic, list<Trait> traits = [],
@@ -45,7 +46,7 @@ def XeMachine_FullScoreboardDrain
 
 // SSA immediate. Element type rides on the op: immediates are untyped in the
 // encoding, typed by the consuming instruction.
-def XeMachine_ImmOp : XeMachine_Op<"imm", [NoMemoryEffect,
+def XeMachine_ImmOp : XeMachine_Op<"imm", [Pure,
     XeMachine_NoMachineInst, XeMachine_NoAsmEmission]> {
   let summary = "materialize an immediate";
   let arguments = (ins I64Attr:$value, TypeAttr:$elemType);
@@ -74,7 +75,8 @@ class XeMachine_SWSBFields {
       DefaultValuedAttr<XeMachine_SWSBTokenMode, "SWSBTokenMode::none">:$swsbTokenMode);
 }
 
-def XeMachine_MovOp : XeMachine_ALUOp<"mov">, XeMachine_SWSBFields {
+def XeMachine_MovOp : XeMachine_ALUOp<"mov", [
+    DeclareOpInterfaceMethods<ConditionallySpeculatable>]>, XeMachine_SWSBFields {
   let summary = "register/immediate move";
   let arguments = !con((ins TypeAttr:$elemType,
                        DefaultValuedAttr<I32Attr, "16">:$execSize,
@@ -361,14 +363,18 @@ def XeMachine_UniformIfOp : XeMachine_IfOp<"uniform_if"> {
 
 def XeMachine_UniformLoopOp : XeMachine_Op<"uniform_loop",
     [SingleBlock, DeclareOpInterfaceMethods<RegionBranchOpInterface,
-                                            ["getEntrySuccessorOperands",
-                                             "getSuccessorInputs"]>]> {
+                                             ["getEntrySuccessorOperands",
+                                              "getSuccessorInputs"]>,
+     DeclareOpInterfaceMethods<LoopLikeOpInterface,
+                               ["getInitsMutable", "getLoopRegions",
+                                "getLoopResults", "getRegionIterArgs",
+                                "getYieldedValuesMutable"]>]> {
   let summary = "structured loop with explicit carried values";
-  let arguments = (ins Variadic<AnyType>:$inits);
+  let arguments = (ins Variadic<AnyType>:$initialValues);
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region AnyRegion:$body);
   let assemblyFormat =
-      "`(` $inits `)` $body attr-dict `:` functional-type($inits, $results)";
+      "`(` $initialValues `)` $body attr-dict `:` functional-type($initialValues, $results)";
 }
 
 def XeMachine_YieldOp : XeMachine_Op<"yield",

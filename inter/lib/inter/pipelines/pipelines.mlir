@@ -41,7 +41,9 @@ module attributes {transform.with_named_sequence} {
         : (!transform.any_op) -> !transform.any_op
     %funcs1 = transform.apply_registered_pass "inter-coalesce-tuples" to %funcs0
         : (!transform.any_op) -> !transform.any_op
-    transform.yield %r8 : !transform.any_op
+    %r9 = transform.apply_registered_pass "loop-invariant-code-motion" to %r8
+        : (!transform.any_op) -> !transform.any_op
+    transform.yield %r9 : !transform.any_op
   }
 
   transform.named_sequence private @inter_prepare_regalloc(
