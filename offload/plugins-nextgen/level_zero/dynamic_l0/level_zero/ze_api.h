@@ -654,17 +654,6 @@ typedef struct _ze_copy_region_t {
   uint32_t depth;
 } ze_copy_region_t;
 
-/* Callbacks for host functions */
-#ifndef ZE_CALLBACK_CONV
-#if defined(_WIN32)
-/// @brief Callback function calling convention
-#define ZE_CALLBACK_CONV __stdcall
-#else
-#define ZE_CALLBACK_CONV
-#endif // defined(_WIN32)
-#endif // ZE_CALLBACK_CONV
-typedef void(ZE_CALLBACK_CONV *ze_host_function_callback_t)(void *pUserData);
-
 /*
  * ============================================================================
  * Level Zero API Functions
@@ -681,8 +670,6 @@ ZE_APIEXPORT ze_result_t ZE_APICALL zeDriverGetExtensionFunctionAddress(
     ze_driver_handle_t hDriver, const char *name, void **ppFunctionAddress);
 ZE_APIEXPORT ze_result_t ZE_APICALL zeDriverGetExtensionProperties(
     ze_driver_handle_t hDriver, uint32_t *pCount, void *pExtensionProperties);
-ZE_APIEXPORT ze_context_handle_t ZE_APICALL
-zeDriverGetDefaultContext(ze_driver_handle_t hDriver);
 
 /* Device functions */
 ZE_APIEXPORT ze_result_t ZE_APICALL zeDeviceGet(ze_driver_handle_t hDriver,
@@ -800,11 +787,6 @@ ZE_APIEXPORT ze_result_t ZE_APICALL zeCommandListAppendMemoryPrefetch(
 ZE_APIEXPORT ze_result_t ZE_APICALL zeCommandListAppendMemAdvise(
     ze_command_list_handle_t hCommandList, ze_device_handle_t hDevice,
     const void *ptr, size_t size, uint32_t advice);
-ZE_APIEXPORT ze_result_t ZE_APICALL zeCommandListAppendHostFunction(
-    ze_command_list_handle_t hCommandList,
-    ze_host_function_callback_t pfnHostFunction, void *pUserData,
-    const void *pNext, ze_event_handle_t hSignalEvent, uint32_t numWaitEvents,
-    ze_event_handle_t *phWaitEvents);
 
 /* Memory functions */
 ZE_APIEXPORT ze_result_t ZE_APICALL zeMemAllocDevice(
