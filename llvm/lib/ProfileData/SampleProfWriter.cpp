@@ -645,13 +645,6 @@ std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
   unsigned LayoutIdx = findUnwrittenEntry(Type);
   SecHdrTableEntry &Entry = SectionHdrLayout[LayoutIdx];
 
-  // In the context-split layout, the second instance of a repeated section type
-  // (such as LBR profile and function offset table) contains flat profiles.
-  if (SecLayout == CtxSplitLayout &&
-      llvm::count_if(SecHdrTable,
-                     [&](const auto &E) { return E.Type == Type; }) == 1)
-    addSecFlag(Entry, SecCommonFlags::SecFlagFlat);
-
   // The setting of SecFlagCompress should happen before markSectionStart.
   if (Type == SecProfileSymbolList && ProfSymList && ProfSymList->toCompress())
     setToCompressSection(SecProfileSymbolList);

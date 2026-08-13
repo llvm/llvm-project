@@ -264,19 +264,22 @@ const std::array<SmallVector<SecHdrTableEntry, 8>, NumOfLayout>
                                           {SecProfileSymbolList, 0, 0, 0, 0},
                                           {SecFuncMetadata, 0, 0, 0, 0}}),
         // CtxSplitLayout
-        SmallVector<SecHdrTableEntry, 8>({{SecProfSummary, 0, 0, 0, 0},
-                                          {SecNameTable, 0, 0, 0, 0},
-                                          // profile with inlined functions
-                                          // for next two sections
-                                          {SecFuncOffsetTable, 0, 0, 0, 0},
-                                          {SecLBRProfile, 0, 0, 0, 0},
-                                          // profile without inlined functions
-                                          // for next two sections
-                                          {SecFuncOffsetTable, 0, 0, 0, 0},
-                                          {SecLBRProfile, 0, 0, 0, 0},
-                                          {SecProfileSymbolList, 0, 0, 0, 0},
-                                          {SecFuncMetadata, 0, 0, 0, 0}}),
-};
+        SmallVector<SecHdrTableEntry, 8>(
+            {{SecProfSummary, 0, 0, 0, 0},
+             {SecNameTable, 0, 0, 0, 0},
+             // profile with inlined functions
+             // for next two sections
+             {SecFuncOffsetTable, 0, 0, 0, 0},
+             {SecLBRProfile, 0, 0, 0, 0},
+             // profile without inlined functions
+             // for next two sections
+             {SecFuncOffsetTable,
+              static_cast<uint64_t>(SecCommonFlags::SecFlagFlat), 0, 0, 0},
+             {SecLBRProfile, static_cast<uint64_t>(SecCommonFlags::SecFlagFlat),
+              0, 0, 0},
+             {SecProfileSymbolList, 0, 0, 0, 0},
+             {SecFuncMetadata, 0, 0, 0, 0}}),
+    };
 
 class LLVM_ABI SampleProfileWriterExtBinaryBase
     : public SampleProfileWriterBinary {
