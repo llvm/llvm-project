@@ -11,19 +11,11 @@ cbuffer c {
     bool cond;
 };
 
-void no_initial_assignment(uint idx) {
-    RWStructuredBuffer<uint> Out;
-    if (cond) {
-        Out = Out1;
-    }
-    Out[idx] = In[idx];
-}
-
-void assignment_to_uninitialized(uint idx) {
-    RWStructuredBuffer<uint> Out;
-    Out = Out;
-    Out[idx] = In[idx];
-}
+// The uninitialized-use cases that were here (`no_initial_assignment` and
+// `assignment_to_uninitialized`) are covered by the dedicated
+// local_resource_conditional_single_path_assign.hlsl and
+// local_resource_default_init_store.hlsl, which expect the diagnostic we
+// ought to emit rather than asserting no diagnostic.
 
 void same_assignment(uint idx) {
     RWStructuredBuffer<uint> Out = Out1;
