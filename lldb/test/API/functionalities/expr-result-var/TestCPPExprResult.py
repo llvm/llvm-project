@@ -25,14 +25,16 @@ class TestCPPResultVariables(TestBase):
         my_derived = frame.FindVariable("my_derived")
         self.assertSuccess(my_derived.error, "Got my_derived")
         my_value_check = ValueCheck(valobj=my_derived)
-        
+
         direct_access_expr = "{0}->derived_int".format(result_varname)
         self.expect_expr(direct_access_expr, result_type="int", result_value="1000")
 
         # Also check this by directly accessing the result variable:
         result_value = frame.FindValue(result_varname, lldb.eValueTypeConstResult, True)
         self.assertTrue(result_value.error.success, "Found my result variable")
-        my_value_check.check_value(self, result_value.Dereference(), "children are correct")
+        my_value_check.check_value(
+            self, result_value.Dereference(), "children are correct"
+        )
 
         # Make sure we can also call a function through the derived type:
         method_result = self.expect_expr(

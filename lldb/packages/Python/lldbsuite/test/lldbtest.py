@@ -302,13 +302,13 @@ def dump_value_obj(val: lldb.SBValue, max_children: int = 10000) -> str:
 class ValueCheck:
     def __init__(
         self,
-        name : string = None,
-        value : string = None,
-        type : string = None,
-        summary : string = None,
-        children : [ValueCheck] = None,
-        dereference : boolean = None,
-        valobj : lldb.SBValue = None,
+        name: string = None,
+        value: string = None,
+        type: string = None,
+        summary: string = None,
+        children: [ValueCheck] = None,
+        dereference: boolean = None,
+        valobj: lldb.SBValue = None,
     ):
         """
         :param name: The name that the SBValue should have. None if the summary
@@ -326,7 +326,7 @@ class ValueCheck:
                          children.
         :param dereference: A ValueCheck for the SBValue returned by the
                             `Dereference` function.
-        :param valobj: If supplied, ignore the other arguments and build a 
+        :param valobj: If supplied, ignore the other arguments and build a
                        ValueCheck that matches valobj except for the name
                        of the toplevel valobj.
         """
@@ -337,15 +337,15 @@ class ValueCheck:
             # name as the reference object may come from
             # a different source.  So we pass that in in
             # the recursive part by hand below.
-            
+
             self.expect_name = name
             # Copy everything else from the incoming valobj:
             self.expect_summary = valobj.GetSummary()
             self.expect_type = valobj.GetDisplayTypeName()
             self.expect_value = valobj.GetValue()
-            self.children : [ValueCheck] = []
+            self.children: [ValueCheck] = []
             for child in valobj.children:
-                self.children.append(ValueCheck(valobj=child, name = child.name))
+                self.children.append(ValueCheck(valobj=child, name=child.name))
         else:
             self.expect_name = name
             self.expect_value = value

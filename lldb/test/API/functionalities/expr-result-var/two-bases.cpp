@@ -27,9 +27,7 @@ struct Derived : public Base_1, Base_2 {
 
 Base *MakeADerivedReportABase() { return (Base *)((Base_1 *)new Derived()); }
 
-Base *ReportABase(Base *input) {
-  return input;
-}
+Base *ReportABase(Base *input) { return input; }
 
 int main() {
   Derived my_derived;
