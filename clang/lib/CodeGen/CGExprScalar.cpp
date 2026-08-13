@@ -4089,6 +4089,7 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
   // Load/convert the LHS.
   LValue LHSLV = EmitCheckedLValue(E->getLHS(), CodeGenFunction::TCK_Store);
 
+  CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, OpInfo.FPFeatures);
   llvm::PHINode *atomicPHI = nullptr;
   if (const AtomicType *atomicTy = LHSTy->getAs<AtomicType>()) {
     // Type wrapped by _Atomic.
@@ -4101,14 +4102,21 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
     // the loaded integer to double, performing FP arithmetics, and truncation
     // back as a single atomic operation. Integer promotion is still
     // semantically safe.
-    bool CanEmitAtomicRMW =
+    bool CanEmitIntegerRMW =
         !AtomicValueTy->isBooleanType() && AtomicValueTy->isIntegerType() &&
         ResultTy->isIntegerType() &&
         !(AtomicValueTy->isUnsignedIntegerType() &&
           CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow)) &&
         CGF.getLangOpts().getSignedOverflowBehavior() !=
             LangOptions::SOB_Trapping;
-    if (CanEmitAtomicRMW) {
+    bool CanEmitFloatingRMW = false;
+    if (!Builder.getIsFPConstrained() && AtomicValueTy->isFloatingType() &&
+        CGF.getContext().hasSameUnqualifiedType(AtomicValueTy, ResultTy)) {
+      llvm::Type *IRTy = CGF.ConvertType(AtomicValueTy);
+      uint64_t StoreBits = CGF.CGM.getDataLayout().getTypeStoreSizeInBits(IRTy);
+      CanEmitFloatingRMW = llvm::isPowerOf2_64(StoreBits);
+    }
+    if (CanEmitIntegerRMW || CanEmitFloatingRMW) {
       llvm::AtomicRMWInst::BinOp AtomicOp = llvm::AtomicRMWInst::BAD_BINOP;
       llvm::Instruction::BinaryOps Op;
       switch (OpInfo.Opcode) {
@@ -4119,12 +4127,16 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
         case BO_ShrAssign:
           break;
         case BO_AddAssign:
-          AtomicOp = llvm::AtomicRMWInst::Add;
-          Op = llvm::Instruction::Add;
+          AtomicOp = CanEmitFloatingRMW ? llvm::AtomicRMWInst::FAdd
+                                        : llvm::AtomicRMWInst::Add;
+          Op = CanEmitFloatingRMW ? llvm::Instruction::FAdd
+                                  : llvm::Instruction::Add;
           break;
         case BO_SubAssign:
-          AtomicOp = llvm::AtomicRMWInst::Sub;
-          Op = llvm::Instruction::Sub;
+          AtomicOp = CanEmitFloatingRMW ? llvm::AtomicRMWInst::FSub
+                                        : llvm::AtomicRMWInst::Sub;
+          Op = CanEmitFloatingRMW ? llvm::Instruction::FSub
+                                  : llvm::Instruction::Sub;
           break;
         case BO_AndAssign:
           AtomicOp = llvm::AtomicRMWInst::And;
@@ -4171,7 +4183,6 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
   else
     OpInfo.LHS = EmitLoadOfLValue(LHSLV, E->getExprLoc());
 
-  CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, OpInfo.FPFeatures);
   SourceLocation Loc = E->getExprLoc();
   if (!PromotionTypeLHS.isNull())
     OpInfo.LHS = EmitScalarConversion(OpInfo.LHS, LHSTy, PromotionTypeLHS,
