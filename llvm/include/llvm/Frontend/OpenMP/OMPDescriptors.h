@@ -111,7 +111,7 @@ using DescriptorMap = DenseMap<Enum, DescriptorTy>;
 LLVM_ABI const descriptor::Clause &getDescriptor(llvm::omp::Clause C);
 LLVM_ABI const descriptor::Modifier &getDescriptor(llvm::omp::Modifier M);
 
-Properties getProperties(Clause C, unsigned Version);
+LLVM_ABI Properties getProperties(Clause C, unsigned Version);
 } // namespace llvm::omp
 
 #endif // LLVM_FRONTEND_OPENMP_OMPDESCRIPTORS_H
