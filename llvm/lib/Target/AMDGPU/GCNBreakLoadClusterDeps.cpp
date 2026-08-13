@@ -69,6 +69,7 @@ class GCNBreakLoadClusterDepsImpl {
   bitset<AMDGPU::NUM_TARGET_REGS> getVGPR32Lanes(Register Reg) const;
   pair<bitset<AMDGPU::NUM_TARGET_REGS>, bitset<AMDGPU::NUM_TARGET_REGS>>
   get_uses_and_defs_for(MachineInstr &MI) const;
+  Register rename_register(Register from_reg, Register to_reg, Register rename_reg);
 
 public:
   bool run(MachineFunction &MF);
@@ -121,6 +122,15 @@ GCNBreakLoadClusterDepsImpl::get_uses_and_defs_for(MachineInstr &MI) const {
              ? &to_return.first
          : &to_return.second)) |= getVGPR32Lanes(MI.getOperand(i).getReg());
   return to_return;
+}
+
+Register GCNBreakLoadClusterDepsImpl::rename_register(Register from_reg, Register to_reg, Register rename_reg) {
+  if (rename_reg == from_reg)
+    return to_reg;
+  if (unsigned Idx =
+      TRI->getSubRegIndex(from_reg.asMCReg(), rename_reg.asMCReg()))
+    return TRI->getSubReg(to_reg.asMCReg(), Idx);
+  return rename_reg;
 }
 
 bool GCNBreakLoadClusterDepsImpl::runOnMachineBasicBlock(
@@ -219,21 +229,20 @@ bool GCNBreakLoadClusterDepsImpl::runOnMachineBasicBlock(
               i * DefinedRegClass.getSizeInBits() / 32 < occupancy_budget) {
             for (unsigned op = 0; op < RIt->getNumOperands(); op++)
               if (RIt->getOperand(op).isReg() && RIt->getOperand(op).isDef() &&
-                  RIt->getOperand(op).getReg() == old_reg)
-                RIt->getOperand(op).setReg(DefinedRegClass.getRegisters()[i]);
+                  TRI->regsOverlap(RIt->getOperand(op).getReg(),old_reg))
+                RIt->getOperand(op).setReg(rename_register(old_reg,DefinedRegClass.getRegisters()[i],RIt->getOperand(op).getReg()));
             for (MachineBasicBlock::iterator RenameIt =
                      std::next(RIt->getIterator());
                  RenameIt != KillerIns; ++RenameIt)
               for (unsigned op = 0; op < RenameIt->getNumOperands(); op++)
                 if (RenameIt->getOperand(op).isReg() &&
-                    RenameIt->getOperand(op).getReg() == old_reg)
-                  RenameIt->getOperand(op).setReg(DefinedRegClass.getRegisters()[i]);
+                    TRI->regsOverlap(RenameIt->getOperand(op).getReg(),old_reg))
+                  RenameIt->getOperand(op).setReg(rename_register(old_reg,DefinedRegClass.getRegisters()[i],RenameIt->getOperand(op).getReg()));
             for (unsigned op = 0; op < KillerIns->getNumOperands(); op++)
               if (KillerIns->getOperand(op).isReg() &&
                   KillerIns->getOperand(op).isUse() &&
-                  KillerIns->getOperand(op).getReg() ==
-                      old_reg)
-                KillerIns->getOperand(op).setReg(DefinedRegClass.getRegisters()[i]);
+                  TRI->regsOverlap(KillerIns->getOperand(op).getReg(),old_reg))
+                KillerIns->getOperand(op).setReg(rename_register(old_reg,DefinedRegClass.getRegisters()[i],KillerIns->getOperand(op).getReg()));
 
             // Delete the conflict reg and all other conflicting registers we
             // just handled
@@ -285,7 +294,7 @@ bool GCNBreakLoadClusterDepsImpl::run(MachineFunction &MF) {
   for (MachineBasicBlock &MBB : MF)
     to_return |= runOnMachineBasicBlock(MBB);
   
-  return false;
+  return to_return;
 }
 
 bool GCNBreakLoadClusterDepsLegacy::runOnMachineFunction(MachineFunction &MF) {
