@@ -1231,6 +1231,77 @@ def testOperationHash():
             assert hash(op2) == hash(custom_op2)
 
 
+# CHECK-LABEL: TEST: testOperationEquivalence
+@run
+def testOperationEquivalence():
+    ctx = Context()
+    with ctx:
+        module = Module.parse(
+            r"""
+        func.func @f() -> i32 {
+          %0 = arith.constant 42 : i32
+          %1 = arith.constant 42 : i32
+          %2 = arith.constant 7 : i32
+          %3 = arith.subi %0, %2 : i32
+          %4 = arith.subi %0, %2 : i32
+          %5 = arith.subi %2, %0 : i32
+          %6 = arith.subi %0, %2 {dialect.discardable} : i32
+          %7 = arith.addi %0, %2 : i32
+          %8 = arith.addi %2, %0 : i32
+          return %0 : i32
+        }
+      """,
+            ctx,
+        )
+        operations = list(module.body.operations[0].regions[0].blocks[0].operations)
+        c42a, c42b, c7, sub3, sub4, sub5, sub6, add7, add8 = operations[:-1]
+        flags = OperationEquivalenceFlags
+        ignore_locations = flags.IGNORE_LOCATIONS
+
+        assert c42a.is_structurally_equivalent(c42b, ignore_locations)
+        assert not c42a.is_structurally_equivalent(c42b)
+        assert c42a.is_structurally_equivalent(c42b) == c42a.is_structurally_equivalent(
+            c42b, flags.NONE
+        )
+        assert not c42a.is_structurally_equivalent(c7, ignore_locations)
+        assert c42a.is_structurally_equivalent(c42a, ignore_locations)
+        assert sub3.is_structurally_equivalent(sub4, ignore_locations)
+        assert not sub3.is_structurally_equivalent(sub5, ignore_locations)
+        assert not c42a.is_structurally_equivalent(sub3, ignore_locations)
+
+        discardable_flags = (
+            ignore_locations | flags.IGNORE_DISCARDABLE_ATTRS
+        )
+        assert not sub3.is_structurally_equivalent(sub6, ignore_locations)
+        assert sub3.is_structurally_equivalent(sub6, discardable_flags)
+
+        assert add7.is_structurally_equivalent(add8, ignore_locations)
+        assert not add7.is_structurally_equivalent(
+            add8, ignore_locations | flags.IGNORE_COMMUTATIVITY
+        )
+
+        properties_flags = ignore_locations | flags.IGNORE_PROPERTIES
+        assert c42a.is_structurally_equivalent(c7, properties_flags)
+
+        assert c42a.structural_hash(ignore_locations) == c42b.structural_hash(
+            ignore_locations
+        )
+        assert sub3.structural_hash(ignore_locations) == sub4.structural_hash(
+            ignore_locations
+        )
+        assert sub3.structural_hash(discardable_flags) == sub6.structural_hash(
+            discardable_flags
+        )
+        assert add7.structural_hash(ignore_locations) == add8.structural_hash(
+            ignore_locations
+        )
+        assert c42a.structural_hash(properties_flags) == c7.structural_hash(
+            properties_flags
+        )
+        # CHECK: operation equivalence passed
+        print("operation equivalence passed")
+
+
 # CHECK-LABEL: TEST: testOperationParse
 @run
 def testOperationParse():
