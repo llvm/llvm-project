@@ -97,6 +97,65 @@ __nth_element_median5(_RandomAccessIterator __first, _Compare __comp) {
   std::__cond_swap<_Compare>(__x3, __x5, __comp);
 }
 
+// nth_element on 4 elements. 3 comparisons for the min or max, 4 for the two inner
+// positions (Knuth V_2(4)). A full sort would need 5.
+template <class _AlgPolicy,
+          class _Compare,
+          class _RandomAccessIterator,
+          __enable_if_t<!__use_branchless_sort<_Compare, _RandomAccessIterator>, int> = 0>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
+__nth_element4(_RandomAccessIterator __first, _RandomAccessIterator __nth, _Compare __comp) {
+  using _Ops = _IterOps<_AlgPolicy>;
+
+  _RandomAccessIterator __x1 = __first;
+  _RandomAccessIterator __x2 = __first + 1;
+  _RandomAccessIterator __x3 = __first + 2;
+  _RandomAccessIterator __x4 = __first + 3;
+
+  if (__comp(*__x2, *__x1))
+    _Ops::iter_swap(__x1, __x2);
+  if (__comp(*__x4, *__x3))
+    _Ops::iter_swap(__x3, __x4);
+
+  const typename iterator_traits<_RandomAccessIterator>::difference_type __k = __nth - __first;
+  if (__k == 0) {
+    if (__comp(*__x3, *__x1))
+      _Ops::iter_swap(__x1, __x3);
+    return;
+  }
+  if (__k == 3) {
+    if (__comp(*__x4, *__x2))
+      _Ops::iter_swap(__x2, __x4);
+    return;
+  }
+
+  if (__k == 1) {
+    // Order pairs by their smaller element so the min is at __x1.
+    if (__comp(*__x3, *__x1)) {
+      _Ops::iter_swap(__x1, __x3);
+      _Ops::iter_swap(__x2, __x4);
+    }
+  } else {
+    // Order pairs by their larger element so the max is at __x4.
+    if (__comp(*__x4, *__x2)) {
+      _Ops::iter_swap(__x1, __x3);
+      _Ops::iter_swap(__x2, __x4);
+    }
+  }
+  // 2nd smallest at __x2 (__k == 1), or 2nd largest at __x3 (__k == 2).
+  if (__comp(*__x3, *__x2))
+    _Ops::iter_swap(__x2, __x3);
+}
+
+template <class _AlgPolicy,
+          class _Compare,
+          class _RandomAccessIterator,
+          __enable_if_t<__use_branchless_sort<_Compare, _RandomAccessIterator>, int> = 0>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
+__nth_element4(_RandomAccessIterator __first, _RandomAccessIterator, _Compare __comp) {
+  std::__sort4<_AlgPolicy, _Compare>(__first, __first + 1, __first + 2, __first + 3, __comp);
+}
+
 // Handles ranges of at most 5 elements. Returns false if the range was too large to be handled.
 template <class _AlgPolicy, class _Compare, class _RandomAccessIterator>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool __nth_element_small(
@@ -115,8 +174,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool __nth_element_small(
     std::__sort3<_AlgPolicy, _Compare>(__first, __first + difference_type(1), --__last, __comp);
     return true;
   case 4:
-    std::__sort4<_AlgPolicy, _Compare>(
-        __first, __first + difference_type(1), __first + difference_type(2), --__last, __comp);
+    std::__nth_element4<_AlgPolicy, _Compare>(__first, __nth, __comp);
     return true;
   case 5:
     if (__nth == __first + difference_type(2)) {
