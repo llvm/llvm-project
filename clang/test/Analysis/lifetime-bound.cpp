@@ -471,3 +471,29 @@ IntPtrArr return_array_field_not_yet_detected() {
   // expected-note@-2    {{Address of stack memory associated with local variable 'z' returned to caller}}
   // expected-warning@-3 {{address of stack memory associated with local variable 'z' returned}}
 }
+
+struct Hold {
+  int *ptr;
+};
+
+Hold takeRef(int &x);
+// Even though there might be a lifetime error in the function
+// UseAfterLifetimeEnd should not emit a warning for this
+// case since there is no annotation present in the code.
+Hold return_by_val_no_ann() {
+  int num = 4;
+  return takeRef(num);
+}
+
+int *unwrap(Hold i [[clang::lifetimebound]]) { return i.ptr; }
+
+int *arg_aggregate_lifetimebound() {
+  int local_num = 5; // expected-note {{'local_num' initialized here}}
+  Hold h{&local_num};
+  return unwrap(h);
+  // expected-warning@-1 {{Returning value bound to 'local_num' that will go out of scope}}
+  // expected-note@-2    {{Lifetime of 'local_num' ended here}}
+  // expected-note@-3    {{Value's lifetime bound to the lifetime of 'local_num' here}}
+  // expected-warning@-4 {{Address of stack memory associated with local variable 'local_num' returned to caller}}
+  // expected-note@-5    {{Address of stack memory associated with local variable 'local_num' returned to caller}}
+}
