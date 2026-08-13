@@ -1785,6 +1785,10 @@ class PatAbdSum<SDPatternOperator OpNode, RVInst Inst, ValueType VecVT>
 class PatAbdSumAcc<SDPatternOperator OpNode, RVInst Inst, ValueType VecVT>
     : Pat<(XLenVT (OpNode (XLenVT GPR:$rd), (VecVT GPR:$rs1), (VecVT GPR:$rs2))),
           (Inst GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+class PatMulParts<SDPatternOperator OpNode, RVInst Inst, ValueType ResultVT,
+                  ValueType SourceVT>
+    : Pat<(ResultVT (OpNode (SourceVT GPR:$rs1), (SourceVT GPR:$rs2))),
+          (Inst GPR:$rs1, GPR:$rs2)>;
 
 class PatGprGprGpr<SDPatternOperator OpNode, RVInst Inst, ValueType VT>
     : Pat<(VT (OpNode (VT GPR:$rd), (VT GPR:$rs1), (VT GPR:$rs2))),
@@ -2295,7 +2299,27 @@ let Predicates = [HasStdExtP] in {
   def : Pat<(XLenVecI16VT (riscv_ppairoe_h GPR:$rs1, GPR:$rs2)),
             (PPAIROE_H GPR:$rs1, GPR:$rs2)>;
 
+  // Packed byte multiply-parts patterns.
+  def : PatMulParts<int_riscv_pmul_00, PMUL_H_B00, XLenVecI16VT, XLenVecI8VT>;
+  def : PatMulParts<int_riscv_pmul_01, PMUL_H_B01, XLenVecI16VT, XLenVecI8VT>;
+  def : PatMulParts<int_riscv_pmul_11, PMUL_H_B11, XLenVecI16VT, XLenVecI8VT>;
+  def : PatMulParts<int_riscv_pmulu_00, PMULU_H_B00, XLenVecI16VT, XLenVecI8VT>;
+  def : PatMulParts<int_riscv_pmulu_01, PMULU_H_B01, XLenVecI16VT, XLenVecI8VT>;
+  def : PatMulParts<int_riscv_pmulu_11, PMULU_H_B11, XLenVecI16VT, XLenVecI8VT>;
+  def : PatMulParts<int_riscv_pmulsu_00, PMULSU_H_B00, XLenVecI16VT, XLenVecI8VT>;
+  def : PatMulParts<int_riscv_pmulsu_11, PMULSU_H_B11, XLenVecI16VT, XLenVecI8VT>;
+
 let append Predicates = [IsRV32] in {
+  // Scalar halfword multiply-parts patterns.
+  def : PatMulParts<int_riscv_mul_00, MUL_H00, i32, v2i16>;
+  def : PatMulParts<int_riscv_mul_01, MUL_H01, i32, v2i16>;
+  def : PatMulParts<int_riscv_mul_11, MUL_H11, i32, v2i16>;
+  def : PatMulParts<int_riscv_mulu_00, MULU_H00, i32, v2i16>;
+  def : PatMulParts<int_riscv_mulu_01, MULU_H01, i32, v2i16>;
+  def : PatMulParts<int_riscv_mulu_11, MULU_H11, i32, v2i16>;
+  def : PatMulParts<int_riscv_mulsu_00, MULSU_H00, i32, v2i16>;
+  def : PatMulParts<int_riscv_mulsu_11, MULSU_H11, i32, v2i16>;
+
   def : PatGpr<bitreverse, REV_RV32>;
 
   def : Pat<(XLenVT (riscv_sati GPR:$rs1, timm:$imm)),
@@ -2925,6 +2949,26 @@ let append Predicates = [IsRV64] in {
   // 32-bit averaging-sub patterns
   def : PatGprGpr<riscv_asub, PASUB_W, v2i32>;
   def : PatGprGpr<riscv_asubu, PASUBU_W, v2i32>;
+
+  // Packed halfword multiply-parts patterns.
+  def : PatMulParts<int_riscv_pmul_00, PMUL_W_H00, v2i32, v4i16>;
+  def : PatMulParts<int_riscv_pmul_01, PMUL_W_H01, v2i32, v4i16>;
+  def : PatMulParts<int_riscv_pmul_11, PMUL_W_H11, v2i32, v4i16>;
+  def : PatMulParts<int_riscv_pmulu_00, PMULU_W_H00, v2i32, v4i16>;
+  def : PatMulParts<int_riscv_pmulu_01, PMULU_W_H01, v2i32, v4i16>;
+  def : PatMulParts<int_riscv_pmulu_11, PMULU_W_H11, v2i32, v4i16>;
+  def : PatMulParts<int_riscv_pmulsu_00, PMULSU_W_H00, v2i32, v4i16>;
+  def : PatMulParts<int_riscv_pmulsu_11, PMULSU_W_H11, v2i32, v4i16>;
+
+  // Scalar word multiply-parts patterns.
+  def : PatMulParts<int_riscv_mul_00, MUL_W00, i64, v2i32>;
+  def : PatMulParts<int_riscv_mul_01, MUL_W01, i64, v2i32>;
+  def : PatMulParts<int_riscv_mul_11, MUL_W11, i64, v2i32>;
+  def : PatMulParts<int_riscv_mulu_00, MULU_W00, i64, v2i32>;
+  def : PatMulParts<int_riscv_mulu_01, MULU_W01, i64, v2i32>;
+  def : PatMulParts<int_riscv_mulu_11, MULU_W11, i64, v2i32>;
+  def : PatMulParts<int_riscv_mulsu_00, MULSU_W00, i64, v2i32>;
+  def : PatMulParts<int_riscv_mulsu_11, MULSU_W11, i64, v2i32>;
 
   // 32-bit multiply high patterns
   def : PatGprGpr<mulhs, PMULH_W, v2i32>;
