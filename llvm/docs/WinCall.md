@@ -32,8 +32,12 @@ WinCall applies in two situations:
    whose OS is Windows or UEFI.)
 
 2. It can be selected per-function with the ``wincall`` attribute
-   (``__attribute__((wincall))``, ``__wincall``, ``_wincall``), which maps to
-   ``CC_WinCall`` in the frontend.
+   (``__attribute__((wincall))``, ``__wincall``, ``_wincall``,
+   ``[[gnu::wincall]]``), which maps to ``CC_WinCall`` in the frontend.
+   WinCall is the APX-aware Microsoft ABI, so ``wincall`` already implies the
+   MS x64 ABI — there is no need to also write ``ms_abi``. (``ms_abi`` alone is
+   still the classic MS x64 convention on non-APX targets, while on
+   ``x86_64apx`` targets ``ms_abi`` alone implies ``wincall``.)
 
 WinCall is **x86-64 only**. On 32-bit x86 or on any non-x86 target the
 attribute is ignored with a warning

@@ -545,6 +545,9 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
       Builder.defineMacro("__x86_64h");
       Builder.defineMacro("__x86_64h__");
     }
+    if (getTriple().isX86_64APX()) {
+      Builder.defineMacro("__x86_64apx__");
+    }
   } else {
     DefineStd(Builder, "i386", Opts);
   }

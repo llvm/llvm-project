@@ -5863,7 +5863,13 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
     CC = CC_X86RegCall;
     break;
   case ParsedAttr::AT_MSABI:
-    CC = IsTargetDefaultMSABI ? CC_C : CC_Win64;
+    // On x86_64apx the MS ABI is WinCall (the APX-aware Microsoft convention),
+    // so msabi implies wincall there. Elsewhere msabi stays the classic MS x64
+    // convention, unless it is combined with an explicit wincall attribute.
+    if (Context.getTargetInfo().getTriple().isX86_64APX())
+      CC = CC_WinCall;
+    else
+      CC = IsTargetDefaultMSABI ? CC_C : CC_Win64;
     break;
   case ParsedAttr::AT_SysVABI:
     CC = IsTargetDefaultMSABI ? CC_X86_64SysV : CC_C;
