@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PdbSymUid.h"
+#include "llvm/Support/NativeFormatting.h"
 
 using namespace lldb_private;
 using namespace lldb_private::npdb;
