@@ -202,22 +202,20 @@ typename __stdinbuf<_CharT>::int_type __stdinbuf<_CharT>::__getchar(bool __consu
 
 template <class _CharT>
 streamsize __stdinbuf<_CharT>::xsgetn(char_type* __s, streamsize __n) {
-  if constexpr (is_same<_CharT, char>::value) {
-    if (__always_noconv_) {
-      streamsize __i = 0;
-      if (__i < __n && __last_consumed_is_next_) {
-        __s[__i++]               = traits_type::to_char_type(__last_consumed_);
-        __last_consumed_         = traits_type::eof();
-        __last_consumed_is_next_ = false;
-      }
-      if (__i < __n) {
-        size_t __nread = fread(__s + __i, 1, static_cast<size_t>(__n - __i), __file_);
-        if (__nread > 0)
-          __last_consumed_ = traits_type::to_int_type(__s[__i + __nread - 1]);
-        __i += static_cast<streamsize>(__nread);
-      }
-      return __i;
+  if (__always_noconv_ && !__is_win32api_wide_char) {
+    streamsize __i = 0;
+    if (__n > 0 && __last_consumed_is_next_) {
+      __s[__i++]               = traits_type::to_char_type(__last_consumed_);
+      __last_consumed_         = traits_type::eof();
+      __last_consumed_is_next_ = false;
     }
+    if (__n > __i) {
+      size_t __nread = fread(__s + __i, 1, static_cast<size_t>(__n - __i), __file_);
+      if (__nread > 0)
+        __last_consumed_ = traits_type::to_int_type(__s[__i + __nread - 1]);
+      __i += static_cast<streamsize>(__nread);
+    }
+    return __i;
   }
   return basic_streambuf<char_type, traits_type>::xsgetn(__s, __n);
 }
