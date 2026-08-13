@@ -190,21 +190,25 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
     def test_runInTerminalInvalidTarget(self):
         self.build_and_create_debug_adapter()
         response = self.launch_and_configurationDone(
-            "INVALIDPROGRAM",
+            self.getBuildArtifact("INVALIDPROGRAM"),
             console="integratedTerminal",
             args=["foobar"],
             env=["FOO=bar"],
         )
         self.assertFalse(response["success"])
         self.assertIn(
-            "'INVALIDPROGRAM' does not exist",
+            f"'{self.getBuildArtifact('INVALIDPROGRAM')}' does not exist",
             response["body"]["error"]["format"],
         )
 
     @skipIfLinux # FIXME: doesn't seem to work on Ubuntu 16.04.
     def test_missingArgInRunInTerminalLauncher(self):
         proc = subprocess.run(
-            [self.lldbDAPExec, "--launch-target", "INVALIDPROGRAM"],
+            [
+                self.lldbDAPExec,
+                "--launch-target",
+                self.getBuildArtifact("INVALIDPROGRAM"),
+            ],
             capture_output=True,
             universal_newlines=True,
         )
@@ -222,7 +226,7 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
                     "--comm-file",
                     comm_file,
                     "--launch-target",
-                    "INVALIDPROGRAM",
+                    self.getBuildArtifact("INVALIDPROGRAM"),
                 ],
                 universal_newlines=True,
                 stderr=subprocess.PIPE,
