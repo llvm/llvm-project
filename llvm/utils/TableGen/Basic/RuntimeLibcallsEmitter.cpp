@@ -124,10 +124,14 @@ private:
 
   // Emit a `setAvailableLibFuncs_<name>` member function for all LibcallLibrary
   // defs sharing \p Name, each gated by its own availability predicate. \p
-  // Exclusions are emitted as guarded setUnavailable calls at the end.
+  // Exclusions are emitted as guarded setUnavailable calls at the end. \p
+  // DefaultCCs holds the distinct DefaultLibcallCallingConv snippets the
+  // consuming system libraries supply; exactly one must exist if any member CC
+  // names the DefaultCC sentinel.
   void emitLibraryFunction(raw_ostream &OS, StringRef Name,
                            ArrayRef<const Record *> Libs,
-                           ArrayRef<LibraryExclusion> Exclusions) const;
+                           ArrayRef<LibraryExclusion> Exclusions,
+                           ArrayRef<StringRef> DefaultCCs) const;
 
   // Group all LibcallLibrary defs by their shared LibraryName, preserving
   // definition order. Both the member-declaration fragment and the definitions
@@ -544,7 +548,8 @@ void RuntimeLibcallEmitter::emitLibraryVariant(raw_ostream &OS,
 
 void RuntimeLibcallEmitter::emitLibraryFunction(
     raw_ostream &OS, StringRef Name, ArrayRef<const Record *> Libs,
-    ArrayRef<LibraryExclusion> Exclusions) const {
+    ArrayRef<LibraryExclusion> Exclusions,
+    ArrayRef<StringRef> DefaultCCs) const {
   OS << "void llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibFuncs_";
   emitLibFuncSuffix(OS, Name);
   OS << "(const llvm::Triple &TT, "
@@ -598,6 +603,37 @@ void RuntimeLibcallEmitter::emitLibraryFunction(
     }
 
     Expanded.push_back(std::move(EL));
+  }
+
+  // If any member CC names the DefaultCC sentinel, emit a local for it (seeded
+  // from the consuming system library's DefaultLibcallCallingConv) so those
+  // snippets are in scope. \p DefaultCCs holds the distinct snippets the
+  // consumers supply: exactly one must exist.
+  bool ReferencesDefaultCC = any_of(Expanded, [](const ExpandedLibrary &EL) {
+    return any_of(EL.Pred2Funcs, [](const auto &KeyAndFuncs) {
+      const Record *CC = KeyAndFuncs.second.CallingConv;
+      return CC && CC->getValueAsString("CallingConv").contains("DefaultCC");
+    });
+  });
+
+  if (ReferencesDefaultCC) {
+    if (DefaultCCs.empty()) {
+      PrintFatalError(Libs.front(),
+                      "library '" + Name +
+                          "' has a member calling convention referencing "
+                          "DefaultCC but no consuming SystemRuntimeLibrary "
+                          "provides a DefaultLibcallCallingConv");
+    }
+    if (DefaultCCs.size() > 1) {
+      PrintFatalError(Libs.front(),
+                      "library '" + Name +
+                          "' is dispatched by multiple SystemRuntimeLibrary "
+                          "defs with different DefaultLibcallCallingConv; "
+                          "DefaultCC is ambiguous for its member calling "
+                          "conventions");
+    }
+
+    OS << "  const CallingConv::ID DefaultCC = " << DefaultCCs.front() << ";\n";
   }
 
   // Impls unconditional in every variant are emitted once and stripped from
@@ -735,8 +771,47 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
     }
   }
 
-  for (const auto &[Name, Libs] : collectLibrariesByName())
-    emitLibraryFunction(OS, Name, Libs, ExclusionsByLibName.lookup(Name));
+  // Collect, per library name, the distinct DefaultLibcallCallingConv snippets
+  // its consuming system libraries supply (a plain Record walk; no member
+  // expansion). emitLibraryFunction, which already expands the members, picks
+  // the snippet for a library that names the DefaultCC sentinel and diagnoses a
+  // missing (none) or ambiguous (more than one) snippet.
+  MapVector<StringRef, SetVector<StringRef>> DefaultCCsByLibName;
+  for (const Record *R : AllLibs) {
+    const Record *DefaultCCClass =
+        R->getValueAsDef("DefaultLibcallCallingConv");
+    StringRef DefaultCC =
+        DefaultCCClass ? DefaultCCClass->getValueAsString("CallingConv").trim()
+                       : StringRef();
+    if (DefaultCC.empty())
+      continue;
+    const DagInit *MemberDag =
+        R->getValueAsDef("MemberList")->getValueAsDag("MemberList");
+    for (const Init *Arg : MemberDag->getArgs()) {
+      const auto *DI = dyn_cast<DefInit>(Arg);
+      if (!DI)
+        continue;
+      const Record *Def = DI->getDef();
+      const Record *Lib = nullptr;
+      if (Def->isSubClassOf("LibcallLibrary"))
+        Lib = Def;
+      else if (Def->isSubClassOf("LibraryRef"))
+        Lib = Def->getValueAsDef("Library");
+      if (!Lib)
+        continue;
+      DefaultCCsByLibName[Lib->getValueAsString("LibraryName")].insert(
+          DefaultCC);
+    }
+  }
+
+  for (const auto &[Name, Libs] : collectLibrariesByName()) {
+    auto It = DefaultCCsByLibName.find(Name);
+    ArrayRef<StringRef> DefaultCCs = It == DefaultCCsByLibName.end()
+                                         ? ArrayRef<StringRef>()
+                                         : It->second.getArrayRef();
+    emitLibraryFunction(OS, Name, Libs, ExclusionsByLibName.lookup(Name),
+                        DefaultCCs);
+  }
 
   OS << "void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets("
         "const llvm::Triple &TT, ExceptionHandling ExceptionModel, "
