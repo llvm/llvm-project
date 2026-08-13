@@ -674,8 +674,8 @@ module {
 
 // PREP-LABEL: func.func @duplicate_live_loop_inits
 // PREP: [[INIT:%.*]] = xemachine.mov
-// PREP-NEXT: [[INIT_COPY0:%.*]] = xemachine.mov [[INIT]] {{.*}}xemachine.regalloc_copy = "loop-init"
-// PREP-NEXT: [[INIT_COPY1:%.*]] = xemachine.mov [[INIT]] {{.*}}xemachine.regalloc_copy = "loop-init"
+// PREP-NEXT: [[INIT_COPY0:%.*]] = xemachine.mov [[INIT]] {{.*}}noMask{{.*}}xemachine.regalloc_copy = "loop-init"
+// PREP-NEXT: [[INIT_COPY1:%.*]] = xemachine.mov [[INIT]] {{.*}}noMask{{.*}}xemachine.regalloc_copy = "loop-init"
 // PREP-NEXT: {{%.*}}:2 = xemachine.uniform_loop([[INIT_COPY0]], [[INIT_COPY1]])
 
 // PREP-LABEL: func.func @loop_backedge_swap

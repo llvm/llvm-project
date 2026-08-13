@@ -829,7 +829,8 @@ repairRepetitiveEntries(func::FuncOp function, const RegionFlow &flow,
       if (duplicate || liveThrough) {
         OpBuilder builder(branch.operation);
         FailureOr<Value> copy = materializeRegisterCopy(
-            builder, branch.operation->getLoc(), init, inputType, "loop-init");
+            builder, branch.operation->getLoc(), init, inputType, "loop-init",
+            /*destinationSub=*/0, /*noMask=*/true);
         if (failed(copy))
           return failure();
         transfer.operand->set(*copy);
