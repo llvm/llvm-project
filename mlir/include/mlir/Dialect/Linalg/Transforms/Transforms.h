@@ -1423,6 +1423,11 @@ struct BlockPackMatmulOptions {
   /// the parallel dimensions and kb is the reduction dimension.
   SmallVector<int64_t, 3> blockFactors;
 
+  /// Scalable flags for block factors. When true, the corresponding block
+  /// factor is considered scalable. Must be empty (all static) or have the same
+  /// size as blockFactors.
+  SmallVector<bool, 3> scalableBlockFactors;
+
   /// If true, allows packing of dimensions that only partially fit into the
   /// block factors.
   bool allowPadding = true;
@@ -1921,6 +1926,11 @@ void populateLinalgGenericOpsSpecializationPatterns(
 /// Populates `patterns` that convert linalg named ops e.g. `linalg.add`
 /// to equivalent `linalg.elementwise`.
 void populateLinalgNamedToElementwisePatterns(RewritePatternSet &patterns);
+
+/// Populates `patterns` that convert linalg category ops (e.g.
+/// `linalg.elementwise`, `linalg.contract`) to equivalent linalg named ops
+/// (e.g. `linalg.add`, `linalg.matmul`).
+void populateLinalgCategoryToNamedPatterns(RewritePatternSet &patterns);
 
 /// Populates `patterns` with patterns that fold operations like
 /// `linalg.transform` into elementwise op map.

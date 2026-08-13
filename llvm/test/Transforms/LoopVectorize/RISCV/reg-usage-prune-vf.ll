@@ -7,9 +7,9 @@ define void @f(ptr noalias %p0, ptr noalias %p1, ptr noalias %p2) {
 ; CHECK-LABEL: define void @f(
 ; CHECK-SAME: ptr noalias [[P0:%.*]], ptr noalias [[P1:%.*]], ptr noalias [[P2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P0]], i64 -1
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P0]], i64 -1
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -43,9 +43,9 @@ define void @f(ptr noalias %p0, ptr noalias %p1, ptr noalias %p2) {
 ; NO-REG-PRESSURE-CHECK-LABEL: define void @f(
 ; NO-REG-PRESSURE-CHECK-SAME: ptr noalias [[P0:%.*]], ptr noalias [[P1:%.*]], ptr noalias [[P2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; NO-REG-PRESSURE-CHECK-NEXT:  [[ENTRY:.*:]]
-; NO-REG-PRESSURE-CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P0]], i64 -1
 ; NO-REG-PRESSURE-CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; NO-REG-PRESSURE-CHECK:       [[VECTOR_PH]]:
+; NO-REG-PRESSURE-CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P0]], i64 -1
 ; NO-REG-PRESSURE-CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NO-REG-PRESSURE-CHECK:       [[VECTOR_BODY]]:
 ; NO-REG-PRESSURE-CHECK-NEXT:    [[TMP7:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]

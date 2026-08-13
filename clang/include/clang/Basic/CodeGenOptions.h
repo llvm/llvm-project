@@ -36,6 +36,19 @@ class PassBuilder;
 }
 namespace clang {
 
+/// A target's ABI policy for whether a class's vtable can be assumed to have
+/// a unique address program-wide. This is the basis for the exact dynamic_cast
+/// optimization (and, where a vtable is not assumed unique, for whether it may
+/// be marked unnamed_addr so the platform can duplicate it).
+enum class VTableUniquenessKind {
+  /// Every vtable has a single address program-wide.
+  AlwaysUnique,
+  /// A vtable with strong linkage (e.g., a class with a key function) is
+  /// unique, but a vague-linkage (weak) vtable may be duplicated by the
+  /// platform and so has no unique address.
+  UniqueIfStrongLinkage,
+};
+
 /// Bitfields of CodeGenOptions, split out from CodeGenOptions to ensure
 /// that this large collection of bitfields is a trivial class type.
 class CodeGenOptionsBase {
@@ -225,6 +238,12 @@ public:
     NonZero,  ///< Convert in-memory bools to i1 by checking if any bit is set
               ///< to 1.
     NonStrictDefault = NonZero
+  };
+
+  enum class NewPMEnablementLevel {
+    Auto,         // Use the target dependent default.
+    ForceEnable,  // Always enable regardless of the target default.
+    ForceDisable, // Always disable regardless of the target default.
   };
 
   /// The code model to use (-mcmodel).

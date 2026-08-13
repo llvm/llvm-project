@@ -1,15 +1,5 @@
 add_custom_target(libc-shared-tests)
 
-# Shared math tests include the entire math library headers into a single file
-# so it might take some time to compile the tests.  We do have dedicated
-# precommit CIs to build and test shared tests.  So we provide a cmake option
-# LIBC_TEST_SKIP_SHARED_TESTS to reduce redundant testings and reduce test time
-# for other precommit CIs.
-if(LIBC_TEST_SKIP_SHARED_TESTS)
-  if(LIBC_CMAKE_VERBOSE_LOGGING)
-    message(STATUS "LIBC_TEST_SKIP_SHARED_MATH_TESTS is set.  Skipping libc-shared-tests.")
-  endif()
-else()
 add_fp_unittest(
   shared_math_test
   SUITE
@@ -785,6 +775,12 @@ add_fp_unittest(
     libc.src.__support.math.setpayloadf128
     libc.src.__support.math.setpayloadf16
     libc.src.__support.math.setpayloadl
+    libc.src.__support.math.setpayloadsig
+    libc.src.__support.math.setpayloadsigbf16
+    libc.src.__support.math.setpayloadsigf
+    libc.src.__support.math.setpayloadsigf128
+    libc.src.__support.math.setpayloadsigf16
+    libc.src.__support.math.setpayloadsigl
     libc.src.__support.math.sqrtl
     libc.src.__support.math.trunc
     libc.src.__support.math.truncbf16
@@ -817,7 +813,71 @@ add_fp_unittest(
     libc.src.__support.math.totalordermagf16
     libc.src.__support.math.totalordermagl
 )
+
 endif() # LIBC_TEST_SKIP_SHARED_MATH_TESTS
+      libc.src.__support.math.totalordermagf
+      libc.src.__support.math.totalordermagf128
+      libc.src.__support.math.totalordermagf16
+      libc.src.__support.math.totalordermagl
+  )
+endif() # LIBC_TEST_SKIP_SHARED_MATH_TESTS
+>>>>>>> main
+
+add_fp_unittest(
+  shared_builtins_test
+  SUITE
+    libc-shared-tests
+  SRCS
+    shared_builtins_test.cpp
+  DEPENDS
+    libc.src.__support.builtins.adddf3
+    libc.src.__support.builtins.addsf3
+    libc.src.__support.builtins.addtf3
+    libc.src.__support.builtins.divdf3
+    libc.src.__support.builtins.divsf3
+    libc.src.__support.builtins.divtf3
+    libc.src.__support.builtins.extenddftf2
+    libc.src.__support.builtins.extendsfdf2
+    libc.src.__support.builtins.extendsftf2
+    libc.src.__support.builtins.extendxftf2
+    libc.src.__support.builtins.fixdfdi
+    libc.src.__support.builtins.fixdfsi
+    libc.src.__support.builtins.fixdfti
+    libc.src.__support.builtins.fixsfdi
+    libc.src.__support.builtins.fixsfsi
+    libc.src.__support.builtins.fixsfti
+    libc.src.__support.builtins.fixunsdfdi
+    libc.src.__support.builtins.fixunsdfsi
+    libc.src.__support.builtins.fixunsdfti
+    libc.src.__support.builtins.fixunssfdi
+    libc.src.__support.builtins.fixunssfsi
+    libc.src.__support.builtins.fixunssfti
+    libc.src.__support.builtins.floatdidf
+    libc.src.__support.builtins.floatdisf
+    libc.src.__support.builtins.floatsidf
+    libc.src.__support.builtins.floatsisf
+    libc.src.__support.builtins.floattidf
+    libc.src.__support.builtins.floattisf
+    libc.src.__support.builtins.floatundidf
+    libc.src.__support.builtins.floatundisf
+    libc.src.__support.builtins.floatunsidf
+    libc.src.__support.builtins.floatunsisf
+    libc.src.__support.builtins.floatuntidf
+    libc.src.__support.builtins.floatuntisf
+    libc.src.__support.builtins.muldf3
+    libc.src.__support.builtins.mulsf3
+    libc.src.__support.builtins.multf3
+    libc.src.__support.builtins.negdf3
+    libc.src.__support.builtins.negsf3
+    libc.src.__support.builtins.subdf3
+    libc.src.__support.builtins.subsf3
+    libc.src.__support.builtins.subtf3
+    libc.src.__support.builtins.truncdfsf2
+    libc.src.__support.builtins.trunctfdf2
+    libc.src.__support.builtins.trunctfsf2
+    libc.src.__support.builtins.trunctfxf2
+    libc.src.__support.uint128
+)
 
 add_fp_unittest(
   shared_str_to_num_test
@@ -832,19 +892,18 @@ add_fp_unittest(
 
 # FIXME: The LLVM libc full build does not support 'system' yet.
 if(NOT LLVM_LIBC_FULL_BUILD)
-add_libc_test(
-  shared_rpc_test
-  UNIT_TEST_ONLY
-  SUITE
-    libc-shared-tests
-  SRCS
-    shared_rpc_test.cpp
-  DEPENDS
-    libc.src.stdio.printf_core.converter
-    libc.src.stdio.printf_core.parser
-    libc.src.stdio.printf_core.writer
-    libc.src.__support.arg_list
-)
+  add_libc_test(
+    shared_rpc_test
+    SUITE
+      libc-shared-tests
+    SRCS
+      shared_rpc_test.cpp
+    DEPENDS
+      libc.src.__support.printf_core.converter
+      libc.src.__support.printf_core.parser
+      libc.src.__support.printf_core.writer
+      libc.src.__support.arg_list
+  )
 endif()
 
 add_fp_unittest(

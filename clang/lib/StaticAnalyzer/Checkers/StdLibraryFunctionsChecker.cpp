@@ -304,11 +304,7 @@ class StdLibraryFunctionsChecker
 
   protected:
     bool checkSpecificValidity(const FunctionDecl *FD) const override {
-      const bool ValidArg =
-          getArgType(FD, ArgN)->isIntegralType(FD->getASTContext());
-      assert(ValidArg &&
-             "This constraint should be applied on an integral type");
-      return ValidArg;
+      return getArgType(FD, ArgN)->isIntegralType(FD->getASTContext());
     }
 
   private:
@@ -2149,8 +2145,6 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                   ErrnoIrrelevant)
             .ArgConstraint(NotNull(ArgNo(0))));
   } else {
-    const auto ReturnsZeroOrMinusOne =
-        ConstraintSet{ReturnValueCondition(WithinRange, Range(-1, 0))};
     const auto ReturnsZero =
         ConstraintSet{ReturnValueCondition(WithinRange, SingleValue(0))};
     const auto ReturnsMinusOne =
@@ -2161,8 +2155,6 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         ConstraintSet{ReturnValueCondition(WithinRange, Range(0, IntMax))};
     const auto ReturnsNonZero =
         ConstraintSet{ReturnValueCondition(OutOfRange, SingleValue(0))};
-    const auto ReturnsFileDescriptor =
-        ConstraintSet{ReturnValueCondition(WithinRange, Range(-1, IntMax))};
     const auto &ReturnsValidFileDescriptor = ReturnsNonnegative;
 
     auto ValidFileDescriptorOrAtFdcwd = [&](ArgNo ArgN) {

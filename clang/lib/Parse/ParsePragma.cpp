@@ -237,6 +237,7 @@ struct PragmaCommentHandler : public PragmaHandler {
 
 private:
   Sema &Actions;
+  bool SeenCopyrightInTU = false; // TU-scoped
 };
 
 struct PragmaDetectMismatchHandler : public PragmaHandler {
@@ -480,7 +481,8 @@ void Parser::initializePragmaHandlers() {
   PP.AddPragmaHandler(OpenACCHandler.get());
 
   if (getLangOpts().MicrosoftExt ||
-      getTargetInfo().getTriple().isOSBinFormatELF()) {
+      getTargetInfo().getTriple().isOSBinFormatELF() ||
+      getTargetInfo().getTriple().isOSAIX()) {
     MSCommentHandler = std::make_unique<PragmaCommentHandler>(Actions);
     PP.AddPragmaHandler(MSCommentHandler.get());
   }
@@ -607,7 +609,8 @@ void Parser::resetPragmaHandlers() {
   OpenACCHandler.reset();
 
   if (getLangOpts().MicrosoftExt ||
-      getTargetInfo().getTriple().isOSBinFormatELF()) {
+      getTargetInfo().getTriple().isOSBinFormatELF() ||
+      getTargetInfo().getTriple().isOSAIX()) {
     PP.RemovePragmaHandler(MSCommentHandler.get());
     MSCommentHandler.reset();
   }
@@ -3269,7 +3272,9 @@ void PragmaDetectMismatchHandler::HandlePragma(Preprocessor &PP,
 /// \code
 ///   #pragma comment(linker, "foo")
 /// \endcode
-/// 'linker' is one of five identifiers: compiler, exestr, lib, linker, user.
+/// 'linker' is one of six identifiers: compiler, copyright, exestr, lib,
+/// linker, user.
+///
 /// "foo" is a string, which is fully macro expanded, and permits string
 /// concatenation, embedded escape characters etc.  See MSDN for more details.
 void PragmaCommentHandler::HandlePragma(Preprocessor &PP,
@@ -3289,7 +3294,7 @@ void PragmaCommentHandler::HandlePragma(Preprocessor &PP,
     return;
   }
 
-  // Verify that this is one of the 5 explicitly listed options.
+  // Verify that this is one of the 6 explicitly listed options.
   IdentifierInfo *II = Tok.getIdentifierInfo();
   PragmaMSCommentKind Kind =
       llvm::StringSwitch<PragmaMSCommentKind>(II->getName())
@@ -3298,9 +3303,18 @@ void PragmaCommentHandler::HandlePragma(Preprocessor &PP,
           .Case("compiler", PCK_Compiler)
           .Case("exestr", PCK_ExeStr)
           .Case("user", PCK_User)
+          .Case("copyright", PCK_Copyright)
           .Default(PCK_Unknown);
   if (Kind == PCK_Unknown) {
     PP.Diag(Tok.getLocation(), diag::err_pragma_comment_unknown_kind);
+    return;
+  }
+
+  if (PP.getTargetInfo().getTriple().isOSAIX() && Kind != PCK_Copyright) {
+    // Currently, pragma comment kinds aside from "copyright" are not fully
+    // implemented by Clang for AIX targets.
+    PP.Diag(Tok.getLocation(), diag::warn_pragma_comment_ignored)
+        << II->getName();
     return;
   }
 
@@ -3308,6 +3322,17 @@ void PragmaCommentHandler::HandlePragma(Preprocessor &PP,
     PP.Diag(Tok.getLocation(), diag::warn_pragma_comment_ignored)
         << II->getName();
     return;
+  }
+
+  // Handle pragma comment copyright kind.
+  if (Kind == PCK_Copyright) {
+    if (SeenCopyrightInTU) {
+      // pragma comment copyright can each appear only once in a TU.
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_comment_once)
+          << II->getName();
+      return;
+    }
+    SeenCopyrightInTU = true;
   }
 
   // Read the optional string if present.
@@ -3335,6 +3360,10 @@ void PragmaCommentHandler::HandlePragma(Preprocessor &PP,
     PP.Diag(Tok.getLocation(), diag::err_pragma_comment_malformed);
     return;
   }
+
+  // Skip further processing for well-formed copyright with an empty string.
+  if (Kind == PCK_Copyright && ArgumentString.empty())
+    return;
 
   // If the pragma is lexically sound, notify any interested PPCallbacks.
   if (PP.getPPCallbacks())

@@ -16,6 +16,7 @@
 #include "AMDGPUMemoryUtils.h"
 #include "AMDGPUTargetMachine.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -24,7 +25,6 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 #define DEBUG_TYPE "amdgpu-late-codegenprepare"
@@ -61,10 +61,15 @@ public:
   bool run();
   bool visitInstruction(Instruction &) { return false; }
 
-  // Check if the specified value is at least DWORD aligned.
-  bool isDWORDAligned(const Value *V) const {
-    KnownBits Known = computeKnownBits(V, DL, AC);
-    return Known.countMinTrailingZeros() >= 2;
+  // Widening may read padding bytes past the original access, so require the
+  // whole AccessSize-byte range at Base to be dereferenceable, not just Base
+  // itself aligned.
+  bool isSafeToWidenLoad(const Value *Base, uint64_t AccessSize,
+                         const Instruction *CxtI) const {
+    return isDereferenceableAndAlignedPointer(
+        Base, Align(4),
+        APInt(DL.getIndexTypeSizeInBits(Base->getType()), AccessSize),
+        SimplifyQuery(DL, /*TLI=*/nullptr, /*DT=*/nullptr, AC, CxtI));
   }
 
   bool canWidenScalarExtLoad(LoadInst &LI) const;
@@ -115,10 +120,10 @@ public:
     const auto *TLI = ST.getTargetLowering();
 
     Type *EltTy = VTy->getElementType();
-    // If the element size is not less than the convert to scalar size, then we
-    // can't do any bit packing
+    // If the element size is not is not a multiple scalar size, then we can't
+    // do any bit packing
     if (!EltTy->isIntegerTy() ||
-        EltTy->getScalarSizeInBits() > ConvertToScalar->getScalarSizeInBits())
+        ConvertToScalar->getScalarSizeInBits() % EltTy->getScalarSizeInBits())
       return false;
 
     // Only coerce illegal types
@@ -512,18 +517,11 @@ bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
   int64_t Offset = 0;
   auto *Base =
       GetPointerBaseWithConstantOffset(LI.getPointerOperand(), Offset, DL);
-  // If that base is not DWORD aligned, it's not safe to perform the following
-  // transforms.
-  if (!isDWORDAligned(Base))
-    return false;
 
   int64_t Adjust = Offset & 0x3;
-  if (Adjust == 0) {
-    // With a zero adjust, the original alignment could be promoted with a
-    // better one.
-    LI.setAlignment(Align(4));
-    return true;
-  }
+  int64_t AccessOffset = Offset - Adjust;
+  if (AccessOffset < 0 || !isSafeToWidenLoad(Base, AccessOffset + 4, &LI))
+    return false;
 
   IRBuilder<> IRB(&LI);
   IRB.SetCurrentDebugLocation(LI.getDebugLoc());
@@ -540,10 +538,11 @@ bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
   AMDGPU::copyMetadataForWidenedLoad(*NewLd, LI);
 
   unsigned ShAmt = Adjust * 8;
+  Value *Shifted = ShAmt ? IRB.CreateLShr(NewLd, ShAmt) : NewLd;
   Value *NewVal = IRB.CreateBitCast(
-      IRB.CreateTrunc(IRB.CreateLShr(NewLd, ShAmt),
-                      DL.typeSizeEqualsStoreSize(LI.getType()) ? IntNTy
-                                                               : LI.getType()),
+      IRB.CreateTrunc(Shifted, DL.typeSizeEqualsStoreSize(LI.getType())
+                                   ? IntNTy
+                                   : LI.getType()),
       LI.getType());
   LI.replaceAllUsesWith(NewVal);
   DeadInsts.emplace_back(&LI);

@@ -56,10 +56,6 @@ public:
   Expected<int32_t> runAsMain(ExecutorAddr MainFnAddr,
                               ArrayRef<std::string> Args) override;
 
-  Expected<int32_t> runAsVoidFunction(ExecutorAddr VoidFnAddr) override;
-
-  Expected<int32_t> runAsIntFunction(ExecutorAddr IntFnAddr, int Arg) override;
-
   void callWrapperAsync(ExecutorAddr WrapperFnAddr,
                         IncomingWFRHandler OnComplete,
                         ArrayRef<char> ArgBuffer) override;
@@ -83,9 +79,6 @@ private:
   SimpleRemoteEPC(std::shared_ptr<SymbolStringPool> SSP,
                   std::unique_ptr<TaskDispatcher> D)
       : ExecutorProcessControl(std::move(SSP), std::move(D)) {}
-
-  static Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
-  createDefaultMemoryManager(SimpleRemoteEPC &SREPC);
 
   Error sendMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
                     ExecutorAddr TagAddr, ArrayRef<char> ArgBytes);
@@ -114,8 +107,6 @@ private:
   std::unique_ptr<SimpleRemoteEPCTransport> T;
 
   ExecutorAddr RunAsMainAddr;
-  ExecutorAddr RunAsVoidFunctionAddr;
-  ExecutorAddr RunAsIntFunctionAddr;
 
   uint64_t NextSeqNo = 0;
   PendingCallWrapperResultsMap PendingCallWrapperResults;

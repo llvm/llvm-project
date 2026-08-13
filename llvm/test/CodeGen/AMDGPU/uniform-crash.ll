@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=amdgcn -mcpu=verde | FileCheck --check-prefix=GCN %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga | FileCheck --check-prefix=GCN %s
+; RUN: llc < %s -mtriple=amdgpu6.01 | FileCheck --check-prefix=GCN %s
+; RUN: llc < %s -mtriple=amdgpu8.02 | FileCheck --check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}icmp_2_users:
 ; GCN: s_cmp_lt_i32 s{{[0-9]+}}, 1

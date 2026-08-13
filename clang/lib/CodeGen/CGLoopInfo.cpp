@@ -21,9 +21,8 @@
 using namespace clang::CodeGen;
 using namespace llvm;
 
-MDNode *
-LoopInfo::createFollowupMetadata(const char *FollowupName,
-                                 ArrayRef<llvm::Metadata *> LoopProperties) {
+MDNode *clang::CodeGen::LoopInfo::createFollowupMetadata(
+    const char *FollowupName, ArrayRef<llvm::Metadata *> LoopProperties) {
   LLVMContext &Ctx = Header->getContext();
 
   SmallVector<Metadata *, 4> Args;
@@ -32,10 +31,9 @@ LoopInfo::createFollowupMetadata(const char *FollowupName,
   return MDNode::get(Ctx, Args);
 }
 
-SmallVector<Metadata *, 4>
-LoopInfo::createPipeliningMetadata(const LoopAttributes &Attrs,
-                                   ArrayRef<Metadata *> LoopProperties,
-                                   bool &HasUserTransforms) {
+SmallVector<Metadata *, 4> clang::CodeGen::LoopInfo::createPipeliningMetadata(
+    const LoopAttributes &Attrs, ArrayRef<Metadata *> LoopProperties,
+    bool &HasUserTransforms) {
   LLVMContext &Ctx = Header->getContext();
 
   std::optional<bool> Enabled;
@@ -72,9 +70,9 @@ LoopInfo::createPipeliningMetadata(const LoopAttributes &Attrs,
 }
 
 SmallVector<Metadata *, 4>
-LoopInfo::createPartialUnrollMetadata(const LoopAttributes &Attrs,
-                                      ArrayRef<Metadata *> LoopProperties,
-                                      bool &HasUserTransforms) {
+clang::CodeGen::LoopInfo::createPartialUnrollMetadata(
+    const LoopAttributes &Attrs, ArrayRef<Metadata *> LoopProperties,
+    bool &HasUserTransforms) {
   LLVMContext &Ctx = Header->getContext();
 
   std::optional<bool> Enabled;
@@ -130,10 +128,9 @@ LoopInfo::createPartialUnrollMetadata(const LoopAttributes &Attrs,
   return Args;
 }
 
-SmallVector<Metadata *, 4>
-LoopInfo::createUnrollAndJamMetadata(const LoopAttributes &Attrs,
-                                     ArrayRef<Metadata *> LoopProperties,
-                                     bool &HasUserTransforms) {
+SmallVector<Metadata *, 4> clang::CodeGen::LoopInfo::createUnrollAndJamMetadata(
+    const LoopAttributes &Attrs, ArrayRef<Metadata *> LoopProperties,
+    bool &HasUserTransforms) {
   LLVMContext &Ctx = Header->getContext();
 
   std::optional<bool> Enabled;
@@ -194,9 +191,9 @@ LoopInfo::createUnrollAndJamMetadata(const LoopAttributes &Attrs,
 }
 
 SmallVector<Metadata *, 4>
-LoopInfo::createLoopVectorizeMetadata(const LoopAttributes &Attrs,
-                                      ArrayRef<Metadata *> LoopProperties,
-                                      bool &HasUserTransforms) {
+clang::CodeGen::LoopInfo::createLoopVectorizeMetadata(
+    const LoopAttributes &Attrs, ArrayRef<Metadata *> LoopProperties,
+    bool &HasUserTransforms) {
   LLVMContext &Ctx = Header->getContext();
 
   std::optional<bool> Enabled;
@@ -212,10 +209,8 @@ LoopInfo::createLoopVectorizeMetadata(const LoopAttributes &Attrs,
     SmallVector<Metadata *, 4> NewLoopProperties;
     if (Enabled == false) {
       NewLoopProperties.append(LoopProperties.begin(), LoopProperties.end());
-      NewLoopProperties.push_back(
-          MDNode::get(Ctx, {MDString::get(Ctx, "llvm.loop.vectorize.enable"),
-                            ConstantAsMetadata::get(ConstantInt::get(
-                                llvm::Type::getInt1Ty(Ctx), 0))}));
+      NewLoopProperties.push_back(MDNode::get(
+          Ctx, {MDString::get(Ctx, "llvm.loop.vectorize.disable")}));
       LoopProperties = NewLoopProperties;
     }
     return createUnrollAndJamMetadata(Attrs, LoopProperties, HasUserTransforms);
@@ -231,11 +226,11 @@ LoopInfo::createLoopVectorizeMetadata(const LoopAttributes &Attrs,
     IsVectorPredicateEnabled =
         (Attrs.VectorizePredicateEnable == LoopAttributes::Enable);
 
-    Metadata *Vals[] = {
-        MDString::get(Ctx, "llvm.loop.vectorize.predicate.enable"),
-        ConstantAsMetadata::get(ConstantInt::get(llvm::Type::getInt1Ty(Ctx),
-                                                 IsVectorPredicateEnabled))};
-    Args.push_back(MDNode::get(Ctx, Vals));
+    Args.push_back(MDNode::get(
+        Ctx,
+        {MDString::get(Ctx, IsVectorPredicateEnabled
+                                ? "llvm.loop.vectorize.predicate.enable"
+                                : "llvm.loop.vectorize.predicate.disable")}));
   }
 
   // Setting vectorize.width
@@ -250,11 +245,10 @@ LoopInfo::createLoopVectorizeMetadata(const LoopAttributes &Attrs,
 
   if (Attrs.VectorizeScalable != LoopAttributes::Unspecified) {
     bool IsScalable = Attrs.VectorizeScalable == LoopAttributes::Enable;
-    Metadata *Vals[] = {
-        MDString::get(Ctx, "llvm.loop.vectorize.scalable.enable"),
-        ConstantAsMetadata::get(
-            ConstantInt::get(llvm::Type::getInt1Ty(Ctx), IsScalable))};
-    Args.push_back(MDNode::get(Ctx, Vals));
+    Args.push_back(MDNode::get(
+        Ctx, {MDString::get(
+                 Ctx, IsScalable ? "llvm.loop.vectorize.scalable.enable"
+                                 : "llvm.loop.vectorize.scalable.disable")}));
   }
 
   // Setting interleave.count
@@ -282,10 +276,10 @@ LoopInfo::createLoopVectorizeMetadata(const LoopAttributes &Attrs,
       (Attrs.VectorizeScalable == LoopAttributes::Disable &&
        Attrs.VectorizeWidth != 1)) {
     VectorizeEnabled = Attrs.VectorizeEnable != LoopAttributes::Disable;
-    Args.push_back(
-        MDNode::get(Ctx, {MDString::get(Ctx, "llvm.loop.vectorize.enable"),
-                          ConstantAsMetadata::get(ConstantInt::get(
-                              llvm::Type::getInt1Ty(Ctx), VectorizeEnabled))}));
+    Args.push_back(MDNode::get(
+        Ctx, {MDString::get(Ctx, VectorizeEnabled
+                                     ? "llvm.loop.vectorize.enable"
+                                     : "llvm.loop.vectorize.disable")}));
   }
 
   // Apply all loop properties to the vectorized loop.
@@ -320,9 +314,9 @@ LoopInfo::createLoopVectorizeMetadata(const LoopAttributes &Attrs,
 }
 
 SmallVector<Metadata *, 4>
-LoopInfo::createLoopDistributeMetadata(const LoopAttributes &Attrs,
-                                       ArrayRef<Metadata *> LoopProperties,
-                                       bool &HasUserTransforms) {
+clang::CodeGen::LoopInfo::createLoopDistributeMetadata(
+    const LoopAttributes &Attrs, ArrayRef<Metadata *> LoopProperties,
+    bool &HasUserTransforms) {
   LLVMContext &Ctx = Header->getContext();
 
   std::optional<bool> Enabled;
@@ -335,10 +329,8 @@ LoopInfo::createLoopDistributeMetadata(const LoopAttributes &Attrs,
     SmallVector<Metadata *, 4> NewLoopProperties;
     if (Enabled == false) {
       NewLoopProperties.append(LoopProperties.begin(), LoopProperties.end());
-      NewLoopProperties.push_back(
-          MDNode::get(Ctx, {MDString::get(Ctx, "llvm.loop.distribute.enable"),
-                            ConstantAsMetadata::get(ConstantInt::get(
-                                llvm::Type::getInt1Ty(Ctx), 0))}));
+      NewLoopProperties.push_back(MDNode::get(
+          Ctx, {MDString::get(Ctx, "llvm.loop.distribute.disable")}));
       LoopProperties = NewLoopProperties;
     }
     return createLoopVectorizeMetadata(Attrs, LoopProperties,
@@ -352,11 +344,8 @@ LoopInfo::createLoopDistributeMetadata(const LoopAttributes &Attrs,
   SmallVector<Metadata *, 4> Args;
   Args.append(LoopProperties.begin(), LoopProperties.end());
 
-  Metadata *Vals[] = {MDString::get(Ctx, "llvm.loop.distribute.enable"),
-                      ConstantAsMetadata::get(ConstantInt::get(
-                          llvm::Type::getInt1Ty(Ctx),
-                          (Attrs.DistributeEnable == LoopAttributes::Enable)))};
-  Args.push_back(MDNode::get(Ctx, Vals));
+  Args.push_back(
+      MDNode::get(Ctx, {MDString::get(Ctx, "llvm.loop.distribute.enable")}));
 
   if (FollowupHasTransforms)
     Args.push_back(
@@ -366,10 +355,9 @@ LoopInfo::createLoopDistributeMetadata(const LoopAttributes &Attrs,
   return Args;
 }
 
-SmallVector<Metadata *, 4>
-LoopInfo::createFullUnrollMetadata(const LoopAttributes &Attrs,
-                                   ArrayRef<Metadata *> LoopProperties,
-                                   bool &HasUserTransforms) {
+SmallVector<Metadata *, 4> clang::CodeGen::LoopInfo::createFullUnrollMetadata(
+    const LoopAttributes &Attrs, ArrayRef<Metadata *> LoopProperties,
+    bool &HasUserTransforms) {
   LLVMContext &Ctx = Header->getContext();
 
   std::optional<bool> Enabled;
@@ -401,7 +389,7 @@ LoopInfo::createFullUnrollMetadata(const LoopAttributes &Attrs,
   return Args;
 }
 
-SmallVector<Metadata *, 4> LoopInfo::createMetadata(
+SmallVector<Metadata *, 4> clang::CodeGen::LoopInfo::createMetadata(
     const LoopAttributes &Attrs,
     llvm::ArrayRef<llvm::Metadata *> AdditionalLoopProperties,
     bool &HasUserTransforms) {
@@ -474,9 +462,11 @@ void LoopAttributes::clear() {
   MustProgress = false;
 }
 
-LoopInfo::LoopInfo(BasicBlock *Header, const LoopAttributes &Attrs,
-                   const llvm::DebugLoc &StartLoc, const llvm::DebugLoc &EndLoc,
-                   LoopInfo *Parent)
+clang::CodeGen::LoopInfo::LoopInfo(BasicBlock *Header,
+                                   const LoopAttributes &Attrs,
+                                   const llvm::DebugLoc &StartLoc,
+                                   const llvm::DebugLoc &EndLoc,
+                                   LoopInfo *Parent)
     : Header(Header), Attrs(Attrs), StartLoc(StartLoc), EndLoc(EndLoc),
       Parent(Parent) {
 
@@ -502,7 +492,7 @@ LoopInfo::LoopInfo(BasicBlock *Header, const LoopAttributes &Attrs,
   TempLoopID = MDNode::getTemporary(Header->getContext(), {});
 }
 
-void LoopInfo::finish() {
+void clang::CodeGen::LoopInfo::finish() {
   // We did not annotate the loop body instructions because there are no
   // attributes for this loop.
   if (!TempLoopID)

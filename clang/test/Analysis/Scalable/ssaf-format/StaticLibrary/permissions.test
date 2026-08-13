@@ -1,0 +1,40 @@
+// Tests for clang-ssaf-format --type static-library that require filesystem
+// permission support (symlinks, chmod).
+
+// UNSUPPORTED: system-windows
+// REQUIRES: non-root-user
+
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
+
+// ============================================================================
+// Broken symlink
+// ============================================================================
+
+// RUN: ln -sf %t/nonexistent-target.json %t/broken-symlink.json
+// RUN: not clang-ssaf-format --type static-library %t/broken-symlink.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=BROKEN-SYMLINK
+// BROKEN-SYMLINK: clang-ssaf-format: error: failed to validate path '{{.*}}broken-symlink.json': Path does not exist
+
+// ============================================================================
+// No read permission
+// ============================================================================
+
+// RUN: cp %S/Inputs/rt-empty.json %t/no-read-permission.json
+// RUN: chmod -r %t/no-read-permission.json
+// RUN: not clang-ssaf-format --type static-library %t/no-read-permission.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=NO-READ-PERMISSION
+// RUN: chmod +r %t/no-read-permission.json
+// NO-READ-PERMISSION:      clang-ssaf-format: error: reading StaticLibrary from file '{{.*}}no-read-permission.json'
+// NO-READ-PERMISSION-NEXT: failed to read file '{{.*}}no-read-permission.json': {{.*}}
+
+// ============================================================================
+// Write to directory without write permission
+// ============================================================================
+
+// RUN: mkdir -p %t/write-protected-dir
+// RUN: chmod -w %t/write-protected-dir
+// RUN: not clang-ssaf-format --type static-library %S/Inputs/rt-empty.json -o %t/write-protected-dir/test.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=WRITE-STREAM-OPEN-FAILURE
+// RUN: chmod +w %t/write-protected-dir
+// WRITE-STREAM-OPEN-FAILURE: clang-ssaf-format: error: failed to validate path '{{.*}}write-protected-dir{{.}}test.json': Parent directory is not writable
