@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/type_traits/conditional.h"
 #include "test/UnitTest/Test.h"
 
 #include "hdr/signal_macros.h"
@@ -34,27 +35,35 @@ class FxDiviTest : public LIBC_NAMESPACE::testing::Test {
     return (a > b) ? (a - b) : (b - a);
   };
 
+  using CompType =
+      cpp::conditional_t<is_signed, long accum, unsigned long accum>;
+
+  // Here, expected() uses CompType's own division operator as a reference which
+  // has its own independent error bounds (division operator on CompType can
+  // have almost 2 ulp of error as per ISO/IEC TR 18037:2008(E),
+  // clause 4.1.6.2.1). The fxdivi implementation being tested here has an exact
+  // fast path when the denominator is a power of 2, so do not use this helper
+  // for such denominators. Instead, use the actual expected fixed-point
+  // literal.
+  static constexpr auto expected = [](IntType n, IntType d) -> FXType {
+    return static_cast<FXType>(static_cast<CompType>(n) /
+                               static_cast<CompType>(d));
+  };
+
 public:
   typedef FXType (*FxDiviFunc)(IntType, IntType);
 
   void testBasicNumbers(FxDiviFunc func) {
-    EXPECT_TRUE(abs_diff(func(1, 3), static_cast<FXType>(
-                                         0.33333333333333333333)) <= epsilon);
-    EXPECT_TRUE(abs_diff(func(2, 3), static_cast<FXType>(
-                                         0.66666666666666666667)) <= epsilon);
+    EXPECT_TRUE(abs_diff(func(1, 3), expected(1, 3)) <= epsilon);
+    EXPECT_TRUE(abs_diff(func(2, 3), expected(2, 3)) <= epsilon);
     EXPECT_EQ(func(3, 4), 3 * one_fourth);
-    EXPECT_TRUE(abs_diff(func(5, 7), static_cast<FXType>(
-                                         0.71428571428571428571)) <= epsilon);
+    EXPECT_TRUE(abs_diff(func(5, 7), expected(5, 7)) <= epsilon);
     if constexpr (is_signed) {
-      EXPECT_TRUE(
-          abs_diff(func(-5, 7), static_cast<FXType>(-0.71428571428571428571)) <=
-          epsilon);
+      EXPECT_TRUE(abs_diff(func(-5, 7), expected(-5, 7)) <= epsilon);
     }
-    EXPECT_TRUE(abs_diff(func(1043, 2764),
-                         static_cast<FXType>(0.37735166425470332851)) <=
-                epsilon);
-    EXPECT_TRUE(abs_diff(func(60000, 720293),
-                         static_cast<FXType>(0.08329943509099769122)) <=
+
+    EXPECT_TRUE(abs_diff(func(1043, 2764), expected(1043, 2764)) <= epsilon);
+    EXPECT_TRUE(abs_diff(func(60000, 720293), expected(60000, 720293)) <=
                 epsilon);
 
     EXPECT_EQ(func(128, 256), one_half);
@@ -70,9 +79,7 @@ public:
     }
 
     if constexpr (has_integral) {
-      EXPECT_TRUE(
-          abs_diff(func(27, 23), static_cast<FXType>(1.17391304347826086957)) <=
-          epsilon);
+      EXPECT_TRUE(abs_diff(func(27, 23), expected(27, 23)) <= epsilon);
     }
   }
 
@@ -98,6 +105,7 @@ public:
       EXPECT_EQ(func(int_max, int_max), static_cast<FXType>(1));
       EXPECT_TRUE(abs_diff(func(int_max - 1, int_max),
                            static_cast<FXType>(1) - epsilon) <= epsilon);
+      EXPECT_EQ(func(int_max, 1), fx_max);
     } else {
       EXPECT_EQ(func(int_max, int_max), fx_max);
       EXPECT_EQ(func(int_max - 1, int_max), fx_max);
