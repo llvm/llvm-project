@@ -201,9 +201,9 @@ lowerCIRVisibilityToLLVMVisibility(cir::VisibilityKind visibilityKind) {
 
 static mlir::Value
 emitBoolVecConversion(mlir::ConversionPatternRewriter &rewriter,
-                      mlir::Value srcVec, cir::VectorType srcTy,
-                      unsigned numElementsDst) {
-  unsigned numElementsSrc = srcTy.getSize();
+                      mlir::Value srcVec, unsigned numElementsDst) {
+  auto srcTy = mlir::cast<mlir::VectorType>(srcVec.getType());
+  unsigned numElementsSrc = srcTy.getNumElements();
   if (numElementsSrc == numElementsDst)
     return srcVec;
 
@@ -242,7 +242,7 @@ static mlir::Value emitFromMemory(mlir::ConversionPatternRewriter &rewriter,
       auto v = mlir::LLVM::BitcastOp::create(rewriter, value.getLoc(),
                                              mlirVecTy, value);
       // Shuffle <P x i1> --> <N x i1> (N is the actual bit size).
-      return emitBoolVecConversion(rewriter, v, paddedVecTy, vecTy.getSize());
+      return emitBoolVecConversion(rewriter, v, vecTy.getSize());
     }
   }
 
@@ -275,8 +275,7 @@ static mlir::Value emitToMemory(mlir::ConversionPatternRewriter &rewriter,
     if (mlir::isa<cir::BoolType>(vecTy.getElementType())) {
       uint64_t bytePadded = std::max<uint64_t>(vecTy.getSize(), 8);
       auto resultTy = mlir::IntegerType::get(origType.getContext(), bytePadded);
-      value =
-          emitBoolVecConversion(rewriter, value, vecTy, resultTy.getWidth());
+      value = emitBoolVecConversion(rewriter, value, resultTy.getWidth());
       return mlir::LLVM::BitcastOp::create(rewriter, value.getLoc(), resultTy,
                                            value);
     }
