@@ -13,13 +13,63 @@
 //   constexpr void  // constexpr in C++20
 //   nth_element(Iter first, Iter nth, Iter last, Compare comp);
 
+#include "test_macros.h"
+
 #include <algorithm>
 #include <cassert>
 #include <functional>
+#if TEST_STD_VER >= 20
+#  include <type_traits>
+#endif
 
-#include "test_macros.h"
 #include "test_iterators.h"
 #include "MoveOnly.h"
+
+template <class T, class Iter>
+TEST_CONSTEXPR_CXX20 void test_small_ranges(int max_n) {
+  for (int n = 0; n <= max_n; ++n) {
+    int perm[8] = {};
+    for (int i = 0; i < n; ++i)
+      perm[i] = i;
+    do {
+      for (int m = 0; m <= n; ++m) {
+        T work[8];
+        for (int i = 0; i < n; ++i)
+          work[i] = T(perm[i]);
+        std::nth_element(Iter(work), Iter(work + m), Iter(work + n), std::greater<T>());
+        if (m == n)
+          continue;
+        assert(work[m] == T(n - 1 - m));
+        for (int i = 0; i < m; ++i)
+          assert(!(work[i] < work[m]));
+        for (int i = m; i < n; ++i)
+          assert(!(work[i] > work[m]));
+      }
+    } while (std::next_permutation(perm, perm + n));
+  }
+
+  for (int n = 1; n <= max_n; ++n) {
+    for (int mask = 0; mask < (1 << n); ++mask) {
+      int orig[8] = {};
+      for (int i = 0; i < n; ++i)
+        orig[i] = (mask >> i) & 1;
+      int sorted[8] = {};
+      std::copy(orig, orig + n, sorted);
+      std::sort(sorted, sorted + n, std::greater<int>());
+      for (int m = 0; m < n; ++m) {
+        T work[8];
+        for (int i = 0; i < n; ++i)
+          work[i] = T(orig[i]);
+        std::nth_element(Iter(work), Iter(work + m), Iter(work + n), std::greater<T>());
+        assert(work[m] == T(sorted[m]));
+        for (int i = 0; i < m; ++i)
+          assert(!(work[i] < work[m]));
+        for (int i = m; i < n; ++i)
+          assert(!(work[i] > work[m]));
+      }
+    }
+  }
+}
 
 template<class T, class Iter>
 TEST_CONSTEXPR_CXX20 bool test()
@@ -62,6 +112,14 @@ TEST_CONSTEXPR_CXX20 bool test()
         assert(input[0] == 7);
         assert(input[1] == 6);
     }
+
+    // Exhaustive check of all permutations of small ranges, and of 0/1 inputs with
+    // duplicates. Lower the size during constant evaluation to stay within constexpr
+    // step limits.
+    int max_n = 8;
+    if (TEST_IS_CONSTANT_EVALUATED)
+      max_n = 5;
+    test_small_ranges<T, Iter>(max_n);
 
     return true;
 }
