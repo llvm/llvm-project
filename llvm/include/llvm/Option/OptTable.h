@@ -299,6 +299,13 @@ public:
     return getInfo(id).MetaVar;
   }
 
+  /// Get the comma-separated list of values accepted by this option, as
+  /// declared by `Values` in its TableGen definition. Returns an empty string
+  /// for options that do not declare any.
+  StringRef getOptionValues(OptSpecifier id) const {
+    return StringRef(getInfo(id).Values);
+  }
+
   /// Specify the environment variable where initial options should be read.
   void setInitialOptionsFromEnvironment(const char *E) { EnvVar = E; }
 
