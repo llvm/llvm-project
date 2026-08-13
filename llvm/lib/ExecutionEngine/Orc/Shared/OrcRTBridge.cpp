@@ -40,7 +40,9 @@ const char *DeregisterEHFrameSectionAllocActionName =
     "llvm_orc_deregisterEHFrameAllocAction";
 
 const char *RegisterJITLoaderGDBAllocActionName =
-    "llvm_orc_registerJITLoaderGDBAllocAction";
+    "orc_rt_ci_aa_sps_GDBJITRegistrar_register";
+const char *DeregisterJITLoaderGDBAllocActionName =
+    "orc_rt_ci_aa_sps_GDBJITRegistrar_deregister";
 
 const char *const DispatchName = "__orc_rt_jit_dispatch";
 const char *const DispatchCtxName = "__orc_rt_jit_dispatch_ctx";
