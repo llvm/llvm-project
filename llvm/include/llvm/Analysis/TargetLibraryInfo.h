@@ -129,7 +129,7 @@ public:
   ///
   /// If it is one of the known library functions, return true and set F to the
   /// corresponding value.
-  LLVM_ABI bool getLibFunc(StringRef funcName, LibFunc &F) const;
+  [[nodiscard]] LLVM_ABI bool getLibFunc(StringRef funcName, LibFunc &F) const;
 
   /// Searches for a particular function name, also checking that its type is
   /// valid for the library function matching that name.
@@ -138,11 +138,13 @@ public:
   /// corresponding value.
   ///
   /// FDecl is assumed to have a parent Module when using this function.
-  LLVM_ABI bool getLibFunc(const Function &FDecl, LibFunc &F) const;
+  [[nodiscard]] LLVM_ABI bool getLibFunc(const Function &FDecl,
+                                         LibFunc &F) const;
 
   /// Searches for a function name using an Instruction \p Opcode.
   /// Currently, only the frem instruction is supported.
-  LLVM_ABI bool getLibFunc(unsigned int Opcode, Type *Ty, LibFunc &F) const;
+  [[nodiscard]] LLVM_ABI bool getLibFunc(unsigned int Opcode, Type *Ty,
+                                         LibFunc &F) const;
 
   /// Forces a function to be marked as unavailable.
   void setUnavailable(LibFunc F) {
@@ -330,24 +332,25 @@ public:
   ///
   /// If it is one of the known library functions, return true and set F to the
   /// corresponding value.
-  bool getLibFunc(StringRef funcName, LibFunc &F) const {
+  [[nodiscard]] bool getLibFunc(StringRef funcName, LibFunc &F) const {
     return Impl->getLibFunc(funcName, F);
   }
 
-  bool getLibFunc(const Function &FDecl, LibFunc &F) const {
+  [[nodiscard]] bool getLibFunc(const Function &FDecl, LibFunc &F) const {
     return Impl->getLibFunc(FDecl, F);
   }
 
   /// If a callbase does not have the 'nobuiltin' attribute, return if the
   /// called function is a known library function and set F to that function.
-  bool getLibFunc(const CallBase &CB, LibFunc &F) const {
+  [[nodiscard]] bool getLibFunc(const CallBase &CB, LibFunc &F) const {
     return !CB.isNoBuiltin() && CB.getCalledFunction() &&
            getLibFunc(*(CB.getCalledFunction()), F);
   }
 
   /// Searches for a function name using an Instruction \p Opcode.
   /// Currently, only the frem instruction is supported.
-  bool getLibFunc(unsigned int Opcode, Type *Ty, LibFunc &F) const {
+  [[nodiscard]] bool getLibFunc(unsigned int Opcode, Type *Ty,
+                                LibFunc &F) const {
     return Impl->getLibFunc(Opcode, Ty, F);
   }
 

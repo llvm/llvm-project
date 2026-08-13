@@ -488,8 +488,8 @@ bool LibCallsShrinkWrap::perform(CallInst *CI) {
   LibFunc Func;
   Function *Callee = CI->getCalledFunction();
   assert(Callee && "perform() should apply to a non-empty callee");
-  TLI.getLibFunc(*Callee, Func);
-  assert(Func && "perform() is not expecting an empty function");
+  [[maybe_unused]] bool FoundLibFunc = TLI.getLibFunc(*Callee, Func);
+  assert(FoundLibFunc && "perform() is not expecting an empty function");
 
   if (performCallDomainErrorOnly(CI, Func) || performCallRangeErrorOnly(CI, Func))
     return true;

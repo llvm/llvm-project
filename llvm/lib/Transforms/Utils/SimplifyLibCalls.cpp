@@ -2719,8 +2719,9 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
   B.setFastMathFlags(FastMathFlags::getFast());
 
   Intrinsic::ID ArgID = Arg->getIntrinsicID();
-  LibFunc ArgLb = NotLibFunc;
-  TLI->getLibFunc(*Arg, ArgLb);
+  LibFunc ArgLb;
+  if (!TLI->getLibFunc(*Arg, ArgLb))
+    ArgLb = NotLibFunc;
 
   // log(pow(x,y)) -> y*log(x)
   AttributeList NoAttrs;
@@ -2775,8 +2776,9 @@ Value *LibCallSimplifier::mergeSqrtToExp(CallInst *CI, IRBuilderBase &B) {
   if (!Arg || !Arg->hasAllowReassoc() || !Arg->hasOneUse())
     return nullptr;
   Intrinsic::ID ArgID = Arg->getIntrinsicID();
-  LibFunc ArgLb = NotLibFunc;
-  TLI->getLibFunc(*Arg, ArgLb);
+  LibFunc ArgLb;
+  if (!TLI->getLibFunc(*Arg, ArgLb))
+    ArgLb = NotLibFunc;
 
   LibFunc SqrtLb, ExpLb, Exp2Lb, Exp10Lb;
 
@@ -3009,7 +3011,8 @@ static bool insertSinCosCall(IRBuilderBase &B, Function *OrigCallee, Value *Arg,
   if (!isLibFuncEmittable(M, TLI, Name))
     return false;
   LibFunc TheLibFunc;
-  TLI->getLibFunc(Name, TheLibFunc);
+  [[maybe_unused]] bool FoundLibFunc = TLI->getLibFunc(Name, TheLibFunc);
+  assert(FoundLibFunc && "isLibFuncEmittable should have rejected this name");
   FunctionCallee Callee = getOrInsertLibFunc(
       M, *TLI, TheLibFunc, OrigCallee->getAttributes(), ResTy, ArgTy);
 

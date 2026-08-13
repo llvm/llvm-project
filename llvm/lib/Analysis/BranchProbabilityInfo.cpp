@@ -892,7 +892,8 @@ bool BPIConstruction::calcZeroHeuristics(const BasicBlock *BB,
   if (TLI)
     if (CallInst *Call = dyn_cast<CallInst>(CI->getOperand(0)))
       if (Function *CalledFn = Call->getCalledFunction())
-        TLI->getLibFunc(*CalledFn, Func);
+        if (!TLI->getLibFunc(*CalledFn, Func))
+          Func = LibFunc::NotLibFunc;
 
   bool Likely;
   if (Func == LibFunc_strcasecmp ||

@@ -1948,7 +1948,8 @@ Value *llvm::emitUnaryFloatFnCall(Value *Op, const TargetLibraryInfo *TLI,
   appendTypeSuffix(Op, Name, NameBuffer);
 
   LibFunc TheLibFunc;
-  TLI->getLibFunc(Name, TheLibFunc);
+  if (!TLI->getLibFunc(Name, TheLibFunc))
+    TheLibFunc = NotLibFunc;
 
   return emitUnaryFloatFnCallHelper(Op, TheLibFunc, Name, B, Attrs, TLI);
 }
@@ -2001,7 +2002,8 @@ Value *llvm::emitBinaryFloatFnCall(Value *Op1, Value *Op2,
   appendTypeSuffix(Op1, Name, NameBuffer);
 
   LibFunc TheLibFunc;
-  TLI->getLibFunc(Name, TheLibFunc);
+  if (!TLI->getLibFunc(Name, TheLibFunc))
+    TheLibFunc = NotLibFunc;
 
   return emitBinaryFloatFnCallHelper(Op1, Op2, TheLibFunc, Name, B, Attrs, TLI);
 }
