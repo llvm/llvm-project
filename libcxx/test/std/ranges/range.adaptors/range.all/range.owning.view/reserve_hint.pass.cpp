@@ -20,11 +20,9 @@
 #include <utility>
 
 #include "test_iterators.h"
+#include "test_range.h"
 
 int globalBuff[8];
-
-template <class T>
-concept HasReserveHint = requires(T t) { t.reserve_hint(); };
 
 constexpr bool test() {
   {

@@ -17,10 +17,8 @@
 #include <ranges>
 
 #include "test_macros.h"
+#include "test_range.h"
 #include "types.h"
-
-template <class T>
-concept ReserveHintInvocable = requires(std::ranges::drop_view<T> t) { t.reserve_hint(); };
 
 constexpr bool test() {
   // approximately_sized_range<V>
@@ -42,11 +40,11 @@ constexpr bool test() {
   // mutable-only approximately_sized_range
   std::ranges::drop_view dropView5(ApproximatelySizedNotConstView(8), 3);
   assert(dropView5.reserve_hint() == 5);
-  static_assert(ReserveHintInvocable<ApproximatelySizedNotConstView>);
-  static_assert(!ReserveHintInvocable<const ApproximatelySizedNotConstView>);
+  static_assert(HasReserveHint<std::ranges::drop_view<ApproximatelySizedNotConstView>>);
+  static_assert(!HasReserveHint<const std::ranges::drop_view<ApproximatelySizedNotConstView>>);
 
   // Because ForwardView is not approximately_sized_range.
-  static_assert(!ReserveHintInvocable<ForwardView>);
+  static_assert(!HasReserveHint<std::ranges::drop_view<ForwardView>>);
 
   return true;
 }

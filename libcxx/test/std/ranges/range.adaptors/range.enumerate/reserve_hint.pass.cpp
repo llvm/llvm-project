@@ -22,10 +22,8 @@
 #include <utility>
 
 #include "test_iterators.h"
+#include "test_range.h"
 #include "types.h"
-
-template <class T>
-concept HasMemberReserveHint = requires(T t) { t.reserve_hint(); };
 
 static constexpr int globalBuff[8] = {};
 
@@ -38,8 +36,8 @@ struct NonApproximatelySizedView : std::ranges::view_base {
 static_assert(!std::ranges::approximately_sized_range<NonApproximatelySizedView>);
 static_assert(!std::ranges::approximately_sized_range<const NonApproximatelySizedView>);
 
-static_assert(!HasMemberReserveHint<std::ranges::enumerate_view<NonApproximatelySizedView>>);
-static_assert(!HasMemberReserveHint<const std::ranges::enumerate_view<NonApproximatelySizedView>>);
+static_assert(!HasReserveHint<std::ranges::enumerate_view<NonApproximatelySizedView>>);
+static_assert(!HasReserveHint<const std::ranges::enumerate_view<NonApproximatelySizedView>>);
 
 struct ApproximatelySizedView : std::ranges::view_base {
   unsigned int size_;
@@ -49,8 +47,8 @@ struct ApproximatelySizedView : std::ranges::view_base {
   constexpr unsigned int reserve_hint() const { return size_; }
 };
 
-static_assert(HasMemberReserveHint<std::ranges::enumerate_view<ApproximatelySizedView>>);
-static_assert(HasMemberReserveHint<const std::ranges::enumerate_view<ApproximatelySizedView>>);
+static_assert(HasReserveHint<std::ranges::enumerate_view<ApproximatelySizedView>>);
+static_assert(HasReserveHint<const std::ranges::enumerate_view<ApproximatelySizedView>>);
 
 struct ApproximatelySizedNotConstView : std::ranges::view_base {
   unsigned int size_;
@@ -60,8 +58,8 @@ struct ApproximatelySizedNotConstView : std::ranges::view_base {
   constexpr unsigned int reserve_hint() { return size_; }
 };
 
-static_assert(HasMemberReserveHint<std::ranges::enumerate_view<ApproximatelySizedNotConstView>>);
-static_assert(!HasMemberReserveHint<const std::ranges::enumerate_view<ApproximatelySizedNotConstView>>);
+static_assert(HasReserveHint<std::ranges::enumerate_view<ApproximatelySizedNotConstView>>);
+static_assert(!HasReserveHint<const std::ranges::enumerate_view<ApproximatelySizedNotConstView>>);
 
 constexpr bool test() {
   // Non-const and const are reserve_hint-able

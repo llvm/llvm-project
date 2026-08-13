@@ -17,21 +17,19 @@
 #include <ranges>
 
 #include "test_iterators.h"
+#include "test_range.h"
 #include "types.h"
-
-template <class View>
-concept ReserveHintEnabled = requires(View v) { v.reserve_hint(); };
 
 constexpr bool test() {
   int buf[8] = {1, 2, 3, 4, 5, 6, 7, 8};
 
   {
-    static_assert(ReserveHintEnabled<std::ranges::common_view<ApproximatelySizedView>&>);
-    static_assert(ReserveHintEnabled<std::ranges::common_view<ApproximatelySizedView> const&>);
-    static_assert(!ReserveHintEnabled<std::ranges::common_view<CopyableView>&>);
-    static_assert(!ReserveHintEnabled<std::ranges::common_view<CopyableView> const&>);
-    static_assert(ReserveHintEnabled<std::ranges::common_view<NonConstApproximatelySizedView>&>);
-    static_assert(!ReserveHintEnabled<std::ranges::common_view<NonConstApproximatelySizedView> const&>);
+    static_assert(HasReserveHint<std::ranges::common_view<ApproximatelySizedView>&>);
+    static_assert(HasReserveHint<std::ranges::common_view<ApproximatelySizedView> const&>);
+    static_assert(!HasReserveHint<std::ranges::common_view<CopyableView>&>);
+    static_assert(!HasReserveHint<std::ranges::common_view<CopyableView> const&>);
+    static_assert(HasReserveHint<std::ranges::common_view<NonConstApproximatelySizedView>&>);
+    static_assert(!HasReserveHint<std::ranges::common_view<NonConstApproximatelySizedView> const&>);
   }
 
   {

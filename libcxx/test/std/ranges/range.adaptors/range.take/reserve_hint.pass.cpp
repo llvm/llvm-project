@@ -21,14 +21,11 @@
 #include "test_range.h"
 #include "types.h"
 
-template <class T>
-concept ReserveHintEnabled = requires(const std::ranges::take_view<T>& tv) { tv.reserve_hint(); };
-
 constexpr bool test() {
   int buffer[8] = {1, 2, 3, 4, 5, 6, 7, 8};
 
   {
-    static_assert(ReserveHintEnabled<ApproximatelySizedForwardView>);
+    static_assert(HasReserveHint<const std::ranges::take_view<ApproximatelySizedForwardView>&>);
   }
 
   {

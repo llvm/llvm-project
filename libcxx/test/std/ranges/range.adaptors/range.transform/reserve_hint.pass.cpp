@@ -16,10 +16,8 @@
 #include <cassert>
 #include <ranges>
 
+#include "test_range.h"
 #include "types.h"
-
-template <class T>
-concept ReserveHintInvocable = requires(T t) { t.reserve_hint(); };
 
 constexpr bool test() {
   {
@@ -27,11 +25,11 @@ constexpr bool test() {
     assert(transformView.reserve_hint() == 5);
   }
 
-  static_assert(ReserveHintInvocable<std::ranges::transform_view<ApproximatelySizedView, PlusOne>>);
-  static_assert(ReserveHintInvocable<const std::ranges::transform_view<ApproximatelySizedView, PlusOne>>);
+  static_assert(HasReserveHint<std::ranges::transform_view<ApproximatelySizedView, PlusOne>>);
+  static_assert(HasReserveHint<const std::ranges::transform_view<ApproximatelySizedView, PlusOne>>);
 
-  static_assert(ReserveHintInvocable<std::ranges::transform_view<ApproximatelySizedNotConstView, PlusOne>>);
-  static_assert(!ReserveHintInvocable<const std::ranges::transform_view<ApproximatelySizedNotConstView, PlusOne>>);
+  static_assert(HasReserveHint<std::ranges::transform_view<ApproximatelySizedNotConstView, PlusOne>>);
+  static_assert(!HasReserveHint<const std::ranges::transform_view<ApproximatelySizedNotConstView, PlusOne>>);
 
   return true;
 }

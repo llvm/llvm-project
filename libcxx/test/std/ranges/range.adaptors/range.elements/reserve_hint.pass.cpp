@@ -19,10 +19,8 @@
 #include <tuple>
 #include <utility>
 
+#include "test_range.h"
 #include "types.h"
-
-template <class T>
-concept HasReserveHint = requires(T t) { t.reserve_hint(); };
 
 struct NonApproximatelySized : std::ranges::view_base {
   using iterator = forward_iterator<std::tuple<int>*>;

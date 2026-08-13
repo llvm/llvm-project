@@ -17,6 +17,7 @@
 #include <ranges>
 
 #include "test_iterators.h"
+#include "test_range.h"
 
 // forward_iterator + sentinel end so that ranges::size doesn't apply,
 // making these ranges approximately_sized only via their member reserve_hint().
@@ -47,9 +48,6 @@ struct NoReserveHintView : std::ranges::view_base {
   constexpr auto begin() const { return forward_iterator<int*>(nullptr); }
   constexpr auto end() const { return sentinel_wrapper<forward_iterator<int*>>(forward_iterator<int*>(nullptr)); }
 };
-
-template <class T>
-concept HasReserveHint = requires(T v) { v.reserve_hint(); };
 
 static_assert(!std::ranges::sized_range<std::ranges::as_rvalue_view<ConstReserveHintView>>);
 static_assert(!std::ranges::sized_range<std::ranges::as_rvalue_view<NonConstReserveHintView>>);
