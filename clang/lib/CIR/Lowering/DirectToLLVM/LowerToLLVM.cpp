@@ -2805,10 +2805,10 @@ CIRToLLVMGlobalOpLowering::lowerGlobalAttributes(
 }
 
 static mlir::LLVM::ThreadLocalMode
-convertTlsModelAttrToLLVM(TLS_ModelAttr attr) {
+convertTlsModelAttrToLLVM(TLSModelAttr attr) {
   // assert that we can just static-cast these.
 #define CHECK_ENUM(CIR, LLVM_VAL)                                              \
-  static_assert(static_cast<unsigned>(TLS_Model::CIR) ==                       \
+  static_assert(static_cast<unsigned>(TLSModel::CIR) ==                        \
                 static_cast<unsigned>(mlir::LLVM::ThreadLocalMode::LLVM_VAL))
   CHECK_ENUM(GeneralDynamic, GeneralDynamic);
   CHECK_ENUM(LocalDynamic, LocalDynamic);
