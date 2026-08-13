@@ -430,8 +430,23 @@ int test_multi_param_highlight() {
 
   // CHECK: note: Value's lifetime bound to the lifetime of 'local_one' here
   // CHECK: return multi_params_annotated(&local_one, &local_two);
-  // CHECK-NEXT:                          ^~~~~~~~~~
+  // CHECK-NEXT:{{\|                                 \^~~~~~~~~~$}}
   // CHECK: note: Value's lifetime bound to the lifetime of 'local_two' here
   // CHECK: return multi_params_annotated(&local_one, &local_two);
-  // CHECK-NEXT:                                      ^~~~~~~~~~
+  // CHECK-NEXT:{{\|                                             \^~~~~~~~~~$}}
+}
+
+int global_var;
+int test_correct_param_highlight() {
+  int local_n = 5;
+  // expected-note@-1 {{'local_n' initialized here}}
+  return multi_params_annotated(&global_var, &local_n);
+  // expected-warning@-1 {{address of stack memory associated with local variable 'local_n' returned}}
+  // expected-warning@-2 {{Returning value bound to 'local_n' that will go out of scope}}
+  // expected-note@-3    {{Value's lifetime bound to the lifetime of 'local_n' here}}
+  // expected-note@-4    {{Lifetime of 'local_n' ended here}}
+
+  // CHECK: note: Value's lifetime bound to the lifetime of 'local_n' here
+  // CHECK: return multi_params_annotated(&global_var, &local_n);
+  // CHECK-NEXT:{{\|                                              \^~~~~~~~$}}
 }
