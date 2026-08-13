@@ -53,9 +53,9 @@ define i1 @pr216058(i16 %b, i16 %h) {
 ; CHECK-LABEL: @pr216058(
 ; CHECK-NEXT:    [[E:%.*]] = sext i16 [[B:%.*]] to i32
 ; CHECK-NEXT:    [[F:%.*]] = sext i16 [[H:%.*]] to i32
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 2147483647, [[F]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 2147483647, [[F]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i16 [[B]], 0
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[E]], [[SUB]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[SUB]], [[E]]
 ; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMP1]], [[CMP2]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
