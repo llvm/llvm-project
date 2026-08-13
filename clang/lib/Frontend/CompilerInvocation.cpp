@@ -2016,7 +2016,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
             .Case("obj", OutputFile)
             .Default(llvm::sys::path::filename(OutputFile).str());
 
-  if (Arg *A = Args.getLastArg(OPT_save_dynamic_debugging_temps))
+  if (Args.getLastArg(OPT_save_dynamic_debugging_temps))
     Opts.SaveDynDbgTempsFilePrefix = OutputFile;
 
   // The memory profile runtime appends the pid to make this name more unique.
