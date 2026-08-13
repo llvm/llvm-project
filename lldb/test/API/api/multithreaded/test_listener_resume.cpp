@@ -8,7 +8,11 @@
 #include <string>
 #include <thread>
 
-%include_SB_APIs%
+#include "lldb/API/SBDebugger.h"
+#include "lldb/API/SBError.h"
+#include "lldb/API/SBEvent.h"
+#include "lldb/API/SBListener.h"
+#include "lldb/API/SBProcess.h"
 
 #include "common.h"
 
@@ -37,8 +41,9 @@ void listener_func() {
       if (process.GetState() == eStateStopped) {
         SBError error = process.Continue();
         if (!error.Success())
-          throw Exception(string("Cannot continue process from listener thread: ")
-                          + error.GetCString());
+          throw Exception(
+              string("Cannot continue process from listener thread: ") +
+              error.GetCString());
         g_process_started.push(true);
       }
     }

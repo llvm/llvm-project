@@ -2,13 +2,23 @@
 // is set to a FILE *, lldb can still successfully run a
 // python command in a stop hook.
 
+#include <cstdlib>
 #include <errno.h>
 #include <mutex>
 #include <stdio.h>
 #include <string>
 #include <vector>
 
-%include_SB_APIs%
+#include "lldb/API/SBBreakpoint.h"
+#include "lldb/API/SBBroadcaster.h"
+#include "lldb/API/SBCommandInterpreter.h"
+#include "lldb/API/SBCommandReturnObject.h"
+#include "lldb/API/SBDebugger.h"
+#include "lldb/API/SBEvent.h"
+#include "lldb/API/SBFileSpec.h"
+#include "lldb/API/SBListener.h"
+#include "lldb/API/SBProcess.h"
+#include "lldb/API/SBTarget.h"
 
 #include "common.h"
 
@@ -44,7 +54,11 @@ void test(SBDebugger &dbg, std::vector<std::string> args) {
   // one that runs in the stop hook and sets a variable when it
   // runs, and one that reports out the variable so we can ensure
   // that we did indeed run the stop hook.
-  const char *source_dir = "%SOURCE_DIR%";
+  // The test sets LLDB_TEST_SOURCE_DIR to the directory containing this
+  // test's support files (see TestMultithreaded.py).
+  const char *source_dir = getenv("LLDB_TEST_SOURCE_DIR");
+  if (!source_dir)
+    throw Exception("LLDB_TEST_SOURCE_DIR is not set");
   SBFileSpec script_spec(source_dir);
   script_spec.AppendPathComponent("some_cmd.py");
   char path[PATH_MAX];
@@ -54,7 +68,7 @@ void test(SBDebugger &dbg, std::vector<std::string> args) {
   import_command.append(path);
   interp.HandleCommand(import_command.c_str(), result);
   if (!result.Succeeded())
-    throw Exception("Couldn't import %SOURCE_DIR%/some_cmd.py");
+    throw Exception(std::string("Couldn't import ") + path);
 
   SBProcess process = target.LaunchSimple(nullptr, nullptr, nullptr);
   if (!process.IsValid())

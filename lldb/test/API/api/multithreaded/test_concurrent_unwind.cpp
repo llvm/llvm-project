@@ -3,15 +3,23 @@
 #include <atomic>
 #include <thread>
 
-%include_SB_APIs%
+#include "lldb/API/SBBreakpoint.h"
+#include "lldb/API/SBDebugger.h"
+#include "lldb/API/SBError.h"
+#include "lldb/API/SBFileSpec.h"
+#include "lldb/API/SBFrame.h"
+#include "lldb/API/SBLaunchInfo.h"
+#include "lldb/API/SBProcess.h"
+#include "lldb/API/SBTarget.h"
+#include "lldb/API/SBThread.h"
 
 #include "common.h"
 
 using namespace lldb;
 
-void test (SBDebugger &dbg, std::vector<std::string> args) {
+void test(SBDebugger &dbg, std::vector<std::string> args) {
 
-SBError error;
+  SBError error;
   dbg.SetAsync(false);
   SBTarget target = dbg.CreateTarget(args.at(0).c_str());
   if (!target.IsValid())
@@ -19,8 +27,8 @@ SBError error;
 
   // Now set our breakpoint and launch:
   SBFileSpec main_sourcefile("deep_stack.cpp");
-  SBBreakpoint bkpt = target.BreakpointCreateBySourceRegex("Set a breakpoint here",
-                                                           main_sourcefile);
+  SBBreakpoint bkpt = target.BreakpointCreateBySourceRegex(
+      "Set a breakpoint here", main_sourcefile);
   if (bkpt.GetNumLocations() == 0)
     throw Exception("Main breakpoint got no locations");
 
@@ -44,7 +52,7 @@ SBError error;
   const size_t num_frames = cur_thread.GetNumFrames();
   // Now step once to clear the frame cache:
   cur_thread.StepOver();
-  
+
   // Create three threads and set them to getting frames simultaneously,
   // and make sure we don't deadlock.
   pseudo_barrier_t rendevous;
@@ -52,7 +60,7 @@ SBError error;
   std::atomic_size_t success(true);
   std::atomic_size_t largest(0);
 
-  auto lambda = [&](size_t stride){
+  auto lambda = [&](size_t stride) {
     pseudo_barrier_wait(rendevous);
     bool younger = true;
     while (1) {
@@ -72,7 +80,6 @@ SBError error;
         break;
       }
     }
-    
   };
 
   std::thread thread1(lambda, 1);
@@ -85,7 +92,7 @@ SBError error;
   thread3.join();
   thread4.join();
   thread5.join();
-  
+
   if (!success)
     throw Exception("One thread stopped before 1000");
 }

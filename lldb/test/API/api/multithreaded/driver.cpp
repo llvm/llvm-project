@@ -7,10 +7,10 @@
 #include <string>
 #include <vector>
 #if !defined(_MSC_VER)
-  #include <signal.h>
+#include <signal.h>
 #endif
 
-%include_SB_APIs%
+#include "lldb/API/SBDebugger.h"
 
 #include "common.h"
 
@@ -19,7 +19,7 @@ using namespace lldb;
 
 void test(SBDebugger &dbg, std::vector<string> args);
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
 
 // Ignore SIGPIPE.  The lldb driver does this as well,
 // because we seem to get spurious SIGPIPES on some
@@ -32,8 +32,7 @@ int main(int argc, char** argv) {
   SBDebugger::Initialize();
   SBDebugger dbg = SBDebugger::Create();
   dbg.HandleCommand("settings set symbols.enable-external-lookup false");
-  dbg.HandleCommand(
-      "settings set plugin.process.gdb-remote.packet-timeout 60");
+  dbg.HandleCommand("settings set plugin.process.gdb-remote.packet-timeout 60");
 
   try {
     if (!dbg.IsValid())

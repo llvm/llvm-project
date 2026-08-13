@@ -7,8 +7,13 @@
 #include <thread>
 #include <vector>
 
-%include_SB_APIs%
 #include "common.h"
+#include "lldb/API/SBBreakpoint.h"
+#include "lldb/API/SBDebugger.h"
+#include "lldb/API/SBError.h"
+#include "lldb/API/SBListener.h"
+#include "lldb/API/SBProcess.h"
+#include "lldb/API/SBTarget.h"
 
 using namespace lldb;
 using namespace std;
@@ -17,7 +22,7 @@ void listener_func();
 void check_listener(SBDebugger &dbg);
 
 // Listener thread and related variables
-atomic<bool> g_done; 
+atomic<bool> g_done;
 SBListener g_listener("test-listener");
 thread g_listener_thread;
 
@@ -31,20 +36,18 @@ void test(SBDebugger &dbg, std::vector<string> args) {
   try {
     g_done.store(false);
     SBTarget target = dbg.CreateTarget(args.at(0).c_str());
-    if (!target.IsValid()) throw Exception("invalid target");
+    if (!target.IsValid())
+      throw Exception("invalid target");
 
     SBBreakpoint breakpoint = target.BreakpointCreateByName("next");
-    if (!breakpoint.IsValid()) throw Exception("invalid breakpoint");
+    if (!breakpoint.IsValid())
+      throw Exception("invalid breakpoint");
 
     std::unique_ptr<char> working_dir(get_working_dir());
 
     SBError error;
-    SBProcess process = target.Launch(g_listener,
-                                      0, 0, 0, 0, 0,
-                                      working_dir.get(),
-                                      0,
-                                      false,
-                                      error);
+    SBProcess process = target.Launch(g_listener, 0, 0, 0, 0, 0,
+                                      working_dir.get(), 0, false, error);
     if (!error.Success())
       throw Exception("Error launching process.");
 
