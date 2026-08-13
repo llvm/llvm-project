@@ -482,12 +482,10 @@ public:
   }
 };
 
-/// PluginContextTy for the host plugin. No per-context state.
 struct GenELF64PluginContextTy final : public PluginContextTy {
   using PluginContextTy::PluginContextTy;
 
-  Error initAsyncInfoImpl(GenericDeviceTy &,
-                          AsyncInfoWrapperTy &) override {
+  Error initAsyncInfoImpl(GenericDeviceTy &, AsyncInfoWrapperTy &) override {
     return Plugin::success();
   }
 };

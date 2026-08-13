@@ -12,9 +12,8 @@
 
 // OffloadDeviceTest creates an ol_context_handle_t in SetUp; this fixture
 // stops at the device so the tests below can exercise olCreateContext.
-struct olCreateContextTest
-    : OffloadTest,
-      ::testing::WithParamInterface<OffloadParam<int>> {
+struct olCreateContextTest : OffloadTest,
+                             ::testing::WithParamInterface<OffloadParam<int>> {
   void SetUp() override {
     RETURN_ON_FATAL_FAILURE(OffloadTest::SetUp());
     auto &DeviceParam = std::get<0>(GetParam());

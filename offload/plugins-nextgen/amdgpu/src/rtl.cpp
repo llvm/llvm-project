@@ -3973,12 +3973,10 @@ private:
   }
 };
 
-/// PluginContextTy for the AMDGPU plugin. No per-context state today.
 struct AMDGPUPluginContextTy final : public PluginContextTy {
   using PluginContextTy::PluginContextTy;
 
-  Error initAsyncInfoImpl(GenericDeviceTy &,
-                          AsyncInfoWrapperTy &) override {
+  Error initAsyncInfoImpl(GenericDeviceTy &, AsyncInfoWrapperTy &) override {
     // TODO: Implement this function.
     return Plugin::success();
   }

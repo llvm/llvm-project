@@ -894,8 +894,7 @@ public:
   }
 };
 
-/// A plugin-side context grouping a set of devices. Every plugin provides a
-/// concrete subclass through GenericPluginTy::createPluginContext.
+/// A plugin-side context grouping a set of devices.
 struct PluginContextTy {
   PluginContextTy(GenericPluginTy &Plugin,
                   llvm::ArrayRef<GenericDeviceTy *> Devices)
@@ -1658,8 +1657,7 @@ struct GenericPluginTy {
                          "async_barrier not supported");
   }
 
-  /// Create a plugin-side context grouping the given devices. Each plugin
-  /// returns its own PluginContextTy subclass.
+  /// Create a plugin-side context grouping the given devices.
   virtual Expected<std::unique_ptr<PluginContextTy>>
   createPluginContext(llvm::ArrayRef<GenericDeviceTy *> Devices) = 0;
 

@@ -1662,8 +1662,6 @@ public:
   }
 };
 
-/// PluginContextTy for the CUDA plugin. Delegates async-info init to the
-/// device (each CUDADeviceTy owns its own CUcontext / stream cache).
 struct CUDAPluginContextTy final : public PluginContextTy {
   using PluginContextTy::PluginContextTy;
 
