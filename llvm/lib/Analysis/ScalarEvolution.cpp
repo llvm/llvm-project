@@ -13368,7 +13368,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::howManyLessThansViaPreInc(
   const auto *AR = dyn_cast<SCEVAddRecExpr>(LHS);
   SCEV::NoWrapFlags NoWrapFlag = IsSigned ? SCEV::FlagNSW : SCEV::FlagNUW;
   if (!AR || AR->getLoop() != L || !AR->isAffine() ||
-      !AR->getNoWrapFlags(NoWrapFlag))
+      !AR->getType()->isIntegerTy() || !AR->getNoWrapFlags(NoWrapFlag))
     return getCouldNotCompute();
 
   const SCEV *Step = AR->getStepRecurrence(*this);
