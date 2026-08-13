@@ -65,6 +65,10 @@ jobs:
     needs:
       - validate-tag
       - release-create
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
     uses: ./.github/workflows/release-documentation.yml
     with:
       release-version: ${{ needs.validate-tag.outputs.release-version }}
@@ -135,7 +139,7 @@ jobs:
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: lit-${{ inputs.release-version }}-release-binary
+          name: lit-${{ needs.validate-tag.outputs.release-version }}-release-binary
           path: |
             llvm/utils/lit/dist
 

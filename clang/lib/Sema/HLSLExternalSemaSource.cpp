@@ -661,6 +661,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
                     /*RawBuffer=*/true, /*HasCounter=*/false)
         .addByteAddressBufferLoadMethods()
         .addByteAddressBufferStoreMethods()
+        .addByteAddressBufferInterlockedMethods()
         .addGetDimensionsMethodForBuffer()
         .completeDefinition();
   });
@@ -670,6 +671,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, /*IsROV=*/true,
                     /*RawBuffer=*/true, /*HasCounter=*/false)
+        .addByteAddressBufferInterlockedMethods()
         .addGetDimensionsMethodForBuffer()
         .completeDefinition();
   });
@@ -841,6 +843,8 @@ void HLSLExternalSemaSource::defineHLSLAtomicIntrinsics() {
                             "__builtin_hlsl_interlocked_add");
   defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedOr",
                             "__builtin_hlsl_interlocked_or");
+  defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedXor",
+                            "__builtin_hlsl_interlocked_xor");
 }
 
 void HLSLExternalSemaSource::onCompletion(CXXRecordDecl *Record,

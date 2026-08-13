@@ -1085,10 +1085,15 @@ diverges from the traditional compilation flow:
   generates generic AMDGCN SPIR-V which retains architecture specific elements
   without hardcoding them, thus allowing for optimal target specific code to be
   generated at run time, when the concrete target is known.
-- **LLVM IR Translation**: The program is compiled to LLVM Intermediate
-  Representation (IR), which is subsequently translated into SPIR-V. In the
-  future, this translation step will be replaced by direct SPIR-V emission via
-  the SPIR-V Back-end.
+- **SPIR-V emission**: The program is compiled to LLVM Intermediate
+  Representation (IR), which is subsequently lowered into SPIR-V via the SPIR-V
+  backend.
+
+  :::{note}
+  The SPIR-V backend does not currently preserve debug information. Pass
+  `-no-use-spirv-backend` on the command line to fall back to the legacy
+  translation path, which retains debug information.
+  :::
 - **Clang Offload Bundler**: The resulting SPIR-V is embedded in the Clang
   offload bundler with the bundle ID `hip-spirv64-amd-amdhsa--amdgcnspirv`.
 

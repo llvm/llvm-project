@@ -36,9 +36,7 @@
 ; SOURCE:      ; }
 ; SOURCE-NEXT: s_endpgm
 
-; ModuleID = 'source-lines.cl'
 source_filename = "source-lines.cl"
-target triple = "amdgcn-amd-amdhsa"
 
 ; Function Attrs: noinline nounwind
 define amdgpu_kernel void @source_lines_test(ptr addrspace(1) %Out) #0 !dbg !7 !kernel_arg_addr_space !12 !kernel_arg_access_qual !13 !kernel_arg_type !14 !kernel_arg_base_type !14 !kernel_arg_type_qual !15 {

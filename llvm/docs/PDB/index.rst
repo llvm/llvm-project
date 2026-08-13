@@ -2,8 +2,6 @@
 The PDB File Format
 =====================================
 
-.. contents::
-   :local:
 
 .. _pdb_intro:
 
