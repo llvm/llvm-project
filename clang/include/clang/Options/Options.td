@@ -4791,6 +4791,14 @@ defm enable_new_pm_codegen
                           "Use the NewPM for the Codegen Pipeline">>,
       DocBrief<
           [{When enabled, use the NewPM to drive the Codegen pipeline.}]>;
+def enable_new_pm_codegen : Joined<["-"], "fenable-new-pm-codegen=">,
+    Group<f_Group>,
+    Visibility<[CC1Option]>,
+    HelpText<"When enabled, use the NewPM to drive the CodeGen pipeline.">,
+    Values<"auto,force-on,force-disable">,
+    NormalizedValuesScope<"CodeGenOptions::NewPMEnablementLevel">,
+    NormalizedValues<["Auto","ForceEnable","ForceDisable"]>,
+    MarshallingInfoEnum<CodeGenOpts<"EnableNewPMCodeGen">, "Auto">;
 defm experimental_loop_fusion
     : OptInCC1FFlag<"experimental-loop-fusion", "Enable", "Disable",
                     "Enable the loop fusion pass",
