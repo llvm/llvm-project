@@ -141,21 +141,7 @@ public:
   ze_result_t(ZE_APICALL *zexKernelGetArgumentSize)(
       ze_kernel_handle_t hKernel, uint32_t argIndex,
       uint32_t *pArgSize) = nullptr;
-
-  /// Level Zero extension function pointer for host function callbacks.
-  ze_result_t(ZE_APICALL *zeCommandListAppendHostFunction)(
-      ze_command_list_handle_t hCommandList, void *pfnHostFunction,
-      void *pUserData, void *pReserved, ze_event_handle_t hSignalEvent,
-      uint32_t numWaitEvents, ze_event_handle_t *phWaitEvents) = nullptr;
-
-  /// Level Zero extension function pointer for querying the driver's default
-  /// ze_context, when the extension is supported. Used by
-  /// LevelZeroPluginTy::createPluginContext to reuse the driver default
-  /// context when the user asks for every device on the driver.
-  ze_context_handle_t(ZE_APICALL *zeDriverGetDefaultContext)(
-      ze_driver_handle_t hDriver) = nullptr;
 };
-
 } // namespace llvm::omp::target::plugin
 
 #endif // OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0CONTEXT_H
