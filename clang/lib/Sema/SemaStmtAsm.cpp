@@ -235,7 +235,8 @@ getClobberConflictLocation(MultiExprArg Exprs, Expr **Constraints,
   return SourceLocation();
 }
 
-ExprResult Sema::ActOnGCCAsmStmtString(Expr *Expr, bool ForAsmLabel) {
+ExprResult Sema::ActOnGCCAsmStmtString(Expr *Expr, bool ForAsmLabel,
+                                       bool IsConstExpr) {
   if (!Expr)
     return ExprError();
 
@@ -245,7 +246,8 @@ ExprResult Sema::ActOnGCCAsmStmtString(Expr *Expr, bool ForAsmLabel) {
       Diag(Expr->getBeginLoc(), diag::err_asm_operand_empty_string)
           << SL->getSourceRange();
     }
-    if (Context.getTargetInfo().FromSystemEncodingConverter != nullptr) {
+    if (!IsConstExpr &&
+        Context.getTargetInfo().FromSystemEncodingConverter != nullptr) {
       SmallString<16> ConvertedAsm;
       Context.getTargetInfo().FromSystemEncodingConverter->convert(
           SL->getString(), ConvertedAsm);
@@ -272,6 +274,7 @@ ExprResult Sema::ActOnGCCAsmStmtString(Expr *Expr, bool ForAsmLabel) {
 
   ConstantExpr *Res = ConstantExpr::Create(getASTContext(), Expr,
                                            ConstantResultStorageKind::APValue);
+
   Res->SetResult(V, getASTContext());
   return Res;
 }

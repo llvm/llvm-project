@@ -11429,7 +11429,8 @@ private:
   ///@{
 
 public:
-  ExprResult ActOnGCCAsmStmtString(Expr *Stm, bool ForAsmLabel);
+  ExprResult ActOnGCCAsmStmtString(Expr *Stm, bool ForAsmLabel,
+                                   bool IsConstExpr = false);
   StmtResult ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
                              bool IsVolatile, unsigned NumOutputs,
                              unsigned NumInputs, IdentifierInfo **Names,
