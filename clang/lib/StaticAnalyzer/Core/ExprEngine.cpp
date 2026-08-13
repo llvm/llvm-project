@@ -1164,6 +1164,10 @@ static bool justRunCheckersAsPreVisit(const Stmt *S) {
   case Stmt::AttributedStmtClass:
   case Stmt::CXXDefaultArgExprClass:
   case Stmt::CXXDefaultInitExprClass:
+  case Stmt::CXXStdInitializerListExprClass:
+  case Expr::ObjCArrayLiteralClass:
+  case Expr::ObjCDictionaryLiteralClass:
+  case Expr::ObjCBoxedExprClass:
   case Stmt::AtomicExprClass:
   case Stmt::ImplicitCastExprClass:
   case Stmt::CStyleCastExprClass:
@@ -1252,6 +1256,10 @@ static bool justRunCheckersAsPostVisit(const Stmt *S) {
   case Stmt::AttributedStmtClass:
   case Stmt::CXXDefaultArgExprClass:
   case Stmt::CXXDefaultInitExprClass:
+  case Stmt::CXXStdInitializerListExprClass:
+  case Expr::ObjCArrayLiteralClass:
+  case Expr::ObjCDictionaryLiteralClass:
+  case Expr::ObjCBoxedExprClass:
   case Stmt::AtomicExprClass:
   case Stmt::BlockExprClass:
   case Stmt::ImplicitCastExprClass:
@@ -2174,37 +2182,28 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Expr::ObjCArrayLiteralClass:
     case Expr::ObjCDictionaryLiteralClass:
     case Expr::ObjCBoxedExprClass: {
-      ExplodedNodeSet preVisit;
-      getCheckerManager().runCheckersForPreStmt(preVisit, Pred, S, *this);
-
-      ExplodedNodeSet Tmp;
-
       const auto *Ex = cast<Expr>(S);
       QualType resultType = Ex->getType();
 
-      for (const auto N : preVisit) {
-        const StackFrame *SF = N->getStackFrame();
-        SVal result = svalBuilder.conjureSymbolVal(
-            /*symbolTag=*/nullptr, getCFGElementRef(), SF, resultType,
-            getNumVisitedCurrent());
-        ProgramStateRef State = N->getState()->BindExpr(Ex, SF, result);
+      const StackFrame *SF = Pred->getStackFrame();
+      SVal result = svalBuilder.conjureSymbolVal(
+          /*symbolTag=*/nullptr, getCFGElementRef(), SF, resultType,
+          getNumVisitedCurrent());
+      ProgramStateRef State = Pred->getState()->BindExpr(Ex, SF, result);
 
-        // Escape pointers passed into the list, unless it's an ObjC boxed
-        // expression which is not a boxable C structure.
-        if (!(isa<ObjCBoxedExpr>(Ex) &&
-              !cast<ObjCBoxedExpr>(Ex)->getSubExpr()
-                                      ->getType()->isRecordType()))
-          for (auto Child : Ex->children()) {
-            assert(Child);
-            const auto *ChildExpr = dyn_cast<Expr>(Child);
-            SVal Val = ChildExpr ? State->getSVal(ChildExpr, SF) : UnknownVal();
-            State = escapeValues(State, Val, PSK_EscapeOther);
-          }
+      // Escape pointers passed into the list, unless it's an ObjC boxed
+      // expression which is not a boxable C structure.
+      if (!(isa<ObjCBoxedExpr>(Ex) &&
+            !cast<ObjCBoxedExpr>(Ex)->getSubExpr()
+                                    ->getType()->isRecordType()))
+        for (auto Child : Ex->children()) {
+          assert(Child);
+          const auto *ChildExpr = dyn_cast<Expr>(Child);
+          SVal Val = ChildExpr ? State->getSVal(ChildExpr, SF) : UnknownVal();
+          State = escapeValues(State, Val, PSK_EscapeOther);
+        }
 
-        Tmp.insert(Engine.makePostStmtNode(S, State, N));
-      }
-
-      getCheckerManager().runCheckersForPostStmt(Dst, Tmp, S, *this);
+      Dst.insert(Engine.makePostStmtNode(S, State, Pred));
       break;
     }
 
