@@ -676,7 +676,8 @@ TargetTransformInfo::getVectorInstrContextHint(const Instruction *I) {
 TargetTransformInfo::VectorInstrContext
 TargetTransformInfo::getBuildVectorContextHint(
     ArrayRef<int> Mask, ArrayRef<Value *> Scalars,
-    function_ref<bool()> CanSplatAllUses) {
+    function_ref<bool(SmallVectorImpl<BuildVectorUseOp> &)> GatherUseOps)
+    const {
   if (Scalars.empty() ||
       !ShuffleVectorInst::isZeroEltSplatMask(Mask, Mask.size()))
     return VectorInstrContext::None;
@@ -685,7 +686,13 @@ TargetTransformInfo::getBuildVectorContextHint(
   if (isa<VectorType>(SplatVal->getType()) || isa<ExtractElementInst>(SplatVal))
     return VectorInstrContext::None;
 
-  if (CanSplatAllUses())
+  SmallVector<BuildVectorUseOp, 4> UserOps;
+  if (!GatherUseOps(UserOps) || UserOps.empty())
+    return VectorInstrContext::None;
+
+  if (all_of(UserOps, [this](const BuildVectorUseOp &UserOp) {
+        return canSplatOperand(UserOp.Opcode, UserOp.OperandIndex);
+      }))
     return VectorInstrContext::SplatOpFolded;
 
   return VectorInstrContext::None;
