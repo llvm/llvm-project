@@ -387,6 +387,7 @@ static bool writeCOFF(COFFParser &CP, ContiguousBlobAccumulator &CBA) {
     CBA.writeZeros(4 * sizeof(uint32_t));
     CBA.write(CP.Obj.Header.NumberOfSections, LittleEndian);
     PointerToSymbolTableOffset = CBA.getOffset();
+    // The final symbol table offset is written after the section data.
     CBA.writeZeros(sizeof(CP.Obj.Header.PointerToSymbolTable));
     CBA.write(CP.Obj.Header.NumberOfSymbols, LittleEndian);
   } else {
@@ -395,6 +396,7 @@ static bool writeCOFF(COFFParser &CP, ContiguousBlobAccumulator &CBA) {
               LittleEndian);
     CBA.write(CP.Obj.Header.TimeDateStamp, LittleEndian);
     PointerToSymbolTableOffset = CBA.getOffset();
+    // The final symbol table offset is written after the section data.
     CBA.writeZeros(sizeof(CP.Obj.Header.PointerToSymbolTable));
     CBA.write(CP.Obj.Header.NumberOfSymbols, LittleEndian);
     CBA.write(CP.Obj.Header.SizeOfOptionalHeader, LittleEndian);
