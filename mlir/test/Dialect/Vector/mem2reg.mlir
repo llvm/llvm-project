@@ -259,6 +259,7 @@ func.func @subview_static_write(%v: vector<4xf32>, %init: vector<8xf32>, %pad: f
   %c0 = arith.constant 0 : index
   %a = memref.alloca() : memref<8xf32>
   vector.transfer_write %init, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
+  // Write via a subview.
   %sv = memref.subview %a[2] [4] [1] : memref<8xf32> to memref<4xf32, strided<[1], offset: 2>>
   vector.transfer_write %v, %sv[%c0] {in_bounds = [true]} : vector<4xf32>, memref<4xf32, strided<[1], offset: 2>>
   %r = vector.transfer_read %a[%c0], %pad {in_bounds = [true]} : memref<8xf32>, vector<8xf32>
@@ -278,6 +279,7 @@ func.func @subview_static_read(%init: vector<8xf32>, %pad: f32) -> vector<4xf32>
   %c0 = arith.constant 0 : index
   %a = memref.alloca() : memref<8xf32>
   vector.transfer_write %init, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
+  // Read via a subview.
   %sv = memref.subview %a[2] [4] [1] : memref<8xf32> to memref<4xf32, strided<[1], offset: 2>>
   %r = vector.transfer_read %sv[%c0], %pad {in_bounds = [true]} : memref<4xf32, strided<[1], offset: 2>>, vector<4xf32>
   return %r : vector<4xf32>
@@ -285,11 +287,10 @@ func.func @subview_static_read(%init: vector<8xf32>, %pad: f32) -> vector<4xf32>
 
 // -----
 
-// A buffer accessed *only* through subviews (no whole-buffer transfer) still
-// promotes: the slot comes from the alloca, not from any transfer. The memref,
-// the subviews, and the transfers are all removed; the written slice is
-// inserted into the buffer value and read back out. (canonicalize/cse would
-// then fold this to a plain forward of the written vector.)
+// A buffer accessed *only* through subviews, with no whole-buffer transfer to
+// seed the promoted value: the reaching definition is the allocator's default
+// value (ub.poison), and the written slice is inserted into it and read back
+// out.
 
 // CHECK-LABEL: func.func @subview_only_write_read
 //   CHECK-SAME:   (%[[V:.*]]: vector<4xf32>, %[[PAD:.*]]: f32)
@@ -297,7 +298,8 @@ func.func @subview_static_read(%init: vector<8xf32>, %pad: f32) -> vector<4xf32>
 //    CHECK-NOT:   memref.subview
 //    CHECK-NOT:   vector.transfer_write
 //    CHECK-NOT:   vector.transfer_read
-//        CHECK:   vector.insert_strided_slice %[[V]], %{{.*}} {offsets = [0], strides = [1]}
+//        CHECK:   %[[POISON:.*]] = ub.poison : vector<8xf32>
+//        CHECK:   vector.insert_strided_slice %[[V]], %[[POISON]] {offsets = [0], strides = [1]}
 func.func @subview_only_write_read(%v: vector<4xf32>, %pad: f32) -> vector<4xf32> {
   %c0 = arith.constant 0 : index
   %a = memref.alloca() : memref<8xf32>
