@@ -174,9 +174,9 @@ public:
   /// object files.
   ///
   /// \param comp_unit
-  ///     When this SymbolFile consists of multiple auxilliary
+  ///     When this SymbolFile consists of multiple auxiliary
   ///     SymbolFiles, for example, a Darwin debug map that references
-  ///     multiple .o files, comp_unit helps choose the auxilliary
+  ///     multiple .o files, comp_unit helps choose the auxiliary
   ///     file. In most other cases comp_unit's symbol file is
   ///     identical with *this.
   ///

@@ -157,7 +157,7 @@ public:
   // PC sections metadata.
   //===------------------------------------------------------------------===//
 
-  /// A pair of PC section name with auxilliary constant data.
+  /// A pair of PC section name with auxiliary constant data.
   using PCSection = std::pair<StringRef, SmallVector<Constant *>>;
 
   /// Return metadata for PC sections.
