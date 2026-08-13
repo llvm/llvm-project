@@ -47,7 +47,7 @@ function(mlgo_lower_models models mlir_opt mlir_translate target_type
       continue()
     endif()
 
-    set(CLASS_NAME "Model${MODEL_INDEX}")
+    set(CLASS_NAME "${target_type}_Model${MODEL_INDEX}")
     math(EXPR MODEL_INDEX "${MODEL_INDEX} + 1")
 
     if (NOT IS_ABSOLUTE "${MODEL_PATH}")
@@ -102,8 +102,8 @@ function(mlgo_lower_models models mlir_opt mlir_translate target_type
     set_source_files_properties(${HEADER_FILE} PROPERTIES GENERATED 1)
 
     # Custom target to force generation of this header
-    add_custom_target(mlgo_model_gen_${CLASS_NAME} DEPENDS ${HEADER_FILE})
-    list(APPEND MLGO_GEN_TARGETS mlgo_model_gen_${CLASS_NAME})
+    add_custom_target(mlgo_model_gen_${MODEL_TYPE}_${CLASS_NAME} DEPENDS ${HEADER_FILE})
+    list(APPEND MLGO_GEN_TARGETS mlgo_model_gen_${MODEL_TYPE}_${CLASS_NAME})
 
     # Append the model metadata to the .def file
     string(APPEND DEF_CONTENT "MLGO_MODEL(${CLASS_NAME}, \"${CLI_FLAG}\")\n")
