@@ -22,6 +22,7 @@ extern "C" void __cxa_finalize(void *);
 // TODO: use recursive mutex to protect this routine.
 [[noreturn]] LLVM_LIBC_FUNCTION(void, exit, (int status)) {
 #ifdef LIBC_COPT_SUPPORT_THREADS
+  // Call TLS destructors, if supported by the target.
   internal::call_atexit_callbacks(self.attrib);
 #endif
   __cxa_finalize(nullptr);
