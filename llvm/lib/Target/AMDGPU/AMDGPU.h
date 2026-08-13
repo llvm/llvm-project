@@ -588,6 +588,9 @@ void initializeAMDGPUSetWavePriorityLegacyPass(PassRegistry &);
 void initializeGCNRewritePartialRegUsesLegacyPass(llvm::PassRegistry &);
 extern char &GCNRewritePartialRegUsesID;
 
+void initializeGCNBreakLoadClusterDepsLegacyPass(llvm::PassRegistry &);
+extern char &GCNBreakLoadClusterDepsID;
+
 void initializeAMDGPUWaitSGPRHazardsLegacyPass(PassRegistry &);
 extern char &AMDGPUWaitSGPRHazardsLegacyID;
 
