@@ -5,7 +5,7 @@
 ;
 ; RUN: echo 'int foo(){return 0;}' > %t.c
 ; RUN: %clang -shared -fPIC -o %t.so %t.c
-; RUN: llvm-offload-binary -o %t.img --image=file=%t.so,arch=abc,triple=x-y-z 2>&1 | FileCheck %s --check-prefix=NO-EXTRACT || true
+; RUN: llvm-offload-binary -o %t.img --image=file=%t.so,arch=abc,triple=x-y-z\n+; RUN: llvm-objdump --offloading %t.img | FileCheck %s --check-prefix=NO-EXTRACT || true
 ;
-; NO-EXTRACT-NOT: Extracted:
+; NO-EXTRACT-NOT: OFFLOADING IMAGE
 

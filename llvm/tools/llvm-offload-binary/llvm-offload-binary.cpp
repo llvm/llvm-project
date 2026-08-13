@@ -105,6 +105,10 @@ static Error bundleImages() {
           llvm::MemoryBuffer::getFileOrSTDIN(File);
       if (std::error_code EC = ObjectOrErr.getError())
         return errorCodeToError(EC);
+      // .so files not supported
+      if (identify_magic((*ObjectOrErr)->getBuffer()) ==
+          file_magic::elf_shared_object)
+        continue;
 
       // Clang uses the '.o' suffix for LTO bitcode.
       if (identify_magic((*ObjectOrErr)->getBuffer()) == file_magic::bitcode)
@@ -124,6 +128,13 @@ static Error bundleImages() {
       }
       AllImages.emplace_back(std::move(ImageBinary));
     }
+  }
+
+  if (AllImages.empty()) {
+    // no valid device images to bundle, create an empty file.
+    if (Error E = writeFile(OutputFile, ""))
+      return E;
+    return Error::success();
   }
 
   SmallString<0> Buffer = OffloadBinary::write(AllImages);
@@ -212,6 +223,9 @@ static Error unbundleImages() {
     SmallVector<const OffloadBinary *> Extracted;
     for (const OffloadFile &File : Binaries) {
       const auto *Binary = File.getBinary();
+      // .so files not supported
+      if (identify_magic(Binary->getImage()) == file_magic::elf_shared_object)
+        continue;
       // We handle the 'file', 'kind', and 'member' identifiers differently.
       bool Match = llvm::all_of(Args, [&](auto &Arg) {
         const auto [Key, Value] = Arg;
