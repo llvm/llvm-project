@@ -533,6 +533,11 @@ static Value *emitHlslClamp(CodeGenFunction &CGF, const CallExpr *E,
   return Clamp;
 }
 
+// Emit a convergent, overloaded HLSL resource intrinsic (e.g. Sample,
+// CalculateLod). Looks up the declaration from RetTy and argument value types,
+// then emits the call via EmitRuntimeCall so convergence control tokens are
+// attached on DXIL/SPIR-V logical targets. Use for IntrConvergent resource
+// ops; non-convergent resource builtins may use Builder.CreateIntrinsic.
 static CallInst *emitResourceIntrinsic(CodeGenFunction &CGF, llvm::Type *RetTy,
                                        Intrinsic::ID ID,
                                        ArrayRef<Value *> Args) {
