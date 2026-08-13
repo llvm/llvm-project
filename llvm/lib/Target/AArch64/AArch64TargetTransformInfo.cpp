@@ -1149,26 +1149,57 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     auto *NeedleTy = cast<FixedVectorType>(ICA.getArgTypes()[1]);
     EVT SearchVT = getTLI()->getValueType(DL, ICA.getArgTypes()[0]);
     unsigned SearchSize = NeedleTy->getNumElements();
-    if (!getTLI()->shouldExpandVectorMatch(SearchVT, SearchSize)) {
-      // Base cost for MATCH instructions. At least on the Neoverse V2 and
-      // Neoverse V3, these are cheap operations with the same latency as a
-      // vector ADD. In most cases, however, we also need to do an extra DUP.
-      // For fixed-length vectors we currently need an extra five--six
-      // instructions besides the MATCH.
-      InstructionCost Cost = 4;
-      if (isa<FixedVectorType>(RetTy))
-        Cost += 10;
-      return Cost;
-    }
-    break;
+    auto IsSupportedTypeAndSearchSize = [&]() {
+      if (SearchVT == MVT::nxv8i16 || SearchVT == MVT::v8i16)
+        return SearchSize == 8;
+
+      if (SearchVT == MVT::nxv16i8 || SearchVT == MVT::v16i8 ||
+          SearchVT == MVT::v8i8)
+        return SearchSize == 8 || SearchSize == 16;
+
+      return false;
+    };
+
+    if (!ST->hasSVE2() || !ST->isSVEAvailable() ||
+        !IsSupportedTypeAndSearchSize())
+      break;
+
+    // Base cost for MATCH instructions. At least on the Neoverse V2 and
+    // Neoverse V3, these are cheap operations with the same latency as a
+    // vector ADD. In most cases, however, we also need to do an extra DUP.
+    // For fixed-length vectors we currently need an extra five--six
+    // instructions besides the MATCH.
+    InstructionCost Cost = 4;
+    if (isa<FixedVectorType>(RetTy))
+      Cost += 10;
+    return Cost;
   }
   case Intrinsic::cttz: {
-    auto LT = getTypeLegalizationCost(ICA.getArgTypes()[0]);
-    if (LT.second == MVT::v8i8 || LT.second == MVT::v16i8)
-      return LT.first * 2;
-    if (LT.second == MVT::v4i16 || LT.second == MVT::v8i16 ||
-        LT.second == MVT::v2i32 || LT.second == MVT::v4i32)
-      return LT.first * 3;
+    auto LT = getTypeLegalizationCost(RetTy);
+    if (LT.second == MVT::i32 || LT.second == MVT::i64) {
+      // Extra cost for and mask of smaller types
+      InstructionCost ExtraCost =
+          LT.second.getSizeInBits() > RetTy->getScalarSizeInBits() ? 1 : 0;
+      // And combine larger sizes to i64 with cmp+add+csel
+      if (LT.second.getSizeInBits() < RetTy->getScalarSizeInBits())
+        ExtraCost += (LT.first - 1) * 3;
+      // Basic cost is rbit+clz or ctz.
+      return LT.first * (ST->hasCSSC() ? 1 : 2) + ExtraCost;
+    }
+
+    static const CostTblEntry BaseCostTbl[] = {
+        {Intrinsic::cttz, MVT::v8i8, 2}, // rbit+clz
+        {Intrinsic::cttz, MVT::v16i8, 2},
+        {Intrinsic::cttz, MVT::v4i16, 3}, // rev16+rbit+clz
+        {Intrinsic::cttz, MVT::v8i16, 3},
+        {Intrinsic::cttz, MVT::v2i32, 3},
+        {Intrinsic::cttz, MVT::v4i32, 3},
+        {Intrinsic::cttz, MVT::v1i64, 6}, // add+bic+cnt+reduce
+        {Intrinsic::cttz, MVT::v2i64, 6}};
+    const auto *Entry =
+        CostTableLookup(BaseCostTbl, Intrinsic::cttz, LT.second);
+    if (Entry)
+      return LT.first * Entry->Cost;
     break;
   }
   case Intrinsic::experimental_cttz_elts: {
@@ -5145,12 +5176,26 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
   case ISD::XOR:
   case ISD::OR:
   case ISD::AND:
+    // TODO: revisit these costs as it's not accurate enough for non-uniform
+    // constant.
+    return LT.first;
   case ISD::SRL:
   case ISD::SRA:
-  case ISD::SHL:
-    // These nodes are marked as 'custom' for combining purposes only.
-    // We know that they are legal. See LowerAdd in ISelLowering.
+  case ISD::SHL: {
+    // Immediate vector shifts require uniform shift amounts. Non-uniform
+    // constants therefore use variable shifts and require materializing the
+    // shift vector. Account for a shift and materialization per legalized
+    // vector, together with shared setup.
+    // This cost is for (ldr, shl) + adrp
+    // TODO: These costs are based on CodeSize only, consider other CostKinds.
+    if (Op2Info.isConstant() && !Op2Info.isUniform() &&
+        LT.second.isFixedLengthVector())
+      return 2 * LT.first + 1;
+
+    // Marked 'custom' for combining purposes; a uniform shift amount still
+    // lowers to a single legal instruction.
     return LT.first;
+  }
 
   case ISD::FNEG:
     // Scalar fmul(fneg) or fneg(fmul) can be converted to fnmul
@@ -7201,15 +7246,9 @@ static bool containsDecreasingPointers(Loop *TheLoop,
   return false;
 }
 
-bool AArch64TTIImpl::preferFixedOverScalableIfEqualCost(bool IsEpilogue) const {
+bool AArch64TTIImpl::preferFixedOverScalableIfEqualCost() const {
   if (SVEPreferFixedOverScalableIfEqualCost.getNumOccurrences())
     return SVEPreferFixedOverScalableIfEqualCost;
-  // For cases like post-LTO vectorization, when we eventually know the trip
-  // count, epilogue with fixed-width vectorization can be deleted if the trip
-  // count is less than the epilogue iterations. That's why we prefer
-  // fixed-width vectorization in epilogue in case of equal costs.
-  if (IsEpilogue)
-    return true;
   return ST->useFixedOverScalableIfEqualCost();
 }
 

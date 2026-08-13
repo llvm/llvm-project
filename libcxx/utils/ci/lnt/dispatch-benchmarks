@@ -1,0 +1,420 @@
+#!/usr/bin/env python3
+# ===----------------------------------------------------------------------===##
+#
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+#
+# ===----------------------------------------------------------------------===##
+
+from typing import Dict, List, NamedTuple, Optional, Sequence, Set, TextIO
+import argparse
+import common
+import github
+import json
+import logging
+import os
+import pathlib
+import re
+import sys
+import tabulate
+
+
+class RunName(NamedTuple):
+    """The name of a workflow run and the information it encodes."""
+    target: common.Target
+    dry_run: bool # whether that workflow run was only a dry-run
+
+
+class WorkflowRun(NamedTuple):
+    """A run of the benchmark workflow, as the Github API describes it."""
+    identifier: int
+    target: common.Target
+    finished: bool
+
+
+class Decision(NamedTuple):
+    """What to do with one work item, and why."""
+    item: common.WorkItem
+    action: str # 'dispatch', 'skip' or 'defer'
+    jobs: int   # how many runs to request now
+    reason: str
+
+
+class Runs(NamedTuple):
+    """What the workflow is currently doing, counted per target."""
+    in_flight: Dict[common.Target, int]
+    completed: Dict[common.Target, int]
+    ids: Dict[common.Target, List[int]]      # in-flight run ids, for the summary
+
+    def in_flight_on(self, machine: str) -> int:
+        """How many runs are in flight on a machine, whatever they are benchmarking."""
+        return sum(n for (target, n) in self.in_flight.items() if target.machine == machine)
+
+
+# The repository and the workflow this tool drives.
+REPOSITORY = 'llvm/llvm-project'
+WORKFLOW = 'libcxx-benchmark-commit.yml'
+
+# The name the benchmark workflow gives its runs. What a run is benchmarking can
+# only be recovered from its name (the inputs a workflow was dispatched with are
+# not available from the API) so this format is a contract with the
+# libcxx-benchmark-commit.yml workflow.
+RUN_NAME_PREFIX = '[libc++] Run benchmark suite against '
+RUN_NAME = re.compile(re.escape(RUN_NAME_PREFIX) + r'([0-9a-fA-F]{40}) on (\S+)( \(dry run\))?$')
+
+
+class HelpFormatter(argparse.ArgumentDefaultsHelpFormatter,
+                    argparse.RawDescriptionHelpFormatter):
+    """Show defaults, but keep the paragraphs of the description intact."""
+
+class GithubError(Exception):
+    pass
+
+
+def parse_plan(stream: TextIO) -> List[common.WorkItem]:
+    """Parse a plan into a list of work items, in the order they were written."""
+    items: List[common.WorkItem] = []
+    for (number, line) in enumerate(stream, start=1):
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            items.append(common.WorkItem.parse(line))
+        except ValueError as error:
+            raise ValueError(f'line {number} of the plan is not a valid work item: {error}')
+    return items
+
+
+def collapse(items: Sequence[common.WorkItem]) -> List[common.WorkItem]:
+    """
+    Keep one item per commit and machine, the one asking for the most runs.
+
+    A plan can be concatenated from multiple sources or handwritten, so we
+    de-duplicate commits against the same machine to avoid duplicate work.
+    """
+    best: Dict[common.Target, common.WorkItem] = {}
+    for item in items:
+        existing = best.get(item.target)
+        if existing is None or item.runs_to_request > existing.runs_to_request:
+            best[item.target] = item
+    # Preserve the order of the plan: it is the order the work should be done in.
+    seen = set()
+    ordered: List[common.WorkItem] = []
+    for item in items:
+        if item.target not in seen:
+            seen.add(item.target)
+            ordered.append(best[item.target])
+    return ordered
+
+
+def parse_run_name(title: str) -> Optional[RunName]:
+    """
+    Return the information encoded in a worfklow's run-name, or None if it can't be parsed.
+
+    The name has to match the workflow's `run-name` exactly.
+    """
+    match = RUN_NAME.match(title.strip())
+    if match is None:
+        return None
+    return RunName(target=common.Target(match.group(1).lower(), match.group(2)),
+                   dry_run=match.group(3) is not None)
+
+
+def connect(token: str, repository: str, workflow: str) -> github.Workflow.Workflow:
+    """Return the workflow this tool drives, as the Github API describes it."""
+    # Ask for the largest page size possible since we walk the whole run history.
+    client = github.Github(auth=github.Auth.Token(token), per_page=100)
+    logging.debug(f'looking up {workflow} in {repository}')
+    try:
+        return client.get_repo(repository).get_workflow(workflow)
+    except github.GithubException as error:
+        raise GithubError(f'could not find the {workflow} workflow in {repository}: {error}')
+
+
+def workflow_runs(workflow: github.Workflow.Workflow) -> List[WorkflowRun]:
+    """
+    Return every run of a workflow whose name says what it benchmarks.
+
+    The whole history is walked, however Github only retains runs for 90 days.
+    Runs are extracted without filtering on status.
+
+    Cancelled runs or runs named in any other format are ignored: they either
+    predate this tooling or don't represent expended capacity towards benchmarking
+    a target. Dry-runs are ignored too, since they never submit to LNT.
+    """
+    runs: Dict[int, WorkflowRun] = {}
+    dry: Set[int] = set()
+    try:
+        for run in workflow.get_runs():
+            parsed = parse_run_name(run.display_title) if run.display_title else None
+            if parsed is None or run.conclusion == 'cancelled':
+                continue
+            if parsed.dry_run:
+                dry.add(run.id)
+                continue
+            # Deduplicate by id: pages can overlap while runs are being created.
+            runs[run.id] = WorkflowRun(identifier=run.id, target=parsed.target,
+                                       finished=run.status == 'completed')
+    except github.GithubException as error:
+        raise GithubError(f'could not list the runs of {workflow.path}: {error}')
+    if dry:
+        logging.info(f'ignoring {len(dry)} dry runs')
+    return list(runs.values())
+
+
+def dispatch(workflow: github.Workflow.Workflow, inputs: Dict[str, str]) -> None:
+    """
+    Request one run of a workflow.
+
+    The definition on `main` is always the one that runs, whatever commit is being
+    benchmarked.
+    """
+    logging.debug(f'dispatching {workflow.path} with {inputs}')
+    try:
+        # A refused dispatch is reported by returning False rather than by raising, and
+        # the refusal reason is not surfaced. The request is all we can report.
+        if not workflow.create_dispatch(ref='main', inputs=inputs):
+            raise GithubError(f'the API refused to dispatch a run for {inputs["commit"]} on {inputs["lnt-machine"]}')
+    except github.GithubException as error:
+        raise GithubError(f'could not dispatch a run for {inputs["commit"]} on {inputs["lnt-machine"]}: {error}')
+
+
+def summarize(runs: Sequence[WorkflowRun]) -> Runs:
+    """Count what the workflow is doing, per target."""
+    in_flight: Dict[common.Target, int] = {}
+    completed: Dict[common.Target, int] = {}
+    ids: Dict[common.Target, List[int]] = {}
+    for run in runs:
+        if run.finished:
+            completed[run.target] = completed.get(run.target, 0) + 1
+        else:
+            in_flight[run.target] = in_flight.get(run.target, 0) + 1
+            ids.setdefault(run.target, []).append(run.identifier)
+    return Runs(in_flight=in_flight, completed=completed, ids=ids)
+
+
+def decide(items: Sequence[common.WorkItem],
+           runs: Runs,
+           max_in_flight: int,
+           extra_attempts: int) -> List[Decision]:
+    """
+    Return a list of Decisions describing what to do with each item.
+
+    Items are considered in the order the plan gave them, which is the order the
+    work should be done in.
+
+    Two budgets are enforced. Capacity: no more than `max_in_flight` runs may exist
+    at once on a machine, including queued runs since they occupy the queue just as
+    much as currently running jobs. Per machine rather than overall because the
+    machines are separate pools of runners.
+
+    Attempts: a target whose runs keep completing without the results reaching LNT
+    (e.g. cancelled, timed out, or failing before the submission step) would
+    otherwise risk being requested forever, since the planner only sees what reached
+    LNT. That budget is per machine too, and runs already in flight count against it.
+    """
+    remaining = {machine: max(0, max_in_flight - runs.in_flight_on(machine))
+                 for machine in {item.machine for item in items}}
+    decisions: List[Decision] = []
+
+    def in_flight_detail(target: common.Target, running: int) -> str:
+        ids = ', '.join(str(i) for i in runs.ids.get(target, [])[:3])
+        return f'{running} already in flight' + (f' (run {ids})' if ids else '')
+
+    for item in items:
+        target = item.target
+        running = runs.in_flight.get(target, 0)
+        finished = runs.completed.get(target, 0)
+        budget = item.samples_want + extra_attempts
+        # Only a target whose budget is spent with nothing left running is really abandoned.
+        if finished + running >= budget and running == 0:
+            reason = f'giving up: {item.samples_have}/{item.samples_want} runs recorded in LNT after {finished} completed runs, budget is {budget}'
+            decisions.append(Decision(item, action='skip', jobs=0, reason=reason))
+            continue
+        pending = min(item.runs_to_request - running, budget - finished - running)
+        if pending <= 0:
+            decisions.append(Decision(item, action='skip', jobs=0,
+                                      reason=in_flight_detail(target, running)))
+            continue
+        if remaining[item.machine] == 0:
+            reason = 'no capacity'
+            if running:
+                reason = f'{reason}, {in_flight_detail(target, running)}'
+            decisions.append(Decision(item, action='defer', jobs=0, reason=reason))
+            continue
+        dispatching = min(pending, remaining[item.machine])
+        remaining[item.machine] -= dispatching
+        deferred = pending - dispatching
+        reason = item.reason
+        if deferred:
+            reason = f'{reason} ({deferred} more deferred, no capacity)'
+        decisions.append(Decision(item, action='dispatch', jobs=dispatching, reason=reason))
+    return decisions
+
+
+def workflow_inputs(args: argparse.Namespace, item: common.WorkItem) -> Dict[str, str]:
+    """Return the inputs to dispatch the workflow with for a work item."""
+    inputs = {'commit': item.commit,
+              'lnt-machine': item.machine,
+              # Submitting to LNT is mandatory, since a run whose results are not recorded
+              # anywhere would be requested again on every future invocation. When run
+              # with --dry-run, this tool never actually dispatches the workflow with
+              # `submit-lnt: false`.
+              'submit-lnt': 'false' if args.dry_run else 'true'}
+    if args.lnt_url:
+        inputs['lnt-url'] = args.lnt_url
+    return inputs
+
+
+def report(args: argparse.Namespace, decisions: Sequence[Decision], runs: Runs) -> None:
+    """Print a human-readable summary of what is about to be done."""
+    out = sys.stderr
+    print(f'Submitting to: {args.lnt_url or "whatever the workflow defaults to"}', file=out)
+    # One line per machine the plan is about, since capacity is per machine.
+    for machine in sorted({d.item.machine for d in decisions}):
+        in_flight = runs.in_flight_on(machine)
+        available = max(0, args.max_in_flight - in_flight)
+        print(f'Capacity on {machine}: {args.max_in_flight} runs allowed at once, {in_flight} '
+              f'in flight -> {available} slots available', file=out)
+    print('', file=out)
+
+    symbols = {'dispatch': '+', 'skip': '~', 'defer': '.'}
+    rows = [(f'{symbols[d.action]} {d.action}', d.item.commit[:12], d.item.machine,
+             str(d.jobs) if d.action == 'dispatch' else '-', d.reason)
+            for d in decisions]
+    print(tabulate.tabulate(rows, headers=['ACTION', 'COMMIT', 'MACHINE', 'JOBS', 'REASON'],
+                            tablefmt='plain', disable_numparse=True,
+                            colalign=('left', 'left', 'left', 'right', 'left'))
+          if rows else '  nothing to do', file=out)
+    print('', file=out)
+
+    counts = {'dispatch': 0, 'skip': 0, 'defer': 0}
+    for decision in decisions:
+        counts[decision.action] += 1
+    jobs = sum(d.jobs for d in decisions if d.action == 'dispatch')
+    print(f'Summary: {len(decisions)} commit/machine pairs requested by the plan, '
+          f'{counts["skip"]} already in flight or given up on, '
+          f'{counts["dispatch"]} being requested now ({jobs} runs), '
+          f'{counts["defer"]} left for later.', file=out)
+    if args.dry_run:
+        print('DRY RUN: nothing was requested.', file=out)
+
+
+def main(argv: List[str]) -> int:
+    parser = argparse.ArgumentParser(
+        prog='dispatch-benchmarks',
+        description='Read a benchmark plan in a compatible format (see plan-benchmarks), and request the '
+                    'corresponding Github Actions workflow runs.\n'
+                    '\n'
+                    'The plan is read as one unit of work per line. A unit of work is a commit to benchmark '
+                    'on a specific machine. It is represented as a JSON object containing these fields: '
+                    '`commit`, the commit to benchmark; `machine`, the LNT machine to benchmark on; '
+                    '`samples_have` and `samples_want`, how many runs it already has and how many it '
+                    'should end up with; and `reason`, a human-readable explanation.\n'
+                    '\n'
+                    'Work that is already running is not requested again, and no more than a fixed '
+                    'number of runs are allowed to exist at once, so that the benchmark machines '
+                    'remain available for other jobs. Work that does not fit is left for a later '
+                    'invocation: since the plan is recomputed from scratch every time, nothing is '
+                    'lost by deferring it.\n'
+                    '\n'
+                    'Results are submitted to LNT unless this is a dry run. That is not optional: '
+                    'results that are not recorded anywhere would be requested again on every '
+                    'invocation, forever.',
+        epilog='This script depends on the modules listed in `libcxx/utils/requirements.txt`.',
+        formatter_class=HelpFormatter)
+    parser.add_argument('--work-items', type=argparse.FileType('r'), default=sys.stdin,
+        help='A file containing the plan, one JSON object per line. By default, this is read from '
+             'standard input.')
+    parser.add_argument('--max-in-flight', type=common.at_least(1), default=4,
+        help='The largest number of workflow runs allowed to exist at once for a single LNT machine. '
+             'This counts runs that are queued but not yet started.')
+    parser.add_argument('--extra-attempts', type=common.at_least(0), default=2,
+        help='How many runs beyond the desired number of samples a commit may consume on a machine '
+             'before it is given up on. This bounds the cost of a job that keeps dying before it '
+             'can submit, since such a run leaves no trace in LNT and would otherwise be requested '
+             'forever. It is counted per machine.')
+    parser.add_argument('--lnt-url', type=str, required=False,
+        help='The LNT instance the runs should submit to. By default the workflow submits to '
+             'whichever instance it defaults to.')
+    parser.add_argument('--token', type=str, required=False, # no default to avoid printing the token in --help
+        help='A Github token with write access to the repository, which is needed both to look at '
+             'the existing runs and to request new ones. Defaults to the GITHUB_TOKEN environment '
+             'variable. `gh auth token` can be used to print the token registered locally.')
+    parser.add_argument('--dry-run', action='store_true',
+        help='Do not request anything, just report what would be requested.')
+    parser.add_argument('--output', type=pathlib.Path, default=None,
+        help='Where to write the record of what was requested, one JSON object per line. Defaults '
+             'to standard output.')
+    parser.add_argument('-q', '--quiet', action='store_true',
+        help='Do not print the human-readable summary to standard error.')
+    parser.add_argument('-v', '--verbose', action='count', default=0,
+        help='Verbosity level: passing the option multiple times increases the level.')
+    args = parser.parse_args(argv)
+
+    # --quiet raises the logging threshold rather than silencing everything, since we
+    # still want to see warnings.
+    logging.basicConfig(format='%(levelname)s: %(message)s',
+                        level=logging.DEBUG if args.verbose else
+                              logging.WARNING if args.quiet else logging.INFO)
+
+    token = args.token or os.environ.get('GITHUB_TOKEN')
+    if not token:
+        raise ValueError('no Github token was provided: pass --token or set the GITHUB_TOKEN environment variable.')
+
+    items = collapse(parse_plan(args.work_items))
+
+    workflow = connect(token, REPOSITORY, WORKFLOW)
+    runs = summarize(workflow_runs(workflow))
+
+    decisions = decide(items, runs, args.max_in_flight, args.extra_attempts)
+
+    # Warn then we give up for good on a commit/machine pair (because enough attempts have been done).
+    for decision in decisions:
+        if decision.action == 'skip' and decision.reason.startswith('giving up'):
+            logging.warning(f'{decision.item.commit[:12]} on {decision.item.machine}: {decision.reason}')
+
+    if not args.quiet:
+        report(args, decisions, runs)
+
+    # Requests are made one at a time and recorded as they succeed. A failure halfway through must still
+    # leave an accurate record, since the runs already requested actually exist in Github.
+    records: List[str] = []
+    dispatched = 0
+    try:
+        for decision in decisions:
+            if decision.action != 'dispatch':
+                continue
+            inputs = workflow_inputs(args, decision.item)
+            for _ in range(decision.jobs):
+                if not args.dry_run:
+                    dispatch(workflow, inputs)
+                dispatched += 1
+                records.append(json.dumps({'commit': decision.item.commit,
+                                           'machine': decision.item.machine,
+                                           'reason': decision.item.reason,
+                                           'dry_run': args.dry_run,
+                                           'inputs': inputs}, sort_keys=True) + '\n')
+    except GithubError:
+        logging.error(f'requested {dispatched} runs before failing')
+        raise
+    finally:
+        # Write what we managed to do even when we fail: those runs exist and will
+        # consume machine time, so we want to report them.
+        contents = ''.join(records)
+        if args.output is None:
+            sys.stdout.write(contents)
+        else:
+            args.output.write_text(contents)
+
+    if not args.quiet and not args.dry_run:
+        print(f'Requested {dispatched} runs.', file=sys.stderr)
+    return 0
+
+
+if __name__ == '__main__':
+    try:
+        sys.exit(main(sys.argv[1:]))
+    except (ValueError, OSError, GithubError, github.GithubException) as error:
+        sys.exit(f'error: {error}')
