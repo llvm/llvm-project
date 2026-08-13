@@ -12304,70 +12304,57 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   }
   case Intrinsic::riscv_pnclipp:
   case Intrinsic::riscv_pnclipup: {
+    bool IsSigned = IntNo == Intrinsic::riscv_pnclipp;
     EVT VT = Op.getValueType();
     SDValue Rs1 = Op.getOperand(1);
     SDValue Rs2 = Op.getOperand(2);
-    unsigned Opc = IntNo == Intrinsic::riscv_pnclipp ? RISCVISD::PNCLIPP
-                                                     : RISCVISD::PNCLIPUP;
+    unsigned Opc = IsSigned ? RISCVISD::PNCLIPP : RISCVISD::PNCLIPUP;
 
     if (Subtarget.is64Bit()) {
       if (VT == MVT::v2i32 && !Rs1.getValueType().isVector()) {
-        unsigned WOpc = IntNo == Intrinsic::riscv_pnclipp
-                            ? RISCVISD::PNCLIPP_W
-                            : RISCVISD::PNCLIPUP_W;
+        unsigned WOpc = IsSigned ? RISCVISD::PNCLIPP_W : RISCVISD::PNCLIPUP_W;
         return DAG.getNode(WOpc, DL, VT, Rs1, Rs2);
       }
       return DAG.getNode(Opc, DL, VT, Rs1, Rs2);
     }
 
-    auto BuildPair = [&](SDValue Lo, SDValue Hi, MVT PairVT) {
-      return DAG.getNode(RISCVISD::BuildPairGPRVec, DL, PairVT, Lo, Hi);
-    };
-
     MVT XLenVT = Subtarget.getXLenVT();
     if (VT == MVT::v4i8) {
-      SDValue Pair = BuildPair(Rs1, Rs2, MVT::v4i16);
-      SDVTList VTs = DAG.getVTList(MVT::v4i8);
-      unsigned ClipOpc = IntNo == Intrinsic::riscv_pnclipp ? RISCV::PNCLIPI_B
-                                                           : RISCV::PNCLIPIU_B;
-      SDValue Ops[] = {Pair, DAG.getTargetConstant(0, DL, MVT::i32)};
-      return SDValue(DAG.getMachineNode(ClipOpc, DL, VTs, Ops), 0);
+      unsigned ClipOpc = IsSigned ? RISCVISD::PNCLIPP_I : RISCVISD::PNCLIPUP_I;
+      SDValue Pair =
+          DAG.getNode(RISCVISD::BuildPairGPRVec, DL, MVT::v4i16, Rs1, Rs2);
+      return DAG.getNode(ClipOpc, DL, MVT::v4i8, Pair,
+                         DAG.getConstant(0, DL, XLenVT));
     }
     if (VT == MVT::v2i16) {
-      unsigned HOpc = IntNo == Intrinsic::riscv_pnclipp ? RISCV::PNCLIPI_H
-                                                        : RISCV::PNCLIPIU_H;
-      SDVTList VTs = DAG.getVTList(MVT::v2i16);
-      SDValue Pair = BuildPair(Rs1, Rs2, MVT::v2i32);
-      SDValue Ops[] = {Pair, DAG.getTargetConstant(0, DL, MVT::i32)};
-      return SDValue(DAG.getMachineNode(HOpc, DL, VTs, Ops), 0);
+      unsigned HOpc = IsSigned ? RISCVISD::PNCLIPP_I : RISCVISD::PNCLIPUP_I;
+      SDValue Pair =
+          DAG.getNode(RISCVISD::BuildPairGPRVec, DL, MVT::v2i32, Rs1, Rs2);
+      return DAG.getNode(HOpc, DL, MVT::v2i16, Pair,
+                         DAG.getConstant(0, DL, XLenVT));
     }
     if (VT == MVT::v2i32) {
-      unsigned NOpc =
-          IntNo == Intrinsic::riscv_pnclipp ? RISCV::NCLIPI : RISCV::NCLIPIU;
-      SDVTList VTs = DAG.getVTList(XLenVT);
-      SDValue Zero = DAG.getTargetConstant(0, DL, MVT::i32);
+      unsigned NOpc = IsSigned ? RISCVISD::NCLIPP_I : RISCVISD::NCLIPUP_I;
+      SDValue Zero = DAG.getConstant(0, DL, XLenVT);
       auto BuildPairFromI64 = [&](SDValue I64) {
-        SDValue Vec = DAG.getNode(ISD::BITCAST, DL, MVT::v2i32, I64);
-        SDValue Lo = DAG.getExtractVectorElt(DL, XLenVT, Vec, 0);
-        SDValue Hi = DAG.getExtractVectorElt(DL, XLenVT, Vec, 1);
+        SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, XLenVT, I64,
+                                 DAG.getConstant(0, DL, MVT::i32));
+        SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, XLenVT, I64,
+                                 DAG.getConstant(1, DL, MVT::i32));
         return DAG.getNode(RISCVISD::BuildGPRPair, DL, MVT::Untyped, Lo, Hi);
       };
       SDValue Pair1 = BuildPairFromI64(Rs1);
       SDValue Pair2 = BuildPairFromI64(Rs2);
-      SDValue Lo = SDValue(DAG.getMachineNode(NOpc, DL, VTs, {Pair1, Zero}), 0);
-      SDValue Hi = SDValue(DAG.getMachineNode(NOpc, DL, VTs, {Pair2, Zero}), 0);
+      SDValue Lo = DAG.getNode(NOpc, DL, XLenVT, Pair1, Zero);
+      SDValue Hi = DAG.getNode(NOpc, DL, XLenVT, Pair2, Zero);
       return DAG.getNode(ISD::BUILD_VECTOR, DL, VT, Lo, Hi);
     }
     if (VT == MVT::v8i8 || VT == MVT::v4i16) {
-      unsigned HOpc =
-          IntNo == Intrinsic::riscv_pnclipp
-              ? (VT == MVT::v8i8 ? RISCV::PNCLIPI_B : RISCV::PNCLIPI_H)
-              : (VT == MVT::v8i8 ? RISCV::PNCLIPIU_B : RISCV::PNCLIPIU_H);
+      unsigned HOpc = IsSigned ? RISCVISD::PNCLIPP_I : RISCVISD::PNCLIPUP_I;
       MVT HalfVT = VT == MVT::v8i8 ? MVT::v4i8 : MVT::v2i16;
-      SDVTList VTs = DAG.getVTList(HalfVT);
-      SDValue Zero = DAG.getTargetConstant(0, DL, MVT::i32);
-      SDValue Lo = SDValue(DAG.getMachineNode(HOpc, DL, VTs, {Rs1, Zero}), 0);
-      SDValue Hi = SDValue(DAG.getMachineNode(HOpc, DL, VTs, {Rs2, Zero}), 0);
+      SDValue Zero = DAG.getConstant(0, DL, XLenVT);
+      SDValue Lo = DAG.getNode(HOpc, DL, HalfVT, Rs1, Zero);
+      SDValue Hi = DAG.getNode(HOpc, DL, HalfVT, Rs2, Zero);
       return DAG.getNode(RISCVISD::BuildPairGPRVec, DL, VT, Lo, Hi);
     }
 
@@ -16668,11 +16655,11 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     }
     case Intrinsic::riscv_pnclipp:
     case Intrinsic::riscv_pnclipup: {
+      bool IsSigned = IntNo == Intrinsic::riscv_pnclipp;
       EVT VT = N->getValueType(0);
       if (!Subtarget.is64Bit() || (VT != MVT::v4i8 && VT != MVT::v2i16))
         return;
-      unsigned Opc = IntNo == Intrinsic::riscv_pnclipp ? RISCVISD::PNCLIPP
-                                                       : RISCVISD::PNCLIPUP;
+      unsigned Opc = IsSigned ? RISCVISD::PNCLIPP : RISCVISD::PNCLIPUP;
       SDValue Src1 = N->getOperand(1);
       SDValue Src2 = N->getOperand(2);
       if (VT == MVT::v4i8) {
