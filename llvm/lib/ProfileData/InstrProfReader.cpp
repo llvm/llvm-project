@@ -659,6 +659,7 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
 
   auto *Start = reinterpret_cast<const char *>(&Header);
   if (Start + ValueDataOffset > DataBuffer->getBufferEnd())
+    // clang-format off
     return error(
         instrprof_error::header_size_mismatch,
         ("profile file size (" + Twine(DataBuffer->getBufferSize()) +
@@ -679,6 +680,7 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
                PaddingBytesAfterVTableNames) +
          "(Padding))")
             .str());
+  // clang-format on
 
   if (BIDFetcher) {
     std::vector<object::BuildID> BinaryIDs;
