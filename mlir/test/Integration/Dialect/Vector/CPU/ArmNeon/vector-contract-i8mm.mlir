@@ -1,5 +1,3 @@
-// REQUIRES: arm-emulator
-
 // DEFINE: %{compile} = mlir-opt %s \
 // DEFINE:   --convert-vector-to-scf --convert-scf-to-cf  --convert-vector-to-llvm='enable-arm-neon enable-arm-i8mm' \
 // DEFINE:   --expand-strided-metadata --convert-to-llvm --finalize-memref-to-llvm  \
