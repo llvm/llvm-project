@@ -349,7 +349,7 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
   const auto *FlatWGS = FD->getAttr<AMDGPUFlatWorkGroupSizeAttr>();
 
   // __launch_bounds__ only takes effect on kernels and is silently ignored on
-  // othre functions The arguments are honored only if the equivalent native
+  // other functions The arguments are honored only if the equivalent native
   // amdgpu_flat_work_group_size / amdgpu_waves_per_eu attribute was not also
   // used out; those take precedence.
   const auto *LaunchBounds =
