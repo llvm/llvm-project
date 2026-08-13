@@ -103,6 +103,8 @@ static std::vector<Desc> getOpDescriptions() {
   Descriptions[DW_OP_GNU_entry_value] = Desc(Op::Dwarf4, Op::SizeLEB);
   Descriptions[DW_OP_GNU_implicit_pointer] =
       Desc(Op::Dwarf4, Op::SizeRefAddr, Op::SignedSizeLEB);
+  // The operand is an opaque 8-bit selector for an NVIDIA-specific operation.
+  Descriptions[DW_OP_NVIDIA_mux] = Desc(Op::Dwarf5, Op::Size1);
   // This Description acts as a marker that getSubOpDesc must be called
   // to fetch the final Description for the operation. Each such final
   // Description must share the same first SizeSubOpLEB operand.
