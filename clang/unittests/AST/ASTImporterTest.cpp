@@ -6504,26 +6504,36 @@ TEST_P(ErrorHandlingTest, ErrorHappensBeforeCreatingANewNode) {
   EXPECT_EQ(OptErr->Error, ASTImportError::NameConflict);
 }
 
-// Check a case when a new AST node is created and linked to the AST before
+// Check a case when a new AST node is created but not linked to the AST before
 // encountering the error.
-TEST_P(ErrorHandlingTest, ErrorHappensAfterNodeIsCreatedAndLinked) {
+TEST_P(ErrorHandlingTest,
+       ErrorHappensAfterCreatingTheNodeButBeforeLinkingThatToTheAST) {
   TranslationUnitDecl *FromTU = getTuDecl(
-      std::string("void foo() { ") + ErroneousStmt + " }", Lang_CXX03);
-  auto *FromFoo = FirstDeclMatcher<FunctionDecl>().match(
-      FromTU, functionDecl(hasName("foo")));
+      std::string(R"(
+      struct S {
+        S() : X(({ )") + ErroneousStmt + R"( 0; })) {}
+        int X;
+      };
+      )",
+      Lang_CXX03);
+  auto *FromCtor = FirstDeclMatcher<CXXConstructorDecl>().match(
+      FromTU, cxxConstructorDecl(hasName("S"), unless(isImplicit())));
 
-  FunctionDecl *ImportedFoo = Import(FromFoo, Lang_CXX03);
-  EXPECT_FALSE(ImportedFoo);
+  CXXConstructorDecl *ImportedCtor = Import(FromCtor, Lang_CXX03);
+  EXPECT_FALSE(ImportedCtor);
 
   TranslationUnitDecl *ToTU = ToAST->getASTContext().getTranslationUnitDecl();
-  // Created and linked.
-  EXPECT_EQ(
-      DeclCounter<FunctionDecl>().match(ToTU, functionDecl(hasName("foo"))),
-      1u);
+  auto *ToS = FirstDeclMatcher<CXXRecordDecl>().match(
+      ToTU, cxxRecordDecl(hasName("S")));
+  ASSERT_TRUE(ToS);
+  // Created, but not linked.
+  EXPECT_EQ(DeclCounter<CXXConstructorDecl>().match(
+                ToS, cxxConstructorDecl(hasName("S"), unless(isImplicit()))),
+            0u);
 
-  ASTImporter *Importer = findFromTU(FromFoo)->Importer.get();
+  ASTImporter *Importer = findFromTU(FromCtor)->Importer.get();
   std::optional<ASTImportError> OptErr =
-      Importer->getImportDeclErrorIfAny(FromFoo);
+      Importer->getImportDeclErrorIfAny(FromCtor);
   ASSERT_TRUE(OptErr);
   EXPECT_EQ(OptErr->Error, ASTImportError::UnsupportedConstruct);
 }
