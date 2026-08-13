@@ -597,7 +597,8 @@ static bool splitDivRemBySelectDivisor(Instruction *I,
     return false;
 
   // If the select has more than one use, there's probably a sibling rem
-  // sharing this divisor and splitting them separately would duplicate the division
+  // sharing this divisor and splitting them separately would duplicate the
+  // division
   auto *Sel = dyn_cast<SelectInst>(I->getOperand(1));
   if (!Sel || !Sel->hasOneUse())
     return false;
@@ -673,7 +674,8 @@ static bool optimizeDivRemBySelectDivisor(BasicBlock *BB,
   bool MadeChange = false;
   Instruction *Next = &*BB->begin();
   while (Next != nullptr) {
-    // We may add instructions immediately after I but we want to skip over them.
+    // We may add instructions immediately after I but we want to skip over
+    // them.
     Instruction *I = Next;
     Next = Next->getNextNode();
 
