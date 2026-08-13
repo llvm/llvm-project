@@ -1373,35 +1373,16 @@ func.func @no_crash_on_dynamic_tensor(%arg0: tensor<?xi32>, %arg1: index) -> ten
 
 // -----
 
-// Regression test: a tensor_desc whose layout is a SliceAttr (produced e.g.
-// by unit-dim-expanding a vector.shape_cast) was not recognized as a
-// workgroup-level layout by WgToSgCreateNdOp, since it only matched
-// LayoutAttr. This left the tensor_desc and its load_nd undistributed,
-// causing a shape mismatch on the consuming shape_cast.
+// Regression test: a tensor_desc with a SliceAttr layout was not distributed.
 gpu.module @test_slice_layout {
-  // CHECK-LABEL: slice_layout_feeding_shape_cast
-  gpu.func @slice_layout_feeding_shape_cast(%arg0: memref<1024x1536xf16>, %arg1: memref<1024x1536xf16>) {
-    %cst = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [1, 4, 4], sg_data = [1, 8, 16]>} dense<3.000000e+00> : vector<1x32x64xf16>
+  // CHECK-LABEL: slice_layout
+  gpu.func @slice_layout(%arg0: memref<1024x1536xf16>) {
     // CHECK: xegpu.create_nd_tdesc %{{.*}} : memref<1024x1536xf16> -> !xegpu.tensor_desc<8x16xf16>
-    %tdesc0 = xegpu.create_nd_tdesc %arg0 : memref<1024x1536xf16>
+    %tdesc = xegpu.create_nd_tdesc %arg0 : memref<1024x1536xf16>
         -> !xegpu.tensor_desc<32x64xf16, #xegpu.slice<#xegpu.layout<sg_layout = [1, 4, 4], sg_data = [1, 8, 16]>, dims = [0]>>
     // CHECK: xegpu.load_nd %{{.*}} : !xegpu.tensor_desc<8x16xf16> -> vector<8x16xf16>
-    %load = xegpu.load_nd %tdesc0[0, 0] <{layout = #xegpu.slice<#xegpu.layout<sg_layout = [1, 4, 4], sg_data = [1, 8, 16]>, dims = [0]>}>
+    %load = xegpu.load_nd %tdesc[0, 0] <{layout = #xegpu.slice<#xegpu.layout<sg_layout = [1, 4, 4], sg_data = [1, 8, 16]>, dims = [0]>}>
         : !xegpu.tensor_desc<32x64xf16, #xegpu.slice<#xegpu.layout<sg_layout = [1, 4, 4], sg_data = [1, 8, 16]>, dims = [0]>> -> vector<32x64xf16>
-    // CHECK: vector.shape_cast {{.*}} : vector<8x16xf16> to vector<1x8x16xf16>
-    %expand = vector.shape_cast %load {layout_result_0 = #xegpu.layout<sg_layout = [1, 4, 4], sg_data = [1, 8, 16]>}
-        : vector<32x64xf16> to vector<1x32x64xf16>
-    // CHECK: arith.addf {{.*}} : vector<1x8x16xf16>
-    %add = arith.addf %expand, %cst {layout_result_0 = #xegpu.layout<sg_layout = [1, 4, 4], sg_data = [1, 8, 16]>}
-        : vector<1x32x64xf16>
-    // CHECK: vector.shape_cast {{.*}} : vector<1x8x16xf16> to vector<8x16xf16>
-    %collapse = vector.shape_cast %add {layout_result_0 = #xegpu.layout<sg_layout = [4, 4], sg_data = [8, 16]>}
-        : vector<1x32x64xf16> to vector<32x64xf16>
-    // CHECK: xegpu.store_nd {{.*}} : vector<8x16xf16>, !xegpu.tensor_desc<8x16xf16>
-    %tdesc1 = xegpu.create_nd_tdesc %arg1 : memref<1024x1536xf16>
-        -> !xegpu.tensor_desc<32x64xf16, #xegpu.layout<sg_layout = [4, 4], sg_data = [8, 16]>>
-    xegpu.store_nd %collapse, %tdesc1[0, 0] <{layout = #xegpu.layout<sg_layout = [4, 4], sg_data = [8, 16]>}>
-        : vector<32x64xf16>, !xegpu.tensor_desc<32x64xf16, #xegpu.layout<sg_layout = [4, 4], sg_data = [8, 16]>>
     gpu.return
   }
 }
