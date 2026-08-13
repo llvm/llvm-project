@@ -65,7 +65,7 @@ Ambrose Leeb \
 aleeb@nvidia.com (email), [aleeb-nvidia](https://github.com/aleeb-nvidia) (GitHub), Ætérnal (Discord), Sirraide (Discourse)
 
 Mariya Podchishchaeva \
-fznamznon23@gmail.com (email), [Fznamznon](https://github.com/Fznamznon) (GitHub), fznamznon (Discord), Fznamznon (Discourse)
+Mariya.Podchishchaeva@amd.com (email), [Fznamznon](https://github.com/Fznamznon) (GitHub), fznamznon (Discord), Fznamznon (Discourse)
 
 ### Recovery AST
 
@@ -167,7 +167,7 @@ i@maskray.me (email), MaskRay (Phabricator), [MaskRay](https://github.com/MaskRa
 ### Constant Expressions
 
 Mariya Podchishchaeva \
-fznamznon23@gmail.com (email), [Fznamznon](https://github.com/Fznamznon) (GitHub), fznamznon (Discord), Fznamznon (Discourse)
+Mariya.Podchishchaeva@amd.com (email), [Fznamznon](https://github.com/Fznamznon) (GitHub), fznamznon (Discord), Fznamznon (Discourse)
 
 ### Thread Safety Analysis
 
