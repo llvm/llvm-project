@@ -241,6 +241,14 @@ _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_EXPORTED_FROM_ABI void* __filebuf_windows_native_handle(FILE* __file) noexcept;
 #    endif
 
+_LIBCPP_HIDE_FROM_ABI inline FILE* __fopen(const char* __name, const char* __mode) {
+#    if _LIBCPP_HAS_LARGEFILE_API
+  return ::__libcpp_fopen64(__name, __mode);
+#    else
+  return std::fopen(__name, __mode);
+#    endif
+}
+
 template <class _CharT, class _Traits>
 class basic_filebuf : public basic_streambuf<_CharT, _Traits> {
 public:
@@ -446,7 +454,6 @@ private:
 
   _LIBCPP_HIDE_FROM_ABI static int __fseek(FILE* __file, pos_type __offset, int __whence);
   _LIBCPP_HIDE_FROM_ABI static pos_type __ftell(FILE* __file);
-  _LIBCPP_HIDE_FROM_ABI static FILE* __fopen(const char* __name, const char* __mode);
 
   _LIBCPP_EXPORTED_FROM_ABI friend FILE* __get_ostream_file(ostream&);
 
@@ -795,15 +802,6 @@ const wchar_t* basic_filebuf<_CharT, _Traits>::__make_mdwstring(ios_base::openmo
 #    endif
 
 template <class _CharT, class _Traits>
-FILE* basic_filebuf<_CharT, _Traits>::__fopen(const char* __name, const char* __mode) {
-#    if _LIBCPP_HAS_LARGEFILE_API
-  return __libcpp_fopen64(__name, __mode);
-#    else
-  return std::fopen(__name, __mode);
-#    endif
-}
-
-template <class _CharT, class _Traits>
 basic_filebuf<_CharT, _Traits>* basic_filebuf<_CharT, _Traits>::open(const char* __s, ios_base::openmode __mode) {
   if (__file_)
     return nullptr;
@@ -1092,7 +1090,7 @@ int basic_filebuf<_CharT, _Traits>::__fseek(FILE* __file, pos_type __offset, int
 #    elif _LIBCPP_LIBC_NEWLIB
   return fseek(__file, __offset, __whence);
 #    elif _LIBCPP_HAS_LARGEFILE_API
-  return __libcpp_fseeko64(__file, __offset, __whence);
+  return ::__libcpp_fseeko64(__file, __offset, __whence);
 #    else
   return ::fseeko(__file, __offset, __whence);
 #    endif
@@ -1105,7 +1103,7 @@ typename basic_filebuf<_CharT, _Traits>::pos_type basic_filebuf<_CharT, _Traits>
 #    elif _LIBCPP_LIBC_NEWLIB
   return ftell(__file);
 #    elif _LIBCPP_HAS_LARGEFILE_API
-  return __libcpp_ftello64(__file);
+  return ::__libcpp_ftello64(__file);
 #    else
   return ftello(__file);
 #    endif
