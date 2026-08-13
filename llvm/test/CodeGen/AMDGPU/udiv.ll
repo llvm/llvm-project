@@ -1752,18 +1752,18 @@ define amdgpu_kernel void @v_udiv_i23(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-NEXT:    s_add_u32 s4, s2, 4
 ; GCN-NEXT:    s_addc_u32 s5, s3, 0
 ; GCN-NEXT:    s_add_u32 s6, s2, 2
-; GCN-NEXT:    s_addc_u32 s7, s3, 0
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
+; GCN-NEXT:    s_addc_u32 s4, s3, 0
 ; GCN-NEXT:    v_mov_b32_e32 v1, s5
-; GCN-NEXT:    s_add_u32 s4, s2, 6
-; GCN-NEXT:    s_addc_u32 s5, s3, 0
-; GCN-NEXT:    v_mov_b32_e32 v2, s4
-; GCN-NEXT:    v_mov_b32_e32 v3, s5
+; GCN-NEXT:    s_add_u32 s5, s2, 6
+; GCN-NEXT:    s_addc_u32 s7, s3, 0
+; GCN-NEXT:    v_mov_b32_e32 v2, s5
+; GCN-NEXT:    v_mov_b32_e32 v3, s7
 ; GCN-NEXT:    flat_load_ubyte v4, v[2:3]
 ; GCN-NEXT:    flat_load_ushort v5, v[0:1]
 ; GCN-NEXT:    v_mov_b32_e32 v0, s2
 ; GCN-NEXT:    v_mov_b32_e32 v2, s6
-; GCN-NEXT:    v_mov_b32_e32 v3, s7
+; GCN-NEXT:    v_mov_b32_e32 v3, s4
 ; GCN-NEXT:    v_mov_b32_e32 v1, s3
 ; GCN-NEXT:    flat_load_ubyte v2, v[2:3]
 ; GCN-NEXT:    flat_load_ushort v0, v[0:1]
@@ -2001,18 +2001,18 @@ define amdgpu_kernel void @v_udiv_i24(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-NEXT:    s_add_u32 s4, s2, 4
 ; GCN-NEXT:    s_addc_u32 s5, s3, 0
 ; GCN-NEXT:    s_add_u32 s6, s2, 2
-; GCN-NEXT:    s_addc_u32 s7, s3, 0
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
+; GCN-NEXT:    s_addc_u32 s4, s3, 0
 ; GCN-NEXT:    v_mov_b32_e32 v1, s5
-; GCN-NEXT:    s_add_u32 s4, s2, 6
-; GCN-NEXT:    s_addc_u32 s5, s3, 0
-; GCN-NEXT:    v_mov_b32_e32 v2, s4
-; GCN-NEXT:    v_mov_b32_e32 v3, s5
+; GCN-NEXT:    s_add_u32 s5, s2, 6
+; GCN-NEXT:    s_addc_u32 s7, s3, 0
+; GCN-NEXT:    v_mov_b32_e32 v2, s5
+; GCN-NEXT:    v_mov_b32_e32 v3, s7
 ; GCN-NEXT:    flat_load_ubyte v4, v[2:3]
 ; GCN-NEXT:    flat_load_ushort v5, v[0:1]
 ; GCN-NEXT:    v_mov_b32_e32 v0, s2
 ; GCN-NEXT:    v_mov_b32_e32 v2, s6
-; GCN-NEXT:    v_mov_b32_e32 v3, s7
+; GCN-NEXT:    v_mov_b32_e32 v3, s4
 ; GCN-NEXT:    v_mov_b32_e32 v1, s3
 ; GCN-NEXT:    flat_load_ubyte v2, v[2:3]
 ; GCN-NEXT:    flat_load_ushort v0, v[0:1]

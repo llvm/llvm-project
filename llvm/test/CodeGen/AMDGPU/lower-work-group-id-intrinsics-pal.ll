@@ -34,10 +34,9 @@ define amdgpu_cs void @_amdgpu_cs_main() {
 ;
 ; GFX9ARCH-GISEL-LABEL: _amdgpu_cs_main:
 ; GFX9ARCH-GISEL:       ; %bb.0: ; %.entry
-; GFX9ARCH-GISEL-NEXT:    s_mov_b32 s0, ttmp9
 ; GFX9ARCH-GISEL-NEXT:    s_and_b32 s1, ttmp7, 0xffff
 ; GFX9ARCH-GISEL-NEXT:    s_lshr_b32 s2, ttmp7, 16
-; GFX9ARCH-GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9ARCH-GISEL-NEXT:    v_mov_b32_e32 v0, ttmp9
 ; GFX9ARCH-GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9ARCH-GISEL-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX9ARCH-GISEL-NEXT:    buffer_store_dwordx3 v[0:2], off, s[0:3], 0
@@ -54,10 +53,9 @@ define amdgpu_cs void @_amdgpu_cs_main() {
 ;
 ; GFX12-GISEL-LABEL: _amdgpu_cs_main:
 ; GFX12-GISEL:       ; %bb.0: ; %.entry
-; GFX12-GISEL-NEXT:    s_mov_b32 s0, ttmp9
 ; GFX12-GISEL-NEXT:    s_and_b32 s1, ttmp7, 0xffff
 ; GFX12-GISEL-NEXT:    s_lshr_b32 s2, ttmp7, 16
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, ttmp9 :: v_dual_mov_b32 v1, s1
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX12-GISEL-NEXT:    buffer_store_b96 v[0:2], off, s[0:3], null
 ; GFX12-GISEL-NEXT:    s_endpgm

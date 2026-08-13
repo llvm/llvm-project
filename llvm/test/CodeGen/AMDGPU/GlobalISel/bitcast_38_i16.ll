@@ -11,8 +11,6 @@ define void @main(<19 x i32> %arg) {
 ; GCN-NEXT:    s_mov_b32 s4, 0
 ; GCN-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v0
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
-; GCN-NEXT:    s_mov_b32 s12, s4
-; GCN-NEXT:    s_mov_b32 s13, s4
 ; GCN-NEXT:    s_mov_b32 s5, s4
 ; GCN-NEXT:    s_mov_b32 s6, s4
 ; GCN-NEXT:    s_mov_b32 s7, s4
@@ -23,8 +21,8 @@ define void @main(<19 x i32> %arg) {
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GCN-NEXT:    v_mov_b32_e32 v2, v1
 ; GCN-NEXT:    v_mov_b32_e32 v3, v1
-; GCN-NEXT:    v_mov_b32_e32 v4, s12
-; GCN-NEXT:    v_mov_b32_e32 v5, s13
+; GCN-NEXT:    v_mov_b32_e32 v4, s4
+; GCN-NEXT:    v_mov_b32_e32 v5, s4
 ; GCN-NEXT:    image_store v[0:3], v[4:5], s[4:11] unorm
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]

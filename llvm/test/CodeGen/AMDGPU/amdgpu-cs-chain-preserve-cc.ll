@@ -594,29 +594,24 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_realign_stack(i32
 ; GISEL-GFX11-NEXT:    s_and_not1_b32 s33, s33, 31
 ; GISEL-GFX11-NEXT:    s_addk_i32 s32, 0xe0
 ; GISEL-GFX11-NEXT:    scratch_store_b32 off, v16, s33 ; 4-byte Folded Spill
-; GISEL-GFX11-NEXT:    s_mov_b32 s7, 4
-; GISEL-GFX11-NEXT:    s_mov_b32 s6, 3
-; GISEL-GFX11-NEXT:    s_mov_b32 s5, 2
-; GISEL-GFX11-NEXT:    s_mov_b32 s4, 1
-; GISEL-GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(VALU_DEP_3)
-; GISEL-GFX11-NEXT:    v_dual_mov_b32 v1, s4 :: v_dual_lshlrev_b32 v0, 4, v8
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v4, s7
-; GISEL-GFX11-NEXT:    v_dual_mov_b32 v2, s5 :: v_dual_mov_b32 v3, s6
+; GISEL-GFX11-NEXT:    v_dual_mov_b32 v3, 3 :: v_dual_lshlrev_b32 v0, 4, v8
+; GISEL-GFX11-NEXT:    v_mov_b32_e32 v2, 2
+; GISEL-GFX11-NEXT:    v_dual_mov_b32 v4, 4 :: v_dual_mov_b32 v1, 1
+; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GISEL-GFX11-NEXT:    v_add_nc_u32_e32 v5, s33, v0
 ; GISEL-GFX11-NEXT:    s_mov_b32 s3, s0
 ; GISEL-GFX11-NEXT:    ;;#ASMSTART
 ; GISEL-GFX11-NEXT:    s_nop
 ; GISEL-GFX11-NEXT:    ;;#ASMEND
-; GISEL-GFX11-NEXT:    v_dual_mov_b32 v8, v9 :: v_dual_mov_b32 v9, v10
-; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GISEL-GFX11-NEXT:    v_dual_mov_b32 v10, v11 :: v_dual_add_nc_u32 v5, 32, v5
 ; GISEL-GFX11-NEXT:    s_mov_b32 s4, chain_preserve_callee@abs32@lo
 ; GISEL-GFX11-NEXT:    s_mov_b32 s5, chain_preserve_callee@abs32@hi
+; GISEL-GFX11-NEXT:    v_dual_mov_b32 v8, v9 :: v_dual_add_nc_u32 v5, 32, v5
+; GISEL-GFX11-NEXT:    v_dual_mov_b32 v9, v10 :: v_dual_mov_b32 v10, v11
 ; GISEL-GFX11-NEXT:    s_mov_b32 s0, s3
-; GISEL-GFX11-NEXT:    s_mov_b32 s32, s34
 ; GISEL-GFX11-NEXT:    scratch_store_b128 v5, v[1:4], off dlc
 ; GISEL-GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GISEL-GFX11-NEXT:    scratch_load_b32 v16, off, s33 ; 4-byte Folded Reload
+; GISEL-GFX11-NEXT:    s_mov_b32 s32, s34
 ; GISEL-GFX11-NEXT:    s_mov_b32 exec_lo, -1
 ; GISEL-GFX11-NEXT:    s_setpc_b64 s[4:5]
 ;

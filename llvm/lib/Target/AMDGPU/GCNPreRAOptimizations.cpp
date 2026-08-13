@@ -47,6 +47,7 @@ namespace {
 
 class GCNPreRAOptimizationsImpl {
 private:
+  const GCNSubtarget *ST;
   const SIInstrInfo *TII;
   const SIRegisterInfo *TRI;
   MachineRegisterInfo *MRI;
@@ -55,6 +56,8 @@ private:
   bool processReg(Register Reg);
   void hintTrue16Copy(const MachineInstr &MI);
   bool optimizeBVHStack(MachineInstr &MI);
+  bool optimizeSGPRToVGPRCopy(MachineInstr &MI);
+  bool narrowTupleCopy(MachineInstr &MI);
 
 public:
   GCNPreRAOptimizationsImpl(LiveIntervals *LS) : LIS(LS) {}
@@ -299,8 +302,300 @@ bool GCNPreRAOptimizationsImpl::optimizeBVHStack(MachineInstr &MI) {
   return true;
 }
 
+// A scalar move of an immediate, which has a VALU equivalent of the same width.
+static bool isMovImm(const MachineInstr &Def) {
+  switch (Def.getOpcode()) {
+  case AMDGPU::S_MOV_B32:
+  case AMDGPU::S_MOV_B64:
+  case AMDGPU::S_MOV_B64_IMM_PSEUDO:
+    return Def.getNumOperands() == 2 && Def.getOperand(1).isImm();
+  default:
+    return false;
+  }
+}
+
+// A def of a tuple subregister that can be redone directly in a VGPR: an
+// immediate move or a copy of a 32 bit virtual register.
+static bool isRewritableTupleDef(const MachineInstr &Def, Register Tuple,
+                                 const SIRegisterInfo *TRI,
+                                 const MachineRegisterInfo *MRI) {
+  if (isMovImm(Def))
+    return true;
+  switch (Def.getOpcode()) {
+  case AMDGPU::COPY: {
+    const MachineOperand &CopySrc = Def.getOperand(1);
+    if (!CopySrc.isReg())
+      return false;
+    Register CopySrcReg = CopySrc.getReg();
+    if (CopySrcReg == Tuple)
+      return true;
+    if (!CopySrcReg.isVirtual())
+      return false;
+    return (CopySrc.getSubReg()
+                ? TRI->getSubRegIdxSize(CopySrc.getSubReg())
+                : TRI->getRegSizeInBits(CopySrcReg, *MRI)) == 32;
+  }
+  default:
+    return false;
+  }
+}
+
+// Build a register tuple directly in VGPRs instead of building it in SGPRs and
+// copying the whole tuple:
+//
+//   undef %0.sub0:sgpr_256 = S_MOV_B32 1
+//   %0.sub1:sgpr_256 = COPY %0.sub0
+//   ...
+//   %1:vreg_256 = COPY %0:sgpr_256
+// =>
+//   undef %1.sub0:vreg_256 = V_MOV_B32_e32 1, implicit $exec
+//   %1.sub1:vreg_256 = COPY %1.sub0
+//   ...
+//
+// Runs after SIFoldOperands and the coalescer, so any use that could have taken
+// the SGPR tuple has already folded or coalesced it.
+bool GCNPreRAOptimizationsImpl::optimizeSGPRToVGPRCopy(MachineInstr &MI) {
+  const MachineOperand &DstMO = MI.getOperand(0);
+  const MachineOperand &SrcMO = MI.getOperand(1);
+  if (DstMO.getSubReg() || SrcMO.getSubReg())
+    return false;
+
+  Register Dst = DstMO.getReg();
+  Register Src = SrcMO.getReg();
+  if (!Dst.isVirtual() || !Src.isVirtual())
+    return false;
+
+  const TargetRegisterClass *DstRC = MRI->getRegClass(Dst);
+  const TargetRegisterClass *SrcRC = MRI->getRegClass(Src);
+  if (!TRI->isVGPRClass(DstRC) || !TRI->isSGPRClass(SrcRC) ||
+      DstRC->getSizeInBits() != SrcRC->getSizeInBits() ||
+      DstRC->getSizeInBits() <= 32)
+    return false;
+
+  // The tuple must be dead after this copy, otherwise the SGPR value is still
+  // needed and rewriting the defs only adds copies. Uses inside the tuple
+  // initialization itself are rewritten together with the defs.
+  for (MachineInstr &Use : MRI->use_nodbg_instructions(Src)) {
+    if (&Use == &MI)
+      continue;
+    if (Use.isCopy() && Use.getOperand(0).getReg() == Src)
+      continue;
+    return false;
+  }
+
+  // Nothing of Dst may be live before the copy, the defs are rewritten in
+  // place and would clobber it.
+  if (!LIS->hasInterval(Dst) || !LIS->hasInterval(Src))
+    return false;
+
+  SlotIndex CopyIdx = LIS->getInstructionIndex(MI);
+  if (LIS->getInterval(Dst).beginIndex() != CopyIdx.getRegSlot())
+    return false;
+
+  // All defs must be 32 bit subregister defs in this block, before the copy.
+  // Immediates and copies are redone in the VGPR tuple, anything else stays
+  // where it is and its result is copied into the tuple.
+  // A wide copy between properly aligned register classes is expanded into 64
+  // bit moves, splitting it into 32 bit pieces would double the move count.
+  // Without that the copy already costs one move per element, so building the
+  // tuple in VGPRs is never worse and gets rid of the SGPR tuple.
+  bool CopyIsPaired = DstRC->getSizeInBits() % 64 == 0 &&
+                      TRI->isProperlyAlignedRC(*DstRC) &&
+                      (ST->hasVMovB64Inst() || ST->hasPkMovB32());
+
+  SmallVector<MachineInstr *, 8> Defs;
+  bool AnyRewritten = !CopyIsPaired;
+  for (MachineOperand &DefMO : MRI->def_operands(Src)) {
+    MachineInstr &Def = *DefMO.getParent();
+    if (Def.getParent() != MI.getParent() ||
+        !SlotIndex::isEarlierInstr(LIS->getInstructionIndex(Def), CopyIdx))
+      return false;
+
+    unsigned SubIdx = DefMO.getSubReg();
+    if (!SubIdx || DefMO.isTied() || is_contained(Defs, &Def))
+      return false;
+
+    // A 64 bit immediate move is redone as a single V_MOV_B64, and a 64 bit
+    // copy inside the tuple stays a single move, so both are worth splitting
+    // even though that half of the wide copy costs one move either way.
+    unsigned SubSize = TRI->getSubRegIdxSize(SubIdx);
+    bool IsMovImm = isMovImm(Def) &&
+                    (SubSize == 32 ||
+                     TII->isImmOperandLegal(TII->get(AMDGPU::V_MOV_B64_PSEUDO),
+                                            1, Def.getOperand(1)));
+    bool IsTupleCopy = Def.isCopy() && Def.getOperand(1).getReg() == Src;
+    if (SubSize != 32 &&
+        (SubSize != 64 || !(ST->hasVMovB64Inst() || ST->hasPkMovB32()) ||
+         !(IsMovImm || IsTupleCopy)))
+      return false;
+
+    // A def that is redone in the VGPR tuple goes away, so the wide copy pays
+    // for itself. Everything else at best trades it for a narrow one.
+    bool Rewritable = isRewritableTupleDef(Def, Src, TRI, MRI);
+    if (Rewritable)
+      AnyRewritten = true;
+    if (!Rewritable && !TRI->getSubRegisterClass(SrcRC, SubIdx))
+      return false;
+
+    Defs.push_back(&Def);
+  }
+
+  // Splitting the copy without getting rid of at least one of the defs just
+  // trades one wide copy for a series of narrow ones.
+  if (!AnyRewritten)
+    return false;
+
+  // The tuple is rebuilt at the copy, keep the defs in their original order.
+  sort(Defs, [this](const MachineInstr *A, const MachineInstr *B) {
+    return SlotIndex::isEarlierInstr(LIS->getInstructionIndex(*A),
+                                     LIS->getInstructionIndex(*B));
+  });
+
+  LLVM_DEBUG(dbgs() << "Building tuple in VGPRs for: " << MI);
+
+  SmallVector<Register, 8> NewVRegs;
+  SmallSetVector<Register, 8> Recompute;
+  for (MachineInstr *Def : Defs) {
+    MachineOperand &DefMO = *Def->findRegisterDefOperand(Src, TRI);
+    unsigned SubIdx = DefMO.getSubReg();
+    RegState UndefFlag = getUndefRegState(DefMO.isUndef());
+    bool KeepDef = !isRewritableTupleDef(*Def, Src, TRI, MRI);
+    unsigned Opc = AMDGPU::COPY;
+    if (!KeepDef) {
+      if (Def->getOpcode() == AMDGPU::S_MOV_B32)
+        Opc = AMDGPU::V_MOV_B32_e32;
+      else if (isMovImm(*Def))
+        Opc = AMDGPU::V_MOV_B64_PSEUDO;
+    }
+
+    // Anything that is not redone in the VGPR tuple stays at its original slot
+    // index: moving it could extend the live range of a physical register, and
+    // it may not be safe to move at all. Redefine it into a plain 32 bit
+    // virtual register in place and copy that into the tuple instead.
+    MachineOperand DefSrcMO = Def->getOperand(1);
+    DefSrcMO.clearParent();
+    if (KeepDef) {
+      Register Tmp =
+          MRI->createVirtualRegister(TRI->getSubRegisterClass(SrcRC, SubIdx));
+      DefMO.setReg(Tmp);
+      DefMO.setSubReg(0);
+      DefMO.setIsUndef(false);
+      NewVRegs.push_back(Tmp);
+      DefSrcMO = MachineOperand::CreateReg(Tmp, false);
+    } else if (DefSrcMO.isReg()) {
+      if (DefSrcMO.getReg() == Src)
+        DefSrcMO.setReg(Dst);
+      else if (DefSrcMO.getReg().isVirtual())
+        // Moving the def to the copy extends the live range of what it reads.
+        Recompute.insert(DefSrcMO.getReg());
+    }
+
+    auto *NewDef =
+        BuildMI(*MI.getParent(), MI, Def->getDebugLoc(), TII->get(Opc))
+            .addDef(Dst, UndefFlag, SubIdx)
+            .add(DefSrcMO)
+            .getInstr();
+    if (!KeepDef) {
+      LIS->RemoveMachineInstrFromMaps(*Def);
+      Def->eraseFromParent();
+    }
+    LIS->InsertMachineInstrInMaps(*NewDef);
+    LLVM_DEBUG(dbgs() << "  " << *NewDef);
+  }
+
+  LIS->RemoveMachineInstrFromMaps(MI);
+  MI.eraseFromParent();
+
+  LIS->removeInterval(Src);
+  LIS->removeInterval(Dst);
+  LIS->createAndComputeVirtRegInterval(Dst);
+  for (Register Tmp : NewVRegs)
+    LIS->createAndComputeVirtRegInterval(Tmp);
+  for (Register Reg : Recompute) {
+    LIS->removeInterval(Reg);
+    LIS->createAndComputeVirtRegInterval(Reg);
+  }
+
+  return true;
+}
+
+// Copying a whole tuple when the uses only read some of its subregisters
+// writes the rest for nothing. Copy only the subregisters that are read:
+//
+//   %1:vreg_64 = COPY %0:sreg_64
+//   ... = %1.sub1
+// =>
+//   %2:vgpr_32 = COPY %0.sub1:sreg_64
+//   ... = %2
+bool GCNPreRAOptimizationsImpl::narrowTupleCopy(MachineInstr &MI) {
+  const MachineOperand &DstMO = MI.getOperand(0);
+  const MachineOperand &SrcMO = MI.getOperand(1);
+  if (DstMO.getSubReg() || SrcMO.getSubReg())
+    return false;
+
+  Register Dst = DstMO.getReg();
+  Register Src = SrcMO.getReg();
+  if (!Dst.isVirtual() || !Src.isVirtual() || !MRI->hasOneDef(Dst))
+    return false;
+
+  const TargetRegisterClass *DstRC = MRI->getRegClass(Dst);
+  const TargetRegisterClass *SrcRC = MRI->getRegClass(Src);
+  unsigned Size = DstRC->getSizeInBits();
+  if (Size <= 32 || Size != SrcRC->getSizeInBits())
+    return false;
+
+  SmallSetVector<unsigned, 8> SubRegs;
+  for (const MachineOperand &UseMO : MRI->use_nodbg_operands(Dst)) {
+    unsigned SubIdx = UseMO.getSubReg();
+    if (!SubIdx || TRI->getSubRegIdxSize(SubIdx) != 32 ||
+        !TRI->getSubRegisterClass(DstRC, SubIdx) ||
+        !TRI->getSubRegisterClass(SrcRC, SubIdx))
+      return false;
+    SubRegs.insert(SubIdx);
+  }
+
+  if (SubRegs.empty() || SubRegs.size() * 32 >= Size)
+    return false;
+
+  LLVM_DEBUG(dbgs() << "Narrowing tuple copy: " << MI);
+
+  SmallVector<Register, 8> NewVRegs;
+  for (unsigned SubIdx : SubRegs) {
+    Register NewReg =
+        MRI->createVirtualRegister(TRI->getSubRegisterClass(DstRC, SubIdx));
+    auto *NewCopy = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+                            TII->get(AMDGPU::COPY), NewReg)
+                        .addReg(Src, RegState::NoFlags, SubIdx)
+                        .getInstr();
+    LIS->InsertMachineInstrInMaps(*NewCopy);
+    NewVRegs.push_back(NewReg);
+    LLVM_DEBUG(dbgs() << "  " << *NewCopy);
+
+    for (MachineOperand &UseMO :
+         make_early_inc_range(MRI->use_nodbg_operands(Dst))) {
+      if (UseMO.getSubReg() != SubIdx)
+        continue;
+      UseMO.setReg(NewReg);
+      UseMO.setSubReg(AMDGPU::NoSubRegister);
+    }
+  }
+
+  MRI->markUsesInDebugValueAsUndef(Dst);
+  LIS->RemoveMachineInstrFromMaps(MI);
+  MI.eraseFromParent();
+
+  LIS->removeInterval(Src);
+  LIS->removeInterval(Dst);
+  LIS->createAndComputeVirtRegInterval(Src);
+  for (Register NewReg : NewVRegs)
+    LIS->createAndComputeVirtRegInterval(NewReg);
+
+  return true;
+}
+
 bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  this->ST = &ST;
   TII = ST.getInstrInfo();
   MRI = &MF.getRegInfo();
   TRI = ST.getRegisterInfo();
@@ -317,6 +612,13 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
       continue;
 
     Changed |= processReg(Reg);
+  }
+
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : make_early_inc_range(MBB)) {
+      if (MI.isCopy())
+        Changed |= optimizeSGPRToVGPRCopy(MI) || narrowTupleCopy(MI);
+    }
   }
 
   const bool HasBVHStack = ST.hasBVHDualAndBVH8Insts();

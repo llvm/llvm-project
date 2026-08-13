@@ -3778,8 +3778,8 @@ define amdgpu_kernel void @uniform_value_i64(ptr addrspace(1) %out, i64 %in) #0 
 ; GFX8DAGISEL-NEXT:    v_readfirstlane_b32 s1, v2
 ; GFX8DAGISEL-NEXT:    s_mul_i32 s2, s3, s4
 ; GFX8DAGISEL-NEXT:    s_add_u32 s1, s1, s2
-; GFX8DAGISEL-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX8DAGISEL-NEXT:    v_mov_b32_e32 v2, s0
+; GFX8DAGISEL-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX8DAGISEL-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; GFX8DAGISEL-NEXT:    s_endpgm
 ;
@@ -3806,15 +3806,15 @@ define amdgpu_kernel void @uniform_value_i64(ptr addrspace(1) %out, i64 %in) #0 
 ; GFX9DAGISEL:       ; %bb.0: ; %entry
 ; GFX9DAGISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9DAGISEL-NEXT:    s_mov_b64 s[4:5], exec
-; GFX9DAGISEL-NEXT:    s_bcnt1_i32_b64 s5, s[4:5]
+; GFX9DAGISEL-NEXT:    s_bcnt1_i32_b64 s4, s[4:5]
 ; GFX9DAGISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9DAGISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9DAGISEL-NEXT:    s_mul_i32 s4, s2, s5
-; GFX9DAGISEL-NEXT:    s_mul_hi_u32 s2, s2, s5
-; GFX9DAGISEL-NEXT:    s_mul_i32 s3, s3, s5
-; GFX9DAGISEL-NEXT:    s_add_u32 s5, s2, s3
-; GFX9DAGISEL-NEXT:    v_mov_b32_e32 v0, s4
-; GFX9DAGISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9DAGISEL-NEXT:    s_mul_i32 s5, s2, s4
+; GFX9DAGISEL-NEXT:    s_mul_hi_u32 s2, s2, s4
+; GFX9DAGISEL-NEXT:    s_mul_i32 s3, s3, s4
+; GFX9DAGISEL-NEXT:    s_add_u32 s2, s2, s3
+; GFX9DAGISEL-NEXT:    v_mov_b32_e32 v0, s5
+; GFX9DAGISEL-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX9DAGISEL-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX9DAGISEL-NEXT:    s_endpgm
 ;
@@ -3822,15 +3822,15 @@ define amdgpu_kernel void @uniform_value_i64(ptr addrspace(1) %out, i64 %in) #0 
 ; GFX9GISEL:       ; %bb.0: ; %entry
 ; GFX9GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9GISEL-NEXT:    s_mov_b64 s[4:5], exec
-; GFX9GISEL-NEXT:    s_bcnt1_i32_b64 s5, s[4:5]
+; GFX9GISEL-NEXT:    s_bcnt1_i32_b64 s4, s[4:5]
 ; GFX9GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9GISEL-NEXT:    s_mul_i32 s4, s2, s5
-; GFX9GISEL-NEXT:    s_mul_hi_u32 s2, s2, s5
-; GFX9GISEL-NEXT:    s_mul_i32 s3, s3, s5
-; GFX9GISEL-NEXT:    s_add_u32 s5, s2, s3
-; GFX9GISEL-NEXT:    v_mov_b32_e32 v0, s4
-; GFX9GISEL-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9GISEL-NEXT:    s_mul_i32 s5, s2, s4
+; GFX9GISEL-NEXT:    s_mul_hi_u32 s2, s2, s4
+; GFX9GISEL-NEXT:    s_mul_i32 s3, s3, s4
+; GFX9GISEL-NEXT:    s_add_u32 s2, s2, s3
+; GFX9GISEL-NEXT:    v_mov_b32_e32 v0, s5
+; GFX9GISEL-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX9GISEL-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX9GISEL-NEXT:    s_endpgm
 ;

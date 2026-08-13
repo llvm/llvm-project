@@ -428,7 +428,7 @@ define void @s_usubo_usube(i64 inreg %a, i64 inreg %b, ptr addrspace(1) %res, pt
 ; GFX11-NEXT:    s_sub_u32 s0, s0, s2
 ; GFX11-NEXT:    s_subb_u32 s1, s1, s3
 ; GFX11-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX11-NEXT:    v_dual_mov_b32 v5, s1 :: v_dual_mov_b32 v4, s0
+; GFX11-NEXT:    v_dual_mov_b32 v4, s0 :: v_dual_mov_b32 v5, s1
 ; GFX11-NEXT:    v_mov_b32_e32 v6, s2
 ; GFX11-NEXT:    global_store_b64 v[0:1], v[4:5], off
 ; GFX11-NEXT:    global_store_b32 v[2:3], v6, off
@@ -445,7 +445,7 @@ define void @s_usubo_usube(i64 inreg %a, i64 inreg %b, ptr addrspace(1) %res, pt
 ; GFX12-NEXT:    s_sub_co_ci_u32 s1, s1, s3
 ; GFX12-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    v_dual_mov_b32 v5, s1 :: v_dual_mov_b32 v4, s0
+; GFX12-NEXT:    v_dual_mov_b32 v4, s0 :: v_dual_mov_b32 v5, s1
 ; GFX12-NEXT:    v_mov_b32_e32 v6, s2
 ; GFX12-NEXT:    global_store_b64 v[0:1], v[4:5], off
 ; GFX12-NEXT:    global_store_b32 v[2:3], v6, off

@@ -429,16 +429,16 @@ define amdgpu_kernel void @fp_to_uint_v2f32_to_v2i64(ptr addrspace(1) %out, <2 x
 ; GFX11-GISEL-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX11-GISEL-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s5, v2
-; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s3, v3
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s6, v1
+; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s5, v1
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX11-GISEL-NEXT:    v_mov_b32_e32 v1, s5
-; GFX11-GISEL-NEXT:    v_dual_mov_b32 v3, s7 :: v_dual_mov_b32 v0, s4
+; GFX11-GISEL-NEXT:    v_mov_b32_e32 v1, s2
+; GFX11-GISEL-NEXT:    v_dual_mov_b32 v3, s3 :: v_dual_mov_b32 v0, s4
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX11-GISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX11-GISEL-NEXT:    v_mov_b32_e32 v2, s5
 ; GFX11-GISEL-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
 ; GFX11-GISEL-NEXT:    s_endpgm
 ;
@@ -643,14 +643,13 @@ define amdgpu_kernel void @fp_to_uint_v4f32_to_v4i64(ptr addrspace(1) %out, <4 x
 ;
 ; GFX11-GISEL-LABEL: fp_to_uint_v4f32_to_v4i64:
 ; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_clause 0x1
 ; GFX11-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x34
-; GFX11-GISEL-NEXT:    s_load_b64 s[8:9], s[4:5], 0x24
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_trunc_f32_e32 v0, s0
 ; GFX11-GISEL-NEXT:    v_trunc_f32_e32 v1, s1
 ; GFX11-GISEL-NEXT:    v_trunc_f32_e32 v2, s2
 ; GFX11-GISEL-NEXT:    v_trunc_f32_e32 v3, s3
+; GFX11-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-GISEL-NEXT:    v_dual_mul_f32 v4, 0x2f800000, v0 :: v_dual_mul_f32 v5, 0x2f800000, v1
 ; GFX11-GISEL-NEXT:    v_dual_mul_f32 v6, 0x2f800000, v2 :: v_dual_mul_f32 v7, 0x2f800000, v3
@@ -672,22 +671,23 @@ define amdgpu_kernel void @fp_to_uint_v4f32_to_v4i64(ptr addrspace(1) %out, <4 x
 ; GFX11-GISEL-NEXT:    v_cvt_u32_f32_e32 v7, v7
 ; GFX11-GISEL-NEXT:    v_cvt_u32_f32_e32 v2, v2
 ; GFX11-GISEL-NEXT:    v_cvt_u32_f32_e32 v3, v3
-; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s1, v4
+; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s2, v4
 ; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s3, v5
-; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s2, v1
-; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s5, v6
-; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s7, v7
-; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s4, v2
-; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s6, v3
-; GFX11-GISEL-NEXT:    v_dual_mov_b32 v8, 0 :: v_dual_mov_b32 v1, s1
-; GFX11-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v3, s3
-; GFX11-GISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v5, s5
-; GFX11-GISEL-NEXT:    v_dual_mov_b32 v4, s4 :: v_dual_mov_b32 v7, s7
-; GFX11-GISEL-NEXT:    v_mov_b32_e32 v6, s6
+; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s6, v0
+; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s7, v1
+; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s4, v6
+; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s5, v7
+; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s8, v2
+; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s9, v3
+; GFX11-GISEL-NEXT:    v_dual_mov_b32 v8, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-GISEL-NEXT:    v_dual_mov_b32 v3, s3 :: v_dual_mov_b32 v0, s6
+; GFX11-GISEL-NEXT:    v_dual_mov_b32 v2, s7 :: v_dual_mov_b32 v5, s4
+; GFX11-GISEL-NEXT:    v_dual_mov_b32 v7, s5 :: v_dual_mov_b32 v4, s8
+; GFX11-GISEL-NEXT:    v_mov_b32_e32 v6, s9
+; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    s_clause 0x1
-; GFX11-GISEL-NEXT:    global_store_b128 v8, v[0:3], s[8:9]
-; GFX11-GISEL-NEXT:    global_store_b128 v8, v[4:7], s[8:9] offset:16
+; GFX11-GISEL-NEXT:    global_store_b128 v8, v[0:3], s[0:1]
+; GFX11-GISEL-NEXT:    global_store_b128 v8, v[4:7], s[0:1] offset:16
 ; GFX11-GISEL-NEXT:    s_endpgm
 ;
 ; EG-LABEL: fp_to_uint_v4f32_to_v4i64:

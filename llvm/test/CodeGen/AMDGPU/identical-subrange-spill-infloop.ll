@@ -201,13 +201,11 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_9
 ; CHECK-NEXT:  ; %bb.7: ; %bb33.preheader
 ; CHECK-NEXT:    s_mov_b32 s16, 0
-; CHECK-NEXT:    s_mov_b32 s20, s16
-; CHECK-NEXT:    s_mov_b32 s21, s16
 ; CHECK-NEXT:    s_mov_b32 s17, s16
 ; CHECK-NEXT:    s_mov_b32 s18, s16
 ; CHECK-NEXT:    s_mov_b32 s19, s16
-; CHECK-NEXT:    v_mov_b32_e32 v1, s20
-; CHECK-NEXT:    v_mov_b32_e32 v2, s21
+; CHECK-NEXT:    v_mov_b32_e32 v1, s16
+; CHECK-NEXT:    v_mov_b32_e32 v2, s16
 ; CHECK-NEXT:    image_sample_lz v3, v[1:2], s[8:15], s[16:19] dmask:0x1
 ; CHECK-NEXT:    image_sample_lz v4, v[1:2], s[36:43], s[16:19] dmask:0x1
 ; CHECK-NEXT:    s_and_b64 vcc, exec, 0

@@ -8,19 +8,35 @@ declare float @llvm.amdgcn.flat.atomic.fmin.num.f32.p1.f32(ptr %ptr, float %data
 declare float @llvm.amdgcn.flat.atomic.fmax.num.f32.p1.f32(ptr %ptr, float %data)
 
 define amdgpu_cs void @flat_atomic_fmin_num_f32_noret(ptr %ptr, float %data) {
-; GCN-LABEL: flat_atomic_fmin_num_f32_noret:
-; GCN:  ; %bb.0:
-; GCN:    flat_atomic_min_num_f32 v[0:1], v2
-; GCN:    s_endpgm
+; GFX12-LABEL: flat_atomic_fmin_num_f32_noret:
+; GFX12:  ; %bb.0:
+; GFX12:    flat_atomic_min_num_f32 v[0:1], v2
+; GFX12:    s_endpgm
+;
+; GFX1250-LABEL: flat_atomic_fmin_num_f32_noret:
+; GFX1250:  ; %bb.0:
+; GFX1250:    s_mov_b64 s[64:65], 0
+; GFX1250:    v_nop
+; GFX1250:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250:    flat_atomic_min_num_f32 v[0:1], v2
+; GFX1250:    s_endpgm
   %ret = call float @llvm.amdgcn.flat.atomic.fmin.num.f32.p1.f32(ptr %ptr, float %data)
   ret void
 }
 
 define amdgpu_cs void @flat_atomic_fmax_num_f32_noret(ptr %ptr, float %data) {
-; GCN-LABEL: flat_atomic_fmax_num_f32_noret:
-; GCN:  ; %bb.0:
-; GCN:    flat_atomic_max_num_f32 v[0:1], v2
-; GCN:    s_endpgm
+; GFX12-LABEL: flat_atomic_fmax_num_f32_noret:
+; GFX12:  ; %bb.0:
+; GFX12:    flat_atomic_max_num_f32 v[0:1], v2
+; GFX12:    s_endpgm
+;
+; GFX1250-LABEL: flat_atomic_fmax_num_f32_noret:
+; GFX1250:  ; %bb.0:
+; GFX1250:    s_mov_b64 s[64:65], 0
+; GFX1250:    v_nop
+; GFX1250:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250:    flat_atomic_max_num_f32 v[0:1], v2
+; GFX1250:    s_endpgm
   %ret = call float @llvm.amdgcn.flat.atomic.fmax.num.f32.p1.f32(ptr %ptr, float %data)
   ret void
 }
@@ -34,6 +50,9 @@ define amdgpu_cs float @flat_atomic_fmin_num_f32_rtn(float %data, ptr %ptr) {
 ;
 ; GFX1250-SDAG-LABEL: flat_atomic_fmin_num_f32_rtn:
 ; GFX1250-SDAG:  ; %bb.0:
+; GFX1250-SDAG:    s_mov_b64 s[64:65], 0
+; GFX1250-SDAG:    v_nop
+; GFX1250-SDAG:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-SDAG:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
 ; GFX1250-SDAG:    flat_atomic_min_num_f32 v0, v[2:3], v0 th:TH_ATOMIC_RETURN
 ; GFX1250-SDAG:    s_wait_loadcnt_dscnt 0x0
@@ -41,6 +60,9 @@ define amdgpu_cs float @flat_atomic_fmin_num_f32_rtn(float %data, ptr %ptr) {
 ;
 ; GFX1250-GISEL-LABEL: flat_atomic_fmin_num_f32_rtn:
 ; GFX1250-GISEL:  ; %bb.0:
+; GFX1250-GISEL:    s_mov_b64 s[64:65], 0
+; GFX1250-GISEL:    v_nop
+; GFX1250-GISEL:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
 ; GFX1250-GISEL:    flat_atomic_min_num_f32 v0, v[4:5], v0 th:TH_ATOMIC_RETURN
 ; GFX1250-GISEL:    s_wait_loadcnt_dscnt 0x0
@@ -58,6 +80,9 @@ define amdgpu_cs float @flat_atomic_fmax_num_f32_rtn(float %data, ptr %ptr) {
 ;
 ; GFX1250-SDAG-LABEL: flat_atomic_fmax_num_f32_rtn:
 ; GFX1250-SDAG:  ; %bb.0:
+; GFX1250-SDAG:    s_mov_b64 s[64:65], 0
+; GFX1250-SDAG:    v_nop
+; GFX1250-SDAG:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-SDAG:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
 ; GFX1250-SDAG:    flat_atomic_max_num_f32 v0, v[2:3], v0 th:TH_ATOMIC_RETURN
 ; GFX1250-SDAG:    s_wait_loadcnt_dscnt 0x0
@@ -65,6 +90,9 @@ define amdgpu_cs float @flat_atomic_fmax_num_f32_rtn(float %data, ptr %ptr) {
 ;
 ; GFX1250-GISEL-LABEL: flat_atomic_fmax_num_f32_rtn:
 ; GFX1250-GISEL:  ; %bb.0:
+; GFX1250-GISEL:    s_mov_b64 s[64:65], 0
+; GFX1250-GISEL:    v_nop
+; GFX1250-GISEL:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
 ; GFX1250-GISEL:    flat_atomic_max_num_f32 v0, v[4:5], v0 th:TH_ATOMIC_RETURN
 ; GFX1250-GISEL:    s_wait_loadcnt_dscnt 0x0
@@ -74,20 +102,17 @@ define amdgpu_cs float @flat_atomic_fmax_num_f32_rtn(float %data, ptr %ptr) {
 }
 
 define amdgpu_ps void @flat_atomic_fmin_num_f32_noret_saddr(ptr inreg %ptr, float %data) {
-; GFX12-SDAG-LABEL: flat_atomic_fmin_num_f32_noret_saddr:
-; GFX12-SDAG:  ; %bb.0:
-; GFX12-SDAG:    v_dual_mov_b32 v1, s0 :: v_dual_mov_b32 v2, s1
-; GFX12-SDAG:    flat_atomic_min_num_f32 v[1:2], v0
-; GFX12-SDAG:    s_endpgm
-;
-; GFX12-GISEL-LABEL: flat_atomic_fmin_num_f32_noret_saddr:
-; GFX12-GISEL:  ; %bb.0:
-; GFX12-GISEL:    v_dual_mov_b32 v2, s1 :: v_dual_mov_b32 v1, s0
-; GFX12-GISEL:    flat_atomic_min_num_f32 v[1:2], v0
-; GFX12-GISEL:    s_endpgm
+; GFX12-LABEL: flat_atomic_fmin_num_f32_noret_saddr:
+; GFX12:  ; %bb.0:
+; GFX12:    v_dual_mov_b32 v1, s0 :: v_dual_mov_b32 v2, s1
+; GFX12:    flat_atomic_min_num_f32 v[1:2], v0
+; GFX12:    s_endpgm
 ;
 ; GFX1250-LABEL: flat_atomic_fmin_num_f32_noret_saddr:
 ; GFX1250:  ; %bb.0:
+; GFX1250:    s_mov_b64 s[64:65], 0
+; GFX1250:    v_nop
+; GFX1250:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250:    v_mov_b32_e32 v1, 0
 ; GFX1250:    flat_atomic_min_num_f32 v1, v0, s[0:1]
 ; GFX1250:    s_endpgm
@@ -96,20 +121,17 @@ define amdgpu_ps void @flat_atomic_fmin_num_f32_noret_saddr(ptr inreg %ptr, floa
 }
 
 define amdgpu_ps void @flat_atomic_fmax_num_f32_noret_saddr(ptr inreg %ptr, float %data) {
-; GFX12-SDAG-LABEL: flat_atomic_fmax_num_f32_noret_saddr:
-; GFX12-SDAG:  ; %bb.0:
-; GFX12-SDAG:    v_dual_mov_b32 v1, s0 :: v_dual_mov_b32 v2, s1
-; GFX12-SDAG:    flat_atomic_max_num_f32 v[1:2], v0
-; GFX12-SDAG:    s_endpgm
-;
-; GFX12-GISEL-LABEL: flat_atomic_fmax_num_f32_noret_saddr:
-; GFX12-GISEL:  ; %bb.0:
-; GFX12-GISEL:    v_dual_mov_b32 v2, s1 :: v_dual_mov_b32 v1, s0
-; GFX12-GISEL:    flat_atomic_max_num_f32 v[1:2], v0
-; GFX12-GISEL:    s_endpgm
+; GFX12-LABEL: flat_atomic_fmax_num_f32_noret_saddr:
+; GFX12:  ; %bb.0:
+; GFX12:    v_dual_mov_b32 v1, s0 :: v_dual_mov_b32 v2, s1
+; GFX12:    flat_atomic_max_num_f32 v[1:2], v0
+; GFX12:    s_endpgm
 ;
 ; GFX1250-LABEL: flat_atomic_fmax_num_f32_noret_saddr:
 ; GFX1250:  ; %bb.0:
+; GFX1250:    s_mov_b64 s[64:65], 0
+; GFX1250:    v_nop
+; GFX1250:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250:    v_mov_b32_e32 v1, 0
 ; GFX1250:    flat_atomic_max_num_f32 v1, v0, s[0:1]
 ; GFX1250:    s_endpgm
@@ -118,22 +140,18 @@ define amdgpu_ps void @flat_atomic_fmax_num_f32_noret_saddr(ptr inreg %ptr, floa
 }
 
 define amdgpu_ps float @flat_atomic_fmin_num_f32_rtn_saddr(ptr inreg %ptr, float %data) {
-; GFX12-SDAG-LABEL: flat_atomic_fmin_num_f32_rtn_saddr:
-; GFX12-SDAG:  ; %bb.0:
-; GFX12-SDAG:    v_dual_mov_b32 v1, s0 :: v_dual_mov_b32 v2, s1
-; GFX12-SDAG:    flat_atomic_min_num_f32 v0, v[1:2], v0 th:TH_ATOMIC_RETURN
-; GFX12-SDAG:    s_wait_loadcnt_dscnt 0x0
-; GFX12-SDAG:    ; return to shader part epilog
-;
-; GFX12-GISEL-LABEL: flat_atomic_fmin_num_f32_rtn_saddr:
-; GFX12-GISEL:  ; %bb.0:
-; GFX12-GISEL:    v_dual_mov_b32 v2, s1 :: v_dual_mov_b32 v1, s0
-; GFX12-GISEL:    flat_atomic_min_num_f32 v0, v[1:2], v0 th:TH_ATOMIC_RETURN
-; GFX12-GISEL:    s_wait_loadcnt_dscnt 0x0
-; GFX12-GISEL:    ; return to shader part epilog
+; GFX12-LABEL: flat_atomic_fmin_num_f32_rtn_saddr:
+; GFX12:  ; %bb.0:
+; GFX12:    v_dual_mov_b32 v1, s0 :: v_dual_mov_b32 v2, s1
+; GFX12:    flat_atomic_min_num_f32 v0, v[1:2], v0 th:TH_ATOMIC_RETURN
+; GFX12:    s_wait_loadcnt_dscnt 0x0
+; GFX12:    ; return to shader part epilog
 ;
 ; GFX1250-LABEL: flat_atomic_fmin_num_f32_rtn_saddr:
 ; GFX1250:  ; %bb.0:
+; GFX1250:    s_mov_b64 s[64:65], 0
+; GFX1250:    v_nop
+; GFX1250:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250:    v_mov_b32_e32 v1, 0
 ; GFX1250:    flat_atomic_min_num_f32 v0, v1, v0, s[0:1] th:TH_ATOMIC_RETURN
 ; GFX1250:    s_wait_loadcnt_dscnt 0x0
@@ -143,22 +161,18 @@ define amdgpu_ps float @flat_atomic_fmin_num_f32_rtn_saddr(ptr inreg %ptr, float
 }
 
 define amdgpu_ps float @flat_atomic_fmax_num_f32_rtn_saddr(ptr inreg %ptr, float %data) {
-; GFX12-SDAG-LABEL: flat_atomic_fmax_num_f32_rtn_saddr:
-; GFX12-SDAG:  ; %bb.0:
-; GFX12-SDAG:    v_dual_mov_b32 v1, s0 :: v_dual_mov_b32 v2, s1
-; GFX12-SDAG:    flat_atomic_max_num_f32 v0, v[1:2], v0 th:TH_ATOMIC_RETURN
-; GFX12-SDAG:    s_wait_loadcnt_dscnt 0x0
-; GFX12-SDAG:    ; return to shader part epilog
-;
-; GFX12-GISEL-LABEL: flat_atomic_fmax_num_f32_rtn_saddr:
-; GFX12-GISEL:  ; %bb.0:
-; GFX12-GISEL:    v_dual_mov_b32 v2, s1 :: v_dual_mov_b32 v1, s0
-; GFX12-GISEL:    flat_atomic_max_num_f32 v0, v[1:2], v0 th:TH_ATOMIC_RETURN
-; GFX12-GISEL:    s_wait_loadcnt_dscnt 0x0
-; GFX12-GISEL:    ; return to shader part epilog
+; GFX12-LABEL: flat_atomic_fmax_num_f32_rtn_saddr:
+; GFX12:  ; %bb.0:
+; GFX12:    v_dual_mov_b32 v1, s0 :: v_dual_mov_b32 v2, s1
+; GFX12:    flat_atomic_max_num_f32 v0, v[1:2], v0 th:TH_ATOMIC_RETURN
+; GFX12:    s_wait_loadcnt_dscnt 0x0
+; GFX12:    ; return to shader part epilog
 ;
 ; GFX1250-LABEL: flat_atomic_fmax_num_f32_rtn_saddr:
 ; GFX1250:  ; %bb.0:
+; GFX1250:    s_mov_b64 s[64:65], 0
+; GFX1250:    v_nop
+; GFX1250:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250:    v_mov_b32_e32 v1, 0
 ; GFX1250:    flat_atomic_max_num_f32 v0, v1, v0, s[0:1] th:TH_ATOMIC_RETURN
 ; GFX1250:    s_wait_loadcnt_dscnt 0x0
@@ -166,3 +180,7 @@ define amdgpu_ps float @flat_atomic_fmax_num_f32_rtn_saddr(ptr inreg %ptr, float
   %ret = call float @llvm.amdgcn.flat.atomic.fmax.num.f32.p1.f32(ptr %ptr, float %data)
   ret float %ret
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; GCN: {{.*}}
+; GFX12-GISEL: {{.*}}
+; GFX12-SDAG: {{.*}}

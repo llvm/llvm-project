@@ -214,8 +214,8 @@ define amdgpu_kernel void @s_uint_to_fp_v4i64_to_v4f64(ptr addrspace(1) %out, <4
 ; SI-NEXT:    v_add_f64 v[6:7], v[6:7], v[4:5]
 ; SI-NEXT:    v_add_f64 v[4:5], v[8:9], v[12:13]
 ; SI-NEXT:    s_addc_u32 s1, s9, 0
-; SI-NEXT:    v_mov_b32_e32 v9, s1
 ; SI-NEXT:    v_mov_b32_e32 v8, s0
+; SI-NEXT:    v_mov_b32_e32 v9, s1
 ; SI-NEXT:    flat_store_dwordx4 v[8:9], v[4:7]
 ; SI-NEXT:    s_nop 0
 ; SI-NEXT:    v_mov_b32_e32 v4, s8
@@ -249,8 +249,8 @@ define amdgpu_kernel void @s_uint_to_fp_v4i64_to_v4f64(ptr addrspace(1) %out, <4
 ; VI-NEXT:    v_add_f64 v[0:1], v[10:11], v[14:15]
 ; VI-NEXT:    s_add_u32 s0, s8, 16
 ; VI-NEXT:    s_addc_u32 s1, s9, 0
-; VI-NEXT:    v_mov_b32_e32 v11, s1
 ; VI-NEXT:    v_mov_b32_e32 v10, s0
+; VI-NEXT:    v_mov_b32_e32 v11, s1
 ; VI-NEXT:    v_mov_b32_e32 v8, s8
 ; VI-NEXT:    v_mov_b32_e32 v9, s9
 ; VI-NEXT:    flat_store_dwordx4 v[10:11], v[4:7]
@@ -374,8 +374,8 @@ define amdgpu_kernel void @s_uint_to_fp_v4i32_to_v4f64(ptr addrspace(1) %out, <4
 ; SI-NEXT:    v_cvt_f64_u32_e32 v[0:1], s0
 ; SI-NEXT:    s_add_u32 s0, s4, 16
 ; SI-NEXT:    s_addc_u32 s1, s5, 0
-; SI-NEXT:    v_mov_b32_e32 v9, s1
 ; SI-NEXT:    v_mov_b32_e32 v8, s0
+; SI-NEXT:    v_mov_b32_e32 v9, s1
 ; SI-NEXT:    flat_store_dwordx4 v[8:9], v[4:7]
 ; SI-NEXT:    s_nop 0
 ; SI-NEXT:    v_mov_b32_e32 v4, s4
@@ -397,8 +397,8 @@ define amdgpu_kernel void @s_uint_to_fp_v4i32_to_v4f64(ptr addrspace(1) %out, <4
 ; VI-NEXT:    v_cvt_f64_u32_e32 v[0:1], s0
 ; VI-NEXT:    s_add_u32 s0, s4, 16
 ; VI-NEXT:    s_addc_u32 s1, s5, 0
-; VI-NEXT:    v_mov_b32_e32 v9, s1
 ; VI-NEXT:    v_mov_b32_e32 v8, s0
+; VI-NEXT:    v_mov_b32_e32 v9, s1
 ; VI-NEXT:    flat_store_dwordx4 v[8:9], v[4:7]
 ; VI-NEXT:    s_nop 0
 ; VI-NEXT:    v_mov_b32_e32 v4, s4

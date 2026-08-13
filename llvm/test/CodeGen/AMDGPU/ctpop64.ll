@@ -277,16 +277,16 @@ define amdgpu_kernel void @s_ctpop_v4i64(ptr addrspace(1) noalias %out, <4 x i64
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    s_load_b256 s[8:15], s[4:5], 0x44
-; GFX12-NEXT:    s_load_b64 s[4:5], s[4:5], 0x24
+; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX12-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_bcnt1_i32_b64 s0, s[8:9]
-; GFX12-NEXT:    s_bcnt1_i32_b64 s1, s[10:11]
-; GFX12-NEXT:    s_bcnt1_i32_b64 s2, s[12:13]
-; GFX12-NEXT:    s_bcnt1_i32_b64 s3, s[14:15]
-; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX12-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5]
+; GFX12-NEXT:    s_bcnt1_i32_b64 s2, s[8:9]
+; GFX12-NEXT:    s_bcnt1_i32_b64 s3, s[10:11]
+; GFX12-NEXT:    s_bcnt1_i32_b64 s4, s[12:13]
+; GFX12-NEXT:    s_bcnt1_i32_b64 s5, s[14:15]
+; GFX12-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
+; GFX12-NEXT:    v_dual_mov_b32 v2, s4 :: v_dual_mov_b32 v3, s5
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
 ; GFX12-NEXT:    s_endpgm
   %ctpop = call <4 x i64> @llvm.ctpop.v4i64(<4 x i64> %val) nounwind readnone
   %truncctpop = trunc <4 x i64> %ctpop to <4 x i32>

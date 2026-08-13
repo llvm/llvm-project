@@ -94,11 +94,11 @@ define amdgpu_kernel void @sext_i32_to_i64_uniform(ptr addrspace(1) %out, i32 %a
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_ashr_i32 s5, s8, 31
-; GCN-NEXT:    s_add_u32 s4, s6, s8
-; GCN-NEXT:    s_addc_u32 s5, s7, s5
-; GCN-NEXT:    v_mov_b32_e32 v0, s4
-; GCN-NEXT:    v_mov_b32_e32 v1, s5
+; GCN-NEXT:    s_ashr_i32 s4, s8, 31
+; GCN-NEXT:    s_add_u32 s5, s6, s8
+; GCN-NEXT:    s_addc_u32 s4, s7, s4
+; GCN-NEXT:    v_mov_b32_e32 v0, s5
+; GCN-NEXT:    v_mov_b32_e32 v1, s4
 ; GCN-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GCN-NEXT:    s_endpgm
   %sext = sext i32 %a to i64

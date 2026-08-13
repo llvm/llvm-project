@@ -705,8 +705,8 @@ define amdgpu_kernel void @s_test_copysign_v3f64(ptr addrspace(1) %out, <3 x dou
 ; VI-NEXT:    s_add_u32 s2, s0, 16
 ; VI-NEXT:    s_addc_u32 s3, s1, 0
 ; VI-NEXT:    v_mov_b32_e32 v4, s12
-; VI-NEXT:    v_mov_b32_e32 v7, s3
 ; VI-NEXT:    v_mov_b32_e32 v6, s2
+; VI-NEXT:    v_mov_b32_e32 v7, s3
 ; VI-NEXT:    flat_store_dwordx2 v[6:7], v[4:5]
 ; VI-NEXT:    v_mov_b32_e32 v0, s8
 ; VI-NEXT:    v_mov_b32_e32 v2, s10
@@ -789,8 +789,8 @@ define amdgpu_kernel void @s_test_copysign_v4f64(ptr addrspace(1) %out, <4 x dou
 ; VI-NEXT:    s_addc_u32 s3, s1, 0
 ; VI-NEXT:    v_mov_b32_e32 v4, s12
 ; VI-NEXT:    v_mov_b32_e32 v6, s14
-; VI-NEXT:    v_mov_b32_e32 v9, s3
 ; VI-NEXT:    v_mov_b32_e32 v8, s2
+; VI-NEXT:    v_mov_b32_e32 v9, s3
 ; VI-NEXT:    flat_store_dwordx4 v[8:9], v[4:7]
 ; VI-NEXT:    v_mov_b32_e32 v0, s8
 ; VI-NEXT:    v_mov_b32_e32 v2, s10

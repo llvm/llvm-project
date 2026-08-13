@@ -335,18 +335,18 @@ define amdgpu_kernel void @test_fmax_v3f32(ptr addrspace(1) %out, <3 x float> %a
 ; GFX12-GISEL-NEXT:    v_max_num_f32_e64 v5, s14, s14
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s3, v1
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s5, v2
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s6, v3
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s7, v4
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s8, v5
-; GFX12-GISEL-NEXT:    s_max_num_f32 s4, s2, s3
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s4, v2
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s5, v3
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s6, v4
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s7, v5
+; GFX12-GISEL-NEXT:    s_max_num_f32 s2, s2, s3
+; GFX12-GISEL-NEXT:    s_max_num_f32 s3, s4, s5
+; GFX12-GISEL-NEXT:    s_max_num_f32 s4, s6, s7
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX12-GISEL-NEXT:    s_mov_b32 s2, -1
-; GFX12-GISEL-NEXT:    s_max_num_f32 s5, s5, s6
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX12-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
-; GFX12-GISEL-NEXT:    s_max_num_f32 s6, s7, s8
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_2)
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v1, s5
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, s6
 ; GFX12-GISEL-NEXT:    buffer_store_b96 v[0:2], off, s[0:3], null
 ; GFX12-GISEL-NEXT:    s_endpgm
   %val = call <3 x float> @llvm.maxnum.v3f32(<3 x float> %a, <3 x float> %b)
@@ -481,20 +481,20 @@ define amdgpu_kernel void @test_fmax_v4f32(ptr addrspace(1) %out, <4 x float> %a
 ; GFX12-GISEL-NEXT:    v_max_num_f32_e64 v7, s15, s15
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s3, v1
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s5, v2
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s6, v3
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s7, v4
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s8, v5
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s9, v6
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s10, v7
-; GFX12-GISEL-NEXT:    s_max_num_f32 s4, s2, s3
-; GFX12-GISEL-NEXT:    s_max_num_f32 s5, s5, s6
-; GFX12-GISEL-NEXT:    s_max_num_f32 s6, s7, s8
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s4, v2
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s5, v3
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s6, v4
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s7, v5
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s8, v6
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s9, v7
+; GFX12-GISEL-NEXT:    s_max_num_f32 s2, s2, s3
+; GFX12-GISEL-NEXT:    s_max_num_f32 s3, s4, s5
+; GFX12-GISEL-NEXT:    s_max_num_f32 s4, s6, s7
+; GFX12-GISEL-NEXT:    s_max_num_f32 s5, s8, s9
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_2)
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v2, s4 :: v_dual_mov_b32 v3, s5
 ; GFX12-GISEL-NEXT:    s_mov_b32 s2, -1
-; GFX12-GISEL-NEXT:    s_max_num_f32 s7, s9, s10
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v1, s5
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v2, s6 :: v_dual_mov_b32 v3, s7
 ; GFX12-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX12-GISEL-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], null
 ; GFX12-GISEL-NEXT:    s_endpgm
@@ -702,33 +702,33 @@ define amdgpu_kernel void @test_fmax_v8f32(ptr addrspace(1) %out, <8 x float> %a
 ; GFX12-GISEL-NEXT:    v_max_num_f32_e64 v15, s23, s23
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s3, v1
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s5, v2
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s6, v3
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s7, v4
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s8, v5
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s9, v6
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s10, v7
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s11, v8
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s12, v9
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s13, v10
-; GFX12-GISEL-NEXT:    s_max_num_f32 s4, s2, s3
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s2, v11
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s3, v12
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s14, v13
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s15, v14
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s16, v15
-; GFX12-GISEL-NEXT:    s_max_num_f32 s5, s5, s6
-; GFX12-GISEL-NEXT:    s_max_num_f32 s6, s7, s8
-; GFX12-GISEL-NEXT:    s_max_num_f32 s7, s9, s10
-; GFX12-GISEL-NEXT:    s_max_num_f32 s8, s11, s12
-; GFX12-GISEL-NEXT:    s_max_num_f32 s9, s13, s2
-; GFX12-GISEL-NEXT:    s_max_num_f32 s10, s3, s14
-; GFX12-GISEL-NEXT:    s_max_num_f32 s11, s15, s16
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v1, s5
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v2, s6 :: v_dual_mov_b32 v3, s7
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s4, v2
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s5, v3
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s6, v4
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s7, v5
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s8, v6
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s9, v7
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s10, v8
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s11, v9
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s12, v10
+; GFX12-GISEL-NEXT:    s_max_num_f32 s2, s2, s3
+; GFX12-GISEL-NEXT:    s_max_num_f32 s3, s4, s5
+; GFX12-GISEL-NEXT:    s_max_num_f32 s4, s6, s7
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s5, v11
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s6, v12
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s7, v13
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s13, v14
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s14, v15
+; GFX12-GISEL-NEXT:    s_max_num_f32 s8, s8, s9
+; GFX12-GISEL-NEXT:    s_max_num_f32 s9, s10, s11
+; GFX12-GISEL-NEXT:    s_max_num_f32 s5, s12, s5
+; GFX12-GISEL-NEXT:    s_max_num_f32 s6, s6, s7
+; GFX12-GISEL-NEXT:    s_max_num_f32 s7, s13, s14
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v4, s8 :: v_dual_mov_b32 v5, s9
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v6, s10 :: v_dual_mov_b32 v7, s11
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v2, s4 :: v_dual_mov_b32 v3, s8
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v4, s9 :: v_dual_mov_b32 v5, s5
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v6, s6 :: v_dual_mov_b32 v7, s7
 ; GFX12-GISEL-NEXT:    s_mov_b32 s2, -1
 ; GFX12-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX12-GISEL-NEXT:    s_clause 0x1
@@ -1068,6 +1068,7 @@ define amdgpu_kernel void @test_fmax_v16f32(ptr addrspace(1) %out, <16 x float> 
 ; GFX12-GISEL-NEXT:    v_max_num_f32_e64 v7, s11, s11
 ; GFX12-GISEL-NEXT:    v_max_num_f32_e64 v8, s40, s40
 ; GFX12-GISEL-NEXT:    v_max_num_f32_e64 v9, s12, s12
+; GFX12-GISEL-NEXT:    v_max_num_f32_e64 v10, s41, s41
 ; GFX12-GISEL-NEXT:    v_max_num_f32_e64 v11, s13, s13
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s3, v1
@@ -1075,80 +1076,79 @@ define amdgpu_kernel void @test_fmax_v16f32(ptr addrspace(1) %out, <16 x float> 
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s5, v3
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s6, v4
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s7, v5
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s11, v6
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s12, v7
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s13, v8
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s24, v9
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s8, v6
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s9, v7
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s10, v8
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s11, v9
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s12, v10
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s13, v11
 ; GFX12-GISEL-NEXT:    v_max_num_f32_e64 v0, s42, s42
 ; GFX12-GISEL-NEXT:    v_max_num_f32_e64 v1, s14, s14
 ; GFX12-GISEL-NEXT:    v_max_num_f32_e64 v2, s43, s43
 ; GFX12-GISEL-NEXT:    v_max_num_f32_e64 v3, s15, s15
 ; GFX12-GISEL-NEXT:    v_max_num_f32_e64 v4, s44, s44
-; GFX12-GISEL-NEXT:    s_max_num_f32 s8, s2, s3
-; GFX12-GISEL-NEXT:    s_max_num_f32 s9, s4, s5
-; GFX12-GISEL-NEXT:    s_max_num_f32 s10, s6, s7
-; GFX12-GISEL-NEXT:    s_max_num_f32 s11, s11, s12
-; GFX12-GISEL-NEXT:    s_max_num_f32 s4, s13, s24
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s3, v1
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s7, v2
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s12, v3
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s13, v4
+; GFX12-GISEL-NEXT:    s_max_num_f32 s2, s2, s3
+; GFX12-GISEL-NEXT:    s_max_num_f32 s3, s4, s5
+; GFX12-GISEL-NEXT:    s_max_num_f32 s4, s6, s7
+; GFX12-GISEL-NEXT:    s_max_num_f32 s5, s8, s9
+; GFX12-GISEL-NEXT:    s_max_num_f32 s6, s10, s11
+; GFX12-GISEL-NEXT:    s_max_num_f32 s7, s12, s13
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s8, v0
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s9, v1
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s10, v2
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s11, v3
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s12, v4
 ; GFX12-GISEL-NEXT:    v_max_num_f32_e64 v0, s16, s16
 ; GFX12-GISEL-NEXT:    v_max_num_f32_e64 v1, s45, s45
 ; GFX12-GISEL-NEXT:    v_max_num_f32_e64 v2, s17, s17
 ; GFX12-GISEL-NEXT:    v_max_num_f32_e64 v3, s46, s46
 ; GFX12-GISEL-NEXT:    v_max_num_f32_e64 v4, s18, s18
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s14, v0
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s15, v1
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s16, v2
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s17, v3
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s18, v4
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s13, v0
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s14, v1
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s15, v2
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s16, v3
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s17, v4
 ; GFX12-GISEL-NEXT:    v_max_num_f32_e64 v0, s47, s47
 ; GFX12-GISEL-NEXT:    v_max_num_f32_e64 v1, s19, s19
 ; GFX12-GISEL-NEXT:    v_max_num_f32_e64 v2, s48, s48
 ; GFX12-GISEL-NEXT:    v_max_num_f32_e64 v3, s20, s20
 ; GFX12-GISEL-NEXT:    v_max_num_f32_e64 v4, s49, s49
-; GFX12-GISEL-NEXT:    v_max_num_f32_e64 v10, s41, s41
-; GFX12-GISEL-NEXT:    s_max_num_f32 s6, s2, s3
-; GFX12-GISEL-NEXT:    s_max_num_f32 s7, s7, s12
-; GFX12-GISEL-NEXT:    s_max_num_f32 s12, s13, s14
-; GFX12-GISEL-NEXT:    s_max_num_f32 s13, s15, s16
-; GFX12-GISEL-NEXT:    s_max_num_f32 s14, s17, s18
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s3, v1
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s16, v2
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s17, v3
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s18, v4
+; GFX12-GISEL-NEXT:    s_max_num_f32 s8, s8, s9
+; GFX12-GISEL-NEXT:    s_max_num_f32 s9, s10, s11
+; GFX12-GISEL-NEXT:    s_max_num_f32 s10, s12, s13
+; GFX12-GISEL-NEXT:    s_max_num_f32 s11, s14, s15
+; GFX12-GISEL-NEXT:    s_max_num_f32 s12, s16, s17
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s13, v0
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s14, v1
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s15, v2
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s16, v3
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s17, v4
 ; GFX12-GISEL-NEXT:    v_max_num_f32_e64 v0, s21, s21
 ; GFX12-GISEL-NEXT:    v_max_num_f32_e64 v1, s50, s50
 ; GFX12-GISEL-NEXT:    v_max_num_f32_e64 v2, s22, s22
 ; GFX12-GISEL-NEXT:    v_max_num_f32_e64 v3, s51, s51
 ; GFX12-GISEL-NEXT:    v_max_num_f32_e64 v4, s23, s23
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s25, v10
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s26, v11
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s19, v0
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s20, v1
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s21, v2
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s22, v3
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s23, v4
-; GFX12-GISEL-NEXT:    s_max_num_f32 s5, s25, s26
-; GFX12-GISEL-NEXT:    s_max_num_f32 s15, s2, s3
-; GFX12-GISEL-NEXT:    s_max_num_f32 s16, s16, s17
-; GFX12-GISEL-NEXT:    s_max_num_f32 s17, s18, s19
-; GFX12-GISEL-NEXT:    s_max_num_f32 s18, s20, s21
-; GFX12-GISEL-NEXT:    s_max_num_f32 s19, s22, s23
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s18, v0
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s19, v1
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s20, v2
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s21, v3
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s22, v4
+; GFX12-GISEL-NEXT:    s_max_num_f32 s13, s13, s14
+; GFX12-GISEL-NEXT:    s_max_num_f32 s14, s15, s16
+; GFX12-GISEL-NEXT:    s_max_num_f32 s15, s17, s18
+; GFX12-GISEL-NEXT:    s_max_num_f32 s16, s19, s20
+; GFX12-GISEL-NEXT:    s_max_num_f32 s17, s21, s22
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v2, s4 :: v_dual_mov_b32 v3, s5
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v4, s6 :: v_dual_mov_b32 v5, s7
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s8 :: v_dual_mov_b32 v1, s9
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v2, s10 :: v_dual_mov_b32 v3, s11
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v4, s4 :: v_dual_mov_b32 v5, s5
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v6, s6 :: v_dual_mov_b32 v7, s7
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v8, s12 :: v_dual_mov_b32 v9, s13
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v10, s14 :: v_dual_mov_b32 v11, s15
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v6, s8 :: v_dual_mov_b32 v7, s9
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v8, s10 :: v_dual_mov_b32 v9, s11
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v10, s12 :: v_dual_mov_b32 v11, s13
 ; GFX12-GISEL-NEXT:    s_mov_b32 s2, -1
 ; GFX12-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v12, s16 :: v_dual_mov_b32 v13, s17
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v14, s18 :: v_dual_mov_b32 v15, s19
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v12, s14 :: v_dual_mov_b32 v13, s15
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v14, s16 :: v_dual_mov_b32 v15, s17
 ; GFX12-GISEL-NEXT:    s_clause 0x3
 ; GFX12-GISEL-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], null
 ; GFX12-GISEL-NEXT:    buffer_store_b128 v[4:7], off, s[0:3], null offset:16

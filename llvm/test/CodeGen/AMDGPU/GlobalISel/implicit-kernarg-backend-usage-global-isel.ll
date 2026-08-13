@@ -23,15 +23,15 @@ define amdgpu_kernel void @addrspacecast(ptr addrspace(5) %ptr.private, ptr addr
 ; GFX8V4-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8V4-NEXT:    s_mov_b32 s2, s0
 ; GFX8V4-NEXT:    s_cmp_lg_u32 s0, -1
-; GFX8V4-NEXT:    s_mov_b32 s0, s1
 ; GFX8V4-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8V4-NEXT:    v_readfirstlane_b32 s3, v0
 ; GFX8V4-NEXT:    s_cselect_b64 s[2:3], s[2:3], 0
-; GFX8V4-NEXT:    s_add_u32 s4, s6, 64
-; GFX8V4-NEXT:    s_addc_u32 s5, s7, 0
-; GFX8V4-NEXT:    v_mov_b32_e32 v0, s4
-; GFX8V4-NEXT:    v_mov_b32_e32 v1, s5
+; GFX8V4-NEXT:    s_add_u32 s0, s6, 64
+; GFX8V4-NEXT:    s_addc_u32 s4, s7, 0
+; GFX8V4-NEXT:    v_mov_b32_e32 v0, s0
+; GFX8V4-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX8V4-NEXT:    flat_load_dword v2, v[0:1]
+; GFX8V4-NEXT:    s_mov_b32 s0, s1
 ; GFX8V4-NEXT:    s_cmp_lg_u32 s1, -1
 ; GFX8V4-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX8V4-NEXT:    v_mov_b32_e32 v1, s3

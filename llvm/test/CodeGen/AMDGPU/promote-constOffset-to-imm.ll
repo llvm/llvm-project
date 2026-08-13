@@ -2582,12 +2582,12 @@ entry:
 define amdgpu_kernel void @negativeoffsetnullptr(ptr %buffer) {
 ; GFX8-LABEL: negativeoffsetnullptr:
 ; GFX8:       ; %bb.0: ; %entry
-; GFX8-NEXT:    s_load_dword s1, s[4:5], 0xec
-; GFX8-NEXT:    s_add_u32 s0, 0, -1
+; GFX8-NEXT:    s_load_dword s0, s[4:5], 0xec
+; GFX8-NEXT:    s_add_u32 s1, 0, -1
+; GFX8-NEXT:    v_mov_b32_e32 v0, s1
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-NEXT:    s_addc_u32 s1, s1, -1
-; GFX8-NEXT:    v_mov_b32_e32 v0, s0
-; GFX8-NEXT:    v_mov_b32_e32 v1, s1
+; GFX8-NEXT:    s_addc_u32 s0, s0, -1
+; GFX8-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX8-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GFX8-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)

@@ -3577,12 +3577,12 @@ define amdgpu_kernel void @uniform_value_i64(ptr addrspace(1) %out, i64 %in) #0 
 ; GFX6DAGISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6DAGISEL-NEXT:    s_mov_b32 s4, s0
 ; GFX6DAGISEL-NEXT:    s_bcnt1_i32_b64 s0, s[8:9]
+; GFX6DAGISEL-NEXT:    s_and_b32 s0, s0, 1
 ; GFX6DAGISEL-NEXT:    s_mov_b32 s5, s1
-; GFX6DAGISEL-NEXT:    s_and_b32 s1, s0, 1
-; GFX6DAGISEL-NEXT:    s_mul_i32 s0, s2, s1
-; GFX6DAGISEL-NEXT:    s_mul_i32 s1, s3, s1
-; GFX6DAGISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GFX6DAGISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX6DAGISEL-NEXT:    s_mul_i32 s1, s2, s0
+; GFX6DAGISEL-NEXT:    s_mul_i32 s0, s3, s0
+; GFX6DAGISEL-NEXT:    v_mov_b32_e32 v0, s1
+; GFX6DAGISEL-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX6DAGISEL-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GFX6DAGISEL-NEXT:    s_endpgm
 ;
@@ -3595,12 +3595,12 @@ define amdgpu_kernel void @uniform_value_i64(ptr addrspace(1) %out, i64 %in) #0 
 ; GFX7DAGISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7DAGISEL-NEXT:    s_mov_b32 s4, s0
 ; GFX7DAGISEL-NEXT:    s_bcnt1_i32_b64 s0, s[8:9]
+; GFX7DAGISEL-NEXT:    s_and_b32 s0, s0, 1
 ; GFX7DAGISEL-NEXT:    s_mov_b32 s5, s1
-; GFX7DAGISEL-NEXT:    s_and_b32 s1, s0, 1
-; GFX7DAGISEL-NEXT:    s_mul_i32 s0, s2, s1
-; GFX7DAGISEL-NEXT:    s_mul_i32 s1, s3, s1
-; GFX7DAGISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GFX7DAGISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX7DAGISEL-NEXT:    s_mul_i32 s1, s2, s0
+; GFX7DAGISEL-NEXT:    s_mul_i32 s0, s3, s0
+; GFX7DAGISEL-NEXT:    v_mov_b32_e32 v0, s1
+; GFX7DAGISEL-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX7DAGISEL-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GFX7DAGISEL-NEXT:    s_endpgm
 ;
@@ -3615,8 +3615,8 @@ define amdgpu_kernel void @uniform_value_i64(ptr addrspace(1) %out, i64 %in) #0 
 ; GFX8DAGISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8DAGISEL-NEXT:    s_mul_i32 s0, s2, s4
 ; GFX8DAGISEL-NEXT:    s_mul_i32 s1, s3, s4
-; GFX8DAGISEL-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX8DAGISEL-NEXT:    v_mov_b32_e32 v2, s0
+; GFX8DAGISEL-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX8DAGISEL-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; GFX8DAGISEL-NEXT:    s_endpgm
 ;
