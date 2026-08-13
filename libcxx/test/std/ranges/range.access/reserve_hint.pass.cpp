@@ -34,27 +34,27 @@ struct SizedSentinelRange {
   constexpr auto end() { return sized_sentinel<int*>(data_ + 42); }
 };
 
-struct HasSizeMember {
+struct SizeMember {
   constexpr std::size_t size() { return 42; }
 };
 
-struct HasSizeFunction {
-  friend constexpr std::size_t size(HasSizeFunction) { return 42; }
+struct SizeFunction {
+  friend constexpr std::size_t size(SizeFunction) { return 42; }
 };
 
-struct HasReserveHintMember {
+struct ReserveHintMember {
   constexpr std::size_t reserve_hint() { return 42; }
 };
 
-struct HasReserveHintFunction {
-  friend constexpr std::size_t reserve_hint(HasReserveHintFunction) { return 42; }
+struct ReserveHintFunction {
+  friend constexpr std::size_t reserve_hint(ReserveHintFunction) { return 42; }
 };
 
-struct HasReserveHintMemberBool {
+struct ReserveHintMemberBool {
   constexpr bool reserve_hint() { return false; }
 };
 
-static_assert(!std::is_invocable_v<RangeReserveHintT, HasReserveHintMemberBool>);
+static_assert(!std::is_invocable_v<RangeReserveHintT, ReserveHintMemberBool>);
 
 static_assert(std::ranges::reserve_hint(bounded_array) == 42);
 ASSERT_SAME_TYPE(decltype(std::ranges::reserve_hint(bounded_array)), std::size_t);
@@ -69,33 +69,33 @@ bool constexpr test_sized_sentinel_range() {
   return true;
 }
 
-static_assert(std::ranges::reserve_hint(HasSizeMember{}) == 42);
-ASSERT_SAME_TYPE(decltype(std::ranges::reserve_hint(HasSizeMember{})), std::size_t);
+static_assert(std::ranges::reserve_hint(SizeMember{}) == 42);
+ASSERT_SAME_TYPE(decltype(std::ranges::reserve_hint(SizeMember{})), std::size_t);
 
-static_assert(std::ranges::reserve_hint(HasSizeFunction{}) == 42);
-ASSERT_SAME_TYPE(decltype(std::ranges::reserve_hint(HasSizeFunction{})), std::size_t);
+static_assert(std::ranges::reserve_hint(SizeFunction{}) == 42);
+ASSERT_SAME_TYPE(decltype(std::ranges::reserve_hint(SizeFunction{})), std::size_t);
 
-static_assert(std::ranges::reserve_hint(HasReserveHintMember{}) == 42);
-ASSERT_SAME_TYPE(decltype(std::ranges::reserve_hint(HasReserveHintMember{})), std::size_t);
+static_assert(std::ranges::reserve_hint(ReserveHintMember{}) == 42);
+ASSERT_SAME_TYPE(decltype(std::ranges::reserve_hint(ReserveHintMember{})), std::size_t);
 
-static_assert(std::ranges::reserve_hint(HasReserveHintFunction{}) == 42);
-ASSERT_SAME_TYPE(decltype(std::ranges::reserve_hint(HasReserveHintFunction{})), std::size_t);
+static_assert(std::ranges::reserve_hint(ReserveHintFunction{}) == 42);
+ASSERT_SAME_TYPE(decltype(std::ranges::reserve_hint(ReserveHintFunction{})), std::size_t);
 
 // test that the order of preference is ranges::size, then member reserve_hint,
 // then function reserve_hint
-struct HasSizeAndReserveHint {
+struct SizeAndReserveHint {
   constexpr std::size_t size() { return 42; }
   constexpr std::size_t reserve_hint() { return 0; }
-  friend constexpr std::size_t reserve_hint(HasSizeAndReserveHint) { return 0; }
+  friend constexpr std::size_t reserve_hint(SizeAndReserveHint) { return 0; }
 };
 
-struct HasReserveHintMemberAndFunction {
+struct ReserveHintMemberAndFunction {
   constexpr std::size_t reserve_hint() { return 42; }
-  friend constexpr std::size_t reserve_hint(HasReserveHintMemberAndFunction) { return 0; }
+  friend constexpr std::size_t reserve_hint(ReserveHintMemberAndFunction) { return 0; }
 };
 
-static_assert(std::ranges::reserve_hint(HasSizeAndReserveHint{}) == 42);
-static_assert(std::ranges::reserve_hint(HasReserveHintMemberAndFunction{}) == 42);
+static_assert(std::ranges::reserve_hint(SizeAndReserveHint{}) == 42);
+static_assert(std::ranges::reserve_hint(ReserveHintMemberAndFunction{}) == 42);
 
 int main(int, char**) {
   test_sized_sentinel_range();

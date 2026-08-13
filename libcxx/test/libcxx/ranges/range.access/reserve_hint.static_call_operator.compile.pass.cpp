@@ -18,24 +18,24 @@ using RangeReserveHintT = decltype(std::ranges::reserve_hint);
 
 extern int bounded_array[42];
 
-struct HasSizeMember {
+struct SizeMember {
   constexpr std::size_t size() { return 42; }
 };
 
-struct HasSizeFunction {
-  friend constexpr std::size_t size(HasSizeFunction) { return 42; }
+struct SizeFunction {
+  friend constexpr std::size_t size(SizeFunction) { return 42; }
 };
 
-struct HasReserveHintMember {
+struct ReserveHintMember {
   constexpr std::size_t reserve_hint() { return 42; }
 };
 
-struct HasReserveHintFunction {
-  friend constexpr std::size_t reserve_hint(HasReserveHintFunction) { return 42; }
+struct ReserveHintFunction {
+  friend constexpr std::size_t reserve_hint(ReserveHintFunction) { return 42; }
 };
 
 static_assert(RangeReserveHintT::operator()(bounded_array) == 42);
-static_assert(RangeReserveHintT::operator()(HasSizeMember{}) == 42);
-static_assert(RangeReserveHintT::operator()(HasSizeFunction{}) == 42);
-static_assert(RangeReserveHintT::operator()(HasReserveHintMember{}) == 42);
-static_assert(RangeReserveHintT::operator()(HasReserveHintFunction{}) == 42);
+static_assert(RangeReserveHintT::operator()(SizeMember{}) == 42);
+static_assert(RangeReserveHintT::operator()(SizeFunction{}) == 42);
+static_assert(RangeReserveHintT::operator()(ReserveHintMember{}) == 42);
+static_assert(RangeReserveHintT::operator()(ReserveHintFunction{}) == 42);
