@@ -50,7 +50,7 @@ int foo() {
 
 And a compilation database:
 
-```bash
+```json
 [
   {
     "directory": "/path/to/your/project",
@@ -69,7 +69,7 @@ We'd like to analyze `main.cpp` and discover the division by zero bug.
 In order to be able to inline the definition of `foo` from `foo.cpp` first we have to generate the `AST` (or `PCH`) file
 of `foo.cpp`:
 
-```bash
+```console
 $ pwd $ /path/to/your/project
 $ clang++ -emit-ast -o foo.cpp.ast foo.cpp
 $ # Check that the .ast file is generated:
@@ -81,7 +81,7 @@ $
 The next step is to create a CTU index file which holds the `USR` name and location of external definitions in the
 source files in format `<USR-Length>:<USR> <File-Path>`:
 
-```bash
+```console
 $ clang-extdef-mapping -p . foo.cpp.ast
 9:c:@F@foo# /path/to/your/project/foo.cpp.ast
 $ clang-extdef-mapping -p . foo.cpp.ast > externalDefMap.txt
@@ -90,7 +90,7 @@ $ clang-extdef-mapping -p . foo.cpp.ast > externalDefMap.txt
 Now everything is available for the CTU analysis.
 We have to feed Clang with CTU specific extra arguments:
 
-```bash
+```console
 $ pwd
 /path/to/your/project
 $ clang++ --analyze \
@@ -116,7 +116,7 @@ This manual procedure is error-prone and not scalable, therefore to analyze real
 The [CodeChecker](https://github.com/Ericsson/codechecker) project fully supports automated CTU analysis with Clang.
 Once we have set up the `PATH` environment variable and we activated the python `venv` then it is all it takes:
 
-```bash
+```console
 $ CodeChecker analyze --ctu --ctu-ast-mode load-from-pch compile_commands.json -o reports
 $ ls -F
 compile_commands.json  foo.cpp  foo.cpp.ast  main.cpp  reports/
@@ -136,7 +136,7 @@ $
 The `plist` files contain the results of the analysis, which may be viewed with the regular analysis tools.
 E.g. one may use `CodeChecker parse` to view the results in command line:
 
-```bash
+```console
 $ CodeChecker parse reports
 [HIGH] /home/egbomrt/ctu_mini_raw_project/main.cpp:5:12: Division by zero [core.DivideZero]
   return 3 / foo();
@@ -163,7 +163,7 @@ Total number of reports: 1
 
 Or we can use `CodeChecker parse -e html` to export the results into HTML format:
 
-```bash
+```console
 $ CodeChecker parse -e html -o html_out reports
 $ firefox html_out/index.html
 ```
@@ -175,7 +175,7 @@ We actively develop CTU with CodeChecker as the driver for this feature, `scan-b
 
 Example usage of scan-build-py:
 
-```bash
+```console
 $ /your/path/to/llvm-project/clang/tools/scan-build-py/bin/analyze-build --ctu
 analyze-build: Run 'scan-view /tmp/scan-build-2019-07-17-17-53-33-810365-7fqgWk' to examine bug reports.
 $ /your/path/to/llvm-project/clang/tools/scan-view/bin/scan-view /tmp/scan-build-2019-07-17-17-53-33-810365-7fqgWk
@@ -227,7 +227,7 @@ int foo() {
 
 The compilation database:
 
-```bash
+```json
 [
   {
     "directory": "/path/to/your/project",
@@ -244,7 +244,7 @@ The compilation database:
 
 The `invocation list`:
 
-```bash
+```yaml
 "/path/to/your/project/foo.cpp":
   - "clang++"
   - "-c"
@@ -264,7 +264,7 @@ We'd like to analyze `main.cpp` and discover the division by zero bug.
 As we are using On-demand mode, we only need to create a CTU index file which holds the `USR` name and location of
 external definitions in the source files in format `<USR-Length>:<USR> <File-Path>`:
 
-```bash
+```console
 $ clang-extdef-mapping -p . foo.cpp
 9:c:@F@foo# /path/to/your/project/foo.cpp
 $ clang-extdef-mapping -p . foo.cpp > externalDefMap.txt
@@ -273,7 +273,7 @@ $ clang-extdef-mapping -p . foo.cpp > externalDefMap.txt
 Now everything is available for the CTU analysis.
 We have to feed Clang with CTU specific extra arguments:
 
-```bash
+```console
 $ pwd
 /path/to/your/project
 $ clang++ --analyze \
@@ -300,7 +300,7 @@ This manual procedure is error-prone and not scalable, therefore to analyze real
 The [CodeChecker](https://github.com/Ericsson/codechecker) project fully supports automated CTU analysis with Clang.
 Once we have set up the `PATH` environment variable and we activated the python `venv` then it is all it takes:
 
-```bash
+```console
 $ CodeChecker analyze --ctu compile_commands.json -o reports
 $ ls -F
 compile_commands.json  foo.cpp main.cpp  reports/
@@ -320,7 +320,7 @@ $
 The `plist` files contain the results of the analysis, which may be viewed with the regular analysis tools.
 E.g. one may use `CodeChecker parse` to view the results in command line:
 
-```bash
+```console
 $ CodeChecker parse reports
 [HIGH] /home/egbomrt/ctu_mini_raw_project/main.cpp:5:12: Division by zero [core.DivideZero]
   return 3 / foo();
@@ -347,7 +347,7 @@ Total number of reports: 1
 
 Or we can use `CodeChecker parse -e html` to export the results into HTML format:
 
-```bash
+```console
 $ CodeChecker parse -e html -o html_out reports
 $ firefox html_out/index.html
 ```
@@ -358,4 +358,3 @@ We actively develop CTU with CodeChecker as the driver for feature, `scan-build-
 `scan-build-py` has various errors and issues, expect it to work only with the very basic projects only.
 
 Currently On-demand analysis is not supported with `scan-build-py`.
-

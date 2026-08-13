@@ -19,11 +19,10 @@ When it succeeds, it will multiplex the handlers of the ASTConsumer to every sum
 
 ### Global Registries
 
-The framework uses [llvm::Registry\<>](https://llvm.org/doxygen/classllvm_1_1Registry.html)
+The framework uses [llvm::Registry<>](https://llvm.org/doxygen/classllvm_1_1Registry.html)
 as an extension point for adding new summary analyses or serialization formats.
 Each entry in the *registry* holds a name, a description and a pointer to a constructor.
 Because static linking can discard unreferenced registration objects, the framework
 uses {doc}`ForceLinkerHeaders` to ensure they are retained.
 
 For details on how to add new extractors and formats, see {doc}`HowToExtend`.
-

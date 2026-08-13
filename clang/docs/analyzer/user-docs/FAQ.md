@@ -11,7 +11,7 @@ Q: How do I tell the analyzer that I do not want the bug being reported here sin
 ```{image} ../images/example_custom_assert.png
 ```
 
-You can tell the analyzer that this path is unreachable by teaching it about your [custom assertion handlers](Annotations.html#custom-assertion-handlers). For example, you can modify the code segment as following:
+You can tell the analyzer that this path is unreachable by teaching it about your [custom assertion handlers](Annotations.md#custom-assertion-handlers). For example, you can modify the code segment as following:
 
 ```c
 void customAssert() __attribute__((analyzer_noreturn));
@@ -104,7 +104,7 @@ If your class only uses an instance variable for part of its lifetime, it may ma
 
 ## Deciding Nullability
 
-Q: How do I decide whether a method's return type should be \_Nullable or \_Nonnull?
+Q: How do I decide whether a method's return type should be `_Nullable` or `_Nonnull`?
 
 Depending on the implementation of the method, this puts you in one of five situations:
 
@@ -120,7 +120,7 @@ In (2) the method should be marked `_Nullable`.
 
 In (3) you should probably annotate the method `_Nonnull`. Why? Because no callers will actually check for nil, given that they can't do anything about the situation and don't know what went wrong. At this point things have gone so poorly that there's basically no way to recover.
 
-The least happy case is (4) because the resulting program will almost certainly either crash or just silently do the wrong thing. If this is a new method or you control the callers, you can use `NSParameterAssert()` (or the equivalent) to check the precondition and remove the nil return. But if you don't control the callers and they rely on this behavior, you should return mark the method `_Nonnull` and return nil cast to \_Nonnull anyway.
+The least happy case is (4) because the resulting program will almost certainly either crash or just silently do the wrong thing. If this is a new method or you control the callers, you can use `NSParameterAssert()` (or the equivalent) to check the precondition and remove the nil return. But if you don't control the callers and they rely on this behavior, you should return mark the method `_Nonnull` and return nil cast to `_Nonnull` anyway.
 
 If you're in (5), document it, then figure out if you're now in (2), (3), or (4).
 
@@ -161,7 +161,7 @@ By adding `assert(length > 0)` in the beginning of the function, you tell the an
 
 Q: How can I suppress a specific analyzer warning?
 
-When you encounter an analyzer bug/false positive, check if it's one of the issues discussed above or if the analyzer [annotations](Annotations.html#custom-assertion-handlers) can resolve the issue by helping the static analyzer understand the code better. Second, please [report it](FilingBugs.html) to help us improve user experience.
+When you encounter an analyzer bug/false positive, check if it's one of the issues discussed above or if the analyzer [annotations](Annotations.md#custom-assertion-handlers) can resolve the issue by helping the static analyzer understand the code better. Second, please [report it](FilingBugs.md) to help us improve user experience.
 
 Sometimes there's really no "good" way to eliminate the issue. In such cases you can "silence" it directly by annotating the problematic line of code with the help of Clang attribute 'suppress':
 
@@ -191,7 +191,7 @@ int bar(bool coin_flip) {
 }
 ```
 
-(exclude-code)=
+(exclude_code)=
 
 ## Excluding Code from Analysis
 
@@ -206,4 +206,3 @@ When the static analyzer is using clang to parse source files, it implicitly def
 ```
 
 This usage is discouraged because it makes the code dead to the analyzer from now on. Instead, we prefer that users file bugs against the analyzer when it flags false positives.
-

@@ -39,7 +39,7 @@ these are logically unsound.
 
 Moreover, if the pedantic mode is activated by
 `-analyzer-config core.BitwiseShift:Pedantic=true`, then this checker also
-reports situations where the \_left\_ operand of a shift operator is negative or
+reports situations where the *left* operand of a shift operator is negative or
 overflow occurs during the right shift of a signed value. (Most compilers
 handle these predictably, but the C standard and the C++ standards before C++20
 say that they're undefined behavior. In the C++20 standard these constructs are
@@ -690,7 +690,7 @@ Checkers (mostly Objective C) that warn for null pointer passing and dereferenci
 
 #### nullability.NullPassedToNonnull (ObjC)
 
-Warns when a null pointer is passed to a pointer which has a \_Nonnull type.
+Warns when a null pointer is passed to a pointer which has a `_Nonnull` type.
 
 ```objc
 if (name != nil)
@@ -703,7 +703,7 @@ NSString *greeting = [@"Hello " stringByAppendingString:name];
 
 #### nullability.NullReturnedFromNonnull (C, C++, ObjC)
 
-Warns when a null pointer is returned from a function that has \_Nonnull return type.
+Warns when a null pointer is returned from a function that has `_Nonnull` return type.
 
 ```objc
 - (nonnull id)firstChild {
@@ -758,7 +758,7 @@ void updateNextData(struct LinkedList *list, int newData) {
 
 #### nullability.NullablePassedToNonnull (ObjC)
 
-Warns when a nullable pointer is passed to a pointer which has a \_Nonnull type.
+Warns when a nullable pointer is passed to a pointer which has a `_Nonnull` type.
 
 ```objc
 typedef struct Dummy { int val; } Dummy;
@@ -775,7 +775,7 @@ void test() {
 
 #### nullability.NullableReturnedFromNonnull (ObjC)
 
-Warns when a nullable pointer is returned from a function that has \_Nonnull return type.
+Warns when a nullable pointer is returned from a function that has `_Nonnull` return type.
 
 (optin-checkers)=
 
@@ -1318,7 +1318,7 @@ One can get rid of this superfluous warning by telling by specifying the
 sanitation functions in the taint configuration file (see
 {doc}`user-docs/TaintAnalysisConfiguration`).
 
-```YAML
+```yaml
 Filters:
 - Name: sanitizeFileName
   Args: [0]
@@ -1368,7 +1368,7 @@ Similarly to the previous example, you need to
 define a `Filter` function in a `YAML` configuration file
 and add the `csa_mark_sanitized` function.
 
-```YAML
+```yaml
 Filters:
 - Name: csa_mark_sanitized
   Args: [0]
@@ -2044,7 +2044,7 @@ These are common options that affect multiple checkers in the `unix` group.
   and deallocations (like `malloc` or `free`) are marked with
   `ownership_holds`, `ownership_takes` and `ownership_returns`
   attributes. For more information see
-  [Attributes in Clang](../AttributeReference.html#ownership-holds-ownership-returns-ownership-takes-clang-static-analyzer).
+  [Attributes in Clang](../AttributeReference.md#ownership-holds-ownership-returns-ownership-takes-clang-static-analyzer).
   Default value is `false`.
 
 - `unix.DynamicMemoryModeling:ModelAllocationFailure`
@@ -2251,7 +2251,7 @@ Custom allocation/deallocation functions can be defined using
 {ref}`ownership attributes<analyzer-ownership-attrs>`.
 
 ```{literalinclude} checkers/mismatched_deallocator_example.cpp
-:language: c
+:language: cpp
 ```
 
 (unix-vfork)=
@@ -2462,7 +2462,7 @@ The `ModelPOSIX` option controls if functions from the POSIX standard are
 recognized by the checker.
 
 With `ModelPOSIX=true`, many POSIX functions are modeled according to the
-[POSIX standard]. This includes ranges of parameters and possible return
+[POSIX standard](https://pubs.opengroup.org/onlinepubs/9699919799/). This includes ranges of parameters and possible return
 values. Furthermore the behavior related to `errno` in the POSIX case is
 often that `errno` is set only if a function call fails, and it becomes
 undefined after a successful function call.
@@ -2924,7 +2924,7 @@ void test() {
 
 #### osx.coreFoundation.CFError (C)
 
-Check usage of CFErrorRef\* parameters
+Check usage of `CFErrorRef *` parameters
 
 ```c
 void test(CFErrorRef *error) {
@@ -4090,7 +4090,7 @@ Here are some examples of cases that we consider incorrect use of RetainPtr cons
 
 ## Debug Checkers
 
-(debug-checkers-1)=
+(debug-checkers)=
 
 ### debug
 
@@ -4180,4 +4180,3 @@ View Call Graph using GraphViz.
 #### debug.ViewExplodedGraph
 
 View Exploded Graphs using GraphViz.
-

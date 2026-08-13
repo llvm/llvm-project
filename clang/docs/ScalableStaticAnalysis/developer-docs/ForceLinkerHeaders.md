@@ -8,7 +8,7 @@ The purpose of this documentation is to give context for upcoming reviews.
 
 ## The problem
 
-SSAF uses [llvm::Registry\<>](https://llvm.org/doxygen/classllvm_1_1Registry.html)
+SSAF uses [llvm::Registry<>](https://llvm.org/doxygen/classllvm_1_1Registry.html)
 for decentralized registration of summary extractors and serialization formats.
 Each registration is a file-scope static object whose constructor adds an entry
 to the global registry:
@@ -149,4 +149,3 @@ void initializeSSAFRegistrations() {
   the decoupled-registration benefit of `llvm::Registry`.
 - Adding a new extractor or format requires modifying a central file, which
   increases merge-conflict risk for downstream users.
-

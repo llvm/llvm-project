@@ -127,7 +127,7 @@ An entry under `Filters` is a [YAML](http://llvm.org/docs/YamlIO.html#introducti
 The following keys are optional:
 : - `Scope` is a string that specifies the prefix of the function's name in its fully qualified name. This option restricts the set of matching function calls. It can encode not only namespaces but struct/class names as well to match member functions.
 
-  (clangsa-taint-propagation-details)=
+(clangsa-taint-propagation-details)=
 
 ### Propagation syntax and semantics
 
@@ -163,4 +163,3 @@ An entry under `Sinks` is a [YAML](http://llvm.org/docs/YamlIO.html#introduction
 
 The following keys are optional:
 : - `Scope` is a string that specifies the prefix of the function's name in its fully qualified name. This option restricts the set of matching function calls.
-

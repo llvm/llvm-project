@@ -41,7 +41,7 @@ On the other hand, new checks can be experimental, with results of variable qual
 
 Starting with analyzer build checker-234, analyzer builds contain a command line utility called `set-xcode-analyzer` that allows users to change what copy of `clang` that Xcode uses for analysis:
 
-```
+```console
 $ set-xcode-analyzer -h
 Usage: set-xcode-analyzer [options]
 
@@ -61,13 +61,13 @@ Operationally, **set-xcode-analyzer** edits Xcode's configuration files to point
 ## Things to keep in mind
 
 - You should quit Xcode prior to running `set-xcode-analyzer`.
-- You will need to run `set-xcode-analyzer` under **\`\`sudo\`\`** in order to have write privileges to modify the Xcode configuration files.
+- You will need to run `set-xcode-analyzer` under **`sudo`** in order to have write privileges to modify the Xcode configuration files.
 
 ## Examples
 
 **Example 1**: Telling Xcode to use checker-235:
 
-```
+```console
 $ pwd
 /tmp
 $ tar xjf checker-235.tar.bz2
@@ -78,13 +78,12 @@ Note that you typically won't install an analyzer build in `/tmp`, but the point
 
 **Example 2**: Telling Xcode to use a very specific version of `clang`:
 
-```
+```console
 $ sudo set-xcode-analyzer --use-checker-build=~/mycrazyclangbuild/bin/clang
 ```
 
 **Example 3**: Resetting Xcode to its default behavior:
 
-```
+```console
 $ sudo set-xcode-analyzer --use-xcode-clang
 ```
-

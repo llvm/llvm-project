@@ -89,7 +89,7 @@ inspects expressions.)
   inlined function could provide different information, making it difficult to
   write proper -verify directives.
 
-  In C, the argument can be typed as 'int' or as '\_Bool'.
+  In C, the argument can be typed as 'int' or as `_Bool`.
 
   Example usage:
 
@@ -115,7 +115,7 @@ inspects expressions.)
   also be analyzed as a top-level function (in which case both TRUE and FALSE
   would be printed), depending on the value of the -analyzer-inlining option.
 
-  In C, the argument can be typed as 'int' or as '\_Bool'.
+  In C, the argument can be typed as 'int' or as `_Bool`.
 
   Example usage:
 
@@ -376,4 +376,3 @@ least one bug report per function) may actually change the values reported by
 - debug.ReportStmts reports a warning at **every** statement, making it a very
   useful tool for testing thoroughly bug report construction and output
   emission.
-

@@ -168,7 +168,7 @@ some cases, however, where the analyzer chooses not to inline:
 - If the function is variadic. This is not a hard limitation, but an engineering
   limitation.
 
-  Tracked by: \<<rdar://problem/12147064>> Support inlining of variadic functions
+  Tracked by: `<rdar://problem/12147064>` Support inlining of variadic functions
 
 - In C++, constructors are not inlined unless the destructor call will be
   processed by the ExprEngine. Thus, if the CFG was built without nodes for
@@ -252,7 +252,7 @@ The -analyzer-config ipa option has five different modes: none, basic-inlining,
 inlining, dynamic, and dynamic-bifurcate. Under -analyzer-config ipa=dynamic,
 all dynamic calls are inlined, whether we are certain or not that this will
 actually be the definition used at runtime. Under -analyzer-config ipa=inlining,
-only "near-perfect" devirtualized calls are inlined\*, and other dynamic calls
+only "near-perfect" devirtualized calls are inlined*, and other dynamic calls
 are evaluated conservatively (as if no definition were available).
 
 - Currently, no Objective-C messages are not inlined under
@@ -355,10 +355,9 @@ CallEvent should be used whenever there is logic dealing with function calls
 that does not care how the call occurred.
 
 Examples include checking that arguments satisfy preconditions (such as
-\_\_attribute\_\_((nonnull))), and attempting to inline a call.
+`__attribute__((nonnull))`), and attempting to inline a call.
 
 CallEvents are reference-counted objects managed by a CallEventManager. While
 there is no inherent issue with persisting them (say, in a ProgramState's GDM),
 they are intended for short-lived use, and can be recreated from CFGElements or
 non-top-level StackFrames fairly easily.
-

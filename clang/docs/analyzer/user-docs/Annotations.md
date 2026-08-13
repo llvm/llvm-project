@@ -56,7 +56,7 @@ Running `scan-build` over this source produces the following output:
 ```{image} ../images/example_attribute_nonnull.png
 ```
 
-(custom-assertion-handlers)=
+(custom_assertion_handlers)=
 
 ### Custom Assertion Handlers
 
@@ -159,10 +159,10 @@ void my_assert_rtn(const char *, const char *, int, const char *) CLANG_ANALYZER
 
 ### Dynamic Memory Modeling Annotations
 
-If a project uses custom functions for dynamic memory management (that e.g. act as wrappers around `malloc`/`free` or `new`/`delete` in C++) and the analyzer cannot "see" the \_definitions\_ of these functions, it's possible to annotate their declarations to let the analyzer model their behavior. (Otherwise the analyzer cannot know that the opaque `my_free()` is basically equivalent to a standard `free()` call.)
+If a project uses custom functions for dynamic memory management (that e.g. act as wrappers around `malloc`/`free` or `new`/`delete` in C++) and the analyzer cannot "see" the `_definitions_` of these functions, it's possible to annotate their declarations to let the analyzer model their behavior. (Otherwise the analyzer cannot know that the opaque `my_free()` is basically equivalent to a standard `free()` call.)
 
 :::{note}
-**This page only provides a brief list of these annotations.** For a full documentation, see the main [Attributes in Clang](../../AttributeReference.html#ownership-holds-ownership-returns-ownership-takes-clang-static-analyzer) page.
+**This page only provides a brief list of these annotations.** For a full documentation, see the main [Attributes in Clang](../../AttributeReference.md#ownership-holds-ownership-returns-ownership-takes-clang-static-analyzer) page.
 :::
 
 #### Attribute 'ownership_returns' (Clang-specific)
@@ -202,7 +202,7 @@ The annotations `ownership_takes` and `ownership_holds` both prevent memory leak
 
 ## Mac OS X API Annotations
 
-(cocoa-mem)=
+(cocoa_mem)=
 
 ### Cocoa & Core Foundation Memory Management Annotations
 
@@ -218,7 +218,7 @@ attributes described here. However, you should consider using proper naming
 conventions or the [objc_method_family](https://clang.llvm.org/docs/LanguageExtensions.html#the-objc-method-family-attribute)
 attribute, if applicable.
 
-(ns-returns-retained)=
+(ns_returns_retained)=
 
 #### Attribute 'ns_returns_retained' (Clang-specific)
 
@@ -276,37 +276,38 @@ Running `scan-build` on this source file produces the following output:
 ```{image} ../images/example_ns_returns_retained.png
 ```
 
-(ns-returns-not-retained)=
+(ns_returns_not_retained)=
 
 #### Attribute 'ns_returns_not_retained' (Clang-specific)
 
 The 'ns_returns_not_retained' attribute is the complement of
-'[ns_returns_retained]'. Where a function or method may appear to obey the
+'[ns_returns_retained](#attribute-ns-returns-retained-clang-specific)'. Where a function or method may appear to obey the
 Cocoa conventions and return a retained Cocoa object, this attribute can be
 used to indicate that the object reference returned should not be considered as
 an "owning" reference being returned to the caller. The Foundation
 framework defines a macro `NS_RETURNS_NOT_RETAINED` that is functionally
 equivalent to the one shown below.
 
-Usage is identical to [ns_returns_retained]. When using the
+Usage is identical to [ns_returns_retained](#attribute-ns-returns-retained-clang-specific). When using the
 attribute, be sure to declare it within the proper macro that checks for
 its availability, as it is not available in earlier versions of the analyzer:
 
-% code-block:objc
-%
-% #ifndef __has_feature      // Optional.
-% #define __has_feature(x) 0 // Compatibility with non-clang compilers.
-% #endif
-%
-% #ifndef NS_RETURNS_NOT_RETAINED
-% #if __has_feature(attribute_ns_returns_not_retained)
-% #define NS_RETURNS_NOT_RETAINED __attribute__((ns_returns_not_retained))
-% #else
-% #define NS_RETURNS_NOT_RETAINED
-% #endif
-% #endif
+```objc
 
-(cf-returns-retained)=
+#ifndef __has_feature      // Optional.
+#define __has_feature(x) 0 // Compatibility with non-clang compilers.
+#endif
+
+#ifndef NS_RETURNS_NOT_RETAINED
+#if __has_feature(attribute_ns_returns_not_retained)
+#define NS_RETURNS_NOT_RETAINED __attribute__((ns_returns_not_retained))
+#else
+#define NS_RETURNS_NOT_RETAINED
+#endif
+#endif
+```
+
+(cf_returns_retained)=
 
 #### Attribute 'cf_returns_retained' (Clang-specific)
 
@@ -340,46 +341,47 @@ interprets the function as:
 
 **Example**
 
-% code-block:objc
-%
-% #import <Cocoa/Cocoa.h>
-%
-% #ifndef __has_feature      // Optional.
-% #define __has_feature(x) 0 // Compatibility with non-clang compilers.
-% #endif
-%
-% #ifndef CF_RETURNS_RETAINED
-% #if __has_feature(attribute_cf_returns_retained)
-% #define CF_RETURNS_RETAINED __attribute__((cf_returns_retained))
-% #else
-% #define CF_RETURNS_RETAINED
-% #endif
-% #endif
-%
-% @interface MyClass : NSObject {}
-% - (NSDate*) returnsCFRetained CF_RETURNS_RETAINED;
-% - (NSDate*) alsoReturnsRetained;
-% - (NSDate*) returnsNSRetained NS_RETURNS_RETAINED;
-% @end
-%
-% CF_RETURNS_RETAINED
-% CFDateRef returnsRetainedCFDate()  {
-%   return CFDateCreate(0, CFAbsoluteTimeGetCurrent());
-% }
-%
-% @implementation MyClass
-% - (NSDate*) returnsCFRetained {
-%   return (NSDate*) returnsRetainedCFDate(); // No leak.
-% }
-%
-% - (NSDate*) alsoReturnsRetained {
-%   return (NSDate*) returnsRetainedCFDate(); // Always report a leak.
-% }
-%
-% - (NSDate*) returnsNSRetained {
-%   return (NSDate*) returnsRetainedCFDate(); // Report a leak when using GC.
-% }
-% @end
+```objc
+
+#import <Cocoa/Cocoa.h>
+
+#ifndef __has_feature      // Optional.
+#define __has_feature(x) 0 // Compatibility with non-clang compilers.
+#endif
+
+#ifndef CF_RETURNS_RETAINED
+#if __has_feature(attribute_cf_returns_retained)
+#define CF_RETURNS_RETAINED __attribute__((cf_returns_retained))
+#else
+#define CF_RETURNS_RETAINED
+#endif
+#endif
+
+@interface MyClass : NSObject {}
+- (NSDate*) returnsCFRetained CF_RETURNS_RETAINED;
+- (NSDate*) alsoReturnsRetained;
+- (NSDate*) returnsNSRetained NS_RETURNS_RETAINED;
+@end
+
+CF_RETURNS_RETAINED
+CFDateRef returnsRetainedCFDate()  {
+  return CFDateCreate(0, CFAbsoluteTimeGetCurrent());
+}
+
+@implementation MyClass
+- (NSDate*) returnsCFRetained {
+  return (NSDate*) returnsRetainedCFDate(); // No leak.
+}
+
+- (NSDate*) alsoReturnsRetained {
+  return (NSDate*) returnsRetainedCFDate(); // Always report a leak.
+}
+
+- (NSDate*) returnsNSRetained {
+  return (NSDate*) returnsRetainedCFDate(); // Report a leak when using GC.
+}
+@end
+```
 
 Running `scan-build` on this example produces the following output:
 
@@ -389,33 +391,34 @@ Running `scan-build` on this example produces the following output:
 #### Attribute 'cf_returns_not_retained' (Clang-specific)
 
 The 'cf_returns_not_retained' attribute is the complement of
-'[cf_returns_retained]'. Where a function or method may appear to obey the
+'[cf_returns_retained](#attribute-cf-returns-retained-clang-specific)'. Where a function or method may appear to obey the
 Core Foundation or Cocoa conventions and return a retained Core Foundation
 object, this attribute can be used to indicate that the object reference
 returned should not be considered as an "owning" reference being
 returned to the caller. The CoreFoundation framework defines a macro
-**\`\`CF_RETURNS_NOT_RETAINED\`\`** that is functionally equivalent to the one
+**`CF_RETURNS_NOT_RETAINED`** that is functionally equivalent to the one
 shown below.
 
-Usage is identical to [cf_returns_retained]. When using the attribute, be sure
+Usage is identical to [cf_returns_retained](#attribute-cf-returns-retained-clang-specific). When using the attribute, be sure
 to declare it within the proper macro that checks for its availability, as it
 is not available in earlier versions of the analyzer:
 
-% code-block:objc
-%
-% #ifndef __has_feature      // Optional.
-% #define __has_feature(x) 0 // Compatibility with non-clang compilers.
-% #endif
-%
-% #ifndef CF_RETURNS_NOT_RETAINED
-% #if __has_feature(attribute_cf_returns_not_retained)
-% #define CF_RETURNS_NOT_RETAINED __attribute__((cf_returns_not_retained))
-% #else
-% #define CF_RETURNS_NOT_RETAINED
-% #endif
-% #endif
+```objc
 
-(ns-consumed)=
+#ifndef __has_feature      // Optional.
+#define __has_feature(x) 0 // Compatibility with non-clang compilers.
+#endif
+
+#ifndef CF_RETURNS_NOT_RETAINED
+#if __has_feature(attribute_cf_returns_not_retained)
+#define CF_RETURNS_NOT_RETAINED __attribute__((cf_returns_not_retained))
+#else
+#define CF_RETURNS_NOT_RETAINED
+#endif
+#endif
+```
+
+(ns_consumed)=
 
 #### Attribute 'ns_consumed' (Clang-specific)
 
@@ -428,46 +431,47 @@ is functionally equivalent to the `NS_CONSUMED` macro shown below.
 
 **Example**
 
-% code-block:objc
-%
-% #ifndef __has_feature      // Optional.
-% #define __has_feature(x) 0 // Compatibility with non-clang compilers.
-% #endif
-%
-% #ifndef NS_CONSUMED
-% #if __has_feature(attribute_ns_consumed)
-% #define NS_CONSUMED __attribute__((ns_consumed))
-% #else
-% #define NS_CONSUMED
-% #endif
-% #endif
-%
-% void consume_ns(id NS_CONSUMED x);
-%
-% void test() {
-%   id x = [[NSObject alloc] init];
-%   consume_ns(x); // No leak!
-% }
-%
-% @interface Foo : NSObject
-% + (void) releaseArg:(id) NS_CONSUMED x;
-% + (void) releaseSecondArg:(id)x second:(id) NS_CONSUMED y;
-% @end
-%
-% void test_method() {
-%   id x = [[NSObject alloc] init];
-%   [Foo releaseArg:x]; // No leak!
-% }
-%
-% void test_method2() {
-%   id a = [[NSObject alloc] init];
-%   id b = [[NSObject alloc] init];
-%   [Foo releaseSecondArg:a second:b]; // 'a' is leaked, but 'b' is released.
-% }
+```objc
+
+#ifndef __has_feature      // Optional.
+#define __has_feature(x) 0 // Compatibility with non-clang compilers.
+#endif
+
+#ifndef NS_CONSUMED
+#if __has_feature(attribute_ns_consumed)
+#define NS_CONSUMED __attribute__((ns_consumed))
+#else
+#define NS_CONSUMED
+#endif
+#endif
+
+void consume_ns(id NS_CONSUMED x);
+
+void test() {
+  id x = [[NSObject alloc] init];
+  consume_ns(x); // No leak!
+}
+
+@interface Foo : NSObject
++ (void) releaseArg:(id) NS_CONSUMED x;
++ (void) releaseSecondArg:(id)x second:(id) NS_CONSUMED y;
+@end
+
+void test_method() {
+  id x = [[NSObject alloc] init];
+  [Foo releaseArg:x]; // No leak!
+}
+
+void test_method2() {
+  id a = [[NSObject alloc] init];
+  id b = [[NSObject alloc] init];
+  [Foo releaseSecondArg:a second:b]; // 'a' is leaked, but 'b' is released.
+}
+```
 
 #### Attribute 'cf_consumed' (Clang-specific)
 
-The 'cf_consumed' attribute is practically identical to [ns_consumed]. The
+The 'cf_consumed' attribute is practically identical to [ns_consumed](#attribute-ns-consumed-clang-specific). The
 attribute can be placed on a specific parameter in either the declaration of a
 function or an Objective-C method. It indicates to the static analyzer that the
 object reference is implicitly passed to a call to `CFRelease` upon
@@ -479,44 +483,45 @@ Operationally this attribute is nearly identical to 'ns_consumed'.
 
 **Example**
 
-% code-block:objc
-%
-% #ifndef __has_feature      // Optional.
-% #define __has_feature(x) 0 // Compatibility with non-clang compilers.
-% #endif
-%
-% #ifndef CF_CONSUMED
-% #if __has_feature(attribute_cf_consumed)
-% #define CF_CONSUMED __attribute__((cf_consumed))
-% #else
-% #define CF_CONSUMED
-% #endif
-% #endif
-%
-% void consume_cf(id CF_CONSUMED x);
-% void consume_CFDate(CFDateRef CF_CONSUMED x);
-%
-% void test() {
-%   id x = [[NSObject alloc] init];
-%   consume_cf(x); // No leak!
-% }
-%
-% void test2() {
-%   CFDateRef date = CFDateCreate(0, CFAbsoluteTimeGetCurrent());
-%   consume_CFDate(date); // No leak, including under GC!
-%
-% }
-%
-% @interface Foo : NSObject
-% + (void) releaseArg:(CFDateRef) CF_CONSUMED x;
-% @end
-%
-% void test_method() {
-%   CFDateRef date = CFDateCreate(0, CFAbsoluteTimeGetCurrent());
-%   [Foo releaseArg:date]; // No leak!
-% }
+```objc
 
-(ns-consumes-self)=
+#ifndef __has_feature      // Optional.
+#define __has_feature(x) 0 // Compatibility with non-clang compilers.
+#endif
+
+#ifndef CF_CONSUMED
+#if __has_feature(attribute_cf_consumed)
+#define CF_CONSUMED __attribute__((cf_consumed))
+#else
+#define CF_CONSUMED
+#endif
+#endif
+
+void consume_cf(id CF_CONSUMED x);
+void consume_CFDate(CFDateRef CF_CONSUMED x);
+
+void test() {
+  id x = [[NSObject alloc] init];
+  consume_cf(x); // No leak!
+}
+
+void test2() {
+  CFDateRef date = CFDateCreate(0, CFAbsoluteTimeGetCurrent());
+  consume_CFDate(date); // No leak, including under GC!
+
+}
+
+@interface Foo : NSObject
++ (void) releaseArg:(CFDateRef) CF_CONSUMED x;
+@end
+
+void test_method() {
+  CFDateRef date = CFDateCreate(0, CFAbsoluteTimeGetCurrent());
+  [Foo releaseArg:date]; // No leak!
+}
+```
+
+(ns_consumes_self)=
 
 #### Attribute 'ns_consumes_self' (Clang-specific)
 
@@ -530,23 +535,24 @@ follow the standard Cocoa naming conventions.
 
 **Example**
 
-% code-block:objc
-% #ifndef __has_feature
-% #define __has_feature(x) 0 // Compatibility with non-clang compilers.
-% #endif
-%
-% #ifndef NS_CONSUMES_SELF
-% #if __has_feature((attribute_ns_consumes_self))
-% #define NS_CONSUMES_SELF __attribute__((ns_consumes_self))
-% #else
-% #define NS_CONSUMES_SELF
-% #endif
-% #endif
-%
-% @interface MyClass : NSObject
-% - initWith:(MyClass *)x;
-% - nonstandardInitWith:(MyClass *)x NS_CONSUMES_SELF NS_RETURNS_RETAINED;
-% @end
+```objc
+#ifndef __has_feature
+#define __has_feature(x) 0 // Compatibility with non-clang compilers.
+#endif
+
+#ifndef NS_CONSUMES_SELF
+#if __has_feature((attribute_ns_consumes_self))
+#define NS_CONSUMES_SELF __attribute__((ns_consumes_self))
+#else
+#define NS_CONSUMES_SELF
+#endif
+#endif
+
+@interface MyClass : NSObject
+- initWith:(MyClass *)x;
+- nonstandardInitWith:(MyClass *)x NS_CONSUMES_SELF NS_RETURNS_RETAINED;
+@end
+```
 
 In this example, `-nonstandardInitWith:` has the same ownership
 semantics as the init method `-initWith:`. The static analyzer will
@@ -600,7 +606,7 @@ These summaries can be overriden with the following
 #### Attribute 'os_returns_retained'
 
 The `os_returns_retained` attribute (accessed through the macro
-`LIBKERN_RETURNS_RETAINED`) plays a role identical to [ns_returns_retained]
+`LIBKERN_RETURNS_RETAINED`) plays a role identical to [ns_returns_retained](#attribute-ns-returns-retained-clang-specific)
 for functions returning `OSObject` subclasses. The attribute indicates that
 it is a callers responsibility to release the returned object.
 
@@ -608,45 +614,48 @@ it is a callers responsibility to release the returned object.
 
 The `os_returns_not_retained` attribute (accessed through the macro
 `LIBKERN_RETURNS_NOT_RETAINED`) plays a role identical to
-[ns_returns_not_retained] for functions returning `OSObject` subclasses. The
+[ns_returns_not_retained](#attribute-ns-returns-not-retained-clang-specific) for functions returning `OSObject` subclasses. The
 attribute indicates that the caller should not change the retain count of the
 returned object.
 
 **Example**
 
-% code-block:objc
-%
-% class MyClass {
-%   OSObject *f;
-%   LIBKERN_RETURNS_NOT_RETAINED OSObject *myFieldGetter();
-% }
-%
-% // Note that the annotation only has to be applied to the function declaration.
-% OSObject * MyClass::myFieldGetter() {
-%   return f;
-% }
+```objc
+
+class MyClass {
+  OSObject *f;
+  LIBKERN_RETURNS_NOT_RETAINED OSObject *myFieldGetter();
+}
+
+// Note that the annotation only has to be applied to the function declaration.
+OSObject * MyClass::myFieldGetter() {
+  return f;
+}
+```
 
 #### Attribute 'os_consumed'
 
-Similarly to [ns_consumed] attribute, `os_consumed` (accessed through
+Similarly to [ns_consumed](#attribute-ns-consumed-clang-specific) attribute, `os_consumed` (accessed through
 `LIBKERN_CONSUMED`) attribute, applied to a parameter, indicates that the
 call to the function *consumes* the parameter: the callee should either release
 it or store it and release it in the destructor, while the caller should assume
 one is subtracted from the reference count after the call.
 
-% code-block:objc
-% IOReturn addToList(LIBKERN_CONSUMED IOPMinformee *newInformee);
+```objc
+IOReturn addToList(LIBKERN_CONSUMED IOPMinformee *newInformee);
+```
 
 #### Attribute 'os_consumes_this'
 
-Similarly to [ns_consumes_self], the `os_consumes_self` attribute indicates
+Similarly to [ns_consumes_self](#attribute-ns-consumes-self-clang-specific), the `os_consumes_self` attribute indicates
 that the method call *consumes* the implicit `this` argument: the caller
 should assume one was subtracted from the reference count of the object after
 the call, and the callee has on obligation to either release the argument, or
 store it and eventually release it in the destructor.
 
-% code-block:objc
-% void addThisToList(OSArray *givenList) LIBKERN_CONSUMES_THIS;
+```objc
+void addThisToList(OSArray *givenList) LIBKERN_CONSUMES_THIS;
+```
 
 #### Out Parameters
 
@@ -658,16 +667,18 @@ parameters by default, but with annotations we distinguish four separate cases:
 **1. Non-retained out parameters**, identified using
 `LIBKERN_RETURNS_NOT_RETAINED` applied to parameters, e.g.:
 
-% code-block:objc
-% void getterViaOutParam(LIBKERN_RETURNS_NOT_RETAINED OSObject **obj)
+```objc
+void getterViaOutParam(LIBKERN_RETURNS_NOT_RETAINED OSObject **obj)
+```
 
 Such functions write a non-retained object into an out parameter, and the
 caller has no further obligations.
 
 **2. Retained out parameters**, identified using `LIBKERN_RETURNS_RETAINED`:
 
-% code-block:objc
-% void getterViaOutParam(LIBKERN_RETURNS_NOT_RETAINED OSObject **obj)
+```objc
+void getterViaOutParam(LIBKERN_RETURNS_NOT_RETAINED OSObject **obj)
+```
 
 In such cases a retained object is written into an out parameter, which the caller has then to release in order to avoid a leak.
 
@@ -675,8 +686,9 @@ These two cases are simple - but in practice a functions returning an
 out-parameter usually also return a return code, and then an out parameter may
 or may not be written, which conditionally depends on the exit code, e.g.:
 
-% code-block:objc
-% bool maybeCreateObject(LIBKERN_RETURNS_RETAINED OSObject **obj);
+```objc
+bool maybeCreateObject(LIBKERN_RETURNS_RETAINED OSObject **obj);
+```
 
 For such functions, the usual semantics is that an object is written into on "success", and not written into on "failure".
 
@@ -692,8 +704,9 @@ success:
 `LIBKERN_RETURNS_RETAINED_ON_ZERO` states that a retained object is written
 into if and only if the function returns a zero value:
 
-% code-block:objc
-% bool OSUnserializeXML(void *data, LIBKERN_RETURNS_RETAINED_ON_ZERO OSString **errString);
+```objc
+bool OSUnserializeXML(void *data, LIBKERN_RETURNS_RETAINED_ON_ZERO OSString **errString);
+```
 
 Then the caller has to release an object if the function has returned zero.
 
@@ -705,4 +718,3 @@ value.
 Note that for non-retained out parameters conditionals do not matter, as the
 caller has no obligations regardless of whether an object is written into or
 not.
-

@@ -25,7 +25,7 @@ takesNonNull((_nonnull) bar); // should not warn here (backward compatibility ha
 anotherTakesNonNull(bar); // would be great to warn here, but not necessary(*)
 ```
 
-Because bar corresponds to the same symbol all the time it is not easy to implement the checker that way the cast only suppress the first call but not the second. For this reason in the first implementation after a contradictory cast happens, I will treat bar as nullable unspecified, this way all of the warnings will be suppressed. Treating the symbol as nullable unspecified also has an advantage that in case the takesNonNull function body is being inlined, the will be no warning, when the symbol is dereferenced. In case I have time after the initial version I might spend additional time to try to find a more sophisticated solution, in which we would produce the second warning (\*).
+Because bar corresponds to the same symbol all the time it is not easy to implement the checker that way the cast only suppress the first call but not the second. For this reason in the first implementation after a contradictory cast happens, I will treat bar as nullable unspecified, this way all of the warnings will be suppressed. Treating the symbol as nullable unspecified also has an advantage that in case the takesNonNull function body is being inlined, the will be no warning, when the symbol is dereferenced. In case I have time after the initial version I might spend additional time to try to find a more sophisticated solution, in which we would produce the second warning (*).
 
 **2) nonnull**
 
@@ -101,4 +101,3 @@ What to track?
 - When there is an explicit cast from a null unspecified to either nonnull or nullable I will trust the cast.
 - Unannotated pointers are treated the same way as pointers annotated with nullability unspecified qualifier, unless the region is wrapped in ASSUME_NONNULL macros.
 - We might want to implement a callback for entry points to top level functions, where the pointer nullability assumptions would be made.
-

@@ -47,7 +47,7 @@ foo[0] = 0;
 After this latest assignment, nothing can be said about the value of `foo[i]`,
 because `foo[0]` may have overwritten it! *Binding to a region R with a
 concrete offset invalidates any symbolic offset bindings whose concrete offset
-region is a super-region \*\*or\** sub-region of R.\* All we know about `foo[i]`
+region is a super-region **or** sub-region of R.* All we know about `foo[i]`
 is that it is somewhere within `foo`, so changing *anything* within `foo`
 might change `foo[i]`, and changing *all* of `foo` (or its base region) will
 *definitely* change `foo[i]`.
@@ -170,4 +170,3 @@ return p2.x;    // The binding for FieldRegion 'p2.x' is requested.
                 // and see that it's the '.x' field. We ask for the value
                 // of 'p.x' within the snapshot, and get back 42.
 ```
-

@@ -39,7 +39,7 @@ The obvious approach to modeling `std::initializer_list` in a checker would be t
 construct a SymbolMetadata for the memory region of the initializer list object,
 which would be of type `T*` and represent `begin()`, so we'd trivially model `begin()`
 as a function that returns this symbol. The array pointed to by that symbol
-would be ``` bindLoc()``ed to contain the list's contents (probably as a ``CompoundVal ```
+would be `bindLoc()`ed to contain the list's contents (probably as a `CompoundVal`
 to produce less bindings in the store). Extent of this array would represent
 `size()` and would be equal to the length of the list as written.
 
@@ -131,10 +131,10 @@ them more openly. As a quick dump of my current mood:
 
 **Artem:**
 
-\> Approach (2): We could teach the Store to scan itself for bindings to
-\> metadata-symbolic-based regions during scanReachableSymbols() whenever
-\> a region turns out to be reachable. This requires no work on checker side,
-\> but it sounds performance-heavy.
+> Approach (2): We could teach the Store to scan itself for bindings to
+> metadata-symbolic-based regions during scanReachableSymbols() whenever
+> a region turns out to be reachable. This requires no work on checker side,
+> but it sounds performance-heavy.
 
 Nope, this approach is wrong. Metadata symbols may become out-of-date: when the
 object changes, metadata symbols attached to it aren't changing (because symbols
@@ -183,12 +183,12 @@ invalidation for free.
 
 **Artem:**
 
-\> In this case, I would be fine with some sort of `AbstractStorageMemoryRegion`
-\> that meant "here is a memory region and somewhere reachable from here exists
-\> another region of type T". Or even multiple regions with different
-\> identifiers. This wouldn't specify how the memory is reachable, but it would
-\> allow for transfer functions to get at those regions and it would allow for
-\> invalidation.
+> In this case, I would be fine with some sort of `AbstractStorageMemoryRegion`
+> that meant "here is a memory region and somewhere reachable from here exists
+> another region of type T". Or even multiple regions with different
+> identifiers. This wouldn't specify how the memory is reachable, but it would
+> allow for transfer functions to get at those regions and it would allow for
+> invalidation.
 
 Yeah, this is what we can easily implement now as a
 symbolic-region-based-on-a-metadata-symbol (though we can make a new region
@@ -202,9 +202,9 @@ abstract storage is most of the time at best a "nice to know" thing - we cannot
 rely on it to do any actual work. We'd anyway need to rely on the checker to do
 the job.
 
-\> For std::initializer_list this reachable region would the region for the
-\> backing array and the transfer functions for begin() and end() yield the
-\> beginning and end element regions for it.
+> For std::initializer_list this reachable region would the region for the
+> backing array and the transfer functions for begin() and end() yield the
+> beginning and end element regions for it.
 
 So maybe in fact for std::initializer_list it may work fine because you cannot
 change the data after the object is constructed - so this region's contents are
@@ -254,18 +254,18 @@ would be their superregion) is actually useful, the mutability of their contents
 is expressed naturally, and the store automagically sees reachable symbols, live
 symbols, escapes, invalidations, whatever.
 
-\> In my view this differs from ghost variables in that (1) this storage does
-\> actually exist (it is just a library implementation detail where that storage
-\> lives) and (2) it is perfectly valid for a pointer into that storage to be
-\> returned and for another part of the program to read or write from that
-\> storage. (Well, in this case just read since it is allowed to be read-only
-\> memory).
+> In my view this differs from ghost variables in that (1) this storage does
+> actually exist (it is just a library implementation detail where that storage
+> lives) and (2) it is perfectly valid for a pointer into that storage to be
+> returned and for another part of the program to read or write from that
+> storage. (Well, in this case just read since it is allowed to be read-only
+> memory).
 
-\> What I'm not OK with is modeling abstract analysis state (for example, the
-\> count of a NSMutableArray or the typestate of a file handle) as a value stored
-\> in some ginned up region in the store.This takes an easy problem that the
-\> analyzer does well at (modeling typestate) and turns it into a hard one that
-\> the analyzer is bad at (reasoning about the contents of the heap).
+> What I'm not OK with is modeling abstract analysis state (for example, the
+> count of a NSMutableArray or the typestate of a file handle) as a value stored
+> in some ginned up region in the store.This takes an easy problem that the
+> analyzer does well at (modeling typestate) and turns it into a hard one that
+> the analyzer is bad at (reasoning about the contents of the heap).
 
 Yeah, i tend to agree on that. For simple typestates, this is probably an
 overkill, so let's definitely put aside the idea of "ghost symbolic regions"
@@ -278,13 +278,13 @@ have a choice between re-doing this modeling in every such checker (which is
 something analyzer is indeed good at, but at a price of making checkers heavy)
 or instead relying on the Store to do exactly what it's designed to do.
 
-\> I think the key criterion here is: "is the region accessible from outside
-\> the library". That is, does the library expose the region as a pointer that
-\> can be read to or written from in the client program? If so, then it makes
-\> sense for this to be in the store: we are modeling reachable storage as
-\> storage. But if we're just modeling arbitrary analysis facts that need to be
-\> invalidated when a pointer escapes then we shouldn't try to gin up storage
-\> for them just to get invalidation for free.
+> I think the key criterion here is: "is the region accessible from outside
+> the library". That is, does the library expose the region as a pointer that
+> can be read to or written from in the client program? If so, then it makes
+> sense for this to be in the store: we are modeling reachable storage as
+> storage. But if we're just modeling arbitrary analysis facts that need to be
+> invalidated when a pointer escapes then we shouldn't try to gin up storage
+> for them just to get invalidation for free.
 
 As a metaphor, i'd probably compare it to body farms - the difference between
 ghost member variables and metadata symbols seems to me like the difference
@@ -319,4 +319,3 @@ about:
 So, because this needs further digging into overall C++ support and rises too
 many questions, i'm delaying a better approach to this problem and will fall
 back to the original trivial patch.
-

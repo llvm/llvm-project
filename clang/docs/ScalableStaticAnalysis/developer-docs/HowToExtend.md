@@ -75,7 +75,7 @@ ANCHOR(MyExtractorAnchorSource)
 `SSAFBuiltinForceLinker.h` includes this `.def` file automatically — no
 need to edit it directly.
 
-For **downstream** additions, see [Out-of-tree (downstream) extensions] below.
+For **downstream** additions, see [Out-of-tree (downstream) extensions](#out-of-tree-downstream-extensions) below.
 
 ## Adding a serialization format
 
@@ -154,7 +154,7 @@ static llvm::Registry<FormatInfo>::Add<MyAnalysisFormatInfo>
 ### Step 4: Add the force-linker anchor
 
 Same pattern as for extractors — add the anchor to `BuiltinAnchorSources.def`
-(in alphabetical order). See [Adding a summary extractor] Step 3,
+(in alphabetical order). See [Adding a summary extractor](#adding-a-summary-extractor) Step 3,
 and {doc}`ForceLinkerHeaders`.
 
 ## Static extensibility
@@ -205,4 +205,3 @@ To use a plugin:
 
 No changes to any force-linker header are required.
 The `llvm::Registry` infrastructure handles everything once the shared object is loaded.
-

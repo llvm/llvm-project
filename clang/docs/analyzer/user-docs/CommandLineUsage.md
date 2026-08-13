@@ -10,7 +10,7 @@ Therefore CodeChecker is recommended in case you need any of the above features 
 
 For a direct analysis of a source file, the `clang` driver can write a SARIF report:
 
-```
+```console
 $ clang --analyze --analyzer-output sarif -o report.sarif source.c
 ```
 
@@ -23,7 +23,7 @@ This direct form analyzes a translation unit.
 For project-wide analysis, use a tool such as scan-build or CodeChecker to drive the individual compiler invocations.
 `scan-build` can emit a SARIF report for each analyzed translation unit with its `-sarif` option:
 
-```
+```console
 $ scan-build -sarif -o reports make
 ```
 
@@ -35,12 +35,12 @@ It is possible, however, to invoke the static analyzer from the command line in 
 The following tools are used commonly to run the analyzer from the command line.
 Both tools are wrapper scripts to drive the analysis and the underlying invocations of the Clang compiler:
 
-1. [scan-build] is an old and simple command line tool that emits static analyzer warnings as HTML files while compiling your project. You can view the analysis results in your web browser; the utility script `scan-view` can provide a trivial HTTP server that servers these result files.
+1. [scan-build](#scan-build) is an old and simple command line tool that emits static analyzer warnings as HTML files while compiling your project. You can view the analysis results in your web browser; the utility script `scan-view` can provide a trivial HTTP server that servers these result files.
    : - Is available as a part of the LLVM project (together with `scan-view`).
      - Useful for individual developers who simply want to view static analysis results at their desk, or in a very simple collaborative environment.
      - Works on all major platforms (Windows, Linux, macOS) and is available as a package in many Linux distributions.
      - Does not include support for cross-translation-unit analysis.
-2. [CodeChecker] is a driver and web server that runs the static analyzer on your projects on demand and maintains a database of issues.
+2. [CodeChecker](#codechecker) is a driver and web server that runs the static analyzer on your projects on demand and maintains a database of issues.
    : - Open source, but out-of-tree, i.e. not part of the LLVM project.
      - Perfect for managing large amounts of thee static analyzer warnings in a collaborative environment.
      - Generally much more feature-rich than scan-build.
@@ -76,7 +76,7 @@ This "poor man's interposition" works amazingly well in many cases and falls dow
 
 Basic usage of `scan-build` is designed to be simple: just place the word "scan-build" in front of your build command:
 
-```
+```console
 $ scan-build make
 $ scan-build xcodebuild
 ```
@@ -85,13 +85,13 @@ In the first case `scan-build` analyzes the code of a project built with `make` 
 
 Here is the general format for invoking `scan-build`:
 
-```
+```console
 $ scan-build [scan-build options] <command> [command options]
 ```
 
-Operationally, `scan-build` literally runs \<command> with all of the subsequent options passed to it. For example, one can pass `-j4` to `make` get a parallel build over 4 cores:
+Operationally, `scan-build` literally runs `<command>` with all of the subsequent options passed to it. For example, one can pass `-j4` to `make` get a parallel build over 4 cores:
 
-```
+```console
 $ scan-build make -j4
 ```
 
@@ -99,7 +99,7 @@ In almost all cases, `scan-build` makes no effort to interpret the options after
 
 It is also possible to use `scan-build` to analyze specific files:
 
-```
+```console
 $ scan-build gcc -c t1.c t2.c
 ```
 
@@ -117,7 +117,7 @@ If you have unexpected compilation/make problems when running scan-build with Mi
   \- Use MinGW `mingw32-make` instead of MSYS `make` and exclude the path to MSYS from PATH to prevent `mingw32-make` from using MSYS utils. MSYS utils are dependent on the MSYS runtime and they are not intended for being run from the Windows cmd. Specifically, makefile commands with backslashed quotes may be heavily corrupted when passed for execution.
   \- Run `make` from the sh shell:
 
-  ```
+  ```console
   $ scan-build [scan-build options] sh -c "make [make options]"
   ```
 
@@ -127,7 +127,7 @@ If you have unexpected compilation/make problems when running scan-build with Mi
 
 As mentioned above, extra options can be passed to `scan-build`. These options prefix the build command. For example:
 
-```
+```console
 $ scan-build -k -V make
 $ scan-build -k -V xcodebuild
 ```
@@ -169,7 +169,7 @@ If an analyzed project uses an autoconf generated `configure` script, you will p
 
 **Example**:
 
-```
+```console
 $ scan-build ./configure
 $ scan-build --keep-cc make
 ```
@@ -186,7 +186,7 @@ Conceptually Xcode projects for iPhone applications are nearly the same as their
 
 The absolute easiest way to analyze iPhone projects is to use the [Analyze feature in Xcode](https://developer.apple.com/library/ios/recipes/xcode_help-source_editor/chapters/Analyze.html#//apple_ref/doc/uid/TP40009975-CH4-SW1) (which is based on the static analyzer). There a user can analyze their project right from a menu without most of the setup described later.
 
-[Instructions are available](../xcode.html) on this website on how to use open source builds of the analyzer as a replacement for the one bundled with Xcode.
+[Instructions are available](UsingWithXCode.md) on this website on how to use open source builds of the analyzer as a replacement for the one bundled with Xcode.
 
 ### Using scan-build directly
 
@@ -198,13 +198,13 @@ If you wish to use **scan-build** with your iPhone project, keep the following t
 
 Note that you can most of this without actually modifying your project. For example, if your application targets iPhoneOS 2.2, you could run **scan-build** in the following manner from the command line:
 
-```
+```console
 $ scan-build xcodebuild -configuration Debug -sdk iphonesimulator2.2
 ```
 
 Alternatively, if your application targets iPhoneOS 3.0:
 
-```
+```console
 $ scan-build xcodebuild -configuration Debug -sdk iphonesimulator3.0
 ```
 
@@ -229,34 +229,34 @@ Install CodeChecker as described here: [CodeChecker Install Guide](https://githu
 Create a compilation database. If you use cmake then pass the `-DCMAKE_EXPORT_COMPILE_COMMANDS=1` parameter to cmake. Cmake will create a `compile_commands.json` file.
 If you have a Makefile based or similar build system then you can log the build commands with the help of CodeChecker:
 
-```
+```bash
 make clean
 CodeChecker log -b "make" -o compile_commands.json
 ```
 
 Analyze your project:
 
-```
+```bash
 CodeChecker analyze compile_commands.json -o ./reports
 ```
 
 View the analysis results.
 Print the detailed results in the command line:
 
-```
+```bash
 CodeChecker parse --print-steps ./reports
 ```
 
 Or view the detailed results in a browser:
 
-```
+```bash
 CodeChecker parse ./reports -e html -o ./reports_html
 firefox ./reports_html/index.html
 ```
 
 Optional: store the analysis results in a DB:
 
-```
+```bash
 mkdir ./ws
 CodeChecker server -w ./ws -v 8555 &
 CodeChecker store ./reports --name my-project --url http://localhost:8555/Default
@@ -264,11 +264,10 @@ CodeChecker store ./reports --name my-project --url http://localhost:8555/Defaul
 
 Optional: manage (categorize, suppress) the results in your web browser:
 
-```
+```bash
 firefox http://localhost:8555/Default
 ```
 
 ### Detailed Usage
 
 For extended documentation please refer to the [official site of CodeChecker](https://github.com/Ericsson/codechecker/blob/master/docs/usage.md)!
-
