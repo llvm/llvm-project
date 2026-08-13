@@ -27,6 +27,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
@@ -43,28 +44,35 @@ bool isOperatorNewDelete(OverloadedOperatorKind OpKind) {
 using DeclCallback =
     llvm::function_ref<void(SourceLocation, NamedDecl &, RefType)>;
 
-class ObjCSelectorDeclMapBuilder
-    : public RecursiveASTVisitor<ObjCSelectorDeclMapBuilder> {
+using SelectorMap = llvm::DenseMap<Selector, llvm::SmallVector<NamedDecl *, 2>>;
+
+class TargetedSelectorDeclCollector
+    : public RecursiveASTVisitor<TargetedSelectorDeclCollector> {
 public:
-  ObjCSelectorMap takeMap() { return std::move(Map); }
+  explicit TargetedSelectorDeclCollector(
+      const llvm::DenseSet<Selector> &NeededSelectors)
+      : NeededSelectors(NeededSelectors) {}
+
+  SelectorMap takeMap() { return std::move(Map); }
 
   bool TraverseDecl(clang::Decl *D) {
     if (!D)
       return true;
     if (auto *Container = llvm::dyn_cast<clang::ObjCContainerDecl>(D)) {
-      for (clang::ObjCMethodDecl *M : Container->methods()) {
-        if (M) {
+      for (auto *M : Container->methods()) {
+        if (M && !M->isPropertyAccessor() &&
+            NeededSelectors.contains(M->getSelector()))
           Map[M->getSelector()].push_back(M);
-        }
       }
-      for (clang::ObjCPropertyDecl *Prop : Container->properties()) {
+      for (auto *Prop : Container->properties()) {
         if (Prop) {
-          if (auto Getter = Prop->getGetterName(); !Getter.isNull())
+          if (auto Getter = Prop->getGetterName();
+              !Getter.isNull() && NeededSelectors.contains(Getter))
             Map[Getter].push_back(Prop);
           if (!Prop->isReadOnly()) {
-            if (auto Setter = Prop->getSetterName(); !Setter.isNull()) {
+            if (auto Setter = Prop->getSetterName();
+                !Setter.isNull() && NeededSelectors.contains(Setter))
               Map[Setter].push_back(Prop);
-            }
           }
         }
       }
@@ -73,12 +81,13 @@ public:
   }
 
 private:
-  ObjCSelectorMap Map;
+  const llvm::DenseSet<Selector> &NeededSelectors;
+  SelectorMap Map;
 };
 
 class ASTWalker : public RecursiveASTVisitor<ASTWalker> {
   DeclCallback Callback;
-  const ObjCSelectorMap &SelectorDecls;
+  llvm::SmallVector<ObjCSelectorExpr *, 4> RecordedSelectors;
 
   void report(SourceLocation Loc, NamedDecl *ND,
               RefType RT = RefType::Explicit) {
@@ -140,8 +149,11 @@ class ASTWalker : public RecursiveASTVisitor<ASTWalker> {
   }
 
 public:
-  ASTWalker(DeclCallback Callback, const ObjCSelectorMap &SelectorDecls)
-      : Callback(Callback), SelectorDecls(SelectorDecls) {}
+  ASTWalker(DeclCallback Callback) : Callback(Callback) {}
+
+  llvm::ArrayRef<ObjCSelectorExpr *> getRecordedSelectors() const {
+    return RecordedSelectors;
+  }
 
   // Operators are almost always ADL extension points and by design references
   // to them doesn't count as uses (generally the type should provide them, so
@@ -519,13 +531,7 @@ public:
   }
 
   bool VisitObjCSelectorExpr(ObjCSelectorExpr *E) {
-    auto Sel = E->getSelector();
-    auto It = SelectorDecls.find(Sel);
-    if (It != SelectorDecls.end()) {
-      for (NamedDecl *ND : It->second) {
-        report(E->getSelectorNameLoc(), ND, RefType::Ambiguous);
-      }
-    }
+    RecordedSelectors.push_back(E);
     return true;
   }
 
@@ -622,17 +628,32 @@ public:
 
 } // namespace
 
-ObjCSelectorMap buildObjCSelectorMap(ASTContext &Ctx) {
-  ObjCSelectorDeclMapBuilder Builder;
-  if (Ctx.getLangOpts().ObjC) {
-    Builder.TraverseDecl(Ctx.getTranslationUnitDecl());
-  }
-  return Builder.takeMap();
-}
+void walkAST(Decl &Root, DeclCallback Callback) {
+  ASTWalker Walker(Callback);
+  Walker.TraverseDecl(&Root);
 
-void walkAST(Decl &Root, const ObjCSelectorMap &SelectorDecls,
-             DeclCallback Callback) {
-  ASTWalker(Callback, SelectorDecls).TraverseDecl(&Root);
+  ASTContext &Ctx = Root.getASTContext();
+  if (!Ctx.getLangOpts().ObjC)
+    return;
+
+  auto RecordedSelectors = Walker.getRecordedSelectors();
+  if (RecordedSelectors.empty())
+    return;
+
+  llvm::DenseSet<Selector> NeededSelectors;
+  for (const auto *E : RecordedSelectors)
+    NeededSelectors.insert(E->getSelector());
+  TargetedSelectorDeclCollector Collector(NeededSelectors);
+  Collector.TraverseDecl(Ctx.getTranslationUnitDecl());
+  auto Map = Collector.takeMap();
+  for (const auto *E : RecordedSelectors) {
+    auto It = Map.find(E->getSelector());
+    if (It != Map.end()) {
+      for (NamedDecl *ND : It->second)
+        Callback(E->getSelectorNameLoc(),
+                 *cast<NamedDecl>(ND->getCanonicalDecl()), RefType::Ambiguous);
+    }
+  }
 }
 
 } // namespace clang::include_cleaner

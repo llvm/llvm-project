@@ -67,20 +67,18 @@ testWalk(llvm::StringRef TargetCode, llvm::StringRef ReferencingCode,
   std::vector<Decl::Kind> TargetDecls;
   // Perform the walk, and capture the offsets of the referenced targets.
   std::unordered_map<RefType, std::vector<size_t>> ReferencedOffsets;
-  ObjCSelectorMap SelectorDecls = buildObjCSelectorMap(AST.context());
   for (Decl *D : AST.context().getTranslationUnitDecl()->decls()) {
     if (ReferencingFile != SM.getDecomposedExpansionLoc(D->getLocation()).first)
       continue;
-    walkAST(*D, SelectorDecls,
-            [&](SourceLocation Loc, NamedDecl &ND, RefType RT) {
-              if (SM.getFileLoc(Loc) != ReferencingLoc)
-                return;
-              auto NDLoc = SM.getDecomposedLoc(SM.getFileLoc(ND.getLocation()));
-              if (NDLoc.first != TargetFile)
-                return;
-              ReferencedOffsets[RT].push_back(NDLoc.second);
-              TargetDecls.push_back(ND.getKind());
-            });
+    walkAST(*D, [&](SourceLocation Loc, NamedDecl &ND, RefType RT) {
+      if (SM.getFileLoc(Loc) != ReferencingLoc)
+        return;
+      auto NDLoc = SM.getDecomposedLoc(SM.getFileLoc(ND.getLocation()));
+      if (NDLoc.first != TargetFile)
+        return;
+      ReferencedOffsets[RT].push_back(NDLoc.second);
+      TargetDecls.push_back(ND.getKind());
+    });
   }
   for (auto &Entry : ReferencedOffsets)
     llvm::sort(Entry.second);
@@ -1181,31 +1179,33 @@ TEST(WalkAST, ObjCSelectorExpr) {
 }
 
 TEST(WalkAST, ObjCSelectorExprPropertyGetter) {
-  testWalk(R"objc(
+  auto Decls = testWalk(R"objc(
     @interface MyClass
     @property(nonatomic) int $ambiguous^foo;
     @end
   )objc",
-           R"objc(
+                        R"objc(
     void test() {
       SEL s = @selector(^foo);
     }
   )objc",
-           {"-x", "objective-c"});
+                        {"-x", "objective-c"});
+  EXPECT_THAT(Decls, ElementsAre(Decl::ObjCProperty));
 }
 
 TEST(WalkAST, ObjCSelectorExprPropertySetter) {
-  testWalk(R"objc(
+  auto Decls = testWalk(R"objc(
     @interface MyClass
     @property(nonatomic) int $ambiguous^foo;
     @end
   )objc",
-           R"objc(
+                        R"objc(
     void test() {
       SEL s = @selector(^setFoo:);
     }
   )objc",
-           {"-x", "objective-c"});
+                        {"-x", "objective-c"});
+  EXPECT_THAT(Decls, ElementsAre(Decl::ObjCProperty));
 }
 
 TEST(WalkAST, ObjCSelectorExprReadOnlyPropertySetter) {
@@ -1267,6 +1267,64 @@ TEST(WalkAST, ObjCSelectorExprMultiColon) {
     }
   )objc",
            {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCPropertyRefExprCustomGetter) {
+  testWalk(R"objc(
+    @interface $implicit^MyClass
+    @property(getter=isFoo, setter=setTheFoo:, nonatomic) int $explicit^foo;
+    @end
+  )objc",
+           R"objc(
+    void test(MyClass *obj) {
+      int x = obj.^foo;
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCPropertyRefExprCustomSetter) {
+  testWalk(R"objc(
+    @interface $implicit^MyClass
+    @property(getter=isFoo, setter=setTheFoo:, nonatomic) int $explicit^foo;
+    @end
+  )objc",
+           R"objc(
+    void test(MyClass *obj) {
+      obj.^foo = 42;
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCSelectorExprCustomPropertyGetter) {
+  auto Decls = testWalk(R"objc(
+    @interface MyClass
+    @property(getter=isFoo, setter=setTheFoo:, nonatomic) int $ambiguous^foo;
+    @end
+  )objc",
+                        R"objc(
+    void test() {
+      SEL s = @selector(^isFoo);
+    }
+  )objc",
+                        {"-x", "objective-c"});
+  EXPECT_THAT(Decls, ElementsAre(Decl::ObjCProperty));
+}
+
+TEST(WalkAST, ObjCSelectorExprCustomPropertySetter) {
+  auto Decls = testWalk(R"objc(
+    @interface MyClass
+    @property(getter=isFoo, setter=setTheFoo:, nonatomic) int $ambiguous^foo;
+    @end
+  )objc",
+                        R"objc(
+    void test() {
+      SEL s = @selector(^setTheFoo:);
+    }
+  )objc",
+                        {"-x", "objective-c"});
+  EXPECT_THAT(Decls, ElementsAre(Decl::ObjCProperty));
 }
 
 } // namespace
