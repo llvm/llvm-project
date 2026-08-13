@@ -702,7 +702,7 @@ endif
 %.o: %.c %.d $(call tool_prereq,$(CC))
 	$(CC) $(CFLAGS) -MT $@ -MD -MP -MF $*.d -c -o $@ $<
 
-%.o: %.cpp %.d $(PCH_OUTPUT) $(SWIFT_CXX_HEADER) $(call tool_prereq,$(CXX)_PATH))
+%.o: %.cpp %.d $(PCH_OUTPUT) $(SWIFT_CXX_HEADER) $(call tool_prereq,$(CXX_PATH))
 	$(CXX) $(PCHFLAGS) $(CXXFLAGS) -MT $@ -MD -MP -MF $*.d -c -o $@ $<
 
 %.o: %.m %.d $(call tool_prereq,$(CC))

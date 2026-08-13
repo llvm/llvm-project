@@ -8,14 +8,16 @@ all: libmoda.dylib libmodb.dylib main
 include Makefile.rules
 
 
-libmoda.dylib: moda.swift
+libmoda.dylib: moda.swift \
+               $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" MAKE_DSYM=YES CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
 		BASENAME=$(shell basename $< .swift) \
 		VPATH=$(SRCDIR) -I $(SRCDIR) -f $(SRCDIR)/dylib.mk all
 
 
-libmodb.dylib: modb.swift
+libmodb.dylib: modb.swift \
+               $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" MAKE_DSYM=YES CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
 		BASENAME=$(shell basename $< .swift) \

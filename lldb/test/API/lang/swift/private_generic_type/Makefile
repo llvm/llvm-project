@@ -6,7 +6,8 @@ include Makefile.rules
 LD_EXTRAS = -lPublic -lPrivate -L$(BUILDDIR)
 SWIFTFLAGS_EXTRAS = -I$(BUILDDIR)
 
-libPrivate.dylib: Private.swift
+libPrivate.dylib: Private.swift \
+                  $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" MAKE_DSYM=NO CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
 		BASENAME=Private \
@@ -17,7 +18,8 @@ libPrivate.dylib: Private.swift
 		DYLIB_SWIFT_SOURCES:=Private.swift \
 		-f $(MAKEFILE_RULES)
 
-libPublic.dylib: Public.swift
+libPublic.dylib: Public.swift \
+                 $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" MAKE_DSYM=YES CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
 		BASENAME=Public \

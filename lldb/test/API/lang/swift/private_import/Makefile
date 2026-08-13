@@ -6,13 +6,15 @@ include Makefile.rules
 LD_EXTRAS = -lLibrary -L$(BUILDDIR)
 SWIFTFLAGS_EXTRAS = -I$(BUILDDIR)
 
-libInvisible.dylib: Invisible.swift
+libInvisible.dylib: Invisible.swift \
+                    $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" MAKE_DSYM=NO CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
 		BASENAME=Invisible DEBUG_INFO_FLAG=-gnone \
 		VPATH=$(SRCDIR) -I $(SRCDIR) -f $(SRCDIR)/dylib.mk all
 
-libLibrary.dylib: Library.swift
+libLibrary.dylib: Library.swift \
+                  $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" MAKE_DSYM=YES CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
 		BASENAME=Library \
